@@ -1,0 +1,323 @@
+/* Interface sobre, en français. Casse normale, pas d'effet criard. */
+
+:root {
+  --green: #80c241;
+  --ink: #1c2126;
+  --paper: rgba(16, 21, 26, 0.78);
+  --paper-line: rgba(255, 255, 255, 0.14);
+  --text: #eef1f2;
+  --text-dim: #aeb8bd;
+  font-family: 'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  background: #10151a;
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+}
+
+.app canvas {
+  touch-action: none;
+}
+
+/* --- Écran de démarrage --- */
+
+.start-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 35%, rgba(38, 48, 56, 0.92), rgba(10, 13, 16, 0.97));
+  z-index: 30;
+  padding: 20px;
+}
+
+.start-card {
+  max-width: 430px;
+  width: 100%;
+  text-align: center;
+  color: var(--text);
+  background: rgba(18, 24, 30, 0.72);
+  border: 1px solid var(--paper-line);
+  border-radius: 16px;
+  padding: 36px 32px 28px;
+  backdrop-filter: blur(8px);
+}
+
+.start-line-badge {
+  display: inline-block;
+  background: var(--green);
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 6px 14px;
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+}
+
+.start-title {
+  font-size: 56px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.start-subtitle {
+  color: var(--text-dim);
+  margin-top: 4px;
+  font-size: 17px;
+}
+
+.start-text {
+  margin: 18px 0 22px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.start-button {
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  color: #122408;
+  background: var(--green);
+  border: none;
+  border-radius: 10px;
+  padding: 13px 34px;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.start-button:hover:not(:disabled) {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+.start-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.start-controls {
+  list-style: none;
+  margin-top: 24px;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--text-dim);
+  border-top: 1px solid var(--paper-line);
+  padding-top: 16px;
+}
+
+/* --- HUD --- */
+
+.hud-top {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.hud-clock,
+.hud-phase,
+.hud-station {
+  background: var(--paper);
+  border: 1px solid var(--paper-line);
+  border-radius: 10px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  backdrop-filter: blur(6px);
+}
+
+.hud-clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.hud-station {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.hud-station-label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.hud-station-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.hud-jy {
+  background: var(--green);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 1px 7px;
+  margin-right: 4px;
+}
+
+.hud-kanji {
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+
+.hud-phase {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hud-phase-dwell {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.hud-phase-brake,
+.hud-phase-depart {
+  color: #e8c33a;
+}
+
+/* --- Réticule --- */
+
+.hud-reticle {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  z-index: 15;
+  pointer-events: none;
+}
+
+/* --- Barre du bas --- */
+
+.hud-bottom {
+  position: fixed;
+  bottom: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 20;
+}
+
+.hud-button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--paper);
+  border: 1px solid var(--paper-line);
+  border-radius: 9px;
+  padding: 9px 14px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: border-color 0.12s ease;
+}
+
+.hud-button:hover {
+  border-color: var(--green);
+}
+
+.hud-volume {
+  width: 90px;
+  accent-color: var(--green);
+}
+
+/* --- Tactile --- */
+
+.joystick {
+  position: fixed;
+  left: 26px;
+  bottom: 26px;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--paper-line);
+  z-index: 25;
+  touch-action: none;
+}
+
+.joystick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.touch-sit {
+  position: fixed;
+  right: 24px;
+  bottom: 96px;
+  z-index: 25;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--paper);
+  border: 1px solid var(--paper-line);
+  border-radius: 12px;
+  padding: 14px 20px;
+}
+
+/* --- Responsive --- */
+
+@media (max-width: 720px) {
+  .hud-station-name {
+    font-size: 13px;
+  }
+
+  .hud-clock {
+    font-size: 15px;
+  }
+
+  .hud-bottom {
+    left: 14px;
+    right: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hud-volume {
+    width: 70px;
+  }
+
+  .start-title {
+    font-size: 42px;
+  }
+}
