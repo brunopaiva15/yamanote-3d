@@ -1,5 +1,6 @@
 // Publicités japonaises : nakazuri (中吊り, affiches portrait suspendues dans
-// l'allée) et bandeaux 窓上 (paysage au-dessus des fenêtres).
+// l'allée, imprimées recto-verso) et écrans publicitaires inclinés au-dessus
+// des fenêtres (窓上, à la manière de l'E235).
 
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -10,16 +11,18 @@ import { makeAdTexture } from '../textures/procedural';
 export function Ads() {
   const swayGroup = useRef<THREE.Group>(null);
 
-  const { portraitMats, landscapeMats } = useMemo(() => {
+  const { portraitMats, screenMats, housingMat, bezelMat } = useMemo(() => {
     const portraitMats: THREE.MeshStandardMaterial[] = [];
-    const landscapeMats: THREE.MeshStandardMaterial[] = [];
+    const screenMats: THREE.MeshBasicMaterial[] = [];
     for (let i = 0; i < 6; i++) {
       portraitMats.push(new THREE.MeshStandardMaterial({ map: makeAdTexture(i, true), roughness: 0.9 }));
     }
     for (let i = 0; i < 6; i++) {
-      landscapeMats.push(new THREE.MeshStandardMaterial({ map: makeAdTexture(20 + i, false), roughness: 0.9 }));
+      screenMats.push(new THREE.MeshBasicMaterial({ map: makeAdTexture(20 + i, false), toneMapped: false }));
     }
-    return { portraitMats, landscapeMats };
+    const housingMat = new THREE.MeshStandardMaterial({ color: '#e9e7e1', roughness: 0.25, metalness: 0.05 });
+    const bezelMat = new THREE.MeshStandardMaterial({ color: '#1c1e22', roughness: 0.4 });
+    return { portraitMats, screenMats, housingMat, bezelMat };
   }, []);
 
   useFrame(() => {
@@ -33,7 +36,7 @@ export function Ads() {
     nakazuri.push({ z: -7.8 + i * 3.1, x: i % 2 === 0 ? -0.16 : 0.16 });
   }
 
-  // Bandeaux 窓上 au centre des baies entre portes.
+  // Paires d'écrans inclinés au centre des baies entre portes.
   const madoue: number[] = [-5, 0, 5];
 
   return (
@@ -41,7 +44,6 @@ export function Ads() {
       <group ref={swayGroup}>
         {nakazuri.map((n, i) => (
           <group key={`nk${i}`} position={[n.x, 1.86, n.z]}>
-            {/* Tringle de suspension */}
             <mesh position={[0, 0.28, 0]}>
               <boxGeometry args={[0.015, 0.32, 0.015]} />
               <meshStandardMaterial color="#9aa0a6" metalness={0.6} roughness={0.4} />
@@ -56,17 +58,29 @@ export function Ads() {
           </group>
         ))}
       </group>
+      {/* Écrans publicitaires 窓上 : boîtiers blancs inclinés vers l'allée */}
       {([1, -1] as const).map((s) =>
-        madoue.map((z, i) => (
-          <mesh
-            key={`mu${s}-${z}`}
-            position={[s * (1.4 - 0.055), 1.94, z]}
-            rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
-            material={landscapeMats[(i + (s === 1 ? 0 : 3)) % landscapeMats.length]}
-          >
-            <planeGeometry args={[0.92, 0.28]} />
-          </mesh>
-        )),
+        madoue.map((z, i) =>
+          [-0.52, 0.52].map((dz, k) => (
+            <group
+              key={`mu${s}-${z}-${k}`}
+              position={[s * (1.4 - 0.09), 2.0, z + dz]}
+              rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
+            >
+              <group rotation={[0.32, 0, 0]}>
+                <mesh material={housingMat}>
+                  <boxGeometry args={[0.98, 0.34, 0.05]} />
+                </mesh>
+                <mesh position={[0, 0, 0.027]} material={bezelMat}>
+                  <planeGeometry args={[0.9, 0.28]} />
+                </mesh>
+                <mesh position={[0, 0, 0.03]} material={screenMats[(i * 2 + k + (s === 1 ? 0 : 3)) % screenMats.length]}>
+                  <planeGeometry args={[0.84, 0.24]} />
+                </mesh>
+              </group>
+            </group>
+          )),
+        ),
       )}
     </group>
   );
