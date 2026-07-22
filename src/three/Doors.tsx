@@ -26,16 +26,16 @@ export function Doors() {
 
   const materials = useMemo(
     () => ({
-      panel: new THREE.MeshStandardMaterial({ color: '#d7dade', roughness: 0.3, metalness: 0.55 }),
+      panel: new THREE.MeshStandardMaterial({ color: '#ced1d5', roughness: 0.52, metalness: 0.35 }),
       glass: new THREE.MeshStandardMaterial({
         color: '#cfd8da',
         transparent: true,
         opacity: 0.09,
-        roughness: 0.06,
-        metalness: 0.25,
+        roughness: 0.08,
+        metalness: 0.1,
         side: THREE.DoubleSide,
       }),
-      frame: new THREE.MeshStandardMaterial({ color: '#b9bcc0', roughness: 0.35, metalness: 0.6 }),
+      frame: new THREE.MeshStandardMaterial({ color: '#b2b5b9', roughness: 0.55, metalness: 0.4 }),
       edge: new THREE.MeshBasicMaterial({
         map: makeDoorEdgeTexture(),
         transparent: true,

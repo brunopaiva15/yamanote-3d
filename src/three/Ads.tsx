@@ -22,8 +22,8 @@ export function Ads() {
     for (let i = 0; i < 6; i++) {
       screenMats.push(new THREE.MeshBasicMaterial({ map: makeAdTexture(20 + i, false), toneMapped: false }));
     }
-    const housingMat = new THREE.MeshStandardMaterial({ color: '#e9e7e1', roughness: 0.25, metalness: 0.05 });
-    const bezelMat = new THREE.MeshStandardMaterial({ color: '#1c1e22', roughness: 0.4 });
+    const housingMat = new THREE.MeshStandardMaterial({ color: '#e9e7e1', roughness: 0.6, metalness: 0.02 });
+    const bezelMat = new THREE.MeshStandardMaterial({ color: '#1c1e22', roughness: 0.55 });
     return { portraitMats, screenMats, housingMat, bezelMat };
   }, []);
 
@@ -40,10 +40,10 @@ export function Ads() {
     }
   });
 
-  // Nakazuri en quinconce le long de l'allée.
+  // Nakazuri en quinconce le long de l'allée (décalées du point de départ).
   const nakazuri: { z: number; x: number }[] = [];
   for (let i = 0; i < 6; i++) {
-    nakazuri.push({ z: -7.8 + i * 3.1, x: i % 2 === 0 ? -0.16 : 0.16 });
+    nakazuri.push({ z: -8.6 + i * 3.1, x: i % 2 === 0 ? -0.16 : 0.16 });
   }
 
   // Paires d'écrans inclinés au centre des baies entre portes.

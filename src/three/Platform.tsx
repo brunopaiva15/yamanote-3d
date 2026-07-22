@@ -43,12 +43,12 @@ export function Platform() {
     const mk = (opts: THREE.MeshStandardMaterialParameters) =>
       new THREE.MeshStandardMaterial({ ...opts, transparent: true, opacity: 0 });
     return {
-      slab: mk({ color: '#9b9c98', roughness: 0.9 }),
-      yellow: mk({ color: '#e0bd35', roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2 }),
-      psd: mk({ color: '#d6d8d4', roughness: 0.5, metalness: 0.3 }),
-      green: mk({ color: '#80c241', roughness: 0.6 }),
-      roof: mk({ color: '#6f7376', roughness: 0.85 }),
-      column: mk({ color: '#8e9296', roughness: 0.6, metalness: 0.4 }),
+      slab: mk({ color: '#9b9c98', roughness: 0.95 }),
+      yellow: mk({ color: '#e0bd35', roughness: 0.88, polygonOffset: true, polygonOffsetFactor: -2 }),
+      psd: mk({ color: '#d6d8d4', roughness: 0.68, metalness: 0.15 }),
+      green: mk({ color: '#80c241', roughness: 0.7 }),
+      roof: mk({ color: '#6f7376', roughness: 0.92 }),
+      column: mk({ color: '#8e9296', roughness: 0.75, metalness: 0.2 }),
       people: mk({ color: '#3c4048', roughness: 0.95 }),
       sign: new THREE.MeshBasicMaterial({ map: sign.texture, transparent: true, opacity: 0, toneMapped: false }),
     };

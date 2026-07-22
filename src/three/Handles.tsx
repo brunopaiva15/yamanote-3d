@@ -36,7 +36,7 @@ function HandleRow({ x }: { x: number }) {
       {/* Rail porteur noir */}
       <mesh>
         <boxGeometry args={[0.035, 0.045, 19.2]} />
-        <meshStandardMaterial color="#26282c" roughness={0.5} metalness={0.4} />
+        <meshStandardMaterial color="#26282c" roughness={0.7} metalness={0.25} />
       </mesh>
       <group ref={group}>
         {/* Sangles */}
@@ -50,7 +50,7 @@ function HandleRow({ x }: { x: number }) {
         {/* Anneaux triangulaires verts (torus à 3 segments, pointe en haut) */}
         <Instances limit={normal.length}>
           <torusGeometry args={[0.078, 0.017, 10, 3]} />
-          <meshStandardMaterial color="#7ec843" roughness={0.32} metalness={0.05} />
+          <meshStandardMaterial color="#79c140" roughness={0.55} metalness={0.02} />
           {normal.map((z) => (
             <Instance key={`r${z}`} position={[0, RING_Y, z]} rotation={[0, 0, Math.PI / 2]} />
           ))}
@@ -58,7 +58,7 @@ function HandleRow({ x }: { x: number }) {
         {/* Poignées jaunes de la zone prioritaire */}
         <Instances limit={Math.max(1, priority.length)}>
           <torusGeometry args={[0.078, 0.017, 10, 3]} />
-          <meshStandardMaterial color="#e8b83a" roughness={0.32} metalness={0.05} />
+          <meshStandardMaterial color="#e0b23c" roughness={0.55} metalness={0.02} />
           {priority.map((z) => (
             <Instance key={`p${z}`} position={[0, RING_Y, z]} rotation={[0, 0, Math.PI / 2]} />
           ))}

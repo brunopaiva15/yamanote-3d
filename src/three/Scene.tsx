@@ -26,7 +26,8 @@ function EnvironmentMap(): null {
     const pmrem = new THREE.PMREMGenerator(gl);
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = env;
-    scene.environmentIntensity = 0.42;
+    // Discret : juste de quoi faire vivre l'inox et le verre, sans vernis.
+    scene.environmentIntensity = 0.22;
     return () => {
       scene.environment = null;
       env.dispose();
@@ -47,8 +48,8 @@ export function Scene() {
       <directionalLight position={[34, 7, -14]} intensity={1.9} color="#ffb37a" />
       <directionalLight position={[-30, 9, 18]} intensity={0.55} color="#e8a98c" />
       {/* Ciel rosé / sol froid. */}
-      <hemisphereLight args={['#eec5ae', '#5f5a64', 0.5]} />
-      <ambientLight intensity={0.3} color="#e3cabb" />
+      <hemisphereLight args={['#eec5ae', '#5f5a64', 0.56]} />
+      <ambientLight intensity={0.34} color="#e3cabb" />
 
       {/* Intérieur : chapelet de points blanc chaud sous le bandeau plafond. */}
       {LAMP_POSITIONS.map((p, i) => (

@@ -35,31 +35,111 @@ function toTexture(c: HTMLCanvasElement): THREE.CanvasTexture {
   return t;
 }
 
-// --- Sol du wagon : gris clair, joints longitudinaux discrets ---
+// --- Sol du wagon : gris clair usé, traces de passage, ombrage aux bords ---
 export function makeFloorTexture(): THREE.CanvasTexture {
   const { c, g } = makeCanvas(512, 512);
   const r = rng(11);
-  g.fillStyle = '#a4a8ae';
+  g.fillStyle = '#9fa3a9';
   g.fillRect(0, 0, 512, 512);
-  // Bande centrale à peine plus foncée (allée).
-  g.fillStyle = 'rgba(120,124,132,0.25)';
+  // Bande centrale légèrement plus foncée et patinée (allée).
+  g.fillStyle = 'rgba(116,120,128,0.28)';
   g.fillRect(150, 0, 212, 512);
   // Moucheture fine.
-  for (let i = 0; i < 4600; i++) {
-    const shade = 140 + Math.floor(r() * 60);
-    g.fillStyle = `rgba(${shade - 8},${shade - 4},${shade + 4},${0.18 + r() * 0.35})`;
+  for (let i = 0; i < 5200; i++) {
+    const shade = 130 + Math.floor(r() * 62);
+    g.fillStyle = `rgba(${shade - 8},${shade - 4},${shade + 4},${0.16 + r() * 0.3})`;
     g.fillRect(r() * 512, r() * 512, 1 + r() * 1.8, 1 + r() * 1.8);
+  }
+  // Traces d'usure : traînées sombres irrégulières dans le sens de la marche.
+  for (let i = 0; i < 90; i++) {
+    const x = 130 + r() * 250;
+    const y = r() * 512;
+    const len = 14 + r() * 70;
+    g.strokeStyle = `rgba(66,70,78,${0.04 + r() * 0.08})`;
+    g.lineWidth = 1.5 + r() * 4;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + (r() - 0.5) * 12, y + len);
+    g.stroke();
+  }
+  // Éraflures claires.
+  for (let i = 0; i < 40; i++) {
+    g.strokeStyle = `rgba(225,228,232,${0.06 + r() * 0.1})`;
+    g.lineWidth = 1;
+    const x = r() * 512;
+    const y = r() * 512;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + (r() - 0.5) * 40, y + (r() - 0.5) * 40);
+    g.stroke();
   }
   // Joints longitudinaux.
   for (const x of [24, 150, 362, 488]) {
-    g.fillStyle = 'rgba(88,92,99,0.5)';
+    g.fillStyle = 'rgba(88,92,99,0.45)';
     g.fillRect(x, 0, 2, 512);
-    g.fillStyle = 'rgba(235,238,240,0.35)';
+    g.fillStyle = 'rgba(235,238,240,0.28)';
     g.fillRect(x + 2, 0, 1, 512);
   }
+  // Ombrage doux vers les parois (fausse occlusion sous les banquettes).
+  const edge = g.createLinearGradient(0, 0, 512, 0);
+  edge.addColorStop(0, 'rgba(40,44,52,0.34)');
+  edge.addColorStop(0.16, 'rgba(40,44,52,0)');
+  edge.addColorStop(0.84, 'rgba(40,44,52,0)');
+  edge.addColorStop(1, 'rgba(40,44,52,0.34)');
+  g.fillStyle = edge;
+  g.fillRect(0, 0, 512, 512);
   const t = toTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(1, 10);
+  return t;
+}
+
+// --- Surface peinte / mélaminé : micro-grain discret sur couleur de base ---
+export function makeSurfaceTexture(base: string, strength = 1): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(256, 256);
+  const r = rng(base.length * 131 + Math.floor(strength * 97));
+  g.fillStyle = base;
+  g.fillRect(0, 0, 256, 256);
+  // Grain fin.
+  for (let i = 0; i < 5200; i++) {
+    const light = r() > 0.5;
+    g.fillStyle = light
+      ? `rgba(255,255,255,${0.015 * strength + r() * 0.03 * strength})`
+      : `rgba(20,22,28,${0.015 * strength + r() * 0.03 * strength})`;
+    g.fillRect(r() * 256, r() * 256, 1 + r() * 2, 1 + r() * 2);
+  }
+  // Légères nuances en larges taches (peinture non uniforme).
+  for (let i = 0; i < 22; i++) {
+    g.fillStyle = r() > 0.5 ? `rgba(255,255,255,${0.02 * strength})` : `rgba(30,32,40,${0.02 * strength})`;
+    g.beginPath();
+    g.ellipse(r() * 256, r() * 256, 24 + r() * 60, 18 + r() * 44, r() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  const t = toTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+// --- Carte de rugosité : bruit doux, casse les reflets uniformes ---
+export function makeRoughnessMap(): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(256, 256);
+  const r = rng(311);
+  g.fillStyle = '#c9c9c9';
+  g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 3600; i++) {
+    const v = 170 + Math.floor(r() * 85);
+    g.fillStyle = `rgba(${v},${v},${v},${0.25 + r() * 0.4})`;
+    g.fillRect(r() * 256, r() * 256, 2 + r() * 4, 2 + r() * 4);
+  }
+  for (let i = 0; i < 16; i++) {
+    const v = 150 + Math.floor(r() * 100);
+    g.fillStyle = `rgba(${v},${v},${v},0.18)`;
+    g.beginPath();
+    g.ellipse(r() * 256, r() * 256, 30 + r() * 70, 20 + r() * 50, r() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 }
 

@@ -10,6 +10,8 @@ import {
   makeTactileTexture,
   makePriorityFloorTexture,
   makePrioritySignTexture,
+  makeSurfaceTexture,
+  makeRoughnessMap,
 } from '../textures/procedural';
 
 const HL = CONFIG.carHalfLength; // 10
@@ -43,22 +45,42 @@ export function Car() {
     [],
   );
 
-  const materials = useMemo(
-    () => ({
-      floor: new THREE.MeshStandardMaterial({ map: textures.floor, roughness: 0.42, metalness: 0.1 }),
-      wall: new THREE.MeshStandardMaterial({ color: '#e4e3dc', roughness: 0.28, metalness: 0.02 }),
-      pinkWall: new THREE.MeshStandardMaterial({ color: '#efd3da', roughness: 0.3, metalness: 0.02 }),
-      ceiling: new THREE.MeshStandardMaterial({ color: '#dfe0de', roughness: 0.5 }),
-      ceilingCenter: new THREE.MeshStandardMaterial({ color: '#e9eae7', roughness: 0.35 }),
-      partition: new THREE.MeshStandardMaterial({ color: '#e6e4de', roughness: 0.28 }),
-      pinkPartition: new THREE.MeshStandardMaterial({ color: '#efd3da', roughness: 0.3 }),
-      steel: new THREE.MeshStandardMaterial({ color: '#d6dade', roughness: 0.18, metalness: 0.9 }),
+  const materials = useMemo(() => {
+    // Micro-grain et rugosité bruitée : surfaces peintes, jamais laquées.
+    const rough = makeRoughnessMap();
+    return {
+      floor: new THREE.MeshStandardMaterial({ map: textures.floor, roughness: 0.72, metalness: 0.02 }),
+      wall: new THREE.MeshStandardMaterial({
+        map: makeSurfaceTexture('#e4e3dc'),
+        roughnessMap: rough,
+        roughness: 0.8,
+        metalness: 0.02,
+      }),
+      pinkWall: new THREE.MeshStandardMaterial({
+        map: makeSurfaceTexture('#efd3da'),
+        roughnessMap: rough,
+        roughness: 0.82,
+        metalness: 0.02,
+      }),
+      ceiling: new THREE.MeshStandardMaterial({ map: makeSurfaceTexture('#dfe0de'), roughness: 0.78 }),
+      ceilingCenter: new THREE.MeshStandardMaterial({ map: makeSurfaceTexture('#e9eae7', 0.7), roughness: 0.65 }),
+      partition: new THREE.MeshStandardMaterial({
+        map: makeSurfaceTexture('#e6e4de'),
+        roughnessMap: rough,
+        roughness: 0.8,
+      }),
+      pinkPartition: new THREE.MeshStandardMaterial({
+        map: makeSurfaceTexture('#efd3da'),
+        roughnessMap: rough,
+        roughness: 0.82,
+      }),
+      steel: new THREE.MeshStandardMaterial({ color: '#c8ccd0', roughness: 0.38, metalness: 0.85 }),
       glass: new THREE.MeshStandardMaterial({
         color: '#cfd8da',
         transparent: true,
         opacity: 0.09,
-        roughness: 0.06,
-        metalness: 0.25,
+        roughness: 0.08,
+        metalness: 0.1,
         side: THREE.DoubleSide,
       }),
       led: new THREE.MeshStandardMaterial({
@@ -67,11 +89,11 @@ export function Car() {
         emissiveIntensity: 1.0,
         roughness: 0.4,
       }),
-      vent: new THREE.MeshStandardMaterial({ color: '#b9bcbe', roughness: 0.55, metalness: 0.3 }),
-      ventSlot: new THREE.MeshStandardMaterial({ color: '#3c3f44', roughness: 0.7 }),
+      vent: new THREE.MeshStandardMaterial({ color: '#b9bcbe', roughness: 0.72, metalness: 0.15 }),
+      ventSlot: new THREE.MeshStandardMaterial({ color: '#3c3f44', roughness: 0.8 }),
       tactile: new THREE.MeshStandardMaterial({
         map: textures.tactile,
-        roughness: 0.65,
+        roughness: 0.85,
         polygonOffset: true,
         polygonOffsetFactor: -2,
         polygonOffsetUnits: -2,
@@ -86,9 +108,8 @@ export function Car() {
       }),
       prioritySign: new THREE.MeshBasicMaterial({ map: textures.prioritySign, toneMapped: false }),
       darkCap: new THREE.MeshStandardMaterial({ color: '#23262b', roughness: 0.9 }),
-    }),
-    [textures],
-  );
+    };
+  }, [textures]);
 
   const sides: (1 | -1)[] = [1, -1];
 

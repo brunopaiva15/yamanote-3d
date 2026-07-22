@@ -11,6 +11,8 @@ import {
   makeCheckerTexture,
   makeQuiltTexture,
   makePriorityBadgeTexture,
+  makeSurfaceTexture,
+  makeRoughnessMap,
   GREEN_CHECKER,
   RED_CHECKER,
 } from '../textures/procedural';
@@ -86,16 +88,28 @@ export function Seats() {
     const red = makeCheckerTexture(RED_CHECKER);
     const quilt = makeQuiltTexture();
     const badge = makePriorityBadgeTexture();
+    const rough = makeRoughnessMap();
     return {
-      green: new THREE.MeshStandardMaterial({ map: green, roughness: 0.92 }),
-      red: new THREE.MeshStandardMaterial({ map: red, roughness: 0.92 }),
-      quilt: new THREE.MeshStandardMaterial({ map: quilt, roughness: 0.85 }),
-      shell: new THREE.MeshStandardMaterial({ color: '#eceae4', roughness: 0.22, metalness: 0.05 }),
-      chrome: new THREE.MeshStandardMaterial({ color: '#e8ecef', roughness: 0.08, metalness: 1 }),
-      yellowGrip: new THREE.MeshStandardMaterial({ color: '#e8b83a', roughness: 0.5 }),
-      heater: new THREE.MeshStandardMaterial({ color: '#585b60', roughness: 0.45, metalness: 0.6 }),
+      green: new THREE.MeshStandardMaterial({ map: green, roughness: 0.95 }),
+      red: new THREE.MeshStandardMaterial({ map: red, roughness: 0.95 }),
+      quilt: new THREE.MeshStandardMaterial({ map: quilt, roughness: 0.9 }),
+      // FRP peint satiné, pas laqué : grain + rugosité bruitée.
+      shell: new THREE.MeshStandardMaterial({
+        map: makeSurfaceTexture('#eceae4', 0.8),
+        roughnessMap: rough,
+        roughness: 0.62,
+        metalness: 0.02,
+      }),
+      // Inox brossé plutôt que chrome miroir.
+      chrome: new THREE.MeshStandardMaterial({ color: '#c9ced3', roughness: 0.3, metalness: 0.9 }),
+      yellowGrip: new THREE.MeshStandardMaterial({ color: '#e0b23c', roughness: 0.68 }),
+      heater: new THREE.MeshStandardMaterial({ color: '#585b60', roughness: 0.65, metalness: 0.35 }),
       badge: new THREE.MeshBasicMaterial({ map: badge, transparent: true, toneMapped: false }),
-      rack: new THREE.MeshStandardMaterial({ color: '#e9e7e1', roughness: 0.3, metalness: 0.1 }),
+      rack: new THREE.MeshStandardMaterial({
+        map: makeSurfaceTexture('#e9e7e1', 0.7),
+        roughness: 0.6,
+        metalness: 0.05,
+      }),
     };
   }, []);
 
