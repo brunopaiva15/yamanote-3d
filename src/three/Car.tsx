@@ -12,6 +12,8 @@ import {
   makePrioritySignTexture,
   makeSurfaceTexture,
   makeRoughnessMap,
+  makeVentTexture,
+  makeDoorStickerTexture,
 } from '../textures/procedural';
 
 const HL = CONFIG.carHalfLength; // 10
@@ -89,7 +91,15 @@ export function Car() {
         emissiveIntensity: 1.0,
         roughness: 0.4,
       }),
-      vent: new THREE.MeshStandardMaterial({ color: '#b9bcbe', roughness: 0.72, metalness: 0.15 }),
+      vent: new THREE.MeshStandardMaterial({ map: makeVentTexture(), roughness: 0.72, metalness: 0.15 }),
+      seam: new THREE.MeshStandardMaterial({ color: '#c4c3bc', roughness: 0.7 }),
+      sticker: new THREE.MeshBasicMaterial({
+        map: makeDoorStickerTexture(),
+        transparent: true,
+        toneMapped: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+      }),
       ventSlot: new THREE.MeshStandardMaterial({ color: '#3c3f44', roughness: 0.8 }),
       tactile: new THREE.MeshStandardMaterial({
         map: textures.tactile,
@@ -183,6 +193,20 @@ export function Car() {
               </mesh>
               <mesh position={[s * HW, (WINDOW_BOTTOM + WINDOW_TOP) / 2, seg.z1 - PILLAR_W / 2]} material={wallMat}>
                 <boxGeometry args={[0.08, WINDOW_TOP - WINDOW_BOTTOM, PILLAR_W]} />
+              </mesh>
+              {/* Jonctions de panneaux : fines lignes au seuil et au linteau */}
+              {[WINDOW_BOTTOM - 0.006, WINDOW_TOP + 0.006].map((y) => (
+                <mesh key={`seam${y}`} position={[s * (HW - 0.038), y, zc]} material={materials.seam}>
+                  <boxGeometry args={[0.012, 0.014, len]} />
+                </mesh>
+              ))}
+              {/* Petit autocollant d'information près des portes */}
+              <mesh
+                position={[s * (HW - 0.038), 1.32, seg.z0 + PILLAR_W / 2]}
+                rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
+                material={materials.sticker}
+              >
+                <planeGeometry args={[0.1, 0.1]} />
               </mesh>
               {/* Panneau 優先席 sur le montant haut des segments roses */}
               {seg.pink && (

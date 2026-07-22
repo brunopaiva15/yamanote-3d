@@ -29,7 +29,7 @@ export default function App() {
         dpr={[1, 2]}
         gl={{ powerPreference: 'high-performance', antialias: true }}
         camera={{ fov: 70, near: 0.05, far: 120, position: [0, CONFIG.eyeHeight, 4.2] }}
-        shadows={false}
+        shadows
       >
         <Scene />
         <Engine />

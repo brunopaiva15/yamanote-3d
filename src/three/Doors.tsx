@@ -13,6 +13,23 @@ import { makeDoorEdgeTexture, makeDoorStickerTexture } from '../textures/procedu
 const DOOR_H = 1.95;
 const PANEL_W = CONFIG.doorHalfWidth; // 0.66 par vantail
 
+// Rectangle à coins arrondis, centré sur l'origine.
+function roundedRect(w: number, h: number, r: number): THREE.Shape {
+  const s = new THREE.Shape();
+  const x = -w / 2;
+  const y = -h / 2;
+  s.moveTo(x + r, y);
+  s.lineTo(x + w - r, y);
+  s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r);
+  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h);
+  s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r);
+  s.quadraticCurveTo(x, y, x + r, y);
+  return s;
+}
+
 interface PanelRef {
   mesh: THREE.Group | null;
   side: 1 | -1;
@@ -54,6 +71,17 @@ export function Doors() {
     [],
   );
 
+  // Vitres à coins arrondis (comme sur l'E235) et leur encadrement.
+  const windowGeos = useMemo(() => {
+    const glassShape = roundedRect(0.42, 0.78, 0.09);
+    const frameShape = roundedRect(0.5, 0.86, 0.11);
+    frameShape.holes.push(roundedRect(0.42, 0.78, 0.09));
+    return {
+      glass: new THREE.ShapeGeometry(glassShape, 16),
+      frame: new THREE.ShapeGeometry(frameShape, 16),
+    };
+  }, []);
+
   useFrame(() => {
     const doorSide = useStore.getState().doorSide;
     for (const p of panels.current) {
@@ -84,14 +112,20 @@ export function Doors() {
                 <mesh position={[0, DOOR_H / 2, 0]} material={materials.panel}>
                   <boxGeometry args={[0.05, DOOR_H, PANEL_W]} />
                 </mesh>
-                {/* Encadrement de vitre */}
-                <mesh position={[inner * 0.4, 1.32, 0]} material={materials.frame}>
-                  <boxGeometry args={[0.045, 0.84, PANEL_W - 0.18]} />
-                </mesh>
-                {/* Vitre du vantail */}
-                <mesh position={[s * -0.03, 1.32, 0]} material={materials.glass}>
-                  <boxGeometry args={[0.02, 0.78, PANEL_W - 0.24]} />
-                </mesh>
+                {/* Encadrement de vitre à coins arrondis */}
+                <mesh
+                  geometry={windowGeos.frame}
+                  position={[inner, 1.32, 0]}
+                  rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
+                  material={materials.frame}
+                />
+                {/* Vitre du vantail, coins arrondis */}
+                <mesh
+                  geometry={windowGeos.glass}
+                  position={[s * -0.03, 1.32, 0]}
+                  rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
+                  material={materials.glass}
+                />
                 {/* Liseré à pois jaunes sur le chant côté fermeture */}
                 <mesh
                   position={[inner, 1.0, -half * (PANEL_W / 2 - 0.035)]}

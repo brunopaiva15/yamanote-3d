@@ -172,14 +172,15 @@ export function makeCheckerTexture(shades: string[]): THREE.CanvasTexture {
 export const GREEN_CHECKER = ['#6fbe3a', '#84cf4c', '#5ca92f', '#93d95e', '#79c243'];
 export const RED_CHECKER = ['#c04a42', '#cf5a50', '#b23c36', '#d96b60', '#c8534a'];
 
-// --- Assise matelassée grise : un coussin par place (couture verticale) ---
+// --- Coussin matelassé gris : texture d'UN coussin (bombé + couture) ---
 export function makeQuiltTexture(): THREE.CanvasTexture {
   const { c, g } = makeCanvas(256, 256);
   const r = rng(53);
-  g.fillStyle = '#71747a';
+  g.fillStyle = '#72757b';
   g.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 2400; i++) {
-    g.strokeStyle = r() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.09)';
+  // Trame tissée.
+  for (let i = 0; i < 2600; i++) {
+    g.strokeStyle = r() > 0.5 ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.08)';
     const x = r() * 256;
     const y = r() * 256;
     g.beginPath();
@@ -187,24 +188,33 @@ export function makeQuiltTexture(): THREE.CanvasTexture {
     g.lineTo(x + (r() - 0.5) * 6, y + (r() - 0.5) * 6);
     g.stroke();
   }
-  // Couture et bombé du coussin (le motif se répète par place assise).
-  const grad = g.createLinearGradient(0, 0, 256, 0);
-  grad.addColorStop(0, 'rgba(0,0,0,0.34)');
-  grad.addColorStop(0.12, 'rgba(0,0,0,0)');
-  grad.addColorStop(0.88, 'rgba(0,0,0,0)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.34)');
-  g.fillStyle = grad;
+  // Bombé : centre légèrement plus clair, bords assombris tout autour.
+  const dome = g.createRadialGradient(128, 128, 30, 128, 128, 165);
+  dome.addColorStop(0, 'rgba(255,255,255,0.07)');
+  dome.addColorStop(0.55, 'rgba(0,0,0,0)');
+  dome.addColorStop(1, 'rgba(20,22,26,0.32)');
+  g.fillStyle = dome;
   g.fillRect(0, 0, 256, 256);
-  g.strokeStyle = 'rgba(30,32,36,0.55)';
+  // Couture périphérique.
+  g.strokeStyle = 'rgba(34,36,40,0.5)';
   g.lineWidth = 3;
-  g.beginPath();
-  g.moveTo(2, 0);
-  g.lineTo(2, 256);
-  g.moveTo(254, 0);
-  g.lineTo(254, 256);
-  g.stroke();
+  g.strokeRect(10, 10, 236, 236);
   const t = toTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+// --- Grille de clim : lamelles sombres sur fond aluminium ---
+export function makeVentTexture(): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(128, 64);
+  g.fillStyle = '#b4b7ba';
+  g.fillRect(0, 0, 128, 64);
+  for (let y = 6; y < 64; y += 10) {
+    g.fillStyle = '#3f4247';
+    g.fillRect(6, y, 116, 4);
+    g.fillStyle = 'rgba(255,255,255,0.25)';
+    g.fillRect(6, y + 4, 116, 1);
+  }
+  const t = toTexture(c);
   return t;
 }
 

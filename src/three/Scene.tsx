@@ -37,15 +37,51 @@ function EnvironmentMap(): null {
   return null;
 }
 
+// Ombres portées du soleil : activation en une passe sur toute la scène.
+// Les matériaux transparents (vitres, fondu du quai) ne projettent pas ;
+// les matériaux non éclairés (ville, ciel, écrans) sont ignorés.
+function ShadowFlags(): null {
+  const { scene } = useThree();
+  useEffect(() => {
+    scene.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const mat = mesh.material as THREE.Material;
+      if (mat instanceof THREE.MeshStandardMaterial) {
+        mesh.receiveShadow = true;
+        if (!mat.transparent) mesh.castShadow = true;
+      }
+    });
+  }, [scene]);
+  return null;
+}
+
 export function Scene() {
   return (
     <>
       <color attach="background" args={['#e0b494']} />
       <fog attach="fog" args={['#dcae8f', 18, 88]} />
       <EnvironmentMap />
+      <ShadowFlags />
 
-      {/* Soleil bas, chaud, qui entre par les fenêtres. */}
-      <directionalLight position={[34, 7, -14]} intensity={1.9} color="#ffb37a" />
+      {/* Soleil bas, chaud, qui entre par les fenêtres et projette de
+          vraies ombres (flaques de lumière au sol, poteaux qui défilent). */}
+      <directionalLight
+        position={[34, 7, -14]}
+        intensity={1.9}
+        color="#ffb37a"
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-left={-18}
+        shadow-camera-right={18}
+        shadow-camera-top={14}
+        shadow-camera-bottom={-8}
+        shadow-camera-near={5}
+        shadow-camera-far={90}
+        shadow-bias={-0.0003}
+        shadow-normalBias={0.03}
+      />
       <directionalLight position={[-30, 9, 18]} intensity={0.55} color="#e8a98c" />
       {/* Ciel rosé / sol froid. */}
       <hemisphereLight args={['#eec5ae', '#5f5a64', 0.56]} />
@@ -53,7 +89,7 @@ export function Scene() {
 
       {/* Intérieur : chapelet de points blanc chaud sous le bandeau plafond. */}
       {LAMP_POSITIONS.map((p, i) => (
-        <pointLight key={i} position={p} intensity={2.7} distance={7} decay={1.7} color="#fff0da" />
+        <pointLight key={i} position={p} intensity={3.0} distance={7} decay={1.7} color="#fff0da" />
       ))}
 
       <EffectComposer>

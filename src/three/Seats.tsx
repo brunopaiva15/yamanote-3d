@@ -5,8 +5,10 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { Instances, Instance } from '@react-three/drei';
 import { CONFIG } from '../data/config';
-import { BENCHES } from '../systems/seats';
+import { BENCHES, SEAT_SLOTS } from '../systems/seats';
 import {
   makeCheckerTexture,
   makeQuiltTexture,
@@ -18,7 +20,6 @@ import {
 } from '../textures/procedural';
 
 const WALL_X = CONFIG.carHalfWidth; // 1.4
-const SEAT_TOP = 0.44;
 
 // --- Panneau d'extrémité (袖仕切り) : silhouette ajourée extrudée ---
 function makePanelGeometry(): THREE.ExtrudeGeometry {
@@ -79,6 +80,10 @@ export function Seats() {
       stanchionL: makeStanchionGeometry(-1),
       midR: makeMidStanchionGeometry(1),
       midL: makeMidStanchionGeometry(-1),
+      // Coussins individuels arrondis (pas standard / prioritaire).
+      cushion7: new RoundedBoxGeometry(0.44, 0.11, 0.5, 3, 0.035),
+      cushion3: new RoundedBoxGeometry(0.44, 0.11, 0.44, 3, 0.035),
+      slat: new THREE.BoxGeometry(0.055, 0.016, 3.46),
     }),
     [],
   );
@@ -113,21 +118,6 @@ export function Seats() {
     };
   }, []);
 
-  // Textures répétées par place assise : un clone de matériau par largeur de
-  // banquette (3 ou 7 places), pour caler les coutures.
-  const quiltByN = useMemo(() => {
-    const cache = new Map<number, THREE.MeshStandardMaterial>();
-    for (const n of [3, 7]) {
-      const m = materials.quilt.clone();
-      const tex = (materials.quilt.map as THREE.Texture).clone();
-      tex.repeat.set(1, n);
-      tex.needsUpdate = true;
-      m.map = tex;
-      cache.set(n, m);
-    }
-    return cache;
-  }, [materials]);
-
   const checkerByN = useMemo(() => {
     const cache = new Map<string, THREE.MeshStandardMaterial>();
     for (const priority of [false, true]) {
@@ -145,14 +135,46 @@ export function Seats() {
   }, [materials]);
 
   const sides: (1 | -1)[] = [1, -1];
+  const seats7 = SEAT_SLOTS.filter((sl) => !sl.priority);
+  const seats3 = SEAT_SLOTS.filter((sl) => sl.priority);
+  // Lattes de la claie du porte-bagages (banquettes de 7 uniquement).
+  const slats = useMemo(() => {
+    const list: { x: number; y: number; z: number }[] = [];
+    for (const s of [1, -1] as const) {
+      for (const b of BENCHES) {
+        if (b.priority) continue;
+        const zc = (b.z0 + b.z1) / 2;
+        for (let i = 0; i < 4; i++) {
+          list.push({ x: s * (WALL_X - 0.09 - i * 0.1), y: 1.81 - i * 0.014, z: zc });
+        }
+      }
+    }
+    return list;
+  }, []);
 
   return (
     <group>
+      {/* Coussins individuels : un module arrondi par place assise */}
+      <Instances geometry={geos.cushion7} material={materials.quilt} limit={seats7.length}>
+        {seats7.map((sl, i) => (
+          <Instance key={`c7-${i}`} position={[sl.side * 1.02, 0.4, sl.z]} />
+        ))}
+      </Instances>
+      <Instances geometry={geos.cushion3} material={materials.quilt} limit={seats3.length}>
+        {seats3.map((sl, i) => (
+          <Instance key={`c3-${i}`} position={[sl.side * 1.02, 0.4, sl.z]} />
+        ))}
+      </Instances>
+      {/* Claie ajourée des porte-bagages */}
+      <Instances geometry={geos.slat} material={materials.rack} limit={slats.length}>
+        {slats.map((p, i) => (
+          <Instance key={`sl-${i}`} position={[p.x, p.y, p.z]} />
+        ))}
+      </Instances>
       {sides.map((s) =>
         BENCHES.map((b, bi) => {
           const len = b.z1 - b.z0;
           const zc = (b.z0 + b.z1) / 2;
-          const quiltMat = quiltByN.get(b.n) ?? materials.quilt;
           const checkerMat = checkerByN.get(`${b.priority}-${b.n}`) ?? materials.green;
           const stanchionMat = b.priority ? materials.yellowGrip : materials.chrome;
           const seatDepth = 0.46;
@@ -168,10 +190,6 @@ export function Seats() {
               {/* Radiateur incliné sous l'assise */}
               <mesh position={[s * (WALL_X - 0.42), 0.16, zc]} rotation={[0, 0, s * 0.35]} material={materials.heater}>
                 <boxGeometry args={[0.3, 0.16, len - 0.3]} />
-              </mesh>
-              {/* Coussins d'assise matelassés (coutures par place via la texture) */}
-              <mesh position={[seatX, SEAT_TOP - 0.05, zc]} material={quiltMat}>
-                <boxGeometry args={[seatDepth, 0.11, len]} />
               </mesh>
               {/* Traversin de dossier en moquette damier */}
               <mesh
@@ -235,16 +253,10 @@ export function Seats() {
               >
                 <cylinderGeometry args={[0.014, 0.014, len - 0.06, 8]} />
               </mesh>
-              {/* Porte-bagages au-dessus des banquettes (hors prioritaire) */}
+              {/* Porte-bagages : lisse avant chromée et supports (la claie
+                  ajourée est instanciée plus haut) */}
               {!b.priority && (
                 <group>
-                  <mesh
-                    position={[s * (WALL_X - 0.22), 1.8, zc]}
-                    rotation={[0, 0, s * 0.1]}
-                    material={materials.rack}
-                  >
-                    <boxGeometry args={[0.4, 0.025, len - 0.15]} />
-                  </mesh>
                   <mesh
                     position={[s * (WALL_X - 0.45), 1.76, zc]}
                     rotation={[Math.PI / 2, 0, 0]}
