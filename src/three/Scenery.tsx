@@ -1,21 +1,30 @@
-// Décor extérieur : ciel de fin d'après-midi (cylindre à dégradé + soleil),
-// trois couches d'immeubles en silhouette par côté, défilement par
-// texture.offset piloté par la distance parcourue, ballast au sol.
+// Décor extérieur, spécifique au quartier de chaque gare : ciel de Tokyo
+// (jour / doré / nuit), trois couches d'immeubles en parallaxe par côté qui
+// FONDENT d'un quartier à l'autre au fil du trajet (deux « banques » ping-pong
+// par couche/côté), ballast au sol, arbres et portiques caténaires défilants.
+//
+// Les silhouettes défilent par texture.offset (piloté par la distance) ; le
+// fondu entre le quartier quitté et celui approché est piloté par la
+// progression `p` du trajet inter-gares. Voir data/districts.ts.
 
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
+import { useStore, type Phase } from '../store';
+import { CONFIG } from '../data/config';
+import { DISTRICTS } from '../data/districts';
 import {
-  makeCityTexture,
+  drawCityInto,
+  cityTexSize,
   makeGroundTexture,
   makeSkyTexture,
   makeSunsetSkyTexture,
   makeNightSkyTexture,
 } from '../textures/procedural';
 
-interface Layer {
+interface LayerDef {
   x: number;
   height: number;
   metersPerRepeat: number;
@@ -24,7 +33,7 @@ interface Layer {
   opacity: number;
 }
 
-const LAYERS: Layer[] = [
+const LAYERS: LayerDef[] = [
   { x: 11, height: 8, metersPerRepeat: 60, repeat: 4, layer: 0, opacity: 1 },
   { x: 24, height: 12, metersPerRepeat: 120, repeat: 2, layer: 1, opacity: 1 },
   { x: 42, height: 18, metersPerRepeat: 240, repeat: 1, layer: 2, opacity: 0.9 },
@@ -32,21 +41,68 @@ const LAYERS: Layer[] = [
 
 const PLANE_LEN = 240;
 
+// Durée d'un trajet inter-gares (s) : depart → cruise → brake (l'arrêt `dwell`
+// prolonge p=1). `index` s'incrémente au début de `depart`, donc à tout instant
+// arrivingDistrict = index et departingDistrict = index-1 : continu, sans saut.
+const JOURNEY = CONFIG.departTime + CONFIG.cruiseTime + CONFIG.brakeTime;
+const PHASE_BASE: Record<Phase, number> = {
+  depart: 0,
+  cruise: CONFIG.departTime,
+  brake: CONFIG.departTime + CONFIG.cruiseTime,
+  dwell: CONFIG.departTime + CONFIG.cruiseTime + CONFIG.brakeTime,
+};
+
+function smoothstep(a: number, b: number, x: number): number {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+
+// Une banque = une version « quartier » d'un plan de ville (jour + éventuelle
+// variante nuit), avec son canvas réutilisable pour la régénération.
+interface Bank {
+  slot: 0 | 1;
+  layer: 0 | 1 | 2;
+  metersPerRepeat: number;
+  sign: number;
+  baseOpacity: number;
+  hasNight: boolean;
+  dayCtx: CanvasRenderingContext2D;
+  dayTex: THREE.CanvasTexture;
+  dayMat: THREE.MeshBasicMaterial;
+  nightCtx: CanvasRenderingContext2D | null;
+  nightTex: THREE.CanvasTexture | null;
+  nightMat: THREE.MeshBasicMaterial | null;
+  district: number;
+}
+
+function makeBankCanvas(layer: 0 | 1 | 2): {
+  ctx: CanvasRenderingContext2D;
+  tex: THREE.CanvasTexture;
+} {
+  const [w, h] = cityTexSize(layer);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D indisponible');
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  return { ctx, tex };
+}
+
 export function Scenery() {
-  const materials = useRef<{ mat: THREE.MeshBasicMaterial; metersPerRepeat: number; sign: number }[]>([]);
-  const groundMat = useRef<THREE.MeshBasicMaterial | null>(null);
+  const arrivingSlot = useRef<0 | 1>(0);
+  const lastIndex = useRef<number>(CONFIG.startIndex);
+  const regenQueue = useRef<(() => void)[]>([]);
 
-  // Variante nuit de la ville : plans superposés dont l'opacité suit l'heure.
-  const nightMats = useRef<THREE.MeshBasicMaterial[]>([]);
-  const dayCityMats = useRef<{ mat: THREE.MeshBasicMaterial; base: number; hasNight: boolean }[]>([]);
-  const skyMats = useRef<{ day: THREE.MeshBasicMaterial; golden: THREE.MeshBasicMaterial; night: THREE.MeshBasicMaterial } | null>(
-    null,
-  );
-
+  // Tout est construit une fois ici et renvoyé (jamais via des refs mutées dans
+  // useMemo : en StrictMode la factory est appelée deux fois, ce qui
+  // désynchroniserait les objets rendus des refs pilotées par useFrame).
   const built = useMemo(() => {
-    materials.current = [];
-    nightMats.current = [];
-    dayCityMats.current = [];
+    const banks: Bank[] = [];
     const planes: {
       key: string;
       x: number;
@@ -54,54 +110,90 @@ export function Scenery() {
       rotY: number;
       height: number;
       mat: THREE.MeshBasicMaterial;
-      night?: THREE.MeshBasicMaterial;
     }[] = [];
+    // slot 0 = arrivant (index de départ), slot 1 = partant (index précédent).
+    const start = CONFIG.startIndex;
+    const initDistrict = (slot: 0 | 1) => (slot === 0 ? start : (start + 29) % 30);
+
     for (const L of LAYERS) {
       for (const side of [1, -1] as const) {
-        const tex = makeCityTexture(L.layer);
-        tex.repeat.set(L.repeat, 1);
-        const mat = new THREE.MeshBasicMaterial({
-          map: tex,
-          transparent: true,
-          opacity: L.opacity,
-          fog: true,
-          depthWrite: false,
-        });
-        // Sens de défilement : les immeubles reculent quand le train avance.
         const sign = side === -1 ? 1 : -1;
-        materials.current.push({ mat, metersPerRepeat: L.metersPerRepeat, sign });
-        dayCityMats.current.push({ mat, base: L.opacity, hasNight: L.layer < 2 });
-        // Plan nuit (mêmes bâtiments, fenêtres allumées) pour les couches proches.
-        let night: THREE.MeshBasicMaterial | undefined;
-        if (L.layer < 2) {
-          const ntex = makeCityTexture(L.layer, true);
-          ntex.repeat.set(L.repeat, 1);
-          night = new THREE.MeshBasicMaterial({
-            map: ntex,
+        const rotY = side === -1 ? Math.PI / 2 : -Math.PI / 2;
+        const y = L.height / 2 - 1.1;
+        const hasNight = L.layer < 2;
+        for (const slot of [0, 1] as const) {
+          const district = initDistrict(slot);
+          const day = makeBankCanvas(L.layer);
+          day.tex.repeat.set(L.repeat, 1);
+          drawCityInto(day.ctx, L.layer, false, DISTRICTS[district]);
+          day.tex.needsUpdate = true;
+          const dayMat = new THREE.MeshBasicMaterial({
+            map: day.tex,
             transparent: true,
             opacity: 0,
             fog: true,
             depthWrite: false,
           });
-          materials.current.push({ mat: night, metersPerRepeat: L.metersPerRepeat, sign });
-          nightMats.current.push(night);
+          const bank: Bank = {
+            slot,
+            layer: L.layer,
+            metersPerRepeat: L.metersPerRepeat,
+            sign,
+            baseOpacity: L.opacity,
+            hasNight,
+            dayCtx: day.ctx,
+            dayTex: day.tex,
+            dayMat,
+            nightCtx: null,
+            nightTex: null,
+            nightMat: null,
+            district,
+          };
+          // Décalage de profondeur « vers la caméra » (x=0) pour que les plans
+          // coplanaires (2 slots × jour/nuit) se trient sans z-fighting, tout
+          // en restant bien avant les vitres du wagon (|x| ≈ 1,4).
+          const bias = slot * 0.04;
+          planes.push({
+            key: `city-${L.layer}-${side}-${slot}-day`,
+            x: side * L.x - side * bias,
+            y,
+            rotY,
+            height: L.height,
+            mat: dayMat,
+          });
+          if (hasNight) {
+            const night = makeBankCanvas(L.layer);
+            night.tex.repeat.set(L.repeat, 1);
+            drawCityInto(night.ctx, L.layer, true, DISTRICTS[district]);
+            night.tex.needsUpdate = true;
+            const nightMat = new THREE.MeshBasicMaterial({
+              map: night.tex,
+              transparent: true,
+              opacity: 0,
+              fog: true,
+              depthWrite: false,
+            });
+            bank.nightCtx = night.ctx;
+            bank.nightTex = night.tex;
+            bank.nightMat = nightMat;
+            planes.push({
+              key: `city-${L.layer}-${side}-${slot}-night`,
+              x: side * L.x - side * (bias + 0.02),
+              y,
+              rotY,
+              height: L.height,
+              mat: nightMat,
+            });
+          }
+          banks.push(bank);
         }
-        planes.push({
-          key: `city${L.layer}-${side}`,
-          x: side * L.x,
-          y: L.height / 2 - 1.1,
-          rotY: side === -1 ? Math.PI / 2 : -Math.PI / 2,
-          height: L.height,
-          mat,
-          night,
-        });
       }
     }
+
     const groundTex = makeGroundTexture();
     groundTex.repeat.set(2, 24);
     const gm = new THREE.MeshBasicMaterial({ map: groundTex, fog: true, color: '#d6d4ce' });
-    groundMat.current = gm;
-    // Trois ciels superposés, fondus selon l'heure de Tokyo.
+
     const mkSky = (map: THREE.CanvasTexture, opacity: number) =>
       new THREE.MeshBasicMaterial({
         map,
@@ -112,12 +204,13 @@ export function Scenery() {
         opacity,
         depthWrite: false,
       });
-    skyMats.current = {
+    const sky = {
       day: mkSky(makeSkyTexture(), 1),
       golden: mkSky(makeSunsetSkyTexture(), 0),
       night: mkSky(makeNightSkyTexture(), 0),
     };
-    return { planes, gm, sky: skyMats.current };
+
+    return { planes, banks, gm, sky };
   }, []);
 
   // Poteaux caténaires et arbres qui défilent : les vrais vendeurs de vitesse.
@@ -129,17 +222,76 @@ export function Scenery() {
   const TREE_SPACING = 21;
 
   useFrame(() => {
-    for (const m of materials.current) {
-      const tex = m.mat.map;
-      if (tex) tex.offset.x = (m.sign * runtime.distance) / m.metersPerRepeat;
+    const { index, phase } = useStore.getState();
+
+    // --- Changement de gare : bascule des banques et régénération échelonnée ---
+    if (index !== lastIndex.current) {
+      lastIndex.current = index;
+      // L'ancien slot partant devient le nouvel arrivant (invisible car p≈0).
+      arrivingSlot.current = arrivingSlot.current === 0 ? 1 : 0;
+      const newArriving = arrivingSlot.current;
+      for (const b of built.banks) {
+        if (b.slot !== newArriving) continue;
+        b.district = index;
+        regenQueue.current.push(() => {
+          drawCityInto(b.dayCtx, b.layer, false, DISTRICTS[b.district]);
+          b.dayTex.needsUpdate = true;
+        });
+        if (b.hasNight && b.nightCtx && b.nightTex) {
+          const ctx = b.nightCtx;
+          const tex = b.nightTex;
+          regenQueue.current.push(() => {
+            drawCityInto(ctx, b.layer, true, DISTRICTS[b.district]);
+            tex.needsUpdate = true;
+          });
+        }
+      }
     }
-    const g = groundMat.current?.map;
+    // Drainer la file (≤2 dessins / frame) : la banque reste invisible tant que
+    // p < 0.38, on a donc des dizaines de secondes de marge, sans à-coup.
+    for (let k = 0; k < 2 && regenQueue.current.length > 0; k++) {
+      const task = regenQueue.current.shift();
+      if (task) task();
+    }
+
+    // --- Progression du trajet et poids de fondu ---
+    const p = Math.min(1, Math.max(0, (PHASE_BASE[phase] + runtime.phaseT) / JOURNEY));
+    const wArr = smoothstep(0.38, 0.62, p);
+    const wDep = 1 - wArr;
+
+    // --- Cycle jour / nuit ---
+    const w = dayNightWeights(runtime.clockMin / 60);
+    const cityNight = Math.min(1, w.night + w.golden * 0.45);
+
+    const arriving = arrivingSlot.current;
+    for (const b of built.banks) {
+      const weight = b.slot === arriving ? wArr : wDep;
+      const off = (b.sign * runtime.distance) / b.metersPerRepeat;
+      b.dayTex.offset.x = off;
+      if (b.hasNight) {
+        b.dayMat.opacity = weight * b.baseOpacity * (1 - cityNight);
+        if (b.nightMat && b.nightTex) {
+          b.nightMat.opacity = weight * b.baseOpacity * cityNight;
+          b.nightTex.offset.x = off;
+        }
+      } else {
+        // Couche lointaine : pas de variante nuit, on assombrit par teinte.
+        b.dayMat.opacity = weight * b.baseOpacity;
+        const k = 1 - 0.72 * cityNight;
+        b.dayMat.color.setRGB(k, k, k * 1.08);
+      }
+    }
+
+    // --- Sol défilant ---
+    const g = built.gm.map;
     if (g) g.offset.y = runtime.distance / 10;
+
+    // --- Portiques et arbres défilants ---
     const span = POLE_COUNT * POLE_SPACING;
     for (let i = 0; i < POLE_COUNT; i++) {
-      const p = poles.current[i];
-      if (!p) continue;
-      p.position.z = ((runtime.distance + i * POLE_SPACING) % span) - span / 2;
+      const pl = poles.current[i];
+      if (!pl) continue;
+      pl.position.z = ((runtime.distance + i * POLE_SPACING) % span) - span / 2;
     }
     const treeSpan = TREE_COUNT * TREE_SPACING;
     for (let i = 0; i < TREE_COUNT; i++) {
@@ -147,24 +299,11 @@ export function Scenery() {
       if (!t) continue;
       t.position.z = ((runtime.distance * 0.999 + i * TREE_SPACING + 9) % treeSpan) - treeSpan / 2;
     }
-    // Cycle jour / nuit : fondu des ciels et des fenêtres de la ville.
-    const w = dayNightWeights(runtime.clockMin / 60);
-    if (skyMats.current) {
-      skyMats.current.day.opacity = w.day;
-      skyMats.current.golden.opacity = w.golden;
-      skyMats.current.night.opacity = w.night;
-    }
-    const cityNight = Math.min(1, w.night + w.golden * 0.45);
-    for (const m of nightMats.current) m.opacity = cityNight;
-    // Le plan jour s'efface à la nuit (les couches sans variante nuit
-    // s'assombrissent par teinte).
-    for (const d of dayCityMats.current) {
-      if (d.hasNight) d.mat.opacity = d.base * (1 - cityNight);
-      else {
-        const k = 1 - 0.72 * cityNight;
-        d.mat.color.setRGB(k, k, k * 1.08);
-      }
-    }
+
+    // --- Fondu des ciels selon l'heure de Tokyo ---
+    built.sky.day.opacity = w.day;
+    built.sky.golden.opacity = w.golden;
+    built.sky.night.opacity = w.night;
   });
 
   // Arbres boules (esprit Shashingo) : tronc + deux masses de feuillage.
@@ -191,28 +330,19 @@ export function Scenery() {
         </mesh>
       ))}
 
-      {built.planes.map((p) => (
-        <group key={p.key}>
-          <mesh position={[p.x, p.y, 0]} rotation={[0, p.rotY, 0]} material={p.mat}>
-            <planeGeometry args={[PLANE_LEN, p.height]} />
-          </mesh>
-          {/* Variante nuit, 2 cm plus proche : le tri par distance la dessine
-              après le plan jour et AVANT les vitres du wagon (dont l'écriture
-              de profondeur éliminerait tout plan dessiné après elles). */}
-          {p.night && (
-            <mesh position={[p.x + (p.x > 0 ? -0.02 : 0.02), p.y, 0]} rotation={[0, p.rotY, 0]} material={p.night}>
-              <planeGeometry args={[PLANE_LEN, p.height]} />
-            </mesh>
-          )}
-        </group>
+      {/* Plans de ville : deux banques ping-pong par couche/côté, fondues */}
+      {built.planes.map((pl) => (
+        <mesh key={pl.key} position={[pl.x, pl.y, 0]} rotation={[0, pl.rotY, 0]} material={pl.mat}>
+          <planeGeometry args={[PLANE_LEN, pl.height]} />
+        </mesh>
       ))}
 
       {/* Arbres boules défilants le long de la voie */}
       {treeSpecs.map((spec, i) => (
         <group
           key={`tree${i}`}
-          ref={(g) => {
-            trees.current[i] = g;
+          ref={(gr) => {
+            trees.current[i] = gr;
           }}
           position={[spec.x, -1.1, 0]}
           scale={spec.scale}
@@ -233,11 +363,11 @@ export function Scenery() {
       ))}
 
       {/* Portiques caténaires défilants */}
-      {Array.from({ length: 8 }, (_, i) => (
+      {Array.from({ length: POLE_COUNT }, (_, i) => (
         <group
           key={`pole${i}`}
-          ref={(g) => {
-            poles.current[i] = g;
+          ref={(gr) => {
+            poles.current[i] = gr;
           }}
         >
           {([-1, 1] as const).map((s) => (

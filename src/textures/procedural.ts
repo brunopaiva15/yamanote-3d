@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { STATIONS } from '../data/stations';
+import { GENERIC, type District, type Feat } from '../data/districts';
 
 export const JP_FONT = "'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP',sans-serif";
 
@@ -516,28 +517,146 @@ const NIGHT_FACADES = ['#3a4152', '#38404e', '#3e4550', '#3c4156', '#40474f', '#
 const SHOP_COLORS = ['#e2705c', '#5c9fe2', '#e2b45c', '#63c28a', '#c97fb8', '#e28a5c'];
 const NEON_COLORS = ['#ff9a84', '#8fd0ff', '#ffd88a', '#8ff0b4', '#f2b0e4', '#ffbe8f'];
 
-// La variante nuit consomme EXACTEMENT la même séquence aléatoire que le
-// jour : mêmes bâtiments, mêmes enseignes, pour un fondu parfait entre les
-// deux plans superposés.
-export function makeCityTexture(layer: 0 | 1 | 2, night = false): THREE.CanvasTexture {
-  const W = 2048;
-  const H = 512;
-  const { c, g } = makeCanvas(W, H);
-  const r = rng(101 + layer * 57);
+// Graine stable par quartier (FNV-1a du nom) : deux quartiers → deux villes.
+function districtSeed(name: string): number {
+  let s = 2166136261 >>> 0;
+  for (let i = 0; i < name.length; i++) {
+    s ^= name.charCodeAt(i);
+    s = Math.imul(s, 16777619) >>> 0;
+  }
+  return s >>> 0;
+}
+
+// Résolution de la texture de ville par couche (la couche lointaine, très
+// brumeuse, est allégée pour tenir le budget mémoire GPU avec deux banques).
+export function cityTexSize(layer: 0 | 1 | 2): [number, number] {
+  return layer === 2 ? [1024, 256] : [2048, 512];
+}
+
+// Masse d'arbres (parcs, sanctuaires) dessinée à la place d'un immeuble.
+// Consomme un nombre déterministe de tirages (invariant jour/nuit).
+function drawTreeMass(
+  g: CanvasRenderingContext2D,
+  x: number,
+  bw: number,
+  H: number,
+  night: boolean,
+  r: () => number,
+): void {
+  const cx = x + bw / 2;
+  const th = H * (0.22 + r() * 0.16);
+  const baseY = H - 4;
+  g.fillStyle = night ? '#2a241c' : '#6a4f38';
+  g.fillRect(cx - 4, baseY - th * 0.5, 8, th * 0.5);
+  const blobs = 3 + Math.floor(r() * 3);
+  const dayLeaf = ['#6ab04a', '#7cc25a', '#5aa23f'];
+  const nightLeaf = ['#243024', '#1f2a1f', '#28321f'];
+  for (let b = 0; b < blobs; b++) {
+    const bx = x + 8 + r() * (bw - 16);
+    const by = baseY - th * (0.5 + r() * 0.5);
+    const rad = bw * (0.16 + r() * 0.16);
+    g.fillStyle = night ? nightLeaf[b % 3] : dayLeaf[b % 3];
+    g.beginPath();
+    g.arc(bx, by, rad, 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
+// Arches de brique au pied de l'immeuble (viaduc, Yūrakuchō, Kanda). Déterministe.
+function drawBrickArches(g: CanvasRenderingContext2D, x: number, bw: number, H: number, night: boolean): void {
+  const aw = 26;
+  const top = H - 40;
+  for (let ax = x + 4; ax + aw < x + bw; ax += aw + 6) {
+    g.fillStyle = night ? 'rgba(70,44,34,0.9)' : 'rgba(150,86,60,0.92)';
+    g.fillRect(ax, top, aw, 36);
+    g.fillStyle = night ? 'rgba(255,206,150,0.5)' : 'rgba(40,30,26,0.42)';
+    g.beginPath();
+    g.moveTo(ax + 4, H - 4);
+    g.lineTo(ax + 4, top + 12);
+    g.arc(ax + aw / 2, top + 12, aw / 2 - 4, Math.PI, 0, false);
+    g.lineTo(ax + aw - 4, H - 4);
+    g.closePath();
+    g.fill();
+  }
+}
+
+// Toit en tuiles à croupe (vieux quartiers, temples). Déterministe.
+function drawTiledRoof(g: CanvasRenderingContext2D, x: number, bw: number, bh: number, H: number, night: boolean): void {
+  const top = H - bh;
+  const eave = 8;
+  g.fillStyle = night ? '#2a2f38' : '#5a6470';
+  g.beginPath();
+  g.moveTo(x - eave, top);
+  g.lineTo(x + bw + eave, top);
+  g.lineTo(x + bw - 6, top - 14);
+  g.lineTo(x + 6, top - 14);
+  g.closePath();
+  g.fill();
+  g.fillStyle = night ? '#20242c' : '#464e58';
+  g.fillRect(x + 4, top - 16, bw - 8, 4);
+}
+
+// Dessine la ville d'un quartier dans un contexte fourni (réutilisable : les
+// banques de Scenery re-dessinent dans leur canvas existant, sans allocation).
+//
+// INVARIANT DU FONDU JOUR/NUIT — À NE JAMAIS ROMPRE : pour un quartier+couche
+// donné, les appels day (night=false) et night (night=true) doivent produire
+// EXACTEMENT la même séquence de tirages r() et les mêmes branches. `night` ne
+// change QUE des couleurs (fillStyle), jamais un r() ni un embranchement qui
+// modifie le nombre de dessins. (Les features viennent du quartier, identiques
+// entre jour et nuit d'un même quartier — elles ne cassent donc pas l'invariant.)
+export function drawCityInto(
+  g: CanvasRenderingContext2D,
+  layer: 0 | 1 | 2,
+  night: boolean,
+  district: District = GENERIC,
+): void {
+  const W = g.canvas.width;
+  const H = g.canvas.height;
+  g.clearRect(0, 0, W, H);
+  g.globalAlpha = 1;
+  g.textAlign = 'left';
+  const r = rng(1009 + districtSeed(district.name) + layer * 57);
+
+  const has = (f: Feat) => district.feats.includes(f);
+  const tall = has('glassTowers') || has('officeTowers') || has('skyscraperCluster') || has('modernWhite');
+  const brick = has('redBrick') || has('brickArch');
+  const dept = has('departmentStore');
+  const billboard = has('animeBillboard') || has('giantScreen');
+  const neonHeavy = has('electricNeon') || has('koreatownSigns') || has('studentArcade') || billboard;
+  const koreatown = has('koreatownSigns') || has('studentArcade');
+  const temple = has('templeLowtown');
+  const green = has('parkGreen') || has('torii');
+  const market = has('shotengai') || has('lowriseMarket');
+
+  const facadesDay = district.facades ?? FACADES;
+  const facadesNight = district.nightFacades ?? NIGHT_FACADES;
+  const neonPal = district.neon ?? NEON_COLORS;
+  const roofWords = district.roofWords ?? ROOF_WORDS;
+  const words = district.words.length ? district.words : SIGN_WORDS;
+
   // Voie surélevée : premier plan bas, le ciel doit respirer.
-  const maxH = layer === 0 ? 0.5 : layer === 1 ? 0.5 : 0.45;
-  const gapChance = layer === 0 ? 0.35 : layer === 1 ? 0.26 : 0;
+  const maxH = (layer === 0 ? 0.52 : layer === 1 ? 0.52 : 0.46) * (0.55 + district.maxHeight);
+  const gapChance = layer === 2 ? 0 : (0.4 - district.density * 0.36) * (layer === 1 ? 0.85 : 1);
   const fade = layer === 0 ? 1 : layer === 1 ? 0.75 : 0.5; // contraste des détails
+
   let x = 0;
   while (x < W) {
-    const bw = 60 + r() * (layer === 0 ? 130 : 90);
+    const bwBase = 60 + r() * (layer === 0 ? 130 : 90);
+    const bw = tall ? bwBase * 0.82 : market ? bwBase * 1.08 : bwBase;
     if (r() < gapChance) {
-      x += bw * (0.5 + r());
+      x += bwBase * (0.5 + r());
+      continue;
+    }
+    // Masse d'arbres à la place d'un immeuble (parcs, sanctuaires).
+    if (green && layer < 2 && r() < 0.42) {
+      drawTreeMass(g, x, bw, H, night, r);
+      x += bw + (layer === 0 ? r() * 26 : r() * 10);
       continue;
     }
     const bh = H * (0.2 + r() * maxH * 0.72);
-    const facadeIdx = Math.floor(r() * FACADES.length);
-    g.fillStyle = night ? NIGHT_FACADES[facadeIdx] : FACADES[facadeIdx];
+    const facadeIdx = Math.floor(r() * facadesDay.length);
+    g.fillStyle = night ? facadesNight[facadeIdx % facadesNight.length] : facadesDay[facadeIdx];
     g.globalAlpha = 1;
     g.fillRect(x, H - bh, bw, bh);
     if (layer > 0) {
@@ -546,54 +665,66 @@ export function makeCityTexture(layer: 0 | 1 | 2, night = false): THREE.CanvasTe
         : `rgba(226,206,196,${layer === 1 ? 0.35 : 0.6})`;
       g.fillRect(x, H - bh, bw, bh);
     }
-    // Toit : enseigne posée (lumineuse la nuit).
-    if (layer < 2 && r() > 0.62) {
+    // Toit en tuiles (vieux quartiers / temples) — bâtiments bas.
+    if (temple && layer < 2 && bh < H * 0.5) {
+      drawTiledRoof(g, x, bw, bh, H, night);
+    }
+    // Toit : enseigne posée (lumineuse la nuit ; fréquente pour les grands magasins).
+    if (layer < 2 && r() > (dept ? 0.4 : 0.62)) {
       const pw = bw * (0.4 + r() * 0.4);
       g.fillStyle = night ? '#20242e' : '#faf6ec';
       g.beginPath();
       g.roundRect(x + bw * 0.2, H - bh - 26, pw, 22, 6);
       g.fill();
       const roofColorIdx = Math.floor(r() * SHOP_COLORS.length);
-      g.fillStyle = night ? NEON_COLORS[roofColorIdx] : SHOP_COLORS[roofColorIdx];
+      g.fillStyle = night ? neonPal[roofColorIdx % neonPal.length] : SHOP_COLORS[roofColorIdx];
       g.font = `bold 15px ${JP_FONT}`;
-      g.fillText(ROOF_WORDS[Math.floor(r() * ROOF_WORDS.length)], x + bw * 0.2 + 8, H - bh - 9, Math.max(10, pw - 14));
+      g.fillText(roofWords[Math.floor(r() * roofWords.length)], x + bw * 0.2 + 8, H - bh - 9, Math.max(10, pw - 14));
     }
     if (layer < 2) {
-      // Fenêtres : reflets de ciel le jour, largement allumées la nuit.
-      const cols = Math.floor(bw / 16);
-      const rows = Math.max(0, Math.floor((bh - 66) / 20));
+      // Fenêtres : grille plus serrée et froide pour les tours de bureaux.
+      const colStep = tall ? 13 : 16;
+      const rowStep = tall ? 17 : 20;
+      const cols = Math.floor(bw / colStep);
+      const rows = Math.max(0, Math.floor((bh - 66) / rowStep));
       for (let i = 0; i < cols; i++) {
         for (let j = 0; j < rows; j++) {
           const w1 = r();
           const w2 = r();
           if (night) {
-            g.fillStyle =
-              w1 > 0.42
+            g.fillStyle = tall
+              ? w1 > 0.6
+                ? `rgba(214,${228 + Math.floor(w2 * 22)},255,${(0.5 + w2 * 0.3) * fade})`
+                : `rgba(20,26,40,${0.72 * fade})`
+              : w1 > 0.42
                 ? `rgba(255,${205 + Math.floor(w2 * 40)},140,${(0.65 + w2 * 0.3) * fade})`
                 : `rgba(24,30,44,${0.7 * fade})`;
           } else {
-            g.fillStyle =
-              w1 > 0.8
+            g.fillStyle = tall
+              ? w1 > 0.7
+                ? `rgba(214,226,238,${0.72 * fade})`
+                : `rgba(150,180,208,${(0.55 + w2 * 0.3) * fade})`
+              : w1 > 0.8
                 ? `rgba(238,240,236,${0.7 * fade})`
                 : `rgba(136,170,196,${(0.5 + w2 * 0.3) * fade})`;
           }
           g.beginPath();
-          g.roundRect(x + 6 + i * 16, H - bh + 8 + j * 20, 9, 12, 2);
+          g.roundRect(x + 6 + i * colStep, H - bh + 8 + j * rowStep, colStep - 7, rowStep - 8, 2);
           g.fill();
         }
       }
       // Devanture au rez-de-chaussée : bandeau, enseigne, vitrine.
       const shopIdx = Math.floor(r() * SHOP_COLORS.length);
-      const shop = night ? NEON_COLORS[shopIdx] : SHOP_COLORS[shopIdx];
+      const shop = night ? neonPal[shopIdx % neonPal.length] : SHOP_COLORS[shopIdx];
       g.fillStyle = shop;
       g.globalAlpha = (night ? 1 : 0.9) * fade;
       g.fillRect(x + 2, H - 58, bw - 4, 20);
       g.globalAlpha = 1;
       g.fillStyle = night ? '#2a2620' : '#fdf9f0';
       g.font = `bold 13px ${JP_FONT}`;
-      g.fillText(SIGN_WORDS[Math.floor(r() * SIGN_WORDS.length)], x + 10, H - 43, Math.max(12, bw - 22));
-      // Auvent rayé une fois sur deux.
-      if (r() > 0.5) {
+      g.fillText(words[Math.floor(r() * words.length)], x + 10, H - 43, Math.max(12, bw - 22));
+      // Auvent rayé (plus fréquent pour marché / shotengai).
+      if (r() < (market ? 0.8 : 0.5)) {
         for (let sx2 = x + 4; sx2 < x + bw - 10; sx2 += 12) {
           g.fillStyle = (sx2 / 12) % 2 < 1 ? (night ? '#464a52' : '#f6f1e6') : shop;
           g.globalAlpha = 0.85 * fade;
@@ -604,26 +735,74 @@ export function makeCityTexture(layer: 0 | 1 | 2, night = false): THREE.CanvasTe
       // Vitrine chaude, éclatante la nuit.
       g.fillStyle = `rgba(255,214,150,${(night ? 0.9 : 0.5) * fade})`;
       g.fillRect(x + 8, H - 26, bw - 16, 22);
+      // Écran / panneau géant (Akihabara, Shibuya, Shinjuku…).
+      if (billboard && r() < 0.5) {
+        const bbw = bw * (0.55 + r() * 0.3);
+        const bbh = Math.min(bh - 20, H * (0.14 + r() * 0.16));
+        const bx = x + (bw - bbw) / 2;
+        const by = H - bh + 12 + r() * 20;
+        const bands = 3 + Math.floor(r() * 3);
+        for (let b = 0; b < bands; b++) {
+          const ci = Math.floor(r() * neonPal.length);
+          g.fillStyle = night ? neonPal[ci] : SHOP_COLORS[ci % SHOP_COLORS.length];
+          g.globalAlpha = (night ? 0.95 : 0.85) * fade;
+          g.fillRect(bx, by + (b * bbh) / bands, bbw, bbh / bands - 1);
+        }
+        g.globalAlpha = 1;
+        g.strokeStyle = night ? 'rgba(10,12,18,0.9)' : 'rgba(60,60,66,0.5)';
+        g.lineWidth = 2;
+        g.strokeRect(bx, by, bbw, bbh);
+      }
+      // Enseignes empilées (Koreatown, arcades étudiantes).
+      if (koreatown && layer === 0) {
+        const strips = 3 + Math.floor(r() * 4);
+        for (let s = 0; s < strips; s++) {
+          const ci = Math.floor(r() * neonPal.length);
+          const sy = H - bh + 20 + s * 22 + r() * 4;
+          const wi = Math.floor(r() * words.length);
+          if (sy > H - 62) continue;
+          g.fillStyle = night ? neonPal[ci] : SHOP_COLORS[ci % SHOP_COLORS.length];
+          g.globalAlpha = (night ? 0.95 : 0.85) * fade;
+          g.fillRect(x + 4, sy, bw - 8, 14);
+          g.globalAlpha = 1;
+          g.fillStyle = night ? '#201a1e' : '#fbf6f4';
+          g.font = `bold 11px ${JP_FONT}`;
+          g.fillText(words[wi], x + 8, sy + 11, bw - 16);
+        }
+      }
     }
-    // Enseigne verticale japonaise (néon la nuit).
-    if (layer === 0 && r() > 0.55) {
+    // Arches de brique au pied (viaduc, Yūrakuchō, Kanda).
+    if (brick && layer < 2) {
+      drawBrickArches(g, x, bw, H, night);
+    }
+    // Enseigne verticale japonaise (néon la nuit ; plus fréquente en quartier électrique).
+    if (layer === 0 && r() < (neonHeavy ? 0.7 : 0.45)) {
       const sx = x + bw - 18;
       const sh = 80 + r() * 80;
       const sy = H - bh + 14 + r() * 30;
       const signIdx = Math.floor(r() * SHOP_COLORS.length);
-      g.fillStyle = night ? NEON_COLORS[signIdx] : SHOP_COLORS[signIdx];
+      g.fillStyle = night ? neonPal[signIdx % neonPal.length] : SHOP_COLORS[signIdx];
       g.beginPath();
       g.roundRect(sx, sy, 16, sh, 5);
       g.fill();
       g.fillStyle = night ? '#2a2620' : '#fdf9f0';
       g.font = `bold 11px ${JP_FONT}`;
-      const word = SIGN_WORDS[Math.floor(r() * SIGN_WORDS.length)];
+      const word = words[Math.floor(r() * words.length)];
       for (let k = 0; k < word.length && k * 13 < sh - 12; k++) {
         g.fillText(word[k], sx + 3, sy + 14 + k * 13);
       }
     }
     x += bw + (layer === 0 ? r() * 26 : r() * 10);
   }
+  g.globalAlpha = 1;
+}
+
+// Alloue un canvas dédié et y dessine la ville d'un quartier (site d'appel
+// historique + création des banques).
+export function makeCityTexture(layer: 0 | 1 | 2, night = false, district: District = GENERIC): THREE.CanvasTexture {
+  const [W, H] = cityTexSize(layer);
+  const { c, g } = makeCanvas(W, H);
+  drawCityInto(g, layer, night, district);
   const t = toTexture(c);
   t.wrapS = THREE.RepeatWrapping;
   t.wrapT = THREE.ClampToEdgeWrapping;

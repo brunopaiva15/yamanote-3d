@@ -13,6 +13,7 @@ import { Handles } from './three/Handles';
 import { Ads } from './three/Ads';
 import { Screens } from './three/Screens';
 import { Scenery } from './three/Scenery';
+import { Landmarks } from './three/Landmarks';
 import { Platform } from './three/Platform';
 import { Passengers } from './three/Passengers';
 import { Player } from './three/Player';
@@ -40,6 +41,7 @@ export default function App() {
         <Ads />
         <Screens />
         <Scenery />
+        <Landmarks />
         <Platform />
         <Passengers />
         <Player />
