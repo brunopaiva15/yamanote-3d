@@ -6,9 +6,11 @@ import { CONFIG, V_MAX } from '../data/config';
 import { DOOR_SIDE } from '../data/stations';
 import {
   approachAnnouncement,
+  directionAnnouncement,
   doorsClosingAnnouncement,
+  generalMessage,
+  isMajorHub,
   nextStationAnnouncement,
-  prioritySeatsAnnouncement,
 } from '../data/announcements';
 import { useStore, type Phase } from '../store';
 import { runtime } from './runtime';
@@ -37,8 +39,8 @@ export function fastForward(): void {
   if (phase === 'cruise') {
     enterPhase('brake');
   } else if (phase === 'dwell') {
-    // Sauter directement à la séquence de départ (mélodie puis fermeture).
-    runtime.phaseT = Math.max(runtime.phaseT, CONFIG.dwellTime - 4.05);
+    // Sauter directement à la séquence de départ (mélodie, annonce, fermeture).
+    runtime.phaseT = Math.max(runtime.phaseT, CONFIG.dwellTime - 13.05);
   } else if (phase === 'depart') {
     enterPhase('cruise');
   }
@@ -87,8 +89,13 @@ export function updateCycle(dt: number): void {
   switch (s.phase) {
     case 'cruise': {
       once('doorside', true, () => s.setDoorSide(DOOR_SIDE[s.index]));
+      // Annonce du sens de la boucle, juste après le départ des grandes gares.
+      once('announce-dir', t > 0.6 && isMajorHub((s.index - 1 + 30) % 30), () =>
+        say(directionAnnouncement(s.index)),
+      );
       once('announce-next', t > 1.2, () => say(nextStationAnnouncement(s.index, DOOR_SIDE[s.index])));
-      once('priority', t > 16 && s.index % 5 === 0, () => say(prioritySeatsAnnouncement()));
+      // Message général de courtoisie (en rotation) toutes les 5 gares.
+      once('general', t > 16 && s.index % 5 === 0, () => say(generalMessage(Math.floor(s.index / 5))));
       if (t >= CONFIG.cruiseTime) enterPhase('brake');
       break;
     }
@@ -107,9 +114,11 @@ export function updateCycle(dt: number): void {
         audio.doorOpenChime();
       });
       once('exchange', t > 1.6, () => exchangePassengers(s.doorSide));
-      once('melody', t >= CONFIG.dwellTime - 4, () => audio.departureMelody(s.index));
-      once('announce-close', t >= CONFIG.dwellTime - 2.6, () => say(doorsClosingAnnouncement()));
-      once('doors-close', t >= CONFIG.dwellTime - 1.2, () => {
+      // Séquence de départ fidèle : la mélodie (発車メロディ) démarre portes ouvertes
+      // et se termine AVANT l'annonce de fermeture ; puis carillon, puis fermeture.
+      once('melody', t >= CONFIG.dwellTime - 13, () => audio.departureMelody(s.index));
+      once('announce-close', t >= CONFIG.dwellTime - 3.5, () => say(doorsClosingAnnouncement()));
+      once('doors-close', t >= CONFIG.dwellTime - 1.5, () => {
         runtime.doorTarget = 0;
         audio.doorCloseChime();
       });
