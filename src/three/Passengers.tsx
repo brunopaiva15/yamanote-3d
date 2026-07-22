@@ -20,12 +20,15 @@ const HIP_Y = 0.5;
 const SHOULDER_Y = 1.06;
 const HEAD_Y = 1.34;
 
-// Assise : au lieu d'enfoncer tout le corps (le bassin passait SOUS le coussin
-// à ~0,45 m), on garde le bassin posé sur le coussin et on abaisse le buste par
-// compression verticale, pivot au bassin (PELVIS_Y). Le haut du corps (torse,
-// bras, sacs, tête) vit dans un groupe « upper » qu'on écrase en Y quand assis.
+// Assise : le groupe entier est mis à l'échelle par la taille du PNJ, mais le
+// coussin est à une hauteur ABSOLUE. La pose assise est donc calée en unités
+// monde via 1/scale : le pivot du buste (groupe « upper ») descend exactement
+// sur le haut du coussin, le buste est légèrement compressé en Y (SEATED_SQUASH),
+// et les jambes assises sont construites par gabarit (cuisses sur le coussin,
+// semelles au sol) quel que soit le gabarit — ni enfoncé, ni en lévitation.
 const PELVIS_Y = 0.46;
-const SEATED_SQUASH = 0.8; // tête ~1,16 assis (≈ hauteur d'assise réelle)
+const SEAT_TOP_Y = 0.45; // haut utile du coussin (monde) : boîte 0,4+0,055, arrondi déduit
+const SEATED_SQUASH = 0.8; // tête assise ≈ 0,45 + 0,70 × scale (~1,15-1,30 m)
 
 interface Part {
   geo: THREE.BufferGeometry;
@@ -44,6 +47,7 @@ interface CharSpec {
   armMat: THREE.Material; // manche (ou peau si t-shirt)
   skinMat: THREE.Material;
   armX: number; // demi-écart des épaules
+  seatedUpperY: number; // pivot du buste quand assis (bassin sur le coussin)
   upperArmGeo: THREE.BufferGeometry; // gabarit de bras (M/F)
   foreArmGeo: THREE.BufferGeometry;
   handGeo: THREE.BufferGeometry;
@@ -183,24 +187,32 @@ function buildChar(app: Appearance, id: number): CharSpec {
     }
   }
 
-  // --- Bas du corps ASSIS : cuisses en avant (+z local, vers l'allée) sur le
-  // coussin (~0,47) puis tibias verticaux jusqu'au sol (y=0). Pas d'enfoncement :
-  // le bassin repose sur le coussin. ---
+  // --- Bas du corps ASSIS : cuisses en avant (+z local, vers l'allée) POSÉES
+  // sur le coussin, tibias verticaux, semelles au sol. Le groupe étant mis à
+  // l'échelle par la taille, les hauteurs absolues (coussin, sol) sont
+  // converties en unités locales via 1/scale : la pose reste juste pour un
+  // petit gabarit comme pour un grand. ---
   {
+    const inv = 1 / b.scale;
+    const cushY = SEAT_TOP_Y * inv; // haut du coussin en unités locales
+    const thighY = cushY + b.legR; // cuisse posée dessus
+    const shoeY = 0.026 * inv; // semelle au sol
+    const kneeZ = 0.34;
+    const shinLen = Math.max(0.24, thighY - shoeY);
     const thighMat = bare ? skinMat : bottomMat;
     const shinMat = bare || app.bottom.type === 'shorts' ? skinMat : bottomMat;
     const thighGeo = new THREE.CylinderGeometry(b.legR + 0.005, b.legR, 0.34, 8);
     const shinGeo = app.feminine
-      ? new THREE.CylinderGeometry(0.039, 0.034, 0.44, 8)
-      : new THREE.CylinderGeometry(0.045, 0.04, 0.44, 8);
+      ? new THREE.CylinderGeometry(0.039, 0.034, shinLen, 8)
+      : new THREE.CylinderGeometry(0.045, 0.04, shinLen, 8);
     for (const s of [-1, 1]) {
-      seated.push({ geo: thighGeo, mat: thighMat, position: [s * legX, 0.47, 0.17], rotation: [Math.PI / 2, 0, 0] });
-      seated.push({ geo: shinGeo, mat: shinMat, position: [s * legX, 0.26, 0.34] });
-      seated.push({ geo: shoeGeo, mat: shoeMat, position: [s * legX, 0.04, 0.37] });
+      seated.push({ geo: thighGeo, mat: thighMat, position: [s * legX, thighY, 0.17], rotation: [Math.PI / 2, 0, 0] });
+      seated.push({ geo: shinGeo, mat: shinMat, position: [s * legX, shoeY + shinLen / 2, kneeZ] });
+      seated.push({ geo: shoeGeo, mat: shoeMat, position: [s * legX, shoeY, kneeZ + 0.03] });
     }
     if (bare) {
       // Jupe / robe qui drape sur les genoux.
-      seated.push({ geo: new RoundedBoxGeometry(2 * b.hipR + 0.06, 0.1, 0.4, 3, 0.04), mat: bottomMat, position: [0, 0.49, 0.16] });
+      seated.push({ geo: new RoundedBoxGeometry(2 * b.hipR + 0.06, 0.1, 0.4, 3, 0.04), mat: bottomMat, position: [0, thighY + 0.02, 0.16] });
     }
   }
 
@@ -304,6 +316,7 @@ function buildChar(app: Appearance, id: number): CharSpec {
     armMat,
     skinMat,
     armX,
+    seatedUpperY: SEAT_TOP_Y / b.scale,
     upperArmGeo: app.feminine ? upperArmGeoF : upperArmGeoM,
     foreArmGeo: app.feminine ? foreArmGeoF : foreArmGeoM,
     handGeo: app.feminine ? handGeoF : handGeoM,
@@ -415,11 +428,13 @@ export function Passengers() {
       r.group.scale.setScalar(p.height);
       if (r.lower) r.lower.visible = !seated;
       if (r.seated) r.seated.visible = seated;
-      // Assise : buste compressé (pivot bassin) pour abaisser la tête sans
-      // enfoncer le bassin dans le coussin.
+      // Assise : le pivot du buste descend sur le haut du coussin (compensé
+      // par 1/scale) et le buste est compressé — bassin posé, jamais enfoncé.
       if (r.upper) {
         const target = seated ? SEATED_SQUASH : 1;
         r.upper.scale.y += (target - r.upper.scale.y) * k;
+        const targetY = seated ? perPax[i].seatedUpperY : PELVIS_Y;
+        r.upper.position.y += (targetY - r.upper.position.y) * k;
       }
       if (r.head) r.head.rotation.set(p.headPitch, p.headYaw, 0);
 
