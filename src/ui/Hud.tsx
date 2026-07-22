@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useStore, type Phase } from '../store';
 import { STATIONS } from '../data/stations';
+import { VOCAB } from '../systems/vocab';
 import { runtime } from '../systems/runtime';
 import { fastForward } from '../systems/stationCycle';
 import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
@@ -38,6 +39,7 @@ export function Hud() {
   const muted = useStore((s) => s.muted);
   const volume = useStore((s) => s.volume);
   const seated = useStore((s) => s.seated);
+  const vocab = useStore((s) => s.vocab);
   const toggleMute = useStore((s) => s.toggleMute);
   const setVolume = useStore((s) => s.setVolume);
   const clock = useClock();
@@ -70,6 +72,17 @@ export function Hud() {
       </div>
 
       <div className="hud-reticle" aria-hidden="true" />
+
+      {/* Fiche de vocabulaire, clin d'œil à Shashingo */}
+      {vocab && VOCAB[vocab] && (
+        <div className="vocab-card" key={vocab}>
+          <span className="vocab-jp">{VOCAB[vocab].jp}</span>
+          <span className="vocab-reading">
+            {VOCAB[vocab].kana} · {VOCAB[vocab].romaji}
+          </span>
+          <span className="vocab-fr">{VOCAB[vocab].fr}</span>
+        </div>
+      )}
 
       <div className="hud-bottom">
         <button className="hud-button" onClick={toggleMute} title="Couper ou rétablir le son (M)">

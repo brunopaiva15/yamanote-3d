@@ -218,6 +218,57 @@ body,
   pointer-events: none;
 }
 
+/* --- Fiche de vocabulaire (esprit Shashingo) --- */
+
+.vocab-card {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 18;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #fdfbf4;
+  color: #2c2a26;
+  border-radius: 12px;
+  padding: 12px 18px 10px;
+  border: 1px solid rgba(60, 56, 48, 0.14);
+  border-top: 5px solid var(--green);
+  box-shadow: 0 6px 18px rgba(20, 24, 30, 0.28);
+  transform: rotate(-1.6deg);
+  animation: vocab-in 0.22s ease-out;
+}
+
+@keyframes vocab-in {
+  from {
+    opacity: 0;
+    transform: rotate(-1.6deg) translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: rotate(-1.6deg) translateY(0);
+  }
+}
+
+.vocab-jp {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.vocab-reading {
+  font-size: 13px;
+  color: #6d675c;
+}
+
+.vocab-fr {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3e7a1e;
+}
+
 /* --- Barre du bas --- */
 
 .hud-bottom {

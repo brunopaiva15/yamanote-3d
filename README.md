@@ -25,6 +25,12 @@ npm run lint     # oxlint
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder, bouton s'asseoir
 - Avance rapide (HUD) : saute à la séquence d'arrivée de la station suivante
 
+## Vocabulaire (esprit Shashingo)
+
+Regarder un objet du wagon (porte, tsurikawa, siège, fenêtre, porte-bagages,
+écran, affiche…) affiche une petite fiche : mot en japonais, lecture kana,
+romaji et traduction française. Neuf mots du quotidien ferroviaire.
+
 ## Déploiement (GitHub Pages)
 
 Le dépôt contient un workflow GitHub Actions (`.github/workflows/deploy.yml`)

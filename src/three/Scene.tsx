@@ -95,8 +95,8 @@ export function Scene() {
       <EffectComposer>
         <Bloom intensity={CONFIG.bloom} luminanceThreshold={0.9} luminanceSmoothing={0.2} mipmapBlur />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-        <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.14} />
-        <Vignette eskil={false} offset={0.3} darkness={0.62} />
+        <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.08} />
+        <Vignette eskil={false} offset={0.3} darkness={0.5} />
       </EffectComposer>
     </>
   );

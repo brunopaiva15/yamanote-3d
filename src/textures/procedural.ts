@@ -406,18 +406,20 @@ export function makeSkyTexture(): THREE.CanvasTexture {
 const SIGN_WORDS = ['寿司', '居酒屋', 'カラオケ', '薬局', '書店', 'ラーメン', '喫茶', 'ホテル', '不動産', '歯科'];
 const ROOF_WORDS = ['未来生活', '東京時間', '光る夜', '毎日新鮮', 'ネオン堂'];
 
+// Façades pastel accueillantes (esprit Shashingo), devantures colorées au
+// rez-de-chaussée, enseignes rondes et verticales.
+const FACADES = ['#e6dcc9', '#e4cfc5', '#dde4d2', '#e0d7e4', '#e8e1cf', '#d6dfe3', '#e7d6c2'];
+const SHOP_COLORS = ['#e2705c', '#5c9fe2', '#e2b45c', '#63c28a', '#c97fb8', '#e28a5c'];
+
 export function makeCityTexture(layer: 0 | 1 | 2): THREE.CanvasTexture {
   const W = 2048;
   const H = 512;
   const { c, g } = makeCanvas(W, H);
   const r = rng(101 + layer * 57);
-  // Bases : proches sombres et froides, lointaines fondues dans la brume chaude.
-  const base: [number, number, number] =
-    layer === 0 ? [62, 62, 76] : layer === 1 ? [104, 96, 112] : [150, 132, 138];
-  const vary = layer === 0 ? 22 : 16;
   // Voie surélevée : premier plan bas, ciel du soir bien visible.
   const maxH = layer === 0 ? 0.5 : layer === 1 ? 0.5 : 0.45;
   const gapChance = layer === 0 ? 0.35 : layer === 1 ? 0.26 : 0;
+  const fade = layer === 0 ? 1 : layer === 1 ? 0.75 : 0.5; // contraste des détails
   let x = 0;
   while (x < W) {
     const bw = 60 + r() * (layer === 0 ? 130 : 90);
@@ -427,52 +429,78 @@ export function makeCityTexture(layer: 0 | 1 | 2): THREE.CanvasTexture {
       continue;
     }
     const bh = H * (0.2 + r() * maxH * 0.72);
-    const v = Math.floor(r() * vary);
-    g.fillStyle = `rgb(${base[0] + v},${base[1] + v},${base[2] + v})`;
+    // Façade pastel, éclaircie sur les couches lointaines (brume).
+    const base = FACADES[Math.floor(r() * FACADES.length)];
+    g.fillStyle = base;
+    g.globalAlpha = 1;
     g.fillRect(x, H - bh, bw, bh);
-    // Liseré chaud côté soleil (rim light), très discret.
-    if (layer < 2) {
-      g.fillStyle = 'rgba(255,190,130,0.1)';
-      g.fillRect(x, H - bh, bw, 2);
-      g.fillRect(x + bw - 2, H - bh, 2, bh * 0.5);
+    if (layer > 0) {
+      g.fillStyle = `rgba(226,206,196,${layer === 1 ? 0.35 : 0.6})`;
+      g.fillRect(x, H - bh, bw, bh);
     }
-    // Toit : panneau publicitaire ou enseigne néon.
-    if (layer < 2 && r() > 0.6) {
+    // Toit : enseigne posée, couleurs franches et douces.
+    if (layer < 2 && r() > 0.62) {
       const pw = bw * (0.4 + r() * 0.4);
-      g.fillStyle = '#2c2f38';
-      g.fillRect(x + bw * 0.2, H - bh - 26, pw, 22);
-      g.fillStyle = r() > 0.5 ? '#ffb35a' : '#7fe0d0';
+      g.fillStyle = '#faf6ec';
+      g.beginPath();
+      g.roundRect(x + bw * 0.2, H - bh - 26, pw, 22, 6);
+      g.fill();
+      g.fillStyle = SHOP_COLORS[Math.floor(r() * SHOP_COLORS.length)];
       g.font = `bold 15px ${JP_FONT}`;
-      g.fillText(ROOF_WORDS[Math.floor(r() * ROOF_WORDS.length)], x + bw * 0.2 + 5, H - bh - 9);
+      g.fillText(ROOF_WORDS[Math.floor(r() * ROOF_WORDS.length)], x + bw * 0.2 + 8, H - bh - 9);
     }
-    // Fenêtres : beaucoup s'allument à cette heure.
+    // Fenêtres : cadres doux, quelques-unes chaudement allumées.
     if (layer < 2) {
-      const cols = Math.floor(bw / 14);
-      const rows = Math.floor(bh / 18);
+      const cols = Math.floor(bw / 16);
+      const rows = Math.max(0, Math.floor((bh - 66) / 20));
       for (let i = 0; i < cols; i++) {
         for (let j = 0; j < rows; j++) {
-          if (r() > 0.7) {
-            const warm = 195 + Math.floor(r() * 55);
-            g.fillStyle = `rgba(255,${warm},${120 + Math.floor(r() * 60)},${0.6 + r() * 0.4})`;
+          if (r() > 0.72) {
+            g.fillStyle = `rgba(255,${208 + Math.floor(r() * 40)},150,${(0.55 + r() * 0.35) * fade})`;
           } else {
-            g.fillStyle = 'rgba(28,30,40,0.6)';
+            g.fillStyle = `rgba(90,98,116,${0.4 * fade})`;
           }
-          g.fillRect(x + 4 + i * 14, H - bh + 6 + j * 18, 8, 10);
+          g.beginPath();
+          g.roundRect(x + 6 + i * 16, H - bh + 8 + j * 20, 9, 12, 2);
+          g.fill();
         }
       }
+      // Devanture colorée au rez-de-chaussée : store, bandeau, enseigne ronde.
+      const shop = SHOP_COLORS[Math.floor(r() * SHOP_COLORS.length)];
+      g.fillStyle = shop;
+      g.globalAlpha = 0.9 * fade;
+      g.fillRect(x + 2, H - 58, bw - 4, 20);
+      g.globalAlpha = 1;
+      g.fillStyle = '#fdf9f0';
+      g.font = `bold 13px ${JP_FONT}`;
+      g.fillText(SIGN_WORDS[Math.floor(r() * SIGN_WORDS.length)], x + 10, H - 43);
+      // Auvent rayé une fois sur deux.
+      if (r() > 0.5) {
+        for (let sx2 = x + 4; sx2 < x + bw - 10; sx2 += 12) {
+          g.fillStyle = (sx2 / 12) % 2 < 1 ? '#f6f1e6' : shop;
+          g.globalAlpha = 0.85 * fade;
+          g.fillRect(sx2, H - 36, 12, 10);
+        }
+        g.globalAlpha = 1;
+      }
+      // Vitrine chaude.
+      g.fillStyle = `rgba(255,214,150,${0.5 * fade})`;
+      g.fillRect(x + 8, H - 26, bw - 16, 22);
     }
-    // Enseigne verticale japonaise.
+    // Enseigne verticale japonaise, pastel et propre.
     if (layer === 0 && r() > 0.55) {
-      const sx = x + bw - 16;
-      const sh = 90 + r() * 90;
-      const sy = H - bh + 10 + r() * 40;
-      g.fillStyle = ['#e0584a', '#4a7ce0', '#e0b44a', '#4ae08c'][Math.floor(r() * 4)];
-      g.fillRect(sx, sy, 14, sh);
-      g.fillStyle = '#fff6e6';
+      const sx = x + bw - 18;
+      const sh = 80 + r() * 80;
+      const sy = H - bh + 14 + r() * 30;
+      g.fillStyle = SHOP_COLORS[Math.floor(r() * SHOP_COLORS.length)];
+      g.beginPath();
+      g.roundRect(sx, sy, 16, sh, 5);
+      g.fill();
+      g.fillStyle = '#fdf9f0';
       g.font = `bold 11px ${JP_FONT}`;
       const word = SIGN_WORDS[Math.floor(r() * SIGN_WORDS.length)];
       for (let k = 0; k < word.length && k * 13 < sh - 12; k++) {
-        g.fillText(word[k], sx + 2, sy + 13 + k * 13);
+        g.fillText(word[k], sx + 3, sy + 14 + k * 13);
       }
     }
     x += bw + (layer === 0 ? r() * 26 : r() * 10);
@@ -512,7 +540,88 @@ const AD_PALETTES: [string, string, string][] = [
   ['#f4efdd', '#3e9c60', '#2c332a'],
   ['#efe6ee', '#8d4e9c', '#302636'],
   ['#f5ead8', '#d98a2b', '#33291c'],
+  ['#fdf3e3', '#e2705c', '#4a3f38'],
+  ['#eaf4ec', '#63c28a', '#37463c'],
+  ['#f3ecf6', '#c97fb8', '#453a4a'],
 ];
+
+// Mascottes plates façon irasutoya : formes rondes, visages simples.
+function drawMascot(g: CanvasRenderingContext2D, kind: number, cx: number, cy: number, s: number): void {
+  const face = () => {
+    g.fillStyle = '#3a3430';
+    g.beginPath();
+    g.arc(cx - s * 0.18, cy, s * 0.05, 0, Math.PI * 2);
+    g.arc(cx + s * 0.18, cy, s * 0.05, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = '#3a3430';
+    g.lineWidth = s * 0.04;
+    g.beginPath();
+    g.arc(cx, cy + s * 0.1, s * 0.12, 0.2 * Math.PI, 0.8 * Math.PI);
+    g.stroke();
+    // Joues roses.
+    g.fillStyle = 'rgba(238,150,140,0.55)';
+    g.beginPath();
+    g.arc(cx - s * 0.32, cy + s * 0.12, s * 0.08, 0, Math.PI * 2);
+    g.arc(cx + s * 0.32, cy + s * 0.12, s * 0.08, 0, Math.PI * 2);
+    g.fill();
+  };
+  if (kind === 0) {
+    // Onigiri : triangle arrondi blanc + nori.
+    g.fillStyle = '#fcfaf4';
+    g.strokeStyle = '#d9d4c8';
+    g.lineWidth = s * 0.04;
+    g.beginPath();
+    g.moveTo(cx, cy - s * 0.62);
+    g.quadraticCurveTo(cx + s * 0.68, cy - s * 0.55, cx + s * 0.55, cy + s * 0.1);
+    g.quadraticCurveTo(cx + s * 0.45, cy + s * 0.52, cx, cy + s * 0.52);
+    g.quadraticCurveTo(cx - s * 0.45, cy + s * 0.52, cx - s * 0.55, cy + s * 0.1);
+    g.quadraticCurveTo(cx - s * 0.68, cy - s * 0.55, cx, cy - s * 0.62);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    g.fillStyle = '#3d4a3a';
+    g.beginPath();
+    g.roundRect(cx - s * 0.22, cy + s * 0.14, s * 0.44, s * 0.38, s * 0.06);
+    g.fill();
+    face();
+  } else if (kind === 1) {
+    // Chat rond : tête + oreilles + moustaches.
+    g.fillStyle = '#f5e3c8';
+    g.beginPath();
+    g.moveTo(cx - s * 0.5, cy - s * 0.28);
+    g.lineTo(cx - s * 0.34, cy - s * 0.62);
+    g.lineTo(cx - s * 0.14, cy - s * 0.4);
+    g.moveTo(cx + s * 0.5, cy - s * 0.28);
+    g.lineTo(cx + s * 0.34, cy - s * 0.62);
+    g.lineTo(cx + s * 0.14, cy - s * 0.4);
+    g.fill();
+    g.beginPath();
+    g.arc(cx, cy, s * 0.52, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = '#c9b394';
+    g.lineWidth = s * 0.03;
+    g.beginPath();
+    for (const dir of [-1, 1]) {
+      g.moveTo(cx + dir * s * 0.4, cy + s * 0.08);
+      g.lineTo(cx + dir * s * 0.72, cy + s * 0.02);
+      g.moveTo(cx + dir * s * 0.4, cy + s * 0.18);
+      g.lineTo(cx + dir * s * 0.72, cy + s * 0.22);
+    }
+    g.stroke();
+    face();
+  } else {
+    // Daruma rebondi.
+    g.fillStyle = '#dd5a4a';
+    g.beginPath();
+    g.arc(cx, cy, s * 0.56, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#fcf6ea';
+    g.beginPath();
+    g.ellipse(cx, cy + s * 0.06, s * 0.36, s * 0.4, 0, 0, Math.PI * 2);
+    g.fill();
+    face();
+  }
+}
 
 export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasTexture {
   const W = portrait ? 512 : 768;
@@ -522,10 +631,45 @@ export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasText
   const [bg, accent, ink] = AD_PALETTES[Math.floor(r() * AD_PALETTES.length)];
   g.fillStyle = bg;
   g.fillRect(0, 0, W, H);
-  const layout = Math.floor(r() * 3);
+  const layout = Math.floor(r() * 5);
   const word = AD_WORDS[Math.floor(r() * AD_WORDS.length)];
   const sub = AD_SUBS[Math.floor(r() * AD_SUBS.length)];
-  if (layout === 0) {
+  if (layout >= 3) {
+    // Affiche mascotte façon irasutoya : personnage plat + gros titre rond.
+    const kind = Math.floor(r() * 3);
+    if (portrait) {
+      // Pastille de fond douce derrière la mascotte.
+      g.fillStyle = accent;
+      g.globalAlpha = 0.16;
+      g.beginPath();
+      g.arc(W / 2, H * 0.38, W * 0.34, 0, Math.PI * 2);
+      g.fill();
+      g.globalAlpha = 1;
+      drawMascot(g, kind, W / 2, H * 0.38, W * 0.42);
+      g.fillStyle = ink;
+      g.textAlign = 'center';
+      g.font = `bold ${Math.floor(W * 0.14)}px ${JP_FONT}`;
+      g.fillText(word, W / 2, H * 0.78);
+      g.fillStyle = accent;
+      g.font = `bold ${Math.floor(W * 0.06)}px ${JP_FONT}`;
+      g.fillText(sub, W / 2, H * 0.88);
+      g.textAlign = 'left';
+    } else {
+      g.fillStyle = accent;
+      g.globalAlpha = 0.16;
+      g.beginPath();
+      g.arc(W * 0.2, H * 0.5, H * 0.42, 0, Math.PI * 2);
+      g.fill();
+      g.globalAlpha = 1;
+      drawMascot(g, kind, W * 0.2, H * 0.5, H * 0.62);
+      g.fillStyle = ink;
+      g.font = `bold ${Math.floor(H * 0.3)}px ${JP_FONT}`;
+      g.fillText(word, W * 0.4, H * 0.52);
+      g.fillStyle = accent;
+      g.font = `bold ${Math.floor(H * 0.14)}px ${JP_FONT}`;
+      g.fillText(sub, W * 0.4, H * 0.78);
+    }
+  } else if (layout === 0) {
     g.fillStyle = accent;
     g.fillRect(0, 0, W, H * 0.16);
     g.fillStyle = bg;

@@ -125,7 +125,7 @@ export function Scenery() {
       {/* Base urbaine chaude jusqu'aux immeubles, fondue dans la brume */}
       <mesh position={[0, -1.18, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[160, PLANE_LEN]} />
-        <meshBasicMaterial color="#a58a7d" fog />
+        <meshBasicMaterial color="#b59a89" fog />
       </mesh>
     </group>
   );
