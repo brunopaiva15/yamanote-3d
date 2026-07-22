@@ -9,7 +9,9 @@ import { runtime } from '../systems/runtime';
 import { makeAdTexture } from '../textures/procedural';
 
 export function Ads() {
-  const swayGroup = useRef<THREE.Group>(null);
+  // Un pivot par affichette, à son point d'accroche au plafond : chaque
+  // nakazuri se balance sur sa tringle, sans translation parasite.
+  const pivots = useRef<(THREE.Group | null)[]>([]);
 
   const { portraitMats, screenMats, housingMat, bezelMat } = useMemo(() => {
     const portraitMats: THREE.MeshStandardMaterial[] = [];
@@ -26,8 +28,16 @@ export function Ads() {
   }, []);
 
   useFrame(() => {
-    if (!swayGroup.current) return;
-    swayGroup.current.rotation.x = runtime.sway * 0.045 - runtime.accel * 0.03;
+    for (let i = 0; i < pivots.current.length; i++) {
+      const p = pivots.current[i];
+      if (!p) continue;
+      // Balancement avant-arrière autour de la tringle, léger déphasage
+      // par affichette pour casser la synchronisation.
+      p.rotation.x =
+        runtime.sway * 0.05 +
+        Math.sin(runtime.swayTime * 1.35 + i * 1.7) * 0.012 * Math.min(1, runtime.speed) -
+        runtime.accel * 0.035;
+    }
   });
 
   // Nakazuri en quinconce le long de l'allée.
@@ -41,23 +51,28 @@ export function Ads() {
 
   return (
     <group>
-      <group ref={swayGroup}>
-        {nakazuri.map((n, i) => (
-          <group key={`nk${i}`} position={[n.x, 1.86, n.z]}>
-            <mesh position={[0, 0.28, 0]}>
-              <boxGeometry args={[0.015, 0.32, 0.015]} />
-              <meshStandardMaterial color="#9aa0a6" metalness={0.6} roughness={0.4} />
-            </mesh>
-            {/* Recto et verso imprimés : jamais de texte en miroir */}
-            <mesh material={portraitMats[i % portraitMats.length]}>
-              <planeGeometry args={[0.62, 0.5]} />
-            </mesh>
-            <mesh rotation={[0, Math.PI, 0]} material={portraitMats[(i + 3) % portraitMats.length]}>
-              <planeGeometry args={[0.62, 0.5]} />
-            </mesh>
-          </group>
-        ))}
-      </group>
+      {nakazuri.map((n, i) => (
+        <group
+          key={`nk${i}`}
+          position={[n.x, 2.14, n.z]}
+          ref={(g) => {
+            pivots.current[i] = g;
+          }}
+        >
+          {/* Tringle de suspension, du plafond vers l'affiche */}
+          <mesh position={[0, -0.06, 0]}>
+            <boxGeometry args={[0.015, 0.12, 0.015]} />
+            <meshStandardMaterial color="#9aa0a6" metalness={0.6} roughness={0.4} />
+          </mesh>
+          {/* Recto et verso imprimés : jamais de texte en miroir */}
+          <mesh position={[0, -0.37, 0]} material={portraitMats[i % portraitMats.length]}>
+            <planeGeometry args={[0.62, 0.5]} />
+          </mesh>
+          <mesh position={[0, -0.37, 0]} rotation={[0, Math.PI, 0]} material={portraitMats[(i + 3) % portraitMats.length]}>
+            <planeGeometry args={[0.62, 0.5]} />
+          </mesh>
+        </group>
+      ))}
       {/* Écrans publicitaires 窓上 : boîtiers blancs inclinés vers l'allée */}
       {([1, -1] as const).map((s) =>
         madoue.map((z, i) =>
