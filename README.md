@@ -71,9 +71,12 @@ Les valeurs continues (vitesse, distance, ouverture des portes) vivent dans
 Tout est synthétisé (Tone.js) : roulement, onduleur VVVF, joints de rail, frein,
 carillons de porte, jingle d'arrivée et mélodies de départ originales (structure
 fidèle à la réalité : deux mélodies « maison » alternées, quelques gares avec leur
-propre jingle ; aucune mélodie réelle n'est transcrite). Les annonces (次は…,
-まもなく…, fermeture, accueil, places prioritaires) sont dites en japonais puis en
-anglais via `speechSynthesis`, avec les correspondances réelles de chaque gare.
+propre jingle ; aucune mélodie réelle n'est transcrite). La séquence de départ
+respecte l'ordre réel : la 発車メロディ joue portes ouvertes et se termine **avant**
+l'annonce de fermeture, puis viennent le carillon et la fermeture. Les annonces
+(sens de la boucle 内回り avec gares repères, 次は… avec numéro JY, まもなく…,
+fermeture, accueil, messages de courtoisie en rotation) sont dites en japonais puis
+en anglais via `speechSynthesis`, avec les correspondances réelles de chaque gare.
 
 Optionnel : déposez vos propres enregistrements dans `public/audio/`
 (`door-open.mp3`, `door-close.mp3`, `arrival.mp3`, `melody-JY01.mp3`…) ; ils seront
