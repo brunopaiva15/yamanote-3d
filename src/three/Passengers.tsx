@@ -20,12 +20,15 @@ const HIP_Y = 0.5;
 const SHOULDER_Y = 1.06;
 const HEAD_Y = 1.34;
 
-// Assise : au lieu d'enfoncer tout le corps (le bassin passait SOUS le coussin
-// à ~0,45 m), on garde le bassin posé sur le coussin et on abaisse le buste par
-// compression verticale, pivot au bassin (PELVIS_Y). Le haut du corps (torse,
-// bras, sacs, tête) vit dans un groupe « upper » qu'on écrase en Y quand assis.
+// Assise : le groupe entier est mis à l'échelle par la taille du PNJ, mais le
+// coussin est à une hauteur ABSOLUE. La pose assise est donc calée en unités
+// monde via 1/scale : le pivot du buste (groupe « upper ») descend exactement
+// sur le haut du coussin, le buste est légèrement compressé en Y (SEATED_SQUASH),
+// et les jambes assises sont construites par gabarit (cuisses sur le coussin,
+// semelles au sol) quel que soit le gabarit — ni enfoncé, ni en lévitation.
 const PELVIS_Y = 0.46;
-const SEATED_SQUASH = 0.8; // tête ~1,16 assis (≈ hauteur d'assise réelle)
+const SEAT_TOP_Y = 0.45; // haut utile du coussin (monde) : boîte 0,4+0,055, arrondi déduit
+const SEATED_SQUASH = 0.8; // tête assise ≈ 0,45 + 0,70 × scale (~1,15-1,30 m)
 
 interface Part {
   geo: THREE.BufferGeometry;
@@ -44,6 +47,10 @@ interface CharSpec {
   armMat: THREE.Material; // manche (ou peau si t-shirt)
   skinMat: THREE.Material;
   armX: number; // demi-écart des épaules
+  seatedUpperY: number; // pivot du buste quand assis (bassin sur le coussin)
+  upperArmGeo: THREE.BufferGeometry; // gabarit de bras (M/F)
+  foreArmGeo: THREE.BufferGeometry;
+  handGeo: THREE.BufferGeometry;
 }
 
 interface ArmRef {
@@ -60,12 +67,21 @@ interface PaxRefs {
 }
 
 // --- Caches partagés (mutualisés entre tous les PNJ) ---
-const headGeo = new THREE.SphereGeometry(0.105, 16, 14);
+// Tête : sphère écrasée en ellipsoïde (mesh scale HEAD_SCALE) → visage plus
+// fin et crédible qu'une boule. Les calottes de cheveux suivent le même ratio.
+const headGeo = new THREE.SphereGeometry(0.105, 18, 16);
+const HEAD_SCALE: [number, number, number] = [0.88, 1.0, 0.94];
 const faceGeo = new THREE.PlaneGeometry(0.17, 0.17);
-const neckGeo = new THREE.CylinderGeometry(0.05, 0.052, 0.16, 8);
-const upperArmGeo = new THREE.CylinderGeometry(0.045, 0.043, 0.26, 8);
-const foreArmGeo = new THREE.CylinderGeometry(0.042, 0.036, 0.24, 8);
-const handGeo = new THREE.SphereGeometry(0.042, 8, 7);
+const neckGeo = new THREE.CylinderGeometry(0.043, 0.047, 0.15, 10);
+// Membres fins et légèrement fuselés, en deux gabarits (masculin / féminin).
+const upperArmGeoM = new THREE.CylinderGeometry(0.041, 0.038, 0.26, 8);
+const foreArmGeoM = new THREE.CylinderGeometry(0.037, 0.031, 0.24, 8);
+const handGeoM = new THREE.SphereGeometry(0.037, 8, 7);
+const upperArmGeoF = new THREE.CylinderGeometry(0.035, 0.032, 0.26, 8);
+const foreArmGeoF = new THREE.CylinderGeometry(0.031, 0.026, 0.24, 8);
+const handGeoF = new THREE.SphereGeometry(0.033, 8, 7);
+const shoeGeoM = new RoundedBoxGeometry(0.085, 0.05, 0.17, 2, 0.02);
+const shoeGeoF = new RoundedBoxGeometry(0.075, 0.045, 0.15, 2, 0.018);
 // Détails de vêtement (prismes 4 pans → faces plates façon tissu).
 const tieGeo = new THREE.CylinderGeometry(0.02, 0.045, 0.26, 4);
 const knotGeo = new THREE.CylinderGeometry(0.03, 0.024, 0.05, 4);
@@ -103,15 +119,19 @@ function torsoGeometry(app: Appearance): THREE.LatheGeometry {
   const long = app.top.type === 'coat' || app.bottom.type === 'dress';
   const bottomY = long ? 0.34 : 0.46;
   const flare = app.bottom.type === 'dress' ? 0.07 : app.top.type === 'coat' ? 0.02 : 0;
+  // Points intermédiaires : la silhouette est courbe, pas anguleuse.
   const pts = [
     new THREE.Vector2(b.hipR + flare, bottomY),
+    new THREE.Vector2((b.hipR + b.waistR) / 2 + flare * 0.4, (bottomY + HIP_Y + 0.22) / 2),
     new THREE.Vector2(b.waistR, HIP_Y + 0.22),
+    new THREE.Vector2((b.waistR + b.chestR) / 2, 0.84),
     new THREE.Vector2(b.chestR, 0.95),
     new THREE.Vector2(b.shoulderR, SHOULDER_Y),
-    new THREE.Vector2(b.shoulderR * 0.82, SHOULDER_Y + 0.08),
-    new THREE.Vector2(0.052, SHOULDER_Y + 0.16),
+    new THREE.Vector2(b.shoulderR * 0.86, SHOULDER_Y + 0.07),
+    new THREE.Vector2(b.shoulderR * 0.55, SHOULDER_Y + 0.13),
+    new THREE.Vector2(0.048, SHOULDER_Y + 0.16),
   ];
-  return new THREE.LatheGeometry(pts, 18);
+  return new THREE.LatheGeometry(pts, 24);
 }
 
 function buildChar(app: Appearance, id: number): CharSpec {
@@ -137,12 +157,12 @@ function buildChar(app: Appearance, id: number): CharSpec {
   const accessories: Part[] = [];
 
   const legX = 0.062;
-  const shoeGeo = new THREE.BoxGeometry(0.09, 0.05, 0.16);
+  const shoeGeo = app.feminine ? shoeGeoF : shoeGeoM;
   const bare = app.bottom.type === 'skirt' || app.bottom.type === 'dress';
 
   // --- Bas du corps DEBOUT ---
   if (bare) {
-    const legGeo = new THREE.CylinderGeometry(0.045, 0.04, 0.48, 7);
+    const legGeo = new THREE.CylinderGeometry(0.041, 0.035, 0.48, 7);
     for (const s of [-1, 1]) {
       lower.push({ geo: legGeo, mat: skinMat, position: [s * legX, 0.27, 0] });
       lower.push({ geo: shoeGeo, mat: shoeMat, position: [s * legX, 0.03, 0.03] });
@@ -167,22 +187,32 @@ function buildChar(app: Appearance, id: number): CharSpec {
     }
   }
 
-  // --- Bas du corps ASSIS : cuisses en avant (+z local, vers l'allée) sur le
-  // coussin (~0,47) puis tibias verticaux jusqu'au sol (y=0). Pas d'enfoncement :
-  // le bassin repose sur le coussin. ---
+  // --- Bas du corps ASSIS : cuisses en avant (+z local, vers l'allée) POSÉES
+  // sur le coussin, tibias verticaux, semelles au sol. Le groupe étant mis à
+  // l'échelle par la taille, les hauteurs absolues (coussin, sol) sont
+  // converties en unités locales via 1/scale : la pose reste juste pour un
+  // petit gabarit comme pour un grand. ---
   {
+    const inv = 1 / b.scale;
+    const cushY = SEAT_TOP_Y * inv; // haut du coussin en unités locales
+    const thighY = cushY + b.legR; // cuisse posée dessus
+    const shoeY = 0.026 * inv; // semelle au sol
+    const kneeZ = 0.34;
+    const shinLen = Math.max(0.24, thighY - shoeY);
     const thighMat = bare ? skinMat : bottomMat;
     const shinMat = bare || app.bottom.type === 'shorts' ? skinMat : bottomMat;
     const thighGeo = new THREE.CylinderGeometry(b.legR + 0.005, b.legR, 0.34, 8);
-    const shinGeo = new THREE.CylinderGeometry(0.045, 0.04, 0.44, 8);
+    const shinGeo = app.feminine
+      ? new THREE.CylinderGeometry(0.039, 0.034, shinLen, 8)
+      : new THREE.CylinderGeometry(0.045, 0.04, shinLen, 8);
     for (const s of [-1, 1]) {
-      seated.push({ geo: thighGeo, mat: thighMat, position: [s * legX, 0.47, 0.17], rotation: [Math.PI / 2, 0, 0] });
-      seated.push({ geo: shinGeo, mat: shinMat, position: [s * legX, 0.26, 0.34] });
-      seated.push({ geo: shoeGeo, mat: shoeMat, position: [s * legX, 0.04, 0.37] });
+      seated.push({ geo: thighGeo, mat: thighMat, position: [s * legX, thighY, 0.17], rotation: [Math.PI / 2, 0, 0] });
+      seated.push({ geo: shinGeo, mat: shinMat, position: [s * legX, shoeY + shinLen / 2, kneeZ] });
+      seated.push({ geo: shoeGeo, mat: shoeMat, position: [s * legX, shoeY, kneeZ + 0.03] });
     }
     if (bare) {
       // Jupe / robe qui drape sur les genoux.
-      seated.push({ geo: new RoundedBoxGeometry(2 * b.hipR + 0.06, 0.1, 0.4, 3, 0.04), mat: bottomMat, position: [0, 0.49, 0.16] });
+      seated.push({ geo: new RoundedBoxGeometry(2 * b.hipR + 0.06, 0.1, 0.4, 3, 0.04), mat: bottomMat, position: [0, thighY + 0.02, 0.16] });
     }
   }
 
@@ -225,33 +255,37 @@ function buildChar(app: Appearance, id: number): CharSpec {
   }
 
   // --- Tête (dans le groupe articulé, origine à HEAD_Y) ---
-  head.push({ geo: headGeo, mat: skinMat, position: [0, 0, 0] });
+  head.push({ geo: headGeo, mat: skinMat, position: [0, 0, 0], scale: HEAD_SCALE });
 
   const hairMat = cloth(app.hair.color, 0.88);
   const hasHat = app.hat !== 'none';
   if (!hasHat && app.hair.style !== 'bald') {
-    // Calotte légèrement plus grande que la tête et abaissée vers l'avant :
-    // elle forme une vraie ligne de cheveux sur le haut du front (remplace la
-    // frange dessinée). Le buzz reste ras.
+    // Calotte légèrement plus grande que la tête (ellipsoïde, mêmes ratios) et
+    // abaissée vers l'avant : vraie ligne de cheveux sur le haut du front.
     const buzz = app.hair.style === 'buzz';
-    const capScale: [number, number, number] = buzz ? [1.02, 0.72, 0.99] : [1.04, 0.96, 1.03];
+    const capScale: [number, number, number] = buzz ? [0.88, 0.72, 0.93] : [0.85, 0.96, 0.9];
     const capGeo = new THREE.SphereGeometry(buzz ? 0.11 : 0.116, 16, 14);
     head.push({ geo: capGeo, mat: hairMat, position: [0, buzz ? 0.02 : 0.012, -0.006], scale: capScale });
     if (app.hair.style === 'bun') {
-      head.push({ geo: new THREE.SphereGeometry(0.05, 10, 9), mat: hairMat, position: [0, 0.07, -0.11] });
+      head.push({ geo: new THREE.SphereGeometry(0.05, 10, 9), mat: hairMat, position: [0, 0.07, -0.1] });
     } else if (app.hair.style === 'ponytail') {
-      head.push({ geo: new THREE.CylinderGeometry(0.03, 0.02, 0.2, 8), mat: hairMat, position: [0, -0.06, -0.12], rotation: [0.3, 0, 0] });
+      head.push({ geo: new THREE.CylinderGeometry(0.03, 0.02, 0.2, 8), mat: hairMat, position: [0, -0.06, -0.11], rotation: [0.3, 0, 0] });
     } else if (app.hair.style === 'long') {
-      head.push({ geo: new RoundedBoxGeometry(0.2, 0.26, 0.11, 3, 0.05), mat: hairMat, position: [0, -0.11, -0.05] });
+      // Masse arrière + deux mèches qui encadrent le visage.
+      head.push({ geo: new RoundedBoxGeometry(0.19, 0.26, 0.1, 3, 0.045), mat: hairMat, position: [0, -0.11, -0.045] });
+      const lockGeo = new RoundedBoxGeometry(0.045, 0.17, 0.075, 2, 0.02);
+      for (const s of [-1, 1]) {
+        head.push({ geo: lockGeo, mat: hairMat, position: [s * 0.083, -0.045, 0.015] });
+      }
     }
   }
 
   if (app.hat === 'beanie') {
-    head.push({ geo: new THREE.SphereGeometry(0.12, 14, 12), mat: cloth(app.hair.color === '#17151a' ? '#3a5a8a' : app.scarfColor, 0.9), position: [0, 0.055, 0], scale: [1, 0.86, 1] });
+    head.push({ geo: new THREE.SphereGeometry(0.12, 14, 12), mat: cloth(app.hair.color === '#17151a' ? '#3a5a8a' : app.scarfColor, 0.9), position: [0, 0.055, 0], scale: [0.9, 0.86, 0.95] });
   } else if (app.hat === 'cap') {
     const capMat = cloth(app.scarfColor, 0.7);
-    head.push({ geo: new THREE.SphereGeometry(0.118, 14, 12), mat: capMat, position: [0, 0.05, 0], scale: [1, 0.6, 1] });
-    head.push({ geo: new THREE.BoxGeometry(0.16, 0.02, 0.09), mat: capMat, position: [0, 0.03, 0.11] });
+    head.push({ geo: new THREE.SphereGeometry(0.118, 14, 12), mat: capMat, position: [0, 0.05, 0], scale: [0.9, 0.6, 0.95] });
+    head.push({ geo: new THREE.BoxGeometry(0.15, 0.02, 0.09), mat: capMat, position: [0, 0.03, 0.105] });
   }
 
   head.push({
@@ -273,7 +307,20 @@ function buildChar(app: Appearance, id: number): CharSpec {
   }
 
   const armMat = app.top.type === 'tshirt' ? skinMat : topMat;
-  return { lower, seated, torso, head, accessories, armMat, skinMat, armX };
+  return {
+    lower,
+    seated,
+    torso,
+    head,
+    accessories,
+    armMat,
+    skinMat,
+    armX,
+    seatedUpperY: SEAT_TOP_Y / b.scale,
+    upperArmGeo: app.feminine ? upperArmGeoF : upperArmGeoM,
+    foreArmGeo: app.feminine ? foreArmGeoF : foreArmGeoM,
+    handGeo: app.feminine ? handGeoF : handGeoM,
+  };
 }
 
 function Parts({ parts }: { parts: Part[] }) {
@@ -295,23 +342,24 @@ function Arm({ spec, s, armRef }: { spec: CharSpec; s: -1 | 1; armRef: ArmRef })
         armRef.shoulder = g;
       }}
     >
-      <mesh geometry={upperArmGeo} material={spec.armMat} position={[0, -0.13, 0]} />
+      <mesh geometry={spec.upperArmGeo} material={spec.armMat} position={[0, -0.13, 0]} />
       <group
         position={[0, -0.26, 0]}
         ref={(g) => {
           armRef.elbow = g;
         }}
       >
-        <mesh geometry={foreArmGeo} material={spec.armMat} position={[0, -0.12, 0]} />
-        <mesh geometry={handGeo} material={spec.skinMat} position={[0, -0.25, 0]} />
+        <mesh geometry={spec.foreArmGeo} material={spec.armMat} position={[0, -0.12, 0]} />
+        <mesh geometry={spec.handGeo} material={spec.skinMat} position={[0, -0.25, 0]} />
       </group>
     </group>
   );
 }
 
 // Postures : cible (rotX épaule, rotZ épaule, rotX coude) selon état / action.
-// PAS d'allongement de bras (les PNJ sont désormais assez grands et les
-// poignées abaissées : le bras reste de proportions normales).
+// PAS d'allongement de bras : les tailles sont réalistes, l'anneau est à sa
+// hauteur réelle (~1,64 m) et le coude se plie en fonction de la taille du PNJ
+// (les petits gabarits ne s'accrochent pas du tout, voir systems/passengers).
 function armTarget(
   p: (typeof paxList)[number],
   s: -1 | 1,
@@ -323,8 +371,11 @@ function armTarget(
   }
   if (p.state === 'standing' && p.holdStrap && s === strapSide) {
     // Bras levé vers l'anneau situé pile au-dessus (le PNJ est en x = ±0,45,
-    // comme les rangées de poignées), légèrement fléchi au coude (naturel).
-    return [0, Math.PI + s * 0.26, -0.28];
+    // comme les rangées de poignées). Un grand plie nettement le coude, un
+    // petit tend presque le bras : la main finit à hauteur d'anneau.
+    const excess = 1.57 * p.height - 1.56; // dépassement de la portée (m)
+    const bend = Math.acos(THREE.MathUtils.clamp(1 - Math.max(0, excess) / 0.5, 0.55, 1));
+    return [0, Math.PI + s * 0.26, -Math.max(0.1, bend)];
   }
   if (seated) {
     return [-0.5, s * 0.06, -0.9]; // avant-bras sur les cuisses
@@ -377,11 +428,13 @@ export function Passengers() {
       r.group.scale.setScalar(p.height);
       if (r.lower) r.lower.visible = !seated;
       if (r.seated) r.seated.visible = seated;
-      // Assise : buste compressé (pivot bassin) pour abaisser la tête sans
-      // enfoncer le bassin dans le coussin.
+      // Assise : le pivot du buste descend sur le haut du coussin (compensé
+      // par 1/scale) et le buste est compressé — bassin posé, jamais enfoncé.
       if (r.upper) {
         const target = seated ? SEATED_SQUASH : 1;
         r.upper.scale.y += (target - r.upper.scale.y) * k;
+        const targetY = seated ? perPax[i].seatedUpperY : PELVIS_Y;
+        r.upper.position.y += (targetY - r.upper.position.y) * k;
       }
       if (r.head) r.head.rotation.set(p.headPitch, p.headYaw, 0);
 

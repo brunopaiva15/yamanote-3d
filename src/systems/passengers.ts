@@ -54,6 +54,14 @@ export interface Pax {
 export const POOL_SIZE = 18;
 export const paxList: Pax[] = [];
 
+// L'anneau des tsurikawa est à ~1,64 m : en dessous de cette échelle (≈1,47 m
+// bras levé), un PNJ ne l'atteint pas naturellement et garde les bras baissés.
+const STRAP_MIN_SCALE = 1.02;
+
+function rollStrap(scale: number): boolean {
+  return scale >= STRAP_MIN_SCALE && Math.random() < 0.6;
+}
+
 function makePax(id: number): Pax {
   const appearance = makeAppearance(id);
   return {
@@ -82,7 +90,7 @@ function makePax(id: number): Pax {
     lookYawTarget: 0,
     bodyLean: 0,
     decideT: 8 + Math.random() * 20,
-    holdStrap: Math.random() < 0.6,
+    holdStrap: rollStrap(appearance.build.scale),
     pockets: appearance.bottom.type === 'trousers' && Math.random() < 0.4,
   };
 }
@@ -130,7 +138,7 @@ function sitPax(p: Pax, slot: number): void {
 
 function standPax(p: Pax, slot: number): void {
   p.state = 'standing';
-  p.holdStrap = Math.random() < 0.6;
+  p.holdStrap = rollStrap(p.height);
   p.standSlot = slot;
   standOccupant[slot] = p.id;
   const s = STAND_SLOTS[slot];
@@ -358,7 +366,7 @@ export function updatePassengers(dt: number): void {
             p.yaw = p.targetYaw;
           } else if (p.afterWalk === 'standing' && p.standSlot >= 0) {
             p.state = 'standing';
-            p.holdStrap = Math.random() < 0.6;
+            p.holdStrap = rollStrap(p.height);
             p.targetYaw = Math.random() > 0.5 ? 0 : Math.PI;
           } else {
             p.state = 'hidden';

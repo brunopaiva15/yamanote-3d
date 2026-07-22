@@ -9,9 +9,10 @@ import { Instances, Instance } from '@react-three/drei';
 import { runtime } from '../systems/runtime';
 
 const RAIL_Y = 2.06;
-// Sangles un peu plus longues : anneau à ~1,72 m (au lieu de 1,82) pour que les
-// passagers l'atteignent d'un bras naturel, sans étirement.
-const STRAP_LEN = 0.24;
+// Sangles longues : anneau à ~1,64 m, la hauteur réelle des tsurikawa E235.
+// Les PNJ ont des tailles japonaises réalistes ; ceux qui sont trop petits ne
+// s'accrochent simplement pas (voir systems/passengers).
+const STRAP_LEN = 0.32;
 const RING_Y = -STRAP_LEN - 0.1;
 const PRIORITY_Z = 8.1; // au-delà : zone prioritaire
 
