@@ -15,12 +15,17 @@ import type { Appearance } from '../systems/appearance';
 import { runtime } from '../systems/runtime';
 import { makeFaceTexture, makeGarmentDecal, makeStripeTexture, makePlaidTexture } from '../textures/procedural';
 
-const SEATED_DROP = 0.3;
-
 // Repères verticaux locaux (pieds à y=0), calés sur l'ancienne silhouette.
 const HIP_Y = 0.5;
 const SHOULDER_Y = 1.06;
 const HEAD_Y = 1.34;
+
+// Assise : au lieu d'enfoncer tout le corps (le bassin passait SOUS le coussin
+// à ~0,45 m), on garde le bassin posé sur le coussin et on abaisse le buste par
+// compression verticale, pivot au bassin (PELVIS_Y). Le haut du corps (torse,
+// bras, sacs, tête) vit dans un groupe « upper » qu'on écrase en Y quand assis.
+const PELVIS_Y = 0.46;
+const SEATED_SQUASH = 0.8; // tête ~1,16 assis (≈ hauteur d'assise réelle)
 
 interface Part {
   geo: THREE.BufferGeometry;
@@ -47,6 +52,7 @@ interface ArmRef {
 }
 interface PaxRefs {
   group: THREE.Group | null;
+  upper: THREE.Group | null; // buste (compressé en Y quand assis)
   lower: THREE.Group | null;
   seated: THREE.Group | null;
   head: THREE.Group | null;
@@ -153,22 +159,22 @@ function buildChar(app: Appearance, id: number): CharSpec {
     }
   }
 
-  // --- Bas du corps ASSIS : cuisses en avant (+z local, vers l'allée) puis
-  // tibias verticaux jusqu'au sol. Le groupe descend de SEATED_DROP, donc le
-  // sol est à y_local = SEATED_DROP. ---
+  // --- Bas du corps ASSIS : cuisses en avant (+z local, vers l'allée) sur le
+  // coussin (~0,47) puis tibias verticaux jusqu'au sol (y=0). Pas d'enfoncement :
+  // le bassin repose sur le coussin. ---
   {
     const thighMat = bare ? skinMat : bottomMat;
     const shinMat = bare || app.bottom.type === 'shorts' ? skinMat : bottomMat;
     const thighGeo = new THREE.CylinderGeometry(b.legR + 0.005, b.legR, 0.34, 8);
-    const shinGeo = new THREE.CylinderGeometry(0.045, 0.04, 0.42, 8);
+    const shinGeo = new THREE.CylinderGeometry(0.045, 0.04, 0.44, 8);
     for (const s of [-1, 1]) {
-      seated.push({ geo: thighGeo, mat: thighMat, position: [s * legX, 0.7, 0.17], rotation: [Math.PI / 2, 0, 0] });
-      seated.push({ geo: shinGeo, mat: shinMat, position: [s * legX, 0.5, 0.33] });
-      seated.push({ geo: shoeGeo, mat: shoeMat, position: [s * legX, 0.31, 0.4] });
+      seated.push({ geo: thighGeo, mat: thighMat, position: [s * legX, 0.47, 0.17], rotation: [Math.PI / 2, 0, 0] });
+      seated.push({ geo: shinGeo, mat: shinMat, position: [s * legX, 0.26, 0.34] });
+      seated.push({ geo: shoeGeo, mat: shoeMat, position: [s * legX, 0.04, 0.37] });
     }
     if (bare) {
       // Jupe / robe qui drape sur les genoux.
-      seated.push({ geo: new RoundedBoxGeometry(2 * b.hipR + 0.06, 0.1, 0.4, 3, 0.04), mat: bottomMat, position: [0, 0.72, 0.16] });
+      seated.push({ geo: new RoundedBoxGeometry(2 * b.hipR + 0.06, 0.1, 0.4, 3, 0.04), mat: bottomMat, position: [0, 0.49, 0.16] });
     }
   }
 
@@ -299,6 +305,7 @@ export function Passengers() {
   const refs = useRef<PaxRefs[]>(
     Array.from({ length: POOL_SIZE }, () => ({
       group: null,
+      upper: null,
       lower: null,
       seated: null,
       head: null,
@@ -328,13 +335,19 @@ export function Passengers() {
       const seatedSway = seated ? runtime.sway * 0.012 : 0;
       r.group.position.set(
         p.pos.x + (p.state === 'standing' ? runtime.sway * 0.02 : 0),
-        p.pos.y + p.bob - (seated ? SEATED_DROP : 0),
+        p.pos.y + p.bob,
         p.pos.z,
       );
       r.group.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway);
       r.group.scale.setScalar(p.height);
       if (r.lower) r.lower.visible = !seated;
       if (r.seated) r.seated.visible = seated;
+      // Assise : buste compressé (pivot bassin) pour abaisser la tête sans
+      // enfoncer le bassin dans le coussin.
+      if (r.upper) {
+        const target = seated ? SEATED_SQUASH : 1;
+        r.upper.scale.y += (target - r.upper.scale.y) * k;
+      }
       if (r.head) r.head.rotation.set(p.headPitch, p.headYaw, 0);
 
       // Bras : lissage vers la posture cible.
@@ -379,21 +392,32 @@ export function Passengers() {
           >
             <Parts parts={perPax[i].seated} />
           </group>
-          {/* Torse, cou, écharpe, détail de vêtement */}
-          <Parts parts={perPax[i].torso} />
-          {/* Bras articulés */}
-          <Arm spec={perPax[i]} s={-1} armRef={refs.current[i].arms[0]} />
-          <Arm spec={perPax[i]} s={1} armRef={refs.current[i].arms[1]} />
-          {/* Sacs */}
-          <Parts parts={perPax[i].accessories} />
-          {/* Tête articulée (regards, hochements, éternuements) */}
+          {/* Buste : compressé en Y quand assis (pivot au bassin). Le groupe
+              interne annule le décalage pour garder les coordonnées absolues. */}
           <group
-            position={[0, HEAD_Y, 0]}
+            position={[0, PELVIS_Y, 0]}
             ref={(g) => {
-              refs.current[i].head = g;
+              refs.current[i].upper = g;
             }}
           >
-            <Parts parts={perPax[i].head} />
+            <group position={[0, -PELVIS_Y, 0]}>
+              {/* Torse, cou, écharpe, détail de vêtement */}
+              <Parts parts={perPax[i].torso} />
+              {/* Bras articulés */}
+              <Arm spec={perPax[i]} s={-1} armRef={refs.current[i].arms[0]} />
+              <Arm spec={perPax[i]} s={1} armRef={refs.current[i].arms[1]} />
+              {/* Sacs */}
+              <Parts parts={perPax[i].accessories} />
+              {/* Tête articulée (regards, hochements, éternuements) */}
+              <group
+                position={[0, HEAD_Y, 0]}
+                ref={(g) => {
+                  refs.current[i].head = g;
+                }}
+              >
+                <Parts parts={perPax[i].head} />
+              </group>
+            </group>
           </group>
         </group>
       ))}
