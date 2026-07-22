@@ -57,16 +57,19 @@ export function Scenery() {
     }
     const groundTex = makeGroundTexture();
     groundTex.repeat.set(2, 24);
-    const gm = new THREE.MeshBasicMaterial({ map: groundTex, fog: true, color: '#c9a58c' });
+    const gm = new THREE.MeshBasicMaterial({ map: groundTex, fog: true, color: '#d6d4ce' });
     groundMat.current = gm;
     const skyTex = makeSkyTexture();
     return { planes, gm, skyTex };
   }, []);
 
-  // Poteaux caténaires qui défilent : le vrai vendeur de vitesse.
+  // Poteaux caténaires et arbres qui défilent : les vrais vendeurs de vitesse.
   const poles = useRef<(THREE.Group | null)[]>([]);
   const POLE_COUNT = 8;
   const POLE_SPACING = 30;
+  const trees = useRef<(THREE.Group | null)[]>([]);
+  const TREE_COUNT = 12;
+  const TREE_SPACING = 21;
 
   useFrame(() => {
     for (const m of materials.current) {
@@ -81,7 +84,24 @@ export function Scenery() {
       if (!p) continue;
       p.position.z = ((runtime.distance + i * POLE_SPACING) % span) - span / 2;
     }
+    const treeSpan = TREE_COUNT * TREE_SPACING;
+    for (let i = 0; i < TREE_COUNT; i++) {
+      const t = trees.current[i];
+      if (!t) continue;
+      t.position.z = ((runtime.distance * 0.999 + i * TREE_SPACING + 9) % treeSpan) - treeSpan / 2;
+    }
   });
+
+  // Arbres boules (esprit Shashingo) : tronc + deux masses de feuillage.
+  const treeSpecs = useMemo(
+    () =>
+      Array.from({ length: TREE_COUNT }, (_, i) => ({
+        x: (i % 2 === 0 ? 1 : -1) * (7.2 + ((i * 13) % 5) * 0.5),
+        scale: 0.85 + ((i * 29) % 10) / 22,
+        leaf: ['#5fb54a', '#6ec25a', '#54a844'][i % 3],
+      })),
+    [],
+  );
 
   return (
     <group>
@@ -95,6 +115,31 @@ export function Scenery() {
         <mesh key={p.key} position={[p.x, p.y, 0]} rotation={[0, p.rotY, 0]} material={p.mat}>
           <planeGeometry args={[PLANE_LEN, p.height]} />
         </mesh>
+      ))}
+
+      {/* Arbres boules défilants le long de la voie */}
+      {treeSpecs.map((spec, i) => (
+        <group
+          key={`tree${i}`}
+          ref={(g) => {
+            trees.current[i] = g;
+          }}
+          position={[spec.x, -1.1, 0]}
+          scale={spec.scale}
+        >
+          <mesh position={[0, 1.1, 0]}>
+            <cylinderGeometry args={[0.14, 0.2, 2.2, 8]} />
+            <meshStandardMaterial color="#7a5c42" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 2.9, 0]} scale={[1, 0.88, 1]}>
+            <sphereGeometry args={[1.35, 14, 12]} />
+            <meshStandardMaterial color={spec.leaf} roughness={0.85} />
+          </mesh>
+          <mesh position={[0.7, 2.2, 0.3]} scale={[1, 0.8, 1]}>
+            <sphereGeometry args={[0.8, 12, 10]} />
+            <meshStandardMaterial color="#74c85a" roughness={0.85} />
+          </mesh>
+        </group>
       ))}
 
       {/* Portiques caténaires défilants */}
@@ -122,10 +167,10 @@ export function Scenery() {
       <mesh position={[0, -1.15, 0]} rotation={[-Math.PI / 2, 0, 0]} material={built.gm}>
         <planeGeometry args={[9, PLANE_LEN]} />
       </mesh>
-      {/* Base urbaine chaude jusqu'aux immeubles, fondue dans la brume */}
+      {/* Base urbaine claire (béton, trottoirs) jusqu'aux immeubles */}
       <mesh position={[0, -1.18, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[160, PLANE_LEN]} />
-        <meshBasicMaterial color="#b59a89" fog />
+        <meshBasicMaterial color="#c4c6bc" fog />
       </mesh>
     </group>
   );

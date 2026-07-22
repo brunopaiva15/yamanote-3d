@@ -360,40 +360,42 @@ export function makePrioritySignTexture(): THREE.CanvasTexture {
   return toTexture(c);
 }
 
-// --- Ciel de fin d'après-midi : dégradé, nuages étirés, soleil bas ---
+// --- Ciel de plein jour : bleu vif, gros cumulus cartoon (esprit Shashingo) ---
 export function makeSkyTexture(): THREE.CanvasTexture {
   const W = 2048;
   const H = 512;
   const { c, g } = makeCanvas(W, H);
   const r = rng(7);
   const grad = g.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#a487b6');
-  grad.addColorStop(0.38, '#cf9a96');
-  grad.addColorStop(0.66, '#eba76f');
-  grad.addColorStop(0.86, '#ffce8f');
-  grad.addColorStop(1, '#ffdfa8');
+  grad.addColorStop(0, '#3f8edb');
+  grad.addColorStop(0.5, '#74b4e8');
+  grad.addColorStop(0.85, '#c2e2f5');
+  grad.addColorStop(1, '#e2f2fa');
   g.fillStyle = grad;
   g.fillRect(0, 0, W, H);
-  // Soleil bas avec halo.
-  const sunX = 1500;
-  const sunY = H * 0.8;
-  const halo = g.createRadialGradient(sunX, sunY, 6, sunX, sunY, 260);
-  halo.addColorStop(0, 'rgba(255,246,220,0.98)');
-  halo.addColorStop(0.12, 'rgba(255,230,175,0.8)');
-  halo.addColorStop(0.5, 'rgba(255,200,130,0.28)');
-  halo.addColorStop(1, 'rgba(255,190,120,0)');
-  g.fillStyle = halo;
-  g.fillRect(sunX - 280, sunY - 280, 560, 560);
-  // Nuages étirés, semi-transparents.
-  for (let i = 0; i < 46; i++) {
-    const y = H * (0.1 + r() * 0.62);
-    const x = r() * W;
-    const w = 90 + r() * 320;
-    const h = 5 + r() * 16;
-    const warm = y / H;
-    g.fillStyle = `rgba(${240 + Math.floor(warm * 15)},${205 + Math.floor(warm * 30)},${190 + Math.floor(warm * 20)},${0.1 + r() * 0.22})`;
+  // Cumulus rebondis : grappes de disques blancs à base plate.
+  for (let i = 0; i < 9; i++) {
+    const cx = r() * W;
+    const baseY = H * (0.28 + r() * 0.38);
+    const scale = 0.7 + r() * 1.1;
+    const blobs = 4 + Math.floor(r() * 4);
+    // Ombre légère sous le nuage.
+    g.fillStyle = 'rgba(150,190,220,0.35)';
     g.beginPath();
-    g.ellipse(x, y, w, h, 0, 0, Math.PI * 2);
+    g.ellipse(cx, baseY + 8 * scale, 95 * scale, 14 * scale, 0, 0, Math.PI * 2);
+    g.fill();
+    // Volume blanc.
+    g.fillStyle = 'rgba(252,254,255,0.97)';
+    for (let b = 0; b < blobs; b++) {
+      const bx = cx + (b - blobs / 2) * 34 * scale + (r() - 0.5) * 16;
+      const radius = (26 + r() * 26) * scale;
+      g.beginPath();
+      g.arc(bx, baseY - radius * 0.45, radius, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Base plate.
+    g.beginPath();
+    g.ellipse(cx, baseY, 88 * scale, 18 * scale, 0, 0, Math.PI * 2);
     g.fill();
   }
   const t = toTexture(c);
@@ -455,11 +457,11 @@ export function makeCityTexture(layer: 0 | 1 | 2): THREE.CanvasTexture {
       const rows = Math.max(0, Math.floor((bh - 66) / 20));
       for (let i = 0; i < cols; i++) {
         for (let j = 0; j < rows; j++) {
-          if (r() > 0.72) {
-            g.fillStyle = `rgba(255,${208 + Math.floor(r() * 40)},150,${(0.55 + r() * 0.35) * fade})`;
-          } else {
-            g.fillStyle = `rgba(90,98,116,${0.4 * fade})`;
-          }
+          // Plein jour : vitres qui reflètent le ciel, quelques stores clairs.
+          g.fillStyle =
+            r() > 0.8
+              ? `rgba(238,240,236,${0.7 * fade})`
+              : `rgba(136,170,196,${(0.5 + r() * 0.3) * fade})`;
           g.beginPath();
           g.roundRect(x + 6 + i * 16, H - bh + 8 + j * 20, 9, 12, 2);
           g.fill();
@@ -515,15 +517,15 @@ export function makeCityTexture(layer: 0 | 1 | 2): THREE.CanvasTexture {
 export function makeGroundTexture(): THREE.CanvasTexture {
   const { c, g } = makeCanvas(256, 512);
   const r = rng(77);
-  g.fillStyle = '#4c4a4c';
+  g.fillStyle = '#8a888a';
   g.fillRect(0, 0, 256, 512);
   for (let i = 0; i < 2600; i++) {
-    const shade = 58 + Math.floor(r() * 46);
-    g.fillStyle = `rgb(${shade + 8},${shade + 2},${shade})`;
+    const shade = 110 + Math.floor(r() * 60);
+    g.fillStyle = `rgb(${shade + 6},${shade + 2},${shade})`;
     g.fillRect(r() * 256, r() * 512, 2 + r() * 3, 2 + r() * 3);
   }
   for (let y = 8; y < 512; y += 42) {
-    g.fillStyle = '#3a3739';
+    g.fillStyle = '#6e6a68';
     g.fillRect(30, y, 196, 12);
   }
   const t = toTexture(c);

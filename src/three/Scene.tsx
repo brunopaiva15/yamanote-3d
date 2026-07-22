@@ -59,17 +59,17 @@ function ShadowFlags(): null {
 export function Scene() {
   return (
     <>
-      <color attach="background" args={['#e0b494']} />
-      <fog attach="fog" args={['#dcae8f', 18, 88]} />
+      <color attach="background" args={['#bcdaee']} />
+      <fog attach="fog" args={['#d6e8f2', 26, 115]} />
       <EnvironmentMap />
       <ShadowFlags />
 
-      {/* Soleil bas, chaud, qui entre par les fenêtres et projette de
-          vraies ombres (flaques de lumière au sol, poteaux qui défilent). */}
+      {/* Plein jour éclatant (esprit Shashingo) : soleil haut, air limpide,
+          ombres nettes mais douces. */}
       <directionalLight
-        position={[34, 7, -14]}
-        intensity={1.9}
-        color="#ffb37a"
+        position={[26, 30, -16]}
+        intensity={1.7}
+        color="#fff6e4"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -78,14 +78,14 @@ export function Scene() {
         shadow-camera-top={14}
         shadow-camera-bottom={-8}
         shadow-camera-near={5}
-        shadow-camera-far={90}
+        shadow-camera-far={100}
         shadow-bias={-0.0003}
         shadow-normalBias={0.03}
       />
-      <directionalLight position={[-30, 9, 18]} intensity={0.55} color="#e8a98c" />
-      {/* Ciel rosé / sol froid. */}
-      <hemisphereLight args={['#eec5ae', '#5f5a64', 0.56]} />
-      <ambientLight intensity={0.34} color="#e3cabb" />
+      <directionalLight position={[-30, 16, 18]} intensity={0.4} color="#dfeaf2" />
+      {/* Ciel bleu clair / sol neutre. */}
+      <hemisphereLight args={['#cfe6f6', '#8d9088', 0.62]} />
+      <ambientLight intensity={0.4} color="#e9f1f5" />
 
       {/* Intérieur : chapelet de points blanc chaud sous le bandeau plafond. */}
       {LAMP_POSITIONS.map((p, i) => (
@@ -95,8 +95,8 @@ export function Scene() {
       <EffectComposer>
         <Bloom intensity={CONFIG.bloom} luminanceThreshold={0.9} luminanceSmoothing={0.2} mipmapBlur />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-        <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.08} />
-        <Vignette eskil={false} offset={0.3} darkness={0.5} />
+        <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.05} />
+        <Vignette eskil={false} offset={0.32} darkness={0.42} />
       </EffectComposer>
     </>
   );
