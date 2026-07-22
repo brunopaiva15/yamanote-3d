@@ -25,6 +25,18 @@ npm run lint     # oxlint
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder, bouton s'asseoir
 - Avance rapide (HUD) : saute à la séquence d'arrivée de la station suivante
 
+## Déploiement (GitHub Pages)
+
+Le dépôt contient un workflow GitHub Actions (`.github/workflows/deploy.yml`)
+qui lint, build et publie `dist/` sur GitHub Pages à chaque push sur `main`
+(ou manuellement depuis l'onglet Actions via « Run workflow »).
+
+Mise en place, une seule fois : dans le dépôt GitHub, ouvrir
+Settings → Pages, puis choisir « GitHub Actions » comme source.
+Le site sera servi sur `https://<utilisateur>.github.io/yamanote-3d/`
+(le build utilise des chemins relatifs, il fonctionne aussi à la racine
+d'un domaine ou sur tout autre hébergeur statique).
+
 ## Stack
 
 Vite + TypeScript strict, React, React Three Fiber, drei, @react-three/postprocessing,
