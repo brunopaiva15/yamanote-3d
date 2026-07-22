@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { STATIONS } from '../data/stations';
 import { GENERIC, type District, type Feat } from '../data/districts';
+import type { Appearance } from '../systems/appearance';
 
 export const JP_FONT = "'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP',sans-serif";
 
@@ -1009,42 +1010,75 @@ export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasText
   return toTexture(c);
 }
 
-// --- Visages des PNJ : traits dessinés, fond transparent ---
-export interface FaceVariant {
-  texture: THREE.CanvasTexture;
-  hair: string;
-  skin: string;
-}
+// --- Visages des PNJ : traits dessinés sur fond transparent, pilotés par
+// l'apparence (peau, cheveux, lunettes, masque, barbe, âge). Une texture par
+// PNJ (128×128, bon marché). La calotte de cheveux est un mesh 3D séparé ;
+// ici on ne dessine que la frange, les traits et les accessoires plats. ---
+export function makeFaceTexture(app: Appearance, seed: number): THREE.CanvasTexture {
+  const r = rng(2600 + seed * 40503);
+  const { c, g } = makeCanvas(128, 128);
+  const hair = app.hair.color;
+  const bald = app.hair.style === 'bald';
 
-const SKINS = ['#f0c8a0', '#e8bd96', '#dcae85', '#f3d3b3'];
-const HAIRS = ['#2a2a2e', '#3d3128', '#4a3a2a', '#565258', '#6b4a33'];
-
-export function makeFaceVariants(): FaceVariant[] {
-  const variants: FaceVariant[] = [];
-  for (let i = 0; i < 8; i++) {
-    const r = rng(900 + i * 31);
-    const skin = SKINS[Math.floor(r() * SKINS.length)];
-    const hair = HAIRS[Math.floor(r() * HAIRS.length)];
-    const { c, g } = makeCanvas(128, 128);
+  // Frange / ligne de cheveux sur le front (sauf crâne rasé ou couvre-chef).
+  if (!bald && app.hat === 'none') {
     g.fillStyle = hair;
     g.beginPath();
-    g.ellipse(64, 26, 58, 30, 0, Math.PI, 0);
+    g.ellipse(64, 24, 56, 26 + r() * 8, 0, Math.PI, 0);
     g.fill();
-    if (r() > 0.5) g.fillRect(6, 20, 18, 40 + r() * 30);
-    if (r() > 0.5) g.fillRect(104, 20, 18, 40 + r() * 30);
-    g.strokeStyle = hair;
-    g.lineWidth = 4;
+    // Mèches latérales occasionnelles.
+    if (r() > 0.55) g.fillRect(8, 20, 14, 34 + r() * 26);
+    if (r() > 0.55) g.fillRect(106, 20, 14, 34 + r() * 26);
+  } else if (app.hat !== 'none') {
+    // Sous une casquette/bonnet : fine frange qui dépasse.
+    g.fillStyle = hair;
+    g.fillRect(14, 40, 100, 6);
+  }
+
+  // Sourcils (plus clairs et fins chez les seniors).
+  g.strokeStyle = app.senior ? 'rgba(120,110,110,0.8)' : hair;
+  g.lineWidth = app.senior ? 2.5 : 3.5;
+  g.beginPath();
+  const browY = 54 + r() * 3;
+  g.moveTo(30, browY + 2);
+  g.lineTo(52, browY);
+  g.moveTo(76, browY);
+  g.lineTo(98, browY + 2);
+  g.stroke();
+
+  // Yeux : ronds ou plissés.
+  const squint = r() > 0.6;
+  g.fillStyle = '#26232a';
+  g.beginPath();
+  g.ellipse(41, 66, 6.5, squint ? 4 : 7.5, 0, 0, Math.PI * 2);
+  g.ellipse(87, 66, 6.5, squint ? 4 : 7.5, 0, 0, Math.PI * 2);
+  g.fill();
+
+  // Nez discret (légère ombre).
+  g.strokeStyle = 'rgba(150,110,86,0.4)';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(64, 70);
+  g.lineTo(61, 82);
+  g.lineTo(66, 83);
+  g.stroke();
+
+  // Rides de senior.
+  if (app.senior) {
+    g.strokeStyle = 'rgba(120,96,80,0.35)';
+    g.lineWidth = 1.5;
     g.beginPath();
-    g.moveTo(30, 52);
-    g.lineTo(52, 50);
-    g.moveTo(76, 50);
-    g.lineTo(98, 52);
+    g.moveTo(24, 60);
+    g.lineTo(30, 63);
+    g.moveTo(104, 60);
+    g.lineTo(98, 63);
+    g.moveTo(48, 88);
+    g.quadraticCurveTo(64, 92, 80, 88);
     g.stroke();
-    g.fillStyle = '#26232a';
-    g.beginPath();
-    g.ellipse(41, 66, 6.5, r() > 0.6 ? 4 : 7.5, 0, 0, Math.PI * 2);
-    g.ellipse(87, 66, 6.5, r() > 0.6 ? 4 : 7.5, 0, 0, Math.PI * 2);
-    g.fill();
+  }
+
+  // Bouche (masquée si masque chirurgical).
+  if (!app.mask) {
     g.strokeStyle = '#a2604f';
     g.lineWidth = 3.5;
     g.beginPath();
@@ -1055,10 +1089,255 @@ export function makeFaceVariants(): FaceVariant[] {
       g.lineTo(72, 96);
     }
     g.stroke();
-    const texture = toTexture(c);
-    variants.push({ texture, hair, skin });
   }
-  return variants;
+
+  // Barbe / bouc : ombre autour de la mâchoire et de la bouche.
+  if (app.facialHair && !app.mask) {
+    g.fillStyle = hair;
+    g.globalAlpha = 0.5;
+    g.beginPath();
+    g.moveTo(30, 78);
+    g.quadraticCurveTo(64, 118, 98, 78);
+    g.quadraticCurveTo(84, 104, 64, 104);
+    g.quadraticCurveTo(44, 104, 30, 78);
+    g.fill();
+    g.globalAlpha = 1;
+  }
+
+  // Masque chirurgical : rectangle clair plissé, nez au menton.
+  if (app.mask) {
+    g.fillStyle = r() > 0.85 ? '#dfe6ec' : '#f4f5f2';
+    g.beginPath();
+    g.moveTo(28, 74);
+    g.lineTo(100, 74);
+    g.lineTo(96, 116);
+    g.quadraticCurveTo(64, 124, 32, 116);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = 'rgba(180,186,190,0.7)';
+    g.lineWidth = 1.5;
+    for (let y = 86; y < 116; y += 8) {
+      g.beginPath();
+      g.moveTo(30, y);
+      g.lineTo(98, y);
+      g.stroke();
+    }
+    // Élastiques.
+    g.strokeStyle = 'rgba(210,214,216,0.9)';
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.moveTo(28, 76);
+    g.lineTo(14, 66);
+    g.moveTo(100, 76);
+    g.lineTo(114, 66);
+    g.stroke();
+  }
+
+  // Lunettes : montures autour des yeux + pont.
+  if (app.glasses) {
+    g.strokeStyle = r() > 0.5 ? '#2a2a30' : '#6a5a48';
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.roundRect(30, 58, 22, 17, 5);
+    g.roundRect(76, 58, 22, 17, 5);
+    g.moveTo(52, 66);
+    g.lineTo(76, 66);
+    g.moveTo(30, 64);
+    g.lineTo(20, 62);
+    g.moveTo(98, 64);
+    g.lineTo(108, 62);
+    g.stroke();
+  }
+
+  return toTexture(c);
+}
+
+// --- Détail de vêtement en décalque de face (cravate, boutons, poche…) ---
+// Fond transparent : seules les formes dessinées apparaissent sur le torse.
+const TIE_COLORS = ['#8a2f38', '#2f4a8a', '#4a6a3a', '#7a5a2a', '#5a3a6a', '#2a5a5a', '#8a6a2a'];
+
+export function makeGarmentDecal(app: Appearance, seed: number): THREE.CanvasTexture | null {
+  const type = app.top.type;
+  if (type === 'sweater' && seed % 3 !== 0) return null; // pulls surtout unis
+  const r = rng(3300 + seed * 7919);
+  const { c, g } = makeCanvas(128, 256);
+  const cx = 64;
+
+  if (type === 'suit') {
+    // Chemise en V.
+    g.fillStyle = r() > 0.5 ? '#f2f2ee' : '#e6ecf2';
+    g.beginPath();
+    g.moveTo(42, 4);
+    g.lineTo(86, 4);
+    g.lineTo(cx, 120);
+    g.closePath();
+    g.fill();
+    // Revers de veste (bords sombres).
+    g.strokeStyle = 'rgba(0,0,0,0.28)';
+    g.lineWidth = 6;
+    g.beginPath();
+    g.moveTo(40, 2);
+    g.lineTo(30, 128);
+    g.moveTo(88, 2);
+    g.lineTo(98, 128);
+    g.stroke();
+    // Cravate.
+    const tie = TIE_COLORS[Math.floor(r() * TIE_COLORS.length)];
+    g.fillStyle = tie;
+    g.beginPath();
+    g.moveTo(58, 18);
+    g.lineTo(70, 18);
+    g.lineTo(76, 150);
+    g.lineTo(cx, 168);
+    g.lineTo(52, 150);
+    g.closePath();
+    g.fill();
+    g.fillStyle = 'rgba(0,0,0,0.18)';
+    g.fillRect(56, 14, 16, 12); // nœud
+  } else if (type === 'coat') {
+    // Revers + rangée de boutons + ceinture.
+    g.strokeStyle = 'rgba(0,0,0,0.22)';
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(46, 4);
+    g.lineTo(34, 150);
+    g.moveTo(82, 4);
+    g.lineTo(94, 150);
+    g.moveTo(cx, 8);
+    g.lineTo(cx, 210);
+    g.stroke();
+    g.fillStyle = 'rgba(20,18,16,0.5)';
+    for (const y of [70, 110, 150]) {
+      g.beginPath();
+      g.arc(cx, y, 4.5, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = 'rgba(0,0,0,0.18)';
+    g.fillRect(20, 176, 88, 12); // ceinture
+  } else if (type === 'hoodie') {
+    // Côtes d'encolure + cordons + poche kangourou.
+    g.strokeStyle = 'rgba(0,0,0,0.2)';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.arc(cx, 6, 40, 0.15 * Math.PI, 0.85 * Math.PI);
+    g.stroke();
+    g.strokeStyle = 'rgba(240,240,236,0.7)';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(56, 20);
+    g.lineTo(58, 92);
+    g.moveTo(72, 20);
+    g.lineTo(70, 92);
+    g.stroke();
+    g.fillStyle = 'rgba(240,240,236,0.85)';
+    for (const x of [56, 72]) {
+      g.beginPath();
+      g.arc(x + (x === 56 ? 2 : -2), 96, 3.5, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.strokeStyle = 'rgba(0,0,0,0.22)';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.roundRect(30, 150, 68, 56, 8);
+    g.stroke();
+    g.beginPath(); // ouvertures de poche
+    g.moveTo(34, 156);
+    g.lineTo(30, 190);
+    g.moveTo(94, 156);
+    g.lineTo(98, 190);
+    g.stroke();
+  } else if (type === 'blouse') {
+    // Col + boutonnage discret.
+    g.strokeStyle = 'rgba(0,0,0,0.18)';
+    g.lineWidth = 4;
+    g.beginPath();
+    g.moveTo(52, 6);
+    g.lineTo(cx, 46);
+    g.lineTo(76, 6);
+    g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.5)';
+    for (const y of [60, 92, 124, 156]) {
+      g.beginPath();
+      g.arc(cx, y, 2.6, 0, Math.PI * 2);
+      g.fill();
+    }
+  } else if (type === 'jacket') {
+    // Fermeture éclair centrale + col.
+    g.strokeStyle = 'rgba(0,0,0,0.3)';
+    g.lineWidth = 4;
+    g.beginPath();
+    g.moveTo(cx, 10);
+    g.lineTo(cx, 210);
+    g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.18)';
+    g.lineWidth = 1.5;
+    for (let y = 16; y < 206; y += 7) {
+      g.beginPath();
+      g.moveTo(cx - 2, y);
+      g.lineTo(cx + 2, y);
+      g.stroke();
+    }
+    g.strokeStyle = 'rgba(0,0,0,0.2)';
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(44, 4);
+    g.lineTo(52, 40);
+    g.moveTo(84, 4);
+    g.lineTo(76, 40);
+    g.stroke();
+  } else if (type === 'tshirt' && r() < 0.55) {
+    // Petit graphisme poitrine.
+    const accent = `hsl(${Math.floor(r() * 360)},55%,55%)`;
+    g.fillStyle = accent;
+    g.globalAlpha = 0.85;
+    g.beginPath();
+    g.roundRect(44, 64, 40, 48, 8);
+    g.fill();
+    g.globalAlpha = 1;
+    g.fillStyle = 'rgba(255,255,255,0.85)';
+    g.beginPath();
+    g.arc(cx, 88, 10, 0, Math.PI * 2);
+    g.fill();
+  } else if (type === 'sweater') {
+    // Encolure ras-du-cou.
+    g.strokeStyle = 'rgba(0,0,0,0.16)';
+    g.lineWidth = 6;
+    g.beginPath();
+    g.arc(cx, 2, 34, 0.2 * Math.PI, 0.8 * Math.PI);
+    g.stroke();
+  } else {
+    return null;
+  }
+
+  return toTexture(c);
+}
+
+// --- Motif de tissu (rayures ou carreaux) sur couleur de base, pour le torse ---
+export function makeStripeTexture(base: string, accent: string): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(128, 128);
+  g.fillStyle = base;
+  g.fillRect(0, 0, 128, 128);
+  g.fillStyle = accent;
+  for (let x = 0; x < 128; x += 24) g.fillRect(x, 0, 12, 128);
+  const t = toTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(3, 1);
+  return t;
+}
+
+export function makePlaidTexture(base: string, accent: string): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(128, 128);
+  g.fillStyle = base;
+  g.fillRect(0, 0, 128, 128);
+  g.fillStyle = accent;
+  g.globalAlpha = 0.6;
+  for (let x = 0; x < 128; x += 32) g.fillRect(x, 0, 14, 128);
+  for (let y = 0; y < 128; y += 32) g.fillRect(0, y, 128, 14);
+  g.globalAlpha = 1;
+  const t = toTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(2, 2);
+  return t;
 }
 
 // --- Panneau de nom de station (style JR) ---
