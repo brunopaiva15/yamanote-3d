@@ -13,7 +13,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { paxList, POOL_SIZE, initPassengers } from '../systems/passengers';
 import type { Appearance } from '../systems/appearance';
 import { runtime } from '../systems/runtime';
-import { makeFaceTexture, makeGarmentDecal, makeStripeTexture, makePlaidTexture } from '../textures/procedural';
+import { makeFaceTexture, makeStripeTexture, makePlaidTexture } from '../textures/procedural';
 
 // Repères verticaux locaux (pieds à y=0), calés sur l'ancienne silhouette.
 const HIP_Y = 0.5;
@@ -66,7 +66,15 @@ const neckGeo = new THREE.CylinderGeometry(0.05, 0.052, 0.16, 8);
 const upperArmGeo = new THREE.CylinderGeometry(0.045, 0.043, 0.26, 8);
 const foreArmGeo = new THREE.CylinderGeometry(0.042, 0.036, 0.24, 8);
 const handGeo = new THREE.SphereGeometry(0.042, 8, 7);
-const decalGeo = new THREE.PlaneGeometry(0.22, 0.44);
+// Détails de vêtement (prismes 4 pans → faces plates façon tissu).
+const tieGeo = new THREE.CylinderGeometry(0.02, 0.045, 0.26, 4);
+const knotGeo = new THREE.CylinderGeometry(0.03, 0.024, 0.05, 4);
+const collarGeo = new THREE.BoxGeometry(0.06, 0.09, 0.012);
+const buttonGeo = new THREE.SphereGeometry(0.011, 8, 6);
+const zipperGeo = new THREE.BoxGeometry(0.014, 0.34, 0.01);
+const pocketGeo = new RoundedBoxGeometry(0.15, 0.08, 0.03, 3, 0.02);
+
+const TIE_COLORS = ['#8a2f38', '#2f4a8a', '#3a4a2a', '#5a3a6a', '#2a5a5a', '#7a5a2a', '#333842'];
 
 const matCache = new Map<string, THREE.MeshStandardMaterial>();
 function cloth(color: string, rough = 0.85): THREE.MeshStandardMaterial {
@@ -187,13 +195,33 @@ function buildChar(app: Appearance, id: number): CharSpec {
     torso.push({ geo: scarfGeo, mat: cloth(app.scarfColor, 0.9), position: [0, SHOULDER_Y + 0.12, 0], rotation: [Math.PI / 2, 0, 0] });
   }
 
-  const decal = makeGarmentDecal(app, id);
-  if (decal) {
-    torso.push({
-      geo: decalGeo,
-      mat: new THREE.MeshStandardMaterial({ map: decal, transparent: true, alphaTest: 0.5, roughness: 0.85 }),
-      position: [0, 0.9, b.chestR - 0.002],
-    });
+  // Détails de vêtement en VRAIS petits volumes 3D (épousent le torse rond,
+  // contrairement à un décalque plat) : cravate, boutons, poche, fermeture.
+  const chestZ = b.chestR - 0.03; // centre légèrement enfoncé → moitié visible
+  if (app.top.type === 'suit') {
+    const tieColor = TIE_COLORS[id % TIE_COLORS.length];
+    const tieMat = cloth(tieColor, 0.6);
+    // Col de chemise clair en V (deux petits pans).
+    const collarMat = cloth('#eef0ec', 0.8);
+    for (const s of [-1, 1]) {
+      torso.push({ geo: collarGeo, mat: collarMat, position: [s * 0.03, 1.0, chestZ + 0.02], rotation: [0, 0, s * 0.5] });
+    }
+    torso.push({ geo: knotGeo, mat: tieMat, position: [0, 0.99, chestZ + 0.025], rotation: [0, Math.PI / 4, 0] });
+    torso.push({ geo: tieGeo, mat: tieMat, position: [0, 0.83, chestZ + 0.02], rotation: [0, Math.PI / 4, 0] });
+  } else if (app.top.type === 'coat') {
+    const btnMat = cloth('#1c1a18', 0.5);
+    for (const y of [1.0, 0.86, 0.72]) {
+      torso.push({ geo: buttonGeo, mat: btnMat, position: [0, y, chestZ + 0.03] });
+    }
+  } else if (app.top.type === 'jacket') {
+    torso.push({ geo: zipperGeo, mat: cloth('#2a2a30', 0.5), position: [0, 0.85, chestZ + 0.025] });
+  } else if (app.top.type === 'hoodie') {
+    torso.push({ geo: pocketGeo, mat: cloth(shade(app.top.color, 0.16), 0.85), position: [0, 0.72, chestZ + 0.02] });
+  } else if (app.top.type === 'blouse') {
+    const btnMat = cloth('#ffffff', 0.7);
+    for (const y of [0.98, 0.86, 0.74]) {
+      torso.push({ geo: buttonGeo, mat: btnMat, position: [0, y, chestZ + 0.03] });
+    }
   }
 
   // --- Tête (dans le groupe articulé, origine à HEAD_Y) ---
@@ -202,10 +230,13 @@ function buildChar(app: Appearance, id: number): CharSpec {
   const hairMat = cloth(app.hair.color, 0.88);
   const hasHat = app.hat !== 'none';
   if (!hasHat && app.hair.style !== 'bald') {
-    const capScale: [number, number, number] =
-      app.hair.style === 'buzz' ? [1, 0.68, 0.95] : [1, 0.84, 0.98];
-    const capGeo = new THREE.SphereGeometry(app.hair.style === 'buzz' ? 0.108 : 0.113, 14, 12);
-    head.push({ geo: capGeo, mat: hairMat, position: [0, 0.03, -0.02], scale: capScale });
+    // Calotte légèrement plus grande que la tête et abaissée vers l'avant :
+    // elle forme une vraie ligne de cheveux sur le haut du front (remplace la
+    // frange dessinée). Le buzz reste ras.
+    const buzz = app.hair.style === 'buzz';
+    const capScale: [number, number, number] = buzz ? [1.02, 0.72, 0.99] : [1.04, 0.96, 1.03];
+    const capGeo = new THREE.SphereGeometry(buzz ? 0.11 : 0.116, 16, 14);
+    head.push({ geo: capGeo, mat: hairMat, position: [0, buzz ? 0.02 : 0.012, -0.006], scale: capScale });
     if (app.hair.style === 'bun') {
       head.push({ geo: new THREE.SphereGeometry(0.05, 10, 9), mat: hairMat, position: [0, 0.07, -0.11] });
     } else if (app.hair.style === 'ponytail') {
@@ -278,38 +309,30 @@ function Arm({ spec, s, armRef }: { spec: CharSpec; s: -1 | 1; armRef: ArmRef })
   );
 }
 
-// Hauteur (monde) de l'anneau des tsurikawa, cf. three/Handles.tsx :
-// RAIL_Y (2.06) + RING_Y (-STRAP_LEN 0.16 - 0.075) → ~1.825, on vise juste en
-// dessous pour que la main saisisse la boucle.
-const RING_WORLD_Y = 1.79;
-const REACH_UP = 0.957; // composante verticale du bras levé (vers l'intérieur)
-
-// Postures : cible (rotX épaule, rotZ épaule, rotX coude, allongement du bras)
-// selon état / action.
+// Postures : cible (rotX épaule, rotZ épaule, rotX coude) selon état / action.
+// PAS d'allongement de bras (les PNJ sont désormais assez grands et les
+// poignées abaissées : le bras reste de proportions normales).
 function armTarget(
   p: (typeof paxList)[number],
   s: -1 | 1,
   strapSide: -1 | 1,
-): [number, number, number, number] {
+): [number, number, number] {
   const seated = p.state === 'seated';
   if (p.action === 'phone' && (seated || p.state === 'standing')) {
-    return [-0.75, s * 0.12, -1.5, 1]; // deux mains devant le visage
+    return [-0.75, s * 0.12, -1.5]; // deux mains devant le visage
   }
   if (p.state === 'standing' && p.holdStrap && s === strapSide) {
-    // Bras tendu vers le haut ET vers l'intérieur, jusqu'à l'anneau situé pile
-    // au-dessus (le PNJ est en x = ±0,45, comme les rangées de poignées).
-    // On allonge le bras selon la taille pour que la main atteigne l'anneau.
-    const arm = (RING_WORLD_Y / p.height - SHOULDER_Y) / REACH_UP; // longueur bras tendu
-    const len = THREE.MathUtils.clamp(arm / 0.5, 1, 1.6);
-    return [0, Math.PI + s * 0.29, -0.05, len];
+    // Bras levé vers l'anneau situé pile au-dessus (le PNJ est en x = ±0,45,
+    // comme les rangées de poignées), légèrement fléchi au coude (naturel).
+    return [0, Math.PI + s * 0.26, -0.28];
   }
   if (seated) {
-    return [-0.5, s * 0.06, -0.9, 1]; // avant-bras sur les cuisses
+    return [-0.5, s * 0.06, -0.9]; // avant-bras sur les cuisses
   }
   if (p.pockets && p.state === 'standing') {
-    return [0.12, s * 0.04, -0.5, 1]; // mains dans les poches
+    return [0.12, s * 0.04, -0.5]; // mains dans les poches
   }
-  return [0, s * 0.12, -0.15, 1]; // repos le long du corps
+  return [0, s * 0.12, -0.15]; // repos le long du corps
 }
 
 export function Passengers() {
@@ -367,11 +390,10 @@ export function Passengers() {
       for (let si = 0; si < 2; si++) {
         const s: -1 | 1 = si === 0 ? -1 : 1;
         const arm = r.arms[si];
-        const [tx, tz, te, tlen] = armTarget(p, s, strapSide);
+        const [tx, tz, te] = armTarget(p, s, strapSide);
         if (arm.shoulder) {
           arm.shoulder.rotation.x += (tx - arm.shoulder.rotation.x) * k;
           arm.shoulder.rotation.z += (tz - arm.shoulder.rotation.z) * k;
-          arm.shoulder.scale.y += (tlen - arm.shoulder.scale.y) * k;
         }
         if (arm.elbow) arm.elbow.rotation.x += (te - arm.elbow.rotation.x) * k;
       }
