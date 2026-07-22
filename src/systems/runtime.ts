@@ -31,6 +31,9 @@ export const runtime = {
   swayTime: 0,
   sway: 0, // balancement latéral normalisé (-1..1)
   platformFade: 0, // opacité du quai (0..1)
+  playerX: 0, // position du joueur (pour les regards des PNJ)
+  playerY: 1.55,
+  playerZ: 4.2,
 };
 
 export function resetRuntime(): void {

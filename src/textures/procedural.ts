@@ -28,6 +28,26 @@ function makeCanvas(w: number, h: number): { c: HTMLCanvasElement; g: CanvasRend
   return { c, g };
 }
 
+// Texte garanti dans son cadre : réduit la taille de police si nécessaire,
+// et passe maxWidth à fillText en dernier recours.
+function fitFillText(
+  g: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  basePx: number,
+  weight = 'bold',
+): void {
+  let px = basePx;
+  do {
+    g.font = `${weight} ${px}px ${JP_FONT}`;
+    if (g.measureText(text).width <= maxWidth) break;
+    px -= Math.max(1, Math.floor(px * 0.08));
+  } while (px > 8);
+  g.fillText(text, x, y, maxWidth);
+}
+
 function toTexture(c: HTMLCanvasElement): THREE.CanvasTexture {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -536,7 +556,7 @@ export function makeCityTexture(layer: 0 | 1 | 2, night = false): THREE.CanvasTe
       const roofColorIdx = Math.floor(r() * SHOP_COLORS.length);
       g.fillStyle = night ? NEON_COLORS[roofColorIdx] : SHOP_COLORS[roofColorIdx];
       g.font = `bold 15px ${JP_FONT}`;
-      g.fillText(ROOF_WORDS[Math.floor(r() * ROOF_WORDS.length)], x + bw * 0.2 + 8, H - bh - 9);
+      g.fillText(ROOF_WORDS[Math.floor(r() * ROOF_WORDS.length)], x + bw * 0.2 + 8, H - bh - 9, Math.max(10, pw - 14));
     }
     if (layer < 2) {
       // Fenêtres : reflets de ciel le jour, largement allumées la nuit.
@@ -571,7 +591,7 @@ export function makeCityTexture(layer: 0 | 1 | 2, night = false): THREE.CanvasTe
       g.globalAlpha = 1;
       g.fillStyle = night ? '#2a2620' : '#fdf9f0';
       g.font = `bold 13px ${JP_FONT}`;
-      g.fillText(SIGN_WORDS[Math.floor(r() * SIGN_WORDS.length)], x + 10, H - 43);
+      g.fillText(SIGN_WORDS[Math.floor(r() * SIGN_WORDS.length)], x + 10, H - 43, Math.max(12, bw - 22));
       // Auvent rayé une fois sur deux.
       if (r() > 0.5) {
         for (let sx2 = x + 4; sx2 < x + bw - 10; sx2 += 12) {
@@ -747,11 +767,9 @@ export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasText
       drawMascot(g, kind, W / 2, H * 0.38, W * 0.42);
       g.fillStyle = ink;
       g.textAlign = 'center';
-      g.font = `bold ${Math.floor(W * 0.14)}px ${JP_FONT}`;
-      g.fillText(word, W / 2, H * 0.78);
+      fitFillText(g, word, W / 2, H * 0.78, W * 0.86, Math.floor(W * 0.14));
       g.fillStyle = accent;
-      g.font = `bold ${Math.floor(W * 0.06)}px ${JP_FONT}`;
-      g.fillText(sub, W / 2, H * 0.88);
+      fitFillText(g, sub, W / 2, H * 0.88, W * 0.86, Math.floor(W * 0.06));
       g.textAlign = 'left';
     } else {
       g.fillStyle = accent;
@@ -762,24 +780,26 @@ export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasText
       g.globalAlpha = 1;
       drawMascot(g, kind, W * 0.2, H * 0.5, H * 0.62);
       g.fillStyle = ink;
-      g.font = `bold ${Math.floor(H * 0.3)}px ${JP_FONT}`;
-      g.fillText(word, W * 0.4, H * 0.52);
+      fitFillText(g, word, W * 0.4, H * 0.52, W * 0.56, Math.floor(H * 0.3));
       g.fillStyle = accent;
-      g.font = `bold ${Math.floor(H * 0.14)}px ${JP_FONT}`;
-      g.fillText(sub, W * 0.4, H * 0.78);
+      fitFillText(g, sub, W * 0.4, H * 0.78, W * 0.56, Math.floor(H * 0.14));
     }
   } else if (layout === 0) {
     g.fillStyle = accent;
     g.fillRect(0, 0, W, H * 0.16);
     g.fillStyle = bg;
-    g.font = `bold ${Math.floor(H * 0.09)}px ${JP_FONT}`;
-    g.fillText(sub, W * 0.05, H * 0.115);
+    fitFillText(g, sub, W * 0.05, H * 0.115, W * 0.9, Math.floor(H * 0.09));
     g.fillStyle = ink;
-    g.font = `bold ${Math.floor(H * (portrait ? 0.11 : 0.34))}px ${JP_FONT}`;
-    g.fillText(word, W * 0.07, H * (portrait ? 0.42 : 0.68));
+    fitFillText(g, word, W * 0.07, H * (portrait ? 0.42 : 0.68), W * 0.86, Math.floor(H * (portrait ? 0.11 : 0.34)));
     g.fillStyle = accent;
-    g.font = `bold ${Math.floor(H * (portrait ? 0.08 : 0.22))}px ${JP_FONT}`;
-    g.fillText(`¥${(198 + Math.floor(r() * 24) * 50).toLocaleString()}`, W * 0.07, H * (portrait ? 0.6 : 0.92));
+    fitFillText(
+      g,
+      `¥${(198 + Math.floor(r() * 24) * 50).toLocaleString()}`,
+      W * 0.07,
+      H * (portrait ? 0.6 : 0.92),
+      W * 0.6,
+      Math.floor(H * (portrait ? 0.08 : 0.22)),
+    );
   } else if (layout === 1) {
     const grad = g.createLinearGradient(0, 0, 0, H * 0.62);
     grad.addColorStop(0, accent);
@@ -792,21 +812,20 @@ export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasText
     g.fill();
     g.fillRect(W * 0.4, H * 0.44, W * 0.2, H * 0.18);
     g.fillStyle = ink;
-    g.font = `bold ${Math.floor(H * 0.1)}px ${JP_FONT}`;
-    g.fillText(word, W * 0.08, H * 0.82);
-    g.font = `${Math.floor(H * 0.055)}px ${JP_FONT}`;
-    g.fillText(sub, W * 0.08, H * 0.93);
+    fitFillText(g, word, W * 0.08, H * 0.82, W * 0.84, Math.floor(H * 0.1));
+    fitFillText(g, sub, W * 0.08, H * 0.93, W * 0.84, Math.floor(H * 0.055), '');
   } else {
+    // Titre vertical : taille calée sur la hauteur disponible.
     g.fillStyle = ink;
-    g.font = `bold ${Math.floor(W * 0.16)}px ${JP_FONT}`;
+    const glyph = Math.min(Math.floor(W * 0.16), Math.floor((H * 0.78) / Math.max(1, word.length)));
+    g.font = `bold ${glyph}px ${JP_FONT}`;
     for (let k = 0; k < word.length; k++) {
-      g.fillText(word[k], W * 0.36, H * 0.18 + k * W * 0.18);
+      g.fillText(word[k], W * 0.36, H * 0.14 + (k + 0.8) * glyph * 1.08, glyph * 1.2);
     }
     g.fillStyle = accent;
     g.fillRect(W * 0.08, H * 0.08, W * 0.06, H * 0.84);
-    g.font = `bold ${Math.floor(W * 0.05)}px ${JP_FONT}`;
     g.fillStyle = ink;
-    g.fillText(sub, W * 0.6, H * 0.9);
+    fitFillText(g, sub, W * 0.56, H * 0.9, W * 0.4, Math.floor(W * 0.05));
   }
   return toTexture(c);
 }

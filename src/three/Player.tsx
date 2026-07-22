@@ -28,6 +28,7 @@ export function Player() {
   const transition = useRef(1); // 0..1, interpolation assise/debout
   const vocabAcc = useRef(0);
   const lookDir = useRef(new THREE.Vector3());
+  const camBase = useRef(new THREE.Vector3(0, CONFIG.eyeHeight, 4.2));
 
   // --- Entrées : clavier + souris + tactile ---
   useEffect(() => {
@@ -208,19 +209,29 @@ export function Player() {
       targetPos = pos.current;
     }
 
-    // Interpolation de la caméra (douce pendant les transitions assise/debout).
-    if (seated || transition.current < 1) camera.position.lerp(targetPos, Math.min(1, dt * 4.5));
-    else camera.position.copy(targetPos);
+    // Position de base lissée SÉPARÉMENT des offsets de balancement : la
+    // caméra ne se poursuit plus elle-même (fini les dérives une fois assis).
+    if (seated || transition.current < 1) camBase.current.lerp(targetPos, Math.min(1, dt * 4.5));
+    else camBase.current.copy(targetPos);
+    camera.position.copy(camBase.current);
 
+    // Assis, le corps est calé contre la banquette : le balancement ressenti
+    // est très atténué (on bouge AVEC la rame).
+    const brace = seated ? 0.25 : 1;
     const bob = seated ? 0 : Math.sin(bobT.current * 2) * 0.016;
-    const trainBounce = Math.sin(runtime.swayTime * 6.7) * 0.006 * speed01;
+    const trainBounce = Math.sin(runtime.swayTime * 6.7) * 0.006 * speed01 * brace;
     camera.position.y += bob + trainBounce;
-    camera.position.x += runtime.sway * 0.028;
+    camera.position.x += runtime.sway * 0.028 * brace;
 
     camera.rotation.order = 'YXZ';
     camera.rotation.y = yaw.current;
     camera.rotation.x = pitch.current;
-    camera.rotation.z = runtime.sway * 0.011 - runtime.accel * 0.004;
+    camera.rotation.z = (runtime.sway * 0.011 - runtime.accel * 0.004) * (seated ? 0.4 : 1);
+
+    // Position du joueur partagée (regards des PNJ).
+    runtime.playerX = camera.position.x;
+    runtime.playerY = camera.position.y;
+    runtime.playerZ = camera.position.z;
 
     // Fiche de vocabulaire (esprit Shashingo) : objet au centre du regard.
     vocabAcc.current += dt;

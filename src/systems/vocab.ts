@@ -61,7 +61,7 @@ function buildHotspots(): Hotspot[] {
   }
   // Affiches suspendues.
   for (let i = 0; i < 6; i++) {
-    list.push({ id: 'ad', pos: new THREE.Vector3(i % 2 === 0 ? -0.16 : 0.16, 1.77, -8.6 + i * 3.1) });
+    list.push({ id: 'ad', pos: new THREE.Vector3(i % 2 === 0 ? -0.16 : 0.16, 1.86, -8.6 + i * 3.1) });
   }
   return list;
 }

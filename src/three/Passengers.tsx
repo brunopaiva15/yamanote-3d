@@ -13,11 +13,14 @@ const SEATED_DROP = 0.3;
 interface PaxRefs {
   group: THREE.Group | null;
   legs: THREE.Mesh | null;
+  head: THREE.Group | null;
 }
 
 export function Passengers() {
   initPassengers();
-  const refs = useRef<PaxRefs[]>(Array.from({ length: POOL_SIZE }, () => ({ group: null, legs: null })));
+  const refs = useRef<PaxRefs[]>(
+    Array.from({ length: POOL_SIZE }, () => ({ group: null, legs: null, head: null })),
+  );
 
   const faces = useMemo(() => makeFaceVariants(), []);
 
@@ -65,9 +68,11 @@ export function Passengers() {
         p.pos.y + p.bob - (seated ? SEATED_DROP : 0),
         p.pos.z,
       );
-      r.group.rotation.set(0, p.yaw, standingSway + seatedSway);
-      r.group.scale.setScalar(p.height);
+      r.group.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway);
+      r.group.scale.set(p.height * p.width, p.height, p.height * p.width);
       if (r.legs) r.legs.visible = !seated;
+      // Tête vivante : regard et hochements pilotés par la couche d'actions.
+      if (r.head) r.head.rotation.set(p.headPitch, p.headYaw, 0);
     }
   });
 
@@ -92,17 +97,22 @@ export function Passengers() {
           />
           {/* Corps / manteau */}
           <mesh geometry={shared.bodyGeo} material={perPax[i].coatMat} position={[0, 0.86, 0]} />
-          {/* Tête */}
-          <mesh geometry={shared.headGeo} material={perPax[i].skinMat} position={[0, 1.34, 0]} />
-          {/* Chevelure */}
-          <mesh
-            geometry={shared.hairGeo}
-            material={perPax[i].hairMat}
-            position={[0, 1.375, -0.022]}
-            scale={[1, 0.82, 0.95]}
-          />
-          {/* Visage */}
-          <mesh geometry={shared.faceGeo} material={perPax[i].faceMat} position={[0, 1.335, 0.102]} />
+          {/* Tête articulée (regards, hochements, éternuements) */}
+          <group
+            position={[0, 1.34, 0]}
+            ref={(g) => {
+              refs.current[i].head = g;
+            }}
+          >
+            <mesh geometry={shared.headGeo} material={perPax[i].skinMat} />
+            <mesh
+              geometry={shared.hairGeo}
+              material={perPax[i].hairMat}
+              position={[0, 0.035, -0.022]}
+              scale={[1, 0.82, 0.95]}
+            />
+            <mesh geometry={shared.faceGeo} material={perPax[i].faceMat} position={[0, -0.005, 0.102]} />
+          </group>
         </group>
       ))}
     </group>

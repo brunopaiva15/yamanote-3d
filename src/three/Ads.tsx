@@ -59,17 +59,17 @@ export function Ads() {
             pivots.current[i] = g;
           }}
         >
-          {/* Tringle de suspension, du plafond vers l'affiche */}
-          <mesh position={[0, -0.06, 0]}>
-            <boxGeometry args={[0.015, 0.12, 0.015]} />
+          {/* Tringle courte : l'affiche reste au-dessus des têtes (bas ~1,67 m) */}
+          <mesh position={[0, -0.035, 0]}>
+            <boxGeometry args={[0.015, 0.07, 0.015]} />
             <meshStandardMaterial color="#9aa0a6" metalness={0.6} roughness={0.4} />
           </mesh>
           {/* Recto et verso imprimés : jamais de texte en miroir */}
-          <mesh position={[0, -0.37, 0]} material={portraitMats[i % portraitMats.length]}>
-            <planeGeometry args={[0.62, 0.5]} />
+          <mesh position={[0, -0.28, 0]} material={portraitMats[i % portraitMats.length]}>
+            <planeGeometry args={[0.62, 0.42]} />
           </mesh>
-          <mesh position={[0, -0.37, 0]} rotation={[0, Math.PI, 0]} material={portraitMats[(i + 3) % portraitMats.length]}>
-            <planeGeometry args={[0.62, 0.5]} />
+          <mesh position={[0, -0.28, 0]} rotation={[0, Math.PI, 0]} material={portraitMats[(i + 3) % portraitMats.length]}>
+            <planeGeometry args={[0.62, 0.42]} />
           </mesh>
         </group>
       ))}
