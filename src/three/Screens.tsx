@@ -177,18 +177,21 @@ export function Screens() {
         CONFIG.doorCenters.map((z) => (
           <group
             key={`scr${s}-${z}`}
-            position={[s * (CONFIG.carHalfWidth - 0.045), 2.08, z]}
+            position={[s * (CONFIG.carHalfWidth - 0.06), 2.07, z]}
             rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
           >
-            <mesh position={[0, 0, -0.012]} material={frameMat}>
-              <boxGeometry args={[1.06, 0.26, 0.02]} />
-            </mesh>
-            <mesh position={[-0.255, 0, 0.002]} material={leftMat}>
-              <planeGeometry args={[0.46, 0.195]} />
-            </mesh>
-            <mesh position={[0.255, 0, 0.002]} material={rightMat}>
-              <planeGeometry args={[0.46, 0.195]} />
-            </mesh>
+            {/* Deux écrans SÉPARÉS, chacun dans son boîtier incliné vers
+                l'allée, avec un espace entre eux (disposition E235). */}
+            {([-1, 1] as const).map((k) => (
+              <group key={`half${k}`} position={[k * 0.33, 0, 0]} rotation={[0.3, 0, 0]}>
+                <mesh position={[0, 0, -0.014]} material={frameMat}>
+                  <boxGeometry args={[0.53, 0.25, 0.035]} />
+                </mesh>
+                <mesh position={[0, 0, 0.005]} material={k === -1 ? leftMat : rightMat}>
+                  <planeGeometry args={[0.47, 0.2]} />
+                </mesh>
+              </group>
+            ))}
           </group>
         )),
       )}
