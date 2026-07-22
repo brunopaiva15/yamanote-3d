@@ -72,6 +72,18 @@ function makeMidStanchionGeometry(side: 1 | -1): THREE.TubeGeometry {
   return new THREE.TubeGeometry(curve, 20, 0.016, 10);
 }
 
+// --- Console chromée du porte-bagages : part du haut de la paroi (près du
+// bandeau publicitaire) et descend en avant porter la lisse de maintien, sous
+// le bord avant de la tablette inclinée. ---
+function makeRackBracketGeometry(side: 1 | -1): THREE.TubeGeometry {
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(side * 1.37, 1.87, 0),
+    new THREE.Vector3(side * 1.16, 1.8, 0),
+    new THREE.Vector3(side * 0.95, 1.7, 0),
+  ]);
+  return new THREE.TubeGeometry(curve, 14, 0.013, 8);
+}
+
 export function Seats() {
   const geos = useMemo(
     () => ({
@@ -83,8 +95,18 @@ export function Seats() {
       // Coussins individuels arrondis (pas standard / prioritaire).
       cushion7: new RoundedBoxGeometry(0.44, 0.11, 0.5, 3, 0.035),
       cushion3: new RoundedBoxGeometry(0.44, 0.11, 0.44, 3, 0.035),
-      slat: new THREE.BoxGeometry(0.055, 0.016, 3.46),
+      // Consoles chromées du porte-bagages, une géométrie par côté.
+      bracketR: makeRackBracketGeometry(1),
+      bracketL: makeRackBracketGeometry(-1),
     }),
+    [],
+  );
+
+  // Tablettes du porte-bagages : un panneau FRP incliné par banquette (longueur
+  // variable), mutualisé entre les deux côtés (l'inclinaison est portée par la
+  // rotation à l'usage).
+  const shelfGeos = useMemo(
+    () => BENCHES.map((b) => new RoundedBoxGeometry(0.44, 0.03, b.z1 - b.z0 - 0.04, 2, 0.012)),
     [],
   );
 
@@ -110,11 +132,6 @@ export function Seats() {
       yellowGrip: new THREE.MeshStandardMaterial({ color: '#e0b23c', roughness: 0.68 }),
       heater: new THREE.MeshStandardMaterial({ color: '#585b60', roughness: 0.65, metalness: 0.35 }),
       badge: new THREE.MeshBasicMaterial({ map: badge, transparent: true, toneMapped: false }),
-      rack: new THREE.MeshStandardMaterial({
-        map: makeSurfaceTexture('#e9e7e1', 0.7),
-        roughness: 0.6,
-        metalness: 0.05,
-      }),
     };
   }, []);
 
@@ -137,20 +154,6 @@ export function Seats() {
   const sides: (1 | -1)[] = [1, -1];
   const seats7 = SEAT_SLOTS.filter((sl) => !sl.priority);
   const seats3 = SEAT_SLOTS.filter((sl) => sl.priority);
-  // Lattes de la claie du porte-bagages (banquettes de 7 uniquement).
-  const slats = useMemo(() => {
-    const list: { x: number; y: number; z: number }[] = [];
-    for (const s of [1, -1] as const) {
-      for (const b of BENCHES) {
-        if (b.priority) continue;
-        const zc = (b.z0 + b.z1) / 2;
-        for (let i = 0; i < 4; i++) {
-          list.push({ x: s * (WALL_X - 0.09 - i * 0.1), y: 1.81 - i * 0.014, z: zc });
-        }
-      }
-    }
-    return list;
-  }, []);
 
   return (
     <group>
@@ -163,12 +166,6 @@ export function Seats() {
       <Instances geometry={geos.cushion3} material={materials.quilt} limit={seats3.length}>
         {seats3.map((sl, i) => (
           <Instance key={`c3-${i}`} position={[sl.side * 1.02, 0.4, sl.z]} />
-        ))}
-      </Instances>
-      {/* Claie ajourée des porte-bagages */}
-      <Instances geometry={geos.slat} material={materials.rack} limit={slats.length}>
-        {slats.map((p, i) => (
-          <Instance key={`sl-${i}`} position={[p.x, p.y, p.z]} />
         ))}
       </Instances>
       {sides.map((s) =>
@@ -245,38 +242,38 @@ export function Seats() {
                   position={[0, 0, z]}
                 />
               ))}
-              {/* Barre de maintien horizontale (握り棒) : sur l'E235 réelle elle
-                  court en HAUT de la travée, au ras du porte-bagages, reliant le
-                  sommet des arceaux verticaux — seuls les poteaux verticaux
-                  descendent vers l'assise. Placée trop bas (à ~1,32 m) elle
-                  barrait le visage des passagers assis (tête ≈ 1,16 · taille,
-                  soit 1,22–1,40 m) et empiétait sur l'assise. Relevée à 1,70 m,
-                  bien au-dessus des têtes assises, en léger avant du porte-
-                  bagages : elle se lit comme la lisse de maintien avant. */}
+              {/* --- Porte-bagages E235 (棚) --- Tablette FRP blanche inclinée
+                  qui monte vers la paroi, au ras du linteau des fenêtres, sous
+                  les écrans publicitaires. Sa lisse de maintien chromée court le
+                  long du bord avant (à 1,70 m, bien au-dessus des têtes assises,
+                  elle sert aussi de barre de maintien pour les voyageurs debout)
+                  et repose sur des consoles chromées incurvées. Présent sur toute
+                  la longueur, y compris au-dessus des places prioritaires. */}
+              {/* Tablette inclinée */}
               <mesh
-                position={[s * 0.9, 1.7, zc]}
+                geometry={shelfGeos[bi]}
+                material={materials.shell}
+                position={[s * 1.17, 1.8, zc]}
+                rotation={[0, 0, s * 0.36]}
+              />
+              {/* Lisse de maintien avant */}
+              <mesh
+                position={[s * 0.95, 1.7, zc]}
                 rotation={[Math.PI / 2, 0, 0]}
                 material={materials.chrome}
               >
-                <cylinderGeometry args={[0.014, 0.014, len - 0.06, 8]} />
+                <cylinderGeometry args={[0.016, 0.016, len - 0.06, 10]} />
               </mesh>
-              {/* Porte-bagages : lisse avant chromée et supports (la claie
-                  ajourée est instanciée plus haut) */}
-              {!b.priority && (
-                <group>
+              {/* Consoles chromées incurvées (aux extrémités, + milieux pour 7) */}
+              {(b.n === 7 ? [b.z0 + 0.18, zc, b.z1 - 0.18] : [b.z0 + 0.14, b.z1 - 0.14]).map(
+                (z, k) => (
                   <mesh
-                    position={[s * (WALL_X - 0.45), 1.76, zc]}
-                    rotation={[Math.PI / 2, 0, 0]}
+                    key={`brk${k}`}
+                    geometry={s === 1 ? geos.bracketR : geos.bracketL}
                     material={materials.chrome}
-                  >
-                    <cylinderGeometry args={[0.013, 0.013, len - 0.15, 8]} />
-                  </mesh>
-                  {[b.z0 + 0.12, b.z1 - 0.12].map((z, k) => (
-                    <mesh key={`arm${k}`} position={[s * (WALL_X - 0.3), 1.77, z]} rotation={[0, 0, s * 0.1]} material={materials.rack}>
-                      <boxGeometry args={[0.32, 0.02, 0.03]} />
-                    </mesh>
-                  ))}
-                </group>
+                    position={[0, 0, z]}
+                  />
+                ),
               )}
             </group>
           );
