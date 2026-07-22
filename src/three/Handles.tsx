@@ -19,11 +19,14 @@ function HandleRow({ x }: { x: number }) {
 
   useFrame(() => {
     if (!group.current) return;
-    const swing =
-      runtime.sway * 0.09 + Math.sin(runtime.swayTime * 2.1 + phase) * 0.02 * (runtime.speed > 0.5 ? 1 : 0.2);
-    const pitch = -runtime.accel * 0.045;
+    // Balancement latéral uniquement (rotation.z) : il déplace toutes les
+    // poignées de la même façon quel que soit leur z. On N'applique PAS de
+    // tangage (rotation.x) : sur une rangée longue de ~19 m, il déplaçait les
+    // poignées éloignées proportionnellement à leur distance au centre, d'où le
+    // grand saut / « reset » au freinage puis à l'arrêt.
+    const speedFactor = Math.min(1, runtime.speed / 3);
+    const swing = runtime.sway * 0.09 + Math.sin(runtime.swayTime * 2.1 + phase) * 0.02 * speedFactor;
     group.current.rotation.z = swing;
-    group.current.rotation.x = pitch;
   });
 
   const zs: number[] = [];

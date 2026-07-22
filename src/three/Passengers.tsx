@@ -278,26 +278,38 @@ function Arm({ spec, s, armRef }: { spec: CharSpec; s: -1 | 1; armRef: ArmRef })
   );
 }
 
-// Postures : cible (rotX épaule, rotZ épaule, rotX coude) selon état / action.
+// Hauteur (monde) de l'anneau des tsurikawa, cf. three/Handles.tsx :
+// RAIL_Y (2.06) + RING_Y (-STRAP_LEN 0.16 - 0.075) → ~1.825, on vise juste en
+// dessous pour que la main saisisse la boucle.
+const RING_WORLD_Y = 1.79;
+const REACH_UP = 0.957; // composante verticale du bras levé (vers l'intérieur)
+
+// Postures : cible (rotX épaule, rotZ épaule, rotX coude, allongement du bras)
+// selon état / action.
 function armTarget(
   p: (typeof paxList)[number],
   s: -1 | 1,
   strapSide: -1 | 1,
-): [number, number, number] {
+): [number, number, number, number] {
   const seated = p.state === 'seated';
   if (p.action === 'phone' && (seated || p.state === 'standing')) {
-    return [-0.75, s * 0.12, -1.5]; // deux mains devant le visage
+    return [-0.75, s * 0.12, -1.5, 1]; // deux mains devant le visage
   }
   if (p.state === 'standing' && p.holdStrap && s === strapSide) {
-    return [0, s * 3.05, -0.32]; // bras levé vers la poignée
+    // Bras tendu vers le haut ET vers l'intérieur, jusqu'à l'anneau situé pile
+    // au-dessus (le PNJ est en x = ±0,45, comme les rangées de poignées).
+    // On allonge le bras selon la taille pour que la main atteigne l'anneau.
+    const arm = (RING_WORLD_Y / p.height - SHOULDER_Y) / REACH_UP; // longueur bras tendu
+    const len = THREE.MathUtils.clamp(arm / 0.5, 1, 1.6);
+    return [0, Math.PI + s * 0.29, -0.05, len];
   }
   if (seated) {
-    return [-0.5, s * 0.06, -0.9]; // avant-bras sur les cuisses
+    return [-0.5, s * 0.06, -0.9, 1]; // avant-bras sur les cuisses
   }
   if (p.pockets && p.state === 'standing') {
-    return [0.12, s * 0.04, -0.5]; // mains dans les poches
+    return [0.12, s * 0.04, -0.5, 1]; // mains dans les poches
   }
-  return [0, s * 0.12, -0.15]; // repos le long du corps
+  return [0, s * 0.12, -0.15, 1]; // repos le long du corps
 }
 
 export function Passengers() {
@@ -355,10 +367,11 @@ export function Passengers() {
       for (let si = 0; si < 2; si++) {
         const s: -1 | 1 = si === 0 ? -1 : 1;
         const arm = r.arms[si];
-        const [tx, tz, te] = armTarget(p, s, strapSide);
+        const [tx, tz, te, tlen] = armTarget(p, s, strapSide);
         if (arm.shoulder) {
           arm.shoulder.rotation.x += (tx - arm.shoulder.rotation.x) * k;
           arm.shoulder.rotation.z += (tz - arm.shoulder.rotation.z) * k;
+          arm.shoulder.scale.y += (tlen - arm.shoulder.scale.y) * k;
         }
         if (arm.elbow) arm.elbow.rotation.x += (te - arm.elbow.rotation.x) * k;
       }
