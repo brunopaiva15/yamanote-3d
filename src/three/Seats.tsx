@@ -245,9 +245,16 @@ export function Seats() {
                   position={[0, 0, z]}
                 />
               ))}
-              {/* Barre horizontale chromée au-dessus du dossier */}
+              {/* Barre de maintien horizontale (握り棒) : sur l'E235 réelle elle
+                  court en HAUT de la travée, au ras du porte-bagages, reliant le
+                  sommet des arceaux verticaux — seuls les poteaux verticaux
+                  descendent vers l'assise. Placée trop bas (à ~1,32 m) elle
+                  barrait le visage des passagers assis (tête ≈ 1,16 · taille,
+                  soit 1,22–1,40 m) et empiétait sur l'assise. Relevée à 1,70 m,
+                  bien au-dessus des têtes assises, en léger avant du porte-
+                  bagages : elle se lit comme la lisse de maintien avant. */}
               <mesh
-                position={[s * 0.93, 1.32, zc]}
+                position={[s * 0.9, 1.7, zc]}
                 rotation={[Math.PI / 2, 0, 0]}
                 material={materials.chrome}
               >
