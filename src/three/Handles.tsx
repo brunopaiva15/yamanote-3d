@@ -9,8 +9,10 @@ import { Instances, Instance } from '@react-three/drei';
 import { runtime } from '../systems/runtime';
 
 const RAIL_Y = 2.06;
-const STRAP_LEN = 0.16;
-const RING_Y = -STRAP_LEN - 0.075;
+// Sangles un peu plus longues : anneau à ~1,72 m (au lieu de 1,82) pour que les
+// passagers l'atteignent d'un bras naturel, sans étirement.
+const STRAP_LEN = 0.24;
+const RING_Y = -STRAP_LEN - 0.1;
 const PRIORITY_Z = 8.1; // au-delà : zone prioritaire
 
 function HandleRow({ x }: { x: number }) {
@@ -19,11 +21,14 @@ function HandleRow({ x }: { x: number }) {
 
   useFrame(() => {
     if (!group.current) return;
-    const swing =
-      runtime.sway * 0.09 + Math.sin(runtime.swayTime * 2.1 + phase) * 0.02 * (runtime.speed > 0.5 ? 1 : 0.2);
-    const pitch = -runtime.accel * 0.045;
+    // Balancement latéral uniquement (rotation.z) : il déplace toutes les
+    // poignées de la même façon quel que soit leur z. On N'applique PAS de
+    // tangage (rotation.x) : sur une rangée longue de ~19 m, il déplaçait les
+    // poignées éloignées proportionnellement à leur distance au centre, d'où le
+    // grand saut / « reset » au freinage puis à l'arrêt.
+    const speedFactor = Math.min(1, runtime.speed / 3);
+    const swing = runtime.sway * 0.09 + Math.sin(runtime.swayTime * 2.1 + phase) * 0.02 * speedFactor;
     group.current.rotation.z = swing;
-    group.current.rotation.x = pitch;
   });
 
   const zs: number[] = [];

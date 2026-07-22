@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { STATIONS } from '../data/stations';
 import { GENERIC, type District, type Feat } from '../data/districts';
+import type { Appearance } from '../systems/appearance';
 
 export const JP_FONT = "'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP',sans-serif";
 
@@ -1009,42 +1010,63 @@ export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasText
   return toTexture(c);
 }
 
-// --- Visages des PNJ : traits dessinés, fond transparent ---
-export interface FaceVariant {
-  texture: THREE.CanvasTexture;
-  hair: string;
-  skin: string;
-}
+// --- Visages des PNJ : traits dessinés sur fond transparent, pilotés par
+// l'apparence (peau, cheveux, lunettes, masque, barbe, âge). Une texture par
+// PNJ (128×128, bon marché). La calotte de cheveux est un mesh 3D séparé ;
+// ici on ne dessine que la frange, les traits et les accessoires plats. ---
+export function makeFaceTexture(app: Appearance, seed: number): THREE.CanvasTexture {
+  const r = rng(2600 + seed * 40503);
+  const { c, g } = makeCanvas(128, 128);
+  const hair = app.hair.color;
 
-const SKINS = ['#f0c8a0', '#e8bd96', '#dcae85', '#f3d3b3'];
-const HAIRS = ['#2a2a2e', '#3d3128', '#4a3a2a', '#565258', '#6b4a33'];
+  // Pas de frange dessinée sur le front : la coiffure est un volume 3D
+  // (calotte + mèches) qui encadre naturellement le visage. On garde le canvas
+  // du visage pour les seuls traits (sourcils, yeux, bouche, lunettes, masque).
 
-export function makeFaceVariants(): FaceVariant[] {
-  const variants: FaceVariant[] = [];
-  for (let i = 0; i < 8; i++) {
-    const r = rng(900 + i * 31);
-    const skin = SKINS[Math.floor(r() * SKINS.length)];
-    const hair = HAIRS[Math.floor(r() * HAIRS.length)];
-    const { c, g } = makeCanvas(128, 128);
-    g.fillStyle = hair;
+  // Sourcils (plus clairs et fins chez les seniors).
+  g.strokeStyle = app.senior ? 'rgba(120,110,110,0.8)' : hair;
+  g.lineWidth = app.senior ? 2.5 : 3.5;
+  g.beginPath();
+  const browY = 54 + r() * 3;
+  g.moveTo(30, browY + 2);
+  g.lineTo(52, browY);
+  g.moveTo(76, browY);
+  g.lineTo(98, browY + 2);
+  g.stroke();
+
+  // Yeux : ronds ou plissés.
+  const squint = r() > 0.6;
+  g.fillStyle = '#26232a';
+  g.beginPath();
+  g.ellipse(41, 66, 6.5, squint ? 4 : 7.5, 0, 0, Math.PI * 2);
+  g.ellipse(87, 66, 6.5, squint ? 4 : 7.5, 0, 0, Math.PI * 2);
+  g.fill();
+
+  // Nez discret (légère ombre).
+  g.strokeStyle = 'rgba(150,110,86,0.4)';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(64, 70);
+  g.lineTo(61, 82);
+  g.lineTo(66, 83);
+  g.stroke();
+
+  // Rides de senior.
+  if (app.senior) {
+    g.strokeStyle = 'rgba(120,96,80,0.35)';
+    g.lineWidth = 1.5;
     g.beginPath();
-    g.ellipse(64, 26, 58, 30, 0, Math.PI, 0);
-    g.fill();
-    if (r() > 0.5) g.fillRect(6, 20, 18, 40 + r() * 30);
-    if (r() > 0.5) g.fillRect(104, 20, 18, 40 + r() * 30);
-    g.strokeStyle = hair;
-    g.lineWidth = 4;
-    g.beginPath();
-    g.moveTo(30, 52);
-    g.lineTo(52, 50);
-    g.moveTo(76, 50);
-    g.lineTo(98, 52);
+    g.moveTo(24, 60);
+    g.lineTo(30, 63);
+    g.moveTo(104, 60);
+    g.lineTo(98, 63);
+    g.moveTo(48, 88);
+    g.quadraticCurveTo(64, 92, 80, 88);
     g.stroke();
-    g.fillStyle = '#26232a';
-    g.beginPath();
-    g.ellipse(41, 66, 6.5, r() > 0.6 ? 4 : 7.5, 0, 0, Math.PI * 2);
-    g.ellipse(87, 66, 6.5, r() > 0.6 ? 4 : 7.5, 0, 0, Math.PI * 2);
-    g.fill();
+  }
+
+  // Bouche (masquée si masque chirurgical).
+  if (!app.mask) {
     g.strokeStyle = '#a2604f';
     g.lineWidth = 3.5;
     g.beginPath();
@@ -1055,10 +1077,95 @@ export function makeFaceVariants(): FaceVariant[] {
       g.lineTo(72, 96);
     }
     g.stroke();
-    const texture = toTexture(c);
-    variants.push({ texture, hair, skin });
   }
-  return variants;
+
+  // Barbe / bouc : ombre autour de la mâchoire et de la bouche.
+  if (app.facialHair && !app.mask) {
+    g.fillStyle = hair;
+    g.globalAlpha = 0.5;
+    g.beginPath();
+    g.moveTo(30, 78);
+    g.quadraticCurveTo(64, 118, 98, 78);
+    g.quadraticCurveTo(84, 104, 64, 104);
+    g.quadraticCurveTo(44, 104, 30, 78);
+    g.fill();
+    g.globalAlpha = 1;
+  }
+
+  // Masque chirurgical : rectangle clair plissé, nez au menton.
+  if (app.mask) {
+    g.fillStyle = r() > 0.85 ? '#dfe6ec' : '#f4f5f2';
+    g.beginPath();
+    g.moveTo(28, 74);
+    g.lineTo(100, 74);
+    g.lineTo(96, 116);
+    g.quadraticCurveTo(64, 124, 32, 116);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = 'rgba(180,186,190,0.7)';
+    g.lineWidth = 1.5;
+    for (let y = 86; y < 116; y += 8) {
+      g.beginPath();
+      g.moveTo(30, y);
+      g.lineTo(98, y);
+      g.stroke();
+    }
+    // Élastiques.
+    g.strokeStyle = 'rgba(210,214,216,0.9)';
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.moveTo(28, 76);
+    g.lineTo(14, 66);
+    g.moveTo(100, 76);
+    g.lineTo(114, 66);
+    g.stroke();
+  }
+
+  // Lunettes : montures autour des yeux + pont.
+  if (app.glasses) {
+    g.strokeStyle = r() > 0.5 ? '#2a2a30' : '#6a5a48';
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.roundRect(30, 58, 22, 17, 5);
+    g.roundRect(76, 58, 22, 17, 5);
+    g.moveTo(52, 66);
+    g.lineTo(76, 66);
+    g.moveTo(30, 64);
+    g.lineTo(20, 62);
+    g.moveTo(98, 64);
+    g.lineTo(108, 62);
+    g.stroke();
+  }
+
+  return toTexture(c);
+}
+
+// --- Motif de tissu (rayures ou carreaux) sur couleur de base, pour le torse ---
+export function makeStripeTexture(base: string, accent: string): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(128, 128);
+  g.fillStyle = base;
+  g.fillRect(0, 0, 128, 128);
+  g.fillStyle = accent;
+  for (let x = 0; x < 128; x += 24) g.fillRect(x, 0, 12, 128);
+  const t = toTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(3, 1);
+  return t;
+}
+
+export function makePlaidTexture(base: string, accent: string): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(128, 128);
+  g.fillStyle = base;
+  g.fillRect(0, 0, 128, 128);
+  g.fillStyle = accent;
+  g.globalAlpha = 0.6;
+  for (let x = 0; x < 128; x += 32) g.fillRect(x, 0, 14, 128);
+  for (let y = 0; y < 128; y += 32) g.fillRect(0, y, 128, 14);
+  g.globalAlpha = 1;
+  const t = toTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(2, 2);
+  return t;
 }
 
 // --- Panneau de nom de station (style JR) ---
