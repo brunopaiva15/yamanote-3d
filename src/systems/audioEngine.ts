@@ -208,17 +208,27 @@ const SPECIALS: Record<string, Note[]> = {
   JY26: [['C6', 1], ['D6', 1], ['E6', 1], ['G6', 1], ['E6', 1], ['D6', 1], ['C6', 1], ['D6', 2], ['C6', 3]], // Takanawa GW
 };
 
+// Durée cible de la 発車メロディ (secondes). En réalité elle joue pendant que les
+// portes sont ouvertes, ~8–11 s en situation normale — bien avant l'annonce de
+// fermeture, qui ne vient qu'APRÈS la fin de la musique. Le motif est donc bouclé
+// jusqu'à approcher cette cible (≈ 3 tours).
+export const MELODY_DURATION = 6.5;
+
 function synthMelody(index: number): void {
   if (!nodes) return;
   const jy = STATIONS[index].jy;
   const tune = SPECIALS[jy] ?? (index % 2 === 0 ? HOUSE_A : HOUSE_B);
   const unit = 0.21;
-  let t = Tone.now() + 0.05;
-  for (const [note, beats] of tune) {
-    const dur = beats * unit;
-    nodes.melodyA.triggerAttackRelease(note, dur * 0.92, t, 0.42);
-    nodes.melodyB.triggerAttackRelease(Tone.Frequency(note).transpose(12).toNote(), dur * 0.92, t, 0.3);
-    t += dur;
+  const start = Tone.now() + 0.05;
+  let t = start;
+  // Boucle sur des tours complets jusqu'à atteindre la durée cible.
+  while (t - start < MELODY_DURATION) {
+    for (const [note, beats] of tune) {
+      const dur = beats * unit;
+      nodes.melodyA.triggerAttackRelease(note, dur * 0.92, t, 0.42);
+      nodes.melodyB.triggerAttackRelease(Tone.Frequency(note).transpose(12).toNote(), dur * 0.92, t, 0.3);
+      t += dur;
+    }
   }
 }
 
