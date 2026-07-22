@@ -26,6 +26,7 @@ export interface Build {
 
 export interface Appearance {
   archetype: Archetype;
+  feminine: boolean; // silhouette / visage féminins (build, traits, cils)
   build: Build;
   skin: string;
   hair: { style: HairStyle; color: string };
@@ -44,7 +45,8 @@ export interface Appearance {
 }
 
 // --- Palettes ---
-export const SKINS = ['#f3d6bb', '#ecc6a0', '#e2b58c', '#d8a878', '#c9925f', '#b87c4c', '#f7ddc6', '#e8bd96'];
+// Peaux : tons naturels doux, peu saturés (l'ancienne palette tirait sur l'orange).
+export const SKINS = ['#f6e3cf', '#f1d7ba', '#ebcaa8', '#e0bb94', '#d3a97e', '#c39468', '#f8e9d8', '#edd0b0'];
 export const HAIRS = ['#17151a', '#241f1c', '#332720', '#433124', '#4a3628', '#5b4632', '#6d5a44', '#8a8288', '#b6b0a8', '#cfc9c2'];
 
 const SUIT_COLORS = ['#272b36', '#2e3444', '#353a48', '#22303c', '#3b3b45', '#41423f', '#2c333e', '#464a54'];
@@ -78,23 +80,31 @@ function pickArchetype(r: () => number): Archetype {
   return 'casual';
 }
 
+// Sommet du crâne du squelette local (tête centrée à 1,34 + rayon) : sert à
+// convertir une taille cible en mètres vers l'échelle du groupe.
+const SKELETON_TOP = 1.445;
+
 // Corpulence : base + variation, avec un peu de « ventre » possible.
-function makeBuild(r: () => number, archetype: Archetype): Build {
+// Les tailles suivent les moyennes japonaises réelles : hommes ~1,60–1,75 m
+// (moy. ≈ 1,68), femmes ~1,48–1,62 m (moy. ≈ 1,55), seniors et étudiants un
+// peu plus petits — fini la foule uniformément grande.
+function makeBuild(r: () => number, archetype: Archetype, feminine: boolean): Build {
   const senior = archetype === 'senior';
-  const heavy = r() < (senior ? 0.4 : 0.22); // silhouette plus corpulente
-  // Taille adulte : assez grands pour atteindre les poignées de plafond sans
-  // étirer les bras (les seniors un peu plus petits).
-  const scale = (senior ? 1.0 : 1.05) + r() * (senior ? 0.12 : 0.15);
-  const shoulderR = 0.15 + r() * 0.05 + (heavy ? 0.02 : 0);
-  const belly = heavy ? 0.03 + r() * 0.04 : r() * 0.015;
-  const hipR = 0.135 + r() * 0.035 + (heavy ? 0.02 : 0);
+  const heavy = r() < (senior ? 0.3 : 0.16); // silhouette plus corpulente
+  let height = feminine ? 1.48 + r() * 0.14 : 1.6 + r() * 0.15;
+  if (senior) height -= 0.05;
+  else if (archetype === 'student') height -= 0.02;
+  const scale = height / SKELETON_TOP;
+  const shoulderR = (feminine ? 0.122 + r() * 0.026 : 0.142 + r() * 0.038) + (heavy ? 0.018 : 0);
+  const belly = heavy ? 0.026 + r() * 0.03 : r() * 0.012;
+  const hipR = (feminine ? 0.128 + r() * 0.03 : 0.13 + r() * 0.032) + (heavy ? 0.018 : 0);
   return {
     scale,
     shoulderR,
-    chestR: shoulderR - 0.01,
-    waistR: Math.max(0.11, shoulderR - 0.03) + belly,
+    chestR: shoulderR - (feminine ? 0.006 : 0.01),
+    waistR: Math.max(feminine ? 0.095 : 0.105, shoulderR - (feminine ? 0.035 : 0.028)) + belly,
     hipR: hipR + belly * 0.5,
-    legR: 0.06 + r() * 0.02 + (heavy ? 0.015 : 0),
+    legR: (feminine ? 0.05 : 0.056) + r() * 0.016 + (heavy ? 0.012 : 0),
   };
 }
 
@@ -102,10 +112,8 @@ function makeBuild(r: () => number, archetype: Archetype): Build {
 function makeOutfit(
   r: () => number,
   archetype: Archetype,
-): { top: Appearance['top']; bottom: Appearance['bottom']; feminine: boolean } {
-  const feminineBase =
-    archetype === 'officeLady' ? true : archetype === 'senior' ? r() < 0.5 : r() < 0.42;
-
+  feminineBase: boolean,
+): { top: Appearance['top']; bottom: Appearance['bottom'] } {
   let top: Appearance['top'];
   let bottom: Appearance['bottom'];
 
@@ -153,7 +161,7 @@ function makeOutfit(
       }
     }
   }
-  return { top, bottom, feminine: feminineBase };
+  return { top, bottom };
 }
 
 function makeHair(r: () => number, archetype: Archetype, feminine: boolean): { style: HairStyle; color: string } {
@@ -174,8 +182,10 @@ export function makeAppearance(id: number): Appearance {
   const r = rng(1300 + id * 2654435761);
   const archetype = pickArchetype(r);
   const senior = archetype === 'senior';
-  const build = makeBuild(r, archetype);
-  const { top, bottom, feminine } = makeOutfit(r, archetype);
+  // Le genre est décidé d'abord : il conditionne la taille et la silhouette.
+  const feminine = archetype === 'officeLady' ? true : senior ? r() < 0.5 : r() < 0.42;
+  const build = makeBuild(r, archetype, feminine);
+  const { top, bottom } = makeOutfit(r, archetype, feminine);
   const hair = makeHair(r, archetype, feminine);
 
   // Accessoires conditionnés par l'archétype.
@@ -199,6 +209,7 @@ export function makeAppearance(id: number): Appearance {
 
   return {
     archetype,
+    feminine,
     build,
     skin: pick(r, SKINS),
     hair,
