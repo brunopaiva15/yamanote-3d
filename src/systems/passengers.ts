@@ -47,6 +47,8 @@ export interface Pax {
   lookYawTarget: number; // cible de l'action « look »
   bodyLean: number;
   decideT: number; // minuterie des décisions assis / debout
+  holdStrap: boolean; // debout : se tient à une poignée (rôdé à chaque passage debout)
+  pockets: boolean; // mains dans les poches (trait stable, pantalon uniquement)
 }
 
 export const POOL_SIZE = 18;
@@ -80,6 +82,8 @@ function makePax(id: number): Pax {
     lookYawTarget: 0,
     bodyLean: 0,
     decideT: 8 + Math.random() * 20,
+    holdStrap: Math.random() < 0.6,
+    pockets: appearance.bottom.type === 'trousers' && Math.random() < 0.4,
   };
 }
 
@@ -126,6 +130,7 @@ function sitPax(p: Pax, slot: number): void {
 
 function standPax(p: Pax, slot: number): void {
   p.state = 'standing';
+  p.holdStrap = Math.random() < 0.6;
   p.standSlot = slot;
   standOccupant[slot] = p.id;
   const s = STAND_SLOTS[slot];
@@ -353,6 +358,7 @@ export function updatePassengers(dt: number): void {
             p.yaw = p.targetYaw;
           } else if (p.afterWalk === 'standing' && p.standSlot >= 0) {
             p.state = 'standing';
+            p.holdStrap = Math.random() < 0.6;
             p.targetYaw = Math.random() > 0.5 ? 0 : Math.PI;
           } else {
             p.state = 'hidden';
