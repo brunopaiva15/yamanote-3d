@@ -82,7 +82,9 @@ function pickArchetype(r: () => number): Archetype {
 function makeBuild(r: () => number, archetype: Archetype): Build {
   const senior = archetype === 'senior';
   const heavy = r() < (senior ? 0.4 : 0.22); // silhouette plus corpulente
-  const scale = (senior ? 0.9 : 0.94) + r() * (senior ? 0.1 : 0.18);
+  // Taille adulte : assez grands pour atteindre les poignées de plafond sans
+  // étirer les bras (les seniors un peu plus petits).
+  const scale = (senior ? 1.0 : 1.05) + r() * (senior ? 0.12 : 0.15);
   const shoulderR = 0.15 + r() * 0.05 + (heavy ? 0.02 : 0);
   const belly = heavy ? 0.03 + r() * 0.04 : r() * 0.015;
   const hipR = 0.135 + r() * 0.035 + (heavy ? 0.02 : 0);
