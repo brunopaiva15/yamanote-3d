@@ -404,101 +404,198 @@ export function makeSkyTexture(): THREE.CanvasTexture {
   return t;
 }
 
-// --- Ville en parallaxe : silhouettes de fin de journée, fenêtres allumées ---
+// --- Ciel d'heure dorée : dégradé chaud, soleil bas, nuages étirés ---
+export function makeSunsetSkyTexture(): THREE.CanvasTexture {
+  const W = 2048;
+  const H = 512;
+  const { c, g } = makeCanvas(W, H);
+  const r = rng(17);
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#a487b6');
+  grad.addColorStop(0.38, '#cf9a96');
+  grad.addColorStop(0.66, '#eba76f');
+  grad.addColorStop(0.86, '#ffce8f');
+  grad.addColorStop(1, '#ffdfa8');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, W, H);
+  const sunX = 1500;
+  const sunY = H * 0.8;
+  const halo = g.createRadialGradient(sunX, sunY, 6, sunX, sunY, 260);
+  halo.addColorStop(0, 'rgba(255,246,220,0.98)');
+  halo.addColorStop(0.12, 'rgba(255,230,175,0.8)');
+  halo.addColorStop(0.5, 'rgba(255,200,130,0.28)');
+  halo.addColorStop(1, 'rgba(255,190,120,0)');
+  g.fillStyle = halo;
+  g.fillRect(sunX - 280, sunY - 280, 560, 560);
+  for (let i = 0; i < 40; i++) {
+    g.fillStyle = `rgba(245,215,195,${0.1 + r() * 0.2})`;
+    g.beginPath();
+    g.ellipse(r() * W, H * (0.1 + r() * 0.62), 90 + r() * 320, 5 + r() * 16, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  const t = toTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  return t;
+}
+
+// --- Ciel de nuit : bleu profond, étoiles, lune ---
+export function makeNightSkyTexture(): THREE.CanvasTexture {
+  const W = 2048;
+  const H = 512;
+  const { c, g } = makeCanvas(W, H);
+  const r = rng(13);
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0b1120');
+  grad.addColorStop(0.6, '#18223a');
+  grad.addColorStop(1, '#2a3550');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 170; i++) {
+    g.fillStyle = `rgba(235,240,250,${0.25 + r() * 0.6})`;
+    g.beginPath();
+    g.arc(r() * W, r() * H * 0.72, 0.6 + r() * 1.1, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Lune avec halo doux et cratères discrets.
+  const mx = 620;
+  const my = H * 0.3;
+  const halo = g.createRadialGradient(mx, my, 8, mx, my, 130);
+  halo.addColorStop(0, 'rgba(240,238,225,0.9)');
+  halo.addColorStop(0.2, 'rgba(220,224,235,0.28)');
+  halo.addColorStop(1, 'rgba(210,220,240,0)');
+  g.fillStyle = halo;
+  g.fillRect(mx - 140, my - 140, 280, 280);
+  g.fillStyle = '#f2efe2';
+  g.beginPath();
+  g.arc(mx, my, 26, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = 'rgba(205,205,195,0.5)';
+  g.beginPath();
+  g.arc(mx - 8, my - 5, 6, 0, Math.PI * 2);
+  g.arc(mx + 9, my + 8, 4, 0, Math.PI * 2);
+  g.fill();
+  for (let i = 0; i < 14; i++) {
+    g.fillStyle = `rgba(16,22,38,${0.25 + r() * 0.3})`;
+    g.beginPath();
+    g.ellipse(r() * W, H * (0.3 + r() * 0.5), 120 + r() * 260, 10 + r() * 22, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  const t = toTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  return t;
+}
+
+// --- Ville en parallaxe : façades pastel le jour, fenêtres et néons la nuit ---
 const SIGN_WORDS = ['寿司', '居酒屋', 'カラオケ', '薬局', '書店', 'ラーメン', '喫茶', 'ホテル', '不動産', '歯科'];
 const ROOF_WORDS = ['未来生活', '東京時間', '光る夜', '毎日新鮮', 'ネオン堂'];
 
-// Façades pastel accueillantes (esprit Shashingo), devantures colorées au
-// rez-de-chaussée, enseignes rondes et verticales.
 const FACADES = ['#e6dcc9', '#e4cfc5', '#dde4d2', '#e0d7e4', '#e8e1cf', '#d6dfe3', '#e7d6c2'];
+const NIGHT_FACADES = ['#3a4152', '#38404e', '#3e4550', '#3c4156', '#40474f', '#374052', '#3d4450'];
 const SHOP_COLORS = ['#e2705c', '#5c9fe2', '#e2b45c', '#63c28a', '#c97fb8', '#e28a5c'];
+const NEON_COLORS = ['#ff9a84', '#8fd0ff', '#ffd88a', '#8ff0b4', '#f2b0e4', '#ffbe8f'];
 
-export function makeCityTexture(layer: 0 | 1 | 2): THREE.CanvasTexture {
+// La variante nuit consomme EXACTEMENT la même séquence aléatoire que le
+// jour : mêmes bâtiments, mêmes enseignes, pour un fondu parfait entre les
+// deux plans superposés.
+export function makeCityTexture(layer: 0 | 1 | 2, night = false): THREE.CanvasTexture {
   const W = 2048;
   const H = 512;
   const { c, g } = makeCanvas(W, H);
   const r = rng(101 + layer * 57);
-  // Voie surélevée : premier plan bas, ciel du soir bien visible.
+  // Voie surélevée : premier plan bas, le ciel doit respirer.
   const maxH = layer === 0 ? 0.5 : layer === 1 ? 0.5 : 0.45;
   const gapChance = layer === 0 ? 0.35 : layer === 1 ? 0.26 : 0;
   const fade = layer === 0 ? 1 : layer === 1 ? 0.75 : 0.5; // contraste des détails
   let x = 0;
   while (x < W) {
     const bw = 60 + r() * (layer === 0 ? 130 : 90);
-    // Trouées entre immeubles : le ciel du soir doit respirer.
     if (r() < gapChance) {
       x += bw * (0.5 + r());
       continue;
     }
     const bh = H * (0.2 + r() * maxH * 0.72);
-    // Façade pastel, éclaircie sur les couches lointaines (brume).
-    const base = FACADES[Math.floor(r() * FACADES.length)];
-    g.fillStyle = base;
+    const facadeIdx = Math.floor(r() * FACADES.length);
+    g.fillStyle = night ? NIGHT_FACADES[facadeIdx] : FACADES[facadeIdx];
     g.globalAlpha = 1;
     g.fillRect(x, H - bh, bw, bh);
     if (layer > 0) {
-      g.fillStyle = `rgba(226,206,196,${layer === 1 ? 0.35 : 0.6})`;
+      g.fillStyle = night
+        ? `rgba(28,34,52,${layer === 1 ? 0.35 : 0.6})`
+        : `rgba(226,206,196,${layer === 1 ? 0.35 : 0.6})`;
       g.fillRect(x, H - bh, bw, bh);
     }
-    // Toit : enseigne posée, couleurs franches et douces.
+    // Toit : enseigne posée (lumineuse la nuit).
     if (layer < 2 && r() > 0.62) {
       const pw = bw * (0.4 + r() * 0.4);
-      g.fillStyle = '#faf6ec';
+      g.fillStyle = night ? '#20242e' : '#faf6ec';
       g.beginPath();
       g.roundRect(x + bw * 0.2, H - bh - 26, pw, 22, 6);
       g.fill();
-      g.fillStyle = SHOP_COLORS[Math.floor(r() * SHOP_COLORS.length)];
+      const roofColorIdx = Math.floor(r() * SHOP_COLORS.length);
+      g.fillStyle = night ? NEON_COLORS[roofColorIdx] : SHOP_COLORS[roofColorIdx];
       g.font = `bold 15px ${JP_FONT}`;
       g.fillText(ROOF_WORDS[Math.floor(r() * ROOF_WORDS.length)], x + bw * 0.2 + 8, H - bh - 9);
     }
-    // Fenêtres : cadres doux, quelques-unes chaudement allumées.
     if (layer < 2) {
+      // Fenêtres : reflets de ciel le jour, largement allumées la nuit.
       const cols = Math.floor(bw / 16);
       const rows = Math.max(0, Math.floor((bh - 66) / 20));
       for (let i = 0; i < cols; i++) {
         for (let j = 0; j < rows; j++) {
-          // Plein jour : vitres qui reflètent le ciel, quelques stores clairs.
-          g.fillStyle =
-            r() > 0.8
-              ? `rgba(238,240,236,${0.7 * fade})`
-              : `rgba(136,170,196,${(0.5 + r() * 0.3) * fade})`;
+          const w1 = r();
+          const w2 = r();
+          if (night) {
+            g.fillStyle =
+              w1 > 0.42
+                ? `rgba(255,${205 + Math.floor(w2 * 40)},140,${(0.65 + w2 * 0.3) * fade})`
+                : `rgba(24,30,44,${0.7 * fade})`;
+          } else {
+            g.fillStyle =
+              w1 > 0.8
+                ? `rgba(238,240,236,${0.7 * fade})`
+                : `rgba(136,170,196,${(0.5 + w2 * 0.3) * fade})`;
+          }
           g.beginPath();
           g.roundRect(x + 6 + i * 16, H - bh + 8 + j * 20, 9, 12, 2);
           g.fill();
         }
       }
-      // Devanture colorée au rez-de-chaussée : store, bandeau, enseigne ronde.
-      const shop = SHOP_COLORS[Math.floor(r() * SHOP_COLORS.length)];
+      // Devanture au rez-de-chaussée : bandeau, enseigne, vitrine.
+      const shopIdx = Math.floor(r() * SHOP_COLORS.length);
+      const shop = night ? NEON_COLORS[shopIdx] : SHOP_COLORS[shopIdx];
       g.fillStyle = shop;
-      g.globalAlpha = 0.9 * fade;
+      g.globalAlpha = (night ? 1 : 0.9) * fade;
       g.fillRect(x + 2, H - 58, bw - 4, 20);
       g.globalAlpha = 1;
-      g.fillStyle = '#fdf9f0';
+      g.fillStyle = night ? '#2a2620' : '#fdf9f0';
       g.font = `bold 13px ${JP_FONT}`;
       g.fillText(SIGN_WORDS[Math.floor(r() * SIGN_WORDS.length)], x + 10, H - 43);
       // Auvent rayé une fois sur deux.
       if (r() > 0.5) {
         for (let sx2 = x + 4; sx2 < x + bw - 10; sx2 += 12) {
-          g.fillStyle = (sx2 / 12) % 2 < 1 ? '#f6f1e6' : shop;
+          g.fillStyle = (sx2 / 12) % 2 < 1 ? (night ? '#464a52' : '#f6f1e6') : shop;
           g.globalAlpha = 0.85 * fade;
           g.fillRect(sx2, H - 36, 12, 10);
         }
         g.globalAlpha = 1;
       }
-      // Vitrine chaude.
-      g.fillStyle = `rgba(255,214,150,${0.5 * fade})`;
+      // Vitrine chaude, éclatante la nuit.
+      g.fillStyle = `rgba(255,214,150,${(night ? 0.9 : 0.5) * fade})`;
       g.fillRect(x + 8, H - 26, bw - 16, 22);
     }
-    // Enseigne verticale japonaise, pastel et propre.
+    // Enseigne verticale japonaise (néon la nuit).
     if (layer === 0 && r() > 0.55) {
       const sx = x + bw - 18;
       const sh = 80 + r() * 80;
       const sy = H - bh + 14 + r() * 30;
-      g.fillStyle = SHOP_COLORS[Math.floor(r() * SHOP_COLORS.length)];
+      const signIdx = Math.floor(r() * SHOP_COLORS.length);
+      g.fillStyle = night ? NEON_COLORS[signIdx] : SHOP_COLORS[signIdx];
       g.beginPath();
       g.roundRect(sx, sy, 16, sh, 5);
       g.fill();
-      g.fillStyle = '#fdf9f0';
+      g.fillStyle = night ? '#2a2620' : '#fdf9f0';
       g.font = `bold 11px ${JP_FONT}`;
       const word = SIGN_WORDS[Math.floor(r() * SIGN_WORDS.length)];
       for (let k = 0; k < word.length && k * 13 < sh - 12; k++) {

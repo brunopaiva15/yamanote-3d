@@ -6,7 +6,14 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { runtime } from '../systems/runtime';
-import { makeCityTexture, makeGroundTexture, makeSkyTexture } from '../textures/procedural';
+import { dayNightWeights } from '../systems/daynight';
+import {
+  makeCityTexture,
+  makeGroundTexture,
+  makeSkyTexture,
+  makeSunsetSkyTexture,
+  makeNightSkyTexture,
+} from '../textures/procedural';
 
 interface Layer {
   x: number;
@@ -29,9 +36,26 @@ export function Scenery() {
   const materials = useRef<{ mat: THREE.MeshBasicMaterial; metersPerRepeat: number; sign: number }[]>([]);
   const groundMat = useRef<THREE.MeshBasicMaterial | null>(null);
 
+  // Variante nuit de la ville : plans superposés dont l'opacité suit l'heure.
+  const nightMats = useRef<THREE.MeshBasicMaterial[]>([]);
+  const dayCityMats = useRef<{ mat: THREE.MeshBasicMaterial; base: number; hasNight: boolean }[]>([]);
+  const skyMats = useRef<{ day: THREE.MeshBasicMaterial; golden: THREE.MeshBasicMaterial; night: THREE.MeshBasicMaterial } | null>(
+    null,
+  );
+
   const built = useMemo(() => {
     materials.current = [];
-    const planes: { key: string; x: number; y: number; rotY: number; height: number; mat: THREE.MeshBasicMaterial }[] = [];
+    nightMats.current = [];
+    dayCityMats.current = [];
+    const planes: {
+      key: string;
+      x: number;
+      y: number;
+      rotY: number;
+      height: number;
+      mat: THREE.MeshBasicMaterial;
+      night?: THREE.MeshBasicMaterial;
+    }[] = [];
     for (const L of LAYERS) {
       for (const side of [1, -1] as const) {
         const tex = makeCityTexture(L.layer);
@@ -44,7 +68,24 @@ export function Scenery() {
           depthWrite: false,
         });
         // Sens de défilement : les immeubles reculent quand le train avance.
-        materials.current.push({ mat, metersPerRepeat: L.metersPerRepeat, sign: side === -1 ? 1 : -1 });
+        const sign = side === -1 ? 1 : -1;
+        materials.current.push({ mat, metersPerRepeat: L.metersPerRepeat, sign });
+        dayCityMats.current.push({ mat, base: L.opacity, hasNight: L.layer < 2 });
+        // Plan nuit (mêmes bâtiments, fenêtres allumées) pour les couches proches.
+        let night: THREE.MeshBasicMaterial | undefined;
+        if (L.layer < 2) {
+          const ntex = makeCityTexture(L.layer, true);
+          ntex.repeat.set(L.repeat, 1);
+          night = new THREE.MeshBasicMaterial({
+            map: ntex,
+            transparent: true,
+            opacity: 0,
+            fog: true,
+            depthWrite: false,
+          });
+          materials.current.push({ mat: night, metersPerRepeat: L.metersPerRepeat, sign });
+          nightMats.current.push(night);
+        }
         planes.push({
           key: `city${L.layer}-${side}`,
           x: side * L.x,
@@ -52,6 +93,7 @@ export function Scenery() {
           rotY: side === -1 ? Math.PI / 2 : -Math.PI / 2,
           height: L.height,
           mat,
+          night,
         });
       }
     }
@@ -59,8 +101,23 @@ export function Scenery() {
     groundTex.repeat.set(2, 24);
     const gm = new THREE.MeshBasicMaterial({ map: groundTex, fog: true, color: '#d6d4ce' });
     groundMat.current = gm;
-    const skyTex = makeSkyTexture();
-    return { planes, gm, skyTex };
+    // Trois ciels superposés, fondus selon l'heure de Tokyo.
+    const mkSky = (map: THREE.CanvasTexture, opacity: number) =>
+      new THREE.MeshBasicMaterial({
+        map,
+        side: THREE.BackSide,
+        fog: false,
+        toneMapped: false,
+        transparent: true,
+        opacity,
+        depthWrite: false,
+      });
+    skyMats.current = {
+      day: mkSky(makeSkyTexture(), 1),
+      golden: mkSky(makeSunsetSkyTexture(), 0),
+      night: mkSky(makeNightSkyTexture(), 0),
+    };
+    return { planes, gm, sky: skyMats.current };
   }, []);
 
   // Poteaux caténaires et arbres qui défilent : les vrais vendeurs de vitesse.
@@ -90,6 +147,24 @@ export function Scenery() {
       if (!t) continue;
       t.position.z = ((runtime.distance * 0.999 + i * TREE_SPACING + 9) % treeSpan) - treeSpan / 2;
     }
+    // Cycle jour / nuit : fondu des ciels et des fenêtres de la ville.
+    const w = dayNightWeights(runtime.clockMin / 60);
+    if (skyMats.current) {
+      skyMats.current.day.opacity = w.day;
+      skyMats.current.golden.opacity = w.golden;
+      skyMats.current.night.opacity = w.night;
+    }
+    const cityNight = Math.min(1, w.night + w.golden * 0.45);
+    for (const m of nightMats.current) m.opacity = cityNight;
+    // Le plan jour s'efface à la nuit (les couches sans variante nuit
+    // s'assombrissent par teinte).
+    for (const d of dayCityMats.current) {
+      if (d.hasNight) d.mat.opacity = d.base * (1 - cityNight);
+      else {
+        const k = 1 - 0.72 * cityNight;
+        d.mat.color.setRGB(k, k, k * 1.08);
+      }
+    }
   });
 
   // Arbres boules (esprit Shashingo) : tronc + deux masses de feuillage.
@@ -105,16 +180,31 @@ export function Scenery() {
 
   return (
     <group>
-      {/* Ciel : cylindre inversé, hors brouillard pour rester éclatant */}
-      <mesh position={[0, 14, 0]}>
-        <cylinderGeometry args={[78, 78, 64, 48, 1, true]} />
-        <meshBasicMaterial map={built.skyTex} side={THREE.BackSide} fog={false} toneMapped={false} />
-      </mesh>
+      {/* Ciels superposés (jour / doré / nuit), fondus selon l'heure de Tokyo */}
+      {([
+        ['night', built.sky.night, -6],
+        ['golden', built.sky.golden, -5],
+        ['day', built.sky.day, -4],
+      ] as const).map(([key, mat, order]) => (
+        <mesh key={`sky-${key}`} position={[0, 14, 0]} material={mat} renderOrder={order}>
+          <cylinderGeometry args={[78, 78, 64, 48, 1, true]} />
+        </mesh>
+      ))}
 
       {built.planes.map((p) => (
-        <mesh key={p.key} position={[p.x, p.y, 0]} rotation={[0, p.rotY, 0]} material={p.mat}>
-          <planeGeometry args={[PLANE_LEN, p.height]} />
-        </mesh>
+        <group key={p.key}>
+          <mesh position={[p.x, p.y, 0]} rotation={[0, p.rotY, 0]} material={p.mat}>
+            <planeGeometry args={[PLANE_LEN, p.height]} />
+          </mesh>
+          {/* Variante nuit, 2 cm plus proche : le tri par distance la dessine
+              après le plan jour et AVANT les vitres du wagon (dont l'écriture
+              de profondeur éliminerait tout plan dessiné après elles). */}
+          {p.night && (
+            <mesh position={[p.x + (p.x > 0 ? -0.02 : 0.02), p.y, 0]} rotation={[0, p.rotY, 0]} material={p.night}>
+              <planeGeometry args={[PLANE_LEN, p.height]} />
+            </mesh>
+          )}
+        </group>
       ))}
 
       {/* Arbres boules défilants le long de la voie */}

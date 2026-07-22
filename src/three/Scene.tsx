@@ -3,13 +3,15 @@
 // pour les laqués et le chrome, post-process filmique discret
 // (bloom seuil haut, grain, vignette).
 
-import { useEffect } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useEffect, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { EffectComposer, Bloom, Vignette, ToneMapping, Noise } from '@react-three/postprocessing';
 import { BlendFunction, ToneMappingMode } from 'postprocessing';
 import { CONFIG } from '../data/config';
+import { runtime } from '../systems/runtime';
+import { dayNightWeights } from '../systems/daynight';
 
 const LAMP_POSITIONS: [number, number, number][] = [
   [0, 2.16, -7.5],
@@ -56,17 +58,74 @@ function ShadowFlags(): null {
   return null;
 }
 
-export function Scene() {
+// Trois ambiances lumineuses fondues selon l'heure réelle de Tokyo.
+const SUN = {
+  day: { color: new THREE.Color('#fff6e4'), intensity: 1.7, pos: new THREE.Vector3(26, 30, -16) },
+  golden: { color: new THREE.Color('#ffb37a'), intensity: 1.6, pos: new THREE.Vector3(34, 7, -14) },
+  night: { color: new THREE.Color('#8fa4cc'), intensity: 0.16, pos: new THREE.Vector3(20, 26, 12) },
+};
+const FOG_COLORS = { day: new THREE.Color('#d6e8f2'), golden: new THREE.Color('#dcae8f'), night: new THREE.Color('#161d2c') };
+const BG_COLORS = { day: new THREE.Color('#bcdaee'), golden: new THREE.Color('#e0b494'), night: new THREE.Color('#10141f') };
+const HEMI_SKY = { day: new THREE.Color('#cfe6f6'), golden: new THREE.Color('#eec5ae'), night: new THREE.Color('#2c3854') };
+const AMBIENT = { day: new THREE.Color('#e9f1f5'), golden: new THREE.Color('#e3cabb'), night: new THREE.Color('#38405a') };
+
+function mixColor(out: THREE.Color, w: { day: number; golden: number; night: number }, set: { day: THREE.Color; golden: THREE.Color; night: THREE.Color }): THREE.Color {
+  out.setRGB(
+    set.day.r * w.day + set.golden.r * w.golden + set.night.r * w.night,
+    set.day.g * w.day + set.golden.g * w.golden + set.night.g * w.night,
+    set.day.b * w.day + set.golden.b * w.golden + set.night.b * w.night,
+  );
+  return out;
+}
+
+// Pilote lumières, brume et fond selon l'heure (jamais par re-render React).
+function DayNightLighting() {
+  const { scene } = useThree();
+  const sun = useRef<THREE.DirectionalLight>(null);
+  const fill = useRef<THREE.DirectionalLight>(null);
+  const hemi = useRef<THREE.HemisphereLight>(null);
+  const amb = useRef<THREE.AmbientLight>(null);
+  const acc = useRef(1);
+  const tmp = useRef(new THREE.Color());
+
+  useFrame((_, dt) => {
+    acc.current += dt;
+    if (acc.current < 0.5) return;
+    acc.current = 0;
+    const w = dayNightWeights(runtime.clockMin / 60);
+    if (sun.current) {
+      sun.current.intensity = SUN.day.intensity * w.day + SUN.golden.intensity * w.golden + SUN.night.intensity * w.night;
+      mixColor(sun.current.color, w, { day: SUN.day.color, golden: SUN.golden.color, night: SUN.night.color });
+      sun.current.position
+        .set(0, 0, 0)
+        .addScaledVector(SUN.day.pos, w.day)
+        .addScaledVector(SUN.golden.pos, w.golden)
+        .addScaledVector(SUN.night.pos, w.night);
+    }
+    if (fill.current) fill.current.intensity = 0.4 * w.day + 0.5 * w.golden + 0.1 * w.night;
+    if (hemi.current) {
+      hemi.current.intensity = 0.62 * w.day + 0.52 * w.golden + 0.22 * w.night;
+      mixColor(hemi.current.color, w, HEMI_SKY);
+    }
+    if (amb.current) {
+      amb.current.intensity = 0.4 * w.day + 0.35 * w.golden + 0.24 * w.night;
+      mixColor(amb.current.color, w, AMBIENT);
+    }
+    if (scene.fog instanceof THREE.Fog) {
+      mixColor(scene.fog.color, w, FOG_COLORS);
+      scene.fog.near = 26 * w.day + 18 * w.golden + 14 * w.night;
+      scene.fog.far = 115 * w.day + 88 * w.golden + 72 * w.night;
+    }
+    if (scene.background instanceof THREE.Color) {
+      mixColor(tmp.current, w, BG_COLORS);
+      scene.background.copy(tmp.current);
+    }
+  });
+
   return (
     <>
-      <color attach="background" args={['#bcdaee']} />
-      <fog attach="fog" args={['#d6e8f2', 26, 115]} />
-      <EnvironmentMap />
-      <ShadowFlags />
-
-      {/* Plein jour éclatant (esprit Shashingo) : soleil haut, air limpide,
-          ombres nettes mais douces. */}
       <directionalLight
+        ref={sun}
         position={[26, 30, -16]}
         intensity={1.7}
         color="#fff6e4"
@@ -82,10 +141,21 @@ export function Scene() {
         shadow-bias={-0.0003}
         shadow-normalBias={0.03}
       />
-      <directionalLight position={[-30, 16, 18]} intensity={0.4} color="#dfeaf2" />
-      {/* Ciel bleu clair / sol neutre. */}
-      <hemisphereLight args={['#cfe6f6', '#8d9088', 0.62]} />
-      <ambientLight intensity={0.4} color="#e9f1f5" />
+      <directionalLight ref={fill} position={[-30, 16, 18]} intensity={0.4} color="#dfeaf2" />
+      <hemisphereLight ref={hemi} args={['#cfe6f6', '#8d9088', 0.62]} />
+      <ambientLight ref={amb} intensity={0.4} color="#e9f1f5" />
+    </>
+  );
+}
+
+export function Scene() {
+  return (
+    <>
+      <color attach="background" args={['#bcdaee']} />
+      <fog attach="fog" args={['#d6e8f2', 26, 115]} />
+      <EnvironmentMap />
+      <ShadowFlags />
+      <DayNightLighting />
 
       {/* Intérieur : chapelet de points blanc chaud sous le bandeau plafond. */}
       {LAMP_POSITIONS.map((p, i) => (
