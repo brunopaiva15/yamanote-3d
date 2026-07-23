@@ -25,6 +25,47 @@ npm run lint     # oxlint
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder, bouton s'asseoir
 - Avance rapide (HUD) : saute à la séquence d'arrivée de la station suivante
 
+## Personnages (modèles 3D riggés)
+
+Les passagers peuvent être rendus de deux façons, avec la **même** logique de
+jeu (états, embarquements, regards, poignées) :
+
+- **Modèles « librairie »** (recommandé) : des personnages low-poly riggés et
+  animés (GLB) installés dans `public/models/` avec un `manifest.json`. Clips
+  assis / debout / marche en crossfade, regard et bras vers la poignée
+  superposés sur les os, lunettes / masques / sacs ajoutés par-dessus.
+- **Procédural** (repli automatique) : si `public/models/manifest.json` est
+  absent ou qu'un GLB ne charge pas, l'ancien rendu en primitives est utilisé.
+
+Installation des modèles — les packs conseillés sont ceux de
+[Quaternius](https://quaternius.com) (licence CC0, usage libre) :
+« Ultimate Modular Men/Women Pack » (personnages complets animés), ou
+« Universal Base Characters » combiné à l'« Universal Animation Library »
+(animations séparées, rig identique). Télécharger les zips, puis :
+
+```bash
+# tout-en-un : extraction, filtrage des humanoïdes riggés, optimisation
+# (compression meshopt), mesures et génération de public/models/manifest.json
+npm run models:import -- ~/Téléchargements/UltimateModularMen.zip \
+  ~/Téléchargements/UltimateModularWomen.zip
+
+# packs avec animations séparées (rig identique) :
+npm run models:import -- UniversalBaseCharacters.zip --anims UniversalAnimationLibrary.zip
+
+# inspecter un pack sans l'installer (os, clips, matériaux, hauteur) :
+npm run models:inspect -- pack.zip
+```
+
+Après import : vérifier/ajuster `archetypes` (salaryman, officeLady, casual,
+student, senior, tourist) et `feminine` dans `public/models/manifest.json`,
+contrôler le rendu avec `npm run dev`, puis committer `public/models/`.
+En dev, `/rig-probe.html?file=mon-perso.glb&clip=Sit_Chair_Idle` rend un GLB
+seul, clip par clip, pour diagnostiquer un modèle hors du jeu.
+Les GLB sont normalisés automatiquement à l'échelle du jeu (aucune retouche
+Blender nécessaire) ; les clips et les os sont détectés par correspondance
+floue (conventions Quaternius / KayKit / Mixamo), avec overrides possibles
+par variante dans le manifest (`clips`, `faceYaw`, `sitHipY`, `tint`).
+
 ## Vocabulaire (esprit Shashingo)
 
 Regarder un objet du wagon (porte, tsurikawa, siège, fenêtre, porte-bagages,
@@ -58,6 +99,9 @@ src/
                          file d'annonces vocales, PNJ, slots d'assise, runtime 60 fps
   three/                 rendu R3F : wagon, sièges, portes, poignées, pubs, écrans LCD,
                          ville en parallaxe, quai + portes palières, PNJ, caméra
+  three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
+                         overrides d'os (regard, tsurikawa), accessoires
+  scripts/               models:import / models:inspect (packs → public/models/)
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   ui/                    HUD français, écran de démarrage, contrôles tactiles
 ```
