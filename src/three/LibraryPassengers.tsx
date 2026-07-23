@@ -55,7 +55,7 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       paxList.map((p) => {
         const template = pickTemplate(templates, p.appearance, p.id);
         const clone = cloneVariant(template, p.appearance);
-        const props = attachProps(clone.wrap, p.appearance);
+        const props = attachProps(clone.wrap, p.appearance, template.variant.bagProp !== false);
         return { clone, pose: makePoseState(), props, currentKey: '', seatFix: 0 };
       }),
     [templates],
@@ -83,9 +83,12 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       const seated = p.state === 'seated';
       const walking = p.state === 'boarding' || p.state === 'alighting';
 
-      // --- Choix du clip (avec repli si le pack n'a pas tout). ---
+      // --- Choix du clip (avec repli si le pack n'a pas tout). Sans clip
+      // assis, standIdle reste joué en sous-couche : le mixer réécrit ainsi
+      // TOUS les os chaque frame (sinon les overrides additifs s'accumulent)
+      // et l'assise manuelle replie les jambes par-dessus. ---
       let key: LogicalClip | '' = '';
-      if (seated) key = actions.sitIdle ? 'sitIdle' : '';
+      if (seated) key = actions.sitIdle ? 'sitIdle' : actions.standIdle ? 'standIdle' : '';
       else if (walking) key = actions.walk ? 'walk' : actions.standIdle ? 'standIdle' : '';
       else key = actions.standIdle ? 'standIdle' : '';
       if (key !== s.currentKey) {
@@ -124,7 +127,11 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       wrap.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway);
       wrap.scale.setScalar(p.height);
 
-      // --- Animation puis overrides d'os (le mixer réécrit la pose). ---
+      // --- Animation puis overrides d'os (le mixer réécrit la pose). Les os
+      // à rotations additives repartent de leur pose de repos : si le clip
+      // actif ne les anime pas, rien ne s'accumule. ---
+      if (s.clone.restHead && bones.head) bones.head.quaternion.copy(s.clone.restHead);
+      if (s.clone.restSpine && bones.spine) bones.spine.quaternion.copy(s.clone.restSpine);
       mixer.update(dt);
       applyPoseOverrides(p, bones, s.pose, k, manualSit);
       updatePropRig(s.props, bones, wrap);

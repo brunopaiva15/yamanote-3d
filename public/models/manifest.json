@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "source": "Quaternius — Ultimate Animated Character Pack (Adventurer)",
+  "license": "CC0 1.0",
+  "walkClipSpeed": 1.4,
+  "variants": [
+    {
+      "id": "Adventurer",
+      "file": "adventurer.glb",
+      "archetypes": ["casual", "tourist", "student"],
+      "feminine": false,
+      "noSitClip": true,
+      "bagProp": false,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Hair": "hair",
+        "Eyebrows": "hair",
+        "LightGreen": "top",
+        "Green": "topDark",
+        "Brown": "bottom",
+        "Brown2": "bag",
+        "Grey": "shoes",
+        "Black": "none",
+        "Eye": "none",
+        "Gold": "none"
+      }
+    }
+  ]
+}

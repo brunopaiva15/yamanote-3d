@@ -127,6 +127,25 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
       vTarget.y -= 1;
       aimBone(b, vTarget, w);
     }
+    // Pieds à plat (sinon ils suivent rigidement le tibia et pointent au sol).
+    vDir.set(Math.sin(p.yaw), -0.15, Math.cos(p.yaw));
+    for (const key of ['footL', 'footR'] as const) {
+      const b = bones[key];
+      if (!b) continue;
+      b.updateWorldMatrix(true, false);
+      b.getWorldPosition(vBonePos);
+      vTarget.copy(vBonePos).add(vDir);
+      aimBone(b, vTarget, w);
+    }
+    // Mains posées vers les genoux (le clip debout laisse les bras ballants),
+    // sauf si la pose téléphone tient déjà les avant-bras.
+    const handW = w * (1 - state.phoneW);
+    if (handW > 0.001) {
+      vDir.set(Math.sin(p.yaw), 0, Math.cos(p.yaw));
+      vTarget.set(p.pos.x, 0.58, p.pos.z).addScaledVector(vDir, 0.34 * p.height);
+      if (bones.foreArmL) aimBone(bones.foreArmL, vTarget, handW * 0.9);
+      if (bones.foreArmR) aimBone(bones.foreArmR, vTarget, handW * 0.9);
+    }
     if (bones.spine) bones.spine.rotation.x += 0.12 * w;
   }
 }

@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { Appearance } from '../../systems/appearance';
 import { SKELETON_TOP } from '../../systems/appearance';
-import type { CharacterManifest, CharacterVariant, LogicalClip } from './manifest';
+import type { CharacterManifest, CharacterVariant, LogicalClip, TintRole } from './manifest';
 
 export type LogicalBone =
   | 'hips'
@@ -54,6 +54,11 @@ export interface CharacterClone {
   actions: Partial<Record<LogicalClip, THREE.AnimationAction>>;
   bones: BoneMap;
   template: CharacterTemplate;
+  // Pose de repos des os recevant des rotations ADDITIVES (tête, buste) :
+  // restaurée avant mixer.update pour qu'aucun ajout ne s'accumule si un clip
+  // n'anime pas ces os (le mixer ne les réécrirait alors jamais).
+  restHead: THREE.Quaternion | null;
+  restSpine: THREE.Quaternion | null;
 }
 
 // --- Résolution floue des os ---------------------------------------------
@@ -224,23 +229,46 @@ export function buildTemplates(manifest: CharacterManifest, gltfs: LoadedGltf[])
 
 // --- Teinte des matériaux nommés -----------------------------------------
 
-// Rôles reconnus dans les noms de matériaux des packs (test : insensible à la
-// casse, sur le nom normalisé). Les matériaux texturés ne sont pas altérés.
-const TINT_ROLES: [RegExp, (app: Appearance) => string][] = [
-  [/skin|body|face|flesh/i, (a) => a.skin],
-  [/hair|beard/i, (a) => a.hair.color],
-  [/top|shirt|torso|jacket|suit|cloth|outfit|upper/i, (a) => a.top.color],
-  [/bottom|pants|trouser|legs|lower|jeans/i, (a) => a.bottom.color],
-  [/shoe|feet|boot|sneaker/i, (a) => a.shoes],
+// Assombrit une couleur hex (mélange vers le noir) pour les rôles *Dark.
+function shade(hex: string, k: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(((n >> 16) & 255) * (1 - k));
+  const g = Math.round(((n >> 8) & 255) * (1 - k));
+  const b = Math.round((n & 255) * (1 - k));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+// La couleur de chaque rôle vient du descripteur d'apparence du passager.
+const ROLE_COLOR: Record<Exclude<TintRole, 'none'>, (app: Appearance) => string> = {
+  skin: (a) => a.skin,
+  hair: (a) => a.hair.color,
+  top: (a) => a.top.color,
+  topDark: (a) => shade(a.top.color, 0.28),
+  bottom: (a) => a.bottom.color,
+  bottomDark: (a) => shade(a.bottom.color, 0.28),
+  shoes: (a) => a.shoes,
+  bag: (a) => a.bagColor,
+};
+
+// Rôles devinés dans les noms de matériaux des packs quand la variante ne
+// fournit pas de tintMap explicite. Les matériaux texturés ne sont pas altérés.
+const TINT_GUESS: [RegExp, Exclude<TintRole, 'none'>][] = [
+  [/skin|body|face|flesh/i, 'skin'],
+  [/hair|beard|brow/i, 'hair'],
+  [/top|shirt|torso|jacket|suit|cloth|outfit|upper/i, 'top'],
+  [/bottom|pants|trouser|legs|lower|jeans/i, 'bottom'],
+  [/shoe|feet|boot|sneaker/i, 'shoes'],
 ];
 
-function tintMaterial(mat: THREE.Material, app: Appearance): THREE.Material {
+function tintMaterial(mat: THREE.Material, app: Appearance, tintMap?: Record<string, TintRole>): THREE.Material {
   const std = mat as THREE.MeshStandardMaterial;
   if (!('color' in std)) return mat;
-  const role = TINT_ROLES.find(([re]) => re.test(mat.name));
+  let role: TintRole | undefined = tintMap?.[mat.name];
+  if (role === 'none') return mat;
+  if (!role) role = TINT_GUESS.find(([re]) => re.test(mat.name))?.[1];
   const cloned = std.clone();
   if (role && !std.map) {
-    cloned.color.set(role[1](app));
+    cloned.color.set(ROLE_COLOR[role](app));
   }
   return cloned;
 }
@@ -259,7 +287,9 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
     mesh.castShadow = false;
     mesh.receiveShadow = false;
     if (doTint) {
-      mesh.material = Array.isArray(mesh.material) ? mesh.material.map((m) => tintMaterial(m, app)) : tintMaterial(mesh.material, app);
+      mesh.material = Array.isArray(mesh.material)
+        ? mesh.material.map((m) => tintMaterial(m, app, template.variant.tintMap))
+        : tintMaterial(mesh.material, app, template.variant.tintMap);
     }
   });
 
@@ -279,5 +309,14 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
     actions[key as LogicalClip] = mixer.clipAction(clip);
   }
 
-  return { wrap, mixer, actions, bones: resolveBones(model), template };
+  const bones = resolveBones(model);
+  return {
+    wrap,
+    mixer,
+    actions,
+    bones,
+    template,
+    restHead: bones.head ? bones.head.quaternion.clone() : null,
+    restSpine: bones.spine ? bones.spine.quaternion.clone() : null,
+  };
 }
