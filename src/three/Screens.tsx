@@ -1,5 +1,6 @@
-// Doubles écrans LCD au-dessus des portes (E235) : écran gauche = prochaine
-// station, écran droit = écran de ligne fidèle au vrai afficheur JR East
+// Doubles écrans LCD au-dessus des portes (E235) : écran gauche = publicités
+// en boucle (comme dans les vraies rames, il n'affiche jamais la prochaine
+// station), écran droit = écran de ligne fidèle au vrai afficheur JR East
 // (bandeau noir, arc vert avec minutes, liste de stations, correspondances).
 // Deux CanvasTexture partagées, redessinées uniquement aux changements.
 
@@ -10,7 +11,7 @@ import { CONFIG } from '../data/config';
 import { STATIONS, TRANSFERS } from '../data/stations';
 import { useStore, type Phase } from '../store';
 import { runtime } from '../systems/runtime';
-import { JP_FONT } from '../textures/procedural';
+import { JP_FONT, drawAdInto } from '../textures/procedural';
 
 const YAMANOTE_GREEN = '#80c241';
 
@@ -45,13 +46,6 @@ function makeScreen(w: number, h: number): {
   return { g, texture, w, h };
 }
 
-function fmtClock(clockMin: number): string {
-  const total = Math.floor(clockMin) % (24 * 60);
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
 // Secondes restantes avant l'arrivée à la prochaine station.
 function secondsToArrival(phase: Phase, phaseT: number): number {
   if (phase === 'cruise') return Math.max(0, CONFIG.cruiseTime - phaseT) + CONFIG.brakeTime;
@@ -69,51 +63,15 @@ function fitText(g: CanvasRenderingContext2D, text: string, maxWidth: number, ba
   } while (px > 10);
 }
 
-// --- Écran gauche : prochaine station ---
-function drawLeft(
-  s: ReturnType<typeof makeScreen>,
-  index: number,
-  phase: Phase,
-  side: 1 | -1,
-  clock: string,
-): void {
+// --- Écran gauche : publicités en boucle (jamais d'info voyageurs, comme
+// dans les vraies E235). Les seeds évitent celles des affiches et écrans
+// 窓上 (0-5 et 20-25) pour ne pas répéter les mêmes visuels dans le wagon.
+const AD_LOOP_FIRST_SEED = 40;
+const AD_LOOP_COUNT = 8;
+
+function drawLeftAd(s: ReturnType<typeof makeScreen>, seed: number): void {
   const { g, w, h } = s;
-  const st = STATIONS[index];
-  const arriving = phase === 'brake' || phase === 'dwell';
-  g.fillStyle = '#10151a';
-  g.fillRect(0, 0, w, h);
-  g.fillStyle = YAMANOTE_GREEN;
-  g.fillRect(0, 0, w, 46);
-  g.fillStyle = '#0e1508';
-  g.font = `bold 26px ${JP_FONT}`;
-  g.textAlign = 'left';
-  g.fillText(arriving ? (phase === 'dwell' ? 'ただいま' : 'まもなく') : 'つぎは', 14, 33);
-  g.font = `20px ${JP_FONT}`;
-  g.fillText(arriving ? (phase === 'dwell' ? 'Now at' : 'Arriving at') : 'Next', 130, 32);
-  g.textAlign = 'right';
-  g.font = `bold 24px ${JP_FONT}`;
-  g.fillText(clock, w - 14, 33);
-  g.fillStyle = YAMANOTE_GREEN;
-  g.beginPath();
-  g.roundRect(16, 70, 78, 78, 12);
-  g.fill();
-  g.fillStyle = '#ffffff';
-  g.textAlign = 'center';
-  g.font = `bold 24px ${JP_FONT}`;
-  g.fillText('JY', 55, 100);
-  g.font = `bold 30px ${JP_FONT}`;
-  g.fillText(st.jy.slice(2), 55, 136);
-  g.fillStyle = '#f2f2ee';
-  fitText(g, st.kanji, 330, 58);
-  g.fillText(st.kanji, 300, 120);
-  g.fillStyle = '#b9c2c8';
-  fitText(g, st.romaji, 330, 26, '');
-  g.fillText(st.romaji, 300, 156);
-  g.fillStyle = '#1c242b';
-  g.fillRect(0, h - 40, w, 40);
-  g.fillStyle = '#e8c33a';
-  g.font = `bold 22px ${JP_FONT}`;
-  g.fillText(side === 1 ? 'でぐち Exit ▶▶' : '◀◀ でぐち Exit', w / 2, h - 12);
+  drawAdInto(g, w, h, seed);
   g.textAlign = 'left';
 }
 
@@ -347,23 +305,28 @@ export function Screens() {
   const left = useMemo(() => makeScreen(512, 216), []);
   const right = useMemo(() => makeScreen(768, 324), []);
   const lastKey = useRef('');
+  const lastAd = useRef(-1);
   const acc = useRef(0);
 
   useFrame((_, dt) => {
     acc.current += dt;
     if (acc.current < 0.25) return;
     acc.current = 0;
-    const { index, phase, doorSide } = useStore.getState();
-    const clock = fmtClock(runtime.clockMin);
+    const { index, phase } = useStore.getState();
+    // Écran gauche : une pub toutes les ~15 s, boucle de AD_LOOP_COUNT spots.
+    const adSeed = AD_LOOP_FIRST_SEED + (Math.floor(runtime.clockMin * 4) % AD_LOOP_COUNT);
+    if (adSeed !== lastAd.current) {
+      lastAd.current = adSeed;
+      drawLeftAd(left, adSeed);
+      left.texture.needsUpdate = true;
+    }
     const banner = Math.floor(runtime.clockMin * 4) % 4 === 3; // bandeau ~15 s sur 60
     const countdown = Math.round(secondsToArrival(phase, runtime.phaseT));
-    const key = `${index}|${phase}|${doorSide}|${clock}|${banner}|${banner ? 0 : countdown}`;
+    const key = `${index}|${phase}|${banner}|${banner ? 0 : countdown}`;
     if (key === lastKey.current) return;
     lastKey.current = key;
-    drawLeft(left, index, phase, doorSide, clock);
     if (banner) drawBanner(right);
     else drawRoute(right, index, phase, countdown);
-    left.texture.needsUpdate = true;
     right.texture.needsUpdate = true;
   });
 

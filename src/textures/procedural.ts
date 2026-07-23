@@ -1017,10 +1017,11 @@ function drawMascot(g: CanvasRenderingContext2D, kind: number, cx: number, cy: n
   }
 }
 
-export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasTexture {
-  const W = portrait ? 512 : 768;
-  const H = portrait ? 720 : 240;
-  const { c, g } = makeCanvas(W, H);
+// Dessine une publicité dans un contexte existant : les gabarits sont exprimés
+// en fractions de W et H, donc réutilisables à n'importe quelles proportions
+// (affiches nakazuri, écrans 窓上, écran gauche au-dessus des portes).
+export function drawAdInto(g: CanvasRenderingContext2D, W: number, H: number, seed: number): void {
+  const portrait = H > W;
   const r = rng(500 + seed * 13);
   const [bg, accent, ink] = AD_PALETTES[Math.floor(r() * AD_PALETTES.length)];
   g.fillStyle = bg;
@@ -1102,6 +1103,13 @@ export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasText
     g.fillStyle = ink;
     fitFillText(g, sub, W * 0.56, H * 0.9, W * 0.4, Math.floor(W * 0.05));
   }
+}
+
+export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasTexture {
+  const W = portrait ? 512 : 768;
+  const H = portrait ? 720 : 240;
+  const { c, g } = makeCanvas(W, H);
+  drawAdInto(g, W, H, seed);
   return toTexture(c);
 }
 
