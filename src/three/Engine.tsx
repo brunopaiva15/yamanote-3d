@@ -6,6 +6,7 @@ import { V_MAX } from '../data/config';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { updateCycle } from '../systems/stationCycle';
+import { updateSegmentEnv } from '../systems/segmentEnv';
 import { updateAudio } from '../systems/audioEngine';
 import { updatePassengers } from '../systems/passengers';
 
@@ -16,6 +17,7 @@ export function Engine(): null {
     const { phase, started } = useStore.getState();
     if (!started) return;
     updateCycle(dt);
+    updateSegmentEnv(dt);
     updateAudio(dt, runtime.speed / V_MAX, phase === 'brake');
     updatePassengers(dt);
   });

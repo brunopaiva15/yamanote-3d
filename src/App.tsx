@@ -14,6 +14,8 @@ import { Ads } from './three/Ads';
 import { Screens } from './three/Screens';
 import { Scenery } from './three/Scenery';
 import { Landmarks } from './three/Landmarks';
+import { SegmentEnvironment } from './three/SegmentEnvironment';
+import { HubStationRoof } from './three/HubStationRoof';
 import { Platform } from './three/Platform';
 import { Passengers } from './three/Passengers';
 import { Player } from './three/Player';
@@ -42,6 +44,8 @@ export default function App() {
         <Screens />
         <Scenery />
         <Landmarks />
+        <SegmentEnvironment />
+        <HubStationRoof />
         <Platform />
         <Passengers />
         <Player />

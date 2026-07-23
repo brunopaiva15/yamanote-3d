@@ -21,6 +21,7 @@ import { useStore } from '../store';
 import { CONFIG } from '../data/config';
 import { DISTRICTS, type Land, type LandmarkSpec } from '../data/districts';
 import { rng } from '../textures/procedural';
+import { box, glow, plane, sil, vehicle, type Ctx } from './landmarkKit';
 
 const BASE_Y = -1.1; // niveau du sol extérieur.
 const FAR_X = 34; // distance latérale des silhouettes (devant la couche lointaine).
@@ -41,64 +42,8 @@ function smoothstep(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
-// --- Contexte de construction : collecte matériaux/géométries pour disposal ---
-interface Ctx {
-  group: THREE.Group;
-  sil: THREE.MeshBasicMaterial[]; // silhouettes non éclairées (s'assombrissent la nuit).
-  glow: THREE.MeshBasicMaterial[]; // écrans/néons émissifs (s'illuminent la nuit).
-  geos: THREE.BufferGeometry[];
-  r: () => number;
-}
-
-function sil(ctx: Ctx, color: string): THREE.MeshBasicMaterial {
-  const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, fog: true, depthWrite: false });
-  m.userData.base = m.color.clone();
-  ctx.sil.push(m);
-  return m;
-}
-function glow(ctx: Ctx, color: string): THREE.MeshBasicMaterial {
-  const m = new THREE.MeshBasicMaterial({
-    color,
-    transparent: true,
-    opacity: 0,
-    fog: true,
-    depthWrite: false,
-    toneMapped: false,
-  });
-  ctx.glow.push(m);
-  return m;
-}
-function box(
-  ctx: Ctx,
-  mat: THREE.Material,
-  w: number,
-  h: number,
-  d: number,
-  x: number,
-  y: number,
-  z: number,
-): void {
-  const g = new THREE.BoxGeometry(w, h, d);
-  ctx.geos.push(g);
-  const m = new THREE.Mesh(g, mat);
-  m.position.set(x, y, z);
-  ctx.group.add(m);
-}
-function plane(
-  ctx: Ctx,
-  mat: THREE.Material,
-  w: number,
-  h: number,
-  x: number,
-  y: number,
-  z: number,
-): void {
-  const g = new THREE.PlaneGeometry(w, h);
-  ctx.geos.push(g);
-  const m = new THREE.Mesh(g, mat);
-  m.position.set(x, y, z);
-  ctx.group.add(m);
-}
+// (Ctx et les primitives sil/glow/box/plane/vehicle vivent dans landmarkKit,
+// partagées avec SegmentEnvironment.)
 function sphere(ctx: Ctx, mat: THREE.Material, rad: number, x: number, y: number, z: number): void {
   const g = new THREE.SphereGeometry(rad, 12, 10);
   ctx.geos.push(g);
@@ -280,26 +225,6 @@ function monorailBeam(ctx: Ctx, len: number): void {
   for (let i = 0; i < n; i++) {
     const z = -len / 2 + 6 + i * 12;
     box(ctx, mat, 1.0, 6.5, 1.0, 0, 3.25, z); // pile
-  }
-}
-
-// Véhicule qui défile (near) : tram, rame shinkansen, locomotive.
-function vehicle(ctx: Ctx, kind: 'tram' | 'shinkansen' | 'loco'): void {
-  if (kind === 'tram') {
-    box(ctx, sil(ctx, '#3aa0c0'), 2.4, 3.0, 9, 0, 1.6, 0);
-    plane(ctx, glow(ctx, '#fff2c0'), 1.9, 1.0, 0, 2.2, 4.55);
-  } else if (kind === 'shinkansen') {
-    box(ctx, sil(ctx, '#eef2f6'), 3.0, 3.2, 22, 0, 1.9, 0);
-    box(ctx, sil(ctx, '#2f6fd0'), 3.05, 0.6, 22, 0, 1.7, 0);
-  } else {
-    box(ctx, sil(ctx, '#26262c'), 2.6, 3.0, 6, 0, 1.7, 0);
-    const cm = sil(ctx, '#3a3a40');
-    const g = new THREE.CylinderGeometry(1.3, 1.3, 5.5, 12);
-    ctx.geos.push(g);
-    const m = new THREE.Mesh(g, cm);
-    m.rotation.x = Math.PI / 2;
-    m.position.set(0, 1.8, 1.5);
-    ctx.group.add(m);
   }
 }
 
