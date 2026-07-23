@@ -1,7 +1,9 @@
 // Doubles écrans LCD au-dessus des portes (E235) : écran gauche = publicités
 // en boucle (comme dans les vraies rames, il n'affiche jamais la prochaine
-// station), écran droit = écran de ligne fidèle au vrai afficheur JR East
-// (bandeau noir, arc vert avec minutes, liste de stations, correspondances).
+// station), écran droit = écran de ligne fidèle au vrai afficheur JR East,
+// qui alterne comme dans la réalité entre trois états : vue rapprochée des
+// 5 prochaines stations (arc vert, minutes, correspondances), plan complet
+// de la boucle (30 stations, minutes jusqu'à ~30 min) et bandeau manières.
 // Deux CanvasTexture partagées, redessinées uniquement aux changements.
 
 import { useMemo, useRef } from 'react';
@@ -46,6 +48,12 @@ function makeScreen(w: number, h: number): {
   return { g, texture, w, h };
 }
 
+// Heure au format de l'afficheur réel : pas de zéro devant l'heure (« 0:11 »).
+function fmtClock(clockMin: number): string {
+  const total = Math.floor(clockMin) % (24 * 60);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
 // Secondes restantes avant l'arrivée à la prochaine station.
 function secondsToArrival(phase: Phase, phaseT: number): number {
   if (phase === 'cruise') return Math.max(0, CONFIG.cruiseTime - phaseT) + CONFIG.brakeTime;
@@ -75,16 +83,10 @@ function drawLeftAd(s: ReturnType<typeof makeScreen>, seed: number): void {
   g.textAlign = 'left';
 }
 
-// --- Écran droit : écran de ligne JR East (arc vert, minutes, stations) ---
-function drawRoute(s: ReturnType<typeof makeScreen>, index: number, phase: Phase, countdown: number): void {
-  const { g, w, h } = s;
+// --- Bandeau noir supérieur, commun aux deux vues de ligne : « Bound for »,
+// onglet Next, tuile de la prochaine gare, heure réelle et n° de voiture. ---
+function drawHeader(g: CanvasRenderingContext2D, w: number, index: number, clock: string): void {
   const next = STATIONS[index];
-
-  // Corps clair.
-  g.fillStyle = '#eceae5';
-  g.fillRect(0, 0, w, h);
-
-  // ----- Bandeau noir supérieur -----
   const HEADER = 88;
   g.fillStyle = '#111214';
   g.fillRect(0, 0, w, HEADER);
@@ -142,16 +144,33 @@ function drawRoute(s: ReturnType<typeof makeScreen>, index: number, phase: Phase
   g.textAlign = 'left';
   fitText(g, next.romaji, w - 380 - 130, 54);
   g.fillText(next.romaji, 368, 62);
-  // Compte à rebours + numéro de voiture.
+  // Heure réelle + numéro de voiture (l'afficheur réel montre l'horloge,
+  // pas un compte à rebours : les minutes vivent dans les cercles).
   g.textAlign = 'right';
   g.fillStyle = '#ffffff';
   g.font = `bold 26px ${JP_FONT}`;
-  const mm = String(Math.floor(countdown / 60)).padStart(2, '0');
-  const ss = String(Math.floor(countdown % 60)).padStart(2, '0');
-  g.fillText(phase === 'dwell' ? '00:00' : `${mm}:${ss}`, w - 12, 30);
+  g.fillText(clock, w - 12, 30);
   g.fillStyle = '#8d939a';
   g.font = `15px ${JP_FONT}`;
   g.fillText('Car No 3', w - 12, 54);
+  g.textAlign = 'left';
+}
+
+// --- Écran droit, vue rapprochée : arc vert, 5 prochaines stations ---
+function drawRoute(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  phase: Phase,
+  countdown: number,
+  clock: string,
+): void {
+  const { g, w, h } = s;
+  const next = STATIONS[index];
+
+  // Corps clair.
+  g.fillStyle = '#eceae5';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock);
 
   // ----- Courbe verte de la ligne, calée sur l'afficheur réel -----
   // Points de passage (cercles des minutes), k = 0 : prochaine station en
@@ -282,6 +301,147 @@ function drawRoute(s: ReturnType<typeof makeScreen>, index: number, phase: Phase
   g.fillText('のりかえ、待ち合わせ時間は含まれません。乗車により多少時間が異なります。', 10, h - 5);
 }
 
+// --- Écran droit, plan complet de la boucle (comme l'afficheur réel) :
+// ovale vert fixe des 30 stations, noms en kanji verticaux, cercles des
+// minutes pour les ~14 prochaines stations, chevron rouge = position/sens. ---
+
+// Position géographique fixe sur l'ovale : 15 colonnes, JY01 (東京) en bas à
+// droite, JY02→JY16 le long du haut de droite à gauche, JY17→JY30 le long du
+// bas de gauche à droite.
+const LOOP_COLS = 15;
+function loopSlot(stIdx: number): { col: number; top: boolean } {
+  if (stIdx === 0) return { col: LOOP_COLS - 1, top: false };
+  if (stIdx <= 15) return { col: LOOP_COLS - stIdx, top: true };
+  return { col: stIdx - 16, top: false };
+}
+
+// Nom de gare en écriture verticale ; le chōonpu (ー) est pivoté comme en
+// tategaki réel.
+function drawVerticalName(g: CanvasRenderingContext2D, name: string, x: number, yStart: number, glyph: number): void {
+  g.font = `bold ${glyph}px ${JP_FONT}`;
+  g.textAlign = 'center';
+  for (let i = 0; i < name.length; i++) {
+    const ch = name[i];
+    const base = yStart + i * glyph;
+    if (ch === 'ー') {
+      g.save();
+      g.translate(x, base - glyph * 0.35);
+      g.rotate(Math.PI / 2);
+      g.fillText(ch, 0, glyph * 0.35);
+      g.restore();
+    } else {
+      g.fillText(ch, x, base);
+    }
+  }
+  g.textAlign = 'left';
+}
+
+function drawLoopMap(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  phase: Phase,
+  countdown: number,
+  clock: string,
+): void {
+  const { g, w, h } = s;
+  g.fillStyle = '#eceae5';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock);
+
+  const X0 = 84;
+  const DX = 41;
+  const Y_TOP = 168;
+  const Y_BOT = 238;
+  const at = (slot: { col: number; top: boolean }): [number, number] => [
+    X0 + slot.col * DX,
+    slot.top ? Y_TOP : Y_BOT,
+  ];
+
+  // Ovale vert : rectangle arrondi dont les longs côtés passent par les
+  // deux rangées de stations.
+  g.strokeStyle = YAMANOTE_GREEN;
+  g.lineWidth = 26;
+  g.beginPath();
+  g.roundRect(X0 - 46, Y_TOP, (LOOP_COLS - 1) * DX + 92, Y_BOT - Y_TOP, (Y_BOT - Y_TOP) / 2);
+  g.stroke();
+
+  // Rang de chaque station dans le sens de marche (0 = prochaine).
+  const rank = new Array<number>(30);
+  for (let k = 0; k < 30; k++) rank[(index + k) % 30] = k;
+  const atStation = phase === 'dwell';
+  const MINUTES_SHOWN = 14; // au-delà (~30 min), simple point blanc
+
+  for (let stIdx = 0; stIdx < 30; stIdx++) {
+    const slot = loopSlot(stIdx);
+    const [x, y] = at(slot);
+    const k = rank[stIdx];
+
+    // Point / cercle des minutes sur l'ovale.
+    if (k < MINUTES_SHOWN) {
+      const minutes = atStation ? k * 2 : k * 2 + Math.max(1, Math.ceil(countdown / 60));
+      g.beginPath();
+      g.arc(x, y, k === 0 ? 13 : 10.5, 0, Math.PI * 2);
+      g.fillStyle = k === 0 ? '#e8c033' : '#ffffff';
+      g.fill();
+      g.fillStyle = '#111214';
+      g.font = `bold ${k === 0 ? 14 : 12}px ${JP_FONT}`;
+      g.textAlign = 'center';
+      g.fillText(String(k === 0 && atStation ? 0 : minutes), x, y + 4);
+      if (k === MINUTES_SHOWN - 1) {
+        // « (分) » du côté des stations sans cercle (rang suivant), où il
+        // ne chevauche pas un autre cercle de minutes.
+        const [fx] = at(loopSlot((index + MINUTES_SHOWN) % 30));
+        g.font = `9px ${JP_FONT}`;
+        g.fillText('(分)', x + (fx >= x ? 20 : -20), y + 3);
+      }
+    } else {
+      g.beginPath();
+      g.arc(x, y, 5, 0, Math.PI * 2);
+      g.fillStyle = '#ffffff';
+      g.fill();
+    }
+
+    // Nom vertical : suspendu au-dessus de la rangée haute, accroché sous
+    // la rangée basse.
+    const name = STATIONS[stIdx].kanji;
+    g.fillStyle = '#111214';
+    if (slot.top) {
+      const glyph = Math.min(13, Math.floor(52 / name.length));
+      drawVerticalName(g, name, x, Y_TOP - 22 - (name.length - 1) * glyph, glyph);
+    } else {
+      // Les noms longs (高輪ゲートウェイ) démarrent plus haut avec un corps
+      // plancher, comme le petit texte serré de l'afficheur réel.
+      const glyph = Math.max(7, Math.min(13, Math.floor(46 / name.length)));
+      drawVerticalName(g, name, x, Y_BOT + (name.length >= 6 ? 26 : 32), glyph);
+    }
+  }
+
+  // Chevron rouge entre la gare précédente et la prochaine : position du
+  // train et sens de marche.
+  const [px, py] = at(loopSlot((index + 29) % 30));
+  const [nx, ny] = at(loopSlot(index));
+  const cx = px + (nx - px) * 0.5;
+  const cy = py + (ny - py) * 0.5;
+  g.fillStyle = '#c8362c';
+  g.save();
+  g.translate(cx, cy);
+  g.rotate(Math.atan2(ny - py, nx - px));
+  g.beginPath();
+  g.moveTo(-7, -12);
+  g.lineTo(15, 0);
+  g.lineTo(-7, 12);
+  g.lineTo(1, 0);
+  g.closePath();
+  g.fill();
+  g.restore();
+  g.textAlign = 'left';
+
+  // Mention basse.
+  g.fillStyle = '#9a9d99';
+  g.font = `10px ${JP_FONT}`;
+  g.fillText('のりかえ、待ち合わせ時間は含まれません。電車により多少時間が異なります。', 10, h - 5);
+}
+
 // --- Écran droit, variante bandeau info ---
 function drawBanner(s: ReturnType<typeof makeScreen>): void {
   const { g, w, h } = s;
@@ -320,13 +480,17 @@ export function Screens() {
       drawLeftAd(left, adSeed);
       left.texture.needsUpdate = true;
     }
-    const banner = Math.floor(runtime.clockMin * 4) % 4 === 3; // bandeau ~15 s sur 60
+    // Écran droit, rotation sur la minute comme l'afficheur réel :
+    // 30 s de vue rapprochée, 15 s de plan de la boucle, 15 s de bandeau.
+    const mode = Math.floor(runtime.clockMin * 4) % 4; // 0-1 arc, 2 plan, 3 bandeau
+    const clock = fmtClock(runtime.clockMin);
     const countdown = Math.round(secondsToArrival(phase, runtime.phaseT));
-    const key = `${index}|${phase}|${banner}|${banner ? 0 : countdown}`;
+    const key = `${index}|${phase}|${mode}|${clock}|${mode === 3 ? 0 : countdown}`;
     if (key === lastKey.current) return;
     lastKey.current = key;
-    if (banner) drawBanner(right);
-    else drawRoute(right, index, phase, countdown);
+    if (mode === 3) drawBanner(right);
+    else if (mode === 2) drawLoopMap(right, index, phase, countdown, clock);
+    else drawRoute(right, index, phase, countdown, clock);
     right.texture.needsUpdate = true;
   });
 
