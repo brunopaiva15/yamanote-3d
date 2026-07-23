@@ -12,6 +12,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
+import { segEnv } from '../systems/segmentEnv';
 import { useStore, type Phase } from '../store';
 import { CONFIG } from '../data/config';
 import { DISTRICTS } from '../data/districts';
@@ -221,6 +222,18 @@ export function Scenery() {
   const TREE_COUNT = 12;
   const TREE_SPACING = 21;
 
+  // Arbres boules (esprit Shashingo) : tronc + deux masses de feuillage.
+  // (Défini avant le useFrame, qui module leur échelle selon le tronçon.)
+  const treeSpecs = useMemo(
+    () =>
+      Array.from({ length: TREE_COUNT }, (_, i) => ({
+        x: (i % 2 === 0 ? 1 : -1) * (7.2 + ((i * 13) % 5) * 0.5),
+        scale: 0.85 + ((i * 29) % 10) / 22,
+        leaf: ['#5fb54a', '#6ec25a', '#54a844'][i % 3],
+      })),
+    [],
+  );
+
   useFrame(() => {
     const { index, phase } = useStore.getState();
 
@@ -265,7 +278,10 @@ export function Scenery() {
 
     const arriving = arrivingSlot.current;
     for (const b of built.banks) {
-      const weight = b.slot === arriving ? wArr : wDep;
+      let weight = b.slot === arriving ? wArr : wDep;
+      // Corridor ferroviaire : la couche proche s'estompe — la ville « recule »
+      // sans déplacer les plans (qui sombreraient dans la brume de nuit).
+      if (b.layer === 0) weight *= 1 - 0.65 * segEnv.w.corridor;
       const off = (b.sign * runtime.distance) / b.metersPerRepeat;
       b.dayTex.offset.x = off;
       if (b.hasNight) {
@@ -294,9 +310,13 @@ export function Scenery() {
       pl.position.z = ((runtime.distance + i * POLE_SPACING) % span) - span / 2;
     }
     const treeSpan = TREE_COUNT * TREE_SPACING;
+    const treeScale = 1 + 0.18 * segEnv.green; // végétation renforcée (greenery)
+    const treesVisible = segEnv.w.trench < 0.5; // pas d'arbres entre les murs
     for (let i = 0; i < TREE_COUNT; i++) {
       const t = trees.current[i];
       if (!t) continue;
+      t.visible = treesVisible;
+      t.scale.setScalar(treeSpecs[i].scale * treeScale);
       t.position.z = ((runtime.distance * 0.999 + i * TREE_SPACING + 9) % treeSpan) - treeSpan / 2;
     }
 
@@ -305,17 +325,6 @@ export function Scenery() {
     built.sky.golden.opacity = w.golden;
     built.sky.night.opacity = w.night;
   });
-
-  // Arbres boules (esprit Shashingo) : tronc + deux masses de feuillage.
-  const treeSpecs = useMemo(
-    () =>
-      Array.from({ length: TREE_COUNT }, (_, i) => ({
-        x: (i % 2 === 0 ? 1 : -1) * (7.2 + ((i * 13) % 5) * 0.5),
-        scale: 0.85 + ((i * 29) % 10) / 22,
-        leaf: ['#5fb54a', '#6ec25a', '#54a844'][i % 3],
-      })),
-    [],
-  );
 
   return (
     <group>

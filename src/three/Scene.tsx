@@ -12,6 +12,7 @@ import { BlendFunction, ToneMappingMode } from 'postprocessing';
 import { CONFIG } from '../data/config';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
+import { segEnv } from '../systems/segmentEnv';
 
 const LAMP_POSITIONS: [number, number, number][] = [
   [0, 2.16, -7.5],
@@ -79,6 +80,15 @@ function mixColor(out: THREE.Color, w: { day: number; golden: number; night: num
 }
 
 // Pilote lumières, brume et fond selon l'heure (jamais par re-render React).
+//
+// Les mélanges coûteux (couleurs, positions, brume, fond) restent throttlés à
+// 0,5 s ; le bloc throttlé ne stocke que les intensités DE BASE. Après le
+// throttle, chaque frame applique un multiplicateur d'assombrissement issu de
+// segEnv (passage sous un pont ~0,3-0,5 s, toiture de gare) : à ombre nulle
+// le résultat est identique au comportement historique, le fondu jour/nuit
+// n'est donc jamais concurrencé. Brume et fond ne sont pas touchés (leur
+// cadence 0,5 s scintillerait contre un passage de pont). Les pointLight du
+// wagon ne sont pas atténués : les néons restent allumés sous un pont.
 function DayNightLighting() {
   const { scene } = useThree();
   const sun = useRef<THREE.DirectionalLight>(null);
@@ -87,39 +97,48 @@ function DayNightLighting() {
   const amb = useRef<THREE.AmbientLight>(null);
   const acc = useRef(1);
   const tmp = useRef(new THREE.Color());
+  const bases = useRef({ sun: 1.7, fill: 0.4, hemi: 0.62, amb: 0.4, dayness: 1 });
 
   useFrame((_, dt) => {
     acc.current += dt;
-    if (acc.current < 0.5) return;
-    acc.current = 0;
-    const w = dayNightWeights(runtime.clockMin / 60);
-    if (sun.current) {
-      sun.current.intensity = SUN.day.intensity * w.day + SUN.golden.intensity * w.golden + SUN.night.intensity * w.night;
-      mixColor(sun.current.color, w, { day: SUN.day.color, golden: SUN.golden.color, night: SUN.night.color });
-      sun.current.position
-        .set(0, 0, 0)
-        .addScaledVector(SUN.day.pos, w.day)
-        .addScaledVector(SUN.golden.pos, w.golden)
-        .addScaledVector(SUN.night.pos, w.night);
+    if (acc.current >= 0.5) {
+      acc.current = 0;
+      const w = dayNightWeights(runtime.clockMin / 60);
+      const b = bases.current;
+      b.sun = SUN.day.intensity * w.day + SUN.golden.intensity * w.golden + SUN.night.intensity * w.night;
+      b.fill = 0.4 * w.day + 0.5 * w.golden + 0.1 * w.night;
+      b.hemi = 0.62 * w.day + 0.52 * w.golden + 0.22 * w.night;
+      b.amb = 0.4 * w.day + 0.35 * w.golden + 0.24 * w.night;
+      b.dayness = w.day + 0.8 * w.golden + 0.25 * w.night;
+      if (sun.current) {
+        mixColor(sun.current.color, w, { day: SUN.day.color, golden: SUN.golden.color, night: SUN.night.color });
+        sun.current.position
+          .set(0, 0, 0)
+          .addScaledVector(SUN.day.pos, w.day)
+          .addScaledVector(SUN.golden.pos, w.golden)
+          .addScaledVector(SUN.night.pos, w.night);
+      }
+      if (hemi.current) mixColor(hemi.current.color, w, HEMI_SKY);
+      if (amb.current) mixColor(amb.current.color, w, AMBIENT);
+      if (scene.fog instanceof THREE.Fog) {
+        mixColor(scene.fog.color, w, FOG_COLORS);
+        scene.fog.near = 26 * w.day + 18 * w.golden + 14 * w.night;
+        scene.fog.far = 115 * w.day + 88 * w.golden + 72 * w.night;
+      }
+      if (scene.background instanceof THREE.Color) {
+        mixColor(tmp.current, w, BG_COLORS);
+        scene.background.copy(tmp.current);
+      }
     }
-    if (fill.current) fill.current.intensity = 0.4 * w.day + 0.5 * w.golden + 0.1 * w.night;
-    if (hemi.current) {
-      hemi.current.intensity = 0.62 * w.day + 0.52 * w.golden + 0.22 * w.night;
-      mixColor(hemi.current.color, w, HEMI_SKY);
-    }
-    if (amb.current) {
-      amb.current.intensity = 0.4 * w.day + 0.35 * w.golden + 0.24 * w.night;
-      mixColor(amb.current.color, w, AMBIENT);
-    }
-    if (scene.fog instanceof THREE.Fog) {
-      mixColor(scene.fog.color, w, FOG_COLORS);
-      scene.fog.near = 26 * w.day + 18 * w.golden + 14 * w.night;
-      scene.fog.far = 115 * w.day + 88 * w.golden + 72 * w.night;
-    }
-    if (scene.background instanceof THREE.Color) {
-      mixColor(tmp.current, w, BG_COLORS);
-      scene.background.copy(tmp.current);
-    }
+
+    // Assombrissement par frame : pont au-dessus ou grande toiture de gare.
+    const b = bases.current;
+    const shade = Math.max(segEnv.bridgeShade, 0.7 * segEnv.roofShade);
+    const dim = 1 - 0.6 * shade * b.dayness;
+    if (sun.current) sun.current.intensity = b.sun * dim;
+    if (fill.current) fill.current.intensity = b.fill * dim;
+    if (hemi.current) hemi.current.intensity = b.hemi * dim;
+    if (amb.current) amb.current.intensity = b.amb * dim;
   });
 
   return (

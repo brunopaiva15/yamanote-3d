@@ -830,6 +830,101 @@ export function makeGroundTexture(): THREE.CanvasTexture {
   return t;
 }
 
+// --- Mur de soutènement (tranchées) : panneaux béton, joints, coulures ---
+// Texture jour uniquement : la nuit se fait par multiplication de couleur au
+// runtime (idiome de la couche lointaine de Scenery), l'invariant jour/nuit
+// de drawCityInto n'est donc pas concerné.
+export function makeRetainingWallTexture(): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(512, 256);
+  const r = rng(413);
+  g.fillStyle = '#b3b0a9';
+  g.fillRect(0, 0, 512, 256);
+  // Grain du béton.
+  for (let i = 0; i < 1600; i++) {
+    const shade = 150 + Math.floor(r() * 40);
+    g.fillStyle = `rgba(${shade},${shade - 2},${shade - 6},0.5)`;
+    g.fillRect(r() * 512, r() * 256, 2 + r() * 4, 2 + r() * 4);
+  }
+  // Joints verticaux de panneaux + joint horizontal médian.
+  g.fillStyle = 'rgba(70,68,64,0.55)';
+  for (let x = 0; x < 512; x += 64) g.fillRect(x, 0, 3, 256);
+  g.fillRect(0, 118, 512, 3);
+  // Coulures sombres depuis le haut du mur.
+  g.fillStyle = 'rgba(60,58,54,0.16)';
+  for (let i = 0; i < 22; i++) {
+    g.fillRect(r() * 512, 0, 2 + r() * 3, 40 + r() * 120);
+  }
+  // Mousse / salissures en pied de mur (bas du canvas = bas du mur).
+  for (let i = 0; i < 60; i++) {
+    const h = 8 + r() * 26;
+    g.fillStyle = `rgba(${86 + Math.floor(r() * 30)},${104 + Math.floor(r() * 30)},66,0.25)`;
+    g.fillRect(r() * 512, 256 - h, 6 + r() * 14, h);
+  }
+  const t = toTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  return t;
+}
+
+// --- Faisceau de voies (corridors) : ballast + UNE paire de rails par repeat
+// (repeat.x = nombre de paires visibles ; les rails vivent dans la texture,
+// zéro géométrie supplémentaire) ---
+export function makeTrackFieldTexture(): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(256, 512);
+  const r = rng(929);
+  g.fillStyle = '#8e8c8a';
+  g.fillRect(0, 0, 256, 512);
+  for (let i = 0; i < 1800; i++) {
+    const shade = 108 + Math.floor(r() * 58);
+    g.fillStyle = `rgb(${shade + 4},${shade + 2},${shade})`;
+    g.fillRect(r() * 256, r() * 512, 2 + r() * 3, 2 + r() * 3);
+  }
+  // Traverses.
+  g.fillStyle = '#6a6664';
+  for (let y = 6; y < 512; y += 40) g.fillRect(58, y, 140, 11);
+  // Deux rails : semelle sombre, champignon clair.
+  for (const x of [78, 170]) {
+    g.fillStyle = '#55565c';
+    g.fillRect(x, 0, 9, 512);
+    g.fillStyle = '#c9ccd2';
+    g.fillRect(x + 2, 0, 4, 512);
+  }
+  // Caniveau à câbles le long du bord.
+  g.fillStyle = '#777470';
+  g.fillRect(8, 0, 18, 512);
+  g.fillStyle = '#5e5c58';
+  g.fillRect(12, 0, 10, 512);
+  const t = toTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+// --- Clôture de voie (niveau du sol) : poteaux + fils, ou haie taillée ---
+export function makeTrackFenceTexture(hedge: boolean): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(256, 64);
+  const r = rng(hedge ? 551 : 313);
+  g.clearRect(0, 0, 256, 64);
+  if (hedge) {
+    // Haie : masse verte irrégulière, opaque, sur toute la longueur.
+    g.fillStyle = '#4e8f3c';
+    g.fillRect(0, 16, 256, 48);
+    for (let i = 0; i < 120; i++) {
+      g.fillStyle = `rgba(${60 + Math.floor(r() * 40)},${120 + Math.floor(r() * 50)},52,0.8)`;
+      g.fillRect(r() * 256 - 4, 8 + r() * 18, 8 + r() * 18, 20 + r() * 28);
+    }
+  } else {
+    // Grillage : poteaux réguliers + trois fils horizontaux (fond transparent).
+    g.fillStyle = '#7d8288';
+    for (let x = 6; x < 256; x += 32) g.fillRect(x, 4, 4, 60);
+    g.fillStyle = 'rgba(120,126,132,0.9)';
+    for (const y of [14, 30, 46]) g.fillRect(0, y, 256, 2);
+  }
+  const t = toTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  return t;
+}
+
 // --- Publicités japonaises procédurales (texte plausible, non déposé) ---
 const AD_WORDS = ['新発売', '期間限定', '半額セール', '求人募集', '英会話', '春の旅行', '毎日健康', '東京生活', '新しい朝', '家族の時間'];
 const AD_SUBS = ['今だけのチャンス', '詳しくはウェブで', 'お近くの店舗へ', '数量限定です', '皆様に感謝'];
