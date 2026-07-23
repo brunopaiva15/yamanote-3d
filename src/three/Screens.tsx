@@ -157,6 +157,11 @@ function drawHeader(g: CanvasRenderingContext2D, w: number, index: number, clock
 }
 
 // --- Écran droit, vue rapprochée : arc vert, 5 prochaines stations ---
+// L'orientation de l'arc dépend du sens de marche sur l'afficheur réel :
+// en 内回り (notre sens, JY croissant) la prochaine station est en bas à
+// droite et la ligne remonte vers la gauche ; les rames 外回り affichent
+// exactement le miroir (prochaine station en bas à gauche, correspondances
+// à droite). Cette vue est donc calée sur l'écran 内回り réel.
 function drawRoute(
   s: ReturnType<typeof makeScreen>,
   index: number,
@@ -303,7 +308,9 @@ function drawRoute(
 
 // --- Écran droit, plan complet de la boucle (comme l'afficheur réel) :
 // ovale vert fixe des 30 stations, noms en kanji verticaux, cercles des
-// minutes pour les ~14 prochaines stations, chevron rouge = position/sens. ---
+// minutes pour les ~14 prochaines stations, chevron rouge = position/sens.
+// Contrairement à la vue rapprochée, ce plan est géographique et identique
+// dans les deux sens de marche (seuls minutes et chevron en dépendent). ---
 
 // Position géographique fixe sur l'ovale : 15 colonnes, JY01 (東京) en bas à
 // droite, JY02→JY16 le long du haut de droite à gauche, JY17→JY30 le long du
