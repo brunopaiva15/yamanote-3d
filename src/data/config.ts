@@ -14,8 +14,9 @@ export const CONFIG = {
   eyeHeight: 1.55,
   sitHeight: 1.16,
 
-  // Départ de la boucle : Shibuya, fin d'après-midi.
-  startIndex: 19,
+  // Départ de la boucle : station tirée au hasard parmi les 30 à chaque
+  // lancement (l'horloge, elle, se cale sur l'heure réelle de Tokyo au start).
+  startIndex: Math.floor(Math.random() * 30),
   clockStart: 16 * 60 + 51,
 
   // Rendu.
