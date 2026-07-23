@@ -1,0 +1,82 @@
+<!doctype html>
+<!-- Page de probe DEV (non commitée) : rend un GLB de personnage seul, clip
+     par clip, pour isoler les problèmes de rig hors du jeu.
+     /rig-probe.html?file=test_salaryman.glb&clip=Sit_Chair_Idle&t=1.0&angle=0.6 -->
+<html>
+  <body style="margin:0">
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+      import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+
+      const q = new URLSearchParams(location.search);
+      const file = q.get('file') ?? 'test_salaryman.glb';
+      const clipName = q.get('clip') ?? '';
+      const t = parseFloat(q.get('t') ?? '1.0');
+      const angle = parseFloat(q.get('angle') ?? '0.5');
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(700, 700);
+      document.body.appendChild(renderer.domElement);
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color('#cfd8dc');
+      scene.add(new THREE.AmbientLight('#ffffff', 1.2));
+      const sun = new THREE.DirectionalLight('#ffffff', 2);
+      sun.position.set(2, 4, 3);
+      scene.add(sun);
+      scene.add(new THREE.GridHelper(4, 8));
+      scene.add(new THREE.AxesHelper(1)); // x rouge, y vert, z bleu
+
+      const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 50);
+      camera.position.set(Math.sin(angle) * 3.2, 1.5, Math.cos(angle) * 3.2);
+      camera.lookAt(0, 0.8, 0);
+
+      const loader = new GLTFLoader();
+      loader.setMeshoptDecoder(MeshoptDecoder);
+      const gltf = await loader.loadAsync(`/models/${file}`);
+      scene.add(gltf.scene);
+      const box = new THREE.Box3().setFromObject(gltf.scene);
+      const info = { height: +(box.max.y - box.min.y).toFixed(3), minY: +box.min.y.toFixed(3), clips: gltf.animations.map((a) => a.name) };
+
+      if (clipName) {
+        const clip = gltf.animations.find((a) => a.name === clipName);
+        const mixer = new THREE.AnimationMixer(gltf.scene);
+        mixer.clipAction(clip).play();
+        mixer.update(t);
+      }
+
+      // Simulation des overrides du jeu (bras vers l'anneau, regard).
+      if (q.get('strap') || q.get('gaze')) {
+        const bones = {};
+        gltf.scene.traverse((o) => {
+          if (o.isBone) bones[o.name] = o;
+        });
+        const aim = (bone, target, w) => {
+          bone.updateWorldMatrix(true, false);
+          const qW = bone.getWorldQuaternion(new THREE.Quaternion());
+          const pos = bone.getWorldPosition(new THREE.Vector3());
+          const dir = new THREE.Vector3(0, 1, 0).applyQuaternion(qW);
+          const td = target.clone().sub(pos).normalize();
+          const dq = new THREE.Quaternion().setFromUnitVectors(dir, td);
+          const qN = dq.multiply(qW);
+          if (bone.parent) qN.premultiply(bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert());
+          bone.quaternion.slerp(qN, w);
+        };
+        if (q.get('strap')) {
+          // Anneau au-dessus du personnage, hauteur 1,64 / échelle norm ≈ brut.
+          const ring = new THREE.Vector3(0, 1.64 / (1.445 / 1.87), 0);
+          aim(bones.UpperArm_R, ring.clone().setY(ring.y - 0.05), 0.85);
+          aim(bones.ForeArm_R, ring, 1);
+        }
+        if (q.get('gaze')) {
+          const [gy, gp] = q.get('gaze').split(',').map(Number);
+          bones.Head.rotation.y += gy;
+          bones.Head.rotation.x += gp;
+        }
+      }
+      renderer.render(scene, camera);
+      document.title = JSON.stringify(info);
+      window.__probeDone = true;
+    </script>
+  </body>
+</html>

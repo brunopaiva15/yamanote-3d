@@ -81,8 +81,9 @@ function pickArchetype(r: () => number): Archetype {
 }
 
 // Sommet du crâne du squelette local (tête centrée à 1,34 + rayon) : sert à
-// convertir une taille cible en mètres vers l'échelle du groupe.
-const SKELETON_TOP = 1.445;
+// convertir une taille cible en mètres vers l'échelle du groupe. Les modèles
+// « librairie » sont normalisés à cette même hauteur (three/characters).
+export const SKELETON_TOP = 1.445;
 
 // Corpulence : base + variation, avec un peu de « ventre » possible.
 // Les tailles suivent les moyennes japonaises réelles : hommes ~1,60–1,75 m
