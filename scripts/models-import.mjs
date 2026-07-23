@@ -98,7 +98,7 @@ function mergeAnimations(charDoc, sources) {
 }
 
 // --- Traits devinés depuis le nom de fichier (à ajuster dans manifest.json) ---
-const EXCLUDE = /(zombie|skeleton|alien|robot|monster|goblin|orc|demon|ghost|animal|dog|cat|dragon|knight|barbarian|mage|rogue|soldier|astronaut|cowboy|ninja|pirate|viking|wizard)/i;
+const EXCLUDE = /(zombie|skeleton|alien|robot|monster|goblin|orc|demon|ghost|animal|dog|cat|dragon|knight|barbarian|mage|rogue|soldier|astronaut|spacesuit|swat|king|queen|beach|cowboy|ninja|pirate|viking|wizard)/i;
 
 function guessTraits(id) {
   const n = id.toLowerCase();
