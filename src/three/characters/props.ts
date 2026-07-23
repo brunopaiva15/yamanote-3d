@@ -19,7 +19,7 @@ const lensGeo = new THREE.BoxGeometry(0.055, 0.04, 0.012);
 const bridgeGeo = new THREE.BoxGeometry(0.03, 0.008, 0.012);
 const templeGeo = new THREE.BoxGeometry(0.008, 0.008, 0.1);
 const maskGeo = new THREE.BoxGeometry(0.13, 0.075, 0.05);
-const backpackGeo = new THREE.BoxGeometry(0.24, 0.3, 0.12);
+const backpackGeo = new THREE.BoxGeometry(0.22, 0.28, 0.1);
 const shoulderBagGeo = new THREE.BoxGeometry(0.16, 0.2, 0.07);
 
 // Position des yeux / du bas du visage par rapport à l'origine de l'os de
@@ -71,7 +71,7 @@ export function attachProps(wrap: THREE.Group, app: Appearance, allowBag = true)
     const mat = new THREE.MeshStandardMaterial({ color: app.bagColor, roughness: 0.7 });
     if (app.bag === 'backpack') {
       const bp = new THREE.Mesh(backpackGeo, mat);
-      bp.position.set(0, 0.16, -0.2); // dans le dos (face +Z)
+      bp.position.set(0, 0.16, -0.15); // plaqué dans le dos (face +Z)
       spine.add(bp);
     } else {
       const bag = new THREE.Mesh(shoulderBagGeo, mat);
@@ -105,7 +105,12 @@ function followBone(follow: THREE.Group | null, bone: THREE.Bone | undefined, wr
 }
 
 // Recale les groupes suiveurs sur les os (à appeler après les overrides).
-export function updatePropRig(rig: PropRig, bones: BoneMap, wrap: THREE.Group): void {
+// `bagVisible` : les sacs sont posés pour la station debout — on les masque
+// quand le passager est assis (sinon la boîte flotte à côté de lui).
+export function updatePropRig(rig: PropRig, bones: BoneMap, wrap: THREE.Group, bagVisible: boolean): void {
   followBone(rig.headFollow, bones.head, wrap);
-  followBone(rig.spineFollow, bones.spine, wrap);
+  if (rig.spineFollow) {
+    rig.spineFollow.visible = bagVisible;
+    if (bagVisible) followBone(rig.spineFollow, bones.spine, wrap);
+  }
 }

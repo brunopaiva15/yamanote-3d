@@ -45,6 +45,46 @@
         mixer.update(t);
       }
 
+      // Simulation de l'ASSISE avec le vrai code du jeu (clone, clips flous,
+      // alignement du bassin, overrides d'os) : ?sit=1 — banc de référence
+      // dessiné à SEAT_TOP_Y=0.45, sol à y=0.
+      if (q.get('sit')) {
+        const { buildTemplates, cloneVariant } = await import('/src/three/characters/library.ts');
+        const { applyPoseOverrides, makePoseState } = await import('/src/three/characters/pose.ts');
+        const manifest = await (await fetch('/models/manifest.json')).json();
+        const variant = manifest.variants.find((v) => v.file === file) ?? { id: file, file, archetypes: [], clips: { standIdle: 'Idle_Neutral' } };
+        const [template] = buildTemplates({ ...manifest, variants: [variant] }, [gltf]);
+        const app = { skin: '#e0bb94', hair: { color: '#241f1c' }, top: { color: '#4a7fc0' }, bottom: { color: '#3a4150' }, shoes: '#2a2622', bagColor: '#3a3128' };
+        const clone = cloneVariant(template, app);
+        gltf.scene.visible = false; // la source T-pose, APRÈS clonage
+        clone.wrap.visible = true;
+        scene.add(clone.wrap);
+        // Banc : coussin (haut à 0.45) + sol quadrillé déjà présent.
+        const bench = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 0.5), new THREE.MeshStandardMaterial({ color: '#666a70' }));
+        bench.position.set(0, 0.45 - 0.06, -0.25);
+        scene.add(bench);
+        const p = {
+          state: 'seated', pos: new THREE.Vector3(0, 0, 0), yaw: 0, height: parseFloat(q.get('h') ?? '1.08'),
+          bob: 0, bodyLean: 0, headYaw: 0.2, headPitch: 0.05, holdStrap: false, action: 'none',
+        };
+        const pose = makePoseState();
+        const action = clone.actions.sitIdle ?? clone.actions.standIdle;
+        action.play();
+        const manualSit = !clone.actions.sitIdle;
+        const seatFix = 0.45 + 0.01 - (clone.template.sitHipY != null && clone.actions.sitIdle ? clone.template.sitHipY : clone.template.standHipY) * p.height;
+        clone.wrap.position.set(0, seatFix, 0);
+        clone.wrap.rotation.y = p.yaw;
+        clone.wrap.scale.setScalar(p.height);
+        // ~2 s de frames simulées pour converger les poids lissés.
+        for (let i = 0; i < 120; i++) {
+          const dt = 1 / 60;
+          if (clone.restHead && clone.bones.head) clone.bones.head.quaternion.copy(clone.restHead);
+          if (clone.restSpine && clone.bones.spine) clone.bones.spine.quaternion.copy(clone.restSpine);
+          clone.mixer.update(dt);
+          applyPoseOverrides(p, clone.bones, pose, Math.min(1, dt * 6), manualSit);
+        }
+      }
+
       // Simulation des overrides du jeu (bras vers l'anneau, regard).
       if (q.get('strap') || q.get('gaze')) {
         const bones = {};

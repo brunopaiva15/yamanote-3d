@@ -134,7 +134,7 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       if (s.clone.restSpine && bones.spine) bones.spine.quaternion.copy(s.clone.restSpine);
       mixer.update(dt);
       applyPoseOverrides(p, bones, s.pose, k, manualSit);
-      updatePropRig(s.props, bones, wrap);
+      updatePropRig(s.props, bones, wrap, !seated);
     }
   });
 
