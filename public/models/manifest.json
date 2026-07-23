@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "source": "Quaternius — Ultimate Animated Character Pack (Men + Women)",
+  "license": "CC0 1.0",
+  "walkClipSpeed": 1.4,
+  "variants": [
+    {
+      "id": "Suit",
+      "file": "suit.glb",
+      "archetypes": ["salaryman", "senior"],
+      "feminine": false,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Hair": "hair",
+        "Eyebrows": "hair",
+        "Suit": "top",
+        "Black": "shoes",
+        "White": "none",
+        "Tie": "none",
+        "DarkBrown": "none",
+        "Grey": "none",
+        "Eye": "none"
+      }
+    },
+    {
+      "id": "Formal_Women",
+      "file": "formal_women.glb",
+      "archetypes": ["officeLady", "senior"],
+      "feminine": true,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Brown": "hair",
+        "Red": "hair",
+        "LimeGreen": "top",
+        "Gold": "none"
+      }
+    },
+    {
+      "id": "Casual_Women",
+      "file": "casual_women.glb",
+      "archetypes": ["casual", "tourist", "student", "officeLady"],
+      "feminine": true,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Hair_Blond": "hair",
+        "Hair_Brown": "hair",
+        "Brown": "none",
+        "White": "top",
+        "Orange": "bottom",
+        "Grey": "shoes"
+      }
+    },
+    {
+      "id": "Punk_Women",
+      "file": "punk_women.glb",
+      "archetypes": ["student", "casual"],
+      "feminine": true,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Pink": "hair",
+        "Hair_Brown": "hair",
+        "Brown": "none",
+        "Black": "none",
+        "Grey": "none"
+      }
+    },
+    {
+      "id": "Adventurer_Women",
+      "file": "adventurer_women.glb",
+      "archetypes": ["casual", "tourist"],
+      "feminine": true,
+      "bagProp": false,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Hair_Brown": "hair",
+        "Brown": "none",
+        "White": "none",
+        "LightGreen": "top",
+        "Green": "topDark",
+        "Brown2": "bottom",
+        "Brown_02": "none",
+        "Gold": "none"
+      }
+    },
+    {
+      "id": "Casual_2",
+      "file": "casual_2.glb",
+      "archetypes": ["casual", "tourist"],
+      "feminine": false,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Skin_Darker": "none",
+        "Hair": "hair",
+        "Eyebrows": "hair",
+        "LightBrown": "top",
+        "LightBlue": "bottom",
+        "Red_Dark": "shoes",
+        "White": "none",
+        "Eye": "none"
+      }
+    },
+    {
+      "id": "Casual_Hoodie",
+      "file": "casual_hoodie.glb",
+      "archetypes": ["student", "casual"],
+      "feminine": false,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Hair": "hair",
+        "Eyebrows": "hair",
+        "Purple": "top",
+        "LightBlue": "bottom",
+        "White": "none",
+        "Eye": "none"
+      }
+    },
+    {
+      "id": "Punk",
+      "file": "punk.glb",
+      "archetypes": ["student", "casual"],
+      "feminine": false,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Red": "hair",
+        "Red_Dark": "hair",
+        "Eyebrows": "hair",
+        "White": "top",
+        "LightBlue": "bottom",
+        "Black": "none",
+        "Earrings": "none",
+        "Eye": "none"
+      }
+    },
+    {
+      "id": "Farmer",
+      "file": "farmer.glb",
+      "archetypes": ["senior", "casual"],
+      "feminine": false,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Eyebrows": "hair",
+        "LightBlue": "bottom",
+        "Brown": "none",
+        "Brown2": "none",
+        "Beige": "none",
+        "Red": "none",
+        "Eye": "none"
+      }
+    },
+    {
+      "id": "Worker",
+      "file": "worker.glb",
+      "archetypes": ["casual"],
+      "feminine": false,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Moustache": "hair",
+        "Eyebrows": "hair",
+        "LightBrown": "top",
+        "Brown": "bottom",
+        "Grey": "shoes",
+        "Worker_Yellow": "none",
+        "Worker_Vest": "none",
+        "Brown2": "none",
+        "Black": "none",
+        "Eye": "none"
+      }
+    },
+    {
+      "id": "Adventurer",
+      "file": "adventurer.glb",
+      "archetypes": ["casual", "tourist"],
+      "feminine": false,
+      "bagProp": false,
+      "clips": { "standIdle": "Idle_Neutral" },
+      "tintMap": {
+        "Skin": "skin",
+        "Hair": "hair",
+        "Eyebrows": "hair",
+        "LightGreen": "top",
+        "Green": "topDark",
+        "Brown": "bottom",
+        "Brown2": "bag",
+        "Grey": "shoes",
+        "Black": "none",
+        "Eye": "none",
+        "Gold": "none"
+      }
+    }
+  ]
+}

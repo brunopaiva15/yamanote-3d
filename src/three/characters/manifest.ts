@@ -10,6 +10,11 @@ import type { Archetype } from '../../systems/appearance';
 // résolus par correspondance floue (voir library.ts), avec override possible.
 export type LogicalClip = 'sitIdle' | 'standIdle' | 'walk';
 
+// Rôles de teinte : la couleur vient du descripteur d'apparence du passager.
+// topDark/bottomDark : même couleur assombrie, pour préserver les habits
+// deux-tons des packs (ex. chemise + ombrage) après recoloration.
+export type TintRole = 'skin' | 'hair' | 'top' | 'topDark' | 'bottom' | 'bottomDark' | 'shoes' | 'bag' | 'none';
+
 export interface CharacterVariant {
   id: string;
   file: string; // GLB dans public/models/
@@ -19,6 +24,8 @@ export interface CharacterVariant {
   clips?: Partial<Record<LogicalClip, string>>; // noms exacts si la détection échoue
   sitHipY?: number; // hauteur des hanches du clip assis (unités normalisées), sinon mesurée
   tint?: boolean; // autoriser la teinte des matériaux nommés (défaut : true)
+  tintMap?: Record<string, TintRole>; // nom de matériau → rôle (prioritaire sur la détection)
+  bagProp?: boolean; // false : pas de sac-accessoire (le modèle a déjà le sien)
 }
 
 export interface CharacterManifest {

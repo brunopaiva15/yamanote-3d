@@ -51,8 +51,9 @@ function makeMask(): THREE.Mesh {
 }
 
 // Attache les accessoires du descripteur d'apparence ; renvoie les groupes
-// suiveurs à recaler chaque frame via updatePropRig.
-export function attachProps(wrap: THREE.Group, app: Appearance): PropRig {
+// suiveurs à recaler chaque frame via updatePropRig. `allowBag` : false quand
+// le modèle a déjà son propre sac (évite le doublon).
+export function attachProps(wrap: THREE.Group, app: Appearance, allowBag = true): PropRig {
   const rig: PropRig = { headFollow: null, spineFollow: null };
 
   if (app.glasses || app.mask) {
@@ -64,7 +65,7 @@ export function attachProps(wrap: THREE.Group, app: Appearance): PropRig {
     rig.headFollow = head;
   }
 
-  if (app.bag === 'backpack' || app.bag === 'shoulder' || app.bag === 'hand') {
+  if (allowBag && (app.bag === 'backpack' || app.bag === 'shoulder' || app.bag === 'hand')) {
     const spine = new THREE.Group();
     spine.matrixAutoUpdate = false;
     const mat = new THREE.MeshStandardMaterial({ color: app.bagColor, roughness: 0.7 });
