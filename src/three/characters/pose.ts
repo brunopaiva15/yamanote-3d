@@ -24,10 +24,17 @@ export function makePoseState(): PoseState {
   return { strapW: 0, phoneW: 0, sitW: 0 };
 }
 
+// Temporaires des APPELANTS (cibles, directions). aimBone a les siens : il ne
+// doit JAMAIS partager ceux-ci, sinon une boucle « viser les deux jambes »
+// voit sa direction écrasée entre la première et la seconde.
 const vBonePos = new THREE.Vector3();
 const vDir = new THREE.Vector3();
 const vTarget = new THREE.Vector3();
 const vChest = new THREE.Vector3();
+// Temporaires PRIVÉS de aimBone.
+const aPos = new THREE.Vector3();
+const aDir = new THREE.Vector3();
+const aTo = new THREE.Vector3();
 const qWorld = new THREE.Quaternion();
 const qParent = new THREE.Quaternion();
 const qDelta = new THREE.Quaternion();
@@ -39,12 +46,12 @@ function aimBone(bone: THREE.Bone, targetWorld: THREE.Vector3, weight: number): 
   if (weight <= 0.001) return;
   bone.updateWorldMatrix(true, false);
   bone.getWorldQuaternion(qWorld);
-  bone.getWorldPosition(vBonePos);
-  vDir.copy(Y_AXIS).applyQuaternion(qWorld);
-  vTarget.subVectors(targetWorld, vBonePos);
-  if (vTarget.lengthSq() < 1e-6) return;
-  vTarget.normalize();
-  qDelta.setFromUnitVectors(vDir, vTarget);
+  bone.getWorldPosition(aPos);
+  aDir.copy(Y_AXIS).applyQuaternion(qWorld);
+  aTo.subVectors(targetWorld, aPos);
+  if (aTo.lengthSq() < 1e-6) return;
+  aTo.normalize();
+  qDelta.setFromUnitVectors(aDir, aTo);
   qNew.copy(qDelta).multiply(qWorld);
   if (bone.parent) {
     bone.parent.getWorldQuaternion(qParent).invert();
@@ -108,8 +115,9 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
   state.sitW = lerpW(state.sitW, manualSit && seated ? 1 : 0, k);
   if (state.sitW > 0.001) {
     const w = state.sitW;
-    // Cuisses vers l'avant du PNJ (horizontal), tibias vers le sol.
-    vDir.set(Math.sin(p.yaw), 0.12, Math.cos(p.yaw));
+    // Cuisses vers l'avant du PNJ, genoux légèrement SOUS les hanches : les
+    // pieds atteignent le sol au lieu de pendre en pointes de ballerine.
+    vDir.set(Math.sin(p.yaw), -0.08, Math.cos(p.yaw));
     for (const key of ['upLegL', 'upLegR'] as const) {
       const b = bones[key];
       if (!b) continue;
@@ -127,8 +135,9 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
       vTarget.y -= 1;
       aimBone(b, vTarget, w);
     }
-    // Pieds à plat (sinon ils suivent rigidement le tibia et pointent au sol).
-    vDir.set(Math.sin(p.yaw), -0.15, Math.cos(p.yaw));
+    // Pieds à plat, quasi horizontaux (sinon ils suivent rigidement le tibia
+    // et pointent vers le sol).
+    vDir.set(Math.sin(p.yaw), -0.02, Math.cos(p.yaw));
     for (const key of ['footL', 'footR'] as const) {
       const b = bones[key];
       if (!b) continue;
@@ -138,13 +147,23 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
       aimBone(b, vTarget, w);
     }
     // Mains posées vers les genoux (le clip debout laisse les bras ballants),
-    // sauf si la pose téléphone tient déjà les avant-bras.
+    // sauf si la pose téléphone tient déjà les avant-bras. Les doigts sont
+    // drapés vers l'avant-bas pour ne pas rester écartés en éventail.
     const handW = w * (1 - state.phoneW);
     if (handW > 0.001) {
       vDir.set(Math.sin(p.yaw), 0, Math.cos(p.yaw));
-      vTarget.set(p.pos.x, 0.58, p.pos.z).addScaledVector(vDir, 0.34 * p.height);
+      vTarget.set(p.pos.x, 0.55, p.pos.z).addScaledVector(vDir, 0.34 * p.height);
       if (bones.foreArmL) aimBone(bones.foreArmL, vTarget, handW * 0.9);
       if (bones.foreArmR) aimBone(bones.foreArmR, vTarget, handW * 0.9);
+      for (const key of ['handL', 'handR'] as const) {
+        const b = bones[key];
+        if (!b) continue;
+        b.updateWorldMatrix(true, false);
+        b.getWorldPosition(vBonePos);
+        vTarget.copy(vBonePos).addScaledVector(vDir, 0.14);
+        vTarget.y -= 0.12;
+        aimBone(b, vTarget, handW * 0.9);
+      }
     }
     if (bones.spine) bones.spine.rotation.x += 0.12 * w;
   }
