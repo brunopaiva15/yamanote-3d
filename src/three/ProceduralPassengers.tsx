@@ -92,6 +92,21 @@ const buttonGeo = new THREE.SphereGeometry(0.011, 8, 6);
 const zipperGeo = new THREE.BoxGeometry(0.014, 0.34, 0.01);
 const pocketGeo = new RoundedBoxGeometry(0.15, 0.08, 0.03, 3, 0.02);
 
+// Sacs : volumes partagés (corps arrondis, rabats, poignées, sangles). Le
+// sac à dos a un rabat supérieur, une poche frontale, une poignée de portage
+// et des sangles plaquées sur la poitrine (même astuce que la cravate : le
+// volume à moitié enfoncé épouse le torse rond).
+const bpBodyGeo = new RoundedBoxGeometry(0.24, 0.3, 0.14, 3, 0.05);
+const bpLidGeo = new RoundedBoxGeometry(0.245, 0.085, 0.145, 2, 0.03);
+const bpPocketGeo = new RoundedBoxGeometry(0.17, 0.13, 0.05, 2, 0.025);
+const bpHandleGeo = new THREE.TorusGeometry(0.026, 0.006, 5, 10, Math.PI);
+const bpChestStrapGeo = new THREE.BoxGeometry(0.038, 0.32, 0.022);
+const sbBodyGeo = new RoundedBoxGeometry(0.16, 0.2, 0.07, 3, 0.03);
+const sbFlapGeo = new RoundedBoxGeometry(0.165, 0.08, 0.075, 2, 0.02);
+const sbStrapGeo = new THREE.BoxGeometry(0.025, 0.44, 0.02);
+const hbBodyGeo = new RoundedBoxGeometry(0.14, 0.16, 0.07, 3, 0.02);
+const hbHandleGeo = new THREE.TorusGeometry(0.032, 0.005, 5, 10, Math.PI);
+
 const TIE_COLORS = ['#8a2f38', '#2f4a8a', '#3a4a2a', '#5a3a6a', '#2a5a5a', '#7a5a2a', '#333842'];
 
 const matCache = new Map<string, THREE.MeshStandardMaterial>();
@@ -298,14 +313,24 @@ function buildChar(app: Appearance, id: number): CharSpec {
 
   // --- Sacs (groupe principal) ---
   const armX = b.shoulderR + 0.02;
-  const bagMat = cloth(app.bagColor, 0.7);
+  const bagMat = cloth(app.bagColor, 0.85);
+  const bagTrimMat = cloth(shade(app.bagColor, 0.32), 0.65);
   if (app.bag === 'backpack') {
-    accessories.push({ geo: new RoundedBoxGeometry(0.24, 0.3, 0.14, 3, 0.04), mat: bagMat, position: [0, 0.92, -(b.chestR + 0.09)] });
+    const zBody = -(b.chestR + 0.09);
+    accessories.push({ geo: bpBodyGeo, mat: bagMat, position: [0, 0.92, zBody] });
+    accessories.push({ geo: bpLidGeo, mat: bagTrimMat, position: [0, 1.028, zBody] });
+    accessories.push({ geo: bpPocketGeo, mat: bagTrimMat, position: [0, 0.85, zBody - 0.055] });
+    accessories.push({ geo: bpHandleGeo, mat: bagTrimMat, position: [0, 1.075, zBody] });
+    for (const s of [-1, 1]) {
+      accessories.push({ geo: bpChestStrapGeo, mat: bagTrimMat, position: [s * 0.065, 0.9, b.chestR - 0.008], rotation: [0.08, 0, s * 0.06] });
+    }
   } else if (app.bag === 'shoulder') {
-    accessories.push({ geo: new RoundedBoxGeometry(0.16, 0.2, 0.07, 3, 0.03), mat: bagMat, position: [0.16, 0.72, 0.06] });
-    accessories.push({ geo: new THREE.BoxGeometry(0.025, 0.44, 0.02), mat: bagMat, position: [0.02, 0.92, 0.02], rotation: [0, 0, 0.7] });
+    accessories.push({ geo: sbBodyGeo, mat: bagMat, position: [0.16, 0.72, 0.06] });
+    accessories.push({ geo: sbFlapGeo, mat: bagTrimMat, position: [0.16, 0.77, 0.06] });
+    accessories.push({ geo: sbStrapGeo, mat: bagTrimMat, position: [0.02, 0.92, 0.02], rotation: [0, 0, 0.7] });
   } else if (app.bag === 'hand') {
-    accessories.push({ geo: new RoundedBoxGeometry(0.14, 0.16, 0.07, 3, 0.02), mat: bagMat, position: [armX + 0.08, 0.5, 0.05] });
+    accessories.push({ geo: hbBodyGeo, mat: bagMat, position: [armX + 0.08, 0.5, 0.05] });
+    accessories.push({ geo: hbHandleGeo, mat: bagTrimMat, position: [armX + 0.08, 0.585, 0.05] });
   }
 
   const armMat = app.top.type === 'tshirt' ? skinMat : topMat;

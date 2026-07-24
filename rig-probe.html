@@ -85,6 +85,33 @@
         }
       }
 
+      // Accessoires (lunettes, masque, sacs) superposés avec le vrai code du
+      // jeu : ?props=1&bag=backpack|shoulder|hand|none&mask=1&glasses=1
+      if (q.get('props')) {
+        const { buildTemplates, cloneVariant } = await import('/src/three/characters/library.ts');
+        const { attachProps, updatePropRig } = await import('/src/three/characters/props.ts');
+        const manifest = await (await fetch('/models/manifest.json')).json();
+        const variant = manifest.variants.find((v) => v.file === file) ?? { id: file, file, archetypes: [], clips: { standIdle: 'Idle_Neutral' } };
+        const [template] = buildTemplates({ ...manifest, variants: [variant] }, [gltf]);
+        const app = {
+          skin: '#e0bb94', hair: { color: '#241f1c' }, top: { color: '#4a7fc0' }, bottom: { color: '#3a4150' },
+          shoes: '#2a2622', bagColor: q.get('bagColor') ?? '#3a3128',
+          glasses: q.get('glasses') === '1', mask: q.get('mask') !== '0', bag: q.get('bag') ?? 'backpack',
+        };
+        const clone = cloneVariant(template, app);
+        gltf.scene.visible = false; // la source T-pose, APRÈS clonage
+        clone.wrap.visible = true;
+        scene.add(clone.wrap);
+        const props = attachProps(clone.wrap, app, variant.bagProp !== false);
+        const action = clone.actions.standIdle;
+        if (action) {
+          action.play();
+          clone.mixer.update(t);
+        }
+        clone.wrap.updateMatrixWorld(true);
+        updatePropRig(props, clone.bones, clone.wrap, true);
+      }
+
       // Simulation des overrides du jeu (bras vers l'anneau, regard).
       if (q.get('strap') || q.get('gaze')) {
         const bones = {};
