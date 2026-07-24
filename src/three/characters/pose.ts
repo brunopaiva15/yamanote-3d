@@ -115,9 +115,11 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
   state.sitW = lerpW(state.sitW, manualSit && seated ? 1 : 0, k);
   if (state.sitW > 0.001) {
     const w = state.sitW;
+    const sinY = Math.sin(p.yaw);
+    const cosY = Math.cos(p.yaw);
     // Cuisses vers l'avant du PNJ, genoux légèrement SOUS les hanches : les
     // pieds atteignent le sol au lieu de pendre en pointes de ballerine.
-    vDir.set(Math.sin(p.yaw), -0.08, Math.cos(p.yaw));
+    vDir.set(sinY, -0.08, cosY);
     for (const key of ['upLegL', 'upLegR'] as const) {
       const b = bones[key];
       if (!b) continue;
@@ -126,18 +128,32 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
       vTarget.copy(vBonePos).add(vDir);
       aimBone(b, vTarget, w);
     }
-    for (const key of ['legL', 'legR'] as const) {
-      const b = bones[key];
+    // Tibias : la cheville doit atterrir à HAUTEUR DE SOL, quelle que soit la
+    // longueur du tibia du modèle. Visé droit vers le bas (ancienne version),
+    // un tibia plus long que la hauteur du genou traversait le plancher — on
+    // replie donc le pied vers la banquette de l'excédent exact (Pythagore),
+    // comme on s'assoit réellement ; s'il est plus court, il pend à la
+    // verticale sans atteindre le sol.
+    const ankleY = 0.05 * p.height; // hauteur de la cheville, pied posé à plat
+    for (const [legKey, footKey] of [
+      ['legL', 'footL'],
+      ['legR', 'footR'],
+    ] as const) {
+      const b = bones[legKey];
       if (!b) continue;
       b.updateWorldMatrix(true, false);
       b.getWorldPosition(vBonePos);
-      vTarget.copy(vBonePos);
-      vTarget.y -= 1;
+      const foot = bones[footKey];
+      let shinLen = 0.35 * p.height;
+      if (foot) shinLen = foot.getWorldPosition(vTarget).distanceTo(vBonePos);
+      const drop = Math.max(0.05, vBonePos.y - ankleY);
+      const tuck = Math.sqrt(Math.max(0, shinLen * shinLen - drop * drop));
+      vTarget.set(vBonePos.x - sinY * tuck, ankleY, vBonePos.z - cosY * tuck);
       aimBone(b, vTarget, w);
     }
     // Pieds à plat, quasi horizontaux (sinon ils suivent rigidement le tibia
     // et pointent vers le sol).
-    vDir.set(Math.sin(p.yaw), -0.02, Math.cos(p.yaw));
+    vDir.set(sinY, -0.02, cosY);
     for (const key of ['footL', 'footR'] as const) {
       const b = bones[key];
       if (!b) continue;
@@ -146,22 +162,33 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
       vTarget.copy(vBonePos).add(vDir);
       aimBone(b, vTarget, w);
     }
-    // Mains posées vers les genoux (le clip debout laisse les bras ballants),
-    // sauf si la pose téléphone tient déjà les avant-bras. Les doigts sont
-    // drapés vers l'avant-bas pour ne pas rester écartés en éventail.
+    // Mains posées sur les cuisses, CHACUNE au-dessus de son propre genou —
+    // l'ancien point central unique faisait converger les deux avant-bras
+    // vers l'axe du corps, mains enfoncées dans les cuisses. Sauf si la pose
+    // téléphone tient déjà les avant-bras. Les doigts sont drapés vers
+    // l'avant, presque à plat, pour épouser le dessus de la cuisse.
     const handW = w * (1 - state.phoneW);
     if (handW > 0.001) {
-      vDir.set(Math.sin(p.yaw), 0, Math.cos(p.yaw));
-      vTarget.set(p.pos.x, 0.55, p.pos.z).addScaledVector(vDir, 0.34 * p.height);
-      if (bones.foreArmL) aimBone(bones.foreArmL, vTarget, handW * 0.9);
-      if (bones.foreArmR) aimBone(bones.foreArmR, vTarget, handW * 0.9);
-      for (const key of ['handL', 'handR'] as const) {
-        const b = bones[key];
+      vDir.set(sinY, 0, cosY);
+      for (const [foreKey, legKey, handKey] of [
+        ['foreArmL', 'legL', 'handL'],
+        ['foreArmR', 'legR', 'handR'],
+      ] as const) {
+        const fore = bones[foreKey];
+        const knee = bones[legKey];
+        if (fore && knee) {
+          knee.updateWorldMatrix(true, false);
+          knee.getWorldPosition(vTarget);
+          vTarget.addScaledVector(vDir, -0.12); // en retrait du genou…
+          vTarget.y += 0.04; // …et posé SUR la cuisse, pas dedans
+          aimBone(fore, vTarget, handW * 0.9);
+        }
+        const b = bones[handKey];
         if (!b) continue;
         b.updateWorldMatrix(true, false);
         b.getWorldPosition(vBonePos);
-        vTarget.copy(vBonePos).addScaledVector(vDir, 0.14);
-        vTarget.y -= 0.12;
+        vTarget.copy(vBonePos).addScaledVector(vDir, 0.12);
+        vTarget.y -= 0.04;
         aimBone(b, vTarget, handW * 0.9);
       }
     }
