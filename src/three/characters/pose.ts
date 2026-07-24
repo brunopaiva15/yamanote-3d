@@ -171,18 +171,27 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
         aimBone(foot, vTarget, w);
       }
     }
-    // Mains posées sur les cuisses, CHACUNE au-dessus de son propre genou —
-    // l'ancien point central unique faisait converger les deux avant-bras
-    // vers l'axe du corps, mains enfoncées dans les cuisses. Sauf si la pose
-    // téléphone tient déjà les avant-bras. Les doigts sont drapés vers
-    // l'avant, presque à plat, pour épouser le dessus de la cuisse.
+    // Bras posés sur les cuisses, CHACUN au-dessus de sa propre jambe — un
+    // point central unique faisait converger les avant-bras dans les cuisses.
+    // Le clip debout garde les coudes écartés (mains flottantes) : le bras
+    // ENTIER descend le long du buste (coude près de la hanche), puis
+    // l'avant-bras se couche sur la cuisse vers le genou, et les doigts sont
+    // drapés vers l'avant, presque à plat, pour épouser le dessus de la
+    // cuisse. Sauf si la pose téléphone tient déjà les avant-bras.
     const handW = w * (1 - state.phoneW);
     if (handW > 0.001) {
       vDir.set(sinY, 0, cosY);
-      for (const [foreKey, legKey, handKey] of [
-        ['foreArmL', 'legL', 'handL'],
-        ['foreArmR', 'legR', 'handR'],
+      for (const [armKey, foreKey, legKey, handKey] of [
+        ['upperArmL', 'foreArmL', 'legL', 'handL'],
+        ['upperArmR', 'foreArmR', 'legR', 'handR'],
       ] as const) {
+        const arm = bones[armKey];
+        if (arm) {
+          arm.updateWorldMatrix(true, false);
+          arm.getWorldPosition(vBonePos); // épaule
+          vTarget.set(vBonePos.x + sinY * 0.18, vBonePos.y - 1, vBonePos.z + cosY * 0.18);
+          aimBone(arm, vTarget, handW * 0.85);
+        }
         const fore = bones[foreKey];
         const knee = bones[legKey];
         if (fore && knee) {
