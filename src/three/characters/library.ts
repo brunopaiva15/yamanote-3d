@@ -275,10 +275,15 @@ function tintMaterial(mat: THREE.Material, app: Appearance, tintMap?: Record<str
 
 // --- Clonage par passager -------------------------------------------------
 
+// Accessoires incongrus livrés avec certains packs (le costume Quaternius
+// tient un pistolet) : masqués au clonage — rien de tout ça dans la Yamanote.
+const HIDDEN_PROP_RE = /pistol|gun|revolver|rifle|weapon|knife|sword|blade/i;
+
 export function cloneVariant(template: CharacterTemplate, app: Appearance): CharacterClone {
   const model = cloneSkeleton(template.scene);
   const doTint = template.variant.tint !== false;
   model.traverse((obj) => {
+    if (HIDDEN_PROP_RE.test(obj.name)) obj.visible = false;
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
     // Les bornes d'un SkinnedMesh ne suivent pas la pose → pas de culling
