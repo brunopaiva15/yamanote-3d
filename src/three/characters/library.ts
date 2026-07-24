@@ -48,11 +48,20 @@ export interface CharacterTemplate {
   standHipY: number; // hanches au repos, unités normalisées (fallback assis manuel)
 }
 
+// Géométrie des jambes mesurée sur la bind pose, en unités normalisées —
+// consommée par l'assise manuelle (pose.ts) pour poser les pieds au sol.
+export interface LegGeom {
+  shinLen: number; // distance genou → pivot du pied
+  ankleH: number; // hauteur du pivot du pied quand il est posé au sol
+  footDetached: boolean; // pieds non parentés aux tibias (cibles IK Quaternius)
+}
+
 export interface CharacterClone {
   wrap: THREE.Group; // groupe piloté par le rendu (pos / yaw / échelle)
   mixer: THREE.AnimationMixer;
   actions: Partial<Record<LogicalClip, THREE.AnimationAction>>;
   bones: BoneMap;
+  legGeom: LegGeom | null;
   template: CharacterTemplate;
   // Pose de repos des os recevant des rotations ADDITIVES (tête, buste) :
   // restaurée avant mixer.update pour qu'aucun ajout ne s'accumule si un clip
@@ -315,11 +324,36 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
   }
 
   const bones = resolveBones(model);
+
+  // Mesure des jambes sur la bind pose (avant toute animation), en unités
+  // normalisées : le wrap est évalué seul, hors scène.
+  let legGeom: LegGeom | null = null;
+  if (bones.legL && bones.footL) {
+    wrap.updateMatrixWorld(true);
+    const knee = bones.legL.getWorldPosition(new THREE.Vector3());
+    const foot = bones.footL.getWorldPosition(new THREE.Vector3());
+    // Détaché = le pied n'est PAS un descendant du tibia (cible IK à part,
+    // convention Quaternius) : il ne suivra pas les rotations de la jambe.
+    let detached = true;
+    for (let a = bones.footL.parent; a; a = a.parent) {
+      if (a === bones.legL) {
+        detached = false;
+        break;
+      }
+    }
+    legGeom = {
+      shinLen: knee.distanceTo(foot),
+      ankleH: Math.max(0.01, foot.y),
+      footDetached: detached,
+    };
+  }
+
   return {
     wrap,
     mixer,
     actions,
     bones,
+    legGeom,
     template,
     restHead: bones.head ? bones.head.quaternion.clone() : null,
     restSpine: bones.spine ? bones.spine.quaternion.clone() : null,

@@ -8,7 +8,7 @@
 
 import * as THREE from 'three';
 import type { Pax } from '../../systems/passengers';
-import type { BoneMap } from './library';
+import type { BoneMap, LegGeom } from './library';
 
 // Hauteur de l'anneau des tsurikawa (voir three/Handles.tsx).
 const STRAP_RING_Y = 1.64;
@@ -31,6 +31,8 @@ const vBonePos = new THREE.Vector3();
 const vDir = new THREE.Vector3();
 const vTarget = new THREE.Vector3();
 const vChest = new THREE.Vector3();
+const vFoot = new THREE.Vector3();
+const mParentInv = new THREE.Matrix4();
 // Temporaires PRIVÉS de aimBone.
 const aPos = new THREE.Vector3();
 const aDir = new THREE.Vector3();
@@ -66,7 +68,8 @@ function lerpW(current: number, target: number, k: number): number {
 
 // Applique tous les overrides d'un passager. `manualSit` : pas de clip assis
 // dans le pack → pose assise approximative par os (jambes pliées, dos rond).
-export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: number, manualSit: boolean): void {
+// `legs` : mesures de la bind pose (voir cloneVariant) pour poser les pieds.
+export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: number, manualSit: boolean, legs?: LegGeom | null): void {
   // --- Regard : superposé au clip (mêmes conventions que l'ancien rendu). ---
   if (bones.head) {
     bones.head.rotation.y += p.headYaw;
@@ -128,13 +131,13 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
       vTarget.copy(vBonePos).add(vDir);
       aimBone(b, vTarget, w);
     }
-    // Tibias : la cheville doit atterrir à HAUTEUR DE SOL, quelle que soit la
-    // longueur du tibia du modèle. Visé droit vers le bas (ancienne version),
-    // un tibia plus long que la hauteur du genou traversait le plancher — on
-    // replie donc le pied vers la banquette de l'excédent exact (Pythagore),
-    // comme on s'assoit réellement ; s'il est plus court, il pend à la
-    // verticale sans atteindre le sol.
-    const ankleY = 0.05 * p.height; // hauteur de la cheville, pied posé à plat
+    // Tibias et pieds : la cheville doit atterrir à HAUTEUR DE SOL, quelle
+    // que soit la longueur du tibia (mesurée sur la bind pose). Si le tibia
+    // dépasse la hauteur du genou, l'excédent replie le pied vers la
+    // banquette (Pythagore), comme on s'assoit réellement ; sinon il pend à
+    // la verticale sans atteindre le sol.
+    const shinLen = (legs?.shinLen ?? 0.35) * p.height;
+    const ankleY = (legs?.ankleH ?? 0.05) * p.height;
     for (const [legKey, footKey] of [
       ['legL', 'footL'],
       ['legR', 'footR'],
@@ -142,25 +145,31 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
       const b = bones[legKey];
       if (!b) continue;
       b.updateWorldMatrix(true, false);
-      b.getWorldPosition(vBonePos);
-      const foot = bones[footKey];
-      let shinLen = 0.35 * p.height;
-      if (foot) shinLen = foot.getWorldPosition(vTarget).distanceTo(vBonePos);
-      const drop = Math.max(0.05, vBonePos.y - ankleY);
+      b.getWorldPosition(vBonePos); // genou
+      const drop = Math.min(shinLen, Math.max(0.05, vBonePos.y - ankleY));
       const tuck = Math.sqrt(Math.max(0, shinLen * shinLen - drop * drop));
-      vTarget.set(vBonePos.x - sinY * tuck, ankleY, vBonePos.z - cosY * tuck);
+      vTarget.set(vBonePos.x - sinY * tuck, vBonePos.y - drop, vBonePos.z - cosY * tuck);
       aimBone(b, vTarget, w);
-    }
-    // Pieds à plat, quasi horizontaux (sinon ils suivent rigidement le tibia
-    // et pointent vers le sol).
-    vDir.set(sinY, -0.02, cosY);
-    for (const key of ['footL', 'footR'] as const) {
-      const b = bones[key];
-      if (!b) continue;
-      b.updateWorldMatrix(true, false);
-      b.getWorldPosition(vBonePos);
-      vTarget.copy(vBonePos).add(vDir);
-      aimBone(b, vTarget, w);
+      const foot = bones[footKey];
+      if (!foot) continue;
+      if (legs?.footDetached && foot.parent) {
+        // Rigs Quaternius : le pied est un os DÉTACHÉ (cible IK, animé en
+        // position par les clips) — il ne suit pas le tibia. On le POSE à la
+        // cheville calculée, sinon la chaussure reste plantée à sa position
+        // debout (sous le plancher, mesh étiré) ; le clip garde le pied à
+        // plat, aucune rotation à forcer.
+        foot.parent.updateWorldMatrix(true, false);
+        mParentInv.copy(foot.parent.matrixWorld).invert();
+        vFoot.copy(vTarget).applyMatrix4(mParentInv);
+        foot.position.lerp(vFoot, w);
+      } else {
+        // Rig FK classique : le pied suit le tibia — on l'aplatit seulement
+        // (sinon il pointe vers le sol dans l'axe du tibia).
+        foot.updateWorldMatrix(true, false);
+        foot.getWorldPosition(vBonePos);
+        vTarget.set(vBonePos.x + sinY, vBonePos.y - 0.02, vBonePos.z + cosY);
+        aimBone(foot, vTarget, w);
+      }
     }
     // Mains posées sur les cuisses, CHACUNE au-dessus de son propre genou —
     // l'ancien point central unique faisait converger les deux avant-bras
