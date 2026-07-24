@@ -8,7 +8,7 @@
 
 import * as THREE from 'three';
 import type { Pax } from '../../systems/passengers';
-import type { BoneMap } from './library';
+import type { CharacterClone } from './library';
 
 // Hauteur de l'anneau des tsurikawa (voir three/Handles.tsx).
 const STRAP_RING_Y = 1.64;
@@ -31,7 +31,14 @@ const vBonePos = new THREE.Vector3();
 const vDir = new THREE.Vector3();
 const vTarget = new THREE.Vector3();
 const vChest = new THREE.Vector3();
-// Temporaires PRIVÉS de aimBone.
+const vFoot = new THREE.Vector3();
+const mParentInv = new THREE.Matrix4();
+const qWrap = new THREE.Quaternion();
+const qWrapOnly = new THREE.Quaternion();
+const qLTarget = new THREE.Quaternion();
+const qMirror = new THREE.Quaternion();
+const qRestW = new THREE.Quaternion();
+// Temporaires PRIVÉS de aimBone / poseBone.
 const aPos = new THREE.Vector3();
 const aDir = new THREE.Vector3();
 const aTo = new THREE.Vector3();
@@ -60,13 +67,51 @@ function aimBone(bone: THREE.Bone, targetWorld: THREE.Vector3, weight: number): 
   bone.quaternion.slerp(qNew, weight);
 }
 
+// Réaligne l'axe +Y d'une orientation monde sur (dx, dy, dz), en conservant
+// son roulis (rotation minimale).
+function alignY(q: THREE.Quaternion, dx: number, dy: number, dz: number, out: THREE.Quaternion): THREE.Quaternion {
+  aDir.copy(Y_AXIS).applyQuaternion(q);
+  aTo.set(dx, dy, dz).normalize();
+  qDelta.setFromUnitVectors(aDir, aTo);
+  return out.copy(qDelta).multiply(q);
+}
+
+// Orientation monde cible : axe +Y de l'os vers (dx, dy, dz), roulis hérité du
+// REPOS (relatif à la poitrine) plutôt que de la pose du clip.
+function worldTarget(qRest: THREE.Quaternion, qRefWorld: THREE.Quaternion, dx: number, dy: number, dz: number, out: THREE.Quaternion): THREE.Quaternion {
+  qRestW.copy(qRefWorld).multiply(qRest);
+  return alignY(qRestW, dx, dy, dz, out);
+}
+
+// Applique une orientation MONDE à l'os (convertie en local), lissée.
+function applyWorld(bone: THREE.Bone, qTargetWorld: THREE.Quaternion, weight: number): void {
+  qNew.copy(qTargetWorld);
+  if (bone.parent) {
+    bone.parent.getWorldQuaternion(qParent).invert();
+    qNew.premultiply(qParent);
+  }
+  bone.quaternion.slerp(qNew, weight);
+}
+
+// Miroir sagittal d'une orientation monde : exprimée en espace wrap (le
+// personnage y fait face à +Z, plan de symétrie x=0), réfléchie (x, -y, -z, w),
+// puis ramenée en monde.
+function mirrorWorld(q: THREE.Quaternion, qWrapWorld: THREE.Quaternion, out: THREE.Quaternion): THREE.Quaternion {
+  out.copy(qWrapWorld).invert().multiply(q);
+  out.set(out.x, -out.y, -out.z, out.w);
+  return out.premultiply(qWrapWorld);
+}
+
 function lerpW(current: number, target: number, k: number): number {
   return current + (target - current) * k;
 }
 
 // Applique tous les overrides d'un passager. `manualSit` : pas de clip assis
 // dans le pack → pose assise approximative par os (jambes pliées, dos rond).
-export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: number, manualSit: boolean): void {
+// Le clone fournit les os et les mesures de bind pose (jambes, bras).
+export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseState, k: number, manualSit: boolean): void {
+  const bones = clone.bones;
+  const legs = clone.legGeom;
   // --- Regard : superposé au clip (mêmes conventions que l'ancien rendu). ---
   if (bones.head) {
     bones.head.rotation.y += p.headYaw;
@@ -117,6 +162,20 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
     const w = state.sitW;
     const sinY = Math.sin(p.yaw);
     const cosY = Math.cos(p.yaw);
+    clone.wrap.getWorldQuaternion(qWrapOnly);
+    // Buste SYMÉTRISÉ : le clip idle vrille le torse (Y), déplaçant une
+    // épaule en avant et l'autre en arrière — bras et mains finissent
+    // inégaux. Chaque os de la chaîne (racine d'abord) est ramené à
+    // l'orientation symétrique la plus proche : la moyenne entre lui-même et
+    // son propre miroir sagittal (la composante symétrique — pitch de
+    // respiration — survit, la vrille et l'inclinaison latérale s'annulent).
+    for (const b of clone.spineChain) {
+      b.updateWorldMatrix(true, false);
+      b.getWorldQuaternion(qRestW);
+      mirrorWorld(qRestW, qWrapOnly, qMirror);
+      qRestW.slerp(qMirror, 0.5);
+      applyWorld(b, qRestW, w);
+    }
     // Cuisses vers l'avant du PNJ, genoux légèrement SOUS les hanches : les
     // pieds atteignent le sol au lieu de pendre en pointes de ballerine.
     vDir.set(sinY, -0.08, cosY);
@@ -128,13 +187,13 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
       vTarget.copy(vBonePos).add(vDir);
       aimBone(b, vTarget, w);
     }
-    // Tibias : la cheville doit atterrir à HAUTEUR DE SOL, quelle que soit la
-    // longueur du tibia du modèle. Visé droit vers le bas (ancienne version),
-    // un tibia plus long que la hauteur du genou traversait le plancher — on
-    // replie donc le pied vers la banquette de l'excédent exact (Pythagore),
-    // comme on s'assoit réellement ; s'il est plus court, il pend à la
-    // verticale sans atteindre le sol.
-    const ankleY = 0.05 * p.height; // hauteur de la cheville, pied posé à plat
+    // Tibias et pieds : la cheville doit atterrir à HAUTEUR DE SOL, quelle
+    // que soit la longueur du tibia (mesurée sur la bind pose). Si le tibia
+    // dépasse la hauteur du genou, l'excédent replie le pied vers la
+    // banquette (Pythagore), comme on s'assoit réellement ; sinon il pend à
+    // la verticale sans atteindre le sol.
+    const shinLen = (legs?.shinLen ?? 0.35) * p.height;
+    const ankleY = (legs?.ankleH ?? 0.05) * p.height;
     for (const [legKey, footKey] of [
       ['legL', 'footL'],
       ['legR', 'footR'],
@@ -142,54 +201,100 @@ export function applyPoseOverrides(p: Pax, bones: BoneMap, state: PoseState, k: 
       const b = bones[legKey];
       if (!b) continue;
       b.updateWorldMatrix(true, false);
-      b.getWorldPosition(vBonePos);
-      const foot = bones[footKey];
-      let shinLen = 0.35 * p.height;
-      if (foot) shinLen = foot.getWorldPosition(vTarget).distanceTo(vBonePos);
-      const drop = Math.max(0.05, vBonePos.y - ankleY);
+      b.getWorldPosition(vBonePos); // genou
+      const drop = Math.min(shinLen, Math.max(0.05, vBonePos.y - ankleY));
       const tuck = Math.sqrt(Math.max(0, shinLen * shinLen - drop * drop));
-      vTarget.set(vBonePos.x - sinY * tuck, ankleY, vBonePos.z - cosY * tuck);
+      vTarget.set(vBonePos.x - sinY * tuck, vBonePos.y - drop, vBonePos.z - cosY * tuck);
       aimBone(b, vTarget, w);
+      const foot = bones[footKey];
+      if (!foot) continue;
+      if (legs?.footDetached && foot.parent) {
+        // Rigs Quaternius : le pied est un os DÉTACHÉ (cible IK, animé en
+        // position par les clips) — il ne suit pas le tibia. On le POSE à la
+        // cheville calculée, sinon la chaussure reste plantée à sa position
+        // debout (sous le plancher, mesh étiré) ; le clip garde le pied à
+        // plat, aucune rotation à forcer.
+        foot.parent.updateWorldMatrix(true, false);
+        mParentInv.copy(foot.parent.matrixWorld).invert();
+        vFoot.copy(vTarget).applyMatrix4(mParentInv);
+        foot.position.lerp(vFoot, w);
+      } else {
+        // Rig FK classique : le pied suit le tibia — on l'aplatit seulement
+        // (sinon il pointe vers le sol dans l'axe du tibia).
+        foot.updateWorldMatrix(true, false);
+        foot.getWorldPosition(vBonePos);
+        vTarget.set(vBonePos.x + sinY, vBonePos.y - 0.02, vBonePos.z + cosY);
+        aimBone(foot, vTarget, w);
+      }
     }
-    // Pieds à plat, quasi horizontaux (sinon ils suivent rigidement le tibia
-    // et pointent vers le sol).
-    vDir.set(sinY, -0.02, cosY);
-    for (const key of ['footL', 'footR'] as const) {
-      const b = bones[key];
-      if (!b) continue;
-      b.updateWorldMatrix(true, false);
-      b.getWorldPosition(vBonePos);
-      vTarget.copy(vBonePos).add(vDir);
-      aimBone(b, vTarget, w);
-    }
-    // Mains posées sur les cuisses, CHACUNE au-dessus de son propre genou —
-    // l'ancien point central unique faisait converger les deux avant-bras
-    // vers l'axe du corps, mains enfoncées dans les cuisses. Sauf si la pose
-    // téléphone tient déjà les avant-bras. Les doigts sont drapés vers
-    // l'avant, presque à plat, pour épouser le dessus de la cuisse.
+    // Bras posés sur les cuisses, CHACUN au-dessus de sa propre jambe. Les
+    // orientations sont reconstruites depuis la BIND POSE (poseBone) et non
+    // depuis la pose du clip : le clip idle est asymétrique (roulis des
+    // poignets différent par côté) et un simple « aim » le conservait — les
+    // deux mains n'étaient pas égales. Le bras entier descend le long du
+    // buste (coude près de la hanche, léger écart pour ne pas rentrer dans le
+    // torse), l'avant-bras se couche sur la cuisse vers le genou, les doigts
+    // sont drapés vers l'avant-bas. Sauf si la pose téléphone tient déjà les
+    // avant-bras.
     const handW = w * (1 - state.phoneW);
     if (handW > 0.001) {
-      vDir.set(sinY, 0, cosY);
-      for (const [foreKey, legKey, handKey] of [
-        ['foreArmL', 'legL', 'handL'],
-        ['foreArmR', 'legR', 'handR'],
-      ] as const) {
-        const fore = bones[foreKey];
-        const knee = bones[legKey];
-        if (fore && knee) {
+      // Clavicules au neutre AVANT de lire la référence : le clip idle les
+      // anime différemment à gauche et à droite, ce qui décale les épaules.
+      for (const [clav, rest] of clone.clavicles) {
+        clav.quaternion.slerp(rest, handW);
+      }
+      const ref = clone.chestRef ?? clone.wrap;
+      ref.updateWorldMatrix(true, false);
+      ref.getWorldQuaternion(qWrap);
+      clone.wrap.getWorldQuaternion(qWrapOnly);
+      // Le bras GAUCHE est construit depuis son repos ; le bras DROIT reçoit
+      // le MIROIR SAGITTAL du résultat gauche (roulis rigoureusement égal —
+      // le buste animé, vrillé, fausserait toute référence par côté). Les
+      // ORIENTATIONS seules ne suffisent pas : la vrille décale aussi les
+      // POSITIONS des épaules — chaque avant-bras vise donc SON genou (les
+      // jambes assises, elles, sont posées symétriquement), le miroir ne
+      // fournissant que le roulis.
+      // 1) Bras : le long du buste, coude avancé, léger écart extérieur.
+      const armRest = clone.armRest.upperArmL;
+      if (bones.upperArmL && armRest) {
+        worldTarget(armRest, qWrap, sinY * 0.45 + cosY * 0.1, -1, cosY * 0.45 - sinY * 0.1, qLTarget);
+        applyWorld(bones.upperArmL, qLTarget, handW * 0.95);
+        if (bones.upperArmR) applyWorld(bones.upperArmR, mirrorWorld(qLTarget, qWrapOnly, qMirror), handW * 0.95);
+      }
+      // 2) Avant-bras : chacun vise le dessus de SON genou.
+      const foreRest = clone.armRest.foreArmL;
+      if (bones.foreArmL && foreRest) {
+        const kneeAim = (fore: THREE.Bone, knee: THREE.Bone | undefined): boolean => {
+          if (!knee) return false;
+          fore.updateWorldMatrix(true, false);
+          fore.getWorldPosition(vBonePos); // coude
           knee.updateWorldMatrix(true, false);
           knee.getWorldPosition(vTarget);
-          vTarget.addScaledVector(vDir, -0.12); // en retrait du genou…
-          vTarget.y += 0.04; // …et posé SUR la cuisse, pas dedans
-          aimBone(fore, vTarget, handW * 0.9);
+          vTarget.y += 0.1; // dessus du genou (marge : les doigts ne doivent pas le traverser)
+          vTarget.addScaledVector(vDir, -0.03);
+          vTarget.sub(vBonePos);
+          return vTarget.lengthSq() > 1e-6;
+        };
+        vDir.set(sinY, 0, cosY);
+        if (kneeAim(bones.foreArmL, bones.legL)) {
+          worldTarget(foreRest, qWrap, vTarget.x, vTarget.y, vTarget.z, qLTarget);
+          applyWorld(bones.foreArmL, qLTarget, handW);
+          if (bones.foreArmR) {
+            // NB : alignY ne supporte pas out === q (aliasing) — sortie séparée.
+            mirrorWorld(qLTarget, qWrapOnly, qMirror);
+            if (kneeAim(bones.foreArmR, bones.legR)) alignY(qMirror, vTarget.x, vTarget.y, vTarget.z, qLTarget);
+            else qLTarget.copy(qMirror);
+            applyWorld(bones.foreArmR, qLTarget, handW);
+          }
         }
-        const b = bones[handKey];
-        if (!b) continue;
-        b.updateWorldMatrix(true, false);
-        b.getWorldPosition(vBonePos);
-        vTarget.copy(vBonePos).addScaledVector(vDir, 0.12);
-        vTarget.y -= 0.04;
-        aimBone(b, vTarget, handW * 0.9);
+      }
+      // 3) Mains : presque à plat sur le genou (un drapé trop plongeant fait
+      // traverser les doigts), miroir exact.
+      const handRest = clone.armRest.handL;
+      if (bones.handL && handRest) {
+        worldTarget(handRest, qWrap, sinY, -0.12, cosY, qLTarget);
+        applyWorld(bones.handL, qLTarget, handW);
+        if (bones.handR) applyWorld(bones.handR, mirrorWorld(qLTarget, qWrapOnly, qMirror), handW);
       }
     }
     if (bones.spine) bones.spine.rotation.x += 0.12 * w;
