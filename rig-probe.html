@@ -84,7 +84,7 @@
           if (clone.restHead && clone.bones.head) clone.bones.head.quaternion.copy(clone.restHead);
           if (clone.restSpine && clone.bones.spine) clone.bones.spine.quaternion.copy(clone.restSpine);
           clone.mixer.update(dt);
-          applyPoseOverrides(p, clone.bones, pose, Math.min(1, dt * 6), manualSit, clone.legGeom);
+          applyPoseOverrides(p, clone, pose, Math.min(1, dt * 6), manualSit);
         }
       }
 

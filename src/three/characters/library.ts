@@ -56,12 +56,27 @@ export interface LegGeom {
   footDetached: boolean; // pieds non parentés aux tibias (cibles IK Quaternius)
 }
 
+// Os des bras dont l'orientation de bind pose est mémorisée : l'assise
+// manuelle reconstruit les bras à partir de cette pose SYMÉTRIQUE (droite =
+// miroir de gauche), et non de la pose du clip dont le roulis diffère par
+// côté (mains inégales à l'arrivée).
+export type ArmBoneKey = 'upperArmL' | 'upperArmR' | 'foreArmL' | 'foreArmR' | 'handL' | 'handR';
+export const ARM_BONE_KEYS: readonly ArmBoneKey[] = ['upperArmL', 'upperArmR', 'foreArmL', 'foreArmR', 'handL', 'handR'];
+
 export interface CharacterClone {
   wrap: THREE.Group; // groupe piloté par le rendu (pos / yaw / échelle)
   mixer: THREE.AnimationMixer;
   actions: Partial<Record<LogicalClip, THREE.AnimationAction>>;
   bones: BoneMap;
   legGeom: LegGeom | null;
+  // Orientations de repos des os des bras, RELATIVES à la poitrine (chestRef)
+  // — la vrille du buste, commune aux deux côtés, est ainsi factorisée.
+  armRest: Partial<Record<ArmBoneKey, THREE.Quaternion>>;
+  // Os de référence des repos des bras (parent des clavicules) ; wrap à défaut.
+  chestRef: THREE.Object3D | null;
+  // Clavicules (parents des bras) et leur rotation LOCALE de bind pose : le
+  // clip idle les anime asymétriquement, l'assise les remet au neutre.
+  clavicles: [THREE.Bone, THREE.Quaternion][];
   template: CharacterTemplate;
   // Pose de repos des os recevant des rotations ADDITIVES (tête, buste) :
   // restaurée avant mixer.update pour qu'aucun ajout ne s'accumule si un clip
@@ -325,11 +340,43 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
 
   const bones = resolveBones(model);
 
-  // Mesure des jambes sur la bind pose (avant toute animation), en unités
-  // normalisées : le wrap est évalué seul, hors scène.
+  // Mesures sur la pose de repos des nœuds (avant toute animation), en
+  // unités normalisées : le wrap est évalué seul, hors scène.
+  //
+  // ATTENTION : cette pose de repos n'est PAS symétrique dans ces packs
+  // (frame posée : torse vrillé, bras non miroirs). Seul le côté GAUCHE sert
+  // de référence — l'assise manuelle construit le bras gauche puis assigne au
+  // droit le miroir sagittal exact du résultat (voir pose.ts).
+  wrap.updateMatrixWorld(true);
+  // Référence : le parent des clavicules (poitrine). Les repos sont pris
+  // RELATIFS à lui — la vrille du buste (Y), posée ou animée, tourne les deux
+  // bras dans le MÊME sens et casserait une référence prise en espace monde.
+  const clavParentL = bones.upperArmL?.parent;
+  const chestRef = clavParentL && (clavParentL as THREE.Bone).isBone ? clavParentL.parent : null;
+  const qChestInv = new THREE.Quaternion();
+  if (chestRef) chestRef.getWorldQuaternion(qChestInv).invert();
+  const armRest: CharacterClone['armRest'] = {};
+  for (const key of ['upperArmL', 'foreArmL', 'handL'] as const) {
+    const b = bones[key];
+    if (!b) continue;
+    const q = b.getWorldQuaternion(new THREE.Quaternion());
+    if (chestRef) q.premultiply(qChestInv);
+    armRest[key] = q;
+  }
+
+  // Clavicules (leurs rotations locales de repos SONT des miroirs exacts
+  // dans ces rigs) : l'assise les remet au neutre, le clip les anime
+  // asymétriquement.
+  const clavicles: CharacterClone['clavicles'] = [];
+  for (const key of ['upperArmL', 'upperArmR'] as const) {
+    const parent = bones[key]?.parent;
+    if (parent && (parent as THREE.Bone).isBone && parent !== bones.spine && parent !== bones.neck) {
+      clavicles.push([parent as THREE.Bone, parent.quaternion.clone()]);
+    }
+  }
+
   let legGeom: LegGeom | null = null;
   if (bones.legL && bones.footL) {
-    wrap.updateMatrixWorld(true);
     const knee = bones.legL.getWorldPosition(new THREE.Vector3());
     const foot = bones.footL.getWorldPosition(new THREE.Vector3());
     // Détaché = le pied n'est PAS un descendant du tibia (cible IK à part,
@@ -354,6 +401,9 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
     actions,
     bones,
     legGeom,
+    armRest,
+    chestRef,
+    clavicles,
     template,
     restHead: bones.head ? bones.head.quaternion.clone() : null,
     restSpine: bones.spine ? bones.spine.quaternion.clone() : null,
