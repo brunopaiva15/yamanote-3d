@@ -67,14 +67,20 @@ function aimBone(bone: THREE.Bone, targetWorld: THREE.Vector3, weight: number): 
   bone.quaternion.slerp(qNew, weight);
 }
 
+// Réaligne l'axe +Y d'une orientation monde sur (dx, dy, dz), en conservant
+// son roulis (rotation minimale).
+function alignY(q: THREE.Quaternion, dx: number, dy: number, dz: number, out: THREE.Quaternion): THREE.Quaternion {
+  aDir.copy(Y_AXIS).applyQuaternion(q);
+  aTo.set(dx, dy, dz).normalize();
+  qDelta.setFromUnitVectors(aDir, aTo);
+  return out.copy(qDelta).multiply(q);
+}
+
 // Orientation monde cible : axe +Y de l'os vers (dx, dy, dz), roulis hérité du
 // REPOS (relatif à la poitrine) plutôt que de la pose du clip.
 function worldTarget(qRest: THREE.Quaternion, qRefWorld: THREE.Quaternion, dx: number, dy: number, dz: number, out: THREE.Quaternion): THREE.Quaternion {
   qRestW.copy(qRefWorld).multiply(qRest);
-  aDir.copy(Y_AXIS).applyQuaternion(qRestW);
-  aTo.set(dx, dy, dz).normalize();
-  qDelta.setFromUnitVectors(aDir, aTo);
-  return out.copy(qDelta).multiply(qRestW);
+  return alignY(qRestW, dx, dy, dz, out);
 }
 
 // Applique une orientation MONDE à l'os (convertie en local), lissée.
@@ -156,6 +162,20 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
     const w = state.sitW;
     const sinY = Math.sin(p.yaw);
     const cosY = Math.cos(p.yaw);
+    clone.wrap.getWorldQuaternion(qWrapOnly);
+    // Buste SYMÉTRISÉ : le clip idle vrille le torse (Y), déplaçant une
+    // épaule en avant et l'autre en arrière — bras et mains finissent
+    // inégaux. Chaque os de la chaîne (racine d'abord) est ramené à
+    // l'orientation symétrique la plus proche : la moyenne entre lui-même et
+    // son propre miroir sagittal (la composante symétrique — pitch de
+    // respiration — survit, la vrille et l'inclinaison latérale s'annulent).
+    for (const b of clone.spineChain) {
+      b.updateWorldMatrix(true, false);
+      b.getWorldQuaternion(qRestW);
+      mirrorWorld(qRestW, qWrapOnly, qMirror);
+      qRestW.slerp(qMirror, 0.5);
+      applyWorld(b, qRestW, w);
+    }
     // Cuisses vers l'avant du PNJ, genoux légèrement SOUS les hanches : les
     // pieds atteignent le sol au lieu de pendre en pointes de ballerine.
     vDir.set(sinY, -0.08, cosY);
@@ -227,26 +247,53 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
       ref.updateWorldMatrix(true, false);
       ref.getWorldQuaternion(qWrap);
       clone.wrap.getWorldQuaternion(qWrapOnly);
-      // Le bras GAUCHE est construit depuis son repos (bras le long du buste,
-      // avant-bras couché sur la cuisse, doigts drapés vers l'avant-bas) ;
-      // le bras DROIT reçoit le MIROIR SAGITTAL EXACT du résultat gauche —
-      // seule construction qui garantisse deux bras et deux mains égaux, le
-      // buste animé (vrillé) faussant toute référence par côté.
-      for (const [lKey, rKey, dx, dy, dz, wgt] of [
-        // Directions du côté GAUCHE (latéral +X wrap : cosY, -sinY) — léger
-        // écart vers l'extérieur pour que les mains tombent SUR les cuisses,
-        // pas dedans (gabarits étroits).
-        ['upperArmL', 'upperArmR', sinY * 0.15 + cosY * 0.1, -1, cosY * 0.15 - sinY * 0.1, handW * 0.95],
-        ['foreArmL', 'foreArmR', sinY + cosY * 0.16, -0.55, cosY - sinY * 0.16, handW],
-        ['handL', 'handR', sinY, -0.15, cosY, handW],
-      ] as const) {
-        const lb = bones[lKey];
-        const rest = clone.armRest[lKey];
-        if (!lb || !rest) continue;
-        worldTarget(rest, qWrap, dx, dy, dz, qLTarget);
-        applyWorld(lb, qLTarget, wgt);
-        const rb = bones[rKey];
-        if (rb) applyWorld(rb, mirrorWorld(qLTarget, qWrapOnly, qMirror), wgt);
+      // Le bras GAUCHE est construit depuis son repos ; le bras DROIT reçoit
+      // le MIROIR SAGITTAL du résultat gauche (roulis rigoureusement égal —
+      // le buste animé, vrillé, fausserait toute référence par côté). Les
+      // ORIENTATIONS seules ne suffisent pas : la vrille décale aussi les
+      // POSITIONS des épaules — chaque avant-bras vise donc SON genou (les
+      // jambes assises, elles, sont posées symétriquement), le miroir ne
+      // fournissant que le roulis.
+      // 1) Bras : le long du buste, coude avancé, léger écart extérieur.
+      const armRest = clone.armRest.upperArmL;
+      if (bones.upperArmL && armRest) {
+        worldTarget(armRest, qWrap, sinY * 0.45 + cosY * 0.1, -1, cosY * 0.45 - sinY * 0.1, qLTarget);
+        applyWorld(bones.upperArmL, qLTarget, handW * 0.95);
+        if (bones.upperArmR) applyWorld(bones.upperArmR, mirrorWorld(qLTarget, qWrapOnly, qMirror), handW * 0.95);
+      }
+      // 2) Avant-bras : chacun vise le dessus de SON genou.
+      const foreRest = clone.armRest.foreArmL;
+      if (bones.foreArmL && foreRest) {
+        const kneeAim = (fore: THREE.Bone, knee: THREE.Bone | undefined): boolean => {
+          if (!knee) return false;
+          fore.updateWorldMatrix(true, false);
+          fore.getWorldPosition(vBonePos); // coude
+          knee.updateWorldMatrix(true, false);
+          knee.getWorldPosition(vTarget);
+          vTarget.y += 0.05; // dessus du genou
+          vTarget.addScaledVector(vDir, -0.03);
+          vTarget.sub(vBonePos);
+          return vTarget.lengthSq() > 1e-6;
+        };
+        vDir.set(sinY, 0, cosY);
+        if (kneeAim(bones.foreArmL, bones.legL)) {
+          worldTarget(foreRest, qWrap, vTarget.x, vTarget.y, vTarget.z, qLTarget);
+          applyWorld(bones.foreArmL, qLTarget, handW);
+          if (bones.foreArmR) {
+            // NB : alignY ne supporte pas out === q (aliasing) — sortie séparée.
+            mirrorWorld(qLTarget, qWrapOnly, qMirror);
+            if (kneeAim(bones.foreArmR, bones.legR)) alignY(qMirror, vTarget.x, vTarget.y, vTarget.z, qLTarget);
+            else qLTarget.copy(qMirror);
+            applyWorld(bones.foreArmR, qLTarget, handW);
+          }
+        }
+      }
+      // 3) Mains : drapées sur le genou, miroir exact.
+      const handRest = clone.armRest.handL;
+      if (bones.handL && handRest) {
+        worldTarget(handRest, qWrap, sinY, -0.3, cosY, qLTarget);
+        applyWorld(bones.handL, qLTarget, handW);
+        if (bones.handR) applyWorld(bones.handR, mirrorWorld(qLTarget, qWrapOnly, qMirror), handW);
       }
     }
     if (bones.spine) bones.spine.rotation.x += 0.12 * w;

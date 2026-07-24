@@ -74,6 +74,10 @@ export interface CharacterClone {
   armRest: Partial<Record<ArmBoneKey, THREE.Quaternion>>;
   // Os de référence des repos des bras (parent des clavicules) ; wrap à défaut.
   chestRef: THREE.Object3D | null;
+  // Chaîne du buste (au-dessus des hanches jusqu'à la poitrine, racine en
+  // premier) : symétrisée pendant l'assise — la vrille animée du torse décale
+  // les épaules et fausse bras et mains.
+  spineChain: THREE.Bone[];
   // Clavicules (parents des bras) et leur rotation LOCALE de bind pose : le
   // clip idle les anime asymétriquement, l'assise les remet au neutre.
   clavicles: [THREE.Bone, THREE.Quaternion][];
@@ -375,6 +379,11 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
     }
   }
 
+  const spineChain: THREE.Bone[] = [];
+  for (let b: THREE.Object3D | null = chestRef; b && (b as THREE.Bone).isBone && b !== bones.hips; b = b.parent) {
+    spineChain.unshift(b as THREE.Bone);
+  }
+
   let legGeom: LegGeom | null = null;
   if (bones.legL && bones.footL) {
     const knee = bones.legL.getWorldPosition(new THREE.Vector3());
@@ -403,6 +412,7 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
     legGeom,
     armRest,
     chestRef,
+    spineChain,
     clavicles,
     template,
     restHead: bones.head ? bones.head.quaternion.clone() : null,
