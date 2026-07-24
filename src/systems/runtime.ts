@@ -25,8 +25,12 @@ export const runtime = {
   accel: 0, // m/s²
   distance: 0, // m parcourus depuis le début
   phaseT: 0, // temps écoulé dans la phase courante (s)
-  doorOpen: 0, // 0 fermé → 1 ouvert
+  doorOpen: 0, // 0 fermé → 1 ouvert (porte de référence de la rame)
   doorTarget: 0,
+  doorT: 999, // temps écoulé depuis le changement de cible (s)
+  psdOpen: 0, // portes palières du quai, décalées sur la rame
+  psdTarget: 0,
+  psdT: 999,
   clockMin: CONFIG.clockStart, // horloge du monde, en minutes (flottant)
   swayTime: 0,
   sway: 0, // balancement latéral normalisé (-1..1)
@@ -43,6 +47,10 @@ export function resetRuntime(): void {
   runtime.phaseT = 0;
   runtime.doorOpen = 0;
   runtime.doorTarget = 0;
+  runtime.doorT = 999;
+  runtime.psdOpen = 0;
+  runtime.psdTarget = 0;
+  runtime.psdT = 999;
   runtime.clockMin = CONFIG.clockStart;
   runtime.swayTime = 0;
   runtime.sway = 0;
