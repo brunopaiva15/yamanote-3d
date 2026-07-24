@@ -14,6 +14,13 @@ import {
 } from '../data/announcements';
 import { useStore, type Phase } from '../store';
 import { runtime } from './runtime';
+import {
+  randomizeDoorTimings,
+  setPsdDoors,
+  setTrainDoors,
+  stationTimings,
+  updateDoorMotion,
+} from './doorMotion';
 import * as audio from './audioEngine';
 import { say } from './speech';
 import { exchangePassengers } from './passengers';
@@ -69,10 +76,8 @@ export function updateCycle(dt: number): void {
   runtime.sway =
     (Math.sin(runtime.swayTime * 0.8) + 0.5 * Math.sin(runtime.swayTime * 1.73)) * 0.55 * s01;
 
-  // --- Animation des portes ---
-  const rate = runtime.doorTarget === 1 ? dt / CONFIG.doorTime : dt / 1.2;
-  if (runtime.doorOpen < runtime.doorTarget) runtime.doorOpen = Math.min(runtime.doorTarget, runtime.doorOpen + rate);
-  else if (runtime.doorOpen > runtime.doorTarget) runtime.doorOpen = Math.max(runtime.doorTarget, runtime.doorOpen - rate);
+  // --- Animation des portes (profil mécanique, rame et quai décalés) ---
+  updateDoorMotion(dt);
 
   // --- Joints de rail : clac-clac tous les ~23 m ---
   if (runtime.distance - lastJointDistance > CONFIG.railJointGap && runtime.speed > 1.5) {
@@ -100,6 +105,8 @@ export function updateCycle(dt: number): void {
       break;
     }
     case 'brake': {
+      // Nouveau tirage des retards de portes pour cette gare.
+      once('door-timings', true, () => randomizeDoorTimings());
       once('jingle', true, () => audio.arrivalJingle());
       once('announce-soon', t > 0.8, () => say(approachAnnouncement(s.index)));
       if (t >= CONFIG.brakeTime) {
@@ -110,18 +117,24 @@ export function updateCycle(dt: number): void {
     }
     case 'dwell': {
       once('doors-open', t > 0.4, () => {
-        runtime.doorTarget = 1;
+        setTrainDoors(1);
         audio.doorOpenChime();
       });
+      // Les portes palières s'ouvrent avec un temps de retard sur la rame,
+      // variable selon la gare.
+      once('psd-open', t > 0.4 + stationTimings.psdOpenDelay, () => setPsdDoors(1));
       once('exchange', t > 1.6, () => exchangePassengers(s.doorSide));
       // Séquence de départ fidèle : la mélodie (発車メロディ) démarre portes ouvertes
       // et se termine AVANT l'annonce de fermeture ; puis carillon, puis fermeture.
       once('melody', t >= CONFIG.dwellTime - 13, () => audio.departureMelody(s.index));
       once('announce-close', t >= CONFIG.dwellTime - 3.5, () => say(doorsClosingAnnouncement()));
-      once('doors-close', t >= CONFIG.dwellTime - 1.5, () => {
-        runtime.doorTarget = 0;
+      once('doors-close', t >= CONFIG.dwellTime - 1.8, () => {
+        setTrainDoors(0);
         audio.doorCloseChime();
       });
+      // Puis le quai referme ses portes, nettement après la rame, avec un
+      // décalage lui aussi variable selon la gare.
+      once('psd-close', t >= CONFIG.dwellTime - 1.8 + stationTimings.psdCloseDelay, () => setPsdDoors(0));
       if (t >= CONFIG.dwellTime) enterPhase('depart');
       break;
     }

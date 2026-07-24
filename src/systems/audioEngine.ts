@@ -24,6 +24,9 @@ interface Nodes {
   clackFilter: Tone.Filter;
   air: Tone.NoiseSynth;
   airFilter: Tone.Filter;
+  slideTrainGain: Tone.Gain;
+  slidePsdGain: Tone.Gain;
+  thud: Tone.MembraneSynth;
   chime: Tone.Synth;
   bell: Tone.Synth;
   melodyA: Tone.Synth;
@@ -77,6 +80,27 @@ export async function startAudio(): Promise<void> {
   });
   air.chain(airFilter, master);
 
+  // Frottement de glissière pendant le coulissement des portes : bruit grave
+  // dont le gain suit la vitesse des vantaux (rame et portes palières).
+  const slideTrainNoise = new Tone.Noise('brown');
+  const slideTrainFilter = new Tone.Filter({ type: 'lowpass', frequency: 260, Q: 0.7 });
+  const slideTrainGain = new Tone.Gain(0);
+  slideTrainNoise.chain(slideTrainFilter, slideTrainGain, master);
+  slideTrainNoise.start();
+  const slidePsdNoise = new Tone.Noise('brown');
+  const slidePsdFilter = new Tone.Filter({ type: 'lowpass', frequency: 520, Q: 0.7 });
+  const slidePsdGain = new Tone.Gain(0);
+  slidePsdNoise.chain(slidePsdFilter, slidePsdGain, master);
+  slidePsdNoise.start();
+
+  // Chocs mécaniques sourds : déverrouillage et arrivée en butée des portes.
+  const thud = new Tone.MembraneSynth({
+    pitchDecay: 0.035,
+    octaves: 4,
+    envelope: { attack: 0.001, decay: 0.16, sustain: 0 },
+    volume: -8,
+  }).connect(master);
+
   // Carillons et jingles.
   const chime = new Tone.Synth({
     oscillator: { type: 'sine' },
@@ -113,6 +137,9 @@ export async function startAudio(): Promise<void> {
     clackFilter,
     air,
     airFilter,
+    slideTrainGain,
+    slidePsdGain,
+    thud,
     chime,
     bell,
     melodyA,
@@ -147,6 +174,30 @@ export function updateAudio(dt: number, speed01: number, braking: boolean): void
   // Crissement sous ~40 % de vitesse en freinage.
   const squeal = braking && speed01 < 0.4 && speed01 > 0.015 ? (0.4 - speed01) * 0.5 * 0.28 : 0;
   nodes.brakeGain.gain.rampTo(squeal, 0.12);
+}
+
+// Gain du frottement de glissière, piloté chaque frame par la vitesse
+// normalisée des vantaux (0 = arrêtés, 1 = pleine vitesse).
+export function setDoorSlide(train01: number, psd01: number): void {
+  if (!nodes) return;
+  nodes.slideTrainGain.gain.rampTo(train01 * 0.05, 0.05);
+  nodes.slidePsdGain.gain.rampTo(psd01 * 0.018, 0.05);
+}
+
+// Choc mécanique d'une porte de la rame : coup sourd + claquement métallique.
+export function doorClunk(vel: number): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.thud.triggerAttackRelease('G1', 0.09, now, vel);
+  nodes.clack.triggerAttackRelease(0.03, now + 0.012, vel * 0.7);
+}
+
+// Choc plus mat des portes palières, entendues depuis l'intérieur du wagon.
+export function psdClunk(vel: number): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.thud.triggerAttackRelease('C2', 0.07, now, vel * 0.8);
+  nodes.clack.triggerAttackRelease(0.025, now + 0.01, vel * 0.45);
 }
 
 // « Clac-clac » des deux bogies au passage d'un joint de rail.

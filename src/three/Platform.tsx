@@ -7,15 +7,20 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
+import { psdDoorPos, psdGateLag } from '../systems/doorMotion';
 import { makeStationSign } from '../textures/procedural';
 
 const PLATFORM_TOP = -0.06;
 const PSD_X = 1.78;
 const PSD_H = 1.32;
+const HALF_GAP = 0.9;
+const LEAF_W = 0.98; // largeur d'un vantail de porte palière
+const LEAF_TRAVEL = 0.92; // course d'ouverture (dégage tout le passage)
 
-// Segments de portes palières : murets entre les ouvertures alignées sur les
-// portes du train (z ≡ ±2.5 / ±7.5 modulo 20 m), sur 80 m de quai.
-function psdSegments(): { z0: number; z1: number }[] {
+// Portes palières : murets fixes entre les ouvertures alignées sur les portes
+// du train (z ≡ ±2.5 / ±7.5 modulo 20 m), sur 80 m de quai, plus la liste des
+// centres d'ouverture où coulissent les vantaux.
+function psdLayout(): { segs: { z0: number; z1: number }[]; gaps: number[] } {
   const gaps: number[] = [];
   for (let base = -40; base <= 40; base += 20) {
     for (const dz of [-7.5, -2.5, 2.5, 7.5]) gaps.push(base + dz);
@@ -23,13 +28,19 @@ function psdSegments(): { z0: number; z1: number }[] {
   gaps.sort((a, b) => a - b);
   const segs: { z0: number; z1: number }[] = [];
   let prev = -40;
-  const HALF_GAP = 0.9;
   for (const gz of gaps) {
     if (gz - HALF_GAP > prev) segs.push({ z0: prev, z1: gz - HALF_GAP });
     prev = gz + HALF_GAP;
   }
   if (prev < 40) segs.push({ z0: prev, z1: 40 });
-  return segs;
+  return { segs, gaps };
+}
+
+interface LeafRef {
+  mesh: THREE.Group | null;
+  baseZ: number; // position fermée du vantail
+  dir: 1 | -1; // sens de coulissement à l'ouverture
+  gate: number; // indice du portique, pour son retard tiré au sort
 }
 
 export function Platform() {
@@ -55,7 +66,9 @@ export function Platform() {
   }, [sign]);
 
   const matList = useMemo(() => Object.values(materials), [materials]);
-  const segments = useMemo(() => psdSegments(), []);
+  const { segs: segments, gaps } = useMemo(() => psdLayout(), []);
+  const leaves = useRef<LeafRef[]>([]);
+  leaves.current = [];
   const silhouettes = useMemo(() => {
     const list: { z: number; x: number; h: number }[] = [];
     for (let i = 0; i < 7; i++) {
@@ -68,6 +81,11 @@ export function Platform() {
     const fade = runtime.platformFade;
     if (group.current) group.current.visible = fade > 0.02;
     for (const m of matList) m.opacity = fade * (m === materials.sign ? 1 : 0.98);
+    // Coulissement des vantaux, chaque portique avec son léger retard propre.
+    for (const l of leaves.current) {
+      if (!l.mesh) continue;
+      l.mesh.position.z = l.baseZ + l.dir * psdDoorPos(psdGateLag(l.gate)) * LEAF_TRAVEL;
+    }
     // Redessiner le panneau de gare à l'approche d'une nouvelle station.
     const { index, phase } = useStore.getState();
     if (fade > 0.03 && phase !== 'cruise' && lastSignIndex.current !== index) {
@@ -101,6 +119,32 @@ export function Platform() {
           </group>
         );
       })}
+      {/* Vantaux coulissants des portiques, un léger retard propre à chacun */}
+      {gaps.map((gz, i) =>
+        ([-1, 1] as const).map((dir) => {
+          const baseZ = gz + dir * (LEAF_W / 2);
+          return (
+            <group
+              key={`leaf${i}-${dir}`}
+              ref={(g) => {
+                if (g) leaves.current.push({ mesh: g, baseZ, dir, gate: i });
+              }}
+              position={[0, 0, baseZ]}
+            >
+              <mesh position={[PSD_X + 0.08, PLATFORM_TOP + PSD_H / 2 - 0.03, 0]} material={materials.psd}>
+                <boxGeometry args={[0.05, PSD_H - 0.06, LEAF_W]} />
+              </mesh>
+              <mesh position={[PSD_X + 0.085, PLATFORM_TOP + PSD_H - 0.13, 0]} material={materials.green}>
+                <boxGeometry args={[0.055, 0.12, LEAF_W]} />
+              </mesh>
+              {/* Bande jaune d'avertissement sur le chant côté fermeture */}
+              <mesh position={[PSD_X + 0.085, PLATFORM_TOP + PSD_H * 0.42, -dir * (LEAF_W / 2 - 0.03)]} material={materials.yellow}>
+                <boxGeometry args={[0.055, PSD_H * 0.55, 0.06]} />
+              </mesh>
+            </group>
+          );
+        }),
+      )}
       {/* Panneaux de nom de station */}
       {[-9, 9].map((z) => (
         <group key={`sign${z}`} position={[3.6, 1.85, z]}>
