@@ -10,15 +10,39 @@ import { CONFIG } from '../data/config';
 import { runtime } from './runtime';
 import * as audio from './audioEngine';
 
-// Retard propre à chaque porte de la rame (s), indexé par son centre z.
-export const TRAIN_DOOR_LAGS: Record<number, number> = {
-  [-7.5]: 0.16,
-  [-2.5]: 0,
-  [2.5]: 0.09,
-  [7.5]: 0.23,
-};
+// Retards retirés au sort à chaque station : quelle porte de la rame part en
+// premier, de combien traînent les autres, le retard propre de chaque
+// portique du quai et le décalage global quai/rame changent d'une gare à
+// l'autre — jamais deux arrêts identiques.
+const trainLags: Record<number, number> = {};
+let sortedTrainLags: number[] = [];
+let psdGateLags: number[] = [];
+// Décalages du quai sur la rame (s) : début d'ouverture et de fermeture.
+export const stationTimings = { psdOpenDelay: 0.8, psdCloseDelay: 0.8 };
 
-const SORTED_TRAIN_LAGS = Object.values(TRAIN_DOOR_LAGS).sort((a, b) => a - b);
+export function randomizeDoorTimings(): void {
+  // Une porte part immédiatement, les autres traînent chacune un peu.
+  const raw = CONFIG.doorCenters.map(() => Math.random() * 0.3);
+  const min = Math.min(...raw);
+  CONFIG.doorCenters.forEach((dz, i) => {
+    trainLags[dz] = raw[i] - min;
+  });
+  sortedTrainLags = Object.values(trainLags).sort((a, b) => a - b);
+  psdGateLags = Array.from({ length: 32 }, () => Math.random() * 0.3);
+  stationTimings.psdOpenDelay = 0.55 + Math.random() * 0.6;
+  stationTimings.psdCloseDelay = 0.55 + Math.random() * 0.4;
+}
+randomizeDoorTimings();
+
+// Retard (s) d'une porte de la rame, par son centre z.
+export function trainDoorLag(dz: number): number {
+  return trainLags[dz] ?? 0;
+}
+
+// Retard (s) d'un portique du quai, par son indice.
+export function psdGateLag(gate: number): number {
+  return psdGateLags[gate % psdGateLags.length] ?? 0;
+}
 
 interface Profile {
   duration: number; // temps de course (s)
@@ -73,7 +97,7 @@ export function psdDoorPos(lag = 0): number {
   return runtime.psdTarget === 1 ? m : 1 - m;
 }
 
-let trainImpactsFired = SORTED_TRAIN_LAGS.length;
+let trainImpactsFired = Infinity;
 let psdImpactFired = true;
 let prevTrain = 0;
 let prevPsd = 0;
@@ -108,8 +132,8 @@ export function updateDoorMotion(dt: number): void {
   // Chocs en butée de la rame, un par porte, dans l'ordre de leurs retards.
   const tp = runtime.doorTarget === 1 ? TRAIN_OPEN : TRAIN_CLOSE;
   while (
-    trainImpactsFired < SORTED_TRAIN_LAGS.length &&
-    runtime.doorT >= tp.duration + SORTED_TRAIN_LAGS[trainImpactsFired]
+    trainImpactsFired < sortedTrainLags.length &&
+    runtime.doorT >= tp.duration + sortedTrainLags[trainImpactsFired]
   ) {
     trainImpactsFired += 1;
     audio.doorClunk(runtime.doorTarget === 1 ? 0.13 : 0.28);
@@ -132,7 +156,7 @@ export function updateDoorMotion(dt: number): void {
 }
 
 export function resetDoorMotion(): void {
-  trainImpactsFired = SORTED_TRAIN_LAGS.length;
+  trainImpactsFired = Infinity;
   psdImpactFired = true;
   prevTrain = 0;
   prevPsd = 0;

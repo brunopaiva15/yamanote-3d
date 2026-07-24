@@ -14,7 +14,13 @@ import {
 } from '../data/announcements';
 import { useStore, type Phase } from '../store';
 import { runtime } from './runtime';
-import { setPsdDoors, setTrainDoors, updateDoorMotion } from './doorMotion';
+import {
+  randomizeDoorTimings,
+  setPsdDoors,
+  setTrainDoors,
+  stationTimings,
+  updateDoorMotion,
+} from './doorMotion';
 import * as audio from './audioEngine';
 import { say } from './speech';
 import { exchangePassengers } from './passengers';
@@ -99,6 +105,8 @@ export function updateCycle(dt: number): void {
       break;
     }
     case 'brake': {
+      // Nouveau tirage des retards de portes pour cette gare.
+      once('door-timings', true, () => randomizeDoorTimings());
       once('jingle', true, () => audio.arrivalJingle());
       once('announce-soon', t > 0.8, () => say(approachAnnouncement(s.index)));
       if (t >= CONFIG.brakeTime) {
@@ -112,8 +120,9 @@ export function updateCycle(dt: number): void {
         setTrainDoors(1);
         audio.doorOpenChime();
       });
-      // Les portes palières s'ouvrent avec un temps de retard sur la rame.
-      once('psd-open', t > 1.2, () => setPsdDoors(1));
+      // Les portes palières s'ouvrent avec un temps de retard sur la rame,
+      // variable selon la gare.
+      once('psd-open', t > 0.4 + stationTimings.psdOpenDelay, () => setPsdDoors(1));
       once('exchange', t > 1.6, () => exchangePassengers(s.doorSide));
       // Séquence de départ fidèle : la mélodie (発車メロディ) démarre portes ouvertes
       // et se termine AVANT l'annonce de fermeture ; puis carillon, puis fermeture.
@@ -123,8 +132,9 @@ export function updateCycle(dt: number): void {
         setTrainDoors(0);
         audio.doorCloseChime();
       });
-      // Puis le quai referme ses portes, nettement après la rame.
-      once('psd-close', t >= CONFIG.dwellTime - 1.0, () => setPsdDoors(0));
+      // Puis le quai referme ses portes, nettement après la rame, avec un
+      // décalage lui aussi variable selon la gare.
+      once('psd-close', t >= CONFIG.dwellTime - 1.8 + stationTimings.psdCloseDelay, () => setPsdDoors(0));
       if (t >= CONFIG.dwellTime) enterPhase('depart');
       break;
     }

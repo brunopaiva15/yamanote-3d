@@ -7,7 +7,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
-import { psdDoorPos } from '../systems/doorMotion';
+import { psdDoorPos, psdGateLag } from '../systems/doorMotion';
 import { makeStationSign } from '../textures/procedural';
 
 const PLATFORM_TOP = -0.06;
@@ -40,7 +40,7 @@ interface LeafRef {
   mesh: THREE.Group | null;
   baseZ: number; // position fermée du vantail
   dir: 1 | -1; // sens de coulissement à l'ouverture
-  lag: number; // retard propre de ce portique (s)
+  gate: number; // indice du portique, pour son retard tiré au sort
 }
 
 export function Platform() {
@@ -84,7 +84,7 @@ export function Platform() {
     // Coulissement des vantaux, chaque portique avec son léger retard propre.
     for (const l of leaves.current) {
       if (!l.mesh) continue;
-      l.mesh.position.z = l.baseZ + l.dir * psdDoorPos(l.lag) * LEAF_TRAVEL;
+      l.mesh.position.z = l.baseZ + l.dir * psdDoorPos(psdGateLag(l.gate)) * LEAF_TRAVEL;
     }
     // Redessiner le panneau de gare à l'approche d'une nouvelle station.
     const { index, phase } = useStore.getState();
@@ -123,12 +123,11 @@ export function Platform() {
       {gaps.map((gz, i) =>
         ([-1, 1] as const).map((dir) => {
           const baseZ = gz + dir * (LEAF_W / 2);
-          const lag = ((i * 5) % 4) * 0.07 + ((i * 3) % 3) * 0.03;
           return (
             <group
               key={`leaf${i}-${dir}`}
               ref={(g) => {
-                if (g) leaves.current.push({ mesh: g, baseZ, dir, lag });
+                if (g) leaves.current.push({ mesh: g, baseZ, dir, gate: i });
               }}
               position={[0, 0, baseZ]}
             >

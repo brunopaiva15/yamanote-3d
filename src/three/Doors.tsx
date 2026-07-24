@@ -7,7 +7,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
 import { useStore } from '../store';
-import { TRAIN_DOOR_LAGS, trainDoorPos } from '../systems/doorMotion';
+import { trainDoorLag, trainDoorPos } from '../systems/doorMotion';
 import { makeDoorEdgeTexture, makeDoorStickerTexture } from '../textures/procedural';
 
 const DOOR_H = 1.95;
@@ -35,7 +35,7 @@ interface PanelRef {
   side: 1 | -1;
   baseZ: number;
   dir: 1 | -1; // sens de coulissement
-  lag: number; // retard propre de cette porte (s)
+  dz: number; // centre z de la porte, pour son retard tiré au sort
 }
 
 export function Doors() {
@@ -87,7 +87,7 @@ export function Doors() {
     const doorSide = useStore.getState().doorSide;
     for (const p of panels.current) {
       if (!p.mesh) continue;
-      const open = p.side === doorSide ? trainDoorPos(p.lag) : 0;
+      const open = p.side === doorSide ? trainDoorPos(trainDoorLag(p.dz)) : 0;
       p.mesh.position.z = p.baseZ + p.dir * open * PANEL_W;
     }
   });
@@ -105,7 +105,7 @@ export function Doors() {
               <group
                 key={`door${s}-${dz}-${half}`}
                 ref={(g) => {
-                  if (g) panels.current.push({ mesh: g, side: s, baseZ, dir: half, lag: TRAIN_DOOR_LAGS[dz] ?? 0 });
+                  if (g) panels.current.push({ mesh: g, side: s, baseZ, dir: half, dz });
                 }}
                 position={[s * (CONFIG.carHalfWidth + 0.03), 0, baseZ]}
               >
