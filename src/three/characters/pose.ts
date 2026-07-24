@@ -270,7 +270,7 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
           fore.getWorldPosition(vBonePos); // coude
           knee.updateWorldMatrix(true, false);
           knee.getWorldPosition(vTarget);
-          vTarget.y += 0.05; // dessus du genou
+          vTarget.y += 0.1; // dessus du genou (marge : les doigts ne doivent pas le traverser)
           vTarget.addScaledVector(vDir, -0.03);
           vTarget.sub(vBonePos);
           return vTarget.lengthSq() > 1e-6;
@@ -288,10 +288,11 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
           }
         }
       }
-      // 3) Mains : drapées sur le genou, miroir exact.
+      // 3) Mains : presque à plat sur le genou (un drapé trop plongeant fait
+      // traverser les doigts), miroir exact.
       const handRest = clone.armRest.handL;
       if (bones.handL && handRest) {
-        worldTarget(handRest, qWrap, sinY, -0.3, cosY, qLTarget);
+        worldTarget(handRest, qWrap, sinY, -0.12, cosY, qLTarget);
         applyWorld(bones.handL, qLTarget, handW);
         if (bones.handR) applyWorld(bones.handR, mirrorWorld(qLTarget, qWrapOnly, qMirror), handW);
       }
