@@ -21,6 +21,15 @@ import {
 
 const WALL_X = CONFIG.carHalfWidth; // 1.4
 
+// Porte-bagages (棚) : centre de la nappe de tubes, et pente qui la fait monter
+// vers la paroi. u est le décalage dans l'épaisseur, compté depuis ce centre et
+// croissant vers la paroi : u = -0,22 tombe sur la lisse de maintien avant
+// (x 0,95 / y 1,70), u = +0,22 sur le bord haut côté paroi.
+const RACK_X = 1.17;
+const RACK_Y = 1.8;
+const RACK_TILT = 0.36;
+const RACK_BAR_OFFSETS = [-0.18, -0.09, 0, 0.09, 0.18];
+
 // --- Panneau d'extrémité (袖仕切り) : silhouette ajourée extrudée ---
 function makePanelGeometry(): THREE.ExtrudeGeometry {
   const shape = new THREE.Shape();
@@ -102,13 +111,30 @@ export function Seats() {
     [],
   );
 
-  // Tablettes du porte-bagages : un panneau FRP incliné par banquette (longueur
-  // variable), mutualisé entre les deux côtés (l'inclinaison est portée par la
-  // rotation à l'usage).
-  const shelfGeos = useMemo(
-    () => BENCHES.map((b) => new RoundedBoxGeometry(0.44, 0.03, b.z1 - b.z0 - 0.04, 2, 0.012)),
-    [],
-  );
+  // Porte-bagages : pas une tablette pleine mais un claire-voie de tubes
+  // longitudinaux, comme sur la rame — on voit au travers, et le plafond reste
+  // lisible depuis l'allée. Un tube unitaire (hauteur 1, axe Y) instancié
+  // partout : une seule géométrie, un seul draw call pour tout le wagon, la
+  // longueur étant portée par l'échelle de chaque instance.
+  const barGeo = useMemo(() => new THREE.CylinderGeometry(0.011, 0.011, 1, 8), []);
+  const rackBars = useMemo(() => {
+    const out: { x: number; y: number; z: number; len: number }[] = [];
+    for (const s of [1, -1] as const) {
+      for (const b of BENCHES) {
+        const len = b.z1 - b.z0 - 0.04;
+        const z = (b.z0 + b.z1) / 2;
+        for (const u of RACK_BAR_OFFSETS) {
+          out.push({
+            x: s * (RACK_X + u * Math.cos(RACK_TILT)),
+            y: RACK_Y + u * Math.sin(RACK_TILT),
+            z,
+            len,
+          });
+        }
+      }
+    }
+    return out;
+  }, []);
 
   const materials = useMemo(() => {
     const green = makeCheckerTexture(GREEN_CHECKER);
@@ -166,6 +192,19 @@ export function Seats() {
       <Instances geometry={geos.cushion3} material={materials.quilt} limit={seats3.length}>
         {seats3.map((sl, i) => (
           <Instance key={`c3-${i}`} position={[sl.side * 1.02, 0.4, sl.z]} />
+        ))}
+      </Instances>
+      {/* Tubes du porte-bagages, tous côtés et toutes banquettes confondus :
+          le cylindre unitaire est couché selon z par la rotation, sa longueur
+          vient de l'échelle. */}
+      <Instances geometry={barGeo} material={materials.chrome} limit={rackBars.length}>
+        {rackBars.map((bar, i) => (
+          <Instance
+            key={`bar${i}`}
+            position={[bar.x, bar.y, bar.z]}
+            rotation={[Math.PI / 2, 0, 0]}
+            scale={[1, bar.len, 1]}
+          />
         ))}
       </Instances>
       {sides.map((s) =>
@@ -242,20 +281,15 @@ export function Seats() {
                   position={[0, 0, z]}
                 />
               ))}
-              {/* --- Porte-bagages E235 (棚) --- Tablette FRP blanche inclinée
+              {/* --- Porte-bagages E235 (棚) --- Claire-voie de tubes inclinée
                   qui monte vers la paroi, au ras du linteau des fenêtres, sous
-                  les écrans publicitaires. Sa lisse de maintien chromée court le
-                  long du bord avant (à 1,70 m, bien au-dessus des têtes assises,
-                  elle sert aussi de barre de maintien pour les voyageurs debout)
-                  et repose sur des consoles chromées incurvées. Présent sur toute
-                  la longueur, y compris au-dessus des places prioritaires. */}
-              {/* Tablette inclinée */}
-              <mesh
-                geometry={shelfGeos[bi]}
-                material={materials.shell}
-                position={[s * 1.17, 1.8, zc]}
-                rotation={[0, 0, s * 0.36]}
-              />
+                  les écrans publicitaires (les tubes eux-mêmes sont instanciés
+                  plus bas, hors de cette boucle). Sa lisse de maintien chromée
+                  court le long du bord avant (à 1,70 m, bien au-dessus des têtes
+                  assises, elle sert aussi de barre de maintien pour les voyageurs
+                  debout) et repose sur des consoles chromées incurvées. Présent
+                  sur toute la longueur, y compris au-dessus des places
+                  prioritaires. */}
               {/* Lisse de maintien avant */}
               <mesh
                 position={[s * 0.95, 1.7, zc]}
