@@ -1,0 +1,47 @@
+<!doctype html>
+<!-- Page de probe DEV : superpose le wagon procédural et une maquette de
+     référence posée dans public/models/raw/ (hors dépôt, voir README).
+     Sert à régler les formes de l'aménagement — jamais les couleurs, la
+     maquette disponible a l'intérieur d'un E235-1000, pas d'un E235-0.
+
+     /car-probe.html?style=ghost&refZ=2.5&h=17.2
+     R : maquette · P : procédural · S : texture / fantôme / fil de fer -->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>car-probe — wagon procédural vs maquette</title>
+    <style>
+      html,
+      body,
+      #root {
+        margin: 0;
+        height: 100%;
+        background: #10141f;
+      }
+      .probe-hud {
+        position: fixed;
+        left: 12px;
+        bottom: 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: rgba(12, 16, 24, 0.78);
+        color: #e8eef5;
+        font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+        pointer-events: none;
+      }
+      .probe-hud kbd {
+        padding: 1px 5px;
+        border: 1px solid #56606f;
+        border-radius: 4px;
+      }
+      .probe-error {
+        margin-top: 4px;
+        color: #ff9b9b;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/dev/car-probe-main.tsx"></script>
+  </body>
+</html>

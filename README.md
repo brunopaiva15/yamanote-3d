@@ -72,6 +72,34 @@ Regarder un objet du wagon (porte, tsurikawa, siège, fenêtre, porte-bagages,
 écran, affiche…) affiche une petite fiche : mot en japonais, lecture kana,
 romaji et traduction française. Neuf mots du quotidien ferroviaire.
 
+## Références visuelles (maquettes hors dépôt)
+
+L'aménagement intérieur est réglé d'après une maquette 3D servant de
+mètre-étalon : [JR East E235-0 Series, par **Hachan**](https://sketchfab.com/3d-models/jr-east-e235-0-series-40f9d1d1e7984404b0b16b8ac265c255).
+
+⚠️ **Cette maquette a l'extérieur d'un E235-0 (Yamanote) mais l'intérieur d'un
+E235-1000 (Yokosuka / Sōbu)** — d'où ses banquettes bleues. Le vrai E235-0 a des
+sièges **vert uguisu** et des places prioritaires **rouges**, avec 優先席 sur le
+dossier : c'est ce que rend le jeu (`GREEN_CHECKER` / `RED_CHECKER` dans
+`src/textures/procedural.ts`). **Ne jamais reprendre les couleurs de la
+maquette** — seulement les formes et les cotes.
+
+Les maquettes vivent dans `public/models/raw/`, ignoré par git : rien n'est
+embarqué dans le jeu, qui reste intégralement procédural (aucun asset 3D
+d'intérieur). Pour préparer une référence et la mesurer :
+
+```bash
+# isole un wagon, redresse les axes, sort en mètres (plancher à y = 0)
+npm run models:inspect -- maquette.gltf \
+  --extract e235y_m_middle_1155 --out public/models/raw/e235-ref-module.glb
+
+# cotes : histogramme des hauteurs et demi-largeurs, en mètres
+npm run models:inspect -- public/models/raw/e235-ref-module.glb --measure --scale 1
+```
+
+En dev, `/car-probe.html` superpose ou juxtapose le wagon procédural et la
+maquette à la même caméra, pour arbitrer élément par élément.
+
 ## Déploiement (GitHub Pages)
 
 Le dépôt contient un workflow GitHub Actions (`.github/workflows/deploy.yml`)
