@@ -11,6 +11,7 @@ import { runtime } from '../systems/runtime';
 import { input, moveAxes, consumeLook } from '../systems/input';
 import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
 import { lookupVocab } from '../systems/vocab';
+import { setListenerPose } from '../systems/audioEngine';
 
 const AISLE_X = 0.7;
 const AISLE_Z = 9.2;
@@ -29,6 +30,8 @@ export function Player() {
   const vocabAcc = useRef(0);
   const lookDir = useRef(new THREE.Vector3());
   const camBase = useRef(new THREE.Vector3(0, CONFIG.eyeHeight, 4.2));
+  const earFwd = useRef(new THREE.Vector3());
+  const earUp = useRef(new THREE.Vector3());
 
   // --- Entrées : clavier + souris + tactile ---
   useEffect(() => {
@@ -232,6 +235,22 @@ export function Player() {
     runtime.playerX = camera.position.x;
     runtime.playerY = camera.position.y;
     runtime.playerZ = camera.position.z;
+
+    // Oreilles du joueur = caméra : les diffuseurs sont fixes dans le wagon,
+    // c'est la tête qui tourne autour d'eux.
+    camera.getWorldDirection(earFwd.current);
+    earUp.current.set(0, 1, 0).applyQuaternion(camera.quaternion);
+    setListenerPose(
+      camera.position.x,
+      camera.position.y,
+      camera.position.z,
+      earFwd.current.x,
+      earFwd.current.y,
+      earFwd.current.z,
+      earUp.current.x,
+      earUp.current.y,
+      earUp.current.z,
+    );
 
     // Fiche de vocabulaire (esprit Shashingo) : objet au centre du regard.
     vocabAcc.current += dt;

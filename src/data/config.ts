@@ -32,7 +32,28 @@ export const CONFIG = {
 
   // Intervalle entre joints de rail (mètres).
   railJointGap: 23,
+
+  // Sonorisation : diffuseurs de plafond du wagon (de part et d'autre du
+  // caisson central, au droit de chaque porte) et haut-parleurs du quai.
+  speakerX: 1.02,
+  speakerY: 2.284, // encastré dans le plafond (sous-face à 2,30 m)
+  platformSpeakerX: 4.4,
+  platformSpeakerY: 3.3,
+  platformSpeakerZ: [-9, -3, 3, 9],
 } as const;
 
 // Vitesse maximale en m/s, dérivée une fois pour toutes.
 export const V_MAX = CONFIG.maxSpeedKmh / 3.6;
+
+// Positions des diffuseurs, partagées par le rendu (grilles au plafond) et le
+// moteur audio (un Panner3D par diffuseur). Repère du wagon.
+export type SpeakerPos = readonly [number, number, number];
+
+export const CABIN_SPEAKERS: readonly SpeakerPos[] = CONFIG.doorCenters.flatMap((z) =>
+  [1, -1].map((s) => [s * CONFIG.speakerX, CONFIG.speakerY, z] as SpeakerPos),
+);
+
+// Quai : construit côté +x, l'abscisse est retournée selon le côté d'ouverture.
+export const PLATFORM_SPEAKERS: readonly SpeakerPos[] = CONFIG.platformSpeakerZ.map(
+  (z) => [CONFIG.platformSpeakerX, CONFIG.platformSpeakerY, z] as SpeakerPos,
+);

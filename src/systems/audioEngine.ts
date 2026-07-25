@@ -2,12 +2,29 @@
 // de rail, freinage, carillons de porte, jingle d'arrivée et mélodies de
 // départ originales. Démarré uniquement au clic « Monter à bord ».
 //
+// Spatialisation : tout ce qui sort de la SONORISATION (carillons de porte,
+// jingle d'arrivée, souffle de ligne des annonces) passe par un bus « PA »
+// — filtrage passe-bande + compression, le timbre d'un haut-parleur de wagon —
+// puis est diffusé par un Panner3D PAR DIFFUSEUR de plafond (voir
+// CABIN_SPEAKERS). La mélodie de départ (発車メロディ), elle, vient des
+// haut-parleurs du QUAI : elle est étouffée portes fermées et s'ouvre par les
+// portes. L'auditeur (Tone.Listener) suit la caméra, donc le son tourne quand
+// on tourne la tête et se rapproche quand on marche sous un diffuseur.
+//
+// Limite connue : speechSynthesis ne peut pas être routé dans le graphe Web
+// Audio, les annonces vocales ne sont donc pas pannées. On ancre malgré tout la
+// voix aux diffuseurs avec le souffle de ligne spatialisé (paVoiceOpen/Close)
+// et un volume d'utterance suivant la distance au diffuseur le plus proche
+// (speakerProximity, lu par systems/speech.ts).
+//
 // Hook fichiers locaux : playClip(name, fallback) joue public/audio/<name>.mp3
 // s'il existe (déposez vos propres enregistrements), sinon retombe sur la
-// synthèse. Aucun asset audio protégé n'est fourni.
+// synthèse. Les clips locaux passent eux aussi par le bus spatialisé.
+// Aucun asset audio protégé n'est fourni.
 
 import * as Tone from 'tone';
 import { STATIONS } from '../data/stations';
+import { CABIN_SPEAKERS, CONFIG, PLATFORM_SPEAKERS } from '../data/config';
 
 interface Nodes {
   master: Tone.Gain;
@@ -31,11 +48,22 @@ interface Nodes {
   bell: Tone.Synth;
   melodyA: Tone.Synth;
   melodyB: Tone.Synth;
+  // Sonorisation.
+  paIn: Tone.Gain; // entrée du bus wagon (avant timbre haut-parleur)
+  platIn: Tone.Gain; // entrée du bus quai
+  platGain: Tone.Gain;
+  platLp: Tone.Filter;
+  platPanners: Tone.Panner3D[];
+  hissGain: Tone.Gain;
+  paClick: Tone.NoiseSynth;
 }
 
 let nodes: Nodes | null = null;
 let volume = 0.8;
 let prevSpeed01 = 0;
+
+// Pose de l'auditeur, tenue à jour par la caméra (voir setListenerPose).
+const listenerPos: { x: number; y: number; z: number } = { x: 0, y: CONFIG.eyeHeight, z: 4.2 };
 
 export async function startAudio(): Promise<void> {
   if (nodes) return;
@@ -101,26 +129,109 @@ export async function startAudio(): Promise<void> {
     volume: -8,
   }).connect(master);
 
-  // Carillons et jingles.
+  // --- Bus SONORISATION du wagon ---------------------------------------
+  // Timbre : un diffuseur de plafond ne descend pas dans le grave et coupe
+  // haut ; une bosse de présence et une compression serrée font le reste.
+  const paIn = new Tone.Gain(1);
+  const paHp = new Tone.Filter({ type: 'highpass', frequency: 300, rolloff: -24, Q: 0.7 });
+  const paPresence = new Tone.Filter({ type: 'peaking', frequency: 1900, Q: 0.9, gain: 4.5 });
+  const paLp = new Tone.Filter({ type: 'lowpass', frequency: 5000, rolloff: -24, Q: 0.5 });
+  const paComp = new Tone.Compressor({ threshold: -22, ratio: 3.2, attack: 0.004, release: 0.14 });
+  // Gain de bus calé pour que la somme des huit diffuseurs, atténuation de
+  // distance comprise, retombe au niveau d'avant spatialisation.
+  const paBus = new Tone.Gain(0.5);
+  paIn.chain(paHp, paPresence, paLp, paComp, paBus);
+
+  // Un Panner3D par diffuseur : c'est CE fan-out qui donne l'impression que le
+  // son sort des grilles du plafond. Cône dirigé vers le bas (les diffuseurs
+  // arrosent l'allée), atténuation inverse avec la distance.
+  for (const [x, y, z] of CABIN_SPEAKERS) {
+    const p = new Tone.Panner3D({
+      positionX: x,
+      positionY: y,
+      positionZ: z,
+      orientationX: 0,
+      orientationY: -1,
+      orientationZ: 0,
+      panningModel: 'HRTF',
+      distanceModel: 'inverse',
+      refDistance: 1.15,
+      rolloffFactor: 1.25,
+      maxDistance: 40,
+      coneInnerAngle: 110,
+      coneOuterAngle: 250,
+      coneOuterGain: 0.45,
+    });
+    paBus.connect(p);
+    p.connect(master);
+  }
+
+  // Petite réverbération de cabine, NON spatialisée : elle recolle les
+  // diffuseurs entre eux sans brouiller les indices de direction.
+  const paVerb = new Tone.Reverb({ decay: 0.85, preDelay: 0.012, wet: 1 });
+  const paVerbGain = new Tone.Gain(0.16);
+  paBus.chain(paVerb, paVerbGain, master);
+
+  // Souffle de ligne : la sono s'ouvre juste avant l'annonce et se referme
+  // après. Spatialisé, il ancre la voix (non pannable) sur les diffuseurs.
+  const hiss = new Tone.Noise('pink');
+  const hissFilter = new Tone.Filter({ type: 'bandpass', frequency: 1500, Q: 0.4 });
+  const hissGain = new Tone.Gain(0);
+  hiss.chain(hissFilter, hissGain, paIn);
+  hiss.start();
+  // Déclic d'ouverture / fermeture de la ligne.
+  const paClick = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.02, sustain: 0 },
+    volume: -14,
+  }).connect(paIn);
+
+  // --- Bus SONORISATION du quai ----------------------------------------
+  // La 発車メロディ est diffusée sur le quai, pas dans la rame : portes
+  // fermées elle est sourde et lointaine, portes ouvertes elle entre par les
+  // ouvertures. platLp / platGain sont pilotés par setPlatformDoors().
+  const platIn = new Tone.Gain(1);
+  const platHp = new Tone.Filter({ type: 'highpass', frequency: 260, rolloff: -12, Q: 0.7 });
+  const platLp = new Tone.Filter({ type: 'lowpass', frequency: 900, rolloff: -24, Q: 0.4 });
+  const platGain = new Tone.Gain(0.16);
+  platIn.chain(platHp, platLp, platGain);
+  const platPanners = PLATFORM_SPEAKERS.map(([x, y, z]) => {
+    const p = new Tone.Panner3D({
+      positionX: x,
+      positionY: y,
+      positionZ: z,
+      panningModel: 'HRTF',
+      distanceModel: 'inverse',
+      refDistance: 2.6,
+      rolloffFactor: 0.9,
+      maxDistance: 60,
+    });
+    platGain.connect(p);
+    p.connect(master);
+    return p;
+  });
+
+  // Carillons et jingles : sortent des diffuseurs du wagon.
   const chime = new Tone.Synth({
     oscillator: { type: 'sine' },
     envelope: { attack: 0.005, decay: 0.25, sustain: 0.15, release: 0.35 },
-  }).connect(master);
+  }).connect(paIn);
   const bell = new Tone.Synth({
     oscillator: { type: 'triangle' },
     envelope: { attack: 0.002, decay: 0.4, sustain: 0, release: 0.4 },
-  }).connect(master);
+  }).connect(paIn);
 
-  // Mélodies de départ : triangle principal + harmonique douce à l'octave.
+  // Mélodies de départ : triangle principal + harmonique douce à l'octave,
+  // envoyées sur les haut-parleurs du quai.
   const melodyA = new Tone.Synth({
     oscillator: { type: 'triangle' },
     envelope: { attack: 0.01, decay: 0.18, sustain: 0.35, release: 0.25 },
-  }).connect(master);
+  }).connect(platIn);
   const melodyB = new Tone.Synth({
     oscillator: { type: 'sine' },
     envelope: { attack: 0.01, decay: 0.18, sustain: 0.25, release: 0.25 },
     volume: -14,
-  }).connect(master);
+  }).connect(platIn);
 
   nodes = {
     master,
@@ -144,6 +255,13 @@ export async function startAudio(): Promise<void> {
     bell,
     melodyA,
     melodyB,
+    paIn,
+    platIn,
+    platGain,
+    platLp,
+    platPanners,
+    hissGain,
+    paClick,
   };
 }
 
@@ -154,6 +272,80 @@ export function setVolume(v: number): void {
 
 export function setMuted(m: boolean): void {
   Tone.getDestination().mute = m;
+}
+
+// --- Spatialisation -----------------------------------------------------
+
+// Pose de l'auditeur, appelée chaque frame depuis la caméra. Les diffuseurs
+// sont fixes dans le repère du wagon, seule la tête bouge.
+export function setListenerPose(
+  px: number,
+  py: number,
+  pz: number,
+  fx: number,
+  fy: number,
+  fz: number,
+  ux: number,
+  uy: number,
+  uz: number,
+): void {
+  listenerPos.x = px;
+  listenerPos.y = py;
+  listenerPos.z = pz;
+  if (!nodes) return;
+  const l = Tone.getListener();
+  l.positionX.value = px;
+  l.positionY.value = py;
+  l.positionZ.value = pz;
+  l.forwardX.value = fx;
+  l.forwardY.value = fy;
+  l.forwardZ.value = fz;
+  l.upX.value = ux;
+  l.upY.value = uy;
+  l.upZ.value = uz;
+}
+
+// Côté d'ouverture : les haut-parleurs du quai basculent avec lui.
+export function setPlatformSide(side: 1 | -1): void {
+  if (!nodes) return;
+  nodes.platPanners.forEach((p, i) => {
+    p.positionX.value = side * PLATFORM_SPEAKERS[i][0];
+  });
+}
+
+// Ouverture acoustique du quai vers la cabine (0 = portes fermées, son sourd
+// et lointain ; 1 = portes ouvertes, la mélodie entre franchement).
+export function setPlatformDoors(open01: number): void {
+  if (!nodes) return;
+  const o = Math.max(0, Math.min(1, open01));
+  nodes.platLp.frequency.rampTo(750 + o * 3600, 0.12);
+  nodes.platGain.gain.rampTo(0.16 + o * 0.44, 0.12);
+}
+
+// Facteur de volume 0..1 selon la distance au diffuseur le plus proche. Sert
+// aux annonces vocales, que speechSynthesis ne permet pas de panner : au moins
+// leur niveau suit la position de la tête dans le wagon.
+export function speakerProximity(): number {
+  let best = Infinity;
+  for (const [x, y, z] of CABIN_SPEAKERS) {
+    const d = Math.hypot(x - listenerPos.x, y - listenerPos.y, z - listenerPos.z);
+    if (d < best) best = d;
+  }
+  if (!Number.isFinite(best)) return 1;
+  return Math.max(0.62, Math.min(1, 1.7 / Math.max(1.2, best)));
+}
+
+// Ouverture / fermeture de la ligne de sonorisation autour d'une annonce.
+export function paVoiceOpen(): void {
+  if (!nodes) return;
+  nodes.paClick.triggerAttackRelease(0.02, Tone.now(), 0.5);
+  nodes.hissGain.gain.rampTo(0.03, 0.1);
+}
+
+export function paVoiceClose(): void {
+  if (!nodes) return;
+  nodes.hissGain.gain.rampTo(0, 0.3);
+  nodes.paClick.triggerAttackRelease(0.015, Tone.now() + 0.18, 0.3);
 }
 
 // Mise à jour continue, pilotée par la vitesse normalisée (0..1).
@@ -302,10 +494,29 @@ async function probeClip(name: string): Promise<boolean> {
   return ok;
 }
 
-export async function playClip(name: string, fallback: () => void): Promise<void> {
+// Un clip local rejoint le MÊME bus spatialisé que sa version synthétisée :
+// déposer un door-open.mp3 ne fait pas ressortir le son du centre de la tête.
+// Repli sans spatialisation si le contexte refuse la source média.
+type Bus = 'cabin' | 'platform';
+
+function routeClip(el: HTMLAudioElement, bus: Bus): void {
+  if (!nodes) {
+    el.volume = Math.min(1, volume);
+    return;
+  }
+  try {
+    const src = Tone.getContext().createMediaElementSource(el);
+    src.connect(bus === 'platform' ? nodes.platIn.input : nodes.paIn.input);
+    el.addEventListener('ended', () => src.disconnect(), { once: true });
+  } catch {
+    el.volume = Math.min(1, volume);
+  }
+}
+
+export async function playClip(name: string, fallback: () => void, bus: Bus = 'cabin'): Promise<void> {
   if (await probeClip(name)) {
     const el = new Audio(`audio/${name}.mp3`);
-    el.volume = Math.min(1, volume);
+    routeClip(el, bus);
     void el.play().catch(() => fallback());
   } else {
     fallback();
@@ -322,5 +533,5 @@ export function arrivalJingle(): void {
   void playClip('arrival', synthArrival);
 }
 export function departureMelody(index: number): void {
-  void playClip(`melody-${STATIONS[index].jy}`, () => synthMelody(index));
+  void playClip(`melody-${STATIONS[index].jy}`, () => synthMelody(index), 'platform');
 }

@@ -93,7 +93,11 @@ export function updateCycle(dt: number): void {
   const t = runtime.phaseT;
   switch (s.phase) {
     case 'cruise': {
-      once('doorside', true, () => s.setDoorSide(DOOR_SIDE[s.index]));
+      once('doorside', true, () => {
+        s.setDoorSide(DOOR_SIDE[s.index]);
+        // Les haut-parleurs du quai passent du côté qui s'ouvrira.
+        audio.setPlatformSide(DOOR_SIDE[s.index]);
+      });
       // Annonce du sens de la boucle, juste après le départ des grandes gares.
       once('announce-dir', t > 0.6 && isMajorHub((s.index - 1 + 30) % 30), () =>
         say(directionAnnouncement(s.index)),
