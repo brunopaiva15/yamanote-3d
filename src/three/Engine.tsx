@@ -7,7 +7,7 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { updateCycle } from '../systems/stationCycle';
 import { updateSegmentEnv } from '../systems/segmentEnv';
-import { updateAudio } from '../systems/audioEngine';
+import { setPlatformDoors, updateAudio } from '../systems/audioEngine';
 import { updatePassengers } from '../systems/passengers';
 
 export function Engine(): null {
@@ -19,6 +19,9 @@ export function Engine(): null {
     updateCycle(dt);
     updateSegmentEnv(dt);
     updateAudio(dt, runtime.speed / V_MAX, phase === 'brake');
+    // Le quai n'est audible que par les ouvertures réellement dégagées :
+    // il faut la porte de la rame ET la porte palière en face.
+    setPlatformDoors(runtime.doorOpen * runtime.psdOpen);
     updatePassengers(dt);
   });
   return null;

@@ -122,6 +122,31 @@ l'annonce de fermeture, puis viennent le carillon et la fermeture. Les annonces
 fermeture, accueil, messages de courtoisie en rotation) sont dites en japonais puis
 en anglais via `speechSynthesis`, avec les correspondances réelles de chaque gare.
 
+### Sonorisation en 3D
+
+Le son de la sonorisation est spatialisé : il sort des haut-parleurs, pas du
+centre de la tête.
+
+- Huit diffuseurs sont modélisés au plafond du wagon (grilles perforées de part
+  et d'autre du caisson central, au droit de chaque porte). Chacun est un
+  `Panner3D` Web Audio à part entière, cône dirigé vers le bas ; l'auditeur
+  (`Tone.Listener`) suit la caméra, donc le son tourne quand on tourne la tête
+  et se rapproche quand on marche sous une grille.
+- Avant diffusion, tout passe par un bus « PA » (coupe-bas 300 Hz, bosse de
+  présence, coupe-haut 5 kHz, compression) : le timbre d'un haut-parleur de
+  wagon, pas celui d'un synthé.
+- La 発車メロディ vient des haut-parleurs du **quai**, pas de la rame : sourde
+  et lointaine portes fermées, elle entre franchement par les ouvertures quand
+  les portes de la rame **et** les portes palières sont dégagées, du côté qui
+  s'ouvre à cette gare.
+
+Limite connue : `speechSynthesis` sort directement sur la carte son, hors du
+graphe Web Audio — les annonces vocales ne peuvent pas être pannées. Elles sont
+malgré tout ancrées aux diffuseurs par le souffle de ligne spatialisé (la sono
+s'ouvre et se referme avec un déclic autour de chaque annonce) et par un volume
+qui suit la distance au diffuseur le plus proche.
+
 Optionnel : déposez vos propres enregistrements dans `public/audio/`
 (`door-open.mp3`, `door-close.mp3`, `arrival.mp3`, `melody-JY01.mp3`…) ; ils seront
-utilisés à la place de la synthèse. Aucun asset audio protégé n'est fourni.
+utilisés à la place de la synthèse, et passent par le même bus spatialisé que la
+version synthétisée. Aucun asset audio protégé n'est fourni.

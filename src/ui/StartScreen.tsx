@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useStore } from '../store';
-import { startAudio, setVolume } from '../systems/audioEngine';
+import { startAudio, setVolume, setPlatformSide } from '../systems/audioEngine';
 import { initSpeech, say } from '../systems/speech';
 import { welcomeAnnouncement } from '../data/announcements';
 import { seedPassengers } from '../systems/passengers';
@@ -19,6 +19,9 @@ export function StartScreen() {
     try {
       await startAudio();
       setVolume(useStore.getState().volume);
+      // Le graphe naît après le premier setDoorSide du cycle : on cale les
+      // haut-parleurs du quai du bon côté dès le départ.
+      setPlatformSide(useStore.getState().doorSide);
     } catch {
       /* l'expérience reste jouable sans audio */
     }

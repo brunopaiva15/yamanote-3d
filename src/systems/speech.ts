@@ -8,9 +8,16 @@
 // - Chrome : les utterances longues sont coupées (~15 s) sans onend ; on
 //   découpe donc par phrases, avec un keep-alive pause/resume et un filet
 //   de sécurité si aucun événement de fin n'arrive.
+//
+// Spatialisation : speechSynthesis sort directement sur la carte son, hors du
+// graphe Web Audio — impossible de la panner. On l'ancre donc aux diffuseurs
+// du plafond par deux biais : le souffle de ligne spatialisé, ouvert pendant
+// toute l'annonce (paVoiceOpen/paVoiceClose), et le volume de l'utterance qui
+// suit la distance au diffuseur le plus proche (speakerProximity).
 
 import type { Utterance } from '../data/announcements';
 import { useStore } from '../store';
+import { paVoiceClose, paVoiceOpen, speakerProximity } from './audioEngine';
 
 const queue: Utterance[] = [];
 let speaking = false;
@@ -80,14 +87,36 @@ function finishUtterance(): void {
   pump();
 }
 
+// Ligne de sonorisation ouverte : souffle spatialisé + déclics d'ouverture et
+// de fermeture, qui ancrent la voix sur les diffuseurs du plafond.
+let lineOpen = false;
+
+function openLine(): void {
+  if (lineOpen) return;
+  lineOpen = true;
+  paVoiceOpen();
+}
+
+function closeLine(): void {
+  if (!lineOpen) return;
+  lineOpen = false;
+  paVoiceClose();
+}
+
 function pump(): void {
-  if (speaking || queue.length === 0) return;
+  if (speaking) return;
+  if (queue.length === 0) {
+    closeLine();
+    return;
+  }
   if (!('speechSynthesis' in window)) {
     queue.length = 0;
+    closeLine();
     return;
   }
   if (useStore.getState().muted) {
     queue.length = 0;
+    closeLine();
     return;
   }
   const item = queue.shift();
@@ -104,7 +133,9 @@ function pump(): void {
   if (voice) u.voice = voice;
   u.rate = item.lang === 'ja-JP' ? 0.97 : 0.9;
   u.pitch = 1.03;
-  u.volume = Math.min(1, useStore.getState().volume * 1.15);
+  // Le niveau suit la distance au diffuseur le plus proche : sous une grille
+  // l'annonce claque, au milieu de deux portes elle recule.
+  u.volume = Math.min(1, useStore.getState().volume * 1.15 * speakerProximity());
   speaking = true;
   u.onend = finishUtterance;
   u.onerror = finishUtterance;
@@ -137,6 +168,7 @@ export function say(items: Utterance[]): void {
       queue.push({ text, lang: item.lang });
     }
   }
+  if (queue.length > 0) openLine();
   pump();
 }
 
@@ -145,4 +177,5 @@ export function cancelSpeech(): void {
   clearTimers();
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   speaking = false;
+  closeLine();
 }

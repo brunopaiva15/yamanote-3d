@@ -240,6 +240,48 @@ export function makeVentTexture(): THREE.CanvasTexture {
   return t;
 }
 
+// --- Grille de diffuseur de plafond : disque perforé sur platine claire ---
+export function makeSpeakerTexture(): THREE.CanvasTexture {
+  const S = 128;
+  const { c, g } = makeCanvas(S, S);
+  g.fillStyle = '#dcdbd5';
+  g.fillRect(0, 0, S, S);
+  // Platine et gorge du diffuseur.
+  const cx = S / 2;
+  g.fillStyle = '#c6c5bf';
+  g.beginPath();
+  g.arc(cx, cx, S * 0.44, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#4a4d51';
+  g.beginPath();
+  g.arc(cx, cx, S * 0.4, 0, Math.PI * 2);
+  g.fill();
+  // Perforations en anneaux concentriques.
+  g.fillStyle = '#22252a';
+  for (let ring = 1; ring <= 5; ring++) {
+    const r = ring * S * 0.072;
+    const n = Math.max(6, Math.round(ring * 7));
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + ring * 0.4;
+      g.beginPath();
+      g.arc(cx + Math.cos(a) * r, cx + Math.sin(a) * r, S * 0.016, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  g.beginPath();
+  g.arc(cx, cx, S * 0.02, 0, Math.PI * 2);
+  g.fill();
+  // Reflet doux du néon voisin sur le chanfrein.
+  const sheen = g.createLinearGradient(0, 0, 0, S);
+  sheen.addColorStop(0, 'rgba(255,255,255,0.22)');
+  sheen.addColorStop(0.5, 'rgba(255,255,255,0)');
+  g.fillStyle = sheen;
+  g.beginPath();
+  g.arc(cx, cx, S * 0.44, 0, Math.PI * 2);
+  g.fill();
+  return toTexture(c);
+}
+
 // --- Bande tactile jaune à picots ---
 export function makeTactileTexture(): THREE.CanvasTexture {
   const { c, g } = makeCanvas(128, 256);

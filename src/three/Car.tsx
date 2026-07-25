@@ -4,7 +4,7 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { CONFIG } from '../data/config';
+import { CABIN_SPEAKERS, CONFIG } from '../data/config';
 import {
   makeFloorTexture,
   makeTactileTexture,
@@ -13,6 +13,7 @@ import {
   makeSurfaceTexture,
   makeRoughnessMap,
   makeVentTexture,
+  makeSpeakerTexture,
   makeDoorStickerTexture,
 } from '../textures/procedural';
 
@@ -92,6 +93,8 @@ export function Car() {
         roughness: 0.4,
       }),
       vent: new THREE.MeshStandardMaterial({ map: makeVentTexture(), roughness: 0.72, metalness: 0.15 }),
+      speaker: new THREE.MeshStandardMaterial({ map: makeSpeakerTexture(), roughness: 0.8, metalness: 0.1 }),
+      speakerRim: new THREE.MeshStandardMaterial({ color: '#8f918c', roughness: 0.6, metalness: 0.25 }),
       seam: new THREE.MeshStandardMaterial({ color: '#c4c3bc', roughness: 0.7 }),
       sticker: new THREE.MeshBasicMaterial({
         map: makeDoorStickerTexture(),
@@ -168,6 +171,21 @@ export function Car() {
         <mesh key={`vent${z}`} position={[0, H - 0.028, z]} material={materials.vent}>
           <boxGeometry args={[0.7, 0.03, 1.6]} />
         </mesh>
+      ))}
+
+      {/* Diffuseurs de la sonorisation : une grille perforée encastrée dans le
+          plafond de part et d'autre du caisson, au droit de chaque porte.
+          Mêmes positions que les Panner3D du moteur audio — c'est de ces
+          grilles-là que sortent carillons et annonces. */}
+      {CABIN_SPEAKERS.map(([x, y, z]) => (
+        <group key={`spk${x}-${z}`} position={[x, y, z]}>
+          <mesh material={materials.speaker}>
+            <cylinderGeometry args={[0.132, 0.132, 0.026, 24]} />
+          </mesh>
+          <mesh position={[0, 0.012, 0]} material={materials.speakerRim}>
+            <cylinderGeometry args={[0.148, 0.148, 0.032, 24]} />
+          </mesh>
+        </group>
       ))}
 
       {/* Parois latérales : segments entre portes, fenêtres cadrées. */}
