@@ -30,6 +30,24 @@ const RACK_Y = 1.8;
 const RACK_TILT = 0.36;
 const RACK_BAR_OFFSETS = [-0.18, -0.09, 0, 0.09, 0.18];
 
+// Dossier : panneau garni quasi vertical, du haut de l'assise à hauteur
+// d'omoplates. La rame n'a pas de traversin roulé — c'est une plaque.
+const BACK_X = WALL_X - 0.155; // 1,245 : centre du panneau
+const BACK_Y = 0.675; // centre : le bas affleure le coussin (0,455), le haut à 0,90
+const BACK_DEPTH = 0.1;
+const BACK_HEIGHT = 0.45;
+
+// Répétitions de la tuile de moquette par mètre : tuile de 16 carreaux, visés
+// à ~4,5 cm de côté.
+const CHECKER_PER_M = 1 / (16 * 0.045);
+
+// Pas d'une banquette de n places, lu sur les segments réels : les coussins
+// sont taillés dessus pour se toucher.
+function benchPitch(n: number): number {
+  const bench = BENCHES.find((b) => b.n === n);
+  return bench ? (bench.z1 - bench.z0) / n : 0.5;
+}
+
 // --- Panneau d'extrémité (袖仕切り) : silhouette ajourée extrudée ---
 function makePanelGeometry(): THREE.ExtrudeGeometry {
   const shape = new THREE.Shape();
@@ -101,9 +119,11 @@ export function Seats() {
       stanchionL: makeStanchionGeometry(-1),
       midR: makeMidStanchionGeometry(1),
       midL: makeMidStanchionGeometry(-1),
-      // Coussins individuels arrondis (pas standard / prioritaire).
-      cushion7: new RoundedBoxGeometry(0.44, 0.11, 0.5, 3, 0.035),
-      cushion3: new RoundedBoxGeometry(0.44, 0.11, 0.44, 3, 0.035),
+      // Coussins : jointifs, à la longueur exacte du pas de la banquette, pour
+      // former une assise continue creusée d'un sillon par place — c'est ce que
+      // montre la rame, pas une file de galettes séparées par des jours.
+      cushion7: new RoundedBoxGeometry(0.45, 0.11, benchPitch(7), 3, 0.03),
+      cushion3: new RoundedBoxGeometry(0.45, 0.11, benchPitch(3), 3, 0.03),
       // Consoles chromées du porte-bagages, une géométrie par côté.
       bracketR: makeRackBracketGeometry(1),
       bracketL: makeRackBracketGeometry(-1),
@@ -117,6 +137,12 @@ export function Seats() {
   // partout : une seule géométrie, un seul draw call pour tout le wagon, la
   // longueur étant portée par l'échelle de chaque instance.
   const barGeo = useMemo(() => new THREE.CylinderGeometry(0.011, 0.011, 1, 8), []);
+
+  // Dossiers : un panneau par banquette, longueur variable.
+  const backGeos = useMemo(
+    () => BENCHES.map((b) => new RoundedBoxGeometry(BACK_DEPTH, BACK_HEIGHT, b.z1 - b.z0 - 0.06, 3, 0.025)),
+    [],
+  );
   const rackBars = useMemo(() => {
     const out: { x: number; y: number; z: number; len: number }[] = [];
     for (const s of [1, -1] as const) {
@@ -168,7 +194,12 @@ export function Seats() {
         const src = priority ? materials.red : materials.green;
         const m = src.clone();
         const tex = (src.map as THREE.Texture).clone();
-        tex.repeat.set(2, n);
+        // Le dossier est une face de boîte : U court sur la longueur, V sur la
+        // hauteur. Le pas se calcule donc en mètres, pas en nombre de places —
+        // la tuile fait 16 carreaux, on vise des carreaux de ~4,5 cm.
+        const bench = BENCHES.find((b) => b.n === n);
+        const len = bench ? bench.z1 - bench.z0 - 0.06 : 1;
+        tex.repeat.set(CHECKER_PER_M * len, CHECKER_PER_M * BACK_HEIGHT);
         tex.needsUpdate = true;
         m.map = tex;
         cache.set(`${priority}-${n}`, m);
@@ -227,14 +258,8 @@ export function Seats() {
               <mesh position={[s * (WALL_X - 0.42), 0.16, zc]} rotation={[0, 0, s * 0.35]} material={materials.heater}>
                 <boxGeometry args={[0.3, 0.16, len - 0.3]} />
               </mesh>
-              {/* Traversin de dossier en moquette damier */}
-              <mesh
-                position={[s * (WALL_X - 0.2), 0.8, zc]}
-                rotation={[Math.PI / 2, 0, 0]}
-                material={checkerMat}
-              >
-                <capsuleGeometry args={[0.155, Math.max(0.2, len - 0.34), 6, 14]} />
-              </mesh>
+              {/* Dossier : panneau garni de moquette damier, arêtes adoucies */}
+              <mesh geometry={backGeos[bi]} position={[s * BACK_X, BACK_Y, zc]} material={checkerMat} />
               {/* Coque blanche derrière le dossier */}
               <mesh position={[s * (WALL_X - 0.05), 0.92, zc]} material={materials.shell}>
                 <boxGeometry args={[0.05, 0.95, len]} />
@@ -246,7 +271,7 @@ export function Seats() {
                   return (
                     <mesh
                       key={`badge${k}`}
-                      position={[s * (WALL_X - 0.2 - 0.157), 0.86, zSeat]}
+                      position={[s * (BACK_X - BACK_DEPTH / 2 - 0.004), 0.79, zSeat]}
                       rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
                       material={materials.badge}
                     >
