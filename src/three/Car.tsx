@@ -5,6 +5,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CABIN_SPEAKERS, CONFIG } from '../data/config';
+import { roundedRect } from './shapes';
 import {
   makeFloorTexture,
   makeTactileTexture,
@@ -37,6 +38,36 @@ const WINDOW_BOTTOM = 0.85;
 const WINDOW_TOP = 1.75;
 const PILLAR_W = 0.14;
 
+// Les baies du E235 sont à coins largement adoucis. La paroi est donc percée
+// d'un seul tenant sur toute la bande vitrée, plutôt que composée de montants
+// droits : le bandeau déborde de BAND_MARGIN au-dessus et en dessous de la
+// vitre pour que l'arrondi de l'ouverture reste entièrement dans la matière.
+const BAND_MARGIN = 0.07;
+const BAND_BOTTOM = WINDOW_BOTTOM - BAND_MARGIN;
+const BAND_TOP = WINDOW_TOP + BAND_MARGIN;
+const WINDOW_RADIUS = 0.11;
+const WALL_THICKNESS = 0.08;
+
+// Diffuseur linéaire de climatisation : même emprise que le caisson central.
+const DUCT_LENGTH = HL * 2 - 0.8;
+
+// Bandeau de paroi percé d'une baie à coins arrondis, pour un segment donné.
+// Construit à plat (x = longueur, y = hauteur) puis redressé à l'usage par une
+// rotation d'un quart de tour ; l'extrusion est recentrée sur l'épaisseur.
+function makeWindowWallGeometry(len: number): THREE.ExtrudeGeometry {
+  const bandHeight = BAND_TOP - BAND_BOTTOM;
+  const outer = new THREE.Shape();
+  outer.moveTo(-len / 2, -bandHeight / 2);
+  outer.lineTo(len / 2, -bandHeight / 2);
+  outer.lineTo(len / 2, bandHeight / 2);
+  outer.lineTo(-len / 2, bandHeight / 2);
+  outer.closePath();
+  outer.holes.push(roundedRect(len - PILLAR_W * 2, WINDOW_TOP - WINDOW_BOTTOM, WINDOW_RADIUS));
+  const geo = new THREE.ExtrudeGeometry(outer, { depth: WALL_THICKNESS, bevelEnabled: false });
+  geo.translate(0, 0, -WALL_THICKNESS / 2);
+  return geo;
+}
+
 export function Car() {
   const textures = useMemo(
     () => ({
@@ -48,9 +79,22 @@ export function Car() {
     [],
   );
 
+  // Un bandeau percé par segment de paroi (longueurs différentes), partagé
+  // entre les deux côtés du wagon.
+  const windowWallGeos = useMemo(
+    () => WALL_SEGMENTS.map((seg) => makeWindowWallGeometry(seg.z1 - seg.z0)),
+    [],
+  );
+
   const materials = useMemo(() => {
     // Micro-grain et rugosité bruitée : surfaces peintes, jamais laquées.
     const rough = makeRoughnessMap();
+    // La gaine de climatisation court d'un bout à l'autre du wagon : la tuile
+    // de persiennes se répète pour garder un pas d'ailettes constant plutôt que
+    // de s'étirer sur dix-neuf mètres.
+    const ventMap = makeVentTexture();
+    ventMap.wrapS = ventMap.wrapT = THREE.RepeatWrapping;
+    ventMap.repeat.set(1, DUCT_LENGTH / 0.6);
     return {
       floor: new THREE.MeshStandardMaterial({ map: textures.floor, roughness: 0.72, metalness: 0.02 }),
       wall: new THREE.MeshStandardMaterial({
@@ -92,7 +136,7 @@ export function Car() {
         emissiveIntensity: 1.0,
         roughness: 0.4,
       }),
-      vent: new THREE.MeshStandardMaterial({ map: makeVentTexture(), roughness: 0.72, metalness: 0.15 }),
+      vent: new THREE.MeshStandardMaterial({ map: ventMap, roughness: 0.72, metalness: 0.15 }),
       speaker: new THREE.MeshStandardMaterial({ map: makeSpeakerTexture(), roughness: 0.8, metalness: 0.1 }),
       speakerRim: new THREE.MeshStandardMaterial({ color: '#8f918c', roughness: 0.6, metalness: 0.25 }),
       seam: new THREE.MeshStandardMaterial({ color: '#c4c3bc', roughness: 0.7 }),
@@ -166,12 +210,11 @@ export function Car() {
         </mesh>
       ))}
 
-      {/* Grilles de clim au plafond */}
-      {[-7.5, -2.5, 2.5, 7.5].map((z) => (
-        <mesh key={`vent${z}`} position={[0, H - 0.028, z]} material={materials.vent}>
-          <boxGeometry args={[0.7, 0.03, 1.6]} />
-        </mesh>
-      ))}
+      {/* Gaine de climatisation : un diffuseur linéaire continu au milieu du
+          caisson, d'un bout à l'autre du wagon — pas quatre grilles isolées. */}
+      <mesh position={[0, H - 0.028, 0]} material={materials.vent}>
+        <boxGeometry args={[0.5, 0.03, DUCT_LENGTH]} />
+      </mesh>
 
       {/* Diffuseurs de la sonorisation : une grille perforée encastrée dans le
           plafond de part et d'autre du caisson, au droit de chaque porte.
@@ -197,23 +240,25 @@ export function Car() {
           const wallMat = seg.pink ? materials.pinkWall : materials.wall;
           return (
             <group key={`wall${s}-${i}`}>
-              <mesh position={[s * HW, WINDOW_BOTTOM / 2, zc]} material={wallMat}>
-                <boxGeometry args={[0.08, WINDOW_BOTTOM, len]} />
+              <mesh position={[s * HW, BAND_BOTTOM / 2, zc]} material={wallMat}>
+                <boxGeometry args={[WALL_THICKNESS, BAND_BOTTOM, len]} />
               </mesh>
-              <mesh position={[s * HW, (WINDOW_TOP + H) / 2, zc]} material={wallMat}>
-                <boxGeometry args={[0.08, H - WINDOW_TOP, len]} />
+              <mesh position={[s * HW, (BAND_TOP + H) / 2, zc]} material={wallMat}>
+                <boxGeometry args={[WALL_THICKNESS, H - BAND_TOP, len]} />
               </mesh>
+              {/* Bandeau percé d'une baie à coins arrondis : il tient lieu de
+                  montants aux deux extrémités du segment. */}
+              <mesh
+                geometry={windowWallGeos[i]}
+                material={wallMat}
+                position={[s * HW, (BAND_BOTTOM + BAND_TOP) / 2, zc]}
+                rotation={[0, Math.PI / 2, 0]}
+              />
               <mesh position={[s * (HW - 0.01), (WINDOW_BOTTOM + WINDOW_TOP) / 2, zc]} material={materials.glass}>
                 <boxGeometry args={[0.02, WINDOW_TOP - WINDOW_BOTTOM, glassLen]} />
               </mesh>
-              <mesh position={[s * HW, (WINDOW_BOTTOM + WINDOW_TOP) / 2, seg.z0 + PILLAR_W / 2]} material={wallMat}>
-                <boxGeometry args={[0.08, WINDOW_TOP - WINDOW_BOTTOM, PILLAR_W]} />
-              </mesh>
-              <mesh position={[s * HW, (WINDOW_BOTTOM + WINDOW_TOP) / 2, seg.z1 - PILLAR_W / 2]} material={wallMat}>
-                <boxGeometry args={[0.08, WINDOW_TOP - WINDOW_BOTTOM, PILLAR_W]} />
-              </mesh>
               {/* Jonctions de panneaux : fines lignes au seuil et au linteau */}
-              {[WINDOW_BOTTOM - 0.006, WINDOW_TOP + 0.006].map((y) => (
+              {[BAND_BOTTOM - 0.006, BAND_TOP + 0.006].map((y) => (
                 <mesh key={`seam${y}`} position={[s * (HW - 0.038), y, zc]} material={materials.seam}>
                   <boxGeometry args={[0.012, 0.014, len]} />
                 </mesh>

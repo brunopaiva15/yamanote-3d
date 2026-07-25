@@ -9,26 +9,10 @@ import { CONFIG } from '../data/config';
 import { useStore } from '../store';
 import { trainDoorLag, trainDoorPos } from '../systems/doorMotion';
 import { makeDoorEdgeTexture, makeDoorStickerTexture } from '../textures/procedural';
+import { roundedRect } from './shapes';
 
 const DOOR_H = 1.95;
 const PANEL_W = CONFIG.doorHalfWidth; // 0.66 par vantail
-
-// Rectangle à coins arrondis, centré sur l'origine.
-function roundedRect(w: number, h: number, r: number): THREE.Shape {
-  const s = new THREE.Shape();
-  const x = -w / 2;
-  const y = -h / 2;
-  s.moveTo(x + r, y);
-  s.lineTo(x + w - r, y);
-  s.quadraticCurveTo(x + w, y, x + w, y + r);
-  s.lineTo(x + w, y + h - r);
-  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  s.lineTo(x + r, y + h);
-  s.quadraticCurveTo(x, y + h, x, y + h - r);
-  s.lineTo(x, y + r);
-  s.quadraticCurveTo(x, y, x + r, y);
-  return s;
-}
 
 interface PanelRef {
   mesh: THREE.Group | null;
