@@ -41,7 +41,11 @@ function makeRingGeometry(): THREE.TubeGeometry {
     for (const t of [0, 0.25, 0.5, 0.75]) points.push(from.clone().lerp(to, t));
   }
   const curve = new THREE.CatmullRomCurve3(points, true);
-  return new THREE.TubeGeometry(curve, 48, RING_TUBE, 8, true);
+  // 24 pas le long du parcours suffisent à tenir les angles arrondis, et 6
+  // faces de section pour une barre de 2 cm : au-delà, on paie très cher un
+  // objet minuscule répété 84 fois (un tube à 48 × 8 coûtait 64 000 triangles
+  // pour l'ensemble des poignées, contre 4 500 à l'ancien tore).
+  return new THREE.TubeGeometry(curve, 24, RING_TUBE, 6, true);
 }
 
 // Statique et partagée par les deux rangées.
