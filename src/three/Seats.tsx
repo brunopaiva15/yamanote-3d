@@ -8,13 +8,16 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { Instances, Instance } from '@react-three/drei';
 import { CONFIG } from '../data/config';
-import { BENCHES, SEAT_SLOTS } from '../systems/seats';
+import { BENCHES, FREE_SPACE, SEAT_SLOTS } from '../systems/seats';
 import {
   makeCheckerTexture,
   makeQuiltTexture,
   makePriorityBadgeTexture,
+  makeFreeSpaceFloorTexture,
+  makeFreeSpaceSignTexture,
   makeSurfaceTexture,
   makeRoughnessMap,
+  CHECKER_CELLS,
   GREEN_CHECKER,
   RED_CHECKER,
 } from '../textures/procedural';
@@ -37,9 +40,14 @@ const BACK_Y = 0.675; // centre : le bas affleure le coussin (0,455), le haut à
 const BACK_DEPTH = 0.1;
 const BACK_HEIGHT = 0.45;
 
-// Répétitions de la tuile de moquette par mètre : tuile de 16 carreaux, visés
-// à ~4,5 cm de côté.
-const CHECKER_PER_M = 1 / (16 * 0.045);
+// Poteau vertical au bord de chaque panneau d'about : il prolonge l'arceau
+// jusqu'au sol, à l'aplomb du départ de la courbe (x 0,76 à y 1,40).
+const POLE_X = 0.765;
+const POLE_TOP = 1.42;
+
+// Répétitions de la tuile de moquette par mètre, pour des carreaux d'environ
+// 2,5 cm de côté — la maille d'un tissu de siège, pas d'une mosaïque.
+const CHECKER_PER_M = 1 / (CHECKER_CELLS * 0.025);
 
 // Pas d'une banquette de n places, lu sur les segments réels : les coussins
 // sont taillés dessus pour se toucher.
@@ -184,6 +192,15 @@ export function Seats() {
       yellowGrip: new THREE.MeshStandardMaterial({ color: '#e0b23c', roughness: 0.68 }),
       heater: new THREE.MeshStandardMaterial({ color: '#585b60', roughness: 0.65, metalness: 0.35 }),
       badge: new THREE.MeshBasicMaterial({ map: badge, transparent: true, toneMapped: false }),
+      freeSpaceFloor: new THREE.MeshBasicMaterial({
+        map: makeFreeSpaceFloorTexture(),
+        transparent: true,
+        toneMapped: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -3,
+        polygonOffsetUnits: -3,
+      }),
+      freeSpaceSign: new THREE.MeshBasicMaterial({ map: makeFreeSpaceSignTexture(), toneMapped: false }),
     };
   }, []);
 
@@ -238,8 +255,57 @@ export function Seats() {
           />
         ))}
       </Instances>
+      {/* Zone libre : ni assise ni dossier, une main courante murale sur
+          potelets, un poteau côté allée et les marquages fauteuil / poussette. */}
+      {FREE_SPACE && (
+        <group>
+          {(() => {
+            const s = FREE_SPACE.side;
+            const zc = (FREE_SPACE.z0 + FREE_SPACE.z1) / 2;
+            const len = FREE_SPACE.z1 - FREE_SPACE.z0;
+            const railX = s * (WALL_X - 0.09);
+            return (
+              <>
+                {/* Main courante horizontale, à hauteur d'appui */}
+                <mesh position={[railX, 0.82, zc]} rotation={[Math.PI / 2, 0, 0]} material={materials.chrome}>
+                  <cylinderGeometry args={[0.019, 0.019, len - 0.1, 12]} />
+                </mesh>
+                {/* Potelets qui la portent */}
+                {[FREE_SPACE.z0 + 0.16, FREE_SPACE.z1 - 0.16].map((z, k) => (
+                  <mesh key={`leg${k}`} position={[railX, 0.41, z]} material={materials.chrome}>
+                    <cylinderGeometry args={[0.016, 0.016, 0.82, 10]} />
+                  </mesh>
+                ))}
+                {/* Poteau vertical côté allée, du sol au plafond */}
+                <mesh position={[s * 0.86, 1.15, FREE_SPACE.z0 + 0.08]} material={materials.chrome}>
+                  <cylinderGeometry args={[0.019, 0.019, 2.3, 12]} />
+                </mesh>
+                {/* Marquage au sol, plaqué dans la baie contre la paroi et non
+                    au milieu de l'allée — même orientation que le sticker
+                    優先席, pour se lire en marchant vers l'about. */}
+                <mesh
+                  position={[s * 1.0, 0.004, zc]}
+                  rotation={[-Math.PI / 2, 0, zc > 0 ? Math.PI : 0]}
+                  material={materials.freeSpaceFloor}
+                >
+                  <planeGeometry args={[0.95, 0.76]} />
+                </mesh>
+                {/* Panneau sur la paroi */}
+                <mesh
+                  position={[s * (WALL_X - 0.045), 1.36, zc]}
+                  rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
+                  material={materials.freeSpaceSign}
+                >
+                  <planeGeometry args={[0.4, 0.25]} />
+                </mesh>
+              </>
+            );
+          })()}
+        </group>
+      )}
       {sides.map((s) =>
         BENCHES.map((b, bi) => {
+          if (b.freeSpaceSide === s) return null; // banquette remplacée par la zone libre
           const len = b.z1 - b.z0;
           const zc = (b.z0 + b.z1) / 2;
           const checkerMat = checkerByN.get(`${b.priority}-${b.n}`) ?? materials.green;
@@ -289,7 +355,10 @@ export function Seats() {
                   rotation={[0, s === 1 ? Math.PI : 0, 0]}
                 />
               ))}
-              {/* Arceaux chromés (jaunes en zone prioritaire) vers le plafond */}
+              {/* Arceaux chromés (jaunes en zone prioritaire) vers le plafond,
+                  et le poteau droit qui les prolonge jusqu'au sol : c'est la
+                  barre que l'on empoigne debout près des portes. L'arceau part
+                  de 1,40 m, le poteau couvre tout ce qui est en dessous. */}
               {[b.z0, b.z1].map((z, k) => (
                 <mesh
                   key={`stan${k}`}
@@ -297,6 +366,15 @@ export function Seats() {
                   material={stanchionMat}
                   position={[0, 0, z]}
                 />
+              ))}
+              {[b.z0, b.z1].map((z, k) => (
+                <mesh
+                  key={`pole${k}`}
+                  position={[s * POLE_X, POLE_TOP / 2, z]}
+                  material={stanchionMat}
+                >
+                  <cylinderGeometry args={[0.017, 0.017, POLE_TOP, 12]} />
+                </mesh>
               ))}
               {midZs.map((z, k) => (
                 <mesh

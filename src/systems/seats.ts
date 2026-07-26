@@ -8,16 +8,30 @@ export interface BenchSegment {
   z1: number;
   n: number; // nombre de places
   priority: boolean; // banquette prioritaire (extrémités)
+  freeSpaceSide?: 1 | -1; // côté où la banquette cède la place à la フリースペース
 }
 
-// Segments de banquette entre les portes (z), identiques des deux côtés.
+// Segments de banquette entre les portes (z), identiques des deux côtés — sauf
+// là où la zone libre remplace une banquette.
+//
+// L'E235 a une フリースペース (fauteuils roulants et poussettes) dans CHAQUE
+// voiture, à une extrémité : c'est précisément la nouveauté par rapport à
+// l'E231-500, qui n'en avait que dans les deux voitures de tête. Elle prend la
+// place d'une banquette prioritaire de trois, d'un seul côté du wagon.
 export const BENCHES: BenchSegment[] = [
   { z0: -9.55, z1: -8.16, n: 3, priority: true },
   { z0: -6.84, z1: -3.16, n: 7, priority: false },
   { z0: -1.84, z1: 1.84, n: 7, priority: false },
   { z0: 3.16, z1: 6.84, n: 7, priority: false },
-  { z0: 8.16, z1: 9.55, n: 3, priority: true },
+  { z0: 8.16, z1: 9.55, n: 3, priority: true, freeSpaceSide: -1 },
 ];
+
+// La zone libre, dérivée de la banquette qu'elle remplace : un seul endroit à
+// modifier si elle change de place.
+const freeBench = BENCHES.find((b) => b.freeSpaceSide !== undefined);
+export const FREE_SPACE = freeBench
+  ? { z0: freeBench.z0, z1: freeBench.z1, side: freeBench.freeSpaceSide as 1 | -1 }
+  : null;
 
 export interface SeatSlot {
   x: number;
@@ -33,6 +47,7 @@ function buildSeatSlots(): SeatSlot[] {
   const sides: (1 | -1)[] = [1, -1];
   for (const side of sides) {
     for (const b of BENCHES) {
+      if (b.freeSpaceSide === side) continue; // pas de place assise dans la zone libre
       const len = b.z1 - b.z0;
       const pitch = len / b.n;
       for (let i = 0; i < b.n; i++) {

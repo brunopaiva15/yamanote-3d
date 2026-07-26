@@ -86,6 +86,13 @@ export function Car() {
     [],
   );
 
+  // Encadrement du hublot de la porte d'intercirculation.
+  const gangwayFrameGeo = useMemo(() => {
+    const frame = roundedRect(0.66, 1.15, 0.11);
+    frame.holes.push(roundedRect(0.56, 1.05, 0.09));
+    return new THREE.ShapeGeometry(frame, 16);
+  }, []);
+
   const materials = useMemo(() => {
     // Micro-grain et rugosité bruitée : surfaces peintes, jamais laquées.
     const rough = makeRoughnessMap();
@@ -132,8 +139,10 @@ export function Car() {
       }),
       led: new THREE.MeshStandardMaterial({
         color: '#fff4e2',
-        emissive: '#ffe9c8',
-        emissiveIntensity: 1.0,
+        emissive: '#ffeed2',
+        // Rampes lumineuses continues : c'est la source visuelle du wagon, elle
+        // doit se lire comme un néon franc et non comme un bandeau blanchâtre.
+        emissiveIntensity: 1.9,
         roughness: 0.4,
       }),
       vent: new THREE.MeshStandardMaterial({ map: ventMap, roughness: 0.72, metalness: 0.15 }),
@@ -206,7 +215,7 @@ export function Car() {
       {/* Bandeau LED : deux lignes émissives, LA source visuelle. */}
       {sides.map((s) => (
         <mesh key={`led${s}`} position={[s * 0.78, H - 0.03, 0]} material={materials.led}>
-          <boxGeometry args={[0.14, 0.028, HL * 2 - 1]} />
+          <boxGeometry args={[0.17, 0.03, HL * 2 - 1]} />
         </mesh>
       ))}
 
@@ -319,9 +328,23 @@ export function Car() {
           <mesh position={[0, 0.95, e * HL - e * 0.01]} material={materials.steel}>
             <boxGeometry args={[0.84, 1.9, 0.06]} />
           </mesh>
+          {/* Encadrement du hublot, mêmes angles adoucis que les vitres de
+              porte : sans lui la porte d'intercirculation reste une plaque. */}
+          <mesh
+            geometry={gangwayFrameGeo}
+            position={[0, 1.25, e * HL - e * 0.042]}
+            rotation={[0, e === 1 ? Math.PI : 0, 0]}
+            material={materials.seam}
+          />
           <mesh position={[0, 1.25, e * HL - e * 0.045]} material={materials.glass}>
             <boxGeometry args={[0.56, 1.05, 0.02]} />
           </mesh>
+          {/* Barres verticales de part et d'autre de la porte d'about */}
+          {[-0.52, 0.52].map((x) => (
+            <mesh key={`gb${x}`} position={[x, 1.15, e * (HL - 0.09)]} material={materials.steel}>
+              <cylinderGeometry args={[0.017, 0.017, 2.3, 12]} />
+            </mesh>
+          ))}
           {/* Cap sombre derrière la vitre : silhouette du wagon suivant */}
           <mesh position={[0, 1.1, e * (HL + 0.6)]} material={materials.darkCap}>
             <boxGeometry args={[2.4, 2.3, 0.1]} />
