@@ -1,7 +1,7 @@
 // Modules d'assise E235, fidèles au design réel : coussins gris matelassés,
 // traversin de dossier en moquette damier verte (rouge en zone prioritaire),
 // panneaux d'extrémité blancs laqués ajourés, porte-bagages, arceaux chromés
-// montant au plafond, radiateurs sous les assises.
+// montant au plafond.
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
@@ -206,7 +206,6 @@ export function Seats() {
         metalness: 0.1,
         side: THREE.DoubleSide,
       }),
-      heater: new THREE.MeshStandardMaterial({ color: '#585b60', roughness: 0.65, metalness: 0.35 }),
       badge: new THREE.MeshBasicMaterial({ map: badge, transparent: true, toneMapped: false }),
       freeSpaceSign: new THREE.MeshBasicMaterial({ map: makeFreeSpaceSignTexture(), toneMapped: false }),
     };
@@ -312,10 +311,6 @@ export function Seats() {
           const midZs = b.n === 7 ? [b.z0 + (len * 2) / 7, b.z0 + (len * 5) / 7] : [];
           return (
             <group key={`bench${s}-${bi}`}>
-              {/* Radiateur incliné sous l'assise */}
-              <mesh position={[s * (WALL_X - 0.42), 0.16, zc]} rotation={[0, 0, s * 0.35]} material={materials.heater}>
-                <boxGeometry args={[0.3, 0.16, len - 0.3]} />
-              </mesh>
               {/* Dossier : panneau garni de moquette damier, arêtes adoucies */}
               <mesh geometry={backGeos[bi]} position={[s * BACK_X, BACK_Y, zc]} material={checkerMat} />
               {/* Badges 優先席 sur le dossier des places prioritaires */}
