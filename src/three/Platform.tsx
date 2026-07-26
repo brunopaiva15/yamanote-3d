@@ -241,26 +241,26 @@ export function Platform() {
         <boxGeometry args={[0.08, 0.1, PLATFORM_LEN]} />
       </mesh>
 
-      {/* Panneaux JR suspendus (boîtier rétroéclairé + suspentes noires) */}
+      {/* Panneaux JR suspendus — en retrait sur le quai pour être lisibles depuis le wagon */}
       {[-9, 9].map((z) => (
-        <group key={`sign${z}`} position={[3.5, PLATFORM_TOP + 2.72, z]}>
-          {[-0.95, 0.95].map((dz) => (
+        <group key={`sign${z}`} position={[5.45, PLATFORM_TOP + 2.72, z]}>
+          {[-1.1, 1.1].map((dz) => (
             <mesh key={`hang${dz}`} position={[0.06, 0.52, dz]} material={materials.signFrame}>
               <boxGeometry args={[0.045, 0.75, 0.07]} />
             </mesh>
           ))}
           {/* Caisson noir derrière la face éclairée */}
           <mesh position={[0.055, 0, 0]} material={materials.signFrame}>
-            <boxGeometry args={[0.1, 0.9, 2.95]} />
+            <boxGeometry args={[0.1, 1.0, 3.35]} />
           </mesh>
           <mesh position={[-0.01, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={materials.sign}>
-            <planeGeometry args={[2.8, 0.84]} />
+            <planeGeometry args={[3.2, 0.96]} />
           </mesh>
         </group>
       ))}
 
-      {/* Tableau d'affichage suspendu, sous l'auvent, lisible depuis le wagon */}
-      <group position={[3.35, PLATFORM_TOP + 3.05, 0]}>
+      {/* Tableau d'affichage suspendu, même profondeur que les panneaux JR */}
+      <group position={[5.35, PLATFORM_TOP + 3.1, 0]}>
         <mesh position={[0.08, 0.15, 0]} material={materials.metal}>
           <boxGeometry args={[0.5, 0.06, 3.4]} />
         </mesh>
