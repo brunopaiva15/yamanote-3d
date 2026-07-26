@@ -21,9 +21,10 @@ import { JP_FONT, drawAdInto, rng } from '../textures/procedural';
 
 const YAMANOTE_GREEN = '#80c241';
 
-// Une seule voiture modélisée : le plan du quai et le bandeau suivent.
-const CAR_COUNT = 1;
-const PLAYER_CAR = 1;
+// Afficheur fidèle à la rame réelle (11 voitures) ; le voyageur est en 3ᵉ.
+// Seule la voiture 3 est modélisée en 3D.
+const CAR_COUNT = 11;
+const PLAYER_CAR = 3;
 
 // Grandes gares pour le « Bound for … & … ».
 const MAJOR_INDICES = [0, 4, 12, 16, 19, 24];
@@ -69,10 +70,10 @@ function fitText(g: CanvasRenderingContext2D, text: string, maxWidth: number, ba
 }
 
 // --- Écran gauche : publicités en boucle (jamais d'info voyageurs, comme
-// dans les vraies E235). Les seeds évitent celles des affiches et écrans
-// 窓上 (0-5 et 20-25) pour ne pas répéter les mêmes visuels dans le wagon.
-const AD_LOOP_FIRST_SEED = 40;
-const AD_LOOP_COUNT = 8;
+// dans les vraies E235). Seeds 300+ : hors nakazuri (0–N), 窓上 (100–111)
+// et affiches d'about (200–203), pour une rotation longue et distincte.
+const AD_LOOP_FIRST_SEED = 300;
+const AD_LOOP_COUNT = 120;
 
 function drawLeftAd(s: ReturnType<typeof makeScreen>, seed: number): void {
   const { g, w, h } = s;
@@ -620,15 +621,16 @@ function drawPlatformDiagram(s: ReturnType<typeof makeScreen>, index: number, cl
   }
   g.textAlign = 'left';
 
-  // Escaliers, ascenseur et sorties le long de la voiture unique : positions
-  // tirées du numéro de gare, stables pour une gare donnée.
-  const marks: { t: number; label: string }[] = [
-    { t: 0.2 + r() * 0.1, label: '階段' },
-    { t: 0.45 + r() * 0.1, label: 'エスカレーター' },
-    { t: 0.75 + r() * 0.1, label: 'エレベーター' },
+  // Escaliers, ascenseur et sorties, répartis d'une gare à l'autre : la
+  // disposition est tirée du numéro de gare, donc stable pour une gare donnée
+  // et différente de la suivante.
+  const marks: { car: number; label: string }[] = [
+    { car: 1 + Math.floor(r() * 3), label: '階段' },
+    { car: 4 + Math.floor(r() * 3), label: 'エスカレーター' },
+    { car: 8 + Math.floor(r() * 3), label: 'エレベーター' },
   ];
   for (const m of marks) {
-    const cx = x0 + m.t * (x1 - x0);
+    const cx = x0 + (m.car - 0.5) * carW;
     g.strokeStyle = '#5b6a76';
     g.lineWidth = 3;
     g.beginPath();

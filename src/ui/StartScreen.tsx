@@ -4,10 +4,10 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { startAudio, setVolume, setPlatformSide } from '../systems/audioEngine';
-import { initSpeech, say } from '../systems/speech';
-import { welcomeAnnouncement } from '../data/announcements';
+import { initSpeech } from '../systems/speech';
 import { seedPassengers } from '../systems/passengers';
 import { runtime, tokyoNow } from '../systems/runtime';
+import { randomizeEntry } from '../systems/stationCycle';
 
 export function StartScreen() {
   const start = useStore((s) => s.start);
@@ -16,7 +16,7 @@ export function StartScreen() {
   const board = async () => {
     setLoading(true);
     initSpeech();
-    // Horloge Tokyo avant le peuplement : la densité dépend de l'heure et du jour.
+    // Horloge Tokyo avant peuplement et tirage : densité selon heure/jour réels.
     const now = tokyoNow();
     runtime.clockMin = now.minutes;
     runtime.tokyoDate = {
@@ -25,18 +25,19 @@ export function StartScreen() {
       day: now.day,
       weekday: now.weekday,
     };
-    seedPassengers();
     try {
       await startAudio();
       setVolume(useStore.getState().volume);
-      // Le graphe naît après le premier setDoorSide du cycle : on cale les
-      // haut-parleurs du quai du bon côté dès le départ.
-      setPlatformSide(useStore.getState().doorSide);
     } catch {
       /* l'expérience reste jouable sans audio */
     }
+    // Point aléatoire sur la boucle (en route, freinage, à quai, départ…) :
+    // plus de message d'accueil fixe ni de départ systématique à l'arrêt.
+    randomizeEntry();
+    setPlatformSide(useStore.getState().doorSide);
+    // Densité PNJ après le tirage, pour le tronçon / la phase choisis.
+    seedPassengers();
     start();
-    window.setTimeout(() => say(welcomeAnnouncement()), 900);
   };
 
   return (

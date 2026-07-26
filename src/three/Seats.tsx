@@ -1,7 +1,7 @@
 // Modules d'assise E235, fidèles au design réel : coussins gris matelassés,
 // traversin de dossier en moquette damier verte (rouge en zone prioritaire),
 // panneaux d'extrémité blancs laqués ajourés, porte-bagages, arceaux chromés
-// montant au plafond, radiateurs sous les assises.
+// montant au plafond.
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
@@ -206,7 +206,6 @@ export function Seats() {
         metalness: 0.1,
         side: THREE.DoubleSide,
       }),
-      heater: new THREE.MeshStandardMaterial({ color: '#585b60', roughness: 0.65, metalness: 0.35 }),
       badge: new THREE.MeshBasicMaterial({ map: badge, transparent: true, toneMapped: false }),
       freeSpaceSign: new THREE.MeshBasicMaterial({ map: makeFreeSpaceSignTexture(), toneMapped: false }),
     };
@@ -308,26 +307,12 @@ export function Seats() {
           const zc = (b.z0 + b.z1) / 2;
           const checkerMat = checkerByN.get(`${b.priority}-${b.n}`) ?? materials.green;
           const stanchionMat = b.priority ? materials.yellowGrip : materials.chrome;
-          const seatDepth = 0.46;
-          const seatX = s * (WALL_X - 0.15 - seatDepth / 2);
           // Arceaux intermédiaires des banquettes de 7 (division 2-3-2).
           const midZs = b.n === 7 ? [b.z0 + (len * 2) / 7, b.z0 + (len * 5) / 7] : [];
           return (
             <group key={`bench${s}-${bi}`}>
-              {/* Coque blanche cantilever sous l'assise */}
-              <mesh position={[seatX, 0.3, zc]} material={materials.shell}>
-                <boxGeometry args={[seatDepth + 0.06, 0.07, len]} />
-              </mesh>
-              {/* Radiateur incliné sous l'assise */}
-              <mesh position={[s * (WALL_X - 0.42), 0.16, zc]} rotation={[0, 0, s * 0.35]} material={materials.heater}>
-                <boxGeometry args={[0.3, 0.16, len - 0.3]} />
-              </mesh>
               {/* Dossier : panneau garni de moquette damier, arêtes adoucies */}
               <mesh geometry={backGeos[bi]} position={[s * BACK_X, BACK_Y, zc]} material={checkerMat} />
-              {/* Coque blanche derrière le dossier */}
-              <mesh position={[s * (WALL_X - 0.05), 0.92, zc]} material={materials.shell}>
-                <boxGeometry args={[0.05, 0.95, len]} />
-              </mesh>
               {/* Badges 優先席 sur le dossier des places prioritaires */}
               {b.priority &&
                 Array.from({ length: b.n }, (_, k) => {

@@ -16,6 +16,7 @@ import { useStore, type Phase } from '../store';
 import { advanceClock, runtime } from './runtime';
 import {
   randomizeDoorTimings,
+  seedDoorMotion,
   setPsdDoors,
   setTrainDoors,
   stationTimings,
@@ -27,6 +28,14 @@ import { exchangePassengers } from './passengers';
 
 const fired = new Set<string>();
 let lastJointDistance = 0;
+
+const ACCEL_RATE = 1.15; // m/s² — doit rester aligné avec updateCycle
+const PHASE_ORDER = [
+  { phase: 'cruise' as const, dur: () => CONFIG.cruiseTime },
+  { phase: 'brake' as const, dur: () => CONFIG.brakeTime },
+  { phase: 'dwell' as const, dur: () => CONFIG.dwellTime },
+  { phase: 'depart' as const, dur: () => CONFIG.departTime },
+];
 
 function once(key: string, condition: boolean, fn: () => void): void {
   if (condition && !fired.has(key)) {
@@ -41,6 +50,127 @@ function enterPhase(phase: Phase): void {
   fired.clear();
 }
 
+function brakeRate(): number {
+  return (V_MAX / CONFIG.brakeTime) * 1.18;
+}
+
+// Vitesse cohérente avec le profil accélération / freinage du cycle.
+function speedFor(phase: Phase, t: number): number {
+  if (phase === 'dwell') return 0;
+  if (phase === 'brake') return Math.max(0, V_MAX - brakeRate() * t);
+  if (phase === 'depart') return Math.min(V_MAX, ACCEL_RATE * t);
+  // Cruise : on arrive déjà lancé après la phase depart.
+  const afterDepart = Math.min(V_MAX, ACCEL_RATE * CONFIG.departTime);
+  return Math.min(V_MAX, afterDepart + ACCEL_RATE * t);
+}
+
+function seedDoorsForDwell(t: number): void {
+  randomizeDoorTimings();
+  const openAt = 0.4;
+  const closeAt = CONFIG.dwellTime - 1.8;
+  const psdOpenAt = openAt + stationTimings.psdOpenDelay;
+  const psdCloseAt = closeAt + stationTimings.psdCloseDelay;
+
+  let trainTarget: 0 | 1 = 0;
+  let trainT = 999;
+  let psdTarget: 0 | 1 = 0;
+  let psdT = 999;
+
+  if (t > openAt && t < closeAt) {
+    trainTarget = 1;
+    trainT = t - openAt;
+  } else if (t >= closeAt) {
+    trainTarget = 0;
+    trainT = t - closeAt;
+  }
+
+  if (t > psdOpenAt && t < psdCloseAt) {
+    psdTarget = 1;
+    psdT = t - psdOpenAt;
+  } else if (t >= psdCloseAt) {
+    psdTarget = 0;
+    psdT = t - psdCloseAt;
+  }
+
+  seedDoorMotion(trainTarget, trainT, psdTarget, psdT);
+}
+
+// Marque comme déjà joués les événements dont l'instant est passé, pour ne
+// pas les redéclencher la première frame après un spawn au milieu d'une phase.
+function seedFired(phase: Phase, t: number): void {
+  fired.clear();
+  if (phase === 'cruise') {
+    fired.add('doorside');
+    if (t > 0.6) fired.add('announce-dir');
+    if (t > 1.2) fired.add('announce-next');
+    if (t > 16) fired.add('general');
+  } else if (phase === 'brake') {
+    fired.add('door-timings');
+    fired.add('jingle');
+    if (t > 0.8) fired.add('announce-soon');
+  } else if (phase === 'dwell') {
+    if (t > 0.4) fired.add('doors-open');
+    if (t > 0.4 + stationTimings.psdOpenDelay) fired.add('psd-open');
+    if (t > 1.6) fired.add('exchange');
+    if (t >= CONFIG.dwellTime - 13) fired.add('melody');
+    if (t >= CONFIG.dwellTime - 3.5) fired.add('announce-close');
+    if (t >= CONFIG.dwellTime - 1.8) fired.add('doors-close');
+    if (t >= CONFIG.dwellTime - 1.8 + stationTimings.psdCloseDelay) fired.add('psd-close');
+  } else if (phase === 'depart') {
+    fired.add('advance');
+  }
+}
+
+// Point d'entrée aléatoire sur la boucle : phase, progression, vitesse, portes.
+// À appeler avant start(), une fois l'audio initialisé.
+export function randomizeEntry(): void {
+  const total = PHASE_ORDER.reduce((sum, p) => sum + p.dur(), 0);
+  let r = Math.random() * total;
+  let phase: Phase = 'cruise';
+  let dur: number = CONFIG.cruiseTime;
+  for (const p of PHASE_ORDER) {
+    const d = p.dur();
+    if (r < d) {
+      phase = p.phase;
+      dur = d;
+      break;
+    }
+    r -= d;
+  }
+
+  // Évite de spawner pile à la bascule de phase.
+  const phaseT = Math.random() * Math.max(0.05, dur - 0.2);
+  const station = Math.floor(Math.random() * 30);
+  // En depart, l'index a déjà avancé vers la gare suivante.
+  const index = phase === 'depart' ? (station + 1) % 30 : station;
+  const doorStation = phase === 'depart' ? station : index;
+  const doorSide = DOOR_SIDE[doorStation];
+  const speed = speedFor(phase, phaseT);
+
+  const store = useStore.getState();
+  store.setPhase(phase);
+  store.setIndex(index);
+  store.setDoorSide(doorSide);
+  audio.setPlatformSide(doorSide);
+
+  runtime.phaseT = phaseT;
+  runtime.speed = speed;
+  runtime.accel = 0;
+  runtime.distance = Math.random() * 8000;
+  runtime.swayTime = Math.random() * 40;
+  runtime.sway = 0;
+  lastJointDistance = runtime.distance;
+
+  if (phase === 'brake') randomizeDoorTimings();
+  if (phase === 'dwell') seedDoorsForDwell(phaseT);
+  else seedDoorMotion(0, 999, 0, 999);
+
+  const s01 = speed / V_MAX;
+  runtime.platformFade = phase !== 'cruise' && s01 < 0.3 ? 1 : 0;
+
+  seedFired(phase, phaseT);
+}
+
 
 export function updateCycle(dt: number): void {
   const s = useStore.getState();
@@ -51,11 +181,9 @@ export function updateCycle(dt: number): void {
 
   // --- Physique du train : approche douce de la vitesse cible ---
   const target = s.phase === 'cruise' || s.phase === 'depart' ? V_MAX : 0;
-  const accelRate = 1.15; // m/s²
-  const brakeRate = (V_MAX / CONFIG.brakeTime) * 1.18;
   const before = runtime.speed;
-  if (runtime.speed < target) runtime.speed = Math.min(target, runtime.speed + accelRate * dt);
-  else if (runtime.speed > target) runtime.speed = Math.max(target, runtime.speed - brakeRate * dt);
+  if (runtime.speed < target) runtime.speed = Math.min(target, runtime.speed + ACCEL_RATE * dt);
+  else if (runtime.speed > target) runtime.speed = Math.max(target, runtime.speed - brakeRate() * dt);
   runtime.accel = (runtime.speed - before) / dt;
   runtime.distance += runtime.speed * dt;
 
