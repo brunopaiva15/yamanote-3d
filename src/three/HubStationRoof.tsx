@@ -1,9 +1,8 @@
 // Grandes toitures des hubs (Tokyo, Ueno, Ikebukuro, Shinjuku, Shibuya,
 // Shinagawa + verrière blanche de Takanawa Gateway) : la structure avale
 // progressivement le ciel pendant TOUT le freinage puis se dissipe au départ.
-// Piloté par la progression p de segEnv — runtime.platformFade ne monte que
-// sur les ~4 dernières secondes, trop tard pour cet effet. Statique + fondu
-// d'opacité, comme le quai. Écrit segEnv.roofShade, consommé par Scene pour
+// Piloté par la progression p de segEnv, en amont du coulissement spatial du
+// quai (platformPresence). Écrit segEnv.roofShade, consommé par Scene pour
 // l'assombrissement global.
 
 import { useMemo } from 'react';

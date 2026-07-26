@@ -25,6 +25,8 @@ import {
 import * as audio from './audioEngine';
 import { say } from './speech';
 import { exchangePassengers } from './passengers';
+import { seedPlatformPresence } from './platformPresence';
+import { clearPlatformCrowd, seedPlatformCrowd } from './platformCrowd';
 
 const fired = new Set<string>();
 let lastJointDistance = 0;
@@ -101,12 +103,14 @@ function seedFired(phase: Phase, t: number): void {
   fired.clear();
   if (phase === 'cruise') {
     fired.add('doorside');
+    fired.add('crowd-clear');
     if (t > 0.6) fired.add('announce-dir');
     if (t > 1.2) fired.add('announce-next');
     if (t > 16) fired.add('general');
   } else if (phase === 'brake') {
     fired.add('door-timings');
     fired.add('jingle');
+    fired.add('crowd-seed');
     if (t > 0.8) fired.add('announce-soon');
   } else if (phase === 'dwell') {
     if (t > 0.4) fired.add('doors-open');
@@ -165,8 +169,10 @@ export function randomizeEntry(): void {
   if (phase === 'dwell') seedDoorsForDwell(phaseT);
   else seedDoorMotion(0, 999, 0, 999);
 
-  const s01 = speed / V_MAX;
-  runtime.platformFade = phase !== 'cruise' && s01 < 0.3 ? 1 : 0;
+  seedPlatformPresence(phase, phaseT);
+  if (phase === 'brake' || phase === 'dwell') seedPlatformCrowd(index);
+  else if (phase === 'depart') seedPlatformCrowd(doorStation);
+  else clearPlatformCrowd();
 
   seedFired(phase, phaseT);
 }
@@ -202,11 +208,9 @@ export function updateCycle(dt: number): void {
     audio.railClack(s01);
   }
 
-  // --- Fondu du quai : visible à basse vitesse hors croisière ---
-  const platformTarget = s.phase !== 'cruise' && s01 < 0.3 ? 1 : 0;
-  runtime.platformFade += (platformTarget - runtime.platformFade) * Math.min(1, dt * 1.6);
-
   // --- Phases ---
+  // (La présence spatiale du quai est pilotée après updateSegmentEnv, dans
+  // Engine — plus de fondu d'opacité à basse vitesse.)
   const t = runtime.phaseT;
   switch (s.phase) {
     case 'cruise': {
@@ -215,6 +219,7 @@ export function updateCycle(dt: number): void {
         // Les haut-parleurs du quai passent du côté qui s'ouvrira.
         audio.setPlatformSide(DOOR_SIDE[s.index]);
       });
+      once('crowd-clear', true, () => clearPlatformCrowd());
       // Annonce du sens de la boucle, juste après le départ des grandes gares.
       once('announce-dir', t > 0.6 && isMajorHub((s.index - 1 + 30) % 30), () =>
         say(directionAnnouncement(s.index)),
@@ -229,6 +234,9 @@ export function updateCycle(dt: number): void {
       // Nouveau tirage des retards de portes pour cette gare.
       once('door-timings', true, () => randomizeDoorTimings());
       once('jingle', true, () => audio.arrivalJingle());
+      // Foule déjà en place dès le début du freinage : on la voit arriver
+      // avec le quai, opaque, le long des vitres.
+      once('crowd-seed', true, () => seedPlatformCrowd(s.index));
       once('announce-soon', t > 0.8, () => say(approachAnnouncement(s.index)));
       if (t >= CONFIG.brakeTime) {
         runtime.speed = 0;

@@ -1853,6 +1853,43 @@ export function makePlaidTexture(base: string, accent: string): THREE.CanvasText
   return t;
 }
 
+// --- Sol de quai : béton clair, joints, usure de passage ---
+export function makePlatformFloorTexture(): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(512, 512);
+  const r = rng(901);
+  g.fillStyle = '#a8a9a4';
+  g.fillRect(0, 0, 512, 512);
+  // Dalles.
+  g.strokeStyle = 'rgba(120,122,118,0.55)';
+  g.lineWidth = 2;
+  for (let y = 0; y <= 512; y += 64) {
+    g.beginPath();
+    g.moveTo(0, y);
+    g.lineTo(512, y);
+    g.stroke();
+  }
+  for (let x = 0; x <= 512; x += 64) {
+    g.beginPath();
+    g.moveTo(x, 0);
+    g.lineTo(x, 512);
+    g.stroke();
+  }
+  for (let i = 0; i < 4200; i++) {
+    const shade = 140 + Math.floor(r() * 50);
+    g.fillStyle = `rgba(${shade},${shade - 2},${shade - 6},${0.12 + r() * 0.28})`;
+    g.fillRect(r() * 512, r() * 512, 1 + r() * 2.2, 1 + r() * 2.2);
+  }
+  // Bande de passage plus claire près du bord (haut de la texture).
+  const wear = g.createLinearGradient(0, 0, 0, 180);
+  wear.addColorStop(0, 'rgba(190,192,186,0.35)');
+  wear.addColorStop(1, 'rgba(190,192,186,0)');
+  g.fillStyle = wear;
+  g.fillRect(0, 0, 512, 180);
+  const t = toTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
 // --- Panneau de nom de station (style JR) ---
 export function makeStationSign(): { canvas: HTMLCanvasElement; texture: THREE.CanvasTexture; redraw: (index: number) => void } {
   const { c, g } = makeCanvas(1024, 320);
@@ -1894,6 +1931,45 @@ export function makeStationSign(): { canvas: HTMLCanvasElement; texture: THREE.C
     g.font = `28px ${JP_FONT}`;
     g.fillText(`${prev.romaji}   |   ${next.romaji}`, 512, 258);
     g.textAlign = 'left';
+    texture.needsUpdate = true;
+  };
+  return { canvas: c, texture, redraw };
+}
+
+// --- Tableau d'affichage suspendu (ホームの電光掲示板) ---
+export function makePlatformBoard(): { canvas: HTMLCanvasElement; texture: THREE.CanvasTexture; redraw: (index: number) => void } {
+  const { c, g } = makeCanvas(1024, 256);
+  const texture = toTexture(c);
+  const redraw = (index: number) => {
+    const st = STATIONS[index];
+    const next = STATIONS[(index + 1) % 30];
+    g.fillStyle = '#0c1016';
+    g.fillRect(0, 0, 1024, 256);
+    g.fillStyle = '#80c241';
+    g.fillRect(0, 0, 1024, 8);
+    g.fillRect(0, 248, 1024, 8);
+    g.fillStyle = '#d8ffe0';
+    g.font = `bold 52px ${JP_FONT}`;
+    g.textAlign = 'left';
+    g.fillText('山手線', 36, 72);
+    g.font = `36px ${JP_FONT}`;
+    g.fillStyle = '#9aa3b0';
+    g.fillText('Yamanote Line', 36, 118);
+    g.fillStyle = '#80c241';
+    g.fillRect(36, 148, 14, 56);
+    g.fillStyle = '#f2f6fa';
+    g.font = `bold 44px ${JP_FONT}`;
+    g.fillText(`${st.kanji}  →  ${next.kanji}`, 64, 190);
+    g.font = `28px ${JP_FONT}`;
+    g.fillStyle = '#7f8794';
+    g.fillText(`${st.romaji}  →  ${next.romaji}`, 64, 228);
+    g.fillStyle = '#ffd66a';
+    g.font = `bold 40px ${JP_FONT}`;
+    g.textAlign = 'right';
+    g.fillText('まもなく発車', 988, 88);
+    g.font = `30px ${JP_FONT}`;
+    g.fillStyle = '#c8cdd6';
+    g.fillText('Departing soon', 988, 132);
     texture.needsUpdate = true;
   };
   return { canvas: c, texture, redraw };
