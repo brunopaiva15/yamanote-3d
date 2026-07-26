@@ -11,7 +11,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { CONFIG } from '../data/config';
+import { CONFIG, carOffsetZ } from '../data/config';
 import { STATIONS, TRANSFERS } from '../data/stations';
 import { useStore, type Phase } from '../store';
 import { runtime } from '../systems/runtime';
@@ -19,9 +19,9 @@ import { JP_FONT, drawAdInto, rng } from '../textures/procedural';
 
 const YAMANOTE_GREEN = '#80c241';
 
-// Rame de onze voitures ; le voyageur est dans la 3e, comme l'annonce le bandeau.
-const CAR_COUNT = 11;
-const PLAYER_CAR = 3;
+// Rame E235 : nombre de voitures et voiture du voyageur (config centrale).
+const CAR_COUNT = CONFIG.carCount;
+const PLAYER_CAR = CONFIG.playerCar;
 
 // Grandes gares pour le « Bound for … & … ».
 const MAJOR_INDICES = [0, 4, 12, 16, 19, 24];
@@ -949,7 +949,7 @@ function drawTrafficInfo(
   }
 }
 
-export function Screens() {
+export function Screens({ carCount = CONFIG.carCount }: { carCount?: number }) {
   const left = useMemo(() => makeScreen(512, 288), []);
   // DEUX canevas pour l'écran de droite : à l'approche, chaque paroi indique
   // si les portes qui s'ouvrent sont de SON côté. C'est la seule vue qui
@@ -1078,36 +1078,45 @@ export function Screens() {
   );
 
   const sides: (1 | -1)[] = [1, -1];
+  // Même contenu LCD dans chaque voiture (textures partagées).
+  const cars = useMemo(
+    () => Array.from({ length: carCount }, (_, i) => i + 1),
+    [carCount],
+  );
 
   return (
     <group>
-      {sides.map((s) =>
-        CONFIG.doorCenters.map((z) => (
-          <group
-            key={`scr${s}-${z}`}
-            position={[s * (CONFIG.carHalfWidth - 0.05), 2.11, z]}
-            rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
-          >
-            {/* Grand panneau blanc de propreté au-dessus de la porte : sur la
-                rame les dalles ne sont pas posées sur la paroi, elles y sont
-                ENCASTRÉES, avec de la réserve blanche tout autour. */}
-            <mesh position={[0, 0, -0.035]} material={surroundMat}>
-              <boxGeometry args={[1.36, 0.5, 0.07]} />
-            </mesh>
-            {/* Deux dalles en retrait dans le panneau, chacune dans sa feuillure */}
-            {([-1, 1] as const).map((k) => (
-              <group key={`half${k}`} position={[k * 0.335, 0, 0]}>
-                <mesh position={[0, 0, -0.012]} material={frameMat}>
-                  <boxGeometry args={[0.62, 0.34, 0.03]} />
+      {cars.map((car) => (
+        <group key={`carScr${car}`} position={[0, 0, carOffsetZ(car)]}>
+          {sides.map((s) =>
+            CONFIG.doorCenters.map((z) => (
+              <group
+                key={`scr${s}-${z}`}
+                position={[s * (CONFIG.carHalfWidth - 0.05), 2.11, z]}
+                rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
+              >
+                {/* Grand panneau blanc de propreté au-dessus de la porte : sur la
+                    rame les dalles ne sont pas posées sur la paroi, elles y sont
+                    ENCASTRÉES, avec de la réserve blanche tout autour. */}
+                <mesh position={[0, 0, -0.035]} material={surroundMat}>
+                  <boxGeometry args={[1.36, 0.5, 0.07]} />
                 </mesh>
-                <mesh position={[0, 0, 0.004]} material={k === -1 ? leftMat : s === 1 ? rightMatA : rightMatB}>
-                  <planeGeometry args={[0.58, 0.3]} />
-                </mesh>
+                {/* Deux dalles en retrait dans le panneau, chacune dans sa feuillure */}
+                {([-1, 1] as const).map((k) => (
+                  <group key={`half${k}`} position={[k * 0.335, 0, 0]}>
+                    <mesh position={[0, 0, -0.012]} material={frameMat}>
+                      <boxGeometry args={[0.62, 0.34, 0.03]} />
+                    </mesh>
+                    <mesh position={[0, 0, 0.004]} material={k === -1 ? leftMat : s === 1 ? rightMatA : rightMatB}>
+                      <planeGeometry args={[0.58, 0.3]} />
+                    </mesh>
+                  </group>
+                ))}
               </group>
-            ))}
-          </group>
-        )),
-      )}
+            )),
+          )}
+        </group>
+      ))}
     </group>
   );
 }

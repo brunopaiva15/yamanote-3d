@@ -27,44 +27,61 @@ const NK_TOP = 2.25; // le haut de l'affiche affleure le caisson de plafond
 const NK_PITCH = 1.05; // pas de la rangée : un ruban ajouré, comme sur la rame
 const NK_RAIL_Y = 2.26;
 
-export function Ads() {
+// Matériaux partagés par les 11 voitures : une seule série de CanvasTexture.
+let sharedMats: {
+  nakazuriMats: THREE.MeshStandardMaterial[];
+  screenMats: THREE.MeshBasicMaterial[];
+  housingMat: THREE.MeshStandardMaterial;
+  bezelMat: THREE.MeshStandardMaterial;
+  clipMat: THREE.MeshStandardMaterial;
+  railMat: THREE.MeshStandardMaterial;
+} | null = null;
+
+function getAdMaterials() {
+  if (sharedMats) return sharedMats;
+  const nakazuriMats = Array.from(
+    { length: 8 },
+    (_, i) =>
+      new THREE.MeshStandardMaterial({
+        map: makeNakazuriTexture(i),
+        roughness: 0.72,
+        metalness: 0,
+      }),
+  );
+  const screenMats: THREE.MeshBasicMaterial[] = [];
+  for (let i = 0; i < 6; i++) {
+    screenMats.push(new THREE.MeshBasicMaterial({ map: makeAdTexture(20 + i, false), toneMapped: false }));
+  }
+  sharedMats = {
+    nakazuriMats,
+    screenMats,
+    housingMat: new THREE.MeshStandardMaterial({ color: '#e9e7e1', roughness: 0.6, metalness: 0.02 }),
+    bezelMat: new THREE.MeshStandardMaterial({ color: '#1c1e22', roughness: 0.55 }),
+    clipMat: new THREE.MeshStandardMaterial({ color: '#b9bec3', roughness: 0.42, metalness: 0.7 }),
+    railMat: new THREE.MeshStandardMaterial({ color: '#aeb3b8', roughness: 0.36, metalness: 0.8 }),
+  };
+  return sharedMats;
+}
+
+export function Ads({ carNumber = CONFIG.playerCar }: { carNumber?: number }) {
   // Un pivot par affiche, à son point d'accroche : chaque nakazuri se balance
   // sur ses pinces, sans translation parasite.
   const pivots = useRef<(THREE.Group | null)[]>([]);
-
-  const { nakazuriMats, screenMats, housingMat, bezelMat, clipMat, railMat } = useMemo(() => {
-    // Huit visuels distincts : de quoi parcourir le wagon sans retomber deux
-    // fois de suite sur la même image.
-    const nakazuriMats = Array.from(
-      { length: 8 },
-      (_, i) =>
-        new THREE.MeshStandardMaterial({
-          map: makeNakazuriTexture(i),
-          roughness: 0.72,
-          metalness: 0,
-        }),
-    );
-    const screenMats: THREE.MeshBasicMaterial[] = [];
-    for (let i = 0; i < 6; i++) {
-      screenMats.push(new THREE.MeshBasicMaterial({ map: makeAdTexture(20 + i, false), toneMapped: false }));
-    }
-    const housingMat = new THREE.MeshStandardMaterial({ color: '#e9e7e1', roughness: 0.6, metalness: 0.02 });
-    const bezelMat = new THREE.MeshStandardMaterial({ color: '#1c1e22', roughness: 0.55 });
-    const clipMat = new THREE.MeshStandardMaterial({ color: '#b9bec3', roughness: 0.42, metalness: 0.7 });
-    const railMat = new THREE.MeshStandardMaterial({ color: '#aeb3b8', roughness: 0.36, metalness: 0.8 });
-    return { nakazuriMats, screenMats, housingMat, bezelMat, clipMat, railMat };
-  }, []);
+  const mats = useMemo(() => getAdMaterials(), []);
+  const { nakazuriMats, screenMats, housingMat, bezelMat, clipMat, railMat } = mats;
 
   // Rangée continue le long de l'axe, sans déborder sur les travées d'about.
+  // Décalage par voiture pour ne pas aligner les mêmes visuels d'un bout à l'autre.
   const nakazuri = useMemo(() => {
     const out: { z: number; front: number; back: number }[] = [];
     const span = HL - 1.1;
+    const shift = (carNumber - 1) * 3;
     for (let z = -span; z <= span + 0.001; z += NK_PITCH) {
       const i = out.length;
-      out.push({ z, front: i % 8, back: (i + 5) % 8 });
+      out.push({ z, front: (i + shift) % 8, back: (i + shift + 5) % 8 });
     }
     return out;
-  }, []);
+  }, [carNumber]);
 
   useFrame(() => {
     for (let i = 0; i < pivots.current.length; i++) {
@@ -73,8 +90,9 @@ export function Ads() {
       // Deux balancements distincts : le roulis du train fait pencher l'affiche
       // dans son plan, l'accélération la pousse d'avant en arrière.
       const speedFactor = Math.min(1, runtime.speed / 3);
-      p.rotation.z = runtime.sway * 0.055 + Math.sin(runtime.swayTime * 1.6 + i * 0.9) * 0.012 * speedFactor;
-      p.rotation.x = -runtime.accel * 0.05 + Math.sin(runtime.swayTime * 1.15 + i * 1.7) * 0.02 * speedFactor;
+      const phase = i + carNumber * 2.3;
+      p.rotation.z = runtime.sway * 0.055 + Math.sin(runtime.swayTime * 1.6 + phase * 0.9) * 0.012 * speedFactor;
+      p.rotation.x = -runtime.accel * 0.05 + Math.sin(runtime.swayTime * 1.15 + phase * 1.7) * 0.02 * speedFactor;
     }
   });
 
@@ -128,7 +146,10 @@ export function Ads() {
                 <mesh position={[0, 0, 0.027]} material={bezelMat}>
                   <planeGeometry args={[0.9, 0.28]} />
                 </mesh>
-                <mesh position={[0, 0, 0.03]} material={screenMats[(i * 2 + k + (s === 1 ? 0 : 3)) % screenMats.length]}>
+                <mesh
+                  position={[0, 0, 0.03]}
+                  material={screenMats[(i * 2 + k + (s === 1 ? 0 : 3) + carNumber) % screenMats.length]}
+                >
                   <planeGeometry args={[0.84, 0.24]} />
                 </mesh>
               </group>

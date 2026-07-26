@@ -4,7 +4,7 @@
 // somnolence, éternuements, discussions à deux, décisions assis / debout.
 
 import * as THREE from 'three';
-import { CONFIG } from '../data/config';
+import { CONFIG, carNumbers, carOffsetZ } from '../data/config';
 import { runtime } from './runtime';
 import { makeAppearance, type Appearance } from './appearance';
 import {
@@ -51,7 +51,12 @@ export interface Pax {
   pockets: boolean; // mains dans les poches (trait stable, pantalon uniquement)
 }
 
-export const POOL_SIZE = 18;
+// Densité calée sur une rame réelle un peu chargée : ~6 assis + 2 debout
+// par voiture, plus une réserve pour les échanges à quai.
+const SEATED_PER_CAR = 6;
+const STANDING_PER_CAR = 2;
+const EXCHANGE_RESERVE = 22;
+export const POOL_SIZE = CONFIG.carCount * (SEATED_PER_CAR + STANDING_PER_CAR) + EXCHANGE_RESERVE;
 export const paxList: Pax[] = [];
 
 // Le bas de l'anneau des tsurikawa est à ~1,71 m (poignées remontées pour le
@@ -101,30 +106,23 @@ export function initPassengers(): void {
   for (let i = 0; i < POOL_SIZE; i++) paxList.push(makePax(i));
 }
 
-// Peuplement initial : environ 9 assis + 4 debout, reste en réserve.
+// Peuplement initial : réparti dans les 11 voitures, reste en réserve.
 export function seedPassengers(): void {
   initPassengers();
-  let seatedCount = 0;
-  let standingCount = 0;
-  for (const p of paxList) {
-    if (seatedCount < 9) {
-      const slot = findFreeSeat();
-      if (slot >= 0) {
-        sitPax(p, slot);
-        seatedCount++;
-        continue;
-      }
+  let next = 0;
+  for (const car of carNumbers()) {
+    for (let i = 0; i < SEATED_PER_CAR && next < paxList.length; i++) {
+      const slot = findFreeSeat(Math.random, car);
+      if (slot < 0) break;
+      sitPax(paxList[next++], slot);
     }
-    if (standingCount < 4) {
-      const slot = findFreeStand();
-      if (slot >= 0) {
-        standPax(p, slot);
-        standingCount++;
-        continue;
-      }
+    for (let i = 0; i < STANDING_PER_CAR && next < paxList.length; i++) {
+      const slot = findFreeStand(Math.random, car);
+      if (slot < 0) break;
+      standPax(paxList[next++], slot);
     }
-    p.state = 'hidden';
   }
+  for (; next < paxList.length; next++) paxList[next].state = 'hidden';
 }
 
 function sitPax(p: Pax, slot: number): void {
@@ -182,14 +180,15 @@ function startWalk(p: Pax, dest: THREE.Vector3, afterWalk: 'seated' | 'standing'
   p.wpi = 0;
 }
 
-// Échange à quai : quelques descentes, quelques montées, côté doorSide.
+// Échange à quai : descentes et montées réparties sur toute la rame.
 export function exchangePassengers(side: 1 | -1): void {
   const inside = paxList.filter((p) => p.state === 'seated' || p.state === 'standing');
   const hidden = paxList.filter((p) => p.state === 'hidden');
-  const nOut = Math.min(inside.length, 1 + Math.floor(Math.random() * 3));
-  const nIn = Math.min(hidden.length, 1 + Math.floor(Math.random() * 3));
+  // ~1 personne par voiture en moyenne, avec un peu de variance.
+  const nOut = Math.min(inside.length, CONFIG.carCount + Math.floor(Math.random() * CONFIG.carCount));
+  const nIn = Math.min(hidden.length, CONFIG.carCount + Math.floor(Math.random() * CONFIG.carCount));
 
-  // Descentes.
+  // Descentes (par la porte la plus proche de leur voiture).
   const shuffledIn = [...inside].sort(() => Math.random() - 0.5);
   for (let i = 0; i < nOut; i++) {
     const p = shuffledIn[i];
@@ -208,13 +207,15 @@ export function exchangePassengers(side: 1 | -1): void {
     p.wpi = 0;
   }
 
-  // Montées : certains préfèrent rester debout même s'il reste des places.
+  // Montées : porte tirée au hasard sur n'importe quelle voiture.
   const shuffledOut = [...hidden].sort(() => Math.random() - 0.5);
   for (let i = 0; i < nIn; i++) {
     const p = shuffledOut[i];
-    const doorZ = CONFIG.doorCenters[Math.floor(Math.random() * CONFIG.doorCenters.length)];
+    const car = 1 + Math.floor(Math.random() * CONFIG.carCount);
+    const doorZ =
+      carOffsetZ(car) + CONFIG.doorCenters[Math.floor(Math.random() * CONFIG.doorCenters.length)];
     const preferStand = Math.random() < 0.3;
-    const seat = preferStand ? -1 : findFreeSeat();
+    const seat = preferStand ? -1 : findFreeSeat(Math.random, car);
     let dest: THREE.Vector3;
     if (seat >= 0) {
       p.seatSlot = seat;
@@ -223,7 +224,7 @@ export function exchangePassengers(side: 1 | -1): void {
       const s = SEAT_SLOTS[seat];
       dest = new THREE.Vector3(s.x, 0, s.z);
     } else {
-      const stand = findFreeStand();
+      const stand = findFreeStand(Math.random, car);
       if (stand < 0) continue;
       p.standSlot = stand;
       standOccupant[stand] = p.id;
@@ -233,7 +234,7 @@ export function exchangePassengers(side: 1 | -1): void {
     }
     p.state = 'boarding';
     p.action = 'none';
-    p.pos.set(side * (3.0 + i * 0.5), 0, doorZ + (Math.random() - 0.5) * 0.8);
+    p.pos.set(side * (3.0 + (i % 4) * 0.5), 0, doorZ + (Math.random() - 0.5) * 0.8);
     p.waypoints = [
       new THREE.Vector3(side * 0.95, 0, doorZ),
       new THREE.Vector3(Math.sign(dest.x) * 0.3 || 0.3, 0, dest.z),
