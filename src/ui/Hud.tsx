@@ -1,10 +1,12 @@
-// HUD sobre en français : horloge, prochaine station, phase, réglages son,
-// s'asseoir, plein écran. Réticule central discret.
+// HUD sobre en français : horloge, prochaine station, phase, remplissage,
+// réglages son, s'asseoir, plein écran. Réticule central discret.
 
 import { useEffect, useState } from 'react';
 import { useStore, type Phase } from '../store';
 import { STATIONS } from '../data/stations';
+import { BAND_COLOR } from '../data/occupancy';
 import { runtime } from '../systems/runtime';
+import { currentSegmentOccupancy } from '../systems/occupancy';
 import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
 import { cancelSpeech } from '../systems/speech';
 import { input } from '../systems/input';
@@ -30,6 +32,22 @@ function useClock(): string {
   return clock;
 }
 
+function useOccupancy(): { percent: number; label: string; color: string } {
+  const [occ, setOcc] = useState({ percent: 0, label: '', color: BAND_COLOR.moderate });
+  const index = useStore((s) => s.index);
+  const phase = useStore((s) => s.phase);
+  useEffect(() => {
+    const tick = () => {
+      const e = currentSegmentOccupancy();
+      setOcc({ percent: e.percent, label: e.label, color: BAND_COLOR[e.band] });
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [index, phase]);
+  return occ;
+}
+
 export function Hud() {
   const started = useStore((s) => s.started);
   const index = useStore((s) => s.index);
@@ -40,6 +58,7 @@ export function Hud() {
   const toggleMute = useStore((s) => s.toggleMute);
   const setVolume = useStore((s) => s.setVolume);
   const clock = useClock();
+  const occupancy = useOccupancy();
 
   // Répercuter le mute et le volume sur l'audio et la voix.
   useEffect(() => {
@@ -64,6 +83,14 @@ export function Hud() {
           <span className="hud-station-name">
             <span className="hud-jy">{st.jy}</span> {st.romaji} <span className="hud-kanji">{st.kanji}</span>
           </span>
+        </div>
+        <div
+          className="hud-occupancy"
+          style={{ borderColor: occupancy.color, color: occupancy.color }}
+          title="Estimation calibrée (±8–12 pts un jour normal)"
+        >
+          <span className="hud-occupancy-pct">~{occupancy.percent}&nbsp;%</span>
+          <span className="hud-occupancy-label">{occupancy.label}</span>
         </div>
         <div className={`hud-phase hud-phase-${phase}`}>{PHASE_LABEL[phase]}</div>
       </div>

@@ -6,6 +6,7 @@ import { useStore } from '../store';
 import { startAudio, setVolume, setPlatformSide } from '../systems/audioEngine';
 import { initSpeech } from '../systems/speech';
 import { seedPassengers } from '../systems/passengers';
+import { runtime, tokyoNow } from '../systems/runtime';
 import { randomizeEntry } from '../systems/stationCycle';
 
 export function StartScreen() {
@@ -15,7 +16,15 @@ export function StartScreen() {
   const board = async () => {
     setLoading(true);
     initSpeech();
-    seedPassengers();
+    // Horloge Tokyo avant peuplement et tirage : densité selon heure/jour réels.
+    const now = tokyoNow();
+    runtime.clockMin = now.minutes;
+    runtime.tokyoDate = {
+      year: now.year,
+      month: now.month,
+      day: now.day,
+      weekday: now.weekday,
+    };
     try {
       await startAudio();
       setVolume(useStore.getState().volume);
@@ -26,6 +35,8 @@ export function StartScreen() {
     // plus de message d'accueil fixe ni de départ systématique à l'arrêt.
     randomizeEntry();
     setPlatformSide(useStore.getState().doorSide);
+    // Densité PNJ après le tirage, pour le tronçon / la phase choisis.
+    seedPassengers();
     start();
   };
 

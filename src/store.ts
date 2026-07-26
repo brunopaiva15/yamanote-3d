@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import { CONFIG } from './data/config';
 import { DOOR_SIDE } from './data/stations';
-import { runtime, tokyoMinutesNow } from './systems/runtime';
+import { runtime, tokyoNow } from './systems/runtime';
 
 export type Phase = 'cruise' | 'brake' | 'dwell' | 'depart';
 
@@ -41,8 +41,15 @@ export const useStore = create<AppState>((set) => ({
   touch: false,
 
   start: () => {
-    // L'horloge du monde se cale sur l'heure réelle de Tokyo.
-    runtime.clockMin = tokyoMinutesNow();
+    // Horloge + date civile figées sur l'instant réel à Tokyo.
+    const now = tokyoNow();
+    runtime.clockMin = now.minutes;
+    runtime.tokyoDate = {
+      year: now.year,
+      month: now.month,
+      day: now.day,
+      weekday: now.weekday,
+    };
     set({ started: true });
   },
   toggleMute: () => set((s) => ({ muted: !s.muted })),
