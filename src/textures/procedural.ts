@@ -1890,47 +1890,143 @@ export function makePlatformFloorTexture(): THREE.CanvasTexture {
   return t;
 }
 
-// --- Panneau de nom de station (style JR) ---
+// Badge trigramme + numéro JY (ex. OSK / JY 24), comme sur les vrais panneaux.
+function drawStationCodeBadge(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  code: string,
+  jy: string,
+): void {
+  g.fillStyle = '#ffffff';
+  g.strokeStyle = '#1a1a1a';
+  g.lineWidth = Math.max(2, size * 0.045);
+  g.beginPath();
+  g.roundRect(x, y, size, size, size * 0.1);
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#1a1a1a';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = `bold ${Math.floor(size * 0.22)}px ${JP_FONT}`;
+  g.fillText(code, x + size / 2, y + size * 0.28);
+  // Cadre vert JY
+  const bx = x + size * 0.12;
+  const by = y + size * 0.48;
+  const bw = size * 0.76;
+  const bh = size * 0.4;
+  g.strokeStyle = '#80c241';
+  g.lineWidth = Math.max(3, size * 0.055);
+  g.strokeRect(bx, by, bw, bh);
+  g.fillStyle = '#1a1a1a';
+  g.font = `bold ${Math.floor(size * 0.2)}px ${JP_FONT}`;
+  g.fillText('JY', x + size / 2, by + bh * 0.32);
+  g.font = `bold ${Math.floor(size * 0.28)}px ${JP_FONT}`;
+  g.fillText(jy.slice(2), x + size / 2, by + bh * 0.72);
+  g.textBaseline = 'alphabetic';
+}
+
+// --- Panneau de nom de station (style JR East réel, rétroéclairé) ---
+// Disposition : badge code | kanji+kana centraux | bande verte directionnelle
+// avec gare précédente / actuelle / suivante + flèche.
 export function makeStationSign(): { canvas: HTMLCanvasElement; texture: THREE.CanvasTexture; redraw: (index: number) => void } {
-  const { c, g } = makeCanvas(1024, 320);
+  const W = 1400;
+  const H = 420;
+  const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
+  const GREEN = '#80c241';
+  const GREEN_LIGHT = '#a8d96a';
   const redraw = (index: number) => {
     const st = STATIONS[index];
     const prev = STATIONS[(index + 29) % 30];
     const next = STATIONS[(index + 1) % 30];
-    g.fillStyle = '#f2f2ee';
-    g.fillRect(0, 0, 1024, 320);
-    g.strokeStyle = '#c8c8c2';
-    g.lineWidth = 4;
-    g.strokeRect(2, 2, 1020, 316);
-    g.fillStyle = '#1d1d20';
-    g.font = `bold 96px ${JP_FONT}`;
+
+    // Fond blanc rétroéclairé + cadre noir fin.
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#1a1a1a';
+    g.lineWidth = 10;
+    g.strokeRect(5, 5, W - 10, H - 10);
+    g.lineWidth = 3;
+    g.strokeRect(14, 14, W - 28, H - 28);
+
+    // --- Zone haute : identité de la gare ---
+    drawStationCodeBadge(g, 48, 36, 155, st.code, st.jy);
+
+    g.fillStyle = '#1a1a1a';
     g.textAlign = 'center';
-    g.fillText(st.kanji, 512, 130);
-    g.font = `44px ${JP_FONT}`;
-    g.fillStyle = '#3a3a40';
-    g.fillText(st.romaji, 512, 190);
-    g.fillStyle = '#80c241';
-    g.beginPath();
-    g.roundRect(40, 40, 120, 120, 18);
-    g.fill();
-    g.fillStyle = '#ffffff';
-    g.font = `bold 34px ${JP_FONT}`;
-    g.fillText('JY', 100, 88);
-    g.font = `bold 44px ${JP_FONT}`;
-    g.fillText(st.jy.slice(2), 100, 138);
-    g.fillStyle = '#80c241';
-    g.fillRect(0, 232, 1024, 88);
-    g.fillStyle = '#ffffff';
-    g.font = `bold 40px ${JP_FONT}`;
-    g.textAlign = 'left';
-    g.fillText(`← ${prev.kanji}`, 36, 290);
+    g.textBaseline = 'alphabetic';
+    const longName = st.kanji.length >= 6;
+    g.font = `bold ${longName ? 84 : 118}px ${JP_FONT}`;
+    g.fillText(st.kanji, W / 2 + 20, longName ? 128 : 138);
+    g.font = `${longName ? 34 : 40}px ${JP_FONT}`;
+    g.fillText(st.kana, W / 2 + 20, longName ? 180 : 196);
+
+    // Reprise discrète à droite.
     g.textAlign = 'right';
-    g.fillText(`${next.kanji} →`, 988, 290);
+    g.fillStyle = '#333333';
+    g.font = `bold 24px ${JP_FONT}`;
+    g.fillText(st.kanji, W - 200, 78);
+    g.font = `20px ${JP_FONT}`;
+    g.fillText(st.romaji, W - 200, 108);
+
+    // Emblème type blason d'arrondissement.
+    const emblemX = W - 100;
+    const emblemY = 130;
+    g.strokeStyle = '#1a1a1a';
+    g.lineWidth = 3.5;
+    g.beginPath();
+    g.arc(emblemX, emblemY, 40, 0, Math.PI * 2);
+    g.stroke();
+    g.beginPath();
+    g.arc(emblemX, emblemY, 24, 0, Math.PI * 2);
+    g.stroke();
+    g.fillStyle = '#1a1a1a';
+    g.font = `bold 22px ${JP_FONT}`;
     g.textAlign = 'center';
-    g.font = `28px ${JP_FONT}`;
-    g.fillText(`${prev.romaji}   |   ${next.romaji}`, 512, 258);
+    g.fillText(st.kanji.charAt(0), emblemX, emblemY + 8);
+
+    // --- Bande verte directionnelle (bas) avec flèche ---
+    const bandY = 248;
+    const bandH = H - bandY - 18;
+    g.fillStyle = GREEN;
+    g.beginPath();
+    g.moveTo(20, bandY);
+    g.lineTo(W - 78, bandY);
+    g.lineTo(W - 20, bandY + bandH / 2);
+    g.lineTo(W - 78, bandY + bandH);
+    g.lineTo(20, bandY + bandH);
+    g.closePath();
+    g.fill();
+
+    // Encoche centrale claire (repère gare actuelle).
+    g.fillStyle = GREEN_LIGHT;
+    g.fillRect(W / 2 - 38, bandY, 76, bandH);
+
+    // Précédente.
+    g.fillStyle = '#ffffff';
     g.textAlign = 'left';
+    g.font = `bold 34px ${JP_FONT}`;
+    g.fillText(prev.kanji, 44, bandY + 50);
+    g.font = `bold 24px ${JP_FONT}`;
+    g.fillText(prev.romaji, 44, bandY + 88);
+
+    // Actuelle (romaji sous l'encoche).
+    g.fillStyle = '#1a1a1a';
+    g.textAlign = 'center';
+    g.font = `bold 26px ${JP_FONT}`;
+    fitFillText(g, st.romaji, W / 2, bandY + bandH / 2 + 9, 150, 26, 'bold');
+
+    // Suivante + mini-badge.
+    g.fillStyle = '#ffffff';
+    g.textAlign = 'right';
+    g.font = `bold 34px ${JP_FONT}`;
+    g.fillText(next.kanji, W - 165, bandY + 50);
+    g.font = `bold 24px ${JP_FONT}`;
+    g.fillText(next.romaji, W - 165, bandY + 88);
+    drawStationCodeBadge(g, W - 155, bandY + 28, 48, next.code, next.jy);
+
     texture.needsUpdate = true;
   };
   return { canvas: c, texture, redraw };

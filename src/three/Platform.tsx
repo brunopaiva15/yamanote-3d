@@ -96,6 +96,7 @@ export function Platform() {
       wallDark: new THREE.MeshStandardMaterial({ color: '#9a9c96', roughness: 0.9 }),
       bench: new THREE.MeshStandardMaterial({ color: '#6a5a48', roughness: 0.88 }),
       metal: new THREE.MeshStandardMaterial({ color: '#7a8088', roughness: 0.45, metalness: 0.55 }),
+      signFrame: new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.55, metalness: 0.35 }),
       lamp: new THREE.MeshStandardMaterial({ color: '#fff2d4', emissive: '#ffe7b0', emissiveIntensity: 0.85, roughness: 0.4 }),
       bin: new THREE.MeshStandardMaterial({ color: '#4a5058', roughness: 0.7, metalness: 0.2 }),
       rubber: new THREE.MeshStandardMaterial({ color: '#2a2c30', roughness: 0.95 }),
@@ -240,18 +241,20 @@ export function Platform() {
         <boxGeometry args={[0.08, 0.1, PLATFORM_LEN]} />
       </mesh>
 
-      {/* Panneaux de nom de station — bien en avant, face au train (comme avant) */}
+      {/* Panneaux JR suspendus (boîtier rétroéclairé + suspentes noires) */}
       {[-9, 9].map((z) => (
-        <group key={`sign${z}`} position={[3.55, PLATFORM_TOP + 1.85, z]}>
-          <mesh position={[0.08, 0.55, 0]} material={materials.column}>
-            <cylinderGeometry args={[0.045, 0.045, 1.5, 8]} />
+        <group key={`sign${z}`} position={[3.5, PLATFORM_TOP + 2.72, z]}>
+          {[-0.95, 0.95].map((dz) => (
+            <mesh key={`hang${dz}`} position={[0.06, 0.52, dz]} material={materials.signFrame}>
+              <boxGeometry args={[0.045, 0.75, 0.07]} />
+            </mesh>
+          ))}
+          {/* Caisson noir derrière la face éclairée */}
+          <mesh position={[0.055, 0, 0]} material={materials.signFrame}>
+            <boxGeometry args={[0.1, 0.9, 2.95]} />
           </mesh>
-          {/* Fond métallique DERRIÈRE le panneau (+x), panneau légèrement vers le train (-x) */}
-          <mesh position={[0.05, 1.1, 0]} material={materials.metal}>
-            <boxGeometry args={[0.06, 0.86, 2.55]} />
-          </mesh>
-          <mesh position={[-0.01, 1.1, 0]} rotation={[0, -Math.PI / 2, 0]} material={materials.sign}>
-            <planeGeometry args={[2.45, 0.78]} />
+          <mesh position={[-0.01, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={materials.sign}>
+            <planeGeometry args={[2.8, 0.84]} />
           </mesh>
         </group>
       ))}
