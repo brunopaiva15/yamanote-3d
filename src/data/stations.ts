@@ -1,6 +1,7 @@
 // Données réelles de la ligne Yamanote : 30 stations (JY01 → JY30),
 // côté d'ouverture des portes et correspondances pour les annonces.
 // `code` = trigramme affiché sur les panneaux de quai ; `kana` = lecture hiragana.
+// Numéros de quai (内回り / 外回り) : voir `platforms.ts`.
 
 export type Station = { jy: string; kanji: string; kana: string; romaji: string; code: string };
 
