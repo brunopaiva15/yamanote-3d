@@ -1,6 +1,6 @@
-// Repères 3D emblématiques par gare : silhouettes procédurales (tours, Tokyo
-// Tower, viaducs de brique, torii, écrans géants, tram, monorail…) qui
-// APPARAISSENT en fondu à l'approche de leur station et disparaissent après.
+// Repères 3D emblématiques par gare : silhouettes procédurales (tours,
+// écrans géants, tram, monorail…) qui APPARAISSENT en fondu à l'approche
+// de leur station et disparaissent après.
 //
 // Deux « slots » ping-pong (arrivant / partant) comme les banques de ville :
 // au changement de gare, le slot devenu arrivant est reconstruit depuis
@@ -72,9 +72,7 @@ function towers(ctx: Ctx, n: number, body: string, win: string, wBase: number, h
   }
 }
 
-// Tour treillis effilée à 4 pieds (Tokyo Tower, flèches). +z = vers la voie.
-// Membres fins : les anciennes entretoises/plateformes massives se lisaient
-// comme de gros blocs semi-transparents face à la vitre.
+// Tour treillis effilée à 4 pieds (flèches). +z = vers la voie.
 function lattice(ctx: Ctx, h: number, spread: number, body: string, plat: string): void {
   const mat = sil(ctx, body);
   const platMat = sil(ctx, plat);
@@ -98,7 +96,6 @@ function lattice(ctx: Ctx, h: number, spread: number, body: string, plat: string
       box(ctx, mat, legW, seg, legW, sx * r0, y, sz * r0);
     }
   }
-  // Anneaux : 4 barres d'arête uniquement (pas de dalle pleine face voie).
   for (let s = 1; s < steps; s++) {
     const t = s / steps;
     const r = taper(t);
@@ -109,7 +106,6 @@ function lattice(ctx: Ctx, h: number, spread: number, body: string, plat: string
     box(ctx, mat, bar, bar, span, r, y, 0);
     box(ctx, mat, bar, bar, span, -r, y, 0);
   }
-  // Plateformes d'observation : dalles plates, pas de cubes massifs.
   const deck = (t: number, wScale: number, thick: number) => {
     const r = taper(t);
     const w = r * 2 * wScale;
@@ -117,73 +113,11 @@ function lattice(ctx: Ctx, h: number, spread: number, body: string, plat: string
   };
   deck(0.42, 1.15, 0.45);
   deck(0.66, 0.85, 0.38);
-  // Antenne.
   box(ctx, mat, 0.22, h * 0.28, 0.22, 0, h * 1.12, 0);
 }
 
-// Tokyo Tower : treillis orange/blanc fin, lisible de loin sans masses rouges.
-function tokyoTower(ctx: Ctx): void {
-  const orange = sil(ctx, '#d4542a');
-  const white = sil(ctx, '#e8e4dc');
-  const h = 36;
-  const spread = 2.6;
-  const legW = 0.3;
-  const bar = 0.26;
-  const steps = 7;
-  const taper = (t: number) => spread * (1 - t * 0.84);
-  const legs: [number, number][] = [
-    [-1, -1],
-    [1, -1],
-    [-1, 1],
-    [1, 1],
-  ];
-  for (const [sx, sz] of legs) {
-    for (let s = 0; s < steps; s++) {
-      const t0 = s / steps;
-      const t1 = (s + 1) / steps;
-      const y = (h * (t0 + t1)) / 2;
-      const r0 = taper(t0);
-      const seg = (h / steps) * 1.04;
-      // Bandes orange / blanc alternées (silhouette Tokyo Tower).
-      const mat = Math.floor(s / 2) % 2 === 0 ? orange : white;
-      box(ctx, mat, legW, seg, legW, sx * r0, y, sz * r0);
-    }
-  }
-  for (let s = 1; s < steps; s++) {
-    const t = s / steps;
-    const r = taper(t);
-    const y = h * t;
-    const span = r * 2;
-    const mat = Math.floor(s / 2) % 2 === 0 ? orange : white;
-    box(ctx, mat, span, bar, bar, 0, y, r);
-    box(ctx, mat, span, bar, bar, 0, y, -r);
-    box(ctx, mat, bar, bar, span, r, y, 0);
-    box(ctx, mat, bar, bar, span, -r, y, 0);
-  }
-  // Étages d'observation (blanc, fins).
-  const mainR = taper(0.4);
-  const topR = taper(0.62);
-  box(ctx, white, mainR * 2.2, 0.5, mainR * 2.2, 0, h * 0.4, 0);
-  box(ctx, white, topR * 2.0, 0.4, topR * 2.0, 0, h * 0.62, 0);
-  box(ctx, orange, 0.2, h * 0.3, 0.2, 0, h * 1.13, 0);
-}
-
-// Colonnade d'arches (viaduc de brique, arcade de marché). Le long de +z (near).
-function arches(ctx: Ctx, color: string, glowColor: string | null, len: number): void {
-  const mat = sil(ctx, color);
-  const openMat = glowColor ? glow(ctx, glowColor) : sil(ctx, '#241a16');
-  const n = Math.round(len / 6);
-  // Bandeau supérieur continu.
-  box(ctx, mat, 3.4, 1.0, len, 0, 3.4, 0);
-  for (let i = 0; i < n; i++) {
-    const z = -len / 2 + 3 + i * 6;
-    box(ctx, mat, 3.0, 3.0, 1.2, 0, 1.5, z); // pilier
-    plane(ctx, openMat, 2.0, 2.2, 1.55, 1.4, z + 3); // ouverture (côté voie)
-  }
-}
-
-// Masse d'arbres (parc, forêt de sanctuaire), + torii optionnel.
-function forest(ctx: Ctx, spread: number, torii: boolean): void {
+// Masse d'arbres (parc, forêt de sanctuaire).
+function forest(ctx: Ctx, spread: number): void {
   const trunk = sil(ctx, '#5a4632');
   const leafA = sil(ctx, '#4f9a3a');
   const leafB = sil(ctx, '#3f8230');
@@ -194,15 +128,6 @@ function forest(ctx: Ctx, spread: number, torii: boolean): void {
     const th = 4 + ctx.r() * 5;
     box(ctx, trunk, 0.5, th * 0.5, 0.5, px, th * 0.25, pz);
     sphere(ctx, i % 2 ? leafA : leafB, th * (0.42 + ctx.r() * 0.2), px, th * 0.62, pz);
-  }
-  if (torii) {
-    const t = sil(ctx, '#c0392b');
-    const w = 5;
-    const hh = 6;
-    box(ctx, t, 0.6, hh, 0.6, -w / 2, hh / 2, spread * 0.6);
-    box(ctx, t, 0.6, hh, 0.6, w / 2, hh / 2, spread * 0.6);
-    box(ctx, t, w + 1.6, 0.7, 0.7, 0, hh, spread * 0.6);
-    box(ctx, t, w + 0.6, 0.5, 0.6, 0, hh - 1.1, spread * 0.6);
   }
 }
 
@@ -286,15 +211,6 @@ function monorailBeam(ctx: Ctx, len: number): void {
   }
 }
 
-// Porte / portique lumineux d'entrée de quartier de divertissement.
-function gate(ctx: Ctx): void {
-  const mat = sil(ctx, '#8a2f2a');
-  box(ctx, mat, 10, 1.6, 1.2, 0, 6.5, 0);
-  box(ctx, mat, 1.2, 7, 1.2, -4.4, 3.5, 0);
-  box(ctx, mat, 1.2, 7, 1.2, 4.4, 3.5, 0);
-  plane(ctx, glow(ctx, '#ffd24a'), 8, 1.2, 0, 6.5, 0.7);
-}
-
 // Verrière blanche moderne (Takanawa Gateway).
 function whiteRoof(ctx: Ctx, w: number): void {
   const mat = sil(ctx, '#eef0f2');
@@ -329,7 +245,6 @@ interface Builder {
 }
 
 const BUILDERS: Record<Land, Builder> = {
-  tokyoTower: { near: false, build: tokyoTower },
   latticeTower: { near: false, build: (c) => lattice(c, 26, 1.8, '#9aa0a6', '#c8ccd0') },
   glassTowerCluster: { near: false, build: (c) => towers(c, 4, '#8ea6c4', '#bcd8ff', 9, 26) },
   boxyTower: { near: false, build: (c) => towers(c, 3, '#9a8f7a', '#ffe6b0', 11, 30) },
@@ -337,11 +252,7 @@ const BUILDERS: Record<Land, Builder> = {
   officeBlock: { near: false, build: (c) => towers(c, 2, '#9aa2ac', '#d6e2ee', 9, 20) },
   giantScreenWall: { near: false, build: (c) => screenWall(c, 16, 20) },
   cylinderFashion: { near: false, build: (c) => cylinder(c, 22) },
-  redBrickStation: { near: false, build: (c) => lowFacade(c, 26, 9, '#a8543a', false) },
-  brickViaduct: { near: true, build: (c) => arches(c, '#9a5238', '#ffce96', NEAR_SPAN) },
-  marketArcade: { near: true, build: (c) => arches(c, '#c8503a', '#ffe0b0', NEAR_SPAN) },
-  toriiForest: { near: false, build: (c) => forest(c, 12, true) },
-  forestMass: { near: false, build: (c) => forest(c, 13, false) },
+  forestMass: { near: false, build: (c) => forest(c, 13) },
   museumFacade: { near: false, build: (c) => lowFacade(c, 24, 11, '#d8cfc0', true) },
   templeRoof: { near: false, build: (c) => templeRoof(c, 12, 6) },
   tramCar: { near: true, build: (c) => vehicle(c, 'tram') },
@@ -349,7 +260,6 @@ const BUILDERS: Record<Land, Builder> = {
   shinkansenSet: { near: true, build: (c) => vehicle(c, 'shinkansen') },
   steamLoco: { near: true, build: (c) => vehicle(c, 'loco') },
   gardenPlaceArch: { near: false, build: (c) => gardenArch(c, 18) },
-  kabukichoGate: { near: true, build: (c) => gate(c) },
   whiteLatticeRoof: { near: false, build: (c) => whiteRoof(c, 22) },
   stackedSignFacade: { near: false, build: (c) => stackedSign(c, 12, 18) },
 };
@@ -463,7 +373,7 @@ export function Landmarks() {
       slot.root.visible = visible;
       if (!visible) continue;
       // depthWrite dès que le fondu est avancé : sinon les silhouettes
-      // transparentes (Tokyo Tower…) se mélangent en gros blocs lavés.
+      // transparentes se mélangent en gros blocs lavés.
       const writeDepth = closeness > 0.88;
       for (const m of slot.sil) {
         m.opacity = closeness;

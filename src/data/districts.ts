@@ -4,8 +4,7 @@
 //
 // Tout reste procédural et stylisé (esprit Shashingo) : aucune donnée
 // géographique réelle, aucune marque déposée — juste le CARACTÈRE reconnaissable
-// de chaque quartier (Akihabara électrique, Ueno verdoyant, Shibuya écrans,
-// Yūrakuchō arches de brique, Hamamatsuchō Tokyo Tower…).
+// de chaque quartier (Akihabara électrique, Ueno verdoyant, Shibuya écrans…).
 //
 // `erasableSyntaxOnly` interdit les enum : on utilise des unions de littéraux.
 
@@ -37,8 +36,9 @@ export type Feat =
   | 'upscaleResidential';
 
 // Repères 3D emblématiques (géométrie primitive, cf. three/Landmarks.tsx).
+// Pas de silhouettes rouge/brique massives (Tokyo Tower, viaducs, torii…) :
+// en transparent elles se lisaient comme de gros blocs lavés dehors.
 export type Land =
-  | 'tokyoTower'
   | 'latticeTower'
   | 'glassTowerCluster'
   | 'boxyTower'
@@ -46,10 +46,6 @@ export type Land =
   | 'officeBlock'
   | 'giantScreenWall'
   | 'cylinderFashion'
-  | 'redBrickStation'
-  | 'brickViaduct'
-  | 'marketArcade'
-  | 'toriiForest'
   | 'forestMass'
   | 'museumFacade'
   | 'templeRoof'
@@ -58,7 +54,6 @@ export type Land =
   | 'shinkansenSet'
   | 'steamLoco'
   | 'gardenPlaceArch'
-  | 'kabukichoGate'
   | 'whiteLatticeRoof'
   | 'stackedSignFacade';
 
@@ -127,10 +122,7 @@ export const DISTRICTS: District[] = [
     accent: '#4a6fae',
     words: ['銀行', '商事', '証券', '本社', '保険', '珈琲'],
     feats: ['glassTowers', 'officeTowers', 'redBrick'],
-    landmarks: [
-      { kind: 'redBrickStation', side: 1 },
-      { kind: 'glassTowerCluster', side: -1, scale: 1.15 },
-    ],
+    landmarks: [{ kind: 'glassTowerCluster', side: -1, scale: 1.15 }],
   },
   // 1 · JY02 Kanda — izakaya sous la voie, arches de brique.
   {
@@ -143,7 +135,7 @@ export const DISTRICTS: District[] = [
     accent: '#c86a3a',
     words: ['居酒屋', '焼鳥', '立呑', '甘味', '古書', '定食'],
     feats: ['elevatedIzakaya', 'salarymanIzakaya', 'brickArch'],
-    landmarks: [{ kind: 'brickViaduct', side: 1, near: true }],
+    landmarks: [],
   },
   // 2 · JY03 Akihabara — Electric Town : néons, panneaux « anime ».
   {
@@ -169,7 +161,7 @@ export const DISTRICTS: District[] = [
     accent: '#c8503a',
     words: ['市場', '鮮魚', '宝石', '激安', '乾物', '衣料'],
     feats: ['lowriseMarket', 'shotengai'],
-    landmarks: [{ kind: 'marketArcade', side: 1, near: true }],
+    landmarks: [],
   },
   // 4 · JY05 Ueno — parc et musées : verdure généreuse.
   {
@@ -251,10 +243,7 @@ export const DISTRICTS: District[] = [
     accent: '#c86a8a',
     words: ['園芸', '花', '和菓子', '珈琲', '塾', '茶'],
     feats: ['parkGreen', 'torii', 'upscaleResidential'],
-    landmarks: [
-      { kind: 'toriiForest', side: 1 },
-      { kind: 'forestMass', side: -1, scale: 0.9 },
-    ],
+    landmarks: [{ kind: 'forestMass', side: -1, scale: 0.9 }],
   },
   // 10 · JY11 Sugamo — shotengai des anciens, temple Jizō.
   {
@@ -265,10 +254,7 @@ export const DISTRICTS: District[] = [
     accent: '#c8443a',
     words: ['甘味', '呉服', '大福', '地蔵', '名店', '茶'],
     feats: ['shotengai', 'templeLowtown'],
-    landmarks: [
-      { kind: 'marketArcade', side: 1, near: true },
-      { kind: 'templeRoof', side: -1 },
-    ],
+    landmarks: [{ kind: 'templeRoof', side: -1 }],
   },
   // 11 · JY12 Ōtsuka — tramway Toden, izakaya.
   {
@@ -346,7 +332,6 @@ export const DISTRICTS: District[] = [
     landmarks: [
       { kind: 'twinTowers', side: -1, scale: 1.25 },
       { kind: 'giantScreenWall', side: 1 },
-      { kind: 'kabukichoGate', side: 1, near: true },
     ],
   },
   // 17 · JY18 Yoyogi — bureaux, lisière de parc, flèche fine.
@@ -373,10 +358,7 @@ export const DISTRICTS: District[] = [
     accent: '#e070a8',
     words: ['原宿', 'クレープ', '古着', 'カフェ', '雑貨', '美容'],
     feats: ['fashionBoutique', 'torii', 'parkGreen'],
-    landmarks: [
-      { kind: 'toriiForest', side: -1, scale: 1.3 },
-      { kind: 'forestMass', side: -1, scale: 1.1 },
-    ],
+    landmarks: [{ kind: 'forestMass', side: -1, scale: 1.1 }],
   },
   // 19 · JY20 Shibuya — écrans géants, mode, néon.
   {
@@ -403,10 +385,7 @@ export const DISTRICTS: District[] = [
     accent: '#b06a4a',
     words: ['恵比寿', '麦酒', '珈琲', '洋食', '硝子', '雑貨'],
     feats: ['officeTowers', 'redBrick', 'upscaleResidential'],
-    landmarks: [
-      { kind: 'gardenPlaceArch', side: 1 },
-      { kind: 'redBrickStation', side: -1, scale: 0.9 },
-    ],
+    landmarks: [{ kind: 'gardenPlaceArch', side: 1 }],
   },
   // 21 · JY22 Meguro — résidentiel haut de gamme, coteaux.
   {
@@ -434,10 +413,7 @@ export const DISTRICTS: District[] = [
     accent: '#6a7a9a',
     words: ['五反田', '居酒屋', '会計', '珈琲', '酒場', '定食'],
     feats: ['officeTowers', 'elevatedIzakaya', 'salarymanIzakaya'],
-    landmarks: [
-      { kind: 'officeBlock', side: 1 },
-      { kind: 'brickViaduct', side: -1, near: true },
-    ],
+    landmarks: [{ kind: 'officeBlock', side: 1 }],
   },
   // 23 · JY24 Ōsaki — tours de verre modernes, passerelles.
   {
@@ -494,12 +470,9 @@ export const DISTRICTS: District[] = [
     accent: '#5a7a9a',
     words: ['田町', '会社', '定食', '珈琲', '学', '酒場'],
     feats: ['officeTowers', 'shotengai', 'upscaleResidential'],
-    landmarks: [
-      { kind: 'officeBlock', side: 1 },
-      { kind: 'marketArcade', side: -1, near: true, scale: 0.8 },
-    ],
+    landmarks: [{ kind: 'officeBlock', side: 1 }],
   },
-  // 27 · JY28 Hamamatsuchō — bureaux, monorail, Tokyo Tower.
+  // 27 · JY28 Hamamatsuchō — bureaux, monorail.
   {
     name: 'Hamamatsucho',
     density: 0.7,
@@ -509,10 +482,7 @@ export const DISTRICTS: District[] = [
     accent: '#c86a4a',
     words: ['浜松町', '貿易', '珈琲', '空港', 'ホテル', '会議'],
     feats: ['officeTowers', 'monorail'],
-    landmarks: [
-      { kind: 'tokyoTower', side: -1, scale: 1.05 },
-      { kind: 'monorailBeam', side: 1, near: true },
-    ],
+    landmarks: [{ kind: 'monorailBeam', side: 1, near: true }],
   },
   // 28 · JY29 Shimbashi — salaryman izakaya, Shiodome.
   {
@@ -528,7 +498,6 @@ export const DISTRICTS: District[] = [
     landmarks: [
       { kind: 'glassTowerCluster', side: -1, scale: 1.15 },
       { kind: 'steamLoco', side: 1, near: true },
-      { kind: 'brickViaduct', side: 1, near: true },
     ],
   },
   // 29 · JY30 Yūrakuchō — arches de brique, abords de Ginza.
@@ -542,6 +511,6 @@ export const DISTRICTS: District[] = [
     accent: '#b06a4a',
     words: ['有楽町', '銀座', '百貨店', '珈琲', '画廊', '洋食'],
     feats: ['brickArch', 'departmentStore', 'elevatedIzakaya', 'upscaleResidential'],
-    landmarks: [{ kind: 'brickViaduct', side: 1, near: true }],
+    landmarks: [],
   },
 ];
