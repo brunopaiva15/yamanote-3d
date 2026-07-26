@@ -1416,44 +1416,47 @@ export function drawAdInto(g: CanvasRenderingContext2D, W: number, H: number, se
 }
 
 // --- Nakazuri (中吊り) : l'affiche suspendue au milieu du wagon ---
-// Format réel : deux B3 (364 × 515 mm) accolés, soit 728 × 515, d'où un
-// rapport de 1,414. L'unité suspendue est donc une PAIRE d'affiches, séparée
-// par un filet, avec une réserve blanche en tête où mordent les pinces.
-// Le papier n'est ni parfaitement blanc ni parfaitement plat : grain, très
-// léger voile de brillance, coins un peu tassés.
+// Proportions relevées sur photos : la bannière est BEAUCOUP plus large que
+// haute, de l'ordre de trois fois. C'est une planche unique en travers du
+// wagon, pas une affiche de format B3 — celles-là sont portrait et se posent
+// ailleurs. On rend donc un visuel continu, avec la réserve blanche de tête où
+// mordent les pinces, et un bandeau de pied qui porte la mention légale, comme
+// sur les campagnes qui prennent toute la largeur.
 export function makeNakazuriTexture(seed: number): THREE.CanvasTexture {
-  const W = 724;
-  const H = 512;
+  const W = 1024;
+  const H = 358;
   const { c, g } = makeCanvas(W, H);
   const r = rng(900 + seed * 17);
-  const half = W / 2;
-  const top = 26; // réserve blanche de suspension
+  const top = 22; // réserve blanche de suspension
+  const foot = 42; // bandeau de pied
 
   g.fillStyle = '#f3f1ec';
   g.fillRect(0, 0, W, H);
 
-  // Les deux affiches, tirées séparément : une paire n'a jamais deux fois le
-  // même visuel, sauf campagne unique — d'où deux graines distinctes.
-  for (let i = 0; i < 2; i++) {
-    g.save();
-    g.beginPath();
-    g.rect(i * half + 3, top, half - 6, H - top - 4);
-    g.clip();
-    g.translate(i * half + 3, top);
-    drawAdInto(g, half - 6, H - top - 4, seed * 2 + i);
-    g.restore();
+  // Visuel principal, en pleine largeur.
+  g.save();
+  g.beginPath();
+  g.rect(3, top, W - 6, H - top - foot);
+  g.clip();
+  g.translate(3, top);
+  drawAdInto(g, W - 6, H - top - foot, seed * 3 + 1);
+  g.restore();
+
+  // Bandeau de pied : aplat sombre, titre en réserve et pavé de mentions.
+  g.fillStyle = '#15181c';
+  g.fillRect(3, H - foot, W - 6, foot - 4);
+  g.fillStyle = '#f4f2ee';
+  g.font = `bold ${Math.round(foot * 0.5)}px ${JP_FONT}`;
+  g.fillText(AD_WORDS[Math.floor(r() * AD_WORDS.length)], 22, H - foot * 0.32);
+  g.fillStyle = 'rgba(244,242,238,0.55)';
+  g.font = `${Math.round(foot * 0.3)}px ${JP_FONT}`;
+  g.fillText(AD_SUBS[Math.floor(r() * AD_SUBS.length)], W * 0.42, H - foot * 0.36);
+  for (let i = 0; i < 4; i++) {
+    g.fillStyle = 'rgba(244,242,238,0.35)';
+    g.fillRect(W - 190 + i * 44, H - foot * 0.72, 34, 16);
   }
 
-  // Filet de séparation et liseré de bord : le papier ne va pas au ras.
-  g.strokeStyle = 'rgba(120,120,126,0.35)';
-  g.lineWidth = 2;
-  g.beginPath();
-  g.moveTo(half, top);
-  g.lineTo(half, H - 4);
-  g.stroke();
-  g.strokeRect(3, top, W - 6, H - top - 4);
-
-  // Réserve de tête : pli, perforations et pinces.
+  // Réserve de tête : pli, perforations.
   g.fillStyle = '#efece6';
   g.fillRect(0, 0, W, top);
   g.strokeStyle = 'rgba(140,140,146,0.45)';
@@ -1463,11 +1466,14 @@ export function makeNakazuriTexture(seed: number): THREE.CanvasTexture {
   g.lineTo(W, top - 0.5);
   g.stroke();
   g.fillStyle = 'rgba(90,92,98,0.35)';
-  for (const x of [W * 0.18, W * 0.5, W * 0.82]) {
+  for (const x of [W * 0.16, W * 0.5, W * 0.84]) {
     g.beginPath();
-    g.ellipse(x, top / 2, 7, 4.5, 0, 0, Math.PI * 2);
+    g.ellipse(x, top / 2, 7, 4, 0, 0, Math.PI * 2);
     g.fill();
   }
+  g.strokeStyle = 'rgba(120,120,126,0.3)';
+  g.lineWidth = 2;
+  g.strokeRect(3, 2, W - 6, H - 6);
 
   // Grain du papier.
   for (let i = 0; i < 2600; i++) {
@@ -1475,7 +1481,7 @@ export function makeNakazuriTexture(seed: number): THREE.CanvasTexture {
     g.fillRect(r() * W, r() * H, 1 + r() * 1.6, 1 + r() * 1.6);
   }
 
-  // Voile de brillance en diagonale : le papier glacé accroche les rampes LED.
+  // Voile de brillance : le papier glacé accroche les rampes LED.
   const sheen = g.createLinearGradient(0, 0, W, H);
   sheen.addColorStop(0, 'rgba(255,255,255,0.1)');
   sheen.addColorStop(0.45, 'rgba(255,255,255,0)');
@@ -1483,13 +1489,6 @@ export function makeNakazuriTexture(seed: number): THREE.CanvasTexture {
   sheen.addColorStop(1, 'rgba(255,255,255,0)');
   g.fillStyle = sheen;
   g.fillRect(0, 0, W, H);
-
-  // Ombre douce dans les angles bas : l'affiche gondole légèrement.
-  const corner = g.createLinearGradient(0, H, 0, H - 60);
-  corner.addColorStop(0, 'rgba(40,42,48,0.16)');
-  corner.addColorStop(1, 'rgba(40,42,48,0)');
-  g.fillStyle = corner;
-  g.fillRect(0, H - 60, W, 60);
 
   return toTexture(c);
 }

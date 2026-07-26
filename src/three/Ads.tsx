@@ -6,10 +6,10 @@
 // regarde dans l'axe de l'allée, ce tunnel d'affiches qui fuit vers le fond —
 // et c'est ainsi qu'on les lit, assis sur les banquettes latérales.
 //
-// Format : une unité suspendue est une PAIRE de B3 (364 × 515 mm chacun), soit
-// 728 × 515 hors tout. Elle est ici portée à 85 cm de large pour occuper, comme
-// sur la rame, presque tout l'espace libre entre les deux rails de tsurikawa
-// (x = ±0,45) sans jamais les toucher.
+// Proportions relevées sur photos : la bannière est bien plus large que haute,
+// de l'ordre de trois fois. Sa largeur est bornée par l'espace libre entre les
+// deux rails de tsurikawa (x = ±0,45), qu'elle ne doit jamais toucher ; sa
+// hauteur en découle. C'est un bandeau plat sous le plafond, pas un panneau.
 
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -21,9 +21,9 @@ import { makeAdTexture, makeNakazuriTexture } from '../textures/procedural';
 const HL = CONFIG.carHalfLength; // 10
 
 // Géométrie de la suspension, en mètres.
-const NK_W = 0.85;
-const NK_H = 0.52;
-const NK_TOP = 2.235; // le haut de l'affiche affleure le caisson de plafond
+const NK_W = 0.86;
+const NK_H = 0.3;
+const NK_TOP = 2.25; // le haut de l'affiche affleure le caisson de plafond
 const NK_PITCH = 1.05; // pas de la rangée : un ruban ajouré, comme sur la rame
 const NK_RAIL_Y = 2.26;
 
@@ -33,8 +33,8 @@ export function Ads() {
   const pivots = useRef<(THREE.Group | null)[]>([]);
 
   const { nakazuriMats, screenMats, housingMat, bezelMat, clipMat, railMat } = useMemo(() => {
-    // Huit visuels distincts, chacun portant lui-même deux affiches : de quoi
-    // parcourir le wagon sans retomber deux fois de suite sur la même image.
+    // Huit visuels distincts : de quoi parcourir le wagon sans retomber deux
+    // fois de suite sur la même image.
     const nakazuriMats = Array.from(
       { length: 8 },
       (_, i) =>
