@@ -1,6 +1,9 @@
-// File d'attente d'annonces vocales sur speechSynthesis : une utterance à la
-// fois, japonais puis anglais. Voix féminine si disponible ; sans voix ja-JP,
-// seul l'anglais est émis.
+// File d'attente d'annonces vocales : une annonce à la fois, japonais puis
+// anglais. Chaque annonce est d'abord cherchée en CLIP pré-généré (Kokoro
+// TTS : jf_alpha ja / af_heart en, voir scripts/announcements-gen.py) — joué
+// par audioManager sur le bus PA, donc réellement spatialisé sur les
+// diffuseurs du plafond. speechSynthesis ne sert plus que de REPLI pour un
+// texte sans clip ; sans voix ja-JP, seul l'anglais est alors émis.
 //
 // Robustesse navigateurs :
 // - iOS / Safari : la synthèse doit être amorcée DANS le geste utilisateur ;
@@ -14,18 +17,28 @@
 //   session et on rejoue le segment avec la voix suivante. pause() tue aussi
 //   ces voix réseau dans Chromium : le keep-alive est réservé aux voix locales.
 //
-// Spatialisation : speechSynthesis sort directement sur la carte son, hors du
-// graphe Web Audio — impossible de la panner. On l'ancre donc aux diffuseurs
-// du plafond par deux biais : le souffle de ligne spatialisé, ouvert pendant
-// toute l'annonce (paVoiceOpen/paVoiceClose), et le volume de l'utterance qui
-// suit la distance au diffuseur le plus proche (speakerProximity).
+// Spatialisation du repli : speechSynthesis sort directement sur la carte
+// son, hors du graphe Web Audio — impossible de le panner. On l'ancre aux
+// diffuseurs du plafond par deux biais : le souffle de ligne spatialisé,
+// ouvert pendant toute l'annonce (paVoiceOpen/paVoiceClose), et le volume de
+// l'utterance qui suit la distance au diffuseur le plus proche
+// (speakerProximity). Les clips, eux, passent par les Panner3D du bus PA.
 
 import type { Utterance } from '../data/announcements';
+import { announcementClipPath } from '../data/announcementClips';
 import { useStore } from '../store';
-import { paVoiceClose, paVoiceOpen, speakerProximity } from './audioEngine';
+import { audioManager, paVoiceClose, paVoiceOpen, speakerProximity } from './audioEngine';
 
-const queue: Utterance[] = [];
+type QueueItem =
+  | { kind: 'clip'; path: string; lang: Utterance['lang']; text: string }
+  | { kind: 'tts'; lang: Utterance['lang']; text: string };
+
+const queue: QueueItem[] = [];
 let speaking = false;
+// Génération d'annulation : un cancelSpeech() invalide les callbacks du clip
+// en cours (playOnce est asynchrone et peut se résoudre après coup).
+let generation = 0;
+let currentClipPath: string | null = null;
 let voicesReady = false;
 let jaVoice: SpeechSynthesisVoice | null = null;
 let enVoice: SpeechSynthesisVoice | null = null;
@@ -156,7 +169,7 @@ function finishUtterance(): void {
 
 // Une voix n'a jamais produit de son (voix réseau Edge en échec silencieux) :
 // on l'écarte et on rejoue le même segment avec la voix suivante.
-function failVoiceAndRetry(item: Utterance, voice: SpeechSynthesisVoice): void {
+function failVoiceAndRetry(item: QueueItem & { kind: 'tts' }, voice: SpeechSynthesisVoice): void {
   console.warn(`[speech] Voix « ${voice.name} » muette — repli sur une autre voix.`);
   badVoices.add(voiceKey(voice));
   refreshVoices();
@@ -204,11 +217,6 @@ function pump(): void {
     closeLine();
     return;
   }
-  if (!('speechSynthesis' in window)) {
-    queue.length = 0;
-    closeLine();
-    return;
-  }
   if (useStore.getState().muted || useStore.getState().volume <= 0.001) {
     queue.length = 0;
     closeLine();
@@ -216,6 +224,39 @@ function pump(): void {
   }
   const item = queue.shift();
   if (!item) return;
+  if (item.kind === 'clip') {
+    playClipItem(item);
+    return;
+  }
+  speakTtsItem(item);
+}
+
+// Clip pré-généré : joué sur le bus PA spatialisé. Fichier introuvable
+// (déploiement partiel, cache) → repli speechSynthesis sur le même texte.
+function playClipItem(item: QueueItem & { kind: 'clip' }): void {
+  speaking = true;
+  currentClipPath = item.path;
+  const g = generation;
+  void audioManager.playOnce(item.path, 'cabin').then((played) => {
+    if (g !== generation) return;
+    currentClipPath = null;
+    speaking = false;
+    if (!played) {
+      const parts = splitSentences(item.text).map(
+        (text): QueueItem => ({ kind: 'tts', lang: item.lang, text }),
+      );
+      queue.unshift(...parts);
+    }
+    pump();
+  });
+}
+
+// Repli speechSynthesis pour un texte sans clip.
+function speakTtsItem(item: QueueItem & { kind: 'tts' }): void {
+  if (!('speechSynthesis' in window)) {
+    pump();
+    return;
+  }
   if (!voicesReady) refreshVoices();
   // Sans voix japonaise disponible : sauter les segments japonais.
   if (item.lang === 'ja-JP' && !jaVoice) {
@@ -295,8 +336,13 @@ export function say(items: Utterance[]): void {
   const { muted, volume } = useStore.getState();
   if (muted || volume <= 0.001) return;
   for (const item of items) {
+    const clip = announcementClipPath(item.lang, item.text);
+    if (clip) {
+      queue.push({ kind: 'clip', path: clip, lang: item.lang, text: item.text });
+      continue;
+    }
     for (const text of splitSentences(item.text)) {
-      queue.push({ text, lang: item.lang });
+      queue.push({ kind: 'tts', lang: item.lang, text });
     }
   }
   if (queue.length > 0) openLine();
@@ -304,9 +350,14 @@ export function say(items: Utterance[]): void {
 }
 
 export function cancelSpeech(): void {
+  generation++;
   queue.length = 0;
   clearTimers();
   currentUtterance = null;
+  if (currentClipPath) {
+    audioManager.stop(currentClipPath);
+    currentClipPath = null;
+  }
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   speaking = false;
   closeLine();

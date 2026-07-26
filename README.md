@@ -151,8 +151,12 @@ départ respecte l'ordre réel : la mélodie joue portes ouvertes et se termine
 **avant** l'annonce de fermeture, puis viennent le carillon et la fermeture.
 Les annonces (sens de la boucle 内回り avec gares repères, 次は… avec numéro
 JY, まもなく…, fermeture, accueil, messages de courtoisie en rotation) sont
-dites en japonais puis en anglais via `speechSynthesis`, avec les
-correspondances réelles de chaque gare.
+dites en japonais puis en anglais, avec les correspondances réelles de chaque
+gare. Les voix sont des clips pré-générés avec **Kokoro TTS** (japonais
+`jf_alpha`, anglais `af_heart`), stockés dans `public/audio/announcements/` et
+régénérables via `scripts/announcements-export.ts` +
+`scripts/announcements-gen.py` ; un texte sans clip retombe sur
+`speechSynthesis`.
 
 ### Sonorisation en 3D
 
@@ -172,11 +176,12 @@ centre de la tête.
   les portes de la rame **et** les portes palières sont dégagées, du côté qui
   s'ouvre à cette gare.
 
-Limite connue : `speechSynthesis` sort directement sur la carte son, hors du
-graphe Web Audio — les annonces vocales ne peuvent pas être pannées. Elles sont
-malgré tout ancrées aux diffuseurs par le souffle de ligne spatialisé (la sono
-s'ouvre et se referme avec un déclic autour de chaque annonce) et par un volume
-qui suit la distance au diffuseur le plus proche.
+Les annonces vocales (clips Kokoro) passent par ce même bus PA : elles sont
+réellement pannées sur les diffuseurs du plafond. Seul le repli
+`speechSynthesis` (texte sans clip) sort hors du graphe Web Audio et ne peut
+pas être panné ; il reste ancré aux diffuseurs par le souffle de ligne
+spatialisé (la sono s'ouvre et se referme avec un déclic autour de chaque
+annonce) et par un volume qui suit la distance au diffuseur le plus proche.
 
 Optionnel : déposez d'autres enregistrements dans `public/audio/`
 (`door-open.mp3`, `door-close.mp3`, `arrival.mp3`, `melody-JY01.mp3`…) ; ils seront
