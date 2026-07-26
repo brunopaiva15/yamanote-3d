@@ -180,6 +180,9 @@ uniquement `JY06` + Inner + plateforme **2** → Nippori.
 Clip Seseragi : `public/audio/melodies/09_seseragi.mp3` (せせらぎ), Outer uniquement sur
 Uguisudani 3, Nippori 10, Tabata 3, Sugamo 2, Otsuka 2, Mejiro 2.
 
+Clip Takadanobaba Outer : `public/audio/melodies/10_tetsuwan-atom-a.mp3` (鉄腕アトム ver.A),
+uniquement `JY15` + Outer + plateforme **1** → Mejiro. La voie 2 Inner utilisera Atom ver.B.
+
 ### Sonorisation en 3D
 
 Le son de la sonorisation est spatialisé : il sort des haut-parleurs, pas du

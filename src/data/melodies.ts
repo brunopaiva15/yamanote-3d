@@ -175,6 +175,26 @@ export const SESERAGI_PLATFORMS: Record<
   },
 };
 
+/** Chemin : Tetsuwan Atom ver.A — Takadanobaba Outer voie 1. */
+export const TAKADANOBABA_OUTER_ATOM_A_PATH = '/audio/melodies/10_tetsuwan-atom-a.mp3';
+
+/** Config exclusive : Takadanobaba Outer Loop plateforme 1 → Mejiro. */
+export const TAKADANOBABA_OUTER_ATOM_A = {
+  id: 'tetsuwan-atom-ver-a',
+  name: 'Tetsuwan Atom ver.A',
+  japaneseName: '鉄腕アトム ver.A',
+  file: TAKADANOBABA_OUTER_ATOM_A_PATH,
+  type: 'departure_melody' as const,
+  audioSource: 'platform_speakers' as const,
+  line: 'yamanote',
+  stationCode: 'JY15',
+  stationName: 'Takadanobaba',
+  direction: 'outer' as const,
+  platform: 1,
+  nextStationCode: 'JY14',
+  nextStationName: 'Mejiro',
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -472,6 +492,31 @@ export function shouldPlaySeseragi(ctx: MelodyPlayContext): boolean {
   if (!stationConfig) return false;
   if (Number(ctx.platform) !== Number(stationConfig.platform)) return false;
   if (ctx.nextStationCode && ctx.nextStationCode !== stationConfig.nextStationCode) return false;
+
+  return true;
+}
+
+/**
+ * Tetsuwan Atom ver.A : exclusivement Takadanobaba (JY15) Outer Loop plateforme 1 → Mejiro.
+ * La voie 2 Inner utilisera Atom ver.B.
+ */
+export function shouldPlayTakadanobabaOuterAtomA(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== TAKADANOBABA_OUTER_ATOM_A.stationCode) return false;
+  if (ctx.direction !== 'outer') return false;
+  if (Number(ctx.platform) !== TAKADANOBABA_OUTER_ATOM_A.platform) return false;
+
+  if (ctx.nextStationCode && ctx.nextStationCode !== TAKADANOBABA_OUTER_ATOM_A.nextStationCode) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
 
   return true;
 }

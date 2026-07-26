@@ -50,6 +50,7 @@ const KOMAGOME_OUTER_SAKURA_A_SECS = 18.7;
 const KOMAGOME_INNER_SAKURA_V2_SECS = 18.3;
 const UGUISUDANI_INNER_HARU_TREMOLO_SECS = 12.0;
 const SESERAGI_MELODY_SECS = 12.1;
+const TAKADANOBABA_OUTER_ATOM_A_SECS = 16.5;
 /** Marge entre fin de mélodie et annonce de fermeture. */
 const MELODY_TO_ANNOUNCE_GAP = 3.5;
 
@@ -66,6 +67,7 @@ function melodyBudgetSeconds(stationIndex: number): number {
     if (dir === 'inner') return KOMAGOME_INNER_SAKURA_V2_SECS;
   }
   if (jy === 'JY06' && dir === 'inner') return UGUISUDANI_INNER_HARU_TREMOLO_SECS;
+  if (jy === 'JY15' && dir === 'outer') return TAKADANOBABA_OUTER_ATOM_A_SECS;
   if (dir === 'outer' && SESERAGI_PLATFORMS[jy]) return SESERAGI_MELODY_SECS;
   if (dir === 'outer' && outerMainMelodyPlatforms[jy]) return OUTER_MAIN_MELODY_SECS;
   if (dir === 'inner' && innerMainMelodyPlatforms[jy]) return INNER_MAIN_MELODY_SECS;

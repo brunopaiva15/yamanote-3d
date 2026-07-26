@@ -11,5 +11,6 @@ melodies/05_sakura-sakura-a.mp3 — Komagome Outer voie 1 (さくらさくらA /
 melodies/06_sakura-sakura-b.mp3 — Komagome Inner voie 2 (さくらさくら V2)
 melodies/08_haru-tremolo.mp3 — Uguisudani Inner voie 2 (春トレモロ)
 melodies/09_seseragi.mp3 — Outer (Uguisudani 3, Nippori 10, Tabata 3, Sugamo 2, Otsuka 2, Mejiro 2)
+melodies/10_tetsuwan-atom-a.mp3 — Takadanobaba Outer voie 1 (鉄腕アトム ver.A)
 Jouées une seule fois au début de la procédure de départ, portes ouvertes,
 via audioManager.playOnce (garde departureId anti double-lecture).
