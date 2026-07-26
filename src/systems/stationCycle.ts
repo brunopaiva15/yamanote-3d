@@ -4,6 +4,7 @@
 
 import { CONFIG, V_MAX } from '../data/config';
 import {
+  ENABLE_DEPARTURE_MELODY_CLIPS,
   innerMainMelodyPlatforms,
   outerMainMelodyPlatforms,
   SESERAGI_PLATFORMS,
@@ -63,6 +64,8 @@ const IKEBUKURO_INNER_BIC_CAMERA_B_SECS = 13.5;
 const MELODY_TO_ANNOUNCE_GAP = 3.5;
 
 function melodyBudgetSeconds(stationIndex: number): number {
+  // Clips MP3 désactivés : budget de la synthèse Tone.js uniquement.
+  if (!ENABLE_DEPARTURE_MELODY_CLIPS) return 6.5;
   const jy = STATIONS[stationIndex]?.jy;
   if (!jy) return 6.5;
   const dir = useStore.getState().loopDirection;
