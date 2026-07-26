@@ -3,9 +3,10 @@
 // toitures de gare. Valeurs mutées chaque frame (idiome runtime.ts), lues par
 // les composants three dans leur useFrame — aucun état React.
 //
-// L'environnement appartient au tronçon ENTIER et bascule au début de
-// `depart` (quand index avance) : le quai et la vitesse quasi nulle masquent
-// le fondu (~2,5 s). Voir data/segments.ts pour la classification.
+// L'environnement appartient au tronçon ENTIER. L'index avance au début de
+// `depart`, mais on retient le tronçon d'arrivée tant que le quai est encore
+// visible — sinon murs / clôtures du prochain segment remplacent le mur de
+// gare sous les yeux. Voir data/segments.ts pour la classification.
 
 import { CONFIG } from '../data/config';
 import { SEGMENTS, segmentAt, type SegmentKind } from '../data/segments';
@@ -62,7 +63,15 @@ export function bridgeZ(k: number): number {
 
 export function updateSegmentEnv(dt: number): void {
   const { index, phase } = useStore.getState();
-  const seg = segmentAt(index);
+  // Au début de `depart`, l'index a déjà avancé vers la gare suivante — mais
+  // le quai (opaque, coulissant) est encore sous les yeux. On conserve le
+  // tronçon d'arrivée jusqu'à ce que le quai soit largement parti, sinon les
+  // murs / clôtures du prochain segment « remplacent » le mur de gare.
+  let envIndex = index;
+  if (phase === 'depart' && runtime.phaseT < CONFIG.departTime - 0.8) {
+    envIndex = (index + 29) % 30;
+  }
+  const seg = segmentAt(envIndex);
   if (seg !== segEnv.seg) {
     const first = segEnv.seg < 0;
     segEnv.seg = seg;
@@ -76,9 +85,12 @@ export function updateSegmentEnv(dt: number): void {
   }
 
   const spec = SEGMENTS[seg];
+  // Progression visuelle du trajet : toujours basée sur l'index courant
+  // (annonces / scenery), pas sur le hold d'environnement.
   segEnv.p = Math.min(1, Math.max(0, (PHASE_BASE[phase] + runtime.phaseT) / JOURNEY));
 
-  // Fondu exponentiel (~2,5 s), entièrement masqué par le quai pendant `depart`.
+  // Fondu exponentiel (~2,5 s). Pendant le hold de départ on ne change pas
+  // de cible (même tronçon) ; le vrai morph n'arrive qu'une fois le quai parti.
   const k = Math.min(1, dt * 0.9);
   for (const kind of KINDS) {
     const target = spec.kind === kind ? 1 : 0;
@@ -87,8 +99,11 @@ export function updateSegmentEnv(dt: number): void {
   segEnv.green += ((spec.greenery ? 1 : 0) - segEnv.green) * k;
 
   // Hauteur de mur : s'abaisse quand la tranchée s'ouvre en fin de tronçon.
+  // Pendant le hold de départ, on fige la hauteur (pas d'opensAtEnd du
+  // prochain tronçon qui ferait monter/descendre les murs sous le quai).
   let wallTarget = spec.wallHeight ?? WALL_DEFAULT;
-  if (spec.opensAtEnd) wallTarget *= 1 - smoothstep(0.7, 0.95, segEnv.p);
+  const holdingDepart = phase === 'depart' && runtime.phaseT < CONFIG.departTime - 0.8;
+  if (spec.opensAtEnd && !holdingDepart) wallTarget *= 1 - smoothstep(0.7, 0.95, segEnv.p);
   segEnv.wallH += (wallTarget - segEnv.wallH) * k;
 
   // Ponts : gate fondu sur le poids du type porteur, ombrage analytique

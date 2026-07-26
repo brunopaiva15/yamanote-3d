@@ -69,7 +69,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       }
       body.visible = true;
 
-      const walking = p.state === 'ambling';
+      const walking = p.state === 'ambling' || p.state === 'patrolling';
       let key: LogicalClip | '' = '';
       if (walking) key = actions.walk ? 'walk' : actions.standIdle ? 'standIdle' : '';
       else key = actions.standIdle ? 'standIdle' : '';
@@ -85,7 +85,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
         s.currentKey = key;
       }
       if (key === 'walk' && actions.walk) {
-        actions.walk.timeScale = (CONFIG.walkSpeed * 0.55) / walkClipSpeed;
+        actions.walk.timeScale = (CONFIG.walkSpeed * 0.92) / walkClipSpeed;
       }
 
       body.position.set(p.pos.x, PLATFORM_Y + p.bob, p.pos.z);
