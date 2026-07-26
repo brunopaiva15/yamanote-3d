@@ -10,6 +10,7 @@ import {
   OSAKI_INNER_SECONDARY_MELODY_PATH,
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
+  UGUISUDANI_INNER_HARU_TREMOLO_PATH,
   makeDepartureId,
   shouldPlayInnerMainMelody,
   shouldPlayKomagomeInnerSakuraV2,
@@ -17,6 +18,7 @@ import {
   shouldPlayOsakiInnerSecondaryMelody,
   shouldPlayOsakiOuterSecondaryMelody,
   shouldPlayOuterMainMelody,
+  shouldPlayUguisudaniInnerHaruTremolo,
   type MelodyPlayContext,
   type ServiceType,
   type TrainState,
@@ -171,6 +173,10 @@ export function stopKomagomeInnerSakuraV2(): void {
   audioManager.stop(KOMAGOME_INNER_SAKURA_V2_PATH);
 }
 
+export function stopUguisudaniInnerHaruTremolo(): void {
+  audioManager.stop(UGUISUDANI_INNER_HARU_TREMOLO_PATH);
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
@@ -179,6 +185,7 @@ export function cancelDepartureMelody(): void {
   audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
   stopKomagomeOuterSakuraA();
   stopKomagomeInnerSakuraV2();
+  stopUguisudaniInnerHaruTremolo();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -297,6 +304,22 @@ export async function playKomagomeInnerSakuraV2(context: MelodyPlayContext): Pro
   return ok;
 }
 
+/**
+ * Haru Tremolo : Uguisudani Inner voie 2 → Nippori, une fois par départ.
+ */
+export async function playUguisudaniInnerHaruTremolo(context: MelodyPlayContext): Promise<boolean> {
+  if (!shouldPlayUguisudaniInnerHaruTremolo(context)) return false;
+  if (isDepartureBlocked()) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  const ok = await audioManager.playOnce(UGUISUDANI_INNER_HARU_TREMOLO_PATH);
+  if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+    runtime.lastMelodyDepartureId = null;
+  }
+  return ok;
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -327,6 +350,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (await playOsakiOuterSecondaryMelody(context)) return true;
   if (await playKomagomeOuterSakuraA(context)) return true;
   if (await playKomagomeInnerSakuraV2(context)) return true;
+  if (await playUguisudaniInnerHaruTremolo(context)) return true;
   if (await playInnerMainMelody(context)) return true;
   if (await playOuterMainMelody(context)) return true;
   return false;

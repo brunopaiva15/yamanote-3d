@@ -9,5 +9,6 @@ melodies/03_jre-ikst-010-03_inner-secondary-osaki.mp3 — Ōsaki Inner voie 2
 melodies/04_jre-ikst-010-05_outer-secondary-osaki.mp3 — Ōsaki Outer voie 4
 melodies/05_sakura-sakura-a.mp3 — Komagome Outer voie 1 (さくらさくらA / V1)
 melodies/06_sakura-sakura-b.mp3 — Komagome Inner voie 2 (さくらさくら V2)
+melodies/08_haru-tremolo.mp3 — Uguisudani Inner voie 2 (春トレモロ)
 Jouées une seule fois au début de la procédure de départ, portes ouvertes,
 via audioManager.playOnce (garde departureId anti double-lecture).

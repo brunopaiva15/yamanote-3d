@@ -174,6 +174,9 @@ uniquement `JY10` + Outer + plateforme **1** → Tabata.
 Clip Komagome Inner : `public/audio/melodies/06_sakura-sakura-b.mp3` (さくらさくら V2),
 uniquement `JY10` + Inner + plateforme **2** → Sugamo.
 
+Clip Uguisudani Inner : `public/audio/melodies/08_haru-tremolo.mp3` (春トレモロ),
+uniquement `JY06` + Inner + plateforme **2** → Nippori. La voie 3 Outer utilisera Seseragi.
+
 ### Sonorisation en 3D
 
 Le son de la sonorisation est spatialisé : il sort des haut-parleurs, pas du

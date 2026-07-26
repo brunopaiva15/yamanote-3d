@@ -32,6 +32,7 @@ import {
   OSAKI_INNER_SECONDARY_MELODY_PATH,
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
+  UGUISUDANI_INNER_HARU_TREMOLO_PATH,
 } from '../data/melodies';
 import { STATIONS } from '../data/stations';
 import { buildDepartureContext, playDepartureMelodyForContext } from './departureSequence';
@@ -674,4 +675,5 @@ export function stopDepartureMelodyClips(): void {
   audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
   audioManager.stop(KOMAGOME_OUTER_SAKURA_A_PATH);
   audioManager.stop(KOMAGOME_INNER_SAKURA_V2_PATH);
+  audioManager.stop(UGUISUDANI_INNER_HARU_TREMOLO_PATH);
 }

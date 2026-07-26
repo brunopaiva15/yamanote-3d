@@ -88,6 +88,26 @@ export const KOMAGOME_INNER_SAKURA_V2 = {
   nextStationName: 'Sugamo',
 };
 
+/** Chemin : Haru Tremolo — Uguisudani Inner voie 2. */
+export const UGUISUDANI_INNER_HARU_TREMOLO_PATH = '/audio/melodies/08_haru-tremolo.mp3';
+
+/** Config exclusive : Uguisudani Inner Loop plateforme 2 → Nippori. */
+export const UGUISUDANI_INNER_HARU_TREMOLO = {
+  id: 'haru-tremolo',
+  name: 'Haru Tremolo',
+  japaneseName: '春（トレモロ）',
+  file: UGUISUDANI_INNER_HARU_TREMOLO_PATH,
+  type: 'departure_melody' as const,
+  audioSource: 'platform_speakers' as const,
+  line: 'yamanote',
+  stationCode: 'JY06',
+  stationName: 'Uguisudani',
+  direction: 'inner' as const,
+  platform: 2,
+  nextStationCode: 'JY07',
+  nextStationName: 'Nippori',
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -328,6 +348,31 @@ export function shouldPlayKomagomeInnerSakuraV2(ctx: MelodyPlayContext): boolean
   if (Number(ctx.platform) !== KOMAGOME_INNER_SAKURA_V2.platform) return false;
 
   if (ctx.nextStationCode && ctx.nextStationCode !== KOMAGOME_INNER_SAKURA_V2.nextStationCode) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * Haru Tremolo : exclusivement Uguisudani (JY06) Inner Loop plateforme 2 → Nippori.
+ * La voie 3 Outer utilisera Seseragi (autre fichier).
+ */
+export function shouldPlayUguisudaniInnerHaruTremolo(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== UGUISUDANI_INNER_HARU_TREMOLO.stationCode) return false;
+  if (ctx.direction !== 'inner') return false;
+  if (Number(ctx.platform) !== UGUISUDANI_INNER_HARU_TREMOLO.platform) return false;
+
+  if (ctx.nextStationCode && ctx.nextStationCode !== UGUISUDANI_INNER_HARU_TREMOLO.nextStationCode) {
     return false;
   }
 
