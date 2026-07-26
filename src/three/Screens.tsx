@@ -202,20 +202,20 @@ function drawRoute(
   // Points de passage (cercles des minutes), k = 0 : prochaine station en
   // bas à droite, k = 4 : la plus lointaine en haut à gauche.
   const CIRCLES: [number, number][] = [
-    [292, 279],
-    [347, 224],
-    [407, 183],
-    [474, 150],
-    [538, 127],
+    [318, 330],
+    [372, 266],
+    [430, 214],
+    [498, 174],
+    [566, 142],
   ];
   const path: [number, number][] = [
-    [808, 112],
+    [820, 124],
     CIRCLES[4],
     CIRCLES[3],
     CIRCLES[2],
     CIRCLES[1],
     CIRCLES[0],
-    [248, 356],
+    [268, 384],
   ];
   g.strokeStyle = YAMANOTE_GREEN;
   g.lineWidth = 44;
@@ -234,7 +234,7 @@ function drawRoute(
   // Chevron rouge : sens de marche, en bout de courbe.
   g.fillStyle = '#c8362c';
   g.save();
-  g.translate(273, 310);
+  g.translate(296, 362);
   g.rotate(Math.PI - 1.05);
   g.beginPath();
   g.moveTo(-10, -18);
@@ -248,76 +248,63 @@ function drawRoute(
   // ----- 5 prochaines stations : cercles des minutes + cascade kanji -----
   // Positions calées sur l'afficheur réel : les rangées ont leur propre
   // ligne de base, légèrement au-dessus de leur cercle.
-  const BADGE_X = [18, 18, 18, 18, 18];
-  const BASE_Y = [278, 226, 180, 146, 118];
   const atStation = phase === 'dwell';
   for (let k = 4; k >= 0; k--) {
     const stIdx = (index + k) % 30;
     const st = STATIONS[stIdx];
     const [mx, my] = CIRCLES[k];
-    // Cercle des minutes (jaune pour la prochaine).
+    // Cercle des minutes : blanc, jaune et plus gros pour la prochaine.
     const minutes = atStation ? k * 2 : k * 2 + Math.max(1, Math.ceil(countdown / 60));
     g.beginPath();
-    g.arc(mx, my, k === 0 ? 23 : 19, 0, Math.PI * 2);
+    g.arc(mx, my, k === 0 ? 25 : 20, 0, Math.PI * 2);
     g.fillStyle = k === 0 ? '#e8c033' : '#ffffff';
     g.fill();
     g.fillStyle = '#111214';
-    g.font = `bold ${k === 0 ? 25 : 21}px ${JP_FONT}`;
+    g.font = `bold ${k === 0 ? 27 : 22}px ${JP_FONT}`;
     g.textAlign = 'center';
-    g.fillText(String(k === 0 && atStation ? 0 : minutes), mx, my + 7);
+    g.fillText(String(k === 0 && atStation ? 0 : minutes), mx, my + 8);
     if (k === 4) {
-      g.font = `12px ${JP_FONT}`;
-      g.fillText('(分)', mx - 40, my + 4);
+      g.font = `13px ${JP_FONT}`;
+      g.fillText('(分)', mx + 34, my + 6);
     }
-    // Pastille JY + nom kanji.
-    const bx = BADGE_X[k];
-    const by = BASE_Y[k];
-    g.fillStyle = '#ffffff';
-    g.beginPath();
-    g.roundRect(bx, by - 30, 36, 36, 6);
-    g.fill();
-    g.strokeStyle = YAMANOTE_GREEN;
-    g.lineWidth = 3;
-    g.beginPath();
-    g.roundRect(bx + 2, by - 28, 32, 32, 5);
-    g.stroke();
+    // Nom de gare : en GROS, sans pastille, calé à droite juste avant la
+    // courbe. L'ensemble forme une cascade diagonale qui épouse la courbe —
+    // c'est la disposition de l'afficheur, pas une colonne alignée.
+    g.textAlign = 'right';
     g.fillStyle = '#111214';
-    g.font = `bold 10px ${JP_FONT}`;
-    g.fillText('JY', bx + 18, by - 17);
-    g.font = `bold 15px ${JP_FONT}`;
-    g.fillText(st.jy.slice(2), bx + 18, by - 1);
+    const name = lang === 'jp' ? st.kanji : st.romaji;
+    fitText(g, name, mx - 54, k === 0 ? 42 : 36, '');
+    g.fillText(name, mx - 42, my + 14);
     g.textAlign = 'left';
-    const name = st.kanji.length === 2 ? `${st.kanji[0]} ${st.kanji[1]}` : st.kanji;
-    fitText(g, name, 180, 26);
-    g.fillStyle = '#111214';
-    g.fillText(name, bx + 44, by);
   }
 
-  // ----- Panneau des correspondances (gare suivante), en bas à gauche -----
+  // ----- Pavé des correspondances de la prochaine gare, à droite -----
   const tr = TRANSFERS[next.jy];
   if (tr) {
+    g.textAlign = 'right';
     g.fillStyle = '#111214';
-    fitText(g, `${next.kanji}駅`, 120, 20);
-    g.fillText(`${next.kanji}駅`, w - 250, 208);
-    g.font = `12px ${JP_FONT}`;
+    g.font = `bold 20px ${JP_FONT}`;
+    g.fillText(`${next.kanji}駅`, w - 12, 196);
+    g.font = `15px ${JP_FONT}`;
     g.fillStyle = '#3a3d42';
-    g.fillText('乗換えのご案内', w - 250, 226);
+    g.fillText('乗換えのご案内', w - 12, 218);
+    g.textAlign = 'left';
     const lines = tr.jp.split('、').slice(0, 8);
-    const colors = ['#f15a22', '#00a7e1', '#e21b30', '#009944', '#8f76d6', '#f6aa00', '#00ada9', '#b5b5ac'];
-    g.font = `12px ${JP_FONT}`;
+    const colors = ['#00a650', '#0072bc', '#f15a22', '#0067c0', '#1d3f94', '#e2231a', '#e60012', '#8f76d6'];
+    g.font = `13px ${JP_FONT}`;
     for (let i = 0; i < lines.length; i++) {
-      const col = Math.floor(i / 4);
-      const row = i % 4;
-      const lx = w - 250 + col * 118;
-      const ly = 244 + row * 21;
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const lx = w - 296 + col * 146;
+      const ly = 248 + row * 23;
       g.fillStyle = colors[i % colors.length];
       g.beginPath();
-      g.roundRect(lx, ly - 11, 13, 13, 3);
+      g.roundRect(lx, ly - 12, 14, 14, 3);
       g.fill();
       g.fillStyle = '#26282c';
       let label = lines[i];
-      if (label.length > 7) label = label.slice(0, 6) + '…';
-      g.fillText(label, lx + 18, ly);
+      if (label.length > 8) label = label.slice(0, 7) + '…';
+      g.fillText(label, lx + 20, ly);
     }
   }
 
@@ -947,7 +934,11 @@ export function Screens() {
     }
   });
 
-  const frameMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#22262b', roughness: 0.5 }), []);
+  const frameMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#1b1f24', roughness: 0.45 }), []);
+  const surroundMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: '#eeece6', roughness: 0.62, metalness: 0.02 }),
+    [],
+  );
   const leftMat = useMemo(
     () => new THREE.MeshBasicMaterial({ map: left.texture, toneMapped: false }),
     [left.texture],
@@ -969,21 +960,23 @@ export function Screens() {
         CONFIG.doorCenters.map((z) => (
           <group
             key={`scr${s}-${z}`}
-            position={[s * (CONFIG.carHalfWidth - 0.14), 2.16, z]}
+            position={[s * (CONFIG.carHalfWidth - 0.05), 2.11, z]}
             rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
           >
-            {/* Deux écrans SÉPARÉS, chacun dans son boîtier incliné vers
-                l'allée, avec un espace entre eux (disposition E235). */}
+            {/* Grand panneau blanc de propreté au-dessus de la porte : sur la
+                rame les dalles ne sont pas posées sur la paroi, elles y sont
+                ENCASTRÉES, avec de la réserve blanche tout autour. */}
+            <mesh position={[0, 0, -0.035]} material={surroundMat}>
+              <boxGeometry args={[1.36, 0.5, 0.07]} />
+            </mesh>
+            {/* Deux dalles en retrait dans le panneau, chacune dans sa feuillure */}
             {([-1, 1] as const).map((k) => (
-              <group key={`half${k}`} position={[k * 0.345, 0, 0]} rotation={[0.22, 0, 0]}>
-                {/* Boîtier franchement plus grand que la dalle : il faut un
-                    encadrement visible sur les quatre côtés, sinon l'image
-                    paraît coupée par la paroi. */}
-                <mesh position={[0, 0, -0.014]} material={frameMat}>
-                  <boxGeometry args={[0.68, 0.42, 0.035]} />
+              <group key={`half${k}`} position={[k * 0.335, 0, 0]}>
+                <mesh position={[0, 0, -0.012]} material={frameMat}>
+                  <boxGeometry args={[0.62, 0.34, 0.03]} />
                 </mesh>
-                <mesh position={[0, 0, 0.005]} material={k === -1 ? leftMat : s === 1 ? rightMatA : rightMatB}>
-                  <planeGeometry args={[0.6, 0.32]} />
+                <mesh position={[0, 0, 0.004]} material={k === -1 ? leftMat : s === 1 ? rightMatA : rightMatB}>
+                  <planeGeometry args={[0.58, 0.3]} />
                 </mesh>
               </group>
             ))}

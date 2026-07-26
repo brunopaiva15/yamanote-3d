@@ -30,7 +30,7 @@ const HL = CONFIG.carHalfLength; // 10
 const HW = CONFIG.carHalfWidth; // 1.4
 const H = CONFIG.carHeight; // 2.3
 const DOOR_HW = CONFIG.doorHalfWidth; // 0.66
-const DOOR_H = 1.95;
+const DOOR_H = 1.85; // hauteur d'ouverture réelle d'une rame de banlieue
 
 // Segments de paroi entre les ouvertures de portes (portes à ±2.5 et ±7.5).
 // Les segments d'extrémité (index 0 et 4) sont en zone prioritaire (rose).
