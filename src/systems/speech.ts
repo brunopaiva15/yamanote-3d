@@ -8,6 +8,11 @@
 // - Chrome : les utterances longues sont coupées (~15 s) sans onend ; on
 //   découpe donc par phrases, avec un keep-alive pause/resume et un filet
 //   de sécurité si aucun événement de fin n'arrive.
+// - Edge : les voix « Online (Natural) » (Nanami, Aria) sont des voix réseau
+//   qui peuvent échouer en silence — aucun son, pas de onstart, parfois aucun
+//   événement. Si une voix ne démarre pas, on la met en liste noire pour la
+//   session et on rejoue le segment avec la voix suivante. pause() tue aussi
+//   ces voix réseau dans Chromium : le keep-alive est réservé aux voix locales.
 //
 // Spatialisation : speechSynthesis sort directement sur la carte son, hors du
 // graphe Web Audio — impossible de la panner. On l'ancre donc aux diffuseurs
@@ -25,9 +30,18 @@ let voicesReady = false;
 let jaVoice: SpeechSynthesisVoice | null = null;
 let enVoice: SpeechSynthesisVoice | null = null;
 let watchdogId = 0;
+let startWatchdogId = 0;
+let retryId = 0;
 let keepAliveId = 0;
 let volumeSyncId = 0;
 let currentUtterance: SpeechSynthesisUtterance | null = null;
+
+// Voix qui n'ont jamais produit de son : écartées jusqu'au rechargement.
+const badVoices = new Set<string>();
+
+function voiceKey(v: SpeechSynthesisVoice): string {
+  return `${v.voiceURI}|${v.name}|${v.lang}`;
+}
 
 // Niveau utterance : volume du site × proximité du diffuseur (hors graphe Tone).
 function speechLevel(): number {
@@ -63,7 +77,10 @@ function normalizeVoiceName(name: string): string {
 
 function pickVoice(lang: string): SpeechSynthesisVoice | null {
   if (!('speechSynthesis' in window)) return null;
-  const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.replace('_', '-').toLowerCase().startsWith(lang));
+  const voices = window.speechSynthesis
+    .getVoices()
+    .filter((v) => v.lang.replace('_', '-').toLowerCase().startsWith(lang))
+    .filter((v) => !badVoices.has(voiceKey(v)));
   if (voices.length === 0) return null;
   const wanted = PREFERRED_VOICE[lang];
   if (wanted) {
@@ -119,9 +136,13 @@ function splitSentences(text: string): string[] {
 
 function clearTimers(): void {
   if (watchdogId) window.clearTimeout(watchdogId);
+  if (startWatchdogId) window.clearTimeout(startWatchdogId);
+  if (retryId) window.clearTimeout(retryId);
   if (keepAliveId) window.clearInterval(keepAliveId);
   if (volumeSyncId) window.clearInterval(volumeSyncId);
   watchdogId = 0;
+  startWatchdogId = 0;
+  retryId = 0;
   keepAliveId = 0;
   volumeSyncId = 0;
 }
@@ -131,6 +152,34 @@ function finishUtterance(): void {
   currentUtterance = null;
   speaking = false;
   pump();
+}
+
+// Une voix n'a jamais produit de son (voix réseau Edge en échec silencieux) :
+// on l'écarte et on rejoue le même segment avec la voix suivante.
+function failVoiceAndRetry(item: Utterance, voice: SpeechSynthesisVoice): void {
+  console.warn(`[speech] Voix « ${voice.name} » muette — repli sur une autre voix.`);
+  badVoices.add(voiceKey(voice));
+  refreshVoices();
+  if (currentUtterance) {
+    currentUtterance.onstart = null;
+    currentUtterance.onend = null;
+    currentUtterance.onerror = null;
+  }
+  clearTimers();
+  currentUtterance = null;
+  queue.unshift(item);
+  try {
+    window.speechSynthesis.cancel();
+  } catch {
+    /* sans gravité */
+  }
+  // Chromium avale un speak() lancé dans la foulée d'un cancel() : on laisse
+  // retomber la poussière avant de relancer la file.
+  retryId = window.setTimeout(() => {
+    retryId = 0;
+    speaking = false;
+    pump();
+  }, 250);
 }
 
 // Ligne de sonorisation ouverte : souffle spatialisé + déclics d'ouverture et
@@ -184,8 +233,20 @@ function pump(): void {
   u.volume = speechLevel();
   currentUtterance = u;
   speaking = true;
+  let started = false;
+  u.onstart = () => {
+    started = true;
+  };
   u.onend = finishUtterance;
-  u.onerror = finishUtterance;
+  u.onerror = (e) => {
+    // Échec avant le moindre son (Edge « Online (Natural) » sans réseau,
+    // synthesis-failed…) : la voix est écartée et le segment rejoué.
+    if (!started && voice && e.error !== 'canceled' && e.error !== 'interrupted') {
+      failVoiceAndRetry(item, voice);
+      return;
+    }
+    finishUtterance();
+  };
   // Filet de sécurité : si onend n'arrive jamais, on libère la file.
   const estimatedMs = 5000 + item.text.length * 260;
   watchdogId = window.setTimeout(() => {
@@ -196,15 +257,35 @@ function pump(): void {
     }
     finishUtterance();
   }, estimatedMs);
-  // Keep-alive Chrome : pause/resume périodique pendant la lecture.
-  keepAliveId = window.setInterval(() => {
+  // Certaines voix réseau échouent en silence, sans aucun événement : si rien
+  // n'a démarré au bout de 4 s, on change de voix plutôt que d'attendre le
+  // watchdog en laissant l'annonce muette.
+  startWatchdogId = window.setTimeout(() => {
+    if (started) return;
+    if (voice) {
+      failVoiceAndRetry(item, voice);
+      return;
+    }
     try {
-      window.speechSynthesis.pause();
-      window.speechSynthesis.resume();
+      window.speechSynthesis.cancel();
     } catch {
       /* sans gravité */
     }
-  }, 10000);
+    finishUtterance();
+  }, 4000);
+  // Keep-alive Chrome : pause/resume périodique pendant la lecture. Réservé
+  // aux voix locales — pause() coupe définitivement les voix réseau (Edge
+  // Natural) dans Chromium.
+  if (!voice || voice.localService) {
+    keepAliveId = window.setInterval(() => {
+      try {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      } catch {
+        /* sans gravité */
+      }
+    }, 10000);
+  }
   // Resync volume / proximité pendant l'annonce (le slider et la tête bougent).
   volumeSyncId = window.setInterval(syncSpeechVolume, 200);
   window.speechSynthesis.speak(u);
