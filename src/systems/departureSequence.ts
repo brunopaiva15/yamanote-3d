@@ -7,6 +7,7 @@ import {
   EBISU_INNER_THIRD_MAN_F_PATH,
   INNER_MAIN_MELODY_PATH,
   IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
+  IKEBUKURO_INNER_BIC_CAMERA_B_PATH,
   KANDA_INNER_MONDAMIN_B_PATH,
   KANDA_OUTER_MONDAMIN_A_PATH,
   KOMAGOME_INNER_SAKURA_V2_PATH,
@@ -23,6 +24,7 @@ import {
   makeDepartureId,
   shouldPlayEbisuInnerThirdManF,
   shouldPlayIkebukuroInnerBicCameraA,
+  shouldPlayIkebukuroInnerBicCameraB,
   shouldPlayInnerMainMelody,
   shouldPlayKandaInnerMondaminB,
   shouldPlayKandaOuterMondaminA,
@@ -68,6 +70,7 @@ let gloriousGatewayBPlaying = false;
 let kandaMondaminAPlaying = false;
 let kandaMondaminBPlaying = false;
 let bicCameraAPlaying = false;
+let bicCameraBPlaying = false;
 
 export function isDepartureBlocked(): boolean {
   const b = runtime.departureBlockers;
@@ -101,6 +104,7 @@ export function resetMelodyDepartureGuard(): void {
   kandaMondaminAPlaying = false;
   kandaMondaminBPlaying = false;
   bicCameraAPlaying = false;
+  bicCameraBPlaying = false;
 }
 
 /** Dérive l'état train pour la mélodie à partir de la phase et des portes. */
@@ -258,6 +262,11 @@ export function stopIkebukuroInnerBicCameraA(): void {
   bicCameraAPlaying = false;
 }
 
+export function stopIkebukuroInnerBicCameraB(): void {
+  audioManager.stop(IKEBUKURO_INNER_BIC_CAMERA_B_PATH);
+  bicCameraBPlaying = false;
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
@@ -276,6 +285,7 @@ export function cancelDepartureMelody(): void {
   stopKandaOuterMondaminA();
   stopKandaInnerMondaminB();
   stopIkebukuroInnerBicCameraA();
+  stopIkebukuroInnerBicCameraB();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -620,6 +630,32 @@ export async function playIkebukuroInnerBicCameraA(
   }
 }
 
+/**
+ * Bic Camera Theme Song ver.B : Ikebukuro Inner voie 6 → Mejiro, une fois par départ.
+ * Ne nécessite pas departureAuthorized (préparation du départ).
+ */
+export async function playIkebukuroInnerBicCameraB(
+  context: MelodyPlayContext,
+): Promise<boolean> {
+  if (!shouldPlayIkebukuroInnerBicCameraB(context)) return false;
+  if (context.emergencyActive) return false;
+  if (runtime.departureBlockers.heldAtStation) return false;
+  if (bicCameraBPlaying) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  bicCameraBPlaying = true;
+  try {
+    const ok = await audioManager.playOnce(IKEBUKURO_INNER_BIC_CAMERA_B_PATH);
+    if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+      runtime.lastMelodyDepartureId = null;
+    }
+    return ok;
+  } finally {
+    bicCameraBPlaying = false;
+  }
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -644,8 +680,9 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (context.trainState !== 'stopped_doors_open') return false;
   if (context.emergencyActive) return false;
 
-  // Bic Camera A (voie 5) : peut démarrer sans departureAuthorized.
+  // Bic Camera A/B (voies 5/6) : peuvent démarrer sans departureAuthorized.
   if (await playIkebukuroInnerBicCameraA(context)) return true;
+  if (await playIkebukuroInnerBicCameraB(context)) return true;
 
   if (context.departureAuthorized === false) return false;
   if (isDepartureBlocked()) return false;

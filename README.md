@@ -202,7 +202,10 @@ Clip Kanda Inner : `public/audio/melodies/17_mondamin-cm-song-b.mp3` (モンダ�
 uniquement `JY02` + Inner + plateforme **3** → Akihabara.
 
 Clip Ikebukuro Inner voie 5 : `public/audio/melodies/18_bic-camera-theme-a.mp3` (ビックカメラテーマソング ver.A),
-uniquement `JY13` + Inner + plateforme **5** → Mejiro (quai secondaire via `useAlternativePlatform`). La voie 6 (ver.B) n’est pas encore fournie.
+uniquement `JY13` + Inner + plateforme **5** → Mejiro (quai secondaire via `useAlternativePlatform`).
+
+Clip Ikebukuro Inner voie 6 : `public/audio/melodies/19_bic-camera-theme-b.mp3` (ビックカメラテーマソング ver.B),
+uniquement `JY13` + Inner + plateforme **6** → Mejiro (voie principale).
 
 ### Sonorisation en 3D
 

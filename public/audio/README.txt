@@ -19,5 +19,6 @@ melodies/15_glorious-gateway-b.mp3 — Takanawa Gateway Outer voie 2
 melodies/16_mondamin-cm-song-a.mp3 — Kanda Outer voie 2 (モンダミンCMソング ver.A)
 melodies/17_mondamin-cm-song-b.mp3 — Kanda Inner voie 3 (モンダミンCMソング ver.B)
 melodies/18_bic-camera-theme-a.mp3 — Ikebukuro Inner voie 5 (ビックカメラテーマソング ver.A)
+melodies/19_bic-camera-theme-b.mp3 — Ikebukuro Inner voie 6 (ビックカメラテーマソング ver.B)
 Jouées une seule fois au début de la procédure de départ, portes ouvertes,
 via audioManager.playOnce (garde departureId anti double-lecture).
