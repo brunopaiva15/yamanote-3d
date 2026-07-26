@@ -1,4 +1,6 @@
-// Gabarits d'annonces JP / EN, phrasé standard JR East.
+// Gabarits d'annonces JP / EN, phrasé standard JR East (Yamanote / 通勤型).
+// Séquences : départ = 列車案内? → 次駅 → 乗換? → 案内(0–2) ;
+//             approche = まもなく(+portes) → 乗換?
 
 import { STATIONS, TRANSFERS, type Station } from './stations';
 
@@ -26,45 +28,82 @@ function nextHubs(from: number, count: number): Station[] {
   return out;
 }
 
+function doorSideJp(side: 1 | -1): string {
+  return side === 1 ? '右' : '左';
+}
+
+function doorSideEn(side: 1 | -1): string {
+  return side === 1 ? 'right' : 'left';
+}
+
+/** JY01 → JY-01 (forme parlée EN de la numérotation Yamanote). */
+export function spokenJy(jy: string): string {
+  const m = /^([A-Z]+)(\d+)$/i.exec(jy);
+  if (!m) return jy;
+  return `${m[1].toUpperCase()}-${m[2]}`;
+}
+
+// --- Blocs élémentaires ---
+
 // Annonce du sens de la boucle, dite après le départ des grandes gares.
-// La Yamanote n'a pas de terminus : on annonce le sens (外回り, boucle
-// extérieure — l'unique sens simulé, ordre JY croissant) et 1 à 2 gares repères.
+// La Yamanote n'a pas de terminus : on annonce le sens (外回り) et 1 à 2 gares repères.
 export function directionAnnouncement(index: number): Utterance[] {
   const hubs = nextHubs(index, 2);
-  const jp = `この電車は、山手線、外回り、${hubs.map((h) => h.kanji).join('・')}方面です。`;
-  const en =
-    `This is the Yamanote Line, outer loop, bound for ${
-      hubs.length === 2 ? `${hubs[0].romaji} and ${hubs[1].romaji}` : hubs[0].romaji
-    }.`;
+  const jpHubs = hubs.map((h) => h.kanji).join('・');
+  const enHubs =
+    hubs.length === 2 ? `${hubs[0].romaji} and ${hubs[1].romaji}` : hubs[0].romaji;
   return [
-    { text: jp, lang: 'ja-JP' },
-    { text: en, lang: 'en-US' },
+    { text: `この電車は、山手線外回り、${jpHubs}方面ゆきです。`, lang: 'ja-JP' },
+    { text: `This is a Yamanote Line train bound for ${enHubs}.`, lang: 'en-US' },
   ];
 }
 
-// Au départ : « 次は… », station à venir + côté de sortie + correspondances.
-// Le numéro de gare JY est clairement énoncé dans la version anglaise.
+// « 次は… » : station à venir + côté de sortie (forme distance courte).
 export function nextStationAnnouncement(index: number, side: 1 | -1): Utterance[] {
   const st = STATIONS[index];
-  const tr = TRANSFERS[st.jy];
-  const jp =
-    `次は、${st.kanji}、${st.kanji}。お出口は${side === 1 ? '右' : '左'}側です。` +
-    (tr ? `${tr.jp}は、お乗り換えです。` : '');
-  const en =
-    `The next station is ${st.romaji}, ${st.jy}. The doors on the ${side === 1 ? 'right' : 'left'} side will open.` +
-    (tr ? ` Please change here for ${tr.en}.` : '');
+  const sideJp = doorSideJp(side);
+  const sideEn = doorSideEn(side);
   return [
-    { text: jp, lang: 'ja-JP' },
-    { text: en, lang: 'en-US' },
+    {
+      text: `次は、${st.kanji}、${st.kanji}。お出口は、${sideJp}側です。`,
+      lang: 'ja-JP',
+    },
+    {
+      text:
+        `The next station is ${st.romaji}. ${spokenJy(st.jy)}. ` +
+        `The doors on the ${sideEn} side will open.`,
+      lang: 'en-US',
+    },
   ];
 }
 
-// À l'approche : « まもなく… ».
-export function approachAnnouncement(index: number): Utterance[] {
+// « まもなく… » : approche + côté de sortie.
+export function approachAnnouncement(index: number, side: 1 | -1): Utterance[] {
   const st = STATIONS[index];
+  const sideJp = doorSideJp(side);
+  const sideEn = doorSideEn(side);
   return [
-    { text: `まもなく、${st.kanji}、${st.kanji}。`, lang: 'ja-JP' },
-    { text: `We will soon make a brief stop at ${st.romaji}, ${st.jy}.`, lang: 'en-US' },
+    {
+      text: `まもなく、${st.kanji}、${st.kanji}。お出口は、${sideJp}側です。`,
+      lang: 'ja-JP',
+    },
+    {
+      text:
+        `The next station is ${st.romaji}. ` +
+        `The doors on the ${sideEn} side will open.`,
+      lang: 'en-US',
+    },
+  ];
+}
+
+// Correspondances (乗換案内), uniquement si la gare en a.
+export function transferAnnouncement(index: number): Utterance[] {
+  const st = STATIONS[index];
+  const tr = TRANSFERS[st.jy];
+  if (!tr) return [];
+  return [
+    { text: `${tr.jp}は、お乗換です。`, lang: 'ja-JP' },
+    { text: `Please change here for ${tr.en}.`, lang: 'en-US' },
   ];
 }
 
@@ -76,7 +115,7 @@ export function doorsClosingAnnouncement(): Utterance[] {
   ];
 }
 
-// Accueil, au démarrage de l'expérience.
+// Accueil (hors séquence standard — conservé pour usage éventuel).
 export function welcomeAnnouncement(): Utterance[] {
   return [
     { text: '本日も、山手線を、ご利用くださいまして、ありがとうございます。', lang: 'ja-JP' },
@@ -84,53 +123,94 @@ export function welcomeAnnouncement(): Utterance[] {
   ];
 }
 
-// --- Messages généraux de courtoisie (occasionnels, en rotation) ---
+// --- 案内放送 (max 2 après next + transfers) ---
 
-// Rappel des places prioritaires.
 export function prioritySeatsAnnouncement(): Utterance[] {
   return [
     {
-      text: 'この電車には、優先席があります。お年寄りや、お体の不自由なお客様に、お席をお譲りください。',
+      text:
+        'この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。',
       lang: 'ja-JP',
     },
     {
-      text: 'Priority seats are located in each car. Please offer your seat to passengers who may need it.',
+      text: 'There are priority seats in most cars. Please offer your seat to those who may need it.',
       lang: 'en-US',
     },
   ];
 }
 
-// Téléphones en mode manière près des places prioritaires.
 export function mannersAnnouncement(): Utterance[] {
   return [
     {
-      text: '携帯電話は、マナーモードに設定の上、通話はご遠慮ください。',
+      text:
+        'お客様にお願いいたします。優先席付近では、携帯電話の電源をお切りください。それ以外の場所では、マナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。',
       lang: 'ja-JP',
     },
     {
-      text: 'Please set your mobile phone to silent mode and refrain from talking on the phone.',
+      text:
+        'Please switch off your mobile phone when you are near the priority seats. ' +
+        'In other areas, please set it to silent mode and refrain from talking on the phone.',
       lang: 'en-US',
     },
   ];
 }
 
-// Attention aux bagages et aux objets oubliés.
-export function belongingsAnnouncement(): Utterance[] {
+export function suddenStopAnnouncement(): Utterance[] {
   return [
     {
-      text: 'お手回り品は、お忘れ物のないよう、ご注意ください。',
+      text:
+        'お客様にお願いいたします。電車は事故防止のため、やむを得ず急停車することがありますので、お立ちのお客様は、つり革や手すりにおつかまりください。',
       lang: 'ja-JP',
     },
     {
-      text: 'Please be careful not to leave any belongings behind.',
+      text: 'It may be necessary for the train to stop suddenly to prevent an accident. So please be careful.',
       lang: 'en-US',
     },
   ];
 }
 
-// Rotation des messages généraux : sélection selon un compteur qui avance.
-const GENERAL_MESSAGES = [prioritySeatsAnnouncement, mannersAnnouncement, belongingsAnnouncement];
+const GUIDANCE_POOL = [
+  prioritySeatsAnnouncement,
+  mannersAnnouncement,
+  suddenStopAnnouncement,
+] as const;
 
-export function generalMessage(counter: number): Utterance[] {
-  return GENERAL_MESSAGES[((counter % GENERAL_MESSAGES.length) + GENERAL_MESSAGES.length) % GENERAL_MESSAGES.length]();
+/** 0 à 2 messages de courtoisie, rotation déterministe selon l'index de gare. */
+export function guidanceAnnouncements(index: number): Utterance[] {
+  const count = index % 3; // 0, 1 ou 2
+  if (count === 0) return [];
+  const start = Math.floor(index / 3) % GUIDANCE_POOL.length;
+  const out: Utterance[] = [];
+  for (let i = 0; i < count; i++) {
+    out.push(...GUIDANCE_POOL[(start + i) % GUIDANCE_POOL.length]());
+  }
+  return out;
+}
+
+// --- Séquences ---
+
+/**
+ * Départ (cruise) : 列車案内? → 次駅案内 → 乗換案内? → 案内放送(0–2).
+ * Direction uniquement si la gare précédente est un hub majeur.
+ */
+export function departureSequence(index: number, side: 1 | -1): Utterance[] {
+  const out: Utterance[] = [];
+  const prev = (index - 1 + 30) % 30;
+  if (isMajorHub(prev)) {
+    out.push(...directionAnnouncement(index));
+  }
+  out.push(...nextStationAnnouncement(index, side));
+  out.push(...transferAnnouncement(index));
+  out.push(...guidanceAnnouncements(index));
+  return out;
+}
+
+/**
+ * Approche (brake) : まもなく案内(+portes) → 乗換案内?
+ */
+export function approachSequence(index: number, side: 1 | -1): Utterance[] {
+  const out: Utterance[] = [];
+  out.push(...approachAnnouncement(index, side));
+  out.push(...transferAnnouncement(index));
+  return out;
 }
