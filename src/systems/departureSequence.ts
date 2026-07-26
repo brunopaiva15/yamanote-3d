@@ -10,6 +10,7 @@ import {
   OSAKI_INNER_SECONDARY_MELODY_PATH,
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
+  SESERAGI_MELODY_PATH,
   UGUISUDANI_INNER_HARU_TREMOLO_PATH,
   makeDepartureId,
   shouldPlayInnerMainMelody,
@@ -18,6 +19,7 @@ import {
   shouldPlayOsakiInnerSecondaryMelody,
   shouldPlayOsakiOuterSecondaryMelody,
   shouldPlayOuterMainMelody,
+  shouldPlaySeseragi,
   shouldPlayUguisudaniInnerHaruTremolo,
   type MelodyPlayContext,
   type ServiceType,
@@ -41,6 +43,7 @@ export type DepartureBlockers = {
 };
 
 let outerMainMelodyPlaying = false;
+let seseragiPlaying = false;
 
 export function isDepartureBlocked(): boolean {
   const b = runtime.departureBlockers;
@@ -65,6 +68,7 @@ export function clearDepartureBlockers(): void {
 export function resetMelodyDepartureGuard(): void {
   runtime.lastMelodyDepartureId = null;
   outerMainMelodyPlaying = false;
+  seseragiPlaying = false;
 }
 
 /** Dérive l'état train pour la mélodie à partir de la phase et des portes. */
@@ -177,6 +181,11 @@ export function stopUguisudaniInnerHaruTremolo(): void {
   audioManager.stop(UGUISUDANI_INNER_HARU_TREMOLO_PATH);
 }
 
+export function stopSeseragi(): void {
+  audioManager.stop(SESERAGI_MELODY_PATH);
+  seseragiPlaying = false;
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
@@ -186,6 +195,7 @@ export function cancelDepartureMelody(): void {
   stopKomagomeOuterSakuraA();
   stopKomagomeInnerSakuraV2();
   stopUguisudaniInnerHaruTremolo();
+  stopSeseragi();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -320,6 +330,28 @@ export async function playUguisudaniInnerHaruTremolo(context: MelodyPlayContext)
   return ok;
 }
 
+/**
+ * Seseragi : Outer Loop sur les six quais listés, une fois par départ.
+ */
+export async function playSeseragi(context: MelodyPlayContext): Promise<boolean> {
+  if (!shouldPlaySeseragi(context)) return false;
+  if (isDepartureBlocked()) return false;
+  if (seseragiPlaying) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  seseragiPlaying = true;
+  try {
+    const ok = await audioManager.playOnce(SESERAGI_MELODY_PATH);
+    if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+      runtime.lastMelodyDepartureId = null;
+    }
+    return ok;
+  } finally {
+    seseragiPlaying = false;
+  }
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -351,6 +383,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (await playKomagomeOuterSakuraA(context)) return true;
   if (await playKomagomeInnerSakuraV2(context)) return true;
   if (await playUguisudaniInnerHaruTremolo(context)) return true;
+  if (await playSeseragi(context)) return true;
   if (await playInnerMainMelody(context)) return true;
   if (await playOuterMainMelody(context)) return true;
   return false;

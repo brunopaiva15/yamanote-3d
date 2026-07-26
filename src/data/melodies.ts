@@ -108,6 +108,73 @@ export const UGUISUDANI_INNER_HARU_TREMOLO = {
   nextStationName: 'Nippori',
 };
 
+/** Chemin : Seseragi — six quais Outer Yamanote. */
+export const SESERAGI_MELODY_PATH = '/audio/melodies/09_seseragi.mp3';
+
+export const SESERAGI_MELODY = {
+  id: 'seseragi',
+  name: 'Seseragi',
+  japaneseName: 'せせらぎ',
+  file: SESERAGI_MELODY_PATH,
+  type: 'departure_melody' as const,
+  audioSource: 'platform_speakers' as const,
+};
+
+/** Quais Outer qui diffusent Seseragi. */
+export const SESERAGI_PLATFORMS: Record<
+  string,
+  {
+    station: string;
+    platform: number;
+    direction: 'outer';
+    nextStationCode: string;
+    nextStation: string;
+  }
+> = {
+  JY06: {
+    station: 'Uguisudani',
+    platform: 3,
+    direction: 'outer',
+    nextStationCode: 'JY05',
+    nextStation: 'Ueno',
+  },
+  JY07: {
+    station: 'Nippori',
+    platform: 10,
+    direction: 'outer',
+    nextStationCode: 'JY06',
+    nextStation: 'Uguisudani',
+  },
+  JY09: {
+    station: 'Tabata',
+    platform: 3,
+    direction: 'outer',
+    nextStationCode: 'JY08',
+    nextStation: 'Nishi-Nippori',
+  },
+  JY11: {
+    station: 'Sugamo',
+    platform: 2,
+    direction: 'outer',
+    nextStationCode: 'JY10',
+    nextStation: 'Komagome',
+  },
+  JY12: {
+    station: 'Otsuka',
+    platform: 2,
+    direction: 'outer',
+    nextStationCode: 'JY11',
+    nextStation: 'Sugamo',
+  },
+  JY14: {
+    station: 'Mejiro',
+    platform: 2,
+    direction: 'outer',
+    nextStationCode: 'JY13',
+    nextStation: 'Ikebukuro',
+  },
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -364,7 +431,7 @@ export function shouldPlayKomagomeInnerSakuraV2(ctx: MelodyPlayContext): boolean
 
 /**
  * Haru Tremolo : exclusivement Uguisudani (JY06) Inner Loop plateforme 2 → Nippori.
- * La voie 3 Outer utilisera Seseragi (autre fichier).
+ * La voie 3 Outer utilise Seseragi.
  */
 export function shouldPlayUguisudaniInnerHaruTremolo(ctx: MelodyPlayContext): boolean {
   if (ctx.line !== 'yamanote') return false;
@@ -383,6 +450,28 @@ export function shouldPlayUguisudaniInnerHaruTremolo(ctx: MelodyPlayContext): bo
   if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
   const service = resolveServiceType(ctx);
   if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * Seseragi : Outer Loop uniquement, sur les six quais listés dans SESERAGI_PLATFORMS.
+ */
+export function shouldPlaySeseragi(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.direction !== 'outer') return false;
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  const stationConfig = SESERAGI_PLATFORMS[ctx.stationCode];
+  if (!stationConfig) return false;
+  if (Number(ctx.platform) !== Number(stationConfig.platform)) return false;
+  if (ctx.nextStationCode && ctx.nextStationCode !== stationConfig.nextStationCode) return false;
 
   return true;
 }

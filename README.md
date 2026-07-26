@@ -175,7 +175,10 @@ Clip Komagome Inner : `public/audio/melodies/06_sakura-sakura-b.mp3` (さくら�
 uniquement `JY10` + Inner + plateforme **2** → Sugamo.
 
 Clip Uguisudani Inner : `public/audio/melodies/08_haru-tremolo.mp3` (春トレモロ),
-uniquement `JY06` + Inner + plateforme **2** → Nippori. La voie 3 Outer utilisera Seseragi.
+uniquement `JY06` + Inner + plateforme **2** → Nippori.
+
+Clip Seseragi : `public/audio/melodies/09_seseragi.mp3` (せせらぎ), Outer uniquement sur
+Uguisudani 3, Nippori 10, Tabata 3, Sugamo 2, Otsuka 2, Mejiro 2.
 
 ### Sonorisation en 3D
 

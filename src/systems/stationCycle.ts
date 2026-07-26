@@ -6,6 +6,7 @@ import { CONFIG, V_MAX } from '../data/config';
 import {
   innerMainMelodyPlatforms,
   outerMainMelodyPlatforms,
+  SESERAGI_PLATFORMS,
 } from '../data/melodies';
 import { DOOR_SIDE, STATIONS } from '../data/stations';
 import {
@@ -48,6 +49,7 @@ const OSAKI_OUTER_SECONDARY_MELODY_SECS = 22.1;
 const KOMAGOME_OUTER_SAKURA_A_SECS = 18.7;
 const KOMAGOME_INNER_SAKURA_V2_SECS = 18.3;
 const UGUISUDANI_INNER_HARU_TREMOLO_SECS = 12.0;
+const SESERAGI_MELODY_SECS = 12.1;
 /** Marge entre fin de mélodie et annonce de fermeture. */
 const MELODY_TO_ANNOUNCE_GAP = 3.5;
 
@@ -64,6 +66,7 @@ function melodyBudgetSeconds(stationIndex: number): number {
     if (dir === 'inner') return KOMAGOME_INNER_SAKURA_V2_SECS;
   }
   if (jy === 'JY06' && dir === 'inner') return UGUISUDANI_INNER_HARU_TREMOLO_SECS;
+  if (dir === 'outer' && SESERAGI_PLATFORMS[jy]) return SESERAGI_MELODY_SECS;
   if (dir === 'outer' && outerMainMelodyPlatforms[jy]) return OUTER_MAIN_MELODY_SECS;
   if (dir === 'inner' && innerMainMelodyPlatforms[jy]) return INNER_MAIN_MELODY_SECS;
   return 6.5;
