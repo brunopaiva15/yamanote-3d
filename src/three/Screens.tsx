@@ -67,10 +67,10 @@ function fitText(g: CanvasRenderingContext2D, text: string, maxWidth: number, ba
 }
 
 // --- Écran gauche : publicités en boucle (jamais d'info voyageurs, comme
-// dans les vraies E235). Les seeds évitent celles des affiches et écrans
-// 窓上 (0-5 et 20-25) pour ne pas répéter les mêmes visuels dans le wagon.
-const AD_LOOP_FIRST_SEED = 40;
-const AD_LOOP_COUNT = 8;
+// dans les vraies E235). Seeds 300+ : hors nakazuri (0–N), 窓上 (100–111)
+// et affiches d'about (200–203), pour une rotation longue et distincte.
+const AD_LOOP_FIRST_SEED = 300;
+const AD_LOOP_COUNT = 120;
 
 function drawLeftAd(s: ReturnType<typeof makeScreen>, seed: number): void {
   const { g, w, h } = s;
