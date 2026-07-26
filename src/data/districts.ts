@@ -510,7 +510,7 @@ export const DISTRICTS: District[] = [
     words: ['浜松町', '貿易', '珈琲', '空港', 'ホテル', '会議'],
     feats: ['officeTowers', 'monorail'],
     landmarks: [
-      { kind: 'tokyoTower', side: -1, scale: 1.15 },
+      { kind: 'tokyoTower', side: -1, scale: 1.05 },
       { kind: 'monorailBeam', side: 1, near: true },
     ],
   },
