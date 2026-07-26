@@ -23,7 +23,6 @@ npm run lint     # oxlint
 - S'asseoir : un clic net vers une place libre ; se lever : espace ou un nouveau clic
 - M : couper le son, F : plein écran
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder, bouton s'asseoir
-- Avance rapide (HUD) : saute à la séquence d'arrivée de la station suivante
 
 ## Personnages (modèles 3D riggés)
 
@@ -65,12 +64,6 @@ Les GLB sont normalisés automatiquement à l'échelle du jeu (aucune retouche
 Blender nécessaire) ; les clips et les os sont détectés par correspondance
 floue (conventions Quaternius / KayKit / Mixamo), avec overrides possibles
 par variante dans le manifest (`clips`, `faceYaw`, `sitHipY`, `tint`).
-
-## Vocabulaire (esprit Shashingo)
-
-Regarder un objet du wagon (porte, tsurikawa, siège, fenêtre, porte-bagages,
-écran, affiche…) affiche une petite fiche : mot en japonais, lecture kana,
-romaji et traduction française. Neuf mots du quotidien ferroviaire.
 
 ## Références visuelles (maquettes hors dépôt)
 

@@ -41,17 +41,6 @@ function enterPhase(phase: Phase): void {
   fired.clear();
 }
 
-export function fastForward(): void {
-  const { phase } = useStore.getState();
-  if (phase === 'cruise') {
-    enterPhase('brake');
-  } else if (phase === 'dwell') {
-    // Sauter directement à la séquence de départ (mélodie, annonce, fermeture).
-    runtime.phaseT = Math.max(runtime.phaseT, CONFIG.dwellTime - 13.05);
-  } else if (phase === 'depart') {
-    enterPhase('cruise');
-  }
-}
 
 export function updateCycle(dt: number): void {
   const s = useStore.getState();

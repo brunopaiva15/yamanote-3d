@@ -400,24 +400,49 @@ export function makePriorityBadgeTexture(): THREE.CanvasTexture {
   return toTexture(c);
 }
 
-// --- Sticker de sol rouge « Priority Seat » (extrémités du wagon) ---
+// Teintes des sols d'about, partagées avec three/Car.tsx : la portion qui
+// passe sous les banquettes est unie, seule la partie dégagée porte le
+// marquage — sinon le texte se retrouve caché sous les sièges.
+export const PRIORITY_FLOOR_COLOR = '#d81f1a';
+export const FREE_FLOOR_COLOR = '#e2197f';
+
+// --- Sol rouge de la zone prioritaire ---
+// Ce n'est pas un sticker posé sur le gris : sur l'E235 tout le plancher de la
+// travée d'about est teinté, rouge côté places prioritaires et magenta côté
+// zone libre. Les caractères 優先席 sont dans trois cartouches empilés dans le
+// sens de la marche, « Priority Seat » à la verticale à côté.
 export function makePriorityFloorTexture(): THREE.CanvasTexture {
-  const { c, g } = makeCanvas(256, 256);
-  g.fillStyle = '#c8362c';
-  g.beginPath();
-  g.roundRect(6, 6, 244, 244, 26);
-  g.fill();
-  g.strokeStyle = 'rgba(255,255,255,0.85)';
-  g.lineWidth = 5;
-  g.beginPath();
-  g.roundRect(16, 16, 224, 224, 20);
-  g.stroke();
-  g.fillStyle = '#ffffff';
+  const { c, g } = makeCanvas(256, 548);
+  g.fillStyle = '#d81f1a';
+  g.fillRect(0, 0, 256, 548);
+  const r = rng(77);
+  for (let i = 0; i < 900; i++) {
+    g.fillStyle = `rgba(255,255,255,${0.02 + r() * 0.05})`;
+    g.fillRect(r() * 256, r() * 548, 1 + r() * 3, 1 + r() * 3);
+  }
+  const boxes = ['優', '先', '席'];
   g.textAlign = 'center';
-  g.font = `bold 64px ${JP_FONT}`;
-  g.fillText('優先席', 128, 118);
-  g.font = `26px ${JP_FONT}`;
-  g.fillText('Priority Seat', 128, 168);
+  g.textBaseline = 'middle';
+  boxes.forEach((ch, i) => {
+    const y = 180 + i * 100;
+    g.strokeStyle = 'rgba(255,255,255,0.92)';
+    g.lineWidth = 4;
+    g.beginPath();
+    g.roundRect(58, y - 40, 80, 80, 8);
+    g.stroke();
+    g.fillStyle = '#ffffff';
+    g.font = `bold 56px ${JP_FONT}`;
+    g.fillText(ch, 98, y + 2);
+  });
+  // « Priority Seat » à la verticale, le long des cartouches.
+  g.save();
+  g.translate(180, 280);
+  g.rotate(Math.PI / 2);
+  g.fillStyle = '#ffffff';
+  g.font = `28px ${JP_FONT}`;
+  g.fillText('Priority Seat', 0, 0);
+  g.restore();
+  g.textBaseline = 'alphabetic';
   g.textAlign = 'left';
   return toTexture(c);
 }
@@ -450,8 +475,8 @@ export function makePrioritySignTexture(): THREE.CanvasTexture {
 
 // --- Pictogrammes de la zone libre (フリースペース) ---
 // Tracés à la main plutôt qu'en police d'icônes : aucune dépendance, et le
-// dessin reste lisible aux tailles où il est vu (sticker de sol sous les pieds,
-// panneau mural à 2 m).
+// dessin reste lisible aux tailles où il est vu. Les traits sont épais : un
+// marquage au sol se lit de loin.
 
 function drawWheelchair(g: CanvasRenderingContext2D, cx: number, cy: number, s: number, color: string): void {
   g.save();
@@ -459,32 +484,27 @@ function drawWheelchair(g: CanvasRenderingContext2D, cx: number, cy: number, s: 
   g.scale(s, s);
   g.fillStyle = color;
   g.strokeStyle = color;
-  // Tête.
-  g.beginPath();
-  g.arc(-6, -30, 7, 0, Math.PI * 2);
-  g.fill();
-  // Dos et cuisses.
-  g.lineWidth = 7;
   g.lineCap = 'round';
+  g.beginPath();
+  g.arc(-6, -30, 9, 0, Math.PI * 2);
+  g.fill();
+  g.lineWidth = 10;
   g.beginPath();
   g.moveTo(-6, -20);
   g.lineTo(-6, 0);
   g.lineTo(14, 0);
   g.stroke();
-  // Jambe et repose-pied.
-  g.lineWidth = 6;
+  g.lineWidth = 9;
   g.beginPath();
   g.moveTo(14, 0);
   g.lineTo(18, 16);
   g.lineTo(26, 16);
   g.stroke();
-  // Grande roue.
-  g.lineWidth = 4;
+  g.lineWidth = 6;
   g.beginPath();
   g.arc(2, 14, 18, 0, Math.PI * 2);
   g.stroke();
-  // Main courante de la roue.
-  g.lineWidth = 2;
+  g.lineWidth = 3;
   g.beginPath();
   g.arc(2, 14, 12, 0, Math.PI * 2);
   g.stroke();
@@ -506,50 +526,59 @@ function drawStroller(g: CanvasRenderingContext2D, cx: number, cy: number, s: nu
   g.lineTo(16, 2);
   g.closePath();
   g.fill();
-  // Poignée.
-  g.lineWidth = 5;
+  // Poignée, et la silhouette qui pousse.
+  g.lineWidth = 7;
   g.beginPath();
   g.moveTo(-16, -10);
-  g.lineTo(-30, -24);
+  g.lineTo(-34, -26);
+  g.stroke();
+  g.beginPath();
+  g.arc(-52, -44, 10, 0, Math.PI * 2);
+  g.fill();
+  g.lineWidth = 10;
+  g.beginPath();
+  g.moveTo(-52, -34);
+  g.lineTo(-50, -8);
+  g.stroke();
+  g.lineWidth = 9;
+  g.beginPath();
+  g.moveTo(-50, -8);
+  g.lineTo(-58, 18);
+  g.moveTo(-50, -8);
+  g.lineTo(-40, 16);
+  g.moveTo(-50, -26);
+  g.lineTo(-34, -26);
   g.stroke();
   // Châssis.
-  g.lineWidth = 5;
+  g.lineWidth = 7;
   g.beginPath();
   g.moveTo(-14, 4);
   g.lineTo(-8, 20);
   g.moveTo(14, 4);
   g.lineTo(18, 20);
   g.stroke();
-  // Roues.
   g.beginPath();
-  g.arc(-8, 24, 6, 0, Math.PI * 2);
-  g.moveTo(24, 24);
-  g.arc(18, 24, 6, 0, Math.PI * 2);
+  g.arc(-8, 24, 8, 0, Math.PI * 2);
+  g.moveTo(26, 24);
+  g.arc(18, 24, 8, 0, Math.PI * 2);
   g.fill();
   g.restore();
 }
 
-// --- Sticker de sol bleu de la zone libre ---
+// --- Sol magenta de la zone libre ---
+// Même principe que le rouge prioritaire : toute la travée est teintée, avec
+// la poussette au-dessus et le fauteuil roulant en dessous, en grand.
 export function makeFreeSpaceFloorTexture(): THREE.CanvasTexture {
-  const { c, g } = makeCanvas(320, 256);
-  g.fillStyle = '#1f6ea8';
-  g.beginPath();
-  g.roundRect(6, 6, 308, 244, 26);
-  g.fill();
-  g.strokeStyle = 'rgba(255,255,255,0.85)';
-  g.lineWidth = 5;
-  g.beginPath();
-  g.roundRect(16, 16, 288, 224, 20);
-  g.stroke();
-  drawWheelchair(g, 96, 96, 1.05, '#ffffff');
-  drawStroller(g, 224, 96, 1.05, '#ffffff');
-  g.fillStyle = '#ffffff';
-  g.textAlign = 'center';
-  g.font = `bold 34px ${JP_FONT}`;
-  g.fillText('フリースペース', 160, 196);
-  g.font = `20px ${JP_FONT}`;
-  g.fillText('Free Space', 160, 224);
-  g.textAlign = 'left';
+  const { c, g } = makeCanvas(256, 548);
+  g.fillStyle = '#e2197f';
+  g.fillRect(0, 0, 256, 548);
+  const r = rng(78);
+  for (let i = 0; i < 900; i++) {
+    g.fillStyle = `rgba(255,255,255,${0.02 + r() * 0.05})`;
+    g.fillRect(r() * 256, r() * 548, 1 + r() * 3, 1 + r() * 3);
+  }
+  drawStroller(g, 138, 180, 1.5, '#ffffff');
+  drawWheelchair(g, 120, 380, 1.6, '#ffffff');
   return toTexture(c);
 }
 
@@ -568,6 +597,89 @@ export function makeFreeSpaceSignTexture(): THREE.CanvasTexture {
   g.fillText('フリースペース', 128, 126);
   g.font = `15px ${JP_FONT}`;
   g.fillText('Free Space', 128, 148);
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+// --- Petits équipements de paroi d'about ---
+// Ce sont eux qui peuplent la travée d'about d'une vraie rame : interphone de
+// détresse, plaque de numéro de voiture, coffret d'extincteur. Sans eux la
+// paroi rose reste une surface vide.
+
+// Interphone SOS : cartouche rouge, pictogramme de combiné, flèche vers le bas.
+export function makeSosTexture(): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(128, 160);
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, 128, 160);
+  g.fillStyle = '#c8241f';
+  g.fillRect(6, 6, 116, 52);
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center';
+  g.font = `bold 34px ${JP_FONT}`;
+  g.fillText('SOS', 64, 45);
+  // Main sur bouton, stylisée.
+  g.fillStyle = '#1d1f22';
+  g.beginPath();
+  g.arc(84, 106, 15, 0, Math.PI * 2);
+  g.fill();
+  g.fillRect(74, 106, 20, 30);
+  // Flèche descendante à gauche.
+  g.strokeStyle = '#1d1f22';
+  g.lineWidth = 6;
+  g.beginPath();
+  g.moveTo(34, 78);
+  g.lineTo(34, 128);
+  g.stroke();
+  g.beginPath();
+  g.moveTo(22, 116);
+  g.lineTo(34, 134);
+  g.lineTo(46, 116);
+  g.closePath();
+  g.fill();
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+// Plaque de numéro de voiture, vissée en haut de la paroi d'about.
+export function makeCarNumberTexture(label: string): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(320, 72);
+  g.fillStyle = '#20242a';
+  g.fillRect(0, 0, 320, 72);
+  g.strokeStyle = 'rgba(255,255,255,0.25)';
+  g.lineWidth = 2;
+  g.strokeRect(4, 4, 312, 64);
+  g.fillStyle = '#f2f4f6';
+  g.textAlign = 'center';
+  g.font = `600 38px ${JP_FONT}`;
+  g.fillText(label, 160, 50);
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+// Coffret d'extincteur : porte blanche à liseré rouge vertical et étiquette.
+export function makeExtinguisherTexture(): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(128, 320);
+  g.fillStyle = '#eceae5';
+  g.fillRect(0, 0, 128, 320);
+  g.fillStyle = '#c8241f';
+  g.fillRect(96, 12, 16, 296);
+  g.strokeStyle = 'rgba(90,92,96,0.5)';
+  g.lineWidth = 2;
+  g.strokeRect(3, 3, 122, 314);
+  // Étiquette 消火器 en haut.
+  g.fillStyle = '#ffffff';
+  g.fillRect(16, 22, 66, 58);
+  g.strokeStyle = '#c8241f';
+  g.lineWidth = 3;
+  g.strokeRect(16, 22, 66, 58);
+  g.fillStyle = '#c8241f';
+  g.textAlign = 'center';
+  g.font = `bold 20px ${JP_FONT}`;
+  g.fillText('消', 49, 48);
+  g.fillText('火', 49, 72);
+  // Serrure.
+  g.fillStyle = '#8d9096';
+  g.fillRect(48, 214, 22, 12);
   g.textAlign = 'left';
   return toTexture(c);
 }
@@ -1127,6 +1239,14 @@ const AD_PALETTES: [string, string, string][] = [
   ['#fdf3e3', '#e2705c', '#4a3f38'],
   ['#eaf4ec', '#63c28a', '#37463c'],
   ['#f3ecf6', '#c97fb8', '#453a4a'],
+  // Fonds pleins : une planche de nakazuri n'est pas une suite d'affiches
+  // blanches. Un tirage sur deux part d'un aplat soutenu, texte en réserve.
+  ['#c9432f', '#ffe9d6', '#ffffff'],
+  ['#1f4f8f', '#ffd25e', '#ffffff'],
+  ['#2f7d4f', '#f4f0dd', '#ffffff'],
+  ['#e8b021', '#3a2c12', '#2a2413'],
+  ['#3b2f6b', '#f0c24a', '#ffffff'],
+  ['#0f1418', '#e8613c', '#f2ede6'],
 ];
 
 // Mascottes plates façon irasutoya : formes rondes, visages simples.
@@ -1293,6 +1413,84 @@ export function drawAdInto(g: CanvasRenderingContext2D, W: number, H: number, se
     g.fillStyle = ink;
     fitFillText(g, sub, W * 0.56, H * 0.9, W * 0.4, Math.floor(W * 0.05));
   }
+}
+
+// --- Nakazuri (中吊り) : l'affiche suspendue au milieu du wagon ---
+// Proportions relevées sur photos : la bannière est BEAUCOUP plus large que
+// haute, de l'ordre de trois fois. C'est une planche unique en travers du
+// wagon, pas une affiche de format B3 — celles-là sont portrait et se posent
+// ailleurs. On rend donc un visuel continu, avec la réserve blanche de tête où
+// mordent les pinces, et un bandeau de pied qui porte la mention légale, comme
+// sur les campagnes qui prennent toute la largeur.
+export function makeNakazuriTexture(seed: number): THREE.CanvasTexture {
+  const W = 1024;
+  const H = 358;
+  const { c, g } = makeCanvas(W, H);
+  const r = rng(900 + seed * 17);
+  const top = 22; // réserve blanche de suspension
+  const foot = 42; // bandeau de pied
+
+  g.fillStyle = '#f3f1ec';
+  g.fillRect(0, 0, W, H);
+
+  // Visuel principal, en pleine largeur.
+  g.save();
+  g.beginPath();
+  g.rect(3, top, W - 6, H - top - foot);
+  g.clip();
+  g.translate(3, top);
+  drawAdInto(g, W - 6, H - top - foot, seed * 3 + 1);
+  g.restore();
+
+  // Bandeau de pied : aplat sombre, titre en réserve et pavé de mentions.
+  g.fillStyle = '#15181c';
+  g.fillRect(3, H - foot, W - 6, foot - 4);
+  g.fillStyle = '#f4f2ee';
+  g.font = `bold ${Math.round(foot * 0.5)}px ${JP_FONT}`;
+  g.fillText(AD_WORDS[Math.floor(r() * AD_WORDS.length)], 22, H - foot * 0.32);
+  g.fillStyle = 'rgba(244,242,238,0.55)';
+  g.font = `${Math.round(foot * 0.3)}px ${JP_FONT}`;
+  g.fillText(AD_SUBS[Math.floor(r() * AD_SUBS.length)], W * 0.42, H - foot * 0.36);
+  for (let i = 0; i < 4; i++) {
+    g.fillStyle = 'rgba(244,242,238,0.35)';
+    g.fillRect(W - 190 + i * 44, H - foot * 0.72, 34, 16);
+  }
+
+  // Réserve de tête : pli, perforations.
+  g.fillStyle = '#efece6';
+  g.fillRect(0, 0, W, top);
+  g.strokeStyle = 'rgba(140,140,146,0.45)';
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(0, top - 0.5);
+  g.lineTo(W, top - 0.5);
+  g.stroke();
+  g.fillStyle = 'rgba(90,92,98,0.35)';
+  for (const x of [W * 0.16, W * 0.5, W * 0.84]) {
+    g.beginPath();
+    g.ellipse(x, top / 2, 7, 4, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.strokeStyle = 'rgba(120,120,126,0.3)';
+  g.lineWidth = 2;
+  g.strokeRect(3, 2, W - 6, H - 6);
+
+  // Grain du papier.
+  for (let i = 0; i < 2600; i++) {
+    g.fillStyle = r() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(60,58,54,0.045)';
+    g.fillRect(r() * W, r() * H, 1 + r() * 1.6, 1 + r() * 1.6);
+  }
+
+  // Voile de brillance : le papier glacé accroche les rampes LED.
+  const sheen = g.createLinearGradient(0, 0, W, H);
+  sheen.addColorStop(0, 'rgba(255,255,255,0.1)');
+  sheen.addColorStop(0.45, 'rgba(255,255,255,0)');
+  sheen.addColorStop(0.72, 'rgba(255,255,255,0.06)');
+  sheen.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = sheen;
+  g.fillRect(0, 0, W, H);
+
+  return toTexture(c);
 }
 
 export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasTexture {

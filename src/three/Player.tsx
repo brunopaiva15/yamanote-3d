@@ -10,7 +10,6 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { input, moveAxes, consumeLook } from '../systems/input';
 import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
-import { lookupVocab } from '../systems/vocab';
 import { setListenerPose } from '../systems/audioEngine';
 
 const AISLE_X = 0.7;
@@ -27,8 +26,6 @@ export function Player() {
   const seatAnchor = useRef(new THREE.Vector3());
   const seatYaw = useRef(0);
   const transition = useRef(1); // 0..1, interpolation assise/debout
-  const vocabAcc = useRef(0);
-  const lookDir = useRef(new THREE.Vector3());
   const camBase = useRef(new THREE.Vector3(0, CONFIG.eyeHeight, 4.2));
   const earFwd = useRef(new THREE.Vector3());
   const earUp = useRef(new THREE.Vector3());
@@ -252,15 +249,6 @@ export function Player() {
       earUp.current.z,
     );
 
-    // Fiche de vocabulaire (esprit Shashingo) : objet au centre du regard.
-    vocabAcc.current += dt;
-    if (started && vocabAcc.current > 0.18) {
-      vocabAcc.current = 0;
-      camera.getWorldDirection(lookDir.current);
-      const state = useStore.getState();
-      const id = lookupVocab(camera.position, lookDir.current, state.vocab);
-      if (id !== state.vocab) state.setVocab(id);
-    }
   });
 
   return null;

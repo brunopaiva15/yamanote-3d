@@ -11,7 +11,7 @@ import { trainDoorLag, trainDoorPos } from '../systems/doorMotion';
 import { makeDoorEdgeTexture, makeDoorStickerTexture } from '../textures/procedural';
 import { roundedRect } from './shapes';
 
-const DOOR_H = 1.95;
+const DOOR_H = 1.85; // hauteur d'ouverture réelle d'une rame de banlieue
 const PANEL_W = CONFIG.doorHalfWidth; // 0.66 par vantail
 
 interface PanelRef {

@@ -80,12 +80,21 @@ function HandleRow({ x }: { x: number }) {
         <meshStandardMaterial color="#26282c" roughness={0.7} metalness={0.25} />
       </mesh>
       <group ref={group}>
-        {/* Sangles */}
-        <Instances limit={zs.length}>
+        {/* Sangles : de la couleur de leur anneau. Sur l'E235-0 la poignée est
+            d'une seule teinte, sangle comprise — vert sur la majeure partie du
+            wagon, jaune en zone prioritaire. */}
+        <Instances limit={Math.max(1, normal.length)}>
           <boxGeometry args={[0.03, STRAP_LEN, 0.014]} />
-          <meshStandardMaterial color="#2c2e33" roughness={0.82} />
-          {zs.map((z) => (
+          <meshStandardMaterial color="#79c140" roughness={0.72} />
+          {normal.map((z) => (
             <Instance key={`s${z}`} position={[0, -STRAP_LEN / 2, z]} />
+          ))}
+        </Instances>
+        <Instances limit={Math.max(1, priority.length)}>
+          <boxGeometry args={[0.03, STRAP_LEN, 0.014]} />
+          <meshStandardMaterial color="#e0b23c" roughness={0.72} />
+          {priority.map((z) => (
+            <Instance key={`ps${z}`} position={[0, -STRAP_LEN / 2, z]} />
           ))}
         </Instances>
         {/* Anneaux triangulaires verts */}

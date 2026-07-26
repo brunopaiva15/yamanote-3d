@@ -8,12 +8,12 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { Instances, Instance } from '@react-three/drei';
 import { CONFIG } from '../data/config';
+import { roundedRect } from './shapes';
 import { BENCHES, FREE_SPACE, SEAT_SLOTS } from '../systems/seats';
 import {
   makeCheckerTexture,
   makeQuiltTexture,
   makePriorityBadgeTexture,
-  makeFreeSpaceFloorTexture,
   makeFreeSpaceSignTexture,
   makeSurfaceTexture,
   makeRoughnessMap,
@@ -56,25 +56,29 @@ function benchPitch(n: number): number {
   return bench ? (bench.z1 - bench.z0) / n : 0.5;
 }
 
+// Baie du panneau d'about, dans le repère du panneau (x = profondeur depuis la
+// paroi, y = hauteur).
+const PANEL_WINDOW = { x: 0.33, y: 1.0, w: 0.44, h: 0.56 };
+
 // --- Panneau d'extrémité (袖仕切り) : silhouette ajourée extrudée ---
 function makePanelGeometry(): THREE.ExtrudeGeometry {
   const shape = new THREE.Shape();
   // Contour (x = profondeur depuis la paroi, y = hauteur).
-  shape.moveTo(0, 0.07);
-  shape.lineTo(0.5, 0.07);
-  shape.quadraticCurveTo(0.68, 0.1, 0.66, 0.42);
-  shape.lineTo(0.62, 1.02);
-  shape.quadraticCurveTo(0.6, 1.34, 0.4, 1.42);
-  shape.quadraticCurveTo(0.2, 1.47, 0, 1.46);
-  shape.lineTo(0, 0.07);
-  // Découpe arrondie (poignée), triangle adouci comme sur l'E235.
-  const hole = new THREE.Path();
-  hole.moveTo(0.44, 0.8);
-  hole.quadraticCurveTo(0.58, 0.9, 0.51, 1.04);
-  hole.quadraticCurveTo(0.44, 1.17, 0.32, 1.11);
-  hole.quadraticCurveTo(0.22, 1.0, 0.29, 0.87);
-  hole.quadraticCurveTo(0.35, 0.79, 0.44, 0.8);
-  shape.holes.push(hole);
+  // Sur la rame le panneau est une plaque quasi rectangulaire : bord avant
+  // droit sur presque toute sa hauteur, puis un grand rayon qui rabat le haut
+  // vers la paroi. L'ancien tracé se renflait vers l'avant à mi-hauteur avant
+  // de se pincer, ce qui lui donnait une silhouette de dossier moulé.
+  shape.moveTo(0, 0.05);
+  shape.lineTo(0.56, 0.05);
+  shape.quadraticCurveTo(0.63, 0.06, 0.635, 0.16);
+  shape.lineTo(0.635, 1.06);
+  shape.quadraticCurveTo(0.63, 1.33, 0.44, 1.44);
+  shape.quadraticCurveTo(0.26, 1.53, 0, 1.53);
+  shape.lineTo(0, 0.05);
+  // Grand hublot vitré : sur l'E235 le panneau d'about est percé d'une baie
+  // largement arrondie, pas d'un simple oculus — c'est elle qui donne au
+  // panneau sa silhouette et qui laisse passer le regard vers la porte.
+  shape.holes.push(roundedRect(PANEL_WINDOW.w, PANEL_WINDOW.h, 0.13, PANEL_WINDOW.x, PANEL_WINDOW.y));
   const geo = new THREE.ExtrudeGeometry(shape, {
     depth: 0.035,
     bevelEnabled: true,
@@ -123,6 +127,10 @@ export function Seats() {
   const geos = useMemo(
     () => ({
       panel: makePanelGeometry(),
+      panelGlass: new THREE.ShapeGeometry(
+        roundedRect(PANEL_WINDOW.w - 0.01, PANEL_WINDOW.h - 0.01, 0.125, PANEL_WINDOW.x, PANEL_WINDOW.y),
+        16,
+      ),
       stanchionR: makeStanchionGeometry(1),
       stanchionL: makeStanchionGeometry(-1),
       midR: makeMidStanchionGeometry(1),
@@ -190,16 +198,16 @@ export function Seats() {
       // Inox brossé plutôt que chrome miroir.
       chrome: new THREE.MeshStandardMaterial({ color: '#c9ced3', roughness: 0.3, metalness: 0.9 }),
       yellowGrip: new THREE.MeshStandardMaterial({ color: '#e0b23c', roughness: 0.68 }),
+      panelGlass: new THREE.MeshStandardMaterial({
+        color: '#cfd8da',
+        transparent: true,
+        opacity: 0.16,
+        roughness: 0.12,
+        metalness: 0.1,
+        side: THREE.DoubleSide,
+      }),
       heater: new THREE.MeshStandardMaterial({ color: '#585b60', roughness: 0.65, metalness: 0.35 }),
       badge: new THREE.MeshBasicMaterial({ map: badge, transparent: true, toneMapped: false }),
-      freeSpaceFloor: new THREE.MeshBasicMaterial({
-        map: makeFreeSpaceFloorTexture(),
-        transparent: true,
-        toneMapped: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -3,
-        polygonOffsetUnits: -3,
-      }),
       freeSpaceSign: new THREE.MeshBasicMaterial({ map: makeFreeSpaceSignTexture(), toneMapped: false }),
     };
   }, []);
@@ -280,16 +288,6 @@ export function Seats() {
                 <mesh position={[s * 0.86, 1.15, FREE_SPACE.z0 + 0.08]} material={materials.chrome}>
                   <cylinderGeometry args={[0.019, 0.019, 2.3, 12]} />
                 </mesh>
-                {/* Marquage au sol, plaqué dans la baie contre la paroi et non
-                    au milieu de l'allée — même orientation que le sticker
-                    優先席, pour se lire en marchant vers l'about. */}
-                <mesh
-                  position={[s * 1.0, 0.004, zc]}
-                  rotation={[-Math.PI / 2, 0, zc > 0 ? Math.PI : 0]}
-                  material={materials.freeSpaceFloor}
-                >
-                  <planeGeometry args={[0.95, 0.76]} />
-                </mesh>
                 {/* Panneau sur la paroi */}
                 <mesh
                   position={[s * (WALL_X - 0.045), 1.36, zc]}
@@ -352,6 +350,16 @@ export function Seats() {
                   geometry={geos.panel}
                   material={materials.shell}
                   position={[s * WALL_X, 0, z - 0.0175]}
+                  rotation={[0, s === 1 ? Math.PI : 0, 0]}
+                />
+              ))}
+              {/* Vitre du hublot */}
+              {[b.z0, b.z1].map((z, k) => (
+                <mesh
+                  key={`panelglass${k}`}
+                  geometry={geos.panelGlass}
+                  material={materials.panelGlass}
+                  position={[s * WALL_X, 0, z]}
                   rotation={[0, s === 1 ? Math.PI : 0, 0]}
                 />
               ))}

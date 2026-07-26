@@ -1,78 +1,117 @@
-// Publicités japonaises : nakazuri (中吊り, affiches portrait suspendues dans
-// l'allée, imprimées recto-verso) et écrans publicitaires inclinés au-dessus
-// des fenêtres (窓上, à la manière de l'E235).
+// Publicités japonaises : nakazuri (中吊り) suspendues dans l'axe du wagon et
+// écrans inclinés au-dessus des fenêtres (窓上, à la manière de l'E235).
+//
+// Les nakazuri ne sont pas orientées le long du wagon mais EN TRAVERS : leur
+// face regarde l'avant et l'arrière de la rame. C'est ce qui donne, quand on
+// regarde dans l'axe de l'allée, ce tunnel d'affiches qui fuit vers le fond —
+// et c'est ainsi qu'on les lit, assis sur les banquettes latérales.
+//
+// Proportions relevées sur photos : la bannière est bien plus large que haute,
+// de l'ordre de trois fois. Sa largeur est bornée par l'espace libre entre les
+// deux rails de tsurikawa (x = ±0,45), qu'elle ne doit jamais toucher ; sa
+// hauteur en découle. C'est un bandeau plat sous le plafond, pas un panneau.
 
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { CONFIG } from '../data/config';
 import { runtime } from '../systems/runtime';
-import { makeAdTexture } from '../textures/procedural';
+import { makeAdTexture, makeNakazuriTexture } from '../textures/procedural';
+
+const HL = CONFIG.carHalfLength; // 10
+
+// Géométrie de la suspension, en mètres.
+const NK_W = 0.86;
+const NK_H = 0.3;
+const NK_TOP = 2.25; // le haut de l'affiche affleure le caisson de plafond
+const NK_PITCH = 1.05; // pas de la rangée : un ruban ajouré, comme sur la rame
+const NK_RAIL_Y = 2.26;
 
 export function Ads() {
-  // Un pivot par affichette, à son point d'accroche au plafond : chaque
-  // nakazuri se balance sur sa tringle, sans translation parasite.
+  // Un pivot par affiche, à son point d'accroche : chaque nakazuri se balance
+  // sur ses pinces, sans translation parasite.
   const pivots = useRef<(THREE.Group | null)[]>([]);
 
-  const { portraitMats, screenMats, housingMat, bezelMat } = useMemo(() => {
-    const portraitMats: THREE.MeshStandardMaterial[] = [];
+  const { nakazuriMats, screenMats, housingMat, bezelMat, clipMat, railMat } = useMemo(() => {
+    // Huit visuels distincts : de quoi parcourir le wagon sans retomber deux
+    // fois de suite sur la même image.
+    const nakazuriMats = Array.from(
+      { length: 8 },
+      (_, i) =>
+        new THREE.MeshStandardMaterial({
+          map: makeNakazuriTexture(i),
+          roughness: 0.72,
+          metalness: 0,
+        }),
+    );
     const screenMats: THREE.MeshBasicMaterial[] = [];
-    for (let i = 0; i < 6; i++) {
-      portraitMats.push(new THREE.MeshStandardMaterial({ map: makeAdTexture(i, true), roughness: 0.9 }));
-    }
     for (let i = 0; i < 6; i++) {
       screenMats.push(new THREE.MeshBasicMaterial({ map: makeAdTexture(20 + i, false), toneMapped: false }));
     }
     const housingMat = new THREE.MeshStandardMaterial({ color: '#e9e7e1', roughness: 0.6, metalness: 0.02 });
     const bezelMat = new THREE.MeshStandardMaterial({ color: '#1c1e22', roughness: 0.55 });
-    return { portraitMats, screenMats, housingMat, bezelMat };
+    const clipMat = new THREE.MeshStandardMaterial({ color: '#b9bec3', roughness: 0.42, metalness: 0.7 });
+    const railMat = new THREE.MeshStandardMaterial({ color: '#aeb3b8', roughness: 0.36, metalness: 0.8 });
+    return { nakazuriMats, screenMats, housingMat, bezelMat, clipMat, railMat };
+  }, []);
+
+  // Rangée continue le long de l'axe, sans déborder sur les travées d'about.
+  const nakazuri = useMemo(() => {
+    const out: { z: number; front: number; back: number }[] = [];
+    const span = HL - 1.1;
+    for (let z = -span; z <= span + 0.001; z += NK_PITCH) {
+      const i = out.length;
+      out.push({ z, front: i % 8, back: (i + 5) % 8 });
+    }
+    return out;
   }, []);
 
   useFrame(() => {
     for (let i = 0; i < pivots.current.length; i++) {
       const p = pivots.current[i];
       if (!p) continue;
-      // Balancement avant-arrière autour de la tringle, léger déphasage
-      // par affichette pour casser la synchronisation.
-      p.rotation.x =
-        runtime.sway * 0.05 +
-        Math.sin(runtime.swayTime * 1.35 + i * 1.7) * 0.012 * Math.min(1, runtime.speed) -
-        runtime.accel * 0.035;
+      // Deux balancements distincts : le roulis du train fait pencher l'affiche
+      // dans son plan, l'accélération la pousse d'avant en arrière.
+      const speedFactor = Math.min(1, runtime.speed / 3);
+      p.rotation.z = runtime.sway * 0.055 + Math.sin(runtime.swayTime * 1.6 + i * 0.9) * 0.012 * speedFactor;
+      p.rotation.x = -runtime.accel * 0.05 + Math.sin(runtime.swayTime * 1.15 + i * 1.7) * 0.02 * speedFactor;
     }
   });
-
-  // Nakazuri en quinconce le long de l'allée (décalées du point de départ).
-  const nakazuri: { z: number; x: number }[] = [];
-  for (let i = 0; i < 6; i++) {
-    nakazuri.push({ z: -8.6 + i * 3.1, x: i % 2 === 0 ? -0.16 : 0.16 });
-  }
 
   // Paires d'écrans inclinés au centre des baies entre portes.
   const madoue: number[] = [-5, 0, 5];
 
   return (
     <group>
+      {/* Rail de suspension au plafond, dans l'axe */}
+      <mesh position={[0, NK_RAIL_Y, 0]} material={railMat}>
+        <boxGeometry args={[0.022, 0.022, (HL - 1) * 2]} />
+      </mesh>
+
       {nakazuri.map((n, i) => (
         <group
           key={`nk${i}`}
-          position={[n.x, 2.14, n.z]}
+          position={[0, NK_TOP, n.z]}
           ref={(g) => {
             pivots.current[i] = g;
           }}
         >
-          {/* Tringle courte : l'affiche reste au-dessus des têtes (bas ~1,67 m) */}
-          <mesh position={[0, -0.035, 0]}>
-            <boxGeometry args={[0.015, 0.07, 0.015]} />
-            <meshStandardMaterial color="#9aa0a6" metalness={0.6} roughness={0.4} />
-          </mesh>
+          {/* Pinces de suspension */}
+          {[-0.3, 0.3].map((x) => (
+            <mesh key={`clip${x}`} position={[x, 0.014, 0]} material={clipMat}>
+              <boxGeometry args={[0.05, 0.028, 0.012]} />
+            </mesh>
+          ))}
           {/* Recto et verso imprimés : jamais de texte en miroir */}
-          <mesh position={[0, -0.28, 0]} material={portraitMats[i % portraitMats.length]}>
-            <planeGeometry args={[0.62, 0.42]} />
+          <mesh position={[0, -NK_H / 2, 0.001]} material={nakazuriMats[n.front]}>
+            <planeGeometry args={[NK_W, NK_H]} />
           </mesh>
-          <mesh position={[0, -0.28, 0]} rotation={[0, Math.PI, 0]} material={portraitMats[(i + 3) % portraitMats.length]}>
-            <planeGeometry args={[0.62, 0.42]} />
+          <mesh position={[0, -NK_H / 2, -0.001]} rotation={[0, Math.PI, 0]} material={nakazuriMats[n.back]}>
+            <planeGeometry args={[NK_W, NK_H]} />
           </mesh>
         </group>
       ))}
+
       {/* Écrans publicitaires 窓上 : boîtiers blancs inclinés vers l'allée */}
       {([1, -1] as const).map((s) =>
         madoue.map((z, i) =>
