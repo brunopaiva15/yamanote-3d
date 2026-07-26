@@ -48,6 +48,26 @@ export const OSAKI_OUTER_SECONDARY_MELODY = {
   type: 'departure_melody' as const,
 };
 
+/** Chemin : Sakura Sakura A — Komagome Outer voie 1. */
+export const KOMAGOME_OUTER_SAKURA_A_PATH = '/audio/melodies/05_sakura-sakura-a.mp3';
+
+/** Config exclusive : Komagome Outer Loop plateforme 1 → Tabata. */
+export const KOMAGOME_OUTER_SAKURA_A = {
+  id: 'sakura-sakura-a',
+  name: 'Sakura Sakura A',
+  japaneseName: 'さくらさくらA',
+  file: KOMAGOME_OUTER_SAKURA_A_PATH,
+  type: 'departure_melody' as const,
+  source: 'platform_speakers' as const,
+  line: 'yamanote',
+  stationCode: 'JY10',
+  stationName: 'Komagome',
+  direction: 'outer' as const,
+  platform: 1,
+  nextStationCode: 'JY09',
+  nextStationName: 'Tabata',
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -236,6 +256,32 @@ export function shouldPlayOsakiOuterSecondaryMelody(ctx: MelodyPlayContext): boo
   if (Number(ctx.platform) !== OSAKI_OUTER_SECONDARY_MELODY.platform) return false;
 
   if (ctx.nextStationCode && ctx.nextStationCode !== OSAKI_OUTER_SECONDARY_MELODY.nextStationCode) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
+  if (ctx.departureAuthorized === false) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * Sakura Sakura A : exclusivement Komagome (JY10) Outer Loop plateforme 1 → Tabata.
+ * La voie 2 Inner utilise Sakura Sakura B (autre fichier).
+ */
+export function shouldPlayKomagomeOuterSakuraA(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== KOMAGOME_OUTER_SAKURA_A.stationCode) return false;
+  if (ctx.direction !== 'outer') return false;
+  if (Number(ctx.platform) !== KOMAGOME_OUTER_SAKURA_A.platform) return false;
+
+  if (ctx.nextStationCode && ctx.nextStationCode !== KOMAGOME_OUTER_SAKURA_A.nextStationCode) {
     return false;
   }
 

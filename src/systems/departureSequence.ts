@@ -5,11 +5,13 @@
 
 import {
   INNER_MAIN_MELODY_PATH,
+  KOMAGOME_OUTER_SAKURA_A_PATH,
   OSAKI_INNER_SECONDARY_MELODY_PATH,
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
   makeDepartureId,
   shouldPlayInnerMainMelody,
+  shouldPlayKomagomeOuterSakuraA,
   shouldPlayOsakiInnerSecondaryMelody,
   shouldPlayOsakiOuterSecondaryMelody,
   shouldPlayOuterMainMelody,
@@ -159,12 +161,17 @@ export function stopOsakiOuterSecondaryMelody(): void {
   runtime.lastMelodyDepartureId = null;
 }
 
+export function stopKomagomeOuterSakuraA(): void {
+  audioManager.stop(KOMAGOME_OUTER_SAKURA_A_PATH);
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
   stopOuterMainMelody();
   stopOsakiInnerSecondaryMelody();
   audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
+  stopKomagomeOuterSakuraA();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -251,6 +258,22 @@ export async function playOsakiOuterSecondaryMelody(context: MelodyPlayContext):
   return ok;
 }
 
+/**
+ * Sakura Sakura A : Komagome Outer voie 1 → Tabata, une fois par départ.
+ */
+export async function playKomagomeOuterSakuraA(context: MelodyPlayContext): Promise<boolean> {
+  if (!shouldPlayKomagomeOuterSakuraA(context)) return false;
+  if (isDepartureBlocked()) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  const ok = await audioManager.playOnce(KOMAGOME_OUTER_SAKURA_A_PATH);
+  if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+    runtime.lastMelodyDepartureId = null;
+  }
+  return ok;
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -279,6 +302,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
 
   if (await playOsakiInnerSecondaryMelody(context)) return true;
   if (await playOsakiOuterSecondaryMelody(context)) return true;
+  if (await playKomagomeOuterSakuraA(context)) return true;
   if (await playInnerMainMelody(context)) return true;
   if (await playOuterMainMelody(context)) return true;
   return false;

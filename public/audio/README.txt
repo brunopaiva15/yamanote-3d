@@ -7,5 +7,6 @@ melodies/01_jre-ikst-010-01_inner-main.mp3 — Inner Loop (Tokyo 4, … Ōsaki 1
 melodies/02_jre-ikst-010-02_outer-main.mp3 — Outer Loop (Tokyo 5, … Ōsaki 3…)
 melodies/03_jre-ikst-010-03_inner-secondary-osaki.mp3 — Ōsaki Inner voie 2
 melodies/04_jre-ikst-010-05_outer-secondary-osaki.mp3 — Ōsaki Outer voie 4
+melodies/05_sakura-sakura-a.mp3 — Komagome Outer voie 1 (さくらさくらA)
 Jouées une seule fois au début de la procédure de départ, portes ouvertes,
 via audioManager.playOnce (garde departureId anti double-lecture).

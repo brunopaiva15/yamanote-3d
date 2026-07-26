@@ -45,6 +45,7 @@ const INNER_MAIN_MELODY_SECS = 18.1;
 const OUTER_MAIN_MELODY_SECS = 20.1;
 const OSAKI_INNER_SECONDARY_MELODY_SECS = 19.1;
 const OSAKI_OUTER_SECONDARY_MELODY_SECS = 22.1;
+const KOMAGOME_OUTER_SAKURA_A_SECS = 18.7;
 /** Marge entre fin de mélodie et annonce de fermeture. */
 const MELODY_TO_ANNOUNCE_GAP = 3.5;
 
@@ -56,6 +57,7 @@ function melodyBudgetSeconds(stationIndex: number): number {
     if (dir === 'inner') return OSAKI_INNER_SECONDARY_MELODY_SECS;
     if (dir === 'outer') return OSAKI_OUTER_SECONDARY_MELODY_SECS;
   }
+  if (dir === 'outer' && jy === 'JY10') return KOMAGOME_OUTER_SAKURA_A_SECS;
   if (dir === 'outer' && outerMainMelodyPlatforms[jy]) return OUTER_MAIN_MELODY_SECS;
   if (dir === 'inner' && innerMainMelodyPlatforms[jy]) return INNER_MAIN_MELODY_SECS;
   return 6.5;
