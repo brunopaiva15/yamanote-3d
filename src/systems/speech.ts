@@ -55,29 +55,51 @@ const PREFERRED_VOICE: Record<string, string> = {
 
 const FEMALE_HINTS = ['female', 'kyoko', 'o-ren', 'haruka', 'sayaka', 'nanami', 'ayumi', 'samantha', 'zira', 'google'];
 
+// Voix listées par le navigateur mais restées muettes à l'usage : on ne les
+// repropose plus (voir la détection d'échec dans pump()).
+const mutedVoices = new Set<string>();
+
 // Réduit un nom de voix à ses lettres et chiffres : « (ja-JP, NanamiNeural) »
 // et « ja-JP-NanamiNeural » se rejoignent alors sur « jajpnanamineural ».
 function normalizeVoiceName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+// Windows publie ses voix « Online (Natural) » à tous les navigateurs, mais
+// seul Edge sait les jouer : ailleurs elles sont sélectionnables et muettes.
+// On les garde en dernier recours au lieu de les choisir d'office.
+const isEdge = typeof navigator !== 'undefined' && navigator.userAgent.includes('Edg/');
+
+function isRemoteNatural(voice: SpeechSynthesisVoice): boolean {
+  const name = voice.name.toLowerCase();
+  return name.includes('online') || name.includes('natural');
+}
+
+// Classement des voix d'une langue : identifiant Azure complet d'abord, prénom
+// de la voix ensuite (Edge nomme la même voix de deux façons selon name et
+// voiceURI), puis l'heuristique féminine historique.
 function pickVoice(lang: string): SpeechSynthesisVoice | null {
   if (!('speechSynthesis' in window)) return null;
-  const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.replace('_', '-').toLowerCase().startsWith(lang));
-  if (voices.length === 0) return null;
-  const wanted = PREFERRED_VOICE[lang];
-  if (wanted) {
-    const id = normalizeVoiceName(wanted);
-    // Ex. « ja-JP-NanamiNeural » → « nanami ».
-    const firstName = normalizeVoiceName(wanted.split('-').pop() ?? '').replace(/neural$/, '');
-    const haystack = (v: SpeechSynthesisVoice) => normalizeVoiceName(`${v.name} ${v.voiceURI}`);
-    const exact = voices.find((v) => haystack(v).includes(id));
-    if (exact) return exact;
-    const byName = firstName.length > 0 ? voices.find((v) => haystack(v).includes(firstName)) : undefined;
-    if (byName) return byName;
-  }
-  const female = voices.find((v) => FEMALE_HINTS.some((h) => v.name.toLowerCase().includes(h)));
-  return female ?? voices[0];
+  const wanted = PREFERRED_VOICE[lang] ?? '';
+  const id = normalizeVoiceName(wanted);
+  // Ex. « ja-JP-NanamiNeural » → « nanami ».
+  const firstName = normalizeVoiceName(wanted.split('-').pop() ?? '').replace(/neural$/, '');
+  const score = (voice: SpeechSynthesisVoice): number => {
+    const haystack = normalizeVoiceName(`${voice.name} ${voice.voiceURI}`);
+    let value = 0;
+    if (id.length > 0 && haystack.includes(id)) value += 100;
+    else if (firstName.length > 0 && haystack.includes(firstName)) value += 50;
+    if (FEMALE_HINTS.some((h) => voice.name.toLowerCase().includes(h))) value += 10;
+    if (!isEdge && isRemoteNatural(voice)) value -= 200;
+    return value;
+  };
+  const ranked = window.speechSynthesis
+    .getVoices()
+    .filter((v) => v.lang.replace('_', '-').toLowerCase().startsWith(lang))
+    .filter((v) => !mutedVoices.has(v.voiceURI))
+    .map((voice, index) => ({ voice, index, value: score(voice) }))
+    .sort((a, b) => b.value - a.value || a.index - b.index);
+  return ranked.length > 0 ? ranked[0].voice : null;
 }
 
 function refreshVoices(): void {
@@ -184,8 +206,28 @@ function pump(): void {
   u.volume = speechLevel();
   currentUtterance = u;
   speaking = true;
-  u.onend = finishUtterance;
-  u.onerror = finishUtterance;
+  // Filet anti-voix muette : si l'utterance ne démarre jamais ou se termine
+  // instantanément, la voix choisie ne produit pas de son (cas des « Online
+  // (Natural) » de Windows hors Edge). On l'écarte et on rejoue le segment.
+  let started = false;
+  const startedAt = performance.now();
+  u.onstart = () => {
+    started = true;
+  };
+  const onDone = (): void => {
+    // Utterance annulée entre-temps : cancelSpeech a déjà fait le ménage.
+    if (currentUtterance !== u) return;
+    const silent = !started || (performance.now() - startedAt < 250 && item.text.length >= 6);
+    if (silent && voice && !mutedVoices.has(voice.voiceURI)) {
+      mutedVoices.add(voice.voiceURI);
+      console.warn('Voix muette écartée, repli sur la suivante :', voice.name);
+      refreshVoices();
+      queue.unshift(item);
+    }
+    finishUtterance();
+  };
+  u.onend = onDone;
+  u.onerror = onDone;
   // Filet de sécurité : si onend n'arrive jamais, on libère la file.
   const estimatedMs = 5000 + item.text.length * 260;
   watchdogId = window.setTimeout(() => {
