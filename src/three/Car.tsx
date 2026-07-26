@@ -22,6 +22,8 @@ import {
   makeCarNumberTexture,
   makeExtinguisherTexture,
   makeAdTexture,
+  PRIORITY_FLOOR_COLOR,
+  FREE_FLOOR_COLOR,
 } from '../textures/procedural';
 
 const HL = CONFIG.carHalfLength; // 10
@@ -56,6 +58,10 @@ const WALL_THICKNESS = 0.08;
 
 // Diffuseur linéaire de climatisation : même emprise que le caisson central.
 const DUCT_LENGTH = HL * 2 - 0.8;
+
+// Largeur de la bande de sol qui porte le marquage : le dégagement entre
+// l'axe de l'allée et le nez des banquettes (elles commencent vers x = 0,80).
+const MARK_W = 0.86;
 
 // Sols teintés des quatre demi-travées d'about : rouge prioritaire partout,
 // sauf là où la zone libre prend la place d'une banquette (voir systems/seats).
@@ -220,6 +226,22 @@ export function Car() {
         polygonOffsetUnits: -3,
       }),
       prioritySign: new THREE.MeshBasicMaterial({ map: textures.prioritySign, toneMapped: false }),
+      priorityFloorPlain: new THREE.MeshStandardMaterial({
+        color: PRIORITY_FLOOR_COLOR,
+        roughness: 0.42,
+        metalness: 0.05,
+        polygonOffset: true,
+        polygonOffsetFactor: -3,
+        polygonOffsetUnits: -3,
+      }),
+      freeFloorPlain: new THREE.MeshStandardMaterial({
+        color: FREE_FLOOR_COLOR,
+        roughness: 0.42,
+        metalness: 0.05,
+        polygonOffset: true,
+        polygonOffsetFactor: -3,
+        polygonOffsetUnits: -3,
+      }),
       darkCap: new THREE.MeshStandardMaterial({ color: '#23262b', roughness: 0.9 }),
       posterFrame: new THREE.MeshStandardMaterial({ color: '#3a3d42', roughness: 0.5, metalness: 0.3 }),
       sos: new THREE.MeshStandardMaterial({ map: makeSosTexture(), roughness: 0.7 }),
@@ -242,14 +264,25 @@ export function Car() {
           côté places prioritaires, magenta côté zone libre, chaque demi-largeur
           traitée séparément. */}
       {END_FLOORS.map((f) => (
-        <mesh
-          key={`ef${f.key}`}
-          position={[(f.side * (HW + 0.06)) / 2, 0.004, (f.z0 + f.z1) / 2]}
-          rotation={[-Math.PI / 2, 0, f.z1 > 0 ? Math.PI : 0]}
-          material={f.free ? materials.freeSpaceFloor : materials.priorityFloor}
-        >
-          <planeGeometry args={[HW + 0.06, f.z1 - f.z0]} />
-        </mesh>
+        <group key={`ef${f.key}`}>
+          {/* Partie dégagée, côté allée : c'est elle qui porte le marquage.
+              Le texte serait illisible s'il passait sous les banquettes. */}
+          <mesh
+            position={[f.side * (MARK_W / 2), 0.004, (f.z0 + f.z1) / 2]}
+            rotation={[-Math.PI / 2, 0, f.z1 > 0 ? Math.PI : 0]}
+            material={f.free ? materials.freeSpaceFloor : materials.priorityFloor}
+          >
+            <planeGeometry args={[MARK_W, f.z1 - f.z0]} />
+          </mesh>
+          {/* Prolongement uni jusqu'à la paroi, sous les banquettes */}
+          <mesh
+            position={[f.side * (MARK_W + (HW + 0.06 - MARK_W) / 2), 0.004, (f.z0 + f.z1) / 2]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            material={f.free ? materials.freeFloorPlain : materials.priorityFloorPlain}
+          >
+            <planeGeometry args={[HW + 0.06 - MARK_W, f.z1 - f.z0]} />
+          </mesh>
+        </group>
       ))}
 
       {/* Plafond et caisson central */}

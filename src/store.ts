@@ -18,7 +18,6 @@ interface AppState {
   doorSide: 1 | -1;
   seated: boolean;
   touch: boolean; // interface tactile active
-  vocab: string | null; // mot de vocabulaire regardé (fiche Shashingo)
 
   start: () => void;
   toggleMute: () => void;
@@ -28,7 +27,6 @@ interface AppState {
   setDoorSide: (s: 1 | -1) => void;
   setSeated: (b: boolean) => void;
   setTouch: (b: boolean) => void;
-  setVocab: (v: string | null) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -40,7 +38,6 @@ export const useStore = create<AppState>((set) => ({
   doorSide: DOOR_SIDE[CONFIG.startIndex],
   seated: false,
   touch: false,
-  vocab: null,
 
   start: () => {
     // L'horloge du monde se cale sur l'heure réelle de Tokyo.
@@ -54,5 +51,4 @@ export const useStore = create<AppState>((set) => ({
   setDoorSide: (doorSide) => set({ doorSide }),
   setSeated: (seated) => set({ seated }),
   setTouch: (touch) => set({ touch }),
-  setVocab: (vocab) => set({ vocab }),
 }));

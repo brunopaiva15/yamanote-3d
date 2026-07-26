@@ -58,19 +58,23 @@ function benchPitch(n: number): number {
 
 // Baie du panneau d'about, dans le repère du panneau (x = profondeur depuis la
 // paroi, y = hauteur).
-const PANEL_WINDOW = { x: 0.34, y: 1.0, w: 0.42, h: 0.5 };
+const PANEL_WINDOW = { x: 0.33, y: 1.0, w: 0.44, h: 0.56 };
 
 // --- Panneau d'extrémité (袖仕切り) : silhouette ajourée extrudée ---
 function makePanelGeometry(): THREE.ExtrudeGeometry {
   const shape = new THREE.Shape();
   // Contour (x = profondeur depuis la paroi, y = hauteur).
-  shape.moveTo(0, 0.07);
-  shape.lineTo(0.5, 0.07);
-  shape.quadraticCurveTo(0.68, 0.1, 0.66, 0.42);
-  shape.lineTo(0.62, 1.02);
-  shape.quadraticCurveTo(0.6, 1.34, 0.4, 1.42);
-  shape.quadraticCurveTo(0.2, 1.47, 0, 1.46);
-  shape.lineTo(0, 0.07);
+  // Sur la rame le panneau est une plaque quasi rectangulaire : bord avant
+  // droit sur presque toute sa hauteur, puis un grand rayon qui rabat le haut
+  // vers la paroi. L'ancien tracé se renflait vers l'avant à mi-hauteur avant
+  // de se pincer, ce qui lui donnait une silhouette de dossier moulé.
+  shape.moveTo(0, 0.05);
+  shape.lineTo(0.56, 0.05);
+  shape.quadraticCurveTo(0.63, 0.06, 0.635, 0.16);
+  shape.lineTo(0.635, 1.06);
+  shape.quadraticCurveTo(0.63, 1.33, 0.44, 1.44);
+  shape.quadraticCurveTo(0.26, 1.53, 0, 1.53);
+  shape.lineTo(0, 0.05);
   // Grand hublot vitré : sur l'E235 le panneau d'about est percé d'une baie
   // largement arrondie, pas d'un simple oculus — c'est elle qui donne au
   // panneau sa silhouette et qui laisse passer le regard vers la porte.

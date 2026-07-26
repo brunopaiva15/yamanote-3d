@@ -400,38 +400,43 @@ export function makePriorityBadgeTexture(): THREE.CanvasTexture {
   return toTexture(c);
 }
 
+// Teintes des sols d'about, partagées avec three/Car.tsx : la portion qui
+// passe sous les banquettes est unie, seule la partie dégagée porte le
+// marquage — sinon le texte se retrouve caché sous les sièges.
+export const PRIORITY_FLOOR_COLOR = '#d81f1a';
+export const FREE_FLOOR_COLOR = '#e2197f';
+
 // --- Sol rouge de la zone prioritaire ---
 // Ce n'est pas un sticker posé sur le gris : sur l'E235 tout le plancher de la
 // travée d'about est teinté, rouge côté places prioritaires et magenta côté
 // zone libre. Les caractères 優先席 sont dans trois cartouches empilés dans le
 // sens de la marche, « Priority Seat » à la verticale à côté.
 export function makePriorityFloorTexture(): THREE.CanvasTexture {
-  const { c, g } = makeCanvas(400, 512);
+  const { c, g } = makeCanvas(256, 548);
   g.fillStyle = '#d81f1a';
-  g.fillRect(0, 0, 400, 512);
-  // Patine : un sol de rame est brillant et marqué.
+  g.fillRect(0, 0, 256, 548);
   const r = rng(77);
   for (let i = 0; i < 900; i++) {
     g.fillStyle = `rgba(255,255,255,${0.02 + r() * 0.05})`;
-    g.fillRect(r() * 400, r() * 512, 1 + r() * 3, 1 + r() * 3);
+    g.fillRect(r() * 256, r() * 548, 1 + r() * 3, 1 + r() * 3);
   }
   const boxes = ['優', '先', '席'];
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   boxes.forEach((ch, i) => {
-    const y = 150 + i * 96;
+    const y = 180 + i * 100;
     g.strokeStyle = 'rgba(255,255,255,0.92)';
     g.lineWidth = 4;
     g.beginPath();
-    g.roundRect(112, y - 38, 76, 76, 8);
+    g.roundRect(58, y - 40, 80, 80, 8);
     g.stroke();
     g.fillStyle = '#ffffff';
-    g.font = `bold 54px ${JP_FONT}`;
-    g.fillText(ch, 150, y + 2);
+    g.font = `bold 56px ${JP_FONT}`;
+    g.fillText(ch, 98, y + 2);
   });
-  // « Priority Seat » à la verticale, lettres tournées d'un quart de tour.
+  // « Priority Seat » à la verticale, le long des cartouches.
   g.save();
-  g.translate(232, 246);
+  g.translate(180, 280);
   g.rotate(Math.PI / 2);
   g.fillStyle = '#ffffff';
   g.font = `28px ${JP_FONT}`;
@@ -470,8 +475,8 @@ export function makePrioritySignTexture(): THREE.CanvasTexture {
 
 // --- Pictogrammes de la zone libre (フリースペース) ---
 // Tracés à la main plutôt qu'en police d'icônes : aucune dépendance, et le
-// dessin reste lisible aux tailles où il est vu (sticker de sol sous les pieds,
-// panneau mural à 2 m).
+// dessin reste lisible aux tailles où il est vu. Les traits sont épais : un
+// marquage au sol se lit de loin.
 
 function drawWheelchair(g: CanvasRenderingContext2D, cx: number, cy: number, s: number, color: string): void {
   g.save();
@@ -479,31 +484,26 @@ function drawWheelchair(g: CanvasRenderingContext2D, cx: number, cy: number, s: 
   g.scale(s, s);
   g.fillStyle = color;
   g.strokeStyle = color;
-  // Tête.
+  g.lineCap = 'round';
   g.beginPath();
   g.arc(-6, -30, 9, 0, Math.PI * 2);
   g.fill();
-  // Dos et cuisses.
   g.lineWidth = 10;
-  g.lineCap = 'round';
   g.beginPath();
   g.moveTo(-6, -20);
   g.lineTo(-6, 0);
   g.lineTo(14, 0);
   g.stroke();
-  // Jambe et repose-pied.
   g.lineWidth = 9;
   g.beginPath();
   g.moveTo(14, 0);
   g.lineTo(18, 16);
   g.lineTo(26, 16);
   g.stroke();
-  // Grande roue.
   g.lineWidth = 6;
   g.beginPath();
   g.arc(2, 14, 18, 0, Math.PI * 2);
   g.stroke();
-  // Main courante de la roue.
   g.lineWidth = 3;
   g.beginPath();
   g.arc(2, 14, 12, 0, Math.PI * 2);
@@ -526,8 +526,7 @@ function drawStroller(g: CanvasRenderingContext2D, cx: number, cy: number, s: nu
   g.lineTo(16, 2);
   g.closePath();
   g.fill();
-  // Poignée, et la silhouette qui pousse : sans elle le pictogramme se lit
-  // « chariot » et non « poussette ».
+  // Poignée, et la silhouette qui pousse.
   g.lineWidth = 7;
   g.beginPath();
   g.moveTo(-16, -10);
@@ -558,7 +557,6 @@ function drawStroller(g: CanvasRenderingContext2D, cx: number, cy: number, s: nu
   g.moveTo(14, 4);
   g.lineTo(18, 20);
   g.stroke();
-  // Roues.
   g.beginPath();
   g.arc(-8, 24, 8, 0, Math.PI * 2);
   g.moveTo(26, 24);
@@ -571,16 +569,16 @@ function drawStroller(g: CanvasRenderingContext2D, cx: number, cy: number, s: nu
 // Même principe que le rouge prioritaire : toute la travée est teintée, avec
 // la poussette au-dessus et le fauteuil roulant en dessous, en grand.
 export function makeFreeSpaceFloorTexture(): THREE.CanvasTexture {
-  const { c, g } = makeCanvas(400, 512);
+  const { c, g } = makeCanvas(256, 548);
   g.fillStyle = '#e2197f';
-  g.fillRect(0, 0, 400, 512);
+  g.fillRect(0, 0, 256, 548);
   const r = rng(78);
   for (let i = 0; i < 900; i++) {
     g.fillStyle = `rgba(255,255,255,${0.02 + r() * 0.05})`;
-    g.fillRect(r() * 400, r() * 512, 1 + r() * 3, 1 + r() * 3);
+    g.fillRect(r() * 256, r() * 548, 1 + r() * 3, 1 + r() * 3);
   }
-  drawStroller(g, 200, 170, 2.1, '#ffffff');
-  drawWheelchair(g, 200, 350, 2.1, '#ffffff');
+  drawStroller(g, 138, 180, 1.5, '#ffffff');
+  drawWheelchair(g, 120, 380, 1.6, '#ffffff');
   return toTexture(c);
 }
 
