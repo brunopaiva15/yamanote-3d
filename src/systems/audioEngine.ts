@@ -26,6 +26,7 @@
 import * as Tone from 'tone';
 import { CABIN_SPEAKERS, CONFIG, PLATFORM_SPEAKERS } from '../data/config';
 import {
+  EBISU_INNER_THIRD_MAN_F_PATH,
   INNER_MAIN_MELODY_PATH,
   KOMAGOME_INNER_SAKURA_V2_PATH,
   KOMAGOME_OUTER_SAKURA_A_PATH,
@@ -682,4 +683,5 @@ export function stopDepartureMelodyClips(): void {
   audioManager.stop(SESERAGI_MELODY_PATH);
   audioManager.stop(TAKADANOBABA_OUTER_ATOM_A_PATH);
   audioManager.stop(TAKADANOBABA_INNER_ATOM_B_PATH);
+  audioManager.stop(EBISU_INNER_THIRD_MAN_F_PATH);
 }

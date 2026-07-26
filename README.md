@@ -186,6 +186,9 @@ uniquement `JY15` + Outer + plateforme **1** → Mejiro.
 Clip Takadanobaba Inner : `public/audio/melodies/11_tetsuwan-atom-b.mp3` (鉄腕アトム ver.B),
 uniquement `JY15` + Inner + plateforme **2** → Shin-Okubo.
 
+Clip Ebisu Inner : `public/audio/melodies/13_the-third-man-f.mp3` (第三の男 ver.F),
+uniquement `JY21` + Inner + plateforme **2** → Meguro. La voie 1 Outer (ver.E) n’est pas encore fournie.
+
 ### Sonorisation en 3D
 
 Le son de la sonorisation est spatialisé : il sort des haut-parleurs, pas du

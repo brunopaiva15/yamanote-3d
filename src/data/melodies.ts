@@ -215,6 +215,26 @@ export const TAKADANOBABA_INNER_ATOM_B = {
   nextStationName: 'Shin-Okubo',
 };
 
+/** Chemin : The Third Man ver.F — Ebisu Inner voie 2. */
+export const EBISU_INNER_THIRD_MAN_F_PATH = '/audio/melodies/13_the-third-man-f.mp3';
+
+/** Config exclusive : Ebisu Inner Loop plateforme 2 → Meguro. */
+export const EBISU_INNER_THIRD_MAN_F = {
+  id: 'the-third-man-ver-f',
+  name: 'The Third Man ver.F',
+  japaneseName: '第三の男 ver.F',
+  file: EBISU_INNER_THIRD_MAN_F_PATH,
+  type: 'departure_melody' as const,
+  audioSource: 'platform_speakers' as const,
+  line: 'yamanote',
+  stationCode: 'JY21',
+  stationName: 'Ebisu',
+  direction: 'inner' as const,
+  platform: 2,
+  nextStationCode: 'JY22',
+  nextStationName: 'Meguro',
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -552,6 +572,31 @@ export function shouldPlayTakadanobabaInnerAtomB(ctx: MelodyPlayContext): boolea
   if (Number(ctx.platform) !== TAKADANOBABA_INNER_ATOM_B.platform) return false;
 
   if (ctx.nextStationCode && ctx.nextStationCode !== TAKADANOBABA_INNER_ATOM_B.nextStationCode) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * The Third Man ver.F : exclusivement Ebisu (JY21) Inner Loop plateforme 2 → Meguro.
+ * La voie 1 Outer (ver.E) n’est pas encore fournie.
+ */
+export function shouldPlayEbisuInnerThirdManF(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== EBISU_INNER_THIRD_MAN_F.stationCode) return false;
+  if (ctx.direction !== 'inner') return false;
+  if (Number(ctx.platform) !== EBISU_INNER_THIRD_MAN_F.platform) return false;
+
+  if (ctx.nextStationCode && ctx.nextStationCode !== EBISU_INNER_THIRD_MAN_F.nextStationCode) {
     return false;
   }
 

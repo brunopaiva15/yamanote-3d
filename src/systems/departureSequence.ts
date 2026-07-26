@@ -4,6 +4,7 @@
 // n'est pas bloqué.
 
 import {
+  EBISU_INNER_THIRD_MAN_F_PATH,
   INNER_MAIN_MELODY_PATH,
   KOMAGOME_INNER_SAKURA_V2_PATH,
   KOMAGOME_OUTER_SAKURA_A_PATH,
@@ -15,6 +16,7 @@ import {
   TAKADANOBABA_OUTER_ATOM_A_PATH,
   UGUISUDANI_INNER_HARU_TREMOLO_PATH,
   makeDepartureId,
+  shouldPlayEbisuInnerThirdManF,
   shouldPlayInnerMainMelody,
   shouldPlayKomagomeInnerSakuraV2,
   shouldPlayKomagomeOuterSakuraA,
@@ -50,6 +52,7 @@ let outerMainMelodyPlaying = false;
 let seseragiPlaying = false;
 let takadanobabaAtomAPlaying = false;
 let takadanobabaAtomBPlaying = false;
+let ebisuThirdManFPlaying = false;
 
 export function isDepartureBlocked(): boolean {
   const b = runtime.departureBlockers;
@@ -77,6 +80,7 @@ export function resetMelodyDepartureGuard(): void {
   seseragiPlaying = false;
   takadanobabaAtomAPlaying = false;
   takadanobabaAtomBPlaying = false;
+  ebisuThirdManFPlaying = false;
 }
 
 /** Dérive l'état train pour la mélodie à partir de la phase et des portes. */
@@ -204,6 +208,11 @@ export function stopTakadanobabaInnerAtomB(): void {
   takadanobabaAtomBPlaying = false;
 }
 
+export function stopEbisuInnerThirdManF(): void {
+  audioManager.stop(EBISU_INNER_THIRD_MAN_F_PATH);
+  ebisuThirdManFPlaying = false;
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
@@ -216,6 +225,7 @@ export function cancelDepartureMelody(): void {
   stopSeseragi();
   stopTakadanobabaOuterAtomA();
   stopTakadanobabaInnerAtomB();
+  stopEbisuInnerThirdManF();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -416,6 +426,28 @@ export async function playTakadanobabaInnerAtomB(context: MelodyPlayContext): Pr
   }
 }
 
+/**
+ * The Third Man ver.F : Ebisu Inner voie 2 → Meguro, une fois par départ.
+ */
+export async function playEbisuInnerThirdManF(context: MelodyPlayContext): Promise<boolean> {
+  if (!shouldPlayEbisuInnerThirdManF(context)) return false;
+  if (isDepartureBlocked()) return false;
+  if (ebisuThirdManFPlaying) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  ebisuThirdManFPlaying = true;
+  try {
+    const ok = await audioManager.playOnce(EBISU_INNER_THIRD_MAN_F_PATH);
+    if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+      runtime.lastMelodyDepartureId = null;
+    }
+    return ok;
+  } finally {
+    ebisuThirdManFPlaying = false;
+  }
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -450,6 +482,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (await playSeseragi(context)) return true;
   if (await playTakadanobabaOuterAtomA(context)) return true;
   if (await playTakadanobabaInnerAtomB(context)) return true;
+  if (await playEbisuInnerThirdManF(context)) return true;
   if (await playInnerMainMelody(context)) return true;
   if (await playOuterMainMelody(context)) return true;
   return false;
