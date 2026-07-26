@@ -195,6 +195,26 @@ export const TAKADANOBABA_OUTER_ATOM_A = {
   nextStationName: 'Mejiro',
 };
 
+/** Chemin : Tetsuwan Atom ver.B — Takadanobaba Inner voie 2. */
+export const TAKADANOBABA_INNER_ATOM_B_PATH = '/audio/melodies/11_tetsuwan-atom-b.mp3';
+
+/** Config exclusive : Takadanobaba Inner Loop plateforme 2 → Shin-Okubo. */
+export const TAKADANOBABA_INNER_ATOM_B = {
+  id: 'tetsuwan-atom-ver-b',
+  name: 'Tetsuwan Atom ver.B',
+  japaneseName: '鉄腕アトム ver.B',
+  file: TAKADANOBABA_INNER_ATOM_B_PATH,
+  type: 'departure_melody' as const,
+  audioSource: 'platform_speakers' as const,
+  line: 'yamanote',
+  stationCode: 'JY15',
+  stationName: 'Takadanobaba',
+  direction: 'inner' as const,
+  platform: 2,
+  nextStationCode: 'JY16',
+  nextStationName: 'Shin-Okubo',
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -498,7 +518,7 @@ export function shouldPlaySeseragi(ctx: MelodyPlayContext): boolean {
 
 /**
  * Tetsuwan Atom ver.A : exclusivement Takadanobaba (JY15) Outer Loop plateforme 1 → Mejiro.
- * La voie 2 Inner utilisera Atom ver.B.
+ * La voie 2 Inner utilise Atom ver.B.
  */
 export function shouldPlayTakadanobabaOuterAtomA(ctx: MelodyPlayContext): boolean {
   if (ctx.line !== 'yamanote') return false;
@@ -507,6 +527,31 @@ export function shouldPlayTakadanobabaOuterAtomA(ctx: MelodyPlayContext): boolea
   if (Number(ctx.platform) !== TAKADANOBABA_OUTER_ATOM_A.platform) return false;
 
   if (ctx.nextStationCode && ctx.nextStationCode !== TAKADANOBABA_OUTER_ATOM_A.nextStationCode) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * Tetsuwan Atom ver.B : exclusivement Takadanobaba (JY15) Inner Loop plateforme 2 → Shin-Okubo.
+ * La voie 1 Outer utilise Atom ver.A.
+ */
+export function shouldPlayTakadanobabaInnerAtomB(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== TAKADANOBABA_INNER_ATOM_B.stationCode) return false;
+  if (ctx.direction !== 'inner') return false;
+  if (Number(ctx.platform) !== TAKADANOBABA_INNER_ATOM_B.platform) return false;
+
+  if (ctx.nextStationCode && ctx.nextStationCode !== TAKADANOBABA_INNER_ATOM_B.nextStationCode) {
     return false;
   }
 

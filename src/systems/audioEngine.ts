@@ -33,6 +33,7 @@ import {
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
   SESERAGI_MELODY_PATH,
+  TAKADANOBABA_INNER_ATOM_B_PATH,
   TAKADANOBABA_OUTER_ATOM_A_PATH,
   UGUISUDANI_INNER_HARU_TREMOLO_PATH,
 } from '../data/melodies';
@@ -680,4 +681,5 @@ export function stopDepartureMelodyClips(): void {
   audioManager.stop(UGUISUDANI_INNER_HARU_TREMOLO_PATH);
   audioManager.stop(SESERAGI_MELODY_PATH);
   audioManager.stop(TAKADANOBABA_OUTER_ATOM_A_PATH);
+  audioManager.stop(TAKADANOBABA_INNER_ATOM_B_PATH);
 }

@@ -181,7 +181,10 @@ Clip Seseragi : `public/audio/melodies/09_seseragi.mp3` (せせらぎ), Outer un
 Uguisudani 3, Nippori 10, Tabata 3, Sugamo 2, Otsuka 2, Mejiro 2.
 
 Clip Takadanobaba Outer : `public/audio/melodies/10_tetsuwan-atom-a.mp3` (鉄腕アトム ver.A),
-uniquement `JY15` + Outer + plateforme **1** → Mejiro. La voie 2 Inner utilisera Atom ver.B.
+uniquement `JY15` + Outer + plateforme **1** → Mejiro.
+
+Clip Takadanobaba Inner : `public/audio/melodies/11_tetsuwan-atom-b.mp3` (鉄腕アトム ver.B),
+uniquement `JY15` + Inner + plateforme **2** → Shin-Okubo.
 
 ### Sonorisation en 3D
 

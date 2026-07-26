@@ -11,6 +11,7 @@ import {
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
   SESERAGI_MELODY_PATH,
+  TAKADANOBABA_INNER_ATOM_B_PATH,
   TAKADANOBABA_OUTER_ATOM_A_PATH,
   UGUISUDANI_INNER_HARU_TREMOLO_PATH,
   makeDepartureId,
@@ -21,6 +22,7 @@ import {
   shouldPlayOsakiOuterSecondaryMelody,
   shouldPlayOuterMainMelody,
   shouldPlaySeseragi,
+  shouldPlayTakadanobabaInnerAtomB,
   shouldPlayTakadanobabaOuterAtomA,
   shouldPlayUguisudaniInnerHaruTremolo,
   type MelodyPlayContext,
@@ -47,6 +49,7 @@ export type DepartureBlockers = {
 let outerMainMelodyPlaying = false;
 let seseragiPlaying = false;
 let takadanobabaAtomAPlaying = false;
+let takadanobabaAtomBPlaying = false;
 
 export function isDepartureBlocked(): boolean {
   const b = runtime.departureBlockers;
@@ -73,6 +76,7 @@ export function resetMelodyDepartureGuard(): void {
   outerMainMelodyPlaying = false;
   seseragiPlaying = false;
   takadanobabaAtomAPlaying = false;
+  takadanobabaAtomBPlaying = false;
 }
 
 /** Dérive l'état train pour la mélodie à partir de la phase et des portes. */
@@ -195,6 +199,11 @@ export function stopTakadanobabaOuterAtomA(): void {
   takadanobabaAtomAPlaying = false;
 }
 
+export function stopTakadanobabaInnerAtomB(): void {
+  audioManager.stop(TAKADANOBABA_INNER_ATOM_B_PATH);
+  takadanobabaAtomBPlaying = false;
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
@@ -206,6 +215,7 @@ export function cancelDepartureMelody(): void {
   stopUguisudaniInnerHaruTremolo();
   stopSeseragi();
   stopTakadanobabaOuterAtomA();
+  stopTakadanobabaInnerAtomB();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -384,6 +394,28 @@ export async function playTakadanobabaOuterAtomA(context: MelodyPlayContext): Pr
   }
 }
 
+/**
+ * Tetsuwan Atom ver.B : Takadanobaba Inner voie 2 → Shin-Okubo, une fois par départ.
+ */
+export async function playTakadanobabaInnerAtomB(context: MelodyPlayContext): Promise<boolean> {
+  if (!shouldPlayTakadanobabaInnerAtomB(context)) return false;
+  if (isDepartureBlocked()) return false;
+  if (takadanobabaAtomBPlaying) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  takadanobabaAtomBPlaying = true;
+  try {
+    const ok = await audioManager.playOnce(TAKADANOBABA_INNER_ATOM_B_PATH);
+    if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+      runtime.lastMelodyDepartureId = null;
+    }
+    return ok;
+  } finally {
+    takadanobabaAtomBPlaying = false;
+  }
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -417,6 +449,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (await playUguisudaniInnerHaruTremolo(context)) return true;
   if (await playSeseragi(context)) return true;
   if (await playTakadanobabaOuterAtomA(context)) return true;
+  if (await playTakadanobabaInnerAtomB(context)) return true;
   if (await playInnerMainMelody(context)) return true;
   if (await playOuterMainMelody(context)) return true;
   return false;
