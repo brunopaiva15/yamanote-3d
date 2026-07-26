@@ -165,38 +165,6 @@ export function Car() {
     return new THREE.ShapeGeometry(frame, 16);
   }, []);
 
-  // Porte d'about percée du hublot : sans ce trou, la plaque d'acier occulte
-  // entièrement le décor extérieur quand on regarde le fond du wagon.
-  const gangwayDoorGeo = useMemo(() => {
-    const W = 0.84;
-    const Hgt = 1.9;
-    const outer = new THREE.Shape();
-    outer.moveTo(-W / 2, -Hgt / 2);
-    outer.lineTo(W / 2, -Hgt / 2);
-    outer.lineTo(W / 2, Hgt / 2);
-    outer.lineTo(-W / 2, Hgt / 2);
-    outer.closePath();
-    // Centre du hublot : y monde 1.25, centre de porte y=0.95 → +0.30 en local.
-    outer.holes.push(roundedRect(0.56, 1.05, 0.09, 0, 0.3));
-    const geo = new THREE.ExtrudeGeometry(outer, { depth: 0.06, bevelEnabled: false });
-    geo.translate(0, 0, -0.03);
-    return geo;
-  }, []);
-
-  // Cap sombre du wagon suivant, percé pour laisser voir le décor au fond.
-  const darkCapGeo = useMemo(() => {
-    const outer = new THREE.Shape();
-    outer.moveTo(-1.2, -1.15);
-    outer.lineTo(1.2, -1.15);
-    outer.lineTo(1.2, 1.15);
-    outer.lineTo(-1.2, 1.15);
-    outer.closePath();
-    outer.holes.push(roundedRect(0.7, 1.25, 0.08));
-    const geo = new THREE.ExtrudeGeometry(outer, { depth: 0.1, bevelEnabled: false });
-    geo.translate(0, 0, -0.05);
-    return geo;
-  }, []);
-
   const materials = useMemo(() => {
     // Micro-grain et rugosité bruitée : surfaces peintes, jamais laquées.
     const rough = makeRoughnessMap();
@@ -505,12 +473,9 @@ export function Car() {
           <mesh position={[0, 2.05, e * HL]} material={materials.pinkPartition}>
             <boxGeometry args={[0.84, 0.5, 0.1]} />
           </mesh>
-          <mesh
-            geometry={gangwayDoorGeo}
-            position={[0, 0.95, e * HL - e * 0.01]}
-            rotation={[0, e === 1 ? 0 : Math.PI, 0]}
-            material={materials.steel}
-          />
+          <mesh position={[0, 0.95, e * HL - e * 0.01]} material={materials.steel}>
+            <boxGeometry args={[0.84, 1.9, 0.06]} />
+          </mesh>
           {/* Encadrement du hublot, mêmes angles adoucis que les vitres de
               porte : sans lui la porte d'intercirculation reste une plaque. */}
           <mesh
@@ -528,13 +493,10 @@ export function Car() {
               <cylinderGeometry args={[0.017, 0.017, 2.3, 12]} />
             </mesh>
           ))}
-          {/* Cap sombre du wagon suivant, percé : on voit le décor au fond */}
-          <mesh
-            geometry={darkCapGeo}
-            position={[0, 1.1, e * (HL + 0.6)]}
-            rotation={[0, e === 1 ? 0 : Math.PI, 0]}
-            material={materials.darkCap}
-          />
+          {/* Cap sombre derrière la vitre : silhouette du wagon suivant */}
+          <mesh position={[0, 1.1, e * (HL + 0.6)]} material={materials.darkCap}>
+            <boxGeometry args={[2.4, 2.3, 0.1]} />
+          </mesh>
         </group>
       ))}
     </group>

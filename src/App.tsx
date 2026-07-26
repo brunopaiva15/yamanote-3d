@@ -32,7 +32,9 @@ export default function App() {
       <Canvas
         dpr={[1, 2]}
         gl={{ powerPreference: 'high-performance', antialias: true }}
-        camera={{ fov: 70, near: 0.05, far: 120, position: [0, CONFIG.eyeHeight, 4.2] }}
+        // far généreux : en regardant le fond du wagon, les baies latérales
+        // visent la ville sous un angle rasant (rayons ≫ distance latérale).
+        camera={{ fov: 70, near: 0.05, far: 260, position: [0, CONFIG.eyeHeight, 4.2] }}
         shadows
       >
         <Scene />

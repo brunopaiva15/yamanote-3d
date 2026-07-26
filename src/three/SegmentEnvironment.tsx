@@ -25,7 +25,7 @@ import {
 } from '../textures/procedural';
 import { vehicle, type Ctx } from './landmarkKit';
 
-const PLANE_LEN = 240;
+const PLANE_LEN = 400; // aligné sur Scenery (vue en biais vers le fond du wagon)
 const WALL_X = 6.6; // murs juste derrière les poteaux caténaires (±5.2)
 const FENCE_X = 6.2;
 const FIELD_X = 9; // centre du plan de faisceau (s'étend de 4 à 14 m)

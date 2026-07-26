@@ -122,8 +122,10 @@ function DayNightLighting() {
       if (amb.current) mixColor(amb.current.color, w, AMBIENT);
       if (scene.fog instanceof THREE.Fog) {
         mixColor(scene.fog.color, w, FOG_COLORS);
-        scene.fog.near = 26 * w.day + 18 * w.golden + 14 * w.night;
-        scene.fog.far = 115 * w.day + 88 * w.golden + 72 * w.night;
+        // Far élargi : la ville vue à travers les baies en regardant le fond
+        // du wagon est beaucoup plus loin que la distance latérale pure.
+        scene.fog.near = 30 * w.day + 22 * w.golden + 16 * w.night;
+        scene.fog.far = 220 * w.day + 170 * w.golden + 130 * w.night;
       }
       if (scene.background instanceof THREE.Color) {
         mixColor(tmp.current, w, BG_COLORS);
@@ -171,7 +173,7 @@ export function Scene() {
   return (
     <>
       <color attach="background" args={['#bcdaee']} />
-      <fog attach="fog" args={['#d6e8f2', 26, 115]} />
+      <fog attach="fog" args={['#d6e8f2', 30, 220]} />
       <EnvironmentMap />
       <ShadowFlags />
       <DayNightLighting />
