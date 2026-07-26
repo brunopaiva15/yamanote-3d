@@ -13,21 +13,37 @@ import { updatePlatformCrowd } from '../systems/platformCrowd';
 import { setPlatformDoors, updateAudio } from '../systems/audioEngine';
 import { updatePassengers } from '../systems/passengers';
 
-/** Au-delà : onglet repris après pause — on n'avance pas le cycle (évite de sauter des gares). */
-const TAB_RESUME_GAP = 1.5;
-/** Plafond du dt cycle : à ≥1 FPS on reste en temps réel pour les phases gare. */
-const CYCLE_DT_CAP = 1;
+/**
+ * Plafond du dt cycle : borne les trous que l'API Visibility ne signale pas
+ * (mise en veille machine, page restée « visible »). Une frame lente mais
+ * visible avance le cycle de tout son temps écoulé — le seuil ne sert qu'à
+ * éviter de téléporter le train de plusieurs gares d'un coup.
+ */
+const CYCLE_DT_CAP = 5;
 /** Plafond du dt physique : pas stables pour portes / PNJ / audio. */
 const PHYS_DT_CAP = 0.05;
+
+// Onglet repris après masquage : rAF était en pause, la première frame porte
+// tout le temps caché. On saute l'avance du cycle sur cette frame-là (évite
+// de sauter des gares) — mais UNIQUEMENT elle : une frame lente sur un onglet
+// visible (shaders, GC, GPU saturé) doit compter en entier, sinon le cycle
+// gèle sous charge et le prochain arrêt n'arrive jamais.
+let tabJustResumed = false;
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) tabJustResumed = true;
+  });
+}
 
 export function Engine(): null {
   useFrame((_, rawDt) => {
     const raw = Math.max(0, rawDt);
-    // Cycle & déplacement : horloge murale. Un FPS bas ne doit plus ralentir
-    // le passage d'une gare à l'autre (l'ancien min(dt, 0.05) divisait le
-    // temps réel par 5–10 sous charge).
-    const cycleDt = raw > TAB_RESUME_GAP ? 0 : Math.min(raw, CYCLE_DT_CAP);
-    const physDt = raw > TAB_RESUME_GAP ? 0 : Math.min(raw, PHYS_DT_CAP);
+    const skipCycle = tabJustResumed;
+    tabJustResumed = false;
+    // Cycle & déplacement : horloge murale. Un FPS bas ne doit ni ralentir ni
+    // geler le passage d'une gare à l'autre.
+    const cycleDt = skipCycle ? 0 : Math.min(raw, CYCLE_DT_CAP);
+    const physDt = Math.min(raw, PHYS_DT_CAP);
     if (cycleDt <= 0 && physDt <= 0) return;
 
     const { phase, started } = useStore.getState();
