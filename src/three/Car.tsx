@@ -5,17 +5,23 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CABIN_SPEAKERS, CONFIG } from '../data/config';
+import { FREE_SPACE } from '../systems/seats';
 import { roundedRect } from './shapes';
 import {
   makeFloorTexture,
   makeTactileTexture,
   makePriorityFloorTexture,
+  makeFreeSpaceFloorTexture,
   makePrioritySignTexture,
   makeSurfaceTexture,
   makeRoughnessMap,
   makeVentTexture,
   makeSpeakerTexture,
   makeDoorStickerTexture,
+  makeSosTexture,
+  makeCarNumberTexture,
+  makeExtinguisherTexture,
+  makeAdTexture,
 } from '../textures/procedural';
 
 const HL = CONFIG.carHalfLength; // 10
@@ -51,6 +57,18 @@ const WALL_THICKNESS = 0.08;
 // Diffuseur linéaire de climatisation : même emprise que le caisson central.
 const DUCT_LENGTH = HL * 2 - 0.8;
 
+// Sols teintés des quatre demi-travées d'about : rouge prioritaire partout,
+// sauf là où la zone libre prend la place d'une banquette (voir systems/seats).
+const END_FLOORS = ([1, -1] as const).flatMap((e) =>
+  ([1, -1] as const).map((side) => ({
+    key: `${e}${side}`,
+    side,
+    z0: e === 1 ? 7.5 + DOOR_HW : -HL,
+    z1: e === 1 ? HL : -7.5 - DOOR_HW,
+    free: FREE_SPACE !== null && FREE_SPACE.side === side && FREE_SPACE.z0 * e > 0,
+  })),
+);
+
 // Bandeau de paroi percé d'une baie à coins arrondis, pour un segment donné.
 // Construit à plat (x = longueur, y = hauteur) puis redressé à l'usage par une
 // rotation d'un quart de tour ; l'extrusion est recentrée sur l'épaisseur.
@@ -74,6 +92,7 @@ export function Car() {
       floor: makeFloorTexture(),
       tactile: makeTactileTexture(),
       priorityFloor: makePriorityFloorTexture(),
+      freeSpaceFloor: makeFreeSpaceFloorTexture(),
       prioritySign: makePrioritySignTexture(),
     }),
     [],
@@ -83,6 +102,16 @@ export function Car() {
   // entre les deux côtés du wagon.
   const windowWallGeos = useMemo(
     () => WALL_SEGMENTS.map((seg) => makeWindowWallGeometry(seg.z1 - seg.z0)),
+    [],
+  );
+
+  // Quatre affiches distinctes : deux par about, pour ne pas voir la même
+  // image en se retournant.
+  const endPosterMats = useMemo(
+    () =>
+      [0, 1, 2, 3].map(
+        (i) => new THREE.MeshStandardMaterial({ map: makeAdTexture(40 + i, false), roughness: 0.88 }),
+      ),
     [],
   );
 
@@ -119,7 +148,7 @@ export function Car() {
         metalness: 0.02,
       }),
       pinkWall: new THREE.MeshStandardMaterial({
-        map: makeSurfaceTexture('#efd3da'),
+        map: makeSurfaceTexture('#f2c3cf'),
         roughnessMap: rough,
         roughness: 0.82,
         metalness: 0.02,
@@ -132,7 +161,7 @@ export function Car() {
         roughness: 0.8,
       }),
       pinkPartition: new THREE.MeshStandardMaterial({
-        map: makeSurfaceTexture('#efd3da'),
+        map: makeSurfaceTexture('#f2c3cf'),
         roughnessMap: rough,
         roughness: 0.82,
       }),
@@ -172,16 +201,30 @@ export function Car() {
         polygonOffsetFactor: -2,
         polygonOffsetUnits: -2,
       }),
-      priorityFloor: new THREE.MeshBasicMaterial({
+      // Sols d'about : revêtement teinté à part entière, donc éclairé comme le
+      // reste du plancher et aussi brillant que lui — pas un décalque plat.
+      priorityFloor: new THREE.MeshStandardMaterial({
         map: textures.priorityFloor,
-        transparent: true,
-        toneMapped: false,
+        roughness: 0.42,
+        metalness: 0.05,
+        polygonOffset: true,
+        polygonOffsetFactor: -3,
+        polygonOffsetUnits: -3,
+      }),
+      freeSpaceFloor: new THREE.MeshStandardMaterial({
+        map: textures.freeSpaceFloor,
+        roughness: 0.42,
+        metalness: 0.05,
         polygonOffset: true,
         polygonOffsetFactor: -3,
         polygonOffsetUnits: -3,
       }),
       prioritySign: new THREE.MeshBasicMaterial({ map: textures.prioritySign, toneMapped: false }),
       darkCap: new THREE.MeshStandardMaterial({ color: '#23262b', roughness: 0.9 }),
+      posterFrame: new THREE.MeshStandardMaterial({ color: '#3a3d42', roughness: 0.5, metalness: 0.3 }),
+      sos: new THREE.MeshStandardMaterial({ map: makeSosTexture(), roughness: 0.7 }),
+      carNumber: new THREE.MeshStandardMaterial({ map: makeCarNumberTexture('クハE234-10'), roughness: 0.6, metalness: 0.2 }),
+      extinguisher: new THREE.MeshStandardMaterial({ map: makeExtinguisherTexture(), roughness: 0.55, metalness: 0.05 }),
     };
   }, [textures]);
 
@@ -194,15 +237,18 @@ export function Car() {
         <boxGeometry args={[HW * 2, 0.1, HL * 2]} />
       </mesh>
 
-      {/* Stickers de sol 優先席 aux extrémités */}
-      {[-1, 1].map((e) => (
+      {/* Sols teintés des travées d'about. Sur l'E235 ce ne sont pas des
+          stickers posés sur le gris : tout le plancher de la travée est rouge
+          côté places prioritaires, magenta côté zone libre, chaque demi-largeur
+          traitée séparément. */}
+      {END_FLOORS.map((f) => (
         <mesh
-          key={`pf${e}`}
-          position={[0, 0.003, e * 9.1]}
-          rotation={[-Math.PI / 2, 0, e === 1 ? Math.PI : 0]}
-          material={materials.priorityFloor}
+          key={`ef${f.key}`}
+          position={[(f.side * (HW + 0.06)) / 2, 0.004, (f.z0 + f.z1) / 2]}
+          rotation={[-Math.PI / 2, 0, f.z1 > 0 ? Math.PI : 0]}
+          material={f.free ? materials.freeSpaceFloor : materials.priorityFloor}
         >
-          <planeGeometry args={[1.15, 1.15]} />
+          <planeGeometry args={[HW + 0.06, f.z1 - f.z0]} />
         </mesh>
       ))}
 
@@ -329,6 +375,33 @@ export function Car() {
           </mesh>
           <mesh position={[0.91, H / 2, e * HL]} material={materials.pinkPartition}>
             <boxGeometry args={[0.98, H, 0.1]} />
+          </mesh>
+
+          {/* Équipements de la paroi d'about : affiches encadrées de part et
+              d'autre de la porte, interphone SOS, plaque de numéro de voiture,
+              coffret d'extincteur. C'est ce qui peuple la travée sur la rame. */}
+          {([-1, 1] as const).map((sx) => (
+            <group key={`endkit${sx}`}>
+              {/* Affiche encadrée à hauteur de regard */}
+              <mesh position={[sx * 0.93, 1.42, e * (HL - 0.055)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.posterFrame}>
+                <planeGeometry args={[0.56, 0.4]} />
+              </mesh>
+              <mesh position={[sx * 0.93, 1.42, e * (HL - 0.06)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={endPosterMats[(e + 1) / 2 + (sx + 1)]}>
+                <planeGeometry args={[0.5, 0.34]} />
+              </mesh>
+            </group>
+          ))}
+          {/* Interphone SOS, au-dessus de la porte côté gauche */}
+          <mesh position={[-0.5, 1.92, e * (HL - 0.056)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.sos}>
+            <planeGeometry args={[0.12, 0.15]} />
+          </mesh>
+          {/* Plaque de numéro de voiture */}
+          <mesh position={[0.95, 2.12, e * (HL - 0.056)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.carNumber}>
+            <planeGeometry args={[0.32, 0.072]} />
+          </mesh>
+          {/* Coffret d'extincteur, au sol contre la porte */}
+          <mesh position={[-0.62, 0.62, e * (HL - 0.09)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.extinguisher}>
+            <boxGeometry args={[0.24, 0.62, 0.07]} />
           </mesh>
           <mesh position={[0, 2.05, e * HL]} material={materials.pinkPartition}>
             <boxGeometry args={[0.84, 0.5, 0.1]} />
