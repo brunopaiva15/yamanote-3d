@@ -12,8 +12,10 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
+import { BAND_COLOR } from '../data/occupancy';
 import { STATIONS, TRANSFERS } from '../data/stations';
 import { useStore, type Phase } from '../store';
+import { currentSegmentOccupancy } from '../systems/occupancy';
 import { runtime } from '../systems/runtime';
 import { JP_FONT, drawAdInto, rng } from '../textures/procedural';
 
@@ -111,6 +113,7 @@ function drawHeader(
   lang: ScreenLang,
 ): void {
   const next = STATIONS[index];
+  const occ = currentSegmentOccupancy();
   g.fillStyle = '#0e0f11';
   g.fillRect(0, 0, w, HEADER_H);
 
@@ -161,6 +164,18 @@ function drawHeader(
   g.fillStyle = '#9aa0a6';
   g.font = `italic 17px ${JP_FONT}`;
   g.fillText(lang === 'jp' ? `${PLAYER_CAR}号車` : `Car No. ${PLAYER_CAR}`, w - 12, 34);
+
+  // Pastille de charge estimée, sous l'heure.
+  const color = BAND_COLOR[occ.band];
+  const label = lang === 'jp' ? `混雑 ${occ.percent}%` : `Load ${occ.percent}%`;
+  g.fillStyle = color;
+  g.beginPath();
+  g.roundRect(w - 132, 48, 120, 28, 6);
+  g.fill();
+  g.fillStyle = '#ffffff';
+  g.font = `bold 16px ${JP_FONT}`;
+  g.textAlign = 'center';
+  g.fillText(label, w - 72, 67);
   g.textAlign = 'left';
 }
 
@@ -1006,7 +1021,8 @@ export function Screens() {
       state = rotation[tick % rotation.length];
     }
 
-    const key = `${index}|${phase}|${state}|${clock}|${doorSide}|${state.startsWith('loop') || state.startsWith('zoom') ? countdown : 0}`;
+    const occPct = currentSegmentOccupancy().percent;
+    const key = `${index}|${phase}|${state}|${clock}|${doorSide}|${occPct}|${state.startsWith('loop') || state.startsWith('zoom') ? countdown : 0}`;
     if (key === lastKey.current) return;
     lastKey.current = key;
 

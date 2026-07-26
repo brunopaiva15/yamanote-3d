@@ -16,7 +16,7 @@ export function isMajorHub(index: number): boolean {
   return MAJOR_HUBS.has(((index % 30) + 30) % 30);
 }
 
-// Les 1 à 2 prochains grands hubs à partir de `from` (sens +1, boucle intérieure).
+// Les 1 à 2 prochains grands hubs à partir de `from` (sens +1, boucle extérieure).
 function nextHubs(from: number, count: number): Station[] {
   const out: Station[] = [];
   for (let step = 0; step < 30 && out.length < count; step++) {
@@ -27,13 +27,13 @@ function nextHubs(from: number, count: number): Station[] {
 }
 
 // Annonce du sens de la boucle, dite après le départ des grandes gares.
-// La Yamanote n'a pas de terminus : on annonce le sens (内回り, boucle
-// intérieure — l'unique sens simulé) et 1 à 2 gares repères à venir.
+// La Yamanote n'a pas de terminus : on annonce le sens (外回り, boucle
+// extérieure — l'unique sens simulé, ordre JY croissant) et 1 à 2 gares repères.
 export function directionAnnouncement(index: number): Utterance[] {
   const hubs = nextHubs(index, 2);
-  const jp = `この電車は、山手線、内回り、${hubs.map((h) => h.kanji).join('・')}方面です。`;
+  const jp = `この電車は、山手線、外回り、${hubs.map((h) => h.kanji).join('・')}方面です。`;
   const en =
-    `This is the Yamanote Line, inner loop, bound for ${
+    `This is the Yamanote Line, outer loop, bound for ${
       hubs.length === 2 ? `${hubs[0].romaji} and ${hubs[1].romaji}` : hubs[0].romaji
     }.`;
   return [

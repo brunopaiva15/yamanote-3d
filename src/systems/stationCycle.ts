@@ -13,7 +13,7 @@ import {
   nextStationAnnouncement,
 } from '../data/announcements';
 import { useStore, type Phase } from '../store';
-import { runtime } from './runtime';
+import { advanceClock, runtime } from './runtime';
 import {
   randomizeDoorTimings,
   setPsdDoors,
@@ -47,7 +47,7 @@ export function updateCycle(dt: number): void {
   if (!s.started) return;
 
   runtime.phaseT += dt;
-  runtime.clockMin += dt / 60;
+  advanceClock(dt);
 
   // --- Physique du train : approche douce de la vitesse cible ---
   const target = s.phase === 'cruise' || s.phase === 'depart' ? V_MAX : 0;

@@ -5,7 +5,9 @@
 
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
+import { targetPaxCounts } from '../data/occupancy';
 import { runtime } from './runtime';
+import { currentSegmentOccupancy } from './occupancy';
 import { makeAppearance, type Appearance } from './appearance';
 import {
   SEAT_SLOTS,
@@ -51,7 +53,12 @@ export interface Pax {
   pockets: boolean; // mains dans les poches (trait stable, pantalon uniquement)
 }
 
-export const POOL_SIZE = 18;
+// Capacité visuelle max d'une voiture (51 assises + 30 debout) + réserve
+// d'échange pour animer montées/descentes sans saturer le pool.
+const MAX_SEATED = SEAT_SLOTS.length;
+const MAX_STANDING = STAND_SLOTS.length;
+const EXCHANGE_RESERVE = 15;
+export const POOL_SIZE = MAX_SEATED + MAX_STANDING + EXCHANGE_RESERVE;
 export const paxList: Pax[] = [];
 
 // Le bas de l'anneau des tsurikawa est à ~1,71 m (poignées remontées pour le
@@ -101,13 +108,14 @@ export function initPassengers(): void {
   for (let i = 0; i < POOL_SIZE; i++) paxList.push(makePax(i));
 }
 
-// Peuplement initial : environ 9 assis + 4 debout, reste en réserve.
+// Peuplement initial calé sur le taux de remplissage du tronçon courant.
 export function seedPassengers(): void {
   initPassengers();
+  const target = targetPaxCounts(currentSegmentOccupancy().percent);
   let seatedCount = 0;
   let standingCount = 0;
   for (const p of paxList) {
-    if (seatedCount < 9) {
+    if (seatedCount < target.seated) {
       const slot = findFreeSeat();
       if (slot >= 0) {
         sitPax(p, slot);
@@ -115,7 +123,7 @@ export function seedPassengers(): void {
         continue;
       }
     }
-    if (standingCount < 4) {
+    if (standingCount < target.standing) {
       const slot = findFreeStand();
       if (slot >= 0) {
         standPax(p, slot);
@@ -182,64 +190,108 @@ function startWalk(p: Pax, dest: THREE.Vector3, afterWalk: 'seated' | 'standing'
   p.wpi = 0;
 }
 
-// Échange à quai : quelques descentes, quelques montées, côté doorSide.
-export function exchangePassengers(side: 1 | -1): void {
-  const inside = paxList.filter((p) => p.state === 'seated' || p.state === 'standing');
-  const hidden = paxList.filter((p) => p.state === 'hidden');
-  const nOut = Math.min(inside.length, 1 + Math.floor(Math.random() * 3));
-  const nIn = Math.min(hidden.length, 1 + Math.floor(Math.random() * 3));
+function countInside(): { seated: number; standing: number; seatedPax: Pax[]; standingPax: Pax[] } {
+  const seatedPax: Pax[] = [];
+  const standingPax: Pax[] = [];
+  for (const p of paxList) {
+    if (p.state === 'seated') seatedPax.push(p);
+    else if (p.state === 'standing') standingPax.push(p);
+  }
+  return { seated: seatedPax.length, standing: standingPax.length, seatedPax, standingPax };
+}
 
-  // Descentes.
-  const shuffledIn = [...inside].sort(() => Math.random() - 0.5);
-  for (let i = 0; i < nOut; i++) {
-    const p = shuffledIn[i];
-    const doorZ = nearestDoorZ(p.pos.z);
-    releaseSlots(p);
-    endChat(p);
-    p.action = 'none';
-    p.state = 'alighting';
-    p.afterWalk = 'hidden';
-    p.waypoints = [
-      new THREE.Vector3(side * 0.3, 0, p.pos.z),
-      new THREE.Vector3(side * 0.95, 0, doorZ),
-      new THREE.Vector3(side * 2.4, 0, doorZ),
-      new THREE.Vector3(side * 3.4, 0, doorZ + (Math.random() - 0.5) * 2.5),
-    ];
-    p.wpi = 0;
+function beginAlight(p: Pax, side: 1 | -1): void {
+  const doorZ = nearestDoorZ(p.pos.z);
+  releaseSlots(p);
+  endChat(p);
+  p.action = 'none';
+  p.state = 'alighting';
+  p.afterWalk = 'hidden';
+  p.waypoints = [
+    new THREE.Vector3(side * 0.3, 0, p.pos.z),
+    new THREE.Vector3(side * 0.95, 0, doorZ),
+    new THREE.Vector3(side * 2.4, 0, doorZ),
+    new THREE.Vector3(side * 3.4, 0, doorZ + (Math.random() - 0.5) * 2.5),
+  ];
+  p.wpi = 0;
+}
+
+function beginBoard(p: Pax, side: 1 | -1, afterWalk: 'seated' | 'standing', boardIndex: number): boolean {
+  const doorZ = CONFIG.doorCenters[Math.floor(Math.random() * CONFIG.doorCenters.length)];
+  let dest: THREE.Vector3;
+  if (afterWalk === 'seated') {
+    const seat = findFreeSeat();
+    if (seat < 0) return false;
+    p.seatSlot = seat;
+    seatOccupant[seat] = p.id;
+    p.afterWalk = 'seated';
+    const s = SEAT_SLOTS[seat];
+    dest = new THREE.Vector3(s.x, 0, s.z);
+  } else {
+    const stand = findFreeStand();
+    if (stand < 0) return false;
+    p.standSlot = stand;
+    standOccupant[stand] = p.id;
+    p.afterWalk = 'standing';
+    const s = STAND_SLOTS[stand];
+    dest = new THREE.Vector3(s.x, 0, s.z);
+  }
+  p.state = 'boarding';
+  p.action = 'none';
+  p.pos.set(side * (3.0 + (boardIndex % 6) * 0.45), 0, doorZ + (Math.random() - 0.5) * 0.8);
+  p.waypoints = [
+    new THREE.Vector3(side * 0.95, 0, doorZ),
+    new THREE.Vector3(Math.sign(dest.x) * 0.3 || 0.3, 0, dest.z),
+    dest,
+  ];
+  p.wpi = 0;
+  return true;
+}
+
+// Échange à quai : rapproche la densité du taux estimé du prochain tronçon.
+export function exchangePassengers(side: 1 | -1): void {
+  const target = targetPaxCounts(currentSegmentOccupancy().percent);
+  const { seated, standing, seatedPax, standingPax } = countInside();
+
+  // Variance légère pour que deux arrêts au même taux ne soient pas identiques.
+  const jitter = () => Math.floor(Math.random() * 3) - 1;
+  const wantSeated = Math.max(0, Math.min(MAX_SEATED, target.seated + jitter()));
+  const wantStanding = Math.max(0, Math.min(MAX_STANDING, target.standing + jitter()));
+
+  let needSeatOut = Math.max(0, seated - wantSeated);
+  let needStandOut = Math.max(0, standing - wantStanding);
+  let needSeatIn = Math.max(0, wantSeated - seated);
+  let needStandIn = Math.max(0, wantStanding - standing);
+
+  // Toujours un petit flux même si la cible est stable (vie du quai).
+  if (needSeatOut + needStandOut + needSeatIn + needStandIn === 0) {
+    needSeatOut = Math.min(seated, 1 + Math.floor(Math.random() * 2));
+    needStandOut = Math.min(standing, Math.random() < 0.5 ? 1 : 0);
+    needSeatIn = needSeatOut;
+    needStandIn = needStandOut;
   }
 
-  // Montées : certains préfèrent rester debout même s'il reste des places.
-  const shuffledOut = [...hidden].sort(() => Math.random() - 0.5);
-  for (let i = 0; i < nIn; i++) {
-    const p = shuffledOut[i];
-    const doorZ = CONFIG.doorCenters[Math.floor(Math.random() * CONFIG.doorCenters.length)];
-    const preferStand = Math.random() < 0.3;
-    const seat = preferStand ? -1 : findFreeSeat();
-    let dest: THREE.Vector3;
-    if (seat >= 0) {
-      p.seatSlot = seat;
-      seatOccupant[seat] = p.id;
-      p.afterWalk = 'seated';
-      const s = SEAT_SLOTS[seat];
-      dest = new THREE.Vector3(s.x, 0, s.z);
-    } else {
-      const stand = findFreeStand();
-      if (stand < 0) continue;
-      p.standSlot = stand;
-      standOccupant[stand] = p.id;
-      p.afterWalk = 'standing';
-      const s = STAND_SLOTS[stand];
-      dest = new THREE.Vector3(s.x, 0, s.z);
-    }
-    p.state = 'boarding';
-    p.action = 'none';
-    p.pos.set(side * (3.0 + i * 0.5), 0, doorZ + (Math.random() - 0.5) * 0.8);
-    p.waypoints = [
-      new THREE.Vector3(side * 0.95, 0, doorZ),
-      new THREE.Vector3(Math.sign(dest.x) * 0.3 || 0.3, 0, dest.z),
-      dest,
-    ];
-    p.wpi = 0;
+  const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
+  let boardIndex = 0;
+
+  for (const p of shuffle(seatedPax).slice(0, needSeatOut)) beginAlight(p, side);
+  for (const p of shuffle(standingPax).slice(0, needStandOut)) beginAlight(p, side);
+
+  const freshHidden = paxList.filter((p) => p.state === 'hidden');
+  const queue = shuffle(freshHidden);
+  let qi = 0;
+  while (qi < queue.length && needSeatIn > 0) {
+    if (beginBoard(queue[qi++], side, 'seated', boardIndex++)) needSeatIn--;
+    else break;
+  }
+  while (qi < queue.length && needStandIn > 0) {
+    if (beginBoard(queue[qi++], side, 'standing', boardIndex++)) needStandIn--;
+    else break;
+  }
+  // Si plus de places assises, basculer le reste en debout.
+  while (qi < queue.length && needSeatIn > 0) {
+    if (beginBoard(queue[qi++], side, 'standing', boardIndex++)) needSeatIn--;
+    else break;
   }
 }
 

@@ -2,22 +2,70 @@
 // lit et écrit ici, les composants three lisent dans leur useFrame.
 
 import { CONFIG } from '../data/config';
+import type { TokyoDate } from '../data/occupancy';
 
-// Heure réelle à Tokyo (UTC+9), en minutes depuis minuit.
-export function tokyoMinutesNow(): number {
+export interface TokyoNow {
+  minutes: number;
+  year: number;
+  month: number;
+  day: number;
+  weekday: number;
+}
+
+// Instant civil + horloge à Tokyo (UTC+9).
+export function tokyoNow(): TokyoNow {
   try {
     const parts = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Asia/Tokyo',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      weekday: 'short',
       hour: 'numeric',
       minute: 'numeric',
       second: 'numeric',
       hour12: false,
     }).formatToParts(new Date());
-    const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
-    return (get('hour') % 24) * 60 + get('minute') + get('second') / 60;
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+    const weekdayMap: Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+    const hour = Number(get('hour')) % 24;
+    const minute = Number(get('minute'));
+    const second = Number(get('second'));
+    return {
+      minutes: hour * 60 + minute + second / 60,
+      year: Number(get('year')),
+      month: Number(get('month')),
+      day: Number(get('day')),
+      weekday: weekdayMap[get('weekday')] ?? new Date().getUTCDay(),
+    };
   } catch {
-    return CONFIG.clockStart;
+    const fallback = new Date();
+    return {
+      minutes: CONFIG.clockStart,
+      year: fallback.getFullYear(),
+      month: fallback.getMonth() + 1,
+      day: fallback.getDate(),
+      weekday: fallback.getDay(),
+    };
   }
+}
+
+// Heure réelle à Tokyo (UTC+9), en minutes depuis minuit.
+export function tokyoMinutesNow(): number {
+  return tokyoNow().minutes;
+}
+
+function defaultTokyoDate(): TokyoDate {
+  const n = tokyoNow();
+  return { year: n.year, month: n.month, day: n.day, weekday: n.weekday };
 }
 
 export const runtime = {
@@ -32,6 +80,7 @@ export const runtime = {
   psdTarget: 0,
   psdT: 999,
   clockMin: CONFIG.clockStart, // horloge du monde, en minutes (flottant)
+  tokyoDate: defaultTokyoDate() as TokyoDate,
   swayTime: 0,
   sway: 0, // balancement latéral normalisé (-1..1)
   platformFade: 0, // opacité du quai (0..1)
@@ -39,6 +88,23 @@ export const runtime = {
   playerY: 1.55,
   playerZ: 4.2,
 };
+
+/** Avance l'horloge ; si on passe minuit, incrémente la date Tokyo d'un jour. */
+export function advanceClock(dtSeconds: number): void {
+  runtime.clockMin += dtSeconds / 60;
+  while (runtime.clockMin >= 24 * 60) {
+    runtime.clockMin -= 24 * 60;
+    const d = runtime.tokyoDate;
+    const utc = Date.UTC(d.year, d.month - 1, d.day + 1);
+    const next = new Date(utc);
+    runtime.tokyoDate = {
+      year: next.getUTCFullYear(),
+      month: next.getUTCMonth() + 1,
+      day: next.getUTCDate(),
+      weekday: next.getUTCDay(),
+    };
+  }
+}
 
 export function resetRuntime(): void {
   runtime.speed = 0;
@@ -52,6 +118,7 @@ export function resetRuntime(): void {
   runtime.psdTarget = 0;
   runtime.psdT = 999;
   runtime.clockMin = CONFIG.clockStart;
+  runtime.tokyoDate = defaultTokyoDate();
   runtime.swayTime = 0;
   runtime.sway = 0;
   runtime.platformFade = 0;

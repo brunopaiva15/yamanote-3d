@@ -7,6 +7,7 @@ import { startAudio, setVolume, setPlatformSide } from '../systems/audioEngine';
 import { initSpeech, say } from '../systems/speech';
 import { welcomeAnnouncement } from '../data/announcements';
 import { seedPassengers } from '../systems/passengers';
+import { runtime, tokyoNow } from '../systems/runtime';
 
 export function StartScreen() {
   const start = useStore((s) => s.start);
@@ -15,6 +16,15 @@ export function StartScreen() {
   const board = async () => {
     setLoading(true);
     initSpeech();
+    // Horloge Tokyo avant le peuplement : la densité dépend de l'heure et du jour.
+    const now = tokyoNow();
+    runtime.clockMin = now.minutes;
+    runtime.tokyoDate = {
+      year: now.year,
+      month: now.month,
+      day: now.day,
+      weekday: now.weekday,
+    };
     seedPassengers();
     try {
       await startAudio();
