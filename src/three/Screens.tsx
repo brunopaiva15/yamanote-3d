@@ -94,6 +94,14 @@ const STATUS_LABEL: Record<ScreenStatus, Record<ScreenLang, string>> = {
 // l'heure et le numéro de voiture. L'afficheur réel alterne japonais et
 // anglais sur la même disposition ; c'est la langue qui change, pas la mise
 // en page.
+// Hauteur du bandeau : ~30 % de l'écran sur la photo de référence.
+const HEADER_H = 112;
+
+// Bandeau noir supérieur, refait sur photo. De gauche à droite : la direction
+// dans une BOÎTE BLANCHE calée en bas, la barre verte pleine hauteur, le
+// libellé d'état en blanc directement sur le noir (pas d'onglet), le nom de la
+// gare en très grand, l'heure en jaune pâle et le numéro de voiture. Pas de
+// pastille JY dans le bandeau : la photo n'en montre pas.
 function drawHeader(
   g: CanvasRenderingContext2D,
   w: number,
@@ -103,84 +111,66 @@ function drawHeader(
   lang: ScreenLang,
 ): void {
   const next = STATIONS[index];
-  const HEADER = 88;
-  g.fillStyle = '#111214';
-  g.fillRect(0, 0, w, HEADER);
+  g.fillStyle = '#0e0f11';
+  g.fillRect(0, 0, w, HEADER_H);
 
-  // Direction : les deux prochaines grandes gares.
+  // Boîte blanche de direction, ancrée au bas du bandeau.
   const majors: string[] = [];
   for (let k = 1; k <= 29 && majors.length < 2; k++) {
     const idx = (index + k) % 30;
     if (MAJOR_INDICES.includes(idx)) majors.push(lang === 'jp' ? STATIONS[idx].kanji : STATIONS[idx].romaji);
   }
+  g.fillStyle = '#f2f2ee';
+  g.fillRect(0, 40, 176, HEADER_H - 40);
+  g.fillStyle = '#17191c';
   g.textAlign = 'left';
   if (lang === 'jp') {
-    g.fillStyle = '#ffffff';
-    fitText(g, `${majors[0] ?? ''}・${majors[1] ?? ''}`, 175, 26);
-    g.fillText(`${majors[0] ?? ''}・${majors[1] ?? ''}`, 12, 40);
-    g.fillStyle = '#c9ccd0';
-    g.font = `18px ${JP_FONT}`;
-    g.fillText('方面', 12, 70);
-  } else {
-    g.fillStyle = '#c9ccd0';
+    fitText(g, `${majors[0] ?? ''}・${majors[1] ?? ''}`, 158, 24);
+    g.fillText(`${majors[0] ?? ''}・${majors[1] ?? ''}`, 9, 76);
     g.font = `17px ${JP_FONT}`;
-    g.fillText('Bound for', 12, 24);
-    g.fillStyle = '#ffffff';
-    fitText(g, `${majors[0] ?? ''} &`, 175, 22);
-    g.fillText(`${majors[0] ?? ''} &`, 12, 50);
-    fitText(g, majors[1] ?? '', 175, 22);
-    g.fillText(majors[1] ?? '', 12, 76);
+    g.fillText('方面', 9, 102);
+  } else {
+    g.font = `16px ${JP_FONT}`;
+    g.fillText('Bound for', 9, 60);
+    fitText(g, `${majors[0] ?? ''}&`, 158, 21);
+    g.fillText(`${majors[0] ?? ''}&`, 9, 82);
+    fitText(g, majors[1] ?? '', 158, 21);
+    g.fillText(majors[1] ?? '', 9, 104);
   }
 
-  // Barre verte puis libellé d'état, sur fond blanc comme sur l'afficheur.
+  // Barre verte pleine hauteur.
   g.fillStyle = YAMANOTE_GREEN;
-  g.fillRect(196, 0, 14, HEADER);
-  g.fillStyle = '#ffffff';
-  g.fillRect(210, 0, 132, HEADER);
-  g.fillStyle = '#14181c';
-  g.textAlign = 'center';
-  fitText(g, STATUS_LABEL[status][lang], 120, 26);
-  g.fillText(STATUS_LABEL[status][lang], 276, HEADER / 2 + 9);
+  g.fillRect(180, 0, 42, HEADER_H);
 
-  // Pastille JY.
+  // Libellé d'état, blanc sur noir, en haut.
   g.fillStyle = '#ffffff';
-  g.beginPath();
-  g.roundRect(352, 16, 56, 56, 8);
-  g.fill();
-  g.strokeStyle = YAMANOTE_GREEN;
-  g.lineWidth = 4;
-  g.beginPath();
-  g.roundRect(354, 18, 52, 52, 7);
-  g.stroke();
-  g.fillStyle = '#111214';
-  g.font = `bold 14px ${JP_FONT}`;
-  g.fillText('JY', 380, 38);
-  g.font = `bold 24px ${JP_FONT}`;
-  g.fillText(next.jy.slice(2), 380, 64);
+  g.font = `26px ${JP_FONT}`;
+  g.fillText(STATUS_LABEL[status][lang], 236, 32);
 
-  // Nom de la gare, en grand.
-  g.fillStyle = '#ffffff';
-  g.textAlign = 'left';
+  // Nom de la gare, très grand, centré sur l'espace restant.
   const name = lang === 'jp' ? next.kanji : next.romaji;
-  fitText(g, name, w - 424 - 130, 56);
-  g.fillText(name, 424, 62);
+  g.textAlign = 'center';
+  fitText(g, name, 380, 66);
+  g.fillText(name, 452, 98);
 
-  // Heure réelle et numéro de voiture.
+  // Heure (jaune pâle) et numéro de voiture, en haut à droite.
   g.textAlign = 'right';
-  g.fillStyle = '#ffffff';
-  g.font = `bold 26px ${JP_FONT}`;
-  g.fillText(clock, w - 12, 34);
-  g.fillStyle = '#8d939a';
-  g.font = `15px ${JP_FONT}`;
-  g.fillText(lang === 'jp' ? `${PLAYER_CAR}号車` : `Car No.${PLAYER_CAR}`, w - 12, 60);
+  g.fillStyle = '#ece98f';
+  g.font = `bold 30px ${JP_FONT}`;
+  g.fillText(clock, w - 118, 34);
+  g.fillStyle = '#9aa0a6';
+  g.font = `italic 17px ${JP_FONT}`;
+  g.fillText(lang === 'jp' ? `${PLAYER_CAR}号車` : `Car No. ${PLAYER_CAR}`, w - 12, 34);
   g.textAlign = 'left';
 }
 
-// --- Écran droit, vue rapprochée : arc vert, 5 prochaines stations ---
-// Disposition relevée sur les vues observées : la prochaine gare est en BAS
-// À GAUCHE et la courbe remonte vers la droite ; les noms de gares forment
-// une colonne à gauche, la plus proche en bas, et le pavé des correspondances
-// occupe le côté libre, à droite. Le sens 外回り afficherait le miroir.
+// --- Écran droit, vue rapprochée : la grande courbe verte, refaite sur la
+// photo réelle. La bande traverse tout l'écran — elle entre par le bord bas à
+// gauche et file GLISSER SOUS LE BANDEAU en haut à droite (elle est dessinée
+// avant lui). Les cinq prochaines gares s'y accrochent : cercle des minutes
+// sur la bande, nom en très grand à gauche, les noms de deux kanji espacés
+// d'un blanc (東 京) comme sur l'afficheur. Le pavé des correspondances de la
+// prochaine gare occupe le côté libre, à droite.
 function drawRoute(
   s: ReturnType<typeof makeScreen>,
   index: number,
@@ -192,38 +182,32 @@ function drawRoute(
 ): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
-
-  // Corps clair.
-  g.fillStyle = '#eceae5';
+  g.fillStyle = '#e9e8e4';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, status, lang);
 
-  // ----- Courbe verte de la ligne, calée sur l'afficheur réel -----
-  // Points de passage (cercles des minutes), k = 0 : prochaine station en
-  // bas à droite, k = 4 : la plus lointaine en haut à gauche.
+  // Cercles des minutes, du plus proche (bas gauche) au plus lointain.
   const CIRCLES: [number, number][] = [
-    [318, 330],
-    [372, 266],
-    [430, 214],
-    [498, 174],
-    [566, 142],
+    [294, 330],
+    [347, 270],
+    [404, 224],
+    [475, 184],
+    [542, 156],
   ];
   const path: [number, number][] = [
-    [820, 124],
+    [760, 74],
     CIRCLES[4],
     CIRCLES[3],
     CIRCLES[2],
     CIRCLES[1],
     CIRCLES[0],
-    [236, 436],
+    [240, 410],
   ];
   g.strokeStyle = YAMANOTE_GREEN;
-  g.lineWidth = 56;
+  g.lineWidth = 62;
   g.lineCap = 'round';
   g.lineJoin = 'round';
   g.beginPath();
   g.moveTo(path[0][0], path[0][1]);
-  // Chaîne de quadratiques passant par les milieux : courbe lisse.
   for (let i = 1; i < path.length - 1; i++) {
     const mxp = (path[i][0] + path[i + 1][0]) / 2;
     const myp = (path[i][1] + path[i + 1][1]) / 2;
@@ -231,23 +215,21 @@ function drawRoute(
   }
   g.lineTo(path[path.length - 1][0], path[path.length - 1][1]);
   g.stroke();
-  // Chevron rouge : sens de marche, en bout de courbe.
-  g.fillStyle = '#c8362c';
+
+  // Chevron grenat sur la bande, sous le cercle jaune : position du train.
+  g.fillStyle = '#9c1f22';
   g.save();
-  g.translate(305, 352);
-  g.rotate(Math.PI - 1.05);
+  g.translate(262, 374);
+  g.rotate(2.17);
   g.beginPath();
-  g.moveTo(-14, -25);
+  g.moveTo(-16, -26);
   g.lineTo(30, 0);
-  g.lineTo(-14, 25);
-  g.lineTo(3, 0);
+  g.lineTo(-16, 26);
+  g.lineTo(-2, 0);
   g.closePath();
   g.fill();
   g.restore();
 
-  // ----- 5 prochaines stations : cercles des minutes + cascade kanji -----
-  // Positions calées sur l'afficheur réel : les rangées ont leur propre
-  // ligne de base, légèrement au-dessus de leur cercle.
   const atStation = phase === 'dwell';
   for (let k = 4; k >= 0; k--) {
     const stIdx = (index + k) % 30;
@@ -256,25 +238,31 @@ function drawRoute(
     // Cercle des minutes : blanc, jaune et plus gros pour la prochaine.
     const minutes = atStation ? k * 2 : k * 2 + Math.max(1, Math.ceil(countdown / 60));
     g.beginPath();
-    g.arc(mx, my, k === 0 ? 25 : 20, 0, Math.PI * 2);
+    g.arc(mx, my, k === 0 ? 26 : 21, 0, Math.PI * 2);
     g.fillStyle = k === 0 ? '#e8c033' : '#ffffff';
     g.fill();
     g.fillStyle = '#111214';
-    g.font = `bold ${k === 0 ? 27 : 22}px ${JP_FONT}`;
+    g.font = `bold ${k === 0 ? 28 : 23}px ${JP_FONT}`;
     g.textAlign = 'center';
     g.fillText(String(k === 0 && atStation ? 0 : minutes), mx, my + 8);
     if (k === 4) {
-      g.font = `13px ${JP_FONT}`;
-      g.fillText(lang === 'jp' ? '(分)' : '(min)', mx + 34, my + 6);
+      g.font = `14px ${JP_FONT}`;
+      g.textAlign = 'left';
+      g.fillText(lang === 'jp' ? '(分)' : '(min)', mx + 30, my - 4);
     }
-    // Nom de gare : en GROS, sans pastille, calé à droite juste avant la
-    // courbe. L'ensemble forme une cascade diagonale qui épouse la courbe —
-    // c'est la disposition de l'afficheur, pas une colonne alignée.
+    // Nom en très grand à gauche du cercle, cascade diagonale. Les noms de
+    // deux caractères sont espacés d'un blanc idéographique, comme en vrai.
     g.textAlign = 'right';
     g.fillStyle = '#111214';
-    const name = lang === 'jp' ? st.kanji : st.romaji;
-    fitText(g, name, mx - 54, k === 0 ? 42 : 36, '');
-    g.fillText(name, mx - 42, my + 14);
+    let name = lang === 'jp' ? st.kanji : st.romaji;
+    if (lang === 'jp' && name.length === 2) name = `${name[0]}　${name[1]}`;
+    // Corps dégressif vers le haut : sur la photo 東京 est le plus grand et
+    // les gares lointaines rapetissent — c'est aussi ce qui évite que les
+    // noms serrés du sommet ne se chevauchent.
+    const SIZES_JP = [48, 38, 38, 34, 32];
+    const SIZES_EN = [33, 27, 27, 24, 23];
+    fitText(g, name, mx - 58, (lang === 'jp' ? SIZES_JP : SIZES_EN)[k], '');
+    g.fillText(name, mx - 44, my + (k === 0 ? 16 : 13));
     g.textAlign = 'left';
   }
 
@@ -283,35 +271,50 @@ function drawRoute(
   if (tr) {
     g.textAlign = 'right';
     g.fillStyle = '#111214';
-    g.font = `bold 20px ${JP_FONT}`;
-    g.fillText(`${next.kanji}駅`, w - 12, 196);
+    g.font = `bold 21px ${JP_FONT}`;
+    g.fillText(`${next.kanji}駅`, w - 12, 192);
     g.font = `15px ${JP_FONT}`;
     g.fillStyle = '#3a3d42';
-    g.fillText('乗換えのご案内', w - 12, 218);
+    g.fillText('乗換えのご案内', w - 12, 214);
     g.textAlign = 'left';
-    const lines = tr.jp.split('、').slice(0, 8);
-    const colors = ['#00a650', '#0072bc', '#f15a22', '#0067c0', '#1d3f94', '#e2231a', '#e60012', '#8f76d6'];
-    g.font = `13px ${JP_FONT}`;
+    const lines = tr.jp.split('、').slice(0, 7);
+    const colors = ['#00a650', '#0072bc', '#f15a22', '#0067c0', '#1d3f94', '#a51e36', '#e60012'];
+    g.font = `15px ${JP_FONT}`;
+    let y = 240;
     for (let i = 0; i < lines.length; i++) {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const lx = w - 296 + col * 146;
-      const ly = 248 + row * 23;
-      g.fillStyle = colors[i % colors.length];
-      g.beginPath();
-      g.roundRect(lx, ly - 12, 14, 14, 3);
-      g.fill();
-      g.fillStyle = '#26282c';
       let label = lines[i];
-      if (label.length > 8) label = label.slice(0, 7) + '…';
-      g.fillText(label, lx + 20, ly);
+      const long = label.length > 9;
+      if (label.length > 16) label = label.slice(0, 15) + '…';
+      // Les libellés longs (shinkansen) prennent la ligne entière ; les
+      // courts se rangent par deux, comme sur la photo.
+      const pair = !long && i + 1 < lines.length && lines[i + 1].length <= 9;
+      const draw = (lx: number, text: string, ci: number) => {
+        g.fillStyle = colors[ci % colors.length];
+        g.beginPath();
+        g.roundRect(lx, y - 13, 15, 15, 3);
+        g.fill();
+        g.fillStyle = '#26282c';
+        g.fillText(text, lx + 21, y);
+      };
+      draw(470, label, i);
+      if (pair) {
+        i++;
+        draw(622, lines[i], i);
+      }
+      y += 27;
+      if (y > h - 26) break;
     }
   }
 
-  // Mention basse.
-  g.fillStyle = '#9a9d99';
-  g.font = `10px ${JP_FONT}`;
-  g.fillText('のりかえ、待ち合わせ時間は含まれません。乗車により多少時間が異なります。', 10, h - 6);
+  // Mention basse, cadrée à droite comme sur la photo.
+  g.textAlign = 'right';
+  g.fillStyle = '#8f918d';
+  g.font = `11px ${JP_FONT}`;
+  g.fillText('のりかえ、待ち合わせ時間は含まれません。電車により多少時間が異なります。', w - 8, h - 7);
+  g.textAlign = 'left';
+
+  // Le bandeau se dessine PAR-DESSUS : la courbe glisse dessous.
+  drawHeader(g, w, index, clock, status, lang);
 }
 
 // --- Écran droit, plan complet de la boucle (comme l'afficheur réel) :
@@ -741,11 +744,11 @@ function drawTransfers(s: ReturnType<typeof makeScreen>, index: number, clock: s
   drawHeader(g, w, index, clock, 'next', 'jp');
 
   g.fillStyle = '#dfe6ea';
-  g.fillRect(0, 96, w, 40);
+  g.fillRect(0, HEADER_H, w, 40);
   g.fillStyle = '#26303a';
   g.font = `bold 23px ${JP_FONT}`;
   g.textAlign = 'left';
-  g.fillText(`${next.kanji}のりかえ  /  Transfer at ${next.romaji}`, 16, 124);
+  g.fillText(`${next.kanji}のりかえ  /  Transfer at ${next.romaji}`, 16, HEADER_H + 28);
 
   const lines = (TRANSFERS[next.jy]?.jp ?? '').split('、').filter(Boolean).slice(0, 8);
   if (lines.length === 0) {
@@ -758,7 +761,7 @@ function drawTransfers(s: ReturnType<typeof makeScreen>, index: number, clock: s
   const cw = (w - 48) / cols;
   lines.forEach((label, i) => {
     const cx = 24 + (i % cols) * cw;
-    const cy = 176 + Math.floor(i / cols) * 44;
+    const cy = HEADER_H + 68 + Math.floor(i / cols) * 44;
     const badge = LINE_BADGES.find((b) => b.match.test(label));
     g.fillStyle = badge?.color ?? '#7c868f';
     g.beginPath();
