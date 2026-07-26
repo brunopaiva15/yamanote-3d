@@ -61,15 +61,28 @@ function toTexture(c: HTMLCanvasElement): THREE.CanvasTexture {
 export function makeFloorTexture(): THREE.CanvasTexture {
   const { c, g } = makeCanvas(512, 512);
   const r = rng(11);
-  g.fillStyle = '#9fa3a9';
+  // Revêtement clair, allée PLUS claire que les bas-côtés : c'est le sens réel
+  // du contraste (la bande de marche est le ton dominant, les rives sous les
+  // banquettes sont plus soutenues), et il éclaire nettement l'intérieur.
+  g.fillStyle = '#9ea2a7';
   g.fillRect(0, 0, 512, 512);
-  // Bande centrale légèrement plus foncée et patinée (allée).
-  g.fillStyle = 'rgba(116,120,128,0.28)';
+  g.fillStyle = '#b5b8bc';
   g.fillRect(150, 0, 212, 512);
-  // Moucheture fine.
+  // Semis régulier de pastilles, la trame du sol de rame : c'est ce qui
+  // distingue un plancher de train d'un aplat gris.
+  for (let y = 4; y < 512; y += 12) {
+    for (let x = ((y / 12) % 2) * 6 + 4; x < 512; x += 12) {
+      const inAisle = x > 150 && x < 362;
+      g.fillStyle = inAisle ? 'rgba(138,142,147,0.62)' : 'rgba(120,124,130,0.62)';
+      g.beginPath();
+      g.arc(x, y, 2.1, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  // Moucheture fine par-dessus la trame.
   for (let i = 0; i < 5200; i++) {
-    const shade = 130 + Math.floor(r() * 62);
-    g.fillStyle = `rgba(${shade - 8},${shade - 4},${shade + 4},${0.16 + r() * 0.3})`;
+    const shade = 148 + Math.floor(r() * 62);
+    g.fillStyle = `rgba(${shade - 8},${shade - 4},${shade + 4},${0.14 + r() * 0.26})`;
     g.fillRect(r() * 512, r() * 512, 1 + r() * 1.8, 1 + r() * 1.8);
   }
   // Traces d'usure : traînées sombres irrégulières dans le sens de la marche.
@@ -166,16 +179,27 @@ export function makeRoughnessMap(): THREE.CanvasTexture {
 }
 
 // --- Moquette en damier pixellisé (assises E235) ---
+// Nombre de carreaux par tuile : partagé avec three/Seats.tsx, qui en déduit le
+// nombre de répétitions par mètre.
+export const CHECKER_CELLS = 32;
+
 export function makeCheckerTexture(shades: string[]): THREE.CanvasTexture {
   const { c, g } = makeCanvas(256, 256);
   const r = rng(41 + shades.length);
-  const cell = 16;
+  const cell = 256 / CHECKER_CELLS;
   for (let y = 0; y < 256; y += cell) {
     for (let x = 0; x < 256; x += cell) {
       g.fillStyle = shades[Math.floor(r() * shades.length)];
       g.fillRect(x, y, cell, cell);
     }
   }
+  // Le damier brut lit comme de gros pixels : un voile de la teinte moyenne
+  // rapproche les carreaux les uns des autres, il en reste une moucheture de
+  // tissu au lieu d'une mosaïque.
+  g.globalAlpha = 0.45;
+  g.fillStyle = shades[0];
+  g.fillRect(0, 0, 256, 256);
+  g.globalAlpha = 1;
   // Trame tissée par-dessus.
   for (let i = 0; i < 2600; i++) {
     g.strokeStyle = r() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)';
@@ -420,6 +444,130 @@ export function makePrioritySignTexture(): THREE.CanvasTexture {
     g.fill();
     g.fillRect(x - 7, 114, 14, 22);
   }
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+// --- Pictogrammes de la zone libre (フリースペース) ---
+// Tracés à la main plutôt qu'en police d'icônes : aucune dépendance, et le
+// dessin reste lisible aux tailles où il est vu (sticker de sol sous les pieds,
+// panneau mural à 2 m).
+
+function drawWheelchair(g: CanvasRenderingContext2D, cx: number, cy: number, s: number, color: string): void {
+  g.save();
+  g.translate(cx, cy);
+  g.scale(s, s);
+  g.fillStyle = color;
+  g.strokeStyle = color;
+  // Tête.
+  g.beginPath();
+  g.arc(-6, -30, 7, 0, Math.PI * 2);
+  g.fill();
+  // Dos et cuisses.
+  g.lineWidth = 7;
+  g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(-6, -20);
+  g.lineTo(-6, 0);
+  g.lineTo(14, 0);
+  g.stroke();
+  // Jambe et repose-pied.
+  g.lineWidth = 6;
+  g.beginPath();
+  g.moveTo(14, 0);
+  g.lineTo(18, 16);
+  g.lineTo(26, 16);
+  g.stroke();
+  // Grande roue.
+  g.lineWidth = 4;
+  g.beginPath();
+  g.arc(2, 14, 18, 0, Math.PI * 2);
+  g.stroke();
+  // Main courante de la roue.
+  g.lineWidth = 2;
+  g.beginPath();
+  g.arc(2, 14, 12, 0, Math.PI * 2);
+  g.stroke();
+  g.restore();
+}
+
+function drawStroller(g: CanvasRenderingContext2D, cx: number, cy: number, s: number, color: string): void {
+  g.save();
+  g.translate(cx, cy);
+  g.scale(s, s);
+  g.fillStyle = color;
+  g.strokeStyle = color;
+  g.lineCap = 'round';
+  // Capote inclinée : le trait qui fait lire « poussette » et pas « chariot ».
+  g.beginPath();
+  g.moveTo(-16, 2);
+  g.lineTo(-16, -14);
+  g.arc(-2, -14, 14, Math.PI, Math.PI * 1.5);
+  g.lineTo(16, 2);
+  g.closePath();
+  g.fill();
+  // Poignée.
+  g.lineWidth = 5;
+  g.beginPath();
+  g.moveTo(-16, -10);
+  g.lineTo(-30, -24);
+  g.stroke();
+  // Châssis.
+  g.lineWidth = 5;
+  g.beginPath();
+  g.moveTo(-14, 4);
+  g.lineTo(-8, 20);
+  g.moveTo(14, 4);
+  g.lineTo(18, 20);
+  g.stroke();
+  // Roues.
+  g.beginPath();
+  g.arc(-8, 24, 6, 0, Math.PI * 2);
+  g.moveTo(24, 24);
+  g.arc(18, 24, 6, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+}
+
+// --- Sticker de sol bleu de la zone libre ---
+export function makeFreeSpaceFloorTexture(): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(320, 256);
+  g.fillStyle = '#1f6ea8';
+  g.beginPath();
+  g.roundRect(6, 6, 308, 244, 26);
+  g.fill();
+  g.strokeStyle = 'rgba(255,255,255,0.85)';
+  g.lineWidth = 5;
+  g.beginPath();
+  g.roundRect(16, 16, 288, 224, 20);
+  g.stroke();
+  drawWheelchair(g, 96, 96, 1.05, '#ffffff');
+  drawStroller(g, 224, 96, 1.05, '#ffffff');
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center';
+  g.font = `bold 34px ${JP_FONT}`;
+  g.fillText('フリースペース', 160, 196);
+  g.font = `20px ${JP_FONT}`;
+  g.fillText('Free Space', 160, 224);
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+// --- Panneau mural bleu de la zone libre ---
+export function makeFreeSpaceSignTexture(): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(256, 160);
+  g.fillStyle = '#1f6ea8';
+  g.beginPath();
+  g.roundRect(2, 2, 252, 156, 10);
+  g.fill();
+  drawWheelchair(g, 74, 66, 0.82, '#ffffff');
+  drawStroller(g, 182, 66, 0.82, '#ffffff');
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center';
+  g.font = `bold 30px ${JP_FONT}`;
+  g.fillText('フリースペース', 128, 126);
+  g.font = `15px ${JP_FONT}`;
+  g.fillText('Free Space', 128, 148);
   g.textAlign = 'left';
   return toTexture(c);
 }

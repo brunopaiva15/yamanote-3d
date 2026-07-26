@@ -83,7 +83,7 @@ function HandleRow({ x }: { x: number }) {
         {/* Sangles */}
         <Instances limit={zs.length}>
           <boxGeometry args={[0.03, STRAP_LEN, 0.014]} />
-          <meshStandardMaterial color="#dcd9cf" roughness={0.85} />
+          <meshStandardMaterial color="#2c2e33" roughness={0.82} />
           {zs.map((z) => (
             <Instance key={`s${z}`} position={[0, -STRAP_LEN / 2, z]} />
           ))}

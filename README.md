@@ -74,19 +74,27 @@ romaji et traduction française. Neuf mots du quotidien ferroviaire.
 
 ## Références visuelles (maquettes hors dépôt)
 
-L'aménagement intérieur est réglé d'après une maquette 3D servant de
-mètre-étalon : [JR East E235-0 Series, par **Hachan**](https://sketchfab.com/3d-models/jr-east-e235-0-series-40f9d1d1e7984404b0b16b8ac265c255).
+Le jeu ne contient **aucun modèle 3D d'intérieur** : la coque, les banquettes et
+tous les aménagements sont procéduraux. Une maquette peut néanmoins servir de
+mètre-étalon pendant le développement, pour arbitrer une forme ou relever une
+cote — sans jamais finir dans le dépôt.
 
-⚠️ **Cette maquette a l'extérieur d'un E235-0 (Yamanote) mais l'intérieur d'un
-E235-1000 (Yokosuka / Sōbu)** — d'où ses banquettes bleues. Le vrai E235-0 a des
-sièges **vert uguisu** et des places prioritaires **rouges**, avec 優先席 sur le
-dossier : c'est ce que rend le jeu (`GREEN_CHECKER` / `RED_CHECKER` dans
-`src/textures/procedural.ts`). **Ne jamais reprendre les couleurs de la
-maquette** — seulement les formes et les cotes.
+⚠️ **N'utiliser qu'une maquette dont on a le droit de se servir.** Sur Sketchfab,
+la licence se lit sur `https://api.sketchfab.com/v3/models/<uid>` : un
+`"license": {}` vide avec `"isDownloadable": false` signifie que l'auteur n'a
+rien diffusé et n'accorde aucun droit. Chercher plutôt des modèles CC0 ou CC-BY,
+et créditer l'auteur dans ce fichier.
 
-Les maquettes vivent dans `public/models/raw/`, ignoré par git : rien n'est
-embarqué dans le jeu, qui reste intégralement procédural (aucun asset 3D
-d'intérieur). Pour préparer une référence et la mesurer :
+⚠️ **Se méfier de la série.** Beaucoup de maquettes « E235 » mélangent
+l'extérieur E235-0 (Yamanote) et l'intérieur E235-1000 (Yokosuka / Sōbu), aux
+banquettes bleues. Le vrai E235-0 a des sièges **vert uguisu** et des places
+prioritaires **rouges**, avec 優先席 sur le dossier : c'est ce que rend le jeu
+(`GREEN_CHECKER` / `RED_CHECKER` dans `src/textures/procedural.ts`). Une
+maquette sert à lire des formes et des cotes, pas des teintes.
+
+Les maquettes vivent dans `public/models/raw/`, ignoré par git, et un greffon de
+build les retire de `dist/` (voir `vite.config.ts`) pour qu'un build local ne les
+publie jamais. Pour préparer une référence et la mesurer :
 
 ```bash
 # isole un wagon, redresse les axes, sort en mètres (plancher à y = 0)

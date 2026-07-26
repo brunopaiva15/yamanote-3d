@@ -72,6 +72,14 @@ function applyStyle(root: THREE.Object3D, style: RefStyle, originals: Map<string
   });
 }
 
+// Longueur d'un module de la maquette (une travée de porte), mesurée par
+// `models:inspect --measure` : les copies se posent bout à bout dessus.
+const MODULE_LENGTH = 5.24;
+
+function tileOffsets(n: number, center: number): number[] {
+  return Array.from({ length: n }, (_, i) => center + (i - (n - 1) / 2) * MODULE_LENGTH);
+}
+
 export function CarProbe() {
   const [ref, setRef] = useState<THREE.Group | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +88,7 @@ export function CarProbe() {
   const [style, setStyle] = useState<RefStyle>((q.get('style') as RefStyle) ?? 'texture');
   const originals = useMemo(() => new Map<string, THREE.Material | THREE.Material[]>(), []);
   const refZ = num('refZ', 2.5); // travée de porte du jeu la plus proche du départ
+  const tile = Math.max(1, Math.round(num('tile', 1)));
 
   useEffect(() => {
     let cancelled = false;
@@ -138,7 +147,15 @@ export function CarProbe() {
             <Screens />
           </>
         )}
-        {showRef && ref && <primitive object={ref} position={[0, 0, refZ]} />}
+        {showRef &&
+          ref &&
+          // ?tile=n répète le module pour couvrir les 20 m du wagon : c'est le
+          // « 1:1 » maximal atteignable avec cette maquette, qui n'est qu'une
+          // travée de porte de 5,24 m. Ce que ça laisse voir (parois absentes,
+          // banquettes tranchées) est le vrai coût d'un remplacement.
+          (tile > 1 ? tileOffsets(tile, refZ) : [refZ]).map((z, i) => (
+            <primitive key={`ref${i}`} object={i === 0 ? ref : ref.clone(true)} position={[0, 0, z]} />
+          ))}
         <OrbitControls target={[num('tx', 0), num('ty', 1.4), num('tz', -2)]} makeDefault />
       </Canvas>
       <div className="probe-hud">
