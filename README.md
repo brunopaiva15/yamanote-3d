@@ -195,6 +195,9 @@ uniquement `JY26` + Inner + plateforme **1** → Tamachi.
 Clip Takanawa Gateway Outer : `public/audio/melodies/15_glorious-gateway-b.mp3`,
 uniquement `JY26` + Outer + plateforme **2** → Shinagawa.
 
+Clip Kanda Outer : `public/audio/melodies/16_mondamin-cm-song-a.mp3` (モンダミンCMソング ver.A),
+uniquement `JY02` + Outer + plateforme **2** → Tokyo. La voie 3 Inner (ver.B) n’est pas encore fournie.
+
 ### Sonorisation en 3D
 
 Le son de la sonorisation est spatialisé : il sort des haut-parleurs, pas du

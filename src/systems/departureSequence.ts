@@ -6,6 +6,7 @@
 import {
   EBISU_INNER_THIRD_MAN_F_PATH,
   INNER_MAIN_MELODY_PATH,
+  KANDA_OUTER_MONDAMIN_A_PATH,
   KOMAGOME_INNER_SAKURA_V2_PATH,
   KOMAGOME_OUTER_SAKURA_A_PATH,
   OSAKI_INNER_SECONDARY_MELODY_PATH,
@@ -20,6 +21,7 @@ import {
   makeDepartureId,
   shouldPlayEbisuInnerThirdManF,
   shouldPlayInnerMainMelody,
+  shouldPlayKandaOuterMondaminA,
   shouldPlayKomagomeInnerSakuraV2,
   shouldPlayKomagomeOuterSakuraA,
   shouldPlayOsakiInnerSecondaryMelody,
@@ -59,6 +61,7 @@ let takadanobabaAtomBPlaying = false;
 let ebisuThirdManFPlaying = false;
 let gloriousGatewayAPlaying = false;
 let gloriousGatewayBPlaying = false;
+let kandaMondaminAPlaying = false;
 
 export function isDepartureBlocked(): boolean {
   const b = runtime.departureBlockers;
@@ -89,6 +92,7 @@ export function resetMelodyDepartureGuard(): void {
   ebisuThirdManFPlaying = false;
   gloriousGatewayAPlaying = false;
   gloriousGatewayBPlaying = false;
+  kandaMondaminAPlaying = false;
 }
 
 /** Dérive l'état train pour la mélodie à partir de la phase et des portes. */
@@ -231,6 +235,11 @@ export function stopTakanawaGatewayOuterGloriousB(): void {
   gloriousGatewayBPlaying = false;
 }
 
+export function stopKandaOuterMondaminA(): void {
+  audioManager.stop(KANDA_OUTER_MONDAMIN_A_PATH);
+  kandaMondaminAPlaying = false;
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
@@ -246,6 +255,7 @@ export function cancelDepartureMelody(): void {
   stopEbisuInnerThirdManF();
   stopTakanawaGatewayInnerGloriousA();
   stopTakanawaGatewayOuterGloriousB();
+  stopKandaOuterMondaminA();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -516,6 +526,30 @@ export async function playTakanawaGatewayOuterGloriousB(
   }
 }
 
+/**
+ * Mondamin CM Song ver.A : Kanda Outer voie 2 → Tokyo, une fois par départ.
+ */
+export async function playKandaOuterMondaminA(
+  context: MelodyPlayContext,
+): Promise<boolean> {
+  if (!shouldPlayKandaOuterMondaminA(context)) return false;
+  if (isDepartureBlocked()) return false;
+  if (kandaMondaminAPlaying) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  kandaMondaminAPlaying = true;
+  try {
+    const ok = await audioManager.playOnce(KANDA_OUTER_MONDAMIN_A_PATH);
+    if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+      runtime.lastMelodyDepartureId = null;
+    }
+    return ok;
+  } finally {
+    kandaMondaminAPlaying = false;
+  }
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -553,6 +587,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (await playEbisuInnerThirdManF(context)) return true;
   if (await playTakanawaGatewayInnerGloriousA(context)) return true;
   if (await playTakanawaGatewayOuterGloriousB(context)) return true;
+  if (await playKandaOuterMondaminA(context)) return true;
   if (await playInnerMainMelody(context)) return true;
   if (await playOuterMainMelody(context)) return true;
   return false;

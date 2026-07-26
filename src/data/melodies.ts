@@ -275,6 +275,27 @@ export const TAKANAWA_GATEWAY_OUTER_GLORIOUS_B = {
   nextStationName: 'Shinagawa',
 };
 
+/** Chemin : Mondamin CM Song ver.A — Kanda Outer voie 2. */
+export const KANDA_OUTER_MONDAMIN_A_PATH =
+  '/audio/melodies/16_mondamin-cm-song-a.mp3';
+
+/** Config exclusive : Kanda Outer Loop plateforme 2 → Tokyo. */
+export const KANDA_OUTER_MONDAMIN_A = {
+  id: 'mondamin-cm-song-ver-a',
+  name: 'Mondamin CM Song ver.A',
+  japaneseName: 'モンダミンCMソング ver.A',
+  file: KANDA_OUTER_MONDAMIN_A_PATH,
+  type: 'departure_melody' as const,
+  audioSource: 'platform_speakers' as const,
+  line: 'yamanote',
+  stationCode: 'JY02',
+  stationName: 'Kanda',
+  direction: 'outer' as const,
+  platform: 2,
+  nextStationCode: 'JY01',
+  nextStationName: 'Tokyo',
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -700,6 +721,34 @@ export function shouldPlayTakanawaGatewayOuterGloriousB(ctx: MelodyPlayContext):
   if (ctx.trainState !== 'stopped_doors_open') return false;
   if (!ctx.departureSequenceStarted) return false;
   if (ctx.departureAuthorized === false) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * Mondamin CM Song ver.A : exclusivement Kanda (JY02) Outer Loop plateforme 2 → Tokyo.
+ * La voie 3 Inner utilisera Mondamin CM Song ver.B.
+ */
+export function shouldPlayKandaOuterMondaminA(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== KANDA_OUTER_MONDAMIN_A.stationCode) return false;
+  if (ctx.direction !== 'outer') return false;
+  if (Number(ctx.platform) !== KANDA_OUTER_MONDAMIN_A.platform) return false;
+
+  if (
+    ctx.nextStationCode &&
+    ctx.nextStationCode !== KANDA_OUTER_MONDAMIN_A.nextStationCode
+  ) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
   if (ctx.emergencyActive) return false;
 
   if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
