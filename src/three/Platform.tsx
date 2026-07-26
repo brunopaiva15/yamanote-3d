@@ -99,11 +99,21 @@ export function Platform() {
       lamp: new THREE.MeshStandardMaterial({ color: '#fff2d4', emissive: '#ffe7b0', emissiveIntensity: 0.85, roughness: 0.4 }),
       bin: new THREE.MeshStandardMaterial({ color: '#4a5058', roughness: 0.7, metalness: 0.2 }),
       rubber: new THREE.MeshStandardMaterial({ color: '#2a2c30', roughness: 0.95 }),
-      sign: new THREE.MeshBasicMaterial({ map: sign.texture, toneMapped: false }),
-      board: new THREE.MeshBasicMaterial({ map: board.texture, toneMapped: false }),
-      ad0: new THREE.MeshBasicMaterial({ map: ads[0], toneMapped: false }),
-      ad1: new THREE.MeshBasicMaterial({ map: ads[1], toneMapped: false }),
-      ad2: new THREE.MeshBasicMaterial({ map: ads[2], toneMapped: false }),
+      sign: new THREE.MeshBasicMaterial({
+        map: sign.texture,
+        toneMapped: false,
+        side: THREE.DoubleSide,
+        depthWrite: true,
+      }),
+      board: new THREE.MeshBasicMaterial({
+        map: board.texture,
+        toneMapped: false,
+        side: THREE.DoubleSide,
+        depthWrite: true,
+      }),
+      ad0: new THREE.MeshBasicMaterial({ map: ads[0], toneMapped: false, side: THREE.DoubleSide }),
+      ad1: new THREE.MeshBasicMaterial({ map: ads[1], toneMapped: false, side: THREE.DoubleSide }),
+      ad2: new THREE.MeshBasicMaterial({ map: ads[2], toneMapped: false, side: THREE.DoubleSide }),
     };
   }, [floorTex, tactileTex, sign, board, ads]);
 
@@ -230,36 +240,36 @@ export function Platform() {
         <boxGeometry args={[0.08, 0.1, PLATFORM_LEN]} />
       </mesh>
 
-      {/* Panneaux de nom de station */}
-      {[-12, 12].map((z) => (
-        <group key={`sign${z}`} position={[midX + 0.2, PLATFORM_TOP + 1.95, z]}>
-          <mesh position={[0, 0.15, 0]} material={materials.column}>
-            <boxGeometry args={[0.12, 1.7, 0.12]} />
+      {/* Panneaux de nom de station — bien en avant, face au train (comme avant) */}
+      {[-9, 9].map((z) => (
+        <group key={`sign${z}`} position={[3.55, PLATFORM_TOP + 1.85, z]}>
+          <mesh position={[0.08, 0.55, 0]} material={materials.column}>
+            <cylinderGeometry args={[0.045, 0.045, 1.5, 8]} />
           </mesh>
-          <mesh position={[0, 1.05, 0]} rotation={[0, -Math.PI / 2, 0]} material={materials.sign}>
-            <planeGeometry args={[2.5, 0.78]} />
+          {/* Fond métallique DERRIÈRE le panneau (+x), panneau légèrement vers le train (-x) */}
+          <mesh position={[0.05, 1.1, 0]} material={materials.metal}>
+            <boxGeometry args={[0.06, 0.86, 2.55]} />
           </mesh>
-          <mesh position={[0, 1.05, 0.02]} material={materials.metal}>
-            <boxGeometry args={[0.08, 0.82, 2.55]} />
+          <mesh position={[-0.01, 1.1, 0]} rotation={[0, -Math.PI / 2, 0]} material={materials.sign}>
+            <planeGeometry args={[2.45, 0.78]} />
           </mesh>
         </group>
       ))}
 
-      {/* Tableau d'affichage suspendu */}
-      <group position={[midX - 0.3, PLATFORM_TOP + 3.35, 0]}>
-        <mesh material={materials.metal}>
-          <boxGeometry args={[0.7, 0.08, 3.4]} />
+      {/* Tableau d'affichage suspendu, sous l'auvent, lisible depuis le wagon */}
+      <group position={[3.35, PLATFORM_TOP + 3.05, 0]}>
+        <mesh position={[0.08, 0.15, 0]} material={materials.metal}>
+          <boxGeometry args={[0.5, 0.06, 3.4]} />
         </mesh>
-        <mesh position={[0, -0.35, 0]} rotation={[0, -Math.PI / 2, 0]} material={materials.board}>
+        <mesh position={[0.05, -0.28, 0]} material={materials.metal}>
+          <boxGeometry args={[0.08, 0.88, 3.3]} />
+        </mesh>
+        <mesh position={[-0.02, -0.28, 0]} rotation={[0, -Math.PI / 2, 0]} material={materials.board}>
           <planeGeometry args={[3.2, 0.8]} />
         </mesh>
-        <mesh position={[0, -0.35, 0.04]} material={materials.metal}>
-          <boxGeometry args={[0.1, 0.85, 3.3]} />
-        </mesh>
-        {/* Suspentes */}
         {[-1.4, 1.4].map((z) => (
-          <mesh key={`hang${z}`} position={[0, 0.35, z]} material={materials.metal}>
-            <boxGeometry args={[0.04, 0.7, 0.04]} />
+          <mesh key={`hang${z}`} position={[0.08, 0.45, z]} material={materials.metal}>
+            <boxGeometry args={[0.04, 0.55, 0.04]} />
           </mesh>
         ))}
       </group>
@@ -303,12 +313,12 @@ export function Platform() {
                 <boxGeometry args={[0.45, 0.4, 0.08]} />
               </mesh>
             ))}
-            {/* Affiche murale */}
-            <mesh position={[0.7, 1.55, 0]} rotation={[0, -Math.PI / 2, 0]} material={adMat}>
-              <planeGeometry args={[1.1, 1.6]} />
-            </mesh>
-            <mesh position={[0.68, 1.55, 0]} material={materials.metal}>
+            {/* Affiche murale : fond derrière, image face au train */}
+            <mesh position={[0.72, 1.55, 0]} material={materials.metal}>
               <boxGeometry args={[0.05, 1.65, 1.15]} />
+            </mesh>
+            <mesh position={[0.68, 1.55, 0]} rotation={[0, -Math.PI / 2, 0]} material={adMat}>
+              <planeGeometry args={[1.1, 1.6]} />
             </mesh>
             {/* Poubelle */}
             <mesh position={[-0.15, 0.45, 1.55]} material={materials.bin}>
