@@ -101,27 +101,23 @@ function buildStandSlots(): StandSlot[] {
 export const STAND_SLOTS: StandSlot[] = buildStandSlots();
 export const standOccupant: Occupant[] = STAND_SLOTS.map(() => null);
 
-// Les PNJ peuplent surtout la voiture du voyageur (pool limité).
-function inPlayerCar(z: number): boolean {
-  return Math.abs(z) <= CONFIG.carHalfLength;
-}
-
-export function findFreeSeat(random = Math.random): number {
+// Place libre, éventuellement limitée à une voiture (peuplement / montées).
+export function findFreeSeat(random = Math.random, car?: number): number {
   const free: number[] = [];
   for (let i = 0; i < SEAT_SLOTS.length; i++) {
     if (seatOccupant[i] !== null) continue;
-    if (!inPlayerCar(SEAT_SLOTS[i].z)) continue;
+    if (car !== undefined && SEAT_SLOTS[i].car !== car) continue;
     free.push(i);
   }
   if (free.length === 0) return -1;
   return free[Math.floor(random() * free.length)];
 }
 
-export function findFreeStand(random = Math.random): number {
+export function findFreeStand(random = Math.random, car?: number): number {
   const free: number[] = [];
   for (let i = 0; i < STAND_SLOTS.length; i++) {
     if (standOccupant[i] !== null) continue;
-    if (!inPlayerCar(STAND_SLOTS[i].z)) continue;
+    if (car !== undefined && STAND_SLOTS[i].car !== car) continue;
     free.push(i);
   }
   if (free.length === 0) return -1;
