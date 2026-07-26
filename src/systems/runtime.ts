@@ -100,6 +100,11 @@ export const runtime = {
   /** Arrêt terminus / quai alternatif (ex. Ōsaki 2) — autre mélodie ou silence. */
   terminusStop: false,
   /**
+   * Utiliser le quai alternatif de la gare (ex. Ōsaki Inner voie 2, Outer voie 4).
+   * Indépendant de terminusStop : un départ voyageurs peut partir de la voie secondaire.
+   */
+  useAlternativePlatform: false,
+  /**
    * Si true, startDepartureSequence enchaîne aussi annonce + fermetures.
    * En usage normal (stationCycle), reste false : les timers gèrent la suite.
    */
@@ -152,6 +157,7 @@ export function resetRuntime(): void {
   runtime.departureBlockers.emergency = false;
   runtime.outOfService = false;
   runtime.terminusStop = false;
+  runtime.useAlternativePlatform = false;
   runtime.autonomousDepartureSequence = false;
   runtime.trainId = 'yamanote-e235-1';
   runtime.stopSequence = 0;

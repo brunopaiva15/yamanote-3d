@@ -1,13 +1,15 @@
-// Séquence de départ quai : 発車メロディ Inner / Outer, puis fermeture.
+// Séquence de départ quai : 発車メロディ Inner / Outer / Ōsaki secondaire.
 // La mélodie est jouée une seule fois par arrêt (departureId) ; les étapes
 // portes / départ restent pilotées par stationCycle tant que le départ
 // n'est pas bloqué.
 
 import {
   INNER_MAIN_MELODY_PATH,
+  OSAKI_INNER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
   makeDepartureId,
   shouldPlayInnerMainMelody,
+  shouldPlayOsakiInnerSecondaryMelody,
   shouldPlayOuterMainMelody,
   type MelodyPlayContext,
   type ServiceType,
@@ -73,6 +75,31 @@ function serviceTypeFromRuntime(): ServiceType {
   return 'normal';
 }
 
+function serviceStateFromRuntime(): MelodyPlayContext['serviceState'] {
+  if (runtime.outOfService) return 'out_of_service';
+  if (runtime.terminusStop) return 'terminated';
+  return 'in_service';
+}
+
+function resolvePlatform(
+  stationJy: string,
+  direction: LoopDirection,
+  override?: number,
+): number {
+  if (override !== undefined) return override;
+  const info = platformFor(stationJy, direction);
+  if (!info) return 0;
+  if (runtime.useAlternativePlatform && info.alternativePlatform != null) {
+    return info.alternativePlatform;
+  }
+  return info.platform;
+}
+
+function nextStationCodeFor(index: number, direction: LoopDirection): string {
+  const nextIndex = direction === 'outer' ? (index - 1 + 30) % 30 : (index + 1) % 30;
+  return STATIONS[nextIndex].jy;
+}
+
 export function buildDepartureContext(opts?: {
   departureSequenceStarted?: boolean;
   platform?: number;
@@ -83,8 +110,7 @@ export function buildDepartureContext(opts?: {
   const index = opts?.stationIndex ?? s.index;
   const station = STATIONS[index];
   const direction = opts?.direction ?? s.loopDirection;
-  const info = platformFor(station.jy, direction);
-  const platform = opts?.platform ?? info?.platform ?? 0;
+  const platform = resolvePlatform(station.jy, direction, opts?.platform);
   const stopSequence = runtime.stopSequence;
   const trainId = runtime.trainId;
   const departureId = makeDepartureId({
@@ -101,12 +127,14 @@ export function buildDepartureContext(opts?: {
     direction,
     stationCode: station.jy,
     platform,
+    nextStationCode: nextStationCodeFor(index, direction),
     trainState: trainStateFromRuntime(s.phase, runtime.doorOpen, runtime.doorTarget),
     departureSequenceStarted: opts?.departureSequenceStarted ?? true,
     departureId,
     trainId,
     stopSequence,
     serviceType: serviceTypeFromRuntime(),
+    serviceState: serviceStateFromRuntime(),
     emergencyActive: runtime.departureBlockers.emergency,
     departureAuthorized: !blocked,
     outOfService: runtime.outOfService,
@@ -119,10 +147,15 @@ export function stopOuterMainMelody(): void {
   outerMainMelodyPlaying = false;
 }
 
+export function stopOsakiInnerSecondaryMelody(): void {
+  audioManager.stop(OSAKI_INNER_SECONDARY_MELODY_PATH);
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
   stopOuterMainMelody();
+  stopOsakiInnerSecondaryMelody();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -177,6 +210,22 @@ export async function playOuterMainMelodyOncePerStop(context: MelodyPlayContext)
   return playOuterMainMelody(context);
 }
 
+/**
+ * JRE-IKST-010-03 : Ōsaki Inner voie 2 → Shinagawa, une fois par départ.
+ */
+export async function playOsakiInnerSecondaryMelody(context: MelodyPlayContext): Promise<boolean> {
+  if (!shouldPlayOsakiInnerSecondaryMelody(context)) return false;
+  if (isDepartureBlocked()) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  const ok = await audioManager.playOnce(OSAKI_INNER_SECONDARY_MELODY_PATH);
+  if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+    runtime.lastMelodyDepartureId = null;
+  }
+  return ok;
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -194,8 +243,8 @@ async function departTrain(): Promise<void> {
 }
 
 /**
- * Sélectionne et joue la 発車メロディ adaptée (inner main, outer main, …).
- * Retourne true si un clip réel a été lancé.
+ * Sélectionne et joue la 発車メロディ adaptée.
+ * Ordre : cas spécifiques (Ōsaki voie 2) → Inner Main → Outer Main.
  */
 export async function playDepartureMelodyForContext(context: MelodyPlayContext): Promise<boolean> {
   if (context.trainState !== 'stopped_doors_open') return false;
@@ -203,6 +252,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (context.emergencyActive) return false;
   if (isDepartureBlocked()) return false;
 
+  if (await playOsakiInnerSecondaryMelody(context)) return true;
   if (await playInnerMainMelody(context)) return true;
   if (await playOuterMainMelody(context)) return true;
   return false;

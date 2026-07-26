@@ -12,6 +12,24 @@ export const INNER_MAIN_MELODY_PATH =
 export const OUTER_MAIN_MELODY_PATH =
   '/audio/melodies/02_jre-ikst-010-02_outer-main.mp3';
 
+/** Chemin logique du clip Inner secondaire Ōsaki voie 2 (JRE-IKST-010-03). */
+export const OSAKI_INNER_SECONDARY_MELODY_PATH =
+  '/audio/melodies/03_jre-ikst-010-03_inner-secondary-osaki.mp3';
+
+/** Config exclusive : Ōsaki Inner Loop plateforme 2 → Shinagawa. */
+export const OSAKI_INNER_SECONDARY_MELODY = {
+  id: 'jre-ikst-010-03',
+  file: OSAKI_INNER_SECONDARY_MELODY_PATH,
+  line: 'yamanote',
+  stationCode: 'JY24',
+  stationName: 'Osaki',
+  direction: 'inner' as const,
+  platform: 2,
+  nextStationCode: 'JY25',
+  nextStationName: 'Shinagawa',
+  type: 'departure_melody' as const,
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -86,7 +104,11 @@ export type MelodyPlayContext = {
   departureId?: string;
   trainId?: string;
   stopSequence?: number;
+  /** Prochaine gare (code JY), ex. JY25 depuis Ōsaki Inner. */
+  nextStationCode?: string;
   serviceType?: ServiceType;
+  /** Alias runtime : out_of_service | terminated | in_service. */
+  serviceState?: 'in_service' | 'out_of_service' | 'terminated';
   emergencyActive?: boolean;
   departureAuthorized?: boolean;
   /** @deprecated préférer serviceType */
@@ -96,6 +118,8 @@ export type MelodyPlayContext = {
 };
 
 export function resolveServiceType(ctx: MelodyPlayContext): ServiceType {
+  if (ctx.serviceState === 'out_of_service') return 'out_of_service';
+  if (ctx.serviceState === 'terminated') return 'terminal';
   if (ctx.serviceType) return ctx.serviceType;
   if (ctx.outOfService) return 'out_of_service';
   if (ctx.terminus) return 'terminal';
@@ -153,6 +177,32 @@ export function shouldPlayOuterMainMelody(ctx: MelodyPlayContext): boolean {
   const stationConfig = outerMainMelodyPlatforms[ctx.stationCode];
   if (!stationConfig) return false;
   if (Number(stationConfig.platform) !== Number(ctx.platform)) return false;
+
+  return true;
+}
+
+/**
+ * JRE-IKST-010-03 : exclusivement Ōsaki (JY24) Inner Loop plateforme 2 → Shinagawa.
+ * Ne jamais jouer sur la voie 1 (mélodie principale) ni en terminus / hors service.
+ */
+export function shouldPlayOsakiInnerSecondaryMelody(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== OSAKI_INNER_SECONDARY_MELODY.stationCode) return false;
+  if (ctx.direction !== 'inner') return false;
+  if (Number(ctx.platform) !== OSAKI_INNER_SECONDARY_MELODY.platform) return false;
+
+  if (ctx.nextStationCode && ctx.nextStationCode !== OSAKI_INNER_SECONDARY_MELODY.nextStationCode) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
+  if (ctx.departureAuthorized === false) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
 
   return true;
 }

@@ -160,6 +160,10 @@ Clip Outer Loop principal : `public/audio/melodies/02_jre-ikst-010-02_outer-main
 (JRE-IKST-010-02), mêmes règles pour `direction === "outer"` et les 18 quais
 listés (Ōsaki quai 3 uniquement ; quai 4 réservé à une mélodie secondaire).
 
+Clip Ōsaki Inner secondaire : `public/audio/melodies/03_jre-ikst-010-03_inner-secondary-osaki.mp3`
+(JRE-IKST-010-03), uniquement `JY24` + Inner + plateforme **2** → Shinagawa
+(`runtime.useAlternativePlatform`). La voie 1 garde le clip Inner Main.
+
 ### Sonorisation en 3D
 
 Le son de la sonorisation est spatialisé : il sort des haut-parleurs, pas du

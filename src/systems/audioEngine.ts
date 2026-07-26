@@ -25,8 +25,11 @@
 
 import * as Tone from 'tone';
 import { CABIN_SPEAKERS, CONFIG, PLATFORM_SPEAKERS } from '../data/config';
-import { INNER_MAIN_MELODY_PATH, OUTER_MAIN_MELODY_PATH } from '../data/melodies';
-import { platformFor } from '../data/platforms';
+import {
+  INNER_MAIN_MELODY_PATH,
+  OSAKI_INNER_SECONDARY_MELODY_PATH,
+  OUTER_MAIN_MELODY_PATH,
+} from '../data/melodies';
 import { STATIONS } from '../data/stations';
 import { buildDepartureContext, playDepartureMelodyForContext } from './departureSequence';
 
@@ -653,12 +656,6 @@ export function departureMelody(index: number): void {
     departureSequenceStarted: true,
     stationIndex: index,
   });
-  const station = STATIONS[index];
-  if (station) {
-    ctx.stationCode = station.jy;
-    const info = platformFor(station.jy, ctx.direction);
-    if (info) ctx.platform = info.platform;
-  }
   void playDepartureMelodyForContext(ctx).then((played) => {
     if (!played) {
       void playClip(`melody-${STATIONS[index].jy}`, () => synthMelody(index), 'platform');
@@ -670,4 +667,5 @@ export function departureMelody(index: number): void {
 export function stopDepartureMelodyClips(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
   audioManager.stop(OUTER_MAIN_MELODY_PATH);
+  audioManager.stop(OSAKI_INNER_SECONDARY_MELODY_PATH);
 }
