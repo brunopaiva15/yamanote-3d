@@ -1,33 +1,37 @@
-// Tsurikawa E235 : poignées triangulaires vert Yamanote suspendues à des
-// rails noirs (jaunes en zone prioritaire, aux extrémités du wagon).
+// Tsurikawa E235 : poignées triangulaires vert Yamanote (jaunes en zone
+// prioritaire, aux extrémités du wagon), refaites d'après photos. Il n'y a
+// PAS de sangle souple accrochée à un rail noir : chaque poignée est un
+// COLLIER de plastique articulé serré sur une barre chromée, prolongé d'une
+// courte attache rigide, puis l'anneau — le tout d'une seule teinte. La barre
+// est portée par de petits pendards fixés au plafond.
 // Les rangées oscillent avec le balancement du train.
 
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Instances, Instance } from '@react-three/drei';
+import { CONFIG } from '../data/config';
 import { runtime } from '../systems/runtime';
 
-const RAIL_Y = 2.06;
-// Sangles longues : anneau à ~1,64 m, la hauteur réelle des tsurikawa E235.
-// Les PNJ ont des tailles japonaises réalistes ; ceux qui sont trop petits ne
-// s'accrochent simplement pas (voir systems/passengers). Cette hauteur est
-// reprise telle quelle par three/characters/pose.ts (STRAP_RING_Y) comme cible
-// du bras levé : le centre de l'anneau ne doit pas bouger.
-const STRAP_LEN = 0.32;
-const RING_Y = -STRAP_LEN - 0.1;
+// Barre chromée un peu plus basse que l'ancien rail, mais attache COURTE :
+// le bas de l'anneau remonte à ~1,70 m, au-dessus de la tête du joueur (yeux
+// à 1,55 m) — on ne se prend plus les poignées en marchant. Cette hauteur est
+// reprise par three/characters/pose.ts (STRAP_RING_Y ≈ centre d'anneau) et
+// par le seuil d'atteinte des PNJ (systems/passengers).
+const RAIL_Y = 2.0;
+const LINK_LEN = 0.1; // attache rigide collier → anneau
 const PRIORITY_Z = 8.1; // au-delà : zone prioritaire
-// Pas relevé sur la rame : 45 cm, pas 50.
+// Pas relevé sur la rame : 45 cm.
 const RING_PITCH = 0.451;
 
 // Anneau : triangle à coins arrondis, pointe en haut, 22 cm hors tout —
-// mesuré sur la maquette de référence, contre 19 auparavant. Un tore à trois
-// segments donnait des angles vifs et une section de 3,4 cm, bien trop grosse :
-// la vraie barre fait 2 cm. On échantillonne chaque côté (sommet + trois points
-// intermédiaires) avant de passer le tout à une Catmull-Rom fermée : les côtés
-// restent tendus et seuls les angles s'arrondissent.
+// mesuré sur la maquette de référence. On échantillonne chaque côté (sommet +
+// trois points intermédiaires) avant de passer le tout à une Catmull-Rom
+// fermée : les côtés restent tendus et seuls les angles s'arrondissent.
 const RING_R = 0.116;
-const RING_TUBE = 0.01;
+const RING_TUBE = 0.011;
+// Centre de l'anneau sous la barre : collier, attache, puis rayon.
+const RING_Y = -(0.01 + LINK_LEN + RING_R);
 
 function makeRingGeometry(): THREE.TubeGeometry {
   const corners = [0, 1, 2].map((i) => {
@@ -41,15 +45,15 @@ function makeRingGeometry(): THREE.TubeGeometry {
     for (const t of [0, 0.25, 0.5, 0.75]) points.push(from.clone().lerp(to, t));
   }
   const curve = new THREE.CatmullRomCurve3(points, true);
-  // 24 pas le long du parcours suffisent à tenir les angles arrondis, et 6
-  // faces de section pour une barre de 2 cm : au-delà, on paie très cher un
-  // objet minuscule répété 84 fois (un tube à 48 × 8 coûtait 64 000 triangles
-  // pour l'ensemble des poignées, contre 4 500 à l'ancien tore).
+  // 24 pas le long du parcours et 6 faces de section : suffisant pour un
+  // objet de 22 cm répété 84 fois — au-delà, on paie très cher.
   return new THREE.TubeGeometry(curve, 24, RING_TUBE, 6, true);
 }
 
-// Statique et partagée par les deux rangées.
+// Géométries statiques, partagées par les deux rangées.
 const RING_GEO = makeRingGeometry();
+const COLLAR_GEO = new THREE.CylinderGeometry(0.024, 0.024, 0.05, 10);
+const LINK_GEO = new THREE.BoxGeometry(0.036, LINK_LEN + 0.02, 0.013);
 
 function HandleRow({ x }: { x: number }) {
   const group = useRef<THREE.Group>(null);
@@ -72,45 +76,48 @@ function HandleRow({ x }: { x: number }) {
   const normal = zs.filter((z) => Math.abs(z) <= PRIORITY_Z);
   const priority = zs.filter((z) => Math.abs(z) > PRIORITY_Z);
 
+  // Une poignée complète = collier sur la barre + attache + anneau, d'une
+  // seule teinte : trois jeux d'instances par couleur.
+  const handleSet = (list: number[], color: string, keyPrefix: string) => (
+    <>
+      <Instances geometry={COLLAR_GEO} limit={Math.max(1, list.length)}>
+        <meshStandardMaterial color={color} roughness={0.62} metalness={0.02} />
+        {list.map((z) => (
+          <Instance key={`${keyPrefix}c${z}`} position={[0, 0, z]} rotation={[Math.PI / 2, 0, 0]} />
+        ))}
+      </Instances>
+      <Instances geometry={LINK_GEO} limit={Math.max(1, list.length)}>
+        <meshStandardMaterial color={color} roughness={0.62} metalness={0.02} />
+        {list.map((z) => (
+          <Instance key={`${keyPrefix}l${z}`} position={[0, -(LINK_LEN + 0.02) / 2, z]} />
+        ))}
+      </Instances>
+      <Instances geometry={RING_GEO} limit={Math.max(1, list.length)}>
+        <meshStandardMaterial color={color} roughness={0.55} metalness={0.02} />
+        {list.map((z) => (
+          <Instance key={`${keyPrefix}r${z}`} position={[0, RING_Y, z]} />
+        ))}
+      </Instances>
+    </>
+  );
+
   return (
     <group position={[x, RAIL_Y, 0]}>
-      {/* Rail porteur noir */}
-      <mesh>
-        <boxGeometry args={[0.035, 0.045, 19.2]} />
-        <meshStandardMaterial color="#26282c" roughness={0.7} metalness={0.25} />
+      {/* Barre porteuse chromée */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.015, 0.015, 19.2, 12]} />
+        <meshStandardMaterial color="#c9ced3" roughness={0.28} metalness={0.9} />
       </mesh>
+      {/* Pendards : petits tubes qui portent la barre depuis le plafond */}
+      {[-8.4, -6, -3.6, -1.2, 1.2, 3.6, 6, 8.4].map((z) => (
+        <mesh key={`sup${z}`} position={[0, (CONFIG.carHeight - RAIL_Y) / 2, z]}>
+          <cylinderGeometry args={[0.009, 0.009, CONFIG.carHeight - RAIL_Y, 8]} />
+          <meshStandardMaterial color="#dfe1e3" roughness={0.5} metalness={0.4} />
+        </mesh>
+      ))}
       <group ref={group}>
-        {/* Sangles : de la couleur de leur anneau. Sur l'E235-0 la poignée est
-            d'une seule teinte, sangle comprise — vert sur la majeure partie du
-            wagon, jaune en zone prioritaire. */}
-        <Instances limit={Math.max(1, normal.length)}>
-          <boxGeometry args={[0.03, STRAP_LEN, 0.014]} />
-          <meshStandardMaterial color="#79c140" roughness={0.72} />
-          {normal.map((z) => (
-            <Instance key={`s${z}`} position={[0, -STRAP_LEN / 2, z]} />
-          ))}
-        </Instances>
-        <Instances limit={Math.max(1, priority.length)}>
-          <boxGeometry args={[0.03, STRAP_LEN, 0.014]} />
-          <meshStandardMaterial color="#e0b23c" roughness={0.72} />
-          {priority.map((z) => (
-            <Instance key={`ps${z}`} position={[0, -STRAP_LEN / 2, z]} />
-          ))}
-        </Instances>
-        {/* Anneaux triangulaires verts */}
-        <Instances geometry={RING_GEO} limit={normal.length}>
-          <meshStandardMaterial color="#79c140" roughness={0.55} metalness={0.02} />
-          {normal.map((z) => (
-            <Instance key={`r${z}`} position={[0, RING_Y, z]} />
-          ))}
-        </Instances>
-        {/* Poignées jaunes de la zone prioritaire */}
-        <Instances geometry={RING_GEO} limit={Math.max(1, priority.length)}>
-          <meshStandardMaterial color="#e0b23c" roughness={0.55} metalness={0.02} />
-          {priority.map((z) => (
-            <Instance key={`p${z}`} position={[0, RING_Y, z]} />
-          ))}
-        </Instances>
+        {handleSet(normal, '#79c140', 'n')}
+        {handleSet(priority, '#e0b23c', 'p')}
       </group>
     </group>
   );

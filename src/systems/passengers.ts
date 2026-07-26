@@ -54,8 +54,9 @@ export interface Pax {
 export const POOL_SIZE = 18;
 export const paxList: Pax[] = [];
 
-// L'anneau des tsurikawa est à ~1,64 m : en dessous de cette échelle (≈1,47 m
-// bras levé), un PNJ ne l'atteint pas naturellement et garde les bras baissés.
+// Le bas de l'anneau des tsurikawa est à ~1,71 m (poignées remontées pour le
+// confort de marche du joueur) : en dessous de cette échelle, un PNJ ne
+// l'atteint pas naturellement et garde les bras baissés.
 const STRAP_MIN_SCALE = 1.02;
 
 function rollStrap(scale: number): boolean {
