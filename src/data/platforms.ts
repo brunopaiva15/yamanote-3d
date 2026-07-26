@@ -1,0 +1,264 @@
+// Numéros de quai (platform) réels de la Yamanote, par gare et par sens.
+// Données de référence pour usage futur (affichage, annonces, orientation…).
+// Non branchées au runtime pour l'instant.
+//
+// 内回り (inner) = sens STATIONS[i] → STATIONS[(i+1)%30] (Tokyo → Kanda → …).
+// 外回り (outer) = sens inverse (Tokyo → Yūrakuchō → …).
+//
+// À Ikebukuro (JY13) et Ōsaki (JY24), un quai alternatif sert aux
+// départs / terminus / arrangements spéciaux.
+
+export type LoopDirection = 'inner' | 'outer';
+
+export type PlatformInfo = {
+  /** Quai principal pour ce sens. */
+  platform: number;
+  /** Quai alternatif (départ / terminus), si distinct. */
+  alternativePlatform?: number;
+  /** Prochaine gare dans ce sens (romaji, aligné sur STATIONS). */
+  nextStation: string;
+};
+
+export type StationPlatforms = {
+  station: string;
+  inner: PlatformInfo;
+  outer: PlatformInfo;
+};
+
+/** Ordre des gares en 内回り (inner loop), à partir d'Ōsaki. */
+export const INNER_LOOP_ORDER = [
+  'Osaki',
+  'Shinagawa',
+  'Takanawa Gateway',
+  'Tamachi',
+  'Hamamatsucho',
+  'Shimbashi',
+  'Yurakucho',
+  'Tokyo',
+  'Kanda',
+  'Akihabara',
+  'Okachimachi',
+  'Ueno',
+  'Uguisudani',
+  'Nippori',
+  'Nishi-Nippori',
+  'Tabata',
+  'Komagome',
+  'Sugamo',
+  'Otsuka',
+  'Ikebukuro',
+  'Mejiro',
+  'Takadanobaba',
+  'Shin-Okubo',
+  'Shinjuku',
+  'Yoyogi',
+  'Harajuku',
+  'Shibuya',
+  'Ebisu',
+  'Meguro',
+  'Gotanda',
+] as const;
+
+/** Ordre des gares en 外回り (outer loop), à partir d'Ōsaki. */
+export const OUTER_LOOP_ORDER = [
+  'Osaki',
+  'Gotanda',
+  'Meguro',
+  'Ebisu',
+  'Shibuya',
+  'Harajuku',
+  'Yoyogi',
+  'Shinjuku',
+  'Shin-Okubo',
+  'Takadanobaba',
+  'Mejiro',
+  'Ikebukuro',
+  'Otsuka',
+  'Sugamo',
+  'Komagome',
+  'Tabata',
+  'Nishi-Nippori',
+  'Nippori',
+  'Uguisudani',
+  'Ueno',
+  'Okachimachi',
+  'Akihabara',
+  'Kanda',
+  'Tokyo',
+  'Yurakucho',
+  'Shimbashi',
+  'Hamamatsucho',
+  'Tamachi',
+  'Takanawa Gateway',
+  'Shinagawa',
+] as const;
+
+/** Quai par code JY (JY01…JY30). */
+export const YAMANOTE_PLATFORMS: Record<string, StationPlatforms> = {
+  JY01: {
+    station: 'Tokyo',
+    inner: { platform: 4, nextStation: 'Kanda' },
+    outer: { platform: 5, nextStation: 'Yurakucho' },
+  },
+  JY02: {
+    station: 'Kanda',
+    inner: { platform: 3, nextStation: 'Akihabara' },
+    outer: { platform: 2, nextStation: 'Tokyo' },
+  },
+  JY03: {
+    station: 'Akihabara',
+    inner: { platform: 2, nextStation: 'Okachimachi' },
+    outer: { platform: 3, nextStation: 'Kanda' },
+  },
+  JY04: {
+    station: 'Okachimachi',
+    inner: { platform: 3, nextStation: 'Ueno' },
+    outer: { platform: 2, nextStation: 'Akihabara' },
+  },
+  JY05: {
+    station: 'Ueno',
+    inner: { platform: 2, nextStation: 'Uguisudani' },
+    outer: { platform: 3, nextStation: 'Okachimachi' },
+  },
+  JY06: {
+    station: 'Uguisudani',
+    inner: { platform: 2, nextStation: 'Nippori' },
+    outer: { platform: 3, nextStation: 'Ueno' },
+  },
+  JY07: {
+    station: 'Nippori',
+    inner: { platform: 11, nextStation: 'Nishi-Nippori' },
+    outer: { platform: 10, nextStation: 'Uguisudani' },
+  },
+  JY08: {
+    station: 'Nishi-Nippori',
+    inner: { platform: 3, nextStation: 'Tabata' },
+    outer: { platform: 2, nextStation: 'Nippori' },
+  },
+  JY09: {
+    station: 'Tabata',
+    inner: { platform: 2, nextStation: 'Komagome' },
+    outer: { platform: 3, nextStation: 'Nishi-Nippori' },
+  },
+  JY10: {
+    station: 'Komagome',
+    inner: { platform: 2, nextStation: 'Sugamo' },
+    outer: { platform: 1, nextStation: 'Tabata' },
+  },
+  JY11: {
+    station: 'Sugamo',
+    inner: { platform: 2, nextStation: 'Otsuka' },
+    outer: { platform: 1, nextStation: 'Komagome' },
+  },
+  JY12: {
+    station: 'Otsuka',
+    inner: { platform: 1, nextStation: 'Ikebukuro' },
+    outer: { platform: 2, nextStation: 'Sugamo' },
+  },
+  JY13: {
+    station: 'Ikebukuro',
+    inner: { platform: 6, alternativePlatform: 5, nextStation: 'Mejiro' },
+    outer: { platform: 7, alternativePlatform: 8, nextStation: 'Otsuka' },
+  },
+  JY14: {
+    station: 'Mejiro',
+    inner: { platform: 1, nextStation: 'Takadanobaba' },
+    outer: { platform: 2, nextStation: 'Ikebukuro' },
+  },
+  JY15: {
+    station: 'Takadanobaba',
+    inner: { platform: 2, nextStation: 'Shin-Okubo' },
+    outer: { platform: 1, nextStation: 'Mejiro' },
+  },
+  JY16: {
+    station: 'Shin-Okubo',
+    inner: { platform: 2, nextStation: 'Shinjuku' },
+    outer: { platform: 1, nextStation: 'Takadanobaba' },
+  },
+  JY17: {
+    station: 'Shinjuku',
+    inner: { platform: 14, nextStation: 'Yoyogi' },
+    outer: { platform: 15, nextStation: 'Shin-Okubo' },
+  },
+  JY18: {
+    station: 'Yoyogi',
+    inner: { platform: 2, nextStation: 'Harajuku' },
+    outer: { platform: 1, nextStation: 'Shinjuku' },
+  },
+  JY19: {
+    station: 'Harajuku',
+    inner: { platform: 1, nextStation: 'Shibuya' },
+    outer: { platform: 2, nextStation: 'Yoyogi' },
+  },
+  JY20: {
+    station: 'Shibuya',
+    inner: { platform: 2, nextStation: 'Ebisu' },
+    outer: { platform: 1, nextStation: 'Harajuku' },
+  },
+  JY21: {
+    station: 'Ebisu',
+    inner: { platform: 2, nextStation: 'Meguro' },
+    outer: { platform: 1, nextStation: 'Shibuya' },
+  },
+  JY22: {
+    station: 'Meguro',
+    inner: { platform: 1, nextStation: 'Gotanda' },
+    outer: { platform: 2, nextStation: 'Ebisu' },
+  },
+  JY23: {
+    station: 'Gotanda',
+    inner: { platform: 1, nextStation: 'Osaki' },
+    outer: { platform: 2, nextStation: 'Meguro' },
+  },
+  JY24: {
+    station: 'Osaki',
+    inner: { platform: 1, alternativePlatform: 2, nextStation: 'Shinagawa' },
+    outer: { platform: 3, alternativePlatform: 4, nextStation: 'Gotanda' },
+  },
+  JY25: {
+    station: 'Shinagawa',
+    inner: { platform: 1, nextStation: 'Takanawa Gateway' },
+    outer: { platform: 3, nextStation: 'Osaki' },
+  },
+  JY26: {
+    station: 'Takanawa Gateway',
+    inner: { platform: 1, nextStation: 'Tamachi' },
+    outer: { platform: 2, nextStation: 'Shinagawa' },
+  },
+  JY27: {
+    station: 'Tamachi',
+    inner: { platform: 2, nextStation: 'Hamamatsucho' },
+    outer: { platform: 3, nextStation: 'Takanawa Gateway' },
+  },
+  JY28: {
+    station: 'Hamamatsucho',
+    inner: { platform: 2, nextStation: 'Shimbashi' },
+    outer: { platform: 3, nextStation: 'Tamachi' },
+  },
+  JY29: {
+    station: 'Shimbashi',
+    inner: { platform: 5, nextStation: 'Yurakucho' },
+    outer: { platform: 4, nextStation: 'Hamamatsucho' },
+  },
+  JY30: {
+    station: 'Yurakucho',
+    inner: { platform: 2, nextStation: 'Tokyo' },
+    outer: { platform: 3, nextStation: 'Shimbashi' },
+  },
+};
+
+/** Quai pour un code JY et un sens (undefined si code inconnu). */
+export function platformFor(jy: string, direction: LoopDirection): PlatformInfo | undefined {
+  return YAMANOTE_PLATFORMS[jy]?.[direction];
+}
+
+/**
+ * Version simplifiée : numéro de quai principal par gare (inner / outer).
+ * Utile pour un affichage rapide ; ignore les quais alternatifs.
+ */
+export const PLATFORM_NUMBERS: Record<string, { inner: number; outer: number }> = Object.fromEntries(
+  Object.entries(YAMANOTE_PLATFORMS).map(([jy, info]) => [
+    jy,
+    { inner: info.inner.platform, outer: info.outer.platform },
+  ]),
+);
