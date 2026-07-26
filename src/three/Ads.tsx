@@ -118,7 +118,7 @@ export function Ads() {
           [-0.52, 0.52].map((dz, k) => (
             <group
               key={`mu${s}-${z}-${k}`}
-              position={[s * (1.4 - 0.09), 2.0, z + dz]}
+              position={[s * (1.4 - 0.09), 2.12, z + dz]}
               rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
             >
               <group rotation={[0.32, 0, 0]}>
