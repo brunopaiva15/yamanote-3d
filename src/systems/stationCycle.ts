@@ -41,7 +41,7 @@ let lastJointDistance = 0;
 const ACCEL_RATE = 1.15; // m/s² — doit rester aligné avec updateCycle
 
 /** Durée audio approximative des clips connus (s), pour caler le dwell. */
-const INNER_MAIN_MELODY_SECS = 9.1;
+const INNER_MAIN_MELODY_SECS = 18.1;
 const OUTER_MAIN_MELODY_SECS = 20.1;
 const OSAKI_INNER_SECONDARY_MELODY_SECS = 19.1;
 const OSAKI_OUTER_SECONDARY_MELODY_SECS = 22.1;
