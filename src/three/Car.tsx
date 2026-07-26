@@ -148,11 +148,12 @@ export function Car() {
   );
 
   // Quatre affiches distinctes : deux par about, pour ne pas voir la même
-  // image en se retournant.
+  // image en se retournant. Seeds 200–203 : hors des bandes nakazuri (0–N),
+  // 窓上 (100–111) et boucle LCD portes (300+).
   const endPosterMats = useMemo(
     () =>
       [0, 1, 2, 3].map(
-        (i) => new THREE.MeshStandardMaterial({ map: makeAdTexture(40 + i, false), roughness: 0.88 }),
+        (i) => new THREE.MeshStandardMaterial({ map: makeAdTexture(200 + i, false), roughness: 0.88 }),
       ),
     [],
   );

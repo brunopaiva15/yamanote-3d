@@ -32,11 +32,26 @@ export function Ads() {
   // sur ses pinces, sans translation parasite.
   const pivots = useRef<(THREE.Group | null)[]>([]);
 
+  // Rangée continue le long de l'axe, sans déborder sur les travées d'about.
+  // Calculée d'abord pour dimensionner le pool de textures (recto + verso
+  // uniques sur chaque suspension).
+  const nakazuri = useMemo(() => {
+    const out: { z: number; front: number; back: number }[] = [];
+    const span = HL - 1.1;
+    for (let z = -span; z <= span + 0.001; z += NK_PITCH) {
+      const i = out.length;
+      out.push({ z, front: i, back: 0 }); // back rempli après le décompte
+    }
+    const n = out.length;
+    for (let i = 0; i < n; i++) out[i].back = n + i;
+    return out;
+  }, []);
+
   const { nakazuriMats, screenMats, housingMat, bezelMat, clipMat, railMat } = useMemo(() => {
-    // Huit visuels distincts : de quoi parcourir le wagon sans retomber deux
-    // fois de suite sur la même image.
+    // Un visuel distinct par face (recto/verso) : plus de répétition dans l'allée.
+    const nakazuriCount = Math.max(2, nakazuri.length * 2);
     const nakazuriMats = Array.from(
-      { length: 8 },
+      { length: nakazuriCount },
       (_, i) =>
         new THREE.MeshStandardMaterial({
           map: makeNakazuriTexture(i),
@@ -44,27 +59,17 @@ export function Ads() {
           metalness: 0,
         }),
     );
+    // Douze écrans 窓上 : une texture par panneau (seeds 100–111).
     const screenMats: THREE.MeshBasicMaterial[] = [];
-    for (let i = 0; i < 6; i++) {
-      screenMats.push(new THREE.MeshBasicMaterial({ map: makeAdTexture(20 + i, false), toneMapped: false }));
+    for (let i = 0; i < 12; i++) {
+      screenMats.push(new THREE.MeshBasicMaterial({ map: makeAdTexture(100 + i, false), toneMapped: false }));
     }
     const housingMat = new THREE.MeshStandardMaterial({ color: '#e9e7e1', roughness: 0.6, metalness: 0.02 });
     const bezelMat = new THREE.MeshStandardMaterial({ color: '#1c1e22', roughness: 0.55 });
     const clipMat = new THREE.MeshStandardMaterial({ color: '#b9bec3', roughness: 0.42, metalness: 0.7 });
     const railMat = new THREE.MeshStandardMaterial({ color: '#aeb3b8', roughness: 0.36, metalness: 0.8 });
     return { nakazuriMats, screenMats, housingMat, bezelMat, clipMat, railMat };
-  }, []);
-
-  // Rangée continue le long de l'axe, sans déborder sur les travées d'about.
-  const nakazuri = useMemo(() => {
-    const out: { z: number; front: number; back: number }[] = [];
-    const span = HL - 1.1;
-    for (let z = -span; z <= span + 0.001; z += NK_PITCH) {
-      const i = out.length;
-      out.push({ z, front: i % 8, back: (i + 5) % 8 });
-    }
-    return out;
-  }, []);
+  }, [nakazuri]);
 
   useFrame(() => {
     for (let i = 0; i < pivots.current.length; i++) {
@@ -128,7 +133,10 @@ export function Ads() {
                 <mesh position={[0, 0, 0.027]} material={bezelMat}>
                   <planeGeometry args={[0.9, 0.28]} />
                 </mesh>
-                <mesh position={[0, 0, 0.03]} material={screenMats[(i * 2 + k + (s === 1 ? 0 : 3)) % screenMats.length]}>
+                <mesh
+                  position={[0, 0, 0.03]}
+                  material={screenMats[(s === 1 ? 0 : 6) + i * 2 + k]}
+                >
                   <planeGeometry args={[0.84, 0.24]} />
                 </mesh>
               </group>

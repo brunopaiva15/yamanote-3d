@@ -3,6 +3,7 @@
 // PNJ, panneaux et autocollants.
 
 import * as THREE from 'three';
+import { AD_PALETTES, AD_SUBS, AD_WORDS } from '../data/ads';
 import { STATIONS } from '../data/stations';
 import { GENERIC, type District, type Feat } from '../data/districts';
 import type { Appearance } from '../systems/appearance';
@@ -1227,27 +1228,9 @@ export function makeTrackFenceTexture(hedge: boolean): THREE.CanvasTexture {
   return t;
 }
 
-// --- Publicités japonaises procédurales (texte plausible, non déposé) ---
-const AD_WORDS = ['新発売', '期間限定', '半額セール', '求人募集', '英会話', '春の旅行', '毎日健康', '東京生活', '新しい朝', '家族の時間'];
-const AD_SUBS = ['今だけのチャンス', '詳しくはウェブで', 'お近くの店舗へ', '数量限定です', '皆様に感謝'];
-const AD_PALETTES: [string, string, string][] = [
-  ['#f2ede2', '#c9503e', '#2e2b28'],
-  ['#e8f0f2', '#3e6ec9', '#22303c'],
-  ['#f4efdd', '#3e9c60', '#2c332a'],
-  ['#efe6ee', '#8d4e9c', '#302636'],
-  ['#f5ead8', '#d98a2b', '#33291c'],
-  ['#fdf3e3', '#e2705c', '#4a3f38'],
-  ['#eaf4ec', '#63c28a', '#37463c'],
-  ['#f3ecf6', '#c97fb8', '#453a4a'],
-  // Fonds pleins : une planche de nakazuri n'est pas une suite d'affiches
-  // blanches. Un tirage sur deux part d'un aplat soutenu, texte en réserve.
-  ['#c9432f', '#ffe9d6', '#ffffff'],
-  ['#1f4f8f', '#ffd25e', '#ffffff'],
-  ['#2f7d4f', '#f4f0dd', '#ffffff'],
-  ['#e8b021', '#3a2c12', '#2a2413'],
-  ['#3b2f6b', '#f0c24a', '#ffffff'],
-  ['#0f1418', '#e8613c', '#f2ede6'],
-];
+// --- Publicités japonaises procédurales (pools dans data/ads.ts) ---
+const AD_LAYOUT_COUNT = 8;
+const AD_MASCOT_COUNT = 7;
 
 // Mascottes plates façon irasutoya : formes rondes, visages simples.
 function drawMascot(g: CanvasRenderingContext2D, kind: number, cx: number, cy: number, s: number): void {
@@ -1269,7 +1252,8 @@ function drawMascot(g: CanvasRenderingContext2D, kind: number, cx: number, cy: n
     g.arc(cx + s * 0.32, cy + s * 0.12, s * 0.08, 0, Math.PI * 2);
     g.fill();
   };
-  if (kind === 0) {
+  const k = ((kind % AD_MASCOT_COUNT) + AD_MASCOT_COUNT) % AD_MASCOT_COUNT;
+  if (k === 0) {
     // Onigiri : triangle arrondi blanc + nori.
     g.fillStyle = '#fcfaf4';
     g.strokeStyle = '#d9d4c8';
@@ -1288,7 +1272,7 @@ function drawMascot(g: CanvasRenderingContext2D, kind: number, cx: number, cy: n
     g.roundRect(cx - s * 0.22, cy + s * 0.14, s * 0.44, s * 0.38, s * 0.06);
     g.fill();
     face();
-  } else if (kind === 1) {
+  } else if (k === 1) {
     // Chat rond : tête + oreilles + moustaches.
     g.fillStyle = '#f5e3c8';
     g.beginPath();
@@ -1313,7 +1297,7 @@ function drawMascot(g: CanvasRenderingContext2D, kind: number, cx: number, cy: n
     }
     g.stroke();
     face();
-  } else {
+  } else if (k === 2) {
     // Daruma rebondi.
     g.fillStyle = '#dd5a4a';
     g.beginPath();
@@ -1324,6 +1308,129 @@ function drawMascot(g: CanvasRenderingContext2D, kind: number, cx: number, cy: n
     g.ellipse(cx, cy + s * 0.06, s * 0.36, s * 0.4, 0, 0, Math.PI * 2);
     g.fill();
     face();
+  } else if (k === 3) {
+    // Lapin : tête blanche + oreilles longues.
+    g.fillStyle = '#f7f4ef';
+    g.beginPath();
+    g.ellipse(cx - s * 0.22, cy - s * 0.55, s * 0.12, s * 0.38, -0.15, 0, Math.PI * 2);
+    g.ellipse(cx + s * 0.22, cy - s * 0.55, s * 0.12, s * 0.38, 0.15, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#f2b8b0';
+    g.beginPath();
+    g.ellipse(cx - s * 0.22, cy - s * 0.52, s * 0.05, s * 0.22, -0.15, 0, Math.PI * 2);
+    g.ellipse(cx + s * 0.22, cy - s * 0.52, s * 0.05, s * 0.22, 0.15, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#f7f4ef';
+    g.beginPath();
+    g.arc(cx, cy, s * 0.48, 0, Math.PI * 2);
+    g.fill();
+    face();
+  } else if (k === 4) {
+    // Pingouin : corps noir, ventre blanc, bec orange.
+    g.fillStyle = '#2c3238';
+    g.beginPath();
+    g.ellipse(cx, cy + s * 0.04, s * 0.42, s * 0.52, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#f7f4ef';
+    g.beginPath();
+    g.ellipse(cx, cy + s * 0.12, s * 0.26, s * 0.34, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#e8913a';
+    g.beginPath();
+    g.moveTo(cx - s * 0.1, cy - s * 0.02);
+    g.lineTo(cx + s * 0.18, cy + s * 0.04);
+    g.lineTo(cx - s * 0.1, cy + s * 0.1);
+    g.closePath();
+    g.fill();
+    face();
+  } else if (k === 5) {
+    // Bol de riz / chawanmushi : bol + vapeur.
+    g.fillStyle = '#f0ebe2';
+    g.beginPath();
+    g.ellipse(cx, cy - s * 0.08, s * 0.42, s * 0.18, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#c45a3a';
+    g.beginPath();
+    g.moveTo(cx - s * 0.46, cy - s * 0.02);
+    g.quadraticCurveTo(cx - s * 0.5, cy + s * 0.35, cx, cy + s * 0.48);
+    g.quadraticCurveTo(cx + s * 0.5, cy + s * 0.35, cx + s * 0.46, cy - s * 0.02);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.35)';
+    g.lineWidth = s * 0.04;
+    g.beginPath();
+    g.moveTo(cx - s * 0.38, cy + s * 0.08);
+    g.quadraticCurveTo(cx, cy + s * 0.18, cx + s * 0.38, cy + s * 0.08);
+    g.stroke();
+    g.strokeStyle = 'rgba(180,190,200,0.55)';
+    g.lineWidth = s * 0.03;
+    for (const dx of [-0.16, 0, 0.16]) {
+      g.beginPath();
+      g.moveTo(cx + s * dx, cy - s * 0.22);
+      g.quadraticCurveTo(cx + s * dx + s * 0.06, cy - s * 0.4, cx + s * dx, cy - s * 0.55);
+      g.stroke();
+    }
+    face();
+  } else {
+    // Poisson kawaii : ovale + nageoire + œil.
+    g.fillStyle = '#6eb6d9';
+    g.beginPath();
+    g.ellipse(cx - s * 0.05, cy, s * 0.42, s * 0.3, 0, 0, Math.PI * 2);
+    g.fill();
+    g.beginPath();
+    g.moveTo(cx + s * 0.3, cy);
+    g.lineTo(cx + s * 0.62, cy - s * 0.28);
+    g.lineTo(cx + s * 0.62, cy + s * 0.28);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#f0a060';
+    g.beginPath();
+    g.moveTo(cx - s * 0.05, cy - s * 0.28);
+    g.lineTo(cx + s * 0.08, cy - s * 0.5);
+    g.lineTo(cx + s * 0.12, cy - s * 0.22);
+    g.closePath();
+    g.fill();
+    face();
+  }
+}
+
+function drawMascotAd(
+  g: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  portrait: boolean,
+  kind: number,
+  word: string,
+  sub: string,
+  accent: string,
+  ink: string,
+): void {
+  if (portrait) {
+    g.fillStyle = accent;
+    g.globalAlpha = 0.16;
+    g.beginPath();
+    g.arc(W / 2, H * 0.38, W * 0.34, 0, Math.PI * 2);
+    g.fill();
+    g.globalAlpha = 1;
+    drawMascot(g, kind, W / 2, H * 0.38, W * 0.42);
+    g.fillStyle = ink;
+    g.textAlign = 'center';
+    fitFillText(g, word, W / 2, H * 0.78, W * 0.86, Math.floor(W * 0.14));
+    g.fillStyle = accent;
+    fitFillText(g, sub, W / 2, H * 0.88, W * 0.86, Math.floor(W * 0.06));
+    g.textAlign = 'left';
+  } else {
+    g.fillStyle = accent;
+    g.globalAlpha = 0.16;
+    g.beginPath();
+    g.arc(W * 0.2, H * 0.5, H * 0.42, 0, Math.PI * 2);
+    g.fill();
+    g.globalAlpha = 1;
+    drawMascot(g, kind, W * 0.2, H * 0.5, H * 0.62);
+    g.fillStyle = ink;
+    fitFillText(g, word, W * 0.4, H * 0.52, W * 0.56, Math.floor(H * 0.3));
+    g.fillStyle = accent;
+    fitFillText(g, sub, W * 0.4, H * 0.78, W * 0.56, Math.floor(H * 0.14));
   }
 }
 
@@ -1336,40 +1443,12 @@ export function drawAdInto(g: CanvasRenderingContext2D, W: number, H: number, se
   const [bg, accent, ink] = AD_PALETTES[Math.floor(r() * AD_PALETTES.length)];
   g.fillStyle = bg;
   g.fillRect(0, 0, W, H);
-  const layout = Math.floor(r() * 5);
+  const layout = Math.floor(r() * AD_LAYOUT_COUNT);
   const word = AD_WORDS[Math.floor(r() * AD_WORDS.length)];
   const sub = AD_SUBS[Math.floor(r() * AD_SUBS.length)];
-  if (layout >= 3) {
+  if (layout >= 6) {
     // Affiche mascotte façon irasutoya : personnage plat + gros titre rond.
-    const kind = Math.floor(r() * 3);
-    if (portrait) {
-      // Pastille de fond douce derrière la mascotte.
-      g.fillStyle = accent;
-      g.globalAlpha = 0.16;
-      g.beginPath();
-      g.arc(W / 2, H * 0.38, W * 0.34, 0, Math.PI * 2);
-      g.fill();
-      g.globalAlpha = 1;
-      drawMascot(g, kind, W / 2, H * 0.38, W * 0.42);
-      g.fillStyle = ink;
-      g.textAlign = 'center';
-      fitFillText(g, word, W / 2, H * 0.78, W * 0.86, Math.floor(W * 0.14));
-      g.fillStyle = accent;
-      fitFillText(g, sub, W / 2, H * 0.88, W * 0.86, Math.floor(W * 0.06));
-      g.textAlign = 'left';
-    } else {
-      g.fillStyle = accent;
-      g.globalAlpha = 0.16;
-      g.beginPath();
-      g.arc(W * 0.2, H * 0.5, H * 0.42, 0, Math.PI * 2);
-      g.fill();
-      g.globalAlpha = 1;
-      drawMascot(g, kind, W * 0.2, H * 0.5, H * 0.62);
-      g.fillStyle = ink;
-      fitFillText(g, word, W * 0.4, H * 0.52, W * 0.56, Math.floor(H * 0.3));
-      g.fillStyle = accent;
-      fitFillText(g, sub, W * 0.4, H * 0.78, W * 0.56, Math.floor(H * 0.14));
-    }
+    drawMascotAd(g, W, H, portrait, Math.floor(r() * AD_MASCOT_COUNT), word, sub, accent, ink);
   } else if (layout === 0) {
     g.fillStyle = accent;
     g.fillRect(0, 0, W, H * 0.16);
@@ -1400,7 +1479,7 @@ export function drawAdInto(g: CanvasRenderingContext2D, W: number, H: number, se
     g.fillStyle = ink;
     fitFillText(g, word, W * 0.08, H * 0.82, W * 0.84, Math.floor(H * 0.1));
     fitFillText(g, sub, W * 0.08, H * 0.93, W * 0.84, Math.floor(H * 0.055), '');
-  } else {
+  } else if (layout === 2) {
     // Titre vertical : taille calée sur la hauteur disponible.
     g.fillStyle = ink;
     const glyph = Math.min(Math.floor(W * 0.16), Math.floor((H * 0.78) / Math.max(1, word.length)));
@@ -1412,6 +1491,87 @@ export function drawAdInto(g: CanvasRenderingContext2D, W: number, H: number, se
     g.fillRect(W * 0.08, H * 0.08, W * 0.06, H * 0.84);
     g.fillStyle = ink;
     fitFillText(g, sub, W * 0.56, H * 0.9, W * 0.4, Math.floor(W * 0.05));
+  } else if (layout === 3) {
+    // Bandes diagonales + gros pourcentage promo.
+    g.save();
+    g.translate(W * 0.72, H * 0.15);
+    g.rotate(-0.4);
+    g.fillStyle = accent;
+    g.globalAlpha = 0.22;
+    for (let i = -2; i < 6; i++) g.fillRect(i * W * 0.12, -H, W * 0.06, H * 2.4);
+    g.globalAlpha = 1;
+    g.restore();
+    g.fillStyle = accent;
+    g.beginPath();
+    g.arc(W * (portrait ? 0.5 : 0.78), H * (portrait ? 0.28 : 0.42), H * (portrait ? 0.16 : 0.28), 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = bg;
+    g.textAlign = 'center';
+    fitFillText(
+      g,
+      `${10 + Math.floor(r() * 8) * 5}%`,
+      W * (portrait ? 0.5 : 0.78),
+      H * (portrait ? 0.3 : 0.46),
+      H * 0.5,
+      Math.floor(H * (portrait ? 0.1 : 0.18)),
+    );
+    g.textAlign = 'left';
+    g.fillStyle = ink;
+    fitFillText(g, word, W * 0.06, H * (portrait ? 0.62 : 0.55), W * (portrait ? 0.88 : 0.55), Math.floor(H * (portrait ? 0.1 : 0.22)));
+    g.fillStyle = accent;
+    fitFillText(g, sub, W * 0.06, H * (portrait ? 0.78 : 0.82), W * (portrait ? 0.88 : 0.55), Math.floor(H * (portrait ? 0.055 : 0.12)));
+  } else if (layout === 4) {
+    // Grille de pavés colorés façon magazine.
+    const cols = portrait ? 2 : 4;
+    const rows = portrait ? 3 : 2;
+    const pad = Math.min(W, H) * 0.04;
+    const cw = (W - pad * (cols + 1)) / cols;
+    const ch = H * (portrait ? 0.42 : 0.48) / rows;
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const t = (row * cols + col) / Math.max(1, cols * rows - 1);
+        g.fillStyle = t < 0.5 ? accent : ink;
+        g.globalAlpha = 0.18 + t * 0.35;
+        g.beginPath();
+        g.roundRect(pad + col * (cw + pad), pad + row * (ch + pad * 0.6), cw, ch, Math.min(cw, ch) * 0.12);
+        g.fill();
+      }
+    }
+    g.globalAlpha = 1;
+    g.fillStyle = ink;
+    fitFillText(g, word, W * 0.06, H * (portrait ? 0.72 : 0.78), W * 0.88, Math.floor(H * (portrait ? 0.09 : 0.16)));
+    g.fillStyle = accent;
+    fitFillText(g, sub, W * 0.06, H * (portrait ? 0.86 : 0.94), W * 0.88, Math.floor(H * (portrait ? 0.05 : 0.09)));
+  } else {
+    // Badge circulaire + barre bas de page.
+    g.fillStyle = accent;
+    g.beginPath();
+    g.arc(W * (portrait ? 0.5 : 0.22), H * (portrait ? 0.32 : 0.45), H * (portrait ? 0.18 : 0.32), 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = bg;
+    g.textAlign = 'center';
+    fitFillText(
+      g,
+      word.slice(0, Math.min(2, word.length)),
+      W * (portrait ? 0.5 : 0.22),
+      H * (portrait ? 0.34 : 0.48),
+      H * 0.45,
+      Math.floor(H * (portrait ? 0.1 : 0.16)),
+    );
+    g.textAlign = 'left';
+    g.fillStyle = ink;
+    fitFillText(
+      g,
+      word,
+      portrait ? W * 0.08 : W * 0.42,
+      portrait ? H * 0.62 : H * 0.42,
+      portrait ? W * 0.84 : W * 0.52,
+      Math.floor(H * (portrait ? 0.09 : 0.2)),
+    );
+    g.fillStyle = accent;
+    g.fillRect(0, H * 0.82, W, H * 0.18);
+    g.fillStyle = bg;
+    fitFillText(g, sub, W * 0.05, H * 0.94, W * 0.9, Math.floor(H * 0.09));
   }
 }
 
