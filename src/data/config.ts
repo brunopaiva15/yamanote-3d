@@ -26,7 +26,7 @@ export const CONFIG = {
   // Géométrie intérieure du wagon (demi-dimensions).
   carHalfLength: 10,
   carHalfWidth: 1.4,
-  carHeight: 2.3,
+  carHeight: 2.38,
   doorCenters: [-7.5, -2.5, 2.5, 7.5],
   doorHalfWidth: 0.66,
 
@@ -36,7 +36,7 @@ export const CONFIG = {
   // Sonorisation : diffuseurs de plafond du wagon (de part et d'autre du
   // caisson central, au droit de chaque porte) et haut-parleurs du quai.
   speakerX: 1.02,
-  speakerY: 2.284, // encastré dans le plafond (sous-face à 2,30 m)
+  speakerY: 2.364, // encastré dans le plafond (sous-face à 2,38 m)
   platformSpeakerX: 4.4,
   platformSpeakerY: 3.3,
   platformSpeakerZ: [-9, -3, 3, 9],

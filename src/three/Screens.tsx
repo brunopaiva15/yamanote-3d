@@ -19,16 +19,9 @@ import { JP_FONT, drawAdInto, rng } from '../textures/procedural';
 
 const YAMANOTE_GREEN = '#80c241';
 
-// Codes trois lettres officiels JR East (grandes gares uniquement).
-const THREE_LETTER: Record<string, string> = {
-  JY01: 'TYO',
-  JY03: 'AKB',
-  JY05: 'UEN',
-  JY13: 'IKB',
-  JY17: 'SJK',
-  JY20: 'SBY',
-  JY25: 'SGW',
-};
+// Rame de onze voitures ; le voyageur est dans la 3e, comme l'annonce le bandeau.
+const CAR_COUNT = 11;
+const PLAYER_CAR = 3;
 
 // Grandes gares pour le « Bound for … & … ».
 const MAJOR_INDICES = [0, 4, 12, 16, 19, 24];
@@ -87,74 +80,99 @@ function drawLeftAd(s: ReturnType<typeof makeScreen>, seed: number): void {
 
 // --- Bandeau noir supérieur, commun aux deux vues de ligne : « Bound for »,
 // onglet Next, tuile de la prochaine gare, heure réelle et n° de voiture. ---
-function drawHeader(g: CanvasRenderingContext2D, w: number, index: number, clock: string): void {
+export type ScreenStatus = 'now' | 'next' | 'soon';
+export type ScreenLang = 'jp' | 'en';
+
+const STATUS_LABEL: Record<ScreenStatus, Record<ScreenLang, string>> = {
+  now: { jp: 'ただいま', en: 'Now stopping at' },
+  next: { jp: 'つぎは', en: 'Next' },
+  soon: { jp: 'まもなく', en: 'Soon' },
+};
+
+// Bandeau noir supérieur, commun à toutes les vues. De gauche à droite :
+// direction, barre verte, libellé d'état, pastille JY, nom de la gare, puis
+// l'heure et le numéro de voiture. L'afficheur réel alterne japonais et
+// anglais sur la même disposition ; c'est la langue qui change, pas la mise
+// en page.
+function drawHeader(
+  g: CanvasRenderingContext2D,
+  w: number,
+  index: number,
+  clock: string,
+  status: ScreenStatus,
+  lang: ScreenLang,
+): void {
   const next = STATIONS[index];
   const HEADER = 88;
   g.fillStyle = '#111214';
   g.fillRect(0, 0, w, HEADER);
-  // « Bound for » : les deux prochaines grandes gares.
+
+  // Direction : les deux prochaines grandes gares.
   const majors: string[] = [];
   for (let k = 1; k <= 29 && majors.length < 2; k++) {
     const idx = (index + k) % 30;
-    if (MAJOR_INDICES.includes(idx)) majors.push(STATIONS[idx].romaji);
+    if (MAJOR_INDICES.includes(idx)) majors.push(lang === 'jp' ? STATIONS[idx].kanji : STATIONS[idx].romaji);
   }
-  g.fillStyle = '#c9ccd0';
-  g.font = `17px ${JP_FONT}`;
   g.textAlign = 'left';
-  g.fillText('Bound for', 12, 24);
-  g.fillStyle = '#ffffff';
-  fitText(g, `${majors[0] ?? ''}&`, 175, 22);
-  g.fillText(`${majors[0] ?? ''}&`, 12, 50);
-  fitText(g, majors[1] ?? '', 175, 22);
-  g.fillText(majors[1] ?? '', 12, 76);
-  // Onglet vert « Next ».
-  g.fillStyle = YAMANOTE_GREEN;
-  g.fillRect(196, 0, 64, HEADER);
-  g.fillStyle = '#ffffff';
-  g.font = `bold 22px ${JP_FONT}`;
-  g.textAlign = 'center';
-  g.fillText('Next', 228, 28);
-  // Tuile noire avec code 3 lettres + pastille JY.
-  const code = THREE_LETTER[next.jy];
-  g.fillStyle = '#000000';
-  g.beginPath();
-  g.roundRect(268, 6, 84, HEADER - 12, 8);
-  g.fill();
-  if (code) {
+  if (lang === 'jp') {
     g.fillStyle = '#ffffff';
-    g.font = `bold 16px ${JP_FONT}`;
-    g.fillText(code, 310, 24);
+    fitText(g, `${majors[0] ?? ''}・${majors[1] ?? ''}`, 175, 26);
+    g.fillText(`${majors[0] ?? ''}・${majors[1] ?? ''}`, 12, 40);
+    g.fillStyle = '#c9ccd0';
+    g.font = `18px ${JP_FONT}`;
+    g.fillText('方面', 12, 70);
+  } else {
+    g.fillStyle = '#c9ccd0';
+    g.font = `17px ${JP_FONT}`;
+    g.fillText('Bound for', 12, 24);
+    g.fillStyle = '#ffffff';
+    fitText(g, `${majors[0] ?? ''} &`, 175, 22);
+    g.fillText(`${majors[0] ?? ''} &`, 12, 50);
+    fitText(g, majors[1] ?? '', 175, 22);
+    g.fillText(majors[1] ?? '', 12, 76);
   }
-  g.strokeStyle = '#ffffff';
-  g.lineWidth = 3;
+
+  // Barre verte puis libellé d'état, sur fond blanc comme sur l'afficheur.
+  g.fillStyle = YAMANOTE_GREEN;
+  g.fillRect(196, 0, 14, HEADER);
+  g.fillStyle = '#ffffff';
+  g.fillRect(210, 0, 132, HEADER);
+  g.fillStyle = '#14181c';
+  g.textAlign = 'center';
+  fitText(g, STATUS_LABEL[status][lang], 120, 26);
+  g.fillText(STATUS_LABEL[status][lang], 276, HEADER / 2 + 9);
+
+  // Pastille JY.
   g.fillStyle = '#ffffff';
   g.beginPath();
-  g.roundRect(282, code ? 30 : 16, 56, 52, 8);
+  g.roundRect(352, 16, 56, 56, 8);
   g.fill();
   g.strokeStyle = YAMANOTE_GREEN;
   g.lineWidth = 4;
   g.beginPath();
-  g.roundRect(284, code ? 32 : 18, 52, 48, 7);
+  g.roundRect(354, 18, 52, 52, 7);
   g.stroke();
   g.fillStyle = '#111214';
   g.font = `bold 14px ${JP_FONT}`;
-  g.fillText('JY', 310, code ? 48 : 34);
-  g.font = `bold 22px ${JP_FONT}`;
-  g.fillText(next.jy.slice(2), 310, code ? 74 : 62);
-  // Grand nom romaji.
+  g.fillText('JY', 380, 38);
+  g.font = `bold 24px ${JP_FONT}`;
+  g.fillText(next.jy.slice(2), 380, 64);
+
+  // Nom de la gare, en grand.
   g.fillStyle = '#ffffff';
   g.textAlign = 'left';
-  fitText(g, next.romaji, w - 380 - 130, 54);
-  g.fillText(next.romaji, 368, 62);
-  // Heure réelle + numéro de voiture (l'afficheur réel montre l'horloge,
-  // pas un compte à rebours : les minutes vivent dans les cercles).
+  const name = lang === 'jp' ? next.kanji : next.romaji;
+  fitText(g, name, w - 424 - 130, 56);
+  g.fillText(name, 424, 62);
+
+  // Heure réelle et numéro de voiture.
   g.textAlign = 'right';
   g.fillStyle = '#ffffff';
   g.font = `bold 26px ${JP_FONT}`;
-  g.fillText(clock, w - 12, 30);
+  g.fillText(clock, w - 12, 34);
   g.fillStyle = '#8d939a';
   g.font = `15px ${JP_FONT}`;
-  g.fillText('Car No 3', w - 12, 54);
+  g.fillText(lang === 'jp' ? `${PLAYER_CAR}号車` : `Car No.${PLAYER_CAR}`, w - 12, 60);
   g.textAlign = 'left';
 }
 
@@ -170,6 +188,8 @@ function drawRoute(
   phase: Phase,
   countdown: number,
   clock: string,
+  status: ScreenStatus,
+  lang: ScreenLang,
 ): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
@@ -177,7 +197,7 @@ function drawRoute(
   // Corps clair.
   g.fillStyle = '#eceae5';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock);
+  drawHeader(g, w, index, clock, status, lang);
 
   // ----- Courbe verte de la ligne, calée sur l'afficheur réel -----
   // Points de passage (cercles des minutes), k = 0 : prochaine station en
@@ -351,11 +371,13 @@ function drawLoopMap(
   phase: Phase,
   countdown: number,
   clock: string,
+  status: ScreenStatus,
+  lang: ScreenLang,
 ): void {
   const { g, w, h } = s;
   g.fillStyle = '#eceae5';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock);
+  drawHeader(g, w, index, clock, status, lang);
 
   const X0 = 84;
   const DX = 41;
@@ -479,8 +501,6 @@ function drawBanner(s: ReturnType<typeof makeScreen>): void {
 // mise en évidence.
 const PLATFORM_BLUE = '#cfe4f4';
 const PLATFORM_ORANGE = '#e8722a';
-const CAR_COUNT = 11; // une rame E235 de la Yamanote
-const PLAYER_CAR = 3; // cohérent avec « Car No 3 » du bandeau
 
 function drawPlatformDiagram(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
   const { g, w, h } = s;
@@ -622,9 +642,219 @@ function drawPlatformDiagram(s: ReturnType<typeof makeScreen>, index: number, cl
   g.textAlign = 'left';
 }
 
+
+// --- État « côté d'ouverture » (まもなく) ---
+// Les deux faces du wagon n'affichent PAS la même chose : chaque écran indique
+// si les portes qui s'ouvrent sont de son côté ou de l'autre. C'est la seule
+// vue qui diffère physiquement d'une paroi à l'autre, d'où deux canevas.
+function drawDoorSide(s: ReturnType<typeof makeScreen>, index: number, clock: string, mine: boolean): void {
+  const { g, w, h } = s;
+  g.fillStyle = '#eceae5';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'soon', 'jp');
+
+  const cy = h * 0.56;
+  // Vantaux stylisés, entrouverts du bon côté.
+  const dw = 62;
+  const gap = mine ? 26 : 4;
+  for (const dir of [-1, 1]) {
+    g.fillStyle = '#9aa3ab';
+    g.strokeStyle = '#5d666e';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.roundRect(w / 2 + dir * (gap / 2) - (dir < 0 ? dw : 0), cy - 58, dw, 116, 6);
+    g.fill();
+    g.stroke();
+  }
+
+  // Flèches vertes divergentes : elles ne s'affichent que si c'est ce côté.
+  if (mine) {
+    g.fillStyle = YAMANOTE_GREEN;
+    for (const dir of [-1, 1]) {
+      const bx = w / 2 + dir * 150;
+      g.beginPath();
+      g.moveTo(bx + dir * 66, cy);
+      g.lineTo(bx, cy - 44);
+      g.lineTo(bx, cy - 18);
+      g.lineTo(bx - dir * 62, cy - 18);
+      g.lineTo(bx - dir * 62, cy + 18);
+      g.lineTo(bx, cy + 18);
+      g.lineTo(bx, cy + 44);
+      g.closePath();
+      g.fill();
+    }
+  }
+
+  g.textAlign = 'center';
+  g.fillStyle = '#14181c';
+  g.font = `bold 34px ${JP_FONT}`;
+  g.fillText(mine ? 'こちら側のドアが開きます' : '反対側のドアが開きます', w / 2, h - 54);
+  g.fillStyle = '#5c646c';
+  g.font = `22px ${JP_FONT}`;
+  g.fillText(mine ? 'Doors on this side will open' : 'Doors on the other side will open', w / 2, h - 22);
+  g.textAlign = 'left';
+}
+
+// --- État « correspondances à la prochaine gare » ---
+// Chaque ligne en correspondance a sa pastille colorée, comme sur l'afficheur.
+const LINE_BADGES: { match: RegExp; code: string; color: string }[] = [
+  { match: /新幹線/, code: 'S', color: '#1f6fb5' },
+  { match: /中央線/, code: 'JC', color: '#f15a24' },
+  { match: /京浜東北/, code: 'JK', color: '#00a7db' },
+  { match: /東海道|上野東京/, code: 'JT', color: '#f68b1e' },
+  { match: /横須賀|総武/, code: 'JO', color: '#0067c0' },
+  { match: /埼京|川越/, code: 'JA', color: '#00ac9a' },
+  { match: /湘南新宿/, code: 'JS', color: '#e21f26' },
+  { match: /丸ノ内/, code: 'M', color: '#e60012' },
+  { match: /銀座/, code: 'G', color: '#f39700' },
+  { match: /日比谷/, code: 'H', color: '#9caeb7' },
+  { match: /千代田/, code: 'C', color: '#00a95f' },
+  { match: /有楽町/, code: 'Y', color: '#c1a470' },
+  { match: /副都心/, code: 'F', color: '#9c5e31' },
+  { match: /半蔵門/, code: 'Z', color: '#8f76d6' },
+  { match: /南北/, code: 'N', color: '#00ac9b' },
+  { match: /東西/, code: 'T', color: '#009bbf' },
+  { match: /浅草/, code: 'A', color: '#e85298' },
+  { match: /都営新宿/, code: 'S', color: '#6cbb5a' },
+  { match: /大江戸/, code: 'E', color: '#b6007a' },
+  { match: /京急|京浜急行/, code: 'KK', color: '#00bfff' },
+  { match: /京成/, code: 'KS', color: '#005aaa' },
+  { match: /東急/, code: 'TY', color: '#e5171f' },
+  { match: /東武/, code: 'TS', color: '#0f6cb6' },
+  { match: /西武/, code: 'SI', color: '#f5a200' },
+  { match: /小田急/, code: 'OH', color: '#0079c2' },
+  { match: /京王/, code: 'KO', color: '#d31e79' },
+  { match: /りんかい/, code: 'R', color: '#0079c1' },
+  { match: /モノレール/, code: 'MO', color: '#0a6eb4' },
+];
+
+function drawTransfers(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+  const { g, w, h } = s;
+  const next = STATIONS[index];
+  g.fillStyle = '#eceae5';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', 'jp');
+
+  g.fillStyle = '#dfe6ea';
+  g.fillRect(0, 96, w, 40);
+  g.fillStyle = '#26303a';
+  g.font = `bold 23px ${JP_FONT}`;
+  g.textAlign = 'left';
+  g.fillText(`${next.kanji}のりかえ  /  Transfer at ${next.romaji}`, 16, 124);
+
+  const lines = (TRANSFERS[next.jy]?.jp ?? '').split('、').filter(Boolean).slice(0, 8);
+  if (lines.length === 0) {
+    g.fillStyle = '#5c646c';
+    g.font = `26px ${JP_FONT}`;
+    g.fillText('のりかえの路線はありません', 24, h * 0.66);
+    return;
+  }
+  const cols = 2;
+  const cw = (w - 48) / cols;
+  lines.forEach((label, i) => {
+    const cx = 24 + (i % cols) * cw;
+    const cy = 176 + Math.floor(i / cols) * 44;
+    const badge = LINE_BADGES.find((b) => b.match.test(label));
+    g.fillStyle = badge?.color ?? '#7c868f';
+    g.beginPath();
+    g.arc(cx + 17, cy - 8, 17, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#ffffff';
+    g.textAlign = 'center';
+    g.font = `bold ${badge && badge.code.length > 1 ? 15 : 19}px ${JP_FONT}`;
+    g.fillText(badge?.code ?? '·', cx + 17, cy - 1);
+    g.textAlign = 'left';
+    g.fillStyle = '#26303a';
+    fitText(g, label, cw - 60, 23, '');
+    g.fillText(label, cx + 44, cy);
+  });
+}
+
+// --- Écrans de courtoisie : places prioritaires et embarquement ---
+function drawPriorityNotice(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+  const { g, w, h } = s;
+  g.fillStyle = '#f4f6f7';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', 'jp');
+  // Rangée de silhouettes : canne, femme enceinte, bébé, blessé.
+  const base = h * 0.56;
+  const blue = '#1f5fa8';
+  for (let i = 0; i < 4; i++) {
+    const cx = w * (0.16 + i * 0.14);
+    g.fillStyle = blue;
+    g.beginPath();
+    g.arc(cx, base - 76, 15, 0, Math.PI * 2);
+    g.fill();
+    g.beginPath();
+    g.roundRect(cx - 16, base - 56, 32, 56, 10);
+    g.fill();
+    if (i === 1) {
+      g.beginPath();
+      g.arc(cx + 14, base - 26, 13, 0, Math.PI * 2);
+      g.fill();
+    }
+    if (i === 0) {
+      g.lineWidth = 5;
+      g.strokeStyle = blue;
+      g.beginPath();
+      g.moveTo(cx + 24, base - 60);
+      g.lineTo(cx + 24, base + 6);
+      g.stroke();
+    }
+  }
+  g.fillStyle = '#1f5fa8';
+  g.font = `bold 44px ${JP_FONT}`;
+  g.textAlign = 'left';
+  g.fillText('優先席', w * 0.66, base - 30);
+  g.fillStyle = '#26303a';
+  g.font = `22px ${JP_FONT}`;
+  g.fillText('おゆずりください。', w * 0.66, base + 4);
+  g.font = `18px ${JP_FONT}`;
+  g.fillStyle = '#5c646c';
+  g.fillText('Priority Seat', w * 0.66, base + 34);
+}
+
+function drawSafetyNotice(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+  const { g, w, h } = s;
+  g.fillStyle = '#f4f6f7';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', 'jp');
+  // Bande podotactile jaune et file de voyageurs qui attendent derrière.
+  const base = h - 46;
+  g.fillStyle = '#f2c521';
+  for (let i = 0; i < 7; i++) {
+    g.beginPath();
+    g.roundRect(w * 0.06 + i * 34, base - 8 + i * 2, 26, 12, 3);
+    g.fill();
+  }
+  const green = '#2f8f4e';
+  for (let i = 0; i < 4; i++) {
+    const cx = w * 0.1 + i * 46;
+    g.fillStyle = green;
+    g.beginPath();
+    g.arc(cx, base - 96, 14, 0, Math.PI * 2);
+    g.fill();
+    g.beginPath();
+    g.roundRect(cx - 15, base - 78, 30, 54, 9);
+    g.fill();
+  }
+  g.fillStyle = '#26303a';
+  g.textAlign = 'left';
+  g.font = `bold 30px ${JP_FONT}`;
+  g.fillText('かけこみ乗車は', w * 0.44, h * 0.46);
+  g.fillText('おやめください。', w * 0.44, h * 0.62);
+  g.fillStyle = '#5c646c';
+  g.font = `18px ${JP_FONT}`;
+  g.fillText('Please do not rush onto the train.', w * 0.44, h * 0.78);
+}
+
 export function Screens() {
-  const left = useMemo(() => makeScreen(512, 216), []);
-  const right = useMemo(() => makeScreen(768, 324), []);
+  const left = useMemo(() => makeScreen(512, 288), []);
+  // DEUX canevas pour l'écran de droite : à l'approche, chaque paroi indique
+  // si les portes qui s'ouvrent sont de SON côté. C'est la seule vue qui
+  // diffère physiquement d'un côté à l'autre de la rame.
+  const rightA = useMemo(() => makeScreen(768, 384), []);
+  const rightB = useMemo(() => makeScreen(768, 384), []);
   const lastKey = useRef('');
   const lastAd = useRef(-1);
   const acc = useRef(0);
@@ -633,7 +863,8 @@ export function Screens() {
     acc.current += dt;
     if (acc.current < 0.25) return;
     acc.current = 0;
-    const { index, phase } = useStore.getState();
+    const { index, phase, doorSide } = useStore.getState();
+
     // Écran gauche : une pub toutes les ~15 s, boucle de AD_LOOP_COUNT spots.
     const adSeed = AD_LOOP_FIRST_SEED + (Math.floor(runtime.clockMin * 4) % AD_LOOP_COUNT);
     if (adSeed !== lastAd.current) {
@@ -641,22 +872,80 @@ export function Screens() {
       drawLeftAd(left, adSeed);
       left.texture.needsUpdate = true;
     }
-    // Écran droit. À l'approche et à quai, l'afficheur réel bascule sur le
-    // PLAN DU QUAI : c'est le moment où il sert à quelque chose, on cherche sa
-    // sortie. Le reste du temps il tourne sur la minute — 30 s de vue
-    // rapprochée, 15 s de plan de la boucle, 15 s de bandeau.
-    const atStation = phase === 'brake' || phase === 'dwell';
-    const mode = atStation ? 4 : Math.floor(runtime.clockMin * 4) % 4;
+
+    // Écran droit : machine à états calée sur la phase du cycle.
+    //
+    //  à quai      → ただいま, plans de ligne en japonais puis en anglais,
+    //                entrecoupés du plan du quai ;
+    //  en route    → つぎは, mêmes plans, plus les correspondances de la
+    //                prochaine gare et les écrans de courtoisie ;
+    //  à l'approche→ まもなく, côté d'ouverture, alterné avec le plan du quai.
+    //
+    // Les états d'exploitation dégradée (retard, interruption, arrêt d'urgence)
+    // existent sur la vraie rame mais ne sont pas rendus ici : la simulation
+    // n'a ni incident ni retard, les afficher serait annoncer au voyageur
+    // quelque chose qui n'arrive pas.
+    const tick = Math.floor(runtime.clockMin * 4);
     const clock = fmtClock(runtime.clockMin);
     const countdown = Math.round(secondsToArrival(phase, runtime.phaseT));
-    const key = `${index}|${phase}|${mode}|${clock}|${mode === 3 || mode === 4 ? 0 : countdown}`;
+
+    let state: string;
+    let status: ScreenStatus;
+    if (phase === 'brake') {
+      status = 'soon';
+      state = tick % 3 === 2 ? 'platform' : 'door';
+    } else if (phase === 'dwell') {
+      status = 'now';
+      state = ['loopJP', 'loopEN', 'zoomJP', 'zoomEN', 'platform'][tick % 5];
+    } else {
+      status = 'next';
+      state = ['loopJP', 'zoomJP', 'transfers', 'loopEN', 'zoomEN', 'priority', 'zoomJP', 'manners', 'loopJP', 'safety'][
+        tick % 10
+      ];
+    }
+
+    const key = `${index}|${phase}|${state}|${clock}|${doorSide}|${state.startsWith('loop') || state.startsWith('zoom') ? countdown : 0}`;
     if (key === lastKey.current) return;
     lastKey.current = key;
-    if (mode === 4) drawPlatformDiagram(right, index, clock);
-    else if (mode === 3) drawBanner(right);
-    else if (mode === 2) drawLoopMap(right, index, phase, countdown, clock);
-    else drawRoute(right, index, phase, countdown, clock);
-    right.texture.needsUpdate = true;
+
+    for (const [side, screen] of [
+      [1, rightA],
+      [-1, rightB],
+    ] as const) {
+      const g = screen;
+      switch (state) {
+        case 'door':
+          drawDoorSide(g, index, clock, doorSide === side);
+          break;
+        case 'platform':
+          drawPlatformDiagram(g, index, clock);
+          break;
+        case 'transfers':
+          drawTransfers(g, index, clock);
+          break;
+        case 'priority':
+          drawPriorityNotice(g, index, clock);
+          break;
+        case 'safety':
+          drawSafetyNotice(g, index, clock);
+          break;
+        case 'manners':
+          drawBanner(g);
+          break;
+        case 'loopJP':
+          drawLoopMap(g, index, phase, countdown, clock, status, 'jp');
+          break;
+        case 'loopEN':
+          drawLoopMap(g, index, phase, countdown, clock, status, 'en');
+          break;
+        case 'zoomEN':
+          drawRoute(g, index, phase, countdown, clock, status, 'en');
+          break;
+        default:
+          drawRoute(g, index, phase, countdown, clock, status, 'jp');
+      }
+      g.texture.needsUpdate = true;
+    }
   });
 
   const frameMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#22262b', roughness: 0.5 }), []);
@@ -664,9 +953,13 @@ export function Screens() {
     () => new THREE.MeshBasicMaterial({ map: left.texture, toneMapped: false }),
     [left.texture],
   );
-  const rightMat = useMemo(
-    () => new THREE.MeshBasicMaterial({ map: right.texture, toneMapped: false }),
-    [right.texture],
+  const rightMatA = useMemo(
+    () => new THREE.MeshBasicMaterial({ map: rightA.texture, toneMapped: false }),
+    [rightA.texture],
+  );
+  const rightMatB = useMemo(
+    () => new THREE.MeshBasicMaterial({ map: rightB.texture, toneMapped: false }),
+    [rightB.texture],
   );
 
   const sides: (1 | -1)[] = [1, -1];
@@ -677,18 +970,18 @@ export function Screens() {
         CONFIG.doorCenters.map((z) => (
           <group
             key={`scr${s}-${z}`}
-            position={[s * (CONFIG.carHalfWidth - 0.06), 2.07, z]}
+            position={[s * (CONFIG.carHalfWidth - 0.06), 2.13, z]}
             rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
           >
             {/* Deux écrans SÉPARÉS, chacun dans son boîtier incliné vers
                 l'allée, avec un espace entre eux (disposition E235). */}
             {([-1, 1] as const).map((k) => (
-              <group key={`half${k}`} position={[k * 0.33, 0, 0]} rotation={[0.3, 0, 0]}>
+              <group key={`half${k}`} position={[k * 0.335, 0, 0]} rotation={[0.3, 0, 0]}>
                 <mesh position={[0, 0, -0.014]} material={frameMat}>
-                  <boxGeometry args={[0.53, 0.25, 0.035]} />
+                  <boxGeometry args={[0.65, 0.36, 0.035]} />
                 </mesh>
-                <mesh position={[0, 0, 0.005]} material={k === -1 ? leftMat : rightMat}>
-                  <planeGeometry args={[0.47, 0.2]} />
+                <mesh position={[0, 0, 0.005]} material={k === -1 ? leftMat : s === 1 ? rightMatA : rightMatB}>
+                  <planeGeometry args={[0.6, 0.32]} />
                 </mesh>
               </group>
             ))}
