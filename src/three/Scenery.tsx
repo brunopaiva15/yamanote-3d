@@ -1,8 +1,7 @@
 // Décor extérieur, spécifique au quartier de chaque gare : ciel de Tokyo
-// (jour / doré / nuit), trois couches d'immeubles en parallaxe par côté — et
-// des façades d'about (±Z) pour le regard vers le fond du wagon — qui FONDENT
-// d'un quartier à l'autre au fil du trajet (deux « banques » ping-pong par
-// couche/côté), ballast au sol, arbres et portiques caténaires défilants.
+// (jour / doré / nuit), trois couches d'immeubles en parallaxe par côté qui
+// FONDENT d'un quartier à l'autre au fil du trajet (deux « banques » ping-pong
+// par couche/côté), ballast au sol, arbres et portiques caténaires défilants.
 //
 // Les silhouettes défilent par texture.offset (piloté par la distance) ; le
 // fondu entre le quartier quitté et celui approché est piloté par la
@@ -41,21 +40,9 @@ const LAYERS: LayerDef[] = [
   { x: 42, height: 18, metersPerRepeat: 240, repeat: 1, layer: 2, opacity: 0.9 },
 ];
 
-// Façades au fond / à l'avant : les plans latéraux sont vus de chant depuis
-// l'allée, donc invisibles par le hublot d'about. On réutilise les matériaux
-// des banques latérales (même quartier / fondu), sans allouer de textures.
-const END_LAYERS: {
-  z: number;
-  width: number;
-  height: number;
-  layer: 0 | 1 | 2;
-}[] = [
-  { z: 24, width: 32, height: 10, layer: 0 },
-  { z: 40, width: 48, height: 14, layer: 1 },
-  { z: 62, width: 68, height: 18, layer: 2 },
-];
-
-const PLANE_LEN = 240;
+// Assez long pour que les baies vues en biais (regard vers le fond) touchent
+// encore la texture de ville plutôt que le vide / le far clip.
+const PLANE_LEN = 400;
 
 // Durée d'un trajet inter-gares (s) : depart → cruise → brake (l'arrêt `dwell`
 // prolonge p=1). `index` s'incrémente au début de `depart`, donc à tout instant
@@ -123,9 +110,7 @@ export function Scenery() {
       key: string;
       x: number;
       y: number;
-      z: number;
       rotY: number;
-      width: number;
       height: number;
       mat: THREE.MeshBasicMaterial;
     }[] = [];
@@ -175,9 +160,7 @@ export function Scenery() {
             key: `city-${L.layer}-${side}-${slot}-day`,
             x: side * L.x - side * bias,
             y,
-            z: 0,
             rotY,
-            width: PLANE_LEN,
             height: L.height,
             mat: dayMat,
           });
@@ -200,50 +183,12 @@ export function Scenery() {
               key: `city-${L.layer}-${side}-${slot}-night`,
               x: side * L.x - side * (bias + 0.02),
               y,
-              z: 0,
               rotY,
-              width: PLANE_LEN,
               height: L.height,
               mat: nightMat,
             });
           }
           banks.push(bank);
-        }
-      }
-    }
-
-    // Façades d'about : mêmes matériaux que le côté +X (sign=-1), pour que le
-    // hublot montre la ville quand on regarde le fond — sans textures en plus.
-    for (const L of END_LAYERS) {
-      for (const end of [1, -1] as const) {
-        const rotY = end === 1 ? Math.PI : 0;
-        const y = L.height / 2 - 1.1;
-        for (const slot of [0, 1] as const) {
-          const bank = banks.find((b) => b.layer === L.layer && b.slot === slot && b.sign === -1);
-          if (!bank) continue;
-          const bias = slot * 0.04;
-          planes.push({
-            key: `city-end-${L.layer}-${end}-${slot}-day`,
-            x: 0,
-            y,
-            z: end * L.z - end * bias,
-            rotY,
-            width: L.width,
-            height: L.height,
-            mat: bank.dayMat,
-          });
-          if (bank.nightMat) {
-            planes.push({
-              key: `city-end-${L.layer}-${end}-${slot}-night`,
-              x: 0,
-              y,
-              z: end * L.z - end * (bias + 0.02),
-              rotY,
-              width: L.width,
-              height: L.height,
-              mat: bank.nightMat,
-            });
-          }
         }
       }
     }
@@ -396,15 +341,10 @@ export function Scenery() {
         </mesh>
       ))}
 
-      {/* Plans de ville : latéraux (±X) et about (±Z), banques ping-pong fondues */}
+      {/* Plans de ville : deux banques ping-pong par couche/côté, fondues */}
       {built.planes.map((pl) => (
-        <mesh
-          key={pl.key}
-          position={[pl.x, pl.y, pl.z]}
-          rotation={[0, pl.rotY, 0]}
-          material={pl.mat}
-        >
-          <planeGeometry args={[pl.width, pl.height]} />
+        <mesh key={pl.key} position={[pl.x, pl.y, 0]} rotation={[0, pl.rotY, 0]} material={pl.mat}>
+          <planeGeometry args={[PLANE_LEN, pl.height]} />
         </mesh>
       ))}
 

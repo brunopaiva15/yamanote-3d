@@ -25,7 +25,10 @@ import { box, glow, plane, sil, vehicle, type Ctx } from './landmarkKit';
 
 const BASE_Y = -1.1; // niveau du sol extérieur.
 const FAR_X = 34; // distance latérale des silhouettes (devant la couche lointaine).
-const FAR_Z = -5;
+// Deux positions le long de la voie : visibles par les baies latérales quand on
+// regarde chaque fond du wagon (pas seulement dehors à gauche / à droite).
+// L'ancienne valeur unique FAR_Z = -5 les plaçait derrière le regard initial.
+const FAR_ZS = [-32, 28] as const;
 const NEAR_X = 8; // repères au niveau de la voie.
 const NEAR_SPAN = 100; // période de défilement des repères proches (m).
 
@@ -384,27 +387,30 @@ function populate(slot: Slot, districtIndex: number): void {
   specs.forEach((spec: LandmarkSpec, i: number) => {
     const builder = BUILDERS[spec.kind];
     if (!builder) return;
-    const itemGroup = new THREE.Group();
-    const ctx: Ctx = {
-      group: itemGroup,
-      sil: slot.sil,
-      glow: slot.glow,
-      geos: slot.geos,
-      r: rng(700 + districtIndex * 53 + i * 131 + spec.kind.length * 7),
-    };
-    builder.build(ctx);
     const side = spec.side ?? 1;
     const scale = spec.scale ?? 1;
-    itemGroup.scale.setScalar(scale);
-    if (builder.near) {
-      itemGroup.position.set(side * NEAR_X, BASE_Y, 0);
-    } else {
-      itemGroup.position.set(side * FAR_X, BASE_Y, FAR_Z);
-      // Oriente +z local vers la voie (x=0).
-      itemGroup.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
-    }
-    slot.root.add(itemGroup);
-    slot.items.push({ group: itemGroup, near: builder.near, phase: i * 23 });
+    const zs = builder.near ? [0] : [...FAR_ZS];
+    zs.forEach((z, zi) => {
+      const itemGroup = new THREE.Group();
+      const ctx: Ctx = {
+        group: itemGroup,
+        sil: slot.sil,
+        glow: slot.glow,
+        geos: slot.geos,
+        r: rng(700 + districtIndex * 53 + i * 131 + spec.kind.length * 7 + zi * 17),
+      };
+      builder.build(ctx);
+      itemGroup.scale.setScalar(scale);
+      if (builder.near) {
+        itemGroup.position.set(side * NEAR_X, BASE_Y, 0);
+      } else {
+        itemGroup.position.set(side * FAR_X, BASE_Y, z);
+        // Oriente +z local vers la voie (x=0).
+        itemGroup.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
+      }
+      slot.root.add(itemGroup);
+      slot.items.push({ group: itemGroup, near: builder.near, phase: i * 23 + zi * 41 });
+    });
   });
 }
 
