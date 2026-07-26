@@ -128,7 +128,23 @@ function makeWindowWallGeometry(len: number): THREE.ExtrudeGeometry {
   return geo;
 }
 
-export function Car() {
+// Plaque d'about : les voitures de tête / queue portent le préfixe クハ,
+// les intermédiaires un numéro de voiture simple (号車).
+function carPlateLabel(carNumber: number): string {
+  if (carNumber === 1) return 'クハE235-1';
+  if (carNumber === CONFIG.carCount) return `クハE234-${carNumber}`;
+  return `${carNumber}号車`;
+}
+
+export function Car({ carNumber = CONFIG.playerCar }: { carNumber?: number }) {
+  // Extrémité +z = tête de rame (voiture 1) : cabine fermée.
+  // Extrémité −z = queue (voiture 11) : cabine fermée.
+  // Partout ailleurs : intercirculation ouverte.
+  const endOpen = {
+    [-1]: carNumber !== CONFIG.carCount,
+    [1]: carNumber !== 1,
+  } as const;
+
   const textures = useMemo(
     () => ({
       floor: makeFloorTexture(),
@@ -281,10 +297,14 @@ export function Car() {
       darkCap: new THREE.MeshStandardMaterial({ color: '#23262b', roughness: 0.9 }),
       posterFrame: new THREE.MeshStandardMaterial({ color: '#3a3d42', roughness: 0.5, metalness: 0.3 }),
       sos: new THREE.MeshStandardMaterial({ map: makeSosTexture(), roughness: 0.7 }),
-      carNumber: new THREE.MeshStandardMaterial({ map: makeCarNumberTexture('クハE234-10'), roughness: 0.6, metalness: 0.2 }),
+      carNumber: new THREE.MeshStandardMaterial({
+        map: makeCarNumberTexture(carPlateLabel(carNumber)),
+        roughness: 0.6,
+        metalness: 0.2,
+      }),
       extinguisher: new THREE.MeshStandardMaterial({ map: makeExtinguisherTexture(), roughness: 0.55, metalness: 0.05 }),
     };
-  }, [textures]);
+  }, [textures, carNumber]);
 
   const sides: (1 | -1)[] = [1, -1];
 
@@ -433,71 +453,82 @@ export function Car() {
         )),
       )}
 
-      {/* Parois d'about (roses, zone prioritaire) avec porte d'intercirculation */}
-      {[-1, 1].map((e) => (
-        <group key={`end${e}`}>
-          <mesh position={[-0.91, H / 2, e * HL]} material={materials.pinkPartition}>
-            <boxGeometry args={[0.98, H, 0.1]} />
-          </mesh>
-          <mesh position={[0.91, H / 2, e * HL]} material={materials.pinkPartition}>
-            <boxGeometry args={[0.98, H, 0.1]} />
-          </mesh>
-
-          {/* Équipements de la paroi d'about : affiches encadrées de part et
-              d'autre de la porte, interphone SOS, plaque de numéro de voiture,
-              coffret d'extincteur. C'est ce qui peuple la travée sur la rame. */}
-          {([-1, 1] as const).map((sx) => (
-            <group key={`endkit${sx}`}>
-              {/* Affiche encadrée à hauteur de regard */}
-              <mesh position={[sx * 0.93, 1.42, e * (HL - 0.055)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.posterFrame}>
-                <planeGeometry args={[0.56, 0.4]} />
-              </mesh>
-              <mesh position={[sx * 0.93, 1.42, e * (HL - 0.06)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={endPosterMats[(e + 1) / 2 + (sx + 1)]}>
-                <planeGeometry args={[0.5, 0.34]} />
-              </mesh>
-            </group>
-          ))}
-          {/* Interphone SOS, au-dessus de la porte côté gauche */}
-          <mesh position={[-0.5, 1.92, e * (HL - 0.056)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.sos}>
-            <planeGeometry args={[0.12, 0.15]} />
-          </mesh>
-          {/* Plaque de numéro de voiture */}
-          <mesh position={[0.95, 2.12, e * (HL - 0.056)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.carNumber}>
-            <planeGeometry args={[0.32, 0.072]} />
-          </mesh>
-          {/* Coffret d'extincteur, au sol contre la porte */}
-          <mesh position={[-0.62, 0.62, e * (HL - 0.09)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.extinguisher}>
-            <boxGeometry args={[0.24, 0.62, 0.07]} />
-          </mesh>
-          <mesh position={[0, 2.05, e * HL]} material={materials.pinkPartition}>
-            <boxGeometry args={[0.84, 0.5, 0.1]} />
-          </mesh>
-          <mesh position={[0, 0.95, e * HL - e * 0.01]} material={materials.steel}>
-            <boxGeometry args={[0.84, 1.9, 0.06]} />
-          </mesh>
-          {/* Encadrement du hublot, mêmes angles adoucis que les vitres de
-              porte : sans lui la porte d'intercirculation reste une plaque. */}
-          <mesh
-            geometry={gangwayFrameGeo}
-            position={[0, 1.25, e * HL - e * 0.042]}
-            rotation={[0, e === 1 ? Math.PI : 0, 0]}
-            material={materials.seam}
-          />
-          <mesh position={[0, 1.25, e * HL - e * 0.045]} material={materials.glass}>
-            <boxGeometry args={[0.56, 1.05, 0.02]} />
-          </mesh>
-          {/* Barres verticales de part et d'autre de la porte d'about */}
-          {[-0.52, 0.52].map((x) => (
-            <mesh key={`gb${x}`} position={[x, 1.15, e * (HL - 0.09)]} material={materials.steel}>
-              <cylinderGeometry args={[0.017, 0.017, 2.3, 12]} />
+      {/* Parois d'about (roses, zone prioritaire) avec porte d'intercirculation.
+          Ouverte entre voitures, fermée aux cabines de tête et de queue. */}
+      {([-1, 1] as const).map((e) => {
+        const open = endOpen[e];
+        return (
+          <group key={`end${e}`}>
+            <mesh position={[-0.91, H / 2, e * HL]} material={materials.pinkPartition}>
+              <boxGeometry args={[0.98, H, 0.1]} />
             </mesh>
-          ))}
-          {/* Cap sombre derrière la vitre : silhouette du wagon suivant */}
-          <mesh position={[0, 1.1, e * (HL + 0.6)]} material={materials.darkCap}>
-            <boxGeometry args={[2.4, 2.3, 0.1]} />
-          </mesh>
-        </group>
-      ))}
+            <mesh position={[0.91, H / 2, e * HL]} material={materials.pinkPartition}>
+              <boxGeometry args={[0.98, H, 0.1]} />
+            </mesh>
+
+            {/* Équipements de la paroi d'about : affiches encadrées de part et
+                d'autre de la porte, interphone SOS, plaque de numéro de voiture,
+                coffret d'extincteur. C'est ce qui peuple la travée sur la rame. */}
+            {([-1, 1] as const).map((sx) => (
+              <group key={`endkit${sx}`}>
+                {/* Affiche encadrée à hauteur de regard */}
+                <mesh position={[sx * 0.93, 1.42, e * (HL - 0.055)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.posterFrame}>
+                  <planeGeometry args={[0.56, 0.4]} />
+                </mesh>
+                <mesh position={[sx * 0.93, 1.42, e * (HL - 0.06)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={endPosterMats[(e + 1) / 2 + (sx + 1)]}>
+                  <planeGeometry args={[0.5, 0.34]} />
+                </mesh>
+              </group>
+            ))}
+            {/* Interphone SOS, au-dessus de la porte côté gauche */}
+            <mesh position={[-0.5, 1.92, e * (HL - 0.056)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.sos}>
+              <planeGeometry args={[0.12, 0.15]} />
+            </mesh>
+            {/* Plaque de numéro de voiture */}
+            <mesh position={[0.95, 2.12, e * (HL - 0.056)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.carNumber}>
+              <planeGeometry args={[0.32, 0.072]} />
+            </mesh>
+            {/* Coffret d'extincteur, au sol contre la porte */}
+            <mesh position={[-0.62, 0.62, e * (HL - 0.09)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.extinguisher}>
+              <boxGeometry args={[0.24, 0.62, 0.07]} />
+            </mesh>
+            <mesh position={[0, 2.05, e * HL]} material={materials.pinkPartition}>
+              <boxGeometry args={[0.84, 0.5, 0.1]} />
+            </mesh>
+            {/* Barres verticales de part et d'autre de la porte d'about */}
+            {[-0.52, 0.52].map((x) => (
+              <mesh key={`gb${x}`} position={[x, 1.15, e * (HL - 0.09)]} material={materials.steel}>
+                <cylinderGeometry args={[0.017, 0.017, 2.3, 12]} />
+              </mesh>
+            ))}
+            {open ? (
+              // Intercirculation : ouverture libre, seul le seuil bas reste.
+              <mesh position={[0, 0.04, e * HL]} material={materials.steel}>
+                <boxGeometry args={[0.84, 0.08, 0.08]} />
+              </mesh>
+            ) : (
+              <>
+                {/* Cabine : porte d'about fermée + hublot + cap sombre derrière */}
+                <mesh position={[0, 0.95, e * HL - e * 0.01]} material={materials.steel}>
+                  <boxGeometry args={[0.84, 1.9, 0.06]} />
+                </mesh>
+                <mesh
+                  geometry={gangwayFrameGeo}
+                  position={[0, 1.25, e * HL - e * 0.042]}
+                  rotation={[0, e === 1 ? Math.PI : 0, 0]}
+                  material={materials.seam}
+                />
+                <mesh position={[0, 1.25, e * HL - e * 0.045]} material={materials.glass}>
+                  <boxGeometry args={[0.56, 1.05, 0.02]} />
+                </mesh>
+                <mesh position={[0, 1.1, e * (HL + 0.6)]} material={materials.darkCap}>
+                  <boxGeometry args={[2.4, 2.3, 0.1]} />
+                </mesh>
+              </>
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }

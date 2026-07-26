@@ -24,6 +24,9 @@ export const CONFIG = {
   bloom: 0.25,
 
   // Géométrie intérieure du wagon (demi-dimensions).
+  // Rame E235 Yamanote : 11 voitures de 20 m, voyageur en 3ᵉ (annonce / écrans).
+  carCount: 11,
+  playerCar: 3,
   carHalfLength: 10,
   carHalfWidth: 1.4,
   carHeight: 2.38,
@@ -44,6 +47,24 @@ export const CONFIG = {
 
 // Vitesse maximale en m/s, dérivée une fois pour toutes.
 export const V_MAX = CONFIG.maxSpeedKmh / 3.6;
+
+// Pas d'une voiture (bout à bout, intercirculations dans le même plan).
+export const CAR_PITCH = CONFIG.carHalfLength * 2;
+
+// Décalage z de la voiture n (1…11) : la voiture du voyageur reste à z = 0.
+// Les numéros croissent vers −z ; la voiture 1 (tête) est du côté +z, là où
+// le regard initial du joueur pointe.
+export function carOffsetZ(carNumber: number): number {
+  return (CONFIG.playerCar - carNumber) * CAR_PITCH;
+}
+
+export function carNumbers(): number[] {
+  return Array.from({ length: CONFIG.carCount }, (_, i) => i + 1);
+}
+
+// Emprise de la rame sur z (extrémités des voitures de tête et de queue).
+export const TRAIN_Z_MIN = carOffsetZ(CONFIG.carCount) - CONFIG.carHalfLength;
+export const TRAIN_Z_MAX = carOffsetZ(1) + CONFIG.carHalfLength;
 
 // Positions des diffuseurs, partagées par le rendu (grilles au plafond) et le
 // moteur audio (un Panner3D par diffuseur). Repère du wagon.

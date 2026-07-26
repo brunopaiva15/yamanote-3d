@@ -5,7 +5,7 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { CONFIG, V_MAX } from '../data/config';
+import { CONFIG, V_MAX, carNumbers, carOffsetZ, TRAIN_Z_MIN, TRAIN_Z_MAX } from '../data/config';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { input, moveAxes, consumeLook } from '../systems/input';
@@ -13,8 +13,30 @@ import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
 import { setListenerPose } from '../systems/audioEngine';
 
 const AISLE_X = 0.7;
-const AISLE_Z = 9.2;
+// Demi-ouverture de l'intercirculation : au-delà, les parois d'about bloquent.
+const GANGWAY_X = 0.38;
+const AISLE_Z_MIN = TRAIN_Z_MIN + 0.8;
+const AISLE_Z_MAX = TRAIN_Z_MAX - 0.8;
 const LOOK_SENS = 0.0032;
+
+// Empêche de traverser une paroi d'about fermée (cabine) ou les montants
+// roses quand on n'est pas dans l'ouverture d'intercirculation.
+function constrainZ(prevZ: number, x: number, z: number): number {
+  const HL = CONFIG.carHalfLength;
+  for (const car of carNumbers()) {
+    const oz = carOffsetZ(car);
+    for (const end of [-1, 1] as const) {
+      const wallZ = oz + end * HL;
+      const isCab =
+        (car === 1 && end === 1) || (car === CONFIG.carCount && end === -1);
+      const blocked = isCab || Math.abs(x) > GANGWAY_X;
+      if (!blocked) continue;
+      if (prevZ < wallZ - 0.02 && z >= wallZ - 0.02) z = wallZ - 0.05;
+      if (prevZ > wallZ + 0.02 && z <= wallZ + 0.02) z = wallZ + 0.05;
+    }
+  }
+  return z;
+}
 
 export function Player() {
   const { camera, gl } = useThree();
@@ -146,7 +168,11 @@ export function Player() {
     if (i >= 0 && seatOccupant[i] === 'player') seatOccupant[i] = null;
     if (i >= 0) {
       const s = SEAT_SLOTS[i];
-      pos.current.set(THREE.MathUtils.clamp(s.x - s.side * 0.55, -AISLE_X, AISLE_X), CONFIG.eyeHeight, s.z);
+      pos.current.set(
+        THREE.MathUtils.clamp(s.x - s.side * 0.55, -AISLE_X, AISLE_X),
+        CONFIG.eyeHeight,
+        THREE.MathUtils.clamp(s.z, AISLE_Z_MIN, AISLE_Z_MAX),
+      );
     }
     playerSeat.current = -1;
     transition.current = 0;
@@ -201,8 +227,11 @@ export function Player() {
         const rz = -Math.sin(yaw.current);
         const vx = (fx * axes.y + rx * axes.x) * CONFIG.walkSpeed * Math.min(1, mag);
         const vz = (fz * axes.y + rz * axes.x) * CONFIG.walkSpeed * Math.min(1, mag);
+        const prevZ = pos.current.z;
         pos.current.x = THREE.MathUtils.clamp(pos.current.x + vx * dt, -AISLE_X, AISLE_X);
-        pos.current.z = THREE.MathUtils.clamp(pos.current.z + vz * dt, -AISLE_Z, AISLE_Z);
+        let nextZ = THREE.MathUtils.clamp(pos.current.z + vz * dt, AISLE_Z_MIN, AISLE_Z_MAX);
+        nextZ = constrainZ(prevZ, pos.current.x, nextZ);
+        pos.current.z = nextZ;
         bobT.current += dt * 7.5 * Math.min(1, mag);
       }
       pos.current.y = CONFIG.eyeHeight;
