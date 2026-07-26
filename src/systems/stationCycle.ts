@@ -6,7 +6,6 @@ import { CONFIG, V_MAX } from '../data/config';
 import {
   innerMainMelodyPlatforms,
   outerMainMelodyPlatforms,
-  OSAKI_INNER_SECONDARY_MELODY,
 } from '../data/melodies';
 import { DOOR_SIDE, STATIONS } from '../data/stations';
 import {
@@ -45,6 +44,7 @@ const ACCEL_RATE = 1.15; // m/s² — doit rester aligné avec updateCycle
 const INNER_MAIN_MELODY_SECS = 9.1;
 const OUTER_MAIN_MELODY_SECS = 20.1;
 const OSAKI_INNER_SECONDARY_MELODY_SECS = 19.1;
+const OSAKI_OUTER_SECONDARY_MELODY_SECS = 22.1;
 /** Marge entre fin de mélodie et annonce de fermeture. */
 const MELODY_TO_ANNOUNCE_GAP = 3.5;
 
@@ -52,12 +52,9 @@ function melodyBudgetSeconds(stationIndex: number): number {
   const jy = STATIONS[stationIndex]?.jy;
   if (!jy) return 6.5;
   const dir = useStore.getState().loopDirection;
-  if (
-    dir === 'inner' &&
-    jy === OSAKI_INNER_SECONDARY_MELODY.stationCode &&
-    runtime.useAlternativePlatform
-  ) {
-    return OSAKI_INNER_SECONDARY_MELODY_SECS;
+  if (jy === 'JY24' && runtime.useAlternativePlatform) {
+    if (dir === 'inner') return OSAKI_INNER_SECONDARY_MELODY_SECS;
+    if (dir === 'outer') return OSAKI_OUTER_SECONDARY_MELODY_SECS;
   }
   if (dir === 'outer' && outerMainMelodyPlatforms[jy]) return OUTER_MAIN_MELODY_SECS;
   if (dir === 'inner' && innerMainMelodyPlatforms[jy]) return INNER_MAIN_MELODY_SECS;

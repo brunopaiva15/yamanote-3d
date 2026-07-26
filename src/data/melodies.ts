@@ -30,6 +30,24 @@ export const OSAKI_INNER_SECONDARY_MELODY = {
   type: 'departure_melody' as const,
 };
 
+/** Chemin logique du clip Outer secondaire Ōsaki voie 4 (JRE-IKST-010-05). */
+export const OSAKI_OUTER_SECONDARY_MELODY_PATH =
+  '/audio/melodies/04_jre-ikst-010-05_outer-secondary-osaki.mp3';
+
+/** Config exclusive : Ōsaki Outer Loop plateforme 4 → Gotanda. */
+export const OSAKI_OUTER_SECONDARY_MELODY = {
+  id: 'jre-ikst-010-05',
+  file: OSAKI_OUTER_SECONDARY_MELODY_PATH,
+  line: 'yamanote',
+  stationCode: 'JY24',
+  stationName: 'Osaki',
+  direction: 'outer' as const,
+  platform: 4,
+  nextStationCode: 'JY23',
+  nextStationName: 'Gotanda',
+  type: 'departure_melody' as const,
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -192,6 +210,32 @@ export function shouldPlayOsakiInnerSecondaryMelody(ctx: MelodyPlayContext): boo
   if (Number(ctx.platform) !== OSAKI_INNER_SECONDARY_MELODY.platform) return false;
 
   if (ctx.nextStationCode && ctx.nextStationCode !== OSAKI_INNER_SECONDARY_MELODY.nextStationCode) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
+  if (ctx.departureAuthorized === false) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * JRE-IKST-010-05 : exclusivement Ōsaki (JY24) Outer Loop plateforme 4 → Gotanda.
+ * Ne jamais jouer sur la voie 3 (mélodie principale) ni en terminus / hors service.
+ */
+export function shouldPlayOsakiOuterSecondaryMelody(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== OSAKI_OUTER_SECONDARY_MELODY.stationCode) return false;
+  if (ctx.direction !== 'outer') return false;
+  if (Number(ctx.platform) !== OSAKI_OUTER_SECONDARY_MELODY.platform) return false;
+
+  if (ctx.nextStationCode && ctx.nextStationCode !== OSAKI_OUTER_SECONDARY_MELODY.nextStationCode) {
     return false;
   }
 

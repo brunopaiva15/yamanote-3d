@@ -6,10 +6,12 @@
 import {
   INNER_MAIN_MELODY_PATH,
   OSAKI_INNER_SECONDARY_MELODY_PATH,
+  OSAKI_OUTER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
   makeDepartureId,
   shouldPlayInnerMainMelody,
   shouldPlayOsakiInnerSecondaryMelody,
+  shouldPlayOsakiOuterSecondaryMelody,
   shouldPlayOuterMainMelody,
   type MelodyPlayContext,
   type ServiceType,
@@ -151,11 +153,18 @@ export function stopOsakiInnerSecondaryMelody(): void {
   audioManager.stop(OSAKI_INNER_SECONDARY_MELODY_PATH);
 }
 
+export function stopOsakiOuterSecondaryMelody(): void {
+  audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
+  // Permet une nouvelle tentative sur le même arrêt si la procédure reprend.
+  runtime.lastMelodyDepartureId = null;
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
   stopOuterMainMelody();
   stopOsakiInnerSecondaryMelody();
+  audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -226,6 +235,22 @@ export async function playOsakiInnerSecondaryMelody(context: MelodyPlayContext):
   return ok;
 }
 
+/**
+ * JRE-IKST-010-05 : Ōsaki Outer voie 4 → Gotanda, une fois par départ.
+ */
+export async function playOsakiOuterSecondaryMelody(context: MelodyPlayContext): Promise<boolean> {
+  if (!shouldPlayOsakiOuterSecondaryMelody(context)) return false;
+  if (isDepartureBlocked()) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  const ok = await audioManager.playOnce(OSAKI_OUTER_SECONDARY_MELODY_PATH);
+  if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+    runtime.lastMelodyDepartureId = null;
+  }
+  return ok;
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -244,7 +269,7 @@ async function departTrain(): Promise<void> {
 
 /**
  * Sélectionne et joue la 発車メロディ adaptée.
- * Ordre : cas spécifiques (Ōsaki voie 2) → Inner Main → Outer Main.
+ * Ordre : cas Ōsaki secondaires → Inner Main → Outer Main.
  */
 export async function playDepartureMelodyForContext(context: MelodyPlayContext): Promise<boolean> {
   if (context.trainState !== 'stopped_doors_open') return false;
@@ -253,6 +278,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (isDepartureBlocked()) return false;
 
   if (await playOsakiInnerSecondaryMelody(context)) return true;
+  if (await playOsakiOuterSecondaryMelody(context)) return true;
   if (await playInnerMainMelody(context)) return true;
   if (await playOuterMainMelody(context)) return true;
   return false;

@@ -28,6 +28,7 @@ import { CABIN_SPEAKERS, CONFIG, PLATFORM_SPEAKERS } from '../data/config';
 import {
   INNER_MAIN_MELODY_PATH,
   OSAKI_INNER_SECONDARY_MELODY_PATH,
+  OSAKI_OUTER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
 } from '../data/melodies';
 import { STATIONS } from '../data/stations';
@@ -668,4 +669,5 @@ export function stopDepartureMelodyClips(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
   audioManager.stop(OUTER_MAIN_MELODY_PATH);
   audioManager.stop(OSAKI_INNER_SECONDARY_MELODY_PATH);
+  audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
 }

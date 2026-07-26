@@ -164,6 +164,10 @@ Clip Ōsaki Inner secondaire : `public/audio/melodies/03_jre-ikst-010-03_inner-s
 (JRE-IKST-010-03), uniquement `JY24` + Inner + plateforme **2** → Shinagawa
 (`runtime.useAlternativePlatform`). La voie 1 garde le clip Inner Main.
 
+Clip Ōsaki Outer secondaire : `public/audio/melodies/04_jre-ikst-010-05_outer-secondary-osaki.mp3`
+(JRE-IKST-010-05), uniquement `JY24` + Outer + plateforme **4** → Gotanda.
+La voie 3 garde le clip Outer Main.
+
 ### Sonorisation en 3D
 
 Le son de la sonorisation est spatialisé : il sort des haut-parleurs, pas du
