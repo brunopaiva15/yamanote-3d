@@ -5,12 +5,9 @@
 import { CONFIG, V_MAX } from '../data/config';
 import { DOOR_SIDE } from '../data/stations';
 import {
-  approachAnnouncement,
-  directionAnnouncement,
+  approachSequence,
+  departureSequence,
   doorsClosingAnnouncement,
-  generalMessage,
-  isMajorHub,
-  nextStationAnnouncement,
 } from '../data/announcements';
 import { useStore, type Phase } from '../store';
 import { advanceClock, runtime } from './runtime';
@@ -104,9 +101,7 @@ function seedFired(phase: Phase, t: number): void {
   if (phase === 'cruise') {
     fired.add('doorside');
     fired.add('crowd-clear');
-    if (t > 0.6) fired.add('announce-dir');
-    if (t > 1.2) fired.add('announce-next');
-    if (t > 16) fired.add('general');
+    if (t > 0.6) fired.add('announce-depart');
   } else if (phase === 'brake') {
     fired.add('door-timings');
     fired.add('jingle');
@@ -220,13 +215,10 @@ export function updateCycle(dt: number): void {
         audio.setPlatformSide(DOOR_SIDE[s.index]);
       });
       once('crowd-clear', true, () => clearPlatformCrowd());
-      // Annonce du sens de la boucle, juste après le départ des grandes gares.
-      once('announce-dir', t > 0.6 && isMajorHub((s.index - 1 + 30) % 30), () =>
-        say(directionAnnouncement(s.index)),
+      // Séquence JR départ : 列車案内? → 次駅 → 乗換? → 案内(0–2).
+      once('announce-depart', t > 0.6, () =>
+        say(departureSequence(s.index, DOOR_SIDE[s.index])),
       );
-      once('announce-next', t > 1.2, () => say(nextStationAnnouncement(s.index, DOOR_SIDE[s.index])));
-      // Message général de courtoisie (en rotation) toutes les 5 gares.
-      once('general', t > 16 && s.index % 5 === 0, () => say(generalMessage(Math.floor(s.index / 5))));
       if (t >= CONFIG.cruiseTime) enterPhase('brake');
       break;
     }
@@ -237,7 +229,10 @@ export function updateCycle(dt: number): void {
       // Foule déjà en place dès le début du freinage : on la voit arriver
       // avec le quai, opaque, le long des vitres.
       once('crowd-seed', true, () => seedPlatformCrowd(s.index));
-      once('announce-soon', t > 0.8, () => say(approachAnnouncement(s.index)));
+      // Séquence JR approche : まもなく(+portes) → 乗換?
+      once('announce-soon', t > 0.8, () =>
+        say(approachSequence(s.index, DOOR_SIDE[s.index])),
+      );
       if (t >= CONFIG.brakeTime) {
         runtime.speed = 0;
         enterPhase('dwell');
