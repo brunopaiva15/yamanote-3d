@@ -142,70 +142,17 @@ Les valeurs continues (vitesse, distance, ouverture des portes) vivent dans
 ## Audio
 
 Roulement, onduleur VVVF, joints de rail, frein et carillons sont synthétisés
-(Tone.js). Les mélodies de départ (発車メロディ) utilisent un enregistrement
-quai lorsqu'il est fourni pour la combinaison gare / sens / quai, sinon une
-synthèse originale. La séquence de départ respecte l'ordre réel : la mélodie
-joue portes ouvertes et se termine **avant** l'annonce de fermeture, puis
-viennent le carillon et la fermeture. Les annonces (sens de la boucle 内回り
-avec gares repères, 次は… avec numéro JY, まもなく…, fermeture, accueil,
-messages de courtoisie en rotation) sont dites en japonais puis en anglais via
-`speechSynthesis`, avec les correspondances réelles de chaque gare.
-
-Clip Inner Loop principal : `public/audio/melodies/01_jre-ikst-010-01_inner-main.mp3`,
-déclenché uniquement sur les quais listés dans `src/data/melodies.ts` (direction
-`inner`, train à l'arrêt portes ouvertes, procédure de départ). Une seule lecture
-par départ ; interruption via `audioManager.stop` si le départ est annulé.
-
-Clip Outer Loop principal : `public/audio/melodies/02_jre-ikst-010-02_outer-main.mp3`
-(JRE-IKST-010-02), mêmes règles pour `direction === "outer"` et les 18 quais
-listés (Ōsaki quai 3 uniquement ; quai 4 réservé à une mélodie secondaire).
-
-Clip Ōsaki Inner secondaire : `public/audio/melodies/03_jre-ikst-010-03_inner-secondary-osaki.mp3`
-(JRE-IKST-010-03), uniquement `JY24` + Inner + plateforme **2** → Shinagawa
-(`runtime.useAlternativePlatform`). La voie 1 garde le clip Inner Main.
-
-Clip Ōsaki Outer secondaire : `public/audio/melodies/04_jre-ikst-010-05_outer-secondary-osaki.mp3`
-(JRE-IKST-010-05), uniquement `JY24` + Outer + plateforme **4** → Gotanda.
-La voie 3 garde le clip Outer Main.
-
-Clip Komagome Outer : `public/audio/melodies/05_sakura-sakura-a.mp3` (さくらさくらA / V1),
-uniquement `JY10` + Outer + plateforme **1** → Tabata.
-
-Clip Komagome Inner : `public/audio/melodies/06_sakura-sakura-b.mp3` (さくらさくら V2),
-uniquement `JY10` + Inner + plateforme **2** → Sugamo.
-
-Clip Uguisudani Inner : `public/audio/melodies/08_haru-tremolo.mp3` (春トレモロ),
-uniquement `JY06` + Inner + plateforme **2** → Nippori.
-
-Clip Seseragi : `public/audio/melodies/09_seseragi.mp3` (せせらぎ), Outer uniquement sur
-Uguisudani 3, Nippori 10, Tabata 3, Sugamo 2, Otsuka 2, Mejiro 2.
-
-Clip Takadanobaba Outer : `public/audio/melodies/10_tetsuwan-atom-a.mp3` (鉄腕アトム ver.A),
-uniquement `JY15` + Outer + plateforme **1** → Mejiro.
-
-Clip Takadanobaba Inner : `public/audio/melodies/11_tetsuwan-atom-b.mp3` (鉄腕アトム ver.B),
-uniquement `JY15` + Inner + plateforme **2** → Shin-Okubo.
-
-Clip Ebisu Inner : `public/audio/melodies/13_the-third-man-f.mp3` (第三の男 ver.F),
-uniquement `JY21` + Inner + plateforme **2** → Meguro. La voie 1 Outer (ver.E) n’est pas encore fournie.
-
-Clip Takanawa Gateway Inner : `public/audio/melodies/14_glorious-gateway-a.mp3`,
-uniquement `JY26` + Inner + plateforme **1** → Tamachi.
-
-Clip Takanawa Gateway Outer : `public/audio/melodies/15_glorious-gateway-b.mp3`,
-uniquement `JY26` + Outer + plateforme **2** → Shinagawa.
-
-Clip Kanda Outer : `public/audio/melodies/16_mondamin-cm-song-a.mp3` (モンダミンCMソング ver.A),
-uniquement `JY02` + Outer + plateforme **2** → Tokyo.
-
-Clip Kanda Inner : `public/audio/melodies/17_mondamin-cm-song-b.mp3` (モンダミンCMソング ver.B),
-uniquement `JY02` + Inner + plateforme **3** → Akihabara.
-
-Clip Ikebukuro Inner voie 5 : `public/audio/melodies/18_bic-camera-theme-a.mp3` (ビックカメラテーマソング ver.A),
-uniquement `JY13` + Inner + plateforme **5** → Mejiro (quai secondaire via `useAlternativePlatform`).
-
-Clip Ikebukuro Inner voie 6 : `public/audio/melodies/19_bic-camera-theme-b.mp3` (ビックカメラテーマソング ver.B),
-uniquement `JY13` + Inner + plateforme **6** → Mejiro (voie principale).
+(Tone.js). Les mélodies de départ (発車メロディ) utilisent pour l’instant une
+**synthèse originale** uniquement : les clips MP3 de quais (œuvres protégées)
+sont désactivés (`ENABLE_DEPARTURE_MELODY_CLIPS = false` dans
+`src/data/melodies.ts`) faute d’autorisations copyright. Le câblage par gare /
+quai / sens reste en place pour une réactivation ultérieure. La séquence de
+départ respecte l'ordre réel : la mélodie joue portes ouvertes et se termine
+**avant** l'annonce de fermeture, puis viennent le carillon et la fermeture.
+Les annonces (sens de la boucle 内回り avec gares repères, 次は… avec numéro
+JY, まもなく…, fermeture, accueil, messages de courtoisie en rotation) sont
+dites en japonais puis en anglais via `speechSynthesis`, avec les
+correspondances réelles de chaque gare.
 
 ### Sonorisation en 3D
 

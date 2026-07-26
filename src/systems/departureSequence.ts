@@ -5,6 +5,7 @@
 
 import {
   EBISU_INNER_THIRD_MAN_F_PATH,
+  ENABLE_DEPARTURE_MELODY_CLIPS,
   INNER_MAIN_MELODY_PATH,
   IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
   IKEBUKURO_INNER_BIC_CAMERA_B_PATH,
@@ -675,8 +676,10 @@ async function departTrain(): Promise<void> {
 /**
  * Sélectionne et joue la 発車メロディ adaptée.
  * Ordre : cas Ōsaki secondaires → Inner Main → Outer Main.
+ * Désactivé tant que ENABLE_DEPARTURE_MELODY_CLIPS est false (copyright).
  */
 export async function playDepartureMelodyForContext(context: MelodyPlayContext): Promise<boolean> {
+  if (!ENABLE_DEPARTURE_MELODY_CLIPS) return false;
   if (context.trainState !== 'stopped_doors_open') return false;
   if (context.emergencyActive) return false;
 

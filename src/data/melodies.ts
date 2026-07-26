@@ -4,6 +4,14 @@
 
 import type { LoopDirection } from './platforms';
 
+/**
+ * Clips MP3 de 発車メロディ (œuvres protégées) : désactivés tant que les
+ * autorisations copyright ne sont pas obtenues. Le jeu utilise alors la
+ * synthèse Tone.js. Remettre à `true` uniquement avec les droits nécessaires
+ * et les fichiers sous `public/audio/melodies/`.
+ */
+export const ENABLE_DEPARTURE_MELODY_CLIPS = false;
+
 /** Chemin logique du clip Inner Loop principal (sous public/). */
 export const INNER_MAIN_MELODY_PATH =
   '/audio/melodies/01_jre-ikst-010-01_inner-main.mp3';
