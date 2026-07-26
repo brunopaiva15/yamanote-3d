@@ -175,16 +175,16 @@ const GUIDANCE_POOL = [
   suddenStopAnnouncement,
 ] as const;
 
-/** 0 à 2 messages de courtoisie, rotation déterministe selon l'index de gare. */
+/**
+ * Messages de courtoisie : seulement à certaines gares (pas à chaque arrêt),
+ * un seul à la fois, en rotation. En vraie vie ils ne passent qu'occasionnellement
+ * (téléphone / priorité / freinage d'urgence ≈ 1 fois par boucle chacun).
+ */
 export function guidanceAnnouncements(index: number): Utterance[] {
-  const count = index % 3; // 0, 1 ou 2
-  if (count === 0) return [];
-  const start = Math.floor(index / 3) % GUIDANCE_POOL.length;
-  const out: Utterance[] = [];
-  for (let i = 0; i < count; i++) {
-    out.push(...GUIDANCE_POOL[(start + i) % GUIDANCE_POOL.length]());
-  }
-  return out;
+  // 1 gare sur 10 → chaque type ~1× par boucle de 30.
+  if (index % 10 !== 0) return [];
+  const which = Math.floor(index / 10) % GUIDANCE_POOL.length;
+  return GUIDANCE_POOL[which]();
 }
 
 // --- Séquences ---
