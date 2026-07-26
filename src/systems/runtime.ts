@@ -104,6 +104,12 @@ export const runtime = {
    * En usage normal (stationCycle), reste false : les timers gèrent la suite.
    */
   autonomousDepartureSequence: false,
+  /** Identifiant stable de la rame (pour departureId anti double-lecture). */
+  trainId: 'yamanote-e235-1',
+  /** Compteur d'arrêts depuis le début de la session (incrémenté à chaque dwell). */
+  stopSequence: 0,
+  /** Dernier departureId pour lequel une 発車メロディ a été lancée. */
+  lastMelodyDepartureId: null as string | null,
 };
 
 /** Avance l'horloge ; si on passe minuit, incrémente la date Tokyo d'un jour. */
@@ -147,4 +153,7 @@ export function resetRuntime(): void {
   runtime.outOfService = false;
   runtime.terminusStop = false;
   runtime.autonomousDepartureSequence = false;
+  runtime.trainId = 'yamanote-e235-1';
+  runtime.stopSequence = 0;
+  runtime.lastMelodyDepartureId = null;
 }

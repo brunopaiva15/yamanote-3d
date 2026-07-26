@@ -156,6 +156,10 @@ déclenché uniquement sur les quais listés dans `src/data/melodies.ts` (direct
 `inner`, train à l'arrêt portes ouvertes, procédure de départ). Une seule lecture
 par départ ; interruption via `audioManager.stop` si le départ est annulé.
 
+Clip Outer Loop principal : `public/audio/melodies/02_jre-ikst-010-02_outer-main.mp3`
+(JRE-IKST-010-02), mêmes règles pour `direction === "outer"` et les 18 quais
+listés (Ōsaki quai 3 uniquement ; quai 4 réservé à une mélodie secondaire).
+
 ### Sonorisation en 3D
 
 Le son de la sonorisation est spatialisé : il sort des haut-parleurs, pas du

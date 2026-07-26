@@ -1,8 +1,18 @@
-// Séquence de départ quai : 発車メロディ Inner Loop, puis fermeture.
-// La mélodie est jouée une seule fois ; les étapes portes / départ restent
-// pilotées par stationCycle tant que le départ n'est pas bloqué.
+// Séquence de départ quai : 発車メロディ Inner / Outer, puis fermeture.
+// La mélodie est jouée une seule fois par arrêt (departureId) ; les étapes
+// portes / départ restent pilotées par stationCycle tant que le départ
+// n'est pas bloqué.
 
-import { INNER_MAIN_MELODY_PATH, shouldPlayInnerMainMelody, type MelodyPlayContext, type TrainState } from '../data/melodies';
+import {
+  INNER_MAIN_MELODY_PATH,
+  OUTER_MAIN_MELODY_PATH,
+  makeDepartureId,
+  shouldPlayInnerMainMelody,
+  shouldPlayOuterMainMelody,
+  type MelodyPlayContext,
+  type ServiceType,
+  type TrainState,
+} from '../data/melodies';
 import { platformFor, type LoopDirection } from '../data/platforms';
 import { STATIONS } from '../data/stations';
 import { useStore } from '../store';
@@ -19,6 +29,8 @@ export type DepartureBlockers = {
   signalStop: boolean;
   emergency: boolean;
 };
+
+let outerMainMelodyPlaying = false;
 
 export function isDepartureBlocked(): boolean {
   const b = runtime.departureBlockers;
@@ -39,27 +51,50 @@ export function clearDepartureBlockers(): void {
   runtime.departureBlockers.emergency = false;
 }
 
+/** Remet à zéro l'anti-double-lecture (après départ ou reset). */
+export function resetMelodyDepartureGuard(): void {
+  runtime.lastMelodyDepartureId = null;
+  outerMainMelodyPlaying = false;
+}
+
 /** Dérive l'état train pour la mélodie à partir de la phase et des portes. */
 export function trainStateFromRuntime(phase: string, doorOpen: number, doorTarget: number): TrainState {
   if (phase === 'cruise' || phase === 'depart') return phase === 'depart' ? 'departing' : 'moving';
   if (phase === 'brake') return 'approaching';
-  // dwell
   if (doorTarget === 0 && doorOpen < 0.95) return doorOpen > 0.05 ? 'doors_closing' : 'stopped_doors_closed';
   if (doorOpen >= 0.85) return 'stopped_doors_open';
   if (doorTarget === 1) return 'stopped_doors_open';
   return 'stopped_doors_closed';
 }
 
+function serviceTypeFromRuntime(): ServiceType {
+  if (runtime.outOfService) return 'out_of_service';
+  if (runtime.terminusStop) return 'terminal';
+  return 'normal';
+}
+
 export function buildDepartureContext(opts?: {
   departureSequenceStarted?: boolean;
   platform?: number;
   direction?: LoopDirection;
+  stationIndex?: number;
 }): MelodyPlayContext {
   const s = useStore.getState();
-  const station = STATIONS[s.index];
+  const index = opts?.stationIndex ?? s.index;
+  const station = STATIONS[index];
   const direction = opts?.direction ?? s.loopDirection;
   const info = platformFor(station.jy, direction);
   const platform = opts?.platform ?? info?.platform ?? 0;
+  const stopSequence = runtime.stopSequence;
+  const trainId = runtime.trainId;
+  const departureId = makeDepartureId({
+    trainId,
+    stationCode: station.jy,
+    platform,
+    stopSequence,
+  });
+
+  const blocked = isDepartureBlocked();
 
   return {
     line: 'yamanote',
@@ -68,24 +103,78 @@ export function buildDepartureContext(opts?: {
     platform,
     trainState: trainStateFromRuntime(s.phase, runtime.doorOpen, runtime.doorTarget),
     departureSequenceStarted: opts?.departureSequenceStarted ?? true,
+    departureId,
+    trainId,
+    stopSequence,
+    serviceType: serviceTypeFromRuntime(),
+    emergencyActive: runtime.departureBlockers.emergency,
+    departureAuthorized: !blocked,
     outOfService: runtime.outOfService,
     terminus: runtime.terminusStop,
   };
 }
 
-/** Arrête la mélodie Inner Main si elle tourne (annulation / interruption). */
+export function stopOuterMainMelody(): void {
+  audioManager.stop(OUTER_MAIN_MELODY_PATH);
+  outerMainMelodyPlaying = false;
+}
+
+/** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
+  stopOuterMainMelody();
+}
+
+function claimDepartureId(context: MelodyPlayContext): boolean {
+  if (context.departureId && runtime.lastMelodyDepartureId === context.departureId) return false;
+  return true;
+}
+
+function markDepartureId(context: MelodyPlayContext): void {
+  if (context.departureId) runtime.lastMelodyDepartureId = context.departureId;
 }
 
 /**
  * Joue la mélodie Inner Main une fois si le contexte le permet.
- * Ne relance pas si déjà en cours. Retourne true si le clip a été lancé.
+ * Ne relance pas pour le même departureId.
  */
 export async function playInnerMainMelody(context: MelodyPlayContext): Promise<boolean> {
   if (!shouldPlayInnerMainMelody(context)) return false;
   if (isDepartureBlocked()) return false;
-  return audioManager.playOnce(INNER_MAIN_MELODY_PATH);
+  if (!claimDepartureId(context)) return false;
+  markDepartureId(context);
+  const ok = await audioManager.playOnce(INNER_MAIN_MELODY_PATH);
+  if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+    runtime.lastMelodyDepartureId = null;
+  }
+  return ok;
+}
+
+/**
+ * Joue JRE-IKST-010-02 (Outer Main) une fois. Pas de boucle, pas de superposition.
+ */
+export async function playOuterMainMelody(context: MelodyPlayContext): Promise<boolean> {
+  if (!shouldPlayOuterMainMelody(context)) return false;
+  if (isDepartureBlocked()) return false;
+  if (outerMainMelodyPlaying) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  outerMainMelodyPlaying = true;
+  try {
+    const ok = await audioManager.playOnce(OUTER_MAIN_MELODY_PATH);
+    if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+      runtime.lastMelodyDepartureId = null;
+    }
+    return ok;
+  } finally {
+    outerMainMelodyPlaying = false;
+  }
+}
+
+/** Variante explicite « une fois par arrêt » (même garde departureId). */
+export async function playOuterMainMelodyOncePerStop(context: MelodyPlayContext): Promise<boolean> {
+  return playOuterMainMelody(context);
 }
 
 async function playDoorClosingAnnouncement(): Promise<void> {
@@ -102,30 +191,40 @@ async function closeTrainDoors(): Promise<void> {
 
 async function departTrain(): Promise<void> {
   // Le passage en phase « depart » reste géré par stationCycle (timer dwell).
-  // Ici : no-op volontaire — la mélodie ne force jamais le départ.
+}
+
+/**
+ * Sélectionne et joue la 発車メロディ adaptée (inner main, outer main, …).
+ * Retourne true si un clip réel a été lancé.
+ */
+export async function playDepartureMelodyForContext(context: MelodyPlayContext): Promise<boolean> {
+  if (context.trainState !== 'stopped_doors_open') return false;
+  if (context.departureAuthorized === false) return false;
+  if (context.emergencyActive) return false;
+  if (isDepartureBlocked()) return false;
+
+  if (await playInnerMainMelody(context)) return true;
+  if (await playOuterMainMelody(context)) return true;
+  return false;
 }
 
 /**
  * Procédure de départ : mélodie (si applicable), puis annonce / fermetures
- * si le départ n'est pas bloqué. La mélodie seule ne provoque pas le départ
- * en cas de porte bloquée, maintien en gare, signal d'arrêt ou urgence.
+ * si le départ n'est pas bloqué. La mélodie seule ne provoque pas le départ.
  */
 export async function startDepartureSequence(context: MelodyPlayContext): Promise<void> {
-  if (!shouldPlayInnerMainMelody(context)) return;
+  if (context.trainState !== 'stopped_doors_open') return;
+  if (context.departureAuthorized === false) return;
+  if (context.emergencyActive) return;
   if (isDepartureBlocked()) return;
 
-  const played = await audioManager.playOnce(INNER_MAIN_MELODY_PATH);
-  if (!played) return;
+  await playDepartureMelodyForContext(context);
 
-  if (isDepartureBlocked()) {
+  if (context.emergencyActive || isDepartureBlocked()) {
     cancelDepartureMelody();
     return;
   }
 
-  // Les étapes suivantes ne sont exécutées que si un appelant pilote la
-  // séquence en mode autonome (hors timers de stationCycle). En usage normal,
-  // stationCycle enchaîne annonce → portes → départ sur son propre calendrier
-  // et n'appelle que departureMelody / playInnerMainMelody.
   if (runtime.autonomousDepartureSequence) {
     await playDoorClosingAnnouncement();
     if (isDepartureBlocked()) {
@@ -136,4 +235,9 @@ export async function startDepartureSequence(context: MelodyPlayContext): Promis
     await closeTrainDoors();
     await departTrain();
   }
+}
+
+/** Exposé pour les tests / debug. */
+export function melodyDepartureGuardState(): { lastId: string | null; outerPlaying: boolean } {
+  return { lastId: runtime.lastMelodyDepartureId, outerPlaying: outerMainMelodyPlaying };
 }

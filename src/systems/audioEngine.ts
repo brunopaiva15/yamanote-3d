@@ -24,12 +24,11 @@
 // locaux passent eux aussi par le bus spatialisé.
 
 import * as Tone from 'tone';
-import { INNER_MAIN_MELODY_PATH, shouldPlayInnerMainMelody, type TrainState } from '../data/melodies';
+import { CABIN_SPEAKERS, CONFIG, PLATFORM_SPEAKERS } from '../data/config';
+import { INNER_MAIN_MELODY_PATH, OUTER_MAIN_MELODY_PATH } from '../data/melodies';
 import { platformFor } from '../data/platforms';
 import { STATIONS } from '../data/stations';
-import { CABIN_SPEAKERS, CONFIG, PLATFORM_SPEAKERS } from '../data/config';
-import { useStore } from '../store';
-import { runtime } from './runtime';
+import { buildDepartureContext, playDepartureMelodyForContext } from './departureSequence';
 
 interface Nodes {
   master: Tone.Gain;
@@ -645,53 +644,30 @@ export function arrivalJingle(): void {
 }
 
 /**
- * 発車メロディ : pour les quais Inner Main listés, joue le clip réel une fois ;
- * sinon repli sur melody-JYXX.mp3 ou synthèse.
+ * 発車メロディ : clips Inner/Outer Main selon quai et sens, sinon
+ * melody-JYXX.mp3 ou synthèse. Délègue la sélection à departureSequence
+ * (évite les doubles lectures via departureId).
  */
 export function departureMelody(index: number): void {
-  const s = useStore.getState();
+  const ctx = buildDepartureContext({
+    departureSequenceStarted: true,
+    stationIndex: index,
+  });
   const station = STATIONS[index];
-  const direction = s.loopDirection;
-  const platform = platformFor(station.jy, direction)?.platform ?? 0;
-
-  let trainState: TrainState = 'moving';
-  if (s.phase === 'brake') trainState = 'approaching';
-  else if (s.phase === 'depart') trainState = 'departing';
-  else if (s.phase === 'dwell') {
-    if (runtime.doorTarget === 0 && runtime.doorOpen < 0.95) {
-      trainState = runtime.doorOpen > 0.05 ? 'doors_closing' : 'stopped_doors_closed';
-    } else if (runtime.doorOpen >= 0.85 || runtime.doorTarget === 1) {
-      trainState = 'stopped_doors_open';
-    } else {
-      trainState = 'stopped_doors_closed';
+  if (station) {
+    ctx.stationCode = station.jy;
+    const info = platformFor(station.jy, ctx.direction);
+    if (info) ctx.platform = info.platform;
+  }
+  void playDepartureMelodyForContext(ctx).then((played) => {
+    if (!played) {
+      void playClip(`melody-${STATIONS[index].jy}`, () => synthMelody(index), 'platform');
     }
-  }
+  });
+}
 
-  const blocked =
-    runtime.departureBlockers.doorBlocked ||
-    runtime.departureBlockers.heldAtStation ||
-    runtime.departureBlockers.signalStop ||
-    runtime.departureBlockers.emergency;
-
-  if (blocked) return;
-
-  if (
-    shouldPlayInnerMainMelody({
-      line: 'yamanote',
-      direction,
-      stationCode: station.jy,
-      platform,
-      trainState,
-      departureSequenceStarted: true,
-      outOfService: runtime.outOfService,
-      terminus: runtime.terminusStop,
-    })
-  ) {
-    void audioManager.playOnce(INNER_MAIN_MELODY_PATH).then((ok) => {
-      if (!ok) void playClip(`melody-${station.jy}`, () => synthMelody(index), 'platform');
-    });
-    return;
-  }
-
-  void playClip(`melody-${station.jy}`, () => synthMelody(index), 'platform');
+/** Arrêt d'urgence des clips de départ connus (reset / quitter la gare). */
+export function stopDepartureMelodyClips(): void {
+  audioManager.stop(INNER_MAIN_MELODY_PATH);
+  audioManager.stop(OUTER_MAIN_MELODY_PATH);
 }
