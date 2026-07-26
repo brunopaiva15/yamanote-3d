@@ -15,5 +15,6 @@ melodies/10_tetsuwan-atom-a.mp3 — Takadanobaba Outer voie 1 (鉄腕アトム v
 melodies/11_tetsuwan-atom-b.mp3 — Takadanobaba Inner voie 2 (鉄腕アトム ver.B)
 melodies/13_the-third-man-f.mp3 — Ebisu Inner voie 2 (第三の男 ver.F)
 melodies/14_glorious-gateway-a.mp3 — Takanawa Gateway Inner voie 1
+melodies/15_glorious-gateway-b.mp3 — Takanawa Gateway Outer voie 2
 Jouées une seule fois au début de la procédure de départ, portes ouvertes,
 via audioManager.playOnce (garde departureId anti double-lecture).

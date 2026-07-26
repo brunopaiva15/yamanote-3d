@@ -37,6 +37,7 @@ import {
   TAKADANOBABA_INNER_ATOM_B_PATH,
   TAKADANOBABA_OUTER_ATOM_A_PATH,
   TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH,
+  TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH,
   UGUISUDANI_INNER_HARU_TREMOLO_PATH,
 } from '../data/melodies';
 import { STATIONS } from '../data/stations';
@@ -686,4 +687,5 @@ export function stopDepartureMelodyClips(): void {
   audioManager.stop(TAKADANOBABA_INNER_ATOM_B_PATH);
   audioManager.stop(EBISU_INNER_THIRD_MAN_F_PATH);
   audioManager.stop(TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH);
+  audioManager.stop(TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH);
 }

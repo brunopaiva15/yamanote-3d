@@ -255,6 +255,26 @@ export const TAKANAWA_GATEWAY_INNER_GLORIOUS_A = {
   nextStationName: 'Tamachi',
 };
 
+/** Chemin : Glorious Gateway B — Takanawa Gateway Outer voie 2. */
+export const TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH =
+  '/audio/melodies/15_glorious-gateway-b.mp3';
+
+/** Config exclusive : Takanawa Gateway Outer Loop plateforme 2 → Shinagawa. */
+export const TAKANAWA_GATEWAY_OUTER_GLORIOUS_B = {
+  id: 'glorious-gateway-b',
+  name: 'Glorious Gateway B',
+  file: TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH,
+  type: 'departure_melody' as const,
+  audioSource: 'platform_speakers' as const,
+  line: 'yamanote',
+  stationCode: 'JY26',
+  stationName: 'Takanawa Gateway',
+  direction: 'outer' as const,
+  platform: 2,
+  nextStationCode: 'JY25',
+  nextStationName: 'Shinagawa',
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -633,7 +653,7 @@ export function shouldPlayEbisuInnerThirdManF(ctx: MelodyPlayContext): boolean {
 
 /**
  * Glorious Gateway A : exclusivement Takanawa Gateway (JY26) Inner Loop plateforme 1 → Tamachi.
- * La voie 2 Outer utilisera Glorious Gateway B.
+ * La voie 2 Outer utilise Glorious Gateway B.
  */
 export function shouldPlayTakanawaGatewayInnerGloriousA(ctx: MelodyPlayContext): boolean {
   if (ctx.line !== 'yamanote') return false;
@@ -644,6 +664,35 @@ export function shouldPlayTakanawaGatewayInnerGloriousA(ctx: MelodyPlayContext):
   if (
     ctx.nextStationCode &&
     ctx.nextStationCode !== TAKANAWA_GATEWAY_INNER_GLORIOUS_A.nextStationCode
+  ) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
+  if (ctx.departureAuthorized === false) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * Glorious Gateway B : exclusivement Takanawa Gateway (JY26) Outer Loop plateforme 2 → Shinagawa.
+ * Les voies 3/4 (Keihin-Tōhoku) ne sont pas concernées.
+ */
+export function shouldPlayTakanawaGatewayOuterGloriousB(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== TAKANAWA_GATEWAY_OUTER_GLORIOUS_B.stationCode) return false;
+  if (ctx.direction !== 'outer') return false;
+  if (Number(ctx.platform) !== TAKANAWA_GATEWAY_OUTER_GLORIOUS_B.platform) return false;
+
+  if (
+    ctx.nextStationCode &&
+    ctx.nextStationCode !== TAKANAWA_GATEWAY_OUTER_GLORIOUS_B.nextStationCode
   ) {
     return false;
   }
