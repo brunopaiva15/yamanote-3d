@@ -1,9 +1,11 @@
 // Doubles écrans LCD au-dessus des portes (E235) : écran gauche = publicités
 // en boucle (comme dans les vraies rames, il n'affiche jamais la prochaine
 // station), écran droit = écran de ligne fidèle au vrai afficheur JR East,
-// qui alterne comme dans la réalité entre trois états : vue rapprochée des
+// qui alterne comme dans la réalité entre quatre états : vue rapprochée des
 // 5 prochaines stations (arc vert, minutes, correspondances), plan complet
-// de la boucle (30 stations, minutes jusqu'à ~30 min) et bandeau manières.
+// de la boucle (30 stations, minutes jusqu'à ~30 min), bandeau manières, et
+// — à l'approche et à quai — le PLAN DU QUAI, qui montre où s'arrête chaque
+// voiture par rapport aux escaliers et aux sorties.
 // Deux CanvasTexture partagées, redessinées uniquement aux changements.
 
 import { useMemo, useRef } from 'react';
@@ -13,7 +15,7 @@ import { CONFIG } from '../data/config';
 import { STATIONS, TRANSFERS } from '../data/stations';
 import { useStore, type Phase } from '../store';
 import { runtime } from '../systems/runtime';
-import { JP_FONT, drawAdInto } from '../textures/procedural';
+import { JP_FONT, drawAdInto, rng } from '../textures/procedural';
 
 const YAMANOTE_GREEN = '#80c241';
 
@@ -468,6 +470,158 @@ function drawBanner(s: ReturnType<typeof makeScreen>): void {
   g.textAlign = 'left';
 }
 
+// --- Écran droit, plan du quai (駅構内図) ---
+// C'est la vue la plus caractéristique de l'afficheur réel, et celle qui
+// manquait : à l'approche d'une gare, l'écran passe du plan de ligne au plan
+// du QUAI. On y lit où s'arrête chaque voiture par rapport aux escaliers, aux
+// ascenseurs et aux sorties — le fond passe au bleu clair, le bandeau de tête
+// à l'orange, et la rame est dessinée voiture par voiture, celle du voyageur
+// mise en évidence.
+const PLATFORM_BLUE = '#cfe4f4';
+const PLATFORM_ORANGE = '#e8722a';
+const CAR_COUNT = 11; // une rame E235 de la Yamanote
+const PLAYER_CAR = 3; // cohérent avec « Car No 3 » du bandeau
+
+function drawPlatformDiagram(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+  const { g, w, h } = s;
+  const next = STATIONS[index];
+  const r = rng(1700 + index * 31);
+
+  g.fillStyle = PLATFORM_BLUE;
+  g.fillRect(0, 0, w, h);
+
+  // --- Bandeau de tête : つぎは + nom de gare + pastille JY ---
+  const HEAD = 96;
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, w, HEAD);
+  g.fillStyle = PLATFORM_ORANGE;
+  g.fillRect(0, HEAD - 6, w, 6);
+
+  g.fillStyle = '#3d4650';
+  g.font = `20px ${JP_FONT}`;
+  g.textAlign = 'left';
+  g.fillText('つぎは', 16, 34);
+  g.fillStyle = '#14181c';
+  g.font = `bold 52px ${JP_FONT}`;
+  g.fillText(next.kanji, 16, 82);
+  g.fillStyle = '#525c66';
+  g.font = `22px ${JP_FONT}`;
+  g.fillText(next.romaji, 24 + g.measureText(next.kanji).width * 1.6, 80);
+
+  // Pastille de ligne, à droite comme sur l'afficheur.
+  const bx = w - 74;
+  g.beginPath();
+  g.arc(bx, HEAD / 2 - 4, 38, 0, Math.PI * 2);
+  g.fillStyle = YAMANOTE_GREEN;
+  g.fill();
+  g.lineWidth = 5;
+  g.strokeStyle = '#ffffff';
+  g.stroke();
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center';
+  g.font = `bold 18px ${JP_FONT}`;
+  g.fillText('JY', bx, HEAD / 2 - 12);
+  g.font = `bold 30px ${JP_FONT}`;
+  g.fillText(next.jy.slice(2), bx, HEAD / 2 + 16);
+
+  // --- Bandeau de correspondances, sur fond crème ---
+  const tr = TRANSFERS[next.jy];
+  const BAND = HEAD + 40;
+  g.fillStyle = '#f6e7b8';
+  g.fillRect(0, HEAD, w, 40);
+  g.fillStyle = '#4a4231';
+  g.textAlign = 'left';
+  g.font = `19px ${JP_FONT}`;
+  const lines = tr ? tr.jp.split('、').slice(0, 4).join('  ') : 'のりかえ なし';
+  fitText(g, lines, w - 200, 19);
+  g.fillText(lines, 14, HEAD + 27);
+  g.textAlign = 'right';
+  g.font = `bold 20px ${JP_FONT}`;
+  g.fillStyle = '#7a4a12';
+  g.fillText(clock, w - 14, HEAD + 27);
+  g.textAlign = 'left';
+
+  // --- Plan du quai ---
+  const top = BAND + 26;
+  const platY = h - 74; // ligne de nez de quai
+  const x0 = 58;
+  const x1 = w - 24;
+  const carW = (x1 - x0) / CAR_COUNT;
+
+  // Sens de marche, en tête à gauche.
+  g.fillStyle = '#2c343c';
+  g.font = `20px ${JP_FONT}`;
+  g.fillText(`${STATIONS[(index + 4) % 30].kanji}ゆき`, 14, top + 4);
+
+  // Quai : bande grise, nez de quai orange.
+  g.fillStyle = '#e9eef2';
+  g.fillRect(x0 - 34, platY, x1 - x0 + 58, 46);
+  g.fillStyle = PLATFORM_ORANGE;
+  g.fillRect(x0 - 34, platY, x1 - x0 + 58, 5);
+
+  // Les voitures, numérotées, celle du voyageur en vert.
+  for (let i = 0; i < CAR_COUNT; i++) {
+    const cx = x0 + i * carW;
+    const isMine = i + 1 === PLAYER_CAR;
+    g.fillStyle = isMine ? YAMANOTE_GREEN : '#ffffff';
+    g.strokeStyle = '#7d8a95';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.roundRect(cx + 3, platY - 40, carW - 6, 34, 5);
+    g.fill();
+    g.stroke();
+    g.fillStyle = isMine ? '#ffffff' : '#2c343c';
+    g.textAlign = 'center';
+    g.font = `bold 19px ${JP_FONT}`;
+    g.fillText(String(i + 1), cx + carW / 2, platY - 15);
+  }
+  g.textAlign = 'left';
+
+  // Escaliers, ascenseur et sorties, répartis d'une gare à l'autre : la
+  // disposition est tirée du numéro de gare, donc stable pour une gare donnée
+  // et différente de la suivante.
+  const marks: { car: number; label: string }[] = [
+    { car: 1 + Math.floor(r() * 3), label: '階段' },
+    { car: 4 + Math.floor(r() * 3), label: 'エスカレーター' },
+    { car: 8 + Math.floor(r() * 3), label: 'エレベーター' },
+  ];
+  for (const m of marks) {
+    const cx = x0 + (m.car - 0.5) * carW;
+    g.strokeStyle = '#5b6a76';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(cx, platY + 46);
+    g.lineTo(cx, top + 44);
+    g.stroke();
+    g.fillStyle = '#ffffff';
+    g.strokeStyle = '#5b6a76';
+    g.lineWidth = 2;
+    const tw = g.measureText(m.label).width * 0.9 + 18;
+    g.beginPath();
+    g.roundRect(cx - tw / 2, top + 18, tw, 28, 6);
+    g.fill();
+    g.stroke();
+    g.fillStyle = '#2c343c';
+    g.font = `16px ${JP_FONT}`;
+    g.textAlign = 'center';
+    g.fillText(m.label, cx, top + 38);
+  }
+  g.textAlign = 'left';
+
+  // Sortie principale, à l'une des deux extrémités.
+  const gateLeft = r() > 0.5;
+  const gx = gateLeft ? x0 - 30 : x1 - 4;
+  g.fillStyle = '#f6d24a';
+  g.beginPath();
+  g.roundRect(gx - 26, platY + 52, 96, 26, 5);
+  g.fill();
+  g.fillStyle = '#2c343c';
+  g.font = `bold 16px ${JP_FONT}`;
+  g.textAlign = 'center';
+  g.fillText('改札口', gx + 22, platY + 71);
+  g.textAlign = 'left';
+}
+
 export function Screens() {
   const left = useMemo(() => makeScreen(512, 216), []);
   const right = useMemo(() => makeScreen(768, 324), []);
@@ -487,15 +641,19 @@ export function Screens() {
       drawLeftAd(left, adSeed);
       left.texture.needsUpdate = true;
     }
-    // Écran droit, rotation sur la minute comme l'afficheur réel :
-    // 30 s de vue rapprochée, 15 s de plan de la boucle, 15 s de bandeau.
-    const mode = Math.floor(runtime.clockMin * 4) % 4; // 0-1 arc, 2 plan, 3 bandeau
+    // Écran droit. À l'approche et à quai, l'afficheur réel bascule sur le
+    // PLAN DU QUAI : c'est le moment où il sert à quelque chose, on cherche sa
+    // sortie. Le reste du temps il tourne sur la minute — 30 s de vue
+    // rapprochée, 15 s de plan de la boucle, 15 s de bandeau.
+    const atStation = phase === 'brake' || phase === 'dwell';
+    const mode = atStation ? 4 : Math.floor(runtime.clockMin * 4) % 4;
     const clock = fmtClock(runtime.clockMin);
     const countdown = Math.round(secondsToArrival(phase, runtime.phaseT));
-    const key = `${index}|${phase}|${mode}|${clock}|${mode === 3 ? 0 : countdown}`;
+    const key = `${index}|${phase}|${mode}|${clock}|${mode === 3 || mode === 4 ? 0 : countdown}`;
     if (key === lastKey.current) return;
     lastKey.current = key;
-    if (mode === 3) drawBanner(right);
+    if (mode === 4) drawPlatformDiagram(right, index, clock);
+    else if (mode === 3) drawBanner(right);
     else if (mode === 2) drawLoopMap(right, index, phase, countdown, clock);
     else drawRoute(right, index, phase, countdown, clock);
     right.texture.needsUpdate = true;
