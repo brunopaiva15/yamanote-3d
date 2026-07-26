@@ -177,11 +177,10 @@ function drawHeader(
 }
 
 // --- Écran droit, vue rapprochée : arc vert, 5 prochaines stations ---
-// L'orientation de l'arc dépend du sens de marche sur l'afficheur réel :
-// en 内回り (notre sens, JY croissant) la prochaine station est en bas à
-// droite et la ligne remonte vers la gauche ; les rames 外回り affichent
-// exactement le miroir (prochaine station en bas à gauche, correspondances
-// à droite). Cette vue est donc calée sur l'écran 内回り réel.
+// Disposition relevée sur les vues observées : la prochaine gare est en BAS
+// À GAUCHE et la courbe remonte vers la droite ; les noms de gares forment
+// une colonne à gauche, la plus proche en bas, et le pavé des correspondances
+// occupe le côté libre, à droite. Le sens 外回り afficherait le miroir.
 function drawRoute(
   s: ReturnType<typeof makeScreen>,
   index: number,
@@ -203,20 +202,20 @@ function drawRoute(
   // Points de passage (cercles des minutes), k = 0 : prochaine station en
   // bas à droite, k = 4 : la plus lointaine en haut à gauche.
   const CIRCLES: [number, number][] = [
-    [476, 279],
-    [421, 224],
-    [361, 183],
-    [294, 150],
-    [230, 127],
+    [292, 279],
+    [347, 224],
+    [407, 183],
+    [474, 150],
+    [538, 127],
   ];
   const path: [number, number][] = [
-    [-40, 112],
+    [808, 112],
     CIRCLES[4],
     CIRCLES[3],
     CIRCLES[2],
     CIRCLES[1],
     CIRCLES[0],
-    [520, 356],
+    [248, 356],
   ];
   g.strokeStyle = YAMANOTE_GREEN;
   g.lineWidth = 44;
@@ -235,8 +234,8 @@ function drawRoute(
   // Chevron rouge : sens de marche, en bout de courbe.
   g.fillStyle = '#c8362c';
   g.save();
-  g.translate(495, 310);
-  g.rotate(1.05);
+  g.translate(273, 310);
+  g.rotate(Math.PI - 1.05);
   g.beginPath();
   g.moveTo(-10, -18);
   g.lineTo(22, 0);
@@ -249,7 +248,7 @@ function drawRoute(
   // ----- 5 prochaines stations : cercles des minutes + cascade kanji -----
   // Positions calées sur l'afficheur réel : les rangées ont leur propre
   // ligne de base, légèrement au-dessus de leur cercle.
-  const BADGE_X = [564, 516, 441, 357, 274];
+  const BADGE_X = [18, 18, 18, 18, 18];
   const BASE_Y = [278, 226, 180, 146, 118];
   const atStation = phase === 'dwell';
   for (let k = 4; k >= 0; k--) {
@@ -289,7 +288,7 @@ function drawRoute(
     g.fillText(st.jy.slice(2), bx + 18, by - 1);
     g.textAlign = 'left';
     const name = st.kanji.length === 2 ? `${st.kanji[0]} ${st.kanji[1]}` : st.kanji;
-    fitText(g, name, w - (bx + 44) - 6, 26);
+    fitText(g, name, 180, 26);
     g.fillStyle = '#111214';
     g.fillText(name, bx + 44, by);
   }
@@ -299,17 +298,17 @@ function drawRoute(
   if (tr) {
     g.fillStyle = '#111214';
     fitText(g, `${next.kanji}駅`, 120, 20);
-    g.fillText(`${next.kanji}駅`, 10, 208);
+    g.fillText(`${next.kanji}駅`, w - 250, 208);
     g.font = `12px ${JP_FONT}`;
     g.fillStyle = '#3a3d42';
-    g.fillText('乗換えのご案内', 10, 226);
+    g.fillText('乗換えのご案内', w - 250, 226);
     const lines = tr.jp.split('、').slice(0, 8);
     const colors = ['#f15a22', '#00a7e1', '#e21b30', '#009944', '#8f76d6', '#f6aa00', '#00ada9', '#b5b5ac'];
     g.font = `12px ${JP_FONT}`;
     for (let i = 0; i < lines.length; i++) {
       const col = Math.floor(i / 4);
       const row = i % 4;
-      const lx = 10 + col * 112;
+      const lx = w - 250 + col * 118;
       const ly = 244 + row * 21;
       g.fillStyle = colors[i % colors.length];
       g.beginPath();
@@ -325,7 +324,7 @@ function drawRoute(
   // Mention basse.
   g.fillStyle = '#9a9d99';
   g.font = `10px ${JP_FONT}`;
-  g.fillText('のりかえ、待ち合わせ時間は含まれません。乗車により多少時間が異なります。', 10, h - 5);
+  g.fillText('のりかえ、待ち合わせ時間は含まれません。乗車により多少時間が異なります。', 10, h - 6);
 }
 
 // --- Écran droit, plan complet de la boucle (comme l'afficheur réel) :
@@ -970,15 +969,18 @@ export function Screens() {
         CONFIG.doorCenters.map((z) => (
           <group
             key={`scr${s}-${z}`}
-            position={[s * (CONFIG.carHalfWidth - 0.06), 2.13, z]}
+            position={[s * (CONFIG.carHalfWidth - 0.14), 2.16, z]}
             rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
           >
             {/* Deux écrans SÉPARÉS, chacun dans son boîtier incliné vers
                 l'allée, avec un espace entre eux (disposition E235). */}
             {([-1, 1] as const).map((k) => (
-              <group key={`half${k}`} position={[k * 0.335, 0, 0]} rotation={[0.3, 0, 0]}>
+              <group key={`half${k}`} position={[k * 0.345, 0, 0]} rotation={[0.22, 0, 0]}>
+                {/* Boîtier franchement plus grand que la dalle : il faut un
+                    encadrement visible sur les quatre côtés, sinon l'image
+                    paraît coupée par la paroi. */}
                 <mesh position={[0, 0, -0.014]} material={frameMat}>
-                  <boxGeometry args={[0.65, 0.36, 0.035]} />
+                  <boxGeometry args={[0.68, 0.42, 0.035]} />
                 </mesh>
                 <mesh position={[0, 0, 0.005]} material={k === -1 ? leftMat : s === 1 ? rightMatA : rightMatB}>
                   <planeGeometry args={[0.6, 0.32]} />
