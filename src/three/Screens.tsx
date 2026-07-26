@@ -19,9 +19,9 @@ import { JP_FONT, drawAdInto, rng } from '../textures/procedural';
 
 const YAMANOTE_GREEN = '#80c241';
 
-// Rame de onze voitures ; le voyageur est dans la 3e, comme l'annonce le bandeau.
-const CAR_COUNT = 11;
-const PLAYER_CAR = 3;
+// Une seule voiture modélisée : le plan du quai et le bandeau suivent.
+const CAR_COUNT = 1;
+const PLAYER_CAR = 1;
 
 // Grandes gares pour le « Bound for … & … ».
 const MAJOR_INDICES = [0, 4, 12, 16, 19, 24];
@@ -605,16 +605,15 @@ function drawPlatformDiagram(s: ReturnType<typeof makeScreen>, index: number, cl
   }
   g.textAlign = 'left';
 
-  // Escaliers, ascenseur et sorties, répartis d'une gare à l'autre : la
-  // disposition est tirée du numéro de gare, donc stable pour une gare donnée
-  // et différente de la suivante.
-  const marks: { car: number; label: string }[] = [
-    { car: 1 + Math.floor(r() * 3), label: '階段' },
-    { car: 4 + Math.floor(r() * 3), label: 'エスカレーター' },
-    { car: 8 + Math.floor(r() * 3), label: 'エレベーター' },
+  // Escaliers, ascenseur et sorties le long de la voiture unique : positions
+  // tirées du numéro de gare, stables pour une gare donnée.
+  const marks: { t: number; label: string }[] = [
+    { t: 0.2 + r() * 0.1, label: '階段' },
+    { t: 0.45 + r() * 0.1, label: 'エスカレーター' },
+    { t: 0.75 + r() * 0.1, label: 'エレベーター' },
   ];
   for (const m of marks) {
-    const cx = x0 + (m.car - 0.5) * carW;
+    const cx = x0 + m.t * (x1 - x0);
     g.strokeStyle = '#5b6a76';
     g.lineWidth = 3;
     g.beginPath();
