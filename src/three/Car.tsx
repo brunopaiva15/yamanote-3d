@@ -103,7 +103,15 @@ export function Car() {
     ventMap.wrapS = ventMap.wrapT = THREE.RepeatWrapping;
     ventMap.repeat.set(1, DUCT_LENGTH / 0.6);
     return {
-      floor: new THREE.MeshStandardMaterial({ map: textures.floor, roughness: 0.72, metalness: 0.02 }),
+      // Un plancher de rame n'est pas mat : il renvoie les rampes lumineuses
+      // en une traînée diffuse. La carte de rugosité fait varier ce brillant
+      // pour éviter le miroir uniforme.
+      floor: new THREE.MeshStandardMaterial({
+        map: textures.floor,
+        roughnessMap: rough,
+        roughness: 0.52,
+        metalness: 0.06,
+      }),
       wall: new THREE.MeshStandardMaterial({
         map: makeSurfaceTexture('#e4e3dc'),
         roughnessMap: rough,

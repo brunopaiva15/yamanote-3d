@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { EffectComposer, Bloom, Vignette, ToneMapping, Noise } from '@react-three/postprocessing';
+import { EffectComposer, Bloom, N8AO, Vignette, ToneMapping, Noise } from '@react-three/postprocessing';
 import { BlendFunction, ToneMappingMode } from 'postprocessing';
 import { CONFIG } from '../data/config';
 import { runtime } from '../systems/runtime';
@@ -29,8 +29,8 @@ function EnvironmentMap(): null {
     const pmrem = new THREE.PMREMGenerator(gl);
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = env;
-    // Discret : juste de quoi faire vivre l'inox et le verre, sans vernis.
-    scene.environmentIntensity = 0.22;
+    // De quoi faire vivre l'inox des barres et le brillant du sol, sans vernis.
+    scene.environmentIntensity = 0.38;
     return () => {
       scene.environment = null;
       env.dispose();
@@ -182,6 +182,22 @@ export function Scene() {
       ))}
 
       <EffectComposer>
+        {/* Occlusion ambiante. C'est ce qui sépare une image de synthèse d'une
+            photo : le noircissement des angles, sous les banquettes, derrière
+            les mains courantes, dans les feuillures de porte. Les maquettes
+            photogrammétriques l'ont cuite dans leurs textures ; ici elle est
+            calculée, donc elle suit le cycle jour / nuit et les portes qui
+            s'ouvrent. Rayon court (25 cm) : on cherche les contacts, pas un
+            assombrissement général du wagon. */}
+        <N8AO
+          aoRadius={0.55}
+          distanceFalloff={0.8}
+          intensity={4.5}
+          quality="medium"
+          halfRes
+          depthAwareUpsampling
+          color="#1b2028"
+        />
         <Bloom intensity={CONFIG.bloom} luminanceThreshold={0.9} luminanceSmoothing={0.2} mipmapBlur />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
         <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.05} />
