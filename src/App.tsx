@@ -17,6 +17,7 @@ import { Landmarks } from './three/Landmarks';
 import { SegmentEnvironment } from './three/SegmentEnvironment';
 import { HubStationRoof } from './three/HubStationRoof';
 import { Platform } from './three/Platform';
+import { PlatformCrowd } from './three/PlatformCrowd';
 import { Passengers } from './three/Passengers';
 import { Player } from './three/Player';
 import { Hud } from './ui/Hud';
@@ -47,6 +48,7 @@ export default function App() {
         <SegmentEnvironment />
         <HubStationRoof />
         <Platform />
+        <PlatformCrowd />
         <Passengers />
         <Player />
       </Canvas>

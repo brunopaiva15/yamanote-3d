@@ -34,7 +34,8 @@ export const runtime = {
   clockMin: CONFIG.clockStart, // horloge du monde, en minutes (flottant)
   swayTime: 0,
   sway: 0, // balancement latéral normalisé (-1..1)
-  platformFade: 0, // opacité du quai (0..1)
+  platformFade: 0, // présence du quai 0..1 (visibilité / approche, plus d'opacité)
+  platformSlide: 0, // décalage Z du quai (m) : négatif à l'approche, positif au départ
   playerX: 0, // position du joueur (pour les regards des PNJ)
   playerY: 1.55,
   playerZ: 4.2,
@@ -55,4 +56,5 @@ export function resetRuntime(): void {
   runtime.swayTime = 0;
   runtime.sway = 0;
   runtime.platformFade = 0;
+  runtime.platformSlide = 0;
 }
