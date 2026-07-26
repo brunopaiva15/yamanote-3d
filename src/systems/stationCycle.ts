@@ -23,7 +23,6 @@ import {
   setPsdDoors,
   setTrainDoors,
   stationTimings,
-  updateDoorMotion,
 } from './doorMotion';
 import * as audio from './audioEngine';
 import { say } from './speech';
@@ -288,10 +287,8 @@ export function updateCycle(dt: number): void {
   runtime.sway =
     (Math.sin(runtime.swayTime * 0.8) + 0.5 * Math.sin(runtime.swayTime * 1.73)) * 0.55 * s01;
 
-  // --- Animation des portes (profil mécanique, rame et quai décalés) ---
-  updateDoorMotion(dt);
-
   // --- Joints de rail : clac-clac tous les ~23 m ---
+  // (L'animation des portes est pilotée par Engine avec le dt physique.)
   if (runtime.distance - lastJointDistance > CONFIG.railJointGap && runtime.speed > 1.5) {
     lastJointDistance = runtime.distance;
     audio.railClack(s01);
