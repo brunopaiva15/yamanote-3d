@@ -24,6 +24,11 @@ import { say } from './speech';
 import { exchangePassengers } from './passengers';
 import { seedPlatformPresence } from './platformPresence';
 import { clearPlatformCrowd, seedPlatformCrowd } from './platformCrowd';
+import {
+  cancelDepartureMelody,
+  clearDepartureBlockers,
+  isDepartureBlocked,
+} from './departureSequence';
 
 const fired = new Set<string>();
 let lastJointDistance = 0;
@@ -47,6 +52,8 @@ function enterPhase(phase: Phase): void {
   useStore.getState().setPhase(phase);
   runtime.phaseT = 0;
   fired.clear();
+  if (phase === 'dwell') clearDepartureBlockers();
+  if (phase !== 'dwell') cancelDepartureMelody();
 }
 
 function brakeRate(): number {
@@ -251,6 +258,15 @@ export function updateCycle(dt: number): void {
       // Séquence de départ fidèle : la mélodie (発車メロディ) démarre portes ouvertes
       // et se termine AVANT l'annonce de fermeture ; puis carillon, puis fermeture.
       once('melody', t >= CONFIG.dwellTime - 13, () => audio.departureMelody(s.index));
+
+      // Porte bloquée / maintien / signal / urgence : stop mélodie, reste à quai.
+      if (isDepartureBlocked()) {
+        cancelDepartureMelody();
+        if (runtime.doorTarget !== 1) setTrainDoors(1);
+        if (runtime.psdTarget !== 1) setPsdDoors(1);
+        break;
+      }
+
       once('announce-close', t >= CONFIG.dwellTime - 3.5, () => say(doorsClosingAnnouncement()));
       once('doors-close', t >= CONFIG.dwellTime - 1.8, () => {
         setTrainDoors(0);

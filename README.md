@@ -141,15 +141,20 @@ Les valeurs continues (vitesse, distance, ouverture des portes) vivent dans
 
 ## Audio
 
-Tout est synthétisé (Tone.js) : roulement, onduleur VVVF, joints de rail, frein,
-carillons de porte, jingle d'arrivée et mélodies de départ originales (structure
-fidèle à la réalité : deux mélodies « maison » alternées, quelques gares avec leur
-propre jingle ; aucune mélodie réelle n'est transcrite). La séquence de départ
-respecte l'ordre réel : la 発車メロディ joue portes ouvertes et se termine **avant**
-l'annonce de fermeture, puis viennent le carillon et la fermeture. Les annonces
-(sens de la boucle 内回り avec gares repères, 次は… avec numéro JY, まもなく…,
-fermeture, accueil, messages de courtoisie en rotation) sont dites en japonais puis
-en anglais via `speechSynthesis`, avec les correspondances réelles de chaque gare.
+Roulement, onduleur VVVF, joints de rail, frein et carillons sont synthétisés
+(Tone.js). Les mélodies de départ (発車メロディ) utilisent un enregistrement
+quai lorsqu'il est fourni pour la combinaison gare / sens / quai, sinon une
+synthèse originale. La séquence de départ respecte l'ordre réel : la mélodie
+joue portes ouvertes et se termine **avant** l'annonce de fermeture, puis
+viennent le carillon et la fermeture. Les annonces (sens de la boucle 内回り
+avec gares repères, 次は… avec numéro JY, まもなく…, fermeture, accueil,
+messages de courtoisie en rotation) sont dites en japonais puis en anglais via
+`speechSynthesis`, avec les correspondances réelles de chaque gare.
+
+Clip Inner Loop principal : `public/audio/melodies/01_jre-ikst-010-01_inner-main.mp3`,
+déclenché uniquement sur les quais listés dans `src/data/melodies.ts` (direction
+`inner`, train à l'arrêt portes ouvertes, procédure de départ). Une seule lecture
+par départ ; interruption via `audioManager.stop` si le départ est annulé.
 
 ### Sonorisation en 3D
 
@@ -175,7 +180,6 @@ malgré tout ancrées aux diffuseurs par le souffle de ligne spatialisé (la son
 s'ouvre et se referme avec un déclic autour de chaque annonce) et par un volume
 qui suit la distance au diffuseur le plus proche.
 
-Optionnel : déposez vos propres enregistrements dans `public/audio/`
+Optionnel : déposez d'autres enregistrements dans `public/audio/`
 (`door-open.mp3`, `door-close.mp3`, `arrival.mp3`, `melody-JY01.mp3`…) ; ils seront
-utilisés à la place de la synthèse, et passent par le même bus spatialisé que la
-version synthétisée. Aucun asset audio protégé n'est fourni.
+utilisés à la place de la synthèse, et passent par le même bus spatialisé.

@@ -88,6 +88,22 @@ export const runtime = {
   playerX: 0, // position du joueur (pour les regards des PNJ)
   playerY: 1.55,
   playerZ: 4.2,
+  // Blocages de départ : la mélodie s'arrête, le train reste à quai portes ouvertes.
+  departureBlockers: {
+    doorBlocked: false,
+    heldAtStation: false,
+    signalStop: false,
+    emergency: false,
+  },
+  /** Train hors service (ne joue pas la 発車メロディ Inner Main). */
+  outOfService: false,
+  /** Arrêt terminus / quai alternatif (ex. Ōsaki 2) — autre mélodie ou silence. */
+  terminusStop: false,
+  /**
+   * Si true, startDepartureSequence enchaîne aussi annonce + fermetures.
+   * En usage normal (stationCycle), reste false : les timers gèrent la suite.
+   */
+  autonomousDepartureSequence: false,
 };
 
 /** Avance l'horloge ; si on passe minuit, incrémente la date Tokyo d'un jour. */
@@ -124,4 +140,11 @@ export function resetRuntime(): void {
   runtime.sway = 0;
   runtime.platformFade = 0;
   runtime.platformSlide = 0;
+  runtime.departureBlockers.doorBlocked = false;
+  runtime.departureBlockers.heldAtStation = false;
+  runtime.departureBlockers.signalStop = false;
+  runtime.departureBlockers.emergency = false;
+  runtime.outOfService = false;
+  runtime.terminusStop = false;
+  runtime.autonomousDepartureSequence = false;
 }
