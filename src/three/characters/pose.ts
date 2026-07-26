@@ -108,6 +108,28 @@ function lerpW(current: number, target: number, k: number): number {
   return current + (target - current) * k;
 }
 
+// Avant-bras en pose « téléphone » : les deux mains convergent devant le
+// buste. Réutilisé par la rame et la foule du quai (mêmes os / même poids).
+export function applyPhoneArms(
+  p: { action: string; yaw: number; pos: THREE.Vector3 },
+  bones: CharacterClone['bones'],
+  state: PoseState,
+  k: number,
+  active: boolean,
+): void {
+  state.phoneW = lerpW(state.phoneW, active ? 1 : 0, k);
+  if (state.phoneW > 0.001 && bones.head) {
+    bones.head.updateWorldMatrix(true, false);
+    bones.head.getWorldPosition(vChest);
+    // Point devant le buste, sous le menton, dans la direction du regard.
+    vDir.set(Math.sin(p.yaw), 0, Math.cos(p.yaw));
+    vChest.addScaledVector(vDir, 0.28);
+    vChest.y -= 0.28;
+    if (bones.foreArmL) aimBone(bones.foreArmL, vChest, state.phoneW);
+    if (bones.foreArmR) aimBone(bones.foreArmR, vChest, state.phoneW);
+  }
+}
+
 // Applique tous les overrides d'un passager. `manualSit` : pas de clip assis
 // dans le pack → pose assise approximative par os (jambes pliées, dos rond).
 // Le clone fournit les os et les mesures de bind pose (jambes, bras).
@@ -145,18 +167,7 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
   }
 
   // --- Téléphone : les deux avant-bras remontent devant la poitrine. ---
-  const phoneActive = p.action === 'phone' && (seated || standing);
-  state.phoneW = lerpW(state.phoneW, phoneActive ? 1 : 0, k);
-  if (state.phoneW > 0.001 && bones.head) {
-    bones.head.updateWorldMatrix(true, false);
-    bones.head.getWorldPosition(vChest);
-    // Point devant le buste, sous le menton, dans la direction du regard.
-    vDir.set(Math.sin(p.yaw), 0, Math.cos(p.yaw));
-    vChest.addScaledVector(vDir, 0.28);
-    vChest.y -= 0.28;
-    if (bones.foreArmL) aimBone(bones.foreArmL, vChest, state.phoneW);
-    if (bones.foreArmR) aimBone(bones.foreArmR, vChest, state.phoneW);
-  }
+  applyPhoneArms(p, bones, state, k, p.action === 'phone' && (seated || standing));
 
   // --- Assise manuelle de secours (pack sans clip assis). ---
   state.sitW = lerpW(state.sitW, manualSit && seated ? 1 : 0, k);

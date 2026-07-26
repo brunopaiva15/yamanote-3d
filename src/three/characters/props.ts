@@ -1,14 +1,15 @@
 // Accessoires « Tokyo » superposés aux personnages librairie : lunettes,
-// masque chirurgical, sacs. Les modèles des packs n'en ont pas — on attache de
-// petits volumes à des groupes « suiveurs » recalés chaque frame sur la
-// transformation monde des os (tête, buste), en unités normalisées (le
-// personnage fait SKELETON_TOP=1.445 unités, comme l'ancien squelette).
+// masque chirurgical, sacs, téléphone. Les modèles des packs n'en ont pas —
+// on attache de petits volumes à des groupes « suiveurs » recalés chaque
+// frame sur la transformation monde des os (tête, buste, main), en unités
+// normalisées (le personnage fait SKELETON_TOP=1.445 unités, comme l'ancien
+// squelette).
 //
 // Les accessoires sont MODELÉS (coque bombée et plissée pour le masque,
-// sangles, poches et rabats pour les sacs) plutôt que de simples boîtes.
-// Toutes les géométries sont transformées « en dur » à la construction du
-// module et partagées entre les PNJ ; seuls les matériaux teintés (couleur de
-// sac) sont créés par passager.
+// sangles, poches et rabats pour les sacs, coque + écran pour le téléphone)
+// plutôt que de simples boîtes. Toutes les géométries sont transformées « en
+// dur » à la construction du module et partagées entre les PNJ ; seuls les
+// matériaux teintés (couleur de sac) sont créés par passager.
 
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
@@ -18,6 +19,7 @@ import type { BoneMap } from './library';
 export interface PropRig {
   headFollow: THREE.Group | null;
   spineFollow: THREE.Group | null;
+  handFollow: THREE.Group | null; // téléphone (main droite, repli gauche)
 }
 
 // Assombrit une couleur hex — accents des sacs (sangles, rabats, poches).
@@ -187,11 +189,40 @@ function makeHandBag(color: string): THREE.Group {
   return g;
 }
 
+// --- Téléphone -------------------------------------------------------------
+// Smartphone tenu dans la paume : coque sombre + dalle légèrement émissive.
+// Positionnée le long de +Y de l'os de main (poignet → doigts) et tournée
+// pour que l'écran regarde le visage quand les avant-bras sont en pose phone.
+
+const phoneBodyGeo = new RoundedBoxGeometry(0.042, 0.082, 0.009, 2, 0.004);
+const phoneScreenGeo = new THREE.BoxGeometry(0.034, 0.066, 0.0012);
+const phoneBodyMat = new THREE.MeshStandardMaterial({ color: '#1a1c20', roughness: 0.45, metalness: 0.25 });
+const phoneScreenMat = new THREE.MeshStandardMaterial({
+  color: '#7a96b0',
+  roughness: 0.28,
+  metalness: 0.05,
+  emissive: '#243848',
+  emissiveIntensity: 0.45,
+});
+
+function makePhone(): THREE.Group {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(phoneBodyGeo, phoneBodyMat));
+  const screen = new THREE.Mesh(phoneScreenGeo, phoneScreenMat);
+  screen.position.z = 0.0052;
+  g.add(screen);
+  // Poignet → paume : le long des doigts (+Y Quaternius), vers la paume (+Z).
+  g.position.set(0.01, 0.055, 0.022);
+  g.rotation.set(-0.55, 0.2, 0.35);
+  return g;
+}
+
 // Attache les accessoires du descripteur d'apparence ; renvoie les groupes
 // suiveurs à recaler chaque frame via updatePropRig. `allowBag` : false quand
-// le modèle a déjà son propre sac (évite le doublon).
+// le modèle a déjà son propre sac (évite le doublon). Le téléphone est
+// toujours créé (masqué) : n'importe quel PNJ peut passer en action « phone ».
 export function attachProps(wrap: THREE.Group, app: Appearance, allowBag = true): PropRig {
-  const rig: PropRig = { headFollow: null, spineFollow: null };
+  const rig: PropRig = { headFollow: null, spineFollow: null, handFollow: null };
 
   if (app.glasses || app.mask) {
     const head = new THREE.Group();
@@ -211,6 +242,13 @@ export function attachProps(wrap: THREE.Group, app: Appearance, allowBag = true)
     wrap.add(spine);
     rig.spineFollow = spine;
   }
+
+  const hand = new THREE.Group();
+  hand.matrixAutoUpdate = false;
+  hand.visible = false;
+  hand.add(makePhone());
+  wrap.add(hand);
+  rig.handFollow = hand;
 
   return rig;
 }
@@ -237,10 +275,24 @@ function followBone(follow: THREE.Group | null, bone: THREE.Bone | undefined, wr
 // Recale les groupes suiveurs sur les os (à appeler après les overrides).
 // `bagVisible` : les sacs sont posés pour la station debout — on les masque
 // quand le passager est assis (sinon le sac flotte à côté de lui).
-export function updatePropRig(rig: PropRig, bones: BoneMap, wrap: THREE.Group, bagVisible: boolean): void {
+// `phoneVisible` : téléphone dans la main (pose « phone » active).
+export function updatePropRig(
+  rig: PropRig,
+  bones: BoneMap,
+  wrap: THREE.Group,
+  bagVisible: boolean,
+  phoneVisible = false,
+): void {
   followBone(rig.headFollow, bones.head, wrap);
   if (rig.spineFollow) {
     rig.spineFollow.visible = bagVisible;
     if (bagVisible) followBone(rig.spineFollow, bones.spine, wrap);
+  }
+  if (rig.handFollow) {
+    rig.handFollow.visible = phoneVisible;
+    if (phoneVisible) {
+      const handBone = bones.handR ?? bones.handL ?? bones.foreArmR ?? bones.foreArmL;
+      followBone(rig.handFollow, handBone, wrap);
+    }
   }
 }
