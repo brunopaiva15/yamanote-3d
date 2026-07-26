@@ -12,6 +12,7 @@ import { Doors } from './three/Doors';
 import { Handles } from './three/Handles';
 import { Ads } from './three/Ads';
 import { Screens } from './three/Screens';
+import { DoorCloseLed } from './three/DoorCloseLed';
 import { Scenery } from './three/Scenery';
 import { Landmarks } from './three/Landmarks';
 import { SegmentEnvironment } from './three/SegmentEnvironment';
@@ -45,6 +46,7 @@ export default function App() {
         <Handles />
         <Ads />
         <Screens />
+        <DoorCloseLed />
         <Scenery />
         <Landmarks />
         <SegmentEnvironment />

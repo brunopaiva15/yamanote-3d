@@ -23,6 +23,7 @@ import { Doors } from '../three/Doors';
 import { Handles } from '../three/Handles';
 import { Ads } from '../three/Ads';
 import { Screens } from '../three/Screens';
+import { DoorCloseLed } from '../three/DoorCloseLed';
 
 const REF_URL = 'models/raw/e235-ref-module.glb';
 
@@ -145,6 +146,7 @@ export function CarProbe() {
             <Handles />
             <Ads />
             <Screens />
+            <DoorCloseLed />
           </>
         )}
         {showRef &&
