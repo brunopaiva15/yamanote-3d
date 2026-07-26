@@ -42,12 +42,40 @@ function syncSpeechVolume(): void {
   currentUtterance.volume = speechLevel();
 }
 
+// Voix visées, par langue : les Microsoft Natural annoncées par leur
+// identifiant Azure. L'API Web Speech ne les expose pas sous ce nom-là — Edge
+// renvoie « Microsoft Server Speech Text to Speech Voice (ja-JP, NanamiNeural) »
+// en voiceURI et « Microsoft Nanami Online (Natural) - Japanese (Japan) » en
+// name. On teste donc l'identifiant complet, puis le seul prénom de la voix
+// (Nanami, Aria), avant de retomber sur l'heuristique féminine.
+const PREFERRED_VOICE: Record<string, string> = {
+  ja: 'ja-JP-NanamiNeural',
+  en: 'en-US-AriaNeural',
+};
+
 const FEMALE_HINTS = ['female', 'kyoko', 'o-ren', 'haruka', 'sayaka', 'nanami', 'ayumi', 'samantha', 'zira', 'google'];
+
+// Réduit un nom de voix à ses lettres et chiffres : « (ja-JP, NanamiNeural) »
+// et « ja-JP-NanamiNeural » se rejoignent alors sur « jajpnanamineural ».
+function normalizeVoiceName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 
 function pickVoice(lang: string): SpeechSynthesisVoice | null {
   if (!('speechSynthesis' in window)) return null;
   const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.replace('_', '-').toLowerCase().startsWith(lang));
   if (voices.length === 0) return null;
+  const wanted = PREFERRED_VOICE[lang];
+  if (wanted) {
+    const id = normalizeVoiceName(wanted);
+    // Ex. « ja-JP-NanamiNeural » → « nanami ».
+    const firstName = normalizeVoiceName(wanted.split('-').pop() ?? '').replace(/neural$/, '');
+    const haystack = (v: SpeechSynthesisVoice) => normalizeVoiceName(`${v.name} ${v.voiceURI}`);
+    const exact = voices.find((v) => haystack(v).includes(id));
+    if (exact) return exact;
+    const byName = firstName.length > 0 ? voices.find((v) => haystack(v).includes(firstName)) : undefined;
+    if (byName) return byName;
+  }
   const female = voices.find((v) => FEMALE_HINTS.some((h) => v.name.toLowerCase().includes(h)));
   return female ?? voices[0];
 }
