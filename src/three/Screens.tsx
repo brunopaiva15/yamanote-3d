@@ -215,10 +215,10 @@ function drawRoute(
     CIRCLES[2],
     CIRCLES[1],
     CIRCLES[0],
-    [268, 384],
+    [236, 436],
   ];
   g.strokeStyle = YAMANOTE_GREEN;
-  g.lineWidth = 44;
+  g.lineWidth = 56;
   g.lineCap = 'round';
   g.lineJoin = 'round';
   g.beginPath();
@@ -234,13 +234,13 @@ function drawRoute(
   // Chevron rouge : sens de marche, en bout de courbe.
   g.fillStyle = '#c8362c';
   g.save();
-  g.translate(296, 362);
+  g.translate(305, 352);
   g.rotate(Math.PI - 1.05);
   g.beginPath();
-  g.moveTo(-10, -18);
-  g.lineTo(22, 0);
-  g.lineTo(-10, 18);
-  g.lineTo(2, 0);
+  g.moveTo(-14, -25);
+  g.lineTo(30, 0);
+  g.lineTo(-14, 25);
+  g.lineTo(3, 0);
   g.closePath();
   g.fill();
   g.restore();
@@ -265,7 +265,7 @@ function drawRoute(
     g.fillText(String(k === 0 && atStation ? 0 : minutes), mx, my + 8);
     if (k === 4) {
       g.font = `13px ${JP_FONT}`;
-      g.fillText('(分)', mx + 34, my + 6);
+      g.fillText(lang === 'jp' ? '(分)' : '(min)', mx + 34, my + 6);
     }
     // Nom de gare : en GROS, sans pastille, calé à droite juste avant la
     // courbe. L'ensemble forme une cascade diagonale qui épouse la courbe —
@@ -377,7 +377,7 @@ function drawLoopMap(
   // Ovale vert : rectangle arrondi dont les longs côtés passent par les
   // deux rangées de stations.
   g.strokeStyle = YAMANOTE_GREEN;
-  g.lineWidth = 26;
+  g.lineWidth = 30;
   g.beginPath();
   g.roundRect(X0 - 46, Y_TOP, (LOOP_COLS - 1) * DX + 92, Y_BOT - Y_TOP, (Y_BOT - Y_TOP) / 2);
   g.stroke();
@@ -409,7 +409,7 @@ function drawLoopMap(
         // ne chevauche pas un autre cercle de minutes.
         const [fx] = at(loopSlot((index + MINUTES_SHOWN) % 30));
         g.font = `9px ${JP_FONT}`;
-        g.fillText('(分)', x + (fx >= x ? 20 : -20), y + 3);
+        g.fillText(lang === 'jp' ? '(分)' : '(min)', x + (fx >= x ? 20 : -20), y + 3);
       }
     } else {
       g.beginPath();
@@ -418,18 +418,37 @@ function drawLoopMap(
       g.fill();
     }
 
-    // Nom vertical : suspendu au-dessus de la rangée haute, accroché sous
-    // la rangée basse.
-    const name = STATIONS[stIdx].kanji;
+    // Nom de gare : vertical en japonais ; en anglais, romaji INCLINÉ à 45°
+    // comme sur l'afficheur — au-dessus de la rangée haute en montant vers la
+    // droite, sous la rangée basse en descendant, ancré à la station.
     g.fillStyle = '#111214';
-    if (slot.top) {
-      const glyph = Math.min(13, Math.floor(52 / name.length));
-      drawVerticalName(g, name, x, Y_TOP - 22 - (name.length - 1) * glyph, glyph);
+    if (lang === 'jp') {
+      const name = STATIONS[stIdx].kanji;
+      if (slot.top) {
+        const glyph = Math.min(13, Math.floor(52 / name.length));
+        drawVerticalName(g, name, x, Y_TOP - 22 - (name.length - 1) * glyph, glyph);
+      } else {
+        // Les noms longs (高輪ゲートウェイ) démarrent plus haut avec un corps
+        // plancher, comme le petit texte serré de l'afficheur réel.
+        const glyph = Math.max(7, Math.min(13, Math.floor(46 / name.length)));
+        drawVerticalName(g, name, x, Y_BOT + (name.length >= 6 ? 26 : 32), glyph);
+      }
     } else {
-      // Les noms longs (高輪ゲートウェイ) démarrent plus haut avec un corps
-      // plancher, comme le petit texte serré de l'afficheur réel.
-      const glyph = Math.max(7, Math.min(13, Math.floor(46 / name.length)));
-      drawVerticalName(g, name, x, Y_BOT + (name.length >= 6 ? 26 : 32), glyph);
+      const name = STATIONS[stIdx].romaji;
+      g.save();
+      if (slot.top) {
+        g.translate(x - 2, Y_TOP - 18);
+        g.rotate(-0.8);
+        g.textAlign = 'left';
+      } else {
+        g.translate(x + 2, Y_BOT + 22);
+        g.rotate(-0.8);
+        g.textAlign = 'right';
+      }
+      g.font = `11px ${JP_FONT}`;
+      g.fillText(name, 0, 4);
+      g.restore();
+      g.textAlign = 'left';
     }
   }
 
@@ -444,10 +463,10 @@ function drawLoopMap(
   g.translate(cx, cy);
   g.rotate(Math.atan2(ny - py, nx - px));
   g.beginPath();
-  g.moveTo(-7, -12);
-  g.lineTo(15, 0);
-  g.lineTo(-7, 12);
-  g.lineTo(1, 0);
+  g.moveTo(-9, -16);
+  g.lineTo(20, 0);
+  g.lineTo(-9, 16);
+  g.lineTo(2, 0);
   g.closePath();
   g.fill();
   g.restore();
@@ -834,6 +853,99 @@ function drawSafetyNotice(s: ReturnType<typeof makeScreen>, index: number, clock
   g.fillText('Please do not rush onto the train.', w * 0.44, h * 0.78);
 }
 
+
+// --- Information trafic (運行情報) ---
+// L'afficheur réel relaie les perturbations de TOUTE la région de Tokyo, pas
+// seulement de la Yamanote — c'est presque toujours une autre ligne qui est
+// touchée. C'est aussi ce qui permet de rendre cet état honnêtement : notre
+// rame roule à l'heure, l'avis concerne un réseau voisin et se conclut par la
+// mention « la Yamanote circule normalement », comme en vrai.
+interface TrafficNotice {
+  lineJp: string;
+  lineEn: string;
+  reasonJp: string;
+  reasonEn: string;
+}
+
+const OTHER_LINES: [string, string][] = [
+  ['東急池上線', 'Tokyu Ikegami Line'],
+  ['中央線快速', 'Chuo Line (Rapid)'],
+  ['京王線', 'Keio Line'],
+  ['埼京線', 'Saikyo Line'],
+  ['東京メトロ東西線', 'Tokyo Metro Tozai Line'],
+  ['京成本線', 'Keisei Main Line'],
+];
+const DELAY_REASONS: [string, string][] = [
+  ['信号確認', 'a signal check'],
+  ['車内点検', 'an on-board inspection'],
+  ['踏切安全確認', 'a crossing safety check'],
+  ['混雑', 'congestion'],
+];
+
+// Une perturbation existe (ou non) par tranche de 30 minutes d'horloge : le
+// tirage est déterministe, les faces japonaise et anglaise décrivent donc le
+// même incident, et la plupart des tranches n'en ont aucun.
+function trafficNotice(clockMin: number): TrafficNotice | null {
+  const slot = Math.floor(clockMin / 30);
+  const r = rng(4200 + slot);
+  if (r() > 0.34) return null;
+  const [lineJp, lineEn] = OTHER_LINES[Math.floor(r() * OTHER_LINES.length)];
+  const [reasonJp, reasonEn] = DELAY_REASONS[Math.floor(r() * DELAY_REASONS.length)];
+  return { lineJp, lineEn, reasonJp, reasonEn };
+}
+
+function drawTrafficInfo(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  lang: ScreenLang,
+  notice: TrafficNotice,
+): void {
+  const { g, w, h } = s;
+  g.fillStyle = '#f4f6f7';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', lang);
+
+  // Triangle d'avertissement jaune.
+  const tx = 96;
+  const ty = h * 0.52;
+  g.fillStyle = '#f2c521';
+  g.strokeStyle = '#3a3418';
+  g.lineWidth = 4;
+  g.beginPath();
+  g.moveTo(tx, ty - 52);
+  g.lineTo(tx + 56, ty + 44);
+  g.lineTo(tx - 56, ty + 44);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#221f10';
+  g.textAlign = 'center';
+  g.font = `bold 56px ${JP_FONT}`;
+  g.fillText('!', tx, ty + 30);
+
+  g.textAlign = 'left';
+  g.fillStyle = '#14181c';
+  g.font = `bold 40px ${JP_FONT}`;
+  g.fillText(lang === 'jp' ? '運行情報' : 'Traffic Information', 190, ty - 26);
+  g.font = `22px ${JP_FONT}`;
+  g.fillStyle = '#26303a';
+  if (lang === 'jp') {
+    g.fillText(`${notice.lineJp}は、${notice.reasonJp}のため、`, 190, ty + 14);
+    g.fillText('遅れが出ています。', 190, ty + 46);
+    g.fillStyle = '#2f8f4e';
+    g.font = `20px ${JP_FONT}`;
+    g.fillText('山手線は平常どおり運転しています。', 190, ty + 84);
+  } else {
+    fitText(g, `The ${notice.lineEn} is delayed`, w - 210, 22, '');
+    g.fillText(`The ${notice.lineEn} is delayed`, 190, ty + 14);
+    g.fillText(`due to ${notice.reasonEn}.`, 190, ty + 46);
+    g.fillStyle = '#2f8f4e';
+    g.font = `20px ${JP_FONT}`;
+    g.fillText('The Yamanote Line is operating on schedule.', 190, ty + 84);
+  }
+}
+
 export function Screens() {
   const left = useMemo(() => makeScreen(512, 288), []);
   // DEUX canevas pour l'écran de droite : à l'approche, chaque paroi indique
@@ -875,6 +987,7 @@ export function Screens() {
     const clock = fmtClock(runtime.clockMin);
     const countdown = Math.round(secondsToArrival(phase, runtime.phaseT));
 
+    const notice = trafficNotice(runtime.clockMin);
     let state: string;
     let status: ScreenStatus;
     if (phase === 'brake') {
@@ -885,9 +998,10 @@ export function Screens() {
       state = ['loopJP', 'loopEN', 'zoomJP', 'zoomEN', 'platform'][tick % 5];
     } else {
       status = 'next';
-      state = ['loopJP', 'zoomJP', 'transfers', 'loopEN', 'zoomEN', 'priority', 'zoomJP', 'manners', 'loopJP', 'safety'][
-        tick % 10
-      ];
+      const rotation = notice
+        ? ['loopJP', 'zoomJP', 'transfers', 'trafficJP', 'loopEN', 'zoomEN', 'trafficEN', 'priority', 'zoomJP', 'manners', 'loopJP', 'safety']
+        : ['loopJP', 'zoomJP', 'transfers', 'loopEN', 'zoomEN', 'priority', 'zoomJP', 'manners', 'loopJP', 'safety'];
+      state = rotation[tick % rotation.length];
     }
 
     const key = `${index}|${phase}|${state}|${clock}|${doorSide}|${state.startsWith('loop') || state.startsWith('zoom') ? countdown : 0}`;
@@ -917,6 +1031,14 @@ export function Screens() {
           break;
         case 'manners':
           drawBanner(g);
+          break;
+        case 'trafficJP':
+          if (notice) drawTrafficInfo(g, index, clock, 'jp', notice);
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp');
+          break;
+        case 'trafficEN':
+          if (notice) drawTrafficInfo(g, index, clock, 'en', notice);
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'en');
           break;
         case 'loopJP':
           drawLoopMap(g, index, phase, countdown, clock, status, 'jp');
