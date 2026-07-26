@@ -1,6 +1,7 @@
-// Moteur audio (Tone.js), tout synthétisé : roulement, onduleur VVVF, joints
-// de rail, freinage, carillons de porte, jingle d'arrivée et mélodies de
-// départ originales. Démarré uniquement au clic « Monter à bord ».
+// Moteur audio (Tone.js) : roulement, onduleur VVVF, joints de rail, freinage,
+// carillons de porte, jingle d'arrivée — synthétisés — et mélodies de départ
+// (発車メロディ) : clip quai réel quand disponible (voir data/melodies.ts),
+// sinon synthèse. Démarré uniquement au clic « Monter à bord ».
 //
 // Spatialisation : tout ce qui sort de la SONORISATION (carillons de porte,
 // jingle d'arrivée, souffle de ligne des annonces) passe par un bus « PA »
@@ -18,13 +19,33 @@
 // (speakerProximity, lu par systems/speech.ts).
 //
 // Hook fichiers locaux : playClip(name, fallback) joue public/audio/<name>.mp3
-// s'il existe (déposez vos propres enregistrements), sinon retombe sur la
-// synthèse. Les clips locaux passent eux aussi par le bus spatialisé.
-// Aucun asset audio protégé n'est fourni.
+// s'il existe, sinon retombe sur la synthèse. audioManager.playOnce(path) joue
+// un chemin (ex. /audio/melodies/…) une seule fois sans relancer. Les clips
+// locaux passent eux aussi par le bus spatialisé.
 
 import * as Tone from 'tone';
-import { STATIONS } from '../data/stations';
 import { CABIN_SPEAKERS, CONFIG, PLATFORM_SPEAKERS } from '../data/config';
+import {
+  EBISU_INNER_THIRD_MAN_F_PATH,
+  INNER_MAIN_MELODY_PATH,
+  IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
+  IKEBUKURO_INNER_BIC_CAMERA_B_PATH,
+  KANDA_INNER_MONDAMIN_B_PATH,
+  KANDA_OUTER_MONDAMIN_A_PATH,
+  KOMAGOME_INNER_SAKURA_V2_PATH,
+  KOMAGOME_OUTER_SAKURA_A_PATH,
+  OSAKI_INNER_SECONDARY_MELODY_PATH,
+  OSAKI_OUTER_SECONDARY_MELODY_PATH,
+  OUTER_MAIN_MELODY_PATH,
+  SESERAGI_MELODY_PATH,
+  TAKADANOBABA_INNER_ATOM_B_PATH,
+  TAKADANOBABA_OUTER_ATOM_A_PATH,
+  TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH,
+  TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH,
+  UGUISUDANI_INNER_HARU_TREMOLO_PATH,
+} from '../data/melodies';
+import { STATIONS } from '../data/stations';
+import { buildDepartureContext, playDepartureMelodyForContext } from './departureSequence';
 
 interface Nodes {
   master: Tone.Gain;
@@ -479,19 +500,43 @@ function synthMelody(index: number): void {
 
 const clipAvailable = new Map<string, boolean>();
 
-async function probeClip(name: string): Promise<boolean> {
-  const cached = clipAvailable.get(name);
+/** Résout un chemin logique (/audio/...) en URL relative compatible base Vite. */
+function resolveAudioUrl(pathOrName: string): string {
+  if (pathOrName.startsWith('/')) {
+    const base = import.meta.env.BASE_URL || './';
+    const normalized = base.endsWith('/') ? base : `${base}/`;
+    return `${normalized}${pathOrName.replace(/^\//, '')}`;
+  }
+  if (pathOrName.includes('/')) {
+    const base = import.meta.env.BASE_URL || './';
+    const normalized = base.endsWith('/') ? base : `${base}/`;
+    return `${normalized}${pathOrName.replace(/^\//, '')}`;
+  }
+  return `audio/${pathOrName}.mp3`;
+}
+
+async function probeUrl(url: string): Promise<boolean> {
+  const cached = clipAvailable.get(url);
   if (cached !== undefined) return cached;
   let ok = false;
   try {
-    const res = await fetch(`audio/${name}.mp3`, { method: 'HEAD' });
+    const res = await fetch(url, { method: 'HEAD' });
     const type = res.headers.get('content-type') ?? '';
-    ok = res.ok && type.includes('audio');
+    ok = res.ok && (type.includes('audio') || type.includes('octet-stream') || type === '');
+    // Certains serveurs statiques omettent content-type sur HEAD : retenter GET partiel.
+    if (res.ok && !ok) {
+      const get = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' } });
+      ok = get.ok;
+    }
   } catch {
     ok = false;
   }
-  clipAvailable.set(name, ok);
+  clipAvailable.set(url, ok);
   return ok;
+}
+
+async function probeClip(name: string): Promise<boolean> {
+  return probeUrl(resolveAudioUrl(name));
 }
 
 // Un clip local rejoint le MÊME bus spatialisé que sa version synthétisée :
@@ -515,13 +560,95 @@ function routeClip(el: HTMLAudioElement, bus: Bus): void {
 
 export async function playClip(name: string, fallback: () => void, bus: Bus = 'cabin'): Promise<void> {
   if (await probeClip(name)) {
-    const el = new Audio(`audio/${name}.mp3`);
+    const el = new Audio(resolveAudioUrl(name));
     routeClip(el, bus);
     void el.play().catch(() => fallback());
   } else {
     fallback();
   }
 }
+
+// --- audioManager : lecture unique / arrêt par chemin ---
+
+const activeByPath = new Map<string, HTMLAudioElement>();
+const playWaiters = new Map<string, Array<() => void>>();
+
+function notifyPlayDone(path: string): void {
+  const waiters = playWaiters.get(path);
+  if (!waiters) return;
+  playWaiters.delete(path);
+  for (const w of waiters) w();
+}
+
+function waitForPath(path: string): Promise<void> {
+  return new Promise((resolve) => {
+    const list = playWaiters.get(path) ?? [];
+    list.push(resolve);
+    playWaiters.set(path, list);
+  });
+}
+
+/**
+ * Joue un fichier audio une seule fois. Si le même chemin est déjà en cours,
+ * ne relance pas et attend la fin de la lecture existante.
+ * @returns false si le fichier est introuvable.
+ */
+async function playOnce(path: string, bus: Bus = 'platform'): Promise<boolean> {
+  const existing = activeByPath.get(path);
+  if (existing && !existing.paused && !existing.ended) {
+    await new Promise<void>((resolve) => {
+      const el = activeByPath.get(path);
+      if (!el || el.paused || el.ended) {
+        resolve();
+        return;
+      }
+      const list = playWaiters.get(path) ?? [];
+      list.push(resolve);
+      playWaiters.set(path, list);
+    });
+    return true;
+  }
+
+  const url = resolveAudioUrl(path);
+  if (!(await probeUrl(url))) return false;
+
+  const el = new Audio(url);
+  activeByPath.set(path, el);
+  routeClip(el, bus);
+
+  const finished = waitForPath(path);
+  const done = () => {
+    if (activeByPath.get(path) === el) activeByPath.delete(path);
+    notifyPlayDone(path);
+  };
+  el.addEventListener('ended', done, { once: true });
+  el.addEventListener('error', done, { once: true });
+  void el.play().catch(done);
+  await finished;
+  return true;
+}
+
+/** Arrête un clip lancé via playOnce (annulation de départ, urgence…). */
+function stop(path: string): void {
+  const el = activeByPath.get(path);
+  if (!el) {
+    notifyPlayDone(path);
+    return;
+  }
+  el.pause();
+  el.currentTime = 0;
+  activeByPath.delete(path);
+  notifyPlayDone(path);
+}
+
+export const audioManager = {
+  playOnce,
+  stop,
+  isPlaying(path: string): boolean {
+    const el = activeByPath.get(path);
+    return !!el && !el.paused && !el.ended;
+  },
+};
 
 export function doorOpenChime(): void {
   void playClip('door-open', synthDoorOpen);
@@ -532,6 +659,41 @@ export function doorCloseChime(): void {
 export function arrivalJingle(): void {
   void playClip('arrival', synthArrival);
 }
+
+/**
+ * 発車メロディ : clips Inner/Outer Main selon quai et sens, sinon
+ * melody-JYXX.mp3 ou synthèse. Délègue la sélection à departureSequence
+ * (évite les doubles lectures via departureId).
+ */
 export function departureMelody(index: number): void {
-  void playClip(`melody-${STATIONS[index].jy}`, () => synthMelody(index), 'platform');
+  const ctx = buildDepartureContext({
+    departureSequenceStarted: true,
+    stationIndex: index,
+  });
+  void playDepartureMelodyForContext(ctx).then((played) => {
+    if (!played) {
+      void playClip(`melody-${STATIONS[index].jy}`, () => synthMelody(index), 'platform');
+    }
+  });
+}
+
+/** Arrêt d'urgence des clips de départ connus (reset / quitter la gare). */
+export function stopDepartureMelodyClips(): void {
+  audioManager.stop(INNER_MAIN_MELODY_PATH);
+  audioManager.stop(OUTER_MAIN_MELODY_PATH);
+  audioManager.stop(OSAKI_INNER_SECONDARY_MELODY_PATH);
+  audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
+  audioManager.stop(KOMAGOME_OUTER_SAKURA_A_PATH);
+  audioManager.stop(KOMAGOME_INNER_SAKURA_V2_PATH);
+  audioManager.stop(UGUISUDANI_INNER_HARU_TREMOLO_PATH);
+  audioManager.stop(SESERAGI_MELODY_PATH);
+  audioManager.stop(TAKADANOBABA_OUTER_ATOM_A_PATH);
+  audioManager.stop(TAKADANOBABA_INNER_ATOM_B_PATH);
+  audioManager.stop(EBISU_INNER_THIRD_MAN_F_PATH);
+  audioManager.stop(TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH);
+  audioManager.stop(TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH);
+  audioManager.stop(KANDA_OUTER_MONDAMIN_A_PATH);
+  audioManager.stop(KANDA_INNER_MONDAMIN_B_PATH);
+  audioManager.stop(IKEBUKURO_INNER_BIC_CAMERA_A_PATH);
+  audioManager.stop(IKEBUKURO_INNER_BIC_CAMERA_B_PATH);
 }

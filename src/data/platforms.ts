@@ -1,6 +1,6 @@
 // Numéros de quai (platform) réels de la Yamanote, par gare et par sens.
-// Données de référence pour usage futur (affichage, annonces, orientation…).
-// Non branchées au runtime pour l'instant.
+// Utilisés au runtime pour la 発車メロディ (voir data/melodies.ts) et
+// disponibles pour affichage / annonces / orientation.
 //
 // 内回り (inner) = sens STATIONS[i] → STATIONS[(i+1)%30] (Tokyo → Kanda → …).
 // 外回り (outer) = sens inverse (Tokyo → Yūrakuchō → …).

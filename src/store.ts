@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 import { CONFIG } from './data/config';
+import type { LoopDirection } from './data/platforms';
 import { DOOR_SIDE } from './data/stations';
 import { runtime, tokyoNow } from './systems/runtime';
 
@@ -16,6 +17,8 @@ interface AppState {
   index: number; // station suivante (en roulant) ou courante (à quai)
   phase: Phase;
   doorSide: 1 | -1;
+  /** Sens de circulation : 内回り (inner) par défaut — boucle actuelle du sim. */
+  loopDirection: LoopDirection;
   seated: boolean;
   touch: boolean; // interface tactile active
 
@@ -25,6 +28,7 @@ interface AppState {
   setPhase: (p: Phase) => void;
   setIndex: (i: number) => void;
   setDoorSide: (s: 1 | -1) => void;
+  setLoopDirection: (d: LoopDirection) => void;
   setSeated: (b: boolean) => void;
   setTouch: (b: boolean) => void;
 }
@@ -37,6 +41,7 @@ export const useStore = create<AppState>((set) => ({
   // Valeurs par défaut avant boarding ; randomizeEntry() les remplace.
   phase: 'cruise',
   doorSide: DOOR_SIDE[CONFIG.startIndex],
+  loopDirection: 'inner',
   seated: false,
   touch: false,
 
@@ -57,6 +62,7 @@ export const useStore = create<AppState>((set) => ({
   setPhase: (phase) => set({ phase }),
   setIndex: (index) => set({ index }),
   setDoorSide: (doorSide) => set({ doorSide }),
+  setLoopDirection: (loopDirection) => set({ loopDirection }),
   setSeated: (seated) => set({ seated }),
   setTouch: (touch) => set({ touch }),
 }));
