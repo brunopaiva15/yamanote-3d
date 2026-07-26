@@ -59,21 +59,57 @@ const WALL_THICKNESS = 0.08;
 // Diffuseur linéaire de climatisation : même emprise que le caisson central.
 const DUCT_LENGTH = HL * 2 - 0.8;
 
-// Largeur de la bande de sol qui porte le marquage : le dégagement entre
-// l'axe de l'allée et le nez des banquettes (elles commencent vers x = 0,80).
+// --- Sols teintés des travées d'about ---
+// La limite entre rouge et magenta n'est pas l'axe du wagon : le rouge
+// prioritaire traverse l'ouverture de la porte d'intercirculation et s'arrête
+// à son montant opposé, le magenta n'occupe que le reste. Le rouge est donc
+// nettement le plus large des deux.
+const HALF_FLOOR = HW + 0.06;
+const GANGWAY_HALF = 0.42; // demi-ouverture de la porte d'about
+// Largeur de la bande qui porte le marquage, côté banquettes : le dégagement
+// entre l'axe de l'allée et le nez des sièges (ils commencent vers x = 0,80).
 const MARK_W = 0.86;
 
-// Sols teintés des quatre demi-travées d'about : rouge prioritaire partout,
-// sauf là où la zone libre prend la place d'une banquette (voir systems/seats).
-const END_FLOORS = ([1, -1] as const).flatMap((e) =>
-  ([1, -1] as const).map((side) => ({
-    key: `${e}${side}`,
-    side,
-    z0: e === 1 ? 7.5 + DOOR_HW : -HL,
-    z1: e === 1 ? HL : -7.5 - DOOR_HW,
-    free: FREE_SPACE !== null && FREE_SPACE.side === side && FREE_SPACE.z0 * e > 0,
-  })),
-);
+interface FloorStrip {
+  key: string;
+  x0: number;
+  x1: number;
+  z0: number;
+  z1: number;
+  free: boolean;
+  marked: boolean;
+}
+
+function buildEndFloors(): FloorStrip[] {
+  const out: FloorStrip[] = [];
+  for (const e of [1, -1] as const) {
+    const z0 = e === 1 ? 7.5 + DOOR_HW : -HL;
+    const z1 = e === 1 ? HL : -7.5 - DOOR_HW;
+    // Côté de la zone libre à cette extrémité, s'il y en a une.
+    const freeSide = FREE_SPACE !== null && FREE_SPACE.z0 * e > 0 ? FREE_SPACE.side : 0;
+    const push = (key: string, x0: number, x1: number, free: boolean, marked: boolean) => {
+      if (Math.abs(x1 - x0) > 0.01) out.push({ key: `${e}${key}`, x0, x1, z0, z1, free, marked });
+    };
+    if (freeSide === 0) {
+      // Places prioritaires des deux côtés : rouge sur toute la travée.
+      for (const side of [1, -1] as const) {
+        push(`p${side}`, 0, side * MARK_W, false, true);
+        push(`pw${side}`, side * MARK_W, side * HALF_FLOOR, false, false);
+      }
+    } else {
+      const f = freeSide;
+      // Magenta : du montant de porte opposé jusqu'à la paroi, marquage compris.
+      push('f', f * GANGWAY_HALF, f * HALF_FLOOR, true, true);
+      // Rouge : tout le reste, y compris la traversée de l'ouverture de porte.
+      push('rg', f * GANGWAY_HALF, 0, false, false);
+      push('r', 0, -f * MARK_W, false, true);
+      push('rw', -f * MARK_W, -f * HALF_FLOOR, false, false);
+    }
+  }
+  return out;
+}
+
+const END_FLOORS = buildEndFloors();
 
 // Bandeau de paroi percé d'une baie à coins arrondis, pour un segment donné.
 // Construit à plat (x = longueur, y = hauteur) puis redressé à l'usage par une
@@ -264,25 +300,22 @@ export function Car() {
           côté places prioritaires, magenta côté zone libre, chaque demi-largeur
           traitée séparément. */}
       {END_FLOORS.map((f) => (
-        <group key={`ef${f.key}`}>
-          {/* Partie dégagée, côté allée : c'est elle qui porte le marquage.
-              Le texte serait illisible s'il passait sous les banquettes. */}
-          <mesh
-            position={[f.side * (MARK_W / 2), 0.004, (f.z0 + f.z1) / 2]}
-            rotation={[-Math.PI / 2, 0, f.z1 > 0 ? Math.PI : 0]}
-            material={f.free ? materials.freeSpaceFloor : materials.priorityFloor}
-          >
-            <planeGeometry args={[MARK_W, f.z1 - f.z0]} />
-          </mesh>
-          {/* Prolongement uni jusqu'à la paroi, sous les banquettes */}
-          <mesh
-            position={[f.side * (MARK_W + (HW + 0.06 - MARK_W) / 2), 0.004, (f.z0 + f.z1) / 2]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            material={f.free ? materials.freeFloorPlain : materials.priorityFloorPlain}
-          >
-            <planeGeometry args={[HW + 0.06 - MARK_W, f.z1 - f.z0]} />
-          </mesh>
-        </group>
+        <mesh
+          key={`ef${f.key}`}
+          position={[(f.x0 + f.x1) / 2, 0.004, (f.z0 + f.z1) / 2]}
+          rotation={[-Math.PI / 2, 0, f.z1 > 0 ? Math.PI : 0]}
+          material={
+            f.marked
+              ? f.free
+                ? materials.freeSpaceFloor
+                : materials.priorityFloor
+              : f.free
+                ? materials.freeFloorPlain
+                : materials.priorityFloorPlain
+          }
+        >
+          <planeGeometry args={[Math.abs(f.x1 - f.x0), f.z1 - f.z0]} />
+        </mesh>
       ))}
 
       {/* Plafond et caisson central */}
