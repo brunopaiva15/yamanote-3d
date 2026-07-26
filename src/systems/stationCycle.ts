@@ -57,6 +57,7 @@ const TAKANAWA_GATEWAY_INNER_GLORIOUS_A_SECS = 12.7;
 const TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_SECS = 8.1;
 const KANDA_OUTER_MONDAMIN_A_SECS = 11.7;
 const KANDA_INNER_MONDAMIN_B_SECS = 11.2;
+const IKEBUKURO_INNER_BIC_CAMERA_A_SECS = 13.7;
 /** Marge entre fin de mélodie et annonce de fermeture. */
 const MELODY_TO_ANNOUNCE_GAP = 3.5;
 
@@ -67,6 +68,9 @@ function melodyBudgetSeconds(stationIndex: number): number {
   if (jy === 'JY24' && runtime.useAlternativePlatform) {
     if (dir === 'inner') return OSAKI_INNER_SECONDARY_MELODY_SECS;
     if (dir === 'outer') return OSAKI_OUTER_SECONDARY_MELODY_SECS;
+  }
+  if (jy === 'JY13' && dir === 'inner' && runtime.useAlternativePlatform) {
+    return IKEBUKURO_INNER_BIC_CAMERA_A_SECS;
   }
   if (jy === 'JY10') {
     if (dir === 'outer') return KOMAGOME_OUTER_SAKURA_A_SECS;

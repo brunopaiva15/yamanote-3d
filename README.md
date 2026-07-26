@@ -201,6 +201,9 @@ uniquement `JY02` + Outer + plateforme **2** → Tokyo.
 Clip Kanda Inner : `public/audio/melodies/17_mondamin-cm-song-b.mp3` (モンダミンCMソング ver.B),
 uniquement `JY02` + Inner + plateforme **3** → Akihabara.
 
+Clip Ikebukuro Inner voie 5 : `public/audio/melodies/18_bic-camera-theme-a.mp3` (ビックカメラテーマソング ver.A),
+uniquement `JY13` + Inner + plateforme **5** → Mejiro (quai secondaire via `useAlternativePlatform`). La voie 6 (ver.B) n’est pas encore fournie.
+
 ### Sonorisation en 3D
 
 Le son de la sonorisation est spatialisé : il sort des haut-parleurs, pas du

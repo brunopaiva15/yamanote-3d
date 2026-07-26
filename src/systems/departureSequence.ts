@@ -6,6 +6,7 @@
 import {
   EBISU_INNER_THIRD_MAN_F_PATH,
   INNER_MAIN_MELODY_PATH,
+  IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
   KANDA_INNER_MONDAMIN_B_PATH,
   KANDA_OUTER_MONDAMIN_A_PATH,
   KOMAGOME_INNER_SAKURA_V2_PATH,
@@ -21,6 +22,7 @@ import {
   UGUISUDANI_INNER_HARU_TREMOLO_PATH,
   makeDepartureId,
   shouldPlayEbisuInnerThirdManF,
+  shouldPlayIkebukuroInnerBicCameraA,
   shouldPlayInnerMainMelody,
   shouldPlayKandaInnerMondaminB,
   shouldPlayKandaOuterMondaminA,
@@ -65,6 +67,7 @@ let gloriousGatewayAPlaying = false;
 let gloriousGatewayBPlaying = false;
 let kandaMondaminAPlaying = false;
 let kandaMondaminBPlaying = false;
+let bicCameraAPlaying = false;
 
 export function isDepartureBlocked(): boolean {
   const b = runtime.departureBlockers;
@@ -97,6 +100,7 @@ export function resetMelodyDepartureGuard(): void {
   gloriousGatewayBPlaying = false;
   kandaMondaminAPlaying = false;
   kandaMondaminBPlaying = false;
+  bicCameraAPlaying = false;
 }
 
 /** Dérive l'état train pour la mélodie à partir de la phase et des portes. */
@@ -249,6 +253,11 @@ export function stopKandaInnerMondaminB(): void {
   kandaMondaminBPlaying = false;
 }
 
+export function stopIkebukuroInnerBicCameraA(): void {
+  audioManager.stop(IKEBUKURO_INNER_BIC_CAMERA_A_PATH);
+  bicCameraAPlaying = false;
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
@@ -266,6 +275,7 @@ export function cancelDepartureMelody(): void {
   stopTakanawaGatewayOuterGloriousB();
   stopKandaOuterMondaminA();
   stopKandaInnerMondaminB();
+  stopIkebukuroInnerBicCameraA();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -584,6 +594,32 @@ export async function playKandaInnerMondaminB(
   }
 }
 
+/**
+ * Bic Camera Theme Song ver.A : Ikebukuro Inner voie 5 → Mejiro, une fois par départ.
+ * Ne nécessite pas departureAuthorized (préparation du départ).
+ */
+export async function playIkebukuroInnerBicCameraA(
+  context: MelodyPlayContext,
+): Promise<boolean> {
+  if (!shouldPlayIkebukuroInnerBicCameraA(context)) return false;
+  if (context.emergencyActive) return false;
+  if (runtime.departureBlockers.heldAtStation) return false;
+  if (bicCameraAPlaying) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  bicCameraAPlaying = true;
+  try {
+    const ok = await audioManager.playOnce(IKEBUKURO_INNER_BIC_CAMERA_A_PATH);
+    if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+      runtime.lastMelodyDepartureId = null;
+    }
+    return ok;
+  } finally {
+    bicCameraAPlaying = false;
+  }
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -606,8 +642,12 @@ async function departTrain(): Promise<void> {
  */
 export async function playDepartureMelodyForContext(context: MelodyPlayContext): Promise<boolean> {
   if (context.trainState !== 'stopped_doors_open') return false;
-  if (context.departureAuthorized === false) return false;
   if (context.emergencyActive) return false;
+
+  // Bic Camera A (voie 5) : peut démarrer sans departureAuthorized.
+  if (await playIkebukuroInnerBicCameraA(context)) return true;
+
+  if (context.departureAuthorized === false) return false;
   if (isDepartureBlocked()) return false;
 
   if (await playOsakiInnerSecondaryMelody(context)) return true;
@@ -634,14 +674,15 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
  */
 export async function startDepartureSequence(context: MelodyPlayContext): Promise<void> {
   if (context.trainState !== 'stopped_doors_open') return;
-  if (context.departureAuthorized === false) return;
   if (context.emergencyActive) return;
-  if (isDepartureBlocked()) return;
 
   await playDepartureMelodyForContext(context);
 
-  if (context.emergencyActive || isDepartureBlocked()) {
-    cancelDepartureMelody();
+  // Fermeture / départ uniquement si autorisé ; l’interruption n’avance pas la séquence.
+  if (context.departureAuthorized === false || isDepartureBlocked()) {
+    if (context.emergencyActive || isDepartureBlocked()) {
+      cancelDepartureMelody();
+    }
     return;
   }
 

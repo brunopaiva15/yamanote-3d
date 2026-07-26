@@ -317,6 +317,27 @@ export const KANDA_INNER_MONDAMIN_B = {
   nextStationName: 'Akihabara',
 };
 
+/** Chemin : Bic Camera Theme Song ver.A — Ikebukuro Inner voie 5 (secondaire). */
+export const IKEBUKURO_INNER_BIC_CAMERA_A_PATH =
+  '/audio/melodies/18_bic-camera-theme-a.mp3';
+
+/** Config exclusive : Ikebukuro Inner Loop plateforme 5 → Mejiro. */
+export const IKEBUKURO_INNER_BIC_CAMERA_A = {
+  id: 'bic-camera-theme-ver-a',
+  name: 'Bic Camera Theme Song ver.A',
+  japaneseName: 'ビックカメラテーマソング ver.A',
+  file: IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
+  type: 'departure_melody' as const,
+  audioSource: 'platform_speakers' as const,
+  line: 'yamanote',
+  stationCode: 'JY13',
+  stationName: 'Ikebukuro',
+  direction: 'inner' as const,
+  platform: 5,
+  nextStationCode: 'JY14',
+  nextStationName: 'Mejiro',
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -798,6 +819,34 @@ export function shouldPlayKandaInnerMondaminB(ctx: MelodyPlayContext): boolean {
   if (ctx.trainState !== 'stopped_doors_open') return false;
   if (!ctx.departureSequenceStarted) return false;
   if (ctx.departureAuthorized === false) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * Bic Camera Theme Song ver.A : exclusivement Ikebukuro (JY13) Inner Loop plateforme 5 → Mejiro.
+ * La voie 6 (principale) utilisera ver.B. Ne pas exiger departureAuthorized.
+ */
+export function shouldPlayIkebukuroInnerBicCameraA(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== IKEBUKURO_INNER_BIC_CAMERA_A.stationCode) return false;
+  if (ctx.direction !== 'inner') return false;
+  if (Number(ctx.platform) !== IKEBUKURO_INNER_BIC_CAMERA_A.platform) return false;
+
+  if (
+    ctx.nextStationCode &&
+    ctx.nextStationCode !== IKEBUKURO_INNER_BIC_CAMERA_A.nextStationCode
+  ) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
   if (ctx.emergencyActive) return false;
 
   if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
