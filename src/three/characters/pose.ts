@@ -10,8 +10,10 @@ import * as THREE from 'three';
 import type { Pax } from '../../systems/passengers';
 import type { CharacterClone } from './library';
 
-// Hauteur de l'anneau des tsurikawa (voir three/Handles.tsx).
-const STRAP_RING_Y = 1.64;
+// Hauteur du centre de l'anneau des tsurikawa (voir three/Handles.tsx :
+// barre à 2,0 m, attache courte — l'anneau est remonté pour que le joueur ne
+// se le prenne plus dans la tête).
+const STRAP_RING_Y = 1.77;
 
 // Poids lissés par passager (persistent entre frames).
 export interface PoseState {

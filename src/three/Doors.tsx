@@ -56,14 +56,22 @@ export function Doors() {
     [],
   );
 
-  // Vitres à coins arrondis (comme sur l'E235) et leur encadrement.
+  // Vitres à coins arrondis (comme sur l'E235) et leur encadrement — et
+  // surtout le VANTAIL lui-même, percé de la même baie : la vitre était
+  // plaquée sur un panneau plein, on voyait la tôle au travers au lieu du
+  // dehors. Le panneau est extrudé autour de la découpe.
   const windowGeos = useMemo(() => {
     const glassShape = roundedRect(0.42, 0.78, 0.09);
     const frameShape = roundedRect(0.5, 0.86, 0.11);
     frameShape.holes.push(roundedRect(0.42, 0.78, 0.09));
+    const panelShape = roundedRect(PANEL_W, DOOR_H, 0.01, 0, DOOR_H / 2);
+    panelShape.holes.push(roundedRect(0.42, 0.78, 0.09, 0, 1.32));
+    const panel = new THREE.ExtrudeGeometry(panelShape, { depth: 0.05, bevelEnabled: false });
+    panel.translate(0, 0, -0.025);
     return {
       glass: new THREE.ShapeGeometry(glassShape, 16),
       frame: new THREE.ShapeGeometry(frameShape, 16),
+      panel,
     };
   }, []);
 
@@ -93,10 +101,13 @@ export function Doors() {
                 }}
                 position={[s * (CONFIG.carHalfWidth + 0.03), 0, baseZ]}
               >
-                {/* Vantail */}
-                <mesh position={[0, DOOR_H / 2, 0]} material={materials.panel}>
-                  <boxGeometry args={[0.05, DOOR_H, PANEL_W]} />
-                </mesh>
+                {/* Vantail percé de sa baie : on voit dehors au travers */}
+                <mesh
+                  geometry={windowGeos.panel}
+                  position={[0, 0, 0]}
+                  rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
+                  material={materials.panel}
+                />
                 {/* Encadrement de vitre à coins arrondis */}
                 <mesh
                   geometry={windowGeos.frame}

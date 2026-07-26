@@ -93,7 +93,15 @@ export function updateSegmentEnv(dt: number): void {
 
   // Ponts : gate fondu sur le poids du type porteur, ombrage analytique
   // (zéro allocation) depuis la position des deux tabliers recyclés.
-  segEnv.bridgeW = spec.bridges ? smoothstep(0.5, 0.8, segEnv.w[spec.kind]) : 0;
+  // Le gate suit AUSSI la hauteur de mur : le tablier est posé sur les murs
+  // de la tranchée, et quand elle s'ouvre à l'approche d'une gare, les murs
+  // fondent — sans ce facteur, le tablier descendait avec eux jusqu'à
+  // traverser le wagon. Il s'estompe dès que les murs passent sous ~3,9 m,
+  // la hauteur qui le tient au-dessus de la caisse (le rendu borne en plus
+  // la hauteur du tablier, ceinture et bretelles).
+  segEnv.bridgeW = spec.bridges
+    ? smoothstep(0.5, 0.8, segEnv.w[spec.kind]) * smoothstep(3.4, 3.9, segEnv.wallH)
+    : 0;
   let shade = 0;
   if (segEnv.bridgeW > 0.01) {
     for (let b = 0; b < BRIDGE_COUNT; b++) {

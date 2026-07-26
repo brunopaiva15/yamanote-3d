@@ -384,9 +384,9 @@ function Arm({ spec, s, armRef }: { spec: CharSpec; s: -1 | 1; armRef: ArmRef })
 }
 
 // Postures : cible (rotX épaule, rotZ épaule, rotX coude) selon état / action.
-// PAS d'allongement de bras : les tailles sont réalistes, l'anneau est à sa
-// hauteur réelle (~1,64 m) et le coude se plie en fonction de la taille du PNJ
-// (les petits gabarits ne s'accrochent pas du tout, voir systems/passengers).
+// PAS d'allongement de bras : les tailles sont réalistes, le bas de l'anneau
+// est à ~1,71 m et le coude se plie en fonction de la taille du PNJ (les
+// petits gabarits ne s'accrochent pas du tout, voir systems/passengers).
 function armTarget(
   p: (typeof paxList)[number],
   s: -1 | 1,
@@ -400,7 +400,7 @@ function armTarget(
     // Bras levé vers l'anneau situé pile au-dessus (le PNJ est en x = ±0,45,
     // comme les rangées de poignées). Un grand plie nettement le coude, un
     // petit tend presque le bras : la main finit à hauteur d'anneau.
-    const excess = 1.57 * p.height - 1.56; // dépassement de la portée (m)
+    const excess = 1.68 * p.height - 1.7; // dépassement de la portée (m)
     const bend = Math.acos(THREE.MathUtils.clamp(1 - Math.max(0, excess) / 0.5, 0.55, 1));
     return [0, Math.PI + s * 0.26, -Math.max(0.1, bend)];
   }

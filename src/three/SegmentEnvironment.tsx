@@ -213,7 +213,9 @@ export function SegmentEnvironment() {
     // l'ombrage), tablier posé sur les murs en tranchée, plus haut (piles
     // apparentes) sur les tronçons en viaduc ---
     const bridgesVisible = segEnv.bridgeW > 0.02;
-    const deckY = trench01 * (wallTop + 0.1) + (1 - trench01) * 6.4;
+    // Jamais sous 3 m : même pendant le fondu de sortie de tranchée, le
+    // tablier ne doit pas descendre dans le gabarit de la rame (caisse 2,38 m).
+    const deckY = Math.max(3.0, trench01 * (wallTop + 0.1) + (1 - trench01) * 6.4);
     for (let k = 0; k < built.bridges.length; k++) {
       const b = built.bridges[k];
       b.root.visible = bridgesVisible;
