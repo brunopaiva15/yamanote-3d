@@ -5,7 +5,6 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { CONFIG, CAR_PITCH, TRAIN_Z_MIN, TRAIN_Z_MAX, carNumbers, carOffsetZ } from '../data/config';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { psdDoorPos, psdGateLag } from '../systems/doorMotion';
@@ -17,26 +16,23 @@ const PSD_H = 1.32;
 const HALF_GAP = 0.9;
 const LEAF_W = 0.98; // largeur d'un vantail de porte palière
 const LEAF_TRAVEL = 0.92; // course d'ouverture (dégage tout le passage)
-const PLATFORM_LEN = TRAIN_Z_MAX - TRAIN_Z_MIN;
-const PLATFORM_MID = (TRAIN_Z_MIN + TRAIN_Z_MAX) / 2;
 
 // Portes palières : murets fixes entre les ouvertures alignées sur les portes
-// de chaque voiture (z ≡ offset + ±2.5 / ±7.5), sur toute la longueur de la
-// rame, plus la liste des centres d'ouverture où coulissent les vantaux.
+// du train (z ≡ ±2.5 / ±7.5 modulo 20 m), sur 80 m de quai, plus la liste des
+// centres d'ouverture où coulissent les vantaux.
 function psdLayout(): { segs: { z0: number; z1: number }[]; gaps: number[] } {
   const gaps: number[] = [];
-  for (const car of carNumbers()) {
-    const oz = carOffsetZ(car);
-    for (const dz of CONFIG.doorCenters) gaps.push(oz + dz);
+  for (let base = -40; base <= 40; base += 20) {
+    for (const dz of [-7.5, -2.5, 2.5, 7.5]) gaps.push(base + dz);
   }
   gaps.sort((a, b) => a - b);
   const segs: { z0: number; z1: number }[] = [];
-  let prev = TRAIN_Z_MIN;
+  let prev = -40;
   for (const gz of gaps) {
     if (gz - HALF_GAP > prev) segs.push({ z0: prev, z1: gz - HALF_GAP });
     prev = gz + HALF_GAP;
   }
-  if (prev < TRAIN_Z_MAX) segs.push({ z0: prev, z1: TRAIN_Z_MAX });
+  if (prev < 40) segs.push({ z0: prev, z1: 40 });
   return { segs, gaps };
 }
 
@@ -75,26 +71,11 @@ export function Platform() {
   leaves.current = [];
   const silhouettes = useMemo(() => {
     const list: { z: number; x: number; h: number }[] = [];
-    for (let i = 0; i < 18; i++) {
-      list.push({
-        z: TRAIN_Z_MIN + 8 + i * (PLATFORM_LEN / 19),
-        x: 2.9 + (i % 2) * 0.9,
-        h: 1.5 + (i % 3) * 0.1,
-      });
+    for (let i = 0; i < 7; i++) {
+      list.push({ z: -32 + i * 10.5 + (i % 3), x: 2.9 + (i % 2) * 0.9, h: 1.5 + (i % 3) * 0.1 });
     }
     return list;
   }, []);
-  const columns = useMemo(() => {
-    const zs: number[] = [];
-    for (let z = TRAIN_Z_MIN + CAR_PITCH / 2; z <= TRAIN_Z_MAX - CAR_PITCH / 2 + 0.01; z += CAR_PITCH / 2) {
-      zs.push(z);
-    }
-    return zs;
-  }, []);
-  const signZs = useMemo(
-    () => carNumbers().filter((n) => n % 2 === 1).map((n) => carOffsetZ(n)),
-    [],
-  );
 
   useFrame(() => {
     const fade = runtime.platformFade;
@@ -115,13 +96,13 @@ export function Platform() {
 
   return (
     <group ref={group} rotation={[0, doorSide === 1 ? 0 : Math.PI, 0]} visible={false}>
-      {/* Dalle du quai — toute la longueur de la rame */}
-      <mesh position={[3.75, PLATFORM_TOP - 0.25, PLATFORM_MID]} material={materials.slab}>
-        <boxGeometry args={[4.1, 0.5, PLATFORM_LEN]} />
+      {/* Dalle du quai */}
+      <mesh position={[3.75, PLATFORM_TOP - 0.25, 0]} material={materials.slab}>
+        <boxGeometry args={[4.1, 0.5, 80]} />
       </mesh>
       {/* Ligne jaune de sécurité */}
-      <mesh position={[2.1, PLATFORM_TOP + 0.004, PLATFORM_MID]} material={materials.yellow}>
-        <boxGeometry args={[0.34, 0.01, PLATFORM_LEN]} />
+      <mesh position={[2.1, PLATFORM_TOP + 0.004, 0]} material={materials.yellow}>
+        <boxGeometry args={[0.34, 0.01, 80]} />
       </mesh>
       {/* Portes palières : murets + liseré vert Yamanote */}
       {segments.map((s, i) => {
@@ -164,8 +145,8 @@ export function Platform() {
           );
         }),
       )}
-      {/* Panneaux de nom de station, une voiture sur deux */}
-      {signZs.map((z) => (
+      {/* Panneaux de nom de station */}
+      {[-9, 9].map((z) => (
         <group key={`sign${z}`} position={[3.6, 1.85, z]}>
           <mesh position={[0, 0.55, 0]} material={materials.column}>
             <cylinderGeometry args={[0.04, 0.04, 1.4, 8]} />
@@ -176,10 +157,10 @@ export function Platform() {
         </group>
       ))}
       {/* Toit et piliers */}
-      <mesh position={[4.1, 3.15, PLATFORM_MID]} material={materials.roof}>
-        <boxGeometry args={[4.6, 0.12, PLATFORM_LEN]} />
+      <mesh position={[4.1, 3.15, 0]} material={materials.roof}>
+        <boxGeometry args={[4.6, 0.12, 80]} />
       </mesh>
-      {columns.map((z) => (
+      {[-30, -15, 0, 15, 30].map((z) => (
         <mesh key={`col${z}`} position={[4.6, 1.55, z]} material={materials.column}>
           <cylinderGeometry args={[0.09, 0.09, 3.2, 10]} />
         </mesh>

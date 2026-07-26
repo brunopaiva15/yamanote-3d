@@ -6,7 +6,12 @@ import { useStore } from './store';
 import { CONFIG } from './data/config';
 import { Engine } from './three/Engine';
 import { Scene } from './three/Scene';
-import { Train } from './three/Train';
+import { Car } from './three/Car';
+import { Seats } from './three/Seats';
+import { Doors } from './three/Doors';
+import { Handles } from './three/Handles';
+import { Ads } from './three/Ads';
+import { Screens } from './three/Screens';
 import { Scenery } from './three/Scenery';
 import { Landmarks } from './three/Landmarks';
 import { SegmentEnvironment } from './three/SegmentEnvironment';
@@ -26,12 +31,17 @@ export default function App() {
       <Canvas
         dpr={[1, 2]}
         gl={{ powerPreference: 'high-performance', antialias: true }}
-        camera={{ fov: 70, near: 0.05, far: 280, position: [0, CONFIG.eyeHeight, 4.2] }}
+        camera={{ fov: 70, near: 0.05, far: 120, position: [0, CONFIG.eyeHeight, 4.2] }}
         shadows
       >
         <Scene />
         <Engine />
-        <Train />
+        <Car />
+        <Seats />
+        <Doors />
+        <Handles />
+        <Ads />
+        <Screens />
         <Scenery />
         <Landmarks />
         <SegmentEnvironment />

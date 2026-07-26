@@ -9,7 +9,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { Instances, Instance } from '@react-three/drei';
 import { CONFIG } from '../data/config';
 import { roundedRect } from './shapes';
-import { BENCHES, FREE_SPACE, localSeatSlots } from '../systems/seats';
+import { BENCHES, FREE_SPACE, SEAT_SLOTS } from '../systems/seats';
 import {
   makeCheckerTexture,
   makeQuiltTexture,
@@ -234,10 +234,8 @@ export function Seats() {
   }, [materials]);
 
   const sides: (1 | -1)[] = [1, -1];
-  // Coussins en repère local : Seats est monté une fois par voiture.
-  const localSeats = useMemo(() => localSeatSlots(), []);
-  const seats7 = localSeats.filter((sl) => !sl.priority);
-  const seats3 = localSeats.filter((sl) => sl.priority);
+  const seats7 = SEAT_SLOTS.filter((sl) => !sl.priority);
+  const seats3 = SEAT_SLOTS.filter((sl) => sl.priority);
 
   return (
     <group>

@@ -28,8 +28,7 @@ export function randomizeDoorTimings(): void {
     trainLags[dz] = raw[i] - min;
   });
   sortedTrainLags = Object.values(trainLags).sort((a, b) => a - b);
-  // Une entrée par portique de quai (4 portes × 11 voitures).
-  psdGateLags = Array.from({ length: CONFIG.carCount * CONFIG.doorCenters.length }, () => Math.random() * 0.3);
+  psdGateLags = Array.from({ length: 32 }, () => Math.random() * 0.3);
   stationTimings.psdOpenDelay = 0.55 + Math.random() * 0.6;
   stationTimings.psdCloseDelay = 0.55 + Math.random() * 0.4;
 }

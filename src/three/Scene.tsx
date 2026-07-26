@@ -9,17 +9,18 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { EffectComposer, Bloom, N8AO, Vignette, ToneMapping, Noise } from '@react-three/postprocessing';
 import { BlendFunction, ToneMappingMode } from 'postprocessing';
-import { CONFIG, carNumbers, carOffsetZ } from '../data/config';
+import { CONFIG } from '../data/config';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { segEnv } from '../systems/segmentEnv';
 
-// Trois points par voiture : assez pour lire l'allée sur 220 m sans saturer
-// le budget de lumières dynamiques.
-const LAMP_POSITIONS: [number, number, number][] = carNumbers().flatMap((car) => {
-  const oz = carOffsetZ(car);
-  return ([-6, 0, 6] as const).map((z) => [0, 2.16, z + oz] as [number, number, number]);
-});
+const LAMP_POSITIONS: [number, number, number][] = [
+  [0, 2.16, -7.5],
+  [0, 2.16, -3.75],
+  [0, 2.16, 0],
+  [0, 2.16, 3.75],
+  [0, 2.16, 7.5],
+];
 
 // Réflexions douces sur le chrome et les panneaux laqués, sans requête réseau.
 function EnvironmentMap(): null {
@@ -121,10 +122,8 @@ function DayNightLighting() {
       if (amb.current) mixColor(amb.current.color, w, AMBIENT);
       if (scene.fog instanceof THREE.Fog) {
         mixColor(scene.fog.color, w, FOG_COLORS);
-        // Brume poussée plus loin : la rame fait ~220 m, il faut encore lire
-        // les voitures lointaines quand on regarde dans l'axe de l'allée.
-        scene.fog.near = 40 * w.day + 28 * w.golden + 20 * w.night;
-        scene.fog.far = 260 * w.day + 200 * w.golden + 150 * w.night;
+        scene.fog.near = 26 * w.day + 18 * w.golden + 14 * w.night;
+        scene.fog.far = 115 * w.day + 88 * w.golden + 72 * w.night;
       }
       if (scene.background instanceof THREE.Color) {
         mixColor(tmp.current, w, BG_COLORS);
@@ -172,14 +171,14 @@ export function Scene() {
   return (
     <>
       <color attach="background" args={['#bcdaee']} />
-      <fog attach="fog" args={['#d6e8f2', 40, 260]} />
+      <fog attach="fog" args={['#d6e8f2', 26, 115]} />
       <EnvironmentMap />
       <ShadowFlags />
       <DayNightLighting />
 
       {/* Intérieur : chapelet de points blanc chaud sous le bandeau plafond. */}
       {LAMP_POSITIONS.map((p, i) => (
-        <pointLight key={i} position={p} intensity={2.6} distance={9} decay={1.7} color="#fff0da" />
+        <pointLight key={i} position={p} intensity={3.0} distance={7} decay={1.7} color="#fff0da" />
       ))}
 
       <EffectComposer>
