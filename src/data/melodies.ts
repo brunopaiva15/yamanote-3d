@@ -235,6 +235,26 @@ export const EBISU_INNER_THIRD_MAN_F = {
   nextStationName: 'Meguro',
 };
 
+/** Chemin : Glorious Gateway A — Takanawa Gateway Inner voie 1. */
+export const TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH =
+  '/audio/melodies/14_glorious-gateway-a.mp3';
+
+/** Config exclusive : Takanawa Gateway Inner Loop plateforme 1 → Tamachi. */
+export const TAKANAWA_GATEWAY_INNER_GLORIOUS_A = {
+  id: 'glorious-gateway-a',
+  name: 'Glorious Gateway A',
+  file: TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH,
+  type: 'departure_melody' as const,
+  audioSource: 'platform_speakers' as const,
+  line: 'yamanote',
+  stationCode: 'JY26',
+  stationName: 'Takanawa Gateway',
+  direction: 'inner' as const,
+  platform: 1,
+  nextStationCode: 'JY27',
+  nextStationName: 'Tamachi',
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -602,6 +622,35 @@ export function shouldPlayEbisuInnerThirdManF(ctx: MelodyPlayContext): boolean {
 
   if (ctx.trainState !== 'stopped_doors_open') return false;
   if (!ctx.departureSequenceStarted) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * Glorious Gateway A : exclusivement Takanawa Gateway (JY26) Inner Loop plateforme 1 → Tamachi.
+ * La voie 2 Outer utilisera Glorious Gateway B.
+ */
+export function shouldPlayTakanawaGatewayInnerGloriousA(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== TAKANAWA_GATEWAY_INNER_GLORIOUS_A.stationCode) return false;
+  if (ctx.direction !== 'inner') return false;
+  if (Number(ctx.platform) !== TAKANAWA_GATEWAY_INNER_GLORIOUS_A.platform) return false;
+
+  if (
+    ctx.nextStationCode &&
+    ctx.nextStationCode !== TAKANAWA_GATEWAY_INNER_GLORIOUS_A.nextStationCode
+  ) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
+  if (ctx.departureAuthorized === false) return false;
   if (ctx.emergencyActive) return false;
 
   if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;

@@ -14,6 +14,7 @@ import {
   SESERAGI_MELODY_PATH,
   TAKADANOBABA_INNER_ATOM_B_PATH,
   TAKADANOBABA_OUTER_ATOM_A_PATH,
+  TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH,
   UGUISUDANI_INNER_HARU_TREMOLO_PATH,
   makeDepartureId,
   shouldPlayEbisuInnerThirdManF,
@@ -26,6 +27,7 @@ import {
   shouldPlaySeseragi,
   shouldPlayTakadanobabaInnerAtomB,
   shouldPlayTakadanobabaOuterAtomA,
+  shouldPlayTakanawaGatewayInnerGloriousA,
   shouldPlayUguisudaniInnerHaruTremolo,
   type MelodyPlayContext,
   type ServiceType,
@@ -53,6 +55,7 @@ let seseragiPlaying = false;
 let takadanobabaAtomAPlaying = false;
 let takadanobabaAtomBPlaying = false;
 let ebisuThirdManFPlaying = false;
+let gloriousGatewayAPlaying = false;
 
 export function isDepartureBlocked(): boolean {
   const b = runtime.departureBlockers;
@@ -81,6 +84,7 @@ export function resetMelodyDepartureGuard(): void {
   takadanobabaAtomAPlaying = false;
   takadanobabaAtomBPlaying = false;
   ebisuThirdManFPlaying = false;
+  gloriousGatewayAPlaying = false;
 }
 
 /** Dérive l'état train pour la mélodie à partir de la phase et des portes. */
@@ -213,6 +217,11 @@ export function stopEbisuInnerThirdManF(): void {
   ebisuThirdManFPlaying = false;
 }
 
+export function stopTakanawaGatewayInnerGloriousA(): void {
+  audioManager.stop(TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH);
+  gloriousGatewayAPlaying = false;
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
@@ -226,6 +235,7 @@ export function cancelDepartureMelody(): void {
   stopTakadanobabaOuterAtomA();
   stopTakadanobabaInnerAtomB();
   stopEbisuInnerThirdManF();
+  stopTakanawaGatewayInnerGloriousA();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -448,6 +458,30 @@ export async function playEbisuInnerThirdManF(context: MelodyPlayContext): Promi
   }
 }
 
+/**
+ * Glorious Gateway A : Takanawa Gateway Inner voie 1 → Tamachi, une fois par départ.
+ */
+export async function playTakanawaGatewayInnerGloriousA(
+  context: MelodyPlayContext,
+): Promise<boolean> {
+  if (!shouldPlayTakanawaGatewayInnerGloriousA(context)) return false;
+  if (isDepartureBlocked()) return false;
+  if (gloriousGatewayAPlaying) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  gloriousGatewayAPlaying = true;
+  try {
+    const ok = await audioManager.playOnce(TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH);
+    if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+      runtime.lastMelodyDepartureId = null;
+    }
+    return ok;
+  } finally {
+    gloriousGatewayAPlaying = false;
+  }
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -483,6 +517,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (await playTakadanobabaOuterAtomA(context)) return true;
   if (await playTakadanobabaInnerAtomB(context)) return true;
   if (await playEbisuInnerThirdManF(context)) return true;
+  if (await playTakanawaGatewayInnerGloriousA(context)) return true;
   if (await playInnerMainMelody(context)) return true;
   if (await playOuterMainMelody(context)) return true;
   return false;

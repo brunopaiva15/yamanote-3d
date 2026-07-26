@@ -53,6 +53,7 @@ const SESERAGI_MELODY_SECS = 12.1;
 const TAKADANOBABA_OUTER_ATOM_A_SECS = 16.5;
 const TAKADANOBABA_INNER_ATOM_B_SECS = 16.9;
 const EBISU_INNER_THIRD_MAN_F_SECS = 11.1;
+const TAKANAWA_GATEWAY_INNER_GLORIOUS_A_SECS = 12.7;
 /** Marge entre fin de mélodie et annonce de fermeture. */
 const MELODY_TO_ANNOUNCE_GAP = 3.5;
 
@@ -74,6 +75,7 @@ function melodyBudgetSeconds(stationIndex: number): number {
     if (dir === 'inner') return TAKADANOBABA_INNER_ATOM_B_SECS;
   }
   if (jy === 'JY21' && dir === 'inner') return EBISU_INNER_THIRD_MAN_F_SECS;
+  if (jy === 'JY26' && dir === 'inner') return TAKANAWA_GATEWAY_INNER_GLORIOUS_A_SECS;
   if (dir === 'outer' && SESERAGI_PLATFORMS[jy]) return SESERAGI_MELODY_SECS;
   if (dir === 'outer' && outerMainMelodyPlatforms[jy]) return OUTER_MAIN_MELODY_SECS;
   if (dir === 'inner' && innerMainMelodyPlatforms[jy]) return INNER_MAIN_MELODY_SECS;

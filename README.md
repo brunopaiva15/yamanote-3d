@@ -189,6 +189,9 @@ uniquement `JY15` + Inner + plateforme **2** → Shin-Okubo.
 Clip Ebisu Inner : `public/audio/melodies/13_the-third-man-f.mp3` (第三の男 ver.F),
 uniquement `JY21` + Inner + plateforme **2** → Meguro. La voie 1 Outer (ver.E) n’est pas encore fournie.
 
+Clip Takanawa Gateway Inner : `public/audio/melodies/14_glorious-gateway-a.mp3`,
+uniquement `JY26` + Inner + plateforme **1** → Tamachi. La voie 2 Outer utilisera Glorious Gateway B.
+
 ### Sonorisation en 3D
 
 Le son de la sonorisation est spatialisé : il sort des haut-parleurs, pas du
