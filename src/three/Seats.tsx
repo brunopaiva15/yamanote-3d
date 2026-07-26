@@ -308,10 +308,16 @@ export function Seats() {
           const zc = (b.z0 + b.z1) / 2;
           const checkerMat = checkerByN.get(`${b.priority}-${b.n}`) ?? materials.green;
           const stanchionMat = b.priority ? materials.yellowGrip : materials.chrome;
+          const seatDepth = 0.46;
+          const seatX = s * (WALL_X - 0.15 - seatDepth / 2);
           // Arceaux intermédiaires des banquettes de 7 (division 2-3-2).
           const midZs = b.n === 7 ? [b.z0 + (len * 2) / 7, b.z0 + (len * 5) / 7] : [];
           return (
             <group key={`bench${s}-${bi}`}>
+              {/* Coque blanche cantilever sous l'assise */}
+              <mesh position={[seatX, 0.3, zc]} material={materials.shell}>
+                <boxGeometry args={[seatDepth + 0.06, 0.07, len]} />
+              </mesh>
               {/* Radiateur incliné sous l'assise */}
               <mesh position={[s * (WALL_X - 0.42), 0.16, zc]} rotation={[0, 0, s * 0.35]} material={materials.heater}>
                 <boxGeometry args={[0.3, 0.16, len - 0.3]} />
