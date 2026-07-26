@@ -5,12 +5,14 @@
 
 import {
   INNER_MAIN_MELODY_PATH,
+  KOMAGOME_INNER_SAKURA_V2_PATH,
   KOMAGOME_OUTER_SAKURA_A_PATH,
   OSAKI_INNER_SECONDARY_MELODY_PATH,
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
   makeDepartureId,
   shouldPlayInnerMainMelody,
+  shouldPlayKomagomeInnerSakuraV2,
   shouldPlayKomagomeOuterSakuraA,
   shouldPlayOsakiInnerSecondaryMelody,
   shouldPlayOsakiOuterSecondaryMelody,
@@ -165,6 +167,10 @@ export function stopKomagomeOuterSakuraA(): void {
   audioManager.stop(KOMAGOME_OUTER_SAKURA_A_PATH);
 }
 
+export function stopKomagomeInnerSakuraV2(): void {
+  audioManager.stop(KOMAGOME_INNER_SAKURA_V2_PATH);
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
   audioManager.stop(INNER_MAIN_MELODY_PATH);
@@ -172,6 +178,7 @@ export function cancelDepartureMelody(): void {
   stopOsakiInnerSecondaryMelody();
   audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
   stopKomagomeOuterSakuraA();
+  stopKomagomeInnerSakuraV2();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {
@@ -274,6 +281,22 @@ export async function playKomagomeOuterSakuraA(context: MelodyPlayContext): Prom
   return ok;
 }
 
+/**
+ * Sakura Sakura V2 : Komagome Inner voie 2 → Sugamo, une fois par départ.
+ */
+export async function playKomagomeInnerSakuraV2(context: MelodyPlayContext): Promise<boolean> {
+  if (!shouldPlayKomagomeInnerSakuraV2(context)) return false;
+  if (isDepartureBlocked()) return false;
+  if (!claimDepartureId(context)) return false;
+
+  markDepartureId(context);
+  const ok = await audioManager.playOnce(KOMAGOME_INNER_SAKURA_V2_PATH);
+  if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
+    runtime.lastMelodyDepartureId = null;
+  }
+  return ok;
+}
+
 async function playDoorClosingAnnouncement(): Promise<void> {
   say(doorsClosingAnnouncement());
 }
@@ -303,6 +326,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (await playOsakiInnerSecondaryMelody(context)) return true;
   if (await playOsakiOuterSecondaryMelody(context)) return true;
   if (await playKomagomeOuterSakuraA(context)) return true;
+  if (await playKomagomeInnerSakuraV2(context)) return true;
   if (await playInnerMainMelody(context)) return true;
   if (await playOuterMainMelody(context)) return true;
   return false;

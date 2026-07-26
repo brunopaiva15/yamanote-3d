@@ -68,6 +68,26 @@ export const KOMAGOME_OUTER_SAKURA_A = {
   nextStationName: 'Tabata',
 };
 
+/** Chemin : Sakura Sakura B / V2 — Komagome Inner voie 2. */
+export const KOMAGOME_INNER_SAKURA_V2_PATH = '/audio/melodies/06_sakura-sakura-b.mp3';
+
+/** Config exclusive : Komagome Inner Loop plateforme 2 → Sugamo. */
+export const KOMAGOME_INNER_SAKURA_V2 = {
+  id: 'sakura-sakura-v2',
+  file: KOMAGOME_INNER_SAKURA_V2_PATH,
+  name: 'Sakura Sakura V2',
+  japaneseName: 'さくらさくら V2',
+  type: 'departure_melody' as const,
+  audioSource: 'platform_speakers' as const,
+  line: 'yamanote',
+  stationCode: 'JY10',
+  stationName: 'Komagome',
+  direction: 'inner' as const,
+  platform: 2,
+  nextStationCode: 'JY11',
+  nextStationName: 'Sugamo',
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -288,6 +308,31 @@ export function shouldPlayKomagomeOuterSakuraA(ctx: MelodyPlayContext): boolean 
   if (ctx.trainState !== 'stopped_doors_open') return false;
   if (!ctx.departureSequenceStarted) return false;
   if (ctx.departureAuthorized === false) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * Sakura Sakura V2 : exclusivement Komagome (JY10) Inner Loop plateforme 2 → Sugamo.
+ * La voie 1 Outer utilise Sakura Sakura A / V1.
+ */
+export function shouldPlayKomagomeInnerSakuraV2(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== KOMAGOME_INNER_SAKURA_V2.stationCode) return false;
+  if (ctx.direction !== 'inner') return false;
+  if (Number(ctx.platform) !== KOMAGOME_INNER_SAKURA_V2.platform) return false;
+
+  if (ctx.nextStationCode && ctx.nextStationCode !== KOMAGOME_INNER_SAKURA_V2.nextStationCode) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
   if (ctx.emergencyActive) return false;
 
   if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;

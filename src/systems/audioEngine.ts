@@ -27,6 +27,7 @@ import * as Tone from 'tone';
 import { CABIN_SPEAKERS, CONFIG, PLATFORM_SPEAKERS } from '../data/config';
 import {
   INNER_MAIN_MELODY_PATH,
+  KOMAGOME_INNER_SAKURA_V2_PATH,
   KOMAGOME_OUTER_SAKURA_A_PATH,
   OSAKI_INNER_SECONDARY_MELODY_PATH,
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
@@ -672,4 +673,5 @@ export function stopDepartureMelodyClips(): void {
   audioManager.stop(OSAKI_INNER_SECONDARY_MELODY_PATH);
   audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
   audioManager.stop(KOMAGOME_OUTER_SAKURA_A_PATH);
+  audioManager.stop(KOMAGOME_INNER_SAKURA_V2_PATH);
 }

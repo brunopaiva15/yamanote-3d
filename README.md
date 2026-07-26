@@ -168,9 +168,11 @@ Clip Ōsaki Outer secondaire : `public/audio/melodies/04_jre-ikst-010-05_outer-s
 (JRE-IKST-010-05), uniquement `JY24` + Outer + plateforme **4** → Gotanda.
 La voie 3 garde le clip Outer Main.
 
-Clip Komagome Outer : `public/audio/melodies/05_sakura-sakura-a.mp3` (さくらさくらA),
-uniquement `JY10` + Outer + plateforme **1** → Tabata. La voie 2 Inner utilisera
-Sakura Sakura B.
+Clip Komagome Outer : `public/audio/melodies/05_sakura-sakura-a.mp3` (さくらさくらA / V1),
+uniquement `JY10` + Outer + plateforme **1** → Tabata.
+
+Clip Komagome Inner : `public/audio/melodies/06_sakura-sakura-b.mp3` (さくらさくら V2),
+uniquement `JY10` + Inner + plateforme **2** → Sugamo.
 
 ### Sonorisation en 3D
 
