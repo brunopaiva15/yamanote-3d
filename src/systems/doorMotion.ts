@@ -161,3 +161,23 @@ export function resetDoorMotion(): void {
   prevTrain = 0;
   prevPsd = 0;
 }
+
+// Pose les portes (rame + quai) à un instant déjà écoulé, sans sons ni chocs :
+// utilisé pour un démarrage au milieu d'une phase d'arrêt.
+export function seedDoorMotion(
+  trainTarget: 0 | 1,
+  trainT: number,
+  psdTarget: 0 | 1,
+  psdT: number,
+): void {
+  runtime.doorTarget = trainTarget;
+  runtime.doorT = trainT;
+  runtime.psdTarget = psdTarget;
+  runtime.psdT = psdT;
+  trainImpactsFired = Infinity;
+  psdImpactFired = true;
+  runtime.doorOpen = trainDoorPos(0);
+  runtime.psdOpen = psdDoorPos(0);
+  prevTrain = runtime.doorOpen;
+  prevPsd = runtime.psdOpen;
+}

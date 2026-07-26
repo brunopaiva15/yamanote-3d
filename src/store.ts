@@ -34,6 +34,7 @@ export const useStore = create<AppState>((set) => ({
   muted: false,
   volume: 0.8,
   index: CONFIG.startIndex,
+  // Valeurs par défaut avant boarding ; randomizeEntry() les remplace.
   phase: 'cruise',
   doorSide: DOOR_SIDE[CONFIG.startIndex],
   seated: false,
