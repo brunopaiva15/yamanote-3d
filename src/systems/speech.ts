@@ -26,6 +26,21 @@ let jaVoice: SpeechSynthesisVoice | null = null;
 let enVoice: SpeechSynthesisVoice | null = null;
 let watchdogId = 0;
 let keepAliveId = 0;
+let volumeSyncId = 0;
+let currentUtterance: SpeechSynthesisUtterance | null = null;
+
+// Niveau utterance : volume du site × proximité du diffuseur (hors graphe Tone).
+function speechLevel(): number {
+  const { muted, volume } = useStore.getState();
+  if (muted || volume <= 0.001) return 0;
+  return Math.min(1, volume * 1.15 * speakerProximity());
+}
+
+// Applique le volume courant à l'utterance en cours (slider + distance).
+function syncSpeechVolume(): void {
+  if (!currentUtterance) return;
+  currentUtterance.volume = speechLevel();
+}
 
 const FEMALE_HINTS = ['female', 'kyoko', 'o-ren', 'haruka', 'sayaka', 'nanami', 'ayumi', 'samantha', 'zira', 'google'];
 
@@ -77,12 +92,15 @@ function splitSentences(text: string): string[] {
 function clearTimers(): void {
   if (watchdogId) window.clearTimeout(watchdogId);
   if (keepAliveId) window.clearInterval(keepAliveId);
+  if (volumeSyncId) window.clearInterval(volumeSyncId);
   watchdogId = 0;
   keepAliveId = 0;
+  volumeSyncId = 0;
 }
 
 function finishUtterance(): void {
   clearTimers();
+  currentUtterance = null;
   speaking = false;
   pump();
 }
@@ -114,7 +132,7 @@ function pump(): void {
     closeLine();
     return;
   }
-  if (useStore.getState().muted) {
+  if (useStore.getState().muted || useStore.getState().volume <= 0.001) {
     queue.length = 0;
     closeLine();
     return;
@@ -133,9 +151,10 @@ function pump(): void {
   if (voice) u.voice = voice;
   u.rate = item.lang === 'ja-JP' ? 0.97 : 0.9;
   u.pitch = 1.03;
-  // Le niveau suit la distance au diffuseur le plus proche : sous une grille
-  // l'annonce claque, au milieu de deux portes elle recule.
-  u.volume = Math.min(1, useStore.getState().volume * 1.15 * speakerProximity());
+  // Le niveau suit le volume du site et la distance au diffuseur le plus proche :
+  // sous une grille l'annonce claque, au milieu de deux portes elle recule.
+  u.volume = speechLevel();
+  currentUtterance = u;
   speaking = true;
   u.onend = finishUtterance;
   u.onerror = finishUtterance;
@@ -158,11 +177,14 @@ function pump(): void {
       /* sans gravité */
     }
   }, 10000);
+  // Resync volume / proximité pendant l'annonce (le slider et la tête bougent).
+  volumeSyncId = window.setInterval(syncSpeechVolume, 200);
   window.speechSynthesis.speak(u);
 }
 
 export function say(items: Utterance[]): void {
-  if (useStore.getState().muted) return;
+  const { muted, volume } = useStore.getState();
+  if (muted || volume <= 0.001) return;
   for (const item of items) {
     for (const text of splitSentences(item.text)) {
       queue.push({ text, lang: item.lang });
@@ -175,7 +197,18 @@ export function say(items: Utterance[]): void {
 export function cancelSpeech(): void {
   queue.length = 0;
   clearTimers();
+  currentUtterance = null;
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   speaking = false;
   closeLine();
+}
+
+// À appeler quand le volume du site change : coupe la voix à 0, sinon met à jour.
+export function applySpeechVolume(): void {
+  const { muted, volume } = useStore.getState();
+  if (muted || volume <= 0.001) {
+    cancelSpeech();
+    return;
+  }
+  syncSpeechVolume();
 }

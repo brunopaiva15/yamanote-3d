@@ -8,7 +8,7 @@ import { BAND_COLOR } from '../data/occupancy';
 import { runtime } from '../systems/runtime';
 import { currentSegmentOccupancy } from '../systems/occupancy';
 import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
-import { cancelSpeech } from '../systems/speech';
+import { applySpeechVolume, cancelSpeech } from '../systems/speech';
 import { input } from '../systems/input';
 
 const PHASE_LABEL: Record<Phase, string> = {
@@ -67,6 +67,7 @@ export function Hud() {
   }, [muted]);
   useEffect(() => {
     setAudioVolume(volume);
+    applySpeechVolume();
   }, [volume]);
 
   if (!started) return null;
