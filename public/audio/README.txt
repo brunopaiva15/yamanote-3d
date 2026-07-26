@@ -17,5 +17,6 @@ melodies/13_the-third-man-f.mp3 — Ebisu Inner voie 2 (第三の男 ver.F)
 melodies/14_glorious-gateway-a.mp3 — Takanawa Gateway Inner voie 1
 melodies/15_glorious-gateway-b.mp3 — Takanawa Gateway Outer voie 2
 melodies/16_mondamin-cm-song-a.mp3 — Kanda Outer voie 2 (モンダミンCMソング ver.A)
+melodies/17_mondamin-cm-song-b.mp3 — Kanda Inner voie 3 (モンダミンCMソング ver.B)
 Jouées une seule fois au début de la procédure de départ, portes ouvertes,
 via audioManager.playOnce (garde departureId anti double-lecture).

@@ -196,7 +196,10 @@ Clip Takanawa Gateway Outer : `public/audio/melodies/15_glorious-gateway-b.mp3`,
 uniquement `JY26` + Outer + plateforme **2** → Shinagawa.
 
 Clip Kanda Outer : `public/audio/melodies/16_mondamin-cm-song-a.mp3` (モンダミンCMソング ver.A),
-uniquement `JY02` + Outer + plateforme **2** → Tokyo. La voie 3 Inner (ver.B) n’est pas encore fournie.
+uniquement `JY02` + Outer + plateforme **2** → Tokyo.
+
+Clip Kanda Inner : `public/audio/melodies/17_mondamin-cm-song-b.mp3` (モンダミンCMソング ver.B),
+uniquement `JY02` + Inner + plateforme **3** → Akihabara.
 
 ### Sonorisation en 3D
 

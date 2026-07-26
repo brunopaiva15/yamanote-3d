@@ -296,6 +296,27 @@ export const KANDA_OUTER_MONDAMIN_A = {
   nextStationName: 'Tokyo',
 };
 
+/** Chemin : Mondamin CM Song ver.B — Kanda Inner voie 3. */
+export const KANDA_INNER_MONDAMIN_B_PATH =
+  '/audio/melodies/17_mondamin-cm-song-b.mp3';
+
+/** Config exclusive : Kanda Inner Loop plateforme 3 → Akihabara. */
+export const KANDA_INNER_MONDAMIN_B = {
+  id: 'mondamin-cm-song-ver-b',
+  name: 'Mondamin CM Song ver.B',
+  japaneseName: 'モンダミンCMソング ver.B',
+  file: KANDA_INNER_MONDAMIN_B_PATH,
+  type: 'departure_melody' as const,
+  audioSource: 'platform_speakers' as const,
+  line: 'yamanote',
+  stationCode: 'JY02',
+  stationName: 'Kanda',
+  direction: 'inner' as const,
+  platform: 3,
+  nextStationCode: 'JY03',
+  nextStationName: 'Akihabara',
+};
+
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<
   string,
@@ -732,7 +753,7 @@ export function shouldPlayTakanawaGatewayOuterGloriousB(ctx: MelodyPlayContext):
 
 /**
  * Mondamin CM Song ver.A : exclusivement Kanda (JY02) Outer Loop plateforme 2 → Tokyo.
- * La voie 3 Inner utilisera Mondamin CM Song ver.B.
+ * La voie 3 Inner utilise Mondamin CM Song ver.B.
  */
 export function shouldPlayKandaOuterMondaminA(ctx: MelodyPlayContext): boolean {
   if (ctx.line !== 'yamanote') return false;
@@ -749,6 +770,34 @@ export function shouldPlayKandaOuterMondaminA(ctx: MelodyPlayContext): boolean {
 
   if (ctx.trainState !== 'stopped_doors_open') return false;
   if (!ctx.departureSequenceStarted) return false;
+  if (ctx.emergencyActive) return false;
+
+  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
+  const service = resolveServiceType(ctx);
+  if (service === 'out_of_service' || service === 'terminal') return false;
+
+  return true;
+}
+
+/**
+ * Mondamin CM Song ver.B : exclusivement Kanda (JY02) Inner Loop plateforme 3 → Akihabara.
+ */
+export function shouldPlayKandaInnerMondaminB(ctx: MelodyPlayContext): boolean {
+  if (ctx.line !== 'yamanote') return false;
+  if (ctx.stationCode !== KANDA_INNER_MONDAMIN_B.stationCode) return false;
+  if (ctx.direction !== 'inner') return false;
+  if (Number(ctx.platform) !== KANDA_INNER_MONDAMIN_B.platform) return false;
+
+  if (
+    ctx.nextStationCode &&
+    ctx.nextStationCode !== KANDA_INNER_MONDAMIN_B.nextStationCode
+  ) {
+    return false;
+  }
+
+  if (ctx.trainState !== 'stopped_doors_open') return false;
+  if (!ctx.departureSequenceStarted) return false;
+  if (ctx.departureAuthorized === false) return false;
   if (ctx.emergencyActive) return false;
 
   if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
