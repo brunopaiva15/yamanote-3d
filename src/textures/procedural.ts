@@ -1239,6 +1239,14 @@ const AD_PALETTES: [string, string, string][] = [
   ['#fdf3e3', '#e2705c', '#4a3f38'],
   ['#eaf4ec', '#63c28a', '#37463c'],
   ['#f3ecf6', '#c97fb8', '#453a4a'],
+  // Fonds pleins : une planche de nakazuri n'est pas une suite d'affiches
+  // blanches. Un tirage sur deux part d'un aplat soutenu, texte en réserve.
+  ['#c9432f', '#ffe9d6', '#ffffff'],
+  ['#1f4f8f', '#ffd25e', '#ffffff'],
+  ['#2f7d4f', '#f4f0dd', '#ffffff'],
+  ['#e8b021', '#3a2c12', '#2a2413'],
+  ['#3b2f6b', '#f0c24a', '#ffffff'],
+  ['#0f1418', '#e8613c', '#f2ede6'],
 ];
 
 // Mascottes plates façon irasutoya : formes rondes, visages simples.
@@ -1405,6 +1413,85 @@ export function drawAdInto(g: CanvasRenderingContext2D, W: number, H: number, se
     g.fillStyle = ink;
     fitFillText(g, sub, W * 0.56, H * 0.9, W * 0.4, Math.floor(W * 0.05));
   }
+}
+
+// --- Nakazuri (中吊り) : l'affiche suspendue au milieu du wagon ---
+// Format réel : deux B3 (364 × 515 mm) accolés, soit 728 × 515, d'où un
+// rapport de 1,414. L'unité suspendue est donc une PAIRE d'affiches, séparée
+// par un filet, avec une réserve blanche en tête où mordent les pinces.
+// Le papier n'est ni parfaitement blanc ni parfaitement plat : grain, très
+// léger voile de brillance, coins un peu tassés.
+export function makeNakazuriTexture(seed: number): THREE.CanvasTexture {
+  const W = 724;
+  const H = 512;
+  const { c, g } = makeCanvas(W, H);
+  const r = rng(900 + seed * 17);
+  const half = W / 2;
+  const top = 26; // réserve blanche de suspension
+
+  g.fillStyle = '#f3f1ec';
+  g.fillRect(0, 0, W, H);
+
+  // Les deux affiches, tirées séparément : une paire n'a jamais deux fois le
+  // même visuel, sauf campagne unique — d'où deux graines distinctes.
+  for (let i = 0; i < 2; i++) {
+    g.save();
+    g.beginPath();
+    g.rect(i * half + 3, top, half - 6, H - top - 4);
+    g.clip();
+    g.translate(i * half + 3, top);
+    drawAdInto(g, half - 6, H - top - 4, seed * 2 + i);
+    g.restore();
+  }
+
+  // Filet de séparation et liseré de bord : le papier ne va pas au ras.
+  g.strokeStyle = 'rgba(120,120,126,0.35)';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(half, top);
+  g.lineTo(half, H - 4);
+  g.stroke();
+  g.strokeRect(3, top, W - 6, H - top - 4);
+
+  // Réserve de tête : pli, perforations et pinces.
+  g.fillStyle = '#efece6';
+  g.fillRect(0, 0, W, top);
+  g.strokeStyle = 'rgba(140,140,146,0.45)';
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(0, top - 0.5);
+  g.lineTo(W, top - 0.5);
+  g.stroke();
+  g.fillStyle = 'rgba(90,92,98,0.35)';
+  for (const x of [W * 0.18, W * 0.5, W * 0.82]) {
+    g.beginPath();
+    g.ellipse(x, top / 2, 7, 4.5, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // Grain du papier.
+  for (let i = 0; i < 2600; i++) {
+    g.fillStyle = r() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(60,58,54,0.045)';
+    g.fillRect(r() * W, r() * H, 1 + r() * 1.6, 1 + r() * 1.6);
+  }
+
+  // Voile de brillance en diagonale : le papier glacé accroche les rampes LED.
+  const sheen = g.createLinearGradient(0, 0, W, H);
+  sheen.addColorStop(0, 'rgba(255,255,255,0.1)');
+  sheen.addColorStop(0.45, 'rgba(255,255,255,0)');
+  sheen.addColorStop(0.72, 'rgba(255,255,255,0.06)');
+  sheen.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = sheen;
+  g.fillRect(0, 0, W, H);
+
+  // Ombre douce dans les angles bas : l'affiche gondole légèrement.
+  const corner = g.createLinearGradient(0, H, 0, H - 60);
+  corner.addColorStop(0, 'rgba(40,42,48,0.16)');
+  corner.addColorStop(1, 'rgba(40,42,48,0)');
+  g.fillStyle = corner;
+  g.fillRect(0, H - 60, W, 60);
+
+  return toTexture(c);
 }
 
 export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasTexture {
