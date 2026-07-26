@@ -1,6 +1,6 @@
 // Petite LED orange sous le panneau LCD au-dessus de chaque porte (E235) :
-// elle clignote pendant la fermeture des portes du côté quai — comme sur la
-// rame réelle, encastrée dans la sous-face de la paroi blanche.
+// encastrée dans la sous-face de la paroi blanche, elle clignote côté quai
+// dès l'annonce de fermeture et pendant la course des vantaux.
 
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -11,24 +11,41 @@ import { runtime } from '../systems/runtime';
 
 // Fréquence de clignotement (~2,5 Hz), calée sur l'indicateur réel.
 const BLINK_HZ = 2.5;
+// Aligné sur `announce-close` dans stationCycle (dwellTime − 3,5 s).
+const ANNOUNCE_CLOSE_LEAD = 3.5;
 
-function makeLedMat(): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
-    color: '#5a2a0c',
-    emissive: '#ff6a12',
-    emissiveIntensity: 0,
-    roughness: 0.35,
-    metalness: 0.05,
+const COLOR_OFF = '#6a3210';
+const COLOR_DIM = '#b85414';
+const COLOR_ON = '#ff8c1a';
+
+function makeLedMat(): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({
+    color: COLOR_OFF,
     toneMapped: false,
+    side: THREE.DoubleSide,
+    // La sous-face est dans un creux : sans ça, le N8AO l'éteint.
+    depthTest: true,
+    depthWrite: false,
   });
 }
 
+function isDoorClosingWarn(): boolean {
+  const { phase } = useStore.getState();
+  // De l'annonce « portes qui ferment » jusqu'à la fin de la course.
+  const fromAnnounce =
+    phase === 'dwell' &&
+    runtime.phaseT >= CONFIG.dwellTime - ANNOUNCE_CLOSE_LEAD &&
+    runtime.doorOpen > 0.02;
+  const closing = runtime.doorTarget === 0 && runtime.doorOpen > 0.02;
+  return fromAnnounce || closing;
+}
+
 export function DoorCloseLed() {
-  // Un matériau par face du wagon : seul le côté quai clignote.
+  // Un matériau par face : seul le côté quai clignote.
   const mats = useMemo(
     () => ({
-      right: makeLedMat(), // side +1
-      left: makeLedMat(), // side -1
+      right: makeLedMat(),
+      left: makeLedMat(),
     }),
     [],
   );
@@ -37,18 +54,21 @@ export function DoorCloseLed() {
 
   useFrame(({ clock }) => {
     const doorSide = useStore.getState().doorSide;
-    // Fermeture en cours : cible fermée et vantaux encore ouverts / en course.
-    const closing = runtime.doorTarget === 0 && runtime.doorOpen > 0.02;
-    const lit = closing && (clock.elapsedTime * BLINK_HZ) % 1 < 0.5;
+    const warn = isDoorClosingWarn();
+    const lit = warn && (clock.elapsedTime * BLINK_HZ) % 1 < 0.55;
 
     for (const side of [1, -1] as const) {
       const m = side === 1 ? matsRef.current.right : matsRef.current.left;
-      if (side === doorSide && closing) {
-        m.emissiveIntensity = lit ? 2.4 : 0.04;
-        m.color.set(lit ? '#ff8a28' : '#5a2a0c');
+      if (side !== doorSide) {
+        // Face opposée au quai : lentille présente mais éteinte.
+        m.color.set(COLOR_OFF);
+        continue;
+      }
+      if (warn) {
+        m.color.set(lit ? COLOR_ON : COLOR_DIM);
       } else {
-        m.emissiveIntensity = 0;
-        m.color.set('#5a2a0c');
+        // Lentille toujours un peu visible sous le panneau.
+        m.color.set(COLOR_DIM);
       }
     }
   });
@@ -64,10 +84,24 @@ export function DoorCloseLed() {
             position={[s * (CONFIG.carHalfWidth - 0.05), 2.11, z]}
             rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
           >
-            {/* Sous-face du panneau blanc (hauteur 0,5 → y = −0,25), centrée
-                au-dessus de l'ouverture, légèrement en avant vers la cabine. */}
-            <mesh position={[0, -0.258, 0.008]} scale={[1, 0.45, 1]} material={s === 1 ? mats.right : mats.left}>
-              <sphereGeometry args={[0.02, 14, 10]} />
+            {/* Sous-face du panneau blanc (h = 0,5 → y = −0,25) : disque orange
+                orienté vers le bas, bien détaché pour rester lisible en cabine. */}
+            <mesh
+              position={[0, -0.268, 0.02]}
+              rotation={[Math.PI / 2, 0, 0]}
+              renderOrder={3}
+              material={s === 1 ? mats.right : mats.left}
+            >
+              <circleGeometry args={[0.032, 20]} />
+            </mesh>
+            {/* Dôme légèrement bombé, comme la lentille réelle. */}
+            <mesh
+              position={[0, -0.272, 0.02]}
+              scale={[1, 0.4, 1]}
+              renderOrder={3}
+              material={s === 1 ? mats.right : mats.left}
+            >
+              <sphereGeometry args={[0.026, 16, 10]} />
             </mesh>
           </group>
         )),
