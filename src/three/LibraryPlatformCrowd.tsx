@@ -12,12 +12,16 @@ import { rng } from '../textures/procedural';
 import { CONFIG } from '../data/config';
 import { MODELS_BASE, type CharacterManifest, type LogicalClip } from './characters/manifest';
 import { buildTemplates, cloneVariant, type CharacterClone, type CharacterTemplate } from './characters/library';
+import { applyPhoneArms, makePoseState, type PoseState } from './characters/pose';
+import { attachProps, updatePropRig, type PropRig } from './characters/props';
 
 const PLATFORM_Y = -0.06;
 const FADE = 0.22;
 
 interface Slot {
   clone: CharacterClone;
+  pose: PoseState;
+  props: PropRig;
   currentKey: LogicalClip | '';
 }
 
@@ -43,7 +47,8 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       crowdList.map((p) => {
         const template = pickTemplate(templates, p.appearance, p.id);
         const clone = cloneVariant(template, p.appearance);
-        return { clone, currentKey: '' as LogicalClip | '' };
+        const props = attachProps(clone.wrap, p.appearance, template.variant.bagProp !== false);
+        return { clone, pose: makePoseState(), props, currentKey: '' as LogicalClip | '' };
       }),
     [templates],
   );
@@ -52,6 +57,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
 
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
+    const k = Math.min(1, dt * 6);
     if (wrap.current) {
       wrap.current.visible = runtime.platformFade > 0.02;
       wrap.current.position.z = runtime.platformSlide;
@@ -98,6 +104,9 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
         bones.head.rotation.x += p.headPitch * 0.9;
         bones.head.rotation.y += p.lookYaw * 0.45;
       }
+      const phoneActive = p.action === 'phone' && p.state === 'waiting';
+      applyPhoneArms(p, bones, s.pose, k, phoneActive);
+      updatePropRig(s.props, bones, body, true, phoneActive && s.pose.phoneW > 0.05);
     }
   });
 

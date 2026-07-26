@@ -21,6 +21,16 @@ const headGeo = new THREE.SphereGeometry(0.105, 14, 12);
 const faceGeo = new THREE.PlaneGeometry(0.17, 0.17);
 const neckGeo = new THREE.CylinderGeometry(0.043, 0.047, 0.15, 8);
 const shoeGeo = new RoundedBoxGeometry(0.08, 0.048, 0.16, 2, 0.018);
+const phoneBodyGeo = new RoundedBoxGeometry(0.042, 0.082, 0.009, 2, 0.004);
+const phoneScreenGeo = new THREE.BoxGeometry(0.034, 0.066, 0.0012);
+const phoneBodyMat = new THREE.MeshStandardMaterial({ color: '#1a1c20', roughness: 0.45, metalness: 0.25 });
+const phoneScreenMat = new THREE.MeshStandardMaterial({
+  color: '#7a96b0',
+  roughness: 0.28,
+  metalness: 0.05,
+  emissive: '#243848',
+  emissiveIntensity: 0.45,
+});
 
 const matCache = new Map<string, THREE.MeshStandardMaterial>();
 function cloth(color: string, rough = 0.85): THREE.MeshStandardMaterial {
@@ -93,10 +103,26 @@ function buildPerson(app: Appearance, id: number): THREE.Group {
 
   const armGeo = new THREE.CylinderGeometry(0.035, 0.03, 0.5, 7);
   for (const s of [-1, 1]) {
+    const armG = new THREE.Group();
+    armG.position.set(s * (app.build.shoulderR + 0.02), SHOULDER_Y - 0.12, 0.02);
+    armG.rotation.z = s * 0.12;
+    if (s === 1) armG.name = 'crowd-arm-r';
     const arm = new THREE.Mesh(armGeo, top);
-    arm.position.set(s * (app.build.shoulderR + 0.02), SHOULDER_Y - 0.12, 0.02);
-    arm.rotation.z = s * 0.12;
-    root.add(arm);
+    armG.add(arm);
+    if (s === 1) {
+      // Smartphone dans la main droite (visible en action « phone »).
+      const phone = new THREE.Group();
+      phone.name = 'crowd-phone';
+      phone.visible = false;
+      phone.position.set(0.02, -0.22, 0.06);
+      phone.rotation.set(-0.5, 0.4, 0.2);
+      phone.add(new THREE.Mesh(phoneBodyGeo, phoneBodyMat));
+      const screen = new THREE.Mesh(phoneScreenGeo, phoneScreenMat);
+      screen.position.z = 0.0052;
+      phone.add(screen);
+      armG.add(phone);
+    }
+    root.add(armG);
   }
 
   const headG = new THREE.Group();
@@ -168,6 +194,14 @@ export function ProceduralPlatformCrowd() {
         head.rotation.x = p.headPitch;
         head.rotation.y = p.lookYaw * 0.5;
       }
+      const onPhone = p.action === 'phone' && p.state === 'waiting';
+      const armR = g.getObjectByName('crowd-arm-r');
+      if (armR) {
+        armR.rotation.x = onPhone ? -1.15 : 0;
+        armR.rotation.z = onPhone ? 0.35 : 0.12;
+      }
+      const phone = g.getObjectByName('crowd-phone');
+      if (phone) phone.visible = onPhone;
     }
   });
 

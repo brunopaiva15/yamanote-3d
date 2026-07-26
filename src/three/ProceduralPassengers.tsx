@@ -66,6 +66,7 @@ interface PaxRefs {
   seated: THREE.Group | null;
   head: THREE.Group | null;
   arms: [ArmRef, ArmRef]; // [gauche s=-1, droite s=+1]
+  phone: THREE.Group | null; // smartphone dans la main droite
 }
 
 // --- Caches partagés (mutualisés entre tous les PNJ) ---
@@ -96,6 +97,18 @@ const pocketGeo = new RoundedBoxGeometry(0.15, 0.08, 0.03, 3, 0.02);
 // sac à dos a un rabat supérieur, une poche frontale, une poignée de portage
 // et des sangles plaquées sur la poitrine (même astuce que la cravate : le
 // volume à moitié enfoncé épouse le torse rond).
+// Smartphone (partagé) : coque + dalle, tenu dans la main droite en pose phone.
+const phoneBodyGeo = new RoundedBoxGeometry(0.042, 0.082, 0.009, 2, 0.004);
+const phoneScreenGeo = new THREE.BoxGeometry(0.034, 0.066, 0.0012);
+const phoneBodyMat = new THREE.MeshStandardMaterial({ color: '#1a1c20', roughness: 0.45, metalness: 0.25 });
+const phoneScreenMat = new THREE.MeshStandardMaterial({
+  color: '#7a96b0',
+  roughness: 0.28,
+  metalness: 0.05,
+  emissive: '#243848',
+  emissiveIntensity: 0.45,
+});
+
 const bpBodyGeo = new RoundedBoxGeometry(0.24, 0.3, 0.14, 3, 0.05);
 const bpLidGeo = new RoundedBoxGeometry(0.245, 0.085, 0.145, 2, 0.03);
 const bpPocketGeo = new RoundedBoxGeometry(0.17, 0.13, 0.05, 2, 0.025);
@@ -361,7 +374,19 @@ function Parts({ parts }: { parts: Part[] }) {
 }
 
 // Un bras articulé : épaule pivot → coude pivot → avant-bras + main.
-function Arm({ spec, s, armRef }: { spec: CharSpec; s: -1 | 1; armRef: ArmRef }) {
+// Sur le bras droit (s=+1), un téléphone est parenté près de la main et
+// basculé visible quand l'action est « phone ».
+function Arm({
+  spec,
+  s,
+  armRef,
+  onPhone,
+}: {
+  spec: CharSpec;
+  s: -1 | 1;
+  armRef: ArmRef;
+  onPhone?: (g: THREE.Group | null) => void;
+}) {
   return (
     <group
       position={[s * spec.armX, SHOULDER_Y, 0]}
@@ -378,6 +403,19 @@ function Arm({ spec, s, armRef }: { spec: CharSpec; s: -1 | 1; armRef: ArmRef })
       >
         <mesh geometry={spec.foreArmGeo} material={spec.armMat} position={[0, -0.12, 0]} />
         <mesh geometry={spec.handGeo} material={spec.skinMat} position={[0, -0.25, 0]} />
+        {s === 1 && (
+          <group
+            visible={false}
+            position={[0.01, -0.27, 0.04]}
+            rotation={[-0.4, 0.35, 0.15]}
+            ref={(g) => {
+              onPhone?.(g);
+            }}
+          >
+            <mesh geometry={phoneBodyGeo} material={phoneBodyMat} />
+            <mesh geometry={phoneScreenGeo} material={phoneScreenMat} position={[0, 0, 0.0052]} />
+          </group>
+        )}
       </group>
     </group>
   );
@@ -426,6 +464,7 @@ export function ProceduralPassengers() {
         { shoulder: null, elbow: null },
         { shoulder: null, elbow: null },
       ],
+      phone: null,
     })),
   );
 
@@ -477,6 +516,9 @@ export function ProceduralPassengers() {
         }
         if (arm.elbow) arm.elbow.rotation.x += (te - arm.elbow.rotation.x) * k;
       }
+      if (r.phone) {
+        r.phone.visible = p.action === 'phone' && (seated || p.state === 'standing');
+      }
     }
   });
 
@@ -518,9 +560,16 @@ export function ProceduralPassengers() {
             <group position={[0, -PELVIS_Y, 0]}>
               {/* Torse, cou, écharpe, détail de vêtement */}
               <Parts parts={perPax[i].torso} />
-              {/* Bras articulés */}
+              {/* Bras articulés (+ téléphone dans la main droite) */}
               <Arm spec={perPax[i]} s={-1} armRef={refs.current[i].arms[0]} />
-              <Arm spec={perPax[i]} s={1} armRef={refs.current[i].arms[1]} />
+              <Arm
+                spec={perPax[i]}
+                s={1}
+                armRef={refs.current[i].arms[1]}
+                onPhone={(g) => {
+                  refs.current[i].phone = g;
+                }}
+              />
               {/* Sacs */}
               <Parts parts={perPax[i].accessories} />
               {/* Tête articulée (regards, hochements, éternuements) */}
