@@ -494,6 +494,12 @@ body,
     width: 70px;
   }
 
+  /* La barre du bas occupe toute la largeur ici : on décolle le joystick
+     pour qu'il ne recouvre pas le sélecteur de langue. */
+  .joystick {
+    bottom: 64px;
+  }
+
   .lang-option {
     font-size: 11px;
     padding: 6px 7px;
