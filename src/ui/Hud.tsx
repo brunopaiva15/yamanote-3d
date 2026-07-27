@@ -32,18 +32,19 @@ function useClock(): string {
 
 // L'arrêt d'urgence vit dans runtime (pas dans le store) : on le sonde comme
 // l'horloge, à la seconde. `sync` relit l'état sans attendre le prochain tick
-// (masque le bouton SOS dès le clic).
-function useEmergencyStop(): [boolean, () => void] {
-  const [active, setActive] = useState(false);
+// (masque le bouton SOS dès le clic). On expose l'étape brute : le badge ne
+// signale l'urgence que freinage / immobilisation, tandis que la remontée en
+// vitesse ('resuming', jusqu'à ~V_MAX) s'affiche déjà « En route ».
+type EmergencyStage = typeof runtime.emergencyStop.stage;
+
+function useEmergencyStage(): [EmergencyStage, () => void] {
+  const [stage, setStage] = useState<EmergencyStage>('none');
   useEffect(() => {
-    const id = window.setInterval(
-      () => setActive(runtime.emergencyStop.stage !== 'none'),
-      500,
-    );
+    const id = window.setInterval(() => setStage(runtime.emergencyStop.stage), 500);
     return () => window.clearInterval(id);
   }, []);
-  const sync = () => setActive(runtime.emergencyStop.stage !== 'none');
-  return [active, sync];
+  const sync = () => setStage(runtime.emergencyStop.stage);
+  return [stage, sync];
 }
 
 function useOccupancy(): { percent: number; band: OccupancyBand } {
@@ -78,7 +79,10 @@ export function Hud() {
   const t = useT();
   const clock = useClock();
   const occupancy = useOccupancy();
-  const [emergency, syncEmergency] = useEmergencyStop();
+  const [emergencyStage, syncEmergency] = useEmergencyStage();
+  // Urgence « visible » : freinage ou immobilisation. Dès la reprise, le
+  // badge repasse en phase normale et le bouton SOS redevient disponible.
+  const emergency = emergencyStage === 'braking' || emergencyStage === 'stopped';
 
   // Répercuter le mute et le volume sur l'audio et la voix.
   useEffect(() => {
@@ -124,8 +128,9 @@ export function Hud() {
       </div>
 
       {/* Bouton SOS : seulement en pleine course entre deux gares — l'arrêt
-          d'urgence ne peut se déclencher qu'en phase cruise — et masqué tant
-          qu'un arrêt d'urgence est déjà en cours. */}
+          d'urgence ne peut se déclencher qu'en phase cruise — et masqué
+          pendant freinage / immobilisation. Pendant la remontée en vitesse,
+          il est de retour : re-déclencher est permis. */}
       {phase === 'cruise' && !emergency && (
         <button
           className="hud-emergency"
