@@ -5,7 +5,8 @@
 
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
-import { targetPaxCounts } from '../data/occupancy';
+import { targetPaxCounts, type PaxTargets } from '../data/occupancy';
+import { paxScale } from './perf';
 import { runtime } from './runtime';
 import { currentSegmentOccupancy } from './occupancy';
 import { makeAppearance, type Appearance } from './appearance';
@@ -108,10 +109,17 @@ export function initPassengers(): void {
   for (let i = 0; i < POOL_SIZE; i++) paxList.push(makePax(i));
 }
 
+// Cibles du tronçon courant, réduites par le palier de qualité adaptative.
+function scaledTargets(): PaxTargets {
+  const t = targetPaxCounts(currentSegmentOccupancy().percent);
+  const s = paxScale();
+  return { seated: Math.round(t.seated * s), standing: Math.round(t.standing * s) };
+}
+
 // Peuplement initial calé sur le taux de remplissage du tronçon courant.
 export function seedPassengers(): void {
   initPassengers();
-  const target = targetPaxCounts(currentSegmentOccupancy().percent);
+  const target = scaledTargets();
   let seatedCount = 0;
   let standingCount = 0;
   for (const p of paxList) {
@@ -248,9 +256,32 @@ function beginBoard(p: Pax, side: 1 | -1, afterWalk: 'seated' | 'standing', boar
   return true;
 }
 
+// Dégradation perf : masque immédiatement les PNJ excédentaires par rapport
+// aux cibles réduites, en commençant par les plus éloignés du joueur (c'est
+// là que la disparition se remarque le moins). Les échanges suivants restent
+// naturellement sous les nouvelles cibles.
+export function trimPassengersForPerf(): void {
+  const target = scaledTargets();
+  const { seatedPax, standingPax } = countInside();
+  const dist = (p: Pax) => Math.hypot(p.pos.x - runtime.playerX, p.pos.z - runtime.playerZ);
+  const farthestFirst = (arr: Pax[]) => [...arr].sort((a, b) => dist(b) - dist(a));
+  const hide = (p: Pax) => {
+    releaseSlots(p);
+    endChat(p);
+    p.action = 'none';
+    p.state = 'hidden';
+    p.waypoints = [];
+    p.wpi = 0;
+  };
+  const standOver = Math.max(0, standingPax.length - target.standing);
+  const seatOver = Math.max(0, seatedPax.length - target.seated);
+  for (const p of farthestFirst(standingPax).slice(0, standOver)) hide(p);
+  for (const p of farthestFirst(seatedPax).slice(0, seatOver)) hide(p);
+}
+
 // Échange à quai : rapproche la densité du taux estimé du prochain tronçon.
 export function exchangePassengers(side: 1 | -1): void {
-  const target = targetPaxCounts(currentSegmentOccupancy().percent);
+  const target = scaledTargets();
   const { seated, standing, seatedPax, standingPax } = countInside();
 
   // Variance légère pour que deux arrêts au même taux ne soient pas identiques.

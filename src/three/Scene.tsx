@@ -10,6 +10,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { EffectComposer, Bloom, N8AO, Vignette, ToneMapping, Noise } from '@react-three/postprocessing';
 import { BlendFunction, ToneMappingMode } from 'postprocessing';
 import { CONFIG } from '../data/config';
+import { usePerf, type PerfLevel } from '../systems/perf';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { segEnv } from '../systems/segmentEnv';
@@ -21,6 +22,18 @@ const LAMP_POSITIONS: [number, number, number][] = [
   [0, 2.16, 3.75],
   [0, 2.16, 7.5],
 ];
+
+// Palier 3 : plafonne la résolution de rendu (le fill-rate est souvent le
+// goulot sur les écrans haute densité). En dessous, densité native (cap 2,
+// comme le dpr initial du Canvas).
+function AdaptiveDpr({ level }: { level: PerfLevel }): null {
+  const setDpr = useThree((s) => s.setDpr);
+  useEffect(() => {
+    const native = Math.min(window.devicePixelRatio || 1, 2);
+    setDpr(level >= 3 ? Math.min(native, 1.25) : native);
+  }, [level, setDpr]);
+  return null;
+}
 
 // Réflexions douces sur le chrome et les panneaux laqués, sans requête réseau.
 function EnvironmentMap(): null {
@@ -89,7 +102,7 @@ function mixColor(out: THREE.Color, w: { day: number; golden: number; night: num
 // n'est donc jamais concurrencé. Brume et fond ne sont pas touchés (leur
 // cadence 0,5 s scintillerait contre un passage de pont). Les pointLight du
 // wagon ne sont pas atténués : les néons restent allumés sous un pont.
-function DayNightLighting() {
+function DayNightLighting({ level }: { level: PerfLevel }) {
   const { scene } = useThree();
   const sun = useRef<THREE.DirectionalLight>(null);
   const fill = useRef<THREE.DirectionalLight>(null);
@@ -143,16 +156,23 @@ function DayNightLighting() {
     if (amb.current) amb.current.intensity = b.amb * dim;
   });
 
+  // Paliers de qualité : ombres du soleil réduites (palier 2) puis coupées
+  // (palier 3). La lumière est re-montée à chaque changement (key) pour que
+  // l'ancienne shadow map soit réellement libérée.
+  const shadowTier = level >= 3 ? 'off' : level >= 2 ? 'low' : 'full';
+  const shadowMapSize = shadowTier === 'low' ? 1024 : 2048;
+
   return (
     <>
       <directionalLight
+        key={`sun-${shadowTier}`}
         ref={sun}
         position={[26, 30, -16]}
         intensity={1.7}
         color="#fff6e4"
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        castShadow={shadowTier !== 'off'}
+        shadow-mapSize-width={shadowMapSize}
+        shadow-mapSize-height={shadowMapSize}
         shadow-camera-left={-18}
         shadow-camera-right={18}
         shadow-camera-top={14}
@@ -170,41 +190,65 @@ function DayNightLighting() {
 }
 
 export function Scene() {
+  // Palier de qualité adaptative (voir systems/perf) : ne change qu'aux
+  // dégradations détectées, donc quelques re-renders par session au plus.
+  const perfLevel = usePerf((s) => s.level);
+
+  // Palier 2 : néons du wagon espacés (un pointLight sur deux), légèrement
+  // poussés pour garder une luminosité d'ensemble comparable.
+  const lampPositions = perfLevel >= 2
+    ? LAMP_POSITIONS.filter((_, i) => i % 2 === 0)
+    : LAMP_POSITIONS;
+  const lampIntensity = perfLevel >= 2 ? 3.6 : 3.0;
+
   return (
     <>
       <color attach="background" args={['#bcdaee']} />
       <fog attach="fog" args={['#d6e8f2', 30, 220]} />
+      <AdaptiveDpr level={perfLevel} />
       <EnvironmentMap />
       <ShadowFlags />
-      <DayNightLighting />
+      <DayNightLighting level={perfLevel} />
 
       {/* Intérieur : chapelet de points blanc chaud sous le bandeau plafond. */}
-      {LAMP_POSITIONS.map((p, i) => (
-        <pointLight key={i} position={p} intensity={3.0} distance={7} decay={1.7} color="#fff0da" />
+      {lampPositions.map((p, i) => (
+        <pointLight key={i} position={p} intensity={lampIntensity} distance={7} decay={1.7} color="#fff0da" />
       ))}
 
-      <EffectComposer>
-        {/* Occlusion ambiante. C'est ce qui sépare une image de synthèse d'une
-            photo : le noircissement des angles, sous les banquettes, derrière
-            les mains courantes, dans les feuillures de porte. Les maquettes
-            photogrammétriques l'ont cuite dans leurs textures ; ici elle est
-            calculée, donc elle suit le cycle jour / nuit et les portes qui
-            s'ouvrent. Rayon court (25 cm) : on cherche les contacts, pas un
-            assombrissement général du wagon. */}
-        <N8AO
-          aoRadius={0.55}
-          distanceFalloff={0.8}
-          intensity={4.5}
-          quality="medium"
-          halfRes
-          depthAwareUpsampling
-          color="#1b2028"
-        />
-        <Bloom intensity={CONFIG.bloom} luminanceThreshold={0.9} luminanceSmoothing={0.2} mipmapBlur />
-        <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-        <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.05} />
-        <Vignette eskil={false} offset={0.32} darkness={0.42} />
-      </EffectComposer>
+      {perfLevel < 2 ? (
+        <EffectComposer>
+          {/* Occlusion ambiante. C'est ce qui sépare une image de synthèse d'une
+              photo : le noircissement des angles, sous les banquettes, derrière
+              les mains courantes, dans les feuillures de porte. Les maquettes
+              photogrammétriques l'ont cuite dans leurs textures ; ici elle est
+              calculée, donc elle suit le cycle jour / nuit et les portes qui
+              s'ouvrent. Rayon court (25 cm) : on cherche les contacts, pas un
+              assombrissement général du wagon. */}
+          <N8AO
+            aoRadius={0.55}
+            distanceFalloff={0.8}
+            intensity={4.5}
+            quality="medium"
+            halfRes
+            depthAwareUpsampling
+            color="#1b2028"
+          />
+          <Bloom intensity={CONFIG.bloom} luminanceThreshold={0.9} luminanceSmoothing={0.2} mipmapBlur />
+          <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+          <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.05} />
+          <Vignette eskil={false} offset={0.32} darkness={0.42} />
+        </EffectComposer>
+      ) : (
+        /* Paliers 2+ : l'occlusion ambiante (le post-effet le plus coûteux)
+           est coupée ; le reste de l'étalonnage est conservé pour ne pas
+           changer la signature visuelle du jeu. */
+        <EffectComposer>
+          <Bloom intensity={CONFIG.bloom} luminanceThreshold={0.9} luminanceSmoothing={0.2} mipmapBlur />
+          <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+          <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.05} />
+          <Vignette eskil={false} offset={0.32} darkness={0.42} />
+        </EffectComposer>
+      )}
     </>
   );
 }

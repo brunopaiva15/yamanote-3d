@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { isMajorHub } from '../data/announcements';
 import { CONFIG } from '../data/config';
 import { makeAppearance, type Appearance } from './appearance';
+import { paxScale } from './perf';
 import { runtime } from './runtime';
 
 export type CrowdState = 'hidden' | 'waiting' | 'ambling' | 'patrolling';
@@ -75,9 +76,14 @@ export function initPlatformCrowd(): void {
 }
 
 function crowdCount(stationIndex: number): { total: number; walkers: number } {
-  if (isMajorHub(stationIndex)) return { total: 16, walkers: 7 };
-  if (stationIndex % 3 === 0) return { total: 12, walkers: 5 };
-  return { total: 9, walkers: 4 };
+  const base = isMajorHub(stationIndex)
+    ? { total: 16, walkers: 7 }
+    : stationIndex % 3 === 0
+      ? { total: 12, walkers: 5 }
+      : { total: 9, walkers: 4 };
+  // Palier de qualité adaptative : même réduction que les PNJ de la rame.
+  const s = paxScale();
+  return { total: Math.round(base.total * s), walkers: Math.round(base.walkers * s) };
 }
 
 function clampPos(x: number, z: number): THREE.Vector3 {
