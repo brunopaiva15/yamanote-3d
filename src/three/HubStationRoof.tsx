@@ -66,9 +66,11 @@ function roofBuilder(): {
 // lumineux chauds (gares classiques).
 function buildSteelRoof(): Roof {
   const { roof, mat, glow, box } = roofBuilder();
-  const slab = mat('#3a3f46');
-  const truss = mat('#4a5058');
-  const col = mat('#555b63');
+  // Éclairci depuis qu'on peut se tenir dessous : à 6,30 m au-dessus du quai,
+  // une dalle presque noire faisait un ciel de plomb.
+  const slab = mat('#5c636c');
+  const truss = mat('#6b727b');
+  const col = mat('#767d86');
   const lamp = glow('#ffd9a2');
   box(slab, ROOF_W, 0.5, ROOF_LEN, 0, 6.3, 0);
   for (let z = -81; z <= 81; z += 18) box(truss, ROOF_W, 0.6, 0.6, 0, 5.95, z);

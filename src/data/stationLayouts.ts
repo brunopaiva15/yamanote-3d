@@ -254,7 +254,8 @@ const OVERRIDES: Record<number, Partial<StationLayout>> = {
   0: {
     signature: 'tokyo',
     canopy: 'truss',
-    canopyY: 6.4,
+    // Sous la grande dalle de la halle (6,30 m) : l'auvent de quai reste dessous.
+    canopyY: 5.5,
     depth: 10.5,
     columnSpacing: 16,
     backdrop: 'secondTrack',

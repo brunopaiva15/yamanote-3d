@@ -28,6 +28,7 @@ import {
 } from '../../data/stationGeometry';
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
 import { PlatformSignage } from './PlatformSignage';
+import { Signature } from './Signature';
 import { psdLayout } from './psdLayout';
 
 const UP = new THREE.Quaternion();
@@ -414,6 +415,9 @@ export function Station() {
       </instancedMesh>
 
       <Amenities place={place} canopyY={canopyY} m={m} />
+
+      {/* Charpente propre aux trois gares signature. */}
+      {layout.signature && <Signature layout={layout} backX={backX} materials={m} />}
 
       <PlatformSignage
         hangX={midX + 0.7}
