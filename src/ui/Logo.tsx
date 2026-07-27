@@ -2,10 +2,10 @@
 // n'importe quelle taille, et les couleurs suivent la charte de la ligne.
 //
 // Composition, dans l'esprit des jaquettes de jeux japonisants : l'ovale de la
-// boucle Yamanote en emblème de fond, la pastille JY et 山手線 au-dessus, le
-// mot-symbole en gros caractères blancs cernés d'encre avec son ombre portée,
-// et « 3D » sur une plaque inclinée qui déborde à droite. Les couleurs sont
-// réglées pour le panneau blanc du menu (façon ekimeiban).
+// boucle Yamanote en emblème de fond, le mot-symbole en gros caractères blancs
+// cernés d'encre avec son ombre portée, « 3D » sur une plaque inclinée qui
+// déborde à droite, et 山手線 juste en dessous, dans le même traitement que le
+// mot-symbole. Les couleurs sont réglées pour le panneau blanc du menu.
 //
 // Les deux textes du mot-symbole sont contraints par textLength : quelle que
 // soit la police réellement disponible sur la machine, le logo garde exactement
@@ -28,7 +28,7 @@ const LOOP_DOTS: [number, number][] = [
 
 export function Logo() {
   return (
-    <svg className="logo" viewBox="0 0 560 200" role="img" aria-label="Yamanote 3D">
+    <svg className="logo" viewBox="0 40 560 205" role="img" aria-label="Yamanote 3D 山手線">
       <defs>
         <linearGradient id="logo-green" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#a5db5e" />
@@ -52,15 +52,6 @@ export function Logo() {
           <circle key={`${x}-${y}`} cx={x} cy={y} r="5" fill="#4d8a1f" />
         ))}
       </g>
-
-      {/* Pastille JY + nom de la ligne. */}
-      <circle cx="226" cy="44" r="17" fill="#80c241" />
-      <text x="226" y="50" textAnchor="middle" fontSize="16" fontWeight="700" fill="#ffffff">
-        JY
-      </text>
-      <text x="255" y="54" fontSize="27" fontWeight="700" fill="#4d8a1f" letterSpacing="7">
-        山手線
-      </text>
 
       {/* Mot-symbole : ombre portée, puis les lettres cernées d'encre. */}
       <text
@@ -120,6 +111,36 @@ export function Logo() {
           3D
         </text>
       </g>
+
+      {/* 山手線, sous le mot-symbole, dans le même traitement que lui. */}
+      <text
+        x="284"
+        y="233"
+        textAnchor="middle"
+        fontSize="44"
+        fontWeight="800"
+        fill="#16300a"
+        textLength="210"
+        lengthAdjust="spacing"
+      >
+        山手線
+      </text>
+      <text
+        x="280"
+        y="228"
+        textAnchor="middle"
+        fontSize="44"
+        fontWeight="800"
+        fill="#ffffff"
+        stroke="#10151a"
+        strokeWidth="9"
+        strokeLinejoin="round"
+        paintOrder="stroke"
+        textLength="210"
+        lengthAdjust="spacing"
+      >
+        山手線
+      </text>
     </svg>
   );
 }

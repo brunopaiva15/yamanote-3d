@@ -8,6 +8,13 @@
   --paper-line: rgba(255, 255, 255, 0.14);
   --text: #eef1f2;
   --text-dim: #aeb8bd;
+  /* Langage « sticker » hérité du logo : fond blanc, contour d'encre épais,
+     ombre franche décalée vers le bas. Appliqué à toute l'interface. */
+  --ink-line: #10151a;
+  --sticker: #ffffff;
+  --sticker-ink: #16181a;
+  --sticker-dim: #5c666d;
+  --sticker-shadow: 0 3px 0 rgba(16, 21, 26, 0.85);
   font-family: 'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
 }
 
@@ -34,10 +41,10 @@ body,
   touch-action: none;
 }
 
-/* --- Menu principal : panneau de gare (ekimeiban) JR East ---
-   Panneau blanc sur fond sombre, comme un panneau rétroéclairé de quai la
-   nuit : typo gothique noire, pastille JY, bande à la couleur de la ligne.
-   Pas d'effet — la signalétique réelle n'en a pas. */
+/* --- Menu principal : panneau blanc façon jaquette ---
+   Grand sticker blanc cerné d'encre sur un aplat au vert de la ligne, dans le
+   même langage que le logo : contours épais, ombres franches, pas de flou ni
+   de dégradé. */
 
 .start-screen {
   position: fixed;
@@ -46,7 +53,7 @@ body,
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: #0c0f12;
+  background: #6cb032;
   z-index: 30;
   padding: 20px;
 }
@@ -55,12 +62,13 @@ body,
   position: relative;
   width: 100%;
   max-width: 520px;
-  background: #ffffff;
-  color: #16181a;
-  border-radius: 10px;
+  background: var(--sticker);
+  color: var(--sticker-ink);
+  border: 3px solid var(--ink-line);
+  border-radius: 22px;
   padding: 24px 28px 22px;
   overflow: hidden;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 6px 0 var(--ink-line);
 }
 
 .logo {
@@ -87,6 +95,8 @@ body,
   margin: 16px -28px 0;
   padding: 6px 20px;
   background: var(--green);
+  border-top: 3px solid var(--ink-line);
+  border-bottom: 3px solid var(--ink-line);
   color: #ffffff;
   font-size: 13px;
   font-weight: 700;
@@ -104,18 +114,19 @@ body,
 
 .start-button {
   display: block;
-  margin: 18px auto 0;
+  margin: 20px auto 0;
   font: inherit;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.02em;
-  color: #14230a;
+  color: var(--ink-line);
   background: var(--green);
-  border: none;
-  border-radius: 8px;
-  padding: 13px 46px;
+  border: 3px solid var(--ink-line);
+  border-radius: 14px;
+  padding: 12px 44px;
   cursor: pointer;
-  transition: background-color 0.12s ease;
+  box-shadow: 0 4px 0 var(--ink-line);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.1s ease;
 }
 
 .start-button:hover:not(:disabled) {
@@ -123,12 +134,13 @@ body,
 }
 
 .start-button:active:not(:disabled) {
-  background: #6ea834;
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink-line);
 }
 
 .start-button:focus-visible {
   outline: 3px solid #2f5d0f;
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 
 .start-button:disabled {
@@ -142,10 +154,10 @@ body,
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px 18px;
-  margin-top: 20px;
+  margin-top: 22px;
   padding-top: 16px;
   text-align: left;
-  border-top: 1px solid #e3e7ea;
+  border-top: 2px dashed #d5dade;
 }
 
 .start-controls li {
@@ -165,12 +177,12 @@ body,
   font: inherit;
   font-size: 10.5px;
   font-weight: 700;
-  color: #33393e;
-  background: #f1f3f5;
-  border: 1px solid #d5dade;
-  border-bottom-width: 2px;
-  border-radius: 5px;
-  padding: 3px 6px;
+  color: var(--sticker-ink);
+  background: var(--sticker);
+  border: 2px solid var(--ink-line);
+  border-bottom-width: 3px;
+  border-radius: 7px;
+  padding: 2px 6px;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -206,17 +218,17 @@ body,
   display: inline-flex;
   gap: 2px;
   padding: 2px;
-  background: var(--paper);
-  border: 1px solid var(--paper-line);
-  border-radius: 9px;
-  backdrop-filter: blur(6px);
+  background: var(--sticker);
+  border: 2px solid var(--ink-line);
+  border-radius: 11px;
+  box-shadow: var(--sticker-shadow);
 }
 
 .lang-option {
   font: inherit;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-dim);
+  font-weight: 700;
+  color: var(--sticker-dim);
   background: none;
   border: none;
   border-radius: 7px;
@@ -227,37 +239,20 @@ body,
 }
 
 .lang-option:hover {
-  color: var(--text);
+  color: var(--sticker-ink);
 }
 
-.lang-option-active {
+.lang-option-active,
+.lang-option-active:hover {
   color: #122408;
   background: var(--green);
 }
 
-/* Variante claire pour le panneau blanc du menu principal, en coin haut
-   droit, hors du flux centré. */
+/* Coin haut droit du panneau du menu, hors du flux centré. */
 .lang-switch-board {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: #f1f3f5;
-  border-color: #dde2e6;
-  backdrop-filter: none;
-}
-
-.lang-switch-board .lang-option {
-  color: #5c666d;
-}
-
-.lang-switch-board .lang-option:hover {
-  color: #16181a;
-}
-
-.lang-switch-board .lang-option-active,
-.lang-switch-board .lang-option-active:hover {
-  color: #122408;
-  background: var(--green);
 }
 
 /* --- HUD --- */
@@ -278,14 +273,14 @@ body,
 .hud-phase,
 .hud-station,
 .hud-occupancy {
-  background: var(--paper);
-  border: 1px solid var(--paper-line);
-  border-radius: 10px;
-  color: var(--text);
+  background: var(--sticker);
+  border: 2px solid var(--ink-line);
+  border-radius: 12px;
+  color: var(--sticker-ink);
   display: flex;
   align-items: center;
   padding: 8px 14px;
-  backdrop-filter: blur(6px);
+  box-shadow: var(--sticker-shadow);
 }
 
 .hud-occupancy {
@@ -323,7 +318,7 @@ body,
 
 .hud-station-label {
   font-size: 11px;
-  color: var(--text-dim);
+  color: var(--sticker-dim);
 }
 
 .hud-station-name {
@@ -336,29 +331,30 @@ body,
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
-  border-radius: 6px;
-  padding: 1px 7px;
+  border: 2px solid var(--ink-line);
+  border-radius: 7px;
+  padding: 0 6px;
   margin-right: 4px;
 }
 
 .hud-kanji {
-  color: var(--text-dim);
+  color: var(--sticker-dim);
   margin-left: 4px;
 }
 
 .hud-phase {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .hud-phase-dwell {
-  border-color: var(--green);
-  color: var(--green);
+  border-color: #4d8a1f;
+  color: #3f7413;
 }
 
 .hud-phase-brake,
 .hud-phase-depart {
-  color: #e8c33a;
+  color: #9a7b00;
 }
 
 /* --- Réticule --- */
@@ -395,19 +391,24 @@ body,
 .hud-button {
   font: inherit;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--paper);
-  border: 1px solid var(--paper-line);
-  border-radius: 9px;
-  padding: 9px 14px;
+  font-weight: 700;
+  color: var(--sticker-ink);
+  background: var(--sticker);
+  border: 2px solid var(--ink-line);
+  border-radius: 11px;
+  padding: 8px 14px;
   cursor: pointer;
-  backdrop-filter: blur(6px);
-  transition: border-color 0.12s ease;
+  box-shadow: var(--sticker-shadow);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.1s ease;
 }
 
 .hud-button:hover {
-  border-color: var(--green);
+  background: #f1f3f5;
+}
+
+.hud-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(16, 21, 26, 0.85);
 }
 
 .hud-volume {
@@ -449,12 +450,13 @@ body,
   z-index: 25;
   font: inherit;
   font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--paper);
-  border: 1px solid var(--paper-line);
-  border-radius: 12px;
-  padding: 14px 20px;
+  font-weight: 700;
+  color: var(--sticker-ink);
+  background: var(--sticker);
+  border: 2px solid var(--ink-line);
+  border-radius: 14px;
+  padding: 13px 20px;
+  box-shadow: 0 4px 0 rgba(16, 21, 26, 0.85);
 }
 
 /* --- Responsive --- */
