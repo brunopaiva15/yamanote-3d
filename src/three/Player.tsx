@@ -10,6 +10,7 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { input, moveAxes, consumeLook } from '../systems/input';
 import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
+import { publishPlayerPose } from '../systems/playerFrame';
 import { setListenerPose } from '../systems/audioEngine';
 
 const AISLE_X = 0.7;
@@ -228,10 +229,8 @@ export function Player() {
     camera.rotation.x = pitch.current;
     camera.rotation.z = (runtime.sway * 0.011 - runtime.accel * 0.004) * (seated ? 0.4 : 1);
 
-    // Position du joueur partagée (regards des PNJ).
-    runtime.playerX = camera.position.x;
-    runtime.playerY = camera.position.y;
-    runtime.playerZ = camera.position.z;
+    // Position du joueur partagée (regards des PNJ), dans les trois repères.
+    publishPlayerPose(camera.position.x, camera.position.y, camera.position.z);
 
     // Oreilles du joueur = caméra : les diffuseurs sont fixes dans le wagon,
     // c'est la tête qui tourne autour d'eux.

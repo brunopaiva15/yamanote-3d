@@ -6,6 +6,7 @@ import { useStore } from './store';
 import { CONFIG } from './data/config';
 import { Engine } from './three/Engine';
 import { Scene } from './three/Scene';
+import { TrainRig } from './three/TrainRig';
 import { Car } from './three/Car';
 import { Seats } from './three/Seats';
 import { Doors } from './three/Doors';
@@ -40,20 +41,24 @@ export default function App() {
       >
         <Scene />
         <Engine />
-        <Car />
-        <Seats />
-        <Doors />
-        <Handles />
-        <Ads />
-        <Screens />
-        <DoorCloseLed />
+        {/* Tout ce qui appartient à la rame : fixe à l'origine tant qu'on est
+            à bord, glissant le long de la voie quand on la regarde du quai. */}
+        <TrainRig>
+          <Car />
+          <Seats />
+          <Doors />
+          <Handles />
+          <Ads />
+          <Screens />
+          <DoorCloseLed />
+          <Passengers />
+        </TrainRig>
         <Scenery />
         <Landmarks />
         <SegmentEnvironment />
         <HubStationRoof />
         <Platform />
         <PlatformCrowd />
-        <Passengers />
         <Player />
       </Canvas>
       <Hud />
