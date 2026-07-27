@@ -168,8 +168,8 @@ const PHONE_PALM = { x: 0.05, y: 0.85, z: -0.52 };
 // relative au coude et au poignet par construction. Les flexions restantes
 // (plier vers l'anneau, refermer les doigts dessus) sont de COURTS aims,
 // sans composante de vrille.
-const STRAP_UPPER_MID = { x: 0.85, y: 0.15, z: 0.15 };
-const STRAP_UPPER_END = { x: 0.4, y: 0.85, z: 0.12 };
+const STRAP_UPPER_MID = { x: 0.85, y: 0.15, z: 0.2 };
+const STRAP_UPPER_END = { x: 0.38, y: 0.82, z: 0.26 }; // levé DEVANT le plan des épaules
 
 // Réutilisé par la rame et la foule du quai. `strapSide` : côté du bras déjà
 // accroché à la poignée (±1, 0 si aucun) — le téléphone passe alors dans
@@ -302,7 +302,10 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
         hand.getWorldPosition(vTarget);
         l2 = vFoot.distanceTo(vTarget); // coude → poignet
       }
-      vChest.set(p.pos.x, STRAP_RING_Y - 0.085, p.pos.z); // cible du poignet
+      // Cible du poignet : sous l'anneau, légèrement DEVANT le PNJ — on
+      // attrape une poignée devant son visage, pas à l'aplomb du crâne (le
+      // bras montait dans le plan du corps et semblait tiré en arrière).
+      vChest.set(p.pos.x + Math.sin(p.yaw) * 0.05, STRAP_RING_Y - 0.085, p.pos.z + Math.cos(p.yaw) * 0.05);
       vDir.subVectors(vChest, vBonePos);
       // Portée insuffisante (petits gabarits / bras courts) : HAUSSEMENT
       // d'épaule progressif — la clavicule vise plus haut, comme un humain
@@ -338,7 +341,7 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
       fore.updateWorldMatrix(true, false);
       fore.getWorldQuaternion(qRestW).multiply(handRel);
       applyWorld(hand, qRestW, sw);
-      vTarget.set(p.pos.x + Math.sin(p.yaw) * 0.13, STRAP_RING_Y - 0.02, p.pos.z + Math.cos(p.yaw) * 0.13);
+      vTarget.set(p.pos.x + Math.sin(p.yaw) * 0.17, STRAP_RING_Y - 0.02, p.pos.z + Math.cos(p.yaw) * 0.17);
       aimBone(hand, vTarget, sw);
     }
   }
