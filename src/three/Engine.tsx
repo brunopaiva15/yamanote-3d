@@ -11,7 +11,8 @@ import { updateSegmentEnv } from '../systems/segmentEnv';
 import { updatePlatformPresence } from '../systems/platformPresence';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
 import { setPlatformDoors, updateAudio } from '../systems/audioEngine';
-import { updatePassengers } from '../systems/passengers';
+import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
+import { perfLevel, updatePerfMonitor } from '../systems/perf';
 
 /**
  * Plafond du dt cycle : borne les trous que l'API Visibility ne signale pas
@@ -29,6 +30,8 @@ const PHYS_DT_CAP = 0.05;
 // visible (shaders, GC, GPU saturé) doit compter en entier, sinon le cycle
 // gèle sous charge et le prochain arrêt n'arrive jamais.
 let tabJustResumed = false;
+// Dernier palier de qualité appliqué aux PNJ (voir bloc perf dans useFrame).
+let lastPerfLevel = 0;
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) tabJustResumed = true;
@@ -48,6 +51,16 @@ export function Engine(): null {
 
     const { phase, started } = useStore.getState();
     if (!started) return;
+
+    // Qualité adaptative : mesure du rythme réel (dt non plafonné, hors frame
+    // de reprise d'onglet) ; si un palier vient d'être franchi, allège
+    // immédiatement le pool de PNJ.
+    if (!skipCycle) updatePerfMonitor(raw);
+    const perfNow = perfLevel();
+    if (perfNow !== lastPerfLevel) {
+      lastPerfLevel = perfNow;
+      trimPassengersForPerf();
+    }
 
     if (cycleDt > 0) {
       updateCycle(cycleDt);
