@@ -1,4 +1,4 @@
-# 山手線 Yamanote Line Ride
+# Yamanote 3D — 山手線
 
 Expérience web contemplative et passive : vous êtes passager d'une rame JR East
 série E235 sur la ligne Yamanote (Tokyo, boucle de 30 stations). Aucun objectif,
@@ -23,6 +23,24 @@ npm run lint     # oxlint
 - S'asseoir : un clic net vers une place libre ; se lever : espace ou un nouveau clic
 - M : couper le son, F : plein écran
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder, bouton s'asseoir
+
+## Langues
+
+L'interface (menu, HUD, contrôles tactiles) existe en **français, anglais et
+japonais**. La langue est détectée au premier lancement depuis
+`navigator.languages` — `ja-*` → japonais, `fr-*` → français, tout le reste →
+anglais — et le sélecteur FR / EN / 日本語 (menu principal et barre du HUD)
+permet d'en changer à tout moment ; le choix explicite est mémorisé dans
+`localStorage` (`yamanote.lang`) et l'emporte ensuite sur la détection.
+
+Tous les libellés vivent dans `src/i18n/strings.ts` (un dictionnaire par
+langue) ; `useT()` renvoie celui de la langue courante. Ajouter une langue =
+ajouter une entrée à `STRINGS` et son code à `LANGS`.
+
+En revanche la signalétique **embarquée** n'est pas traduite, volontairement :
+annonces sonores, écrans LCD, plans de quai et affiches restent en japonais et
+en anglais, comme dans une vraie rame de la Yamanote. C'est du décor, pas de
+l'interface.
 
 ## Personnages (modèles 3D riggés)
 
@@ -132,7 +150,8 @@ src/
                          overrides d'os (regard, tsurikawa), accessoires
   scripts/               models:import / models:inspect (packs → public/models/)
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
-  ui/                    HUD français, écran de démarrage, contrôles tactiles
+  i18n/                  dictionnaires FR / EN / JA, détection de langue
+  ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles
 ```
 
 Les valeurs continues (vitesse, distance, ouverture des portes) vivent dans

@@ -1,16 +1,41 @@
-// Écran de démarrage : titre, rappel des contrôles, bouton qui débloque
-// l'audio (contrainte navigateur) et lance l'expérience.
+// Menu principal : logo Yamanote 3D, accroche, pense-bête des commandes en
+// touches, sélecteur de langue et bouton qui débloque l'audio (contrainte
+// navigateur) avant de lancer l'expérience.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../store';
+import { useT } from '../i18n';
 import { startAudio, setVolume, setPlatformSide } from '../systems/audioEngine';
 import { initSpeech } from '../systems/speech';
 import { seedPassengers } from '../systems/passengers';
 import { runtime, tokyoNow } from '../systems/runtime';
 import { randomizeEntry } from '../systems/stationCycle';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { Logo } from './Logo';
+
+// Horloge de Tokyo affichée en pied de carte : l'heure réelle là-bas, celle
+// dans laquelle la boucle va démarrer.
+function useTokyoClock(): string {
+  const [clock, setClock] = useState('');
+  useEffect(() => {
+    const tick = () => {
+      const now = tokyoNow();
+      const total = Math.floor(now.minutes) % (24 * 60);
+      setClock(
+        `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`,
+      );
+    };
+    tick();
+    const id = window.setInterval(tick, 5000);
+    return () => window.clearInterval(id);
+  }, []);
+  return clock;
+}
 
 export function StartScreen() {
   const start = useStore((s) => s.start);
+  const t = useT();
+  const tokyoClock = useTokyoClock();
   const [loading, setLoading] = useState(false);
 
   const board = async () => {
@@ -42,24 +67,32 @@ export function StartScreen() {
 
   return (
     <div className="start-screen">
+      <div className="start-rails" aria-hidden="true" />
       <div className="start-card">
-        <div className="start-line-badge">JY</div>
-        <h1 className="start-title">山手線</h1>
-        <p className="start-subtitle">Yamanote Line Ride</p>
-        <p className="start-text">
-          Une boucle de trente stations autour de Tokyo, en temps quasi réel. Rien à gagner :
-          on s'assoit, on regarde la ville, on écoute les annonces.
-        </p>
+        <LanguageSwitcher className="lang-switch-start" />
+        <Logo />
+        <p className="start-tagline">{t.start.tagline}</p>
+        <p className="start-text">{t.start.intro}</p>
         <button className="start-button" onClick={() => void board()} disabled={loading}>
-          {loading ? 'Préparation…' : 'Monter à bord'}
+          {loading ? t.start.loading : t.start.board}
         </button>
         <ul className="start-controls">
-          <li>Regarder : cliquer et glisser avec la souris</li>
-          <li>Marcher : ZQSD, WASD ou les flèches</li>
-          <li>S'asseoir : un clic net vers une place libre</li>
-          <li>Se lever : espace ou un nouveau clic</li>
-          <li>Raccourcis : M pour le son, F pour le plein écran</li>
+          {t.start.controls.map((hint) => (
+            <li key={hint.action}>
+              <span className="start-keys">
+                {hint.keys.map((key) => (
+                  <kbd key={key}>{key}</kbd>
+                ))}
+              </span>
+              <span className="start-action">{hint.action}</span>
+            </li>
+          ))}
         </ul>
+        <p className="start-foot">
+          <span className="start-live" aria-hidden="true" />
+          {t.start.tokyoTime}
+          <strong>{tokyoClock}</strong>
+        </p>
       </div>
     </div>
   );

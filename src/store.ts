@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import { CONFIG } from './data/config';
 import type { LoopDirection } from './data/platforms';
 import { DOOR_SIDE } from './data/stations';
+import { applyDocumentLang, initialLang, storeLang, type Lang } from './i18n/strings';
 import { runtime, tokyoNow } from './systems/runtime';
 
 export type Phase = 'cruise' | 'brake' | 'dwell' | 'depart';
@@ -21,8 +22,11 @@ interface AppState {
   loopDirection: LoopDirection;
   seated: boolean;
   touch: boolean; // interface tactile active
+  /** Langue de l'interface : détectée au premier lancement, puis mémorisée. */
+  lang: Lang;
 
   start: () => void;
+  setLang: (l: Lang) => void;
   toggleMute: () => void;
   setVolume: (v: number) => void;
   setPhase: (p: Phase) => void;
@@ -32,6 +36,9 @@ interface AppState {
   setSeated: (b: boolean) => void;
   setTouch: (b: boolean) => void;
 }
+
+const START_LANG = initialLang();
+applyDocumentLang(START_LANG);
 
 export const useStore = create<AppState>((set) => ({
   started: false,
@@ -44,6 +51,7 @@ export const useStore = create<AppState>((set) => ({
   loopDirection: 'inner',
   seated: false,
   touch: false,
+  lang: START_LANG,
 
   start: () => {
     // Horloge + date civile figées sur l'instant réel à Tokyo.
@@ -56,6 +64,11 @@ export const useStore = create<AppState>((set) => ({
       weekday: now.weekday,
     };
     set({ started: true });
+  },
+  setLang: (lang) => {
+    storeLang(lang);
+    applyDocumentLang(lang);
+    set({ lang });
   },
   toggleMute: () => set((s) => ({ muted: !s.muted })),
   setVolume: (volume) => set({ volume }),
