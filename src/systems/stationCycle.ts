@@ -41,29 +41,29 @@ let lastJointDistance = 0;
 
 const ACCEL_RATE = 1.15; // m/s² — doit rester aligné avec updateCycle
 
-/** Durée audio approximative des clips connus (s), pour caler le dwell. */
-const INNER_MAIN_MELODY_SECS = 18.1;
-const OUTER_MAIN_MELODY_SECS = 20.1;
-const OSAKI_INNER_SECONDARY_MELODY_SECS = 19.1;
-const OSAKI_OUTER_SECONDARY_MELODY_SECS = 22.1;
-const KOMAGOME_OUTER_SAKURA_A_SECS = 18.7;
-const KOMAGOME_INNER_SAKURA_V2_SECS = 18.3;
-const UGUISUDANI_INNER_HARU_TREMOLO_SECS = 12.0;
-const SESERAGI_MELODY_SECS = 12.1;
-const TAKADANOBABA_OUTER_ATOM_A_SECS = 16.5;
-const TAKADANOBABA_INNER_ATOM_B_SECS = 16.9;
-const EBISU_INNER_THIRD_MAN_F_SECS = 11.1;
-const TAKANAWA_GATEWAY_INNER_GLORIOUS_A_SECS = 12.7;
-const TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_SECS = 8.1;
-const KANDA_OUTER_MONDAMIN_A_SECS = 11.7;
-const KANDA_INNER_MONDAMIN_B_SECS = 11.2;
-const IKEBUKURO_INNER_BIC_CAMERA_A_SECS = 13.7;
-const IKEBUKURO_INNER_BIC_CAMERA_B_SECS = 13.5;
+/** Durée des clips originaux (s), imprimée par scripts/melodies-gen.py. */
+const INNER_MAIN_MELODY_SECS = 8.6;
+const OUTER_MAIN_MELODY_SECS = 9.1;
+const OSAKI_INNER_SECONDARY_MELODY_SECS = 8.8;
+const OSAKI_OUTER_SECONDARY_MELODY_SECS = 8.3;
+const KOMAGOME_OUTER_SAKURA_A_SECS = 13.6;
+const KOMAGOME_INNER_SAKURA_V2_SECS = 13.4;
+const UGUISUDANI_INNER_HARU_TREMOLO_SECS = 9.4;
+const SESERAGI_MELODY_SECS = 8.1;
+const TAKADANOBABA_OUTER_ATOM_A_SECS = 6.8;
+const TAKADANOBABA_INNER_ATOM_B_SECS = 6.4;
+const EBISU_INNER_THIRD_MAN_F_SECS = 11.2;
+const TAKANAWA_GATEWAY_INNER_GLORIOUS_A_SECS = 10.7;
+const TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_SECS = 10.2;
+const KANDA_OUTER_MONDAMIN_A_SECS = 8.0;
+const KANDA_INNER_MONDAMIN_B_SECS = 7.6;
+const IKEBUKURO_INNER_BIC_CAMERA_A_SECS = 8.0;
+const IKEBUKURO_INNER_BIC_CAMERA_B_SECS = 7.3;
 /** Marge entre fin de mélodie et annonce de fermeture. */
 const MELODY_TO_ANNOUNCE_GAP = 3.5;
 
 function melodyBudgetSeconds(stationIndex: number): number {
-  // Clips MP3 désactivés : budget de la synthèse Tone.js uniquement.
+  // Sans clips (flag coupé) : budget de la synthèse Tone.js uniquement.
   if (!ENABLE_DEPARTURE_MELODY_CLIPS) return 6.5;
   const jy = STATIONS[stationIndex]?.jy;
   if (!jy) return 6.5;

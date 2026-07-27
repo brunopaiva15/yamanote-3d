@@ -161,11 +161,13 @@ Les valeurs continues (vitesse, distance, ouverture des portes) vivent dans
 ## Audio
 
 Roulement, onduleur VVVF, joints de rail, frein et carillons sont synthétisés
-(Tone.js). Les mélodies de départ (発車メロディ) utilisent pour l’instant une
-**synthèse originale** uniquement : les clips MP3 de quais (œuvres protégées)
-sont désactivés (`ENABLE_DEPARTURE_MELODY_CLIPS = false` dans
-`src/data/melodies.ts`) faute d’autorisations copyright. Le câblage par gare /
-quai / sens reste en place pour une réactivation ultérieure. La séquence de
+(Tone.js). Les mélodies de départ (発車メロディ) sont des **compositions
+originales** du projet : une par quai câblé, inspirée du caractère de la
+mélodie réelle (gamme, tempo, timbre) sans en reprendre les notes — les
+enregistrements protégés ne sont pas embarqués. Elles sont générées par
+`scripts/melodies-gen.py` dans `public/audio/melodies/` et activées via
+`ENABLE_DEPARTURE_MELODY_CLIPS = true` (`src/data/melodies.ts`) ; flag à
+`false` = retour à la synthèse Tone.js seule. La séquence de
 départ respecte l'ordre réel : la mélodie joue portes ouvertes et se termine
 **avant** l'annonce de fermeture, puis viennent le carillon et la fermeture.
 Les annonces (sens de la boucle 内回り avec gares repères, 次は… avec numéro

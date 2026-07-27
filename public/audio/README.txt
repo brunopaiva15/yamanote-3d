@@ -7,8 +7,10 @@ door-open.mp3, door-close.mp3, arrival.mp3, melody-JY01.mp3 ... melody-JY30.mp3
 Sans fichier, la synthèse Tone.js est utilisée.
 
 Mélodies de départ par quai (発車メロディ) :
-Les clips MP3 sous melodies/ sont désactivés tant que
-ENABLE_DEPARTURE_MELODY_CLIPS = false (src/data/melodies.ts),
-faute d’autorisations copyright. Le jeu utilise la synthèse Tone.js.
-Le câblage (shouldPlay* / play*) reste dans le code pour une
-réactivation ultérieure une fois les droits obtenus.
+Les clips MP3 sous melodies/ sont des compositions ORIGINALES du projet,
+générées par scripts/melodies-gen.py — une par quai câblé, inspirée du
+caractère de la mélodie réelle (gamme, tempo, timbre) sans en reprendre
+les notes. Aucun enregistrement protégé n'est embarqué. Activées via
+ENABLE_DEPARTURE_MELODY_CLIPS = true (src/data/melodies.ts) ; repasser
+le flag à false pour revenir à la synthèse Tone.js seule.
+Ne pas éditer les MP3 à la main : régénérer via le script.
