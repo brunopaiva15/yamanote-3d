@@ -1,9 +1,9 @@
 // Menu principal, composé comme un ekimeiban (panneau de nom de gare) JR East :
-// panneau blanc sur fond sombre, nom de la ligne en tête, titre typographique,
-// bande à la couleur de la ligne avec les deux sens de circulation, puis les
-// commandes et le bouton qui débloque l'audio (contrainte navigateur) avant de
-// lancer l'expérience. La bande et les mentions 内回り／外回り restent en
-// japonais : c'est de la signalétique, pas de l'interface (cf. src/i18n).
+// panneau blanc sur fond sombre, logo en pièce maîtresse, bande à la couleur
+// de la ligne avec les deux sens de circulation, puis les commandes et le
+// bouton qui débloque l'audio (contrainte navigateur) avant de lancer
+// l'expérience. La bande et les mentions 内回り／外回り restent en japonais :
+// c'est de la signalétique, pas de l'interface (cf. src/i18n).
 
 import { useEffect, useState } from 'react';
 import { useStore } from '../store';
@@ -71,15 +71,7 @@ export function StartScreen() {
   return (
     <div className="start-screen">
       <div className="start-board">
-        <header className="board-head">
-          <span className="board-line" lang="ja">
-            山手線
-            <span className="board-line-en" lang="en">
-              YAMANOTE LINE
-            </span>
-          </span>
-          <LanguageSwitcher className="lang-switch-board" />
-        </header>
+        <LanguageSwitcher className="lang-switch-board" />
         <Logo />
         <p className="start-tagline">{t.start.tagline}</p>
         <div className="board-band" aria-hidden="true" lang="ja">
