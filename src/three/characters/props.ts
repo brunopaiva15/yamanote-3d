@@ -209,10 +209,11 @@ const phoneScreenMat = new THREE.MeshStandardMaterial({
 });
 
 // Prise MAIN DROITE réglée à la main (probe ?grip=) : téléphone couché en
-// diagonale sur la paume, dalle côté paume ouverte (+Z), inclinée vers le
-// visage. Légèrement surdimensionné pour suivre les mains stylisées des packs.
-const PHONE_GRIP_POS = new THREE.Vector3(0, 0.09, 0.024);
-const PHONE_GRIP_ROT = new THREE.Euler(-0.35, 0, 0.3);
+// diagonale DANS la paume — côté -Z de l'os (la paume, +Z étant le dos de la
+// main), écran retourné vers l'extérieur de la paume (Ry ≈ π), incliné vers
+// le visage. Légèrement surdimensionné pour les mains stylisées des packs.
+const PHONE_GRIP_POS = new THREE.Vector3(0, 0.09, -0.022);
+const PHONE_GRIP_ROT = new THREE.Euler(0.15, Math.PI, 0.3);
 const PHONE_GRIP_SCALE = 1.28;
 
 // `side` : 1 = prise droite, -1 = prise gauche. La gauche est le MIROIR

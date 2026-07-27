@@ -91,11 +91,11 @@
           scene.add(ring);
         }
         const props = attachProps(clone.wrap, app, variant.bagProp !== false);
-        // ?grip=rx,rz,py,pz,s — essai de prise du téléphone (main droite).
+        // ?grip=rx,ry,rz,py,pz,s — essai de prise du téléphone (main droite).
         const grip = q.get('grip');
         if (grip && props.phoneR) {
-          const [rx, rz, py, pz, s] = grip.split(',').map(Number);
-          props.phoneR.rotation.set(rx, 0, rz);
+          const [rx, ry, rz, py, pz, s] = grip.split(',').map(Number);
+          props.phoneR.rotation.set(rx, ry, rz);
           props.phoneR.position.set(0, py, pz);
           props.phoneR.scale.setScalar(s || 1);
         }
