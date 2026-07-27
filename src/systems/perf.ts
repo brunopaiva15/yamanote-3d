@@ -80,3 +80,17 @@ export function qualityLevel(quality: Quality): PerfLevel {
 export function paxScale(): number {
   return PAX_SCALE[perfLevel()];
 }
+
+/**
+ * Niveau de détail de la rame vue de l'extérieur : 0 = tout, 1 = sans les
+ * ornements, 2 = bogies simplifiés, 3+ = vantaux figés et accessoires de toit
+ * supprimés. Un cran plus indulgent que le palier global : l'extérieur n'est
+ * visible que sur le quai, où la scène du wagon ne coûte plus rien.
+ */
+export function consistDetail(): 0 | 1 | 2 | 3 {
+  const l = perfLevel();
+  if (l <= 1) return 0;
+  if (l === 2) return 1;
+  if (l === 3) return 2;
+  return 3;
+}

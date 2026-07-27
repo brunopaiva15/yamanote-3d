@@ -16,6 +16,26 @@ import { alight, board, crossNearestPortal } from '../systems/boarding';
 import { setListenerPose } from '../systems/audioEngine';
 
 const LOOK_SENS = 0.0032;
+
+// Caméra libre de développement : __freeCam({x,y,z,tx,ty,tz}) en console pose
+// l'œil où l'on veut (juger l'extérieur de la rame, une gare, une cote) ;
+// __freeCam(null) rend la main au joueur.
+const freeCam = {
+  active: false,
+  pos: new THREE.Vector3(),
+  target: new THREE.Vector3(),
+};
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__freeCam = (
+    v: { x: number; y: number; z: number; tx: number; ty: number; tz: number } | null,
+  ) => {
+    freeCam.active = v !== null;
+    if (v) {
+      freeCam.pos.set(v.x, v.y, v.z);
+      freeCam.target.set(v.tx, v.ty, v.tz);
+    }
+  };
+}
 /** Vitesse de montée/descente de l'œil au franchissement d'un seuil (m/s). */
 const STEP_LERP = 0.28;
 
@@ -33,6 +53,14 @@ export function Player() {
   const earFwd = useRef(new THREE.Vector3());
   const earUp = useRef(new THREE.Vector3());
 
+  // Outil dev : franchir le seuil le plus proche sans avoir à y marcher —
+  // la marche reste le seul moyen en jeu.
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof window === 'undefined') return;
+    (window as unknown as Record<string, unknown>).__crossPortal = () =>
+      crossNearestPortal(pos.current);
+  }, []);
+
   // --- Entrées : clavier + souris + tactile ---
   useEffect(() => {
     const canvas = gl.domElement;
@@ -48,7 +76,6 @@ export function Player() {
         input.standRequest = true;
         e.preventDefault();
       }
-      if (e.code === 'KeyE') input.boardRequest = true;
       if (e.code === 'KeyM') useStore.getState().toggleMute();
       if (e.code === 'KeyF') {
         void document.documentElement.requestFullscreen().catch(() => undefined);
@@ -168,6 +195,13 @@ export function Player() {
     const dt = Math.min(rawDt, 0.05);
     const { started, seated } = useStore.getState();
 
+    if (freeCam.active) {
+      camera.position.copy(freeCam.pos);
+      camera.rotation.set(0, 0, 0);
+      camera.lookAt(freeCam.target);
+      return;
+    }
+
     // Regard.
     const { dx, dy } = consumeLook();
     if (started) {
@@ -186,11 +220,6 @@ export function Player() {
     if (input.standRequest) {
       input.standRequest = false;
       if (seated) standUp();
-    }
-    // Descendre / remonter au raccourci (E, ou bouton tactile).
-    if (input.boardRequest) {
-      input.boardRequest = false;
-      if (started && !seated) crossNearestPortal(pos.current);
     }
 
     transition.current = Math.min(1, transition.current + dt * 2.2);

@@ -5,7 +5,6 @@ import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { input } from '../systems/input';
-import { useNearPortal } from './useNearPortal';
 
 const RADIUS = 52;
 
@@ -13,10 +12,8 @@ export function Controls() {
   const started = useStore((s) => s.started);
   const touch = useStore((s) => s.touch);
   const seated = useStore((s) => s.seated);
-  const onPlatform = useStore((s) => s.onPlatform);
   const setTouch = useStore((s) => s.setTouch);
   const t = useT();
-  const near = useNearPortal();
   const baseRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
   const pointerId = useRef<number | null>(null);
@@ -84,17 +81,6 @@ export function Controls() {
       <div className="joystick" ref={baseRef}>
         <div className="joystick-knob" ref={knobRef} />
       </div>
-      {/* Descendre / monter : n'apparaît que devant un seuil dégagé. */}
-      {near && !seated && (
-        <button
-          className="touch-board"
-          onClick={() => {
-            input.boardRequest = true;
-          }}
-        >
-          {onPlatform ? t.hud.boardTrain : t.hud.alight}
-        </button>
-      )}
       <button
         className="touch-sit"
         onClick={() => {

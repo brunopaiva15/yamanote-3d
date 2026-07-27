@@ -21,10 +21,7 @@ export function BoardingPrompt() {
 
   if (!started || seated || touch || !near) return null;
 
-  return (
-    <div className="hud-prompt">
-      <kbd>E</kbd>
-      <span>{onPlatform ? t.hud.boardTrain : t.hud.alight}</span>
-    </div>
-  );
+  // Pas de touche : la porte ouverte EST le passage, on marche à travers.
+  // L'invite ne fait qu'annoncer que c'est possible.
+  return <div className="hud-prompt">{onPlatform ? t.hud.boardTrain : t.hud.alight}</div>;
 }

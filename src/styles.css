@@ -537,9 +537,6 @@ body,
   top: calc(50% + 34px);
   transform: translateX(-50%);
   z-index: 15;
-  display: flex;
-  align-items: center;
-  gap: 8px;
   padding: 7px 13px;
   border-radius: 12px;
   background: rgba(16, 21, 26, 0.62);
@@ -548,31 +545,6 @@ body,
   letter-spacing: 0.02em;
   pointer-events: none;
   white-space: nowrap;
-}
-
-.hud-prompt kbd {
-  font: inherit;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 5px;
-  border: 1px solid rgba(242, 244, 242, 0.55);
-  background: rgba(242, 244, 242, 0.12);
-}
-
-.touch-board {
-  position: fixed;
-  right: 24px;
-  bottom: 160px;
-  z-index: 25;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--sticker-ink);
-  background: var(--sticker);
-  border: 2px solid var(--ink-line);
-  border-radius: 14px;
-  padding: 13px 20px;
-  box-shadow: 0 4px 0 rgba(16, 21, 26, 0.85);
 }
 
 .touch-sit {

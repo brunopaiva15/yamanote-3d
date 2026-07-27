@@ -7,6 +7,7 @@ import { CONFIG } from './data/config';
 import { Engine } from './three/Engine';
 import { Scene } from './three/Scene';
 import { TrainRig } from './three/TrainRig';
+import { TrainConsist } from './three/exterior/TrainConsist';
 import { Car } from './three/Car';
 import { Seats } from './three/Seats';
 import { Doors } from './three/Doors';
@@ -53,6 +54,7 @@ export default function App() {
           <Screens />
           <DoorCloseLed />
           <Passengers />
+          <TrainConsist />
         </TrainRig>
         <Scenery />
         <Landmarks />
