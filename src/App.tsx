@@ -25,6 +25,7 @@ import { Player } from './three/Player';
 import { Hud } from './ui/Hud';
 import { StartScreen } from './ui/StartScreen';
 import { Controls } from './ui/Controls';
+import { BoardingPrompt } from './ui/BoardingPrompt';
 
 export default function App() {
   const started = useStore((s) => s.started);
@@ -62,6 +63,7 @@ export default function App() {
         <Player />
       </Canvas>
       <Hud />
+      <BoardingPrompt />
       <Controls />
       {!started && <StartScreen />}
     </div>

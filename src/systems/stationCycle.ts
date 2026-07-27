@@ -573,4 +573,23 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   w.__setTrainZ = (z: number) => {
     runtime.trainZ = z;
   };
+  // Saut direct à un instant d'une phase, sans attendre le cycle réel.
+  w.__jumpTo = (phase: Phase, t = 0, station?: number) => {
+    const store = useStore.getState();
+    const index = station ?? store.index;
+    store.setIndex(index);
+    store.setPhase(phase);
+    store.setDoorSide(DOOR_SIDE[index]);
+    audio.setPlatformSide(DOOR_SIDE[index]);
+    runtime.phaseT = t;
+    const sim = simulatePhaseState(phase, t);
+    runtime.speed = sim.v;
+    runtime.accel = sim.a;
+    if (phase === 'dwell') seedDoorsForDwell(t, index);
+    else seedDoorMotion(0, 999, 0, 999);
+    seedPlatformPresence(phase, t);
+    if (phase === 'cruise') clearPlatformCrowd();
+    else seedPlatformCrowd(index);
+    seedFired(phase, t, index);
+  };
 }

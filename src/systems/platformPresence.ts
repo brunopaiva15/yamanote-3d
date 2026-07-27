@@ -36,6 +36,13 @@ function presenceFrom(phase: Phase, p: number): { presence: number; slide: numbe
 
 // À appeler APRÈS updateSegmentEnv pour lire un p à jour.
 export function updatePlatformPresence(): void {
+  // Le joueur est descendu : c'est la gare qui devient le repère fixe. Elle ne
+  // glisse plus et ne disparaît plus — c'est la rame qui s'en va (runtime.trainZ).
+  if (runtime.playerFrame === 'platform') {
+    runtime.platformFade = 1;
+    runtime.platformSlide = 0;
+    return;
+  }
   const { phase } = useStore.getState();
   const { presence, slide } = presenceFrom(phase, segEnv.p);
   runtime.platformFade = presence;

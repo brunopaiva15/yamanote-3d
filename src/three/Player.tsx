@@ -11,11 +11,13 @@ import { runtime } from '../systems/runtime';
 import { input, moveAxes, consumeLook } from '../systems/input';
 import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
 import { publishPlayerPose } from '../systems/playerFrame';
+import { AISLE_U, frameAt, groundY, resolveMove, snapInside } from '../systems/walkable';
+import { alight, board, crossNearestPortal } from '../systems/boarding';
 import { setListenerPose } from '../systems/audioEngine';
 
-const AISLE_X = 0.7;
-const AISLE_Z = 9.2;
 const LOOK_SENS = 0.0032;
+/** Vitesse de montée/descente de l'œil au franchissement d'un seuil (m/s). */
+const STEP_LERP = 0.28;
 
 export function Player() {
   const { camera, gl } = useThree();
@@ -46,6 +48,7 @@ export function Player() {
         input.standRequest = true;
         e.preventDefault();
       }
+      if (e.code === 'KeyE') input.boardRequest = true;
       if (e.code === 'KeyM') useStore.getState().toggleMute();
       if (e.code === 'KeyF') {
         void document.documentElement.requestFullscreen().catch(() => undefined);
@@ -114,6 +117,8 @@ export function Player() {
   }, [gl]);
 
   const trySit = () => {
+    // Les banquettes du wagon ne se prennent pas depuis le quai.
+    if (runtime.playerFrame !== 'car') return;
     const forward = new THREE.Vector3(-Math.sin(yaw.current), 0, -Math.cos(yaw.current));
     let best = -1;
     let bestScore = Infinity;
@@ -147,7 +152,12 @@ export function Player() {
     if (i >= 0 && seatOccupant[i] === 'player') seatOccupant[i] = null;
     if (i >= 0) {
       const s = SEAT_SLOTS[i];
-      pos.current.set(THREE.MathUtils.clamp(s.x - s.side * 0.55, -AISLE_X, AISLE_X), CONFIG.eyeHeight, s.z);
+      pos.current.set(
+        THREE.MathUtils.clamp(s.x - s.side * 0.55, -AISLE_U, AISLE_U),
+        CONFIG.eyeHeight,
+        s.z + runtime.trainZ,
+      );
+      snapInside(pos.current);
     }
     playerSeat.current = -1;
     transition.current = 0;
@@ -177,6 +187,11 @@ export function Player() {
       input.standRequest = false;
       if (seated) standUp();
     }
+    // Descendre / remonter au raccourci (E, ou bouton tactile).
+    if (input.boardRequest) {
+      input.boardRequest = false;
+      if (started && !seated) crossNearestPortal(pos.current);
+    }
 
     transition.current = Math.min(1, transition.current + dt * 2.2);
     const speed01 = runtime.speed / V_MAX;
@@ -192,21 +207,31 @@ export function Player() {
         yaw.current += d * dt * 2.4;
       }
     } else {
-      // Marche dans l'allée.
+      // Marche : allée du wagon, alcôves de porte, seuils ouverts, quai.
       const axes = moveAxes();
       const mag = Math.hypot(axes.x, axes.y);
+      // Le quai fait 96 m de long : au pas de promenade on n'en verrait
+      // jamais le bout. Maj. pour presser le pas, comme tout le monde.
+      const running = input.keys.has('ShiftLeft') || input.keys.has('ShiftRight');
+      const speed = running ? CONFIG.runSpeed : CONFIG.walkSpeed;
       if (started && mag > 0.01) {
         const fx = -Math.sin(yaw.current);
         const fz = -Math.cos(yaw.current);
         const rx = Math.cos(yaw.current);
         const rz = -Math.sin(yaw.current);
-        const vx = (fx * axes.y + rx * axes.x) * CONFIG.walkSpeed * Math.min(1, mag);
-        const vz = (fz * axes.y + rz * axes.x) * CONFIG.walkSpeed * Math.min(1, mag);
-        pos.current.x = THREE.MathUtils.clamp(pos.current.x + vx * dt, -AISLE_X, AISLE_X);
-        pos.current.z = THREE.MathUtils.clamp(pos.current.z + vz * dt, -AISLE_Z, AISLE_Z);
-        bobT.current += dt * 7.5 * Math.min(1, mag);
+        const vx = (fx * axes.y + rx * axes.x) * speed * Math.min(1, mag);
+        const vz = (fz * axes.y + rz * axes.x) * speed * Math.min(1, mag);
+        resolveMove(pos.current, vx * dt, vz * dt);
+        bobT.current += dt * (running ? 10.5 : 7.5) * Math.min(1, mag);
       }
-      pos.current.y = CONFIG.eyeHeight;
+      // Le sol descend de 6 cm entre le plancher du wagon et la dalle du
+      // quai : l'œil suit la marche au lieu de sauter.
+      const eyeTarget = groundY(pos.current.x, pos.current.z) + CONFIG.eyeHeight;
+      pos.current.y = THREE.MathUtils.damp(pos.current.y, eyeTarget, 1 / STEP_LERP, dt);
+      // Basculement de repère : franchir le seuil suffit, aucune touche.
+      const frame = frameAt(pos.current.x, pos.current.z);
+      if (frame === 'platform') alight();
+      else if (frame === 'car') board();
       targetPos = pos.current;
     }
 
@@ -217,8 +242,10 @@ export function Player() {
     camera.position.copy(camBase.current);
 
     // Assis, le corps est calé contre la banquette : le balancement ressenti
-    // est très atténué (on bouge AVEC la rame).
-    const brace = seated ? 0.25 : 1;
+    // est très atténué (on bouge AVEC la rame). Debout sur le quai, il n'y a
+    // évidemment rien à ressentir : le béton ne tangue pas.
+    const aboard = runtime.playerFrame === 'car' ? 1 : 0;
+    const brace = (seated ? 0.25 : 1) * aboard;
     const bob = seated ? 0 : Math.sin(bobT.current * 2) * 0.016;
     const trainBounce = Math.sin(runtime.swayTime * 6.7) * 0.006 * speed01 * brace;
     camera.position.y += bob + trainBounce;
@@ -227,7 +254,8 @@ export function Player() {
     camera.rotation.order = 'YXZ';
     camera.rotation.y = yaw.current;
     camera.rotation.x = pitch.current;
-    camera.rotation.z = (runtime.sway * 0.011 - runtime.accel * 0.004) * (seated ? 0.4 : 1);
+    camera.rotation.z =
+      (runtime.sway * 0.011 - runtime.accel * 0.004) * (seated ? 0.4 : 1) * aboard;
 
     // Position du joueur partagée (regards des PNJ), dans les trois repères.
     publishPlayerPose(camera.position.x, camera.position.y, camera.position.z);
