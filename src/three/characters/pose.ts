@@ -10,10 +10,19 @@ import * as THREE from 'three';
 import type { Pax } from '../../systems/passengers';
 import type { CharacterClone } from './library';
 
-// Hauteur du centre de l'anneau des tsurikawa (voir three/Handles.tsx :
-// barre à 2,0 m, attache courte — l'anneau est remonté pour que le joueur ne
-// se le prenne plus dans la tête).
+// Géométrie des tsurikawa, reprise de three/Handles.tsx : rangées en
+// x = ±0,45, anneaux tous les 0,451 m à partir de z = -9,35 ; centre d'anneau
+// à 1,77 m (barre à 2,0 m, attache courte — anneaux remontés pour que le
+// joueur ne se les prenne plus dans la tête). L'anneau est un TRIANGLE pointe
+// en haut : on l'agrippe par sa barre BASSE, à centre - R/2.
 const STRAP_RING_Y = 1.77;
+const STRAP_BAR_Y = STRAP_RING_Y - 0.058; // barre basse du triangle (R = 0,116)
+const STRAP_ROW_X = 0.45;
+const STRAP_PITCH = 0.451;
+const STRAP_Z0 = -9.35;
+// Un humain n'attrape pas la poignée à l'aplomb de son crâne (bras vertical
+// collé à la tête) : il saisit celle qui pend DEVANT son visage — l'élection
+// de l'anneau (portée du bras à l'appui) se fait dans le bloc poignée.
 
 // Poids lissés par passager (persistent entre frames).
 export interface PoseState {
@@ -260,6 +269,11 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
     const hand = side === 1 ? bones.handR : bones.handL;
     const foreRel = side === 1 ? clone.armRel.foreR : clone.armRel.foreL;
     const handRel = side === 1 ? clone.armRel.handR : clone.armRel.handL;
+    const facingX = Math.sin(p.yaw);
+    const facingZ = Math.cos(p.yaw);
+    const dirZ = facingZ >= 0 ? 1 : -1;
+    const ringX = side * STRAP_ROW_X;
+    let ringZ = p.pos.z; // anneau élu — calculé selon la portée, voir IK
     const ref = clone.chestRef ?? clone.wrap;
     ref.updateWorldMatrix(true, false);
     ref.getWorldQuaternion(qWrap);
@@ -302,10 +316,34 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
         hand.getWorldPosition(vTarget);
         l2 = vFoot.distanceTo(vTarget); // coude → poignet
       }
-      // Cible du poignet : sous l'anneau, légèrement DEVANT le PNJ — on
-      // attrape une poignée devant son visage, pas à l'aplomb du crâne (le
-      // bras montait dans le plan du corps et semblait tiré en arrière).
-      vChest.set(p.pos.x + Math.sin(p.yaw) * 0.05, STRAP_RING_Y - 0.085, p.pos.z + Math.cos(p.yaw) * 0.05);
+      // ÉLECTION de l'anneau : jamais celui à l'aplomb du crâne (bras
+      // vertical collé à la tête) — le plus LOIN devant dans la fenêtre
+      // [0,03 ; 0,48] plafonnée par la PORTÉE du bras. La fenêtre fait ~un
+      // pas de grille : il y a toujours un candidat devant ; repli sur le
+      // plus proche si le bras est vraiment trop court. Grands gabarits →
+      // anneau loin devant, bras en diagonale, coude souple.
+      const wristY = STRAP_BAR_Y - 0.08;
+      const dy = wristY - vBonePos.y;
+      const dxRow = ringX - vBonePos.x;
+      const reach = l1 + l2 + 0.02; // marge : haussement d'épaule en secours
+      const aheadCap = Math.min(0.481, Math.sqrt(Math.max(0.01, reach * reach - dy * dy - dxRow * dxRow)));
+      const k0 = Math.round((p.pos.z - STRAP_Z0) / STRAP_PITCH);
+      let bestAhead = -1;
+      let nearestAbs = Infinity;
+      for (let k = k0 - 2; k <= k0 + 2; k++) {
+        const z = STRAP_Z0 + k * STRAP_PITCH;
+        const ahead = (z - p.pos.z) * dirZ;
+        if (Math.abs(ahead) < nearestAbs) {
+          nearestAbs = Math.abs(ahead);
+          if (bestAhead < 0) ringZ = z;
+        }
+        if (ahead >= 0.03 && ahead <= aheadCap && ahead > bestAhead) {
+          bestAhead = ahead;
+          ringZ = z;
+        }
+      }
+      // Cible du poignet : sous la barre basse de l'anneau élu.
+      vChest.set(ringX, wristY, ringZ);
       vDir.subVectors(vChest, vBonePos);
       // Portée insuffisante (petits gabarits / bras courts) : HAUSSEMENT
       // d'épaule progressif — la clavicule vise plus haut, comme un humain
@@ -338,15 +376,21 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
       aimBone(fore, vChest, sw); // avant-bras vers le poignet cible
     }
     // Main : prolonge l'avant-bras (poignet sans vrille), puis un CASSÉ net
-    // du poignet : les doigts basculent vers l'avant du PNJ pour accrocher
-    // le bas de l'anneau (qui pend face à lui) — sans ça ils filent tout
-    // droit au travers et la main ne « prend » pas.
+    // du poignet — les doigts montent par-dessus la barre basse de l'anneau,
+    // légèrement vers l'avant — et la PAUME est résolue vers le visage :
+    // vue de l'extérieur on voit le dos/la tranche de la main qui agrippe,
+    // plus une paume ouverte à plat.
     if (fore && hand && handRel) {
       fore.updateWorldMatrix(true, false);
       fore.getWorldQuaternion(qRestW).multiply(handRel);
       applyWorld(hand, qRestW, sw);
-      vTarget.set(p.pos.x + Math.sin(p.yaw) * 0.17, STRAP_RING_Y - 0.02, p.pos.z + Math.cos(p.yaw) * 0.17);
+      vTarget.set(ringX + facingX * 0.06, STRAP_BAR_Y + 0.03, ringZ + facingZ * 0.06);
       aimBone(hand, vTarget, sw);
+      hand.updateWorldMatrix(true, false);
+      hand.getWorldQuaternion(qRestW);
+      vTarget.set(0, -0.35, -0.9).applyQuaternion(qWrapOnly); // vers le bas-visage
+      solvePalmRoll(qRestW, vTarget.x, vTarget.y, vTarget.z);
+      applyWorld(hand, qRestW, sw);
     }
   }
 

@@ -78,6 +78,13 @@
           p.headYaw = 0;
           p.headPitch = 0.55; // même cible que systems/passengers
         }
+        if (p.holdStrap) {
+          // Même alignement que systems/passengers (alignStrapStand) : le
+          // porteur se poste ~0,28 m derrière un anneau de la grille.
+          const dir = Math.cos(p.yaw) >= 0 ? 1 : -1;
+          const ringZ = -9.35 + Math.round((p.pos.z + dir * 0.28 + 9.35) / 0.451) * 0.451;
+          p.pos.z = ringZ - dir * 0.28;
+        }
         if (seated) {
           // Banc : coussin (haut à 0.45) + sol quadrillé déjà présent.
           const bench = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 0.5), new THREE.MeshStandardMaterial({ color: '#666a70' }));
@@ -85,10 +92,15 @@
           scene.add(bench);
         }
         if (p.holdStrap) {
-          // Anneau de tsurikawa (repère) au-dessus du PNJ, comme Handles.tsx.
-          const ring = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.011, 8, 20), new THREE.MeshStandardMaterial({ color: '#e8e4dc' }));
-          ring.position.set(p.pos.x, 1.77, p.pos.z);
-          scene.add(ring);
+          // Rangée d'anneaux (repères) AUX POSITIONS RÉELLES du jeu
+          // (Handles.tsx : z = -9.35 + k * 0.451) — la pose choisit celui
+          // devant le PNJ, pas celui à l'aplomb du crâne.
+          const ringMat = new THREE.MeshStandardMaterial({ color: '#e8e4dc' });
+          for (let k = 19; k <= 23; k++) {
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.011, 8, 20), ringMat);
+            ring.position.set(p.pos.x, 1.77, -9.35 + k * 0.451);
+            scene.add(ring);
+          }
         }
         const props = attachProps(clone.wrap, app, variant.bagProp !== false);
         // ?grip=rx,ry,rz,py,pz,s — essai de prise du téléphone (main droite).

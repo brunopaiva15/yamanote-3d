@@ -64,11 +64,27 @@ export const paxList: Pax[] = [];
 
 // Le bas de l'anneau des tsurikawa est à ~1,71 m (poignées remontées pour le
 // confort de marche du joueur) : en dessous de cette échelle, un PNJ ne
-// l'atteint pas naturellement et garde les bras baissés.
-const STRAP_MIN_SCALE = 1.02;
+// l'atteint qu'en s'étirant bras tendu — pas naturel — et garde les bras
+// baissés.
+const STRAP_MIN_SCALE = 1.06;
 
 function rollStrap(scale: number): boolean {
   return scale >= STRAP_MIN_SCALE && Math.random() < 0.6;
+}
+
+// Grille des anneaux de tsurikawa (three/Handles.tsx) : un porteur ne se
+// poste PAS à l'aplomb d'un anneau — il se décale pour en avoir un ~0,28 m
+// DEVANT lui et l'attraper bras en diagonale (characters/pose.ts vise ce
+// même anneau). Décalage ≤ un demi-pas (0,23 m), invisible dans la foule.
+const STRAP_Z0 = -9.35;
+const STRAP_PITCH = 0.451;
+const STRAP_AHEAD = 0.28;
+
+function alignStrapStand(p: Pax): void {
+  if (!p.holdStrap) return;
+  const dir = Math.cos(p.targetYaw) >= 0 ? 1 : -1;
+  const ringZ = STRAP_Z0 + Math.round((p.pos.z + dir * STRAP_AHEAD - STRAP_Z0) / STRAP_PITCH) * STRAP_PITCH;
+  p.pos.z = THREE.MathUtils.clamp(ringZ - dir * STRAP_AHEAD, -9.0, 9.0);
 }
 
 function makePax(id: number): Pax {
@@ -162,6 +178,7 @@ function standPax(p: Pax, slot: number): void {
   p.pos.set(s.x, 0, s.z);
   p.yaw = Math.random() > 0.5 ? 0 : Math.PI;
   p.targetYaw = p.yaw;
+  alignStrapStand(p);
 }
 
 function releaseSlots(p: Pax): void {
@@ -452,6 +469,7 @@ export function updatePassengers(dt: number): void {
             p.state = 'standing';
             p.holdStrap = rollStrap(p.height);
             p.targetYaw = Math.random() > 0.5 ? 0 : Math.PI;
+            alignStrapStand(p);
           } else {
             p.state = 'hidden';
           }
