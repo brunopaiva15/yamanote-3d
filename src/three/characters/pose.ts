@@ -159,21 +159,17 @@ const PHONE_HAND = { x: -0.45, y: 0.1, z: 0.75 }; // doigts presque à plat en t
 // paume vers le bas : téléphone posé sur le DOS de la main).
 const PHONE_PALM = { x: 0.05, y: 0.85, z: -0.52 };
 
-// Bras à la poignée — construction gauche + miroir (comme le téléphone), en
-// DEUX temps : écart latéral puis levée. Depuis le repos (bras pendant), une
-// seule rotation « minimale » vers le haut est un retournement ~180° au
-// roulis indéfini — le bras finissait vrillé vers l'arrière au gré de la
-// frame du clip. Le chemin par le côté est celui d'une vraie épaule ;
-// l'aplomb exact sur l'ANNEAU est ensuite raffiné par aimBone (corrections
-// courtes, stables). La main agrippe : doigts par-dessus l'anneau, paume
-// résolue vers le bas-intérieur.
+// Bras à la poignée. SEULE l'épaule est posée en absolu — construction
+// gauche + miroir, en DEUX temps (écart latéral puis levée : depuis le
+// repos, une seule rotation « minimale » vers le haut est un retournement
+// ~180° au roulis indéfini — le bras finissait vrillé vers l'arrière au gré
+// de la frame du clip). L'avant-bras et la main PROLONGENT ensuite la
+// chaîne par les offsets de bind parent→enfant (clone.armRel) : zéro vrille
+// relative au coude et au poignet par construction. Les flexions restantes
+// (plier vers l'anneau, refermer les doigts dessus) sont de COURTS aims,
+// sans composante de vrille.
 const STRAP_UPPER_MID = { x: 0.85, y: 0.15, z: 0.15 };
 const STRAP_UPPER_END = { x: 0.4, y: 0.85, z: 0.12 };
-const STRAP_FORE_MID = { x: 0.75, y: 0.45, z: 0.12 };
-const STRAP_FORE_END = { x: 0.06, y: 0.95, z: 0.08 };
-const STRAP_HAND_MID = { x: 0.65, y: 0.55, z: 0.12 };
-const STRAP_HAND_END = { x: 0, y: 0.75, z: 0.5 }; // doigts fléchis par-dessus l'anneau
-const STRAP_PALM = { x: -0.3, y: -0.85, z: 0.15 };
 
 // Réutilisé par la rame et la foule du quai. `strapSide` : côté du bras déjà
 // accroché à la poignée (±1, 0 si aucun) — le téléphone passe alors dans
@@ -262,43 +258,89 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
     const arm = side === 1 ? bones.upperArmR : bones.upperArmL;
     const fore = side === 1 ? bones.foreArmR : bones.foreArmL;
     const hand = side === 1 ? bones.handR : bones.handL;
+    const foreRel = side === 1 ? clone.armRel.foreR : clone.armRel.foreL;
+    const handRel = side === 1 ? clone.armRel.handR : clone.armRel.handL;
     const ref = clone.chestRef ?? clone.wrap;
     ref.updateWorldMatrix(true, false);
     ref.getWorldQuaternion(qWrap);
     clone.wrap.getWorldQuaternion(qWrapOnly);
-    const strapAim = (
-      bone: THREE.Bone | undefined,
-      rest: THREE.Quaternion | undefined,
-      mid: { x: number; y: number; z: number },
-      end: { x: number; y: number; z: number },
-      weight: number,
-      palm?: { x: number; y: number; z: number },
-    ) => {
-      if (!bone || !rest) return;
-      vDir.set(mid.x, mid.y, mid.z).applyQuaternion(qWrapOnly);
-      worldTarget(rest, qWrap, vDir.x, vDir.y, vDir.z, qLTarget);
-      vDir.set(end.x, end.y, end.z).applyQuaternion(qWrapOnly);
+    // Clavicule au neutre : le clip idle la laisse tomber, ce qui coûte
+    // plusieurs centimètres de portée vers l'anneau.
+    for (const [clav, rest] of clone.clavicles) {
+      if (arm && clav === arm.parent) clav.quaternion.slerp(rest, sw);
+    }
+    // Épaule : deux temps depuis le repos (roulis de bind conservé), miroir
+    // pour le bras droit — fixe le ROULIS de toute la chaîne.
+    if (arm && clone.armRest.upperArmL) {
+      vDir.set(STRAP_UPPER_MID.x, STRAP_UPPER_MID.y, STRAP_UPPER_MID.z).applyQuaternion(qWrapOnly);
+      worldTarget(clone.armRest.upperArmL, qWrap, vDir.x, vDir.y, vDir.z, qLTarget);
+      vDir.set(STRAP_UPPER_END.x, STRAP_UPPER_END.y, STRAP_UPPER_END.z).applyQuaternion(qWrapOnly);
       alignY(qLTarget, vDir.x, vDir.y, vDir.z, qRestW);
       qLTarget.copy(qRestW);
-      if (palm) {
-        vTarget.set(palm.x, palm.y, palm.z).applyQuaternion(qWrapOnly);
-        solvePalmRoll(qLTarget, vTarget.x, vTarget.y, vTarget.z);
+      applyWorld(arm, side === 1 ? mirrorWorld(qLTarget, qWrapOnly, qMirror) : qLTarget, sw * 0.95);
+    }
+    if (arm && fore) {
+      // Avant-bras : prolonge le bras (offset de bind → coude sans vrille)…
+      if (foreRel) {
+        arm.updateWorldMatrix(true, false);
+        arm.getWorldQuaternion(qRestW).multiply(foreRel);
+        applyWorld(fore, qRestW, sw);
       }
-      applyWorld(bone, side === 1 ? mirrorWorld(qLTarget, qWrapOnly, qMirror) : qLTarget, weight);
-    };
-    strapAim(arm, clone.armRest.upperArmL, STRAP_UPPER_MID, STRAP_UPPER_END, sw * 0.95);
-    if (arm) {
-      // Portée adaptée au gabarit : petite correction du coude vers un guide
-      // hors/sous l'anneau (le deux-temps fixe le roulis, l'aim la portée).
-      vChest.set(p.pos.x + side * 0.15, STRAP_RING_Y - 0.35, p.pos.z);
-      aimBone(arm, vChest, sw * 0.85);
+      // …puis IK à DEUX OS : longueurs mesurées sur le squelette (invariantes
+      // à la pose), coude posé sur le cercle solution côté extérieur-bas —
+      // le POIGNET atterrit sous l'anneau quel que soit le gabarit, là où un
+      // aim purement directionnel sur- ou sous-dépassait selon le modèle
+      // (doigts au travers de l'anneau, ou main qui flotte dessous).
+      arm.updateWorldMatrix(true, false);
+      arm.getWorldPosition(vBonePos); // épaule
+      fore.updateWorldMatrix(true, false);
+      fore.getWorldPosition(vFoot); // coude
+      const l1 = vBonePos.distanceTo(vFoot);
+      let l2 = l1 * 0.9;
+      if (hand) {
+        hand.updateWorldMatrix(true, false);
+        hand.getWorldPosition(vTarget);
+        l2 = vFoot.distanceTo(vTarget); // coude → poignet
+      }
+      vChest.set(p.pos.x, STRAP_RING_Y - 0.085, p.pos.z); // cible du poignet
+      vDir.subVectors(vChest, vBonePos);
+      // Portée insuffisante (petits gabarits / bras courts) : HAUSSEMENT
+      // d'épaule progressif — la clavicule vise plus haut, comme un humain
+      // qui se hisse — puis l'épaule est relue avant l'IK.
+      const deficit = vDir.length() - (l1 + l2 - 0.02);
+      if (deficit > 0 && arm.parent && (arm.parent as THREE.Bone).isBone) {
+        const shrug = Math.min(1, deficit / 0.05) * sw;
+        vTarget.copy(vBonePos);
+        vTarget.y += 0.3;
+        aimBone(arm.parent as THREE.Bone, vTarget, shrug * 0.75);
+        arm.updateWorldMatrix(true, false);
+        arm.getWorldPosition(vBonePos);
+        vDir.subVectors(vChest, vBonePos);
+      }
+      const d = Math.min(Math.max(vDir.length(), Math.abs(l1 - l2) + 0.01), l1 + l2 - 0.01);
+      vDir.normalize();
+      const along = (l1 * l1 + d * d - l2 * l2) / (2 * d);
+      const out = Math.sqrt(Math.max(0, l1 * l1 - along * along));
+      // Pole du coude : extérieur-bas-avant, orthogonalisé à l'axe épaule→cible.
+      vTarget.set(side * 0.8 + Math.sin(p.yaw) * 0.4, -0.35, Math.cos(p.yaw) * 0.4);
+      vTarget.addScaledVector(vDir, -vTarget.dot(vDir));
+      if (vTarget.lengthSq() < 1e-6) vTarget.set(side, 0, 0);
+      vTarget.normalize();
+      vFoot.copy(vBonePos).addScaledVector(vDir, along).addScaledVector(vTarget, out);
+      aimBone(arm, vFoot, sw); // épaule vers le coude IK (l'avant-bras suit, rigide)
+      aimBone(fore, vChest, sw); // avant-bras vers le poignet cible
     }
-    strapAim(fore, clone.armRest.foreArmL, STRAP_FORE_MID, STRAP_FORE_END, sw);
-    if (fore) {
-      vChest.set(p.pos.x, STRAP_RING_Y - 0.1, p.pos.z);
-      aimBone(fore, vChest, sw); // poignet SOUS l'anneau, les doigts l'enveloppent
+    // Main : prolonge l'avant-bras (poignet sans vrille), puis un CASSÉ net
+    // du poignet : les doigts basculent vers l'avant du PNJ pour accrocher
+    // le bas de l'anneau (qui pend face à lui) — sans ça ils filent tout
+    // droit au travers et la main ne « prend » pas.
+    if (fore && hand && handRel) {
+      fore.updateWorldMatrix(true, false);
+      fore.getWorldQuaternion(qRestW).multiply(handRel);
+      applyWorld(hand, qRestW, sw);
+      vTarget.set(p.pos.x + Math.sin(p.yaw) * 0.13, STRAP_RING_Y - 0.02, p.pos.z + Math.cos(p.yaw) * 0.13);
+      aimBone(hand, vTarget, sw);
     }
-    strapAim(hand, clone.armRest.handL, STRAP_HAND_MID, STRAP_HAND_END, sw, STRAP_PALM);
   }
 
   // --- Assise manuelle de secours (pack sans clip assis). ---

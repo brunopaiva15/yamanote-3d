@@ -72,6 +72,11 @@ export interface CharacterClone {
   // Orientations de repos des os des bras, RELATIVES à la poitrine (chestRef)
   // — la vrille du buste, commune aux deux côtés, est ainsi factorisée.
   armRest: Partial<Record<ArmBoneKey, THREE.Quaternion>>;
+  // Offsets de bind PARENT → ENFANT au sein de chaque bras (bras→avant-bras,
+  // avant-bras→main), par côté : ils prolongent une chaîne posée SANS
+  // introduire de vrille relative (coude/poignet neutres du rig), là où
+  // reposer chaque os indépendamment tord la chaîne (bras à la poignée).
+  armRel: { foreL?: THREE.Quaternion; handL?: THREE.Quaternion; foreR?: THREE.Quaternion; handR?: THREE.Quaternion };
   // Os de référence des repos des bras (parent des clavicules) ; wrap à défaut.
   chestRef: THREE.Object3D | null;
   // Chaîne du buste (au-dessus des hanches jusqu'à la poitrine, racine en
@@ -368,6 +373,20 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
     armRest[key] = q;
   }
 
+  // Offsets parent → enfant à la bind pose (aucune hypothèse de symétrie :
+  // mesurés PAR CÔTÉ, directement entre les os).
+  const relOf = (parent?: THREE.Bone, child?: THREE.Bone): THREE.Quaternion | undefined => {
+    if (!parent || !child) return undefined;
+    const q = parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+    return q.multiply(child.getWorldQuaternion(new THREE.Quaternion()));
+  };
+  const armRel: CharacterClone['armRel'] = {
+    foreL: relOf(bones.upperArmL, bones.foreArmL),
+    handL: relOf(bones.foreArmL, bones.handL),
+    foreR: relOf(bones.upperArmR, bones.foreArmR),
+    handR: relOf(bones.foreArmR, bones.handR),
+  };
+
   // Clavicules (leurs rotations locales de repos SONT des miroirs exacts
   // dans ces rigs) : l'assise les remet au neutre, le clip les anime
   // asymétriquement.
@@ -411,6 +430,7 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
     bones,
     legGeom,
     armRest,
+    armRel,
     chestRef,
     spineChain,
     clavicles,
