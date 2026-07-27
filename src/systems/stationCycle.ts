@@ -11,9 +11,14 @@ import {
 } from '../data/melodies';
 import { DOOR_SIDE, STATIONS } from '../data/stations';
 import {
+  EMERGENCY_REASONS,
   approachSequence,
   departureSequence,
   doorsClosingAnnouncement,
+  emergencyBrakeAnnouncement,
+  emergencyResumeAnnouncement,
+  emergencyStopAnnouncement,
+  emergencyWaitAnnouncement,
 } from '../data/announcements';
 import { useStore, type Phase } from '../store';
 import { advanceClock, runtime } from './runtime';
@@ -25,7 +30,7 @@ import {
   stationTimings,
 } from './doorMotion';
 import * as audio from './audioEngine';
-import { say } from './speech';
+import { cancelSpeech, say } from './speech';
 import { exchangePassengers } from './passengers';
 import { seedPlatformPresence } from './platformPresence';
 import { clearPlatformCrowd, seedPlatformCrowd } from './platformCrowd';
@@ -46,6 +51,77 @@ function scheduleNextRunSound(from: number): void {
   nextRunSoundAt = from + 14 + Math.random() * 22;
 }
 
+// --- Arrêt d'urgence (急停車) -------------------------------------------
+// Très rare : tiré au sort à chaque entrée en cruise, déclenché en pleine
+// course. Le train freine en urgence, reste immobilisé 1 à 5 min avec les
+// annonces conducteur, puis repart. Le chrono de phase est avancé au prorata
+// de la vitesse pendant tout l'événement : gelé à l'arrêt, il ne consomme que
+// l'équivalent de la distance réellement parcourue — la gare suivante arrive
+// donc au bon moment après la reprise.
+const EMERGENCY_PROBABILITY = 0.015; // ~1 station sur 67, soit ~1 fois / 2 h
+const EMERGENCY_HOLD_MIN = 60; // s
+const EMERGENCY_HOLD_MAX = 300; // s
+
+// Instant de déclenchement dans la phase cruise courante, -1 = aucun.
+let emergencyAt = -1;
+
+/** Déclenche l'arrêt d'urgence (aussi exposé en dev : __emergencyStop()). */
+export function beginEmergencyStop(): void {
+  const em = runtime.emergencyStop;
+  if (em.stage !== 'none') return;
+  if (useStore.getState().phase !== 'cruise') return;
+  em.stage = 'braking';
+  em.t = 0;
+  em.holdFor = EMERGENCY_HOLD_MIN + Math.random() * (EMERGENCY_HOLD_MAX - EMERGENCY_HOLD_MIN);
+  em.reason = Math.floor(Math.random() * EMERGENCY_REASONS.length);
+  // L'urgence coupe l'annonce en cours, comme en vrai.
+  cancelSpeech();
+  say(emergencyBrakeAnnouncement());
+  audio.brakeApply();
+  audio.flangeSqueal(0.8);
+}
+
+// Étapes de l'arrêt d'urgence, appelées chaque frame tant qu'il est actif.
+// Les événements one-shot passent par `fired` : la phase cruise n'étant pas
+// quittée, les clés survivent à tout l'événement.
+function updateEmergencyStop(dt: number): void {
+  const em = runtime.emergencyStop;
+  em.t += dt;
+  switch (em.stage) {
+    case 'braking':
+      if (runtime.speed <= 0.01) {
+        runtime.speed = 0;
+        runtime.accel = 0;
+        em.stage = 'stopped';
+        em.t = 0;
+        audio.stopSettle();
+      }
+      break;
+    case 'stopped':
+      // Annonce conducteur ~4 s après l'immobilisation.
+      once('em-stopped', em.t >= 4, () => say(emergencyStopAnnouncement(em.reason)));
+      // Rappel d'attente à mi-arrêt, seulement si l'arrêt se prolonge.
+      once('em-wait', em.holdFor >= 160 && em.t >= em.holdFor * 0.55, () =>
+        say(emergencyWaitAnnouncement()),
+      );
+      // Annonce de reprise, puis desserrage et redémarrage.
+      once('em-resume', em.t >= em.holdFor - 12, () => say(emergencyResumeAnnouncement()));
+      if (em.t >= em.holdFor) {
+        em.stage = 'resuming';
+        em.t = 0;
+        audio.brakeRelease();
+      }
+      break;
+    case 'resuming':
+      if (runtime.speed >= V_MAX * 0.98) {
+        em.stage = 'none';
+        em.t = 0;
+        scheduleNextRunSound(runtime.phaseT + 8);
+      }
+      break;
+  }
+}
+
 // --- Profil de traction / freinage type E235 ---------------------------
 // Départ : le train reste immobile quelques secondes après la fin du dwell
 // (desserrage des freins), puis la traction monte progressivement (jerk
@@ -62,6 +138,11 @@ const BRAKE_EASE_V = 3; // m/s : desserrage progressif sous cette vitesse
 const JERK_UP = 0.55; // m/s³ : montée de traction / relâchement du frein
 const JERK_DOWN = 1.0; // m/s³ : application du frein / coupure de traction
 
+// Freinage d'urgence (非常ブレーキ) : plus fort que le freinage de service et
+// appliqué d'un coup — c'est la secousse qui fait l'événement.
+const EMERGENCY_BRAKE = 1.7; // m/s²
+const EMERGENCY_JERK = 2.4; // m/s³ : application quasi immédiate
+
 function accelCap(v: number): number {
   return v <= ACCEL_TAPER_V ? ACCEL_MAX : (ACCEL_MAX * ACCEL_TAPER_V) / v;
 }
@@ -70,22 +151,29 @@ function brakeCap(v: number): number {
   return BRAKE_MIN + (BRAKE_MAX - BRAKE_MIN) * Math.min(1, v / BRAKE_EASE_V);
 }
 
+// L'urgence garde presque toute sa force jusqu'à l'arrêt : léger desserrage
+// sous 2 m/s seulement, pour ne pas diverger numériquement à v≈0.
+function emergencyBrakeCap(v: number): number {
+  return Math.max(0.5, EMERGENCY_BRAKE * Math.min(1, v / 2));
+}
+
 // Un pas d'intégration du profil : mêmes équations pour la boucle 60 fps
 // (updateCycle) et le repositionnement au spawn (speedFor).
 function stepTrain(
   state: { v: number; a: number; d: number },
   target: number,
   dt: number,
+  emergency = false,
 ): void {
   let aTarget = 0;
   if (state.v < target - 0.01) {
     // Approche douce de la vitesse cible : la traction se relâche d'elle-même.
     aTarget = Math.min(accelCap(state.v), (target - state.v) / 1.2);
   } else if (state.v > target + 0.001) {
-    aTarget = -brakeCap(state.v);
+    aTarget = emergency ? -emergencyBrakeCap(state.v) : -brakeCap(state.v);
   }
   const da = aTarget - state.a;
-  const lim = da > 0 ? JERK_UP * dt : -JERK_DOWN * dt;
+  const lim = da > 0 ? JERK_UP * dt : -(emergency ? EMERGENCY_JERK : JERK_DOWN) * dt;
   state.a += Math.abs(da) < Math.abs(lim) ? da : lim;
   const before = state.v;
   state.v = Math.max(0, Math.min(V_MAX, state.v + state.a * dt));
@@ -272,6 +360,8 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
   if (phase === 'cruise') {
     fired.add('doorside');
     fired.add('crowd-clear');
+    // Pas d'arrêt d'urgence sur la toute première course après l'embarquement.
+    fired.add('emergency-roll');
     if (t > 0.6) fired.add('announce-depart');
   } else if (phase === 'brake') {
     fired.add('door-timings');
@@ -330,6 +420,7 @@ export function randomizeEntry(): void {
   store.setDoorSide(doorSide);
   audio.setPlatformSide(doorSide);
 
+  emergencyAt = -1;
   runtime.phaseT = phaseT;
   runtime.speed = sim.v;
   runtime.accel = sim.a;
@@ -359,14 +450,20 @@ export function updateCycle(dt: number): void {
   const s = useStore.getState();
   if (!s.started) return;
 
-  runtime.phaseT += dt;
+  // Pendant un arrêt d'urgence, le chrono de phase avance au prorata de la
+  // vitesse : gelé à l'arrêt, cohérent avec la distance pendant freinage et
+  // reprise. L'horloge murale, elle, continue — c'est le retard qui se crée.
+  const em = runtime.emergencyStop;
+  runtime.phaseT += em.stage === 'none' ? dt : dt * (runtime.speed / V_MAX);
   advanceClock(dt);
 
   // --- Physique du train : profil jerk-limité type E235 ---
   // Sous-pas de 0,1 s max : un dt de rattrapage (onglet lent) resterait stable.
-  const target = phaseTarget(s.phase, runtime.phaseT);
+  const emergencyBraking = em.stage === 'braking' || em.stage === 'stopped';
+  const target = emergencyBraking ? 0 : phaseTarget(s.phase, runtime.phaseT);
   const state = { v: runtime.speed, a: runtime.accel, d: runtime.distance };
-  for (let left = dt; left > 1e-6; left -= 0.1) stepTrain(state, target, Math.min(0.1, left));
+  for (let left = dt; left > 1e-6; left -= 0.1)
+    stepTrain(state, target, Math.min(0.1, left), em.stage === 'braking');
   runtime.speed = state.v;
   runtime.accel = state.a;
   runtime.distance = state.d;
@@ -382,6 +479,12 @@ export function updateCycle(dt: number): void {
   if (runtime.distance - lastJointDistance > CONFIG.railJointGap && runtime.speed > 1.5) {
     lastJointDistance = runtime.distance;
     audio.railClack(s01);
+  }
+
+  // --- Arrêt d'urgence actif : la machine à phases attend la fin. ---
+  if (em.stage !== 'none') {
+    updateEmergencyStop(dt);
+    return;
   }
 
   // --- Phases ---
@@ -400,6 +503,16 @@ export function updateCycle(dt: number): void {
       once('announce-depart', t > 0.6, () =>
         say(departureSequence(s.index, DOOR_SIDE[s.index])),
       );
+      // Arrêt d'urgence : tirage rare à l'entrée en cruise, déclenchement en
+      // pleine course — assez tôt pour avoir le temps de repartir avant la gare.
+      once('emergency-roll', true, () => {
+        emergencyAt = Math.random() < EMERGENCY_PROBABILITY ? 8 + Math.random() * 20 : -1;
+      });
+      if (emergencyAt >= 0 && t >= emergencyAt) {
+        emergencyAt = -1;
+        beginEmergencyStop();
+        break;
+      }
       // Petits événements sonores de course, rares et discrets : crissement
       // de boudin dans une courbe, purge d'air sous le plancher.
       if (nextRunSoundAt >= 0 && t >= nextRunSoundAt) {
@@ -491,4 +604,11 @@ export function updateCycle(dt: number): void {
       break;
     }
   }
+}
+
+// Outils dev, dans la console du navigateur : __emergencyStop() déclenche un
+// arrêt d'urgence, __runtime donne accès à l'état continu (vitesse, phase…).
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__emergencyStop = beginEmergencyStop;
+  (window as unknown as Record<string, unknown>).__runtime = runtime;
 }

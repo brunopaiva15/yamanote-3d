@@ -357,6 +357,11 @@ body,
   color: #9a7b00;
 }
 
+.hud-phase-emergency {
+  border-color: #b3261e;
+  color: #b3261e;
+}
+
 /* --- Réticule --- */
 
 .hud-reticle {

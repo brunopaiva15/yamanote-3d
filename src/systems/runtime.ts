@@ -110,6 +110,21 @@ export const runtime = {
    * En usage normal (stationCycle), reste false : les timers gèrent la suite.
    */
   autonomousDepartureSequence: false,
+  /**
+   * Arrêt d'urgence en pleine voie (急停車), très rare : freinage d'urgence,
+   * immobilisation de 1 à 5 min avec annonces, puis reprise. Piloté par
+   * stationCycle, uniquement pendant la phase cruise (le chrono de phase est
+   * gelé à l'arrêt, avancé au prorata de la vitesse pendant freinage/reprise).
+   */
+  emergencyStop: {
+    stage: 'none' as 'none' | 'braking' | 'stopped' | 'resuming',
+    /** Temps écoulé dans l'étape courante (s). */
+    t: 0,
+    /** Durée d'immobilisation tirée au sort (s). */
+    holdFor: 0,
+    /** Motif (index dans EMERGENCY_REASONS). */
+    reason: 0,
+  },
   /** Identifiant stable de la rame (pour departureId anti double-lecture). */
   trainId: 'yamanote-e235-1',
   /** Compteur d'arrêts depuis le début de la session (incrémenté à chaque dwell). */
@@ -157,6 +172,10 @@ export function resetRuntime(): void {
   runtime.departureBlockers.heldAtStation = false;
   runtime.departureBlockers.signalStop = false;
   runtime.departureBlockers.emergency = false;
+  runtime.emergencyStop.stage = 'none';
+  runtime.emergencyStop.t = 0;
+  runtime.emergencyStop.holdFor = 0;
+  runtime.emergencyStop.reason = 0;
   runtime.outOfService = false;
   runtime.terminusStop = false;
   runtime.useAlternativePlatform = false;

@@ -381,16 +381,28 @@ export function speakerProximity(): number {
 }
 
 // Ouverture / fermeture de la ligne de sonorisation autour d'une annonce.
+// Le NoiseSynth du clic refuse tout événement antérieur au dernier programmé :
+// une ligne fermée puis rouverte dans la même frame (annonce coupée par une
+// annonce d'urgence) doit caler son clic APRÈS celui de fermeture déjà posé.
+let lastPaClickAt = 0;
+
+function paClick(duration: number, when: number, velocity: number): void {
+  if (!nodes) return;
+  const t = Math.max(when, lastPaClickAt + 0.005);
+  lastPaClickAt = t;
+  nodes.paClick.triggerAttackRelease(duration, t, velocity);
+}
+
 export function paVoiceOpen(): void {
   if (!nodes) return;
-  nodes.paClick.triggerAttackRelease(0.02, Tone.now(), 0.5);
+  paClick(0.02, Tone.now(), 0.5);
   nodes.hissGain.gain.rampTo(0.03, 0.1);
 }
 
 export function paVoiceClose(): void {
   if (!nodes) return;
   nodes.hissGain.gain.rampTo(0, 0.3);
-  nodes.paClick.triggerAttackRelease(0.015, Tone.now() + 0.18, 0.3);
+  paClick(0.015, Tone.now() + 0.18, 0.3);
 }
 
 // Mise à jour continue, pilotée par la vitesse normalisée (0..1).

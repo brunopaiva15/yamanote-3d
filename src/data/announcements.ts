@@ -169,6 +169,70 @@ export function suddenStopAnnouncement(): Utterance[] {
   ];
 }
 
+// --- Arrêt d'urgence (急停車) ---
+// Séquence : annonce automatique pendant le freinage, annonce conducteur une
+// fois immobilisé (avec le motif), rappel d'attente si l'arrêt se prolonge,
+// annonce de reprise juste avant le redémarrage.
+
+export const EMERGENCY_REASONS = [
+  { jp: '信号確認', en: 'a signal check' },
+  { jp: '線路内の安全確認', en: 'a track safety check' },
+  { jp: '車両の点検', en: 'a train inspection' },
+] as const;
+
+export function emergencyBrakeAnnouncement(): Utterance[] {
+  return [
+    { text: '急停車します。ご注意ください。', lang: 'ja-JP' },
+    { text: 'This train will make an emergency stop. Please hold on.', lang: 'en-US' },
+  ];
+}
+
+export function emergencyStopAnnouncement(reason: number): Utterance[] {
+  const r = EMERGENCY_REASONS[((reason % EMERGENCY_REASONS.length) + EMERGENCY_REASONS.length) % EMERGENCY_REASONS.length];
+  return [
+    {
+      text:
+        `お客様にご案内いたします。ただいま、${r.jp}のため、急停車いたしました。` +
+        '安全の確認を行っておりますので、恐れ入りますが、いましばらくお待ちください。',
+      lang: 'ja-JP',
+    },
+    {
+      text:
+        `Attention please. This train has made an emergency stop due to ${r.en}. ` +
+        'Please wait while safety checks are carried out.',
+      lang: 'en-US',
+    },
+  ];
+}
+
+export function emergencyWaitAnnouncement(): Utterance[] {
+  return [
+    {
+      text:
+        'お客様にご案内いたします。ただいま、安全の確認を行っております。' +
+        '運転再開まで、いましばらくお待ちください。ご迷惑をおかけいたします。',
+      lang: 'ja-JP',
+    },
+    {
+      text: 'Safety checks are still under way. We apologize for the delay, and thank you for your patience.',
+      lang: 'en-US',
+    },
+  ];
+}
+
+export function emergencyResumeAnnouncement(): Utterance[] {
+  return [
+    {
+      text: 'お待たせいたしました。安全の確認がとれましたので、まもなく運転を再開いたします。',
+      lang: 'ja-JP',
+    },
+    {
+      text: 'Thank you for waiting. Safety has been confirmed, and this train will shortly resume service.',
+      lang: 'en-US',
+    },
+  ];
+}
+
 const GUIDANCE_POOL = [
   prioritySeatsAnnouncement,
   mannersAnnouncement,

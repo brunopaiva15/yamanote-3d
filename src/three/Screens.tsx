@@ -15,6 +15,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { EMERGENCY_REASONS } from '../data/announcements';
 import { CONFIG } from '../data/config';
 import { STATIONS, TRANSFERS } from '../data/stations';
 import { useStore, type Phase } from '../store';
@@ -1173,6 +1174,59 @@ function drawTrafficInfo(
   }
 }
 
+// --- Arrêt d'urgence (急停車) ---
+// Affiché en boucle JP/EN tant que l'arrêt d'urgence est actif : cadre rouge,
+// pastille d'alerte, motif de l'arrêt — c'est l'écran rouge du vrai afficheur
+// quand la rame elle-même est immobilisée.
+function drawEmergencyInfo(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  lang: ScreenLang,
+  reason: number,
+): void {
+  const { g, w, h } = s;
+  const r = EMERGENCY_REASONS[((reason % EMERGENCY_REASONS.length) + EMERGENCY_REASONS.length) % EMERGENCY_REASONS.length];
+  g.fillStyle = '#f4f6f7';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', lang);
+
+  // Cadre rouge plein écran sous le bandeau.
+  g.strokeStyle = '#c8362c';
+  g.lineWidth = 5;
+  g.beginPath();
+  g.roundRect(18, HEADER_H + 16, w - 36, h - HEADER_H - 32, 10);
+  g.stroke();
+
+  // Pastille d'alerte + titre rouge.
+  const ty = HEADER_H + 62;
+  g.fillStyle = '#c8362c';
+  g.beginPath();
+  g.arc(66, ty - 10, 21, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center';
+  g.font = `bold 30px ${JP_FONT}`;
+  g.fillText('!', 66, ty);
+  g.textAlign = 'left';
+  g.fillStyle = '#c8362c';
+  g.font = `bold 34px ${JP_FONT}`;
+  g.fillText(lang === 'jp' ? '運転を見合わせています' : 'Service Suspended', 104, ty);
+
+  // Motif et consignes.
+  g.fillStyle = '#26303a';
+  g.font = `23px ${JP_FONT}`;
+  if (lang === 'jp') {
+    g.fillText(`ただいま、${r.jp}のため、急停車いたしました。`, 48, ty + 56);
+    g.fillText('安全の確認を行っています。運転再開まで、', 48, ty + 92);
+    g.fillText('いましばらくお待ちください。', 48, ty + 128);
+  } else {
+    g.fillText(`This train has made an emergency stop`, 48, ty + 56);
+    g.fillText(`due to ${r.en}. Safety checks are under way.`, 48, ty + 92);
+    g.fillText('We apologize for the inconvenience.', 48, ty + 128);
+  }
+}
+
 // --- État des autres lignes (他線区の運行情報) ---
 // La liste ligne par ligne du vrai afficheur : pastille de couleur, nom, et
 // statut — la ligne perturbée en ambre, les autres « 平常運転 ».
@@ -1322,10 +1376,12 @@ export function Screens() {
     //                une ligne JR — certificat de retard ;
     //  à l'approche→ まもなく, côté d'ouverture, alterné avec le plan du quai.
     //
-    // Les états de la propre ligne en exploitation dégradée (retard Yamanote,
-    // interruption, arrêt d'urgence) existent sur la vraie rame mais ne sont
-    // pas rendus ici : la simulation n'a ni incident ni retard, les afficher
-    // serait annoncer au voyageur quelque chose qui n'arrive pas.
+    // L'arrêt d'urgence (急停車) est un événement RÉEL de la simulation
+    // (stationCycle) : quand il est actif, l'écran rouge remplace toute la
+    // rotation, en alternance JP/EN. Les autres états dégradés de la propre
+    // ligne (retard persistant, interruption planifiée) restent non rendus :
+    // la simulation n'a pas ces incidents, les afficher serait annoncer au
+    // voyageur quelque chose qui n'arrive pas.
     const tick = Math.floor(runtime.clockMin * 4);
     const clock = fmtClock(runtime.clockMin);
     const countdown = Math.round(secondsToArrival(phase, runtime.phaseT));
@@ -1335,9 +1391,13 @@ export function Screens() {
     const jrNotice = !!notice && /中央|埼京/.test(notice.lineJp);
     // Visuel manières du moment : change d'un passage du cycle à l'autre.
     const mannerVariant = Math.floor(tick / 10) % 3;
+    const emergency = runtime.emergencyStop;
     let state: string;
     let status: ScreenStatus;
-    if (phase === 'brake') {
+    if (emergency.stage !== 'none') {
+      status = 'next';
+      state = tick % 2 === 0 ? 'emergencyJP' : 'emergencyEN';
+    } else if (phase === 'brake') {
       status = 'soon';
       state = tick % 3 === 2 ? 'platform' : 'door';
     } else if (phase === 'dwell') {
@@ -1422,6 +1482,12 @@ export function Screens() {
         case 'certEN':
           drawDelayCert(g, index, clock, 'en');
           break;
+        case 'emergencyJP':
+          drawEmergencyInfo(g, index, clock, 'jp', emergency.reason);
+          break;
+        case 'emergencyEN':
+          drawEmergencyInfo(g, index, clock, 'en', emergency.reason);
+          break;
         case 'loopJP':
           drawLoopMap(g, index, phase, countdown, clock, status, 'jp');
           break;
@@ -1490,3 +1556,4 @@ export function Screens() {
     </group>
   );
 }
+
