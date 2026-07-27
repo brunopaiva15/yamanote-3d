@@ -1,6 +1,9 @@
-// File d'attente d'annonces vocales sur speechSynthesis : une utterance à la
-// fois, japonais puis anglais. Voix féminine si disponible ; sans voix ja-JP,
-// seul l'anglais est émis.
+// File d'attente d'annonces vocales : une annonce à la fois, japonais puis
+// anglais. Chaque annonce est d'abord cherchée en CLIP pré-généré (Kokoro
+// TTS : jf_alpha ja / af_heart en, voir scripts/announcements-gen.py) — joué
+// par audioManager sur le bus PA, donc réellement spatialisé sur les
+// diffuseurs du plafond. speechSynthesis ne sert plus que de REPLI pour un
+// texte sans clip ; sans voix ja-JP, seul l'anglais est alors émis.
 //
 // Robustesse navigateurs :
 // - iOS / Safari : la synthèse doit être amorcée DANS le geste utilisateur ;
@@ -8,26 +11,50 @@
 // - Chrome : les utterances longues sont coupées (~15 s) sans onend ; on
 //   découpe donc par phrases, avec un keep-alive pause/resume et un filet
 //   de sécurité si aucun événement de fin n'arrive.
+// - Edge : les voix « Online (Natural) » (Nanami, Aria) sont des voix réseau
+//   qui peuvent échouer en silence — aucun son, pas de onstart, parfois aucun
+//   événement. Si une voix ne démarre pas, on la met en liste noire pour la
+//   session et on rejoue le segment avec la voix suivante. pause() tue aussi
+//   ces voix réseau dans Chromium : le keep-alive est réservé aux voix locales.
 //
-// Spatialisation : speechSynthesis sort directement sur la carte son, hors du
-// graphe Web Audio — impossible de la panner. On l'ancre donc aux diffuseurs
-// du plafond par deux biais : le souffle de ligne spatialisé, ouvert pendant
-// toute l'annonce (paVoiceOpen/paVoiceClose), et le volume de l'utterance qui
-// suit la distance au diffuseur le plus proche (speakerProximity).
+// Spatialisation du repli : speechSynthesis sort directement sur la carte
+// son, hors du graphe Web Audio — impossible de le panner. On l'ancre aux
+// diffuseurs du plafond par deux biais : le souffle de ligne spatialisé,
+// ouvert pendant toute l'annonce (paVoiceOpen/paVoiceClose), et le volume de
+// l'utterance qui suit la distance au diffuseur le plus proche
+// (speakerProximity). Les clips, eux, passent par les Panner3D du bus PA.
 
 import type { Utterance } from '../data/announcements';
+import { announcementClipPath } from '../data/announcementClips';
 import { useStore } from '../store';
-import { paVoiceClose, paVoiceOpen, speakerProximity } from './audioEngine';
+import { audioManager, paVoiceClose, paVoiceOpen, speakerProximity } from './audioEngine';
 
-const queue: Utterance[] = [];
+type QueueItem =
+  | { kind: 'clip'; path: string; lang: Utterance['lang']; text: string }
+  | { kind: 'tts'; lang: Utterance['lang']; text: string };
+
+const queue: QueueItem[] = [];
 let speaking = false;
+// Génération d'annulation : un cancelSpeech() invalide les callbacks du clip
+// en cours (playOnce est asynchrone et peut se résoudre après coup).
+let generation = 0;
+let currentClipPath: string | null = null;
 let voicesReady = false;
 let jaVoice: SpeechSynthesisVoice | null = null;
 let enVoice: SpeechSynthesisVoice | null = null;
 let watchdogId = 0;
+let startWatchdogId = 0;
+let retryId = 0;
 let keepAliveId = 0;
 let volumeSyncId = 0;
 let currentUtterance: SpeechSynthesisUtterance | null = null;
+
+// Voix qui n'ont jamais produit de son : écartées jusqu'au rechargement.
+const badVoices = new Set<string>();
+
+function voiceKey(v: SpeechSynthesisVoice): string {
+  return `${v.voiceURI}|${v.name}|${v.lang}`;
+}
 
 // Niveau utterance : volume du site × proximité du diffuseur (hors graphe Tone).
 function speechLevel(): number {
@@ -63,7 +90,10 @@ function normalizeVoiceName(name: string): string {
 
 function pickVoice(lang: string): SpeechSynthesisVoice | null {
   if (!('speechSynthesis' in window)) return null;
-  const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.replace('_', '-').toLowerCase().startsWith(lang));
+  const voices = window.speechSynthesis
+    .getVoices()
+    .filter((v) => v.lang.replace('_', '-').toLowerCase().startsWith(lang))
+    .filter((v) => !badVoices.has(voiceKey(v)));
   if (voices.length === 0) return null;
   const wanted = PREFERRED_VOICE[lang];
   if (wanted) {
@@ -119,9 +149,13 @@ function splitSentences(text: string): string[] {
 
 function clearTimers(): void {
   if (watchdogId) window.clearTimeout(watchdogId);
+  if (startWatchdogId) window.clearTimeout(startWatchdogId);
+  if (retryId) window.clearTimeout(retryId);
   if (keepAliveId) window.clearInterval(keepAliveId);
   if (volumeSyncId) window.clearInterval(volumeSyncId);
   watchdogId = 0;
+  startWatchdogId = 0;
+  retryId = 0;
   keepAliveId = 0;
   volumeSyncId = 0;
 }
@@ -131,6 +165,34 @@ function finishUtterance(): void {
   currentUtterance = null;
   speaking = false;
   pump();
+}
+
+// Une voix n'a jamais produit de son (voix réseau Edge en échec silencieux) :
+// on l'écarte et on rejoue le même segment avec la voix suivante.
+function failVoiceAndRetry(item: QueueItem & { kind: 'tts' }, voice: SpeechSynthesisVoice): void {
+  console.warn(`[speech] Voix « ${voice.name} » muette — repli sur une autre voix.`);
+  badVoices.add(voiceKey(voice));
+  refreshVoices();
+  if (currentUtterance) {
+    currentUtterance.onstart = null;
+    currentUtterance.onend = null;
+    currentUtterance.onerror = null;
+  }
+  clearTimers();
+  currentUtterance = null;
+  queue.unshift(item);
+  try {
+    window.speechSynthesis.cancel();
+  } catch {
+    /* sans gravité */
+  }
+  // Chromium avale un speak() lancé dans la foulée d'un cancel() : on laisse
+  // retomber la poussière avant de relancer la file.
+  retryId = window.setTimeout(() => {
+    retryId = 0;
+    speaking = false;
+    pump();
+  }, 250);
 }
 
 // Ligne de sonorisation ouverte : souffle spatialisé + déclics d'ouverture et
@@ -155,11 +217,6 @@ function pump(): void {
     closeLine();
     return;
   }
-  if (!('speechSynthesis' in window)) {
-    queue.length = 0;
-    closeLine();
-    return;
-  }
   if (useStore.getState().muted || useStore.getState().volume <= 0.001) {
     queue.length = 0;
     closeLine();
@@ -167,6 +224,39 @@ function pump(): void {
   }
   const item = queue.shift();
   if (!item) return;
+  if (item.kind === 'clip') {
+    playClipItem(item);
+    return;
+  }
+  speakTtsItem(item);
+}
+
+// Clip pré-généré : joué sur le bus PA spatialisé. Fichier introuvable
+// (déploiement partiel, cache) → repli speechSynthesis sur le même texte.
+function playClipItem(item: QueueItem & { kind: 'clip' }): void {
+  speaking = true;
+  currentClipPath = item.path;
+  const g = generation;
+  void audioManager.playOnce(item.path, 'cabin').then((played) => {
+    if (g !== generation) return;
+    currentClipPath = null;
+    speaking = false;
+    if (!played) {
+      const parts = splitSentences(item.text).map(
+        (text): QueueItem => ({ kind: 'tts', lang: item.lang, text }),
+      );
+      queue.unshift(...parts);
+    }
+    pump();
+  });
+}
+
+// Repli speechSynthesis pour un texte sans clip.
+function speakTtsItem(item: QueueItem & { kind: 'tts' }): void {
+  if (!('speechSynthesis' in window)) {
+    pump();
+    return;
+  }
   if (!voicesReady) refreshVoices();
   // Sans voix japonaise disponible : sauter les segments japonais.
   if (item.lang === 'ja-JP' && !jaVoice) {
@@ -184,8 +274,20 @@ function pump(): void {
   u.volume = speechLevel();
   currentUtterance = u;
   speaking = true;
+  let started = false;
+  u.onstart = () => {
+    started = true;
+  };
   u.onend = finishUtterance;
-  u.onerror = finishUtterance;
+  u.onerror = (e) => {
+    // Échec avant le moindre son (Edge « Online (Natural) » sans réseau,
+    // synthesis-failed…) : la voix est écartée et le segment rejoué.
+    if (!started && voice && e.error !== 'canceled' && e.error !== 'interrupted') {
+      failVoiceAndRetry(item, voice);
+      return;
+    }
+    finishUtterance();
+  };
   // Filet de sécurité : si onend n'arrive jamais, on libère la file.
   const estimatedMs = 5000 + item.text.length * 260;
   watchdogId = window.setTimeout(() => {
@@ -196,15 +298,35 @@ function pump(): void {
     }
     finishUtterance();
   }, estimatedMs);
-  // Keep-alive Chrome : pause/resume périodique pendant la lecture.
-  keepAliveId = window.setInterval(() => {
+  // Certaines voix réseau échouent en silence, sans aucun événement : si rien
+  // n'a démarré au bout de 4 s, on change de voix plutôt que d'attendre le
+  // watchdog en laissant l'annonce muette.
+  startWatchdogId = window.setTimeout(() => {
+    if (started) return;
+    if (voice) {
+      failVoiceAndRetry(item, voice);
+      return;
+    }
     try {
-      window.speechSynthesis.pause();
-      window.speechSynthesis.resume();
+      window.speechSynthesis.cancel();
     } catch {
       /* sans gravité */
     }
-  }, 10000);
+    finishUtterance();
+  }, 4000);
+  // Keep-alive Chrome : pause/resume périodique pendant la lecture. Réservé
+  // aux voix locales — pause() coupe définitivement les voix réseau (Edge
+  // Natural) dans Chromium.
+  if (!voice || voice.localService) {
+    keepAliveId = window.setInterval(() => {
+      try {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      } catch {
+        /* sans gravité */
+      }
+    }, 10000);
+  }
   // Resync volume / proximité pendant l'annonce (le slider et la tête bougent).
   volumeSyncId = window.setInterval(syncSpeechVolume, 200);
   window.speechSynthesis.speak(u);
@@ -214,8 +336,13 @@ export function say(items: Utterance[]): void {
   const { muted, volume } = useStore.getState();
   if (muted || volume <= 0.001) return;
   for (const item of items) {
+    const clip = announcementClipPath(item.lang, item.text);
+    if (clip) {
+      queue.push({ kind: 'clip', path: clip, lang: item.lang, text: item.text });
+      continue;
+    }
     for (const text of splitSentences(item.text)) {
-      queue.push({ text, lang: item.lang });
+      queue.push({ kind: 'tts', lang: item.lang, text });
     }
   }
   if (queue.length > 0) openLine();
@@ -223,9 +350,14 @@ export function say(items: Utterance[]): void {
 }
 
 export function cancelSpeech(): void {
+  generation++;
   queue.length = 0;
   clearTimers();
   currentUtterance = null;
+  if (currentClipPath) {
+    audioManager.stop(currentClipPath);
+    currentClipPath = null;
+  }
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   speaking = false;
   closeLine();

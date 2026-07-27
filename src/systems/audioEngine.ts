@@ -12,11 +12,12 @@
 // portes. L'auditeur (Tone.Listener) suit la caméra, donc le son tourne quand
 // on tourne la tête et se rapproche quand on marche sous un diffuseur.
 //
-// Limite connue : speechSynthesis ne peut pas être routé dans le graphe Web
-// Audio, les annonces vocales ne sont donc pas pannées. On ancre malgré tout la
-// voix aux diffuseurs avec le souffle de ligne spatialisé (paVoiceOpen/Close)
-// et un volume d'utterance suivant la distance au diffuseur le plus proche
-// (speakerProximity, lu par systems/speech.ts).
+// Annonces vocales : les clips pré-générés (Kokoro, voir systems/speech.ts)
+// passent par audioManager sur le bus « PA » et sont donc pannés comme le
+// reste. Le REPLI speechSynthesis, lui, sort hors du graphe Web Audio et ne
+// peut pas être panné : on l'ancre aux diffuseurs avec le souffle de ligne
+// spatialisé (paVoiceOpen/Close) et un volume d'utterance suivant la distance
+// au diffuseur le plus proche (speakerProximity, lu par systems/speech.ts).
 //
 // Hook fichiers locaux : playClip(name, fallback) joue public/audio/<name>.mp3
 // s'il existe, sinon retombe sur la synthèse. audioManager.playOnce(path) joue
