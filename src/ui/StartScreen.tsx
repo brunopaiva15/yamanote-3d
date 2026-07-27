@@ -14,6 +14,7 @@ import { seedPassengers } from '../systems/passengers';
 import { runtime, tokyoNow } from '../systems/runtime';
 import { randomizeEntry } from '../systems/stationCycle';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { QualitySelect } from './QualitySelect';
 import { Logo } from './Logo';
 
 // Horloge de Tokyo affichée en pied de carte : l'heure réelle là-bas, celle
@@ -94,6 +95,10 @@ export function StartScreen() {
             </li>
           ))}
         </ul>
+        <div className="start-quality">
+          <span className="start-quality-label">{t.quality.label}</span>
+          <QualitySelect />
+        </div>
         <p className="start-foot">
           {t.start.tokyoTime}
           <strong>{tokyoClock}</strong>

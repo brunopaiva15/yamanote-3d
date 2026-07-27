@@ -71,6 +71,18 @@ export interface Strings {
     fullscreenTitle: string;
   };
 
+  quality: {
+    label: string;
+    levels: {
+      veryLow: string;
+      low: string;
+      medium: string;
+      high: string;
+      veryHigh: string;
+      ultra: string;
+    };
+  };
+
   language: string;
 }
 
@@ -118,6 +130,17 @@ const FR: Strings = {
     stand: 'Se lever',
     fullscreen: 'Plein écran',
     fullscreenTitle: 'Plein écran (F)',
+  },
+  quality: {
+    label: 'Qualité vidéo',
+    levels: {
+      veryLow: 'Très basse',
+      low: 'Basse',
+      medium: 'Moyenne',
+      high: 'Haute',
+      veryHigh: 'Très haute',
+      ultra: 'Ultra',
+    },
   },
   language: 'Langue',
 };
@@ -167,6 +190,17 @@ const EN: Strings = {
     fullscreen: 'Fullscreen',
     fullscreenTitle: 'Fullscreen (F)',
   },
+  quality: {
+    label: 'Video quality',
+    levels: {
+      veryLow: 'Very Low',
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+      veryHigh: 'Very High',
+      ultra: 'Ultra',
+    },
+  },
   language: 'Language',
 };
 
@@ -213,6 +247,17 @@ const JA: Strings = {
     stand: '立つ',
     fullscreen: '全画面',
     fullscreenTitle: '全画面表示（F）',
+  },
+  quality: {
+    label: '画質',
+    levels: {
+      veryLow: '最低',
+      low: '低',
+      medium: '中',
+      high: '高',
+      veryHigh: '最高',
+      ultra: 'ウルトラ',
+    },
   },
   language: '言語',
 };

@@ -10,7 +10,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { EffectComposer, Bloom, N8AO, Vignette, ToneMapping, Noise } from '@react-three/postprocessing';
 import { BlendFunction, ToneMappingMode } from 'postprocessing';
 import { CONFIG } from '../data/config';
-import { usePerf, type PerfLevel } from '../systems/perf';
+import { qualityLevel, usePerf, type PerfLevel } from '../systems/perf';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { segEnv } from '../systems/segmentEnv';
@@ -23,14 +23,15 @@ const LAMP_POSITIONS: [number, number, number][] = [
   [0, 2.16, 7.5],
 ];
 
-// Paliers 3-4 : plafonne la résolution de rendu (le fill-rate est souvent le
+// Paliers 3-5 : plafonne la résolution de rendu (le fill-rate est souvent le
 // goulot sur les écrans haute densité). En dessous, densité native (cap 2,
-// comme le dpr initial du Canvas).
+// comme le dpr initial du Canvas). Palier 5 (Très basse) : rendu sous la
+// résolution de l'écran.
 function AdaptiveDpr({ level }: { level: PerfLevel }): null {
   const setDpr = useThree((s) => s.setDpr);
   useEffect(() => {
     const native = Math.min(window.devicePixelRatio || 1, 2);
-    const cap = level >= 4 ? 1 : level >= 3 ? 1.25 : native;
+    const cap = level >= 5 ? 0.75 : level >= 4 ? 1 : level >= 3 ? 1.25 : native;
     setDpr(Math.min(native, cap));
   }, [level, setDpr]);
   return null;
@@ -191,9 +192,9 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
 }
 
 export function Scene() {
-  // Palier de qualité adaptative (voir systems/perf) : ne change qu'aux
-  // dégradations détectées, donc quelques re-renders par session au plus.
-  const perfLevel = usePerf((s) => s.level);
+  // Palier issu de la qualité vidéo choisie par le joueur (voir systems/perf) :
+  // ne change qu'à un réglage manuel, donc quelques re-renders par session.
+  const perfLevel = usePerf((s) => qualityLevel(s.quality));
 
   // Palier 2 : néons du wagon espacés (un pointLight sur deux) ; palier 4 :
   // deux seulement — à chaque fois légèrement poussés pour garder une
@@ -252,7 +253,7 @@ export function Scene() {
           <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.05} />
           <Vignette eskil={false} offset={0.32} darkness={0.42} />
         </EffectComposer>
-      ) : null /* Palier 4 : rendu direct, aucun post-processing — le tone
+      ) : null /* Paliers 4-5 : rendu direct, aucun post-processing — le tone
            mapping filmique par défaut du renderer prend le relais. */}
     </>
   );
