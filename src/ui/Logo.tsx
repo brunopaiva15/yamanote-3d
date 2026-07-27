@@ -28,7 +28,7 @@ const LOOP_DOTS: [number, number][] = [
 
 export function Logo() {
   return (
-    <svg className="logo" viewBox="0 40 560 205" role="img" aria-label="Yamanote 3D 山手線">
+    <svg className="logo" viewBox="0 40 560 175" role="img" aria-label="Yamanote 3D 山手線">
       <defs>
         <linearGradient id="logo-green" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#a5db5e" />
@@ -112,31 +112,32 @@ export function Logo() {
         </text>
       </g>
 
-      {/* 山手線, sous le mot-symbole, dans le même traitement que lui. */}
+      {/* 山手線, serré sous le mot-symbole et centré sur lui (l'axe du mot,
+          x=224, pas celui du SVG — la plaque 3D déborde à droite). */}
       <text
-        x="284"
-        y="233"
+        x="227"
+        y="201"
         textAnchor="middle"
-        fontSize="44"
+        fontSize="32"
         fontWeight="800"
         fill="#16300a"
-        textLength="210"
+        textLength="128"
         lengthAdjust="spacing"
       >
         山手線
       </text>
       <text
-        x="280"
-        y="228"
+        x="224"
+        y="197"
         textAnchor="middle"
-        fontSize="44"
+        fontSize="32"
         fontWeight="800"
         fill="#ffffff"
         stroke="#10151a"
-        strokeWidth="9"
+        strokeWidth="6"
         strokeLinejoin="round"
         paintOrder="stroke"
-        textLength="210"
+        textLength="128"
         lengthAdjust="spacing"
       >
         山手線
