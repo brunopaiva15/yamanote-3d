@@ -1,22 +1,18 @@
-// HUD sobre en français : horloge, prochaine station, phase, remplissage,
-// réglages son, s'asseoir, plein écran. Réticule central discret.
+// HUD sobre : horloge, prochaine station, phase, remplissage, réglages son,
+// s'asseoir, plein écran, sélecteur de langue. Réticule central discret.
+// Tous les libellés viennent du dictionnaire de la langue courante.
 
 import { useEffect, useState } from 'react';
-import { useStore, type Phase } from '../store';
+import { useStore } from '../store';
 import { STATIONS } from '../data/stations';
-import { BAND_COLOR } from '../data/occupancy';
+import { BAND_COLOR, type OccupancyBand } from '../data/occupancy';
+import { useT } from '../i18n';
 import { runtime } from '../systems/runtime';
 import { currentSegmentOccupancy } from '../systems/occupancy';
 import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
 import { applySpeechVolume, cancelSpeech } from '../systems/speech';
 import { input } from '../systems/input';
-
-const PHASE_LABEL: Record<Phase, string> = {
-  cruise: 'En route',
-  brake: 'Arrivée',
-  dwell: 'À quai',
-  depart: 'Départ',
-};
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 function useClock(): string {
   const [clock, setClock] = useState('');
@@ -32,14 +28,17 @@ function useClock(): string {
   return clock;
 }
 
-function useOccupancy(): { percent: number; label: string; color: string } {
-  const [occ, setOcc] = useState({ percent: 0, label: '', color: BAND_COLOR.moderate });
+function useOccupancy(): { percent: number; band: OccupancyBand } {
+  const [occ, setOcc] = useState<{ percent: number; band: OccupancyBand }>({
+    percent: 0,
+    band: 'moderate',
+  });
   const index = useStore((s) => s.index);
   const phase = useStore((s) => s.phase);
   useEffect(() => {
     const tick = () => {
       const e = currentSegmentOccupancy();
-      setOcc({ percent: e.percent, label: e.label, color: BAND_COLOR[e.band] });
+      setOcc({ percent: e.percent, band: e.band });
     };
     tick();
     const id = window.setInterval(tick, 1000);
@@ -57,6 +56,8 @@ export function Hud() {
   const seated = useStore((s) => s.seated);
   const toggleMute = useStore((s) => s.toggleMute);
   const setVolume = useStore((s) => s.setVolume);
+  const lang = useStore((s) => s.lang);
+  const t = useT();
   const clock = useClock();
   const occupancy = useOccupancy();
 
@@ -73,7 +74,12 @@ export function Hud() {
   if (!started) return null;
 
   const st = STATIONS[index];
-  const label = phase === 'dwell' ? 'Station actuelle' : 'Prochaine station';
+  const label = phase === 'dwell' ? t.hud.currentStation : t.hud.nextStation;
+  const color = BAND_COLOR[occupancy.band];
+  // En japonais, le nom en kanji passe devant et le rōmaji devient la mention
+  // secondaire — l'inverse des deux autres langues.
+  const primary = lang === 'ja' ? st.kanji : st.romaji;
+  const secondary = lang === 'ja' ? st.romaji : st.kanji;
 
   return (
     <>
@@ -82,26 +88,27 @@ export function Hud() {
         <div className="hud-station">
           <span className="hud-station-label">{label}</span>
           <span className="hud-station-name">
-            <span className="hud-jy">{st.jy}</span> {st.romaji} <span className="hud-kanji">{st.kanji}</span>
+            <span className="hud-jy">{st.jy}</span> {primary} <span className="hud-kanji">{secondary}</span>
           </span>
         </div>
         <div
           className="hud-occupancy"
-          style={{ borderColor: occupancy.color, color: occupancy.color }}
-          title="Estimation calibrée (±8–12 pts un jour normal)"
+          style={{ borderColor: color, color }}
+          title={t.hud.occupancyTitle}
         >
           <span className="hud-occupancy-pct">~{occupancy.percent}&nbsp;%</span>
-          <span className="hud-occupancy-label">{occupancy.label}</span>
+          <span className="hud-occupancy-label">{t.hud.band[occupancy.band]}</span>
         </div>
-        <div className={`hud-phase hud-phase-${phase}`}>{PHASE_LABEL[phase]}</div>
+        <div className={`hud-phase hud-phase-${phase}`}>{t.hud.phase[phase]}</div>
       </div>
 
       <div className="hud-reticle" aria-hidden="true" />
 
 
       <div className="hud-bottom">
-        <button className="hud-button" onClick={toggleMute} title="Couper ou rétablir le son (M)">
-          {muted ? 'Son coupé' : 'Son actif'}
+        <LanguageSwitcher className="lang-switch-hud" />
+        <button className="hud-button" onClick={toggleMute} title={t.hud.soundTitle}>
+          {muted ? t.hud.soundOff : t.hud.soundOn}
         </button>
         <input
           className="hud-volume"
@@ -111,7 +118,8 @@ export function Hud() {
           step={0.05}
           value={volume}
           onChange={(e) => setVolume(Number(e.target.value))}
-          title="Volume"
+          title={t.hud.volume}
+          aria-label={t.hud.volume}
         />
         <button
           className="hud-button"
@@ -119,14 +127,14 @@ export function Hud() {
             input.sitRequest = true;
           }}
         >
-          {seated ? 'Se lever' : "S'asseoir"}
+          {seated ? t.hud.stand : t.hud.sit}
         </button>
         <button
           className="hud-button"
           onClick={() => void document.documentElement.requestFullscreen().catch(() => undefined)}
-          title="Plein écran (F)"
+          title={t.hud.fullscreenTitle}
         >
-          Plein écran
+          {t.hud.fullscreen}
         </button>
       </div>
     </>

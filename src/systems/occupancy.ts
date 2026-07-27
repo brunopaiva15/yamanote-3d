@@ -3,7 +3,6 @@
 // overrides calendaires (Nouvel An, Golden Week, Obon, Halloween, fin décembre).
 
 import {
-  BAND_LABEL_FR,
   DAY_COEFFS,
   HOLIDAY_DAY_COEFFS,
   HOUR_CURVE,
@@ -27,7 +26,6 @@ import { runtime } from './runtime';
 
 export interface OccupancyEstimate {
   percent: number;
-  label: string;
   band: OccupancyBand;
   fromIndex: number;
 }
@@ -188,7 +186,6 @@ export function estimateOccupancy(args: {
   const band = occupancyBand(percent);
   return {
     percent,
-    label: BAND_LABEL_FR[band],
     band,
     fromIndex,
   };

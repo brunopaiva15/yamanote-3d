@@ -3,6 +3,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
+import { useT } from '../i18n';
 import { input } from '../systems/input';
 
 const RADIUS = 52;
@@ -12,6 +13,7 @@ export function Controls() {
   const touch = useStore((s) => s.touch);
   const seated = useStore((s) => s.seated);
   const setTouch = useStore((s) => s.setTouch);
+  const t = useT();
   const baseRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
   const pointerId = useRef<number | null>(null);
@@ -85,7 +87,7 @@ export function Controls() {
           input.sitRequest = true;
         }}
       >
-        {seated ? 'Se lever' : "S'asseoir"}
+        {seated ? t.hud.stand : t.hud.sit}
       </button>
     </>
   );

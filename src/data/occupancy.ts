@@ -328,16 +328,8 @@ export function occupancyBand(percent: number): OccupancyBand {
   return 'crushed';
 }
 
-export const BAND_LABEL_FR: Record<OccupancyBand, string> = {
-  empty: 'très fluide',
-  light: 'fluide',
-  moderate: 'confortable',
-  busy: 'chargé',
-  crowded: 'serré',
-  packed: 'très serré',
-  crushed: 'saturé',
-};
-
+// Les libellés de palier sont traduits côté interface (src/i18n/strings.ts) ;
+// ce module ne produit que la bande et sa couleur.
 export const BAND_COLOR: Record<OccupancyBand, string> = {
   empty: '#5a9e6f',
   light: '#7bb05a',
