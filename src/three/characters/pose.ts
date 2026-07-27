@@ -14,6 +14,11 @@ import type { CharacterClone } from './library';
 // barre à 2,0 m, attache courte — l'anneau est remonté pour que le joueur ne
 // se le prenne plus dans la tête).
 const STRAP_RING_Y = 1.77;
+// Rangées d'anneaux : z discrets (mêmes constantes que three/Handles.tsx) —
+// le bras vise l'anneau RÉEL le plus proche, pas un anneau imaginaire à p.z.
+const RING_PITCH = 0.451;
+const RING_Z_MIN = -9.35;
+const RING_Z_MAX = 9.35;
 
 // Poids lissés par passager (persistent entre frames).
 export interface PoseState {
@@ -34,6 +39,11 @@ const vDir = new THREE.Vector3();
 const vTarget = new THREE.Vector3();
 const vChest = new THREE.Vector3();
 const vFoot = new THREE.Vector3();
+const vShoulder = new THREE.Vector3();
+const vElbow = new THREE.Vector3();
+const vAxis = new THREE.Vector3();
+const vPole = new THREE.Vector3();
+const vSide = new THREE.Vector3();
 const mParentInv = new THREE.Matrix4();
 const qWrap = new THREE.Quaternion();
 const qWrapOnly = new THREE.Quaternion();
@@ -108,14 +118,17 @@ function lerpW(current: number, target: number, k: number): number {
   return current + (target - current) * k;
 }
 
-// Avant-bras en pose « téléphone » : les deux mains convergent devant le
-// buste. Réutilisé par la rame et la foule du quai (mêmes os / même poids).
+// Avant-bras en pose « téléphone » : les mains convergent devant le buste.
+// Réutilisé par la rame et la foule du quai (mêmes os / même poids).
+// `skipSide` : main déjà occupée (poignée) — le téléphone se tient à UNE main,
+// sinon le même avant-bras recevrait deux cibles contradictoires (bras tordu).
 export function applyPhoneArms(
   p: { action: string; yaw: number; pos: THREE.Vector3 },
   bones: CharacterClone['bones'],
   state: PoseState,
   k: number,
   active: boolean,
+  skipSide: 'L' | 'R' | null = null,
 ): void {
   state.phoneW = lerpW(state.phoneW, active ? 1 : 0, k);
   if (state.phoneW > 0.001 && bones.head) {
@@ -125,8 +138,17 @@ export function applyPhoneArms(
     vDir.set(Math.sin(p.yaw), 0, Math.cos(p.yaw));
     vChest.addScaledVector(vDir, 0.28);
     vChest.y -= 0.28;
-    if (bones.foreArmL) aimBone(bones.foreArmL, vChest, state.phoneW);
-    if (bones.foreArmR) aimBone(bones.foreArmR, vChest, state.phoneW);
+    // Chaque main vise un point légèrement décalé de SON côté : les deux
+    // avant-bras ne convergent plus vers le même point (mains emmêlées).
+    vSide.set(Math.cos(p.yaw), 0, -Math.sin(p.yaw)); // gauche du personnage
+    if (bones.foreArmL && skipSide !== 'L') {
+      vTarget.copy(vChest).addScaledVector(vSide, 0.045);
+      aimBone(bones.foreArmL, vTarget, state.phoneW);
+    }
+    if (bones.foreArmR && skipSide !== 'R') {
+      vTarget.copy(vChest).addScaledVector(vSide, -0.045);
+      aimBone(bones.foreArmR, vTarget, state.phoneW);
+    }
   }
 }
 
@@ -151,23 +173,62 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
   // (holdStrap, voir systems/passengers). Bras côté extérieur.
   const strapActive = standing && p.holdStrap;
   state.strapW = lerpW(state.strapW, strapActive ? 1 : 0, k);
+  const strapSide: 'L' | 'R' | null = strapActive ? (p.pos.x >= 0 ? 'R' : 'L') : null;
   if (state.strapW > 0.001) {
     const side = p.pos.x >= 0 ? 1 : -1;
     const arm = side === 1 ? bones.upperArmR : bones.upperArmL;
     const fore = side === 1 ? bones.foreArmR : bones.foreArmL;
-    // L'épaule vise un point décalé vers l'extérieur et sous l'anneau : le
-    // coude s'écarte et se plie, l'avant-bras converge sur l'anneau — bras
-    // naturel plutôt que tendu à la verticale.
-    vChest.set(p.pos.x + side * 0.2, STRAP_RING_Y - 0.3, p.pos.z);
-    if (arm) aimBone(arm, vChest, state.strapW * 0.9);
-    if (fore) {
-      vChest.set(p.pos.x, STRAP_RING_Y, p.pos.z);
-      aimBone(fore, vChest, state.strapW); // avant-bras jusqu'à l'anneau
+    const hand = side === 1 ? bones.handR : bones.handL;
+    if (arm && fore) {
+      // Le PNJ est PILE sous la rangée d'anneaux (x = ±0,45 des deux côtés) :
+      // un simple « aim » tendait le bras à la verticale et la main dépassait
+      // l'anneau, doigts en l'air. IK 2 os à la place : longueurs mesurées sur
+      // la pose courante, coude calculé (plié vers l'extérieur), poignet posé
+      // SOUS l'anneau réel le plus proche — la main l'enserre au lieu de le
+      // traverser.
+      const ringZ = Math.min(
+        RING_Z_MAX,
+        Math.max(RING_Z_MIN, RING_Z_MIN + Math.round((p.pos.z - RING_Z_MIN) / RING_PITCH) * RING_PITCH),
+      );
+      arm.updateWorldMatrix(true, false);
+      arm.getWorldPosition(vShoulder);
+      fore.updateWorldMatrix(true, false);
+      fore.getWorldPosition(vElbow);
+      const upperLen = Math.max(0.05, vShoulder.distanceTo(vElbow));
+      let foreLen = upperLen * 0.9;
+      if (hand) {
+        hand.updateWorldMatrix(true, false);
+        hand.getWorldPosition(vBonePos);
+        foreLen = Math.max(0.05, vElbow.distanceTo(vBonePos));
+      }
+      // Cible du POIGNET : bas de l'anneau (la main continue au-delà et le tient).
+      vTarget.set(p.pos.x, STRAP_RING_Y - 0.1, ringZ);
+      vAxis.subVectors(vTarget, vShoulder);
+      const dist = Math.max(1e-3, vAxis.length());
+      const d = Math.min(dist, (upperLen + foreLen) * 0.999); // trop court : bras tendu, sans dépasser
+      vAxis.multiplyScalar(1 / dist);
+      // Angle épaule→coude (loi du cosinus), coude poussé vers l'extérieur.
+      const cosA = Math.min(1, Math.max(-1, (upperLen * upperLen + d * d - foreLen * foreLen) / (2 * upperLen * d)));
+      const sinA = Math.sqrt(1 - cosA * cosA);
+      vPole.set(side, -0.25, 0);
+      vPole.addScaledVector(vAxis, -vPole.dot(vAxis));
+      if (vPole.lengthSq() < 1e-4) vPole.set(side, 0, 0);
+      vPole.normalize();
+      vElbow.copy(vShoulder).addScaledVector(vAxis, upperLen * cosA).addScaledVector(vPole, upperLen * sinA);
+      aimBone(arm, vElbow, state.strapW * 0.95);
+      aimBone(fore, vTarget, state.strapW);
+      if (hand) {
+        // Doigts vers le centre de l'anneau : prise « tenue », pas de doigts
+        // écartés qui pointent au plafond.
+        vElbow.set(p.pos.x, STRAP_RING_Y + 0.04, ringZ);
+        aimBone(hand, vElbow, state.strapW * 0.85);
+      }
     }
   }
 
-  // --- Téléphone : les deux avant-bras remontent devant la poitrine. ---
-  applyPhoneArms(p, bones, state, k, p.action === 'phone' && (seated || standing));
+  // --- Téléphone : avant-bras devant la poitrine. Une seule main si l'autre
+  // tient la poignée (sinon deux cibles contradictoires sur le même bras). ---
+  applyPhoneArms(p, bones, state, k, p.action === 'phone' && (seated || standing), strapSide);
 
   // --- Assise manuelle de secours (pack sans clip assis). ---
   state.sitW = lerpW(state.sitW, manualSit && seated ? 1 : 0, k);

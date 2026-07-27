@@ -135,7 +135,10 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       mixer.update(dt);
       applyPoseOverrides(p, s.clone, s.pose, k, manualSit);
       const phoneVisible = p.action === 'phone' && (seated || p.state === 'standing') && s.pose.phoneW > 0.05;
-      updatePropRig(s.props, bones, wrap, !seated, phoneVisible);
+      // Main du téléphone : la gauche si la droite tient la poignée (PNJ à
+      // x ≥ 0, bras extérieur droit — voir pose.ts).
+      const phoneHand = p.state === 'standing' && p.holdStrap && p.pos.x >= 0 ? 'L' : 'R';
+      updatePropRig(s.props, bones, wrap, !seated, phoneVisible, phoneHand);
     }
   });
 

@@ -19,7 +19,8 @@ import type { BoneMap } from './library';
 export interface PropRig {
   headFollow: THREE.Group | null;
   spineFollow: THREE.Group | null;
-  handFollow: THREE.Group | null; // téléphone (main droite, repli gauche)
+  handFollow: THREE.Group | null; // téléphone (main droite par défaut)
+  phone: THREE.Group | null; // volume intérieur du téléphone (recalé si main gauche)
 }
 
 // Assombrit une couleur hex — accents des sacs (sangles, rabats, poches).
@@ -222,7 +223,7 @@ function makePhone(): THREE.Group {
 // le modèle a déjà son propre sac (évite le doublon). Le téléphone est
 // toujours créé (masqué) : n'importe quel PNJ peut passer en action « phone ».
 export function attachProps(wrap: THREE.Group, app: Appearance, allowBag = true): PropRig {
-  const rig: PropRig = { headFollow: null, spineFollow: null, handFollow: null };
+  const rig: PropRig = { headFollow: null, spineFollow: null, handFollow: null, phone: null };
 
   if (app.glasses || app.mask) {
     const head = new THREE.Group();
@@ -246,9 +247,11 @@ export function attachProps(wrap: THREE.Group, app: Appearance, allowBag = true)
   const hand = new THREE.Group();
   hand.matrixAutoUpdate = false;
   hand.visible = false;
-  hand.add(makePhone());
+  const phone = makePhone();
+  hand.add(phone);
   wrap.add(hand);
   rig.handFollow = hand;
+  rig.phone = phone;
 
   return rig;
 }
@@ -276,12 +279,15 @@ function followBone(follow: THREE.Group | null, bone: THREE.Bone | undefined, wr
 // `bagVisible` : les sacs sont posés pour la station debout — on les masque
 // quand le passager est assis (sinon le sac flotte à côté de lui).
 // `phoneVisible` : téléphone dans la main (pose « phone » active).
+// `phoneHand` : main qui tient le téléphone — 'L' quand la droite est déjà
+// occupée par la poignée (voir pose.ts) ; le volume est mis en miroir.
 export function updatePropRig(
   rig: PropRig,
   bones: BoneMap,
   wrap: THREE.Group,
   bagVisible: boolean,
   phoneVisible = false,
+  phoneHand: 'L' | 'R' = 'R',
 ): void {
   followBone(rig.headFollow, bones.head, wrap);
   if (rig.spineFollow) {
@@ -291,7 +297,19 @@ export function updatePropRig(
   if (rig.handFollow) {
     rig.handFollow.visible = phoneVisible;
     if (phoneVisible) {
-      const handBone = bones.handR ?? bones.handL ?? bones.foreArmR ?? bones.foreArmL;
+      const handBone =
+        phoneHand === 'L'
+          ? bones.handL ?? bones.handR ?? bones.foreArmL ?? bones.foreArmR
+          : bones.handR ?? bones.handL ?? bones.foreArmR ?? bones.foreArmL;
+      if (rig.phone) {
+        if (phoneHand === 'L') {
+          rig.phone.position.set(-0.01, 0.055, 0.022);
+          rig.phone.rotation.set(-0.55, -0.2, -0.35);
+        } else {
+          rig.phone.position.set(0.01, 0.055, 0.022);
+          rig.phone.rotation.set(-0.55, 0.2, 0.35);
+        }
+      }
       followBone(rig.handFollow, handBone, wrap);
     }
   }
