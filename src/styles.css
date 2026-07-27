@@ -34,7 +34,10 @@ body,
   touch-action: none;
 }
 
-/* --- Menu principal --- */
+/* --- Menu principal : panneau de gare (ekimeiban) JR East ---
+   Panneau blanc sur fond sombre, comme un panneau rétroéclairé de quai la
+   nuit : typo gothique noire, pastille JY, bande à la couleur de la ligne.
+   Pas d'effet — la signalétique réelle n'en a pas. */
 
 .start-screen {
   position: fixed;
@@ -43,121 +46,153 @@ body,
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse at 50% 22%, rgba(128, 194, 65, 0.13), transparent 62%),
-    radial-gradient(ellipse at 50% 38%, rgba(38, 48, 56, 0.94), rgba(8, 11, 14, 0.98));
+  background: #0c0f12;
   z-index: 30;
   padding: 20px;
 }
 
-/* Traînées obliques qui défilent lentement : la ville qui passe derrière la
-   vitre, en fond de menu. Volontairement très discrètes. */
-.start-rails {
-  position: absolute;
-  inset: -30% -20%;
-  background: repeating-linear-gradient(
-    114deg,
-    transparent 0 84px,
-    rgba(128, 194, 65, 0.07) 84px 88px,
-    transparent 88px 190px
-  );
-  animation: start-rails 9s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes start-rails {
-  to {
-    transform: translateX(-190px);
-  }
-}
-
-.start-card {
-  position: relative;
+.start-board {
+  width: 100%;
   max-width: 520px;
-  width: 100%;
-  text-align: center;
-  color: var(--text);
-  background:
-    radial-gradient(130% 100% at 50% -25%, rgba(128, 194, 65, 0.11), transparent 60%),
-    rgba(15, 20, 26, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 24px;
-  padding: 30px 34px 24px;
+  background: #ffffff;
+  color: #16181a;
+  border-radius: 10px;
+  padding: 20px 28px 22px;
   overflow: hidden;
-  backdrop-filter: blur(10px);
-  box-shadow:
-    0 26px 64px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
 }
 
-/* Bande verte de caisse E235, en tête de carte. */
-.start-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 5px;
-  background: linear-gradient(90deg, #4d8a1f, var(--green) 30%, #b2e277 50%, var(--green) 70%, #4d8a1f);
+.board-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.logo {
+.board-line {
+  font-size: 13px;
+  font-weight: 700;
+  color: #33393e;
+}
+
+.board-line-en {
+  margin-left: 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #868f95;
+}
+
+/* Nom « de la gare » : furigana, pastille JY, titre. */
+.board-name {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.board-kana {
   display: block;
-  width: 100%;
-  max-width: 380px;
-  margin: 6px auto 0;
-  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.5));
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em; /* recentre le texte malgré l'espacement des lettres */
+  color: #4a5158;
+}
+
+.board-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+/* Pastille de numérotation des gares : carré arrondi cerclé de la couleur de
+   la ligne, code « JY » en noir — le format JR East. */
+.board-roundel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 4px solid var(--green);
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #16181a;
+  flex: none;
+}
+
+.board-title {
+  font-size: clamp(30px, 8vw, 42px);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+  color: #101315;
 }
 
 .start-tagline {
-  margin-top: 2px;
-  font-size: 14px;
+  margin-top: 8px;
+  text-align: center;
+  font-size: 13.5px;
   font-weight: 600;
-  color: #cfe0b6;
+  color: #5c666d;
+}
+
+/* Bande à la couleur de la ligne, toute la largeur du panneau, avec les deux
+   sens de circulation — l'élément le plus reconnaissable d'un ekimeiban. */
+.board-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px -28px 0;
+  padding: 6px 20px;
+  background: var(--green);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .start-text {
-  margin: 14px auto 22px;
+  margin: 18px auto 0;
   max-width: 400px;
+  text-align: center;
   font-size: 14px;
   line-height: 1.65;
-  color: var(--text-dim);
+  color: #4a5158;
 }
 
 .start-button {
+  display: block;
+  margin: 18px auto 0;
   font: inherit;
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
   letter-spacing: 0.02em;
-  color: #12240a;
-  background: linear-gradient(180deg, #9ad855, #6cab30);
+  color: #14230a;
+  background: var(--green);
   border: none;
-  border-radius: 14px;
-  padding: 15px 42px;
+  border-radius: 8px;
+  padding: 13px 46px;
   cursor: pointer;
-  box-shadow:
-    0 5px 0 #3f6d1c,
-    0 14px 26px rgba(0, 0, 0, 0.42);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  transition: background-color 0.12s ease;
 }
 
 .start-button:hover:not(:disabled) {
-  filter: brightness(1.05);
-  transform: translateY(-2px);
-  box-shadow:
-    0 7px 0 #3f6d1c,
-    0 18px 30px rgba(0, 0, 0, 0.45);
+  background: #8ecf51;
 }
 
 .start-button:active:not(:disabled) {
-  transform: translateY(3px);
-  box-shadow:
-    0 2px 0 #3f6d1c,
-    0 8px 16px rgba(0, 0, 0, 0.4);
+  background: #6ea834;
+}
+
+.start-button:focus-visible {
+  outline: 3px solid #2f5d0f;
+  outline-offset: 2px;
 }
 
 .start-button:disabled {
-  opacity: 0.65;
+  opacity: 0.6;
   cursor: wait;
 }
 
@@ -167,10 +202,10 @@ body,
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px 18px;
-  margin-top: 24px;
-  padding-top: 18px;
+  margin-top: 20px;
+  padding-top: 16px;
   text-align: left;
-  border-top: 1px solid var(--paper-line);
+  border-top: 1px solid #e3e7ea;
 }
 
 .start-controls li {
@@ -190,11 +225,11 @@ body,
   font: inherit;
   font-size: 10.5px;
   font-weight: 700;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.09);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #33393e;
+  background: #f1f3f5;
+  border: 1px solid #d5dade;
   border-bottom-width: 2px;
-  border-radius: 6px;
+  border-radius: 5px;
   padding: 3px 6px;
   line-height: 1.2;
   white-space: nowrap;
@@ -202,7 +237,7 @@ body,
 
 .start-action {
   font-size: 12.5px;
-  color: var(--text-dim);
+  color: #5c666d;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -210,45 +245,19 @@ body,
 
 .start-foot {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: center;
   gap: 7px;
-  margin-top: 20px;
+  margin-top: 16px;
   font-size: 11.5px;
   letter-spacing: 0.03em;
-  color: #7f8d95;
+  color: #868f95;
 }
 
 .start-foot strong {
   font-variant-numeric: tabular-nums;
   font-size: 13px;
-  color: var(--text);
-}
-
-/* Pastille « en direct » : l'horloge de Tokyo est la vraie. */
-.start-live {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 0 0 rgba(128, 194, 65, 0.6);
-  animation: start-live 2.2s ease-out infinite;
-}
-
-@keyframes start-live {
-  70% {
-    box-shadow: 0 0 0 7px rgba(128, 194, 65, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(128, 194, 65, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .start-rails,
-  .start-live {
-    animation: none;
-  }
+  color: #16181a;
 }
 
 /* --- Sélecteur de langue --- */
@@ -286,11 +295,25 @@ body,
   background: var(--green);
 }
 
-/* Coin haut droit de la carte de démarrage, hors du flux centré. */
-.lang-switch-start {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+/* Variante claire pour le panneau blanc du menu principal. */
+.lang-switch-board {
+  background: #f1f3f5;
+  border-color: #dde2e6;
+  backdrop-filter: none;
+}
+
+.lang-switch-board .lang-option {
+  color: #5c666d;
+}
+
+.lang-switch-board .lang-option:hover {
+  color: #16181a;
+}
+
+.lang-switch-board .lang-option-active,
+.lang-switch-board .lang-option-active:hover {
+  color: #122408;
+  background: var(--green);
 }
 
 /* --- HUD --- */
@@ -530,8 +553,13 @@ body,
     padding: 6px 7px;
   }
 
-  .start-card {
-    padding: 26px 22px 20px;
+  .start-board {
+    padding: 18px 20px 20px;
+  }
+
+  .board-band {
+    margin-left: -20px;
+    margin-right: -20px;
   }
 
   .start-text {
@@ -543,10 +571,5 @@ body,
   .start-controls {
     grid-template-columns: minmax(0, 1fr);
     gap: 7px;
-  }
-
-  .lang-switch-start {
-    top: 10px;
-    right: 10px;
   }
 }

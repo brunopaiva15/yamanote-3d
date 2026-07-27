@@ -1,6 +1,9 @@
-// Menu principal : logo Yamanote 3D, accroche, pense-bête des commandes en
-// touches, sélecteur de langue et bouton qui débloque l'audio (contrainte
-// navigateur) avant de lancer l'expérience.
+// Menu principal, composé comme un ekimeiban (panneau de nom de gare) JR East :
+// panneau blanc sur fond sombre, nom de la ligne en tête, titre typographique,
+// bande à la couleur de la ligne avec les deux sens de circulation, puis les
+// commandes et le bouton qui débloque l'audio (contrainte navigateur) avant de
+// lancer l'expérience. La bande et les mentions 内回り／外回り restent en
+// japonais : c'est de la signalétique, pas de l'interface (cf. src/i18n).
 
 import { useEffect, useState } from 'react';
 import { useStore } from '../store';
@@ -67,11 +70,22 @@ export function StartScreen() {
 
   return (
     <div className="start-screen">
-      <div className="start-rails" aria-hidden="true" />
-      <div className="start-card">
-        <LanguageSwitcher className="lang-switch-start" />
+      <div className="start-board">
+        <header className="board-head">
+          <span className="board-line" lang="ja">
+            山手線
+            <span className="board-line-en" lang="en">
+              YAMANOTE LINE
+            </span>
+          </span>
+          <LanguageSwitcher className="lang-switch-board" />
+        </header>
         <Logo />
         <p className="start-tagline">{t.start.tagline}</p>
+        <div className="board-band" aria-hidden="true" lang="ja">
+          <span>◀ 内回り</span>
+          <span>外回り ▶</span>
+        </div>
         <p className="start-text">{t.start.intro}</p>
         <button className="start-button" onClick={() => void board()} disabled={loading}>
           {loading ? t.start.loading : t.start.board}
@@ -89,7 +103,6 @@ export function StartScreen() {
           ))}
         </ul>
         <p className="start-foot">
-          <span className="start-live" aria-hidden="true" />
           {t.start.tokyoTime}
           <strong>{tokyoClock}</strong>
         </p>
