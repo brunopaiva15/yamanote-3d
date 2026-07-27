@@ -360,10 +360,39 @@ export function setPlatformSide(side: 1 | -1): void {
   });
 }
 
+/**
+ * L'auditeur est-il dehors, sur le quai ? Le filtrage du bus quai simule le
+ * son entendu À TRAVERS les ouvertures de la rame ; debout sous les
+ * haut-parleurs, il n'a plus lieu d'être.
+ */
+let listenerOutside = false;
+
+export function setListenerOutside(outside: boolean): void {
+  listenerOutside = outside;
+  if (!nodes) return;
+  if (outside) {
+    nodes.platLp.frequency.rampTo(11000, 0.25);
+    nodes.platGain.gain.rampTo(0.82, 0.25);
+  }
+}
+
+/**
+ * Distance à la rame (m), pour le roulement. À bord elle vaut zéro ; depuis le
+ * quai, elle fait décroître le bruit du train qui s'éloigne.
+ */
+let rollingDistance = 0;
+
+export function setRollingDistance(m: number): void {
+  rollingDistance = Math.max(0, m);
+}
+
 // Ouverture acoustique du quai vers la cabine (0 = portes fermées, son sourd
 // et lointain ; 1 = portes ouvertes, la mélodie entre franchement).
 export function setPlatformDoors(open01: number): void {
   if (!nodes) return;
+  // Dehors, les portes de la rame ne filtrent plus rien : setListenerOutside
+  // a déjà ouvert le bus en grand.
+  if (listenerOutside) return;
   const o = Math.max(0, Math.min(1, open01));
   nodes.platLp.frequency.rampTo(750 + o * 3600, 0.12);
   nodes.platGain.gain.rampTo(0.16 + o * 0.44, 0.12);
@@ -373,6 +402,9 @@ export function setPlatformDoors(open01: number): void {
 // aux annonces vocales, que speechSynthesis ne permet pas de panner : au moins
 // leur niveau suit la position de la tête dans le wagon.
 export function speakerProximity(): number {
+  // Depuis le quai, la sono du wagon n'est plus qu'un lointain : ce sont les
+  // haut-parleurs du quai qui portent les annonces.
+  if (listenerOutside) return 0.45;
   let best = Infinity;
   for (const [x, y, z] of CABIN_SPEAKERS) {
     const d = Math.hypot(x - listenerPos.x, y - listenerPos.y, z - listenerPos.z);
@@ -413,7 +445,9 @@ export function updateAudio(dt: number, speed01: number, braking: boolean): void
   const accel01 = (speed01 - prevSpeed01) / dt; // par seconde
   prevSpeed01 = speed01;
 
-  nodes.rollGain.gain.rampTo(Math.pow(speed01, 1.1) * 0.32, 0.08);
+  // Atténuation en 1/(1+d) : un train qui quitte la gare s'éloigne vraiment.
+  const far = 1 / (1 + Math.pow(rollingDistance / 22, 1.6));
+  nodes.rollGain.gain.rampTo(Math.pow(speed01, 1.1) * 0.32 * far, 0.08);
   nodes.rollFilter.frequency.rampTo(280 + speed01 * 1500, 0.08);
 
   // Le « chant » VVVF : surtout audible à l'accélération, plus discrètement

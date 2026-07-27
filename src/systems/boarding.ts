@@ -9,36 +9,36 @@
 import * as THREE from 'three';
 import { useStore } from '../store';
 import { runtime } from './runtime';
-import { setDepartureBlockers } from './departureSequence';
+import { beginPlatformWait, boardableElapsed, endPlatformWait } from './platformWait';
+import { resumeDwellAt } from './stationCycle';
 import { nearestOpenPortal, STEP_OUT_U, worldXAt } from './walkable';
-
-/**
- * Tant que la machine à états de l'attente n'existe pas, le train ne part pas
- * sans le joueur : on le retient à quai. `holdTrainForPlayer` sera basculé à
- * false par platformWait, qui prendra le relais.
- */
-export const boarding = {
-  holdTrainForPlayer: true,
-};
 
 export function isOnPlatform(): boolean {
   return runtime.playerFrame === 'platform';
 }
 
-/** Le joueur vient de poser le pied sur le quai. */
+/**
+ * Le joueur vient de poser le pied sur le quai. Le cycle station passe la main
+ * à platformWait : le train finira son arrêt et partira sans lui, comme en vrai.
+ */
 export function alight(): void {
   if (runtime.playerFrame === 'platform') return;
   runtime.playerFrame = 'platform';
   useStore.getState().setOnPlatform(true);
-  if (boarding.holdTrainForPlayer) setDepartureBlockers({ heldAtStation: true });
+  beginPlatformWait();
 }
 
-/** Le joueur vient de remonter dans la rame. */
+/**
+ * Le joueur vient de remonter dans la rame. Le cycle station reprend le dwell
+ * exactement là où l'attente en était : ni mélodie rejouée, ni annonce sautée.
+ */
 export function board(): void {
   if (runtime.playerFrame === 'car') return;
+  const elapsed = boardableElapsed();
   runtime.playerFrame = 'car';
   useStore.getState().setOnPlatform(false);
-  if (boarding.holdTrainForPlayer) setDepartureBlockers({ heldAtStation: false });
+  endPlatformWait();
+  resumeDwellAt(elapsed, useStore.getState().index);
 }
 
 /**

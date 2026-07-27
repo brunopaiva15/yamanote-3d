@@ -10,6 +10,7 @@ import { updateDoorMotion } from '../systems/doorMotion';
 import { updateSegmentEnv } from '../systems/segmentEnv';
 import { updatePlatformPresence } from '../systems/platformPresence';
 import { updateStationOcclusion } from '../systems/stationOcclusion';
+import { updatePlatformWait } from '../systems/platformWait';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
 import { setPlatformDoors, updateAudio } from '../systems/audioEngine';
 import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
@@ -63,7 +64,11 @@ export function Engine(): null {
     }
 
     if (cycleDt > 0) {
-      updateCycle(cycleDt);
+      // Descendu sur le quai, le joueur n'est plus dans le référentiel du
+      // train : la gare devient fixe, la rame glisse, et c'est une autre
+      // machine à états qui mène la danse.
+      if (runtime.playerFrame === 'platform') updatePlatformWait(cycleDt);
+      else updateCycle(cycleDt);
       updateSegmentEnv(cycleDt);
       updatePlatformPresence();
       // Lit platformFade / platformSlide : doit venir après.

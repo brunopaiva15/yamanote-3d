@@ -1,0 +1,280 @@
+// Attendre le prochain train, debout sur le quai.
+//
+// Dès que le joueur descend, le rapport s'inverse : la gare devient le repère
+// fixe (runtime.distance gelé, donc tout le décor reste calé sur elle) et c'est
+// la rame qui glisse le long de la voie (runtime.trainZ). Le cycle station
+// habituel est court-circuité et remplacé par cette machine à états, qui tient
+// son propre chrono et ne touche jamais à runtime.phaseT.
+//
+// La phase du store reste 'dwell' du début à la fin : le HUD dit « à quai », la
+// signalétique du quai affiche la bonne gare, la toiture de hub reste en place.
+// Rien de tout cela n'a besoin de savoir que le joueur est dehors.
+//
+// Le décor défilant vers +z, un train qui part s'en va vers les z négatifs et
+// le suivant arrive depuis les z positifs.
+
+import { CONFIG, V_MAX } from '../data/config';
+import { approachSequence, doorsClosingAnnouncement } from '../data/announcements';
+import { DOOR_SIDE } from '../data/stations';
+import { useStore } from '../store';
+import { advanceClock, runtime } from './runtime';
+import { DEPART_HOLD, integrateTrain, type TrainState } from './trainPhysics';
+import { randomizeDoorTimings, setPsdDoors, setTrainDoors, stationTimings } from './doorMotion';
+import * as audio from './audioEngine';
+import { say } from './speech';
+import { exchangePassengers, seedPassengers } from './passengers';
+import { clearPlatformCrowd, seedPlatformCrowd } from './platformCrowd';
+import { cancelDepartureMelody, resetMelodyDepartureGuard } from './departureSequence';
+import {
+  CLOSE_ANNOUNCE_LEAD,
+  DOORS_CLOSE_LEAD,
+  dwellDuration,
+  melodyStartAt,
+} from './stationCycle';
+
+/**
+ * Creux entre deux rames, quai vide (s). L'intervalle complet d'un départ au
+ * suivant tourne autour de deux minutes, la cadence réelle de la Yamanote aux
+ * heures creuses.
+ */
+const HEADWAY_GAP = 60;
+
+/** Distance au-delà de laquelle la rame qui part est hors de vue. */
+const OUT_OF_SIGHT = 320;
+
+/** Immobilisation avant ouverture des portes. */
+const BERTH_SETTLE = 1.6;
+
+export type WaitStage = 'boardable' | 'departing' | 'clear' | 'approaching' | 'berthing';
+
+export const platformWait = {
+  stage: 'boardable' as WaitStage,
+  /** Chrono de l'étape courante (s). */
+  t: 0,
+  /** Vitesse d'attente accélérée, pour la mise au point (__platformWaitSpeed). */
+  rate: 1,
+  /** Distance de freinage de la rame qui arrive, calculée une fois. */
+  approachDist: 0,
+};
+
+const fired = new Set<string>();
+const train: TrainState = { v: 0, a: 0, d: 0 };
+let lastClackDist = 0;
+
+function once(key: string, condition: boolean, fn: () => void): void {
+  if (condition && !fired.has(key)) {
+    fired.add(key);
+    fn();
+  }
+}
+
+function enter(stage: WaitStage): void {
+  platformWait.stage = stage;
+  platformWait.t = 0;
+  fired.clear();
+}
+
+/** Distance parcourue par une rame qui freine de la vitesse de ligne à l'arrêt. */
+function brakingDistance(): number {
+  const s: TrainState = { v: V_MAX, a: 0, d: 0 };
+  for (let i = 0; i < 4000 && s.v > 0.01; i++) integrateTrain(s, 0, 0.05);
+  return s.d;
+}
+
+/**
+ * Le joueur vient de descendre : on reprend le dwell en cours là où il en est.
+ * Les événements déjà joués (ouverture, échange de passagers, mélodie…) sont
+ * marqués pour ne pas se rejouer.
+ */
+export function beginPlatformWait(): void {
+  const { index } = useStore.getState();
+  const t = runtime.phaseT;
+  const dwell = dwellDuration(index);
+  enter('boardable');
+  platformWait.t = Math.min(t, dwell);
+  train.v = 0;
+  train.a = 0;
+  train.d = 0;
+  runtime.trainZ = 0;
+  runtime.trainPresent = true;
+  runtime.speed = 0;
+  runtime.accel = 0;
+  runtime.sway = 0;
+  audio.setListenerOutside(true);
+
+  // Ce qui est déjà passé dans ce dwell ne doit pas se rejouer.
+  if (t > 0.4) fired.add('doors-open');
+  if (t > 0.4 + stationTimings.psdOpenDelay) fired.add('psd-open');
+  if (t > 1.6) fired.add('exchange');
+  if (t >= melodyStartAt(index, dwell)) fired.add('melody');
+  if (t >= dwell - CLOSE_ANNOUNCE_LEAD) fired.add('announce-close');
+  if (t >= dwell - DOORS_CLOSE_LEAD) fired.add('doors-close');
+  if (t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay) fired.add('psd-close');
+}
+
+/** Le joueur remonte : temps de dwell déjà écoulé, pour rendre la main au cycle. */
+export function boardableElapsed(): number {
+  const { index } = useStore.getState();
+  if (platformWait.stage !== 'boardable') return 0;
+  return Math.min(platformWait.t, dwellDuration(index) - DOORS_CLOSE_LEAD - 0.5);
+}
+
+export function endPlatformWait(): void {
+  audio.setListenerOutside(false);
+  audio.setRollingDistance(0);
+  runtime.trainZ = 0;
+  runtime.trainPresent = true;
+}
+
+// --- Étapes -------------------------------------------------------------
+
+function updateBoardable(dt: number, index: number, doorSide: 1 | -1): void {
+  const dwell = dwellDuration(index);
+  const t = platformWait.t;
+  once('doors-open', t > 0.4, () => {
+    setTrainDoors(1);
+    audio.doorOpenChime();
+  });
+  once('psd-open', t > 0.4 + stationTimings.psdOpenDelay, () => setPsdDoors(1));
+  once('exchange', t > 1.6, () => exchangePassengers(doorSide));
+  once('melody', t >= melodyStartAt(index, dwell), () => audio.departureMelody(index));
+  once('announce-close', t >= dwell - CLOSE_ANNOUNCE_LEAD, () => say(doorsClosingAnnouncement()));
+  once('doors-close', t >= dwell - DOORS_CLOSE_LEAD, () => {
+    setTrainDoors(0);
+    audio.doorCloseChime();
+  });
+  once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () =>
+    setPsdDoors(0),
+  );
+  if (t >= dwell) {
+    cancelDepartureMelody();
+    resetMelodyDepartureGuard();
+    train.v = 0;
+    train.a = 0;
+    train.d = 0;
+    lastClackDist = 0;
+    enter('departing');
+  }
+  void dt;
+}
+
+function updateDeparting(dt: number): void {
+  const t = platformWait.t;
+  once('brake-release', t >= DEPART_HOLD - 1.2, () => audio.brakeRelease());
+  const target = t < DEPART_HOLD ? 0 : V_MAX;
+  integrateTrain(train, target, dt);
+  runtime.trainZ = -train.d;
+  runtime.speed = train.v;
+  runtime.accel = train.a;
+  audio.setRollingDistance(train.d);
+  // Dès que la rame s'ébranle, plus aucun seuil n'est franchissable.
+  if (train.d > 0.5) runtime.trainPresent = false;
+  if (train.d - lastClackDist > CONFIG.railJointGap && train.v > 1.5) {
+    lastClackDist = train.d;
+    audio.railClack(train.v / V_MAX);
+  }
+  if (train.d >= OUT_OF_SIGHT) {
+    runtime.speed = 0;
+    runtime.accel = 0;
+    audio.setRollingDistance(OUT_OF_SIGHT);
+    clearPlatformCrowd();
+    enter('clear');
+  }
+}
+
+function updateClear(index: number, doorSide: 1 | -1): void {
+  const t = platformWait.t;
+  // Le quai se repeuple pour la rame suivante.
+  once('crowd', t >= 10, () => seedPlatformCrowd(index));
+  // Annonce d'approche depuis les haut-parleurs du quai.
+  once('announce', t >= HEADWAY_GAP - 24, () => say(approachSequence(index, doorSide)));
+  if (t >= HEADWAY_GAP) {
+    platformWait.approachDist = brakingDistance();
+    train.v = V_MAX;
+    train.a = 0;
+    train.d = 0;
+    lastClackDist = 0;
+    runtime.trainZ = platformWait.approachDist;
+    randomizeDoorTimings();
+    enter('approaching');
+  }
+}
+
+function updateApproaching(dt: number): void {
+  once('brake-apply', platformWait.t >= 0.4, () => audio.brakeApply());
+  once('jingle', platformWait.t >= 1.5, () => audio.arrivalJingle());
+  integrateTrain(train, 0, dt);
+  const left = Math.max(0, platformWait.approachDist - train.d);
+  runtime.trainZ = left;
+  runtime.speed = train.v;
+  runtime.accel = train.a;
+  audio.setRollingDistance(left);
+  if (train.d - lastClackDist > CONFIG.railJointGap && train.v > 1.5) {
+    lastClackDist = train.d;
+    audio.railClack(train.v / V_MAX);
+  }
+  once('squeal', train.v < V_MAX * 0.25 && train.v > 1, () => audio.flangeSqueal(0.45));
+  if (train.v <= 0.02 || left <= 0.01) {
+    runtime.trainZ = 0;
+    runtime.speed = 0;
+    runtime.accel = 0;
+    audio.setRollingDistance(0);
+    enter('berthing');
+  }
+}
+
+function updateBerthing(index: number): void {
+  once('settle', true, () => {
+    audio.stopSettle();
+    runtime.trainPresent = true;
+    runtime.stopSequence += 1;
+    runtime.trainId = `yamanote-e235-${runtime.stopSequence}`;
+    runtime.lastMelodyDepartureId = null;
+    // Nouvelle rame : de nouveaux visages derrière les vitres.
+    seedPassengers();
+  });
+  if (platformWait.t >= BERTH_SETTLE) enter('boardable');
+  void index;
+}
+
+// --- Boucle -------------------------------------------------------------
+
+/** Appelée à la place d'updateCycle tant que le joueur est sur le quai. */
+export function updatePlatformWait(rawDt: number): void {
+  const dt = rawDt * platformWait.rate;
+  // L'horloge de Tokyo ne s'arrête pas parce qu'on est descendu : sans cela le
+  // cycle jour/nuit gèlerait le temps de l'attente.
+  advanceClock(rawDt);
+  runtime.swayTime += dt;
+  runtime.sway = 0;
+
+  const { index } = useStore.getState();
+  const doorSide = DOOR_SIDE[index];
+  platformWait.t += dt;
+
+  switch (platformWait.stage) {
+    case 'boardable':
+      updateBoardable(dt, index, doorSide);
+      break;
+    case 'departing':
+      updateDeparting(dt);
+      break;
+    case 'clear':
+      updateClear(index, doorSide);
+      break;
+    case 'approaching':
+      updateApproaching(dt);
+      break;
+    case 'berthing':
+      updateBerthing(index);
+      break;
+  }
+}
+
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  const w = window as unknown as Record<string, unknown>;
+  w.__platformWait = platformWait;
+  w.__platformWaitSpeed = (k: number) => {
+    platformWait.rate = Math.max(0.1, k);
+  };
+}

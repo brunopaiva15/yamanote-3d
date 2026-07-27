@@ -153,9 +153,9 @@ const MELODY_TO_ANNOUNCE_GAP = 1.5;
  * durent ~6,8 s à eux deux — l'anglais doit être terminé avant que la rame ne
  * s'ébranle (fin du dwell + DEPART_HOLD).
  */
-const CLOSE_ANNOUNCE_LEAD = 7.0;
+export const CLOSE_ANNOUNCE_LEAD = 7.0;
 /** Avance de la fermeture des portes sur la fin du dwell. */
-const DOORS_CLOSE_LEAD = 4.0;
+export const DOORS_CLOSE_LEAD = 4.0;
 /**
  * Départ de l'annonce d'approche avant la fin de la croisière. Aux gares à
  * grosses correspondances (Ueno, Tokyo, Shinjuku…), まもなく + 乗換案内 ja/en
@@ -208,13 +208,13 @@ function melodyWindowSeconds(stationIndex: number): number {
 }
 
 /** Dwell assez long pour laisser finir la 発車メロディ avant l'annonce. */
-function dwellDuration(stationIndex: number): number {
+export function dwellDuration(stationIndex: number): number {
   const window = melodyWindowSeconds(stationIndex);
   // ~2 s après ouverture pour l'échange + mélodie (2 passages) + marge + annonce.
   return Math.max(CONFIG.dwellTime, 2 + window + MELODY_TO_ANNOUNCE_GAP + CLOSE_ANNOUNCE_LEAD);
 }
 
-function melodyStartAt(stationIndex: number, dwell: number): number {
+export function melodyStartAt(stationIndex: number, dwell: number): number {
   const window = melodyWindowSeconds(stationIndex);
   return Math.max(2, dwell - CLOSE_ANNOUNCE_LEAD - MELODY_TO_ANNOUNCE_GAP - window);
 }
@@ -339,6 +339,23 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
     fired.add('advance');
     if (t >= DEPART_HOLD - 1.2) fired.add('brake-release');
   }
+}
+
+/**
+ * Reprend le cycle station à un instant donné du dwell — utilisé quand le
+ * joueur remonte dans une rame après avoir attendu sur le quai. Les portes
+ * sont déjà dans le bon état (platformWait a joué la même chorégraphie) ;
+ * seul le jeu d'événements déjà déclenchés doit être rétabli, sans quoi la
+ * mélodie se rejouerait ou l'annonce de fermeture serait sautée.
+ */
+export function resumeDwellAt(t: number, stationIndex: number): void {
+  const store = useStore.getState();
+  store.setIndex(stationIndex);
+  store.setPhase('dwell');
+  runtime.phaseT = t;
+  runtime.speed = 0;
+  runtime.accel = 0;
+  seedFired('dwell', t, stationIndex);
 }
 
 // Point d'entrée aléatoire sur la boucle : phase, progression, vitesse, portes.
