@@ -11,6 +11,7 @@ import { runtime } from '../systems/runtime';
 import { currentSegmentOccupancy } from '../systems/occupancy';
 import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
 import { applySpeechVolume, cancelSpeech } from '../systems/speech';
+import { beginEmergencyStop } from '../systems/stationCycle';
 import { input } from '../systems/input';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
@@ -30,8 +31,9 @@ function useClock(): string {
 }
 
 // L'arrêt d'urgence vit dans runtime (pas dans le store) : on le sonde comme
-// l'horloge, à la seconde.
-function useEmergencyStop(): boolean {
+// l'horloge, à la seconde. `sync` relit l'état sans attendre le prochain tick
+// (masque le bouton SOS dès le clic).
+function useEmergencyStop(): [boolean, () => void] {
   const [active, setActive] = useState(false);
   useEffect(() => {
     const id = window.setInterval(
@@ -40,7 +42,8 @@ function useEmergencyStop(): boolean {
     );
     return () => window.clearInterval(id);
   }, []);
-  return active;
+  const sync = () => setActive(runtime.emergencyStop.stage !== 'none');
+  return [active, sync];
 }
 
 function useOccupancy(): { percent: number; band: OccupancyBand } {
@@ -75,7 +78,7 @@ export function Hud() {
   const t = useT();
   const clock = useClock();
   const occupancy = useOccupancy();
-  const emergency = useEmergencyStop();
+  const [emergency, syncEmergency] = useEmergencyStop();
 
   // Répercuter le mute et le volume sur l'audio et la voix.
   useEffect(() => {
@@ -119,6 +122,23 @@ export function Hud() {
           {emergency ? t.hud.phaseEmergency : t.hud.phase[phase]}
         </div>
       </div>
+
+      {/* Bouton SOS : seulement en pleine course entre deux gares — l'arrêt
+          d'urgence ne peut se déclencher qu'en phase cruise — et masqué tant
+          qu'un arrêt d'urgence est déjà en cours. */}
+      {phase === 'cruise' && !emergency && (
+        <button
+          className="hud-emergency"
+          onClick={() => {
+            beginEmergencyStop();
+            syncEmergency();
+          }}
+          title={t.hud.emergencyTitle}
+        >
+          <span className="hud-emergency-dot" aria-hidden="true" />
+          {t.hud.emergency}
+        </button>
+      )}
 
       <div className="hud-reticle" aria-hidden="true" />
 
