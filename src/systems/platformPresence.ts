@@ -13,7 +13,7 @@ function smoothstep(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
-function presenceFrom(phase: Phase, p: number, phaseT: number): { presence: number; slide: number } {
+function presenceFrom(phase: Phase, p: number): { presence: number; slide: number } {
   if (phase === 'brake') {
     // Freinage : p ≈ 0.878 → 1. Le quai entre assez tôt pour qu'on le voie
     // glisser le long des vitres, opaque, comme une vraie approche.
@@ -22,10 +22,14 @@ function presenceFrom(phase: Phase, p: number, phaseT: number): { presence: numb
   }
   if (phase === 'dwell') return { presence: 1, slide: 0 };
   if (phase === 'depart') {
-    // Piloté par phaseT (pas p) : le quai doit être ENTIÈREMENT parti avant
-    // la croisière, sinon le mur de gare disparaît d'un coup au bascule.
-    const presence = 1 - smoothstep(0.7, CONFIG.departTime - 0.6, phaseT);
-    return { presence, slide: (1 - presence) * 78 };
+    // Piloté par la distance RÉELLEMENT parcourue depuis l'arrêt : le quai
+    // défile exactement à la vitesse du train (immobile pendant le desserrage
+    // des freins, puis accélération progressive). departTime est dimensionné
+    // pour qu'il soit entièrement parti avant la croisière, sinon le mur de
+    // gare disparaîtrait d'un coup au bascule.
+    const d = Math.max(0, runtime.distance - runtime.departStartDist);
+    const presence = 1 - smoothstep(4, 64, d);
+    return { presence, slide: Math.min(d, 90) };
   }
   return { presence: 0, slide: 0 };
 }
@@ -33,7 +37,7 @@ function presenceFrom(phase: Phase, p: number, phaseT: number): { presence: numb
 // À appeler APRÈS updateSegmentEnv pour lire un p à jour.
 export function updatePlatformPresence(): void {
   const { phase } = useStore.getState();
-  const { presence, slide } = presenceFrom(phase, segEnv.p, runtime.phaseT);
+  const { presence, slide } = presenceFrom(phase, segEnv.p);
   runtime.platformFade = presence;
   runtime.platformSlide = slide;
 }
@@ -46,7 +50,7 @@ export function seedPlatformPresence(phase: Phase, phaseT: number): void {
   else if (phase === 'cruise') p = Math.min(1, (CONFIG.departTime + phaseT) / journey);
   else if (phase === 'brake') p = Math.min(1, (CONFIG.departTime + CONFIG.cruiseTime + phaseT) / journey);
   else p = 1;
-  const { presence, slide } = presenceFrom(phase, p, phaseT);
+  const { presence, slide } = presenceFrom(phase, p);
   runtime.platformFade = presence;
   runtime.platformSlide = slide;
 }

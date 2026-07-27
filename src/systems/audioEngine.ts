@@ -63,6 +63,8 @@ interface Nodes {
   clackFilter: Tone.Filter;
   air: Tone.NoiseSynth;
   airFilter: Tone.Filter;
+  vent: Tone.NoiseSynth;
+  squeal: Tone.Synth;
   slideTrainGain: Tone.Gain;
   slidePsdGain: Tone.Gain;
   thud: Tone.MembraneSynth;
@@ -129,6 +131,25 @@ export async function startAudio(): Promise<void> {
     envelope: { attack: 0.02, decay: 0.55, sustain: 0 },
   });
   air.chain(airFilter, master);
+
+  // Purges d'air du circuit de frein (application, desserrage, compresseur) :
+  // souffle plus grave et plus feutré que l'air des portes.
+  const ventFilter = new Tone.Filter({ type: 'lowpass', frequency: 750, Q: 0.6 });
+  const vent = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.04, decay: 1.1, sustain: 0 },
+    volume: -10,
+  });
+  vent.chain(ventFilter, master);
+
+  // Crissement de boudin dans les courbes : sinus aigu tenu, très discret.
+  const squealHp = new Tone.Filter({ type: 'highpass', frequency: 1500, Q: 0.5 });
+  const squeal = new Tone.Synth({
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.35, decay: 0.3, sustain: 0.4, release: 0.6 },
+    volume: -26,
+  });
+  squeal.chain(squealHp, master);
 
   // Frottement de glissière pendant le coulissement des portes : bruit grave
   // dont le gain suit la vitesse des vantaux (rame et portes palières).
@@ -270,6 +291,8 @@ export async function startAudio(): Promise<void> {
     clackFilter,
     air,
     airFilter,
+    vent,
+    squeal,
     slideTrainGain,
     slidePsdGain,
     thud,
@@ -379,11 +402,15 @@ export function updateAudio(dt: number, speed01: number, braking: boolean): void
   nodes.rollGain.gain.rampTo(Math.pow(speed01, 1.1) * 0.32, 0.08);
   nodes.rollFilter.frequency.rampTo(280 + speed01 * 1500, 0.08);
 
-  // Le « chant » VVVF : surtout audible à l'accélération.
-  const accelBoost = Math.max(0, Math.min(1, accel01 * 9));
+  // Le « chant » VVVF : surtout audible à l'accélération, plus discrètement
+  // au freinage (récupération). L'accélération réelle est ~0,84 m/s² : le
+  // facteur est calé pour que la pleine traction donne un boost proche de 1.
+  const accelBoost = Math.max(0, Math.min(1, accel01 * 12));
+  const regenBoost = Math.max(0, Math.min(0.5, -accel01 * 6));
+  const boost = Math.max(accelBoost, regenBoost);
   nodes.vvvfOsc.frequency.rampTo(52 + speed01 * 170, 0.08);
   nodes.vvvfFilter.frequency.rampTo(160 + speed01 * 1900, 0.08);
-  nodes.vvvfGain.gain.rampTo(speed01 > 0.005 ? 0.012 + accelBoost * 0.05 * (0.35 + speed01) : 0, 0.1);
+  nodes.vvvfGain.gain.rampTo(speed01 > 0.005 ? 0.012 + boost * 0.05 * (0.35 + speed01) : 0, 0.1);
 
   // Crissement sous ~40 % de vitesse en freinage.
   const squeal = braking && speed01 < 0.4 && speed01 > 0.015 ? (0.4 - speed01) * 0.5 * 0.28 : 0;
@@ -412,6 +439,51 @@ export function psdClunk(vel: number): void {
   const now = Tone.now();
   nodes.thud.triggerAttackRelease('C2', 0.07, now, vel * 0.8);
   nodes.clack.triggerAttackRelease(0.025, now + 0.01, vel * 0.45);
+}
+
+// --- Bruitages du circuit de frein et de course -------------------------
+
+// Mise en action des freins : brève purge d'air en début de freinage.
+export function brakeApply(): void {
+  if (!nodes) return;
+  nodes.vent.envelope.decay = 0.5;
+  nodes.vent.triggerAttackRelease(0.25, Tone.now(), 0.12);
+}
+
+// Desserrage des freins juste avant le départ : longue purge « pshhh »
+// suivie d'une petite queue d'échappement.
+export function brakeRelease(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.vent.envelope.decay = 1.3;
+  nodes.vent.triggerAttackRelease(0.55, now, 0.2);
+  nodes.vent.triggerAttackRelease(0.2, now + 1.15, 0.07);
+}
+
+// Immobilisation complète : léger tassement de caisse puis serrage à l'arrêt.
+export function stopSettle(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.thud.triggerAttackRelease('F1', 0.12, now, 0.1);
+  nodes.vent.envelope.decay = 0.4;
+  nodes.vent.triggerAttackRelease(0.2, now + 0.3, 0.09);
+}
+
+// Crissement de boudin dans une courbe : deux tenues aiguës, très en retrait.
+export function flangeSqueal(intensity: number): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  const base = 2500 + Math.random() * 900;
+  const vel = 0.05 + intensity * 0.06;
+  nodes.squeal.triggerAttackRelease(base, 0.9 + Math.random() * 0.8, now, vel);
+  nodes.squeal.triggerAttackRelease(base * 1.045, 0.5, now + 1.35, vel * 0.6);
+}
+
+// Petite purge du compresseur sous le plancher, en pleine course.
+export function airCompressorPurge(): void {
+  if (!nodes) return;
+  nodes.vent.envelope.decay = 0.35;
+  nodes.vent.triggerAttackRelease(0.15, Tone.now(), 0.05);
 }
 
 // « Clac-clac » des deux bogies au passage d'un joint de rail.

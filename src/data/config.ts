@@ -2,10 +2,12 @@
 
 export const CONFIG = {
   // Cycle station (secondes), calé sur la réalité : ~2 min par station, boucle ~1 h.
-  cruiseTime: 78,
-  brakeTime: 12,
+  // depart et brake sont dimensionnés pour le profil physique E235 de
+  // stationCycle (~0,84 m/s² au démarrage, arrêt complet en ~21 s depuis 90 km/h).
+  cruiseTime: 59,
+  brakeTime: 22,
   dwellTime: 22,
-  departTime: 8,
+  departTime: 17,
   doorTime: 2.6,
 
   // Vitesses et hauteurs (mètres, m/s, km/h).
