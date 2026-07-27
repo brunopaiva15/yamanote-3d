@@ -168,8 +168,10 @@ enregistrements protégés ne sont pas embarqués. Elles sont générées par
 `scripts/melodies-gen.py` dans `public/audio/melodies/` et activées via
 `ENABLE_DEPARTURE_MELODY_CLIPS = true` (`src/data/melodies.ts`) ; flag à
 `false` = retour à la synthèse Tone.js seule. La séquence de
-départ respecte l'ordre réel : la mélodie joue portes ouvertes et se termine
-**avant** l'annonce de fermeture, puis viennent le carillon et la fermeture.
+départ respecte l'ordre réel : la mélodie joue portes ouvertes — deux
+passages, séparés d'une courte respiration, comme la lance le chef de quai —
+et se termine **avant** l'annonce de fermeture, puis viennent le carillon et
+la fermeture.
 Les annonces (sens de la boucle 内回り avec gares repères, 次は… avec numéro
 JY, まもなく…, fermeture, accueil, messages de courtoisie en rotation) sont
 dites en japonais puis en anglais, avec les correspondances réelles de chaque

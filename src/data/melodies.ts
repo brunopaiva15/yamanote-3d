@@ -20,6 +20,16 @@ import type { LoopDirection } from './platforms';
  */
 export const ENABLE_DEPARTURE_MELODY_CLIPS = true;
 
+/**
+ * La 発車メロディ est jouée DEUX passages par arrêt, séparés d'une courte
+ * respiration — comme sur les quais réels, où le chef de quai laisse tourner
+ * la mélodie avant l'annonce de fermeture. Partagé par la lecture
+ * (departureSequence), la synthèse de repli (audioEngine) et le
+ * dimensionnement du dwell (stationCycle).
+ */
+export const MELODY_REPEATS = 2;
+export const MELODY_REPEAT_GAP_S = 0.7;
+
 /** Chemin logique du clip Inner Loop principal (sous public/). */
 export const INNER_MAIN_MELODY_PATH =
   '/audio/melodies/01_jre-ikst-010-01_inner-main.mp3';

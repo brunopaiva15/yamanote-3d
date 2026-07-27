@@ -6,6 +6,8 @@ import { CONFIG, V_MAX } from '../data/config';
 import {
   ENABLE_DEPARTURE_MELODY_CLIPS,
   innerMainMelodyPlatforms,
+  MELODY_REPEATS,
+  MELODY_REPEAT_GAP_S,
   outerMainMelodyPlatforms,
   SESERAGI_PLATFORMS,
 } from '../data/melodies';
@@ -259,16 +261,24 @@ function melodyBudgetSeconds(stationIndex: number): number {
   return 6.5;
 }
 
+/** Fenêtre sonore de la mélodie : MELODY_REPEATS passages + respirations. */
+function melodyWindowSeconds(stationIndex: number): number {
+  return (
+    MELODY_REPEATS * melodyBudgetSeconds(stationIndex) +
+    (MELODY_REPEATS - 1) * MELODY_REPEAT_GAP_S
+  );
+}
+
 /** Dwell assez long pour laisser finir la 発車メロディ avant l'annonce. */
 function dwellDuration(stationIndex: number): number {
-  const budget = melodyBudgetSeconds(stationIndex);
-  // ~2 s après ouverture pour l'échange + mélodie + marge + annonce complète.
-  return Math.max(CONFIG.dwellTime, 2 + budget + MELODY_TO_ANNOUNCE_GAP + CLOSE_ANNOUNCE_LEAD);
+  const window = melodyWindowSeconds(stationIndex);
+  // ~2 s après ouverture pour l'échange + mélodie (2 passages) + marge + annonce.
+  return Math.max(CONFIG.dwellTime, 2 + window + MELODY_TO_ANNOUNCE_GAP + CLOSE_ANNOUNCE_LEAD);
 }
 
 function melodyStartAt(stationIndex: number, dwell: number): number {
-  const budget = melodyBudgetSeconds(stationIndex);
-  return Math.max(2, dwell - CLOSE_ANNOUNCE_LEAD - MELODY_TO_ANNOUNCE_GAP - budget);
+  const window = melodyWindowSeconds(stationIndex);
+  return Math.max(2, dwell - CLOSE_ANNOUNCE_LEAD - MELODY_TO_ANNOUNCE_GAP - window);
 }
 
 const PHASE_ORDER = [
