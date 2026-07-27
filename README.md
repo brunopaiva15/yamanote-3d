@@ -177,7 +177,9 @@ gare. Les voix sont des clips pré-générés avec **Kokoro TTS** (japonais
 `jf_alpha`, anglais `af_heart`), stockés dans `public/audio/announcements/` et
 régénérables via `scripts/announcements-export.ts` +
 `scripts/announcements-gen.py` ; un texte sans clip retombe sur
-`speechSynthesis`.
+`speechSynthesis`. Le japonais est synthétisé segment par segment, avec de
+vraies pauses aux 、/。 — la cadence posée des annonces automatiques JR
+(まもなく、…渋谷、…渋谷。), que Kokoro ne marque pas de lui-même.
 
 ### Sonorisation en 3D
 

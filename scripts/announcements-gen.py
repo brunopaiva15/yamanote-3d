@@ -11,6 +11,12 @@ anglais, repli espeak). Les identifiants de gare sont vérifiés : si open_jtalk
 lit un nom de gare autrement que sa transcription kana (stations.ts), le kana
 remplace le kanji dans le texte synthétisé.
 
+Cadence japonaise : Kokoro ignore presque la ponctuation quand on lui passe la
+phrase en un bloc (「まもなく、渋谷、渋谷。」sort d'une traite). Le japonais est
+donc synthétisé segment par segment (découpe aux 、 et 。) et les segments sont
+raccordés avec de vraies plages de silence — la respiration des annonces
+automatiques JR East. L'anglais, correctement rythmé d'un bloc, reste entier.
+
 Dépendances : pip install kokoro-onnx "misaki[en,ja]" lameenc
 Modèle : kokoro-v1.0.onnx + voices-v1.0.bin
   (https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0)
@@ -21,6 +27,7 @@ Usage :
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -36,6 +43,10 @@ HEAD_PAD_S = 0.06
 TAIL_PAD_S = 0.22
 TRIM_THRESHOLD = 0.003  # amplitude sous laquelle un bord est du silence
 PEAK_TARGET = 0.89
+# Silences insérés entre les segments japonais : une respiration nette à
+# chaque virgule (まもなく、渋谷、渋谷。), plus longue entre deux phrases.
+JA_COMMA_GAP_S = 0.38
+JA_SENTENCE_GAP_S = 0.62
 
 
 def build_en_g2p():
@@ -84,13 +95,53 @@ def station_replacements(stations):
     return out
 
 
-def trim_and_pad(samples: np.ndarray, sr: int) -> np.ndarray:
+def trim_edges(samples: np.ndarray) -> np.ndarray:
     loud = np.flatnonzero(np.abs(samples) > TRIM_THRESHOLD)
     if loud.size:
         samples = samples[loud[0] : loud[-1] + 1]
+    return samples
+
+
+def trim_and_pad(samples: np.ndarray, sr: int) -> np.ndarray:
+    samples = trim_edges(samples)
     head = np.zeros(int(sr * HEAD_PAD_S), dtype=samples.dtype)
     tail = np.zeros(int(sr * TAIL_PAD_S), dtype=samples.dtype)
     return np.concatenate([head, samples, tail])
+
+
+def split_ja_segments(text: str) -> list[str]:
+    """Segments d'une annonce japonaise, ponctuation de fin incluse.
+
+    「まもなく、渋谷、渋谷。お出口は…」→ ['まもなく、', '渋谷、', '渋谷。', …]
+    (le ・ des énumérations reste à l'intérieur de son segment).
+    """
+    return re.findall(r"[^、。]+[、。]?", text)
+
+
+def synth_ja(kokoro: Kokoro, ja_g2p, text: str, speed: float) -> tuple[np.ndarray, int]:
+    """Synthèse japonaise segment par segment, silences insérés aux 、 et 。.
+
+    Chaque segment est débarrassé de ses bords silencieux avant raccord : les
+    pauses ont ainsi une durée exacte, indépendante de ce que Kokoro laisse
+    autour de chaque prise.
+    """
+    parts: list[np.ndarray] = []
+    sr = 24000
+    segments = split_ja_segments(text)
+    for i, seg in enumerate(segments):
+        phonemes, _ = ja_g2p(seg)
+        if not phonemes:
+            continue
+        samples, sr = kokoro.create(
+            phonemes, voice=VOICE["ja-JP"], speed=speed, is_phonemes=True
+        )
+        parts.append(trim_edges(np.asarray(samples, dtype=np.float32)))
+        if i < len(segments) - 1:
+            gap = JA_SENTENCE_GAP_S if seg.endswith("。") else JA_COMMA_GAP_S
+            parts.append(np.zeros(int(sr * gap), dtype=np.float32))
+    if not parts:
+        return np.zeros(1, dtype=np.float32), sr
+    return np.concatenate(parts), sr
 
 
 def encode_mp3(samples: np.ndarray, sr: int) -> bytes:
@@ -125,12 +176,12 @@ def main() -> None:
         if item["lang"] == "ja-JP":
             for kanji, kana in replacements:
                 text = text.replace(kanji, kana)
-            phonemes, _ = ja_g2p(text)
+            samples, sr = synth_ja(kokoro, ja_g2p, text, item["speed"])
         else:
             phonemes, _ = en_g2p(text)
-        samples, sr = kokoro.create(
-            phonemes, voice=VOICE[item["lang"]], speed=item["speed"], is_phonemes=True
-        )
+            samples, sr = kokoro.create(
+                phonemes, voice=VOICE[item["lang"]], speed=item["speed"], is_phonemes=True
+            )
         samples = trim_and_pad(np.asarray(samples, dtype=np.float32), sr)
         mp3 = encode_mp3(samples, sr)
         (out / f"{item['key']}.mp3").write_bytes(mp3)

@@ -31,7 +31,8 @@ import { audioManager, paVoiceClose, paVoiceOpen, speakerProximity } from './aud
 
 type QueueItem =
   | { kind: 'clip'; path: string; lang: Utterance['lang']; text: string }
-  | { kind: 'tts'; lang: Utterance['lang']; text: string };
+  | { kind: 'tts'; lang: Utterance['lang']; text: string }
+  | { kind: 'pause'; ms: number };
 
 const queue: QueueItem[] = [];
 let speaking = false;
@@ -47,6 +48,7 @@ let startWatchdogId = 0;
 let retryId = 0;
 let keepAliveId = 0;
 let volumeSyncId = 0;
+let pauseId = 0;
 let currentUtterance: SpeechSynthesisUtterance | null = null;
 
 // Voix qui n'ont jamais produit de son : écartées jusqu'au rechargement.
@@ -147,17 +149,44 @@ function splitSentences(text: string): string[] {
   return out;
 }
 
+// Pauses de cadence du japonais, alignées sur les clips Kokoro (voir
+// scripts/announcements-gen.py) : respiration aux 、, plus longue aux 。.
+const JA_COMMA_PAUSE_MS = 380;
+const JA_SENTENCE_PAUSE_MS = 620;
+
+// Items TTS d'un texte sans clip. Anglais : découpe par phrases (suffisant,
+// speechSynthesis marque bien la ponctuation anglaise). Japonais : segments
+// aux 、/。 séparés par de vraies pauses — sinon la voix enchaîne
+// 「まもなく、渋谷、渋谷。」d'une traite.
+function ttsItems(lang: Utterance['lang'], text: string): QueueItem[] {
+  if (lang !== 'ja-JP') {
+    return splitSentences(text).map((t) => ({ kind: 'tts', lang, text: t }));
+  }
+  const segments = (text.match(/[^、。]+[、。]?/g) ?? []).filter((s) => s.trim().length > 0);
+  const out: QueueItem[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    out.push({ kind: 'tts', lang, text: segments[i] });
+    if (i < segments.length - 1) {
+      const ms = segments[i].endsWith('。') ? JA_SENTENCE_PAUSE_MS : JA_COMMA_PAUSE_MS;
+      out.push({ kind: 'pause', ms });
+    }
+  }
+  return out;
+}
+
 function clearTimers(): void {
   if (watchdogId) window.clearTimeout(watchdogId);
   if (startWatchdogId) window.clearTimeout(startWatchdogId);
   if (retryId) window.clearTimeout(retryId);
   if (keepAliveId) window.clearInterval(keepAliveId);
   if (volumeSyncId) window.clearInterval(volumeSyncId);
+  if (pauseId) window.clearTimeout(pauseId);
   watchdogId = 0;
   startWatchdogId = 0;
   retryId = 0;
   keepAliveId = 0;
   volumeSyncId = 0;
+  pauseId = 0;
 }
 
 function finishUtterance(): void {
@@ -224,6 +253,15 @@ function pump(): void {
   }
   const item = queue.shift();
   if (!item) return;
+  if (item.kind === 'pause') {
+    speaking = true;
+    pauseId = window.setTimeout(() => {
+      pauseId = 0;
+      speaking = false;
+      pump();
+    }, item.ms);
+    return;
+  }
   if (item.kind === 'clip') {
     playClipItem(item);
     return;
@@ -242,10 +280,7 @@ function playClipItem(item: QueueItem & { kind: 'clip' }): void {
     currentClipPath = null;
     speaking = false;
     if (!played) {
-      const parts = splitSentences(item.text).map(
-        (text): QueueItem => ({ kind: 'tts', lang: item.lang, text }),
-      );
-      queue.unshift(...parts);
+      queue.unshift(...ttsItems(item.lang, item.text));
     }
     pump();
   });
@@ -267,7 +302,8 @@ function speakTtsItem(item: QueueItem & { kind: 'tts' }): void {
   u.lang = item.lang;
   const voice = item.lang === 'ja-JP' ? jaVoice : enVoice;
   if (voice) u.voice = voice;
-  u.rate = item.lang === 'ja-JP' ? 0.97 : 0.9;
+  // Débit posé d'annonce automatique, aligné sur les clips Kokoro (ja 0.85).
+  u.rate = item.lang === 'ja-JP' ? 0.85 : 0.9;
   u.pitch = 1.03;
   // Le niveau suit le volume du site et la distance au diffuseur le plus proche :
   // sous une grille l'annonce claque, au milieu de deux portes elle recule.
@@ -341,9 +377,7 @@ export function say(items: Utterance[]): void {
       queue.push({ kind: 'clip', path: clip, lang: item.lang, text: item.text });
       continue;
     }
-    for (const text of splitSentences(item.text)) {
-      queue.push({ kind: 'tts', lang: item.lang, text });
-    }
+    queue.push(...ttsItems(item.lang, item.text));
   }
   if (queue.length > 0) openLine();
   pump();
