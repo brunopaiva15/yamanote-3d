@@ -28,6 +28,20 @@ function useClock(): string {
   return clock;
 }
 
+// L'arrêt d'urgence vit dans runtime (pas dans le store) : on le sonde comme
+// l'horloge, à la seconde.
+function useEmergencyStop(): boolean {
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    const id = window.setInterval(
+      () => setActive(runtime.emergencyStop.stage !== 'none'),
+      500,
+    );
+    return () => window.clearInterval(id);
+  }, []);
+  return active;
+}
+
 function useOccupancy(): { percent: number; band: OccupancyBand } {
   const [occ, setOcc] = useState<{ percent: number; band: OccupancyBand }>({
     percent: 0,
@@ -60,6 +74,7 @@ export function Hud() {
   const t = useT();
   const clock = useClock();
   const occupancy = useOccupancy();
+  const emergency = useEmergencyStop();
 
   // Répercuter le mute et le volume sur l'audio et la voix.
   useEffect(() => {
@@ -99,7 +114,9 @@ export function Hud() {
           <span className="hud-occupancy-pct">~{occupancy.percent}&nbsp;%</span>
           <span className="hud-occupancy-label">{t.hud.band[occupancy.band]}</span>
         </div>
-        <div className={`hud-phase hud-phase-${phase}`}>{t.hud.phase[phase]}</div>
+        <div className={`hud-phase hud-phase-${emergency ? 'emergency' : phase}`}>
+          {emergency ? t.hud.phaseEmergency : t.hud.phase[phase]}
+        </div>
       </div>
 
       <div className="hud-reticle" aria-hidden="true" />

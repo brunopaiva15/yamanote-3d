@@ -1,41 +1,51 @@
 // Données réelles de la ligne Yamanote : 30 stations (JY01 → JY30),
 // côté d'ouverture des portes et correspondances pour les annonces.
-// `code` = trigramme affiché sur les panneaux de quai ; `kana` = lecture hiragana.
+// `code` = trigramme affiché sur les panneaux de quai ; `kana` = lecture hiragana ;
+// `zh` / `ko` = graphies officielles JR East (chinois simplifié / hangul) du
+// cycle quadrilingue des afficheurs E235.
 // Numéros de quai (内回り / 外回り) : voir `platforms.ts`.
 
-export type Station = { jy: string; kanji: string; kana: string; romaji: string; code: string };
+export type Station = {
+  jy: string;
+  kanji: string;
+  kana: string;
+  romaji: string;
+  code: string;
+  zh: string;
+  ko: string;
+};
 
 export const STATIONS: Station[] = [
-  { jy: 'JY01', kanji: '東京', kana: 'とうきょう', romaji: 'Tokyo', code: 'TYO' },
-  { jy: 'JY02', kanji: '神田', kana: 'かんだ', romaji: 'Kanda', code: 'KND' },
-  { jy: 'JY03', kanji: '秋葉原', kana: 'あきはばら', romaji: 'Akihabara', code: 'AKB' },
-  { jy: 'JY04', kanji: '御徒町', kana: 'おかちまち', romaji: 'Okachimachi', code: 'OKC' },
-  { jy: 'JY05', kanji: '上野', kana: 'うえの', romaji: 'Ueno', code: 'UEN' },
-  { jy: 'JY06', kanji: '鶯谷', kana: 'うぐいすだに', romaji: 'Uguisudani', code: 'UGD' },
-  { jy: 'JY07', kanji: '日暮里', kana: 'にっぽり', romaji: 'Nippori', code: 'NPR' },
-  { jy: 'JY08', kanji: '西日暮里', kana: 'にしにっぽり', romaji: 'Nishi-Nippori', code: 'NNP' },
-  { jy: 'JY09', kanji: '田端', kana: 'たばた', romaji: 'Tabata', code: 'TBT' },
-  { jy: 'JY10', kanji: '駒込', kana: 'こまごめ', romaji: 'Komagome', code: 'KMG' },
-  { jy: 'JY11', kanji: '巣鴨', kana: 'すがも', romaji: 'Sugamo', code: 'SGM' },
-  { jy: 'JY12', kanji: '大塚', kana: 'おおつか', romaji: 'Ōtsuka', code: 'OTS' },
-  { jy: 'JY13', kanji: '池袋', kana: 'いけぶくろ', romaji: 'Ikebukuro', code: 'IKB' },
-  { jy: 'JY14', kanji: '目白', kana: 'めじろ', romaji: 'Mejiro', code: 'MJR' },
-  { jy: 'JY15', kanji: '高田馬場', kana: 'たかだのばば', romaji: 'Takadanobaba', code: 'TKB' },
-  { jy: 'JY16', kanji: '新大久保', kana: 'しんおおくぼ', romaji: 'Shin-Ōkubo', code: 'SOK' },
-  { jy: 'JY17', kanji: '新宿', kana: 'しんじゅく', romaji: 'Shinjuku', code: 'SJK' },
-  { jy: 'JY18', kanji: '代々木', kana: 'よよぎ', romaji: 'Yoyogi', code: 'YOY' },
-  { jy: 'JY19', kanji: '原宿', kana: 'はらじゅく', romaji: 'Harajuku', code: 'JYH' },
-  { jy: 'JY20', kanji: '渋谷', kana: 'しぶや', romaji: 'Shibuya', code: 'SBY' },
-  { jy: 'JY21', kanji: '恵比寿', kana: 'えびす', romaji: 'Ebisu', code: 'EBS' },
-  { jy: 'JY22', kanji: '目黒', kana: 'めぐろ', romaji: 'Meguro', code: 'MGR' },
-  { jy: 'JY23', kanji: '五反田', kana: 'ごたんだ', romaji: 'Gotanda', code: 'GTN' },
-  { jy: 'JY24', kanji: '大崎', kana: 'おおさき', romaji: 'Ōsaki', code: 'OSK' },
-  { jy: 'JY25', kanji: '品川', kana: 'しながわ', romaji: 'Shinagawa', code: 'SGW' },
-  { jy: 'JY26', kanji: '高輪ゲートウェイ', kana: 'たかなわげーとうぇい', romaji: 'Takanawa Gateway', code: 'TGW' },
-  { jy: 'JY27', kanji: '田町', kana: 'たまち', romaji: 'Tamachi', code: 'TMC' },
-  { jy: 'JY28', kanji: '浜松町', kana: 'はままつちょう', romaji: 'Hamamatsuchō', code: 'HMC' },
-  { jy: 'JY29', kanji: '新橋', kana: 'しんばし', romaji: 'Shimbashi', code: 'SMB' },
-  { jy: 'JY30', kanji: '有楽町', kana: 'ゆうらくちょう', romaji: 'Yūrakuchō', code: 'YUR' },
+  { jy: 'JY01', kanji: '東京', kana: 'とうきょう', romaji: 'Tokyo', code: 'TYO', zh: '东京', ko: '도쿄' },
+  { jy: 'JY02', kanji: '神田', kana: 'かんだ', romaji: 'Kanda', code: 'KND', zh: '神田', ko: '간다' },
+  { jy: 'JY03', kanji: '秋葉原', kana: 'あきはばら', romaji: 'Akihabara', code: 'AKB', zh: '秋叶原', ko: '아키하바라' },
+  { jy: 'JY04', kanji: '御徒町', kana: 'おかちまち', romaji: 'Okachimachi', code: 'OKC', zh: '御徒町', ko: '오카치마치' },
+  { jy: 'JY05', kanji: '上野', kana: 'うえの', romaji: 'Ueno', code: 'UEN', zh: '上野', ko: '우에노' },
+  { jy: 'JY06', kanji: '鶯谷', kana: 'うぐいすだに', romaji: 'Uguisudani', code: 'UGD', zh: '莺谷', ko: '우구이스다니' },
+  { jy: 'JY07', kanji: '日暮里', kana: 'にっぽり', romaji: 'Nippori', code: 'NPR', zh: '日暮里', ko: '닛포리' },
+  { jy: 'JY08', kanji: '西日暮里', kana: 'にしにっぽり', romaji: 'Nishi-Nippori', code: 'NNP', zh: '西日暮里', ko: '니시닛포리' },
+  { jy: 'JY09', kanji: '田端', kana: 'たばた', romaji: 'Tabata', code: 'TBT', zh: '田端', ko: '다바타' },
+  { jy: 'JY10', kanji: '駒込', kana: 'こまごめ', romaji: 'Komagome', code: 'KMG', zh: '驹込', ko: '고마고메' },
+  { jy: 'JY11', kanji: '巣鴨', kana: 'すがも', romaji: 'Sugamo', code: 'SGM', zh: '巢鸭', ko: '스가모' },
+  { jy: 'JY12', kanji: '大塚', kana: 'おおつか', romaji: 'Ōtsuka', code: 'OTS', zh: '大塚', ko: '오쓰카' },
+  { jy: 'JY13', kanji: '池袋', kana: 'いけぶくろ', romaji: 'Ikebukuro', code: 'IKB', zh: '池袋', ko: '이케부쿠로' },
+  { jy: 'JY14', kanji: '目白', kana: 'めじろ', romaji: 'Mejiro', code: 'MJR', zh: '目白', ko: '메지로' },
+  { jy: 'JY15', kanji: '高田馬場', kana: 'たかだのばば', romaji: 'Takadanobaba', code: 'TKB', zh: '高田马场', ko: '다카다노바바' },
+  { jy: 'JY16', kanji: '新大久保', kana: 'しんおおくぼ', romaji: 'Shin-Ōkubo', code: 'SOK', zh: '新大久保', ko: '신오쿠보' },
+  { jy: 'JY17', kanji: '新宿', kana: 'しんじゅく', romaji: 'Shinjuku', code: 'SJK', zh: '新宿', ko: '신주쿠' },
+  { jy: 'JY18', kanji: '代々木', kana: 'よよぎ', romaji: 'Yoyogi', code: 'YOY', zh: '代代木', ko: '요요기' },
+  { jy: 'JY19', kanji: '原宿', kana: 'はらじゅく', romaji: 'Harajuku', code: 'JYH', zh: '原宿', ko: '하라주쿠' },
+  { jy: 'JY20', kanji: '渋谷', kana: 'しぶや', romaji: 'Shibuya', code: 'SBY', zh: '涩谷', ko: '시부야' },
+  { jy: 'JY21', kanji: '恵比寿', kana: 'えびす', romaji: 'Ebisu', code: 'EBS', zh: '惠比寿', ko: '에비스' },
+  { jy: 'JY22', kanji: '目黒', kana: 'めぐろ', romaji: 'Meguro', code: 'MGR', zh: '目黑', ko: '메구로' },
+  { jy: 'JY23', kanji: '五反田', kana: 'ごたんだ', romaji: 'Gotanda', code: 'GTN', zh: '五反田', ko: '고탄다' },
+  { jy: 'JY24', kanji: '大崎', kana: 'おおさき', romaji: 'Ōsaki', code: 'OSK', zh: '大崎', ko: '오사키' },
+  { jy: 'JY25', kanji: '品川', kana: 'しながわ', romaji: 'Shinagawa', code: 'SGW', zh: '品川', ko: '시나가와' },
+  { jy: 'JY26', kanji: '高輪ゲートウェイ', kana: 'たかなわげーとうぇい', romaji: 'Takanawa Gateway', code: 'TGW', zh: '高轮Gateway', ko: '다카나와 게이트웨이' },
+  { jy: 'JY27', kanji: '田町', kana: 'たまち', romaji: 'Tamachi', code: 'TMC', zh: '田町', ko: '다마치' },
+  { jy: 'JY28', kanji: '浜松町', kana: 'はままつちょう', romaji: 'Hamamatsuchō', code: 'HMC', zh: '滨松町', ko: '하마마쓰초' },
+  { jy: 'JY29', kanji: '新橋', kana: 'しんばし', romaji: 'Shimbashi', code: 'SMB', zh: '新桥', ko: '신바시' },
+  { jy: 'JY30', kanji: '有楽町', kana: 'ゆうらくちょう', romaji: 'Yūrakuchō', code: 'YUR', zh: '有乐町', ko: '유라쿠초' },
 ];
 
 // Côté d'ouverture des portes par index de station (1 = droite, -1 = gauche).

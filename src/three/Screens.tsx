@@ -1,16 +1,21 @@
 // Doubles écrans LCD au-dessus des portes (E235) : écran gauche = publicités
 // en boucle (comme dans les vraies rames, il n'affiche jamais la prochaine
-// station), écran droit = écran de ligne fidèle au vrai afficheur JR East,
-// qui alterne comme dans la réalité entre quatre états : vue rapprochée des
-// 5 prochaines stations (arc vert, minutes, correspondances), plan complet
-// de la boucle (30 stations, minutes jusqu'à ~30 min), bandeau manières, et
-// — à l'approche et à quai — le PLAN DU QUAI, qui montre où s'arrête chaque
-// voiture par rapport aux escaliers et aux sorties.
+// station), écran droit = écran de ligne fidèle au vrai afficheur JR East.
+// Comme sur la rame réelle, il enchaîne un cycle QUADRILINGUE (japonais,
+// anglais, chinois simplifié, coréen) et de nombreux états : vue rapprochée
+// des 5 prochaines stations (arc vert, minutes, correspondances), plan complet
+// de la boucle (30 stations, minutes jusqu'à ~30 min), écran « prochain
+// arrêt » zh/ko, correspondances détaillées, écrans manières (téléphone,
+// sac à dos, fuite sonore des écouteurs), places prioritaires, sécurité,
+// avertissement de FERMETURE DES PORTES en fin d'arrêt, côté d'ouverture à
+// l'approche, plan du quai, et — quand une autre ligne est perturbée —
+// information trafic, état des autres lignes et certificat de retard.
 // Deux CanvasTexture partagées, redessinées uniquement aux changements.
 
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { EMERGENCY_REASONS } from '../data/announcements';
 import { CONFIG } from '../data/config';
 import { STATIONS, TRANSFERS } from '../data/stations';
 import { useStore, type Phase } from '../store';
@@ -82,13 +87,23 @@ function drawLeftAd(s: ReturnType<typeof makeScreen>, seed: number): void {
 // --- Bandeau noir supérieur, commun aux deux vues de ligne : « Bound for »,
 // onglet Next, tuile de la prochaine gare, heure réelle et n° de voiture. ---
 export type ScreenStatus = 'now' | 'next' | 'soon';
-export type ScreenLang = 'jp' | 'en';
+// Cycle quadrilingue du vrai afficheur : japonais → anglais → chinois
+// simplifié → coréen. Les plans de ligne n'existent qu'en jp/en (comme en
+// vrai) ; zh et ko ont leur écran « prochain arrêt » dédié.
+export type ScreenLang = 'jp' | 'en' | 'zh' | 'ko';
 
 const STATUS_LABEL: Record<ScreenStatus, Record<ScreenLang, string>> = {
-  now: { jp: 'ただいま', en: 'Now stopping at' },
-  next: { jp: 'つぎは', en: 'Next' },
-  soon: { jp: 'まもなく', en: 'Soon' },
+  now: { jp: 'ただいま', en: 'Now stopping at', zh: '当前车站', ko: '이번 역' },
+  next: { jp: 'つぎは', en: 'Next', zh: '下一站', ko: '다음은' },
+  soon: { jp: 'まもなく', en: 'Soon', zh: '即将到达', ko: '잠시 후' },
 };
+
+// Nom de gare dans la langue du cycle d'affichage.
+function stationName(st: (typeof STATIONS)[number], lang: ScreenLang): string {
+  if (lang === 'jp') return st.kanji;
+  if (lang === 'en') return st.romaji;
+  return lang === 'zh' ? st.zh : st.ko;
+}
 
 // Bandeau noir supérieur, commun à toutes les vues. De gauche à droite :
 // direction, barre verte, libellé d'état, pastille JY, nom de la gare, puis
@@ -119,24 +134,26 @@ function drawHeader(
   const majors: string[] = [];
   for (let k = 1; k <= 29 && majors.length < 2; k++) {
     const idx = (index + k) % 30;
-    if (MAJOR_INDICES.includes(idx)) majors.push(lang === 'jp' ? STATIONS[idx].kanji : STATIONS[idx].romaji);
+    if (MAJOR_INDICES.includes(idx)) majors.push(stationName(STATIONS[idx], lang));
   }
   g.fillStyle = '#f2f2ee';
   g.fillRect(0, 40, 176, HEADER_H - 40);
   g.fillStyle = '#17191c';
   g.textAlign = 'left';
-  if (lang === 'jp') {
-    fitText(g, `${majors[0] ?? ''}・${majors[1] ?? ''}`, 158, 24);
-    g.fillText(`${majors[0] ?? ''}・${majors[1] ?? ''}`, 9, 76);
-    g.font = `17px ${JP_FONT}`;
-    g.fillText('方面', 9, 102);
-  } else {
+  if (lang === 'en') {
     g.font = `16px ${JP_FONT}`;
     g.fillText('Bound for', 9, 60);
     fitText(g, `${majors[0] ?? ''}&`, 158, 21);
     g.fillText(`${majors[0] ?? ''}&`, 9, 82);
     fitText(g, majors[1] ?? '', 158, 21);
     g.fillText(majors[1] ?? '', 9, 104);
+  } else {
+    // jp/zh/ko partagent la mise en page « noms + suffixe de direction ».
+    const suffix = lang === 'jp' ? '方面' : lang === 'zh' ? '方向' : '방면';
+    fitText(g, `${majors[0] ?? ''}・${majors[1] ?? ''}`, 158, 24);
+    g.fillText(`${majors[0] ?? ''}・${majors[1] ?? ''}`, 9, 76);
+    g.font = `17px ${JP_FONT}`;
+    g.fillText(suffix, 9, 102);
   }
 
   // Barre verte pleine hauteur.
@@ -149,7 +166,7 @@ function drawHeader(
   g.fillText(STATUS_LABEL[status][lang], 236, 32);
 
   // Nom de la gare, très grand, centré sur l'espace restant.
-  const name = lang === 'jp' ? next.kanji : next.romaji;
+  const name = stationName(next, lang);
   g.textAlign = 'center';
   fitText(g, name, 380, 66);
   g.fillText(name, 452, 98);
@@ -161,7 +178,12 @@ function drawHeader(
   g.fillText(clock, w - 118, 34);
   g.fillStyle = '#9aa0a6';
   g.font = `italic 17px ${JP_FONT}`;
-  g.fillText(lang === 'jp' ? `${PLAYER_CAR}号車` : `Car No. ${PLAYER_CAR}`, w - 12, 34);
+  const carLabel =
+    lang === 'jp' ? `${PLAYER_CAR}号車`
+    : lang === 'zh' ? `${PLAYER_CAR}号车`
+    : lang === 'ko' ? `${PLAYER_CAR}호차`
+    : `Car No. ${PLAYER_CAR}`;
+  g.fillText(carLabel, w - 12, 34);
   g.textAlign = 'left';
 }
 
@@ -482,22 +504,224 @@ function drawLoopMap(
   g.fillText('のりかえ、待ち合わせ時間は含まれません。電車により多少時間が異なります。', 10, h - 5);
 }
 
-// --- Écran droit, variante bandeau info ---
-function drawBanner(s: ReturnType<typeof makeScreen>): void {
+// --- Écrans manières (fond clair avec bandeau, comme les vrais) ---
+// La rame réelle fait tourner plusieurs visuels de courtoisie ; on en rend
+// trois : téléphone en mode silencieux, sac à dos porté devant, fuite sonore
+// des écouteurs. Ils partagent le gabarit pictogramme à gauche / texte à
+// droite des autres écrans de courtoisie.
+
+function drawPhoneManner(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
   const { g, w, h } = s;
-  g.fillStyle = '#1c242b';
+  g.fillStyle = '#f4f6f7';
   g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', 'jp');
+  // Téléphone barré d'un cercle d'interdiction rouge.
+  const cx = w * 0.2;
+  const cy = HEADER_H + (h - HEADER_H) * 0.52;
+  g.fillStyle = '#3a424a';
+  g.beginPath();
+  g.roundRect(cx - 34, cy - 62, 68, 124, 12);
+  g.fill();
+  g.fillStyle = '#cfe0ec';
+  g.beginPath();
+  g.roundRect(cx - 26, cy - 50, 52, 92, 4);
+  g.fill();
+  g.strokeStyle = '#d0342c';
+  g.lineWidth = 11;
+  g.beginPath();
+  g.arc(cx, cy, 84, 0, Math.PI * 2);
+  g.stroke();
+  g.beginPath();
+  g.moveTo(cx - 58, cy - 58);
+  g.lineTo(cx + 58, cy + 58);
+  g.stroke();
+
+  g.textAlign = 'left';
+  g.fillStyle = '#26303a';
+  g.font = `bold 30px ${JP_FONT}`;
+  g.fillText('マナーモードに設定のうえ、', w * 0.42, h * 0.42);
+  g.fillText('通話はご遠慮ください。', w * 0.42, h * 0.58);
+  g.fillStyle = '#5c646c';
+  g.font = `18px ${JP_FONT}`;
+  g.fillText('Please set your mobile phone to silent mode', w * 0.42, h * 0.74);
+  g.fillText('and refrain from making calls.', w * 0.42, h * 0.85);
+}
+
+function drawBackpackManner(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+  const { g, w, h } = s;
+  g.fillStyle = '#f4f6f7';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', 'jp');
+  // Silhouette portant son sac à dos sur le ventre.
+  const cx = w * 0.2;
+  const base = HEADER_H + (h - HEADER_H) * 0.82;
+  const green = '#2f8f4e';
+  g.fillStyle = green;
+  g.beginPath();
+  g.arc(cx, base - 156, 20, 0, Math.PI * 2);
+  g.fill();
+  g.beginPath();
+  g.roundRect(cx - 22, base - 128, 44, 100, 14);
+  g.fill();
+  // Le sac, tenu devant, sanglé aux épaules.
+  g.fillStyle = '#e8a020';
+  g.beginPath();
+  g.roundRect(cx + 14, base - 112, 44, 62, 10);
+  g.fill();
+  g.strokeStyle = '#b57708';
+  g.lineWidth = 4;
+  g.beginPath();
+  g.moveTo(cx + 4, base - 124);
+  g.lineTo(cx + 30, base - 108);
+  g.stroke();
+
+  g.textAlign = 'left';
+  g.fillStyle = '#26303a';
+  g.font = `bold 30px ${JP_FONT}`;
+  g.fillText('リュックサックは前に抱えるか、', w * 0.4, h * 0.42);
+  g.fillText('網棚をご利用ください。', w * 0.4, h * 0.58);
+  g.fillStyle = '#5c646c';
+  g.font = `18px ${JP_FONT}`;
+  g.fillText('Please hold your backpack in front of you', w * 0.4, h * 0.74);
+  g.fillText('or use the overhead racks.', w * 0.4, h * 0.85);
+}
+
+function drawHeadphoneManner(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+  const { g, w, h } = s;
+  g.fillStyle = '#f4f6f7';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', 'jp');
+  // Tête de profil casquée, ondes rouges qui s'échappent.
+  const cx = w * 0.2;
+  const cy = HEADER_H + (h - HEADER_H) * 0.5;
+  g.fillStyle = '#3a424a';
+  g.beginPath();
+  g.arc(cx, cy, 52, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = '#26303a';
+  g.lineWidth = 14;
+  g.beginPath();
+  g.arc(cx, cy - 6, 62, Math.PI * 1.05, Math.PI * 1.95);
+  g.stroke();
+  for (const dir of [-1, 1] as const) {
+    g.fillStyle = '#26303a';
+    g.beginPath();
+    g.roundRect(cx + dir * 58 - 12, cy - 26, 24, 52, 8);
+    g.fill();
+  }
+  g.strokeStyle = '#d0342c';
+  g.lineWidth = 5;
+  for (let i = 1; i <= 3; i++) {
+    g.beginPath();
+    g.arc(cx + 76, cy, 18 + i * 16, -Math.PI * 0.32, Math.PI * 0.32);
+    g.stroke();
+  }
+
+  g.textAlign = 'left';
+  g.fillStyle = '#26303a';
+  g.font = `bold 30px ${JP_FONT}`;
+  g.fillText('ヘッドホンからの音もれに', w * 0.44, h * 0.42);
+  g.fillText('ご注意ください。', w * 0.44, h * 0.58);
+  g.fillStyle = '#5c646c';
+  g.font = `18px ${JP_FONT}`;
+  g.fillText('Please make sure that sound does not', w * 0.44, h * 0.74);
+  g.fillText('leak from your headphones.', w * 0.44, h * 0.85);
+}
+
+// --- Écran « prochain arrêt » chinois / coréen ---
+// Sur la vraie rame, les passages en chinois simplifié et en coréen du cycle
+// quadrilingue n'affichent pas le plan de ligne : un écran dédié montre le nom
+// de la gare en très grand avec la pastille JY. Le kanji et le romaji restent
+// en petit pour se raccorder à la signalétique du quai.
+function drawNextStationLang(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  status: ScreenStatus,
+  lang: 'zh' | 'ko',
+): void {
+  const { g, w, h } = s;
+  const next = STATIONS[index];
+  g.fillStyle = '#eceae5';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, status, lang);
+
+  // Pastille JY, à gauche du nom.
+  const bx = 128;
+  const by = HEADER_H + (h - HEADER_H) * 0.46;
+  g.beginPath();
+  g.arc(bx, by, 56, 0, Math.PI * 2);
   g.fillStyle = YAMANOTE_GREEN;
-  g.fillRect(0, 0, w, 10);
-  g.fillRect(0, h - 10, w, 10);
-  g.fillStyle = '#f2f2ee';
+  g.fill();
+  g.lineWidth = 7;
+  g.strokeStyle = '#ffffff';
+  g.stroke();
+  g.fillStyle = '#ffffff';
   g.textAlign = 'center';
-  g.font = `bold 42px ${JP_FONT}`;
-  g.fillText('優先席付近では', w / 2, h * 0.36);
-  g.fillText('マナーモードに設定', w / 2, h * 0.55);
-  g.font = `26px ${JP_FONT}`;
-  g.fillStyle = '#b9c2c8';
-  g.fillText('Please set your phone to silent mode', w / 2, h * 0.76);
+  g.font = `bold 24px ${JP_FONT}`;
+  g.fillText('JY', bx, by - 12);
+  g.font = `bold 40px ${JP_FONT}`;
+  g.fillText(next.jy.slice(2), bx, by + 28);
+
+  // Nom géant dans la langue du cycle.
+  const name = lang === 'zh' ? next.zh : next.ko;
+  g.fillStyle = '#111214';
+  const nx = (w + 190) / 2;
+  fitText(g, name, w - 260, 88);
+  g.fillText(name, nx, by + 28);
+
+  // Rappel kanji / romaji, en petit sous le nom.
+  g.fillStyle = '#5c646c';
+  g.font = `22px ${JP_FONT}`;
+  g.fillText(`${next.kanji}　${next.romaji}`, nx, h - 34);
+  g.textAlign = 'left';
+}
+
+// --- Avertissement de fermeture des portes (fin d'arrêt) ---
+// Diffusé sur les deux parois dans les dernières secondes à quai, juste avant
+// le départ : vantaux qui se referment, flèches convergentes ambre.
+function drawDoorClosing(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+  const { g, w, h } = s;
+  g.fillStyle = '#eceae5';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'now', 'jp');
+
+  const cy = h * 0.56;
+  const dw = 62;
+  const gap = 34; // entrouverts : en train de se refermer
+  for (const dir of [-1, 1]) {
+    g.fillStyle = '#9aa3ab';
+    g.strokeStyle = '#5d666e';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.roundRect(w / 2 + dir * (gap / 2) - (dir < 0 ? dw : 0), cy - 58, dw, 116, 6);
+    g.fill();
+    g.stroke();
+  }
+
+  // Flèches ambre convergentes, pointées vers la fermeture.
+  g.fillStyle = '#e8a020';
+  for (const dir of [-1, 1]) {
+    const bx = w / 2 + dir * 150;
+    g.beginPath();
+    g.moveTo(bx - dir * 66, cy);
+    g.lineTo(bx, cy - 44);
+    g.lineTo(bx, cy - 18);
+    g.lineTo(bx + dir * 62, cy - 18);
+    g.lineTo(bx + dir * 62, cy + 18);
+    g.lineTo(bx, cy + 18);
+    g.lineTo(bx, cy + 44);
+    g.closePath();
+    g.fill();
+  }
+
+  g.textAlign = 'center';
+  g.fillStyle = '#14181c';
+  g.font = `bold 34px ${JP_FONT}`;
+  g.fillText('ドアが閉まります。ご注意ください。', w / 2, h - 54);
+  g.fillStyle = '#5c646c';
+  g.font = `22px ${JP_FONT}`;
+  g.fillText('The doors are closing. Please stand clear.', w / 2, h - 22);
   g.textAlign = 'left';
 }
 
@@ -871,13 +1095,13 @@ interface TrafficNotice {
   reasonEn: string;
 }
 
-const OTHER_LINES: [string, string][] = [
-  ['東急池上線', 'Tokyu Ikegami Line'],
-  ['中央線快速', 'Chuo Line (Rapid)'],
-  ['京王線', 'Keio Line'],
-  ['埼京線', 'Saikyo Line'],
-  ['東京メトロ東西線', 'Tokyo Metro Tozai Line'],
-  ['京成本線', 'Keisei Main Line'],
+const OTHER_LINES: { jp: string; en: string; color: string }[] = [
+  { jp: '東急池上線', en: 'Tokyu Ikegami Line', color: '#ee86a7' },
+  { jp: '中央線快速', en: 'Chuo Line (Rapid)', color: '#f15a24' },
+  { jp: '京王線', en: 'Keio Line', color: '#d31e79' },
+  { jp: '埼京線', en: 'Saikyo Line', color: '#00ac9a' },
+  { jp: '東京メトロ東西線', en: 'Tokyo Metro Tozai Line', color: '#009bbf' },
+  { jp: '京成本線', en: 'Keisei Main Line', color: '#005aaa' },
 ];
 const DELAY_REASONS: [string, string][] = [
   ['信号確認', 'a signal check'],
@@ -893,9 +1117,9 @@ function trafficNotice(clockMin: number): TrafficNotice | null {
   const slot = Math.floor(clockMin / 30);
   const r = rng(4200 + slot);
   if (r() > 0.34) return null;
-  const [lineJp, lineEn] = OTHER_LINES[Math.floor(r() * OTHER_LINES.length)];
+  const line = OTHER_LINES[Math.floor(r() * OTHER_LINES.length)];
   const [reasonJp, reasonEn] = DELAY_REASONS[Math.floor(r() * DELAY_REASONS.length)];
-  return { lineJp, lineEn, reasonJp, reasonEn };
+  return { lineJp: line.jp, lineEn: line.en, reasonJp, reasonEn };
 }
 
 function drawTrafficInfo(
@@ -950,6 +1174,172 @@ function drawTrafficInfo(
   }
 }
 
+// --- Arrêt d'urgence (急停車) ---
+// Affiché en boucle JP/EN tant que l'arrêt d'urgence est actif : cadre rouge,
+// pastille d'alerte, motif de l'arrêt — c'est l'écran rouge du vrai afficheur
+// quand la rame elle-même est immobilisée.
+function drawEmergencyInfo(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  lang: ScreenLang,
+  reason: number,
+): void {
+  const { g, w, h } = s;
+  const r = EMERGENCY_REASONS[((reason % EMERGENCY_REASONS.length) + EMERGENCY_REASONS.length) % EMERGENCY_REASONS.length];
+  g.fillStyle = '#f4f6f7';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', lang);
+
+  // Cadre rouge plein écran sous le bandeau.
+  g.strokeStyle = '#c8362c';
+  g.lineWidth = 5;
+  g.beginPath();
+  g.roundRect(18, HEADER_H + 16, w - 36, h - HEADER_H - 32, 10);
+  g.stroke();
+
+  // Pastille d'alerte + titre rouge.
+  const ty = HEADER_H + 62;
+  g.fillStyle = '#c8362c';
+  g.beginPath();
+  g.arc(66, ty - 10, 21, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center';
+  g.font = `bold 30px ${JP_FONT}`;
+  g.fillText('!', 66, ty);
+  g.textAlign = 'left';
+  g.fillStyle = '#c8362c';
+  g.font = `bold 34px ${JP_FONT}`;
+  g.fillText(lang === 'jp' ? '運転を見合わせています' : 'Service Suspended', 104, ty);
+
+  // Motif et consignes.
+  g.fillStyle = '#26303a';
+  g.font = `23px ${JP_FONT}`;
+  if (lang === 'jp') {
+    g.fillText(`ただいま、${r.jp}のため、急停車いたしました。`, 48, ty + 56);
+    g.fillText('安全の確認を行っています。運転再開まで、', 48, ty + 92);
+    g.fillText('いましばらくお待ちください。', 48, ty + 128);
+  } else {
+    g.fillText(`This train has made an emergency stop`, 48, ty + 56);
+    g.fillText(`due to ${r.en}. Safety checks are under way.`, 48, ty + 92);
+    g.fillText('We apologize for the inconvenience.', 48, ty + 128);
+  }
+}
+
+// --- État des autres lignes (他線区の運行情報) ---
+// La liste ligne par ligne du vrai afficheur : pastille de couleur, nom, et
+// statut — la ligne perturbée en ambre, les autres « 平常運転 ».
+function drawLineStatus(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  lang: ScreenLang,
+  notice: TrafficNotice,
+): void {
+  const { g, w, h } = s;
+  g.fillStyle = '#f4f6f7';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', lang);
+
+  g.fillStyle = '#26303a';
+  g.fillRect(0, HEADER_H, w, 40);
+  g.fillStyle = '#ffffff';
+  g.font = `bold 22px ${JP_FONT}`;
+  g.textAlign = 'left';
+  g.fillText(lang === 'jp' ? '他線区の運行情報' : 'Service Status — Other Lines', 16, HEADER_H + 29);
+
+  // La Yamanote d'abord, puis la ligne perturbée, puis les autres.
+  const rows: { jp: string; en: string; color: string; delayed: boolean }[] = [
+    { jp: '山手線', en: 'Yamanote Line', color: YAMANOTE_GREEN, delayed: false },
+    ...OTHER_LINES
+      .slice()
+      .sort((a, b) => Number(b.jp === notice.lineJp) - Number(a.jp === notice.lineJp))
+      .slice(0, 5)
+      .map((l) => ({ ...l, delayed: l.jp === notice.lineJp })),
+  ];
+
+  let y = HEADER_H + 70;
+  for (const row of rows) {
+    g.fillStyle = row.color;
+    g.beginPath();
+    g.roundRect(20, y - 20, 26, 26, 5);
+    g.fill();
+    g.fillStyle = '#26303a';
+    g.font = `22px ${JP_FONT}`;
+    fitText(g, lang === 'jp' ? row.jp : row.en, w - 300, 22, '');
+    g.fillText(lang === 'jp' ? row.jp : row.en, 60, y);
+    g.textAlign = 'right';
+    if (row.delayed) {
+      g.fillStyle = '#e8a020';
+      g.beginPath();
+      g.roundRect(w - 170, y - 24, 150, 32, 6);
+      g.fill();
+      g.fillStyle = '#241c08';
+      g.font = `bold 20px ${JP_FONT}`;
+      g.fillText(lang === 'jp' ? '遅延' : 'Delayed', w - 36, y);
+    } else {
+      g.fillStyle = '#2f8f4e';
+      g.font = `20px ${JP_FONT}`;
+      g.fillText(lang === 'jp' ? '平常運転' : 'On schedule', w - 24, y);
+    }
+    g.textAlign = 'left';
+    y += 37;
+  }
+}
+
+// --- Certificat de retard (遅延証明書) ---
+// Le vrai afficheur renvoie vers le site JR East quand une ligne JR est en
+// retard ; l'écran n'apparaît donc que si la perturbation touche une ligne JR.
+function drawDelayCert(s: ReturnType<typeof makeScreen>, index: number, clock: string, lang: ScreenLang): void {
+  const { g, w, h } = s;
+  g.fillStyle = '#f4f6f7';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', lang);
+
+  // Pictogramme : feuille à coin plié, marquée 証.
+  const px = 110;
+  const py = HEADER_H + (h - HEADER_H) * 0.5;
+  g.fillStyle = '#ffffff';
+  g.strokeStyle = '#5b6a76';
+  g.lineWidth = 4;
+  g.beginPath();
+  g.moveTo(px - 44, py - 62);
+  g.lineTo(px + 20, py - 62);
+  g.lineTo(px + 44, py - 38);
+  g.lineTo(px + 44, py + 62);
+  g.lineTo(px - 44, py + 62);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.beginPath();
+  g.moveTo(px + 20, py - 62);
+  g.lineTo(px + 20, py - 38);
+  g.lineTo(px + 44, py - 38);
+  g.stroke();
+  g.fillStyle = '#1f5fa8';
+  g.textAlign = 'center';
+  g.font = `bold 44px ${JP_FONT}`;
+  g.fillText('証', px, py + 26);
+
+  g.textAlign = 'left';
+  g.fillStyle = '#14181c';
+  g.font = `bold 36px ${JP_FONT}`;
+  g.fillText(lang === 'jp' ? '遅延証明書のご案内' : 'Delay Certificates', 200, py - 30);
+  g.fillStyle = '#26303a';
+  g.font = `22px ${JP_FONT}`;
+  if (lang === 'jp') {
+    g.fillText('遅延証明書は、JR東日本ホームページで', 200, py + 12);
+    g.fillText('発行しています。', 200, py + 44);
+  } else {
+    g.fillText('Delay certificates for JR East lines are', 200, py + 12);
+    g.fillText('issued on the JR East website.', 200, py + 44);
+  }
+  g.fillStyle = '#5c646c';
+  g.font = `18px ${JP_FONT}`;
+  g.fillText('www.jreast.co.jp', 200, py + 82);
+}
+
 export function Screens() {
   const left = useMemo(() => makeScreen(512, 288), []);
   // DEUX canevas pour l'écran de droite : à l'approche, chaque paroi indique
@@ -977,38 +1367,63 @@ export function Screens() {
 
     // Écran droit : machine à états calée sur la phase du cycle.
     //
-    //  à quai      → ただいま, plans de ligne en japonais puis en anglais,
-    //                entrecoupés du plan du quai ;
-    //  en route    → つぎは, mêmes plans, plus les correspondances de la
-    //                prochaine gare et les écrans de courtoisie ;
+    //  à quai      → ただいま, plans jp/en, écrans zh/ko et plan du quai,
+    //                puis avertissement de FERMETURE DES PORTES en toute fin
+    //                d'arrêt ;
+    //  en route    → つぎは, cycle quadrilingue complet, correspondances,
+    //                écrans de courtoisie et manières ; si une AUTRE ligne
+    //                est perturbée : info trafic, état des lignes et — pour
+    //                une ligne JR — certificat de retard ;
     //  à l'approche→ まもなく, côté d'ouverture, alterné avec le plan du quai.
     //
-    // Les états d'exploitation dégradée (retard, interruption, arrêt d'urgence)
-    // existent sur la vraie rame mais ne sont pas rendus ici : la simulation
-    // n'a ni incident ni retard, les afficher serait annoncer au voyageur
-    // quelque chose qui n'arrive pas.
+    // L'arrêt d'urgence (急停車) est un événement RÉEL de la simulation
+    // (stationCycle) : quand il est actif, l'écran rouge remplace toute la
+    // rotation, en alternance JP/EN. Les autres états dégradés de la propre
+    // ligne (retard persistant, interruption planifiée) restent non rendus :
+    // la simulation n'a pas ces incidents, les afficher serait annoncer au
+    // voyageur quelque chose qui n'arrive pas.
     const tick = Math.floor(runtime.clockMin * 4);
     const clock = fmtClock(runtime.clockMin);
     const countdown = Math.round(secondsToArrival(phase, runtime.phaseT));
 
     const notice = trafficNotice(runtime.clockMin);
+    // Le certificat de retard ne concerne que les lignes JR East.
+    const jrNotice = !!notice && /中央|埼京/.test(notice.lineJp);
+    // Visuel manières du moment : change d'un passage du cycle à l'autre.
+    const mannerVariant = Math.floor(tick / 10) % 3;
+    const emergency = runtime.emergencyStop;
     let state: string;
     let status: ScreenStatus;
-    if (phase === 'brake') {
+    if (emergency.stage !== 'none') {
+      status = 'next';
+      state = tick % 2 === 0 ? 'emergencyJP' : 'emergencyEN';
+    } else if (phase === 'brake') {
       status = 'soon';
       state = tick % 3 === 2 ? 'platform' : 'door';
     } else if (phase === 'dwell') {
       status = 'now';
-      state = ['loopJP', 'loopEN', 'zoomJP', 'zoomEN', 'platform'][tick % 5];
+      state =
+        CONFIG.dwellTime - runtime.phaseT <= 5
+          ? 'doorClosing'
+          : ['loopJP', 'loopEN', 'nextZH', 'nextKO', 'zoomJP', 'zoomEN', 'platform'][tick % 7];
     } else {
       status = 'next';
       const rotation = notice
-        ? ['loopJP', 'zoomJP', 'transfers', 'trafficJP', 'loopEN', 'zoomEN', 'trafficEN', 'priority', 'zoomJP', 'manners', 'loopJP', 'safety']
-        : ['loopJP', 'zoomJP', 'transfers', 'loopEN', 'zoomEN', 'priority', 'zoomJP', 'manners', 'loopJP', 'safety'];
+        ? [
+            'loopJP', 'zoomJP', 'nextZH', 'nextKO', 'transfers',
+            'trafficJP', 'statusJP', ...(jrNotice ? ['certJP'] : []),
+            'loopEN', 'zoomEN',
+            'trafficEN', 'statusEN', ...(jrNotice ? ['certEN'] : []),
+            'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
+          ]
+        : [
+            'loopJP', 'zoomJP', 'nextZH', 'nextKO', 'transfers',
+            'loopEN', 'zoomEN', 'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
+          ];
       state = rotation[tick % rotation.length];
     }
 
-    const key = `${index}|${phase}|${state}|${clock}|${doorSide}|${state.startsWith('loop') || state.startsWith('zoom') ? countdown : 0}`;
+    const key = `${index}|${phase}|${state}|${mannerVariant}|${clock}|${doorSide}|${state.startsWith('loop') || state.startsWith('zoom') ? countdown : 0}`;
     if (key === lastKey.current) return;
     lastKey.current = key;
 
@@ -1020,6 +1435,9 @@ export function Screens() {
       switch (state) {
         case 'door':
           drawDoorSide(g, index, clock, doorSide === side);
+          break;
+        case 'doorClosing':
+          drawDoorClosing(g, index, clock);
           break;
         case 'platform':
           drawPlatformDiagram(g, index, clock);
@@ -1033,8 +1451,14 @@ export function Screens() {
         case 'safety':
           drawSafetyNotice(g, index, clock);
           break;
-        case 'manners':
-          drawBanner(g);
+        case 'manner':
+          [drawPhoneManner, drawBackpackManner, drawHeadphoneManner][mannerVariant](g, index, clock);
+          break;
+        case 'nextZH':
+          drawNextStationLang(g, index, clock, status, 'zh');
+          break;
+        case 'nextKO':
+          drawNextStationLang(g, index, clock, status, 'ko');
           break;
         case 'trafficJP':
           if (notice) drawTrafficInfo(g, index, clock, 'jp', notice);
@@ -1043,6 +1467,26 @@ export function Screens() {
         case 'trafficEN':
           if (notice) drawTrafficInfo(g, index, clock, 'en', notice);
           else drawLoopMap(g, index, phase, countdown, clock, status, 'en');
+          break;
+        case 'statusJP':
+          if (notice) drawLineStatus(g, index, clock, 'jp', notice);
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp');
+          break;
+        case 'statusEN':
+          if (notice) drawLineStatus(g, index, clock, 'en', notice);
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'en');
+          break;
+        case 'certJP':
+          drawDelayCert(g, index, clock, 'jp');
+          break;
+        case 'certEN':
+          drawDelayCert(g, index, clock, 'en');
+          break;
+        case 'emergencyJP':
+          drawEmergencyInfo(g, index, clock, 'jp', emergency.reason);
+          break;
+        case 'emergencyEN':
+          drawEmergencyInfo(g, index, clock, 'en', emergency.reason);
           break;
         case 'loopJP':
           drawLoopMap(g, index, phase, countdown, clock, status, 'jp');
@@ -1112,3 +1556,4 @@ export function Screens() {
     </group>
   );
 }
+

@@ -17,9 +17,14 @@
 
 import { writeFileSync } from 'node:fs';
 import {
+  EMERGENCY_REASONS,
   approachSequence,
   departureSequence,
   doorsClosingAnnouncement,
+  emergencyBrakeAnnouncement,
+  emergencyResumeAnnouncement,
+  emergencyStopAnnouncement,
+  emergencyWaitAnnouncement,
   welcomeAnnouncement,
   type Utterance,
 } from '../src/data/announcements';
@@ -53,6 +58,13 @@ for (let i = 0; i < STATIONS.length; i++) {
 }
 utterances.push(...doorsClosingAnnouncement());
 utterances.push(...welcomeAnnouncement());
+// Arrêt d'urgence : freinage, annonce d'arrêt (un clip par motif), attente, reprise.
+utterances.push(...emergencyBrakeAnnouncement());
+for (let r = 0; r < EMERGENCY_REASONS.length; r++) {
+  utterances.push(...emergencyStopAnnouncement(r));
+}
+utterances.push(...emergencyWaitAnnouncement());
+utterances.push(...emergencyResumeAnnouncement());
 
 const byKey = new Map<string, { key: string; lang: string; text: string; tts: string; speed: number }>();
 for (const u of utterances) {

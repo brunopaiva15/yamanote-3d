@@ -47,6 +47,8 @@ export interface Strings {
 
   hud: {
     phase: { cruise: string; brake: string; dwell: string; depart: string };
+    /** Bandeau de phase pendant un arrêt d'urgence en pleine voie. */
+    phaseEmergency: string;
     currentStation: string;
     nextStation: string;
     occupancyTitle: string;
@@ -95,6 +97,7 @@ const FR: Strings = {
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arrivée', dwell: 'À quai', depart: 'Départ' },
+    phaseEmergency: 'Arrêt d’urgence',
     currentStation: 'Station actuelle',
     nextStation: 'Prochaine station',
     occupancyTitle: 'Estimation calibrée (±8–12 pts un jour normal)',
@@ -142,6 +145,7 @@ const EN: Strings = {
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arriving', dwell: 'At the platform', depart: 'Departing' },
+    phaseEmergency: 'Emergency stop',
     currentStation: 'Current station',
     nextStation: 'Next station',
     occupancyTitle: 'Calibrated estimate (±8–12 pts on a normal day)',
@@ -188,6 +192,7 @@ const JA: Strings = {
   },
   hud: {
     phase: { cruise: '走行中', brake: 'まもなく到着', dwell: '停車中', depart: '発車' },
+    phaseEmergency: '緊急停止',
     currentStation: '現在の駅',
     nextStation: '次の駅',
     occupancyTitle: '推定混雑率（平常日でおよそ±8〜12ポイント）',
