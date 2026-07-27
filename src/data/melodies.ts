@@ -1,16 +1,24 @@
 // Mélodies de départ (発車メロディ) par quai — Inner / Outer Loop principaux.
 // Diffusées par les haut-parleurs du quai, uniquement pendant la procédure
 // de départ (train à l'arrêt, portes ouvertes).
+//
+// Les clips embarqués sont des compositions ORIGINALES du projet (générées
+// par scripts/melodies-gen.py), inspirées du caractère des mélodies réelles
+// de chaque quai (gamme, tempo, timbre) sans en reprendre les notes : aucune
+// œuvre protégée n'est embarquée. Les identifiants et commentaires
+// « jre-ikst-… », « Sakura Sakura », etc. désignent le BRANCHEMENT historique
+// du quai (quelle mélodie y sonne dans la réalité), pas l'œuvre embarquée.
 
 import type { LoopDirection } from './platforms';
 
 /**
- * Clips MP3 de 発車メロディ (œuvres protégées) : désactivés tant que les
- * autorisations copyright ne sont pas obtenues. Le jeu utilise alors la
- * synthèse Tone.js. Remettre à `true` uniquement avec les droits nécessaires
- * et les fichiers sous `public/audio/melodies/`.
+ * Clips MP3 de 発車メロディ : activés. Les fichiers sous
+ * `public/audio/melodies/` sont des compositions originales libres de droits
+ * (voir scripts/melodies-gen.py) — les enregistrements réels, protégés,
+ * restaient interdits sans autorisation. Repasser à `false` pour revenir à la
+ * synthèse Tone.js seule.
  */
-export const ENABLE_DEPARTURE_MELODY_CLIPS = false;
+export const ENABLE_DEPARTURE_MELODY_CLIPS = true;
 
 /** Chemin logique du clip Inner Loop principal (sous public/). */
 export const INNER_MAIN_MELODY_PATH =
@@ -62,8 +70,8 @@ export const KOMAGOME_OUTER_SAKURA_A_PATH = '/audio/melodies/05_sakura-sakura-a.
 /** Config exclusive : Komagome Outer Loop plateforme 1 → Tabata. */
 export const KOMAGOME_OUTER_SAKURA_A = {
   id: 'sakura-sakura-a',
-  name: 'Sakura Sakura A',
-  japaneseName: 'さくらさくらA',
+  name: 'Harugasumi',
+  japaneseName: '春霞',
   file: KOMAGOME_OUTER_SAKURA_A_PATH,
   type: 'departure_melody' as const,
   source: 'platform_speakers' as const,
@@ -83,8 +91,8 @@ export const KOMAGOME_INNER_SAKURA_V2_PATH = '/audio/melodies/06_sakura-sakura-b
 export const KOMAGOME_INNER_SAKURA_V2 = {
   id: 'sakura-sakura-v2',
   file: KOMAGOME_INNER_SAKURA_V2_PATH,
-  name: 'Sakura Sakura V2',
-  japaneseName: 'さくらさくら V2',
+  name: 'Hanafubuki',
+  japaneseName: '花吹雪',
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
   line: 'yamanote',
@@ -102,8 +110,8 @@ export const UGUISUDANI_INNER_HARU_TREMOLO_PATH = '/audio/melodies/08_haru-tremo
 /** Config exclusive : Uguisudani Inner Loop plateforme 2 → Nippori. */
 export const UGUISUDANI_INNER_HARU_TREMOLO = {
   id: 'haru-tremolo',
-  name: 'Haru Tremolo',
-  japaneseName: '春（トレモロ）',
+  name: 'Haru no Saezuri',
+  japaneseName: '春のさえずり',
   file: UGUISUDANI_INNER_HARU_TREMOLO_PATH,
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
@@ -121,8 +129,8 @@ export const SESERAGI_MELODY_PATH = '/audio/melodies/09_seseragi.mp3';
 
 export const SESERAGI_MELODY = {
   id: 'seseragi',
-  name: 'Seseragi',
-  japaneseName: 'せせらぎ',
+  name: 'Ogawa',
+  japaneseName: '小川',
   file: SESERAGI_MELODY_PATH,
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
@@ -189,8 +197,8 @@ export const TAKADANOBABA_OUTER_ATOM_A_PATH = '/audio/melodies/10_tetsuwan-atom-
 /** Config exclusive : Takadanobaba Outer Loop plateforme 1 → Mejiro. */
 export const TAKADANOBABA_OUTER_ATOM_A = {
   id: 'tetsuwan-atom-ver-a',
-  name: 'Tetsuwan Atom ver.A',
-  japaneseName: '鉄腕アトム ver.A',
+  name: 'Mirai March ver.A',
+  japaneseName: '未来マーチ ver.A',
   file: TAKADANOBABA_OUTER_ATOM_A_PATH,
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
@@ -209,8 +217,8 @@ export const TAKADANOBABA_INNER_ATOM_B_PATH = '/audio/melodies/11_tetsuwan-atom-
 /** Config exclusive : Takadanobaba Inner Loop plateforme 2 → Shin-Okubo. */
 export const TAKADANOBABA_INNER_ATOM_B = {
   id: 'tetsuwan-atom-ver-b',
-  name: 'Tetsuwan Atom ver.B',
-  japaneseName: '鉄腕アトム ver.B',
+  name: 'Mirai March ver.B',
+  japaneseName: '未来マーチ ver.B',
   file: TAKADANOBABA_INNER_ATOM_B_PATH,
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
@@ -229,8 +237,8 @@ export const EBISU_INNER_THIRD_MAN_F_PATH = '/audio/melodies/13_the-third-man-f.
 /** Config exclusive : Ebisu Inner Loop plateforme 2 → Meguro. */
 export const EBISU_INNER_THIRD_MAN_F = {
   id: 'the-third-man-ver-f',
-  name: 'The Third Man ver.F',
-  japaneseName: '第三の男 ver.F',
+  name: 'Yugure Waltz',
+  japaneseName: '夕暮れワルツ',
   file: EBISU_INNER_THIRD_MAN_F_PATH,
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
@@ -250,7 +258,7 @@ export const TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH =
 /** Config exclusive : Takanawa Gateway Inner Loop plateforme 1 → Tamachi. */
 export const TAKANAWA_GATEWAY_INNER_GLORIOUS_A = {
   id: 'glorious-gateway-a',
-  name: 'Glorious Gateway A',
+  name: 'Aurora Gate ver.A',
   file: TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH,
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
@@ -270,7 +278,7 @@ export const TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH =
 /** Config exclusive : Takanawa Gateway Outer Loop plateforme 2 → Shinagawa. */
 export const TAKANAWA_GATEWAY_OUTER_GLORIOUS_B = {
   id: 'glorious-gateway-b',
-  name: 'Glorious Gateway B',
+  name: 'Aurora Gate ver.B',
   file: TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH,
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
@@ -290,8 +298,8 @@ export const KANDA_OUTER_MONDAMIN_A_PATH =
 /** Config exclusive : Kanda Outer Loop plateforme 2 → Tokyo. */
 export const KANDA_OUTER_MONDAMIN_A = {
   id: 'mondamin-cm-song-ver-a',
-  name: 'Mondamin CM Song ver.A',
-  japaneseName: 'モンダミンCMソング ver.A',
+  name: 'Asa no Jingle ver.A',
+  japaneseName: '朝のジングル ver.A',
   file: KANDA_OUTER_MONDAMIN_A_PATH,
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
@@ -311,8 +319,8 @@ export const KANDA_INNER_MONDAMIN_B_PATH =
 /** Config exclusive : Kanda Inner Loop plateforme 3 → Akihabara. */
 export const KANDA_INNER_MONDAMIN_B = {
   id: 'mondamin-cm-song-ver-b',
-  name: 'Mondamin CM Song ver.B',
-  japaneseName: 'モンダミンCMソング ver.B',
+  name: 'Asa no Jingle ver.B',
+  japaneseName: '朝のジングル ver.B',
   file: KANDA_INNER_MONDAMIN_B_PATH,
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
@@ -332,8 +340,8 @@ export const IKEBUKURO_INNER_BIC_CAMERA_A_PATH =
 /** Config exclusive : Ikebukuro Inner Loop plateforme 5 → Mejiro. */
 export const IKEBUKURO_INNER_BIC_CAMERA_A = {
   id: 'bic-camera-theme-ver-a',
-  name: 'Bic Camera Theme Song ver.A',
-  japaneseName: 'ビックカメラテーマソング ver.A',
+  name: 'Denki Pop ver.A',
+  japaneseName: '電気ポップ ver.A',
   file: IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
@@ -353,8 +361,8 @@ export const IKEBUKURO_INNER_BIC_CAMERA_B_PATH =
 /** Config exclusive : Ikebukuro Inner Loop plateforme 6 → Mejiro. */
 export const IKEBUKURO_INNER_BIC_CAMERA_B = {
   id: 'bic-camera-theme-ver-b',
-  name: 'Bic Camera Theme Song ver.B',
-  japaneseName: 'ビックカメラテーマソング ver.B',
+  name: 'Denki Pop ver.B',
+  japaneseName: '電気ポップ ver.B',
   file: IKEBUKURO_INNER_BIC_CAMERA_B_PATH,
   type: 'departure_melody' as const,
   audioSource: 'platform_speakers' as const,
