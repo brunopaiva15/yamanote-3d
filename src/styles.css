@@ -195,6 +195,39 @@ body,
   white-space: nowrap;
 }
 
+.start-quality {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px dashed #d5dade;
+}
+
+.start-quality-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #5c666d;
+}
+
+.quality-select {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sticker-ink);
+  background: var(--sticker);
+  border: 2px solid var(--ink-line);
+  border-radius: 11px;
+  padding: 6px 10px;
+  cursor: pointer;
+  box-shadow: var(--sticker-shadow);
+}
+
+.quality-select:hover {
+  background: #f1f3f5;
+}
+
 .start-foot {
   display: flex;
   align-items: baseline;
@@ -419,6 +452,11 @@ body,
 .hud-volume {
   width: 90px;
   accent-color: var(--green);
+}
+
+.quality-select-hud {
+  font-size: 13px;
+  padding: 7px 10px;
 }
 
 /* --- Tactile --- */

@@ -81,7 +81,7 @@ function crowdCount(stationIndex: number): { total: number; walkers: number } {
     : stationIndex % 3 === 0
       ? { total: 12, walkers: 5 }
       : { total: 9, walkers: 4 };
-  // Palier de qualité adaptative : même réduction que les PNJ de la rame.
+  // Qualité vidéo : même réduction que les PNJ de la rame.
   const s = paxScale();
   return { total: Math.round(base.total * s), walkers: Math.round(base.walkers * s) };
 }

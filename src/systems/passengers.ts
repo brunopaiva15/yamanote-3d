@@ -109,7 +109,7 @@ export function initPassengers(): void {
   for (let i = 0; i < POOL_SIZE; i++) paxList.push(makePax(i));
 }
 
-// Cibles du tronçon courant, réduites par le palier de qualité adaptative.
+// Cibles du tronçon courant, réduites par la qualité vidéo choisie.
 function scaledTargets(): PaxTargets {
   const t = targetPaxCounts(currentSegmentOccupancy().percent);
   const s = paxScale();

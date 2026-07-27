@@ -13,6 +13,7 @@ import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
 import { applySpeechVolume, cancelSpeech } from '../systems/speech';
 import { input } from '../systems/input';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { QualitySelect } from './QualitySelect';
 
 function useClock(): string {
   const [clock, setClock] = useState('');
@@ -124,6 +125,7 @@ export function Hud() {
 
       <div className="hud-bottom">
         <LanguageSwitcher className="lang-switch-hud" />
+        <QualitySelect className="quality-select-hud" />
         <button className="hud-button" onClick={toggleMute} title={t.hud.soundTitle}>
           {muted ? t.hud.soundOff : t.hud.soundOn}
         </button>

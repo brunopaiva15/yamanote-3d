@@ -12,7 +12,7 @@ import { updatePlatformPresence } from '../systems/platformPresence';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
 import { setPlatformDoors, updateAudio } from '../systems/audioEngine';
 import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
-import { perfLevel, updatePerfCalibration, updatePerfMonitor } from '../systems/perf';
+import { perfLevel } from '../systems/perf';
 
 /**
  * Plafond du dt cycle : borne les trous que l'API Visibility ne signale pas
@@ -30,8 +30,8 @@ const PHYS_DT_CAP = 0.05;
 // visible (shaders, GC, GPU saturé) doit compter en entier, sinon le cycle
 // gèle sous charge et le prochain arrêt n'arrive jamais.
 let tabJustResumed = false;
-// Dernier palier de qualité appliqué aux PNJ (voir bloc perf dans useFrame).
-let lastPerfLevel = 0;
+// Dernier palier de qualité appliqué aux PNJ (voir bloc qualité dans useFrame).
+let lastPerfLevel = perfLevel();
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) tabJustResumed = true;
@@ -50,17 +50,11 @@ export function Engine(): null {
     if (cycleDt <= 0 && physDt <= 0) return;
 
     const { phase, started } = useStore.getState();
-    if (!started) {
-      // Écran de démarrage : la scène tourne déjà — calibrage du palier de
-      // qualité pour embarquer directement au bon niveau.
-      if (!skipCycle) updatePerfCalibration(raw);
-      return;
-    }
+    if (!started) return;
 
-    // Qualité adaptative : mesure du rythme réel (dt non plafonné, hors frame
-    // de reprise d'onglet) ; si un palier vient d'être franchi, allège
-    // immédiatement le pool de PNJ.
-    if (!skipCycle) updatePerfMonitor(raw);
+    // Qualité vidéo abaissée en cours de trajet : allège immédiatement le
+    // pool de PNJ. En sens inverse (qualité remontée), la densité se remplit
+    // naturellement à l'échange de passagers du prochain arrêt.
     const perfNow = perfLevel();
     if (perfNow !== lastPerfLevel) {
       lastPerfLevel = perfNow;
