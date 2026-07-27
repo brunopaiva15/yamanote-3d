@@ -305,7 +305,8 @@ export function updatePlatformCrowd(dt: number): void {
       }
       if (p.state === 'waiting') {
         const pitchT = p.action === 'phone' ? 0.5 : p.action === 'look' ? 0.05 : 0;
-        const yawT = p.action === 'look' ? p.lookYaw : p.action === 'phone' ? 0.1 : 0;
+        // Téléphone : le yaw vers la main est ajouté par la pose (characters/pose.ts).
+        const yawT = p.action === 'look' ? p.lookYaw : 0;
         p.headPitch += (pitchT - p.headPitch) * Math.min(1, dt * 4);
         p.lookYaw += (yawT - p.lookYaw) * Math.min(1, dt * 3);
         p.targetYaw = -Math.PI / 2 + p.lookYaw * 0.35;

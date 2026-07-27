@@ -105,8 +105,8 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
         bones.head.rotation.y += p.lookYaw * 0.45;
       }
       const phoneActive = p.action === 'phone' && p.state === 'waiting';
-      applyPhoneArms(p, bones, s.pose, k, phoneActive);
-      updatePropRig(s.props, bones, body, true, phoneActive && s.pose.phoneW > 0.05);
+      applyPhoneArms(s.clone, s.pose, k, phoneActive);
+      updatePropRig(s.props, bones, body, true, phoneActive && s.pose.phoneW > 0.05, s.pose.phoneSide);
     }
   });
 

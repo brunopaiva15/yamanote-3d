@@ -19,7 +19,9 @@ import type { BoneMap } from './library';
 export interface PropRig {
   headFollow: THREE.Group | null;
   spineFollow: THREE.Group | null;
-  handFollow: THREE.Group | null; // téléphone (main droite, repli gauche)
+  handFollow: THREE.Group | null; // téléphone, recalé sur la main qui le tient
+  phoneR: THREE.Group | null; // prise main droite
+  phoneL: THREE.Group | null; // prise main gauche (miroir sagittal de la droite)
 }
 
 // Assombrit une couleur hex — accents des sacs (sangles, rabats, poches).
@@ -191,8 +193,9 @@ function makeHandBag(color: string): THREE.Group {
 
 // --- Téléphone -------------------------------------------------------------
 // Smartphone tenu dans la paume : coque sombre + dalle légèrement émissive.
-// Positionnée le long de +Y de l'os de main (poignet → doigts) et tournée
-// pour que l'écran regarde le visage quand les avant-bras sont en pose phone.
+// La pose téléphone (characters/pose.ts) impose l'orientation MONDE de la
+// main — la prise est donc réglée une fois pour toutes dans le repère de
+// l'os de main (+Y poignet → doigts, +Z côté paume, rigs Quaternius).
 
 const phoneBodyGeo = new RoundedBoxGeometry(0.042, 0.082, 0.009, 2, 0.004);
 const phoneScreenGeo = new THREE.BoxGeometry(0.034, 0.066, 0.0012);
@@ -205,15 +208,31 @@ const phoneScreenMat = new THREE.MeshStandardMaterial({
   emissiveIntensity: 0.45,
 });
 
-function makePhone(): THREE.Group {
+// Prise MAIN DROITE réglée à la main (probe ?grip=) : téléphone couché en
+// diagonale sur la paume, dalle côté paume ouverte (+Z), inclinée vers le
+// visage. Légèrement surdimensionné pour suivre les mains stylisées des packs.
+const PHONE_GRIP_POS = new THREE.Vector3(0, 0.09, 0.024);
+const PHONE_GRIP_ROT = new THREE.Euler(-0.35, 0, 0.3);
+const PHONE_GRIP_SCALE = 1.28;
+
+// `side` : 1 = prise droite, -1 = prise gauche. La gauche est le MIROIR
+// SAGITTAL exact de la droite — licite parce que pose.ts force les
+// orientations monde des deux mains à être miroirs l'une de l'autre : dans le
+// repère de l'os, le miroir s'écrit position (-x, y, z) et quaternion
+// (x, -y, -z, w), la coque du téléphone étant symétrique sur son axe x.
+function makePhone(side: 1 | -1): THREE.Group {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(phoneBodyGeo, phoneBodyMat));
   const screen = new THREE.Mesh(phoneScreenGeo, phoneScreenMat);
   screen.position.z = 0.0052;
   g.add(screen);
-  // Poignet → paume : le long des doigts (+Y Quaternius), vers la paume (+Z).
-  g.position.set(0.01, 0.055, 0.022);
-  g.rotation.set(-0.55, 0.2, 0.35);
+  g.position.copy(PHONE_GRIP_POS);
+  g.quaternion.setFromEuler(PHONE_GRIP_ROT);
+  g.scale.setScalar(PHONE_GRIP_SCALE);
+  if (side === -1) {
+    g.position.x *= -1;
+    g.quaternion.set(g.quaternion.x, -g.quaternion.y, -g.quaternion.z, g.quaternion.w);
+  }
   return g;
 }
 
@@ -222,7 +241,7 @@ function makePhone(): THREE.Group {
 // le modèle a déjà son propre sac (évite le doublon). Le téléphone est
 // toujours créé (masqué) : n'importe quel PNJ peut passer en action « phone ».
 export function attachProps(wrap: THREE.Group, app: Appearance, allowBag = true): PropRig {
-  const rig: PropRig = { headFollow: null, spineFollow: null, handFollow: null };
+  const rig: PropRig = { headFollow: null, spineFollow: null, handFollow: null, phoneR: null, phoneL: null };
 
   if (app.glasses || app.mask) {
     const head = new THREE.Group();
@@ -246,7 +265,11 @@ export function attachProps(wrap: THREE.Group, app: Appearance, allowBag = true)
   const hand = new THREE.Group();
   hand.matrixAutoUpdate = false;
   hand.visible = false;
-  hand.add(makePhone());
+  rig.phoneR = makePhone(1);
+  rig.phoneL = makePhone(-1);
+  rig.phoneL.visible = false;
+  hand.add(rig.phoneR);
+  hand.add(rig.phoneL);
   wrap.add(hand);
   rig.handFollow = hand;
 
@@ -276,12 +299,15 @@ function followBone(follow: THREE.Group | null, bone: THREE.Bone | undefined, wr
 // `bagVisible` : les sacs sont posés pour la station debout — on les masque
 // quand le passager est assis (sinon le sac flotte à côté de lui).
 // `phoneVisible` : téléphone dans la main (pose « phone » active).
+// `phoneSide` : main qui le tient (PoseState.phoneSide) — la gauche quand la
+// droite est déjà à la poignée.
 export function updatePropRig(
   rig: PropRig,
   bones: BoneMap,
   wrap: THREE.Group,
   bagVisible: boolean,
   phoneVisible = false,
+  phoneSide: 1 | -1 = 1,
 ): void {
   followBone(rig.headFollow, bones.head, wrap);
   if (rig.spineFollow) {
@@ -291,7 +317,12 @@ export function updatePropRig(
   if (rig.handFollow) {
     rig.handFollow.visible = phoneVisible;
     if (phoneVisible) {
-      const handBone = bones.handR ?? bones.handL ?? bones.foreArmR ?? bones.foreArmL;
+      const right = phoneSide !== -1;
+      const handBone = right
+        ? (bones.handR ?? bones.foreArmR ?? bones.handL ?? bones.foreArmL)
+        : (bones.handL ?? bones.foreArmL ?? bones.handR ?? bones.foreArmR);
+      if (rig.phoneR) rig.phoneR.visible = right;
+      if (rig.phoneL) rig.phoneL.visible = !right;
       followBone(rig.handFollow, handBone, wrap);
     }
   }

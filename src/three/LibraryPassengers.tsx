@@ -135,7 +135,7 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       mixer.update(dt);
       applyPoseOverrides(p, s.clone, s.pose, k, manualSit);
       const phoneVisible = p.action === 'phone' && (seated || p.state === 'standing') && s.pose.phoneW > 0.05;
-      updatePropRig(s.props, bones, wrap, !seated, phoneVisible);
+      updatePropRig(s.props, bones, wrap, !seated, phoneVisible, s.pose.phoneSide);
     }
   });
 

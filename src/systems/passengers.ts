@@ -506,7 +506,9 @@ export function updatePassengers(dt: number): void {
         pitchT = 0.04;
         break;
       case 'phone':
-        yawT = 0.12;
+        // Le yaw vers la main qui tient le téléphone est ajouté par la pose
+        // (characters/pose.ts), qui seule connaît le côté choisi.
+        yawT = 0;
         pitchT = 0.55;
         break;
       case 'doze':

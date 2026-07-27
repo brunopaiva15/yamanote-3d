@@ -48,12 +48,15 @@
         mixer.update(t);
       }
 
-      // Simulation de l'ASSISE avec le vrai code du jeu (clone, clips flous,
-      // alignement du bassin, overrides d'os) : ?sit=1 — banc de référence
-      // dessiné à SEAT_TOP_Y=0.45, sol à y=0.
-      if (q.get('sit')) {
+      // Simulation ASSISE / DEBOUT avec le vrai code du jeu (clone, clips
+      // flous, alignement du bassin, overrides d'os, accessoires) :
+      //   ?sit=1  — banc de référence dessiné à SEAT_TOP_Y=0.45, sol à y=0.
+      //   ?stand=1 [&strap=1] — debout, option bras à la poignée (anneau dessiné).
+      //   &action=phone — pose téléphone (regard baissé, prop dans la main).
+      if (q.get('sit') || q.get('stand')) {
         const { buildTemplates, cloneVariant } = await import('/src/three/characters/library.ts');
         const { applyPoseOverrides, makePoseState } = await import('/src/three/characters/pose.ts');
+        const { attachProps, updatePropRig } = await import('/src/three/characters/props.ts');
         const manifest = await (await fetch('/models/manifest.json')).json();
         const variant = manifest.variants.find((v) => v.file === file) ?? { id: file, file, archetypes: [], clips: { standIdle: 'Idle_Neutral' } };
         const [template] = buildTemplates({ ...manifest, variants: [variant] }, [gltf]);
@@ -62,20 +65,48 @@
         gltf.scene.visible = false; // la source T-pose, APRÈS clonage
         clone.wrap.visible = true;
         scene.add(clone.wrap);
-        // Banc : coussin (haut à 0.45) + sol quadrillé déjà présent.
-        const bench = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 0.5), new THREE.MeshStandardMaterial({ color: '#666a70' }));
-        bench.position.set(0, 0.45 - 0.06, -0.25);
-        scene.add(bench);
+        const seated = !q.get('stand');
         const p = {
-          state: 'seated', pos: new THREE.Vector3(0, 0, 0), yaw: 0, height: parseFloat(q.get('h') ?? '1.08'),
-          bob: 0, bodyLean: 0, headYaw: 0.2, headPitch: 0.05, holdStrap: false, action: 'none',
+          state: seated ? 'seated' : 'standing',
+          pos: new THREE.Vector3(parseFloat(q.get('px') ?? '0'), 0, 0),
+          yaw: parseFloat(q.get('yaw') ?? '0'),
+          height: parseFloat(q.get('h') ?? '1.08'),
+          bob: 0, bodyLean: 0, headYaw: 0.2, headPitch: 0.05,
+          holdStrap: q.get('strap') === '1', action: q.get('action') ?? 'none',
         };
+        if (p.action === 'phone') {
+          p.headYaw = 0;
+          p.headPitch = 0.55; // même cible que systems/passengers
+        }
+        if (seated) {
+          // Banc : coussin (haut à 0.45) + sol quadrillé déjà présent.
+          const bench = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 0.5), new THREE.MeshStandardMaterial({ color: '#666a70' }));
+          bench.position.set(p.pos.x, 0.45 - 0.06, p.pos.z - 0.25);
+          scene.add(bench);
+        }
+        if (p.holdStrap) {
+          // Anneau de tsurikawa (repère) au-dessus du PNJ, comme Handles.tsx.
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.011, 8, 20), new THREE.MeshStandardMaterial({ color: '#e8e4dc' }));
+          ring.position.set(p.pos.x, 1.77, p.pos.z);
+          scene.add(ring);
+        }
+        const props = attachProps(clone.wrap, app, variant.bagProp !== false);
+        // ?grip=rx,rz,py,pz,s — essai de prise du téléphone (main droite).
+        const grip = q.get('grip');
+        if (grip && props.phoneR) {
+          const [rx, rz, py, pz, s] = grip.split(',').map(Number);
+          props.phoneR.rotation.set(rx, 0, rz);
+          props.phoneR.position.set(0, py, pz);
+          props.phoneR.scale.setScalar(s || 1);
+        }
         const pose = makePoseState();
-        const action = clone.actions.sitIdle ?? clone.actions.standIdle;
+        const action = (seated ? clone.actions.sitIdle : null) ?? clone.actions.standIdle;
         action.play();
-        const manualSit = !clone.actions.sitIdle;
-        const seatFix = 0.45 + 0.01 - (clone.template.sitHipY != null && clone.actions.sitIdle ? clone.template.sitHipY : clone.template.standHipY) * p.height;
-        clone.wrap.position.set(0, seatFix, 0);
+        const manualSit = seated && !clone.actions.sitIdle;
+        const seatFix = seated
+          ? 0.45 + 0.01 - (clone.template.sitHipY != null && clone.actions.sitIdle ? clone.template.sitHipY : clone.template.standHipY) * p.height
+          : 0;
+        clone.wrap.position.set(p.pos.x, seatFix, p.pos.z);
         clone.wrap.rotation.y = p.yaw;
         clone.wrap.scale.setScalar(p.height);
         // ~2 s de frames simulées pour converger les poids lissés.
@@ -85,6 +116,13 @@
           if (clone.restSpine && clone.bones.spine) clone.bones.spine.quaternion.copy(clone.restSpine);
           clone.mixer.update(dt);
           applyPoseOverrides(p, clone, pose, Math.min(1, dt * 6), manualSit);
+          const phoneVisible = p.action === 'phone' && pose.phoneW > 0.05;
+          updatePropRig(props, clone.bones, clone.wrap, !seated, phoneVisible, pose.phoneSide);
+        }
+        // ?axes=handR — trièdre local d'un os (x rouge, y vert, z bleu).
+        const axesBone = q.get('axes');
+        if (axesBone && clone.bones[axesBone]) {
+          clone.bones[axesBone].add(new THREE.AxesHelper(0.22));
         }
       }
 
@@ -115,8 +153,9 @@
         updatePropRig(props, clone.bones, clone.wrap, true);
       }
 
-      // Simulation des overrides du jeu (bras vers l'anneau, regard).
-      if (q.get('strap') || q.get('gaze')) {
+      // Simulation des overrides du jeu (bras vers l'anneau, regard) sur la
+      // scène BRUTE — sans objet quand la simulation complète (sit/stand) tourne.
+      if (!q.get('sit') && !q.get('stand') && (q.get('strap') || q.get('gaze'))) {
         const bones = {};
         gltf.scene.traverse((o) => {
           if (o.isBone) bones[o.name] = o;

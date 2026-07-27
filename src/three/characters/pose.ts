@@ -19,11 +19,12 @@ const STRAP_RING_Y = 1.77;
 export interface PoseState {
   strapW: number;
   phoneW: number;
+  phoneSide: 1 | -1; // main du téléphone : 1 droite (défaut), -1 gauche
   sitW: number;
 }
 
 export function makePoseState(): PoseState {
-  return { strapW: 0, phoneW: 0, sitW: 0 };
+  return { strapW: 0, phoneW: 0, phoneSide: 1, sitW: 0 };
 }
 
 // Temporaires des APPELANTS (cibles, directions). aimBone a les siens : il ne
@@ -40,6 +41,7 @@ const qWrapOnly = new THREE.Quaternion();
 const qLTarget = new THREE.Quaternion();
 const qMirror = new THREE.Quaternion();
 const qRestW = new THREE.Quaternion();
+const qRoll = new THREE.Quaternion();
 // Temporaires PRIVÉS de aimBone / poseBone.
 const aPos = new THREE.Vector3();
 const aDir = new THREE.Vector3();
@@ -108,26 +110,79 @@ function lerpW(current: number, target: number, k: number): number {
   return current + (target - current) * k;
 }
 
-// Avant-bras en pose « téléphone » : les deux mains convergent devant le
-// buste. Réutilisé par la rame et la foule du quai (mêmes os / même poids).
+// Pose « téléphone » : UN SEUL bras est piloté — clavicule au neutre, épaule,
+// avant-bras et main entièrement reconstruits depuis la bind pose (comme
+// l'assise), l'autre bras restant au clip (debout : il pend le long du corps)
+// ou à l'assise manuelle (main sur la cuisse). L'ancienne version visait les
+// deux avant-bras vers un même point sans toucher ni épaules ni mains : bras
+// repliés l'un dans l'autre au gré du clip, téléphone perdu entre les mains.
+//
+// Directions cibles (axe +Y de chaque os) construites pour le bras GAUCHE en
+// espace wrap (+X = gauche du PNJ, +Z devant lui) ; si le téléphone est en
+// main droite, le résultat gauche reçoit le miroir sagittal exact — même
+// technique que l'assise, seule référence fiable de ces rigs (bind non
+// symétrique, clips asymétriques).
+const PHONE_UPPER_STAND = { x: 0.1, y: -0.9, z: 0.18 }; // bras le long du buste, coude à peine avancé
+const PHONE_UPPER_SIT = { x: 0.1, y: -0.78, z: 0.36 }; // assis : coude posé vers la cuisse
+const PHONE_FORE_STAND = { x: -0.18, y: 0.25, z: 0.8 }; // avant-bras devant le sternum, main à mi-poitrine
+const PHONE_FORE_SIT = { x: -0.18, y: 0.02, z: 0.85 }; // assis : main plus basse, au-dessus des genoux
+const PHONE_HAND = { x: -0.45, y: 0.1, z: 0.75 }; // doigts presque à plat en travers : paume vers le visage
+// Roulis de la main autour de l'axe des doigts : le roulis de bind laisse la
+// paume s'ouvrir vers l'avant — on la referme vers le menton (l'écran du
+// téléphone, parenté à la main, suit).
+const PHONE_HAND_ROLL = 1.0;
+
+// Réutilisé par la rame et la foule du quai. `strapSide` : côté du bras déjà
+// accroché à la poignée (±1, 0 si aucun) — le téléphone passe alors dans
+// l'autre main au lieu d'arracher le bras à l'anneau.
 export function applyPhoneArms(
-  p: { action: string; yaw: number; pos: THREE.Vector3 },
-  bones: CharacterClone['bones'],
+  clone: CharacterClone,
   state: PoseState,
   k: number,
   active: boolean,
+  strapSide: 0 | 1 | -1 = 0,
+  seated = false,
 ): void {
+  // Choix de main figé tant que la pose est engagée (pas de saut en cours).
+  if (state.phoneW < 0.05) state.phoneSide = strapSide === 1 ? -1 : 1;
   state.phoneW = lerpW(state.phoneW, active ? 1 : 0, k);
-  if (state.phoneW > 0.001 && bones.head) {
-    bones.head.updateWorldMatrix(true, false);
-    bones.head.getWorldPosition(vChest);
-    // Point devant le buste, sous le menton, dans la direction du regard.
-    vDir.set(Math.sin(p.yaw), 0, Math.cos(p.yaw));
-    vChest.addScaledVector(vDir, 0.28);
-    vChest.y -= 0.28;
-    if (bones.foreArmL) aimBone(bones.foreArmL, vChest, state.phoneW);
-    if (bones.foreArmR) aimBone(bones.foreArmR, vChest, state.phoneW);
+  const w = state.phoneW;
+  if (w <= 0.001) return;
+  const bones = clone.bones;
+  const side = state.phoneSide;
+  const upper = side === 1 ? bones.upperArmR : bones.upperArmL;
+  const fore = side === 1 ? bones.foreArmR : bones.foreArmL;
+  const hand = side === 1 ? bones.handR : bones.handL;
+
+  const ref = clone.chestRef ?? clone.wrap;
+  ref.updateWorldMatrix(true, false);
+  ref.getWorldQuaternion(qWrap);
+  clone.wrap.getWorldQuaternion(qWrapOnly);
+
+  // Clavicule du côté téléphone au neutre : le clip l'anime et déplacerait
+  // l'épaule sous le bras reconstruit.
+  for (const [clav, rest] of clone.clavicles) {
+    if (upper && clav === upper.parent) clav.quaternion.slerp(rest, w);
   }
+
+  // dirLocal (espace wrap) → monde via l'orientation du wrap : valable même
+  // quand le groupe parent est retourné (foule du quai côté opposé).
+  const apply = (bone: THREE.Bone | undefined, rest: THREE.Quaternion | undefined, d: { x: number; y: number; z: number }, weight: number, roll = 0) => {
+    if (!bone || !rest) return;
+    vDir.set(d.x, d.y, d.z).applyQuaternion(qWrapOnly);
+    worldTarget(rest, qWrap, vDir.x, vDir.y, vDir.z, qLTarget);
+    if (roll !== 0) {
+      qRoll.setFromAxisAngle(vDir.normalize(), roll);
+      qLTarget.premultiply(qRoll);
+    }
+    applyWorld(bone, side === 1 ? mirrorWorld(qLTarget, qWrapOnly, qMirror) : qLTarget, weight);
+  };
+  apply(upper, clone.armRest.upperArmL, seated ? PHONE_UPPER_SIT : PHONE_UPPER_STAND, w * 0.95);
+  apply(fore, clone.armRest.foreArmL, seated ? PHONE_FORE_SIT : PHONE_FORE_STAND, w);
+  apply(hand, clone.armRest.handL, PHONE_HAND, w, PHONE_HAND_ROLL);
+
+  // Regard légèrement tourné vers la main qui tient le téléphone.
+  if (bones.head) bones.head.rotation.y -= side * 0.1 * w;
 }
 
 // Applique tous les overrides d'un passager. `manualSit` : pas de clip assis
@@ -150,6 +205,7 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
   // est au-dessus de lui. Seuls les grands gabarits s'y accrochent
   // (holdStrap, voir systems/passengers). Bras côté extérieur.
   const strapActive = standing && p.holdStrap;
+  const strapSide: 0 | 1 | -1 = strapActive ? (p.pos.x >= 0 ? 1 : -1) : 0;
   state.strapW = lerpW(state.strapW, strapActive ? 1 : 0, k);
   if (state.strapW > 0.001) {
     const side = p.pos.x >= 0 ? 1 : -1;
@@ -165,9 +221,6 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
       aimBone(fore, vChest, state.strapW); // avant-bras jusqu'à l'anneau
     }
   }
-
-  // --- Téléphone : les deux avant-bras remontent devant la poitrine. ---
-  applyPhoneArms(p, bones, state, k, p.action === 'phone' && (seated || standing));
 
   // --- Assise manuelle de secours (pack sans clip assis). ---
   state.sitW = lerpW(state.sitW, manualSit && seated ? 1 : 0, k);
@@ -247,14 +300,17 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
     // deux mains n'étaient pas égales. Le bras entier descend le long du
     // buste (coude près de la hanche, léger écart pour ne pas rentrer dans le
     // torse), l'avant-bras se couche sur la cuisse vers le genou, les doigts
-    // sont drapés vers l'avant-bas. Sauf si la pose téléphone tient déjà les
-    // avant-bras.
-    const handW = w * (1 - state.phoneW);
-    if (handW > 0.001) {
+    // sont drapés vers l'avant-bas. Le bras qui tient le téléphone est seul
+    // exempté (posé ensuite par applyPhoneArms) : l'AUTRE main reste sur la
+    // cuisse.
+    const handWL = w * (state.phoneSide === -1 ? 1 - state.phoneW : 1);
+    const handWR = w * (state.phoneSide === 1 ? 1 - state.phoneW : 1);
+    if (handWL > 0.001 || handWR > 0.001) {
       // Clavicules au neutre AVANT de lire la référence : le clip idle les
       // anime différemment à gauche et à droite, ce qui décale les épaules.
       for (const [clav, rest] of clone.clavicles) {
-        clav.quaternion.slerp(rest, handW);
+        const wc = bones.upperArmR && clav === bones.upperArmR.parent ? handWR : handWL;
+        clav.quaternion.slerp(rest, wc);
       }
       const ref = clone.chestRef ?? clone.wrap;
       ref.updateWorldMatrix(true, false);
@@ -271,8 +327,8 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
       const armRest = clone.armRest.upperArmL;
       if (bones.upperArmL && armRest) {
         worldTarget(armRest, qWrap, sinY * 0.45 + cosY * 0.1, -1, cosY * 0.45 - sinY * 0.1, qLTarget);
-        applyWorld(bones.upperArmL, qLTarget, handW * 0.95);
-        if (bones.upperArmR) applyWorld(bones.upperArmR, mirrorWorld(qLTarget, qWrapOnly, qMirror), handW * 0.95);
+        applyWorld(bones.upperArmL, qLTarget, handWL * 0.95);
+        if (bones.upperArmR) applyWorld(bones.upperArmR, mirrorWorld(qLTarget, qWrapOnly, qMirror), handWR * 0.95);
       }
       // 2) Avant-bras : chacun vise le dessus de SON genou.
       const foreRest = clone.armRest.foreArmL;
@@ -291,13 +347,13 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
         vDir.set(sinY, 0, cosY);
         if (kneeAim(bones.foreArmL, bones.legL)) {
           worldTarget(foreRest, qWrap, vTarget.x, vTarget.y, vTarget.z, qLTarget);
-          applyWorld(bones.foreArmL, qLTarget, handW);
+          applyWorld(bones.foreArmL, qLTarget, handWL);
           if (bones.foreArmR) {
             // NB : alignY ne supporte pas out === q (aliasing) — sortie séparée.
             mirrorWorld(qLTarget, qWrapOnly, qMirror);
             if (kneeAim(bones.foreArmR, bones.legR)) alignY(qMirror, vTarget.x, vTarget.y, vTarget.z, qLTarget);
             else qLTarget.copy(qMirror);
-            applyWorld(bones.foreArmR, qLTarget, handW);
+            applyWorld(bones.foreArmR, qLTarget, handWR);
           }
         }
       }
@@ -306,10 +362,15 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
       const handRest = clone.armRest.handL;
       if (bones.handL && handRest) {
         worldTarget(handRest, qWrap, sinY, -0.12, cosY, qLTarget);
-        applyWorld(bones.handL, qLTarget, handW);
-        if (bones.handR) applyWorld(bones.handR, mirrorWorld(qLTarget, qWrapOnly, qMirror), handW);
+        applyWorld(bones.handL, qLTarget, handWL);
+        if (bones.handR) applyWorld(bones.handR, mirrorWorld(qLTarget, qWrapOnly, qMirror), handWR);
       }
     }
     if (bones.spine) bones.spine.rotation.x += 0.12 * w;
   }
+
+  // --- Téléphone : bras dédié, EN DERNIER — il se superpose au clip debout
+  // comme à l'assise manuelle (dont il remplace la main côté téléphone), et
+  // laisse le bras de la poignée accroché à son anneau. ---
+  applyPhoneArms(clone, state, k, p.action === 'phone' && (seated || standing), strapSide, seated);
 }
