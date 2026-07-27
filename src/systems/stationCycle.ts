@@ -70,15 +70,26 @@ const EMERGENCY_HOLD_MAX = 150; // s
 // Instant de déclenchement dans la phase cruise courante, -1 = aucun.
 let emergencyAt = -1;
 
-/** Déclenche l'arrêt d'urgence (aussi exposé en dev : __emergencyStop()). */
+/**
+ * Déclenche l'arrêt d'urgence (aussi exposé en dev : __emergencyStop()).
+ * Accepté en course normale comme pendant la remontée en vitesse qui suit un
+ * premier arrêt (stage 'resuming') : un nouveau coup de frein est légitime
+ * dès que le train se relance. Refusé seulement pendant freinage /
+ * immobilisation, où l'événement est déjà en cours.
+ */
 export function beginEmergencyStop(): void {
   const em = runtime.emergencyStop;
-  if (em.stage !== 'none') return;
+  if (em.stage === 'braking' || em.stage === 'stopped') return;
   if (useStore.getState().phase !== 'cruise') return;
   em.stage = 'braking';
   em.t = 0;
   em.holdFor = EMERGENCY_HOLD_MIN + Math.random() * (EMERGENCY_HOLD_MAX - EMERGENCY_HOLD_MIN);
   em.reason = Math.floor(Math.random() * EMERGENCY_REASONS.length);
+  // Ré-arme les annonces de l'événement : un second arrêt dans la même phase
+  // cruise (les clés `fired` y survivent) rejoue la séquence complète.
+  fired.delete('em-stopped');
+  fired.delete('em-wait');
+  fired.delete('em-resume');
   // L'urgence coupe l'annonce en cours, comme en vrai.
   cancelSpeech();
   say(emergencyBrakeAnnouncement());

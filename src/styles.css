@@ -397,12 +397,16 @@ body,
 
 /* --- Bouton SOS (arrêt d'urgence manuel) --- */
 
-/* Visible seulement quand la rame roule entre deux gares : accroché sous le
-   bandeau de phase, dans le langage sticker mais en rouge signalétique. */
+/* Visible seulement quand la rame roule entre deux gares. Posé seul, centré
+   au-dessus de la bande des réglages : à l'écart de la barre (en bas à
+   droite, qui peut s'étendre jusqu'au centre) comme des pastilles d'état
+   (en haut), il se lit comme une action et ne risque pas le clic
+   accidentel. Langage sticker, rouge signalétique. */
 .hud-emergency {
   position: fixed;
-  top: 74px;
-  right: 14px;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
   z-index: 20;
   display: flex;
   align-items: center;
@@ -425,7 +429,7 @@ body,
 }
 
 .hud-emergency:active {
-  transform: translateY(2px);
+  transform: translate(-50%, 2px);
   box-shadow: 0 1px 0 rgba(16, 21, 26, 0.85);
 }
 
@@ -569,12 +573,21 @@ body,
     font-size: 10px;
   }
 
-  /* Les pastilles du bandeau peuvent passer sur deux lignes ici : on laisse
-     davantage de place au-dessus du bouton. */
+  /* Ici la barre du bas occupe toute la largeur : le bouton rejoint la
+     colonne des actions du pouce droit, au-dessus de « S'asseoir », avec
+     une cible tactile à la taille de ce dernier. */
   .hud-emergency {
-    top: 92px;
-    font-size: 12px;
-    padding: 7px 11px;
+    left: auto;
+    right: 24px;
+    bottom: 156px;
+    transform: none;
+    font-size: 14px;
+    padding: 11px 16px;
+    border-radius: 14px;
+  }
+
+  .hud-emergency:active {
+    transform: translateY(2px);
   }
 
   .hud-bottom {
