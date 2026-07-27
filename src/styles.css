@@ -395,6 +395,49 @@ body,
   color: #b3261e;
 }
 
+/* --- Bouton SOS (arrêt d'urgence manuel) --- */
+
+/* Visible seulement quand la rame roule entre deux gares : accroché sous le
+   bandeau de phase, dans le langage sticker mais en rouge signalétique. */
+.hud-emergency {
+  position: fixed;
+  top: 74px;
+  right: 14px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  background: #c22a21;
+  border: 2px solid var(--ink-line);
+  border-radius: 11px;
+  padding: 8px 14px;
+  cursor: pointer;
+  box-shadow: var(--sticker-shadow);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.1s ease;
+}
+
+.hud-emergency:hover {
+  background: #a91f17;
+}
+
+.hud-emergency:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(16, 21, 26, 0.85);
+}
+
+/* Pastille « bouton coup de poing » : anneau blanc, cœur rouge. */
+.hud-emergency-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  flex: none;
+}
+
 /* --- Réticule --- */
 
 .hud-reticle {
@@ -524,6 +567,14 @@ body,
 
   .hud-occupancy-label {
     font-size: 10px;
+  }
+
+  /* Les pastilles du bandeau peuvent passer sur deux lignes ici : on laisse
+     davantage de place au-dessus du bouton. */
+  .hud-emergency {
+    top: 92px;
+    font-size: 12px;
+    padding: 7px 11px;
   }
 
   .hud-bottom {

@@ -55,14 +55,17 @@ function scheduleNextRunSound(from: number): void {
 
 // --- Arrêt d'urgence (急停車) -------------------------------------------
 // Très rare : tiré au sort à chaque entrée en cruise, déclenché en pleine
-// course. Le train freine en urgence, reste immobilisé 1 à 5 min avec les
-// annonces conducteur, puis repart. Le chrono de phase est avancé au prorata
+// course (ou à la demande, via le bouton SOS du HUD). Le train freine en
+// urgence, reste immobilisé de 45 s à 2 min 30 avec les annonces conducteur,
+// puis repart. Le chrono de phase est avancé au prorata
 // de la vitesse pendant tout l'événement : gelé à l'arrêt, il ne consomme que
 // l'équivalent de la distance réellement parcourue — la gare suivante arrive
 // donc au bon moment après la reprise.
 const EMERGENCY_PROBABILITY = 0.015; // ~1 station sur 67, soit ~1 fois / 2 h
-const EMERGENCY_HOLD_MIN = 60; // s
-const EMERGENCY_HOLD_MAX = 300; // s
+// Bornes d'immobilisation : le minimum laisse l'annonce d'arrêt (~21 s à
+// partir de t=4) se terminer avant l'annonce de reprise (à holdFor − 12 s).
+const EMERGENCY_HOLD_MIN = 45; // s
+const EMERGENCY_HOLD_MAX = 150; // s
 
 // Instant de déclenchement dans la phase cruise courante, -1 = aucun.
 let emergencyAt = -1;
@@ -103,7 +106,7 @@ function updateEmergencyStop(dt: number): void {
       // Annonce conducteur ~4 s après l'immobilisation.
       once('em-stopped', em.t >= 4, () => say(emergencyStopAnnouncement(em.reason)));
       // Rappel d'attente à mi-arrêt, seulement si l'arrêt se prolonge.
-      once('em-wait', em.holdFor >= 160 && em.t >= em.holdFor * 0.55, () =>
+      once('em-wait', em.holdFor >= 90 && em.t >= em.holdFor * 0.55, () =>
         say(emergencyWaitAnnouncement()),
       );
       // Annonce de reprise, puis desserrage et redémarrage.

@@ -111,10 +111,11 @@ export const runtime = {
    */
   autonomousDepartureSequence: false,
   /**
-   * Arrêt d'urgence en pleine voie (急停車), très rare : freinage d'urgence,
-   * immobilisation de 1 à 5 min avec annonces, puis reprise. Piloté par
-   * stationCycle, uniquement pendant la phase cruise (le chrono de phase est
-   * gelé à l'arrêt, avancé au prorata de la vitesse pendant freinage/reprise).
+   * Arrêt d'urgence en pleine voie (急停車), rare ou déclenché via le bouton
+   * SOS : freinage d'urgence, immobilisation de 45 s à 2 min 30 avec
+   * annonces, puis reprise. Piloté par stationCycle, uniquement pendant la
+   * phase cruise (le chrono de phase est gelé à l'arrêt, avancé au prorata
+   * de la vitesse pendant freinage/reprise).
    */
   emergencyStop: {
     stage: 'none' as 'none' | 'braking' | 'stopped' | 'resuming',
