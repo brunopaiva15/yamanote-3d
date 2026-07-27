@@ -14,6 +14,7 @@ import { qualityLevel, usePerf, type PerfLevel } from '../systems/perf';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { segEnv } from '../systems/segmentEnv';
+import { applyShadowFlags } from './shadowFlags';
 
 const LAMP_POSITIONS: [number, number, number][] = [
   [0, 2.16, -7.5],
@@ -55,21 +56,12 @@ function EnvironmentMap(): null {
   return null;
 }
 
-// Ombres portées du soleil : activation en une passe sur toute la scène.
-// Les matériaux transparents (vitres, fondu du quai) ne projettent pas ;
-// les matériaux non éclairés (ville, ciel, écrans) sont ignorés.
+// Activation en une passe sur toute la scène, au montage. Ce qui est construit
+// hors React après coup appelle applyShadowFlags lui-même (voir shadowFlags.ts).
 function ShadowFlags(): null {
   const { scene } = useThree();
   useEffect(() => {
-    scene.traverse((obj) => {
-      const mesh = obj as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      const mat = mesh.material as THREE.Material;
-      if (mat instanceof THREE.MeshStandardMaterial) {
-        mesh.receiveShadow = true;
-        if (!mat.transparent) mesh.castShadow = true;
-      }
-    });
+    applyShadowFlags(scene);
   }, [scene]);
   return null;
 }

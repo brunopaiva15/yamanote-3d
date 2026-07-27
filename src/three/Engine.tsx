@@ -9,6 +9,7 @@ import { updateCycle } from '../systems/stationCycle';
 import { updateDoorMotion } from '../systems/doorMotion';
 import { updateSegmentEnv } from '../systems/segmentEnv';
 import { updatePlatformPresence } from '../systems/platformPresence';
+import { updateStationOcclusion } from '../systems/stationOcclusion';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
 import { setPlatformDoors, updateAudio } from '../systems/audioEngine';
 import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
@@ -65,6 +66,8 @@ export function Engine(): null {
       updateCycle(cycleDt);
       updateSegmentEnv(cycleDt);
       updatePlatformPresence();
+      // Lit platformFade / platformSlide : doit venir après.
+      updateStationOcclusion();
     }
     if (physDt > 0) {
       updateDoorMotion(physDt);

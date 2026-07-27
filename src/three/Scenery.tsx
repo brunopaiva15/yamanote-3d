@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { segEnv } from '../systems/segmentEnv';
+import { hiddenByStation, sidePush } from '../systems/stationOcclusion';
 import { useStore, type Phase } from '../store';
 import { CONFIG } from '../data/config';
 import { DISTRICTS } from '../data/districts';
@@ -305,11 +306,16 @@ export function Scenery() {
     if (g) g.offset.y = runtime.distance / 10;
 
     // --- Portiques et arbres défilants ---
+    // Un mât de portique tombe à x = ±5.2, en plein milieu du quai : dans
+    // l'emprise de la gare, le portique s'efface (la caténaire y est portée
+    // par la charpente de l'auvent, comme en vrai).
     const span = POLE_COUNT * POLE_SPACING;
     for (let i = 0; i < POLE_COUNT; i++) {
       const pl = poles.current[i];
       if (!pl) continue;
-      pl.position.z = ((runtime.distance + i * POLE_SPACING) % span) - span / 2;
+      const z = ((runtime.distance + i * POLE_SPACING) % span) - span / 2;
+      pl.position.z = z;
+      pl.visible = !hiddenByStation(z);
     }
     const treeSpan = TREE_COUNT * TREE_SPACING;
     const treeScale = 1 + 0.18 * segEnv.green; // végétation renforcée (greenery)
@@ -317,8 +323,11 @@ export function Scenery() {
     for (let i = 0; i < TREE_COUNT; i++) {
       const t = trees.current[i];
       if (!t) continue;
+      const spec = treeSpecs[i];
+      const side = spec.x >= 0 ? 1 : -1;
       t.visible = treesVisible;
-      t.scale.setScalar(treeSpecs[i].scale * treeScale);
+      t.scale.setScalar(spec.scale * treeScale);
+      t.position.x = spec.x + side * sidePush(side);
       t.position.z = ((runtime.distance * 0.999 + i * TREE_SPACING + 9) % treeSpan) - treeSpan / 2;
     }
 

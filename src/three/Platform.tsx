@@ -17,14 +17,26 @@ import {
   makeAdTexture,
 } from '../textures/procedural';
 
-const PLATFORM_TOP = -0.06;
-const PSD_X = 1.78;
-const PSD_H = 1.32;
-const HALF_GAP = 0.9;
-const LEAF_W = 0.98;
-const LEAF_TRAVEL = 0.92;
-const PLATFORM_LEN = 96;
-const PLATFORM_DEPTH = 5.4;
+import {
+  CANOPY_Y,
+  PLATFORM_BACK_X,
+  PLATFORM_DEPTH,
+  PLATFORM_LEN,
+  PLATFORM_MID_X,
+  PLATFORM_TOP,
+  PSD_H,
+  PSD_LEAF_TRAVEL as LEAF_TRAVEL,
+  PSD_LEAF_W as LEAF_W,
+  PSD_HALF_GAP as HALF_GAP,
+  PSD_X,
+} from '../data/stationGeometry';
+
+/**
+ * Hauteur du mur de fond : il monte jusqu'à la sous-face de l'auvent. Tant
+ * qu'on ne voyait le quai que du wagon, un mur de 3,10 m suffisait ; debout
+ * dessus, la fente qui restait sous l'auvent laisse voir la ville par-dessus.
+ */
+const BACK_WALL_H = CANOPY_Y - 0.07 - PLATFORM_TOP;
 
 function psdLayout(): { segs: { z0: number; z1: number }[]; gaps: number[] } {
   const gaps: number[] = [];
@@ -159,13 +171,13 @@ export function Platform() {
     }
   });
 
-  const backX = 1.78 + PLATFORM_DEPTH - 0.15;
-  const midX = 1.78 + PLATFORM_DEPTH * 0.55;
+  const backX = PLATFORM_BACK_X;
+  const midX = PLATFORM_MID_X;
 
   return (
     <group ref={root} rotation={[0, doorSide === 1 ? 0 : Math.PI, 0]} visible={false}>
       {/* Dalle du quai */}
-      <mesh position={[1.78 + PLATFORM_DEPTH / 2, PLATFORM_TOP - 0.22, 0]} material={materials.slab} receiveShadow>
+      <mesh position={[PSD_X + PLATFORM_DEPTH / 2, PLATFORM_TOP - 0.22, 0]} material={materials.slab} receiveShadow>
         <boxGeometry args={[PLATFORM_DEPTH, 0.44, PLATFORM_LEN]} />
       </mesh>
       {/* Nez de quai caoutchouc */}
@@ -229,9 +241,9 @@ export function Platform() {
         }),
       )}
 
-      {/* Mur de fond du quai */}
-      <mesh position={[backX, PLATFORM_TOP + 1.55, 0]} material={materials.wall}>
-        <boxGeometry args={[0.18, 3.1, PLATFORM_LEN]} />
+      {/* Mur de fond du quai, jusqu'à la sous-face de l'auvent */}
+      <mesh position={[backX, PLATFORM_TOP + BACK_WALL_H / 2, 0]} material={materials.wall}>
+        <boxGeometry args={[0.18, BACK_WALL_H, PLATFORM_LEN]} />
       </mesh>
       {/* Bandeau sombre + frise verte JR */}
       <mesh position={[backX - 0.02, PLATFORM_TOP + 2.85, 0]} material={materials.wallDark}>
@@ -278,7 +290,7 @@ export function Platform() {
       </group>
 
       {/* Auvent + poutres + néons */}
-      <mesh position={[1.78 + PLATFORM_DEPTH / 2, PLATFORM_TOP + 3.55, 0]} material={materials.roof}>
+      <mesh position={[PSD_X + PLATFORM_DEPTH / 2, CANOPY_Y + 0.07, 0]} material={materials.roof}>
         <boxGeometry args={[PLATFORM_DEPTH + 0.4, 0.14, PLATFORM_LEN]} />
       </mesh>
       {columns.map((z) => (
@@ -290,7 +302,7 @@ export function Platform() {
           <mesh position={[backX - 0.55, PLATFORM_TOP + 1.35, z]} material={materials.green}>
             <boxGeometry args={[0.3, 0.16, 0.3]} />
           </mesh>
-          <mesh position={[1.78 + PLATFORM_DEPTH / 2, PLATFORM_TOP + 3.42, z]} material={materials.beam}>
+          <mesh position={[PSD_X + PLATFORM_DEPTH / 2, CANOPY_Y - 0.06, z]} material={materials.beam}>
             <boxGeometry args={[PLATFORM_DEPTH - 0.2, 0.16, 0.22]} />
           </mesh>
           {/* Néon sous auvent */}
