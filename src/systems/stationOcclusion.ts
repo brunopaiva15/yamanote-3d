@@ -13,11 +13,12 @@
 //     latéralement, pour continuer à occulter la ville derrière la gare.
 
 import { useStore } from '../store';
-import { PLATFORM_DEPTH, PLATFORM_LEN } from '../data/stationGeometry';
+import { layoutFor } from '../data/stationLayouts';
+import { PLATFORM_DEPTH } from '../data/stationGeometry';
 import { runtime } from './runtime';
 
 /** Écartement latéral appliqué aux plans longs quand le quai est là. */
-export const OCCLUSION_PUSH = PLATFORM_DEPTH + 1.4;
+export const OCCLUSION_PUSH = PLATFORM_DEPTH + 6;
 
 /** Marge longitudinale au-delà des bouts de quai (auvent, escaliers…). */
 const SPAN_MARGIN = 6;
@@ -37,7 +38,8 @@ export function updateStationOcclusion(): void {
   const fade = runtime.platformFade;
   stationOcclusion.active = fade;
   stationOcclusion.side = useStore.getState().doorSide;
-  const half = PLATFORM_LEN / 2 + SPAN_MARGIN;
+  const layout = layoutFor(useStore.getState().index);
+  const half = layout.length / 2 + SPAN_MARGIN;
   stationOcclusion.z0 = runtime.platformSlide - half;
   stationOcclusion.z1 = runtime.platformSlide + half;
   runtime.platformOcclusion = fade;

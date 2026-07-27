@@ -19,7 +19,7 @@ import { Scenery } from './three/Scenery';
 import { Landmarks } from './three/Landmarks';
 import { SegmentEnvironment } from './three/SegmentEnvironment';
 import { HubStationRoof } from './three/HubStationRoof';
-import { Platform } from './three/Platform';
+import { Station } from './three/station/Station';
 import { PlatformCrowd } from './three/PlatformCrowd';
 import { Passengers } from './three/Passengers';
 import { Player } from './three/Player';
@@ -60,7 +60,7 @@ export default function App() {
         <Landmarks />
         <SegmentEnvironment />
         <HubStationRoof />
-        <Platform />
+        <Station />
         <PlatformCrowd />
         <Player />
       </Canvas>
