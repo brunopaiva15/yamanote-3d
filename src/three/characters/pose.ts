@@ -324,10 +324,14 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
       vDir.normalize();
       const along = (l1 * l1 + d * d - l2 * l2) / (2 * d);
       const out = Math.sqrt(Math.max(0, l1 * l1 - along * along));
-      // Pole du coude : extérieur-bas-avant, orthogonalisé à l'axe épaule→cible.
-      vTarget.set(side * 0.8 + Math.sin(p.yaw) * 0.4, -0.35, Math.cos(p.yaw) * 0.4);
+      // Pole du coude : extérieur-bas-avant DU BRAS, dans le repère du
+      // PERSONNAGE (+X = sa gauche, bras droit → -X), orthogonalisé à l'axe
+      // épaule→cible. Un pole exprimé en espace monde (side de pos.x) tombait
+      // du mauvais côté pour la moitié des orientations : le coude passait en
+      // travers, PAR-DESSUS la tête — le fameux bras tordu vers l'arrière.
+      vTarget.set(-side * 0.9, -0.3, 0.15).applyQuaternion(qWrapOnly);
       vTarget.addScaledVector(vDir, -vTarget.dot(vDir));
-      if (vTarget.lengthSq() < 1e-6) vTarget.set(side, 0, 0);
+      if (vTarget.lengthSq() < 1e-6) vTarget.set(-side, 0, 0).applyQuaternion(qWrapOnly);
       vTarget.normalize();
       vFoot.copy(vBonePos).addScaledVector(vDir, along).addScaledVector(vTarget, out);
       aimBone(arm, vFoot, sw); // épaule vers le coude IK (l'avant-bras suit, rigide)
