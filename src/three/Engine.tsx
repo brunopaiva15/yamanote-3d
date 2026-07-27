@@ -12,7 +12,7 @@ import { updatePlatformPresence } from '../systems/platformPresence';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
 import { setPlatformDoors, updateAudio } from '../systems/audioEngine';
 import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
-import { perfLevel, updatePerfMonitor } from '../systems/perf';
+import { perfLevel, updatePerfCalibration, updatePerfMonitor } from '../systems/perf';
 
 /**
  * Plafond du dt cycle : borne les trous que l'API Visibility ne signale pas
@@ -50,7 +50,12 @@ export function Engine(): null {
     if (cycleDt <= 0 && physDt <= 0) return;
 
     const { phase, started } = useStore.getState();
-    if (!started) return;
+    if (!started) {
+      // Écran de démarrage : la scène tourne déjà — calibrage du palier de
+      // qualité pour embarquer directement au bon niveau.
+      if (!skipCycle) updatePerfCalibration(raw);
+      return;
+    }
 
     // Qualité adaptative : mesure du rythme réel (dt non plafonné, hors frame
     // de reprise d'onglet) ; si un palier vient d'être franchi, allège

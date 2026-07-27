@@ -23,14 +23,15 @@ const LAMP_POSITIONS: [number, number, number][] = [
   [0, 2.16, 7.5],
 ];
 
-// Palier 3 : plafonne la résolution de rendu (le fill-rate est souvent le
+// Paliers 3-4 : plafonne la résolution de rendu (le fill-rate est souvent le
 // goulot sur les écrans haute densité). En dessous, densité native (cap 2,
 // comme le dpr initial du Canvas).
 function AdaptiveDpr({ level }: { level: PerfLevel }): null {
   const setDpr = useThree((s) => s.setDpr);
   useEffect(() => {
     const native = Math.min(window.devicePixelRatio || 1, 2);
-    setDpr(level >= 3 ? Math.min(native, 1.25) : native);
+    const cap = level >= 4 ? 1 : level >= 3 ? 1.25 : native;
+    setDpr(Math.min(native, cap));
   }, [level, setDpr]);
   return null;
 }
@@ -194,12 +195,15 @@ export function Scene() {
   // dégradations détectées, donc quelques re-renders par session au plus.
   const perfLevel = usePerf((s) => s.level);
 
-  // Palier 2 : néons du wagon espacés (un pointLight sur deux), légèrement
-  // poussés pour garder une luminosité d'ensemble comparable.
-  const lampPositions = perfLevel >= 2
-    ? LAMP_POSITIONS.filter((_, i) => i % 2 === 0)
-    : LAMP_POSITIONS;
-  const lampIntensity = perfLevel >= 2 ? 3.6 : 3.0;
+  // Palier 2 : néons du wagon espacés (un pointLight sur deux) ; palier 4 :
+  // deux seulement — à chaque fois légèrement poussés pour garder une
+  // luminosité d'ensemble comparable.
+  const lampPositions = perfLevel >= 4
+    ? [LAMP_POSITIONS[1], LAMP_POSITIONS[3]]
+    : perfLevel >= 2
+      ? LAMP_POSITIONS.filter((_, i) => i % 2 === 0)
+      : LAMP_POSITIONS;
+  const lampIntensity = perfLevel >= 4 ? 4.2 : perfLevel >= 2 ? 3.6 : 3.0;
 
   return (
     <>
@@ -238,17 +242,18 @@ export function Scene() {
           <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.05} />
           <Vignette eskil={false} offset={0.32} darkness={0.42} />
         </EffectComposer>
-      ) : (
-        /* Paliers 2+ : l'occlusion ambiante (le post-effet le plus coûteux)
-           est coupée ; le reste de l'étalonnage est conservé pour ne pas
-           changer la signature visuelle du jeu. */
-        <EffectComposer>
+      ) : perfLevel < 4 ? (
+        /* Paliers 2-3 : l'occlusion ambiante (le post-effet le plus coûteux)
+           est coupée et le multisampling réduit ; le reste de l'étalonnage est
+           conservé pour ne pas changer la signature visuelle du jeu. */
+        <EffectComposer multisampling={2}>
           <Bloom intensity={CONFIG.bloom} luminanceThreshold={0.9} luminanceSmoothing={0.2} mipmapBlur />
           <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
           <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.05} />
           <Vignette eskil={false} offset={0.32} darkness={0.42} />
         </EffectComposer>
-      )}
+      ) : null /* Palier 4 : rendu direct, aucun post-processing — le tone
+           mapping filmique par défaut du renderer prend le relais. */}
     </>
   );
 }
