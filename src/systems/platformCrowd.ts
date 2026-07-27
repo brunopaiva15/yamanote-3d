@@ -257,6 +257,24 @@ function advanceWalk(p: CrowdPax, dt: number, onDone: () => void): void {
   p.headPitch += (0 - p.headPitch) * Math.min(1, dt * 5);
 }
 
+/**
+ * Rayon d'évitement autour du joueur quand il est sur le quai. Personne ne
+ * traverse personne : sans cela, un promeneur passerait au travers de la tête
+ * du joueur, ce qui n'arrive jamais dans un vrai couloir.
+ */
+const PLAYER_CLEARANCE = 0.62;
+
+function avoidPlayer(p: CrowdPax): void {
+  if (runtime.playerFrame !== 'platform') return;
+  const dx = p.pos.x - runtime.playerPlatX;
+  const dz = p.pos.z - runtime.playerPlatZ;
+  const d = Math.hypot(dx, dz);
+  if (d >= PLAYER_CLEARANCE || d < 1e-4) return;
+  const push = (PLAYER_CLEARANCE - d) / d;
+  p.pos.x += dx * push;
+  p.pos.z += dz * push;
+}
+
 export function updatePlatformCrowd(dt: number): void {
   const presence = runtime.platformFade;
   if (presence < 0.04) {
@@ -269,6 +287,7 @@ export function updatePlatformCrowd(dt: number): void {
 
     p.actionT += dt;
     p.bobPhase += dt;
+    avoidPlayer(p);
 
     if (p.state === 'patrolling') {
       advanceWalk(p, dt, () => {

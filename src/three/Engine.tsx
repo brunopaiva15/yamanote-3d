@@ -1,7 +1,8 @@
 // Boucle 60 fps unique : toute la logique par frame passe par ici, aucune
 // mise à jour d'état React par frame ailleurs.
 
-import { useFrame } from '@react-three/fiber';
+import { useEffect } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import { V_MAX } from '../data/config';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
@@ -41,6 +42,21 @@ if (typeof document !== 'undefined') {
 }
 
 export function Engine(): null {
+  const gl = useThree((s) => s.gl);
+
+  // Outil dev : __renderInfo() donne le coût de la frame précédente. Sert à
+  // vérifier qu'ajouter la gare et l'extérieur de la rame ne change rien au
+  // budget quand on est simplement assis dans le wagon.
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof window === 'undefined') return;
+    (window as unknown as Record<string, unknown>).__renderInfo = () => ({
+      calls: gl.info.render.calls,
+      triangles: gl.info.render.triangles,
+      geometries: gl.info.memory.geometries,
+      textures: gl.info.memory.textures,
+    });
+  }, [gl]);
+
   useFrame((_, rawDt) => {
     const raw = Math.max(0, rawDt);
     const skipCycle = tabJustResumed;

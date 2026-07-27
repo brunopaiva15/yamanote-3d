@@ -18,6 +18,7 @@ import { useStore } from '../../store';
 import { runtime } from '../../systems/runtime';
 import { psdDoorPos, psdGateLag } from '../../systems/doorMotion';
 import { placementFor } from '../../systems/stationPlacement';
+import { platformDetail } from '../../systems/perf';
 import { layoutFor, type StationPalette } from '../../data/stationLayouts';
 import {
   PLATFORM_TOP,
@@ -165,6 +166,7 @@ export function Station() {
   const layout = layoutFor(index);
   const { segs, gaps } = useMemo(() => psdLayout(layout.length), [layout.length]);
   const place = useMemo(() => placementFor(index, gaps), [index, gaps]);
+  const detail = platformDetail();
   const halfZ = layout.length / 2;
   const backX = place.backX;
   const depth = layout.depth;
@@ -227,11 +229,15 @@ export function Station() {
   );
   const lamps = useMemo(
     () =>
-      place.columns.flatMap((z) => [
-        mat(PSD_X + depth * 0.28, canopyY - 0.11, z + layout.columnSpacing / 2, 1.7, 0.05, 0.14),
-        mat(PSD_X + depth * 0.72, canopyY - 0.11, z, 1.7, 0.05, 0.14),
-      ]),
-    [place.columns, depth, canopyY, layout.columnSpacing],
+      place.columns.flatMap((z) =>
+        detail >= 2
+          ? [mat(PSD_X + depth * 0.5, canopyY - 0.11, z, 1.7, 0.05, 0.14)]
+          : [
+              mat(PSD_X + depth * 0.28, canopyY - 0.11, z + layout.columnSpacing / 2, 1.7, 0.05, 0.14),
+              mat(PSD_X + depth * 0.72, canopyY - 0.11, z, 1.7, 0.05, 0.14),
+            ],
+      ),
+    [place.columns, depth, canopyY, layout.columnSpacing, detail],
   );
   const queue = useMemo(
     () => place.queueMarks.map((q) => mat(q.x, PLATFORM_TOP + 0.006, q.z, 0.9, 1, 0.5)),
@@ -414,10 +420,12 @@ export function Station() {
         <planeGeometry args={[1, 1]} />
       </instancedMesh>
 
-      <Amenities place={place} canopyY={canopyY} m={m} />
+      {detail <= 2 && <Amenities place={place} canopyY={canopyY} m={m} />}
 
       {/* Charpente propre aux trois gares signature. */}
-      {layout.signature && <Signature layout={layout} backX={backX} materials={m} />}
+      {layout.signature && detail === 0 && (
+        <Signature layout={layout} backX={backX} materials={m} />
+      )}
 
       <PlatformSignage
         hangX={midX + 0.7}
