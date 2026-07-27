@@ -39,7 +39,66 @@ import {
 const fired = new Set<string>();
 let lastJointDistance = 0;
 
-const ACCEL_RATE = 1.15; // m/s² — doit rester aligné avec updateCycle
+// Prochain petit événement sonore de course (temps de phase cruise), -1 = aucun.
+let nextRunSoundAt = -1;
+
+function scheduleNextRunSound(from: number): void {
+  nextRunSoundAt = from + 14 + Math.random() * 22;
+}
+
+// --- Profil de traction / freinage type E235 ---------------------------
+// Départ : le train reste immobile quelques secondes après la fin du dwell
+// (desserrage des freins), puis la traction monte progressivement (jerk
+// limité) jusqu'à ~0,84 m/s² (3,0 km/h/s), qui s'essouffle au-delà de
+// ~40 km/h (zone à puissance constante). 90 km/h est atteint en ~45 s.
+// Freinage : application progressive, ~1,35 m/s² en service, puis desserrage
+// graduel sous ~11 km/h pour un arrêt sans à-coup (~21 s depuis 90 km/h).
+const DEPART_HOLD = 3.0; // s immobile en début de phase depart
+const ACCEL_MAX = 0.84; // m/s²
+const ACCEL_TAPER_V = 11; // m/s : au-delà, accel = ACCEL_MAX·TAPER_V/v
+const BRAKE_MAX = 1.35; // m/s²
+const BRAKE_MIN = 0.35; // m/s² résiduel à l'approche de l'arrêt
+const BRAKE_EASE_V = 3; // m/s : desserrage progressif sous cette vitesse
+const JERK_UP = 0.55; // m/s³ : montée de traction / relâchement du frein
+const JERK_DOWN = 1.0; // m/s³ : application du frein / coupure de traction
+
+function accelCap(v: number): number {
+  return v <= ACCEL_TAPER_V ? ACCEL_MAX : (ACCEL_MAX * ACCEL_TAPER_V) / v;
+}
+
+function brakeCap(v: number): number {
+  return BRAKE_MIN + (BRAKE_MAX - BRAKE_MIN) * Math.min(1, v / BRAKE_EASE_V);
+}
+
+// Un pas d'intégration du profil : mêmes équations pour la boucle 60 fps
+// (updateCycle) et le repositionnement au spawn (speedFor).
+function stepTrain(
+  state: { v: number; a: number; d: number },
+  target: number,
+  dt: number,
+): void {
+  let aTarget = 0;
+  if (state.v < target - 0.01) {
+    // Approche douce de la vitesse cible : la traction se relâche d'elle-même.
+    aTarget = Math.min(accelCap(state.v), (target - state.v) / 1.2);
+  } else if (state.v > target + 0.001) {
+    aTarget = -brakeCap(state.v);
+  }
+  const da = aTarget - state.a;
+  const lim = da > 0 ? JERK_UP * dt : -JERK_DOWN * dt;
+  state.a += Math.abs(da) < Math.abs(lim) ? da : lim;
+  const before = state.v;
+  state.v = Math.max(0, Math.min(V_MAX, state.v + state.a * dt));
+  if (state.v === 0 || state.v === V_MAX) state.a = dt > 0 ? (state.v - before) / dt : 0;
+  state.d += state.v * dt;
+}
+
+/** Vitesse cible de la phase courante (0 pendant le hold de départ). */
+function phaseTarget(phase: Phase, t: number): number {
+  if (phase === 'cruise') return V_MAX;
+  if (phase === 'depart') return t < DEPART_HOLD ? 0 : V_MAX;
+  return 0;
+}
 
 /** Durée des clips originaux (s), imprimée par scripts/melodies-gen.py. */
 const INNER_MAIN_MELODY_SECS = 8.6;
@@ -60,7 +119,15 @@ const KANDA_INNER_MONDAMIN_B_SECS = 7.6;
 const IKEBUKURO_INNER_BIC_CAMERA_A_SECS = 8.0;
 const IKEBUKURO_INNER_BIC_CAMERA_B_SECS = 7.3;
 /** Marge entre fin de mélodie et annonce de fermeture. */
-const MELODY_TO_ANNOUNCE_GAP = 3.5;
+const MELODY_TO_ANNOUNCE_GAP = 1.5;
+/**
+ * Avance de l'annonce de fermeture sur la fin du dwell : les clips ja + en
+ * durent ~6,4 s à eux deux — l'anglais doit être terminé avant que la rame ne
+ * s'ébranle (fin du dwell + DEPART_HOLD).
+ */
+const CLOSE_ANNOUNCE_LEAD = 7.0;
+/** Avance de la fermeture des portes sur la fin du dwell. */
+const DOORS_CLOSE_LEAD = 4.0;
 
 function melodyBudgetSeconds(stationIndex: number): number {
   // Sans clips (flag coupé) : budget de la synthèse Tone.js uniquement.
@@ -99,13 +166,13 @@ function melodyBudgetSeconds(stationIndex: number): number {
 /** Dwell assez long pour laisser finir la 発車メロディ avant l'annonce. */
 function dwellDuration(stationIndex: number): number {
   const budget = melodyBudgetSeconds(stationIndex);
-  // ~2 s après ouverture pour l'échange + mélodie + marge avant annonce.
-  return Math.max(CONFIG.dwellTime, 2 + budget + MELODY_TO_ANNOUNCE_GAP);
+  // ~2 s après ouverture pour l'échange + mélodie + marge + annonce complète.
+  return Math.max(CONFIG.dwellTime, 2 + budget + MELODY_TO_ANNOUNCE_GAP + CLOSE_ANNOUNCE_LEAD);
 }
 
 function melodyStartAt(stationIndex: number, dwell: number): number {
   const budget = melodyBudgetSeconds(stationIndex);
-  return Math.max(2, dwell - MELODY_TO_ANNOUNCE_GAP - budget);
+  return Math.max(2, dwell - CLOSE_ANNOUNCE_LEAD - MELODY_TO_ANNOUNCE_GAP - budget);
 }
 
 const PHASE_ORDER = [
@@ -132,29 +199,45 @@ function enterPhase(phase: Phase): void {
   }
   if (phase === 'depart') {
     resetMelodyDepartureGuard();
+    // Le quai glisse désormais avec la distance réellement parcourue.
+    runtime.departStartDist = runtime.distance;
   }
+  if (phase === 'cruise') scheduleNextRunSound(6);
   if (phase !== 'dwell') cancelDepartureMelody();
 }
 
-function brakeRate(): number {
-  return (V_MAX / CONFIG.brakeTime) * 1.18;
+// État du train (vitesse, accélération, distance) au temps t d'une phase,
+// par intégration du même profil que la boucle : sert au spawn en cours de
+// trajet (randomizeEntry).
+function simulatePhaseState(phase: Phase, t: number): { v: number; a: number; d: number } {
+  const state = { v: 0, a: 0, d: 0 };
+  if (phase === 'dwell') return state;
+  const dt = 0.05;
+  if (phase === 'brake') {
+    state.v = V_MAX;
+    for (let x = 0; x < t; x += dt) stepTrain(state, 0, Math.min(dt, t - x));
+    return state;
+  }
+  const departSpan = phase === 'depart' ? t : CONFIG.departTime;
+  for (let x = 0; x < departSpan; x += dt) {
+    stepTrain(state, phaseTarget('depart', x), Math.min(dt, departSpan - x));
+  }
+  if (phase === 'cruise') {
+    for (let x = 0; x < t; x += dt) stepTrain(state, V_MAX, Math.min(dt, t - x));
+  }
+  return state;
 }
 
 // Vitesse cohérente avec le profil accélération / freinage du cycle.
 function speedFor(phase: Phase, t: number): number {
-  if (phase === 'dwell') return 0;
-  if (phase === 'brake') return Math.max(0, V_MAX - brakeRate() * t);
-  if (phase === 'depart') return Math.min(V_MAX, ACCEL_RATE * t);
-  // Cruise : on arrive déjà lancé après la phase depart.
-  const afterDepart = Math.min(V_MAX, ACCEL_RATE * CONFIG.departTime);
-  return Math.min(V_MAX, afterDepart + ACCEL_RATE * t);
+  return simulatePhaseState(phase, t).v;
 }
 
 function seedDoorsForDwell(t: number, stationIndex: number): void {
   randomizeDoorTimings();
   const dwell = dwellDuration(stationIndex);
   const openAt = 0.4;
-  const closeAt = dwell - 1.8;
+  const closeAt = dwell - DOORS_CLOSE_LEAD;
   const psdOpenAt = openAt + stationTimings.psdOpenDelay;
   const psdCloseAt = closeAt + stationTimings.psdCloseDelay;
 
@@ -192,20 +275,23 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
     if (t > 0.6) fired.add('announce-depart');
   } else if (phase === 'brake') {
     fired.add('door-timings');
+    fired.add('brake-apply');
     fired.add('jingle');
     fired.add('crowd-seed');
     if (t > 0.8) fired.add('announce-soon');
+    if (speedFor('brake', t) <= 0.01) fired.add('stop-settle');
   } else if (phase === 'dwell') {
     const dwell = dwellDuration(stationIndex);
     if (t > 0.4) fired.add('doors-open');
     if (t > 0.4 + stationTimings.psdOpenDelay) fired.add('psd-open');
     if (t > 1.6) fired.add('exchange');
     if (t >= melodyStartAt(stationIndex, dwell)) fired.add('melody');
-    if (t >= dwell - 3.5) fired.add('announce-close');
-    if (t >= dwell - 1.8) fired.add('doors-close');
-    if (t >= dwell - 1.8 + stationTimings.psdCloseDelay) fired.add('psd-close');
+    if (t >= dwell - CLOSE_ANNOUNCE_LEAD) fired.add('announce-close');
+    if (t >= dwell - DOORS_CLOSE_LEAD) fired.add('doors-close');
+    if (t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay) fired.add('psd-close');
   } else if (phase === 'depart') {
     fired.add('advance');
+    if (t >= DEPART_HOLD - 1.2) fired.add('brake-release');
   }
 }
 
@@ -236,7 +322,7 @@ export function randomizeEntry(): void {
   const index = phase === 'depart' ? (station + 1) % 30 : station;
   const doorStation = phase === 'depart' ? station : index;
   const doorSide = DOOR_SIDE[doorStation];
-  const speed = speedFor(phase, phaseT);
+  const sim = simulatePhaseState(phase, phaseT);
 
   const store = useStore.getState();
   store.setPhase(phase);
@@ -245,12 +331,15 @@ export function randomizeEntry(): void {
   audio.setPlatformSide(doorSide);
 
   runtime.phaseT = phaseT;
-  runtime.speed = speed;
-  runtime.accel = 0;
+  runtime.speed = sim.v;
+  runtime.accel = sim.a;
   runtime.distance = Math.random() * 8000;
+  // En depart, le quai est déjà parti de la distance simulée depuis l'arrêt.
+  runtime.departStartDist = runtime.distance - (phase === 'depart' ? sim.d : 0);
   runtime.swayTime = Math.random() * 40;
   runtime.sway = 0;
   if (phase === 'dwell') runtime.stopSequence += 1;
+  if (phase === 'cruise') scheduleNextRunSound(phaseT + 4);
   lastJointDistance = runtime.distance;
 
   if (phase === 'brake') randomizeDoorTimings();
@@ -273,13 +362,14 @@ export function updateCycle(dt: number): void {
   runtime.phaseT += dt;
   advanceClock(dt);
 
-  // --- Physique du train : approche douce de la vitesse cible ---
-  const target = s.phase === 'cruise' || s.phase === 'depart' ? V_MAX : 0;
-  const before = runtime.speed;
-  if (runtime.speed < target) runtime.speed = Math.min(target, runtime.speed + ACCEL_RATE * dt);
-  else if (runtime.speed > target) runtime.speed = Math.max(target, runtime.speed - brakeRate() * dt);
-  runtime.accel = (runtime.speed - before) / dt;
-  runtime.distance += runtime.speed * dt;
+  // --- Physique du train : profil jerk-limité type E235 ---
+  // Sous-pas de 0,1 s max : un dt de rattrapage (onglet lent) resterait stable.
+  const target = phaseTarget(s.phase, runtime.phaseT);
+  const state = { v: runtime.speed, a: runtime.accel, d: runtime.distance };
+  for (let left = dt; left > 1e-6; left -= 0.1) stepTrain(state, target, Math.min(0.1, left));
+  runtime.speed = state.v;
+  runtime.accel = state.a;
+  runtime.distance = state.d;
 
   // --- Balancement du wagon, proportionnel à la vitesse ---
   runtime.swayTime += dt;
@@ -310,12 +400,23 @@ export function updateCycle(dt: number): void {
       once('announce-depart', t > 0.6, () =>
         say(departureSequence(s.index, DOOR_SIDE[s.index])),
       );
+      // Petits événements sonores de course, rares et discrets : crissement
+      // de boudin dans une courbe, purge d'air sous le plancher.
+      if (nextRunSoundAt >= 0 && t >= nextRunSoundAt) {
+        if (s01 > 0.5) {
+          if (Math.random() < 0.6) audio.flangeSqueal(0.35 + Math.random() * 0.5);
+          else audio.airCompressorPurge();
+        }
+        scheduleNextRunSound(t);
+      }
       if (t >= CONFIG.cruiseTime) enterPhase('brake');
       break;
     }
     case 'brake': {
       // Nouveau tirage des retards de portes pour cette gare.
       once('door-timings', true, () => randomizeDoorTimings());
+      // Mise en action des freins : purge d'air au tout début du freinage.
+      once('brake-apply', true, () => audio.brakeApply());
       once('jingle', true, () => audio.arrivalJingle());
       // Foule déjà en place dès le début du freinage : on la voit arriver
       // avec le quai, opaque, le long des vitres.
@@ -324,8 +425,11 @@ export function updateCycle(dt: number): void {
       once('announce-soon', t > 0.8, () =>
         say(approachSequence(s.index, DOOR_SIDE[s.index])),
       );
+      // Immobilisation : léger tassement de caisse + serrage à l'arrêt.
+      once('stop-settle', t > 1 && runtime.speed <= 0.01, () => audio.stopSettle());
       if (t >= CONFIG.brakeTime) {
         runtime.speed = 0;
+        runtime.accel = 0;
         enterPhase('dwell');
       }
       break;
@@ -349,17 +453,28 @@ export function updateCycle(dt: number): void {
         cancelDepartureMelody();
         if (runtime.doorTarget !== 1) setTrainDoors(1);
         if (runtime.psdTarget !== 1) setPsdDoors(1);
+        // On retient l'horloge avant la séquence de fermeture et on réarme
+        // ses événements : au déblocage, annonce → fermeture → départ se
+        // rejouent dans l'ordre au lieu de partir tous dans la même frame.
+        runtime.phaseT = Math.min(runtime.phaseT, dwell - CLOSE_ANNOUNCE_LEAD - 1);
+        fired.delete('announce-close');
+        fired.delete('doors-close');
+        fired.delete('psd-close');
         break;
       }
 
-      once('announce-close', t >= dwell - 3.5, () => say(doorsClosingAnnouncement()));
-      once('doors-close', t >= dwell - 1.8, () => {
+      once('announce-close', t >= dwell - CLOSE_ANNOUNCE_LEAD, () =>
+        say(doorsClosingAnnouncement()),
+      );
+      once('doors-close', t >= dwell - DOORS_CLOSE_LEAD, () => {
         setTrainDoors(0);
         audio.doorCloseChime();
       });
       // Puis le quai referme ses portes, nettement après la rame, avec un
       // décalage lui aussi variable selon la gare.
-      once('psd-close', t >= dwell - 1.8 + stationTimings.psdCloseDelay, () => setPsdDoors(0));
+      once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () =>
+        setPsdDoors(0),
+      );
       if (t >= dwell) enterPhase('depart');
       break;
     }
@@ -370,6 +485,8 @@ export function updateCycle(dt: number): void {
           dir === 'outer' ? (s.index - 1 + 30) % 30 : (s.index + 1) % 30;
         s.setIndex(next);
       });
+      // Desserrage des freins juste avant la mise en mouvement.
+      once('brake-release', t >= DEPART_HOLD - 1.2, () => audio.brakeRelease());
       if (t >= CONFIG.departTime) enterPhase('cruise');
       break;
     }
