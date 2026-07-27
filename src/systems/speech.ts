@@ -302,8 +302,7 @@ function speakTtsItem(item: QueueItem & { kind: 'tts' }): void {
   u.lang = item.lang;
   const voice = item.lang === 'ja-JP' ? jaVoice : enVoice;
   if (voice) u.voice = voice;
-  // Débit posé d'annonce automatique, aligné sur les clips Kokoro (ja 0.85).
-  u.rate = item.lang === 'ja-JP' ? 0.85 : 0.9;
+  u.rate = item.lang === 'ja-JP' ? 0.97 : 0.9;
   u.pitch = 1.03;
   // Le niveau suit le volume du site et la distance au diffuseur le plus proche :
   // sous une grille l'annonce claque, au milieu de deux portes elle recule.

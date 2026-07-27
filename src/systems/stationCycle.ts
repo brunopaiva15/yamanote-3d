@@ -212,7 +212,7 @@ const IKEBUKURO_INNER_BIC_CAMERA_B_SECS = 7.3;
 const MELODY_TO_ANNOUNCE_GAP = 1.5;
 /**
  * Avance de l'annonce de fermeture sur la fin du dwell : les clips ja + en
- * durent ~6,8 s à eux deux — l'anglais doit être terminé avant que la rame ne
+ * durent ~6,5 s à eux deux — l'anglais doit être terminé avant que la rame ne
  * s'ébranle (fin du dwell + DEPART_HOLD).
  */
 const CLOSE_ANNOUNCE_LEAD = 7.0;
