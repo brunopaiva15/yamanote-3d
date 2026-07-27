@@ -328,13 +328,17 @@ export function Seats() {
                     </mesh>
                   );
                 })}
-              {/* Panneaux d'extrémité laqués ajourés */}
+              {/* Panneaux d'extrémité laqués ajourés. La rotation de 180° du
+                  côté s = 1 inverse la direction d'extrusion : le décalage qui
+                  centre l'épaisseur sur le bout de banquette change donc de
+                  signe avec le côté, sinon le panneau glisse de toute son
+                  épaisseur et le coussin dépasse. */}
               {[b.z0, b.z1].map((z, k) => (
                 <mesh
                   key={`panel${k}`}
                   geometry={geos.panel}
                   material={materials.shell}
-                  position={[s * WALL_X, 0, z - 0.0175]}
+                  position={[s * WALL_X, 0, z + s * 0.0175]}
                   rotation={[0, s === 1 ? Math.PI : 0, 0]}
                 />
               ))}
