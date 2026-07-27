@@ -6,6 +6,8 @@ import { CONFIG, V_MAX } from '../data/config';
 import {
   ENABLE_DEPARTURE_MELODY_CLIPS,
   innerMainMelodyPlatforms,
+  MELODY_REPEATS,
+  MELODY_REPEAT_GAP_S,
   outerMainMelodyPlatforms,
   SESERAGI_PLATFORMS,
 } from '../data/melodies';
@@ -210,12 +212,20 @@ const IKEBUKURO_INNER_BIC_CAMERA_B_SECS = 7.3;
 const MELODY_TO_ANNOUNCE_GAP = 1.5;
 /**
  * Avance de l'annonce de fermeture sur la fin du dwell : les clips ja + en
- * durent ~6,4 s à eux deux — l'anglais doit être terminé avant que la rame ne
+ * durent ~6,8 s à eux deux — l'anglais doit être terminé avant que la rame ne
  * s'ébranle (fin du dwell + DEPART_HOLD).
  */
 const CLOSE_ANNOUNCE_LEAD = 7.0;
 /** Avance de la fermeture des portes sur la fin du dwell. */
 const DOORS_CLOSE_LEAD = 4.0;
+/**
+ * Départ de l'annonce d'approche avant la fin de la croisière. Aux gares à
+ * grosses correspondances (Ueno, Tokyo, Shinjuku…), まもなく + 乗換案内 ja/en
+ * cumulent ~40 s : lancée au freinage (22 s), la séquence déborderait loin
+ * après l'ouverture des portes. Comme en vrai, elle démarre en pleine course
+ * et se termine autour de l'arrêt.
+ */
+const APPROACH_ANNOUNCE_LEAD = 20.0;
 
 function melodyBudgetSeconds(stationIndex: number): number {
   // Sans clips (flag coupé) : budget de la synthèse Tone.js uniquement.
@@ -251,16 +261,24 @@ function melodyBudgetSeconds(stationIndex: number): number {
   return 6.5;
 }
 
+/** Fenêtre sonore de la mélodie : MELODY_REPEATS passages + respirations. */
+function melodyWindowSeconds(stationIndex: number): number {
+  return (
+    MELODY_REPEATS * melodyBudgetSeconds(stationIndex) +
+    (MELODY_REPEATS - 1) * MELODY_REPEAT_GAP_S
+  );
+}
+
 /** Dwell assez long pour laisser finir la 発車メロディ avant l'annonce. */
 function dwellDuration(stationIndex: number): number {
-  const budget = melodyBudgetSeconds(stationIndex);
-  // ~2 s après ouverture pour l'échange + mélodie + marge + annonce complète.
-  return Math.max(CONFIG.dwellTime, 2 + budget + MELODY_TO_ANNOUNCE_GAP + CLOSE_ANNOUNCE_LEAD);
+  const window = melodyWindowSeconds(stationIndex);
+  // ~2 s après ouverture pour l'échange + mélodie (2 passages) + marge + annonce.
+  return Math.max(CONFIG.dwellTime, 2 + window + MELODY_TO_ANNOUNCE_GAP + CLOSE_ANNOUNCE_LEAD);
 }
 
 function melodyStartAt(stationIndex: number, dwell: number): number {
-  const budget = melodyBudgetSeconds(stationIndex);
-  return Math.max(2, dwell - CLOSE_ANNOUNCE_LEAD - MELODY_TO_ANNOUNCE_GAP - budget);
+  const window = melodyWindowSeconds(stationIndex);
+  return Math.max(2, dwell - CLOSE_ANNOUNCE_LEAD - MELODY_TO_ANNOUNCE_GAP - window);
 }
 
 const PHASE_ORDER = [
@@ -363,12 +381,12 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
     // Pas d'arrêt d'urgence sur la toute première course après l'embarquement.
     fired.add('emergency-roll');
     if (t > 0.6) fired.add('announce-depart');
+    if (t >= CONFIG.cruiseTime - APPROACH_ANNOUNCE_LEAD) fired.add('announce-soon');
   } else if (phase === 'brake') {
     fired.add('door-timings');
     fired.add('brake-apply');
     fired.add('jingle');
     fired.add('crowd-seed');
-    if (t > 0.8) fired.add('announce-soon');
     if (speedFor('brake', t) <= 0.01) fired.add('stop-settle');
   } else if (phase === 'dwell') {
     const dwell = dwellDuration(stationIndex);
@@ -513,6 +531,11 @@ export function updateCycle(dt: number): void {
         beginEmergencyStop();
         break;
       }
+      // Séquence JR approche : まもなく(+portes) → 乗換?, lancée avant le
+      // freinage pour que les grandes gares finissent autour de l'arrêt.
+      once('announce-soon', t >= CONFIG.cruiseTime - APPROACH_ANNOUNCE_LEAD, () =>
+        say(approachSequence(s.index, DOOR_SIDE[s.index])),
+      );
       // Petits événements sonores de course, rares et discrets : crissement
       // de boudin dans une courbe, purge d'air sous le plancher.
       if (nextRunSoundAt >= 0 && t >= nextRunSoundAt) {
@@ -534,10 +557,7 @@ export function updateCycle(dt: number): void {
       // Foule déjà en place dès le début du freinage : on la voit arriver
       // avec le quai, opaque, le long des vitres.
       once('crowd-seed', true, () => seedPlatformCrowd(s.index));
-      // Séquence JR approche : まもなく(+portes) → 乗換?
-      once('announce-soon', t > 0.8, () =>
-        say(approachSequence(s.index, DOOR_SIDE[s.index])),
-      );
+      // (L'annonce d'approche part en fin de cruise, voir APPROACH_ANNOUNCE_LEAD.)
       // Immobilisation : léger tassement de caisse + serrage à l'arrêt.
       once('stop-settle', t > 1 && runtime.speed <= 0.01, () => audio.stopSettle());
       if (t >= CONFIG.brakeTime) {

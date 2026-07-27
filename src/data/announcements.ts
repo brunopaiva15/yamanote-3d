@@ -245,8 +245,10 @@ const GUIDANCE_POOL = [
  * (téléphone / priorité / freinage d'urgence ≈ 1 fois par boucle chacun).
  */
 export function guidanceAnnouncements(index: number): Utterance[] {
-  // 1 gare sur 10 → chaque type ~1× par boucle de 30.
-  if (index % 10 !== 0) return [];
+  // 1 gare sur 10 → chaque type ~1× par boucle de 30. Décalée sur les gares
+  // calmes (鶯谷, 新大久保, 高輪GW) : à Tokyo, direction + correspondances
+  // remplissent déjà presque toute la croisière.
+  if (index % 10 !== 5) return [];
   const which = Math.floor(index / 10) % GUIDANCE_POOL.length;
   return GUIDANCE_POOL[which]();
 }

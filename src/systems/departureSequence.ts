@@ -1,7 +1,7 @@
 // Séquence de départ quai : 発車メロディ Inner / Outer / Ōsaki secondaire.
-// La mélodie est jouée une seule fois par arrêt (departureId) ; les étapes
-// portes / départ restent pilotées par stationCycle tant que le départ
-// n'est pas bloqué.
+// La mélodie est lancée une seule fois par arrêt (departureId) et joue alors
+// deux passages (MELODY_REPEATS) ; les étapes portes / départ restent
+// pilotées par stationCycle tant que le départ n'est pas bloqué.
 
 import {
   EBISU_INNER_THIRD_MAN_F_PATH,
@@ -13,6 +13,8 @@ import {
   KANDA_OUTER_MONDAMIN_A_PATH,
   KOMAGOME_INNER_SAKURA_V2_PATH,
   KOMAGOME_OUTER_SAKURA_A_PATH,
+  MELODY_REPEATS,
+  MELODY_REPEAT_GAP_S,
   OSAKI_INNER_SECONDARY_MELODY_PATH,
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
@@ -268,8 +270,32 @@ export function stopIkebukuroInnerBicCameraB(): void {
   bicCameraBPlaying = false;
 }
 
+// Génération d'annulation : un cancel pendant un passage (ou la respiration
+// entre les deux) invalide les passages restants de playMelodyRounds.
+let melodyCancelGen = 0;
+
+/**
+ * Joue le clip en MELODY_REPEATS passages, séparés d'une courte respiration.
+ * S'arrête si la mélodie est annulée entre-temps (blocage, urgence, reset).
+ * @returns false si le fichier est introuvable.
+ */
+async function playMelodyRounds(path: string): Promise<boolean> {
+  const gen = melodyCancelGen;
+  for (let round = 0; round < MELODY_REPEATS; round++) {
+    if (round > 0) {
+      await new Promise<void>((resolve) => setTimeout(resolve, MELODY_REPEAT_GAP_S * 1000));
+      if (gen !== melodyCancelGen || isDepartureBlocked()) return true;
+    }
+    const ok = await audioManager.playOnce(path);
+    if (!ok) return false;
+    if (gen !== melodyCancelGen) return true;
+  }
+  return true;
+}
+
 /** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
 export function cancelDepartureMelody(): void {
+  melodyCancelGen++;
   audioManager.stop(INNER_MAIN_MELODY_PATH);
   stopOuterMainMelody();
   stopOsakiInnerSecondaryMelody();
@@ -307,7 +333,7 @@ export async function playInnerMainMelody(context: MelodyPlayContext): Promise<b
   if (isDepartureBlocked()) return false;
   if (!claimDepartureId(context)) return false;
   markDepartureId(context);
-  const ok = await audioManager.playOnce(INNER_MAIN_MELODY_PATH);
+  const ok = await playMelodyRounds(INNER_MAIN_MELODY_PATH);
   if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
     runtime.lastMelodyDepartureId = null;
   }
@@ -326,7 +352,7 @@ export async function playOuterMainMelody(context: MelodyPlayContext): Promise<b
   markDepartureId(context);
   outerMainMelodyPlaying = true;
   try {
-    const ok = await audioManager.playOnce(OUTER_MAIN_MELODY_PATH);
+    const ok = await playMelodyRounds(OUTER_MAIN_MELODY_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -350,7 +376,7 @@ export async function playOsakiInnerSecondaryMelody(context: MelodyPlayContext):
   if (!claimDepartureId(context)) return false;
 
   markDepartureId(context);
-  const ok = await audioManager.playOnce(OSAKI_INNER_SECONDARY_MELODY_PATH);
+  const ok = await playMelodyRounds(OSAKI_INNER_SECONDARY_MELODY_PATH);
   if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
     runtime.lastMelodyDepartureId = null;
   }
@@ -366,7 +392,7 @@ export async function playOsakiOuterSecondaryMelody(context: MelodyPlayContext):
   if (!claimDepartureId(context)) return false;
 
   markDepartureId(context);
-  const ok = await audioManager.playOnce(OSAKI_OUTER_SECONDARY_MELODY_PATH);
+  const ok = await playMelodyRounds(OSAKI_OUTER_SECONDARY_MELODY_PATH);
   if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
     runtime.lastMelodyDepartureId = null;
   }
@@ -382,7 +408,7 @@ export async function playKomagomeOuterSakuraA(context: MelodyPlayContext): Prom
   if (!claimDepartureId(context)) return false;
 
   markDepartureId(context);
-  const ok = await audioManager.playOnce(KOMAGOME_OUTER_SAKURA_A_PATH);
+  const ok = await playMelodyRounds(KOMAGOME_OUTER_SAKURA_A_PATH);
   if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
     runtime.lastMelodyDepartureId = null;
   }
@@ -398,7 +424,7 @@ export async function playKomagomeInnerSakuraV2(context: MelodyPlayContext): Pro
   if (!claimDepartureId(context)) return false;
 
   markDepartureId(context);
-  const ok = await audioManager.playOnce(KOMAGOME_INNER_SAKURA_V2_PATH);
+  const ok = await playMelodyRounds(KOMAGOME_INNER_SAKURA_V2_PATH);
   if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
     runtime.lastMelodyDepartureId = null;
   }
@@ -414,7 +440,7 @@ export async function playUguisudaniInnerHaruTremolo(context: MelodyPlayContext)
   if (!claimDepartureId(context)) return false;
 
   markDepartureId(context);
-  const ok = await audioManager.playOnce(UGUISUDANI_INNER_HARU_TREMOLO_PATH);
+  const ok = await playMelodyRounds(UGUISUDANI_INNER_HARU_TREMOLO_PATH);
   if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
     runtime.lastMelodyDepartureId = null;
   }
@@ -433,7 +459,7 @@ export async function playSeseragi(context: MelodyPlayContext): Promise<boolean>
   markDepartureId(context);
   seseragiPlaying = true;
   try {
-    const ok = await audioManager.playOnce(SESERAGI_MELODY_PATH);
+    const ok = await playMelodyRounds(SESERAGI_MELODY_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -455,7 +481,7 @@ export async function playTakadanobabaOuterAtomA(context: MelodyPlayContext): Pr
   markDepartureId(context);
   takadanobabaAtomAPlaying = true;
   try {
-    const ok = await audioManager.playOnce(TAKADANOBABA_OUTER_ATOM_A_PATH);
+    const ok = await playMelodyRounds(TAKADANOBABA_OUTER_ATOM_A_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -477,7 +503,7 @@ export async function playTakadanobabaInnerAtomB(context: MelodyPlayContext): Pr
   markDepartureId(context);
   takadanobabaAtomBPlaying = true;
   try {
-    const ok = await audioManager.playOnce(TAKADANOBABA_INNER_ATOM_B_PATH);
+    const ok = await playMelodyRounds(TAKADANOBABA_INNER_ATOM_B_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -499,7 +525,7 @@ export async function playEbisuInnerThirdManF(context: MelodyPlayContext): Promi
   markDepartureId(context);
   ebisuThirdManFPlaying = true;
   try {
-    const ok = await audioManager.playOnce(EBISU_INNER_THIRD_MAN_F_PATH);
+    const ok = await playMelodyRounds(EBISU_INNER_THIRD_MAN_F_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -523,7 +549,7 @@ export async function playTakanawaGatewayInnerGloriousA(
   markDepartureId(context);
   gloriousGatewayAPlaying = true;
   try {
-    const ok = await audioManager.playOnce(TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH);
+    const ok = await playMelodyRounds(TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -547,7 +573,7 @@ export async function playTakanawaGatewayOuterGloriousB(
   markDepartureId(context);
   gloriousGatewayBPlaying = true;
   try {
-    const ok = await audioManager.playOnce(TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH);
+    const ok = await playMelodyRounds(TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -571,7 +597,7 @@ export async function playKandaOuterMondaminA(
   markDepartureId(context);
   kandaMondaminAPlaying = true;
   try {
-    const ok = await audioManager.playOnce(KANDA_OUTER_MONDAMIN_A_PATH);
+    const ok = await playMelodyRounds(KANDA_OUTER_MONDAMIN_A_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -595,7 +621,7 @@ export async function playKandaInnerMondaminB(
   markDepartureId(context);
   kandaMondaminBPlaying = true;
   try {
-    const ok = await audioManager.playOnce(KANDA_INNER_MONDAMIN_B_PATH);
+    const ok = await playMelodyRounds(KANDA_INNER_MONDAMIN_B_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -621,7 +647,7 @@ export async function playIkebukuroInnerBicCameraA(
   markDepartureId(context);
   bicCameraAPlaying = true;
   try {
-    const ok = await audioManager.playOnce(IKEBUKURO_INNER_BIC_CAMERA_A_PATH);
+    const ok = await playMelodyRounds(IKEBUKURO_INNER_BIC_CAMERA_A_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -647,7 +673,7 @@ export async function playIkebukuroInnerBicCameraB(
   markDepartureId(context);
   bicCameraBPlaying = true;
   try {
-    const ok = await audioManager.playOnce(IKEBUKURO_INNER_BIC_CAMERA_B_PATH);
+    const ok = await playMelodyRounds(IKEBUKURO_INNER_BIC_CAMERA_B_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }

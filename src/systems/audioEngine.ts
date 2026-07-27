@@ -35,6 +35,8 @@ import {
   KANDA_OUTER_MONDAMIN_A_PATH,
   KOMAGOME_INNER_SAKURA_V2_PATH,
   KOMAGOME_OUTER_SAKURA_A_PATH,
+  MELODY_REPEATS,
+  MELODY_REPEAT_GAP_S,
   OSAKI_INNER_SECONDARY_MELODY_PATH,
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
@@ -568,16 +570,20 @@ function synthMelody(index: number): void {
   const jy = STATIONS[index].jy;
   const tune = SPECIALS[jy] ?? (index % 2 === 0 ? HOUSE_A : HOUSE_B);
   const unit = 0.21;
-  const start = Tone.now() + 0.05;
-  let t = start;
-  // Boucle sur des tours complets jusqu'à atteindre la durée cible.
-  while (t - start < MELODY_DURATION) {
-    for (const [note, beats] of tune) {
-      const dur = beats * unit;
-      nodes.melodyA.triggerAttackRelease(note, dur * 0.92, t, 0.42);
-      nodes.melodyB.triggerAttackRelease(Tone.Frequency(note).transpose(12).toNote(), dur * 0.92, t, 0.3);
-      t += dur;
+  let t = Tone.now() + 0.05;
+  // Deux passages, comme les clips : des tours complets jusqu'à la durée
+  // cible, une respiration, puis le second passage.
+  for (let round = 0; round < MELODY_REPEATS; round++) {
+    const start = t;
+    while (t - start < MELODY_DURATION) {
+      for (const [note, beats] of tune) {
+        const dur = beats * unit;
+        nodes.melodyA.triggerAttackRelease(note, dur * 0.92, t, 0.42);
+        nodes.melodyB.triggerAttackRelease(Tone.Frequency(note).transpose(12).toNote(), dur * 0.92, t, 0.3);
+        t += dur;
+      }
     }
+    t += MELODY_REPEAT_GAP_S;
   }
 }
 
