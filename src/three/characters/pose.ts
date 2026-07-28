@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import type { Pax } from '../../systems/passengers';
 import type { CharacterClone } from './library';
+import { usesHeldPose } from './props';
 
 // Géométrie des tsurikawa, reprise de three/Handles.tsx : rangées en
 // x = ±0,45, anneaux tous les 0,451 m à partir de z = -9,35 ; centre d'anneau
@@ -544,5 +545,5 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
   // --- Téléphone : bras dédié, EN DERNIER — il se superpose au clip debout
   // comme à l'assise manuelle (dont il remplace la main côté téléphone), et
   // laisse le bras de la poignée accroché à son anneau. ---
-  applyPhoneArms(clone, state, k, p.action === 'phone' && (seated || standing), strapSide, seated);
+  applyPhoneArms(clone, state, k, usesHeldPose(p.action) && (seated || standing), strapSide, seated);
 }

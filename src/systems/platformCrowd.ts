@@ -24,6 +24,12 @@ import {
   STAIR_RISE,
   STAIR_STEPS,
 } from '../data/stationGeometry';
+import {
+  PAX_ACTIONS,
+  isPairAction,
+  type PaxAction,
+} from '../data/paxActions';
+import { resolveMotion, platformPlayerCtx } from './paxMotion';
 
 export type CrowdState =
   | 'hidden'
@@ -57,7 +63,7 @@ export interface CrowdPax {
   height: number;
   bobPhase: number;
   bob: number;
-  action: 'none' | 'phone' | 'look' | 'shift';
+  action: PaxAction | 'shift';
   actionT: number;
   actionDur: number;
   lookYaw: number;
@@ -70,6 +76,8 @@ export interface CrowdPax {
   ticket: number;
   /** Secondes d'immobilité avant de se mettre en marche (départs échelonnés). */
   delay: number;
+  partner: number;
+  chatRole: 0 | 1;
 }
 
 export const CROWD_POOL = 18;
@@ -116,6 +124,8 @@ function makeCrowd(id: number): CrowdPax {
     laneX: 3.2,
     ticket: -1,
     delay: 0,
+    partner: -1,
+    chatRole: 0,
   };
 }
 
@@ -237,6 +247,8 @@ export function seedPlatformCrowd(stationIndex: number): void {
       p.actionDur = 2 + Math.random() * 4;
       p.lookYaw = (Math.random() - 0.5) * 0.9;
       p.headPitch = p.action === 'phone' ? 0.45 : 0.05;
+      p.partner = -1;
+      p.chatRole = 0;
     }
   }
 }
@@ -250,6 +262,8 @@ export function clearPlatformCrowd(): void {
     p.wpi = 0;
     p.y = 0;
     p.ticket = -1;
+    p.partner = -1;
+    p.action = 'none';
   }
 }
 
@@ -300,6 +314,7 @@ function sendToStairs(p: CrowdPax, pl: StationPlacement, delay = 0): boolean {
   const s = nearestStair(pl, p.pos.z);
   if (!s) return false;
   const lane = (Math.random() - 0.5) * 1.4;
+  endCrowdPair(p);
   p.state = 'leaving';
   p.action = 'none';
   p.headPitch = 0;
@@ -359,6 +374,7 @@ export function crowdSendBoarder(doorLocalZ: number, ticket: number): boolean {
     }
   }
   if (!best || bestD > 26) return false;
+  endCrowdPair(best);
   best.state = 'boarding';
   best.action = 'none';
   best.headPitch = 0;
@@ -453,6 +469,7 @@ export function crowdTarget(stationIndex: number): number {
 const tmp = new THREE.Vector3();
 
 function startPatrol(p: CrowdPax): void {
+  endCrowdPair(p);
   p.state = 'patrolling';
   p.action = 'shift';
   p.actionT = 0;
@@ -464,6 +481,7 @@ function startPatrol(p: CrowdPax): void {
 }
 
 function startShortAmble(p: CrowdPax): void {
+  endCrowdPair(p);
   const dist = 4 + Math.random() * 10;
   const dir = Math.random() < 0.5 ? 1 : -1;
   const dest = clampPos(
@@ -478,6 +496,110 @@ function startShortAmble(p: CrowdPax): void {
   p.actionT = 0;
   p.waypoints = [mid, dest];
   p.wpi = 0;
+}
+
+function endCrowdPair(p: CrowdPax): void {
+  if (p.partner >= 0) {
+    const other = crowdList[p.partner];
+    if (other && other.partner === p.id) {
+      other.partner = -1;
+      other.action = 'none';
+      other.actionT = 0;
+      other.actionDur = 1.5 + Math.random() * 2.5;
+    }
+  }
+  p.partner = -1;
+}
+
+function findCrowdPartner(p: CrowdPax, maxDist: number): CrowdPax | null {
+  let best: CrowdPax | null = null;
+  let bestD = maxDist;
+  for (const other of crowdList) {
+    if (other.id === p.id) continue;
+    if (other.state !== 'waiting') continue;
+    if (other.action === 'shift') continue;
+    if (isPairAction(other.action as PaxAction)) continue;
+    const d = p.pos.distanceTo(other.pos);
+    if (d > bestD) continue;
+    bestD = d;
+    best = other;
+  }
+  return best;
+}
+
+/** Tirage d'occupation pour un voyageur en attente (catalogue waiting). */
+function pickCrowdAction(p: CrowdPax): void {
+  const player = platformPlayerCtx();
+  const playerDist = Math.hypot(p.pos.x - player.playerX, p.pos.z - player.playerZ);
+  const arch = p.appearance.archetype;
+
+  let total = 0;
+  const weights: number[] = [];
+  for (let i = 0; i < PAX_ACTIONS.length; i++) {
+    const def = PAX_ACTIONS[i];
+    let w = 0;
+    if (def.where.includes('waiting')) {
+      w = def.weight;
+      if (def.kind === 'player') {
+        if (runtime.playerFrame !== 'platform' || playerDist >= (def.playerDist ?? 3.5)) w = 0;
+      }
+      if (def.needsMask && !p.appearance.mask) w = 0;
+      if (def.needsGlasses && !p.appearance.glasses) w = 0;
+      if (def.needsBag && p.appearance.bag === 'none') w = 0;
+      if (def.archetypes && def.archetypes.includes(arch)) w *= def.archetypeBoost ?? 1.4;
+    }
+    weights[i] = w;
+    total += w;
+  }
+
+  if (total <= 0) {
+    p.action = 'none';
+    p.actionDur = 1.5 + Math.random() * 2.5;
+    p.lookYaw = 0;
+    return;
+  }
+
+  let pick = Math.random() * total;
+  let chosen = PAX_ACTIONS[PAX_ACTIONS.length - 1];
+  for (let i = 0; i < PAX_ACTIONS.length; i++) {
+    pick -= weights[i];
+    if (pick <= 0) {
+      chosen = PAX_ACTIONS[i];
+      break;
+    }
+  }
+
+  const dur = chosen.dur[0] + Math.random() * (chosen.dur[1] - chosen.dur[0]);
+  p.actionDur = dur;
+  if (
+    chosen.id === 'look' ||
+    chosen.id === 'lookBoard' ||
+    chosen.id === 'fidget' ||
+    chosen.id === 'curiousGlance'
+  ) {
+    p.lookYaw = (Math.random() - 0.5) * 1.1;
+  }
+
+  if (chosen.kind === 'pair') {
+    const other = findCrowdPartner(p, chosen.partnerDist ?? 1.4);
+    if (other) {
+      p.action = chosen.id;
+      p.partner = other.id;
+      p.chatRole = 0;
+      other.action = chosen.id;
+      other.partner = p.id;
+      other.chatRole = 1;
+      other.actionT = 0;
+      other.actionDur = dur;
+      return;
+    }
+    p.action = 'look';
+    p.actionDur = 2 + Math.random() * 3;
+    return;
+  }
+
+  p.action = chosen.id;
+  p.partner = -1;
 }
 
 function advanceWalk(p: CrowdPax, dt: number, onDone: () => void): void {
@@ -615,37 +737,41 @@ export function updatePlatformCrowd(dt: number): void {
       p.bob = Math.sin(p.bobPhase * 1.1) * 0.004;
       if (p.actionT >= p.actionDur) {
         p.actionT = 0;
+        if (isPairAction(p.action as PaxAction)) endCrowdPair(p);
         if (p.role === 'walker') {
           // Les promeneurs repartent vite marcher.
           startPatrol(p);
+        } else if (Math.random() < 0.38) {
+          // Les gens qui attendent se déplacent souvent le long du quai.
+          startShortAmble(p);
         } else {
-          const roll = Math.random();
-          if (roll < 0.42) {
-            // Les gens qui attendent se déplacent souvent le long du quai.
-            startShortAmble(p);
-          } else if (roll < 0.7) {
-            p.action = 'phone';
-            p.actionDur = 4 + Math.random() * 6;
-            p.headPitch = 0.5;
-          } else if (roll < 0.9) {
-            p.action = 'look';
-            p.actionDur = 2 + Math.random() * 3.5;
-            p.lookYaw = (Math.random() - 0.5) * 1.1;
-            p.headPitch = 0.04;
-          } else {
-            p.action = 'none';
-            p.actionDur = 1.5 + Math.random() * 2.5;
-            p.lookYaw = 0;
-            p.headPitch = 0;
-          }
+          pickCrowdAction(p);
         }
       }
       if (p.state === 'waiting') {
-        const pitchT = p.action === 'phone' ? 0.5 : p.action === 'look' ? 0.05 : 0;
-        // Téléphone : le yaw vers la main est ajouté par la pose (characters/pose.ts).
-        const yawT = p.action === 'look' ? p.lookYaw : 0;
-        p.headPitch += (pitchT - p.headPitch) * Math.min(1, dt * 4);
-        p.lookYaw += (yawT - p.lookYaw) * Math.min(1, dt * 3);
+        const partner = p.partner >= 0 ? crowdList[p.partner] : null;
+        if (isPairAction(p.action as PaxAction) && (!partner || partner.partner !== p.id)) {
+          endCrowdPair(p);
+          p.action = 'none';
+        }
+        const player = platformPlayerCtx();
+        const m = resolveMotion({
+          action: p.action === 'shift' ? 'none' : (p.action as PaxAction),
+          actionT: p.actionT,
+          bobPhase: p.bobPhase,
+          chatRole: p.chatRole,
+          lookYawTarget: p.lookYaw,
+          posX: p.pos.x,
+          posZ: p.pos.z,
+          yaw: p.yaw,
+          partnerX: partner?.pos.x,
+          partnerZ: partner?.pos.z,
+          playerX: player.playerX,
+          playerY: player.playerY,
+          playerZ: player.playerZ,
+        });
+        p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed);
+        p.lookYaw += (m.yaw - p.lookYaw) * Math.min(1, dt * Math.min(m.speed, 4));
         p.targetYaw = -Math.PI / 2 + p.lookYaw * 0.35;
       }
     }

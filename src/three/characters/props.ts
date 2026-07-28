@@ -15,13 +15,30 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { Appearance } from '../../systems/appearance';
 import type { BoneMap } from './library';
+import type { PaxAction } from '../../data/paxActions';
+import { ACTION_BY_ID } from '../../data/paxActions';
 
 export interface PropRig {
   headFollow: THREE.Group | null;
   spineFollow: THREE.Group | null;
-  handFollow: THREE.Group | null; // téléphone, recalé sur la main qui le tient
-  phoneR: THREE.Group | null; // prise main droite
-  phoneL: THREE.Group | null; // prise main gauche (miroir sagittal de la droite)
+  handFollow: THREE.Group | null; // objet tenu, recalé sur la main
+  phoneR: THREE.Group | null;
+  phoneL: THREE.Group | null;
+  book: THREE.Group | null;
+  bottle: THREE.Group | null;
+  map: THREE.Group | null;
+  ticket: THREE.Group | null;
+}
+
+/** Quelle prop main afficher pour une action (ou null). */
+export function handPropFor(action: PaxAction): 'phone' | 'book' | 'bottle' | 'map' | 'ticket' | null {
+  return ACTION_BY_ID.get(action)?.handProp ?? null;
+}
+
+/** Pose bras « objet tenu » (téléphone / livre / bouteille / plan). */
+export function usesHeldPose(action: PaxAction): boolean {
+  const prop = handPropFor(action);
+  return prop === 'phone' || prop === 'book' || prop === 'bottle' || prop === 'map' || action === 'sharePhone';
 }
 
 // Assombrit une couleur hex — accents des sacs (sangles, rabats, poches).
@@ -237,12 +254,98 @@ function makePhone(side: 1 | -1): THREE.Group {
   return g;
 }
 
+// --- Livre / bouteille / plan / ticket (props tenus, partagés) -------------
+
+const bookMat = new THREE.MeshStandardMaterial({ color: '#6a4a38', roughness: 0.85 });
+const bookPageMat = new THREE.MeshStandardMaterial({ color: '#e8e2d4', roughness: 0.95 });
+const bookBodyGeo = new RoundedBoxGeometry(0.07, 0.095, 0.014, 1, 0.003);
+const bookPageGeo = new THREE.BoxGeometry(0.062, 0.088, 0.002);
+
+function makeBook(): THREE.Group {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(bookBodyGeo, bookMat));
+  const page = new THREE.Mesh(bookPageGeo, bookPageMat);
+  page.position.z = 0.008;
+  g.add(page);
+  g.position.copy(PHONE_GRIP_POS);
+  g.quaternion.setFromEuler(new THREE.Euler(0.25, Math.PI, 0.15));
+  g.scale.setScalar(1.15);
+  return g;
+}
+
+const bottleMat = new THREE.MeshStandardMaterial({ color: '#3a7a9a', roughness: 0.35, metalness: 0.1, transparent: true, opacity: 0.85 });
+const bottleCapMat = new THREE.MeshStandardMaterial({ color: '#1a1c20', roughness: 0.5 });
+const bottleBodyGeo = new THREE.CylinderGeometry(0.016, 0.018, 0.09, 8);
+const bottleNeckGeo = new THREE.CylinderGeometry(0.009, 0.012, 0.028, 6);
+const bottleCapGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.01, 6);
+
+function makeBottle(): THREE.Group {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(bottleBodyGeo, bottleMat);
+  body.position.y = 0.02;
+  g.add(body);
+  const neck = new THREE.Mesh(bottleNeckGeo, bottleMat);
+  neck.position.y = 0.075;
+  g.add(neck);
+  const cap = new THREE.Mesh(bottleCapGeo, bottleCapMat);
+  cap.position.y = 0.095;
+  g.add(cap);
+  g.position.set(0, 0.08, -0.02);
+  g.quaternion.setFromEuler(new THREE.Euler(0.35, 0, 0.2));
+  return g;
+}
+
+const mapMat = new THREE.MeshStandardMaterial({ color: '#e8dcc0', roughness: 0.9, side: THREE.DoubleSide });
+const mapLineMat = new THREE.MeshStandardMaterial({ color: '#c94f42', roughness: 0.8 });
+const mapGeo = new THREE.PlaneGeometry(0.1, 0.08);
+const mapFoldGeo = new THREE.PlaneGeometry(0.05, 0.08);
+
+function makeMap(): THREE.Group {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(mapGeo, mapMat));
+  const fold = new THREE.Mesh(mapFoldGeo, mapLineMat);
+  fold.position.set(0.03, 0, 0.001);
+  fold.rotation.y = 0.15;
+  g.add(fold);
+  g.position.copy(PHONE_GRIP_POS);
+  g.quaternion.setFromEuler(new THREE.Euler(0.4, Math.PI, 0.1));
+  g.scale.setScalar(1.1);
+  return g;
+}
+
+const ticketMat = new THREE.MeshStandardMaterial({ color: '#f0ebe0', roughness: 0.95 });
+const ticketStripeMat = new THREE.MeshStandardMaterial({ color: '#3a5a8a', roughness: 0.8 });
+const ticketGeo = new RoundedBoxGeometry(0.045, 0.028, 0.002, 1, 0.001);
+const ticketStripeGeo = new THREE.BoxGeometry(0.045, 0.006, 0.0022);
+
+function makeTicket(): THREE.Group {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(ticketGeo, ticketMat));
+  const stripe = new THREE.Mesh(ticketStripeGeo, ticketStripeMat);
+  stripe.position.y = 0.006;
+  g.add(stripe);
+  g.position.copy(PHONE_GRIP_POS);
+  g.quaternion.setFromEuler(new THREE.Euler(0.2, Math.PI, 0.25));
+  g.scale.setScalar(1.2);
+  return g;
+}
+
 // Attache les accessoires du descripteur d'apparence ; renvoie les groupes
 // suiveurs à recaler chaque frame via updatePropRig. `allowBag` : false quand
-// le modèle a déjà son propre sac (évite le doublon). Le téléphone est
-// toujours créé (masqué) : n'importe quel PNJ peut passer en action « phone ».
+// le modèle a déjà son propre sac (évite le doublon). Les objets tenus
+// (téléphone, livre, bouteille, plan, ticket) sont toujours créés masqués.
 export function attachProps(wrap: THREE.Group, app: Appearance, allowBag = true): PropRig {
-  const rig: PropRig = { headFollow: null, spineFollow: null, handFollow: null, phoneR: null, phoneL: null };
+  const rig: PropRig = {
+    headFollow: null,
+    spineFollow: null,
+    handFollow: null,
+    phoneR: null,
+    phoneL: null,
+    book: null,
+    bottle: null,
+    map: null,
+    ticket: null,
+  };
 
   if (app.glasses || app.mask) {
     const head = new THREE.Group();
@@ -269,8 +372,20 @@ export function attachProps(wrap: THREE.Group, app: Appearance, allowBag = true)
   rig.phoneR = makePhone(1);
   rig.phoneL = makePhone(-1);
   rig.phoneL.visible = false;
+  rig.book = makeBook();
+  rig.book.visible = false;
+  rig.bottle = makeBottle();
+  rig.bottle.visible = false;
+  rig.map = makeMap();
+  rig.map.visible = false;
+  rig.ticket = makeTicket();
+  rig.ticket.visible = false;
   hand.add(rig.phoneR);
   hand.add(rig.phoneL);
+  hand.add(rig.book);
+  hand.add(rig.bottle);
+  hand.add(rig.map);
+  hand.add(rig.ticket);
   wrap.add(hand);
   rig.handFollow = hand;
 
@@ -299,7 +414,7 @@ function followBone(follow: THREE.Group | null, bone: THREE.Bone | undefined, wr
 // Recale les groupes suiveurs sur les os (à appeler après les overrides).
 // `bagVisible` : les sacs sont posés pour la station debout — on les masque
 // quand le passager est assis (sinon le sac flotte à côté de lui).
-// `phoneVisible` : téléphone dans la main (pose « phone » active).
+// `handProp` : objet tenu (téléphone, livre, bouteille, plan, ticket).
 // `phoneSide` : main qui le tient (PoseState.phoneSide) — la gauche quand la
 // droite est déjà à la poignée.
 export function updatePropRig(
@@ -307,7 +422,7 @@ export function updatePropRig(
   bones: BoneMap,
   wrap: THREE.Group,
   bagVisible: boolean,
-  phoneVisible = false,
+  handProp: 'phone' | 'book' | 'bottle' | 'map' | 'ticket' | null = null,
   phoneSide: 1 | -1 = 1,
 ): void {
   followBone(rig.headFollow, bones.head, wrap);
@@ -316,14 +431,22 @@ export function updatePropRig(
     if (bagVisible) followBone(rig.spineFollow, bones.spine, wrap);
   }
   if (rig.handFollow) {
-    rig.handFollow.visible = phoneVisible;
-    if (phoneVisible) {
+    const show = handProp !== null;
+    rig.handFollow.visible = show;
+    if (show) {
       const right = phoneSide !== -1;
       const handBone = right
         ? (bones.handR ?? bones.foreArmR ?? bones.handL ?? bones.foreArmL)
         : (bones.handL ?? bones.foreArmL ?? bones.handR ?? bones.foreArmR);
-      if (rig.phoneR) rig.phoneR.visible = right;
-      if (rig.phoneL) rig.phoneL.visible = !right;
+      if (rig.phoneR) rig.phoneR.visible = handProp === 'phone' && right;
+      if (rig.phoneL) rig.phoneL.visible = handProp === 'phone' && !right;
+      if (rig.book) {
+        // Livre / plan / ticket / bouteille : une seule prise (droite par défaut).
+        rig.book.visible = handProp === 'book';
+      }
+      if (rig.bottle) rig.bottle.visible = handProp === 'bottle';
+      if (rig.map) rig.map.visible = handProp === 'map';
+      if (rig.ticket) rig.ticket.visible = handProp === 'ticket';
       followBone(rig.handFollow, handBone, wrap);
     }
   }

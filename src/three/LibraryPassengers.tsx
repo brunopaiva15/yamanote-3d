@@ -18,7 +18,7 @@ import { rng } from '../textures/procedural';
 import { MODELS_BASE, type CharacterManifest } from './characters/manifest';
 import { buildTemplates, cloneVariant, type CharacterClone, type CharacterTemplate } from './characters/library';
 import { applyPoseOverrides, makePoseState, type PoseState } from './characters/pose';
-import { attachProps, updatePropRig, type PropRig } from './characters/props';
+import { attachProps, updatePropRig, handPropFor, type PropRig } from './characters/props';
 import type { LogicalClip } from './characters/manifest';
 
 // Haut utile du coussin (monde) — même repère que Seats.tsx / rendu procédural.
@@ -134,8 +134,9 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       if (s.clone.restSpine && bones.spine) bones.spine.quaternion.copy(s.clone.restSpine);
       mixer.update(dt);
       applyPoseOverrides(p, s.clone, s.pose, k, manualSit);
-      const phoneVisible = p.action === 'phone' && (seated || p.state === 'standing') && s.pose.phoneW > 0.05;
-      updatePropRig(s.props, bones, wrap, !seated, phoneVisible, s.pose.phoneSide);
+      const held = (seated || p.state === 'standing') ? handPropFor(p.action) : null;
+      const phoneVisible = held !== null && s.pose.phoneW > 0.05;
+      updatePropRig(s.props, bones, wrap, !seated, phoneVisible ? held : null, s.pose.phoneSide);
     }
   });
 

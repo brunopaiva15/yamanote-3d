@@ -1,7 +1,8 @@
 // Logique des PNJ : pool réutilisé, machine à états par passager
 // (hidden / seated / standing / boarding / alighting), embarquement et
-// descente par waypoints, et une couche de « vie » : regards, téléphone,
-// somnolence, éternuements, discussions à deux, décisions assis / debout.
+// descente par waypoints, et une couche de « vie » tirée du catalogue
+// data/paxActions : regards, téléphone, somnolence, échanges à deux,
+// micro-gestes, décisions assis / debout.
 
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
@@ -21,9 +22,16 @@ import {
   seatOccupant,
   standOccupant,
 } from './seats';
+import {
+  PAX_ACTIONS,
+  isPairAction,
+  type PaxAction,
+  type ActionWhere,
+} from '../data/paxActions';
+import { resolveMotion, trainPlayerCtx } from './paxMotion';
 
 export type PaxState = 'hidden' | 'seated' | 'standing' | 'boarding' | 'alighting';
-export type PaxAction = 'none' | 'look' | 'phone' | 'doze' | 'stare' | 'chat' | 'sneeze';
+export type { PaxAction };
 
 export interface Pax {
   id: number;
@@ -194,7 +202,8 @@ function releaseSlots(p: Pax): void {
   p.standSlot = -1;
 }
 
-function endChat(p: Pax): void {
+/** Libère un éventuel partenaire d'échange (chat, chuchotis, rire…). */
+function endPair(p: Pax): void {
   if (p.partner >= 0) {
     const other = paxList[p.partner];
     if (other && other.partner === p.id) {
@@ -208,7 +217,7 @@ function endChat(p: Pax): void {
 }
 
 function startWalk(p: Pax, dest: THREE.Vector3, afterWalk: 'seated' | 'standing' | 'hidden'): void {
-  endChat(p);
+  endPair(p);
   p.action = 'none';
   p.state = 'boarding';
   p.afterWalk = afterWalk;
@@ -256,7 +265,7 @@ function doorPlatformZ(doorZ: number): number {
 function beginAlight(p: Pax, side: 1 | -1): void {
   const doorZ = nearestDoorZ(p.pos.z);
   releaseSlots(p);
-  endChat(p);
+  endPair(p);
   p.action = 'none';
   p.state = 'alighting';
   p.afterWalk = 'hidden';
@@ -385,7 +394,7 @@ export function trimPassengersForPerf(): void {
   const farthestFirst = (arr: Pax[]) => [...arr].sort((a, b) => dist(b) - dist(a));
   const hide = (p: Pax) => {
     releaseSlots(p);
-    endChat(p);
+    endPair(p);
     p.action = 'none';
     p.state = 'hidden';
     p.waypoints = [];
@@ -445,74 +454,112 @@ export function exchangePassengers(side: 1 | -1): void {
   }
 }
 
-// Angle de tête (relatif au corps) pour regarder un point du monde.
-function headYawToward(p: Pax, x: number, z: number): number {
-  const world = Math.atan2(x - p.pos.x, z - p.pos.z);
-  let d = world - p.yaw;
-  while (d > Math.PI) d -= Math.PI * 2;
-  while (d < -Math.PI) d += Math.PI * 2;
-  return THREE.MathUtils.clamp(d, -1.15, 1.15);
+function whereOf(p: Pax): ActionWhere | null {
+  if (p.state === 'seated') return 'seated';
+  if (p.state === 'standing') return 'standing';
+  return null;
 }
 
-// Choix d'une nouvelle occupation pour un PNJ posé (assis ou debout).
+function findPartner(p: Pax, maxDist: number): Pax | null {
+  let best: Pax | null = null;
+  let bestD = maxDist;
+  for (const other of paxList) {
+    if (other.id === p.id) continue;
+    if (other.state !== 'seated' && other.state !== 'standing') continue;
+    if (isPairAction(other.action)) continue;
+    if (other.action === 'sneeze' || other.action === 'cough' || other.action === 'doze') continue;
+    const d = p.pos.distanceTo(other.pos);
+    if (d > bestD) continue;
+    bestD = d;
+    best = other;
+  }
+  return best;
+}
+
+function applyAction(p: Pax, id: PaxAction, dur: number, partner: Pax | null = null): void {
+  p.action = id;
+  p.actionDur = dur;
+  p.actionT = 0;
+  if (id === 'look' || id === 'curiousGlance' || id === 'lookBoard' || id === 'fidget') {
+    p.lookYawTarget = (Math.random() - 0.5) * 2;
+  }
+  if (partner) {
+    p.partner = partner.id;
+    p.chatRole = 0;
+    partner.action = id;
+    partner.partner = p.id;
+    partner.chatRole = 1;
+    partner.actionT = 0;
+    partner.actionDur = dur;
+    if (id === 'look' || id === 'curiousGlance') {
+      partner.lookYawTarget = (Math.random() - 0.5) * 2;
+    }
+  } else {
+    p.partner = -1;
+  }
+}
+
+// Choix d'une nouvelle occupation via le catalogue (data/paxActions).
 function pickAction(p: Pax): void {
-  const roll = Math.random();
+  const where = whereOf(p);
+  if (!where) return;
+
   const dxp = runtime.playerCarX - p.pos.x;
   const dzp = runtime.playerCarZ - p.pos.z;
-  const playerClose = Math.hypot(dxp, dzp) < 3.5;
+  const playerDist = Math.hypot(dxp, dzp);
+  const arch = p.appearance.archetype;
 
-  if (roll < 0.16) {
-    // Discussion : trouver un voisin disponible.
-    for (const other of paxList) {
-      if (other.id === p.id) continue;
-      if (other.state !== 'seated' && other.state !== 'standing') continue;
-      if (other.action === 'chat' || other.action === 'sneeze') continue;
-      if (p.pos.distanceTo(other.pos) > 1.4) continue;
-      const dur = 8 + Math.random() * 10;
-      p.action = 'chat';
-      p.partner = other.id;
-      p.chatRole = 0;
-      p.actionDur = dur;
-      other.action = 'chat';
-      other.partner = p.id;
-      other.chatRole = 1;
-      other.actionT = 0;
-      other.actionDur = dur;
+  let total = 0;
+  const weights: number[] = [];
+  for (let i = 0; i < PAX_ACTIONS.length; i++) {
+    const def = PAX_ACTIONS[i];
+    let w = 0;
+    if (def.where.includes(where)) {
+      w = def.weight;
+      if (def.kind === 'player') {
+        const lim = def.playerDist ?? 3.5;
+        if (playerDist >= lim) w = 0;
+      }
+      if (def.needsMask && !p.appearance.mask) w = 0;
+      if (def.needsGlasses && !p.appearance.glasses) w = 0;
+      if (def.needsBag && p.appearance.bag === 'none') w = 0;
+      if (def.archetypes && def.archetypes.includes(arch)) {
+        w *= def.archetypeBoost ?? 1.4;
+      }
+    }
+    weights[i] = w;
+    total += w;
+  }
+
+  if (total <= 0) {
+    applyAction(p, 'none', 2 + Math.random() * 4);
+    return;
+  }
+
+  let pick = Math.random() * total;
+  let chosen = PAX_ACTIONS[PAX_ACTIONS.length - 1];
+  for (let i = 0; i < PAX_ACTIONS.length; i++) {
+    pick -= weights[i];
+    if (pick <= 0) {
+      chosen = PAX_ACTIONS[i];
+      break;
+    }
+  }
+
+  const dur = chosen.dur[0] + Math.random() * (chosen.dur[1] - chosen.dur[0]);
+
+  if (chosen.kind === 'pair') {
+    const other = findPartner(p, chosen.partnerDist ?? 1.4);
+    if (other) {
+      applyAction(p, chosen.id, dur, other);
       return;
     }
-    p.action = 'look';
-    p.actionDur = 3 + Math.random() * 3;
-    p.lookYawTarget = (Math.random() - 0.5) * 2;
+    // Pas de voisin : repli sur un regard.
+    applyAction(p, 'look', 3 + Math.random() * 3);
     return;
   }
-  if (roll < 0.28 && playerClose) {
-    p.action = 'stare';
-    p.actionDur = 1.8 + Math.random() * 3;
-    return;
-  }
-  if (roll < 0.5) {
-    p.action = 'phone';
-    p.actionDur = 6 + Math.random() * 9;
-    return;
-  }
-  if (roll < 0.62 && p.state === 'seated') {
-    p.action = 'doze';
-    p.actionDur = 8 + Math.random() * 12;
-    return;
-  }
-  if (roll < 0.68) {
-    p.action = 'sneeze';
-    p.actionDur = 0.9;
-    return;
-  }
-  if (roll < 0.85) {
-    p.action = 'look';
-    p.actionDur = 2.5 + Math.random() * 4;
-    p.lookYawTarget = (Math.random() - 0.5) * 2;
-    return;
-  }
-  p.action = 'none';
-  p.actionDur = 2 + Math.random() * 5;
+
+  applyAction(p, chosen.id, dur);
 }
 
 // Décisions occasionnelles : un debout va s'asseoir, un assis se dégourdit.
@@ -618,63 +665,37 @@ export function updatePassengers(dt: number): void {
 
     if (p.actionT >= p.actionDur) {
       p.actionT = 0;
-      if (p.action === 'chat') endChat(p);
+      if (isPairAction(p.action)) endPair(p);
       pickAction(p);
     }
 
-    // Cibles de tête selon l'action en cours.
-    let yawT = 0;
-    let pitchT = 0;
-    let lean = 0;
-    switch (p.action) {
-      case 'look':
-        yawT = p.lookYawTarget;
-        pitchT = 0.04;
-        break;
-      case 'phone':
-        // Le yaw vers la main qui tient le téléphone est ajouté par la pose
-        // (characters/pose.ts), qui seule connaît le côté choisi.
-        yawT = 0;
-        pitchT = 0.55;
-        break;
-      case 'doze':
-        yawT = 0.25;
-        pitchT = 0.4 + Math.sin(p.bobPhase * 0.9) * 0.05;
-        lean = 0.05;
-        break;
-      case 'stare':
-        yawT = headYawToward(p, runtime.playerCarX, runtime.playerCarZ);
-        pitchT = THREE.MathUtils.clamp((1.35 - runtime.playerCarY) * 0.3, -0.3, 0.25);
-        break;
-      case 'chat': {
-        const other = p.partner >= 0 ? paxList[p.partner] : null;
-        if (other && other.partner === p.id) {
-          yawT = headYawToward(p, other.pos.x, other.pos.z);
-          // Hochements alternés : chacun « parle » à son tour.
-          pitchT = Math.max(0, Math.sin(p.actionT * 2.4 + p.chatRole * Math.PI)) * 0.09;
-        } else {
-          endChat(p);
-          p.action = 'none';
-        }
-        break;
-      }
-      case 'sneeze': {
-        // Inspiration tête en arrière, puis atchoum vers l'avant.
-        const t = p.actionT;
-        if (t < 0.35) pitchT = -0.3 * (t / 0.35);
-        else if (t < 0.55) {
-          pitchT = 0.55;
-          lean = 0.09;
-        } else pitchT = 0.55 * (1 - (t - 0.55) / 0.35);
-        break;
-      }
-      default:
-        yawT = 0;
-        pitchT = 0;
+    // Cibles de tête selon l'action en cours (catalogue → paxMotion).
+    const partner = p.partner >= 0 ? paxList[p.partner] : null;
+    if (isPairAction(p.action) && (!partner || partner.partner !== p.id)) {
+      endPair(p);
+      p.action = 'none';
     }
-    const speed = p.action === 'sneeze' ? 14 : 4.5;
-    p.headYaw += (yawT - p.headYaw) * Math.min(1, dt * speed);
-    p.headPitch += (pitchT - p.headPitch) * Math.min(1, dt * speed);
-    p.bodyLean += (lean - p.bodyLean) * Math.min(1, dt * speed);
+    const seatSide =
+      p.state === 'seated' && p.seatSlot >= 0 ? SEAT_SLOTS[p.seatSlot].side : undefined;
+    const player = trainPlayerCtx();
+    const m = resolveMotion({
+      action: p.action,
+      actionT: p.actionT,
+      bobPhase: p.bobPhase,
+      chatRole: p.chatRole,
+      lookYawTarget: p.lookYawTarget,
+      posX: p.pos.x,
+      posZ: p.pos.z,
+      yaw: p.yaw,
+      partnerX: partner?.pos.x,
+      partnerZ: partner?.pos.z,
+      playerX: player.playerX,
+      playerY: player.playerY,
+      playerZ: player.playerZ,
+      seatSide,
+    });
+    p.headYaw += (m.yaw - p.headYaw) * Math.min(1, dt * m.speed);
+    p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed);
+    p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed);
   }
 }
