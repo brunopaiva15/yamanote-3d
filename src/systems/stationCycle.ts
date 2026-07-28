@@ -1,17 +1,10 @@
 // Machine à états du cycle station : cruise → brake → dwell → depart, avec
-// timing quasi réel (~2 min par station). Déclenche annonces, carillons,
-// mélodies et échanges de passagers aux bons instants.
+// timing quasi réel (~2 min à 2 min 20 par station, selon la durée d'arrêt
+// tirée). Déclenche annonces, carillons, mélodies et échanges de passagers aux
+// bons instants — voir « Chronologie de l'arrêt » plus bas.
 
 import { CONFIG, V_MAX } from '../data/config';
-import {
-  ENABLE_DEPARTURE_MELODY_CLIPS,
-  innerMainMelodyPlatforms,
-  MELODY_REPEATS,
-  MELODY_REPEAT_GAP_S,
-  outerMainMelodyPlatforms,
-  SESERAGI_PLATFORMS,
-} from '../data/melodies';
-import { DOOR_SIDE, STATIONS } from '../data/stations';
+import { DOOR_SIDE, STATIONS, TRANSFERS } from '../data/stations';
 import { cruiseDuration } from '../data/segments';
 import {
   EMERGENCY_REASONS,
@@ -36,6 +29,7 @@ import {
 import * as audio from './audioEngine';
 import { cancelSpeech, say } from './speech';
 import {
+  lineDelayed,
   notifyLineDelay,
   paAgentMessage,
   paAlightFirst,
@@ -49,6 +43,7 @@ import { clearPlatformCrowd, seedPlatformCrowd } from './platformCrowd';
 import {
   cancelDepartureMelody,
   clearDepartureBlockers,
+  interruptDepartureMelody,
   isDepartureBlocked,
   resetMelodyDepartureGuard,
 } from './departureSequence';
@@ -151,34 +146,54 @@ function updateEmergencyStop(dt: number): void {
   }
 }
 
-/** Durée des clips originaux (s), imprimée par scripts/melodies-gen.py. */
-const INNER_MAIN_MELODY_SECS = 8.6;
-const OUTER_MAIN_MELODY_SECS = 9.1;
-const OSAKI_INNER_SECONDARY_MELODY_SECS = 8.8;
-const OSAKI_OUTER_SECONDARY_MELODY_SECS = 8.3;
-const KOMAGOME_OUTER_SAKURA_A_SECS = 13.6;
-const KOMAGOME_INNER_SAKURA_V2_SECS = 13.4;
-const UGUISUDANI_INNER_HARU_TREMOLO_SECS = 9.4;
-const SESERAGI_MELODY_SECS = 8.1;
-const TAKADANOBABA_OUTER_ATOM_A_SECS = 6.8;
-const TAKADANOBABA_INNER_ATOM_B_SECS = 6.4;
-const EBISU_INNER_THIRD_MAN_F_SECS = 11.2;
-const TAKANAWA_GATEWAY_INNER_GLORIOUS_A_SECS = 10.7;
-const TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_SECS = 10.2;
-const KANDA_OUTER_MONDAMIN_A_SECS = 8.0;
-const KANDA_INNER_MONDAMIN_B_SECS = 7.6;
-const IKEBUKURO_INNER_BIC_CAMERA_A_SECS = 8.0;
-const IKEBUKURO_INNER_BIC_CAMERA_B_SECS = 7.3;
-/** Marge entre fin de mélodie et annonce de fermeture. */
-const MELODY_TO_ANNOUNCE_GAP = 1.5;
+// --- Chronologie de l'arrêt ----------------------------------------------
+//
+// Tout ce bloc est calé sur l'arrêt COMPLET du train, et non sur la durée des
+// clips : la 発車メロディ n'est pas un morceau qu'on laisse finir, c'est un
+// signal que le chef de train lance ~25 s avant le départ et coupe ~15 s avant.
+// Séquence visée, en secondes après l'immobilisation :
+//
+//   0 s       arrêt du E235
+//   1–3 s     ouverture des portes
+//   15–25 s   début de la mélodie (20 s de référence)
+//   +10 s     coupure de la mélodie, et annonce de fermeture dans la foulée
+//   +20 s     fermeture des portes
+//   +26 s     la rame s'ébranle → immobilisation de 41 à 51 s, ~46 s en moyenne
+//
+// Les bornes 15–25 s ne sont pas du bruit : une petite gare ou une ligne en
+// retard presse l'échange, une grande gare ou une régulation l'étire. JR East
+// ne fixe d'ailleurs pas d'heure de départ à toutes les gares intermédiaires.
+
 /**
- * Avance de l'annonce de fermeture sur la fin du dwell : les clips ja + en
- * durent ~6,5 s à eux deux — l'anglais doit être terminé avant que la rame ne
- * s'ébranle (fin du dwell + DEPART_HOLD).
+ * Secondes déjà écoulées depuis l'arrêt complet quand la phase dwell démarre :
+ * le profil de freinage amène v=0 vers t≈21 s d'une phase brake qui en dure 22.
+ * Les chronos ci-dessous sont en temps de dwell, ce décalage fait le pont.
  */
-export const CLOSE_ANNOUNCE_LEAD = 7.0;
+const STOP_TO_DWELL_T0 = 1.0;
+
+/** Début de la mélodie après l'arrêt complet : référence et bornes admises. */
+const MELODY_AFTER_STOP = 20.0;
+const MELODY_AFTER_STOP_MIN = 15.0;
+const MELODY_AFTER_STOP_MAX = 25.0;
+/** Tirage aléatoire autour de la référence (± s), avant biais gare / retard. */
+const MELODY_AFTER_STOP_JITTER = 2.5;
+/** Décalage selon la taille de la gare, et selon l'état de la ligne (s). */
+const MELODY_STATION_BIAS = 2.5;
+
+/** Durée pendant laquelle la mélodie sonne avant d'être coupée (s). */
+export const MELODY_SOUNDING = 10.0;
+
+/**
+ * Avance de l'annonce de fermeture sur la fin du dwell. Elle tombe sur la
+ * coupure de la mélodie : la voix prend la place du silence, comme sur le quai.
+ * Les clips ja + en durent ~6,5 s à eux deux et doivent être finis avant que la
+ * rame ne s'ébranle (fin du dwell + DEPART_HOLD) — ils le sont largement.
+ */
+export const CLOSE_ANNOUNCE_LEAD = 13.0;
 /** Avance de la fermeture des portes sur la fin du dwell. */
 export const DOORS_CLOSE_LEAD = 4.0;
+/** Avance du début de la mélodie sur la fin du dwell (= annonce + durée sonore). */
+const MELODY_LEAD = CLOSE_ANNOUNCE_LEAD + MELODY_SOUNDING;
 /**
  * Départ de l'annonce d'approche avant la fin de la croisière. Aux gares à
  * grosses correspondances (Ueno, Tokyo, Shinjuku…), まもなく + 乗換案内 ja/en
@@ -188,58 +203,51 @@ export const DOORS_CLOSE_LEAD = 4.0;
  */
 const APPROACH_ANNOUNCE_LEAD = 20.0;
 
-function melodyBudgetSeconds(stationIndex: number): number {
-  // Sans clips (flag coupé) : budget de la synthèse Tone.js uniquement.
-  if (!ENABLE_DEPARTURE_MELODY_CLIPS) return 6.5;
+/**
+ * Chronologie tirée pour l'arrêt en cours. Tirée UNE fois, à l'entrée en
+ * freinage : dwellDuration() est appelée à chaque frame par le cycle, par le
+ * quai et par l'affichage — elle doit rendre la même valeur du début à la fin
+ * de l'arrêt.
+ */
+export const stopTimings = { melodyAfterStop: MELODY_AFTER_STOP };
+
+/**
+ * Poids de la gare, mesuré au nombre de lignes en correspondance : Mejiro n'en
+ * a aucune et expédie l'échange, Shinjuku en aligne neuf et prend son temps.
+ */
+function stationBias(stationIndex: number): number {
   const jy = STATIONS[stationIndex]?.jy;
-  if (!jy) return 6.5;
-  const dir = useStore.getState().loopDirection;
-  if (jy === 'JY24' && runtime.useAlternativePlatform) {
-    if (dir === 'inner') return OSAKI_INNER_SECONDARY_MELODY_SECS;
-    if (dir === 'outer') return OSAKI_OUTER_SECONDARY_MELODY_SECS;
-  }
-  if (jy === 'JY13' && dir === 'inner') {
-    if (runtime.useAlternativePlatform) return IKEBUKURO_INNER_BIC_CAMERA_A_SECS;
-    return IKEBUKURO_INNER_BIC_CAMERA_B_SECS;
-  }
-  if (jy === 'JY10') {
-    if (dir === 'outer') return KOMAGOME_OUTER_SAKURA_A_SECS;
-    if (dir === 'inner') return KOMAGOME_INNER_SAKURA_V2_SECS;
-  }
-  if (jy === 'JY06' && dir === 'inner') return UGUISUDANI_INNER_HARU_TREMOLO_SECS;
-  if (jy === 'JY15') {
-    if (dir === 'outer') return TAKADANOBABA_OUTER_ATOM_A_SECS;
-    if (dir === 'inner') return TAKADANOBABA_INNER_ATOM_B_SECS;
-  }
-  if (jy === 'JY21' && dir === 'inner') return EBISU_INNER_THIRD_MAN_F_SECS;
-  if (jy === 'JY26' && dir === 'inner') return TAKANAWA_GATEWAY_INNER_GLORIOUS_A_SECS;
-  if (jy === 'JY26' && dir === 'outer') return TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_SECS;
-  if (jy === 'JY02' && dir === 'outer') return KANDA_OUTER_MONDAMIN_A_SECS;
-  if (jy === 'JY02' && dir === 'inner') return KANDA_INNER_MONDAMIN_B_SECS;
-  if (dir === 'outer' && SESERAGI_PLATFORMS[jy]) return SESERAGI_MELODY_SECS;
-  if (dir === 'outer' && outerMainMelodyPlatforms[jy]) return OUTER_MAIN_MELODY_SECS;
-  if (dir === 'inner' && innerMainMelodyPlatforms[jy]) return INNER_MAIN_MELODY_SECS;
-  return 6.5;
+  const transfers = jy ? TRANSFERS[jy] : undefined;
+  if (!transfers) return -MELODY_STATION_BIAS;
+  return transfers.jp.split('、').length >= 5 ? MELODY_STATION_BIAS : 0;
 }
 
-/** Fenêtre sonore de la mélodie : MELODY_REPEATS passages + respirations. */
-function melodyWindowSeconds(stationIndex: number): number {
-  return (
-    MELODY_REPEATS * melodyBudgetSeconds(stationIndex) +
-    (MELODY_REPEATS - 1) * MELODY_REPEAT_GAP_S
+/** Tire l'instant de la mélodie pour l'arrêt qui commence. */
+export function randomizeStopTimings(stationIndex: number): void {
+  // Ligne en retard : on rattrape sur les quais, la mélodie part plus tôt.
+  const bias = stationBias(stationIndex) - (lineDelayed() ? MELODY_STATION_BIAS : 0);
+  const jitter = (Math.random() * 2 - 1) * MELODY_AFTER_STOP_JITTER;
+  stopTimings.melodyAfterStop = Math.min(
+    MELODY_AFTER_STOP_MAX,
+    Math.max(MELODY_AFTER_STOP_MIN, MELODY_AFTER_STOP + bias + jitter),
   );
 }
 
-/** Dwell assez long pour laisser finir la 発車メロディ avant l'annonce. */
-export function dwellDuration(stationIndex: number): number {
-  const window = melodyWindowSeconds(stationIndex);
-  // ~2 s après ouverture pour l'échange + mélodie (2 passages) + marge + annonce.
-  return Math.max(CONFIG.dwellTime, 2 + window + MELODY_TO_ANNOUNCE_GAP + CLOSE_ANNOUNCE_LEAD);
+/**
+ * Durée du dwell, entièrement déduite de l'instant de la mélodie : tout le
+ * reste de la procédure s'enchaîne derrière elle à intervalles fixes.
+ */
+export function dwellDuration(_stationIndex: number): number {
+  return stopTimings.melodyAfterStop - STOP_TO_DWELL_T0 + MELODY_LEAD;
 }
 
-export function melodyStartAt(stationIndex: number, dwell: number): number {
-  const window = melodyWindowSeconds(stationIndex);
-  return Math.max(2, dwell - CLOSE_ANNOUNCE_LEAD - MELODY_TO_ANNOUNCE_GAP - window);
+export function melodyStartAt(_stationIndex: number, dwell: number): number {
+  return Math.max(2, dwell - MELODY_LEAD);
+}
+
+/** Instant de la coupure : la mélodie n'atteint jamais sa dernière note. */
+export function melodyCutAt(stationIndex: number, dwell: number): number {
+  return melodyStartAt(stationIndex, dwell) + MELODY_SOUNDING;
 }
 
 const PHASE_ORDER = (stationIndex: number) => [
@@ -367,6 +375,7 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
     if (t > 1.6) fired.add('exchange');
     if (t > 6) fired.add('pa-agent');
     if (t >= melodyStartAt(stationIndex, dwell)) fired.add('melody');
+    if (t >= melodyCutAt(stationIndex, dwell)) fired.add('melody-cut');
     if (t >= dwell - CLOSE_ANNOUNCE_LEAD) fired.add('announce-close');
     if (t >= dwell - CLOSE_ANNOUNCE_LEAD + 1.2) fired.add('pa-close');
     if (t >= dwell - DOORS_CLOSE_LEAD) fired.add('doors-close');
@@ -399,8 +408,10 @@ export function resumeDwellAt(t: number, stationIndex: number): void {
 // À appeler avant start(), une fois l'audio initialisé.
 export function randomizeEntry(): void {
   const station = Math.floor(Math.random() * 30);
-  // Pré-positionne l'index pour que dwellDuration() voie la bonne gare.
+  // Pré-positionne l'index pour que dwellDuration() voie la bonne gare, et
+  // tire sa chronologie : PHASE_ORDER a besoin de la durée du dwell.
   useStore.getState().setIndex(station);
+  randomizeStopTimings(station);
 
   const phases = PHASE_ORDER(station);
   const total = phases.reduce((sum, p) => sum + p.dur, 0);
@@ -546,8 +557,12 @@ export function updateCycle(dt: number): void {
       break;
     }
     case 'brake': {
-      // Nouveau tirage des retards de portes pour cette gare.
-      once('door-timings', true, () => randomizeDoorTimings());
+      // Nouveau tirage des retards de portes et de la chronologie de l'arrêt
+      // pour cette gare — avant le dwell, dont il fixe la durée.
+      once('door-timings', true, () => {
+        randomizeDoorTimings();
+        randomizeStopTimings(s.index);
+      });
       // Mise en action des freins : purge d'air au tout début du freinage.
       once('brake-apply', true, () => audio.brakeApply());
       once('jingle', true, () => audio.arrivalJingle());
@@ -581,19 +596,19 @@ export function updateCycle(dt: number): void {
       once('pa-alight', t > 0.4 + stationTimings.psdOpenDelay + 0.6, () => paAlightFirst());
       once('exchange', t > 1.6, () => exchangePassengers(s.doorSide));
       once('pa-agent', t > 6, () => paAgentMessage());
-      // Séquence de départ fidèle : la mélodie (発車メロディ) démarre portes ouvertes
-      // et se termine AVANT l'annonce de fermeture ; puis carillon, puis fermeture.
-      once('melody', t >= melodyStartAt(s.index, dwell), () => audio.departureMelody(s.index));
 
       // Porte bloquée / maintien / signal / urgence : stop mélodie, reste à quai.
       if (isDepartureBlocked()) {
         cancelDepartureMelody();
         if (runtime.doorTarget !== 1) setTrainDoors(1);
         if (runtime.psdTarget !== 1) setPsdDoors(1);
-        // On retient l'horloge avant la séquence de fermeture et on réarme
-        // ses événements : au déblocage, annonce → fermeture → départ se
-        // rejouent dans l'ordre au lieu de partir tous dans la même frame.
-        runtime.phaseT = Math.min(runtime.phaseT, dwell - CLOSE_ANNOUNCE_LEAD - 1);
+        // On retient l'horloge juste avant la mélodie et on réarme la fin de
+        // procédure : au déblocage, la 発車メロディ est relancée pour la
+        // nouvelle tentative de départ, puis annonce → fermeture → départ
+        // s'enchaînent dans l'ordre au lieu de partir tous dans la même frame.
+        runtime.phaseT = Math.min(runtime.phaseT, melodyStartAt(s.index, dwell));
+        fired.delete('melody');
+        fired.delete('melody-cut');
         fired.delete('announce-close');
         fired.delete('pa-close');
         fired.delete('doors-close');
@@ -601,6 +616,14 @@ export function updateCycle(dt: number): void {
         break;
       }
 
+      // Séquence de départ fidèle : la mélodie (発車メロディ) démarre une
+      // vingtaine de secondes après l'arrêt, portes ouvertes depuis longtemps,
+      // tourne une dizaine de secondes, puis le chef de train la coupe —
+      // l'annonce de fermeture prend le relais sur ce silence.
+      once('melody', t >= melodyStartAt(s.index, dwell), () =>
+        audio.departureMelody(s.index, MELODY_SOUNDING),
+      );
+      once('melody-cut', t >= melodyCutAt(s.index, dwell), () => interruptDepartureMelody());
       once('announce-close', t >= dwell - CLOSE_ANNOUNCE_LEAD, () =>
         say(doorsClosingAnnouncement()),
       );
@@ -654,6 +677,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     store.setPhase(phase);
     store.setDoorSide(DOOR_SIDE[index]);
     audio.setPlatformSide(DOOR_SIDE[index]);
+    randomizeStopTimings(index);
     runtime.phaseT = t;
     const sim = simulatePhaseState(phase, t, index);
     runtime.speed = sim.v;

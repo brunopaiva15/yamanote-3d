@@ -47,29 +47,13 @@
 
 import * as Tone from 'tone';
 import { CABIN_SPEAKERS, CONFIG, PLATFORM_SPEAKERS } from '../data/config';
-import {
-  EBISU_INNER_THIRD_MAN_F_PATH,
-  INNER_MAIN_MELODY_PATH,
-  IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
-  IKEBUKURO_INNER_BIC_CAMERA_B_PATH,
-  KANDA_INNER_MONDAMIN_B_PATH,
-  KANDA_OUTER_MONDAMIN_A_PATH,
-  KOMAGOME_INNER_SAKURA_V2_PATH,
-  KOMAGOME_OUTER_SAKURA_A_PATH,
-  MELODY_REPEATS,
-  MELODY_REPEAT_GAP_S,
-  OSAKI_INNER_SECONDARY_MELODY_PATH,
-  OSAKI_OUTER_SECONDARY_MELODY_PATH,
-  OUTER_MAIN_MELODY_PATH,
-  SESERAGI_MELODY_PATH,
-  TAKADANOBABA_INNER_ATOM_B_PATH,
-  TAKADANOBABA_OUTER_ATOM_A_PATH,
-  TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH,
-  TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH,
-  UGUISUDANI_INNER_HARU_TREMOLO_PATH,
-} from '../data/melodies';
+import { MELODY_PATHS, MELODY_REPEATS, MELODY_REPEAT_GAP_S } from '../data/melodies';
 import { STATIONS } from '../data/stations';
-import { buildDepartureContext, playDepartureMelodyForContext } from './departureSequence';
+import {
+  buildDepartureContext,
+  isDepartureBlocked,
+  playDepartureMelodyForContext,
+} from './departureSequence';
 
 interface Nodes {
   master: Tone.Gain;
@@ -873,25 +857,29 @@ const SPECIALS: Record<string, Note[]> = {
   JY26: [['C6', 1], ['D6', 1], ['E6', 1], ['G6', 1], ['E6', 1], ['D6', 1], ['C6', 1], ['D6', 2], ['C6', 3]], // Takanawa GW
 };
 
-// Durée cible de la 発車メロディ (secondes). En réalité elle joue pendant que les
-// portes sont ouvertes, ~8–11 s en situation normale — bien avant l'annonce de
-// fermeture, qui ne vient qu'APRÈS la fin de la musique. Le motif est donc bouclé
-// jusqu'à approcher cette cible (≈ 3 tours).
+// Durée d'un passage du motif (secondes) : le motif est bouclé jusqu'à
+// approcher cette cible (≈ 3 tours), comme un clip de quai.
 export const MELODY_DURATION = 6.5;
 
-function synthMelody(index: number): void {
+/**
+ * Repli synthétisé pour les quais sans clip. Les notes sont PLANIFIÉES à
+ * l'avance dans Tone : une fois posées, on ne peut plus les rappeler. La
+ * mélodie est donc écrite d'emblée à la longueur exacte que le chef de train
+ * lui laissera (`seconds`), au lieu d'être coupée après coup.
+ */
+function synthMelody(index: number, seconds: number): void {
   if (!nodes) return;
   const jy = STATIONS[index].jy;
   const tune = SPECIALS[jy] ?? (index % 2 === 0 ? HOUSE_A : HOUSE_B);
   const unit = 0.21;
-  let t = Tone.now() + 0.05;
-  // Deux passages, comme les clips : des tours complets jusqu'à la durée
-  // cible, une respiration, puis le second passage.
-  for (let round = 0; round < MELODY_REPEATS; round++) {
+  const t0 = Tone.now() + 0.05;
+  let t = t0;
+  for (let round = 0; round < MELODY_REPEATS && t - t0 < seconds; round++) {
     const start = t;
-    while (t - start < MELODY_DURATION) {
+    while (t - start < MELODY_DURATION && t - t0 < seconds) {
       for (const [note, beats] of tune) {
         const dur = beats * unit;
+        if (t - t0 >= seconds) break;
         nodes.melodyA.triggerAttackRelease(note, dur * 0.92, t, 0.42);
         nodes.melodyB.triggerAttackRelease(Tone.Frequency(note).transpose(12).toNote(), dur * 0.92, t, 0.3);
         t += dur;
@@ -1012,6 +1000,8 @@ interface ClipHandle {
   /** Résolue à la fin de la lecture, qu'elle aille au bout ou soit coupée. */
   ended: Promise<void>;
   stop: () => void;
+  /** Coupe en fondu sur `seconds` au lieu de trancher net. */
+  fadeOut: (seconds: number) => void;
 }
 
 /** Lance un buffer décodé sur un bus. Le player se démonte tout seul. */
@@ -1041,16 +1031,30 @@ function startClip(buf: Tone.ToneAudioBuffer, bus: Bus): ClipHandle {
   player.onstop = finish;
   player.start();
 
+  const hardStop = (): void => {
+    if (finished) return;
+    try {
+      player.stop();
+    } catch {
+      /* déjà arrêté */
+    }
+    finish();
+  };
+
   return {
     ended,
-    stop: () => {
+    stop: hardStop,
+    // Coupure en fondu : ATOS ne tranche pas la 発車メロディ au milieu d'une
+    // note, il la referme en une fraction de seconde quand le chef relâche le
+    // bouton. `finish` n'est appelé qu'à l'arrêt planifié, via onstop.
+    fadeOut: (seconds: number) => {
       if (finished) return;
       try {
-        player.stop();
+        player.volume.rampTo(-48, seconds);
+        player.stop(`+${seconds}`);
       } catch {
-        /* déjà arrêté */
+        hardStop();
       }
-      finish();
     },
   };
 }
@@ -1115,9 +1119,19 @@ function stop(path: string): void {
   handle.stop();
 }
 
+/** Même chose, mais en fondu — coupure de la 発車メロディ par le chef de train. */
+function fadeOut(path: string, seconds: number): void {
+  stopEpoch.set(path, (stopEpoch.get(path) ?? 0) + 1);
+  const handle = activeByPath.get(path);
+  if (!handle) return;
+  activeByPath.delete(path);
+  handle.fadeOut(seconds);
+}
+
 export const audioManager = {
   playOnce,
   stop,
+  fadeOut,
   isPlaying(path: string): boolean {
     return activeByPath.has(path);
   },
@@ -1133,42 +1147,54 @@ export function arrivalJingle(): void {
   void playClip('arrival', synthArrival);
 }
 
+/** Gare dont le repli est déjà lancé, pour ne pas l'empiler sur lui-même. */
+let fallbackMelodyStation = -1;
+/** Clip melody-JYXX.mp3 déposé par l'utilisateur et en cours, s'il y en a un. */
+let fallbackMelodyPath: string | null = null;
+
 /**
  * 発車メロディ : clips Inner/Outer Main selon quai et sens, sinon
- * melody-JYXX.mp3 ou synthèse. Délègue la sélection à departureSequence
- * (évite les doubles lectures via departureId).
+ * melody-JYXX.mp3 déposé dans public/audio/, sinon synthèse. Délègue la
+ * sélection à departureSequence (évite les doubles lectures via departureId).
+ * `sounding` est le temps que le chef de train laissera à la mélodie avant de
+ * la couper : les clips sont coupés en vol par interruptDepartureMelody(), la
+ * synthèse — dont les notes sont planifiées d'avance — s'y ajuste à l'écriture.
  */
-export function departureMelody(index: number): void {
+export function departureMelody(index: number, sounding: number): void {
   const ctx = buildDepartureContext({
     departureSequenceStarted: true,
     stationIndex: index,
   });
-  void playDepartureMelodyForContext(ctx).then((played) => {
-    if (!played) {
-      void playClip(`melody-${STATIONS[index].jy}`, () => synthMelody(index), 'platform');
+  void playDepartureMelodyForContext(ctx).then(async (played) => {
+    // Rien joué parce que le départ est bloqué : surtout pas de repli, le quai
+    // doit rester muet tant que la procédure ne repart pas.
+    if (played || isDepartureBlocked() || fallbackMelodyStation === index) return;
+    fallbackMelodyStation = index;
+    const path = `melody-${STATIONS[index].jy}`;
+    fallbackMelodyPath = path;
+    if (!(await audioManager.playOnce(path, 'platform'))) {
+      fallbackMelodyPath = null;
+      synthMelody(index, sounding);
     }
   });
 }
 
+/** Coupe le repli en cours ; `fade` à 0 pour trancher net. */
+export function stopFallbackMelody(fade: number): void {
+  if (!fallbackMelodyPath) return;
+  if (fade > 0) audioManager.fadeOut(fallbackMelodyPath, fade);
+  else audioManager.stop(fallbackMelodyPath);
+  fallbackMelodyPath = null;
+}
+
+/** Réarme le repli : la mélodie de cet arrêt-là est derrière nous. */
+export function resetFallbackMelodyGuard(): void {
+  fallbackMelodyStation = -1;
+}
+
 /** Arrêt d'urgence des clips de départ connus (reset / quitter la gare). */
 export function stopDepartureMelodyClips(): void {
-  audioManager.stop(INNER_MAIN_MELODY_PATH);
-  audioManager.stop(OUTER_MAIN_MELODY_PATH);
-  audioManager.stop(OSAKI_INNER_SECONDARY_MELODY_PATH);
-  audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
-  audioManager.stop(KOMAGOME_OUTER_SAKURA_A_PATH);
-  audioManager.stop(KOMAGOME_INNER_SAKURA_V2_PATH);
-  audioManager.stop(UGUISUDANI_INNER_HARU_TREMOLO_PATH);
-  audioManager.stop(SESERAGI_MELODY_PATH);
-  audioManager.stop(TAKADANOBABA_OUTER_ATOM_A_PATH);
-  audioManager.stop(TAKADANOBABA_INNER_ATOM_B_PATH);
-  audioManager.stop(EBISU_INNER_THIRD_MAN_F_PATH);
-  audioManager.stop(TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH);
-  audioManager.stop(TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH);
-  audioManager.stop(KANDA_OUTER_MONDAMIN_A_PATH);
-  audioManager.stop(KANDA_INNER_MONDAMIN_B_PATH);
-  audioManager.stop(IKEBUKURO_INNER_BIC_CAMERA_A_PATH);
-  audioManager.stop(IKEBUKURO_INNER_BIC_CAMERA_B_PATH);
+  for (const path of MELODY_PATHS) audioManager.stop(path);
 }
 
 // --- Ambiance de gare ----------------------------------------------------

@@ -34,12 +34,19 @@ import {
 } from './stationPa';
 import { exchangePassengers, seedPassengers } from './passengers';
 import { crowdArrive, crowdDisperse, crowdPresentCount, crowdTarget } from './platformCrowd';
-import { cancelDepartureMelody, resetMelodyDepartureGuard } from './departureSequence';
+import {
+  cancelDepartureMelody,
+  interruptDepartureMelody,
+  resetMelodyDepartureGuard,
+} from './departureSequence';
 import {
   CLOSE_ANNOUNCE_LEAD,
   DOORS_CLOSE_LEAD,
+  MELODY_SOUNDING,
   dwellDuration,
+  melodyCutAt,
   melodyStartAt,
+  randomizeStopTimings,
 } from './stationCycle';
 
 /**
@@ -122,6 +129,7 @@ export function beginPlatformWait(): void {
   if (t > 5) fired.add('agent-1');
   if (t > melodyStartAt(index, dwell) - 3) fired.add('agent-2');
   if (t >= melodyStartAt(index, dwell)) fired.add('melody');
+  if (t >= melodyCutAt(index, dwell)) fired.add('melody-cut');
   if (t >= dwell - CLOSE_ANNOUNCE_LEAD) fired.add('announce-close');
   if (t >= dwell - DOORS_CLOSE_LEAD) fired.add('doors-close');
   if (t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay) fired.add('psd-close');
@@ -158,7 +166,12 @@ function updateBoardable(dt: number, index: number, doorSide: 1 | -1): void {
   // avant que la mélodie ne parte.
   once('agent-1', t > 5, () => paAgentMessage());
   once('agent-2', t > melodyStartAt(index, dwell) - 3, () => paAgentMessage(1));
-  once('melody', t >= melodyStartAt(index, dwell), () => audio.departureMelody(index));
+  once('melody', t >= melodyStartAt(index, dwell), () =>
+    audio.departureMelody(index, MELODY_SOUNDING),
+  );
+  // De près, la coupure du chef de train s'entend pour ce qu'elle est : la
+  // mélodie se referme en pleine phrase.
+  once('melody-cut', t >= melodyCutAt(index, dwell), () => interruptDepartureMelody());
   // Sur le quai, l'annonce de fermeture est celle de la GARE : elle nomme la
   // voie. Celle de la rame, on ne l'entend pas d'ici.
   once('announce-close', t >= dwell - CLOSE_ANNOUNCE_LEAD, () => paDoorsClosing(index));
@@ -272,6 +285,9 @@ function updateBerthing(index: number): void {
     runtime.stopSequence += 1;
     runtime.trainId = `yamanote-e235-${runtime.stopSequence}`;
     runtime.lastMelodyDepartureId = null;
+    // Nouvelle rame, nouvelle chronologie d'arrêt : deux trains d'affilée à la
+    // même gare ne repartent pas à la même seconde.
+    randomizeStopTimings(index);
     // Nouvelle rame : de nouveaux visages derrière les vitres.
     seedPassengers();
     // La gare annonce son propre nom, deux fois, comme sur les quais ATOS.

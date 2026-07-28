@@ -26,6 +26,7 @@ import {
 import { STATIONS, TRANSFERS } from '../data/stations';
 import { useStore, type Phase } from '../store';
 import { runtime } from '../systems/runtime';
+import { CLOSE_ANNOUNCE_LEAD, dwellDuration } from '../systems/stationCycle';
 import { JP_FONT, drawAdInto, rng } from '../textures/procedural';
 
 const YAMANOTE_GREEN = '#80c241';
@@ -1427,8 +1428,9 @@ export function Screens() {
       state = tick % 3 === 2 ? 'platform' : 'door';
     } else if (phase === 'dwell') {
       status = 'now';
+      // L'écran passe au pictogramme « portes qui ferment » avec l'annonce.
       state =
-        CONFIG.dwellTime - runtime.phaseT <= 5
+        runtime.phaseT >= dwellDuration(index) - CLOSE_ANNOUNCE_LEAD
           ? 'doorClosing'
           : ['loopJP', 'loopEN', 'nextZH', 'nextKO', 'zoomJP', 'zoomEN', 'platform'][tick % 7];
     } else {

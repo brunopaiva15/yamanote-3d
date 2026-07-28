@@ -136,7 +136,12 @@ export function headwayMinutesTo(fromIndex: number, hops: number, dir: LoopDirec
   return total;
 }
 
-/** Durée de croisière (s) : l'intervalle du tronçon moins depart/brake/dwell min. */
+/**
+ * Durée de croisière (s) : l'intervalle du tronçon moins depart/brake et le
+ * forfait d'arrêt CONFIG.dwellTime. L'arrêt réel étant plus long que ce
+ * forfait (voir config.ts), le cycle complet dépasse un peu l'intervalle —
+ * c'est voulu : la croisière garde de quoi dérouler les deux annonces.
+ */
 export function cruiseDuration(stationIndex: number): number {
   const headwaySec = SEGMENT_HEADWAY_MIN[segmentForArrival(stationIndex)] * 60;
   const fixed = CONFIG.departTime + CONFIG.brakeTime + CONFIG.dwellTime;

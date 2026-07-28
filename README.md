@@ -364,11 +364,13 @@ mélodie réelle (gamme, tempo, timbre) sans en reprendre les notes — les
 enregistrements protégés ne sont pas embarqués. Elles sont générées par
 `scripts/melodies-gen.py` dans `public/audio/melodies/` et activées via
 `ENABLE_DEPARTURE_MELODY_CLIPS = true` (`src/data/melodies.ts`) ; flag à
-`false` = retour à la synthèse Tone.js seule. La séquence de
-départ respecte l'ordre réel : la mélodie joue portes ouvertes — deux
-passages, séparés d'une courte respiration, comme la lance le chef de quai —
-et se termine **avant** l'annonce de fermeture, puis viennent le carillon et
-la fermeture.
+`false` = retour à la synthèse Tone.js seule. La séquence de départ respecte la
+chronologie réelle, comptée depuis l'arrêt complet : portes ouvertes à 1–3 s,
+mélodie **une vingtaine de secondes plus tard** (15–25 s selon la taille de la
+gare et l'état de la ligne, comme le chef de train qui la lance ~25 s avant le
+départ), coupée en fondu au bout d'une dizaine de secondes — elle n'arrive
+jamais au bout — l'annonce de fermeture prenant le relais sur ce silence, puis
+la fermeture vers 40 s et le départ vers 45–50 s.
 Les annonces (sens de la boucle 内回り avec gares repères, 次は… avec numéro
 JY, まもなく…, fermeture, accueil, messages de courtoisie en rotation) sont
 dites en japonais puis en anglais, avec les correspondances réelles de chaque

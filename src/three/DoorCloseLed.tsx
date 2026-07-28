@@ -8,11 +8,10 @@ import * as THREE from 'three';
 import { CONFIG } from '../data/config';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
+import { CLOSE_ANNOUNCE_LEAD, dwellDuration } from '../systems/stationCycle';
 
 // Fréquence de clignotement (~2,5 Hz), calée sur l'indicateur réel.
 const BLINK_HZ = 2.5;
-// Aligné sur `announce-close` dans stationCycle (dwellTime − 3,5 s).
-const ANNOUNCE_CLOSE_LEAD = 3.5;
 
 const COLOR_OFF = '#6a3210';
 const COLOR_DIM = '#b85414';
@@ -30,11 +29,12 @@ function makeLedMat(): THREE.MeshBasicMaterial {
 }
 
 function isDoorClosingWarn(): boolean {
-  const { phase } = useStore.getState();
-  // De l'annonce « portes qui ferment » jusqu'à la fin de la course.
+  const { phase, index } = useStore.getState();
+  // De l'annonce « portes qui ferment » jusqu'à la fin de la course : le même
+  // instant que `announce-close` dans stationCycle, dwell compris.
   const fromAnnounce =
     phase === 'dwell' &&
-    runtime.phaseT >= CONFIG.dwellTime - ANNOUNCE_CLOSE_LEAD &&
+    runtime.phaseT >= dwellDuration(index) - CLOSE_ANNOUNCE_LEAD &&
     runtime.doorOpen > 0.02;
   const closing = runtime.doorTarget === 0 && runtime.doorOpen > 0.02;
   return fromAnnounce || closing;
