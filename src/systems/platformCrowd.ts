@@ -78,7 +78,9 @@ export const crowdList: CrowdPax[] = [];
 // Bornes de la foule, tirées du gabarit de la gare courante : le quai fait
 // désormais 224 m et sa profondeur varie d'une typologie à l'autre.
 function bounds(): { z0: number; z1: number; x0: number; x1: number } {
-  const p = placementFor(useStore.getState().index, psdGates());
+  // platformIndex, pas index : au départ la foule reste sur le quai qu'on
+  // quitte, dont le gabarit n'est pas celui de la gare suivante.
+  const p = placementFor(useStore.getState().platformIndex, psdGates());
   return {
     z0: -p.walkHalfZ + 2,
     z1: p.walkHalfZ - 2,
@@ -254,7 +256,7 @@ export function clearPlatformCrowd(): void {
 // --- Flux de voyageurs : trémies et portes -------------------------------
 
 function placement(): StationPlacement {
-  return placementFor(useStore.getState().index, psdGates());
+  return placementFor(useStore.getState().platformIndex, psdGates());
 }
 
 /** Trémie la plus proche d'une abscisse z locale, ou null si la gare n'en a pas. */

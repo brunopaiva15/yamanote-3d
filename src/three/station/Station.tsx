@@ -20,9 +20,16 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../../store';
+import { DOOR_SIDE } from '../../data/stations';
 import { runtime } from '../../systems/runtime';
 import { psdDoorPos, psdGateLag } from '../../systems/doorMotion';
-import { placementFor, stairTopZ, type Placed } from '../../systems/stationPlacement';
+import {
+  gantryZs,
+  placementFor,
+  stairTopZ,
+  trackSignZs,
+  type Placed,
+} from '../../systems/stationPlacement';
 import { platformDetail } from '../../systems/perf';
 import { layoutFor, type StationLayout } from '../../data/stationLayouts';
 import {
@@ -30,6 +37,7 @@ import {
   OPP_DEPTH,
   PLATFORM_TOP,
   PSD_H,
+  PSD_LEAF_JOINT_W,
   PSD_LEAF_TRAVEL,
   PSD_LEAF_W,
   PSD_X,
@@ -59,6 +67,9 @@ const UP = new THREE.Quaternion();
 const V = new THREE.Vector3();
 const S = new THREE.Vector3();
 
+/** Référence stable pour les gares sans charpente signature. */
+const EMPTY_AVOID: { z: number; r: number }[] = [];
+
 
 /** Recul du panneau de limite derrière la limite de marche réelle (m). */
 const BARRIER_STANDOFF = 0.35;
@@ -69,8 +80,14 @@ const YARD_TRACKS = 4;
 const YARD_PITCH = 4.6;
 
 export function Station() {
-  const doorSide = useStore((s) => s.doorSide);
-  const index = useStore((s) => s.index);
+  // La gare rendue est celle dont le quai est physiquement là (platformIndex),
+  // pas la prochaine du trajet (index) : au départ, index avance dès le coup de
+  // sifflet alors que le quai défile encore le long des vitres — reconstruire
+  // ici sur index transformait la gare sous les yeux du joueur. Le côté
+  // d'ouverture suit la même logique : store.doorSide bascule vers la gare
+  // suivante en début de croisière, quand ce quai-ci est encore visible.
+  const index = useStore((s) => s.platformIndex);
+  const doorSide = DOOR_SIDE[index];
   const root = useRef<THREE.Group>(null);
 
   const layout = layoutFor(index);
@@ -251,6 +268,7 @@ export function Station() {
   const vendRef = useRef<THREE.InstancedMesh>(null);
   const vendFaceRef = useRef<THREE.InstancedMesh>(null);
   const leafRef = useRef<THREE.InstancedMesh>(null);
+  const leafJointRef = useRef<THREE.InstancedMesh>(null);
 
   useInstances(psdRef, psdSegs);
   useInstances(glassRef, psdGlass);
@@ -277,6 +295,7 @@ export function Station() {
     }
     const im = leafRef.current;
     if (!im || presence <= 0.02) return;
+    const jm = leafJointRef.current;
     const mm = leafMat.current;
     let k = 0;
     for (let g = 0; g < gaps.length; g++) {
@@ -287,15 +306,50 @@ export function Station() {
           UP,
           S.set(0.07, PSD_H - 0.06, PSD_LEAF_W),
         );
-        im.setMatrixAt(k++, mm);
+        im.setMatrixAt(k, mm);
+        // Montant de rive, calé sur le BORD DE FERMETURE du vantail : il suit
+        // donc la porte. Fermé, les deux montants se touchent et tracent la
+        // ligne sombre qui partage le portique en deux ; ouvert, chacun garde
+        // son joint, comme sur les portes réelles.
+        if (jm) {
+          mm.compose(
+            V.set(
+              PSD_X + 0.08,
+              PLATFORM_TOP + PSD_H / 2,
+              gaps[g] + dir * (open + PSD_LEAF_JOINT_W / 2),
+            ),
+            UP,
+            // À peine plus épais que le vantail : le joint affleure de trois
+            // millimètres de chaque côté, sinon les deux faces se disputent.
+            S.set(0.076, PSD_H - 0.1, PSD_LEAF_JOINT_W),
+          );
+          jm.setMatrixAt(k, mm);
+        }
+        k++;
       }
     }
     im.count = leafCount;
     im.instanceMatrix.needsUpdate = true;
+    if (jm) {
+      jm.count = leafCount;
+      jm.instanceMatrix.needsUpdate = true;
+    }
   });
 
   const midX = PSD_X + depth * 0.55;
   const wallH = canopyY - 0.07 - PLATFORM_TOP;
+
+  // Ce que les totems doivent contourner : le mobilier au sol, mais aussi
+  // l'aplomb des panneaux 番線 et des potences — leur chapeau montait pile
+  // dans les caissons suspendus.
+  const signageGround = useMemo(
+    () => [
+      ...place.obstacles,
+      ...trackSignZs(place).map((z) => ({ z, halfZ: 0.3 })),
+      ...gantryZs(place).map((z) => ({ z, halfZ: 0.3 })),
+    ],
+    [place],
+  );
 
   return (
     <group ref={root} name="gare" rotation={[0, doorSide === 1 ? 0 : Math.PI, 0]} visible={false}>
@@ -338,6 +392,14 @@ export function Station() {
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
       <instancedMesh name="vantaux-psd" ref={leafRef} args={[undefined, undefined, Math.max(1, leafCount)]} material={m.psd}>
+        <boxGeometry args={[1, 1, 1]} />
+      </instancedMesh>
+      <instancedMesh
+        name="joint-vantaux-psd"
+        ref={leafJointRef}
+        args={[undefined, undefined, Math.max(1, leafCount)]}
+        material={m.psdJoint}
+      >
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
         </>
@@ -459,9 +521,12 @@ export function Station() {
         canopyY={canopyY}
         halfZ={halfZ}
         totemX={PSD_X + depth * 0.32}
-        bandX={backX}
+        // À Harajuku la bande est suspendue DEVANT le mur de fond : calée sur
+        // backX comme sur un îlot, elle était entièrement noyée dedans.
+        bandX={place.hasBackWall ? backX - 0.3 : backX}
         detail={detail}
-        ground={place.obstacles}
+        ground={signageGround}
+        avoid={layout.sigPlan?.keepOut ?? EMPTY_AVOID}
         frame={m.frame}
         metal={m.metal}
         accent={m.accent}
@@ -602,7 +667,7 @@ function FarSide({
   if (far === null) {
     const backX = place.backX;
     return (
-      <group>
+      <group name="mur-fond">
         <mesh position={[backX, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
           <boxGeometry args={[0.18, wallH, len]} />
         </mesh>

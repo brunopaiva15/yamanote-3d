@@ -144,8 +144,10 @@ function build(): Built {
     ),
     liner: track(
       new THREE.MeshStandardMaterial({
-        color: '#767b80',
-        roughness: 0.95,
+        // Crème d'habitacle, pas le gris technique : c'est le « plafond » et
+        // les parois qu'on lit à travers les baies des voitures voisines.
+        color: '#e2e1db',
+        roughness: 0.92,
         side: THREE.BackSide,
       }),
     ),

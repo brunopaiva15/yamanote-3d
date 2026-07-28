@@ -200,7 +200,7 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   // et immobile, donc le seul où une mesure a du sens.
   w.__probeGoto = (i: number, phase: 'dwell' | 'brake' = 'dwell') => {
     const k = ((i % 30) + 30) % 30;
-    useStore.setState({ index: k, phase, doorSide: DOOR_SIDE[k] });
+    useStore.setState({ index: k, platformIndex: k, phase, doorSide: DOOR_SIDE[k] });
     runtime.platformFade = 1;
     runtime.platformSlide = 0;
   };

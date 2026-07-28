@@ -84,12 +84,14 @@ export function Harajuku({ layout, place }: SigProps) {
       ))}
 
       {/* --- Le bâtiment de 2020, par-dessus notre mur de fond ------------ */}
-      {/* Façade vitrée continue : montants blancs serrés, verre entre eux. */}
-      <mesh position={[backX + 0.24, PLATFORM_TOP + 4.6, 0]} material={s.pane}>
+      {/* Façade vitrée continue : montants blancs serrés, verre entre eux.
+          Elle se tient DERRIÈRE le débord d'auvent (qui dépasse le mur de
+          35 cm) : plaquée au mur, ses montants traversaient l'auvent. */}
+      <mesh position={[backX + 0.5, PLATFORM_TOP + 4.6, 0]} material={s.pane}>
         <boxGeometry args={[0.12, 6.4, len * 0.62]} />
       </mesh>
       {bays(len, 3.4, -0.31, 0.31).map((z) => (
-        <mesh key={`mu${z}`} position={[backX + 0.3, PLATFORM_TOP + 4.6, z]} material={s.white}>
+        <mesh key={`mu${z}`} position={[backX + 0.56, PLATFORM_TOP + 4.6, z]} material={s.white}>
           <boxGeometry args={[0.16, 6.4, 0.16]} />
         </mesh>
       ))}

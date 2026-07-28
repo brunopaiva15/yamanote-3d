@@ -17,7 +17,11 @@ import * as THREE from 'three';
 import { PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
 import type { StationLayout } from '../../data/stationLayouts';
 import { runtime } from '../../systems/runtime';
-import type { StationPlacement } from '../../systems/stationPlacement';
+import {
+  GANTRY_PULL,
+  trackSignZs,
+  type StationPlacement,
+} from '../../systems/stationPlacement';
 import {
   makeAccessPlate,
   makeExitSign,
@@ -81,11 +85,23 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
     };
   }, [mats, plates]);
 
+  // Largeur du caisson 番線 : pleine tant que le quai le permet, raccourcie
+  // sur les quais étroits. À 3,24 m il traversait l'épine centrale — bande
+  // directionnelle, horloge, chemin de câbles, gouttière — sur tous les îlots
+  // de moins de neuf mètres. Il s'arrête donc avant le couloir de l'épine
+  // (le chemin de câbles, son occupant le plus avancé, part à backX − 1,16).
+  const trackW = Math.min(3.24, place.backX - 1.3 - (PSD_X - 0.12));
+  const trackX = PSD_X - 0.12 + trackW / 2;
+  /** Aplomb des suspentes du caisson, depuis son centre. */
+  const trackHx = Math.max(0.35, trackW / 2 - 0.57);
+
   useEffect(() => {
     for (const s of signs.exits) s.redraw(station);
     signs.transfer.redraw(station);
-    signs.track.redraw(station);
-  }, [signs, station]);
+    // Le caisson 番線 se raccourcit sur les quais étroits : la texture se
+    // recompose à sa proportion au lieu de s'y écraser.
+    signs.track.redraw(station, trackW);
+  }, [signs, station, trackW]);
 
   // Les panneaux ne s'allument pas tant que le quai n'est pas là : redessiner
   // un canvas est gratuit, mais une gare invisible n'a pas à coûter un rendu.
@@ -105,7 +121,11 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
         // trouve à sa cage vitrée. Sa plaque, elle, reste posée dessus.
         .map((a, k) => ({ ...a, plate: k }))
         .filter((a) => a.kind !== 'elevator')
-        .map((a) => ({ z: a.z - a.halfZ - 1.6, i: a.kind === 'stairs' ? 0 : 1, plate: a.plate })),
+        .map((a) => ({
+          z: a.z - a.halfZ - GANTRY_PULL,
+          i: a.kind === 'stairs' ? 0 : 1,
+          plate: a.plate,
+        })),
     [place.accesses],
   );
 
@@ -120,48 +140,36 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
   // lecture quand on arrive du train.
   const panelW = Math.min(2.05, span / 2 - 0.12);
   const top = SIGN_BOTTOM + SIGN_H;
-  /** Du haut d'une plaque d'accès à la sous-face de l'auvent. */
-  const plateHang = Math.max(0.06, layout.canopyY - PLATFORM_TOP - 2.62 - 0.31);
+  /**
+   * Hauteur d'une plaque d'accès. Sur une trémie, à 2,62 m, on la lit sans
+   * lever la tête ; sur l'ascenseur elle se pose SUR la cage — au même niveau,
+   * elle s'enfonçait de vingt centimètres dans le chapeau (2,50 m).
+   */
+  const plateY = (kind: string): number => (kind === 'elevator' ? 2.83 : 2.62);
 
-  // Panneaux 番線, suspendus près du bord de quai. Centrés sur le milieu du
-  // quai et espacés de trente-six mètres : quel que soit l'endroit où l'on
-  // descend de la rame, il y en a toujours un dans le champ — c'est le repère
-  // qu'on cherche des yeux en arrivant sur un quai.
-  const trackSigns = useMemo(() => {
-    const out: number[] = [];
-    const halfZ = place.walkHalfZ;
-    const half = layout.length / 2;
-    for (let k = -3; k <= 3; k++) {
-      let z = k * 36;
-      if (Math.abs(z) > halfZ - 8) continue;
-      // Les bannières publicitaires courent tous les 26 m à partir de
-      // -halfZ + 18, à la même hauteur : au croisement, les deux caissons se
-      // traversaient. Le panneau 番線 se décale jusqu'à trouver son creux.
-      for (let guard = 0; guard < 8; guard++) {
-        const d = Math.abs(((z - (-half + 18)) % 26 + 26) % 26);
-        if (Math.min(d, 26 - d) > 2.2) break;
-        z += 2.4;
-      }
-      out.push(z);
-    }
-    return out;
-  }, [place.walkHalfZ, layout.length]);
+  // Panneaux 番線, suspendus près du bord de quai et espacés de trente-six
+  // mètres : quel que soit l'endroit où l'on descend de la rame, il y en a
+  // toujours un dans le champ — c'est le repère qu'on cherche des yeux en
+  // arrivant sur un quai. Leurs abscisses viennent du placement, qui les
+  // écarte des bannières, du kiosque et de l'horloge — et que les totems
+  // consultent à leur tour pour ne pas se dresser dessous.
+  const trackSigns = useMemo(() => trackSignZs(place), [place]);
 
   return (
     <group ref={root} name="orientation">
       {trackSigns.map((z) => (
-        <group name="panneau-番線" key={`tk${z}`} position={[PSD_X + 1.5, PLATFORM_TOP + SIGN_BOTTOM + 0.34, z]}>
+        <group name="panneau-番線" key={`tk${z}`} position={[trackX, PLATFORM_TOP + SIGN_BOTTOM + 0.34, z]}>
           {[-1, 1].map((d) => {
             // Du haut du caisson à la SOUS-FACE de l'auvent, ni plus ni moins.
             const hangH = Math.max(0.06, layout.canopyY - PLATFORM_TOP - SIGN_BOTTOM - 0.71);
             return (
-              <mesh key={d} position={[d * 1.05, 0.37 + hangH / 2, 0]} material={mats.strut}>
+              <mesh key={d} position={[d * trackHx, 0.37 + hangH / 2, 0]} material={mats.strut}>
                 <boxGeometry args={[0.05, hangH, 0.05]} />
               </mesh>
             );
           })}
           <mesh material={mats.frame}>
-            <boxGeometry args={[3.24, 0.74, 0.09]} />
+            <boxGeometry args={[trackW, 0.74, 0.09]} />
           </mesh>
           {[1, -1].map((d) => (
             <mesh
@@ -170,7 +178,7 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
               rotation={[0, d === 1 ? 0 : Math.PI, 0]}
               material={mats.track}
             >
-              <planeGeometry args={[3.16, 0.66]} />
+              <planeGeometry args={[trackW - 0.08, 0.66]} />
             </mesh>
           ))}
         </group>
@@ -179,11 +187,13 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
       {/* Plaque de balisage au-dessus de chaque accès : la lettre du plan JR,
           posée là où l'on débouche. C'est par elle qu'on se donne rendez-vous
           sur un quai de deux cent vingt mètres. */}
-      {detail <= 2 && place.accesses.map((a, k) => (
-        <group name="plaque-accès" key={`ap${k}`} position={[a.x, PLATFORM_TOP + 2.62, a.z - a.halfZ + 0.1]}>
+      {detail <= 2 && place.accesses.map((a, k) => {
+        const hang = Math.max(0.06, layout.canopyY - PLATFORM_TOP - plateY(a.kind) - 0.31);
+        return (
+        <group name="plaque-accès" key={`ap${k}`} position={[a.x, PLATFORM_TOP + plateY(a.kind), a.z - a.halfZ + 0.1]}>
           {/* Suspente jusqu'à l'auvent : la plaque flottait, sans rien. */}
-          <mesh position={[0, 0.31 + plateHang / 2, 0]} material={mats.strut}>
-            <boxGeometry args={[0.05, plateHang, 0.05]} />
+          <mesh position={[0, 0.31 + hang / 2, 0]} material={mats.strut}>
+            <boxGeometry args={[0.05, hang, 0.05]} />
           </mesh>
           <mesh material={mats.frame}>
             <boxGeometry args={[0.5, 0.62, 0.07]} />
@@ -199,7 +209,8 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
             </mesh>
           ))}
         </group>
-      ))}
+        );
+      })}
 
       {gantries.map(({ z, i, plate }) => (
         <group name="potence" key={`ov${z}`} position={[0, PLATFORM_TOP, z]}>

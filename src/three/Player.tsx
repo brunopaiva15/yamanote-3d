@@ -1,6 +1,7 @@
-// Caméra et contrôles : cliquer-glisser pour regarder (fiable en iframe),
-// pointer lock en bonus, ZQSD / WASD / flèches, clic net pour s'asseoir,
-// joystick tactile additionné au clavier. Balancement caméra lié au train.
+// Caméra et contrôles : un clic souris capture le pointeur (regard libre),
+// cliquer-glisser en secours si le verrou est refusé (iframe), ZQSD / WASD /
+// flèches, clic net pour s'asseoir, joystick tactile additionné au clavier.
+// Balancement caméra lié au train.
 
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -68,6 +69,8 @@ export function Player() {
     let downY = 0;
     let dragDist = 0;
     let pointerDown = false;
+    /** True si le verrou était déjà actif au pointerdown (clic = s'asseoir). */
+    let wasLockedAtDown = false;
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return;
@@ -85,25 +88,33 @@ export function Player() {
 
     const locked = () => document.pointerLockElement === canvas;
 
-    const onPointerDown = (e: PointerEvent) => {
-      if (e.target !== canvas) return;
-      pointerDown = true;
-      downX = e.clientX;
-      downY = e.clientY;
-      dragDist = 0;
-      canvas.setPointerCapture(e.pointerId);
-    };
-    // Pointer lock en bonus, sur double-clic uniquement : jamais au clic
-    // simple, sinon le HUD devient incliquable une fois le verrou actif.
-    // Échoue sans bruit en iframe ; Échap pour en sortir.
-    const onDoubleClick = () => {
+    const requestLock = () => {
       if (locked()) return;
       try {
         const p = canvas.requestPointerLock() as unknown as Promise<void> | undefined;
         if (p && typeof p.catch === 'function') void p.catch(() => undefined);
       } catch {
-        /* refus silencieux */
+        /* refus silencieux (iframe, politique navigateur…) */
       }
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.target !== canvas) return;
+      pointerDown = true;
+      wasLockedAtDown = locked();
+      downX = e.clientX;
+      downY = e.clientY;
+      dragDist = 0;
+      // Desktop : un clic capture le pointeur pour regarder librement.
+      // Échap libère le verrou (HUD à nouveau cliquable). Tactile : glisser.
+      if (
+        e.pointerType === 'mouse' &&
+        !wasLockedAtDown &&
+        useStore.getState().started
+      ) {
+        requestLock();
+      }
+      if (!wasLockedAtDown) canvas.setPointerCapture(e.pointerId);
     };
     const onPointerMove = (e: PointerEvent) => {
       if (locked()) {
@@ -121,23 +132,22 @@ export function Player() {
       if (!pointerDown) return;
       pointerDown = false;
       // Clic net (sans glisser) : s'asseoir / se lever. Souris uniquement,
-      // le tactile a son propre bouton.
-      if (dragDist < 6 && e.pointerType === 'mouse' && useStore.getState().started) {
-        input.sitRequest = true;
-      }
+      // le tactile a son propre bouton. Le clic qui vient de demander le
+      // verrou ne s'assoit pas ; un clic une fois verrouillé, ou un clic
+      // net si le verrou a été refusé, oui.
+      if (dragDist >= 6 || e.pointerType !== 'mouse' || !useStore.getState().started) return;
+      if (wasLockedAtDown || !locked()) input.sitRequest = true;
     };
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('dblclick', onDoubleClick);
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       canvas.removeEventListener('pointerdown', onPointerDown);
-      canvas.removeEventListener('dblclick', onDoubleClick);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
     };

@@ -16,6 +16,7 @@ import { randomizeEntry } from '../systems/stationCycle';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
 import { Logo } from './Logo';
+import { Footer } from './Footer';
 
 // Horloge de Tokyo affichée en pied de carte : l'heure réelle là-bas, celle
 // dans laquelle la boucle va démarrer.
@@ -133,6 +134,7 @@ export function StartScreen() {
           {t.start.tokyoTime}
           <strong>{tokyoClock}</strong>
         </p>
+        <Footer />
       </div>
     </div>
   );

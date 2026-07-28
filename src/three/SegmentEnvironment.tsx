@@ -39,8 +39,8 @@ const FIELD_X = 9; // centre du plan de faisceau (s'étend de 4 à 14 m)
  */
 const FIELD_TILE = 12;
 
-// Idiome des banques Scenery : le décor du côté gauche défile en +offset,
-// celui du côté droit en -offset.
+// Idiome hérité des banques de ville : le décor du côté gauche défile en
+// +offset, celui du côté droit en -offset.
 const SIDES = [
   { side: -1 as const, sign: 1, rotY: Math.PI / 2 },
   { side: 1 as const, sign: -1, rotY: -Math.PI / 2 },

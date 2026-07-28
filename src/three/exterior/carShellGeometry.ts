@@ -8,6 +8,7 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { CONFIG } from '../../data/config';
 import { E235 } from '../../data/e235';
 import { roundedRect } from '../shapes';
 
@@ -87,15 +88,24 @@ function sideShape(): THREE.Shape {
   return outer;
 }
 
-/** Profil de toit : arc surbaissé d'un bord de pavillon à l'autre. */
+/**
+ * Profil de toit : arc surbaissé d'un bord de pavillon à l'autre.
+ *
+ * Le dessous DOIT rester au-dessus du plafond intérieur (CONFIG.carHeight).
+ * L'ancienne version fermait la forme à y ≈ 2,23 — sous le plafond (2,38).
+ * Dès que la coque s'allume (sortie sur le quai), on lisait donc une dalle
+ * grise à la place du plafond, uniquement hors du wagon.
+ */
 function roofShape(): THREE.Shape {
   const s = new THREE.Shape();
-  const y0 = E235.roofY - 0.16;
-  s.moveTo(-HW, y0);
+  // Face visible du plafond intérieur : sous-face de la dalle à carHeight.
+  const yBot = CONFIG.carHeight + 0.04;
+  const yEaves = Math.max(E235.roofY - 0.04, yBot + 0.02);
+  s.moveTo(-HW, yEaves);
   s.quadraticCurveTo(-HW * 0.55, E235.roofCrownY, 0, E235.roofCrownY);
-  s.quadraticCurveTo(HW * 0.55, E235.roofCrownY, HW, y0);
-  s.lineTo(HW, y0 - 0.1);
-  s.lineTo(-HW, y0 - 0.1);
+  s.quadraticCurveTo(HW * 0.55, E235.roofCrownY, HW, yEaves);
+  s.lineTo(HW, yBot);
+  s.lineTo(-HW, yBot);
   s.closePath();
   return s;
 }
@@ -284,17 +294,39 @@ function buildGlass(): THREE.BufferGeometry {
  * Doublure d'intérieur pour les voitures que le joueur n'occupe pas : une
  * boîte vue de l'intérieur, qui donne du fond aux vitres et aux portes
  * ouvertes au lieu de laisser voir à travers la rame.
+ *
+ * Le dessus s'arrête juste sous le plafond réel — le pavillon extérieur
+ * (gris) commence au-dessus, il ne doit plus jamais servir de plafond.
  */
 function buildLiner(): THREE.BufferGeometry {
-  const g = new THREE.BoxGeometry(HW * 2 - 0.24, E235.roofY - 0.2, HALF * 2 - 0.3);
-  g.translate(0, (E235.roofY - 0.2) / 2 - 0.05, 0);
+  const h = CONFIG.carHeight - 0.06;
+  const g = new THREE.BoxGeometry(HW * 2 - 0.24, h, HALF * 2 - 0.3);
+  g.translate(0, h / 2 - 0.02, 0);
   return g;
 }
 
-/** Un vantail extérieur : panneau plein et hublot, à transformer par instance. */
+/** Hauteur / largeur du hublot de vantail — partagées avec le verre. */
+const LEAF_WIN_W = 0.44;
+const LEAF_WIN_H = 0.8;
+const LEAF_WIN_Y = 1.3;
+
+/**
+ * Un vantail extérieur PERCÉ de son hublot.
+ *
+ * Avant, c'était une boîte pleine sur laquelle on plaquait une vitre
+ * transparente : depuis le quai, on voyait du vert uguisu à travers le
+ * « hublot », jamais l'intérieur. Même tour de main que les vantaux
+ * intérieurs (Doors.tsx) — la découpe laisse enfin voir au travers.
+ */
 function buildDoorLeaf(): THREE.BufferGeometry {
-  const g = new THREE.BoxGeometry(0.05, E235.doorH, E235.doorHalfW);
-  g.translate(0, E235.doorH / 2, 0);
+  const w = E235.doorHalfW;
+  const h = E235.doorH;
+  const panelShape = roundedRect(w, h, 0.008, 0, h / 2);
+  panelShape.holes.push(roundedRect(LEAF_WIN_W, LEAF_WIN_H, 0.09, 0, LEAF_WIN_Y));
+  const g = new THREE.ExtrudeGeometry(panelShape, { depth: 0.05, bevelEnabled: false });
+  // Shape dans (z, y) via XY, extrusion en +Z → épaisseur en X après rotation.
+  g.rotateY(Math.PI / 2);
+  g.translate(-0.025, 0, 0);
   return g;
 }
 
@@ -305,9 +337,9 @@ function buildDoorLeaf(): THREE.BufferGeometry {
  * son panneau — le hublot y clignotait au lieu de s'afficher.
  */
 function buildDoorGlass(): THREE.BufferGeometry {
-  const g = new THREE.PlaneGeometry(0.44, 0.8);
+  const g = new THREE.PlaneGeometry(LEAF_WIN_W, LEAF_WIN_H);
   g.rotateY(Math.PI / 2);
-  g.translate(0.028, 1.3, 0);
+  g.translate(0.028, LEAF_WIN_Y, 0);
   return g;
 }
 

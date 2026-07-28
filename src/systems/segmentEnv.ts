@@ -8,20 +8,12 @@
 // visible — sinon murs / clôtures du prochain segment remplacent le mur de
 // gare sous les yeux. Voir data/segments.ts pour la classification.
 
-import { CONFIG } from '../data/config';
-import { SEGMENTS, segmentAt, type SegmentKind } from '../data/segments';
-import { useStore, type Phase } from '../store';
+import { SEGMENTS, journeyProgress, segmentAt, type SegmentKind } from '../data/segments';
+import { useStore } from '../store';
 import { runtime } from './runtime';
 
-// Progression du trajet inter-gares : même convention que Scenery/Landmarks
-// (depart → cruise → brake ; dwell maintient p = 1).
-const JOURNEY = CONFIG.departTime + CONFIG.cruiseTime + CONFIG.brakeTime;
-const PHASE_BASE: Record<Phase, number> = {
-  depart: 0,
-  cruise: CONFIG.departTime,
-  brake: CONFIG.departTime + CONFIG.cruiseTime,
-  dwell: JOURNEY,
-};
+// Progression du trajet inter-gares : même convention que SkyDome/Landmarks
+// (depart → cruise → brake ; dwell maintient p = 1). Durée variable par tronçon.
 
 const KINDS: SegmentKind[] = ['viaduct', 'corridor', 'trench', 'ground'];
 
@@ -88,16 +80,15 @@ export function bridgeZ(k: number): number {
 }
 
 export function updateSegmentEnv(dt: number): void {
-  const { index, phase } = useStore.getState();
+  const { index, phase, platformIndex } = useStore.getState();
   // Au début de `depart`, l'index a déjà avancé vers la gare suivante — mais
   // le quai (opaque, coulissant) est encore sous les yeux. On conserve le
-  // tronçon d'arrivée jusqu'à ce que le quai soit largement parti, sinon les
+  // tronçon d'arrivée jusqu'à ce que le quai soit hors de vue, sinon les
   // murs / clôtures du prochain segment « remplacent » le mur de gare.
-  let envIndex = index;
-  if (phase === 'depart' && runtime.phaseT < CONFIG.departTime - 0.8) {
-    envIndex = (index + 29) % 30;
-  }
-  const seg = segmentAt(envIndex);
+  // platformIndex retient précisément cette gare-là (17 s de depart ne
+  // suffisent pas à dépasser un quai de 224 m : le défilement déborde sur la
+  // croisière), et ce quel que soit le sens de la boucle.
+  const seg = segmentAt(platformIndex);
   if (seg !== segEnv.seg) {
     const first = segEnv.seg < 0;
     segEnv.seg = seg;
@@ -113,7 +104,7 @@ export function updateSegmentEnv(dt: number): void {
   const spec = SEGMENTS[seg];
   // Progression visuelle du trajet : toujours basée sur l'index courant
   // (annonces / scenery), pas sur le hold d'environnement.
-  segEnv.p = Math.min(1, Math.max(0, (PHASE_BASE[phase] + runtime.phaseT) / JOURNEY));
+  segEnv.p = journeyProgress(phase, runtime.phaseT, index);
 
   // Fondu exponentiel (~2,5 s). Pendant le hold de départ on ne change pas
   // de cible (même tronçon) ; le vrai morph n'arrive qu'une fois le quai parti.
@@ -128,7 +119,7 @@ export function updateSegmentEnv(dt: number): void {
   // Pendant le hold de départ, on fige la hauteur (pas d'opensAtEnd du
   // prochain tronçon qui ferait monter/descendre les murs sous le quai).
   let wallTarget = spec.wallHeight ?? WALL_DEFAULT;
-  const holdingDepart = phase === 'depart' && runtime.phaseT < CONFIG.departTime - 0.8;
+  const holdingDepart = platformIndex !== index;
   if (spec.opensAtEnd && !holdingDepart) wallTarget *= 1 - smoothstep(0.7, 0.95, segEnv.p);
   segEnv.wallH += (wallTarget - segEnv.wallH) * k;
 

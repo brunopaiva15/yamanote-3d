@@ -12,6 +12,7 @@
 // Repère QUAI : celui dans lequel Platform.tsx construit sa géométrie, côté
 // +x, avant la rotation de π appliquée quand doorSide === -1.
 
+import { DOOR_SIDE } from '../data/stations';
 import { useStore } from '../store';
 import { runtime } from './runtime';
 
@@ -32,17 +33,24 @@ export function worldToCarZ(z: number): number {
 }
 
 // --- Repère quai <-> monde ----------------------------------------------
-// rotation.y = π quand doorSide === -1 : (x, z) → (-x, -z). La translation
-// platformSlide, elle, est posée dans le repère parent (donc en monde).
+// rotation.y = π quand le quai s'ouvre côté -1 : (x, z) → (-x, -z). La
+// translation platformSlide, elle, est posée dans le repère parent (donc en
+// monde). Le côté est celui du quai PRÉSENT (platformIndex) — store.doorSide
+// bascule vers la gare suivante en début de croisière, alors que ce quai-ci
+// défile encore et que sa foule vit toujours dans son repère.
+
+function platformFlip(): 1 | -1 {
+  return DOOR_SIDE[useStore.getState().platformIndex];
+}
 
 export function platformToWorld(x: number, z: number, out: { x: number; z: number }): void {
-  const flip = useStore.getState().doorSide === 1 ? 1 : -1;
+  const flip = platformFlip();
   out.x = x * flip;
   out.z = z * flip + runtime.platformSlide;
 }
 
 export function worldToPlatform(x: number, z: number, out: { x: number; z: number }): void {
-  const flip = useStore.getState().doorSide === 1 ? 1 : -1;
+  const flip = platformFlip();
   out.x = x * flip;
   out.z = (z - runtime.platformSlide) * flip;
 }

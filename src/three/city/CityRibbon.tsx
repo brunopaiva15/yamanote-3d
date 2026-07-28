@@ -16,7 +16,7 @@
 //   · l'écartement latéral, par côté : celui de la gare (stationOcclusion) et
 //     celui du faisceau de voies d'un corridor (segEnv.citySetback).
 //
-// Le sol urbain vit ici aussi, et non plus dans Scenery : il porte la même
+// Le sol urbain vit ici aussi, et non plus dans Wayside : il porte la même
 // élévation que la ville, et il est fendu en deux nappes qui laissent
 // l'emprise de la voie libre — une nappe unique passerait au-dessus du train
 // dès qu'elle monte sur les murs d'une tranchée.

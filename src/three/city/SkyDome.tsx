@@ -24,8 +24,9 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { runtime } from '../../systems/runtime';
 import { dayNightWeights } from '../../systems/daynight';
-import { useStore, type Phase } from '../../store';
+import { useStore } from '../../store';
 import { CONFIG } from '../../data/config';
+import { journeyProgress } from '../../data/segments';
 import { DISTRICTS } from '../../data/districts';
 import {
   cityTexSize,
@@ -55,14 +56,6 @@ const SIL_REPEAT = 4;
  * d'où metersPerRepeat = (π/2)·L. À 1400, la silhouette se lit à ~890 m.
  */
 const SIL_METERS_PER_REPEAT = 1400;
-
-const JOURNEY = CONFIG.departTime + CONFIG.cruiseTime + CONFIG.brakeTime;
-const PHASE_BASE: Record<Phase, number> = {
-  depart: 0,
-  cruise: CONFIG.departTime,
-  brake: CONFIG.departTime + CONFIG.cruiseTime,
-  dwell: JOURNEY,
-};
 
 function smoothstep(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -206,7 +199,9 @@ export function SkyDome() {
     const task = pending.current.shift();
     if (task) task();
 
-    const p = Math.min(1, Math.max(0, (PHASE_BASE[phase] + runtime.phaseT) / JOURNEY));
+    // Durée d'inter-gare variable selon le tronçon : la source est
+    // data/segments, partagée avec segEnv, les annonces et le quai.
+    const p = journeyProgress(phase, runtime.phaseT, index);
     const wArr = smoothstep(0.38, 0.62, p);
     u.uSilMix.value = arrivingBank.current === 1 ? wArr : 1 - wArr;
 

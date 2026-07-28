@@ -1,9 +1,16 @@
 // Tous les réglages ajustables de l'expérience, au même endroit.
 
 export const CONFIG = {
-  // Cycle station (secondes), calé sur la réalité : ~2 min par station, boucle ~1 h.
-  // depart et brake sont dimensionnés pour le profil physique E235 de
-  // stationCycle (~0,84 m/s² au démarrage, arrêt complet en ~21 s depuis 90 km/h).
+  // Cycle station (secondes). depart et brake sont dimensionnés pour le profil
+  // physique E235 de stationCycle (~0,84 m/s² au démarrage, arrêt complet en
+  // ~21 s depuis 90 km/h).
+  //
+  // dwellTime n'est PAS la durée d'arrêt : celle-ci est tirée par arrêt
+  // (stationCycle.dwellDuration, 37 à 47 s selon la gare et l'état de la
+  // ligne). C'est le forfait d'arrêt retiré de l'intervalle réel du tronçon
+  // pour dimensionner la croisière (segments.cruiseDuration) — le laisser bas
+  // garde à la croisière de quoi placer l'annonce de départ ET celle
+  // d'approche, qui cumulent jusqu'à 71 s de parole sur une même file.
   cruiseTime: 59,
   brakeTime: 22,
   dwellTime: 22,

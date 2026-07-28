@@ -17,9 +17,16 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { EMERGENCY_REASONS } from '../data/announcements';
 import { CONFIG } from '../data/config';
+import type { LoopDirection } from '../data/platforms';
+import {
+  cruiseDuration,
+  headwayMinutesTo,
+  stationAtHop,
+} from '../data/segments';
 import { STATIONS, TRANSFERS } from '../data/stations';
 import { useStore, type Phase } from '../store';
 import { runtime } from '../systems/runtime';
+import { CLOSE_ANNOUNCE_LEAD, dwellDuration } from '../systems/stationCycle';
 import { JP_FONT, drawAdInto, rng } from '../textures/procedural';
 
 const YAMANOTE_GREEN = '#80c241';
@@ -56,11 +63,28 @@ function fmtClock(clockMin: number): string {
 }
 
 // Secondes restantes avant l'arrivée à la prochaine station.
-function secondsToArrival(phase: Phase, phaseT: number): number {
-  if (phase === 'cruise') return Math.max(0, CONFIG.cruiseTime - phaseT) + CONFIG.brakeTime;
+function secondsToArrival(phase: Phase, phaseT: number, stationIndex: number): number {
+  const cruiseSec = cruiseDuration(stationIndex);
+  if (phase === 'cruise') return Math.max(0, cruiseSec - phaseT) + CONFIG.brakeTime;
   if (phase === 'brake') return Math.max(0, CONFIG.brakeTime - phaseT);
-  if (phase === 'depart') return Math.max(0, CONFIG.departTime - phaseT) + CONFIG.cruiseTime + CONFIG.brakeTime;
+  if (phase === 'depart') {
+    return Math.max(0, CONFIG.departTime - phaseT) + cruiseSec + CONFIG.brakeTime;
+  }
   return 0;
+}
+
+function etaMinutes(
+  index: number,
+  hops: number,
+  atStation: boolean,
+  countdown: number,
+  dir: LoopDirection,
+): number {
+  if (atStation && hops === 0) return 0;
+  const hopMin = headwayMinutesTo(index, hops, dir);
+  if (atStation) return hopMin;
+  const remain = Math.max(1, Math.ceil(countdown / 60));
+  return hops === 0 ? remain : hopMin + remain;
 }
 
 function fitText(g: CanvasRenderingContext2D, text: string, maxWidth: number, basePx: number, weight = 'bold'): void {
@@ -202,6 +226,7 @@ function drawRoute(
   clock: string,
   status: ScreenStatus,
   lang: ScreenLang,
+  dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
@@ -255,11 +280,11 @@ function drawRoute(
 
   const atStation = phase === 'dwell';
   for (let k = 4; k >= 0; k--) {
-    const stIdx = (index + k) % 30;
+    const stIdx = stationAtHop(index, k, dir);
     const st = STATIONS[stIdx];
     const [mx, my] = CIRCLES[k];
     // Cercle des minutes : blanc, jaune et plus gros pour la prochaine.
-    const minutes = atStation ? k * 2 : k * 2 + Math.max(1, Math.ceil(countdown / 60));
+    const minutes = etaMinutes(index, k, atStation, countdown, dir);
     g.beginPath();
     g.arc(mx, my, k === 0 ? 26 : 21, 0, Math.PI * 2);
     g.fillStyle = k === 0 ? '#e8c033' : '#ffffff';
@@ -385,6 +410,7 @@ function drawLoopMap(
   clock: string,
   status: ScreenStatus,
   lang: ScreenLang,
+  dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
   g.fillStyle = '#eceae5';
@@ -410,7 +436,7 @@ function drawLoopMap(
 
   // Rang de chaque station dans le sens de marche (0 = prochaine).
   const rank = new Array<number>(30);
-  for (let k = 0; k < 30; k++) rank[(index + k) % 30] = k;
+  for (let k = 0; k < 30; k++) rank[stationAtHop(index, k, dir)] = k;
   const atStation = phase === 'dwell';
   const MINUTES_SHOWN = 14; // au-delà (~30 min), simple point blanc
 
@@ -421,7 +447,7 @@ function drawLoopMap(
 
     // Point / cercle des minutes sur l'ovale.
     if (k < MINUTES_SHOWN) {
-      const minutes = atStation ? k * 2 : k * 2 + Math.max(1, Math.ceil(countdown / 60));
+      const minutes = etaMinutes(index, k, atStation, countdown, dir);
       g.beginPath();
       g.arc(x, y, k === 0 ? 13 : 10.5, 0, Math.PI * 2);
       g.fillStyle = k === 0 ? '#e8c033' : '#ffffff';
@@ -433,7 +459,7 @@ function drawLoopMap(
       if (k === MINUTES_SHOWN - 1) {
         // « (分) » du côté des stations sans cercle (rang suivant), où il
         // ne chevauche pas un autre cercle de minutes.
-        const [fx] = at(loopSlot((index + MINUTES_SHOWN) % 30));
+        const [fx] = at(loopSlot(stationAtHop(index, MINUTES_SHOWN, dir)));
         g.font = `9px ${JP_FONT}`;
         g.fillText(lang === 'jp' ? '(分)' : '(min)', x + (fx >= x ? 20 : -20), y + 3);
       }
@@ -1355,7 +1381,7 @@ export function Screens() {
     acc.current += dt;
     if (acc.current < 0.25) return;
     acc.current = 0;
-    const { index, phase, doorSide } = useStore.getState();
+    const { index, phase, doorSide, loopDirection } = useStore.getState();
 
     // Écran gauche : une pub toutes les ~15 s, boucle de AD_LOOP_COUNT spots.
     const adSeed = AD_LOOP_FIRST_SEED + (Math.floor(runtime.clockMin * 4) % AD_LOOP_COUNT);
@@ -1384,7 +1410,7 @@ export function Screens() {
     // voyageur quelque chose qui n'arrive pas.
     const tick = Math.floor(runtime.clockMin * 4);
     const clock = fmtClock(runtime.clockMin);
-    const countdown = Math.round(secondsToArrival(phase, runtime.phaseT));
+    const countdown = Math.round(secondsToArrival(phase, runtime.phaseT, index));
 
     const notice = trafficNotice(runtime.clockMin);
     // Le certificat de retard ne concerne que les lignes JR East.
@@ -1402,8 +1428,9 @@ export function Screens() {
       state = tick % 3 === 2 ? 'platform' : 'door';
     } else if (phase === 'dwell') {
       status = 'now';
+      // L'écran passe au pictogramme « portes qui ferment » avec l'annonce.
       state =
-        CONFIG.dwellTime - runtime.phaseT <= 5
+        runtime.phaseT >= dwellDuration(index) - CLOSE_ANNOUNCE_LEAD
           ? 'doorClosing'
           : ['loopJP', 'loopEN', 'nextZH', 'nextKO', 'zoomJP', 'zoomEN', 'platform'][tick % 7];
     } else {
@@ -1462,19 +1489,19 @@ export function Screens() {
           break;
         case 'trafficJP':
           if (notice) drawTrafficInfo(g, index, clock, 'jp', notice);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp');
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection);
           break;
         case 'trafficEN':
           if (notice) drawTrafficInfo(g, index, clock, 'en', notice);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'en');
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection);
           break;
         case 'statusJP':
           if (notice) drawLineStatus(g, index, clock, 'jp', notice);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp');
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection);
           break;
         case 'statusEN':
           if (notice) drawLineStatus(g, index, clock, 'en', notice);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'en');
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection);
           break;
         case 'certJP':
           drawDelayCert(g, index, clock, 'jp');
@@ -1489,16 +1516,16 @@ export function Screens() {
           drawEmergencyInfo(g, index, clock, 'en', emergency.reason);
           break;
         case 'loopJP':
-          drawLoopMap(g, index, phase, countdown, clock, status, 'jp');
+          drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection);
           break;
         case 'loopEN':
-          drawLoopMap(g, index, phase, countdown, clock, status, 'en');
+          drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection);
           break;
         case 'zoomEN':
-          drawRoute(g, index, phase, countdown, clock, status, 'en');
+          drawRoute(g, index, phase, countdown, clock, status, 'en', loopDirection);
           break;
         default:
-          drawRoute(g, index, phase, countdown, clock, status, 'jp');
+          drawRoute(g, index, phase, countdown, clock, status, 'jp', loopDirection);
       }
       g.texture.needsUpdate = true;
     }

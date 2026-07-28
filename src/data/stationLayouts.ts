@@ -27,7 +27,15 @@
 // Le champ `backdrop`, qui nommait une famille de rendu au lieu d'un fait, a
 // disparu : c'était lui qui donnait à vingt-neuf quais le même mur.
 
-import { PLATFORM_DEPTH } from './stationGeometry';
+import {
+  directionBandZs,
+  ELEVATOR_HALF_Z,
+  ESCALATOR_HALF_Z,
+  PLATFORM_DEPTH,
+  PSD_X,
+  STAIR_HALF_Z,
+} from './stationGeometry';
+import { CONSIST, E235 } from './e235';
 
 /** Niveau où court la voie dans la gare. */
 export type Elevation =
@@ -135,6 +143,35 @@ export interface StationAmenities {
   clock: boolean;
 }
 
+/**
+ * Plan d'implantation d'une charpente signature : ce que le RESTE de la gare
+ * doit savoir d'elle.
+ *
+ * Une charpente est dessinée par son fichier (three/station/signatures), mais
+ * ses retombées ne la regardent pas seule : un portique riveté descend en plein
+ * gabarit des panneaux suspendus, un poteau de halle se plante sur l'épine où
+ * le placement range bancs et distributeurs. Le plan est donc calculé ICI, dans
+ * les données — c'est la seule couche que le placement (systems) et le rendu
+ * (three) peuvent lire tous les deux — et la charpente le CONSOMME au lieu de
+ * recalculer sa trame dans son coin.
+ */
+export interface SigPlan {
+  /**
+   * Plans de charpente pleins sous l'auvent : rien de suspendu (panneaux,
+   * bannières, tableaux) ne se cale à leur droit. `r` est la demi-emprise du
+   * plan, marge comprise ; chaque consommateur y ajoute la sienne.
+   */
+  keepOut: { z: number; r: number }[];
+  /**
+   * Poteaux qui descendent jusqu'au sol du quai : le mobilier s'en écarte et
+   * la marche les contourne. Déjà écartés des accès, des potences et de la
+   * bande directionnelle — c'est le rôle de ce plan.
+   */
+  posts: { x: number; z: number }[];
+  /** Tronçons interdits aux conduites (gouttière, chemin de câbles). */
+  runBlocks: { z0: number; z1: number }[];
+}
+
 export interface StationLayout {
   elevation: Elevation;
   config: PlatformConfig;
@@ -167,10 +204,25 @@ export interface StationLayout {
   crowdScale: number;
   ambience: Ambience;
   signature?: SignatureKey;
+  /** Plan d'implantation de la charpente signature, quand elle en impose un. */
+  sigPlan?: SigPlan;
 }
 
 /** Longueur réelle d'un quai de la Yamanote : 11 voitures de 20 m. */
 export const FULL_PLATFORM_LEN = 224;
+
+/**
+ * Positions régulières sur la longueur du quai — la trame de toutes les
+ * charpentes signature. Partagée avec leur rendu (signatures/kit la
+ * ré-exporte) : la même formule des deux côtés, ou rien ne coïncide.
+ */
+export function bays(length: number, spacing: number, from = -0.5, to = 0.5): number[] {
+  const out: number[] = [];
+  const z0 = length * from + spacing * 0.4;
+  const z1 = length * to - spacing * 0.4;
+  for (let z = z0; z <= z1; z += spacing) out.push(z);
+  return out;
+}
 
 const PALETTES = {
   // Béton clair et acier gris : la gare JR ordinaire.
@@ -822,8 +874,154 @@ function amenities(scale: number, kiosk: boolean, clock: boolean): StationAmenit
   };
 }
 
+/**
+ * Écarte chaque plan de charpente des créneaux déjà pris, en cherchant des
+ * deux côtés ; un plan qui ne trouve pas de creux est abandonné — mieux vaut
+ * une travée plus large qu'un portique dans un escalier mécanique.
+ */
+function dodgePlanes(zs: number[], solids: { z: number; r: number }[]): number[] {
+  return zs.flatMap((base) => {
+    for (let d = 0; d <= 4.5; d += 0.9) {
+      for (const s of d === 0 ? [0] : [-d, d]) {
+        const z = base + s;
+        if (!solids.some((o) => Math.abs(z - o.z) < o.r)) return [z];
+      }
+    }
+    return [];
+  });
+}
+
+/**
+ * Plan d'implantation de la charpente signature, quand elle en impose un.
+ *
+ * Seuls figurent ici les éléments que le RESTE de la gare doit éviter ou
+ * contourner : les membrures qui descendent en plein gabarit des panneaux
+ * suspendus, et les poteaux plantés sur l'épine. Ce qui reste au-dessus de
+ * l'auvent, ou se tient hors de tout passage, n'a rien à déclarer.
+ */
+function sigPlanFor(
+  key: SignatureKey | undefined,
+  length: number,
+  depth: number,
+  spacing: number,
+  am: StationAmenities,
+): SigPlan | undefined {
+  if (!key) return undefined;
+  const usable = length / 2 - 3;
+  const backX = PSD_X + depth / 2;
+  const halfConsist = ((CONSIST.length - 1) / 2) * E235.pitch;
+
+  // Les créneaux déjà pris le long de la voie, chacun avec sa demi-emprise.
+  const accesses = [
+    ...am.stairs.map((z) => ({ z, r: STAIR_HALF_Z + 0.75 })),
+    ...am.escalators.map((z) => ({ z, r: ESCALATOR_HALF_Z + 0.75 })),
+    ...(am.elevator !== null ? [{ z: am.elevator, r: ELEVATOR_HALF_Z + 0.75 }] : []),
+  ];
+  // Potences d'orientation : même formule que systems/stationPlacement.
+  const gantries = [
+    ...am.stairs.map((z) => ({ z: z - STAIR_HALF_Z - 1.6, r: 1.4 })),
+    ...am.escalators.map((z) => ({ z: z - ESCALATOR_HALF_Z - 1.6, r: 1.4 })),
+  ];
+  // Débouchés des accès : la plaque de balisage y pend, avec sa suspente.
+  const entries = [
+    ...am.stairs.map((z) => ({ z: z - STAIR_HALF_Z + 0.1, r: 0.6 })),
+    ...am.escalators.map((z) => ({ z: z - ESCALATOR_HALF_Z + 0.1, r: 0.6 })),
+  ];
+  const bands = directionBandZs(length).map((z) => ({ z, r: 4.65 }));
+  // Kiosque : même position que systems/stationPlacement (usable × 0,36).
+  const kiosk = am.kiosk ? [{ z: usable * 0.36, r: 3.15 }] : [];
+  const clock = am.clock ? [{ z: 0, r: 0.8 }] : [];
+  // Trame des piliers génériques : tous les `spacing` mètres depuis -usable,
+  // comme systems/stationPlacement les pose.
+  const columns: { z: number; r: number }[] = [];
+  for (let z = -usable; z <= usable; z += spacing) columns.push({ z, r: 0.55 });
+  const mirrors = [-1, 1].map((d) => ({ z: d * (halfConsist + 1.2), r: 0.5 }));
+
+  /**
+   * Poteaux d'épine : écartés de tout ce qui vit déjà sur l'épine — et de la
+   * trame des piliers génériques, dont les poutres transversales montent en
+   * travers de leur fût.
+   */
+  const spinePosts = (zs: number[]): number[] =>
+    dodgePlanes(zs, [...accesses, ...gantries, ...bands, ...kiosk, ...clock, ...columns]);
+
+  switch (key) {
+    case 'tokyo':
+      // Colonnes rivetées au bord de quai : seul le panneau 番線, qui court
+      // presque jusqu'au bord, doit connaître la trame des fermes.
+      return { keepOut: bays(length, 16).map((z) => ({ z, r: 0.5 })), posts: [], runBlocks: [] };
+    case 'yurakucho': {
+      // Portiques rivetés pleine largeur : leurs poutres descendent sous
+      // l'auvent, leurs montants tiennent au ras des bords. Ils s'écartent des
+      // escaliers mécaniques, des débouchés d'accès, des piliers génériques,
+      // des miroirs de départ et des suspentes de potence ; tout le suspendu
+      // s'écarte d'eux en retour.
+      const zs = dodgePlanes(bays(length, 7.2), [
+        ...am.escalators.map((z) => ({ z, r: ESCALATOR_HALF_Z + 0.9 })),
+        ...entries,
+        ...columns,
+        ...mirrors,
+        ...gantries.map((g) => ({ z: g.z, r: 0.6 })),
+      ]);
+      return { keepOut: zs.map((z) => ({ z, r: 0.75 })), posts: [], runBlocks: [] };
+    }
+    case 'shinjuku':
+      // La rangée de piliers supplémentaire côté voie, dans le gabarit du 番線.
+      return { keepOut: bays(length, 12).map((z) => ({ z, r: 0.55 })), posts: [], runBlocks: [] };
+    case 'shimbashi': {
+      const zs = spinePosts(bays(length, 11));
+      return {
+        keepOut: zs.map((z) => ({ z, r: 0.8 })),
+        posts: zs.map((z) => ({ x: backX, z })),
+        runBlocks: [],
+      };
+    }
+    case 'ebisu': {
+      // Descentes de charge du complexe, dans la moitié couverte seulement.
+      const built = length * 0.46;
+      const zs = spinePosts(bays(built, 12).map((z) => z - length * 0.16));
+      return {
+        keepOut: zs.map((z) => ({ z, r: 0.8 })),
+        posts: zs.map((z) => ({ x: backX, z })),
+        runBlocks: [],
+      };
+    }
+    case 'takanawaGateway': {
+      const zs = spinePosts(bays(length, 27));
+      return {
+        keepOut: [
+          ...zs.map((z) => ({ z, r: 0.6 })),
+          // Passerelles vitrées au-dessus de la voie d'en face : les bannières
+          // et les tableaux d'affichage passent au large. La seconde se tient
+          // au-delà de la troisième bande directionnelle et de la potence de
+          // l'escalier mécanique, qu'elle chevauchait tour à tour.
+          { z: -length * 0.22, r: 4.2 },
+          { z: length * 0.275, r: 4.2 },
+        ],
+        posts: zs.map((z) => ({ x: backX, z })),
+        runBlocks: [],
+      };
+    }
+    case 'hamamatsucho': {
+      // Le portique de jonction ancien / neuf : un plan franc et profond.
+      const joint = -length * 0.06;
+      return {
+        keepOut: [{ z: joint, r: 1.55 }],
+        posts: [{ x: PSD_X + 0.3, z: joint }],
+        runBlocks: [{ z0: joint - 1.8, z1: joint + 1.8 }],
+      };
+    }
+    default:
+      return undefined;
+  }
+}
+
 function build(spec: Spec): StationLayout {
   const f = FAMILY[spec.elevation];
+  // Un kiosque de quai ne tient que là où il y a du monde pour le faire vivre.
+  const am = amenities(spec.crowd, spec.kiosk ?? spec.crowd >= 1.4, spec.clock ?? true);
+  const depth = spec.depth ?? f.depth;
+  const columnSpacing = spec.columnSpacing ?? f.columnSpacing;
   return {
     elevation: spec.elevation,
     config: spec.config,
@@ -833,16 +1031,16 @@ function build(spec: Spec): StationLayout {
     works: spec.works ?? false,
     openFarSide: spec.openFarSide ?? false,
     length: FULL_PLATFORM_LEN,
-    depth: spec.depth ?? f.depth,
+    depth,
     canopy: spec.canopy ?? f.canopy,
     canopyY: spec.canopyY ?? f.canopyY,
-    columnSpacing: spec.columnSpacing ?? f.columnSpacing,
+    columnSpacing,
     palette: PALETTES[spec.palette ?? f.palette],
-    // Un kiosque de quai ne tient que là où il y a du monde pour le faire vivre.
-    amenities: amenities(spec.crowd, spec.kiosk ?? spec.crowd >= 1.4, spec.clock ?? true),
+    amenities: am,
     crowdScale: spec.crowd,
     ambience: spec.ambience,
     signature: spec.signature,
+    sigPlan: sigPlanFor(spec.signature, FULL_PLATFORM_LEN, depth, columnSpacing, am),
   };
 }
 
@@ -851,7 +1049,7 @@ function build(spec: Spec): StationLayout {
  *
  * `partial` compte pour OUI : à Ikebukuro et à Ōsaki, c'est la voie SECONDAIRE
  * qui n'est pas équipée — voies 5 et 8 d'un côté, 2 et 4 de l'autre — et le jeu
- * circule en 外回り sur la principale, qui l'est. La différence se verra sur le
+ * circule en 内回り sur la principale, qui l'est. La différence se verra sur le
  * quai d'en face, pas sous nos pieds.
  *
  * Restent donc Shinjuku et Shibuya, où les grands travaux interdisent encore

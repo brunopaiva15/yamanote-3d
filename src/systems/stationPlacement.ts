@@ -11,11 +11,14 @@
 import { CONSIST, E235 } from '../data/e235';
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
 import {
+  ELEVATOR_HALF_Z,
+  ESCALATOR_HALF_Z,
   OPP_DEPTH,
   PSD_HALF_GAP,
   PSD_X,
   TRACK_HALF,
   STAIR_GOING,
+  STAIR_HALF_Z,
   STAIR_RISE,
   STAIR_STEPS,
   STAIR_WALK_HALF_X,
@@ -176,6 +179,60 @@ function clearSpans(
   return out.filter((sp) => sp.z1 - sp.z0 >= minLen);
 }
 
+/** Recul de la potence d'orientation devant l'entrée de son accès (m). */
+export const GANTRY_PULL = 1.6;
+
+/**
+ * Abscisses des potences d'orientation le long de la voie.
+ *
+ * Une par escalier et par escalier mécanique, un peu avant l'entrée — c'est le
+ * rendu (OverheadSigns) qui les dessine, mais leur position est une affaire de
+ * placement : les caissons publicitaires de l'épine et les totems doivent la
+ * connaître pour s'en écarter, sinon les panneaux se traversent.
+ */
+export function gantryZs(p: StationPlacement): number[] {
+  return p.accesses
+    .filter((a) => a.kind !== 'elevator')
+    .map((a) => a.z - a.halfZ - GANTRY_PULL);
+}
+
+/**
+ * Abscisses des panneaux 番線 le long de la voie.
+ *
+ * Un tous les trente-six mètres, décalé jusqu'à trouver son creux : la trame
+ * des bannières publicitaires, le kiosque et l'horloge occupent la même
+ * hauteur sous l'auvent, et le caisson les traversait. Partagée entre le rendu
+ * (OverheadSigns) et les totems (PlatformSignage), qui s'en écartent au sol.
+ */
+export function trackSignZs(p: StationPlacement): number[] {
+  const halfZ = p.walkHalfZ;
+  const half = p.layout.length / 2;
+  // Ce qui monte jusqu'au gabarit du panneau, au milieu du quai qu'il couvre —
+  // et les plans de la charpente signature, quand elle en impose.
+  const solids = [
+    ...(p.kiosk ? [{ z: p.kiosk.z, r: p.kiosk.halfZ + 0.3 }] : []),
+    ...(p.layout.amenities.clock ? [{ z: 0, r: 0.65 }] : []),
+    ...(p.layout.sigPlan?.keepOut ?? []).map((k) => ({ z: k.z, r: k.r + 0.15 })),
+  ];
+  const out: number[] = [];
+  for (let k = -3; k <= 3; k++) {
+    let z = k * 36;
+    if (Math.abs(z) > halfZ - 8) continue;
+    // Les bannières courent tous les 26 m à partir de -half + 18, à la même
+    // hauteur : au croisement, les deux caissons se traversaient.
+    for (let guard = 0; guard < 10; guard++) {
+      const d = Math.abs((((z - (-half + 18)) % 26) + 26) % 26);
+      const nearBanner = Math.min(d, 26 - d) <= 2.2;
+      if (!nearBanner && !solids.some((s) => Math.abs(z - s.z) < s.r)) break;
+      z += 2.4;
+    }
+    // Chassé jusqu'au bout du quai sans trouver de creux : tant pis pour lui.
+    if (Math.abs(z) > halfZ - 8) continue;
+    out.push(z);
+  }
+  return out;
+}
+
 /** Jeu minimal entre deux emprises voisines (m). */
 const CLEARANCE = 0.12;
 
@@ -221,22 +278,17 @@ function fit(candidates: Placed[], taken: Placed[], reach = 3.2): Placed[] {
 /**
  * Décale `z` hors de toute baie de porte palière, pour y plaquer un
  * équipement. Rien ne se pose au droit d'une baie : c'est par là qu'on entre
- * dans la rame, et la face pleine du muret est la seule surface disponible.
+ * dans la rame — ni dans la POCHE DE REFOULEMENT du vantail, qui glisse
+ * ouvert jusqu'à 1,90 m de l'axe de la baie et passait au travers du caisson.
+ * Trop près d'une baie, le point se cale au milieu du muret plein voisin :
+ * à mi-chemin de deux baies au pas de cinq mètres, tout y est hors d'atteinte.
  */
 function offGate(z: number, gates: readonly number[]): number {
-  let best = z;
-  let bestGap = -Infinity;
-  // Le point demandé, puis de part et d'autre : on garde celui qui s'écarte le
-  // plus de la baie la plus proche.
-  for (const cand of [z, z - PSD_HALF_GAP - 0.6, z + PSD_HALF_GAP + 0.6]) {
-    let gap = Infinity;
-    for (const g of gates) gap = Math.min(gap, Math.abs(cand - g));
-    if (gap > bestGap) {
-      bestGap = gap;
-      best = cand;
-    }
-  }
-  return best;
+  if (!gates.length) return z;
+  let g = gates[0];
+  for (const cand of gates) if (Math.abs(z - cand) < Math.abs(z - g)) g = cand;
+  if (Math.abs(z - g) >= 2.15) return z;
+  return g + (z >= g ? 1 : -1) * (PSD_HALF_GAP + 1.6);
 }
 
 export function placementFor(index: number, gates: readonly number[]): StationPlacement {
@@ -269,15 +321,17 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   // Piliers, trémies, escaliers mécaniques, ascenseur et kiosque sont posés par
   // le gabarit et font autorité. Tout le mobilier vient ensuite se ranger
   // autour, jamais l'inverse.
-  const stairs: Placed[] = a.stairs.map((z) => ({ x: midX + 0.4, z, halfX: 1.5, halfZ: 2.6 }));
+  const stairs: Placed[] = a.stairs.map((z) => ({ x: midX + 0.4, z, halfX: 1.5, halfZ: STAIR_HALF_Z }));
   const escalators: Placed[] = a.escalators.map((z) => ({
     x: midX + 0.55,
     z,
     halfX: 0.7,
-    halfZ: 2.8,
+    halfZ: ESCALATOR_HALF_Z,
   }));
   const elevator: Placed | null =
-    a.elevator === null ? null : { x: backX - 1.05, z: a.elevator, halfX: 0.95, halfZ: 0.95 };
+    a.elevator === null
+      ? null
+      : { x: backX - 1.05, z: a.elevator, halfX: 0.95, halfZ: ELEVATOR_HALF_Z };
   const kiosk: Placed | null = a.kiosk
     ? { x: backX - 1.35, z: usable * 0.36, halfX: 1.25, halfZ: 2.4 }
     : null;
@@ -305,6 +359,11 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   const taken: Placed[] = [
     ...columns.map((z) => ({ x: backX - 0.55, z, halfX: 0.34, halfZ: 0.34 })),
     ...structure,
+    // Poteaux de la charpente signature : plantés jusqu'au sol, ils sont déjà
+    // écartés des accès et de la bande directionnelle par le plan (data) — le
+    // mobilier, lui, s'écarte d'eux ici, et la marche les contournera puisque
+    // `taken` devient la liste des obstacles.
+    ...(layout.sigPlan?.posts ?? []).map((s) => ({ x: s.x, z: s.z, halfX: 0.35, halfZ: 0.35 })),
   ];
 
   // --- Le mobilier, rangé dans ce qui reste --------------------------
@@ -400,14 +459,24 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
       z: (k - (CONSIST.length - 1) / 2) * E235.pitch,
       car: k + 1,
     })),
-    runSpans: clearSpans(
-      -usable,
-      usable,
-      [...escalators, ...(elevator ? [elevator] : []), ...(kiosk ? [kiosk] : [])].map((o) => ({
+    runSpans: clearSpans(-usable, usable, [
+      ...[...escalators, ...(elevator ? [elevator] : []), ...(kiosk ? [kiosk] : [])].map((o) => ({
         z0: o.z - o.halfZ - 0.5,
         z1: o.z + o.halfZ + 0.5,
       })),
-    ),
+      // Sous un auvent bas, la traverse des potences d'orientation monte
+      // jusqu'à la cote où courent la gouttière et le chemin de câbles : les
+      // conduites s'interrompent à son droit, comme elles le font aux gaines.
+      ...(layout.canopyY < 3.65
+        ? [...stairs, ...escalators].map((s) => {
+            const g = s.z - s.halfZ - GANTRY_PULL;
+            return { z0: g - 1.2, z1: g + 1.2 };
+          })
+        : []),
+      // Et au droit des plans profonds de la charpente signature — le portique
+      // de jonction d'Hamamatsuchō descend en travers de leur cote.
+      ...(layout.sigPlan?.runBlocks ?? []),
+    ]),
   };
 
   // `taken` a exactement recueilli tout ce qui a été retenu, structure comprise.

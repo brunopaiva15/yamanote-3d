@@ -903,7 +903,7 @@ function drawTiledRoof(g: CanvasRenderingContext2D, x: number, bw: number, bh: n
 }
 
 // Dessine la ville d'un quartier dans un contexte fourni (réutilisable : les
-// banques de Scenery re-dessinent dans leur canvas existant, sans allocation).
+// banques de three/city/SkyDome re-dessinent dans leur canvas, sans allocation).
 //
 // INVARIANT DU FONDU JOUR/NUIT — À NE JAMAIS ROMPRE : pour un quartier+couche
 // donné, les appels day (night=false) et night (night=true) doivent produire
@@ -1193,7 +1193,7 @@ export function makeGroundTexture(): THREE.CanvasTexture {
 
 // --- Mur de soutènement (tranchées) : panneaux béton, joints, coulures ---
 // Texture jour uniquement : la nuit se fait par multiplication de couleur au
-// runtime (idiome de la couche lointaine de Scenery), l'invariant jour/nuit
+// runtime (idiome de la silhouette lointaine du ciel), l'invariant jour/nuit
 // de drawCityInto n'est donc pas concerné.
 export function makeRetainingWallTexture(): THREE.CanvasTexture {
   const { c, g } = makeCanvas(512, 256);
@@ -2143,7 +2143,10 @@ export function makePlatformBoard(): {
     const st = STATIONS[index];
     const ahead = directionBoardStations(index, 3);
     const jy = st.jy;
-    const track = PLATFORM_NUMBERS[jy]?.outer ?? 1;
+    // Le jeu tourne en 内回り (voir LOOP_JP) : c'est ce quai-là, et c'est ce
+    // numéro-là que la sono du quai annonce (「N番線」). Les deux doivent dire
+    // la même chose, sans quoi on lit un chiffre et on en entend un autre.
+    const track = PLATFORM_NUMBERS[jy]?.inner ?? 1;
 
     g.fillStyle = '#0c1016';
     g.fillRect(0, 0, W, H);
@@ -2459,7 +2462,7 @@ export function makeTransferSign(): {
 
 export function makePlatformNumberSign(): {
   texture: THREE.CanvasTexture;
-  redraw: (index: number) => void;
+  redraw: (index: number, width?: number) => void;
 } {
   const W = 1400;
   const H = 300;
@@ -2467,54 +2470,88 @@ export function makePlatformNumberSign(): {
   const texture = toTexture(c);
   const GREEN = '#7dbe3c';
 
-  const redraw = (index: number) => {
+  // Le caisson se raccourcit sur les quais étroits (voir OverheadSigns) : le
+  // dessin se fait dans un repère PROPORTIONNÉ à l'affichage — L px de large
+  // pour 300 de haut, ramenés au canvas par une échelle horizontale — sinon
+  // toute la composition s'écrasait avec lui. Sous ~2,6 m, la mise en page
+  // passe en version courte : mêmes numéro et badge, chaîne des gares réduite.
+  const redraw = (index: number, width = 3.24) => {
     const jy = STATIONS[index].jy;
-    // Le jeu tourne en 外回り (voir directionAnnouncement) : c'est ce quai-là.
-    const track = PLATFORM_NUMBERS[jy]?.outer ?? 1;
+    // Le jeu tourne en 内回り (voir LOOP_JP) : c'est ce quai-là, et le même
+    // numéro que celui annoncé par la sono du quai.
+    const track = PLATFORM_NUMBERS[jy]?.inner ?? 1;
     const ahead = directionBoardStations(index, 5);
+    const L = Math.round(((width - 0.08) / 0.66) * H);
+    g.setTransform(W / L, 0, 0, 1, 0, 0);
 
     g.fillStyle = GREEN;
-    g.fillRect(0, 0, W, H);
+    g.fillRect(0, 0, L, H);
     g.strokeStyle = '#e8ecea';
     g.lineWidth = 8;
-    g.strokeRect(4, 4, W - 8, H - 8);
+    g.strokeRect(4, 4, L - 8, H - 8);
 
-    // Numéro de voie, en réserve, calé à gauche.
     g.fillStyle = '#ffffff';
     g.textAlign = 'center';
     g.textBaseline = 'alphabetic';
-    g.font = `bold 210px ${JP_FONT}`;
-    g.fillText(String(track), 118, H - 62);
 
-    // Badge JY, façon pictogramme de ligne.
-    g.strokeStyle = '#ffffff';
-    g.lineWidth = 7;
-    g.beginPath();
-    g.roundRect(212, 42, 92, 92, 14);
-    g.stroke();
-    g.font = `bold 52px ${JP_FONT}`;
-    fitFillText(g, 'JY', 258, 106, 78, 52, 'bold');
+    if (L < 1150) {
+      // Version courte. Numéro et badge inchangés, nom de ligne et sens sur
+      // une seule colonne, deux gares de direction au lieu de cinq.
+      fitFillText(g, String(track), 108, H - 70, 170, 190, 'bold');
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = 7;
+      g.beginPath();
+      g.roundRect(196, 58, 84, 84, 13);
+      g.stroke();
+      fitFillText(g, 'JY', 238, 118, 70, 46, 'bold');
 
-    // Nom de ligne et sens.
-    g.textAlign = 'left';
-    g.font = `bold 76px ${JP_FONT}`;
-    g.fillText('山手線', 336, 108);
-    g.font = `bold 46px ${JP_FONT}`;
-    g.fillText('（外回り）', 594, 104);
-    g.font = `30px ${JP_FONT}`;
-    g.fillStyle = 'rgba(255,255,255,0.9)';
-    g.fillText('Yamanote Line', 338, 148);
+      g.textAlign = 'left';
+      fitFillText(g, '山手線（外回り）', 300, 130, L - 330, 60, 'bold');
+      g.font = `28px ${JP_FONT}`;
+      g.fillStyle = 'rgba(255,255,255,0.9)';
+      g.fillText('Yamanote Line', 302, 174);
 
-    // Filet séparateur puis la chaîne des gares desservies.
-    g.fillStyle = 'rgba(255,255,255,0.55)';
-    g.fillRect(336, 168, W - 396, 3);
-    g.fillStyle = '#ffffff';
-    fitFillText(g, `${ahead.map((s) => s.kanji).join('・')}方面`, 336, 226, W - 396, 54, 'bold');
-    g.fillStyle = 'rgba(255,255,255,0.92)';
-    const en = ahead.map((s) => s.romaji);
-    const enLine = `for ${en.slice(0, -1).join(', ')} & ${en[en.length - 1]}`;
-    fitFillText(g, enLine, 338, 268, W - 396, 30);
+      g.fillStyle = 'rgba(255,255,255,0.55)';
+      g.fillRect(300, 196, L - 330, 3);
+      g.fillStyle = '#ffffff';
+      const near = ahead.slice(0, 2);
+      fitFillText(g, `${near.map((s) => s.kanji).join('・')}方面`, 300, 254, L - 330, 46, 'bold');
+    } else {
+      // Numéro de voie, en réserve, calé à gauche.
+      g.font = `bold 210px ${JP_FONT}`;
+      g.fillText(String(track), 118, H - 62);
 
+      // Badge JY, façon pictogramme de ligne.
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = 7;
+      g.beginPath();
+      g.roundRect(212, 42, 92, 92, 14);
+      g.stroke();
+      g.font = `bold 52px ${JP_FONT}`;
+      fitFillText(g, 'JY', 258, 106, 78, 52, 'bold');
+
+      // Nom de ligne et sens.
+      g.textAlign = 'left';
+      g.font = `bold 76px ${JP_FONT}`;
+      g.fillText('山手線', 336, 108);
+      g.font = `bold 46px ${JP_FONT}`;
+      g.fillText('（外回り）', 594, 104);
+      g.font = `30px ${JP_FONT}`;
+      g.fillStyle = 'rgba(255,255,255,0.9)';
+      g.fillText('Yamanote Line', 338, 148);
+
+      // Filet séparateur puis la chaîne des gares desservies.
+      g.fillStyle = 'rgba(255,255,255,0.55)';
+      g.fillRect(336, 168, L - 396, 3);
+      g.fillStyle = '#ffffff';
+      fitFillText(g, `${ahead.map((s) => s.kanji).join('・')}方面`, 336, 226, L - 396, 54, 'bold');
+      g.fillStyle = 'rgba(255,255,255,0.92)';
+      const en = ahead.map((s) => s.romaji);
+      const enLine = `for ${en.slice(0, -1).join(', ')} & ${en[en.length - 1]}`;
+      fitFillText(g, enLine, 338, 268, L - 396, 30);
+    }
+
+    g.setTransform(1, 0, 0, 1, 0, 0);
     texture.needsUpdate = true;
   };
   return { texture, redraw };

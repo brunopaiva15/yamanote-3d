@@ -49,6 +49,12 @@ const IGNORE = [
   'gare/muret-psd ✕ gare/vantaux-psd',
   'gare/bandeau-psd ✕ gare/vantaux-psd',
   'gare/bandeau-psd ✕ gare/vitrage-psd',
+  // Le montant de rive est encastré dans le vantail qu'il borde, et coulisse
+  // dans le muret avec lui.
+  'gare/joint-vantaux-psd ✕ gare/vantaux-psd',
+  'gare/joint-vantaux-psd ✕ gare/muret-psd',
+  'gare/bandeau-psd ✕ gare/joint-vantaux-psd',
+  'gare/joint-vantaux-psd ✕ gare/vitrage-psd',
   // Structure : la poutre repose sur le poteau, la bague le ceinture, la
   // trémie et l'escalier mécanique sont percés DANS la dalle.
   'gare/pilier ✕ gare/poutre',
@@ -70,16 +76,49 @@ const IGNORE = [
   'gare/dalle ✕ gare/trousse/repère-voiture',
   'gare/dalle ✕ gare/repères-attente',
   'gare/repères-attente ✕ gare/trousse/repère-voiture',
+  // Les bords d'en face reçoivent le même bandeau que le bord près : il
+  // couronne leur muret, comme bandeau-psd ✕ muret-psd ci-dessus.
+  'gare/bord-opposé ✕ gare/bord-opposé/bandeau-psd-opposé',
+  'gare/travée-opposée ✕ gare/travée-opposée/bandeau-psd-opposé',
+  // La gouttière court en tête de pilier, la potence de caméra est vissée
+  // sous sa poutre : des attaches, pas des chocs.
+  'gare/pilier ✕ gare/trousse/gouttière',
+  'gare/poutre ✕ gare/trousse/caméra',
+  // Harajuku : poutres en appui sur le mur de fond, caissons encastrés
+  // dedans, armoires adossées contre.
+  'gare/mur-fond ✕ gare/poutre',
+  'gare/mur-fond ✕ gare/publicité/caisson-mur',
+  'gare/mur-fond ✕ gare/trousse/armoire',
+  // Charpentes signature : leurs poteaux et tabliers prennent appui DANS la
+  // travée d'en face (piles, fondations) et traversent la dalle d'auvent —
+  // c'est ainsi qu'un bâtiment enjambe un quai.
+  'gare/charpente-ebisu ✕ gare/travée-opposée',
+  'gare/charpente-nippori ✕ gare/travée-opposée',
+  'gare/charpente-shimbashi ✕ gare/travée-opposée',
+  'gare/charpente-takanawaGateway ✕ gare/travée-opposée',
+  'gare/auvent ✕ gare/charpente-ebisu',
+  'gare/auvent ✕ gare/charpente-shimbashi',
+  'gare/auvent ✕ gare/charpente-takanawaGateway',
+  // La gaine d'escalier mécanique monte PAR CONSTRUCTION jusqu'à la sous-face
+  // de l'auvent ; et les balustrades inclinées gonflent leur boîte englobante
+  // (la sonde travaille en AABB), d'où de faux contacts avec les néons.
+  'gare/auvent ✕ gare/escalator',
+  'gare/escalator ✕ gare/néon',
 ];
 
 const totals = new Map();
 for (const i of stations) {
   const res = await page.evaluate(
     async ([idx, ignore]) => {
-      // Poser la gare voulue et laisser React la reconstruire.
+      // Poser la gare voulue et laisser React la reconstruire. Le délai est
+      // large à dessein : à 350 ms, sous SwiftShader, on mesurait parfois la
+      // gare PRÉCÉDENTE encore montée, sous le nom de la nouvelle.
       window.__probeGoto(idx, globalThis.__probePhase ?? 'dwell');
-      await new Promise((r) => setTimeout(r, 350));
-      return window.__stationProbe({ min: 0.05, ignore });
+      await new Promise((r) => setTimeout(r, 900));
+      // Seuil à 5,5 cm : une pénétration de l'épaisseur exacte d'une suspente
+      // (5 cm) est une tige qui prend appui sur une poutrelle — une attache,
+      // pas un choc. Tout caisson fait au moins 7 cm : rien de réel n'échappe.
+      return window.__stationProbe({ min: 0.055, ignore });
     },
     [i, IGNORE],
   );
