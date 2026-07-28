@@ -6,6 +6,10 @@
 // Segment i = trajet STATIONS[i] → STATIONS[(i+1)%30], dans le sens simulé
 // (内回り, ordre JY croissant).
 
+import { CONFIG } from './config';
+import type { LoopDirection } from './platforms';
+import type { Phase } from '../store';
+
 export type SegmentKind = 'viaduct' | 'corridor' | 'trench' | 'ground';
 
 export interface Segment {
@@ -66,6 +70,104 @@ export const SEGMENTS: Segment[] = [
 // `depart`), donc l'environnement traversé est toujours celui du segment
 // index-1 → index.
 export const segmentAt = (stationIndex: number): number => (stationIndex + 29) % 30;
+
+/**
+ * Intervalle arrivée→arrivée (min) par tronçon 内回り, dérivé d'un horaire
+ * matinal type (Osaki 07:42 → … → Tokyo 08:33). Akihabara corrigé à 08:28.
+ * Boucle ≈ 67 min (8×3 + 1×1 + 21×2).
+ */
+export const SEGMENT_HEADWAY_MIN: readonly number[] = [
+  /* 00 Tokyo→Kanda             */ 3,
+  /* 01 Kanda→Akihabara         */ 2,
+  /* 02 Akihabara→Okachimachi   */ 2,
+  /* 03 Okachimachi→Ueno        */ 2,
+  /* 04 Ueno→Uguisudani         */ 2,
+  /* 05 Uguisudani→Nippori      */ 2,
+  /* 06 Nippori→Nishi-Nippori   */ 2,
+  /* 07 Nishi-Nippori→Tabata    */ 2,
+  /* 08 Tabata→Komagome         */ 2,
+  /* 09 Komagome→Sugamo         */ 2,
+  /* 10 Sugamo→Otsuka           */ 2,
+  /* 11 Otsuka→Ikebukuro        */ 3,
+  /* 12 Ikebukuro→Mejiro        */ 3,
+  /* 13 Mejiro→Takadanobaba     */ 1,
+  /* 14 Takadanobaba→Shin-Okubo */ 3,
+  /* 15 Shin-Okubo→Shinjuku     */ 2,
+  /* 16 Shinjuku→Yoyogi         */ 2,
+  /* 17 Yoyogi→Harajuku         */ 3,
+  /* 18 Harajuku→Shibuya        */ 2,
+  /* 19 Shibuya→Ebisu           */ 3,
+  /* 20 Ebisu→Meguro            */ 2,
+  /* 21 Meguro→Gotanda          */ 2,
+  /* 22 Gotanda→Osaki           */ 2,
+  /* 23 Osaki→Shinagawa         */ 3,
+  /* 24 Shinagawa→Takanawa GW   */ 2,
+  /* 25 Takanawa Gateway→Tamachi*/ 2,
+  /* 26 Tamachi→Hamamatsucho    */ 3,
+  /* 27 Hamamatsucho→Shimbashi  */ 2,
+  /* 28 Shimbashi→Yurakucho     */ 2,
+  /* 29 Yurakucho→Tokyo         */ 2,
+];
+
+/** Index du tronçon parcouru pour arriver à `stationIndex` (identique inner/outer). */
+export function segmentForArrival(stationIndex: number): number {
+  return segmentAt(stationIndex);
+}
+
+/** Index du tronçon du k-ième saut depuis `fromIndex` dans le sens `dir`. */
+export function segmentForHop(fromIndex: number, dir: LoopDirection): number {
+  return dir === 'inner' ? fromIndex : (fromIndex - 1 + 30) % 30;
+}
+
+/** Gare atteinte après k sauts depuis `fromIndex`. */
+export function stationAtHop(fromIndex: number, hops: number, dir: LoopDirection): number {
+  if (dir === 'inner') return (fromIndex + hops) % 30;
+  return (fromIndex - hops + 30) % 30;
+}
+
+/** Somme des intervalles (min) sur `hops` tronçons consécutifs. */
+export function headwayMinutesTo(fromIndex: number, hops: number, dir: LoopDirection): number {
+  let total = 0;
+  let idx = fromIndex;
+  for (let k = 0; k < hops; k++) {
+    total += SEGMENT_HEADWAY_MIN[segmentForHop(idx, dir)];
+    idx = stationAtHop(idx, 1, dir);
+  }
+  return total;
+}
+
+/** Durée de croisière (s) : l'intervalle du tronçon moins depart/brake/dwell min. */
+export function cruiseDuration(stationIndex: number): number {
+  const headwaySec = SEGMENT_HEADWAY_MIN[segmentForArrival(stationIndex)] * 60;
+  const fixed = CONFIG.departTime + CONFIG.brakeTime + CONFIG.dwellTime;
+  return Math.max(8, headwaySec - fixed);
+}
+
+/** Trajet inter-gares sans dwell : depart + cruise + brake (s). */
+export function journeyDuration(stationIndex: number): number {
+  return CONFIG.departTime + cruiseDuration(stationIndex) + CONFIG.brakeTime;
+}
+
+/** Temps écoulé au début de chaque phase pour le tronçon vers `stationIndex`. */
+export function phaseBase(phase: Phase, stationIndex: number): number {
+  const cruise = cruiseDuration(stationIndex);
+  switch (phase) {
+    case 'depart':
+      return 0;
+    case 'cruise':
+      return CONFIG.departTime;
+    case 'brake':
+      return CONFIG.departTime + cruise;
+    default:
+      return journeyDuration(stationIndex);
+  }
+}
+
+/** Progression 0..1 du trajet inter-gares (dwell maintient p = 1). */
+export function journeyProgress(phase: Phase, phaseT: number, stationIndex: number): number {
+  const journey = journeyDuration(stationIndex);
+  return Math.min(1, Math.max(0, (phaseBase(phase, stationIndex) + phaseT) / journey));
+}
 
 // Gares à grande toiture : la verrière masque progressivement le ciel à
 // l'approche et au départ. Superset des MAJOR_HUBS d'announcements.ts
