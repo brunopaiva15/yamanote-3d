@@ -116,6 +116,16 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
     return out;
   }, [segs, detail, layout.psd]);
 
+  // Totem d'îlot : centre du caisson à 2,02 m au-dessus du dallage. Les pieds
+  // rejoignent le sol (plus deux centimètres d'encastrement, comme un montant
+  // planté). Ils dataient d'avant le basculement en îlot — quand le caisson
+  // s'asseyait sur un garde-corps d'un mètre vingt — et s'arrêtaient donc à
+  // mi-hauteur, soixante centimètres au-dessus de la dalle.
+  const totemY = 2.02;
+  const frameH = 1.36;
+  const legH = totemY - frameH / 2 + 0.02;
+  const legY = -(totemY + frameH / 2 + 0.02) / 2;
+
   return (
     <group name="publicité">
       {/* Caissons lumineux du fond de quai : monture noire, visuel rétroéclairé.
@@ -125,10 +135,10 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
         <group
           name="caisson-mur"
           key={`wa${z}`}
-          position={[onWall ? backX - 0.09 : backX - 0.17, PLATFORM_TOP + (onWall ? 1.88 : 2.02), z]}
+          position={[onWall ? backX - 0.09 : backX - 0.17, PLATFORM_TOP + (onWall ? 1.88 : totemY), z]}
         >
           <mesh material={p.frame}>
-            <boxGeometry args={[0.1, 1.36, 2.16]} />
+            <boxGeometry args={[0.1, frameH, 2.16]} />
           </mesh>
           <mesh position={[-0.055, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={stationAd(station, i)}>
             <planeGeometry args={[2.0, 1.2]} />
@@ -142,8 +152,8 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
                 <planeGeometry args={[2.0, 1.2]} />
               </mesh>
               {[-1, 1].map((d) => (
-                <mesh key={d} position={[0.02, -1.06, d * 0.9]} material={p.frame}>
-                  <boxGeometry args={[0.08, 0.76, 0.08]} />
+                <mesh key={d} position={[0.02, legY, d * 0.9]} material={p.frame}>
+                  <boxGeometry args={[0.08, legH, 0.08]} />
                 </mesh>
               ))}
             </>
