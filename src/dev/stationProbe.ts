@@ -196,6 +196,10 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     gl.info.reset();
   };
   w.__stationProbe = (opts?: { min?: number; ignore?: string[] }) => probeStation(scene, opts);
+  // La scène elle-même : toute vérification ponctuelle — l'inclinaison d'une
+  // rampe, la hauteur d'un caisson — s'écrit alors depuis la console, sans
+  // avoir à rouvrir cette sonde pour y ajouter une mesure de plus.
+  w.__probeScene = scene;
   // Se poser sur une gare donnée, à l'arrêt : c'est l'état où tout est monté
   // et immobile, donc le seul où une mesure a du sens.
   w.__probeGoto = (i: number, phase: 'dwell' | 'brake' = 'dwell') => {

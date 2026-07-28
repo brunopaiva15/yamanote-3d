@@ -892,9 +892,15 @@ function Stairwell({ s, m, station }: { s: Placed; m: Mats; station: number }) {
 
   return (
     <group name="trémie" position={[s.x, PLATFORM_TOP, s.z]}>
-      {/* Gaine sous la dalle, vue de l'intérieur : la trémie a un fond. */}
+      {/* Gaine sous la dalle, vue de l'intérieur : la trémie a un fond.
+          Un centimètre plus étroite que l'ouverture : à largeur égale, ses
+          faces latérales tombaient dans le plan des parois du trou extrudé
+          dans la dalle (et sa face lointaine dans celui du fond du trou) —
+          quatre plans confondus qui scintillaient tout autour de la volée. */}
       <mesh position={[0, -STAIR_SHAFT_DEPTH / 2 - 0.02, 0]} material={m.shaft}>
-        <boxGeometry args={[ix * 2, STAIR_SHAFT_DEPTH, (s.halfZ - STAIR_OPENING_INSET) * 2]} />
+        <boxGeometry
+          args={[ix * 2 - 0.02, STAIR_SHAFT_DEPTH, (s.halfZ - STAIR_OPENING_INSET) * 2 - 0.02]}
+        />
       </mesh>
       {/* Volée. Le premier giron est la dalle : la marche k descend de k
           contremarches et couvre le giron qui suit son nez. */}
@@ -920,48 +926,55 @@ function Stairwell({ s, m, station }: { s: Placed; m: Mats; station: number }) {
 
       {/* Caisson publicitaire plaqué sur le garde-corps côté voie : sur un vrai
           quai c'est la surface la plus rentable de la trémie, et elle est en
-          plein dans le champ de quiconque marche le long du quai. */}
-      <mesh position={[-(s.halfX - 0.005), 0.53, 0]} material={m.frame}>
+          plein dans le champ de quiconque marche le long du quai. Un millimètre
+          seulement dans la joue — plus profond, sa face intérieure et le nu
+          extérieur du garde-corps se disputaient le même plan. */}
+      <mesh position={[-(s.halfX + 0.029), 0.53, 0]} material={m.frame}>
         <boxGeometry args={[0.06, 0.86, s.halfZ * 2 - 0.3]} />
       </mesh>
       <mesh
-        position={[-(s.halfX + 0.036), 0.53, 0]}
+        position={[-(s.halfX + 0.06), 0.53, 0]}
         rotation={[0, -Math.PI / 2, 0]}
         material={stationAd(station, 5)}
       >
         <planeGeometry args={[s.halfZ * 2 - 0.42, 0.76]} />
       </mesh>
 
-      {/* Garde-corps sur le bandeau de dalle qui borde l'ouverture. */}
+      {/* Garde-corps sur le bandeau de dalle qui borde l'ouverture. Les joues
+          s'arrêtent avant la traverse de tête : à longueur pleine elles
+          s'enfonçaient dedans et les angles clignotaient sur toute la hauteur. */}
       {[-1, 1].map((d) => (
         <group key={`r${d}`}>
-          <mesh position={[d * (s.halfX - 0.07), 0.5, 0]} material={m.wall}>
-            <boxGeometry args={[0.14, 1, s.halfZ * 2]} />
+          <mesh position={[d * (s.halfX - 0.07), 0.5, -0.08]} material={m.wall}>
+            <boxGeometry args={[0.14, 1, s.halfZ * 2 - 0.16]} />
           </mesh>
-          <mesh position={[d * (s.halfX - 0.07), 1.03, 0]} material={m.metal}>
-            <boxGeometry args={[0.18, 0.07, s.halfZ * 2]} />
+          <mesh position={[d * (s.halfX - 0.07), 1.03, -0.08]} material={m.metal}>
+            <boxGeometry args={[0.18, 0.07, s.halfZ * 2 - 0.16]} />
           </mesh>
-          {/* Main courante intérieure : elle DESCEND avec les marches — d'où
-              le signe négatif, sans lequel elle ressortait en l'air. */}
+          {/* Main courante intérieure. Elle descend AVEC les marches, donc le
+              signe est POSITIF : une rotation de θ autour de x envoie l'axe
+              local +z sur (0, −sin θ, cos θ), et il faut y décroissant quand z
+              croît. En négatif la rampe remontait à contresens de sa volée —
+              les deux se croisaient en X, et elle ressortait de la trémie par
+              le fond. Elle dépasse du sol du quai en tête de volée : c'est ce
+              que fait une main courante là où l'escalier commence. */}
           <mesh
             position={[
               d * (ix - 0.09),
               -(STAIR_STEPS / 2 + 1) * STAIR_RISE + 0.92,
               nose + (STAIR_STEPS / 2 + 1) * STAIR_GOING,
             ]}
-            rotation={[-Math.atan2(STAIR_RISE, STAIR_GOING), 0, 0]}
+            rotation={[Math.atan2(STAIR_RISE, STAIR_GOING), 0, 0]}
             material={m.metal}
           >
             <boxGeometry args={[0.05, 0.05, STAIR_STEPS * Math.hypot(STAIR_GOING, STAIR_RISE)]} />
           </mesh>
         </group>
       ))}
-      {/* Traverse de tête du garde-corps : deux centimètres plus courte que la
-          largeur de la trémie et un centimètre en retrait, pour se loger DANS
-          les joues au lieu d'affleurer avec elles. À nu commun, les deux angles
-          du garde-corps partageaient chacun deux plans sur toute leur hauteur. */}
+      {/* Traverse de tête du garde-corps : elle prend toute la largeur et
+          bute contre les joues (raccourcies), sans s'y enfoncer. */}
       <mesh position={[0, 0.5, s.halfZ - 0.08]} material={m.wall}>
-        <boxGeometry args={[s.halfX * 2 - 0.02, 1, 0.14]} />
+        <boxGeometry args={[s.halfX * 2, 1, 0.14]} />
       </mesh>
 
       {/* Affiches sur les joues de la gaine : c'est ce qu'on a sous les yeux en
@@ -977,10 +990,11 @@ function Stairwell({ s, m, station }: { s: Placed; m: Mats; station: number }) {
         return (
           <mesh
             key={`ad${d}`}
-            // `ix - 0.02` était exactement le nu des girons : l'affiche tombait
-            // dans le plan du flanc des marches. Elle est plaquée sur la joue
-            // de la gaine, cinq millimètres en dedans.
-            position={[d * (ix - 0.005), tread + h / 2 + 0.14, nose + t]}
+            // La gaine est un centimètre plus étroite que l'ouverture : l'affiche
+            // se plaque sur sa face intérieure (cinq millimètres en dedans du
+            // nouveau nu), pas dans l'interstice entre dalle et gaine où elle
+            // disparaîtrait derrière le BackSide.
+            position={[d * (ix - 0.015), tread + h / 2 + 0.14, nose + t]}
             rotation={[0, d === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
             material={stationAd(station, k + 1, true)}
           >
