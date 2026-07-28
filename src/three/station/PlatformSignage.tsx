@@ -168,9 +168,10 @@ export function PlatformSignage({
   useFrame((_, dt) => {
     if (runtime.platformFade <= 0.03) return;
     clock.current += dt;
-    const { index, phase } = useStore.getState();
-    // Pendant depart l'index a déjà avancé : panneau = gare quittée (index-1).
-    const signIndex = phase === 'depart' ? (index + 29) % 30 : index;
+    // La gare du panneau est celle du quai présent : pendant le départ, index
+    // a déjà avancé mais platformIndex retient la gare quittée, quel que soit
+    // le sens de la boucle.
+    const { platformIndex: signIndex, phase } = useStore.getState();
     if (
       (phase === 'brake' || phase === 'dwell' || phase === 'depart') &&
       lastSignIndex.current !== signIndex

@@ -8,6 +8,7 @@ import { crowdList, initPlatformCrowd } from '../systems/platformCrowd';
 import type { Appearance } from '../systems/appearance';
 import { runtime } from '../systems/runtime';
 import { useStore } from '../store';
+import { DOOR_SIDE } from '../data/stations';
 import { rng } from '../textures/procedural';
 import { CONFIG } from '../data/config';
 import { MODELS_BASE, type CharacterManifest, type LogicalClip } from './characters/manifest';
@@ -36,7 +37,9 @@ function pickTemplate(templates: CharacterTemplate[], app: Appearance, id: numbe
 
 export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest }) {
   initPlatformCrowd();
-  const doorSide = useStore((s) => s.doorSide);
+  // Même côté que le quai présent (platformIndex) — voir ProceduralPlatformCrowd.
+  const platformIndex = useStore((s) => s.platformIndex);
+  const doorSide = DOOR_SIDE[platformIndex];
   const wrap = useRef<THREE.Group>(null);
   const urls = useMemo(() => manifest.variants.map((v) => MODELS_BASE + v.file), [manifest]);
   const gltfs = useGLTF(urls);

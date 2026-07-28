@@ -20,6 +20,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../../store';
+import { DOOR_SIDE } from '../../data/stations';
 import { runtime } from '../../systems/runtime';
 import { psdDoorPos, psdGateLag } from '../../systems/doorMotion';
 import { placementFor, stairTopZ, type Placed } from '../../systems/stationPlacement';
@@ -69,8 +70,14 @@ const YARD_TRACKS = 4;
 const YARD_PITCH = 4.6;
 
 export function Station() {
-  const doorSide = useStore((s) => s.doorSide);
-  const index = useStore((s) => s.index);
+  // La gare rendue est celle dont le quai est physiquement là (platformIndex),
+  // pas la prochaine du trajet (index) : au départ, index avance dès le coup de
+  // sifflet alors que le quai défile encore le long des vitres — reconstruire
+  // ici sur index transformait la gare sous les yeux du joueur. Le côté
+  // d'ouverture suit la même logique : store.doorSide bascule vers la gare
+  // suivante en début de croisière, quand ce quai-ci est encore visible.
+  const index = useStore((s) => s.platformIndex);
+  const doorSide = DOOR_SIDE[index];
   const root = useRef<THREE.Group>(null);
 
   const layout = layoutFor(index);

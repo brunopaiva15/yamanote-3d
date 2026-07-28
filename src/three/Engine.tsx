@@ -103,7 +103,10 @@ export function Engine(): null {
       // L'ambiance du lieu suit les mêmes ouvertures : sur le quai on est
       // dedans, dans la rame portes fermées on ne l'entend presque plus. Elle
       // ne vit qu'aussi longtemps que la gare est là.
-      const stationIndex = useStore.getState().index;
+      // La gare qu'on entend est celle dont le quai est là (platformIndex) :
+      // au départ, index désigne déjà la suivante alors que celle-ci défile
+      // encore le long des vitres, et son ambiance s'éloigne avec elle.
+      const stationIndex = useStore.getState().platformIndex;
       setStationAmbience(
         layoutFor(stationIndex).ambience,
         runtime.platformFade *

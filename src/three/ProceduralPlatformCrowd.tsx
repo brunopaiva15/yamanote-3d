@@ -10,6 +10,7 @@ import type { Appearance } from '../systems/appearance';
 import { makeFaceTexture } from '../textures/procedural';
 import { runtime } from '../systems/runtime';
 import { useStore } from '../store';
+import { DOOR_SIDE } from '../data/stations';
 
 const PLATFORM_Y = -0.06;
 const HEAD_Y = 1.34;
@@ -161,7 +162,11 @@ function buildPerson(app: Appearance, id: number): THREE.Group {
 
 export function ProceduralPlatformCrowd() {
   initPlatformCrowd();
-  const doorSide = useStore((s) => s.doorSide);
+  // Le côté de la foule est celui du quai présent (platformIndex), pas
+  // store.doorSide : celui-ci bascule vers la gare suivante en début de
+  // croisière, alors que ce quai — et sa foule — défilent encore.
+  const platformIndex = useStore((s) => s.platformIndex);
+  const doorSide = DOOR_SIDE[platformIndex];
   const wrap = useRef<THREE.Group>(null);
 
   const people = useMemo(() => {
