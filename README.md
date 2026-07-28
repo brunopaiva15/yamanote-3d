@@ -52,11 +52,33 @@ accessible, celle du joueur : c'est la seule dont l'intérieur existe.
 ## Les gares
 
 Le quai fait sa vraie longueur : 224 m, onze voitures de 20 m, 44 baies de portes
-palières. `data/stationLayouts.ts` donne à chacune des trente gares une
-typologie — quai latéral, îlot, viaduc, tranchée, grande gare — déduite du
-tronçon traversé puis corrigée gare par gare : profondeur, hauteur libre, entraxe
-des piliers, style d'auvent, fond de quai, palette, densité de foule. Tokyo,
-Shinjuku et Shibuya ont en plus une charpente à elles (`three/station/Signature`).
+palières. `data/stationLayouts.ts` est une **table explicite de trente lignes**,
+une par gare, qui se lit en face du relevé : profondeur, hauteur libre, entraxe
+des piliers, style d'auvent, fond de quai, palette, densité de foule, ambiance
+sonore.
+
+Trois axes y sont tenus séparés, parce que les confondre uniformise tout :
+
+- `elevation` — le niveau où court la voie : **sol** (12 gares), **viaduc**
+  (13), **tranchée** (5 : Tabata, Komagome, Sugamo, Mejiro, Meguro) ;
+- `config` — ce qu'on a de l'autre côté du quai : îlot partagé avec une autre
+  ligne (13, la Keihin-Tōhoku sauf à Yoyogi), îlot Yamanote pur (14), quais
+  latéraux (Harajuku, seul cas de la boucle), double îlot de terminus
+  (Ikebukuro, Ōsaki) ;
+- `signature` — le caractère qui ne se paramètre pas, dessiné à part
+  (`three/station/Signature`).
+
+S'y ajoutent l'état des portes de quai en 2026 (`psd` : absentes à Shinjuku et
+Shibuya, partielles à Ikebukuro et Ōsaki) et le drapeau `works` des cinq gares
+en travaux (Shinjuku, Shibuya, Shinagawa, Tamachi, Hamamatsuchō).
+
+Ces valeurs étaient auparavant **déduites du tronçon traversé**
+(`data/segments`), ce qui est une erreur de principe — un tronçon dit ce qu'on
+voit *entre* deux gares, pas comment la gare est bâtie — et sortait fausse pour
+sept d'entre elles. Chaque gare porte donc maintenant ses propres cotes.
+
+Quatorze gares déclarent une `signature` ; trois sont dessinées à ce jour
+(Tokyo, Shinjuku, Shibuya), les autres retombent proprement sur le gabarit.
 
 `systems/stationPlacement` est la source unique du mobilier, partagée par le rendu
 et par la marche : un banc dessiné à un endroit et infranchissable à un autre se
@@ -203,7 +225,7 @@ src/
   three/                 rendu R3F : wagon, sièges, portes, poignées, pubs, écrans LCD,
                          ville en parallaxe, PNJ, caméra
   three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines
-  three/station/         quai praticable de 224 m, cinq typologies, signalétique
+  three/station/         quai praticable de 224 m, trente gabarits de gare, signalétique
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
   scripts/               models:import / models:inspect (packs → public/models/)

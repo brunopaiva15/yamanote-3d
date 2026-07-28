@@ -1,34 +1,65 @@
-// Typologie de chaque gare de la boucle.
+// Ce qui change d'une gare de la boucle à l'autre — table explicite, gare par gare.
 //
 // Tant qu'on ne voyait le quai que par les vitres, une seule gare générique
 // suffisait. Dès qu'on y marche, l'uniformité saute aux yeux : une gare de
 // viaduc à Yūrakuchō ne ressemble pas à la tranchée de Mejiro ni à la halle de
-// Shinjuku. Ce fichier décrit ce qui change d'une gare à l'autre ; la
-// géométrie, elle, reste unique et paramétrée.
+// Shinjuku. Ce fichier décrit ce qui change ; la géométrie, elle, reste unique
+// et paramétrée.
 //
-// Le gabarit est déduit du tronçon (data/segments) et du statut de hub, puis
-// corrigé gare par gare par la table d'exceptions en fin de fichier.
+// La version précédente DÉDUISAIT la typologie du tronçon traversé
+// (data/segments) avant de corriger par exceptions. C'était une erreur de
+// principe : un tronçon dit ce qu'on voit ENTRE deux gares, pas comment la gare
+// est bâtie. Sept gares en sortaient fausses — Tabata et Komagome sont en
+// tranchée alors que leurs tronçons sont au sol, Ōtsuka, Takadanobaba,
+// Shin-Ōkubo, Gotanda et Hamamatsuchō sont sur viaduc alors que les leurs sont
+// au sol ou en tranchée. Chaque gare porte donc maintenant ses propres cotes,
+// et `SPECS` se lit ligne à ligne en face du relevé.
+//
+// Trois axes indépendants, qu'on aurait tort de confondre :
+//   - `elevation`     : le niveau où court la voie (sol, viaduc, tranchée) ;
+//   - `config`        : ce qu'il y a de l'autre côté du quai (voie Keihin-Tōhoku
+//                       partagée, deuxième voie Yamanote, quai latéral) ;
+//   - `signature`     : le caractère architectural, quand il ne se paramètre pas.
+//
+// `backdrop` reste, lui, la FAMILLE DE RENDU que three/station sait dessiner
+// aujourd'hui. `config` dit la vérité ; le fond de quai réel (rame Keihin-Tōhoku
+// qui passe, quai d'en face, second îlot) viendra la consommer.
 
-import { isMajorHub } from './announcements';
-import { ROOF_HUBS, SEGMENTS, segmentAt } from './segments';
-import { PLATFORM_DEPTH, PLATFORM_LEN } from './stationGeometry';
+import { PLATFORM_DEPTH } from './stationGeometry';
 
-export type Typology =
-  /** Quai latéral adossé à un mur : le cas le plus courant. */
-  | 'sideWall'
-  /** Quai en îlot : la deuxième voie est visible de l'autre côté. */
+/** Niveau où court la voie dans la gare. */
+export type Elevation =
+  /** Au niveau du sol : grands faisceaux, longues perspectives. */
+  | 'ground'
+  /** Sur viaduc : garde-corps ajouré, la ville en contrebas, la rue dessous. */
+  | 'elevated'
+  /** En tranchée : parois de soutènement des deux côtés, la gare est au-dessus. */
+  | 'trench';
+
+/** Ce qu'on a de l'autre côté du quai — la différence à ne surtout pas uniformiser. */
+export type PlatformConfig =
+  /** Quai partagé avec une autre ligne : la voie d'en face n'est pas la Yamanote. */
+  | 'sharedIsland'
+  /** Îlot Yamanote : les deux sens se font face sur le même quai. */
   | 'island'
-  /** Quai sur viaduc : garde-corps ajouré, la ville en contrebas. */
-  | 'viaduct'
-  /** Quai en tranchée : parois de soutènement hautes des deux côtés. */
-  | 'trench'
-  /** Grande gare : quai large, hauteur libre, charpente. */
-  | 'hub';
+  /** Quai latéral : mur dans le dos, quai opposé au-delà des deux voies. */
+  | 'side'
+  /** Deux îlots Yamanote : quatre voies, départs et terminus. */
+  | 'terminusIsland';
+
+/** Portes de quai, à la situation documentée en 2026. */
+export type PsdState =
+  /** Toutes les voies Yamanote équipées. */
+  | 'full'
+  /** Voie principale équipée, voie secondaire encore nue. */
+  | 'partial'
+  /** Aucune porte : les grands travaux en cours l'interdisent encore. */
+  | 'none';
 
 export type CanopyStyle =
   /** Auvent tôlé sur poutrelles, la norme JR. */
   | 'steel'
-  /** Dalle béton basse, gares en tranchée et souterraines. */
+  /** Dalle béton basse, gares en tranchée et sous bâtiment. */
   | 'slab'
   /** Charpente claire et verrières, gares récentes. */
   | 'glass'
@@ -44,6 +75,41 @@ export type Backdrop =
   | 'parapet'
   /** Mur de soutènement de tranchée, plus haut que l'auvent. */
   | 'retaining';
+
+/**
+ * Gares dont le caractère ne se paramètre pas et reçoivent une charpente à
+ * elles (three/station/Signature). Une clé déclarée mais pas encore dessinée ne
+ * casse rien : Signature ne rend que ce qu'elle connaît.
+ */
+export type SignatureKey =
+  | 'tokyo'
+  | 'akihabara'
+  | 'ueno'
+  | 'nippori'
+  | 'otsuka'
+  | 'shinjuku'
+  | 'harajuku'
+  | 'shibuya'
+  | 'ebisu'
+  | 'gotanda'
+  | 'takanawaGateway'
+  | 'hamamatsucho'
+  | 'shimbashi'
+  | 'yurakucho';
+
+/** Couleur sonore du quai : ce qu'on entend par-dessus la sonorisation. */
+export type Ambience =
+  | 'hall'
+  | 'street'
+  | 'office'
+  | 'quiet'
+  | 'electric'
+  | 'market'
+  | 'students'
+  | 'park'
+  | 'birds'
+  | 'tram'
+  | 'monorail';
 
 export interface StationPalette {
   slab: string;
@@ -78,7 +144,15 @@ export interface StationAmenities {
 }
 
 export interface StationLayout {
-  typology: Typology;
+  elevation: Elevation;
+  config: PlatformConfig;
+  /** Ligne qui partage le quai, quand `config` vaut 'sharedIsland'. */
+  sharedWith?: string;
+  /** Autres lignes visibles depuis le quai, du plus proche au plus lointain. */
+  parallel: readonly string[];
+  psd: PsdState;
+  /** Gare en travaux à la situation de 2026 : variante chantier. */
+  works: boolean;
   /** Longueur du quai (m) : onze voitures de 20 m plus les abouts. */
   length: number;
   /** Profondeur du quai (m), du bord au mur de fond. */
@@ -93,13 +167,14 @@ export interface StationLayout {
   amenities: StationAmenities;
   /** Densité de foule relative (1 = gare ordinaire). */
   crowdScale: number;
-  signature?: 'tokyo' | 'shinjuku' | 'shibuya';
+  ambience: Ambience;
+  signature?: SignatureKey;
 }
 
 /** Longueur réelle d'un quai de la Yamanote : 11 voitures de 20 m. */
 export const FULL_PLATFORM_LEN = 224;
 
-const PALETTES: Record<string, StationPalette> = {
+const PALETTES = {
   // Béton clair et acier gris : la gare JR ordinaire.
   standard: {
     slab: '#c8c9c4',
@@ -170,8 +245,573 @@ const PALETTES: Record<string, StationPalette> = {
     lamp: '#ffffff',
     tile: '#c8ced2',
   },
+  // Takanawa Gateway : acier blanc, bois clair, verre. La plus lumineuse de la
+  // boucle — elle empruntait jusqu'ici la palette de Shibuya, qui est grise.
+  takanawa: {
+    slab: '#dcdcd6',
+    wall: '#e6e4dc',
+    column: '#d0d3d1',
+    canopy: '#e9e5d9',
+    accent: '#80c241',
+    lamp: '#ffffff',
+    tile: '#c9a97c',
+  },
+  // Vieux viaduc de brique et d'acier : Yūrakuchō, Shimbashi. Piliers épais,
+  // maçonnerie sombre, arcades commerçantes en dessous.
+  brickViaduct: {
+    slab: '#c6c2ba',
+    wall: '#8f6551',
+    column: '#4f4a45',
+    canopy: '#5a5450',
+    accent: '#80c241',
+    lamp: '#ffe9bc',
+    tile: '#7a4d3c',
+  },
+  // Harajuku : le bâtiment blanc de 2020 d'un côté, le Meiji-jingū de l'autre.
+  harajuku: {
+    slab: '#d4d5cf',
+    wall: '#dcdcd4',
+    column: '#b9bdb8',
+    canopy: '#8f9690',
+    accent: '#80c241',
+    lamp: '#fff6e0',
+    tile: '#b8a582',
+  },
+} as const satisfies Record<string, StationPalette>;
+
+type PaletteKey = keyof typeof PALETTES;
+
+/**
+ * Gabarit par défaut d'un niveau de voie. Une gare n'énonce que ses écarts :
+ * la table de 30 lignes reste lisible en face du relevé.
+ */
+const FAMILY: Record<
+  Elevation,
+  {
+    depth: number;
+    canopy: CanopyStyle;
+    canopyY: number;
+    columnSpacing: number;
+    backdrop: Backdrop;
+    palette: PaletteKey;
+  }
+> = {
+  ground: {
+    depth: PLATFORM_DEPTH + 2.2,
+    canopy: 'steel',
+    canopyY: 4.1,
+    columnSpacing: 12,
+    backdrop: 'secondTrack',
+    palette: 'standard',
+  },
+  elevated: {
+    depth: PLATFORM_DEPTH + 1.4,
+    canopy: 'steel',
+    canopyY: 3.9,
+    columnSpacing: 11,
+    backdrop: 'parapet',
+    palette: 'viaduct',
+  },
+  trench: {
+    depth: PLATFORM_DEPTH + 0.8,
+    canopy: 'slab',
+    canopyY: 3.3,
+    columnSpacing: 9,
+    backdrop: 'retaining',
+    palette: 'trench',
+  },
 };
 
+interface Spec {
+  /** Code JY et nom, pour se relire : l'ordre suit STATIONS. */
+  name: string;
+  elevation: Elevation;
+  config: PlatformConfig;
+  sharedWith?: string;
+  parallel?: readonly string[];
+  /** Défaut : 'full'. */
+  psd?: PsdState;
+  works?: true;
+  signature?: SignatureKey;
+  ambience: Ambience;
+  crowd: number;
+  // --- Écarts au gabarit de famille ---
+  depth?: number;
+  canopy?: CanopyStyle;
+  canopyY?: number;
+  columnSpacing?: number;
+  backdrop?: Backdrop;
+  palette?: PaletteKey;
+  /** Force la présence d'un kiosque, sinon déduite de l'affluence. */
+  kiosk?: boolean;
+  /** Force l'horloge de quai, sinon présente partout. */
+  clock?: false;
+}
+
+const KT = 'Keihin-Tōhoku';
+
+/**
+ * Les trente gares, dans l'ordre JY01 → JY30.
+ *
+ * Les configurations de quai reprennent le relevé : onze gares où la Yamanote
+ * partage son îlot avec la Keihin-Tōhoku, Yoyogi avec la Chūō–Sōbu, Shinagawa
+ * de nouveau avec la Keihin-Tōhoku ; quatorze îlots Yamanote purs ; un seul
+ * couple de quais latéraux, Harajuku ; deux gares à quatre voies Yamanote qui
+ * permettent départs et terminus, Ikebukuro et Ōsaki.
+ */
+const SPECS: readonly Spec[] = [
+  {
+    // JY01 — halle monumentale, voies 4 et 5 sur deux quais partagés avec la
+    // Keihin-Tōhoku. Depuis le quai, ce n'est pas la façade de brique qu'on
+    // voit, c'est un gigantesque environnement ferroviaire couvert.
+    name: 'JY01 Tokyo',
+    elevation: 'ground',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Tōkaidō', 'Chūō', 'Tōkaidō Shinkansen'],
+    signature: 'tokyo',
+    ambience: 'hall',
+    crowd: 2,
+    depth: 10.5,
+    canopy: 'truss',
+    // Sous la grande dalle de la halle (6,30 m) : l'auvent de quai reste dessous.
+    canopyY: 5.5,
+    columnSpacing: 16,
+    backdrop: 'secondTrack',
+    palette: 'tokyo',
+  },
+  {
+    // JY02 — viaduc à trois quais centraux ; les voies 2 et 3 sont réunies sur
+    // le même îlot. Quai étroit, charpente sombre, immeubles à toucher.
+    name: 'JY02 Kanda',
+    elevation: 'elevated',
+    config: 'island',
+    parallel: [KT, 'Chūō', 'Ginza'],
+    ambience: 'street',
+    crowd: 1,
+    depth: PLATFORM_DEPTH + 0.6,
+    canopyY: 3.7,
+  },
+  {
+    // JY03 — viaducs croisés : les voies 5 et 6 de la Chūō–Sōbu passent
+    // perpendiculairement au niveau supérieur. Poutres massives, plafonds bas,
+    // plusieurs couches de circulation visibles à la fois.
+    name: 'JY03 Akihabara',
+    elevation: 'elevated',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Chūō–Sōbu', 'Hibiya', 'Tsukuba Express'],
+    signature: 'akihabara',
+    ambience: 'electric',
+    crowd: 1.4,
+    depth: PLATFORM_DEPTH + 1,
+    canopyY: 3.7,
+    columnSpacing: 9.5,
+  },
+  {
+    // JY04 — quatre voies parallèles sur viaduc, quais rectilignes et étroits,
+    // couverture métallique presque continue. Ameyoko est juste dessous.
+    name: 'JY04 Okachimachi',
+    elevation: 'elevated',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Ginza', 'Hibiya', 'Ōedo'],
+    ambience: 'market',
+    crowd: 0.95,
+    depth: PLATFORM_DEPTH + 0.9,
+  },
+  {
+    // JY05 — voies élevées, voies terminales et niveaux souterrains. Le quai
+    // Yamanote est plus resserré qu'à Tokyo, mais le faisceau donne au décor
+    // une profondeur considérable.
+    name: 'JY05 Ueno',
+    elevation: 'ground',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Utsunomiya', 'Takasaki', 'Jōban', 'Tōhoku Shinkansen'],
+    signature: 'ueno',
+    ambience: 'hall',
+    crowd: 1.6,
+    depth: 8.6,
+    canopy: 'truss',
+    canopyY: 5.2,
+    columnSpacing: 14,
+    backdrop: 'secondTrack',
+    palette: 'hub',
+  },
+  {
+    // JY06 — la plus discrète de la boucle : deux quais centraux au sol,
+    // toitures anciennes, garde-corps simples, vue sur les temples et les
+    // arbres d'Ueno. « Vallée du rossignol » : les oiseaux font partie du lieu.
+    name: 'JY06 Uguisudani',
+    elevation: 'ground',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Tōhoku Shinkansen'],
+    ambience: 'birds',
+    crowd: 0.55,
+    depth: PLATFORM_DEPTH + 1.4,
+    canopyY: 3.8,
+    clock: false,
+  },
+  {
+    // JY07 — immense corridor ferroviaire au sol, voies 10 et 11 séparées.
+    // Quais longs, ponts-concours au-dessus des rails, faisceau dégagé.
+    name: 'JY07 Nippori',
+    elevation: 'ground',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Jōban', 'Keisei', 'Nippori–Toneri Liner'],
+    signature: 'nippori',
+    ambience: 'street',
+    crowd: 1.2,
+    depth: PLATFORM_DEPTH + 2.6,
+    canopyY: 4.2,
+  },
+  {
+    // JY08 — compacte mais verticalement complexe : quais JR au niveau
+    // supérieur, hall en dessous. Quais sobres, étroits, très techniques.
+    name: 'JY08 Nishi-Nippori',
+    elevation: 'elevated',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Chiyoda', 'Nippori–Toneri Liner'],
+    ambience: 'street',
+    crowd: 0.9,
+    depth: PLATFORM_DEPTH + 0.8,
+    canopyY: 3.6,
+  },
+  {
+    // JY09 — quatre voies en TRANCHÉE sous le bâtiment de gare, pas au sol :
+    // murs de soutènement, passerelles, grande gare-pont au-dessus.
+    name: 'JY09 Tabata',
+    elevation: 'trench',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Tōhoku Shinkansen'],
+    ambience: 'quiet',
+    crowd: 0.8,
+  },
+  {
+    // JY10 — unique quai central en tranchée, étroit et calme, talus
+    // végétalisés et azalées le long de la voie. Là encore une tranchée, que
+    // le tronçon au sol ne laissait pas deviner.
+    name: 'JY10 Komagome',
+    elevation: 'trench',
+    config: 'island',
+    parallel: ['Namboku'],
+    ambience: 'quiet',
+    crowd: 0.8,
+    depth: PLATFORM_DEPTH + 0.5,
+  },
+  {
+    // JY11 — quai central en tranchée, murs latéraux proches, toiture
+    // partielle, bâtiment de gare posé au-dessus des voies.
+    name: 'JY11 Sugamo',
+    elevation: 'trench',
+    config: 'island',
+    parallel: ['Mita'],
+    ambience: 'quiet',
+    crowd: 0.85,
+  },
+  {
+    // JY12 — quai aérien ouvert, la rue passe immédiatement en dessous et le
+    // tram Arakawa traverse à côté. Le tronçon est en tranchée, la gare non.
+    name: 'JY12 Otsuka',
+    elevation: 'elevated',
+    config: 'island',
+    parallel: ['Toden Arakawa'],
+    signature: 'otsuka',
+    ambience: 'tram',
+    crowd: 0.9,
+    depth: PLATFORM_DEPTH + 1.6,
+    canopyY: 4,
+  },
+  {
+    // JY13 — quatre voies Yamanote (5 à 8) sur deux quais centraux : c'est ce
+    // qui permet départs et terminus. Quais très larges, cages d'escalier
+    // nombreuses, panneaux suspendus volumineux. Les voies 5 et 8, longtemps
+    // moins utilisées, n'ont pas toutes reçu leurs portes en même temps.
+    name: 'JY13 Ikebukuro',
+    elevation: 'ground',
+    config: 'terminusIsland',
+    parallel: ['Saikyō', 'Shōnan–Shinjuku', 'Seibu Ikebukuro', 'Tōbu Tōjō'],
+    psd: 'partial',
+    ambience: 'hall',
+    crowd: 2,
+    depth: 9.8,
+    canopy: 'truss',
+    canopyY: 5.6,
+    columnSpacing: 14,
+    palette: 'hub',
+  },
+  {
+    // JY14 — un seul bâtiment-pont au-dessus du quai, peu de locaux, vue
+    // dégagée. L'une des deux seules gares sans correspondance ferroviaire.
+    name: 'JY14 Mejiro',
+    elevation: 'trench',
+    config: 'island',
+    parallel: [],
+    ambience: 'quiet',
+    crowd: 0.75,
+    depth: PLATFORM_DEPTH + 0.6,
+  },
+  {
+    // JY15 — quai aérien étroit, toiture métallique continue, colonnes
+    // nombreuses, lignes Seibu visibles juste à côté. Forte affluence
+    // étudiante et accumulation de panneaux.
+    name: 'JY15 Takadanobaba',
+    elevation: 'elevated',
+    config: 'island',
+    parallel: ['Seibu Shinjuku', 'Tōzai'],
+    ambience: 'students',
+    crowd: 1.4,
+    depth: PLATFORM_DEPTH + 0.7,
+    canopyY: 3.7,
+    columnSpacing: 9.5,
+  },
+  {
+    // JY16 — quai central étroit, toiture simple, ville extrêmement proche.
+    // Le bâtiment actuel est plus vertical que l'ancienne petite gare.
+    name: 'JY16 Shin-Okubo',
+    elevation: 'elevated',
+    config: 'island',
+    parallel: [],
+    ambience: 'street',
+    crowd: 1,
+    depth: PLATFORM_DEPTH + 0.5,
+    canopyY: 3.8,
+  },
+  {
+    // JY17 — quai central des voies 14 et 15, au niveau du sol. Alignement
+    // massif de quais, toiture presque continue, forêt de poteaux, visibilité
+    // coupée par les autres quais. Pas encore de portes de quai Yamanote : la
+    // restructuration en cours l'interdit.
+    name: 'JY17 Shinjuku',
+    elevation: 'ground',
+    config: 'island',
+    parallel: ['Chūō', 'Chūō–Sōbu', 'Saikyō', 'Shōnan–Shinjuku', 'Odakyū', 'Keiō'],
+    psd: 'none',
+    works: true,
+    signature: 'shinjuku',
+    ambience: 'hall',
+    crowd: 2.2,
+    depth: 8.4,
+    canopy: 'slab',
+    canopyY: 4.2,
+    columnSpacing: 9,
+    palette: 'shinjuku',
+  },
+  {
+    // JY18 — quatre voies imbriquant Yamanote et Chūō–Sōbu : les voies 1 et 2
+    // sont sur DEUX quais différents, chacune adossée à une voie Chūō–Sōbu.
+    // Quais légèrement courbes, anciennes marquises, organisation asymétrique.
+    name: 'JY18 Yoyogi',
+    elevation: 'ground',
+    config: 'sharedIsland',
+    sharedWith: 'Chūō–Sōbu',
+    parallel: ['Ōedo'],
+    ambience: 'street',
+    crowd: 0.9,
+    depth: PLATFORM_DEPTH + 1,
+    canopyY: 3.8,
+  },
+  {
+    // JY19 — LE seul couple de quais latéraux de la boucle, depuis la refonte
+    // qui a remplacé l'ancien quai central. Takeshita d'un côté, la végétation
+    // du Meiji-jingū de l'autre ; bâtiment clair et vitré, quais courbes.
+    name: 'JY19 Harajuku',
+    elevation: 'ground',
+    config: 'side',
+    parallel: ['Chiyoda', 'Fukutoshin'],
+    signature: 'harajuku',
+    ambience: 'park',
+    crowd: 1.3,
+    depth: PLATFORM_DEPTH + 0.8,
+    canopy: 'glass',
+    canopyY: 4.6,
+    backdrop: 'wall',
+    palette: 'harajuku',
+  },
+  {
+    // JY20 — depuis 2023 les deux sens tiennent sur un unique quai central très
+    // large, mais fortement courbé. Parois et plafonds provisoires, panneaux de
+    // chantier partout, et toujours pas de portes de quai en 2026.
+    name: 'JY20 Shibuya',
+    elevation: 'elevated',
+    config: 'island',
+    parallel: ['Saikyō', 'Shōnan–Shinjuku', 'Ginza', 'Tōkyū Tōyoko'],
+    psd: 'none',
+    works: true,
+    signature: 'shibuya',
+    ambience: 'hall',
+    crowd: 2,
+    depth: 10,
+    canopy: 'glass',
+    canopyY: 6.2,
+    columnSpacing: 15,
+    backdrop: 'secondTrack',
+    palette: 'shibuya',
+  },
+  {
+    // JY21 — quai central couvert sur viaduc, parallèle au quai
+    // Saikyō/Shōnan–Shinjuku, très intégré au complexe Atre. L'extrémité est
+    // se prolonge vers la longue passerelle d'Ebisu Garden Place.
+    name: 'JY21 Ebisu',
+    elevation: 'elevated',
+    config: 'island',
+    parallel: ['Saikyō', 'Shōnan–Shinjuku', 'Hibiya'],
+    signature: 'ebisu',
+    ambience: 'office',
+    crowd: 1.2,
+    depth: PLATFORM_DEPTH + 1.8,
+    canopyY: 4.2,
+  },
+  {
+    // JY22 — quai central en tranchée, murs latéraux proches, Atre posé
+    // au-dessus. Large au centre, effilé aux extrémités.
+    name: 'JY22 Meguro',
+    elevation: 'trench',
+    config: 'island',
+    parallel: ['Namboku', 'Mita', 'Tōkyū Meguro'],
+    ambience: 'quiet',
+    crowd: 1,
+    depth: PLATFORM_DEPTH + 1,
+  },
+  {
+    // JY23 — quai central légèrement courbé sur viaduc, ville et façades
+    // commerciales à toucher, et la Tōkyū Ikegami spectaculairement perchée au
+    // quatrième niveau. Le tronçon est en tranchée, la gare non.
+    name: 'JY23 Gotanda',
+    elevation: 'elevated',
+    config: 'island',
+    parallel: ['Tōkyū Ikegami', 'Asakusa'],
+    signature: 'gotanda',
+    ambience: 'street',
+    crowd: 1,
+    depth: PLATFORM_DEPTH + 1.2,
+    canopyY: 3.9,
+  },
+  {
+    // JY24 — quatre voies Yamanote (1 à 4) sur deux quais centraux : point
+    // opérationnel de départ, de terminus et d'accès au dépôt. Portes en place
+    // sur les voies principales 1 et 3, annoncées sur les secondaires 2 et 4.
+    name: 'JY24 Osaki',
+    elevation: 'ground',
+    config: 'terminusIsland',
+    parallel: ['Saikyō', 'Shōnan–Shinjuku', 'Rinkai'],
+    psd: 'partial',
+    ambience: 'office',
+    crowd: 1.3,
+    depth: 8.8,
+    canopyY: 4.6,
+    columnSpacing: 13,
+    palette: 'hub',
+  },
+  {
+    // JY25 — très grande gare au sol. Voies 1 et 3 sur deux quais séparés :
+    // la numérotation n'est plus continue depuis le remaniement. Immense
+    // toiture industrielle, longues perspectives, escaliers massifs, et
+    // plusieurs secteurs encore en travaux sur le plan de 2026.
+    name: 'JY25 Shinagawa',
+    elevation: 'ground',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Tōkaidō', 'Yokosuka', 'Tōkaidō Shinkansen', 'Keikyū'],
+    works: true,
+    ambience: 'hall',
+    crowd: 1.7,
+    depth: 9.4,
+    canopy: 'truss',
+    canopyY: 5.4,
+    columnSpacing: 14,
+    palette: 'hub',
+  },
+  {
+    // JY26 — grand quai central, second quai central pour la Keihin-Tōhoku.
+    // Toiture blanche inspirée de l'origami, acier et bois clair, façades
+    // vitrées, atrium visible depuis le quai : la plus lumineuse de la boucle,
+    // et la seule dont l'architecture est entièrement propre.
+    name: 'JY26 Takanawa Gateway',
+    elevation: 'ground',
+    config: 'island',
+    parallel: [KT],
+    signature: 'takanawaGateway',
+    ambience: 'quiet',
+    crowd: 0.7,
+    depth: 9,
+    canopy: 'glass',
+    canopyY: 6,
+    columnSpacing: 15,
+    palette: 'takanawa',
+  },
+  {
+    // JY27 — quatre voies sur deux quais centraux, les extérieures à la
+    // Keihin-Tōhoku. Longues marquises, quais rectilignes, vaste
+    // bâtiment-pont, et une partie du hall en travaux en 2026.
+    name: 'JY27 Tamachi',
+    elevation: 'ground',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Tōkaidō'],
+    works: true,
+    ambience: 'office',
+    crowd: 1,
+    depth: PLATFORM_DEPTH + 1.8,
+  },
+  {
+    // JY28 — quatre voies au niveau supérieur. Environnement très vertical, le
+    // monorail de Haneda immédiatement à côté, éléments anciens mêlés aux
+    // structures neuves et plusieurs zones en construction.
+    name: 'JY28 Hamamatsucho',
+    elevation: 'elevated',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Tokyo Monorail', 'Asakusa', 'Ōedo'],
+    works: true,
+    signature: 'hamamatsucho',
+    ambience: 'monorail',
+    crowd: 1.1,
+    depth: PLATFORM_DEPTH + 1.2,
+    canopyY: 4,
+  },
+  {
+    // JY29 — grande gare élevée, quai central des voies 4 et 5. Vieux viaduc
+    // métallique, couverture dense, quais parallèles multiples ; dessous, les
+    // arcades et les couloirs bas contrastent avec les tours de Shiodome.
+    name: 'JY29 Shimbashi',
+    elevation: 'elevated',
+    config: 'island',
+    parallel: ['Tōkaidō', 'Yokosuka', 'Ginza', 'Asakusa', 'Yurikamome'],
+    signature: 'shimbashi',
+    ambience: 'office',
+    crowd: 1.5,
+    depth: PLATFORM_DEPTH + 2,
+    canopyY: 4.1,
+    palette: 'brickViaduct',
+  },
+  {
+    // JY30 — viaduc ancien en acier et maçonnerie, piliers épais, quai couvert
+    // et étroit. Restaurants et petites cellules commerciales sous les voies ;
+    // à l'ouest, l'International Forum tranche par sa modernité.
+    name: 'JY30 Yurakucho',
+    elevation: 'elevated',
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Yūrakuchō'],
+    signature: 'yurakucho',
+    ambience: 'office',
+    crowd: 1.1,
+    depth: PLATFORM_DEPTH + 0.6,
+    canopyY: 3.4,
+    palette: 'brickViaduct',
+  },
+];
+
+/**
+ * Mobilier déduit de l'affluence. Un quai plus fréquenté reçoit plus de bancs,
+ * plus de distributeurs et un escalier mécanique supplémentaire.
+ */
 function amenities(scale: number, kiosk: boolean, clock: boolean): StationAmenities {
   const half = FULL_PLATFORM_LEN / 2;
   return {
@@ -186,128 +826,29 @@ function amenities(scale: number, kiosk: boolean, clock: boolean): StationAmenit
   };
 }
 
-/** Gabarit déduit du tronçon traversé, avant exceptions. */
-function baseLayout(index: number): StationLayout {
-  const hub = isMajorHub(index) || ROOF_HUBS[index] !== undefined;
-  const kind = SEGMENTS[segmentAt(index)].kind;
-
-  if (hub) {
-    return {
-      typology: 'hub',
-      length: FULL_PLATFORM_LEN,
-      depth: 9.2,
-      canopy: 'truss',
-      canopyY: 5.6,
-      columnSpacing: 14,
-      backdrop: 'secondTrack',
-      palette: PALETTES.hub,
-      amenities: amenities(1.6, true, true),
-      crowdScale: 1.9,
-    };
-  }
-  if (kind === 'trench') {
-    return {
-      typology: 'trench',
-      length: FULL_PLATFORM_LEN,
-      depth: PLATFORM_DEPTH + 0.8,
-      canopy: 'slab',
-      canopyY: 3.3,
-      columnSpacing: 9,
-      backdrop: 'retaining',
-      palette: PALETTES.trench,
-      amenities: amenities(0.8, false, true),
-      crowdScale: 0.8,
-    };
-  }
-  if (kind === 'viaduct') {
-    return {
-      typology: 'viaduct',
-      length: FULL_PLATFORM_LEN,
-      depth: PLATFORM_DEPTH + 1.4,
-      canopy: 'steel',
-      canopyY: 3.9,
-      columnSpacing: 11,
-      backdrop: 'parapet',
-      palette: PALETTES.viaduct,
-      amenities: amenities(1, false, true),
-      crowdScale: 1,
-    };
-  }
-  if (kind === 'corridor') {
-    return {
-      typology: 'island',
-      length: FULL_PLATFORM_LEN,
-      depth: PLATFORM_DEPTH + 2.2,
-      canopy: 'steel',
-      canopyY: 4.1,
-      columnSpacing: 12,
-      backdrop: 'secondTrack',
-      palette: PALETTES.standard,
-      amenities: amenities(1.1, false, true),
-      crowdScale: 1.1,
-    };
-  }
+function build(spec: Spec): StationLayout {
+  const f = FAMILY[spec.elevation];
   return {
-    typology: 'sideWall',
+    elevation: spec.elevation,
+    config: spec.config,
+    sharedWith: spec.sharedWith,
+    parallel: spec.parallel ?? [],
+    psd: spec.psd ?? 'full',
+    works: spec.works ?? false,
     length: FULL_PLATFORM_LEN,
-    depth: PLATFORM_DEPTH + 1,
-    canopy: 'steel',
-    canopyY: 3.6,
-    columnSpacing: 10.5,
-    backdrop: 'wall',
-    palette: PALETTES.standard,
-    amenities: amenities(0.9, false, false),
-    crowdScale: 0.9,
+    depth: spec.depth ?? f.depth,
+    canopy: spec.canopy ?? f.canopy,
+    canopyY: spec.canopyY ?? f.canopyY,
+    columnSpacing: spec.columnSpacing ?? f.columnSpacing,
+    backdrop: spec.backdrop ?? f.backdrop,
+    palette: PALETTES[spec.palette ?? f.palette],
+    // Un kiosque de quai ne tient que là où il y a du monde pour le faire vivre.
+    amenities: amenities(spec.crowd, spec.kiosk ?? spec.crowd >= 1.4, spec.clock ?? true),
+    crowdScale: spec.crowd,
+    ambience: spec.ambience,
+    signature: spec.signature,
   };
 }
-
-/** Retouches gare par gare, par code JY (index 0-based). */
-const OVERRIDES: Record<number, Partial<StationLayout>> = {
-  // JY01 Tokyo — halle de brique, charpente rivetée, verrière en berceau.
-  0: {
-    signature: 'tokyo',
-    canopy: 'truss',
-    // Sous la grande dalle de la halle (6,30 m) : l'auvent de quai reste dessous.
-    canopyY: 5.5,
-    depth: 10.5,
-    columnSpacing: 16,
-    backdrop: 'secondTrack',
-    palette: PALETTES.tokyo,
-    crowdScale: 2,
-  },
-  // JY05 Ueno — grande gare, mais quai plus resserré qu'à Tokyo.
-  4: { depth: 8.6, canopyY: 5.2 },
-  // JY07 Uguisudani — la plus discrète de la boucle.
-  6: { crowdScale: 0.55, amenities: { ...amenities(0.6, false, false) } },
-  // JY13 Ikebukuro — hub très fréquenté.
-  12: { crowdScale: 2, depth: 9.8 },
-  // JY17 Shinjuku — forêt de piliers, dalle basse, éclairage jaune.
-  16: {
-    signature: 'shinjuku',
-    canopy: 'slab',
-    canopyY: 4.2,
-    depth: 8.4,
-    columnSpacing: 9,
-    palette: PALETTES.shinjuku,
-    crowdScale: 2.2,
-  },
-  // JY20 Shibuya — îlot large de 2023, verre et acier blanc.
-  19: {
-    signature: 'shibuya',
-    typology: 'island',
-    canopy: 'glass',
-    canopyY: 6.2,
-    depth: 10,
-    columnSpacing: 15,
-    backdrop: 'secondTrack',
-    palette: PALETTES.shibuya,
-    crowdScale: 2,
-  },
-  // JY26 Takanawa Gateway — verrière blanche, gare neuve et vide.
-  25: { canopy: 'glass', canopyY: 6.0, palette: PALETTES.shibuya, crowdScale: 0.7 },
-  // JY30 Yurakucho — viaduc étroit sous les voies du Shinkansen.
-  29: { depth: PLATFORM_DEPTH + 0.6, canopyY: 3.4 },
-};
 
 const CACHE = new Map<number, StationLayout>();
 
@@ -316,10 +857,7 @@ export function layoutFor(index: number): StationLayout {
   const i = ((index % 30) + 30) % 30;
   const hit = CACHE.get(i);
   if (hit) return hit;
-  const layout = { ...baseLayout(i), ...OVERRIDES[i] };
+  const layout = build(SPECS[i]);
   CACHE.set(i, layout);
   return layout;
 }
-
-/** Ancienne longueur de quai, conservée pour les repères de l'occultation. */
-export { PLATFORM_LEN };

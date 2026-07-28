@@ -119,6 +119,11 @@ export function Signature({ layout, backX, materials: m }: Props) {
     );
   }
 
+  // Une clé déclarée dans les données mais pas encore dessinée ne rend rien :
+  // sans ce garde-fou, toute nouvelle gare signature héritait silencieusement
+  // de la charpente de Shibuya.
+  if (layout.signature !== 'shibuya') return null;
+
   // Shibuya : arcs d'acier blanc, verrières entre les arcs, hauteur libre.
   return (
     <group>
