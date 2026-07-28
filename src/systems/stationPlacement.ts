@@ -183,6 +183,16 @@ function clearSpans(
 export const GANTRY_PULL = 1.6;
 
 /**
+ * Dégagement devant le nez d'une trémie ou d'un escalier mécanique (m).
+ *
+ * La volée s'ouvre côté -z : c'est par là qu'on y entre, que la foule s'y
+ * dirige, et que la potence d'orientation se tient. L'emprise de la cage
+ * elle-même ne couvre pas ce débouché — sans cette réserve, un banc ou un
+ * pilier s'y calait juste devant l'entrée.
+ */
+const ACCESS_APPROACH = 2.0;
+
+/**
  * Abscisses des potences d'orientation le long de la voie.
  *
  * Une par escalier et par escalier mécanique, un peu avant l'entrée — c'est le
@@ -343,16 +353,35 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     ...(kiosk ? [kiosk] : []),
   ];
 
+  // Réserve devant le nez des accès verticaux : mobilier seulement. Ce n'est
+  // pas un obstacle de marche — le joueur et la foule doivent pouvoir s'y
+  // présenter — mais bancs et piliers n'ont rien à y faire.
+  const approachClear: Placed[] = [
+    ...stairs.map((s) => ({
+      x: s.x,
+      z: stairTopZ(s) - ACCESS_APPROACH / 2,
+      halfX: s.halfX,
+      halfZ: ACCESS_APPROACH / 2,
+    })),
+    ...escalators.map((e) => ({
+      x: e.x,
+      z: e.z - e.halfZ - ACCESS_APPROACH / 2,
+      halfX: Math.max(e.halfX, 1.2),
+      halfZ: ACCESS_APPROACH / 2,
+    })),
+  ];
+
   // La trame de piliers saute la travée occupée par une trémie, une gaine
-  // d'ascenseur ou un kiosque — comme sur un vrai quai, où le poteau est
-  // reporté plutôt que planté au milieu de la cage.
+  // d'ascenseur ou un kiosque — et le débouché devant leur entrée — comme sur
+  // un vrai quai, où le poteau est reporté plutôt que planté au milieu de la
+  // cage ou juste devant.
   const columns: number[] = [];
   for (let z = -usable; z <= usable; z += layout.columnSpacing) {
     // L'emprise est un peu plus large que le poteau : il porte des coffrets,
     // des caissons publicitaires et une descente d'eau, et rien de tout cela ne
     // doit dépasser de ce qu'on contourne.
     const post = { x: backX - 0.55, z, halfX: 0.34, halfZ: 0.34 };
-    if (structure.some((s) => hits(post, s))) continue;
+    if (structure.some((s) => hits(post, s)) || approachClear.some((s) => hits(post, s))) continue;
     columns.push(z);
   }
 
@@ -364,6 +393,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     // mobilier, lui, s'écarte d'eux ici, et la marche les contournera puisque
     // `taken` devient la liste des obstacles.
     ...(layout.sigPlan?.posts ?? []).map((s) => ({ x: s.x, z: s.z, halfX: 0.35, halfZ: 0.35 })),
+    ...approachClear,
   ];
 
   // --- Le mobilier, rangé dans ce qui reste --------------------------
@@ -479,8 +509,9 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     ]),
   };
 
-  // `taken` a exactement recueilli tout ce qui a été retenu, structure comprise.
-  const obstacles = taken;
+  // `taken` a recueilli structure et mobilier ; la réserve d'approche n'est
+  // qu'un garde-fou de pose, pas une emprise à contourner en marchant.
+  const obstacles = taken.filter((t) => !approachClear.includes(t));
 
   // Une borne plantée au sol se contourne ; plaquée sur un muret de portes
   // palières, elle ne gêne personne et n'a rien à faire ici. `offGate` a déjà
