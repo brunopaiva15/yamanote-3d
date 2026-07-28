@@ -24,7 +24,7 @@ import {
   makeStationSign,
   type BoardView,
 } from '../../textures/procedural';
-import { PLATFORM_TOP } from '../../data/stationGeometry';
+import { directionBandZs, PLATFORM_TOP } from '../../data/stationGeometry';
 
 interface Props {
   /** Abscisse de suspension des caissons (repère quai). */
@@ -41,9 +41,36 @@ interface Props {
   detail: number;
   /** Ce qui est déjà posé au sol près de l'épine : les totems s'en écartent. */
   ground: { z: number; halfZ: number }[];
+  /**
+   * Plans de charpente signature : les caissons suspendus (nom de gare,
+   * afficheurs) se décalent pour ne pas les traverser.
+   */
+  avoid: { z: number; r: number }[];
   frame: THREE.Material;
   metal: THREE.Material;
   accent: THREE.Material;
+}
+
+/**
+ * Décale `z` hors des plans à éviter, en cherchant des deux côtés ; null si
+ * aucun creux à portée — le caisson saute plutôt que de transpercer un
+ * portique. `halfZ` est la demi-longueur du caisson à caser.
+ */
+function clearOf(
+  z: number,
+  halfZ: number,
+  avoid: { z: number; r: number }[],
+): number | null {
+  // La portée est large : les passerelles de Takanawa imposent plus de cinq
+  // mètres de décalage à un tableau, et un tableau déplacé vaut mieux qu'un
+  // tableau en moins.
+  for (let d = 0; d <= 7.3; d += 0.9) {
+    for (const s of d === 0 ? [0] : [-d, d]) {
+      const cand = z + s;
+      if (!avoid.some((a) => Math.abs(cand - a.z) < a.r + halfZ)) return cand;
+    }
+  }
+  return null;
 }
 
 /** Intervalle réel entre deux rames, en secondes (cf. platformWait). */
@@ -101,6 +128,7 @@ export function PlatformSignage({
   bandX,
   detail,
   ground,
+  avoid,
   frame,
   metal,
   accent,
@@ -137,24 +165,41 @@ export function PlatformSignage({
 
   // Un panneau de nom de gare tous les ~55 m, un tableau d'affichage tous les
   // ~110 m : sur un quai de 224 m, un seul de chaque serait introuvable.
+  // L'un comme l'autre se décalent des plans de charpente signature : les
+  // portiques de Yūrakuchō leur passaient au travers.
   const signZ = useMemo(() => {
     const out: number[] = [];
-    for (let z = -halfZ + 26; z <= halfZ - 26; z += 55) out.push(z);
+    for (let z = -halfZ + 26; z <= halfZ - 26; z += 55) {
+      const clear = clearOf(z, 1.8, avoid);
+      if (clear !== null) out.push(clear);
+    }
     return out;
-  }, [halfZ]);
-  const boardZ = useMemo(() => [-halfZ * 0.45, halfZ * 0.45], [halfZ]);
+  }, [halfZ, avoid]);
+  const boardZ = useMemo(
+    () =>
+      [-halfZ * 0.45, halfZ * 0.45].flatMap((z) => {
+        const clear = clearOf(z, 1.85, avoid);
+        return clear === null ? [] : [clear];
+      }),
+    [halfZ, avoid],
+  );
   // Les totems se posaient à des z fixes, sans consulter le mobilier : ils
   // tombaient dans un distributeur une fois sur dix. Ils s'écartent de tout ce
-  // qui est déjà au sol autour de l'épine.
+  // qui est déjà au sol autour de l'épine — en cherchant des DEUX côtés : la
+  // dérive à sens unique pouvait chasser un totem d'obstacle en obstacle sans
+  // jamais trouver de creux, et le laisser planté dans le dernier.
   const totemZ = useMemo(
     () =>
-      [-halfZ * 0.66, 0, halfZ * 0.66].map((z) => {
-        for (let guard = 0; guard < 12; guard++) {
-          const clash = ground.some((o) => Math.abs(o.z - z) < o.halfZ + 0.9);
-          if (!clash) break;
-          z += 1.1;
+      [-halfZ * 0.66, 0, halfZ * 0.66].flatMap((base) => {
+        for (let d = 0; d <= 7.7; d += 1.1) {
+          for (const s of d === 0 ? [0] : [-d, d]) {
+            const z = base + s;
+            if (!ground.some((o) => Math.abs(o.z - z) < o.halfZ + 0.9)) return [z];
+          }
         }
-        return z;
+        // Pas de creux à portée : mieux vaut un totem de moins qu'un totem
+        // dans un escalier.
+        return [];
       }),
     [halfZ, ground],
   );
@@ -163,7 +208,9 @@ export function PlatformSignage({
   // publicitaires (une tous les 26 m, à partir de -halfZ + 18) : d'un seul
   // tenant, ou calée n'importe où, elle les aurait traversées — et elle passe
   // aussi au large des trémies et des escaliers mécaniques.
-  const bandZ = useMemo(() => [-halfZ + 31, -halfZ + 109, -halfZ + 161], [halfZ]);
+  // Abscisses partagées (data/stationGeometry) : les charpentes signature qui
+  // plantent des poteaux sur l'épine enjambent ces trois tronçons.
+  const bandZ = useMemo(() => directionBandZs(halfZ * 2), [halfZ]);
 
   useFrame((_, dt) => {
     if (runtime.platformFade <= 0.03) return;

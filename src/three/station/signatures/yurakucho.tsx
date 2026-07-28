@@ -11,10 +11,7 @@ import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { PLATFORM_TOP, PSD_X } from '../../../data/stationGeometry';
 import { mat, useInstances } from '../instancing';
-import { bays, siteCut, useSigMaterials, type SigProps } from './kit';
-
-/** Entraxe des portiques rivetés (m) : court, comme sur l'ouvrage réel. */
-const FRAME = 7.2;
+import { clearSpineSpans, siteCut, useSigMaterials, type SigProps } from './kit';
 
 export function Yurakucho({ layout, place }: SigProps) {
   const { outerX, oppBackX } = siteCut(place);
@@ -46,7 +43,14 @@ export function Yurakucho({ layout, place }: SigProps) {
     [],
   );
 
-  const frameZ = useMemo(() => bays(layout.length, FRAME), [layout.length]);
+  // La trame des portiques vient du PLAN (data/stationLayouts) : c'est lui qui
+  // les écarte des escaliers mécaniques, des débouchés d'accès, des piliers et
+  // des miroirs — et c'est lui que la signalétique suspendue consulte pour
+  // s'écarter d'eux en retour.
+  const frameZ = useMemo(
+    () => (layout.sigPlan?.keepOut ?? []).map((k) => k.z),
+    [layout.sigPlan],
+  );
 
   const posts = useMemo(
     () =>
@@ -62,8 +66,12 @@ export function Yurakucho({ layout, place }: SigProps) {
       ),
     [frameZ, colX0, colX1],
   );
+  // La poutre s'est amincie et collée à la sous-face : à 52 cm de haut elle
+  // descendait dans la bande directionnelle, la gouttière et les panneaux
+  // suspendus. La profondeur de l'ouvrage, ce sont les goussets qui la donnent,
+  // près des montants, hors du gabarit de tout ce qui pend au milieu.
   const girders = useMemo(
-    () => frameZ.map((z) => mat(midX, top - 0.28, z, colX1 - colX0 + 0.8, 0.52, 0.34)),
+    () => frameZ.map((z) => mat(midX, top - 0.14, z, colX1 - colX0 + 0.8, 0.18, 0.34)),
     [frameZ, midX, colX0, colX1, top],
   );
   const braces = useMemo(
@@ -72,6 +80,15 @@ export function Yurakucho({ layout, place }: SigProps) {
         [colX0 + 0.9, colX1 - 0.9].map((x) => mat(x, top - 0.72, z, 1.5, 0.16, 0.24)),
       ),
     [frameZ, colX0, colX1, top],
+  );
+
+  // Le longeron d'axe s'interrompt là où pendent la bande directionnelle et
+  // les plaques d'accès, et au droit des gaines d'escalier mécanique qui
+  // montent jusqu'à l'auvent : continu, il les transperçait toutes.
+  const spineSpans = useMemo(
+    () =>
+      clearSpineSpans(-(layout.length / 2 - 2), layout.length / 2 - 2, layout.length, place),
+    [layout.length, place],
   );
 
   const postRef = useRef<THREE.InstancedMesh>(null);
@@ -99,10 +116,13 @@ export function Yurakucho({ layout, place }: SigProps) {
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
 
-      {/* Longeron continu dans l'axe : ce qui donne au plafond sa trame serrée. */}
-      <mesh position={[midX, top - 0.62, 0]} material={s.steel}>
-        <boxGeometry args={[0.3, 0.34, layout.length - 4]} />
-      </mesh>
+      {/* Longeron dans l'axe : ce qui donne au plafond sa trame serrée. Il
+          s'interrompt au droit des bandes directionnelles et des accès. */}
+      {spineSpans.map((sp) => (
+        <mesh key={`sp${sp.z0}`} position={[midX, top - 0.62, (sp.z0 + sp.z1) / 2]} material={s.steel}>
+          <boxGeometry args={[0.28, 0.34, sp.z1 - sp.z0]} />
+        </mesh>
+      ))}
 
       {/* L'International Forum : deux coques de verre par-dessus le parapet,
           la modernité à laquelle le vieux viaduc se cogne. */}

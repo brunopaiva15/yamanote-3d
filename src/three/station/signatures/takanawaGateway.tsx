@@ -136,8 +136,10 @@ export function TakanawaGateway({ layout, place, m }: SigProps) {
       ))}
 
       {/* Mâts d'appui : au droit de l'épine et du fond de la travée d'en face,
-          jamais dans un passage. */}
-      {bays(layout.length, FOLD * 3).map((z) =>
+          jamais dans un passage. Leur trame vient du plan (data/stationLayouts),
+          qui les écarte des accès — l'un d'eux se dressait au beau milieu d'un
+          escalier mécanique. */}
+      {(layout.sigPlan?.posts ?? []).map(({ z }) =>
         [place.backX, oppBackX].map((x) => (
           <mesh
             key={`p${x}-${z}`}
@@ -150,8 +152,11 @@ export function TakanawaGateway({ layout, place, m }: SigProps) {
       )}
 
       {/* Passerelles vitrées au-dessus de la voie d'en face : le grand hall du
-          deuxième niveau se voit depuis le quai, et c'est voulu. */}
-      {[-layout.length * 0.22, layout.length * 0.2].map((z) => (
+          deuxième niveau se voit depuis le quai, et c'est voulu. La seconde se
+          tient au-delà de la troisième bande directionnelle (qu'elle
+          chevauchait à 0,2 de la longueur) ET de la potence de l'escalier
+          mécanique, dont les suspentes montaient au travers de son tablier. */}
+      {[-layout.length * 0.22, layout.length * 0.275].map((z) => (
         <group key={`br${z}`} position={[0, 0, z]}>
           <mesh position={[(place.backX + oppBackX) / 2, 4.5, 0]} material={s.white}>
             <boxGeometry args={[oppBackX - place.backX, 0.24, 4.2]} />
@@ -171,9 +176,11 @@ export function TakanawaGateway({ layout, place, m }: SigProps) {
         </group>
       ))}
 
-      {/* Le quai lui-même reçoit son bandeau lumineux d'égout. */}
+      {/* Le quai lui-même reçoit son bandeau lumineux d'égout — calé SOUS les
+          poutres transversales : au ras de la sous-face, il les traversait
+          toutes. */}
       {[PSD_X + 0.8, place.farEdgeX !== null ? place.farEdgeX - 0.8 : place.backX].map((x) => (
-        <mesh key={`l${x}`} position={[x, top - 0.12, 0]} material={m.lamp}>
+        <mesh key={`l${x}`} position={[x, top - 0.215, 0]} material={m.lamp}>
           <boxGeometry args={[0.42, 0.07, layout.length - 8]} />
         </mesh>
       ))}

@@ -50,6 +50,27 @@ export const CANOPY_Y = 3.49;
 /** Épaisseur de la dalle du quai (percée au droit des trémies d'escalier). */
 export const SLAB_H = 0.44;
 
+// --- Emprises des accès (demi-longueurs le long de la voie) --------------
+//
+// Partagées entre le placement (systems/stationPlacement), qui pose les
+// emprises de collision, et les gabarits (data/stationLayouts), qui écartent
+// les charpentes signature de ces mêmes accès. Deux valeurs divergentes, et
+// un portique se plante dans un escalier mécanique.
+
+export const STAIR_HALF_Z = 2.6;
+export const ESCALATOR_HALF_Z = 2.8;
+export const ELEVATOR_HALF_Z = 0.95;
+
+/**
+ * Abscisses des trois tronçons de la bande directionnelle verte, suspendue
+ * au-dessus de l'épine (voir PlatformSignage). Chacun fait 8,2 m : les
+ * charpentes signature qui portent des poteaux sur l'épine doivent l'enjamber.
+ */
+export function directionBandZs(length: number): number[] {
+  const halfZ = length / 2;
+  return [-halfZ + 31, -halfZ + 109, -halfZ + 161];
+}
+
 // --- Trémies d'escalier -------------------------------------------------
 //
 // La dalle est réellement percée : on descend la volée sur quelques marches,

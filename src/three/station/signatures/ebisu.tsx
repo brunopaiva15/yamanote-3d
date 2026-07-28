@@ -64,12 +64,15 @@ export function Ebisu({ layout, place }: SigProps) {
           <boxGeometry args={[span, 0.44, 0.36]} />
         </mesh>
       ))}
-      {/* Descentes de charge : au droit de l'épine et du fond de la travée. */}
-      {bays(built, 12).map((z) =>
+      {/* Descentes de charge : au droit de l'épine et du fond de la travée.
+          Leur trame vient du plan (data/stationLayouts), qui les écarte des
+          escaliers mécaniques, des potences et de la bande directionnelle —
+          l'une d'elles se plantait en plein milieu d'un escalier mécanique. */}
+      {(layout.sigPlan?.posts ?? []).map(({ z }) =>
         [place.backX, oppBackX].map((x) => (
           <mesh
             key={`c${x}-${z}`}
-            position={[x, PLATFORM_TOP + (soffit - PLATFORM_TOP) / 2, z - layout.length * 0.16]}
+            position={[x, PLATFORM_TOP + (soffit - PLATFORM_TOP) / 2, z]}
             material={s.wall}
           >
             <boxGeometry args={[0.44, soffit - PLATFORM_TOP, 0.44]} />
@@ -104,8 +107,9 @@ export function Ebisu({ layout, place }: SigProps) {
       </group>
 
       {/* Au-delà du bâti, le quai retrouve son auvent : le contraste entre les
-          deux moitiés est ce qu'on remarque en marchant vers l'est. */}
-      <mesh position={[outerX - 0.9, top - 0.12, layout.length * 0.22]} material={s.beam}>
+          deux moitiés est ce qu'on remarque en marchant vers l'est. Le rail
+          court SOUS les poutres transversales, qu'il traversait à leur cote. */}
+      <mesh position={[outerX - 0.9, top - 0.26, layout.length * 0.22]} material={s.beam}>
         <boxGeometry args={[0.34, 0.24, layout.length * 0.3]} />
       </mesh>
     </group>

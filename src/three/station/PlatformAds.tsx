@@ -12,7 +12,7 @@
 import { useMemo } from 'react';
 import { PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
 import type { StationLayout } from '../../data/stationLayouts';
-import type { StationPlacement } from '../../systems/stationPlacement';
+import { gantryZs, type StationPlacement } from '../../systems/stationPlacement';
 import { adPool, stationAd } from './adPool';
 
 interface Props {
@@ -40,12 +40,35 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
    */
   const onWall = place.hasBackWall;
 
+  // --- Bannières suspendues dans l'axe -------------------------------
+  // Elles passent à l'aplomb des trémies et des escaliers mécaniques : au droit
+  // de l'un d'eux, la bannière traverserait le fléchage de sortie ou la gaine.
+  // Et au large des tableaux d'affichage, suspendus à la même hauteur de
+  // l'autre côté de l'épine (à ±45 % du quai, voir PlatformSignage).
+  const hanging = useMemo(() => {
+    if (detail > 1) return [];
+    const clear = [
+      ...[...place.stairs, ...place.escalators].map((s) => ({ z: s.z, r: s.halfZ + 2.2 })),
+      ...[-1, 1].map((d) => ({ z: d * half * 0.45, r: 3.1 })),
+      // Plans de la charpente signature : passerelles de Takanawa, poteaux de
+      // halle sur l'épine — la bannière passait au travers.
+      ...(layout.sigPlan?.keepOut ?? []).map((k) => ({ z: k.z, r: k.r + 1.2 })),
+    ];
+    const out: { z: number; i: number }[] = [];
+    for (let z = -half + 18; z <= half - 18; z += 26) {
+      if (clear.some((c) => Math.abs(z - c.z) < c.r)) continue;
+      out.push({ z, i: out.length });
+    }
+    return out;
+  }, [half, detail, place.stairs, place.escalators, layout.sigPlan]);
+
   // --- Caissons du fond de quai --------------------------------------
   const wallAds = useMemo(() => {
-    // Ce qui monte assez haut pour masquer l'affiche.
     // Tout ce qui monte assez haut pour masquer l'affiche — ou pour la
     // traverser. La liste ne connaissait ni les armoires ni les escaliers
-    // mécaniques : le caisson leur rentrait dedans.
+    // mécaniques : le caisson leur rentrait dedans. Ni les potences
+    // d'orientation, qui enjambent l'épine à hauteur du caisson : leurs
+    // panneaux de sortie lui passaient au travers.
     const blockers = [
       ...place.vending.map((v) => ({ z: v.z, r: v.halfZ + 1.3 })),
       ...place.cabinets.map((c) => ({ z: c.z, r: c.halfZ + 1.3 })),
@@ -53,6 +76,10 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
       ...(place.elevator ? [{ z: place.elevator.z, r: place.elevator.halfZ + 1.6 }] : []),
       ...place.stairs.map((s) => ({ z: s.z, r: s.halfZ + 1.3 })),
       ...place.escalators.map((e) => ({ z: e.z, r: e.halfZ + 1.3 })),
+      ...gantryZs(place).map((z) => ({ z, r: 1.3 })),
+      // Poteaux de charpente plantés sur l'épine (Shimbashi, Ebisu, Takanawa) :
+      // le caisson dos à dos s'y encastrait.
+      ...(layout.sigPlan?.posts ?? []).map((s) => ({ z: s.z, r: 1.5 })),
     ];
     const out: { z: number; i: number }[] = [];
     const step = 10.5;
@@ -64,27 +91,13 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
       out.push({ z, i: out.length });
     }
     return out;
-  }, [layout.columnSpacing, half, place]);
+  }, [layout.columnSpacing, layout.sigPlan, half, place]);
 
   // --- Bandeaux verticaux sur les piliers ----------------------------
   const columnAds = useMemo(
     () => (detail > 1 ? [] : place.columns.map((z, i) => ({ z, i }))),
     [place.columns, detail],
   );
-
-  // --- Bannières suspendues dans l'axe -------------------------------
-  // Elles passent à l'aplomb des trémies et des escaliers mécaniques : au droit
-  // de l'un d'eux, la bannière traverserait le fléchage de sortie ou la gaine.
-  const hanging = useMemo(() => {
-    if (detail > 1) return [];
-    const clear = [...place.stairs, ...place.escalators].map((s) => ({ z: s.z, r: s.halfZ + 2.2 }));
-    const out: { z: number; i: number }[] = [];
-    for (let z = -half + 18; z <= half - 18; z += 26) {
-      if (clear.some((c) => Math.abs(z - c.z) < c.r)) continue;
-      out.push({ z, i: out.length });
-    }
-    return out;
-  }, [half, detail, place.stairs, place.escalators]);
 
   // --- Affiches collées sur les murets de portes palières ------------
   // Un muret sur deux, et seulement les plus larges : les chutes de trame ne
@@ -161,9 +174,18 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
       ))}
 
       {/* Bannières suspendues, recto-verso : elles ferment la perspective du
-          quai comme les nakazuri ferment celle du wagon. */}
+          quai comme les nakazuri ferment celle du wagon. Sur un îlot elles
+          pendent au-dessus de l'allée du bord d'EN FACE — la seule travée sans
+          gouttière ni chemin de câbles : dans l'allée près, leur chant montait
+          droit dans les conduites, à toutes les gares. Elles meublent du même
+          coup une moitié de quai qui n'avait rien de suspendu. Sur le quai
+          latéral d'Harajuku, l'allée près est assez large pour les garder. */}
       {hanging.map(({ z, i }) => (
-        <group name="bannière" key={`ha${z}`} position={[midX - 1.5, layout.canopyY - 0.62, z]}>
+        <group
+          name="bannière"
+          key={`ha${z}`}
+          position={[onWall ? midX - 1.5 : backX + 1.25, layout.canopyY - 0.62, z]}
+        >
           {[-1, 1].map((d) => (
             <mesh key={d} position={[d * 1.0, 0.42, 0]} material={p.frame}>
               <boxGeometry args={[0.04, 0.62, 0.04]} />

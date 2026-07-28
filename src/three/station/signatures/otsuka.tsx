@@ -94,8 +94,11 @@ export function Otsuka({ layout, place, m }: SigProps) {
         </mesh>
       ))}
 
-      {/* Éclairage seulement sous la partie couverte : ailleurs, c'est le jour. */}
-      <mesh position={[place.backX, top - 0.1, 0]} material={m.lamp}>
+      {/* Éclairage seulement sous la partie couverte : ailleurs, c'est le jour.
+          Le bandeau court SOUS les poutres et EN RETRAIT de l'épine : posé sur
+          l'axe, il traversait la bande directionnelle, ses suspentes et les
+          plaques d'accès ; à 1,6 m, c'était l'horloge qu'il trouvait. */}
+      <mesh position={[place.backX - 2.23, top - 0.215, 0]} material={m.lamp}>
         <boxGeometry args={[0.5, 0.07, covered - 3]} />
       </mesh>
     </group>

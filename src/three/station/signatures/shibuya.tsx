@@ -39,11 +39,12 @@ export function Shibuya({ layout, place, m }: SigProps) {
           </mesh>
         </group>
       ))}
-      {/* Bandeau lumineux continu au droit de chaque bord de quai. */}
-      <mesh position={[PSD_X + 0.9, top - 0.14, 0]} material={m.lamp}>
+      {/* Bandeau lumineux continu au droit de chaque bord de quai — calé SOUS
+          les poutres transversales, qu'il traversait au ras de la sous-face. */}
+      <mesh position={[PSD_X + 0.9, top - 0.215, 0]} material={m.lamp}>
         <boxGeometry args={[0.5, 0.07, layout.length - 8]} />
       </mesh>
-      <mesh position={[outerX - 1.4, top - 0.14, 0]} material={m.lamp}>
+      <mesh position={[outerX - 1.4, top - 0.215, 0]} material={m.lamp}>
         <boxGeometry args={[0.5, 0.07, layout.length - 8]} />
       </mesh>
     </group>
