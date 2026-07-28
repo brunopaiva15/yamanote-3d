@@ -9,9 +9,9 @@
 
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { directionBandZs, PLATFORM_TOP, PSD_X } from '../../../data/stationGeometry';
+import { PLATFORM_TOP, PSD_X } from '../../../data/stationGeometry';
 import { mat, useInstances } from '../instancing';
-import { siteCut, useSigMaterials, type SigProps } from './kit';
+import { clearSpineSpans, siteCut, useSigMaterials, type SigProps } from './kit';
 
 export function Yurakucho({ layout, place }: SigProps) {
   const { outerX, oppBackX } = siteCut(place);
@@ -71,7 +71,7 @@ export function Yurakucho({ layout, place }: SigProps) {
   // suspendus. La profondeur de l'ouvrage, ce sont les goussets qui la donnent,
   // près des montants, hors du gabarit de tout ce qui pend au milieu.
   const girders = useMemo(
-    () => frameZ.map((z) => mat(midX, top - 0.12, z, colX1 - colX0 + 0.8, 0.2, 0.34)),
+    () => frameZ.map((z) => mat(midX, top - 0.14, z, colX1 - colX0 + 0.8, 0.18, 0.34)),
     [frameZ, midX, colX0, colX1, top],
   );
   const braces = useMemo(
@@ -83,22 +83,13 @@ export function Yurakucho({ layout, place }: SigProps) {
   );
 
   // Le longeron d'axe s'interrompt là où pendent la bande directionnelle et
-  // les plaques d'accès : continu, il les transperçait toutes les trois.
-  const spineSpans = useMemo(() => {
-    const half = layout.length / 2 - 2;
-    const blocked = [
-      ...directionBandZs(layout.length).map((z) => ({ z0: z - 4.65, z1: z + 4.65 })),
-      ...place.accesses.map((a) => ({ z0: a.z - a.halfZ - 2.9, z1: a.z - a.halfZ + 0.7 })),
-    ].sort((a, b) => a.z0 - b.z0);
-    const out: { z0: number; z1: number }[] = [];
-    let cur = -half;
-    for (const b of blocked) {
-      if (b.z0 > cur + 2) out.push({ z0: cur, z1: Math.min(b.z0, half) });
-      cur = Math.max(cur, b.z1);
-    }
-    if (half > cur + 2) out.push({ z0: cur, z1: half });
-    return out;
-  }, [layout.length, place.accesses]);
+  // les plaques d'accès, et au droit des gaines d'escalier mécanique qui
+  // montent jusqu'à l'auvent : continu, il les transperçait toutes.
+  const spineSpans = useMemo(
+    () =>
+      clearSpineSpans(-(layout.length / 2 - 2), layout.length / 2 - 2, layout.length, place),
+    [layout.length, place],
+  );
 
   const postRef = useRef<THREE.InstancedMesh>(null);
   const baseRef = useRef<THREE.InstancedMesh>(null);
@@ -129,7 +120,7 @@ export function Yurakucho({ layout, place }: SigProps) {
           s'interrompt au droit des bandes directionnelles et des accès. */}
       {spineSpans.map((sp) => (
         <mesh key={`sp${sp.z0}`} position={[midX, top - 0.62, (sp.z0 + sp.z1) / 2]} material={s.steel}>
-          <boxGeometry args={[0.3, 0.34, sp.z1 - sp.z0]} />
+          <boxGeometry args={[0.28, 0.34, sp.z1 - sp.z0]} />
         </mesh>
       ))}
 

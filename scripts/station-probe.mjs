@@ -109,7 +109,10 @@ for (const i of stations) {
       // gare PRÉCÉDENTE encore montée, sous le nom de la nouvelle.
       window.__probeGoto(idx, globalThis.__probePhase ?? 'dwell');
       await new Promise((r) => setTimeout(r, 900));
-      return window.__stationProbe({ min: 0.05, ignore });
+      // Seuil à 5,5 cm : une pénétration de l'épaisseur exacte d'une suspente
+      // (5 cm) est une tige qui prend appui sur une poutrelle — une attache,
+      // pas un choc. Tout caisson fait au moins 7 cm : rien de réel n'échappe.
+      return window.__stationProbe({ min: 0.055, ignore });
     },
     [i, IGNORE],
   );

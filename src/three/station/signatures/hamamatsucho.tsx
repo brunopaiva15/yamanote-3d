@@ -11,8 +11,8 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { directionBandZs, PLATFORM_TOP, PSD_X } from '../../../data/stationGeometry';
-import { bays, siteCut, useSigMaterials, type SigProps } from './kit';
+import { PLATFORM_TOP, PSD_X } from '../../../data/stationGeometry';
+import { bays, clearSpineSpans, siteCut, useSigMaterials, type SigProps } from './kit';
 
 /** Abscisse de la jonction ancien / neuf, en fraction de la longueur. */
 const JOINT = -0.06;
@@ -40,23 +40,12 @@ export function Hamamatsucho({ layout, place }: SigProps) {
   }, [place.columns, place.escalators, place.accesses]);
 
   // Le longeron de la moitié ancienne s'interrompt au droit des bandes
-  // directionnelles et des débouchés d'accès, qu'il transperçait.
-  const spineSpans = useMemo(() => {
-    const z0 = -len / 2 + 2;
-    const z1 = jointZ - 0.8;
-    const blocked = [
-      ...directionBandZs(len).map((z) => ({ z0: z - 4.65, z1: z + 4.65 })),
-      ...place.accesses.map((a) => ({ z0: a.z - a.halfZ - 2.9, z1: a.z - a.halfZ + 0.7 })),
-    ].sort((a, b) => a.z0 - b.z0);
-    const out: { z0: number; z1: number }[] = [];
-    let cur = z0;
-    for (const b of blocked) {
-      if (b.z0 > cur + 2) out.push({ z0: cur, z1: Math.min(b.z0, z1) });
-      cur = Math.max(cur, b.z1);
-    }
-    if (z1 > cur + 2) out.push({ z0: cur, z1 });
-    return out;
-  }, [len, jointZ, place.accesses]);
+  // directionnelles, des débouchés d'accès et des gaines d'escalier mécanique,
+  // qu'il transperçait (voir clearSpineSpans).
+  const spineSpans = useMemo(
+    () => clearSpineSpans(-len / 2 + 2, jointZ - 0.8, len, place),
+    [len, jointZ, place],
+  );
 
   const s = useSigMaterials(
     () => ({
@@ -95,7 +84,7 @@ export function Hamamatsucho({ layout, place }: SigProps) {
       ))}
       {spineSpans.map((sp) => (
         <mesh key={`sp${sp.z0}`} position={[midX, top - 0.52, (sp.z0 + sp.z1) / 2]} material={s.old}>
-          <boxGeometry args={[0.36, 0.3, sp.z1 - sp.z0]} />
+          <boxGeometry args={[0.28, 0.3, sp.z1 - sp.z0]} />
         </mesh>
       ))}
 

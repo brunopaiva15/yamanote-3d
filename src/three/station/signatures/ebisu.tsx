@@ -107,8 +107,9 @@ export function Ebisu({ layout, place }: SigProps) {
       </group>
 
       {/* Au-delà du bâti, le quai retrouve son auvent : le contraste entre les
-          deux moitiés est ce qu'on remarque en marchant vers l'est. */}
-      <mesh position={[outerX - 0.9, top - 0.12, layout.length * 0.22]} material={s.beam}>
+          deux moitiés est ce qu'on remarque en marchant vers l'est. Le rail
+          court SOUS les poutres transversales, qu'il traversait à leur cote. */}
+      <mesh position={[outerX - 0.9, top - 0.26, layout.length * 0.22]} material={s.beam}>
         <boxGeometry args={[0.34, 0.24, layout.length * 0.3]} />
       </mesh>
     </group>

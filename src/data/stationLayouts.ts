@@ -953,13 +953,15 @@ function sigPlanFor(
     case 'yurakucho': {
       // Portiques rivetés pleine largeur : leurs poutres descendent sous
       // l'auvent, leurs montants tiennent au ras des bords. Ils s'écartent des
-      // escaliers mécaniques, des débouchés d'accès, des piliers génériques et
-      // des miroirs de départ ; tout le suspendu s'écarte d'eux.
+      // escaliers mécaniques, des débouchés d'accès, des piliers génériques,
+      // des miroirs de départ et des suspentes de potence ; tout le suspendu
+      // s'écarte d'eux en retour.
       const zs = dodgePlanes(bays(length, 7.2), [
         ...am.escalators.map((z) => ({ z, r: ESCALATOR_HALF_Z + 0.9 })),
         ...entries,
         ...columns,
         ...mirrors,
+        ...gantries.map((g) => ({ z: g.z, r: 0.6 })),
       ]);
       return { keepOut: zs.map((z) => ({ z, r: 0.75 })), posts: [], runBlocks: [] };
     }
@@ -990,9 +992,10 @@ function sigPlanFor(
         keepOut: [
           ...zs.map((z) => ({ z, r: 0.6 })),
           // Passerelles vitrées au-dessus de la voie d'en face : les bannières
-          // et les tableaux d'affichage passent au large.
+          // et les tableaux d'affichage passent au large. La seconde se tient
+          // au-delà de la troisième bande directionnelle, qu'elle chevauchait.
           { z: -length * 0.22, r: 4.2 },
-          { z: length * 0.2, r: 4.2 },
+          { z: length * 0.26, r: 4.2 },
         ],
         posts: zs.map((z) => ({ x: backX, z })),
         runBlocks: [],

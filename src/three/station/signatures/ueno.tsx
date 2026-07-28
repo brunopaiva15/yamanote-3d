@@ -89,8 +89,9 @@ export function Ueno({ layout, place, m }: SigProps) {
       {/* Bandeau lumineux sous la halle : la moitié couverte reste éclairée.
           Il court SOUS les poutres et EN RETRAIT de l'épine — sur l'axe, il
           traversait les gaines d'escalier mécanique, la bande directionnelle
-          et les suspentes des plaques d'accès. */}
-      <mesh position={[place.backX - 1.6, top - 0.215, -layout.length * 0.23]} material={m.lamp}>
+          et les suspentes des plaques d'accès ; à 1,6 m, c'était l'horloge et
+          les suspentes du panneau 番線 qu'il trouvait. */}
+      <mesh position={[place.backX - 2.23, top - 0.215, -layout.length * 0.23]} material={m.lamp}>
         <boxGeometry args={[0.6, 0.08, layout.length * 0.5]} />
       </mesh>
     </group>
