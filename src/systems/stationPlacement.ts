@@ -60,6 +60,16 @@ export interface StationKit {
   downpipes: number[];
   /** Repères de voiture peints au sol : 「N号車 乗車位置」. */
   carMarks: { z: number; car: number }[];
+  /**
+   * Tronçons libres pour les conduites qui courent le long du quai —
+   * gouttière, chemin de câbles.
+   *
+   * D'un seul tenant sur deux cent vingt mètres, une conduite traverse tout ce
+   * qui monte à l'auvent : la gaine d'un escalier mécanique, la cage d'un
+   * ascenseur, le toit d'un kiosque. Une vraie installation s'interrompt et
+   * repart de l'autre côté ; celle-ci fait pareil.
+   */
+  runSpans: { z0: number; z1: number }[];
 }
 
 /**
@@ -144,6 +154,26 @@ function every(step: number, halfZ: number, phase = 0): number[] {
   const out: number[] = [];
   for (let z = -halfZ + phase; z <= halfZ; z += step) out.push(z);
   return out;
+}
+
+/**
+ * Découpe [z0, z1] en tronçons libres, en retirant les intervalles occupés.
+ * Les morceaux trop courts pour valoir un objet sont abandonnés.
+ */
+function clearSpans(
+  z0: number,
+  z1: number,
+  blocked: { z0: number; z1: number }[],
+  minLen = 3,
+): { z0: number; z1: number }[] {
+  const out: { z0: number; z1: number }[] = [];
+  let cur = z0;
+  for (const b of [...blocked].sort((a, c) => a.z0 - c.z0)) {
+    if (b.z0 > cur + minLen) out.push({ z0: cur, z1: Math.min(b.z0, z1) });
+    cur = Math.max(cur, b.z1);
+  }
+  if (z1 > cur + minLen) out.push({ z0: cur, z1 });
+  return out.filter((sp) => sp.z1 - sp.z0 >= minLen);
 }
 
 /** Jeu minimal entre deux emprises voisines (m). */
@@ -336,6 +366,9 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   // néons ont déjà eu. Il s'écarte donc du poteau le plus proche.
   const nearestColumn = (z: number): number =>
     columns.reduce((best, c) => (Math.abs(z - c) < Math.abs(z - best) ? c : best), columns[0]);
+  // Extincteur et téléphone se vissent tous deux sur un poteau : sur le même,
+  // ils se rentraient dedans. Le téléphone choisit, l'extincteur s'écarte.
+  const phoneZ = columns.length ? nearestColumn(usable * 0.24) : null;
 
   const offPost = (z: number): number => {
     let near = Infinity;
@@ -350,7 +383,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     // Extincteur et téléphone se vissent sur un poteau. Le mur de fond ne
     // portait qu'à Harajuku : partout ailleurs, l'îlot n'en a pas et ils
     // seraient restés suspendus au milieu du quai, le dos à l'air.
-    extinguishers: columns.filter((_, k) => k % 4 === 2),
+    extinguishers: columns.filter((_, k) => k % 4 === 2 && columns[k] !== phoneZ),
     emergencyStops: [
       -usable + 1.5,
       usable - 1.5,
@@ -361,12 +394,20 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
       .sort((p, q) => p - q),
     emergencyStopX,
     mirrors: [-halfConsist - 1.2, halfConsist + 1.2],
-    phone: columns.length ? nearestColumn(usable * 0.24) : null,
+    phone: phoneZ,
     downpipes: columns.filter((_, k) => k % 2 === 0),
     carMarks: Array.from({ length: CONSIST.length }, (_, k) => ({
       z: (k - (CONSIST.length - 1) / 2) * E235.pitch,
       car: k + 1,
     })),
+    runSpans: clearSpans(
+      -usable,
+      usable,
+      [...escalators, ...(elevator ? [elevator] : []), ...(kiosk ? [kiosk] : [])].map((o) => ({
+        z0: o.z - o.halfZ - 0.5,
+        z1: o.z + o.halfZ + 0.5,
+      })),
+    ),
   };
 
   // `taken` a exactement recueilli tout ce qui a été retenu, structure comprise.

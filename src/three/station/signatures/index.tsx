@@ -48,5 +48,12 @@ export function Signature(props: SigProps) {
   const key = props.layout.signature;
   if (!key) return null;
   const Drawn = DRAWN[key];
-  return Drawn ? <Drawn {...props} /> : null;
+  if (!Drawn) return null;
+  // Nommée pour la sonde de gare : une charpente qui traverse le mobilier
+  // doit se lire « charpente ✕ … » et non « (sans nom) ✕ … ».
+  return (
+    <group name={`charpente-${key}`}>
+      <Drawn {...props} />
+    </group>
+  );
 }

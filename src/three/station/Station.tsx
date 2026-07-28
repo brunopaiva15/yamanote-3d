@@ -298,9 +298,9 @@ export function Station() {
   const wallH = canopyY - 0.07 - PLATFORM_TOP;
 
   return (
-    <group ref={root} rotation={[0, doorSide === 1 ? 0 : Math.PI, 0]} visible={false}>
+    <group ref={root} name="gare" rotation={[0, doorSide === 1 ? 0 : Math.PI, 0]} visible={false}>
       {/* --- Dalle (percée au droit des trémies), bord de quai, bande tactile --- */}
-      <mesh geometry={slabGeo} material={m.slab} receiveShadow />
+      <mesh name="dalle" geometry={slabGeo} material={m.slab} receiveShadow />
       <mesh position={[PSD_X + 0.12, PLATFORM_TOP + 0.01, 0]} material={m.rubber}>
         <boxGeometry args={[0.16, 0.04, layout.length]} />
       </mesh>
@@ -321,23 +321,23 @@ export function Station() {
         <boxGeometry args={[0.07, 0.66, layout.length]} />
       </mesh>
       {/* Repères d'attente peints au sol, deux par baie */}
-      <instancedMesh ref={queueRef} args={[undefined, undefined, Math.max(1, queue.length)]} material={m.queue}>
+      <instancedMesh name="repères-attente" ref={queueRef} args={[undefined, undefined, Math.max(1, queue.length)]} material={m.queue}>
         <boxGeometry args={[1, 0.004, 1]} />
       </instancedMesh>
 
       {/* --- Portes palières, là où elles existent --- */}
       {hasPsd && (
         <>
-      <instancedMesh ref={psdRef} args={[undefined, undefined, Math.max(1, psdSegs.length)]} material={m.psd}>
+      <instancedMesh name="muret-psd" ref={psdRef} args={[undefined, undefined, Math.max(1, psdSegs.length)]} material={m.psd}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh ref={glassRef} args={[undefined, undefined, Math.max(1, psdGlass.length)]} material={m.glass}>
+      <instancedMesh name="vitrage-psd" ref={glassRef} args={[undefined, undefined, Math.max(1, psdGlass.length)]} material={m.glass}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh ref={bandRef} args={[undefined, undefined, Math.max(1, psdBand.length)]} material={m.accent}>
+      <instancedMesh name="bandeau-psd" ref={bandRef} args={[undefined, undefined, Math.max(1, psdBand.length)]} material={m.accent}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh ref={leafRef} args={[undefined, undefined, Math.max(1, leafCount)]} material={m.psd}>
+      <instancedMesh name="vantaux-psd" ref={leafRef} args={[undefined, undefined, Math.max(1, leafCount)]} material={m.psd}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
         </>
@@ -349,20 +349,28 @@ export function Station() {
           exactement le même traitement que celui-ci — liseré, bande
           podotactile, muret de portes palières — mais retourné. */}
       {place.farEdgeX !== null && (
-        <FarEdge farX={place.farEdgeX} len={layout.length} tactileW={tactileW} hasPsd={hasPsd} m={m} />
+        <FarEdge
+          farX={place.farEdgeX}
+          len={layout.length}
+          tactileW={tactileW}
+          hasPsd={hasPsd}
+          segs={segs}
+          m={m}
+        />
       )}
 
       {/* --- Ce qu'on voit au-delà : voie, quai d'en face, clôture --- */}
-      <FarSide layout={layout} place={place} wallH={wallH} m={m} detail={detail} />
+      <FarSide layout={layout} place={place} wallH={wallH} m={m} detail={detail} segs={segs} />
 
       {/* --- Auvent, poutres, piliers, néons --- */}
-      <mesh position={[PSD_X + depth / 2, canopyY + 0.07, 0]} material={m.canopy} receiveShadow>
+      <mesh name="auvent" position={[PSD_X + depth / 2, canopyY + 0.07, 0]} material={m.canopy} receiveShadow>
         <boxGeometry args={[depth + 0.4, 0.14, layout.length]} />
       </mesh>
-      <instancedMesh ref={beamRef} args={[undefined, undefined, Math.max(1, beams.length)]} material={m.beam}>
+      <instancedMesh name="poutre" ref={beamRef} args={[undefined, undefined, Math.max(1, beams.length)]} material={m.beam}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
       <instancedMesh
+        name="pilier"
         ref={columnRef}
         args={[undefined, undefined, Math.max(1, columns.length)]}
         material={m.column}
@@ -370,27 +378,27 @@ export function Station() {
       >
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh ref={columnBandRef} args={[undefined, undefined, Math.max(1, columnBands.length)]} material={m.accent}>
+      <instancedMesh name="bague-pilier" ref={columnBandRef} args={[undefined, undefined, Math.max(1, columnBands.length)]} material={m.accent}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh ref={lampRef} args={[undefined, undefined, Math.max(1, lamps.length)]} material={m.lamp}>
+      <instancedMesh name="néon" ref={lampRef} args={[undefined, undefined, Math.max(1, lamps.length)]} material={m.lamp}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
 
       {/* --- Mobilier --- */}
-      <instancedMesh ref={seatRef} args={[undefined, undefined, Math.max(1, benchSeat.length)]} material={m.bench}>
+      <instancedMesh name="banc" ref={seatRef} args={[undefined, undefined, Math.max(1, benchSeat.length)]} material={m.bench}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh ref={backRef} args={[undefined, undefined, Math.max(1, benchBack.length)]} material={m.bench}>
+      <instancedMesh name="banc-dossier" ref={backRef} args={[undefined, undefined, Math.max(1, benchBack.length)]} material={m.bench}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh ref={legRef} args={[undefined, undefined, Math.max(1, benchLegs.length)]} material={m.metal}>
+      <instancedMesh name="banc-pied" ref={legRef} args={[undefined, undefined, Math.max(1, benchLegs.length)]} material={m.metal}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh ref={vendRef} args={[undefined, undefined, Math.max(1, vending.length)]} material={m.vending}>
+      <instancedMesh name="distributeur" ref={vendRef} args={[undefined, undefined, Math.max(1, vending.length)]} material={m.vending}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh ref={vendFaceRef} args={[undefined, undefined, Math.max(1, vendingFace.length)]} material={m.vendingFace}>
+      <instancedMesh name="distributeur-face" ref={vendFaceRef} args={[undefined, undefined, Math.max(1, vendingFace.length)]} material={m.vendingFace}>
         <planeGeometry args={[1, 1]} />
       </instancedMesh>
 
@@ -450,9 +458,10 @@ export function Station() {
         hangX={midX + 0.7}
         canopyY={canopyY}
         halfZ={halfZ}
-        totemX={midX - 0.6}
+        totemX={PSD_X + depth * 0.32}
         bandX={backX}
         detail={detail}
+        ground={place.obstacles}
         frame={m.frame}
         metal={m.metal}
         accent={m.accent}
@@ -474,16 +483,27 @@ function FarEdge({
   len,
   tactileW,
   hasPsd,
+  segs,
   m,
 }: {
   farX: number;
   len: number;
   tactileW: number;
   hasPsd: boolean;
+  segs: { z0: number; z1: number }[];
   m: Mats;
 }) {
+  const band = useMemo(
+    () =>
+      segs.map((sg) =>
+        mat(farX - 0.045, PLATFORM_TOP + PSD_H - 0.07, (sg.z0 + sg.z1) / 2, 0.12, 0.1, sg.z1 - sg.z0),
+      ),
+    [segs, farX],
+  );
+  const bandRef = useRef<THREE.InstancedMesh>(null);
+  useInstances(bandRef, band);
   return (
-    <group>
+    <group name="bord-opposé">
       <mesh position={[farX - 0.12, PLATFORM_TOP + 0.01, 0]} material={m.rubber}>
         <boxGeometry args={[0.16, 0.04, len]} />
       </mesh>
@@ -505,9 +525,19 @@ function FarEdge({
           <mesh position={[farX - 0.11, PLATFORM_TOP + PSD_H * 0.72, 0]} material={m.glass}>
             <boxGeometry args={[0.02, PSD_H * 0.42, len - 0.4]} />
           </mesh>
-          <mesh position={[farX - 0.045, PLATFORM_TOP + PSD_H - 0.07, 0]} material={m.accent}>
-            <boxGeometry args={[0.12, 0.1, len]} />
-          </mesh>
+          {/* Le bandeau uguisu est INTERROMPU à chaque baie, comme au bord près.
+              Continu sur deux cent vingt mètres, il traçait une barre verte
+              franche à la hauteur exacte des vitres de porte de la rame — qui
+              ne sont opaques qu'à neuf pour cent : vues du wagon, elles
+              viraient au vert d'un bout à l'autre du quai. */}
+          <instancedMesh
+            name="bandeau-psd-opposé"
+            ref={bandRef}
+            args={[undefined, undefined, Math.max(1, band.length)]}
+            material={m.accent}
+          >
+            <boxGeometry args={[1, 1, 1]} />
+          </instancedMesh>
         </>
       )}
     </group>
@@ -534,15 +564,38 @@ function FarSide({
   wallH,
   m,
   detail,
+  segs,
 }: {
   layout: ReturnType<typeof layoutFor>;
   place: ReturnType<typeof placementFor>;
   wallH: number;
   m: Mats;
   detail: number;
+  segs: { z0: number; z1: number }[];
 }) {
   const len = layout.length;
   const far = place.farEdgeX;
+
+  // Les crochets se déclarent AVANT le retour anticipé d'Harajuku : après, ils
+  // ne seraient pas appelés à chaque rendu et React s'en plaindrait.
+  const oppBand = useMemo(
+    () =>
+      far === null
+        ? []
+        : segs.map((sg) =>
+            mat(
+              far + 2 * TRACK_HALF + 0.045,
+              PLATFORM_TOP + PSD_H - 0.07,
+              (sg.z0 + sg.z1) / 2,
+              0.12,
+              0.1,
+              sg.z1 - sg.z0,
+            ),
+          ),
+    [segs, far],
+  );
+  const oppBandRef = useRef<THREE.InstancedMesh>(null);
+  useInstances(oppBandRef, oppBand);
 
   // Harajuku : le seul quai latéral de la boucle. Un vrai mur, un vrai
   // soubassement carrelé, et rien à voir au-delà.
@@ -571,9 +624,8 @@ function FarSide({
   // À Ikebukuro et Ōsaki, la voie d'en face est la voie SECONDAIRE : celle qui
   // n'a pas encore ses portes. C'est précisément là que ça se voit.
   const oppPsd = hasPsd && layout.psd !== 'partial';
-
   return (
-    <group>
+    <group name="travée-opposée">
       {/* Joue de rive du bord d'en face. */}
       <mesh position={[far - 0.03, PLATFORM_TOP - SLAB_H - 0.32, 0]} material={m.wallDark}>
         <boxGeometry args={[0.07, 0.66, len]} />
@@ -604,9 +656,15 @@ function FarSide({
           <mesh position={[oppEdge + 0.05, PLATFORM_TOP + PSD_H / 2, 0]} material={m.psd}>
             <boxGeometry args={[0.1, PSD_H, len]} />
           </mesh>
-          <mesh position={[oppEdge + 0.045, PLATFORM_TOP + PSD_H - 0.07, 0]} material={m.accent}>
-            <boxGeometry args={[0.12, 0.1, len]} />
-          </mesh>
+          {/* Bandeau interrompu, pour la même raison qu'au bord d'en face. */}
+          <instancedMesh
+            name="bandeau-psd-opposé"
+            ref={oppBandRef}
+            args={[undefined, undefined, Math.max(1, oppBand.length)]}
+            material={m.accent}
+          >
+            <boxGeometry args={[1, 1, 1]} />
+          </instancedMesh>
         </>
       )}
       {/* L'auvent d'en face : on le voit, on n'y marche pas. Il tombe au
@@ -739,7 +797,7 @@ function Stairwell({ s, m, station }: { s: Placed; m: Mats; station: number }) {
   const bottom = -STAIR_STEPS * STAIR_RISE;
 
   return (
-    <group position={[s.x, PLATFORM_TOP, s.z]}>
+    <group name="trémie" position={[s.x, PLATFORM_TOP, s.z]}>
       {/* Gaine sous la dalle, vue de l'intérieur : la trémie a un fond. */}
       <mesh position={[0, -STAIR_SHAFT_DEPTH / 2 - 0.02, 0]} material={m.shaft}>
         <boxGeometry args={[ix * 2, STAIR_SHAFT_DEPTH, (s.halfZ - STAIR_OPENING_INSET) * 2]} />
@@ -863,7 +921,7 @@ function Amenities({
 
       {/* Ascenseur vitré. */}
       {place.elevator && (
-        <group position={[place.elevator.x, PLATFORM_TOP, place.elevator.z]}>
+        <group name="ascenseur" position={[place.elevator.x, PLATFORM_TOP, place.elevator.z]}>
           <mesh position={[0, 1.2, 0]} material={m.glass}>
             <boxGeometry args={[1.7, 2.4, 1.7]} />
           </mesh>
@@ -875,7 +933,7 @@ function Amenities({
 
       {/* Kiosque de quai. */}
       {place.kiosk && (
-        <group position={[place.kiosk.x, PLATFORM_TOP, place.kiosk.z]}>
+        <group name="kiosque" position={[place.kiosk.x, PLATFORM_TOP, place.kiosk.z]}>
           <mesh position={[0, 1.2, 0]} material={m.kiosk}>
             <boxGeometry args={[place.kiosk.halfX * 2, 2.4, place.kiosk.halfZ * 2]} />
           </mesh>
@@ -891,7 +949,7 @@ function Amenities({
       {/* Horloge de quai, suspendue à l'auvent — par une vraie potence : le
           boîtier flottait à trente-cinq centimètres du plafond, sans rien. */}
       {place.layout.amenities.clock && (
-        <group position={[place.backX - 1.6, canopyY - 0.62, 0]}>
+        <group name="horloge" position={[place.backX - 1.6, canopyY - 0.62, 0]}>
           <mesh position={[0, 0.45, 0]} material={m.metal}>
             <boxGeometry args={[0.05, 0.36, 0.05]} />
           </mesh>
@@ -932,7 +990,7 @@ function Escalator({ e, canopyY, m }: { e: Placed; canopyY: number; m: Mats }) {
   const STEPS = 12;
 
   return (
-    <group position={[e.x, PLATFORM_TOP, e.z]}>
+    <group name="escalator" position={[e.x, PLATFORM_TOP, e.z]}>
       {/* Palier bas : plaque à peigne, au ras du sol. */}
       <mesh position={[0, 0.03, -run / 2 - 0.3]} material={m.metal}>
         <boxGeometry args={[1.3, 0.06, 0.6]} />
