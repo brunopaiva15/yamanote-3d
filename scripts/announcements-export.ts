@@ -7,19 +7,26 @@
 //     --platform=node --outfile=<tmp>/announcements-export.mjs
 //   node <tmp>/announcements-export.mjs <sortie.json>
 //
-// Chaque entrée : { key, lang, text, tts, speed }
+// Chaque entrée : { key, lang, text, tts, voice, speed }
 // - key   : clipKey(lang, text), nom de fichier du MP3 et clé du manifeste ;
 // - text  : texte affiché / haché, identique au runtime ;
 // - tts   : texte adapté à la synthèse (macrons ASCII et « JY-xx » épelé en
 //           anglais — le japonais part tel quel, le dictionnaire open_jtalk
 //           connaît les gares) ;
-// - speed : vitesse Kokoro (ja-JP : jf_alpha 1.15, en-US : af_heart 0.93).
-//           Le japonais est au-dessus du rythme natif pour COMPENSER la
-//           découpe en segments du générateur : synthétisé seul, un segment
-//           reçoit une intonation de fin de phrase et s'allonge d'environ
-//           25 % — à vitesse 1.0 la voix articulait donc plus lentement
-//           qu'avant l'ajout des pauses. Les silences aux 、/。 eux-mêmes
-//           sont posés par le générateur, pas par le débit.
+// - voice : voix Kokoro. QUATRE locutrices, toutes féminines, parce que quatre
+//           sources parlent dans ce jeu et qu'on doit les distinguer à
+//           l'oreille sans regarder : la sono de la RAME (jf_alpha), l'annonce
+//           automatique du QUAI (jf_gongitsune), l'AGENT de quai au micro
+//           (jf_nezumi, moins lisse — c'est une personne, pas un automate), et
+//           les deux voix anglaises (af_heart à bord, af_sarah au quai).
+// - speed : vitesse Kokoro. Le japonais est au-dessus du rythme natif pour
+//           COMPENSER la découpe en segments du générateur : synthétisé seul,
+//           un segment reçoit une intonation de fin de phrase et s'allonge
+//           d'environ 25 % — à vitesse 1.0 la voix articulait donc plus
+//           lentement qu'avant l'ajout des pauses. Les silences aux 、/。
+//           eux-mêmes sont posés par le générateur, pas par le débit.
+//           L'anglais du quai est un cran sous celui de la rame : dehors, sous
+//           une verrière, une annonce trop rapide ne s'attrape pas.
 
 import { writeFileSync } from 'node:fs';
 import {
@@ -34,13 +41,63 @@ import {
   welcomeAnnouncement,
   type Utterance,
 } from '../src/data/announcements';
+import {
+  PLATFORM_AGENT_MESSAGES,
+  PLATFORM_DELAY_CAUSES,
+  platformAgentMessage,
+  platformApproachAnnouncement,
+  platformArrivalAnnouncement,
+  platformDelayAnnouncement,
+  platformDoorsClosingAnnouncement,
+  platformGreeting,
+  platformPreAnnouncement,
+  platformTrainEnteringAnnouncement,
+  type StationUtterance,
+  type StationVoice,
+} from '../src/data/stationAnnouncements';
+import { platformFor, type LoopDirection } from '../src/data/platforms';
 import { DOOR_SIDE, STATIONS } from '../src/data/stations';
 import { clipKey } from '../src/data/clipKey';
 
-const SPEED: Record<Utterance['lang'], number> = {
-  'ja-JP': 1.15,
-  'en-US': 0.93,
+/** Voix de la sonorisation de la RAME (annonces de bord). */
+const CABIN_VOICE: Record<Utterance['lang'], string> = {
+  'ja-JP': 'jf_alpha',
+  'en-US': 'af_heart',
 };
+
+/** Voix de la sonorisation du QUAI, par rôle (voir data/stationAnnouncements). */
+const STATION_VOICE: Record<StationVoice, string> = {
+  atos: 'jf_gongitsune',
+  agent: 'jf_nezumi',
+  'atos-en': 'af_sarah',
+};
+
+const SPEED: Record<string, number> = {
+  jf_alpha: 1.15,
+  jf_gongitsune: 1.15,
+  // L'agent parle un peu plus vite : il improvise, il n'articule pas un script.
+  jf_nezumi: 1.22,
+  af_heart: 0.93,
+  af_sarah: 0.88,
+};
+
+/**
+ * Sens de circulation pour lequel on grave les annonces de quai. Le jeu tourne
+ * en 内回り (store.loopDirection), et le numéro de voie comme la direction
+ * annoncée en dépendent : graver l'autre sens doublerait le poids pour des
+ * clips que personne n'entendrait. Ajouter 'outer' ici le jour où la boucle
+ * peut s'inverser — sans clip, le runtime retombe sur speechSynthesis.
+ */
+const DIRECTIONS: LoopDirection[] = ['inner'];
+
+/** Numéros de voie possibles à cette gare dans ce sens (principal + alternatif). */
+function platformsFor(jy: string, direction: LoopDirection): number[] {
+  const info = platformFor(jy, direction);
+  if (!info) return [1];
+  const out = [info.platform];
+  if (info.alternativePlatform != null) out.push(info.alternativePlatform);
+  return out;
+}
 
 // « Ōsaki » → « Osaki » : les macrons perturbent le G2P anglais.
 function stripDiacritics(s: string): string {
@@ -57,6 +114,8 @@ function ttsText(u: Utterance): string {
   return u.text;
 }
 
+// --- Sonorisation de la RAME --------------------------------------------
+
 const utterances: Utterance[] = [];
 for (let i = 0; i < STATIONS.length; i++) {
   utterances.push(...departureSequence(i, DOOR_SIDE[i]));
@@ -72,15 +131,57 @@ for (let r = 0; r < EMERGENCY_REASONS.length; r++) {
 utterances.push(...emergencyWaitAnnouncement());
 utterances.push(...emergencyResumeAnnouncement());
 
-const byKey = new Map<string, { key: string; lang: string; text: string; tts: string; speed: number }>();
-for (const u of utterances) {
+// --- Sonorisation du QUAI (ATOS + agent) ---------------------------------
+
+const stationUtterances: StationUtterance[] = [];
+for (const direction of DIRECTIONS) {
+  for (let i = 0; i < STATIONS.length; i++) {
+    for (const platform of platformsFor(STATIONS[i].jy, direction)) {
+      stationUtterances.push(...platformPreAnnouncement(i, platform));
+      stationUtterances.push(...platformApproachAnnouncement(i, platform));
+      stationUtterances.push(...platformDoorsClosingAnnouncement(platform));
+    }
+    stationUtterances.push(...platformArrivalAnnouncement(i));
+  }
+}
+stationUtterances.push(...platformGreeting());
+stationUtterances.push(...platformTrainEnteringAnnouncement());
+for (let n = 0; n < PLATFORM_AGENT_MESSAGES.length; n++) {
+  stationUtterances.push(...platformAgentMessage(n));
+}
+for (let c = 0; c < PLATFORM_DELAY_CAUSES.length; c++) {
+  stationUtterances.push(...platformDelayAnnouncement(c));
+}
+
+// --- Déduplication ------------------------------------------------------
+
+interface Item {
+  key: string;
+  lang: string;
+  text: string;
+  tts: string;
+  voice: string;
+  speed: number;
+}
+
+const byKey = new Map<string, Item>();
+
+function add(u: Utterance, voice: string): void {
   const key = clipKey(u.lang, u.text);
   const existing = byKey.get(key);
   if (existing && existing.text !== u.text) {
     throw new Error(`Collision de clé ${key} : « ${existing.text} » / « ${u.text} »`);
   }
-  byKey.set(key, { key, lang: u.lang, text: u.text, tts: ttsText(u), speed: SPEED[u.lang] });
+  // Même texte, deux voix : la clé ne porte pas la voix, l'un des deux clips
+  // écraserait l'autre. Il faut alors différencier les textes.
+  if (existing && existing.voice !== voice) {
+    throw new Error(`Texte « ${u.text} » réclamé par ${existing.voice} et ${voice}`);
+  }
+  byKey.set(key, { key, lang: u.lang, text: u.text, tts: ttsText(u), voice, speed: SPEED[voice] });
 }
+
+for (const u of utterances) add(u, CABIN_VOICE[u.lang]);
+for (const u of stationUtterances) add(u, STATION_VOICE[u.voice]);
 
 const out = {
   items: [...byKey.values()],

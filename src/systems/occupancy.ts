@@ -7,7 +7,7 @@ import {
   HOLIDAY_DAY_COEFFS,
   HOUR_CURVE,
   MONTH_COEFFS,
-  OUTER_BASE_0815,
+  INNER_BASE_0815,
   dayPeriod,
   isGoldenWeek,
   isHalloweenZone,
@@ -121,7 +121,7 @@ function halloweenBoost(fromIndex: number, minutes: number, date: TokyoDate): nu
 }
 
 function baseEstimate(fromIndex: number, minutes: number, date: TokyoDate, holiday: boolean): number {
-  const baseline = OUTER_BASE_0815[fromIndex];
+  const baseline = INNER_BASE_0815[fromIndex];
   const hf = hourFactor(minutes);
   const period = dayPeriod(minutes);
   const dc = dayCoeffsFor(date, holiday);

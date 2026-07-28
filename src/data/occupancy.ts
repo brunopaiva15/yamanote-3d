@@ -26,8 +26,8 @@ export interface TokyoDate {
 // Index i = tronçon STATIONS[i] → STATIONS[(i+1)%30].
 // ---------------------------------------------------------------------------
 
-/** Sens simulé (外回り, ordre JY croissant) — pic Shin-Ōkubo→Shinjuku 139 %. */
-export const OUTER_BASE_0815: readonly number[] = [
+/** Sens simulé (内回り, ordre JY croissant) — pic Shin-Ōkubo→Shinjuku 139 %. */
+export const INNER_BASE_0815: readonly number[] = [
   /* 00 Tokyo→Kanda                 */ 96,
   /* 01 Kanda→Akihabara             */ 99,
   /* 02 Akihabara→Okachimachi       */ 104,
@@ -61,11 +61,11 @@ export const OUTER_BASE_0815: readonly number[] = [
 ];
 
 /**
- * Sens inverse (内回り) — réserve. Index = gare de départ dans ce sens
- * (JY décroissant) : INNER_BASE_0815[i] = taux i → (i-1+30)%30.
+ * Sens inverse (外回り) — réserve. Index = gare de départ dans ce sens
+ * (JY décroissant) : OUTER_BASE_0815[i] = taux i → (i-1+30)%30.
  * Pic officiel Ueno→Okachimachi = index 4.
  */
-export const INNER_BASE_0815: readonly number[] = [
+export const OUTER_BASE_0815: readonly number[] = [
   /* 00 Tokyo→Yūrakuchō             */ 111,
   /* 01 Kanda→Tokyo                 */ 125,
   /* 02 Akihabara→Kanda             */ 120,

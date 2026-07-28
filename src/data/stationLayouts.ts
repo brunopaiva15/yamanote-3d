@@ -851,7 +851,7 @@ function build(spec: Spec): StationLayout {
  *
  * `partial` compte pour OUI : à Ikebukuro et à Ōsaki, c'est la voie SECONDAIRE
  * qui n'est pas équipée — voies 5 et 8 d'un côté, 2 et 4 de l'autre — et le jeu
- * circule en 外回り sur la principale, qui l'est. La différence se verra sur le
+ * circule en 内回り sur la principale, qui l'est. La différence se verra sur le
  * quai d'en face, pas sous nos pieds.
  *
  * Restent donc Shinjuku et Shibuya, où les grands travaux interdisent encore

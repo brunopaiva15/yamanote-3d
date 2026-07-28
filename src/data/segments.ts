@@ -4,7 +4,7 @@
 // tranchées ouvertes et sections au niveau du sol.
 //
 // Segment i = trajet STATIONS[i] → STATIONS[(i+1)%30], dans le sens simulé
-// (外回り, ordre JY croissant).
+// (内回り, ordre JY croissant).
 
 export type SegmentKind = 'viaduct' | 'corridor' | 'trench' | 'ground';
 

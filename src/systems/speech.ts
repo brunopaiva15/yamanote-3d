@@ -1,9 +1,17 @@
-// File d'attente d'annonces vocales : une annonce à la fois, japonais puis
-// anglais. Chaque annonce est d'abord cherchée en CLIP pré-généré (Kokoro
-// TTS : jf_alpha ja / af_heart en, voir scripts/announcements-gen.py) — joué
-// par audioManager sur le bus PA, donc réellement spatialisé sur les
-// diffuseurs du plafond. speechSynthesis ne sert plus que de REPLI pour un
-// texte sans clip ; sans voix ja-JP, seul l'anglais est alors émis.
+// Files d'attente d'annonces vocales. Deux sonorisations parlent dans ce jeu,
+// et elles ne se doivent rien : celle de la RAME (次は、渋谷…) et celle de la
+// GARE (まもなく、1番線に…). Chacune a sa file, son ordre, son souffle de ligne
+// et son bus spatialisé ; les deux peuvent se chevaucher, comme en vrai quand
+// on est assis porte ouverte et que le quai annonce la fermeture.
+//
+// Où on les entend est décidé par audioEngine (paVoiceGain / platVoiceGain) :
+// sur le quai la voix de bord est muette, dans la rame celle du quai est un
+// lointain. Ce module ne s'occupe que de QUI parle et dans quel ordre.
+//
+// Chaque annonce est d'abord cherchée en CLIP pré-généré (Kokoro TTS, voir
+// scripts/announcements-gen.py) — joué par audioManager sur le bus voulu, donc
+// réellement spatialisé. speechSynthesis ne sert que de REPLI pour un texte
+// sans clip ; sans voix ja-JP, seul l'anglais est alors émis.
 //
 // Robustesse navigateurs :
 // - iOS / Safari : la synthèse doit être amorcée DANS le geste utilisateur ;
@@ -17,29 +25,73 @@
 //   session et on rejoue le segment avec la voix suivante. pause() tue aussi
 //   ces voix réseau dans Chromium : le keep-alive est réservé aux voix locales.
 //
+// speechSynthesis est une ressource UNIQUE : il n'y a qu'une bouche pour deux
+// files. Le canal qui la tient bloque l'autre le temps de son segment (voir
+// ttsOwner) — les clips, eux, sont vraiment simultanés.
+//
 // Spatialisation du repli : speechSynthesis sort directement sur la carte
 // son, hors du graphe Web Audio — impossible de le panner. On l'ancre aux
-// diffuseurs du plafond par deux biais : le souffle de ligne spatialisé,
-// ouvert pendant toute l'annonce (paVoiceOpen/paVoiceClose), et le volume de
-// l'utterance qui suit la distance au diffuseur le plus proche
-// (speakerProximity). Les clips, eux, passent par les Panner3D du bus PA.
+// diffuseurs par deux biais : le souffle de ligne spatialisé, ouvert pendant
+// toute l'annonce (paVoiceOpen/paVoiceClose), et le volume de l'utterance qui
+// suit la distance au diffuseur le plus proche (speakerProximity).
 
 import type { Utterance } from '../data/announcements';
 import { announcementClipPath } from '../data/announcementClips';
 import { useStore } from '../store';
-import { audioManager, paVoiceClose, paVoiceOpen, speakerProximity } from './audioEngine';
+import {
+  audioManager,
+  paVoiceClose,
+  paVoiceOpen,
+  speakerProximity,
+  type VoiceBus,
+} from './audioEngine';
+
+/** Qui parle : la sono de la rame, ou celle de la gare. */
+export type SpeechChannel = 'cabin' | 'platform';
+
+const BUS: Record<SpeechChannel, VoiceBus> = {
+  cabin: 'cabinVoice',
+  platform: 'platformVoice',
+};
 
 type QueueItem =
   | { kind: 'clip'; path: string; lang: Utterance['lang']; text: string }
   | { kind: 'tts'; lang: Utterance['lang']; text: string }
   | { kind: 'pause'; ms: number };
 
-const queue: QueueItem[] = [];
-let speaking = false;
-// Génération d'annulation : un cancelSpeech() invalide les callbacks du clip
-// en cours (playOnce est asynchrone et peut se résoudre après coup).
-let generation = 0;
-let currentClipPath: string | null = null;
+interface ChannelState {
+  queue: QueueItem[];
+  speaking: boolean;
+  /** Génération d'annulation : invalide les callbacks d'un clip en vol. */
+  generation: number;
+  currentClipPath: string | null;
+  lineOpen: boolean;
+  pauseId: number;
+  /** Attente du tour de parole quand l'autre canal tient speechSynthesis. */
+  deferId: number;
+}
+
+function newChannel(): ChannelState {
+  return {
+    queue: [],
+    speaking: false,
+    generation: 0,
+    currentClipPath: null,
+    lineOpen: false,
+    pauseId: 0,
+    deferId: 0,
+  };
+}
+
+const channels: Record<SpeechChannel, ChannelState> = {
+  cabin: newChannel(),
+  platform: newChannel(),
+};
+
+const ALL_CHANNELS: SpeechChannel[] = ['cabin', 'platform'];
+
+// --- État de speechSynthesis (ressource unique, partagée) ----------------
+
 let voicesReady = false;
 let jaVoice: SpeechSynthesisVoice | null = null;
 let enVoice: SpeechSynthesisVoice | null = null;
@@ -48,8 +100,9 @@ let startWatchdogId = 0;
 let retryId = 0;
 let keepAliveId = 0;
 let volumeSyncId = 0;
-let pauseId = 0;
 let currentUtterance: SpeechSynthesisUtterance | null = null;
+/** Canal qui tient la bouche unique, null si elle est libre. */
+let ttsOwner: SpeechChannel | null = null;
 
 // Voix qui n'ont jamais produit de son : écartées jusqu'au rechargement.
 const badVoices = new Set<string>();
@@ -59,16 +112,16 @@ function voiceKey(v: SpeechSynthesisVoice): string {
 }
 
 // Niveau utterance : volume du site × proximité du diffuseur (hors graphe Tone).
-function speechLevel(): number {
+function speechLevel(channel: SpeechChannel): number {
   const { muted, volume } = useStore.getState();
   if (muted || volume <= 0.001) return 0;
-  return Math.min(1, volume * 1.15 * speakerProximity());
+  return Math.min(1, volume * 1.15 * speakerProximity(BUS[channel]));
 }
 
 // Applique le volume courant à l'utterance en cours (slider + distance).
 function syncSpeechVolume(): void {
-  if (!currentUtterance) return;
-  currentUtterance.volume = speechLevel();
+  if (!currentUtterance || !ttsOwner) return;
+  currentUtterance.volume = speechLevel(ttsOwner);
 }
 
 // Voix visées, par langue : les Microsoft Natural annoncées par leur
@@ -174,31 +227,45 @@ function ttsItems(lang: Utterance['lang'], text: string): QueueItem[] {
   return out;
 }
 
-function clearTimers(): void {
+/** Timers de l'utterance en cours (ressource unique). */
+function clearTtsTimers(): void {
   if (watchdogId) window.clearTimeout(watchdogId);
   if (startWatchdogId) window.clearTimeout(startWatchdogId);
   if (retryId) window.clearTimeout(retryId);
   if (keepAliveId) window.clearInterval(keepAliveId);
   if (volumeSyncId) window.clearInterval(volumeSyncId);
-  if (pauseId) window.clearTimeout(pauseId);
   watchdogId = 0;
   startWatchdogId = 0;
   retryId = 0;
   keepAliveId = 0;
   volumeSyncId = 0;
-  pauseId = 0;
+}
+
+function releaseTts(): SpeechChannel | null {
+  const owner = ttsOwner;
+  clearTtsTimers();
+  currentUtterance = null;
+  ttsOwner = null;
+  return owner;
 }
 
 function finishUtterance(): void {
-  clearTimers();
-  currentUtterance = null;
-  speaking = false;
-  pump();
+  const owner = releaseTts();
+  if (owner) {
+    channels[owner].speaking = false;
+    pump(owner);
+  }
+  // La bouche est libre : l'autre canal peut avoir un segment en attente.
+  for (const c of ALL_CHANNELS) if (c !== owner) pump(c);
 }
 
 // Une voix n'a jamais produit de son (voix réseau Edge en échec silencieux) :
 // on l'écarte et on rejoue le même segment avec la voix suivante.
-function failVoiceAndRetry(item: QueueItem & { kind: 'tts' }, voice: SpeechSynthesisVoice): void {
+function failVoiceAndRetry(
+  channel: SpeechChannel,
+  item: QueueItem & { kind: 'tts' },
+  voice: SpeechSynthesisVoice,
+): void {
   console.warn(`[speech] Voix « ${voice.name} » muette — repli sur une autre voix.`);
   badVoices.add(voiceKey(voice));
   refreshVoices();
@@ -207,9 +274,8 @@ function failVoiceAndRetry(item: QueueItem & { kind: 'tts' }, voice: SpeechSynth
     currentUtterance.onend = null;
     currentUtterance.onerror = null;
   }
-  clearTimers();
-  currentUtterance = null;
-  queue.unshift(item);
+  releaseTts();
+  channels[channel].queue.unshift(item);
   try {
     window.speechSynthesis.cancel();
   } catch {
@@ -219,83 +285,96 @@ function failVoiceAndRetry(item: QueueItem & { kind: 'tts' }, voice: SpeechSynth
   // retomber la poussière avant de relancer la file.
   retryId = window.setTimeout(() => {
     retryId = 0;
-    speaking = false;
-    pump();
+    channels[channel].speaking = false;
+    pump(channel);
   }, 250);
 }
 
 // Ligne de sonorisation ouverte : souffle spatialisé + déclics d'ouverture et
-// de fermeture, qui ancrent la voix sur les diffuseurs du plafond.
-let lineOpen = false;
-
-function openLine(): void {
-  if (lineOpen) return;
-  lineOpen = true;
-  paVoiceOpen();
+// de fermeture, qui ancrent la voix sur les diffuseurs.
+function openLine(channel: SpeechChannel): void {
+  const ch = channels[channel];
+  if (ch.lineOpen) return;
+  ch.lineOpen = true;
+  paVoiceOpen(BUS[channel]);
 }
 
-function closeLine(): void {
-  if (!lineOpen) return;
-  lineOpen = false;
-  paVoiceClose();
+function closeLine(channel: SpeechChannel): void {
+  const ch = channels[channel];
+  if (!ch.lineOpen) return;
+  ch.lineOpen = false;
+  paVoiceClose(BUS[channel]);
 }
 
-function pump(): void {
-  if (speaking) return;
-  if (queue.length === 0) {
-    closeLine();
+function pump(channel: SpeechChannel): void {
+  const ch = channels[channel];
+  if (ch.speaking) return;
+  if (ch.queue.length === 0) {
+    closeLine(channel);
     return;
   }
   if (useStore.getState().muted || useStore.getState().volume <= 0.001) {
-    queue.length = 0;
-    closeLine();
+    ch.queue.length = 0;
+    closeLine(channel);
     return;
   }
-  const item = queue.shift();
-  if (!item) return;
+  const item = ch.queue[0];
+  if (item.kind === 'tts' && ttsOwner !== null && ttsOwner !== channel) {
+    // L'autre sono tient la bouche unique : on repasse dans un instant plutôt
+    // que de jeter le segment. Les clips, eux, ne s'attendent pas.
+    if (ch.deferId) return;
+    ch.deferId = window.setTimeout(() => {
+      ch.deferId = 0;
+      pump(channel);
+    }, 200);
+    return;
+  }
+  ch.queue.shift();
   if (item.kind === 'pause') {
-    speaking = true;
-    pauseId = window.setTimeout(() => {
-      pauseId = 0;
-      speaking = false;
-      pump();
+    ch.speaking = true;
+    ch.pauseId = window.setTimeout(() => {
+      ch.pauseId = 0;
+      ch.speaking = false;
+      pump(channel);
     }, item.ms);
     return;
   }
   if (item.kind === 'clip') {
-    playClipItem(item);
+    playClipItem(channel, item);
     return;
   }
-  speakTtsItem(item);
+  speakTtsItem(channel, item);
 }
 
-// Clip pré-généré : joué sur le bus PA spatialisé. Fichier introuvable
+// Clip pré-généré : joué sur le bus spatialisé du canal. Fichier introuvable
 // (déploiement partiel, cache) → repli speechSynthesis sur le même texte.
-function playClipItem(item: QueueItem & { kind: 'clip' }): void {
-  speaking = true;
-  currentClipPath = item.path;
-  const g = generation;
-  void audioManager.playOnce(item.path, 'cabin').then((played) => {
-    if (g !== generation) return;
-    currentClipPath = null;
-    speaking = false;
+function playClipItem(channel: SpeechChannel, item: QueueItem & { kind: 'clip' }): void {
+  const ch = channels[channel];
+  ch.speaking = true;
+  ch.currentClipPath = item.path;
+  const g = ch.generation;
+  void audioManager.playOnce(item.path, BUS[channel]).then((played) => {
+    if (g !== ch.generation) return;
+    ch.currentClipPath = null;
+    ch.speaking = false;
     if (!played) {
-      queue.unshift(...ttsItems(item.lang, item.text));
+      ch.queue.unshift(...ttsItems(item.lang, item.text));
     }
-    pump();
+    pump(channel);
   });
 }
 
 // Repli speechSynthesis pour un texte sans clip.
-function speakTtsItem(item: QueueItem & { kind: 'tts' }): void {
+function speakTtsItem(channel: SpeechChannel, item: QueueItem & { kind: 'tts' }): void {
+  const ch = channels[channel];
   if (!('speechSynthesis' in window)) {
-    pump();
+    pump(channel);
     return;
   }
   if (!voicesReady) refreshVoices();
   // Sans voix japonaise disponible : sauter les segments japonais.
   if (item.lang === 'ja-JP' && !jaVoice) {
-    pump();
+    pump(channel);
     return;
   }
   const u = new SpeechSynthesisUtterance(item.text);
@@ -306,9 +385,10 @@ function speakTtsItem(item: QueueItem & { kind: 'tts' }): void {
   u.pitch = 1.03;
   // Le niveau suit le volume du site et la distance au diffuseur le plus proche :
   // sous une grille l'annonce claque, au milieu de deux portes elle recule.
-  u.volume = speechLevel();
+  u.volume = speechLevel(channel);
   currentUtterance = u;
-  speaking = true;
+  ttsOwner = channel;
+  ch.speaking = true;
   let started = false;
   u.onstart = () => {
     started = true;
@@ -318,7 +398,7 @@ function speakTtsItem(item: QueueItem & { kind: 'tts' }): void {
     // Échec avant le moindre son (Edge « Online (Natural) » sans réseau,
     // synthesis-failed…) : la voix est écartée et le segment rejoué.
     if (!started && voice && e.error !== 'canceled' && e.error !== 'interrupted') {
-      failVoiceAndRetry(item, voice);
+      failVoiceAndRetry(channel, item, voice);
       return;
     }
     finishUtterance();
@@ -339,7 +419,7 @@ function speakTtsItem(item: QueueItem & { kind: 'tts' }): void {
   startWatchdogId = window.setTimeout(() => {
     if (started) return;
     if (voice) {
-      failVoiceAndRetry(item, voice);
+      failVoiceAndRetry(channel, item, voice);
       return;
     }
     try {
@@ -367,33 +447,52 @@ function speakTtsItem(item: QueueItem & { kind: 'tts' }): void {
   window.speechSynthesis.speak(u);
 }
 
-export function say(items: Utterance[]): void {
+/**
+ * Met une séquence en file. `channel` dit QUELLE sono parle : celle de la rame
+ * (défaut) ou celle de la gare. Les deux files avancent en parallèle.
+ */
+export function say(items: Utterance[], channel: SpeechChannel = 'cabin'): void {
   const { muted, volume } = useStore.getState();
   if (muted || volume <= 0.001) return;
+  const ch = channels[channel];
   for (const item of items) {
     const clip = announcementClipPath(item.lang, item.text);
     if (clip) {
-      queue.push({ kind: 'clip', path: clip, lang: item.lang, text: item.text });
+      ch.queue.push({ kind: 'clip', path: clip, lang: item.lang, text: item.text });
       continue;
     }
-    queue.push(...ttsItems(item.lang, item.text));
+    ch.queue.push(...ttsItems(item.lang, item.text));
   }
-  if (queue.length > 0) openLine();
-  pump();
+  if (ch.queue.length > 0) openLine(channel);
+  pump(channel);
 }
 
-export function cancelSpeech(): void {
-  generation++;
-  queue.length = 0;
-  clearTimers();
-  currentUtterance = null;
-  if (currentClipPath) {
-    audioManager.stop(currentClipPath);
-    currentClipPath = null;
+/** Vide une file (ou les deux) et coupe ce qui est en train d'être dit. */
+export function cancelSpeech(channel?: SpeechChannel): void {
+  const targets = channel ? [channel] : ALL_CHANNELS;
+  for (const c of targets) {
+    const ch = channels[c];
+    ch.generation++;
+    ch.queue.length = 0;
+    if (ch.pauseId) window.clearTimeout(ch.pauseId);
+    if (ch.deferId) window.clearTimeout(ch.deferId);
+    ch.pauseId = 0;
+    ch.deferId = 0;
+    if (ch.currentClipPath) {
+      audioManager.stop(ch.currentClipPath);
+      ch.currentClipPath = null;
+    }
+    // La bouche unique n'est coupée que si c'est ce canal-ci qui la tient :
+    // annuler la rame ne doit pas faire taire le quai au milieu d'un mot.
+    if (ttsOwner === c) {
+      releaseTts();
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+    ch.speaking = false;
+    closeLine(c);
   }
-  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-  speaking = false;
-  closeLine();
+  // Une bouche libérée peut débloquer un segment en attente sur l'autre canal.
+  for (const c of ALL_CHANNELS) if (!targets.includes(c)) pump(c);
 }
 
 // À appeler quand le volume du site change : coupe la voix à 0, sinon met à jour.

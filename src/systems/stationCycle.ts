@@ -34,6 +34,14 @@ import {
 } from './doorMotion';
 import * as audio from './audioEngine';
 import { cancelSpeech, say } from './speech';
+import {
+  notifyLineDelay,
+  paAgentMessage,
+  paAlightFirst,
+  paArrival,
+  paDoorsClosing,
+  paPsdBeeps,
+} from './stationPa';
 import { exchangePassengers } from './passengers';
 import { seedPlatformPresence } from './platformPresence';
 import { clearPlatformCrowd, seedPlatformCrowd } from './platformCrowd';
@@ -91,9 +99,12 @@ export function beginEmergencyStop(): void {
   fired.delete('em-stopped');
   fired.delete('em-wait');
   fired.delete('em-resume');
-  // L'urgence coupe l'annonce en cours, comme en vrai.
-  cancelSpeech();
+  // L'urgence coupe l'annonce en cours, comme en vrai. Seulement celle de la
+  // rame : la sono d'une gare qu'on n'a pas atteinte ne s'interrompt pas.
+  cancelSpeech('cabin');
   say(emergencyBrakeAnnouncement());
+  // La ligne prend du retard, et les quais le diront à la prochaine attente.
+  notifyLineDelay(em.reason);
   audio.brakeApply();
   audio.flangeSqueal(0.8);
 }
@@ -258,7 +269,12 @@ function enterPhase(phase: Phase): void {
     runtime.departStartDist = runtime.distance;
   }
   if (phase === 'cruise') scheduleNextRunSound(6);
-  if (phase !== 'dwell') cancelDepartureMelody();
+  if (phase !== 'dwell') {
+    cancelDepartureMelody();
+    // La rame quitte le quai : ce que la gare avait encore à dire reste
+    // derrière elle. La sono du wagon, en revanche, continue.
+    cancelSpeech('platform');
+  }
 }
 
 // État du train (vitesse, accélération, distance) au temps t d'une phase,
@@ -339,11 +355,15 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
     if (speedFor('brake', t) <= 0.01) fired.add('stop-settle');
   } else if (phase === 'dwell') {
     const dwell = dwellDuration(stationIndex);
+    if (t > 0.9) fired.add('pa-arrival');
     if (t > 0.4) fired.add('doors-open');
     if (t > 0.4 + stationTimings.psdOpenDelay) fired.add('psd-open');
+    if (t > 0.4 + stationTimings.psdOpenDelay + 0.6) fired.add('pa-alight');
     if (t > 1.6) fired.add('exchange');
+    if (t > 6) fired.add('pa-agent');
     if (t >= melodyStartAt(stationIndex, dwell)) fired.add('melody');
     if (t >= dwell - CLOSE_ANNOUNCE_LEAD) fired.add('announce-close');
+    if (t >= dwell - CLOSE_ANNOUNCE_LEAD + 1.2) fired.add('pa-close');
     if (t >= dwell - DOORS_CLOSE_LEAD) fired.add('doors-close');
     if (t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay) fired.add('psd-close');
   } else if (phase === 'depart') {
@@ -534,6 +554,11 @@ export function updateCycle(dt: number): void {
     }
     case 'dwell': {
       const dwell = dwellDuration(s.index);
+      // La sono du QUAI, entendue de l'intérieur : seulement ce qui passe par
+      // les portes ouvertes. Le carillon d'approche et l'avertissement
+      // d'entrée sont déjà finis quand on s'arrête ; restent le nom de la gare,
+      // l'agent qui presse l'échange et la fermeture voie par voie.
+      once('pa-arrival', t > 0.9, () => paArrival(s.index));
       once('doors-open', t > 0.4, () => {
         setTrainDoors(1);
         audio.doorOpenChime();
@@ -541,7 +566,9 @@ export function updateCycle(dt: number): void {
       // Les portes palières s'ouvrent avec un temps de retard sur la rame,
       // variable selon la gare.
       once('psd-open', t > 0.4 + stationTimings.psdOpenDelay, () => setPsdDoors(1));
+      once('pa-alight', t > 0.4 + stationTimings.psdOpenDelay + 0.6, () => paAlightFirst());
       once('exchange', t > 1.6, () => exchangePassengers(s.doorSide));
+      once('pa-agent', t > 6, () => paAgentMessage());
       // Séquence de départ fidèle : la mélodie (発車メロディ) démarre portes ouvertes
       // et se termine AVANT l'annonce de fermeture ; puis carillon, puis fermeture.
       once('melody', t >= melodyStartAt(s.index, dwell), () => audio.departureMelody(s.index));
@@ -556,6 +583,7 @@ export function updateCycle(dt: number): void {
         // rejouent dans l'ordre au lieu de partir tous dans la même frame.
         runtime.phaseT = Math.min(runtime.phaseT, dwell - CLOSE_ANNOUNCE_LEAD - 1);
         fired.delete('announce-close');
+        fired.delete('pa-close');
         fired.delete('doors-close');
         fired.delete('psd-close');
         break;
@@ -564,15 +592,19 @@ export function updateCycle(dt: number): void {
       once('announce-close', t >= dwell - CLOSE_ANNOUNCE_LEAD, () =>
         say(doorsClosingAnnouncement()),
       );
+      // Le quai dit la même chose une seconde plus tard, mais lui nomme la
+      // voie : les deux annonces se répondent par-dessus les portes ouvertes.
+      once('pa-close', t >= dwell - CLOSE_ANNOUNCE_LEAD + 1.2, () => paDoorsClosing(s.index));
       once('doors-close', t >= dwell - DOORS_CLOSE_LEAD, () => {
         setTrainDoors(0);
         audio.doorCloseChime();
       });
       // Puis le quai referme ses portes, nettement après la rame, avec un
       // décalage lui aussi variable selon la gare.
-      once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () =>
-        setPsdDoors(0),
-      );
+      once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () => {
+        setPsdDoors(0);
+        paPsdBeeps();
+      });
       if (t >= dwell) enterPhase('depart');
       break;
     }

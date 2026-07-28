@@ -14,14 +14,24 @@
 // le suivant arrive depuis les z positifs.
 
 import { CONFIG, V_MAX } from '../data/config';
-import { approachSequence, doorsClosingAnnouncement } from '../data/announcements';
 import { DOOR_SIDE } from '../data/stations';
 import { useStore } from '../store';
 import { advanceClock, runtime } from './runtime';
 import { DEPART_HOLD, integrateTrain, type TrainState } from './trainPhysics';
 import { randomizeDoorTimings, setPsdDoors, setTrainDoors, stationTimings } from './doorMotion';
 import * as audio from './audioEngine';
-import { say } from './speech';
+import { cancelSpeech } from './speech';
+import {
+  paAgentMessage,
+  paAlightFirst,
+  paApproach,
+  paArrival,
+  paDelay,
+  paDoorsClosing,
+  paPreAnnouncement,
+  paPsdBeeps,
+  paTrainEntering,
+} from './stationPa';
 import { exchangePassengers, seedPassengers } from './passengers';
 import { crowdArrive, crowdDisperse, crowdPresentCount, crowdTarget } from './platformCrowd';
 import { cancelDepartureMelody, resetMelodyDepartureGuard } from './departureSequence';
@@ -101,11 +111,16 @@ export function beginPlatformWait(): void {
   runtime.accel = 0;
   runtime.sway = 0;
   audio.setListenerOutside(true);
+  // Le joueur n'est plus dans la rame : ce qu'elle avait encore à dire ne lui
+  // parvient plus. Inutile de laisser la file se vider dans le vide.
+  cancelSpeech('cabin');
 
   // Ce qui est déjà passé dans ce dwell ne doit pas se rejouer.
   if (t > 0.4) fired.add('doors-open');
   if (t > 0.4 + stationTimings.psdOpenDelay) fired.add('psd-open');
   if (t > 1.6) fired.add('exchange');
+  if (t > 5) fired.add('agent-1');
+  if (t > melodyStartAt(index, dwell) - 3) fired.add('agent-2');
   if (t >= melodyStartAt(index, dwell)) fired.add('melody');
   if (t >= dwell - CLOSE_ANNOUNCE_LEAD) fired.add('announce-close');
   if (t >= dwell - DOORS_CLOSE_LEAD) fired.add('doors-close');
@@ -134,18 +149,27 @@ function updateBoardable(dt: number, index: number, doorSide: 1 | -1): void {
   once('doors-open', t > 0.4, () => {
     setTrainDoors(1);
     audio.doorOpenChime();
+    // L'agent de quai, dès que les vantaux s'écartent.
+    paAlightFirst();
   });
   once('psd-open', t > 0.4 + stationTimings.psdOpenDelay, () => setPsdDoors(1));
   once('exchange', t > 1.6, () => exchangePassengers(doorSide));
+  // Pendant que la foule monte : une consigne de plus, puis une autre juste
+  // avant que la mélodie ne parte.
+  once('agent-1', t > 5, () => paAgentMessage());
+  once('agent-2', t > melodyStartAt(index, dwell) - 3, () => paAgentMessage(1));
   once('melody', t >= melodyStartAt(index, dwell), () => audio.departureMelody(index));
-  once('announce-close', t >= dwell - CLOSE_ANNOUNCE_LEAD, () => say(doorsClosingAnnouncement()));
+  // Sur le quai, l'annonce de fermeture est celle de la GARE : elle nomme la
+  // voie. Celle de la rame, on ne l'entend pas d'ici.
+  once('announce-close', t >= dwell - CLOSE_ANNOUNCE_LEAD, () => paDoorsClosing(index));
   once('doors-close', t >= dwell - DOORS_CLOSE_LEAD, () => {
     setTrainDoors(0);
     audio.doorCloseChime();
   });
-  once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () =>
-    setPsdDoors(0),
-  );
+  once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () => {
+    setPsdDoors(0);
+    paPsdBeeps();
+  });
   if (t >= dwell) {
     cancelDepartureMelody();
     resetMelodyDepartureGuard();
@@ -188,7 +212,7 @@ function updateDeparting(dt: number): void {
 const REFILL_FROM = 6;
 const REFILL_TO = HEADWAY_GAP - 8;
 
-function updateClear(index: number, doorSide: 1 | -1): void {
+function updateClear(index: number): void {
   const t = platformWait.t;
   // Le quai se repeuple par les escaliers, au compte-gouttes : les voyageurs
   // montent de la trémie au lieu d'apparaître d'un bloc.
@@ -197,8 +221,12 @@ function updateClear(index: number, doorSide: 1 | -1): void {
   for (let guard = 0; crowdPresentCount() < want && guard < 4; guard++) {
     if (!crowdArrive(index)) break;
   }
-  // Annonce d'approche depuis les haut-parleurs du quai.
-  once('announce', t >= HEADWAY_GAP - 24, () => say(approachSequence(index, doorSide)));
+  // La gare reprend la parole une fois le quai dégagé : l'excuse de retard
+  // s'il y en a une à faire, l'annonce anticipée du prochain train, puis le
+  // carillon ATOS et l'annonce d'approche.
+  once('delay', t >= 6, () => paDelay());
+  once('pre-announce', t >= 14, () => paPreAnnouncement(index, true));
+  once('announce', t >= HEADWAY_GAP - 24, () => paApproach(index));
   if (t >= HEADWAY_GAP) {
     platformWait.approachDist = brakingDistance();
     train.v = V_MAX;
@@ -216,6 +244,9 @@ function updateApproaching(dt: number): void {
   once('jingle', platformWait.t >= 1.5, () => audio.arrivalJingle());
   integrateTrain(train, 0, dt);
   const left = Math.max(0, platformWait.approachDist - train.d);
+  // La rame est en vue au bout du quai : l'avertissement court prend le relais
+  // de l'annonce d'approche, plus fort et répété.
+  once('entering', left <= 150, () => paTrainEntering());
   runtime.trainZ = left;
   runtime.speed = train.v;
   runtime.accel = train.a;
@@ -243,9 +274,10 @@ function updateBerthing(index: number): void {
     runtime.lastMelodyDepartureId = null;
     // Nouvelle rame : de nouveaux visages derrière les vitres.
     seedPassengers();
+    // La gare annonce son propre nom, deux fois, comme sur les quais ATOS.
+    paArrival(index);
   });
   if (platformWait.t >= BERTH_SETTLE) enter('boardable');
-  void index;
 }
 
 // --- Boucle -------------------------------------------------------------
@@ -271,7 +303,7 @@ export function updatePlatformWait(rawDt: number): void {
       updateDeparting(dt);
       break;
     case 'clear':
-      updateClear(index, doorSide);
+      updateClear(index);
       break;
     case 'approaching':
       updateApproaching(dt);
