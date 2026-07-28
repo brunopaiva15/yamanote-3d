@@ -19,12 +19,15 @@ const root = join(__dirname, '..');
 const outDir = join(root, 'assets');
 const gameShot = join(outDir, 'game-screenshot.png');
 const logoPngPath = join(outDir, 'logo-capture.png');
-const bannerOut = join(outDir, 'banner-1600x400.png');
-const publicBanner = join(root, 'public', 'banner-1600x400.png');
 
 const WIDTH = 1600;
 const HEIGHT = 400;
-const LOGO_WIDTH = 820;
+
+/** Variantes : logo standard (820 px) et logo discret (340 px). */
+const VARIANTS = [
+  { name: 'banner-1600x400', logoWidth: 820, public: true },
+  { name: 'banner-1600x400-small', logoWidth: 340, public: true },
+];
 
 async function captureAssets(baseUrl) {
   const browser = await chromium.launch({ headless: true });
@@ -32,7 +35,6 @@ async function captureAssets(baseUrl) {
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 120_000 });
   await page.waitForSelector('.logo', { timeout: 60_000 });
 
-  // Isoler le SVG logo sur fond transparent (sans le panneau blanc du menu).
   await page.evaluate(() => {
     const logo = document.querySelector('.logo');
     if (!logo) return;
@@ -51,7 +53,6 @@ async function captureAssets(baseUrl) {
   });
   console.log('Logo :', logoPngPath);
 
-  // Recharger pour capturer le jeu (le DOM a été vidé ci-dessus).
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 120_000 });
   await page.waitForSelector('.start-button', { timeout: 60_000 });
   await page.evaluate(() => {
@@ -68,7 +69,9 @@ async function captureAssets(baseUrl) {
   console.log('Capture jeu :', gameShot);
 }
 
-async function composeBanner() {
+async function composeVariant({ name, logoWidth, public: toPublic }) {
+  const bannerOut = join(outDir, `${name}.png`);
+
   const blurredBg = await sharp(gameShot)
     .resize(WIDTH, HEIGHT, { fit: 'cover', position: 'center' })
     .blur(20)
@@ -87,9 +90,9 @@ async function composeBanner() {
     </svg>`,
   );
 
-  const logoPng = await sharp(logoPngPath).resize({ width: LOGO_WIDTH }).png().toBuffer();
+  const logoPng = await sharp(logoPngPath).resize({ width: logoWidth }).png().toBuffer();
   const logoMeta = await sharp(logoPng).metadata();
-  const logoLeft = Math.round((WIDTH - (logoMeta.width ?? LOGO_WIDTH)) / 2);
+  const logoLeft = Math.round((WIDTH - (logoMeta.width ?? logoWidth)) / 2);
   const logoTop = Math.round((HEIGHT - (logoMeta.height ?? 280)) / 2);
 
   await sharp(blurredBg)
@@ -100,11 +103,23 @@ async function composeBanner() {
     .png()
     .toFile(bannerOut);
 
-  await copyFile(bannerOut, publicBanner);
-  console.log('Bannière :', bannerOut);
+  if (toPublic) {
+    await copyFile(bannerOut, join(root, 'public', `${name}.png`));
+  }
+  console.log(`Bannière (${logoWidth}px) :`, bannerOut);
+}
+
+async function composeBanners() {
+  for (const variant of VARIANTS) {
+    await composeVariant(variant);
+  }
 }
 
 const baseUrl = process.argv[2] ?? 'http://127.0.0.1:5173';
+const composeOnly = process.argv.includes('--compose-only');
+
 await mkdir(outDir, { recursive: true });
-await captureAssets(baseUrl);
-await composeBanner();
+if (!composeOnly) {
+  await captureAssets(baseUrl);
+}
+await composeBanners();
