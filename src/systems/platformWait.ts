@@ -23,7 +23,7 @@ import { randomizeDoorTimings, setPsdDoors, setTrainDoors, stationTimings } from
 import * as audio from './audioEngine';
 import { say } from './speech';
 import { exchangePassengers, seedPassengers } from './passengers';
-import { clearPlatformCrowd, seedPlatformCrowd } from './platformCrowd';
+import { crowdArrive, crowdDisperse, crowdPresentCount, crowdTarget } from './platformCrowd';
 import { cancelDepartureMelody, resetMelodyDepartureGuard } from './departureSequence';
 import {
   CLOSE_ANNOUNCE_LEAD,
@@ -169,6 +169,9 @@ function updateDeparting(dt: number): void {
   audio.setRollingDistance(train.d);
   // Dès que la rame s'ébranle, plus aucun seuil n'est franchissable.
   if (train.d > 0.5) runtime.trainPresent = false;
+  // La rame a dégagé le quai : ceux qui restent gagnent la sortie, l'un après
+  // l'autre. Le quai se vidait jusqu'ici d'un seul coup, sans transition.
+  once('disperse', train.d > 30, () => crowdDisperse());
   if (train.d - lastClackDist > CONFIG.railJointGap && train.v > 1.5) {
     lastClackDist = train.d;
     audio.railClack(train.v / V_MAX);
@@ -177,15 +180,23 @@ function updateDeparting(dt: number): void {
     runtime.speed = 0;
     runtime.accel = 0;
     audio.setRollingDistance(OUT_OF_SIGHT);
-    clearPlatformCrowd();
     enter('clear');
   }
 }
 
+/** Fenêtre de remplissage du quai entre deux rames (s après le départ). */
+const REFILL_FROM = 6;
+const REFILL_TO = HEADWAY_GAP - 8;
+
 function updateClear(index: number, doorSide: 1 | -1): void {
   const t = platformWait.t;
-  // Le quai se repeuple pour la rame suivante.
-  once('crowd', t >= 10, () => seedPlatformCrowd(index));
+  // Le quai se repeuple par les escaliers, au compte-gouttes : les voyageurs
+  // montent de la trémie au lieu d'apparaître d'un bloc.
+  const filled = Math.max(0, Math.min(1, (t - REFILL_FROM) / (REFILL_TO - REFILL_FROM)));
+  const want = Math.round(filled * crowdTarget(index));
+  for (let guard = 0; crowdPresentCount() < want && guard < 4; guard++) {
+    if (!crowdArrive(index)) break;
+  }
   // Annonce d'approche depuis les haut-parleurs du quai.
   once('announce', t >= HEADWAY_GAP - 24, () => say(approachSequence(index, doorSide)));
   if (t >= HEADWAY_GAP) {

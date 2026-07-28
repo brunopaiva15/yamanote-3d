@@ -4,7 +4,9 @@
 
 import * as THREE from 'three';
 import { AD_PALETTES, AD_SUBS, AD_WORDS } from '../data/ads';
-import { STATIONS } from '../data/stations';
+import { STATIONS, TRANSFERS, directionBoardStations } from '../data/stations';
+import { PLATFORM_NUMBERS } from '../data/platforms';
+import { lineInfo, stationExits } from '../data/lines';
 import { GENERIC, type District, type Feat } from '../data/districts';
 import type { Appearance } from '../systems/appearance';
 
@@ -1434,13 +1436,32 @@ function drawMascotAd(
   }
 }
 
+/** Luminance approchée d'une couleur #rrggbb, pour trier les fonds. */
+function luma(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  return (((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255;
+}
+
+/**
+ * Palettes à fond franc. Sur un quai déjà clair, une affiche à fond crème se
+ * fond dans le béton : les caissons de quai tirent dans ce sous-ensemble.
+ */
+const AD_BOLD_PALETTES = AD_PALETTES.filter(([bg]) => luma(bg) < 0.7);
+
 // Dessine une publicité dans un contexte existant : les gabarits sont exprimés
 // en fractions de W et H, donc réutilisables à n'importe quelles proportions
 // (affiches nakazuri, écrans 窓上, écran gauche au-dessus des portes).
-export function drawAdInto(g: CanvasRenderingContext2D, W: number, H: number, seed: number): void {
+export function drawAdInto(
+  g: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  seed: number,
+  bold = false,
+): void {
   const portrait = H > W;
   const r = rng(500 + seed * 13);
-  const [bg, accent, ink] = AD_PALETTES[Math.floor(r() * AD_PALETTES.length)];
+  const palettes = bold ? AD_BOLD_PALETTES : AD_PALETTES;
+  const [bg, accent, ink] = palettes[Math.floor(r() * palettes.length)];
   g.fillStyle = bg;
   g.fillRect(0, 0, W, H);
   const layout = Math.floor(r() * AD_LAYOUT_COUNT);
@@ -1653,11 +1674,11 @@ export function makeNakazuriTexture(seed: number): THREE.CanvasTexture {
   return toTexture(c);
 }
 
-export function makeAdTexture(seed: number, portrait: boolean): THREE.CanvasTexture {
+export function makeAdTexture(seed: number, portrait: boolean, bold = false): THREE.CanvasTexture {
   const W = portrait ? 512 : 768;
   const H = portrait ? 720 : 240;
   const { c, g } = makeCanvas(W, H);
-  drawAdInto(g, W, H, seed);
+  drawAdInto(g, W, H, seed, bold);
   return toTexture(c);
 }
 
@@ -2069,4 +2090,213 @@ export function makePlatformBoard(): { canvas: HTMLCanvasElement; texture: THREE
     texture.needsUpdate = true;
   };
   return { canvas: c, texture, redraw };
+}
+
+// --- Signalétique d'orientation suspendue au-dessus du quai ---
+//
+// C'est elle qui fait lire « gare japonaise » avant même qu'on ait déchiffré un
+// caractère : une potence en travers du quai, un panneau JAUNE pour les
+// sorties, un panneau BLANC pour les correspondances avec les pastilles de
+// lignes colorées. Le quai n'avait jusqu'ici que son panneau de nom de gare.
+//
+// Même schéma que makeStationSign : la texture est créée une fois, seul son
+// contenu est redessiné au changement de gare.
+
+/** Jaune des panneaux de sortie JR. */
+const EXIT_YELLOW = '#f2b705';
+
+/** Flèche pleine, orientée par un angle (0 = vers le bas). */
+function drawSignArrow(
+  g: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+  angle: number,
+): void {
+  g.save();
+  g.translate(cx, cy);
+  g.rotate(angle);
+  g.beginPath();
+  g.moveTo(0, size * 0.5);
+  g.lineTo(-size * 0.42, -size * 0.05);
+  g.lineTo(-size * 0.17, -size * 0.05);
+  g.lineTo(-size * 0.17, -size * 0.5);
+  g.lineTo(size * 0.17, -size * 0.5);
+  g.lineTo(size * 0.17, -size * 0.05);
+  g.lineTo(size * 0.42, -size * 0.05);
+  g.closePath();
+  g.fill();
+  g.restore();
+}
+
+/**
+ * Panneau jaune de sortie. `slot` choisit laquelle des deux sorties de la gare
+ * est affichée, et le sens de la flèche.
+ */
+export function makeExitSign(slot: number): {
+  texture: THREE.CanvasTexture;
+  redraw: (index: number) => void;
+} {
+  const W = 1024;
+  const H = 320;
+  const { c, g } = makeCanvas(W, H);
+  const texture = toTexture(c);
+  const redraw = (index: number) => {
+    const exits = stationExits(index);
+    const exit = exits[slot % exits.length];
+    g.fillStyle = EXIT_YELLOW;
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#141414';
+    g.lineWidth = 12;
+    g.strokeRect(6, 6, W - 12, H - 12);
+
+    g.fillStyle = '#141414';
+    drawSignArrow(g, 120, H / 2, 150, slot % 2 === 0 ? 0 : -Math.PI / 4);
+
+    g.textAlign = 'left';
+    g.textBaseline = 'alphabetic';
+    fitFillText(g, exit.jp, 230, H * 0.52, W - 290, 96, 'bold');
+    g.fillStyle = '#2a2a26';
+    fitFillText(g, exit.en, 232, H * 0.78, W - 290, 46);
+
+    // Mention 出口 / Exit, en réserve dans un bandeau sombre.
+    g.fillStyle = '#141414';
+    g.fillRect(W - 150, 22, 128, 74);
+    g.fillStyle = EXIT_YELLOW;
+    g.textAlign = 'center';
+    fitFillText(g, '出口', W - 86, 80, 112, 54, 'bold');
+    g.textAlign = 'left';
+
+    texture.needsUpdate = true;
+  };
+  return { texture, redraw };
+}
+
+/**
+ * Panneau blanc de correspondance : pastille colorée + nom de ligne, tiré des
+ * mêmes données que les annonces (TRANSFERS). Une gare sans correspondance
+ * reçoit à la place le rappel de la ligne Yamanote.
+ */
+export function makeTransferSign(): {
+  texture: THREE.CanvasTexture;
+  redraw: (index: number) => void;
+} {
+  const W = 1024;
+  const H = 320;
+  const { c, g } = makeCanvas(W, H);
+  const texture = toTexture(c);
+  const redraw = (index: number) => {
+    const tr = TRANSFERS[STATIONS[index].jy];
+    const names = tr
+      ? tr.jp.split('、').map((s) => s.trim()).filter(Boolean).slice(0, 4)
+      : ['山手線'];
+
+    g.fillStyle = '#f6f5f2';
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#141414';
+    g.lineWidth = 12;
+    g.strokeRect(6, 6, W - 12, H - 12);
+
+    // Bandeau de gauche : のりかえ.
+    g.fillStyle = '#141414';
+    g.fillRect(18, 18, 196, H - 36);
+    g.fillStyle = '#f6f5f2';
+    g.textAlign = 'center';
+    fitFillText(g, 'のりかえ', 116, H * 0.46, 168, 46, 'bold');
+    fitFillText(g, 'Transfer', 116, H * 0.68, 168, 32);
+    g.textAlign = 'left';
+
+    // Une ligne par entrée : pastille de couleur puis nom.
+    const rows = names.length;
+    const rowH = (H - 52) / rows;
+    for (let i = 0; i < rows; i++) {
+      const info = lineInfo(names[i]);
+      const y = 26 + i * rowH;
+      g.fillStyle = info.color;
+      g.beginPath();
+      g.roundRect(238, y + rowH * 0.16, 26, rowH * 0.68, 13);
+      g.fill();
+      g.fillStyle = '#141414';
+      const jpSize = Math.min(46, rowH * 0.52);
+      fitFillText(g, names[i], 282, y + rowH * (info.romaji ? 0.56 : 0.68), W - 320, jpSize, 'bold');
+      if (info.romaji) {
+        g.fillStyle = '#55585c';
+        fitFillText(g, info.romaji, 284, y + rowH * 0.88, W - 320, Math.min(28, rowH * 0.3));
+        g.fillStyle = '#141414';
+      }
+    }
+
+    texture.needsUpdate = true;
+  };
+  return { texture, redraw };
+}
+
+// --- Panneau de quai 番線 : le vrai marqueur visuel d'un quai Yamanote ---
+//
+// Grand aplat uguisu, numéro de voie en réserve blanche, badge JY, 山手線 avec
+// le sens de la boucle, et la chaîne des gares desservies terminée par 方面.
+// C'est ce panneau — pas l'affiche de sortie — qu'on voit en premier sur les
+// photos de quai, et il manquait complètement.
+
+export function makePlatformNumberSign(): {
+  texture: THREE.CanvasTexture;
+  redraw: (index: number) => void;
+} {
+  const W = 1400;
+  const H = 300;
+  const { c, g } = makeCanvas(W, H);
+  const texture = toTexture(c);
+  const GREEN = '#7dbe3c';
+
+  const redraw = (index: number) => {
+    const jy = STATIONS[index].jy;
+    // Le jeu tourne en 外回り (voir directionAnnouncement) : c'est ce quai-là.
+    const track = PLATFORM_NUMBERS[jy]?.outer ?? 1;
+    const ahead = directionBoardStations(index, 5);
+
+    g.fillStyle = GREEN;
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#e8ecea';
+    g.lineWidth = 8;
+    g.strokeRect(4, 4, W - 8, H - 8);
+
+    // Numéro de voie, en réserve, calé à gauche.
+    g.fillStyle = '#ffffff';
+    g.textAlign = 'center';
+    g.textBaseline = 'alphabetic';
+    g.font = `bold 210px ${JP_FONT}`;
+    g.fillText(String(track), 118, H - 62);
+
+    // Badge JY, façon pictogramme de ligne.
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = 7;
+    g.beginPath();
+    g.roundRect(212, 42, 92, 92, 14);
+    g.stroke();
+    g.font = `bold 52px ${JP_FONT}`;
+    fitFillText(g, 'JY', 258, 106, 78, 52, 'bold');
+
+    // Nom de ligne et sens.
+    g.textAlign = 'left';
+    g.font = `bold 76px ${JP_FONT}`;
+    g.fillText('山手線', 336, 108);
+    g.font = `bold 46px ${JP_FONT}`;
+    g.fillText('（外回り）', 594, 104);
+    g.font = `30px ${JP_FONT}`;
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    g.fillText('Yamanote Line', 338, 148);
+
+    // Filet séparateur puis la chaîne des gares desservies.
+    g.fillStyle = 'rgba(255,255,255,0.55)';
+    g.fillRect(336, 168, W - 396, 3);
+    g.fillStyle = '#ffffff';
+    fitFillText(g, `${ahead.map((s) => s.kanji).join('・')}方面`, 336, 226, W - 396, 54, 'bold');
+    g.fillStyle = 'rgba(255,255,255,0.92)';
+    const en = ahead.map((s) => s.romaji);
+    const enLine = `for ${en.slice(0, -1).join(', ')} & ${en[en.length - 1]}`;
+    fitFillText(g, enLine, 338, 268, W - 396, 30);
+
+    texture.needsUpdate = true;
+  };
+  return { texture, redraw };
 }

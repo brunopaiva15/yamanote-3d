@@ -10,6 +10,8 @@ import { paxScale } from './perf';
 import { runtime } from './runtime';
 import { currentSegmentOccupancy } from './occupancy';
 import { makeAppearance, type Appearance } from './appearance';
+import { crowdArriveFromTrain, crowdSendBoarder, takeArrivedBoarders } from './platformCrowd';
+import { worldToPlatform } from './playerFrame';
 import {
   SEAT_SLOTS,
   STAND_SLOTS,
@@ -52,6 +54,8 @@ export interface Pax {
   decideT: number; // minuterie des décisions assis / debout
   holdStrap: boolean; // debout : se tient à une poignée (rôdé à chaque passage debout)
   pockets: boolean; // mains dans les poches (trait stable, pantalon uniquement)
+  /** Porte par laquelle ce PNJ descend ; -1 s'il ne descend pas. */
+  exitDoorZ: number;
 }
 
 // Capacité visuelle max d'une voiture (51 assises + 30 debout) + réserve
@@ -117,6 +121,7 @@ function makePax(id: number): Pax {
     decideT: 8 + Math.random() * 20,
     holdStrap: rollStrap(appearance.build.scale),
     pockets: appearance.bottom.type === 'trousers' && Math.random() < 0.4,
+    exitDoorZ: -1,
   };
 }
 
@@ -135,6 +140,7 @@ function scaledTargets(): PaxTargets {
 // Peuplement initial calé sur le taux de remplissage du tronçon courant.
 export function seedPassengers(): void {
   initPassengers();
+  releasePending();
   const target = scaledTargets();
   let seatedCount = 0;
   let standingCount = 0;
@@ -225,6 +231,28 @@ function countInside(): { seated: number; standing: number; seatedPax: Pax[]; st
   return { seated: seatedPax.length, standing: standingPax.length, seatedPax, standingPax };
 }
 
+/**
+ * Passage de relais entre les deux populations.
+ *
+ * Les PNJ de la rame vivent dans le repère du WAGON ; ceux du quai dans celui
+ * de la GARE. Un voyageur qui descend ne peut donc pas rester un PNJ de rame :
+ * il glisserait avec le train au démarrage. La bascule se fait DANS LA BAIE de
+ * la porte palière, juste derrière le nez de quai : c'est le point le plus
+ * masqué, encadré par la caisse d'un côté et les portes palières de l'autre.
+ *
+ * Avant, un descendant marchait jusqu'à 3,40 m sur le quai puis s'évaporait, et
+ * un montant se matérialisait au même endroit : les voyageurs apparaissaient et
+ * disparaissaient en plein milieu du quai.
+ */
+const DOOR_HANDOVER_X = 2.0;
+
+/** z du quai (repère local) correspondant à une porte du wagon. */
+function doorPlatformZ(doorZ: number): number {
+  const out = { x: 0, z: 0 };
+  worldToPlatform(0, doorZ + runtime.trainZ, out);
+  return out.z;
+}
+
 function beginAlight(p: Pax, side: 1 | -1): void {
   const doorZ = nearestDoorZ(p.pos.z);
   releaseSlots(p);
@@ -232,16 +260,56 @@ function beginAlight(p: Pax, side: 1 | -1): void {
   p.action = 'none';
   p.state = 'alighting';
   p.afterWalk = 'hidden';
+  p.exitDoorZ = doorZ;
   p.waypoints = [
     new THREE.Vector3(side * 0.3, 0, p.pos.z),
     new THREE.Vector3(side * 0.95, 0, doorZ),
-    new THREE.Vector3(side * 2.4, 0, doorZ),
-    new THREE.Vector3(side * 3.4, 0, doorZ + (Math.random() - 0.5) * 2.5),
+    new THREE.Vector3(side * DOOR_HANDOVER_X, 0, doorZ),
   ];
   p.wpi = 0;
 }
 
-function beginBoard(p: Pax, side: 1 | -1, afterWalk: 'seated' | 'standing', boardIndex: number): boolean {
+/**
+ * Montées en attente : la place est réservée dès l'échange, mais le PNJ ne
+ * démarre que lorsque le voyageur du quai a atteint le seuil (ou après un
+ * délai de garde, si le quai est vide).
+ */
+interface PendingBoard {
+  paxId: number;
+  side: 1 | -1;
+  doorZ: number;
+  dest: THREE.Vector3;
+  /** Secondes restantes avant démarrage forcé. */
+  fuse: number;
+}
+const pendingBoards: PendingBoard[] = [];
+let nextTicket = 1;
+
+function releasePending(): void {
+  for (const b of pendingBoards) releaseSlots(paxList[b.paxId]);
+  pendingBoards.length = 0;
+  // Les jetons dont le voyageur du quai a été effacé en route ne reviendront
+  // jamais : on ne les garde pas d'une rame à l'autre.
+  ticketToPax.clear();
+}
+
+/** Démarre la marche intérieure d'un montant, depuis l'embrasure de la porte. */
+function startBoardWalk(b: PendingBoard): void {
+  const p = paxList[b.paxId];
+  // La place réservée a pu être libérée entre-temps (dégradation perf, reset).
+  if (p.seatSlot < 0 && p.standSlot < 0) return;
+  p.state = 'boarding';
+  p.action = 'none';
+  p.pos.set(b.side * DOOR_HANDOVER_X, 0, b.doorZ);
+  p.waypoints = [
+    new THREE.Vector3(b.side * 0.95, 0, b.doorZ),
+    new THREE.Vector3(Math.sign(b.dest.x) * 0.3 || 0.3, 0, b.dest.z),
+    b.dest.clone(),
+  ];
+  p.wpi = 0;
+}
+
+function beginBoard(p: Pax, side: 1 | -1, afterWalk: 'seated' | 'standing'): boolean {
   const doorZ = CONFIG.doorCenters[Math.floor(Math.random() * CONFIG.doorCenters.length)];
   let dest: THREE.Vector3;
   if (afterWalk === 'seated') {
@@ -261,16 +329,49 @@ function beginBoard(p: Pax, side: 1 | -1, afterWalk: 'seated' | 'standing', boar
     const s = STAND_SLOTS[stand];
     dest = new THREE.Vector3(s.x, 0, s.z);
   }
-  p.state = 'boarding';
+  // Le PNJ reste invisible tant qu'il n'est pas au seuil : sa place est
+  // seulement réservée.
+  p.state = 'hidden';
   p.action = 'none';
-  p.pos.set(side * (3.0 + (boardIndex % 6) * 0.45), 0, doorZ + (Math.random() - 0.5) * 0.8);
-  p.waypoints = [
-    new THREE.Vector3(side * 0.95, 0, doorZ),
-    new THREE.Vector3(Math.sign(dest.x) * 0.3 || 0.3, 0, dest.z),
-    dest,
-  ];
+  p.waypoints = [];
   p.wpi = 0;
+  const board: PendingBoard = { paxId: p.id, side, doorZ, dest, fuse: 9 };
+  const ticket = nextTicket++;
+  if (crowdSendBoarder(doorPlatformZ(doorZ), ticket)) {
+    pendingBoards.push(board);
+    ticketToPax.set(ticket, p.id);
+  } else {
+    // Quai vide (ou aucun candidat à portée) : on démarre tout de suite, mais
+    // depuis l'embrasure et non du milieu du quai.
+    startBoardWalk(board);
+  }
   return true;
+}
+
+/** Jeton du quai → PNJ de rame qui l'attend. */
+const ticketToPax = new Map<number, number>();
+
+/** Bascule les montants dont le voyageur du quai a atteint la porte. */
+function drainArrivedBoarders(dt: number): void {
+  for (const ticket of takeArrivedBoarders()) {
+    const paxId = ticketToPax.get(ticket);
+    ticketToPax.delete(ticket);
+    if (paxId === undefined) continue;
+    const i = pendingBoards.findIndex((b) => b.paxId === paxId);
+    if (i < 0) continue;
+    const [b] = pendingBoards.splice(i, 1);
+    startBoardWalk(b);
+  }
+  // Garde-fou : un voyageur du quai peut être effacé en route (changement de
+  // gare, purge de qualité). Le montant part quand même plutôt que de garder
+  // sa place réservée pour rien.
+  for (let i = pendingBoards.length - 1; i >= 0; i--) {
+    const b = pendingBoards[i];
+    b.fuse -= dt;
+    if (b.fuse > 0) continue;
+    pendingBoards.splice(i, 1);
+    startBoardWalk(b);
+  }
 }
 
 // Dégradation perf : masque immédiatement les PNJ excédentaires par rapport
@@ -320,25 +421,26 @@ export function exchangePassengers(side: 1 | -1): void {
   }
 
   const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
-  let boardIndex = 0;
 
   for (const p of shuffle(seatedPax).slice(0, needSeatOut)) beginAlight(p, side);
   for (const p of shuffle(standingPax).slice(0, needStandOut)) beginAlight(p, side);
 
-  const freshHidden = paxList.filter((p) => p.state === 'hidden');
+  // Un PNJ qui attend déjà son tour au seuil n'est pas disponible.
+  const busy = new Set(pendingBoards.map((b) => b.paxId));
+  const freshHidden = paxList.filter((p) => p.state === 'hidden' && !busy.has(p.id));
   const queue = shuffle(freshHidden);
   let qi = 0;
   while (qi < queue.length && needSeatIn > 0) {
-    if (beginBoard(queue[qi++], side, 'seated', boardIndex++)) needSeatIn--;
+    if (beginBoard(queue[qi++], side, 'seated')) needSeatIn--;
     else break;
   }
   while (qi < queue.length && needStandIn > 0) {
-    if (beginBoard(queue[qi++], side, 'standing', boardIndex++)) needStandIn--;
+    if (beginBoard(queue[qi++], side, 'standing')) needStandIn--;
     else break;
   }
   // Si plus de places assises, basculer le reste en debout.
   while (qi < queue.length && needSeatIn > 0) {
-    if (beginBoard(queue[qi++], side, 'standing', boardIndex++)) needSeatIn--;
+    if (beginBoard(queue[qi++], side, 'standing')) needSeatIn--;
     else break;
   }
 }
@@ -448,6 +550,7 @@ function maybeRelocate(p: Pax): boolean {
 const tmp = new THREE.Vector3();
 
 export function updatePassengers(dt: number): void {
+  drainArrivedBoarders(dt);
   for (const p of paxList) {
     if (p.state === 'boarding' || p.state === 'alighting') {
       const wp = p.waypoints[p.wpi];
@@ -471,6 +574,11 @@ export function updatePassengers(dt: number): void {
             p.targetYaw = Math.random() > 0.5 ? 0 : Math.PI;
             alignStrapStand(p);
           } else {
+            // Descente terminée : le voyageur passe la main à la foule du
+            // quai, qui l'emmène jusqu'à la sortie. Sans ce relais il
+            // s'évanouissait sur place, en plein milieu du quai.
+            if (p.state === 'alighting') crowdArriveFromTrain(doorPlatformZ(p.exitDoorZ));
+            p.exitDoorZ = 0;
             p.state = 'hidden';
           }
           p.action = 'none';

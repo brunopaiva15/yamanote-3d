@@ -49,12 +49,13 @@ export const E235 = {
   pillar: 0.16,
 
   /**
-   * Bande uguisu (黄緑6号) : sur le E235-0 elle court en haut de caisse, juste
-   * sous la ligne de toit — pas à la ceinture. Les portes, elles, sont vertes
-   * sur toute leur hauteur.
+   * Habillage uguisu (黄緑6号). Le E235-0 n'a PAS de bandeau continu en haut de
+   * caisse : le vert est AUX PORTES, et il monte du bas de caisse jusqu'au
+   * pavillon. Les vantaux, verts eux aussi, n'en sont que la partie basse
+   * mobile ; au-dessus, c'est la caisse qui est verte. Entre deux portes, le
+   * haut de caisse reste inox.
    */
-  bandBottom: 1.94,
-  bandTop: 2.26,
+  doorGreenTop: 2.38,
 
   /** Nez de cabine : longueur du masque vert et hauteur de son pare-brise. */
   cabLen: 2.1,
@@ -103,8 +104,12 @@ export function carZ(index: number): number {
 
 /** Teintes de la livrée. */
 export const LIVERY = {
-  /** 黄緑6号, le vert Yamanote. Même valeur que la frise du quai. */
-  uguisu: '#80c241',
+  /**
+   * 黄緑6号, le vert Yamanote. Plus clair et plus jaune que la frise du quai :
+   * sur photo, les portes du E235 tirent nettement vers le jaune-vert, là où un
+   * vert soutenu donne une rame trop sombre.
+   */
+  uguisu: '#9bc93f',
   /** Inox brossé de la caisse. */
   stainless: '#c9ccd0',
   /** Toit : peinture grise mate, plus sombre que la caisse. */
@@ -113,8 +118,12 @@ export const LIVERY = {
   underframe: '#3a3d42',
   /** Bogies. */
   bogie: '#2e3136',
-  /** Vitrage teinté vert des baies. */
-  glass: '#4d5f4a',
+  /**
+   * Vitrage des baies. Teinté, mais CLAIR : sur photo on voit franchement
+   * l'intérieur et les voyageurs derrière. Le vert bouteille précédent rendait
+   * une rame aux vitres opaques, ce qu'aucune photo ne montre.
+   */
+  glass: '#93a89b',
   /** Pare-brise et bandeau noir de face avant. */
   black: '#16181b',
 } as const;

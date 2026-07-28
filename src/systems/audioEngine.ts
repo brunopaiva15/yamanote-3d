@@ -23,6 +23,14 @@
 // s'il existe, sinon retombe sur la synthèse. audioManager.playOnce(path) joue
 // un chemin (ex. /audio/melodies/…) une seule fois sans relancer. Les clips
 // locaux passent eux aussi par le bus spatialisé.
+//
+// Les clips sont TÉLÉCHARGÉS ET DÉCODÉS, puis joués par un Tone.Player : ils ne
+// passent plus par un <audio> (voir le bloc « Clips » plus bas — c'est ce qui
+// les rendait muets sur téléphone).
+//
+// Distance : tout ce qui est porté par la RAME (roulement, onduleur, freins,
+// joints de rail, chocs de porte…) passe par un bus commun dont le gain suit la
+// distance à la rame. Sur le quai, un train qui part s'éloigne vraiment.
 
 import * as Tone from 'tone';
 import { CABIN_SPEAKERS, CONFIG, PLATFORM_SPEAKERS } from '../data/config';
@@ -52,6 +60,8 @@ import { buildDepartureContext, playDepartureMelodyForContext } from './departur
 
 interface Nodes {
   master: Tone.Gain;
+  /** Bus de tout ce que porte la rame ; son gain suit la distance au train. */
+  trainBus: Tone.Gain;
   rollNoise: Tone.Noise;
   rollFilter: Tone.Filter;
   rollGain: Tone.Gain;
@@ -97,25 +107,30 @@ export async function startAudio(): Promise<void> {
 
   const master = new Tone.Gain(volume * 0.9).toDestination();
 
+  // Bus de la rame : tout ce qui est PORTÉ PAR LE TRAIN y passe, et lui seul
+  // s'atténue avec la distance (voir updateAudio). À bord, son gain vaut 1 et
+  // il est parfaitement transparent.
+  const trainBus = new Tone.Gain(1).connect(master);
+
   // Roulement : bruit rose → passe-bas → gain, modulés par la vitesse.
   const rollNoise = new Tone.Noise('pink');
   const rollFilter = new Tone.Filter({ type: 'lowpass', frequency: 300, Q: 0.6 });
   const rollGain = new Tone.Gain(0);
-  rollNoise.chain(rollFilter, rollGain, master);
+  rollNoise.chain(rollFilter, rollGain, trainBus);
   rollNoise.start();
 
   // Onduleur VVVF : dent de scie → passe-bande, fréquence liée à la vitesse.
   const vvvfOsc = new Tone.Oscillator({ type: 'sawtooth', frequency: 55 });
   const vvvfFilter = new Tone.Filter({ type: 'bandpass', frequency: 200, Q: 6 });
   const vvvfGain = new Tone.Gain(0);
-  vvvfOsc.chain(vvvfFilter, vvvfGain, master);
+  vvvfOsc.chain(vvvfFilter, vvvfGain, trainBus);
   vvvfOsc.start();
 
   // Crissement de frein : bruit blanc → passe-bande aigu.
   const brakeNoise = new Tone.Noise('white');
   const brakeFilter = new Tone.Filter({ type: 'bandpass', frequency: 2400, Q: 3.5 });
   const brakeGain = new Tone.Gain(0);
-  brakeNoise.chain(brakeFilter, brakeGain, master);
+  brakeNoise.chain(brakeFilter, brakeGain, trainBus);
   brakeNoise.start();
 
   // Joints de rail : impulsions de bruit filtré passe-bas.
@@ -124,7 +139,7 @@ export async function startAudio(): Promise<void> {
     noise: { type: 'white' },
     envelope: { attack: 0.001, decay: 0.055, sustain: 0 },
   });
-  clack.chain(clackFilter, master);
+  clack.chain(clackFilter, trainBus);
 
   // Air comprimé (fermeture de portes).
   const airFilter = new Tone.Filter({ type: 'lowpass', frequency: 1600, Q: 0.8 });
@@ -132,7 +147,7 @@ export async function startAudio(): Promise<void> {
     noise: { type: 'white' },
     envelope: { attack: 0.02, decay: 0.55, sustain: 0 },
   });
-  air.chain(airFilter, master);
+  air.chain(airFilter, trainBus);
 
   // Purges d'air du circuit de frein (application, desserrage, compresseur) :
   // souffle plus grave et plus feutré que l'air des portes.
@@ -142,7 +157,7 @@ export async function startAudio(): Promise<void> {
     envelope: { attack: 0.04, decay: 1.1, sustain: 0 },
     volume: -10,
   });
-  vent.chain(ventFilter, master);
+  vent.chain(ventFilter, trainBus);
 
   // Crissement de boudin dans les courbes : sinus aigu tenu, très discret.
   const squealHp = new Tone.Filter({ type: 'highpass', frequency: 1500, Q: 0.5 });
@@ -151,19 +166,19 @@ export async function startAudio(): Promise<void> {
     envelope: { attack: 0.35, decay: 0.3, sustain: 0.4, release: 0.6 },
     volume: -26,
   });
-  squeal.chain(squealHp, master);
+  squeal.chain(squealHp, trainBus);
 
   // Frottement de glissière pendant le coulissement des portes : bruit grave
   // dont le gain suit la vitesse des vantaux (rame et portes palières).
   const slideTrainNoise = new Tone.Noise('brown');
   const slideTrainFilter = new Tone.Filter({ type: 'lowpass', frequency: 260, Q: 0.7 });
   const slideTrainGain = new Tone.Gain(0);
-  slideTrainNoise.chain(slideTrainFilter, slideTrainGain, master);
+  slideTrainNoise.chain(slideTrainFilter, slideTrainGain, trainBus);
   slideTrainNoise.start();
   const slidePsdNoise = new Tone.Noise('brown');
   const slidePsdFilter = new Tone.Filter({ type: 'lowpass', frequency: 520, Q: 0.7 });
   const slidePsdGain = new Tone.Gain(0);
-  slidePsdNoise.chain(slidePsdFilter, slidePsdGain, master);
+  slidePsdNoise.chain(slidePsdFilter, slidePsdGain, trainBus);
   slidePsdNoise.start();
 
   // Chocs mécaniques sourds : déverrouillage et arrivée en butée des portes.
@@ -172,7 +187,7 @@ export async function startAudio(): Promise<void> {
     octaves: 4,
     envelope: { attack: 0.001, decay: 0.16, sustain: 0 },
     volume: -8,
-  }).connect(master);
+  }).connect(trainBus);
 
   // --- Bus SONORISATION du wagon ---------------------------------------
   // Timbre : un diffuseur de plafond ne descend pas dans le grave et coupe
@@ -280,6 +295,7 @@ export async function startAudio(): Promise<void> {
 
   nodes = {
     master,
+    trainBus,
     rollNoise,
     rollFilter,
     rollGain,
@@ -310,6 +326,30 @@ export async function startAudio(): Promise<void> {
     hissGain,
     paClick,
   };
+
+  watchContextState();
+}
+
+// Sur téléphone, le contexte est suspendu par le système à la moindre
+// interruption (appel, écran verrouillé, autre application qui prend l'audio) et
+// ne repart pas tout seul : sans ce filet, l'expérience revient muette.
+let contextWatched = false;
+
+function watchContextState(): void {
+  if (contextWatched || typeof window === 'undefined') return;
+  contextWatched = true;
+  const resume = (): void => {
+    if (Tone.getContext().state === 'running') return;
+    void Tone.getContext().resume().catch(() => {
+      /* le prochain geste retentera */
+    });
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) resume();
+  });
+  for (const ev of ['pointerdown', 'touchend', 'keydown'] as const) {
+    window.addEventListener(ev, resume, { passive: true });
+  }
 }
 
 export function setVolume(v: number): void {
@@ -414,17 +454,24 @@ export function speakerProximity(): number {
   return Math.max(0.62, Math.min(1, 1.7 / Math.max(1.2, best)));
 }
 
-// Ouverture / fermeture de la ligne de sonorisation autour d'une annonce.
-// Le NoiseSynth du clic refuse tout événement antérieur au dernier programmé :
-// une ligne fermée puis rouverte dans la même frame (annonce coupée par une
-// annonce d'urgence) doit caler son clic APRÈS celui de fermeture déjà posé.
-let lastPaClickAt = 0;
+// Un instrument Tone refuse tout déclenchement antérieur ou égal au dernier
+// programmé : « Start time must be strictly greater than previous start time ».
+// Sur une frame longue (onglet repris, GPU saturé, machine lente), plusieurs
+// événements du cycle tombent au MÊME instant audio — deux portes qui claquent,
+// l'immobilisation et un choc de porte — et l'assertion cassait la frame.
+// Chaque instrument à déclenchements multiples réserve donc son créneau ici.
+const lastTriggerAt = new Map<string, number>();
 
+function slot(instrument: string, when: number, gap = 0.005): number {
+  const t = Math.max(when, (lastTriggerAt.get(instrument) ?? 0) + gap);
+  lastTriggerAt.set(instrument, t);
+  return t;
+}
+
+// Ouverture / fermeture de la ligne de sonorisation autour d'une annonce.
 function paClick(duration: number, when: number, velocity: number): void {
   if (!nodes) return;
-  const t = Math.max(when, lastPaClickAt + 0.005);
-  lastPaClickAt = t;
-  nodes.paClick.triggerAttackRelease(duration, t, velocity);
+  nodes.paClick.triggerAttackRelease(duration, slot('paClick', when), velocity);
 }
 
 export function paVoiceOpen(): void {
@@ -445,10 +492,14 @@ export function updateAudio(dt: number, speed01: number, braking: boolean): void
   const accel01 = (speed01 - prevSpeed01) / dt; // par seconde
   prevSpeed01 = speed01;
 
-  // Atténuation en 1/(1+d) : un train qui quitte la gare s'éloigne vraiment.
+  // Atténuation en 1/(1+d) sur TOUT le bus de la rame : roulement, onduleur,
+  // freins, joints de rail, chocs de porte. Un train qui quitte la gare
+  // s'éloigne vraiment, au lieu de garder son chant VVVF plein pot jusqu'à
+  // disparaître du champ. Les aigus partent avant les graves, comme dehors.
   const far = 1 / (1 + Math.pow(rollingDistance / 22, 1.6));
-  nodes.rollGain.gain.rampTo(Math.pow(speed01, 1.1) * 0.32 * far, 0.08);
-  nodes.rollFilter.frequency.rampTo(280 + speed01 * 1500, 0.08);
+  nodes.trainBus.gain.rampTo(far, 0.12);
+  nodes.rollGain.gain.rampTo(Math.pow(speed01, 1.1) * 0.32, 0.08);
+  nodes.rollFilter.frequency.rampTo((280 + speed01 * 1500) * (0.35 + 0.65 * far), 0.08);
 
   // Le « chant » VVVF : surtout audible à l'accélération, plus discrètement
   // au freinage (récupération). L'accélération réelle est ~0,84 m/s² : le
@@ -477,16 +528,16 @@ export function setDoorSlide(train01: number, psd01: number): void {
 export function doorClunk(vel: number): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.thud.triggerAttackRelease('G1', 0.09, now, vel);
-  nodes.clack.triggerAttackRelease(0.03, now + 0.012, vel * 0.7);
+  nodes.thud.triggerAttackRelease('G1', 0.09, slot('thud', now), vel);
+  nodes.clack.triggerAttackRelease(0.03, slot('clack', now + 0.012), vel * 0.7);
 }
 
 // Choc plus mat des portes palières, entendues depuis l'intérieur du wagon.
 export function psdClunk(vel: number): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.thud.triggerAttackRelease('C2', 0.07, now, vel * 0.8);
-  nodes.clack.triggerAttackRelease(0.025, now + 0.01, vel * 0.45);
+  nodes.thud.triggerAttackRelease('C2', 0.07, slot('thud', now), vel * 0.8);
+  nodes.clack.triggerAttackRelease(0.025, slot('clack', now + 0.01), vel * 0.45);
 }
 
 // --- Bruitages du circuit de frein et de course -------------------------
@@ -495,7 +546,7 @@ export function psdClunk(vel: number): void {
 export function brakeApply(): void {
   if (!nodes) return;
   nodes.vent.envelope.decay = 0.5;
-  nodes.vent.triggerAttackRelease(0.25, Tone.now(), 0.12);
+  nodes.vent.triggerAttackRelease(0.25, slot('vent', Tone.now()), 0.12);
 }
 
 // Desserrage des freins juste avant le départ : longue purge « pshhh »
@@ -504,17 +555,17 @@ export function brakeRelease(): void {
   if (!nodes) return;
   const now = Tone.now();
   nodes.vent.envelope.decay = 1.3;
-  nodes.vent.triggerAttackRelease(0.55, now, 0.2);
-  nodes.vent.triggerAttackRelease(0.2, now + 1.15, 0.07);
+  nodes.vent.triggerAttackRelease(0.55, slot('vent', now), 0.2);
+  nodes.vent.triggerAttackRelease(0.2, slot('vent', now + 1.15), 0.07);
 }
 
 // Immobilisation complète : léger tassement de caisse puis serrage à l'arrêt.
 export function stopSettle(): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.thud.triggerAttackRelease('F1', 0.12, now, 0.1);
+  nodes.thud.triggerAttackRelease('F1', 0.12, slot('thud', now), 0.1);
   nodes.vent.envelope.decay = 0.4;
-  nodes.vent.triggerAttackRelease(0.2, now + 0.3, 0.09);
+  nodes.vent.triggerAttackRelease(0.2, slot('vent', now + 0.3), 0.09);
 }
 
 // Crissement de boudin dans une courbe : deux tenues aiguës, très en retrait.
@@ -523,15 +574,15 @@ export function flangeSqueal(intensity: number): void {
   const now = Tone.now();
   const base = 2500 + Math.random() * 900;
   const vel = 0.05 + intensity * 0.06;
-  nodes.squeal.triggerAttackRelease(base, 0.9 + Math.random() * 0.8, now, vel);
-  nodes.squeal.triggerAttackRelease(base * 1.045, 0.5, now + 1.35, vel * 0.6);
+  nodes.squeal.triggerAttackRelease(base, 0.9 + Math.random() * 0.8, slot('squeal', now), vel);
+  nodes.squeal.triggerAttackRelease(base * 1.045, 0.5, slot('squeal', now + 1.35), vel * 0.6);
 }
 
 // Petite purge du compresseur sous le plancher, en pleine course.
 export function airCompressorPurge(): void {
   if (!nodes) return;
   nodes.vent.envelope.decay = 0.35;
-  nodes.vent.triggerAttackRelease(0.15, Tone.now(), 0.05);
+  nodes.vent.triggerAttackRelease(0.15, slot('vent', Tone.now()), 0.05);
 }
 
 // « Clac-clac » des deux bogies au passage d'un joint de rail.
@@ -540,7 +591,8 @@ export function railClack(speed01: number): void {
   const now = Tone.now();
   const v = 0.12 + speed01 * 0.5;
   const bogieDelay = 0.5 - speed01 * 0.32; // second bogie plus proche à vitesse haute
-  const hit = (t: number, vel: number) => nodes!.clack.triggerAttackRelease(0.05, t, vel);
+  const hit = (t: number, vel: number) =>
+    nodes!.clack.triggerAttackRelease(0.05, slot('clack', t), vel);
   hit(now, v);
   hit(now + 0.09, v * 0.85);
   hit(now + bogieDelay, v * 0.9);
@@ -552,23 +604,23 @@ export function railClack(speed01: number): void {
 function synthDoorOpen(): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.chime.triggerAttackRelease('E5', 0.16, now, 0.5);
-  nodes.chime.triggerAttackRelease('A5', 0.3, now + 0.18, 0.5);
+  nodes.chime.triggerAttackRelease('E5', 0.16, slot('chime', now), 0.5);
+  nodes.chime.triggerAttackRelease('A5', 0.3, slot('chime', now + 0.18), 0.5);
 }
 
 function synthDoorClose(): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.chime.triggerAttackRelease('A5', 0.16, now, 0.5);
-  nodes.chime.triggerAttackRelease('E5', 0.3, now + 0.18, 0.5);
-  nodes.air.triggerAttackRelease(0.5, now + 0.5, 0.18);
+  nodes.chime.triggerAttackRelease('A5', 0.16, slot('chime', now), 0.5);
+  nodes.chime.triggerAttackRelease('E5', 0.3, slot('chime', now + 0.18), 0.5);
+  nodes.air.triggerAttackRelease(0.5, slot('air', now + 0.5), 0.18);
 }
 
 function synthArrival(): void {
   if (!nodes) return;
   const now = Tone.now();
   const notes = ['G5', 'C6', 'E6', 'G6'];
-  notes.forEach((n, i) => nodes!.bell.triggerAttackRelease(n, 0.3, now + i * 0.17, 0.4));
+  notes.forEach((n, i) => nodes!.bell.triggerAttackRelease(n, 0.3, slot('bell', now + i * 0.17), 0.4));
 }
 
 // --- Mélodies de départ (発車メロディ), compositions ORIGINALES ---
@@ -622,8 +674,23 @@ function synthMelody(index: number): void {
 }
 
 // --- Hook fichiers locaux : public/audio/<name>.mp3 si présent ---
-
-const clipAvailable = new Map<string, boolean>();
+//
+// Les clips sont téléchargés puis DÉCODÉS en AudioBuffer, et joués par un
+// Tone.Player branché sur le bus voulu. La version précédente créait un
+// HTMLAudioElement (`new Audio(...)`) routé par createMediaElementSource : deux
+// pièges qui ne se voient que sur téléphone.
+//
+// 1. Politique d'autoplay. iOS n'autorise `play()` sur un élément média que
+//    dans un geste utilisateur. Le clic « Monter à bord » débloque le contexte
+//    Web Audio, pas les éléments créés dix minutes plus tard : chaque annonce
+//    partait en NotAllowedError, avalée par le `.catch()`. Pire, playOnce
+//    renvoyait quand même `true` — donc pas même de repli speechSynthesis.
+//    D'où le symptôme : tout s'entend sauf les voix.
+// 2. MediaElementSource. WebKit rend régulièrement du silence pour un élément
+//    détaché du document branché sur le graphe audio.
+//
+// Un AudioBuffer décodé n'a ni l'une ni l'autre contrainte : dès que le
+// contexte tourne, il sonne.
 
 /** Résout un chemin logique (/audio/...) en URL relative compatible base Vite. */
 function resolveAudioUrl(pathOrName: string): string {
@@ -640,138 +707,184 @@ function resolveAudioUrl(pathOrName: string): string {
   return `audio/${pathOrName}.mp3`;
 }
 
-async function probeUrl(url: string): Promise<boolean> {
-  const cached = clipAvailable.get(url);
-  if (cached !== undefined) return cached;
-  let ok = false;
-  try {
-    const res = await fetch(url, { method: 'HEAD' });
-    const type = res.headers.get('content-type') ?? '';
-    ok = res.ok && (type.includes('audio') || type.includes('octet-stream') || type === '');
-    // Certains serveurs statiques omettent content-type sur HEAD : retenter GET partiel.
-    if (res.ok && !ok) {
-      const get = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' } });
-      ok = get.ok;
-    }
-  } catch {
-    ok = false;
-  }
-  clipAvailable.set(url, ok);
-  return ok;
-}
-
-async function probeClip(name: string): Promise<boolean> {
-  return probeUrl(resolveAudioUrl(name));
-}
-
 // Un clip local rejoint le MÊME bus spatialisé que sa version synthétisée :
 // déposer un door-open.mp3 ne fait pas ressortir le son du centre de la tête.
-// Repli sans spatialisation si le contexte refuse la source média.
 type Bus = 'cabin' | 'platform';
 
-function routeClip(el: HTMLAudioElement, bus: Bus): void {
-  if (!nodes) {
-    el.volume = Math.min(1, volume);
-    return;
+function busInput(bus: Bus): Tone.Gain | null {
+  if (!nodes) return null;
+  return bus === 'platform' ? nodes.platIn : nodes.paIn;
+}
+
+// --- Téléchargement et décodage des clips -------------------------------
+
+/**
+ * Budget de PCM décodé conservé en mémoire (octets). Les 204 annonces pèsent
+ * 7,7 Mo compressées mais bien davantage une fois décodées : on garde les plus
+ * récentes, les autres se retéléchargent depuis le cache HTTP du navigateur.
+ */
+const CLIP_CACHE_BYTES = 24 * 1024 * 1024;
+
+/** Insertion la plus ancienne en tête : c'est l'ordre d'éviction. */
+const clipCache = new Map<string, Tone.ToneAudioBuffer>();
+let clipCacheBytes = 0;
+const clipLoads = new Map<string, Promise<Tone.ToneAudioBuffer | null>>();
+/** URLs qui ont répondu 404 : inutile de les redemander à chaque annonce. */
+const missingClips = new Set<string>();
+
+function clipBytes(buf: Tone.ToneAudioBuffer): number {
+  return buf.length * buf.numberOfChannels * 4;
+}
+
+function cacheClip(url: string, buf: Tone.ToneAudioBuffer): void {
+  clipCache.set(url, buf);
+  clipCacheBytes += clipBytes(buf);
+  for (const [key, old] of clipCache) {
+    if (clipCacheBytes <= CLIP_CACHE_BYTES || key === url) break;
+    clipCache.delete(key);
+    clipCacheBytes -= clipBytes(old);
   }
-  try {
-    const src = Tone.getContext().createMediaElementSource(el);
-    src.connect(bus === 'platform' ? nodes.platIn.input : nodes.paIn.input);
-    el.addEventListener('ended', () => src.disconnect(), { once: true });
-  } catch {
-    el.volume = Math.min(1, volume);
+}
+
+/** Buffer décodé d'un clip, ou null si le fichier n'existe pas. */
+async function loadClip(url: string): Promise<Tone.ToneAudioBuffer | null> {
+  if (missingClips.has(url)) return null;
+  const hit = clipCache.get(url);
+  if (hit) {
+    // Remis en fin de file : le plus récemment joué sort en dernier.
+    clipCache.delete(url);
+    clipCache.set(url, hit);
+    return hit;
   }
+  const pending = clipLoads.get(url);
+  if (pending) return pending;
+  const load = Tone.ToneAudioBuffer.fromUrl(url)
+    .then((buf) => {
+      clipLoads.delete(url);
+      cacheClip(url, buf);
+      return buf;
+    })
+    .catch(() => {
+      clipLoads.delete(url);
+      missingClips.add(url);
+      return null;
+    });
+  clipLoads.set(url, load);
+  return load;
+}
+
+interface ClipHandle {
+  /** Résolue à la fin de la lecture, qu'elle aille au bout ou soit coupée. */
+  ended: Promise<void>;
+  stop: () => void;
+}
+
+/** Lance un buffer décodé sur un bus. Le player se démonte tout seul. */
+function startClip(buf: Tone.ToneAudioBuffer, bus: Bus): ClipHandle {
+  const dest = busInput(bus);
+  const player = new Tone.Player({ url: buf });
+  if (dest) player.connect(dest);
+  else player.toDestination();
+
+  let settle: () => void = () => {};
+  const ended = new Promise<void>((resolve) => {
+    settle = resolve;
+  });
+  let finished = false;
+  const finish = (): void => {
+    if (finished) return;
+    finished = true;
+    window.clearTimeout(guard);
+    // Le démontage attend la sortie du callback : Tone n'aime pas qu'on
+    // dispose un nœud depuis son propre onstop.
+    window.setTimeout(() => player.dispose(), 0);
+    settle();
+  };
+  // Filet : si onstop n'arrive jamais (contexte suspendu en cours de route),
+  // la file d'annonces ne doit pas rester bloquée sur ce clip.
+  const guard = window.setTimeout(finish, (buf.duration + 2) * 1000);
+  player.onstop = finish;
+  player.start();
+
+  return {
+    ended,
+    stop: () => {
+      if (finished) return;
+      try {
+        player.stop();
+      } catch {
+        /* déjà arrêté */
+      }
+      finish();
+    },
+  };
 }
 
 export async function playClip(name: string, fallback: () => void, bus: Bus = 'cabin'): Promise<void> {
-  if (await probeClip(name)) {
-    const el = new Audio(resolveAudioUrl(name));
-    routeClip(el, bus);
-    void el.play().catch(() => fallback());
-  } else {
+  const buf = await loadClip(resolveAudioUrl(name));
+  if (!buf) {
     fallback();
+    return;
   }
+  await startClip(buf, bus).ended;
 }
 
 // --- audioManager : lecture unique / arrêt par chemin ---
 
-const activeByPath = new Map<string, HTMLAudioElement>();
-const playWaiters = new Map<string, Array<() => void>>();
-
-function notifyPlayDone(path: string): void {
-  const waiters = playWaiters.get(path);
-  if (!waiters) return;
-  playWaiters.delete(path);
-  for (const w of waiters) w();
-}
-
-function waitForPath(path: string): Promise<void> {
-  return new Promise((resolve) => {
-    const list = playWaiters.get(path) ?? [];
-    list.push(resolve);
-    playWaiters.set(path, list);
-  });
-}
+const activeByPath = new Map<string, ClipHandle>();
+/** Incrémenté par stop() : invalide une lecture encore en cours de chargement. */
+const stopEpoch = new Map<string, number>();
 
 /**
  * Joue un fichier audio une seule fois. Si le même chemin est déjà en cours,
  * ne relance pas et attend la fin de la lecture existante.
- * @returns false si le fichier est introuvable.
+ * @returns false si le fichier est introuvable (l'appelant peut alors se
+ * rabattre sur la synthèse ou sur speechSynthesis).
  */
 async function playOnce(path: string, bus: Bus = 'platform'): Promise<boolean> {
   const existing = activeByPath.get(path);
-  if (existing && !existing.paused && !existing.ended) {
-    await new Promise<void>((resolve) => {
-      const el = activeByPath.get(path);
-      if (!el || el.paused || el.ended) {
-        resolve();
-        return;
-      }
-      const list = playWaiters.get(path) ?? [];
-      list.push(resolve);
-      playWaiters.set(path, list);
-    });
+  if (existing) {
+    await existing.ended;
     return true;
   }
 
-  const url = resolveAudioUrl(path);
-  if (!(await probeUrl(url))) return false;
+  const epoch = stopEpoch.get(path) ?? 0;
+  const buf = await loadClip(resolveAudioUrl(path));
+  if (!buf) return false;
+  // Annulé pendant le téléchargement (départ avorté, arrêt d'urgence) : on ne
+  // lance surtout pas la lecture après coup.
+  if ((stopEpoch.get(path) ?? 0) !== epoch) return true;
 
-  const el = new Audio(url);
-  activeByPath.set(path, el);
-  routeClip(el, bus);
+  // Un autre appel a pu démarrer le même clip pendant le téléchargement.
+  const raced = activeByPath.get(path);
+  if (raced) {
+    await raced.ended;
+    return true;
+  }
 
-  const finished = waitForPath(path);
-  const done = () => {
-    if (activeByPath.get(path) === el) activeByPath.delete(path);
-    notifyPlayDone(path);
-  };
-  el.addEventListener('ended', done, { once: true });
-  el.addEventListener('error', done, { once: true });
-  void el.play().catch(done);
-  await finished;
+  const handle = startClip(buf, bus);
+  activeByPath.set(path, handle);
+  void handle.ended.then(() => {
+    if (activeByPath.get(path) === handle) activeByPath.delete(path);
+  });
+  await handle.ended;
   return true;
 }
 
 /** Arrête un clip lancé via playOnce (annulation de départ, urgence…). */
 function stop(path: string): void {
-  const el = activeByPath.get(path);
-  if (!el) {
-    notifyPlayDone(path);
-    return;
-  }
-  el.pause();
-  el.currentTime = 0;
+  stopEpoch.set(path, (stopEpoch.get(path) ?? 0) + 1);
+  const handle = activeByPath.get(path);
+  if (!handle) return;
   activeByPath.delete(path);
-  notifyPlayDone(path);
+  handle.stop();
 }
 
 export const audioManager = {
   playOnce,
   stop,
   isPlaying(path: string): boolean {
-    const el = activeByPath.get(path);
-    return !!el && !el.paused && !el.ended;
+    return activeByPath.has(path);
   },
 };
 

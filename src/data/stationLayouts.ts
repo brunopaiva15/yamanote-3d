@@ -52,6 +52,12 @@ export interface StationPalette {
   canopy: string;
   accent: string;
   lamp: string;
+  /**
+   * Faïence du soubassement du mur de fond. Un quai japonais n'est pas gris de
+   * haut en bas : le bas de mur est carrelé, en général dans un ton chaud, et
+   * c'est ce qui réchauffe tout le reste.
+   */
+  tile: string;
 }
 
 export interface StationAmenities {
@@ -102,6 +108,7 @@ const PALETTES: Record<string, StationPalette> = {
     canopy: '#5e646a',
     accent: '#80c241',
     lamp: '#fff2d4',
+    tile: '#c7b394',
   },
   // Tranchée : tout est plus sombre, la lumière vient d'en haut.
   trench: {
@@ -111,6 +118,7 @@ const PALETTES: Record<string, StationPalette> = {
     canopy: '#4e545a',
     accent: '#80c241',
     lamp: '#ffeec6',
+    tile: '#a8977c',
   },
   // Viaduc : dalle plus claire, structure peinte en gris perle.
   viaduct: {
@@ -120,6 +128,7 @@ const PALETTES: Record<string, StationPalette> = {
     canopy: '#6a7076',
     accent: '#80c241',
     lamp: '#fff5dc',
+    tile: '#cfbb99',
   },
   // Grande gare : béton lissé pâle, charpente claire.
   hub: {
@@ -129,6 +138,7 @@ const PALETTES: Record<string, StationPalette> = {
     canopy: '#7a8188',
     accent: '#80c241',
     lamp: '#fff8e6',
+    tile: '#d3c0a0',
   },
   // Tokyo : brique et acier riveté sombre de la halle Marunouchi.
   tokyo: {
@@ -138,6 +148,7 @@ const PALETTES: Record<string, StationPalette> = {
     canopy: '#6b5348',
     accent: '#80c241',
     lamp: '#ffeec0',
+    tile: '#7d4636',
   },
   // Shinjuku : forêt de piliers, éclairage jaune, tout est plus bas.
   shinjuku: {
@@ -147,6 +158,7 @@ const PALETTES: Record<string, StationPalette> = {
     canopy: '#565c62',
     accent: '#80c241',
     lamp: '#ffe9ae',
+    tile: '#b39a70',
   },
   // Shibuya : verre et acier blanc de la reconstruction de 2023.
   shibuya: {
@@ -156,6 +168,7 @@ const PALETTES: Record<string, StationPalette> = {
     canopy: '#aeb5ba',
     accent: '#80c241',
     lamp: '#ffffff',
+    tile: '#c8ced2',
   },
 };
 
