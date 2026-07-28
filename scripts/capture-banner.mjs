@@ -1,5 +1,5 @@
 /**
- * Capture une frame du jeu puis compose la bannière 1500×500 :
+ * Capture une frame du jeu puis compose la bannière 1600×400 :
  * fond flouté + logo au premier plan.
  *
  * Le logo est capturé via Chromium (pas via sharp/librsvg) pour respecter
@@ -19,12 +19,12 @@ const root = join(__dirname, '..');
 const outDir = join(root, 'assets');
 const gameShot = join(outDir, 'game-screenshot.png');
 const logoPngPath = join(outDir, 'logo-capture.png');
-const bannerOut = join(outDir, 'banner-1500x500.png');
-const publicBanner = join(root, 'public', 'banner-1500x500.png');
+const bannerOut = join(outDir, 'banner-1600x400.png');
+const publicBanner = join(root, 'public', 'banner-1600x400.png');
 
-const WIDTH = 1500;
-const HEIGHT = 500;
-const LOGO_WIDTH = 900;
+const WIDTH = 1600;
+const HEIGHT = 400;
+const LOGO_WIDTH = 820;
 
 async function captureAssets(baseUrl) {
   const browser = await chromium.launch({ headless: true });
