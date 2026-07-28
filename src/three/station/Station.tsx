@@ -22,7 +22,13 @@ import * as THREE from 'three';
 import { useStore } from '../../store';
 import { runtime } from '../../systems/runtime';
 import { psdDoorPos, psdGateLag } from '../../systems/doorMotion';
-import { placementFor, stairTopZ, type Placed } from '../../systems/stationPlacement';
+import {
+  gantryZs,
+  placementFor,
+  stairTopZ,
+  trackSignZs,
+  type Placed,
+} from '../../systems/stationPlacement';
 import { platformDetail } from '../../systems/perf';
 import { layoutFor, type StationLayout } from '../../data/stationLayouts';
 import {
@@ -297,6 +303,18 @@ export function Station() {
   const midX = PSD_X + depth * 0.55;
   const wallH = canopyY - 0.07 - PLATFORM_TOP;
 
+  // Ce que les totems doivent contourner : le mobilier au sol, mais aussi
+  // l'aplomb des panneaux 番線 et des potences — leur chapeau montait pile
+  // dans les caissons suspendus.
+  const signageGround = useMemo(
+    () => [
+      ...place.obstacles,
+      ...trackSignZs(place).map((z) => ({ z, halfZ: 0.3 })),
+      ...gantryZs(place).map((z) => ({ z, halfZ: 0.3 })),
+    ],
+    [place],
+  );
+
   return (
     <group ref={root} name="gare" rotation={[0, doorSide === 1 ? 0 : Math.PI, 0]} visible={false}>
       {/* --- Dalle (percée au droit des trémies), bord de quai, bande tactile --- */}
@@ -459,9 +477,11 @@ export function Station() {
         canopyY={canopyY}
         halfZ={halfZ}
         totemX={PSD_X + depth * 0.32}
-        bandX={backX}
+        // À Harajuku la bande est suspendue DEVANT le mur de fond : calée sur
+        // backX comme sur un îlot, elle était entièrement noyée dedans.
+        bandX={place.hasBackWall ? backX - 0.3 : backX}
         detail={detail}
-        ground={place.obstacles}
+        ground={signageGround}
         frame={m.frame}
         metal={m.metal}
         accent={m.accent}
@@ -602,7 +622,7 @@ function FarSide({
   if (far === null) {
     const backX = place.backX;
     return (
-      <group>
+      <group name="mur-fond">
         <mesh position={[backX, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
           <boxGeometry args={[0.18, wallH, len]} />
         </mesh>

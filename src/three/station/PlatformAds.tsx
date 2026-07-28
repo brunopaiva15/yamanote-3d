@@ -12,7 +12,7 @@
 import { useMemo } from 'react';
 import { PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
 import type { StationLayout } from '../../data/stationLayouts';
-import type { StationPlacement } from '../../systems/stationPlacement';
+import { gantryZs, type StationPlacement } from '../../systems/stationPlacement';
 import { adPool, stationAd } from './adPool';
 
 interface Props {
@@ -40,38 +40,6 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
    */
   const onWall = place.hasBackWall;
 
-  // --- Caissons du fond de quai --------------------------------------
-  const wallAds = useMemo(() => {
-    // Ce qui monte assez haut pour masquer l'affiche.
-    // Tout ce qui monte assez haut pour masquer l'affiche — ou pour la
-    // traverser. La liste ne connaissait ni les armoires ni les escaliers
-    // mécaniques : le caisson leur rentrait dedans.
-    const blockers = [
-      ...place.vending.map((v) => ({ z: v.z, r: v.halfZ + 1.3 })),
-      ...place.cabinets.map((c) => ({ z: c.z, r: c.halfZ + 1.3 })),
-      ...(place.kiosk ? [{ z: place.kiosk.z, r: place.kiosk.halfZ + 1.6 }] : []),
-      ...(place.elevator ? [{ z: place.elevator.z, r: place.elevator.halfZ + 1.6 }] : []),
-      ...place.stairs.map((s) => ({ z: s.z, r: s.halfZ + 1.3 })),
-      ...place.escalators.map((e) => ({ z: e.z, r: e.halfZ + 1.3 })),
-    ];
-    const out: { z: number; i: number }[] = [];
-    const step = 10.5;
-    // Décalé d'un demi-entraxe de pilier : une affiche derrière un poteau ne se
-    // lit pas.
-    const phase = layout.columnSpacing / 2;
-    for (let z = -half + 7 + phase; z <= half - 7; z += step) {
-      if (blockers.some((b) => Math.abs(z - b.z) < b.r)) continue;
-      out.push({ z, i: out.length });
-    }
-    return out;
-  }, [layout.columnSpacing, half, place]);
-
-  // --- Bandeaux verticaux sur les piliers ----------------------------
-  const columnAds = useMemo(
-    () => (detail > 1 ? [] : place.columns.map((z, i) => ({ z, i }))),
-    [place.columns, detail],
-  );
-
   // --- Bannières suspendues dans l'axe -------------------------------
   // Elles passent à l'aplomb des trémies et des escaliers mécaniques : au droit
   // de l'un d'eux, la bannière traverserait le fléchage de sortie ou la gaine.
@@ -85,6 +53,42 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
     }
     return out;
   }, [half, detail, place.stairs, place.escalators]);
+
+  // --- Caissons du fond de quai --------------------------------------
+  const wallAds = useMemo(() => {
+    // Tout ce qui monte assez haut pour masquer l'affiche — ou pour la
+    // traverser. La liste ne connaissait ni les armoires ni les escaliers
+    // mécaniques : le caisson leur rentrait dedans. Ni les potences
+    // d'orientation, qui enjambent l'épine à hauteur du caisson : leurs
+    // panneaux de sortie lui passaient au travers. Ni les bannières, qui
+    // sous un auvent bas descendent jusqu'à son couronnement.
+    const blockers = [
+      ...place.vending.map((v) => ({ z: v.z, r: v.halfZ + 1.3 })),
+      ...place.cabinets.map((c) => ({ z: c.z, r: c.halfZ + 1.3 })),
+      ...(place.kiosk ? [{ z: place.kiosk.z, r: place.kiosk.halfZ + 1.6 }] : []),
+      ...(place.elevator ? [{ z: place.elevator.z, r: place.elevator.halfZ + 1.6 }] : []),
+      ...place.stairs.map((s) => ({ z: s.z, r: s.halfZ + 1.3 })),
+      ...place.escalators.map((e) => ({ z: e.z, r: e.halfZ + 1.3 })),
+      ...gantryZs(place).map((z) => ({ z, r: 1.3 })),
+      ...(layout.canopyY < 3.7 ? hanging.map((h) => ({ z: h.z, r: 1.3 })) : []),
+    ];
+    const out: { z: number; i: number }[] = [];
+    const step = 10.5;
+    // Décalé d'un demi-entraxe de pilier : une affiche derrière un poteau ne se
+    // lit pas.
+    const phase = layout.columnSpacing / 2;
+    for (let z = -half + 7 + phase; z <= half - 7; z += step) {
+      if (blockers.some((b) => Math.abs(z - b.z) < b.r)) continue;
+      out.push({ z, i: out.length });
+    }
+    return out;
+  }, [layout.columnSpacing, layout.canopyY, half, place, hanging]);
+
+  // --- Bandeaux verticaux sur les piliers ----------------------------
+  const columnAds = useMemo(
+    () => (detail > 1 ? [] : place.columns.map((z, i) => ({ z, i }))),
+    [place.columns, detail],
+  );
 
   // --- Affiches collées sur les murets de portes palières ------------
   // Un muret sur deux, et seulement les plus larges : les chutes de trame ne

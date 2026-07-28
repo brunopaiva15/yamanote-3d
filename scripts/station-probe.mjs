@@ -70,6 +70,19 @@ const IGNORE = [
   'gare/dalle ✕ gare/trousse/repère-voiture',
   'gare/dalle ✕ gare/repères-attente',
   'gare/repères-attente ✕ gare/trousse/repère-voiture',
+  // Les bords d'en face reçoivent le même bandeau que le bord près : il
+  // couronne leur muret, comme bandeau-psd ✕ muret-psd ci-dessus.
+  'gare/bord-opposé ✕ gare/bord-opposé/bandeau-psd-opposé',
+  'gare/travée-opposée ✕ gare/travée-opposée/bandeau-psd-opposé',
+  // La gouttière court en tête de pilier, la potence de caméra est vissée
+  // sous sa poutre : des attaches, pas des chocs.
+  'gare/pilier ✕ gare/trousse/gouttière',
+  'gare/poutre ✕ gare/trousse/caméra',
+  // Harajuku : poutres en appui sur le mur de fond, caissons encastrés
+  // dedans, armoires adossées contre.
+  'gare/mur-fond ✕ gare/poutre',
+  'gare/mur-fond ✕ gare/publicité/caisson-mur',
+  'gare/mur-fond ✕ gare/trousse/armoire',
 ];
 
 const totals = new Map();

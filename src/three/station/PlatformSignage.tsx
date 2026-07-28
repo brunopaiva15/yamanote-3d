@@ -145,16 +145,21 @@ export function PlatformSignage({
   const boardZ = useMemo(() => [-halfZ * 0.45, halfZ * 0.45], [halfZ]);
   // Les totems se posaient à des z fixes, sans consulter le mobilier : ils
   // tombaient dans un distributeur une fois sur dix. Ils s'écartent de tout ce
-  // qui est déjà au sol autour de l'épine.
+  // qui est déjà au sol autour de l'épine — en cherchant des DEUX côtés : la
+  // dérive à sens unique pouvait chasser un totem d'obstacle en obstacle sans
+  // jamais trouver de creux, et le laisser planté dans le dernier.
   const totemZ = useMemo(
     () =>
-      [-halfZ * 0.66, 0, halfZ * 0.66].map((z) => {
-        for (let guard = 0; guard < 12; guard++) {
-          const clash = ground.some((o) => Math.abs(o.z - z) < o.halfZ + 0.9);
-          if (!clash) break;
-          z += 1.1;
+      [-halfZ * 0.66, 0, halfZ * 0.66].flatMap((base) => {
+        for (let d = 0; d <= 7.7; d += 1.1) {
+          for (const s of d === 0 ? [0] : [-d, d]) {
+            const z = base + s;
+            if (!ground.some((o) => Math.abs(o.z - z) < o.halfZ + 0.9)) return [z];
+          }
         }
-        return z;
+        // Pas de creux à portée : mieux vaut un totem de moins qu'un totem
+        // dans un escalier.
+        return [];
       }),
     [halfZ, ground],
   );
