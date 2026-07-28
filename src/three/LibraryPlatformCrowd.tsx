@@ -108,6 +108,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       if (bones.head) {
         bones.head.rotation.x += p.headPitch * 0.9;
         bones.head.rotation.y += p.lookYaw * 0.45;
+        bones.head.rotation.z += p.headRoll;
       }
       const phoneActive = usesHeldPose(p.action === 'shift' ? 'none' : p.action) && p.state === 'waiting';
       applyPhoneArms(s.clone, s.pose, k, phoneActive);

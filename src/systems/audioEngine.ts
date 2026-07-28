@@ -987,6 +987,29 @@ export function paxSlip(dist: number): void {
   nodes.paxFabric.triggerAttackRelease(0.1, slot('paxFabric', now + 0.9), v * 0.5);
 }
 
+/** Petit choc quand le joueur bouscule un voyageur. */
+export function paxBump(dist: number, hard = false): void {
+  if (!nodes) return;
+  const v = paxVel(dist, hard ? 0.1 : 0.06);
+  if (v <= 0) return;
+  const now = Tone.now();
+  nodes.paxFabric.triggerAttackRelease(0.08, slot('paxFabric', now), v);
+  nodes.clack.triggerAttackRelease(0.025, slot('clack', now + 0.02), v * (hard ? 0.45 : 0.25));
+  if (hard) nodes.thud.triggerAttackRelease('A1', 0.06, slot('thud', now + 0.03), v * 0.35);
+}
+
+/** Éclats de dispute / bagarre (tissu + petits chocs). */
+export function paxScuffle(dist: number): void {
+  if (!nodes) return;
+  const v = paxVel(dist, 0.08);
+  if (v <= 0) return;
+  const now = Tone.now();
+  for (let i = 0; i < 3; i++) {
+    nodes.paxFabric.triggerAttackRelease(0.06, slot('paxFabric', now + i * 0.18), v * (0.6 + Math.random() * 0.4));
+    if (i > 0) nodes.clack.triggerAttackRelease(0.03, slot('clack', now + i * 0.18 + 0.02), v * 0.3);
+  }
+}
+
 // « Clac-clac » des deux bogies au passage d'un joint de rail.
 export function railClack(speed01: number): void {
   if (!nodes) return;

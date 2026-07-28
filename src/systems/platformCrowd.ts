@@ -31,7 +31,7 @@ import {
   type PaxAction,
 } from '../data/paxActions';
 import { resolveMotion, platformPlayerCtx } from './paxMotion';
-import { playPaxActionSfx } from './paxSfx';
+import { playPaxActionSfx, paxBump } from './paxSfx';
 
 export type CrowdState =
   | 'hidden'
@@ -70,6 +70,7 @@ export interface CrowdPax {
   actionDur: number;
   lookYaw: number;
   headPitch: number;
+  headRoll: number;
   bodyLean: number;
   bodyRoll: number;
   waypoints: THREE.Vector3[];
@@ -82,6 +83,8 @@ export interface CrowdPax {
   delay: number;
   partner: number;
   chatRole: 0 | 1;
+  /** Poussée cumulée par le joueur (chute / glissade si on abuse). */
+  pushAccum: number;
 }
 
 /** Capacité max du pool — assez large pour que Shinjuku/Shibuya débordent
@@ -125,6 +128,7 @@ function makeCrowd(id: number): CrowdPax {
     actionDur: 2 + Math.random() * 4,
     lookYaw: 0,
     headPitch: 0,
+    headRoll: 0,
     bodyLean: 0,
     bodyRoll: 0,
     waypoints: [],
@@ -135,6 +139,7 @@ function makeCrowd(id: number): CrowdPax {
     delay: 0,
     partner: -1,
     chatRole: 0,
+    pushAccum: 0,
   };
 }
 
@@ -267,6 +272,43 @@ export function seedPlatformCrowd(stationIndex: number): void {
       p.partner = -1;
       p.chatRole = 0;
     }
+  }
+  seedCrowdChats();
+}
+
+/** Discussions silencieuses entre voyageurs en attente proches. */
+function seedCrowdChats(): void {
+  const waiters = crowdList.filter((p) => p.state === 'waiting');
+  const used = new Set<number>();
+  let pairs = 0;
+  const want = Math.max(1, Math.floor(waiters.length * 0.35));
+  for (const p of waiters) {
+    if (pairs >= want || used.has(p.id)) continue;
+    let best: CrowdPax | null = null;
+    let bestD = 1.6;
+    for (const other of waiters) {
+      if (other.id === p.id || used.has(other.id)) continue;
+      const d = p.pos.distanceTo(other.pos);
+      if (d > bestD) continue;
+      bestD = d;
+      best = other;
+    }
+    if (!best) continue;
+    used.add(p.id);
+    used.add(best.id);
+    const kind: PaxAction = Math.random() < 0.6 ? 'chat' : Math.random() < 0.5 ? 'gossip' : 'laugh';
+    const dur = 5 + Math.random() * 8;
+    p.action = kind;
+    p.partner = best.id;
+    p.chatRole = 0;
+    p.actionT = 0;
+    p.actionDur = dur;
+    best.action = kind;
+    best.partner = p.id;
+    best.chatRole = 1;
+    best.actionT = 0;
+    best.actionDur = dur;
+    pairs++;
   }
 }
 
@@ -651,39 +693,100 @@ function advanceWalk(p: CrowdPax, dt: number, onDone: () => void): void {
 }
 
 /**
- * Rayon d'évitement autour du joueur quand il est sur le quai. Personne ne
- * traverse personne : sans cela, un promeneur passerait au travers de la tête
- * du joueur, ce qui n'arrive jamais dans un vrai couloir.
+ * Évitement + poussée : si le joueur marche dans quelqu'un et insiste,
+ * le voyageur glisse / trébuche.
  */
 const PLAYER_CLEARANCE = 0.62;
+const CROWD_PUSH_FALL = 0.95;
+let crowdBumpCd = 0;
+let prevPlatX = 0;
+let prevPlatZ = 0;
+let prevPlatInit = false;
 
-function avoidPlayer(p: CrowdPax): void {
-  if (runtime.playerFrame !== 'platform') return;
-  const dx = p.pos.x - runtime.playerPlatX;
-  const dz = p.pos.z - runtime.playerPlatZ;
+function avoidPlayer(p: CrowdPax, dt: number, pvx: number, pvz: number): void {
+  if (runtime.playerFrame !== 'platform') {
+    p.pushAccum = Math.max(0, p.pushAccum - dt * 0.8);
+    return;
+  }
+  const px = runtime.playerPlatX;
+  const pz = runtime.playerPlatZ;
+  const dx = p.pos.x - px;
+  const dz = p.pos.z - pz;
   const d = Math.hypot(dx, dz);
-  if (d >= PLAYER_CLEARANCE || d < 1e-4) return;
+  if (d >= PLAYER_CLEARANCE || d < 1e-4) {
+    p.pushAccum = Math.max(0, p.pushAccum - dt * 0.75);
+    return;
+  }
+  if (isFallingAction(p.action === 'shift' ? 'none' : (p.action as PaxAction))) {
+    p.pushAccum = 0;
+    return;
+  }
+  if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') return;
+
   const push = (PLAYER_CLEARANCE - d) / d;
   p.pos.x += dx * push;
   p.pos.z += dz * push;
+
+  const nx = dx / d;
+  const nz = dz / d;
+  const approach = Math.max(0, pvx * nx + pvz * nz);
+  const overlap = (PLAYER_CLEARANCE - d) / PLAYER_CLEARANCE;
+  p.pushAccum += (0.5 + approach * 0.85 + overlap * 1.2) * dt;
+
+  if (crowdBumpCd <= 0 && (approach > 0.35 || overlap > 0.3)) {
+    paxBump(d, overlap > 0.5);
+    crowdBumpCd = 0.3;
+  }
+
+  if (p.pushAccum > 0.2 && p.state === 'waiting' && !isPairAction(p.action as PaxAction)) {
+    if (p.action !== 'angry' && p.action !== 'gasp') {
+      endCrowdPair(p);
+      p.action = 'angry';
+      p.actionT = 0;
+      p.actionDur = 1.2;
+    }
+  }
+
+  if (p.pushAccum >= CROWD_PUSH_FALL && p.state === 'waiting') {
+    endCrowdPair(p);
+    p.pushAccum = 0;
+    p.action = 'slip';
+    p.actionT = 0;
+    p.actionDur = 2.2;
+    p.lookYaw = nx >= 0 ? 1 : -1;
+    playPaxActionSfx('slip', d);
+  }
 }
 
 export function updatePlatformCrowd(dt: number): void {
   const presence = runtime.platformFade;
   if (presence < 0.04) {
     if (seededFor >= 0) clearPlatformCrowd();
+    prevPlatInit = false;
     return;
   }
   // Une seule résolution du gabarit par frame : les transits la consultent
   // pour savoir à quelle hauteur ils posent le pied dans une trémie.
   const currentPlacement = placement();
+  crowdBumpCd = Math.max(0, crowdBumpCd - dt);
+  const platX = runtime.playerPlatX;
+  const platZ = runtime.playerPlatZ;
+  let pvx = 0;
+  let pvz = 0;
+  if (prevPlatInit && runtime.playerFrame === 'platform') {
+    pvx = (platX - prevPlatX) / Math.max(dt, 1e-4);
+    pvz = (platZ - prevPlatZ) / Math.max(dt, 1e-4);
+  }
+  prevPlatX = platX;
+  prevPlatZ = platZ;
+  prevPlatInit = true;
 
   for (const p of crowdList) {
     if (p.state === 'hidden') continue;
 
     p.actionT += dt;
     p.bobPhase += dt;
-    avoidPlayer(p);
+    avoidPlayer(p, dt, pvx, pvz);
 
     // Transits : arrivée par la trémie, départ vers la sortie, montée en rame.
     if (p.state === 'arriving' || p.state === 'leaving' || p.state === 'boarding') {
@@ -797,6 +900,7 @@ export function updatePlatformCrowd(dt: number): void {
         });
         p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed);
         p.lookYaw += (m.yaw - p.lookYaw) * Math.min(1, dt * Math.min(m.speed, 4));
+        p.headRoll += (m.headRoll - p.headRoll) * Math.min(1, dt * m.speed);
         p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed);
         p.bodyRoll += (m.roll - p.bodyRoll) * Math.min(1, dt * m.speed);
         if (isFallingAction(act) || Math.abs(m.drop) > 0.001) {

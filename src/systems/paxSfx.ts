@@ -3,11 +3,13 @@
 
 import type { PaxAction } from '../data/paxActions';
 import {
+  paxBump,
   paxClick,
   paxCough,
   paxDrink,
   paxFabricRustle,
   paxFall,
+  paxScuffle,
   paxSlip,
   paxSneeze,
   paxSniffle,
@@ -55,7 +57,18 @@ export function playPaxActionSfx(action: PaxAction, dist: number): void {
     case 'ticketGlance':
       paxClick(dist);
       break;
+    case 'argue':
+    case 'fight':
+    case 'shove':
+    case 'scold':
+      paxScuffle(dist);
+      break;
+    case 'gasp':
+      paxSniffle(dist);
+      break;
     default:
       break;
   }
 }
+
+export { paxBump };
