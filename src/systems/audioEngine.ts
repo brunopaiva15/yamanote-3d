@@ -708,9 +708,18 @@ export function updateAudio(dt: number, speed01: number, braking: boolean): void
   // freins, joints de rail, chocs de porte. Un train qui quitte la gare
   // s'éloigne vraiment, au lieu de garder son chant VVVF plein pot jusqu'à
   // disparaître du champ. Les aigus partent avant les graves, comme dehors.
-  const far = 1 / (1 + Math.pow(rollingDistance / 22, 1.6));
+  // Sur le quai la référence est plus longue (~65 m) : la rame qui arrive se
+  // fait entendre dès le bout du quai, et celle qui part s'efface vers 320 m.
+  const ref = listenerOutside ? 65 : 22;
+  const exp = listenerOutside ? 1.35 : 1.6;
+  const far = 1 / (1 + Math.pow(rollingDistance / ref, exp));
   nodes.trainBus.gain.rampTo(far, 0.12);
-  nodes.rollGain.gain.rampTo(Math.pow(speed01, 1.1) * 0.32, 0.08);
+
+  // Gains calés pour l'intérieur du wagon : debout sur le quai, face à la
+  // rame et contre l'ambiance de gare, on les remonte pour que départ et
+  // arrivée se lisent clairement.
+  const exterior = listenerOutside ? 2.8 : 1;
+  nodes.rollGain.gain.rampTo(Math.pow(speed01, 1.1) * 0.32 * exterior, 0.08);
   nodes.rollFilter.frequency.rampTo((280 + speed01 * 1500) * (0.35 + 0.65 * far), 0.08);
 
   // Le « chant » VVVF : surtout audible à l'accélération, plus discrètement
@@ -721,10 +730,14 @@ export function updateAudio(dt: number, speed01: number, braking: boolean): void
   const boost = Math.max(accelBoost, regenBoost);
   nodes.vvvfOsc.frequency.rampTo(52 + speed01 * 170, 0.08);
   nodes.vvvfFilter.frequency.rampTo(160 + speed01 * 1900, 0.08);
-  nodes.vvvfGain.gain.rampTo(speed01 > 0.005 ? 0.012 + boost * 0.05 * (0.35 + speed01) : 0, 0.1);
+  nodes.vvvfGain.gain.rampTo(
+    speed01 > 0.005 ? (0.012 + boost * 0.05 * (0.35 + speed01)) * exterior : 0,
+    0.1,
+  );
 
   // Crissement sous ~40 % de vitesse en freinage.
-  const squeal = braking && speed01 < 0.4 && speed01 > 0.015 ? (0.4 - speed01) * 0.5 * 0.28 : 0;
+  const squeal =
+    braking && speed01 < 0.4 && speed01 > 0.015 ? (0.4 - speed01) * 0.5 * 0.28 * exterior : 0;
   nodes.brakeGain.gain.rampTo(squeal, 0.12);
 }
 
@@ -758,7 +771,7 @@ export function psdClunk(vel: number): void {
 export function brakeApply(): void {
   if (!nodes) return;
   nodes.vent.envelope.decay = 0.5;
-  nodes.vent.triggerAttackRelease(0.25, slot('vent', Tone.now()), 0.12);
+  nodes.vent.triggerAttackRelease(0.25, slot('vent', Tone.now()), listenerOutside ? 0.28 : 0.12);
 }
 
 // Desserrage des freins juste avant le départ : longue purge « pshhh »
@@ -766,18 +779,20 @@ export function brakeApply(): void {
 export function brakeRelease(): void {
   if (!nodes) return;
   const now = Tone.now();
+  const loud = listenerOutside ? 2.2 : 1;
   nodes.vent.envelope.decay = 1.3;
-  nodes.vent.triggerAttackRelease(0.55, slot('vent', now), 0.2);
-  nodes.vent.triggerAttackRelease(0.2, slot('vent', now + 1.15), 0.07);
+  nodes.vent.triggerAttackRelease(0.55, slot('vent', now), 0.2 * loud);
+  nodes.vent.triggerAttackRelease(0.2, slot('vent', now + 1.15), 0.07 * loud);
 }
 
 // Immobilisation complète : léger tassement de caisse puis serrage à l'arrêt.
 export function stopSettle(): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.thud.triggerAttackRelease('F1', 0.12, slot('thud', now), 0.1);
+  const loud = listenerOutside ? 2 : 1;
+  nodes.thud.triggerAttackRelease('F1', 0.12, slot('thud', now), 0.1 * loud);
   nodes.vent.envelope.decay = 0.4;
-  nodes.vent.triggerAttackRelease(0.2, slot('vent', now + 0.3), 0.09);
+  nodes.vent.triggerAttackRelease(0.2, slot('vent', now + 0.3), 0.09 * loud);
 }
 
 // Crissement de boudin dans une courbe : deux tenues aiguës, très en retrait.
@@ -785,7 +800,7 @@ export function flangeSqueal(intensity: number): void {
   if (!nodes) return;
   const now = Tone.now();
   const base = 2500 + Math.random() * 900;
-  const vel = 0.05 + intensity * 0.06;
+  const vel = (0.05 + intensity * 0.06) * (listenerOutside ? 2.4 : 1);
   nodes.squeal.triggerAttackRelease(base, 0.9 + Math.random() * 0.8, slot('squeal', now), vel);
   nodes.squeal.triggerAttackRelease(base * 1.045, 0.5, slot('squeal', now + 1.35), vel * 0.6);
 }
@@ -801,7 +816,7 @@ export function airCompressorPurge(): void {
 export function railClack(speed01: number): void {
   if (!nodes) return;
   const now = Tone.now();
-  const v = 0.12 + speed01 * 0.5;
+  const v = (0.12 + speed01 * 0.5) * (listenerOutside ? 2.2 : 1);
   const bogieDelay = 0.5 - speed01 * 0.32; // second bogie plus proche à vitesse haute
   const hit = (t: number, vel: number) =>
     nodes!.clack.triggerAttackRelease(0.05, slot('clack', t), vel);
