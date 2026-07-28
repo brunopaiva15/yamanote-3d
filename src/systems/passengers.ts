@@ -566,6 +566,35 @@ function applyAction(p: Pax, id: PaxAction, dur: number, partner: Pax | null = n
   if (id === 'fall' || id === 'stumble') reactToFall(p, id === 'fall');
 }
 
+/** Voisins qui regardent quand le JOUEUR trébuche dans l'allée. */
+export function reactToPlayerFall(hard: boolean): void {
+  const px = runtime.playerCarX;
+  const pz = runtime.playerCarZ;
+  const radius = hard ? 3.2 : 2.2;
+  let n = 0;
+  for (const other of paxList) {
+    if (other.state !== 'seated' && other.state !== 'standing') continue;
+    if (isPairAction(other.action) || isFallingAction(other.action)) continue;
+    if (other.action === 'doze' || other.action === 'sneeze') continue;
+    if (Math.hypot(other.pos.x - px, other.pos.z - pz) > radius) continue;
+    endPair(other);
+    other.partner = -1;
+    other.action = 'look';
+    other.actionT = 0;
+    other.actionDur = hard ? 2.5 + Math.random() * 1.5 : 1.6 + Math.random();
+    const world = Math.atan2(px - other.pos.x, pz - other.pos.z);
+    let d = world - other.yaw;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    other.lookYawTarget = THREE.MathUtils.clamp(d, -1.15, 1.15);
+    if (hard && Math.random() < 0.35) {
+      other.action = 'gasp';
+      other.actionDur = 1.2;
+    }
+    if (++n >= 5) break;
+  }
+}
+
 /** Voisins qui regardent / étouffent un rire quand quelqu'un trébuche. */
 function reactToFall(fallen: Pax, hard: boolean): void {
   const radius = hard ? 2.8 : 1.8;
