@@ -2087,7 +2087,10 @@ export function makePlatformBoard(): {
     const st = STATIONS[index];
     const ahead = directionBoardStations(index, 3);
     const jy = st.jy;
-    const track = PLATFORM_NUMBERS[jy]?.outer ?? 1;
+    // Le jeu tourne en 内回り (voir LOOP_JP) : c'est ce quai-là, et c'est ce
+    // numéro-là que la sono du quai annonce (「N番線」). Les deux doivent dire
+    // la même chose, sans quoi on lit un chiffre et on en entend un autre.
+    const track = PLATFORM_NUMBERS[jy]?.inner ?? 1;
 
     g.fillStyle = '#0c1016';
     g.fillRect(0, 0, W, H);
@@ -2413,8 +2416,9 @@ export function makePlatformNumberSign(): {
 
   const redraw = (index: number) => {
     const jy = STATIONS[index].jy;
-    // Le jeu tourne en 外回り (voir directionAnnouncement) : c'est ce quai-là.
-    const track = PLATFORM_NUMBERS[jy]?.outer ?? 1;
+    // Le jeu tourne en 内回り (voir LOOP_JP) : c'est ce quai-là, et le même
+    // numéro que celui annoncé par la sono du quai.
+    const track = PLATFORM_NUMBERS[jy]?.inner ?? 1;
     const ahead = directionBoardStations(index, 5);
 
     g.fillStyle = GREEN;

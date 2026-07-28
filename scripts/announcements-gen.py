@@ -32,6 +32,10 @@ dans le manifeste existant. Un texte inchangé garde alors exactement le fichier
 qu'il avait — une version de kokoro-onnx ou de misaki plus récente ne fait pas
 dériver, en douce, les 200 annonces déjà en place. Sans le drapeau, tout est
 regravé.
+
+Le dossier de sortie appartient au script : un MP3 dont plus aucun texte ne
+réclame la clé est supprimé. Corriger un mot d'annonce change son hachage, donc
+son fichier ; sans ce balayage l'ancien resterait là, muet et lourd.
 """
 
 import json
@@ -222,6 +226,12 @@ def main() -> None:
         total_bytes += len(mp3)
         print(f"[{i}/{len(todo)}] {item['key']} {voice} "
               f"{manifest[item['key']]:.1f}s — {item['text'][:48]}")
+
+    orphans = [p for p in out.glob("*.mp3") if p.stem not in manifest]
+    for p in orphans:
+        p.unlink()
+    if orphans:
+        print(f"{len(orphans)} clips orphelins supprimés (textes disparus du code).")
 
     entries = "\n".join(
         f"  {json.dumps(k)}: {v}," for k, v in sorted(manifest.items())

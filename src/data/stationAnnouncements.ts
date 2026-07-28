@@ -16,10 +16,10 @@
 // scripts/announcements-export.ts ; le runtime, lui, ne voit que du texte.
 //
 // La direction annoncée reprend mot pour mot celle de la rame
-// (directionAnnouncement) : 山手線外回り et les mêmes grands repères, pour que
-// le quai et le wagon ne se contredisent pas.
+// (directionAnnouncement) : le même LOOP_JP et les mêmes grands repères, pour
+// que le quai et le wagon ne se contredisent pas.
 
-import { nextHubs, type Utterance } from './announcements';
+import { LOOP_JP, nextHubs, type Utterance } from './announcements';
 import { STATIONS } from './stations';
 
 /** Voix de synthèse visée pour un texte donné (voir le générateur Kokoro). */
@@ -55,7 +55,7 @@ function bound(index: number): { jp: string; en: string } {
 
 export function platformPreAnnouncement(index: number, platform: number): StationUtterance[] {
   const b = bound(index);
-  return [ja(`今度の、${platform}番線の電車は、山手線外回り、${b.jp}方面行きです。`)];
+  return [ja(`今度の、${platform}番線の電車は、${LOOP_JP}、${b.jp}方面行きです。`)];
 }
 
 /** Remerciement d'ouverture, parfois posé avant la pré-annonce. */
@@ -76,7 +76,7 @@ export function platformApproachAnnouncement(
   const b = bound(index);
   return [
     ja(
-      `まもなく、${platform}番線に、山手線外回り、${b.jp}方面行きがまいります。` +
+      `まもなく、${platform}番線に、${LOOP_JP}、${b.jp}方面行きがまいります。` +
         '危ないですから、黄色い点字ブロックまで、お下がりください。',
     ),
     en(

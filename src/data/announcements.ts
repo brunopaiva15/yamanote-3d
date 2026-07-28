@@ -9,6 +9,17 @@ export interface Utterance {
   lang: 'ja-JP' | 'en-US';
 }
 
+/**
+ * Sens de circulation, tel qu'il est annoncé.
+ *
+ * Le jeu tourne en 内回り (`store.loopDirection`) : STATIONS[i] → STATIONS[i+1],
+ * soit 東京 → 神田 → 上野 → 池袋 → 新宿 → 渋谷 → 品川 → 東京. C'est bien la
+ * boucle INTÉRIEURE ; le 外回り fait le tour dans l'autre sens. Déclaré une
+ * seule fois, pour la rame et pour le quai : les deux sonorisations ne peuvent
+ * pas se contredire sur le sens du train qu'elles annoncent.
+ */
+export const LOOP_JP = '山手線内回り';
+
 // Grandes gares de la boucle, servant de repères pour l'annonce du sens.
 // (index 0-based dans STATIONS : 東京, 上野, 池袋, 新宿, 渋谷, 品川.)
 const MAJOR_HUBS = new Set([0, 4, 12, 16, 19, 24]);
@@ -18,7 +29,7 @@ export function isMajorHub(index: number): boolean {
   return MAJOR_HUBS.has(((index % 30) + 30) % 30);
 }
 
-// Les 1 à 2 prochains grands hubs à partir de `from` (sens +1, boucle extérieure).
+// Les 1 à 2 prochains grands hubs à partir de `from` (sens +1, boucle intérieure).
 // Partagé avec les annonces de quai (data/stationAnnouncements) : la gare et la
 // rame doivent nommer les mêmes repères de direction.
 export function nextHubs(from: number, count: number): Station[] {
@@ -48,14 +59,14 @@ export function spokenJy(jy: string): string {
 // --- Blocs élémentaires ---
 
 // Annonce du sens de la boucle, dite après le départ des grandes gares.
-// La Yamanote n'a pas de terminus : on annonce le sens (外回り) et 1 à 2 gares repères.
+// La Yamanote n'a pas de terminus : on annonce le sens (内回り) et 1 à 2 gares repères.
 export function directionAnnouncement(index: number): Utterance[] {
   const hubs = nextHubs(index, 2);
   const jpHubs = hubs.map((h) => h.kanji).join('・');
   const enHubs =
     hubs.length === 2 ? `${hubs[0].romaji} and ${hubs[1].romaji}` : hubs[0].romaji;
   return [
-    { text: `この電車は、山手線外回り、${jpHubs}方面ゆきです。`, lang: 'ja-JP' },
+    { text: `この電車は、${LOOP_JP}、${jpHubs}方面ゆきです。`, lang: 'ja-JP' },
     { text: `This is a Yamanote Line train bound for ${enHubs}.`, lang: 'en-US' },
   ];
 }
