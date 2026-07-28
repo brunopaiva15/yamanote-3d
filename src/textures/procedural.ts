@@ -4,7 +4,8 @@
 
 import * as THREE from 'three';
 import { AD_PALETTES, AD_SUBS, AD_WORDS } from '../data/ads';
-import { STATIONS, TRANSFERS } from '../data/stations';
+import { STATIONS, TRANSFERS, directionBoardStations } from '../data/stations';
+import { PLATFORM_NUMBERS } from '../data/platforms';
 import { lineInfo, stationExits } from '../data/lines';
 import { GENERIC, type District, type Feat } from '../data/districts';
 import type { Appearance } from '../systems/appearance';
@@ -2224,6 +2225,76 @@ export function makeTransferSign(): {
         g.fillStyle = '#141414';
       }
     }
+
+    texture.needsUpdate = true;
+  };
+  return { texture, redraw };
+}
+
+// --- Panneau de quai 番線 : le vrai marqueur visuel d'un quai Yamanote ---
+//
+// Grand aplat uguisu, numéro de voie en réserve blanche, badge JY, 山手線 avec
+// le sens de la boucle, et la chaîne des gares desservies terminée par 方面.
+// C'est ce panneau — pas l'affiche de sortie — qu'on voit en premier sur les
+// photos de quai, et il manquait complètement.
+
+export function makePlatformNumberSign(): {
+  texture: THREE.CanvasTexture;
+  redraw: (index: number) => void;
+} {
+  const W = 1400;
+  const H = 300;
+  const { c, g } = makeCanvas(W, H);
+  const texture = toTexture(c);
+  const GREEN = '#7dbe3c';
+
+  const redraw = (index: number) => {
+    const jy = STATIONS[index].jy;
+    // Le jeu tourne en 外回り (voir directionAnnouncement) : c'est ce quai-là.
+    const track = PLATFORM_NUMBERS[jy]?.outer ?? 1;
+    const ahead = directionBoardStations(index, 5);
+
+    g.fillStyle = GREEN;
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#e8ecea';
+    g.lineWidth = 8;
+    g.strokeRect(4, 4, W - 8, H - 8);
+
+    // Numéro de voie, en réserve, calé à gauche.
+    g.fillStyle = '#ffffff';
+    g.textAlign = 'center';
+    g.textBaseline = 'alphabetic';
+    g.font = `bold 210px ${JP_FONT}`;
+    g.fillText(String(track), 118, H - 62);
+
+    // Badge JY, façon pictogramme de ligne.
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = 7;
+    g.beginPath();
+    g.roundRect(212, 42, 92, 92, 14);
+    g.stroke();
+    g.font = `bold 52px ${JP_FONT}`;
+    fitFillText(g, 'JY', 258, 106, 78, 52, 'bold');
+
+    // Nom de ligne et sens.
+    g.textAlign = 'left';
+    g.font = `bold 76px ${JP_FONT}`;
+    g.fillText('山手線', 336, 108);
+    g.font = `bold 46px ${JP_FONT}`;
+    g.fillText('（外回り）', 594, 104);
+    g.font = `30px ${JP_FONT}`;
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    g.fillText('Yamanote Line', 338, 148);
+
+    // Filet séparateur puis la chaîne des gares desservies.
+    g.fillStyle = 'rgba(255,255,255,0.55)';
+    g.fillRect(336, 168, W - 396, 3);
+    g.fillStyle = '#ffffff';
+    fitFillText(g, `${ahead.map((s) => s.kanji).join('・')}方面`, 336, 226, W - 396, 54, 'bold');
+    g.fillStyle = 'rgba(255,255,255,0.92)';
+    const en = ahead.map((s) => s.romaji);
+    const enLine = `for ${en.slice(0, -1).join(', ')} & ${en[en.length - 1]}`;
+    fitFillText(g, enLine, 338, 268, W - 396, 30);
 
     texture.needsUpdate = true;
   };

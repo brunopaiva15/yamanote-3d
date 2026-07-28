@@ -126,3 +126,20 @@ export const TRANSFERS: Record<string, { jp: string; en: string }> = {
   },
   JY30: { jp: '京浜東北線、東京メトロ有楽町線', en: 'the Keihin-Tohoku Line and the Tokyo Metro Yurakucho Line' },
 };
+
+/**
+ * Gares listées sur le panneau de direction suspendu au-dessus du quai
+ * (「原宿・代々木・新宿・池袋・上野方面」).
+ *
+ * Un vrai panneau ne liste pas les gares suivantes une à une : il donne la
+ * prochaine, puis les repères — celles où l'on change de ligne. TRANSFERS est
+ * exactement cette liste, et sert déjà aux annonces de correspondance.
+ */
+export function directionBoardStations(index: number, max = 5): Station[] {
+  const out: Station[] = [STATIONS[(index + 1) % 30]];
+  for (let step = 2; step < 30 && out.length < max; step++) {
+    const st = STATIONS[(index + step) % 30];
+    if (TRANSFERS[st.jy]) out.push(st);
+  }
+  return out;
+}

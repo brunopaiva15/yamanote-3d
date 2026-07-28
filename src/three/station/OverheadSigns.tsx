@@ -18,7 +18,7 @@ import { PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
 import type { StationLayout } from '../../data/stationLayouts';
 import { runtime } from '../../systems/runtime';
 import type { StationPlacement } from '../../systems/stationPlacement';
-import { makeExitSign, makeTransferSign } from '../../textures/procedural';
+import { makeExitSign, makePlatformNumberSign, makeTransferSign } from '../../textures/procedural';
 
 /** Hauteur libre sous les panneaux : on passe dessous sans se baisser. */
 const SIGN_BOTTOM = 2.35;
@@ -37,6 +37,7 @@ export function OverheadSigns({ place, layout, station }: Props) {
     () => ({
       exits: [makeExitSign(0), makeExitSign(1)],
       transfer: makeTransferSign(),
+      track: makePlatformNumberSign(),
     }),
     [],
   );
@@ -46,6 +47,7 @@ export function OverheadSigns({ place, layout, station }: Props) {
         (s) => new THREE.MeshBasicMaterial({ map: s.texture, toneMapped: false }),
       ),
       transfer: new THREE.MeshBasicMaterial({ map: signs.transfer.texture, toneMapped: false }),
+      track: new THREE.MeshBasicMaterial({ map: signs.track.texture, toneMapped: false }),
       frame: new THREE.MeshStandardMaterial({ color: '#15171a', roughness: 0.5, metalness: 0.3 }),
       strut: new THREE.MeshStandardMaterial({ color: '#8d9399', roughness: 0.4, metalness: 0.6 }),
     }),
@@ -55,6 +57,7 @@ export function OverheadSigns({ place, layout, station }: Props) {
   useEffect(() => {
     for (const s of signs.exits) s.redraw(station);
     signs.transfer.redraw(station);
+    signs.track.redraw(station);
   }, [signs, station]);
 
   // Les panneaux ne s'allument pas tant que le quai n'est pas là : redessiner
@@ -85,8 +88,48 @@ export function OverheadSigns({ place, layout, station }: Props) {
   const panelW = Math.min(2.05, span / 2 - 0.12);
   const top = SIGN_BOTTOM + SIGN_H;
 
+  // Panneaux 番線, suspendus près du bord de quai. Centrés sur le milieu du
+  // quai et espacés de trente-six mètres : quel que soit l'endroit où l'on
+  // descend de la rame, il y en a toujours un dans le champ — c'est le repère
+  // qu'on cherche des yeux en arrivant sur un quai.
+  const trackSigns = useMemo(() => {
+    const out: number[] = [];
+    const halfZ = place.walkHalfZ;
+    for (let k = -3; k <= 3; k++) {
+      const z = k * 36;
+      if (Math.abs(z) <= halfZ - 8) out.push(z);
+    }
+    return out;
+  }, [place.walkHalfZ]);
+
   return (
     <group ref={root}>
+      {trackSigns.map((z) => (
+        <group key={`tk${z}`} position={[PSD_X + 1.5, PLATFORM_TOP + SIGN_BOTTOM + 0.34, z]}>
+          {[-1, 1].map((d) => {
+            const hangH = layout.canopyY - PLATFORM_TOP - SIGN_BOTTOM - 0.71;
+            return (
+              <mesh key={d} position={[d * 1.05, 0.37 + hangH / 2, 0]} material={mats.strut}>
+                <boxGeometry args={[0.05, Math.max(0.1, hangH), 0.05]} />
+              </mesh>
+            );
+          })}
+          <mesh material={mats.frame}>
+            <boxGeometry args={[3.24, 0.74, 0.09]} />
+          </mesh>
+          {[1, -1].map((d) => (
+            <mesh
+              key={d}
+              position={[0, 0, d * 0.051]}
+              rotation={[0, d === 1 ? 0 : Math.PI, 0]}
+              material={mats.track}
+            >
+              <planeGeometry args={[3.16, 0.66]} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+
       {gantries.map(({ z, i }) => (
         <group key={`ov${z}`} position={[0, PLATFORM_TOP, z]}>
           {/* Traverse et suspentes jusqu'à la sous-face de l'auvent. */}
