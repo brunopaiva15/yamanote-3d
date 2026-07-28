@@ -30,6 +30,12 @@ export interface ControlHint {
   action: string;
 }
 
+/** Une ligne du même pense-bête, version tactile : un geste ou un bouton. */
+export interface TouchHint {
+  gestures: readonly string[];
+  action: string;
+}
+
 export interface Strings {
   /** Valeur de l'attribut lang du document. */
   htmlLang: string;
@@ -42,6 +48,8 @@ export interface Strings {
     board: string;
     loading: string;
     controls: readonly ControlHint[];
+    /** Affiché à la place de `controls` sur un écran tactile. */
+    touchControls: readonly TouchHint[];
     tokyoTime: string;
   };
 
@@ -112,6 +120,13 @@ const FR: Strings = {
       { keys: ['M'], action: 'Son' },
       { keys: ['F'], action: 'Plein écran' },
     ],
+    touchControls: [
+      { gestures: ['Glisser'], action: 'Regarder autour' },
+      { gestures: ['Joystick'], action: 'Marcher' },
+      { gestures: ['S’asseoir'], action: 'S’asseoir / se lever' },
+      { gestures: ['Porte'], action: 'Descendre / monter' },
+      { gestures: ['Son'], action: 'Couper le son' },
+    ],
     tokyoTime: 'Heure à Tokyo',
   },
   hud: {
@@ -177,6 +192,13 @@ const EN: Strings = {
       { keys: ['M'], action: 'Sound' },
       { keys: ['F'], action: 'Fullscreen' },
     ],
+    touchControls: [
+      { gestures: ['Drag'], action: 'Look around' },
+      { gestures: ['Joystick'], action: 'Walk' },
+      { gestures: ['Sit down'], action: 'Sit down / stand up' },
+      { gestures: ['Doorway'], action: 'Get off / board' },
+      { gestures: ['Sound'], action: 'Mute or unmute' },
+    ],
     tokyoTime: 'Tokyo time',
   },
   hud: {
@@ -240,6 +262,13 @@ const JA: Strings = {
       { keys: ['Shift'], action: '早歩き' },
       { keys: ['M'], action: '音声' },
       { keys: ['F'], action: '全画面' },
+    ],
+    touchControls: [
+      { gestures: ['スワイプ'], action: '見まわす' },
+      { gestures: ['スティック'], action: '歩く' },
+      { gestures: ['座る'], action: '座る / 立つ' },
+      { gestures: ['出入口'], action: '降りる / 乗る' },
+      { gestures: ['音声'], action: '音を消す' },
     ],
     tokyoTime: '東京の現在時刻',
   },
