@@ -738,17 +738,26 @@ function Stairwell({ s, m, station }: { s: Placed; m: Mats; station: number }) {
       </mesh>
 
       {/* Affiches sur les joues de la gaine : c'est ce qu'on a sous les yeux en
-          descendant, et sans elles la trémie n'est qu'un puits gris. */}
-      {[-1, 1].map((d, k) => (
-        <mesh
-          key={`ad${d}`}
-          position={[d * (ix - 0.02), -0.62 - k * 0.34, nose + (2.6 + k * 1.9) * STAIR_GOING]}
-          rotation={[0, d === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
-          material={stationAd(station, k + 1, true)}
-        >
-          <planeGeometry args={[0.62, 0.9]} />
-        </mesh>
-      ))}
+          descendant, et sans elles la trémie n'est qu'un puits gris.
+          Chacune est calée SUR SA MARCHE — la hauteur de joue disponible varie
+          tout au long de la volée, une affiche posée à hauteur fixe se
+          retrouverait à moitié enterrée dans les girons. */}
+      {[
+        { d: 1, t: 1.87, w: 0.62, h: 0.6 },
+        { d: -1, t: 3.4, w: 0.7, h: 1.0 },
+      ].map(({ d, t, w, h }, k) => {
+        const tread = -Math.floor(t / STAIR_GOING) * STAIR_RISE;
+        return (
+          <mesh
+            key={`ad${d}`}
+            position={[d * (ix - 0.02), tread + h / 2 + 0.14, nose + t]}
+            rotation={[0, d === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
+            material={stationAd(station, k + 1, true)}
+          >
+            <planeGeometry args={[w, h]} />
+          </mesh>
+        );
+      })}
 
       {/* Fléchage de sortie, porté par deux montants qui prennent appui sur
           la balustrade — il pendait jusqu'ici en l'air. */}
