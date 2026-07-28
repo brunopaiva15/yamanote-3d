@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { paxList, POOL_SIZE, initPassengers } from '../systems/passengers';
 import type { Appearance } from '../systems/appearance';
+import { isPairAction } from '../data/paxActions';
 import { runtime } from '../systems/runtime';
 import { makeFaceTexture, makeStripeTexture, makePlaidTexture } from '../textures/procedural';
 import { usesHeldPose } from './characters/props';
@@ -583,8 +584,20 @@ export function ProceduralPassengers() {
         p.pos.y + p.bob,
         p.pos.z,
       );
+      // Assis en discussion : lean/roll du wrap = 0 (sinon pieds qui glissent).
+      const lean =
+        seated && isPairAction(p.action)
+          ? 0
+          : seated
+            ? Math.min(p.bodyLean, 0.08)
+            : p.bodyLean;
       // YXZ : cap, puis buste dans le repère du personnage (cf. LibraryPassengers).
-      r.group.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll, 'YXZ');
+      r.group.rotation.set(
+        lean,
+        p.yaw,
+        standingSway + seatedSway + (seated ? 0 : p.bodyRoll),
+        'YXZ',
+      );
       r.group.scale.setScalar(p.height);
       applyBodyPivot(r.group, p.bodyPivot, p.height);
       if (r.lower) r.lower.visible = !seated;

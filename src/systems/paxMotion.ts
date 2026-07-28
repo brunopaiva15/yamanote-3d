@@ -137,16 +137,17 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       const wave = Math.sin(t * 2.6 + role * Math.PI);
       const speaking = wave > 0.05;
       if (motion === 'agree') {
-        // Hochements d'acquiescement synchrones, regard tenu.
-        return set(yaw, 0.1 + Math.max(0, Math.sin(t * 4.2)) * 0.12, 0.03, 7, 0, 0, Math.sin(t * 1.3) * 0.08);
+        // Hochements d'acquiescement synchrones, regard tenu (tête seule).
+        return set(yaw, 0.1 + Math.max(0, Math.sin(t * 4.2)) * 0.12, 0, 7, 0, 0, Math.sin(t * 1.3) * 0.08);
       }
       if (speaking) {
-        // Parole silencieuse : hochements rythmés, buste un peu en avant.
+        // Parole silencieuse : hochements rythmés — pas de lean (sinon les
+        // pieds glissent sur le coussin quand on est assis).
         const jab = Math.max(0, Math.sin(t * (motion === 'gossip' ? 9 : 7.5)));
         return set(
           yaw + Math.sin(t * 3.1) * 0.04,
           0.06 + jab * (motion === 'gossip' ? 0.18 : 0.14),
-          0.05 + jab * 0.04,
+          0,
           8,
           0,
           0,
@@ -158,7 +159,7 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       return set(
         yaw * 0.95,
         0.1 + listenNod,
-        0.025,
+        0,
         6,
         0,
         0,
@@ -173,7 +174,7 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       return set(
         yaw,
         speaking ? 0.18 + Math.max(0, Math.sin(t * 6)) * 0.08 : 0.14,
-        0.09,
+        0,
         6,
         0,
         0,
@@ -183,13 +184,13 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
     case 'laugh': {
       if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
       const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
-      // Rire silencieux : tête qui rebondit, léger penché complice.
+      // Rire silencieux : tête qui rebondit, léger penché complice (tête seule).
       return set(
         yaw + Math.sin(t * 3) * 0.08,
         0.05 + Math.abs(Math.sin(t * 8.5)) * 0.2,
-        0.06,
+        0,
         11,
-        Math.sin(t * 6) * 0.06,
+        0,
         0,
         0.1 + Math.sin(t * 4) * 0.08,
       );
@@ -197,11 +198,10 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
     case 'flirt': {
       if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
       const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
-      // Regard tenu, sourire (tête penchée), petit hochement.
       return set(
         yaw * 0.9,
         0.06 + Math.sin(t * 2.4 + role) * 0.05,
-        0.04,
+        0,
         5,
         0,
         0,
@@ -217,7 +217,8 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
     }
     case 'couple': {
       if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
-      return set(headYawToward(ctx, ctx.partnerX, ctx.partnerZ) * 0.55, 0.06, 0.07);
+      // Assis : inclinaison de tête seulement (pas de lean buste → pieds stables).
+      return set(headYawToward(ctx, ctx.partnerX, ctx.partnerZ) * 0.55, 0.06, 0, 5, 0, 0, 0.08);
     }
     case 'point': {
       // Regard vers la vitre, partenaire en périphérie.

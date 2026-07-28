@@ -577,35 +577,6 @@ function applyAction(p: Pax, id: PaxAction, dur: number, partner: Pax | null = n
   if (id === 'fall' || id === 'stumble') reactToFall(p, id === 'fall');
 }
 
-/** Voisins qui regardent quand le JOUEUR trébuche dans l'allée. */
-export function reactToPlayerFall(hard: boolean): void {
-  const px = runtime.playerCarX;
-  const pz = runtime.playerCarZ;
-  const radius = hard ? 3.2 : 2.2;
-  let n = 0;
-  for (const other of paxList) {
-    if (other.state !== 'seated' && other.state !== 'standing') continue;
-    if (isPairAction(other.action) || isFallingAction(other.action)) continue;
-    if (other.action === 'doze' || other.action === 'sneeze') continue;
-    if (Math.hypot(other.pos.x - px, other.pos.z - pz) > radius) continue;
-    endPair(other);
-    other.partner = -1;
-    other.action = 'look';
-    other.actionT = 0;
-    other.actionDur = hard ? 2.5 + Math.random() * 1.5 : 1.6 + Math.random();
-    const world = Math.atan2(px - other.pos.x, pz - other.pos.z);
-    let d = world - other.yaw;
-    while (d > Math.PI) d -= Math.PI * 2;
-    while (d < -Math.PI) d += Math.PI * 2;
-    other.lookYawTarget = THREE.MathUtils.clamp(d, -1.15, 1.15);
-    if (hard && Math.random() < 0.35) {
-      other.action = 'gasp';
-      other.actionDur = 1.2;
-    }
-    if (++n >= 5) break;
-  }
-}
-
 /** Voisins qui regardent / étouffent un rire quand quelqu'un trébuche. */
 function reactToFall(fallen: Pax, hard: boolean): void {
   const radius = hard ? 2.8 : 1.8;
@@ -958,6 +929,22 @@ export function updatePassengers(dt: number): void {
       seatSide,
     });
     const speedMul = isDramaAction(p.action) || isFallingAction(p.action) ? 1.25 : 1;
+    // Assis : la discussion ne doit bouger que la tête — lean/roll du groupe
+    // faisait glisser les pieds / décaler latéralement sur le coussin.
+    if (p.state === 'seated') {
+      m.roll = 0;
+      if (isPairAction(p.action)) {
+        m.lean = 0;
+        p.bodyLean = 0;
+        p.bodyRoll = 0;
+      }
+      if (p.seatSlot >= 0) {
+        const s = SEAT_SLOTS[p.seatSlot];
+        p.pos.x = s.x;
+        p.pos.z = s.z;
+        p.yaw = p.targetYaw;
+      }
+    }
     p.headYaw += (m.yaw - p.headYaw) * Math.min(1, dt * m.speed * speedMul);
     p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed * speedMul);
     p.headRoll += (m.headRoll - p.headRoll) * Math.min(1, dt * m.speed * speedMul);

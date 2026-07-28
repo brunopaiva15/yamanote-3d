@@ -12,6 +12,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { paxList, initPassengers } from '../systems/passengers';
 import type { Appearance } from '../systems/appearance';
+import { isPairAction } from '../data/paxActions';
 import { runtime } from '../systems/runtime';
 import { CONFIG } from '../data/config';
 import { rng } from '../textures/procedural';
@@ -124,11 +125,23 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
         p.pos.y + p.bob + s.seatFix,
         p.pos.z,
       );
+      // Assis en discussion : lean/roll du wrap = 0 (sinon pieds qui glissent).
+      const lean =
+        seated && isPairAction(p.action)
+          ? 0
+          : seated
+            ? Math.min(p.bodyLean, 0.08)
+            : p.bodyLean;
       // YXZ : le cap d'abord, PUIS le buste dans le repère du personnage. En
       // XYZ (l'ordre par défaut), `bodyLean` bascule autour du X du MONDE : un
       // assis, tourné vers la vitre, penchait de côté au lieu de se pencher en
       // avant, et un debout sur deux tombait à la renverse.
-      wrap.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll, 'YXZ');
+      wrap.rotation.set(
+        lean,
+        p.yaw,
+        standingSway + seatedSway + (seated ? 0 : p.bodyRoll),
+        'YXZ',
+      );
       wrap.scale.setScalar(p.height);
       applyBodyPivot(wrap, p.bodyPivot, p.height);
 
