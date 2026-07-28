@@ -37,6 +37,8 @@ import {
 } from '../../data/stationGeometry';
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
 import { Barrier } from './Barrier';
+import { stationAd } from './adPool';
+import { PlatformAds } from './PlatformAds';
 import { PlatformSignage } from './PlatformSignage';
 import { Signature } from './Signature';
 import { psdLayout } from './psdLayout';
@@ -159,6 +161,14 @@ function makeStationMaterials(p: StationPalette, textures: StationTextures) {
         emissiveIntensity: 0.14,
       }),
       wallDark: new THREE.MeshStandardMaterial({ color: p.column, roughness: 0.9 }),
+      // Faïence de soubassement : c'est elle qui casse le tout-gris du fond.
+      tile: new THREE.MeshStandardMaterial({
+        color: p.tile,
+        roughness: 0.42,
+        metalness: 0.04,
+        emissive: p.tile,
+        emissiveIntensity: 0.1,
+      }),
       bench: new THREE.MeshStandardMaterial({ color: '#6a5a48', roughness: 0.88 }),
       metal: new THREE.MeshStandardMaterial({ color: '#7a8088', roughness: 0.45, metalness: 0.55 }),
       frame: new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.55, metalness: 0.35 }),
@@ -213,7 +223,9 @@ export function Station() {
     floor.repeat.set(3, Math.round(layout.length / 7));
     const tactile = makeTactileTexture();
     tactile.repeat.set(1, Math.round(layout.length / 3.4));
-    return { floor, tactile, ads: [makeAdTexture(4101, true), makeAdTexture(4102, true)] };
+    // Fonds francs, comme les caissons du quai : le distributeur et le kiosque
+    // portent des affiches, pas des aplats crème sur un décor déjà clair.
+    return { floor, tactile, ads: [makeAdTexture(4101, true, true), makeAdTexture(4102, true, true)] };
   }, [layout.length]);
 
   const m = useMemo(() => makeStationMaterials(layout.palette, textures), [layout.palette, textures]);
@@ -502,8 +514,12 @@ export function Station() {
       {/* Trémies d'escalier : la dalle est percée, donc elles font partie de la
           structure — jamais retirées par un palier de qualité. */}
       {place.stairs.map((s, i) => (
-        <Stairwell key={`stair${i}`} s={s} m={m} />
+        <Stairwell key={`stair${i}`} s={s} m={m} station={index} />
       ))}
+
+      {/* Affichage publicitaire : caissons du mur, colonnes habillées,
+          bannières suspendues, allèges de portes palières. */}
+      <PlatformAds place={place} layout={layout} segs={segs} station={index} detail={detail} />
 
       {detail <= 2 && <Amenities place={place} canopyY={canopyY} m={m} />}
 
@@ -587,6 +603,7 @@ function Backdrop({
         <mesh position={[backX, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
           <boxGeometry args={[0.22, wallH, len]} />
         </mesh>
+        <Wainscot backX={backX - 0.11} len={len} m={m} />
         <mesh position={[backX + 0.1, PLATFORM_TOP + wallH + 1.6, 0]} material={m.wallDark}>
           <boxGeometry args={[0.4, 3.2, len]} />
         </mesh>
@@ -619,11 +636,30 @@ function Backdrop({
       <mesh position={[backX, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
         <boxGeometry args={[0.18, wallH, len]} />
       </mesh>
+      <Wainscot backX={backX - 0.09} len={len} m={m} />
       <mesh position={[backX - 0.02, PLATFORM_TOP + wallH - 0.6, 0]} material={m.wallDark}>
         <boxGeometry args={[0.2, 0.35, len]} />
       </mesh>
       <mesh position={[backX - 0.03, PLATFORM_TOP + wallH - 0.92, 0]} material={m.accent}>
         <boxGeometry args={[0.08, 0.1, len]} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * Soubassement carrelé du mur de fond : un aplat chaud d'un mètre de haut,
+ * couronné du liseré uguisu de la ligne. Sans lui le fond du quai est un aplat
+ * de béton clair sur toute sa hauteur — le « trop blanc et gris » du décor.
+ */
+function Wainscot({ backX, len, m }: { backX: number; len: number; m: Mats }) {
+  return (
+    <group>
+      <mesh position={[backX - 0.015, PLATFORM_TOP + 0.52, 0]} material={m.tile}>
+        <boxGeometry args={[0.05, 1.04, len]} />
+      </mesh>
+      <mesh position={[backX - 0.025, PLATFORM_TOP + 1.07, 0]} material={m.accent}>
+        <boxGeometry args={[0.07, 0.07, len]} />
       </mesh>
     </group>
   );
@@ -639,7 +675,7 @@ function Backdrop({
  * Repère local : origine au centre de l'emprise, au niveau du sol du quai. La
  * volée descend vers +z ; l'entrée est donc côté -z, dégagée.
  */
-function Stairwell({ s, m }: { s: Placed; m: Mats }) {
+function Stairwell({ s, m, station }: { s: Placed; m: Mats; station: number }) {
   const ix = s.halfX - STAIR_OPENING_INSET; // demi-largeur de l'ouverture
   const width = ix * 2 - 0.04;
   const nose = -s.halfZ; // nez de la volée, en repère local
@@ -700,6 +736,19 @@ function Stairwell({ s, m }: { s: Placed; m: Mats }) {
       <mesh position={[0, 0.5, s.halfZ - 0.07]} material={m.wall}>
         <boxGeometry args={[s.halfX * 2, 1, 0.14]} />
       </mesh>
+
+      {/* Affiches sur les joues de la gaine : c'est ce qu'on a sous les yeux en
+          descendant, et sans elles la trémie n'est qu'un puits gris. */}
+      {[-1, 1].map((d, k) => (
+        <mesh
+          key={`ad${d}`}
+          position={[d * (ix - 0.02), -0.62 - k * 0.34, nose + (2.6 + k * 1.9) * STAIR_GOING]}
+          rotation={[0, d === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
+          material={stationAd(station, k + 1, true)}
+        >
+          <planeGeometry args={[0.62, 0.9]} />
+        </mesh>
+      ))}
 
       {/* Fléchage de sortie, porté par deux montants qui prennent appui sur
           la balustrade — il pendait jusqu'ici en l'air. */}

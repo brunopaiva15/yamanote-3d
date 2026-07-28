@@ -1,0 +1,177 @@
+// Publicité de quai.
+//
+// Un quai japonais n'est pas une nappe de béton clair : c'est un couloir tapissé
+// d'affiches. Caissons lumineux au mur du fond, colonnes habillées de bandeaux
+// verticaux, bannières suspendues dans l'axe, panneaux collés sur les portes
+// palières. Sans eux, la gare rendait exactement ce que le joueur a signalé —
+// blanc et gris d'un bout à l'autre.
+//
+// Les visuels viennent du pool commun (adPool) : construits une fois pour la
+// session, seul leur agencement change d'une gare à l'autre.
+
+import { useMemo } from 'react';
+import { PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
+import type { StationLayout } from '../../data/stationLayouts';
+import type { StationPlacement } from '../../systems/stationPlacement';
+import { adPool, stationAd } from './adPool';
+
+interface Props {
+  place: StationPlacement;
+  layout: StationLayout;
+  /** Murets pleins des portes palières, pour y coller des affiches. */
+  segs: { z0: number; z1: number }[];
+  station: number;
+  /** Palier de qualité : plus il monte, moins on garde de familles d'affiches. */
+  detail: number;
+}
+
+export function PlatformAds({ place, layout, segs, station, detail }: Props) {
+  const p = adPool();
+  const backX = place.backX;
+  const half = layout.length / 2;
+  const midX = PSD_X + layout.depth * 0.55;
+
+  /**
+   * Y a-t-il un vrai mur derrière ? Sinon (viaduc, quai en îlot) le fond n'est
+   * qu'un garde-corps d'un mètre vingt : les caissons s'y posent DESSUS, sur
+   * pieds, au lieu d'être encastrés — c'est exactement ce qu'on voit sur les
+   * quais aériens de la boucle.
+   */
+  const onWall = layout.backdrop === 'wall' || layout.backdrop === 'retaining';
+
+  // --- Caissons du fond de quai --------------------------------------
+  const wallAds = useMemo(() => {
+    // Ce qui monte assez haut pour masquer l'affiche.
+    const blockers = [
+      ...place.vending.map((v) => ({ z: v.z, r: v.halfZ + 1.3 })),
+      ...(place.kiosk ? [{ z: place.kiosk.z, r: place.kiosk.halfZ + 1.6 }] : []),
+      ...(place.elevator ? [{ z: place.elevator.z, r: place.elevator.halfZ + 1.6 }] : []),
+      ...place.stairs.map((s) => ({ z: s.z, r: s.halfZ + 0.8 })),
+    ];
+    const out: { z: number; i: number }[] = [];
+    const step = 10.5;
+    // Décalé d'un demi-entraxe de pilier : une affiche derrière un poteau ne se
+    // lit pas.
+    const phase = layout.columnSpacing / 2;
+    for (let z = -half + 7 + phase; z <= half - 7; z += step) {
+      if (blockers.some((b) => Math.abs(z - b.z) < b.r)) continue;
+      out.push({ z, i: out.length });
+    }
+    return out;
+  }, [layout.columnSpacing, half, place]);
+
+  // --- Bandeaux verticaux sur les piliers ----------------------------
+  const columnAds = useMemo(
+    () => (detail > 1 ? [] : place.columns.map((z, i) => ({ z, i }))),
+    [place.columns, detail],
+  );
+
+  // --- Bannières suspendues dans l'axe -------------------------------
+  // Elles passent à l'aplomb des trémies et des escaliers mécaniques : au droit
+  // de l'un d'eux, la bannière traverserait le fléchage de sortie ou la gaine.
+  const hanging = useMemo(() => {
+    if (detail > 1) return [];
+    const clear = [...place.stairs, ...place.escalators].map((s) => ({ z: s.z, r: s.halfZ + 2.2 }));
+    const out: { z: number; i: number }[] = [];
+    for (let z = -half + 18; z <= half - 18; z += 26) {
+      if (clear.some((c) => Math.abs(z - c.z) < c.r)) continue;
+      out.push({ z, i: out.length });
+    }
+    return out;
+  }, [half, detail, place.stairs, place.escalators]);
+
+  // --- Affiches collées sur les murets de portes palières ------------
+  // Un muret sur deux, et seulement les plus larges : les chutes de trame ne
+  // reçoivent rien.
+  const psdAds = useMemo(() => {
+    if (detail > 2) return [];
+    const out: { z: number; i: number }[] = [];
+    segs.forEach((s, k) => {
+      if (k % 2 !== 1) return;
+      if (s.z1 - s.z0 < 1.7) return;
+      out.push({ z: (s.z0 + s.z1) / 2, i: out.length });
+    });
+    return out;
+  }, [segs, detail]);
+
+  return (
+    <group>
+      {/* Caissons lumineux du fond de quai : monture noire, visuel rétroéclairé.
+          Calés au-dessus du liseré qui couronne la faïence (1,10 m) et du
+          dossier des bancs — rien ne vient mordre l'affiche. */}
+      {wallAds.map(({ z, i }) => (
+        <group
+          key={`wa${z}`}
+          position={[onWall ? backX - 0.09 : backX - 0.17, PLATFORM_TOP + (onWall ? 1.88 : 2.02), z]}
+        >
+          <mesh material={p.frame}>
+            <boxGeometry args={[0.1, 1.36, 2.16]} />
+          </mesh>
+          <mesh position={[-0.055, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={stationAd(station, i)}>
+            <planeGeometry args={[2.0, 1.2]} />
+          </mesh>
+          {/* Sans mur derrière : deux pieds qui prennent appui sur le
+              garde-corps, et un dos plein pour ne pas voir au travers. */}
+          {!onWall && (
+            <>
+              <mesh position={[0.052, 0, 0]} rotation={[0, Math.PI / 2, 0]} material={p.housing}>
+                <planeGeometry args={[2.16, 1.36]} />
+              </mesh>
+              {[-1, 1].map((d) => (
+                <mesh key={d} position={[0.02, -1.06, d * 0.9]} material={p.frame}>
+                  <boxGeometry args={[0.08, 0.76, 0.08]} />
+                </mesh>
+              ))}
+            </>
+          )}
+        </group>
+      ))}
+
+      {/* Colonnes habillées : un bandeau vertical côté voie. */}
+      {columnAds.map(({ z, i }) => (
+        <group key={`ca${z}`} position={[backX - 0.71, PLATFORM_TOP + 1.55, z]}>
+          <mesh position={[0.015, 0, 0]} material={p.housing}>
+            <boxGeometry args={[0.03, 1.18, 0.3]} />
+          </mesh>
+          <mesh position={[-0.006, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={stationAd(station, i, true)}>
+            <planeGeometry args={[0.27, 1.1]} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Bannières suspendues, recto-verso : elles ferment la perspective du
+          quai comme les nakazuri ferment celle du wagon. */}
+      {hanging.map(({ z, i }) => (
+        <group key={`ha${z}`} position={[midX - 1.5, layout.canopyY - 0.62, z]}>
+          {[-1, 1].map((d) => (
+            <mesh key={d} position={[d * 1.0, 0.42, 0]} material={p.frame}>
+              <boxGeometry args={[0.04, 0.62, 0.04]} />
+            </mesh>
+          ))}
+          <mesh material={p.frame}>
+            <boxGeometry args={[2.3, 0.82, 0.05]} />
+          </mesh>
+          <mesh position={[0, 0, 0.031]} material={stationAd(station, i + 4)}>
+            <planeGeometry args={[2.2, 0.72]} />
+          </mesh>
+          <mesh position={[0, 0, -0.031]} rotation={[0, Math.PI, 0]} material={stationAd(station, i + 7)}>
+            <planeGeometry args={[2.2, 0.72]} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Portes palières : bandeau publicitaire sur l'allège, sous la partie
+          vitrée du muret — c'est la seule surface pleine disponible. */}
+      {psdAds.map(({ z, i }) => (
+        <mesh
+          key={`pa${z}`}
+          position={[PSD_X + 0.056, PLATFORM_TOP + 0.37, z]}
+          rotation={[0, Math.PI / 2, 0]}
+          material={stationAd(station, i + 2)}
+        >
+          <planeGeometry args={[1.6, 0.5]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
