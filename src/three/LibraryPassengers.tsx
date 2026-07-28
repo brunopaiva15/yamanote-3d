@@ -124,7 +124,7 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
         p.pos.y + p.bob + s.seatFix,
         p.pos.z,
       );
-      wrap.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway);
+      wrap.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll);
       wrap.scale.setScalar(p.height);
 
       // --- Animation puis overrides d'os (le mixer réécrit la pose). Les os

@@ -12,7 +12,11 @@ export interface MotionTargets {
   yaw: number;
   pitch: number;
   lean: number;
-  /** Vitesse de lissage (sneeze/cough plus vifs). */
+  /** Roulis du buste (chute latérale). */
+  roll: number;
+  /** Décalage vertical (négatif = au sol). */
+  drop: number;
+  /** Vitesse de lissage (sneeze/cough/chute plus vifs). */
   speed: number;
 }
 
@@ -61,12 +65,21 @@ function nearestDoorZ(z: number): number {
   return best;
 }
 
-const out: MotionTargets = { yaw: 0, pitch: 0, lean: 0, speed: 4.5 };
+const out: MotionTargets = { yaw: 0, pitch: 0, lean: 0, roll: 0, drop: 0, speed: 4.5 };
 
-function set(yaw: number, pitch: number, lean = 0, speed = 4.5): MotionTargets {
+function set(
+  yaw: number,
+  pitch: number,
+  lean = 0,
+  speed = 4.5,
+  roll = 0,
+  drop = 0,
+): MotionTargets {
   out.yaw = yaw;
   out.pitch = pitch;
   out.lean = lean;
+  out.roll = roll;
+  out.drop = drop;
   out.speed = speed;
   return out;
 }
@@ -237,6 +250,69 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       return set(0, 0.55, 0.03);
     case 'sway':
       return set(Math.sin(phase * 1.1) * 0.2, 0.02, Math.sin(phase * 1.1) * 0.05);
+    case 'stumble': {
+      // Côté figé dans lookYawTarget (±1) au démarrage de l'action.
+      const side = ctx.lookYawTarget >= 0 ? 1 : -1;
+      if (t < 0.35) {
+        // Perd l'équilibre.
+        const u = t / 0.35;
+        return set(side * 0.4 * u, 0.1, 0.15 * u, 10, side * 0.55 * u, -0.02 * u);
+      }
+      if (t < 0.9) {
+        // Presque au sol, se rattrape.
+        const u = (t - 0.35) / 0.55;
+        return set(side * 0.5, 0.2, 0.35 * (1 - u * 0.4), 9, side * (0.7 - u * 0.35), -0.08 * (1 - u));
+      }
+      // Relevage gêné, coup d'œil autour.
+      const u = Math.min(1, (t - 0.9) / 0.9);
+      return set(side * 0.3 * (1 - u) + Math.sin(t * 3) * 0.1, 0.15, 0.05 * (1 - u), 7, side * 0.15 * (1 - u), 0);
+    }
+    case 'fall': {
+      const side = ctx.lookYawTarget >= 0 ? 1 : -1;
+      if (t < 0.45) {
+        // Tangage → bascule.
+        const u = t / 0.45;
+        return set(side * 0.5 * u, 0.15 * u, 0.55 * u, 11, side * 0.7 * u, -0.15 * u * u);
+      }
+      if (t < 1.1) {
+        // Impact au sol.
+        const u = (t - 0.45) / 0.65;
+        return set(
+          side * (0.6 + Math.sin(u * 8) * 0.05),
+          0.35,
+          1.05,
+          14,
+          side * 1.05,
+          -0.52 - 0.04 * Math.sin(u * Math.PI),
+        );
+      }
+      if (t < 2.6) {
+        // Assis par terre, gêné, regarde autour.
+        const look = Math.sin(t * 1.7) * 0.55;
+        return set(look, 0.25 + Math.sin(t * 2.2) * 0.05, 0.95, 5, side * 0.85, -0.55);
+      }
+      if (t < 3.6) {
+        // Se hisse à quatre pattes / à genoux.
+        const u = (t - 2.6) / 1.0;
+        return set(side * 0.2 * (1 - u), 0.35, 0.95 - u * 0.55, 6, side * (0.85 - u * 0.6), -0.55 + u * 0.35);
+      }
+      // Se redresse, secoue la tête, un peu penaud.
+      const u = Math.min(1, (t - 3.6) / 1.4);
+      return set(side * 0.15 * (1 - u) + Math.sin(t * 4) * 0.08, 0.12, 0.2 * (1 - u), 5, side * 0.12 * (1 - u), -0.2 * (1 - u));
+    }
+    case 'slip': {
+      const side = ctx.lookYawTarget >= 0 ? 1 : -1;
+      if (t < 0.4) {
+        const u = t / 0.4;
+        return set(side * 0.35 * u, 0.1, 0.2 * u, 10, side * 0.65 * u, -0.05 * u);
+      }
+      if (t < 1.1) {
+        const u = (t - 0.4) / 0.7;
+        return set(side * 0.45, 0.25, 0.55 * (1 - u * 0.3), 9, side * (0.9 - u * 0.4), -0.18 * (1 - u * 0.5));
+      }
+      const u = Math.min(1, (t - 1.1) / 1.0);
+      return set(side * 0.2 * (1 - u), 0.1, 0.08 * (1 - u), 6, side * 0.2 * (1 - u), 0);
+    }
     case 'bow': {
       if (t < 0.5) return set(0, 0.55 * (t / 0.5), 0.08, 6);
       if (t < 1.0) return set(0, 0.55, 0.08, 5);

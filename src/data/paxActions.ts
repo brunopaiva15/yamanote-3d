@@ -57,6 +57,12 @@ export type PaxAction =
   | 'lookCeiling'
   | 'lookFloor'
   | 'sway'
+  /** Faux pas : perd l'équilibre puis se rattrape. */
+  | 'stumble'
+  /** Tombe vraiment au sol, reste un instant, se relève (rare, comique). */
+  | 'fall'
+  /** Glissade sur le quai. */
+  | 'slip'
   // Sociales / à deux.
   | 'whisper'
   | 'laugh'
@@ -136,6 +142,9 @@ export type MotionId =
   | 'ceiling'
   | 'floor'
   | 'sway'
+  | 'stumble'
+  | 'fall'
+  | 'slip'
   | 'whisper'
   | 'laugh'
   | 'point'
@@ -209,7 +218,15 @@ export const BUSY_BRIEF: ReadonlySet<PaxAction> = new Set([
   'offerSeat',
   'doubleTake',
   'waveTrain',
+  'stumble',
+  'fall',
+  'slip',
 ]);
+
+/** Occupations qui font perdre la poignée / le contrôle du corps. */
+export function isFallingAction(a: PaxAction): boolean {
+  return a === 'fall' || a === 'stumble' || a === 'slip';
+}
 
 export function isPairAction(a: PaxAction): boolean {
   return PAIR_ACTIONS.has(a);
@@ -644,6 +661,32 @@ export const PAX_ACTIONS: readonly PaxActionDef[] = [
     where: ['standing'],
     dur: [4, 10],
     motion: 'sway',
+  },
+  {
+    // Rare : faux pas — plus fréquent sans poignée et quand le wagon tangue.
+    id: 'stumble',
+    weight: 1.4,
+    kind: 'solo',
+    where: ['standing'],
+    dur: [1.6, 2.4],
+    motion: 'stumble',
+  },
+  {
+    // Très rare : chute comique au sol puis relevé gêné.
+    id: 'fall',
+    weight: 0.55,
+    kind: 'solo',
+    where: ['standing'],
+    dur: [4.2, 5.8],
+    motion: 'fall',
+  },
+  {
+    id: 'slip',
+    weight: 0.9,
+    kind: 'solo',
+    where: ['waiting'],
+    dur: [1.8, 2.8],
+    motion: 'slip',
   },
 
   // ——— Sociales ———

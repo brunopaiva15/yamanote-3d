@@ -27,9 +27,11 @@ import {
 import {
   PAX_ACTIONS,
   isPairAction,
+  isFallingAction,
   type PaxAction,
 } from '../data/paxActions';
 import { resolveMotion, platformPlayerCtx } from './paxMotion';
+import { playPaxActionSfx } from './paxSfx';
 
 export type CrowdState =
   | 'hidden'
@@ -68,6 +70,8 @@ export interface CrowdPax {
   actionDur: number;
   lookYaw: number;
   headPitch: number;
+  bodyLean: number;
+  bodyRoll: number;
   waypoints: THREE.Vector3[];
   wpi: number;
   walkDir: 1 | -1; // sens de promenade le long du quai
@@ -118,6 +122,8 @@ function makeCrowd(id: number): CrowdPax {
     actionDur: 2 + Math.random() * 4,
     lookYaw: 0,
     headPitch: 0,
+    bodyLean: 0,
+    bodyRoll: 0,
     waypoints: [],
     wpi: 0,
     walkDir: Math.random() < 0.5 ? 1 : -1,
@@ -579,6 +585,9 @@ function pickCrowdAction(p: CrowdPax): void {
   ) {
     p.lookYaw = (Math.random() - 0.5) * 1.1;
   }
+  if (isFallingAction(chosen.id)) {
+    p.lookYaw = Math.random() < 0.5 ? 1 : -1;
+  }
 
   if (chosen.kind === 'pair') {
     const other = findCrowdPartner(p, chosen.partnerDist ?? 1.4);
@@ -600,6 +609,11 @@ function pickCrowdAction(p: CrowdPax): void {
 
   p.action = chosen.id;
   p.partner = -1;
+  const dist =
+    runtime.playerFrame === 'platform'
+      ? Math.hypot(p.pos.x - runtime.playerPlatX, p.pos.z - runtime.playerPlatZ)
+      : 99;
+  playPaxActionSfx(chosen.id, dist);
 }
 
 function advanceWalk(p: CrowdPax, dt: number, onDone: () => void): void {
@@ -734,7 +748,6 @@ export function updatePlatformCrowd(dt: number): void {
       });
     } else {
       // waiting
-      p.bob = Math.sin(p.bobPhase * 1.1) * 0.004;
       if (p.actionT >= p.actionDur) {
         p.actionT = 0;
         if (isPairAction(p.action as PaxAction)) endCrowdPair(p);
@@ -755,8 +768,9 @@ export function updatePlatformCrowd(dt: number): void {
           p.action = 'none';
         }
         const player = platformPlayerCtx();
+        const act = p.action === 'shift' ? 'none' : (p.action as PaxAction);
         const m = resolveMotion({
-          action: p.action === 'shift' ? 'none' : (p.action as PaxAction),
+          action: act,
           actionT: p.actionT,
           bobPhase: p.bobPhase,
           chatRole: p.chatRole,
@@ -772,6 +786,15 @@ export function updatePlatformCrowd(dt: number): void {
         });
         p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed);
         p.lookYaw += (m.yaw - p.lookYaw) * Math.min(1, dt * Math.min(m.speed, 4));
+        p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed);
+        p.bodyRoll += (m.roll - p.bodyRoll) * Math.min(1, dt * m.speed);
+        if (isFallingAction(act) || Math.abs(m.drop) > 0.001) {
+          p.bob += (m.drop - p.bob) * Math.min(1, dt * m.speed);
+        } else {
+          p.bob = Math.sin(p.bobPhase * 1.1) * 0.004;
+          p.bodyLean *= Math.max(0, 1 - dt * 5);
+          p.bodyRoll *= Math.max(0, 1 - dt * 5);
+        }
         p.targetYaw = -Math.PI / 2 + p.lookYaw * 0.35;
       }
     }

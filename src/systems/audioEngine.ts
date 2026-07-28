@@ -108,6 +108,14 @@ interface Nodes {
   roomVerb: Tone.Reverb;
   roomSend: Tone.Gain;
   roomLp: Tone.Filter;
+  /** Bruitages PNJ : souffle (éternuement, toux, bâillement). */
+  paxBreath: Tone.NoiseSynth;
+  paxBreathFilter: Tone.Filter;
+  /** Tissu / sac. */
+  paxFabric: Tone.NoiseSynth;
+  paxFabricFilter: Tone.Filter;
+  /** Clics secs (photo, écouteurs). */
+  paxClick: Tone.NoiseSynth;
 }
 
 let nodes: Nodes | null = null;
@@ -415,6 +423,31 @@ export async function startAudio(): Promise<void> {
   ambGain.connect(roomSend);
   platGain.connect(roomSend);
 
+  // Bruitages voyageurs : très discrets, sur le bus rame (pas la sono PA).
+  const paxBreathFilter = new Tone.Filter({ type: 'bandpass', frequency: 1600, Q: 0.85 });
+  const paxBreath = new Tone.NoiseSynth({
+    noise: { type: 'pink' },
+    envelope: { attack: 0.015, decay: 0.22, sustain: 0 },
+    volume: -16,
+  });
+  paxBreath.chain(paxBreathFilter, trainBus);
+
+  const paxFabricFilter = new Tone.Filter({ type: 'bandpass', frequency: 780, Q: 0.7 });
+  const paxFabric = new Tone.NoiseSynth({
+    noise: { type: 'brown' },
+    envelope: { attack: 0.008, decay: 0.14, sustain: 0 },
+    volume: -20,
+  });
+  paxFabric.chain(paxFabricFilter, trainBus);
+
+  const paxClickFilter = new Tone.Filter({ type: 'highpass', frequency: 2200, Q: 0.5 });
+  const paxClick = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.035, sustain: 0 },
+    volume: -18,
+  });
+  paxClick.chain(paxClickFilter, trainBus);
+
   nodes = {
     master,
     trainBus,
@@ -465,6 +498,11 @@ export async function startAudio(): Promise<void> {
     roomVerb,
     roomSend,
     roomLp,
+    paxBreath,
+    paxBreathFilter,
+    paxFabric,
+    paxFabricFilter,
+    paxClick,
   };
 
   watchContextState();
@@ -795,6 +833,143 @@ export function airCompressorPurge(): void {
   if (!nodes) return;
   nodes.vent.envelope.decay = 0.35;
   nodes.vent.triggerAttackRelease(0.15, slot('vent', Tone.now()), 0.05);
+}
+
+// --- Bruitages voyageurs (Foley discret, bus rame) -----------------------
+
+/** Atténuation par distance au joueur (m). Au-delà de ~7 m : silence. */
+function paxVel(dist: number, base: number): number {
+  if (dist > 7.5) return 0;
+  return base / (1 + dist * 0.55);
+}
+
+/** Éternuement feutré (inspiration + atchoum). */
+export function paxSneeze(dist: number): void {
+  if (!nodes) return;
+  const v = paxVel(dist, 0.09);
+  if (v <= 0) return;
+  const now = Tone.now();
+  nodes.paxBreathFilter.frequency.value = 1200;
+  nodes.paxBreath.envelope.decay = 0.12;
+  nodes.paxBreath.triggerAttackRelease(0.1, slot('paxBreath', now), v * 0.35);
+  nodes.paxBreathFilter.frequency.setValueAtTime(2200, now + 0.14);
+  nodes.paxBreath.envelope.decay = 0.2;
+  nodes.paxBreath.triggerAttackRelease(0.16, slot('paxBreath', now + 0.14), v);
+  nodes.paxFabric.triggerAttackRelease(0.08, slot('paxFabric', now + 0.16), v * 0.4);
+}
+
+/** Toux sèche, courte. */
+export function paxCough(dist: number): void {
+  if (!nodes) return;
+  const v = paxVel(dist, 0.07);
+  if (v <= 0) return;
+  const now = Tone.now();
+  nodes.paxBreathFilter.frequency.value = 2400;
+  nodes.paxBreath.envelope.decay = 0.1;
+  nodes.paxBreath.triggerAttackRelease(0.07, slot('paxBreath', now), v);
+  nodes.paxBreath.triggerAttackRelease(0.05, slot('paxBreath', now + 0.11), v * 0.65);
+}
+
+/** Reniflement. */
+export function paxSniffle(dist: number): void {
+  if (!nodes) return;
+  const v = paxVel(dist, 0.045);
+  if (v <= 0) return;
+  nodes.paxBreathFilter.frequency.value = 2800;
+  nodes.paxBreath.envelope.decay = 0.08;
+  nodes.paxBreath.triggerAttackRelease(0.06, slot('paxBreath', Tone.now()), v);
+}
+
+/** Bâillement : souffle très bas. */
+export function paxYawn(dist: number): void {
+  if (!nodes) return;
+  const v = paxVel(dist, 0.035);
+  if (v <= 0) return;
+  const now = Tone.now();
+  nodes.paxBreathFilter.frequency.value = 700;
+  nodes.paxBreath.envelope.decay = 0.55;
+  nodes.paxBreath.triggerAttackRelease(0.45, slot('paxBreath', now), v);
+  nodes.paxFabric.triggerAttackRelease(0.2, slot('paxFabric', now + 0.1), v * 0.5);
+}
+
+/** Fouille de sac / tissu. */
+export function paxFabricRustle(dist: number, pulses = 3): void {
+  if (!nodes) return;
+  const v = paxVel(dist, 0.055);
+  if (v <= 0) return;
+  const now = Tone.now();
+  for (let i = 0; i < pulses; i++) {
+    nodes.paxFabric.triggerAttackRelease(
+      0.07 + Math.random() * 0.05,
+      slot('paxFabric', now + i * 0.12),
+      v * (0.7 + Math.random() * 0.3),
+    );
+  }
+}
+
+/** Gorgée discrète. */
+export function paxDrink(dist: number): void {
+  if (!nodes) return;
+  const v = paxVel(dist, 0.04);
+  if (v <= 0) return;
+  const now = Tone.now();
+  nodes.paxBreathFilter.frequency.value = 900;
+  nodes.paxBreath.envelope.decay = 0.15;
+  nodes.paxBreath.triggerAttackRelease(0.12, slot('paxBreath', now + 0.55), v);
+  nodes.paxClick.triggerAttackRelease(0.02, slot('paxClick', now + 0.05), v * 0.5);
+}
+
+/** Clic d'obturateur / écouteurs. */
+export function paxClick(dist: number): void {
+  if (!nodes) return;
+  const v = paxVel(dist, 0.05);
+  if (v <= 0) return;
+  nodes.paxClick.triggerAttackRelease(0.025, slot('paxClick', Tone.now()), v);
+}
+
+/** Faux pas : déséquilibre + rattrapage. */
+export function paxStumble(dist: number): void {
+  if (!nodes) return;
+  const v = paxVel(dist, 0.08);
+  if (v <= 0) return;
+  const now = Tone.now();
+  nodes.paxFabric.triggerAttackRelease(0.12, slot('paxFabric', now), v);
+  nodes.clack.triggerAttackRelease(0.04, slot('clack', now + 0.08), v * 0.35);
+  nodes.paxFabric.triggerAttackRelease(0.1, slot('paxFabric', now + 0.35), v * 0.55);
+  nodes.thud.triggerAttackRelease('C2', 0.06, slot('thud', now + 0.4), v * 0.25);
+}
+
+/**
+ * Chute : bascule, impact au sol, relevé (bruitages calés sur paxMotion « fall »).
+ */
+export function paxFall(dist: number): void {
+  if (!nodes) return;
+  const v = paxVel(dist, 0.12);
+  if (v <= 0) return;
+  const now = Tone.now();
+  nodes.paxFabric.triggerAttackRelease(0.18, slot('paxFabric', now), v * 0.8);
+  nodes.paxBreathFilter.frequency.value = 1100;
+  nodes.paxBreath.envelope.decay = 0.2;
+  nodes.paxBreath.triggerAttackRelease(0.15, slot('paxBreath', now + 0.1), v * 0.4);
+  nodes.thud.triggerAttackRelease('F1', 0.16, slot('thud', now + 0.55), v * 0.85);
+  nodes.clack.triggerAttackRelease(0.05, slot('clack', now + 0.56), v * 0.45);
+  nodes.paxFabric.triggerAttackRelease(0.2, slot('paxFabric', now + 0.58), v);
+  nodes.paxFabric.triggerAttackRelease(0.1, slot('paxFabric', now + 1.4), v * 0.4);
+  nodes.paxFabric.triggerAttackRelease(0.15, slot('paxFabric', now + 2.75), v * 0.7);
+  nodes.thud.triggerAttackRelease('A1', 0.08, slot('thud', now + 3.2), v * 0.3);
+  nodes.paxFabric.triggerAttackRelease(0.12, slot('paxFabric', now + 3.5), v * 0.45);
+}
+
+/** Glissade quai. */
+export function paxSlip(dist: number): void {
+  if (!nodes) return;
+  const v = paxVel(dist, 0.07);
+  if (v <= 0) return;
+  const now = Tone.now();
+  nodes.paxFabric.triggerAttackRelease(0.14, slot('paxFabric', now), v);
+  nodes.clack.triggerAttackRelease(0.035, slot('clack', now + 0.12), v * 0.3);
+  nodes.thud.triggerAttackRelease('G1', 0.07, slot('thud', now + 0.35), v * 0.35);
+  nodes.paxFabric.triggerAttackRelease(0.1, slot('paxFabric', now + 0.9), v * 0.5);
 }
 
 // « Clac-clac » des deux bogies au passage d'un joint de rail.

@@ -100,7 +100,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
 
       // p.y : négatif dans une trémie d'escalier, où l'on descend vraiment.
       body.position.set(p.pos.x, PLATFORM_Y + p.y + p.bob, p.pos.z);
-      body.rotation.set(0, p.yaw, 0);
+      body.rotation.set(p.bodyLean, p.yaw, p.bodyRoll);
       body.scale.setScalar(p.height);
 
       if (s.clone.restHead && bones.head) bones.head.quaternion.copy(s.clone.restHead);

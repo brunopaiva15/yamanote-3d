@@ -25,10 +25,12 @@ import {
 import {
   PAX_ACTIONS,
   isPairAction,
+  isFallingAction,
   type PaxAction,
   type ActionWhere,
 } from '../data/paxActions';
 import { resolveMotion, trainPlayerCtx } from './paxMotion';
+import { playPaxActionSfx } from './paxSfx';
 
 export type PaxState = 'hidden' | 'seated' | 'standing' | 'boarding' | 'alighting';
 export type { PaxAction };
@@ -57,8 +59,9 @@ export interface Pax {
   chatRole: 0 | 1; // déphasage des hochements de tête
   headYaw: number;
   headPitch: number;
-  lookYawTarget: number; // cible de l'action « look »
+  lookYawTarget: number; // cible de l'action « look » ; aussi signe de chute (±1)
   bodyLean: number;
+  bodyRoll: number; // roulis (chutes latérales)
   decideT: number; // minuterie des décisions assis / debout
   holdStrap: boolean; // debout : se tient à une poignée (rôdé à chaque passage debout)
   pockets: boolean; // mains dans les poches (trait stable, pantalon uniquement)
@@ -126,6 +129,7 @@ function makePax(id: number): Pax {
     headPitch: 0,
     lookYawTarget: 0,
     bodyLean: 0,
+    bodyRoll: 0,
     decideT: 8 + Math.random() * 20,
     holdStrap: rollStrap(appearance.build.scale),
     pockets: appearance.bottom.type === 'trousers' && Math.random() < 0.4,
@@ -483,6 +487,12 @@ function applyAction(p: Pax, id: PaxAction, dur: number, partner: Pax | null = n
   if (id === 'look' || id === 'curiousGlance' || id === 'lookBoard' || id === 'fidget') {
     p.lookYawTarget = (Math.random() - 0.5) * 2;
   }
+  if (isFallingAction(id)) {
+    // Signe de la chute (côté), figé pour toute la durée.
+    p.lookYawTarget = Math.random() < 0.5 ? 1 : -1;
+    // Lâche la poignée — c'est souvent pour ça qu'on tombe.
+    if (id === 'fall') p.holdStrap = false;
+  }
   if (partner) {
     p.partner = partner.id;
     p.chatRole = 0;
@@ -497,6 +507,44 @@ function applyAction(p: Pax, id: PaxAction, dur: number, partner: Pax | null = n
   } else {
     p.partner = -1;
   }
+  const dist = Math.hypot(p.pos.x - runtime.playerCarX, p.pos.z - runtime.playerCarZ);
+  playPaxActionSfx(id, dist);
+  if (id === 'fall' || id === 'stumble') reactToFall(p, id === 'fall');
+}
+
+/** Voisins qui regardent / étouffent un rire quand quelqu'un trébuche. */
+function reactToFall(fallen: Pax, hard: boolean): void {
+  const radius = hard ? 2.8 : 1.8;
+  let n = 0;
+  for (const other of paxList) {
+    if (other.id === fallen.id) continue;
+    if (other.state !== 'seated' && other.state !== 'standing') continue;
+    if (isPairAction(other.action) || isFallingAction(other.action)) continue;
+    if (other.action === 'doze' || other.action === 'sneeze') continue;
+    if (fallen.pos.distanceTo(other.pos) > radius) continue;
+    // Regard vers le malheureux, parfois un rire étouffé (solo, sans partenaire).
+    other.partner = -1;
+    other.action = hard && Math.random() < 0.35 ? 'laugh' : 'stare';
+    other.actionT = 0;
+    other.actionDur = hard ? 2.2 + Math.random() * 1.5 : 1.4 + Math.random() * 1.2;
+    other.lookYawTarget = 0;
+    // Pour stare/laugh sans partenaire : stare suit le joueur — on préfère look vers le tombé.
+    // Astuce : on utilise chat + partner ponctuel pour orienter la tête, sinon look.
+    other.action = 'look';
+    other.lookYawTarget = (() => {
+      const world = Math.atan2(fallen.pos.x - other.pos.x, fallen.pos.z - other.pos.z);
+      let d = world - other.yaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      return THREE.MathUtils.clamp(d, -1.15, 1.15);
+    })();
+    if (hard && Math.random() < 0.4) {
+      // Petit hochement type rire : on garde look + bob via actionT sur une durée courte,
+      // le pitch « laugh » exige un partenaire — on reste sur look goguenard.
+      other.actionDur = 2.5 + Math.random() * 1.5;
+    }
+    if (++n >= 4) break;
+  }
 }
 
 // Choix d'une nouvelle occupation via le catalogue (data/paxActions).
@@ -508,6 +556,7 @@ function pickAction(p: Pax): void {
   const dzp = runtime.playerCarZ - p.pos.z;
   const playerDist = Math.hypot(dxp, dzp);
   const arch = p.appearance.archetype;
+  const jolt = Math.abs(runtime.sway) + Math.abs(runtime.accel) * 1.4;
 
   let total = 0;
   const weights: number[] = [];
@@ -525,6 +574,14 @@ function pickAction(p: Pax): void {
       if (def.needsBag && p.appearance.bag === 'none') w = 0;
       if (def.archetypes && def.archetypes.includes(arch)) {
         w *= def.archetypeBoost ?? 1.4;
+      }
+      // Chutes : rares, amplifiées par le tangage, freinées par la poignée.
+      if (def.id === 'stumble' || def.id === 'fall') {
+        if (p.holdStrap) w *= def.id === 'fall' ? 0.2 : 0.45;
+        else w *= 1.35;
+        if (jolt > 0.35) w *= 1 + jolt * 2.5;
+        if (arch === 'senior') w *= 1.25;
+        if (arch === 'student') w *= 1.15;
       }
     }
     weights[i] = w;
@@ -643,6 +700,7 @@ export function updatePassengers(dt: number): void {
       p.headYaw += (0 - p.headYaw) * Math.min(1, dt * 6);
       p.headPitch += (0 - p.headPitch) * Math.min(1, dt * 6);
       p.bodyLean *= Math.max(0, 1 - dt * 8);
+      p.bodyRoll *= Math.max(0, 1 - dt * 8);
       let d = p.targetYaw - p.yaw;
       while (d > Math.PI) d -= Math.PI * 2;
       while (d < -Math.PI) d += Math.PI * 2;
@@ -653,7 +711,7 @@ export function updatePassengers(dt: number): void {
     if (p.state !== 'seated' && p.state !== 'standing') continue;
 
     // --- Couche de vie des PNJ posés ---
-    p.bob = 0;
+    if (!isFallingAction(p.action)) p.bob = 0;
     p.bobPhase += dt;
     p.actionT += dt;
     p.decideT -= dt;
@@ -664,6 +722,11 @@ export function updatePassengers(dt: number): void {
     }
 
     if (p.actionT >= p.actionDur) {
+      // Fin de chute : on reprend souvent la poignée.
+      if (p.action === 'fall' && p.height >= 1.06 && Math.random() < 0.75) {
+        p.holdStrap = true;
+        alignStrapStand(p);
+      }
       p.actionT = 0;
       if (isPairAction(p.action)) endPair(p);
       pickAction(p);
@@ -697,5 +760,10 @@ export function updatePassengers(dt: number): void {
     p.headYaw += (m.yaw - p.headYaw) * Math.min(1, dt * m.speed);
     p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed);
     p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed);
+    p.bodyRoll += (m.roll - p.bodyRoll) * Math.min(1, dt * m.speed);
+    // Chute : le bob porte le décalage vertical (au sol).
+    if (isFallingAction(p.action) || Math.abs(m.drop) > 0.001 || Math.abs(p.bob) > 0.001) {
+      p.bob += (m.drop - p.bob) * Math.min(1, dt * m.speed);
+    }
   }
 }
