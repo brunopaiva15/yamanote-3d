@@ -251,6 +251,7 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
   if (bones.head) {
     bones.head.rotation.y += p.headYaw;
     bones.head.rotation.x += p.headPitch;
+    bones.head.rotation.z += p.headRoll;
   }
 
   const seated = p.state === 'seated';

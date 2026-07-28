@@ -70,6 +70,7 @@ export interface CrowdPax {
   actionDur: number;
   lookYaw: number;
   headPitch: number;
+  headRoll: number;
   bodyLean: number;
   bodyRoll: number;
   waypoints: THREE.Vector3[];
@@ -124,6 +125,7 @@ function makeCrowd(id: number): CrowdPax {
     actionDur: 2 + Math.random() * 4,
     lookYaw: 0,
     headPitch: 0,
+    headRoll: 0,
     bodyLean: 0,
     bodyRoll: 0,
     waypoints: [],
@@ -259,6 +261,43 @@ export function seedPlatformCrowd(stationIndex: number): void {
       p.partner = -1;
       p.chatRole = 0;
     }
+  }
+  seedCrowdChats();
+}
+
+/** Discussions silencieuses entre voyageurs en attente proches. */
+function seedCrowdChats(): void {
+  const waiters = crowdList.filter((p) => p.state === 'waiting');
+  const used = new Set<number>();
+  let pairs = 0;
+  const want = Math.max(1, Math.floor(waiters.length * 0.35));
+  for (const p of waiters) {
+    if (pairs >= want || used.has(p.id)) continue;
+    let best: CrowdPax | null = null;
+    let bestD = 1.6;
+    for (const other of waiters) {
+      if (other.id === p.id || used.has(other.id)) continue;
+      const d = p.pos.distanceTo(other.pos);
+      if (d > bestD) continue;
+      bestD = d;
+      best = other;
+    }
+    if (!best) continue;
+    used.add(p.id);
+    used.add(best.id);
+    const kind: PaxAction = Math.random() < 0.6 ? 'chat' : Math.random() < 0.5 ? 'gossip' : 'laugh';
+    const dur = 5 + Math.random() * 8;
+    p.action = kind;
+    p.partner = best.id;
+    p.chatRole = 0;
+    p.actionT = 0;
+    p.actionDur = dur;
+    best.action = kind;
+    best.partner = p.id;
+    best.chatRole = 1;
+    best.actionT = 0;
+    best.actionDur = dur;
+    pairs++;
   }
 }
 
@@ -850,6 +889,7 @@ export function updatePlatformCrowd(dt: number): void {
         });
         p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed);
         p.lookYaw += (m.yaw - p.lookYaw) * Math.min(1, dt * Math.min(m.speed, 4));
+        p.headRoll += (m.headRoll - p.headRoll) * Math.min(1, dt * m.speed);
         p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed);
         p.bodyRoll += (m.roll - p.bodyRoll) * Math.min(1, dt * m.speed);
         if (isFallingAction(act) || Math.abs(m.drop) > 0.001) {

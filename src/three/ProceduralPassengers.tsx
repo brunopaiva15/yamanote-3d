@@ -503,7 +503,7 @@ export function ProceduralPassengers() {
         const targetY = seated ? perPax[i].seatedUpperY : PELVIS_Y;
         r.upper.position.y += (targetY - r.upper.position.y) * k;
       }
-      if (r.head) r.head.rotation.set(p.headPitch, p.headYaw, 0);
+      if (r.head) r.head.rotation.set(p.headPitch, p.headYaw, p.headRoll);
 
       // Bras : lissage vers la posture cible.
       const strapSide: -1 | 1 = p.pos.x >= 0 ? 1 : -1;

@@ -14,6 +14,8 @@ export interface MotionTargets {
   lean: number;
   /** Roulis du buste (chute latérale). */
   roll: number;
+  /** Inclinaison de tête (écoute / sourire / connivence). */
+  headRoll: number;
   /** Décalage vertical (négatif = au sol). */
   drop: number;
   /** Vitesse de lissage (sneeze/cough/chute plus vifs). */
@@ -65,7 +67,7 @@ function nearestDoorZ(z: number): number {
   return best;
 }
 
-const out: MotionTargets = { yaw: 0, pitch: 0, lean: 0, roll: 0, drop: 0, speed: 4.5 };
+const out: MotionTargets = { yaw: 0, pitch: 0, lean: 0, roll: 0, headRoll: 0, drop: 0, speed: 4.5 };
 
 function set(
   yaw: number,
@@ -74,12 +76,14 @@ function set(
   speed = 4.5,
   roll = 0,
   drop = 0,
+  headRoll = 0,
 ): MotionTargets {
   out.yaw = yaw;
   out.pitch = pitch;
   out.lean = lean;
   out.roll = roll;
   out.drop = drop;
+  out.headRoll = headRoll;
   out.speed = speed;
   return out;
 }
@@ -114,27 +118,79 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
     case 'agree': {
       if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
       const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
-      const pitch =
-        motion === 'gossip'
-          ? Math.max(0, Math.sin(t * 3.2 + role * Math.PI)) * 0.16 + 0.06
-          : Math.max(0, Math.sin(t * 2.8 + role * Math.PI)) * 0.14;
-      return set(yaw, pitch, motion === 'gossip' ? 0.05 : 0.02, 6);
+      // Alternance claire : un « parle », l'autre écoute / hoche / sourit.
+      const wave = Math.sin(t * 2.6 + role * Math.PI);
+      const speaking = wave > 0.05;
+      if (motion === 'agree') {
+        // Hochements d'acquiescement synchrones, regard tenu.
+        return set(yaw, 0.1 + Math.max(0, Math.sin(t * 4.2)) * 0.12, 0.03, 7, 0, 0, Math.sin(t * 1.3) * 0.08);
+      }
+      if (speaking) {
+        // Parole silencieuse : hochements rythmés, buste un peu en avant.
+        const jab = Math.max(0, Math.sin(t * (motion === 'gossip' ? 9 : 7.5)));
+        return set(
+          yaw + Math.sin(t * 3.1) * 0.04,
+          0.06 + jab * (motion === 'gossip' ? 0.18 : 0.14),
+          0.05 + jab * 0.04,
+          8,
+          0,
+          0,
+          Math.sin(t * 2.2) * 0.05,
+        );
+      }
+      // Écoute : petits hochements, tête penchée (sourire / intérêt).
+      const listenNod = Math.max(0, Math.sin(t * 5.2 + 1.1)) * 0.07;
+      return set(
+        yaw * 0.95,
+        0.1 + listenNod,
+        0.025,
+        6,
+        0,
+        0,
+        0.12 + Math.sin(t * 0.9 + role) * 0.06,
+      );
     }
     case 'whisper': {
       if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
+      const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
+      const wave = Math.sin(t * 2.2 + role * Math.PI);
+      const speaking = wave > 0;
       return set(
-        headYawToward(ctx, ctx.partnerX, ctx.partnerZ),
-        0.12 + Math.max(0, Math.sin(t * 2.1 + role * Math.PI)) * 0.06,
-        0.06,
+        yaw,
+        speaking ? 0.18 + Math.max(0, Math.sin(t * 6)) * 0.08 : 0.14,
+        0.09,
+        6,
+        0,
+        0,
+        speaking ? 0.06 : 0.14,
       );
     }
     case 'laugh': {
       if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
+      const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
+      // Rire silencieux : tête qui rebondit, léger penché complice.
       return set(
-        headYawToward(ctx, ctx.partnerX, ctx.partnerZ),
-        0.08 + Math.abs(Math.sin(t * 7.5)) * 0.14,
+        yaw + Math.sin(t * 3) * 0.08,
+        0.05 + Math.abs(Math.sin(t * 8.5)) * 0.2,
+        0.06,
+        11,
+        Math.sin(t * 6) * 0.06,
+        0,
+        0.1 + Math.sin(t * 4) * 0.08,
+      );
+    }
+    case 'flirt': {
+      if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
+      const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
+      // Regard tenu, sourire (tête penchée), petit hochement.
+      return set(
+        yaw * 0.9,
+        0.06 + Math.sin(t * 2.4 + role) * 0.05,
         0.04,
-        10,
+        5,
+        0,
+        0,
+        0.16 + Math.sin(t * 1.5) * 0.05,
       );
     }
     case 'share': {
@@ -374,11 +430,6 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       }
       const u = Math.min(1, (t - 0.7) / 1.0);
       return set(yaw * (1 - u * 0.5), 0.1, 0.05 * (1 - u), 7, side * 0.2 * (1 - u), 0);
-    }
-    case 'flirt': {
-      if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
-      const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
-      return set(yaw * 0.85, 0.08 + Math.sin(t * 2.2 + role) * 0.06, 0.04, 5, Math.sin(t + role) * 0.04);
     }
     case 'sulk':
       return set(0.75, 0.35, 0.08, 4, -0.06);

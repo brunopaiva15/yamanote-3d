@@ -61,6 +61,7 @@ export interface Pax {
   chatRole: 0 | 1; // déphasage des hochements de tête
   headYaw: number;
   headPitch: number;
+  headRoll: number; // inclinaison (écoute / sourire)
   lookYawTarget: number; // cible de l'action « look » ; aussi signe de chute (±1)
   bodyLean: number;
   bodyRoll: number; // roulis (chutes latérales)
@@ -131,6 +132,7 @@ function makePax(id: number): Pax {
     chatRole: 0,
     headYaw: 0,
     headPitch: 0,
+    headRoll: 0,
     lookYawTarget: 0,
     bodyLean: 0,
     bodyRoll: 0,
@@ -179,6 +181,43 @@ export function seedPassengers(): void {
       }
     }
     p.state = 'hidden';
+  }
+  seedChats();
+}
+
+/** Lance des discussions silencieuses entre voisins dès le peuplement. */
+function seedChats(): void {
+  const candidates = paxList.filter((p) => p.state === 'seated' || p.state === 'standing');
+  // Mélange léger pour ne pas toujours jumeler les mêmes ids.
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  const used = new Set<number>();
+  let pairs = 0;
+  const want = Math.max(3, Math.floor(candidates.length * 0.28));
+  for (const p of candidates) {
+    if (pairs >= want) break;
+    if (used.has(p.id)) continue;
+    let best: Pax | null = null;
+    let bestD = 1.75;
+    for (const other of candidates) {
+      if (other.id === p.id || used.has(other.id)) continue;
+      if (other.state !== p.state) continue; // voisins de même posture
+      const d = p.pos.distanceTo(other.pos);
+      if (d > bestD) continue;
+      bestD = d;
+      best = other;
+    }
+    if (!best) continue;
+    used.add(p.id);
+    used.add(best.id);
+    const roll = Math.random();
+    const kind: PaxAction =
+      roll < 0.55 ? 'chat' : roll < 0.72 ? 'gossip' : roll < 0.85 ? 'laugh' : roll < 0.93 ? 'whisper' : 'nodAgree';
+    const dur = 6 + Math.random() * 10;
+    applyAction(p, kind, dur, best);
+    pairs++;
   }
 }
 
@@ -472,17 +511,27 @@ function whereOf(p: Pax): ActionWhere | null {
 function findPartner(p: Pax, maxDist: number): Pax | null {
   let best: Pax | null = null;
   let bestD = maxDist;
+  let bestSame: Pax | null = null;
+  let bestSameD = maxDist;
   for (const other of paxList) {
     if (other.id === p.id) continue;
     if (other.state !== 'seated' && other.state !== 'standing') continue;
     if (isPairAction(other.action)) continue;
     if (other.action === 'sneeze' || other.action === 'cough' || other.action === 'doze') continue;
+    if (isFallingAction(other.action)) continue;
     const d = p.pos.distanceTo(other.pos);
-    if (d > bestD) continue;
-    bestD = d;
-    best = other;
+    if (d > maxDist) continue;
+    if (d < bestD) {
+      bestD = d;
+      best = other;
+    }
+    if (other.state === p.state && d < bestSameD) {
+      bestSameD = d;
+      bestSame = other;
+    }
   }
-  return best;
+  // Préférer un voisin dans la même posture (deux assis / deux debout).
+  return bestSame ?? best;
 }
 
 function applyAction(p: Pax, id: PaxAction, dur: number, partner: Pax | null = null): void {
@@ -816,6 +865,7 @@ export function updatePassengers(dt: number): void {
       // En marche : tête droite, pas d'action.
       p.headYaw += (0 - p.headYaw) * Math.min(1, dt * 6);
       p.headPitch += (0 - p.headPitch) * Math.min(1, dt * 6);
+      p.headRoll += (0 - p.headRoll) * Math.min(1, dt * 6);
       p.bodyLean *= Math.max(0, 1 - dt * 8);
       p.bodyRoll *= Math.max(0, 1 - dt * 8);
       let d = p.targetYaw - p.yaw;
@@ -877,6 +927,7 @@ export function updatePassengers(dt: number): void {
     const speedMul = isDramaAction(p.action) || isFallingAction(p.action) ? 1.25 : 1;
     p.headYaw += (m.yaw - p.headYaw) * Math.min(1, dt * m.speed * speedMul);
     p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed * speedMul);
+    p.headRoll += (m.headRoll - p.headRoll) * Math.min(1, dt * m.speed * speedMul);
     p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed * speedMul);
     p.bodyRoll += (m.roll - p.bodyRoll) * Math.min(1, dt * m.speed * speedMul);
     // Chute : le bob porte le décalage vertical (au sol).

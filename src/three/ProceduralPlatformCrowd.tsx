@@ -200,6 +200,7 @@ export function ProceduralPlatformCrowd() {
       if (head) {
         head.rotation.x = p.headPitch;
         head.rotation.y = p.lookYaw * 0.5;
+        head.rotation.z = p.headRoll;
       }
       const onPhone = usesHeldPose(p.action === 'shift' ? 'none' : p.action) && p.state === 'waiting';
       const armR = g.getObjectByName('crowd-arm-r');
