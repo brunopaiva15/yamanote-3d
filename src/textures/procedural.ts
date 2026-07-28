@@ -2300,3 +2300,168 @@ export function makePlatformNumberSign(): {
   };
   return { texture, redraw };
 }
+
+// --- La trousse du quai -------------------------------------------------
+//
+// Les petits équipements réglementaires qu'on ne remarque qu'en leur absence :
+// bouton d'arrêt d'urgence, armoire technique, téléphone ferroviaire, repères
+// de voiture peints au sol. Aucun ne change d'une gare à l'autre — ce sont des
+// modèles JR standard — donc chaque texture est faite une fois pour la session.
+
+/** Repère de voiture peint au sol, sous les pieds : 「N号車」 et 乗車位置. */
+export function makeCarMarkTexture(car: number): THREE.CanvasTexture {
+  const W = 256;
+  const H = 320;
+  const { c, g } = makeCanvas(W, H);
+  // Le sol se voit à travers : seule la peinture est opaque.
+  g.clearRect(0, 0, W, H);
+
+  // Cartouche blanc cerné de vert, à la manière des marquages JR East.
+  g.fillStyle = 'rgba(244,244,240,0.92)';
+  g.strokeStyle = '#4f9b28';
+  g.lineWidth = 9;
+  g.beginPath();
+  g.roundRect(14, 14, W - 28, H - 28, 16);
+  g.fill();
+  g.stroke();
+
+  g.textAlign = 'center';
+  g.fillStyle = '#2c2f33';
+  fitFillText(g, `${car}`, W / 2, 150, W - 70, 128);
+  g.fillStyle = '#4f9b28';
+  fitFillText(g, '号車', W / 2, 210, W - 70, 52);
+  g.fillStyle = '#5c6066';
+  fitFillText(g, '乗車位置', W / 2, 268, W - 80, 36, '600');
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+/** Bouton d'arrêt d'urgence 非常停止ボタン : caisson jaune, bouton rouge. */
+export function makeEmergencyStopTexture(): THREE.CanvasTexture {
+  const W = 200;
+  const H = 260;
+  const { c, g } = makeCanvas(W, H);
+  g.fillStyle = '#e8b820';
+  g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#8a6b0d';
+  g.lineWidth = 5;
+  g.strokeRect(3, 3, W - 6, H - 6);
+
+  // Bandeau noir du titre.
+  g.fillStyle = '#1c1e21';
+  g.fillRect(10, 12, W - 20, 46);
+  g.fillStyle = '#f6d94a';
+  g.textAlign = 'center';
+  fitFillText(g, '非常停止ボタン', W / 2, 46, W - 34, 30);
+
+  // Bouton champignon, en relief.
+  g.fillStyle = '#7c1512';
+  g.beginPath();
+  g.arc(W / 2, 148, 56, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#cc2a21';
+  g.beginPath();
+  g.arc(W / 2, 143, 50, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.28)';
+  g.beginPath();
+  g.arc(W / 2 - 14, 126, 20, 0, Math.PI * 2);
+  g.fill();
+
+  g.fillStyle = '#1c1e21';
+  fitFillText(g, '押してください', W / 2, 232, W - 30, 26, '600');
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+/** Armoire électrique : tôle grise, ouïes, triangle de danger. */
+export function makeCabinetTexture(): THREE.CanvasTexture {
+  const W = 200;
+  const H = 300;
+  const { c, g } = makeCanvas(W, H);
+  g.fillStyle = '#9aa0a4';
+  g.fillRect(0, 0, W, H);
+  // Deux portes et leur joint central.
+  g.fillStyle = 'rgba(255,255,255,0.14)';
+  g.fillRect(6, 6, W / 2 - 10, H - 12);
+  g.fillStyle = 'rgba(0,0,0,0.16)';
+  g.fillRect(W / 2 - 2, 4, 4, H - 8);
+
+  // Ouïes de ventilation, en bas de chaque porte.
+  g.fillStyle = '#5f656a';
+  for (let y = H - 96; y < H - 24; y += 12) {
+    g.fillRect(20, y, W / 2 - 34, 5);
+    g.fillRect(W / 2 + 14, y, W / 2 - 34, 5);
+  }
+
+  // Triangle de danger et mention réglementaire.
+  g.fillStyle = '#e8c22a';
+  g.strokeStyle = '#1c1e21';
+  g.lineWidth = 5;
+  g.beginPath();
+  g.moveTo(W / 2, 34);
+  g.lineTo(W / 2 + 40, 100);
+  g.lineTo(W / 2 - 40, 100);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#1c1e21';
+  g.textAlign = 'center';
+  fitFillText(g, '⚡', W / 2, 92, 40, 42);
+  fitFillText(g, '高電圧危険', W / 2, 132, W - 30, 26);
+  g.fillStyle = '#3a3e42';
+  fitFillText(g, '関係者以外', W / 2, 164, W - 40, 20, '600');
+  fitFillText(g, '立入禁止', W / 2, 188, W - 40, 20, '600');
+
+  // Poignée et serrure.
+  g.fillStyle = '#43484c';
+  g.fillRect(W / 2 - 26, H - 128, 18, 40);
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+/** Téléphone ferroviaire : coffret crème, combiné, étiquette 列車無線. */
+export function makeRailPhoneTexture(): THREE.CanvasTexture {
+  const W = 180;
+  const H = 240;
+  const { c, g } = makeCanvas(W, H);
+  g.fillStyle = '#e4e0d4';
+  g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#9a968a';
+  g.lineWidth = 4;
+  g.strokeRect(3, 3, W - 6, H - 6);
+
+  g.fillStyle = '#1f4f8c';
+  g.fillRect(10, 10, W - 20, 40);
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center';
+  fitFillText(g, '列車無線', W / 2, 40, W - 30, 28);
+
+  // Combiné sur sa fourche, vu de face.
+  g.fillStyle = '#2c3035';
+  g.beginPath();
+  g.roundRect(W / 2 - 46, 78, 92, 26, 12);
+  g.fill();
+  g.beginPath();
+  g.roundRect(W / 2 - 52, 72, 26, 40, 10);
+  g.fill();
+  g.beginPath();
+  g.roundRect(W / 2 + 26, 72, 26, 40, 10);
+  g.fill();
+  // Cordon spiralé.
+  g.strokeStyle = '#2c3035';
+  g.lineWidth = 4;
+  g.beginPath();
+  for (let k = 0; k <= 20; k++) {
+    const t = k / 20;
+    g.lineTo(W / 2 - 30 + Math.sin(t * Math.PI * 5) * 9, 112 + t * 46);
+  }
+  g.stroke();
+
+  g.fillStyle = '#7c2018';
+  fitFillText(g, '緊急連絡用', W / 2, 196, W - 30, 24);
+  g.fillStyle = '#4a4e52';
+  fitFillText(g, 'Railway phone', W / 2, 222, W - 24, 18, '600');
+  g.textAlign = 'left';
+  return toTexture(c);
+}

@@ -84,6 +84,21 @@ Quatorze gares déclarent une `signature` ; trois sont dessinées à ce jour
 et par la marche : un banc dessiné à un endroit et infranchissable à un autre se
 verrait au premier pas. Tout ce qui se répète passe par un `InstancedMesh`.
 
+Le module **range** ce mobilier au lieu de l'empiler. La structure fait autorité —
+piliers, trémies, escaliers mécaniques, ascenseur, kiosque — puis chaque famille
+vient chercher son creux, en glissant le long de la voie et en renonçant si elle
+n'en trouve pas : mieux vaut un banc de moins qu'un banc dans un poteau. La trame
+de piliers, elle, saute la travée d'une trémie ou d'une gaine d'ascenseur.
+
+`three/station/PlatformKit` pose la trousse réglementaire, celle qu'on ne remarque
+qu'en son absence : diffuseurs de la sonorisation sous l'auvent, caméras en dôme,
+coffrets d'extincteur, boutons d'arrêt d'urgence sur la face pleine des portes
+palières, armoires électriques, téléphone ferroviaire, bacs de tri par trois,
+gouttière et descentes d'eau, chemin de câbles, ligne verte de guidage et repères
+「N号車 乗車位置」 peints au sol. Rien de tout cela ne se pose au hasard : les
+bornes d'urgence évitent les baies de portes, les diffuseurs évitent les poutres,
+et rien n'atterrit dans une file d'attente.
+
 **La signalétique n'a pas changé** : les panneaux de nom de gare et le tableau
 d'affichage sont les mêmes textures et le même `redraw`, seulement répartis sur
 un quai plus long.

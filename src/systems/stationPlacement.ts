@@ -8,8 +8,10 @@
 // Repère QUAI : x mesuré depuis l'axe de la voie vers le fond du quai, z le
 // long de la voie, origine au milieu du quai.
 
+import { CONSIST, E235 } from '../data/e235';
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
 import {
+  PSD_HALF_GAP,
   PSD_X,
   STAIR_GOING,
   STAIR_RISE,
@@ -27,6 +29,30 @@ export interface Placed {
   halfZ: number;
 }
 
+/**
+ * La trousse réglementaire du quai : les petits équipements qu'on ne remarque
+ * qu'en leur absence. Chacun n'est qu'une abscisse le long de la voie ; leur
+ * hauteur et leur support sont l'affaire du rendu (three/station/PlatformKit).
+ */
+export interface StationKit {
+  /** Diffuseurs de la sonorisation, suspendus à l'auvent. */
+  speakers: number[];
+  /** Caméras de surveillance, sur un pilier sur trois. */
+  cameras: number[];
+  /** Coffrets d'extincteur, plaqués au fond du quai. */
+  extinguishers: number[];
+  /** Boutons d'arrêt d'urgence, sur la face pleine des portes palières. */
+  emergencyStops: number[];
+  /** Miroirs de départ suspendus, au droit des cabines de conduite. */
+  mirrors: number[];
+  /** Téléphone ferroviaire. */
+  phone: number | null;
+  /** Descentes d'eau pluviale, un pilier sur deux. */
+  downpipes: number[];
+  /** Repères de voiture peints au sol : 「N号車 乗車位置」. */
+  carMarks: { z: number; car: number }[];
+}
+
 export interface StationPlacement {
   layout: StationLayout;
   /** Abscisse du nu intérieur du mur de fond. */
@@ -37,14 +63,18 @@ export interface StationPlacement {
   walkHalfZ: number;
   columns: number[];
   benches: Placed[];
+  /** Batteries de tri : chaque emprise porte trois bacs côte à côte. */
   bins: Placed[];
   vending: Placed[];
+  /** Armoires électriques et coffrets techniques, adossés au fond. */
+  cabinets: Placed[];
   kiosk: Placed | null;
   stairs: Placed[];
   escalators: Placed[];
   elevator: Placed | null;
   /** Repères d'attente peints au sol, deux par baie de porte palière. */
   queueMarks: { x: number; z: number }[];
+  kit: StationKit;
   /** Toutes les emprises qui barrent le passage. */
   obstacles: Placed[];
 }
@@ -63,6 +93,80 @@ function spread(n: number, halfZ: number, phase = 0): number[] {
   return Array.from({ length: n }, (_, i) => -span / 2 + step * (i + 0.5) + phase);
 }
 
+/**
+ * Positions tous les `step` mètres sur la longueur utile. À l'inverse de
+ * `spread`, l'entraxe est imposé et c'est le nombre qui s'ajuste : un diffuseur
+ * de sonorisation se pose tous les vingt mètres, pas « douze par quai ».
+ */
+function every(step: number, halfZ: number, phase = 0): number[] {
+  const out: number[] = [];
+  for (let z = -halfZ + phase; z <= halfZ; z += step) out.push(z);
+  return out;
+}
+
+/** Jeu minimal entre deux emprises voisines (m). */
+const CLEARANCE = 0.12;
+
+/** Deux emprises se marchent-elles dessus ? */
+function hits(a: Placed, b: Placed): boolean {
+  return (
+    Math.abs(a.x - b.x) < a.halfX + b.halfX + CLEARANCE &&
+    Math.abs(a.z - b.z) < a.halfZ + b.halfZ + CLEARANCE
+  );
+}
+
+/**
+ * Range une famille de mobilier en évitant ce qui est déjà posé.
+ *
+ * Le quai empilait jusqu'ici ses familles sans jamais se demander si la place
+ * était libre : sur les trente gares, soixante-cinq bancs traversaient un
+ * pilier, et des distributeurs sortaient d'une trémie. Chaque candidat glisse
+ * donc le long de la voie jusqu'à trouver son creux, et renonce s'il n'en
+ * trouve pas — mieux vaut un banc de moins qu'un banc dans un poteau.
+ *
+ * `taken` est enrichi au fur et à mesure : l'ordre d'appel EST l'ordre de
+ * priorité, la structure d'abord, le mobilier ensuite.
+ */
+function fit(candidates: Placed[], taken: Placed[], reach = 3.2): Placed[] {
+  const kept: Placed[] = [];
+  for (const c of candidates) {
+    let placed: Placed | null = null;
+    for (let d = 0; d <= reach && !placed; d += 0.4) {
+      for (const s of d === 0 ? [0] : [-d, d]) {
+        const cand = { ...c, z: c.z + s };
+        if (taken.some((t) => hits(cand, t))) continue;
+        placed = cand;
+        break;
+      }
+    }
+    if (!placed) continue;
+    kept.push(placed);
+    taken.push(placed);
+  }
+  return kept;
+}
+
+/**
+ * Décale `z` hors de toute baie de porte palière, pour y plaquer un
+ * équipement. Rien ne se pose au droit d'une baie : c'est par là qu'on entre
+ * dans la rame, et la face pleine du muret est la seule surface disponible.
+ */
+function offGate(z: number, gates: readonly number[]): number {
+  let best = z;
+  let bestGap = -Infinity;
+  // Le point demandé, puis de part et d'autre : on garde celui qui s'écarte le
+  // plus de la baie la plus proche.
+  for (const cand of [z, z - PSD_HALF_GAP - 0.6, z + PSD_HALF_GAP + 0.6]) {
+    let gap = Infinity;
+    for (const g of gates) gap = Math.min(gap, Math.abs(cand - g));
+    if (gap > bestGap) {
+      bestGap = gap;
+      best = cand;
+    }
+  }
+  return best;
+}
+
 export function placementFor(index: number, gates: readonly number[]): StationPlacement {
   const i = ((index % 30) + 30) % 30;
   const hit = CACHE.get(i);
@@ -77,28 +181,12 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   const wallX = backX - 0.85;
   const midX = PSD_X + layout.depth * 0.55;
 
-  const columns: number[] = [];
-  for (let z = -usable; z <= usable; z += layout.columnSpacing) columns.push(z);
-
   const a = layout.amenities;
-  const benches: Placed[] = spread(a.benches, usable, 1.7).map((z) => ({
-    x: wallX,
-    z,
-    halfX: 0.45,
-    halfZ: 1.35,
-  }));
-  const bins: Placed[] = benches
-    .filter((_, k) => k % 2 === 0)
-    .map((b) => ({ x: b.x - 0.1, z: b.z + 1.7, halfX: 0.25, halfZ: 0.25 }));
-  const vending: Placed[] = spread(a.vending, usable, -4.3).map((z) => ({
-    x: backX - 0.55,
-    z,
-    halfX: 0.42,
-    halfZ: 0.75,
-  }));
-  const kiosk: Placed | null = a.kiosk
-    ? { x: backX - 1.35, z: usable * 0.36, halfX: 1.25, halfZ: 2.4 }
-    : null;
+
+  // --- Ce qui ne bouge pas : structure et circulations verticales -----
+  // Piliers, trémies, escaliers mécaniques, ascenseur et kiosque sont posés par
+  // le gabarit et font autorité. Tout le mobilier vient ensuite se ranger
+  // autour, jamais l'inverse.
   const stairs: Placed[] = a.stairs.map((z) => ({ x: midX + 0.4, z, halfX: 1.5, halfZ: 2.6 }));
   const escalators: Placed[] = a.escalators.map((z) => ({
     x: midX + 0.55,
@@ -108,6 +196,54 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   }));
   const elevator: Placed | null =
     a.elevator === null ? null : { x: backX - 1.05, z: a.elevator, halfX: 0.95, halfZ: 0.95 };
+  const kiosk: Placed | null = a.kiosk
+    ? { x: backX - 1.35, z: usable * 0.36, halfX: 1.25, halfZ: 2.4 }
+    : null;
+
+  const structure: Placed[] = [
+    ...stairs,
+    ...escalators,
+    ...(elevator ? [elevator] : []),
+    ...(kiosk ? [kiosk] : []),
+  ];
+
+  // La trame de piliers saute la travée occupée par une trémie, une gaine
+  // d'ascenseur ou un kiosque — comme sur un vrai quai, où le poteau est
+  // reporté plutôt que planté au milieu de la cage.
+  const columns: number[] = [];
+  for (let z = -usable; z <= usable; z += layout.columnSpacing) {
+    const post = { x: backX - 0.55, z, halfX: 0.26, halfZ: 0.26 };
+    if (structure.some((s) => hits(post, s))) continue;
+    columns.push(z);
+  }
+
+  const taken: Placed[] = [
+    ...columns.map((z) => ({ x: backX - 0.55, z, halfX: 0.26, halfZ: 0.26 })),
+    ...structure,
+  ];
+
+  // --- Le mobilier, rangé dans ce qui reste --------------------------
+  const benches = fit(
+    spread(a.benches, usable, 1.7).map((z) => ({ x: wallX, z, halfX: 0.45, halfZ: 1.35 })),
+    taken,
+  );
+  const vending = fit(
+    spread(a.vending, usable, -4.3).map((z) => ({ x: backX - 0.55, z, halfX: 0.42, halfZ: 0.75 })),
+    taken,
+  );
+  const cabinets = fit(
+    spread(3, usable, 8.9).map((z) => ({ x: backX - 0.36, z, halfX: 0.3, halfZ: 0.55 })),
+    taken,
+  );
+  // Un bac n'est jamais seul sur un quai japonais : ils vont par trois —
+  // bouteilles, canettes, papiers — sous une même armature. L'emprise s'élargit
+  // d'autant, et la batterie se pose au bout d'un banc sur deux.
+  const bins = fit(
+    benches
+      .filter((_, k) => k % 2 === 0)
+      .map((b) => ({ x: b.x - 0.06, z: b.z + 2.2, halfX: 0.28, halfZ: 0.66 })),
+    taken,
+  );
 
   // Deux files d'attente peintes de part et d'autre de chaque baie.
   const queueMarks: { x: number; z: number }[] = [];
@@ -115,16 +251,48 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     for (const dz of [-1.25, 1.25]) queueMarks.push({ x: PSD_X + 1.15, z: g + dz });
   }
 
-  const obstacles = [
-    ...columns.map((z) => ({ x: backX - 0.55, z, halfX: 0.26, halfZ: 0.26 })),
-    ...benches,
-    ...bins,
-    ...vending,
-    ...(kiosk ? [kiosk] : []),
-    ...stairs,
-    ...escalators,
-    ...(elevator ? [elevator] : []),
-  ];
+  // La trousse réglementaire.
+  //
+  // Les boutons d'arrêt d'urgence se posent là où ils servent — au droit de
+  // chaque accès, d'où l'on débouche sur le quai — et aux deux abouts, mais sur
+  // la face pleine des portes palières : sur une borne plantée près du bord ils
+  // se seraient trouvés en plein dans une file d'attente, devant une porte.
+  // Les miroirs de départ, eux, se suspendent à l'auvent au droit des cabines
+  // de conduite, pour la même raison.
+  const halfConsist = ((CONSIST.length - 1) / 2) * E235.pitch;
+  // Un diffuseur affleure la sous-face de l'auvent : au droit d'un pilier, il
+  // disparaîtrait dans la poutre transversale — exactement le défaut que les
+  // néons ont déjà eu. Il s'écarte donc du poteau le plus proche.
+  const offPost = (z: number): number => {
+    let near = Infinity;
+    for (const c of columns) if (Math.abs(z - c) < Math.abs(z - near)) near = c;
+    const d = z - near;
+    return Math.abs(d) >= 0.6 ? z : near + (d >= 0 ? 0.6 : -0.6);
+  };
+
+  const kit: StationKit = {
+    speakers: every(19, usable, 4.1).map(offPost),
+    cameras: columns.filter((_, k) => k % 3 === 1),
+    extinguishers: spread(5, usable, -2.4),
+    emergencyStops: [
+      -usable + 1.5,
+      usable - 1.5,
+      ...stairs.map((s) => s.z - s.halfZ - 0.8),
+      ...escalators.map((e) => e.z - e.halfZ - 0.8),
+    ]
+      .map((z) => offGate(z, gates))
+      .sort((p, q) => p - q),
+    mirrors: [-halfConsist - 1.2, halfConsist + 1.2],
+    phone: usable * 0.24,
+    downpipes: columns.filter((_, k) => k % 2 === 0),
+    carMarks: Array.from({ length: CONSIST.length }, (_, k) => ({
+      z: (k - (CONSIST.length - 1) / 2) * E235.pitch,
+      car: k + 1,
+    })),
+  };
+
+  // `taken` a exactement recueilli tout ce qui a été retenu, structure comprise.
+  const obstacles = taken;
 
   const placement: StationPlacement = {
     layout,
@@ -137,11 +305,13 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     benches,
     bins,
     vending,
+    cabinets,
     kiosk,
     stairs,
     escalators,
     elevator,
     queueMarks,
+    kit,
     obstacles,
   };
   CACHE.set(i, placement);

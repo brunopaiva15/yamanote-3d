@@ -38,8 +38,10 @@ import {
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
 import { Barrier } from './Barrier';
 import { stationAd } from './adPool';
+import { mat, matFacingTrack, useInstances } from './instancing';
 import { OverheadSigns } from './OverheadSigns';
 import { PlatformAds } from './PlatformAds';
+import { PlatformKit } from './PlatformKit';
 import { PlatformSignage } from './PlatformSignage';
 import { Signature } from './Signature';
 import { psdLayout } from './psdLayout';
@@ -47,42 +49,6 @@ import { psdLayout } from './psdLayout';
 const UP = new THREE.Quaternion();
 const V = new THREE.Vector3();
 const S = new THREE.Vector3();
-
-/** Quart de tour vers -x : un plan (dressé en XY) regarde alors la voie. */
-const FACING_TRACK = new THREE.Quaternion().setFromAxisAngle(
-  new THREE.Vector3(0, 1, 0),
-  -Math.PI / 2,
-);
-
-function mat(x: number, y: number, z: number, sx = 1, sy = 1, sz = 1): THREE.Matrix4 {
-  return new THREE.Matrix4().compose(V.set(x, y, z), UP, S.set(sx, sy, sz));
-}
-
-/** Comme mat(), pour un plan plaqué sur une face tournée vers la voie. */
-function matFacingTrack(
-  x: number,
-  y: number,
-  z: number,
-  width: number,
-  height: number,
-): THREE.Matrix4 {
-  return new THREE.Matrix4().compose(V.set(x, y, z), FACING_TRACK, S.set(width, height, 1));
-}
-
-/** Pose une liste de matrices sur un InstancedMesh et ajuste son compte. */
-function useInstances(
-  ref: React.RefObject<THREE.InstancedMesh | null>,
-  matrices: THREE.Matrix4[],
-): void {
-  useLayoutEffect(() => {
-    const im = ref.current;
-    if (!im) return;
-    for (let i = 0; i < matrices.length; i++) im.setMatrixAt(i, matrices[i]);
-    im.count = matrices.length;
-    im.instanceMatrix.needsUpdate = true;
-    im.computeBoundingSphere();
-  }, [ref, matrices]);
-}
 
 type StationTextures = {
   floor: THREE.Texture;
@@ -353,10 +319,6 @@ export function Station() {
       ),
     [place.benches],
   );
-  const bins = useMemo(
-    () => place.bins.map((b) => mat(b.x, PLATFORM_TOP + 0.45, b.z, 1, 1, 1)),
-    [place.bins],
-  );
   const vending = useMemo(
     () => place.vending.map((v) => mat(v.x, PLATFORM_TOP + 0.9, v.z, 0.8, 1.8, 1.4)),
     [place.vending],
@@ -380,7 +342,6 @@ export function Station() {
   const seatRef = useRef<THREE.InstancedMesh>(null);
   const backRef = useRef<THREE.InstancedMesh>(null);
   const legRef = useRef<THREE.InstancedMesh>(null);
-  const binRef = useRef<THREE.InstancedMesh>(null);
   const vendRef = useRef<THREE.InstancedMesh>(null);
   const vendFaceRef = useRef<THREE.InstancedMesh>(null);
   const leafRef = useRef<THREE.InstancedMesh>(null);
@@ -396,7 +357,6 @@ export function Station() {
   useInstances(seatRef, benchSeat);
   useInstances(backRef, benchBack);
   useInstances(legRef, benchLegs);
-  useInstances(binRef, bins);
   useInstances(vendRef, vending);
   useInstances(vendFaceRef, vendingFace);
 
@@ -502,9 +462,6 @@ export function Station() {
       <instancedMesh ref={legRef} args={[undefined, undefined, Math.max(1, benchLegs.length)]} material={m.metal}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh ref={binRef} args={[undefined, undefined, Math.max(1, bins.length)]} material={m.bin}>
-        <cylinderGeometry args={[0.18, 0.2, 0.9, 10]} />
-      </instancedMesh>
       <instancedMesh ref={vendRef} args={[undefined, undefined, Math.max(1, vending.length)]} material={m.vending}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
@@ -524,6 +481,10 @@ export function Station() {
 
       {/* Potences d'orientation : sorties en jaune, correspondances en blanc. */}
       <OverheadSigns place={place} layout={layout} station={index} />
+
+      {/* La trousse réglementaire : sonorisation, caméras, extincteurs, bornes
+          d'urgence, armoires, bacs de tri, gouttières, marquages au sol. */}
+      <PlatformKit place={place} layout={layout} detail={detail} materials={m} />
 
       {detail <= 2 && <Amenities place={place} canopyY={canopyY} m={m} />}
 
