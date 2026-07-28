@@ -19,7 +19,9 @@ export function isMajorHub(index: number): boolean {
 }
 
 // Les 1 à 2 prochains grands hubs à partir de `from` (sens +1, boucle extérieure).
-function nextHubs(from: number, count: number): Station[] {
+// Partagé avec les annonces de quai (data/stationAnnouncements) : la gare et la
+// rame doivent nommer les mêmes repères de direction.
+export function nextHubs(from: number, count: number): Station[] {
   const out: Station[] = [];
   for (let step = 0; step < 30 && out.length < count; step++) {
     const i = (from + step) % 30;

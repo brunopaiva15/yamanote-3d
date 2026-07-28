@@ -7,10 +7,23 @@
 // jingle d'arrivée, souffle de ligne des annonces) passe par un bus « PA »
 // — filtrage passe-bande + compression, le timbre d'un haut-parleur de wagon —
 // puis est diffusé par un Panner3D PAR DIFFUSEUR de plafond (voir
-// CABIN_SPEAKERS). La mélodie de départ (発車メロディ), elle, vient des
-// haut-parleurs du QUAI : elle est étouffée portes fermées et s'ouvre par les
-// portes. L'auditeur (Tone.Listener) suit la caméra, donc le son tourne quand
-// on tourne la tête et se rapproche quand on marche sous un diffuseur.
+// CABIN_SPEAKERS). La mélodie de départ (発車メロディ) et les annonces ATOS,
+// elles, viennent des haut-parleurs du QUAI : elles sont étouffées portes
+// fermées et s'ouvrent par les portes. L'auditeur (Tone.Listener) suit la
+// caméra, donc le son tourne quand on tourne la tête et se rapproche quand on
+// marche sous un diffuseur.
+//
+// Deux sonorisations, deux VOIX. Une gare a sa propre sono, indépendante de
+// celle de la rame, et on ne les entend pas au même endroit :
+//
+//   • sur le QUAI, la voix de bord est inaudible — les diffuseurs sont dans le
+//     wagon, derrière les vitres (paVoiceGain tombe à zéro) ;
+//   • DANS la rame arrêtée en gare, la voix du quai n'est qu'un lointain qui
+//     entre par les portes (platVoiceGain très en retrait).
+//
+// La MUSIQUE du quai, elle, ne suit pas cette règle : la 発車メロディ est faite
+// pour être entendue des voyageurs déjà montés, et elle passe donc en clair par
+// les portes ouvertes (platIn direct, sans platVoiceGain).
 //
 // Annonces vocales : les clips pré-générés (Kokoro, voir systems/speech.ts)
 // passent par audioManager sur le bus « PA » et sont donc pannés comme le
@@ -86,12 +99,20 @@ interface Nodes {
   melodyB: Tone.Synth;
   // Sonorisation.
   paIn: Tone.Gain; // entrée du bus wagon (avant timbre haut-parleur)
+  paVoiceIn: Tone.Gain; // voix de bord seule, coupée depuis le quai
+  paVoiceGain: Tone.Gain;
   platIn: Tone.Gain; // entrée du bus quai
+  platVoiceIn: Tone.Gain; // voix du quai seule, lointaine depuis la rame
+  platVoiceGain: Tone.Gain;
   platGain: Tone.Gain;
   platLp: Tone.Filter;
   platPanners: Tone.Panner3D[];
   hissGain: Tone.Gain;
   paClick: Tone.NoiseSynth;
+  platHissGain: Tone.Gain;
+  platClick: Tone.NoiseSynth;
+  platChime: Tone.Synth;
+  platBeep: Tone.Synth;
   // Ambiance de gare : le fond sonore du LIEU, distinct de la sonorisation.
   ambBed: Tone.Noise;
   ambFilter: Tone.Filter;
@@ -108,6 +129,13 @@ interface Nodes {
 let nodes: Nodes | null = null;
 let volume = 0.8;
 let prevSpeed01 = 0;
+
+/**
+ * Niveau de la voix du QUAI entendue depuis la rame. Assez pour reconnaître
+ * qu'une annonce passe dehors et en attraper des morceaux, pas assez pour
+ * couvrir celle du wagon : c'est ce qu'on entend vraiment, assis porte ouverte.
+ */
+const PLAT_VOICE_INSIDE = 0.3;
 
 // Pose de l'auditeur, tenue à jour par la caméra (voir setListenerPose).
 const listenerPos: { x: number; y: number; z: number } = { x: 0, y: CONFIG.eyeHeight, z: 4.2 };
@@ -243,19 +271,26 @@ export async function startAudio(): Promise<void> {
   const paVerbGain = new Tone.Gain(0.16);
   paBus.chain(paVerb, paVerbGain, master);
 
+  // Voix de bord : tout ce que DIT la rame passe par ce robinet, et lui seul se
+  // ferme quand le joueur descend sur le quai. Les carillons de porte et le
+  // jingle d'arrivée restent branchés en direct sur paIn — eux, on les entend
+  // très bien depuis le quai.
+  const paVoiceGain = new Tone.Gain(1).connect(paIn);
+  const paVoiceIn = new Tone.Gain(1).connect(paVoiceGain);
+
   // Souffle de ligne : la sono s'ouvre juste avant l'annonce et se referme
   // après. Spatialisé, il ancre la voix (non pannable) sur les diffuseurs.
   const hiss = new Tone.Noise('pink');
   const hissFilter = new Tone.Filter({ type: 'bandpass', frequency: 1500, Q: 0.4 });
   const hissGain = new Tone.Gain(0);
-  hiss.chain(hissFilter, hissGain, paIn);
+  hiss.chain(hissFilter, hissGain, paVoiceIn);
   hiss.start();
   // Déclic d'ouverture / fermeture de la ligne.
   const paClick = new Tone.NoiseSynth({
     noise: { type: 'white' },
     envelope: { attack: 0.001, decay: 0.02, sustain: 0 },
     volume: -14,
-  }).connect(paIn);
+  }).connect(paVoiceIn);
 
   // --- Bus SONORISATION du quai ----------------------------------------
   // La 発車メロディ est diffusée sur le quai, pas dans la rame : portes
@@ -266,6 +301,38 @@ export async function startAudio(): Promise<void> {
   const platLp = new Tone.Filter({ type: 'lowpass', frequency: 900, rolloff: -24, Q: 0.4 });
   const platGain = new Tone.Gain(0.16);
   platIn.chain(platHp, platLp, platGain);
+  // Voix du quai (annonces ATOS, agent de quai) : même sono que la mélodie,
+  // mais elle passe par un robinet à part. La musique est faite pour porter
+  // jusque dans la rame ; la parole du quai, non — depuis une voiture arrêtée
+  // on n'en saisit qu'un lointain, même portes ouvertes.
+  const platVoiceGain = new Tone.Gain(PLAT_VOICE_INSIDE).connect(platIn);
+  const platVoiceIn = new Tone.Gain(1).connect(platVoiceGain);
+  const platHiss = new Tone.Noise('pink');
+  const platHissFilter = new Tone.Filter({ type: 'bandpass', frequency: 1300, Q: 0.4 });
+  const platHissGain = new Tone.Gain(0);
+  platHiss.chain(platHissFilter, platHissGain, platVoiceIn);
+  platHiss.start();
+  const platClick = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.025, sustain: 0 },
+    volume: -16,
+  }).connect(platVoiceIn);
+
+  // Carillon ATOS (avant l'annonce d'approche) et bips de service : le signal
+  // électronique de l'entrée en gare, les bips des portes palières. Branchés
+  // en direct sur platIn — ce sont des signaux, pas de la parole, et ils
+  // portent jusque dans la rame.
+  const platChime = new Tone.Synth({
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.004, decay: 0.7, sustain: 0.05, release: 0.6 },
+    volume: -6,
+  }).connect(platIn);
+  const platBeep = new Tone.Synth({
+    oscillator: { type: 'square' },
+    envelope: { attack: 0.002, decay: 0.1, sustain: 0.3, release: 0.06 },
+    volume: -20,
+  }).connect(platIn);
+
   const platPanners = PLATFORM_SPEAKERS.map(([x, y, z]) => {
     const p = new Tone.Panner3D({
       positionX: x,
@@ -375,12 +442,20 @@ export async function startAudio(): Promise<void> {
     melodyA,
     melodyB,
     paIn,
+    paVoiceIn,
+    paVoiceGain,
     platIn,
+    platVoiceIn,
+    platVoiceGain,
     platGain,
     platLp,
     platPanners,
     hissGain,
     paClick,
+    platHissGain,
+    platClick,
+    platChime,
+    platBeep,
     ambBed,
     ambFilter,
     ambGain,
@@ -459,7 +534,10 @@ export function setListenerPose(
 }
 
 // Côté d'ouverture : les haut-parleurs du quai basculent avec lui.
+let platformSide: 1 | -1 = 1;
+
 export function setPlatformSide(side: 1 | -1): void {
+  platformSide = side;
   if (!nodes) return;
   nodes.platPanners.forEach((p, i) => {
     p.positionX.value = side * PLATFORM_SPEAKERS[i][0];
@@ -480,6 +558,11 @@ export function setListenerOutside(outside: boolean): void {
     nodes.platLp.frequency.rampTo(11000, 0.25);
     nodes.platGain.gain.rampTo(0.82, 0.25);
   }
+  // Debout sur le quai, la sono du wagon est derrière les vitres : les
+  // diffuseurs sont à l'intérieur, la voix de bord ne sort pas. À l'inverse,
+  // celle du quai n'a plus rien à traverser.
+  nodes.paVoiceGain.gain.rampTo(outside ? 0 : 1, 0.3);
+  nodes.platVoiceGain.gain.rampTo(outside ? 1 : PLAT_VOICE_INSIDE, 0.3);
 }
 
 /**
@@ -504,13 +587,27 @@ export function setPlatformDoors(open01: number): void {
   nodes.platGain.gain.rampTo(0.16 + o * 0.44, 0.12);
 }
 
-// Facteur de volume 0..1 selon la distance au diffuseur le plus proche. Sert
-// aux annonces vocales, que speechSynthesis ne permet pas de panner : au moins
-// leur niveau suit la position de la tête dans le wagon.
-export function speakerProximity(): number {
-  // Depuis le quai, la sono du wagon n'est plus qu'un lointain : ce sont les
-  // haut-parleurs du quai qui portent les annonces.
-  if (listenerOutside) return 0.45;
+/**
+ * Facteur de volume 0..1 selon la distance au diffuseur le plus proche de la
+ * sono visée. Sert aux annonces vocales, que speechSynthesis ne permet pas de
+ * panner : au moins leur niveau suit la position de la tête. Les clips, eux,
+ * passent par les Panner3D et n'en ont pas besoin.
+ */
+export function speakerProximity(bus: VoiceBus = 'cabinVoice'): number {
+  if (bus === 'platformVoice') {
+    // Dans la rame, la voix du quai n'est qu'un lointain par les portes.
+    if (!listenerOutside) return PLAT_VOICE_INSIDE;
+    let best = Infinity;
+    for (const [x, y, z] of PLATFORM_SPEAKERS) {
+      const d = Math.hypot(platformSide * x - listenerPos.x, y - listenerPos.y, z - listenerPos.z);
+      if (d < best) best = d;
+    }
+    if (!Number.isFinite(best)) return 1;
+    return Math.max(0.5, Math.min(1, 3.4 / Math.max(2.6, best)));
+  }
+  // Depuis le quai, les diffuseurs du wagon sont derrière les vitres : la voix
+  // de bord ne s'entend pas — c'est la sono du quai qui parle.
+  if (listenerOutside) return 0;
   let best = Infinity;
   for (const [x, y, z] of CABIN_SPEAKERS) {
     const d = Math.hypot(x - listenerPos.x, y - listenerPos.y, z - listenerPos.z);
@@ -534,22 +631,57 @@ function slot(instrument: string, when: number, gap = 0.005): number {
   return t;
 }
 
-// Ouverture / fermeture de la ligne de sonorisation autour d'une annonce.
-function paClick(duration: number, when: number, velocity: number): void {
+// Ouverture / fermeture d'une ligne de sonorisation autour d'une annonce.
+// Deux lignes indépendantes : celle de la rame et celle de la gare.
+export function paVoiceOpen(bus: VoiceBus = 'cabinVoice'): void {
   if (!nodes) return;
-  nodes.paClick.triggerAttackRelease(duration, slot('paClick', when), velocity);
+  const plat = bus === 'platformVoice';
+  const click = plat ? nodes.platClick : nodes.paClick;
+  const hiss = plat ? nodes.platHissGain : nodes.hissGain;
+  click.triggerAttackRelease(0.02, slot(plat ? 'platClick' : 'paClick', Tone.now()), 0.5);
+  hiss.gain.rampTo(plat ? 0.022 : 0.03, 0.1);
 }
 
-export function paVoiceOpen(): void {
+export function paVoiceClose(bus: VoiceBus = 'cabinVoice'): void {
   if (!nodes) return;
-  paClick(0.02, Tone.now(), 0.5);
-  nodes.hissGain.gain.rampTo(0.03, 0.1);
+  const plat = bus === 'platformVoice';
+  const click = plat ? nodes.platClick : nodes.paClick;
+  const hiss = plat ? nodes.platHissGain : nodes.hissGain;
+  hiss.gain.rampTo(0, 0.3);
+  click.triggerAttackRelease(0.015, slot(plat ? 'platClick' : 'paClick', Tone.now() + 0.18), 0.3);
 }
 
-export function paVoiceClose(): void {
+// --- Signaux de la sono du quai -----------------------------------------
+
+/**
+ * Carillon ATOS : le motif de quelques notes qui précède l'annonce d'approche.
+ * Ce n'est pas la mélodie de départ — c'est un signal d'attention, court, sur
+ * lequel personne ne se retourne mais que tout le monde reconnaît.
+ */
+export function platformChime(): void {
   if (!nodes) return;
-  nodes.hissGain.gain.rampTo(0, 0.3);
-  paClick(0.015, Tone.now() + 0.18, 0.3);
+  const now = Tone.now() + 0.05;
+  const notes = ['C#6', 'G#5', 'B5', 'E5', 'G#5'];
+  notes.forEach((n, i) => {
+    nodes!.platChime.triggerAttackRelease(n, 0.6, slot('platChime', now + i * 0.3), 0.42);
+  });
+}
+
+/** Signal électronique entre deux 「電車がまいります」 : deux bips secs. */
+export function platformWarningSignal(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.platBeep.triggerAttackRelease('E6', 0.14, slot('platBeep', now), 0.4);
+  nodes.platBeep.triggerAttackRelease('E6', 0.14, slot('platBeep', now + 0.24), 0.4);
+}
+
+/** Bips des portes palières pendant leur fermeture. */
+export function psdDoorBeeps(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  for (let i = 0; i < 5; i++) {
+    nodes.platBeep.triggerAttackRelease('B5', 0.1, slot('platBeep', now + i * 0.36), 0.3);
+  }
 }
 
 // Mise à jour continue, pilotée par la vitesse normalisée (0..1).
@@ -775,11 +907,18 @@ function resolveAudioUrl(pathOrName: string): string {
 
 // Un clip local rejoint le MÊME bus spatialisé que sa version synthétisée :
 // déposer un door-open.mp3 ne fait pas ressortir le son du centre de la tête.
-type Bus = 'cabin' | 'platform';
+// Les deux entrées « …Voice » sont celles que le lieu d'écoute fait taire :
+// la voix de bord depuis le quai, celle du quai depuis la rame.
+export type Bus = 'cabin' | 'platform' | 'cabinVoice' | 'platformVoice';
+/** Les deux bus de PAROLE, seuls concernés par la coupure selon le lieu. */
+export type VoiceBus = Extract<Bus, 'cabinVoice' | 'platformVoice'>;
 
 function busInput(bus: Bus): Tone.Gain | null {
   if (!nodes) return null;
-  return bus === 'platform' ? nodes.platIn : nodes.paIn;
+  if (bus === 'platform') return nodes.platIn;
+  if (bus === 'cabinVoice') return nodes.paVoiceIn;
+  if (bus === 'platformVoice') return nodes.platVoiceIn;
+  return nodes.paIn;
 }
 
 // --- Téléchargement et décodage des clips -------------------------------

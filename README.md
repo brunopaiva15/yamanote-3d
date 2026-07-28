@@ -372,13 +372,43 @@ la fermeture.
 Les annonces (sens de la boucle 内回り avec gares repères, 次は… avec numéro
 JY, まもなく…, fermeture, accueil, messages de courtoisie en rotation) sont
 dites en japonais puis en anglais, avec les correspondances réelles de chaque
-gare. Les voix sont des clips pré-générés avec **Kokoro TTS** (japonais
-`jf_alpha`, anglais `af_heart`), stockés dans `public/audio/announcements/` et
-régénérables via `scripts/announcements-export.ts` +
-`scripts/announcements-gen.py` ; un texte sans clip retombe sur
-`speechSynthesis`. Le japonais est synthétisé segment par segment, avec de
-vraies pauses aux 、/。 — la cadence posée des annonces automatiques JR
-(まもなく、…渋谷、…渋谷。), que Kokoro ne marque pas de lui-même.
+gare. Les voix sont des clips pré-générés avec **Kokoro TTS**, stockés dans
+`public/audio/announcements/` et régénérables via
+`scripts/announcements-export.ts` + `scripts/announcements-gen.py` ; un texte
+sans clip retombe sur `speechSynthesis`. Le japonais est synthétisé segment par
+segment, avec de vraies pauses aux 、/。 — la cadence posée des annonces
+automatiques JR (まもなく、…渋谷、…渋谷。), que Kokoro ne marque pas de
+lui-même. `--reuse` ne grave que les clips absents : un texte inchangé garde
+exactement le fichier qu'il avait, et une version plus récente de Kokoro ne
+fait pas dériver en douce les annonces déjà en place.
+
+### La gare parle aussi
+
+Une gare a sa propre sonorisation, et elle ne dit pas la même chose que la
+rame. Le quai annonce le train qui arrive, le numéro de voie et la ligne
+jaune ; la rame annonce la gare suivante et les correspondances. Sur un quai
+ATOS, la séquence se déroule toujours dans le même ordre : annonce anticipée du
+prochain train, carillon, まもなく、1番線に…、危ないですから、黄色い点字ブロック
+までお下がりください, sa reprise anglaise, puis 電車がまいります répété pendant
+que la rame entre, le nom de la gare à l'arrêt, l'agent qui presse l'échange,
+la mélodie, 1番線、ドアが閉まります et les bips des portes palières. Un arrêt
+d'urgence subi en cours de route met la ligne en retard : les quais s'en
+excusent, motif à l'appui, pendant les quelques arrêts qui suivent
+(`data/stationAnnouncements`, `systems/stationPa`).
+
+**Quatre locutrices, toutes féminines**, parce que quatre sources parlent et
+qu'on doit les distinguer sans regarder : la sono de la rame (`jf_alpha`),
+l'annonce automatique du quai (`jf_gongitsune`), l'agent de quai au micro
+(`jf_nezumi`, un peu plus rapide et moins lisse — c'est une personne, pas un
+automate), et les deux voix anglaises (`af_heart` à bord, `af_sarah` au quai,
+un cran plus lente : dehors, sous une verrière, une annonce trop rapide ne
+s'attrape pas).
+
+Le numéro de voie annoncé est le vrai (`data/platforms`), y compris les voies
+secondaires d'Ikebukuro et d'Ōsaki. Les clips ne sont gravés que pour le sens
+réellement circulé (`DIRECTIONS` dans `scripts/announcements-export.ts`) : dans
+l'autre sens, ni le numéro de voie ni la direction annoncée ne seraient les
+mêmes.
 
 ### L'ambiance du lieu
 
@@ -416,14 +446,32 @@ centre de la tête.
 - La 発車メロディ vient des haut-parleurs du **quai**, pas de la rame : sourde
   et lointaine portes fermées, elle entre franchement par les ouvertures quand
   les portes de la rame **et** les portes palières sont dégagées, du côté qui
-  s'ouvre à cette gare.
+  s'ouvre à cette gare. Elle est faite pour être entendue des voyageurs déjà
+  montés : elle porte jusque dans le wagon.
 
-Les annonces vocales (clips Kokoro) passent par ce même bus PA : elles sont
-réellement pannées sur les diffuseurs du plafond. Seul le repli
-`speechSynthesis` (texte sans clip) sort hors du graphe Web Audio et ne peut
-pas être panné ; il reste ancré aux diffuseurs par le souffle de ligne
-spatialisé (la sono s'ouvre et se referme avec un déclic autour de chaque
-annonce) et par un volume qui suit la distance au diffuseur le plus proche.
+Les annonces vocales (clips Kokoro) passent par ces mêmes bus : elles sont
+réellement pannées sur les diffuseurs, ceux du plafond pour la rame, ceux du
+quai pour la gare. Seul le repli `speechSynthesis` (texte sans clip) sort hors
+du graphe Web Audio et ne peut pas être panné ; il reste ancré aux diffuseurs
+par le souffle de ligne spatialisé (la sono s'ouvre et se referme avec un
+déclic autour de chaque annonce) et par un volume qui suit la distance au
+diffuseur le plus proche.
+
+**Où on est décide ce qu'on entend.** Les deux voix ont chacune leur robinet, et
+il dépend du côté de la porte où se trouve la tête :
+
+- sur le **quai**, la voix de bord est muette — les diffuseurs sont dans le
+  wagon, derrière les vitres. On n'entend que la gare, et en clair ;
+- dans la **rame arrêtée**, la voix du quai n'est qu'un lointain qui entre par
+  les portes ouvertes : assez pour reconnaître qu'une annonce passe dehors et
+  en attraper des morceaux, pas assez pour couvrir celle du wagon.
+
+Ce partage ne vaut que pour la **parole**. Les carillons de porte, le jingle
+d'arrivée, le carillon ATOS, les bips des portes palières et la mélodie de
+départ sont des signaux : ils traversent, dans les deux sens. Chaque
+sonorisation a sa propre file d'annonces, si bien que la gare et la rame
+peuvent parler en même temps — ce qu'elles font vraiment quand on est assis
+porte ouverte et que le quai annonce la fermeture une seconde après le wagon.
 
 Optionnel : déposez d'autres enregistrements dans `public/audio/`
 (`door-open.mp3`, `door-close.mp3`, `arrival.mp3`, `melody-JY01.mp3`…) ; ils seront
