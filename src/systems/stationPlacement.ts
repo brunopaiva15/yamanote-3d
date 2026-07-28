@@ -11,11 +11,14 @@
 import { CONSIST, E235 } from '../data/e235';
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
 import {
+  ELEVATOR_HALF_Z,
+  ESCALATOR_HALF_Z,
   OPP_DEPTH,
   PSD_HALF_GAP,
   PSD_X,
   TRACK_HALF,
   STAIR_GOING,
+  STAIR_HALF_Z,
   STAIR_RISE,
   STAIR_STEPS,
   STAIR_WALK_HALF_X,
@@ -204,10 +207,12 @@ export function gantryZs(p: StationPlacement): number[] {
 export function trackSignZs(p: StationPlacement): number[] {
   const halfZ = p.walkHalfZ;
   const half = p.layout.length / 2;
-  // Ce qui monte jusqu'au gabarit du panneau, au milieu du quai qu'il couvre.
+  // Ce qui monte jusqu'au gabarit du panneau, au milieu du quai qu'il couvre —
+  // et les plans de la charpente signature, quand elle en impose.
   const solids = [
     ...(p.kiosk ? [{ z: p.kiosk.z, r: p.kiosk.halfZ + 0.3 }] : []),
     ...(p.layout.amenities.clock ? [{ z: 0, r: 0.65 }] : []),
+    ...(p.layout.sigPlan?.keepOut ?? []).map((k) => ({ z: k.z, r: k.r + 0.15 })),
   ];
   const out: number[] = [];
   for (let k = -3; k <= 3; k++) {
@@ -316,15 +321,17 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   // Piliers, trémies, escaliers mécaniques, ascenseur et kiosque sont posés par
   // le gabarit et font autorité. Tout le mobilier vient ensuite se ranger
   // autour, jamais l'inverse.
-  const stairs: Placed[] = a.stairs.map((z) => ({ x: midX + 0.4, z, halfX: 1.5, halfZ: 2.6 }));
+  const stairs: Placed[] = a.stairs.map((z) => ({ x: midX + 0.4, z, halfX: 1.5, halfZ: STAIR_HALF_Z }));
   const escalators: Placed[] = a.escalators.map((z) => ({
     x: midX + 0.55,
     z,
     halfX: 0.7,
-    halfZ: 2.8,
+    halfZ: ESCALATOR_HALF_Z,
   }));
   const elevator: Placed | null =
-    a.elevator === null ? null : { x: backX - 1.05, z: a.elevator, halfX: 0.95, halfZ: 0.95 };
+    a.elevator === null
+      ? null
+      : { x: backX - 1.05, z: a.elevator, halfX: 0.95, halfZ: ELEVATOR_HALF_Z };
   const kiosk: Placed | null = a.kiosk
     ? { x: backX - 1.35, z: usable * 0.36, halfX: 1.25, halfZ: 2.4 }
     : null;
@@ -352,6 +359,11 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   const taken: Placed[] = [
     ...columns.map((z) => ({ x: backX - 0.55, z, halfX: 0.34, halfZ: 0.34 })),
     ...structure,
+    // Poteaux de la charpente signature : plantés jusqu'au sol, ils sont déjà
+    // écartés des accès et de la bande directionnelle par le plan (data) — le
+    // mobilier, lui, s'écarte d'eux ici, et la marche les contournera puisque
+    // `taken` devient la liste des obstacles.
+    ...(layout.sigPlan?.posts ?? []).map((s) => ({ x: s.x, z: s.z, halfX: 0.35, halfZ: 0.35 })),
   ];
 
   // --- Le mobilier, rangé dans ce qui reste --------------------------
@@ -461,6 +473,9 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
             return { z0: g - 1.2, z1: g + 1.2 };
           })
         : []),
+      // Et au droit des plans profonds de la charpente signature — le portique
+      // de jonction d'Hamamatsuchō descend en travers de leur cote.
+      ...(layout.sigPlan?.runBlocks ?? []),
     ]),
   };
 

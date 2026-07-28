@@ -17,14 +17,10 @@ export interface SigProps {
   m: Mats;
 }
 
-/** Positions régulières sur la longueur du quai. */
-export function bays(length: number, spacing: number, from = -0.5, to = 0.5): number[] {
-  const out: number[] = [];
-  const z0 = length * from + spacing * 0.4;
-  const z1 = length * to - spacing * 0.4;
-  for (let z = z0; z <= z1; z += spacing) out.push(z);
-  return out;
-}
+// La trame des travées vit dans les DONNÉES (data/stationLayouts) : le plan
+// d'implantation (SigPlan) y est calculé avec la même formule, et le placement
+// comme la signalétique le consultent. Ré-exportée ici pour les charpentes.
+export { bays } from '../../../data/stationLayouts';
 
 /**
  * Matériaux propres à une charpente, créés une fois et rendus à la sortie.

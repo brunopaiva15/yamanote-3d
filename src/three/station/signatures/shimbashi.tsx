@@ -14,10 +14,8 @@ import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { PLATFORM_TOP, PSD_X } from '../../../data/stationGeometry';
 import { mat, useInstances } from '../instancing';
-import { bays, siteCut, useSigMaterials, type SigProps } from './kit';
+import { siteCut, useSigMaterials, type SigProps } from './kit';
 
-/** Entraxe des fermes de la halle (m). */
-const TRUSS = 11;
 /** Portée du faisceau au-delà du quai d'en face — cf. Station.tsx. */
 const YARD_REACH = 4 * 4.6;
 
@@ -50,7 +48,13 @@ export function Shimbashi({ layout, place }: SigProps) {
     [],
   );
 
-  const trussZ = useMemo(() => bays(layout.length, TRUSS), [layout.length]);
+  // La trame des fermes vient du plan (data/stationLayouts) : c'est lui qui
+  // écarte les poteaux d'épine des accès, du kiosque, des potences et de la
+  // bande directionnelle — et que mobilier et caissons consultent en retour.
+  const trussZ = useMemo(
+    () => (layout.sigPlan?.posts ?? []).map((p) => p.z),
+    [layout.sigPlan],
+  );
 
   // Poteaux : au droit de l'épine, du fond du quai d'en face et du bout du
   // faisceau. Jamais dans une voie, jamais dans un passage.

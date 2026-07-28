@@ -65,6 +65,9 @@ const UP = new THREE.Quaternion();
 const V = new THREE.Vector3();
 const S = new THREE.Vector3();
 
+/** Référence stable pour les gares sans charpente signature. */
+const EMPTY_AVOID: { z: number; r: number }[] = [];
+
 
 /** Recul du panneau de limite derrière la limite de marche réelle (m). */
 const BARRIER_STANDOFF = 0.35;
@@ -482,6 +485,7 @@ export function Station() {
         bandX={place.hasBackWall ? backX - 0.3 : backX}
         detail={detail}
         ground={signageGround}
+        avoid={layout.sigPlan?.keepOut ?? EMPTY_AVOID}
         frame={m.frame}
         metal={m.metal}
         accent={m.accent}

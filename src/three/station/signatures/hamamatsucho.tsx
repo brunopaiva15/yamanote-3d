@@ -9,8 +9,9 @@
 // La poutre du monorail est déjà dans le décor de quartier (three/Landmarks) :
 // elle n'a pas à être dessinée ici.
 
+import { useMemo } from 'react';
 import * as THREE from 'three';
-import { PLATFORM_TOP, PSD_X } from '../../../data/stationGeometry';
+import { directionBandZs, PLATFORM_TOP, PSD_X } from '../../../data/stationGeometry';
 import { bays, siteCut, useSigMaterials, type SigProps } from './kit';
 
 /** Abscisse de la jonction ancien / neuf, en fraction de la longueur. */
@@ -25,6 +26,37 @@ export function Hamamatsucho({ layout, place }: SigProps) {
   const x1 = outerX + 0.4;
   const span = x1 - x0;
   const midX = (x0 + x1) / 2;
+
+  // Les poutrelles balaient toute la largeur : elles passent au large des
+  // piliers génériques (et des caméras qui y sont vissées), des gaines
+  // d'escalier mécanique et des débouchés d'accès où pend une plaque.
+  const clearBay = useMemo(() => {
+    const solids = [
+      ...place.columns.map((z) => ({ z, r: 0.55 })),
+      ...place.escalators.map((e) => ({ z: e.z, r: e.halfZ + 0.6 })),
+      ...place.accesses.map((a) => ({ z: a.z - a.halfZ + 0.1, r: 0.6 })),
+    ];
+    return (z: number) => !solids.some((s) => Math.abs(z - s.z) < s.r);
+  }, [place.columns, place.escalators, place.accesses]);
+
+  // Le longeron de la moitié ancienne s'interrompt au droit des bandes
+  // directionnelles et des débouchés d'accès, qu'il transperçait.
+  const spineSpans = useMemo(() => {
+    const z0 = -len / 2 + 2;
+    const z1 = jointZ - 0.8;
+    const blocked = [
+      ...directionBandZs(len).map((z) => ({ z0: z - 4.65, z1: z + 4.65 })),
+      ...place.accesses.map((a) => ({ z0: a.z - a.halfZ - 2.9, z1: a.z - a.halfZ + 0.7 })),
+    ].sort((a, b) => a.z0 - b.z0);
+    const out: { z0: number; z1: number }[] = [];
+    let cur = z0;
+    for (const b of blocked) {
+      if (b.z0 > cur + 2) out.push({ z0: cur, z1: Math.min(b.z0, z1) });
+      cur = Math.max(cur, b.z1);
+    }
+    if (z1 > cur + 2) out.push({ z0: cur, z1 });
+    return out;
+  }, [len, jointZ, place.accesses]);
 
   const s = useSigMaterials(
     () => ({
@@ -53,29 +85,35 @@ export function Hamamatsucho({ layout, place }: SigProps) {
 
   return (
     <group>
-      {/* Moitié ancienne : poutrelles tous les quatre mètres, très présentes. */}
-      {bays(len, 4, -0.5, JOINT).map((z) => (
-        <mesh key={`o${z}`} position={[midX, top - 0.3, z]} material={s.old}>
-          <boxGeometry args={[span, 0.22, 0.2]} />
+      {/* Moitié ancienne : poutrelles tous les quatre mètres, très présentes —
+          amincies et PLAQUÉES à la sous-face : plus creuses, elles balayaient
+          la bande directionnelle, la gouttière et les bannières. */}
+      {bays(len, 4, -0.5, JOINT).filter(clearBay).map((z) => (
+        <mesh key={`o${z}`} position={[midX, top - 0.12, z]} material={s.old}>
+          <boxGeometry args={[span, 0.16, 0.2]} />
         </mesh>
       ))}
-      <mesh position={[midX, top - 0.52, (-len / 2 + jointZ) / 2]} material={s.old}>
-        <boxGeometry args={[0.36, 0.3, len / 2 + jointZ]} />
-      </mesh>
+      {spineSpans.map((sp) => (
+        <mesh key={`sp${sp.z0}`} position={[midX, top - 0.52, (sp.z0 + sp.z1) / 2]} material={s.old}>
+          <boxGeometry args={[0.36, 0.3, sp.z1 - sp.z0]} />
+        </mesh>
+      ))}
 
       {/* Moitié neuve : deux profilés larges, et rien d'autre. */}
-      {bays(len, 9, JOINT, 0.5).map((z) => (
-        <mesh key={`n${z}`} position={[midX, top - 0.26, z]} material={s.fresh}>
-          <boxGeometry args={[span, 0.34, 0.42]} />
+      {bays(len, 9, JOINT, 0.5).filter(clearBay).map((z) => (
+        <mesh key={`n${z}`} position={[midX, top - 0.12, z]} material={s.fresh}>
+          <boxGeometry args={[span, 0.2, 0.42]} />
         </mesh>
       ))}
 
       {/* La jonction : un portique franc, là où l'un s'arrête et l'autre commence.
-          C'est ce joint qu'on remarque en marchant le long du quai. */}
+          C'est ce joint qu'on remarque en marchant le long du quai. Le montant
+          côté voie se tient EN RETRAIT du bord : planté à l'ancienne place, il
+          mordait sur le gabarit de la rame. */}
       <mesh position={[midX, top - 0.42, jointZ]} material={s.fresh}>
         <boxGeometry args={[span + 0.6, 0.6, 0.7]} />
       </mesh>
-      {[x0, x1].map((x) => (
+      {[PSD_X + 0.3, x1].map((x) => (
         <mesh
           key={`j${x}`}
           position={[x, PLATFORM_TOP + (top - PLATFORM_TOP) / 2, jointZ]}

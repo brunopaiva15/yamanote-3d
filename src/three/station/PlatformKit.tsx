@@ -50,10 +50,20 @@ interface Props {
   };
 }
 
-/** Suspentes d'un tronçon de conduite : une tous les dix mètres environ. */
-function hangers(sp: { z0: number; z1: number }): number[] {
+/**
+ * Suspentes d'un tronçon de conduite : une tous les dix mètres environ,
+ * décalée du pilier le plus proche — au droit d'un poteau, elle traversait la
+ * poutre transversale, et la caméra qui y est parfois vissée.
+ */
+function hangers(sp: { z0: number; z1: number }, columns: readonly number[]): number[] {
   const n = Math.max(2, Math.round((sp.z1 - sp.z0) / 10));
-  return Array.from({ length: n }, (_, k) => sp.z0 + 0.4 + (k / (n - 1)) * (sp.z1 - sp.z0 - 0.8));
+  return Array.from({ length: n }, (_, k) => {
+    const z = sp.z0 + 0.4 + (k / (n - 1)) * (sp.z1 - sp.z0 - 0.8);
+    const near = columns.some((c) => Math.abs(z - c) < 0.5);
+    if (!near) return z;
+    const shifted = z + 0.7;
+    return shifted <= sp.z1 - 0.3 ? shifted : z - 0.7;
+  });
 }
 
 /** Couvercles des bacs de tri : bouteilles, papiers, tout-venant. */
@@ -367,7 +377,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
           <mesh position={[trayX, canopyY - 0.43, (sp.z0 + sp.z1) / 2]} material={m.frame}>
             <boxGeometry args={[0.24, 0.06, sp.z1 - sp.z0 - 0.4]} />
           </mesh>
-          {hangers(sp).map((z, k) => (
+          {hangers(sp, place.columns).map((z, k) => (
             <mesh key={k} position={[trayX, canopyY - 0.22, z]} material={m.metal}>
               <boxGeometry args={[0.34, 0.44, 0.05]} />
             </mesh>

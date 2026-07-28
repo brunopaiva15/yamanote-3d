@@ -83,15 +83,32 @@ const IGNORE = [
   'gare/mur-fond ✕ gare/poutre',
   'gare/mur-fond ✕ gare/publicité/caisson-mur',
   'gare/mur-fond ✕ gare/trousse/armoire',
+  // Charpentes signature : leurs poteaux et tabliers prennent appui DANS la
+  // travée d'en face (piles, fondations) et traversent la dalle d'auvent —
+  // c'est ainsi qu'un bâtiment enjambe un quai.
+  'gare/charpente-ebisu ✕ gare/travée-opposée',
+  'gare/charpente-nippori ✕ gare/travée-opposée',
+  'gare/charpente-shimbashi ✕ gare/travée-opposée',
+  'gare/charpente-takanawaGateway ✕ gare/travée-opposée',
+  'gare/auvent ✕ gare/charpente-ebisu',
+  'gare/auvent ✕ gare/charpente-shimbashi',
+  'gare/auvent ✕ gare/charpente-takanawaGateway',
+  // La gaine d'escalier mécanique monte PAR CONSTRUCTION jusqu'à la sous-face
+  // de l'auvent ; et les balustrades inclinées gonflent leur boîte englobante
+  // (la sonde travaille en AABB), d'où de faux contacts avec les néons.
+  'gare/auvent ✕ gare/escalator',
+  'gare/escalator ✕ gare/néon',
 ];
 
 const totals = new Map();
 for (const i of stations) {
   const res = await page.evaluate(
     async ([idx, ignore]) => {
-      // Poser la gare voulue et laisser React la reconstruire.
+      // Poser la gare voulue et laisser React la reconstruire. Le délai est
+      // large à dessein : à 350 ms, sous SwiftShader, on mesurait parfois la
+      // gare PRÉCÉDENTE encore montée, sous le nom de la nouvelle.
       window.__probeGoto(idx, globalThis.__probePhase ?? 'dwell');
-      await new Promise((r) => setTimeout(r, 350));
+      await new Promise((r) => setTimeout(r, 900));
       return window.__stationProbe({ min: 0.05, ignore });
     },
     [i, IGNORE],

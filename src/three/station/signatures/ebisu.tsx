@@ -64,12 +64,15 @@ export function Ebisu({ layout, place }: SigProps) {
           <boxGeometry args={[span, 0.44, 0.36]} />
         </mesh>
       ))}
-      {/* Descentes de charge : au droit de l'épine et du fond de la travée. */}
-      {bays(built, 12).map((z) =>
+      {/* Descentes de charge : au droit de l'épine et du fond de la travée.
+          Leur trame vient du plan (data/stationLayouts), qui les écarte des
+          escaliers mécaniques, des potences et de la bande directionnelle —
+          l'une d'elles se plantait en plein milieu d'un escalier mécanique. */}
+      {(layout.sigPlan?.posts ?? []).map(({ z }) =>
         [place.backX, oppBackX].map((x) => (
           <mesh
             key={`c${x}-${z}`}
-            position={[x, PLATFORM_TOP + (soffit - PLATFORM_TOP) / 2, z - layout.length * 0.16]}
+            position={[x, PLATFORM_TOP + (soffit - PLATFORM_TOP) / 2, z]}
             material={s.wall}
           >
             <boxGeometry args={[0.44, soffit - PLATFORM_TOP, 0.44]} />

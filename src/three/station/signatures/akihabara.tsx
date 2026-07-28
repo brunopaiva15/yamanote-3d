@@ -83,9 +83,12 @@ export function Akihabara({ place, m }: SigProps) {
       ))}
 
       {/* Sous le franchissement, le plafond du quai descend et s'assombrit :
-          c'est la zone basse et sourde d'Akihabara. */}
-      <mesh position={[place.backX, PLATFORM_TOP + 3.3, 0]} material={m.wallDark}>
-        <boxGeometry args={[3.2, 0.14, DECK_W - 3]} />
+          c'est la zone basse et sourde d'Akihabara. La retombée couvre l'allée
+          du bord d'en face — la seule bande sans pilier, sans bande
+          directionnelle et sans conduites : centrée sur l'épine, elle
+          traversait tout ce qui y vit. */}
+      <mesh position={[place.backX + 0.86, PLATFORM_TOP + 3.3, 0]} material={m.wallDark}>
+        <boxGeometry args={[1.48, 0.14, DECK_W - 3]} />
       </mesh>
     </group>
   );
