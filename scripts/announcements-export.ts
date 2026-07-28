@@ -13,9 +13,13 @@
 // - tts   : texte adapté à la synthèse (macrons ASCII et « JY-xx » épelé en
 //           anglais — le japonais part tel quel, le dictionnaire open_jtalk
 //           connaît les gares) ;
-// - speed : vitesse Kokoro (ja-JP : jf_alpha 1.0 — le rythme natif de la
-//           voix, sans ralenti ; en-US : af_heart 0.93). Les pauses japonaises
-//           sont l'affaire du générateur (silences insérés aux 、/。).
+// - speed : vitesse Kokoro (ja-JP : jf_alpha 1.15, en-US : af_heart 0.93).
+//           Le japonais est au-dessus du rythme natif pour COMPENSER la
+//           découpe en segments du générateur : synthétisé seul, un segment
+//           reçoit une intonation de fin de phrase et s'allonge d'environ
+//           25 % — à vitesse 1.0 la voix articulait donc plus lentement
+//           qu'avant l'ajout des pauses. Les silences aux 、/。 eux-mêmes
+//           sont posés par le générateur, pas par le débit.
 
 import { writeFileSync } from 'node:fs';
 import {
@@ -34,7 +38,7 @@ import { DOOR_SIDE, STATIONS } from '../src/data/stations';
 import { clipKey } from '../src/data/clipKey';
 
 const SPEED: Record<Utterance['lang'], number> = {
-  'ja-JP': 1.0,
+  'ja-JP': 1.15,
   'en-US': 0.93,
 };
 
