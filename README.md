@@ -4,7 +4,7 @@ Expérience web contemplative et passive : vous êtes passager d'une rame JR Eas
 série E235 sur la ligne Yamanote (Tokyo, boucle de 30 stations). Aucun objectif,
 aucun score : on marche dans le wagon, on s'assoit, on regarde la ville défiler,
 on écoute les annonces et les mélodies. La boucle tourne indéfiniment, en temps
-quasi réel (~2 minutes par station, ~1 heure la boucle).
+quasi réel (environ 1 à 3 minutes par tronçon selon la gare, ~67 minutes la boucle).
 
 ## Lancer
 

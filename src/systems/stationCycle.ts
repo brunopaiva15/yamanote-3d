@@ -12,6 +12,7 @@ import {
   SESERAGI_PLATFORMS,
 } from '../data/melodies';
 import { DOOR_SIDE, STATIONS } from '../data/stations';
+import { cruiseDuration } from '../data/segments';
 import {
   EMERGENCY_REASONS,
   approachSequence,
@@ -241,11 +242,11 @@ export function melodyStartAt(stationIndex: number, dwell: number): number {
   return Math.max(2, dwell - CLOSE_ANNOUNCE_LEAD - MELODY_TO_ANNOUNCE_GAP - window);
 }
 
-const PHASE_ORDER = [
-  { phase: 'cruise' as const, dur: () => CONFIG.cruiseTime },
-  { phase: 'brake' as const, dur: () => CONFIG.brakeTime },
-  { phase: 'dwell' as const, dur: () => dwellDuration(useStore.getState().index) },
-  { phase: 'depart' as const, dur: () => CONFIG.departTime },
+const PHASE_ORDER = (stationIndex: number) => [
+  { phase: 'cruise' as const, dur: cruiseDuration(stationIndex) },
+  { phase: 'brake' as const, dur: CONFIG.brakeTime },
+  { phase: 'dwell' as const, dur: dwellDuration(stationIndex) },
+  { phase: 'depart' as const, dur: CONFIG.departTime },
 ];
 
 function once(key: string, condition: boolean, fn: () => void): void {
@@ -280,7 +281,11 @@ function enterPhase(phase: Phase): void {
 // État du train (vitesse, accélération, distance) au temps t d'une phase,
 // par intégration du même profil que la boucle : sert au spawn en cours de
 // trajet (randomizeEntry).
-function simulatePhaseState(phase: Phase, t: number): { v: number; a: number; d: number } {
+function simulatePhaseState(
+  phase: Phase,
+  t: number,
+  _stationIndex: number,
+): { v: number; a: number; d: number } {
   const state = { v: 0, a: 0, d: 0 };
   if (phase === 'dwell') return state;
   const dt = 0.05;
@@ -300,8 +305,8 @@ function simulatePhaseState(phase: Phase, t: number): { v: number; a: number; d:
 }
 
 // Vitesse cohérente avec le profil accélération / freinage du cycle.
-function speedFor(phase: Phase, t: number): number {
-  return simulatePhaseState(phase, t).v;
+function speedFor(phase: Phase, t: number, stationIndex: number): number {
+  return simulatePhaseState(phase, t, stationIndex).v;
 }
 
 function seedDoorsForDwell(t: number, stationIndex: number): void {
@@ -346,13 +351,13 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
     // Pas d'arrêt d'urgence sur la toute première course après l'embarquement.
     fired.add('emergency-roll');
     if (t > 0.6) fired.add('announce-depart');
-    if (t >= CONFIG.cruiseTime - APPROACH_ANNOUNCE_LEAD) fired.add('announce-soon');
+    if (t >= cruiseDuration(stationIndex) - APPROACH_ANNOUNCE_LEAD) fired.add('announce-soon');
   } else if (phase === 'brake') {
     fired.add('door-timings');
     fired.add('brake-apply');
     fired.add('jingle');
     fired.add('crowd-seed');
-    if (speedFor('brake', t) <= 0.01) fired.add('stop-settle');
+    if (speedFor('brake', t, stationIndex) <= 0.01) fired.add('stop-settle');
   } else if (phase === 'dwell') {
     const dwell = dwellDuration(stationIndex);
     if (t > 0.9) fired.add('pa-arrival');
@@ -396,18 +401,18 @@ export function randomizeEntry(): void {
   // Pré-positionne l'index pour que dwellDuration() voie la bonne gare.
   useStore.getState().setIndex(station);
 
-  const total = PHASE_ORDER.reduce((sum, p) => sum + p.dur(), 0);
+  const phases = PHASE_ORDER(station);
+  const total = phases.reduce((sum, p) => sum + p.dur, 0);
   let r = Math.random() * total;
   let phase: Phase = 'cruise';
-  let dur: number = CONFIG.cruiseTime;
-  for (const p of PHASE_ORDER) {
-    const d = p.dur();
-    if (r < d) {
+  let dur: number = cruiseDuration(station);
+  for (const p of phases) {
+    if (r < p.dur) {
       phase = p.phase;
-      dur = d;
+      dur = p.dur;
       break;
     }
-    r -= d;
+    r -= p.dur;
   }
 
   // Évite de spawner pile à la bascule de phase.
@@ -416,7 +421,7 @@ export function randomizeEntry(): void {
   const index = phase === 'depart' ? (station + 1) % 30 : station;
   const doorStation = phase === 'depart' ? station : index;
   const doorSide = DOOR_SIDE[doorStation];
-  const sim = simulatePhaseState(phase, phaseT);
+  const sim = simulatePhaseState(phase, phaseT, phase === 'depart' ? index : station);
 
   const store = useStore.getState();
   store.setPhase(phase);
@@ -496,6 +501,7 @@ export function updateCycle(dt: number): void {
   const t = runtime.phaseT;
   switch (s.phase) {
     case 'cruise': {
+      const cruiseSec = cruiseDuration(s.index);
       once('doorside', true, () => {
         s.setDoorSide(DOOR_SIDE[s.index]);
         // Les haut-parleurs du quai passent du côté qui s'ouvrira.
@@ -518,7 +524,7 @@ export function updateCycle(dt: number): void {
       }
       // Séquence JR approche : まもなく(+portes) → 乗換?, lancée avant le
       // freinage pour que les grandes gares finissent autour de l'arrêt.
-      once('announce-soon', t >= CONFIG.cruiseTime - APPROACH_ANNOUNCE_LEAD, () =>
+      once('announce-soon', t >= cruiseSec - APPROACH_ANNOUNCE_LEAD, () =>
         say(approachSequence(s.index, DOOR_SIDE[s.index])),
       );
       // Petits événements sonores de course, rares et discrets : crissement
@@ -530,7 +536,7 @@ export function updateCycle(dt: number): void {
         }
         scheduleNextRunSound(t);
       }
-      if (t >= CONFIG.cruiseTime) enterPhase('brake');
+      if (t >= cruiseSec) enterPhase('brake');
       break;
     }
     case 'brake': {
@@ -642,7 +648,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     store.setDoorSide(DOOR_SIDE[index]);
     audio.setPlatformSide(DOOR_SIDE[index]);
     runtime.phaseT = t;
-    const sim = simulatePhaseState(phase, t);
+    const sim = simulatePhaseState(phase, t, index);
     runtime.speed = sim.v;
     runtime.accel = sim.a;
     if (phase === 'dwell') seedDoorsForDwell(t, index);

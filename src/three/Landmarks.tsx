@@ -19,6 +19,7 @@ import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { useStore } from '../store';
 import { CONFIG } from '../data/config';
+import { journeyProgress } from '../data/segments';
 import { DISTRICTS, type Land, type LandmarkSpec } from '../data/districts';
 import { rng } from '../textures/procedural';
 import { box, glow, plane, sil, vehicle, type Ctx } from './landmarkKit';
@@ -32,14 +33,6 @@ const FAR_X = 34; // distance latérale des silhouettes (devant la couche lointa
 const FAR_ZS = [-32, 28] as const;
 const NEAR_X = 8; // repères au niveau de la voie.
 const NEAR_SPAN = 100; // période de défilement des repères proches (m).
-
-const PHASE_BASE: Record<string, number> = {
-  depart: 0,
-  cruise: CONFIG.departTime,
-  brake: CONFIG.departTime + CONFIG.cruiseTime,
-  dwell: CONFIG.departTime + CONFIG.cruiseTime + CONFIG.brakeTime,
-};
-const JOURNEY = CONFIG.departTime + CONFIG.cruiseTime + CONFIG.brakeTime;
 
 function smoothstep(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -361,7 +354,7 @@ export function Landmarks() {
       populate(pair[arrivingSlot.current], index);
     }
 
-    const p = Math.min(1, Math.max(0, (PHASE_BASE[phase] + runtime.phaseT) / JOURNEY));
+    const p = journeyProgress(phase, runtime.phaseT, index);
     const closeArr = smoothstep(0.55, 1.0, p);
     const closeDep = smoothstep(0.55, 1.0, 1 - p);
 
