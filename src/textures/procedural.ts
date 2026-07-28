@@ -1742,10 +1742,20 @@ export function makeAdTexture(seed: number, portrait: boolean, bold = false): TH
 // l'apparence (peau, cheveux, lunettes, masque, barbe, âge). Une texture par
 // PNJ (128×128, bon marché). La calotte de cheveux est un mesh 3D séparé ;
 // ici on ne dessine que la frange, les traits et les accessoires plats. ---
+function faceSkinDarkness(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  if (Number.isNaN(n)) return 0.35;
+  const r = (n >> 16) & 0xff;
+  const g = (n >> 8) & 0xff;
+  const b = n & 0xff;
+  return 1 - (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
 export function makeFaceTexture(app: Appearance, seed: number): THREE.CanvasTexture {
   const r = rng(2600 + seed * 40503);
   const { c, g } = makeCanvas(128, 128);
   const hair = app.hair.color;
+  const dark = faceSkinDarkness(app.skin);
 
   // Pas de frange dessinée sur le front : la coiffure est un volume 3D
   // (calotte + mèches) qui encadre naturellement le visage. On garde le canvas
@@ -1754,7 +1764,7 @@ export function makeFaceTexture(app: Appearance, seed: number): THREE.CanvasText
 
   // Sourcils : arc doux et fin (plus clairs chez les seniors, plus fins
   // et arqués pour les visages féminins).
-  g.strokeStyle = app.senior ? 'rgba(120,110,110,0.75)' : hair;
+  g.strokeStyle = app.senior ? (dark > 0.55 ? 'rgba(60,50,45,0.8)' : 'rgba(120,110,110,0.75)') : hair;
   g.lineWidth = app.senior ? 2 : fem ? 2.2 : 3;
   g.lineCap = 'round';
   g.beginPath();
@@ -1793,17 +1803,22 @@ export function makeFaceTexture(app: Appearance, seed: number): THREE.CanvasText
     g.stroke();
   }
 
-  // Joues légèrement rosées (jeunes visages surtout).
+  // Joues : blush rose sur peaux claires, nuance chaude plus discrète sur peaux foncées.
   if (!app.senior && (fem || r() < 0.3)) {
-    g.fillStyle = `rgba(232,140,130,${fem ? 0.16 : 0.1})`;
+    const blushA = (fem ? 0.16 : 0.1) * (1 - dark * 0.55);
+    g.fillStyle =
+      dark > 0.55
+        ? `rgba(180,70,60,${blushA * 0.7})`
+        : `rgba(232,140,130,${blushA})`;
     g.beginPath();
     g.arc(32, 84, 8, 0, Math.PI * 2);
     g.arc(96, 84, 8, 0, Math.PI * 2);
     g.fill();
   }
 
-  // Nez discret (courte ombre douce).
-  g.strokeStyle = 'rgba(150,110,86,0.32)';
+  // Nez discret (courte ombre douce), teinte adaptée à la peau.
+  g.strokeStyle =
+    dark > 0.55 ? `rgba(30,18,12,${0.28 + dark * 0.12})` : 'rgba(150,110,86,0.32)';
   g.lineWidth = 2;
   g.lineCap = 'round';
   g.beginPath();
@@ -1813,7 +1828,7 @@ export function makeFaceTexture(app: Appearance, seed: number): THREE.CanvasText
 
   // Rides de senior.
   if (app.senior) {
-    g.strokeStyle = 'rgba(120,96,80,0.35)';
+    g.strokeStyle = dark > 0.55 ? 'rgba(40,28,20,0.4)' : 'rgba(120,96,80,0.35)';
     g.lineWidth = 1.5;
     g.beginPath();
     g.moveTo(24, 60);
@@ -1826,9 +1841,9 @@ export function makeFaceTexture(app: Appearance, seed: number): THREE.CanvasText
   }
 
   // Bouche (masquée si masque chirurgical) : plus petite et plus douce,
-  // sourire discret ou bouche neutre, teinte légèrement rosée au féminin.
+  // sourire discret ou bouche neutre ; teinte adaptée à la peau.
   if (!app.mask) {
-    g.strokeStyle = fem ? '#b3574f' : '#96594a';
+    g.strokeStyle = dark > 0.55 ? (fem ? '#8a3a32' : '#6a342c') : fem ? '#b3574f' : '#96594a';
     g.lineWidth = fem ? 2.6 : 3;
     g.lineCap = 'round';
     g.beginPath();
