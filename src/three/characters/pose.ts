@@ -9,8 +9,7 @@
 import * as THREE from 'three';
 import type { Pax } from '../../systems/passengers';
 import type { CharacterClone } from './library';
-import { usesHeldPose } from './props';
-import { isFallingAction } from '../../data/paxActions';
+import { ACTION_BY_ID, isFallingAction, type MotionId, type PaxAction } from '../../data/paxActions';
 
 // Géométrie des tsurikawa, reprise de three/Handles.tsx : rangées en
 // x = ±0,45, anneaux tous les 0,451 m à partir de z = -9,35 ; centre d'anneau
@@ -32,10 +31,15 @@ export interface PoseState {
   phoneW: number;
   phoneSide: 1 | -1; // main du téléphone : 1 droite (défaut), -1 gauche
   sitW: number;
+  /** Geste de bras engagé (motion du catalogue), '' si les bras sont libres. */
+  gesture: MotionId | '';
+  gestureW: number;
+  /** Bras qui porte un geste à une main : 1 droite, -1 gauche. */
+  gestureSide: 1 | -1;
 }
 
 export function makePoseState(): PoseState {
-  return { strapW: 0, phoneW: 0, phoneSide: 1, sitW: 0 };
+  return { strapW: 0, phoneW: 0, phoneSide: 1, sitW: 0, gesture: '', gestureW: 0, gestureSide: 1 };
 }
 
 // Temporaires des APPELANTS (cibles, directions). aimBone a les siens : il ne
@@ -147,28 +151,487 @@ function lerpW(current: number, target: number, k: number): number {
   return current + (target - current) * k;
 }
 
-// Pose « téléphone » : UN SEUL bras est piloté — clavicule au neutre, épaule,
-// avant-bras et main entièrement reconstruits depuis la bind pose (comme
-// l'assise), l'autre bras restant au clip (debout : il pend le long du corps)
-// ou à l'assise manuelle (main sur la cuisse). L'ancienne version visait les
-// deux avant-bras vers un même point sans toucher ni épaules ni mains : bras
-// repliés l'un dans l'autre au gré du clip, téléphone perdu entre les mains.
+// Sommet du crâne du squelette normalisé (cf. systems/appearance) : convertit
+// une hauteur de pivot exprimée en fraction de la taille vers des mètres.
+const SKELETON_TOP = 1.445;
+const vPivotUp = new THREE.Vector3();
+
+/**
+ * Déplace le groupe pour que la rotation se fasse autour d'un point situé à
+ * `pivot` × taille du corps, et non autour de l'origine du groupe (les PIEDS).
+ *
+ * Une inclinaison légère pivote bien aux chevilles — c'est le cas par défaut,
+ * pivot = 0. Une chute, non : basculée aux pieds, elle COUCHE le corps en le
+ * translatant d'un mètre et demi sur le côté. Le voyageur au sol finissait
+ * dans la banquette ou au travers de la caisse, invisible depuis l'allée.
+ *
+ * `wrap.rotation` doit être posée avant l'appel.
+ */
+export function applyBodyPivot(wrap: THREE.Object3D, pivot: number, height: number): void {
+  if (pivot <= 0.001) return;
+  const h = pivot * SKELETON_TOP * height;
+  vPivotUp.set(0, 1, 0).applyEuler(wrap.rotation);
+  wrap.position.x -= h * vPivotUp.x;
+  wrap.position.y += h * (1 - vPivotUp.y);
+  wrap.position.z -= h * vPivotUp.z;
+}
+
+// --- Gestes des bras ------------------------------------------------------
+//
+// Un seul geste avait son rig : le téléphone. Les soixante-cinq occupations
+// ajoutées depuis ne bougeaient que la tête et le buste — on « se grattait la
+// tête » les bras ballants, on « regardait sa montre » sans lever le poignet,
+// on se prenait le visage sans main, on se battait sans bras. Chaque motion du
+// catalogue reçoit donc ici les directions de ses trois os.
 //
 // Directions cibles (axe +Y de chaque os) construites pour le bras GAUCHE en
-// espace wrap (+X = gauche du PNJ, +Z devant lui) ; si le téléphone est en
-// main droite, le résultat gauche reçoit le miroir sagittal exact — même
-// technique que l'assise, seule référence fiable de ces rigs (bind non
-// symétrique, clips asymétriques).
-const PHONE_UPPER_STAND = { x: 0.1, y: -0.9, z: 0.18 }; // bras le long du buste, coude à peine avancé
-const PHONE_UPPER_SIT = { x: 0.1, y: -0.78, z: 0.36 }; // assis : coude posé vers la cuisse
-const PHONE_FORE_STAND = { x: -0.18, y: 0.25, z: 0.8 }; // avant-bras devant le sternum, main à mi-poitrine
-const PHONE_FORE_SIT = { x: -0.18, y: 0.02, z: 0.85 }; // assis : main plus basse, au-dessus des genoux
-const PHONE_HAND = { x: -0.45, y: 0.1, z: 0.75 }; // doigts presque à plat en travers du regard
-// Direction (espace wrap) que la PAUME doit regarder : vers le haut-arrière,
-// le menton — le téléphone couché dans la paume présente ainsi son écran au
-// visage. Roulis résolu par solvePalmRoll (le roulis de bind laissait la
-// paume vers le bas : téléphone posé sur le DOS de la main).
-const PHONE_PALM = { x: 0.05, y: 0.85, z: -0.52 };
+// espace wrap (+X = gauche du PNJ, +Y en haut, +Z devant lui) ; le bras droit
+// reçoit le MIROIR SAGITTAL exact du résultat gauche — seule référence fiable
+// de ces rigs, dont la bind pose n'est pas symétrique et dont les clips le
+// sont encore moins.
+interface Dir {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface ArmGesture {
+  /** Épaule → coude. */
+  upper: Dir;
+  /** Coude → poignet. */
+  fore: Dir;
+  /** Poignet → doigts. */
+  hand: Dir;
+  /** Direction que doit regarder la PAUME (sinon roulis de bind). */
+  palm?: Dir;
+  /** Assis, le coude tombe sur la cuisse : variantes facultatives. */
+  upperSit?: Dir;
+  foreSit?: Dir;
+  /** Les deux bras (miroir), sinon un seul. */
+  both?: boolean;
+  /** Bras imposé (1 droite, -1 gauche) quand le regard vise déjà ce côté. */
+  side?: 1 | -1;
+  /** Va-et-vient : ± amp ajouté à une composante, avant normalisation. */
+  swing?: { on: 'upper' | 'fore' | 'hand'; axis: 'x' | 'y' | 'z'; amp: number; freq: number };
+  /** Déphase les deux protagonistes d'un duo (dispute, bagarre, bousculade). */
+  roleShift?: boolean;
+  /** Le geste tient un objet : pilote l'affichage de la prop (props.ts). */
+  prop?: boolean;
+}
+
+// Repères récurrents, pour que les gestes d'une même famille se ressemblent.
+const ARM_DOWN: Dir = { x: 0.1, y: -0.9, z: 0.18 }; // le long du buste
+const ARM_DOWN_SIT: Dir = { x: 0.1, y: -0.78, z: 0.36 }; // assis : coude vers la cuisse
+const ARM_OUT: Dir = { x: 0.42, y: -0.78, z: 0.2 }; // coude écarté du corps
+const FORE_UP_FACE: Dir = { x: -0.3, y: 0.86, z: 0.32 }; // avant-bras vers le visage
+const PALM_TO_FACE: Dir = { x: 0.05, y: -0.1, z: -0.95 }; // paume tournée vers soi
+
+/**
+ * Rig de chaque occupation. Une motion absente = bras laissés au clip (repos,
+ * mains dans les poches, assise) : c'est le cas voulu pour tout ce qui ne se
+ * joue pas avec les mains (regards, somnolence, balancement, marche…).
+ */
+const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
+  // — Objets tenus : la pose historique du téléphone, déclinée par objet —
+  phone: {
+    upper: ARM_DOWN,
+    upperSit: ARM_DOWN_SIT,
+    fore: { x: -0.18, y: 0.25, z: 0.8 },
+    foreSit: { x: -0.18, y: 0.02, z: 0.85 },
+    hand: { x: -0.45, y: 0.1, z: 0.75 },
+    palm: { x: 0.05, y: 0.85, z: -0.52 },
+    prop: true,
+  },
+  read: {
+    // Livre tenu à deux mains, un peu plus bas et plus près que le téléphone.
+    upper: { x: 0.14, y: -0.86, z: 0.28 },
+    upperSit: { x: 0.14, y: -0.74, z: 0.42 },
+    fore: { x: -0.3, y: 0.3, z: 0.82 },
+    foreSit: { x: -0.3, y: 0.08, z: 0.86 },
+    hand: { x: -0.5, y: 0.15, z: 0.7 },
+    palm: { x: 0.05, y: 0.8, z: -0.58 },
+    both: true,
+    prop: true,
+  },
+  map: {
+    // Plan déplié : les deux mains écartées devant la poitrine.
+    upper: { x: 0.3, y: -0.8, z: 0.3 },
+    fore: { x: -0.1, y: 0.35, z: 0.85 },
+    hand: { x: -0.25, y: 0.2, z: 0.8 },
+    palm: { x: 0.05, y: 0.7, z: -0.65 },
+    both: true,
+    prop: true,
+  },
+  ticket: {
+    // Billet pincé, remonté à hauteur d'œil, tête déjà tournée vers lui.
+    upper: { x: 0.12, y: -0.82, z: 0.32 },
+    fore: { x: -0.42, y: 0.62, z: 0.55 },
+    hand: { x: -0.6, y: 0.35, z: 0.5 },
+    palm: { x: 0.1, y: 0.5, z: -0.8 },
+    side: -1,
+    prop: true,
+  },
+  drink: {
+    // Bouteille portée à la bouche : coude haut, poignet cassé vers soi.
+    upper: { x: 0.2, y: -0.72, z: 0.4 },
+    fore: FORE_UP_FACE,
+    hand: { x: -0.32, y: 0.72, z: 0.1 },
+    palm: { x: -0.15, y: 0.2, z: -0.9 },
+    prop: true,
+  },
+  share: {
+    // Téléphone tendu vers le voisin : bras plus ouvert que la pose solo.
+    upper: { x: 0.34, y: -0.76, z: 0.3 },
+    fore: { x: -0.5, y: 0.3, z: 0.72 },
+    hand: { x: -0.7, y: 0.15, z: 0.6 },
+    palm: { x: 0.1, y: 0.8, z: -0.5 },
+    prop: true,
+  },
+  photo: {
+    // Deux mains montées devant le visage, coudes ouverts.
+    upper: { x: 0.4, y: -0.66, z: 0.42 },
+    fore: { x: -0.18, y: 0.62, z: 0.7 },
+    hand: { x: -0.3, y: 0.4, z: 0.75 },
+    palm: { x: 0.05, y: 0.55, z: -0.75 },
+    both: true,
+    prop: true,
+  },
+
+  // — Main au visage —
+  sneeze: { upper: ARM_OUT, fore: FORE_UP_FACE, hand: { x: -0.4, y: 0.7, z: -0.05 }, palm: PALM_TO_FACE },
+  cough: { upper: ARM_OUT, fore: FORE_UP_FACE, hand: { x: -0.45, y: 0.65, z: 0 }, palm: PALM_TO_FACE },
+  yawn: { upper: ARM_OUT, fore: FORE_UP_FACE, hand: { x: -0.5, y: 0.62, z: 0.05 }, palm: PALM_TO_FACE },
+  sniffle: { upper: ARM_OUT, fore: FORE_UP_FACE, hand: { x: -0.35, y: 0.75, z: 0.1 }, palm: PALM_TO_FACE },
+  gasp: { upper: ARM_OUT, fore: FORE_UP_FACE, hand: { x: -0.45, y: 0.68, z: 0.05 }, palm: PALM_TO_FACE },
+  rubEyes: {
+    upper: { x: 0.34, y: -0.72, z: 0.34 },
+    fore: { x: -0.25, y: 0.9, z: 0.28 },
+    hand: { x: -0.3, y: 0.78, z: 0.15 },
+    palm: PALM_TO_FACE,
+    both: true,
+    swing: { on: 'hand', axis: 'x', amp: 0.12, freq: 5.5 },
+  },
+  facepalm: {
+    // Paume plaquée sur le front, coude en avant : le geste se lit de loin.
+    upper: { x: 0.24, y: -0.62, z: 0.55 },
+    fore: { x: -0.2, y: 0.9, z: 0.2 },
+    hand: { x: -0.25, y: 0.85, z: -0.1 },
+    palm: PALM_TO_FACE,
+  },
+  wipe: {
+    upper: ARM_OUT,
+    fore: { x: -0.25, y: 0.92, z: 0.2 },
+    hand: { x: -0.55, y: 0.72, z: 0.05 },
+    palm: PALM_TO_FACE,
+    swing: { on: 'hand', axis: 'x', amp: 0.4, freq: 4 },
+  },
+  adjust: {
+    // Masque repincé sur le nez.
+    upper: ARM_OUT,
+    fore: FORE_UP_FACE,
+    hand: { x: -0.4, y: 0.72, z: 0.1 },
+    palm: PALM_TO_FACE,
+    swing: { on: 'hand', axis: 'y', amp: 0.12, freq: 4.5 },
+  },
+  glasses: {
+    // Branche remontée : deux doigts sur l'arête du nez.
+    upper: ARM_OUT,
+    fore: { x: -0.35, y: 0.85, z: 0.35 },
+    hand: { x: -0.5, y: 0.6, z: 0.25 },
+    palm: PALM_TO_FACE,
+    side: 1,
+  },
+  scratch: {
+    // Main sur le haut du crâne : coude ouvert À HAUTEUR D'ÉPAULE, sans quoi
+    // l'avant-bras part d'une épaule basse et la main s'arrête à la joue.
+    upper: { x: 0.86, y: 0.1, z: 0.02 },
+    fore: { x: -0.42, y: 0.86, z: -0.15 },
+    hand: { x: -0.72, y: 0.5, z: -0.3 },
+    palm: { x: -0.3, y: -0.4, z: 0.5 },
+    side: -1,
+    swing: { on: 'hand', axis: 'x', amp: 0.22, freq: 9 },
+  },
+  earbud: {
+    // Doigt sur l'écouteur, tête déjà penchée de ce côté.
+    upper: { x: 0.8, y: -0.1, z: 0.1 },
+    fore: { x: -0.3, y: 0.9, z: -0.05 },
+    hand: { x: -0.6, y: 0.66, z: -0.2 },
+    palm: { x: -0.6, y: 0, z: 0.3 },
+    side: -1,
+  },
+  crack: {
+    // Nuque saisie du côté OPPOSÉ à la tête qui roule.
+    upper: { x: 0.82, y: 0.05, z: 0.05 },
+    fore: { x: -0.6, y: 0.74, z: -0.22 },
+    hand: { x: -0.82, y: 0.42, z: -0.3 },
+    palm: { x: -0.2, y: -0.3, z: 0.6 },
+    side: 1,
+  },
+  chin: {
+    // Menton posé dans la paume — assis, le coude s'appuie sur la cuisse.
+    upper: { x: 0.2, y: -0.86, z: 0.3 },
+    upperSit: { x: 0.2, y: -0.8, z: 0.45 },
+    fore: { x: -0.32, y: 0.88, z: 0.28 },
+    hand: { x: -0.35, y: 0.75, z: 0.15 },
+    palm: PALM_TO_FACE,
+    side: -1,
+  },
+  laugh: {
+    // Rire retenu derrière la main : le geste tokyoïte par excellence.
+    upper: ARM_OUT,
+    fore: FORE_UP_FACE,
+    hand: { x: -0.45, y: 0.68, z: 0.1 },
+    palm: PALM_TO_FACE,
+    swing: { on: 'hand', axis: 'y', amp: 0.1, freq: 8 },
+  },
+  whisper: {
+    // Main en coupe au coin de la bouche, du côté du voisin.
+    upper: { x: 0.5, y: -0.62, z: 0.3 },
+    fore: { x: -0.15, y: 0.82, z: 0.4 },
+    hand: { x: -0.62, y: 0.5, z: 0.3 },
+    palm: { x: -0.55, y: 0.2, z: -0.65 },
+  },
+  flirt: {
+    // Mèche remise derrière l'oreille.
+    upper: { x: 0.45, y: -0.62, z: 0.15 },
+    fore: { x: -0.2, y: 0.9, z: -0.05 },
+    hand: { x: -0.5, y: 0.7, z: -0.25 },
+    palm: { x: -0.5, y: -0.2, z: 0.4 },
+    swing: { on: 'hand', axis: 'z', amp: 0.15, freq: 1.6 },
+  },
+
+  // — Bras et buste —
+  crossArms: {
+    // Bras croisés : avant-bras en travers du VENTRE (à hauteur de poitrine,
+    // les deux se rejoignaient en une seule masse sous le menton), chaque main
+    // s'arrêtant SOUS le coude opposé — poussées plus loin en travers, elles
+    // ressortaient de part et d'autre du corps.
+    upper: { x: 0.2, y: -0.95, z: 0.1 },
+    fore: { x: -0.6, y: -0.3, z: 0.74 },
+    hand: { x: -0.74, y: -0.22, z: 0.62 },
+    palm: { x: 0, y: -0.9, z: -0.2 },
+    both: true,
+  },
+  sulk: {
+    upper: { x: 0.2, y: -0.95, z: 0.1 },
+    fore: { x: -0.58, y: -0.34, z: 0.74 },
+    hand: { x: -0.72, y: -0.26, z: 0.62 },
+    palm: { x: 0, y: -0.9, z: -0.2 },
+    both: true,
+  },
+  jealous: {
+    upper: { x: 0.2, y: -0.95, z: 0.1 },
+    fore: { x: -0.6, y: -0.28, z: 0.74 },
+    hand: { x: -0.74, y: -0.2, z: 0.62 },
+    palm: { x: 0, y: -0.9, z: -0.2 },
+    both: true,
+  },
+  angry: {
+    // Poings serrés le long du corps, coudes écartés.
+    upper: { x: 0.45, y: -0.85, z: 0.05 },
+    fore: { x: -0.15, y: -0.35, z: 0.9 },
+    hand: { x: -0.2, y: -0.2, z: 0.94 },
+    palm: { x: 0, y: -0.4, z: -0.85 },
+    both: true,
+  },
+  shrug: {
+    // Épaules montées, paumes retournées vers le ciel.
+    upper: { x: 0.62, y: -0.72, z: 0.15 },
+    fore: { x: 0.25, y: 0.05, z: 0.95 },
+    hand: { x: 0.35, y: 0.05, z: 0.9 },
+    palm: { x: 0, y: 0.95, z: 0.1 },
+    both: true,
+  },
+  shoulders: {
+    upper: { x: 0.35, y: -0.88, z: 0.12 },
+    fore: { x: -0.1, y: -0.5, z: 0.82 },
+    hand: { x: -0.15, y: -0.45, z: 0.85 },
+    both: true,
+    swing: { on: 'upper', axis: 'y', amp: 0.18, freq: 2.2 },
+  },
+  stretch: {
+    // Les deux bras au-dessus de la tête, dos creusé.
+    upper: { x: 0.32, y: 0.9, z: -0.1 },
+    fore: { x: 0.1, y: 0.98, z: 0.05 },
+    hand: { x: 0.05, y: 0.98, z: 0.05 },
+    both: true,
+    swing: { on: 'upper', axis: 'x', amp: 0.16, freq: 1.2 },
+  },
+  fidget: {
+    // Doigts qui se triturent devant le ventre.
+    upper: { x: 0.16, y: -0.9, z: 0.28 },
+    fore: { x: -0.35, y: 0.05, z: 0.9 },
+    hand: { x: -0.6, y: 0, z: 0.78 },
+    palm: { x: 0, y: 0.4, z: -0.9 },
+    both: true,
+    swing: { on: 'hand', axis: 'x', amp: 0.18, freq: 3.4 },
+  },
+  button: {
+    // Bouton de manteau repris à deux mains, sous le sternum.
+    upper: { x: 0.2, y: -0.88, z: 0.28 },
+    fore: { x: -0.5, y: 0.3, z: 0.78 },
+    hand: { x: -0.75, y: 0.2, z: 0.6 },
+    palm: { x: 0, y: 0.5, z: -0.85 },
+    both: true,
+    swing: { on: 'hand', axis: 'y', amp: 0.12, freq: 3 },
+  },
+  bag: {
+    // Sangle du sac remontée sur l'épaule.
+    upper: { x: 0.4, y: -0.62, z: 0.2 },
+    fore: { x: -0.3, y: 0.85, z: 0.2 },
+    hand: { x: -0.55, y: 0.6, z: -0.1 },
+    palm: { x: -0.4, y: -0.3, z: 0.5 },
+    side: -1,
+    swing: { on: 'hand', axis: 'y', amp: 0.14, freq: 2.4 },
+  },
+  rummage: {
+    // Bras plongé dans le sac, à hauteur de hanche.
+    upper: { x: 0.3, y: -0.85, z: 0.3 },
+    fore: { x: -0.45, y: -0.3, z: 0.82 },
+    hand: { x: -0.6, y: -0.45, z: 0.6 },
+    palm: { x: 0, y: 0.6, z: -0.75 },
+    swing: { on: 'hand', axis: 'x', amp: 0.28, freq: 4.5 },
+  },
+  eat: {
+    // Bouchée portée à la bouche, l'autre main en coupe dessous.
+    upper: { x: 0.24, y: -0.76, z: 0.36 },
+    fore: FORE_UP_FACE,
+    hand: { x: -0.4, y: 0.7, z: 0.15 },
+    palm: PALM_TO_FACE,
+    swing: { on: 'fore', axis: 'y', amp: 0.18, freq: 3.2 },
+  },
+  fan: {
+    // Main qui s'évente devant le visage.
+    upper: { x: 0.36, y: -0.72, z: 0.34 },
+    fore: { x: -0.2, y: 0.8, z: 0.5 },
+    hand: { x: -0.35, y: 0.55, z: 0.6 },
+    palm: PALM_TO_FACE,
+    swing: { on: 'hand', axis: 'x', amp: 0.45, freq: 6 },
+  },
+  tie: {
+    // Lacet repris : les deux mains descendent vers la chaussure.
+    upper: { x: 0.2, y: -0.94, z: 0.2 },
+    fore: { x: -0.15, y: -0.75, z: 0.6 },
+    hand: { x: -0.2, y: -0.85, z: 0.45 },
+    both: true,
+    swing: { on: 'hand', axis: 'x', amp: 0.2, freq: 3.5 },
+  },
+  watch: {
+    // Poignet remonté en travers de la POITRINE (au menton, on ne lisait plus
+    // une montre mais un objet porté à la bouche), cadran vers le visage.
+    upper: { x: 0.22, y: -0.84, z: 0.34 },
+    fore: { x: -0.66, y: 0.3, z: 0.62 },
+    hand: { x: -0.88, y: 0.12, z: 0.45 },
+    palm: { x: 0.15, y: 0.75, z: -0.62 },
+    side: -1,
+  },
+  checkTime: {
+    upper: { x: 0.22, y: -0.84, z: 0.34 },
+    fore: { x: -0.66, y: 0.3, z: 0.62 },
+    hand: { x: -0.88, y: 0.12, z: 0.45 },
+    palm: { x: 0.15, y: 0.75, z: -0.62 },
+    side: -1,
+  },
+  bagFeet: {
+    // Sac calé entre les pieds : une main descend le retenir.
+    upper: { x: 0.16, y: -0.95, z: 0.2 },
+    fore: { x: -0.2, y: -0.82, z: 0.52 },
+    hand: { x: -0.25, y: -0.9, z: 0.35 },
+  },
+  offer: {
+    // Place cédée : main ouverte tendue vers le siège.
+    upper: { x: 0.5, y: -0.72, z: 0.3 },
+    fore: { x: 0.35, y: -0.15, z: 0.9 },
+    hand: { x: 0.45, y: -0.2, z: 0.85 },
+    palm: { x: 0, y: 0.95, z: 0.1 },
+  },
+  point: {
+    // Bras tendu vers la vitre, index en avant.
+    upper: { x: 0.75, y: -0.4, z: 0.35 },
+    fore: { x: 0.8, y: 0.1, z: 0.55 },
+    hand: { x: 0.9, y: 0.1, z: 0.4 },
+    palm: { x: 0, y: -0.9, z: 0.2 },
+    side: -1,
+  },
+  wave: {
+    // Bras levé qui salue le train qui arrive.
+    upper: { x: 0.6, y: 0.7, z: 0.15 },
+    fore: { x: 0.2, y: 0.95, z: 0.1 },
+    hand: { x: 0.1, y: 0.98, z: 0.1 },
+    palm: { x: 0, y: 0, z: 0.95 },
+    swing: { on: 'hand', axis: 'x', amp: 0.4, freq: 5 },
+  },
+  bow: {
+    // Salut : mains jointes devant les cuisses, bras collés au corps.
+    upper: { x: 0.06, y: -0.96, z: 0.2 },
+    fore: { x: -0.42, y: -0.55, z: 0.72 },
+    hand: { x: -0.6, y: -0.5, z: 0.6 },
+    palm: { x: 0, y: -0.3, z: -0.9 },
+    both: true,
+  },
+
+  // — Drame —
+  argue: {
+    // Index levé qui ponctue, coude haut.
+    upper: { x: 0.5, y: -0.55, z: 0.5 },
+    fore: { x: -0.1, y: 0.8, z: 0.6 },
+    hand: { x: -0.2, y: 0.9, z: 0.35 },
+    palm: { x: 0, y: 0.2, z: -0.9 },
+    swing: { on: 'hand', axis: 'y', amp: 0.3, freq: 5.5 },
+    roleShift: true,
+  },
+  scold: {
+    upper: { x: 0.45, y: -0.55, z: 0.5 },
+    fore: { x: -0.15, y: 0.85, z: 0.5 },
+    hand: { x: -0.25, y: 0.92, z: 0.25 },
+    palm: { x: 0, y: 0.2, z: -0.9 },
+    swing: { on: 'hand', axis: 'x', amp: 0.35, freq: 6 },
+    roleShift: true,
+  },
+  fight: {
+    // Poings hauts, coups alternés : les deux rôles sont déphasés.
+    upper: { x: 0.35, y: -0.55, z: 0.6 },
+    fore: { x: -0.1, y: 0.35, z: 0.92 },
+    hand: { x: -0.1, y: 0.25, z: 0.95 },
+    palm: { x: 0, y: -0.3, z: -0.9 },
+    both: true,
+    swing: { on: 'fore', axis: 'z', amp: 0.5, freq: 9 },
+    roleShift: true,
+  },
+  shove: {
+    // Bras tendus qui poussent (rôle 0) ou encaissent (rôle 1).
+    upper: { x: 0.42, y: -0.6, z: 0.6 },
+    fore: { x: 0.1, y: 0.15, z: 0.98 },
+    hand: { x: 0.15, y: 0.1, z: 0.98 },
+    palm: { x: 0, y: -0.2, z: 0.95 },
+    both: true,
+    swing: { on: 'upper', axis: 'z', amp: 0.35, freq: 3.2 },
+    roleShift: true,
+  },
+
+  // — Chutes : les bras partent devant amortir —
+  stumble: {
+    upper: { x: 0.7, y: -0.5, z: 0.5 },
+    fore: { x: 0.3, y: 0.15, z: 0.94 },
+    hand: { x: 0.35, y: 0.05, z: 0.92 },
+    palm: { x: 0, y: -0.9, z: 0.3 },
+    both: true,
+  },
+  fall: {
+    upper: { x: 0.8, y: -0.35, z: 0.5 },
+    fore: { x: 0.45, y: 0.05, z: 0.9 },
+    hand: { x: 0.5, y: -0.1, z: 0.85 },
+    palm: { x: 0, y: -0.95, z: 0.2 },
+    both: true,
+  },
+  slip: {
+    upper: { x: 0.75, y: -0.35, z: 0.45 },
+    fore: { x: 0.4, y: 0.35, z: 0.85 },
+    hand: { x: 0.45, y: 0.25, z: 0.85 },
+    palm: { x: 0, y: -0.9, z: 0.3 },
+    both: true,
+  },
+};
 
 // Bras à la poignée. SEULE l'épaule est posée en absolu — construction
 // gauche + miroir, en DEUX temps (écart latéral puis levée : depuis le
@@ -182,63 +645,144 @@ const PHONE_PALM = { x: 0.05, y: 0.85, z: -0.52 };
 const STRAP_UPPER_MID = { x: 0.85, y: 0.15, z: 0.2 };
 const STRAP_UPPER_END = { x: 0.38, y: 0.82, z: 0.26 }; // levé DEVANT le plan des épaules
 
-// Réutilisé par la rame et la foule du quai. `strapSide` : côté du bras déjà
-// accroché à la poignée (±1, 0 si aucun) — le téléphone passe alors dans
-// l'autre main au lieu d'arracher le bras à l'anneau.
-export function applyPhoneArms(
+// Directions effectives de la frame (base + va-et-vient), sans allocation.
+const dUpper = { x: 0, y: 0, z: 0 };
+const dFore = { x: 0, y: 0, z: 0 };
+const dHand = { x: 0, y: 0, z: 0 };
+
+function swung(base: Dir, g: ArmGesture, part: 'upper' | 'fore' | 'hand', t: number, role: number, out: Dir): Dir {
+  out.x = base.x;
+  out.y = base.y;
+  out.z = base.z;
+  const s = g.swing;
+  if (s && s.on === part) {
+    out[s.axis] += Math.sin(t * s.freq + (g.roleShift ? role * Math.PI : 0)) * s.amp;
+  }
+  return out;
+}
+
+/**
+ * Pose un bras entier : clavicule au neutre puis épaule, avant-bras et main
+ * reconstruits depuis la bind pose. Le clip continue d'animer l'autre bras.
+ *
+ * qWrap (poitrine) et qWrapOnly (wrap) doivent être à jour : l'appelant les
+ * pose juste avant, comme le fait l'assise manuelle.
+ */
+function poseArm(
   clone: CharacterClone,
-  state: PoseState,
-  k: number,
-  active: boolean,
-  strapSide: 0 | 1 | -1 = 0,
-  seated = false,
+  side: 1 | -1,
+  upper: Dir,
+  fore: Dir,
+  hand: Dir,
+  palm: Dir | undefined,
+  w: number,
 ): void {
-  // Choix de main figé tant que la pose est engagée (pas de saut en cours).
-  if (state.phoneW < 0.05) state.phoneSide = strapSide === 1 ? -1 : 1;
-  state.phoneW = lerpW(state.phoneW, active ? 1 : 0, k);
-  const w = state.phoneW;
   if (w <= 0.001) return;
   const bones = clone.bones;
-  const side = state.phoneSide;
-  const upper = side === 1 ? bones.upperArmR : bones.upperArmL;
-  const fore = side === 1 ? bones.foreArmR : bones.foreArmL;
-  const hand = side === 1 ? bones.handR : bones.handL;
+  const bUpper = side === 1 ? bones.upperArmR : bones.upperArmL;
+  const bFore = side === 1 ? bones.foreArmR : bones.foreArmL;
+  const bHand = side === 1 ? bones.handR : bones.handL;
+
+  // Clavicule du côté posé au neutre : le clip l'anime et déplacerait
+  // l'épaule sous le bras reconstruit.
+  for (const [clav, rest] of clone.clavicles) {
+    if (bUpper && clav === bUpper.parent) clav.quaternion.slerp(rest, w);
+  }
+
+  // dirLocal (espace wrap) → monde via l'orientation du wrap : valable même
+  // quand le groupe parent est retourné (foule du quai côté opposé).
+  const apply = (bone: THREE.Bone | undefined, rest: THREE.Quaternion | undefined, d: Dir, weight: number, pal?: Dir) => {
+    if (!bone || !rest) return;
+    vDir.set(d.x, d.y, d.z).applyQuaternion(qWrapOnly);
+    worldTarget(rest, qWrap, vDir.x, vDir.y, vDir.z, qLTarget);
+    if (pal) {
+      vTarget.set(pal.x, pal.y, pal.z).applyQuaternion(qWrapOnly);
+      solvePalmRoll(qLTarget, vTarget.x, vTarget.y, vTarget.z);
+    }
+    applyWorld(bone, side === 1 ? mirrorWorld(qLTarget, qWrapOnly, qMirror) : qLTarget, weight);
+  };
+  apply(bUpper, clone.armRest.upperArmL, upper, w * 0.95);
+  apply(bFore, clone.armRest.foreArmL, fore, w);
+  apply(bHand, clone.armRest.handL, hand, w, palm);
+}
+
+/** Part du bras prise par le geste courant : l'assise n'y repose pas la main. */
+export function armTaken(state: PoseState, side: 1 | -1): number {
+  if (!state.gesture || state.gestureW <= 0.001) return 0;
+  const g = ARM_GESTURES[state.gesture];
+  if (!g) return 0;
+  if (g.both) return state.gestureW;
+  return state.gestureSide === side ? state.gestureW : 0;
+}
+
+/** Contexte minimal d'un geste — commun aux PNJ de rame et à la foule du quai. */
+export interface ArmCtx {
+  action: PaxAction;
+  actionT: number;
+  seated: boolean;
+  /** Le PNJ est-il en posture de gestes (posé, pas en marche ni caché) ? */
+  posed: boolean;
+  /** Côté du bras déjà accroché à la poignée (0 = aucun). */
+  strapSide: 0 | 1 | -1;
+  /** Rôle dans un duo : déphase les deux protagonistes. */
+  chatRole: 0 | 1;
+}
+
+/**
+ * Superpose au clip le geste de l'occupation courante. Un seul geste à la
+ * fois : le changement d'occupation referme l'ancien avant d'ouvrir le
+ * nouveau, sinon deux poses de bras se mélangeraient en une troisième qui
+ * n'existe pas.
+ *
+ * Réutilisé par la rame et la foule du quai.
+ */
+export function applyArmGesture(clone: CharacterClone, state: PoseState, k: number, ctx: ArmCtx): void {
+  const motion = ctx.posed ? ACTION_BY_ID.get(ctx.action)?.motion : undefined;
+  const wanted: MotionId | '' = motion && ARM_GESTURES[motion] ? motion : '';
+
+  if (state.gesture !== wanted) {
+    state.gestureW = lerpW(state.gestureW, 0, k);
+    if (state.gestureW < 0.06) {
+      state.gesture = wanted;
+      state.gestureW = 0;
+      // Main libre par défaut ; certains gestes imposent leur côté, le regard
+      // du catalogue visant déjà par là (montre, écouteur, nuque…).
+      const g = wanted ? ARM_GESTURES[wanted] : undefined;
+      state.gestureSide = g?.side ?? (ctx.strapSide === 1 ? -1 : 1);
+    }
+  } else {
+    state.gestureW = lerpW(state.gestureW, wanted ? 1 : 0, k);
+  }
+
+  const g = state.gesture ? ARM_GESTURES[state.gesture] : undefined;
+  // props.ts n'affiche l'objet que si la main le tient vraiment.
+  state.phoneSide = state.gestureSide;
+  state.phoneW = g?.prop ? state.gestureW : 0;
+  if (!g || state.gestureW <= 0.001) return;
 
   const ref = clone.chestRef ?? clone.wrap;
   ref.updateWorldMatrix(true, false);
   ref.getWorldQuaternion(qWrap);
   clone.wrap.getWorldQuaternion(qWrapOnly);
 
-  // Clavicule du côté téléphone au neutre : le clip l'anime et déplacerait
-  // l'épaule sous le bras reconstruit.
-  for (const [clav, rest] of clone.clavicles) {
-    if (upper && clav === upper.parent) clav.quaternion.slerp(rest, w);
+  const t = ctx.actionT;
+  const role = ctx.chatRole;
+  const upper = swung(ctx.seated ? (g.upperSit ?? g.upper) : g.upper, g, 'upper', t, role, dUpper);
+  const fore = swung(ctx.seated ? (g.foreSit ?? g.fore) : g.fore, g, 'fore', t, role, dFore);
+  const hand = swung(g.hand, g, 'hand', t, role, dHand);
+
+  // Un bras accroché à un tsurikawa ne lâche pas pour faire un geste : de ce
+  // côté-là, la poignée garde la main. Un geste à deux bras se joue alors à un.
+  const free = (side: 1 | -1) => (ctx.strapSide === side ? 1 - state.strapW : 1);
+  if (g.both) {
+    poseArm(clone, -1, upper, fore, hand, g.palm, state.gestureW * free(-1));
+    poseArm(clone, 1, upper, fore, hand, g.palm, state.gestureW * free(1));
+  } else {
+    poseArm(clone, state.gestureSide, upper, fore, hand, g.palm, state.gestureW * free(state.gestureSide));
   }
 
-  // dirLocal (espace wrap) → monde via l'orientation du wrap : valable même
-  // quand le groupe parent est retourné (foule du quai côté opposé).
-  const apply = (
-    bone: THREE.Bone | undefined,
-    rest: THREE.Quaternion | undefined,
-    d: { x: number; y: number; z: number },
-    weight: number,
-    palm?: { x: number; y: number; z: number },
-  ) => {
-    if (!bone || !rest) return;
-    vDir.set(d.x, d.y, d.z).applyQuaternion(qWrapOnly);
-    worldTarget(rest, qWrap, vDir.x, vDir.y, vDir.z, qLTarget);
-    if (palm) {
-      vTarget.set(palm.x, palm.y, palm.z).applyQuaternion(qWrapOnly);
-      solvePalmRoll(qLTarget, vTarget.x, vTarget.y, vTarget.z);
-    }
-    applyWorld(bone, side === 1 ? mirrorWorld(qLTarget, qWrapOnly, qMirror) : qLTarget, weight);
-  };
-  apply(upper, clone.armRest.upperArmL, seated ? PHONE_UPPER_SIT : PHONE_UPPER_STAND, w * 0.95);
-  apply(fore, clone.armRest.foreArmL, seated ? PHONE_FORE_SIT : PHONE_FORE_STAND, w);
-  apply(hand, clone.armRest.handL, PHONE_HAND, w, PHONE_PALM);
-
-  // Regard légèrement tourné vers la main qui tient le téléphone.
-  if (bones.head) bones.head.rotation.y -= side * 0.1 * w;
+  // Regard légèrement tourné vers l'objet tenu.
+  if (g.prop && clone.bones.head) clone.bones.head.rotation.y -= state.gestureSide * 0.1 * state.gestureW;
 }
 
 // Applique tous les overrides d'un passager. `manualSit` : pas de clip assis
@@ -476,10 +1020,10 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
     // buste (coude près de la hanche, léger écart pour ne pas rentrer dans le
     // torse), l'avant-bras se couche sur la cuisse vers le genou, les doigts
     // sont drapés vers l'avant-bas. Le bras qui tient le téléphone est seul
-    // exempté (posé ensuite par applyPhoneArms) : l'AUTRE main reste sur la
+    // exempté (posé ensuite par applyArmGesture) : l'AUTRE main reste sur la
     // cuisse.
-    const handWL = w * (state.phoneSide === -1 ? 1 - state.phoneW : 1);
-    const handWR = w * (state.phoneSide === 1 ? 1 - state.phoneW : 1);
+    const handWL = w * (1 - armTaken(state, -1));
+    const handWR = w * (1 - armTaken(state, 1));
     if (handWL > 0.001 || handWR > 0.001) {
       // Clavicules au neutre AVANT de lire la référence : le clip idle les
       // anime différemment à gauche et à droite, ce qui décale les épaules.
@@ -544,8 +1088,15 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
     if (bones.spine) bones.spine.rotation.x += 0.12 * w;
   }
 
-  // --- Téléphone : bras dédié, EN DERNIER — il se superpose au clip debout
-  // comme à l'assise manuelle (dont il remplace la main côté téléphone), et
+  // --- Geste de l'occupation : EN DERNIER — il se superpose au clip debout
+  // comme à l'assise manuelle (dont il remplace la ou les mains engagées), et
   // laisse le bras de la poignée accroché à son anneau. ---
-  applyPhoneArms(clone, state, k, usesHeldPose(p.action) && (seated || standing), strapSide, seated);
+  applyArmGesture(clone, state, k, {
+    action: p.action,
+    actionT: p.actionT,
+    seated,
+    posed: seated || standing,
+    strapSide,
+    chatRole: p.chatRole,
+  });
 }

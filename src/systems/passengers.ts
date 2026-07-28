@@ -66,6 +66,8 @@ export interface Pax {
   lookYawTarget: number; // cible de l'action « look » ; aussi signe de chute (±1)
   bodyLean: number;
   bodyRoll: number; // roulis (chutes latérales)
+  /** Hauteur du pivot du corps (fraction de la taille) : 0 = les pieds. */
+  bodyPivot: number;
   /** Accumulation de poussée par le joueur (0..~1.5) ; chute au-delà du seuil. */
   pushAccum: number;
   decideT: number; // minuterie des décisions assis / debout
@@ -137,6 +139,7 @@ function makePax(id: number): Pax {
     lookYawTarget: 0,
     bodyLean: 0,
     bodyRoll: 0,
+    bodyPivot: 0,
     pushAccum: 0,
     decideT: 3 + Math.random() * 8,
     holdStrap: rollStrap(appearance.build.scale),
@@ -897,6 +900,7 @@ export function updatePassengers(dt: number): void {
       p.headRoll += (0 - p.headRoll) * Math.min(1, dt * 6);
       p.bodyLean *= Math.max(0, 1 - dt * 8);
       p.bodyRoll *= Math.max(0, 1 - dt * 8);
+      p.bodyPivot *= Math.max(0, 1 - dt * 8);
       let d = p.targetYaw - p.yaw;
       while (d > Math.PI) d -= Math.PI * 2;
       while (d < -Math.PI) d += Math.PI * 2;
@@ -959,6 +963,7 @@ export function updatePassengers(dt: number): void {
     p.headRoll += (m.headRoll - p.headRoll) * Math.min(1, dt * m.speed * speedMul);
     p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed * speedMul);
     p.bodyRoll += (m.roll - p.bodyRoll) * Math.min(1, dt * m.speed * speedMul);
+    p.bodyPivot += (m.pivot - p.bodyPivot) * Math.min(1, dt * m.speed * speedMul);
     // Chute : le bob porte le décalage vertical (au sol).
     if (isFallingAction(p.action) || Math.abs(m.drop) > 0.001 || Math.abs(p.bob) > 0.001) {
       p.bob += (m.drop - p.bob) * Math.min(1, dt * m.speed);

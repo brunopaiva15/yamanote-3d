@@ -17,7 +17,7 @@ import { CONFIG } from '../data/config';
 import { rng } from '../textures/procedural';
 import { MODELS_BASE, type CharacterManifest } from './characters/manifest';
 import { buildTemplates, cloneVariant, type CharacterClone, type CharacterTemplate } from './characters/library';
-import { applyPoseOverrides, makePoseState, type PoseState } from './characters/pose';
+import { applyBodyPivot, applyPoseOverrides, makePoseState, type PoseState } from './characters/pose';
 import { attachProps, updatePropRig, handPropFor, type PropRig } from './characters/props';
 import type { LogicalClip } from './characters/manifest';
 
@@ -130,6 +130,7 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       // avant, et un debout sur deux tombait à la renverse.
       wrap.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll, 'YXZ');
       wrap.scale.setScalar(p.height);
+      applyBodyPivot(wrap, p.bodyPivot, p.height);
 
       // --- Animation puis overrides d'os (le mixer réécrit la pose). Les os
       // à rotations additives repartent de leur pose de repos : si le clip

@@ -118,6 +118,8 @@ export type MotionId =
   | 'cough'
   | 'scratch'
   | 'adjust'
+  /** Sangle de sac remontée sur l'épaule (distinct du masque : autre bras). */
+  | 'bag'
   | 'watch'
   | 'window'
   | 'music'
@@ -404,7 +406,7 @@ export const PAX_ACTIONS: readonly PaxActionDef[] = [
     kind: 'solo',
     where: ['seated', 'standing', 'waiting'],
     dur: [2.0, 4.5],
-    motion: 'adjust',
+    motion: 'bag',
     needsBag: true,
   },
   {

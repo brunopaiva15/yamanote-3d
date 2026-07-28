@@ -18,6 +18,16 @@ export interface MotionTargets {
   headRoll: number;
   /** Décalage vertical (négatif = au sol). */
   drop: number;
+  /**
+   * Hauteur du PIVOT du corps, en fraction de la taille (0 = les pieds).
+   *
+   * Une inclinaison légère pivote aux chevilles : les pieds restent au sol,
+   * c'est le cas par défaut. Une CHUTE, non — elle bascule autour du bassin.
+   * Pivoter une chute aux pieds couche le corps en le translatant de plus
+   * d'un mètre : le voyageur au sol partait dans la banquette, quand ce
+   * n'était pas au travers de la caisse.
+   */
+  pivot: number;
   /** Vitesse de lissage (sneeze/cough/chute plus vifs). */
   speed: number;
 }
@@ -67,7 +77,7 @@ function nearestDoorZ(z: number): number {
   return best;
 }
 
-const out: MotionTargets = { yaw: 0, pitch: 0, lean: 0, roll: 0, headRoll: 0, drop: 0, speed: 4.5 };
+const out: MotionTargets = { yaw: 0, pitch: 0, lean: 0, roll: 0, headRoll: 0, drop: 0, pivot: 0, speed: 4.5 };
 
 function set(
   yaw: number,
@@ -77,6 +87,7 @@ function set(
   roll = 0,
   drop = 0,
   headRoll = 0,
+  pivot = 0,
 ): MotionTargets {
   out.yaw = yaw;
   out.pitch = pitch;
@@ -84,9 +95,13 @@ function set(
   out.roll = roll;
   out.drop = drop;
   out.headRoll = headRoll;
+  out.pivot = pivot;
   out.speed = speed;
   return out;
 }
+
+/** Bassin : pivot des chutes, en fraction de la taille du PNJ. */
+const HIP = 0.6;
 
 /** Calcule les cibles de tête / lean pour l'action courante. */
 export function resolveMotion(ctx: MotionContext): MotionTargets {
@@ -233,6 +248,9 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       return set(0.55 + Math.sin(t * 9) * 0.12, 0.25, 0, 7);
     case 'adjust':
       return set(Math.sin(t * 3) * 0.2, 0.35 + Math.sin(t * 5) * 0.08, 0, 6);
+    case 'bag':
+      // Sangle remontée : coup d'œil à l'épaule, buste qui se redresse.
+      return set(0.4 + Math.sin(t * 2.4) * 0.12, 0.22, -0.03, 6);
     case 'watch':
       return set(0.7, 0.45, 0, 6);
     case 'window': {
@@ -310,28 +328,28 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       // Côté figé dans lookYawTarget (±1) au démarrage de l'action.
       const side = ctx.lookYawTarget >= 0 ? 1 : -1;
       if (t < 0.35) {
-        // Perd l'équilibre.
+        // Perd l'équilibre : les pieds tiennent encore, pivot bas.
         const u = t / 0.35;
-        return set(side * 0.4 * u, 0.1, 0.15 * u, 10, side * 0.55 * u, -0.02 * u);
+        return set(side * 0.4 * u, 0.1, 0.15 * u, 10, side * 0.55 * u, -0.02 * u, 0, HIP * 0.3 * u);
       }
       if (t < 0.9) {
         // Presque au sol, se rattrape.
         const u = (t - 0.35) / 0.55;
-        return set(side * 0.5, 0.2, 0.35 * (1 - u * 0.4), 9, side * (0.7 - u * 0.35), -0.08 * (1 - u));
+        return set(side * 0.5, 0.2, 0.35 * (1 - u * 0.4), 9, side * (0.7 - u * 0.35), -0.08 * (1 - u), 0, HIP * 0.35);
       }
       // Relevage gêné, coup d'œil autour.
       const u = Math.min(1, (t - 0.9) / 0.9);
-      return set(side * 0.3 * (1 - u) + Math.sin(t * 3) * 0.1, 0.15, 0.05 * (1 - u), 7, side * 0.15 * (1 - u), 0);
+      return set(side * 0.3 * (1 - u) + Math.sin(t * 3) * 0.1, 0.15, 0.05 * (1 - u), 7, side * 0.15 * (1 - u), 0, 0, HIP * 0.3 * (1 - u));
     }
     case 'fall': {
       const side = ctx.lookYawTarget >= 0 ? 1 : -1;
       if (t < 0.45) {
-        // Tangage → bascule.
+        // Tangage → bascule : le pivot monte des chevilles vers le bassin.
         const u = t / 0.45;
-        return set(side * 0.5 * u, 0.15 * u, 0.55 * u, 11, side * 0.7 * u, -0.15 * u * u);
+        return set(side * 0.5 * u, 0.15 * u, 0.55 * u, 11, side * 0.7 * u, -0.12 * u * u, 0, HIP * u);
       }
       if (t < 1.1) {
-        // Impact au sol.
+        // Impact au sol : le bassin touche, le corps s'y couche autour.
         const u = (t - 0.45) / 0.65;
         return set(
           side * (0.6 + Math.sin(u * 8) * 0.05),
@@ -339,35 +357,37 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
           1.05,
           14,
           side * 1.05,
-          -0.52 - 0.04 * Math.sin(u * Math.PI),
+          -0.72 - 0.04 * Math.sin(u * Math.PI),
+          0,
+          HIP,
         );
       }
       if (t < 2.6) {
         // Assis par terre, gêné, regarde autour.
         const look = Math.sin(t * 1.7) * 0.55;
-        return set(look, 0.25 + Math.sin(t * 2.2) * 0.05, 0.95, 5, side * 0.85, -0.55);
+        return set(look, 0.25 + Math.sin(t * 2.2) * 0.05, 0.95, 5, side * 0.85, -0.66, 0, HIP);
       }
       if (t < 3.6) {
         // Se hisse à quatre pattes / à genoux.
         const u = (t - 2.6) / 1.0;
-        return set(side * 0.2 * (1 - u), 0.35, 0.95 - u * 0.55, 6, side * (0.85 - u * 0.6), -0.55 + u * 0.35);
+        return set(side * 0.2 * (1 - u), 0.35, 0.95 - u * 0.55, 6, side * (0.85 - u * 0.6), -0.66 + u * 0.5, 0, HIP * (1 - u * 0.5));
       }
       // Se redresse, secoue la tête, un peu penaud.
       const u = Math.min(1, (t - 3.6) / 1.4);
-      return set(side * 0.15 * (1 - u) + Math.sin(t * 4) * 0.08, 0.12, 0.2 * (1 - u), 5, side * 0.12 * (1 - u), -0.2 * (1 - u));
+      return set(side * 0.15 * (1 - u) + Math.sin(t * 4) * 0.08, 0.12, 0.2 * (1 - u), 5, side * 0.12 * (1 - u), -0.16 * (1 - u), 0, HIP * 0.5 * (1 - u));
     }
     case 'slip': {
       const side = ctx.lookYawTarget >= 0 ? 1 : -1;
       if (t < 0.4) {
         const u = t / 0.4;
-        return set(side * 0.35 * u, 0.1, 0.2 * u, 10, side * 0.65 * u, -0.05 * u);
+        return set(side * 0.35 * u, 0.1, 0.2 * u, 10, side * 0.65 * u, -0.05 * u, 0, HIP * 0.4 * u);
       }
       if (t < 1.1) {
         const u = (t - 0.4) / 0.7;
-        return set(side * 0.45, 0.25, 0.55 * (1 - u * 0.3), 9, side * (0.9 - u * 0.4), -0.18 * (1 - u * 0.5));
+        return set(side * 0.45, 0.25, 0.55 * (1 - u * 0.3), 9, side * (0.9 - u * 0.4), -0.16 * (1 - u * 0.5), 0, HIP * 0.5);
       }
       const u = Math.min(1, (t - 1.1) / 1.0);
-      return set(side * 0.2 * (1 - u), 0.1, 0.08 * (1 - u), 6, side * 0.2 * (1 - u), 0);
+      return set(side * 0.2 * (1 - u), 0.1, 0.08 * (1 - u), 6, side * 0.2 * (1 - u), 0, 0, HIP * 0.4 * (1 - u));
     }
     case 'argue': {
       if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);

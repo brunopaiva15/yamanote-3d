@@ -12,6 +12,8 @@ import { runtime } from '../systems/runtime';
 import { useStore } from '../store';
 import { DOOR_SIDE } from '../data/stations';
 import { usesHeldPose } from './characters/props';
+import { ACTION_BY_ID, type MotionId, type PaxAction } from '../data/paxActions';
+import { applyBodyPivot } from './characters/pose';
 
 const PLATFORM_Y = -0.06;
 const HEAD_Y = 1.34;
@@ -161,6 +163,69 @@ function buildPerson(app: Appearance, id: number): THREE.Group {
   return root;
 }
 
+// Familles de gestes du bras droit (rotX = levée, rotZ = écart). Le corps de
+// secours n'a qu'une articulation d'épaule : on ne distingue que les grandes
+// familles — main au visage, bras levé, bras tendu, objet tenu.
+const CROWD_ARMS: Partial<Record<MotionId, [number, number, number?, number?]>> = {
+  phone: [-1.15, 0.35],
+  read: [-1.05, 0.3],
+  map: [-1.1, 0.4],
+  ticket: [-1.2, 0.3],
+  share: [-1.1, 0.45],
+  photo: [-1.4, 0.35],
+  drink: [-1.5, 0.4],
+  sneeze: [-1.55, 0.45],
+  cough: [-1.55, 0.45],
+  yawn: [-1.5, 0.45],
+  sniffle: [-1.5, 0.45],
+  gasp: [-1.55, 0.4],
+  laugh: [-1.5, 0.4],
+  adjust: [-1.5, 0.45],
+  glasses: [-1.5, 0.4],
+  wipe: [-1.55, 0.45, 0.3, 4],
+  fan: [-1.5, 0.5, 0.5, 6],
+  eat: [-1.5, 0.4, 0.25, 3.2],
+  scratch: [-1.7, 0.7, 0.2, 9],
+  earbud: [-1.6, 0.75],
+  facepalm: [-1.65, 0.4],
+  whisper: [-1.45, 0.55],
+  flirt: [-1.5, 0.6],
+  checkTime: [-1.25, 0.3],
+  watch: [-1.25, 0.3],
+  bag: [-1.35, 0.7, 0.14, 2.4],
+  rummage: [-0.9, 0.35, 0.3, 4.5],
+  crossArms: [-0.75, 0.3],
+  sulk: [-0.75, 0.3],
+  jealous: [-0.75, 0.3],
+  angry: [-0.5, 0.4],
+  shrug: [-0.6, 0.7],
+  shoulders: [-0.35, 0.5, 0.2, 2.2],
+  stretch: [-2.6, 0.3, 0.15, 1.2],
+  fidget: [-0.85, 0.2, 0.15, 3.4],
+  button: [-1.0, 0.25, 0.12, 3],
+  tie: [-0.4, 0.2, 0.2, 3.5],
+  bagFeet: [-0.35, 0.15],
+  offer: [-1.4, 0.5],
+  point: [-1.6, 0.5],
+  wave: [-2.6, 0.5, 0.4, 5],
+  bow: [-0.3, 0.1],
+  argue: [-1.5, 0.45, 0.3, 5.5],
+  scold: [-1.55, 0.45, 0.35, 6],
+  fight: [-1.4, 0.35, 0.5, 9],
+  shove: [-1.5, 0.3, 0.35, 3.2],
+  stumble: [-1.5, 0.55],
+  fall: [-1.7, 0.6],
+  slip: [-1.6, 0.6],
+};
+
+function crowdArmTarget(action: PaxAction, t: number): [number, number] | null {
+  const motion = ACTION_BY_ID.get(action)?.motion;
+  const g = motion ? CROWD_ARMS[motion] : undefined;
+  if (!g) return null;
+  const wob = g[2] != null && g[3] != null ? Math.sin(t * g[3]) * g[2] : 0;
+  return [g[0] + wob, g[1]];
+}
+
 export function ProceduralPlatformCrowd() {
   initPlatformCrowd();
   // Le côté de la foule est celui du quai présent (platformIndex), pas
@@ -197,17 +262,22 @@ export function ProceduralPlatformCrowd() {
       g.position.set(p.pos.x, PLATFORM_Y + p.y + p.bob, p.pos.z);
       // YXZ : cap, puis buste dans le repère du personnage (cf. LibraryPassengers).
       g.rotation.set(p.bodyLean, p.yaw, p.bodyRoll, 'YXZ');
+      applyBodyPivot(g, p.bodyPivot, p.height);
       const head = g.getObjectByName('crowd-head');
       if (head) {
         head.rotation.x = p.headPitch;
         head.rotation.y = p.lookYaw * 0.5;
         head.rotation.z = p.headRoll;
       }
-      const onPhone = usesHeldPose(p.action === 'shift' ? 'none' : p.action) && p.state === 'waiting';
+      // Le bras du quai suit les mêmes familles de gestes que la rame (le
+      // corps de secours n'a qu'un bras articulé : c'est le droit qui joue).
+      const act = p.action === 'shift' ? 'none' : p.action;
+      const onPhone = usesHeldPose(act) && p.state === 'waiting';
+      const arm = p.state === 'waiting' ? crowdArmTarget(act, p.actionT) : null;
       const armR = g.getObjectByName('crowd-arm-r');
       if (armR) {
-        armR.rotation.x = onPhone ? -1.15 : 0;
-        armR.rotation.z = onPhone ? 0.35 : 0.12;
+        armR.rotation.x = arm ? arm[0] : 0;
+        armR.rotation.z = arm ? arm[1] : 0.12;
       }
       const phone = g.getObjectByName('crowd-phone');
       if (phone) phone.visible = onPhone;

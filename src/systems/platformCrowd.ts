@@ -74,6 +74,8 @@ export interface CrowdPax {
   headRoll: number;
   bodyLean: number;
   bodyRoll: number;
+  /** Hauteur du pivot du corps (fraction de la taille) : 0 = les pieds. */
+  bodyPivot: number;
   waypoints: THREE.Vector3[];
   wpi: number;
   walkDir: 1 | -1; // sens de promenade le long du quai
@@ -132,6 +134,7 @@ function makeCrowd(id: number): CrowdPax {
     headRoll: 0,
     bodyLean: 0,
     bodyRoll: 0,
+    bodyPivot: 0,
     waypoints: [],
     wpi: 0,
     walkDir: Math.random() < 0.5 ? 1 : -1,
@@ -911,12 +914,14 @@ export function updatePlatformCrowd(dt: number): void {
         p.headRoll += (m.headRoll - p.headRoll) * Math.min(1, dt * m.speed);
         p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed);
         p.bodyRoll += (m.roll - p.bodyRoll) * Math.min(1, dt * m.speed);
+        p.bodyPivot += (m.pivot - p.bodyPivot) * Math.min(1, dt * m.speed);
         if (isFallingAction(act) || Math.abs(m.drop) > 0.001) {
           p.bob += (m.drop - p.bob) * Math.min(1, dt * m.speed);
         } else {
           p.bob = Math.sin(p.bobPhase * 1.1) * 0.004;
           p.bodyLean *= Math.max(0, 1 - dt * 5);
           p.bodyRoll *= Math.max(0, 1 - dt * 5);
+          p.bodyPivot *= Math.max(0, 1 - dt * 5);
         }
         p.targetYaw = -Math.PI / 2 + p.lookYaw * 0.35;
       }

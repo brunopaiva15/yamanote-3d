@@ -17,6 +17,8 @@ import type { Appearance } from '../systems/appearance';
 import { runtime } from '../systems/runtime';
 import { makeFaceTexture, makeStripeTexture, makePlaidTexture } from '../textures/procedural';
 import { usesHeldPose } from './characters/props';
+import { applyBodyPivot } from './characters/pose';
+import { ACTION_BY_ID, isFallingAction, type MotionId } from '../data/paxActions';
 
 // Repères verticaux locaux (pieds à y=0), calés sur l'ancienne silhouette.
 const HIP_Y = 0.5;
@@ -422,6 +424,86 @@ function Arm({
   );
 }
 
+// Gestes des bras du rendu de secours. Le rig « librairie » (characters/pose)
+// pose chaque os par sa direction ; ici le bras n'a que deux articulations à
+// un axe, on se contente donc des FAMILLES de gestes — main au visage, bras
+// levé, bras croisés, bras tendus — mais plus aucune occupation ne se joue
+// les bras ballants.
+interface ProcArm {
+  /** Épaule : rotation X (avant), Z (écart, multipliée par le côté). */
+  x: number;
+  z: number;
+  /** Coude : rotation X (flexion, négative = plié). */
+  elbow: number;
+  both?: boolean;
+  side?: 1 | -1;
+  /** Va-et-vient du coude : [amplitude, fréquence]. */
+  swing?: [number, number];
+}
+
+const FACE: ProcArm = { x: -0.55, z: 0.42, elbow: -2.5 };
+const HELD: ProcArm = { x: -0.75, z: 0.12, elbow: -1.5, both: true };
+const FOLDED: ProcArm = { x: -0.3, z: 0.3, elbow: -2.15, both: true };
+
+const PROC_ARMS: Partial<Record<MotionId, ProcArm>> = {
+  phone: HELD,
+  read: HELD,
+  map: HELD,
+  share: HELD,
+  photo: { x: -1.0, z: 0.3, elbow: -1.9, both: true },
+  ticket: { x: -0.7, z: 0.3, elbow: -2.0, side: -1 },
+  drink: FACE,
+  // Main au visage.
+  sneeze: FACE,
+  cough: FACE,
+  yawn: FACE,
+  sniffle: FACE,
+  gasp: FACE,
+  laugh: FACE,
+  adjust: FACE,
+  glasses: FACE,
+  eat: { ...FACE, swing: [0.25, 3.2] },
+  wipe: { ...FACE, swing: [0.3, 4] },
+  fan: { ...FACE, swing: [0.5, 6] },
+  rubEyes: { ...FACE, both: true },
+  facepalm: { x: -0.7, z: 0.3, elbow: -2.6 },
+  whisper: { x: -0.5, z: 0.55, elbow: -2.4 },
+  scratch: { x: -0.35, z: 0.85, elbow: -2.6, side: -1, swing: [0.2, 9] },
+  earbud: { x: -0.25, z: 0.8, elbow: -2.5, side: -1 },
+  crack: { x: -0.3, z: 0.8, elbow: -2.55, side: 1 },
+  chin: { x: -0.5, z: 0.25, elbow: -2.45, side: -1 },
+  flirt: { x: -0.3, z: 0.7, elbow: -2.5 },
+  watch: { x: -0.6, z: 0.28, elbow: -2.2, side: -1 },
+  checkTime: { x: -0.6, z: 0.28, elbow: -2.2, side: -1 },
+  // Bras et buste.
+  crossArms: FOLDED,
+  sulk: FOLDED,
+  jealous: FOLDED,
+  angry: { x: -0.35, z: 0.45, elbow: -1.6, both: true },
+  shrug: { x: -0.3, z: 0.75, elbow: -1.5, both: true },
+  shoulders: { x: -0.2, z: 0.5, elbow: -0.6, both: true, swing: [0.2, 2.2] },
+  stretch: { x: -2.7, z: 0.25, elbow: -0.25, both: true, swing: [0.15, 1.2] },
+  fidget: { x: -0.35, z: 0.2, elbow: -1.9, both: true, swing: [0.15, 3.4] },
+  button: { x: -0.5, z: 0.2, elbow: -2.1, both: true, swing: [0.12, 3] },
+  bag: { x: -0.3, z: 0.7, elbow: -2.4, side: -1, swing: [0.14, 2.4] },
+  rummage: { x: -0.45, z: 0.3, elbow: -1.5, swing: [0.3, 4.5] },
+  tie: { x: -0.9, z: 0.2, elbow: -1.2, both: true, swing: [0.2, 3.5] },
+  bagFeet: { x: -0.55, z: 0.15, elbow: -0.8 },
+  offer: { x: -1.15, z: 0.5, elbow: -0.35 },
+  point: { x: -1.5, z: 0.5, elbow: -0.15, side: -1 },
+  wave: { x: -2.5, z: 0.5, elbow: -0.5, swing: [0.4, 5] },
+  bow: { x: -0.25, z: 0.1, elbow: -0.9, both: true },
+  // Drame.
+  argue: { x: -0.9, z: 0.45, elbow: -2.0, swing: [0.3, 5.5] },
+  scold: { x: -0.95, z: 0.45, elbow: -2.1, swing: [0.35, 6] },
+  fight: { x: -1.05, z: 0.35, elbow: -1.8, both: true, swing: [0.5, 9] },
+  shove: { x: -1.35, z: 0.3, elbow: -0.5, both: true, swing: [0.35, 3.2] },
+  // Chutes : les bras partent devant amortir.
+  stumble: { x: -1.4, z: 0.5, elbow: -0.6, both: true },
+  fall: { x: -1.6, z: 0.55, elbow: -0.45, both: true },
+  slip: { x: -1.5, z: 0.55, elbow: -0.5, both: true },
+};
+
 // Postures : cible (rotX épaule, rotZ épaule, rotX coude) selon état / action.
 // PAS d'allongement de bras : les tailles sont réalistes, le bas de l'anneau
 // est à ~1,71 m et le coude se plie en fonction de la taille du PNJ (les
@@ -432,8 +514,18 @@ function armTarget(
   strapSide: -1 | 1,
 ): [number, number, number] {
   const seated = p.state === 'seated';
-  if (usesHeldPose(p.action) && (seated || p.state === 'standing')) {
-    return [-0.75, s * 0.12, -1.5]; // deux mains devant le visage
+  const posed = seated || p.state === 'standing';
+  const motion = ACTION_BY_ID.get(p.action)?.motion;
+  const g = posed && motion ? PROC_ARMS[motion] : undefined;
+  if (g) {
+    const side = g.side ?? (strapSide === 1 ? -1 : 1);
+    // Une main déjà à la poignée n'en descend pas pour faire un geste ; une
+    // chute, si — c'est même souvent pour ça qu'on tombe.
+    const strapBusy = p.state === 'standing' && p.holdStrap && s === strapSide && !isFallingAction(p.action);
+    if ((g.both || side === s) && !strapBusy) {
+      const wob = g.swing ? Math.sin(p.actionT * g.swing[1] + p.chatRole * Math.PI) * g.swing[0] : 0;
+      return [g.x, s * g.z, g.elbow + wob];
+    }
   }
   if (p.state === 'standing' && p.holdStrap && s === strapSide) {
     // Bras levé vers l'anneau situé pile au-dessus (le PNJ est en x = ±0,45,
@@ -494,6 +586,7 @@ export function ProceduralPassengers() {
       // YXZ : cap, puis buste dans le repère du personnage (cf. LibraryPassengers).
       r.group.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll, 'YXZ');
       r.group.scale.setScalar(p.height);
+      applyBodyPivot(r.group, p.bodyPivot, p.height);
       if (r.lower) r.lower.visible = !seated;
       if (r.seated) r.seated.visible = seated;
       // Assise : le pivot du buste descend sur le haut du coussin (compensé

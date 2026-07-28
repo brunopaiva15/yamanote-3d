@@ -13,8 +13,8 @@ import { rng } from '../textures/procedural';
 import { CONFIG } from '../data/config';
 import { MODELS_BASE, type CharacterManifest, type LogicalClip } from './characters/manifest';
 import { buildTemplates, cloneVariant, type CharacterClone, type CharacterTemplate } from './characters/library';
-import { applyPhoneArms, makePoseState, type PoseState } from './characters/pose';
-import { attachProps, updatePropRig, handPropFor, usesHeldPose, type PropRig } from './characters/props';
+import { applyArmGesture, applyBodyPivot, makePoseState, type PoseState } from './characters/pose';
+import { attachProps, updatePropRig, handPropFor, type PropRig } from './characters/props';
 
 const PLATFORM_Y = -0.06;
 const FADE = 0.22;
@@ -104,6 +104,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       // en avant » l'inclinait sur le côté (cf. LibraryPassengers).
       body.rotation.set(p.bodyLean, p.yaw, p.bodyRoll, 'YXZ');
       body.scale.setScalar(p.height);
+      applyBodyPivot(body, p.bodyPivot, p.height);
 
       if (s.clone.restHead && bones.head) bones.head.quaternion.copy(s.clone.restHead);
       mixer.update(dt);
@@ -112,9 +113,19 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
         bones.head.rotation.y += p.lookYaw * 0.45;
         bones.head.rotation.z += p.headRoll;
       }
-      const phoneActive = usesHeldPose(p.action === 'shift' ? 'none' : p.action) && p.state === 'waiting';
-      applyPhoneArms(s.clone, s.pose, k, phoneActive);
-      const held = phoneActive ? handPropFor(p.action === 'shift' ? 'none' : p.action) : null;
+      // Le quai a droit aux mêmes gestes que la rame : jusqu'ici seul le
+      // téléphone était rigé, et les soixante autres occupations n'y bougeaient
+      // que la tête.
+      const act = p.action === 'shift' ? 'none' : p.action;
+      applyArmGesture(s.clone, s.pose, k, {
+        action: act,
+        actionT: p.actionT,
+        seated: false,
+        posed: p.state === 'waiting',
+        strapSide: 0,
+        chatRole: p.chatRole,
+      });
+      const held = handPropFor(act);
       updatePropRig(s.props, bones, body, true, held !== null && s.pose.phoneW > 0.05 ? held : null, s.pose.phoneSide);
     }
   });
