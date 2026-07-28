@@ -24,8 +24,10 @@ import { runtime } from '../../systems/runtime';
 import { psdDoorPos, psdGateLag } from '../../systems/doorMotion';
 import { placementFor, stairTopZ, type Placed } from '../../systems/stationPlacement';
 import { platformDetail } from '../../systems/perf';
-import { layoutFor, type StationPalette } from '../../data/stationLayouts';
+import { layoutFor } from '../../data/stationLayouts';
 import {
+  GAUGE_HALF,
+  OPP_DEPTH,
   PLATFORM_TOP,
   PSD_H,
   PSD_LEAF_TRAVEL,
@@ -39,148 +41,32 @@ import {
   STAIR_STEPS,
   STAIR_WALK_LEN,
   STAIR_WALK_STEPS,
+  TRACK_HALF,
 } from '../../data/stationGeometry';
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
 import { Barrier } from './Barrier';
+import { makeStationMaterials, type Mats } from './materials';
 import { stationAd } from './adPool';
 import { mat, matFacingTrack, useInstances } from './instancing';
 import { OverheadSigns } from './OverheadSigns';
 import { PlatformAds } from './PlatformAds';
 import { PlatformKit } from './PlatformKit';
 import { PlatformSignage } from './PlatformSignage';
-import { Signature } from './Signature';
+import { Signature } from './signatures';
 import { psdLayout } from './psdLayout';
 
 const UP = new THREE.Quaternion();
 const V = new THREE.Vector3();
 const S = new THREE.Vector3();
 
-type StationTextures = {
-  floor: THREE.Texture;
-  tactile: THREE.Texture;
-  ads: THREE.Texture[];
-};
-
-/** Tous les matériaux d'une gare, dérivés de sa palette. */
-function makeStationMaterials(p: StationPalette, textures: StationTextures) {
-  return {
-      slab: new THREE.MeshStandardMaterial({
-        map: textures.floor,
-        color: p.slab,
-        roughness: 0.94,
-        emissive: p.slab,
-        emissiveIntensity: 0.12,
-      }),
-      tactile: new THREE.MeshStandardMaterial({
-        map: textures.tactile,
-        color: '#e8c84a',
-        roughness: 0.82,
-        polygonOffset: true,
-        polygonOffsetFactor: -2,
-      }),
-      edge: new THREE.MeshStandardMaterial({
-        color: '#f2f2ef',
-        roughness: 0.9,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-      }),
-      queue: new THREE.MeshBasicMaterial({
-        color: '#e8e4d8',
-        transparent: true,
-        opacity: 0.75,
-        polygonOffset: true,
-        polygonOffsetFactor: -3,
-        toneMapped: false,
-      }),
-      rubber: new THREE.MeshStandardMaterial({ color: '#2a2c30', roughness: 0.95 }),
-      psd: new THREE.MeshStandardMaterial({ color: '#d8dad6', roughness: 0.62, metalness: 0.18 }),
-      glass: new THREE.MeshStandardMaterial({
-        color: '#9eb4c4',
-        roughness: 0.15,
-        metalness: 0.05,
-        transparent: true,
-        opacity: 0.35,
-        depthWrite: false,
-      }),
-      accent: new THREE.MeshStandardMaterial({ color: p.accent, roughness: 0.68 }),
-      canopy: new THREE.MeshStandardMaterial({
-        color: p.canopy,
-        roughness: 0.9,
-        metalness: 0.15,
-        // Sous un auvent, aucune lumière directe n'atteint la sous-face : sans
-        // ce rappel, elle vire au noir dès qu'on marche dessous.
-        emissive: p.canopy,
-        emissiveIntensity: 0.34,
-      }),
-      beam: new THREE.MeshStandardMaterial({
-        color: p.canopy,
-        roughness: 0.78,
-        metalness: 0.3,
-        emissive: p.canopy,
-        emissiveIntensity: 0.28,
-      }),
-      column: new THREE.MeshStandardMaterial({
-        color: p.column,
-        roughness: 0.72,
-        metalness: 0.18,
-        emissive: p.column,
-        emissiveIntensity: 0.16,
-      }),
-      wall: new THREE.MeshStandardMaterial({
-        color: p.wall,
-        roughness: 0.92,
-        emissive: p.wall,
-        emissiveIntensity: 0.14,
-      }),
-      wallDark: new THREE.MeshStandardMaterial({ color: p.column, roughness: 0.9 }),
-      // Faïence de soubassement : c'est elle qui casse le tout-gris du fond.
-      tile: new THREE.MeshStandardMaterial({
-        color: p.tile,
-        roughness: 0.42,
-        metalness: 0.04,
-        emissive: p.tile,
-        emissiveIntensity: 0.1,
-      }),
-      bench: new THREE.MeshStandardMaterial({ color: '#6a5a48', roughness: 0.88 }),
-      metal: new THREE.MeshStandardMaterial({ color: '#7a8088', roughness: 0.45, metalness: 0.55 }),
-      frame: new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.55, metalness: 0.35 }),
-      lamp: new THREE.MeshStandardMaterial({
-        color: p.lamp,
-        emissive: p.lamp,
-        emissiveIntensity: 0.9,
-        roughness: 0.4,
-      }),
-      bin: new THREE.MeshStandardMaterial({ color: '#4a5058', roughness: 0.7, metalness: 0.2 }),
-      vending: new THREE.MeshStandardMaterial({ color: '#b8322c', roughness: 0.6 }),
-      vendingFace: new THREE.MeshBasicMaterial({ map: textures.ads[0], toneMapped: false }),
-      kiosk: new THREE.MeshStandardMaterial({ color: '#e8e4dc', roughness: 0.78 }),
-      ad: new THREE.MeshBasicMaterial({
-        map: textures.ads[1],
-        toneMapped: false,
-        side: THREE.DoubleSide,
-      }),
-      liner: new THREE.MeshStandardMaterial({ color: '#3b3f44', roughness: 0.95 }),
-      // Gaine sous une trémie : vue de l'intérieur, depuis le quai.
-      shaft: new THREE.MeshStandardMaterial({
-        color: '#2c3035',
-        roughness: 0.97,
-        side: THREE.BackSide,
-      }),
-    };
-
-}
-
-type Mats = ReturnType<typeof makeStationMaterials>;
 
 /** Recul du panneau de limite derrière la limite de marche réelle (m). */
 const BARRIER_STANDOFF = 0.35;
 
-/** De l'axe d'une voie au bord du quai qu'elle dessert : la cote du bord près. */
-const TRACK_HALF = PSD_X;
-/** Écartement des rails, ramené au repère du jeu. */
-const GAUGE_HALF = 0.7175;
-/** Profondeur du quai d'en face : on n'en voit que la tranche. */
-const OPP_DEPTH = 4.2;
+/** Voies du faisceau, au-delà du quai d'en face, là où rien ne ferme la travée. */
+const YARD_TRACKS = 4;
+/** Entraxe de ces voies (m). */
+const YARD_PITCH = 4.6;
 
 export function Station() {
   const doorSide = useStore((s) => s.doorSide);
@@ -555,7 +441,7 @@ export function Station() {
 
       {/* Charpente propre aux trois gares signature. */}
       {layout.signature && detail === 0 && (
-        <Signature layout={layout} place={place} materials={m} />
+        <Signature layout={layout} place={place} m={m} />
       )}
 
       <PlatformSignage
@@ -744,6 +630,32 @@ function FarSide({
           </mesh>
           <mesh position={[oppBack, PLATFORM_TOP + 1.9, 0]} material={m.metal}>
             <boxGeometry args={[0.08, 0.06, len]} />
+          </mesh>
+        </group>
+      ) : layout.openFarSide ? (
+        // Grand faisceau : rien ne ferme la travée. Des voies encore, jusqu'au
+        // bord du champ, et une simple clôture au bout. C'est la perspective
+        // dégagée de Nippori et d'Ueno, celle qu'un mur de fond escamotait.
+        <group>
+          <mesh
+            position={[oppBack + (YARD_TRACKS * YARD_PITCH) / 2, PLATFORM_TOP - SLAB_H - 0.86, 0]}
+            material={m.liner}
+          >
+            <boxGeometry args={[YARD_TRACKS * YARD_PITCH, 0.42, len]} />
+          </mesh>
+          {Array.from({ length: YARD_TRACKS }, (_, k) => {
+            const x = oppBack + (k + 0.5) * YARD_PITCH;
+            return [-1, 1].map((d) => (
+              <mesh key={`yr${k}${d}`} position={[x + d * GAUGE_HALF, -1.11, 0]} material={m.metal}>
+                <boxGeometry args={[0.08, 0.16, len]} />
+              </mesh>
+            ));
+          })}
+          <mesh
+            position={[oppBack + YARD_TRACKS * YARD_PITCH, PLATFORM_TOP - 0.3, 0]}
+            material={m.wallDark}
+          >
+            <boxGeometry args={[0.14, 1.6, len]} />
           </mesh>
         </group>
       ) : (

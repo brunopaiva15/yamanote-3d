@@ -13,7 +13,7 @@
 //     latéralement, pour continuer à occulter la ville derrière la gare.
 
 import { useStore } from '../store';
-import { layoutFor } from '../data/stationLayouts';
+import { layoutFor, type StationLayout } from '../data/stationLayouts';
 import { PLATFORM_DEPTH } from '../data/stationGeometry';
 import { runtime } from './runtime';
 
@@ -25,9 +25,14 @@ import { runtime } from './runtime';
  * une quinzaine de mètres de plus à Shibuya. Un mur de soutènement écarté de
  * l'ancienne valeur ressortait en plein milieu de cette travée.
  */
-function pushFor(depth: number, island: boolean): number {
-  // Bord près → bord d'en face, puis voie (2 × 1,78 m) et quai d'en face.
-  return depth + (island ? 12 : 6);
+function pushFor(layout: StationLayout): number {
+  // Bord près → bord d'en face, puis la voie (2 × 1,78 m) et le quai d'en face.
+  // La marge est large à dessein : au-delà de la travée, les charpentes
+  // signature débordent encore — le faisceau de Nippori, l'International Forum
+  // de Yūrakuchō, le bois du Meiji-jingū derrière Harajuku. Un mur de
+  // soutènement écarté au plus juste ressortait en plein milieu.
+  const island = layout.config !== 'side';
+  return layout.depth + (island ? 24 : 18) + (layout.openFarSide ? 22 : 0);
 }
 
 /** Valeur de repli, pour qui a besoin d'un ordre de grandeur hors frame. */
@@ -46,6 +51,13 @@ export const stationOcclusion = {
   z1: 0,
   /** Écartement à appliquer, propre à la gare courante. */
   push: PLATFORM_DEPTH + 6,
+  /**
+   * L'écartement vaut-il des DEUX côtés ? Sur un îlot, tout est du côté du
+   * quai et l'autre rive reste au décor de tronçon. À Harajuku — seul quai
+   * latéral de la boucle — il y a une gare de chaque côté de la voie : le quai
+   * d'en face et son auvent se plantaient dans la clôture du tronçon.
+   */
+  bothSides: false,
 };
 
 /** À appeler après updatePlatformPresence : lit platformFade / platformSlide. */
@@ -54,7 +66,8 @@ export function updateStationOcclusion(): void {
   stationOcclusion.active = fade;
   stationOcclusion.side = useStore.getState().doorSide;
   const layout = layoutFor(useStore.getState().index);
-  stationOcclusion.push = pushFor(layout.depth, layout.config !== 'side');
+  stationOcclusion.push = pushFor(layout);
+  stationOcclusion.bothSides = layout.config === 'side';
   const half = layout.length / 2 + SPAN_MARGIN;
   stationOcclusion.z0 = runtime.platformSlide - half;
   stationOcclusion.z1 = runtime.platformSlide + half;
@@ -75,5 +88,6 @@ export function hiddenByStation(z: number, bothSides = true, x = 0): boolean {
 
 /** Écartement à appliquer à un plan long posé du côté `side`. */
 export function sidePush(side: 1 | -1): number {
-  return side === stationOcclusion.side ? stationOcclusion.active * stationOcclusion.push : 0;
+  const applies = stationOcclusion.bothSides || side === stationOcclusion.side;
+  return applies ? stationOcclusion.active * stationOcclusion.push : 0;
 }

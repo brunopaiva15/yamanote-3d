@@ -72,3 +72,21 @@ export function useInstances(
     im.computeBoundingSphere();
   }, [ref, matrices]);
 }
+
+/** Comme mat(), mais orientée : pour une boîte inclinée (panneau, ferme, rampe). */
+export function matOriented(
+  q: THREE.Quaternion,
+  x: number,
+  y: number,
+  z: number,
+  sx: number,
+  sy: number,
+  sz: number,
+): THREE.Matrix4 {
+  return new THREE.Matrix4().compose(V.set(x, y, z), q, S.set(sx, sy, sz));
+}
+
+/** Quaternion d'une rotation autour de l'axe z : l'inclinaison d'un versant. */
+export function tiltZ(angle: number): THREE.Quaternion {
+  return new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle);
+}

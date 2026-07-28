@@ -90,8 +90,31 @@ Ces valeurs étaient auparavant **déduites du tronçon traversé**
 voit *entre* deux gares, pas comment la gare est bâtie — et sortait fausse pour
 sept d'entre elles. Chaque gare porte donc maintenant ses propres cotes.
 
-Quatorze gares déclarent une `signature` ; trois sont dessinées à ce jour
-(Tokyo, Shinjuku, Shibuya), les autres retombent proprement sur le gabarit.
+Quatorze gares déclarent une `signature` ; **neuf sont dessinées**, une par
+fichier dans `three/station/signatures/` :
+
+- **Takanawa Gateway** — la toiture pliée de Kengo Kuma, versants d'acier blanc
+  doublés de bois clair qui enjambent d'un seul tenant les deux quais et les
+  voies, verrière de faîte, passerelles vitrées. La plus claire des trente.
+- **Akihabara** — le viaduc de la Chūō–Sōbu qui franchit le site
+  perpendiculairement : poutres à âme pleine, sous-face rivetée, piles posées
+  hors de tout quai et de toute voie.
+- **Ueno** — la halle rivetée sur la moitié sud, et l'ouverture franche vers le
+  nord : c'est le contraste qui fait la gare, pas le détail des fermes.
+- **Nippori** — deux ponts-concours qui enjambent tout le faisceau.
+- **Harajuku** — le bâtiment blanc et vitré de 2020, son hall du niveau
+  supérieur, le quai latéral d'en face et la masse sombre du Meiji-jingū.
+- **Yūrakuchō** — le vieux viaduc riveté à entraxe court, socles de brique, et
+  les coques de verre de l'International Forum en contrepoint.
+- **Tokyo**, **Shinjuku**, **Shibuya** — comme avant.
+
+Ōtsuka, Ebisu, Gotanda, Hamamatsuchō et Shimbashi déclarent la leur sans être
+encore dessinées : elles retombent proprement sur le gabarit.
+
+Quatre gares — Ueno, Nippori, Ōsaki, Shinagawa — portent `openFarSide` : la
+travée d'en face ne se ferme pas par un mur mais par un faisceau, des voies
+encore jusqu'au bord du champ. C'est la perspective dégagée qu'un mur de fond
+escamotait.
 
 `systems/stationPlacement` est la source unique du mobilier, partagée par le rendu
 et par la marche : un banc dessiné à un endroit et infranchissable à un autre se
@@ -271,6 +294,7 @@ src/
                          ville en parallaxe, PNJ, caméra
   three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines
   three/station/         quai praticable de 224 m, trente gabarits de gare, signalétique
+  three/station/signatures/ les charpentes propres à une gare : Takanawa, Akihabara…
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
   scripts/               models:import / models:inspect (packs → public/models/)

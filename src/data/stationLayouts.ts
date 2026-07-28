@@ -145,6 +145,13 @@ export interface StationLayout {
   psd: PsdState;
   /** Gare en travaux à la situation de 2026 : variante chantier. */
   works: boolean;
+  /**
+   * La travée d'en face ne se ferme pas par un mur mais par un faisceau : des
+   * voies encore, jusqu'au bord du champ. C'est ce qui fait Nippori et Ueno —
+   * « perspectives dégagées sur tout le faisceau » — et ce que Shinagawa et
+   * Ōsaki donnent à voir de leurs quais parallèles.
+   */
+  openFarSide: boolean;
   /** Longueur du quai (m) : onze voitures de 20 m plus les abouts. */
   length: number;
   /** Profondeur du quai (m), du bord au mur de fond. */
@@ -319,6 +326,7 @@ interface Spec {
   /** Défaut : 'full'. */
   psd?: PsdState;
   works?: true;
+  openFarSide?: true;
   signature?: SignatureKey;
   ambience: Ambience;
   crowd: number;
@@ -410,6 +418,7 @@ const SPECS: readonly Spec[] = [
     // Yamanote est plus resserré qu'à Tokyo, mais le faisceau donne au décor
     // une profondeur considérable.
     name: 'JY05 Ueno',
+    openFarSide: true,
     elevation: 'ground',
     config: 'sharedIsland',
     sharedWith: KT,
@@ -442,6 +451,7 @@ const SPECS: readonly Spec[] = [
     // JY07 — immense corridor ferroviaire au sol, voies 10 et 11 séparées.
     // Quais longs, ponts-concours au-dessus des rails, faisceau dégagé.
     name: 'JY07 Nippori',
+    openFarSide: true,
     elevation: 'ground',
     config: 'sharedIsland',
     sharedWith: KT,
@@ -679,6 +689,7 @@ const SPECS: readonly Spec[] = [
     // opérationnel de départ, de terminus et d'accès au dépôt. Portes en place
     // sur les voies principales 1 et 3, annoncées sur les secondaires 2 et 4.
     name: 'JY24 Osaki',
+    openFarSide: true,
     elevation: 'ground',
     config: 'terminusIsland',
     parallel: ['Saikyō', 'Shōnan–Shinjuku', 'Rinkai'],
@@ -696,6 +707,7 @@ const SPECS: readonly Spec[] = [
     // toiture industrielle, longues perspectives, escaliers massifs, et
     // plusieurs secteurs encore en travaux sur le plan de 2026.
     name: 'JY25 Shinagawa',
+    openFarSide: true,
     elevation: 'ground',
     config: 'sharedIsland',
     sharedWith: KT,
@@ -817,6 +829,7 @@ function build(spec: Spec): StationLayout {
     parallel: spec.parallel ?? [],
     psd: spec.psd ?? 'full',
     works: spec.works ?? false,
+    openFarSide: spec.openFarSide ?? false,
     length: FULL_PLATFORM_LEN,
     depth: spec.depth ?? f.depth,
     canopy: spec.canopy ?? f.canopy,

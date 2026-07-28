@@ -11,8 +11,10 @@
 import { CONSIST, E235 } from '../data/e235';
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
 import {
+  OPP_DEPTH,
   PSD_HALF_GAP,
   PSD_X,
+  TRACK_HALF,
   STAIR_GOING,
   STAIR_RISE,
   STAIR_STEPS,
@@ -375,6 +377,34 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   };
   CACHE.set(i, placement);
   return placement;
+}
+
+/**
+ * Coupe de la travée d'en face, pour qui doit l'enjamber : une charpente de
+ * halle, un viaduc qui traverse, une passerelle au-dessus du faisceau.
+ * Toutes les abscisses sont nulles sur un quai latéral, où il n'y a rien
+ * au-delà du mur.
+ */
+export interface FarSideCut {
+  /** Second bord d'embarquement de NOTRE quai. */
+  farX: number;
+  /** Axe de la voie d'en face. */
+  trackX: number;
+  /** Bord du quai d'en face. */
+  oppEdgeX: number;
+  /** Fond du quai d'en face : là où la travée se ferme. */
+  oppBackX: number;
+}
+
+export function farSideOf(p: StationPlacement): FarSideCut | null {
+  if (p.farEdgeX === null) return null;
+  const farX = p.farEdgeX;
+  return {
+    farX,
+    trackX: farX + TRACK_HALF,
+    oppEdgeX: farX + 2 * TRACK_HALF,
+    oppBackX: farX + 2 * TRACK_HALF + OPP_DEPTH,
+  };
 }
 
 // --- Trémies d'escalier -------------------------------------------------
