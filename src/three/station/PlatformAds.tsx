@@ -99,12 +99,13 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
   }, [segs, detail, layout.psd]);
 
   return (
-    <group>
+    <group name="publicité">
       {/* Caissons lumineux du fond de quai : monture noire, visuel rétroéclairé.
           Calés au-dessus du liseré qui couronne la faïence (1,10 m) et du
           dossier des bancs — rien ne vient mordre l'affiche. */}
       {wallAds.map(({ z, i }) => (
         <group
+          name="caisson-mur"
           key={`wa${z}`}
           position={[onWall ? backX - 0.09 : backX - 0.17, PLATFORM_TOP + (onWall ? 1.88 : 2.02), z]}
         >
@@ -135,7 +136,7 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
       {/* Colonnes habillées : un bandeau vertical côté voie, et un second côté
           d'en face quand la colonne se dresse au milieu d'un îlot. */}
       {columnAds.map(({ z, i }) => (
-        <group key={`ca${z}`} position={[backX - 0.71, PLATFORM_TOP + 1.55, z]}>
+        <group name="bandeau-pilier" key={`ca${z}`} position={[backX - 0.71, PLATFORM_TOP + 1.55, z]}>
           <mesh position={[0.015, 0, 0]} material={p.housing}>
             <boxGeometry args={[0.03, 1.18, 0.3]} />
           </mesh>
@@ -157,7 +158,7 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
       {/* Bannières suspendues, recto-verso : elles ferment la perspective du
           quai comme les nakazuri ferment celle du wagon. */}
       {hanging.map(({ z, i }) => (
-        <group key={`ha${z}`} position={[midX - 1.5, layout.canopyY - 0.62, z]}>
+        <group name="bannière" key={`ha${z}`} position={[midX - 1.5, layout.canopyY - 0.62, z]}>
           {[-1, 1].map((d) => (
             <mesh key={d} position={[d * 1.0, 0.42, 0]} material={p.frame}>
               <boxGeometry args={[0.04, 0.62, 0.04]} />

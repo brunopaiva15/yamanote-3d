@@ -50,6 +50,12 @@ interface Props {
   };
 }
 
+/** Suspentes d'un tronçon de conduite : une tous les dix mètres environ. */
+function hangers(sp: { z0: number; z1: number }): number[] {
+  const n = Math.max(2, Math.round((sp.z1 - sp.z0) / 10));
+  return Array.from({ length: n }, (_, k) => sp.z0 + 0.4 + (k / (n - 1)) * (sp.z1 - sp.z0 - 0.8));
+}
+
 /** Couvercles des bacs de tri : bouteilles, papiers, tout-venant. */
 const BIN_LIDS = ['#2f6fb5', '#d8b52a', '#4b5157'] as const;
 /** Écartement des trois bacs d'une même batterie (m). */
@@ -177,6 +183,12 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
     () => kit.cameras.map((z) => mat(backX - 1.0, canopyY - 0.27, z, 0.3, 0.06, 0.3)),
     [kit.cameras, backX, canopyY],
   );
+  // Potence de caméra : la platine flottait vingt-sept centimètres sous
+  // l'auvent, sans rien pour la tenir.
+  const cameraStems = useMemo(
+    () => kit.cameras.map((z) => mat(backX - 1.0, canopyY - 0.12, z, 0.07, 0.3, 0.07)),
+    [kit.cameras, backX, canopyY],
+  );
   const cameraDomes = useMemo(
     () => kit.cameras.map((z) => mat(backX - 1.0, canopyY - 0.34, z, 0.22, 0.16, 0.22)),
     [kit.cameras, backX, canopyY],
@@ -276,6 +288,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
 
   const speakerPlateRef = useRef<THREE.InstancedMesh>(null);
   const speakerGrilleRef = useRef<THREE.InstancedMesh>(null);
+  const camStemRef = useRef<THREE.InstancedMesh>(null);
   const camPlateRef = useRef<THREE.InstancedMesh>(null);
   const camDomeRef = useRef<THREE.InstancedMesh>(null);
   const extBoxRef = useRef<THREE.InstancedMesh>(null);
@@ -295,6 +308,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
 
   useInstances(speakerPlateRef, speakerPlates);
   useInstances(speakerGrilleRef, speakerGrilles);
+  useInstances(camStemRef, cameraStems);
   useInstances(camPlateRef, cameraPlates);
   useInstances(camDomeRef, cameraDomes);
   useInstances(extBoxRef, extBoxes);
@@ -312,40 +326,60 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   useInstances(lid2, binLids[2]);
 
   return (
-    <group>
+    <group name="trousse">
       {/* --- Toujours là : ce qui structure le quai --------------------- */}
 
       {/* Ligne verte de guidage, dans l'axe de circulation. Avec la bande
           podotactile du bord, c'est le couple qui dit « quai japonais ». */}
-      <mesh position={[PSD_X + depth * 0.55 - 0.2, PLATFORM_TOP + 0.007, 0]} material={mats.guide}>
+      <mesh name="ligne-guidage" position={[PSD_X + depth * 0.55 - 0.2, PLATFORM_TOP + 0.007, 0]} material={mats.guide}>
         <boxGeometry args={[0.11, 0.005, len - 4]} />
       </mesh>
 
-      {/* Gouttière en tête de pilier, et ses descentes. */}
-      <mesh position={[pipeX, canopyY - 0.06, 0]} material={m.metal}>
-        <boxGeometry args={[0.17, 0.13, len - 1]} />
-      </mesh>
-      <instancedMesh ref={pipeRef} args={[undefined, undefined, Math.max(1, pipes.length)]} material={m.metal}>
+      {/* Gouttière en tête de pilier, et ses descentes.
+          Elle court SOUS les poutres transversales, et s'interrompt à chaque
+          gaine qui monte à l'auvent : d'un seul tenant à ras de la sous-face,
+          elle traversait les vingt poutres de chaque gare et toutes les
+          gaines d'escalier mécanique. */}
+      {kit.runSpans.map((sp) => (
+        <mesh
+          name="gouttière"
+          key={`gt${sp.z0}`}
+          position={[pipeX, canopyY - 0.28, (sp.z0 + sp.z1) / 2]}
+          material={m.metal}
+        >
+          <boxGeometry args={[0.17, 0.13, sp.z1 - sp.z0]} />
+        </mesh>
+      ))}
+      <instancedMesh name="descente-eau" ref={pipeRef} args={[undefined, undefined, Math.max(1, pipes.length)]} material={m.metal}>
         <cylinderGeometry args={[0.055, 0.055, 1, 8]} />
       </instancedMesh>
 
-      {/* Chemin de câbles, dans l'ombre de l'auvent — et sous les poutres. */}
-      <mesh position={[trayX, canopyY - 0.32, 0]} material={m.metal}>
-        <boxGeometry args={[0.42, 0.11, len - 6]} />
-      </mesh>
-      {[-0.1, 0.1].map((dx) => (
-        <mesh key={dx} position={[trayX + dx, canopyY - 0.25, 0]} material={m.frame}>
-          <boxGeometry args={[0.07, 0.06, len - 6.4]} />
-        </mesh>
+      {/* Chemin de câbles : mêmes tronçons que la gouttière, sous les poutres,
+          et suspendu — il pendait dans le vide sur toute sa longueur. */}
+      {kit.runSpans.map((sp) => (
+        <group name="chemin-câbles" key={`ct${sp.z0}`}>
+          <mesh position={[trayX, canopyY - 0.5, (sp.z0 + sp.z1) / 2]} material={m.metal}>
+            <boxGeometry args={[0.42, 0.11, sp.z1 - sp.z0]} />
+          </mesh>
+          <mesh position={[trayX, canopyY - 0.43, (sp.z0 + sp.z1) / 2]} material={m.frame}>
+            <boxGeometry args={[0.24, 0.06, sp.z1 - sp.z0 - 0.4]} />
+          </mesh>
+          {hangers(sp).map((z, k) => (
+            <mesh key={k} position={[trayX, canopyY - 0.22, z]} material={m.metal}>
+              <boxGeometry args={[0.34, 0.44, 0.05]} />
+            </mesh>
+          ))}
+        </group>
       ))}
 
       {/* Bacs de tri : trois par batterie, couvercles de couleur. */}
-      <instancedMesh ref={binBodyRef} args={[undefined, undefined, Math.max(1, binBodies.length)]} material={m.bin}>
+      <instancedMesh name="bac-tri" ref={binBodyRef} args={[undefined, undefined, Math.max(1, binBodies.length)]} material={m.bin}>
         <cylinderGeometry args={[0.185, 0.2, 0.82, 12]} />
       </instancedMesh>
       {BIN_LIDS.map((c, k) => (
         <instancedMesh
           key={c}
+          name="bac-tri"
           ref={lidRefs[k]}
           args={[undefined, undefined, Math.max(1, binLids[k].length)]}
           material={mats.lids[k]}
@@ -353,7 +387,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
           <cylinderGeometry args={[0.2, 0.19, 0.08, 12]} />
         </instancedMesh>
       ))}
-      <instancedMesh ref={binRailRef} args={[undefined, undefined, Math.max(1, binRails.length)]} material={m.metal}>
+      <instancedMesh name="bac-tri" ref={binRailRef} args={[undefined, undefined, Math.max(1, binRails.length)]} material={m.metal}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
 
@@ -361,6 +395,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
       {detail <= 2 && (
         <group>
           <instancedMesh
+            name="diffuseur"
             ref={speakerPlateRef}
             args={[undefined, undefined, Math.max(1, speakerPlates.length)]}
             material={m.metal}
@@ -368,6 +403,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
             <boxGeometry args={[1, 1, 1]} />
           </instancedMesh>
           <instancedMesh
+            name="diffuseur"
             ref={speakerGrilleRef}
             args={[undefined, undefined, Math.max(1, speakerGrilles.length)]}
             material={mats.speaker}
@@ -376,6 +412,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
           </instancedMesh>
 
           <instancedMesh
+            name="extincteur"
             ref={extBoxRef}
             args={[undefined, undefined, Math.max(1, extBoxes.length)]}
             material={m.frame}
@@ -383,6 +420,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
             <boxGeometry args={[1, 1, 1]} />
           </instancedMesh>
           <instancedMesh
+            name="extincteur"
             ref={extFaceRef}
             args={[undefined, undefined, Math.max(1, extFaces.length)]}
             material={mats.extinguisher}
@@ -392,6 +430,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
 
           {bare && (
             <instancedMesh
+              name="arrêt-urgence"
               ref={stopPostRef}
               args={[undefined, undefined, Math.max(1, stopPosts.length)]}
               material={m.metal}
@@ -400,6 +439,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
             </instancedMesh>
           )}
           <instancedMesh
+            name="arrêt-urgence"
             ref={stopHeadRef}
             args={[undefined, undefined, Math.max(1, stopHeads.length)]}
             material={m.frame}
@@ -407,6 +447,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
             <boxGeometry args={[1, 1, 1]} />
           </instancedMesh>
           <instancedMesh
+            name="arrêt-urgence"
             ref={stopFaceRef}
             args={[undefined, undefined, Math.max(1, stopFaces.length)]}
             material={mats.stop}
@@ -415,6 +456,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
           </instancedMesh>
 
           <instancedMesh
+            name="armoire"
             ref={cabBodyRef}
             args={[undefined, undefined, Math.max(1, cabBodies.length)]}
             material={m.wall}
@@ -422,6 +464,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
             <boxGeometry args={[1, 1, 1]} />
           </instancedMesh>
           <instancedMesh
+            name="armoire"
             ref={cabFaceRef}
             args={[undefined, undefined, Math.max(1, cabFaces.length)]}
             material={mats.cabinet}
@@ -432,7 +475,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
           {/* Téléphone ferroviaire : il n'y en a qu'un, sur un pilier lui aussi,
               et il ne s'instancie pas. */}
           {kit.phone !== null && (
-            <group position={[postFaceX, PLATFORM_TOP + 1.32, kit.phone]}>
+            <group name="téléphone" position={[postFaceX, PLATFORM_TOP + 1.32, kit.phone]}>
               <mesh position={[-0.07, 0, 0]} material={m.frame}>
                 <boxGeometry args={[0.15, 0.62, 0.44]} />
               </mesh>
@@ -448,6 +491,15 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
       {detail <= 1 && (
         <group>
           <instancedMesh
+            name="caméra"
+            ref={camStemRef}
+            args={[undefined, undefined, Math.max(1, cameraStems.length)]}
+            material={m.metal}
+          >
+            <boxGeometry args={[1, 1, 1]} />
+          </instancedMesh>
+          <instancedMesh
+            name="caméra"
             ref={camPlateRef}
             args={[undefined, undefined, Math.max(1, cameraPlates.length)]}
             material={m.metal}
@@ -455,6 +507,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
             <boxGeometry args={[1, 1, 1]} />
           </instancedMesh>
           <instancedMesh
+            name="caméra"
             ref={camDomeRef}
             args={[undefined, undefined, Math.max(1, cameraDomes.length)]}
             material={mats.dome}
@@ -467,7 +520,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
               conducteur voie toute la ligne des portes. Sur un mât planté au
               sol ils se seraient dressés en plein dans une file d'attente. */}
           {kit.mirrors.map((z, k) => (
-            <group key={`mir${k}`} position={[PSD_X + 0.42, canopyY, z]}>
+            <group name="miroir" key={`mir${k}`} position={[PSD_X + 0.42, canopyY, z]}>
               <mesh position={[0, -0.34, 0]} material={m.metal}>
                 <boxGeometry args={[0.07, 0.68, 0.07]} />
               </mesh>
@@ -486,6 +539,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
           {/* Repères de voiture peints au sol. */}
           {carMarkMats.map(({ z, m: mm }, k) => (
             <mesh
+              name="repère-voiture"
               key={`car${k}`}
               position={[PSD_X + 1.52, PLATFORM_TOP + 0.008, z]}
               rotation={[-Math.PI / 2, 0, 0]}

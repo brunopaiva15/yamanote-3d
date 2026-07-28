@@ -39,6 +39,8 @@ interface Props {
   bandX: number;
   /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
   detail: number;
+  /** Ce qui est déjà posé au sol près de l'épine : les totems s'en écartent. */
+  ground: { z: number; halfZ: number }[];
   frame: THREE.Material;
   metal: THREE.Material;
   accent: THREE.Material;
@@ -98,6 +100,7 @@ export function PlatformSignage({
   totemX,
   bandX,
   detail,
+  ground,
   frame,
   metal,
   accent,
@@ -140,7 +143,21 @@ export function PlatformSignage({
     return out;
   }, [halfZ]);
   const boardZ = useMemo(() => [-halfZ * 0.45, halfZ * 0.45], [halfZ]);
-  const totemZ = useMemo(() => [-halfZ * 0.66, 0, halfZ * 0.66], [halfZ]);
+  // Les totems se posaient à des z fixes, sans consulter le mobilier : ils
+  // tombaient dans un distributeur une fois sur dix. Ils s'écartent de tout ce
+  // qui est déjà au sol autour de l'épine.
+  const totemZ = useMemo(
+    () =>
+      [-halfZ * 0.66, 0, halfZ * 0.66].map((z) => {
+        for (let guard = 0; guard < 12; guard++) {
+          const clash = ground.some((o) => Math.abs(o.z - z) < o.halfZ + 0.9);
+          if (!clash) break;
+          z += 1.1;
+        }
+        return z;
+      }),
+    [halfZ, ground],
+  );
   // La bande directionnelle est suspendue à l'auvent, au-dessus de l'épine.
   // Ses trois tronçons se posent dans les CREUX de la trame des bannières
   // publicitaires (une tous les 26 m, à partir de -halfZ + 18) : d'un seul
@@ -174,17 +191,25 @@ export function PlatformSignage({
 
   const signY = canopyY - 0.77;
   const boardY = canopyY - 0.39;
+  // Hauteur libre entre le haut d'un caisson et la sous-face de l'auvent : les
+  // suspentes se calculaient à longueur fixe et ressortaient sur le toit.
+  const bandHang = Math.max(0.06, 0.5 - 0.31);
+  const boardHang = Math.max(0.06, canopyY - (boardY + 0.18));
 
   return (
-    <group>
+    <group name="signalétique">
       {/* Panneaux JR suspendus, lisibles depuis le wagon comme depuis le quai */}
       {signZ.map((z) => (
-        <group key={`sign${z}`} position={[hangX, signY, z]}>
-          {[-1.1, 1.1].map((dz) => (
-            <mesh key={`hang${dz}`} position={[0.06, 0.52, dz]} material={frame}>
-              <boxGeometry args={[0.045, 0.75, 0.07]} />
-            </mesh>
-          ))}
+        <group name="panneau-nom" key={`sign${z}`} position={[hangX, signY, z]}>
+          {[-1.1, 1.1].map((dz) => {
+            // Du haut du caisson à la sous-face de l'auvent, ni plus ni moins.
+            const h = Math.max(0.06, canopyY - (signY + 0.5));
+            return (
+              <mesh key={`hang${dz}`} position={[0.06, 0.5 + h / 2, dz]} material={frame}>
+                <boxGeometry args={[0.045, h, 0.07]} />
+              </mesh>
+            );
+          })}
           {/* Caisson noir derrière la face éclairée */}
           <mesh position={[0.055, 0, 0]} material={frame}>
             <boxGeometry args={[0.1, 1.0, 3.35]} />
@@ -197,7 +222,7 @@ export function PlatformSignage({
 
       {/* Tableaux d'affichage suspendus */}
       {boardZ.map((z) => (
-        <group key={`board${z}`} position={[hangX - 0.1, boardY, z]}>
+        <group name="afficheur" key={`board${z}`} position={[hangX - 0.1, boardY, z]}>
           <mesh position={[0.08, 0.15, 0]} material={metal}>
             <boxGeometry args={[0.5, 0.06, 3.4]} />
           </mesh>
@@ -212,8 +237,8 @@ export function PlatformSignage({
             <planeGeometry args={[3.2, 0.8]} />
           </mesh>
           {[-1.4, 1.4].map((dz) => (
-            <mesh key={`hang${dz}`} position={[0.08, 0.45, dz]} material={metal}>
-              <boxGeometry args={[0.04, 0.55, 0.04]} />
+            <mesh key={`hang${dz}`} position={[0.08, 0.18 + boardHang / 2, dz]} material={metal}>
+              <boxGeometry args={[0.04, boardHang, 0.04]} />
             </mesh>
           ))}
         </group>
@@ -224,7 +249,7 @@ export function PlatformSignage({
           une flèche, les gares desservies, et rien d'autre. Recto-verso,
           puisqu'un îlot a un bord d'embarquement de chaque côté. */}
       {detail <= 2 && bandZ.map((z) => (
-        <group key={`band${z}`} position={[bandX, canopyY - 0.5, z]}>
+        <group name="bande-directionnelle" key={`band${z}`} position={[bandX, canopyY - 0.5, z]}>
           <mesh material={frame}>
             <boxGeometry args={[0.12, 0.62, 8.2]} />
           </mesh>
@@ -238,10 +263,11 @@ export function PlatformSignage({
               <planeGeometry args={[8, 0.56]} />
             </mesh>
           ))}
-          {/* Suspentes jusqu'à la sous-face de l'auvent. */}
+          {/* Suspentes jusqu'à la sous-face de l'auvent, et pas au-delà : à
+              longueur fixe, elles la traversaient et ressortaient sur le toit. */}
           {[-3.4, 3.4].map((dz) => (
-            <mesh key={dz} position={[0, 0.55, dz]} material={metal}>
-              <boxGeometry args={[0.05, 0.5, 0.05]} />
+            <mesh key={dz} position={[0, 0.31 + bandHang / 2, dz]} material={metal}>
+              <boxGeometry args={[0.05, bandHang, 0.05]} />
             </mesh>
           ))}
         </group>
@@ -250,7 +276,7 @@ export function PlatformSignage({
 
       {/* Totems d'information */}
       {totemZ.map((z) => (
-        <group key={`totem${z}`} position={[totemX, PLATFORM_TOP, z]}>
+        <group name="totem" key={`totem${z}`} position={[totemX, PLATFORM_TOP, z]}>
           <mesh position={[0, 1.1, 0]} material={metal}>
             <boxGeometry args={[0.22, 2.2, 0.35]} />
           </mesh>

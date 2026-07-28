@@ -120,6 +120,8 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
   // lecture quand on arrive du train.
   const panelW = Math.min(2.05, span / 2 - 0.12);
   const top = SIGN_BOTTOM + SIGN_H;
+  /** Du haut d'une plaque d'accès à la sous-face de l'auvent. */
+  const plateHang = Math.max(0.06, layout.canopyY - PLATFORM_TOP - 2.62 - 0.31);
 
   // Panneaux 番線, suspendus près du bord de quai. Centrés sur le milieu du
   // quai et espacés de trente-six mètres : quel que soit l'endroit où l'on
@@ -128,22 +130,33 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
   const trackSigns = useMemo(() => {
     const out: number[] = [];
     const halfZ = place.walkHalfZ;
+    const half = layout.length / 2;
     for (let k = -3; k <= 3; k++) {
-      const z = k * 36;
-      if (Math.abs(z) <= halfZ - 8) out.push(z);
+      let z = k * 36;
+      if (Math.abs(z) > halfZ - 8) continue;
+      // Les bannières publicitaires courent tous les 26 m à partir de
+      // -halfZ + 18, à la même hauteur : au croisement, les deux caissons se
+      // traversaient. Le panneau 番線 se décale jusqu'à trouver son creux.
+      for (let guard = 0; guard < 8; guard++) {
+        const d = Math.abs(((z - (-half + 18)) % 26 + 26) % 26);
+        if (Math.min(d, 26 - d) > 2.2) break;
+        z += 2.4;
+      }
+      out.push(z);
     }
     return out;
-  }, [place.walkHalfZ]);
+  }, [place.walkHalfZ, layout.length]);
 
   return (
-    <group ref={root}>
+    <group ref={root} name="orientation">
       {trackSigns.map((z) => (
-        <group key={`tk${z}`} position={[PSD_X + 1.5, PLATFORM_TOP + SIGN_BOTTOM + 0.34, z]}>
+        <group name="panneau-番線" key={`tk${z}`} position={[PSD_X + 1.5, PLATFORM_TOP + SIGN_BOTTOM + 0.34, z]}>
           {[-1, 1].map((d) => {
-            const hangH = layout.canopyY - PLATFORM_TOP - SIGN_BOTTOM - 0.71;
+            // Du haut du caisson à la SOUS-FACE de l'auvent, ni plus ni moins.
+            const hangH = Math.max(0.06, layout.canopyY - PLATFORM_TOP - SIGN_BOTTOM - 0.71);
             return (
               <mesh key={d} position={[d * 1.05, 0.37 + hangH / 2, 0]} material={mats.strut}>
-                <boxGeometry args={[0.05, Math.max(0.1, hangH), 0.05]} />
+                <boxGeometry args={[0.05, hangH, 0.05]} />
               </mesh>
             );
           })}
@@ -167,7 +180,11 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
           posée là où l'on débouche. C'est par elle qu'on se donne rendez-vous
           sur un quai de deux cent vingt mètres. */}
       {detail <= 2 && place.accesses.map((a, k) => (
-        <group key={`ap${k}`} position={[a.x, PLATFORM_TOP + 2.62, a.z - a.halfZ + 0.1]}>
+        <group name="plaque-accès" key={`ap${k}`} position={[a.x, PLATFORM_TOP + 2.62, a.z - a.halfZ + 0.1]}>
+          {/* Suspente jusqu'à l'auvent : la plaque flottait, sans rien. */}
+          <mesh position={[0, 0.31 + plateHang / 2, 0]} material={mats.strut}>
+            <boxGeometry args={[0.05, plateHang, 0.05]} />
+          </mesh>
           <mesh material={mats.frame}>
             <boxGeometry args={[0.5, 0.62, 0.07]} />
           </mesh>
@@ -185,17 +202,19 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
       ))}
 
       {gantries.map(({ z, i, plate }) => (
-        <group key={`ov${z}`} position={[0, PLATFORM_TOP, z]}>
+        <group name="potence" key={`ov${z}`} position={[0, PLATFORM_TOP, z]}>
           {/* Traverse et suspentes jusqu'à la sous-face de l'auvent. */}
           <mesh position={[midX, top + 0.09, 0]} material={mats.strut}>
             <boxGeometry args={[span, 0.1, 0.1]} />
           </mesh>
           {[-1, 1].map((d) => {
             const hx = midX + d * span * 0.34;
-            const hangH = layout.canopyY - PLATFORM_TOP - top - 0.09;
+            // La suspente s'arrête à la sous-face de l'auvent : calculée à
+            // longueur libre, elle la traversait et ressortait sur le toit.
+            const hangH = Math.max(0.06, layout.canopyY - PLATFORM_TOP - top - 0.14);
             return (
               <mesh key={d} position={[hx, top + 0.14 + hangH / 2, 0]} material={mats.strut}>
-                <boxGeometry args={[0.06, Math.max(0.1, hangH), 0.06]} />
+                <boxGeometry args={[0.06, hangH, 0.06]} />
               </mesh>
             );
           })}

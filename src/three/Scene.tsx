@@ -5,6 +5,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { installStationProbe } from '../dev/stationProbe';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { EffectComposer, Bloom, N8AO, Vignette, ToneMapping, Noise } from '@react-three/postprocessing';
@@ -96,6 +97,18 @@ function mixColor(out: THREE.Color, w: { day: number; golden: number; night: num
 // n'est donc jamais concurrencé. Brume et fond ne sont pas touchés (leur
 // cadence 0,5 s scintillerait contre un passage de pont). Les pointLight du
 // wagon ne sont pas atténués : les néons restent allumés sous un pont.
+/**
+ * Sonde de gare, en développement seulement : `__stationProbe()` dans la
+ * console rapporte les volumes qui s'interpénètrent. Le placement du mobilier
+ * n'arbitre que des emprises AU SOL ; tout ce qui est suspendu se posait
+ * jusqu'ici à l'aveugle, fichier par fichier.
+ */
+function StationProbe() {
+  const { scene } = useThree();
+  useEffect(() => installStationProbe(scene), [scene]);
+  return null;
+}
+
 function DayNightLighting({ level }: { level: PerfLevel }) {
   const { scene } = useThree();
   const sun = useRef<THREE.DirectionalLight>(null);
@@ -206,6 +219,7 @@ export function Scene() {
       <EnvironmentMap />
       <ShadowFlags />
       <DayNightLighting level={perfLevel} />
+      <StationProbe />
 
       {/* Intérieur : chapelet de points blanc chaud sous le bandeau plafond. */}
       {lampPositions.map((p, i) => (

@@ -108,6 +108,7 @@ export function Scenery() {
   const built = useMemo(() => {
     const banks: Bank[] = [];
     const planes: {
+      side: 1 | -1;
       key: string;
       x: number;
       y: number;
@@ -159,6 +160,7 @@ export function Scenery() {
           const bias = slot * 0.04;
           planes.push({
             key: `city-${L.layer}-${side}-${slot}-day`,
+            side,
             x: side * L.x - side * bias,
             y,
             rotY,
@@ -182,6 +184,7 @@ export function Scenery() {
             bank.nightMat = nightMat;
             planes.push({
               key: `city-${L.layer}-${side}-${slot}-night`,
+              side,
               x: side * L.x - side * (bias + 0.02),
               y,
               rotY,
@@ -222,6 +225,7 @@ export function Scenery() {
   const POLE_COUNT = 8;
   const POLE_SPACING = 30;
   const trees = useRef<(THREE.Group | null)[]>([]);
+  const cityRefs = useRef<(THREE.Mesh | null)[]>([]);
   const TREE_COUNT = 12;
   const TREE_SPACING = 21;
 
@@ -331,6 +335,13 @@ export function Scenery() {
       t.position.z = ((runtime.distance * 0.999 + i * TREE_SPACING + 9) % treeSpan) - treeSpan / 2;
     }
 
+    // --- Plans de ville : rangés derrière la gare ---
+    for (let i = 0; i < built.planes.length; i++) {
+      const mesh = cityRefs.current[i];
+      const pl = built.planes[i];
+      if (mesh) mesh.position.x = pl.x + pl.side * sidePush(pl.side);
+    }
+
     // --- Fondu des ciels selon l'heure de Tokyo ---
     built.sky.day.opacity = w.day;
     built.sky.golden.opacity = w.golden;
@@ -350,9 +361,20 @@ export function Scenery() {
         </mesh>
       ))}
 
-      {/* Plans de ville : deux banques ping-pong par couche/côté, fondues */}
-      {built.planes.map((pl) => (
-        <mesh key={pl.key} position={[pl.x, pl.y, 0]} rotation={[0, pl.rotY, 0]} material={pl.mat}>
+      {/* Plans de ville : deux banques ping-pong par couche/côté, fondues.
+          Écartés à l'approche d'une gare, comme les murs et les clôtures : la
+          première couche est à onze mètres de l'axe, et la gare va maintenant
+          jusqu'au quai d'en face — les immeubles poussaient dans les voies. */}
+      {built.planes.map((pl, i) => (
+        <mesh
+          key={pl.key}
+          ref={(o) => {
+            cityRefs.current[i] = o;
+          }}
+          position={[pl.x, pl.y, 0]}
+          rotation={[0, pl.rotY, 0]}
+          material={pl.mat}
+        >
           <planeGeometry args={[PLANE_LEN, pl.height]} />
         </mesh>
       ))}
