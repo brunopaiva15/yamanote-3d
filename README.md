@@ -401,6 +401,56 @@ corridors portaient `repeat.y = 24` sur un plan de 400 m — une tuile tous les
 des plans de ville, sur les deux surfaces les plus proches et les plus rapides
 du champ. Les tuiles sont désormais dimensionnées en mètres et le rendu s'y cale.
 
+### Ce que ça coûte
+
+`node scripts/scenery-cost.mjs` relève la scène palier par palier, en pleine
+voie et à quai. Les chiffres retenus — appels de rendu, triangles, programmes —
+ne dépendent pas de la carte graphique : on peut donc les prendre sous
+SwiftShader et en tirer un budget valable partout. Le temps par image, lui, n'y
+voudrait rien dire, et n'est pas relevé.
+
+Attention au piège : `gl.info` se remet à zéro à chaque `render()`, et le
+post-traitement en appelle plusieurs par image. Lu naïvement, il ne rapporte que
+la dernière passe plein écran — un appel, un triangle. La sonde coupe donc la
+remise à zéro automatique et cumule sur un nombre d'images connu.
+
+| palier | où | appels | triangles | instances |
+|---|---|---|---|---|
+| ultra | voie | 759 | 273 k | 1 612 |
+| ultra | quai | 634 | 167 k | 2 209 |
+| medium | voie | 274 | 131 k | 1 428 |
+| veryLow | voie | 225 | 94 k | 785 |
+
+Deux enseignements. D'abord, **le paysage n'est pas le poste dominant** : il pèse
+une quarantaine de maillages sur sept cent vingt visibles, et une cinquantaine
+de milliers de triangles sur deux cent soixante-treize mille — l'intérieur du
+wagon et ses passagers font le reste. Ensuite, **le grand levier du palier est
+l'ombre du soleil**, coupée à partir de `medium` : c'est elle qui fait passer de
+690 à 274 appels, en supprimant une seconde passe sur tout ce qui projette.
+
+Trois corrections sont sorties de cette première mesure — la première fois que
+le paysage était mesuré plutôt que supposé :
+
+- **Les emplacements réservés se paient.** Une instance dégénérée — mise à
+  l'échelle zéro faute d'objet à poser — coûte son traitement de sommets comme
+  les autres. Réserver douze emplacements de bosquet par cellule pour en remplir
+  un ou deux passait **cent vingt mille triangles par image** au pilote pour
+  rien. Les capacités couvrent maintenant le cas courant, pas le maximum
+  théorique ; au-delà, le générateur laisse tomber, et personne ne compte les
+  arbres d'un bosquet depuis un train.
+- **Les arbres du bord de voie** coûtaient trente-six appels de rendu pour douze
+  sujets. Ils prennent le bosquet de la ville : même dessin, une instance chacun,
+  un appel.
+- **Toutes les ombres ne servent pas.** `userData.noShadow` permet de refuser
+  explicitement : le garde-corps projette à l'aplomb du tablier, les rails sur
+  le ballast, le mobilier sur lui-même. Le portique, lui, garde la sienne — la
+  barre qui balaie l'intérieur du wagon toutes les trente secondes est l'un des
+  plus beaux effets de la course.
+
+Aux deux derniers paliers, acrotères, croupes et bosquets tombent — mais pas les
+enseignes : un quad par bâtiment, et c'est tout ce qui reste de reconnaissable à
+Akihabara ou Shin-Ōkubo une fois la nuit tombée.
+
 Pour regarder tout ça : `node scripts/scenery-shots.mjs /tmp/decor` se cale au
 milieu d'un inter-gare, vise par une baie et capture, de jour comme de nuit. La
 sonde de gare, elle, se pose à l'arrêt — là où le quai masque justement tout le
@@ -552,7 +602,8 @@ src/
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
   scripts/               models:import / models:inspect (packs → public/models/),
-                         sondes navigateur : station-probe, scenery-shots
+                         sondes navigateur : station-probe, scenery-shots,
+                         scenery-cost
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
   ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles

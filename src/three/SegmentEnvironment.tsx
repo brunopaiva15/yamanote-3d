@@ -26,7 +26,7 @@ import {
 } from '../textures/procedural';
 import { vehicle, type Ctx } from './landmarkKit';
 
-const PLANE_LEN = 400; // aligné sur Scenery (vue en biais vers le fond du wagon)
+const PLANE_LEN = 460; // aligné sur Wayside et le sol de la ville
 const WALL_X = 6.6; // murs juste derrière les poteaux caténaires (±5.2)
 const DECK_X = 5.1; // joue du tablier, au ras de l'emprise de la voie
 const FENCE_X = 6.2;

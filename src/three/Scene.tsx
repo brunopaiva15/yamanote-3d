@@ -107,8 +107,8 @@ function mixColor(out: THREE.Color, w: { day: number; golden: number; night: num
  * jusqu'ici à l'aveugle, fichier par fichier.
  */
 function StationProbe() {
-  const { scene } = useThree();
-  useEffect(() => installStationProbe(scene), [scene]);
+  const { scene, gl } = useThree();
+  useEffect(() => installStationProbe(scene, gl), [scene, gl]);
   return null;
 }
 

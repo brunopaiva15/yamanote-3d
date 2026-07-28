@@ -67,16 +67,24 @@ const GROUND_LEN = 460;
  * de jour, en deçà on verrait la ville apparaître à vue. Ce qui s'allège, c'est
  * la DENSITÉ de chaque rang, pas l'étendue.
  */
-function tuning(level: PerfLevel): { cells: number; rankScale: number; props: boolean } {
-  if (level <= 1) return { cells: 13, rankScale: 1, props: true };
-  if (level === 2) return { cells: 12, rankScale: 0.8, props: true };
-  if (level === 3) return { cells: 11, rankScale: 0.6, props: true };
-  return { cells: 11, rankScale: 0.4, props: false };
+function tuning(level: PerfLevel): {
+  cells: number;
+  rankScale: number;
+  props: boolean;
+  signs: boolean;
+} {
+  if (level <= 1) return { cells: 13, rankScale: 1, props: true, signs: true };
+  if (level === 2) return { cells: 12, rankScale: 0.8, props: true, signs: true };
+  if (level === 3) return { cells: 11, rankScale: 0.6, props: true, signs: true };
+  // Aux deux derniers paliers, acrotères, croupes et bosquets tombent — mais
+  // pas les enseignes : un quad par bâtiment, et c'est tout ce qui reste de
+  // reconnaissable à Akihabara ou Shin-Ōkubo une fois la nuit tombée.
+  return { cells: 11, rankScale: 0.4, props: false, signs: true };
 }
 
 export function CityRibbon() {
   const level = usePerf((s) => qualityLevel(s.quality));
-  const { cells, rankScale, props } = tuning(level);
+  const { cells, rankScale, props, signs } = tuning(level);
 
   const yRoot = useRef<THREE.Group>(null);
   const zRoot = useRef<THREE.Group>(null);
@@ -143,7 +151,7 @@ export function CityRibbon() {
       box: props ? mkMesh(cells * PROP_CAPS.box) : null,
       hip: props ? mkMesh(cells * PROP_CAPS.hip, hipGeo.clone()) : null,
       tree: props ? mkPlain(cells * PROP_CAPS.tree, groveGeo, groveMat) : null,
-      sign: props ? mkPlain(cells * PROP_CAPS.sign, signGeo, signMat) : null,
+      sign: signs ? mkPlain(cells * PROP_CAPS.sign, signGeo, signMat) : null,
     }));
 
     const groundTex = makeCityGroundTexture();
@@ -151,7 +159,7 @@ export function CityRibbon() {
     const groundMat = new THREE.MeshLambertMaterial({ map: groundTex, fog: true });
 
     return { city, sides, groundTex, groundMat, groveMat, groveGeo, signMat, signTex, signGeo, hipGeo };
-  }, [cells, props]);
+  }, [cells, props, signs]);
 
   useEffect(
     () => () => {
@@ -240,7 +248,7 @@ export function CityRibbon() {
         s.body.trim.needsUpdate = true;
 
         // --- Acrotères, croupes, bosquets, enseignes ---
-        if (!s.box || !s.hip || !s.tree || !s.sign) continue;
+        if (!s.sign) continue;
         const np = buildCellProps(cell, s.side, sc.buf, n, sc.propBuf);
         // Un curseur par famille : le générateur les entremêle dans un seul
         // tampon, le rendu les répartit dans quatre maillages.
@@ -252,6 +260,8 @@ export function CityRibbon() {
           if (k >= PROP_CAPS[p.kind]) continue;
           used[p.kind] = k + 1;
           const idx = slot * PROP_CAPS[p.kind] + k;
+
+          if (p.kind !== 'sign' && (!s.box || !s.hip || !s.tree)) continue;
 
           if (p.kind === 'sign') {
             // Panneau plaqué sur la face qui regarde la voie, donc tourné vers
@@ -272,7 +282,7 @@ export function CityRibbon() {
           const baseY = p.kind === 'box' ? p.y + p.h / 2 : p.y;
           sc.pos.set(s.side * p.x, baseY, st.origin - p.s);
 
-          if (p.kind === 'tree') {
+          if (p.kind === 'tree' && s.tree) {
             const spread = Math.min(p.h * 1.15, Math.max(p.d, p.w));
             sc.scl.set(spread, p.h, spread);
             sc.mtx.compose(sc.pos, sc.rot, sc.scl);
@@ -285,6 +295,7 @@ export function CityRibbon() {
           sc.scl.set(p.d, p.h, p.w);
           sc.mtx.compose(sc.pos, sc.rot, sc.scl);
           const target = p.kind === 'hip' ? s.hip : s.box;
+          if (!target) continue;
           target.mesh.setMatrixAt(idx, sc.mtx);
           sc.color.set(p.tone);
           target.mesh.setColorAt(idx, sc.color);
@@ -298,12 +309,13 @@ export function CityRibbon() {
           for (let k = used[kind]; k < cap; k++) {
             const idx = slot * cap + k;
             if (kind === 'sign') s.sign.setMatrixAt(idx, sc.hidden);
-            else if (kind === 'tree') s.tree.setMatrixAt(idx, sc.hidden);
-            else if (kind === 'hip') s.hip.mesh.setMatrixAt(idx, sc.hidden);
-            else s.box.mesh.setMatrixAt(idx, sc.hidden);
+            else if (kind === 'tree') s.tree?.setMatrixAt(idx, sc.hidden);
+            else if (kind === 'hip') s.hip?.mesh.setMatrixAt(idx, sc.hidden);
+            else s.box?.mesh.setMatrixAt(idx, sc.hidden);
           }
         }
         for (const m of [s.box, s.hip]) {
+          if (!m) continue;
           m.mesh.instanceMatrix.needsUpdate = true;
           if (m.mesh.instanceColor) m.mesh.instanceColor.needsUpdate = true;
           m.accent.needsUpdate = true;
@@ -311,6 +323,7 @@ export function CityRibbon() {
           m.trim.needsUpdate = true;
         }
         for (const m of [s.tree, s.sign]) {
+          if (!m) continue;
           m.instanceMatrix.needsUpdate = true;
           if (m.instanceColor) m.instanceColor.needsUpdate = true;
         }

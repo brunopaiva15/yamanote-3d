@@ -61,9 +61,9 @@ async function aim(dx, dy) {
 
 // L'index est la gare d'ARRIVÉE : le tronçon traversé est index-1.
 const cases = [
-  [1, 17 * 60 + 5, 'viaduc-dore'],
-  [1, 21 * 60 + 30, 'viaduc-nuit'],
-  [7, 21 * 60 + 30, 'nishinippori-nuit'],
+  [1, 15 * 60 + 30, 'viaduc-jour'],
+  [7, 15 * 60 + 30, 'nishinippori-jour'],
+  [3, 21 * 60 + 30, 'akihabara-nuit'],
 ];
 // « rasant » plonge vers l'emprise : c'est le seul angle où l'on juge le
 // premier plan, celui qui vend la vitesse.

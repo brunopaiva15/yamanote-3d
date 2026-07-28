@@ -426,12 +426,22 @@ export interface CityProp {
   tone: string;
 }
 
-/** Capacité par famille et par cellule. */
+/**
+ * Capacité par famille et par cellule.
+ *
+ * Ce ne sont PAS les maxima théoriques. Une instance dégénérée — mise à
+ * l'échelle zéro faute d'objet à poser — coûte son traitement de sommets comme
+ * les autres, et réserver douze emplacements de bosquet par cellule pour en
+ * remplir un ou deux passait cent mille triangles par image au pilote pour
+ * rien. Les valeurs ci-dessous couvrent le cas courant ; au-delà, le
+ * générateur laisse simplement tomber, et personne ne compte les arbres d'un
+ * bosquet depuis un train.
+ */
 export const PROP_CAPS: Record<PropKind, number> = {
-  box: CELL_CAPACITY * 2 + 1,
-  hip: CELL_CAPACITY,
-  tree: CELL_CAPACITY,
-  sign: CELL_CAPACITY,
+  box: 18,
+  hip: 5,
+  tree: 5,
+  sign: 6,
 };
 const PROP_TOTAL = PROP_CAPS.box + PROP_CAPS.hip + PROP_CAPS.tree + PROP_CAPS.sign;
 

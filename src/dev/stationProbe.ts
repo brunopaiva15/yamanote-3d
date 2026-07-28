@@ -145,10 +145,56 @@ export function probeStation(
   };
 }
 
+/**
+ * Ce que la scène coûte réellement, tel que le pilote le voit.
+ *
+ * Les chiffres qui comptent — appels de rendu, triangles, programmes — ne
+ * dépendent pas de la carte : on peut donc les relever sous SwiftShader et en
+ * tirer un budget valable partout. Le temps par image, lui, n'y veut rien dire.
+ *
+ * `gl.info` se remet à zéro à chaque `render()`, et le post-traitement en
+ * appelle plusieurs par image : lu naïvement, il ne rapporte que la dernière
+ * passe plein écran — un appel, un triangle. On coupe donc la remise à zéro
+ * automatique et on cumule sur un nombre d'images connu.
+ */
+function probePerf(
+  scene: THREE.Object3D,
+  gl: THREE.WebGLRenderer,
+): Record<string, number> {
+  let meshes = 0;
+  let instanced = 0;
+  let instances = 0;
+  scene.traverseVisible((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    meshes++;
+    const im = m as THREE.InstancedMesh;
+    if (im.isInstancedMesh) {
+      instanced++;
+      instances += im.count;
+    }
+  });
+  return {
+    calls: gl.info.render.calls,
+    triangles: gl.info.render.triangles,
+    programs: gl.info.programs?.length ?? 0,
+    geometries: gl.info.memory.geometries,
+    textures: gl.info.memory.textures,
+    meshes,
+    instanced,
+    instances,
+  };
+}
+
 /** Branche la sonde sur `window`, en développement uniquement. */
-export function installStationProbe(scene: THREE.Object3D): void {
+export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRenderer): void {
   if (!import.meta.env.DEV) return;
   const w = window as unknown as Record<string, unknown>;
+  w.__probePerf = () => probePerf(scene, gl);
+  w.__probePerfReset = () => {
+    gl.info.autoReset = false;
+    gl.info.reset();
+  };
   w.__stationProbe = (opts?: { min?: number; ignore?: string[] }) => probeStation(scene, opts);
   // Se poser sur une gare donnée, à l'arrêt : c'est l'état où tout est monté
   // et immobile, donc le seul où une mesure a du sens.

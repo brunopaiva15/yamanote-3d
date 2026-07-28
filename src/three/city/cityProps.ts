@@ -54,10 +54,12 @@ export function makeGroveGeometry(): THREE.BufferGeometry {
     [0.28, -0.26, 0.82, 0.29, LEAF_C],
   ];
   for (const [x, z, h, rad, leaf] of sujets) {
-    const trunk = new THREE.CylinderGeometry(0.035, 0.055, h * 0.45, 5);
+    const trunk = new THREE.CylinderGeometry(0.035, 0.055, h * 0.45, 4);
     trunk.translate(x, h * 0.225, z);
     parts.push(tinted(trunk, TRUNK));
-    const crown = new THREE.SphereGeometry(rad, 8, 6);
+    // Huit méridiens, cinq parallèles : au-delà, on paie de la rondeur que la
+    // brume et la distance mangent — et il s'en instancie des centaines.
+    const crown = new THREE.SphereGeometry(rad, 8, 5);
     crown.scale(1, 0.86, 1);
     crown.translate(x, h * 0.68, z);
     parts.push(tinted(crown, leaf));

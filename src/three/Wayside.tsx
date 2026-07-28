@@ -24,7 +24,7 @@
 // l'emprise longitudinale du quai (systems/stationOcclusion) : la gare porte sa
 // propre caténaire et son propre mobilier.
 
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -35,6 +35,7 @@ import { hiddenByStation, sidePush } from '../systems/stationOcclusion';
 import { qualityLevel, usePerf } from '../systems/perf';
 import { TRACK_BED_TILE, TRACK_BED_WIDTH, makeGroundTexture } from '../textures/procedural';
 import { GAUGE_HALF } from '../data/stationGeometry';
+import { makeGroveGeometry } from './city/cityProps';
 
 /** Longueur des plans au sol : la vue en biais vers le fond du wagon porte loin. */
 const PLANE_LEN = 460;
@@ -218,11 +219,25 @@ export function Wayside() {
     const portalGeo = makePortalGeometry();
     const portals = new THREE.InstancedMesh(portalGeo, steel, POLE_COUNT);
     portals.frustumCulled = false;
+    // Le portique, lui, garde son ombre : la barre qui balaie l'intérieur du
+    // wagon toutes les trente secondes est l'un des plus beaux effets de la
+    // course, et elle ne coûte qu'une géométrie.
+
+    // Arbres du bord de voie : ils partageaient la géométrie de personne et
+    // coûtaient trente-six appels de rendu pour douze sujets. Ils prennent
+    // maintenant le bosquet de la ville — même dessin, une instance chacun.
+    const groveGeo = makeGroveGeometry();
+    const groveMat = new THREE.MeshLambertMaterial({ vertexColors: true, fog: true });
+    const groves = new THREE.InstancedMesh(groveGeo, groveMat, TREE_COUNT);
+    groves.frustumCulled = false;
+    groves.userData.noShadow = true;
 
     const railingGeo = makeRailingGeometry();
     const railings = ([1, -1] as const).map((side) => {
       const mesh = new THREE.InstancedMesh(railingGeo, railingMat, RAILING_PANELS);
       mesh.frustumCulled = false;
+      // Son ombre tombe sur le tablier, à l'aplomb : elle ne se voit jamais.
+      mesh.userData.noShadow = true;
       return { side, mesh };
     });
 
@@ -241,6 +256,7 @@ export function Wayside() {
       const mat = new THREE.MeshStandardMaterial({ color: kit.color, roughness: 0.62, metalness: kit.metalness });
       const mesh = new THREE.InstancedMesh(kit.geo, mat, kit.count);
       mesh.frustumCulled = false;
+      mesh.userData.noShadow = true;
       return { kit, mesh, mat };
     });
 
@@ -266,6 +282,9 @@ export function Wayside() {
       steel,
       railMat,
       railingMat,
+      groveGeo,
+      groveMat,
+      groves,
       portalGeo,
       portals,
       railingGeo,
@@ -280,15 +299,13 @@ export function Wayside() {
     };
   }, [furniture]);
 
-  const trees = useRef<(THREE.Group | null)[]>([]);
-
-  // Arbres boules (esprit Shashingo) : tronc + deux masses de feuillage.
+  // Bosquets du bord de voie : hauteur et teinte fixées par emplacement.
   const treeSpecs = useMemo(
     () =>
       Array.from({ length: TREE_COUNT }, (_, i) => ({
         x: (i % 2 === 0 ? 1 : -1) * (7.2 + ((i * 13) % 5) * 0.5),
-        scale: 0.85 + ((i * 29) % 10) / 22,
-        leaf: ['#5fb54a', '#6ec25a', '#54a844'][i % 3],
+        height: 5.4 + ((i * 29) % 10) * 0.28,
+        leaf: ['#dfe9d2', '#d4e2c6', '#e6eedc'][i % 3],
       })),
     [],
   );
@@ -301,6 +318,7 @@ export function Wayside() {
       scl: new THREE.Vector3(1, 1, 1),
       rot: new THREE.Quaternion(),
       axis: new THREE.Vector3(0, 1, 0),
+      color: new THREE.Color(),
     }),
     [],
   );
@@ -414,52 +432,38 @@ export function Wayside() {
       built.lamps.visible = on > 0.03;
     }
 
-    // --- Arbres défilants ---
+    // --- Bosquets défilants ---
     const treeSpan = TREE_COUNT * TREE_SPACING;
     const treeScale = 1 + 0.18 * segEnv.green; // végétation renforcée (greenery)
-    const treesVisible = segEnv.w.trench < 0.5; // pas d'arbres entre les murs
-    for (let i = 0; i < TREE_COUNT; i++) {
-      const t = trees.current[i];
-      if (!t) continue;
-      const spec = treeSpecs[i];
-      const side = spec.x >= 0 ? 1 : -1;
-      t.visible = treesVisible;
-      t.scale.setScalar(spec.scale * treeScale);
-      t.position.x = spec.x + side * sidePush(side);
-      // Les arbres poussent dans la RUE, pas sur le tablier : ils suivent le
-      // sol de la ville et se retrouvent sept mètres plus bas sous un viaduc.
-      t.position.y = segEnv.cityY;
-      t.position.z = ((runtime.distance * 0.999 + i * TREE_SPACING + 9) % treeSpan) - treeSpan / 2;
+    built.groves.visible = segEnv.w.trench < 0.5; // pas d'arbres entre les murs
+    if (built.groves.visible) {
+      for (let i = 0; i < TREE_COUNT; i++) {
+        const spec = treeSpecs[i];
+        const side = spec.x >= 0 ? 1 : -1;
+        const z = ((runtime.distance * 0.999 + i * TREE_SPACING + 9) % treeSpan) - treeSpan / 2;
+        if (hiddenByStation(z)) {
+          built.groves.setMatrixAt(i, sc.hidden);
+          continue;
+        }
+        const h = spec.height * treeScale;
+        // Les arbres poussent dans la RUE, pas sur le tablier : ils suivent le
+        // sol de la ville et se retrouvent sept mètres plus bas sous un viaduc.
+        sc.pos.set(spec.x + side * sidePush(side), segEnv.cityY, z);
+        sc.rot.identity();
+        sc.scl.set(h * 0.9, h, h * 0.9);
+        sc.mtx.compose(sc.pos, sc.rot, sc.scl);
+        built.groves.setMatrixAt(i, sc.mtx);
+        sc.color.set(spec.leaf);
+        built.groves.setColorAt(i, sc.color);
+      }
+      built.groves.instanceMatrix.needsUpdate = true;
+      if (built.groves.instanceColor) built.groves.instanceColor.needsUpdate = true;
     }
   });
 
   return (
     <group>
-      {/* Arbres boules défilants le long de la voie */}
-      {treeSpecs.map((spec, i) => (
-        <group
-          key={`tree${i}`}
-          ref={(gr) => {
-            trees.current[i] = gr;
-          }}
-          position={[spec.x, -1.1, 0]}
-          scale={spec.scale}
-        >
-          <mesh position={[0, 1.1, 0]}>
-            <cylinderGeometry args={[0.14, 0.2, 2.2, 8]} />
-            <meshStandardMaterial color="#7a5c42" roughness={0.9} />
-          </mesh>
-          <mesh position={[0, 2.9, 0]} scale={[1, 0.88, 1]}>
-            <sphereGeometry args={[1.35, 14, 12]} />
-            <meshStandardMaterial color={spec.leaf} roughness={0.85} />
-          </mesh>
-          <mesh position={[0.7, 2.2, 0.3]} scale={[1, 0.8, 1]}>
-            <sphereGeometry args={[0.8, 12, 10]} />
-            <meshStandardMaterial color="#74c85a" roughness={0.85} />
-          </mesh>
-        </group>
-      ))}
-
+      <primitive object={built.groves} />
       <primitive object={built.portals} />
       {built.railings.map((r) => (
         <primitive key={`railing${r.side}`} object={r.mesh} />
@@ -474,7 +478,12 @@ export function Wayside() {
           brillantes du paysage, et une texture plate ne les rend pas. La gare
           pose déjà ceux de la voie d'en face — même profil, même altitude. */}
       {([-1, 1] as const).map((s) => (
-        <mesh key={`rail${s}`} position={[s * GAUGE_HALF, -1.11, 0]} material={built.railMat}>
+        <mesh
+          key={`rail${s}`}
+          position={[s * GAUGE_HALF, -1.11, 0]}
+          material={built.railMat}
+          userData={{ noShadow: true }}
+        >
           <boxGeometry args={[0.08, 0.16, PLANE_LEN]} />
         </mesh>
       ))}
