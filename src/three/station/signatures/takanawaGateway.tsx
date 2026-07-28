@@ -153,9 +153,10 @@ export function TakanawaGateway({ layout, place, m }: SigProps) {
 
       {/* Passerelles vitrées au-dessus de la voie d'en face : le grand hall du
           deuxième niveau se voit depuis le quai, et c'est voulu. La seconde se
-          tient au-delà de la troisième bande directionnelle — à 0,2 de la
-          longueur, son vitrage la chevauchait. */}
-      {[-layout.length * 0.22, layout.length * 0.26].map((z) => (
+          tient au-delà de la troisième bande directionnelle (qu'elle
+          chevauchait à 0,2 de la longueur) ET de la potence de l'escalier
+          mécanique, dont les suspentes montaient au travers de son tablier. */}
+      {[-layout.length * 0.22, layout.length * 0.275].map((z) => (
         <group key={`br${z}`} position={[0, 0, z]}>
           <mesh position={[(place.backX + oppBackX) / 2, 4.5, 0]} material={s.white}>
             <boxGeometry args={[oppBackX - place.backX, 0.24, 4.2]} />

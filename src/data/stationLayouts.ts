@@ -993,9 +993,10 @@ function sigPlanFor(
           ...zs.map((z) => ({ z, r: 0.6 })),
           // Passerelles vitrées au-dessus de la voie d'en face : les bannières
           // et les tableaux d'affichage passent au large. La seconde se tient
-          // au-delà de la troisième bande directionnelle, qu'elle chevauchait.
+          // au-delà de la troisième bande directionnelle et de la potence de
+          // l'escalier mécanique, qu'elle chevauchait tour à tour.
           { z: -length * 0.22, r: 4.2 },
-          { z: length * 0.26, r: 4.2 },
+          { z: length * 0.275, r: 4.2 },
         ],
         posts: zs.map((z) => ({ x: backX, z })),
         runBlocks: [],
