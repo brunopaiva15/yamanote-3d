@@ -51,6 +51,14 @@ export interface Strings {
     /** Affiché à la place de `controls` sur un écran tactile. */
     touchControls: readonly TouchHint[];
     tokyoTime: string;
+    /** Libellé du champ heure (écran d'accueil). */
+    timeLabel: string;
+    /** Remet l'heure sur l'instant réel à Tokyo. */
+    timeNow: string;
+    /** Libellé du sélecteur de gare. */
+    stationLabel: string;
+    /** Option « laisser le hasard choisir la gare ». */
+    stationRandom: string;
   };
 
   hud: {
@@ -131,6 +139,10 @@ const FR: Strings = {
       { gestures: ['Son'], action: 'Couper le son' },
     ],
     tokyoTime: 'Heure à Tokyo',
+    timeLabel: 'Heure',
+    timeNow: 'Maintenant',
+    stationLabel: 'Arrêt',
+    stationRandom: 'Aléatoire',
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arrivée', dwell: 'À quai', depart: 'Départ' },
@@ -207,6 +219,10 @@ const EN: Strings = {
       { gestures: ['Sound'], action: 'Mute or unmute' },
     ],
     tokyoTime: 'Tokyo time',
+    timeLabel: 'Time',
+    timeNow: 'Now',
+    stationLabel: 'Station',
+    stationRandom: 'Random',
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arriving', dwell: 'At the platform', depart: 'Departing' },
@@ -282,6 +298,10 @@ const JA: Strings = {
       { gestures: ['音声'], action: '音を消す' },
     ],
     tokyoTime: '東京の現在時刻',
+    timeLabel: '時刻',
+    timeNow: '現在',
+    stationLabel: '駅',
+    stationRandom: 'ランダム',
   },
   hud: {
     phase: { cruise: '走行中', brake: 'まもなく到着', dwell: '停車中', depart: '発車' },

@@ -4,8 +4,12 @@
 // bouton qui débloque l'audio (contrainte navigateur) avant de lancer
 // l'expérience. La bande et les mentions 内回り／外回り restent en japonais :
 // c'est de la signalétique, pas de l'interface (cf. src/i18n).
+//
+// Avant de monter, on peut (sans y être obligé) choisir l'heure et l'arrêt :
+// par défaut, heure réelle à Tokyo et gare tirée au hasard, comme avant.
 
 import { useEffect, useState } from 'react';
+import { STATIONS } from '../data/stations';
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { startAudio, setVolume, setPlatformSide } from '../systems/audioEngine';
@@ -18,23 +22,21 @@ import { QualitySelect } from './QualitySelect';
 import { Logo } from './Logo';
 import { Footer } from './Footer';
 
-// Horloge de Tokyo affichée en pied de carte : l'heure réelle là-bas, celle
-// dans laquelle la boucle va démarrer.
-function useTokyoClock(): string {
-  const [clock, setClock] = useState('');
-  useEffect(() => {
-    const tick = () => {
-      const now = tokyoNow();
-      const total = Math.floor(now.minutes) % (24 * 60);
-      setClock(
-        `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`,
-      );
-    };
-    tick();
-    const id = window.setInterval(tick, 5000);
-    return () => window.clearInterval(id);
-  }, []);
-  return clock;
+/** Minutes depuis minuit → chaîne HH:MM pour un <input type="time">. */
+function minutesToTimeValue(minutes: number): string {
+  const total = ((Math.floor(minutes) % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/** Chaîne HH:MM (éventuellement HH:MM:SS) → minutes depuis minuit. */
+function timeValueToMinutes(value: string): number {
+  const [hRaw, mRaw] = value.split(':');
+  const h = Number(hRaw);
+  const m = Number(mRaw);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return tokyoNow().minutes;
+  return ((Math.floor(h) % 24) * 60 + Math.floor(m) + 24 * 60) % (24 * 60);
 }
 
 // Pointeur grossier = doigt : le pense-bête des touches n'aurait aucun sens,
@@ -53,19 +55,42 @@ function useCoarsePointer(): boolean {
   return coarse;
 }
 
+/** Valeur sentinelle du sélecteur : laisser randomizeEntry tirer la gare. */
+const STATION_RANDOM = 'random';
+
 export function StartScreen() {
   const start = useStore((s) => s.start);
   const t = useT();
-  const tokyoClock = useTokyoClock();
   const coarsePointer = useCoarsePointer();
   const [loading, setLoading] = useState(false);
+  // Heure de départ : figée à l'ouverture du menu (Tokyo), modifiable ensuite.
+  const [timeValue, setTimeValue] = useState(() => minutesToTimeValue(tokyoNow().minutes));
+  // true tant que le joueur n'a pas touché le champ : on suit l'heure réelle.
+  const [timePinned, setTimePinned] = useState(false);
+  const [stationChoice, setStationChoice] = useState<string>(STATION_RANDOM);
+
+  // Tant que l'heure n'est pas figée par le joueur, la rafraîchir doucement
+  // pour que le pied de carte et le champ restent calés sur Tokyo.
+  useEffect(() => {
+    if (timePinned) return;
+    const tick = () => setTimeValue(minutesToTimeValue(tokyoNow().minutes));
+    tick();
+    const id = window.setInterval(tick, 5000);
+    return () => window.clearInterval(id);
+  }, [timePinned]);
+
+  const syncTimeToNow = () => {
+    setTimeValue(minutesToTimeValue(tokyoNow().minutes));
+    setTimePinned(false);
+  };
 
   const board = async () => {
     setLoading(true);
     initSpeech();
-    // Horloge Tokyo avant peuplement et tirage : densité selon heure/jour réels.
+    // Horloge Tokyo (réelle ou choisie) avant peuplement et tirage : densité
+    // selon heure/jour. La date civile reste celle du jour à Tokyo.
     const now = tokyoNow();
-    runtime.clockMin = now.minutes;
+    runtime.clockMin = timeValueToMinutes(timeValue);
     runtime.tokyoDate = {
       year: now.year,
       month: now.month,
@@ -78,9 +103,12 @@ export function StartScreen() {
     } catch {
       /* l'expérience reste jouable sans audio */
     }
-    // Point aléatoire sur la boucle (en route, freinage, à quai, départ…) :
-    // plus de message d'accueil fixe ni de départ systématique à l'arrêt.
-    randomizeEntry();
+    // Gare choisie, ou point aléatoire sur la boucle (en route, freinage,
+    // à quai, départ…) : plus de message d'accueil fixe ni de départ
+    // systématique à l'arrêt.
+    const stationIndex =
+      stationChoice === STATION_RANDOM ? undefined : Number(stationChoice);
+    randomizeEntry(Number.isFinite(stationIndex) ? stationIndex : undefined);
     setPlatformSide(useStore.getState().doorSide);
     // Densité PNJ après le tirage, pour le tronçon / la phase choisis.
     seedPassengers();
@@ -126,13 +154,60 @@ export function StartScreen() {
                 </li>
               ))}
         </ul>
-        <div className="start-quality">
-          <span className="start-quality-label">{t.quality.label}</span>
-          <QualitySelect />
+        <div className="start-options">
+          <div className="start-option">
+            <label className="start-option-label" htmlFor="start-time">
+              {t.start.timeLabel}
+            </label>
+            <div className="start-time-row">
+              <input
+                id="start-time"
+                className="start-time-input"
+                type="time"
+                value={timeValue}
+                onChange={(e) => {
+                  setTimeValue(e.target.value);
+                  setTimePinned(true);
+                }}
+                aria-label={t.start.timeLabel}
+              />
+              <button
+                type="button"
+                className="start-time-now"
+                onClick={syncTimeToNow}
+                title={t.start.tokyoTime}
+              >
+                {t.start.timeNow}
+              </button>
+            </div>
+          </div>
+          <div className="start-option">
+            <label className="start-option-label" htmlFor="start-station">
+              {t.start.stationLabel}
+            </label>
+            <select
+              id="start-station"
+              className="quality-select start-station-select"
+              value={stationChoice}
+              onChange={(e) => setStationChoice(e.target.value)}
+              aria-label={t.start.stationLabel}
+            >
+              <option value={STATION_RANDOM}>{t.start.stationRandom}</option>
+              {STATIONS.map((st, i) => (
+                <option key={st.jy} value={String(i)}>
+                  {st.jy} {st.kanji} / {st.romaji}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="start-option">
+            <span className="start-option-label">{t.quality.label}</span>
+            <QualitySelect />
+          </div>
         </div>
         <p className="start-foot">
           {t.start.tokyoTime}
-          <strong>{tokyoClock}</strong>
+          <strong>{timeValue}</strong>
         </p>
         <Footer />
       </div>
