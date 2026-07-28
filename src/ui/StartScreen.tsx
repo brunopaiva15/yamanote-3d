@@ -36,10 +36,27 @@ function useTokyoClock(): string {
   return clock;
 }
 
+// Pointeur grossier = doigt : le pense-bête des touches n'aurait aucun sens,
+// on affiche les gestes. Interrogé en media query plutôt qu'au premier
+// touchstart (store.touch) : ici il faut la réponse avant tout contact.
+function useCoarsePointer(): boolean {
+  const [coarse, setCoarse] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(pointer: coarse)');
+    const onChange = () => setCoarse(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return coarse;
+}
+
 export function StartScreen() {
   const start = useStore((s) => s.start);
   const t = useT();
   const tokyoClock = useTokyoClock();
+  const coarsePointer = useCoarsePointer();
   const [loading, setLoading] = useState(false);
 
   const board = async () => {
@@ -84,16 +101,29 @@ export function StartScreen() {
           {loading ? t.start.loading : t.start.board}
         </button>
         <ul className="start-controls">
-          {t.start.controls.map((hint) => (
-            <li key={hint.action}>
-              <span className="start-keys">
-                {hint.keys.map((key) => (
-                  <kbd key={key}>{key}</kbd>
-                ))}
-              </span>
-              <span className="start-action">{hint.action}</span>
-            </li>
-          ))}
+          {coarsePointer
+            ? t.start.touchControls.map((hint) => (
+                <li key={hint.action}>
+                  <span className="start-keys">
+                    {hint.gestures.map((gesture) => (
+                      <span className="start-gesture" key={gesture}>
+                        {gesture}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="start-action">{hint.action}</span>
+                </li>
+              ))
+            : t.start.controls.map((hint) => (
+                <li key={hint.action}>
+                  <span className="start-keys">
+                    {hint.keys.map((key) => (
+                      <kbd key={key}>{key}</kbd>
+                    ))}
+                  </span>
+                  <span className="start-action">{hint.action}</span>
+                </li>
+              ))}
         </ul>
         <div className="start-quality">
           <span className="start-quality-label">{t.quality.label}</span>
