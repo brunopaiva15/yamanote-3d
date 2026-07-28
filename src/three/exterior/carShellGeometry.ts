@@ -241,18 +241,26 @@ function buildBogies(): THREE.BufferGeometry {
   return merge(parts, 'bogies');
 }
 
-/** Vitrage teinté des baies. */
+/**
+ * Vitrage teinté des baies, POSÉ DANS L'ÉPAISSEUR de la peau de caisse.
+ *
+ * Il était auparavant à HW − SKIN − 0,005, soit exactement 1,400 — c'est-à-dire
+ * pile sur le nu extérieur du vitrage INTÉRIEUR de la voiture du joueur
+ * (Car.tsx : boîte de 2 cm centrée à 1,39). Deux surfaces transparentes
+ * coplanaires : depuis le quai, les vitres scintillaient en z-fighting dès que
+ * la caméra bougeait. Reculé de 1,5 cm sous le nu extérieur, le vitrage tombe
+ * dans l'ouverture (la peau court de 1,405 à 1,475) sans toucher ni la peau, ni
+ * la paroi intérieure (nu extérieur à 1,44), ni la vitre intérieure.
+ */
+const GLASS_X = HW - 0.015;
+
 function buildGlass(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
   for (const s of [1, -1] as const) {
     for (const w of WINDOWS) {
       const g = new THREE.PlaneGeometry(w.z1 - w.z0, E235.windowTop - E235.windowBottom);
       g.rotateY((s * Math.PI) / 2);
-      g.translate(
-        s * (HW - SKIN - 0.005),
-        (E235.windowBottom + E235.windowTop) / 2,
-        (w.z0 + w.z1) / 2,
-      );
+      g.translate(s * GLASS_X, (E235.windowBottom + E235.windowTop) / 2, (w.z0 + w.z1) / 2);
       parts.push(g);
     }
   }
@@ -277,6 +285,12 @@ function buildDoorLeaf(): THREE.BufferGeometry {
   return g;
 }
 
+/**
+ * Hublot d'un vantail, décalé vers +x par rapport au vantail. L'instance du
+ * côté −x le reçoit retourné d'un demi-tour (voir layoutLeaves) : sans cela il
+ * se retrouvait DERRIÈRE le vantail, face tournée vers l'intérieur et à 3 mm de
+ * son panneau — le hublot y clignotait au lieu de s'afficher.
+ */
 function buildDoorGlass(): THREE.BufferGeometry {
   const g = new THREE.PlaneGeometry(0.44, 0.8);
   g.rotateY(Math.PI / 2);

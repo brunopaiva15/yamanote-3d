@@ -45,6 +45,9 @@ interface Built {
 }
 
 const LEAF_MATRIX = new THREE.Matrix4();
+const GLASS_MATRIX = new THREE.Matrix4();
+/** Demi-tour appliqué aux hublots du côté −x : leur décalage part vers +x. */
+const GLASS_FLIP = new THREE.Matrix4().makeRotationY(Math.PI);
 
 /**
  * Repose les 176 vantaux extérieurs. `open` est la course de la porte de
@@ -66,7 +69,12 @@ function layoutLeaves(built: Built, side: 1 | -1, open: boolean): void {
             cz + dz + dir * (E235.doorHalfW / 2 + shift),
           );
           built.leaves.setMatrixAt(k, LEAF_MATRIX);
-          built.leafGlass.setMatrixAt(k, LEAF_MATRIX);
+          // Le hublot est modélisé en saillie vers +x : sur le flanc opposé il
+          // faut le retourner, faute de quoi il s'enfonce dans le vantail et
+          // regarde l'intérieur de la rame.
+          GLASS_MATRIX.copy(LEAF_MATRIX);
+          if (s === -1) GLASS_MATRIX.multiply(GLASS_FLIP);
+          built.leafGlass.setMatrixAt(k, GLASS_MATRIX);
           k++;
         }
       }

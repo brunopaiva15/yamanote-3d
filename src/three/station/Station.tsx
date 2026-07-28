@@ -17,7 +17,7 @@ import * as THREE from 'three';
 import { useStore } from '../../store';
 import { runtime } from '../../systems/runtime';
 import { psdDoorPos, psdGateLag } from '../../systems/doorMotion';
-import { placementFor } from '../../systems/stationPlacement';
+import { placementFor, type Placed } from '../../systems/stationPlacement';
 import { platformDetail } from '../../systems/perf';
 import { layoutFor, type StationPalette } from '../../data/stationLayouts';
 import {
@@ -36,8 +36,25 @@ const UP = new THREE.Quaternion();
 const V = new THREE.Vector3();
 const S = new THREE.Vector3();
 
+/** Quart de tour vers -x : un plan (dressé en XY) regarde alors la voie. */
+const FACING_TRACK = new THREE.Quaternion().setFromAxisAngle(
+  new THREE.Vector3(0, 1, 0),
+  -Math.PI / 2,
+);
+
 function mat(x: number, y: number, z: number, sx = 1, sy = 1, sz = 1): THREE.Matrix4 {
   return new THREE.Matrix4().compose(V.set(x, y, z), UP, S.set(sx, sy, sz));
+}
+
+/** Comme mat(), pour un plan plaqué sur une face tournée vers la voie. */
+function matFacingTrack(
+  x: number,
+  y: number,
+  z: number,
+  width: number,
+  height: number,
+): THREE.Matrix4 {
+  return new THREE.Matrix4().compose(V.set(x, y, z), FACING_TRACK, S.set(width, height, 1));
 }
 
 /** Pose une liste de matrices sur un InstancedMesh et ajuste son compte. */
@@ -227,18 +244,22 @@ export function Station() {
     () => place.columns.map((z) => mat(PSD_X + depth / 2, canopyY - 0.09, z, depth - 0.2, 0.18, 0.24)),
     [place.columns, depth, canopyY],
   );
-  const lamps = useMemo(
-    () =>
-      place.columns.flatMap((z) =>
-        detail >= 2
-          ? [mat(PSD_X + depth * 0.5, canopyY - 0.11, z, 1.7, 0.05, 0.14)]
-          : [
-              mat(PSD_X + depth * 0.28, canopyY - 0.11, z + layout.columnSpacing / 2, 1.7, 0.05, 0.14),
-              mat(PSD_X + depth * 0.72, canopyY - 0.11, z, 1.7, 0.05, 0.14),
-            ],
-      ),
-    [place.columns, depth, canopyY, layout.columnSpacing, detail],
-  );
+  // Néons : le tube AFFLEURE la sous-face de l'auvent (elle est à canopyY) au
+  // lieu de flotter huit centimètres dessous, et se décale toujours des
+  // poutres — au droit d'un pilier il disparaissait purement et simplement
+  // dans la poutre transversale.
+  const lamps = useMemo(() => {
+    const y = canopyY - 0.025;
+    const off = layout.columnSpacing;
+    return place.columns.flatMap((z) =>
+      detail >= 2
+        ? [mat(PSD_X + depth * 0.5, y, z + off * 0.5, 1.7, 0.05, 0.14)]
+        : [
+            mat(PSD_X + depth * 0.28, y, z + off * 0.3, 1.7, 0.05, 0.14),
+            mat(PSD_X + depth * 0.72, y, z + off * 0.7, 1.7, 0.05, 0.14),
+          ],
+    );
+  }, [place.columns, depth, canopyY, layout.columnSpacing, detail]);
   const queue = useMemo(
     () => place.queueMarks.map((q) => mat(q.x, PLATFORM_TOP + 0.006, q.z, 0.9, 1, 0.5)),
     [place.queueMarks],
@@ -266,8 +287,11 @@ export function Station() {
     () => place.vending.map((v) => mat(v.x, PLATFORM_TOP + 0.9, v.z, 0.8, 1.8, 1.4)),
     [place.vending],
   );
+  // Façade éclairée du distributeur : le plan doit REGARDER LA VOIE. Posé sans
+  // rotation, il était dressé perpendiculairement à la machine et la traversait
+  // de part en part comme un panneau planté là.
   const vendingFace = useMemo(
-    () => place.vending.map((v) => mat(v.x - 0.41, PLATFORM_TOP + 1.05, v.z, 1, 1.1, 1.2)),
+    () => place.vending.map((v) => matFacingTrack(v.x - 0.41, PLATFORM_TOP + 1.05, v.z, 1.2, 1.1)),
     [place.vending],
   );
 
@@ -562,40 +586,22 @@ function Amenities({
           <mesh position={[0, 0.5, s.halfZ - 0.06]} material={m.wall}>
             <boxGeometry args={[s.halfX * 2, 1, 0.12]} />
           </mesh>
-          {/* Fléchage de sortie au-dessus de la trémie. */}
+          {/* Fléchage de sortie, porté par deux montants qui prennent appui sur
+              la balustrade — il pendait jusqu'ici en l'air. */}
+          {[-1, 1].map((d) => (
+            <mesh key={`post${d}`} position={[d * (s.halfX - 0.2), 1.66, s.halfZ - 0.1]} material={m.metal}>
+              <boxGeometry args={[0.07, 1.52, 0.07]} />
+            </mesh>
+          ))}
           <mesh position={[0, 2.25, s.halfZ - 0.1]} material={m.accent}>
             <boxGeometry args={[1.5, 0.34, 0.08]} />
           </mesh>
         </group>
       ))}
 
-      {/* Escaliers mécaniques : la rampe monte hors du quai. */}
+      {/* Escaliers mécaniques : la volée monte vers la mezzanine. */}
       {place.escalators.map((e, i) => (
-        <group key={`esc${i}`} position={[e.x, PLATFORM_TOP, e.z]}>
-          {/* Rampe montante : elle sort du quai vers la mezzanine. */}
-          <mesh position={[0, 1.05, 0.4]} rotation={[-0.52, 0, 0]} material={m.metal}>
-            <boxGeometry args={[1.1, 0.14, e.halfZ * 2.6]} />
-          </mesh>
-          {Array.from({ length: 9 }, (_, k) => (
-            <mesh
-              key={`s${k}`}
-              position={[0, 0.16 + k * 0.2, -e.halfZ + 0.5 + k * 0.35]}
-              material={m.metal}
-            >
-              <boxGeometry args={[0.98, 0.05, 0.34]} />
-            </mesh>
-          ))}
-          {[-1, 1].map((d) => (
-            <mesh
-              key={d}
-              position={[d * 0.58, 1.45, 0.4]}
-              rotation={[-0.52, 0, 0]}
-              material={m.glass}
-            >
-              <boxGeometry args={[0.05, 0.95, e.halfZ * 2.6]} />
-            </mesh>
-          ))}
-        </group>
+        <Escalator key={`esc${i}`} e={e} canopyY={canopyY} m={m} />
       ))}
 
       {/* Ascenseur vitré. */}
@@ -625,9 +631,13 @@ function Amenities({
         </group>
       )}
 
-      {/* Horloge de quai, suspendue à l'auvent. */}
+      {/* Horloge de quai, suspendue à l'auvent — par une vraie potence : le
+          boîtier flottait à trente-cinq centimètres du plafond, sans rien. */}
       {place.layout.amenities.clock && (
         <group position={[place.backX - 1.6, canopyY - 0.62, 0]}>
+          <mesh position={[0, 0.45, 0]} material={m.metal}>
+            <boxGeometry args={[0.05, 0.36, 0.05]} />
+          </mesh>
           <mesh material={m.metal}>
             <boxGeometry args={[0.09, 0.55, 0.55]} />
           </mesh>
@@ -636,6 +646,76 @@ function Amenities({
           </mesh>
         </group>
       )}
+    </group>
+  );
+}
+
+/** Pente normalisée d'un escalier mécanique : 30°. */
+const ESCALATOR_SLOPE = Math.PI / 6;
+
+/**
+ * Un escalier mécanique montant, d'un seul tenant : palier bas au ras du quai,
+ * poutre porteuse qui part du sol, marches posées dessus, balustrades de même
+ * pente, et une trémie qui rejoint la sous-face de l'auvent.
+ *
+ * La version précédente empilait trois éléments indépendants — une rampe qui
+ * commençait sous la dalle et s'arrêtait à 2,90 m en plein ciel, neuf marches
+ * suspendues soixante centimètres au-dessus d'elle, deux balustrades encore
+ * plus longues : de loin, un tas de planches flottantes.
+ */
+function Escalator({ e, canopyY, m }: { e: Placed; canopyY: number; m: Mats }) {
+  const run = e.halfZ * 2 - 0.8; // volée utile, dans l'emprise de collision
+  const rise = run * Math.tan(ESCALATOR_SLOPE);
+  const incline = run / Math.cos(ESCALATOR_SLOPE);
+  /** Hauteur libre sous l'auvent, depuis le sol du quai. */
+  const clear = canopyY - PLATFORM_TOP;
+  const hoodH = Math.max(0.3, clear - rise);
+  const hoodZ = (run / 2 + e.halfZ) / 2;
+  const hoodLen = Math.max(0.3, e.halfZ - run / 2);
+  const STEPS = 12;
+
+  return (
+    <group position={[e.x, PLATFORM_TOP, e.z]}>
+      {/* Palier bas : plaque à peigne, au ras du sol. */}
+      <mesh position={[0, 0.03, -run / 2 - 0.3]} material={m.metal}>
+        <boxGeometry args={[1.3, 0.06, 0.6]} />
+      </mesh>
+      {/* Poutre porteuse : son extrémité basse s'enfonce sous la dalle. */}
+      <mesh position={[0, rise / 2 - 0.22, 0]} rotation={[-ESCALATOR_SLOPE, 0, 0]} material={m.metal}>
+        <boxGeometry args={[1.2, 0.44, incline]} />
+      </mesh>
+      {/* Marches, posées SUR la poutre. */}
+      {Array.from({ length: STEPS }, (_, k) => {
+        const t = (k + 0.5) / STEPS;
+        return (
+          <mesh key={k} position={[0, t * rise + 0.03, -run / 2 + t * run]} material={m.metal}>
+            <boxGeometry args={[1.02, 0.06, run / STEPS]} />
+          </mesh>
+        );
+      })}
+      {/* Balustrades vitrées, exactement la pente de la volée. */}
+      {[-1, 1].map((d) => (
+        <mesh
+          key={d}
+          position={[d * 0.62, rise / 2 + 0.5, 0]}
+          rotation={[-ESCALATOR_SLOPE, 0, 0]}
+          material={m.glass}
+        >
+          <boxGeometry args={[0.05, 0.95, incline]} />
+        </mesh>
+      ))}
+      {/* Trémie de sortie : joues et fond jusqu'à l'auvent, retombée devant. */}
+      {[-1, 1].map((d) => (
+        <mesh key={`h${d}`} position={[d * 0.63, rise + hoodH / 2, hoodZ]} material={m.wall}>
+          <boxGeometry args={[0.11, hoodH, hoodLen]} />
+        </mesh>
+      ))}
+      <mesh position={[0, rise + hoodH / 2, e.halfZ - 0.06]} material={m.wall}>
+        <boxGeometry args={[1.37, hoodH, 0.12]} />
+      </mesh>
+      <mesh position={[0, clear - 0.26, run / 2 + 0.06]} material={m.wallDark}>
+        <boxGeometry args={[1.37, 0.52, 0.12]} />
+      </mesh>
     </group>
   );
 }
