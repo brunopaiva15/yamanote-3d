@@ -57,6 +57,19 @@ export const CONFIG = {
 // Vitesse maximale en m/s, dérivée une fois pour toutes.
 export const V_MAX = CONFIG.maxSpeedKmh / 3.6;
 
+/**
+ * Dépassement de course d'un vantail en butée d'ouverture.
+ *
+ * Sans lui, la porte grande ouverte s'arrête PILE dans le plan du montant de
+ * baie : le chant du vantail et le tableau de la porte deviennent deux faces
+ * exactement confondues, et elles se disputent le tampon de profondeur tant que
+ * la rame reste à quai — le bout de la porte clignote. Ces quinze millimètres
+ * de plus glissent le chant DERRIÈRE le montant, comme dans une vraie poche de
+ * porte : plus rien n'est coplanaire, et l'ouverture visible ne change pas
+ * puisque c'est le montant qui la borde.
+ */
+export const DOOR_POCKET_TUCK = 0.015;
+
 // Positions des diffuseurs, partagées par le rendu (grilles au plafond) et le
 // moteur audio (un Panner3D par diffuseur). Repère du wagon.
 export type SpeakerPos = readonly [number, number, number];

@@ -38,6 +38,7 @@ import {
   PLATFORM_TOP,
   PSD_H,
   PSD_LEAF_JOINT_W,
+  PSD_LEAF_TIP_INSET,
   PSD_LEAF_TRAVEL,
   PSD_LEAF_W,
   PSD_X,
@@ -301,8 +302,15 @@ export function Station() {
     for (let g = 0; g < gaps.length; g++) {
       const open = psdDoorPos(psdGateLag(g)) * PSD_LEAF_TRAVEL;
       for (const dir of [1, -1] as const) {
+        // Le vantail rentre de PSD_LEAF_TIP_INSET derrière son montant de rive :
+        // les deux chants tombaient dans le même plan et le bout du vantail
+        // clignotait dès que le portique s'ouvrait.
         mm.compose(
-          V.set(PSD_X + 0.08, PLATFORM_TOP + PSD_H / 2, gaps[g] + dir * (PSD_LEAF_W / 2 + open)),
+          V.set(
+            PSD_X + 0.08,
+            PLATFORM_TOP + PSD_H / 2,
+            gaps[g] + dir * (PSD_LEAF_W / 2 + open + PSD_LEAF_TIP_INSET),
+          ),
           UP,
           S.set(0.07, PSD_H - 0.06, PSD_LEAF_W),
         );
@@ -319,9 +327,12 @@ export function Station() {
               gaps[g] + dir * (open + PSD_LEAF_JOINT_W / 2),
             ),
             UP,
-            // À peine plus épais que le vantail : le joint affleure de trois
-            // millimètres de chaque côté, sinon les deux faces se disputent.
-            S.set(0.076, PSD_H - 0.1, PSD_LEAF_JOINT_W),
+            // À peine plus épais et un rien plus haut que le vantail : le joint
+            // affleure de trois millimètres de chaque côté et de cinq en tête
+            // comme en pied. Il coiffe ainsi complètement la rive rentrée du
+            // vantail — plus une seule face confondue, donc plus de
+            // scintillement au bout du portique.
+            S.set(0.076, PSD_H - 0.05, PSD_LEAF_JOINT_W),
           );
           jm.setMatrixAt(k, mm);
         }

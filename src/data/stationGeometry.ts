@@ -27,6 +27,18 @@ export const PSD_LEAF_TRAVEL = 0.92;
  */
 export const PSD_LEAF_JOINT_W = 0.04;
 
+/**
+ * Retrait du vantail derrière son montant de rive.
+ *
+ * Le montant était calé PILE sur le chant du vantail : les deux boîtes se
+ * terminaient dans le même plan, et ces deux faces confondues se disputaient le
+ * tampon de profondeur. Portique ouvert, le bout du vantail — la seule partie
+ * qui dépasse encore du muret — clignotait entre blanc et gris sombre. Le
+ * vantail rentre donc de quatre millimètres et c'est le montant qui coiffe la
+ * rive, comme le joint caoutchouc d'une vraie ホームドア.
+ */
+export const PSD_LEAF_TIP_INSET = 0.004;
+
 /** Longueur du quai (m). */
 export const PLATFORM_LEN = 96;
 

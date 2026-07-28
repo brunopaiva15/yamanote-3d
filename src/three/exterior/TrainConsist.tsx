@@ -12,6 +12,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { DOOR_POCKET_TUCK } from '../../data/config';
 import { CONSIST, E235, LIVERY, PLAYER_CAR, carZ } from '../../data/e235';
 import { useStore } from '../../store';
 import { runtime } from '../../systems/runtime';
@@ -59,7 +60,11 @@ function layoutLeaves(built: Built, side: 1 | -1, open: boolean): void {
   for (let i = 0; i < CARS; i++) {
     const cz = carZ(i);
     for (const dz of E235.doorCenters) {
-      const slide = open ? trainDoorPos(trainDoorLag(dz)) * E235.doorHalfW : 0;
+      // Course + dépassement : en butée le chant du vantail se glisse derrière
+      // le tableau de la porte percé dans la peau de caisse. Sans ces quelques
+      // millimètres, les deux faces sont exactement confondues et le bout de la
+      // porte clignote pendant tout l'arrêt (voir DOOR_POCKET_TUCK).
+      const slide = open ? trainDoorPos(trainDoorLag(dz)) * (E235.doorHalfW + DOOR_POCKET_TUCK) : 0;
       for (const s of [1, -1] as const) {
         const shift = s === side ? slide : 0;
         for (const dir of [1, -1] as const) {

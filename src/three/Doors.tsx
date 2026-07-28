@@ -5,7 +5,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { CONFIG } from '../data/config';
+import { CONFIG, DOOR_POCKET_TUCK } from '../data/config';
 import { useStore } from '../store';
 import { trainDoorLag, trainDoorPos } from '../systems/doorMotion';
 import { makeDoorEdgeTexture, makeDoorStickerTexture } from '../textures/procedural';
@@ -38,19 +38,21 @@ export function Doors() {
         side: THREE.DoubleSide,
       }),
       frame: new THREE.MeshStandardMaterial({ color: '#b2b5b9', roughness: 0.55, metalness: 0.4 }),
+      // Liseré et autocollant sont déjà décollés de trois millimètres du nu du
+      // vantail : c'est mille fois la précision du tampon de profondeur à cette
+      // distance, aucun décalage de polygones n'est nécessaire. Et il était
+      // NUISIBLE : porte ouverte, ces deux décalques sont enfouis dans la paroi
+      // du wagon, et un polygonOffset négatif les faisait ressortir au travers
+      // sous les angles rasants — le chant de la porte scintillait.
       edge: new THREE.MeshBasicMaterial({
         map: makeDoorEdgeTexture(),
         transparent: true,
         toneMapped: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -2,
       }),
       sticker: new THREE.MeshBasicMaterial({
         map: makeDoorStickerTexture(),
         transparent: true,
         toneMapped: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -2,
       }),
     }),
     [],
@@ -80,7 +82,9 @@ export function Doors() {
     for (const p of panels.current) {
       if (!p.mesh) continue;
       const open = p.side === doorSide ? trainDoorPos(trainDoorLag(p.dz)) : 0;
-      p.mesh.position.z = p.baseZ + p.dir * open * PANEL_W;
+      // Course + dépassement : en butée le chant passe derrière le montant de
+      // baie au lieu de tomber dans son plan (voir DOOR_POCKET_TUCK).
+      p.mesh.position.z = p.baseZ + p.dir * open * (PANEL_W + DOOR_POCKET_TUCK);
     }
   });
 
