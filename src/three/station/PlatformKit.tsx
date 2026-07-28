@@ -205,12 +205,15 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   );
 
   // Coffrets d'extincteur, vissés sur la face avant d'un pilier.
+  // Le caisson est un rien moins profond que le pilier (0,3) qui le porte, et
+  // sa façade se décolle de trois millimètres de son propre nu : posée pile
+  // dessus, elle partageait son plan et clignotait à hauteur d'œil.
   const extBoxes = useMemo(
-    () => kit.extinguishers.map((z) => mat(postFaceX - 0.07, PLATFORM_TOP + 0.95, z, 0.15, 0.78, 0.3)),
+    () => kit.extinguishers.map((z) => mat(postFaceX - 0.07, PLATFORM_TOP + 0.95, z, 0.15, 0.78, 0.28)),
     [kit.extinguishers, postFaceX],
   );
   const extFaces = useMemo(
-    () => kit.extinguishers.map((z) => matFacingTrack(postFaceX - 0.145, PLATFORM_TOP + 0.95, z, 0.28, 0.74)),
+    () => kit.extinguishers.map((z) => matFacingTrack(postFaceX - 0.148, PLATFORM_TOP + 0.95, z, 0.28, 0.74)),
     [kit.extinguishers, postFaceX],
   );
 

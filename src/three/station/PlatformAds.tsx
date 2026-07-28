@@ -155,8 +155,11 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
           d'en face quand la colonne se dresse au milieu d'un îlot. */}
       {columnAds.map(({ z, i }) => (
         <group name="bandeau-pilier" key={`ca${z}`} position={[backX - 0.71, PLATFORM_TOP + 1.55, z]}>
+          {/* Deux centimètres moins profond que le pilier : à profondeur égale
+              le caisson partageait ses deux flancs avec lui, et l'arête du
+              bandeau clignotait sur toute sa hauteur. */}
           <mesh position={[0.015, 0, 0]} material={p.housing}>
-            <boxGeometry args={[0.03, 1.18, 0.3]} />
+            <boxGeometry args={[0.03, 1.18, 0.28]} />
           </mesh>
           <mesh position={[-0.006, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={stationAd(station, i, true)}>
             <planeGeometry args={[0.27, 1.1]} />

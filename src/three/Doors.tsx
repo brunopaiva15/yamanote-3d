@@ -119,10 +119,14 @@ export function Doors() {
                   rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
                   material={materials.frame}
                 />
-                {/* Vitre du vantail, coins arrondis */}
+                {/* Vitre du vantail, coins arrondis. Trois millimètres plus en
+                    dedans qu'avant : à x = ±1,40 elle tombait exactement sur le
+                    nu extérieur des vitres de la paroi, et porte ouverte les
+                    deux verres — tous deux transparents et à double face — se
+                    disputaient le même plan sur toute la baie. */}
                 <mesh
                   geometry={windowGeos.glass}
-                  position={[s * -0.03, 1.32, 0]}
+                  position={[s * -0.033, 1.32, 0]}
                   rotation={[0, s === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
                   material={materials.glass}
                 />

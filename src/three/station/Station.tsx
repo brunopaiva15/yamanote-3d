@@ -186,10 +186,21 @@ export function Station() {
       ),
     [segs],
   );
+  // Bandeau vert du muret : six millimètres PLUS COURT que le muret qu'il
+  // couronne. À égalité, ses deux bouts tombaient dans le plan des bouts du
+  // muret — deux faces confondues, en pleine vue depuis la baie de porte, là
+  // où le regard se pose en montant.
   const psdBand = useMemo(
     () =>
       segs.map((s) =>
-        mat(PSD_X - 0.005, PLATFORM_TOP + PSD_H - 0.07, (s.z0 + s.z1) / 2, 0.12, 0.1, s.z1 - s.z0),
+        mat(
+          PSD_X - 0.005,
+          PLATFORM_TOP + PSD_H - 0.07,
+          (s.z0 + s.z1) / 2,
+          0.12,
+          0.1,
+          s.z1 - s.z0 - 0.012,
+        ),
       ),
     [segs],
   );
@@ -225,7 +236,10 @@ export function Station() {
     );
   }, [place.columns, depth, canopyY, layout.columnSpacing, detail]);
   const queue = useMemo(
-    () => place.queueMarks.map((q) => mat(q.x, PLATFORM_TOP + 0.006, q.z, 0.9, 1, 0.5)),
+    // Deux millimètres au-dessus de la bande podotactile : les deux se
+    // recouvrent au ras du bord de quai, et à hauteur égale leurs faces
+    // supérieures étaient rigoureusement dans le même plan.
+    () => place.queueMarks.map((q) => mat(q.x, PLATFORM_TOP + 0.008, q.z, 0.9, 1, 0.5)),
     [place.queueMarks],
   );
   const benchSeat = useMemo(
@@ -849,7 +863,11 @@ function Wainscot({ backX, len, m }: { backX: number; len: number; m: Mats }) {
       <mesh position={[backX - 0.015, PLATFORM_TOP + 0.52, 0]} material={m.tile}>
         <boxGeometry args={[0.05, 1.04, len]} />
       </mesh>
-      <mesh position={[backX - 0.025, PLATFORM_TOP + 1.07, 0]} material={m.accent}>
+      {/* Le liseré déborde de cinq millimètres du nu de la faïence : il la
+          couronne comme une moulure. À nu commun, sa face avant et celle du
+          carrelage étaient dans le même plan sur les deux cent vingt mètres du
+          mur de fond — une ligne qui scintillait droit devant soi. */}
+      <mesh position={[backX - 0.02, PLATFORM_TOP + 1.07, 0]} material={m.accent}>
         <boxGeometry args={[0.07, 0.07, len]} />
       </mesh>
     </group>
@@ -938,8 +956,12 @@ function Stairwell({ s, m, station }: { s: Placed; m: Mats; station: number }) {
           </mesh>
         </group>
       ))}
-      <mesh position={[0, 0.5, s.halfZ - 0.07]} material={m.wall}>
-        <boxGeometry args={[s.halfX * 2, 1, 0.14]} />
+      {/* Traverse de tête du garde-corps : deux centimètres plus courte que la
+          largeur de la trémie et un centimètre en retrait, pour se loger DANS
+          les joues au lieu d'affleurer avec elles. À nu commun, les deux angles
+          du garde-corps partageaient chacun deux plans sur toute leur hauteur. */}
+      <mesh position={[0, 0.5, s.halfZ - 0.08]} material={m.wall}>
+        <boxGeometry args={[s.halfX * 2 - 0.02, 1, 0.14]} />
       </mesh>
 
       {/* Affiches sur les joues de la gaine : c'est ce qu'on a sous les yeux en
@@ -955,7 +977,10 @@ function Stairwell({ s, m, station }: { s: Placed; m: Mats; station: number }) {
         return (
           <mesh
             key={`ad${d}`}
-            position={[d * (ix - 0.02), tread + h / 2 + 0.14, nose + t]}
+            // `ix - 0.02` était exactement le nu des girons : l'affiche tombait
+            // dans le plan du flanc des marches. Elle est plaquée sur la joue
+            // de la gaine, cinq millimètres en dedans.
+            position={[d * (ix - 0.005), tread + h / 2 + 0.14, nose + t]}
             rotation={[0, d === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
             material={stationAd(station, k + 1, true)}
           >
@@ -1095,17 +1120,21 @@ function Escalator({ e, canopyY, m }: { e: Placed; canopyY: number; m: Mats }) {
           <boxGeometry args={[0.05, 0.95, incline]} />
         </mesh>
       ))}
-      {/* Trémie de sortie : joues et fond jusqu'à l'auvent, retombée devant. */}
+      {/* Trémie de sortie : joues et fond jusqu'à l'auvent, retombée devant.
+          Le fond et la retombée sont MOINS LARGES que l'écartement des joues
+          et légèrement en retrait : à égalité de largeur et de nu, les trois
+          panneaux partageaient leurs faces d'angle et l'arête verticale de la
+          trémie clignotait sur toute sa hauteur. */}
       {[-1, 1].map((d) => (
         <mesh key={`h${d}`} position={[d * 0.63, rise + hoodH / 2, hoodZ]} material={m.wall}>
           <boxGeometry args={[0.11, hoodH, hoodLen]} />
         </mesh>
       ))}
-      <mesh position={[0, rise + hoodH / 2, e.halfZ - 0.06]} material={m.wall}>
-        <boxGeometry args={[1.37, hoodH, 0.12]} />
+      <mesh position={[0, rise + hoodH / 2 + 0.01, e.halfZ - 0.07]} material={m.wall}>
+        <boxGeometry args={[1.34, hoodH - 0.02, 0.12]} />
       </mesh>
-      <mesh position={[0, clear - 0.26, run / 2 + 0.06]} material={m.wallDark}>
-        <boxGeometry args={[1.37, 0.52, 0.12]} />
+      <mesh position={[0, clear - 0.26, run / 2 + 0.07]} material={m.wallDark}>
+        <boxGeometry args={[1.34, 0.52, 0.12]} />
       </mesh>
     </group>
   );

@@ -56,8 +56,11 @@ const BAND_TOP = WINDOW_TOP + BAND_MARGIN;
 const WINDOW_RADIUS = 0.11;
 const WALL_THICKNESS = 0.08;
 
-// Diffuseur linéaire de climatisation : même emprise que le caisson central.
-const DUCT_LENGTH = HL * 2 - 0.8;
+// Diffuseur linéaire de climatisation : quatre centimètres plus court que le
+// caisson central qui le porte. À emprise identique, leurs deux bouts
+// tombaient dans le même plan, et la tranche du caisson clignotait au-dessus
+// des travées d'about.
+const DUCT_LENGTH = HL * 2 - 0.84;
 
 // --- Sols teintés des travées d'about ---
 // La limite entre rouge et magenta n'est pas l'axe du wagon : le rouge
@@ -470,8 +473,12 @@ export function Car() {
           <mesh position={[-0.62, 0.62, e * (HL - 0.09)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.extinguisher}>
             <boxGeometry args={[0.24, 0.62, 0.07]} />
           </mesh>
+          {/* Imposte au-dessus de la porte d'intercirculation : un centimètre
+              plus large de chaque côté, donc noyée dans les parois roses qui
+              l'encadrent. À 0,84 exactement, ses deux flancs tombaient dans le
+              plan de ceux de la porte. */}
           <mesh position={[0, 2.05, e * HL]} material={materials.pinkPartition}>
-            <boxGeometry args={[0.84, 0.5, 0.1]} />
+            <boxGeometry args={[0.86, 0.5, 0.09]} />
           </mesh>
           <mesh position={[0, 0.95, e * HL - e * 0.01]} material={materials.steel}>
             <boxGeometry args={[0.84, 1.9, 0.06]} />
