@@ -404,10 +404,19 @@ export function resumeDwellAt(t: number, stationIndex: number): void {
   seedFired('dwell', t, stationIndex);
 }
 
-// Point d'entrée aléatoire sur la boucle : phase, progression, vitesse, portes.
-// À appeler avant start(), une fois l'audio initialisé.
-export function randomizeEntry(): void {
-  const station = Math.floor(Math.random() * 30);
+/**
+ * Point d'entrée sur la boucle : phase, progression, vitesse, portes.
+ * À appeler avant start(), une fois l'audio initialisé.
+ *
+ * @param stationIndex Gare choisie (0–29). Absent → tirage aléatoire.
+ *   La phase reste tirée au hasard autour de cette gare (en route, freinage,
+ *   à quai, départ) pour garder la variété du boarding actuel.
+ */
+export function randomizeEntry(stationIndex?: number): void {
+  const station =
+    stationIndex == null
+      ? Math.floor(Math.random() * 30)
+      : ((stationIndex % 30) + 30) % 30;
   // Pré-positionne l'index pour que dwellDuration() voie la bonne gare, et
   // tire sa chronologie : PHASE_ORDER a besoin de la durée du dwell.
   useStore.getState().setIndex(station);

@@ -7,7 +7,6 @@ import { CONFIG } from './data/config';
 import type { LoopDirection } from './data/platforms';
 import { DOOR_SIDE } from './data/stations';
 import { applyDocumentLang, initialLang, storeLang, type Lang } from './i18n/strings';
-import { runtime, tokyoNow } from './systems/runtime';
 
 export type Phase = 'cruise' | 'brake' | 'dwell' | 'depart';
 
@@ -67,15 +66,8 @@ export const useStore = create<AppState>((set) => ({
   lang: START_LANG,
 
   start: () => {
-    // Horloge + date civile figées sur l'instant réel à Tokyo.
-    const now = tokyoNow();
-    runtime.clockMin = now.minutes;
-    runtime.tokyoDate = {
-      year: now.year,
-      month: now.month,
-      day: now.day,
-      weekday: now.weekday,
-    };
+    // L'horloge et la date sont posées par StartScreen.board() (heure réelle
+    // à Tokyo, ou celle choisie avant de monter). On ne les écrase pas ici.
     set({ started: true });
   },
   setLang: (lang) => {
