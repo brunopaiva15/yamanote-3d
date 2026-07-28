@@ -137,6 +137,21 @@ let prevSpeed01 = 0;
  */
 const PLAT_VOICE_INSIDE = 0.3;
 
+/**
+ * Niveau du bus de la sono du QUAI, aux trois points de calage : portes
+ * fermées, portes ouvertes, et debout sur le quai.
+ *
+ * Ce bus alimente QUATRE Panner3D qui se somment sur l'auditeur, et sur le quai
+ * on se tient à trois mètres sous le plus proche : un gain qui semble modeste
+ * au nœud arrive bien plus fort à l'oreille, et la gare écrasait tout le reste.
+ * Les trois valeurs gardent entre elles les mêmes rapports qu'avant — la
+ * mélodie entre toujours franchement par les portes, et le quai reste plus
+ * ouvert que la rame — mais l'ensemble redescend d'environ 8 dB.
+ */
+const PLAT_BUS_CLOSED = 0.07;
+const PLAT_BUS_OPEN = 0.26;
+const PLAT_BUS_OUTSIDE = 0.34;
+
 // Pose de l'auditeur, tenue à jour par la caméra (voir setListenerPose).
 const listenerPos: { x: number; y: number; z: number } = { x: 0, y: CONFIG.eyeHeight, z: 4.2 };
 
@@ -299,7 +314,7 @@ export async function startAudio(): Promise<void> {
   const platIn = new Tone.Gain(1);
   const platHp = new Tone.Filter({ type: 'highpass', frequency: 260, rolloff: -12, Q: 0.7 });
   const platLp = new Tone.Filter({ type: 'lowpass', frequency: 900, rolloff: -24, Q: 0.4 });
-  const platGain = new Tone.Gain(0.16);
+  const platGain = new Tone.Gain(PLAT_BUS_CLOSED);
   platIn.chain(platHp, platLp, platGain);
   // Voix du quai (annonces ATOS, agent de quai) : même sono que la mélodie,
   // mais elle passe par un robinet à part. La musique est faite pour porter
@@ -556,7 +571,7 @@ export function setListenerOutside(outside: boolean): void {
   if (!nodes) return;
   if (outside) {
     nodes.platLp.frequency.rampTo(11000, 0.25);
-    nodes.platGain.gain.rampTo(0.82, 0.25);
+    nodes.platGain.gain.rampTo(PLAT_BUS_OUTSIDE, 0.25);
   }
   // Debout sur le quai, la sono du wagon est derrière les vitres : les
   // diffuseurs sont à l'intérieur, la voix de bord ne sort pas. À l'inverse,
@@ -584,7 +599,7 @@ export function setPlatformDoors(open01: number): void {
   if (listenerOutside) return;
   const o = Math.max(0, Math.min(1, open01));
   nodes.platLp.frequency.rampTo(750 + o * 3600, 0.12);
-  nodes.platGain.gain.rampTo(0.16 + o * 0.44, 0.12);
+  nodes.platGain.gain.rampTo(PLAT_BUS_CLOSED + o * (PLAT_BUS_OPEN - PLAT_BUS_CLOSED), 0.12);
 }
 
 /**
@@ -657,22 +672,37 @@ export function paVoiceClose(bus: VoiceBus = 'cabinVoice'): void {
  * Carillon ATOS : le motif de quelques notes qui précède l'annonce d'approche.
  * Ce n'est pas la mélodie de départ — c'est un signal d'attention, court, sur
  * lequel personne ne se retourne mais que tout le monde reconnaît.
+ *
+ * @returns la durée du motif (s). Le carillon PRÉCÈDE l'annonce, il ne la
+ *          couvre pas : l'appelant attend ce délai avant de faire parler la
+ *          gare (voir stationPa.paApproach).
  */
-export function platformChime(): void {
-  if (!nodes) return;
-  const now = Tone.now() + 0.05;
+export function platformChime(): number {
+  if (!nodes) return 0;
+  const lead = 0.05;
+  const step = 0.3;
+  const tail = 0.6;
+  const now = Tone.now() + lead;
   const notes = ['C#6', 'G#5', 'B5', 'E5', 'G#5'];
   notes.forEach((n, i) => {
-    nodes!.platChime.triggerAttackRelease(n, 0.6, slot('platChime', now + i * 0.3), 0.42);
+    nodes!.platChime.triggerAttackRelease(n, 0.6, slot('platChime', now + i * step), 0.42);
   });
+  return lead + (notes.length - 1) * step + tail;
 }
 
-/** Signal électronique entre deux 「電車がまいります」 : deux bips secs. */
-export function platformWarningSignal(): void {
-  if (!nodes) return;
+/**
+ * Signal électronique avant 「電車がまいります」 : deux bips secs.
+ *
+ * @returns la durée du signal (s), pour la même raison que le carillon.
+ */
+export function platformWarningSignal(): number {
+  if (!nodes) return 0;
   const now = Tone.now();
+  const gap = 0.24;
+  const tail = 0.14;
   nodes.platBeep.triggerAttackRelease('E6', 0.14, slot('platBeep', now), 0.4);
-  nodes.platBeep.triggerAttackRelease('E6', 0.14, slot('platBeep', now + 0.24), 0.4);
+  nodes.platBeep.triggerAttackRelease('E6', 0.14, slot('platBeep', now + gap), 0.4);
+  return gap + tail;
 }
 
 /** Bips des portes palières pendant leur fermeture. */
