@@ -82,10 +82,11 @@ mécanique suit : le seuil de porte ne dépend plus que de la porte de la rame
 pas (`systems/doorMotion`). Les boutons d'arrêt d'urgence, faute de muret pour
 les porter, passent sur des bornes en retrait de la bande podotactile.
 
-`psd: 'partial'` — Ikebukuro et Ōsaki — ne change rien sous nos pieds : c'est la
-voie *secondaire* qui n'est pas équipée (voies 5 et 8, voies 2 et 4), et le jeu
-circule en 外回り sur la principale, qui l'est. La différence se verra sur le
-quai d'en face.
+`psd: 'partial'` — Ōsaki seul désormais — ne change rien sous nos pieds : c'est
+la voie *secondaire* qui n'est pas encore équipée (voies 2 et 4, travaux jusqu'à
+fin 2026), et le jeu circule sur la principale, qui l'est. La différence se
+verra sur le quai d'en face. Ikebukuro a reçu ses portes secondaires le
+18 mars 2026 et est passé en `full`.
 
 Ces valeurs étaient auparavant **déduites du tronçon traversé**
 (`data/segments`), ce qui est une erreur de principe — un tronçon dit ce qu'on

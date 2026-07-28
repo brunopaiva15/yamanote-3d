@@ -577,12 +577,12 @@ const SPECS: readonly Spec[] = [
     // JY13 — quatre voies Yamanote (5 à 8) sur deux quais centraux : c'est ce
     // qui permet départs et terminus. Quais très larges, cages d'escalier
     // nombreuses, panneaux suspendus volumineux. Les voies 5 et 8, longtemps
-    // moins utilisées, n'ont pas toutes reçu leurs portes en même temps.
+    // nues, ont reçu leurs portes le 18 mars 2026 : la gare est désormais
+    // entièrement équipée.
     name: 'JY13 Ikebukuro',
     elevation: 'ground',
     config: 'terminusIsland',
     parallel: ['Saikyō', 'Shōnan–Shinjuku', 'Seibu Ikebukuro', 'Tōbu Tōjō'],
-    psd: 'partial',
     ambience: 'hall',
     crowd: 2,
     depth: 9.8,
@@ -739,7 +739,8 @@ const SPECS: readonly Spec[] = [
   {
     // JY24 — quatre voies Yamanote (1 à 4) sur deux quais centraux : point
     // opérationnel de départ, de terminus et d'accès au dépôt. Portes en place
-    // sur les voies principales 1 et 3, annoncées sur les secondaires 2 et 4.
+    // sur les voies principales 1 et 3 ; les secondaires 2 et 4 sont encore
+    // en travaux civils (笠石) jusqu'à novembre 2026 au moins.
     name: 'JY24 Osaki',
     openFarSide: true,
     elevation: 'ground',
@@ -1047,13 +1048,13 @@ function build(spec: Spec): StationLayout {
 /**
  * La voie où l'on se trouve a-t-elle des portes de quai ?
  *
- * `partial` compte pour OUI : à Ikebukuro et à Ōsaki, c'est la voie SECONDAIRE
- * qui n'est pas équipée — voies 5 et 8 d'un côté, 2 et 4 de l'autre — et le jeu
- * circule en 内回り sur la principale, qui l'est. La différence se verra sur le
- * quai d'en face, pas sous nos pieds.
+ * `partial` compte pour OUI : à Ōsaki, c'est la voie SECONDAIRE qui n'est pas
+ * encore équipée (voies 2 et 4), et le jeu circule sur la principale, qui l'est.
+ * La différence se verra sur le quai d'en face, pas sous nos pieds.
  *
  * Restent donc Shinjuku et Shibuya, où les grands travaux interdisent encore
- * toute pose : là, le bord de quai est nu.
+ * toute pose : là, le bord de quai est nu. Ikebukuro, longtemps `partial`, a
+ * reçu ses portes secondaires le 18 mars 2026.
  */
 export function hasPlatformDoors(index: number): boolean {
   return layoutFor(index).psd !== 'none';
