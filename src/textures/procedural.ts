@@ -2054,42 +2054,205 @@ export function makeStationSign(): { canvas: HTMLCanvasElement; texture: THREE.C
 }
 
 // --- Tableau d'affichage suspendu (ホームの電光掲示板) ---
-export function makePlatformBoard(): { canvas: HTMLCanvasElement; texture: THREE.CanvasTexture; redraw: (index: number) => void } {
-  const { c, g } = makeCanvas(1024, 256);
+/**
+ * État réel affiché par le tableau des départs.
+ *
+ * L'ancien tableau annonçait « まもなく発車 » en permanence, y compris en pleine
+ * voie entre deux gares, où il n'y a aucun train le long du quai. Un tableau de
+ * quai dit ce qui se passe MAINTENANT : c'est ce qu'on regarde en arrivant, et
+ * la seule surface animée d'un quai japonais.
+ */
+export interface BoardView {
+  /** Ce que fait le prochain train. */
+  status: 'approaching' | 'boarding' | 'departing' | 'waiting';
+  /** Minutes avant le prochain train, quand on l'attend. */
+  minutes: number;
+  /** Le bandeau alterne japonais et anglais, comme un vrai afficheur. */
+  english: boolean;
+  /** Clignotement, quand la fermeture des portes est imminente. */
+  blink: boolean;
+}
+
+export function makePlatformBoard(): {
+  canvas: HTMLCanvasElement;
+  texture: THREE.CanvasTexture;
+  redraw: (index: number, view: BoardView) => void;
+} {
+  const W = 1024;
+  const H = 256;
+  const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
-  const redraw = (index: number) => {
+
+  const redraw = (index: number, view: BoardView) => {
     const st = STATIONS[index];
-    const next = STATIONS[(index + 1) % 30];
+    const ahead = directionBoardStations(index, 3);
+    const jy = st.jy;
+    const track = PLATFORM_NUMBERS[jy]?.outer ?? 1;
+
     g.fillStyle = '#0c1016';
-    g.fillRect(0, 0, 1024, 256);
+    g.fillRect(0, 0, W, H);
     g.fillStyle = '#80c241';
-    g.fillRect(0, 0, 1024, 8);
-    g.fillRect(0, 248, 1024, 8);
-    g.fillStyle = '#d8ffe0';
-    g.font = `bold 52px ${JP_FONT}`;
+    g.fillRect(0, 0, W, 8);
+    g.fillRect(0, H - 8, W, 8);
+
+    // --- Colonne de gauche : la ligne et le quai ---
     g.textAlign = 'left';
-    g.fillText('山手線', 36, 72);
-    g.font = `36px ${JP_FONT}`;
-    g.fillStyle = '#9aa3b0';
-    g.fillText('Yamanote Line', 36, 118);
-    g.fillStyle = '#80c241';
-    g.fillRect(36, 148, 14, 56);
-    g.fillStyle = '#f2f6fa';
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = '#d8ffe0';
     g.font = `bold 44px ${JP_FONT}`;
-    g.fillText(`${st.kanji}  →  ${next.kanji}`, 64, 190);
-    g.font = `28px ${JP_FONT}`;
+    g.fillText('山手線', 34, 66);
+    g.font = `26px ${JP_FONT}`;
+    g.fillStyle = '#9aa3b0';
+    g.fillText('Yamanote Line', 34, 100);
+
+    g.fillStyle = '#80c241';
+    g.beginPath();
+    g.roundRect(34, 126, 96, 92, 10);
+    g.fill();
+    g.fillStyle = '#0c1016';
+    g.textAlign = 'center';
+    g.font = `bold 62px ${JP_FONT}`;
+    g.fillText(String(track), 82, 196);
+    g.font = `bold 20px ${JP_FONT}`;
+    g.fillText('番線', 82, 148);
+
+    // --- Colonne centrale : la destination ---
+    g.textAlign = 'left';
+    g.fillStyle = '#f2f6fa';
+    fitFillText(g, `${ahead.map((x) => x.kanji).join('・')}方面`, 158, 116, 500, 46);
     g.fillStyle = '#7f8794';
-    g.fillText(`${st.romaji}  →  ${next.romaji}`, 64, 228);
-    g.fillStyle = '#ffd66a';
-    g.font = `bold 40px ${JP_FONT}`;
-    g.textAlign = 'right';
-    g.fillText('まもなく発車', 988, 88);
-    g.font = `30px ${JP_FONT}`;
+    fitFillText(g, `for ${ahead.map((x) => x.romaji).join(', ')}`, 158, 152, 500, 26, '400');
+
+    // Filet, puis la gare suivante — celle qu'on atteint en montant ici.
+    g.fillStyle = 'rgba(255,255,255,0.16)';
+    g.fillRect(158, 168, 500, 2);
     g.fillStyle = '#c8cdd6';
-    g.fillText('Departing soon', 988, 132);
+    g.font = `24px ${JP_FONT}`;
+    g.fillText('次は', 158, 204);
+    g.fillStyle = '#f2f6fa';
+    fitFillText(g, STATIONS[(index + 1) % 30].kanji, 210, 206, 220, 34);
+    g.fillStyle = '#7f8794';
+    g.font = `20px ${JP_FONT}`;
+    g.fillText(STATIONS[(index + 1) % 30].romaji, 210, 232);
+
+    // --- Colonne de droite : l'état, en gros, et il change ---
+    const band: Record<BoardView['status'], { jp: string; en: string; color: string }> = {
+      approaching: { jp: 'まもなく到着', en: 'Arriving', color: '#ffd66a' },
+      boarding: { jp: 'ご乗車ください', en: 'Now boarding', color: '#9be36a' },
+      departing: { jp: 'まもなく発車', en: 'Departing', color: '#ff8f6a' },
+      waiting: { jp: `約 ${view.minutes} 分後`, en: `in about ${view.minutes} min`, color: '#7fb6ff' },
+    };
+    const b = band[view.status];
+    g.textAlign = 'right';
+    // Le clignotement ne s'applique qu'à la fermeture imminente : partout
+    // ailleurs, un afficheur qui bat serait illisible.
+    g.fillStyle = view.blink ? '#20262e' : b.color;
+    fitFillText(g, view.english ? b.en : b.jp, W - 34, 108, 330, view.english ? 44 : 52);
+    g.fillStyle = '#8b929c';
+    g.font = `22px ${JP_FONT}`;
+    g.fillText(view.english ? b.jp : b.en, W - 34, 146);
+
+    // Voyant d'activité : trois points qui suivent l'alternance de langue.
+    for (let k = 0; k < 3; k++) {
+      g.fillStyle = k === (view.english ? 1 : 0) ? b.color : 'rgba(255,255,255,0.18)';
+      g.beginPath();
+      g.arc(W - 34 - k * 22, 190, 6, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.textAlign = 'left';
+
     texture.needsUpdate = true;
   };
   return { canvas: c, texture, redraw };
+}
+
+/**
+ * Plaque de balisage d'un accès : la lettre, et ce qu'elle désigne.
+ *
+ * Les plans officiels JR balisent chaque escalier, escalier mécanique et
+ * ascenseur par une lettre, et c'est par elle qu'on se repère sur un quai de
+ * deux cent vingt mètres.
+ */
+export function makeAccessPlate(letter: string, kind: 'stairs' | 'escalator' | 'elevator'): THREE.CanvasTexture {
+  const W = 256;
+  const H = 320;
+  const { c, g } = makeCanvas(W, H);
+  const label: Record<typeof kind, { jp: string; en: string }> = {
+    stairs: { jp: '階段', en: 'Stairs' },
+    escalator: { jp: 'エスカレーター', en: 'Escalator' },
+    elevator: { jp: 'エレベーター', en: 'Elevator' },
+  };
+  const l = label[kind];
+
+  g.fillStyle = '#f4f4f0';
+  g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#1a1a1a';
+  g.lineWidth = 8;
+  g.strokeRect(4, 4, W - 8, H - 8);
+
+  // La lettre, en réserve dans un carré sombre : c'est elle qu'on cherche.
+  g.fillStyle = '#1a1a1a';
+  g.fillRect(28, 28, W - 56, 160);
+  g.fillStyle = '#f4f4f0';
+  g.textAlign = 'center';
+  fitFillText(g, letter, W / 2, 158, W - 80, 132);
+
+  g.fillStyle = '#1a1a1a';
+  fitFillText(g, l.jp, W / 2, 236, W - 40, 42);
+  g.fillStyle = '#5c6066';
+  fitFillText(g, l.en, W / 2, 280, W - 40, 28, '600');
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+/**
+ * Grande bande verte directionnelle, à plaquer sur l'épine du quai.
+ *
+ * Sur un quai japonais c'est l'élément le plus long et le plus lisible :
+ * une flèche, les gares desservies, et rien d'autre. Elle dit d'un coup d'œil
+ * dans quel sens part le train qu'on attend.
+ */
+export function makeDirectionBand(): {
+  texture: THREE.CanvasTexture;
+  redraw: (index: number) => void;
+} {
+  const W = 2048;
+  const H = 192;
+  const { c, g } = makeCanvas(W, H);
+  const texture = toTexture(c);
+
+  const redraw = (index: number) => {
+    const ahead = directionBoardStations(index, 4);
+    g.fillStyle = '#5aa32c';
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(255,255,255,0.14)';
+    g.fillRect(0, 0, W, 10);
+    g.fillStyle = 'rgba(0,0,0,0.16)';
+    g.fillRect(0, H - 12, W, 12);
+
+    // Flèche de tête, dans le sens de la marche.
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.moveTo(58, H / 2);
+    g.lineTo(150, 40);
+    g.lineTo(150, 74);
+    g.lineTo(300, 74);
+    g.lineTo(300, H - 74);
+    g.lineTo(150, H - 74);
+    g.lineTo(150, H - 40);
+    g.closePath();
+    g.fill();
+
+    g.textAlign = 'left';
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = '#ffffff';
+    fitFillText(g, `${ahead.map((s) => s.kanji).join('・')}方面`, 340, H * 0.56, W - 420, 92);
+    g.fillStyle = 'rgba(255,255,255,0.86)';
+    fitFillText(g, `for ${ahead.map((s) => s.romaji).join(', ')}`, 342, H * 0.85, W - 420, 40, '600');
+
+    texture.needsUpdate = true;
+  };
+  return { texture, redraw };
 }
 
 // --- Signalétique d'orientation suspendue au-dessus du quai ---
@@ -2299,4 +2462,169 @@ export function makePlatformNumberSign(): {
     texture.needsUpdate = true;
   };
   return { texture, redraw };
+}
+
+// --- La trousse du quai -------------------------------------------------
+//
+// Les petits équipements réglementaires qu'on ne remarque qu'en leur absence :
+// bouton d'arrêt d'urgence, armoire technique, téléphone ferroviaire, repères
+// de voiture peints au sol. Aucun ne change d'une gare à l'autre — ce sont des
+// modèles JR standard — donc chaque texture est faite une fois pour la session.
+
+/** Repère de voiture peint au sol, sous les pieds : 「N号車」 et 乗車位置. */
+export function makeCarMarkTexture(car: number): THREE.CanvasTexture {
+  const W = 256;
+  const H = 320;
+  const { c, g } = makeCanvas(W, H);
+  // Le sol se voit à travers : seule la peinture est opaque.
+  g.clearRect(0, 0, W, H);
+
+  // Cartouche blanc cerné de vert, à la manière des marquages JR East.
+  g.fillStyle = 'rgba(244,244,240,0.92)';
+  g.strokeStyle = '#4f9b28';
+  g.lineWidth = 9;
+  g.beginPath();
+  g.roundRect(14, 14, W - 28, H - 28, 16);
+  g.fill();
+  g.stroke();
+
+  g.textAlign = 'center';
+  g.fillStyle = '#2c2f33';
+  fitFillText(g, `${car}`, W / 2, 150, W - 70, 128);
+  g.fillStyle = '#4f9b28';
+  fitFillText(g, '号車', W / 2, 210, W - 70, 52);
+  g.fillStyle = '#5c6066';
+  fitFillText(g, '乗車位置', W / 2, 268, W - 80, 36, '600');
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+/** Bouton d'arrêt d'urgence 非常停止ボタン : caisson jaune, bouton rouge. */
+export function makeEmergencyStopTexture(): THREE.CanvasTexture {
+  const W = 200;
+  const H = 260;
+  const { c, g } = makeCanvas(W, H);
+  g.fillStyle = '#e8b820';
+  g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#8a6b0d';
+  g.lineWidth = 5;
+  g.strokeRect(3, 3, W - 6, H - 6);
+
+  // Bandeau noir du titre.
+  g.fillStyle = '#1c1e21';
+  g.fillRect(10, 12, W - 20, 46);
+  g.fillStyle = '#f6d94a';
+  g.textAlign = 'center';
+  fitFillText(g, '非常停止ボタン', W / 2, 46, W - 34, 30);
+
+  // Bouton champignon, en relief.
+  g.fillStyle = '#7c1512';
+  g.beginPath();
+  g.arc(W / 2, 148, 56, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#cc2a21';
+  g.beginPath();
+  g.arc(W / 2, 143, 50, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.28)';
+  g.beginPath();
+  g.arc(W / 2 - 14, 126, 20, 0, Math.PI * 2);
+  g.fill();
+
+  g.fillStyle = '#1c1e21';
+  fitFillText(g, '押してください', W / 2, 232, W - 30, 26, '600');
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+/** Armoire électrique : tôle grise, ouïes, triangle de danger. */
+export function makeCabinetTexture(): THREE.CanvasTexture {
+  const W = 200;
+  const H = 300;
+  const { c, g } = makeCanvas(W, H);
+  g.fillStyle = '#9aa0a4';
+  g.fillRect(0, 0, W, H);
+  // Deux portes et leur joint central.
+  g.fillStyle = 'rgba(255,255,255,0.14)';
+  g.fillRect(6, 6, W / 2 - 10, H - 12);
+  g.fillStyle = 'rgba(0,0,0,0.16)';
+  g.fillRect(W / 2 - 2, 4, 4, H - 8);
+
+  // Ouïes de ventilation, en bas de chaque porte.
+  g.fillStyle = '#5f656a';
+  for (let y = H - 96; y < H - 24; y += 12) {
+    g.fillRect(20, y, W / 2 - 34, 5);
+    g.fillRect(W / 2 + 14, y, W / 2 - 34, 5);
+  }
+
+  // Triangle de danger et mention réglementaire.
+  g.fillStyle = '#e8c22a';
+  g.strokeStyle = '#1c1e21';
+  g.lineWidth = 5;
+  g.beginPath();
+  g.moveTo(W / 2, 34);
+  g.lineTo(W / 2 + 40, 100);
+  g.lineTo(W / 2 - 40, 100);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#1c1e21';
+  g.textAlign = 'center';
+  fitFillText(g, '⚡', W / 2, 92, 40, 42);
+  fitFillText(g, '高電圧危険', W / 2, 132, W - 30, 26);
+  g.fillStyle = '#3a3e42';
+  fitFillText(g, '関係者以外', W / 2, 164, W - 40, 20, '600');
+  fitFillText(g, '立入禁止', W / 2, 188, W - 40, 20, '600');
+
+  // Poignée et serrure.
+  g.fillStyle = '#43484c';
+  g.fillRect(W / 2 - 26, H - 128, 18, 40);
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+/** Téléphone ferroviaire : coffret crème, combiné, étiquette 列車無線. */
+export function makeRailPhoneTexture(): THREE.CanvasTexture {
+  const W = 180;
+  const H = 240;
+  const { c, g } = makeCanvas(W, H);
+  g.fillStyle = '#e4e0d4';
+  g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#9a968a';
+  g.lineWidth = 4;
+  g.strokeRect(3, 3, W - 6, H - 6);
+
+  g.fillStyle = '#1f4f8c';
+  g.fillRect(10, 10, W - 20, 40);
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center';
+  fitFillText(g, '列車無線', W / 2, 40, W - 30, 28);
+
+  // Combiné sur sa fourche, vu de face.
+  g.fillStyle = '#2c3035';
+  g.beginPath();
+  g.roundRect(W / 2 - 46, 78, 92, 26, 12);
+  g.fill();
+  g.beginPath();
+  g.roundRect(W / 2 - 52, 72, 26, 40, 10);
+  g.fill();
+  g.beginPath();
+  g.roundRect(W / 2 + 26, 72, 26, 40, 10);
+  g.fill();
+  // Cordon spiralé.
+  g.strokeStyle = '#2c3035';
+  g.lineWidth = 4;
+  g.beginPath();
+  for (let k = 0; k <= 20; k++) {
+    const t = k / 20;
+    g.lineTo(W / 2 - 30 + Math.sin(t * Math.PI * 5) * 9, 112 + t * 46);
+  }
+  g.stroke();
+
+  g.fillStyle = '#7c2018';
+  fitFillText(g, '緊急連絡用', W / 2, 196, W - 30, 24);
+  g.fillStyle = '#4a4e52';
+  fitFillText(g, 'Railway phone', W / 2, 222, W - 24, 18, '600');
+  g.textAlign = 'left';
+  return toTexture(c);
 }

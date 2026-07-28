@@ -85,6 +85,10 @@ export const runtime = {
   psdOpen: 0, // portes palières du quai, décalées sur la rame
   psdTarget: 0,
   psdT: 999,
+  // Cette gare-ci en a-t-elle seulement ? Shinjuku et Shibuya n'en ont
+  // toujours pas : le seuil de porte, le son du quai et la mécanique des
+  // vantaux doivent alors ignorer psdOpen, qui continue pourtant de battre.
+  psdPresent: true,
   clockMin: CONFIG.clockStart, // horloge du monde, en minutes (flottant)
   tokyoDate: defaultTokyoDate() as TokyoDate,
   swayTime: 0,

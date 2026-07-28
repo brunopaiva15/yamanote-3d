@@ -92,6 +92,17 @@ interface Nodes {
   platPanners: Tone.Panner3D[];
   hissGain: Tone.Gain;
   paClick: Tone.NoiseSynth;
+  // Ambiance de gare : le fond sonore du LIEU, distinct de la sonorisation.
+  ambBed: Tone.Noise;
+  ambFilter: Tone.Filter;
+  ambGain: Tone.Gain;
+  ambIn: Tone.Gain;
+  ambChirp: Tone.Synth;
+  ambBell: Tone.Synth;
+  ambWhoosh: Tone.NoiseSynth;
+  roomVerb: Tone.Reverb;
+  roomSend: Tone.Gain;
+  roomLp: Tone.Filter;
 }
 
 let nodes: Nodes | null = null;
@@ -293,6 +304,51 @@ export async function startAudio(): Promise<void> {
     volume: -14,
   }).connect(platIn);
 
+  // --- Ambiance du lieu -----------------------------------------------
+  //
+  // Ce n'est ni la rame ni la sonorisation : c'est ce qu'on entend PAR-DESSUS,
+  // et qui n'est pas le même à Uguisudani, dans sa vallée d'arbres, qu'à
+  // Shinjuku sous sa dalle. Un lit de bruit filtré donne la couleur du lieu ;
+  // trois petits générateurs y posent des événements — un chant d'oiseau, un
+  // timbre de tram, le passage feutré d'un monorail.
+  const ambIn = new Tone.Gain(1);
+  const ambFilter = new Tone.Filter({ type: 'lowpass', frequency: 900, rolloff: -12, Q: 0.5 });
+  const ambGain = new Tone.Gain(0);
+  ambIn.chain(ambFilter, ambGain);
+  ambGain.connect(master);
+  const ambBed = new Tone.Noise('pink').connect(ambIn);
+  ambBed.volume.value = -18;
+  ambBed.start();
+
+  const ambChirp = new Tone.Synth({
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.006, decay: 0.09, sustain: 0, release: 0.06 },
+    volume: -16,
+  }).connect(ambIn);
+  const ambBell = new Tone.Synth({
+    oscillator: { type: 'triangle' },
+    envelope: { attack: 0.002, decay: 0.7, sustain: 0, release: 0.5 },
+    volume: -20,
+  }).connect(ambIn);
+  const ambWhoosh = new Tone.NoiseSynth({
+    noise: { type: 'brown' },
+    envelope: { attack: 0.5, decay: 1.4, sustain: 0, release: 0.6 },
+    volume: -18,
+  }).connect(ambIn);
+
+  // Réverbération du LIEU. Une seule queue, dont on ne fait varier que le
+  // niveau d'envoi et la brillance : une tranchée est sourde et proche, une
+  // halle longue et claire, un viaduc n'en a pour ainsi dire pas. Recréer une
+  // réponse impulsionnelle à chaque gare coûterait un rendu asynchrone pour un
+  // effet que l'oreille attribue surtout à la quantité de réverbération.
+  const roomVerb = new Tone.Reverb({ decay: 2.6, preDelay: 0.02, wet: 1 });
+  const roomLp = new Tone.Filter({ type: 'lowpass', frequency: 2200, rolloff: -12, Q: 0.4 });
+  const roomSend = new Tone.Gain(0);
+  roomSend.chain(roomLp, roomVerb);
+  roomVerb.connect(master);
+  ambGain.connect(roomSend);
+  platGain.connect(roomSend);
+
   nodes = {
     master,
     trainBus,
@@ -325,6 +381,16 @@ export async function startAudio(): Promise<void> {
     platPanners,
     hissGain,
     paClick,
+    ambBed,
+    ambFilter,
+    ambGain,
+    ambIn,
+    ambChirp,
+    ambBell,
+    ambWhoosh,
+    roomVerb,
+    roomSend,
+    roomLp,
   };
 
   watchContextState();
@@ -934,4 +1000,96 @@ export function stopDepartureMelodyClips(): void {
   audioManager.stop(KANDA_INNER_MONDAMIN_B_PATH);
   audioManager.stop(IKEBUKURO_INNER_BIC_CAMERA_A_PATH);
   audioManager.stop(IKEBUKURO_INNER_BIC_CAMERA_B_PATH);
+}
+
+// --- Ambiance de gare ----------------------------------------------------
+//
+// Ce qu'on entend PAR-DESSUS la sonorisation, et qui n'est pas le même d'une
+// gare à l'autre : les oiseaux d'Uguisudani — dont le nom veut dire « vallée du
+// rossignol » —, le timbre du tram à Ōtsuka, le passage feutré du monorail à
+// Hamamatsuchō, la rumeur d'un quai de bureaux ou le silence d'une tranchée.
+//
+// Deux réglages seulement, mais qui suffisent : la COULEUR du lit sonore, et la
+// RÉVERBÉRATION du lieu. Une gare de viaduc n'a pratiquement pas de queue, une
+// tranchée est sourde et proche, une halle est longue et claire.
+
+/** Réglage d'un lit d'ambiance : couleur, niveau, et cadence d'événements. */
+interface AmbienceSpec {
+  /** Coupure du lit de bruit (Hz) : grave = sourd, aigu = vif. */
+  cut: number;
+  /** Niveau du lit. */
+  level: number;
+  /** Événement posé par-dessus, et son intervalle moyen (s). 0 = aucun. */
+  event?: 'chirp' | 'bell' | 'whoosh';
+  every?: number;
+}
+
+const AMBIENCE: Record<string, AmbienceSpec> = {
+  // Les oiseaux de la vallée du rossignol : c'est l'identité du lieu.
+  birds: { cut: 1500, level: 0.1, event: 'chirp', every: 5 },
+  park: { cut: 1200, level: 0.13, event: 'chirp', every: 11 },
+  tram: { cut: 760, level: 0.2, event: 'bell', every: 17 },
+  monorail: { cut: 900, level: 0.22, event: 'whoosh', every: 21 },
+  electric: { cut: 1900, level: 0.24, event: 'chirp', every: 7 },
+  market: { cut: 1050, level: 0.3 },
+  students: { cut: 1250, level: 0.3 },
+  street: { cut: 850, level: 0.22 },
+  office: { cut: 700, level: 0.2 },
+  hall: { cut: 620, level: 0.26 },
+  quiet: { cut: 560, level: 0.09 },
+};
+
+let ambKind = '';
+let ambTimer = 0;
+let ambNext = 4;
+
+/**
+ * Règle l'ambiance du lieu.
+ *
+ * @param kind     couleur sonore de la gare (data/stationLayouts).
+ * @param presence 0 = inaudible, 1 = on est dessus. Dans la rame, l'ambiance
+ *                 n'entre que par les portes ouvertes.
+ * @param room     0 = plein air, 1 = grande halle fermée.
+ */
+export function setStationAmbience(kind: string, presence: number, room: number): void {
+  if (!nodes) return;
+  const spec = AMBIENCE[kind] ?? AMBIENCE.street;
+  const p = Math.max(0, Math.min(1, presence));
+  if (kind !== ambKind) {
+    ambKind = kind;
+    nodes.ambFilter.frequency.rampTo(spec.cut, 0.6);
+    ambNext = (spec.every ?? 8) * (0.5 + Math.random());
+    ambTimer = 0;
+  }
+  nodes.ambGain.gain.rampTo(spec.level * p, 0.4);
+  // La réverbération du lieu ne s'entend que si l'on est dans le lieu.
+  nodes.roomSend.gain.rampTo(0.06 + room * 0.34, 0.5);
+  nodes.roomLp.frequency.rampTo(900 + room * 3200, 0.5);
+}
+
+/** Pose les événements d'ambiance. À appeler chaque frame de physique. */
+export function updateAmbience(dt: number): void {
+  if (!nodes || dt <= 0) return;
+  const spec = AMBIENCE[ambKind];
+  if (!spec?.event || nodes.ambGain.gain.value < 0.02) return;
+  ambTimer += dt;
+  if (ambTimer < ambNext) return;
+  ambTimer = 0;
+  ambNext = (spec.every ?? 8) * (0.55 + Math.random() * 0.9);
+  const now = Tone.now();
+  if (spec.event === 'chirp') {
+    // Deux ou trois notes brèves qui montent : un chant, pas un bip.
+    const base = 1900 + Math.random() * 900;
+    const n = 2 + Math.floor(Math.random() * 2);
+    for (let k = 0; k < n; k++) {
+      nodes.ambChirp.triggerAttackRelease(base * (1 + k * 0.13), 0.06, now + k * 0.11);
+    }
+  } else if (spec.event === 'bell') {
+    // Le timbre du tram : deux coups, le second plus faible.
+    nodes.ambBell.triggerAttackRelease(880, 0.5, now);
+    nodes.ambBell.triggerAttackRelease(880, 0.4, now + 0.34);
+  } else {
+    // Le monorail passe : un souffle qui enfle puis s'en va.
+    nodes.ambWhoosh.triggerAttackRelease(1.6, now);
+  }
 }

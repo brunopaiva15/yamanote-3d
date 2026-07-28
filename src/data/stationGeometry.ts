@@ -23,6 +23,20 @@ export const PSD_LEAF_TRAVEL = 0.92;
 /** Longueur du quai (m). */
 export const PLATFORM_LEN = 96;
 
+// --- La travée d'en face ------------------------------------------------
+//
+// Vingt-neuf gares sur trente sont des îlots : au-delà du second bord
+// d'embarquement il y a une voie, puis un autre quai. Ces trois cotes en
+// décrivent la coupe, et servent au rendu du fond de quai comme aux charpentes
+// signature qui l'enjambent.
+
+/** De l'axe d'une voie au bord du quai qu'elle dessert. */
+export const TRACK_HALF = PSD_X;
+/** Demi-écartement des rails (1 435 mm), ramené au repère du jeu. */
+export const GAUGE_HALF = 0.7175;
+/** Profondeur du quai d'en face : on n'en voit que la tranche. */
+export const OPP_DEPTH = 4.2;
+
 /** Profondeur du quai : la dalle va de PSD_X à PSD_X + PLATFORM_DEPTH. */
 export const PLATFORM_DEPTH = 5.4;
 

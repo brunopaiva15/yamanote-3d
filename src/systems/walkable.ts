@@ -73,7 +73,10 @@ function currentPlatform() {
 
 function portalOpen(): number {
   if (!runtime.trainPresent) return 0;
-  return runtime.doorOpen * runtime.psdOpen;
+  // Sans portes de quai (Shinjuku, Shibuya), le seuil ne dépend que de la
+  // porte de la rame : psdOpen continue de battre dans son coin, mais il n'y a
+  // rien en face qu'il puisse ouvrir ou fermer.
+  return runtime.doorOpen * (runtime.psdPresent ? runtime.psdOpen : 1);
 }
 
 function inCar(u: number, w: number): boolean {

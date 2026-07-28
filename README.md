@@ -52,19 +52,157 @@ accessible, celle du joueur : c'est la seule dont l'intérieur existe.
 ## Les gares
 
 Le quai fait sa vraie longueur : 224 m, onze voitures de 20 m, 44 baies de portes
-palières. `data/stationLayouts.ts` donne à chacune des trente gares une
-typologie — quai latéral, îlot, viaduc, tranchée, grande gare — déduite du
-tronçon traversé puis corrigée gare par gare : profondeur, hauteur libre, entraxe
-des piliers, style d'auvent, fond de quai, palette, densité de foule. Tokyo,
-Shinjuku et Shibuya ont en plus une charpente à elles (`three/station/Signature`).
+palières. `data/stationLayouts.ts` est une **table explicite de trente lignes**,
+une par gare, qui se lit en face du relevé : profondeur, hauteur libre, entraxe
+des piliers, style d'auvent, fond de quai, palette, densité de foule, ambiance
+sonore.
+
+Trois axes y sont tenus séparés, parce que les confondre uniformise tout :
+
+- `elevation` — le niveau où court la voie : **sol** (12 gares), **viaduc**
+  (13), **tranchée** (5 : Tabata, Komagome, Sugamo, Mejiro, Meguro) ;
+- `config` — ce qu'on a de l'autre côté du quai : îlot partagé avec une autre
+  ligne (13, la Keihin-Tōhoku sauf à Yoyogi), îlot Yamanote pur (14), quais
+  latéraux (Harajuku, seul cas de la boucle), double îlot de terminus
+  (Ikebukuro, Ōsaki) ;
+- `signature` — le caractère qui ne se paramètre pas, dessiné à part
+  (`three/station/signatures/`).
+
+S'y ajoutent l'état des portes de quai en 2026 (`psd`) et le drapeau `works` des
+cinq gares en travaux (Shinjuku, Shibuya, Shinagawa, Tamachi, Hamamatsuchō).
+
+**Deux gares n'ont pas de portes de quai** : à Shinjuku et à Shibuya, les grands
+travaux en interdisent encore la pose. Le bord y est nu — bande podotactile
+élargie de 42 à 86 cm, joue de rive visible, ballast en contrebas — et la
+mécanique suit : le seuil de porte ne dépend plus que de la porte de la rame
+(`systems/walkable`), la mélodie de départ entre dès que celle-ci s'écarte
+(`three/Engine`), et on n'entend plus déverrouiller ni glisser ce qui n'existe
+pas (`systems/doorMotion`). Les boutons d'arrêt d'urgence, faute de muret pour
+les porter, passent sur des bornes en retrait de la bande podotactile.
+
+`psd: 'partial'` — Ikebukuro et Ōsaki — ne change rien sous nos pieds : c'est la
+voie *secondaire* qui n'est pas équipée (voies 5 et 8, voies 2 et 4), et le jeu
+circule en 外回り sur la principale, qui l'est. La différence se verra sur le
+quai d'en face.
+
+Ces valeurs étaient auparavant **déduites du tronçon traversé**
+(`data/segments`), ce qui est une erreur de principe — un tronçon dit ce qu'on
+voit *entre* deux gares, pas comment la gare est bâtie — et sortait fausse pour
+sept d'entre elles. Chaque gare porte donc maintenant ses propres cotes.
+
+Quatorze gares déclarent une `signature`, et **toutes les quatorze sont
+dessinées**, une par fichier dans `three/station/signatures/` :
+
+- **Takanawa Gateway** — la toiture pliée de Kengo Kuma, versants d'acier blanc
+  doublés de bois clair qui enjambent d'un seul tenant les deux quais et les
+  voies, verrière de faîte, passerelles vitrées. La plus claire des trente.
+- **Akihabara** — le viaduc de la Chūō–Sōbu qui franchit le site
+  perpendiculairement : poutres à âme pleine, sous-face rivetée, piles posées
+  hors de tout quai et de toute voie.
+- **Ueno** — la halle rivetée sur la moitié sud, et l'ouverture franche vers le
+  nord : c'est le contraste qui fait la gare, pas le détail des fermes.
+- **Nippori** — deux ponts-concours qui enjambent tout le faisceau.
+- **Harajuku** — le bâtiment blanc et vitré de 2020, son hall du niveau
+  supérieur, le quai latéral d'en face et la masse sombre du Meiji-jingū.
+- **Yūrakuchō** — le vieux viaduc riveté à entraxe court, socles de brique, et
+  les coques de verre de l'International Forum en contrepoint.
+- **Ōtsuka** — la toiture centrale à deux pentes, et les deux extrémités du
+  quai laissées à ciel ouvert : le seul auvent de la boucle qui ne court pas
+  d'un bout à l'autre.
+- **Ebisu** — le complexe Atre qui enjambe les voies, sa sous-face de dalle en
+  guise de ciel, et la passerelle couverte qui part vers Garden Place.
+- **Gotanda** — la Tōkyū Ikegami perchée au quatrième niveau : non pas un
+  tablier vu d'en dessous, mais une gare entière — quai, auvent, garde-corps —
+  suspendue dix mètres au-dessus.
+- **Hamamatsuchō** — la verticalité, et le joint franc entre une moitié de quai
+  sous couverture ancienne et l'autre sous charpente neuve.
+- **Shimbashi** — la couverture générale en treillis qui court sur tout le
+  faisceau, socles de brique, poteaux centenaires.
+- **Tokyo**, **Shinjuku**, **Shibuya** — comme avant.
+
+Cinq gares — Ueno, Nippori, Ōsaki, Shinagawa, Shimbashi — portent `openFarSide` : la
+travée d'en face ne se ferme pas par un mur mais par un faisceau, des voies
+encore jusqu'au bord du champ. C'est la perspective dégagée qu'un mur de fond
+escamotait.
+
+Les repères de quartier (`three/Landmarks`) se rangent maintenant derrière
+l'emprise bâtie de la gare, et non plus à une distance fixe : le tram d'Ōtsuka
+et la poutre de monorail de Hamamatsuchō, plantés à huit mètres de l'axe,
+tombaient dans le ballast de la voie d'en face depuis que la gare s'y prolonge.
 
 `systems/stationPlacement` est la source unique du mobilier, partagée par le rendu
 et par la marche : un banc dessiné à un endroit et infranchissable à un autre se
 verrait au premier pas. Tout ce qui se répète passe par un `InstancedMesh`.
 
-**La signalétique n'a pas changé** : les panneaux de nom de gare et le tableau
-d'affichage sont les mêmes textures et le même `redraw`, seulement répartis sur
-un quai plus long.
+**Il n'y a pas de mur derrière vous.** Vingt-neuf des trente gares sont des
+îlots : deux bords d'embarquement, l'ossature ramenée au milieu — piliers,
+bancs, distributeurs, caissons publicitaires dos à dos — et, au-delà du second
+bord, une voie puis un autre quai. Laquelle voie change tout : la Keihin-Tōhoku
+à Tokyo, Ueno ou Yūrakuchō, la Yamanote elle-même en sens inverse à Kanda ou
+Mejiro, la deuxième paire de voies des terminus à Ikebukuro et Ōsaki. Ce que
+`elevation` ferme au fond — paroi de tranchée, garde-corps de viaduc, mur — se
+trouve alors quinze mètres plus loin, derrière le quai d'en face, et non plus à
+portée de main. Harajuku, seul quai latéral de la boucle, garde son mur et son
+soubassement carrelé.
+
+`place.backX` désigne cette ossature dans les deux cas — mur de fond ou épine
+centrale — pour que tout ce qui se pose « au fond » n'ait pas à savoir lequel
+des deux il a devant lui. Le champ `backdrop`, qui nommait une famille de rendu
+au lieu d'un fait, a disparu : c'était lui qui donnait à vingt-neuf quais le
+même mur gris.
+
+### Paliers de qualité
+
+Tout ce que les gares ont gagné se règle par `platformDetail()` :
+
+| palier | ce qui tombe |
+|---|---|
+| **ultra, très élevé** | rien |
+| **élevé** | caméras, miroirs de départ, repères de voiture peints |
+| **moyen** | charpentes signature, bandeaux publicitaires de pilier, bannières |
+| **bas** | trousse réglementaire, bande directionnelle, plaques de balisage, auvent et rails du quai d'en face |
+
+Ce qui reste à tous les paliers est ce sans quoi la gare cesserait d'être
+lisible : dalle, bords d'embarquement, portes palières, piliers, auvent, voie
+d'en face et son ballast, bacs, gouttières, ligne de guidage.
+
+Le module **range** ce mobilier au lieu de l'empiler. La structure fait autorité —
+piliers, trémies, escaliers mécaniques, ascenseur, kiosque — puis chaque famille
+vient chercher son creux, en glissant le long de la voie et en renonçant si elle
+n'en trouve pas : mieux vaut un banc de moins qu'un banc dans un poteau. La trame
+de piliers, elle, saute la travée d'une trémie ou d'une gaine d'ascenseur.
+
+`three/station/PlatformKit` pose la trousse réglementaire, celle qu'on ne remarque
+qu'en son absence : diffuseurs de la sonorisation sous l'auvent, caméras en dôme,
+coffrets d'extincteur, boutons d'arrêt d'urgence sur la face pleine des portes
+palières, armoires électriques, téléphone ferroviaire, bacs de tri par trois,
+gouttière et descentes d'eau, chemin de câbles, ligne verte de guidage et repères
+「N号車 乗車位置」 peints au sol. Rien de tout cela ne se pose au hasard : les
+bornes d'urgence évitent les baies de portes, les diffuseurs évitent les poutres,
+et rien n'atterrit dans une file d'attente.
+
+### La signalétique
+
+Le panneau de nom de gare n'a pas changé : code JY, gare précédente et suivante,
+bande verte directionnelle, redessiné au changement de gare.
+
+**Le tableau d'affichage, lui, vit.** Il annonçait 「まもなく発車」 en permanence,
+y compris en pleine voie entre deux gares où aucun train ne longe le quai. Il
+suit désormais l'état réel — approche, embarquement, départ, attente avec
+décompte — et alterne japonais et anglais toutes les trois secondes et demie,
+avec un bandeau qui clignote quand la fermeture est imminente. Deux sources
+selon l'endroit d'où on le regarde : debout sur le quai c'est `platformWait`,
+à bord c'est la phase du cycle station. Le canvas n'est redessiné que lorsque
+son contenu change réellement, soit environ une fois par seconde.
+
+**Les accès sont balisés par lettre**, comme sur les plans officiels JR : A, B,
+C… dans l'ordre où on les rencontre en marchant, tous types confondus —
+escaliers, escaliers mécaniques, ascenseur. La lettre est posée au-dessus de
+l'accès et répétée en bout de potence, pour se lire de loin.
+
+**La grande bande verte directionnelle** est suspendue au-dessus de l'épine, en
+trois tronçons calés dans les creux de la trame des bannières publicitaires :
+une flèche, les gares desservies, et rien d'autre.
 
 ## L'extérieur de la rame
 
@@ -203,7 +341,8 @@ src/
   three/                 rendu R3F : wagon, sièges, portes, poignées, pubs, écrans LCD,
                          ville en parallaxe, PNJ, caméra
   three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines
-  three/station/         quai praticable de 224 m, cinq typologies, signalétique
+  three/station/         quai praticable de 224 m, trente gabarits de gare, signalétique
+  three/station/signatures/ les charpentes propres à une gare : Takanawa, Akihabara…
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
   scripts/               models:import / models:inspect (packs → public/models/)
@@ -240,6 +379,26 @@ régénérables via `scripts/announcements-export.ts` +
 `speechSynthesis`. Le japonais est synthétisé segment par segment, avec de
 vraies pauses aux 、/。 — la cadence posée des annonces automatiques JR
 (まもなく、…渋谷、…渋谷。), que Kokoro ne marque pas de lui-même.
+
+### L'ambiance du lieu
+
+Ce qu'on entend **par-dessus** la sonorisation, et qui n'est pas le même d'une
+gare à l'autre : les oiseaux d'Uguisudani — 鶯谷, « la vallée du rossignol » —,
+le timbre du tram à Ōtsuka, le passage feutré du monorail à Hamamatsuchō, la
+rumeur d'Ameyoko sous Okachimachi, le silence d'une tranchée à Mejiro. Chaque
+gare porte sa clé `ambience` (`data/stationLayouts`), et un lit de bruit filtré
+lui donne sa couleur ; trois petits générateurs y posent les événements.
+
+La **réverbération du lieu** ne se décrète pas gare par gare : elle découle de
+la forme (`roomTone`). Un quai de viaduc est à ciel ouvert et n'a pour ainsi
+dire pas de queue (0,18) ; une tranchée a ses deux parois à portée de voix, une
+halle sous charpente renvoie long et clair (0,70). Une seule queue de
+réverbération, dont on ne fait varier que le niveau d'envoi et la brillance :
+recréer une réponse impulsionnelle à chaque gare coûterait un rendu asynchrone
+pour un effet que l'oreille attribue surtout à la quantité.
+
+L'ambiance entre par les mêmes ouvertures que la mélodie : pleine sur le quai,
+réduite dans la rame portes fermées, muette entre deux gares.
 
 ### Sonorisation en 3D
 

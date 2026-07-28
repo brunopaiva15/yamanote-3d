@@ -9,7 +9,7 @@
 // s'en approche — nid d'abeilles rouge, halo autour du point où l'on va le
 // toucher. Purement décoratif : la collision, elle, est dans walkable.
 
-import { useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { runtime } from '../../systems/runtime';
@@ -118,6 +118,10 @@ export function Barrier({ x, y, z, width, height }: BarrierProps) {
       }),
     [uniforms],
   );
+
+  // Un panneau de limite est reconstruit à chaque gare : son programme de
+  // shader ne survit pas au départ.
+  useLayoutEffect(() => () => material.dispose(), [material]);
 
   useFrame((_, rawDt) => {
     const m = mesh.current;

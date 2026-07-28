@@ -1,17 +1,29 @@
 // Signalétique du quai : panneaux de nom de gare suspendus, tableau
-// d'affichage électronique, totems d'information.
+// d'affichage électronique, totems, et la grande bande verte directionnelle.
 //
-// Ce bloc est repris tel quel de l'ancien Platform.tsx, redraw compris. Les
-// panneaux d'affichage ne changent pas : seul l'endroit d'où on les regarde
-// change. La seule adaptation est leur répartition sur un quai désormais long
-// de plus de deux cents mètres, au lieu de quatre-vingt-seize.
+// Le panneau de nom n'a pas changé : c'est la même texture et le même redraw
+// qu'avant, seulement répartis sur un quai de plus de deux cents mètres.
+//
+// Le tableau d'affichage, lui, a changé du tout au tout. Il annonçait
+// « まもなく発車 » en permanence, y compris en pleine voie entre deux gares où
+// aucun train ne longe le quai. Un afficheur de quai dit ce qui se passe
+// MAINTENANT, et c'est la seule surface animée d'une gare japonaise : il suit
+// donc l'état réel — approche, embarquement, départ, attente — et alterne
+// japonais et anglais comme un vrai. Le canvas est redessiné quand l'état
+// affiché change, pas à chaque frame : une fois par seconde environ.
 
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../../store';
 import { runtime } from '../../systems/runtime';
-import { makePlatformBoard, makeStationSign } from '../../textures/procedural';
+import { platformWait } from '../../systems/platformWait';
+import {
+  makeDirectionBand,
+  makePlatformBoard,
+  makeStationSign,
+  type BoardView,
+} from '../../textures/procedural';
 import { PLATFORM_TOP } from '../../data/stationGeometry';
 
 interface Props {
@@ -23,15 +35,79 @@ interface Props {
   halfZ: number;
   /** Abscisse des totems posés au sol. */
   totemX: number;
+  /** Abscisse de l'épine : la bande directionnelle est suspendue au-dessus. */
+  bandX: number;
+  /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
+  detail: number;
   frame: THREE.Material;
   metal: THREE.Material;
   accent: THREE.Material;
 }
 
-export function PlatformSignage({ hangX, canopyY, halfZ, totemX, frame, metal, accent }: Props) {
+/** Intervalle réel entre deux rames, en secondes (cf. platformWait). */
+const HEADWAY = 60;
+/** Cadence d'alternance japonais / anglais de l'afficheur (s). */
+const CYCLE = 3.5;
+
+/**
+ * Ce que le tableau doit afficher, à cet instant.
+ *
+ * Deux sources selon l'endroit d'où l'on regarde : debout sur le quai, c'est
+ * `platformWait` qui mène la danse ; à bord, c'est la phase du cycle station.
+ * Les deux disent la même chose de la même rame, vue de deux côtés.
+ */
+function boardView(t: number): BoardView {
+  const english = Math.floor(t / CYCLE) % 2 === 1;
+  if (runtime.playerFrame === 'platform') {
+    const { stage } = platformWait;
+    if (stage === 'departing') {
+      return { status: 'departing', minutes: 0, english, blink: Math.floor(t * 2) % 2 === 0 };
+    }
+    if (stage === 'clear') {
+      const left = Math.max(0, HEADWAY - platformWait.t);
+      return { status: 'waiting', minutes: Math.max(1, Math.ceil(left / 60)), english, blink: false };
+    }
+    if (stage === 'approaching' || stage === 'berthing') {
+      return { status: 'approaching', minutes: 0, english, blink: false };
+    }
+    return { status: 'boarding', minutes: 0, english, blink: false };
+  }
+  const { phase } = useStore.getState();
+  if (phase === 'brake') return { status: 'approaching', minutes: 0, english, blink: false };
+  if (phase === 'depart') {
+    return { status: 'departing', minutes: 0, english, blink: Math.floor(t * 2) % 2 === 0 };
+  }
+  if (phase === 'dwell') return { status: 'boarding', minutes: 0, english, blink: false };
+  return { status: 'waiting', minutes: 2, english, blink: false };
+}
+
+/** Deux vues sont-elles assez différentes pour mériter un redessin ? */
+function sameView(a: BoardView, b: BoardView): boolean {
+  return (
+    a.status === b.status &&
+    a.minutes === b.minutes &&
+    a.english === b.english &&
+    a.blink === b.blink
+  );
+}
+
+export function PlatformSignage({
+  hangX,
+  canopyY,
+  halfZ,
+  totemX,
+  bandX,
+  detail,
+  frame,
+  metal,
+  accent,
+}: Props) {
   const sign = useMemo(() => makeStationSign(), []);
   const board = useMemo(() => makePlatformBoard(), []);
+  const band = useMemo(() => makeDirectionBand(), []);
   const lastSignIndex = useRef(-1);
+  const lastView = useRef<BoardView | null>(null);
+  const clock = useRef(0);
 
   const materials = useMemo(
     () => ({
@@ -47,8 +123,13 @@ export function PlatformSignage({ hangX, canopyY, halfZ, totemX, frame, metal, a
         side: THREE.DoubleSide,
         depthWrite: true,
       }),
+      band: new THREE.MeshBasicMaterial({
+        map: band.texture,
+        toneMapped: false,
+        side: THREE.DoubleSide,
+      }),
     }),
-    [sign, board],
+    [sign, board, band],
   );
 
   // Un panneau de nom de gare tous les ~55 m, un tableau d'affichage tous les
@@ -60,9 +141,16 @@ export function PlatformSignage({ hangX, canopyY, halfZ, totemX, frame, metal, a
   }, [halfZ]);
   const boardZ = useMemo(() => [-halfZ * 0.45, halfZ * 0.45], [halfZ]);
   const totemZ = useMemo(() => [-halfZ * 0.66, 0, halfZ * 0.66], [halfZ]);
+  // La bande directionnelle est suspendue à l'auvent, au-dessus de l'épine.
+  // Ses trois tronçons se posent dans les CREUX de la trame des bannières
+  // publicitaires (une tous les 26 m, à partir de -halfZ + 18) : d'un seul
+  // tenant, ou calée n'importe où, elle les aurait traversées — et elle passe
+  // aussi au large des trémies et des escaliers mécaniques.
+  const bandZ = useMemo(() => [-halfZ + 31, -halfZ + 109, -halfZ + 161], [halfZ]);
 
-  useFrame(() => {
+  useFrame((_, dt) => {
     if (runtime.platformFade <= 0.03) return;
+    clock.current += dt;
     const { index, phase } = useStore.getState();
     // Pendant depart l'index a déjà avancé : panneau = gare quittée (index-1).
     const signIndex = phase === 'depart' ? (index + 29) % 30 : index;
@@ -72,7 +160,15 @@ export function PlatformSignage({ hangX, canopyY, halfZ, totemX, frame, metal, a
     ) {
       lastSignIndex.current = signIndex;
       sign.redraw(signIndex);
-      board.redraw(signIndex);
+      band.redraw(signIndex);
+      lastView.current = null;
+    }
+    // L'afficheur ne se redessine que lorsqu'il a réellement changé : sinon on
+    // repeindrait un canvas de 1024 × 256 soixante fois par seconde pour rien.
+    const view = boardView(clock.current);
+    if (!lastView.current || !sameView(lastView.current, view)) {
+      lastView.current = view;
+      board.redraw(signIndex, view);
     }
   });
 
@@ -122,6 +218,35 @@ export function PlatformSignage({ hangX, canopyY, halfZ, totemX, frame, metal, a
           ))}
         </group>
       ))}
+
+      {/* Grande bande verte directionnelle, suspendue au-dessus de l'épine.
+          C'est l'élément le plus long et le plus lisible d'un quai japonais :
+          une flèche, les gares desservies, et rien d'autre. Recto-verso,
+          puisqu'un îlot a un bord d'embarquement de chaque côté. */}
+      {detail <= 2 && bandZ.map((z) => (
+        <group key={`band${z}`} position={[bandX, canopyY - 0.5, z]}>
+          <mesh material={frame}>
+            <boxGeometry args={[0.12, 0.62, 8.2]} />
+          </mesh>
+          {[-1, 1].map((d) => (
+            <mesh
+              key={d}
+              position={[d * 0.065, 0, 0]}
+              rotation={[0, d === -1 ? -Math.PI / 2 : Math.PI / 2, 0]}
+              material={materials.band}
+            >
+              <planeGeometry args={[8, 0.56]} />
+            </mesh>
+          ))}
+          {/* Suspentes jusqu'à la sous-face de l'auvent. */}
+          {[-3.4, 3.4].map((dz) => (
+            <mesh key={dz} position={[0, 0.55, dz]} material={metal}>
+              <boxGeometry args={[0.05, 0.5, 0.05]} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+
 
       {/* Totems d'information */}
       {totemZ.map((z) => (
