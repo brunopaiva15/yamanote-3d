@@ -4,6 +4,7 @@
 import { useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { V_MAX } from '../data/config';
+import { layoutFor, roomTone } from '../data/stationLayouts';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { updateCycle } from '../systems/stationCycle';
@@ -13,7 +14,7 @@ import { updatePlatformPresence } from '../systems/platformPresence';
 import { updateStationOcclusion } from '../systems/stationOcclusion';
 import { updatePlatformWait } from '../systems/platformWait';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
-import { setPlatformDoors, updateAudio } from '../systems/audioEngine';
+import { setPlatformDoors, setStationAmbience, updateAmbience, updateAudio } from '../systems/audioEngine';
 import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
 import { perfLevel } from '../systems/perf';
 
@@ -97,7 +98,19 @@ export function Engine(): null {
       // faut la porte de la rame ET la porte palière en face — là où il y en a
       // une. À Shinjuku et Shibuya, la porte de la rame donne directement sur
       // le quai, et la mélodie entre dès qu'elle s'écarte.
-      setPlatformDoors(runtime.doorOpen * (runtime.psdPresent ? runtime.psdOpen : 1));
+      const openings = runtime.doorOpen * (runtime.psdPresent ? runtime.psdOpen : 1);
+      setPlatformDoors(openings);
+      // L'ambiance du lieu suit les mêmes ouvertures : sur le quai on est
+      // dedans, dans la rame portes fermées on ne l'entend presque plus. Elle
+      // ne vit qu'aussi longtemps que la gare est là.
+      const stationIndex = useStore.getState().index;
+      setStationAmbience(
+        layoutFor(stationIndex).ambience,
+        runtime.platformFade *
+          (runtime.playerFrame === 'platform' ? 1 : 0.12 + 0.88 * openings),
+        roomTone(stationIndex),
+      );
+      updateAmbience(physDt);
       updatePassengers(physDt);
       updatePlatformCrowd(physDt);
     }

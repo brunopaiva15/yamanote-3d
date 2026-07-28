@@ -151,6 +151,21 @@ des deux il a devant lui. Le champ `backdrop`, qui nommait une famille de rendu
 au lieu d'un fait, a disparu : c'était lui qui donnait à vingt-neuf quais le
 même mur gris.
 
+### Paliers de qualité
+
+Tout ce que les gares ont gagné se règle par `platformDetail()` :
+
+| palier | ce qui tombe |
+|---|---|
+| **ultra, très élevé** | rien |
+| **élevé** | caméras, miroirs de départ, repères de voiture peints |
+| **moyen** | charpentes signature, bandeaux publicitaires de pilier, bannières |
+| **bas** | trousse réglementaire, bande directionnelle, plaques de balisage, auvent et rails du quai d'en face |
+
+Ce qui reste à tous les paliers est ce sans quoi la gare cesserait d'être
+lisible : dalle, bords d'embarquement, portes palières, piliers, auvent, voie
+d'en face et son ballast, bacs, gouttières, ligne de guidage.
+
 Le module **range** ce mobilier au lieu de l'empiler. La structure fait autorité —
 piliers, trémies, escaliers mécaniques, ascenseur, kiosque — puis chaque famille
 vient chercher son creux, en glissant le long de la voie et en renonçant si elle
@@ -364,6 +379,26 @@ régénérables via `scripts/announcements-export.ts` +
 `speechSynthesis`. Le japonais est synthétisé segment par segment, avec de
 vraies pauses aux 、/。 — la cadence posée des annonces automatiques JR
 (まもなく、…渋谷、…渋谷。), que Kokoro ne marque pas de lui-même.
+
+### L'ambiance du lieu
+
+Ce qu'on entend **par-dessus** la sonorisation, et qui n'est pas le même d'une
+gare à l'autre : les oiseaux d'Uguisudani — 鶯谷, « la vallée du rossignol » —,
+le timbre du tram à Ōtsuka, le passage feutré du monorail à Hamamatsuchō, la
+rumeur d'Ameyoko sous Okachimachi, le silence d'une tranchée à Mejiro. Chaque
+gare porte sa clé `ambience` (`data/stationLayouts`), et un lit de bruit filtré
+lui donne sa couleur ; trois petits générateurs y posent les événements.
+
+La **réverbération du lieu** ne se décrète pas gare par gare : elle découle de
+la forme (`roomTone`). Un quai de viaduc est à ciel ouvert et n'a pour ainsi
+dire pas de queue (0,18) ; une tranchée a ses deux parois à portée de voix, une
+halle sous charpente renvoie long et clair (0,70). Une seule queue de
+réverbération, dont on ne fait varier que le niveau d'envoi et la brillance :
+recréer une réponse impulsionnelle à chaque gare coûterait un rendu asynchrone
+pour un effet que l'oreille attribue surtout à la quantité.
+
+L'ambiance entre par les mêmes ouvertures que la mélodie : pleine sur le quai,
+réduite dans la rame portes fermées, muette entre deux gares.
 
 ### Sonorisation en 3D
 

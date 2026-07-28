@@ -33,9 +33,11 @@ interface Props {
   place: StationPlacement;
   layout: StationLayout;
   station: number;
+  /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
+  detail: number;
 }
 
-export function OverheadSigns({ place, layout, station }: Props) {
+export function OverheadSigns({ place, layout, station, detail }: Props) {
   // Deux sorties + un tableau de correspondances, redessinés au changement de
   // gare et non reconstruits : une seule texture par panneau pour la session.
   const signs = useMemo(
@@ -67,14 +69,17 @@ export function OverheadSigns({ place, layout, station }: Props) {
     [signs, plates],
   );
 
-  // Les plaques d'une gare quittée ne resservent pas.
+  // Rien d'une gare quittée ne ressert. `mats` se reconstruit à chaque gare
+  // puisque les plaques en dépendent : c'est TOUT l'objet qu'il faut rendre,
+  // pas seulement les plaques — sinon les cinq autres matériaux s'accumulaient
+  // à chaque arrêt, un tour de boucle après l'autre.
   useEffect(() => {
-    const mm = mats.plates;
+    const all = [mats.transfer, mats.track, mats.frame, mats.strut, ...mats.exits, ...mats.plates];
     return () => {
-      for (const x of mm) x.dispose();
+      for (const x of all) x.dispose();
       for (const t of plates) t.dispose();
     };
-  }, [mats.plates, plates]);
+  }, [mats, plates]);
 
   useEffect(() => {
     for (const s of signs.exits) s.redraw(station);
@@ -161,7 +166,7 @@ export function OverheadSigns({ place, layout, station }: Props) {
       {/* Plaque de balisage au-dessus de chaque accès : la lettre du plan JR,
           posée là où l'on débouche. C'est par elle qu'on se donne rendez-vous
           sur un quai de deux cent vingt mètres. */}
-      {place.accesses.map((a, k) => (
+      {detail <= 2 && place.accesses.map((a, k) => (
         <group key={`ap${k}`} position={[a.x, PLATFORM_TOP + 2.62, a.z - a.halfZ + 0.1]}>
           <mesh material={mats.frame}>
             <boxGeometry args={[0.5, 0.62, 0.07]} />

@@ -353,7 +353,7 @@ export function Station() {
       )}
 
       {/* --- Ce qu'on voit au-delà : voie, quai d'en face, clôture --- */}
-      <FarSide layout={layout} place={place} wallH={wallH} m={m} />
+      <FarSide layout={layout} place={place} wallH={wallH} m={m} detail={detail} />
 
       {/* --- Auvent, poutres, piliers, néons --- */}
       <mesh position={[PSD_X + depth / 2, canopyY + 0.07, 0]} material={m.canopy} receiveShadow>
@@ -405,7 +405,7 @@ export function Station() {
       <PlatformAds place={place} layout={layout} segs={segs} station={index} detail={detail} />
 
       {/* Potences d'orientation : sorties en jaune, correspondances en blanc. */}
-      <OverheadSigns place={place} layout={layout} station={index} />
+      <OverheadSigns place={place} layout={layout} station={index} detail={detail} />
 
       {/* La trousse réglementaire : sonorisation, caméras, extincteurs, bornes
           d'urgence, armoires, bacs de tri, gouttières, marquages au sol. */}
@@ -439,8 +439,10 @@ export function Station() {
         />
       ))}
 
-      {/* Charpente propre aux trois gares signature. */}
-      {layout.signature && detail === 0 && (
+      {/* Charpente propre à la gare, quand elle en a une. Elle était réservée
+          aux deux paliers les plus riches ; elle porte maintenant l'essentiel
+          du caractère de quatorze gares, et descend donc d'un cran. */}
+      {layout.signature && detail <= 1 && (
         <Signature layout={layout} place={place} m={m} />
       )}
 
@@ -450,6 +452,7 @@ export function Station() {
         halfZ={halfZ}
         totemX={midX - 0.6}
         bandX={backX}
+        detail={detail}
         frame={m.frame}
         metal={m.metal}
         accent={m.accent}
@@ -530,11 +533,13 @@ function FarSide({
   place,
   wallH,
   m,
+  detail,
 }: {
   layout: ReturnType<typeof layoutFor>;
   place: ReturnType<typeof placementFor>;
   wallH: number;
   m: Mats;
+  detail: number;
 }) {
   const len = layout.length;
   const far = place.farEdgeX;
@@ -604,9 +609,13 @@ function FarSide({
           </mesh>
         </>
       )}
-      <mesh position={[(oppEdge + oppBack) / 2, layout.canopyY + 0.07, 0]} material={m.canopy}>
-        <boxGeometry args={[OPP_DEPTH + 0.4, 0.14, len]} />
-      </mesh>
+      {/* L'auvent d'en face : on le voit, on n'y marche pas. Il tombe au
+          palier le plus léger, où la silhouette du quai suffit. */}
+      {detail <= 2 && (
+        <mesh position={[(oppEdge + oppBack) / 2, layout.canopyY + 0.07, 0]} material={m.canopy}>
+          <boxGeometry args={[OPP_DEPTH + 0.4, 0.14, len]} />
+        </mesh>
+      )}
 
       {/* Faisceau : là où rien ne ferme la travée, des voies encore, jusqu'au
           bord du champ. C'est la perspective dégagée de Nippori et d'Ueno, et
@@ -619,14 +628,17 @@ function FarSide({
           >
             <boxGeometry args={[YARD_TRACKS * YARD_PITCH, 0.42, len]} />
           </mesh>
-          {Array.from({ length: YARD_TRACKS }, (_, k) => {
-            const x = oppBack + (k + 0.5) * YARD_PITCH;
-            return [-1, 1].map((d) => (
-              <mesh key={`yr${k}${d}`} position={[x + d * GAUGE_HALF, -1.11, 0]} material={m.metal}>
-                <boxGeometry args={[0.08, 0.16, len]} />
-              </mesh>
-            ));
-          })}
+          {/* Les rails du faisceau : huit longs prismes qu'on distingue à
+              peine au-delà de vingt mètres. Le ballast, lui, reste toujours. */}
+          {detail <= 2 &&
+            Array.from({ length: YARD_TRACKS }, (_, k) => {
+              const x = oppBack + (k + 0.5) * YARD_PITCH;
+              return [-1, 1].map((d) => (
+                <mesh key={`yr${k}${d}`} position={[x + d * GAUGE_HALF, -1.11, 0]} material={m.metal}>
+                  <boxGeometry args={[0.08, 0.16, len]} />
+                </mesh>
+              ));
+            })}
         </group>
       )}
 

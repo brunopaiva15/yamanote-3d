@@ -37,6 +37,8 @@ interface Props {
   totemX: number;
   /** Abscisse de l'épine : la bande directionnelle est suspendue au-dessus. */
   bandX: number;
+  /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
+  detail: number;
   frame: THREE.Material;
   metal: THREE.Material;
   accent: THREE.Material;
@@ -95,6 +97,7 @@ export function PlatformSignage({
   halfZ,
   totemX,
   bandX,
+  detail,
   frame,
   metal,
   accent,
@@ -220,7 +223,7 @@ export function PlatformSignage({
           C'est l'élément le plus long et le plus lisible d'un quai japonais :
           une flèche, les gares desservies, et rien d'autre. Recto-verso,
           puisqu'un îlot a un bord d'embarquement de chaque côté. */}
-      {bandZ.map((z) => (
+      {detail <= 2 && bandZ.map((z) => (
         <group key={`band${z}`} position={[bandX, canopyY - 0.5, z]}>
           <mesh material={frame}>
             <boxGeometry args={[0.12, 0.62, 8.2]} />
@@ -243,6 +246,7 @@ export function PlatformSignage({
           ))}
         </group>
       ))}
+
 
       {/* Totems d'information */}
       {totemZ.map((z) => (

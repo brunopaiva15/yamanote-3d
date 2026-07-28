@@ -861,6 +861,25 @@ export function hasPlatformDoors(index: number): boolean {
   return layoutFor(index).psd !== 'none';
 }
 
+/**
+ * Réverbération du lieu, 0 (plein air) à 1 (grande halle fermée).
+ *
+ * Elle ne se décrète pas gare par gare : elle découle de la forme. Un quai de
+ * viaduc est à ciel ouvert et n'a pour ainsi dire pas de queue ; une tranchée
+ * a ses deux parois à portée de voix ; une halle sous charpente renvoie long et
+ * clair. C'est exactement ce qu'on entend en descendant du train.
+ */
+export function roomTone(index: number): number {
+  const l = layoutFor(index);
+  const base = l.elevation === 'elevated' ? 0.12 : l.elevation === 'trench' ? 0.58 : 0.34;
+  // Une couverture haute et continue ferme le volume ; une dalle basse le rend
+  // sourd sans l'allonger, d'où le poids plus faible.
+  const roof = l.canopy === 'truss' ? 0.34 : l.canopy === 'glass' ? 0.18 : l.canopy === 'slab' ? 0.12 : 0.06;
+  // Un quai latéral a un mur dans le dos ; un îlot ouvre des deux côtés.
+  const closed = l.config === 'side' ? 0.08 : 0;
+  return Math.min(1, base + roof + closed);
+}
+
 const CACHE = new Map<number, StationLayout>();
 
 /** Gabarit complet d'une gare, mémoïsé (30 objets au total). */
