@@ -450,11 +450,16 @@ function speakTtsItem(channel: SpeechChannel, item: QueueItem & { kind: 'tts' })
 /**
  * Met une séquence en file. `channel` dit QUELLE sono parle : celle de la rame
  * (défaut) ou celle de la gare. Les deux files avancent en parallèle.
+ *
+ * `leadMs` retarde le premier mot sans retarder la mise en file : c'est ce qui
+ * laisse un carillon ou un signal finir avant que la voix ne commence, au lieu
+ * de démarrer par-dessus ses dernières notes.
  */
-export function say(items: Utterance[], channel: SpeechChannel = 'cabin'): void {
+export function say(items: Utterance[], channel: SpeechChannel = 'cabin', leadMs = 0): void {
   const { muted, volume } = useStore.getState();
   if (muted || volume <= 0.001) return;
   const ch = channels[channel];
+  if (leadMs > 0 && items.length > 0) ch.queue.push({ kind: 'pause', ms: leadMs });
   for (const item of items) {
     const clip = announcementClipPath(item.lang, item.text);
     if (clip) {

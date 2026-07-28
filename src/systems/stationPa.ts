@@ -24,6 +24,7 @@ import {
   platformGreeting,
   platformPreAnnouncement,
   platformTrainEnteringAnnouncement,
+  type StationUtterance,
 } from '../data/stationAnnouncements';
 import { STATIONS } from '../data/stations';
 import { useStore } from '../store';
@@ -87,16 +88,27 @@ export function paPreAnnouncement(index: number, withGreeting = false): void {
   );
 }
 
-/** Carillon ATOS puis annonce d'approche, japonais et anglais. */
-export function paApproach(index: number): void {
-  audio.platformChime();
-  say(platformApproachAnnouncement(index, currentPlatformNumber(index)), 'platform');
+/**
+ * Silence entre la fin d'un signal de la sono et le premier mot : sur un quai,
+ * la voix ne s'enchaîne pas dans la queue du carillon, elle la laisse tomber.
+ */
+const SIGNAL_TO_VOICE_MS = 300;
+
+/** Signal de la sono, puis la voix — jamais les deux en même temps. */
+function sayAfterSignal(items: StationUtterance[], signalS: number): void {
+  say(items, 'platform', Math.round(signalS * 1000) + SIGNAL_TO_VOICE_MS);
 }
 
-/** La rame est en vue : avertissement court, répété, signal électronique entre. */
+/** Carillon ATOS puis annonce d'approche, japonais et anglais. */
+export function paApproach(index: number): void {
+  const chime = audio.platformChime();
+  sayAfterSignal(platformApproachAnnouncement(index, currentPlatformNumber(index)), chime);
+}
+
+/** La rame est en vue : signal électronique, puis l'avertissement court, répété. */
 export function paTrainEntering(): void {
-  audio.platformWarningSignal();
-  say(platformTrainEnteringAnnouncement(), 'platform');
+  const signal = audio.platformWarningSignal();
+  sayAfterSignal(platformTrainEnteringAnnouncement(), signal);
   say(platformTrainEnteringAnnouncement(), 'platform');
 }
 
