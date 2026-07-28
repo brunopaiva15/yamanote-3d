@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { paxList, POOL_SIZE, initPassengers } from '../systems/passengers';
 import type { Appearance } from '../systems/appearance';
+import { isPairAction } from '../data/paxActions';
 import { runtime } from '../systems/runtime';
 import { makeFaceTexture, makeStripeTexture, makePlaidTexture } from '../textures/procedural';
 import { usesHeldPose } from './characters/props';
@@ -491,7 +492,18 @@ export function ProceduralPassengers() {
         p.pos.y + p.bob,
         p.pos.z,
       );
-      r.group.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll);
+      // Assis en discussion : lean/roll du wrap = 0 (sinon pieds qui glissent).
+      const lean =
+        seated && isPairAction(p.action)
+          ? 0
+          : seated
+            ? Math.min(p.bodyLean, 0.08)
+            : p.bodyLean;
+      r.group.rotation.set(
+        lean,
+        p.yaw,
+        standingSway + seatedSway + (seated ? 0 : p.bodyRoll),
+      );
       r.group.scale.setScalar(p.height);
       if (r.lower) r.lower.visible = !seated;
       if (r.seated) r.seated.visible = seated;
