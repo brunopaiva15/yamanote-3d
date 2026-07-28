@@ -97,6 +97,23 @@ Quatorze gares déclarent une `signature` ; trois sont dessinées à ce jour
 et par la marche : un banc dessiné à un endroit et infranchissable à un autre se
 verrait au premier pas. Tout ce qui se répète passe par un `InstancedMesh`.
 
+**Il n'y a pas de mur derrière vous.** Vingt-neuf des trente gares sont des
+îlots : deux bords d'embarquement, l'ossature ramenée au milieu — piliers,
+bancs, distributeurs, caissons publicitaires dos à dos — et, au-delà du second
+bord, une voie puis un autre quai. Laquelle voie change tout : la Keihin-Tōhoku
+à Tokyo, Ueno ou Yūrakuchō, la Yamanote elle-même en sens inverse à Kanda ou
+Mejiro, la deuxième paire de voies des terminus à Ikebukuro et Ōsaki. Ce que
+`elevation` ferme au fond — paroi de tranchée, garde-corps de viaduc, mur — se
+trouve alors quinze mètres plus loin, derrière le quai d'en face, et non plus à
+portée de main. Harajuku, seul quai latéral de la boucle, garde son mur et son
+soubassement carrelé.
+
+`place.backX` désigne cette ossature dans les deux cas — mur de fond ou épine
+centrale — pour que tout ce qui se pose « au fond » n'ait pas à savoir lequel
+des deux il a devant lui. Le champ `backdrop`, qui nommait une famille de rendu
+au lieu d'un fait, a disparu : c'était lui qui donnait à vingt-neuf quais le
+même mur gris.
+
 Le module **range** ce mobilier au lieu de l'empiler. La structure fait autorité —
 piliers, trémies, escaliers mécaniques, ascenseur, kiosque — puis chaque famille
 vient chercher son creux, en glissant le long de la voie et en renonçant si elle

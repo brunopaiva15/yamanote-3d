@@ -64,13 +64,19 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   /** Quai sans portes : Shinjuku, Shibuya. */
   const bare = layout.psd === 'none';
 
-  // Abscisses partagées par tout le fichier. Les descentes d'eau et la
-  // gouttière se tiennent DERRIÈRE la limite de marche (walkX1) : un tuyau
-  // planté au milieu du passage, on lui rentre dedans.
-  const pipeX = backX - 0.28;
+  // Abscisses partagées par tout le fichier.
+  //
+  // Sur un îlot — vingt-neuf gares sur trente — il n'y a pas de mur de fond :
+  // l'ossature est une épine centrale, et tout ce qui s'y accroche doit tenir
+  // DANS l'emprise du poteau, sinon on lui rentre dedans en passant. D'où la
+  // descente d'eau plaquée sur la face du pilier, et les coffrets vissés
+  // dessus plutôt que sur un mur qui n'existe pas.
+  const columnX = backX - 0.55;
+  const pipeX = columnX + 0.15;
   const trayX = backX - 0.95;
   const speakerX = PSD_X + depth * 0.28;
-  const wallFaceX = backX - 0.1;
+  /** Face du pilier tournée vers la voie : c'est là que se lisent les coffrets. */
+  const postFaceX = columnX - 0.15;
 
   // --- Textures et matériaux propres à la trousse ---------------------
   // Les repères de voiture sont onze visuels distincts : ils ne s'instancient
@@ -176,14 +182,14 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
     [kit.cameras, backX, canopyY],
   );
 
-  // Coffrets d'extincteur, plaqués au fond du quai.
+  // Coffrets d'extincteur, vissés sur la face avant d'un pilier.
   const extBoxes = useMemo(
-    () => kit.extinguishers.map((z) => mat(wallFaceX - 0.08, PLATFORM_TOP + 0.95, z, 0.17, 0.78, 0.32)),
-    [kit.extinguishers, wallFaceX],
+    () => kit.extinguishers.map((z) => mat(postFaceX - 0.07, PLATFORM_TOP + 0.95, z, 0.15, 0.78, 0.3)),
+    [kit.extinguishers, postFaceX],
   );
   const extFaces = useMemo(
-    () => kit.extinguishers.map((z) => matFacingTrack(wallFaceX - 0.17, PLATFORM_TOP + 0.95, z, 0.3, 0.74)),
-    [kit.extinguishers, wallFaceX],
+    () => kit.extinguishers.map((z) => matFacingTrack(postFaceX - 0.145, PLATFORM_TOP + 0.95, z, 0.28, 0.74)),
+    [kit.extinguishers, postFaceX],
   );
 
   // Boutons d'arrêt d'urgence, tournés vers le quai : on doit les voir en
@@ -423,14 +429,15 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
             <planeGeometry args={[1, 1]} />
           </instancedMesh>
 
-          {/* Téléphone ferroviaire : il n'y en a qu'un, il ne s'instancie pas. */}
+          {/* Téléphone ferroviaire : il n'y en a qu'un, sur un pilier lui aussi,
+              et il ne s'instancie pas. */}
           {kit.phone !== null && (
-            <group position={[wallFaceX, PLATFORM_TOP + 1.32, kit.phone]}>
+            <group position={[postFaceX, PLATFORM_TOP + 1.32, kit.phone]}>
               <mesh position={[-0.07, 0, 0]} material={m.frame}>
-                <boxGeometry args={[0.16, 0.62, 0.46]} />
+                <boxGeometry args={[0.15, 0.62, 0.44]} />
               </mesh>
-              <mesh position={[-0.155, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={mats.phone}>
-                <planeGeometry args={[0.42, 0.56]} />
+              <mesh position={[-0.148, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={mats.phone}>
+                <planeGeometry args={[0.4, 0.56]} />
               </mesh>
             </group>
           )}

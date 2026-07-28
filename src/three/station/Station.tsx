@@ -1,9 +1,14 @@
-// La gare : quai praticable de 224 m, décliné en cinq typologies.
+// La gare : quai praticable de 224 m, un gabarit par gare.
 //
 // Remplace l'ancien Platform.tsx, qui décrivait un quai unique de 96 m pensé
 // pour n'être vu que par les vitres. Maintenant qu'on y marche, il faut sa
 // vraie longueur (onze voitures de 20 m), de quoi occuper les yeux d'un bout à
 // l'autre, et une gare de viaduc qui ne ressemble pas à une gare en tranchée.
+//
+// Le quai est un ÎLOT dans vingt-neuf cas sur trente : deux bords
+// d'embarquement, l'ossature au milieu, et derrière soi non pas un mur mais une
+// voie puis un autre quai. Harajuku seul est un quai latéral, avec un vrai mur
+// de fond. Voir FarEdge et FarSide en fin de fichier.
 //
 // Construit côté +x puis retourné d'un demi-tour selon le côté d'ouverture, et
 // glissant le long de la voie — comme avant. Tout ce qui se répète (murets de
@@ -169,6 +174,13 @@ type Mats = ReturnType<typeof makeStationMaterials>;
 
 /** Recul du panneau de limite derrière la limite de marche réelle (m). */
 const BARRIER_STANDOFF = 0.35;
+
+/** De l'axe d'une voie au bord du quai qu'elle dessert : la cote du bord près. */
+const TRACK_HALF = PSD_X;
+/** Écartement des rails, ramené au repère du jeu. */
+const GAUGE_HALF = 0.7175;
+/** Profondeur du quai d'en face : on n'en voit que la tranche. */
+const OPP_DEPTH = 4.2;
 
 export function Station() {
   const doorSide = useStore((s) => s.doorSide);
@@ -445,8 +457,17 @@ export function Station() {
         </>
       )}
 
-      {/* --- Fond de quai selon la typologie --- */}
-      <Backdrop layout={layout} backX={backX} wallH={wallH} m={m} />
+      {/* --- Le bord d'en face, sur notre propre quai -------------------
+          Vingt-neuf des trente gares sont des îlots : ce qu'on a dans le dos
+          n'est pas un mur, c'est un SECOND BORD D'EMBARQUEMENT. Il reçoit donc
+          exactement le même traitement que celui-ci — liseré, bande
+          podotactile, muret de portes palières — mais retourné. */}
+      {place.farEdgeX !== null && (
+        <FarEdge farX={place.farEdgeX} len={layout.length} tactileW={tactileW} hasPsd={hasPsd} m={m} />
+      )}
+
+      {/* --- Ce qu'on voit au-delà : voie, quai d'en face, clôture --- */}
+      <FarSide layout={layout} place={place} wallH={wallH} m={m} />
 
       {/* --- Auvent, poutres, piliers, néons --- */}
       <mesh position={[PSD_X + depth / 2, canopyY + 0.07, 0]} material={m.canopy} receiveShadow>
@@ -534,7 +555,7 @@ export function Station() {
 
       {/* Charpente propre aux trois gares signature. */}
       {layout.signature && detail === 0 && (
-        <Signature layout={layout} backX={backX} materials={m} />
+        <Signature layout={layout} place={place} materials={m} />
       )}
 
       <PlatformSignage
@@ -550,82 +571,190 @@ export function Station() {
   );
 }
 
-/** Fond du quai : ce qu'on a derrière soi quand on regarde la voie. */
-function Backdrop({
+/**
+ * Le bord d'embarquement d'en face, sur un quai en îlot.
+ *
+ * Même dessin qu'au bord près, retourné : liseré caoutchouc, ligne blanche,
+ * bande podotactile et muret de portes palières. Les vantaux, eux, ne sont pas
+ * animés — aucune rame ne s'y présente, et à huit mètres un portique fermé se
+ * lit comme un muret continu.
+ */
+function FarEdge({
+  farX,
+  len,
+  tactileW,
+  hasPsd,
+  m,
+}: {
+  farX: number;
+  len: number;
+  tactileW: number;
+  hasPsd: boolean;
+  m: Mats;
+}) {
+  return (
+    <group>
+      <mesh position={[farX - 0.12, PLATFORM_TOP + 0.01, 0]} material={m.rubber}>
+        <boxGeometry args={[0.16, 0.04, len]} />
+      </mesh>
+      <mesh position={[farX - 0.24, PLATFORM_TOP + 0.006, 0]} material={m.edge}>
+        <boxGeometry args={[0.12, 0.012, len]} />
+      </mesh>
+      <mesh
+        position={[farX - 0.29 - tactileW / 2, PLATFORM_TOP + 0.008, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={m.tactile}
+      >
+        <planeGeometry args={[tactileW, len]} />
+      </mesh>
+      {hasPsd && (
+        <>
+          <mesh position={[farX - 0.05, PLATFORM_TOP + PSD_H / 2, 0]} material={m.psd}>
+            <boxGeometry args={[0.1, PSD_H, len]} />
+          </mesh>
+          <mesh position={[farX - 0.11, PLATFORM_TOP + PSD_H * 0.72, 0]} material={m.glass}>
+            <boxGeometry args={[0.02, PSD_H * 0.42, len - 0.4]} />
+          </mesh>
+          <mesh position={[farX - 0.045, PLATFORM_TOP + PSD_H - 0.07, 0]} material={m.accent}>
+            <boxGeometry args={[0.12, 0.1, len]} />
+          </mesh>
+        </>
+      )}
+    </group>
+  );
+}
+
+/**
+ * Ce qu'on a derrière soi quand on regarde la voie.
+ *
+ * Jusqu'ici, quatre familles de rendu abstraites — mur, garde-corps, paroi de
+ * tranchée, « deuxième voie » — dont vingt-neuf gares tiraient à peu près le
+ * même fond gris. La vérité est ailleurs : la Yamanote n'a qu'UN quai latéral
+ * sur toute la boucle, Harajuku. Partout ailleurs on est sur un îlot, et
+ * derrière soi il y a une voie, puis un autre quai.
+ *
+ * Laquelle change tout : à Tokyo, Ueno ou Yūrakuchō c'est la Keihin-Tōhoku qui
+ * passe là, sur un quai qu'on partage avec elle ; à Kanda ou Mejiro c'est la
+ * Yamanote elle-même, en sens inverse ; à Ikebukuro et Ōsaki c'est une
+ * deuxième paire de voies Yamanote, celles des départs et des terminus.
+ */
+function FarSide({
   layout,
-  backX,
+  place,
   wallH,
   m,
 }: {
   layout: ReturnType<typeof layoutFor>;
-  backX: number;
+  place: ReturnType<typeof placementFor>;
   wallH: number;
   m: Mats;
 }) {
   const len = layout.length;
-  if (layout.backdrop === 'parapet') {
-    // Viaduc : garde-corps ajouré, la ville se voit par-dessus.
-    return (
-      <group>
-        <mesh position={[backX, PLATFORM_TOP + 0.6, 0]} material={m.wall}>
-          <boxGeometry args={[0.18, 1.2, len]} />
-        </mesh>
-        <mesh position={[backX, PLATFORM_TOP + 1.24, 0]} material={m.metal}>
-          <boxGeometry args={[0.1, 0.08, len]} />
-        </mesh>
-        <mesh position={[backX, PLATFORM_TOP + 1.9, 0]} material={m.metal}>
-          <boxGeometry args={[0.08, 0.06, len]} />
-        </mesh>
-      </group>
-    );
-  }
-  if (layout.backdrop === 'retaining') {
-    // Tranchée : la paroi monte au-delà de l'auvent.
+  const far = place.farEdgeX;
+
+  // Harajuku : le seul quai latéral de la boucle. Un vrai mur, un vrai
+  // soubassement carrelé, et rien à voir au-delà.
+  if (far === null) {
+    const backX = place.backX;
     return (
       <group>
         <mesh position={[backX, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
-          <boxGeometry args={[0.22, wallH, len]} />
+          <boxGeometry args={[0.18, wallH, len]} />
         </mesh>
-        <Wainscot backX={backX - 0.11} len={len} m={m} />
-        <mesh position={[backX + 0.1, PLATFORM_TOP + wallH + 1.6, 0]} material={m.wallDark}>
-          <boxGeometry args={[0.4, 3.2, len]} />
+        <Wainscot backX={backX - 0.09} len={len} m={m} />
+        <mesh position={[backX - 0.02, PLATFORM_TOP + wallH - 0.6, 0]} material={m.wallDark}>
+          <boxGeometry args={[0.2, 0.35, len]} />
         </mesh>
-      </group>
-    );
-  }
-  if (layout.backdrop === 'secondTrack') {
-    // Îlot : la deuxième voie et le quai d'en face, en fond.
-    return (
-      <group>
-        <mesh position={[backX, PLATFORM_TOP + 0.62, 0]} material={m.wall}>
-          <boxGeometry args={[0.2, 1.24, len]} />
-        </mesh>
-        {/* Voie opposée : ballast sombre puis quai d'en face. */}
-        <mesh position={[backX + 2.6, PLATFORM_TOP - 1.05, 0]} material={m.liner}>
-          <boxGeometry args={[5, 0.3, len]} />
-        </mesh>
-        <mesh position={[backX + 6.2, PLATFORM_TOP - 0.24, 0]} material={m.slab}>
-          <boxGeometry args={[4.4, 0.44, len]} />
-        </mesh>
-        <mesh position={[backX + 8.3, PLATFORM_TOP + 1.7, 0]} material={m.wall}>
-          <boxGeometry args={[0.24, 3.5, len]} />
+        <mesh position={[backX - 0.03, PLATFORM_TOP + wallH - 0.92, 0]} material={m.accent}>
+          <boxGeometry args={[0.08, 0.1, len]} />
         </mesh>
       </group>
     );
   }
-  // Mur plein, jusqu'à la sous-face de l'auvent.
+
+  const trackX = far + TRACK_HALF;
+  const oppEdge = far + 2 * TRACK_HALF;
+  const oppBack = oppEdge + OPP_DEPTH;
+  const hasPsd = layout.psd !== 'none';
+  // À Ikebukuro et Ōsaki, la voie d'en face est la voie SECONDAIRE : celle qui
+  // n'a pas encore ses portes. C'est précisément là que ça se voit.
+  const oppPsd = hasPsd && layout.psd !== 'partial';
+
   return (
     <group>
-      <mesh position={[backX, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
-        <boxGeometry args={[0.18, wallH, len]} />
+      {/* Joue de rive du bord d'en face. */}
+      <mesh position={[far - 0.03, PLATFORM_TOP - SLAB_H - 0.32, 0]} material={m.wallDark}>
+        <boxGeometry args={[0.07, 0.66, len]} />
       </mesh>
-      <Wainscot backX={backX - 0.09} len={len} m={m} />
-      <mesh position={[backX - 0.02, PLATFORM_TOP + wallH - 0.6, 0]} material={m.wallDark}>
-        <boxGeometry args={[0.2, 0.35, len]} />
+
+      {/* La voie : ballast et deux files de rails. */}
+      <mesh position={[trackX, PLATFORM_TOP - SLAB_H - 0.86, 0]} material={m.liner}>
+        <boxGeometry args={[TRACK_HALF * 2, 0.42, len]} />
       </mesh>
-      <mesh position={[backX - 0.03, PLATFORM_TOP + wallH - 0.92, 0]} material={m.accent}>
-        <boxGeometry args={[0.08, 0.1, len]} />
+      {[-1, 1].map((d) => (
+        <mesh key={d} position={[trackX + d * GAUGE_HALF, -1.11, 0]} material={m.metal}>
+          <boxGeometry args={[0.08, 0.16, len]} />
+        </mesh>
+      ))}
+
+      {/* Le quai d'en face : dalle, joue, muret de portes, auvent. */}
+      <mesh
+        position={[(oppEdge + oppBack) / 2, PLATFORM_TOP - SLAB_H / 2, 0]}
+        material={m.slab}
+      >
+        <boxGeometry args={[OPP_DEPTH, SLAB_H, len]} />
       </mesh>
+      <mesh position={[oppEdge + 0.03, PLATFORM_TOP - SLAB_H - 0.32, 0]} material={m.wallDark}>
+        <boxGeometry args={[0.07, 0.66, len]} />
+      </mesh>
+      {oppPsd && (
+        <>
+          <mesh position={[oppEdge + 0.05, PLATFORM_TOP + PSD_H / 2, 0]} material={m.psd}>
+            <boxGeometry args={[0.1, PSD_H, len]} />
+          </mesh>
+          <mesh position={[oppEdge + 0.045, PLATFORM_TOP + PSD_H - 0.07, 0]} material={m.accent}>
+            <boxGeometry args={[0.12, 0.1, len]} />
+          </mesh>
+        </>
+      )}
+      <mesh position={[(oppEdge + oppBack) / 2, layout.canopyY + 0.07, 0]} material={m.canopy}>
+        <boxGeometry args={[OPP_DEPTH + 0.4, 0.14, len]} />
+      </mesh>
+
+      {/* Ce qui ferme la travée, selon le niveau où court la voie. */}
+      {layout.elevation === 'trench' ? (
+        // Tranchée : la paroi de soutènement monte bien au-delà de l'auvent.
+        <group>
+          <mesh position={[oppBack, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
+            <boxGeometry args={[0.24, wallH, len]} />
+          </mesh>
+          <Wainscot backX={oppBack - 0.13} len={len} m={m} />
+          <mesh position={[oppBack + 0.12, PLATFORM_TOP + wallH + 1.7, 0]} material={m.wallDark}>
+            <boxGeometry args={[0.42, 3.4, len]} />
+          </mesh>
+        </group>
+      ) : layout.elevation === 'elevated' ? (
+        // Viaduc : garde-corps ajouré, la ville se voit par-dessus.
+        <group>
+          <mesh position={[oppBack, PLATFORM_TOP + 0.6, 0]} material={m.wall}>
+            <boxGeometry args={[0.18, 1.2, len]} />
+          </mesh>
+          <mesh position={[oppBack, PLATFORM_TOP + 1.24, 0]} material={m.metal}>
+            <boxGeometry args={[0.1, 0.08, len]} />
+          </mesh>
+          <mesh position={[oppBack, PLATFORM_TOP + 1.9, 0]} material={m.metal}>
+            <boxGeometry args={[0.08, 0.06, len]} />
+          </mesh>
+        </group>
+      ) : (
+        // Au sol : un mur de fond ordinaire, avec sa faïence.
+        <group>
+          <mesh position={[oppBack, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
+            <boxGeometry args={[0.2, wallH, len]} />
+          </mesh>
+          <Wainscot backX={oppBack - 0.11} len={len} m={m} />
+        </group>
+      )}
     </group>
   );
 }

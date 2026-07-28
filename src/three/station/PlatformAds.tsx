@@ -32,12 +32,13 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
   const midX = PSD_X + layout.depth * 0.55;
 
   /**
-   * Y a-t-il un vrai mur derrière ? Sinon (viaduc, quai en îlot) le fond n'est
-   * qu'un garde-corps d'un mètre vingt : les caissons s'y posent DESSUS, sur
-   * pieds, au lieu d'être encastrés — c'est exactement ce qu'on voit sur les
-   * quais aériens de la boucle.
+   * Y a-t-il un vrai mur derrière ? Seulement à Harajuku, le quai latéral de la
+   * boucle : le caisson s'y encastre. Partout ailleurs on est sur un îlot, et
+   * les caissons se dressent sur pieds au milieu, DOS À DOS — c'est la façon
+   * dont un îlot japonais se meuble, et ce qui fait qu'on ne voit jamais l'autre
+   * bord en enfilade.
    */
-  const onWall = layout.backdrop === 'wall' || layout.backdrop === 'retaining';
+  const onWall = place.hasBackWall;
 
   // --- Caissons du fond de quai --------------------------------------
   const wallAds = useMemo(() => {
@@ -113,12 +114,13 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
           <mesh position={[-0.055, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={stationAd(station, i)}>
             <planeGeometry args={[2.0, 1.2]} />
           </mesh>
-          {/* Sans mur derrière : deux pieds qui prennent appui sur le
-              garde-corps, et un dos plein pour ne pas voir au travers. */}
+          {/* Sans mur derrière : le caisson est un totem à deux faces, planté
+              sur l'épine centrale, et il porte donc une affiche de CHAQUE côté —
+              celle du bord d'en face n'est pas la nôtre. Deux pieds le tiennent. */}
           {!onWall && (
             <>
-              <mesh position={[0.052, 0, 0]} rotation={[0, Math.PI / 2, 0]} material={p.housing}>
-                <planeGeometry args={[2.16, 1.36]} />
+              <mesh position={[0.055, 0, 0]} rotation={[0, Math.PI / 2, 0]} material={stationAd(station, i + 9)}>
+                <planeGeometry args={[2.0, 1.2]} />
               </mesh>
               {[-1, 1].map((d) => (
                 <mesh key={d} position={[0.02, -1.06, d * 0.9]} material={p.frame}>
@@ -130,7 +132,8 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
         </group>
       ))}
 
-      {/* Colonnes habillées : un bandeau vertical côté voie. */}
+      {/* Colonnes habillées : un bandeau vertical côté voie, et un second côté
+          d'en face quand la colonne se dresse au milieu d'un îlot. */}
       {columnAds.map(({ z, i }) => (
         <group key={`ca${z}`} position={[backX - 0.71, PLATFORM_TOP + 1.55, z]}>
           <mesh position={[0.015, 0, 0]} material={p.housing}>
@@ -139,6 +142,15 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
           <mesh position={[-0.006, 0, 0]} rotation={[0, -Math.PI / 2, 0]} material={stationAd(station, i, true)}>
             <planeGeometry args={[0.27, 1.1]} />
           </mesh>
+          {!onWall && (
+            <mesh
+              position={[0.336, 0, 0]}
+              rotation={[0, Math.PI / 2, 0]}
+              material={stationAd(station, i + 5, true)}
+            >
+              <planeGeometry args={[0.27, 1.1]} />
+            </mesh>
+          )}
         </group>
       ))}
 

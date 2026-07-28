@@ -9,10 +9,11 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
 import type { StationLayout } from '../../data/stationLayouts';
+import type { StationPlacement } from '../../systems/stationPlacement';
 
 interface Props {
   layout: StationLayout;
-  backX: number;
+  place: StationPlacement;
   materials: {
     beam: THREE.Material;
     column: THREE.Material;
@@ -32,10 +33,14 @@ function bays(length: number, spacing: number): number[] {
   return out;
 }
 
-export function Signature({ layout, backX, materials: m }: Props) {
+export function Signature({ layout, place, materials: m }: Props) {
   const depth = layout.depth;
   const midX = PSD_X + depth / 2;
   const top = layout.canopyY;
+  // Bord extérieur du quai : le mur de fond à Harajuku, le second bord
+  // d'embarquement partout ailleurs. Une charpente prend appui là, pas sur
+  // l'épine centrale où s'alignent les bancs.
+  const outerX = place.farEdgeX ?? place.backX;
 
   const trussZ = useMemo(() => bays(layout.length, 16), [layout.length]);
   const ribZ = useMemo(() => bays(layout.length, 12), [layout.length]);
@@ -65,20 +70,18 @@ export function Signature({ layout, backX, materials: m }: Props) {
                 <boxGeometry args={[0.1, 1.5, 0.2]} />
               </mesh>
             ))}
-            {/* Colonnes rivetées jusqu'au sol. */}
-            {[PSD_X + 0.5, backX - 0.5].map((x) => (
+            {/* Colonnes rivetées jusqu'au sol, une par bord de quai. */}
+            {[PSD_X + 0.5, outerX - 0.5].map((x) => (
               <mesh key={x} position={[x, PLATFORM_TOP + (top - PLATFORM_TOP) / 2, 0]} material={m.column}>
                 <boxGeometry args={[0.4, top - PLATFORM_TOP, 0.4]} />
               </mesh>
             ))}
           </group>
         ))}
-        {/* Pilastres de brique le long du mur de fond. */}
-        {ribZ.map((z) => (
-          <mesh key={`b${z}`} position={[backX - 0.22, PLATFORM_TOP + 1.9, z]} material={m.wall}>
-            <boxGeometry args={[0.28, 3.8, 1.1]} />
-          </mesh>
-        ))}
+        {/* Les pilastres de brique de la halle Marunouchi tenaient sur un mur
+            de fond que Tokyo n'a pas : la Yamanote y est sur un îlot partagé
+            avec la Keihin-Tōhoku. Ils reviendront sur les vraies parois de la
+            halle, avec le reste de la charpente. */}
       </group>
     );
   }
@@ -152,7 +155,7 @@ export function Signature({ layout, backX, materials: m }: Props) {
       <mesh position={[PSD_X + 0.9, top - 0.14, 0]} material={m.lamp}>
         <boxGeometry args={[0.5, 0.07, layout.length - 8]} />
       </mesh>
-      <mesh position={[backX - 1.4, top - 0.14, 0]} material={m.lamp}>
+      <mesh position={[outerX - 1.4, top - 0.14, 0]} material={m.lamp}>
         <boxGeometry args={[0.5, 0.07, layout.length - 8]} />
       </mesh>
     </group>

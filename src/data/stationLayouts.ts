@@ -21,9 +21,11 @@
 //                       partagée, deuxième voie Yamanote, quai latéral) ;
 //   - `signature`     : le caractère architectural, quand il ne se paramètre pas.
 //
-// `backdrop` reste, lui, la FAMILLE DE RENDU que three/station sait dessiner
-// aujourd'hui. `config` dit la vérité ; le fond de quai réel (rame Keihin-Tōhoku
-// qui passe, quai d'en face, second îlot) viendra la consommer.
+// Le fond de quai découle désormais de ces deux premiers axes, et de rien
+// d'autre : `config` dit ce qu'on a dans le dos — une voie Keihin-Tōhoku, la
+// voie Yamanote opposée, un mur — et `elevation` dit ce qu'on voit au-delà.
+// Le champ `backdrop`, qui nommait une famille de rendu au lieu d'un fait, a
+// disparu : c'était lui qui donnait à vingt-neuf quais le même mur.
 
 import { PLATFORM_DEPTH } from './stationGeometry';
 
@@ -65,16 +67,6 @@ export type CanopyStyle =
   | 'glass'
   /** Charpente de halle, très haute. */
   | 'truss';
-
-export type Backdrop =
-  /** Mur plein jusqu'à l'auvent. */
-  | 'wall'
-  /** Deuxième voie et son quai d'en face. */
-  | 'secondTrack'
-  /** Garde-corps ajouré : on voit la ville par-dessus. */
-  | 'parapet'
-  /** Mur de soutènement de tranchée, plus haut que l'auvent. */
-  | 'retaining';
 
 /**
  * Gares dont le caractère ne se paramètre pas et reçoivent une charpente à
@@ -162,7 +154,6 @@ export interface StationLayout {
   canopyY: number;
   /** Entraxe des piliers (m). */
   columnSpacing: number;
-  backdrop: Backdrop;
   palette: StationPalette;
   amenities: StationAmenities;
   /** Densité de foule relative (1 = gare ordinaire). */
@@ -292,7 +283,6 @@ const FAMILY: Record<
     canopy: CanopyStyle;
     canopyY: number;
     columnSpacing: number;
-    backdrop: Backdrop;
     palette: PaletteKey;
   }
 > = {
@@ -301,7 +291,6 @@ const FAMILY: Record<
     canopy: 'steel',
     canopyY: 4.1,
     columnSpacing: 12,
-    backdrop: 'secondTrack',
     palette: 'standard',
   },
   elevated: {
@@ -309,7 +298,6 @@ const FAMILY: Record<
     canopy: 'steel',
     canopyY: 3.9,
     columnSpacing: 11,
-    backdrop: 'parapet',
     palette: 'viaduct',
   },
   trench: {
@@ -317,7 +305,6 @@ const FAMILY: Record<
     canopy: 'slab',
     canopyY: 3.3,
     columnSpacing: 9,
-    backdrop: 'retaining',
     palette: 'trench',
   },
 };
@@ -340,7 +327,6 @@ interface Spec {
   canopy?: CanopyStyle;
   canopyY?: number;
   columnSpacing?: number;
-  backdrop?: Backdrop;
   palette?: PaletteKey;
   /** Force la présence d'un kiosque, sinon déduite de l'affluence. */
   kiosk?: boolean;
@@ -377,7 +363,6 @@ const SPECS: readonly Spec[] = [
     // Sous la grande dalle de la halle (6,30 m) : l'auvent de quai reste dessous.
     canopyY: 5.5,
     columnSpacing: 16,
-    backdrop: 'secondTrack',
     palette: 'tokyo',
   },
   {
@@ -436,7 +421,6 @@ const SPECS: readonly Spec[] = [
     canopy: 'truss',
     canopyY: 5.2,
     columnSpacing: 14,
-    backdrop: 'secondTrack',
     palette: 'hub',
   },
   {
@@ -630,7 +614,6 @@ const SPECS: readonly Spec[] = [
     depth: PLATFORM_DEPTH + 0.8,
     canopy: 'glass',
     canopyY: 4.6,
-    backdrop: 'wall',
     palette: 'harajuku',
   },
   {
@@ -650,7 +633,6 @@ const SPECS: readonly Spec[] = [
     canopy: 'glass',
     canopyY: 6.2,
     columnSpacing: 15,
-    backdrop: 'secondTrack',
     palette: 'shibuya',
   },
   {
@@ -840,7 +822,6 @@ function build(spec: Spec): StationLayout {
     canopy: spec.canopy ?? f.canopy,
     canopyY: spec.canopyY ?? f.canopyY,
     columnSpacing: spec.columnSpacing ?? f.columnSpacing,
-    backdrop: spec.backdrop ?? f.backdrop,
     palette: PALETTES[spec.palette ?? f.palette],
     // Un kiosque de quai ne tient que là où il y a du monde pour le faire vivre.
     amenities: amenities(spec.crowd, spec.kiosk ?? spec.crowd >= 1.4, spec.clock ?? true),

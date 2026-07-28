@@ -78,9 +78,11 @@ export function OverheadSigns({ place, layout, station }: Props) {
     return spots.sort((a, b) => a.z - b.z);
   }, [place.stairs, place.escalators]);
 
-  // Largeur utile : du bord du quai au mur du fond, moins les abouts.
+  // Largeur utile : d'un bord de quai à l'autre, moins les abouts. Sur un îlot
+  // la potence enjambe les DEUX bords — calée sur l'épine centrale, elle n'en
+  // couvrait que la moitié et les panneaux se retrouvaient tous du même côté.
   const x0 = PSD_X + 0.75;
-  const x1 = place.backX - 0.75;
+  const x1 = (place.farEdgeX ?? place.backX) - 0.75;
   const span = Math.max(2.4, x1 - x0);
   const midX = (x0 + x1) / 2;
   // Panneau de sortie côté voie, correspondances côté fond : c'est l'ordre de

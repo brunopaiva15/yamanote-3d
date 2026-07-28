@@ -39,7 +39,7 @@ export interface StationKit {
   speakers: number[];
   /** Caméras de surveillance, sur un pilier sur trois. */
   cameras: number[];
-  /** Coffrets d'extincteur, plaqués au fond du quai. */
+  /** Coffrets d'extincteur, vissés sur un pilier sur quatre. */
   extinguishers: number[];
   /** Boutons d'arrêt d'urgence, écartés des baies de portes. */
   emergencyStops: number[];
@@ -52,7 +52,7 @@ export interface StationKit {
   emergencyStopX: number;
   /** Miroirs de départ suspendus, au droit des cabines de conduite. */
   mirrors: number[];
-  /** Téléphone ferroviaire. */
+  /** Téléphone ferroviaire, sur un pilier lui aussi. */
   phone: number | null;
   /** Descentes d'eau pluviale, un pilier sur deux. */
   downpipes: number[];
@@ -62,8 +62,22 @@ export interface StationKit {
 
 export interface StationPlacement {
   layout: StationLayout;
-  /** Abscisse du nu intérieur du mur de fond. */
+  /**
+   * Abscisse de l'ossature du quai : ce à quoi tout s'adosse.
+   *
+   * Sur un quai latéral (Harajuku, seul cas de la boucle) c'est le nu intérieur
+   * du mur de fond. Sur les vingt-neuf autres — des îlots — il n'y a AUCUN mur :
+   * c'est l'épine centrale, entre les deux bords d'embarquement, celle où
+   * s'alignent piliers, bancs, distributeurs et caissons publicitaires.
+   *
+   * Les deux cas se nomment pareil à dessein : tout ce qui se pose « au fond »
+   * se pose sur l'épine, sans avoir à savoir lequel des deux il a devant lui.
+   */
   backX: number;
+  /** Y a-t-il vraiment un mur derrière ? Harajuku seulement. */
+  hasBackWall: boolean;
+  /** Bord de quai opposé, sur un îlot ; null sur un quai latéral. */
+  farEdgeX: number | null;
   /** Bornes de marche du joueur et de la foule. */
   walkX0: number;
   walkX1: number;
@@ -180,13 +194,23 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   if (hit) return hit;
 
   const layout = layoutFor(i);
-  const backX = PSD_X + layout.depth - 0.15;
   const halfZ = layout.length / 2;
   const usable = halfZ - 3;
 
-  // Le mobilier s'adosse au fond du quai, la circulation reste devant.
+  // Quai latéral : un mur de fond, et la circulation devant. Îlot : deux bords
+  // d'embarquement, et toute l'ossature ramenée au milieu. `depth` est la
+  // largeur du quai dans les deux cas — de bord à mur, ou de bord à bord.
+  const hasBackWall = layout.config === 'side';
+  const farEdgeX = hasBackWall ? null : PSD_X + layout.depth;
+  const backX = hasBackWall ? PSD_X + layout.depth - 0.15 : PSD_X + layout.depth / 2;
+
+  // Le mobilier s'adosse à l'ossature, la circulation reste devant.
   const wallX = backX - 0.85;
-  const midX = PSD_X + layout.depth * 0.55;
+  // Trémies et escaliers mécaniques : au tiers du quai contre un mur de fond,
+  // mais PILE SUR L'ÉPINE sur un îlot — c'est la seule position qui laisse
+  // passer des deux côtés. Décentrés, ils étranglaient le bord près à moins de
+  // cinquante centimètres sur les quais étroits.
+  const midX = hasBackWall ? PSD_X + layout.depth * 0.55 : backX - 0.4;
 
   const a = layout.amenities;
 
@@ -219,13 +243,16 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   // reporté plutôt que planté au milieu de la cage.
   const columns: number[] = [];
   for (let z = -usable; z <= usable; z += layout.columnSpacing) {
-    const post = { x: backX - 0.55, z, halfX: 0.26, halfZ: 0.26 };
+    // L'emprise est un peu plus large que le poteau : il porte des coffrets,
+    // des caissons publicitaires et une descente d'eau, et rien de tout cela ne
+    // doit dépasser de ce qu'on contourne.
+    const post = { x: backX - 0.55, z, halfX: 0.34, halfZ: 0.34 };
     if (structure.some((s) => hits(post, s))) continue;
     columns.push(z);
   }
 
   const taken: Placed[] = [
-    ...columns.map((z) => ({ x: backX - 0.55, z, halfX: 0.26, halfZ: 0.26 })),
+    ...columns.map((z) => ({ x: backX - 0.55, z, halfX: 0.34, halfZ: 0.34 })),
     ...structure,
   ];
 
@@ -275,6 +302,9 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   // Un diffuseur affleure la sous-face de l'auvent : au droit d'un pilier, il
   // disparaîtrait dans la poutre transversale — exactement le défaut que les
   // néons ont déjà eu. Il s'écarte donc du poteau le plus proche.
+  const nearestColumn = (z: number): number =>
+    columns.reduce((best, c) => (Math.abs(z - c) < Math.abs(z - best) ? c : best), columns[0]);
+
   const offPost = (z: number): number => {
     let near = Infinity;
     for (const c of columns) if (Math.abs(z - c) < Math.abs(z - near)) near = c;
@@ -285,7 +315,10 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   const kit: StationKit = {
     speakers: every(19, usable, 4.1).map(offPost),
     cameras: columns.filter((_, k) => k % 3 === 1),
-    extinguishers: spread(5, usable, -2.4),
+    // Extincteur et téléphone se vissent sur un poteau. Le mur de fond ne
+    // portait qu'à Harajuku : partout ailleurs, l'îlot n'en a pas et ils
+    // seraient restés suspendus au milieu du quai, le dos à l'air.
+    extinguishers: columns.filter((_, k) => k % 4 === 2),
     emergencyStops: [
       -usable + 1.5,
       usable - 1.5,
@@ -296,7 +329,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
       .sort((p, q) => p - q),
     emergencyStopX,
     mirrors: [-halfConsist - 1.2, halfConsist + 1.2],
-    phone: usable * 0.24,
+    phone: columns.length ? nearestColumn(usable * 0.24) : null,
     downpipes: columns.filter((_, k) => k % 2 === 0),
     carMarks: Array.from({ length: CONSIST.length }, (_, k) => ({
       z: (k - (CONSIST.length - 1) / 2) * E235.pitch,
@@ -319,9 +352,13 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   const placement: StationPlacement = {
     layout,
     backX,
-    // Le joueur marche du liseré blanc jusqu'à 35 cm du mur de fond.
+    hasBackWall,
+    farEdgeX,
+    // Le joueur marche du liseré blanc jusqu'à 35 cm du mur de fond — ou, sur
+    // un îlot, jusqu'au liseré d'en face, exactement comme de ce côté-ci. Ce
+    // qui l'arrête au milieu, ce sont les obstacles de l'épine, pas une borne.
     walkX0: PSD_X + 0.2,
-    walkX1: backX - 0.35,
+    walkX1: farEdgeX === null ? backX - 0.35 : farEdgeX - 0.2,
     walkHalfZ: halfZ - 2,
     columns,
     benches,
