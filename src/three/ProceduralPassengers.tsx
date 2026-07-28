@@ -16,6 +16,7 @@ import { paxList, POOL_SIZE, initPassengers } from '../systems/passengers';
 import type { Appearance } from '../systems/appearance';
 import { runtime } from '../systems/runtime';
 import { makeFaceTexture, makeStripeTexture, makePlaidTexture } from '../textures/procedural';
+import { usesHeldPose } from './characters/props';
 
 // Repères verticaux locaux (pieds à y=0), calés sur l'ancienne silhouette.
 const HIP_Y = 0.5;
@@ -431,7 +432,7 @@ function armTarget(
   strapSide: -1 | 1,
 ): [number, number, number] {
   const seated = p.state === 'seated';
-  if (p.action === 'phone' && (seated || p.state === 'standing')) {
+  if (usesHeldPose(p.action) && (seated || p.state === 'standing')) {
     return [-0.75, s * 0.12, -1.5]; // deux mains devant le visage
   }
   if (p.state === 'standing' && p.holdStrap && s === strapSide) {
@@ -490,7 +491,7 @@ export function ProceduralPassengers() {
         p.pos.y + p.bob,
         p.pos.z,
       );
-      r.group.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway);
+      r.group.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll);
       r.group.scale.setScalar(p.height);
       if (r.lower) r.lower.visible = !seated;
       if (r.seated) r.seated.visible = seated;
@@ -517,7 +518,7 @@ export function ProceduralPassengers() {
         if (arm.elbow) arm.elbow.rotation.x += (te - arm.elbow.rotation.x) * k;
       }
       if (r.phone) {
-        r.phone.visible = p.action === 'phone' && (seated || p.state === 'standing');
+        r.phone.visible = usesHeldPose(p.action) && (seated || p.state === 'standing');
       }
     }
   });

@@ -11,6 +11,7 @@ import { makeFaceTexture } from '../textures/procedural';
 import { runtime } from '../systems/runtime';
 import { useStore } from '../store';
 import { DOOR_SIDE } from '../data/stations';
+import { usesHeldPose } from './characters/props';
 
 const PLATFORM_Y = -0.06;
 const HEAD_Y = 1.34;
@@ -194,13 +195,13 @@ export function ProceduralPlatformCrowd() {
       g.visible = true;
       // p.y : négatif dans une trémie d'escalier, où l'on descend vraiment.
       g.position.set(p.pos.x, PLATFORM_Y + p.y + p.bob, p.pos.z);
-      g.rotation.y = p.yaw;
+      g.rotation.set(p.bodyLean, p.yaw, p.bodyRoll);
       const head = g.getObjectByName('crowd-head');
       if (head) {
         head.rotation.x = p.headPitch;
         head.rotation.y = p.lookYaw * 0.5;
       }
-      const onPhone = p.action === 'phone' && p.state === 'waiting';
+      const onPhone = usesHeldPose(p.action === 'shift' ? 'none' : p.action) && p.state === 'waiting';
       const armR = g.getObjectByName('crowd-arm-r');
       if (armR) {
         armR.rotation.x = onPhone ? -1.15 : 0;

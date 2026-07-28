@@ -14,7 +14,7 @@ import { CONFIG } from '../data/config';
 import { MODELS_BASE, type CharacterManifest, type LogicalClip } from './characters/manifest';
 import { buildTemplates, cloneVariant, type CharacterClone, type CharacterTemplate } from './characters/library';
 import { applyPhoneArms, makePoseState, type PoseState } from './characters/pose';
-import { attachProps, updatePropRig, type PropRig } from './characters/props';
+import { attachProps, updatePropRig, handPropFor, usesHeldPose, type PropRig } from './characters/props';
 
 const PLATFORM_Y = -0.06;
 const FADE = 0.22;
@@ -100,7 +100,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
 
       // p.y : négatif dans une trémie d'escalier, où l'on descend vraiment.
       body.position.set(p.pos.x, PLATFORM_Y + p.y + p.bob, p.pos.z);
-      body.rotation.set(0, p.yaw, 0);
+      body.rotation.set(p.bodyLean, p.yaw, p.bodyRoll);
       body.scale.setScalar(p.height);
 
       if (s.clone.restHead && bones.head) bones.head.quaternion.copy(s.clone.restHead);
@@ -109,9 +109,10 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
         bones.head.rotation.x += p.headPitch * 0.9;
         bones.head.rotation.y += p.lookYaw * 0.45;
       }
-      const phoneActive = p.action === 'phone' && p.state === 'waiting';
+      const phoneActive = usesHeldPose(p.action === 'shift' ? 'none' : p.action) && p.state === 'waiting';
       applyPhoneArms(s.clone, s.pose, k, phoneActive);
-      updatePropRig(s.props, bones, body, true, phoneActive && s.pose.phoneW > 0.05, s.pose.phoneSide);
+      const held = phoneActive ? handPropFor(p.action === 'shift' ? 'none' : p.action) : null;
+      updatePropRig(s.props, bones, body, true, held !== null && s.pose.phoneW > 0.05 ? held : null, s.pose.phoneSide);
     }
   });
 
