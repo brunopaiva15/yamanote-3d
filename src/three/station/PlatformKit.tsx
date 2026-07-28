@@ -3,7 +3,7 @@
 // Tout ce qu'on ne remarque qu'en son absence, et qui manquait : diffuseurs de
 // la sonorisation, caméras en dôme, coffrets d'extincteur, boutons d'arrêt
 // d'urgence, armoires électriques, téléphone ferroviaire, bacs de tri,
-// descentes d'eau, gouttière, chemin de câbles, ligne verte de guidage et
+// descentes d'eau, gouttière, chemin de câbles et
 // repères de voiture peints au sol.
 //
 // Aucun de ces objets ne change d'une gare à l'autre — ce sont des modèles JR
@@ -76,7 +76,6 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   const backX = place.backX;
   const depth = layout.depth;
   const canopyY = layout.canopyY;
-  const len = layout.length;
   /** Quai sans portes : Shinjuku, Shibuya. */
   const bare = layout.psd === 'none';
 
@@ -130,13 +129,6 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
             polygonOffsetFactor: -3,
           }),
       ),
-      // Ligne verte de guidage, peinte comme les repères d'attente.
-      guide: new THREE.MeshBasicMaterial({
-        color: '#4f9b28',
-        toneMapped: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -3,
-      }),
       // Optique de caméra : noir laqué, un rien brillant.
       dome: new THREE.MeshStandardMaterial({ color: '#26292e', roughness: 0.22, metalness: 0.35 }),
       // Miroir de départ : verre sombre. Sans carte d'environnement il ne
@@ -161,7 +153,6 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
       mats.stop,
       mats.cabinet,
       mats.phone,
-      mats.guide,
       mats.dome,
       mats.mirror,
       ...mats.carMarks,
@@ -344,12 +335,6 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   return (
     <group name="trousse">
       {/* --- Toujours là : ce qui structure le quai --------------------- */}
-
-      {/* Ligne verte de guidage, dans l'axe de circulation. Avec la bande
-          podotactile du bord, c'est le couple qui dit « quai japonais ». */}
-      <mesh name="ligne-guidage" position={[PSD_X + depth * 0.55 - 0.2, PLATFORM_TOP + 0.007, 0]} material={mats.guide}>
-        <boxGeometry args={[0.11, 0.005, len - 4]} />
-      </mesh>
 
       {/* Gouttière en tête de pilier, et ses descentes.
           Elle court SOUS les poutres transversales, et s'interrompt à chaque
