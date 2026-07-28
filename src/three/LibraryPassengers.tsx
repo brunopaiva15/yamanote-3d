@@ -124,7 +124,11 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
         p.pos.y + p.bob + s.seatFix,
         p.pos.z,
       );
-      wrap.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll);
+      // YXZ : le cap d'abord, PUIS le buste dans le repère du personnage. En
+      // XYZ (l'ordre par défaut), `bodyLean` bascule autour du X du MONDE : un
+      // assis, tourné vers la vitre, penchait de côté au lieu de se pencher en
+      // avant, et un debout sur deux tombait à la renverse.
+      wrap.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll, 'YXZ');
       wrap.scale.setScalar(p.height);
 
       // --- Animation puis overrides d'os (le mixer réécrit la pose). Les os

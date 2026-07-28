@@ -23,6 +23,7 @@ import {
   standOccupant,
 } from './seats';
 import {
+  BUSY_BRIEF,
   PAX_ACTIONS,
   isPairAction,
   isFallingAction,
@@ -147,6 +148,12 @@ function makePax(id: number): Pax {
 export function initPassengers(): void {
   if (paxList.length > 0) return;
   for (let i = 0; i < POOL_SIZE; i++) paxList.push(makePax(i));
+}
+
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  // Outil dev : __pax donne l'état de chaque voyageur de la rame (posture,
+  // occupation en cours, partenaire d'échange) — pendant de __crowd.
+  (window as unknown as Record<string, unknown>).__pax = paxList;
 }
 
 // Cibles du tronçon courant, réduites par la qualité vidéo choisie.
@@ -517,8 +524,9 @@ function findPartner(p: Pax, maxDist: number): Pax | null {
     if (other.id === p.id) continue;
     if (other.state !== 'seated' && other.state !== 'standing') continue;
     if (isPairAction(other.action)) continue;
-    if (other.action === 'sneeze' || other.action === 'cough' || other.action === 'doze') continue;
-    if (isFallingAction(other.action)) continue;
+    // On n'attrape pas quelqu'un au milieu d'un geste bref (éternuement, salut,
+    // chute…) : l'échange trancherait son animation en deux.
+    if (BUSY_BRIEF.has(other.action) || other.action === 'doze') continue;
     const d = p.pos.distanceTo(other.pos);
     if (d > maxDist) continue;
     if (d < bestD) {
@@ -605,27 +613,19 @@ function reactToFall(fallen: Pax, hard: boolean): void {
     if (isPairAction(other.action) || isFallingAction(other.action)) continue;
     if (other.action === 'doze' || other.action === 'sneeze') continue;
     if (fallen.pos.distanceTo(other.pos) > radius) continue;
-    // Regard vers le malheureux, parfois un rire étouffé (solo, sans partenaire).
-    other.partner = -1;
-    other.action = hard && Math.random() < 0.35 ? 'laugh' : 'stare';
-    other.actionT = 0;
-    other.actionDur = hard ? 2.2 + Math.random() * 1.5 : 1.4 + Math.random() * 1.2;
-    other.lookYawTarget = 0;
-    // Pour stare/laugh sans partenaire : stare suit le joueur — on préfère look vers le tombé.
-    // Astuce : on utilise chat + partner ponctuel pour orienter la tête, sinon look.
+    // Regard vers le malheureux. `stare` suit le JOUEUR et `laugh` exige un
+    // partenaire : ni l'un ni l'autre ne sait viser un tiers. On oriente donc
+    // un `look` vers le tombé — une chute franche retient le regard plus
+    // longtemps, ce qui suffit à lire la gêne du wagon.
+    endPair(other);
     other.action = 'look';
-    other.lookYawTarget = (() => {
-      const world = Math.atan2(fallen.pos.x - other.pos.x, fallen.pos.z - other.pos.z);
-      let d = world - other.yaw;
-      while (d > Math.PI) d -= Math.PI * 2;
-      while (d < -Math.PI) d += Math.PI * 2;
-      return THREE.MathUtils.clamp(d, -1.15, 1.15);
-    })();
-    if (hard && Math.random() < 0.4) {
-      // Petit hochement type rire : on garde look + bob via actionT sur une durée courte,
-      // le pitch « laugh » exige un partenaire — on reste sur look goguenard.
-      other.actionDur = 2.5 + Math.random() * 1.5;
-    }
+    other.actionT = 0;
+    other.actionDur = hard ? 2.2 + Math.random() * 1.8 : 1.4 + Math.random() * 1.2;
+    const world = Math.atan2(fallen.pos.x - other.pos.x, fallen.pos.z - other.pos.z);
+    let d = world - other.yaw;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    other.lookYawTarget = THREE.MathUtils.clamp(d, -1.15, 1.15);
     if (++n >= 4) break;
   }
 }

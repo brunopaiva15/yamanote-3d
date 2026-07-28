@@ -491,7 +491,8 @@ export function ProceduralPassengers() {
         p.pos.y + p.bob,
         p.pos.z,
       );
-      r.group.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll);
+      // YXZ : cap, puis buste dans le repère du personnage (cf. LibraryPassengers).
+      r.group.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll, 'YXZ');
       r.group.scale.setScalar(p.height);
       if (r.lower) r.lower.visible = !seated;
       if (r.seated) r.seated.visible = seated;

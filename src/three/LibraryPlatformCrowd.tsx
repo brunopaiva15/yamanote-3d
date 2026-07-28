@@ -100,7 +100,9 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
 
       // p.y : négatif dans une trémie d'escalier, où l'on descend vraiment.
       body.position.set(p.pos.x, PLATFORM_Y + p.y + p.bob, p.pos.z);
-      body.rotation.set(p.bodyLean, p.yaw, p.bodyRoll);
+      // YXZ : le voyageur du quai fait face à la voie — en XYZ, son « penché
+      // en avant » l'inclinait sur le côté (cf. LibraryPassengers).
+      body.rotation.set(p.bodyLean, p.yaw, p.bodyRoll, 'YXZ');
       body.scale.setScalar(p.height);
 
       if (s.clone.restHead && bones.head) bones.head.quaternion.copy(s.clone.restHead);

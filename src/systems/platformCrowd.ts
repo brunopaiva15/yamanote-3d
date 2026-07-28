@@ -25,6 +25,7 @@ import {
   STAIR_STEPS,
 } from '../data/stationGeometry';
 import {
+  BUSY_BRIEF,
   PAX_ACTIONS,
   isPairAction,
   isFallingAction,
@@ -578,6 +579,9 @@ function findCrowdPartner(p: CrowdPax, maxDist: number): CrowdPax | null {
     if (other.state !== 'waiting') continue;
     if (other.action === 'shift') continue;
     if (isPairAction(other.action as PaxAction)) continue;
+    // Même règle qu'en rame : pas de recrutement au milieu d'une glissade ou
+    // d'un geste bref, sinon l'animation est coupée net.
+    if (BUSY_BRIEF.has(other.action as PaxAction)) continue;
     const d = p.pos.distanceTo(other.pos);
     if (d > bestD) continue;
     bestD = d;
@@ -723,9 +727,13 @@ function avoidPlayer(p: CrowdPax, dt: number, pvx: number, pvz: number): void {
   }
   if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') return;
 
+  // L'écart reste SUR LE QUAI : sans borne, insister contre quelqu'un le
+  // poussait par-dessus le nez de quai, dans la voie, ou au travers du mur
+  // de fond — un voyageur ne recule pas dans le vide pour nous laisser passer.
   const push = (PLAYER_CLEARANCE - d) / d;
-  p.pos.x += dx * push;
-  p.pos.z += dz * push;
+  const bounded = clampPos(p.pos.x + dx * push, p.pos.z + dz * push);
+  p.pos.x = bounded.x;
+  p.pos.z = bounded.z;
 
   const nx = dx / d;
   const nz = dz / d;

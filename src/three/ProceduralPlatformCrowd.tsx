@@ -195,7 +195,8 @@ export function ProceduralPlatformCrowd() {
       g.visible = true;
       // p.y : négatif dans une trémie d'escalier, où l'on descend vraiment.
       g.position.set(p.pos.x, PLATFORM_Y + p.y + p.bob, p.pos.z);
-      g.rotation.set(p.bodyLean, p.yaw, p.bodyRoll);
+      // YXZ : cap, puis buste dans le repère du personnage (cf. LibraryPassengers).
+      g.rotation.set(p.bodyLean, p.yaw, p.bodyRoll, 'YXZ');
       const head = g.getObjectByName('crowd-head');
       if (head) {
         head.rotation.x = p.headPitch;

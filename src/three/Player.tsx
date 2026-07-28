@@ -63,6 +63,10 @@ export function Player() {
   });
   const unbalance = useRef(0);
   const prevAccel = useRef(0);
+  /** Secondes de répit après un relevé : on ne rechute pas dans la foulée. */
+  const fallCooldown = useRef(0);
+  /** Coup de tête d'un faux pas : décalage de visée qui se résorbe seul. */
+  const stumbleKick = useRef(0);
 
   // Outil dev : franchir le seuil le plus proche sans avoir à y marcher —
   // la marche reste le seul moyen en jeu.
@@ -124,7 +128,16 @@ export function Player() {
       ) {
         requestLock();
       }
-      if (!wasLockedAtDown) canvas.setPointerCapture(e.pointerId);
+      // Capture de secours pour le cliquer-glisser. Elle est REFUSÉE quand une
+      // demande de verrou est déjà en vol (InvalidStateError) : sans ce filet,
+      // chaque clic de la souris lançait une exception non rattrapée.
+      if (!wasLockedAtDown) {
+        try {
+          canvas.setPointerCapture(e.pointerId);
+        } catch {
+          /* verrou de pointeur en cours : le glisser passera par window */
+        }
+      }
     };
     const onPointerMove = (e: PointerEvent) => {
       if (locked()) {
@@ -262,6 +275,10 @@ export function Player() {
     const aboard = runtime.playerFrame === 'car' ? 1 : 0;
 
     // --- Déséquilibre → chute (debout, dans la rame uniquement) ---
+    fallCooldown.current = Math.max(0, fallCooldown.current - dt);
+    // Le coup de tête d'un faux pas se résorbe : il secoue la vue, il ne
+    // déplace pas la visée du joueur.
+    stumbleKick.current *= Math.max(0, 1 - dt * 3.2);
     if (started && !seated && aboard && !fall.current.active) {
       const axes = moveAxes();
       const mag = Math.hypot(axes.x, axes.y);
@@ -284,7 +301,7 @@ export function Player() {
       if (dAccel > 0.55 && Math.abs(runtime.accel) > 0.25) {
         unbalance.current += 0.45 + dAccel * 0.4;
       }
-      if (unbalance.current > 1.05) {
+      if (unbalance.current > 1.05 && fallCooldown.current <= 0) {
         fall.current.active = true;
         fall.current.t = 0;
         fall.current.dur = 3.4 + Math.random() * 0.8;
@@ -297,7 +314,7 @@ export function Player() {
         // Mini faux pas sans aller au sol.
         paxStumble(0.5);
         unbalance.current *= 0.55;
-        pitch.current = THREE.MathUtils.clamp(pitch.current + 0.18, -1.35, 1.35);
+        stumbleKick.current = Math.min(0.22, stumbleKick.current + 0.16);
       }
     } else {
       prevAccel.current = runtime.accel;
@@ -306,15 +323,21 @@ export function Player() {
 
     let targetPos: THREE.Vector3;
     if (fall.current.active) {
-      // Pas de marche pendant la chute — on reste où on est.
+      // Pas de marche pendant la chute — on reste où on est. La descente au
+      // sol est un DÉCALAGE de caméra (fallDrop plus bas) : pos.current, lui,
+      // reste à hauteur debout. L'y écrire ici le ferait resservir de base à
+      // l'image suivante, et le décalage se cumulerait — le joueur traversait
+      // le plancher et s'enfonçait de dizaines de mètres sous la voie.
       targetPos = pos.current;
+      pos.current.y = groundY(pos.current.x, pos.current.z) + CONFIG.eyeHeight;
       fall.current.t += dt;
       if (fall.current.t >= fall.current.dur) {
         fall.current.active = false;
         runtime.playerFalling = false;
-        // Remet l'œil à hauteur debout.
-        const eye = groundY(pos.current.x, pos.current.z) + CONFIG.eyeHeight;
-        pos.current.y = eye;
+        // On se relève étourdi mais pas maudit : quelques secondes sans
+        // rechute, sinon un freinage un peu long remet au sol en boucle.
+        unbalance.current = 0;
+        fallCooldown.current = 8;
       }
     } else if (seated) {
       targetPos = seatAnchor.current;
@@ -398,13 +421,11 @@ export function Player() {
         fallRoll = side * 1.05 * (1 - u);
       }
       camera.position.y -= fallDrop;
-      // Pendant la chute on reste dans le wagon : pas de bascule de repère.
-      pos.current.y = camera.position.y;
     }
 
     camera.rotation.order = 'YXZ';
     camera.rotation.y = yaw.current;
-    camera.rotation.x = pitch.current + fallPitch;
+    camera.rotation.x = THREE.MathUtils.clamp(pitch.current + fallPitch + stumbleKick.current, -1.5, 1.5);
     camera.rotation.z =
       (runtime.sway * 0.011 - runtime.accel * 0.004) * (seated ? 0.4 : 1) * aboard + fallRoll;
 

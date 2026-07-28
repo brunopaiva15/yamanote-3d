@@ -35,10 +35,15 @@ export function handPropFor(action: PaxAction): 'phone' | 'book' | 'bottle' | 'm
   return ACTION_BY_ID.get(action)?.handProp ?? null;
 }
 
-/** Pose bras « objet tenu » (téléphone / livre / bouteille / plan). */
+/**
+ * Pose bras « objet tenu » (téléphone / livre / bouteille / plan / ticket).
+ *
+ * C'est aussi ce qui autorise l'affichage de l'objet : un `handProp` absent
+ * d'ici ne sort jamais de la main. Le ticket manquait — `ticketGlance` levait
+ * donc le regard sur un billet invisible.
+ */
 export function usesHeldPose(action: PaxAction): boolean {
-  const prop = handPropFor(action);
-  return prop === 'phone' || prop === 'book' || prop === 'bottle' || prop === 'map' || action === 'sharePhone';
+  return handPropFor(action) !== null || action === 'sharePhone';
 }
 
 // Assombrit une couleur hex — accents des sacs (sangles, rabats, poches).
