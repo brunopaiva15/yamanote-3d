@@ -15,7 +15,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
-import { segEnv, bridgeZ, BRIDGE_COUNT, WALL_MAX } from '../systems/segmentEnv';
+import { segEnv, bridgeZ, BRIDGE_COUNT, VIADUCT_RISE, WALL_MAX } from '../systems/segmentEnv';
 import { sidePush } from '../systems/stationOcclusion';
 import { SEGMENTS } from '../data/segments';
 import {
@@ -28,6 +28,7 @@ import { vehicle, type Ctx } from './landmarkKit';
 
 const PLANE_LEN = 400; // aligné sur Scenery (vue en biais vers le fond du wagon)
 const WALL_X = 6.6; // murs juste derrière les poteaux caténaires (±5.2)
+const DECK_X = 5.1; // joue du tablier, au ras de l'emprise de la voie
 const FENCE_X = 6.2;
 const FIELD_X = 9; // centre du plan de faisceau (s'étend de 4 à 14 m)
 
@@ -94,6 +95,13 @@ export function SegmentEnvironment() {
       return { root, deckG, piers };
     });
 
+    // --- Joue de tablier (viaduc) : un plan opaque par côté, qui grandit vers
+    // le bas depuis le niveau de la voie ---
+    const deckTex = makeRetainingWallTexture();
+    deckTex.repeat.set(PLANE_LEN / 30, 1);
+    const deckSideMat = new THREE.MeshBasicMaterial({ map: deckTex, fog: true, color: '#b6b2aa' });
+    deckSideMat.userData.base = deckSideMat.color.clone();
+
     // --- Faisceau de voies (corridors) : un plan au sol par côté, rails
     // dans la texture, même vitesse de défilement que le ballast ---
     const fieldTex = makeTrackFieldTexture();
@@ -157,6 +165,8 @@ export function SegmentEnvironment() {
     return {
       walls,
       capMat,
+      deckTex,
+      deckSideMat,
       bridges,
       fieldTex,
       fieldMat,
@@ -171,6 +181,7 @@ export function SegmentEnvironment() {
     };
   }, []);
 
+  const deckRefs = useRef<(THREE.Mesh | null)[]>([]);
   const wallRefs = useRef<(THREE.Mesh | null)[]>([]);
   const capRefs = useRef<(THREE.Mesh | null)[]>([]);
   const fenceRefs = useRef<(THREE.Mesh | null)[]>([]);
@@ -226,6 +237,26 @@ export function SegmentEnvironment() {
     }
     const capBase = built.capMat.userData.base as THREE.Color;
     built.capMat.color.copy(capBase).multiplyScalar(nightK);
+
+    // --- Joue de tablier : elle POUSSE VERS LE BAS depuis le niveau de la
+    // voie, plutôt que de se fondre. Un fondu d'opacité laisserait voir la rue
+    // par transparence à travers la structure qui la surplombe.
+    const viaduct01 = segEnv.w.viaduct;
+    const deckVisible = viaduct01 > 0.02;
+    const deckH = Math.max(0.01, VIADUCT_RISE * viaduct01);
+    built.deckSideMat.color
+      .copy(built.deckSideMat.userData.base as THREE.Color)
+      .multiplyScalar(nightK);
+    built.deckTex.offset.x = runtime.distance / 30;
+    for (let i = 0; i < SIDES.length; i++) {
+      const mesh = deckRefs.current[i];
+      const { side } = SIDES[i];
+      if (!mesh) continue;
+      mesh.visible = deckVisible;
+      mesh.scale.y = deckH;
+      mesh.position.x = side * DECK_X + side * sidePush(side);
+      mesh.position.y = -1.12 - deckH / 2;
+    }
 
     // --- Ponts : position depuis bridgeZ (source unique, partagée avec
     // l'ombrage), tablier posé sur les murs en tranchée, plus haut (piles
@@ -299,6 +330,22 @@ export function SegmentEnvironment() {
 
   return (
     <group>
+      {/* Joue de tablier (viaduc) */}
+      {SIDES.map(({ side, rotY }, i) => (
+        <mesh
+          key={`deck${side}`}
+          ref={(m) => {
+            deckRefs.current[i] = m;
+          }}
+          position={[side * DECK_X, -20, 0]}
+          rotation={[0, rotY, 0]}
+          material={built.deckSideMat}
+          visible={false}
+        >
+          <planeGeometry args={[PLANE_LEN, 1]} />
+        </mesh>
+      ))}
+
       {/* Murs de soutènement + parapets (tranchées) */}
       {built.walls.map((wall, i) => (
         <mesh

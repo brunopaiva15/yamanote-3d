@@ -210,7 +210,7 @@ export function SkyDome() {
     u.uSilDark.value = 1 - 0.62 * cityNight;
     // La brume de l'horizon est celle de la scène : une seule source de vérité.
     if (scene.fog instanceof THREE.Fog) (u.uHaze.value as THREE.Color).copy(scene.fog.color);
-    u.uHazeAmt.value = 0.42 + 0.2 * w.day;
+    u.uHazeAmt.value = 0.3 + 0.16 * w.day;
   });
 
   return (

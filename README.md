@@ -233,6 +233,34 @@ ville. Une cellule sur deux est traversée par une **rue perpendiculaire** qui
 perce les trois rangs au même endroit : c'est le seul moment où le regard
 s'enfonce, et le meilleur révélateur de vitesse qui soit en train.
 
+**Le sol de la ville n'est pas celui de la voie.** `elevation` ne servait
+jusqu'ici qu'à habiller — murs en tranchée, piles de pont plus hautes en
+viaduc. C'est pourtant la cote qui commande tout le paysage. Depuis un siège,
+par une baie, on ne voit d'un bâtiment posé à douze mètres qu'une **tranche de
+quatre mètres de haut** : ni ciel, ni ligne de toit. C'est exact au niveau du
+sol ; ça ne l'est pas sur les treize tronçons en viaduc, où l'on court sept
+mètres au-dessus de la rue et où le regard passe *par-dessus* les toits bas.
+`segEnv.cityY` fait donc descendre la ville de sept mètres sous un viaduc et la
+fait remonter sur la crête des murs en tranchée ; le morph passe par les poids
+fondus de tronçon, masqué par le quai à l'arrêt, exactement comme le glissement
+vertical des murs. Un corridor ferroviaire, lui, la fait reculer de neuf mètres
+— le faisceau de voies parallèles court jusqu'à quatorze mètres de l'axe.
+
+Le sol descend avec elle, et il est **fendu en deux nappes** qui laissent
+l'emprise de la voie libre : une nappe unique passerait au-dessus du train dès
+qu'elle monte sur les murs d'une tranchée. Sous un viaduc, une joue de tablier
+(`three/SegmentEnvironment`) pousse vers le bas depuis le niveau de la voie et
+ferme le vide entre le ballast et la rue.
+
+**Acrotères, édicules, chaussées.** Chaque bâtiment porte un acrotère
+légèrement débordant : c'est le détail qui manque le plus dès qu'on regarde du
+haut d'un viaduc, parce qu'une boîte nue ne se lit pas comme un immeuble — un
+immeuble a un *bord* de toiture. Ce qui a des étages à desservir reçoit en plus
+un édicule de couverture, et chaque rue perpendiculaire reçoit sa chaussée, ce
+qui fait de la trouée une perspective au lieu d'un trou. Tout cela passe par un
+second `InstancedMesh` et le même matériau, avec un drapeau « volume nu » : ni
+fenêtres, ni vitrine, teinte de couverture sur toutes les faces.
+
 **La trame de façade se mesure en mètres**, pas en fraction de bâtiment
 (`three/city/cityMaterial`). Le nuanceur reconstitue dans le sommet les
 dimensions réelles de l'instance depuis `instanceMatrix` et choisit l'UV selon

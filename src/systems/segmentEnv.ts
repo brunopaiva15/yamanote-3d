@@ -29,6 +29,17 @@ export const WALL_DEFAULT = 5; // hauteur de mur par défaut (m)
 export const WALL_MAX = 7.5; // course de glissement vertical des murs (m)
 export const BRIDGE_COUNT = 2; // tabliers recyclés
 
+/** Niveau du sol au droit de la voie (m) : le repère de tout le décor. */
+export const GROUND_Y = -1.1;
+/** Hauteur du tablier au-dessus de la rue, sur les tronçons en viaduc (m). */
+export const VIADUCT_RISE = 7.5;
+/**
+ * Recul latéral de la ville dans un corridor ferroviaire (m) : le faisceau de
+ * voies parallèles s'étend jusqu'à quatorze mètres de l'axe, la ville ne peut
+ * pas commencer à douze.
+ */
+export const CORRIDOR_SETBACK = 9;
+
 function smoothstep(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
@@ -44,6 +55,21 @@ export const segEnv = {
   bridgeW: 0, // 0..1 : présence des ponts (gate fondu, 0 si le tronçon n'en a pas)
   bridgeShade: 0, // 0..1 : assombrissement instantané sous un tablier
   roofShade: 0, // 0..1 : écrit par HubStationRoof (grande toiture au-dessus)
+  /**
+   * Niveau du sol de LA VILLE (m), qui n'est pas celui de la voie.
+   *
+   * `elevation` ne servait jusqu'ici qu'à habiller : murs en tranchée, piles de
+   * pont plus hautes en viaduc. Or c'est la cote qui commande tout le paysage.
+   * Depuis un siège, par une baie, on ne voit d'un bâtiment posé à douze mètres
+   * qu'une tranche de quatre mètres de haut — ni ciel, ni ligne de toit. C'est
+   * exact au niveau du sol ; ça ne l'est pas sur les treize tronçons en viaduc,
+   * où l'on court sept mètres au-dessus de la rue et où le regard passe
+   * PAR-DESSUS les toits bas. En tranchée, symétriquement, la ville s'assied
+   * sur la crête des murs de soutènement.
+   */
+  cityY: GROUND_Y,
+  /** Recul latéral supplémentaire de la ville (m) : faisceau des corridors. */
+  citySetback: 0,
 };
 
 // Période et position z des tabliers : source unique de vérité, partagée
@@ -117,6 +143,13 @@ export function updateSegmentEnv(dt: number): void {
   segEnv.bridgeW = spec.bridges
     ? smoothstep(0.5, 0.8, segEnv.w[spec.kind]) * smoothstep(3.4, 3.9, segEnv.wallH)
     : 0;
+  // Élévation de la ville. Les poids fondus font le morph : la bascule d'un
+  // tronçon à l'autre a lieu à l'arrêt, masquée par le quai, exactement comme
+  // le glissement vertical des murs de tranchée.
+  segEnv.cityY =
+    GROUND_Y - VIADUCT_RISE * segEnv.w.viaduct + Math.max(0, segEnv.wallH) * segEnv.w.trench;
+  segEnv.citySetback = CORRIDOR_SETBACK * segEnv.w.corridor;
+
   let shade = 0;
   if (segEnv.bridgeW > 0.01) {
     for (let b = 0; b < BRIDGE_COUNT; b++) {

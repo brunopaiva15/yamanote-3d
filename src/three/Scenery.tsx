@@ -1,12 +1,14 @@
-// Abords immédiats de la voie : ballast, emprise urbaine au sol, portiques
-// caténaires et arbres défilants.
+// Abords immédiats de la voie : ballast, portiques caténaires et arbres
+// défilants.
 //
 // Ce fichier portait aussi le ciel et les trois couches d'immeubles peints. Les
 // deux sont partis :
 //   · le ciel et la ligne d'horizon vivent dans three/city/SkyDome, en une
 //     seule passe posée à l'infini ;
 //   · la ville est devenue un volume — three/city/CityRibbon — bâti dans le
-//     monde et non plus glissé par `texture.offset`.
+//     monde et non plus glissé par `texture.offset`, et elle emporte avec elle
+//     son sol, qui n'est pas au niveau de la voie : sept mètres plus bas sous
+//     un viaduc, sur la crête des murs en tranchée.
 //
 // Ce qui reste ici défile en GÉOMÉTRIE (recyclage en z par `runtime.distance`),
 // exactement comme avant : ce sont les vrais vendeurs de vitesse.
@@ -18,29 +20,16 @@ import { runtime } from '../systems/runtime';
 import { segEnv } from '../systems/segmentEnv';
 import { hiddenByStation, sidePush } from '../systems/stationOcclusion';
 import { makeGroundTexture } from '../textures/procedural';
-import { GROUND_TILE, makeCityGroundTexture } from '../textures/city';
 
 /** Longueur des plans au sol : la vue en biais vers le fond du wagon porte loin. */
 const PLANE_LEN = 460;
-/**
- * Largeur de l'emprise urbaine au sol. Elle allait jusqu'à 160 m d'un seul
- * aplat clair ; elle porte maintenant un tissu de parcelles et court au-delà du
- * dernier rang de bâtiments (66 m + profondeur), assez loin pour que ce soit la
- * brume, et non un bord franc, qui en marque la fin.
- */
-const GROUND_WIDTH = 320;
 
 export function Scenery() {
   const built = useMemo(() => {
     const groundTex = makeGroundTexture();
     groundTex.repeat.set(2, 24);
     const gm = new THREE.MeshBasicMaterial({ map: groundTex, fog: true, color: '#d6d4ce' });
-    // Le sol urbain est ÉCLAIRÉ, comme la ville qu'il porte : il se dore à
-    // l'heure dorée et s'éteint la nuit, au lieu de rester un aplat constant.
-    const cityGroundTex = makeCityGroundTexture();
-    cityGroundTex.repeat.set(GROUND_WIDTH / GROUND_TILE, PLANE_LEN / GROUND_TILE);
-    const cgm = new THREE.MeshLambertMaterial({ map: cityGroundTex, fog: true });
-    return { gm, cgm };
+    return { gm };
   }, []);
 
   // Poteaux caténaires et arbres qui défilent : les vrais vendeurs de vitesse.
@@ -67,8 +56,6 @@ export function Scenery() {
     // --- Sol défilant ---
     const g = built.gm.map;
     if (g) g.offset.y = runtime.distance / 10;
-    const cg = built.cgm.map;
-    if (cg) cg.offset.y = runtime.distance / GROUND_TILE;
 
     // --- Portiques et arbres défilants ---
     // Un mât de portique tombe à x = ±5.2, en plein milieu du quai : dans
@@ -93,6 +80,9 @@ export function Scenery() {
       t.visible = treesVisible;
       t.scale.setScalar(spec.scale * treeScale);
       t.position.x = spec.x + side * sidePush(side);
+      // Les arbres poussent dans la RUE, pas sur le tablier : ils suivent le
+      // sol de la ville et se retrouvent sept mètres plus bas sous un viaduc.
+      t.position.y = segEnv.cityY;
       t.position.z = ((runtime.distance * 0.999 + i * TREE_SPACING + 9) % treeSpan) - treeSpan / 2;
     }
   });
@@ -148,11 +138,6 @@ export function Scenery() {
       {/* Sol extérieur : bande de ballast étroite sous le train */}
       <mesh position={[0, -1.15, 0]} rotation={[-Math.PI / 2, 0, 0]} material={built.gm}>
         <planeGeometry args={[9, PLANE_LEN]} />
-      </mesh>
-      {/* Tissu urbain au sol : parcelles, cours, ruelles — ce sur quoi le
-          ruban de bâtiments est posé, et ce qu'on voit dans ses trouées. */}
-      <mesh position={[0, -1.18, 0]} rotation={[-Math.PI / 2, 0, 0]} material={built.cgm}>
-        <planeGeometry args={[GROUND_WIDTH, PLANE_LEN]} />
       </mesh>
     </group>
   );

@@ -277,6 +277,111 @@ export function buildCell(
   return count;
 }
 
+// --- Superstructures et chaussées -------------------------------------------
+
+/**
+ * Volume secondaire, sans façade ni devanture : acrotère, édicule de toiture,
+ * dalle de chaussée. Rendu par le même matériau, avec le drapeau « nu » —
+ * teinte de couverture sur toutes les faces, ni fenêtres ni vitrine.
+ */
+export interface CityProp {
+  s: number;
+  x: number;
+  w: number;
+  d: number;
+  h: number;
+  /** Altitude de la BASE, relative au sol de la ville (m). */
+  y: number;
+  tone: string;
+}
+
+/** Acrotère + édicule par bâtiment, plus la chaussée de la rue de la cellule. */
+export const PROP_CAPACITY = CELL_CAPACITY * 2 + 1;
+
+const PARAPET_TONE = '#c6c3ba';
+const ROOFTOP_TONE = '#b4b1a8';
+const ROAD_TONE = '#5f5e5a';
+
+/**
+ * Dérive les volumes secondaires d'une cellule déjà bâtie.
+ *
+ * L'acrotère est le détail qui manque le plus dès qu'on regarde du haut d'un
+ * viaduc : une boîte nue ne se lit pas comme un immeuble, un immeuble a un
+ * BORD de toiture. Il déborde légèrement, comme une corniche.
+ */
+export function buildCellProps(
+  cell: number,
+  side: 1 | -1,
+  buildings: CityBuilding[],
+  n: number,
+  out: CityProp[],
+): number {
+  const r = stream(cell * 7717 + (side === 1 ? 101 : 6089));
+  let count = 0;
+
+  for (let i = 0; i < n && count < out.length; i++) {
+    const b = buildings[i];
+    const p = out[count++];
+    p.s = b.s;
+    p.x = b.x;
+    p.w = b.w + 0.45;
+    p.d = b.d + 0.45;
+    p.h = 0.55;
+    p.y = b.h;
+    p.tone = PARAPET_TONE;
+
+    // Édicule : cage d'escalier, machinerie, château d'eau. Seulement sur ce
+    // qui a des étages à desservir. Les tirages sont consommés d'abord et la
+    // décision prise ensuite : la suite avance du même nombre de pas quelle que
+    // soit la branche, et la cellule reste lisible.
+    const want = r();
+    const ew = b.w * (0.2 + r() * 0.18);
+    const ed = b.d * (0.25 + r() * 0.24);
+    const eh = 2.1 + r() * 1.3;
+    const es = (r() - 0.5) * 0.7;
+    const ex = (r() - 0.5) * 0.7;
+    if (b.h > 7 && want < 0.55 && count < out.length) {
+      const q = out[count++];
+      q.w = ew;
+      q.d = ed;
+      q.h = eh;
+      q.s = b.s + es * (b.w - ew);
+      q.x = b.x + ex * (b.d - ed);
+      q.y = b.h;
+      q.tone = ROOFTOP_TONE;
+    }
+  }
+
+  // Chaussée : la trouée devient une perspective au lieu d'un trou.
+  const street = streetOf(cell);
+  if (street && count < out.length) {
+    const inner = RANKS[0].x0 - 1.5;
+    const outer = RANKS[RANKS.length - 1].x1;
+    const p = out[count++];
+    p.s = (street[0] + street[1]) / 2;
+    p.w = street[1] - street[0] - 1.2;
+    p.x = (inner + outer) / 2;
+    p.d = outer - inner;
+    p.h = 0.14;
+    p.y = 0;
+    p.tone = ROAD_TONE;
+  }
+  return count;
+}
+
+/** Tableau de travail réutilisable, à la capacité d'une cellule. */
+export function makePropBuffer(): CityProp[] {
+  return Array.from({ length: PROP_CAPACITY }, () => ({
+    s: 0,
+    x: 0,
+    w: 0,
+    d: 0,
+    h: 0,
+    y: 0,
+    tone: '#ffffff',
+  }));
+}
+
 /** Tableau de travail réutilisable, à la capacité d'une cellule. */
 export function makeCellBuffer(): CityBuilding[] {
   return Array.from({ length: CELL_CAPACITY }, () => ({

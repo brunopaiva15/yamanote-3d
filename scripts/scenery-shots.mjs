@@ -59,10 +59,13 @@ async function aim(dx, dy) {
   curDy = dy;
 }
 
+// L'index est la gare d'ARRIVÉE : le tronçon traversé est index-1.
 const cases = [
-  [16, 15 * 60 + 30, 'shinjuku-jour'],
-  [8, 15 * 60 + 30, 'tabata-jour'],
-  [2, 21 * 60 + 30, 'akihabara-nuit'],
+  [1, 15 * 60 + 30, 'viaduc-kanda'],
+  [10, 15 * 60 + 30, 'tranchee-sugamo'],
+  [14, 15 * 60 + 30, 'sol-takadanobaba'],
+  [25, 15 * 60 + 30, 'corridor-takanawa'],
+  [1, 21 * 60 + 30, 'viaduc-kanda-nuit'],
 ];
 const angles = [
   ['travers', -230, -30],
@@ -78,7 +81,9 @@ for (const [idx, clock, name] of cases) {
       window.__probeCruise(i);
       window.__probeClock(c);
     }, [idx, clock]);
-    await new Promise((r) => setTimeout(r, 350));
+    // Les poids de tronçon (segEnv) se fondent en ~2,5 s : laisser converger,
+    // sinon la ville n'a pas fini de descendre sous un viaduc.
+    await new Promise((r) => setTimeout(r, 1400));
     await page.screenshot({ path: `${out}/${name}-${tag}.png` });
     console.log('→', `${name}-${tag}`);
   }

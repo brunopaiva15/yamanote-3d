@@ -63,7 +63,10 @@ export function makeCityMaterial(): CityMaterial {
         `#include <common>
         attribute vec2 aJitter;
         attribute vec3 aAccent;
-        attribute vec2 aTrim;   // x = vigueur des enseignes, y = rez-de-chaussée commerçant
+        // x = vigueur des enseignes, y = rez-de-chaussée commerçant,
+        // z = volume NU (acrotère, édicule, chaussée) : teinte de couverture
+        // sur toutes ses faces, ni fenêtres ni vitrine.
+        attribute vec3 aTrim;
         uniform float uFacTile;
         uniform vec2 uSocTile;
         varying vec2 vCityFac;
@@ -71,7 +74,7 @@ export function makeCityMaterial(): CityMaterial {
         varying float vCityUp;
         varying float vCityRoof;
         varying vec3 vCityAccent;
-        varying vec2 vCityTrim;`,
+        varying vec3 vCityTrim;`,
       )
       .replace(
         '#include <uv_vertex>',
@@ -115,18 +118,24 @@ export function makeCityMaterial(): CityMaterial {
         varying float vCityUp;
         varying float vCityRoof;
         varying vec3 vCityAccent;
-        varying vec2 vCityTrim;`,
+        varying vec3 vCityTrim;`,
       )
       .replace(
         '#include <map_fragment>',
         `vec4 cityFac = texture2D(uFacade, vCityFac);
         vec4 cityRof = texture2D(uRoof, vCityFac * uRoofScale);
         vec4 citySoc = texture2D(uSocle, vCitySoc);
+        // Un volume nu se traite partout comme une couverture.
+        float cityRoofish = max(vCityRoof, vCityTrim.z);
         // Devanture : les trois premiers mètres des faces verticales.
-        float citySocle = (1.0 - vCityRoof) * (1.0 - step(uSocTile.y, vCityUp)) * vCityTrim.y;
-        vec3 cityTone = mix(cityFac.rgb, cityRof.rgb, vCityRoof);
+        float citySocle = (1.0 - cityRoofish) * (1.0 - step(uSocTile.y, vCityUp)) * vCityTrim.y;
+        vec3 cityTone = mix(cityFac.rgb, cityRof.rgb, cityRoofish);
         cityTone = mix(cityTone, citySoc.rgb, citySocle);
-        diffuseColor.rgb *= cityTone;
+        // Les palettes de quartier sont claires (elles font la teinte
+        // d'ensemble) et la scène est vivement éclairée pour l'intérieur du
+        // wagon : sans ce coefficient, toute face au soleil sature en blanc et
+        // la ville perd son relief.
+        diffuseColor.rgb *= cityTone * 0.72;
         // Bandeau d'enseigne et store : teinte du quartier, pas de la façade.
         float cityAccentMask = citySocle
           * smoothstep(0.20, 0.30, citySoc.a)
@@ -144,7 +153,7 @@ export function makeCityMaterial(): CityMaterial {
         // Fenêtres : chaque vitrage porte un tirage stable dans l'alpha de la
         // texture ; le seuil descend avec la nuit, les étages s'allument donc
         // par paquets au fil de la soirée plutôt que tous d'un coup.
-        float cityWin = cityFac.a * (1.0 - vCityRoof) * (1.0 - citySocle);
+        float cityWin = cityFac.a * (1.0 - cityRoofish) * (1.0 - citySocle);
         float cityWinOn = step(0.03, cityWin) * step(1.0 - 0.8 * uNight, cityWin);
         float cityGlass = citySocle
           * smoothstep(0.62, 0.70, citySoc.a)

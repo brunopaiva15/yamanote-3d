@@ -115,20 +115,20 @@ export function makeRoofTexture(): THREE.DataTexture {
   const S = 128; // 12 m
   const d = new Uint8Array(S * S * 4);
   const r = rng(0x0f00f);
-  rect(d, S, S, 0, 0, S, S, 152, 150, 144, 0);
+  rect(d, S, S, 0, 0, S, S, 118, 117, 112, 0);
   for (let i = 0; i < S; i += 16) {
-    rect(d, S, S, 0, i, S, 1, 138, 136, 130, 0); // joints de lés
+    rect(d, S, S, 0, i, S, 1, 100, 99, 95, 0); // joints de lés
   }
   for (let i = 0; i < 5; i++) {
     const w = 14 + Math.floor(r() * 22);
     const h = 10 + Math.floor(r() * 16);
     const x = Math.floor(r() * (S - w));
     const y = Math.floor(r() * (S - h));
-    rect(d, S, S, x, y, w, h, 104, 104, 108, 0); // groupes techniques
-    rect(d, S, S, x, y + h - 3, w, 3, 84, 84, 88, 0);
+    rect(d, S, S, x, y, w, h, 86, 86, 90, 0); // groupes techniques
+    rect(d, S, S, x, y + h - 3, w, 3, 66, 66, 70, 0);
   }
-  rect(d, S, S, 86, 20, 22, 20, 196, 193, 184, 0); // réservoir
-  rect(d, S, S, 86, 36, 22, 4, 120, 118, 114, 0);
+  rect(d, S, S, 86, 20, 22, 20, 168, 165, 156, 0); // réservoir
+  rect(d, S, S, 86, 36, 22, 4, 92, 90, 87, 0);
   return toTexture(d, S, S);
 }
 
@@ -148,7 +148,7 @@ export function makeCityGroundTexture(): THREE.DataTexture {
   const S = 256; // 40 m
   const d = new Uint8Array(S * S * 4);
   const r = rng(0x6c0117);
-  rect(d, S, S, 0, 0, S, S, 118, 116, 112, 255); // enrobé de fond
+  rect(d, S, S, 0, 0, S, S, 92, 91, 88, 255); // enrobé de fond
 
   // Parcelles : dalles, cours, petites toitures. Les tons restent proches —
   // c'est la fragmentation qui compte, pas le contraste.
@@ -160,14 +160,14 @@ export function makeCityGroundTexture(): THREE.DataTexture {
     const t = r();
     const c =
       t < 0.34
-        ? [146, 143, 137]
+        ? [116, 113, 108]
         : t < 0.58
-          ? [128, 126, 122]
+          ? [100, 98, 95]
           : t < 0.76
-            ? [104, 108, 96]
+            ? [80, 86, 74]
             : t < 0.9
-              ? [150, 146, 138]
-              : [96, 94, 92];
+              ? [124, 120, 113]
+              : [72, 71, 70];
     // Enroulement manuel : la tuile doit rester continue d'un bord à l'autre.
     for (const dx of [0, -S, S]) {
       for (const dy of [0, -S, S]) {
@@ -180,8 +180,8 @@ export function makeCityGroundTexture(): THREE.DataTexture {
     const along = r() < 0.5;
     const p = Math.floor(r() * S);
     const t = 3 + Math.floor(r() * 4);
-    if (along) rect(d, S, S, 0, p, S, t, 92, 90, 88, 255);
-    else rect(d, S, S, p, 0, t, S, 92, 90, 88, 255);
+    if (along) rect(d, S, S, 0, p, S, t, 66, 65, 64, 255);
+    else rect(d, S, S, p, 0, t, S, 66, 65, 64, 255);
   }
   const t = toTexture(d, S, S);
   t.colorSpace = THREE.SRGBColorSpace;
