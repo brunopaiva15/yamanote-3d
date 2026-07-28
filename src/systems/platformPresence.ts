@@ -3,7 +3,7 @@
 // calé à l'arrêt, puis part derrière au départ. Piloté par la progression du
 // trajet (segEnv.p) et la phase, écrit dans runtime chaque frame.
 
-import { CONFIG } from '../data/config';
+import { journeyProgress } from '../data/segments';
 import { useStore, type Phase } from '../store';
 import { runtime } from './runtime';
 import { segEnv } from './segmentEnv';
@@ -88,13 +88,10 @@ export function updatePlatformPresence(): void {
 
 // Presence immédiate pour randomizeEntry (segEnv peut ne pas être à jour).
 export function seedPlatformPresence(phase: Phase, phaseT: number): void {
-  const journey = CONFIG.departTime + CONFIG.cruiseTime + CONFIG.brakeTime;
-  let p = 0;
-  if (phase === 'depart') p = Math.min(1, phaseT / journey);
-  else if (phase === 'cruise') p = Math.min(1, (CONFIG.departTime + phaseT) / journey);
-  else if (phase === 'brake') p = Math.min(1, (CONFIG.departTime + CONFIG.cruiseTime + phaseT) / journey);
-  else p = 1;
   const { index, platformIndex } = useStore.getState();
+  // p suit la convention du trajet (index, durées variables par tronçon) ; le
+  // gabarit du quai, lui, est celui de la gare présente (platformIndex).
+  const p = journeyProgress(phase, phaseT, index);
   runtime.psdPresent = hasPlatformDoors(platformIndex);
   const half = layoutFor(platformIndex).length / 2;
   const { presence, slide } = presenceFrom(phase, p, half, platformIndex !== index);

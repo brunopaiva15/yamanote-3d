@@ -57,9 +57,6 @@ export interface Strings {
     phase: { cruise: string; brake: string; dwell: string; depart: string };
     /** Bandeau de phase pendant un arrêt d'urgence en pleine voie. */
     phaseEmergency: string;
-    /** Bouton SOS : déclenchement manuel d'un arrêt d'urgence en pleine course. */
-    emergency: string;
-    emergencyTitle: string;
     currentStation: string;
     nextStation: string;
     occupancyTitle: string;
@@ -97,6 +94,11 @@ export interface Strings {
   };
 
   language: string;
+
+  footer: {
+    disclaimer: string;
+    support: string;
+  };
 }
 
 const FR: Strings = {
@@ -132,8 +134,6 @@ const FR: Strings = {
   hud: {
     phase: { cruise: 'En route', brake: 'Arrivée', dwell: 'À quai', depart: 'Départ' },
     phaseEmergency: 'Arrêt d’urgence',
-    emergency: 'Arrêt d’urgence',
-    emergencyTitle: 'Déclencher manuellement un arrêt d’urgence',
     currentStation: 'Station actuelle',
     nextStation: 'Prochaine station',
     occupancyTitle: 'Estimation calibrée (±8–12 pts un jour normal)',
@@ -169,6 +169,11 @@ const FR: Strings = {
     },
   },
   language: 'Langue',
+  footer: {
+    disclaimer:
+      'Projet indépendant, sans lien avec JR East, Tokyo Metro, Toei Subway ni aucune autre compagnie ferroviaire ou titulaire de marque. Les noms, logos et éléments visuels cités appartiennent à leurs propriétaires respectifs.',
+    support: 'Soutenir le projet',
+  },
 };
 
 const EN: Strings = {
@@ -204,8 +209,6 @@ const EN: Strings = {
   hud: {
     phase: { cruise: 'En route', brake: 'Arriving', dwell: 'At the platform', depart: 'Departing' },
     phaseEmergency: 'Emergency stop',
-    emergency: 'Emergency stop',
-    emergencyTitle: 'Manually trigger an emergency stop',
     currentStation: 'Current station',
     nextStation: 'Next station',
     occupancyTitle: 'Calibrated estimate (±8–12 pts on a normal day)',
@@ -241,6 +244,11 @@ const EN: Strings = {
     },
   },
   language: 'Language',
+  footer: {
+    disclaimer:
+      'Independent project, not affiliated with JR East, Tokyo Metro, Toei Subway, or any other railway operator or trademark holder. Names, logos, and visual elements mentioned belong to their respective owners.',
+    support: 'Support the project',
+  },
 };
 
 const JA: Strings = {
@@ -275,8 +283,6 @@ const JA: Strings = {
   hud: {
     phase: { cruise: '走行中', brake: 'まもなく到着', dwell: '停車中', depart: '発車' },
     phaseEmergency: '緊急停止',
-    emergency: '非常停止',
-    emergencyTitle: '非常停止ボタン：列車を急停車させます',
     currentStation: '現在の駅',
     nextStation: '次の駅',
     occupancyTitle: '推定混雑率（平常日でおよそ±8〜12ポイント）',
@@ -312,6 +318,11 @@ const JA: Strings = {
     },
   },
   language: '言語',
+  footer: {
+    disclaimer:
+      '独立プロジェクトであり、JR東日本、東京メトロ、都営地下鉄その他いかなる鉄道事業者・商標権者とも提携・後援・スポンサー関係にありません。記載の名称・ロゴ・視覚要素は各権利者に帰属します。',
+    support: 'プロジェクトを支援する',
+  },
 };
 
 export const STRINGS: Record<Lang, Strings> = { fr: FR, en: EN, ja: JA };

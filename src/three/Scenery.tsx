@@ -14,8 +14,9 @@ import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { segEnv } from '../systems/segmentEnv';
 import { hiddenByStation, sidePush } from '../systems/stationOcclusion';
-import { useStore, type Phase } from '../store';
+import { useStore } from '../store';
 import { CONFIG } from '../data/config';
+import { journeyProgress } from '../data/segments';
 import { DISTRICTS } from '../data/districts';
 import {
   drawCityInto,
@@ -48,13 +49,6 @@ const PLANE_LEN = 400;
 // Durée d'un trajet inter-gares (s) : depart → cruise → brake (l'arrêt `dwell`
 // prolonge p=1). `index` s'incrémente au début de `depart`, donc à tout instant
 // arrivingDistrict = index et departingDistrict = index-1 : continu, sans saut.
-const JOURNEY = CONFIG.departTime + CONFIG.cruiseTime + CONFIG.brakeTime;
-const PHASE_BASE: Record<Phase, number> = {
-  depart: 0,
-  cruise: CONFIG.departTime,
-  brake: CONFIG.departTime + CONFIG.cruiseTime,
-  dwell: CONFIG.departTime + CONFIG.cruiseTime + CONFIG.brakeTime,
-};
 
 function smoothstep(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -275,7 +269,7 @@ export function Scenery() {
     }
 
     // --- Progression du trajet et poids de fondu ---
-    const p = Math.min(1, Math.max(0, (PHASE_BASE[phase] + runtime.phaseT) / JOURNEY));
+    const p = journeyProgress(phase, runtime.phaseT, index);
     const wArr = smoothstep(0.38, 0.62, p);
     const wDep = 1 - wArr;
 

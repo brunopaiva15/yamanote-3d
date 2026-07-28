@@ -8,20 +8,12 @@
 // visible — sinon murs / clôtures du prochain segment remplacent le mur de
 // gare sous les yeux. Voir data/segments.ts pour la classification.
 
-import { CONFIG } from '../data/config';
-import { SEGMENTS, segmentAt, type SegmentKind } from '../data/segments';
-import { useStore, type Phase } from '../store';
+import { SEGMENTS, journeyProgress, segmentAt, type SegmentKind } from '../data/segments';
+import { useStore } from '../store';
 import { runtime } from './runtime';
 
 // Progression du trajet inter-gares : même convention que Scenery/Landmarks
-// (depart → cruise → brake ; dwell maintient p = 1).
-const JOURNEY = CONFIG.departTime + CONFIG.cruiseTime + CONFIG.brakeTime;
-const PHASE_BASE: Record<Phase, number> = {
-  depart: 0,
-  cruise: CONFIG.departTime,
-  brake: CONFIG.departTime + CONFIG.cruiseTime,
-  dwell: JOURNEY,
-};
+// (depart → cruise → brake ; dwell maintient p = 1). Durée variable par tronçon.
 
 const KINDS: SegmentKind[] = ['viaduct', 'corridor', 'trench', 'ground'];
 
@@ -86,7 +78,7 @@ export function updateSegmentEnv(dt: number): void {
   const spec = SEGMENTS[seg];
   // Progression visuelle du trajet : toujours basée sur l'index courant
   // (annonces / scenery), pas sur le hold d'environnement.
-  segEnv.p = Math.min(1, Math.max(0, (PHASE_BASE[phase] + runtime.phaseT) / JOURNEY));
+  segEnv.p = journeyProgress(phase, runtime.phaseT, index);
 
   // Fondu exponentiel (~2,5 s). Pendant le hold de départ on ne change pas
   // de cible (même tronçon) ; le vrai morph n'arrive qu'une fois le quai parti.
