@@ -267,12 +267,15 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   );
 
   // Descentes d'eau pluviale, plaquées derrière les piliers.
+  // La descente s'arrête SOUS la gouttière, qu'elle rejoint : montée jusqu'à
+  // l'auvent, elle la traversait, et les poutres transversales avec.
+  const pipeTop = canopyY - 0.36;
   const pipes = useMemo(
     () =>
       kit.downpipes.map((z) =>
-        mat(pipeX, PLATFORM_TOP + (canopyY - PLATFORM_TOP) / 2, z, 1, canopyY - PLATFORM_TOP, 1),
+        mat(pipeX, PLATFORM_TOP + (pipeTop - PLATFORM_TOP) / 2, z, 1, pipeTop - PLATFORM_TOP, 1),
       ),
-    [kit.downpipes, pipeX, canopyY],
+    [kit.downpipes, pipeX, pipeTop],
   );
 
   // Repères de voiture peints au sol : posés à plat, un peu au-dessus de la

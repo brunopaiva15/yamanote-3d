@@ -43,11 +43,16 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
   // --- Caissons du fond de quai --------------------------------------
   const wallAds = useMemo(() => {
     // Ce qui monte assez haut pour masquer l'affiche.
+    // Tout ce qui monte assez haut pour masquer l'affiche — ou pour la
+    // traverser. La liste ne connaissait ni les armoires ni les escaliers
+    // mécaniques : le caisson leur rentrait dedans.
     const blockers = [
       ...place.vending.map((v) => ({ z: v.z, r: v.halfZ + 1.3 })),
+      ...place.cabinets.map((c) => ({ z: c.z, r: c.halfZ + 1.3 })),
       ...(place.kiosk ? [{ z: place.kiosk.z, r: place.kiosk.halfZ + 1.6 }] : []),
       ...(place.elevator ? [{ z: place.elevator.z, r: place.elevator.halfZ + 1.6 }] : []),
-      ...place.stairs.map((s) => ({ z: s.z, r: s.halfZ + 0.8 })),
+      ...place.stairs.map((s) => ({ z: s.z, r: s.halfZ + 1.3 })),
+      ...place.escalators.map((e) => ({ z: e.z, r: e.halfZ + 1.3 })),
     ];
     const out: { z: number; i: number }[] = [];
     const step = 10.5;

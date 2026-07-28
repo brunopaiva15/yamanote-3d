@@ -349,11 +349,18 @@ export function Station() {
           exactement le même traitement que celui-ci — liseré, bande
           podotactile, muret de portes palières — mais retourné. */}
       {place.farEdgeX !== null && (
-        <FarEdge farX={place.farEdgeX} len={layout.length} tactileW={tactileW} hasPsd={hasPsd} m={m} />
+        <FarEdge
+          farX={place.farEdgeX}
+          len={layout.length}
+          tactileW={tactileW}
+          hasPsd={hasPsd}
+          segs={segs}
+          m={m}
+        />
       )}
 
       {/* --- Ce qu'on voit au-delà : voie, quai d'en face, clôture --- */}
-      <FarSide layout={layout} place={place} wallH={wallH} m={m} detail={detail} />
+      <FarSide layout={layout} place={place} wallH={wallH} m={m} detail={detail} segs={segs} />
 
       {/* --- Auvent, poutres, piliers, néons --- */}
       <mesh name="auvent" position={[PSD_X + depth / 2, canopyY + 0.07, 0]} material={m.canopy} receiveShadow>
@@ -451,7 +458,7 @@ export function Station() {
         hangX={midX + 0.7}
         canopyY={canopyY}
         halfZ={halfZ}
-        totemX={midX - 0.6}
+        totemX={PSD_X + depth * 0.32}
         bandX={backX}
         detail={detail}
         ground={place.obstacles}
@@ -476,14 +483,25 @@ function FarEdge({
   len,
   tactileW,
   hasPsd,
+  segs,
   m,
 }: {
   farX: number;
   len: number;
   tactileW: number;
   hasPsd: boolean;
+  segs: { z0: number; z1: number }[];
   m: Mats;
 }) {
+  const band = useMemo(
+    () =>
+      segs.map((sg) =>
+        mat(farX - 0.045, PLATFORM_TOP + PSD_H - 0.07, (sg.z0 + sg.z1) / 2, 0.12, 0.1, sg.z1 - sg.z0),
+      ),
+    [segs, farX],
+  );
+  const bandRef = useRef<THREE.InstancedMesh>(null);
+  useInstances(bandRef, band);
   return (
     <group name="bord-opposé">
       <mesh position={[farX - 0.12, PLATFORM_TOP + 0.01, 0]} material={m.rubber}>
@@ -507,9 +525,19 @@ function FarEdge({
           <mesh position={[farX - 0.11, PLATFORM_TOP + PSD_H * 0.72, 0]} material={m.glass}>
             <boxGeometry args={[0.02, PSD_H * 0.42, len - 0.4]} />
           </mesh>
-          <mesh position={[farX - 0.045, PLATFORM_TOP + PSD_H - 0.07, 0]} material={m.accent}>
-            <boxGeometry args={[0.12, 0.1, len]} />
-          </mesh>
+          {/* Le bandeau uguisu est INTERROMPU à chaque baie, comme au bord près.
+              Continu sur deux cent vingt mètres, il traçait une barre verte
+              franche à la hauteur exacte des vitres de porte de la rame — qui
+              ne sont opaques qu'à neuf pour cent : vues du wagon, elles
+              viraient au vert d'un bout à l'autre du quai. */}
+          <instancedMesh
+            name="bandeau-psd-opposé"
+            ref={bandRef}
+            args={[undefined, undefined, Math.max(1, band.length)]}
+            material={m.accent}
+          >
+            <boxGeometry args={[1, 1, 1]} />
+          </instancedMesh>
         </>
       )}
     </group>
@@ -536,15 +564,38 @@ function FarSide({
   wallH,
   m,
   detail,
+  segs,
 }: {
   layout: ReturnType<typeof layoutFor>;
   place: ReturnType<typeof placementFor>;
   wallH: number;
   m: Mats;
   detail: number;
+  segs: { z0: number; z1: number }[];
 }) {
   const len = layout.length;
   const far = place.farEdgeX;
+
+  // Les crochets se déclarent AVANT le retour anticipé d'Harajuku : après, ils
+  // ne seraient pas appelés à chaque rendu et React s'en plaindrait.
+  const oppBand = useMemo(
+    () =>
+      far === null
+        ? []
+        : segs.map((sg) =>
+            mat(
+              far + 2 * TRACK_HALF + 0.045,
+              PLATFORM_TOP + PSD_H - 0.07,
+              (sg.z0 + sg.z1) / 2,
+              0.12,
+              0.1,
+              sg.z1 - sg.z0,
+            ),
+          ),
+    [segs, far],
+  );
+  const oppBandRef = useRef<THREE.InstancedMesh>(null);
+  useInstances(oppBandRef, oppBand);
 
   // Harajuku : le seul quai latéral de la boucle. Un vrai mur, un vrai
   // soubassement carrelé, et rien à voir au-delà.
@@ -573,7 +624,6 @@ function FarSide({
   // À Ikebukuro et Ōsaki, la voie d'en face est la voie SECONDAIRE : celle qui
   // n'a pas encore ses portes. C'est précisément là que ça se voit.
   const oppPsd = hasPsd && layout.psd !== 'partial';
-
   return (
     <group name="travée-opposée">
       {/* Joue de rive du bord d'en face. */}
@@ -606,9 +656,15 @@ function FarSide({
           <mesh position={[oppEdge + 0.05, PLATFORM_TOP + PSD_H / 2, 0]} material={m.psd}>
             <boxGeometry args={[0.1, PSD_H, len]} />
           </mesh>
-          <mesh position={[oppEdge + 0.045, PLATFORM_TOP + PSD_H - 0.07, 0]} material={m.accent}>
-            <boxGeometry args={[0.12, 0.1, len]} />
-          </mesh>
+          {/* Bandeau interrompu, pour la même raison qu'au bord d'en face. */}
+          <instancedMesh
+            name="bandeau-psd-opposé"
+            ref={oppBandRef}
+            args={[undefined, undefined, Math.max(1, oppBand.length)]}
+            material={m.accent}
+          >
+            <boxGeometry args={[1, 1, 1]} />
+          </instancedMesh>
         </>
       )}
       {/* L'auvent d'en face : on le voit, on n'y marche pas. Il tombe au
