@@ -48,8 +48,13 @@ export function makeCityMaterial(): CityMaterial {
     uRoofScale: { value: FACADE_TILE / ROOF_TILE },
     uSocTile: { value: new THREE.Vector2(SOCLE_TILE[0], SOCLE_TILE[1]) },
     uNight: night,
-    uWinColor: { value: new THREE.Color('#ffdca8').multiplyScalar(1.35) },
+    uWinWarm: { value: new THREE.Color('#ffdca8').multiplyScalar(1.35) },
+    uWinCool: { value: new THREE.Color('#d8e6ff').multiplyScalar(1.25) },
     uShopColor: { value: new THREE.Color('#ffc98a').multiplyScalar(1.15) },
+    // Rebond de rue : une ville de nuit est éclairée par le bas — lampadaires,
+    // vitrines, phares. Sans lui, les six premiers mètres d'une façade sont
+    // plus sombres que ses étages, ce qui n'arrive jamais en ville.
+    uStreetGlow: { value: new THREE.Color('#ffb877') },
   };
 
   const material = new THREE.MeshLambertMaterial({ color: '#ffffff', fog: true });
@@ -65,8 +70,9 @@ export function makeCityMaterial(): CityMaterial {
         attribute vec3 aAccent;
         // x = vigueur des enseignes, y = rez-de-chaussée commerçant,
         // z = volume NU (acrotère, édicule, chaussée) : teinte de couverture
-        // sur toutes ses faces, ni fenêtres ni vitrine.
-        attribute vec3 aTrim;
+        // sur toutes ses faces, ni fenêtres ni vitrine,
+        // w = température des fenêtres (0 = néon de bureau, 1 = lampe).
+        attribute vec4 aTrim;
         uniform float uFacTile;
         uniform vec2 uSocTile;
         varying vec2 vCityFac;
@@ -74,7 +80,7 @@ export function makeCityMaterial(): CityMaterial {
         varying float vCityUp;
         varying float vCityRoof;
         varying vec3 vCityAccent;
-        varying vec3 vCityTrim;`,
+        varying vec4 vCityTrim;`,
       )
       .replace(
         '#include <uv_vertex>',
@@ -111,14 +117,16 @@ export function makeCityMaterial(): CityMaterial {
         uniform float uRoofScale;
         uniform vec2 uSocTile;
         uniform float uNight;
-        uniform vec3 uWinColor;
+        uniform vec3 uWinWarm;
+        uniform vec3 uWinCool;
         uniform vec3 uShopColor;
+        uniform vec3 uStreetGlow;
         varying vec2 vCityFac;
         varying vec2 vCitySoc;
         varying float vCityUp;
         varying float vCityRoof;
         varying vec3 vCityAccent;
-        varying vec3 vCityTrim;`,
+        varying vec4 vCityTrim;`,
       )
       .replace(
         '#include <map_fragment>',
@@ -159,9 +167,16 @@ export function makeCityMaterial(): CityMaterial {
           * smoothstep(0.62, 0.70, citySoc.a)
           * (1.0 - smoothstep(0.84, 0.93, citySoc.a));
         float cityNeon = citySocle * smoothstep(0.93, 1.0, citySoc.a);
-        vec3 cityEmit = uWinColor * cityWinOn * uNight;
+        vec3 cityWinCol = mix(uWinCool, uWinWarm, vCityTrim.w);
+        vec3 cityEmit = cityWinCol * cityWinOn * uNight;
         cityEmit += uShopColor * cityGlass * (0.10 + 0.85 * uNight) * vCityTrim.x;
         cityEmit += vCityAccent * cityNeon * (0.05 + 1.5 * uNight) * vCityTrim.x;
+        // Rebond de rue : décroissance rapide sur les trois ou quatre premiers
+        // mètres, sur les seules faces verticales. La portée compte autant que
+        // l'intensité — étalée sur six mètres, elle éclairait la façade ENTIÈRE
+        // d'un quartier bas, et Nishi-Nippori s'allumait comme en plein jour.
+        float cityBounce = exp(-vCityUp * 0.34) * (1.0 - cityRoofish);
+        cityEmit += uStreetGlow * cityBounce * uNight * 0.26;
         totalEmissiveRadiance += cityEmit;`,
       );
   };

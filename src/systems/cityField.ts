@@ -57,6 +57,8 @@ export interface CityBuilding {
   sign: 'none' | 'screen' | 'vertical';
   /** Masse d'arbres à la place du bâtiment (parc, sanctuaire). */
   grove: boolean;
+  /** 0 = fenêtres au blanc froid (bureau), 1 = au blanc chaud (logement). */
+  warm: number;
   /** Décalage de la trame de façade (m), pour que deux voisins ne s'alignent pas. */
   jx: number;
   jy: number;
@@ -213,6 +215,15 @@ export interface Tissue {
   trade: number;
   /** Plafond de hauteur du premier rang (marchés, échoppes). */
   lowCap: number;
+  /**
+   * Part de fenêtres éclairées au BLANC FROID plutôt qu'au blanc chaud.
+   *
+   * Un bureau est au néon, un logement à la lampe. Une ville dont toutes les
+   * fenêtres ont la même température se lit comme une texture ; c'est le
+   * mélange des deux qui donne à Shinjuku sa dureté et à Nishi-Nippori sa
+   * douceur, à la même heure.
+   */
+  cool: number;
 }
 
 const TISSUE_CACHE = new Map<string, Tissue>();
@@ -228,6 +239,7 @@ export function tissueOf(district: District): Tissue {
     sign: 0,
     trade: 0.18 + district.density * 0.42,
     lowCap: 1,
+    cool: 0.2,
   };
   if (has('parkGreen')) t.green += 0.3;
   if (has('torii')) t.green += 0.14;
@@ -255,10 +267,14 @@ export function tissueOf(district: District): Tissue {
     t.lowCap = 0.55;
   }
   if (has('fashionBoutique')) t.trade += 0.18;
-  // Les quartiers de tours n'ont pas d'échoppes en pied d'immeuble.
+  // Les quartiers de tours n'ont pas d'échoppes en pied d'immeuble, et
+  // s'éclairent au néon plutôt qu'à la lampe.
   if (has('glassTowers') || has('officeTowers') || has('skyscraperCluster') || has('modernWhite')) {
     t.trade -= 0.16;
+    t.cool += 0.5;
   }
+  if (has('upscaleResidential') || has('templeLowtown')) t.cool -= 0.12;
+  t.cool = Math.max(0.05, Math.min(0.85, t.cool));
   t.trade = Math.max(0.04, Math.min(0.86, t.trade));
   t.green = Math.min(0.45, t.green);
   t.hip = Math.min(0.62, t.hip);
@@ -370,6 +386,9 @@ export function buildCell(
           : rank < 2 && !grove && sr < tissue.screen + tissue.sign
             ? 'vertical'
             : 'none';
+      // Les tours du fond sont plus souvent des bureaux que le bâti bas.
+      const coolChance = tissue.cool * (rank === 2 ? 1.25 : rank === 1 ? 1 : 0.7);
+      b.warm = r() < coolChance ? 0.05 + r() * 0.2 : 0.75 + r() * 0.25;
       b.jx = r() * 12;
       b.jy = r() * 3;
 
@@ -593,6 +612,7 @@ export function makeCellBuffer(): CityBuilding[] {
     crown: 'flat' as const,
     sign: 'none' as const,
     grove: false,
+    warm: 1,
     jx: 0,
     jy: 0,
   }));

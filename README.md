@@ -296,6 +296,36 @@ composée dans le même nuanceur, dans une bande de `v`, et défile par rotation
 pure — ce qui est exactement la parallaxe d'un objet infiniment loin. Le taux
 est calé pour se lire à ~900 m.
 
+### La nuit
+
+Jour et nuit ne sont pas deux étalonnages d'une même image : ce sont deux
+sources différentes. Le jour, la ville est éclairée par le haut. La nuit, elle
+l'est **par le bas et par elle-même**, et c'est ce renversement qu'il fallait
+modéliser.
+
+- **Le rebond de rue.** Lampadaires, vitrines, phares : les trois ou quatre
+  premiers mètres d'une façade sont, la nuit, plus clairs que ses étages —
+  l'inverse exact du jour. Une décroissance exponentielle sur `vCityUp` suffit,
+  et elle coûte une ligne. La portée compte autant que l'intensité : étalée sur
+  six mètres, elle éclairait la façade *entière* d'un quartier bas, et
+  Nishi-Nippori s'allumait comme en plein jour.
+- **La température des fenêtres.** Un bureau est au néon, un logement à la
+  lampe. Une ville dont toutes les fenêtres ont la même température se lit
+  comme une texture ; c'est le mélange qui donne à Shinjuku sa dureté et à
+  Nishi-Nippori sa douceur, à la même heure. La proportion vient des `feats`
+  du quartier, et le fond, plus souvent tertiaire, est plus froid que le bâti bas.
+- **Les foyers d'éclairage.** Sur JR East, ils sont portés par les mâts de
+  caténaire eux-mêmes ; ils héritent donc de leur entraxe, et c'est ce
+  chapelet — une lumière toutes les trente secondes de vitesse — qui dit la
+  nuit mieux que n'importe quel étalonnage. Ils s'allument à la tombée du jour :
+  un lampadaire allumé à quinze heures se remarque.
+- **La lueur urbaine.** Au-dessus de Tokyo, le ciel de nuit n'est pas noir. Les
+  millions de lampes que la ville tourne vers le haut lui font un dôme orangé
+  qui s'éteint en montant, et c'est sur lui que les silhouettes se détachent —
+  jamais sur du bleu nuit. Ajoutée dans le nuanceur de `SkyDome`, sous la
+  composition de la silhouette. La brume de nuit se réchauffe d'autant : elle
+  diffuse cette lueur, et sans elle le lointain tombait dans un aplat sombre.
+
 ### Ce qui distingue un quartier d'un autre
 
 Les `feats` de `data/districts` — Akihabara électrique, Ueno verdoyant, Shibuya

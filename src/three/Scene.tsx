@@ -73,8 +73,11 @@ const SUN = {
   golden: { color: new THREE.Color('#ffb37a'), intensity: 1.6, pos: new THREE.Vector3(34, 7, -14) },
   night: { color: new THREE.Color('#8fa4cc'), intensity: 0.16, pos: new THREE.Vector3(20, 26, 12) },
 };
-const FOG_COLORS = { day: new THREE.Color('#d6e8f2'), golden: new THREE.Color('#dcae8f'), night: new THREE.Color('#161d2c') };
-const BG_COLORS = { day: new THREE.Color('#bcdaee'), golden: new THREE.Color('#e0b494'), night: new THREE.Color('#10141f') };
+// La brume de nuit n'est pas le noir de la nuit : elle est teintée par la
+// lueur urbaine qu'elle diffuse, et c'est ce qui empêche le lointain de tomber
+// dans un aplat sombre où plus rien ne se distingue.
+const FOG_COLORS = { day: new THREE.Color('#d6e8f2'), golden: new THREE.Color('#dcae8f'), night: new THREE.Color('#241f2a') };
+const BG_COLORS = { day: new THREE.Color('#bcdaee'), golden: new THREE.Color('#e0b494'), night: new THREE.Color('#131320') };
 const HEMI_SKY = { day: new THREE.Color('#cfe6f6'), golden: new THREE.Color('#eec5ae'), night: new THREE.Color('#2c3854') };
 const AMBIENT = { day: new THREE.Color('#e9f1f5'), golden: new THREE.Color('#e3cabb'), night: new THREE.Color('#38405a') };
 
@@ -145,7 +148,7 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
         // Far élargi : la ville vue à travers les baies en regardant le fond
         // du wagon est beaucoup plus loin que la distance latérale pure.
         scene.fog.near = 30 * w.day + 22 * w.golden + 16 * w.night;
-        scene.fog.far = 220 * w.day + 170 * w.golden + 130 * w.night;
+        scene.fog.far = 220 * w.day + 170 * w.golden + 150 * w.night;
       }
       if (scene.background instanceof THREE.Color) {
         mixColor(tmp.current, w, BG_COLORS);

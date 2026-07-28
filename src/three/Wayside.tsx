@@ -44,6 +44,10 @@ const RAIL_Y = -1.15;
 const POLE_X = 5.2;
 const POLE_COUNT = 8;
 const POLE_SPACING = 30;
+/** Hauteur du foyer d'éclairage porté par les mâts (m). */
+const LAMP_Y = 5.15;
+/** Déport du foyer vers la voie (m). */
+const LAMP_REACH = 0.95;
 /** Hauteur du fil de contact au-dessus du rail (m). */
 const CONTACT_Y = 4.9;
 /** Hauteur du câble porteur à l'aplomb d'un portique (m). */
@@ -51,7 +55,8 @@ const MESSENGER_Y = 6.05;
 /** Flèche du porteur à mi-portée (m). */
 const MESSENGER_SAG = 0.55;
 
-const RAILING_X = 5.45;
+/** Le garde-corps se pose SUR le tablier, dont la joue est en 5,1. */
+const RAILING_X = 5.0;
 const RAILING_PANEL = 10; // longueur d'un panneau de garde-corps (m)
 const RAILING_PANELS = 15; // ± 75 m : au-delà, un garde-corps n'est plus qu'un trait
 
@@ -106,6 +111,11 @@ function makePortalGeometry(): THREE.BufferGeometry {
   for (const s of [-1, 1]) {
     parts.push(cylAt(0.09, 0.13, 7, 8, s * POLE_X, 2.2, 0));
     parts.push(boxAt(0.16, 0.16, 0.16, s * POLE_X, 5.72, 0)); // tête de mât
+    // Potence d'éclairage : sur JR East, les foyers sont portés par les mâts
+    // de caténaire eux-mêmes. Ils héritent donc de leur entraxe — et c'est ce
+    // chapelet, une lumière toutes les trente mètres, qui dit la nuit.
+    parts.push(boxAt(LAMP_REACH, 0.07, 0.07, s * (POLE_X - LAMP_REACH / 2), LAMP_Y, 0));
+    parts.push(boxAt(0.34, 0.09, 0.2, s * (POLE_X - LAMP_REACH), LAMP_Y - 0.07, 0));
   }
   parts.push(boxAt(10.6, 0.14, 0.14, 0, 5.4, 0));
   // Pendules : ils relient le porteur au fil de contact, et c'est leur rythme
@@ -234,6 +244,14 @@ export function Wayside() {
       return { kit, mesh, mat };
     });
 
+    // Foyers d'éclairage : deux par portique, éteints le jour.
+    const lampMat = new THREE.MeshBasicMaterial({ color: '#ffe9c2', toneMapped: false, fog: true });
+    // Un volume et non un plan : le foyer doit se lire par en dessous depuis un
+    // siège, et de profil depuis le quai.
+    const lampGeo = new THREE.BoxGeometry(0.34, 0.07, 0.2);
+    const lamps = new THREE.InstancedMesh(lampGeo, lampMat, POLE_COUNT * 2);
+    lamps.frustumCulled = false;
+
     // Feu du signal : un disque émissif, vert en voie libre, rouge quand la
     // rame est arrêtée en pleine voie.
     const aspectMat = new THREE.MeshBasicMaterial({ color: '#3ad06a', toneMapped: false, fog: true });
@@ -253,6 +271,9 @@ export function Wayside() {
       railingGeo,
       railings,
       kitMeshes,
+      lampMat,
+      lampGeo,
+      lamps,
       aspectGeo,
       aspectMat,
       aspects,
@@ -311,8 +332,23 @@ export function Wayside() {
     for (let i = 0; i < POLE_COUNT; i++) {
       const z = ((runtime.distance + i * POLE_SPACING) % portalSpan) - portalSpan / 2;
       place(built.portals, i, z, 0, 0);
+      // Sous-face des deux foyers : posée sous la potence, elle regarde le sol.
+      for (let s2 = 0; s2 < 2; s2++) {
+        const idx = i * 2 + s2;
+        if (hiddenByStation(z)) {
+          built.lamps.setMatrixAt(idx, sc.hidden);
+          continue;
+        }
+        const side = s2 === 0 ? 1 : -1;
+        sc.pos.set(side * (POLE_X - LAMP_REACH), RAIL_Y + LAMP_Y - 0.13, z);
+        sc.rot.identity();
+        sc.scl.set(1, 1, 1);
+        sc.mtx.compose(sc.pos, sc.rot, sc.scl);
+        built.lamps.setMatrixAt(idx, sc.mtx);
+      }
     }
     built.portals.instanceMatrix.needsUpdate = true;
+    built.lamps.instanceMatrix.needsUpdate = true;
 
     // --- Garde-corps de viaduc ---
     // Il ne se fond pas : il POUSSE depuis le tablier, comme la joue de tablier
@@ -369,6 +405,14 @@ export function Wayside() {
       const night = Math.min(1, w.night + w.golden * 0.4);
       built.aspectMat.color.set(stopped ? '#ff4633' : '#3ad06a').multiplyScalar(0.55 + 0.75 * night);
     }
+    // Les foyers ne s'allument qu'à la tombée du jour, et s'éteignent tout à
+    // fait de jour : un lampadaire allumé à quinze heures se remarque.
+    {
+      const w = dayNightWeights(runtime.clockMin / 60);
+      const on = Math.min(1, w.night + w.golden * 0.55);
+      built.lampMat.color.set('#ffe9c2').multiplyScalar(on * 1.6);
+      built.lamps.visible = on > 0.03;
+    }
 
     // --- Arbres défilants ---
     const treeSpan = TREE_COUNT * TREE_SPACING;
@@ -424,6 +468,7 @@ export function Wayside() {
         <primitive key={kit.key} object={mesh} />
       ))}
       {built.aspects && <primitive object={built.aspects} />}
+      <primitive object={built.lamps} />
 
       {/* Rails en volume : à contre-jour ce sont les deux seules lignes
           brillantes du paysage, et une texture plate ne les rend pas. La gare

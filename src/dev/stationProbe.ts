@@ -171,6 +171,16 @@ export function installStationProbe(scene: THREE.Object3D): void {
     runtime.platformSlide = 0;
   };
 
+  // État courant : de quoi diagnostiquer une capture qui ne montre pas ce
+  // qu'on croyait avoir demandé.
+  w.__probeState = () => ({
+    clockMin: Math.round(runtime.clockMin),
+    index: useStore.getState().index,
+    phase: useStore.getState().phase,
+    platformFade: +runtime.platformFade.toFixed(2),
+    distance: Math.round(runtime.distance),
+  });
+
   // Heure de Tokyo, en minutes depuis minuit. L'horloge avance ensuite d'une
   // minute par minute réelle : la valeur posée tient le temps d'une capture.
   w.__probeClock = (minutes: number) => {

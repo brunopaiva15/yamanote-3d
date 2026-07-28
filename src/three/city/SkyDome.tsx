@@ -105,6 +105,8 @@ uniform vec2 uBand;         // v0, v1
 uniform vec3 uHaze;
 uniform float uHazeAmt;
 uniform float uSilDark;
+uniform vec3 uGlow;
+uniform float uGlowAmt;
 varying vec2 vSkyUv;
 
 void main() {
@@ -112,6 +114,12 @@ void main() {
       texture2D(uDay, vSkyUv).rgb * uWeights.x
     + texture2D(uGolden, vSkyUv).rgb * uWeights.y
     + texture2D(uNight, vSkyUv).rgb * uWeights.z;
+
+  // Lueur urbaine : au-dessus de Tokyo, le ciel de nuit n'est pas noir. Les
+  // millions de lampes que la ville tourne vers le haut lui font un dôme
+  // orangé qui s'éteint en montant — et c'est sur lui que les silhouettes se
+  // détachent, jamais sur du bleu nuit.
+  col += uGlow * uGlowAmt * (1.0 - smoothstep(uBand.y - 0.02, uBand.y + 0.26, vSkyUv.y));
 
   float bv = (vSkyUv.y - uBand.x) / (uBand.y - uBand.x);
   if (bv > 0.0 && bv < 1.0) {
@@ -172,6 +180,8 @@ export function SkyDome() {
         uHaze: { value: new THREE.Color('#d6e8f2') },
         uHazeAmt: { value: 0.5 },
         uSilDark: { value: 1 },
+        uGlow: { value: new THREE.Color('#c4702f') },
+        uGlowAmt: { value: 0 },
       },
     });
 
@@ -211,6 +221,7 @@ export function SkyDome() {
     // La brume de l'horizon est celle de la scène : une seule source de vérité.
     if (scene.fog instanceof THREE.Fog) (u.uHaze.value as THREE.Color).copy(scene.fog.color);
     u.uHazeAmt.value = 0.3 + 0.16 * w.day;
+    u.uGlowAmt.value = 0.3 * w.night + 0.12 * w.golden;
   });
 
   return (

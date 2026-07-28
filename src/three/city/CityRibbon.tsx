@@ -45,6 +45,9 @@ import { GROUND_TILE, makeCityGroundTexture, makeSignageTexture } from '../../te
 import { makeCityMaterial } from './cityMaterial';
 import { makeGroveGeometry, makeHipRoofGeometry } from './cityProps';
 
+/** Rebond de l'éclairage public sur le sol, la nuit. */
+const STREET_BOUNCE = new THREE.Color('#ffb877');
+
 /** Axe de rotation des enseignes, qui regardent toutes la voie. */
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 /** Familles de volumes secondaires, dans l'ordre d'escamotage. */
@@ -89,7 +92,7 @@ export function CityRibbon() {
       const geo = geometry ?? new THREE.BoxGeometry(1, 1, 1);
       const accent = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
       const jitter = new THREE.InstancedBufferAttribute(new Float32Array(count * 2), 2);
-      const trim = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
+      const trim = new THREE.InstancedBufferAttribute(new Float32Array(count * 4), 4);
       accent.setUsage(THREE.DynamicDrawUsage);
       jitter.setUsage(THREE.DynamicDrawUsage);
       trim.setUsage(THREE.DynamicDrawUsage);
@@ -228,7 +231,7 @@ export function CityRibbon() {
           sc.accent.set(b.accent);
           s.body.accent.setXYZ(idx, sc.accent.r, sc.accent.g, sc.accent.b);
           s.body.jitter.setXY(idx, b.jx, b.jy);
-          s.body.trim.setXYZ(idx, b.glow, b.socle, 0);
+          s.body.trim.setXYZW(idx, b.glow, b.socle, 0, b.warm);
         }
         s.body.mesh.instanceMatrix.needsUpdate = true;
         if (s.body.mesh.instanceColor) s.body.mesh.instanceColor.needsUpdate = true;
@@ -287,7 +290,7 @@ export function CityRibbon() {
           target.mesh.setColorAt(idx, sc.color);
           target.accent.setXYZ(idx, 1, 1, 1);
           target.jitter.setXY(idx, 0, 0);
-          target.trim.setXYZ(idx, 0, 0, 1);
+          target.trim.setXYZW(idx, 0, 0, 1, 1);
         }
         // Escamoter les emplacements non pourvus de la cellule.
         for (const kind of PROP_KINDS) {
@@ -351,6 +354,9 @@ export function CityRibbon() {
     // Un écran géant existe le jour — il est simplement terne. La nuit, il
     // devient la source lumineuse la plus forte du quartier.
     built.signMat.color.setScalar(0.42 + 1.35 * night);
+    // Le sol de la rue se relève lui aussi : il reçoit l'éclairage public et
+    // les vitrines, et un asphalte parfaitement noir n'existe pas en ville.
+    built.groundMat.emissive.copy(STREET_BOUNCE).multiplyScalar(0.07 * night);
   });
 
   return (
