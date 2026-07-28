@@ -645,6 +645,19 @@ lui-même. `--reuse` ne grave que les clips absents : un texte inchangé garde
 exactement le fichier qu'il avait, et une version plus récente de Kokoro ne
 fait pas dériver en douce les annonces déjà en place.
 
+**Ce que l'analyseur lit, et ce qu'il croit lire.** Kokoro ne reçoit pas du
+texte mais des phonèmes, fabriqués par misaki. Or un analyseur morphologique se
+trompe, et il se trompe surtout sur les noms propres : 「山手線内回り」 sortait
+en *yamate sen-nai mawari* — 山手 lu やまて, 線内回り recollé en un mot —, soit
+le nom de la ligne écorché dans presque chaque annonce, et 御徒町 en tête de
+phrase sortait *gotochō*. Les mots concernés sont réécrits en katakana pour la
+synthèse seule (`JA_READINGS` dans `announcements-export.ts`), le texte du jeu
+gardant son orthographe ; les noms de GARES, eux, sont vérifiés tout seuls
+contre leur transcription kana (`stations.ts`) — avec le même misaki que la
+synthèse, sans quoi le contrôle valide une lecture que personne n'entendra.
+Une correction de lecture ne change pas la clé du clip, qui hache le texte du
+jeu : il faut supprimer les MP3 concernés pour que `--reuse` les regrave.
+
 ### La gare parle aussi
 
 Une gare a sa propre sonorisation, et elle ne dit pas la même chose que la
