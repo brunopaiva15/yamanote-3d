@@ -189,6 +189,37 @@ export function makeCityGroundTexture(): THREE.DataTexture {
 }
 
 /**
+ * Panneau lumineux : écran géant s'il est étalé, enseigne verticale s'il est
+ * dressé. Une seule tuile pour les deux, parce que ce qui les distingue est
+ * leur PROPORTION, pas leur graphisme — un écran de Shibuya vu d'un train,
+ * c'est une grille de cellules colorées ; une enseigne de Shin-Ōkubo, la même
+ * grille étirée en hauteur.
+ *
+ * Le RGB module la teinte d'accent du quartier, portée par instance.
+ */
+export function makeSignageTexture(): THREE.DataTexture {
+  const S = 128;
+  const d = new Uint8Array(S * S * 4);
+  const r = rng(0x51617);
+  rect(d, S, S, 0, 0, S, S, 26, 24, 28, 255); // cadre sombre
+  const CELL = 32;
+  for (let cy = 0; cy < 4; cy++) {
+    for (let cx = 0; cx < 4; cx++) {
+      const v = r();
+      // Une cellule sur cinq reste éteinte : une enseigne pleine ne clignote
+      // pas, elle se lit comme un aplat.
+      if (v < 0.2) continue;
+      const lum = 150 + Math.floor(v * 105);
+      rect(d, S, S, cx * CELL + 3, cy * CELL + 3, CELL - 6, CELL - 6, lum, lum, lum, 255);
+      if (r() < 0.45) {
+        rect(d, S, S, cx * CELL + 3, cy * CELL + 3, CELL - 6, 5, 250, 248, 244, 255);
+      }
+    }
+  }
+  return toTexture(d, S, S);
+}
+
+/**
  * Devanture : les trois premiers mètres, là où vit tout le caractère d'une rue
  * de Tokyo. Deux locaux de quatre mètres, vitrine, bandeau d'enseigne, store,
  * et de loin en loin un néon vertical.

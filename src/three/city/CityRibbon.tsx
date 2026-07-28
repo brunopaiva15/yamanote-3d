@@ -33,15 +33,22 @@ import { qualityLevel, usePerf, type PerfLevel } from '../../systems/perf';
 import {
   CELL_CAPACITY,
   CELL_LEN,
-  PROP_CAPACITY,
+  PROP_CAPS,
+  type PropKind,
   buildCell,
   buildCellProps,
   makeCellBuffer,
   makePropBuffer,
   updateCityAnchor,
 } from '../../systems/cityField';
-import { GROUND_TILE, makeCityGroundTexture } from '../../textures/city';
+import { GROUND_TILE, makeCityGroundTexture, makeSignageTexture } from '../../textures/city';
 import { makeCityMaterial } from './cityMaterial';
+import { makeGroveGeometry, makeHipRoofGeometry } from './cityProps';
+
+/** Axe de rotation des enseignes, qui regardent toutes la voie. */
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+/** Familles de volumes secondaires, dans l'ordre d'escamotage. */
+const PROP_KINDS: PropKind[] = ['box', 'hip', 'tree', 'sign'];
 
 /** Emprise laissée libre de part et d'autre de l'axe : ballast et voie. */
 const GROUND_INNER = 5;
@@ -75,12 +82,11 @@ export function CityRibbon() {
   const built = useMemo(() => {
     const city = makeCityMaterial();
     const bodyPer = cells * CELL_CAPACITY;
-    const propPer = cells * PROP_CAPACITY;
 
-    const mkMesh = (count: number) => {
+    const mkMesh = (count: number, geometry?: THREE.BufferGeometry) => {
       // Une géométrie par maillage : les attributs d'instance vivent dessus,
       // deux InstancedMesh ne peuvent donc pas la partager.
-      const geo = new THREE.BoxGeometry(1, 1, 1);
+      const geo = geometry ?? new THREE.BoxGeometry(1, 1, 1);
       const accent = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
       const jitter = new THREE.InstancedBufferAttribute(new Float32Array(count * 2), 2);
       const trim = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
@@ -100,17 +106,48 @@ export function CityRibbon() {
       return { geo, mesh, accent, jitter, trim };
     };
 
+    // Bosquets : matériau à couleurs de sommets (tronc brun, feuillage vert),
+    // teinté par instance. Il ne passe pas par le matériau de ville — un
+    // feuillage n'a ni fenêtres ni devanture.
+    const groveMat = new THREE.MeshLambertMaterial({ vertexColors: true, fog: true });
+    // Enseignes : non éclairées, teintées par instance, dont le NIVEAU suit
+    // l'heure — le panneau est terne le jour et éclate la nuit.
+    const signTex = makeSignageTexture();
+    const signMat = new THREE.MeshBasicMaterial({
+      map: signTex,
+      toneMapped: false,
+      fog: true,
+      side: THREE.DoubleSide,
+    });
+    const signGeo = new THREE.PlaneGeometry(1, 1);
+    const groveGeo = makeGroveGeometry();
+    const hipGeo = makeHipRoofGeometry();
+
+    const mkPlain = (count: number, geo: THREE.BufferGeometry, mat: THREE.Material) => {
+      const mesh = new THREE.InstancedMesh(geo, mat, count);
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      mesh.frustumCulled = false;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      return mesh;
+    };
+
     const sides = ([1, -1] as const).map((side) => ({
       side,
       body: mkMesh(bodyPer),
-      prop: props ? mkMesh(propPer) : null,
+      // Les acrotères, édicules et chaussées passent par le matériau de ville
+      // (drapeau « nu ») ; les toitures en croupe aussi, avec leur pyramide.
+      box: props ? mkMesh(cells * PROP_CAPS.box) : null,
+      hip: props ? mkMesh(cells * PROP_CAPS.hip, hipGeo.clone()) : null,
+      tree: props ? mkPlain(cells * PROP_CAPS.tree, groveGeo, groveMat) : null,
+      sign: props ? mkPlain(cells * PROP_CAPS.sign, signGeo, signMat) : null,
     }));
 
     const groundTex = makeCityGroundTexture();
     groundTex.repeat.set(GROUND_SPAN / GROUND_TILE, GROUND_LEN / GROUND_TILE);
     const groundMat = new THREE.MeshLambertMaterial({ map: groundTex, fog: true });
 
-    return { city, sides, groundTex, groundMat };
+    return { city, sides, groundTex, groundMat, groveMat, groveGeo, signMat, signTex, signGeo, hipGeo };
   }, [cells, props]);
 
   useEffect(
@@ -118,9 +155,19 @@ export function CityRibbon() {
       for (const s of built.sides) {
         s.body.mesh.dispose();
         s.body.geo.dispose();
-        s.prop?.mesh.dispose();
-        s.prop?.geo.dispose();
+        s.box?.mesh.dispose();
+        s.box?.geo.dispose();
+        s.hip?.mesh.dispose();
+        s.hip?.geo.dispose();
+        s.tree?.dispose();
+        s.sign?.dispose();
       }
+      built.groveGeo.dispose();
+      built.groveMat.dispose();
+      built.signGeo.dispose();
+      built.signTex.dispose();
+      built.signMat.dispose();
+      built.hipGeo.dispose();
       built.groundMat.dispose();
       built.groundTex.dispose();
       built.city.dispose();
@@ -140,6 +187,10 @@ export function CityRibbon() {
       rot: new THREE.Quaternion(),
       color: new THREE.Color(),
       accent: new THREE.Color(),
+      // Curseurs par famille, remis à zéro à chaque cellule : le fichier
+      // promet zéro allocation en régime établi, un littéral par cellule la
+      // romprait.
+      used: { box: 0, hip: 0, tree: 0, sign: 0 } as Record<PropKind, number>,
     }),
     [],
   );
@@ -162,11 +213,12 @@ export function CityRibbon() {
         const base = slot * CELL_CAPACITY;
         for (let i = 0; i < CELL_CAPACITY; i++) {
           const idx = base + i;
-          if (i >= n) {
+          const b = i < n ? sc.buf[i] : null;
+          // Un bosquet REMPLACE le bâtiment : son emplacement reste vide.
+          if (!b || b.grove) {
             s.body.mesh.setMatrixAt(idx, sc.hidden);
             continue;
           }
-          const b = sc.buf[i];
           sc.pos.set(s.side * b.x, b.h / 2, st.origin - b.s);
           sc.scl.set(b.d, b.h, b.w);
           sc.mtx.compose(sc.pos, sc.rot, sc.scl);
@@ -184,32 +236,81 @@ export function CityRibbon() {
         s.body.jitter.needsUpdate = true;
         s.body.trim.needsUpdate = true;
 
-        // --- Acrotères, édicules, chaussées ---
-        if (!s.prop) continue;
+        // --- Acrotères, croupes, bosquets, enseignes ---
+        if (!s.box || !s.hip || !s.tree || !s.sign) continue;
         const np = buildCellProps(cell, s.side, sc.buf, n, sc.propBuf);
-        const pBase = slot * PROP_CAPACITY;
-        for (let i = 0; i < PROP_CAPACITY; i++) {
-          const idx = pBase + i;
-          if (i >= np) {
-            s.prop.mesh.setMatrixAt(idx, sc.hidden);
+        // Un curseur par famille : le générateur les entremêle dans un seul
+        // tampon, le rendu les répartit dans quatre maillages.
+        const used = sc.used;
+        for (const kind of PROP_KINDS) used[kind] = 0;
+        for (let i = 0; i < np; i++) {
+          const p = sc.propBuf[i];
+          const k = used[p.kind];
+          if (k >= PROP_CAPS[p.kind]) continue;
+          used[p.kind] = k + 1;
+          const idx = slot * PROP_CAPS[p.kind] + k;
+
+          if (p.kind === 'sign') {
+            // Panneau plaqué sur la face qui regarde la voie, donc tourné vers
+            // l'axe : un quart de tour, dans le sens du côté.
+            sc.pos.set(s.side * p.x, p.y + p.h / 2, st.origin - p.s);
+            sc.rot.setFromAxisAngle(Y_AXIS, s.side === 1 ? -Math.PI / 2 : Math.PI / 2);
+            sc.scl.set(p.w, p.h, 1);
+            sc.mtx.compose(sc.pos, sc.rot, sc.scl);
+            s.sign.setMatrixAt(idx, sc.mtx);
+            sc.color.set(p.tone);
+            s.sign.setColorAt(idx, sc.color);
+            sc.rot.identity();
             continue;
           }
-          const p = sc.propBuf[i];
-          sc.pos.set(s.side * p.x, p.y + p.h / 2, st.origin - p.s);
+
+          // Bosquets et croupes sont écrits dans un cube unité POSÉ PAR LA
+          // BASE ; les volumes en boîte, eux, sont centrés.
+          const baseY = p.kind === 'box' ? p.y + p.h / 2 : p.y;
+          sc.pos.set(s.side * p.x, baseY, st.origin - p.s);
+
+          if (p.kind === 'tree') {
+            const spread = Math.min(p.h * 1.15, Math.max(p.d, p.w));
+            sc.scl.set(spread, p.h, spread);
+            sc.mtx.compose(sc.pos, sc.rot, sc.scl);
+            s.tree.setMatrixAt(idx, sc.mtx);
+            sc.color.set(p.tone);
+            s.tree.setColorAt(idx, sc.color);
+            continue;
+          }
+
           sc.scl.set(p.d, p.h, p.w);
           sc.mtx.compose(sc.pos, sc.rot, sc.scl);
-          s.prop.mesh.setMatrixAt(idx, sc.mtx);
+          const target = p.kind === 'hip' ? s.hip : s.box;
+          target.mesh.setMatrixAt(idx, sc.mtx);
           sc.color.set(p.tone);
-          s.prop.mesh.setColorAt(idx, sc.color);
-          s.prop.accent.setXYZ(idx, 1, 1, 1);
-          s.prop.jitter.setXY(idx, 0, 0);
-          s.prop.trim.setXYZ(idx, 0, 0, 1);
+          target.mesh.setColorAt(idx, sc.color);
+          target.accent.setXYZ(idx, 1, 1, 1);
+          target.jitter.setXY(idx, 0, 0);
+          target.trim.setXYZ(idx, 0, 0, 1);
         }
-        s.prop.mesh.instanceMatrix.needsUpdate = true;
-        if (s.prop.mesh.instanceColor) s.prop.mesh.instanceColor.needsUpdate = true;
-        s.prop.accent.needsUpdate = true;
-        s.prop.jitter.needsUpdate = true;
-        s.prop.trim.needsUpdate = true;
+        // Escamoter les emplacements non pourvus de la cellule.
+        for (const kind of PROP_KINDS) {
+          const cap = PROP_CAPS[kind];
+          for (let k = used[kind]; k < cap; k++) {
+            const idx = slot * cap + k;
+            if (kind === 'sign') s.sign.setMatrixAt(idx, sc.hidden);
+            else if (kind === 'tree') s.tree.setMatrixAt(idx, sc.hidden);
+            else if (kind === 'hip') s.hip.mesh.setMatrixAt(idx, sc.hidden);
+            else s.box.mesh.setMatrixAt(idx, sc.hidden);
+          }
+        }
+        for (const m of [s.box, s.hip]) {
+          m.mesh.instanceMatrix.needsUpdate = true;
+          if (m.mesh.instanceColor) m.mesh.instanceColor.needsUpdate = true;
+          m.accent.needsUpdate = true;
+          m.jitter.needsUpdate = true;
+          m.trim.needsUpdate = true;
+        }
+        for (const m of [s.tree, s.sign]) {
+          m.instanceMatrix.needsUpdate = true;
+          if (m.instanceColor) m.instanceColor.needsUpdate = true;
+        }
       }
     };
 
@@ -245,7 +346,11 @@ export function CityRibbon() {
 
     // --- Nuit : les fenêtres, vitrines et néons s'allument ---
     const w = dayNightWeights(runtime.clockMin / 60);
-    built.city.night.value = Math.min(1, w.night + w.golden * 0.35);
+    const night = Math.min(1, w.night + w.golden * 0.35);
+    built.city.night.value = night;
+    // Un écran géant existe le jour — il est simplement terne. La nuit, il
+    // devient la source lumineuse la plus forte du quartier.
+    built.signMat.color.setScalar(0.42 + 1.35 * night);
   });
 
   return (
@@ -259,7 +364,10 @@ export function CityRibbon() {
             }}
           >
             <primitive object={s.body.mesh} />
-            {s.prop && <primitive object={s.prop.mesh} />}
+            {s.box && <primitive object={s.box.mesh} />}
+            {s.hip && <primitive object={s.hip.mesh} />}
+            {s.tree && <primitive object={s.tree} />}
+            {s.sign && <primitive object={s.sign} />}
           </group>
         ))}
       </group>

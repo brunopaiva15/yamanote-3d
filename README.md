@@ -296,6 +296,41 @@ composée dans le même nuanceur, dans une bande de `v`, et défile par rotation
 pure — ce qui est exactement la parallaxe d'un objet infiniment loin. Le taux
 est calé pour se lire à ~900 m.
 
+### Ce qui distingue un quartier d'un autre
+
+Les `feats` de `data/districts` — Akihabara électrique, Ueno verdoyant, Shibuya
+à écrans — ne vivaient que dans la **silhouette peinte de l'horizon**, c'est-à-
+dire à neuf cents mètres, dans la brume. Le long de la voie, là où on regarde,
+le tissu était partout le même aux palettes près.
+
+`tissueOf()` les traduit maintenant en réglages de génération. Chaque champ est
+une **proportion** de bâtiments concernés, jamais un interrupteur : un quartier
+de temples garde des immeubles, un quartier électrique garde des murs aveugles.
+C'est le mélange qui fait le caractère, pas l'uniformité.
+
+- **Les bosquets** (`parkGreen`, `torii`, un peu `templeLowtown`) ne s'ajoutent
+  pas au tissu : ils le REMPLACENT. C'est ce qui fait la lisière du parc d'Ueno
+  ou le bois du Meiji-jingū — non pas des arbres posés le long de la voie, mais
+  du bâti qui manque. Trois sujets serrés par masse, parce qu'un arbre isolé se
+  lit comme du mobilier et une masse comme un lieu.
+- **Les toitures en croupe** (`templeLowtown`, `upscaleResidential`) coiffent le
+  bâti bas, jamais une tour. Une croupe, géométriquement, c'est un cylindre à
+  quatre pans tourné d'un huitième de tour ; le faîte reste large, comme sur une
+  maison de ville japonaise, et le débord est franc.
+- **Les enseignes** (`electricNeon`, `koreatownSigns`, `giantScreen`,
+  `animeBillboard`) se plaquent sur la face qui regarde la voie. Une seule tuile
+  pour les deux formes : ce qui distingue un écran de Shibuya d'une enseigne de
+  Shin-Ōkubo, c'est leur proportion, pas leur graphisme. Elles existent le jour,
+  ternes ; la nuit elles deviennent la source la plus forte du quartier.
+- **Les marchés** (`shotengai`, `lowriseMarket`) rabattent le plafond de hauteur
+  du premier rang et multiplient les rez-de-chaussée commerçants ; les quartiers
+  de tours, à l'inverse, n'ont pas d'échoppes en pied d'immeuble.
+
+Quatre familles, quatre `InstancedMesh` par côté : le générateur les entremêle
+dans un seul tampon, le rendu les répartit. Bosquets et croupes sont écrits dans
+un cube unité posé PAR LA BASE, ce qui rend leur matrice d'instance directement
+lisible en mètres.
+
 ### L'emprise ferroviaire
 
 `three/Wayside` (anciennement `three/Scenery`) tient le rang qui défile le plus

@@ -61,10 +61,11 @@ async function aim(dx, dy) {
 
 // L'index est la gare d'ARRIVÉE : le tronçon traversé est index-1.
 const cases = [
-  [1, 15 * 60 + 30, 'viaduc-kanda'],
-  [14, 15 * 60 + 30, 'sol-takadanobaba'],
-  [25, 15 * 60 + 30, 'corridor-takanawa'],
-  [1, 21 * 60 + 30, 'viaduc-kanda-nuit'],
+  [5, 15 * 60 + 30, 'ueno-parc'],
+  [7, 15 * 60 + 30, 'nishinippori-temples'],
+  [3, 15 * 60 + 30, 'akihabara-electrique'],
+  [16, 21 * 60 + 30, 'shinjuku-nuit'],
+  [3, 21 * 60 + 30, 'akihabara-nuit'],
 ];
 // « rasant » plonge vers l'emprise : c'est le seul angle où l'on juge le
 // premier plan, celui qui vend la vitesse.
