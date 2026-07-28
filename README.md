@@ -18,9 +18,11 @@ npm run lint     # oxlint
 
 ## Contrôles
 
-- Regarder : cliquer-glisser avec la souris (pointer lock en bonus sur double-clic, Échap pour sortir)
+- Regarder : un clic dans le jeu capture la souris (regard libre) ; Échap pour
+  libérer. Si le verrou est refusé (iframe), cliquer-glisser reste disponible
 - Marcher : ZQSD, WASD ou les flèches ; Maj pour presser le pas
-- S'asseoir : un clic net vers une place libre ; se lever : espace ou un nouveau clic
+- S'asseoir : un clic net vers une place libre (ou le bouton du HUD) une fois
+  le regard capturé ; se lever : espace, un nouveau clic, ou le bouton du HUD
 - **Descendre / remonter : marcher à travers une porte ouverte.** Aucune touche —
   la porte ouverte *est* le passage
 - M : couper le son, F : plein écran
