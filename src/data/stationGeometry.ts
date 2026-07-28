@@ -32,3 +32,34 @@ export const PLATFORM_MID_X = PSD_X + PLATFORM_DEPTH * 0.55;
 
 /** Sous-face de l'auvent. */
 export const CANOPY_Y = 3.49;
+
+/** Épaisseur de la dalle du quai (percée au droit des trémies d'escalier). */
+export const SLAB_H = 0.44;
+
+// --- Trémies d'escalier -------------------------------------------------
+//
+// La dalle est réellement percée : on descend la volée sur quelques marches,
+// puis une limite de zone barre le passage (three/station/Barrier). Ces cotes
+// sont partagées par le rendu (Station), la marche du joueur (walkable) et les
+// voyageurs qui quittent le quai (platformCrowd) — trois consommateurs qui
+// doivent voir exactement le même escalier.
+
+/** Contremarche et giron d'une marche. */
+export const STAIR_RISE = 0.17;
+export const STAIR_GOING = 0.34;
+/** Marches modélisées, jusqu'au palier intermédiaire hors de vue. */
+export const STAIR_STEPS = 12;
+/** Marches réellement descendables avant la limite de zone. */
+export const STAIR_WALK_STEPS = 5;
+/**
+ * Longueur praticable de la volée, mesurée depuis le nez du quai : le premier
+ * giron est la dalle elle-même, la limite tombe donc au nez de la marche qui
+ * suit la dernière descendable — le joueur s'arrête PIEDS SUR une marche.
+ */
+export const STAIR_WALK_LEN = (STAIR_WALK_STEPS + 1) * STAIR_GOING;
+/** Demi-largeur praticable, entre les garde-corps. */
+export const STAIR_WALK_HALF_X = 1.12;
+/** Retrait de l'ouverture par rapport à l'emprise de collision de la trémie. */
+export const STAIR_OPENING_INSET = 0.18;
+/** Profondeur de la gaine sous la dalle. */
+export const STAIR_SHAFT_DEPTH = 3.4;

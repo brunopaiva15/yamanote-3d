@@ -75,7 +75,8 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       }
       body.visible = true;
 
-      const walking = p.state === 'ambling' || p.state === 'patrolling';
+      const transit = p.state === 'arriving' || p.state === 'leaving' || p.state === 'boarding';
+      const walking = p.state === 'ambling' || p.state === 'patrolling' || (transit && p.delay <= 0);
       let key: LogicalClip | '' = '';
       if (walking) key = actions.walk ? 'walk' : actions.standIdle ? 'standIdle' : '';
       else key = actions.standIdle ? 'standIdle' : '';
@@ -94,7 +95,8 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
         actions.walk.timeScale = (CONFIG.walkSpeed * 0.92) / walkClipSpeed;
       }
 
-      body.position.set(p.pos.x, PLATFORM_Y + p.bob, p.pos.z);
+      // p.y : négatif dans une trémie d'escalier, où l'on descend vraiment.
+      body.position.set(p.pos.x, PLATFORM_Y + p.y + p.bob, p.pos.z);
       body.rotation.set(0, p.yaw, 0);
       body.scale.setScalar(p.height);
 

@@ -21,7 +21,7 @@ import { PLATFORM_TOP, PSD_X } from '../data/stationGeometry';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import { runtime, type PlayerFrame } from './runtime';
-import { placementFor } from './stationPlacement';
+import { placementFor, stairwellAt } from './stationPlacement';
 
 /** Demi-largeur de l'allée centrale du wagon (les banquettes commencent après). */
 export const AISLE_U = 0.72;
@@ -56,6 +56,8 @@ interface Region {
 }
 
 const CAR_REGION: Region = { frame: 'car', y: 0 };
+// Le quai n'est plus plat : on descend quelques marches dans les trémies. La
+// région est donc reconstruite à chaque test plutôt que constante.
 const PLATFORM_REGION: Region = { frame: 'platform', y: PLATFORM_TOP };
 
 // --- Prédicats ----------------------------------------------------------
@@ -97,20 +99,34 @@ function inPortal(u: number, w: number): boolean {
   return false;
 }
 
-function inPlatform(u: number, w: number): boolean {
+/** Abscisse z locale du quai (repère de construction) pour un z monde. */
+function platformZ(w: number): number {
+  return useStore.getState().doorSide * (w - runtime.platformSlide);
+}
+
+/**
+ * Altitude du sol du quai sous (u, w), ou null si l'endroit n'est pas
+ * praticable. Les trémies d'escalier sont testées EN PREMIER : leur emprise
+ * reste un obstacle (on ne tombe pas dans le trou par le côté), mais la volée
+ * elle-même se descend, marche après marche, jusqu'à la limite de zone.
+ */
+function platformFloorY(u: number, w: number): number | null {
   const p = currentPlatform();
-  if (u < p.walkX0 || u > p.walkX1) return false;
-  const localZ = useStore.getState().doorSide * (w - runtime.platformSlide);
-  if (Math.abs(localZ) > p.walkHalfZ) return false;
+  const localZ = platformZ(w);
+  const stair = stairwellAt(p, u, localZ);
+  if (stair) return PLATFORM_TOP + stair.y;
+  if (u < p.walkX0 || u > p.walkX1) return null;
+  if (Math.abs(localZ) > p.walkHalfZ) return null;
   for (const o of p.obstacles) {
-    if (Math.abs(u - o.x) <= o.halfX && Math.abs(localZ - o.z) <= o.halfZ) return false;
+    if (Math.abs(u - o.x) <= o.halfX && Math.abs(localZ - o.z) <= o.halfZ) return null;
   }
-  return true;
+  return PLATFORM_TOP;
 }
 
 function regionAt(u: number, w: number): Region | null {
   if (inCar(u, w)) return CAR_REGION;
-  if (inPlatform(u, w)) return PLATFORM_REGION;
+  const y = platformFloorY(u, w);
+  if (y !== null) return y === PLATFORM_TOP ? PLATFORM_REGION : { frame: 'platform', y };
   if (inPortal(u, w)) return u < PORTAL_MID_U ? CAR_REGION : PLATFORM_REGION;
   return null;
 }

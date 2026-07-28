@@ -454,17 +454,24 @@ export function speakerProximity(): number {
   return Math.max(0.62, Math.min(1, 1.7 / Math.max(1.2, best)));
 }
 
-// Ouverture / fermeture de la ligne de sonorisation autour d'une annonce.
-// Le NoiseSynth du clic refuse tout événement antérieur au dernier programmé :
-// une ligne fermée puis rouverte dans la même frame (annonce coupée par une
-// annonce d'urgence) doit caler son clic APRÈS celui de fermeture déjà posé.
-let lastPaClickAt = 0;
+// Un instrument Tone refuse tout déclenchement antérieur ou égal au dernier
+// programmé : « Start time must be strictly greater than previous start time ».
+// Sur une frame longue (onglet repris, GPU saturé, machine lente), plusieurs
+// événements du cycle tombent au MÊME instant audio — deux portes qui claquent,
+// l'immobilisation et un choc de porte — et l'assertion cassait la frame.
+// Chaque instrument à déclenchements multiples réserve donc son créneau ici.
+const lastTriggerAt = new Map<string, number>();
 
+function slot(instrument: string, when: number, gap = 0.005): number {
+  const t = Math.max(when, (lastTriggerAt.get(instrument) ?? 0) + gap);
+  lastTriggerAt.set(instrument, t);
+  return t;
+}
+
+// Ouverture / fermeture de la ligne de sonorisation autour d'une annonce.
 function paClick(duration: number, when: number, velocity: number): void {
   if (!nodes) return;
-  const t = Math.max(when, lastPaClickAt + 0.005);
-  lastPaClickAt = t;
-  nodes.paClick.triggerAttackRelease(duration, t, velocity);
+  nodes.paClick.triggerAttackRelease(duration, slot('paClick', when), velocity);
 }
 
 export function paVoiceOpen(): void {
@@ -521,16 +528,16 @@ export function setDoorSlide(train01: number, psd01: number): void {
 export function doorClunk(vel: number): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.thud.triggerAttackRelease('G1', 0.09, now, vel);
-  nodes.clack.triggerAttackRelease(0.03, now + 0.012, vel * 0.7);
+  nodes.thud.triggerAttackRelease('G1', 0.09, slot('thud', now), vel);
+  nodes.clack.triggerAttackRelease(0.03, slot('clack', now + 0.012), vel * 0.7);
 }
 
 // Choc plus mat des portes palières, entendues depuis l'intérieur du wagon.
 export function psdClunk(vel: number): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.thud.triggerAttackRelease('C2', 0.07, now, vel * 0.8);
-  nodes.clack.triggerAttackRelease(0.025, now + 0.01, vel * 0.45);
+  nodes.thud.triggerAttackRelease('C2', 0.07, slot('thud', now), vel * 0.8);
+  nodes.clack.triggerAttackRelease(0.025, slot('clack', now + 0.01), vel * 0.45);
 }
 
 // --- Bruitages du circuit de frein et de course -------------------------
@@ -539,7 +546,7 @@ export function psdClunk(vel: number): void {
 export function brakeApply(): void {
   if (!nodes) return;
   nodes.vent.envelope.decay = 0.5;
-  nodes.vent.triggerAttackRelease(0.25, Tone.now(), 0.12);
+  nodes.vent.triggerAttackRelease(0.25, slot('vent', Tone.now()), 0.12);
 }
 
 // Desserrage des freins juste avant le départ : longue purge « pshhh »
@@ -548,17 +555,17 @@ export function brakeRelease(): void {
   if (!nodes) return;
   const now = Tone.now();
   nodes.vent.envelope.decay = 1.3;
-  nodes.vent.triggerAttackRelease(0.55, now, 0.2);
-  nodes.vent.triggerAttackRelease(0.2, now + 1.15, 0.07);
+  nodes.vent.triggerAttackRelease(0.55, slot('vent', now), 0.2);
+  nodes.vent.triggerAttackRelease(0.2, slot('vent', now + 1.15), 0.07);
 }
 
 // Immobilisation complète : léger tassement de caisse puis serrage à l'arrêt.
 export function stopSettle(): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.thud.triggerAttackRelease('F1', 0.12, now, 0.1);
+  nodes.thud.triggerAttackRelease('F1', 0.12, slot('thud', now), 0.1);
   nodes.vent.envelope.decay = 0.4;
-  nodes.vent.triggerAttackRelease(0.2, now + 0.3, 0.09);
+  nodes.vent.triggerAttackRelease(0.2, slot('vent', now + 0.3), 0.09);
 }
 
 // Crissement de boudin dans une courbe : deux tenues aiguës, très en retrait.
@@ -567,15 +574,15 @@ export function flangeSqueal(intensity: number): void {
   const now = Tone.now();
   const base = 2500 + Math.random() * 900;
   const vel = 0.05 + intensity * 0.06;
-  nodes.squeal.triggerAttackRelease(base, 0.9 + Math.random() * 0.8, now, vel);
-  nodes.squeal.triggerAttackRelease(base * 1.045, 0.5, now + 1.35, vel * 0.6);
+  nodes.squeal.triggerAttackRelease(base, 0.9 + Math.random() * 0.8, slot('squeal', now), vel);
+  nodes.squeal.triggerAttackRelease(base * 1.045, 0.5, slot('squeal', now + 1.35), vel * 0.6);
 }
 
 // Petite purge du compresseur sous le plancher, en pleine course.
 export function airCompressorPurge(): void {
   if (!nodes) return;
   nodes.vent.envelope.decay = 0.35;
-  nodes.vent.triggerAttackRelease(0.15, Tone.now(), 0.05);
+  nodes.vent.triggerAttackRelease(0.15, slot('vent', Tone.now()), 0.05);
 }
 
 // « Clac-clac » des deux bogies au passage d'un joint de rail.
@@ -584,7 +591,8 @@ export function railClack(speed01: number): void {
   const now = Tone.now();
   const v = 0.12 + speed01 * 0.5;
   const bogieDelay = 0.5 - speed01 * 0.32; // second bogie plus proche à vitesse haute
-  const hit = (t: number, vel: number) => nodes!.clack.triggerAttackRelease(0.05, t, vel);
+  const hit = (t: number, vel: number) =>
+    nodes!.clack.triggerAttackRelease(0.05, slot('clack', t), vel);
   hit(now, v);
   hit(now + 0.09, v * 0.85);
   hit(now + bogieDelay, v * 0.9);
@@ -596,23 +604,23 @@ export function railClack(speed01: number): void {
 function synthDoorOpen(): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.chime.triggerAttackRelease('E5', 0.16, now, 0.5);
-  nodes.chime.triggerAttackRelease('A5', 0.3, now + 0.18, 0.5);
+  nodes.chime.triggerAttackRelease('E5', 0.16, slot('chime', now), 0.5);
+  nodes.chime.triggerAttackRelease('A5', 0.3, slot('chime', now + 0.18), 0.5);
 }
 
 function synthDoorClose(): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.chime.triggerAttackRelease('A5', 0.16, now, 0.5);
-  nodes.chime.triggerAttackRelease('E5', 0.3, now + 0.18, 0.5);
-  nodes.air.triggerAttackRelease(0.5, now + 0.5, 0.18);
+  nodes.chime.triggerAttackRelease('A5', 0.16, slot('chime', now), 0.5);
+  nodes.chime.triggerAttackRelease('E5', 0.3, slot('chime', now + 0.18), 0.5);
+  nodes.air.triggerAttackRelease(0.5, slot('air', now + 0.5), 0.18);
 }
 
 function synthArrival(): void {
   if (!nodes) return;
   const now = Tone.now();
   const notes = ['G5', 'C6', 'E6', 'G6'];
-  notes.forEach((n, i) => nodes!.bell.triggerAttackRelease(n, 0.3, now + i * 0.17, 0.4));
+  notes.forEach((n, i) => nodes!.bell.triggerAttackRelease(n, 0.3, slot('bell', now + i * 0.17), 0.4));
 }
 
 // --- Mélodies de départ (発車メロディ), compositions ORIGINALES ---

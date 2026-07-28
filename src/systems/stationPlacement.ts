@@ -9,7 +9,15 @@
 // long de la voie, origine au milieu du quai.
 
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
-import { PSD_X } from '../data/stationGeometry';
+import {
+  PSD_X,
+  STAIR_GOING,
+  STAIR_RISE,
+  STAIR_STEPS,
+  STAIR_WALK_HALF_X,
+  STAIR_WALK_LEN,
+  STAIR_WALK_STEPS,
+} from '../data/stationGeometry';
 
 export interface Placed {
   x: number;
@@ -138,4 +146,52 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   };
   CACHE.set(i, placement);
   return placement;
+}
+
+// --- Trémies d'escalier -------------------------------------------------
+//
+// La volée descend du nez du quai (côté -z de l'emprise) vers +z. Une seule
+// fonction dit l'altitude du sol dans la trémie ; le rendu, la marche du
+// joueur et les voyageurs qui s'en vont la partagent, donc personne ne
+// marche à dix centimètres au-dessus des marches.
+
+/** Nez de la volée : abscisse z locale du bord haut, côté quai. */
+export function stairTopZ(s: Placed): number {
+  return s.z - s.halfZ;
+}
+
+/** Altitude (relative au sol du quai) à `t` mètres du nez de la volée. */
+export function stairDropAt(t: number, maxSteps = STAIR_STEPS): number {
+  if (t <= 0) return 0;
+  const step = Math.min(maxSteps, Math.floor(t / STAIR_GOING));
+  return -step * STAIR_RISE;
+}
+
+export interface StairwellHit {
+  stair: Placed;
+  /** Distance parcourue depuis le nez de la volée (m). */
+  t: number;
+  /** Altitude du sol sous les pieds, relative au sol du quai. */
+  y: number;
+}
+
+/**
+ * Position dans une volée d'escalier, ou null si le point n'y est pas.
+ * `maxLen` borne la descente : le joueur s'arrête à la limite de zone
+ * (STAIR_WALK_LEN), les PNJ descendent jusqu'au fond et disparaissent.
+ */
+export function stairwellAt(
+  p: StationPlacement,
+  x: number,
+  z: number,
+  maxLen = STAIR_WALK_LEN,
+  maxSteps = STAIR_WALK_STEPS,
+): StairwellHit | null {
+  for (const s of p.stairs) {
+    if (Math.abs(x - s.x) > STAIR_WALK_HALF_X) continue;
+    const t = z - stairTopZ(s);
+    if (t < 0 || t > maxLen) continue;
+    return { stair: s, t, y: stairDropAt(t, maxSteps) };
+  }
+  return null;
 }

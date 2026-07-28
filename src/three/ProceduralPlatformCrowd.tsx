@@ -187,7 +187,8 @@ export function ProceduralPlatformCrowd() {
         continue;
       }
       g.visible = true;
-      g.position.set(p.pos.x, PLATFORM_Y + p.bob, p.pos.z);
+      // p.y : négatif dans une trémie d'escalier, où l'on descend vraiment.
+      g.position.set(p.pos.x, PLATFORM_Y + p.y + p.bob, p.pos.z);
       g.rotation.y = p.yaw;
       const head = g.getObjectByName('crowd-head');
       if (head) {
