@@ -116,9 +116,9 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
       const pitch =
         motion === 'gossip'
-          ? Math.max(0, Math.sin(t * 2.8 + role * Math.PI)) * 0.11 + 0.04
-          : Math.max(0, Math.sin(t * 2.4 + role * Math.PI)) * 0.09;
-      return set(yaw, pitch, motion === 'gossip' ? 0.03 : 0);
+          ? Math.max(0, Math.sin(t * 3.2 + role * Math.PI)) * 0.16 + 0.06
+          : Math.max(0, Math.sin(t * 2.8 + role * Math.PI)) * 0.14;
+      return set(yaw, pitch, motion === 'gossip' ? 0.05 : 0.02, 6);
     }
     case 'whisper': {
       if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
@@ -313,6 +313,81 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       const u = Math.min(1, (t - 1.1) / 1.0);
       return set(side * 0.2 * (1 - u), 0.1, 0.08 * (1 - u), 6, side * 0.2 * (1 - u), 0);
     }
+    case 'argue': {
+      if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
+      const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
+      // Hochements vifs alternés, buste en avant.
+      const jab = Math.max(0, Math.sin(t * 5.5 + role * Math.PI));
+      return set(yaw + Math.sin(t * 8) * 0.08, 0.12 + jab * 0.18, 0.08 + jab * 0.1, 9);
+    }
+    case 'fight': {
+      if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
+      const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
+      const punch = Math.sin(t * 9 + role * 1.7);
+      const side = role === 0 ? 1 : -1;
+      return set(
+        yaw + punch * 0.2,
+        0.15 + Math.abs(punch) * 0.2,
+        0.12 + Math.max(0, punch) * 0.18,
+        12,
+        side * punch * 0.35,
+        Math.min(0, punch) * -0.04,
+      );
+    }
+    case 'jealous': {
+      if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
+      // Role 0 : fixe le partenaire ; role 1 : détourne le regard puis re-fixe.
+      const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
+      if (role === 1) {
+        const turn = Math.sin(t * 1.4);
+        return set(yaw * (0.3 + 0.5 * Math.max(0, turn)), 0.25, 0.04, 5, -0.08);
+      }
+      return set(yaw * 0.9 + Math.sin(t * 2) * 0.15, 0.2, 0.05, 6);
+    }
+    case 'angry': {
+      // Tête qui tourne sèchement, menton bas, buste raide.
+      const snap = Math.sin(t * 3.2) > 0 ? 0.85 : -0.55;
+      return set(snap, 0.22, 0.06, 8);
+    }
+    case 'scold': {
+      if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
+      const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
+      const wag = Math.sin(t * 6 + role * Math.PI) * 0.25;
+      return set(yaw + wag, 0.18 + (role === 0 ? 0.12 : 0.05), role === 0 ? 0.12 : 0.02, 8);
+    }
+    case 'shove': {
+      if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
+      const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
+      const side = role === 0 ? 1 : -1;
+      if (t < 0.35) return set(yaw, 0.1, 0.05, 10, side * 0.1);
+      if (t < 0.7) {
+        // Role 0 pousse ; role 1 encaisse.
+        const u = (t - 0.35) / 0.35;
+        return set(
+          yaw,
+          0.2,
+          role === 0 ? 0.25 * u : -0.05,
+          14,
+          side * (role === 0 ? 0.15 : 0.55 * u),
+          role === 1 ? -0.12 * u : 0,
+        );
+      }
+      const u = Math.min(1, (t - 0.7) / 1.0);
+      return set(yaw * (1 - u * 0.5), 0.1, 0.05 * (1 - u), 7, side * 0.2 * (1 - u), 0);
+    }
+    case 'flirt': {
+      if (ctx.partnerX === undefined || ctx.partnerZ === undefined) return set(0, 0);
+      const yaw = headYawToward(ctx, ctx.partnerX, ctx.partnerZ);
+      return set(yaw * 0.85, 0.08 + Math.sin(t * 2.2 + role) * 0.06, 0.04, 5, Math.sin(t + role) * 0.04);
+    }
+    case 'sulk':
+      return set(0.75, 0.35, 0.08, 4, -0.06);
+    case 'gasp': {
+      if (t < 0.35) return set(0, -0.25 * (t / 0.35), -0.04, 10);
+      return set(Math.sin(t * 9) * 0.12, -0.15 + 0.3 * Math.min(1, (t - 0.35) / 0.6), 0, 7);
+    }
+    case 'facepalm':
+      return set(0.15, 0.65 + Math.sin(t * 2) * 0.05, 0.1, 5);
     case 'bow': {
       if (t < 0.5) return set(0, 0.55 * (t / 0.5), 0.08, 6);
       if (t < 1.0) return set(0, 0.55, 0.08, 5);

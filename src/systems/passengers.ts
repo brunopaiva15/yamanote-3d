@@ -26,11 +26,13 @@ import {
   PAX_ACTIONS,
   isPairAction,
   isFallingAction,
+  isDramaAction,
   type PaxAction,
   type ActionWhere,
 } from '../data/paxActions';
 import { resolveMotion, trainPlayerCtx } from './paxMotion';
 import { playPaxActionSfx } from './paxSfx';
+import { paxBump } from './audioEngine';
 
 export type PaxState = 'hidden' | 'seated' | 'standing' | 'boarding' | 'alighting';
 export type { PaxAction };
@@ -62,6 +64,8 @@ export interface Pax {
   lookYawTarget: number; // cible de l'action « look » ; aussi signe de chute (±1)
   bodyLean: number;
   bodyRoll: number; // roulis (chutes latérales)
+  /** Accumulation de poussée par le joueur (0..~1.5) ; chute au-delà du seuil. */
+  pushAccum: number;
   decideT: number; // minuterie des décisions assis / debout
   holdStrap: boolean; // debout : se tient à une poignée (rôdé à chaque passage debout)
   pockets: boolean; // mains dans les poches (trait stable, pantalon uniquement)
@@ -122,7 +126,7 @@ function makePax(id: number): Pax {
     bob: 0,
     action: 'none',
     actionT: 0,
-    actionDur: 2 + Math.random() * 4,
+    actionDur: 0.6 + Math.random() * 1.8,
     partner: -1,
     chatRole: 0,
     headYaw: 0,
@@ -130,7 +134,8 @@ function makePax(id: number): Pax {
     lookYawTarget: 0,
     bodyLean: 0,
     bodyRoll: 0,
-    decideT: 8 + Math.random() * 20,
+    pushAccum: 0,
+    decideT: 3 + Math.random() * 8,
     holdStrap: rollStrap(appearance.build.scale),
     pockets: appearance.bottom.type === 'trousers' && Math.random() < 0.4,
     exitDoorZ: -1,
@@ -653,8 +658,120 @@ function maybeRelocate(p: Pax): boolean {
 
 const tmp = new THREE.Vector3();
 
+/** Seuil de poussée : au-delà, le voyageur debout bascule. */
+const PUSH_FALL = 0.9;
+const PUSH_STAND_R = 0.5;
+const PUSH_SEAT_R = 0.36;
+
+let prevPlayerX = 0;
+let prevPlayerZ = 0;
+let prevPlayerInit = false;
+let bumpCooldown = 0;
+
+/**
+ * Le joueur n'a pas de collision dure avec les PNJ, mais s'il marche dans
+ * quelqu'un, on pousse le voyageur et on accumule. Abuser → chute.
+ */
+function resolvePlayerPush(dt: number): void {
+  if (runtime.playerFrame !== 'car') {
+    prevPlayerInit = false;
+    return;
+  }
+  const px = runtime.playerCarX;
+  const pz = runtime.playerCarZ;
+  if (!prevPlayerInit) {
+    prevPlayerX = px;
+    prevPlayerZ = pz;
+    prevPlayerInit = true;
+    return;
+  }
+  const pvx = (px - prevPlayerX) / Math.max(dt, 1e-4);
+  const pvz = (pz - prevPlayerZ) / Math.max(dt, 1e-4);
+  prevPlayerX = px;
+  prevPlayerZ = pz;
+  bumpCooldown = Math.max(0, bumpCooldown - dt);
+  const speed = Math.hypot(pvx, pvz);
+
+  for (const p of paxList) {
+    if (p.state !== 'standing' && p.state !== 'seated') continue;
+    if (isFallingAction(p.action)) {
+      p.pushAccum = 0;
+      continue;
+    }
+    const dx = p.pos.x - px;
+    const dz = p.pos.z - pz;
+    const dist = Math.hypot(dx, dz);
+    const radius = p.state === 'standing' ? PUSH_STAND_R : PUSH_SEAT_R;
+    if (dist >= radius || dist < 1e-4) {
+      p.pushAccum = Math.max(0, p.pushAccum - dt * 0.7);
+      continue;
+    }
+
+    // Approche : composante de vitesse du joueur vers le PNJ.
+    const nx = dx / dist;
+    const nz = dz / dist;
+    const approach = Math.max(0, pvx * nx + pvz * nz);
+    const overlap = (radius - dist) / radius;
+
+    if (p.state === 'standing') {
+      // Écarte doucement le voyageur (reste près de son slot).
+      const push = overlap * 0.55;
+      p.pos.x += nx * push;
+      p.pos.z += nz * push;
+      if (p.standSlot >= 0) {
+        const s = STAND_SLOTS[p.standSlot];
+        p.pos.x = THREE.MathUtils.clamp(p.pos.x, s.x - 0.35, s.x + 0.35);
+        p.pos.z = THREE.MathUtils.clamp(p.pos.z, s.z - 0.45, s.z + 0.45);
+        alignStrapStand(p);
+      }
+      // Accumulation : plus on insiste en marchant dedans, plus ça monte.
+      const rate = 0.55 + approach * 0.9 + overlap * 1.4 + (speed > 1.6 ? 0.5 : 0);
+      p.pushAccum += rate * dt;
+      // Première bousculade : regard fâché vers le joueur.
+      if (p.pushAccum > 0.15 && p.action !== 'angry' && p.action !== 'gasp' && !isPairAction(p.action)) {
+        if (p.pushAccum < 0.45) {
+          endPair(p);
+          p.action = 'angry';
+          p.actionT = 0;
+          p.actionDur = 1.2;
+          p.partner = -1;
+        }
+      }
+      if (bumpCooldown <= 0 && (approach > 0.4 || overlap > 0.35)) {
+        paxBump(dist, overlap > 0.55);
+        bumpCooldown = 0.28;
+      }
+      if (p.pushAccum >= PUSH_FALL) {
+        endPair(p);
+        p.holdStrap = false;
+        p.pushAccum = 0;
+        applyAction(p, 'fall', 4.5 + Math.random() * 1.2);
+        // Direction de la chute = sens de la poussée (applyAction tire au hasard).
+        p.lookYawTarget = nx >= 0 ? 1 : -1;
+      }
+    } else {
+      // Assis : on ne le fait pas tomber, mais il s'énerve si on le frôle.
+      p.pushAccum += (0.3 + approach * 0.5) * dt;
+      if (p.pushAccum > 0.35 && !isPairAction(p.action) && p.action !== 'angry') {
+        endPair(p);
+        p.action = Math.random() < 0.5 ? 'angry' : 'gasp';
+        p.actionT = 0;
+        p.actionDur = 1.5 + Math.random();
+        p.partner = -1;
+        p.pushAccum = 0;
+        if (bumpCooldown <= 0) {
+          paxBump(dist, false);
+          bumpCooldown = 0.35;
+        }
+      }
+      p.pushAccum = Math.max(0, p.pushAccum - dt * 0.4);
+    }
+  }
+}
+
 export function updatePassengers(dt: number): void {
   drainArrivedBoarders(dt);
+  resolvePlayerPush(dt);
   for (const p of paxList) {
     if (p.state === 'boarding' || p.state === 'alighting') {
       const wp = p.waypoints[p.wpi];
@@ -717,7 +834,7 @@ export function updatePassengers(dt: number): void {
     p.decideT -= dt;
 
     if (p.decideT <= 0) {
-      p.decideT = 14 + Math.random() * 18;
+      p.decideT = 5 + Math.random() * 9;
       if (maybeRelocate(p)) continue;
     }
 
@@ -757,10 +874,11 @@ export function updatePassengers(dt: number): void {
       playerZ: player.playerZ,
       seatSide,
     });
-    p.headYaw += (m.yaw - p.headYaw) * Math.min(1, dt * m.speed);
-    p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed);
-    p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed);
-    p.bodyRoll += (m.roll - p.bodyRoll) * Math.min(1, dt * m.speed);
+    const speedMul = isDramaAction(p.action) || isFallingAction(p.action) ? 1.25 : 1;
+    p.headYaw += (m.yaw - p.headYaw) * Math.min(1, dt * m.speed * speedMul);
+    p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed * speedMul);
+    p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed * speedMul);
+    p.bodyRoll += (m.roll - p.bodyRoll) * Math.min(1, dt * m.speed * speedMul);
     // Chute : le bob porte le décalage vertical (au sol).
     if (isFallingAction(p.action) || Math.abs(m.drop) > 0.001 || Math.abs(p.bob) > 0.001) {
       p.bob += (m.drop - p.bob) * Math.min(1, dt * m.speed);

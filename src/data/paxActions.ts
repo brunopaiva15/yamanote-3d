@@ -63,6 +63,17 @@ export type PaxAction =
   | 'fall'
   /** Glissade sur le quai. */
   | 'slip'
+  // Drama / émotions visibles.
+  | 'argue'
+  | 'fight'
+  | 'jealous'
+  | 'angry'
+  | 'scold'
+  | 'shove'
+  | 'flirt'
+  | 'sulk'
+  | 'gasp'
+  | 'facepalm'
   // Sociales / à deux.
   | 'whisper'
   | 'laugh'
@@ -145,6 +156,16 @@ export type MotionId =
   | 'stumble'
   | 'fall'
   | 'slip'
+  | 'argue'
+  | 'fight'
+  | 'jealous'
+  | 'angry'
+  | 'scold'
+  | 'shove'
+  | 'flirt'
+  | 'sulk'
+  | 'gasp'
+  | 'facepalm'
   | 'whisper'
   | 'laugh'
   | 'point'
@@ -206,6 +227,12 @@ export const PAIR_ACTIONS: ReadonlySet<PaxAction> = new Set([
   'gossip',
   'sideChat',
   'nodAgree',
+  'argue',
+  'fight',
+  'jealous',
+  'scold',
+  'shove',
+  'flirt',
 ]);
 
 /** Gestes brefs : un voisin en train de les faire n'est pas un bon partenaire. */
@@ -221,11 +248,30 @@ export const BUSY_BRIEF: ReadonlySet<PaxAction> = new Set([
   'stumble',
   'fall',
   'slip',
+  'shove',
+  'gasp',
+  'facepalm',
 ]);
 
 /** Occupations qui font perdre la poignée / le contrôle du corps. */
 export function isFallingAction(a: PaxAction): boolean {
   return a === 'fall' || a === 'stumble' || a === 'slip';
+}
+
+/** Scènes dramatiques (bagarre, dispute…) — motions plus amples. */
+export function isDramaAction(a: PaxAction): boolean {
+  return (
+    a === 'argue' ||
+    a === 'fight' ||
+    a === 'jealous' ||
+    a === 'angry' ||
+    a === 'scold' ||
+    a === 'shove' ||
+    a === 'sulk' ||
+    a === 'gasp' ||
+    a === 'facepalm' ||
+    a === 'flirt'
+  );
 }
 
 export function isPairAction(a: PaxAction): boolean {
@@ -247,47 +293,47 @@ export function actionShowsBottle(a: PaxAction): boolean {
 
 /** Catalogue complet : historiques d'abord, puis les nouvelles couches. */
 export const PAX_ACTIONS: readonly PaxActionDef[] = [
-  // ——— Historiques (poids calés sur l'ancien pickAction) ———
+  // ——— Historiques (poids calés pour un wagon vivant, pas une salle d'attente) ———
   {
     id: 'chat',
-    weight: 16,
+    weight: 22,
     kind: 'pair',
     where: ['seated', 'standing'],
-    dur: [8, 18],
+    dur: [4, 9],
     motion: 'chat',
-    partnerDist: 1.4,
+    partnerDist: 1.6,
   },
   {
     id: 'stare',
-    weight: 12,
+    weight: 10,
     kind: 'player',
     where: ['seated', 'standing'],
-    dur: [1.8, 4.8],
+    dur: [1.2, 3.2],
     motion: 'stare',
-    playerDist: 3.5,
+    playerDist: 4.2,
   },
   {
     id: 'phone',
-    weight: 22,
+    weight: 10,
     kind: 'solo',
     where: ['seated', 'standing', 'waiting'],
-    dur: [6, 15],
+    dur: [3, 7],
     motion: 'phone',
     handProp: 'phone',
   },
   {
     id: 'doze',
-    weight: 12,
+    weight: 5,
     kind: 'solo',
     where: ['seated'],
-    dur: [8, 20],
+    dur: [5, 10],
     motion: 'doze',
     archetypes: ['senior', 'salaryman'],
-    archetypeBoost: 1.4,
+    archetypeBoost: 1.3,
   },
   {
     id: 'sneeze',
-    weight: 6,
+    weight: 5,
     kind: 'solo',
     where: ['seated', 'standing', 'waiting'],
     dur: [0.9, 0.9],
@@ -295,18 +341,18 @@ export const PAX_ACTIONS: readonly PaxActionDef[] = [
   },
   {
     id: 'look',
-    weight: 17,
+    weight: 12,
     kind: 'solo',
     where: ['seated', 'standing', 'waiting'],
-    dur: [2.5, 6.5],
+    dur: [1.5, 3.5],
     motion: 'look',
   },
   {
     id: 'none',
-    weight: 15,
+    weight: 4,
     kind: 'solo',
     where: ['seated', 'standing', 'waiting'],
-    dur: [2, 7],
+    dur: [1, 2.5],
     motion: 'idle',
   },
 
@@ -663,18 +709,16 @@ export const PAX_ACTIONS: readonly PaxActionDef[] = [
     motion: 'sway',
   },
   {
-    // Rare : faux pas — plus fréquent sans poignée et quand le wagon tangue.
     id: 'stumble',
-    weight: 1.4,
+    weight: 2.2,
     kind: 'solo',
     where: ['standing'],
     dur: [1.6, 2.4],
     motion: 'stumble',
   },
   {
-    // Très rare : chute comique au sol puis relevé gêné.
     id: 'fall',
-    weight: 0.55,
+    weight: 1.0,
     kind: 'solo',
     where: ['standing'],
     dur: [4.2, 5.8],
@@ -682,31 +726,119 @@ export const PAX_ACTIONS: readonly PaxActionDef[] = [
   },
   {
     id: 'slip',
-    weight: 0.9,
+    weight: 1.2,
     kind: 'solo',
     where: ['waiting'],
     dur: [1.8, 2.8],
     motion: 'slip',
   },
 
-  // ——— Sociales ———
+  // ——— Drama (gestes amples, bien visibles) ———
   {
-    id: 'whisper',
-    weight: 5.0,
+    id: 'argue',
+    weight: 7.5,
     kind: 'pair',
     where: ['seated', 'standing', 'waiting'],
-    dur: [6, 14],
-    motion: 'whisper',
+    dur: [4, 8],
+    motion: 'argue',
+    partnerDist: 1.55,
+  },
+  {
+    id: 'fight',
+    weight: 4.5,
+    kind: 'pair',
+    where: ['standing'],
+    dur: [3.5, 6],
+    motion: 'fight',
     partnerDist: 1.15,
   },
   {
-    id: 'laugh',
-    weight: 3.5,
+    id: 'jealous',
+    weight: 5.5,
     kind: 'pair',
     where: ['seated', 'standing', 'waiting'],
-    dur: [3, 7],
-    motion: 'laugh',
+    dur: [3.5, 7],
+    motion: 'jealous',
+    partnerDist: 1.7,
+  },
+  {
+    id: 'angry',
+    weight: 6.0,
+    kind: 'solo',
+    where: ['seated', 'standing', 'waiting'],
+    dur: [2.5, 5],
+    motion: 'angry',
+  },
+  {
+    id: 'scold',
+    weight: 5.0,
+    kind: 'pair',
+    where: ['seated', 'standing', 'waiting'],
+    dur: [3, 6],
+    motion: 'scold',
     partnerDist: 1.4,
+  },
+  {
+    id: 'shove',
+    weight: 3.5,
+    kind: 'pair',
+    where: ['standing', 'waiting'],
+    dur: [1.4, 2.2],
+    motion: 'shove',
+    partnerDist: 1.1,
+  },
+  {
+    id: 'flirt',
+    weight: 5.0,
+    kind: 'pair',
+    where: ['seated', 'standing', 'waiting'],
+    dur: [4, 9],
+    motion: 'flirt',
+    partnerDist: 1.25,
+  },
+  {
+    id: 'sulk',
+    weight: 4.5,
+    kind: 'solo',
+    where: ['seated', 'standing', 'waiting'],
+    dur: [3, 6],
+    motion: 'sulk',
+  },
+  {
+    id: 'gasp',
+    weight: 3.5,
+    kind: 'solo',
+    where: ['seated', 'standing', 'waiting'],
+    dur: [0.8, 1.4],
+    motion: 'gasp',
+  },
+  {
+    id: 'facepalm',
+    weight: 4.0,
+    kind: 'solo',
+    where: ['seated', 'standing', 'waiting'],
+    dur: [2, 4],
+    motion: 'facepalm',
+  },
+
+  // ——— Sociales ———
+  {
+    id: 'whisper',
+    weight: 8.0,
+    kind: 'pair',
+    where: ['seated', 'standing', 'waiting'],
+    dur: [4, 9],
+    motion: 'whisper',
+    partnerDist: 1.25,
+  },
+  {
+    id: 'laugh',
+    weight: 7.0,
+    kind: 'pair',
+    where: ['seated', 'standing', 'waiting'],
+    dur: [2.5, 5],
+    motion: 'laugh',
+    partnerDist: 1.5,
   },
   {
     id: 'pointWindow',
