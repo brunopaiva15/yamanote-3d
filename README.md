@@ -66,7 +66,7 @@ Trois axes y sont tenus séparés, parce que les confondre uniformise tout :
   latéraux (Harajuku, seul cas de la boucle), double îlot de terminus
   (Ikebukuro, Ōsaki) ;
 - `signature` — le caractère qui ne se paramètre pas, dessiné à part
-  (`three/station/Signature`).
+  (`three/station/signatures/`).
 
 S'y ajoutent l'état des portes de quai en 2026 (`psd`) et le drapeau `works` des
 cinq gares en travaux (Shinjuku, Shibuya, Shinagawa, Tamachi, Hamamatsuchō).
