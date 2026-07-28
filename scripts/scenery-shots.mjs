@@ -62,14 +62,16 @@ async function aim(dx, dy) {
 // L'index est la gare d'ARRIVÉE : le tronçon traversé est index-1.
 const cases = [
   [1, 15 * 60 + 30, 'viaduc-kanda'],
-  [10, 15 * 60 + 30, 'tranchee-sugamo'],
   [14, 15 * 60 + 30, 'sol-takadanobaba'],
   [25, 15 * 60 + 30, 'corridor-takanawa'],
   [1, 21 * 60 + 30, 'viaduc-kanda-nuit'],
 ];
+// « rasant » plonge vers l'emprise : c'est le seul angle où l'on juge le
+// premier plan, celui qui vend la vitesse.
 const angles = [
   ['travers', -230, -30],
   ['biais', -140, -30],
+  ['rasant', -230, 55],
 ];
 
 for (const [idx, clock, name] of cases) {

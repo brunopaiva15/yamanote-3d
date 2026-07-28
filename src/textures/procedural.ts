@@ -1116,22 +1116,78 @@ export function makeCityTexture(layer: 0 | 1 | 2, night = false, district: Distr
 }
 
 // --- Sol extérieur : ballast et traverses, teinte chaude de fin de journée ---
+/**
+ * Longueur, en mètres, couverte par une tuile de plate-forme. Le rendu DOIT
+ * caler `repeat.y` et `offset.y` dessus : c'est la surface la plus proche et la
+ * plus rapide du champ, donc celle où un défilement faux se voit le plus.
+ *
+ * Elle défilait justement à 1,67× la vitesse du train — `repeat.set(2, 24)` sur
+ * un plan de 400 m fait une tuile tous les 16,7 m, mais `offset.y` avançait
+ * d'une tuile tous les 10 m. Le même mensonge que celui des plans de ville.
+ */
+export const TRACK_BED_TILE = 8;
+/** Largeur, en mètres, couverte par une tuile de plate-forme. */
+export const TRACK_BED_WIDTH = 10;
+
+/**
+ * Plate-forme de la voie : ballast, traverses, rails et caniveaux à câbles.
+ *
+ * Les cotes sont réelles et exprimées en mètres : traverses de 2,40 m tous les
+ * 65 cm, écartement de 1 435 mm, caniveaux à câbles en rive. C'est le caniveau
+ * qui court le long de toute voie japonaise, et c'est ce qui manquait le plus —
+ * la seule ligne continue que l'œil peut suivre à quatre-vingt-dix.
+ */
 export function makeGroundTexture(): THREE.CanvasTexture {
-  const { c, g } = makeCanvas(256, 512);
+  const W = 512;
+  const H = 512;
+  const kx = W / TRACK_BED_WIDTH; // px par mètre en travers
+  const ky = H / TRACK_BED_TILE; // px par mètre en long
+  const { c, g } = makeCanvas(W, H);
   const r = rng(77);
+
   g.fillStyle = '#8a888a';
-  g.fillRect(0, 0, 256, 512);
-  for (let i = 0; i < 2600; i++) {
-    const shade = 110 + Math.floor(r() * 60);
+  g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 5200; i++) {
+    const shade = 108 + Math.floor(r() * 62);
     g.fillStyle = `rgb(${shade + 6},${shade + 2},${shade})`;
-    g.fillRect(r() * 256, r() * 512, 2 + r() * 3, 2 + r() * 3);
+    g.fillRect(r() * W, r() * H, 2 + r() * 4, 2 + r() * 4);
   }
-  for (let y = 8; y < 512; y += 42) {
-    g.fillStyle = '#6e6a68';
-    g.fillRect(30, y, 196, 12);
+
+  // Axe de la voie au milieu de la tuile.
+  const cx = W / 2;
+  // Traverses : 2,40 m de long, 24 cm de large, entraxe 65 cm.
+  g.fillStyle = '#6b6763';
+  for (let m = 0; m < TRACK_BED_TILE; m += 0.65) {
+    g.fillRect(cx - 1.2 * kx, m * ky, 2.4 * kx, 0.24 * ky);
+    g.fillStyle = 'rgba(0,0,0,0.18)';
+    g.fillRect(cx - 1.2 * kx, (m + 0.24) * ky, 2.4 * kx, 0.05 * ky);
+    g.fillStyle = '#6b6763';
   }
+  // Rails : écartement 1 435 mm, patin sombre et champignon clair.
+  for (const s of [-1, 1]) {
+    const rx = cx + s * 0.7175 * kx;
+    g.fillStyle = '#4e5158';
+    g.fillRect(rx - 0.05 * kx, 0, 0.1 * kx, H);
+    g.fillStyle = '#cfd3d8';
+    g.fillRect(rx - 0.026 * kx, 0, 0.052 * kx, H);
+  }
+  // Caniveaux à câbles, en rive de plate-forme.
+  for (const s of [-1, 1]) {
+    const tx = cx + s * 4.1 * kx;
+    g.fillStyle = '#7c7975';
+    g.fillRect(tx - 0.22 * kx, 0, 0.44 * kx, H);
+    g.fillStyle = '#5f5d59';
+    g.fillRect(tx - 0.15 * kx, 0, 0.3 * kx, H);
+    // Joints entre éléments préfabriqués, tous les deux mètres.
+    g.fillStyle = 'rgba(40,40,38,0.5)';
+    for (let m = 0; m < TRACK_BED_TILE; m += 2) {
+      g.fillRect(tx - 0.22 * kx, m * ky, 0.44 * kx, 0.05 * ky);
+    }
+  }
+
   const t = toTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
   return t;
 }
 

@@ -296,6 +296,46 @@ composée dans le même nuanceur, dans une bande de `v`, et défile par rotation
 pure — ce qui est exactement la parallaxe d'un objet infiniment loin. Le taux
 est calé pour se lire à ~900 m.
 
+### L'emprise ferroviaire
+
+`three/Wayside` (anciennement `three/Scenery`) tient le rang qui défile le plus
+vite, donc **celui qui vend la vitesse**. Il se résumait à huit portiques
+caténaires et douze arbres boules — un objet toutes les trente secondes de
+regard, là où une voie réelle en présente un par seconde.
+
+Ce qu'on en voit vraiment se calcule : l'œil est à 1,55 m dans l'allée, le bas
+de vitre à 0,85 m pour une demi-largeur de caisse de 1,40 m. Le rayon rasant
+descend donc d'un demi-mètre par mètre, et le sol n'apparaît qu'à **5,4 m de
+l'axe**. Tout ce qui est plus bas et plus près est invisible de l'intérieur —
+et une tête de signal, à cinq mètres de haut, passe au-dessus de la vitre. D'où
+ce qui est modélisé, et à quelle cote :
+
+- la **plate-forme** : ballast, traverses de 2,40 m tous les 65 cm, écartement
+  de 1 435 mm, caniveaux à câbles en rive — la seule ligne continue que l'œil
+  puisse suivre à quatre-vingt-dix ;
+- les **rails en volume**, deux prismes métalliques : à contre-jour ce sont les
+  deux seules lignes brillantes du paysage, et une texture plate ne les rend pas ;
+- le **garde-corps de viaduc**, montants tous les 2,5 m, deux lisses et une
+  plinthe — la plus forte affirmation qu'on court en l'air, et il pousse depuis
+  le tablier au lieu de se fondre ;
+- le **mobilier recyclé** : armoires relais tous les 52 m, bornes tous les 38 m,
+  signaux tous les 190 m avec leur feu émissif — vert en voie libre, rouge
+  pendant un arrêt d'urgence ;
+- les **portiques caténaires**, qui portent enfin leurs fils : câble porteur en
+  chaînette, fil de contact tendu, pendules. Toutes les portées étant
+  identiques et espacées de trente mètres, une portée accrochée à chaque
+  portique pave la voie sans couture, recyclage compris.
+
+Chaque famille est fusionnée en une seule géométrie rendue par un
+`InstancedMesh` : un signal, ce sont cinq volumes, et sans fusion le premier
+plan coûterait plus cher que la ville entière.
+
+**Deux surfaces mentaient encore du même 1,67×.** Le ballast et le faisceau des
+corridors portaient `repeat.y = 24` sur un plan de 400 m — une tuile tous les
+16,7 m — quand `offset.y` en avançait une tous les 10. Exactement le mensonge
+des plans de ville, sur les deux surfaces les plus proches et les plus rapides
+du champ. Les tuiles sont désormais dimensionnées en mètres et le rendu s'y cale.
+
 Pour regarder tout ça : `node scripts/scenery-shots.mjs /tmp/decor` se cale au
 milieu d'un inter-gare, vise par une baie et capture, de jour comme de nuit. La
 sonde de gare, elle, se pose à l'arrêt — là où le quai masque justement tout le
@@ -437,6 +477,8 @@ src/
                          file d'annonces vocales, PNJ, slots d'assise, runtime 60 fps
   three/                 rendu R3F : wagon, sièges, portes, poignées, pubs, écrans LCD,
                          PNJ, caméra
+  three/Wayside.tsx      l'emprise ferroviaire : plate-forme, rails, garde-corps
+                         de viaduc, mobilier de voie, caténaire
   three/city/            le paysage : ruban urbain instancié, matériau de façade,
                          ciel et ligne d'horizon en une passe
   three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines

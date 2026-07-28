@@ -15,7 +15,7 @@ import { Handles } from './three/Handles';
 import { Ads } from './three/Ads';
 import { Screens } from './three/Screens';
 import { DoorCloseLed } from './three/DoorCloseLed';
-import { Scenery } from './three/Scenery';
+import { Wayside } from './three/Wayside';
 import { SkyDome } from './three/city/SkyDome';
 import { CityRibbon } from './three/city/CityRibbon';
 import { Landmarks } from './three/Landmarks';
@@ -60,7 +60,7 @@ export default function App() {
         </TrainRig>
         <SkyDome />
         <CityRibbon />
-        <Scenery />
+        <Wayside />
         <Landmarks />
         <SegmentEnvironment />
         <HubStationRoof />

@@ -31,6 +31,13 @@ const WALL_X = 6.6; // murs juste derrière les poteaux caténaires (±5.2)
 const DECK_X = 5.1; // joue du tablier, au ras de l'emprise de la voie
 const FENCE_X = 6.2;
 const FIELD_X = 9; // centre du plan de faisceau (s'étend de 4 à 14 m)
+/**
+ * Longueur couverte par une tuile de faisceau (m). Elle défilait 1,67× trop
+ * vite — `repeat.y = 24` sur un plan de 400 m fait une tuile tous les 16,7 m,
+ * quand `offset.y` en avançait une tous les 10. Même mensonge que celui des
+ * plans de ville, sur la surface la plus rapide du champ.
+ */
+const FIELD_TILE = 12;
 
 // Idiome des banques Scenery : le décor du côté gauche défile en +offset,
 // celui du côté droit en -offset.
@@ -103,9 +110,10 @@ export function SegmentEnvironment() {
     deckSideMat.userData.base = deckSideMat.color.clone();
 
     // --- Faisceau de voies (corridors) : un plan au sol par côté, rails
-    // dans la texture, même vitesse de défilement que le ballast ---
+    // dans la texture, même vitesse de défilement que le ballast. Posé JUSTE
+    // AU-DESSUS du sol de la ville (-1,14) : sous lui, il disparaissait. ---
     const fieldTex = makeTrackFieldTexture();
-    fieldTex.repeat.set(2, 24);
+    fieldTex.repeat.set(2, PLANE_LEN / FIELD_TILE);
     const fieldMat = new THREE.MeshBasicMaterial({
       map: fieldTex,
       transparent: true,
@@ -278,7 +286,7 @@ export function SegmentEnvironment() {
     }
 
     // --- Faisceau de voies ---
-    built.fieldTex.offset.y = runtime.distance / 10;
+    built.fieldTex.offset.y = runtime.distance / FIELD_TILE;
     built.fieldMat.opacity = corridor01 * 0.95;
     const fieldBase = built.fieldMat.userData.base as THREE.Color;
     built.fieldMat.color.copy(fieldBase).multiplyScalar(nightK);
@@ -387,7 +395,7 @@ export function SegmentEnvironment() {
           ref={(m) => {
             fieldRefs.current[i] = m;
           }}
-          position={[side * FIELD_X, -1.16, 0]}
+          position={[side * FIELD_X, -1.12, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
           material={built.fieldMat}
         >
