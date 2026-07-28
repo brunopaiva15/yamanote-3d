@@ -8,7 +8,6 @@
 import {
   EBISU_INNER_THIRD_MAN_F_PATH,
   ENABLE_DEPARTURE_MELODY_CLIPS,
-  INNER_MAIN_MELODY_PATH,
   IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
   IKEBUKURO_INNER_BIC_CAMERA_B_PATH,
   KANDA_INNER_MONDAMIN_B_PATH,
@@ -20,14 +19,15 @@ import {
   MELODY_REPEAT_GAP_S,
   OSAKI_INNER_SECONDARY_MELODY_PATH,
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
-  OUTER_MAIN_MELODY_PATH,
   SESERAGI_MELODY_PATH,
   TAKADANOBABA_INNER_ATOM_B_PATH,
   TAKADANOBABA_OUTER_ATOM_A_PATH,
   TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH,
   TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH,
   UGUISUDANI_INNER_HARU_TREMOLO_PATH,
+  innerMainMelodyPathFor,
   makeDepartureId,
+  outerMainMelodyPathFor,
   shouldPlayEbisuInnerThirdManF,
   shouldPlayIkebukuroInnerBicCameraA,
   shouldPlayIkebukuroInnerBicCameraB,
@@ -278,7 +278,7 @@ export async function playInnerMainMelody(context: MelodyPlayContext): Promise<b
   if (isDepartureBlocked()) return false;
   if (!claimDepartureId(context)) return false;
   markDepartureId(context);
-  const ok = await playMelodyRounds(INNER_MAIN_MELODY_PATH);
+  const ok = await playMelodyRounds(innerMainMelodyPathFor(context.stationCode));
   if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
     runtime.lastMelodyDepartureId = null;
   }
@@ -297,7 +297,7 @@ export async function playOuterMainMelody(context: MelodyPlayContext): Promise<b
   markDepartureId(context);
   outerMainMelodyPlaying = true;
   try {
-    const ok = await playMelodyRounds(OUTER_MAIN_MELODY_PATH);
+    const ok = await playMelodyRounds(outerMainMelodyPathFor(context.stationCode));
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
