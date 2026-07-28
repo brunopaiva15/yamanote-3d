@@ -93,7 +93,13 @@ export function Engine(): null {
     }
     if (physDt > 0) {
       updateDoorMotion(physDt);
-      updateAudio(physDt, runtime.speed / V_MAX, phase === 'brake');
+      // Sur le quai la phase du store reste 'dwell' : le freinage réel se lit
+      // sur l'accélération (rame qui arrive), sinon le crissement ne part jamais.
+      updateAudio(
+        physDt,
+        runtime.speed / V_MAX,
+        phase === 'brake' || runtime.accel < -0.05,
+      );
       // Le quai n'est audible que par les ouvertures réellement dégagées : il
       // faut la porte de la rame ET la porte palière en face — là où il y en a
       // une. À Shinjuku et Shibuya, la porte de la rame donne directement sur
