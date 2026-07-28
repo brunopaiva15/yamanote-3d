@@ -13,6 +13,7 @@
 //     latéralement, pour continuer à occulter la ville derrière la gare.
 
 import { useStore } from '../store';
+import { DOOR_SIDE } from '../data/stations';
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
 import { OPP_DEPTH, PLATFORM_DEPTH, PSD_X, TRACK_HALF } from '../data/stationGeometry';
 import { runtime } from './runtime';
@@ -71,8 +72,12 @@ export const stationOcclusion = {
 export function updateStationOcclusion(): void {
   const fade = runtime.platformFade;
   stationOcclusion.active = fade;
-  stationOcclusion.side = useStore.getState().doorSide;
-  const layout = layoutFor(useStore.getState().index);
+  // La gare qui occulte est celle dont le quai est là (platformIndex) : au
+  // départ, index et doorSide sont déjà passés à la gare suivante alors que ce
+  // quai-ci défile encore le long de la voie.
+  const platformIndex = useStore.getState().platformIndex;
+  stationOcclusion.side = DOOR_SIDE[platformIndex];
+  const layout = layoutFor(platformIndex);
   stationOcclusion.push = pushFor(layout);
   stationOcclusion.bothSides = layout.config === 'side';
   stationOcclusion.outer = outerOf(layout);

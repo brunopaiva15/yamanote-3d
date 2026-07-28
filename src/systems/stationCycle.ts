@@ -382,6 +382,7 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
 export function resumeDwellAt(t: number, stationIndex: number): void {
   const store = useStore.getState();
   store.setIndex(stationIndex);
+  store.setPlatformIndex(stationIndex);
   store.setPhase('dwell');
   runtime.phaseT = t;
   runtime.speed = 0;
@@ -421,6 +422,8 @@ export function randomizeEntry(): void {
   const store = useStore.getState();
   store.setPhase(phase);
   store.setIndex(index);
+  // En depart, le quai qu'on longe est encore celui de la gare quittée.
+  store.setPlatformIndex(doorStation);
   store.setDoorSide(doorSide);
   audio.setPlatformSide(doorSide);
 
@@ -501,7 +504,10 @@ export function updateCycle(dt: number): void {
         // Les haut-parleurs du quai passent du côté qui s'ouvrira.
         audio.setPlatformSide(DOOR_SIDE[s.index]);
       });
-      once('crowd-clear', true, () => clearPlatformCrowd());
+      // La foule ne s'évapore que quand le quai qui la porte est hors de vue :
+      // en début de croisière, il défile encore le long des vitres
+      // (platformIndex ne rejoint index qu'à ce moment-là).
+      once('crowd-clear', s.index === s.platformIndex, () => clearPlatformCrowd());
       // Séquence JR départ : 列車案内? → 次駅 → 乗換? → 案内(0–2).
       once('announce-depart', t > 0.6, () =>
         say(departureSequence(s.index, DOOR_SIDE[s.index])),
@@ -638,6 +644,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     const store = useStore.getState();
     const index = station ?? store.index;
     store.setIndex(index);
+    store.setPlatformIndex(index);
     store.setPhase(phase);
     store.setDoorSide(DOOR_SIDE[index]);
     audio.setPlatformSide(DOOR_SIDE[index]);

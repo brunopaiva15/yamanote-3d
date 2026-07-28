@@ -68,7 +68,9 @@ const PLATFORM_REGION: Region = { frame: 'platform', y: PLATFORM_TOP };
  * se verrait au premier pas.
  */
 function currentPlatform() {
-  return placementFor(useStore.getState().index, psdGates());
+  // platformIndex : la gare dont le quai est physiquement là. index désigne
+  // déjà la suivante pendant le départ.
+  return placementFor(useStore.getState().platformIndex, psdGates());
 }
 
 function portalOpen(): number {
