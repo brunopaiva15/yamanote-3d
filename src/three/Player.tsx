@@ -14,8 +14,7 @@ import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
 import { publishPlayerPose } from '../systems/playerFrame';
 import { AISLE_U, frameAt, groundY, resolveMove, snapInside } from '../systems/walkable';
 import { alight, board, crossNearestPortal } from '../systems/boarding';
-import { setListenerPose, paxFall, paxStumble } from '../systems/audioEngine';
-import { reactToPlayerFall } from '../systems/passengers';
+import { setListenerPose } from '../systems/audioEngine';
 
 const LOOK_SENS = 0.0032;
 
@@ -54,15 +53,6 @@ export function Player() {
   const camBase = useRef(new THREE.Vector3(0, CONFIG.eyeHeight, 4.2));
   const earFwd = useRef(new THREE.Vector3());
   const earUp = useRef(new THREE.Vector3());
-  // Chute du joueur dans la rame (déséquilibre freinage / tangage / course).
-  const fall = useRef({
-    active: false,
-    t: 0,
-    dur: 3.6,
-    side: 1 as 1 | -1,
-  });
-  const unbalance = useRef(0);
-  const prevAccel = useRef(0);
 
   // Outil dev : franchir le seuil le plus proche sans avoir à y marcher —
   // la marche reste le seul moyen en jeu.
@@ -222,101 +212,31 @@ export function Player() {
       return;
     }
 
-    // Regard (atténué pendant la chute).
+    // Regard.
     const { dx, dy } = consumeLook();
     if (started) {
-      const lookScale = fall.current.active ? 0.35 : 1;
-      yaw.current -= dx * LOOK_SENS * lookScale;
-      pitch.current = THREE.MathUtils.clamp(
-        pitch.current - dy * LOOK_SENS * lookScale,
-        fall.current.active ? -0.4 : -1.35,
-        fall.current.active ? 1.2 : 1.35,
-      );
+      yaw.current -= dx * LOOK_SENS;
+      pitch.current = THREE.MathUtils.clamp(pitch.current - dy * LOOK_SENS, -1.35, 1.35);
     }
 
-    // Pendant la chute : Espace accélère le relevé ; assise bloquée.
-    if (fall.current.active) {
-      if (input.standRequest || input.sitRequest) {
-        input.standRequest = false;
-        input.sitRequest = false;
-        if (fall.current.t < fall.current.dur - 1.1) {
-          fall.current.t = Math.max(fall.current.t, fall.current.dur - 1.05);
-        }
-      }
-    } else {
-      if (input.sitRequest) {
-        input.sitRequest = false;
-        if (started) {
-          if (seated) standUp();
-          else trySit();
-        }
-      }
-      if (input.standRequest) {
-        input.standRequest = false;
+    // Demandes s'asseoir / se lever.
+    if (input.sitRequest) {
+      input.sitRequest = false;
+      if (started) {
         if (seated) standUp();
+        else trySit();
       }
+    }
+    if (input.standRequest) {
+      input.standRequest = false;
+      if (seated) standUp();
     }
 
     transition.current = Math.min(1, transition.current + dt * 2.2);
     const speed01 = runtime.speed / V_MAX;
-    const aboard = runtime.playerFrame === 'car' ? 1 : 0;
-
-    // --- Déséquilibre → chute (debout, dans la rame uniquement) ---
-    if (started && !seated && aboard && !fall.current.active) {
-      const axes = moveAxes();
-      const mag = Math.hypot(axes.x, axes.y);
-      const running = input.keys.has('ShiftLeft') || input.keys.has('ShiftRight');
-      const dAccel = Math.abs(runtime.accel - prevAccel.current);
-      prevAccel.current = runtime.accel;
-      let jolt =
-        Math.abs(runtime.accel) * 1.8 +
-        Math.abs(runtime.sway) * 1.15 +
-        dAccel * 3.2;
-      if (running) jolt *= 1.55;
-      if (mag > 0.45) jolt *= 1.25;
-      // Debout tranquille : on récupère l'équilibre.
-      if (mag < 0.08 && !running) {
-        unbalance.current = Math.max(0, unbalance.current - dt * 0.85);
-      } else {
-        unbalance.current += jolt * dt * 0.55;
-      }
-      // Coup sec de frein / accélération : risque immédiat.
-      if (dAccel > 0.55 && Math.abs(runtime.accel) > 0.25) {
-        unbalance.current += 0.45 + dAccel * 0.4;
-      }
-      if (unbalance.current > 1.05) {
-        fall.current.active = true;
-        fall.current.t = 0;
-        fall.current.dur = 3.4 + Math.random() * 0.8;
-        fall.current.side = runtime.sway >= 0 ? 1 : -1;
-        unbalance.current = 0;
-        runtime.playerFalling = true;
-        paxFall(0.4);
-        reactToPlayerFall(true);
-      } else if (unbalance.current > 0.72 && Math.random() < dt * 0.8) {
-        // Mini faux pas sans aller au sol.
-        paxStumble(0.5);
-        unbalance.current *= 0.55;
-        pitch.current = THREE.MathUtils.clamp(pitch.current + 0.18, -1.35, 1.35);
-      }
-    } else {
-      prevAccel.current = runtime.accel;
-      if (!fall.current.active) unbalance.current = Math.max(0, unbalance.current - dt * 1.2);
-    }
 
     let targetPos: THREE.Vector3;
-    if (fall.current.active) {
-      // Pas de marche pendant la chute — on reste où on est.
-      targetPos = pos.current;
-      fall.current.t += dt;
-      if (fall.current.t >= fall.current.dur) {
-        fall.current.active = false;
-        runtime.playerFalling = false;
-        // Remet l'œil à hauteur debout.
-        const eye = groundY(pos.current.x, pos.current.z) + CONFIG.eyeHeight;
-        pos.current.y = eye;
-      }
-    } else if (seated) {
+    if (seated) {
       targetPos = seatAnchor.current;
       // Attirer doucement le regard vers l'allée au moment de s'asseoir.
       if (transition.current < 0.4) {
@@ -363,50 +283,18 @@ export function Player() {
     // Assis, le corps est calé contre la banquette : le balancement ressenti
     // est très atténué (on bouge AVEC la rame). Debout sur le quai, il n'y a
     // évidemment rien à ressentir : le béton ne tangue pas.
-    const brace = (seated ? 0.25 : 1) * aboard * (fall.current.active ? 0.15 : 1);
-    const bob = seated || fall.current.active ? 0 : Math.sin(bobT.current * 2) * 0.016;
+    const aboard = runtime.playerFrame === 'car' ? 1 : 0;
+    const brace = (seated ? 0.25 : 1) * aboard;
+    const bob = seated ? 0 : Math.sin(bobT.current * 2) * 0.016;
     const trainBounce = Math.sin(runtime.swayTime * 6.7) * 0.006 * speed01 * brace;
     camera.position.y += bob + trainBounce;
     camera.position.x += runtime.sway * 0.028 * brace;
 
-    // Cinématique de chute : bascule latérale + chute vers le sol + relevé.
-    let fallDrop = 0;
-    let fallPitch = 0;
-    let fallRoll = 0;
-    if (fall.current.active) {
-      const t = fall.current.t;
-      const side = fall.current.side;
-      const dur = fall.current.dur;
-      if (t < 0.4) {
-        const u = t / 0.4;
-        fallDrop = u * u * 0.45;
-        fallPitch = u * 0.55;
-        fallRoll = side * u * 0.75;
-      } else if (t < 1.0) {
-        const u = (t - 0.4) / 0.6;
-        fallDrop = 0.45 + u * 0.85;
-        fallPitch = 0.55 + u * 0.65;
-        fallRoll = side * (0.75 + u * 0.35);
-      } else if (t < dur - 1.15) {
-        fallDrop = 1.25 + Math.sin(t * 3) * 0.02;
-        fallPitch = 1.1 + Math.sin(t * 2.2) * 0.04;
-        fallRoll = side * 1.05;
-      } else {
-        const u = Math.min(1, (t - (dur - 1.15)) / 1.15);
-        fallDrop = 1.25 * (1 - u);
-        fallPitch = 1.1 * (1 - u);
-        fallRoll = side * 1.05 * (1 - u);
-      }
-      camera.position.y -= fallDrop;
-      // Pendant la chute on reste dans le wagon : pas de bascule de repère.
-      pos.current.y = camera.position.y;
-    }
-
     camera.rotation.order = 'YXZ';
     camera.rotation.y = yaw.current;
-    camera.rotation.x = pitch.current + fallPitch;
+    camera.rotation.x = pitch.current;
     camera.rotation.z =
-      (runtime.sway * 0.011 - runtime.accel * 0.004) * (seated ? 0.4 : 1) * aboard + fallRoll;
+      (runtime.sway * 0.011 - runtime.accel * 0.004) * (seated ? 0.4 : 1) * aboard;
 
     // Position du joueur partagée (regards des PNJ), dans les trois repères.
     publishPlayerPose(camera.position.x, camera.position.y, camera.position.z);
@@ -426,6 +314,7 @@ export function Player() {
       earUp.current.y,
       earUp.current.z,
     );
+
   });
 
   return null;

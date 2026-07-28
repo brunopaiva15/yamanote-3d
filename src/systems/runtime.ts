@@ -112,8 +112,6 @@ export const runtime = {
   playerPlatX: 0, // position du joueur dans le repère local du quai (côté +x, avant rotation)
   playerPlatY: 1.55,
   playerPlatZ: 0,
-  /** True pendant une chute du joueur (caméra au sol dans la rame). */
-  playerFalling: false,
   /**
    * Glissement longitudinal de la rame (m), appliqué par TrainRig. Vaut 0 tant
    * que le joueur est à bord : le train reste fixe à l'origine et c'est le
@@ -216,7 +214,6 @@ export function resetRuntime(): void {
   runtime.playerPlatX = 0;
   runtime.playerPlatY = 1.55;
   runtime.playerPlatZ = 0;
-  runtime.playerFalling = false;
   runtime.trainZ = 0;
   runtime.trainPresent = true;
   runtime.platformOcclusion = 0;

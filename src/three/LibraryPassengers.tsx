@@ -12,6 +12,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { paxList, initPassengers } from '../systems/passengers';
 import type { Appearance } from '../systems/appearance';
+import { isPairAction } from '../data/paxActions';
 import { runtime } from '../systems/runtime';
 import { CONFIG } from '../data/config';
 import { rng } from '../textures/procedural';
@@ -124,7 +125,18 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
         p.pos.y + p.bob + s.seatFix,
         p.pos.z,
       );
-      wrap.rotation.set(p.bodyLean, p.yaw, standingSway + seatedSway + p.bodyRoll);
+      // Assis en discussion : lean/roll du wrap = 0 (sinon pieds qui glissent).
+      const lean =
+        seated && isPairAction(p.action)
+          ? 0
+          : seated
+            ? Math.min(p.bodyLean, 0.08)
+            : p.bodyLean;
+      wrap.rotation.set(
+        lean,
+        p.yaw,
+        standingSway + seatedSway + (seated ? 0 : p.bodyRoll),
+      );
       wrap.scale.setScalar(p.height);
 
       // --- Animation puis overrides d'os (le mixer réécrit la pose). Les os
