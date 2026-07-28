@@ -84,7 +84,10 @@ export interface CrowdPax {
   chatRole: 0 | 1;
 }
 
-export const CROWD_POOL = 18;
+/** Capacité max du pool — assez large pour que Shinjuku/Shibuya débordent
+ *  vraiment de voyageurs en attente, sans plafonner tous les hubs au même
+ *  effectif (Shinjuku à 2,2× peut monter au-dessus de Tokyo à 2,0×). */
+export const CROWD_POOL = 40;
 export const crowdList: CrowdPax[] = [];
 
 // Bornes de la foule, tirées du gabarit de la gare courante : le quai fait
@@ -147,8 +150,11 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
 }
 
 function crowdCountBase(stationIndex: number): { total: number; walkers: number } {
+  // Les hubs partent avec plus d'attenteurs près des portes : c'est ce qui
+  // donne l'impression de quai bondé (Shinjuku, Shibuya…), les promeneurs
+  // restant une minorité qui anime le fond.
   const base = isMajorHub(stationIndex)
-    ? { total: 16, walkers: 7 }
+    ? { total: 18, walkers: 5 }
     : stationIndex % 3 === 0
       ? { total: 12, walkers: 5 }
       : { total: 9, walkers: 4 };
@@ -159,14 +165,17 @@ function crowdCountBase(stationIndex: number): { total: number; walkers: number 
  * Densité réelle : le gabarit de la gare pèse autant que son statut de hub —
  * Uguisudani reste vide quand Shinjuku déborde — et la qualité vidéo réduit
  * l'ensemble comme pour les PNJ de la rame.
+ *
+ * Quand le total est plafonné par CROWD_POOL, on conserve le ratio
+ * waiters/walkers du gabarit : sinon les hubs « débordaient » surtout de
+ * promeneurs et peinaient à peupler les files d'attente aux portes.
  */
 function crowdCount(stationIndex: number): { total: number; walkers: number } {
   const base = crowdCountBase(stationIndex);
   const s = paxScale() * layoutFor(stationIndex).crowdScale;
-  return {
-    total: Math.min(CROWD_POOL, Math.round(base.total * s)),
-    walkers: Math.round(base.walkers * s),
-  };
+  const total = Math.min(CROWD_POOL, Math.round(base.total * s));
+  const walkers = Math.min(total, Math.round(total * (base.walkers / base.total)));
+  return { total, walkers };
 }
 
 function clampPos(x: number, z: number): THREE.Vector3 {
@@ -177,15 +186,17 @@ function clampPos(x: number, z: number): THREE.Vector3 {
   );
 }
 
-// Emplacements d'attente près des portes.
+// Emplacements d'attente près des portes. Quatre files quand la file est
+// dense, pour que les hubs ne s'empilent pas sur trois lignes seulement.
 function waitSlot(i: number, n: number, bias: number): THREE.Vector3 {
   const doors = CONFIG.doorCenters;
   const doorZ = doors[i % doors.length];
-  const lane = i % 3;
-  const x = 2.6 + lane * 0.75 + ((i * 17) % 7) * 0.03;
-  const z = doorZ + ((i * 13) % 11 - 5) * 0.5 + bias;
-  const spread = (i / Math.max(1, n - 1) - 0.5) * 10;
-  return clampPos(x, z + spread * 0.2);
+  const lanes = n > 14 ? 4 : 3;
+  const lane = i % lanes;
+  const x = 2.45 + lane * 0.65 + ((i * 17) % 7) * 0.03;
+  const z = doorZ + ((i * 13) % 11 - 5) * 0.45 + bias;
+  const spread = (i / Math.max(1, n - 1) - 0.5) * 12;
+  return clampPos(x, z + spread * 0.25);
 }
 
 function patrolWaypoints(laneX: number, fromZ: number, dir: 1 | -1): THREE.Vector3[] {
