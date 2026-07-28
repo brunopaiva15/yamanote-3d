@@ -878,15 +878,20 @@ function Stairwell({ s, m, station }: { s: Placed; m: Mats; station: number }) {
           <mesh position={[d * (s.halfX - 0.07), 1.03, 0]} material={m.metal}>
             <boxGeometry args={[0.18, 0.07, s.halfZ * 2]} />
           </mesh>
-          {/* Main courante intérieure : elle DESCEND avec les marches — d'où
-              le signe négatif, sans lequel elle ressortait en l'air. */}
+          {/* Main courante intérieure. Elle descend AVEC les marches, donc le
+              signe est POSITIF : une rotation de θ autour de x envoie l'axe
+              local +z sur (0, −sin θ, cos θ), et il faut y décroissant quand z
+              croît. En négatif la rampe remontait à contresens de sa volée —
+              les deux se croisaient en X, et elle ressortait de la trémie par
+              le fond. Elle dépasse du sol du quai en tête de volée : c'est ce
+              que fait une main courante là où l'escalier commence. */}
           <mesh
             position={[
               d * (ix - 0.09),
               -(STAIR_STEPS / 2 + 1) * STAIR_RISE + 0.92,
               nose + (STAIR_STEPS / 2 + 1) * STAIR_GOING,
             ]}
-            rotation={[-Math.atan2(STAIR_RISE, STAIR_GOING), 0, 0]}
+            rotation={[Math.atan2(STAIR_RISE, STAIR_GOING), 0, 0]}
             material={m.metal}
           >
             <boxGeometry args={[0.05, 0.05, STAIR_STEPS * Math.hypot(STAIR_GOING, STAIR_RISE)]} />
