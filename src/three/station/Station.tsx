@@ -711,8 +711,8 @@ function FarSide({
   const oppEdge = far + 2 * TRACK_HALF;
   const oppBack = oppEdge + OPP_DEPTH;
   const hasPsd = layout.psd !== 'none';
-  // À Ikebukuro et Ōsaki, la voie d'en face est la voie SECONDAIRE : celle qui
-  // n'a pas encore ses portes. C'est précisément là que ça se voit.
+  // À Ōsaki, la voie d'en face est la voie SECONDAIRE : celle qui n'a pas
+  // encore ses portes. C'est précisément là que ça se voit.
   const oppPsd = hasPsd && layout.psd !== 'partial';
   return (
     <group name="travée-opposée">
