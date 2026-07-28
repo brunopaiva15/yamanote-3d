@@ -49,6 +49,12 @@ const IGNORE = [
   'gare/muret-psd ✕ gare/vantaux-psd',
   'gare/bandeau-psd ✕ gare/vantaux-psd',
   'gare/bandeau-psd ✕ gare/vitrage-psd',
+  // Le montant de rive est encastré dans le vantail qu'il borde, et coulisse
+  // dans le muret avec lui.
+  'gare/joint-vantaux-psd ✕ gare/vantaux-psd',
+  'gare/joint-vantaux-psd ✕ gare/muret-psd',
+  'gare/bandeau-psd ✕ gare/joint-vantaux-psd',
+  'gare/joint-vantaux-psd ✕ gare/vitrage-psd',
   // Structure : la poutre repose sur le poteau, la bague le ceinture, la
   // trémie et l'escalier mécanique sont percés DANS la dalle.
   'gare/pilier ✕ gare/poutre',

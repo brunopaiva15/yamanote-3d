@@ -45,6 +45,8 @@ export function makeStationMaterials(p: StationPalette, textures: StationTexture
       }),
       rubber: new THREE.MeshStandardMaterial({ color: '#2a2c30', roughness: 0.95 }),
       psd: new THREE.MeshStandardMaterial({ color: '#d8dad6', roughness: 0.62, metalness: 0.18 }),
+      // Joint de rive des vantaux : le caoutchouc sombre du bord de fermeture.
+      psdJoint: new THREE.MeshStandardMaterial({ color: '#3a3f45', roughness: 0.78, metalness: 0.12 }),
       glass: new THREE.MeshStandardMaterial({
         color: '#9eb4c4',
         roughness: 0.15,

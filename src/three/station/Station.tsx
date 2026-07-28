@@ -30,6 +30,7 @@ import {
   OPP_DEPTH,
   PLATFORM_TOP,
   PSD_H,
+  PSD_LEAF_JOINT_W,
   PSD_LEAF_TRAVEL,
   PSD_LEAF_W,
   PSD_X,
@@ -251,6 +252,7 @@ export function Station() {
   const vendRef = useRef<THREE.InstancedMesh>(null);
   const vendFaceRef = useRef<THREE.InstancedMesh>(null);
   const leafRef = useRef<THREE.InstancedMesh>(null);
+  const leafJointRef = useRef<THREE.InstancedMesh>(null);
 
   useInstances(psdRef, psdSegs);
   useInstances(glassRef, psdGlass);
@@ -277,6 +279,7 @@ export function Station() {
     }
     const im = leafRef.current;
     if (!im || presence <= 0.02) return;
+    const jm = leafJointRef.current;
     const mm = leafMat.current;
     let k = 0;
     for (let g = 0; g < gaps.length; g++) {
@@ -287,11 +290,34 @@ export function Station() {
           UP,
           S.set(0.07, PSD_H - 0.06, PSD_LEAF_W),
         );
-        im.setMatrixAt(k++, mm);
+        im.setMatrixAt(k, mm);
+        // Montant de rive, calé sur le BORD DE FERMETURE du vantail : il suit
+        // donc la porte. Fermé, les deux montants se touchent et tracent la
+        // ligne sombre qui partage le portique en deux ; ouvert, chacun garde
+        // son joint, comme sur les portes réelles.
+        if (jm) {
+          mm.compose(
+            V.set(
+              PSD_X + 0.08,
+              PLATFORM_TOP + PSD_H / 2,
+              gaps[g] + dir * (open + PSD_LEAF_JOINT_W / 2),
+            ),
+            UP,
+            // À peine plus épais que le vantail : le joint affleure de trois
+            // millimètres de chaque côté, sinon les deux faces se disputent.
+            S.set(0.076, PSD_H - 0.1, PSD_LEAF_JOINT_W),
+          );
+          jm.setMatrixAt(k, mm);
+        }
+        k++;
       }
     }
     im.count = leafCount;
     im.instanceMatrix.needsUpdate = true;
+    if (jm) {
+      jm.count = leafCount;
+      jm.instanceMatrix.needsUpdate = true;
+    }
   });
 
   const midX = PSD_X + depth * 0.55;
@@ -338,6 +364,14 @@ export function Station() {
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
       <instancedMesh name="vantaux-psd" ref={leafRef} args={[undefined, undefined, Math.max(1, leafCount)]} material={m.psd}>
+        <boxGeometry args={[1, 1, 1]} />
+      </instancedMesh>
+      <instancedMesh
+        name="joint-vantaux-psd"
+        ref={leafJointRef}
+        args={[undefined, undefined, Math.max(1, leafCount)]}
+        material={m.psdJoint}
+      >
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
         </>

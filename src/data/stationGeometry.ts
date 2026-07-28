@@ -20,6 +20,13 @@ export const PSD_HALF_GAP = 0.9;
 export const PSD_LEAF_W = 0.98;
 export const PSD_LEAF_TRAVEL = 0.92;
 
+/**
+ * Montant de rive d'un vantail : le joint sombre de son bord de fermeture.
+ * Sans lui, les deux vantaux fermés d'un même portique — même blanc, même
+ * plan — se lisent comme un seul panneau de deux mètres.
+ */
+export const PSD_LEAF_JOINT_W = 0.04;
+
 /** Longueur du quai (m). */
 export const PLATFORM_LEN = 96;
 
