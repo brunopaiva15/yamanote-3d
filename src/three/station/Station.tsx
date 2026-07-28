@@ -184,16 +184,24 @@ export function Station() {
   const depth = layout.depth;
   const canopyY = layout.canopyY;
 
+  // Portes de quai : Shinjuku et Shibuya n'en ont toujours pas. Sans elles, le
+  // bord est nu et c'est la bande podotactile qui prend le relais — nettement
+  // plus large, comme sur tout quai japonais non équipé.
+  const hasPsd = layout.psd !== 'none';
+  const tactileW = hasPsd ? 0.42 : 0.86;
+
   // --- Textures et matériaux, refaits à chaque changement de gare ---
   const textures = useMemo(() => {
     const floor = makePlatformFloorTexture();
     floor.repeat.set(3, Math.round(layout.length / 7));
     const tactile = makeTactileTexture();
-    tactile.repeat.set(1, Math.round(layout.length / 3.4));
+    // Les picots gardent leur pas quelle que soit la largeur de la bande :
+    // étirée sans ce rapport, elle donnait des ovales sur un quai sans portes.
+    tactile.repeat.set(tactileW / 0.42, Math.round(layout.length / 3.4));
     // Fonds francs, comme les caissons du quai : le distributeur et le kiosque
     // portent des affiches, pas des aplats crème sur un décor déjà clair.
     return { floor, tactile, ads: [makeAdTexture(4101, true, true), makeAdTexture(4102, true, true)] };
-  }, [layout.length]);
+  }, [layout.length, tactileW]);
 
   const m = useMemo(() => makeStationMaterials(layout.palette, textures), [layout.palette, textures]);
 
@@ -402,18 +410,26 @@ export function Station() {
         <boxGeometry args={[0.12, 0.012, layout.length]} />
       </mesh>
       <mesh
-        position={[PSD_X + 0.5, PLATFORM_TOP + 0.008, 0]}
+        position={[PSD_X + 0.29 + tactileW / 2, PLATFORM_TOP + 0.008, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         material={m.tactile}
       >
-        <planeGeometry args={[0.42, layout.length]} />
+        <planeGeometry args={[tactileW, layout.length]} />
+      </mesh>
+      {/* Joue de rive : la dalle s'arrête 44 cm sous le sol du quai et le
+          ballast est 65 cm plus bas encore. Derrière un muret de portes
+          palières on ne l'a jamais vu ; penché au-dessus d'un bord nu, si. */}
+      <mesh position={[PSD_X + 0.03, PLATFORM_TOP - SLAB_H - 0.32, 0]} material={m.wallDark}>
+        <boxGeometry args={[0.07, 0.66, layout.length]} />
       </mesh>
       {/* Repères d'attente peints au sol, deux par baie */}
       <instancedMesh ref={queueRef} args={[undefined, undefined, Math.max(1, queue.length)]} material={m.queue}>
         <boxGeometry args={[1, 0.004, 1]} />
       </instancedMesh>
 
-      {/* --- Portes palières --- */}
+      {/* --- Portes palières, là où elles existent --- */}
+      {hasPsd && (
+        <>
       <instancedMesh ref={psdRef} args={[undefined, undefined, Math.max(1, psdSegs.length)]} material={m.psd}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
@@ -426,6 +442,8 @@ export function Station() {
       <instancedMesh ref={leafRef} args={[undefined, undefined, Math.max(1, leafCount)]} material={m.psd}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
+        </>
+      )}
 
       {/* --- Fond de quai selon la typologie --- */}
       <Backdrop layout={layout} backX={backX} wallH={wallH} m={m} />

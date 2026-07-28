@@ -85,6 +85,9 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
   // reçoivent rien.
   const psdAds = useMemo(() => {
     if (detail > 2) return [];
+    // Sans portes de quai, il n'y a pas d'allège où les coller : elles
+    // flotteraient au-dessus du vide, le long du bord.
+    if (layout.psd === 'none') return [];
     const out: { z: number; i: number }[] = [];
     segs.forEach((s, k) => {
       if (k % 2 !== 1) return;
@@ -92,7 +95,7 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
       out.push({ z: (s.z0 + s.z1) / 2, i: out.length });
     });
     return out;
-  }, [segs, detail]);
+  }, [segs, detail, layout.psd]);
 
   return (
     <group>

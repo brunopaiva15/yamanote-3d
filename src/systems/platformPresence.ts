@@ -7,7 +7,7 @@ import { CONFIG } from '../data/config';
 import { useStore, type Phase } from '../store';
 import { runtime } from './runtime';
 import { segEnv } from './segmentEnv';
-import { layoutFor } from '../data/stationLayouts';
+import { hasPlatformDoors, layoutFor } from '../data/stationLayouts';
 
 function smoothstep(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -44,6 +44,14 @@ function presenceFrom(
 
 // À appeler APRÈS updateSegmentEnv pour lire un p à jour.
 export function updatePlatformPresence(): void {
+  const { phase, index } = useStore.getState();
+  // Publié ici plutôt que lu en trois endroits : le seuil de porte
+  // (systems/walkable), le son du quai (three/Engine) et la mécanique des
+  // vantaux (systems/doorMotion) doivent tous savoir si cette gare-ci a des
+  // portes de quai. C'est la même gare que celle dont on lit le gabarit
+  // ci-dessous — la cohérence est acquise, pas à retrouver.
+  runtime.psdPresent = hasPlatformDoors(index);
+
   // Le joueur est descendu : c'est la gare qui devient le repère fixe. Elle ne
   // glisse plus et ne disparaît plus — c'est la rame qui s'en va (runtime.trainZ).
   if (runtime.playerFrame === 'platform') {
@@ -51,7 +59,6 @@ export function updatePlatformPresence(): void {
     runtime.platformSlide = 0;
     return;
   }
-  const { phase, index } = useStore.getState();
   const { presence, slide } = presenceFrom(phase, segEnv.p, layoutFor(index).length / 2);
   runtime.platformFade = presence;
   runtime.platformSlide = slide;
@@ -65,7 +72,9 @@ export function seedPlatformPresence(phase: Phase, phaseT: number): void {
   else if (phase === 'cruise') p = Math.min(1, (CONFIG.departTime + phaseT) / journey);
   else if (phase === 'brake') p = Math.min(1, (CONFIG.departTime + CONFIG.cruiseTime + phaseT) / journey);
   else p = 1;
-  const half = layoutFor(useStore.getState().index).length / 2;
+  const index = useStore.getState().index;
+  runtime.psdPresent = hasPlatformDoors(index);
+  const half = layoutFor(index).length / 2;
   const { presence, slide } = presenceFrom(phase, p, half);
   runtime.platformFade = presence;
   runtime.platformSlide = slide;

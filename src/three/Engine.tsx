@@ -93,9 +93,11 @@ export function Engine(): null {
     if (physDt > 0) {
       updateDoorMotion(physDt);
       updateAudio(physDt, runtime.speed / V_MAX, phase === 'brake');
-      // Le quai n'est audible que par les ouvertures réellement dégagées :
-      // il faut la porte de la rame ET la porte palière en face.
-      setPlatformDoors(runtime.doorOpen * runtime.psdOpen);
+      // Le quai n'est audible que par les ouvertures réellement dégagées : il
+      // faut la porte de la rame ET la porte palière en face — là où il y en a
+      // une. À Shinjuku et Shibuya, la porte de la rame donne directement sur
+      // le quai, et la mélodie entre dès qu'elle s'écarte.
+      setPlatformDoors(runtime.doorOpen * (runtime.psdPresent ? runtime.psdOpen : 1));
       updatePassengers(physDt);
       updatePlatformCrowd(physDt);
     }

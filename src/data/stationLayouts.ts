@@ -850,6 +850,21 @@ function build(spec: Spec): StationLayout {
   };
 }
 
+/**
+ * La voie où l'on se trouve a-t-elle des portes de quai ?
+ *
+ * `partial` compte pour OUI : à Ikebukuro et à Ōsaki, c'est la voie SECONDAIRE
+ * qui n'est pas équipée — voies 5 et 8 d'un côté, 2 et 4 de l'autre — et le jeu
+ * circule en 外回り sur la principale, qui l'est. La différence se verra sur le
+ * quai d'en face, pas sous nos pieds.
+ *
+ * Restent donc Shinjuku et Shibuya, où les grands travaux interdisent encore
+ * toute pose : là, le bord de quai est nu.
+ */
+export function hasPlatformDoors(index: number): boolean {
+  return layoutFor(index).psd !== 'none';
+}
+
 const CACHE = new Map<number, StationLayout>();
 
 /** Gabarit complet d'une gare, mémoïsé (30 objets au total). */

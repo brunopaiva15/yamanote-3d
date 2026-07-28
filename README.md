@@ -68,9 +68,22 @@ Trois axes y sont tenus séparés, parce que les confondre uniformise tout :
 - `signature` — le caractère qui ne se paramètre pas, dessiné à part
   (`three/station/Signature`).
 
-S'y ajoutent l'état des portes de quai en 2026 (`psd` : absentes à Shinjuku et
-Shibuya, partielles à Ikebukuro et Ōsaki) et le drapeau `works` des cinq gares
-en travaux (Shinjuku, Shibuya, Shinagawa, Tamachi, Hamamatsuchō).
+S'y ajoutent l'état des portes de quai en 2026 (`psd`) et le drapeau `works` des
+cinq gares en travaux (Shinjuku, Shibuya, Shinagawa, Tamachi, Hamamatsuchō).
+
+**Deux gares n'ont pas de portes de quai** : à Shinjuku et à Shibuya, les grands
+travaux en interdisent encore la pose. Le bord y est nu — bande podotactile
+élargie de 42 à 86 cm, joue de rive visible, ballast en contrebas — et la
+mécanique suit : le seuil de porte ne dépend plus que de la porte de la rame
+(`systems/walkable`), la mélodie de départ entre dès que celle-ci s'écarte
+(`three/Engine`), et on n'entend plus déverrouiller ni glisser ce qui n'existe
+pas (`systems/doorMotion`). Les boutons d'arrêt d'urgence, faute de muret pour
+les porter, passent sur des bornes en retrait de la bande podotactile.
+
+`psd: 'partial'` — Ikebukuro et Ōsaki — ne change rien sous nos pieds : c'est la
+voie *secondaire* qui n'est pas équipée (voies 5 et 8, voies 2 et 4), et le jeu
+circule en 外回り sur la principale, qui l'est. La différence se verra sur le
+quai d'en face.
 
 Ces valeurs étaient auparavant **déduites du tronçon traversé**
 (`data/segments`), ce qui est une erreur de principe — un tronçon dit ce qu'on

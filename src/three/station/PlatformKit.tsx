@@ -54,8 +54,6 @@ interface Props {
 const BIN_LIDS = ['#2f6fb5', '#d8b52a', '#4b5157'] as const;
 /** Écartement des trois bacs d'une même batterie (m). */
 const BIN_STEP = 0.44;
-/** Face pleine des portes palières, côté quai : les murets font 10 cm. */
-const STOP_X = PSD_X + 0.05;
 
 export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   const kit = place.kit;
@@ -63,6 +61,8 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   const depth = layout.depth;
   const canopyY = layout.canopyY;
   const len = layout.length;
+  /** Quai sans portes : Shinjuku, Shibuya. */
+  const bare = layout.psd === 'none';
 
   // Abscisses partagées par tout le fichier. Les descentes d'eau et la
   // gouttière se tiennent DERRIÈRE la limite de marche (walkX1) : un tuyau
@@ -186,19 +186,33 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
     [kit.extinguishers, wallFaceX],
   );
 
-  // Boutons d'arrêt d'urgence, plaqués sur la face pleine des portes palières
-  // et tournés vers le quai : on doit les voir en marchant, pas en se
-  // retournant vers la voie. Rien au sol, donc rien dans une file d'attente.
+  // Boutons d'arrêt d'urgence, tournés vers le quai : on doit les voir en
+  // marchant, pas en se retournant vers la voie.
+  //
+  // Là où il y a des portes de quai, le caisson se plaque sur la face pleine du
+  // muret et ne coûte rien au passage. À Shinjuku et Shibuya il n'y a aucun
+  // muret pour le porter : il lui faut une borne, en retrait de la bande
+  // podotactile élargie. `offGate` l'a déjà écarté des baies de portes, donc
+  // elle ne barre jamais le chemin d'un voyageur qui descend.
+  const stopX = kit.emergencyStopX;
+  const stopY = bare ? PLATFORM_TOP + 1.16 : PLATFORM_TOP + 0.94;
   const stopHeads = useMemo(
-    () => kit.emergencyStops.map((z) => mat(STOP_X, PLATFORM_TOP + 0.94, z, 0.09, 0.4, 0.31)),
-    [kit.emergencyStops],
+    () => kit.emergencyStops.map((z) => mat(stopX, stopY, z, 0.09, 0.4, 0.31)),
+    [kit.emergencyStops, stopX, stopY],
   );
   const stopFaces = useMemo(
+    () => kit.emergencyStops.map((z) => matFacing(FACING_BACK, stopX + 0.05, stopY, z, 0.28, 0.37)),
+    [kit.emergencyStops, stopX, stopY],
+  );
+  // Fût de la borne, seulement là où elle est libre.
+  const stopPosts = useMemo(
     () =>
-      kit.emergencyStops.map((z) =>
-        matFacing(FACING_BACK, STOP_X + 0.05, PLATFORM_TOP + 0.94, z, 0.28, 0.37),
-      ),
-    [kit.emergencyStops],
+      bare
+        ? kit.emergencyStops.map((z) =>
+            mat(stopX, PLATFORM_TOP + (stopY - PLATFORM_TOP - 0.2) / 2, z, 0.12, stopY - PLATFORM_TOP - 0.2, 0.12),
+          )
+        : [],
+    [bare, kit.emergencyStops, stopX, stopY],
   );
 
   // Armoires électriques, adossées au fond.
@@ -260,6 +274,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   const camDomeRef = useRef<THREE.InstancedMesh>(null);
   const extBoxRef = useRef<THREE.InstancedMesh>(null);
   const extFaceRef = useRef<THREE.InstancedMesh>(null);
+  const stopPostRef = useRef<THREE.InstancedMesh>(null);
   const stopHeadRef = useRef<THREE.InstancedMesh>(null);
   const stopFaceRef = useRef<THREE.InstancedMesh>(null);
   const cabBodyRef = useRef<THREE.InstancedMesh>(null);
@@ -278,6 +293,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   useInstances(camDomeRef, cameraDomes);
   useInstances(extBoxRef, extBoxes);
   useInstances(extFaceRef, extFaces);
+  useInstances(stopPostRef, stopPosts);
   useInstances(stopHeadRef, stopHeads);
   useInstances(stopFaceRef, stopFaces);
   useInstances(cabBodyRef, cabBodies);
@@ -368,6 +384,15 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
             <planeGeometry args={[1, 1]} />
           </instancedMesh>
 
+          {bare && (
+            <instancedMesh
+              ref={stopPostRef}
+              args={[undefined, undefined, Math.max(1, stopPosts.length)]}
+              material={m.metal}
+            >
+              <boxGeometry args={[1, 1, 1]} />
+            </instancedMesh>
+          )}
           <instancedMesh
             ref={stopHeadRef}
             args={[undefined, undefined, Math.max(1, stopHeads.length)]}

@@ -41,8 +41,15 @@ export interface StationKit {
   cameras: number[];
   /** Coffrets d'extincteur, plaqués au fond du quai. */
   extinguishers: number[];
-  /** Boutons d'arrêt d'urgence, sur la face pleine des portes palières. */
+  /** Boutons d'arrêt d'urgence, écartés des baies de portes. */
   emergencyStops: number[];
+  /**
+   * Abscisse de ces boutons : plaqués sur la face pleine du muret là où il y a
+   * des portes de quai, sur une borne en retrait de la bande podotactile là où
+   * il n'y en a pas — à Shinjuku et Shibuya, il n'y a aucun muret pour les
+   * porter.
+   */
+  emergencyStopX: number;
   /** Miroirs de départ suspendus, au droit des cabines de conduite. */
   mirrors: number[];
   /** Téléphone ferroviaire. */
@@ -259,7 +266,12 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   // se seraient trouvés en plein dans une file d'attente, devant une porte.
   // Les miroirs de départ, eux, se suspendent à l'auvent au droit des cabines
   // de conduite, pour la même raison.
+  //
+  // À Shinjuku et Shibuya, aucun muret ne peut les porter : il leur faut une
+  // borne, plantée derrière la bande podotactile élargie.
   const halfConsist = ((CONSIST.length - 1) / 2) * E235.pitch;
+  const barePlatform = layout.psd === 'none';
+  const emergencyStopX = barePlatform ? PSD_X + 1.32 : PSD_X + 0.05;
   // Un diffuseur affleure la sous-face de l'auvent : au droit d'un pilier, il
   // disparaîtrait dans la poutre transversale — exactement le défaut que les
   // néons ont déjà eu. Il s'écarte donc du poteau le plus proche.
@@ -282,6 +294,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     ]
       .map((z) => offGate(z, gates))
       .sort((p, q) => p - q),
+    emergencyStopX,
     mirrors: [-halfConsist - 1.2, halfConsist + 1.2],
     phone: usable * 0.24,
     downpipes: columns.filter((_, k) => k % 2 === 0),
@@ -293,6 +306,15 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
 
   // `taken` a exactement recueilli tout ce qui a été retenu, structure comprise.
   const obstacles = taken;
+
+  // Une borne plantée au sol se contourne ; plaquée sur un muret de portes
+  // palières, elle ne gêne personne et n'a rien à faire ici. `offGate` a déjà
+  // garanti qu'aucune ne barre une baie de porte.
+  if (barePlatform) {
+    for (const z of kit.emergencyStops) {
+      obstacles.push({ x: emergencyStopX, z, halfX: 0.16, halfZ: 0.16 });
+    }
+  }
 
   const placement: StationPlacement = {
     layout,

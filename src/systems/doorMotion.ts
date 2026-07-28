@@ -115,7 +115,10 @@ export function setPsdDoors(target: 0 | 1): void {
   runtime.psdTarget = target;
   runtime.psdT = 0;
   psdImpactFired = false;
-  audio.psdClunk(0.09);
+  // La cinématique continue de tourner même sans portes de quai — le cycle
+  // station n'a pas à connaître la gare — mais on n'entend pas déverrouiller
+  // ce qui n'existe pas.
+  if (runtime.psdPresent) audio.psdClunk(0.09);
 }
 
 // À appeler chaque frame : avance les horloges, publie les positions de
@@ -143,12 +146,12 @@ export function updateDoorMotion(dt: number): void {
   const pp = runtime.psdTarget === 1 ? PSD_OPEN : PSD_CLOSE;
   if (!psdImpactFired && runtime.psdT >= pp.duration) {
     psdImpactFired = true;
-    audio.psdClunk(runtime.psdTarget === 1 ? 0.07 : 0.15);
+    if (runtime.psdPresent) audio.psdClunk(runtime.psdTarget === 1 ? 0.07 : 0.15);
   }
 
   if (dt > 0) {
     const vTrain = Math.abs(train - prevTrain) / dt;
-    const vPsd = Math.abs(psd - prevPsd) / dt;
+    const vPsd = runtime.psdPresent ? Math.abs(psd - prevPsd) / dt : 0;
     audio.setDoorSlide(Math.min(1, vTrain * 1.6), Math.min(1, vPsd * 1.6));
   }
   prevTrain = train;
