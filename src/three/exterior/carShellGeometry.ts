@@ -157,16 +157,29 @@ function buildBody(): THREE.BufferGeometry {
   return merge(parts, 'caisse');
 }
 
-/** Bandeau uguisu, en haut de caisse, continu par-dessus les portes. */
+/**
+ * Habillage uguisu au-dessus des portes.
+ *
+ * Il y avait ici un bandeau continu d'un about à l'autre — c'est faux pour le
+ * E235-0 : le vert n'est QU'AUX PORTES et il monte du bas de caisse jusqu'au
+ * pavillon, formant un montant d'un seul tenant par baie ; entre deux portes,
+ * le haut de caisse reste inox. Les vantaux couvrent la partie basse (ce sont
+ * eux qui coulissent) ; cette pièce-ci couvre ce qui les surmonte.
+ */
 function buildBand(): THREE.BufferGeometry {
-  const h = E235.bandTop - E235.bandBottom;
-  const y = (E235.bandTop + E235.bandBottom) / 2;
-  const t = 0.04; // le bandeau affleure la caisse, sans s'y enfouir
+  const t = 0.03; // l'habillage affleure la caisse, sans s'y enfouir
+  const y0 = E235.doorH;
+  const y1 = E235.doorGreenTop;
+  // Un peu plus large que la baie : le vert déborde sur l'encadrement, comme
+  // sur la série.
+  const w = E235.doorHalfW * 2 + 0.12;
   const parts: THREE.BufferGeometry[] = [];
   for (const s of [1, -1] as const) {
-    parts.push(box(t, h, HALF * 2, s * (HW + t / 2 - 0.005), y, 0));
+    for (const dz of E235.doorCenters) {
+      parts.push(box(t, y1 - y0, w, s * (HW + t / 2 - 0.004), (y0 + y1) / 2, dz));
+    }
   }
-  return merge(parts, 'bandeau');
+  return merge(parts, 'habillage de porte');
 }
 
 /** Pavillon + carénages de climatisation + antennes. */

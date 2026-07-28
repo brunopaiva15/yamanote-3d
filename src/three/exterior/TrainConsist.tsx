@@ -133,10 +133,13 @@ function build(): Built {
     glass: track(
       new THREE.MeshStandardMaterial({
         color: LIVERY.glass,
-        roughness: 0.1,
-        metalness: 0.25,
+        roughness: 0.07,
+        metalness: 0.35,
         transparent: true,
-        opacity: 0.78,
+        // Assez transparent pour qu'on distingue les voyageurs derrière : c'est
+        // ce que montrent les photos, et c'est ce qui fait qu'une rame à quai
+        // n'a pas l'air vide.
+        opacity: 0.58,
       }),
     ),
     liner: track(
