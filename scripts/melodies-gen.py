@@ -569,6 +569,100 @@ MELODIES = [
             (6, 3, ("D4", "A4", "F#5")), (9, 3.5, ("G3", "D4", "B4")),
         ],
     ),
+    # Inner Loop principal ver.B — seconde version du même branchement, pour que
+    # les vingt quais Inner ne sonnent pas tous pareil. Se rapproche du CARACTÈRE
+    # du 010-01 réel : la bémol majeur (quatre bémols), ♩=110, guirlandes de
+    # doubles croches, notes de passage chromatiques et basse en croches
+    # continues sous la cloche. Mélodie neuve : rien n'est transcrit.
+    dict(
+        file="20_jre-ikst-010-01_inner-main-v2.mp3",
+        title="Meguri no Asa ver.B (めぐりの朝 ver.B)",
+        bpm=110,
+        inst="synthbell",
+        notes=[
+            (0, 0.5, "Eb5"), (0.5, 0.5, "Ab5"),
+            (1, 0.25, "C6"), (1.25, 0.25, "Bb5"), (1.5, 0.5, "C6"),
+            (2, 1, "Eb6"),
+            (3, 0.25, "Db6"), (3.25, 0.25, "C6"), (3.5, 0.5, "Bb5"),
+            (4, 1.5, "Ab5"), (5.5, 0.5, "G5"),
+            (6, 0.25, "Ab5"), (6.25, 0.25, "Bb5"), (6.5, 0.5, "C6"),
+            (7, 1, "Eb6"),
+            (8, 0.5, "F6"), (8.5, 0.5, "Eb6"), (9, 0.5, "C6"), (9.5, 0.5, "Bb5"),
+            (10, 0.75, "Ab5"), (10.75, 0.25, "G5"), (11, 1, "Ab5"),
+            (12, 0.25, "Bb5"), (12.25, 0.25, "C6"), (12.5, 0.5, "Db6"),
+            (13, 0.5, "C6"), (13.5, 0.5, "Bb5"),
+            (14, 2, "Ab5"),
+            # Basse en croches continues (main gauche du modèle), discrète.
+            *[
+                (b + i * 0.5, 0.5, n, 0.28, "pluck")
+                for b, chord in [
+                    (0, ("Ab2", "Eb3", "Ab3", "Eb3")),
+                    (2, ("Ab2", "Eb3", "C4", "Eb3")),
+                    (4, ("F2", "C3", "F3", "C3")),
+                    (6, ("Eb2", "Bb2", "Eb3", "G3")),
+                    (8, ("Db2", "Ab2", "Db3", "F3")),
+                    (10, ("C3", "Eb3", "Ab3", "Eb3")),
+                    (12, ("Bb2", "F3")),
+                    (13, ("Eb2", "Bb2")),
+                    (14, ("Ab2", "Eb3", "Ab3", "Eb3")),
+                ]
+                for i, n in enumerate(chord)
+            ],
+        ],
+        pads=[
+            (0, 4, ("Ab3", "Eb4", "C5")), (4, 2, ("F3", "C4", "Ab4")),
+            (6, 2, ("Eb3", "Bb3", "G4")), (8, 2, ("Db4", "Ab4", "F5")),
+            (10, 2, ("Ab3", "Eb4", "C5")), (12, 1, ("Bb3", "F4", "Db5")),
+            (13, 1, ("Eb3", "Bb3", "G4")), (14, 2, ("Ab3", "Eb4", "C5")),
+        ],
+    ),
+    # Outer Loop principal ver.B — pendant de la précédente pour les dix-huit
+    # quais Outer : même la bémol majeur et même ♩=110, mais départ syncopé
+    # (après le temps), contour retombant et cadence V–I sous la tonique tenue.
+    dict(
+        file="21_jre-ikst-010-02_outer-main-v2.mp3",
+        title="Sotomawari no Kaze ver.B (外回りの風 ver.B)",
+        bpm=110,
+        inst="synthbell",
+        notes=[
+            (0.25, 0.25, "Eb6"), (0.5, 0.5, "C6"),
+            (1, 0.25, "Bb5"), (1.25, 0.25, "C6"), (1.5, 0.5, "Db6"),
+            (2, 1, "C6"),
+            (3, 0.5, "Ab5"), (3.5, 0.5, "Bb5"),
+            (4, 1.5, "C6"), (5.5, 0.25, "Bb5"), (5.75, 0.25, "Ab5"),
+            (6, 0.5, "G5"), (6.5, 0.5, "Ab5"),
+            (7, 1, "Eb5"),
+            (8, 0.5, "F5"), (8.5, 0.5, "Ab5"),
+            (9, 0.25, "C6"), (9.25, 0.25, "Db6"), (9.5, 0.5, "Eb6"),
+            (10, 1, "F6"),
+            (11, 0.5, "Eb6"), (11.5, 0.5, "C6"),
+            (12, 0.75, "Bb5"), (12.75, 0.25, "A5"),
+            (13, 0.5, "Ab5"), (13.5, 0.5, "C6"),
+            (14, 2, "Ab5"),
+            *[
+                (b + i * 0.5, 0.5, n, 0.28, "pluck")
+                for b, chord in [
+                    (0, ("Ab2", "Eb3", "Ab3", "C4")),
+                    (2, ("F2", "C3", "F3", "Ab3")),
+                    (4, ("Db2", "Ab2", "Db3", "F3")),
+                    (6, ("Eb2", "Bb2", "Eb3", "G3")),
+                    (8, ("Ab2", "Eb3", "Ab3", "C4")),
+                    (10, ("Db2", "Ab2", "Db3", "F3")),
+                    (12, ("Bb2", "F3", "Bb3", "Db4")),
+                    (14, ("Eb2", "Bb2")),
+                    (15, ("Ab2", "Eb3")),
+                ]
+                for i, n in enumerate(chord)
+            ],
+        ],
+        pads=[
+            (0, 2, ("Ab3", "Eb4", "C5")), (2, 2, ("F3", "C4", "Ab4")),
+            (4, 2, ("Db4", "Ab4", "F5")), (6, 2, ("Eb3", "Bb3", "G4")),
+            (8, 2, ("Ab3", "Eb4", "C5")), (10, 2, ("Db4", "Ab4", "F5")),
+            (12, 2, ("Bb3", "F4", "Db5")), (14, 1, ("Eb3", "Bb3", "G4")),
+            (15, 1, ("Ab3", "Eb4", "C5")),
+        ],
+    ),
 ]
 
 

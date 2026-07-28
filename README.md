@@ -625,7 +625,12 @@ mélodie réelle (gamme, tempo, timbre) sans en reprendre les notes — les
 enregistrements protégés ne sont pas embarqués. Elles sont générées par
 `scripts/melodies-gen.py` dans `public/audio/melodies/` et activées via
 `ENABLE_DEPARTURE_MELODY_CLIPS = true` (`src/data/melodies.ts`) ; flag à
-`false` = retour à la synthèse Tone.js seule. La séquence de départ respecte la
+`false` = retour à la synthèse Tone.js seule. Les deux branchements principaux
+(Inner et Outer, câblés sur une vingtaine de quais chacun) existent en **deux
+versions** : chaque gare garde toujours la sienne (`version` dans
+`innerMainMelodyPlatforms` / `outerMainMelodyPlatforms`), mais elles alternent
+le long de la boucle pour qu'on n'entende jamais deux fois la même d'affilée.
+La séquence de départ respecte la
 chronologie réelle, comptée depuis l'arrêt complet : portes ouvertes à 1–3 s,
 mélodie **une vingtaine de secondes plus tard** (15–25 s selon la taille de la
 gare et l'état de la ligne, comme le chef de train qui la lance ~25 s avant le
