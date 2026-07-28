@@ -82,6 +82,15 @@ mécanique suit : le seuil de porte ne dépend plus que de la porte de la rame
 pas (`systems/doorMotion`). Les boutons d'arrêt d'urgence, faute de muret pour
 les porter, passent sur des bornes en retrait de la bande podotactile.
 
+Le bord nu n'était toutefois nu **qu'à l'écran** : la marche s'y arrêtait quand
+même, 20 cm avant le vide, sur rien du tout. Les deux bords de ces deux quais
+portent donc la même limite de zone que les abouts et le pied des volées
+(`three/station/Barrier`) : une maille hexagonale rouge, éteinte de loin, qui
+s'allume au dernier pas — à la hauteur exacte du muret qui manque, pour qu'on
+regarde par-dessus. Elle reprend la trame des 44 baies et **s'ouvre au droit
+d'une porte en même temps que le portillon** de `systems/walkable` ; le bord
+d'en face, où aucune rame ne se présente, reste continu.
+
 `psd: 'partial'` — Ōsaki seul désormais — ne change rien sous nos pieds : c'est
 la voie *secondaire* qui n'est pas encore équipée (voies 2 et 4, travaux jusqu'à
 fin 2026), et le jeu circule sur la principale, qui l'est. La différence se
