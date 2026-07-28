@@ -16,6 +16,8 @@ import { Ads } from './three/Ads';
 import { Screens } from './three/Screens';
 import { DoorCloseLed } from './three/DoorCloseLed';
 import { Scenery } from './three/Scenery';
+import { SkyDome } from './three/city/SkyDome';
+import { CityRibbon } from './three/city/CityRibbon';
 import { Landmarks } from './three/Landmarks';
 import { SegmentEnvironment } from './three/SegmentEnvironment';
 import { HubStationRoof } from './three/HubStationRoof';
@@ -56,6 +58,8 @@ export default function App() {
           <Passengers />
           <TrainConsist />
         </TrainRig>
+        <SkyDome />
+        <CityRibbon />
         <Scenery />
         <Landmarks />
         <SegmentEnvironment />

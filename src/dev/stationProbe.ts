@@ -160,4 +160,20 @@ export function installStationProbe(scene: THREE.Object3D): void {
   };
 
   w.__probeName = () => STATIONS[useStore.getState().index].romaji;
+
+  // Se poser EN PLEINE VOIE, quartier choisi : l'état où l'on juge le décor.
+  // Le quai est retiré, sinon il masque tout ce qu'on vient regarder.
+  w.__probeCruise = (i: number) => {
+    const k = ((i % 30) + 30) % 30;
+    useStore.setState({ index: k, phase: 'cruise', doorSide: DOOR_SIDE[k] });
+    runtime.phaseT = 25;
+    runtime.platformFade = 0;
+    runtime.platformSlide = 0;
+  };
+
+  // Heure de Tokyo, en minutes depuis minuit. L'horloge avance ensuite d'une
+  // minute par minute réelle : la valeur posée tient le temps d'une capture.
+  w.__probeClock = (minutes: number) => {
+    runtime.clockMin = ((minutes % 1440) + 1440) % 1440;
+  };
 }

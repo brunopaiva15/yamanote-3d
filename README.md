@@ -204,6 +204,75 @@ l'accès et répétée en bout de potence, pour se lire de loin.
 trois tronçons calés dans les creux de la trame des bannières publicitaires :
 une flèche, les gares desservies, et rien d'autre.
 
+## Le paysage
+
+La ville qui défile était peinte sur trois plans fixes, et c'est la **texture**
+qui coulait — `offset.x = distance / metersPerRepeat`. Le compte ne tombait
+juste sur aucune des trois couches : sur la plus proche, un motif couvrait 100 m
+de monde mais avançait d'une répétition tous les 60 m parcourus. La ville
+glissait donc à **1,67 fois la vitesse du train**, et à contresens de la
+parallaxe perspective du plan lui-même. C'est ce qui se lisait immédiatement
+comme un décor tiré au fil.
+
+Elle est maintenant **bâtie dans le monde**, et c'est le train qui la dépasse.
+
+**Le ruban** (`systems/cityField` + `three/city/CityRibbon`) découpe la voie en
+cellules de 40 m et engendre, pour chacune, un tissu de bâtiments à partir de
+son seul index monde. Le rendu n'en garde qu'un anneau glissant de treize
+cellules par côté — 520 m, au-delà de la portée de la brume — recyclé une
+cellule à la fois, soit une réécriture toutes les 1,6 s à vitesse de croisière.
+Entre deux recyclages, plus rien ne bouge : le groupe entier recule d'un
+`runtime.distance` et les instances gardent une abscisse fixe.
+
+Trois rangs, et c'est le point : un bord de voie **bas** (12 à 21 m de l'axe,
+deux à quatre niveaux), un rang d'îlot (22 à 38 m), un fond haut (40 à 66 m).
+C'est la stratification qui produit l'occultation mutuelle, donc la profondeur ;
+un plan unique, aussi bien dessiné soit-il, reste du carton. Le premier rang
+reste bas à dessein — un premier rang haut est un mur, et un mur ne fait pas une
+ville. Une cellule sur deux est traversée par une **rue perpendiculaire** qui
+perce les trois rangs au même endroit : c'est le seul moment où le regard
+s'enfonce, et le meilleur révélateur de vitesse qui soit en train.
+
+**La trame de façade se mesure en mètres**, pas en fraction de bâtiment
+(`three/city/cityMaterial`). Le nuanceur reconstitue dans le sommet les
+dimensions réelles de l'instance depuis `instanceMatrix` et choisit l'UV selon
+la face — le long de la voie sur les pignons, en profondeur sur les faces qui
+regardent les rails, à plat sur les toitures. Un étage fait trois mètres sur une
+tour de cinquante comme sur une échoppe de six, et c'est cette constance qui
+donne une **taille** aux bâtiments. Sous trois mètres, un second échantillon
+prend la main : la devanture, vitrine, bandeau d'enseigne et store — mais
+seulement là où le quartier est commerçant, sinon la frise redevient continue.
+
+Jour et nuit ne sont plus deux jeux de textures fondus l'un dans l'autre : la
+ville est **éclairée** par le soleil et l'ambiante de `three/Scene`, elle se dore
+donc à l'heure dorée. La nuit n'ajoute que l'émissif. Chaque vitrage porte dans
+l'alpha de sa texture un tirage stable, et le seuil d'allumage descend avec la
+nuit : les étages s'allument par paquets au fil de la soirée au lieu de basculer
+tous ensemble.
+
+**Le quartier appartient à un endroit, plus à un instant.** L'ancien fondu
+suivait la progression `p` du trajet : le quartier changeait avec le temps, où
+qu'on regarde, y compris derrière soi. `cityField` mesure l'inter-gare réel et
+donne à chaque gare un territoire d'un demi-inter-gare de part et d'autre. On
+entre dans un quartier, on le traverse, on en sort. À la frontière, les deux
+tissus s'entremêlent bâtiment par bâtiment sur ±90 m — une ville ne change pas
+de caractère sur une ligne.
+
+**Le ciel et l'horizon** tiennent en une passe (`three/city/SkyDome`) : un seul
+cylindre opaque, test de profondeur désactivé, dessiné avant tout le reste. Le
+ciel était fait de trois cylindres transparents fondus, ce qui marchait tant que
+tout le décor était transparent et n'écrivait pas la profondeur ; un ruban
+opaque posé à deux cents mètres dans l'axe de la voie passerait maintenant
+*derrière* un ciel posé à soixante-dix-huit. La silhouette lointaine est
+composée dans le même nuanceur, dans une bande de `v`, et défile par rotation
+pure — ce qui est exactement la parallaxe d'un objet infiniment loin. Le taux
+est calé pour se lire à ~900 m.
+
+Pour regarder tout ça : `node scripts/scenery-shots.mjs /tmp/decor` se cale au
+milieu d'un inter-gare, vise par une baie et capture, de jour comme de nuit. La
+sonde de gare, elle, se pose à l'arrêt — là où le quai masque justement tout le
+paysage.
+
 ## L'extérieur de la rame
 
 `three/exterior/` modélise la rame E235-0 complète, visible depuis le quai :
@@ -339,13 +408,16 @@ src/
   systems/               logique pure : machine à états du cycle station, audio Tone.js,
                          file d'annonces vocales, PNJ, slots d'assise, runtime 60 fps
   three/                 rendu R3F : wagon, sièges, portes, poignées, pubs, écrans LCD,
-                         ville en parallaxe, PNJ, caméra
+                         PNJ, caméra
+  three/city/            le paysage : ruban urbain instancié, matériau de façade,
+                         ciel et ligne d'horizon en une passe
   three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines
   three/station/         quai praticable de 224 m, trente gabarits de gare, signalétique
   three/station/signatures/ les charpentes propres à une gare : Takanawa, Akihabara…
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
-  scripts/               models:import / models:inspect (packs → public/models/)
+  scripts/               models:import / models:inspect (packs → public/models/),
+                         sondes navigateur : station-probe, scenery-shots
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
   ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles
