@@ -18,7 +18,12 @@ import { PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
 import type { StationLayout } from '../../data/stationLayouts';
 import { runtime } from '../../systems/runtime';
 import type { StationPlacement } from '../../systems/stationPlacement';
-import { makeExitSign, makePlatformNumberSign, makeTransferSign } from '../../textures/procedural';
+import {
+  makeAccessPlate,
+  makeExitSign,
+  makePlatformNumberSign,
+  makeTransferSign,
+} from '../../textures/procedural';
 
 /** Hauteur libre sous les panneaux : on passe dessous sans se baisser. */
 const SIGN_BOTTOM = 2.35;
@@ -41,6 +46,13 @@ export function OverheadSigns({ place, layout, station }: Props) {
     }),
     [],
   );
+  // Une plaque par accès, refaite au changement de gare : leur nombre et leurs
+  // lettres en dépendent. Ce sont de petits canvas, et il y en a au plus cinq.
+  const plates = useMemo(
+    () => place.accesses.map((a) => makeAccessPlate(a.letter, a.kind)),
+    [place.accesses],
+  );
+
   const mats = useMemo(
     () => ({
       exits: signs.exits.map(
@@ -50,9 +62,19 @@ export function OverheadSigns({ place, layout, station }: Props) {
       track: new THREE.MeshBasicMaterial({ map: signs.track.texture, toneMapped: false }),
       frame: new THREE.MeshStandardMaterial({ color: '#15171a', roughness: 0.5, metalness: 0.3 }),
       strut: new THREE.MeshStandardMaterial({ color: '#8d9399', roughness: 0.4, metalness: 0.6 }),
+      plates: plates.map((t) => new THREE.MeshBasicMaterial({ map: t, toneMapped: false })),
     }),
-    [signs],
+    [signs, plates],
   );
+
+  // Les plaques d'une gare quittée ne resservent pas.
+  useEffect(() => {
+    const mm = mats.plates;
+    return () => {
+      for (const x of mm) x.dispose();
+      for (const t of plates) t.dispose();
+    };
+  }, [mats.plates, plates]);
 
   useEffect(() => {
     for (const s of signs.exits) s.redraw(station);
@@ -69,14 +91,18 @@ export function OverheadSigns({ place, layout, station }: Props) {
 
   // Une potence par accès. Décalée d'un mètre vers le milieu du quai : plantée
   // pile au-dessus de la trémie, elle serait masquée par le fléchage de sortie
-  // qui coiffe déjà celle-ci.
-  const gantries = useMemo(() => {
-    const spots = [
-      ...place.stairs.map((s) => ({ z: s.z - s.halfZ - 1.6, i: 0 })),
-      ...place.escalators.map((e) => ({ z: e.z - e.halfZ - 1.6, i: 1 })),
-    ];
-    return spots.sort((a, b) => a.z - b.z);
-  }, [place.stairs, place.escalators]);
+  // qui coiffe déjà celle-ci. Chacune porte la lettre de l'accès qu'elle
+  // annonce — c'est par elle qu'on se repère sur deux cent vingt mètres.
+  const gantries = useMemo(
+    () =>
+      place.accesses
+        // L'ascenseur n'a pas de potence : on ne l'annonce pas de loin, on le
+        // trouve à sa cage vitrée. Sa plaque, elle, reste posée dessus.
+        .map((a, k) => ({ ...a, plate: k }))
+        .filter((a) => a.kind !== 'elevator')
+        .map((a) => ({ z: a.z - a.halfZ - 1.6, i: a.kind === 'stairs' ? 0 : 1, plate: a.plate })),
+    [place.accesses],
+  );
 
   // Largeur utile : d'un bord de quai à l'autre, moins les abouts. Sur un îlot
   // la potence enjambe les DEUX bords — calée sur l'épine centrale, elle n'en
@@ -132,7 +158,28 @@ export function OverheadSigns({ place, layout, station }: Props) {
         </group>
       ))}
 
-      {gantries.map(({ z, i }) => (
+      {/* Plaque de balisage au-dessus de chaque accès : la lettre du plan JR,
+          posée là où l'on débouche. C'est par elle qu'on se donne rendez-vous
+          sur un quai de deux cent vingt mètres. */}
+      {place.accesses.map((a, k) => (
+        <group key={`ap${k}`} position={[a.x, PLATFORM_TOP + 2.62, a.z - a.halfZ + 0.1]}>
+          <mesh material={mats.frame}>
+            <boxGeometry args={[0.5, 0.62, 0.07]} />
+          </mesh>
+          {[1, -1].map((d) => (
+            <mesh
+              key={d}
+              position={[0, 0, d * 0.041]}
+              rotation={[0, d === 1 ? 0 : Math.PI, 0]}
+              material={mats.plates[k]}
+            >
+              <planeGeometry args={[0.44, 0.56]} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+
+      {gantries.map(({ z, i, plate }) => (
         <group key={`ov${z}`} position={[0, PLATFORM_TOP, z]}>
           {/* Traverse et suspentes jusqu'à la sous-face de l'auvent. */}
           <mesh position={[midX, top + 0.09, 0]} material={mats.strut}>
@@ -147,6 +194,24 @@ export function OverheadSigns({ place, layout, station }: Props) {
               </mesh>
             );
           })}
+
+          {/* La lettre de l'accès, en bout de traverse : on la lit de loin,
+              avant même de déchiffrer le nom de la sortie. */}
+          <group position={[midX - panelW - 0.36, SIGN_BOTTOM + SIGN_H / 2, 0]}>
+            <mesh material={mats.frame}>
+              <boxGeometry args={[0.46, SIGN_H + 0.06, 0.09]} />
+            </mesh>
+            {[1, -1].map((d) => (
+              <mesh
+                key={d}
+                position={[0, 0, d * 0.051]}
+                rotation={[0, d === 1 ? 0 : Math.PI, 0]}
+                material={mats.plates[plate]}
+              >
+                <planeGeometry args={[0.4, SIGN_H]} />
+              </mesh>
+            ))}
+          </group>
 
           {/* Deux caissons côte à côte, chacun imprimé des deux faces. */}
           {[

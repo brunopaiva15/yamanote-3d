@@ -62,6 +62,23 @@ export interface StationKit {
   carMarks: { z: number; car: number }[];
 }
 
+/**
+ * Un accès au quai, avec sa lettre.
+ *
+ * Les plans officiels JR balisent chaque escalier, escalier mécanique et
+ * ascenseur par une lettre, et c'est par elle qu'on se repère : « rendez-vous
+ * en B ». La lettre suit l'ordre le long de la voie, tous types confondus —
+ * c'est ainsi qu'un plan se lit, pas par famille.
+ */
+export interface Access {
+  kind: 'stairs' | 'escalator' | 'elevator';
+  /** A, B, C… dans l'ordre où on les rencontre en marchant. */
+  letter: string;
+  x: number;
+  z: number;
+  halfZ: number;
+}
+
 export interface StationPlacement {
   layout: StationLayout;
   /**
@@ -97,6 +114,8 @@ export interface StationPlacement {
   elevator: Placed | null;
   /** Repères d'attente peints au sol, deux par baie de porte palière. */
   queueMarks: { x: number; z: number }[];
+  /** Trémies, escaliers mécaniques et ascenseur, balisés par lettre. */
+  accesses: Access[];
   kit: StationKit;
   /** Toutes les emprises qui barrent le passage. */
   obstacles: Placed[];
@@ -287,6 +306,17 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     for (const dz of [-1.25, 1.25]) queueMarks.push({ x: PSD_X + 1.15, z: g + dz });
   }
 
+  // Balisage des accès, dans l'ordre où on les rencontre le long du quai.
+  const accesses: Access[] = [
+    ...stairs.map((a) => ({ kind: 'stairs' as const, x: a.x, z: a.z, halfZ: a.halfZ })),
+    ...escalators.map((a) => ({ kind: 'escalator' as const, x: a.x, z: a.z, halfZ: a.halfZ })),
+    ...(elevator
+      ? [{ kind: 'elevator' as const, x: elevator.x, z: elevator.z, halfZ: elevator.halfZ }]
+      : []),
+  ]
+    .sort((a, b) => a.z - b.z)
+    .map((a, k) => ({ ...a, letter: String.fromCharCode(65 + k) }));
+
   // La trousse réglementaire.
   //
   // Les boutons d'arrêt d'urgence se posent là où ils servent — au droit de
@@ -372,6 +402,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     escalators,
     elevator,
     queueMarks,
+    accesses,
     kit,
     obstacles,
   };

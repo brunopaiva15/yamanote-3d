@@ -2054,42 +2054,205 @@ export function makeStationSign(): { canvas: HTMLCanvasElement; texture: THREE.C
 }
 
 // --- Tableau d'affichage suspendu (ホームの電光掲示板) ---
-export function makePlatformBoard(): { canvas: HTMLCanvasElement; texture: THREE.CanvasTexture; redraw: (index: number) => void } {
-  const { c, g } = makeCanvas(1024, 256);
+/**
+ * État réel affiché par le tableau des départs.
+ *
+ * L'ancien tableau annonçait « まもなく発車 » en permanence, y compris en pleine
+ * voie entre deux gares, où il n'y a aucun train le long du quai. Un tableau de
+ * quai dit ce qui se passe MAINTENANT : c'est ce qu'on regarde en arrivant, et
+ * la seule surface animée d'un quai japonais.
+ */
+export interface BoardView {
+  /** Ce que fait le prochain train. */
+  status: 'approaching' | 'boarding' | 'departing' | 'waiting';
+  /** Minutes avant le prochain train, quand on l'attend. */
+  minutes: number;
+  /** Le bandeau alterne japonais et anglais, comme un vrai afficheur. */
+  english: boolean;
+  /** Clignotement, quand la fermeture des portes est imminente. */
+  blink: boolean;
+}
+
+export function makePlatformBoard(): {
+  canvas: HTMLCanvasElement;
+  texture: THREE.CanvasTexture;
+  redraw: (index: number, view: BoardView) => void;
+} {
+  const W = 1024;
+  const H = 256;
+  const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
-  const redraw = (index: number) => {
+
+  const redraw = (index: number, view: BoardView) => {
     const st = STATIONS[index];
-    const next = STATIONS[(index + 1) % 30];
+    const ahead = directionBoardStations(index, 3);
+    const jy = st.jy;
+    const track = PLATFORM_NUMBERS[jy]?.outer ?? 1;
+
     g.fillStyle = '#0c1016';
-    g.fillRect(0, 0, 1024, 256);
+    g.fillRect(0, 0, W, H);
     g.fillStyle = '#80c241';
-    g.fillRect(0, 0, 1024, 8);
-    g.fillRect(0, 248, 1024, 8);
-    g.fillStyle = '#d8ffe0';
-    g.font = `bold 52px ${JP_FONT}`;
+    g.fillRect(0, 0, W, 8);
+    g.fillRect(0, H - 8, W, 8);
+
+    // --- Colonne de gauche : la ligne et le quai ---
     g.textAlign = 'left';
-    g.fillText('山手線', 36, 72);
-    g.font = `36px ${JP_FONT}`;
-    g.fillStyle = '#9aa3b0';
-    g.fillText('Yamanote Line', 36, 118);
-    g.fillStyle = '#80c241';
-    g.fillRect(36, 148, 14, 56);
-    g.fillStyle = '#f2f6fa';
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = '#d8ffe0';
     g.font = `bold 44px ${JP_FONT}`;
-    g.fillText(`${st.kanji}  →  ${next.kanji}`, 64, 190);
-    g.font = `28px ${JP_FONT}`;
+    g.fillText('山手線', 34, 66);
+    g.font = `26px ${JP_FONT}`;
+    g.fillStyle = '#9aa3b0';
+    g.fillText('Yamanote Line', 34, 100);
+
+    g.fillStyle = '#80c241';
+    g.beginPath();
+    g.roundRect(34, 126, 96, 92, 10);
+    g.fill();
+    g.fillStyle = '#0c1016';
+    g.textAlign = 'center';
+    g.font = `bold 62px ${JP_FONT}`;
+    g.fillText(String(track), 82, 196);
+    g.font = `bold 20px ${JP_FONT}`;
+    g.fillText('番線', 82, 148);
+
+    // --- Colonne centrale : la destination ---
+    g.textAlign = 'left';
+    g.fillStyle = '#f2f6fa';
+    fitFillText(g, `${ahead.map((x) => x.kanji).join('・')}方面`, 158, 116, 500, 46);
     g.fillStyle = '#7f8794';
-    g.fillText(`${st.romaji}  →  ${next.romaji}`, 64, 228);
-    g.fillStyle = '#ffd66a';
-    g.font = `bold 40px ${JP_FONT}`;
-    g.textAlign = 'right';
-    g.fillText('まもなく発車', 988, 88);
-    g.font = `30px ${JP_FONT}`;
+    fitFillText(g, `for ${ahead.map((x) => x.romaji).join(', ')}`, 158, 152, 500, 26, '400');
+
+    // Filet, puis la gare suivante — celle qu'on atteint en montant ici.
+    g.fillStyle = 'rgba(255,255,255,0.16)';
+    g.fillRect(158, 168, 500, 2);
     g.fillStyle = '#c8cdd6';
-    g.fillText('Departing soon', 988, 132);
+    g.font = `24px ${JP_FONT}`;
+    g.fillText('次は', 158, 204);
+    g.fillStyle = '#f2f6fa';
+    fitFillText(g, STATIONS[(index + 1) % 30].kanji, 210, 206, 220, 34);
+    g.fillStyle = '#7f8794';
+    g.font = `20px ${JP_FONT}`;
+    g.fillText(STATIONS[(index + 1) % 30].romaji, 210, 232);
+
+    // --- Colonne de droite : l'état, en gros, et il change ---
+    const band: Record<BoardView['status'], { jp: string; en: string; color: string }> = {
+      approaching: { jp: 'まもなく到着', en: 'Arriving', color: '#ffd66a' },
+      boarding: { jp: 'ご乗車ください', en: 'Now boarding', color: '#9be36a' },
+      departing: { jp: 'まもなく発車', en: 'Departing', color: '#ff8f6a' },
+      waiting: { jp: `約 ${view.minutes} 分後`, en: `in about ${view.minutes} min`, color: '#7fb6ff' },
+    };
+    const b = band[view.status];
+    g.textAlign = 'right';
+    // Le clignotement ne s'applique qu'à la fermeture imminente : partout
+    // ailleurs, un afficheur qui bat serait illisible.
+    g.fillStyle = view.blink ? '#20262e' : b.color;
+    fitFillText(g, view.english ? b.en : b.jp, W - 34, 108, 330, view.english ? 44 : 52);
+    g.fillStyle = '#8b929c';
+    g.font = `22px ${JP_FONT}`;
+    g.fillText(view.english ? b.jp : b.en, W - 34, 146);
+
+    // Voyant d'activité : trois points qui suivent l'alternance de langue.
+    for (let k = 0; k < 3; k++) {
+      g.fillStyle = k === (view.english ? 1 : 0) ? b.color : 'rgba(255,255,255,0.18)';
+      g.beginPath();
+      g.arc(W - 34 - k * 22, 190, 6, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.textAlign = 'left';
+
     texture.needsUpdate = true;
   };
   return { canvas: c, texture, redraw };
+}
+
+/**
+ * Plaque de balisage d'un accès : la lettre, et ce qu'elle désigne.
+ *
+ * Les plans officiels JR balisent chaque escalier, escalier mécanique et
+ * ascenseur par une lettre, et c'est par elle qu'on se repère sur un quai de
+ * deux cent vingt mètres.
+ */
+export function makeAccessPlate(letter: string, kind: 'stairs' | 'escalator' | 'elevator'): THREE.CanvasTexture {
+  const W = 256;
+  const H = 320;
+  const { c, g } = makeCanvas(W, H);
+  const label: Record<typeof kind, { jp: string; en: string }> = {
+    stairs: { jp: '階段', en: 'Stairs' },
+    escalator: { jp: 'エスカレーター', en: 'Escalator' },
+    elevator: { jp: 'エレベーター', en: 'Elevator' },
+  };
+  const l = label[kind];
+
+  g.fillStyle = '#f4f4f0';
+  g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#1a1a1a';
+  g.lineWidth = 8;
+  g.strokeRect(4, 4, W - 8, H - 8);
+
+  // La lettre, en réserve dans un carré sombre : c'est elle qu'on cherche.
+  g.fillStyle = '#1a1a1a';
+  g.fillRect(28, 28, W - 56, 160);
+  g.fillStyle = '#f4f4f0';
+  g.textAlign = 'center';
+  fitFillText(g, letter, W / 2, 158, W - 80, 132);
+
+  g.fillStyle = '#1a1a1a';
+  fitFillText(g, l.jp, W / 2, 236, W - 40, 42);
+  g.fillStyle = '#5c6066';
+  fitFillText(g, l.en, W / 2, 280, W - 40, 28, '600');
+  g.textAlign = 'left';
+  return toTexture(c);
+}
+
+/**
+ * Grande bande verte directionnelle, à plaquer sur l'épine du quai.
+ *
+ * Sur un quai japonais c'est l'élément le plus long et le plus lisible :
+ * une flèche, les gares desservies, et rien d'autre. Elle dit d'un coup d'œil
+ * dans quel sens part le train qu'on attend.
+ */
+export function makeDirectionBand(): {
+  texture: THREE.CanvasTexture;
+  redraw: (index: number) => void;
+} {
+  const W = 2048;
+  const H = 192;
+  const { c, g } = makeCanvas(W, H);
+  const texture = toTexture(c);
+
+  const redraw = (index: number) => {
+    const ahead = directionBoardStations(index, 4);
+    g.fillStyle = '#5aa32c';
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(255,255,255,0.14)';
+    g.fillRect(0, 0, W, 10);
+    g.fillStyle = 'rgba(0,0,0,0.16)';
+    g.fillRect(0, H - 12, W, 12);
+
+    // Flèche de tête, dans le sens de la marche.
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.moveTo(58, H / 2);
+    g.lineTo(150, 40);
+    g.lineTo(150, 74);
+    g.lineTo(300, 74);
+    g.lineTo(300, H - 74);
+    g.lineTo(150, H - 74);
+    g.lineTo(150, H - 40);
+    g.closePath();
+    g.fill();
+
+    g.textAlign = 'left';
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = '#ffffff';
+    fitFillText(g, `${ahead.map((s) => s.kanji).join('・')}方面`, 340, H * 0.56, W - 420, 92);
+    g.fillStyle = 'rgba(255,255,255,0.86)';
+    fitFillText(g, `for ${ahead.map((s) => s.romaji).join(', ')}`, 342, H * 0.85, W - 420, 40, '600');
+
+    texture.needsUpdate = true;
+  };
+  return { texture, redraw };
 }
 
 // --- Signalétique d'orientation suspendue au-dessus du quai ---

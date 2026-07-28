@@ -449,6 +449,7 @@ export function Station() {
         canopyY={canopyY}
         halfZ={halfZ}
         totemX={midX - 0.6}
+        bandX={backX}
         frame={m.frame}
         metal={m.metal}
         accent={m.accent}

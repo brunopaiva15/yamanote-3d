@@ -166,9 +166,28 @@ gouttière et descentes d'eau, chemin de câbles, ligne verte de guidage et rep�
 bornes d'urgence évitent les baies de portes, les diffuseurs évitent les poutres,
 et rien n'atterrit dans une file d'attente.
 
-**La signalétique n'a pas changé** : les panneaux de nom de gare et le tableau
-d'affichage sont les mêmes textures et le même `redraw`, seulement répartis sur
-un quai plus long.
+### La signalétique
+
+Le panneau de nom de gare n'a pas changé : code JY, gare précédente et suivante,
+bande verte directionnelle, redessiné au changement de gare.
+
+**Le tableau d'affichage, lui, vit.** Il annonçait 「まもなく発車」 en permanence,
+y compris en pleine voie entre deux gares où aucun train ne longe le quai. Il
+suit désormais l'état réel — approche, embarquement, départ, attente avec
+décompte — et alterne japonais et anglais toutes les trois secondes et demie,
+avec un bandeau qui clignote quand la fermeture est imminente. Deux sources
+selon l'endroit d'où on le regarde : debout sur le quai c'est `platformWait`,
+à bord c'est la phase du cycle station. Le canvas n'est redessiné que lorsque
+son contenu change réellement, soit environ une fois par seconde.
+
+**Les accès sont balisés par lettre**, comme sur les plans officiels JR : A, B,
+C… dans l'ordre où on les rencontre en marchant, tous types confondus —
+escaliers, escaliers mécaniques, ascenseur. La lettre est posée au-dessus de
+l'accès et répétée en bout de potence, pour se lire de loin.
+
+**La grande bande verte directionnelle** est suspendue au-dessus de l'épine, en
+trois tronçons calés dans les creux de la trame des bannières publicitaires :
+une flèche, les gares desservies, et rien d'autre.
 
 ## L'extérieur de la rame
 
