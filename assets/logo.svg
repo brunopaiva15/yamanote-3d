@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 40 560 175" role="img" aria-label="Yamanote 3D">
+  <defs>
+    <linearGradient id="logo-green" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a5db5e"/>
+      <stop offset="1" stop-color="#5da028"/>
+    </linearGradient>
+  </defs>
+  <g opacity="0.15">
+    <rect x="66" y="58" width="428" height="118" rx="59" fill="none" stroke="#80c241" stroke-width="24"/>
+    <circle cx="120" cy="58" r="5" fill="#4d8a1f"/>
+    <circle cx="220" cy="58" r="5" fill="#4d8a1f"/>
+    <circle cx="330" cy="58" r="5" fill="#4d8a1f"/>
+    <circle cx="440" cy="58" r="5" fill="#4d8a1f"/>
+    <circle cx="150" cy="176" r="5" fill="#4d8a1f"/>
+    <circle cx="280" cy="176" r="5" fill="#4d8a1f"/>
+    <circle cx="410" cy="176" r="5" fill="#4d8a1f"/>
+  </g>
+  <text x="61" y="155" font-family="Arial Black, Arial, sans-serif" font-size="86" font-weight="800" fill="#16300a" textLength="336" lengthAdjust="spacingAndGlyphs">YAMANOTE</text>
+  <text x="56" y="147" font-family="Arial Black, Arial, sans-serif" font-size="86" font-weight="800" fill="#ffffff" stroke="#10151a" stroke-width="12" stroke-linejoin="round" paint-order="stroke" textLength="336" lengthAdjust="spacingAndGlyphs">YAMANOTE</text>
+  <g transform="rotate(-6 454 132)">
+    <rect x="414" y="104" width="92" height="72" rx="16" fill="#0b0f13" opacity="0.3"/>
+    <rect x="408" y="96" width="92" height="72" rx="16" fill="url(#logo-green)" stroke="#10151a" stroke-width="7"/>
+    <text x="454" y="150" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="46" font-weight="800" fill="#ffffff" stroke="#10151a" stroke-width="6" stroke-linejoin="round" paint-order="stroke" textLength="58" lengthAdjust="spacingAndGlyphs">3D</text>
+  </g>
+  <text x="227" y="201" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="32" font-weight="800" fill="#16300a" textLength="128" lengthAdjust="spacing">&#23665;&#25163;&#32218;</text>
+  <text x="224" y="197" text-anchor="middle" font-family="Noto Sans JP, sans-serif" font-size="32" font-weight="800" fill="#ffffff" stroke="#10151a" stroke-width="6" stroke-linejoin="round" paint-order="stroke" textLength="128" lengthAdjust="spacing">&#23665;&#25163;&#32218;</text>
+</svg>
