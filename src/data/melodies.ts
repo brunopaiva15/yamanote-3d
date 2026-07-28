@@ -21,11 +21,11 @@ import type { LoopDirection } from './platforms';
 export const ENABLE_DEPARTURE_MELODY_CLIPS = true;
 
 /**
- * La 発車メロディ est jouée DEUX passages par arrêt, séparés d'une courte
- * respiration — comme sur les quais réels, où le chef de quai laisse tourner
- * la mélodie avant l'annonce de fermeture. Partagé par la lecture
- * (departureSequence), la synthèse de repli (audioEngine) et le
- * dimensionnement du dwell (stationCycle).
+ * Plafond de passages : sur le quai, la mélodie tourne en boucle jusqu'à ce
+ * que le chef de train relâche le bouton — elle est COUPÉE, elle ne se
+ * termine pas. C'est stationCycle qui décide de l'instant (MELODY_SOUNDING) ;
+ * deux passages suffisent à couvrir cette fenêtre pour le plus court des
+ * clips, et le second est presque toujours interrompu en route.
  */
 export const MELODY_REPEATS = 2;
 export const MELODY_REPEAT_GAP_S = 0.7;
@@ -384,6 +384,31 @@ export const IKEBUKURO_INNER_BIC_CAMERA_B = {
   nextStationCode: 'JY14',
   nextStationName: 'Mejiro',
 };
+
+/**
+ * Tous les clips de 発車メロディ, pour les couper d'un seul geste : coupure du
+ * chef de train, blocage de départ, urgence, sortie de gare. L'ordre n'a pas
+ * d'importance : il n'y en a jamais qu'un seul en cours à la fois.
+ */
+export const MELODY_PATHS: readonly string[] = [
+  INNER_MAIN_MELODY_PATH,
+  OUTER_MAIN_MELODY_PATH,
+  OSAKI_INNER_SECONDARY_MELODY_PATH,
+  OSAKI_OUTER_SECONDARY_MELODY_PATH,
+  KOMAGOME_OUTER_SAKURA_A_PATH,
+  KOMAGOME_INNER_SAKURA_V2_PATH,
+  UGUISUDANI_INNER_HARU_TREMOLO_PATH,
+  SESERAGI_MELODY_PATH,
+  TAKADANOBABA_OUTER_ATOM_A_PATH,
+  TAKADANOBABA_INNER_ATOM_B_PATH,
+  EBISU_INNER_THIRD_MAN_F_PATH,
+  TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH,
+  TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH,
+  KANDA_OUTER_MONDAMIN_A_PATH,
+  KANDA_INNER_MONDAMIN_B_PATH,
+  IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
+  IKEBUKURO_INNER_BIC_CAMERA_B_PATH,
+];
 
 /** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
 export const innerMainMelodyPlatforms: Record<

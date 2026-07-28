@@ -1,7 +1,9 @@
 // Séquence de départ quai : 発車メロディ Inner / Outer / Ōsaki secondaire.
-// La mélodie est lancée une seule fois par arrêt (departureId) et joue alors
-// deux passages (MELODY_REPEATS) ; les étapes portes / départ restent
-// pilotées par stationCycle tant que le départ n'est pas bloqué.
+// La mélodie est lancée une seule fois par arrêt (departureId) et boucle
+// jusqu'à ce que le chef de train la coupe (interruptDepartureMelody, appelé
+// par stationCycle) : elle n'arrive presque jamais au bout. Les étapes portes
+// / départ restent pilotées par stationCycle tant que le départ n'est pas
+// bloqué.
 
 import {
   EBISU_INNER_THIRD_MAN_F_PATH,
@@ -13,6 +15,7 @@ import {
   KANDA_OUTER_MONDAMIN_A_PATH,
   KOMAGOME_INNER_SAKURA_V2_PATH,
   KOMAGOME_OUTER_SAKURA_A_PATH,
+  MELODY_PATHS,
   MELODY_REPEATS,
   MELODY_REPEAT_GAP_S,
   OSAKI_INNER_SECONDARY_MELODY_PATH,
@@ -49,7 +52,11 @@ import {
 import { platformFor, type LoopDirection } from '../data/platforms';
 import { STATIONS } from '../data/stations';
 import { useStore } from '../store';
-import { audioManager } from './audioEngine';
+import {
+  audioManager,
+  resetFallbackMelodyGuard,
+  stopFallbackMelody,
+} from './audioEngine';
 import { runtime } from './runtime';
 import { doorsClosingAnnouncement } from '../data/announcements';
 import { say } from './speech';
@@ -62,6 +69,9 @@ export type DepartureBlockers = {
   signalStop: boolean;
   emergency: boolean;
 };
+
+/** Fondu de la coupure par le chef de train (s) : bref, mais pas un couperet. */
+const MELODY_FADE_S = 0.6;
 
 let outerMainMelodyPlaying = false;
 let seseragiPlaying = false;
@@ -97,17 +107,8 @@ export function clearDepartureBlockers(): void {
 /** Remet à zéro l'anti-double-lecture (après départ ou reset). */
 export function resetMelodyDepartureGuard(): void {
   runtime.lastMelodyDepartureId = null;
-  outerMainMelodyPlaying = false;
-  seseragiPlaying = false;
-  takadanobabaAtomAPlaying = false;
-  takadanobabaAtomBPlaying = false;
-  ebisuThirdManFPlaying = false;
-  gloriousGatewayAPlaying = false;
-  gloriousGatewayBPlaying = false;
-  kandaMondaminAPlaying = false;
-  kandaMondaminBPlaying = false;
-  bicCameraAPlaying = false;
-  bicCameraBPlaying = false;
+  clearPlayingFlags();
+  resetFallbackMelodyGuard();
 }
 
 /** Dérive l'état train pour la mélodie à partir de la phase et des portes. */
@@ -193,83 +194,6 @@ export function buildDepartureContext(opts?: {
   };
 }
 
-export function stopOuterMainMelody(): void {
-  audioManager.stop(OUTER_MAIN_MELODY_PATH);
-  outerMainMelodyPlaying = false;
-}
-
-export function stopOsakiInnerSecondaryMelody(): void {
-  audioManager.stop(OSAKI_INNER_SECONDARY_MELODY_PATH);
-}
-
-export function stopOsakiOuterSecondaryMelody(): void {
-  audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
-  // Permet une nouvelle tentative sur le même arrêt si la procédure reprend.
-  runtime.lastMelodyDepartureId = null;
-}
-
-export function stopKomagomeOuterSakuraA(): void {
-  audioManager.stop(KOMAGOME_OUTER_SAKURA_A_PATH);
-}
-
-export function stopKomagomeInnerSakuraV2(): void {
-  audioManager.stop(KOMAGOME_INNER_SAKURA_V2_PATH);
-}
-
-export function stopUguisudaniInnerHaruTremolo(): void {
-  audioManager.stop(UGUISUDANI_INNER_HARU_TREMOLO_PATH);
-}
-
-export function stopSeseragi(): void {
-  audioManager.stop(SESERAGI_MELODY_PATH);
-  seseragiPlaying = false;
-}
-
-export function stopTakadanobabaOuterAtomA(): void {
-  audioManager.stop(TAKADANOBABA_OUTER_ATOM_A_PATH);
-  takadanobabaAtomAPlaying = false;
-}
-
-export function stopTakadanobabaInnerAtomB(): void {
-  audioManager.stop(TAKADANOBABA_INNER_ATOM_B_PATH);
-  takadanobabaAtomBPlaying = false;
-}
-
-export function stopEbisuInnerThirdManF(): void {
-  audioManager.stop(EBISU_INNER_THIRD_MAN_F_PATH);
-  ebisuThirdManFPlaying = false;
-}
-
-export function stopTakanawaGatewayInnerGloriousA(): void {
-  audioManager.stop(TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH);
-  gloriousGatewayAPlaying = false;
-}
-
-export function stopTakanawaGatewayOuterGloriousB(): void {
-  audioManager.stop(TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH);
-  gloriousGatewayBPlaying = false;
-}
-
-export function stopKandaOuterMondaminA(): void {
-  audioManager.stop(KANDA_OUTER_MONDAMIN_A_PATH);
-  kandaMondaminAPlaying = false;
-}
-
-export function stopKandaInnerMondaminB(): void {
-  audioManager.stop(KANDA_INNER_MONDAMIN_B_PATH);
-  kandaMondaminBPlaying = false;
-}
-
-export function stopIkebukuroInnerBicCameraA(): void {
-  audioManager.stop(IKEBUKURO_INNER_BIC_CAMERA_A_PATH);
-  bicCameraAPlaying = false;
-}
-
-export function stopIkebukuroInnerBicCameraB(): void {
-  audioManager.stop(IKEBUKURO_INNER_BIC_CAMERA_B_PATH);
-  bicCameraBPlaying = false;
-}
-
 // Génération d'annulation : un cancel pendant un passage (ou la respiration
 // entre les deux) invalide les passages restants de playMelodyRounds.
 let melodyCancelGen = 0;
@@ -293,26 +217,47 @@ async function playMelodyRounds(path: string): Promise<boolean> {
   return true;
 }
 
-/** Arrête toute 発車メロディ en cours (annulation / interruption / changement de phase). */
+/** Remet à zéro les verrous « ce clip-là tourne déjà ». */
+function clearPlayingFlags(): void {
+  outerMainMelodyPlaying = false;
+  seseragiPlaying = false;
+  takadanobabaAtomAPlaying = false;
+  takadanobabaAtomBPlaying = false;
+  ebisuThirdManFPlaying = false;
+  gloriousGatewayAPlaying = false;
+  gloriousGatewayBPlaying = false;
+  kandaMondaminAPlaying = false;
+  kandaMondaminBPlaying = false;
+  bicCameraAPlaying = false;
+  bicCameraBPlaying = false;
+}
+
+/**
+ * Arrête net toute 発車メロディ en cours : blocage de départ, urgence, sortie
+ * de gare. Brutal par nature — ce n'est pas une coupure de chef de train mais
+ * un incident (voir interruptDepartureMelody pour la coupure normale).
+ */
 export function cancelDepartureMelody(): void {
   melodyCancelGen++;
-  audioManager.stop(INNER_MAIN_MELODY_PATH);
-  stopOuterMainMelody();
-  stopOsakiInnerSecondaryMelody();
-  audioManager.stop(OSAKI_OUTER_SECONDARY_MELODY_PATH);
-  stopKomagomeOuterSakuraA();
-  stopKomagomeInnerSakuraV2();
-  stopUguisudaniInnerHaruTremolo();
-  stopSeseragi();
-  stopTakadanobabaOuterAtomA();
-  stopTakadanobabaInnerAtomB();
-  stopEbisuInnerThirdManF();
-  stopTakanawaGatewayInnerGloriousA();
-  stopTakanawaGatewayOuterGloriousB();
-  stopKandaOuterMondaminA();
-  stopKandaInnerMondaminB();
-  stopIkebukuroInnerBicCameraA();
-  stopIkebukuroInnerBicCameraB();
+  for (const path of MELODY_PATHS) audioManager.stop(path);
+  stopFallbackMelody(0);
+  clearPlayingFlags();
+  // Le départ reprendra peut-être depuis ce même quai : la garde par
+  // departureId doit laisser une nouvelle tentative passer.
+  runtime.lastMelodyDepartureId = null;
+  resetFallbackMelodyGuard();
+}
+
+/**
+ * Coupure normale, celle du chef de train qui relâche le bouton : la mélodie
+ * se referme en fondu au bout de sa fenêtre sonore, sans jamais aller au bout
+ * du morceau. La suite de la procédure (annonce, fermeture, départ) continue.
+ */
+export function interruptDepartureMelody(): void {
+  melodyCancelGen++;
+  for (const path of MELODY_PATHS) audioManager.fadeOut(path, MELODY_FADE_S);
+  stopFallbackMelody(MELODY_FADE_S);
+  clearPlayingFlags();
 }
 
 function claimDepartureId(context: MelodyPlayContext): boolean {

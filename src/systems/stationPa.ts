@@ -50,10 +50,10 @@ export function currentPlatformNumber(index: number): number {
 // suivante, l'excuse qui va avec — la seule annonce du quai qui parle d'autre
 // chose que du train en approche.
 
-/** Motif ATOS en attente d'annonce, -1 = ligne à l'heure. */
+/** Motif ATOS en attente d'annonce, -1 = rien à annoncer. */
 let pendingDelay = -1;
 /** Arrêt auquel l'incident a eu lieu : passé quelques gares, il ne se dit plus. */
-let delayStop = 0;
+let delayStop = Number.NEGATIVE_INFINITY;
 
 /** Nombre d'arrêts pendant lesquels la gare s'excuse encore de l'incident. */
 const DELAY_LIFETIME_STOPS = 6;
@@ -66,6 +66,15 @@ export function notifyLineDelay(emergencyReason: number): void {
     DELAY_FOR_EMERGENCY.length;
   pendingDelay = DELAY_FOR_EMERGENCY[i];
   delayStop = runtime.stopSequence;
+}
+
+/**
+ * La ligne traîne-t-elle encore le retard d'un incident récent ? Vrai même une
+ * fois l'excuse diffusée : ce qui compte ici n'est pas l'annonce mais le
+ * rattrapage, qui presse les échanges pendant quelques gares.
+ */
+export function lineDelayed(): boolean {
+  return runtime.stopSequence - delayStop <= DELAY_LIFETIME_STOPS;
 }
 
 /** Diffuse l'excuse de retard s'il y en a une à faire, et pas trop vieille. */
