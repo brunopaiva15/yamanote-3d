@@ -273,6 +273,66 @@ body,
   color: #16181a;
 }
 
+/* --- Pied de page (écran d'accueil) --- */
+
+.site-footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 2px dashed #d5dade;
+  text-align: center;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: #868f95;
+}
+
+.site-footer a {
+  color: #4a6b2a;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.site-footer a:hover {
+  color: #2f5d0f;
+}
+
+.site-footer-copy {
+  font-size: 11px;
+  color: #5c666d;
+}
+
+.site-footer-disclaimer {
+  margin-top: 8px;
+  max-width: 420px;
+  margin-inline: auto;
+}
+
+.site-footer-support {
+  margin-top: 8px;
+}
+
+.site-footer-support a {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 2px solid var(--ink-line);
+  border-radius: 9px;
+  background: #fff7e6;
+  color: #8b4513;
+  text-decoration: none;
+  box-shadow: 0 2px 0 var(--ink-line);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.site-footer-support a:hover {
+  color: #6b3410;
+  transform: translateY(-1px);
+}
+
+.site-footer-support a:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 var(--ink-line);
+}
+
 /* --- Sélecteur de langue --- */
 
 .lang-switch {
@@ -776,5 +836,11 @@ body,
 
   .start-foot {
     margin-top: 10px;
+  }
+
+  .site-footer {
+    margin-top: 12px;
+    padding-top: 10px;
+    font-size: 10px;
   }
 }
