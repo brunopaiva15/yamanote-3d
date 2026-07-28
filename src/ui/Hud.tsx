@@ -11,7 +11,6 @@ import { runtime } from '../systems/runtime';
 import { currentSegmentOccupancy } from '../systems/occupancy';
 import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
 import { applySpeechVolume, cancelSpeech } from '../systems/speech';
-import { beginEmergencyStop } from '../systems/stationCycle';
 import { input } from '../systems/input';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
@@ -31,20 +30,17 @@ function useClock(): string {
 }
 
 // L'arrêt d'urgence vit dans runtime (pas dans le store) : on le sonde comme
-// l'horloge, à la seconde. `sync` relit l'état sans attendre le prochain tick
-// (masque le bouton SOS dès le clic). On expose l'étape brute : le badge ne
-// signale l'urgence que freinage / immobilisation, tandis que la remontée en
-// vitesse ('resuming', jusqu'à ~V_MAX) s'affiche déjà « En route ».
+// l'horloge. Le badge ne signale l'urgence que freinage / immobilisation,
+// tandis que la remontée en vitesse ('resuming') s'affiche déjà « En route ».
 type EmergencyStage = typeof runtime.emergencyStop.stage;
 
-function useEmergencyStage(): [EmergencyStage, () => void] {
+function useEmergencyStage(): EmergencyStage {
   const [stage, setStage] = useState<EmergencyStage>('none');
   useEffect(() => {
     const id = window.setInterval(() => setStage(runtime.emergencyStop.stage), 500);
     return () => window.clearInterval(id);
   }, []);
-  const sync = () => setStage(runtime.emergencyStop.stage);
-  return [stage, sync];
+  return stage;
 }
 
 function useOccupancy(): { percent: number; band: OccupancyBand } {
@@ -79,9 +75,7 @@ export function Hud() {
   const t = useT();
   const clock = useClock();
   const occupancy = useOccupancy();
-  const [emergencyStage, syncEmergency] = useEmergencyStage();
-  // Urgence « visible » : freinage ou immobilisation. Dès la reprise, le
-  // badge repasse en phase normale et le bouton SOS redevient disponible.
+  const emergencyStage = useEmergencyStage();
   const emergency = emergencyStage === 'braking' || emergencyStage === 'stopped';
 
   // Répercuter le mute et le volume sur l'audio et la voix.
@@ -126,24 +120,6 @@ export function Hud() {
           {emergency ? t.hud.phaseEmergency : t.hud.phase[phase]}
         </div>
       </div>
-
-      {/* Bouton SOS : seulement en pleine course entre deux gares — l'arrêt
-          d'urgence ne peut se déclencher qu'en phase cruise — et masqué
-          pendant freinage / immobilisation. Pendant la remontée en vitesse,
-          il est de retour : re-déclencher est permis. */}
-      {phase === 'cruise' && !emergency && (
-        <button
-          className="hud-emergency"
-          onClick={() => {
-            beginEmergencyStop();
-            syncEmergency();
-          }}
-          title={t.hud.emergencyTitle}
-        >
-          <span className="hud-emergency-dot" aria-hidden="true" />
-          {t.hud.emergency}
-        </button>
-      )}
 
       <div className="hud-reticle" aria-hidden="true" />
 

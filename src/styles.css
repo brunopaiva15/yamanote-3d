@@ -483,53 +483,6 @@ body,
   color: #b3261e;
 }
 
-/* --- Bouton SOS (arrêt d'urgence manuel) --- */
-
-/* Visible seulement quand la rame roule entre deux gares. Posé seul, centré
-   au-dessus de la bande des réglages : à l'écart de la barre (en bas à
-   droite, qui peut s'étendre jusqu'au centre) comme des pastilles d'état
-   (en haut), il se lit comme une action et ne risque pas le clic
-   accidentel. Langage sticker, rouge signalétique. */
-.hud-emergency {
-  position: fixed;
-  left: 50%;
-  bottom: 72px;
-  transform: translateX(-50%);
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  color: #ffffff;
-  background: #c22a21;
-  border: 2px solid var(--ink-line);
-  border-radius: 11px;
-  padding: 8px 14px;
-  cursor: pointer;
-  box-shadow: var(--sticker-shadow);
-  transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.1s ease;
-}
-
-.hud-emergency:hover {
-  background: #a91f17;
-}
-
-.hud-emergency:active {
-  transform: translate(-50%, 2px);
-  box-shadow: 0 1px 0 rgba(16, 21, 26, 0.85);
-}
-
-/* Pastille « bouton coup de poing » : anneau blanc, cœur rouge. */
-.hud-emergency-dot {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  border: 3px solid #ffffff;
-  flex: none;
-}
-
 /* --- Réticule --- */
 
 .hud-reticle {
@@ -677,23 +630,6 @@ body,
 
   .hud-occupancy-label {
     font-size: 10px;
-  }
-
-  /* Ici la barre du bas occupe toute la largeur : le bouton rejoint la
-     colonne des actions du pouce droit, au-dessus de « S'asseoir », avec
-     une cible tactile à la taille de ce dernier. */
-  .hud-emergency {
-    left: auto;
-    right: 24px;
-    bottom: 156px;
-    transform: none;
-    font-size: 14px;
-    padding: 11px 16px;
-    border-radius: 14px;
-  }
-
-  .hud-emergency:active {
-    transform: translateY(2px);
   }
 
   .hud-bottom {

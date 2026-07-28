@@ -65,7 +65,7 @@ function scheduleNextRunSound(from: number): void {
 
 // --- Arrêt d'urgence (急停車) -------------------------------------------
 // Très rare : tiré au sort à chaque entrée en cruise, déclenché en pleine
-// course (ou à la demande, via le bouton SOS du HUD). Le train freine en
+// course. Le train freine en
 // urgence, reste immobilisé de 45 s à 2 min 30 avec les annonces conducteur,
 // puis repart. Le chrono de phase est avancé au prorata
 // de la vitesse pendant tout l'événement : gelé à l'arrêt, il ne consomme que
