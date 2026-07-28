@@ -38,6 +38,7 @@ import {
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
 import { Barrier } from './Barrier';
 import { stationAd } from './adPool';
+import { OverheadSigns } from './OverheadSigns';
 import { PlatformAds } from './PlatformAds';
 import { PlatformSignage } from './PlatformSignage';
 import { Signature } from './Signature';
@@ -521,6 +522,9 @@ export function Station() {
           bannières suspendues, allèges de portes palières. */}
       <PlatformAds place={place} layout={layout} segs={segs} station={index} detail={detail} />
 
+      {/* Potences d'orientation : sorties en jaune, correspondances en blanc. */}
+      <OverheadSigns place={place} layout={layout} station={index} />
+
       {detail <= 2 && <Amenities place={place} canopyY={canopyY} m={m} />}
 
       {/* Limites de zone : bouts du quai et pied de chaque volée. Le panneau
@@ -707,6 +711,20 @@ function Stairwell({ s, m, station }: { s: Placed; m: Mats; station: number }) {
       {/* Petit palier au fond de la volée modélisée. */}
       <mesh position={[0, bottom - 0.03, nose + (STAIR_STEPS + 1) * STAIR_GOING + 0.4]} material={m.wall}>
         <boxGeometry args={[width, 0.06, 0.9]} />
+      </mesh>
+
+      {/* Caisson publicitaire plaqué sur le garde-corps côté voie : sur un vrai
+          quai c'est la surface la plus rentable de la trémie, et elle est en
+          plein dans le champ de quiconque marche le long du quai. */}
+      <mesh position={[-(s.halfX - 0.005), 0.53, 0]} material={m.frame}>
+        <boxGeometry args={[0.06, 0.86, s.halfZ * 2 - 0.3]} />
+      </mesh>
+      <mesh
+        position={[-(s.halfX + 0.036), 0.53, 0]}
+        rotation={[0, -Math.PI / 2, 0]}
+        material={stationAd(station, 5)}
+      >
+        <planeGeometry args={[s.halfZ * 2 - 0.42, 0.76]} />
       </mesh>
 
       {/* Garde-corps sur le bandeau de dalle qui borde l'ouverture. */}

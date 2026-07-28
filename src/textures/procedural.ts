@@ -4,7 +4,8 @@
 
 import * as THREE from 'three';
 import { AD_PALETTES, AD_SUBS, AD_WORDS } from '../data/ads';
-import { STATIONS } from '../data/stations';
+import { STATIONS, TRANSFERS } from '../data/stations';
+import { lineInfo, stationExits } from '../data/lines';
 import { GENERIC, type District, type Feat } from '../data/districts';
 import type { Appearance } from '../systems/appearance';
 
@@ -2088,4 +2089,143 @@ export function makePlatformBoard(): { canvas: HTMLCanvasElement; texture: THREE
     texture.needsUpdate = true;
   };
   return { canvas: c, texture, redraw };
+}
+
+// --- Signalétique d'orientation suspendue au-dessus du quai ---
+//
+// C'est elle qui fait lire « gare japonaise » avant même qu'on ait déchiffré un
+// caractère : une potence en travers du quai, un panneau JAUNE pour les
+// sorties, un panneau BLANC pour les correspondances avec les pastilles de
+// lignes colorées. Le quai n'avait jusqu'ici que son panneau de nom de gare.
+//
+// Même schéma que makeStationSign : la texture est créée une fois, seul son
+// contenu est redessiné au changement de gare.
+
+/** Jaune des panneaux de sortie JR. */
+const EXIT_YELLOW = '#f2b705';
+
+/** Flèche pleine, orientée par un angle (0 = vers le bas). */
+function drawSignArrow(
+  g: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+  angle: number,
+): void {
+  g.save();
+  g.translate(cx, cy);
+  g.rotate(angle);
+  g.beginPath();
+  g.moveTo(0, size * 0.5);
+  g.lineTo(-size * 0.42, -size * 0.05);
+  g.lineTo(-size * 0.17, -size * 0.05);
+  g.lineTo(-size * 0.17, -size * 0.5);
+  g.lineTo(size * 0.17, -size * 0.5);
+  g.lineTo(size * 0.17, -size * 0.05);
+  g.lineTo(size * 0.42, -size * 0.05);
+  g.closePath();
+  g.fill();
+  g.restore();
+}
+
+/**
+ * Panneau jaune de sortie. `slot` choisit laquelle des deux sorties de la gare
+ * est affichée, et le sens de la flèche.
+ */
+export function makeExitSign(slot: number): {
+  texture: THREE.CanvasTexture;
+  redraw: (index: number) => void;
+} {
+  const W = 1024;
+  const H = 320;
+  const { c, g } = makeCanvas(W, H);
+  const texture = toTexture(c);
+  const redraw = (index: number) => {
+    const exits = stationExits(index);
+    const exit = exits[slot % exits.length];
+    g.fillStyle = EXIT_YELLOW;
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#141414';
+    g.lineWidth = 12;
+    g.strokeRect(6, 6, W - 12, H - 12);
+
+    g.fillStyle = '#141414';
+    drawSignArrow(g, 120, H / 2, 150, slot % 2 === 0 ? 0 : -Math.PI / 4);
+
+    g.textAlign = 'left';
+    g.textBaseline = 'alphabetic';
+    fitFillText(g, exit.jp, 230, H * 0.52, W - 290, 96, 'bold');
+    g.fillStyle = '#2a2a26';
+    fitFillText(g, exit.en, 232, H * 0.78, W - 290, 46);
+
+    // Mention 出口 / Exit, en réserve dans un bandeau sombre.
+    g.fillStyle = '#141414';
+    g.fillRect(W - 150, 22, 128, 74);
+    g.fillStyle = EXIT_YELLOW;
+    g.textAlign = 'center';
+    fitFillText(g, '出口', W - 86, 80, 112, 54, 'bold');
+    g.textAlign = 'left';
+
+    texture.needsUpdate = true;
+  };
+  return { texture, redraw };
+}
+
+/**
+ * Panneau blanc de correspondance : pastille colorée + nom de ligne, tiré des
+ * mêmes données que les annonces (TRANSFERS). Une gare sans correspondance
+ * reçoit à la place le rappel de la ligne Yamanote.
+ */
+export function makeTransferSign(): {
+  texture: THREE.CanvasTexture;
+  redraw: (index: number) => void;
+} {
+  const W = 1024;
+  const H = 320;
+  const { c, g } = makeCanvas(W, H);
+  const texture = toTexture(c);
+  const redraw = (index: number) => {
+    const tr = TRANSFERS[STATIONS[index].jy];
+    const names = tr
+      ? tr.jp.split('、').map((s) => s.trim()).filter(Boolean).slice(0, 4)
+      : ['山手線'];
+
+    g.fillStyle = '#f6f5f2';
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#141414';
+    g.lineWidth = 12;
+    g.strokeRect(6, 6, W - 12, H - 12);
+
+    // Bandeau de gauche : のりかえ.
+    g.fillStyle = '#141414';
+    g.fillRect(18, 18, 196, H - 36);
+    g.fillStyle = '#f6f5f2';
+    g.textAlign = 'center';
+    fitFillText(g, 'のりかえ', 116, H * 0.46, 168, 46, 'bold');
+    fitFillText(g, 'Transfer', 116, H * 0.68, 168, 32);
+    g.textAlign = 'left';
+
+    // Une ligne par entrée : pastille de couleur puis nom.
+    const rows = names.length;
+    const rowH = (H - 52) / rows;
+    for (let i = 0; i < rows; i++) {
+      const info = lineInfo(names[i]);
+      const y = 26 + i * rowH;
+      g.fillStyle = info.color;
+      g.beginPath();
+      g.roundRect(238, y + rowH * 0.16, 26, rowH * 0.68, 13);
+      g.fill();
+      g.fillStyle = '#141414';
+      const jpSize = Math.min(46, rowH * 0.52);
+      fitFillText(g, names[i], 282, y + rowH * (info.romaji ? 0.56 : 0.68), W - 320, jpSize, 'bold');
+      if (info.romaji) {
+        g.fillStyle = '#55585c';
+        fitFillText(g, info.romaji, 284, y + rowH * 0.88, W - 320, Math.min(28, rowH * 0.3));
+        g.fillStyle = '#141414';
+      }
+    }
+
+    texture.needsUpdate = true;
+  };
+  return { texture, redraw };
 }
