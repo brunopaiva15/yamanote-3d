@@ -80,3 +80,29 @@ export function qualityLevel(quality: Quality): PerfLevel {
 export function paxScale(): number {
   return PAX_SCALE[perfLevel()];
 }
+
+/**
+ * Niveau de détail de la gare : 0 = tout, 1 = sans la charpente de signature,
+ * 2 = mobilier réduit, 3 = quai nu. Le quai n'est visible que par intervalles,
+ * mais il est long de 224 m : c'est le plus gros poste quand on marche dessus.
+ */
+export function platformDetail(): 0 | 1 | 2 | 3 {
+  const l = perfLevel();
+  if (l <= 1) return 0;
+  if (l === 2) return 1;
+  if (l === 3) return 2;
+  return 3;
+}
+
+/**
+ * Niveau de détail de la rame vue de l'extérieur : 0 = tout, 1 = sans les
+ * ornements, 2 = bogies simplifiés, 3 = vantaux figés. L'extérieur n'est
+ * visible que depuis le quai, où la scène du wagon ne coûte plus rien.
+ */
+export function consistDetail(): 0 | 1 | 2 | 3 {
+  const l = perfLevel();
+  if (l <= 1) return 0;
+  if (l === 2) return 1;
+  if (l === 3) return 2;
+  return 3;
+}

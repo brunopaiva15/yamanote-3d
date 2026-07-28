@@ -24,6 +24,7 @@ import {
 } from '../data/announcements';
 import { useStore, type Phase } from '../store';
 import { advanceClock, runtime } from './runtime';
+import { DEPART_HOLD, integrateTrain, phaseTarget, stepTrain } from './trainPhysics';
 import {
   randomizeDoorTimings,
   seedDoorMotion,
@@ -138,72 +139,6 @@ function updateEmergencyStop(dt: number): void {
   }
 }
 
-// --- Profil de traction / freinage type E235 ---------------------------
-// Départ : le train reste immobile quelques secondes après la fin du dwell
-// (desserrage des freins), puis la traction monte progressivement (jerk
-// limité) jusqu'à ~0,84 m/s² (3,0 km/h/s), qui s'essouffle au-delà de
-// ~40 km/h (zone à puissance constante). 90 km/h est atteint en ~45 s.
-// Freinage : application progressive, ~1,35 m/s² en service, puis desserrage
-// graduel sous ~11 km/h pour un arrêt sans à-coup (~21 s depuis 90 km/h).
-const DEPART_HOLD = 3.0; // s immobile en début de phase depart
-const ACCEL_MAX = 0.84; // m/s²
-const ACCEL_TAPER_V = 11; // m/s : au-delà, accel = ACCEL_MAX·TAPER_V/v
-const BRAKE_MAX = 1.35; // m/s²
-const BRAKE_MIN = 0.35; // m/s² résiduel à l'approche de l'arrêt
-const BRAKE_EASE_V = 3; // m/s : desserrage progressif sous cette vitesse
-const JERK_UP = 0.55; // m/s³ : montée de traction / relâchement du frein
-const JERK_DOWN = 1.0; // m/s³ : application du frein / coupure de traction
-
-// Freinage d'urgence (非常ブレーキ) : plus fort que le freinage de service et
-// appliqué d'un coup — c'est la secousse qui fait l'événement.
-const EMERGENCY_BRAKE = 1.7; // m/s²
-const EMERGENCY_JERK = 2.4; // m/s³ : application quasi immédiate
-
-function accelCap(v: number): number {
-  return v <= ACCEL_TAPER_V ? ACCEL_MAX : (ACCEL_MAX * ACCEL_TAPER_V) / v;
-}
-
-function brakeCap(v: number): number {
-  return BRAKE_MIN + (BRAKE_MAX - BRAKE_MIN) * Math.min(1, v / BRAKE_EASE_V);
-}
-
-// L'urgence garde presque toute sa force jusqu'à l'arrêt : léger desserrage
-// sous 2 m/s seulement, pour ne pas diverger numériquement à v≈0.
-function emergencyBrakeCap(v: number): number {
-  return Math.max(0.5, EMERGENCY_BRAKE * Math.min(1, v / 2));
-}
-
-// Un pas d'intégration du profil : mêmes équations pour la boucle 60 fps
-// (updateCycle) et le repositionnement au spawn (speedFor).
-function stepTrain(
-  state: { v: number; a: number; d: number },
-  target: number,
-  dt: number,
-  emergency = false,
-): void {
-  let aTarget = 0;
-  if (state.v < target - 0.01) {
-    // Approche douce de la vitesse cible : la traction se relâche d'elle-même.
-    aTarget = Math.min(accelCap(state.v), (target - state.v) / 1.2);
-  } else if (state.v > target + 0.001) {
-    aTarget = emergency ? -emergencyBrakeCap(state.v) : -brakeCap(state.v);
-  }
-  const da = aTarget - state.a;
-  const lim = da > 0 ? JERK_UP * dt : -(emergency ? EMERGENCY_JERK : JERK_DOWN) * dt;
-  state.a += Math.abs(da) < Math.abs(lim) ? da : lim;
-  const before = state.v;
-  state.v = Math.max(0, Math.min(V_MAX, state.v + state.a * dt));
-  if (state.v === 0 || state.v === V_MAX) state.a = dt > 0 ? (state.v - before) / dt : 0;
-  state.d += state.v * dt;
-}
-
-/** Vitesse cible de la phase courante (0 pendant le hold de départ). */
-function phaseTarget(phase: Phase, t: number): number {
-  if (phase === 'cruise') return V_MAX;
-  if (phase === 'depart') return t < DEPART_HOLD ? 0 : V_MAX;
-  return 0;
-}
-
 /** Durée des clips originaux (s), imprimée par scripts/melodies-gen.py. */
 const INNER_MAIN_MELODY_SECS = 8.6;
 const OUTER_MAIN_MELODY_SECS = 9.1;
@@ -229,9 +164,9 @@ const MELODY_TO_ANNOUNCE_GAP = 1.5;
  * durent ~6,5 s à eux deux — l'anglais doit être terminé avant que la rame ne
  * s'ébranle (fin du dwell + DEPART_HOLD).
  */
-const CLOSE_ANNOUNCE_LEAD = 7.0;
+export const CLOSE_ANNOUNCE_LEAD = 7.0;
 /** Avance de la fermeture des portes sur la fin du dwell. */
-const DOORS_CLOSE_LEAD = 4.0;
+export const DOORS_CLOSE_LEAD = 4.0;
 /**
  * Départ de l'annonce d'approche avant la fin de la croisière. Aux gares à
  * grosses correspondances (Ueno, Tokyo, Shinjuku…), まもなく + 乗換案内 ja/en
@@ -284,13 +219,13 @@ function melodyWindowSeconds(stationIndex: number): number {
 }
 
 /** Dwell assez long pour laisser finir la 発車メロディ avant l'annonce. */
-function dwellDuration(stationIndex: number): number {
+export function dwellDuration(stationIndex: number): number {
   const window = melodyWindowSeconds(stationIndex);
   // ~2 s après ouverture pour l'échange + mélodie (2 passages) + marge + annonce.
   return Math.max(CONFIG.dwellTime, 2 + window + MELODY_TO_ANNOUNCE_GAP + CLOSE_ANNOUNCE_LEAD);
 }
 
-function melodyStartAt(stationIndex: number, dwell: number): number {
+export function melodyStartAt(stationIndex: number, dwell: number): number {
   const window = melodyWindowSeconds(stationIndex);
   return Math.max(2, dwell - CLOSE_ANNOUNCE_LEAD - MELODY_TO_ANNOUNCE_GAP - window);
 }
@@ -417,6 +352,23 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
   }
 }
 
+/**
+ * Reprend le cycle station à un instant donné du dwell — utilisé quand le
+ * joueur remonte dans une rame après avoir attendu sur le quai. Les portes
+ * sont déjà dans le bon état (platformWait a joué la même chorégraphie) ;
+ * seul le jeu d'événements déjà déclenchés doit être rétabli, sans quoi la
+ * mélodie se rejouerait ou l'annonce de fermeture serait sautée.
+ */
+export function resumeDwellAt(t: number, stationIndex: number): void {
+  const store = useStore.getState();
+  store.setIndex(stationIndex);
+  store.setPhase('dwell');
+  runtime.phaseT = t;
+  runtime.speed = 0;
+  runtime.accel = 0;
+  seedFired('dwell', t, stationIndex);
+}
+
 // Point d'entrée aléatoire sur la boucle : phase, progression, vitesse, portes.
 // À appeler avant start(), une fois l'audio initialisé.
 export function randomizeEntry(): void {
@@ -494,8 +446,7 @@ export function updateCycle(dt: number): void {
   const emergencyBraking = em.stage === 'braking' || em.stage === 'stopped';
   const target = emergencyBraking ? 0 : phaseTarget(s.phase, runtime.phaseT);
   const state = { v: runtime.speed, a: runtime.accel, d: runtime.distance };
-  for (let left = dt; left > 1e-6; left -= 0.1)
-    stepTrain(state, target, Math.min(0.1, left), em.stage === 'braking');
+  integrateTrain(state, target, dt, em.stage === 'braking');
   runtime.speed = state.v;
   runtime.accel = state.a;
   runtime.distance = state.d;
@@ -641,8 +592,32 @@ export function updateCycle(dt: number): void {
 }
 
 // Outils dev, dans la console du navigateur : __emergencyStop() déclenche un
-// arrêt d'urgence, __runtime donne accès à l'état continu (vitesse, phase…).
+// arrêt d'urgence, __runtime donne accès à l'état continu (vitesse, phase…),
+// __setTrainZ(z) déplace la rame le long de la voie (le décor ne bouge pas).
 if (import.meta.env.DEV && typeof window !== 'undefined') {
-  (window as unknown as Record<string, unknown>).__emergencyStop = beginEmergencyStop;
-  (window as unknown as Record<string, unknown>).__runtime = runtime;
+  const w = window as unknown as Record<string, unknown>;
+  w.__emergencyStop = beginEmergencyStop;
+  w.__runtime = runtime;
+  w.__setTrainZ = (z: number) => {
+    runtime.trainZ = z;
+  };
+  // Saut direct à un instant d'une phase, sans attendre le cycle réel.
+  w.__jumpTo = (phase: Phase, t = 0, station?: number) => {
+    const store = useStore.getState();
+    const index = station ?? store.index;
+    store.setIndex(index);
+    store.setPhase(phase);
+    store.setDoorSide(DOOR_SIDE[index]);
+    audio.setPlatformSide(DOOR_SIDE[index]);
+    runtime.phaseT = t;
+    const sim = simulatePhaseState(phase, t);
+    runtime.speed = sim.v;
+    runtime.accel = sim.a;
+    if (phase === 'dwell') seedDoorsForDwell(t, index);
+    else seedDoorMotion(0, 999, 0, 999);
+    seedPlatformPresence(phase, t);
+    if (phase === 'cruise') clearPlatformCrowd();
+    else seedPlatformCrowd(index);
+    seedFired(phase, t, index);
+  };
 }

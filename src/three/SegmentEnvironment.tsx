@@ -16,6 +16,7 @@ import * as THREE from 'three';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { segEnv, bridgeZ, BRIDGE_COUNT, WALL_MAX } from '../systems/segmentEnv';
+import { sidePush } from '../systems/stationOcclusion';
 import { SEGMENTS } from '../data/segments';
 import {
   rng,
@@ -59,7 +60,7 @@ export function SegmentEnvironment() {
       const tex = makeRetainingWallTexture();
       tex.repeat.set(PLANE_LEN / 30, 1);
       const mat = new THREE.MeshBasicMaterial({ map: tex, fog: true });
-      return { key: `wall${side}`, x: side * WALL_X, sign, rotY, tex, mat };
+      return { key: `wall${side}`, side, x: side * WALL_X, sign, rotY, tex, mat };
     });
     const capMat = new THREE.MeshBasicMaterial({ color: '#9a978f', fog: true });
     capMat.userData.base = capMat.color.clone();
@@ -119,7 +120,16 @@ export function SegmentEnvironment() {
           depthWrite: false,
         });
         mat.userData.base = mat.color.clone();
-        return { key: `fence${side}${hedge ? 'h' : 'f'}`, x: side * FENCE_X, sign, rotY, hedge, tex, mat };
+        return {
+          key: `fence${side}${hedge ? 'h' : 'f'}`,
+          side,
+          x: side * FENCE_X,
+          sign,
+          rotY,
+          hedge,
+          tex,
+          mat,
+        };
       }),
     );
 
@@ -163,6 +173,8 @@ export function SegmentEnvironment() {
 
   const wallRefs = useRef<(THREE.Mesh | null)[]>([]);
   const capRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const fenceRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const fieldRefs = useRef<(THREE.Mesh | null)[]>([]);
 
   useFrame(() => {
     const seg = segEnv.seg;
@@ -194,15 +206,21 @@ export function SegmentEnvironment() {
       const wall = built.walls[i];
       const mesh = wallRefs.current[i];
       const cap = capRefs.current[i];
+      // Le mur passerait dans le quai : à l'approche d'une gare, il s'écarte
+      // pour se ranger derrière elle. Le glissement est masqué par le quai
+      // lui-même, qui entre en scène au même moment.
+      const push = wall.side * sidePush(wall.side);
       wall.tex.offset.x = (wall.sign * runtime.distance) / 30;
       wall.mat.color.setRGB(nightK, nightK, nightK * 1.03);
       if (mesh) {
         mesh.visible = wallsVisible;
         mesh.scale.y = segEnv.wallH;
+        mesh.position.x = wall.x + push;
         mesh.position.y = wallTop - segEnv.wallH / 2 - sink;
       }
       if (cap) {
         cap.visible = wallsVisible;
+        cap.position.x = wall.x * 1.02 + push;
         cap.position.y = wallTop + 0.17 - sink;
       }
     }
@@ -233,13 +251,21 @@ export function SegmentEnvironment() {
     built.fieldMat.opacity = corridor01 * 0.95;
     const fieldBase = built.fieldMat.userData.base as THREE.Color;
     built.fieldMat.color.copy(fieldBase).multiplyScalar(nightK);
+    for (let i = 0; i < SIDES.length; i++) {
+      const mesh = fieldRefs.current[i];
+      const side = SIDES[i].side;
+      if (mesh) mesh.position.x = side * FIELD_X + side * sidePush(side);
+    }
 
     // --- Clôtures / haies : fondu croisé selon la végétation du tronçon ---
-    for (const f of built.fences) {
+    for (let i = 0; i < built.fences.length; i++) {
+      const f = built.fences[i];
+      const mesh = fenceRefs.current[i];
       f.tex.offset.x = (f.sign * runtime.distance) / 6;
       f.mat.opacity = f.hedge ? ground01 * segEnv.green : ground01 * (1 - segEnv.green) * 0.9;
       const base = f.mat.userData.base as THREE.Color;
       f.mat.color.copy(base).multiplyScalar(silDay);
+      if (mesh) mesh.position.x = f.x + f.side * sidePush(f.side);
     }
 
     // --- Trains : croisement à gauche (défilement accéléré), dépôt à droite ---
@@ -308,9 +334,12 @@ export function SegmentEnvironment() {
       ))}
 
       {/* Faisceau de voies des corridors */}
-      {SIDES.map(({ side }) => (
+      {SIDES.map(({ side }, i) => (
         <mesh
           key={`field${side}`}
+          ref={(m) => {
+            fieldRefs.current[i] = m;
+          }}
           position={[side * FIELD_X, -1.16, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
           material={built.fieldMat}
@@ -320,9 +349,12 @@ export function SegmentEnvironment() {
       ))}
 
       {/* Clôtures / haies du niveau du sol */}
-      {built.fences.map((f) => (
+      {built.fences.map((f, i) => (
         <mesh
           key={f.key}
+          ref={(m) => {
+            fenceRefs.current[i] = m;
+          }}
           position={[f.x, -0.5, 0]}
           rotation={[0, f.rotY, 0]}
           material={f.mat}

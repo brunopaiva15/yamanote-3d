@@ -21,6 +21,8 @@ interface AppState {
   /** Sens de circulation : 内回り (inner) par défaut — boucle actuelle du sim. */
   loopDirection: LoopDirection;
   seated: boolean;
+  /** Le joueur est descendu sur le quai (état discret, pour le HUD). */
+  onPlatform: boolean;
   touch: boolean; // interface tactile active
   /** Langue de l'interface : détectée au premier lancement, puis mémorisée. */
   lang: Lang;
@@ -34,6 +36,7 @@ interface AppState {
   setDoorSide: (s: 1 | -1) => void;
   setLoopDirection: (d: LoopDirection) => void;
   setSeated: (b: boolean) => void;
+  setOnPlatform: (b: boolean) => void;
   setTouch: (b: boolean) => void;
 }
 
@@ -50,6 +53,7 @@ export const useStore = create<AppState>((set) => ({
   doorSide: DOOR_SIDE[CONFIG.startIndex],
   loopDirection: 'inner',
   seated: false,
+  onPlatform: false,
   touch: false,
   lang: START_LANG,
 
@@ -77,5 +81,6 @@ export const useStore = create<AppState>((set) => ({
   setDoorSide: (doorSide) => set({ doorSide }),
   setLoopDirection: (loopDirection) => set({ loopDirection }),
   setSeated: (seated) => set({ seated }),
+  setOnPlatform: (onPlatform) => set({ onPlatform }),
   setTouch: (touch) => set({ touch }),
 }));

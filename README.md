@@ -19,10 +19,66 @@ npm run lint     # oxlint
 ## Contrôles
 
 - Regarder : cliquer-glisser avec la souris (pointer lock en bonus sur double-clic, Échap pour sortir)
-- Marcher : ZQSD, WASD ou les flèches
+- Marcher : ZQSD, WASD ou les flèches ; Maj pour presser le pas
 - S'asseoir : un clic net vers une place libre ; se lever : espace ou un nouveau clic
+- **Descendre / remonter : marcher à travers une porte ouverte.** Aucune touche —
+  la porte ouverte *est* le passage
 - M : couper le son, F : plein écran
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder, bouton s'asseoir
+
+## Descendre en gare
+
+Pendant l'arrêt, on peut sortir du wagon et rester sur le quai. Le train
+termine son arrêt, joue sa 発車メロディ, ferme ses portes et **s'en va sans
+nous** : il faut attendre le suivant, environ deux minutes plus tard, comme sur
+la vraie ligne. Le quai se vide puis se repeuple, l'annonce d'approche tombe, la
+rame suivante freine le long du quai et rouvre ses portes.
+
+Techniquement, c'est un renversement de référentiel. En marche, le train est
+fixe à l'origine et c'est le monde qui défile ; dès que le joueur pose le pied
+sur le quai, la gare devient le repère fixe (`runtime.distance` gelé, donc le
+décor reste calé sur elle) et c'est la rame qui glisse (`runtime.trainZ`, appliqué
+par `three/TrainRig`). Le cycle station passe alors la main à
+`systems/platformWait`, qui tient son propre chrono sans jamais toucher
+`runtime.phaseT` ; `resumeDwellAt()` rend la main proprement à la remontée, sans
+rejouer la mélodie ni sauter l'annonce de fermeture.
+
+Le volume praticable vit dans `systems/walkable` : des rectangles alignés sur les
+axes, plus un « portillon » par porte qui ne s'ouvre que si la porte de la rame
+**et** la porte palière en face sont réellement dégagées. Train absent, tous les
+seuils se ferment — on ne peut pas tomber sur la voie. Une seule voiture est
+accessible, celle du joueur : c'est la seule dont l'intérieur existe.
+
+## Les gares
+
+Le quai fait sa vraie longueur : 224 m, onze voitures de 20 m, 44 baies de portes
+palières. `data/stationLayouts.ts` donne à chacune des trente gares une
+typologie — quai latéral, îlot, viaduc, tranchée, grande gare — déduite du
+tronçon traversé puis corrigée gare par gare : profondeur, hauteur libre, entraxe
+des piliers, style d'auvent, fond de quai, palette, densité de foule. Tokyo,
+Shinjuku et Shibuya ont en plus une charpente à elles (`three/station/Signature`).
+
+`systems/stationPlacement` est la source unique du mobilier, partagée par le rendu
+et par la marche : un banc dessiné à un endroit et infranchissable à un autre se
+verrait au premier pas. Tout ce qui se répète passe par un `InstancedMesh`.
+
+**La signalétique n'a pas changé** : les panneaux de nom de gare et le tableau
+d'affichage sont les mêmes textures et le même `redraw`, seulement répartis sur
+un quai plus long.
+
+## L'extérieur de la rame
+
+`three/exterior/` modélise la rame E235-0 complète, visible depuis le quai :
+onze caisses inox à bandeau uguisu et portes vertes, bogies, climatisation de
+toit, soufflets d'intercirculation, pantographes, et le nez de cabine à masque
+vert, grand pare-brise, damier dégradé, girouette LED 山手線 et feux. Les cotes
+(`data/e235.ts`) sont les cotes réelles ramenées au repère du jeu, et l'entraxe
+de 20 m est celui sur lequel le quai est bâti : les portes tombent en face des
+portes palières.
+
+Chaque matériau ne fait qu'un `InstancedMesh` de onze instances. Le groupe entier
+reste éteint tant qu'on est à bord d'une rame immobile — de l'intérieur, on ne
+voit jamais sa propre caisse : coût nul en jeu normal.
 
 ## Langues
 
@@ -145,7 +201,9 @@ src/
   systems/               logique pure : machine à états du cycle station, audio Tone.js,
                          file d'annonces vocales, PNJ, slots d'assise, runtime 60 fps
   three/                 rendu R3F : wagon, sièges, portes, poignées, pubs, écrans LCD,
-                         ville en parallaxe, quai + portes palières, PNJ, caméra
+                         ville en parallaxe, PNJ, caméra
+  three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines
+  three/station/         quai praticable de 224 m, cinq typologies, signalétique
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
   scripts/               models:import / models:inspect (packs → public/models/)

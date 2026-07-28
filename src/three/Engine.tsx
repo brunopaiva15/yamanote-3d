@@ -1,7 +1,8 @@
 // Boucle 60 fps unique : toute la logique par frame passe par ici, aucune
 // mise à jour d'état React par frame ailleurs.
 
-import { useFrame } from '@react-three/fiber';
+import { useEffect } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import { V_MAX } from '../data/config';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
@@ -9,6 +10,8 @@ import { updateCycle } from '../systems/stationCycle';
 import { updateDoorMotion } from '../systems/doorMotion';
 import { updateSegmentEnv } from '../systems/segmentEnv';
 import { updatePlatformPresence } from '../systems/platformPresence';
+import { updateStationOcclusion } from '../systems/stationOcclusion';
+import { updatePlatformWait } from '../systems/platformWait';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
 import { setPlatformDoors, updateAudio } from '../systems/audioEngine';
 import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
@@ -39,6 +42,21 @@ if (typeof document !== 'undefined') {
 }
 
 export function Engine(): null {
+  const gl = useThree((s) => s.gl);
+
+  // Outil dev : __renderInfo() donne le coût de la frame précédente. Sert à
+  // vérifier qu'ajouter la gare et l'extérieur de la rame ne change rien au
+  // budget quand on est simplement assis dans le wagon.
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof window === 'undefined') return;
+    (window as unknown as Record<string, unknown>).__renderInfo = () => ({
+      calls: gl.info.render.calls,
+      triangles: gl.info.render.triangles,
+      geometries: gl.info.memory.geometries,
+      textures: gl.info.memory.textures,
+    });
+  }, [gl]);
+
   useFrame((_, rawDt) => {
     const raw = Math.max(0, rawDt);
     const skipCycle = tabJustResumed;
@@ -62,9 +80,15 @@ export function Engine(): null {
     }
 
     if (cycleDt > 0) {
-      updateCycle(cycleDt);
+      // Descendu sur le quai, le joueur n'est plus dans le référentiel du
+      // train : la gare devient fixe, la rame glisse, et c'est une autre
+      // machine à états qui mène la danse.
+      if (runtime.playerFrame === 'platform') updatePlatformWait(cycleDt);
+      else updateCycle(cycleDt);
       updateSegmentEnv(cycleDt);
       updatePlatformPresence();
+      // Lit platformFade / platformSlide : doit venir après.
+      updateStationOcclusion();
     }
     if (physDt > 0) {
       updateDoorMotion(physDt);

@@ -533,6 +533,24 @@ body,
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+/* Invite « descendre / monter », sous le réticule : ne s'affiche que devant
+   un seuil réellement dégagé. */
+.hud-prompt {
+  position: fixed;
+  left: 50%;
+  top: calc(50% + 34px);
+  transform: translateX(-50%);
+  z-index: 15;
+  padding: 7px 13px;
+  border-radius: 12px;
+  background: rgba(16, 21, 26, 0.62);
+  color: #f2f4f2;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 .touch-sit {
   position: fixed;
   right: 24px;

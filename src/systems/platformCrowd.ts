@@ -8,6 +8,10 @@ import { CONFIG } from '../data/config';
 import { makeAppearance, type Appearance } from './appearance';
 import { paxScale } from './perf';
 import { runtime } from './runtime';
+import { useStore } from '../store';
+import { psdGates } from '../three/station/psdLayout';
+import { placementFor } from './stationPlacement';
+import { layoutFor } from '../data/stationLayouts';
 
 export type CrowdState = 'hidden' | 'waiting' | 'ambling' | 'patrolling';
 
@@ -38,10 +42,17 @@ export interface CrowdPax {
 export const CROWD_POOL = 18;
 export const crowdList: CrowdPax[] = [];
 
-const Z_MIN = -34;
-const Z_MAX = 34;
-const X_MIN = 2.5;
-const X_MAX = 5.15;
+// Bornes de la foule, tirées du gabarit de la gare courante : le quai fait
+// désormais 224 m et sa profondeur varie d'une typologie à l'autre.
+function bounds(): { z0: number; z1: number; x0: number; x1: number } {
+  const p = placementFor(useStore.getState().index, psdGates());
+  return {
+    z0: -p.walkHalfZ + 2,
+    z1: p.walkHalfZ - 2,
+    x0: p.walkX0 + 0.5,
+    x1: Math.min(p.walkX1 - 0.6, p.walkX0 + 4.2),
+  };
+}
 const WALK_SPEED = CONFIG.walkSpeed * 0.92;
 
 function makeCrowd(id: number): CrowdPax {
@@ -75,22 +86,34 @@ export function initPlatformCrowd(): void {
   for (let i = 0; i < CROWD_POOL; i++) crowdList.push(makeCrowd(i));
 }
 
-function crowdCount(stationIndex: number): { total: number; walkers: number } {
+function crowdCountBase(stationIndex: number): { total: number; walkers: number } {
   const base = isMajorHub(stationIndex)
     ? { total: 16, walkers: 7 }
     : stationIndex % 3 === 0
       ? { total: 12, walkers: 5 }
       : { total: 9, walkers: 4 };
-  // Qualité vidéo : même réduction que les PNJ de la rame.
-  const s = paxScale();
-  return { total: Math.round(base.total * s), walkers: Math.round(base.walkers * s) };
+  return base;
+}
+
+/**
+ * Densité réelle : le gabarit de la gare pèse autant que son statut de hub —
+ * Uguisudani reste vide quand Shinjuku déborde — et la qualité vidéo réduit
+ * l'ensemble comme pour les PNJ de la rame.
+ */
+function crowdCount(stationIndex: number): { total: number; walkers: number } {
+  const base = crowdCountBase(stationIndex);
+  const s = paxScale() * layoutFor(stationIndex).crowdScale;
+  return {
+    total: Math.min(CROWD_POOL, Math.round(base.total * s)),
+    walkers: Math.round(base.walkers * s),
+  };
 }
 
 function clampPos(x: number, z: number): THREE.Vector3 {
   return new THREE.Vector3(
-    THREE.MathUtils.clamp(x, X_MIN, X_MAX),
+    THREE.MathUtils.clamp(x, bounds().x0, bounds().x1),
     0,
-    THREE.MathUtils.clamp(z, Z_MIN, Z_MAX),
+    THREE.MathUtils.clamp(z, bounds().z0, bounds().z1),
   );
 }
 
@@ -107,7 +130,8 @@ function waitSlot(i: number, n: number, bias: number): THREE.Vector3 {
 
 function patrolWaypoints(laneX: number, fromZ: number, dir: 1 | -1): THREE.Vector3[] {
   // Trajet long le long du quai, avec un léger écart de voie au demi-tour.
-  const endZ = dir > 0 ? Z_MAX - 1 - Math.random() * 4 : Z_MIN + 1 + Math.random() * 4;
+  const b = bounds();
+  const endZ = dir > 0 ? b.z1 - 1 - Math.random() * 4 : b.z0 + 1 + Math.random() * 4;
   const midZ = (fromZ + endZ) * 0.5;
   const sway = (Math.random() - 0.5) * 0.45;
   return [
@@ -141,7 +165,8 @@ export function seedPlatformCrowd(stationIndex: number): void {
     p.wpi = 0;
 
     if (isWalker) {
-      const z0 = THREE.MathUtils.lerp(Z_MIN + 4, Z_MAX - 4, (i + 0.5) / walkers);
+      const wb = bounds();
+      const z0 = THREE.MathUtils.lerp(wb.z0 + 4, wb.z1 - 4, (i + 0.5) / walkers);
       p.pos.copy(clampPos(p.laneX, z0));
       p.home.copy(p.pos);
       p.state = 'patrolling';
@@ -232,6 +257,24 @@ function advanceWalk(p: CrowdPax, dt: number, onDone: () => void): void {
   p.headPitch += (0 - p.headPitch) * Math.min(1, dt * 5);
 }
 
+/**
+ * Rayon d'évitement autour du joueur quand il est sur le quai. Personne ne
+ * traverse personne : sans cela, un promeneur passerait au travers de la tête
+ * du joueur, ce qui n'arrive jamais dans un vrai couloir.
+ */
+const PLAYER_CLEARANCE = 0.62;
+
+function avoidPlayer(p: CrowdPax): void {
+  if (runtime.playerFrame !== 'platform') return;
+  const dx = p.pos.x - runtime.playerPlatX;
+  const dz = p.pos.z - runtime.playerPlatZ;
+  const d = Math.hypot(dx, dz);
+  if (d >= PLAYER_CLEARANCE || d < 1e-4) return;
+  const push = (PLAYER_CLEARANCE - d) / d;
+  p.pos.x += dx * push;
+  p.pos.z += dz * push;
+}
+
 export function updatePlatformCrowd(dt: number): void {
   const presence = runtime.platformFade;
   if (presence < 0.04) {
@@ -244,12 +287,13 @@ export function updatePlatformCrowd(dt: number): void {
 
     p.actionT += dt;
     p.bobPhase += dt;
+    avoidPlayer(p);
 
     if (p.state === 'patrolling') {
       advanceWalk(p, dt, () => {
         // Bout du quai : demi-tour et nouveau trajet.
         p.walkDir = p.walkDir > 0 ? -1 : 1;
-        p.laneX = THREE.MathUtils.clamp(p.laneX + (Math.random() - 0.5) * 0.35, X_MIN + 0.15, X_MAX - 0.15);
+        p.laneX = THREE.MathUtils.clamp(p.laneX + (Math.random() - 0.5) * 0.35, bounds().x0 + 0.15, bounds().x1 - 0.15);
         // Petite pause occasionnelle avant de repartir.
         if (Math.random() < 0.22) {
           p.state = 'waiting';

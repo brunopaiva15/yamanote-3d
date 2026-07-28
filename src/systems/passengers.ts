@@ -280,7 +280,7 @@ function beginBoard(p: Pax, side: 1 | -1, afterWalk: 'seated' | 'standing', boar
 export function trimPassengersForPerf(): void {
   const target = scaledTargets();
   const { seatedPax, standingPax } = countInside();
-  const dist = (p: Pax) => Math.hypot(p.pos.x - runtime.playerX, p.pos.z - runtime.playerZ);
+  const dist = (p: Pax) => Math.hypot(p.pos.x - runtime.playerCarX, p.pos.z - runtime.playerCarZ);
   const farthestFirst = (arr: Pax[]) => [...arr].sort((a, b) => dist(b) - dist(a));
   const hide = (p: Pax) => {
     releaseSlots(p);
@@ -355,8 +355,8 @@ function headYawToward(p: Pax, x: number, z: number): number {
 // Choix d'une nouvelle occupation pour un PNJ posé (assis ou debout).
 function pickAction(p: Pax): void {
   const roll = Math.random();
-  const dxp = runtime.playerX - p.pos.x;
-  const dzp = runtime.playerZ - p.pos.z;
+  const dxp = runtime.playerCarX - p.pos.x;
+  const dzp = runtime.playerCarZ - p.pos.z;
   const playerClose = Math.hypot(dxp, dzp) < 3.5;
 
   if (roll < 0.16) {
@@ -535,8 +535,8 @@ export function updatePassengers(dt: number): void {
         lean = 0.05;
         break;
       case 'stare':
-        yawT = headYawToward(p, runtime.playerX, runtime.playerZ);
-        pitchT = THREE.MathUtils.clamp((1.35 - runtime.playerY) * 0.3, -0.3, 0.25);
+        yawT = headYawToward(p, runtime.playerCarX, runtime.playerCarZ);
+        pitchT = THREE.MathUtils.clamp((1.35 - runtime.playerCarY) * 0.3, -0.3, 0.25);
         break;
       case 'chat': {
         const other = p.partner >= 0 ? paxList[p.partner] : null;

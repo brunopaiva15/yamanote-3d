@@ -4,6 +4,12 @@
 import { CONFIG } from '../data/config';
 import type { TokyoDate } from '../data/occupancy';
 
+/**
+ * Repère de marche du joueur : dans le wagon, ou sur le quai. Défini ici (et
+ * non dans systems/playerFrame) pour que runtime reste sans dépendance.
+ */
+export type PlayerFrame = 'car' | 'platform';
+
 export interface TokyoNow {
   minutes: number;
   year: number;
@@ -86,9 +92,37 @@ export const runtime = {
   platformFade: 0, // présence du quai 0..1 (visibilité / approche, plus d'opacité)
   platformSlide: 0, // décalage Z du quai (m) : négatif à l'approche, positif au départ
   departStartDist: 0, // runtime.distance à l'entrée de la phase depart (glissement réel du quai)
-  playerX: 0, // position du joueur (pour les regards des PNJ)
+  playerX: 0, // position du joueur en repère MONDE
   playerY: 1.55,
   playerZ: 4.2,
+  /**
+   * Repère dans lequel vit le joueur. À bord, le monde ≡ le repère du wagon
+   * (le train est fixe à l'origine). Sur le quai, c'est la gare qui est fixe
+   * et la rame qui glisse : les deux repères divergent, d'où la publication
+   * séparée ci-dessous.
+   */
+  playerFrame: 'car' as PlayerFrame,
+  playerCarX: 0, // position du joueur dans le repère du wagon (regards des PNJ à bord)
+  playerCarY: 1.55,
+  playerCarZ: 4.2,
+  playerPlatX: 0, // position du joueur dans le repère local du quai (côté +x, avant rotation)
+  playerPlatY: 1.55,
+  playerPlatZ: 0,
+  /**
+   * Glissement longitudinal de la rame (m), appliqué par TrainRig. Vaut 0 tant
+   * que le joueur est à bord : le train reste fixe à l'origine et c'est le
+   * monde qui défile, exactement comme avant. Le décor défilant vers +z, un
+   * train qui part s'en va vers les z négatifs.
+   */
+  trainZ: 0,
+  /** false entre deux rames : tous les seuils de porte sont infranchissables. */
+  trainPresent: true,
+  /**
+   * Occlusion du décor de voie côté quai (0..1). Le quai masquait jusqu'ici
+   * les poteaux, murs et clôtures qui traversent son emprise ; dès qu'on
+   * marche dessus il faut les retirer explicitement.
+   */
+  platformOcclusion: 0,
   // Blocages de départ : la mélodie s'arrête, le train reste à quai portes ouvertes.
   departureBlockers: {
     doorBlocked: false,
@@ -169,6 +203,16 @@ export function resetRuntime(): void {
   runtime.platformFade = 0;
   runtime.platformSlide = 0;
   runtime.departStartDist = 0;
+  runtime.playerFrame = 'car';
+  runtime.playerCarX = 0;
+  runtime.playerCarY = 1.55;
+  runtime.playerCarZ = 4.2;
+  runtime.playerPlatX = 0;
+  runtime.playerPlatY = 1.55;
+  runtime.playerPlatZ = 0;
+  runtime.trainZ = 0;
+  runtime.trainPresent = true;
+  runtime.platformOcclusion = 0;
   runtime.departureBlockers.doorBlocked = false;
   runtime.departureBlockers.heldAtStation = false;
   runtime.departureBlockers.signalStop = false;

@@ -70,6 +70,8 @@ export interface Strings {
     volume: string;
     sit: string;
     stand: string;
+    alight: string;
+    boardTrain: string;
     fullscreen: string;
     fullscreenTitle: string;
   };
@@ -105,6 +107,8 @@ const FR: Strings = {
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: 'Marcher' },
       { keys: ['Clic'], action: "S'asseoir" },
       { keys: ['Espace'], action: 'Se lever' },
+      { keys: ['Porte'], action: 'Descendre / monter' },
+      { keys: ['Maj'], action: 'Presser le pas' },
       { keys: ['M'], action: 'Son' },
       { keys: ['F'], action: 'Plein écran' },
     ],
@@ -133,6 +137,8 @@ const FR: Strings = {
     volume: 'Volume',
     sit: "S'asseoir",
     stand: 'Se lever',
+    alight: 'Descendre sur le quai',
+    boardTrain: 'Monter dans la rame',
     fullscreen: 'Plein écran',
     fullscreenTitle: 'Plein écran (F)',
   },
@@ -166,6 +172,8 @@ const EN: Strings = {
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: 'Walk' },
       { keys: ['Click'], action: 'Sit down' },
       { keys: ['Space'], action: 'Stand up' },
+      { keys: ['Doorway'], action: 'Get off / board' },
+      { keys: ['Shift'], action: 'Walk faster' },
       { keys: ['M'], action: 'Sound' },
       { keys: ['F'], action: 'Fullscreen' },
     ],
@@ -194,6 +202,8 @@ const EN: Strings = {
     volume: 'Volume',
     sit: 'Sit down',
     stand: 'Stand up',
+    alight: 'Step onto the platform',
+    boardTrain: 'Board the train',
     fullscreen: 'Fullscreen',
     fullscreenTitle: 'Fullscreen (F)',
   },
@@ -226,6 +236,8 @@ const JA: Strings = {
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: '歩く' },
       { keys: ['クリック'], action: '座る' },
       { keys: ['スペース'], action: '立つ' },
+      { keys: ['出入口'], action: '降りる / 乗る' },
+      { keys: ['Shift'], action: '早歩き' },
       { keys: ['M'], action: '音声' },
       { keys: ['F'], action: '全画面' },
     ],
@@ -254,6 +266,8 @@ const JA: Strings = {
     volume: '音量',
     sit: '座る',
     stand: '立つ',
+    alight: 'ホームに降りる',
+    boardTrain: '電車に乗る',
     fullscreen: '全画面',
     fullscreenTitle: '全画面表示（F）',
   },

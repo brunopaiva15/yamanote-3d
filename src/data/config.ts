@@ -13,6 +13,9 @@ export const CONFIG = {
   // Vitesses et hauteurs (mètres, m/s, km/h).
   maxSpeedKmh: 90,
   walkSpeed: 1.4,
+  // Le quai est bien plus long que le wagon : sans presser le pas on n'en
+  // verrait jamais le bout pendant un arrêt.
+  runSpeed: 3.0,
   eyeHeight: 1.55,
   sitHeight: 1.16,
 
