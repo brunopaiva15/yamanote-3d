@@ -108,6 +108,18 @@ interface Nodes {
   roomVerb: Tone.Reverb;
   roomSend: Tone.Gain;
   roomLp: Tone.Filter;
+  // Train qui traverse sur la voie d'en face : sa propre source, spatialisée
+  // au point de la rame le plus proche de l'oreille (voir setPassBy).
+  passPanner: Tone.Panner3D;
+  passRoar: Tone.Noise;
+  passRoarFilter: Tone.Filter;
+  passRoarGain: Tone.Gain;
+  passWind: Tone.Noise;
+  passWindFilter: Tone.Filter;
+  passWindGain: Tone.Gain;
+  passClack: Tone.NoiseSynth;
+  passHornA: Tone.Synth;
+  passHornB: Tone.Synth;
   /** Bruitages PNJ : souffle (éternuement, toux, bâillement). */
   paxBreath: Tone.NoiseSynth;
   paxBreathFilter: Tone.Filter;
@@ -423,6 +435,56 @@ export async function startAudio(): Promise<void> {
   ambGain.connect(roomSend);
   platGain.connect(roomSend);
 
+  // --- Train qui traverse ----------------------------------------------
+  //
+  // Rien de tout cela n'appartient à la rame du joueur : ni le bus train (qui
+  // s'atténue avec SA distance), ni la sono. C'est une source à part, posée
+  // dans l'espace et qui balaie l'auditeur en quelques secondes — le seul son
+  // du jeu qui passe VRAIMENT d'un côté à l'autre de la tête.
+  //
+  // Deux couches, parce qu'un passage à 90 km/h s'entend en deux temps : le
+  // grondement, qui monte longtemps à l'avance et porte loin, et le souffle
+  // aigu — l'air déplacé, le crissement des boudins — qui n'existe qu'au
+  // moment où la caisse est là.
+  const passPanner = new Tone.Panner3D({
+    panningModel: 'HRTF',
+    distanceModel: 'inverse',
+    refDistance: 8,
+    rolloffFactor: 0.8,
+    maxDistance: 400,
+  }).connect(master);
+  const passRoar = new Tone.Noise('brown');
+  const passRoarFilter = new Tone.Filter({ type: 'lowpass', frequency: 300, Q: 0.9 });
+  const passRoarGain = new Tone.Gain(0);
+  passRoar.chain(passRoarFilter, passRoarGain, passPanner);
+  passRoar.start();
+  const passWind = new Tone.Noise('white');
+  const passWindFilter = new Tone.Filter({ type: 'highpass', frequency: 2200, rolloff: -12, Q: 0.6 });
+  const passWindGain = new Tone.Gain(0);
+  passWind.chain(passWindFilter, passWindGain, passPanner);
+  passWind.start();
+  // La gare répond : un passage en tranchée cogne, sur un viaduc il file.
+  passRoarGain.connect(roomSend);
+  // Martèlement des bogies sur les joints, plus sec que le nôtre : ce n'est
+  // pas sous nos pieds, ça vient d'en face.
+  const passClackFilter = new Tone.Filter({ type: 'bandpass', frequency: 620, Q: 1.2 });
+  const passClack = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.04, sustain: 0 },
+  });
+  passClack.chain(passClackFilter, passPanner);
+  // Avertisseur : deux tons tenus ensemble, à l'entrée en gare.
+  const passHornA = new Tone.Synth({
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 0.04, decay: 0.2, sustain: 0.6, release: 0.25 },
+    volume: -20,
+  }).connect(passPanner);
+  const passHornB = new Tone.Synth({
+    oscillator: { type: 'triangle' },
+    envelope: { attack: 0.04, decay: 0.2, sustain: 0.6, release: 0.25 },
+    volume: -22,
+  }).connect(passPanner);
+
   // Bruitages voyageurs : très discrets, sur le bus rame (pas la sono PA).
   const paxBreathFilter = new Tone.Filter({ type: 'bandpass', frequency: 1600, Q: 0.85 });
   const paxBreath = new Tone.NoiseSynth({
@@ -498,6 +560,16 @@ export async function startAudio(): Promise<void> {
     roomVerb,
     roomSend,
     roomLp,
+    passPanner,
+    passRoar,
+    passRoarFilter,
+    passRoarGain,
+    passWind,
+    passWindFilter,
+    passWindGain,
+    passClack,
+    passHornA,
+    passHornB,
     paxBreath,
     paxBreathFilter,
     paxFabric,
@@ -1022,6 +1094,76 @@ export function railClack(speed01: number): void {
   hit(now + 0.09, v * 0.85);
   hit(now + bogieDelay, v * 0.9);
   hit(now + bogieDelay + 0.09, v * 0.75);
+}
+
+// --- Train qui traverse la gare -----------------------------------------
+//
+// Piloté image par image par systems/passingTrain, qui sait où en est la rame.
+// Ce module ne connaît que le POINT de la rame le plus proche de l'oreille :
+// une caisse de 200 m n'est pas une source ponctuelle, et la faire sonner
+// depuis son nez donnerait un son qui a déjà filé alors que la moitié du train
+// est encore devant nous.
+
+/** Niveau de crête du grondement et du souffle, debout sur le quai. */
+const PASS_ROAR = 0.42;
+const PASS_WIND = 0.2;
+/** Ce qu'il en reste dans le wagon : la caisse et les vitres en mangent la moitié. */
+const PASS_INSIDE = 0.42;
+
+let passActive = false;
+
+export function passByStart(): void {
+  passActive = true;
+}
+
+/**
+ * Pose la source et son niveau.
+ *
+ * @param x,y,z   point de la rame le plus proche de l'auditeur (repère monde)
+ * @param closing −1 (rame déjà passée) … +1 (rame encore devant) : c'est le
+ *                seul effet Doppler qu'on puisse donner à du bruit large bande,
+ *                et c'est celui qu'on entend — le grondement se referme d'un
+ *                cran au moment exact où la cabine arrive à notre hauteur.
+ */
+export function setPassBy(x: number, y: number, z: number, closing: number): void {
+  if (!nodes || !passActive) return;
+  const p = nodes.passPanner;
+  p.positionX.value = x;
+  p.positionY.value = y;
+  p.positionZ.value = z;
+  const d = Math.hypot(x - listenerPos.x, y - listenerPos.y, z - listenerPos.z);
+  const near = 1 / (1 + Math.pow(d / 26, 1.5));
+  const inside = listenerOutside ? 1 : PASS_INSIDE;
+  nodes.passRoarGain.gain.rampTo(near * PASS_ROAR * inside, 0.06);
+  // Le souffle ne porte pas : il n'existe qu'à quelques mètres.
+  nodes.passWindGain.gain.rampTo(Math.pow(near, 2.4) * PASS_WIND * inside, 0.06);
+  const doppler = 1 + 0.07 * Math.max(-1, Math.min(1, closing));
+  nodes.passRoarFilter.frequency.rampTo((240 + 900 * near) * doppler, 0.06);
+  nodes.passWindFilter.frequency.rampTo(2100 * doppler, 0.08);
+}
+
+export function passByEnd(): void {
+  passActive = false;
+  if (!nodes) return;
+  nodes.passRoarGain.gain.rampTo(0, 0.4);
+  nodes.passWindGain.gain.rampTo(0, 0.3);
+}
+
+/** Un joint de rail sous la rame d'en face. `level` suit la distance. */
+export function passByClack(level: number): void {
+  if (!nodes || level <= 0.002) return;
+  const now = Tone.now();
+  nodes.passClack.triggerAttackRelease(0.04, slot('passClack', now), level);
+  nodes.passClack.triggerAttackRelease(0.04, slot('passClack', now + 0.07), level * 0.8);
+}
+
+/** Avertisseur à l'entrée en gare : deux tons tenus, brefs. */
+export function passByHorn(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  const loud = listenerOutside ? 0.5 : 0.28;
+  nodes.passHornA.triggerAttackRelease('A4', 0.75, slot('passHornA', now), loud);
+  nodes.passHornB.triggerAttackRelease('C#5', 0.75, slot('passHornB', now), loud);
 }
 
 // --- Carillons et jingles (synthèse, avec hook fichiers locaux) ---
