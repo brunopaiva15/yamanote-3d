@@ -24,7 +24,7 @@ import { runtime } from '../../systems/runtime';
 import { psdDoorPos, psdGateLag } from '../../systems/doorMotion';
 import { placementFor, stairTopZ, type Placed } from '../../systems/stationPlacement';
 import { platformDetail } from '../../systems/perf';
-import { layoutFor } from '../../data/stationLayouts';
+import { layoutFor, type StationLayout } from '../../data/stationLayouts';
 import {
   GAUGE_HALF,
   OPP_DEPTH,
@@ -607,35 +607,10 @@ function FarSide({
         <boxGeometry args={[OPP_DEPTH + 0.4, 0.14, len]} />
       </mesh>
 
-      {/* Ce qui ferme la travée, selon le niveau où court la voie. */}
-      {layout.elevation === 'trench' ? (
-        // Tranchée : la paroi de soutènement monte bien au-delà de l'auvent.
-        <group>
-          <mesh position={[oppBack, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
-            <boxGeometry args={[0.24, wallH, len]} />
-          </mesh>
-          <Wainscot backX={oppBack - 0.13} len={len} m={m} />
-          <mesh position={[oppBack + 0.12, PLATFORM_TOP + wallH + 1.7, 0]} material={m.wallDark}>
-            <boxGeometry args={[0.42, 3.4, len]} />
-          </mesh>
-        </group>
-      ) : layout.elevation === 'elevated' ? (
-        // Viaduc : garde-corps ajouré, la ville se voit par-dessus.
-        <group>
-          <mesh position={[oppBack, PLATFORM_TOP + 0.6, 0]} material={m.wall}>
-            <boxGeometry args={[0.18, 1.2, len]} />
-          </mesh>
-          <mesh position={[oppBack, PLATFORM_TOP + 1.24, 0]} material={m.metal}>
-            <boxGeometry args={[0.1, 0.08, len]} />
-          </mesh>
-          <mesh position={[oppBack, PLATFORM_TOP + 1.9, 0]} material={m.metal}>
-            <boxGeometry args={[0.08, 0.06, len]} />
-          </mesh>
-        </group>
-      ) : layout.openFarSide ? (
-        // Grand faisceau : rien ne ferme la travée. Des voies encore, jusqu'au
-        // bord du champ, et une simple clôture au bout. C'est la perspective
-        // dégagée de Nippori et d'Ueno, celle qu'un mur de fond escamotait.
+      {/* Faisceau : là où rien ne ferme la travée, des voies encore, jusqu'au
+          bord du champ. C'est la perspective dégagée de Nippori et d'Ueno, et
+          les huit voies parallèles de Shimbashi — qu'un mur escamotait. */}
+      {layout.openFarSide && (
         <group>
           <mesh
             position={[oppBack + (YARD_TRACKS * YARD_PITCH) / 2, PLATFORM_TOP - SLAB_H - 0.86, 0]}
@@ -651,22 +626,67 @@ function FarSide({
               </mesh>
             ));
           })}
-          <mesh
-            position={[oppBack + YARD_TRACKS * YARD_PITCH, PLATFORM_TOP - 0.3, 0]}
-            material={m.wallDark}
-          >
-            <boxGeometry args={[0.14, 1.6, len]} />
-          </mesh>
-        </group>
-      ) : (
-        // Au sol : un mur de fond ordinaire, avec sa faïence.
-        <group>
-          <mesh position={[oppBack, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
-            <boxGeometry args={[0.2, wallH, len]} />
-          </mesh>
-          <Wainscot backX={oppBack - 0.11} len={len} m={m} />
         </group>
       )}
+
+      {/* Ce qui ferme la travée, selon le niveau où court la voie — au fond du
+          quai d'en face, ou au bout du faisceau quand il y en a un. */}
+      <Closure x={oppBack + (layout.openFarSide ? YARD_TRACKS * YARD_PITCH : 0)} elevation={layout.elevation} wallH={wallH} len={len} m={m} />
+    </group>
+  );
+}
+
+/** La paroi qui ferme la travée : ce qu'on voit tout au fond. */
+function Closure({
+  x,
+  elevation,
+  wallH,
+  len,
+  m,
+}: {
+  x: number;
+  elevation: StationLayout['elevation'];
+  wallH: number;
+  len: number;
+  m: Mats;
+}) {
+  if (elevation === 'trench') {
+    // Tranchée : la paroi de soutènement monte bien au-delà de l'auvent.
+    return (
+      <group>
+        <mesh position={[x, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
+          <boxGeometry args={[0.24, wallH, len]} />
+        </mesh>
+        <Wainscot backX={x - 0.13} len={len} m={m} />
+        <mesh position={[x + 0.12, PLATFORM_TOP + wallH + 1.7, 0]} material={m.wallDark}>
+          <boxGeometry args={[0.42, 3.4, len]} />
+        </mesh>
+      </group>
+    );
+  }
+  if (elevation === 'elevated') {
+    // Viaduc : garde-corps ajouré, la ville se voit par-dessus.
+    return (
+      <group>
+        <mesh position={[x, PLATFORM_TOP + 0.6, 0]} material={m.wall}>
+          <boxGeometry args={[0.18, 1.2, len]} />
+        </mesh>
+        <mesh position={[x, PLATFORM_TOP + 1.24, 0]} material={m.metal}>
+          <boxGeometry args={[0.1, 0.08, len]} />
+        </mesh>
+        <mesh position={[x, PLATFORM_TOP + 1.9, 0]} material={m.metal}>
+          <boxGeometry args={[0.08, 0.06, len]} />
+        </mesh>
+      </group>
+    );
+  }
+  // Au sol : un mur de fond ordinaire, avec sa faïence.
+  return (
+    <group>
+      <mesh position={[x, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
+        <boxGeometry args={[0.2, wallH, len]} />
+      </mesh>
+      <Wainscot backX={x - 0.11} len={len} m={m} />
     </group>
   );
 }

@@ -90,8 +90,8 @@ Ces valeurs étaient auparavant **déduites du tronçon traversé**
 voit *entre* deux gares, pas comment la gare est bâtie — et sortait fausse pour
 sept d'entre elles. Chaque gare porte donc maintenant ses propres cotes.
 
-Quatorze gares déclarent une `signature` ; **neuf sont dessinées**, une par
-fichier dans `three/station/signatures/` :
+Quatorze gares déclarent une `signature`, et **toutes les quatorze sont
+dessinées**, une par fichier dans `three/station/signatures/` :
 
 - **Takanawa Gateway** — la toiture pliée de Kengo Kuma, versants d'acier blanc
   doublés de bois clair qui enjambent d'un seul tenant les deux quais et les
@@ -106,15 +106,29 @@ fichier dans `three/station/signatures/` :
   supérieur, le quai latéral d'en face et la masse sombre du Meiji-jingū.
 - **Yūrakuchō** — le vieux viaduc riveté à entraxe court, socles de brique, et
   les coques de verre de l'International Forum en contrepoint.
+- **Ōtsuka** — la toiture centrale à deux pentes, et les deux extrémités du
+  quai laissées à ciel ouvert : le seul auvent de la boucle qui ne court pas
+  d'un bout à l'autre.
+- **Ebisu** — le complexe Atre qui enjambe les voies, sa sous-face de dalle en
+  guise de ciel, et la passerelle couverte qui part vers Garden Place.
+- **Gotanda** — la Tōkyū Ikegami perchée au quatrième niveau : non pas un
+  tablier vu d'en dessous, mais une gare entière — quai, auvent, garde-corps —
+  suspendue dix mètres au-dessus.
+- **Hamamatsuchō** — la verticalité, et le joint franc entre une moitié de quai
+  sous couverture ancienne et l'autre sous charpente neuve.
+- **Shimbashi** — la couverture générale en treillis qui court sur tout le
+  faisceau, socles de brique, poteaux centenaires.
 - **Tokyo**, **Shinjuku**, **Shibuya** — comme avant.
 
-Ōtsuka, Ebisu, Gotanda, Hamamatsuchō et Shimbashi déclarent la leur sans être
-encore dessinées : elles retombent proprement sur le gabarit.
-
-Quatre gares — Ueno, Nippori, Ōsaki, Shinagawa — portent `openFarSide` : la
+Cinq gares — Ueno, Nippori, Ōsaki, Shinagawa, Shimbashi — portent `openFarSide` : la
 travée d'en face ne se ferme pas par un mur mais par un faisceau, des voies
 encore jusqu'au bord du champ. C'est la perspective dégagée qu'un mur de fond
 escamotait.
+
+Les repères de quartier (`three/Landmarks`) se rangent maintenant derrière
+l'emprise bâtie de la gare, et non plus à une distance fixe : le tram d'Ōtsuka
+et la poutre de monorail de Hamamatsuchō, plantés à huit mètres de l'axe,
+tombaient dans le ballast de la voie d'en face depuis que la gare s'y prolonge.
 
 `systems/stationPlacement` est la source unique du mobilier, partagée par le rendu
 et par la marche : un banc dessiné à un endroit et infranchissable à un autre se

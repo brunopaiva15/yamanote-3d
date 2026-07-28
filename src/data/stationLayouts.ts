@@ -774,6 +774,8 @@ const SPECS: readonly Spec[] = [
     // métallique, couverture dense, quais parallèles multiples ; dessous, les
     // arcades et les couloirs bas contrastent avec les tours de Shiodome.
     name: 'JY29 Shimbashi',
+    // Huit voies parallèles sous la même couverture : rien ne ferme la travée.
+    openFarSide: true,
     elevation: 'elevated',
     config: 'island',
     parallel: ['Tōkaidō', 'Yokosuka', 'Ginza', 'Asakusa', 'Yurikamome'],

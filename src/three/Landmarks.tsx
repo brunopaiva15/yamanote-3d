@@ -22,6 +22,7 @@ import { CONFIG } from '../data/config';
 import { DISTRICTS, type Land, type LandmarkSpec } from '../data/districts';
 import { rng } from '../textures/procedural';
 import { box, glow, plane, sil, vehicle, type Ctx } from './landmarkKit';
+import { landmarkPush } from '../systems/stationOcclusion';
 
 const BASE_Y = -1.1; // niveau du sol extérieur.
 const FAR_X = 34; // distance latérale des silhouettes (devant la couche lointaine).
@@ -269,6 +270,9 @@ interface SlotItem {
   group: THREE.Group;
   near: boolean;
   phase: number; // décalage z du défilement (near).
+  side: 1 | -1;
+  /** Abscisse au repos, avant l'écartement dû à une gare. */
+  baseX: number;
 }
 interface Slot {
   root: THREE.Group;
@@ -311,6 +315,7 @@ function populate(slot: Slot, districtIndex: number): void {
       };
       builder.build(ctx);
       itemGroup.scale.setScalar(scale);
+      const baseX = builder.near ? NEAR_X : FAR_X;
       if (builder.near) {
         itemGroup.position.set(side * NEAR_X, BASE_Y, 0);
       } else {
@@ -319,7 +324,7 @@ function populate(slot: Slot, districtIndex: number): void {
         itemGroup.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
       }
       slot.root.add(itemGroup);
-      slot.items.push({ group: itemGroup, near: builder.near, phase: i * 23 + zi * 41 });
+      slot.items.push({ group: itemGroup, near: builder.near, phase: i * 23 + zi * 41, side, baseX });
     });
   });
 }
@@ -385,8 +390,12 @@ export function Landmarks() {
         m.opacity = closeness * glowLvl;
         m.depthWrite = writeDepth;
       }
-      // Défilement des repères proches (tram, viaduc, monorail…).
       for (const item of slot.items) {
+        // À l'approche d'une gare, le repère se range derrière elle : la gare
+        // s'étend désormais jusqu'au quai d'en face, et le tram d'Ōtsuka comme
+        // la poutre de monorail de Hamamatsuchō tombaient dedans.
+        item.group.position.x = item.side * (item.baseX + landmarkPush(item.side, item.baseX));
+        // Défilement des repères proches (tram, viaduc, monorail…).
         if (!item.near) continue;
         item.group.position.z = ((runtime.distance + item.phase) % NEAR_SPAN) - NEAR_SPAN / 2;
       }

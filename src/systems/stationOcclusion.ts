@@ -14,7 +14,7 @@
 
 import { useStore } from '../store';
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
-import { PLATFORM_DEPTH } from '../data/stationGeometry';
+import { OPP_DEPTH, PLATFORM_DEPTH, PSD_X, TRACK_HALF } from '../data/stationGeometry';
 import { runtime } from './runtime';
 
 /**
@@ -52,6 +52,13 @@ export const stationOcclusion = {
   /** Écartement à appliquer, propre à la gare courante. */
   push: PLATFORM_DEPTH + 6,
   /**
+   * Bord extérieur de l'emprise BÂTIE : le fond du quai d'en face, faisceau
+   * compris. À distinguer de `push`, qui est volontairement large pour ranger
+   * des plans de quatre cents mètres — un repère de quartier, lui, doit se
+   * poser juste derrière la gare, pas à l'horizon.
+   */
+  outer: PLATFORM_DEPTH,
+  /**
    * L'écartement vaut-il des DEUX côtés ? Sur un îlot, tout est du côté du
    * quai et l'autre rive reste au décor de tronçon. À Harajuku — seul quai
    * latéral de la boucle — il y a une gare de chaque côté de la voie : le quai
@@ -68,6 +75,7 @@ export function updateStationOcclusion(): void {
   const layout = layoutFor(useStore.getState().index);
   stationOcclusion.push = pushFor(layout);
   stationOcclusion.bothSides = layout.config === 'side';
+  stationOcclusion.outer = outerOf(layout);
   const half = layout.length / 2 + SPAN_MARGIN;
   stationOcclusion.z0 = runtime.platformSlide - half;
   stationOcclusion.z1 = runtime.platformSlide + half;
@@ -86,8 +94,37 @@ export function hiddenByStation(z: number, bothSides = true, x = 0): boolean {
   return Math.sign(x) === stationOcclusion.side;
 }
 
+/** Bord extérieur bâti d'une gare : au-delà, il n'y a plus de gare. */
+function outerOf(layout: StationLayout): number {
+  if (layout.config === 'side') return PSD_X + layout.depth;
+  const opp = PSD_X + layout.depth + 2 * TRACK_HALF + OPP_DEPTH;
+  return opp + (layout.openFarSide ? YARD_REACH : 0);
+}
+
+/** Portée du faisceau qui remplace le mur de fond, là où il y en a un. */
+const YARD_REACH = 4 * 4.6;
+
 /** Écartement à appliquer à un plan long posé du côté `side`. */
 export function sidePush(side: 1 | -1): number {
   const applies = stationOcclusion.bothSides || side === stationOcclusion.side;
   return applies ? stationOcclusion.active * stationOcclusion.push : 0;
+}
+
+/**
+ * Écartement d'un repère de quartier (tram, monorail, tours) posé en `baseX`.
+ *
+ * Ces repères vivaient à x = ±8 pour les proches, ±34 pour les silhouettes,
+ * valeurs choisies quand la gare s'arrêtait au fond du quai. Elle se prolonge
+ * maintenant par une voie, un quai d'en face et parfois un faisceau : le tram
+ * d'Ōtsuka et la poutre de monorail de Hamamatsuchō se retrouvaient plantés
+ * dans le ballast de la voie opposée.
+ *
+ * On les range donc juste DERRIÈRE l'emprise bâtie — pas à l'horizon : un tram
+ * qui longe la gare doit rester lisible depuis le quai.
+ */
+export function landmarkPush(side: 1 | -1, baseX: number): number {
+  const applies = stationOcclusion.bothSides || side === stationOcclusion.side;
+  if (!applies) return 0;
+  const want = stationOcclusion.outer + 3 - baseX;
+  return want > 0 ? stationOcclusion.active * want : 0;
 }
