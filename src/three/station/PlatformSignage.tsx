@@ -17,15 +17,23 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../../store';
 import { runtime } from '../../systems/runtime';
-import { platformWait } from '../../systems/platformWait';
+import { nextTrainsFromPlatform } from '../../systems/platformWait';
 import {
   makeDirectionBand,
   makePlatformBoard,
   makeStationSign,
   makeTotemGuide,
   makeTotemSign,
-  type BoardView,
 } from '../../textures/procedural';
+import {
+  boardRows,
+  sameBoardView,
+  type BoardView,
+  type NextTrains,
+} from '../../data/departureBoard';
+import { CONFIG } from '../../data/config';
+import { cruiseDuration, journeyDuration } from '../../data/segments';
+import { dwellDuration, melodyStartAt } from '../../systems/stationCycle';
 import { directionBandZs, nameplateColumns, PLATFORM_TOP } from '../../data/stationGeometry';
 
 interface Props {
@@ -83,51 +91,66 @@ function clearOf(
   return null;
 }
 
-/** Intervalle réel entre deux rames, en secondes (cf. platformWait). */
-const HEADWAY = 60;
 /** Cadence d'alternance japonais / anglais de l'afficheur (s). */
 const CYCLE = 3.5;
+
+/**
+ * Ce que le quai voit venir, depuis le train.
+ *
+ * À bord, la rame qui intéresse le tableau est CELLE OÙ L'ON EST : elle
+ * s'annonce d'elle-même pendant le freinage, occupe le quai pendant l'arrêt,
+ * puis le libère. La suivante vient un intervalle plus tard — l'intervalle du
+ * tronçon, dont la croisière est justement dimensionnée (data/segments).
+ */
+function nextTrainsFromCar(index: number): NextTrains {
+  const { phase } = useStore.getState();
+  const t = runtime.phaseT;
+  const dwell = dwellDuration(index);
+  /** D'une rame à quai à la suivante à quai : l'intervalle réel du tronçon. */
+  const cycle = journeyDuration(index) + CONFIG.dwellTime;
+  switch (phase) {
+    case 'brake': {
+      const first = Math.max(0, CONFIG.brakeTime - t);
+      return { first, second: first + cycle, leaving: false };
+    }
+    case 'dwell':
+      // La 発車メロディ est le signal de départ : c'est à elle, et non à la
+      // fermeture des portes, que le tableau passe en 「まもなく発車」.
+      return {
+        first: null,
+        second: Math.max(60, cycle - t),
+        leaving: t >= melodyStartAt(index, dwell),
+      };
+    case 'depart':
+      return { first: null, second: Math.max(60, cycle - dwell - t), leaving: true };
+    default: {
+      const first = Math.max(0, cruiseDuration(index) - t) + CONFIG.brakeTime;
+      return { first, second: first + cycle, leaving: false };
+    }
+  }
+}
 
 /**
  * Ce que le tableau doit afficher, à cet instant.
  *
  * Deux sources selon l'endroit d'où l'on regarde : debout sur le quai, c'est
  * `platformWait` qui mène la danse ; à bord, c'est la phase du cycle station.
- * Les deux disent la même chose de la même rame, vue de deux côtés.
+ * Les deux disent la même chose de la même rame, vue de deux côtés — et la
+ * mise en forme (約N分後, まもなく, ou l'heure aux premières et dernières
+ * circulations) est la même pour les deux : data/departureBoard.
  */
-function boardView(t: number): BoardView {
+function boardView(t: number, index: number): BoardView {
   const english = Math.floor(t / CYCLE) % 2 === 1;
-  if (runtime.playerFrame === 'platform') {
-    const { stage } = platformWait;
-    if (stage === 'departing') {
-      return { status: 'departing', minutes: 0, english, blink: Math.floor(t * 2) % 2 === 0 };
-    }
-    if (stage === 'clear') {
-      const left = Math.max(0, HEADWAY - platformWait.t);
-      return { status: 'waiting', minutes: Math.max(1, Math.ceil(left / 60)), english, blink: false };
-    }
-    if (stage === 'approaching' || stage === 'berthing') {
-      return { status: 'approaching', minutes: 0, english, blink: false };
-    }
-    return { status: 'boarding', minutes: 0, english, blink: false };
-  }
-  const { phase } = useStore.getState();
-  if (phase === 'brake') return { status: 'approaching', minutes: 0, english, blink: false };
-  if (phase === 'depart') {
-    return { status: 'departing', minutes: 0, english, blink: Math.floor(t * 2) % 2 === 0 };
-  }
-  if (phase === 'dwell') return { status: 'boarding', minutes: 0, english, blink: false };
-  return { status: 'waiting', minutes: 2, english, blink: false };
-}
-
-/** Deux vues sont-elles assez différentes pour mériter un redessin ? */
-function sameView(a: BoardView, b: BoardView): boolean {
-  return (
-    a.status === b.status &&
-    a.minutes === b.minutes &&
-    a.english === b.english &&
-    a.blink === b.blink
-  );
+  const next =
+    runtime.playerFrame === 'platform' ? nextTrainsFromPlatform(index) : nextTrainsFromCar(index);
+  return {
+    rows: boardRows(next, runtime.clockMin),
+    english,
+    // Le tableau ne bat que sur la FERMETURE : 「まもなく発車」 s'affiche dès la
+    // mélodie, mais une ligne qui clignote une demi-minute durant ne se lit
+    // plus. Les vantaux sont le signal, d'où qu'on regarde.
+    blink: next.leaving && runtime.doorTarget === 0 && Math.floor(t * 2) % 2 === 0,
+  };
 }
 
 export function PlatformSignage({
@@ -269,8 +292,10 @@ export function PlatformSignage({
     }
     // L'afficheur ne se redessine que lorsqu'il a réellement changé : sinon on
     // repeindrait un canvas de 1024 × 256 soixante fois par seconde pour rien.
-    const view = boardView(clock.current);
-    if (!lastView.current || !sameView(lastView.current, view)) {
+    // Le tableau est celui du quai qu'on longe, et non de la gare visée : c'est
+    // `signIndex` qui donne son intervalle comme il donne son nom.
+    const view = boardView(clock.current, signIndex);
+    if (!lastView.current || !sameBoardView(lastView.current, view)) {
       lastView.current = view;
       board.redraw(signIndex, view);
     }

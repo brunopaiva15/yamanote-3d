@@ -135,6 +135,32 @@ export const TRANSFERS: Record<string, { jp: string; en: string }> = {
  * prochaine, puis les repères — celles où l'on change de ligne. TRANSFERS est
  * exactement cette liste, et sert déjà aux annonces de correspondance.
  */
+/**
+ * Les gares repères de la boucle : 東京, 上野, 池袋, 新宿, 渋谷, 品川.
+ *
+ * Ce sont elles, et elles seules, que JR nomme dans un 方面 court. Un tableau
+ * des départs de Tamachi annonce 「東京・上野方面」 et non 「浜松町・新橋方面」,
+ * bien que Hamamatsuchō soit l'arrêt suivant : on ne prend pas la Yamanote pour
+ * la gare d'après, on la prend pour un de ces six points.
+ */
+const LOOP_HUBS = ['JY01', 'JY05', 'JY13', 'JY17', 'JY20', 'JY25'];
+
+/**
+ * Les deux repères que le 発車標 met dans sa colonne de droite.
+ *
+ * Le résultat retombe exactement sur les couples réels : 東京・上野 depuis
+ * Tamachi, 渋谷・品川 depuis Shinjuku, 新宿・渋谷 depuis Ikebukuro,
+ * 池袋・新宿 depuis Ueno.
+ */
+export function boardDestinations(index: number, max = 2): Station[] {
+  const out: Station[] = [];
+  for (let step = 1; step < 30 && out.length < max; step++) {
+    const st = STATIONS[(index + step) % 30];
+    if (LOOP_HUBS.includes(st.jy)) out.push(st);
+  }
+  return out;
+}
+
 export function directionBoardStations(index: number, max = 5): Station[] {
   const out: Station[] = [STATIONS[(index + 1) % 30]];
   for (let step = 2; step < 30 && out.length < max; step++) {

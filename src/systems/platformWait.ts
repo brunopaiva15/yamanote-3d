@@ -14,6 +14,7 @@
 // le suivant arrive depuis les z positifs.
 
 import { CONFIG, V_MAX } from '../data/config';
+import type { NextTrains } from '../data/departureBoard';
 import { DOOR_SIDE } from '../data/stations';
 import { useStore } from '../store';
 import { advanceClock, runtime } from './runtime';
@@ -364,6 +365,90 @@ function updateBerthing(index: number): void {
     paArrival(index);
   });
   if (platformWait.t >= BERTH_SETTLE) enter('boardable');
+}
+
+// --- Ce que le 発車標 a le droit d'annoncer ------------------------------
+
+/**
+ * Durées mesurées une fois sur le profil E235 lui-même, et non estimées : le
+ * tableau des départs annonce des minutes, et une minute d'écart se voit. Ce
+ * sont exactement les deux courses que les étapes ci-dessus font tourner —
+ * dégager les 320 m du quai, et freiner depuis la vitesse de ligne.
+ */
+function runTime(from: number, to: number, until: (s: TrainState) => boolean): number {
+  const s: TrainState = { v: from, a: 0, d: 0 };
+  const dt = 1 / 30;
+  let t = 0;
+  while (!until(s) && t < 180) {
+    integrateTrain(s, from === 0 && t < DEPART_HOLD ? 0 : to, dt);
+    t += dt;
+  }
+  return t;
+}
+
+let clearRun = 0;
+/** Temps que met la rame qui part à disparaître au bout du quai (s). */
+function clearRunTime(): number {
+  if (!clearRun) clearRun = runTime(0, V_MAX, (s) => s.d >= OUT_OF_SIGHT);
+  return clearRun;
+}
+
+let approachRun = 0;
+/** Temps de freinage, du moment où la rame paraît à l'arrêt complet (s). */
+function approachRunTime(): number {
+  if (!approachRun) approachRun = runTime(V_MAX, 0, (s) => s.v <= 0.02);
+  return approachRun;
+}
+
+/**
+ * Dans combien de temps la prochaine rame sera à quai, portes ouvertes, et
+ * celle d'après — les deux lignes du 発車標.
+ *
+ * `first` vaut null tant qu'une rame est là : le tableau écrit alors 「まもなく」
+ * ou 「まもなく発車」 selon qu'elle embarque ou qu'elle s'ébranle, et sa seconde
+ * ligne annonce la suivante.
+ *
+ * Le creux retenu est celui du tour en cours (`headway`), rallonge de passage
+ * comprise : c'est la seule prévision honnête dont le quai dispose, et le 約
+ * du tableau ne promet pas mieux.
+ */
+export function nextTrainsFromPlatform(index: number): NextTrains {
+  const t = platformWait.t;
+  const dwell = dwellDuration(index);
+  /** Du bout du quai aux portes ouvertes. */
+  const arrive = approachRunTime() + BERTH_SETTLE;
+  /** D'un départ de rame à l'arrivée de la suivante. */
+  const gap = clearRunTime() + headway + arrive;
+  /** D'une rame à quai à la suivante à quai. */
+  const cycle = dwell + gap;
+  switch (platformWait.stage) {
+    case 'boardable':
+      // La 発車メロディ est le signal de départ : c'est à elle, et non à la
+      // fermeture des portes, que le tableau passe en 「まもなく発車」.
+      return {
+        first: null,
+        second: Math.max(0, dwell - t) + gap,
+        leaving: t >= melodyStartAt(index, dwell),
+      };
+    case 'departing':
+      return {
+        first: null,
+        second: Math.max(0, clearRunTime() - t) + headway + arrive,
+        leaving: true,
+      };
+    case 'clear': {
+      const first = Math.max(0, headway - t) + arrive;
+      return { first, second: first + cycle, leaving: false };
+    }
+    case 'approaching': {
+      const first = Math.max(0, approachRunTime() - t) + BERTH_SETTLE;
+      return { first, second: first + cycle, leaving: false };
+    }
+    default: {
+      const first = Math.max(0, BERTH_SETTLE - t);
+      return { first, second: first + cycle, leaving: false };
+    }
+  }
 }
 
 // --- Boucle -------------------------------------------------------------

@@ -4,7 +4,8 @@
 
 import * as THREE from 'three';
 import { AD_PALETTES, AD_SUBS, AD_WORDS } from '../data/ads';
-import { STATIONS, TRANSFERS, directionBoardStations } from '../data/stations';
+import { STATIONS, TRANSFERS, boardDestinations, directionBoardStations } from '../data/stations';
+import { LCD_BOARDS, type BoardEta, type BoardView } from '../data/departureBoard';
 import { PLATFORM_NUMBERS } from '../data/platforms';
 import { lineInfo, stationExits } from '../data/lines';
 import { GENERIC, type District, type Feat } from '../data/districts';
@@ -2345,26 +2346,107 @@ export function makeTotemGuide(): {
   return { texture, redraw };
 }
 
-// --- Tableau d'affichage suspendu (ホームの電光掲示板) ---
+// --- 発車標 : le tableau des départs suspendu au-dessus du quai ---
+
+/** Un morceau de texte et sa taille, pour composer une ligne à tailles mêlées. */
+type Run = { text: string; px: number };
+
 /**
- * État réel affiché par le tableau des départs.
+ * Écrit une suite de morceaux d'un seul tenant, réduits ensemble s'il le faut.
  *
- * L'ancien tableau annonçait « まもなく発車 » en permanence, y compris en pleine
- * voie entre deux gares, où il n'y a aucun train le long du quai. Un tableau de
- * quai dit ce qui se passe MAINTENANT : c'est ce qu'on regarde en arrivant, et
- * la seule surface animée d'un quai japonais.
+ * C'est ce qui donne au 約N分後 sa physionomie d'afficheur : le chiffre est
+ * deux fois plus haut que le 約 et le 分後 qui l'encadrent, et les trois
+ * restent solidaires. Les tailles sont alignées sur le PLUS GRAND morceau —
+ * une ligne de kana seuls ne se centre pas comme une ligne à gros chiffre.
  */
-export interface BoardView {
-  /** Ce que fait le prochain train. */
-  status: 'approaching' | 'boarding' | 'departing' | 'waiting';
-  /** Minutes avant le prochain train, quand on l'attend. */
-  minutes: number;
-  /** Le bandeau alterne japonais et anglais, comme un vrai afficheur. */
-  english: boolean;
-  /** Clignotement, quand la fermeture des portes est imminente. */
-  blink: boolean;
+function drawRuns(
+  g: CanvasRenderingContext2D,
+  runs: Run[],
+  x: number,
+  cy: number,
+  maxWidth: number,
+  align: 'left' | 'center' | 'right' = 'center',
+): void {
+  const widths = (k: number) =>
+    runs.map((r) => {
+      g.font = `bold ${r.px * k}px ${JP_FONT}`;
+      return g.measureText(r.text).width;
+    });
+  let w = widths(1);
+  let total = w.reduce((a, b) => a + b, 0);
+  let k = 1;
+  if (total > maxWidth) {
+    k = maxWidth / total;
+    w = widths(k);
+    total = w.reduce((a, b) => a + b, 0);
+  }
+  const big = Math.max(...runs.map((r) => r.px)) * k;
+  const y = cy + big * 0.35;
+  let cursor = align === 'left' ? x : align === 'right' ? x - total : x - total / 2;
+  runs.forEach((r, i) => {
+    g.font = `bold ${r.px * k}px ${JP_FONT}`;
+    g.fillText(r.text, cursor, y);
+    cursor += w[i];
+  });
 }
 
+/**
+ * Trame de la matrice à LED : une cellule de trois pixels dont l'inter-diode
+ * est noirci. Un seul petit canvas pour toute la session, repassé en motif
+ * par-dessus le tableau fini — c'est ce qui fait la différence entre du texte
+ * sur fond noir et un afficheur.
+ */
+let ledCell: HTMLCanvasElement | null = null;
+function ledMask(): HTMLCanvasElement {
+  if (ledCell) return ledCell;
+  const { c, g } = makeCanvas(3, 3);
+  g.fillStyle = 'rgba(0,0,0,0.55)';
+  g.fillRect(2, 0, 1, 3);
+  g.fillRect(0, 2, 3, 1);
+  ledCell = c;
+  return c;
+}
+
+/** Ce qu'écrit la colonne du milieu, en morceaux de tailles mêlées. */
+function etaRuns(eta: BoardEta, english: boolean): Run[] {
+  switch (eta.kind) {
+    case 'soon':
+      return [{ text: english ? 'Soon' : 'まもなく', px: 46 }];
+    case 'departing':
+      return [{ text: english ? 'Departing' : 'まもなく発車', px: 40 }];
+    case 'time':
+      return [{ text: eta.hhmm, px: 60 }];
+    default:
+      return english
+        ? [
+            { text: String(eta.minutes), px: 66 },
+            { text: ' min.', px: 40 },
+          ]
+        : [
+            { text: '約', px: 34 },
+            { text: String(eta.minutes), px: 66 },
+            { text: '分後', px: 34 },
+          ];
+  }
+}
+
+/**
+ * Le tableau des départs, tel qu'on le lit sur un quai de la Yamanote depuis
+ * 2020 : DEUX rames, l'une sous l'autre, et pour chacune la même phrase —
+ * la ligne, dans combien de temps, et vers où.
+ *
+ *     山手線　約2分後　東京・上野方面
+ *     山手線　約5分後　東京・上野方面
+ *
+ * L'ancien tableau tenait sur une ligne, mêlait le numéro de quai (que le
+ * caisson 番線 porte déjà, deux mètres plus loin), la gare suivante (que dit
+ * la bande directionnelle) et un état en toutes lettres. Il disait beaucoup,
+ * mais rien de ce qu'on vient y chercher : dans combien de temps.
+ *
+ * Deux équipements coexistent sur la ligne et le dessin change avec eux : la
+ * matrice à LED ambre et verte, avec son inter-diode visible, et les dalles
+ * LCD des quais refaits (voir LCD_BOARDS).
+ */
 export function makePlatformBoard(): {
   canvas: HTMLCanvasElement;
   texture: THREE.CanvasTexture;
@@ -2376,85 +2458,66 @@ export function makePlatformBoard(): {
   const texture = toTexture(c);
 
   const redraw = (index: number, view: BoardView) => {
-    const st = STATIONS[index];
-    const ahead = directionBoardStations(index, 3);
-    const jy = st.jy;
-    // Le jeu tourne en 内回り (voir LOOP_JP) : c'est ce quai-là, et c'est ce
-    // numéro-là que la sono du quai annonce (「N番線」). Les deux doivent dire
-    // la même chose, sans quoi on lit un chiffre et on en entend un autre.
-    const track = PLATFORM_NUMBERS[jy]?.inner ?? 1;
+    const lcd = LCD_BOARDS.has(STATIONS[index].jy);
+    // Deux repères de la boucle, et non les deux gares suivantes : un tableau
+    // de Tamachi annonce 「東京・上野方面」 quand l'arrêt d'après est Hamamatsuchō.
+    const ahead = boardDestinations(index, 2);
+    const dest = view.english
+      ? ahead.map((s) => s.romaji.toUpperCase()).join(' & ')
+      : ahead.map((s) => s.kanji).join('・');
 
-    g.fillStyle = '#0c1016';
+    // Sur LED, l'ambre et le vert sont les deux seules couleurs disponibles ;
+    // la dalle LCD, elle, écrit en blanc et réserve la couleur au délai.
+    const nameColor = lcd ? '#eef3f8' : '#ff9a2e';
+    const destColor = lcd ? '#eef3f8' : '#ff9a2e';
+    const timeColor = lcd ? '#63e88a' : '#4bee63';
+
+    g.fillStyle = lcd ? '#070c14' : '#04060a';
     g.fillRect(0, 0, W, H);
-    g.fillStyle = '#80c241';
-    g.fillRect(0, 0, W, 8);
-    g.fillRect(0, H - 8, W, 8);
 
-    // --- Colonne de gauche : la ligne et le quai ---
     g.textAlign = 'left';
     g.textBaseline = 'alphabetic';
-    g.fillStyle = '#d8ffe0';
-    g.font = `bold 44px ${JP_FONT}`;
-    g.fillText('山手線', 34, 66);
-    g.font = `26px ${JP_FONT}`;
-    g.fillStyle = '#9aa3b0';
-    g.fillText('Yamanote Line', 34, 100);
+    // Halo de diode : le texte d'un afficheur bave un peu sur son fond noir.
+    g.shadowBlur = lcd ? 0 : 10;
 
-    g.fillStyle = '#80c241';
-    g.beginPath();
-    g.roundRect(34, 126, 96, 92, 10);
-    g.fill();
-    g.fillStyle = '#0c1016';
-    g.textAlign = 'center';
-    g.font = `bold 62px ${JP_FONT}`;
-    g.fillText(String(track), 82, 196);
-    g.font = `bold 20px ${JP_FONT}`;
-    g.fillText('番線', 82, 148);
+    view.rows.slice(0, 2).forEach((eta, row) => {
+      const cy = 68 + row * 118;
+      const dim = view.blink && row === 0;
 
-    // --- Colonne centrale : la destination ---
-    g.textAlign = 'left';
-    g.fillStyle = '#f2f6fa';
-    fitFillText(g, `${ahead.map((x) => x.kanji).join('・')}方面`, 158, 116, 500, 46);
-    g.fillStyle = '#7f8794';
-    fitFillText(g, `for ${ahead.map((x) => x.romaji).join(', ')}`, 158, 152, 500, 26, '400');
+      // Une diode éteinte est éteinte : le battement du 発車 laisse à peine la
+      // trace d'ambre que garde une matrice qu'on vient de couper.
+      g.fillStyle = g.shadowColor = dim ? '#140d05' : nameColor;
+      drawRuns(g, [{ text: view.english ? 'YAMANOTE LINE' : '山手線', px: 50 }], 30, cy, 268, 'left');
 
-    // Filet, puis la gare suivante — celle qu'on atteint en montant ici.
-    g.fillStyle = 'rgba(255,255,255,0.16)';
-    g.fillRect(158, 168, 500, 2);
-    g.fillStyle = '#c8cdd6';
-    g.font = `24px ${JP_FONT}`;
-    g.fillText('次は', 158, 204);
-    g.fillStyle = '#f2f6fa';
-    fitFillText(g, STATIONS[(index + 1) % 30].kanji, 210, 206, 220, 34);
-    g.fillStyle = '#7f8794';
-    g.font = `20px ${JP_FONT}`;
-    g.fillText(STATIONS[(index + 1) % 30].romaji, 210, 232);
+      g.fillStyle = g.shadowColor = dim ? '#08120a' : timeColor;
+      drawRuns(g, etaRuns(eta, view.english), 460, cy, 290);
 
-    // --- Colonne de droite : l'état, en gros, et il change ---
-    const band: Record<BoardView['status'], { jp: string; en: string; color: string }> = {
-      approaching: { jp: 'まもなく到着', en: 'Arriving', color: '#ffd66a' },
-      boarding: { jp: 'ご乗車ください', en: 'Now boarding', color: '#9be36a' },
-      departing: { jp: 'まもなく発車', en: 'Departing', color: '#ff8f6a' },
-      waiting: { jp: `約 ${view.minutes} 分後`, en: `in about ${view.minutes} min`, color: '#7fb6ff' },
-    };
-    const b = band[view.status];
-    g.textAlign = 'right';
-    // Le clignotement ne s'applique qu'à la fermeture imminente : partout
-    // ailleurs, un afficheur qui bat serait illisible.
-    g.fillStyle = view.blink ? '#20262e' : b.color;
-    fitFillText(g, view.english ? b.en : b.jp, W - 34, 108, 330, view.english ? 44 : 52);
-    g.fillStyle = '#8b929c';
-    g.font = `22px ${JP_FONT}`;
-    g.fillText(view.english ? b.jp : b.en, W - 34, 146);
+      g.fillStyle = g.shadowColor = dim ? '#140d05' : destColor;
+      drawRuns(g, [{ text: dest, px: 46 }], W - 74, cy, 340, 'right');
 
-    // Voyant d'activité : trois points qui suivent l'alternance de langue.
-    for (let k = 0; k < 3; k++) {
-      g.fillStyle = k === (view.english ? 1 : 0) ? b.color : 'rgba(255,255,255,0.18)';
-      g.beginPath();
-      g.arc(W - 34 - k * 22, 190, 6, 0, Math.PI * 2);
-      g.fill();
+      // 「方面」 en colonne, contre le bord droit : la mention est verticale sur
+      // les vrais tableaux, où elle tient dans la largeur d'un caractère.
+      if (!view.english) {
+        g.font = `bold 21px ${JP_FONT}`;
+        g.fillText('方', W - 60, cy - 6);
+        g.fillText('面', W - 60, cy + 20);
+      }
+    });
+
+    g.shadowBlur = 0;
+
+    if (lcd) {
+      // Filet de séparation : la dalle sépare ses deux lignes par un trait, là
+      // où la matrice à LED se contente du noir entre les diodes.
+      g.fillStyle = 'rgba(255,255,255,0.12)';
+      g.fillRect(24, H / 2, W - 48, 2);
+    } else {
+      const dots = g.createPattern(ledMask(), 'repeat');
+      if (dots) {
+        g.fillStyle = dots;
+        g.fillRect(0, 0, W, H);
+      }
     }
-    g.textAlign = 'left';
 
     texture.needsUpdate = true;
   };
