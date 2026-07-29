@@ -72,6 +72,7 @@ import {
   resetMelodyDepartureGuard,
 } from './departureSequence';
 import { melodyRoundsDuration } from '../data/melodies';
+import { PLATFORM_SCHEDULE } from './platformAnnouncementPlan';
 import {
   armDoorObstruction,
   doorObstructionActive,
@@ -533,11 +534,43 @@ function melodyLead(): number {
 const APPROACH_ANNOUNCE_LEAD = 20.0;
 
 /**
+ * Creux annoncé au plan d'annonces du quai quand on est DANS la rame (s).
+ *
+ * De l'intérieur, on n'entend jamais l'annonce anticipée du prochain train — la
+ * seule décision du plan qui dépende du creux. La valeur ne sert donc qu'à
+ * remplir le contexte, et c'est l'intervalle ordinaire de la Yamanote.
+ */
+const PLATFORM_PLAN_HEADWAY = 120;
+
+/**
+ * Avance du second message d'agent sur la mélodie (s) : le même créneau que sur
+ * le quai — la chronologie est partagée (systems/platformAnnouncementPlan).
+ */
+const AGENT_PRE_MELODY_LEAD = PLATFORM_SCHEDULE.agentPreMelodyLead;
+
+/**
  * Instant du tirage d'un passage sur la voie d'en face, en temps de dwell :
  * après le nom de la gare, l'agent et « laissez descendre », avant l'annonce
  * de fermeture. C'est le seul silence de l'arrêt, et il n'est pas long.
  */
 const PASS_ROLL_AT = 12.0;
+
+/**
+ * Instant du second message d'agent (temps de dwell).
+ *
+ * Il vise la mélodie — assez tôt pour finir dessus —, mais il laisse d'abord
+ * passer le tirage du train qui traverse : celui-là exige le silence de la sono
+ * du quai (`rollPassThrough` renonce si elle parle), et une consigne de plus
+ * vaut moins qu'un rapide à trois mètres du bord. Si le passage est tiré, c'est
+ * lui qui occupe la file et le message tombe de lui-même (créneau vérifié à la
+ * diffusion).
+ */
+function agentSecondAt(stationIndex: number, dwell: number): number {
+  return Math.max(
+    PASS_ROLL_AT + 1.5,
+    melodyStartAt(stationIndex, dwell) - AGENT_PRE_MELODY_LEAD,
+  );
+}
 
 /**
  * Chronologie tirée pour l'arrêt en cours. Tirée UNE fois, à l'entrée en
@@ -746,6 +779,7 @@ function seedFired(phase: Phase, t: number, stationIndex: number, dir: LoopDirec
     if (t > 0.4 + stationTimings.psdOpenDelay + 0.6) fired.add('pa-alight');
     if (t > 1.6) fired.add('exchange');
     if (t > 6) fired.add('pa-agent');
+    if (t > agentSecondAt(stationIndex, dwell)) fired.add('pa-agent-2');
     if (t > PASS_ROLL_AT) fired.add('pass-roll');
     if (t >= melodyStartAt(stationIndex, dwell)) fired.add('melody');
     if (t >= melodyCutAt(stationIndex, dwell)) fired.add('melody-cut');
@@ -998,7 +1032,7 @@ export function updateCycle(dt: number): void {
       // Séquence JR approche : まもなく(+portes) → 乗換?, lancée avant le
       // freinage pour que les grandes gares finissent autour de l'arrêt.
       once('announce-soon', t >= cruiseSec - APPROACH_ANNOUNCE_LEAD, () =>
-        say(approachSequence(s.index, DOOR_SIDE[s.index])),
+        say(approachSequence(s.index, DOOR_SIDE[s.index], s.loopDirection)),
       );
       // Petits événements sonores de course, rares et discrets : crissement
       // de boudin dans une courbe, purge d'air sous le plancher.
@@ -1052,9 +1086,22 @@ export function updateCycle(dt: number): void {
       // Les portes palières s'ouvrent avec un temps de retard sur la rame,
       // variable selon la gare.
       once('psd-open', t > 0.4 + stationTimings.psdOpenDelay, () => setPsdDoors(1));
-      once('pa-alight', t > 0.4 + stationTimings.psdOpenDelay + 0.6, () => paAlightFirst());
+      // Ce que l'agent de quai dit par les portes ouvertes suit le même plan que
+      // sur le quai (systems/platformAnnouncementPlan) : zéro, un ou deux
+      // messages selon l'affluence, l'heure, la gare et le retard — et plus
+      // « laissez descendre » à chaque ouverture de portes.
+      once('pa-alight', t > 0.4 + stationTimings.psdOpenDelay + 0.6, () =>
+        paAlightFirst(s.index, PLATFORM_PLAN_HEADWAY),
+      );
       once('exchange', t > 1.6, () => exchangePassengers(s.doorSide));
-      once('pa-agent', t > 6, () => paAgentMessage());
+      once('pa-agent', t > 6, () =>
+        paAgentMessage(s.index, PLATFORM_PLAN_HEADWAY, 0, melodyStartAt(s.index, dwell) - t),
+      );
+      // Et le second, s'il y en a un, avant la mélodie et après le tirage du
+      // passage : abandonné s'il n'a plus la place de finir sur la première note.
+      once('pa-agent-2', t > agentSecondAt(s.index, dwell), () =>
+        paAgentMessage(s.index, PLATFORM_PLAN_HEADWAY, 1, melodyStartAt(s.index, dwell) - t),
+      );
       // La voie d'en face, quand elle n'est pas la nôtre : un rapide peut la
       // traverser pendant qu'on est à quai. Le créneau va d'ici à l'annonce de
       // fermeture du quai — la seule chose que la gare ait encore à dire — et

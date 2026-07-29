@@ -13,7 +13,7 @@
 // Le niveau, lui, n'est pas décidé ici : audioEngine tient le robinet
 // (platVoiceGain) et fait de la voix du quai un lointain dès qu'on est à bord.
 
-import { platformFor } from '../data/platforms';
+import { platformFor, type LoopDirection } from '../data/platforms';
 import { nearestSpeakers, SPEAKER_GRILLE_DROP, speakerX } from '../data/stationGeometry';
 import { layoutFor } from '../data/stationLayouts';
 import {
@@ -33,19 +33,43 @@ import {
   platformTrainEnteringAnnouncement,
   type StationUtterance,
 } from '../data/stationAnnouncements';
+import { platformNoticesForStation } from '../data/stationAnnouncementRules';
 import { STATIONS } from '../data/stations';
+import { estimateOccupancy } from './occupancy';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import * as audio from './audioEngine';
+import {
+  createPlatformAnnouncementPlan,
+  fitsBeforeCutoff,
+  platformPlanSeed,
+  seededRandom,
+  type PlatformAnnouncementContext,
+  type PlatformAnnouncementPlan,
+} from './platformAnnouncementPlan';
 import { platformToWorld } from './playerFrame';
 import { runtime } from './runtime';
-import { say } from './speech';
+import { say, speechQueueRemaining, utteranceDuration } from './speech';
 import { placementFor } from './stationPlacement';
+
+/**
+ * Sens desservi par le quai où l'on se trouve. Toutes les annonces automatiques
+ * japonaises en dépendent — pas seulement pour ce qu'elles disent (le nom de la
+ * boucle, les gares repères, le numéro de voie) mais pour la BOUCHE qui le dit :
+ * l'automate du 内回り est une femme, celui du 外回り un homme (voir
+ * data/stationAnnouncements.atosVoiceForDirection).
+ *
+ * Le sens est lu ici, une fois, et passé en argument aux fonctions de données —
+ * elles n'ont pas à connaître le store.
+ */
+function dir(): LoopDirection {
+  return useStore.getState().loopDirection;
+}
 
 /** Numéro de voie desservie, tel qu'il est annoncé (「3番線」). */
 export function currentPlatformNumber(index: number): number {
   const station = STATIONS[index];
-  const info = platformFor(station.jy, useStore.getState().loopDirection);
+  const info = platformFor(station.jy, dir());
   if (!info) return 1;
   if (runtime.useAlternativePlatform && info.alternativePlatform != null) {
     return info.alternativePlatform;
@@ -151,28 +175,140 @@ export function lineDelayed(): boolean {
   return runtime.stopSequence - delayStop <= DELAY_LIFETIME_STOPS;
 }
 
-/** Diffuse l'excuse de retard s'il y en a une à faire, et pas trop vieille. */
-export function paDelay(): void {
-  if (pendingDelay < 0) return;
+/**
+ * Diffuse l'excuse de retard s'il y en a une à faire, et pas trop vieille.
+ * @returns vrai si quelque chose a été dit — l'appelant en a besoin pour
+ *   décaler ce qu'il comptait dire ensuite.
+ */
+export function paDelay(): boolean {
+  if (pendingDelay < 0) return false;
   const cause = pendingDelay;
   pendingDelay = -1;
-  if (runtime.stopSequence - delayStop > DELAY_LIFETIME_STOPS) return;
-  say(platformDelayAnnouncement(cause), 'platform');
+  if (runtime.stopSequence - delayStop > DELAY_LIFETIME_STOPS) return false;
+  say(platformDelayAnnouncement(cause, dir()), 'platform');
+  return true;
+}
+
+// --- Le plan d'annonces de l'attente en cours ----------------------------
+//
+// Une seule décision par rame attendue : ce qui va passer, et ce qui ne passera
+// pas. Le calcul lui-même est pur (systems/platformAnnouncementPlan) ; ce qui
+// vit ici, c'est la lecture du monde — l'heure de Tokyo, l'affluence estimée du
+// tronçon, le retard — et la mémoire du plan jusqu'au départ de la rame.
+
+/** Affluence normalisée (0–1) à partir du taux de remplissage estimé. */
+const CROWD_FROM_PERCENT = 30;
+const CROWD_TO_PERCENT = 150;
+
+/**
+ * Affluence du tronçon qui part de cette gare, ramenée entre 0 et 1.
+ *
+ * On lit le modèle de remplissage (systems/occupancy) plutôt que le nombre de
+ * PNJ présents sur le quai : celui-là dépend du réglage de qualité vidéo, et la
+ * sonorisation d'une gare ne doit pas changer parce qu'on a baissé les détails.
+ */
+function crowdLevelFor(index: number, direction: LoopDirection): number {
+  const { percent } = estimateOccupancy({
+    fromIndex: index,
+    minutes: runtime.clockMin,
+    date: runtime.tokyoDate,
+    direction,
+  });
+  const t = (percent - CROWD_FROM_PERCENT) / (CROWD_TO_PERCENT - CROWD_FROM_PERCENT);
+  return Math.max(0, Math.min(1, t));
+}
+
+/** Plan en cours, et la rame à laquelle il appartient. */
+let plan: PlatformAnnouncementPlan | null = null;
+let planStop = -1;
+
+/**
+ * Contexte du plan, tel que la gare le voit à cet instant. Exporté pour la mise
+ * au point : c'est la seule entrée du tirage.
+ */
+export function platformAnnouncementContext(
+  index: number,
+  headwaySeconds: number,
+  stopSequence = runtime.stopSequence,
+): PlatformAnnouncementContext {
+  const direction = dir();
+  return {
+    stationIndex: index,
+    direction,
+    headwaySeconds,
+    hour: runtime.clockMin / 60,
+    crowdLevel: crowdLevelFor(index, direction),
+    delayed: lineDelayed(),
+    stopSequence,
+  };
+}
+
+/**
+ * Établit le plan de la rame attendue. Appelé UNE fois par attente — à l'entrée
+ * du creux entre deux rames, ou à l'arrivée d'une rame pour ce qu'elle dira à
+ * quai. Rappelé pour le même arrêt, il ne retire rien : la graine ne dépend que
+ * de l'arrêt, donc le plan est le même.
+ */
+export function planPlatformAnnouncements(
+  index: number,
+  headwaySeconds: number,
+  stopSequence = runtime.stopSequence,
+): PlatformAnnouncementPlan {
+  const context = platformAnnouncementContext(index, headwaySeconds, stopSequence);
+  plan = createPlatformAnnouncementPlan(context, seededRandom(platformPlanSeed(context)));
+  planStop = stopSequence;
+  return plan;
+}
+
+/**
+ * Le plan en cours. Jamais null pour l'appelant : sans plan établi (entrée en
+ * jeu au milieu d'un arrêt), on en fabrique un pour l'arrêt courant plutôt que
+ * de laisser la gare muette.
+ */
+export function currentPlatformPlan(
+  index: number,
+  headwaySeconds: number,
+  stopSequence = runtime.stopSequence,
+): PlatformAnnouncementPlan {
+  if (!plan || planStop !== stopSequence) {
+    return planPlatformAnnouncements(index, headwaySeconds, stopSequence);
+  }
+  return plan;
 }
 
 // --- Séquence d'approche --------------------------------------------------
 
-/** Annonce anticipée du prochain train, précédée du remerciement d'usage. */
-export function paPreAnnouncement(index: number, withGreeting = false): void {
+/**
+ * Annonce anticipée du prochain train, éventuellement précédée du remerciement.
+ *
+ * `cutoffIn` est le temps qui reste avant l'annonce d'approche, qui elle n'est
+ * pas facultative : si l'anticipée n'y tient pas (une excuse de retard vient de
+ * passer, le creux est court), on l'abandonne. Elle ne se repousse pas — une
+ * anticipée qui sortirait par-dessus le carillon d'approche annoncerait un train
+ * déjà en train d'arriver.
+ *
+ * @returns vrai si l'annonce a bien été mise en file.
+ */
+export function paPreAnnouncement(
+  index: number,
+  withGreeting = false,
+  cutoffIn = Number.POSITIVE_INFINITY,
+): boolean {
   const platform = currentPlatformNumber(index);
-  const dir = useStore.getState().loopDirection;
-  say(
-    [
-      ...(withGreeting ? platformGreeting() : []),
-      ...platformPreAnnouncement(index, platform, dir),
-    ],
-    'platform',
-  );
+  const direction = dir();
+  const items = [
+    ...(withGreeting ? platformGreeting(direction) : []),
+    ...platformPreAnnouncement(index, platform, direction),
+    ...platformNoticesForStation(STATIONS[index].jy, direction, 'pre-approach'),
+  ];
+  if (
+    cutoffIn !== Number.POSITIVE_INFINITY &&
+    !fitsBeforeCutoff(utteranceDuration(items), speechQueueRemaining('platform'), cutoffIn)
+  ) {
+    return false;
+  }
+  say(items, 'platform');
+  return true;
 }
 
 /**
@@ -186,24 +322,31 @@ function sayAfterSignal(items: StationUtterance[], signalS: number): void {
   say(items, 'platform', Math.round(signalS * 1000) + SIGNAL_TO_VOICE_MS);
 }
 
-/** Carillon ATOS puis annonce d'approche, japonais et anglais. */
+/**
+ * Carillon ATOS puis annonce d'approche, japonais et anglais, suivie de la
+ * consigne locale de la gare s'il y en a une pour ce moment-là.
+ *
+ * Celle-ci n'est jamais facultative et ne se plie à aucun plan : une rame qui
+ * entre en gare s'annonce.
+ */
 export function paApproach(index: number): void {
   const chime = audio.platformChime();
+  const direction = dir();
   sayAfterSignal(
-    platformApproachAnnouncement(
-      index,
-      currentPlatformNumber(index),
-      useStore.getState().loopDirection,
-    ),
+    [
+      ...platformApproachAnnouncement(index, currentPlatformNumber(index), direction),
+      ...platformNoticesForStation(STATIONS[index].jy, direction, 'approach'),
+    ],
     chime,
   );
 }
 
 /** La rame est en vue : signal électronique, puis l'avertissement court, répété. */
 export function paTrainEntering(): void {
+  const direction = dir();
   const signal = audio.platformWarningSignal();
-  sayAfterSignal(platformTrainEnteringAnnouncement(), signal);
-  say(platformTrainEnteringAnnouncement(), 'platform');
+  sayAfterSignal(platformTrainEnteringAnnouncement(direction), signal);
+  say(platformTrainEnteringAnnouncement(direction), 'platform');
 }
 
 // --- Train qui traverse ---------------------------------------------------
@@ -219,39 +362,76 @@ export function paTrainEntering(): void {
  */
 export function paPass(track: number, withEnglish: boolean): void {
   const signal = audio.platformWarningSignal();
-  const items = platformPassAnnouncement(track);
+  const items = platformPassAnnouncement(track, dir());
   sayAfterSignal(withEnglish ? items : items.filter((u) => u.lang === 'ja-JP'), signal);
 }
 
 /** L'avertissement court, quand la rame débouche au bout du quai. */
 export function paPassWarning(): void {
   const signal = audio.platformWarningSignal();
-  sayAfterSignal(platformPassWarning(), signal);
+  sayAfterSignal(platformPassWarning(dir()), signal);
 }
 
 // --- À quai ---------------------------------------------------------------
 
+/** Le nom de la gare, deux fois, puis sa consigne locale d'arrivée s'il y en a. */
 export function paArrival(index: number): void {
-  say(platformArrivalAnnouncement(index), 'platform');
-}
-
-/** « Laissez descendre les voyageurs », à l'ouverture des portes. */
-export function paAlightFirst(): void {
-  say(platformAlightFirstAnnouncement(), 'platform');
+  const direction = dir();
+  say(
+    [
+      ...platformArrivalAnnouncement(index, direction),
+      ...platformNoticesForStation(STATIONS[index].jy, direction, 'arrival'),
+    ],
+    'platform',
+  );
 }
 
 /**
- * Un message d'agent pendant l'échange. La rotation suit le numéro d'arrêt :
- * deux arrêts d'affilée ne donnent pas la même phrase, mais la même gare au
- * même moment de la boucle, si.
+ * « Laissez descendre les voyageurs », à l'ouverture des portes — quand le plan
+ * de cet arrêt l'a retenu. Sur un quai désert, l'agent ne dit rien.
+ *
+ * @returns vrai si le message a été diffusé.
  */
-export function paAgentMessage(offset = 0): void {
-  say(platformAgentMessage(runtime.stopSequence + offset), 'platform');
+export function paAlightFirst(index: number, headwaySeconds: number): boolean {
+  if (!currentPlatformPlan(index, headwaySeconds).playAlightFirstMessage) return false;
+  say(platformAlightFirstAnnouncement(), 'platform');
+  return true;
+}
+
+/**
+ * Le message d'agent du créneau `slot` (0 = pendant l'échange, 1 = juste avant
+ * la mélodie), si le plan en a retenu un pour ce créneau ET s'il tient dans le
+ * temps qui reste.
+ *
+ * `cutoffIn` est le temps avant l'annonce prioritaire suivante — la mélodie, la
+ * fermeture. Un message qui déborderait est ABANDONNÉ : le repousser le ferait
+ * sortir par-dessus la mélodie, ou après la fermeture des portes qu'il
+ * demandait de dégager.
+ *
+ * @returns vrai si le message a été diffusé.
+ */
+export function paAgentMessage(
+  index: number,
+  headwaySeconds: number,
+  slot = 0,
+  cutoffIn = Number.POSITIVE_INFINITY,
+): boolean {
+  const messages = currentPlatformPlan(index, headwaySeconds).agentMessages;
+  if (slot >= messages.length) return false;
+  const items = platformAgentMessage(messages[slot]);
+  if (
+    cutoffIn !== Number.POSITIVE_INFINITY &&
+    !fitsBeforeCutoff(utteranceDuration(items), speechQueueRemaining('platform'), cutoffIn)
+  ) {
+    return false;
+  }
+  say(items, 'platform');
+  return true;
 }
 
 /** « Voie N, les portes se ferment », suivie des bips des portes palières. */
 export function paDoorsClosing(index: number): void {
-  say(platformDoorsClosingAnnouncement(currentPlatformNumber(index)), 'platform');
+  say(platformDoorsClosingAnnouncement(currentPlatformNumber(index), dir()), 'platform');
 }
 
 export function paPsdBeeps(): void {
