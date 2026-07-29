@@ -1,6 +1,13 @@
 // Gabarits d'annonces JP / EN, phrasé standard JR East (Yamanote / 通勤型).
 // Séquences : départ = 列車案内? → 次駅 → 乗換? → 案内(0–2) ;
 //             approche = まもなく(+portes) → 乗換?
+//
+// Ponctuation : la sonorisation de la RAME n'utilise aucune virgule (ni 、 ni
+// « , »), rien que des points. Le générateur de clips découpe le japonais sur
+// la ponctuation et pose un silence par coupure — plus long au 。 qu'au 、 —,
+// donc chaque respiration de ces annonces est désormais une pause pleine.
+// Toute chaîne ajoutée ici doit suivre la règle ; voir `noCommas` pour les
+// libellés importés d'ailleurs.
 
 import { STATIONS, TRANSFERS, type Station } from './stations';
 
@@ -41,6 +48,23 @@ export function nextHubs(from: number, count: number): Station[] {
   return out;
 }
 
+/**
+ * Ponctuation des annonces de bord : aucune virgule, rien que des points.
+ *
+ * Les textes de ce fichier sont écrits directement sans virgule ; cette
+ * fonction sert aux libellés venus d'ailleurs (les correspondances de
+ * `TRANSFERS`, énumérées avec des 、 et des virgules), qui alimentent aussi les
+ * écrans embarqués — on convertit donc à la lecture, sans toucher aux données.
+ * En anglais la lettre suivante passe en capitale : après un point, c'est une
+ * nouvelle phrase.
+ */
+function noCommas(text: string): string {
+  return text
+    .replace(/、/g, '。')
+    .replace(/,\s+(\p{L})/gu, (_m, c: string) => `. ${c.toUpperCase()}`)
+    .replace(/,/g, '.');
+}
+
 function doorSideJp(side: 1 | -1): string {
   return side === 1 ? '右' : '左';
 }
@@ -66,7 +90,7 @@ export function directionAnnouncement(index: number): Utterance[] {
   const enHubs =
     hubs.length === 2 ? `${hubs[0].romaji} and ${hubs[1].romaji}` : hubs[0].romaji;
   return [
-    { text: `この電車は、${LOOP_JP}、${jpHubs}方面ゆきです。`, lang: 'ja-JP' },
+    { text: `この電車は。${LOOP_JP}。${jpHubs}方面ゆきです。`, lang: 'ja-JP' },
     { text: `This is a Yamanote Line train bound for ${enHubs}.`, lang: 'en-US' },
   ];
 }
@@ -78,7 +102,7 @@ export function nextStationAnnouncement(index: number, side: 1 | -1): Utterance[
   const sideEn = doorSideEn(side);
   return [
     {
-      text: `次は、${st.kanji}、${st.kanji}。お出口は、${sideJp}側です。`,
+      text: `次は。${st.kanji}。${st.kanji}。お出口は。${sideJp}側です。`,
       lang: 'ja-JP',
     },
     {
@@ -97,7 +121,7 @@ export function approachAnnouncement(index: number, side: 1 | -1): Utterance[] {
   const sideEn = doorSideEn(side);
   return [
     {
-      text: `まもなく、${st.kanji}、${st.kanji}。お出口は、${sideJp}側です。`,
+      text: `まもなく。${st.kanji}。${st.kanji}。お出口は。${sideJp}側です。`,
       lang: 'ja-JP',
     },
     {
@@ -115,8 +139,8 @@ export function transferAnnouncement(index: number): Utterance[] {
   const tr = TRANSFERS[st.jy];
   if (!tr) return [];
   return [
-    { text: `${tr.jp}は、お乗換です。`, lang: 'ja-JP' },
-    { text: `Please change here for ${tr.en}.`, lang: 'en-US' },
+    { text: `${noCommas(tr.jp)}は。お乗換です。`, lang: 'ja-JP' },
+    { text: `Please change here for ${noCommas(tr.en)}.`, lang: 'en-US' },
   ];
 }
 
@@ -131,7 +155,7 @@ export function doorsClosingAnnouncement(): Utterance[] {
 // Accueil (hors séquence standard — conservé pour usage éventuel).
 export function welcomeAnnouncement(): Utterance[] {
   return [
-    { text: '本日も、山手線を、ご利用くださいまして、ありがとうございます。', lang: 'ja-JP' },
+    { text: '本日も。山手線を。ご利用くださいまして。ありがとうございます。', lang: 'ja-JP' },
     { text: 'Thank you for using the Yamanote Line.', lang: 'en-US' },
   ];
 }
@@ -142,7 +166,7 @@ export function prioritySeatsAnnouncement(): Utterance[] {
   return [
     {
       text:
-        'この電車には、優先席があります。優先席を必要とされるお客様がいらっしゃいましたら、席をお譲りください。お客様のご協力をお願いいたします。',
+        'この電車には。優先席があります。優先席を必要とされるお客様がいらっしゃいましたら。席をお譲りください。お客様のご協力をお願いいたします。',
       lang: 'ja-JP',
     },
     {
@@ -156,13 +180,13 @@ export function mannersAnnouncement(): Utterance[] {
   return [
     {
       text:
-        'お客様にお願いいたします。優先席付近では、携帯電話の電源をお切りください。それ以外の場所では、マナーモードに設定のうえ、通話はお控えください。ご協力をお願いいたします。',
+        'お客様にお願いいたします。優先席付近では。携帯電話の電源をお切りください。それ以外の場所では。マナーモードに設定のうえ。通話はお控えください。ご協力をお願いいたします。',
       lang: 'ja-JP',
     },
     {
       text:
         'Please switch off your mobile phone when you are near the priority seats. ' +
-        'In other areas, please set it to silent mode and refrain from talking on the phone.',
+        'In other areas. Please set it to silent mode and refrain from talking on the phone.',
       lang: 'en-US',
     },
   ];
@@ -172,7 +196,7 @@ export function suddenStopAnnouncement(): Utterance[] {
   return [
     {
       text:
-        'お客様にお願いいたします。電車は事故防止のため、やむを得ず急停車することがありますので、お立ちのお客様は、つり革や手すりにおつかまりください。',
+        'お客様にお願いいたします。電車は事故防止のため。やむを得ず急停車することがありますので。お立ちのお客様は。つり革や手すりにおつかまりください。',
       lang: 'ja-JP',
     },
     {
@@ -205,8 +229,8 @@ export function emergencyStopAnnouncement(reason: number): Utterance[] {
   return [
     {
       text:
-        `お客様にご案内いたします。ただいま、${r.jp}のため、急停車いたしました。` +
-        '安全の確認を行っておりますので、恐れ入りますが、いましばらくお待ちください。',
+        `お客様にご案内いたします。ただいま。${r.jp}のため。急停車いたしました。` +
+        '安全の確認を行っておりますので。恐れ入りますが。いましばらくお待ちください。',
       lang: 'ja-JP',
     },
     {
@@ -222,12 +246,12 @@ export function emergencyWaitAnnouncement(): Utterance[] {
   return [
     {
       text:
-        'お客様にご案内いたします。ただいま、安全の確認を行っております。' +
-        '運転再開まで、いましばらくお待ちください。ご迷惑をおかけいたします。',
+        'お客様にご案内いたします。ただいま。安全の確認を行っております。' +
+        '運転再開まで。いましばらくお待ちください。ご迷惑をおかけいたします。',
       lang: 'ja-JP',
     },
     {
-      text: 'Safety checks are still under way. We apologize for the delay, and thank you for your patience.',
+      text: 'Safety checks are still under way. We apologize for the delay. And thank you for your patience.',
       lang: 'en-US',
     },
   ];
@@ -236,11 +260,11 @@ export function emergencyWaitAnnouncement(): Utterance[] {
 export function emergencyResumeAnnouncement(): Utterance[] {
   return [
     {
-      text: 'お待たせいたしました。安全の確認がとれましたので、まもなく運転を再開いたします。',
+      text: 'お待たせいたしました。安全の確認がとれましたので。まもなく運転を再開いたします。',
       lang: 'ja-JP',
     },
     {
-      text: 'Thank you for waiting. Safety has been confirmed, and this train will shortly resume service.',
+      text: 'Thank you for waiting. Safety has been confirmed. And this train will shortly resume service.',
       lang: 'en-US',
     },
   ];
