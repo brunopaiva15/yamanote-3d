@@ -26,7 +26,7 @@ import { buildLicense, buildManifest, writeArtifacts } from './lib/manifest.mjs'
 import { validate } from './validate.mjs';
 
 const FLAGS = ['dryRun', 'force', 'yes', 'skipDownload', 'skipConvert', 'skipValidate'];
-const OPTIONS = ['source', 'url', 'zip', 'dataset', 'maxMb', 'converter'];
+const OPTIONS = ['source', 'url', 'zip', 'dir', 'dataset', 'maxMb', 'converter'];
 
 /** Inventaire des outils : ce qui est là, ce qui manque, ce que ça implique. */
 export async function checkTools(args, reporter) {
@@ -126,7 +126,7 @@ async function dryRun(args, reporter) {
     const url = args.url ?? entry?.url;
     reporter.info(`Source : ${entry?.label ?? id}`);
     reporter.info(`  Catalogue : ${PLATEAU_PORTAL.catalog}`);
-    reporter.info(`  Fiche attestée (millésime 2022) : ${entry?.page ?? '(inconnue)'}`);
+    reporter.info(`  Fiche du jeu de données : ${entry?.page ?? '(inconnue)'}`);
     reporter.info(`  URL : ${url || '(non configurée — --url requis)'}`);
     // Aucune taille annoncée « de mémoire » : seule celle du serveur compte.
     reporter.info('  Taille : établie par une requête HEAD avant tout téléchargement');

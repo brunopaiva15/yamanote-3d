@@ -39,7 +39,7 @@ import { BANDS, describe, makeIO } from './lib/glb.mjs';
 import { processAll } from './process.mjs';
 
 const FLAGS = ['dryRun', 'force', 'yes'];
-const OPTIONS = ['source', 'url', 'zip', 'dataset', 'maxMb', 'converter'];
+const OPTIONS = ['source', 'url', 'zip', 'dir', 'dataset', 'maxMb', 'converter'];
 
 function ratioForBand(band) {
   const lod = PLATEAU_CONFIG.lod;

@@ -30,7 +30,7 @@ import { BANDS, buildChunkDocument, describe, makeIO } from './lib/glb.mjs';
 import { convertAll } from './convert.mjs';
 
 const FLAGS = ['dryRun', 'force', 'yes'];
-const OPTIONS = ['source', 'url', 'zip', 'dataset', 'maxMb', 'converter'];
+const OPTIONS = ['source', 'url', 'zip', 'dir', 'dataset', 'maxMb', 'converter'];
 
 /** Bande de distance d'un bâtiment. */
 export function bandOf(distance, distances) {

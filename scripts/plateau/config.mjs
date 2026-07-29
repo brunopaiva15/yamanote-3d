@@ -195,16 +195,20 @@ export const PLATEAU_CONFIG = {
 /**
  * Portail officiel de diffusion de Project PLATEAU : le G空間情報センター.
  *
- * ⚠️ N'INVENTEZ PAS D'URL DE JEU DE DONNÉES. Le nom court (slug) CKAN d'un jeu
- * PLATEAU n'est pas déductible : il a changé de convention entre millésimes.
- * Deux formes réellement observées, chacune citée par un dépôt officiel :
+ * ⚠️ NE DÉDUISEZ PAS UNE URL DE JEU DE DONNÉES. Les noms courts (slugs) CKAN de
+ * PLATEAU ne suivent pas une règle unique, et celle de Tokyo a changé :
  *
- *   plateau-tokyo23ku-2022          (README de Project-PLATEAU/PLATEAU-GIS-Converter)
- *   plateau-22203-numazu-shi-2021   (README de MIERUNE/plateau-qgis-plugin)
+ *   · jusqu'à FY2020, un jeu par format et par millésime
+ *     (plateau-tokyo23ku-citygml-2020, -obj-2020, -fbx-2020, -3dtiles-2020…) ;
+ *   · **depuis le 1er avril 2022**, un jeu UNIQUE et sans année,
+ *     `plateau-tokyo23ku`, mis à jour en place. Les anciens jeux portent tous
+ *     l'avis « 最新のデータは次のURLから取得することができます » qui y renvoie.
+ *   · ailleurs au Japon, une troisième forme existe encore
+ *     (plateau-22203-numazu-shi-2021, code commune + romaji + année).
  *
- * Extrapoler la première en « plateau-tokyo23ku-2023 » donne un 404. Il faut
- * chercher le millésime voulu depuis le portail, puis passer son URL de
- * ressource au pipeline via --url ou PLATEAU_DATASET_URL.
+ * Extrapoler « plateau-tokyo23ku-2022 » en « …-2023 » donne donc un 404 : la
+ * convention à année avait déjà été abandonnée. C'est l'erreur que ce
+ * commentaire existe pour empêcher.
  */
 export const PLATEAU_PORTAL = {
   /** Portail du programme (rubrique オープンデータ / open data). */
@@ -212,12 +216,10 @@ export const PLATEAU_PORTAL = {
   /** Catalogue G空間情報センター. */
   catalog: 'https://www.geospatial.jp/ckan/dataset',
   /**
-   * Dernier jeu Tokyo 23区 dont l'URL soit ATTESTÉE par une source primaire
-   * (README du convertisseur officiel). Millésime 2022, pas le plus récent :
-   * c'est un point de départ sûr pour retrouver les suivants, pas une
-   * recommandation.
+   * Jeu Tokyo 23区 courant, sans millésime : c'est celui que les anciens jeux
+   * désignent eux-mêmes comme « les données les plus récentes ».
    */
-  tokyo23kuAttested: 'https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku-2022',
+  tokyo23ku: 'https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku',
 };
 
 /**
@@ -228,18 +230,19 @@ export const PLATEAU_PORTAL = {
  * quel que soit le tronçon visé — Shibuya-ku et Meguro-ku pour
  * Shibuya → Ebisu, Toshima-ku pour Sugamo → Ōtsuka.
  *
- * `url` reste VIDE par défaut, et c'est délibéré : mieux vaut un message qui
- * dit où chercher qu'une URL périmée qui renvoie un 404. La taille réelle est
- * établie par une requête HEAD avant tout téléchargement.
+ * `url` reste VIDE par défaut, et c'est délibéré : la fiche porte plusieurs
+ * ressources (CityGML, OBJ, FBX, 3D Tiles, MVT…) et plusieurs formats
+ * d'archive ; c'est à l'utilisateur de copier le lien de LA ressource CityGML.
+ * La taille réelle est établie par une requête HEAD avant tout téléchargement.
  */
 export const DATASETS = {
   'tokyo23ku-citygml': {
-    label: '東京都23区 3D都市モデル (CityGML) — Project PLATEAU',
-    page: PLATEAU_PORTAL.tokyo23kuAttested,
+    label: '3D都市モデル（Project PLATEAU）東京都23区 — ressource CityGML',
+    page: PLATEAU_PORTAL.tokyo23ku,
     url: str('PLATEAU_DATASET_URL', ''),
     /** Inconnue tant que le serveur n'a pas répondu — surtout pas devinée. */
     approxSizeMB: null,
-    license: 'À VÉRIFIER sur la fiche du millésime (généralement CC BY 4.0)',
+    license: 'À VÉRIFIER sur la fiche (PLATEAU diffuse généralement en CC BY 4.0)',
     attribution: '出典：国土交通省 Project PLATEAU（東京都23区 3D都市モデル）',
   },
 };

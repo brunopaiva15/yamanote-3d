@@ -40,7 +40,7 @@ import { buildRoute, locateOnRoute, readLineString } from './lib/route.mjs';
 import { ensureSources } from './download.mjs';
 
 const FLAGS = ['dryRun', 'force', 'yes'];
-const OPTIONS = ['source', 'url', 'zip', 'dataset', 'maxMb', 'converter'];
+const OPTIONS = ['source', 'url', 'zip', 'dir', 'dataset', 'maxMb', 'converter'];
 
 const NUSAMAI_INSTALL_HINT =
   "PLATEAU GIS Converter introuvable.\n" +

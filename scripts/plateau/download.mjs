@@ -17,7 +17,19 @@
 // téléchargement ; au-delà de PLATEAU_CONFIG.download.maxAutoDownloadMB il
 // faut --yes, et au-delà de hardLimitMB il faut --max-mb explicitement.
 
-import { createWriteStream, createReadStream, existsSync, mkdirSync, readdirSync, statSync, writeFileSync, rmSync } from 'node:fs';
+import {
+  closeSync,
+  createReadStream,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { createHash } from 'node:crypto';
 import { basename, dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
@@ -30,12 +42,15 @@ import { isEntryPoint, parseArgs } from './lib/args.mjs';
 import { runTool, whichTool } from './lib/run.mjs';
 
 const FLAGS = ['dryRun', 'force', 'yes'];
-const OPTIONS = ['source', 'url', 'zip', 'dataset', 'maxMb'];
+const OPTIONS = ['source', 'url', 'zip', 'dir', 'dataset', 'maxMb'];
 
 /** Fichiers d'une livraison PLATEAU que le prototype sait exploiter. */
 const WANTED = /(^|\/)udx\/bldg\/.*\.gml$/i;
 
 export function resolveSource(args) {
+  // Livraison DÉJÀ EXTRAITE : la sortie de secours quand l'archive n'est pas un
+  // zip (PLATEAU propose aussi du 7z, que fflate ne sait pas ouvrir).
+  if (args.dir) return { kind: 'dir', path: args.dir };
   if (args.zip) return { kind: 'zip', path: args.zip };
   const explicit = args.source ?? process.env.PLATEAU_SOURCE ?? null;
   if (explicit === 'dataset') return { kind: 'dataset' };
@@ -58,13 +73,15 @@ function datasetUrl(args) {
     throw new PipelineError(
       `Aucune URL configurée pour le jeu de données « ${id} ».`,
       `PLATEAU diffuse ses données via le G空間情報センター.\n` +
-        `  Le nom court du jeu change d'un millésime à l'autre et n'est PAS déductible :\n` +
-        `  cherchez « 3D都市モデル 東京都23区 » dans le catalogue\n` +
-        `    ${PLATEAU_PORTAL.catalog}\n` +
-        `  (point de départ sûr, millésime 2022 : ${PLATEAU_PORTAL.tokyo23kuAttested})\n` +
-        `  puis copiez le lien de la ressource CityGML et relancez avec\n` +
+        `  Fiche du jeu Tokyo 23区 — unique et SANS millésime depuis avril 2022 :\n` +
+        `    ${PLATEAU_PORTAL.tokyo23ku}\n` +
+        `  Prenez-y la ressource CityGML : ni OBJ, ni FBX, ni 3D Tiles, ni MVT,\n` +
+        `  ni GeoTIFF — ce sont des dérivés dont ce pipeline ne peut rien faire.\n` +
+        `  Puis relancez avec\n` +
         `    --url <URL>   (ou PLATEAU_DATASET_URL=<URL>)\n` +
-        `  Vous pouvez aussi pointer une archive déjà téléchargée : --zip <fichier.zip>`,
+        `  Autres entrées possibles :\n` +
+        `    --zip <fichier.zip>       archive déjà téléchargée\n` +
+        `    --dir <dossier>           livraison déjà extraite (ressource en 7z)`,
     );
   }
   return { id, entry, url };
@@ -173,7 +190,42 @@ async function download(url, reporter, args) {
  * l'archive. Une livraison PLATEAU contient aussi les codelists, les
  * métadonnées, le DEM, la végétation… inutiles ici et volumineux.
  */
+/**
+ * Nature d'une archive, lue dans ses premiers octets. PLATEAU publie certaines
+ * ressources en 7z ; les ouvrir avec un lecteur zip ne donne pas une erreur
+ * franche, juste zéro fichier — et un message trompeur en bout de chaîne.
+ */
+export function detectArchive(path) {
+  const fd = openSync(path, 'r');
+  const head = Buffer.alloc(8);
+  try {
+    readSync(fd, head, 0, 8, 0);
+  } finally {
+    closeSync(fd);
+  }
+  if (head.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))) return 'zip';
+  if (head.subarray(0, 2).equals(Buffer.from([0x50, 0x4b]))) return 'zip'; // vide / spanned
+  if (head.subarray(0, 6).equals(Buffer.from([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]))) return '7z';
+  if (head.subarray(0, 2).equals(Buffer.from([0x1f, 0x8b]))) return 'gzip';
+  return 'inconnu';
+}
+
 export function extractBuildings(zipPath, outDir, reporter) {
+  const kind = detectArchive(zipPath);
+  if (kind !== 'zip') {
+    return Promise.reject(
+      new PipelineError(
+        `${zipPath} n'est pas une archive ZIP (format détecté : ${kind}).`,
+        kind === '7z'
+          ? "PLATEAU publie certaines ressources en 7z, que ce pipeline ne sait pas ouvrir.\n" +
+            '  Extrayez-la vous-même puis pointez le dossier obtenu :\n' +
+            '    7z x <archive.7z> -o/chemin/livraison\n' +
+            '    npm run world:build:prototype -- --dir /chemin/livraison\n' +
+            '  (ou choisissez la ressource ZIP sur la fiche du jeu de données)'
+          : 'Vérifiez que le lien copié est bien celui de la ressource CityGML.',
+      ),
+    );
+  }
   return new Promise((resolve, reject) => {
     ensureDirs(outDir);
     const written = [];
@@ -266,6 +318,35 @@ export async function ensureSources(args, reporter) {
     );
     reporter.info(`${files.length} fichier(s) CityGML : ${files.map((f) => basename(f)).join(', ')}`);
     return { kind: 'sample', files, inputHash };
+  }
+
+  if (source.kind === 'dir') {
+    // Livraison déjà extraite sur le disque : on ne télécharge ni ne
+    // décompresse rien, on se contente d'y trouver les CityGML de bâtiments.
+    if (!existsSync(source.path)) {
+      throw new PipelineError(`Dossier introuvable : ${source.path}`);
+    }
+    const all = listGml(source.path);
+    // Une livraison PLATEAU range ses bâtiments dans udx/bldg/. On préfère ce
+    // sous-ensemble s'il existe : sinon on prendrait aussi le relief, la
+    // végétation et le mobilier urbain, que ce pipeline ne sait pas traiter.
+    const bldg = all.filter((f) => /(^|[/\\])udx[/\\]bldg[/\\]/i.test(f));
+    const files = bldg.length > 0 ? bldg : all;
+    if (files.length === 0) {
+      throw new PipelineError(
+        `Aucune donnée PLATEAU trouvée : ${source.path} ne contient aucun .gml.`,
+        "Attendu l'arborescence d'une livraison CityGML (<code>/udx/bldg/*.gml).",
+      );
+    }
+    if (bldg.length === 0) {
+      reporter.warn(
+        `Aucun sous-dossier udx/bldg : les ${files.length} fichier(s) .gml trouvés ` +
+          'seront tous analysés, y compris les thèmes non bâtis (ignorés à la lecture).',
+      );
+    }
+    reporter.info(`Livraison locale : ${source.path} — ${files.length} fichier(s) CityGML.`);
+    if (!args.dryRun) writeMarker('download', { inputHash, outputs: files, extra: { dir: source.path } });
+    return { kind: 'dir', files, inputHash };
   }
 
   // --- Données réelles ---

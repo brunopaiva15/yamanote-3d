@@ -113,11 +113,21 @@ test('aucune URL de jeu de données n’est codée en dur', () => {
     assert.equal(entry.url, '', `${id} : une URL est codée en dur (${entry.url})`);
     assert.equal(entry.approxSizeMB, null, `${id} : taille devinée au lieu d'un HEAD`);
   }
-  // Les seules URL de fiche admises sont celles qu'une source primaire cite.
+  // Les seules URL de fiche admises sont celles qu'une source primaire donne.
   const ATTESTED = new Set([
-    // README de Project-PLATEAU/PLATEAU-GIS-Converter.
-    'https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku-2022',
+    // Jeu Tokyo 23区 courant, sans millésime : c'est l'URL que les anciens
+    // jeux (…-citygml-2020, …-obj-2020, etc.) désignent eux-mêmes depuis le
+    // 1er avril 2022 par l'avis « 最新のデータは次のURLから取得することができます ».
+    'https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku',
   ]);
+  // Et surtout : plus jamais de slug à millésime extrapolé.
+  for (const [id, entry] of Object.entries(DATASETS)) {
+    assert.doesNotMatch(
+      entry.page ?? '',
+      /plateau-tokyo23ku-\d{4}/,
+      `${id} : la convention « tokyo23ku-<année> » a été abandonnée en 2022.`,
+    );
+  }
   for (const [id, entry] of Object.entries(DATASETS)) {
     if (!entry.page) continue;
     assert.ok(

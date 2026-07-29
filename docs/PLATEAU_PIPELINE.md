@@ -92,6 +92,7 @@ sans ambiguïté au Japon.
 | `PLATEAU_SAMPLE_DENSITY` | `900` | bâtiments par km pour l'échantillon synthétique |
 | `PLATEAU_DATASET_URL` | — | URL de l'archive CityGML à télécharger |
 | `PLATEAU_DATASET` | `tokyo23ku-citygml` | identifiant dans `DATASETS` |
+| `--dir <dossier>` | — | livraison déjà extraite (contourne le 7z) |
 | `PLATEAU_SOURCE` | auto | `sample` ou `dataset` |
 | `PLATEAU_CONVERTER` | `auto` | `auto`, `builtin`, `nusamai`, `custom` |
 | `PLATEAU_CONVERTER_PATH` | — | chemin du binaire `nusamai` |
@@ -129,7 +130,7 @@ npm run world:optimize:prototype
 npm run world:validate:prototype           # relit et valide les livrables
 npm run world:check:prototype              # contrôle visuel Playwright + captures
 
-npm test                                   # 60 tests (node --test)
+npm test                                   # 61 tests (node --test)
 npm run dev                                # puis /?plateau=1
 ```
 
@@ -163,6 +164,9 @@ deux de diverger.
 ### 5.2 Obtention des données (`download.mjs`)
 
 * `--source sample` (défaut) : utilise / régénère l'échantillon synthétique.
+* `--dir <dossier>` : livraison **déjà extraite** sur le disque. C'est la
+  sortie de secours quand la ressource n'est pas un ZIP — PLATEAU publie aussi
+  du 7z, que ce pipeline ne sait pas ouvrir.
 * `--source dataset` : télécharge l'archive PLATEAU, avec cache par URL,
   **reprise par `Range`**, `HEAD` préalable pour annoncer la taille, et deux
   garde-fous (`--yes` au-delà de 256 Mo, `--max-mb` au-delà de 8 Go).
@@ -292,7 +296,7 @@ src/systems/plateau.ts        interrupteur + état partagé
 src/three/PlateauWorld.tsx    composant R3F
 src/three/plateau/routeMath.ts  maths du tracé (module PUR, testé)
 src/dev/plateau-probe-main.ts   probe /plateau-probe.html
-tests/                        60 tests node:test
+tests/                        61 tests node:test
 ```
 
 ## 7. Gestion du cache
@@ -350,8 +354,9 @@ Points d'attention :
    liens vers `geospatial.jp` de ce dépôt sont ceux qui sont *cités par des
    dépôts officiels de Project PLATEAU*, pas des liens vérifiés en les
    ouvrant. Une première version du pipeline contenait une URL extrapolée
-   (`plateau-tokyo23ku-2023`) qui renvoyait un 404 ; elle a été retirée, et
-   plus aucune URL de jeu de données n'est codée en dur.
+   (`plateau-tokyo23ku-2023`) qui renvoyait un 404 — la convention à année
+   avait été abandonnée en 2022 au profit du jeu unique `plateau-tokyo23ku`.
+   Plus aucune URL de ressource n'est codée en dur.
 3. **Les hauteurs sont ellipsoïdales**, pas orthométriques. L'ondulation du
    géoïde vaut ~37 m à Tokyo ; elle est constante à l'échelle du kilomètre,
    donc invisible ici puisque tout est recentré sur l'altitude de la voie. Il
@@ -537,24 +542,46 @@ dépliage UV automatique, remaillage, cuisson d'occlusion ambiante.
 
 ## Travailler sur les données réelles
 
-> ⚠️ **Le nom court (slug) d'un jeu PLATEAU n'est pas déductible.** La
-> convention a changé entre millésimes — `plateau-tokyo23ku-2022` d'un côté,
-> `plateau-22203-numazu-shi-2021` de l'autre (deux formes citées par des dépôts
-> officiels). Extrapoler la première en `…-2023` donne un 404. Ce dépôt ne
-> code donc **aucune** URL de jeu de données en dur : il vous envoie au
-> catalogue et attend votre `--url`.
+### Quel jeu de données prendre
+
+**`https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku`** — sans millésime.
+
+Depuis le 1er avril 2022, PLATEAU a consolidé Tokyo 23 区 dans un jeu unique
+mis à jour en place ; tous les anciens jeux par format et par année
+(`-citygml-2020`, `-obj-2020`, `-fbx-2020`, `-3dtiles-2020`…) portent l'avis
+「最新のデータは次のURLから取得することができます」 qui y renvoie. La convention à
+année a donc été abandonnée : `plateau-tokyo23ku-2023` n'existe pas, et
+l'extrapoler donne un 404.
+
+Dans la fiche, prendre la ressource **CityGML** — pas OBJ, FBX, 3D Tiles, MVT
+ni GeoTIFF, qui sont des dérivés dont le pipeline ne peut rien faire. Les deux
+dépôts officiels (`PLATEAU-GIS-Converter`, `plateau-qgis-plugin`) prennent pour
+exemple la ressource étiquetée **« CityGML (v2) »** : c'est celle à privilégier.
+Dans tous les cas l'encodage est CityGML 2.0, ce que le lecteur intégré sait
+lire.
 
 ```bash
 # 1. Repérer la ressource CityGML sur le G空間情報センター
-#    https://www.geospatial.jp/ckan/dataset  (chercher « 3D都市モデル 東京都23区 »)
-#    Point de départ attesté (millésime 2022, pas le plus récent) :
-#    https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku-2022
+#    https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku
 # 2. Vérifier ce qui serait fait, sans rien télécharger
 npm run world:build:prototype -- --source dataset --url <URL> --dry-run
 # 3. Lancer pour de bon (--yes au-delà de 256 Mo)
 npm run world:build:prototype -- --source dataset --url <URL> --yes --converter nusamai
 # Ou avec une archive déjà téléchargée :
-npm run world:build:prototype -- --zip ~/Téléchargements/13100_tokyo23-ku_2023_citygml.zip
+npm run world:build:prototype -- --zip ~/Téléchargements/13100_tokyo23-ku_citygml.zip
+# Ou avec une livraison déjà extraite (obligatoire si la ressource est en 7z) :
+7z x 13100_tokyo23-ku_citygml.7z -o ~/plateau
+npm run world:build:prototype -- --dir ~/plateau
+```
+
+Le pipeline reconnaît le format de l'archive à ses premiers octets et refuse
+franchement ce qu'il ne sait pas ouvrir, plutôt que d'extraire zéro fichier et
+de se plaindre plus tard de ne pas trouver de bâtiments :
+
+```
+✖ …/xxx.7z n'est pas une archive ZIP (format détecté : 7z).
+  → PLATEAU publie certaines ressources en 7z, que ce pipeline ne sait pas ouvrir.
+    Extrayez-la vous-même puis pointez le dossier obtenu : --dir /chemin/livraison
 ```
 
 Le tracé mérite alors d'être régénéré depuis OSM :
@@ -567,7 +594,7 @@ npm run world:build:prototype -- --force …
 ## Vérifier
 
 ```bash
-npm test                        # 60 tests
+npm test                        # 61 tests
 npm run world:validate:prototype
 npm run world:check:prototype   # Playwright : captures + contrôles en scène
 npm run dev                     # /?plateau=1  (démarrage direct sur le tronçon)
