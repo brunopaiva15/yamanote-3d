@@ -523,6 +523,33 @@ milieu d'un inter-gare, vise par une baie et capture, de jour comme de nuit. La
 sonde de gare, elle, se pose à l'arrêt — là où le quai masque justement tout le
 paysage.
 
+### Ville géoréférencée (prototype PLATEAU)
+
+Tout ce qui précède est **procédural** : un paysage crédible, jamais le vrai. Un
+prototype teste l'autre voie — construire le décor à partir des données ouvertes
+[Project PLATEAU](https://www.mlit.go.jp/plateau/) (modèles CityGML 3D des villes
+japonaises, 国土交通省) — sur **un seul tronçon**, Sugamo → Ōtsuka.
+
+```bash
+npm run world:build:prototype -- --dry-run   # vérifie outils et configuration
+npm run world:build:prototype                # CityGML → GLB optimisés + manifeste
+npm run dev                                  # /?plateau=1 pour y démarrer
+```
+
+Le pipeline projette en JGD2011 / CS IX, sélectionne les bâtiments dans un
+corridor de ±300 m, les classe par distance à la voie, découpe en chunks de
+400 m recentrés sur leur propre origine, triangule, simplifie, compresse en
+meshopt et génère `public/world/plateau/manifest.json`. Dans le jeu, le wagon
+reste à l'origine et c'est le monde qui tourne autour de lui : on applique au
+groupe des chunks l'inverse de la transformation du train sur le tracé réel, à
+la vitesse réelle de la rame. Ailleurs sur la boucle, et prototype coupé
+(`ENABLE_PLATEAU_PROTOTYPE = false`), le décor procédural reprend tout.
+
+⚠️ Le dépôt ne contient **aucune donnée PLATEAU** : le build par défaut tourne
+sur un échantillon CityGML *synthétique* au format PLATEAU. Tout est expliqué —
+outils, licences, limites, extension aux 30 tronçons — dans
+[`docs/PLATEAU_PIPELINE.md`](docs/PLATEAU_PIPELINE.md).
+
 ## L'extérieur de la rame
 
 `three/exterior/` modélise la rame E235-0 complète, visible depuis le quai :
@@ -672,6 +699,8 @@ src/
   scripts/               models:import / models:inspect (packs → public/models/),
                          sondes navigateur : station-probe, scenery-shots,
                          scenery-cost, pass-shots
+  scripts/plateau/       pipeline CityGML PLATEAU → GLB (docs/PLATEAU_PIPELINE.md)
+  three/PlateauWorld.tsx monde géoréférencé du prototype, tronçon Sugamo → Ōtsuka
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
   ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles

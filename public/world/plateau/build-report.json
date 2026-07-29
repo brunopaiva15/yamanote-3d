@@ -1,0 +1,305 @@
+{
+  "generatedAt": "2026-07-29T07:25:23.041Z",
+  "tools": {
+    "node": "v22.22.2",
+    "sharp": "libvips 8.18.3",
+    "converter": "builtin",
+    "converterVersion": null,
+    "gltfTransform": "4.4.1",
+    "meshoptimizer": "1.2.0",
+    "earcut": "3.2.3"
+  },
+  "source": {
+    "name": "Échantillon synthétique (PAS de données Project PLATEAU)",
+    "dataset": "data/plateau-sample — généré par scripts/plateau/make-sample.mjs",
+    "license": "CC0 1.0 (production de ce dépôt)",
+    "synthetic": true
+  },
+  "route": {
+    "file": "/home/user/yamanote-3d/data/geo/sugamo-otsuka.geojson",
+    "source": "Approximation géométrique (arc de cercle entre les deux gares)",
+    "license": "CC0 — produit par ce dépôt, ne contient aucune donnée tierce",
+    "points": 41,
+    "totalLength": 1008.1977706061438
+  },
+  "counts": {
+    "filesAnalyzed": 1,
+    "buildingsDetected": 900,
+    "buildingsInCorridor": 900,
+    "buildingsDroppedOutsideCorridor": 0,
+    "buildingsCulledInvisible": 7,
+    "byBand": {
+      "near": 270,
+      "medium": 268,
+      "far": 355
+    },
+    "chunks": 3
+  },
+  "sizes": {
+    "beforeOptimization": 1169004,
+    "afterOptimization": 155788,
+    "reductionPercent": 86.7
+  },
+  "chunks": [
+    {
+      "id": "sugamo-otsuka-000",
+      "url": "world/plateau/sugamo-otsuka-000.glb",
+      "startDistance": 0,
+      "endDistance": 400,
+      "offset": [
+        294.054,
+        -1.719,
+        -89.625
+      ],
+      "boundingRadius": 348.09,
+      "buildings": 367,
+      "before": {
+        "meshes": 1,
+        "primitives": 6,
+        "materials": 2,
+        "textures": 0,
+        "vertices": 12522,
+        "triangles": 4174,
+        "textureBytes": 0,
+        "bytes": 481256
+      },
+      "after": {
+        "meshes": 1,
+        "primitives": 6,
+        "materials": 2,
+        "textures": 0,
+        "vertices": 7613,
+        "triangles": 3819,
+        "textureBytes": 0,
+        "bytes": 61604
+      },
+      "estimatedTextureBytes": 0,
+      "simplification": [
+        {
+          "primitive": "near/facade",
+          "before": 936,
+          "after": 936,
+          "requestedRatio": 1,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "near/roof",
+          "before": 256,
+          "after": 256,
+          "requestedRatio": 1,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "medium/facade",
+          "before": 960,
+          "after": 960,
+          "requestedRatio": 0.6,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "medium/roof",
+          "before": 262,
+          "after": 157,
+          "requestedRatio": 0.6,
+          "achievedRatio": 0.599
+        },
+        {
+          "primitive": "far/facade",
+          "before": 1376,
+          "after": 1376,
+          "requestedRatio": 0.35,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "far/roof",
+          "before": 384,
+          "after": 134,
+          "requestedRatio": 0.35,
+          "achievedRatio": 0.349
+        }
+      ]
+    },
+    {
+      "id": "sugamo-otsuka-001",
+      "url": "world/plateau/sugamo-otsuka-001.glb",
+      "startDistance": 400,
+      "endDistance": 800,
+      "offset": [
+        -89.569,
+        0.478,
+        21.489
+      ],
+      "boundingRadius": 332.17,
+      "buildings": 349,
+      "before": {
+        "meshes": 1,
+        "primitives": 6,
+        "materials": 2,
+        "textures": 0,
+        "vertices": 11802,
+        "triangles": 3934,
+        "textureBytes": 0,
+        "bytes": 453892
+      },
+      "after": {
+        "meshes": 1,
+        "primitives": 6,
+        "materials": 2,
+        "textures": 0,
+        "vertices": 7214,
+        "triangles": 3622,
+        "textureBytes": 0,
+        "bytes": 59124
+      },
+      "estimatedTextureBytes": 0,
+      "simplification": [
+        {
+          "primitive": "near/facade",
+          "before": 1000,
+          "after": 1000,
+          "requestedRatio": 1,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "near/roof",
+          "before": 270,
+          "after": 270,
+          "requestedRatio": 1,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "medium/facade",
+          "before": 896,
+          "after": 896,
+          "requestedRatio": 0.6,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "medium/roof",
+          "before": 250,
+          "after": 150,
+          "requestedRatio": 0.6,
+          "achievedRatio": 0.6
+        },
+        {
+          "primitive": "far/facade",
+          "before": 1192,
+          "after": 1192,
+          "requestedRatio": 0.35,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "far/roof",
+          "before": 326,
+          "after": 114,
+          "requestedRatio": 0.35,
+          "achievedRatio": 0.35
+        }
+      ]
+    },
+    {
+      "id": "sugamo-otsuka-002",
+      "url": "world/plateau/sugamo-otsuka-002.glb",
+      "startDistance": 800,
+      "endDistance": 1008.2,
+      "offset": [
+        -391.436,
+        2.139,
+        56.043
+      ],
+      "boundingRadius": 307.2,
+      "buildings": 177,
+      "before": {
+        "meshes": 1,
+        "primitives": 6,
+        "materials": 2,
+        "textures": 0,
+        "vertices": 6012,
+        "triangles": 2004,
+        "textureBytes": 0,
+        "bytes": 233856
+      },
+      "after": {
+        "meshes": 1,
+        "primitives": 6,
+        "materials": 2,
+        "textures": 0,
+        "vertices": 3665,
+        "triangles": 1837,
+        "textureBytes": 0,
+        "bytes": 35060
+      },
+      "estimatedTextureBytes": 0,
+      "simplification": [
+        {
+          "primitive": "near/facade",
+          "before": 436,
+          "after": 436,
+          "requestedRatio": 1,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "near/roof",
+          "before": 120,
+          "after": 120,
+          "requestedRatio": 1,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "medium/facade",
+          "before": 536,
+          "after": 536,
+          "requestedRatio": 0.6,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "medium/roof",
+          "before": 148,
+          "after": 88,
+          "requestedRatio": 0.6,
+          "achievedRatio": 0.595
+        },
+        {
+          "primitive": "far/facade",
+          "before": 600,
+          "after": 600,
+          "requestedRatio": 0.35,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "far/roof",
+          "before": 164,
+          "after": 57,
+          "requestedRatio": 0.35,
+          "achievedRatio": 0.348
+        }
+      ]
+    }
+  ],
+  "timings": [
+    {
+      "title": "Vérification des outils",
+      "seconds": 0.002
+    },
+    {
+      "title": "Conversion, découpage et optimisation",
+      "seconds": 0.598
+    },
+    {
+      "title": "Manifeste, licences et rapport",
+      "seconds": 0.001
+    },
+    {
+      "title": "Validation",
+      "seconds": 0.009
+    }
+  ],
+  "warnings": [
+    "PLATEAU GIS Converter introuvable dans le PATH et PLATEAU_CONVERTER_PATH non défini : le pipeline utilisera le lecteur CityGML intégré (LOD1/LOD2 sans textures).",
+    "Source = ÉCHANTILLON SYNTHÉTIQUE (data/plateau-sample). Ce ne sont PAS des données Project PLATEAU.",
+    "Aucun convertisseur externe détecté : repli sur le lecteur CityGML intégré (LOD1/LOD2 géométrique, SANS textures ni apparences).",
+    "  Installez-le ou définissez PLATEAU_CONVERTER_PATH.\n  Linux x86_64 : téléchargez nusamai-<version>-x86_64-unknown-linux-gnu.tar.gz depuis\n    https://github.com/MIERUNE/plateau-gis-converter/releases\n    tar -xzf nusamai-<version>-x86_64-unknown-linux-gnu.tar.gz\n    sudo install -m 755 nusamai /usr/local/bin/nusamai\n  macOS (Apple Silicon) : nusamai-<version>-aarch64-apple-darwin.tar.gz\n  Ou passez --converter builtin pour utiliser le lecteur CityGML intégré\n  (LOD1/LOD2 sans textures — voir docs/PLATEAU_PIPELINE.md)."
+  ],
+  "errors": [],
+  "totalSeconds": 0.688
+}

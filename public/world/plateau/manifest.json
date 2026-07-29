@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-29T07:25:23.041Z",
+  "source": {
+    "name": "Échantillon synthétique (PAS de données Project PLATEAU)",
+    "dataset": "data/plateau-sample — généré par scripts/plateau/make-sample.mjs",
+    "license": "CC0 1.0 (production de ce dépôt)",
+    "synthetic": true
+  },
+  "prototype": {
+    "name": "sugamo-otsuka",
+    "from": "Sugamo",
+    "to": "Otsuka",
+    "segment": 10,
+    "corridorMeters": 300,
+    "chunkLengthMeters": 400,
+    "routeSampleMeters": 8,
+    "distances": {
+      "near": 80,
+      "medium": 160,
+      "far": 300
+    }
+  },
+  "coordinateSystem": {
+    "units": "meters",
+    "east": "+X",
+    "up": "+Y",
+    "north": "-Z",
+    "projectedEpsg": 6677,
+    "origin": {
+      "east": 21170,
+      "north": -29710,
+      "up": 63.8
+    }
+  },
+  "route": {
+    "url": "world/plateau/route.json",
+    "totalLength": 1008.1977706061438
+  },
+  "chunks": [
+    {
+      "id": "sugamo-otsuka-000",
+      "segment": 10,
+      "url": "world/plateau/sugamo-otsuka-000.glb",
+      "startDistance": 0,
+      "endDistance": 400,
+      "offset": [
+        294.054,
+        -1.719,
+        -89.625
+      ],
+      "boundingRadius": 348.09,
+      "fileSize": 61604,
+      "buildings": 367,
+      "triangles": 3819,
+      "vertices": 7613,
+      "materials": 2,
+      "textures": 0
+    },
+    {
+      "id": "sugamo-otsuka-001",
+      "segment": 10,
+      "url": "world/plateau/sugamo-otsuka-001.glb",
+      "startDistance": 400,
+      "endDistance": 800,
+      "offset": [
+        -89.569,
+        0.478,
+        21.489
+      ],
+      "boundingRadius": 332.17,
+      "fileSize": 59124,
+      "buildings": 349,
+      "triangles": 3622,
+      "vertices": 7214,
+      "materials": 2,
+      "textures": 0
+    },
+    {
+      "id": "sugamo-otsuka-002",
+      "segment": 10,
+      "url": "world/plateau/sugamo-otsuka-002.glb",
+      "startDistance": 800,
+      "endDistance": 1008.2,
+      "offset": [
+        -391.436,
+        2.139,
+        56.043
+      ],
+      "boundingRadius": 307.2,
+      "fileSize": 35060,
+      "buildings": 177,
+      "triangles": 1837,
+      "vertices": 3665,
+      "materials": 2,
+      "textures": 0
+    }
+  ]
+}
