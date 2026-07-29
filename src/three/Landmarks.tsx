@@ -20,6 +20,7 @@ import { dayNightWeights } from '../systems/daynight';
 import { seasonNow } from '../systems/season';
 import { useStore } from '../store';
 import { CONFIG } from '../data/config';
+import { prevStation } from '../data/loop';
 import { journeyProgress } from '../data/segments';
 import { DISTRICTS, type Land, type LandmarkSpec } from '../data/districts';
 import { rng } from '../textures/procedural';
@@ -343,7 +344,7 @@ export function Landmarks() {
     const pair: [Slot, Slot] = [mk(rootA.current), mk(rootB.current)];
     slots.current = pair;
     populate(pair[0], CONFIG.startIndex);
-    populate(pair[1], (CONFIG.startIndex + 29) % 30);
+    populate(pair[1], prevStation(CONFIG.startIndex, useStore.getState().loopDirection));
     return () => {
       disposeSlot(pair[0]);
       disposeSlot(pair[1]);
@@ -353,7 +354,7 @@ export function Landmarks() {
   useFrame(() => {
     const pair = slots.current;
     if (!pair) return;
-    const { index, phase } = useStore.getState();
+    const { index, phase, loopDirection } = useStore.getState();
 
     // Changement de gare : bascule et reconstruction du nouveau slot arrivant.
     if (index !== lastIndex.current) {
@@ -362,7 +363,7 @@ export function Landmarks() {
       populate(pair[arrivingSlot.current], index);
     }
 
-    const p = journeyProgress(phase, runtime.phaseT, index);
+    const p = journeyProgress(phase, runtime.phaseT, index, loopDirection);
     const closeArr = smoothstep(0.55, 1.0, p);
     const closeDep = smoothstep(0.55, 1.0, 1 - p);
 

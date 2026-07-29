@@ -16,10 +16,12 @@
 // scripts/announcements-export.ts ; le runtime, lui, ne voit que du texte.
 //
 // La direction annoncée reprend mot pour mot celle de la rame
-// (directionAnnouncement) : le même LOOP_JP et les mêmes grands repères, pour
-// que le quai et le wagon ne se contredisent pas.
+// (directionAnnouncement) : le même `loopJp(sens)` et les mêmes grands repères,
+// pour que le quai et le wagon ne se contredisent pas.
 
-import { LOOP_JP, nextHubs, type Utterance } from './announcements.ts';
+import { loopJp, nextHubs, type Utterance } from './announcements.ts';
+import { nextStation } from './loop.ts';
+import type { LoopDirection } from './platforms.ts';
 import { STATIONS } from './stations.ts';
 
 /** Voix de synthèse visée pour un texte donné (voir le générateur Kokoro). */
@@ -40,8 +42,8 @@ function en(text: string): StationUtterance {
 // --- Direction annoncée --------------------------------------------------
 
 /** Les deux grands repères APRÈS la gare `index`, en japonais et en anglais. */
-function bound(index: number): { jp: string; en: string } {
-  const hubs = nextHubs((index + 1) % 30, 2);
+function bound(index: number, dir: LoopDirection): { jp: string; en: string } {
+  const hubs = nextHubs(nextStation(index, dir), 2, dir);
   return {
     jp: hubs.map((h) => h.kanji).join('・'),
     en: hubs.length === 2 ? `${hubs[0].romaji} and ${hubs[1].romaji}` : hubs[0].romaji,
@@ -53,9 +55,13 @@ function bound(index: number): { jp: string; en: string } {
 // Pas systématique sur la Yamanote : quand les rames se succèdent, ATOS la
 // saute. Elle n'est donc diffusée qu'une fois le quai vidé du train précédent.
 
-export function platformPreAnnouncement(index: number, platform: number): StationUtterance[] {
-  const b = bound(index);
-  return [ja(`今度の、${platform}番線の電車は、${LOOP_JP}、${b.jp}方面行きです。`)];
+export function platformPreAnnouncement(
+  index: number,
+  platform: number,
+  dir: LoopDirection,
+): StationUtterance[] {
+  const b = bound(index, dir);
+  return [ja(`今度の、${platform}番線の電車は、${loopJp(dir)}、${b.jp}方面行きです。`)];
 }
 
 /**
@@ -76,11 +82,12 @@ export function platformGreeting(): StationUtterance[] {
 export function platformApproachAnnouncement(
   index: number,
   platform: number,
+  dir: LoopDirection,
 ): StationUtterance[] {
-  const b = bound(index);
+  const b = bound(index, dir);
   return [
     ja(
-      `まもなく、${platform}番線に、${LOOP_JP}、${b.jp}方面行きがまいります。` +
+      `まもなく、${platform}番線に、${loopJp(dir)}、${b.jp}方面行きがまいります。` +
         '危ないですから、黄色い点字ブロックまで、お下がりください。',
     ),
     en(

@@ -49,7 +49,7 @@ function distanceToStop(phase: Phase, phaseT: number, index: number): number {
   const braking = stopDistance(runtime.speed, runtime.accel);
   if (phase === 'brake') return braking;
   if (phase === 'cruise') {
-    const left = Math.max(0, cruiseDuration(index) - phaseT);
+    const left = Math.max(0, cruiseDuration(index, useStore.getState().loopDirection) - phaseT);
     return left * Math.max(runtime.speed, V_MAX * 0.5) + braking;
   }
   return 0;

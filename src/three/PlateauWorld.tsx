@@ -75,7 +75,8 @@ const BASE = import.meta.env.BASE_URL;
  * l'enchaînement depart → cruise → brake du trajet inter-gares.
  */
 function makeProfile(stationIndex: number): SpeedProfile {
-  const cruise = cruiseDuration(stationIndex);
+  // Le prototype ne couvre que le sens 内回り (voir systems/plateau).
+  const cruise = cruiseDuration(stationIndex, 'inner');
   const departEnd = CONFIG.departTime;
   const cruiseEnd = departEnd + cruise;
   return {
@@ -93,7 +94,7 @@ const totalDistanceCache = new Map<number, number>();
 function journeyTotalDistance(stationIndex: number): number {
   const cached = totalDistanceCache.get(stationIndex);
   if (cached !== undefined) return cached;
-  const total = integrateJourney(makeProfile(stationIndex), journeyDuration(stationIndex));
+  const total = integrateJourney(makeProfile(stationIndex), journeyDuration(stationIndex, 'inner'));
   totalDistanceCache.set(stationIndex, total);
   return total;
 }
@@ -190,7 +191,7 @@ export function PlateauWorld() {
         mountedChunks: plateauRuntime.mounted,
         distance: plateauRuntime.distance,
         totalLength: route?.totalLength ?? null,
-        segment: segmentAt(useStore.getState().index),
+        segment: segmentAt(useStore.getState().index, useStore.getState().loopDirection),
         vertices: 0,
         /** Distance latérale minimale d'un sommet à l'axe, dans l'emprise du wagon. */
         nearestToCar: Infinity,
@@ -256,9 +257,10 @@ export function PlateauWorld() {
     const group = worldRef.current;
     if (!group || !manifest || !route) return;
 
-    const { index, phase } = useStore.getState();
-    const segment = segmentAt(index);
-    const active = plateauCoversSegment(segment) && segment === manifest.prototype.segment;
+    const { index, phase, loopDirection } = useStore.getState();
+    const segment = segmentAt(index, loopDirection);
+    const active =
+      plateauCoversSegment(segment, loopDirection) && segment === manifest.prototype.segment;
 
     if (!active) {
       if (group.visible) {
@@ -285,7 +287,10 @@ export function PlateauWorld() {
     // après une longue veille, sonde de développement qui repositionne le
     // train) — sans ce garde-fou, le monde resterait bloqué à une extrémité.
     if (!(travelled > -25 && travelled < total + 25)) {
-      const elapsed = Math.min(phaseBase(phase, index) + runtime.phaseT, journeyDuration(index));
+      const elapsed = Math.min(
+        phaseBase(phase, index, 'inner') + runtime.phaseT,
+        journeyDuration(index, 'inner'),
+      );
       baseDistance.current = runtime.distance - integrateJourney(makeProfile(index), elapsed);
       travelled = runtime.distance - baseDistance.current;
     }
