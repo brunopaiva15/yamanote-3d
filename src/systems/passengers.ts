@@ -1032,6 +1032,19 @@ export function updatePassengers(dt: number): void {
 
     if (p.state !== 'seated' && p.state !== 'standing') continue;
 
+    // Debout : le voyageur pivote vers le cap de sa place (le long de l'allée)
+    // au lieu de garder celui de son dernier pas. Il arrive à son slot par un
+    // pas LATÉRAL (l'allée en x = ±0,3 → la place en x = ±0,45) : sans ce
+    // rattrapage il restait planté face à la banquette, et surtout son cap
+    // rendu ne correspondait plus à celui qui a choisi son anneau
+    // (alignStrapStand) — d'où le bras tendu vers la poignée de DERRIÈRE.
+    if (p.state === 'standing' && !isFallingAction(p.action)) {
+      let d = p.targetYaw - p.yaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      p.yaw += d * Math.min(1, dt * 6);
+    }
+
     // --- Couche de vie des PNJ posés ---
     if (!isFallingAction(p.action)) p.bob = 0;
     p.bobPhase += dt;

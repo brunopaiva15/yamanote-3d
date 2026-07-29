@@ -70,6 +70,8 @@
           state: seated ? 'seated' : 'standing',
           pos: new THREE.Vector3(parseFloat(q.get('px') ?? '0'), 0, 0),
           yaw: parseFloat(q.get('yaw') ?? '0'),
+          // Cap de la place : c'est lui qui décide l'anneau visé (pose.ts).
+          targetYaw: parseFloat(q.get('yaw') ?? '0'),
           height: parseFloat(q.get('h') ?? '1.08'),
           bob: 0, bodyLean: 0, headYaw: 0.2, headPitch: 0.05,
           holdStrap: q.get('strap') === '1', action: q.get('action') ?? 'none',
