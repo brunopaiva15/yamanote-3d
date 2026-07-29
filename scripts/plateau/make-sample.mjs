@@ -4,7 +4,7 @@
 // ⚠️ CE N'EST PAS DE LA DONNÉE PLATEAU. Aucun bâtiment ici ne correspond à un
 // bâtiment réel : ce sont des volumes générés par un tirage déterministe, dont
 // la seule fonction est de rendre le pipeline exécutable de bout en bout sans
-// accès au jeu de données réel (24 Go pour les 23 arrondissements de Tokyo).
+// accès au jeu de données réel (plusieurs Go pour les 23 arrondissements de Tokyo).
 // Le fichier produit est en revanche un vrai CityGML 2.0 conforme au profil
 // que PLATEAU publie, ce qui permet de valider la conversion, la sélection
 // spatiale, le découpage, l'optimisation et l'affichage pour de bon.
@@ -259,7 +259,7 @@ export function generateSample({ route, count, seed }) {
 
   Généré par scripts/plateau/make-sample.mjs (graine ${seed}) pour permettre
   d'exécuter le pipeline PLATEAU du dépôt yamanote-3d sans télécharger les
-  24 Go du jeu de données « 東京都23区 3D都市モデル ».
+  plusieurs gigaoctets du jeu de données « 東京都23区 3D都市モデル ».
 
   Le FORMAT reproduit le profil CityGML 2.0 / bldg / LOD1 publié par Project
   PLATEAU (EPSG:6697, posList en latitude longitude hauteur ellipsoïdale).

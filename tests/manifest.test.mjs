@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { PLATEAU_CONFIG, PROTOTYPE_SEGMENTS } from '../scripts/plateau/config.mjs';
+import { DATASETS, PLATEAU_CONFIG, PLATEAU_PORTAL, PROTOTYPE_SEGMENTS } from '../scripts/plateau/config.mjs';
 import { MANIFEST_VERSION, buildLicense, buildManifest } from '../scripts/plateau/lib/manifest.mjs';
 import {
   readGameSegment,
@@ -101,6 +101,31 @@ test('le jeu et le pipeline visent le même tronçon', () => {
   // La gare de développement est celle d'ARRIVÉE : segmentAt(i) = (i + 29) % 30.
   const devStation = Number(source.match(/PLATEAU_DEV_STATION = \(PLATEAU_SEGMENT \+ (\d+)\)/)?.[1]);
   assert.equal(devStation, 1, 'la gare d’arrivée doit être segment + 1');
+});
+
+test('aucune URL de jeu de données n’est codée en dur', () => {
+  // Régression : une première version portait une URL de fiche CKAN
+  // extrapolée (« plateau-tokyo23ku-2023 ») qui renvoyait un 404. Le slug d'un
+  // jeu PLATEAU n'est pas déductible — la convention a changé entre millésimes
+  // — donc le pipeline ne doit en deviner aucun : il pointe le catalogue et
+  // attend une --url de l'utilisateur.
+  for (const [id, entry] of Object.entries(DATASETS)) {
+    assert.equal(entry.url, '', `${id} : une URL est codée en dur (${entry.url})`);
+    assert.equal(entry.approxSizeMB, null, `${id} : taille devinée au lieu d'un HEAD`);
+  }
+  // Les seules URL de fiche admises sont celles qu'une source primaire cite.
+  const ATTESTED = new Set([
+    // README de Project-PLATEAU/PLATEAU-GIS-Converter.
+    'https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku-2022',
+  ]);
+  for (const [id, entry] of Object.entries(DATASETS)) {
+    if (!entry.page) continue;
+    assert.ok(
+      ATTESTED.has(entry.page),
+      `${id} : « ${entry.page} » n'est attestée par aucune source primaire.`,
+    );
+  }
+  assert.equal(PLATEAU_PORTAL.catalog, 'https://www.geospatial.jp/ckan/dataset');
 });
 
 test('la table des tronçons est cohérente', () => {

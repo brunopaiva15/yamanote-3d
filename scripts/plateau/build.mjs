@@ -13,7 +13,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { DATASETS, PLATEAU_CONFIG } from './config.mjs';
+import { DATASETS, PLATEAU_CONFIG, PLATEAU_PORTAL } from './config.mjs';
 import { createReporter, humanBytes, PipelineError, runMain } from './lib/log.mjs';
 import { isEntryPoint, parseArgs } from './lib/args.mjs';
 import { readMarker } from './lib/cache.mjs';
@@ -121,13 +121,15 @@ async function dryRun(args, reporter) {
   } else if (source.kind === 'zip') {
     reporter.info(`Source : archive locale ${source.path} (aucun téléchargement).`);
   } else {
-    const id = args.dataset ?? 'tokyo23ku-2023-citygml';
+    const id = args.dataset ?? 'tokyo23ku-citygml';
     const entry = DATASETS[id];
     const url = args.url ?? entry?.url;
     reporter.info(`Source : ${entry?.label ?? id}`);
-    reporter.info(`  Page : ${entry?.page ?? '(inconnue)'}`);
+    reporter.info(`  Catalogue : ${PLATEAU_PORTAL.catalog}`);
+    reporter.info(`  Fiche attestée (millésime 2022) : ${entry?.page ?? '(inconnue)'}`);
     reporter.info(`  URL : ${url || '(non configurée — --url requis)'}`);
-    reporter.info(`  Taille annoncée par la fiche : ~${entry?.approxSizeMB ?? '?'} Mo`);
+    // Aucune taille annoncée « de mémoire » : seule celle du serveur compte.
+    reporter.info('  Taille : établie par une requête HEAD avant tout téléchargement');
     reporter.info(
       `  Seuil sans confirmation : ${PLATEAU_CONFIG.download.maxAutoDownloadMB} Mo ` +
         `(--yes au-delà, plafond absolu ${PLATEAU_CONFIG.download.hardLimitMB} Mo)`,
@@ -300,7 +302,7 @@ function describeSource(args) {
       },
     };
   }
-  const id = args.dataset ?? process.env.PLATEAU_DATASET ?? 'tokyo23ku-2023-citygml';
+  const id = args.dataset ?? process.env.PLATEAU_DATASET ?? 'tokyo23ku-citygml';
   const entry = DATASETS[id] ?? {};
   const marker = readMarker('download');
   return {

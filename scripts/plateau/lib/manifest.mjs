@@ -58,7 +58,7 @@ export function buildManifest({ chunks, source, route }) {
  * relèvent pas de la même licence et qu'un fichier unique « MIT » serait faux.
  */
 export function buildLicense({ source, routeProperties }) {
-  const dataset = DATASETS['tokyo23ku-2023-citygml'];
+  const dataset = DATASETS['tokyo23ku-citygml'];
   const synthetic = source.kind === 'sample';
   const routeIsOsm = routeProperties?.source?.includes('OpenStreetMap');
 
@@ -95,13 +95,13 @@ Les licences ci-dessous s'appliqueront alors.`
 
 Project PLATEAU est un programme du 国土交通省 (MLIT, ministère japonais des
 Terres, de l'Infrastructure, des Transports et du Tourisme). Les modèles 3D des
-23 arrondissements de Tokyo sont produits avec la 東京都 (préfecture de Tokyo) ;
-l'arrondissement concerné par ce tronçon est 豊島区 (Toshima-ku).
+23 arrondissements de Tokyo sont produits avec la 東京都 (préfecture de Tokyo).
 
 ⚠️ **Vérifiez la licence du millésime que vous téléchargez.** PLATEAU diffuse
 la majorité de ses jeux en CC BY 4.0, mais les conditions et les mentions
 d'attribution exactes sont portées par la fiche de chaque ressource sur le
-G空間情報センター : ne présumez pas une licence uniforme.`
+G空間情報センター : ne présumez pas une licence uniforme, et ne recopiez pas
+l'attribution ci-dessus sans l'avoir lue sur la fiche.`
 }
 
 ### Tracé de la voie

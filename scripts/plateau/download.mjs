@@ -23,7 +23,7 @@ import { basename, dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { Unzip, UnzipInflate } from 'fflate';
-import { DATASETS, PLATEAU_CONFIG } from './config.mjs';
+import { DATASETS, PLATEAU_CONFIG, PLATEAU_PORTAL } from './config.mjs';
 import { ensureDirs, hashValue, reusable, writeMarker } from './lib/cache.mjs';
 import { PipelineError, createReporter, humanBytes, runMain } from './lib/log.mjs';
 import { isEntryPoint, parseArgs } from './lib/args.mjs';
@@ -40,12 +40,12 @@ export function resolveSource(args) {
   const explicit = args.source ?? process.env.PLATEAU_SOURCE ?? null;
   if (explicit === 'dataset') return { kind: 'dataset' };
   if (explicit === 'sample') return { kind: 'sample' };
-  const url = args.url ?? DATASETS[args.dataset ?? 'tokyo23ku-2023-citygml']?.url;
+  const url = args.url ?? DATASETS[args.dataset ?? 'tokyo23ku-citygml']?.url;
   return url ? { kind: 'dataset' } : { kind: 'sample' };
 }
 
 function datasetUrl(args) {
-  const id = args.dataset ?? process.env.PLATEAU_DATASET ?? 'tokyo23ku-2023-citygml';
+  const id = args.dataset ?? process.env.PLATEAU_DATASET ?? 'tokyo23ku-citygml';
   const entry = DATASETS[id];
   if (!entry) {
     throw new PipelineError(
@@ -57,10 +57,14 @@ function datasetUrl(args) {
   if (!url) {
     throw new PipelineError(
       `Aucune URL configurée pour le jeu de données « ${id} ».`,
-      `PLATEAU diffuse ses données via le G空間情報センター. Ouvrez ${entry.page}, ` +
-        'copiez le lien de la ressource CityGML, puis relancez avec ' +
-        '--url <URL> (ou PLATEAU_DATASET_URL=<URL>). ' +
-        'Vous pouvez aussi pointer une archive déjà téléchargée avec --zip <fichier.zip>.',
+      `PLATEAU diffuse ses données via le G空間情報センター.\n` +
+        `  Le nom court du jeu change d'un millésime à l'autre et n'est PAS déductible :\n` +
+        `  cherchez « 3D都市モデル 東京都23区 » dans le catalogue\n` +
+        `    ${PLATEAU_PORTAL.catalog}\n` +
+        `  (point de départ sûr, millésime 2022 : ${PLATEAU_PORTAL.tokyo23kuAttested})\n` +
+        `  puis copiez le lien de la ressource CityGML et relancez avec\n` +
+        `    --url <URL>   (ou PLATEAU_DATASET_URL=<URL>)\n` +
+        `  Vous pouvez aussi pointer une archive déjà téléchargée : --zip <fichier.zip>`,
     );
   }
   return { id, entry, url };

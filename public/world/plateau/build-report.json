@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-29T08:07:02.329Z",
+  "generatedAt": "2026-07-29T09:19:28.700Z",
   "tools": {
     "node": "v22.22.2",
     "sharp": "libvips 8.18.3",
@@ -357,19 +357,19 @@
   "timings": [
     {
       "title": "Vérification des outils",
-      "seconds": 0.002
+      "seconds": 0.004
     },
     {
       "title": "Conversion, découpage et optimisation",
-      "seconds": 1.155
+      "seconds": 2.206
     },
     {
       "title": "Manifeste, licences et rapport",
-      "seconds": 0.001
+      "seconds": 0.003
     },
     {
       "title": "Validation",
-      "seconds": 0.019
+      "seconds": 0.022
     }
   ],
   "warnings": [
@@ -379,5 +379,5 @@
     "  Installez-le ou définissez PLATEAU_CONVERTER_PATH.\n  Linux x86_64 : téléchargez nusamai-<version>-x86_64-unknown-linux-gnu.tar.gz depuis\n    https://github.com/MIERUNE/plateau-gis-converter/releases\n    tar -xzf nusamai-<version>-x86_64-unknown-linux-gnu.tar.gz\n    sudo install -m 755 nusamai /usr/local/bin/nusamai\n  macOS (Apple Silicon) : nusamai-<version>-aarch64-apple-darwin.tar.gz\n  Ou passez --converter builtin pour utiliser le lecteur CityGML intégré\n  (LOD1/LOD2 sans textures — voir docs/PLATEAU_PIPELINE.md)."
   ],
   "errors": [],
-  "totalSeconds": 1.281
+  "totalSeconds": 5.331
 }

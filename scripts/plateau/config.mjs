@@ -193,27 +193,53 @@ export const PLATEAU_CONFIG = {
 };
 
 /**
- * Jeux de données PLATEAU connus. Les URL pointent vers le G空間情報センター
- * (geospatial.jp), portail de diffusion officiel de Project PLATEAU.
+ * Portail officiel de diffusion de Project PLATEAU : le G空間情報センター.
  *
- * ⚠️ Les tailles sont indicatives et vérifiées à l'exécution par un HEAD :
- * le pipeline n'engage jamais un téléchargement sur la foi de cette table.
+ * ⚠️ N'INVENTEZ PAS D'URL DE JEU DE DONNÉES. Le nom court (slug) CKAN d'un jeu
+ * PLATEAU n'est pas déductible : il a changé de convention entre millésimes.
+ * Deux formes réellement observées, chacune citée par un dépôt officiel :
+ *
+ *   plateau-tokyo23ku-2022          (README de Project-PLATEAU/PLATEAU-GIS-Converter)
+ *   plateau-22203-numazu-shi-2021   (README de MIERUNE/plateau-qgis-plugin)
+ *
+ * Extrapoler la première en « plateau-tokyo23ku-2023 » donne un 404. Il faut
+ * chercher le millésime voulu depuis le portail, puis passer son URL de
+ * ressource au pipeline via --url ou PLATEAU_DATASET_URL.
+ */
+export const PLATEAU_PORTAL = {
+  /** Portail du programme (rubrique オープンデータ / open data). */
+  program: 'https://www.mlit.go.jp/plateau/',
+  /** Catalogue G空間情報センター. */
+  catalog: 'https://www.geospatial.jp/ckan/dataset',
+  /**
+   * Dernier jeu Tokyo 23区 dont l'URL soit ATTESTÉE par une source primaire
+   * (README du convertisseur officiel). Millésime 2022, pas le plus récent :
+   * c'est un point de départ sûr pour retrouver les suivants, pas une
+   * recommandation.
+   */
+  tokyo23kuAttested: 'https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku-2022',
+};
+
+/**
+ * Jeux de données PLATEAU.
+ *
+ * Aucun arrondissement n'est publié seul : PLATEAU diffuse les 23
+ * arrondissements de Tokyo en un unique paquet. C'est celui-là qu'il faut,
+ * quel que soit le tronçon visé — Shibuya-ku et Meguro-ku pour
+ * Shibuya → Ebisu, Toshima-ku pour Sugamo → Ōtsuka.
+ *
+ * `url` reste VIDE par défaut, et c'est délibéré : mieux vaut un message qui
+ * dit où chercher qu'une URL périmée qui renvoie un 404. La taille réelle est
+ * établie par une requête HEAD avant tout téléchargement.
  */
 export const DATASETS = {
-  /**
-   * Aucun arrondissement n'est publié seul : PLATEAU diffuse les 23
-   * arrondissements de Tokyo en un unique jeu de données (13100_tokyo23-ku).
-   * C'est le paquet à récupérer, quel que soit le tronçon visé — Shibuya-ku
-   * et Meguro-ku pour Shibuya → Ebisu, Toshima-ku pour Sugamo → Ōtsuka.
-   */
-  'tokyo23ku-2023-citygml': {
-    label: 'Tokyo 23区 3D都市モデル (CityGML, FY2023)',
-    page: 'https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku-2023',
-    // À renseigner par l'utilisateur (l'URL de ressource CKAN change à chaque
-    // millésime) ; --url ou PLATEAU_DATASET_URL priment de toute façon.
+  'tokyo23ku-citygml': {
+    label: '東京都23区 3D都市モデル (CityGML) — Project PLATEAU',
+    page: PLATEAU_PORTAL.tokyo23kuAttested,
     url: str('PLATEAU_DATASET_URL', ''),
-    approxSizeMB: 24_000,
-    license: 'CC BY 4.0 — 国土交通省 Project PLATEAU',
+    /** Inconnue tant que le serveur n'a pas répondu — surtout pas devinée. */
+    approxSizeMB: null,
+    license: 'À VÉRIFIER sur la fiche du millésime (généralement CC BY 4.0)',
     attribution: '出典：国土交通省 Project PLATEAU（東京都23区 3D都市モデル）',
   },
 };
@@ -224,7 +250,7 @@ export function stageInputs(stage) {
   const d = PLATEAU_CONFIG.distances;
   switch (stage) {
     case 'download':
-      return { dataset: str('PLATEAU_DATASET', 'tokyo23ku-2023-citygml'), url: DATASETS['tokyo23ku-2023-citygml'].url };
+      return { dataset: str('PLATEAU_DATASET', 'tokyo23ku-citygml'), url: DATASETS['tokyo23ku-citygml'].url };
     case 'convert':
       // Le tronçon fait partie des entrées : la sélection au corridor a lieu
       // pendant la conversion, changer de tronçon doit donc la rejouer.

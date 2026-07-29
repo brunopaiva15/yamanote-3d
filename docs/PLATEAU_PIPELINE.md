@@ -91,7 +91,7 @@ sans ambiguïté au Japon.
 | `PLATEAU_PROTOTYPE` | `shibuya-ebisu` | tronçon traité (clé de `PROTOTYPE_SEGMENTS`) |
 | `PLATEAU_SAMPLE_DENSITY` | `900` | bâtiments par km pour l'échantillon synthétique |
 | `PLATEAU_DATASET_URL` | — | URL de l'archive CityGML à télécharger |
-| `PLATEAU_DATASET` | `tokyo23ku-2023-citygml` | identifiant dans `DATASETS` |
+| `PLATEAU_DATASET` | `tokyo23ku-citygml` | identifiant dans `DATASETS` |
 | `PLATEAU_SOURCE` | auto | `sample` ou `dataset` |
 | `PLATEAU_CONVERTER` | `auto` | `auto`, `builtin`, `nusamai`, `custom` |
 | `PLATEAU_CONVERTER_PATH` | — | chemin du binaire `nusamai` |
@@ -191,7 +191,7 @@ porteur. Il traite ~47 Mo/s. Ses limites sont **explicites** et documentées en
 tête de fichier : sur du LOD2 texturé, il rendra la géométrie sans les textures.
 
 La sélection au corridor a lieu **pendant** la conversion : c'est ce qui rend
-le traitement d'un jeu de 24 Go tenable, l'intermédiaire ne contenant que les
+le traitement d'un jeu de plusieurs gigaoctets tenable, l'intermédiaire ne contenant que les
 bâtiments à ±300 m de l'axe. Un bâtiment est retenu si **son point le plus
 proche** de l'axe est dans le corridor — pas son centre : une barre de 60 m à
 cheval sur la limite reste visible depuis le train.
@@ -346,6 +346,12 @@ Points d'attention :
    la conversion du jeu réel n'a **pas** été exécutée.
 2. **Le tracé livré est approché** (arc de cercle entre les deux gares), pas
    relevé. `--overpass` le remplace par la géométrie OSM réelle.
+2 bis. **Les URL du portail n'ont pas pu être testées.** Faute de réseau, les
+   liens vers `geospatial.jp` de ce dépôt sont ceux qui sont *cités par des
+   dépôts officiels de Project PLATEAU*, pas des liens vérifiés en les
+   ouvrant. Une première version du pipeline contenait une URL extrapolée
+   (`plateau-tokyo23ku-2023`) qui renvoyait un 404 ; elle a été retirée, et
+   plus aucune URL de jeu de données n'est codée en dur.
 3. **Les hauteurs sont ellipsoïdales**, pas orthométriques. L'ondulation du
    géoïde vaut ~37 m à Tokyo ; elle est constante à l'échelle du kilomètre,
    donc invisible ici puisque tout est recentré sur l'altitude de la voie. Il
@@ -445,7 +451,9 @@ budget. Marche à suivre :
    corridors — avec un index spatial (grille de 200 m) pour ne pas faire
    30 × N projections. C'est le seul endroit qui demande un vrai changement
    d'algorithme.
-4. **Données.** Le jeu Tokyo 23 区 fait ~24 Go et couvre toute la boucle. Il
+4. **Données.** Le jeu Tokyo 23 区 couvre toute la boucle et pèse plusieurs
+   gigaoctets (taille exacte : voir la fiche du millésime, le pipeline la lit
+   par un HEAD avant de télécharger). Il
    est découpé en mailles ; ne convertir que les mailles qui intersectent la
    boîte englobante de la boucle (une trentaine sur plusieurs centaines).
    `download.mjs` extrait déjà sélectivement.
@@ -529,9 +537,18 @@ dépliage UV automatique, remaillage, cuisson d'occlusion ambiante.
 
 ## Travailler sur les données réelles
 
+> ⚠️ **Le nom court (slug) d'un jeu PLATEAU n'est pas déductible.** La
+> convention a changé entre millésimes — `plateau-tokyo23ku-2022` d'un côté,
+> `plateau-22203-numazu-shi-2021` de l'autre (deux formes citées par des dépôts
+> officiels). Extrapoler la première en `…-2023` donne un 404. Ce dépôt ne
+> code donc **aucune** URL de jeu de données en dur : il vous envoie au
+> catalogue et attend votre `--url`.
+
 ```bash
 # 1. Repérer la ressource CityGML sur le G空間情報センター
-#    https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku-2023
+#    https://www.geospatial.jp/ckan/dataset  (chercher « 3D都市モデル 東京都23区 »)
+#    Point de départ attesté (millésime 2022, pas le plus récent) :
+#    https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku-2022
 # 2. Vérifier ce qui serait fait, sans rien télécharger
 npm run world:build:prototype -- --source dataset --url <URL> --dry-run
 # 3. Lancer pour de bon (--yes au-delà de 256 Mo)
