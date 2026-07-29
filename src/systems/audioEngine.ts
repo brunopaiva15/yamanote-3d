@@ -996,6 +996,19 @@ export function doorClunk(vel: number): void {
   nodes.clack.triggerAttackRelease(0.03, slot('clack', now + 0.012), vel * 0.7);
 }
 
+/**
+ * La porte rencontre quelqu'un, ou quelque chose.
+ *
+ * Ce n'est pas un choc de butée : rien ne claque, rien ne verrouille. Un coup
+ * sourd, court, amorti par ce qui est pris dedans — c'est exactement à ça
+ * qu'on entend, depuis l'intérieur, qu'une porte ne s'est pas fermée.
+ */
+export function doorObstacleBump(vel: number): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.thud.triggerAttackRelease('E1', 0.12, slot('thud', now), vel);
+}
+
 // Choc plus mat des portes palières, entendues depuis l'intérieur du wagon.
 export function psdClunk(vel: number): void {
   if (!nodes) return;

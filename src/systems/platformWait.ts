@@ -41,6 +41,12 @@ import {
   resetMelodyDepartureGuard,
 } from './departureSequence';
 import {
+  armDoorObstruction,
+  doorObstructionActive,
+  onDoorsClosing,
+  resetDoorObstruction,
+} from './doorObstruction';
+import {
   CLOSE_ANNOUNCE_LEAD,
   DOORS_CLOSE_LEAD,
   MELODY_SOUNDING,
@@ -199,11 +205,19 @@ function updateBoardable(dt: number, index: number, doorSide: 1 | -1): void {
   once('doors-close', t >= dwell - DOORS_CLOSE_LEAD, () => {
     setTrainDoors(0);
     audio.doorCloseChime();
+    onDoorsClosing();
   });
   once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () => {
     setPsdDoors(0);
     paPsdBeeps();
   });
+  // Une porte coincée retient la rame, qu'on soit dedans ou sur le quai : d'ici
+  // on voit les vantaux d'une caisse rester entrebâillés, et le train ne part
+  // pas tant qu'ils ne sont pas rentrés.
+  if (doorObstructionActive()) {
+    platformWait.t = Math.min(platformWait.t, dwell - 0.01);
+    return;
+  }
   if (t >= dwell) {
     cancelDepartureMelody();
     resetMelodyDepartureGuard();
@@ -341,6 +355,9 @@ function updateBerthing(index: number): void {
     // Nouvelle rame, nouvelle chronologie d'arrêt : deux trains d'affilée à la
     // même gare ne repartent pas à la même seconde.
     randomizeStopTimings(index);
+    // Nouvelle rame, nouveau tirage de l'incident de porte.
+    resetDoorObstruction();
+    armDoorObstruction();
     // Nouvelle rame : de nouveaux visages derrière les vitres.
     seedPassengers();
     // La gare annonce son propre nom, deux fois, comme sur les quais ATOS.

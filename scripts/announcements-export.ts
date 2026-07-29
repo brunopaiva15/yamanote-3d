@@ -33,6 +33,7 @@ import {
   EMERGENCY_REASONS,
   approachSequence,
   departureSequence,
+  doorReleaseAnnouncement,
   doorsClosingAnnouncement,
   emergencyBrakeAnnouncement,
   emergencyResumeAnnouncement,
@@ -44,10 +45,13 @@ import {
 import {
   PLATFORM_AGENT_MESSAGES,
   PLATFORM_DELAY_CAUSES,
+  PLATFORM_DOOR_RELEASE,
   platformAgentMessage,
   platformApproachAnnouncement,
   platformArrivalAnnouncement,
   platformDelayAnnouncement,
+  platformDoorCheckAnnouncement,
+  platformDoorReleaseAnnouncement,
   platformDoorsClosingAnnouncement,
   platformGreeting,
   platformPassAnnouncement,
@@ -161,6 +165,9 @@ for (let i = 0; i < STATIONS.length; i++) {
   utterances.push(...approachSequence(i, DOOR_SIDE[i]));
 }
 utterances.push(...doorsClosingAnnouncement());
+// Porte bloquée : la demande du conducteur, et sa version insistante.
+utterances.push(...doorReleaseAnnouncement());
+utterances.push(...doorReleaseAnnouncement(true));
 utterances.push(...welcomeAnnouncement());
 // Arrêt d'urgence : freinage, annonce d'arrêt (un clip par motif), attente, reprise.
 utterances.push(...emergencyBrakeAnnouncement());
@@ -201,6 +208,12 @@ for (let n = 0; n < PLATFORM_AGENT_MESSAGES.length; n++) {
 for (let c = 0; c < PLATFORM_DELAY_CAUSES.length; c++) {
   stationUtterances.push(...platformDelayAnnouncement(c));
 }
+// Porte bloquée : les consignes de l'agent, et l'annonce d'attente quand
+// toutes les portes ont dû être rouvertes.
+for (let n = 0; n < PLATFORM_DOOR_RELEASE.length; n++) {
+  stationUtterances.push(...platformDoorReleaseAnnouncement(n));
+}
+stationUtterances.push(...platformDoorCheckAnnouncement());
 
 // --- Déduplication ------------------------------------------------------
 

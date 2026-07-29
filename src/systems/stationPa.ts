@@ -20,6 +20,8 @@ import {
   platformApproachAnnouncement,
   platformArrivalAnnouncement,
   platformDelayAnnouncement,
+  platformDoorCheckAnnouncement,
+  platformDoorReleaseAnnouncement,
   platformDoorsClosingAnnouncement,
   platformGreeting,
   platformPassAnnouncement,
@@ -173,4 +175,14 @@ export function paDoorsClosing(index: number): void {
 
 export function paPsdBeeps(): void {
   audio.psdDoorBeeps();
+}
+
+/** « Éloignez-vous des portes » : l'agent, pendant qu'une porte reste bloquée. */
+export function paDoorRelease(attempt: number): void {
+  say(platformDoorReleaseAnnouncement(attempt), 'platform');
+}
+
+/** Toutes les portes rouvertes : la gare explique l'attente. */
+export function paDoorCheck(): void {
+  say(platformDoorCheckAnnouncement(), 'platform');
 }

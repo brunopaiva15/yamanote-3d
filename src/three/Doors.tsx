@@ -7,7 +7,8 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CONFIG, DOOR_POCKET_TUCK } from '../data/config';
 import { useStore } from '../store';
-import { trainDoorLag, trainDoorPos } from '../systems/doorMotion';
+import { trainDoorPosAt } from '../systems/doorMotion';
+import { PLAYER_CAR } from '../data/e235';
 import { makeDoorEdgeTexture, makeDoorStickerTexture } from '../textures/procedural';
 import { roundedRect } from './shapes';
 
@@ -81,7 +82,9 @@ export function Doors() {
     const doorSide = useStore.getState().doorSide;
     for (const p of panels.current) {
       if (!p.mesh) continue;
-      const open = p.side === doorSide ? trainDoorPos(trainDoorLag(p.dz)) : 0;
+      // Porte par porte : celle qui coince sur un voyageur a sa propre course
+      // (systems/doorObstruction), les autres suivent l'ensemble.
+      const open = p.side === doorSide ? trainDoorPosAt(PLAYER_CAR, p.dz) : 0;
       // Course + dépassement : en butée le chant passe derrière le montant de
       // baie au lieu de tomber dans son plan (voir DOOR_POCKET_TUCK).
       p.mesh.position.z = p.baseZ + p.dir * open * (PANEL_W + DOOR_POCKET_TUCK);

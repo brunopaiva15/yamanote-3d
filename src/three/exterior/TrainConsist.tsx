@@ -16,7 +16,7 @@ import { DOOR_POCKET_TUCK } from '../../data/config';
 import { CONSIST, E235, LIVERY, PLAYER_CAR, carZ } from '../../data/e235';
 import { useStore } from '../../store';
 import { runtime } from '../../systems/runtime';
-import { trainDoorLag, trainDoorPos } from '../../systems/doorMotion';
+import { blockedDoorOpen, trainDoorPosAt } from '../../systems/doorMotion';
 import { consistDetail } from '../../systems/perf';
 import {
   makeBellowsTexture,
@@ -64,7 +64,9 @@ function layoutLeaves(built: Built, side: 1 | -1, open: boolean): void {
       // le tableau de la porte percé dans la peau de caisse. Sans ces quelques
       // millimètres, les deux faces sont exactement confondues et le bout de la
       // porte clignote pendant tout l'arrêt (voir DOOR_POCKET_TUCK).
-      const slide = open ? trainDoorPos(trainDoorLag(dz)) * (E235.doorHalfW + DOOR_POCKET_TUCK) : 0;
+      // Porte par porte : depuis le quai, une porte bloquée sur une caisse
+      // voisine se voit à ça — un seul intervalle resté ouvert sur quarante-quatre.
+      const slide = open ? trainDoorPosAt(i, dz) * (E235.doorHalfW + DOOR_POCKET_TUCK) : 0;
       for (const s of [1, -1] as const) {
         const shift = s === side ? slide : 0;
         for (const dir of [1, -1] as const) {
@@ -291,6 +293,7 @@ function build(): Built {
 export function TrainConsist() {
   const built = useMemo(build, []);
   const lastOpen = useRef(-1);
+  const lastBlocked = useRef(-1);
   const lastService = useRef('');
 
   useFrame(() => {
@@ -314,9 +317,16 @@ export function TrainConsist() {
     // cohérente (portes ouvertes ou fermées, sans coulissement).
     const open = runtime.doorOpen;
     const stepped = consistDetail() >= 3 ? Math.round(open) : open;
-    if (Math.abs(stepped - lastOpen.current) > 0.002) {
+    // Une porte bloquée bouge quand tout le reste est immobile : sa course doit
+    // entrer dans le test, sans quoi la seule chose à voir serait figée.
+    const blocked = blockedDoorOpen();
+    if (
+      Math.abs(stepped - lastOpen.current) > 0.002 ||
+      Math.abs(blocked - lastBlocked.current) > 0.002
+    ) {
       lastOpen.current = stepped;
-      layoutLeaves(built, doorSide, stepped > 0.01);
+      lastBlocked.current = blocked;
+      layoutLeaves(built, doorSide, stepped > 0.01 || blocked > 0.01);
     }
   });
 
