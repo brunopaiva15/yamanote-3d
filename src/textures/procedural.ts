@@ -2124,61 +2124,56 @@ export function makeStationSign(): { canvas: HTMLCanvasElement; texture: THREE.C
   return { canvas: c, texture, redraw };
 }
 
-// --- Panneau de nom de gare vertical, sur poteau (縦型駅名標) ---
+// --- Plaque de nom de gare verticale, sur poteau (縦型駅名標) ---
 //
-// Les totems du quai affichaient la texture du caisson suspendu : une image de
-// 1400 × 420 dessinée pour une face de 3,20 × 0,96 m, plaquée sur une face de
-// 0,30 × 0,90 m. Un rapport de 3,33:1 écrasé dans un cadre de 1:3, soit dix fois
-// trop haut pour sa largeur — le cercle de l'emblème sortait en ellipse, le
-// badge JY en trait vertical, et la bande verte du bas en deux pavés de texte
-// illisibles. Ce n'était pas une texture à recadrer mais une mise en page à
-// écrire : celle des panneaux de poteau, où le nom se lit de haut en bas, la
-// gare précédente au-dessus et la suivante en dessous.
+// Le totem affichait la texture du caisson suspendu : une image de 1400 × 420
+// dessinée pour une face de 3,20 × 0,96 m, plaquée sur une face haute et
+// étroite. Un rapport de 3,33:1 écrasé dans un cadre de 1:3 — le cercle de
+// l'emblème sortait en ellipse et la bande verte en deux pavés illisibles.
+//
+// Mais la plaque de poteau n'est pas le grand panneau recadré : c'est un objet
+// différent, et beaucoup plus dépouillé. JR East la référence en 9号型,
+// 75 × 15 cm ; la réplique officielle de celle du quai Yamanote de Tokyo mesure
+// 70 × 14 cm à l'échelle 70 %, soit un mètre sur vingt centimètres — un rapport
+// de 1:5. À vingt centimètres de large il n'y a de place pour rien d'autre que
+// le nom : pas de gares voisines, pas de flèches, pas de bande verte.
+//
+// Et le nom s'y écrit en HIRAGANA, verticalement, en noir sur blanc. C'est le
+// dernier endroit où JR East a gardé la graphie kana : les caissons suspendus
+// sont passés au kanji (あきはばら → 秋葉原), les plaques de poteau non — la
+// réplique officielle de Tokyo se vend sous le nom « とうきょう ».
 export function makeTotemSign(): {
   texture: THREE.CanvasTexture;
   redraw: (index: number) => void;
 } {
-  // Exactement le rapport de la face du totem (0,30 × 0,90 m) : rien ne
-  // s'étire.
-  const W = 320;
-  const H = 960;
+  // 1:5, le rapport de la plaque réelle.
+  const W = 200;
+  const H = 1000;
   const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
-  const GREEN = '#80c241';
 
   const redraw = (index: number) => {
     const st = STATIONS[index];
-    const prev = STATIONS[(index + 29) % 30];
-    const next = STATIONS[(index + 1) % 30];
 
-    // Même fond blanc rétroéclairé et même double filet que le grand panneau.
+    // Tôle émaillée blanche, filet sombre au bord. Rien de rétroéclairé ici :
+    // une plaque de poteau est une plaque, pas un caisson lumineux.
     g.fillStyle = '#ffffff';
     g.fillRect(0, 0, W, H);
     g.strokeStyle = '#1a1a1a';
-    g.lineWidth = 8;
-    g.strokeRect(4, 4, W - 8, H - 8);
-    g.lineWidth = 2.5;
-    g.strokeRect(13, 13, W - 26, H - 26);
-
-    // Badge trigramme + numéro JY, en tête.
-    drawStationCodeBadge(g, (W - 116) / 2, 30, 116, st.code, st.jy);
+    g.lineWidth = 6;
+    g.strokeRect(3, 3, W - 6, H - 6);
 
     g.textAlign = 'center';
-    g.textBaseline = 'alphabetic';
 
-    // Lecture en kana, puis filet de séparation.
-    g.fillStyle = '#333333';
-    fitFillText(g, st.kana, W / 2, 186, W - 60, 26, '400');
-    g.fillStyle = 'rgba(0,0,0,0.18)';
-    g.fillRect(40, 202, W - 80, 2);
-
-    // Le nom, un caractère par ligne. Le pas est calibré sur le nombre de
-    // caractères : 高輪ゲートウェイ en compte huit et tient dans la même hauteur
-    // que 東京, qui en compte deux et reste plafonné pour ne pas déborder.
-    const top = 222;
-    const bottom = 648;
-    const chars = [...st.kanji];
-    const step = Math.min(122, (bottom - top) / chars.length);
+    // Le nom en kana, un caractère par ligne. Sur une plaque réelle le corps du
+    // glyphe est calibré sur la LARGEUR de la tôle, pas sur la hauteur restante :
+    // c'est le plafond du pas qui joue, et les noms courts (かんだ, trois
+    // caractères) respirent au lieu de s'étirer. Seuls les noms longs passent
+    // sous le plafond — たかなわげーとうぇい en compte dix.
+    const top = 54;
+    const bottom = 878;
+    const chars = [...st.kana];
+    const step = Math.min(160, (bottom - top) / chars.length);
     g.fillStyle = '#1a1a1a';
     g.font = `bold ${Math.floor(step * 0.86)}px ${JP_FONT}`;
     g.textBaseline = 'middle';
@@ -2199,34 +2194,8 @@ export function makeTotemSign(): {
     });
     g.textBaseline = 'alphabetic';
 
-    // Romaji, sous la colonne.
-    g.fillStyle = '#1a1a1a';
-    fitFillText(g, st.romaji, W / 2, 692, W - 56, 40);
-
-    // --- Bande verte : précédente au-dessus, suivante en dessous ---
-    // Sur un panneau vertical, la flèche suit la colonne et non la largeur :
-    // celle du haut remonte vers la gare quittée, celle du bas descend vers la
-    // suivante.
-    const bandY = 712;
-    const bandH = H - 32 - bandY;
-    g.fillStyle = GREEN;
-    g.beginPath();
-    g.roundRect(22, bandY, W - 44, bandH, 8);
-    g.fill();
-    const rowH = bandH / 2;
-    g.fillStyle = 'rgba(255,255,255,0.55)';
-    g.fillRect(34, bandY + rowH - 1, W - 68, 2);
-
-    [prev, next].forEach((s, i) => {
-      const y = bandY + i * rowH;
-      g.fillStyle = '#ffffff';
-      drawSignArrow(g, 54, y + rowH / 2, 42, i === 0 ? Math.PI : 0);
-      g.textAlign = 'left';
-      fitFillText(g, s.kanji, 88, y + rowH * 0.46, W - 116, 34);
-      g.fillStyle = 'rgba(255,255,255,0.92)';
-      fitFillText(g, s.romaji, 88, y + rowH * 0.78, W - 116, 22, '600');
-    });
-    g.textAlign = 'center';
+    // Romaji en pied de plaque, à l'horizontale : la seule mention latine.
+    fitFillText(g, st.romaji, W / 2, 946, W - 26, 34);
 
     texture.needsUpdate = true;
   };

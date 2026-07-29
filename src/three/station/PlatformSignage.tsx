@@ -135,9 +135,11 @@ export function PlatformSignage({
   accent,
 }: Props) {
   const sign = useMemo(() => makeStationSign(), []);
-  // Le totem a sa propre texture : la face d'un poteau est trois fois plus
-  // haute que large, le caisson suspendu trois fois plus large que haut. La
-  // même image sur les deux se déformait de dix fois sur l'un des deux.
+  // Le totem a sa propre texture : une plaque de poteau est cinq fois plus
+  // haute que large, le caisson suspendu trois fois plus large que haut, et
+  // les deux ne portent pas la même chose — kana vertical sur l'une, kanji et
+  // bande directionnelle sur l'autre. La même image sur les deux se déformait
+  // d'un facteur dix.
   const totem = useMemo(() => makeTotemSign(), []);
   const board = useMemo(() => makePlatformBoard(), []);
   const band = useMemo(() => makeDirectionBand(), []);
@@ -340,12 +342,14 @@ export function PlatformSignage({
           <mesh position={[0, 1.1, 0]} material={metal}>
             <boxGeometry args={[0.22, 2.2, 0.35]} />
           </mesh>
+          {/* Plaque de poteau : 0,18 × 0,90 m, le 1:5 de la plaque réelle
+              (9号型, 75 × 15 cm ; celle du quai Yamanote de Tokyo, 100 × 20). */}
           <mesh
             position={[-0.12, 1.55, 0]}
             rotation={[0, -Math.PI / 2, 0]}
             material={materials.totem}
           >
-            <planeGeometry args={[0.3, 0.9]} />
+            <planeGeometry args={[0.18, 0.9]} />
           </mesh>
           <mesh position={[0, 2.35, 0]} material={accent}>
             <boxGeometry args={[0.28, 0.12, 0.4]} />
