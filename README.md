@@ -178,9 +178,11 @@ quai — l'événement le plus physique d'un quai japonais.
 Onze gares peuvent en voir traverser (`data/passingTrains`), et deux régimes s'y
 succèdent selon l'heure de Tokyo :
 
-- **快速**, de 10 h 30 à 15 h 30, aux cinq gares que le rapide saute vraiment :
-  御徒町, 鶯谷, 西日暮里, 浜松町 (en semaine — le week-end il s'y arrête) et
-  有楽町. C'est le passage fréquent, celui qu'on finit par attendre.
+- **快速**, de 10 h 30 à 15 h 30 entre Tabata et Shinagawa, aux cinq gares que
+  le rapide saute vraiment : 御徒町 (en semaine — le week-end il s'y arrête),
+  鶯谷, 日暮里, 西日暮里 et 有楽町. C'est le passage fréquent, celui qu'on finit
+  par attendre. Il saute aussi 新橋, mais le gabarit du jeu en fait un îlot
+  Yamanote pur : aucune voie Keihin-Tōhoku n'y borde le quai.
 - **回送**, une rame vide qui rejoint son dépôt ou en sort : aux onze gares,
   rare en pleine journée, nettement moins après 22 h et avant 7 h — les
   mouvements de dépôt se font avant le premier train et après le dernier.
