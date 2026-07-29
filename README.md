@@ -76,6 +76,17 @@ Le référentiel basculait alors en pleine voie et la rame s'arrêtait net.
 `tests/walkable.test.ts` tient la règle des deux côtés : la porte fermée ne
 s'ouvre pas, et celle qui se referme sur vous ne vous enferme pas.
 
+Ce que le quai en montre doit dire la même chose. Les quarante-quatre baies de
+la rame vues de dehors (`three/exterior/TrainConsist`) suivaient l'ouverture de
+la porte de RÉFÉRENCE — la première à partir, donc la première à s'arrêter. La
+repose des vantaux cessait avec elle, 0,3 s avant les autres, qui restaient
+dessinées à mi-course tout l'arrêt : une rame qui semblait close depuis le quai
+alors qu'on pouvait y monter, portes palières grandes ouvertes. `doorMotion`
+publie maintenant `trainDoorsSettled()` — la course est finie pour TOUS —, et
+le palier de qualité qui ne rejoue pas le coulissement se trompe désormais du
+bon côté : ouvert dès l'ordre d'ouverture, clos seulement une fois les vantaux
+rentrés, jamais l'inverse.
+
 ### Se poser à quai
 
 Un train ne s'arrête pas : il se pose. La dernière seconde d'un arrêt réussi ne

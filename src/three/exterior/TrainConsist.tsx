@@ -16,7 +16,12 @@ import { DOOR_POCKET_TUCK } from '../../data/config';
 import { CONSIST, E235, LIVERY, PLAYER_CAR, carZ } from '../../data/e235';
 import { useStore } from '../../store';
 import { runtime } from '../../systems/runtime';
-import { blockedDoorOpen, trainDoorPosAt } from '../../systems/doorMotion';
+import {
+  blockedDoorOpen,
+  isBlockedDoor,
+  trainDoorPosAt,
+  trainDoorsSettled,
+} from '../../systems/doorMotion';
 import { consistDetail } from '../../systems/perf';
 import {
   makeBellowsTexture,
@@ -51,11 +56,15 @@ const GLASS_MATRIX = new THREE.Matrix4();
 const GLASS_FLIP = new THREE.Matrix4().makeRotationY(Math.PI);
 
 /**
- * Repose les 176 vantaux extérieurs. `open` est la course de la porte de
- * référence, `side` le côté qui s'ouvre — l'autre reste fermé, comme à
- * l'intérieur.
+ * Repose les 176 vantaux extérieurs. `side` est le côté qui s'ouvre — l'autre
+ * reste fermé, comme à l'intérieur.
+ *
+ * `pose` dit COMMENT les poser. `null` : chacun à sa vraie course, c'est
+ * l'animation. Un nombre (0 ou 1) : toute la rame d'un bloc, sans
+ * coulissement — la pose d'arrivée, pour les paliers de qualité qui ne
+ * rejouent pas la course et pour la frame qui la termine.
  */
-function layoutLeaves(built: Built, side: 1 | -1, open: boolean): void {
+function layoutLeaves(built: Built, side: 1 | -1, pose: number | null): void {
   let k = 0;
   for (let i = 0; i < CARS; i++) {
     const cz = carZ(i);
@@ -65,8 +74,11 @@ function layoutLeaves(built: Built, side: 1 | -1, open: boolean): void {
       // millimètres, les deux faces sont exactement confondues et le bout de la
       // porte clignote pendant tout l'arrêt (voir DOOR_POCKET_TUCK).
       // Porte par porte : depuis le quai, une porte bloquée sur une caisse
-      // voisine se voit à ça — un seul intervalle resté ouvert sur quarante-quatre.
-      const slide = open ? trainDoorPosAt(i, dz) * (E235.doorHalfW + DOOR_POCKET_TUCK) : 0;
+      // voisine se voit à ça — un seul intervalle resté ouvert sur
+      // quarante-quatre. Elle garde sa vraie course même quand tout le reste de
+      // la rame est posé d'un bloc : c'est la seule chose qu'il y ait à voir.
+      const travel = pose === null || isBlockedDoor(i, dz) ? trainDoorPosAt(i, dz) : pose;
+      const slide = travel * (E235.doorHalfW + DOOR_POCKET_TUCK);
       for (const s of [1, -1] as const) {
         const shift = s === side ? slide : 0;
         for (const dir of [1, -1] as const) {
@@ -286,13 +298,14 @@ function build(): Built {
   };
   // Portes fermées d'emblée : sans cette pose initiale, un palier de qualité
   // qui fige l'animation laisserait les 176 vantaux empilés à l'origine.
-  layoutLeaves(built, 1, false);
+  layoutLeaves(built, 1, 0);
   return built;
 }
 
 export function TrainConsist() {
   const built = useMemo(build, []);
-  const lastOpen = useRef(-1);
+  const lastKey = useRef(Number.NaN);
+  const lastSide = useRef<1 | -1>(1);
   const lastBlocked = useRef(-1);
   const lastService = useRef('');
 
@@ -301,7 +314,13 @@ export function TrainConsist() {
     // on ne voit jamais sa propre caisse.
     const visible = runtime.playerFrame === 'platform' || runtime.trainZ !== 0;
     built.root.visible = visible;
-    if (!visible) return;
+    if (!visible) {
+      // Les portes ont continué de vivre pendant qu'on ne la regardait pas :
+      // NaN ne s'égale pas lui-même, la première frame de retour repose donc
+      // toujours les vantaux au lieu de croire sa mémoire.
+      lastKey.current = Number.NaN;
+      return;
+    }
 
     const { doorSide, index } = useStore.getState();
 
@@ -312,21 +331,48 @@ export function TrainConsist() {
       built.sign.redraw(service);
     }
 
-    // Vantaux : seul le côté quai coulisse, comme à l'intérieur. Aux paliers
-    // de qualité bas, on ne rejoue plus l'animation mais on garde une pose
-    // cohérente (portes ouvertes ou fermées, sans coulissement).
-    const open = runtime.doorOpen;
-    const stepped = consistDetail() >= 3 ? Math.round(open) : open;
+    // Vantaux : seul le côté quai coulisse, comme à l'intérieur.
+    //
+    // Deux régimes. Course en train de se faire : on repose à chaque image,
+    // chaque vantail à sa vraie position. Course finie — ou palier de qualité
+    // bas, où l'on ne rejoue pas le coulissement : on pose la rame entière sur
+    // la POSE D'ARRIVÉE (`doorTarget`), une fois, et on n'y revient plus.
+    //
+    // C'est ce second régime qui manquait. Le test se faisait sur l'ouverture
+    // de la porte de RÉFÉRENCE, qui est la première à partir et donc la
+    // première à s'arrêter : elle cessait de bouger avec 0,3 s d'avance sur les
+    // autres, la repose s'arrêtait avec elle, et les trois quarts des baies
+    // restaient dessinées à mi-course — portes réputées ouvertes, dessinées
+    // presque closes. Vu du quai, la rame semblait fermée alors qu'on pouvait y
+    // monter, et les portes palières, elles, s'ouvraient bel et bien.
+    const settled = trainDoorsSettled();
+    let pose: number | null;
+    if (consistDetail() >= 3) {
+      // Palier bas : pas de coulissement, donc une pose forcément fausse
+      // pendant la course. Qu'elle se trompe du bon côté — ouverte dès l'ordre
+      // d'ouverture, close seulement quand les vantaux le sont vraiment. Une
+      // rame dessinée close dans laquelle on peut pourtant monter est le seul
+      // mensonge qu'on ne puisse pas se permettre ; une rame dessinée ouverte
+      // une seconde de trop, si.
+      pose = runtime.doorTarget === 1 || !settled ? 1 : 0;
+    } else {
+      pose = settled ? runtime.doorTarget : null;
+    }
     // Une porte bloquée bouge quand tout le reste est immobile : sa course doit
     // entrer dans le test, sans quoi la seule chose à voir serait figée.
     const blocked = blockedDoorOpen();
+    // Clé de repose : l'horloge des portes tant que la course se joue (donc à
+    // chaque image), la pose visée sinon (donc une seule fois).
+    const key = pose === null ? runtime.doorT : -1 - pose;
     if (
-      Math.abs(stepped - lastOpen.current) > 0.002 ||
+      key !== lastKey.current ||
+      doorSide !== lastSide.current ||
       Math.abs(blocked - lastBlocked.current) > 0.002
     ) {
-      lastOpen.current = stepped;
+      lastKey.current = key;
+      lastSide.current = doorSide;
       lastBlocked.current = blocked;
-      layoutLeaves(built, doorSide, stepped > 0.01 || blocked > 0.01);
+      layoutLeaves(built, doorSide, pose);
     }
   });
 

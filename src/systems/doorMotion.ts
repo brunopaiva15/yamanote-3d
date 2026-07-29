@@ -92,6 +92,22 @@ export function trainDoorPos(lag = 0): number {
   return runtime.doorTarget === 1 ? m : 1 - m;
 }
 
+/**
+ * Course terminée pour TOUS les vantaux de la rame, rebond compris.
+ *
+ * `runtime.doorOpen` est la porte de RÉFÉRENCE : celle qui part la première, et
+ * donc celle qui arrive la première. Elle est en butée quand trois autres
+ * roulent encore, jusqu'à 0,3 s derrière elle. Ce qui SUIT la chorégraphie —
+ * le rendu des quarante-quatre baies vues du quai — a besoin de la dernière, et
+ * non de la première : réglé sur la référence, il lâchait les autres à
+ * mi-course et les y laissait tout l'arrêt.
+ */
+export function trainDoorsSettled(): boolean {
+  const p = runtime.doorTarget === 1 ? TRAIN_OPEN : TRAIN_CLOSE;
+  const last = sortedTrainLags.length ? sortedTrainLags[sortedTrainLags.length - 1] : 0;
+  return runtime.doorT >= p.duration + last + p.reboundDur;
+}
+
 // Ouverture (0..1) d'une porte palière du quai, avec retard optionnel.
 export function psdDoorPos(lag = 0): number {
   const p = runtime.psdTarget === 1 ? PSD_OPEN : PSD_CLOSE;
