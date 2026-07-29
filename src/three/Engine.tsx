@@ -27,6 +27,7 @@ import {
   updateAmbience,
   updateAudio,
 } from '../systems/audioEngine';
+import { updatePlatformSpeakers } from '../systems/stationPa';
 import { weather } from '../systems/weather';
 import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
 import { updateConversation } from '../systems/conversation';
@@ -144,6 +145,11 @@ export function Engine(): null {
         doorObstructionOpening(),
       );
       setPlatformDoors(openings);
+      // Et sur QUELS diffuseurs elle sort. La sono du quai est une ligne, pas
+      // un point : les prises du moteur audio suivent la tête pour qu'on
+      // entende l'annonce aussi bien au bout du quai que devant sa porte.
+      // Après updatePlatformPresence, qui vient de poser le glissement du quai.
+      updatePlatformSpeakers();
       // L'ambiance du lieu suit les mêmes ouvertures : sur le quai on est
       // dedans, dans la rame portes fermées on ne l'entend presque plus. Elle
       // ne vit qu'aussi longtemps que la gare est là.

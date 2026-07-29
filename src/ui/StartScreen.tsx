@@ -17,11 +17,12 @@ import { STATIONS } from '../data/stations';
 import type { TokyoDate } from '../data/occupancy';
 import { useStore } from '../store';
 import { useT } from '../i18n';
-import { startAudio, setVolume, setPlatformSide } from '../systems/audioEngine';
+import { startAudio, setVolume } from '../systems/audioEngine';
 import { seedPassengers } from '../systems/passengers';
 import { runtime, tokyoNow } from '../systems/runtime';
 import { seedWeather } from '../systems/weather';
 import { randomizeEntry } from '../systems/stationCycle';
+import { updatePlatformSpeakers } from '../systems/stationPa';
 import { segmentAt } from '../data/segments';
 import { PLATEAU_SEGMENT, plateauEntryStation } from '../systems/plateau';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -172,7 +173,7 @@ export function StartScreen() {
     } else {
       randomizeEntry(Number.isFinite(stationIndex) ? stationIndex : undefined, direction);
     }
-    setPlatformSide(useStore.getState().doorSide);
+    updatePlatformSpeakers();
     // Densité PNJ après le tirage, pour le tronçon / la phase choisis.
     seedPassengers();
     start();

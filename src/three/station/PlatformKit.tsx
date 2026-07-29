@@ -17,7 +17,12 @@
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
+import {
+  PLATFORM_TOP,
+  PSD_X,
+  SPEAKER_GRILLE_DROP,
+  speakerX as speakerXFor,
+} from '../../data/stationGeometry';
 import type { StationLayout } from '../../data/stationLayouts';
 import type { StationPlacement } from '../../systems/stationPlacement';
 import {
@@ -89,7 +94,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   const columnX = backX - 0.55;
   const pipeX = columnX + 0.15;
   const trayX = backX - 0.95;
-  const speakerX = PSD_X + depth * 0.28;
+  const speakerX = speakerXFor(depth);
   /** Face du pilier tournée vers la voie : c'est là que se lisent les coffrets. */
   const postFaceX = columnX - 0.15;
 
@@ -173,7 +178,10 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
     [kit.speakers, speakerX, canopyY],
   );
   const speakerGrilles = useMemo(
-    () => kit.speakers.map((z) => matFacing(FACING_DOWN, speakerX, canopyY - 0.079, z, 0.34, 0.34)),
+    () =>
+      kit.speakers.map((z) =>
+        matFacing(FACING_DOWN, speakerX, canopyY - SPEAKER_GRILLE_DROP, z, 0.34, 0.34),
+      ),
     [kit.speakers, speakerX, canopyY],
   );
 
