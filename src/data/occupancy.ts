@@ -26,7 +26,13 @@ export interface TokyoDate {
 // Index i = tronçon STATIONS[i] → STATIONS[(i+1)%30].
 // ---------------------------------------------------------------------------
 
-/** Sens simulé (内回り, ordre JY croissant) — pic Shin-Ōkubo→Shinjuku 139 %. */
+/**
+ * Sens 内回り — index = gare de DÉPART. Pic Shin-Ōkubo→Shinjuku 139 %.
+ *
+ * Le pendant 外回り est plus bas, et les deux ne se déduisent pas l'un de
+ * l'autre : à la même minute, c'est le sens qui va vers les bureaux qui se
+ * remplit. `systems/occupancy` choisit la table selon `store.loopDirection`.
+ */
 export const INNER_BASE_0815: readonly number[] = [
   /* 00 Tokyo→Kanda                 */ 96,
   /* 01 Kanda→Akihabara             */ 99,
@@ -61,9 +67,13 @@ export const INNER_BASE_0815: readonly number[] = [
 ];
 
 /**
- * Sens inverse (外回り) — réserve. Index = gare de départ dans ce sens
- * (JY décroissant) : OUTER_BASE_0815[i] = taux i → (i-1+30)%30.
+ * Sens 外回り — index = gare de DÉPART dans ce sens (JY décroissant) :
+ * OUTER_BASE_0815[i] = taux du trajet i → (i-1+30)%30.
  * Pic officiel Ueno→Okachimachi = index 4.
+ *
+ * Cette table a dormi en « réserve » tant que le simulateur ne roulait que
+ * dans un sens ; elle est branchée depuis que la rame peut faire le tour dans
+ * l'autre.
  */
 export const OUTER_BASE_0815: readonly number[] = [
   /* 00 Tokyo→Yūrakuchō             */ 111,

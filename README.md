@@ -37,11 +37,65 @@ npm run lint     # oxlint
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder,
   bouton s'asseoir, bouton « Parler » quand quelqu'un est à portée
 
-Avant de monter, le menu laisse choisir la **date**, l'heure et l'arrêt. Par
-défaut, l'instant réel à Tokyo et une gare tirée au hasard. La date n'est pas un
-détail d'état civil : c'est elle qui donne la saison — couleur des frondaisons,
-hauteur du soleil, heure de la tombée de nuit — et le temps qu'il fera ce
-jour-là. Le HUD affiche le temps qu'il fait et la température.
+Avant de monter, le menu laisse choisir la **date**, l'heure, l'arrêt et le
+**sens de circulation**. Par défaut, l'instant réel à Tokyo, une gare tirée au
+hasard et un sens tiré à pile ou face. La date n'est pas un détail d'état
+civil : c'est elle qui donne la saison — couleur des frondaisons, hauteur du
+soleil, heure de la tombée de nuit — et le temps qu'il fera ce jour-là. Le HUD
+affiche le temps qu'il fait et la température.
+
+## Les deux sens
+
+La Yamanote n'a pas de terminus : elle a deux sens, et c'est tout ce qui les
+distingue. **内回り** (*uchi-mawari*, la boucle intérieure) suit l'ordre des
+codes JY — 東京 → 神田 → 上野 → 池袋 → 新宿 → 渋谷 → 品川 → 東京 ; **外回り**
+(*soto-mawari*) fait le même tour à l'envers. On les choisit au menu, et le HUD
+porte le sens en pastille verte.
+
+Le sens n'est pas un miroir posé sur le rendu : c'est une donnée
+(`store.loopDirection`) que toute l'arithmétique de la boucle (`data/loop.ts`)
+prend en paramètre. Ce qu'il change :
+
+- **le tronçon parcouru.** En 内回り on arrive à la gare `i` par le tronçon
+  `i−1` ; en 外回り par le tronçon `i`, à contresens de son nom. Les
+  intervalles n'étant pas symétriques (`SEGMENT_HEADWAY_MIN`), la durée de
+  croisière, la progression du trajet et l'environnement traversé en dépendent ;
+- **les quartiers.** Le territoire d'une gare se déroule dans le sens de
+  marche : en 外回り, Shibuya vient avant Harajuku et non après ;
+- **le remplissage.** `data/occupancy.ts` porte DEUX relevés à 08:15, un par
+  sens, et ils ne se déduisent pas l'un de l'autre : le 内回り est écrasé entre
+  Shin-Ōkubo et Shinjuku (139 %) quand le 外回り l'est entre Ueno et
+  Okachimachi (134 %) — c'est le sens qui va vers les bureaux qui se remplit.
+  Le second dormait « en réserve » ; il est branché ;
+- **ce qui est dit.** 「山手線内回り」 devient 「山手線外回り」, et les gares
+  repères de la direction sont prises vers l'arrière — depuis Tamachi,
+  東京・上野 en 内回り, 品川・渋谷 en 外回り. La rame et le quai tirent la
+  formule de la même fonction, pour ne pas pouvoir se contredire ;
+- **le numéro de voie.** `data/platforms.ts` le relève pour les deux sens : la
+  sono du quai, le caisson 番線 suspendu au-dessus et la 発車メロディ le suivent
+  (Kanda ver.A voie 2 en 外回り, ver.B voie 3 en 内回り) ;
+- **la signalétique.** Le 駅名標 retourne sa flèche et échange ses deux gares
+  encadrantes, le totem d'orientation et la bande directionnelle listent la
+  suite dans le bon ordre, le 発車標 annonce les bons repères ;
+- **la girouette.** Le numéro de course porte la parité réglementaire JR East :
+  impair en 内回り, pair en 外回り.
+
+Ce qu'il ne change **pas**, et ce n'est pas une simplification : le **côté
+d'ouverture des portes**. Un plan de voies à deux tracks est symétrique par
+rotation d'un demi-tour autour de l'axe de la ligne, et le Japon roule à
+gauche — sur un îlot central les deux sens ouvrent à droite, sur deux quais
+latéraux les deux ouvrent à gauche, et sur les doubles îlots 方向別 (上野,
+東京, 田町…) chaque sens a le sien, du même côté. Le côté appartient à la gare.
+`DOOR_SIDE` reste donc une table de trente valeurs, et 「お出口は右側です」 se
+dit à l'identique dans les deux sens : les 次は… et les まもなく… des trente
+gares, japonais et anglais, sont gravés une seule fois pour les deux. Ne
+s'ajoutent au corpus que les textes qui NOMMENT le sens ou un numéro de voie —
+quatre-vingt-trois clips, contre les quatre cent douze du total.
+
+Seule exception documentée : le prototype PLATEAU (§ *Ville géoréférencée*) ne
+couvre que le 内回り. Son tracé exporté est une polyligne orientée ; la
+parcourir à l'envers demanderait d'inverser chunks et origines de distance. En
+外回り, le décor procédural — lui, symétrique — reprend la main.
 
 ## Descendre en gare
 
@@ -544,6 +598,21 @@ diode, qui est l'image classique du quai japonais ; et les dalles LCD des quais
 neufs ou refaits — Takanawa Gateway, Shibuya, Shinagawa — au trait plus fin et
 sans trame. Le canvas n'est redessiné que lorsque son contenu change réellement,
 soit environ une fois par seconde.
+
+**Il est suspendu dans la rangée du bord de voie**, celle des caissons 番線 —
+en travers du quai, recto-verso, aligné sur eux par le bas à la hauteur libre
+commune. Il y en a **quatre par quai**, un dans chaque intervalle de la
+rangée : les deux modèles alternent donc sur toute la longueur, un panneau
+tous les dix-huit mètres, et on n'attend jamais son train hors de vue d'un
+tableau. C'est l'assemblage réel : sur un quai japonais, le tableau des départs
+et le panneau de quai pendent côte à côte, de face pour qui marche le long du
+quai. Il pendait auparavant à côté des panneaux de nom, tourné comme eux vers
+la voie : il se lisait depuis le train et de nulle part ailleurs, alors que
+c'est le tableau de ceux qui attendent. L'emprise de la rangée et ses creux
+libres sont calculés une fois (`stationPlacement.trackSignBox` /
+`departureBoardZs`) et lus par les deux : deux caissons de la même rangée ne
+peuvent pas être en désaccord, et le tableau ne se glisse ni sur un 番線 ni
+sous la traverse d'une potence, qui passe à six centimètres au-dessus de lui.
 
 Enfin, la colonne de droite nomme les **repères de la boucle** (東京, 上野,
 池袋, 新宿, 渋谷, 品川) et non les deux gares suivantes : un tableau de Tamachi
@@ -1413,6 +1482,8 @@ zustand, Tone.js, Web Speech API. Aucune autre dépendance runtime.
 src/
   store.ts               zustand : état discret (phase, station, portes, réglages)
   data/                  stations réelles JY01→JY30, correspondances, annonces, config
+  data/loop.ts           l'arithmétique de la boucle, orientée : gare suivante /
+                         précédente, k-ième saut, libellés 内回り／外回り
   systems/               logique pure : machine à états du cycle station, audio Tone.js,
                          file d'annonces vocales, PNJ, slots d'assise, runtime 60 fps
   systems/season.ts      la saison, dérivée de la date : poids fondus, phénomènes
@@ -1478,8 +1549,9 @@ gare et l'état de la ligne, comme le chef de train qui la lance ~25 s avant le
 départ), coupée en fondu au bout d'une dizaine de secondes — elle n'arrive
 jamais au bout — l'annonce de fermeture prenant le relais sur ce silence, puis
 la fermeture vers 40 s et le départ vers 45–50 s.
-Les annonces (sens de la boucle 内回り avec gares repères, 次は… avec numéro
-JY, まもなく…, fermeture, accueil, messages de courtoisie en rotation) sont
+Les annonces (sens de la boucle — 内回り ou 外回り — avec ses gares repères,
+次は… avec numéro JY, まもなく…, fermeture, accueil, messages de courtoisie en
+rotation) sont
 dites en japonais puis en anglais, avec les correspondances réelles de chaque
 gare. Les voix sont des clips pré-générés avec **Kokoro TTS**, stockés dans
 `public/audio/announcements/` et régénérables via
@@ -1497,7 +1569,8 @@ fait pas dériver en douce les annonces déjà en place.
 **Ce que l'analyseur lit, et ce qu'il croit lire.** Kokoro ne reçoit pas du
 texte mais des phonèmes, fabriqués par misaki. Or un analyseur morphologique se
 trompe, et il se trompe surtout sur les noms propres : 「山手線内回り」 sortait
-en *yamate sen-nai mawari* — 山手 lu やまて, 線内回り recollé en un mot —, soit
+en *yamate sen-nai mawari* — 山手 lu やまて, 線内回り recollé en un mot (et
+線外回り en *sengai mawari*) —, soit
 le nom de la ligne écorché dans presque chaque annonce, et 御徒町 en tête de
 phrase sortait *gotochō*. Les mots concernés sont réécrits en katakana pour la
 synthèse seule (`JA_READINGS` dans `announcements-export.ts`), le texte du jeu
@@ -1608,13 +1681,15 @@ En développement, `__emergencyStop()` et `__powerOutage()` font la même chose
 depuis la console, `__outageSkip(-n)` avance jusqu'aux abords du retour de la
 tension, et `scripts/outage-shots.mjs` en fait la planche de contrôle.
 
-**Quatre locutrices, toutes féminines**, parce que quatre sources parlent et
-qu'on doit les distinguer sans regarder : la sono de la rame (`jf_alpha`),
-l'annonce automatique du quai (`jf_gongitsune`), l'agent de quai au micro
-(`jf_nezumi`, un peu plus rapide et moins lisse — c'est une personne, pas un
-automate), et les deux voix anglaises (`af_heart` à bord, `af_sarah` au quai,
-un cran plus lente : dehors, sous une verrière, une annonce trop rapide ne
-s'attrape pas).
+**Quatre sources, et deux automates qu'on ne confond pas** : la sono de la rame
+(`jf_alpha`), l'annonce automatique du quai (`jm_kumo`, **un homme** — les deux
+machines se répondent parfois à une seconde d'écart, 「1番線、ドアが閉まります」
+sur le quai puis 「ドアが閉まります」 dans le wagon, et il ne faut pas avoir à
+chercher laquelle vient de parler), l'agent de quai au micro (`jf_nezumi`, une
+femme, un peu plus rapide et moins lisse — c'est une personne, pas un automate,
+et elle prend la parole juste après lui), et les deux voix anglaises
+(`af_heart` à bord, `am_michael` au quai, un cran plus lent : dehors, sous une
+verrière, une annonce trop rapide ne s'attrape pas).
 
 S'y ajoute, sur les gares dont l'îlot est partagé avec une autre ligne, la seule
 annonce de quai qui parle d'une voie qui n'est pas la nôtre : まもなく、1番線を、

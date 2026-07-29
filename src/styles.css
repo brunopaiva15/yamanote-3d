@@ -509,8 +509,22 @@ body,
 }
 
 .hud-station-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   color: var(--sticker-dim);
+}
+
+/* Sens de circulation : une pastille verte, comme la bande du menu. */
+.hud-direction {
+  background: var(--green);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 1px 6px;
+  letter-spacing: 0.04em;
 }
 
 .hud-station-name {

@@ -562,6 +562,7 @@ export function Station() {
       {hasSignature && <Signature layout={layout} place={place} m={m} />}
 
       <PlatformSignage
+        place={place}
         hangX={midX + 0.7}
         canopyY={canopyY}
         halfZ={halfZ}

@@ -9,6 +9,8 @@
 // Toute chaîne ajoutée ici doit suivre la règle ; voir `noCommas` pour les
 // libellés importés d'ailleurs.
 
+import { loopNameJp, prevStation, stationAtHop, wrapStation } from './loop.ts';
+import type { LoopDirection } from './platforms.ts';
 import { STATIONS, TRANSFERS, type Station } from './stations.ts';
 
 export interface Utterance {
@@ -19,13 +21,13 @@ export interface Utterance {
 /**
  * Sens de circulation, tel qu'il est annoncé.
  *
- * Le jeu tourne en 内回り (`store.loopDirection`) : STATIONS[i] → STATIONS[i+1],
- * soit 東京 → 神田 → 上野 → 池袋 → 新宿 → 渋谷 → 品川 → 東京. C'est bien la
- * boucle INTÉRIEURE ; le 外回り fait le tour dans l'autre sens. Déclaré une
- * seule fois, pour la rame et pour le quai : les deux sonorisations ne peuvent
- * pas se contredire sur le sens du train qu'elles annoncent.
+ * 内回り : STATIONS[i] → STATIONS[i+1], soit 東京 → 神田 → 上野 → 池袋 →
+ * 新宿 → 渋谷 → 品川 → 東京 — la boucle INTÉRIEURE. 外回り fait le même tour
+ * dans l'autre sens. Une seule fonction, pour la rame et pour le quai : les
+ * deux sonorisations ne peuvent pas se contredire sur le sens du train
+ * qu'elles annoncent.
  */
-export const LOOP_JP = '山手線内回り';
+export const loopJp = loopNameJp;
 
 // Grandes gares de la boucle, servant de repères pour l'annonce du sens.
 // (index 0-based dans STATIONS : 東京, 上野, 池袋, 新宿, 渋谷, 品川.)
@@ -33,16 +35,18 @@ const MAJOR_HUBS = new Set([0, 4, 12, 16, 19, 24]);
 
 // Vrai si la gare (index) est un grand hub servant de repère de direction.
 export function isMajorHub(index: number): boolean {
-  return MAJOR_HUBS.has(((index % 30) + 30) % 30);
+  return MAJOR_HUBS.has(wrapStation(index));
 }
 
-// Les 1 à 2 prochains grands hubs à partir de `from` (sens +1, boucle intérieure).
+// Les 1 à 2 prochains grands hubs à partir de `from`, dans le sens `dir`.
 // Partagé avec les annonces de quai (data/stationAnnouncements) : la gare et la
-// rame doivent nommer les mêmes repères de direction.
-export function nextHubs(from: number, count: number): Station[] {
+// rame doivent nommer les mêmes repères de direction. En 外回り on rencontre
+// évidemment les mêmes six gares, mais dans l'ordre inverse — depuis Tamachi,
+// 品川・渋谷 au lieu de 東京・上野.
+export function nextHubs(from: number, count: number, dir: LoopDirection): Station[] {
   const out: Station[] = [];
   for (let step = 0; step < 30 && out.length < count; step++) {
-    const i = (from + step) % 30;
+    const i = stationAtHop(from, step, dir);
     if (MAJOR_HUBS.has(i)) out.push(STATIONS[i]);
   }
   return out;
@@ -84,13 +88,13 @@ export function spokenJy(jy: string): string {
 
 // Annonce du sens de la boucle, dite après le départ des grandes gares.
 // La Yamanote n'a pas de terminus : on annonce le sens (内回り) et 1 à 2 gares repères.
-export function directionAnnouncement(index: number): Utterance[] {
-  const hubs = nextHubs(index, 2);
+export function directionAnnouncement(index: number, dir: LoopDirection): Utterance[] {
+  const hubs = nextHubs(index, 2, dir);
   const jpHubs = hubs.map((h) => h.kanji).join('・');
   const enHubs =
     hubs.length === 2 ? `${hubs[0].romaji} and ${hubs[1].romaji}` : hubs[0].romaji;
   return [
-    { text: `この電車は。${LOOP_JP}。${jpHubs}方面ゆきです。`, lang: 'ja-JP' },
+    { text: `この電車は。${loopJp(dir)}。${jpHubs}方面ゆきです。`, lang: 'ja-JP' },
     { text: `This is a Yamanote Line train bound for ${enHubs}.`, lang: 'en-US' },
   ];
 }
@@ -386,11 +390,10 @@ export function guidanceAnnouncements(index: number): Utterance[] {
  * Départ (cruise) : 列車案内? → 次駅案内 → 乗換案内? → 案内放送(0–2).
  * Direction uniquement si la gare précédente est un hub majeur.
  */
-export function departureSequence(index: number, side: 1 | -1): Utterance[] {
+export function departureSequence(index: number, side: 1 | -1, dir: LoopDirection): Utterance[] {
   const out: Utterance[] = [];
-  const prev = (index - 1 + 30) % 30;
-  if (isMajorHub(prev)) {
-    out.push(...directionAnnouncement(index));
+  if (isMajorHub(prevStation(index, dir))) {
+    out.push(...directionAnnouncement(index, dir));
   }
   out.push(...nextStationAnnouncement(index, side));
   out.push(...transferAnnouncement(index));

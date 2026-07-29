@@ -12,8 +12,8 @@
 // par audioManager sur le bus voulu, donc réellement spatialisé. Il n'existe
 // AUCUN repli speechSynthesis : la voix du navigateur sort hors du graphe Web
 // Audio — pas de panoramique, pas de souffle de ligne — et son timbre n'est
-// celui d'aucune des quatre locutrices du jeu. Elle s'entendait comme une
-// cinquième voix, plaquée, au milieu d'annonces gravées.
+// celui d'aucune des quatre voix du jeu. Elle s'entendait comme une cinquième
+// voix, plaquée, au milieu d'annonces gravées.
 //
 // La contrepartie est qu'un texte sans clip ne se dit pas. C'est voulu : une
 // annonce muette passe inaperçue là où une voix étrangère casse la scène. Pour

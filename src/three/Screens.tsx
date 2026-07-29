@@ -17,12 +17,9 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { EMERGENCY_REASONS } from '../data/announcements';
 import { CONFIG } from '../data/config';
+import { prevStation, stationAtHop } from '../data/loop';
 import type { LoopDirection } from '../data/platforms';
-import {
-  cruiseDuration,
-  headwayMinutesTo,
-  stationAtHop,
-} from '../data/segments';
+import { cruiseDuration, headwayMinutesTo } from '../data/segments';
 import { STATIONS, TRANSFERS } from '../data/stations';
 import { useStore, type Phase } from '../store';
 import { runtime } from '../systems/runtime';
@@ -73,8 +70,13 @@ function fmtClock(clockMin: number): string {
 }
 
 // Secondes restantes avant l'arrivée à la prochaine station.
-function secondsToArrival(phase: Phase, phaseT: number, stationIndex: number): number {
-  const cruiseSec = cruiseDuration(stationIndex);
+function secondsToArrival(
+  phase: Phase,
+  phaseT: number,
+  stationIndex: number,
+  dir: LoopDirection,
+): number {
+  const cruiseSec = cruiseDuration(stationIndex, dir);
   if (phase === 'cruise') return Math.max(0, cruiseSec - phaseT) + CONFIG.brakeTime;
   if (phase === 'brake') return Math.max(0, CONFIG.brakeTime - phaseT);
   if (phase === 'depart') {
@@ -159,6 +161,7 @@ function drawHeader(
   clock: string,
   status: ScreenStatus,
   lang: ScreenLang,
+  dir: LoopDirection,
 ): void {
   const next = STATIONS[index];
   g.fillStyle = '#0e0f11';
@@ -167,7 +170,7 @@ function drawHeader(
   // Boîte blanche de direction, ancrée au bas du bandeau.
   const majors: string[] = [];
   for (let k = 1; k <= 29 && majors.length < 2; k++) {
-    const idx = (index + k) % 30;
+    const idx = stationAtHop(index, k, dir);
     if (MAJOR_INDICES.includes(idx)) majors.push(stationName(STATIONS[idx], lang));
   }
   g.fillStyle = '#f2f2ee';
@@ -372,7 +375,7 @@ function drawRoute(
   g.textAlign = 'left';
 
   // Le bandeau se dessine PAR-DESSUS : la courbe glisse dessous.
-  drawHeader(g, w, index, clock, status, lang);
+  drawHeader(g, w, index, clock, status, lang, dir);
 }
 
 // --- Écran droit, plan complet de la boucle (comme l'afficheur réel) :
@@ -425,7 +428,7 @@ function drawLoopMap(
   const { g, w, h } = s;
   g.fillStyle = '#eceae5';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, status, lang);
+  drawHeader(g, w, index, clock, status, lang, dir);
 
   const X0 = 84;
   const DX = 41;
@@ -516,7 +519,7 @@ function drawLoopMap(
 
   // Chevron rouge entre la gare précédente et la prochaine : position du
   // train et sens de marche.
-  const [px, py] = at(loopSlot((index + 29) % 30));
+  const [px, py] = at(loopSlot(prevStation(index, dir)));
   const [nx, ny] = at(loopSlot(index));
   const cx = px + (nx - px) * 0.5;
   const cy = py + (ny - py) * 0.5;
@@ -546,11 +549,16 @@ function drawLoopMap(
 // des écouteurs. Ils partagent le gabarit pictogramme à gauche / texte à
 // droite des autres écrans de courtoisie.
 
-function drawPhoneManner(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+function drawPhoneManner(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  dir: LoopDirection,
+): void {
   const { g, w, h } = s;
   g.fillStyle = '#f4f6f7';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp');
+  drawHeader(g, w, index, clock, 'next', 'jp', dir);
   // Téléphone barré d'un cercle d'interdiction rouge.
   const cx = w * 0.2;
   const cy = HEADER_H + (h - HEADER_H) * 0.52;
@@ -583,11 +591,16 @@ function drawPhoneManner(s: ReturnType<typeof makeScreen>, index: number, clock:
   g.fillText('and refrain from making calls.', w * 0.42, h * 0.85);
 }
 
-function drawBackpackManner(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+function drawBackpackManner(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  dir: LoopDirection,
+): void {
   const { g, w, h } = s;
   g.fillStyle = '#f4f6f7';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp');
+  drawHeader(g, w, index, clock, 'next', 'jp', dir);
   // Silhouette portant son sac à dos sur le ventre.
   const cx = w * 0.2;
   const base = HEADER_H + (h - HEADER_H) * 0.82;
@@ -622,11 +635,16 @@ function drawBackpackManner(s: ReturnType<typeof makeScreen>, index: number, clo
   g.fillText('or use the overhead racks.', w * 0.4, h * 0.85);
 }
 
-function drawHeadphoneManner(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+function drawHeadphoneManner(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  dir: LoopDirection,
+): void {
   const { g, w, h } = s;
   g.fillStyle = '#f4f6f7';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp');
+  drawHeader(g, w, index, clock, 'next', 'jp', dir);
   // Tête de profil casquée, ondes rouges qui s'échappent.
   const cx = w * 0.2;
   const cy = HEADER_H + (h - HEADER_H) * 0.5;
@@ -675,12 +693,13 @@ function drawNextStationLang(
   clock: string,
   status: ScreenStatus,
   lang: 'zh' | 'ko',
+  dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
   g.fillStyle = '#eceae5';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, status, lang);
+  drawHeader(g, w, index, clock, status, lang, dir);
 
   // Pastille JY, à gauche du nom.
   const bx = 128;
@@ -716,11 +735,16 @@ function drawNextStationLang(
 // --- Avertissement de fermeture des portes (fin d'arrêt) ---
 // Diffusé sur les deux parois dans les dernières secondes à quai, juste avant
 // le départ : vantaux qui se referment, flèches convergentes ambre.
-function drawDoorClosing(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+function drawDoorClosing(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  dir: LoopDirection,
+): void {
   const { g, w, h } = s;
   g.fillStyle = '#eceae5';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'now', 'jp');
+  drawHeader(g, w, index, clock, 'now', 'jp', dir);
 
   const cy = h * 0.56;
   const dw = 62;
@@ -771,7 +795,12 @@ function drawDoorClosing(s: ReturnType<typeof makeScreen>, index: number, clock:
 const PLATFORM_BLUE = '#cfe4f4';
 const PLATFORM_ORANGE = '#e8722a';
 
-function drawPlatformDiagram(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+function drawPlatformDiagram(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  dir: LoopDirection,
+): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
   const r = rng(1700 + index * 31);
@@ -840,7 +869,7 @@ function drawPlatformDiagram(s: ReturnType<typeof makeScreen>, index: number, cl
   // Sens de marche, en tête à gauche.
   g.fillStyle = '#2c343c';
   g.font = `20px ${JP_FONT}`;
-  g.fillText(`${STATIONS[(index + 4) % 30].kanji}ゆき`, 14, top + 4);
+  g.fillText(`${STATIONS[stationAtHop(index, 4, dir)].kanji}ゆき`, 14, top + 4);
 
   // Quai : bande grise, nez de quai orange.
   g.fillStyle = '#e9eef2';
@@ -916,11 +945,17 @@ function drawPlatformDiagram(s: ReturnType<typeof makeScreen>, index: number, cl
 // Les deux faces du wagon n'affichent PAS la même chose : chaque écran indique
 // si les portes qui s'ouvrent sont de son côté ou de l'autre. C'est la seule
 // vue qui diffère physiquement d'une paroi à l'autre, d'où deux canevas.
-function drawDoorSide(s: ReturnType<typeof makeScreen>, index: number, clock: string, mine: boolean): void {
+function drawDoorSide(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  mine: boolean,
+  dir: LoopDirection,
+): void {
   const { g, w, h } = s;
   g.fillStyle = '#eceae5';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'soon', 'jp');
+  drawHeader(g, w, index, clock, 'soon', 'jp', dir);
 
   const cy = h * 0.56;
   // Vantaux stylisés, entrouverts du bon côté.
@@ -997,12 +1032,17 @@ const LINE_BADGES: { match: RegExp; code: string; color: string }[] = [
   { match: /モノレール/, code: 'MO', color: '#0a6eb4' },
 ];
 
-function drawTransfers(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+function drawTransfers(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  dir: LoopDirection,
+): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
   g.fillStyle = '#eceae5';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp');
+  drawHeader(g, w, index, clock, 'next', 'jp', dir);
 
   g.fillStyle = '#dfe6ea';
   g.fillRect(0, HEADER_H, w, 40);
@@ -1040,11 +1080,16 @@ function drawTransfers(s: ReturnType<typeof makeScreen>, index: number, clock: s
 }
 
 // --- Écrans de courtoisie : places prioritaires et embarquement ---
-function drawPriorityNotice(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+function drawPriorityNotice(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  dir: LoopDirection,
+): void {
   const { g, w, h } = s;
   g.fillStyle = '#f4f6f7';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp');
+  drawHeader(g, w, index, clock, 'next', 'jp', dir);
   // Rangée de silhouettes : canne, femme enceinte, bébé, blessé.
   const base = h * 0.56;
   const blue = '#1f5fa8';
@@ -1083,11 +1128,16 @@ function drawPriorityNotice(s: ReturnType<typeof makeScreen>, index: number, clo
   g.fillText('Priority Seat', w * 0.66, base + 34);
 }
 
-function drawSafetyNotice(s: ReturnType<typeof makeScreen>, index: number, clock: string): void {
+function drawSafetyNotice(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  dir: LoopDirection,
+): void {
   const { g, w, h } = s;
   g.fillStyle = '#f4f6f7';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp');
+  drawHeader(g, w, index, clock, 'next', 'jp', dir);
   // Bande podotactile jaune et file de voyageurs qui attendent derrière.
   const base = h - 46;
   g.fillStyle = '#f2c521';
@@ -1164,11 +1214,12 @@ function drawTrafficInfo(
   clock: string,
   lang: ScreenLang,
   notice: TrafficNotice,
+  dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
   g.fillStyle = '#f4f6f7';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', lang);
+  drawHeader(g, w, index, clock, 'next', lang, dir);
 
   // Triangle d'avertissement jaune.
   const tx = 96;
@@ -1220,12 +1271,13 @@ function drawEmergencyInfo(
   clock: string,
   lang: ScreenLang,
   reason: number,
+  dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
   const r = EMERGENCY_REASONS[((reason % EMERGENCY_REASONS.length) + EMERGENCY_REASONS.length) % EMERGENCY_REASONS.length];
   g.fillStyle = '#f4f6f7';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', lang);
+  drawHeader(g, w, index, clock, 'next', lang, dir);
 
   // Cadre rouge plein écran sous le bandeau.
   g.strokeStyle = '#c8362c';
@@ -1273,11 +1325,12 @@ function drawOutageInfo(
   index: number,
   clock: string,
   lang: ScreenLang,
+  dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
   g.fillStyle = '#f4f6f7';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', lang);
+  drawHeader(g, w, index, clock, 'next', lang, dir);
 
   g.strokeStyle = '#c8362c';
   g.lineWidth = 5;
@@ -1321,11 +1374,12 @@ function drawLineStatus(
   clock: string,
   lang: ScreenLang,
   notice: TrafficNotice,
+  dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
   g.fillStyle = '#f4f6f7';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', lang);
+  drawHeader(g, w, index, clock, 'next', lang, dir);
 
   g.fillStyle = '#26303a';
   g.fillRect(0, HEADER_H, w, 40);
@@ -1377,11 +1431,17 @@ function drawLineStatus(
 // L'écran renvoie le voyageur vers le site de l'exploitant de la ligne
 // perturbée, sans nommer aucune compagnie : le certificat existe chez tous les
 // opérateurs de Tokyo, l'écran suit donc n'importe quelle perturbation.
-function drawDelayCert(s: ReturnType<typeof makeScreen>, index: number, clock: string, lang: ScreenLang): void {
+function drawDelayCert(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  lang: ScreenLang,
+  dir: LoopDirection,
+): void {
   const { g, w, h } = s;
   g.fillStyle = '#f4f6f7';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', lang);
+  drawHeader(g, w, index, clock, 'next', lang, dir);
 
   // Pictogramme : feuille à coin plié, marquée 証.
   const px = 110;
@@ -1510,7 +1570,7 @@ export function Screens() {
     // n'arrive pas.
     const tick = Math.floor(runtime.clockMin * 4);
     const clock = fmtClock(runtime.clockMin);
-    const countdown = Math.round(secondsToArrival(phase, runtime.phaseT, index));
+    const countdown = Math.round(secondsToArrival(phase, runtime.phaseT, index, loopDirection));
 
     const notice = trafficNotice(runtime.clockMin);
     // Visuel manières du moment : change d'un passage du cycle à l'autre.
@@ -1563,65 +1623,65 @@ export function Screens() {
       const g = screen;
       switch (state) {
         case 'door':
-          drawDoorSide(g, index, clock, doorSide === side);
+          drawDoorSide(g, index, clock, doorSide === side, loopDirection);
           break;
         case 'doorClosing':
-          drawDoorClosing(g, index, clock);
+          drawDoorClosing(g, index, clock, loopDirection);
           break;
         case 'platform':
-          drawPlatformDiagram(g, index, clock);
+          drawPlatformDiagram(g, index, clock, loopDirection);
           break;
         case 'transfers':
-          drawTransfers(g, index, clock);
+          drawTransfers(g, index, clock, loopDirection);
           break;
         case 'priority':
-          drawPriorityNotice(g, index, clock);
+          drawPriorityNotice(g, index, clock, loopDirection);
           break;
         case 'safety':
-          drawSafetyNotice(g, index, clock);
+          drawSafetyNotice(g, index, clock, loopDirection);
           break;
         case 'manner':
-          [drawPhoneManner, drawBackpackManner, drawHeadphoneManner][mannerVariant](g, index, clock);
+          [drawPhoneManner, drawBackpackManner, drawHeadphoneManner][mannerVariant](g, index, clock, loopDirection);
           break;
         case 'nextZH':
-          drawNextStationLang(g, index, clock, status, 'zh');
+          drawNextStationLang(g, index, clock, status, 'zh', loopDirection);
           break;
         case 'nextKO':
-          drawNextStationLang(g, index, clock, status, 'ko');
+          drawNextStationLang(g, index, clock, status, 'ko', loopDirection);
           break;
         case 'trafficJP':
-          if (notice) drawTrafficInfo(g, index, clock, 'jp', notice);
+          if (notice) drawTrafficInfo(g, index, clock, 'jp', notice, loopDirection);
           else drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection);
           break;
         case 'trafficEN':
-          if (notice) drawTrafficInfo(g, index, clock, 'en', notice);
+          if (notice) drawTrafficInfo(g, index, clock, 'en', notice, loopDirection);
           else drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection);
           break;
         case 'statusJP':
-          if (notice) drawLineStatus(g, index, clock, 'jp', notice);
+          if (notice) drawLineStatus(g, index, clock, 'jp', notice, loopDirection);
           else drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection);
           break;
         case 'statusEN':
-          if (notice) drawLineStatus(g, index, clock, 'en', notice);
+          if (notice) drawLineStatus(g, index, clock, 'en', notice, loopDirection);
           else drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection);
           break;
         case 'certJP':
-          drawDelayCert(g, index, clock, 'jp');
+          drawDelayCert(g, index, clock, 'jp', loopDirection);
           break;
         case 'certEN':
-          drawDelayCert(g, index, clock, 'en');
+          drawDelayCert(g, index, clock, 'en', loopDirection);
           break;
         case 'emergencyJP':
-          drawEmergencyInfo(g, index, clock, 'jp', emergency.reason);
+          drawEmergencyInfo(g, index, clock, 'jp', emergency.reason, loopDirection);
           break;
         case 'emergencyEN':
-          drawEmergencyInfo(g, index, clock, 'en', emergency.reason);
+          drawEmergencyInfo(g, index, clock, 'en', emergency.reason, loopDirection);
           break;
         case 'outageJP':
-          drawOutageInfo(g, index, clock, 'jp');
+          drawOutageInfo(g, index, clock, 'jp', loopDirection);
           break;
         case 'outageEN':
-          drawOutageInfo(g, index, clock, 'en');
+          drawOutageInfo(g, index, clock, 'en', loopDirection);
           break;
         case 'loopJP':
           drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection);

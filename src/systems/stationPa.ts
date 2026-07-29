@@ -106,8 +106,12 @@ export function paDelay(): void {
 /** Annonce anticipée du prochain train, précédée du remerciement d'usage. */
 export function paPreAnnouncement(index: number, withGreeting = false): void {
   const platform = currentPlatformNumber(index);
+  const dir = useStore.getState().loopDirection;
   say(
-    [...(withGreeting ? platformGreeting() : []), ...platformPreAnnouncement(index, platform)],
+    [
+      ...(withGreeting ? platformGreeting() : []),
+      ...platformPreAnnouncement(index, platform, dir),
+    ],
     'platform',
   );
 }
@@ -126,7 +130,14 @@ function sayAfterSignal(items: StationUtterance[], signalS: number): void {
 /** Carillon ATOS puis annonce d'approche, japonais et anglais. */
 export function paApproach(index: number): void {
   const chime = audio.platformChime();
-  sayAfterSignal(platformApproachAnnouncement(index, currentPlatformNumber(index)), chime);
+  sayAfterSignal(
+    platformApproachAnnouncement(
+      index,
+      currentPlatformNumber(index),
+      useStore.getState().loopDirection,
+    ),
+    chime,
+  );
 }
 
 /** La rame est en vue : signal électronique, puis l'avertissement court, répété. */

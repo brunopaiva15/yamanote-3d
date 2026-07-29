@@ -188,15 +188,30 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
       },
     ],
   },
+  // Le doute sur le sens, dit par quelqu'un qui a vu la scène cent fois. Il
+  // nomme le sens RÉEL de la rame : c'est toute la valeur de la réplique.
   {
     id: 'ev.board.wrong',
-    when: { trigger: 'boarding' },
+    when: { trigger: 'boarding', direction: 'inner' },
     lines: [
       {
         t: {
           fr: 'Vous êtes sûr de votre sens ? Celui-ci fait le tour par l’intérieur.',
           en: 'Sure you are going the right way? This one runs the inner loop.',
           ja: '方向、合ってます？　これは内回りですよ。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.board.wrong.outer',
+    when: { trigger: 'boarding', direction: 'outer' },
+    lines: [
+      {
+        t: {
+          fr: 'Vous êtes sûr de votre sens ? Celui-ci fait le tour par l’extérieur.',
+          en: 'Sure you are going the right way? This one runs the outer loop.',
+          ja: '方向、合ってます？　これは外回りですよ。',
         },
       },
     ],

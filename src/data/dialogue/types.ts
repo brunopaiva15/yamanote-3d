@@ -11,6 +11,7 @@
 // change rien, une paire { f, m } quand il change quelque chose.
 
 import type { Archetype } from '../../systems/appearance';
+import type { LoopDirection } from '../platforms';
 import type { Phase } from '../../store';
 
 /** Texte éventuellement décliné selon le genre du PNJ qui parle. */
@@ -81,6 +82,8 @@ export interface DialogueWhen {
   readonly phase?: readonly Phase[];
   /** Index de gare (0 = JY01 Tokyo) concernés — la gare visée par la réplique. */
   readonly station?: readonly number[];
+  /** Sens de circulation exigé : une réplique qui NOMME 内回り ou 外回り. */
+  readonly direction?: LoopDirection;
   /** true = la rame roule, false = elle est à l'arrêt. */
   readonly moving?: boolean;
   readonly playerSeated?: boolean;
@@ -122,6 +125,8 @@ export interface DialogueCtx {
   /** Gare suivante (index 0..29) et gare dont le quai est là. */
   nextIndex: number;
   hereIndex: number;
+  /** Sens de circulation de la rame. */
+  direction: LoopDirection;
   trigger: DialogueTrigger;
 }
 
@@ -166,5 +171,6 @@ export function matches(entry: DialogueEntry, ctx: DialogueCtx): boolean {
   if (w.station && !w.station.includes(ctx.nextIndex) && !w.station.includes(ctx.hereIndex)) {
     return false;
   }
+  if (w.direction && w.direction !== ctx.direction) return false;
   return true;
 }

@@ -4,16 +4,21 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { crowdList, initPlatformCrowd } from '../systems/platformCrowd';
+import { crowdList, initPlatformCrowd, type CrowdPax } from '../systems/platformCrowd';
 import { carrierOfPax } from '../systems/petCarriers';
-import type { Appearance } from '../systems/appearance';
 import { runtime } from '../systems/runtime';
 import { useStore } from '../store';
 import { DOOR_SIDE } from '../data/stations';
-import { rng } from '../textures/procedural';
 import { CONFIG } from '../data/config';
 import { MODELS_BASE, type CharacterManifest, type LogicalClip } from './characters/manifest';
-import { buildTemplates, cloneVariant, type CharacterClone, type CharacterTemplate } from './characters/library';
+import {
+  buildTemplates,
+  cloneVariant,
+  disposeClone,
+  pickTemplate,
+  type CharacterClone,
+  type CharacterTemplate,
+} from './characters/library';
 import { applyArmGesture, applyBodyPivot, makePoseState, type PoseState } from './characters/pose';
 import { fallClipFor, fallCue, fallYawOffset } from './characters/fall';
 import { attachProps, updatePropRig, handPropFor, type PropRig } from './characters/props';
@@ -25,9 +30,13 @@ const FADE = 0.22;
 const vCarryHand = new THREE.Vector3();
 
 interface Slot {
+  /** Support stable dans la scène : le clone y est greffé, et remplacé. */
+  holder: THREE.Group;
   clone: CharacterClone;
   pose: PoseState;
   props: PropRig;
+  /** Identité que ce modèle représente — comparée à celle du PNJ chaque frame. */
+  identity: number;
   currentKey: LogicalClip | '';
   /** Part de la pose tenue par le clip de chute (0..1) — voir characters/fall.ts. */
   fallW: number;
@@ -37,13 +46,29 @@ interface Slot {
   fallYaw: number;
 }
 
-function pickTemplate(templates: CharacterTemplate[], app: Appearance, id: number): CharacterTemplate {
-  const r = rng(12000 + id * 2654435761);
-  const fem = app.feminine;
-  let pool = templates.filter((t) => t.variant.archetypes.includes(app.archetype) && (t.variant.feminine ?? false) === fem);
-  if (pool.length === 0) pool = templates.filter((t) => (t.variant.feminine ?? false) === fem);
-  if (pool.length === 0) pool = templates;
-  return pool[Math.floor(r() * pool.length)];
+/** Voir LibraryPassengers : les slots invisibles se rebâtissent au compte-gouttes. */
+const HIDDEN_REBUILDS_PER_FRAME = 2;
+
+function buildBody(templates: CharacterTemplate[], p: CrowdPax): Pick<Slot, 'clone' | 'props' | 'identity'> {
+  const template = pickTemplate(templates, p.appearance, p.identity);
+  const clone = cloneVariant(template, p.appearance);
+  const props = attachProps(clone.wrap, p.appearance, template.variant.bagProp !== false);
+  return { clone, props, identity: p.identity };
+}
+
+/** Ce slot ne représente plus la même personne : on refait son corps. */
+function rebuildSlot(s: Slot, templates: CharacterTemplate[], p: CrowdPax): void {
+  disposeClone(s.clone);
+  const body = buildBody(templates, p);
+  s.clone = body.clone;
+  s.props = body.props;
+  s.identity = body.identity;
+  s.pose = makePoseState();
+  s.currentKey = '';
+  s.fallW = 0;
+  s.fallOut = FADE;
+  s.fallYaw = 0;
+  s.holder.add(body.clone.wrap);
 }
 
 export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest }) {
@@ -59,10 +84,18 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
   const slots = useMemo<Slot[]>(
     () =>
       crowdList.map((p) => {
-        const template = pickTemplate(templates, p.appearance, p.id);
-        const clone = cloneVariant(template, p.appearance);
-        const props = attachProps(clone.wrap, p.appearance, template.variant.bagProp !== false);
-        return { clone, pose: makePoseState(), props, currentKey: '' as LogicalClip | '', fallW: 0, fallOut: FADE, fallYaw: 0 };
+        const body = buildBody(templates, p);
+        const holder = new THREE.Group();
+        holder.add(body.clone.wrap);
+        return {
+          holder,
+          ...body,
+          pose: makePoseState(),
+          currentKey: '' as LogicalClip | '',
+          fallW: 0,
+          fallOut: FADE,
+          fallYaw: 0,
+        };
       }),
     [templates],
   );
@@ -77,10 +110,19 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       wrap.current.position.z = runtime.platformSlide;
       wrap.current.rotation.y = doorSide === 1 ? 0 : Math.PI;
     }
+    let rebuildBudget = HIDDEN_REBUILDS_PER_FRAME;
     for (let i = 0; i < crowdList.length; i++) {
       const p = crowdList[i];
       const s = slots[i];
       if (!s) continue;
+      if (s.identity !== p.identity) {
+        // Visible : tout de suite — sinon le seuil montrerait l'ancien corps.
+        if (p.state !== 'hidden') rebuildSlot(s, templates, p);
+        else if (rebuildBudget > 0) {
+          rebuildBudget--;
+          rebuildSlot(s, templates, p);
+        }
+      }
       const { wrap: body, mixer, actions, bones } = s.clone;
       if (p.state === 'hidden' || runtime.platformFade < 0.04) {
         body.visible = false;
@@ -191,7 +233,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
   return (
     <group ref={wrap} visible={false}>
       {slots.map((s, i) => (
-        <primitive key={crowdList[i].id} object={s.clone.wrap} />
+        <primitive key={crowdList[i].id} object={s.holder} />
       ))}
     </group>
   );
