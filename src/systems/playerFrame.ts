@@ -39,7 +39,12 @@ export function worldToCarZ(z: number): number {
 // bascule vers la gare suivante en début de croisière, alors que ce quai-ci
 // défile encore et que sa foule vit toujours dans son repère.
 
-function platformFlip(): 1 | -1 {
+/**
+ * Sens du quai présent : 1 s'il s'ouvre côté +x, -1 s'il est retourné. Exporté
+ * parce qu'une DIRECTION (le regard, par exemple) se ramène au repère quai par
+ * ce seul facteur, sans passer par une conversion de point.
+ */
+export function platformFlip(): 1 | -1 {
   return DOOR_SIDE[useStore.getState().platformIndex];
 }
 

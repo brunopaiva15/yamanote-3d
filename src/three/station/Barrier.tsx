@@ -9,23 +9,30 @@
 // s'en approche — nid d'abeilles rouge, halo autour du point où l'on va le
 // toucher. Purement décoratif : la collision, elle, est dans walkable.
 //
-// Deux formes, une seule encre :
+// Trois formes, une seule encre :
 //   - `Barrier`     : un panneau dressé EN TRAVERS du quai (normale selon z),
 //                     pour les deux abouts et le pied de chaque volée ;
-//   - `EdgeBarrier` : la limite du BORD DE QUAI, tout du long (normale selon x).
+//   - `EdgeBarrier` : la limite du BORD DE QUAI, tout du long (normale selon x) ;
+//   - `GateBarrier` : la baie de porte palière par laquelle on ne peut pas
+//                     monter — les quarante autres voitures de la rame.
 //
-// La seconde n'existe que là où il n'y a pas de portes palières — Shinjuku et
+// La deuxième n'existe que là où il n'y a pas de portes palières — Shinjuku et
 // Shibuya. Ailleurs, c'est le muret qui arrête l'œil en même temps que le pas ;
 // sur ces deux quais-là le bord était nu des deux côtés, et le joueur butait
 // sur un mur invisible au ras du liseré blanc. Elle s'ouvre au droit des baies
-// de porte, exactement quand walkable y laisse passer.
+// de porte, exactement quand walkable y laisse passer — c'est-à-dire aux
+// quatre portes de la voiture du joueur, et à elles seules.
+//
+// La troisième prend le relais partout où le muret existe : là, la baie est
+// déjà un trou dans un mur, et c'est ce trou qu'il faut fermer.
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { PLATFORM_TOP, PSD_H } from '../../data/stationGeometry';
+import { PLATFORM_TOP, PSD_H, PSD_HALF_GAP, PSD_X } from '../../data/stationGeometry';
 import { runtime } from '../../systems/runtime';
 import { PORTAL_HALF_Z, PORTAL_MIN_OPEN, portalOpen } from '../../systems/walkable';
+import { blockedGates, wrongDoor } from '../../systems/wrongDoor';
 
 /** Distance à laquelle le panneau commence à apparaître (m). */
 const FADE_FAR = 3.0;
@@ -61,7 +68,7 @@ const VERT = /* glsl */ `
 `;
 
 /**
- * L'encre d'une limite de zone, commune aux deux formes : la maille, le halo
+ * L'encre d'une limite de zone, commune aux trois formes : la maille, le halo
  * autour du point de contact et le balayage. Les coordonnées sont en MÈTRES
  * dans le plan du panneau — (largeur, hauteur) pour un panneau en travers,
  * (z du quai, hauteur) pour un bord. Chaque forme dissout ensuite l'opacité
@@ -328,8 +335,12 @@ export interface EdgeBarrierProps {
   /** Longueur du quai (m). */
   length: number;
   /**
-   * Axes des baies de porte, quand ce bord en a — la limite s'y ouvre dès que
-   * la rame est à quai, portes dégagées. Sans elles, le bord est continu.
+   * Axes des SEUILS FRANCHISSABLES, quand ce bord en a — la limite s'y ouvre
+   * dès que la rame est à quai, portes dégagées. Sans eux, le bord est continu.
+   *
+   * Ce sont les quatre portes de la voiture du joueur, pas les quarante-quatre
+   * baies de la rame : devant les autres voitures, la rame est là, ses portes
+   * s'écartent, et pourtant on ne peut pas monter — la limite doit y rester.
    */
   gates?: readonly number[];
   /** Hauteur de la limite (m au-dessus du sol du quai). */
@@ -425,6 +436,180 @@ export function EdgeBarrier({ x, length, gates, height = EDGE_H }: EdgeBarrierPr
     <mesh
       ref={mesh}
       position={[x, 0, 0]}
+      geometry={geometry}
+      material={material}
+      visible={false}
+      renderOrder={10}
+    />
+  );
+}
+
+// --- Baie de porte palière par laquelle on ne peut pas monter -------------
+
+/**
+ * Plan de la limite, mesuré depuis le muret. Les vantaux coulissent à
+ * `PSD_X + 0.08` : la limite se tient exactement dans leur plan, là où le
+ * regard attend une porte.
+ */
+const GATE_X = PSD_X + 0.08;
+
+const VERT_GATE = /* glsl */ `
+  attribute float aGate;  // axe de la baie à laquelle ce sommet appartient (m)
+  varying float vGate;
+  varying vec2 vP;        // (z du quai, hauteur), en mètres
+  void main() {
+    vGate = aGate;
+    vP = vec2(position.z, position.y);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const FRAG_GATE = /* glsl */ `
+  precision highp float;
+  uniform vec2 uHit;       // (z, hauteur) du joueur
+  uniform float uStrength; // 0 rien, 1 nez contre la limite
+  uniform float uTime;
+  uniform vec3 uColor;
+  uniform vec2 uY;         // sol et linteau de la baie (m)
+  uniform float uGate;     // axe de la baie visée
+  varying float vGate;
+  varying vec2 vP;
+
+  ${INK}
+
+  void main() {
+    // Halo resserré et franc : on a cette limite à quarante centimètres du
+    // visage, et c'est un refus, pas un décor de fond.
+    vec4 c = ink(vP, uHit, uStrength, uTime, 2.6, 0.42);
+    float a = c.a;
+
+    // Une SEULE baie s'allume : celle qu'on a devant soi. Les quarante autres
+    // restent éteintes — c'est une porte qu'on refuse, pas le quai entier.
+    a *= 1.0 - smoothstep(0.1, 0.9, abs(vGate - uGate));
+
+    // Le seuil et le linteau : la trame naît du sol et meurt sous le bandeau.
+    // Les jambages, eux, restent FRANCS — c'est une baie de porte, pas un bord
+    // perdu : la limite affleure le montant, comme un vantail qu'on n'a pas.
+    a *= smoothstep(0.0, 0.08, vP.y - uY.x) * (1.0 - smoothstep(uY.y - 0.18, uY.y, vP.y));
+
+    if (a < 0.004) discard;
+    gl_FragColor = vec4(c.rgb, min(a, 0.72));
+  }
+`;
+
+/** Un quad par baie refusée, tous dans le même tampon : un seul appel de rendu. */
+function gateGeometry(gates: readonly number[], y0: number, y1: number): THREE.BufferGeometry {
+  const position = new Float32Array(gates.length * 18);
+  const aGate = new Float32Array(gates.length * 6);
+  let p = 0;
+  let g = 0;
+  for (const gz of gates) {
+    const z0 = gz - PSD_HALF_GAP;
+    const z1 = gz + PSD_HALF_GAP;
+    const corners = [
+      [z0, y0],
+      [z1, y0],
+      [z1, y1],
+      [z0, y0],
+      [z1, y1],
+      [z0, y1],
+    ];
+    for (const [z, y] of corners) {
+      position[p++] = 0;
+      position[p++] = y;
+      position[p++] = z;
+      aGate[g++] = gz;
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(position, 3));
+  geo.setAttribute('aGate', new THREE.BufferAttribute(aGate, 1));
+  return geo;
+}
+
+export interface GateBarrierProps {
+  /** Longueur du quai (m) : la trame des baies s'y ajuste. */
+  length: number;
+}
+
+/**
+ * La limite d'une baie de porte palière par laquelle on ne peut pas monter.
+ *
+ * La rame a onze voitures et le quai quarante-quatre baies, mais une seule
+ * voiture est modélisée : devant les quarante autres portes, grandes ouvertes
+ * elles aussi, `walkable` n'ouvre aucun portillon. On y venait, on s'y cognait,
+ * et rien ne le disait — c'était le seul mur invisible du quai.
+ *
+ * La limite ne se dresse que quand on va vraiment vers cette porte-là : les
+ * portes sont dégagées, on est au bord, et on s'est tourné vers la voie
+ * (systems/wrongDoor). Longer le quai n'allume rien.
+ */
+export function GateBarrier({ length }: GateBarrierProps) {
+  const mesh = useRef<THREE.Mesh>(null);
+  const y0 = PLATFORM_TOP;
+  const y1 = PLATFORM_TOP + PSD_H;
+
+  const gates = useMemo(() => blockedGates(length), [length]);
+  const geometry = useMemo(() => gateGeometry(gates, y0, y1), [gates, y0, y1]);
+  const uniforms = useMemo(
+    () => ({
+      uHit: { value: new THREE.Vector2(0, y0) },
+      uStrength: { value: 0 },
+      uTime: { value: 0 },
+      uColor: { value: new THREE.Color('#ff2f3a') },
+      uY: { value: new THREE.Vector2(y0, y1) },
+      uGate: { value: 0 },
+    }),
+    [y0, y1],
+  );
+  const material = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        vertexShader: VERT_GATE,
+        fragmentShader: FRAG_GATE,
+        uniforms,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        toneMapped: false,
+      }),
+    [uniforms],
+  );
+
+  useLayoutEffect(
+    () => () => {
+      material.dispose();
+      geometry.dispose();
+    },
+    [material, geometry],
+  );
+
+  useFrame((_, rawDt) => {
+    const m = mesh.current;
+    if (!m) return;
+    uniforms.uTime.value += Math.min(rawDt, 0.05);
+
+    const wrong = wrongDoor();
+    if (!wrong) {
+      uniforms.uStrength.value = 0;
+      m.visible = false;
+      return;
+    }
+
+    uniforms.uStrength.value = wrong.strength;
+    uniforms.uGate.value = wrong.z;
+    // Milieu du buste plutôt que l'œil : la limite s'allume à hauteur d'homme.
+    uniforms.uHit.value.set(
+      runtime.playerPlatZ,
+      THREE.MathUtils.clamp(runtime.playerPlatY - 0.75, y0, y1),
+    );
+    m.visible = true;
+  });
+
+  return (
+    <mesh
+      ref={mesh}
+      position={[GATE_X, 0, 0]}
       geometry={geometry}
       material={material}
       visible={false}
