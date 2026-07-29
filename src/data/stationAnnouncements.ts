@@ -58,9 +58,13 @@ export function platformPreAnnouncement(index: number, platform: number): Statio
   return [ja(`今度の、${platform}番線の電車は、${LOOP_JP}、${b.jp}方面行きです。`)];
 }
 
-/** Remerciement d'ouverture, parfois posé avant la pré-annonce. */
+/**
+ * Remerciement d'ouverture, parfois posé avant la pré-annonce. Il remercie
+ * pour la LIGNE, jamais pour une compagnie : aucun exploitant réel n'est nommé
+ * dans le jeu.
+ */
 export function platformGreeting(): StationUtterance[] {
-  return [ja('本日も、JR東日本をご利用くださいまして、ありがとうございます。')];
+  return [ja('本日も、山手線を、ご利用くださいまして、ありがとうございます。')];
 }
 
 // --- 3. Annonce principale d'approche ------------------------------------

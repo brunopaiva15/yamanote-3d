@@ -146,7 +146,6 @@ const JA_READINGS: [RegExp, string][] = [
   [/方面行き/g, '方面ゆき'], // « hōmen-iki » → hōmen-yuki, comme la rame
   [/人立入り/g, 'ひと立入り'], // « jinritsu-iri » → hito-tachiiri
   [/ホーム中ほど/g, 'ホームなかほど'], // « hōmu chū-hodo » → hōmu nakahodo
-  [/JR東日本/g, 'ジェイアール東日本'], // « JR » restait en lettres latines
   [/大江戸線/g, 'おおえど線'], // « dai-edo-sen » → ōedo-sen
 ];
 
