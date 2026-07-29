@@ -487,6 +487,23 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       if (t < 1.0) return set(yaw, 0.35);
       return set(yaw * 0.5, 0.08);
     }
+    case 'talk': {
+      // S'adresse au joueur : tête tournée vers lui pour de bon, avec les
+      // hochements et le léger buste en avant de quelqu'un qui parle. Le
+      // rythme est celui d'une phrase, pas d'un tic — deux temps par seconde.
+      const yaw = headYawToward(ctx, ctx.playerX, ctx.playerZ);
+      const pitch = THREE.MathUtils.clamp((1.35 - ctx.playerY) * 0.32, -0.28, 0.3);
+      const beat = Math.sin(t * 5.2);
+      return set(
+        yaw + Math.sin(t * 1.7) * 0.05,
+        pitch + beat * 0.055,
+        0.05,
+        5.5,
+        0,
+        0,
+        Math.sin(t * 1.1) * 0.06,
+      );
+    }
     case 'doubleTake': {
       if (t < 0.35) return set(headYawToward(ctx, ctx.playerX, ctx.playerZ) * 0.3, 0.05, 0, 8);
       if (t < 0.55) return set(0, 0, 0, 8);

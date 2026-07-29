@@ -366,11 +366,11 @@ export function actionDuration(def: PaxActionDef, t: Temper): number {
 
 /**
  * Délai avant la prochaine interruption d'une occupation de fond. Un voyageur
- * placide reste immobile près d'une minute ; un nerveux se gratte, vérifie
+ * placide tient une demi-minute sans bouger ; un nerveux se gratte, vérifie
  * l'heure et remonte son sac toutes les dix secondes.
  */
 export function nextInterludeDelay(t: Temper): number {
-  const base = 9 + (1 - t.restless) * 46;
+  const base = 7 + (1 - t.restless) * 26;
   return base * (0.6 + Math.random() * 0.9);
 }
 

@@ -112,6 +112,12 @@ export const runtime = {
   playerPlatX: 0, // position du joueur dans le repère local du quai (côté +x, avant rotation)
   playerPlatY: 1.55,
   playerPlatZ: 0,
+  // Direction du regard (vecteur unitaire monde). Les PNJ savaient déjà où
+  // est le joueur ; pour SAVOIR QUI IL REGARDE (systems/paxTargeting), il faut
+  // aussi savoir où il regarde.
+  lookX: 0,
+  lookY: 0,
+  lookZ: -1,
   /**
    * Glissement longitudinal de la rame (m), appliqué par TrainRig. Vaut 0 tant
    * que le joueur est à bord : le train reste fixe à l'origine et c'est le

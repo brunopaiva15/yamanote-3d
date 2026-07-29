@@ -352,6 +352,9 @@ function seedCrowdChats(): void {
     if (used.has(p.id)) continue;
     startCrowdAnchor(p);
     p.actionT = Math.random() * p.actionDur * 0.8;
+    // Compteurs décalés : le quai entier a été peuplé d'un coup, ses gestes
+    // ne doivent pas l'être.
+    p.interludeT *= Math.random();
   }
 }
 
@@ -740,6 +743,44 @@ function startCrowdInterlude(p: CrowdPax): void {
     return;
   }
   applyCrowdAction(p, def.id, dur, null);
+}
+
+/**
+ * Fait parler ce voyageur du quai AU joueur (systems/conversation). Un
+ * promeneur s'arrête pour ça : on ne s'adresse pas à quelqu'un en continuant
+ * de marcher vers le bout du quai.
+ */
+export function crowdStartTalking(id: number, dur: number): boolean {
+  const p = crowdList[id];
+  if (!p) return false;
+  if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') return false;
+  endCrowdPair(p);
+  clearCrowdAnchor(p);
+  p.state = 'waiting';
+  p.home.copy(p.pos);
+  p.waypoints = [];
+  p.wpi = 0;
+  p.bob = 0;
+  p.action = 'talkPlayer';
+  p.actionT = 0;
+  p.actionDur = dur;
+  return true;
+}
+
+/** Réplique suivante du même échange. */
+export function crowdKeepTalking(id: number, dur: number): boolean {
+  const p = crowdList[id];
+  if (!p || p.action !== 'talkPlayer') return false;
+  p.actionT = 0;
+  p.actionDur = dur;
+  return true;
+}
+
+/** Fin de l'échange : le voyageur reprend son attente ou sa promenade. */
+export function crowdStopTalking(id: number): void {
+  const p = crowdList[id];
+  if (!p || p.action !== 'talkPlayer') return;
+  p.actionT = p.actionDur;
 }
 
 /** Reprend l'occupation de fond, ou en choisit une autre si elle est épuisée. */

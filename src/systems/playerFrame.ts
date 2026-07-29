@@ -78,3 +78,10 @@ export function publishPlayerPose(worldX: number, worldY: number, worldZ: number
   runtime.playerPlatY = worldY;
   runtime.playerPlatZ = tmp.z;
 }
+
+/** Direction du regard (unitaire, repère monde) : qui le joueur a en face. */
+export function publishPlayerLook(x: number, y: number, z: number): void {
+  runtime.lookX = x;
+  runtime.lookY = y;
+  runtime.lookZ = z;
+}

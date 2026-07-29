@@ -277,6 +277,10 @@ function seedChats(): void {
     if (used.has(p.id)) continue;
     startAnchor(p);
     p.actionT = Math.random() * p.actionDur * 0.8;
+    // Décaler les compteurs d'interruption : sans ça, tout le wagon a été
+    // peuplé à la même seconde, et personne ne bouge de la première minute
+    // avant que tout le monde ne bouge en même temps.
+    p.interludeT *= Math.random();
   }
 }
 
@@ -763,6 +767,40 @@ function startInterlude(p: Pax): void {
   }
 
   applyAction(p, def.id, dur);
+}
+
+/**
+ * Fait parler ce voyageur AU joueur (systems/conversation). Il lâche ce qu'il
+ * faisait, se tourne vers lui, et lui adresse la parole ; à la fin, il
+ * reprendra une occupation ordinaire comme après n'importe quel geste.
+ */
+export function paxStartTalking(id: number, dur: number): boolean {
+  const p = paxList[id];
+  if (!p) return false;
+  if (p.state !== 'seated' && p.state !== 'standing') return false;
+  endPair(p);
+  clearAnchor(p);
+  p.action = 'talkPlayer';
+  p.actionT = 0;
+  p.actionDur = dur;
+  return true;
+}
+
+/** Réplique suivante du même échange : on prolonge sans rien réinitialiser. */
+export function paxKeepTalking(id: number, dur: number): boolean {
+  const p = paxList[id];
+  if (!p || p.action !== 'talkPlayer') return false;
+  p.actionT = 0;
+  p.actionDur = dur;
+  return true;
+}
+
+/** Fin de l'échange : le voyageur retourne à sa vie. */
+export function paxStopTalking(id: number): void {
+  const p = paxList[id];
+  if (!p || p.action !== 'talkPlayer') return;
+  // La boucle verra l'occupation expirée et lui en choisira une autre.
+  p.actionT = p.actionDur;
 }
 
 /** Reprend l'occupation de fond après un geste bref, ou en choisit une autre. */
