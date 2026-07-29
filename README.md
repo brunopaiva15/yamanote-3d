@@ -477,14 +477,60 @@ linteau, où c'est la dalle qui les cache.
 Le panneau de nom de gare n'a pas changé : code JY, gare précédente et suivante,
 bande verte directionnelle, redessiné au changement de gare.
 
-**Le tableau d'affichage, lui, vit.** Il annonçait 「まもなく発車」 en permanence,
-y compris en pleine voie entre deux gares où aucun train ne longe le quai. Il
-suit désormais l'état réel — approche, embarquement, départ, attente avec
-décompte — et alterne japonais et anglais toutes les trois secondes et demie,
-avec un bandeau qui clignote quand la fermeture est imminente. Deux sources
-selon l'endroit d'où on le regarde : debout sur le quai c'est `platformWait`,
-à bord c'est la phase du cycle station. Le canvas n'est redessiné que lorsque
-son contenu change réellement, soit environ une fois par seconde.
+### Le 発車標 — le tableau des départs
+
+Les quais de la Yamanote portent un afficheur suspendu, le **発車標**
+(*hasshahyō*), qui dit dans combien de temps arrivent les prochaines rames. JR
+East l'a déployé sur les trente gares de la ligne entre novembre 2019 et juillet
+2020, et il annonce toujours **DEUX** trains, l'un sous l'autre, avec pour
+chacun la même phrase :
+
+```
+山手線　約2分後　東京・上野方面
+山手線　約5分後　東京・上野方面
+```
+
+```
+YAMANOTE LINE   2 min.   TŌKYŌ & UENO
+YAMANOTE LINE   5 min.   TŌKYŌ & UENO
+```
+
+Le tableau du jeu tenait sur une ligne et disait un ÉTAT (「ご乗車ください」,
+「まもなく発車」). Il dit maintenant ce qu'on vient y chercher : **dans combien
+de temps**. Le 約 est le mot important — ce n'est pas un compte à rebours à la
+seconde mais une estimation, et c'est pour cela qu'il n'y a jamais de
+「約0分後」 : sous les quarante-cinq secondes, le chiffre laisse la place à
+「まもなく」, et à 「まもなく発車」 pour la rame qui s'ébranle, seul moment où
+l'afficheur bat.
+
+**Très tôt le matin et très tard le soir** (avant 5 h 15, après 23 h 45), le
+décompte laisse la place à l'**heure de départ** — `05:12`. Les intervalles y
+sont trop longs pour qu'un « environ » veuille encore dire quelque chose, et ce
+sont les seuls moments où l'on regarde le tableau pour savoir si l'on a raté la
+dernière. La règle de mise en forme est isolée dans `data/departureBoard.ts`,
+qui ne connaît ni le train ni la gare : on lui donne des secondes d'attente et
+l'heure qu'il est, il rend ce qu'il faut écrire (`tests/departureBoard.test.ts`).
+
+Les secondes, elles, viennent de deux sources selon l'endroit d'où on regarde :
+debout sur le quai c'est `platformWait`, qui sait où en est la rame et quel
+creux a été tiré pour l'attente en cours ; à bord c'est la phase du cycle
+station, où la rame qui intéresse le tableau est celle où l'on se trouve. Les
+deux durées de course qui entrent dans le calcul — dégager les 320 m du quai,
+freiner depuis la vitesse de ligne — sont **mesurées sur le profil E235
+lui-même** et non estimées : le tableau annonce des minutes, et une minute
+d'écart se voit.
+
+**Deux équipements coexistent sur la ligne**, et le dessin change avec eux : la
+matrice à LED ambre et verte, avec son inter-diode visible et son halo de
+diode, qui est l'image classique du quai japonais ; et les dalles LCD des quais
+neufs ou refaits — Takanawa Gateway, Shibuya, Shinagawa — au trait plus fin et
+sans trame. Le canvas n'est redessiné que lorsque son contenu change réellement,
+soit environ une fois par seconde.
+
+Enfin, la colonne de droite nomme les **repères de la boucle** (東京, 上野,
+池袋, 新宿, 渋谷, 品川) et non les deux gares suivantes : un tableau de Tamachi
+annonce 「東京・上野方面」 quand l'arrêt d'après est Hamamatsuchō. On ne prend
+pas la Yamanote pour la gare d'à côté.
 
 **Les accès sont balisés par lettre**, comme sur les plans officiels JR : A, B,
 C… dans l'ordre où on les rencontre en marchant, tous types confondus —
