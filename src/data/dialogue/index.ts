@@ -41,7 +41,7 @@ export function pickDialogue(ctx: DialogueCtx, recent: (id: string) => boolean):
   let total = 0;
   const pool: DialogueEntry[] = [];
   const weights: number[] = [];
-  let fallbackPool: DialogueEntry[] = [];
+  const fallbackPool: DialogueEntry[] = [];
   for (const entry of DIALOGUES) {
     if (!matches(entry, ctx)) continue;
     if (recent(entry.id)) {

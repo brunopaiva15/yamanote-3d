@@ -146,6 +146,44 @@ for (const s of talk.said) {
   if (s.error) console.log(`  ⚠ ${s.error}`);
   else console.log(`  ${String(s.qui).padEnd(20)} « ${s.texte} »`);
 }
+
+// --- Couverture -----------------------------------------------------------
+//
+// Un catalogue de deux cents entrées ne vaut rien s'il en reste trois
+// éligibles à six heures du matin sur un quai désert. On balaie donc les
+// contextes extrêmes et on compte ce qui reste disponible.
+
+const coverage = await page.evaluate(async () => {
+  const d = await import('/src/data/dialogue/index.ts');
+  const base = {
+    place: 'car', posture: 'seated', archetype: 'casual', feminine: false, senior: false,
+    mask: false, glasses: false, bag: false, hat: false, scarf: false,
+    hour: 12, month: 5, weekend: false, crowd: 0.5, phase: 'cruise', moving: true,
+    playerSeated: false, nextIndex: 16, hereIndex: 15, trigger: 'ask',
+  };
+  const count = (over) => {
+    const ctx = { ...base, ...over };
+    return d.DIALOGUES.filter((e) => d.matches(e, ctx)).length;
+  };
+  const rows = [];
+  for (const hour of [1, 5, 8, 12, 15, 19, 23]) rows.push([`${hour} h`, count({ hour })]);
+  for (const archetype of ['salaryman', 'officeLady', 'student', 'senior', 'tourist', 'casual']) {
+    rows.push([archetype, count({ archetype, senior: archetype === 'senior' })]);
+  }
+  rows.push(['quai', count({ place: 'platform', posture: 'waiting' })]);
+  rows.push(['bondé', count({ crowd: 0.92 })]);
+  rows.push(['désert', count({ crowd: 0.05 })]);
+  rows.push(['à quai', count({ phase: 'dwell', moving: false })]);
+  for (const trigger of ['bump', 'fallNearby', 'boarding', 'satDown', 'passby', 'arrival']) {
+    rows.push([trigger, count({ trigger })]);
+  }
+  return rows;
+});
+
+console.log('\n— Couverture : échanges éligibles par contexte —');
+for (const [label, n] of coverage) {
+  console.log(`  ${String(label).padEnd(12)} ${String(n).padStart(3)}${n < 5 ? '  ⚠ maigre' : ''}`);
+}
 console.log();
 
 await browser.close();

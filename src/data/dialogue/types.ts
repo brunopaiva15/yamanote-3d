@@ -110,8 +110,14 @@ export interface DialogueCtx {
   trigger: DialogueTrigger;
 }
 
+/**
+ * Créneau horaire, minuit compris. Une nuit s'écrit aussi bien [22, 2] que
+ * [22, 26] — la seconde forme se lit mieux quand on pense « jusqu'à deux
+ * heures du matin », et c'est celle qu'on écrit sans y penser.
+ */
 function inHours(hour: number, [from, to]: readonly [number, number]): boolean {
-  return from <= to ? hour >= from && hour < to : hour >= from || hour < to;
+  const end = to > 24 ? to - 24 : to;
+  return from <= end ? hour >= from && hour < end : hour >= from || hour < end;
 }
 
 /** L'échange est-il recevable dans ce contexte ? */
