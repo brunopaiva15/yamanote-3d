@@ -644,11 +644,25 @@ Dans l'ordre d'importance :
 - l'**hiver sec et lumineux**, contre-intuitif pour qui imagine le Japon
   pluvieux : janvier est le mois le plus ensoleillé de l'année ;
 - la **neige**, rare. Tokyo en compte quelques jours par an. Elle est donc
-  décidée au niveau de la *journée*, pas de l'épisode : la plupart des hivers
-  n'en verront pas, et celui qui en voit s'en souviendra.
+  décidée au niveau de la *journée*, pas de l'épisode : simulé sur cinq années,
+  le modèle en donne de zéro à quatre par hiver, toujours entre la mi-janvier et
+  la fin février.
 
 Chaque poids est une propension, jamais un interrupteur : il pleut en janvier et
-il fait beau pendant le tsuyu — simplement pas souvent.
+il fait beau pendant le tsuyu — simplement pas souvent. Le bilan d'une année
+entière, tel que le modèle la tire :
+
+| mois | pluie | couvert | dégagé | T moyenne |
+|---|---|---|---|---|
+| janvier | 4 % | 14 % | 60 % | 5,4 °C |
+| juin | 24 % | 65 % | 16 % | 21,8 °C |
+| juillet | 23 % | 64 % | 21 % | 24,9 °C |
+| août | 8 % | 32 % | 39 % | 25,8 °C |
+| décembre | 5 % | 16 % | 62 % | 8,5 °C |
+
+Les pourcentages comptent des *heures*, pas des jours. Les moyennes de
+température tombent à quelques dixièmes des normales de Tokyo — c'est le seul
+chiffre du modèle qui soit vérifiable directement, et il l'est.
 
 La **température** est calculée, et pas décorative : moyenne du jour (cosinus
 calé sur les normales de Tokyo, 5 °C début février, 27 °C début août), marche
@@ -700,6 +714,10 @@ quad à une aire nulle : rien à rastériser, pas de `discard`, pas de surcoût.
 Une averse ne tombe pas plus vite qu'une bruine : elle tombe plus **dru**. C'est
 donc le nombre d'instances affichées qui varie, pas leur vitesse ni leur
 opacité — un fondu d'opacité donnerait une pluie fantôme.
+
+Le coût : deux appels de rendu et six mille triangles au palier ultra, sous une
+averse — le tiers d'un seul immeuble de la ville. Par temps sec les deux
+maillages sont éteints, et le budget du décor (voir plus haut) est inchangé.
 
 ### Ce que la pluie fait au reste du décor
 

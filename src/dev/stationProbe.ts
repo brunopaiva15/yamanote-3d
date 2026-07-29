@@ -21,6 +21,7 @@ import { DOOR_SIDE, STATIONS } from '../data/stations';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { freezeWeather, weather } from '../systems/weather';
+import { seasonNow } from '../systems/season';
 
 interface Volume {
   label: string;
@@ -256,6 +257,12 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     Object.assign(weather, patch);
     freezeWeather(true);
   };
+
+  // Saison telle que le monde la voit : poids, phénomènes datés, palette de
+  // feuillage. Une frondaison qui n'a pas la bonne couleur peut l'être parce
+  // que le calendrier se trompe ou parce que le rendu ne la relit pas — les
+  // deux se distinguent ici, et nulle part ailleurs.
+  w.__probeSeason = () => seasonNow();
 
   // État des champs de précipitation : visibles ? combien d'instances ? quelles
   // valeurs d'uniformes ? Une pluie qu'on ne voit pas peut l'être pour six

@@ -25,8 +25,10 @@
 //   · l'hiver sec et lumineux — contre-intuitif pour qui imagine le Japon
 //     pluvieux : janvier est le mois le plus ensoleillé de l'année ;
 //   · la neige, RARE. Tokyo compte quelques jours de neige par an. Elle est
-//     donc décidée au niveau de la JOURNÉE, pas de l'épisode : la plupart des
-//     hivers n'en verront pas, et celui qui en voit s'en souviendra.
+//     donc décidée au niveau de la JOURNÉE, pas de l'épisode. Simulé sur cinq
+//     années, le modèle en donne de zéro à quatre par hiver, toujours entre la
+//     mi-janvier et la fin février — c'est l'ordre de grandeur réel, et c'est
+//     assez rare pour que le jour où l'on tombe dessus se remarque.
 
 import { runtime } from './runtime';
 import { seasonNow, type SeasonState } from './season';
