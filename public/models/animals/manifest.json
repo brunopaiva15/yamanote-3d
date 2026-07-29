@@ -4,19 +4,10 @@
   "license": "CC0 1.0",
   "variants": [
     {
-      "id": "Husky",
-      "file": "husky.glb",
-      "height": 0.62
-    },
-    {
       "id": "ShibaInu",
       "file": "shibainu.glb",
       "height": 0.46
-    },
-    {
-      "id": "Wolf",
-      "file": "wolf.glb",
-      "height": 0.78
     }
-  ]
+  ],
+  "note": "Limite JR East : chien + caisse ≤ 10 kg, cotes cumulées ≤ 120 cm. Husky et loup ne passent pas — seule une petite race voyage sur la Yamanote."
 }

@@ -1742,6 +1742,361 @@ export function makeAdTexture(seed: number, portrait: boolean, bold = false): TH
   return toTexture(c);
 }
 
+// --- Affiche de manières : les animaux dans le train ------------------------
+//
+// Toutes les affiches de gare ne vendent pas quelque chose. Les compagnies
+// japonaises en placardent aussi qui RAPPELLENT une règle, et celle des
+// animaux est l'une des plus reconnaissables : un pictogramme cerclé de rouge
+// pour ce qui est autorisé, une rangée de croix pour tout le reste.
+//
+// Le contenu est celui des règles réelles de JR East, dont dépend aussi
+// systems/petCarriers : l'animal entièrement enfermé, la somme des trois cotes
+// sous 120 cm, le poids total sous 10 kg, et le billet « bagage à main » à
+// 290 ¥. Le DESSIN, lui, est original — pictogrammes construits ici au trait,
+// comme le reste des visuels du jeu, sans rien reprendre d'une affiche
+// existante (même principe que les mélodies de départ).
+
+const MP_INK = '#1d2530';
+const MP_RED = '#d0332e';
+const MP_BAND = '#1c6b4a';
+const MP_FUR = '#c8a06a';
+const MP_FUR_DARK = '#9a7444';
+const MP_PANEL = '#f2f0ea';
+
+function rr(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+/** Museau de chien vu de face, rayon `r` : ce qu'on voit derrière les barreaux. */
+function dogFace(g: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  g.fillStyle = MP_FUR_DARK;
+  for (const s of [-1, 1]) {
+    g.beginPath();
+    g.ellipse(x + s * r * 0.82, y - r * 0.1, r * 0.34, r * 0.62, s * 0.25, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.fillStyle = MP_FUR;
+  g.beginPath();
+  g.ellipse(x, y, r, r * 0.92, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#f6efe4';
+  g.beginPath();
+  g.ellipse(x, y + r * 0.42, r * 0.5, r * 0.36, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = MP_INK;
+  for (const s of [-1, 1]) {
+    g.beginPath();
+    g.arc(x + s * r * 0.36, y - r * 0.14, r * 0.13, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.beginPath();
+  g.ellipse(x, y + r * 0.3, r * 0.16, r * 0.12, 0, 0, Math.PI * 2);
+  g.fill();
+}
+
+/** Chien de profil, longueur `w` : la silhouette des cas interdits. */
+function dogSide(g: CanvasRenderingContext2D, x: number, y: number, w: number): void {
+  const h = w * 0.5;
+  g.fillStyle = MP_FUR;
+  rr(g, x - w * 0.44, y - h * 0.35, w * 0.72, h * 0.62, h * 0.28);
+  g.fill();
+  g.beginPath();
+  g.arc(x + w * 0.4, y - h * 0.42, h * 0.32, 0, Math.PI * 2);
+  g.fill();
+  // Museau, oreille tombante, queue.
+  rr(g, x + w * 0.52, y - h * 0.4, w * 0.2, h * 0.24, h * 0.1);
+  g.fill();
+  g.fillStyle = MP_FUR_DARK;
+  g.beginPath();
+  g.ellipse(x + w * 0.3, y - h * 0.52, h * 0.13, h * 0.26, 0.2, 0, Math.PI * 2);
+  g.fill();
+  g.beginPath();
+  g.moveTo(x - w * 0.42, y - h * 0.3);
+  g.quadraticCurveTo(x - w * 0.7, y - h * 0.9, x - w * 0.5, y - h * 1.0);
+  g.quadraticCurveTo(x - w * 0.52, y - h * 0.6, x - w * 0.36, y - h * 0.2);
+  g.fill();
+  // Pattes.
+  g.fillStyle = MP_FUR;
+  for (const dx of [-0.3, -0.1, 0.2, 0.4]) {
+    rr(g, x + w * dx, y + h * 0.16, w * 0.1, h * 0.44, w * 0.045);
+    g.fill();
+  }
+  g.fillStyle = MP_INK;
+  g.beginPath();
+  g.arc(x + w * 0.7, y - h * 0.32, h * 0.05, 0, Math.PI * 2);
+  g.fill();
+}
+
+/** Caisse de transport de face, largeur `w` : le seul cas autorisé. */
+function carrierIcon(g: CanvasRenderingContext2D, x: number, y: number, w: number): void {
+  const h = w * 0.78;
+  // Poignée.
+  g.strokeStyle = '#7a8a76';
+  g.lineWidth = w * 0.05;
+  g.lineCap = 'round';
+  g.beginPath();
+  g.arc(x, y - h * 0.5, w * 0.16, Math.PI, 0);
+  g.stroke();
+  // Coque : capot clair, base teintée.
+  g.fillStyle = '#e8ece4';
+  rr(g, x - w / 2, y - h * 0.5, w, h * 0.5, w * 0.07);
+  g.fill();
+  g.fillStyle = '#7fb08a';
+  rr(g, x - w / 2, y - h * 0.06, w, h * 0.56, w * 0.07);
+  g.fill();
+  // Fentes d'aération sur le capot.
+  g.fillStyle = '#b9c4b4';
+  for (let i = 0; i < 5; i++) {
+    rr(g, x - w * 0.4 + i * w * 0.2, y - h * 0.42, w * 0.05, h * 0.22, w * 0.02);
+    g.fill();
+  }
+  // Porte : ouverture sombre, chien derrière, puis barreaux par-dessus.
+  const dx = x - w * 0.3;
+  const dw = w * 0.6;
+  const dy = y - h * 0.3;
+  const dh = h * 0.62;
+  g.fillStyle = '#2b3330';
+  rr(g, dx, dy, dw, dh, w * 0.05);
+  g.fill();
+  g.save();
+  rr(g, dx, dy, dw, dh, w * 0.05);
+  g.clip();
+  dogFace(g, x, dy + dh * 0.52, dw * 0.34);
+  g.restore();
+  g.strokeStyle = '#d8ded6';
+  g.lineWidth = w * 0.022;
+  for (let i = 1; i < 5; i++) {
+    g.beginPath();
+    g.moveTo(dx + (i * dw) / 5, dy);
+    g.lineTo(dx + (i * dw) / 5, dy + dh);
+    g.stroke();
+  }
+  for (let i = 1; i < 4; i++) {
+    g.beginPath();
+    g.moveTo(dx, dy + (i * dh) / 4);
+    g.lineTo(dx + dw, dy + (i * dh) / 4);
+    g.stroke();
+  }
+  g.strokeStyle = '#5f6f5c';
+  g.lineWidth = w * 0.03;
+  rr(g, dx, dy, dw, dh, w * 0.05);
+  g.stroke();
+}
+
+/** Chien tenu en laisse — interdit à l'intérieur des portiques. */
+function leashIcon(g: CanvasRenderingContext2D, x: number, y: number, w: number): void {
+  dogSide(g, x, y + w * 0.14, w * 0.72);
+  g.strokeStyle = MP_RED;
+  g.lineWidth = w * 0.035;
+  g.beginPath();
+  g.moveTo(x + w * 0.28, y + w * 0.03);
+  g.quadraticCurveTo(x + w * 0.1, y - w * 0.34, x - w * 0.3, y - w * 0.36);
+  g.stroke();
+}
+
+/** Chien porté dans les bras. */
+function armsIcon(g: CanvasRenderingContext2D, x: number, y: number, w: number): void {
+  g.fillStyle = '#98a2ae';
+  g.beginPath();
+  g.arc(x - w * 0.16, y - w * 0.3, w * 0.17, 0, Math.PI * 2);
+  g.fill();
+  rr(g, x - w * 0.44, y - w * 0.1, w * 0.56, w * 0.5, w * 0.12);
+  g.fill();
+  dogFace(g, x + w * 0.18, y + w * 0.06, w * 0.21);
+  g.fillStyle = '#98a2ae';
+  rr(g, x - w * 0.2, y + w * 0.16, w * 0.5, w * 0.12, w * 0.06);
+  g.fill();
+}
+
+/** Chien en poussette pour animal. */
+function strollerIcon(g: CanvasRenderingContext2D, x: number, y: number, w: number): void {
+  g.fillStyle = '#6fa8c8';
+  rr(g, x - w * 0.36, y - w * 0.1, w * 0.72, w * 0.34, w * 0.1);
+  g.fill();
+  g.beginPath();
+  g.arc(x - w * 0.02, y - w * 0.12, w * 0.3, Math.PI, Math.PI * 1.75);
+  g.lineWidth = w * 0.08;
+  g.strokeStyle = '#6fa8c8';
+  g.stroke();
+  dogFace(g, x + w * 0.02, y - w * 0.16, w * 0.16);
+  g.strokeStyle = '#7c8896';
+  g.lineWidth = w * 0.04;
+  g.beginPath();
+  g.moveTo(x + w * 0.3, y - w * 0.34);
+  g.lineTo(x + w * 0.44, y + w * 0.08);
+  g.stroke();
+  g.fillStyle = MP_INK;
+  for (const s of [-0.24, 0.26]) {
+    g.beginPath();
+    g.arc(x + w * s, y + w * 0.3, w * 0.1, 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
+// La croix doit dominer sans effacer : trop épaisse, elle recouvrait le
+// pictogramme et on ne savait plus ce qui était interdit.
+function crossMark(g: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  g.save();
+  g.globalAlpha = 0.9;
+  g.strokeStyle = MP_RED;
+  g.lineWidth = r * 0.26;
+  g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(x - r, y - r);
+  g.lineTo(x + r, y + r);
+  g.moveTo(x + r, y - r);
+  g.lineTo(x - r, y + r);
+  g.stroke();
+  g.restore();
+}
+
+function okMark(g: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  g.strokeStyle = MP_RED;
+  g.lineWidth = r * 0.26;
+  g.beginPath();
+  g.arc(x, y, r, 0, Math.PI * 2);
+  g.stroke();
+}
+
+/** Un cas interdit : vignette claire, pictogramme, croix par-dessus. */
+function banned(
+  g: CanvasRenderingContext2D,
+  draw: (g: CanvasRenderingContext2D, x: number, y: number, w: number) => void,
+  x: number,
+  y: number,
+  box: number,
+): void {
+  g.fillStyle = MP_PANEL;
+  rr(g, x - box / 2, y - box / 2, box, box, box * 0.12);
+  g.fill();
+  draw(g, x, y + box * 0.02, box * 0.72);
+  crossMark(g, x, y, box * 0.27);
+}
+
+/**
+ * L'affiche s'adapte à son SUPPORT, et c'est nécessaire : les caissons portrait
+ * d'un quai sont des bandeaux de pilier (0,27 × 1,10 m, soit 1:4) quand les
+ * affiches d'about du wagon sont presque carrées (0,50 × 0,34). Dessinée à un
+ * format fixe puis étirée, la même image y serait illisible.
+ *
+ * Deux mises en page : en COLONNE tout s'empile ; en PANNEAU le cas autorisé
+ * se met à gauche et les cas barrés défilent à sa droite.
+ */
+function drawMannersPoster(g: CanvasRenderingContext2D, W: number, H: number): void {
+  const column = H / W >= 1.9;
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, W, H);
+
+  const bandH = column ? H * 0.085 : H * 0.19;
+  g.fillStyle = MP_BAND;
+  g.fillRect(0, 0, W, bandH);
+  g.fillStyle = '#ffffff';
+  fitFillText(g, 'ペットのお持ち込み', W * 0.05, bandH * 0.58, W * 0.9, Math.floor(bandH * 0.46));
+  fitFillText(
+    g,
+    column ? 'Pets: carrier only' : 'Pets must travel fully enclosed in a carrier',
+    W * 0.05,
+    bandH * 0.9,
+    W * 0.9,
+    Math.floor(bandH * 0.24),
+    '',
+  );
+
+  // Pied de page réglementaire. Sur une colonne étroite, les trois règles
+  // tiennent en trois lignes — mais à une SEULE taille, calée sur la plus
+  // longue : ajustées ligne à ligne, la plus courte ressortait deux fois plus
+  // grosse que les autres.
+  const rules = ['3辺の和 120cm以内', '10kg以内', '手回り品きっぷ 290円'];
+  const footH = column ? H * 0.115 : H * 0.16;
+  g.fillStyle = MP_PANEL;
+  g.fillRect(0, H - footH, W, footH);
+  g.fillStyle = MP_INK;
+  if (column) {
+    let px = Math.floor(footH * 0.24);
+    // La plus longue se juge à la MESURE, pas au nombre de caractères : douze
+    // kanji sont plus larges que treize chiffres, et la ligne calibrée sur le
+    // mauvais gabarit débordait du cadre.
+    g.font = `bold ${px}px ${JP_FONT}`;
+    const widest = rules.reduce((a, b) => (g.measureText(a).width >= g.measureText(b).width ? a : b));
+    do {
+      g.font = `bold ${px}px ${JP_FONT}`;
+      if (g.measureText(`・${widest}`).width <= W * 0.88) break;
+      px -= 1;
+    } while (px > 7);
+    for (let i = 0; i < rules.length; i++) {
+      g.fillText(`・${rules[i]}`, W * 0.06, H - footH * (0.74 - i * 0.28));
+    }
+  } else {
+    fitFillText(g, rules.join(' ・ '), W * 0.04, H - footH * 0.36, W * 0.92, Math.floor(footH * 0.52));
+  }
+
+  const top = bandH;
+  const bottom = H - footH;
+  const span = bottom - top;
+
+  if (column) {
+    carrierIcon(g, W * 0.46, top + H * 0.088, W * 0.6);
+    okMark(g, W * 0.85, top + H * 0.035, W * 0.115);
+    g.fillStyle = MP_INK;
+    g.textAlign = 'center';
+    fitFillText(g, '全身をケージに', W / 2, H * 0.269, W * 0.92, Math.floor(W * 0.13));
+    g.textAlign = 'left';
+    g.strokeStyle = '#dcdfe4';
+    g.lineWidth = Math.max(1, W * 0.008);
+    g.beginPath();
+    g.moveTo(W * 0.1, H * 0.288);
+    g.lineTo(W * 0.9, H * 0.288);
+    g.stroke();
+    const box = W * 0.6;
+    for (let i = 0; i < 3; i++) {
+      banned(g, [leashIcon, armsIcon, strollerIcon][i], W * 0.5, H * (0.376 + i * 0.156), box);
+    }
+    g.fillStyle = MP_RED;
+    g.textAlign = 'center';
+    fitFillText(g, 'これらは不可', W / 2, H * 0.825, W * 0.86, Math.floor(W * 0.115));
+    g.textAlign = 'left';
+  } else {
+    // Panneau : le cas autorisé et sa légende à gauche, les cas barrés à
+    // droite sous la leur. Chaque texte sous le dessin qu'il commente.
+    carrierIcon(g, W * 0.155, top + span * 0.42, W * 0.22);
+    okMark(g, W * 0.05, top + span * 0.16, W * 0.032);
+    g.fillStyle = MP_INK;
+    g.textAlign = 'center';
+    fitFillText(g, '全身をケージに', W * 0.155, bottom - span * 0.04, W * 0.29, Math.floor(span * 0.14));
+    g.strokeStyle = '#dcdfe4';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(W * 0.31, top + 6);
+    g.lineTo(W * 0.31, bottom - 6);
+    g.stroke();
+    const box = span * 0.44;
+    for (let i = 0; i < 3; i++) {
+      banned(g, [leashIcon, armsIcon, strollerIcon][i], W * (0.42 + i * 0.2), top + span * 0.4, box);
+    }
+    g.fillStyle = MP_RED;
+    fitFillText(g, 'ほかは不可', W * 0.62, bottom - span * 0.04, W * 0.5, Math.floor(span * 0.16));
+    g.textAlign = 'left';
+  }
+}
+
+/**
+ * Affiche de manières « animaux » — glissée dans les pools publicitaires en un
+ * exemplaire, pour qu'on la croise de temps en temps sans qu'elle devienne le
+ * papier peint du réseau. Les dimensions sont celles du SUPPORT, en pixels :
+ * l'affiche s'y compose, elle ne s'y étire pas.
+ */
+export function makeMannersPetTexture(w: number, h: number): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(w, h);
+  drawMannersPoster(g, w, h);
+  return toTexture(c);
+}
+
 // --- Visages des PNJ : traits dessinés sur fond transparent, pilotés par
 // l'apparence (peau, cheveux, lunettes, masque, barbe, âge). Une texture par
 // PNJ (128×128, bon marché). La calotte de cheveux est un mesh 3D séparé ;

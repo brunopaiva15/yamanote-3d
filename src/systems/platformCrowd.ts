@@ -102,20 +102,6 @@ export interface CrowdPax {
   /** Poussée cumulée par le joueur (chute / glissade si on abuse). */
   pushAccum: number;
   /**
-   * Ce promeneur tient un chien en laisse. Le champ appartient à
-   * systems/dogWalkers, qui le pose et le retire ; il vit ici parce que la
-   * foule doit le consulter (un maître ne monte pas en rame) sans dépendre du
-   * module des chiens.
-   */
-  hasDog: boolean;
-  /**
-   * Secondes pendant lesquelles ce voyageur marque le pas sans avancer.
-   * Posé par systems/dogWalkers : on attend son chien qui renifle. Le laisser
-   * partir sans lui tendait la laisse en un quart de seconde et le reniflage
-   * n'existait jamais.
-   */
-  holdWalk: number;
-  /**
    * Ce n'est pas un voyageur mais l'AGENT de quai : uniforme, casquette, et
    * un slot réservé pour lui seul. Le rendu « librairie » choisit son modèle
    * une fois pour toutes à partir de l'apparence (voir LibraryPlatformCrowd) —
@@ -145,13 +131,6 @@ function bounds(): { z0: number; z1: number; x0: number; x1: number } {
   };
 }
 const WALK_SPEED = CONFIG.walkSpeed * 0.92;
-/** Allure de la foule du quai — ce que doit soutenir un chien qui suit. */
-export const CROWD_WALK_SPEED = WALK_SPEED;
-
-/** Bornes du quai courant : rien de vivant ne doit en sortir. */
-export function crowdBounds(): { z0: number; z1: number; x0: number; x1: number } {
-  return bounds();
-}
 
 function makeCrowd(id: number): CrowdPax {
   const appearance = makeAppearance(9000 + id);
@@ -192,8 +171,6 @@ function makeCrowd(id: number): CrowdPax {
     partner: -1,
     chatRole: 0,
     pushAccum: 0,
-    hasDog: false,
-    holdWalk: 0,
     staff: false,
   };
 }
@@ -434,9 +411,6 @@ export function clearPlatformCrowd(): void {
     p.ticket = -1;
     p.partner = -1;
     p.action = 'none';
-    // Le chien est rendu par systems/dogWalkers, qui voit son maître caché.
-    p.hasDog = false;
-    p.holdWalk = 0;
   }
 }
 
@@ -463,17 +437,6 @@ function nearestStair(p: StationPlacement, z: number) {
 /** Altitude du sol sous un voyageur : nulle sur le quai, négative dans une volée. */
 function floorYAt(p: StationPlacement, x: number, z: number): number {
   return stairwellAt(p, x, z, STAIR_FULL_LEN, STAIR_FULL_STEPS)?.y ?? 0;
-}
-
-/** Gabarit de la dernière image simulée : évite d'en résoudre un par appelant. */
-let framePlacement: StationPlacement | null = null;
-
-/**
- * Altitude du sol du quai, pour qui suit la foule sans en faire partie (les
- * chiens de systems/dogWalkers descendent les mêmes marches que leur maître).
- */
-export function crowdFloorY(x: number, z: number): number {
-  return floorYAt(framePlacement ?? placement(), x, z);
 }
 
 function freeSlot(): CrowdPax | null {
@@ -551,9 +514,6 @@ export function crowdSendBoarder(doorLocalZ: number, ticket: number): boolean {
   let bestD = Infinity;
   for (const p of crowdList) {
     if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') continue;
-    // Un chien voyage en sac de transport au Japon : celui qui en tient un au
-    // bout d'une laisse traverse la gare, il ne prend pas ce train.
-    if (p.hasDog) continue;
     const d = Math.hypot(p.pos.x - (PSD_X + 1.4), p.pos.z - doorLocalZ);
     if (d < bestD) {
       bestD = d;
@@ -961,12 +921,6 @@ function resumeCrowdAnchor(p: CrowdPax): void {
 }
 
 function advanceWalk(p: CrowdPax, dt: number, onDone: () => void): void {
-  if (p.holdWalk > 0) {
-    // On attend son chien : le trajet est suspendu, pas abandonné.
-    p.holdWalk -= dt;
-    p.bob = Math.sin(p.bobPhase * 1.1) * 0.004;
-    return;
-  }
   const wp = p.waypoints[p.wpi];
   if (!wp) {
     onDone();
@@ -1071,7 +1025,6 @@ export function updatePlatformCrowd(dt: number): void {
   // Une seule résolution du gabarit par frame : les transits la consultent
   // pour savoir à quelle hauteur ils posent le pied dans une trémie.
   const currentPlacement = placement();
-  framePlacement = currentPlacement;
   crowdBumpCd = Math.max(0, crowdBumpCd - dt);
   const platX = runtime.playerPlatX;
   const platZ = runtime.playerPlatZ;

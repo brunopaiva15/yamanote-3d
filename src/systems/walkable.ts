@@ -77,9 +77,22 @@ function currentPlatform() {
   return placementFor(useStore.getState().platformIndex, psdGates());
 }
 
+/**
+ * Vitesse en deçà de laquelle la rame est considérée à l'arrêt (m/s). Le profil
+ * de freinage éteint la vitesse exactement à zéro (systems/trainPhysics), le
+ * seuil n'est là que par prudence numérique.
+ */
+const STOPPED_V = 0.05;
+
 /** Ouverture réelle d'un seuil, 0 (fermé) à 1 (dégagé). */
 export function portalOpen(): number {
   if (!runtime.trainPresent) return 0;
+  // Une rame qui roule n'a pas de seuil. La chorégraphie des portes ne les
+  // ouvre jamais en marche, mais c'est une conséquence de la chronologie, pas
+  // une garantie : on la pose ici, là où le passage se décide. Vu du quai,
+  // `runtime.speed` est celle de la rame qui arrive ou qui s'en va — et on ne
+  // monte pas non plus dans un train en mouvement.
+  if (Math.abs(runtime.speed) > STOPPED_V) return 0;
   // Sans portes de quai (Shinjuku, Shibuya), le seuil ne dépend que de la
   // porte de la rame : psdOpen continue de battre dans son coin, mais il n'y a
   // rien en face qu'il puisse ouvrir ou fermer.
@@ -107,12 +120,22 @@ function inCar(u: number, w: number): boolean {
  * fait de lui un obstacle pour la porte qui se ferme
  * (systems/doorObstruction), et c'est ce qui garde ce seuil-là franchissable
  * pour lui — voir `inPortal`.
+ *
+ * Deux précautions, et ce sont les deux moitiés du même bug. La position lue
+ * est celle des PIEDS (`runtime.stanceX/Z`) et non celle de l'œil, qui
+ * balance de deux centimètres avec la caisse : lus sur l'œil, ces deux
+ * centimètres mettaient dans l'encadrement quelqu'un qui n'y était pas. Et les
+ * bornes sont STRICTES : posé pile sur l'une ou l'autre, on est encore dans
+ * l'alcôve ou déjà sur le quai, pas dans le seuil. Sans quoi le seuil
+ * s'auto-alimentait — la clause de sortie de `inPortal` autorisait le pas
+ * suivant, qui la rendait vraie à son tour, et on traversait ainsi une porte
+ * fermée, en pleine course.
  */
 export function playerDoorwayZ(): number | null {
   if (!runtime.trainPresent) return null;
-  const u = useStore.getState().doorSide * runtime.playerX;
-  if (u < ALCOVE_U || u > PLATFORM_U0) return null;
-  const z = runtime.playerZ - runtime.trainZ;
+  const u = useStore.getState().doorSide * runtime.stanceX;
+  if (u <= ALCOVE_U || u >= PLATFORM_U0) return null;
+  const z = runtime.stanceZ - runtime.trainZ;
   for (const dz of CONFIG.doorCenters) {
     if (Math.abs(z - dz) <= PORTAL_HALF_Z) return dz;
   }
@@ -128,6 +151,11 @@ function inPortal(u: number, w: number): boolean {
     // Seuil refermé : on n'y ENTRE plus, mais si on y est déjà, on en sort.
     // Une porte qui se referme sur quelqu'un ne l'emmure pas — elle s'arrête
     // sur lui (systems/doorObstruction), et il lui reste les deux côtés.
+    //
+    // « Y être déjà » se lit sur les pieds, strictement entre l'alcôve et le
+    // quai : la seule façon d'y arriver est d'avoir franchi un seuil
+    // réellement ouvert. La clause rend donc le seuil qu'on occupe, jamais
+    // celui d'à côté ni celui qu'on n'a pas encore atteint.
     return playerDoorwayZ() === dz;
   }
   return false;

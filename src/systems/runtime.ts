@@ -117,6 +117,19 @@ export const runtime = {
    * séparée ci-dessous.
    */
   playerFrame: 'car' as PlayerFrame,
+  /**
+   * Position d'APPUI du joueur en repère monde : où il a les pieds, sans le
+   * balancement de caméra.
+   *
+   * `playerX/Z` est l'ŒIL, et l'œil oscille avec la caisse (± 2 cm à pleine
+   * vitesse, `three/Player`). C'est ce qu'il faut pour les regards, le son et
+   * le viseur ; c'est exactement ce qu'il ne faut pas pour décider qui a un
+   * pied dans l'encadrement d'une porte — deux centimètres d'oscillation
+   * suffisaient à le faire croire de quelqu'un simplement adossé au fond de
+   * l'alcôve, et à lui ouvrir le seuil en pleine course.
+   */
+  stanceX: 0,
+  stanceZ: 4.2,
   playerCarX: 0, // position du joueur dans le repère du wagon (regards des PNJ à bord)
   playerCarY: 1.55,
   playerCarZ: 4.2,
@@ -226,6 +239,8 @@ export function resetRuntime(): void {
   runtime.berthOffset = 0;
   runtime.departStartDist = 0;
   runtime.playerFrame = 'car';
+  runtime.stanceX = 0;
+  runtime.stanceZ = 4.2;
   runtime.playerCarX = 0;
   runtime.playerCarY = 1.55;
   runtime.playerCarZ = 4.2;
