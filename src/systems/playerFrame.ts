@@ -84,6 +84,17 @@ export function publishPlayerPose(worldX: number, worldY: number, worldZ: number
   runtime.playerPlatZ = tmp.z;
 }
 
+/**
+ * Publie la position d'APPUI : celle de la marche, avant que le balancement de
+ * la caisse ne soit ajouté à la caméra. Tout ce qui relève de la géométrie du
+ * volume praticable — au premier chef le seuil de porte (systems/walkable) —
+ * se décide là-dessus et non sur l'œil, qui oscille.
+ */
+export function publishPlayerStance(worldX: number, worldZ: number): void {
+  runtime.stanceX = worldX;
+  runtime.stanceZ = worldZ;
+}
+
 /** Direction du regard (unitaire, repère monde) : qui le joueur a en face. */
 export function publishPlayerLook(x: number, y: number, z: number): void {
   runtime.lookX = x;

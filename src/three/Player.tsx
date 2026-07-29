@@ -11,7 +11,7 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { input, moveAxes, consumeLook } from '../systems/input';
 import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
-import { publishPlayerLook, publishPlayerPose } from '../systems/playerFrame';
+import { publishPlayerLook, publishPlayerPose, publishPlayerStance } from '../systems/playerFrame';
 import { AISLE_U, frameAt, groundY, resolveMove, snapInside } from '../systems/walkable';
 import { alight, board, crossNearestPortal } from '../systems/boarding';
 import { setListenerPose } from '../systems/audioEngine';
@@ -308,6 +308,11 @@ export function Player() {
 
     // Position du joueur partagée (regards des PNJ), dans les trois repères.
     publishPlayerPose(camera.position.x, camera.position.y, camera.position.z);
+    // Et son appui, pris AVANT le balancement : `camBase` est la position de
+    // marche (ou l'assise), la caméra est l'œil qui oscille autour d'elle. Le
+    // seuil de porte se décide sur les pieds — deux centimètres de roulis ne
+    // font pas entrer dans l'encadrement (systems/walkable).
+    publishPlayerStance(camBase.current.x, camBase.current.z);
 
     // Oreilles du joueur = caméra : les diffuseurs sont fixes dans le wagon,
     // c'est la tête qui tourne autour d'eux.
