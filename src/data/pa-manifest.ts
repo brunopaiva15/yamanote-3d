@@ -169,7 +169,6 @@ export const PA_CLIPS: Record<string, number> = {
   "7781ded7": 5.17,
   "7869045c": 3.04,
   "7961d1cf": 6.05,
-  "798ba2bb": 6.47,
   "79a29270": 5.96,
   "7a0c8710": 10.92,
   "7a773ad4": 6.03,

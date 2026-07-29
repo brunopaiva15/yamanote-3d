@@ -1315,8 +1315,9 @@ function drawLineStatus(
 }
 
 // --- Certificat de retard (遅延証明書) ---
-// Le vrai afficheur renvoie vers le site JR East quand une ligne JR est en
-// retard ; l'écran n'apparaît donc que si la perturbation touche une ligne JR.
+// L'écran renvoie le voyageur vers le site de l'exploitant de la ligne
+// perturbée, sans nommer aucune compagnie : le certificat existe chez tous les
+// opérateurs de Tokyo, l'écran suit donc n'importe quelle perturbation.
 function drawDelayCert(s: ReturnType<typeof makeScreen>, index: number, clock: string, lang: ScreenLang): void {
   const { g, w, h } = s;
   g.fillStyle = '#f4f6f7';
@@ -1355,15 +1356,15 @@ function drawDelayCert(s: ReturnType<typeof makeScreen>, index: number, clock: s
   g.fillStyle = '#26303a';
   g.font = `22px ${JP_FONT}`;
   if (lang === 'jp') {
-    g.fillText('遅延証明書は、JR東日本ホームページで', 200, py + 12);
+    g.fillText('遅延証明書は、各鉄道会社のホームページで', 200, py + 12);
     g.fillText('発行しています。', 200, py + 44);
   } else {
-    g.fillText('Delay certificates for JR East lines are', 200, py + 12);
-    g.fillText('issued on the JR East website.', 200, py + 44);
+    g.fillText('Delay certificates are issued on the', 200, py + 12);
+    g.fillText("operating company's website.", 200, py + 44);
   }
   g.fillStyle = '#5c646c';
   g.font = `18px ${JP_FONT}`;
-  g.fillText('www.jreast.co.jp', 200, py + 82);
+  g.fillText(lang === 'jp' ? '詳しくは駅係員まで' : 'Ask station staff for details', 200, py + 82);
 }
 
 export function Screens() {
@@ -1398,8 +1399,8 @@ export function Screens() {
     //                d'arrêt ;
     //  en route    → つぎは, cycle quadrilingue complet, correspondances,
     //                écrans de courtoisie et manières ; si une AUTRE ligne
-    //                est perturbée : info trafic, état des lignes et — pour
-    //                une ligne JR — certificat de retard ;
+    //                est perturbée : info trafic, état des lignes et
+    //                certificat de retard ;
     //  à l'approche→ まもなく, côté d'ouverture, alterné avec le plan du quai.
     //
     // L'arrêt d'urgence (急停車) est un événement RÉEL de la simulation
@@ -1413,8 +1414,6 @@ export function Screens() {
     const countdown = Math.round(secondsToArrival(phase, runtime.phaseT, index));
 
     const notice = trafficNotice(runtime.clockMin);
-    // Le certificat de retard ne concerne que les lignes JR East.
-    const jrNotice = !!notice && /中央|埼京/.test(notice.lineJp);
     // Visuel manières du moment : change d'un passage du cycle à l'autre.
     const mannerVariant = Math.floor(tick / 10) % 3;
     const emergency = runtime.emergencyStop;
@@ -1438,9 +1437,9 @@ export function Screens() {
       const rotation = notice
         ? [
             'loopJP', 'zoomJP', 'nextZH', 'nextKO', 'transfers',
-            'trafficJP', 'statusJP', ...(jrNotice ? ['certJP'] : []),
+            'trafficJP', 'statusJP', 'certJP',
             'loopEN', 'zoomEN',
-            'trafficEN', 'statusEN', ...(jrNotice ? ['certEN'] : []),
+            'trafficEN', 'statusEN', 'certEN',
             'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
           ]
         : [
