@@ -20,8 +20,8 @@ import { placementFor, stairTopZ, stairwellAt, type StationPlacement } from './s
 import { layoutFor } from '../data/stationLayouts';
 import {
   PSD_X,
-  STAIR_GOING,
-  STAIR_RISE,
+  STAIR_FULL_LEN,
+  STAIR_LANDING_Y,
   STAIR_STEPS,
 } from '../data/stationGeometry';
 import {
@@ -55,10 +55,16 @@ export type CrowdState =
   /** Gagne une porte de la rame et y disparaît (relais avec systems/passengers). */
   | 'boarding';
 
-/** Longueur totale de la volée modélisée, du nez au bas des marches. */
-const STAIR_FULL_LEN = (STAIR_STEPS + 1) * STAIR_GOING;
-/** Altitude à laquelle un voyageur qui descend n'est plus visible du quai. */
-const STAIR_VANISH_Y = -STAIR_STEPS * STAIR_RISE + 0.35;
+/**
+ * Altitude à laquelle un voyageur qui descend quitte la scène.
+ *
+ * Au ras du palier bas, et pas plus haut : c'est le point le plus profond, le
+ * plus lointain et le plus sombre de la volée, adossé au voile de tête. Le
+ * seuil valait trente-cinq centimètres de plus, soit deux marches avant le
+ * fond — le voyageur s'effaçait en pleine volée, la tête au niveau du quai,
+ * sous les yeux de qui se penche dans la trémie.
+ */
+const STAIR_VANISH_Y = STAIR_LANDING_Y + 0.1;
 
 export interface CrowdPax {
   id: number;

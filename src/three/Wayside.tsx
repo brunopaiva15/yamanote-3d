@@ -24,18 +24,19 @@
 // l'emprise longitudinale du quai (systems/stationOcclusion) : la gare porte sa
 // propre caténaire et son propre mobilier.
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { segEnv } from '../systems/segmentEnv';
-import { hiddenByStation, sidePush } from '../systems/stationOcclusion';
+import { ballastTrim, hiddenByStation, sidePush, stationOcclusion } from '../systems/stationOcclusion';
 import { qualityLevel, usePerf } from '../systems/perf';
 import { TRACK_BED_TILE, TRACK_BED_WIDTH, makeGroundTexture } from '../textures/procedural';
 import { GAUGE_HALF } from '../data/stationGeometry';
 import { makeGroveGeometry } from './city/cityProps';
+import { makeGroundStrip, underStation } from './groundStrip';
 
 /** Longueur des plans au sol : la vue en biais vers le fond du wagon porte loin. */
 const PLANE_LEN = 460;
@@ -198,6 +199,10 @@ export function Wayside() {
   // Paliers 4-5 : le mobilier de voie disparaît ; la plate-forme, les rails et
   // les portiques restent — le strict nécessaire pour lire la vitesse.
   const furniture = perfLevel < 4;
+  // La plate-forme de la voie se dérobe sous le quai : sa nappe est donc
+  // découpée en tronçons plutôt que d'un seul tenant (voir three/groundStrip).
+  const bed = useMemo(() => makeGroundStrip(TRACK_BED_WIDTH, PLANE_LEN), []);
+  useEffect(() => () => bed.dispose(), [bed]);
 
   const built = useMemo(() => {
     const bedTex = makeGroundTexture();
@@ -328,6 +333,20 @@ export function Wayside() {
 
     // --- Plate-forme : une tuile de huit mètres tous les huit mètres ---
     built.bedTex.offset.y = runtime.distance / TRACK_BED_TILE;
+
+    // Ses RIVES, elles, passent sous le quai — et donc en travers des trémies
+    // d'escalier, dont la volée descend plus bas qu'elles. Celle du côté du
+    // quai se rentre jusqu'au bord de quai, mais seulement au droit du quai :
+    // voir ballastTrim (systems/stationOcclusion) et three/groundStrip.
+    const half = TRACK_BED_WIDTH / 2;
+    const trimIn = ballastTrim(1, half);
+    const trimOut = ballastTrim(-1, half);
+    bed.update((z, x) => {
+      const side = x >= 0 ? 1 : -1;
+      const trim = side === 1 ? trimIn : trimOut;
+      if (trim === 0) return x;
+      return x - side * trim * underStation(z, stationOcclusion.z0, stationOcclusion.z1);
+    });
 
     /** Pose l'instance `i`, ou l'escamote si la gare l'avale. */
     const place = (mesh: THREE.InstancedMesh, i: number, z: number, x: number, yaw: number) => {
@@ -489,9 +508,7 @@ export function Wayside() {
       ))}
 
       {/* Plate-forme : ballast, traverses, rails, caniveaux à câbles */}
-      <mesh position={[0, RAIL_Y, 0]} rotation={[-Math.PI / 2, 0, 0]} material={built.bedMat}>
-        <planeGeometry args={[TRACK_BED_WIDTH, PLANE_LEN]} />
-      </mesh>
+      <mesh position={[0, RAIL_Y, 0]} geometry={bed.geometry} material={built.bedMat} />
     </group>
   );
 }

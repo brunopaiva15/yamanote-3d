@@ -43,25 +43,24 @@ import {
   PSD_LEAF_W,
   PSD_X,
   SLAB_H,
-  STAIR_GOING,
-  STAIR_OPENING_INSET,
-  STAIR_RISE,
-  STAIR_SHAFT_DEPTH,
-  STAIR_STEPS,
+  STAIR_CLEAR_HALF_X,
+  STAIR_OPENING_HALF_X,
+  STAIR_OPENING_Z0,
+  STAIR_OPENING_Z1,
   STAIR_WALK_LEN,
-  STAIR_WALK_STEPS,
+  STAIR_WALK_Y,
   TRACK_HALF,
 } from '../../data/stationGeometry';
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
 import { Barrier, EdgeBarrier } from './Barrier';
 import { makeStationMaterials, type Mats } from './materials';
-import { stationAd } from './adPool';
 import { mat, matFacingTrack, useInstances } from './instancing';
 import { OverheadSigns } from './OverheadSigns';
 import { PlatformAds } from './PlatformAds';
 import { PlatformKit } from './PlatformKit';
 import { PlatformSignage } from './PlatformSignage';
 import { Signature } from './signatures';
+import { Stairwells } from './Stairwell';
 import { psdLayout } from './psdLayout';
 
 const UP = new THREE.Quaternion();
@@ -136,11 +135,13 @@ export function Station() {
     shape.lineTo(x0, half);
     shape.closePath();
     for (const s of place.stairs) {
-      const ix = s.halfX - STAIR_OPENING_INSET;
-      // Le premier giron est la dalle elle-même : l'ouverture ne commence qu'au
-      // nez de la première marche, sinon on marcherait sur le vide.
-      const zNear = stairTopZ(s) + STAIR_GOING;
-      const zFar = s.z + s.halfZ - STAIR_OPENING_INSET;
+      // Le percement vient tel quel du gabarit de la trémie : le premier giron
+      // est la dalle elle-même, l'ouverture ne commence donc qu'au nez de la
+      // première contremarche, et ses quatre chants sont coiffés par les joues,
+      // le voile de tête et la première marche (three/station/Stairwell).
+      const ix = STAIR_OPENING_HALF_X;
+      const zNear = s.z + STAIR_OPENING_Z0;
+      const zFar = s.z + STAIR_OPENING_Z1;
       const hole = new THREE.Path();
       hole.moveTo(s.x - ix, zNear);
       hole.lineTo(s.x - ix, zFar);
@@ -491,9 +492,7 @@ export function Station() {
 
       {/* Trémies d'escalier : la dalle est percée, donc elles font partie de la
           structure — jamais retirées par un palier de qualité. */}
-      {place.stairs.map((s, i) => (
-        <Stairwell key={`stair${i}`} s={s} m={m} station={index} />
-      ))}
+      <Stairwells place={place} m={m} station={index} />
 
       {/* Affichage publicitaire : caissons du mur, colonnes habillées,
           bannières suspendues, allèges de portes palières. */}
@@ -524,12 +523,12 @@ export function Station() {
       {place.stairs.map((s, i) => (
         <Barrier
           key={`lim${i}`}
-          // Le panneau tient dans la trémie : il monte du giron où l'on
-          // s'arrête jusqu'à hauteur de dalle, pas au-delà.
+          // Le panneau tient dans la trémie, entre les joues : il monte du
+          // giron où l'on s'arrête jusqu'à hauteur de dalle, pas au-delà.
           x={s.x}
-          y={PLATFORM_TOP - STAIR_WALK_STEPS * STAIR_RISE + 1.0}
+          y={PLATFORM_TOP + STAIR_WALK_Y + 1.0}
           z={stairTopZ(s) + STAIR_WALK_LEN + BARRIER_STANDOFF}
-          width={(s.halfX - STAIR_OPENING_INSET) * 2}
+          width={STAIR_CLEAR_HALF_X * 2}
           height={2.0}
         />
       ))}
@@ -882,135 +881,6 @@ function Wainscot({ backX, len, m }: { backX: number; len: number; m: Mats }) {
           mur de fond — une ligne qui scintillait droit devant soi. */}
       <mesh position={[backX - 0.02, PLATFORM_TOP + 1.07, 0]} material={m.accent}>
         <boxGeometry args={[0.07, 0.07, len]} />
-      </mesh>
-    </group>
-  );
-}
-
-/**
- * Trémie d'escalier, dalle réellement percée.
- *
- * On descend la volée sur cinq marches ; au-delà, la limite de zone
- * (three/station/Barrier) prend le relais et les marches continuent de
- * s'enfoncer vers la salle des billets, hors d'atteinte.
- *
- * Repère local : origine au centre de l'emprise, au niveau du sol du quai. La
- * volée descend vers +z ; l'entrée est donc côté -z, dégagée.
- */
-function Stairwell({ s, m, station }: { s: Placed; m: Mats; station: number }) {
-  const ix = s.halfX - STAIR_OPENING_INSET; // demi-largeur de l'ouverture
-  const width = ix * 2 - 0.04;
-  const nose = -s.halfZ; // nez de la volée, en repère local
-  const bottom = -STAIR_STEPS * STAIR_RISE;
-
-  return (
-    <group name="trémie" position={[s.x, PLATFORM_TOP, s.z]}>
-      {/* Gaine sous la dalle, vue de l'intérieur : la trémie a un fond. */}
-      <mesh position={[0, -STAIR_SHAFT_DEPTH / 2 - 0.02, 0]} material={m.shaft}>
-        <boxGeometry args={[ix * 2, STAIR_SHAFT_DEPTH, (s.halfZ - STAIR_OPENING_INSET) * 2]} />
-      </mesh>
-      {/* Volée. Le premier giron est la dalle : la marche k descend de k
-          contremarches et couvre le giron qui suit son nez. */}
-      {Array.from({ length: STAIR_STEPS }, (_, i) => {
-        const k = i + 1;
-        const y = -k * STAIR_RISE;
-        const z0 = nose + k * STAIR_GOING;
-        return (
-          <group key={k}>
-            <mesh position={[0, y + 0.03, z0 + STAIR_GOING / 2]} material={m.wall} receiveShadow>
-              <boxGeometry args={[width, 0.06, STAIR_GOING]} />
-            </mesh>
-            <mesh position={[0, y + STAIR_RISE / 2, z0]} material={m.wallDark}>
-              <boxGeometry args={[width, STAIR_RISE, 0.05]} />
-            </mesh>
-          </group>
-        );
-      })}
-      {/* Petit palier au fond de la volée modélisée. */}
-      <mesh position={[0, bottom - 0.03, nose + (STAIR_STEPS + 1) * STAIR_GOING + 0.4]} material={m.wall}>
-        <boxGeometry args={[width, 0.06, 0.9]} />
-      </mesh>
-
-      {/* Caisson publicitaire plaqué sur le garde-corps côté voie : sur un vrai
-          quai c'est la surface la plus rentable de la trémie, et elle est en
-          plein dans le champ de quiconque marche le long du quai. */}
-      <mesh position={[-(s.halfX - 0.005), 0.53, 0]} material={m.frame}>
-        <boxGeometry args={[0.06, 0.86, s.halfZ * 2 - 0.3]} />
-      </mesh>
-      <mesh
-        position={[-(s.halfX + 0.036), 0.53, 0]}
-        rotation={[0, -Math.PI / 2, 0]}
-        material={stationAd(station, 5)}
-      >
-        <planeGeometry args={[s.halfZ * 2 - 0.42, 0.76]} />
-      </mesh>
-
-      {/* Garde-corps sur le bandeau de dalle qui borde l'ouverture. */}
-      {[-1, 1].map((d) => (
-        <group key={`r${d}`}>
-          <mesh position={[d * (s.halfX - 0.07), 0.5, 0]} material={m.wall}>
-            <boxGeometry args={[0.14, 1, s.halfZ * 2]} />
-          </mesh>
-          <mesh position={[d * (s.halfX - 0.07), 1.03, 0]} material={m.metal}>
-            <boxGeometry args={[0.18, 0.07, s.halfZ * 2]} />
-          </mesh>
-          {/* Main courante intérieure : elle DESCEND avec les marches — d'où
-              le signe négatif, sans lequel elle ressortait en l'air. */}
-          <mesh
-            position={[
-              d * (ix - 0.09),
-              -(STAIR_STEPS / 2 + 1) * STAIR_RISE + 0.92,
-              nose + (STAIR_STEPS / 2 + 1) * STAIR_GOING,
-            ]}
-            rotation={[-Math.atan2(STAIR_RISE, STAIR_GOING), 0, 0]}
-            material={m.metal}
-          >
-            <boxGeometry args={[0.05, 0.05, STAIR_STEPS * Math.hypot(STAIR_GOING, STAIR_RISE)]} />
-          </mesh>
-        </group>
-      ))}
-      {/* Traverse de tête du garde-corps : deux centimètres plus courte que la
-          largeur de la trémie et un centimètre en retrait, pour se loger DANS
-          les joues au lieu d'affleurer avec elles. À nu commun, les deux angles
-          du garde-corps partageaient chacun deux plans sur toute leur hauteur. */}
-      <mesh position={[0, 0.5, s.halfZ - 0.08]} material={m.wall}>
-        <boxGeometry args={[s.halfX * 2 - 0.02, 1, 0.14]} />
-      </mesh>
-
-      {/* Affiches sur les joues de la gaine : c'est ce qu'on a sous les yeux en
-          descendant, et sans elles la trémie n'est qu'un puits gris.
-          Chacune est calée SUR SA MARCHE — la hauteur de joue disponible varie
-          tout au long de la volée, une affiche posée à hauteur fixe se
-          retrouverait à moitié enterrée dans les girons. */}
-      {[
-        { d: 1, t: 1.87, w: 0.62, h: 0.6 },
-        { d: -1, t: 3.4, w: 0.7, h: 1.0 },
-      ].map(({ d, t, w, h }, k) => {
-        const tread = -Math.floor(t / STAIR_GOING) * STAIR_RISE;
-        return (
-          <mesh
-            key={`ad${d}`}
-            // `ix - 0.02` était exactement le nu des girons : l'affiche tombait
-            // dans le plan du flanc des marches. Elle est plaquée sur la joue
-            // de la gaine, cinq millimètres en dedans.
-            position={[d * (ix - 0.005), tread + h / 2 + 0.14, nose + t]}
-            rotation={[0, d === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
-            material={stationAd(station, k + 1, true)}
-          >
-            <planeGeometry args={[w, h]} />
-          </mesh>
-        );
-      })}
-
-      {/* Fléchage de sortie, porté par deux montants qui prennent appui sur
-          la balustrade — il pendait jusqu'ici en l'air. */}
-      {[-1, 1].map((d) => (
-        <mesh key={`post${d}`} position={[d * (s.halfX - 0.12), 1.66, s.halfZ - 0.07]} material={m.metal}>
-          <boxGeometry args={[0.07, 1.52, 0.07]} />
-        </mesh>
-      ))}
-      <mesh position={[0, 2.25, s.halfZ - 0.07]} material={m.accent}>
-        <boxGeometry args={[1.5, 0.34, 0.08]} />
       </mesh>
     </group>
   );

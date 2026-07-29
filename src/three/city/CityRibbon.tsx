@@ -24,10 +24,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { makeGroundStrip, underStation } from '../groundStrip';
 import { runtime } from '../../systems/runtime';
 import { dayNightWeights } from '../../systems/daynight';
 import { segEnv } from '../../systems/segmentEnv';
-import { sidePush } from '../../systems/stationOcclusion';
+import { groundPush, sidePush, stationOcclusion } from '../../systems/stationOcclusion';
 import { useStore } from '../../store';
 import { qualityLevel, usePerf, type PerfLevel } from '../../systems/perf';
 import {
@@ -89,6 +90,13 @@ export function CityRibbon() {
   const yRoot = useRef<THREE.Group>(null);
   const zRoot = useRef<THREE.Group>(null);
   const sideRoots = useRef<(THREE.Group | null)[]>([]);
+  // Les deux nappes de rue se dérobent sous le quai : elles sont donc
+  // découpées en tronçons plutôt que d'un seul tenant (voir three/groundStrip).
+  const grounds = useMemo(
+    () => [1, -1].map(() => makeGroundStrip(GROUND_SPAN, GROUND_LEN)),
+    [],
+  );
+  useEffect(() => () => grounds.forEach((g) => g.dispose()), [grounds]);
 
   const built = useMemo(() => {
     const city = makeCityMaterial();
@@ -357,7 +365,24 @@ export function CityRibbon() {
       if (root) root.position.x = side * (sidePush(side) + segEnv.citySetback);
     }
 
-    // --- Sol défilant ---
+    // --- Sol défilant, dégagé de la dalle du quai quand il y en a une ---
+    // La nappe passe SOUS le quai, un mètre plus bas que sa dalle. Le quai la
+    // masque partout, sauf au droit d'une trémie d'escalier, dont la volée
+    // descend plus bas qu'elle : voir groundPush (systems/stationOcclusion).
+    // Seule la rive INTÉRIEURE bouge, et seulement au droit du quai. La nappe
+    // du côté −x est la même géométrie, simplement posée en négatif : sa rive
+    // intérieure est donc son abscisse locale HAUTE, et elle s'écarte dans
+    // l'autre sens.
+    for (let i = 0; i < 2; i++) {
+      const side = i === 0 ? 1 : -1;
+      const push = groundPush(side, GROUND_INNER);
+      const inner = (side * -GROUND_SPAN) / 2;
+      grounds[i].update((z, x) =>
+        push === 0 || x !== inner
+          ? x
+          : x + side * push * underStation(z, stationOcclusion.z0, stationOcclusion.z1),
+      );
+    }
     built.groundTex.offset.y = runtime.distance / GROUND_TILE;
 
     // --- Nuit : les fenêtres, vitrines et néons s'allument ---
@@ -392,15 +417,13 @@ export function CityRibbon() {
       </group>
 
       {/* Sol urbain : deux nappes, l'emprise de la voie laissée libre. */}
-      {([1, -1] as const).map((side) => (
+      {([1, -1] as const).map((side, i) => (
         <mesh
           key={`ground${side}`}
           position={[side * (GROUND_INNER + GROUND_SPAN / 2), -0.04, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
+          geometry={grounds[i].geometry}
           material={built.groundMat}
-        >
-          <planeGeometry args={[GROUND_SPAN, GROUND_LEN]} />
-        </mesh>
+        />
       ))}
     </group>
   );
