@@ -1,5 +1,5 @@
 // Machine à états du cycle station : cruise → brake → dwell → depart, avec
-// timing quasi réel (~2 min à 2 min 20 par station, selon la durée d'arrêt
+// timing quasi réel (~2 min à 2 min 40 par station, selon la durée d'arrêt
 // tirée). Déclenche annonces, carillons, mélodies et échanges de passagers aux
 // bons instants — voir « Chronologie de l'arrêt » plus bas.
 
@@ -49,8 +49,10 @@ import {
   clearDepartureBlockers,
   interruptDepartureMelody,
   isDepartureHeldOpen,
+  plannedStopMelodySounding,
   resetMelodyDepartureGuard,
 } from './departureSequence';
+import { melodyRoundsDuration } from '../data/melodies';
 import {
   armDoorObstruction,
   doorObstructionActive,
@@ -202,17 +204,19 @@ function updateEmergencyStop(dt: number): void {
 
 // --- Chronologie de l'arrêt ----------------------------------------------
 //
-// Tout ce bloc est calé sur l'arrêt COMPLET du train, et non sur la durée des
-// clips : la 発車メロディ n'est pas un morceau qu'on laisse finir, c'est un
-// signal que le chef de train lance ~25 s avant le départ et coupe ~15 s avant.
-// Séquence visée, en secondes après l'immobilisation :
+// Le début de l'arrêt est calé sur l'immobilisation du train ; la FIN, elle,
+// est calée sur la mélodie. La 発車メロディ se joue deux fois, entière, et
+// c'est seulement une fois qu'elle s'est tue que l'annonce de fermeture part et
+// que les portes se ferment — le quai n'expédie pas le morceau pour tenir un
+// horaire. Séquence visée, en secondes après l'immobilisation :
 //
 //   0 s       arrêt du E235
 //   1–3 s     ouverture des portes
 //   15–25 s   début de la mélodie (20 s de référence)
-//   +10 s     coupure de la mélodie, et annonce de fermeture dans la foulée
-//   +20 s     fermeture des portes
-//   +26 s     la rame s'ébranle → immobilisation de 41 à 51 s, ~46 s en moyenne
+//   +13 à 28 s  deux passages entiers, selon le clip du quai, puis silence
+//   +13 s     annonce de fermeture (elle prend la place du silence)
+//   +9 s      fermeture des portes
+//   +4 s      la rame s'ébranle → immobilisation de 45 à 60 s selon la mélodie
 //
 // Les bornes 15–25 s ne sont pas du bruit : une petite gare ou une ligne en
 // retard presse l'échange, une grande gare ou une régulation l'étire. JR East
@@ -234,8 +238,30 @@ const MELODY_AFTER_STOP_JITTER = 2.5;
 /** Décalage selon la taille de la gare, et selon l'état de la ligne (s). */
 const MELODY_STATION_BIAS = 2.5;
 
-/** Durée pendant laquelle la mélodie sonne avant d'être coupée (s). */
-export const MELODY_SOUNDING = 10.0;
+/**
+ * Fenêtre sonore laissée à la mélodie, par défaut (s).
+ *
+ * C'était autrefois une constante, et la mélodie était coupée dessus quoi qu'il
+ * arrive : dix secondes, alors que les clips vont de 6,4 s à 13,6 s — Sakura
+ * Sakura à Komagome n'atteignait donc jamais la fin de son PREMIER passage. La
+ * fenêtre est maintenant tirée par arrêt, sur le clip réellement câblé au quai
+ * (`randomizeStopTimings` → `melodySounding`), et vaut deux passages entiers.
+ * Cette valeur-ci ne sert plus que de repli avant le premier tirage : celle du
+ * motif synthétisé, le seul qu'on puisse jouer sans savoir à quel quai on est.
+ */
+const MELODY_SOUNDING = melodyRoundsDuration(null);
+
+/**
+ * Souffle laissé après la dernière note avant que le chef de train ne relâche
+ * le bouton (s). Sans lui, la coupure en fondu tomberait exactement sur la fin
+ * du second passage et mordrait dessus.
+ */
+const MELODY_TAIL_S = 0.5;
+
+/** Fenêtre sonore de l'arrêt en cours : deux passages de la mélodie du quai. */
+function melodySounding(): number {
+  return stopTimings.melodySounding;
+}
 
 /**
  * Avance de l'annonce de fermeture sur la fin du dwell. Elle tombe sur la
@@ -246,8 +272,14 @@ export const MELODY_SOUNDING = 10.0;
 export const CLOSE_ANNOUNCE_LEAD = 13.0;
 /** Avance de la fermeture des portes sur la fin du dwell. */
 export const DOORS_CLOSE_LEAD = 4.0;
-/** Avance du début de la mélodie sur la fin du dwell (= annonce + durée sonore). */
-const MELODY_LEAD = CLOSE_ANNOUNCE_LEAD + MELODY_SOUNDING;
+/**
+ * Avance du début de la mélodie sur la fin du dwell (= annonce + fenêtre
+ * sonore). Variable d'un quai à l'autre, puisque la fenêtre l'est : c'est par
+ * là que la longueur du clip étire le dwell au lieu d'écourter la mélodie.
+ */
+function melodyLead(): number {
+  return CLOSE_ANNOUNCE_LEAD + melodySounding();
+}
 /**
  * Départ de l'annonce d'approche avant la fin de la croisière. Aux gares à
  * grosses correspondances (Ueno, Tokyo, Shinjuku…), まもなく + 乗換案内 ja/en
@@ -270,7 +302,10 @@ const PASS_ROLL_AT = 12.0;
  * quai et par l'affichage — elle doit rendre la même valeur du début à la fin
  * de l'arrêt.
  */
-export const stopTimings = { melodyAfterStop: MELODY_AFTER_STOP };
+export const stopTimings = {
+  melodyAfterStop: MELODY_AFTER_STOP,
+  melodySounding: MELODY_SOUNDING,
+};
 
 /**
  * Poids de la gare, mesuré au nombre de lignes en correspondance : Mejiro n'en
@@ -303,7 +338,12 @@ export function randomizeBerthOffset(): void {
   runtime.berthOffset = Math.random() < 0.5 ? -mag : mag;
 }
 
-/** Tire l'instant de la mélodie pour l'arrêt qui commence. */
+/**
+ * Tire l'instant de la mélodie pour l'arrêt qui commence, et mesure la fenêtre
+ * qu'il faudra lui laisser : deux passages entiers du clip câblé sur CE quai,
+ * dans CE sens. C'est ce qui fait qu'un arrêt à Komagome (Sakura Sakura, 13,6 s
+ * le passage) dure plus longtemps qu'un arrêt à Takadanobaba (Atom, 6,4 s).
+ */
 export function randomizeStopTimings(stationIndex: number): void {
   // Ligne en retard : on rattrape sur les quais, la mélodie part plus tôt.
   const bias = stationBias(stationIndex) - (lineDelayed() ? MELODY_STATION_BIAS : 0);
@@ -312,23 +352,28 @@ export function randomizeStopTimings(stationIndex: number): void {
     MELODY_AFTER_STOP_MAX,
     Math.max(MELODY_AFTER_STOP_MIN, MELODY_AFTER_STOP + bias + jitter),
   );
+  stopTimings.melodySounding = plannedStopMelodySounding(stationIndex) + MELODY_TAIL_S;
 }
 
 /**
- * Durée du dwell, entièrement déduite de l'instant de la mélodie : tout le
- * reste de la procédure s'enchaîne derrière elle à intervalles fixes.
+ * Durée du dwell, déduite de l'instant de la mélodie et de sa longueur : tout
+ * le reste de la procédure s'enchaîne derrière elle à intervalles fixes.
  */
 export function dwellDuration(_stationIndex: number): number {
-  return stopTimings.melodyAfterStop - STOP_TO_DWELL_T0 + MELODY_LEAD;
+  return stopTimings.melodyAfterStop - STOP_TO_DWELL_T0 + melodyLead();
 }
 
 export function melodyStartAt(_stationIndex: number, dwell: number): number {
-  return Math.max(2, dwell - MELODY_LEAD);
+  return Math.max(2, dwell - melodyLead());
 }
 
-/** Instant de la coupure : la mélodie n'atteint jamais sa dernière note. */
+/**
+ * Instant de la coupure : le chef de train relâche le bouton une fois les deux
+ * passages faits. Le fondu qui suit ne mord donc sur rien — il referme un
+ * silence (voir MELODY_TAIL_S).
+ */
 export function melodyCutAt(stationIndex: number, dwell: number): number {
-  return melodyStartAt(stationIndex, dwell) + MELODY_SOUNDING;
+  return melodyStartAt(stationIndex, dwell) + melodySounding();
 }
 
 const PHASE_ORDER = (stationIndex: number, dir: LoopDirection) => [
@@ -755,7 +800,7 @@ export function updateCycle(dt: number): void {
       // tourne une dizaine de secondes, puis le chef de train la coupe —
       // l'annonce de fermeture prend le relais sur ce silence.
       once('melody', t >= melodyStartAt(s.index, dwell), () =>
-        audio.departureMelody(s.index, MELODY_SOUNDING),
+        audio.departureMelody(s.index),
       );
       once('melody-cut', t >= melodyCutAt(s.index, dwell), () => interruptDepartureMelody());
       once('announce-close', t >= dwell - CLOSE_ANNOUNCE_LEAD, () =>
