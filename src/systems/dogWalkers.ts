@@ -22,11 +22,11 @@
 
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
-import { PSD_X } from '../data/stationGeometry';
+import { PSD_X, STAIR_LANDING_Y } from '../data/stationGeometry';
 import { useStore } from '../store';
 import { rng } from '../textures/procedural';
 import { paxScale } from './perf';
-import { crowdBounds, crowdFloorY, crowdList, CROWD_WALK_SPEED, STAIR_VANISH_Y, type CrowdPax } from './platformCrowd';
+import { crowdBounds, crowdFloorY, crowdList, CROWD_WALK_SPEED, type CrowdPax } from './platformCrowd';
 import { runtime } from './runtime';
 
 /**
@@ -57,6 +57,8 @@ const DOG_TOP_SPEED = CONFIG.walkSpeed * 1.6;
 const REACHED = 0.14;
 /** Dégagement autour du joueur : on ne marche pas au travers d'un chien. */
 const PLAYER_CLEARANCE = 0.5;
+/** Altitude sous laquelle un chien qui descend l'escalier n'est plus vu du quai. */
+const DOG_VANISH_Y = STAIR_LANDING_Y + 0.35;
 /**
  * Part des promeneurs qui tiennent un chien, tirée par gare. Quatre à cinq
  * promeneurs par quai : à 0,12, un peu moins d'une gare sur deux voit un
@@ -203,7 +205,9 @@ function canAppear(owner: CrowdPax): boolean {
 }
 
 function eligible(p: CrowdPax): boolean {
-  if (p.role !== 'walker' || p.hasDog) return false;
+  // `staff` : l'agent de quai a sa place réservée dans le pool et un travail —
+  // il ne promène pas un chien en uniforme.
+  if (p.staff || p.role !== 'walker' || p.hasDog) return false;
   return p.state === 'patrolling' || p.state === 'ambling' || p.state === 'waiting' || p.state === 'arriving';
 }
 
@@ -421,7 +425,7 @@ export function updateDogWalkers(dt: number): void {
     }
     if (dog.owner < 0) {
       dog.orphanT -= dt;
-      if (dog.orphanT <= 0 || dog.y <= STAIR_VANISH_Y) {
+      if (dog.orphanT <= 0 || dog.y <= DOG_VANISH_Y) {
         dog.orphanT = 0;
         continue;
       }
