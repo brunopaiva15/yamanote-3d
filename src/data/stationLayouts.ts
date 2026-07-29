@@ -34,8 +34,8 @@ import {
   PLATFORM_DEPTH,
   PSD_X,
   STAIR_HALF_Z,
-} from './stationGeometry';
-import { CONSIST, E235 } from './e235';
+} from './stationGeometry.ts';
+import { CONSIST, E235 } from './e235.ts';
 
 /** Niveau où court la voie dans la gare. */
 export type Elevation =

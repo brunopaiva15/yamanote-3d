@@ -28,12 +28,12 @@
 // (MELODY_OUTSIDE / MELODY_INSIDE), pour qu'elle sonne DEPUIS LA GARE sans
 // écraser le reste, et reste franchement audible d'une voiture à quai.
 //
-// Annonces vocales : les clips pré-générés (Kokoro, voir systems/speech.ts)
-// passent par audioManager sur le bus « PA » et sont donc pannés comme le
-// reste. Le REPLI speechSynthesis, lui, sort hors du graphe Web Audio et ne
-// peut pas être panné : on l'ancre aux diffuseurs avec le souffle de ligne
-// spatialisé (paVoiceOpen/Close) et un volume d'utterance suivant la distance
-// au diffuseur le plus proche (speakerProximity, lu par systems/speech.ts).
+// Annonces vocales : elles passent TOUTES par un clip pré-généré (Kokoro, voir
+// systems/speech.ts), joué par audioManager sur le bus « PA » et donc panné
+// comme le reste, sous son souffle de ligne (paVoiceOpen/Close). Il n'y a plus
+// de repli speechSynthesis : cette voix-là sortait hors du graphe Web Audio,
+// impossible à panner, et s'entendait comme une cinquième locutrice au milieu
+// des quatre du jeu.
 //
 // Hook fichiers locaux : playClip(name, fallback) joue public/audio/<name>.mp3
 // s'il existe, sinon retombe sur la synthèse. audioManager.playOnce(path) joue
@@ -762,10 +762,7 @@ export function setListenerPose(
 }
 
 // Côté d'ouverture : les haut-parleurs du quai basculent avec lui.
-let platformSide: 1 | -1 = 1;
-
 export function setPlatformSide(side: 1 | -1): void {
-  platformSide = side;
   if (!nodes) return;
   nodes.platPanners.forEach((p, i) => {
     p.positionX.value = side * PLATFORM_SPEAKERS[i][0];
@@ -816,36 +813,6 @@ export function setPlatformDoors(open01: number): void {
   const o = Math.max(0, Math.min(1, open01));
   nodes.platLp.frequency.rampTo(750 + o * 3600, 0.12);
   nodes.platGain.gain.rampTo(PLAT_BUS_CLOSED + o * (PLAT_BUS_OPEN - PLAT_BUS_CLOSED), 0.12);
-}
-
-/**
- * Facteur de volume 0..1 selon la distance au diffuseur le plus proche de la
- * sono visée. Sert aux annonces vocales, que speechSynthesis ne permet pas de
- * panner : au moins leur niveau suit la position de la tête. Les clips, eux,
- * passent par les Panner3D et n'en ont pas besoin.
- */
-export function speakerProximity(bus: VoiceBus = 'cabinVoice'): number {
-  if (bus === 'platformVoice') {
-    // Dans la rame, la voix du quai n'est qu'un lointain par les portes.
-    if (!listenerOutside) return PLAT_VOICE_INSIDE;
-    let best = Infinity;
-    for (const [x, y, z] of PLATFORM_SPEAKERS) {
-      const d = Math.hypot(platformSide * x - listenerPos.x, y - listenerPos.y, z - listenerPos.z);
-      if (d < best) best = d;
-    }
-    if (!Number.isFinite(best)) return 1;
-    return Math.max(0.5, Math.min(1, 3.4 / Math.max(2.6, best)));
-  }
-  // Depuis le quai, les diffuseurs du wagon sont derrière les vitres : la voix
-  // de bord ne s'entend pas — c'est la sono du quai qui parle.
-  if (listenerOutside) return 0;
-  let best = Infinity;
-  for (const [x, y, z] of CABIN_SPEAKERS) {
-    const d = Math.hypot(x - listenerPos.x, y - listenerPos.y, z - listenerPos.z);
-    if (d < best) best = d;
-  }
-  if (!Number.isFinite(best)) return 1;
-  return Math.max(0.62, Math.min(1, 1.7 / Math.max(1.2, best)));
 }
 
 // Un instrument Tone refuse tout déclenchement antérieur ou égal au dernier

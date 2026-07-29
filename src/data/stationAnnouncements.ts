@@ -19,8 +19,8 @@
 // (directionAnnouncement) : le même LOOP_JP et les mêmes grands repères, pour
 // que le quai et le wagon ne se contredisent pas.
 
-import { LOOP_JP, nextHubs, type Utterance } from './announcements';
-import { STATIONS } from './stations';
+import { LOOP_JP, nextHubs, type Utterance } from './announcements.ts';
+import { STATIONS } from './stations.ts';
 
 /** Voix de synthèse visée pour un texte donné (voir le générateur Kokoro). */
 export type StationVoice = 'atos' | 'agent' | 'atos-en';
@@ -175,10 +175,15 @@ export function platformDoorsClosingAnnouncement(platform: number): StationUtter
 // procédure : il ne lit pas un script ATOS, il s'adresse à la personne qu'il
 // voit dans l'encadrement, et sa voix se durcit à mesure que le départ traîne.
 
+// Sa formulation ne recouvre JAMAIS celle du conducteur (doorReleaseAnnouncement) :
+// un clip est identifié par le seul couple (langue, texte), donc deux voix ne
+// peuvent pas se partager une phrase — celle qui grave en dernier prendrait la
+// bouche de l'autre. C'est vrai à l'oreille aussi : le conducteur lit un script
+// depuis sa cabine, l'agent parle à quelqu'un qu'il a devant lui.
 export const PLATFORM_DOOR_RELEASE = [
-  'ドアから離れてください。',
+  '危ないですから、ドアから離れてください。',
   'お荷物、お身体を、ドアからお引きください。',
-  'ドアが閉まりません。ドアから離れてください。',
+  'ドアが閉まりません。もう一度、ドアから離れてください。',
 ] as const;
 
 /** La consigne numéro `n` (modulo), en voix d'agent. */

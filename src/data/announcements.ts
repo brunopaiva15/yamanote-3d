@@ -9,7 +9,7 @@
 // Toute chaîne ajoutée ici doit suivre la règle ; voir `noCommas` pour les
 // libellés importés d'ailleurs.
 
-import { STATIONS, TRANSFERS, type Station } from './stations';
+import { STATIONS, TRANSFERS, type Station } from './stations.ts';
 
 export interface Utterance {
   text: string;

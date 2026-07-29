@@ -24,9 +24,9 @@
 // Le numéro de voie annoncé n'est PAS le nôtre : c'est celui d'en face, relevé
 // gare par gare (voir FACING_TRACK).
 
-import { type LoopDirection } from './platforms';
-import { layoutFor } from './stationLayouts';
-import { STATIONS } from './stations';
+import { type LoopDirection } from './platforms.ts';
+import { layoutFor } from './stationLayouts.ts';
+import { STATIONS } from './stations.ts';
 
 /** Ce qui traverse, et à quel titre. */
 export type PassKind = 'rapid' | 'deadhead';

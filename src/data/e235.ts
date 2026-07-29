@@ -6,7 +6,7 @@
 // (CONFIG.carHalfWidth 1,40 + 8 cm de paroi = 1,475 de demi-caisse) et à la
 // trame du quai (portes palières tous les 20 m).
 
-import { CONFIG } from './config';
+import { CONFIG } from './config.ts';
 
 export const E235 = {
   /** Entraxe des caisses : c'est la trame sur laquelle le quai est bâti. */
