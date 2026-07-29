@@ -50,7 +50,19 @@ export type WeatherKind =
  * qu'on la fige.
  */
 export const weather = {
+  /**
+   * Le temps tel qu'on le VOIT, déduit de l'état continu ci-dessous et non de
+   * l'épisode en cours.
+   *
+   * La distinction n'est pas cosmétique. L'épisode bascule au milieu du fondu
+   * de vingt minutes qui le relie au suivant : nommer le ciel d'après lui,
+   * c'est annoncer « dégagé » dix minutes avant que la dernière goutte soit
+   * tombée — et le badge du HUD contredisait alors la fenêtre. Déduit de
+   * `cloud`, `rain` et `snow`, il ne PEUT plus les contredire.
+   */
   kind: 'fair' as WeatherKind,
+  /** L'épisode en cours, qui est ce que le modèle VISE. Usage interne. */
+  episode: 'fair' as WeatherKind,
   /** Couverture nuageuse 0..1 : assombrit et adoucit toute la scène. */
   cloud: 0,
   /** Intensité de la pluie 0..1. */
@@ -270,6 +282,7 @@ export function seedWeather(): void {
   const day = dayFor(se);
   const { cur } = episodeAt(day, runtime.clockMin);
   const t = TRAITS[cur.kind];
+  weather.episode = cur.kind;
   weather.kind = cur.kind;
   weather.cloud = t.cloud;
   weather.rain = t.rain;
@@ -280,6 +293,27 @@ export function seedWeather(): void {
   weather.flash = 0;
   weather.thunderT = 999;
   updateWeather(0);
+}
+
+/**
+ * Nomme le ciel d'après ce qu'il est, et non d'après ce que le modèle vise.
+ *
+ * Les seuils sont posés SOUS les valeurs nominales de `TRAITS` — une pluie
+ * franche vaut 0,6 et se nomme dès 0,42 — parce que tout ce qui est lu ici a
+ * traversé un fondu d'épisode puis un lissage temporel, et n'atteint sa valeur
+ * nominale qu'au bout d'une minute. Un seuil calé sur le nominal ne serait
+ * atteint qu'au milieu de l'averse.
+ */
+function classify(storm: boolean): WeatherKind {
+  const { rain, snow, cloud } = weather;
+  if (snow >= 0.07) return rain >= 0.07 ? 'sleet' : 'snow';
+  if (storm && rain >= 0.3) return 'thunder';
+  if (rain >= 0.78) return 'downpour';
+  if (rain >= 0.42) return 'rain';
+  if (rain >= 0.07) return 'drizzle';
+  if (cloud >= 0.62) return 'overcast';
+  if (cloud >= 0.17) return 'fair';
+  return 'clear';
 }
 
 /**
@@ -304,7 +338,7 @@ export function updateWeather(dt: number): void {
   const blend = toNext > 0 && toNext < BLEND_MIN ? 1 - toNext / BLEND_MIN : 0;
   const a = TRAITS[cur.kind];
   const b = TRAITS[next.kind];
-  weather.kind = blend > 0.5 ? next.kind : cur.kind;
+  weather.episode = blend > 0.5 ? next.kind : cur.kind;
 
   const cloudT = a.cloud + (b.cloud - a.cloud) * blend;
   const rainT = a.rain + (b.rain - a.rain) * blend;
@@ -345,7 +379,7 @@ export function updateWeather(dt: number): void {
   // toutes les dix à quarante secondes, jamais deux au même endroit.
   weather.thunderT += dt;
   weather.flash = Math.max(0, weather.flash - dt * 6);
-  const storm = weather.kind === 'thunder' ? weather.rain : 0;
+  const storm = weather.episode === 'thunder' ? weather.rain : 0;
   if (storm > 0.25 && weather.thunderT > 9 + 34 * hashInt(Math.floor(minute * 60))) {
     weather.thunderT = 0;
     weather.thunderFar = hashInt(Math.floor(minute * 997) + 17);
@@ -356,6 +390,10 @@ export function updateWeather(dt: number): void {
   // gouttes : sous une averse, la ville s'arrête à cent mètres.
   weather.visibility =
     (1 - 0.16 * weather.cloud) * (1 - 0.5 * weather.rain) * (1 - 0.42 * weather.snow);
+
+  // Le nom vient EN DERNIER, une fois l'état posé : il décrit le ciel, il ne
+  // l'annonce pas.
+  weather.kind = classify(weather.episode === 'thunder');
 }
 
 /** Remet la météo à zéro (nouvelle session). */
@@ -363,6 +401,7 @@ export function resetWeather(): void {
   dayKey = -1;
   today = null;
   weather.kind = 'fair';
+  weather.episode = 'fair';
   weather.cloud = 0;
   weather.rain = 0;
   weather.snow = 0;

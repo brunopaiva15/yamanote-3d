@@ -705,6 +705,13 @@ entière, tel que le modèle la tire :
 | août | 8 % | 32 % | 39 % | 25,8 °C |
 | décembre | 5 % | 16 % | 62 % | 8,5 °C |
 
+Le badge du HUD nomme le ciel d'après **ce qu'il est**, jamais d'après l'épisode
+en cours. La distinction n'est pas cosmétique : l'épisode bascule au milieu du
+fondu de vingt minutes qui le relie au suivant, si bien qu'il annonçait
+« dégagé » dix minutes avant que la dernière goutte soit tombée — et le badge
+contredisait alors la fenêtre. Déduit de la couverture, de la pluie et de la
+neige, il ne *peut* plus les contredire.
+
 Les pourcentages comptent des *heures*, pas des jours. Les moyennes de
 température tombent à quelques dixièmes des normales de Tokyo — c'est le seul
 chiffre du modèle qui soit vérifiable directement, et il l'est.
