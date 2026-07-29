@@ -4,20 +4,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { PLATEAU_CONFIG } from '../scripts/plateau/config.mjs';
+import { PLATEAU_CONFIG, PROTOTYPE_SEGMENTS } from '../scripts/plateau/config.mjs';
 import { MANIFEST_VERSION, buildLicense, buildManifest } from '../scripts/plateau/lib/manifest.mjs';
 import {
+  readGameSegment,
   resolvePublicUrl,
   validateChunkCoverage,
   validateRoute,
 } from '../scripts/plateau/validate.mjs';
 
+const PROTO = PLATEAU_CONFIG.prototype;
 const ROUTE = { totalLength: 1000, points: [] };
 const FAKE_CHUNKS = [
   {
-    id: 'sugamo-otsuka-000',
-    segment: 10,
-    url: 'world/plateau/sugamo-otsuka-000.glb',
+    id: `${PROTO.name}-000`,
+    segment: PROTO.segment,
+    url: `world/plateau/${PROTO.name}-000.glb`,
     startDistance: 0,
     endDistance: 400,
     offset: [1, 2, 3],
@@ -35,9 +37,12 @@ test('buildManifest produit la structure attendue par le jeu', () => {
     route: { epsg: 6677, totalLength: 1000, frame: { origin: { east: 1, north: 2, up: 3 } } },
   });
   assert.equal(manifest.version, MANIFEST_VERSION);
-  assert.equal(manifest.prototype.segment, 10);
-  assert.equal(manifest.prototype.from, 'Sugamo');
-  assert.equal(manifest.prototype.to, 'Otsuka');
+  // Le tronçon vient de la configuration : ces assertions doivent survivre à
+  // un changement de tronçon, c'est justement ce qu'on veut vérifier.
+  assert.equal(manifest.prototype.segment, PROTO.segment);
+  assert.equal(manifest.prototype.from, PROTO.from);
+  assert.equal(manifest.prototype.to, PROTO.to);
+  assert.equal(manifest.prototype.name, PROTO.name);
   assert.deepEqual(manifest.coordinateSystem, {
     units: 'meters',
     east: '+X',
@@ -82,6 +87,38 @@ test('buildLicense distingue l’échantillon synthétique des vraies données',
   assert.match(real, /出典：国土交通省/);
   assert.match(real, /ODbL/);
   assert.doesNotMatch(real, /AUCUNE donnée Project PLATEAU/);
+});
+
+test('le jeu et le pipeline visent le même tronçon', () => {
+  const source = readFileSync(join(PLATEAU_CONFIG.paths.root, 'src/systems/plateau.ts'), 'utf8');
+  assert.equal(
+    readGameSegment(source),
+    PROTO.segment,
+    'PLATEAU_SEGMENT (src/systems/plateau.ts) ne correspond pas au tronçon configuré ' +
+      'dans scripts/plateau/config.mjs — le décor ne s’afficherait jamais.',
+  );
+  assert.throws(() => readGameSegment('rien du tout'), /PLATEAU_SEGMENT introuvable/);
+  // La gare de développement est celle d'ARRIVÉE : segmentAt(i) = (i + 29) % 30.
+  const devStation = Number(source.match(/PLATEAU_DEV_STATION = \(PLATEAU_SEGMENT \+ (\d+)\)/)?.[1]);
+  assert.equal(devStation, 1, 'la gare d’arrivée doit être segment + 1');
+});
+
+test('la table des tronçons est cohérente', () => {
+  for (const [id, seg] of Object.entries(PROTOTYPE_SEGMENTS)) {
+    assert.equal(seg.name, id, `${id} : le nom ne correspond pas à sa clé`);
+    assert.equal(
+      (seg.arrivalStation + 29) % 30,
+      seg.segment,
+      `${id} : arrivalStation ${seg.arrivalStation} ne mène pas au segment ${seg.segment}`,
+    );
+    for (const end of ['from', 'to']) {
+      const a = seg.anchors[end];
+      assert.ok(a.lon > 139.6 && a.lon < 139.85, `${id}.${end} : longitude ${a.lon} hors de Tokyo`);
+      assert.ok(a.lat > 35.5 && a.lat < 35.85, `${id}.${end} : latitude ${a.lat} hors de Tokyo`);
+    }
+    // Viaduc ⇒ rail au-dessus de la rue ; tranchée ⇒ en dessous.
+    assert.notEqual(seg.railAboveGround, 0, `${id} : railAboveGround doit être signé`);
+  }
 });
 
 test('les URL de chunk ne peuvent pas sortir de public/', () => {

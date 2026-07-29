@@ -528,7 +528,11 @@ paysage.
 Tout ce qui précède est **procédural** : un paysage crédible, jamais le vrai. Un
 prototype teste l'autre voie — construire le décor à partir des données ouvertes
 [Project PLATEAU](https://www.mlit.go.jp/plateau/) (modèles CityGML 3D des villes
-japonaises, 国土交通省) — sur **un seul tronçon**, Sugamo → Ōtsuka.
+japonaises, 国土交通省) — sur **un seul tronçon à la fois**, par défaut
+Shibuya → Ebisu (`SEGMENTS[19]`). Le choix du tronçon compte : sur un viaduc, le
+train court sept mètres au-dessus de la rue et le regard passe par-dessus les
+toits ; dans une tranchée, le mur de soutènement masque tout, et c'est exact
+mais inutile à regarder.
 
 ```bash
 npm run world:build:prototype -- --dry-run   # vérifie outils et configuration
@@ -544,6 +548,10 @@ reste à l'origine et c'est le monde qui tourne autour de lui : on applique au
 groupe des chunks l'inverse de la transformation du train sur le tracé réel, à
 la vitesse réelle de la rame. Ailleurs sur la boucle, et prototype coupé
 (`ENABLE_PLATEAU_PROTOTYPE = false`), le décor procédural reprend tout.
+
+Changer de tronçon est une variable d'environnement — `PLATEAU_PROTOTYPE` —
+plus une constante à aligner côté jeu ; la validation du build refuse de publier
+un monde que le jeu chercherait ailleurs sur la boucle.
 
 ⚠️ Le dépôt ne contient **aucune donnée PLATEAU** : le build par défaut tourne
 sur un échantillon CityGML *synthétique* au format PLATEAU. Tout est expliqué —
@@ -700,7 +708,7 @@ src/
                          sondes navigateur : station-probe, scenery-shots,
                          scenery-cost, pass-shots
   scripts/plateau/       pipeline CityGML PLATEAU → GLB (docs/PLATEAU_PIPELINE.md)
-  three/PlateauWorld.tsx monde géoréférencé du prototype, tronçon Sugamo → Ōtsuka
+  three/PlateauWorld.tsx monde géoréférencé du prototype (un tronçon à la fois)
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
   ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles

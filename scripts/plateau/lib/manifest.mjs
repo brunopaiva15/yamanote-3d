@@ -62,7 +62,7 @@ export function buildLicense({ source, routeProperties }) {
   const synthetic = source.kind === 'sample';
   const routeIsOsm = routeProperties?.source?.includes('OpenStreetMap');
 
-  return `# Licences — monde PLATEAU (prototype Sugamo → Ōtsuka)
+  return `# Licences — monde PLATEAU (prototype ${PLATEAU_CONFIG.prototype.from} → ${PLATEAU_CONFIG.prototype.to})
 
 Généré automatiquement par \`npm run world:build:prototype\`.
 Ne pas éditer à la main : le fichier est réécrit à chaque build.

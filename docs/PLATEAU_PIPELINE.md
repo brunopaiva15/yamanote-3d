@@ -1,8 +1,12 @@
-# Pipeline PLATEAU → GLB (prototype Sugamo → Ōtsuka)
+# Pipeline PLATEAU → GLB (prototype Shibuya → Ebisu)
 
 Chaîne automatisée qui va des données ouvertes japonaises [Project PLATEAU]
 (CityGML 3D des villes du Japon, 国土交通省) à des GLB optimisés affichés dans
-Yamanote 3D, sur **un seul tronçon** : Sugamo → Ōtsuka, `SEGMENTS[10]`.
+Yamanote 3D, sur **un seul tronçon** à la fois — par défaut Shibuya → Ebisu,
+`SEGMENTS[19]`, en viaduc.
+
+Le tronçon est un **paramètre**, pas du code : voir
+[§ Changer de tronçon](#changer-de-tronçon).
 
 ```
 CityGML PLATEAU ─► conversion ─► sélection corridor ─► classement par distance
@@ -84,6 +88,8 @@ sans ambiguïté au Japon.
 
 | Variable | Défaut | Effet |
 | --- | --- | --- |
+| `PLATEAU_PROTOTYPE` | `shibuya-ebisu` | tronçon traité (clé de `PROTOTYPE_SEGMENTS`) |
+| `PLATEAU_SAMPLE_DENSITY` | `900` | bâtiments par km pour l'échantillon synthétique |
 | `PLATEAU_DATASET_URL` | — | URL de l'archive CityGML à télécharger |
 | `PLATEAU_DATASET` | `tokyo23ku-2023-citygml` | identifiant dans `DATASETS` |
 | `PLATEAU_SOURCE` | auto | `sample` ou `dataset` |
@@ -113,7 +119,7 @@ npm run world:build:prototype -- --dry-run # vérifie, n'exécute rien de coûte
 npm run world:build:prototype -- --force   # ignore le cache
 npm run world:build:prototype -- --skip-download --skip-convert
 
-npm run world:route:prototype              # (re)génère data/geo/sugamo-otsuka.geojson
+npm run world:route:prototype              # (re)génère data/geo/<tronçon>.geojson
 npm run world:route:prototype -- --overpass   # …depuis OpenStreetMap (ODbL)
 npm run world:sample:prototype             # (re)génère l'échantillon synthétique
 npm run world:download:prototype -- --url <URL>
@@ -123,7 +129,7 @@ npm run world:optimize:prototype
 npm run world:validate:prototype           # relit et valide les livrables
 npm run world:check:prototype              # contrôle visuel Playwright + captures
 
-npm test                                   # 58 tests (node --test)
+npm test                                   # 60 tests (node --test)
 npm run dev                                # puis /?plateau=1
 ```
 
@@ -135,20 +141,24 @@ fichiers qui seraient produits, sans écrire quoi que ce soit.
 
 ### 5.1 Tracé (`fetch-route.mjs`)
 
-Produit `data/geo/sugamo-otsuka.geojson`, une `LineString` avec altitude.
+Produit `data/geo/<tronçon>.geojson`, une `LineString` avec altitude.
 Deux sources, jamais mélangées :
 
 * `--overpass` : géométrie réelle de la 山手線 extraite d'OpenStreetMap
   (recouture des `way`, découpe entre les deux gares). **ODbL 1.0**, attribution
   obligatoire.
 * défaut : un arc de cercle calé sur les coordonnées publiées des deux quais,
-  flèche de 60 m vers le nord, longueur 1 008 m (JR East publie 1,1 km de
-  distance d'exploitation). C'est une **approximation assumée**, marquée
-  `"approximate": true` dans les propriétés du GeoJSON.
+  bombé de `sagittaMeters`. Pour Shibuya → Ebisu : 1 515 m, quand JR East
+  publie 1,6 km de distance d'exploitation. C'est une **approximation
+  assumée**, marquée `"approximate": true` dans les propriétés du GeoJSON.
 
-L'altitude est un profil de tête de rail en **hauteur ellipsoïdale** (61 m à
-Sugamo, en tranchée, → 66,5 m à Ōtsuka, au niveau du sol), cohérent avec
-`SEGMENTS[10] = { kind: 'trench', opensAtEnd: true }`.
+L'altitude n'est pas saisie à la main : on décrit le niveau de la **rue** aux
+deux extrémités (`groundElevation`, en hauteur ellipsoïdale) et la position de
+la voie par rapport à elle (`railAboveGround`, positif en viaduc, négatif en
+tranchée). Shibuya est un fond de vallée et Ebisu sur le plateau : 59 m → 68 m
+de rue, +7,4 m de viaduc, soit 66,4 m → 75,4 m de rail. C'est **le même
+paramètre** qui pose le sol de l'échantillon synthétique, ce qui interdit aux
+deux de diverger.
 
 ### 5.2 Obtention des données (`download.mjs`)
 
@@ -282,7 +292,7 @@ src/systems/plateau.ts        interrupteur + état partagé
 src/three/PlateauWorld.tsx    composant R3F
 src/three/plateau/routeMath.ts  maths du tracé (module PUR, testé)
 src/dev/plateau-probe-main.ts   probe /plateau-probe.html
-tests/                        58 tests node:test
+tests/                        60 tests node:test
 ```
 
 ## 7. Gestion du cache
@@ -345,13 +355,17 @@ Points d'attention :
 
 ### Sur le rendu
 
-5. **Ce tronçon est en tranchée**, et c'est le pire choix possible pour
-   montrer une ville géoréférencée : le mur de soutènement procédural (5 m)
-   masque le bas des bâtiments depuis une baie latérale pendant les deux tiers
-   du parcours. C'est fidèle à la réalité de Sugamo → Ōtsuka, mais cela rend le
-   prototype peu démonstratif. `/plateau-probe.html` existe précisément pour
-   juger la géométrie sans le wagon ni le décor du jeu. Un tronçon en viaduc
-   (19 Shibuya → Ebisu, par exemple) mettrait bien mieux la ville en valeur.
+5. **Le type de tronçon décide de ce qu'on voit.** Le prototype a d'abord
+   tourné sur Sugamo → Ōtsuka (`SEGMENTS[10]`, en tranchée) : le mur de
+   soutènement procédural, haut de cinq mètres, masquait le bas de la ville
+   depuis une baie latérale pendant les deux tiers du parcours. C'était fidèle
+   à la réalité — on ne voit effectivement rien depuis un train en tranchée —
+   mais parfaitement contre-productif pour juger un pipeline. D'où le passage
+   à Shibuya → Ebisu (`SEGMENTS[19]`, en viaduc), où le train court sept
+   mètres au-dessus de la rue et où le regard passe par-dessus les toits bas.
+   Les deux tronçons restent décrits dans `PROTOTYPE_SEGMENTS` : basculer de
+   l'un à l'autre est une variable d'environnement. `/plateau-probe.html`
+   permet de toute façon de juger la géométrie sans le wagon ni le décor.
 6. **Pas de textures.** Le lecteur intégré ignore les apparences CityGML ; et
    de toute façon PLATEAU ne texture que le LOD2, absent du LOD1. Avec
    `nusamai` et un jeu LOD2, la chaîne WebP/redimensionnement est prête et
@@ -369,37 +383,41 @@ Points d'attention :
 Mesures prises dans Chromium (SwiftShader, qualité « high », 960×540), au
 milieu du tronçon, regard par la baie latérale, moyennées sur 12 images :
 
-| | prototype actif | prototype coupé |
-| --- | --- | --- |
-| appels de rendu / image | 1 231 | 1 248 |
-| triangles / image | 371 885 | 379 555 |
+| | prototype actif | prototype coupé | écart |
+| --- | --- | --- | --- |
+| appels de rendu / image | 864 | 954 | **−9 %** |
+| triangles / image | 347 306 | 413 955 | **−16 %** |
+| géométries en mémoire | 521 | 825 | −37 % |
 
-Le monde PLATEAU coûte donc **un peu moins** que le ruban urbain procédural
-qu'il remplace : ses 9 278 triangles tiennent en 6 primitives et 2 matériaux
-par chunk, là où la ville procédurale multiplie les `InstancedMesh`, les
-acrotères, les bosquets et les enseignes. Le budget de la scène reste dominé
-par l'intérieur du wagon, les PNJ et la gare — l'échange de décor s'y voit à
-peine. Ces chiffres viennent d'un rendu logiciel : les valeurs absolues de
-temps par image n'ont pas de sens, seul l'écart entre les deux colonnes en a.
+Le monde PLATEAU coûte donc **moins** que le ruban urbain procédural qu'il
+remplace : ses 13 900 triangles tiennent en 6 primitives et 2 matériaux par
+chunk, là où la ville procédurale multiplie les `InstancedMesh`, les acrotères,
+les croupes, les bosquets et les enseignes. Le budget de la scène reste dominé
+par l'intérieur du wagon, les PNJ et la gare. Ces chiffres viennent d'un rendu
+logiciel : les valeurs absolues de temps par image n'ont pas de sens, seul
+l'écart entre les colonnes en a.
 
 Poids et contenu par chunk (voir `build-report.json` pour le détail complet) :
 
 | chunk | intervalle | bâtiments | triangles | poids | textures |
 | --- | --- | --- | --- | --- | --- |
-| `sugamo-otsuka-000` | 0 → 400 m | 367 | 3 819 | 60,2 Ko | 0 |
-| `sugamo-otsuka-001` | 400 → 800 m | 349 | 3 622 | 57,7 Ko | 0 |
-| `sugamo-otsuka-002` | 800 → 1 008 m | 177 | 1 837 | 34,2 Ko | 0 |
+| `shibuya-ebisu-000` | 0 → 400 m | 361 | 3 685 | 58,4 Ko | 0 |
+| `shibuya-ebisu-001` | 400 → 800 m | 354 | 3 681 | 58,5 Ko | 0 |
+| `shibuya-ebisu-002` | 800 → 1 200 m | 357 | 3 628 | 57,9 Ko | 0 |
+| `shibuya-ebisu-003` | 1 200 → 1 515 m | 284 | 2 906 | 48,3 Ko | 0 |
 
-Total 152 Ko pour 1 008 m de corridor, contre 1,1 Mo avant optimisation
-(−87 %). Mémoire de textures : nulle, faute de textures dans le LOD1.
+Total 223 Ko pour 1 515 m de corridor (1 363 bâtiments : 402 proches,
+388 intermédiaires, 566 éloignés, 7 élagués), contre 1,7 Mo avant
+optimisation — **−87 %**. Mémoire de textures : nulle, faute de textures dans
+le LOD1.
 
 ### Sur la mémoire
 
 `useGLTF` (drei) mémorise chaque URL dans un cache global qui ne se vide
 jamais tout seul : démonter un chunk le retire de la scène, mais géométries,
 matériaux et textures restent en mémoire GPU. À l'échelle du prototype
-(3 chunks, 152 Ko, ~9 300 triangles) c'est sans conséquence. À l'échelle des
-30 tronçons (~90 chunks) il faudra :
+(4 chunks, 223 Ko, ~13 900 triangles) c'est sans conséquence. À l'échelle des
+30 tronçons (~120 chunks) il faudra :
 
 1. suivre les chunks montés dans un compteur de références ;
 2. à la sortie d'un tronçon, pour chaque chunk dont le compteur retombe à 0 :
@@ -431,7 +449,7 @@ budget. Marche à suivre :
    est découpé en mailles ; ne convertir que les mailles qui intersectent la
    boîte englobante de la boucle (une trentaine sur plusieurs centaines).
    `download.mjs` extrait déjà sélectivement.
-5. **Budget d'assets.** En extrapolant le prototype (152 Ko / km de corridor
+5. **Budget d'assets.** En extrapolant le prototype (147 Ko / km de corridor
    à ±300 m, en LOD1 non texturé), la boucle entière (34,5 km) pèse ~5 Mo.
    C'est tenable. Avec du LOD2 texturé, compter deux ordres de grandeur de
    plus : il faudra alors du chargement à la demande par tronçon, et le
@@ -445,6 +463,58 @@ budget. Marche à suivre :
    `corridor`) : le profil altimétrique du tracé doit en tenir compte, sinon
    les viaducs mettront la ville sept mètres trop haut. C'est le point le plus
    délicat, et celui qui gagnerait le plus à utiliser le MNT PLATEAU.
+
+## Changer de tronçon
+
+Le tronçon traité est une entrée de `PROTOTYPE_SEGMENTS`
+(`scripts/plateau/config.mjs`). Deux sont livrés :
+
+| clé | segment | type | longueur | pourquoi |
+| --- | --- | --- | --- | --- |
+| `shibuya-ebisu` *(défaut)* | 19 | viaduc, rail +7,4 m | 1 515 m | on voit la ville par-dessus les toits |
+| `sugamo-otsuka` | 10 | tranchée, rail −6 m | 1 008 m | le mur de soutènement masque presque tout |
+
+```bash
+PLATEAU_PROTOTYPE=sugamo-otsuka npm run world:route:prototype
+PLATEAU_PROTOTYPE=sugamo-otsuka npm run world:build:prototype
+# puis aligner le jeu : PLATEAU_SEGMENT = 10 dans src/systems/plateau.ts
+```
+
+Le jeu porte le numéro de tronçon dans une constante (`PLATEAU_SEGMENT`,
+`src/systems/plateau.ts`) que rien ne relie au pipeline à la compilation. La
+**validation compare les deux** et refuse de valider un monde que le jeu
+chercherait ailleurs sur la boucle :
+
+```
+✖ Le jeu vise le tronçon 10 (PLATEAU_SEGMENT dans src/systems/plateau.ts)
+  alors que le monde publié est celui du tronçon 19 (Shibuya → Ebisu).
+  Le décor ne s'afficherait jamais : alignez les deux.
+```
+
+### Ajouter un tronçon
+
+Une entrée de plus dans `PROTOTYPE_SEGMENTS` suffit :
+
+```js
+'yoyogi-harajuku': {
+  name: 'yoyogi-harajuku',
+  segment: 17,                    // index dans src/data/segments.ts
+  from: 'Yoyogi', to: 'Harajuku',
+  arrivalStation: 18,             // (arrivalStation + 29) % 30 === segment
+  anchors: {
+    from: { lon: …, lat: …, name: '代々木 Yoyogi (JY18)' },
+    to:   { lon: …, lat: …, name: '原宿 Harajuku (JY19)' },
+  },
+  sagittaMeters: 40,              // signé : + = bombé vers la gauche
+  railAboveGround: 0.5,           // + viaduc, − tranchée (voir SEGMENTS[i].kind)
+  groundElevation: { start: 74, end: 76 },  // niveau de la RUE, ellipsoïdal
+},
+```
+
+Un test (`tests/manifest.test.mjs`) vérifie la cohérence de chaque entrée :
+`arrivalStation` doit bien mener au segment déclaré, les ancrages tomber dans
+Tokyo, et `railAboveGround` être non nul (un tronçon est en viaduc ou en
+tranchée, jamais « au niveau de la voie »).
 
 ## Pourquoi pas Blender
 
@@ -480,7 +550,7 @@ npm run world:build:prototype -- --force …
 ## Vérifier
 
 ```bash
-npm test                        # 58 tests
+npm test                        # 60 tests
 npm run world:validate:prototype
 npm run world:check:prototype   # Playwright : captures + contrôles en scène
 npm run dev                     # /?plateau=1  (démarrage direct sur le tronçon)

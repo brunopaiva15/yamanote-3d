@@ -56,8 +56,8 @@ export function visibleFromTrack(building, band) {
 }
 
 /**
- * Palette de façades, alignée sur celle du décor procédural pour Sugamo et
- * Ōtsuka (data/districts.ts, WARM_DAY / OLD_DAY) : béton peint, carrelage
+ * Palette de façades, alignée sur celles du décor procédural
+ * (data/districts.ts, WARM_DAY / OLD_DAY) : béton peint, carrelage
  * beige, crépi. Aucune saturation forte — un quartier de Toshima n'est pas
  * coloré, il est nuancé.
  */
@@ -351,7 +351,7 @@ export async function processAll(args, reporter) {
   return { outputs, chunks: chunkStats, counts, route, routeJson, inputHash, corridorPath };
 }
 
-/** `sugamo-otsuka-000` */
+/** Identifiant de chunk : `<nom-du-tronçon>-000`. */
 export function chunkId(index) {
   return `${PLATEAU_CONFIG.prototype.name}-${String(index).padStart(3, '0')}`;
 }

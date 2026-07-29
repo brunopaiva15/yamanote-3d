@@ -1,4 +1,8 @@
-// Monde géoréférencé PLATEAU — prototype, tronçon Sugamo → Ōtsuka.
+// Monde géoréférencé PLATEAU — prototype, un tronçon à la fois.
+//
+// Le tronçon couvert est celui de PLATEAU_SEGMENT (systems/plateau.ts), qui
+// doit correspondre à celui du monde publié — la validation du build le
+// vérifie. Par défaut : Shibuya → Ebisu, en viaduc.
 //
 // PRINCIPE
 // --------
@@ -150,7 +154,7 @@ export function PlateauWorld() {
       setManifest(m);
       setRoute(r);
       // Le premier chunk est décodé pendant que le joueur roule encore sur le
-      // tronçon précédent : l'entrée sur Sugamo → Ōtsuka ne coûte alors aucun
+      // tronçon précédent : l'entrée sur le tronçon couvert ne coûte alors aucun
       // à-coup. Les suivants arrivent par la fenêtre glissante, un cran avant
       // d'être visibles.
       preloadPlateau(m.chunks[0]);
@@ -192,6 +196,10 @@ export function PlateauWorld() {
         nearestToCar: Infinity,
       };
       if (!group?.visible) return result;
+      // Les matrices monde des chunks datent du dernier rendu ; à 25 m/s, une
+      // image de retard vaut plusieurs dizaines de mètres. On les rafraîchit
+      // avant de mesurer, sinon la distance rapportée est celle d'ailleurs.
+      group.updateMatrixWorld(true);
       const v = new THREE.Vector3();
       group.traverse((obj) => {
         const mesh = obj as THREE.Mesh;

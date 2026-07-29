@@ -279,7 +279,11 @@ export async function build(args, reporter) {
   reporter.info(`  ${paths.manifest}`);
   reporter.info(`  ${paths.license}`);
   reporter.info(`  ${paths.report}`);
-  reporter.info('\nTestez avec : npm run dev  (puis ?plateau=1 pour démarrer sur le segment 10)');
+  reporter.info(
+    `\nTestez avec : npm run dev  (puis ?plateau=1 pour démarrer sur le tronçon ` +
+      `${PLATEAU_CONFIG.prototype.from} → ${PLATEAU_CONFIG.prototype.to}, segment ` +
+      `${PLATEAU_CONFIG.prototype.segment})`,
+  );
   return { optimized, artifacts };
 }
 

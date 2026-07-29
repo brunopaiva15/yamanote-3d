@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-29T07:25:23.041Z",
+  "generatedAt": "2026-07-29T08:07:02.329Z",
   "tools": {
     "node": "v22.22.2",
     "sharp": "libvips 8.18.3",
@@ -16,147 +16,147 @@
     "synthetic": true
   },
   "route": {
-    "file": "/home/user/yamanote-3d/data/geo/sugamo-otsuka.geojson",
+    "file": "/home/user/yamanote-3d/data/geo/shibuya-ebisu.geojson",
     "source": "Approximation géométrique (arc de cercle entre les deux gares)",
     "license": "CC0 — produit par ce dépôt, ne contient aucune donnée tierce",
     "points": 41,
-    "totalLength": 1008.1977706061438
+    "totalLength": 1514.5685016518564
   },
   "counts": {
     "filesAnalyzed": 1,
-    "buildingsDetected": 900,
-    "buildingsInCorridor": 900,
+    "buildingsDetected": 1363,
+    "buildingsInCorridor": 1363,
     "buildingsDroppedOutsideCorridor": 0,
     "buildingsCulledInvisible": 7,
     "byBand": {
-      "near": 270,
-      "medium": 268,
-      "far": 355
+      "near": 402,
+      "medium": 388,
+      "far": 566
     },
-    "chunks": 3
+    "chunks": 4
   },
   "sizes": {
-    "beforeOptimization": 1169004,
-    "afterOptimization": 155788,
-    "reductionPercent": 86.7
+    "beforeOptimization": 1750868,
+    "afterOptimization": 228392,
+    "reductionPercent": 87
   },
   "chunks": [
     {
-      "id": "sugamo-otsuka-000",
-      "url": "world/plateau/sugamo-otsuka-000.glb",
+      "id": "shibuya-ebisu-000",
+      "url": "world/plateau/shibuya-ebisu-000.glb",
       "startDistance": 0,
       "endDistance": 400,
       "offset": [
-        294.054,
-        -1.719,
-        -89.625
+        -253.528,
+        -3.313,
+        -501.702
       ],
-      "boundingRadius": 348.09,
-      "buildings": 367,
+      "boundingRadius": 355.1,
+      "buildings": 361,
       "before": {
         "meshes": 1,
         "primitives": 6,
         "materials": 2,
         "textures": 0,
-        "vertices": 12522,
-        "triangles": 4174,
+        "vertices": 12072,
+        "triangles": 4024,
         "textureBytes": 0,
-        "bytes": 481256
+        "bytes": 464164
       },
       "after": {
         "meshes": 1,
         "primitives": 6,
         "materials": 2,
         "textures": 0,
-        "vertices": 7613,
-        "triangles": 3819,
+        "vertices": 7357,
+        "triangles": 3685,
         "textureBytes": 0,
-        "bytes": 61604
+        "bytes": 59832
       },
       "estimatedTextureBytes": 0,
       "simplification": [
         {
           "primitive": "near/facade",
-          "before": 936,
-          "after": 936,
+          "before": 928,
+          "after": 928,
           "requestedRatio": 1,
           "achievedRatio": 1
         },
         {
           "primitive": "near/roof",
-          "before": 256,
-          "after": 256,
+          "before": 246,
+          "after": 246,
           "requestedRatio": 1,
           "achievedRatio": 1
         },
         {
           "primitive": "medium/facade",
-          "before": 960,
-          "after": 960,
+          "before": 892,
+          "after": 892,
           "requestedRatio": 0.6,
           "achievedRatio": 1
         },
         {
           "primitive": "medium/roof",
-          "before": 262,
-          "after": 157,
+          "before": 242,
+          "after": 145,
           "requestedRatio": 0.6,
           "achievedRatio": 0.599
         },
         {
           "primitive": "far/facade",
-          "before": 1376,
-          "after": 1376,
+          "before": 1344,
+          "after": 1344,
           "requestedRatio": 0.35,
           "achievedRatio": 1
         },
         {
           "primitive": "far/roof",
-          "before": 384,
-          "after": 134,
+          "before": 372,
+          "after": 130,
           "requestedRatio": 0.35,
           "achievedRatio": 0.349
         }
       ]
     },
     {
-      "id": "sugamo-otsuka-001",
-      "url": "world/plateau/sugamo-otsuka-001.glb",
+      "id": "shibuya-ebisu-001",
+      "url": "world/plateau/shibuya-ebisu-001.glb",
       "startDistance": 400,
       "endDistance": 800,
       "offset": [
-        -89.569,
-        0.478,
-        21.489
+        -75.473,
+        -0.937,
+        -143.627
       ],
-      "boundingRadius": 332.17,
-      "buildings": 349,
+      "boundingRadius": 331.53,
+      "buildings": 354,
       "before": {
         "meshes": 1,
         "primitives": 6,
         "materials": 2,
         "textures": 0,
-        "vertices": 11802,
-        "triangles": 3934,
+        "vertices": 12024,
+        "triangles": 4008,
         "textureBytes": 0,
-        "bytes": 453892
+        "bytes": 462340
       },
       "after": {
         "meshes": 1,
         "primitives": 6,
         "materials": 2,
         "textures": 0,
-        "vertices": 7214,
-        "triangles": 3622,
+        "vertices": 7319,
+        "triangles": 3681,
         "textureBytes": 0,
-        "bytes": 59124
+        "bytes": 59860
       },
       "estimatedTextureBytes": 0,
       "simplification": [
         {
           "primitive": "near/facade",
-          "before": 1000,
-          "after": 1000,
+          "before": 980,
+          "after": 980,
           "requestedRatio": 1,
           "achievedRatio": 1
         },
@@ -169,109 +169,187 @@
         },
         {
           "primitive": "medium/facade",
-          "before": 896,
-          "after": 896,
+          "before": 880,
+          "after": 880,
           "requestedRatio": 0.6,
           "achievedRatio": 1
         },
         {
           "primitive": "medium/roof",
-          "before": 250,
-          "after": 150,
+          "before": 240,
+          "after": 144,
           "requestedRatio": 0.6,
           "achievedRatio": 0.6
         },
         {
           "primitive": "far/facade",
-          "before": 1192,
-          "after": 1192,
+          "before": 1284,
+          "after": 1284,
           "requestedRatio": 0.35,
           "achievedRatio": 1
         },
         {
           "primitive": "far/roof",
-          "before": 326,
-          "after": 114,
+          "before": 354,
+          "after": 123,
           "requestedRatio": 0.35,
-          "achievedRatio": 0.35
+          "achievedRatio": 0.347
         }
       ]
     },
     {
-      "id": "sugamo-otsuka-002",
-      "url": "world/plateau/sugamo-otsuka-002.glb",
+      "id": "shibuya-ebisu-002",
+      "url": "world/plateau/shibuya-ebisu-002.glb",
       "startDistance": 800,
-      "endDistance": 1008.2,
+      "endDistance": 1200,
       "offset": [
-        -391.436,
-        2.139,
-        56.043
+        129.64,
+        1.449,
+        199.663
       ],
-      "boundingRadius": 307.2,
-      "buildings": 177,
+      "boundingRadius": 365.6,
+      "buildings": 357,
       "before": {
         "meshes": 1,
         "primitives": 6,
         "materials": 2,
         "textures": 0,
-        "vertices": 6012,
-        "triangles": 2004,
+        "vertices": 11934,
+        "triangles": 3978,
         "textureBytes": 0,
-        "bytes": 233856
+        "bytes": 458916
       },
       "after": {
         "meshes": 1,
         "primitives": 6,
         "materials": 2,
         "textures": 0,
-        "vertices": 3665,
-        "triangles": 1837,
+        "vertices": 7242,
+        "triangles": 3628,
         "textureBytes": 0,
-        "bytes": 35060
+        "bytes": 59276
       },
       "estimatedTextureBytes": 0,
       "simplification": [
         {
           "primitive": "near/facade",
-          "before": 436,
-          "after": 436,
+          "before": 836,
+          "after": 836,
           "requestedRatio": 1,
           "achievedRatio": 1
         },
         {
           "primitive": "near/roof",
-          "before": 120,
-          "after": 120,
+          "before": 222,
+          "after": 222,
           "requestedRatio": 1,
           "achievedRatio": 1
         },
         {
           "primitive": "medium/facade",
-          "before": 536,
-          "after": 536,
+          "before": 876,
+          "after": 876,
           "requestedRatio": 0.6,
           "achievedRatio": 1
         },
         {
           "primitive": "medium/roof",
-          "before": 148,
-          "after": 88,
+          "before": 238,
+          "after": 142,
           "requestedRatio": 0.6,
-          "achievedRatio": 0.595
+          "achievedRatio": 0.597
         },
         {
           "primitive": "far/facade",
-          "before": 600,
-          "after": 600,
+          "before": 1416,
+          "after": 1416,
           "requestedRatio": 0.35,
           "achievedRatio": 1
         },
         {
           "primitive": "far/roof",
-          "before": 164,
-          "after": 57,
+          "before": 390,
+          "after": 136,
           "requestedRatio": 0.35,
-          "achievedRatio": 0.348
+          "achievedRatio": 0.349
+        }
+      ]
+    },
+    {
+      "id": "shibuya-ebisu-003",
+      "url": "world/plateau/shibuya-ebisu-003.glb",
+      "startDistance": 1200,
+      "endDistance": 1514.57,
+      "offset": [
+        334.661,
+        3.571,
+        492.183
+      ],
+      "boundingRadius": 327.41,
+      "buildings": 284,
+      "before": {
+        "meshes": 1,
+        "primitives": 6,
+        "materials": 2,
+        "textures": 0,
+        "vertices": 9474,
+        "triangles": 3158,
+        "textureBytes": 0,
+        "bytes": 365448
+      },
+      "after": {
+        "meshes": 1,
+        "primitives": 6,
+        "materials": 2,
+        "textures": 0,
+        "vertices": 5778,
+        "triangles": 2906,
+        "textureBytes": 0,
+        "bytes": 49424
+      },
+      "estimatedTextureBytes": 0,
+      "simplification": [
+        {
+          "primitive": "near/facade",
+          "before": 764,
+          "after": 764,
+          "requestedRatio": 1,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "near/roof",
+          "before": 212,
+          "after": 212,
+          "requestedRatio": 1,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "medium/facade",
+          "before": 736,
+          "after": 736,
+          "requestedRatio": 0.6,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "medium/roof",
+          "before": 196,
+          "after": 117,
+          "requestedRatio": 0.6,
+          "achievedRatio": 0.597
+        },
+        {
+          "primitive": "far/facade",
+          "before": 984,
+          "after": 984,
+          "requestedRatio": 0.35,
+          "achievedRatio": 1
+        },
+        {
+          "primitive": "far/roof",
+          "before": 266,
+          "after": 93,
+          "requestedRatio": 0.35,
+          "achievedRatio": 0.35
         }
       ]
     }
@@ -283,7 +361,7 @@
     },
     {
       "title": "Conversion, découpage et optimisation",
-      "seconds": 0.598
+      "seconds": 1.155
     },
     {
       "title": "Manifeste, licences et rapport",
@@ -291,7 +369,7 @@
     },
     {
       "title": "Validation",
-      "seconds": 0.009
+      "seconds": 0.019
     }
   ],
   "warnings": [
@@ -301,5 +379,5 @@
     "  Installez-le ou définissez PLATEAU_CONVERTER_PATH.\n  Linux x86_64 : téléchargez nusamai-<version>-x86_64-unknown-linux-gnu.tar.gz depuis\n    https://github.com/MIERUNE/plateau-gis-converter/releases\n    tar -xzf nusamai-<version>-x86_64-unknown-linux-gnu.tar.gz\n    sudo install -m 755 nusamai /usr/local/bin/nusamai\n  macOS (Apple Silicon) : nusamai-<version>-aarch64-apple-darwin.tar.gz\n  Ou passez --converter builtin pour utiliser le lecteur CityGML intégré\n  (LOD1/LOD2 sans textures — voir docs/PLATEAU_PIPELINE.md)."
   ],
   "errors": [],
-  "totalSeconds": 0.688
+  "totalSeconds": 1.281
 }

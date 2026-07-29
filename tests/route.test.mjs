@@ -15,9 +15,16 @@ import {
 import { PLATEAU_CONFIG } from '../scripts/plateau/config.mjs';
 import { geodesicDistance } from '../scripts/plateau/lib/geo.mjs';
 
-const GEOJSON = join(PLATEAU_CONFIG.paths.geo, `${PLATEAU_CONFIG.prototype.name}.geojson`);
+// Rien ici n'est câblé sur un tronçon donné : les bornes sont dérivées de la
+// configuration. Ces tests doivent survivre à un changement de tronçon — c'est
+// justement la propriété qu'on veut protéger.
+const PROTO = PLATEAU_CONFIG.prototype;
+const GEOJSON = join(PLATEAU_CONFIG.paths.geo, `${PROTO.name}.geojson`);
+const ANCHORS = PROTO.anchors;
+/** Distance à vol d'oiseau entre les deux gares : la borne basse du tracé. */
+const CHORD = geodesicDistance(ANCHORS.from.lon, ANCHORS.from.lat, ANCHORS.to.lon, ANCHORS.to.lat);
 
-test('le tracé livré est une LineString cohérente entre Sugamo et Ōtsuka', () => {
+test(`le tracé livré est une LineString cohérente entre ${PROTO.from} et ${PROTO.to}`, () => {
   const line = readLineString(GEOJSON);
   assert.ok(line.coordinates.length >= 10);
   const total = line.coordinates.reduce(
@@ -33,12 +40,29 @@ test('le tracé livré est une LineString cohérente entre Sugamo et Ōtsuka', (
           ),
     0,
   );
-  // Distance d'exploitation publiée par JR East : 1,1 km. On accepte
-  // ±20 % — le tracé livré est explicitement approché.
-  assert.ok(total > 880 && total < 1320, `longueur ${total} m hors plage plausible`);
-  // Altitudes : hauteurs ellipsoïdales de l'ordre de 60-70 m à Toshima.
+  // Un tracé courbe est forcément plus long que la corde, et une courbe
+  // ferroviaire urbaine ne rallonge pas de plus de moitié.
+  assert.ok(total >= CHORD, `tracé ${total} m plus court que la corde ${CHORD} m`);
+  assert.ok(total < CHORD * 1.5, `tracé ${total} m invraisemblablement long`);
+  // Le tracé doit vraiment relier les deux ancrages configurés.
+  const first = line.coordinates[0];
+  const last = line.coordinates.at(-1);
+  assert.ok(
+    geodesicDistance(first.lon, first.lat, ANCHORS.from.lon, ANCHORS.from.lat) < 25,
+    'le tracé ne part pas de la gare de départ',
+  );
+  assert.ok(
+    geodesicDistance(last.lon, last.lat, ANCHORS.to.lon, ANCHORS.to.lat) < 25,
+    "le tracé n'arrive pas à la gare d'arrivée",
+  );
+  // Altitudes : cote du rail = niveau de la rue + railAboveGround (signé).
+  const railMin = Math.min(PROTO.groundElevation.start, PROTO.groundElevation.end) + PROTO.railAboveGround;
+  const railMax = Math.max(PROTO.groundElevation.start, PROTO.groundElevation.end) + PROTO.railAboveGround;
   for (const c of line.coordinates) {
-    assert.ok(c.alt > 40 && c.alt < 90, `altitude improbable : ${c.alt}`);
+    assert.ok(
+      c.alt >= railMin - 0.5 && c.alt <= railMax + 0.5,
+      `altitude ${c.alt} hors du profil configuré [${railMin}, ${railMax}]`,
+    );
   }
 });
 
@@ -57,11 +81,16 @@ test('rééchantillonnage : pas régulier, extrémités exactes, s croissant', (
 test('le repère local place l’origine près du milieu du tracé', () => {
   const line = readLineString(GEOJSON);
   const route = buildRoute(line.coordinates, { sampleMeters: 8 });
+  // L'origine étant au milieu, aucun point n'est plus loin que la demi-longueur
+  // (avec un peu de marge pour la courbure) : les flottants 32 bits du glTF
+  // gardent alors très largement le millimètre.
+  const limit = route.totalLength / 2 + 60;
   for (const p of route.samples) {
     const l = route.frame.toLocal(p.east, p.north, p.up);
-    // Sur un tronçon d'un kilomètre, aucun point du tracé n'est à plus de
-    // 600 m de l'origine locale : les flottants 32 bits gardent le millimètre.
-    assert.ok(Math.hypot(l.x, l.z) < 600, `point à ${Math.hypot(l.x, l.z)} m de l'origine`);
+    assert.ok(
+      Math.hypot(l.x, l.z) < limit,
+      `point à ${Math.hypot(l.x, l.z).toFixed(0)} m de l'origine (limite ${limit.toFixed(0)})`,
+    );
   }
   // Aller-retour du repère local.
   const p = route.samples[10];
@@ -121,21 +150,22 @@ test('sampleRoute (côté pipeline) : extrémités et cap', () => {
   const first = route.frame.toLocal(route.samples[0].east, route.samples[0].north, route.samples[0].up);
   assert.ok(Math.abs(start.x - first.x) < 1e-6);
   assert.ok(Math.abs(start.z - first.z) < 1e-6);
-  // Le tronçon part vers l'ouest-sud-ouest : le cap doit être franchement
-  // différent du début à la fin (le tracé est courbe).
+  // Le tracé est courbe : le cap doit varier franchement d'un bout à l'autre.
   assert.ok(Math.abs(end.yaw - start.yaw) > 0.05, 'le cap ne varie pas le long du tracé');
-  // Un cap de 0 signifierait « vers le nord » : ici on va vers l'ouest.
-  assert.ok(Math.abs(start.yaw) > 1.0, `cap initial ${start.yaw} rad inattendu`);
 });
 
 test('corridor : polygone fermé, en coordonnées géographiques', () => {
   const line = readLineString(GEOJSON);
   const route = buildRoute(line.coordinates, { sampleMeters: 8 });
-  const ring = corridorPolygon(route, 300);
+  const half = PROTO.corridorMeters;
+  const ring = corridorPolygon(route, half);
   assert.ok(ring.length > 20);
   assert.deepEqual(ring[0], ring.at(-1));
+  // Chaque sommet du corridor doit être à `half` mètres de l'axe, à la
+  // tolérance des coins près — et donc jamais plus loin que half·1,5.
   for (const [lon, lat] of ring) {
-    assert.ok(lon > 139.7 && lon < 139.76, `longitude ${lon} hors zone`);
-    assert.ok(lat > 35.72 && lat < 35.75, `latitude ${lat} hors zone`);
+    const p = route.projector.forward(lon, lat);
+    const d = locateOnRoute(route, p.east, p.north).distance;
+    assert.ok(d < half * 1.5, `sommet du corridor à ${d.toFixed(0)} m de l'axe (demi-largeur ${half})`);
   }
 });

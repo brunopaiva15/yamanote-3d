@@ -1,4 +1,7 @@
-// Tracé Sugamo → Ōtsuka : data/geo/sugamo-otsuka.geojson
+// Tracé du tronçon du prototype : data/geo/<nom-du-tronçon>.geojson
+//
+// Le tronçon est choisi dans scripts/plateau/config.mjs (PROTOTYPE_SEGMENTS,
+// sélection par PLATEAU_PROTOTYPE) : ce script n'en connaît que les ancrages.
 //
 // DEUX SOURCES POSSIBLES, jamais mélangées :
 //
@@ -26,32 +29,35 @@ import { PLATEAU_CONFIG } from './config.mjs';
 import { makeProjector, geodesicDistance } from './lib/geo.mjs';
 import { PipelineError, createReporter, runMain } from './lib/log.mjs';
 
-const DEFAULT_OUT = join(PLATEAU_CONFIG.paths.geo, `${PLATEAU_CONFIG.prototype.name}.geojson`);
+const PROTO = PLATEAU_CONFIG.prototype;
+const DEFAULT_OUT = join(PLATEAU_CONFIG.paths.geo, `${PROTO.name}.geojson`);
 
-/**
- * Repères des deux gares (WGS 84 / JGD2011, degrés décimaux).
- * Coordonnées approchées du milieu des quais Yamanote, arrondies à ~10 m.
- */
-export const STATION_ANCHORS = {
-  sugamo: { lon: 139.7393, lat: 35.73352, name: '巣鴨 Sugamo (JY11)' },
-  otsuka: { lon: 139.72855, lat: 35.73147, name: '大塚 Ōtsuka (JY12)' },
-};
+/** Repères des deux gares (JGD2011, degrés décimaux) — voir config.mjs. */
+export const STATION_ANCHORS = PROTO.anchors;
 
 /**
  * Profil altimétrique approché du tronçon, en hauteur ELLIPSOÏDALE (m), pour
  * rester homogène avec les coordonnées PLATEAU (EPSG:6697).
  *
- * Toshima-ku culmine autour de 30 m d'altitude orthométrique et l'ondulation
- * du géoïde y vaut ~37 m, d'où ~67 m ellipsoïdaux au niveau de la rue. Sugamo
- * est en tranchée (~6 m sous la rue), Ōtsuka au niveau du sol — ce qui est
- * exactement ce que décrit SEGMENTS[10] (`trench`, `opensAtEnd`).
+ * On décrit le niveau de la RUE aux deux extrémités, puis on en déduit la cote
+ * de la voie : `railAboveGround` est positif sur un viaduc, négatif dans une
+ * tranchée. C'est le même paramètre qui sert à poser le sol de l'échantillon
+ * synthétique, ce qui garantit que les deux ne peuvent pas diverger.
  */
-const RAIL_ELEVATION = { start: 61.0, end: 66.5 };
+export function railElevation() {
+  const g = PROTO.groundElevation;
+  return {
+    start: g.start + PROTO.railAboveGround,
+    end: g.end + PROTO.railAboveGround,
+  };
+}
 
-/** Arc de cercle entre deux points, avec un cap de départ et d'arrivée donnés. */
+const RAIL_ELEVATION = railElevation();
+
+/** Arc de cercle entre les deux gares, bombé de `sagittaMeters`. */
 function buildApproximateAlignment() {
-  const A = STATION_ANCHORS.sugamo;
-  const B = STATION_ANCHORS.otsuka;
+  const A = STATION_ANCHORS.from;
+  const B = STATION_ANCHORS.to;
   const projector = makeProjector(6677);
   const a = projector.forward(A.lon, A.lat);
   const b = projector.forward(B.lon, B.lat);
@@ -60,13 +66,12 @@ function buildApproximateAlignment() {
   const chordN = b.north - a.north;
   const chord = Math.hypot(chordE, chordN);
 
-  // Le tracé s'écarte de la corde vers le NORD : depuis Sugamo la ligne part
-  // franchement à l'ouest, puis s'infléchit vers le sud-ouest à l'approche
-  // d'Ōtsuka. Flèche de 60 m sur ~1 km, soit un rayon de courbure ~2 000 m,
-  // ordre de grandeur usuel sur la Yamanote.
-  const sagitta = 60;
-  // Normale à gauche de la corde (sens Sugamo → Ōtsuka, cap ~257°) : elle
-  // pointe vers le nord-ouest, côté vers lequel le tracé s'écarte.
+  // La Yamanote ne fait pas de ligne droite entre deux gares : on bombe la
+  // corde d'une flèche configurée, ce qui donne un rayon de courbure de
+  // l'ordre de 2 000 à 5 000 m — l'ordre de grandeur usuel sur la boucle.
+  // Le signe choisit le côté ; la normale ci-dessous est celle de GAUCHE dans
+  // le sens de marche.
+  const sagitta = PROTO.sagittaMeters;
   const nx = -chordN / chord;
   const ny = chordE / chord;
 
@@ -97,8 +102,8 @@ const OVERPASS_ENDPOINT = process.env.OVERPASS_URL ?? 'https://overpass-api.de/a
  * et on la recoud côté client.
  */
 export function overpassQuery() {
-  const A = STATION_ANCHORS.sugamo;
-  const B = STATION_ANCHORS.otsuka;
+  const A = STATION_ANCHORS.from;
+  const B = STATION_ANCHORS.to;
   const pad = 0.004;
   const s = Math.min(A.lat, B.lat) - pad;
   const w = Math.min(A.lon, B.lon) - pad;
@@ -140,7 +145,7 @@ async function fetchFromOverpass(reporter) {
   const ways = (data.elements ?? []).filter((el) => el.type === 'way' && el.geometry?.length > 1);
   if (ways.length === 0) {
     throw new PipelineError(
-      'Overpass n\'a renvoyé aucune voie ferrée pour la boîte Sugamo/Ōtsuka.',
+      `Overpass n'a renvoyé aucune voie ferrée pour la boîte ${PROTO.from}/${PROTO.to}.`,
       'Les étiquettes OSM ont peut-être changé : vérifiez overpassQuery().',
     );
   }
@@ -150,7 +155,7 @@ async function fetchFromOverpass(reporter) {
 
 /**
  * Recoud des `way` OSM en une polyligne continue, puis la restreint au
- * segment Sugamo → Ōtsuka (points les plus proches des deux gares).
+ * tronçon demandé (points les plus proches des deux gares).
  */
 export function stitchWays(ways) {
   const segments = ways.map((w) => w.geometry.map((p) => [p.lon, p.lat]));
@@ -186,13 +191,15 @@ export function stitchWays(ways) {
     }
     return best;
   };
-  let i0 = nearestIndex(STATION_ANCHORS.sugamo);
-  let i1 = nearestIndex(STATION_ANCHORS.otsuka);
+  let i0 = nearestIndex(STATION_ANCHORS.from);
+  let i1 = nearestIndex(STATION_ANCHORS.to);
   const reversed = i0 > i1;
   if (reversed) [i0, i1] = [i1, i0];
   const slice = path.slice(i0, i1 + 1);
   if (slice.length < 2) {
-    throw new PipelineError('Recouture OSM : segment Sugamo→Ōtsuka vide après découpe.');
+    throw new PipelineError(
+      `Recouture OSM : tronçon ${PROTO.from} → ${PROTO.to} vide après découpe.`,
+    );
   }
   const ordered = reversed ? slice.reverse() : slice;
   // OSM ne porte pas d'altitude : on réapplique le profil du tronçon.
@@ -219,15 +226,15 @@ function lengthOf(coordinates) {
 export function makeFeatureCollection(coordinates, source) {
   return {
     type: 'FeatureCollection',
-    name: 'yamanote-sugamo-otsuka',
+    name: `yamanote-${PROTO.name}`,
     features: [
       {
         type: 'Feature',
         properties: {
           line: 'JR山手線 / Yamanote Line',
-          from: 'Sugamo (JY11)',
-          to: 'Ōtsuka (JY12)',
-          segment: PLATEAU_CONFIG.prototype.segment,
+          from: STATION_ANCHORS.from.name,
+          to: STATION_ANCHORS.to.name,
+          segment: PROTO.segment,
           direction: 'inner (内回り)',
           altitude: 'ellipsoidal metres (JGD2011 / GRS80), approximate rail head',
           ...source,
@@ -253,9 +260,9 @@ const APPROX_SOURCE = {
   attribution: null,
   approximate: true,
   note:
-    "Tracé APPROCHÉ, pas un relevé : arc calé sur les coordonnées publiées des quais " +
-    "Sugamo et Ōtsuka, flèche de 60 m vers le nord. Régénérer avec --overpass pour " +
-    "obtenir la géométrie OSM réelle (ODbL).",
+    `Tracé APPROCHÉ, pas un relevé : arc calé sur les coordonnées publiées des quais ` +
+    `${PROTO.from} et ${PROTO.to}, flèche de ${Math.abs(PROTO.sagittaMeters)} m. ` +
+    `Régénérer avec --overpass pour obtenir la géométrie OSM réelle (ODbL).`,
 };
 
 await runMain(async () => {

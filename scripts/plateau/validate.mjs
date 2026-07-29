@@ -54,6 +54,25 @@ export function validateRoute(route) {
   return problems;
 }
 
+/**
+ * Le jeu et le pipeline doivent viser le MÊME tronçon.
+ *
+ * `src/systems/plateau.ts` porte une constante, le manifeste porte une valeur
+ * produite : rien ne les relie à la compilation, et un monde publié pour un
+ * tronçon que le jeu cherche ailleurs sur la boucle ne se verrait jamais — sans
+ * la moindre erreur. On lit donc la constante et on compare.
+ */
+export function readGameSegment(source) {
+  const m = source.match(/export const PLATEAU_SEGMENT\s*=\s*(\d+)/);
+  if (!m) {
+    throw new PipelineError(
+      'PLATEAU_SEGMENT introuvable dans src/systems/plateau.ts.',
+      'La constante a-t-elle été renommée ? Adaptez readGameSegment() dans validate.mjs.',
+    );
+  }
+  return Number(m[1]);
+}
+
 export function validateChunkCoverage(chunks, totalLength) {
   const problems = [];
   const sorted = [...chunks].sort((a, b) => a.startDistance - b.startDistance);
@@ -105,6 +124,17 @@ export async function validate(reporter) {
     problems.push(
       `Convention de coordonnées inattendue : ${JSON.stringify(cs)} ` +
         '(attendu units=meters, east=+X, up=+Y, north=-Z).',
+    );
+  }
+
+  const gamePath = join(PLATEAU_CONFIG.paths.root, 'src/systems/plateau.ts');
+  const gameSegment = readGameSegment(readFileSync(gamePath, 'utf8'));
+  if (gameSegment !== manifest.prototype?.segment) {
+    problems.push(
+      `Le jeu vise le tronçon ${gameSegment} (PLATEAU_SEGMENT dans src/systems/plateau.ts) ` +
+        `alors que le monde publié est celui du tronçon ${manifest.prototype?.segment} ` +
+        `(${manifest.prototype?.from} → ${manifest.prototype?.to}). ` +
+        `Le décor ne s'afficherait jamais : alignez les deux.`,
     );
   }
 

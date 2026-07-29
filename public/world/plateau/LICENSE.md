@@ -1,4 +1,4 @@
-# Licences — monde PLATEAU (prototype Sugamo → Ōtsuka)
+# Licences — monde PLATEAU (prototype Shibuya → Ebisu)
 
 Généré automatiquement par `npm run world:build:prototype`.
 Ne pas éditer à la main : le fichier est réécrit à chaque build.
@@ -25,7 +25,7 @@ Les licences ci-dessous s'appliqueront alors.
 
 ### Tracé de la voie
 
-- Fichier : `data/geo/sugamo-otsuka.geojson`
+- Fichier : `data/geo/shibuya-ebisu.geojson`
 - Source déclarée : Approximation géométrique (arc de cercle entre les deux gares)
 - Licence : CC0 — produit par ce dépôt, ne contient aucune donnée tierce
 - Attribution requise : aucune (tracé approché produit par ce dépôt)

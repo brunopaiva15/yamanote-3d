@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-29T07:25:23.041Z",
+  "generatedAt": "2026-07-29T08:07:02.329Z",
   "source": {
     "name": "Échantillon synthétique (PAS de données Project PLATEAU)",
     "dataset": "data/plateau-sample — généré par scripts/plateau/make-sample.mjs",
@@ -8,10 +8,10 @@
     "synthetic": true
   },
   "prototype": {
-    "name": "sugamo-otsuka",
-    "from": "Sugamo",
-    "to": "Otsuka",
-    "segment": 10,
+    "name": "shibuya-ebisu",
+    "from": "Shibuya",
+    "to": "Ebisu",
+    "segment": 19,
     "corridorMeters": 300,
     "chunkLengthMeters": 400,
     "routeSampleMeters": 8,
@@ -28,70 +28,89 @@
     "north": "-Z",
     "projectedEpsg": 6677,
     "origin": {
-      "east": 21170,
-      "north": -29710,
-      "up": 63.8
+      "east": 18590,
+      "north": -38560,
+      "up": 70.9
     }
   },
   "route": {
     "url": "world/plateau/route.json",
-    "totalLength": 1008.1977706061438
+    "totalLength": 1514.5685016518564
   },
   "chunks": [
     {
-      "id": "sugamo-otsuka-000",
-      "segment": 10,
-      "url": "world/plateau/sugamo-otsuka-000.glb",
+      "id": "shibuya-ebisu-000",
+      "segment": 19,
+      "url": "world/plateau/shibuya-ebisu-000.glb",
       "startDistance": 0,
       "endDistance": 400,
       "offset": [
-        294.054,
-        -1.719,
-        -89.625
+        -253.528,
+        -3.313,
+        -501.702
       ],
-      "boundingRadius": 348.09,
-      "fileSize": 61604,
-      "buildings": 367,
-      "triangles": 3819,
-      "vertices": 7613,
+      "boundingRadius": 355.1,
+      "fileSize": 59832,
+      "buildings": 361,
+      "triangles": 3685,
+      "vertices": 7357,
       "materials": 2,
       "textures": 0
     },
     {
-      "id": "sugamo-otsuka-001",
-      "segment": 10,
-      "url": "world/plateau/sugamo-otsuka-001.glb",
+      "id": "shibuya-ebisu-001",
+      "segment": 19,
+      "url": "world/plateau/shibuya-ebisu-001.glb",
       "startDistance": 400,
       "endDistance": 800,
       "offset": [
-        -89.569,
-        0.478,
-        21.489
+        -75.473,
+        -0.937,
+        -143.627
       ],
-      "boundingRadius": 332.17,
-      "fileSize": 59124,
-      "buildings": 349,
-      "triangles": 3622,
-      "vertices": 7214,
+      "boundingRadius": 331.53,
+      "fileSize": 59860,
+      "buildings": 354,
+      "triangles": 3681,
+      "vertices": 7319,
       "materials": 2,
       "textures": 0
     },
     {
-      "id": "sugamo-otsuka-002",
-      "segment": 10,
-      "url": "world/plateau/sugamo-otsuka-002.glb",
+      "id": "shibuya-ebisu-002",
+      "segment": 19,
+      "url": "world/plateau/shibuya-ebisu-002.glb",
       "startDistance": 800,
-      "endDistance": 1008.2,
+      "endDistance": 1200,
       "offset": [
-        -391.436,
-        2.139,
-        56.043
+        129.64,
+        1.449,
+        199.663
       ],
-      "boundingRadius": 307.2,
-      "fileSize": 35060,
-      "buildings": 177,
-      "triangles": 1837,
-      "vertices": 3665,
+      "boundingRadius": 365.6,
+      "fileSize": 59276,
+      "buildings": 357,
+      "triangles": 3628,
+      "vertices": 7242,
+      "materials": 2,
+      "textures": 0
+    },
+    {
+      "id": "shibuya-ebisu-003",
+      "segment": 19,
+      "url": "world/plateau/shibuya-ebisu-003.glb",
+      "startDistance": 1200,
+      "endDistance": 1514.57,
+      "offset": [
+        334.661,
+        3.571,
+        492.183
+      ],
+      "boundingRadius": 327.41,
+      "fileSize": 49424,
+      "buildings": 284,
+      "triangles": 2906,
+      "vertices": 5778,
       "materials": 2,
       "textures": 0
     }

@@ -24,19 +24,92 @@ function str(name, fallback) {
   return raw === undefined || raw === '' ? fallback : raw;
 }
 
-export const PLATEAU_CONFIG = {
-  prototype: {
+/**
+ * Tronçons descriptibles par le pipeline.
+ *
+ * Changer de tronçon est un changement de CONFIGURATION, pas de code : tout ce
+ * qui distingue un inter-gare d'un autre — où il commence, où il finit, à
+ * quelle hauteur court la voie — tient dans cette table. Le reste du pipeline
+ * n'en sait rien.
+ *
+ * ⚠️ Les ancrages sont les coordonnées publiées du milieu des quais Yamanote,
+ * arrondies à ~10 m, et la géométrie entre les deux est une APPROXIMATION
+ * (arc de cercle). `node scripts/plateau/fetch-route.mjs --overpass` remplace
+ * le tout par la géométrie OpenStreetMap réelle.
+ */
+export const PROTOTYPE_SEGMENTS = {
+  'shibuya-ebisu': {
+    name: 'shibuya-ebisu',
+    /** Index de tronçon dans src/data/segments.ts. */
+    segment: 19,
+    from: 'Shibuya',
+    to: 'Ebisu',
+    /** Index de la gare d'ARRIVÉE dans STATIONS : segmentAt(arrivalStation) = segment. */
+    arrivalStation: 20,
+    anchors: {
+      from: { lon: 139.70165, lat: 35.65845, name: '渋谷 Shibuya (JY20)' },
+      to: { lon: 139.71005, lat: 35.6467, name: '恵比寿 Ebisu (JY21)' },
+    },
+    /**
+     * Flèche de l'arc par rapport à la corde (m), signée : positive = vers la
+     * gauche du sens de marche. Simple bombement plausible, pas un relevé.
+     */
+    sagittaMeters: -55,
+    /**
+     * Hauteur du RAIL par rapport au niveau de la rue (m).
+     * Positif = viaduc (on roule au-dessus des toits bas) ;
+     * négatif = tranchée (la ville est au-dessus de nous).
+     * Calé sur VIADUCT_RISE = 7,5 de src/systems/segmentEnv.ts, pour que la
+     * ville PLATEAU et le sol procédural tombent au même niveau.
+     */
+    railAboveGround: 7.4,
+    /**
+     * Niveau de la RUE aux deux extrémités, en hauteur ellipsoïdale (m).
+     * Shibuya est un fond de vallée, Ebisu est sur le plateau : la ligne
+     * remonte d'une dizaine de mètres entre les deux. Ondulation du géoïde à
+     * Tokyo ≈ 37 m, incluse.
+     */
+    groundElevation: { start: 59, end: 68 },
+  },
+
+  'sugamo-otsuka': {
     name: 'sugamo-otsuka',
-    /** Index de tronçon dans src/data/segments.ts (Sugamo → Ōtsuka). */
     segment: 10,
     from: 'Sugamo',
     to: 'Otsuka',
+    arrivalStation: 11,
+    anchors: {
+      from: { lon: 139.7393, lat: 35.73352, name: '巣鴨 Sugamo (JY11)' },
+      to: { lon: 139.72855, lat: 35.73147, name: '大塚 Ōtsuka (JY12)' },
+    },
+    sagittaMeters: 60,
+    // Tranchée à Sugamo, qui s'ouvre en arrivant à Ōtsuka — d'où le
+    // `opensAtEnd` de SEGMENTS[10]. Le rail est donc SOUS la rue.
+    railAboveGround: -6,
+    groundElevation: { start: 67, end: 67 },
+  },
+};
+
+const PROTOTYPE_ID = str('PLATEAU_PROTOTYPE', 'shibuya-ebisu');
+const SELECTED = PROTOTYPE_SEGMENTS[PROTOTYPE_ID];
+if (!SELECTED) {
+  throw new Error(
+    `Tronçon inconnu : « ${PROTOTYPE_ID} ». ` +
+      `Connus : ${Object.keys(PROTOTYPE_SEGMENTS).join(', ')} (voir PROTOTYPE_SEGMENTS).`,
+  );
+}
+
+export const PLATEAU_CONFIG = {
+  prototype: {
+    ...SELECTED,
     /** Demi-largeur du corridor de sélection, de part et d'autre de l'axe (m). */
     corridorMeters: num('PLATEAU_CORRIDOR_M', 300),
     /** Longueur d'un chunk le long de la voie (m). */
     chunkLengthMeters: num('PLATEAU_CHUNK_M', 400),
     /** Pas d'échantillonnage du tracé exporté dans route.json (m). */
     routeSampleMeters: num('PLATEAU_ROUTE_SAMPLE_M', 8),
+    /** Densité de l'échantillon synthétique (bâtiments par km de corridor). */
+    sampleDensityPerKm: num('PLATEAU_SAMPLE_DENSITY', 900),
   },
 
   /**
@@ -128,9 +201,10 @@ export const PLATEAU_CONFIG = {
  */
 export const DATASETS = {
   /**
-   * Toshima-ku (豊島区) — l'arrondissement qui contient Sugamo et Ōtsuka — n'est
-   * pas publié seul : PLATEAU diffuse les 23 arrondissements de Tokyo en un
-   * seul jeu de données (13100_tokyo23-ku). C'est le paquet à récupérer.
+   * Aucun arrondissement n'est publié seul : PLATEAU diffuse les 23
+   * arrondissements de Tokyo en un unique jeu de données (13100_tokyo23-ku).
+   * C'est le paquet à récupérer, quel que soit le tronçon visé — Shibuya-ku
+   * et Meguro-ku pour Shibuya → Ebisu, Toshima-ku pour Sugamo → Ōtsuka.
    */
   'tokyo23ku-2023-citygml': {
     label: 'Tokyo 23区 3D都市モデル (CityGML, FY2023)',
@@ -152,10 +226,13 @@ export function stageInputs(stage) {
     case 'download':
       return { dataset: str('PLATEAU_DATASET', 'tokyo23ku-2023-citygml'), url: DATASETS['tokyo23ku-2023-citygml'].url };
     case 'convert':
-      return { corridor: p.corridorMeters, crs: PLATEAU_CONFIG.crs };
+      // Le tronçon fait partie des entrées : la sélection au corridor a lieu
+      // pendant la conversion, changer de tronçon doit donc la rejouer.
+      return { name: p.name, segment: p.segment, corridor: p.corridorMeters, crs: PLATEAU_CONFIG.crs };
     case 'process':
       return {
         name: p.name,
+        segment: p.segment,
         corridor: p.corridorMeters,
         chunk: p.chunkLengthMeters,
         sample: p.routeSampleMeters,

@@ -37,11 +37,15 @@ test('--dry-run réussit et ne produit aucune étape coûteuse', async () => {
     : null;
   const res = await exec([script('build.mjs'), '--dry-run']);
   assert.equal(res.code, 0, res.stderr);
+  const p = PLATEAU_CONFIG.prototype;
   assert.match(res.stdout, /Aucune étape coûteuse exécutée/);
-  assert.match(res.stdout, /Prototype : Sugamo → Otsuka \(segment 10\)/);
+  assert.ok(
+    res.stdout.includes(`Prototype : ${p.from} → ${p.to} (segment ${p.segment})`),
+    'le dry-run n’annonce pas le tronçon configuré',
+  );
   assert.match(res.stdout, /Corridor ±300 m · chunks 400 m/);
   assert.match(res.stdout, /EPSG:6697 → EPSG:6677/);
-  assert.match(res.stdout, /sugamo-otsuka-000\.glb/);
+  assert.ok(res.stdout.includes(`${p.name}-000.glb`), 'le dry-run n’annonce pas les chunks');
   assert.match(res.stdout, /manifest\.json/);
   const after = existsSync(PLATEAU_CONFIG.paths.converted)
     ? statSync(PLATEAU_CONFIG.paths.converted).mtimeMs

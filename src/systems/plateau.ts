@@ -14,8 +14,15 @@
  */
 export const ENABLE_PLATEAU_PROTOTYPE = true;
 
-/** Tronçon couvert par le prototype (index dans data/segments.ts). */
-export const PLATEAU_SEGMENT = 10; // Sugamo → Ōtsuka
+/**
+ * Tronçon couvert par le prototype (index dans data/segments.ts).
+ *
+ * ⚠️ Doit correspondre au tronçon choisi côté pipeline
+ * (`PROTOTYPE_SEGMENTS` dans `scripts/plateau/config.mjs`). La validation du
+ * build compare les deux et échoue si elles divergent : impossible de publier
+ * un monde que le jeu chercherait ailleurs sur la boucle.
+ */
+export const PLATEAU_SEGMENT = 19; // Shibuya → Ebisu (viaduc)
 
 export const PLATEAU_SETTINGS = {
   /** Emplacement du manifeste, relatif à la base du site. */
@@ -67,11 +74,11 @@ export function plateauEnabled(): boolean {
  * du prototype au lieu du tirage aléatoire. N'a AUCUN effet hors `npm run dev`
  * — le comportement normal du jeu n'est pas touché.
  *
- * La valeur renvoyée est la gare d'ARRIVÉE du tronçon (Ōtsuka, index 11) :
- * c'est elle que randomizeEntry attend, puisque le tronçon parcouru pour
- * atteindre la gare `i` est `segmentAt(i)`.
+ * La valeur renvoyée est la gare d'ARRIVÉE du tronçon : c'est elle que
+ * randomizeEntry attend, puisque le tronçon parcouru pour atteindre la gare
+ * `i` est `segmentAt(i)` — soit `(i + 29) % 30`.
  */
-export const PLATEAU_DEV_STATION = 11; // Ōtsuka — arrivée du tronçon 10
+export const PLATEAU_DEV_STATION = (PLATEAU_SEGMENT + 1) % 30; // Ebisu (20)
 
 export function plateauDevStation(): number | undefined {
   if (!import.meta.env.DEV) return undefined;

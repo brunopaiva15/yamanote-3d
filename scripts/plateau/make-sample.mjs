@@ -1,5 +1,5 @@
 // Génère un ÉCHANTILLON CityGML SYNTHÉTIQUE au profil PLATEAU (bldg, LOD1,
-// EPSG:6697) le long du corridor Sugamo → Ōtsuka.
+// EPSG:6697) le long du corridor du tronçon sélectionné (voir config.mjs).
 //
 // ⚠️ CE N'EST PAS DE LA DONNÉE PLATEAU. Aucun bâtiment ici ne correspond à un
 // bâtiment réel : ce sont des volumes générés par un tirage déterministe, dont
@@ -14,13 +14,24 @@
 //   npm run world:build:prototype
 //
 // Usage :
-//   node scripts/plateau/make-sample.mjs [--buildings 900] [--seed 20260729]
+//   node scripts/plateau/make-sample.mjs [--buildings <n>] [--seed 20260729]
+//
+// Sans --buildings, le nombre est proportionnel à la longueur du tronçon
+// (PLATEAU_CONFIG.prototype.sampleDensityPerKm), pour que la densité de la
+// ville ne dépende pas du tronçon choisi.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PLATEAU_CONFIG } from './config.mjs';
 import { buildRoute, readLineString, locateOnRoute } from './lib/route.mjs';
 import { createReporter, humanBytes, runMain } from './lib/log.mjs';
+
+/**
+ * Emprise ferroviaire tenue libre de toute construction (m de part et d'autre
+ * de l'axe) : ballast, caténaire, garde-corps de viaduc et gabarit de la rame,
+ * qui fait 2,95 m de large. Aucun sommet de bâtiment ne descend en dessous.
+ */
+const TRACK_CLEARANCE = 9;
 
 /** PRNG déterministe (mulberry32) : même graine ⇒ même échantillon. */
 function mulberry32(seed) {
@@ -34,12 +45,22 @@ function mulberry32(seed) {
 }
 
 /**
- * Niveau de la rue (hauteur ellipsoïdale, m). Toshima-ku est un plateau
- * autour de 30 m orthométriques, +37 m d'ondulation de géoïde. On y ajoute
- * une ondulation douce pour que le sol ne soit pas parfaitement plat.
+ * Niveau de la rue (hauteur ellipsoïdale, m) au droit d'un point.
+ *
+ * Il n'est PAS choisi indépendamment : il se déduit de la cote de la voie au
+ * même endroit, moins `railAboveGround` — le paramètre qui dit si le tronçon
+ * est en viaduc (positif) ou en tranchée (négatif). C'est ce qui garantit que
+ * l'échantillon et le tracé ne peuvent pas diverger quand on change de
+ * tronçon. On y ajoute une ondulation douce, pour que le sol ne soit pas une
+ * table parfaitement plane.
  */
-function streetLevel(east, north) {
-  return 67 + 1.6 * Math.sin(east / 190) + 1.1 * Math.cos(north / 240);
+function streetLevel(railUp, east, north) {
+  return (
+    railUp -
+    PLATEAU_CONFIG.prototype.railAboveGround +
+    1.2 * Math.sin(east / 190) +
+    0.9 * Math.cos(north / 240)
+  );
 }
 
 /** Hauteur tirée : dense et bas près de la voie, quelques immeubles plus hauts. */
@@ -129,6 +150,14 @@ export function generateSample({ route, count, seed }) {
   const rand = mulberry32(seed);
   const { projector } = route;
   const half = PLATEAU_CONFIG.prototype.corridorMeters;
+  // Nombre de bâtiments proportionnel à la longueur du tronçon : la densité
+  // de la ville reste la même qu'on prenne un inter-gare d'un kilomètre ou de
+  // deux, et changer de tronçon ne change pas la nature de l'échantillon.
+  if (!(count > 0)) {
+    count = Math.round(
+      (route.totalLength / 1000) * PLATEAU_CONFIG.prototype.sampleDensityPerKm,
+    );
+  }
   const buildings = [];
   let attempts = 0;
   const placed = [];
@@ -138,7 +167,7 @@ export function generateSample({ route, count, seed }) {
     const s = rand() * route.totalLength;
     const side = rand() < 0.5 ? -1 : 1;
     // Densité décroissante avec la distance : la ville se desserre en
-    // s'éloignant de la tranchée (jardins, cours d'école, voirie).
+    // s'éloignant de l'emprise (jardins, cours d'école, voirie).
     const lateral = 14 + Math.pow(rand(), 0.75) * (half - 14);
 
     // Point du tracé à l'abscisse s, et sa normale.
@@ -152,6 +181,8 @@ export function generateSample({ route, count, seed }) {
     const t = (s - route.rawCum[i]) / len;
     const px = a.east + (b.east - a.east) * t;
     const py = a.north + (b.north - a.north) * t;
+    // Cote de la VOIE à cette abscisse : c'est d'elle que découle le sol.
+    const railUp = a.up + (b.up - a.up) * t;
     const nx = -(b.north - a.north) / len;
     const ny = (b.east - a.east) / len;
     const cx = px + side * nx * lateral;
@@ -172,13 +203,30 @@ export function generateSample({ route, count, seed }) {
       }
     }
     if (clash) continue;
-    placed.push({ cx, cy, radius });
 
     const ring = footprint(rand, cx, cy, angle, width, depth);
-    const base = streetLevel(cx, cy) - 0.2 - rand() * 0.4;
+
+    // Emprise ferroviaire : c'est le CENTRE que `lateral` écarte de l'axe, pas
+    // l'empreinte. Une barre de trente mètres centrée à quatorze pourrait donc
+    // poser un angle en travers de la voie. On teste chaque sommet, et on
+    // rejette le tirage plutôt que de rogner le bâtiment : un volume tronqué
+    // ne ressemblerait à rien.
+    let intrudes = false;
+    let nearest = Infinity;
+    for (const [vx, vy] of ring) {
+      const d = locateOnRoute(route, vx, vy).distance;
+      if (d < nearest) nearest = d;
+      if (d < TRACK_CLEARANCE) {
+        intrudes = true;
+        break;
+      }
+    }
+    if (intrudes) continue;
+
+    placed.push({ cx, cy, radius });
+    const base = streetLevel(railUp, cx, cy) - 0.2 - rand() * 0.4;
     const height = drawHeight(rand, lateral);
-    const located = locateOnRoute(route, cx, cy);
-    buildings.push({ ring, base, height, distance: located.distance, s: located.s });
+    buildings.push({ ring, base, height, distance: nearest, s: locateOnRoute(route, cx, cy).s });
   }
 
   const body = buildings
@@ -216,7 +264,7 @@ export function generateSample({ route, count, seed }) {
   Le FORMAT reproduit le profil CityGML 2.0 / bldg / LOD1 publié par Project
   PLATEAU (EPSG:6697, posList en latitude longitude hauteur ellipsoïdale).
   La GÉOMÉTRIE, elle, est inventée : aucun de ces ${buildings.length} volumes
-  ne correspond à un bâtiment existant de Toshima-ku.
+  ne correspond à un bâtiment existant.
 -->
 <core:CityModel
     xmlns:core="http://www.opengis.net/citygml/2.0"
@@ -224,8 +272,8 @@ export function generateSample({ route, count, seed }) {
     xmlns:gml="http://www.opengis.net/gml"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:xlink="http://www.w3.org/1999/xlink">
-  <gml:description>Synthetic LOD1 sample along the Yamanote line between Sugamo and Otsuka. NOT Project PLATEAU data.</gml:description>
-  <gml:name>sugamo-otsuka-synthetic-sample</gml:name>
+  <gml:description>Synthetic LOD1 sample along the Yamanote line between ${PLATEAU_CONFIG.prototype.from} and ${PLATEAU_CONFIG.prototype.to}. NOT Project PLATEAU data.</gml:description>
+  <gml:name>${PLATEAU_CONFIG.prototype.name}-synthetic-sample</gml:name>
   <gml:boundedBy>
     <gml:Envelope srsName="http://www.opengis.net/def/crs/EPSG/0/6697" srsDimension="3">
       <gml:lowerCorner>${Math.min(...lats).toFixed(9)} ${Math.min(...lons).toFixed(9)} ${Math.min(...alts).toFixed(3)}</gml:lowerCorner>
@@ -244,7 +292,7 @@ await runMain(async () => {
     const i = args.indexOf(flag);
     return i >= 0 ? Number(args[i + 1]) : dflt;
   };
-  const count = get('--buildings', 900);
+  const count = get('--buildings', 0); // 0 ⇒ dérivé de la longueur du tracé
   const seed = get('--seed', 20260729);
   const reporter = createReporter('make-sample');
 
@@ -260,7 +308,7 @@ await runMain(async () => {
   // Arborescence calquée sur celle des livraisons PLATEAU (<code>/udx/bldg/).
   const dir = join(PLATEAU_CONFIG.paths.sample, 'udx', 'bldg');
   mkdirSync(dir, { recursive: true });
-  const out = join(dir, 'sugamo-otsuka-synthetic_bldg_6697_2_op.gml');
+  const out = join(dir, `${PLATEAU_CONFIG.prototype.name}-synthetic_bldg_6697_2_op.gml`);
   writeFileSync(out, xml);
 
   reporter.info(

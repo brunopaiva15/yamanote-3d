@@ -2,8 +2,8 @@
 //
 //   node scripts/plateau/visual-check.mjs [dossier-de-sortie]
 //
-// Lance Vite, ouvre le jeu sous Chromium, embarque, se pose sur le tronçon
-// Sugamo → Ōtsuka et contrôle, à plusieurs abscisses :
+// Lance Vite, ouvre le jeu sous Chromium, embarque, se pose sur le tronçon du
+// prototype (lu dans config.mjs) et contrôle, à plusieurs abscisses :
 //   · aucune erreur de page ni de console ;
 //   · le monde géoréférencé est bien monté et visible ;
 //   · la fenêtre de chunks reste bornée ;
@@ -19,6 +19,11 @@ import { chromium } from 'playwright';
 import { createServer } from 'vite';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { PLATEAU_CONFIG } from './config.mjs';
+
+const PROTO = PLATEAU_CONFIG.prototype;
+/** Gare d'ARRIVÉE du tronçon : c'est elle que __probeCruise attend. */
+const ARRIVAL = PROTO.arrivalStation;
 
 const out = process.argv[2] ?? '/tmp/plateau-check';
 mkdirSync(out, { recursive: true });
@@ -75,10 +80,7 @@ async function board(page) {
   await board(page);
   await page.waitForFunction(() => typeof window.__plateauProbe === 'function', { timeout: 30000 });
 
-  // Visée par la baie latérale. Deux angles : de face (ce que voit un voyageur
-  // assis) et relevé — sur ce tronçon en tranchée, le mur de soutènement
-  // procédural masque le bas de la ville, et il faut lever les yeux pour voir
-  // les bâtiments qui dépassent de la crête.
+  // Visée par la baie latérale : c'est là que la ville se joue.
   let aimX = 0;
   let aimY = 0;
   const aim = async (dx, dy) => {
@@ -95,10 +97,9 @@ async function board(page) {
   await aim(-230, -30);
 
   const samples = [];
-  // Quatre points du tronçon, du départ de Sugamo à l'arrivée à Ōtsuka.
-  // `phaseT` accompagne la fraction : c'est lui qui commande la hauteur des
-  // murs de la tranchée (SEGMENTS[10].opensAtEnd les fait redescendre en fin
-  // de tronçon) et l'élévation du décor procédural.
+  // Quatre points du tronçon, du départ à l'arrivée. `phaseT` accompagne la
+  // fraction : c'est lui qui commande l'élévation du décor procédural et,
+  // sur un tronçon en tranchée, la hauteur des murs de soutènement.
   const JOURNEY = 98; // depart 17 + cruise 59 + brake 22, cf. data/segments.ts
   for (const [tag, fraction] of [
     ['debut', 0.02],
@@ -107,13 +108,14 @@ async function board(page) {
     ['fin', 0.92],
   ]) {
     await page.evaluate(
-      ([f, t]) => {
-        // Gare d'arrivée 11 (Ōtsuka) ⇒ tronçon parcouru = 10 (Sugamo → Ōtsuka).
-        window.__probeCruise(11, t);
+      ([f, t, arrival]) => {
+        // segmentAt(arrival) = arrival - 1 : la gare d'ARRIVÉE désigne le
+        // tronçon qu'on vient de parcourir.
+        window.__probeCruise(arrival, t);
         window.__probeClock(15 * 60 + 30);
         window.__plateauSeek(f);
       },
-      [fraction, Math.max(2, fraction * JOURNEY - 17)],
+      [fraction, Math.max(2, fraction * JOURNEY - 17), ARRIVAL],
     );
     // Une frame SwiftShader dure plusieurs secondes, et les poids de tronçon
     // (segEnv) se fondent en ~2,5 s : laisser converger avant de déclencher.
@@ -128,8 +130,8 @@ async function board(page) {
     );
   }
 
-  const active = samples.filter((s) => s.segment === 10);
-  if (active.length === 0) problems.push('Le jeu n’a jamais atteint le tronçon 10.');
+  const active = samples.filter((s) => s.segment === PROTO.segment);
+  if (active.length === 0) problems.push(`Le jeu n’a jamais atteint le tronçon ${PROTO.segment}.`);
   for (const s of active) {
     if (s.coverage !== 1) problems.push(`${s.tag}: le monde PLATEAU n’est pas actif (coverage=${s.coverage}).`);
     if (!s.visible) problems.push(`${s.tag}: le groupe PLATEAU est invisible.`);
@@ -157,10 +159,10 @@ async function board(page) {
 {
   const { page, errors } = await openGame('?plateau=0');
   await board(page);
-  await page.evaluate(() => {
-    window.__probeCruise(11);
+  await page.evaluate((arrival) => {
+    window.__probeCruise(arrival);
     window.__probeClock(15 * 60 + 30);
-  });
+  }, ARRIVAL);
   await new Promise((r) => setTimeout(r, 1600));
   const probe = await page.evaluate(() =>
     typeof window.__plateauProbe === 'function' ? window.__plateauProbe() : { absent: true },
@@ -176,10 +178,9 @@ async function board(page) {
 }
 
 // --- 3. Le monde produit, seul ----------------------------------------------
-// Dans le jeu, ce tronçon est en TRANCHÉE : le mur de soutènement procédural
-// masque le bas de la ville depuis une baie latérale — c'est fidèle à la
-// réalité, mais cela empêche de juger la géométrie exportée. /plateau-probe.html
-// la montre sans le wagon ni le décor du jeu.
+// /plateau-probe.html montre le monde exporté sans le wagon ni le décor du
+// jeu : c'est le seul endroit où l'on juge la géométrie elle-même, sans qu'un
+// mur de tranchée ou l'aménagement intérieur ne s'interposent.
 {
   const page = await browser.newPage({ viewport: { width: 1100, height: 640 } });
   const errors = [];
