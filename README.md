@@ -29,7 +29,8 @@ npm run lint     # oxlint
 - **Parler : E**, quand un voyageur est en face et à portée de voix — une
   invite l'annonce sous le réticule. Depuis le quai on parle aux gens du quai,
   jamais à travers la vitre à ceux qui sont assis dans la rame
-- M : couper le son, F : plein écran
+- M : couper le son, F : entrer et sortir du plein écran. Les deux ne répondent
+  qu'une fois à bord, et jamais quand le curseur est dans un champ du menu
 - Le **⚠ en bout de barre** déroule les deux arrêts en pleine voie — coup de
   frein d'urgence, coupure de courant — et les déclenche tout de suite. Ils
   tombent d'eux-mêmes, mais rarement : jusqu'à trois heures de trajet pour la

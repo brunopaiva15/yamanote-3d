@@ -2,6 +2,8 @@
 // jour × mois). Calibré sur les taux officiels MLIT / JR East 2024 et les
 // profils temporels décrits dans la doc produit — pas une mesure temps réel.
 
+import { isHoliday } from './holidays.ts';
+
 export type DayPeriod = 'morningPeak' | 'day' | 'eveningPeak' | 'night';
 
 export type OccupancyBand =
@@ -226,70 +228,18 @@ export function morningMatrixFactor(month: number, weekday: number, holiday: boo
 }
 
 // ---------------------------------------------------------------------------
-// Jours fériés japonais 2025–2027 (dates observées, y compris reports).
+// Jours fériés japonais — CALCULÉS (voir data/holidays.ts).
+//
+// C'était une liste littérale de dates, 2025 à 2027. Elle périmait : le menu
+// propose la date réelle à Tokyo et l'horloge du monde avance les jours d'
+// elle-même, si bien qu'au 1er janvier 2028 les seize fériés de l'année auraient
+// disparu en silence — un 元日 rendu comme un mardi de pointe. Et elle était
+// déjà incomplète : elle omettait les fériés tombant un dimanche (23 novembre
+// 2025, 21 mars 2027) pour ne garder que leur report.
 // ---------------------------------------------------------------------------
 
-const HOLIDAYS = new Set<string>([
-  // 2025
-  '2025-01-01',
-  '2025-01-13',
-  '2025-02-11',
-  '2025-02-23',
-  '2025-02-24',
-  '2025-03-20',
-  '2025-04-29',
-  '2025-05-03',
-  '2025-05-04',
-  '2025-05-05',
-  '2025-05-06',
-  '2025-07-21',
-  '2025-08-11',
-  '2025-09-15',
-  '2025-09-23',
-  '2025-10-13',
-  '2025-11-03',
-  '2025-11-24',
-  // 2026
-  '2026-01-01',
-  '2026-01-12',
-  '2026-02-11',
-  '2026-02-23',
-  '2026-03-20',
-  '2026-04-29',
-  '2026-05-03',
-  '2026-05-04',
-  '2026-05-05',
-  '2026-05-06',
-  '2026-07-20',
-  '2026-08-11',
-  '2026-09-21',
-  '2026-09-22',
-  '2026-09-23',
-  '2026-10-12',
-  '2026-11-03',
-  '2026-11-23',
-  // 2027
-  '2027-01-01',
-  '2027-01-11',
-  '2027-02-11',
-  '2027-02-23',
-  '2027-03-22',
-  '2027-04-29',
-  '2027-05-03',
-  '2027-05-04',
-  '2027-05-05',
-  '2027-07-19',
-  '2027-08-11',
-  '2027-09-20',
-  '2027-09-23',
-  '2027-10-11',
-  '2027-11-03',
-  '2027-11-23',
-]);
-
 export function isJapaneseHoliday(date: TokyoDate): boolean {
-  const key = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
-  return HOLIDAYS.has(key);
+  return isHoliday(date);
 }
 
 export function isGoldenWeek(date: TokyoDate): boolean {

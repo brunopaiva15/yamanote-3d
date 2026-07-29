@@ -47,7 +47,11 @@ export default function App() {
         // far généreux : en regardant le fond du wagon, les baies latérales
         // visent la ville sous un angle rasant (rayons ≫ distance latérale).
         camera={{ fov: 70, near: 0.05, far: 260, position: [0, CONFIG.eyeHeight, 4.2] }}
-        shadows
+        // « percentage » = PCFShadowMap. `shadows` tout court demandait
+        // PCFSoftShadowMap, déprécié dans three 0.185 : le moteur retombait de
+        // lui-même sur PCFShadowMap en prévenant à chaque lancement. On demande
+        // donc ce qu'on obtient déjà, et la console reste propre.
+        shadows="percentage"
       >
         <Scene />
         <Engine />

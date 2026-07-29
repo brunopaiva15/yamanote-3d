@@ -619,7 +619,19 @@ export function exchangePassengers(side: 1 | -1): void {
     needStandIn = needStandOut;
   }
 
-  const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
+  // Fisher-Yates, et pas `sort(() => Math.random() - 0.5)` : un comparateur
+  // aléatoire n'est pas un ordre, et le tri qui s'appuie dessus ne rend pas une
+  // permutation uniforme — les premiers éléments restent statistiquement
+  // devant. C'est ce tirage qui décide QUI descend à chaque arrêt : biaisé, ce
+  // sont toujours à peu près les mêmes places qui se vident.
+  const shuffle = <T,>(arr: readonly T[]): T[] => {
+    const out = [...arr];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  };
 
   for (const p of shuffle(seatedPax).slice(0, needSeatOut)) beginAlight(p, side);
   for (const p of shuffle(standingPax).slice(0, needStandOut)) beginAlight(p, side);

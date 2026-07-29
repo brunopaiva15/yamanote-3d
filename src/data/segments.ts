@@ -11,6 +11,7 @@
 
 import { CONFIG } from './config.ts';
 import { nextStation, stationAtHop, wrapStation } from './loop.ts';
+import { LOOP_HUB_INDICES } from './stations.ts';
 import type { LoopDirection } from './platforms.ts';
 import type { Phase } from '../store';
 
@@ -153,6 +154,42 @@ export function cruiseDuration(stationIndex: number, dir: LoopDirection): number
   return Math.max(8, headwaySec - fixed);
 }
 
+/**
+ * Départ de l'annonce d'approche avant la fin de la croisière (s).
+ *
+ * Aux gares à grosses correspondances (Ueno, Tokyo, Shinjuku…), まもなく +
+ * 乗換案内 ja/en cumulent ~40 s : lancée au freinage (22 s), la séquence
+ * déborderait loin après l'ouverture des portes. Comme en vrai, elle démarre en
+ * pleine course et se termine autour de l'arrêt.
+ */
+export const APPROACH_ANNOUNCE_LEAD = 20.0;
+
+/**
+ * Instant de l'annonce de départ dans la croisière (s) : 「次は、渋谷」 part dès
+ * que la rame est lancée.
+ */
+export const DEPART_ANNOUNCE_AT = 0.6;
+
+/**
+ * Instant de l'annonce d'approche, qui ne passe JAMAIS devant celle de départ.
+ *
+ * Vit ici, avec `cruiseDuration` dont elle se déduit, et non dans le cycle
+ * station : c'est de l'arithmétique d'horaire, et elle se teste comme telle
+ * (tests/announceOrder.test.ts).
+ *
+ * Le tronçon Mejiro ↔ Takadanobaba ne compte qu'une minute d'intervalle : une
+ * fois le forfait d'arrêt retiré il ne reste que 8 s de croisière — le plancher
+ * de `cruiseDuration` —, contre 59 ou 119 s partout ailleurs. `cruiseSec − 20`
+ * y valait −12 : la condition était donc déjà vraie à la PREMIÈRE image de la
+ * croisière, et la file de la rame recevait 「まもなく高田馬場」 avant
+ * 「次は、高田馬場」 pour les jouer dans cet ordre — l'approche annoncée avant le
+ * départ, dans les deux sens. La borne remet la séquence d'aplomb sans toucher à
+ * l'horaire, et protège d'avance tout tronçon qu'on raccourcirait.
+ */
+export function approachAnnounceAt(cruiseSec: number): number {
+  return Math.max(DEPART_ANNOUNCE_AT + 0.2, cruiseSec - APPROACH_ANNOUNCE_LEAD);
+}
+
 /** Trajet inter-gares sans dwell : depart + cruise + brake (s). */
 export function journeyDuration(stationIndex: number, dir: LoopDirection): number {
   return CONFIG.departTime + cruiseDuration(stationIndex, dir) + CONFIG.brakeTime;
@@ -185,21 +222,24 @@ export function journeyProgress(
 }
 
 // Gares à grande toiture : la verrière masque progressivement le ciel à
-// l'approche et au départ. Superset des MAJOR_HUBS d'announcements.ts — ne pas
-// fusionner les deux.
+// l'approche et au départ.
 //
-// Takanawa Gateway N'Y EST PLUS. Cette toiture-là est une dalle claire posée à
-// six mètres soixante-dix en travers de la voie ; tant que le quai n'avait
-// qu'un auvent plat, elle passait pour la verrière blanche de la gare. Depuis
-// que la charpente signature FAIT la couverture (data/stationLayouts,
-// `sigCanopy`), elle s'interposait entre l'œil et le toit plié — elle masquait
-// exactement ce qu'elle était censée évoquer. Le quai apporte désormais sa
-// propre toiture, et elle arrive avec lui pendant le freinage.
-export const ROOF_HUBS: Record<number, 'steel'> = {
-  0: 'steel', // Tokyo
-  4: 'steel', // Ueno
-  12: 'steel', // Ikebukuro
-  16: 'steel', // Shinjuku
-  19: 'steel', // Shibuya
-  24: 'steel', // Shinagawa
-};
+// Ce sont exactement les six gares repères de la boucle (data/stations,
+// `LOOP_HUB_JY`), et cette liste en est dérivée. Elle était écrite en dur, avec
+// un commentaire qui la disait « superset des MAJOR_HUBS d'announcements.ts —
+// ne pas fusionner les deux » : c'était vrai du temps où Takanawa Gateway en
+// faisait partie, et faux depuis son retrait. Trois copies du même ensemble,
+// dont une accompagnée d'une consigne de ne pas les réunir.
+//
+// Takanawa Gateway N'Y EST PLUS, et c'est le seul écart voulu. Cette toiture-là
+// est une dalle claire posée à six mètres soixante-dix en travers de la voie ;
+// tant que le quai n'avait qu'un auvent plat, elle passait pour la verrière
+// blanche de la gare. Depuis que la charpente signature FAIT la couverture
+// (data/stationLayouts, `sigCanopy`), elle s'interposait entre l'œil et le toit
+// plié — elle masquait exactement ce qu'elle était censée évoquer. Le quai
+// apporte désormais sa propre toiture, et elle arrive avec lui pendant le
+// freinage. Takanawa Gateway n'étant pas une gare repère, la dérivation
+// l'exclut d'elle-même.
+export const ROOF_HUBS: Record<number, 'steel'> = Object.fromEntries(
+  LOOP_HUB_INDICES.map((i) => [i, 'steel' as const]),
+);

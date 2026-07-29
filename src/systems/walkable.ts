@@ -5,7 +5,8 @@
 // remplace le clamp d'allée qui enfermait le joueur au milieu du wagon.
 //
 // Repère de travail : (u, w). `w` est le z du monde. `u` est l'abscisse
-// mesurée POSITIVEMENT VERS LE QUAI — c'est-à-dire `doorSide * x`. Ce choix
+// mesurée POSITIVEMENT VERS LE QUAI — c'est-à-dire `platformFlip() * x`, le
+// côté du quai qui est physiquement là (voir `walkFlip`). Ce choix
 // fait disparaître le retournement du quai : `u` est exactement l'abscisse
 // locale dans laquelle Platform construit sa géométrie, et le wagon, symétrique,
 // s'y décrit aussi bien d'un côté que de l'autre.
@@ -20,8 +21,24 @@ import { CONFIG } from '../data/config';
 import { PLATFORM_TOP, PSD_X } from '../data/stationGeometry';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
+import { platformFlip } from './playerFrame';
 import { runtime, type PlayerFrame } from './runtime';
 import { placementFor, stairwellAt } from './stationPlacement';
+
+/**
+ * Sens du repère de marche : `u` est compté positivement vers le quai.
+ *
+ * C'est `DOOR_SIDE[platformIndex]` — le côté du quai PRÉSENT — et non
+ * `store.doorSide`, qui bascule vers la gare suivante dès la première image de
+ * la croisière alors que le quai précédent défile encore. Tout ce qui touche au
+ * repère du quai lit déjà celui-là (le rendu de la gare, la foule, les animaux,
+ * la rame croisée, `playerFrame`) ; ce module était le seul à lire l'autre, et
+ * calculait donc son `u` avec le côté de la gare à venir tout en interrogeant
+ * l'emprise de la gare quittée. Sans conséquence tant que le joueur est à bord
+ * pendant cette fenêtre — `inCar` est symétrique en `u` —, mais rien ne
+ * garantissait qu'il y reste.
+ */
+const walkFlip = platformFlip;
 
 /** Demi-largeur de l'allée centrale du wagon (les banquettes commencent après). */
 export const AISLE_U = 0.72;
@@ -133,7 +150,7 @@ function inCar(u: number, w: number): boolean {
  */
 export function playerDoorwayZ(): number | null {
   if (!runtime.trainPresent) return null;
-  const u = useStore.getState().doorSide * runtime.stanceX;
+  const u = walkFlip() * runtime.stanceX;
   if (u <= ALCOVE_U || u >= PLATFORM_U0) return null;
   const z = runtime.stanceZ - runtime.trainZ;
   for (const dz of CONFIG.doorCenters) {
@@ -163,7 +180,7 @@ function inPortal(u: number, w: number): boolean {
 
 /** Abscisse z locale du quai (repère de construction) pour un z monde. */
 function platformZ(w: number): number {
-  return useStore.getState().doorSide * (w - runtime.platformSlide);
+  return walkFlip() * (w - runtime.platformSlide);
 }
 
 /**
@@ -197,13 +214,13 @@ function regionAt(u: number, w: number): Region | null {
 
 /** Repère auquel appartient une position monde, ou null si elle est hors sol. */
 export function frameAt(x: number, z: number): PlayerFrame | null {
-  const u = useStore.getState().doorSide * x;
+  const u = walkFlip() * x;
   return regionAt(u, z)?.frame ?? null;
 }
 
 /** Hauteur du sol sous une position monde (0 dans le wagon, -0,06 sur le quai). */
 export function groundY(x: number, z: number): number {
-  const u = useStore.getState().doorSide * x;
+  const u = walkFlip() * x;
   if (u > ALCOVE_U && u < PLATFORM_U0) {
     // Dans le seuil : la marche de 6 cm se descend progressivement.
     const t = (u - ALCOVE_U) / (PLATFORM_U0 - ALCOVE_U);
@@ -217,7 +234,7 @@ export function groundY(x: number, z: number): number {
  * praticable, avec glissement le long des obstacles. Mutation en place.
  */
 export function resolveMove(pos: THREE.Vector3, dx: number, dz: number): void {
-  const side = useStore.getState().doorSide;
+  const side = walkFlip();
   const u = side * pos.x;
   const w = pos.z;
   const nu = u + side * dx;
@@ -242,7 +259,7 @@ export function resolveMove(pos: THREE.Vector3, dx: number, dz: number): void {
  * changement de côté d'ouverture ou de géométrie de gare.
  */
 export function snapInside(pos: THREE.Vector3): void {
-  const side = useStore.getState().doorSide;
+  const side = walkFlip();
   const u = side * pos.x;
   if (regionAt(u, pos.z)) return;
   pos.x = side * THREE.MathUtils.clamp(u, -AISLE_U, AISLE_U);
@@ -256,7 +273,7 @@ export function snapInside(pos: THREE.Vector3): void {
 export function nearestOpenPortal(x: number, z: number, maxDist = 3.2): PortalInfo | null {
   const open = portalOpen();
   if (open < PORTAL_MIN_OPEN) return null;
-  const side = useStore.getState().doorSide;
+  const side = walkFlip();
   const u = side * x;
   // Trop loin latéralement : on ne propose pas de traverser depuis le fond du
   // quai ni depuis l'autre bout du wagon.
@@ -276,7 +293,7 @@ export function nearestOpenPortal(x: number, z: number, maxDist = 3.2): PortalIn
 
 /** Abscisse monde d'un point du quai / du wagon, à `u` de l'axe de la voie. */
 export function worldXAt(u: number): number {
-  return useStore.getState().doorSide * u;
+  return walkFlip() * u;
 }
 
 /** Abscisse de marche visée quand on franchit un seuil, dans chaque sens. */

@@ -116,6 +116,8 @@ interface BlockedDoor {
   dz: number;
   /** Ouverture au début du mouvement courant, et ouverture visée. */
   from: number;
+  /** Idem pour la porte palière en vis-à-vis, qui n'en est pas au même point. */
+  psdFrom: number;
   to: 0 | 1;
   /** Horloge et durée du mouvement courant (s). */
   t: number;
@@ -165,16 +167,18 @@ function partialDuration(from: number, to: number): number {
  */
 export function startBlockedDoor(car: number, dz: number, gap: number): void {
   const from = trainDoorPos(trainDoorLag(dz));
+  const psdFrom = psdDoorPos(0);
   blocked = {
     car,
     dz,
     from,
+    psdFrom,
     to: 0,
     t: 0,
     dur: partialDuration(from, 0),
     gap,
     pos: from,
-    psdPos: psdDoorPos(0),
+    psdPos: psdFrom,
     touched: false,
     touchT: -1,
     psdZ: Number.NaN,
@@ -188,6 +192,7 @@ export function startBlockedDoor(car: number, dz: number, gap: number): void {
 export function moveBlockedDoor(to: 0 | 1): void {
   if (!blocked || blocked.to === to) return;
   blocked.from = blocked.pos;
+  blocked.psdFrom = blocked.psdPos;
   blocked.to = to;
   blocked.t = 0;
   blocked.dur = partialDuration(blocked.from, to);
@@ -209,6 +214,7 @@ export function setBlockedGap(gap: number): void {
   blocked.gap = gap;
   if (gap === 0 && stopped) {
     blocked.from = blocked.pos;
+    blocked.psdFrom = blocked.psdPos;
     blocked.t = 0;
     blocked.dur = partialDuration(blocked.from, 0);
     blocked.touched = false;
@@ -308,9 +314,13 @@ function updateBlockedDoor(dt: number): void {
     b.pos = free;
   }
   // Porte palière : même mouvement, décalé, et arrêtée par le même obstacle.
+  // Elle part de SA position au début du mouvement (`psdFrom`) et non de celle
+  // du vantail de la rame : les deux sont voisines à l'instant du blocage, mais
+  // le quai suit la rame avec un retard, et prendre l'origine de l'autre faisait
+  // sauter la baie d'autant.
   const p = b.to === 1 ? PSD_OPEN : PSD_CLOSE;
   const u = b.dur > 0 ? Math.min(1, Math.max(0, (b.t - BLOCKED_PSD_LAG) / b.dur)) : 1;
-  const raw = b.from + (b.to - b.from) * trapezoid(u, p.accel, p.decel);
+  const raw = b.psdFrom + (b.to - b.psdFrom) * trapezoid(u, p.accel, p.decel);
   b.psdPos = b.to === 0 ? Math.max(raw, b.gap) : raw;
   // Axe de la baie en vis-à-vis, en repère quai : la rame glisse (trainZ) et le
   // quai se retourne selon le côté d'ouverture.

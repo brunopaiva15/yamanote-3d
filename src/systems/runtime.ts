@@ -170,20 +170,27 @@ export const runtime = {
     signalStop: false,
     emergency: false,
   },
-  /** Train hors service (ne joue pas la 発車メロディ Inner Main). */
+  /**
+   * Train hors service : la 発車メロディ ne sonne pas.
+   *
+   * RÉSERVÉ, et sans producteur : rien ne le pose aujourd'hui, parce que la
+   * boucle du jeu n'a pas de rame de service. Il reste parce que les prédicats
+   * de `data/melodies` sont écrits sur le contrat réel du quai, où cet état
+   * existe — et une garde qui manque coûte plus cher qu'une garde qui dort.
+   */
   outOfService: false,
-  /** Arrêt terminus / quai alternatif (ex. Ōsaki 2) — autre mélodie ou silence. */
+  /** Arrêt terminus : autre mélodie, ou silence. Réservé comme `outOfService`. */
   terminusStop: false,
   /**
-   * Utiliser le quai alternatif de la gare (ex. Ōsaki Inner voie 2, Outer voie 4).
-   * Indépendant de terminusStop : un départ voyageurs peut partir de la voie secondaire.
+   * La rame se range sur la voie SECONDAIRE de la gare (Ōsaki 内 2 / 外 4,
+   * Ikebukuro 内 5 / 外 8). Posé à chaque arrêt par
+   * `stationCycle.randomizeStopTimings`, avant la mesure de la fenêtre sonore :
+   * c'est le quai qui décide de la mélodie, donc de la durée de l'arrêt.
+   *
+   * Indépendant de `terminusStop` : un départ voyageurs ordinaire peut partir
+   * de la voie secondaire, et c'est même le cas courant à Ōsaki.
    */
   useAlternativePlatform: false,
-  /**
-   * Si true, startDepartureSequence enchaîne aussi annonce + fermetures.
-   * En usage normal (stationCycle), reste false : les timers gèrent la suite.
-   */
-  autonomousDepartureSequence: false,
   /**
    * Arrêt subi en pleine voie, rare. Deux natures, et elles ne se ressemblent
    * pas (voir `kind`) : le coup de frein (急停車) et la coupure de caténaire
@@ -304,7 +311,6 @@ export function resetRuntime(): void {
   runtime.outOfService = false;
   runtime.terminusStop = false;
   runtime.useAlternativePlatform = false;
-  runtime.autonomousDepartureSequence = false;
   runtime.trainId = 'yamanote-e235-1';
   runtime.stopSequence = 0;
   runtime.lastMelodyDepartureId = null;

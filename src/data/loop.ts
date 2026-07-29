@@ -14,10 +14,10 @@
 //
 //   • le côté d'ouverture des portes (data/stations, DOOR_SIDE). Un plan de
 //     voies à deux tracks est symétrique par rotation d'un demi-tour autour de
-//     l'axe de la ligne : sur un îlot central les deux sens ouvrent à droite,
-//     sur deux quais latéraux les deux sens ouvrent à gauche, et sur les
-//     doubles îlots 方向別 (上野, 東京, 田町…) chaque sens a le sien, du même
-//     côté. Le côté est donc une propriété de la GARE, pas du sens ;
+//     l'axe de la ligne : la rame qui le parcourt à l'envers a le quai du même
+//     bord. Le côté est donc une propriété de la GARE, pas du sens — ce qui ne
+//     veut pas dire qu'il se calcule à partir du plan de voies ; c'est un
+//     relevé, voir la note de DOOR_SIDE ;
 //   • le tronçon lui-même (data/segments) : on parcourt le même viaduc, la même
 //     tranchée, seulement à l'envers. Seule change la façon d'y arriver.
 

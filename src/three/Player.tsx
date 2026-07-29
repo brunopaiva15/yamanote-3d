@@ -10,6 +10,7 @@ import { CONFIG, V_MAX } from '../data/config';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { input, moveAxes, consumeLook } from '../systems/input';
+import { isTypingTarget, toggleFullscreen } from '../systems/browser';
 import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
 import { publishPlayerLook, publishPlayerPose, publishPlayerStance } from '../systems/playerFrame';
 import { AISLE_U, frameAt, groundY, resolveMove, snapInside } from '../systems/walkable';
@@ -74,18 +75,34 @@ export function Player() {
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return;
+      // Le clavier appartient au champ qui a le focus, pas au jeu. Sans cette
+      // sortie, taper une date dans le menu de départ coupait le son (M), passait
+      // le navigateur en plein écran (F), et l'Escape du preventDefault sur
+      // Space empêchait d'ouvrir les sélecteurs gare / sens / qualité. Le HUD
+      // avait le même défaut : régler le volume aux flèches faisait marcher le
+      // joueur de côté.
+      if (isTypingTarget(e.target)) return;
       input.keys.add(e.code);
+      // Rien de tout ce qui suit n'a de sens avant d'être monté à bord.
+      if (!useStore.getState().started) return;
       if (e.code === 'Space') {
         input.standRequest = true;
         e.preventDefault();
       }
       if (e.code === 'KeyE') input.talkRequest = true;
       if (e.code === 'KeyM') useStore.getState().toggleMute();
-      if (e.code === 'KeyF') {
-        void document.documentElement.requestFullscreen().catch(() => undefined);
-      }
+      if (e.code === 'KeyF') void toggleFullscreen();
     };
     const onKeyUp = (e: KeyboardEvent) => input.keys.delete(e.code);
+    // Une touche relâchée dans une AUTRE fenêtre ne nous parvient jamais :
+    // Alt-Tab en pleine marche, et le joueur repartait tout seul, sans fin, au
+    // retour sur l'onglet. Tout ce qui fait perdre le clavier vide le jeu de
+    // touches — changement de fenêtre, onglet masqué, sortie du verrou de
+    // pointeur.
+    const releaseKeys = () => input.keys.clear();
+    const onVisibility = () => {
+      if (document.hidden) releaseKeys();
+    };
 
     const locked = () => document.pointerLockElement === canvas;
 
@@ -151,12 +168,18 @@ export function Player() {
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', releaseKeys);
+    document.addEventListener('visibilitychange', onVisibility);
+    document.addEventListener('pointerlockchange', releaseKeys);
     canvas.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', releaseKeys);
+      document.removeEventListener('visibilitychange', onVisibility);
+      document.removeEventListener('pointerlockchange', releaseKeys);
       canvas.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
@@ -259,8 +282,8 @@ export function Player() {
       // Marche : allée du wagon, alcôves de porte, seuils ouverts, quai.
       const axes = moveAxes();
       const mag = Math.hypot(axes.x, axes.y);
-      // Le quai fait 96 m de long : au pas de promenade on n'en verrait
-      // jamais le bout. Maj. pour presser le pas, comme tout le monde.
+      // Le quai fait 224 m de long (onze voitures) : au pas de promenade on
+      // n'en verrait jamais le bout. Maj. pour presser le pas, comme tout le monde.
       const running = input.keys.has('ShiftLeft') || input.keys.has('ShiftRight');
       const speed = running ? CONFIG.runSpeed : CONFIG.walkSpeed;
       if (started && mag > 0.01) {

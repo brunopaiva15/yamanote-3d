@@ -6,7 +6,13 @@ export const CONFIG = {
   // complet en ~23 s depuis 90 km/h — les dernières secondes ne servant qu'à
   // poser la rame, voir le lâcher final du freinage).
   //
-  // dwellTime n'est PAS la durée d'arrêt : celle-ci est tirée par arrêt
+  // La durée de croisière n'est PAS ici : elle se déduit de l'intervalle réel
+  // du tronçon (data/segments, SEGMENT_HEADWAY_MIN → cruiseDuration), et varie
+  // donc d'un tronçon à l'autre et d'un sens à l'autre. Un `cruiseTime: 59`
+  // traînait à cette place, que plus personne ne lisait depuis le passage aux
+  // intervalles réels : le supprimer évite qu'on le règle en croyant agir.
+  //
+  // dwellTime n'est PAS la durée d'arrêt non plus : celle-ci est tirée par arrêt
   // (stationCycle.dwellDuration, 40 à 65 s selon la gare, l'état de la ligne
   // et — surtout — la longueur de la 発車メロディ du quai, qu'on laisse aller
   // au bout de ses deux passages). C'est le forfait d'arrêt retiré de
@@ -14,7 +20,7 @@ export const CONFIG = {
   // pour dimensionner la croisière (segments.cruiseDuration) — le laisser bas
   // garde à la croisière de quoi placer l'annonce de départ ET celle
   // d'approche, qui cumulent jusqu'à 71 s de parole sur une même file.
-  cruiseTime: 59,
+  //
   // Le lâcher final allonge le freinage de deux secondes ; elles sont reprises
   // sur le forfait d'arrêt pour que la croisière — et donc l'horaire de la
   // boucle — ne bouge pas d'une seconde.
@@ -37,8 +43,8 @@ export const CONFIG = {
   startIndex: Math.floor(Math.random() * 30),
   clockStart: 16 * 60 + 51,
 
-  // Rendu.
-  exposure: 0.85,
+  // Rendu. (Un `exposure: 0.85` a vécu ici sans jamais être appliqué à
+  // `gl.toneMappingExposure` : l'exposition vient du ton mapping de la scène.)
   bloom: 0.25,
 
   // Géométrie intérieure du wagon (demi-dimensions).

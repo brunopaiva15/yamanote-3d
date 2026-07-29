@@ -62,9 +62,6 @@ import {
   stopFallbackMelody,
 } from './audioEngine';
 import { runtime } from './runtime';
-import { doorsClosingAnnouncement } from '../data/announcements';
-import { say } from './speech';
-import { setPsdDoors, setTrainDoors } from './doorMotion';
 
 /** Raisons pour lesquelles le départ (et la suite après la mélodie) est suspendu. */
 export type DepartureBlockers = {
@@ -129,7 +126,7 @@ export function resetMelodyDepartureGuard(): void {
 }
 
 /** Dérive l'état train pour la mélodie à partir de la phase et des portes. */
-export function trainStateFromRuntime(phase: string, doorOpen: number, doorTarget: number): TrainState {
+function trainStateFromRuntime(phase: string, doorOpen: number, doorTarget: number): TrainState {
   if (phase === 'cruise' || phase === 'depart') return phase === 'depart' ? 'departing' : 'moving';
   if (phase === 'brake') return 'approaching';
   if (doorTarget === 0 && doorOpen < 0.95) return doorOpen > 0.05 ? 'doors_closing' : 'stopped_doors_closed';
@@ -339,11 +336,6 @@ export async function playOuterMainMelody(context: MelodyPlayContext): Promise<b
   } finally {
     outerMainMelodyPlaying = false;
   }
-}
-
-/** Variante explicite « une fois par arrêt » (même garde departureId). */
-export async function playOuterMainMelodyOncePerStop(context: MelodyPlayContext): Promise<boolean> {
-  return playOuterMainMelody(context);
 }
 
 /**
@@ -662,22 +654,6 @@ export async function playIkebukuroInnerBicCameraB(
   }
 }
 
-async function playDoorClosingAnnouncement(): Promise<void> {
-  say(doorsClosingAnnouncement());
-}
-
-async function closePlatformDoors(): Promise<void> {
-  setPsdDoors(0);
-}
-
-async function closeTrainDoors(): Promise<void> {
-  setTrainDoors(0);
-}
-
-async function departTrain(): Promise<void> {
-  // Le passage en phase « depart » reste géré par stationCycle (timer dwell).
-}
-
 /**
  * Sélectionne et joue la 発車メロディ adaptée.
  * Ordre : cas Ōsaki secondaires → Inner Main → Outer Main.
@@ -713,37 +689,12 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   return false;
 }
 
-/**
- * Procédure de départ : mélodie (si applicable), puis annonce / fermetures
- * si le départ n'est pas bloqué. La mélodie seule ne provoque pas le départ.
- */
-export async function startDepartureSequence(context: MelodyPlayContext): Promise<void> {
-  if (context.trainState !== 'stopped_doors_open') return;
-  if (context.emergencyActive) return;
-
-  await playDepartureMelodyForContext(context);
-
-  // Fermeture / départ uniquement si autorisé ; l’interruption n’avance pas la séquence.
-  if (context.departureAuthorized === false || isDepartureBlocked()) {
-    if (context.emergencyActive || isDepartureBlocked()) {
-      cancelDepartureMelody();
-    }
-    return;
-  }
-
-  if (runtime.autonomousDepartureSequence) {
-    await playDoorClosingAnnouncement();
-    if (isDepartureBlocked()) {
-      cancelDepartureMelody();
-      return;
-    }
-    await closePlatformDoors();
-    await closeTrainDoors();
-    await departTrain();
-  }
-}
-
-/** Exposé pour les tests / debug. */
-export function melodyDepartureGuardState(): { lastId: string | null; outerPlaying: boolean } {
-  return { lastId: runtime.lastMelodyDepartureId, outerPlaying: outerMainMelodyPlaying };
-}
+// La procédure complète — mélodie, puis annonce, fermetures et départ — vivait
+// aussi ici, sous `startDepartureSequence`, derrière un drapeau
+// `runtime.autonomousDepartureSequence` que personne ne posait jamais. C'était
+// un second ordonnanceur de départ, en sommeil, en face de celui de
+// `systems/stationCycle` qui, lui, mène l'arrêt. Deux chronologies pour un même
+// départ, dont une morte : elle est partie, et le drapeau avec elle.
+//
+// `melodyDepartureGuardState()` l'accompagne : une sonde exposée « pour les
+// tests » que ni test ni outil n'appelait.

@@ -53,12 +53,27 @@ export const STATIONS: Station[] = [
 
 // Côté d'ouverture des portes par index de station (1 = droite, -1 = gauche).
 //
-// LE MÊME DANS LES DEUX SENS, et ce n'est pas une simplification. Un plan de
-// voies à deux tracks est symétrique par rotation d'un demi-tour autour de
-// l'axe de la ligne, et le Japon roule à gauche : sur un îlot central les deux
-// sens ouvrent à droite, sur deux quais latéraux les deux ouvrent à gauche, et
-// sur les doubles îlots 方向別 (上野, 東京, 田町…) chacun a le sien, du même
-// côté. Le côté appartient donc à la GARE, pas au sens de circulation.
+// CE QUI EST GARANTI : le côté est LE MÊME DANS LES DEUX SENS, et ce n'est pas
+// une simplification. Un plan de voies à deux tracks est symétrique par rotation
+// d'un demi-tour autour de l'axe de la ligne : la rame qui roule à l'endroit et
+// celle qui roule à l'envers ont le quai du même bord. Le côté appartient donc à
+// la GARE, pas au sens de circulation — et c'est pour cela que cette table est
+// indexée par gare seule, sans colonne de sens.
+//
+// CE QUI NE L'EST PAS : le côté ne se DÉDUIT PAS du plan de voies déclaré dans
+// `data/stationLayouts` (`config`). Ce commentaire portait une règle
+// — « sur un îlot central les deux sens ouvrent à droite, sur deux quais
+// latéraux les deux ouvrent à gauche » — qui se lisait comme une dérivation.
+// Elle n'en est pas une : recoupée avec `config`, aucune de ses lectures
+// possibles n'explique plus de dix-sept gares sur trente, et les treize gares
+// dites `island` se partagent le côté sept-sept. La table ci-dessous est un
+// RELEVÉ, gare par gare, et c'est ainsi qu'il faut la corriger — en regardant
+// la gare, pas en calculant.
+//
+// (`config` reste juste dans son registre : il dit ce qu'on a en face du quai —
+// une voie Keihin-Tōhoku, la voie Yamanote opposée, un mur — et le rendu s'en
+// sert pour le fond de travée. Les deux tables décrivent deux choses
+// différentes ; le tort était de les présenter comme liées.)
 export const DOOR_SIDE: (1 | -1)[] =
   [1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, 1, 1, -1, 1, -1, 1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, -1, 1, -1];
 
@@ -152,8 +167,23 @@ export const TRANSFERS: Record<string, { jp: string; en: string }> = {
  * des départs de Tamachi annonce 「東京・上野方面」 et non 「浜松町・新橋方面」,
  * bien que Hamamatsuchō soit l'arrêt suivant : on ne prend pas la Yamanote pour
  * la gare d'après, on la prend pour un de ces six points.
+ *
+ * SOURCE UNIQUE. Le même ensemble était écrit trois fois — ici en codes JY, en
+ * indices dans `data/announcements` (`MAJOR_HUBS`) et encore dans
+ * `data/segments` (`ROOF_HUBS`, dont le commentaire prétendait à tort en être un
+ * superset). Les deux autres le dérivent maintenant d'ici : ces six gares sont
+ * les mêmes pour la signalétique, pour les annonces et pour les verrières,
+ * parce que c'est le même fait — ce sont les grandes gares de la boucle.
  */
-const LOOP_HUBS = ['JY01', 'JY05', 'JY13', 'JY17', 'JY20', 'JY25'];
+export const LOOP_HUB_JY: readonly string[] = ['JY01', 'JY05', 'JY13', 'JY17', 'JY20', 'JY25'];
+
+/** Les mêmes, en indices de `STATIONS`. */
+export const LOOP_HUB_INDICES: readonly number[] = STATIONS.reduce<number[]>((out, st, i) => {
+  if (LOOP_HUB_JY.includes(st.jy)) out.push(i);
+  return out;
+}, []);
+
+const LOOP_HUBS = LOOP_HUB_JY;
 
 /**
  * Les deux repères que le 発車標 met dans sa colonne de droite.

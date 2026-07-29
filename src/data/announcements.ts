@@ -17,7 +17,7 @@
 
 import { loopNameJp, prevStation, stationAtHop, wrapStation } from './loop.ts';
 import type { LoopDirection } from './platforms.ts';
-import { STATIONS, TRANSFERS, type Station } from './stations.ts';
+import { LOOP_HUB_INDICES, STATIONS, TRANSFERS, type Station } from './stations.ts';
 
 export interface Utterance {
   text: string;
@@ -35,9 +35,11 @@ export interface Utterance {
  */
 export const loopJp = loopNameJp;
 
-// Grandes gares de la boucle, servant de repères pour l'annonce du sens.
-// (index 0-based dans STATIONS : 東京, 上野, 池袋, 新宿, 渋谷, 品川.)
-const MAJOR_HUBS = new Set([0, 4, 12, 16, 19, 24]);
+// Grandes gares de la boucle, servant de repères pour l'annonce du sens :
+// 東京, 上野, 池袋, 新宿, 渋谷, 品川. Dérivées de `data/stations`
+// (`LOOP_HUB_JY`), qui les tient pour la signalétique — un seul relevé, trois
+// lecteurs.
+const MAJOR_HUBS = new Set(LOOP_HUB_INDICES);
 
 // Vrai si la gare (index) est un grand hub servant de repère de direction.
 export function isMajorHub(index: number): boolean {

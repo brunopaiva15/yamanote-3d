@@ -6,8 +6,13 @@
 import { CONFIG, V_MAX } from '../data/config';
 import { DOOR_SIDE, STATIONS, TRANSFERS } from '../data/stations';
 import { nextStation, randomDirection, wrapStation } from '../data/loop';
-import type { LoopDirection } from '../data/platforms';
-import { cruiseDuration } from '../data/segments';
+import { platformFor, type LoopDirection } from '../data/platforms';
+import {
+  APPROACH_ANNOUNCE_LEAD,
+  DEPART_ANNOUNCE_AT,
+  approachAnnounceAt,
+  cruiseDuration,
+} from '../data/segments';
 import {
   EMERGENCY_REASONS,
   approachSequence,
@@ -524,15 +529,6 @@ function melodyLead(): number {
   return CLOSE_ANNOUNCE_LEAD + melodySounding();
 }
 /**
- * Départ de l'annonce d'approche avant la fin de la croisière. Aux gares à
- * grosses correspondances (Ueno, Tokyo, Shinjuku…), まもなく + 乗換案内 ja/en
- * cumulent ~40 s : lancée au freinage (22 s), la séquence déborderait loin
- * après l'ouverture des portes. Comme en vrai, elle démarre en pleine course
- * et se termine autour de l'arrêt.
- */
-const APPROACH_ANNOUNCE_LEAD = 20.0;
-
-/**
  * Instant du tirage d'un passage sur la voie d'en face, en temps de dwell :
  * après le nom de la gare, l'agent et « laissez descendre », avant l'annonce
  * de fermeture. C'est le seul silence de l'arrêt, et il n'est pas long.
@@ -582,12 +578,50 @@ export function randomizeBerthOffset(): void {
 }
 
 /**
+ * Part des rames qui se rangent sur la voie SECONDAIRE, là où la gare en a une.
+ *
+ * Deux gares de la boucle en ont, et `data/platforms` les relève depuis
+ * longtemps : Ikebukuro (内 voie 5 au lieu de 6, 外 voie 8 au lieu de 7) et
+ * Ōsaki (内 voie 2 au lieu de 1, 外 voie 4 au lieu de 3). Ōsaki est
+ * l'aiguillage du dépôt de Tōkaidō et voit passer beaucoup de départs et de
+ * terminus : sa voie secondaire sert souvent. Celle d'Ikebukuro est plus rare.
+ *
+ * Le drapeau `runtime.useAlternativePlatform` existait, était lu quatre fois —
+ * et n'était écrit nulle part. Trois clips de 発車メロディ sur dix-neuf étaient
+ * donc injouables, avec les prédicats et les fonctions qui allaient avec :
+ * JRE-IKST-010-03 (Ōsaki 内 voie 2), JRE-IKST-010-05 (Ōsaki 外 voie 4) et Bic
+ * Camera ver.A (Ikebukuro 内 voie 5). Ce tirage les rend au quai.
+ */
+const ALTERNATIVE_PLATFORM_CHANCE: Record<string, number> = {
+  JY24: 0.28, // Ōsaki
+  JY13: 0.12, // Ikebukuro
+};
+
+/**
+ * Où la rame va se ranger : voie principale, ou secondaire quand la gare en a
+ * une. Tiré AVANT la chronologie de l'arrêt, parce que c'est le quai qui décide
+ * quelle mélodie sonnera, donc quelle fenêtre il faut lui laisser.
+ */
+function randomizeStopPlatform(stationIndex: number): void {
+  const station = STATIONS[stationIndex];
+  const info = platformFor(station.jy, useStore.getState().loopDirection);
+  const chance =
+    info?.alternativePlatform != null ? (ALTERNATIVE_PLATFORM_CHANCE[station.jy] ?? 0) : 0;
+  runtime.useAlternativePlatform = Math.random() < chance;
+}
+
+/**
  * Tire l'instant de la mélodie pour l'arrêt qui commence, et mesure la fenêtre
  * qu'il faudra lui laisser : deux passages entiers du clip câblé sur CE quai,
  * dans CE sens. C'est ce qui fait qu'un arrêt à Komagome (Sakura Sakura, 13,6 s
  * le passage) dure plus longtemps qu'un arrêt à Takadanobaba (Atom, 6,4 s).
+ *
+ * La voie est tirée ici, en premier : la fenêtre sonore se mesure sur le clip
+ * du quai où la rame se rangera, pas sur celui du quai principal. Un seul point
+ * d'entrée pour les deux, et l'ordre ne peut pas se perdre.
  */
 export function randomizeStopTimings(stationIndex: number): void {
+  randomizeStopPlatform(stationIndex);
   // Ligne en retard : on rattrape sur les quais, la mélodie part plus tôt.
   const bias = stationBias(stationIndex) - (lineDelayed() ? MELODY_STATION_BIAS : 0);
   const jitter = (Math.random() * 2 - 1) * MELODY_AFTER_STOP_JITTER;
@@ -730,8 +764,8 @@ function seedFired(phase: Phase, t: number, stationIndex: number, dir: LoopDirec
     // l'embarquement.
     fired.add('emergency-roll');
     fired.add('outage-roll');
-    if (t > 0.6) fired.add('announce-depart');
-    if (t >= cruiseDuration(stationIndex, dir) - APPROACH_ANNOUNCE_LEAD) fired.add('announce-soon');
+    if (t > DEPART_ANNOUNCE_AT) fired.add('announce-depart');
+    if (t >= approachAnnounceAt(cruiseDuration(stationIndex, dir))) fired.add('announce-soon');
   } else if (phase === 'brake') {
     fired.add('door-timings');
     fired.add('brake-apply');
@@ -941,7 +975,7 @@ export function updateCycle(dt: number): void {
       // des vitres, on ne la change pas sous ses travées.
       once('berth', s.index === s.platformIndex, () => randomizeBerthOffset());
       // Séquence JR départ : 列車案内? → 次駅 → 乗換? → 案内(0–2).
-      once('announce-depart', t > 0.6, () =>
+      once('announce-depart', t > DEPART_ANNOUNCE_AT, () =>
         say(departureSequence(s.index, DOOR_SIDE[s.index], s.loopDirection)),
       );
       // Coupure de caténaire : même tirage que l'arrêt d'urgence, mais bien
@@ -997,7 +1031,7 @@ export function updateCycle(dt: number): void {
       }
       // Séquence JR approche : まもなく(+portes) → 乗換?, lancée avant le
       // freinage pour que les grandes gares finissent autour de l'arrêt.
-      once('announce-soon', t >= cruiseSec - APPROACH_ANNOUNCE_LEAD, () =>
+      once('announce-soon', t >= approachAnnounceAt(cruiseSec), () =>
         say(approachSequence(s.index, DOOR_SIDE[s.index])),
       );
       // Petits événements sonores de course, rares et discrets : crissement
@@ -1168,6 +1202,19 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   w.__jumpTo = (phase: Phase, t = 0, station?: number) => {
     const store = useStore.getState();
     const index = station ?? store.index;
+    // Un arrêt subi ne survit pas à un saut de phase : sans cette remise à
+    // zéro, le badge du HUD restait figé sur « arrêt d'urgence » et
+    // `beginPowerOutage()` refusait de partir, l'étape précédente étant encore
+    // déclarée en cours.
+    runtime.emergencyStop.stage = 'none';
+    runtime.emergencyStop.kind = 'brake';
+    runtime.emergencyStop.t = 0;
+    resetCarPower(carPower);
+    runtime.carPower = 1;
+    runtime.emergencyLight = 0;
+    nextBatteryTickAt = -1;
+    emergencyAt = -1;
+    outageAt = -1;
     store.setIndex(index);
     store.setPlatformIndex(index);
     store.setPhase(phase);

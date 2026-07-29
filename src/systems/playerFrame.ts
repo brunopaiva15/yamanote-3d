@@ -12,14 +12,23 @@
 // Repère QUAI : celui dans lequel Platform.tsx construit sa géométrie, côté
 // +x, avant la rotation de π appliquée quand doorSide === -1.
 
+import { PLATFORM_TOP } from '../data/stationGeometry';
 import { DOOR_SIDE } from '../data/stations';
 import { useStore } from '../store';
 import { runtime } from './runtime';
 
 export type { PlayerFrame } from './runtime';
 
-/** Sol du quai, 6 cm sous le plancher du wagon. Partagé par le rendu et la marche. */
-export const PLATFORM_TOP = -0.06;
+/**
+ * Sol du quai, 6 cm sous le plancher du wagon.
+ *
+ * Ré-exporté depuis `data/stationGeometry`, qui le tient avec le reste des cotes
+ * de quai, au lieu d'en garder une seconde déclaration ici : la valeur était
+ * écrite deux fois, `systems/walkable` lisait l'une et `systems/paxTargeting`
+ * l'autre. Deux sources pour une hauteur de marche, c'est un décrochage qui
+ * attend son heure.
+ */
+export { PLATFORM_TOP };
 
 // --- Repère wagon <-> monde ---------------------------------------------
 // Le wagon ne translate qu'en z (runtime.trainZ).

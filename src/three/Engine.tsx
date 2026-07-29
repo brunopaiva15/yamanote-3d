@@ -40,8 +40,30 @@ import { perfLevel } from '../systems/perf';
  * éviter de téléporter le train de plusieurs gares d'un coup.
  */
 const CYCLE_DT_CAP = 5;
-/** Plafond du dt physique : pas stables pour portes / PNJ / audio. */
-const PHYS_DT_CAP = 0.05;
+/**
+ * Pas d'intégration de la physique (portes, PNJ, audio) : 0,05 s au plus, pour
+ * que le profil trapézoïdal d'un vantail reste stable.
+ *
+ * Ce n'est PAS un plafond par image. Ç'en était un, et c'était le bug : la
+ * frame consommait 0,05 s de mouvement de porte quel que soit le temps
+ * réellement écoulé, pendant que le cycle station avançait, lui, en temps réel.
+ * Sous vingt images par seconde les deux horloges divergeaient sans borne — la
+ * rame partait à 90 km/h vantaux à demi ouverts, la porte sautait d'un coup à
+ * l'ordre de fermeture, et l'ouverture ne franchissait jamais le seuil de 0,55
+ * qui autorise à descendre : sur une machine lente, on ne pouvait plus sortir
+ * de la rame. Le temps écoulé est donc PARCOURU en autant de sous-pas qu'il
+ * faut, au lieu d'être tronqué.
+ */
+const PHYS_STEP = 0.05;
+/**
+ * Temps de physique simulé au plus par image (s).
+ *
+ * Le sous-pas rend la borne inoffensive tant qu'on tient une image par seconde
+ * — vingt sous-pas —, et il faut bien une borne : une frame de rattrapage de
+ * cinq secondes ferait tourner quatre-vingts fois la mise à jour de tous les
+ * PNJ et n'arrangerait rien.
+ */
+const PHYS_SPAN_CAP = 1.0;
 
 // Onglet repris après masquage : rAF était en pause, la première frame porte
 // tout le temps caché. On saute l'avance du cycle sur cette frame-là (évite
@@ -83,8 +105,11 @@ export function Engine(): null {
     // Cycle & déplacement : horloge murale. Un FPS bas ne doit ni ralentir ni
     // geler le passage d'une gare à l'autre.
     const cycleDt = skipCycle ? 0 : Math.min(raw, CYCLE_DT_CAP);
-    const physDt = Math.min(raw, PHYS_DT_CAP);
-    if (cycleDt <= 0 && physDt <= 0) return;
+    // La physique parcourt le MÊME temps que le cycle : c'est la seule façon que
+    // les portes et les phases restent d'accord (voir PHYS_STEP). Sur la frame
+    // de reprise d'onglet, où le cycle ne bouge pas, elle avance d'un pas.
+    const physSpan = skipCycle ? PHYS_STEP : Math.min(raw, PHYS_SPAN_CAP);
+    if (cycleDt <= 0 && physSpan <= 0) return;
 
     const { phase, started } = useStore.getState();
     if (!started) return;
@@ -118,21 +143,37 @@ export function Engine(): null {
       // Lit platformFade / platformSlide : doit venir après.
       updateStationOcclusion();
     }
-    if (physDt > 0) {
-      updateDoorMotion(physDt);
-      // Après le mouvement des vantaux : la procédure de porte bloquée réagit
-      // au contact que la frame vient d'établir.
-      updateDoorObstruction(physDt);
-      // La bulle de l'agent suit sa tête, et lui survit le temps d'être lue.
-      updatePlatformAgentSpeech(physDt);
-      // Sur le quai la phase du store reste 'dwell' : le freinage réel se lit
-      // sur l'accélération (rame qui arrive), sinon le crissement ne part jamais.
-      updateAudio(
-        physDt,
-        runtime.speed / V_MAX,
-        phase === 'brake' || runtime.accel < -0.05,
-        runtime.carPower,
-      );
+    if (physSpan > 0) {
+      // Tout ce qui INTÈGRE du temps avance par sous-pas de PHYS_STEP au plus,
+      // sur la totalité du temps écoulé. Ce qui ne fait que PUBLIER l'état
+      // courant (niveaux audio, ambiance, tonnerre) reste après la boucle : une
+      // seule fois par image suffit, et deux fois ne veulent rien dire.
+      for (let left = physSpan; left > 1e-6; left -= PHYS_STEP) {
+        const step = Math.min(PHYS_STEP, left);
+        updateDoorMotion(step);
+        // Après le mouvement des vantaux : la procédure de porte bloquée réagit
+        // au contact que le sous-pas vient d'établir.
+        updateDoorObstruction(step);
+        // La bulle de l'agent suit sa tête, et lui survit le temps d'être lue.
+        updatePlatformAgentSpeech(step);
+        // Sur le quai la phase du store reste 'dwell' : le freinage réel se lit
+        // sur l'accélération (rame qui arrive), sinon le crissement ne part jamais.
+        updateAudio(
+          step,
+          runtime.speed / V_MAX,
+          phase === 'brake' || runtime.accel < -0.05,
+          runtime.carPower,
+        );
+        updateAmbience(step);
+        updatePassengers(step);
+        updatePlatformCrowd(step);
+        // Après les voyageurs : la conversation vise une tête dont la position
+        // vient d'être mise à jour, et récolte les événements de ce sous-pas.
+        updateConversation(step);
+      }
+      // Après la foule : c'est elle qui dit qui est encore là pour porter
+      // une caisse, et qui vient de disparaître dans l'escalier ou en rame.
+      updatePetCarriers();
       // Le quai n'est audible que par les ouvertures réellement dégagées : il
       // faut la porte de la rame ET la porte palière en face — là où il y en a
       // une. À Shinjuku et Shibuya, la porte de la rame donne directement sur
@@ -179,15 +220,6 @@ export function Engine(): null {
       // ce retard-là.
       if (weather.thunderT < lastThunderT) playThunder(weather.thunderFar);
       lastThunderT = weather.thunderT;
-      updateAmbience(physDt);
-      updatePassengers(physDt);
-      updatePlatformCrowd(physDt);
-      // Après la foule : c'est elle qui dit qui est encore là pour porter
-      // une caisse, et qui vient de disparaître dans l'escalier ou en rame.
-      updatePetCarriers();
-      // Après les voyageurs : la conversation vise une tête dont la position
-      // vient d'être mise à jour, et récolte les événements de cette image.
-      updateConversation(physDt);
     }
   });
   return null;

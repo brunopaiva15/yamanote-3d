@@ -178,7 +178,7 @@ export function endPlatformWait(): void {
 
 // --- Étapes -------------------------------------------------------------
 
-function updateBoardable(dt: number, index: number, doorSide: 1 | -1): void {
+function updateBoardable(index: number, doorSide: 1 | -1): void {
   const dwell = dwellDuration(index);
   const t = platformWait.t;
   once('doors-open', t > 0.4, () => {
@@ -227,7 +227,6 @@ function updateBoardable(dt: number, index: number, doorSide: 1 | -1): void {
     lastClackDist = 0;
     enter('departing');
   }
-  void dt;
 }
 
 function updateDeparting(dt: number): void {
@@ -474,7 +473,7 @@ export function updatePlatformWait(rawDt: number): void {
 
   switch (platformWait.stage) {
     case 'boardable':
-      updateBoardable(dt, index, doorSide);
+      updateBoardable(index, doorSide);
       break;
     case 'departing':
       updateDeparting(dt);

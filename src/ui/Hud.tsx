@@ -14,6 +14,7 @@ import { weather, type WeatherKind } from '../systems/weather';
 import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
 import { applySpeechVolume, cancelSpeech } from '../systems/speech';
 import { input } from '../systems/input';
+import { toggleFullscreen } from '../systems/browser';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
 import { IncidentMenu } from './IncidentMenu';
@@ -215,7 +216,7 @@ export function Hud() {
         </button>
         <button
           className="hud-button"
-          onClick={() => void document.documentElement.requestFullscreen().catch(() => undefined)}
+          onClick={() => void toggleFullscreen()}
           title={t.hud.fullscreenTitle}
         >
           {t.hud.fullscreen}
