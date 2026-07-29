@@ -1513,13 +1513,26 @@ l'événement, si bien que la gare suivante arrive au bon moment après la repri
 et que le retard se lit sur l'horloge murale, pas sur le trajet
 (`systems/stationCycle`). Ce que ça fait aux voyageurs est décrit plus haut.
 
-**Quatre locutrices, toutes féminines**, parce que quatre sources parlent et
-qu'on doit les distinguer sans regarder : la sono de la rame (`jf_alpha`),
-l'annonce automatique du quai (`jf_gongitsune`), l'agent de quai au micro
-(`jf_nezumi`, un peu plus rapide et moins lisse — c'est une personne, pas un
-automate), et les deux voix anglaises (`af_heart` à bord, `af_sarah` au quai,
-un cran plus lente : dehors, sous une verrière, une annonce trop rapide ne
-s'attrape pas).
+**Quatre sources, et deux registres** : la rame ne parle pas du même que la
+gare, parce qu'on doit les distinguer sans regarder. La rame
+est au féminin — la sono de bord (`jf_alpha`) et son anglais (`af_heart`) ; le
+quai est au masculin — l'annonce automatique (`jm_kumo`), l'agent de quai au
+micro (le même `jm_kumo` descendu d'un demi-ton, un peu plus rapide et moins
+lisse : c'est une personne, pas un automate) et l'anglais du quai
+(`am_michael`, un cran plus lent que celui de bord : dehors, sous une verrière,
+une annonce trop rapide ne s'attrape pas). Quand le quai et le wagon se
+répondent à une seconde d'écart — 「1番線、ドアが閉まります」 puis 「ドアが閉まり
+ます」 —, on sait lequel des deux vient de parler avant d'avoir écouté le texte.
+
+**Un homme, deux bouches.** Kokoro v1.0 ne compte qu'une seule voix d'homme
+japonaise, et le quai en réclame deux : l'automate et l'agent. La seconde est
+donc la première **transposée d'un demi-ton vers le bas**, à débit constant :
+le générateur synthétise à `speed / pitch` puis rééchantillonne de `pitch`
+(`transpose()` dans `announcements-gen.py`), si bien que la durée demandée est
+tenue mais que la hauteur *et les formants* descendent — le timbre d'un homme
+plus grand, pas le même homme ralenti. La transposition est appliquée segment
+par segment, avant l'insertion des silences, pour que les respirations aux 、/。
+gardent exactement la durée voulue.
 
 S'y ajoute, sur les gares dont l'îlot est partagé avec une autre ligne, la seule
 annonce de quai qui parle d'une voie qui n'est pas la nôtre : まもなく、1番線を、

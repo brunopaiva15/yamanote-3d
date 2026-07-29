@@ -4,12 +4,16 @@
 // numéro de voie et de la ligne jaune ; la rame parle de la gare suivante et
 // des correspondances.
 //
-// Trois locutrices, toutes féminines :
+// Trois voix, toutes masculines — la rame, elle, parle au féminin, et c'est à
+// ça qu'on sait sans regarder laquelle des deux sonos vient de s'adresser à
+// nous :
 //
 //   • ATOS   — l'annonce automatique du quai. Diction posée, très segmentée,
 //              une petite pause entre la voie, la ligne, la direction.
-//   • agent  — l'agent de quai au micro. Plus humaine, moins parfaite : c'est
-//              elle qui presse les voyageurs pendant l'échange.
+//   • agent  — l'agent de quai au micro. Plus humain, moins parfait : c'est
+//              lui qui presse les voyageurs pendant l'échange. Même voix de
+//              synthèse que l'ATOS, descendue d'un demi-ton : Kokoro ne compte
+//              qu'un seul homme japonais, et le quai en réclame deux.
 //   • anglais — la voix anglaise du quai, un peu plus lente que l'ATOS.
 //
 // Le canal (quelle voix synthétise quoi) est porté par `voice` et lu par

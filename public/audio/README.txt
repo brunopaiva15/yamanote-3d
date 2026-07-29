@@ -1,5 +1,7 @@
-announcements/ : annonces vocales pré-générées avec Kokoro TTS
-(ja jf_alpha, en af_heart) — voir scripts/announcements-gen.py.
+announcements/ : annonces vocales pré-générées avec Kokoro TTS — la rame au
+féminin (ja jf_alpha, en af_heart), le quai au masculin (ja jm_kumo, l'agent
+étant ce même jm_kumo transposé d'un demi-ton vers le bas, en am_michael) —
+voir scripts/announcements-gen.py.
 Ne pas éditer à la main : régénérer via le script.
 
 Déposez ici vos propres enregistrements mp3 (optionnel) :

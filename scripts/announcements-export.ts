@@ -7,18 +7,19 @@
 //     --platform=node --outfile=<tmp>/announcements-export.mjs
 //   node <tmp>/announcements-export.mjs <sortie.json>
 //
-// Chaque entrée : { key, lang, text, tts, voice, speed }
+// Chaque entrée : { key, lang, text, tts, voice, speed, pitch }
 // - key   : clipKey(lang, text), nom de fichier du MP3 et clé du manifeste ;
 // - text  : texte affiché / haché, identique au runtime ;
 // - tts   : texte adapté à la synthèse (macrons ASCII et « JY-xx » épelé en
 //           anglais ; en japonais, les quelques mots que l'analyseur du
 //           générateur lit de travers, réécrits en kana — voir JA_READINGS) ;
-// - voice : voix Kokoro. QUATRE locutrices, toutes féminines, parce que quatre
-//           sources parlent dans ce jeu et qu'on doit les distinguer à
-//           l'oreille sans regarder : la sono de la RAME (jf_alpha), l'annonce
-//           automatique du QUAI (jf_gongitsune), l'AGENT de quai au micro
-//           (jf_nezumi, moins lisse — c'est une personne, pas un automate), et
-//           les deux voix anglaises (af_heart à bord, af_sarah au quai).
+// - voice : voix Kokoro. QUATRE sources parlent dans ce jeu et on doit les
+//           distinguer à l'oreille sans regarder : la
+//           RAME parle au féminin (jf_alpha en japonais, af_heart en anglais),
+//           le QUAI au masculin (jm_kumo pour l'ATOS et pour l'agent au micro,
+//           am_michael en anglais). Une gare et une rame qui se répondent à une
+//           seconde d'écart ne se confondent plus : ce n'est même plus le même
+//           registre.
 // - speed : vitesse Kokoro. Le japonais est au-dessus du rythme natif pour
 //           COMPENSER la découpe en segments du générateur : synthétisé seul,
 //           un segment reçoit une intonation de fin de phrase et s'allonge
@@ -27,6 +28,12 @@
 //           eux-mêmes sont posés par le générateur, pas par le débit.
 //           L'anglais du quai est un cran sous celui de la rame : dehors, sous
 //           une verrière, une annonce trop rapide ne s'attrape pas.
+// - pitch : transposition appliquée par le générateur APRÈS synthèse, à débit
+//           constant (voir transpose() dans announcements-gen.py). Kokoro v1.0
+//           ne compte qu'une seule voix d'homme japonaise, jm_kumo, et le quai
+//           en réclame deux : l'automate et l'agent. L'agent descend donc d'un
+//           demi-ton — plus grave, un timbre plus large : un autre homme, pas
+//           le même à qui on aurait pressé le bouton d'avance rapide.
 
 import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -67,26 +74,31 @@ import { platformFor, type LoopDirection } from '../src/data/platforms.ts';
 import { DOOR_SIDE, STATIONS } from '../src/data/stations.ts';
 import { clipKey } from '../src/data/clipKey.ts';
 
-/** Voix de la sonorisation de la RAME (annonces de bord). */
-const CABIN_VOICE: Record<Utterance['lang'], string> = {
-  'ja-JP': 'jf_alpha',
-  'en-US': 'af_heart',
+/** Réglage de synthèse d'un canal : voix Kokoro, débit, transposition. */
+interface VoiceSetting {
+  voice: string;
+  speed: number;
+  /** 1 = timbre natif ; < 1 descend la voix sans toucher au débit. */
+  pitch: number;
+}
+
+/** Voix de la sonorisation de la RAME (annonces de bord), au féminin. */
+const CABIN_VOICE: Record<Utterance['lang'], VoiceSetting> = {
+  'ja-JP': { voice: 'jf_alpha', speed: 1.15, pitch: 1 },
+  'en-US': { voice: 'af_heart', speed: 0.93, pitch: 1 },
 };
 
-/** Voix de la sonorisation du QUAI, par rôle (voir data/stationAnnouncements). */
-const STATION_VOICE: Record<StationVoice, string> = {
-  atos: 'jf_gongitsune',
-  agent: 'jf_nezumi',
-  'atos-en': 'af_sarah',
-};
-
-const SPEED: Record<string, number> = {
-  jf_alpha: 1.15,
-  jf_gongitsune: 1.15,
-  // L'agent parle un peu plus vite : il improvise, il n'articule pas un script.
-  jf_nezumi: 1.22,
-  af_heart: 0.93,
-  af_sarah: 0.88,
+/**
+ * Voix de la sonorisation du QUAI, par rôle (voir data/stationAnnouncements) :
+ * au masculin, pour que la gare et la rame ne parlent jamais du même registre.
+ */
+const STATION_VOICE: Record<StationVoice, VoiceSetting> = {
+  atos: { voice: 'jm_kumo', speed: 1.15, pitch: 1 },
+  // L'agent parle un peu plus vite — il improvise, il n'articule pas un script
+  // — et un demi-ton plus bas : deux hommes se distinguent au timbre avant de
+  // se distinguer au débit.
+  agent: { voice: 'jm_kumo', speed: 1.2, pitch: 0.94 },
+  'atos-en': { voice: 'am_michael', speed: 0.88, pitch: 1 },
 };
 
 /**
@@ -224,22 +236,38 @@ interface Item {
   tts: string;
   voice: string;
   speed: number;
+  pitch: number;
 }
 
 const byKey = new Map<string, Item>();
 
-function add(u: Utterance, voice: string): void {
+/** De quelle bouche sort ce clip : la voix Kokoro et ce qu'on lui fait subir. */
+function mouth(s: { voice: string; pitch: number }): string {
+  return s.pitch === 1 ? s.voice : `${s.voice}@${s.pitch}`;
+}
+
+function add(u: Utterance, setting: VoiceSetting): void {
   const key = clipKey(u.lang, u.text);
   const existing = byKey.get(key);
   if (existing && existing.text !== u.text) {
     throw new Error(`Collision de clé ${key} : « ${existing.text} » / « ${u.text} »`);
   }
   // Même texte, deux voix : la clé ne porte pas la voix, l'un des deux clips
-  // écraserait l'autre. Il faut alors différencier les textes.
-  if (existing && existing.voice !== voice) {
-    throw new Error(`Texte « ${u.text} » réclamé par ${existing.voice} et ${voice}`);
+  // écraserait l'autre. Il faut alors différencier les textes. Deux rôles
+  // partagent désormais jm_kumo — seule la transposition les sépare, d'où la
+  // comparaison sur la bouche entière et pas sur le seul nom de voix.
+  if (existing && mouth(existing) !== mouth(setting)) {
+    throw new Error(`Texte « ${u.text} » réclamé par ${mouth(existing)} et ${mouth(setting)}`);
   }
-  byKey.set(key, { key, lang: u.lang, text: u.text, tts: ttsText(u), voice, speed: SPEED[voice] });
+  byKey.set(key, {
+    key,
+    lang: u.lang,
+    text: u.text,
+    tts: ttsText(u),
+    voice: setting.voice,
+    speed: setting.speed,
+    pitch: setting.pitch,
+  });
 }
 
 for (const u of utterances) add(u, CABIN_VOICE[u.lang]);
@@ -249,7 +277,7 @@ for (const u of stationUtterances) add(u, STATION_VOICE[u.voice]);
  * Tous les textes réellement joués, dédupliqués. Exporté pour que
  * tests/announcementClips.test.ts vérifie que chacun a bien son clip : une
  * annonce sans MP3 retombe sur speechSynthesis, hors du graphe audio et dans
- * une voix qui n'est celle d'aucune des quatre locutrices.
+ * une voix qui n'est celle d'aucune des quatre sources du jeu.
  */
 export const ITEMS: Item[] = [...byKey.values()];
 
