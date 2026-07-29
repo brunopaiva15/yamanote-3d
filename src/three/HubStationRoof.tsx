@@ -1,6 +1,8 @@
 // Grandes toitures des hubs (Tokyo, Ueno, Ikebukuro, Shinjuku, Shibuya,
-// Shinagawa + verrière blanche de Takanawa Gateway) : la structure avale
-// progressivement le ciel pendant TOUT le freinage puis se dissipe au départ.
+// Shinagawa) : la structure avale progressivement le ciel pendant TOUT le
+// freinage puis se dissipe au départ. Takanawa Gateway avait la sienne ici,
+// blanche ; elle masquait la toiture pliée que le quai porte maintenant
+// lui-même (voir ROOF_HUBS dans data/segments).
 // Piloté par la progression p de segEnv, en amont du coulissement spatial du
 // quai (platformPresence). Écrit segEnv.roofShade, consommé par Scene pour
 // l'assombrissement global.
@@ -84,31 +86,8 @@ function buildSteelRoof(): Roof {
   return roof;
 }
 
-// Verrière blanche (Takanawa Gateway) : dalle claire, ailes latérales
-// inclinées, diagonales fines, lumière blanche chaude.
-function buildLatticeRoof(): Roof {
-  const { roof, mat, glow, box } = roofBuilder();
-  const slab = mat('#eef0f2');
-  const wing = mat('#e6e9ec');
-  const beam = mat('#d6dade');
-  const lamp = glow('#fff4da');
-  box(slab, ROOF_W, 0.5, ROOF_LEN, 0, 6.7, 0);
-  box(wing, 9, 0.4, ROOF_LEN, -10.5, 5.9, 0, 0.35);
-  box(wing, 9, 0.4, ROOF_LEN, 10.5, 5.9, 0, -0.35);
-  let flip = 1;
-  for (let z = -70; z <= 70; z += 20) {
-    box(beam, 0.35, 6.8, 0.35, -8.6, 3.0, z, flip * 0.45);
-    box(beam, 0.35, 6.8, 0.35, 8.6, 3.0, z, -flip * 0.45);
-    flip = -flip;
-  }
-  box(lamp, 0.3, 0.08, ROOF_LEN - 4, -3.5, 6.35, 0);
-  box(lamp, 0.3, 0.08, ROOF_LEN - 4, 3.5, 6.35, 0);
-  roof.root.visible = false;
-  return roof;
-}
-
 export function HubStationRoof() {
-  const built = useMemo(() => ({ steel: buildSteelRoof(), lattice: buildLatticeRoof() }), []);
+  const built = useMemo(() => ({ steel: buildSteelRoof() }), []);
 
   useFrame(() => {
     if (segEnv.seg < 0) return;
@@ -135,10 +114,7 @@ export function HubStationRoof() {
     const structDay = 1 - 0.45 * cityNight;
     const lampLvl = 0.3 + 0.7 * cityNight;
 
-    for (const [kind, roof] of [
-      ['steel', built.steel],
-      ['lattice', built.lattice],
-    ] as const) {
+    for (const [kind, roof] of [['steel', built.steel]] as const) {
       const active = fade > 0.02 && variant === kind;
       roof.root.visible = active;
       if (!active) continue;
@@ -154,7 +130,6 @@ export function HubStationRoof() {
   return (
     <>
       <primitive object={built.steel.root} />
-      <primitive object={built.lattice.root} />
     </>
   );
 }

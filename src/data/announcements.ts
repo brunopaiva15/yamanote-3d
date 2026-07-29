@@ -9,7 +9,7 @@
 // Toute chaîne ajoutée ici doit suivre la règle ; voir `noCommas` pour les
 // libellés importés d'ailleurs.
 
-import { STATIONS, TRANSFERS, type Station } from './stations';
+import { STATIONS, TRANSFERS, type Station } from './stations.ts';
 
 export interface Utterance {
   text: string;
@@ -149,6 +149,27 @@ export function doorsClosingAnnouncement(): Utterance[] {
   return [
     { text: 'ドアが閉まります。ご注意ください。', lang: 'ja-JP' },
     { text: 'The doors are closing. Please stand clear of the doors.', lang: 'en-US' },
+  ];
+}
+
+/**
+ * Porte bloquée : le conducteur demande de dégager l'encadrement.
+ *
+ * Il n'existe pas d'annonce automatique pour chaque obstruction — c'est une
+ * phrase dite au micro, courte, et qui se durcit d'une tentative à l'autre.
+ * `insist` est le deuxième ton : la porte ne se ferme toujours pas, et ça
+ * s'entend.
+ */
+export function doorReleaseAnnouncement(insist = false): Utterance[] {
+  if (insist) {
+    return [
+      { text: 'ドアが閉まりません。ドアから離れてください。', lang: 'ja-JP' },
+      { text: 'The doors cannot close. Please stand clear of the doors.', lang: 'en-US' },
+    ];
+  }
+  return [
+    { text: 'ドアから離れてください。', lang: 'ja-JP' },
+    { text: 'Please stand clear of the doors.', lang: 'en-US' },
   ];
 }
 

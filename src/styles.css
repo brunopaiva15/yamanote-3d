@@ -703,6 +703,16 @@ body,
   font-size: 13px;
 }
 
+/* L'agent de quai : ce n'est pas une conversation, c'est une consigne. Le
+   liseré vert de la ligne la distingue au premier coup d'œil de ce que dit un
+   voyageur — on comprend avant de lire que c'est le personnel qui parle. */
+.pax-bubble-staff {
+  background: rgba(12, 20, 16, 0.88);
+  border-color: rgba(155, 201, 63, 0.55);
+  border-left: 3px solid #9bc93f;
+  font-weight: 600;
+}
+
 @keyframes pax-bubble-in {
   from {
     opacity: 0;

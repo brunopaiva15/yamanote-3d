@@ -62,6 +62,43 @@ axes, plus un « portillon » par porte qui ne s'ouvre que si la porte de la ram
 seuils se ferment — on ne peut pas tomber sur la voie. Une seule voiture est
 accessible, celle du joueur : c'est la seule dont l'intérieur existe.
 
+### Se poser à quai
+
+Un train ne s'arrête pas : il se pose. La dernière seconde d'un arrêt réussi ne
+se sent pas, et c'est justement ce qui est le plus difficile à obtenir. Deux
+choses s'y jouent, et elles étaient toutes les deux fausses.
+
+Le **profil de freinage** (`systems/trainPhysics`) gardait 0,35 m/s² jusqu'au
+bout : la rame arrivait devant les portières encore à 0,3 m/s et l'arrêt se
+lisait comme une coupure. Il applique désormais le lâcher final des conducteurs
+JR — 停止直前の緩め : sous ~4 km/h le frein se relâche franchement et la vitesse
+s'éteint au lieu d'être coupée. Le dernier mètre prend près de quatre secondes,
+les dix derniers centimètres se parcourent à moins de 0,2 m/s, et on les voit
+passer. Le freinage complet dure ~23 s au lieu de 21 ; les deux secondes sont
+reprises sur le forfait d'arrêt de `data/config`, l'horaire de la boucle ne
+bouge pas.
+
+Le **glissement du quai** vu depuis le wagon, lui, n'était pas branché sur la
+physique du tout : une courbe de temps calée sur la progression du trajet, qui
+finissait sa course plusieurs secondes avant l'immobilisation réelle. Sur un
+tronçon court (Mejiro→Takadanobaba et ses 8 s de croisière), la gare entière
+arrivait d'un bloc alors que la rame était déjà presque à l'arrêt. Le quai est
+maintenant posé à **la distance qui reste à parcourir** avant l'arrêt
+(`stopDistance`, le profil intégré depuis l'état courant) : il défile donc
+exactement à la vitesse du train, comme le reste du décor, et se cale de
+lui-même — il n'y a plus de raccord à la fin, puisque la distance restante vaut
+zéro pile quand la vitesse s'annule.
+
+Reste qu'aucune rame ne se pose au millimètre sur son 定位置. La tolérance JR
+East est de ±35 cm, le TASC des lignes à portes palières en garde une dizaine de
+centimètres : chaque arrêt tire donc son **écart d'arrêt** de 3 à 11 cm, d'un
+côté ou de l'autre (`runtime.berthOffset`). Portes ouvertes, le décalage se lit
+très bien entre le montant de la baie palière et celui de la portière — et il ne
+gêne rien : une baie palière fait 1,80 m pour une porte de rame de 1,32 m.
+L'écart appartient à la rame, pas à la gare : il devient `platformSlide` dans le
+repère du wagon, `−trainZ` dans celui du quai, et se reporte de l'un à l'autre
+quand on descend ou qu'on remonte.
+
 ## Les gares
 
 Le quai fait sa vraie longueur : 224 m, onze voitures de 20 m, 44 baies de portes
@@ -116,9 +153,15 @@ sept d'entre elles. Chaque gare porte donc maintenant ses propres cotes.
 Quatorze gares déclarent une `signature`, et **toutes les quatorze sont
 dessinées**, une par fichier dans `three/station/signatures/` :
 
-- **Takanawa Gateway** — la toiture pliée de Kengo Kuma, versants d'acier blanc
-  doublés de bois clair qui enjambent d'un seul tenant les deux quais et les
-  voies, verrière de faîte, passerelles vitrées. La plus claire des trente.
+- **Takanawa Gateway** — la toiture pliée de Kengo Kuma, et c'est elle qui
+  couvre le quai : seule gare de la boucle à déclarer `sigCanopy`, elle n'a pas
+  de dalle d'auvent générique. Pans blancs cassés en accordéon tous les 4,5 m,
+  fermes triangulaires de cèdre et d'acier qui enjambent d'un seul tenant les
+  quatre voies et les deux quais, noue vitrée tous les neuf mètres, colonnes-
+  arbres, mezzanines vitrées qui franchissent tout le site, mur-rideau de fond
+  toute hauteur à meneaux blancs et traverses de cèdre. La plus claire des
+  trente — sans être la plus blanche : le bois y tient la moitié de ce qu'on
+  voit.
 - **Akihabara** — le viaduc de la Chūō–Sōbu qui franchit le site
   perpendiculairement : poutres à âme pleine, sous-face rivetée, piles posées
   hors de tout quai et de toute voie.
@@ -202,8 +245,8 @@ de voie annoncé n'est pas le nôtre** : c'est celui d'en face, relevé gare par
 gare (à Ueno la Keihin-Tōhoku 北行 est la voie 1, à Okachimachi la numérotation
 est inversée et c'est la 4). Ces textes se gravent comme les autres
 (`announcements-export.ts` puis `announcements-gen.py --reuse`, qui ne
-synthétise que les clips absents) ; tant qu'ils manquent, c'est `speechSynthesis`
-qui les dit.
+synthétise que les clips absents) ; tant qu'ils manquent, l'annonce ne se dit
+pas — voir *La cinquième voix*.
 
 Deux règles gouvernent le déclenchement (`systems/passingTrain`), et la première
 compte plus que le passage lui-même : **la gare ne parle jamais par-dessus
@@ -230,6 +273,118 @@ et l'avertisseur à l'entrée en gare.
 
 En qualité *basse* et *très basse*, aucun passage n'est tiré : une seconde rame
 complète coûte trop cher là où le quai suffit déjà à saturer la machine.
+
+### La porte qui ne se ferme pas
+
+Il arrive qu'un arrêt ne se termine pas. Le conducteur a commandé la fermeture,
+les quarante-quatre portes sont parties ensemble, les portes palières une
+seconde derrière — et l'une d'elles s'arrête en chemin, parce que quelqu'un est
+resté dans l'encadrement.
+
+**Rien ne se rouvre tout seul.** C'est tout l'intérêt de la séquence, et c'est
+exactement ce qu'une porte d'ascenseur ne fait pas. Sur le E235, la détection
+est sensible et la force de maintien réduite avant le démarrage : la porte
+touche, s'arrête, relâche sa pression de deux centimètres pour qu'on puisse se
+dégager — et elle en reste là. Elle ne se verrouille pas, donc le circuit de
+départ n'est pas établi, donc l'indication de départ n'apparaît pas en cabine de
+tête, donc **la rame ne part pas**. C'est un verrouillage, pas un minuteur : le
+chrono de l'arrêt est retenu au bord de la bascule tant que la porte n'est pas
+confirmée fermée (`runtime.departureBlockers.doorBlocked`).
+
+Ce qui débloque la situation est un **geste humain** : le conducteur arrière
+utilise la commande de réouverture, le `再開閉スイッチ`. Elle ne rouvre que la ou
+les portes qui ne sont pas complètement fermées — bouton maintenu, la porte
+s'ouvre ; bouton relâché, elle se referme aussitôt. La durée d'appui dit ce
+qu'il a vu : une impulsion d'une demi-seconde pour décoincer une sangle, une à
+trois secondes quand quelqu'un est réellement en travers. Rien de tout cela ne
+touche aux quarante-trois autres portes.
+
+```
+fermeture rame → ~1 s → fermeture des portes palières
+   → contact, la porte s'arrête sans se verrouiller
+   → 0,5 à 2 s de réaction humaine
+   → 再開閉 : réouverture de la seule porte concernée
+   → 「ドアから離れてください」
+   → 1 à 3 s d'ouverture, puis nouvelle fermeture
+   → contrôle → départ
+```
+
+Deux obstacles, et ils ne se ressemblent pas. **Une personne** entrebâille la
+porte de vingt-cinq centimètres : ça se voit depuis la cabine, ça se voit sur
+les moniteurs de quai, et la réaction est rapide. **Un objet fin** — une sangle
+de sac, un câble d'écouteur — laisse les vantaux se rejoindre à deux
+centimètres près : il n'y a rien à voir, et ce qui alerte n'est pas la vue mais
+l'indication de départ qui ne vient pas. C'est le cas difficile, et il est
+modélisé comme tel : détection plus lente, réouverture plus brève, plus de
+tentatives.
+
+Après trois tentatives, le conducteur renonce à la porte seule et **rouvre
+tout** : un agent de quai vient dégager le passage lui-même, la gare explique
+l'attente, puis la rame referme et repart. C'est la seule branche où l'incident
+touche les autres portes.
+
+Côté annonces, il n'y a pas de message automatique pour une obstruction : c'est
+une phrase dite au micro, `ドアから離れてください`, par le conducteur d'abord,
+puis par l'agent de quai si ça traîne — et elle se durcit,
+`ドアが閉まりません。ドアから離れてください。`. À l'intérieur du wagon, le témoin
+orange au-dessus de la porte concernée continue de clignoter quand tous les
+autres se sont éteints : c'est comme ça qu'on repère la porte qui coince sans
+rien voir d'autre. Depuis le quai, c'est un seul intervalle resté ouvert sur
+quarante-quatre.
+
+**Et si c'est vous ?** Se planter dans l'encadrement déclenche exactement la
+même chose, à un détail près, mais il est de taille : plus rien n'est tiré au
+sort. Ce n'est pas la chance qui décide qu'un joueur se dégage, c'est lui. La
+porte s'arrête sur vous, la rame ne part pas, le conducteur rouvre votre porte
+et vous demande de vous écarter — et il recommencera aussi longtemps qu'il
+faudra. Après trois tentatives il rouvre tout et un agent s'en mêle, mais rien
+ne se referme tant que vous êtes dedans : le train reste à quai, indéfiniment,
+et c'est vous qui décidez quand il repart. Un pas de côté et la porte reprend
+sa course là où elle s'était arrêtée — sans attendre la fin de la procédure si
+vous êtes parti avant.
+
+**Et quelqu'un vient.** Un haut-parleur n'a jamais fait reculer personne :
+quand c'est le joueur qui tient la porte, un agent de quai se met en route dès
+le contact. Il accourt depuis la trémie la plus proche — au pas pressé, une
+porte bloquée retarde la ligne —, se poste **à côté** de la baie (jamais
+devant : il ne bouche pas le passage qu'il vient dégager), se tourne vers celui
+qui bloque et lui parle, en toutes lettres au-dessus de sa tête. Sa consigne
+monte d'un cran à chaque tentative, et il ne repart qu'une fois la porte
+fermée. Pour une obstruction ordinaire, il n'intervient qu'en dernier recours,
+quand le conducteur a renoncé à la porte seule et rouvert tout.
+
+Techniquement, une place du pool de foule lui est réservée depuis le début
+(`CrowdPax.staff`) : le rendu « librairie » choisit le modèle 3D de chaque
+voyageur **une fois pour toutes** à partir de son apparence, on ne peut donc
+pas déguiser un civil en agent en cours de route. Il hérite du costume du pack,
+teint bleu nuit, casquette, pas de sac.
+
+Et on vous le dit à l'oreille aussi. L'agent s'adresse à vous **dès la première
+réouverture** quand c'est vous qui bloquez, là où une obstruction ordinaire lui
+laisse d'abord la parole au conducteur : à cheval sur le seuil, on est déjà
+« dehors » pour le moteur audio, la sono de la rame est coupée net
+(`setListenerOutside`) et le conducteur parlerait tout seul dans une voiture
+qu'on vient de quitter. Depuis l'intérieur, c'est l'inverse : la voix du quai
+est filtrée par ce que les portes laissent passer, et il fallait compter la
+porte entrebâillée sur vous — vingt-cinq centimètres à un pas de l'oreille —
+au lieu de la seule porte de référence, qui est close.
+
+Corollaire indispensable : **un seuil occupé ne devient jamais infranchissable**.
+Le volume praticable (`systems/walkable`) ferme un portillon dès que la porte
+se referme, ce qui emmurait proprement quiconque se tenait dedans. Il reste
+désormais ouvert pour celui qui y est déjà — on n'y ENTRE plus, mais on en
+sort, des deux côtés. Sortir côté quai est d'ailleurs la façon la plus directe
+de dégager le passage : le train referme et s'en va sans vous.
+
+L'incident se tire une fois par arrêt, en même temps que la chronologie de
+l'arrêt, et sa fréquence suit le remplissage du tronçon : de l'ordre d'un arrêt
+sur vingt-cinq en heure creuse, un sur six en pointe (`data/doorObstruction`,
+sans dépendance et couvert par `tests/doorObstruction.test.ts`). La procédure
+elle-même vit dans `systems/doorObstruction` ; la mécanique du vantail — course
+partielle, butée souple, porte palière asservie — dans `systems/doorMotion`, qui
+tient désormais une porte à part du reste de l'ensemble. En développement,
+`__blockDoor()` arme une obstruction pour la prochaine fermeture, et
+`__blockDoor('object')` force le cas difficile.
 
 ### Paliers de qualité
 
@@ -260,6 +415,62 @@ gouttière et descentes d'eau, chemin de câbles, ligne verte de guidage et rep�
 「N号車 乗車位置」 peints au sol. Rien de tout cela ne se pose au hasard : les
 bornes d'urgence évitent les baies de portes, les diffuseurs évitent les poutres,
 et rien n'atterrit dans une file d'attente.
+
+### Les trémies d'escalier
+
+C'est le seul endroit d'une gare où le décor doit tenir **en coupe** : la dalle
+est vraiment percée, le joueur descend dedans, sa tête passe sous le niveau du
+quai. Tout y vient d'une source unique (`data/stationGeometry`) — profil des
+marches, ligne des nez, palier bas, longueur praticable — parce que quatre
+consommateurs doivent voir exactement le même escalier : le rendu
+(`three/station/Stairwell`), le percement de la dalle, la marche du joueur
+(`systems/walkable`) et les voyageurs qui s'en vont (`systems/platformCrowd`).
+
+La volée est un **bloc plein** et non un empilement de plateaux : chaque marche
+descend jusqu'à une sous-face commune, ce qui ferme d'elle-même la gaine. Les
+joues et le voile de tête ne s'arrêtent pas au chant du percement, ils le
+**coiffent** — deux faces coplanaires sur quarante-quatre centimètres d'épaisseur
+de dalle, et la trémie se borde d'un liseré clignotant. Chaque nez de marche
+porte sa bande antidérapante jaune, la main courante descend avec la pente et
+se termine par un retour horizontal à chaque bout, et un bandeau lumineux
+encastré dans les joues éclaire ce que le jour tombant du percement n'atteint
+plus. Au fond, le fléchage de sortie de la gare courante.
+
+Le sol sur lequel on marche n'est délibérément **pas** en marches d'escalier :
+c'est la ligne des nez relevée d'une demi-contremarche, qui passe par le milieu
+de chaque giron. Un profil en escalier faisait tomber le marcheur de dix-sept
+centimètres tous les trente-quatre — quatre chutes par seconde au pas de
+promenade, pour le joueur comme pour les voyageurs.
+
+Deux nappes horizontales passaient enfin **en travers** de la cage : le ballast
+de la voie et la rue de la ville, toutes deux un mètre sous la dalle. Elles se
+dérobent maintenant sur l'emprise du quai, et seulement là — les écarter sur
+leurs quatre cent soixante mètres ouvrait un vide au-delà des abouts de quai
+(`three/groundStrip`, `systems/stationOcclusion`).
+
+C'est ce dégagement qui a libéré la place du **niveau inférieur**. La volée ne
+s'arrête plus sur une cloison : elle passe sous un linteau, repart sous la
+dalle et débouche sur un couloir de correspondance — soubassement de faïence,
+caissons publicitaires rétroéclairés, ligne de guidage peinte. Rien n'y est
+praticable — le joueur est arrêté cinq marches plus haut — mais c'est ce fond
+de champ qui décide si la trémie descend vers une gare ou s'arrête dans un
+puits de deux mètres.
+
+**C'est la hauteur sous linteau qui commande tout le profil.** La sous-face de
+la dalle est à quarante-quatre centimètres ; pour qu'un homme passe dessous, il
+faut être descendu de deux mètres soixante avant d'y arriver, et il n'y a pour
+cela que cinq mètres d'emprise. Quinze marches de 17,5 sur 31 y tiennent et
+donnent 2,15 m — la cote d'un passage de gare. Le fléchage de sortie se pose
+donc AU-DESSUS du passage, sur le linteau, et non suspendu dans la cage où il
+pendait à un mètre du sol.
+
+Le reste est calé sur ce qu'on peut réellement en voir : depuis le haut de la
+volée, le rayon rasant part de la sous-face du linteau et descend d'un demi-
+mètre par mètre ; à neuf mètres il a rejoint le sol. Les caissons se tiennent
+donc à hauteur d'affiche et pas plus loin que sept mètres — une réglette de
+plafond, elle, n'atteindrait jamais l'œil. Et les voyageurs qui s'en vont ne
+s'effacent plus à une altitude donnée : ils marchent jusqu'à un mètre après le
+linteau, où c'est la dalle qui les cache.
 
 ### La signalétique
 
@@ -1184,8 +1395,8 @@ JY, まもなく…, fermeture, accueil, messages de courtoisie en rotation) son
 dites en japonais puis en anglais, avec les correspondances réelles de chaque
 gare. Les voix sont des clips pré-générés avec **Kokoro TTS**, stockés dans
 `public/audio/announcements/` et régénérables via
-`scripts/announcements-export.ts` + `scripts/announcements-gen.py` ; un texte
-sans clip retombe sur `speechSynthesis`. Le japonais est synthétisé segment par
+`scripts/announcements-export.ts` + `scripts/announcements-gen.py`. Le
+japonais est synthétisé segment par
 segment, avec de vraies pauses aux 、/。 — la cadence posée des annonces
 automatiques JR (まもなく。…渋谷。…渋谷。), que Kokoro ne marque pas de
 lui-même. Les annonces **de bord** n'écrivent plus aucune virgule (ni 、 ni
@@ -1242,6 +1453,33 @@ s'attrape pas).
 S'y ajoute, sur les gares dont l'îlot est partagé avec une autre ligne, la seule
 annonce de quai qui parle d'une voie qui n'est pas la nôtre : まもなく、1番線を、
 電車が通過します — voir *Le train qui ne s'arrête pas*.
+
+**La cinquième voix.** Il y en avait une de trop, et c'était la seule qu'on
+n'avait pas choisie. Neuf textes joués n'avaient pas de clip : le remerciement
+d'ouverture, dont le texte venait de changer, et toute la procédure de porte
+bloquée, ajoutée sans regravure. Faute de MP3, ils partaient sur
+`speechSynthesis` — la voix du navigateur, Kyoko ou Nanami selon la machine,
+qui sort **hors du graphe Web Audio** : ni panoramique, ni souffle de ligne,
+juste un volume approché. Sur le quai, où l'on entend l'ATOS et l'agent
+enchaîner, elle s'entendait comme une intruse.
+
+Le générateur, lui, ne pouvait plus tourner : un clip est identifié par le seul
+couple (langue, texte), et l'agent de quai disait mot pour mot la phrase du
+conducteur — 「ドアから離れてください。」. Deux voix pour une clé : l'export
+refusait de continuer, à juste titre, et personne ne pouvait plus regraver quoi
+que ce soit. L'agent a donc sa propre formulation, ce qui est d'ailleurs plus
+juste : il ne lit pas un script depuis une cabine, il parle à quelqu'un qu'il a
+devant lui (「危ないですから、ドアから離れてください。」).
+
+Les neuf clips gravés, le repli a été **supprimé** plutôt que réparé. Un texte
+sans clip ne se dit plus : une annonce muette passe inaperçue là où une voix
+étrangère casse la scène, et un clip qui ne se charge pas est simplement rejoué
+une fois avant qu'on renonce. Pour que le cas n'arrive jamais,
+`tests/announcementClips.test.ts` énumère ce que grave le générateur et vérifie
+que chaque texte a son MP3, que chaque MP3 est là, et qu'aucun ne traîne sans
+être réclamé. Retoucher un mot d'annonce sans regraver fait désormais échouer
+la suite de tests — pas le rendu sonore, trois semaines plus tard, dans une
+gare qu'on ne visitait plus.
 
 Le numéro de voie annoncé est le vrai (`data/platforms`), y compris les voies
 secondaires d'Ikebukuro et d'Ōsaki. Les clips ne sont gravés que pour le sens
@@ -1332,11 +1570,9 @@ centre de la tête.
 
 Les annonces vocales (clips Kokoro) passent par ces mêmes bus : elles sont
 réellement pannées sur les diffuseurs, ceux du plafond pour la rame, ceux du
-quai pour la gare. Seul le repli `speechSynthesis` (texte sans clip) sort hors
-du graphe Web Audio et ne peut pas être panné ; il reste ancré aux diffuseurs
-par le souffle de ligne spatialisé (la sono s'ouvre et se referme avec un
-déclic autour de chaque annonce) et par un volume qui suit la distance au
-diffuseur le plus proche.
+quai pour la gare — toutes, sans exception, puisqu'il n'existe plus de voix qui
+sorte du graphe Web Audio. Chacune est prise sous le souffle de sa ligne, qui
+s'ouvre et se referme avec un déclic autour d'elle.
 
 **Où on est décide ce qu'on entend.** Les deux voix ont chacune leur robinet, et
 il dépend du côté de la porte où se trouve la tête :

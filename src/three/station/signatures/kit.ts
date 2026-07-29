@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { directionBandZs } from '../../../data/stationGeometry';
 import type { StationLayout } from '../../../data/stationLayouts';
 import { farSideOf, type StationPlacement } from '../../../systems/stationPlacement';
+import { matOriented, tiltZ } from '../instancing';
 import type { Mats } from '../materials';
 
 export interface SigProps {
@@ -72,6 +73,35 @@ export function clearSpineSpans(
   }
   if (z1 > cur + 2) out.push({ z0: cur, z1 });
   return out;
+}
+
+/**
+ * Barre tendue entre deux points de la COUPE, à l'abscisse z donnée.
+ *
+ * Une ferme ne se décrit pas en positions et en angles : elle se décrit par ses
+ * nœuds. Diagonales de treillis, montants, branches de colonne — tout ce qui
+ * joint deux points d'un même plan de coupe se pose ici, et l'inclinaison s'en
+ * déduit au lieu de se recalculer à la main à chaque membrure.
+ */
+export function member(
+  a: [number, number],
+  b: [number, number],
+  z: number,
+  thick: number,
+  depth = thick,
+): THREE.Matrix4 {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy);
+  return matOriented(
+    tiltZ(Math.atan2(dy, dx)),
+    (a[0] + b[0]) / 2,
+    (a[1] + b[1]) / 2,
+    z,
+    len,
+    thick,
+    depth,
+  );
 }
 
 /**

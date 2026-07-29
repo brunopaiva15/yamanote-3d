@@ -90,6 +90,19 @@ export function isDepartureBlocked(): boolean {
   return b.doorBlocked || b.heldAtStation || b.signalStop || b.emergency;
 }
 
+/**
+ * Blocages qui exigent la réouverture de TOUTES les portes — un ordre de
+ * maintien à quai, un signal fermé, une urgence.
+ *
+ * `doorBlocked` n'en fait pas partie, et c'est tout l'intérêt : une porte qui
+ * coince ne rouvre QUE cette porte-là (voir systems/doorObstruction, qui mène
+ * sa propre procédure), et le reste de la rame ne bouge pas.
+ */
+export function isDepartureHeldOpen(): boolean {
+  const b = runtime.departureBlockers;
+  return b.heldAtStation || b.signalStop || b.emergency;
+}
+
 export function setDepartureBlockers(partial: Partial<DepartureBlockers>): void {
   Object.assign(runtime.departureBlockers, partial);
   if (isDepartureBlocked()) {

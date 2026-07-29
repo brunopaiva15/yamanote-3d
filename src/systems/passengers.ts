@@ -201,6 +201,9 @@ function scaledTargets(): PaxTargets {
 export function seedPassengers(): void {
   initPassengers();
   releasePending();
+  // Nouvelle rame : celui qui était coincé dans la porte de la précédente est
+  // reparti avec elle.
+  doorwayHolder = -1;
   const target = scaledTargets();
   let seatedCount = 0;
   let standingCount = 0;
@@ -586,6 +589,99 @@ export function exchangePassengers(side: 1 | -1): void {
     if (beginBoard(queue[qi++], side, 'standing')) needSeatIn--;
     else break;
   }
+}
+
+// --- Le voyageur pris dans la porte --------------------------------------
+//
+// Quand une porte se ferme sur quelqu'un (systems/doorObstruction), il faut
+// bien que ce quelqu'un soit là. On prend un voyageur du pool qui n'est pas
+// encore entré en scène, on le plante dans l'embrasure, et on l'y laisse : il
+// ne marche plus, il ne s'assoit pas, il attend qu'on le dégage. C'est la
+// seule position du wagon qui ne soit ni une place assise, ni un slot debout,
+// ni un point de passage — d'où son traitement à part dans updatePassengers.
+
+/** Voyageur immobilisé dans l'embrasure, -1 si personne. */
+let doorwayHolder = -1;
+
+/** Abscisse du seuil : un pied dans le wagon, l'autre encore dehors. */
+const DOORWAY_U = 1.24;
+
+/**
+ * Plante un voyageur dans l'embrasure de la porte `doorZ`, côté quai.
+ * @returns false si le pool n'a personne de libre — l'obstruction se rabattra
+ *          alors sur un objet, qui n'a besoin de personne.
+ */
+export function holdPaxInDoorway(doorZ: number, side: 1 | -1): boolean {
+  if (doorwayHolder >= 0) return true;
+  const busy = new Set(pendingBoards.map((b) => b.paxId));
+  const p = paxList.find((q) => q.state === 'hidden' && !busy.has(q.id));
+  if (!p) return false;
+  releaseSlots(p);
+  endPair(p);
+  clearAnchor(p);
+  p.state = 'boarding';
+  p.afterWalk = 'hidden';
+  p.waypoints = [];
+  p.wpi = 0;
+  p.exitDoorZ = 0;
+  p.pos.set(side * DOORWAY_U, 0, doorZ);
+  // De trois quarts, tourné vers l'intérieur : il vient de monter et se
+  // retourne vers la porte qui vient de le toucher.
+  p.yaw = -side * Math.PI * 0.42;
+  p.targetYaw = p.yaw;
+  p.bob = 0;
+  p.bobPhase = Math.random() * Math.PI * 2;
+  doorwayHolder = p.id;
+  return true;
+}
+
+/** Le passage est dégagé : il finit de monter, ou s'efface faute de place. */
+export function releasePaxFromDoorway(): void {
+  if (doorwayHolder < 0) return;
+  const p = paxList[doorwayHolder];
+  doorwayHolder = -1;
+  if (!p) return;
+  const stand = findFreeStand();
+  if (stand < 0) {
+    p.state = 'hidden';
+    p.waypoints = [];
+    p.wpi = 0;
+    return;
+  }
+  p.standSlot = stand;
+  standOccupant[stand] = p.id;
+  p.afterWalk = 'standing';
+  const s = STAND_SLOTS[stand];
+  p.state = 'boarding';
+  p.waypoints = [
+    new THREE.Vector3(Math.sign(p.pos.x) * 0.95, 0, p.pos.z),
+    new THREE.Vector3(Math.sign(s.x) * 0.3 || 0.3, 0, s.z),
+    new THREE.Vector3(s.x, 0, s.z),
+  ];
+  p.wpi = 0;
+}
+
+/** Y a-t-il quelqu'un dans l'embrasure ? */
+export function paxHeldInDoorway(): boolean {
+  return doorwayHolder >= 0;
+}
+
+/**
+ * Le voyageur coincé, image par image : il ne marche pas, mais il n'est pas
+ * une statue non plus — il se ramasse sur lui-même, regarde la porte, puis le
+ * fond du wagon. Sans ça, la scène la plus tendue de l'arrêt serait jouée par
+ * un mannequin.
+ */
+function updateDoorwayHold(p: Pax, dt: number): void {
+  p.bobPhase += dt * 1.6;
+  p.bob = Math.abs(Math.sin(p.bobPhase * 0.6)) * 0.012;
+  const side = Math.sign(p.pos.x) || 1;
+  // Coup d'œil alterné vers la porte (dehors) puis vers l'intérieur.
+  const target = Math.sin(p.bobPhase * 0.5) > 0 ? -side * 0.55 : side * 0.35;
+  p.headYaw += (target - p.headYaw) * Math.min(1, dt * 2.5);
+  p.headPitch += (-0.06 - p.headPitch) * Math.min(1, dt * 2);
+  p.headRoll += (0 - p.headRoll) * Math.min(1, dt * 2);
+  p.bodyLean += (0.05 - p.bodyLean) * Math.min(1, dt * 2);
 }
 
 function whereOf(p: Pax): ActionWhere | null {
@@ -1031,6 +1127,11 @@ export function updatePassengers(dt: number): void {
   resolvePlayerPush(dt);
   for (const p of paxList) {
     if (p.state === 'boarding' || p.state === 'alighting') {
+      // Pris dans la porte : il reste où il est jusqu'à ce qu'on le dégage.
+      if (p.id === doorwayHolder) {
+        updateDoorwayHold(p, dt);
+        continue;
+      }
       const wp = p.waypoints[p.wpi];
       if (!wp) continue;
       tmp.subVectors(wp, p.pos);

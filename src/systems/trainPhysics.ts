@@ -5,13 +5,18 @@
 // limité) jusqu'à ~0,84 m/s² (3,0 km/h/s), qui s'essouffle au-delà de
 // ~40 km/h (zone à puissance constante). 90 km/h est atteint en ~45 s.
 // Freinage : application progressive, ~1,35 m/s² en service, puis desserrage
-// graduel sous ~11 km/h pour un arrêt sans à-coup (~21 s depuis 90 km/h).
+// graduel sous ~11 km/h et LÂCHER FINAL sous ~4 km/h — la rame se pose au lieu
+// de s'arrêter (~23 s depuis 90 km/h, dont près de quatre secondes rien que
+// pour le dernier mètre).
 //
 // Les mêmes équations servent à trois usages : la boucle 60 fps du cycle
 // station, le repositionnement au spawn (randomizeEntry), et le mouvement de
 // la rame vue depuis le quai (platformWait).
 
-import { V_MAX } from '../data/config';
+// Extension explicite : `data/config` n'a aucune dépendance et ce module non
+// plus, donc Node exécute les deux tels quels — c'est ce qui rend le profil de
+// freinage testable sans harnais (tests/trainPhysics.test.ts).
+import { V_MAX } from '../data/config.ts';
 import type { Phase } from '../store';
 
 /** Secondes immobiles en début de phase depart (desserrage des freins). */
@@ -20,8 +25,21 @@ export const DEPART_HOLD = 3.0;
 const ACCEL_MAX = 0.84; // m/s²
 const ACCEL_TAPER_V = 11; // m/s : au-delà, accel = ACCEL_MAX·TAPER_V/v
 const BRAKE_MAX = 1.35; // m/s²
-const BRAKE_MIN = 0.35; // m/s² résiduel à l'approche de l'arrêt
+const BRAKE_MIN = 0.45; // m/s² : palier de fin de freinage, avant le lâcher
 const BRAKE_EASE_V = 3; // m/s : desserrage progressif sous cette vitesse
+/**
+ * Lâcher final (停止直前の緩め).
+ *
+ * Un train ne s'arrête pas : il se pose. Sous ~4 km/h, le conducteur (ou le
+ * TASC) relâche franchement pour que la vitesse s'éteigne au lieu d'être
+ * coupée — le dernier mètre se parcourt en près de quatre secondes, les dix
+ * derniers centimètres à moins de 0,2 m/s. Sans ce lâcher, le profil gardait
+ * 0,35 m/s² jusqu'au bout : la rame arrivait devant les portières encore à
+ * 0,3 m/s et l'immobilisation se lisait comme un à-coup, exactement ce qu'un
+ * arrêt réussi ne fait pas sentir.
+ */
+const CREEP_V = 1.2; // m/s : sous cette vitesse, le frein se relâche pour de bon
+const CREEP_FLOOR = 0.18; // fraction de frein conservée à v → 0
 const JERK_UP = 0.55; // m/s³ : montée de traction / relâchement du frein
 const JERK_DOWN = 1.0; // m/s³ : application du frein / coupure de traction
 
@@ -35,7 +53,9 @@ export function accelCap(v: number): number {
 }
 
 export function brakeCap(v: number): number {
-  return BRAKE_MIN + (BRAKE_MAX - BRAKE_MIN) * Math.min(1, v / BRAKE_EASE_V);
+  const service = BRAKE_MIN + (BRAKE_MAX - BRAKE_MIN) * Math.min(1, v / BRAKE_EASE_V);
+  const creep = CREEP_FLOOR + (1 - CREEP_FLOOR) * Math.min(1, v / CREEP_V);
+  return service * creep;
 }
 
 // L'urgence garde presque toute sa force jusqu'à l'arrêt : léger desserrage
@@ -81,6 +101,21 @@ export function integrateTrain(
   for (let left = span; left > 1e-6; left -= 0.1) {
     stepTrain(state, target, Math.min(0.1, left), emergency);
   }
+}
+
+/**
+ * Distance restant à parcourir avant l'immobilisation, depuis l'état (v, a).
+ *
+ * C'est la mesure qui place le quai à l'approche : elle décroît exactement à la
+ * vitesse du train (dR/dt = −v, le profil étant déterministe à partir de l'état
+ * courant) et vaut zéro pile quand la rame s'arrête. Poser le quai à −R plutôt
+ * que sur une courbe de temps, c'est se donner la garantie qu'il n'y a ni
+ * rattrapage ni raccord à la fin : la gare se cale d'elle-même.
+ */
+export function stopDistance(v: number, a: number): number {
+  const state: TrainState = { v, a, d: 0 };
+  for (let i = 0; i < 3000 && state.v > 1e-3; i++) stepTrain(state, 0, 0.05);
+  return state.d;
 }
 
 /** Vitesse cible de la phase courante (0 pendant le hold de départ). */

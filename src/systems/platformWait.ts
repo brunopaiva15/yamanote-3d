@@ -17,7 +17,7 @@ import { CONFIG, V_MAX } from '../data/config';
 import { DOOR_SIDE } from '../data/stations';
 import { useStore } from '../store';
 import { advanceClock, runtime } from './runtime';
-import { DEPART_HOLD, integrateTrain, type TrainState } from './trainPhysics';
+import { DEPART_HOLD, integrateTrain, stopDistance, type TrainState } from './trainPhysics';
 import { randomizeDoorTimings, setPsdDoors, setTrainDoors, stationTimings } from './doorMotion';
 import * as audio from './audioEngine';
 import { cancelSpeech } from './speech';
@@ -41,12 +41,19 @@ import {
   resetMelodyDepartureGuard,
 } from './departureSequence';
 import {
+  armDoorObstruction,
+  doorObstructionActive,
+  onDoorsClosing,
+  resetDoorObstruction,
+} from './doorObstruction';
+import {
   CLOSE_ANNOUNCE_LEAD,
   DOORS_CLOSE_LEAD,
   MELODY_SOUNDING,
   dwellDuration,
   melodyCutAt,
   melodyStartAt,
+  randomizeBerthOffset,
   randomizeStopTimings,
 } from './stationCycle';
 
@@ -111,13 +118,6 @@ function enter(stage: WaitStage): void {
   fired.clear();
 }
 
-/** Distance parcourue par une rame qui freine de la vitesse de ligne à l'arrêt. */
-function brakingDistance(): number {
-  const s: TrainState = { v: V_MAX, a: 0, d: 0 };
-  for (let i = 0; i < 4000 && s.v > 0.01; i++) integrateTrain(s, 0, 0.05);
-  return s.d;
-}
-
 /**
  * Le joueur vient de descendre : on reprend le dwell en cours là où il en est.
  * Les événements déjà joués (ouverture, échange de passagers, mélodie…) sont
@@ -132,7 +132,11 @@ export function beginPlatformWait(): void {
   train.v = 0;
   train.a = 0;
   train.d = 0;
-  runtime.trainZ = 0;
+  // Le repère bascule : le quai s'épingle à l'origine, la rame reprend à son
+  // compte l'écart d'arrêt qu'elle portait jusque-là sous la forme d'un
+  // glissement du quai. Sans ce report, la rame se recalerait au centimètre
+  // près sous les pieds du joueur au moment où il pose le pied dehors.
+  runtime.trainZ = -runtime.platformSlide;
   runtime.trainPresent = true;
   runtime.speed = 0;
   runtime.accel = 0;
@@ -165,6 +169,9 @@ export function boardableElapsed(): number {
 export function endPlatformWait(): void {
   audio.setListenerOutside(false);
   audio.setRollingDistance(0);
+  // Retour au repère du wagon : la rame revient à l'origine et c'est le quai
+  // qui reprend l'écart d'arrêt (systems/platformPresence le repose aussitôt
+  // à `berthOffset`). Exactement l'inverse de beginPlatformWait.
   runtime.trainZ = 0;
   runtime.trainPresent = true;
 }
@@ -198,11 +205,19 @@ function updateBoardable(dt: number, index: number, doorSide: 1 | -1): void {
   once('doors-close', t >= dwell - DOORS_CLOSE_LEAD, () => {
     setTrainDoors(0);
     audio.doorCloseChime();
+    onDoorsClosing();
   });
   once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () => {
     setPsdDoors(0);
     paPsdBeeps();
   });
+  // Une porte coincée retient la rame, qu'on soit dedans ou sur le quai : d'ici
+  // on voit les vantaux d'une caisse rester entrebâillés, et le train ne part
+  // pas tant qu'ils ne sont pas rentrés.
+  if (doorObstructionActive()) {
+    platformWait.t = Math.min(platformWait.t, dwell - 0.01);
+    return;
+  }
   if (t >= dwell) {
     cancelDepartureMelody();
     resetMelodyDepartureGuard();
@@ -220,7 +235,8 @@ function updateDeparting(dt: number): void {
   once('brake-release', t >= DEPART_HOLD - 1.2, () => audio.brakeRelease());
   const target = t < DEPART_HOLD ? 0 : V_MAX;
   integrateTrain(train, target, dt);
-  runtime.trainZ = -train.d;
+  // La rame part d'où elle s'était posée, pas du repère théorique.
+  runtime.trainZ = -runtime.berthOffset - train.d;
   runtime.speed = train.v;
   runtime.accel = train.a;
   audio.setRollingDistance(train.d);
@@ -285,12 +301,15 @@ function updateClear(index: number): void {
   });
   once('announce', t >= headway - 24, () => paApproach(index));
   if (t >= headway) {
-    platformWait.approachDist = brakingDistance();
+    platformWait.approachDist = stopDistance(V_MAX, 0);
     train.v = V_MAX;
     train.a = 0;
     train.d = 0;
     lastClackDist = 0;
-    runtime.trainZ = platformWait.approachDist;
+    // Nouvelle rame, nouveau conducteur : son écart d'arrêt est tiré ici,
+    // avant même qu'elle ne se montre au bout du quai.
+    randomizeBerthOffset();
+    runtime.trainZ = platformWait.approachDist - runtime.berthOffset;
     randomizeDoorTimings();
     enter('approaching');
   }
@@ -300,11 +319,15 @@ function updateApproaching(dt: number): void {
   once('brake-apply', platformWait.t >= 0.4, () => audio.brakeApply());
   once('jingle', platformWait.t >= 1.5, () => audio.arrivalJingle());
   integrateTrain(train, 0, dt);
-  const left = Math.max(0, platformWait.approachDist - train.d);
+  // Ce qu'il reste à parcourir se lit sur l'état de la rame, et non sur une
+  // distance de freinage estimée d'avance : elle se pose ainsi exactement sur
+  // son repère — à l'écart d'arrêt près — sans le recalage final que laissait
+  // la soustraction.
+  const left = stopDistance(train.v, train.a);
   // La rame est en vue au bout du quai : l'avertissement court prend le relais
   // de l'annonce d'approche, plus fort et répété.
   once('entering', left <= 150, () => paTrainEntering());
-  runtime.trainZ = left;
+  runtime.trainZ = left - runtime.berthOffset;
   runtime.speed = train.v;
   runtime.accel = train.a;
   audio.setRollingDistance(left);
@@ -314,7 +337,7 @@ function updateApproaching(dt: number): void {
   }
   once('squeal', train.v < V_MAX * 0.25 && train.v > 1, () => audio.flangeSqueal(0.45));
   if (train.v <= 0.02 || left <= 0.01) {
-    runtime.trainZ = 0;
+    runtime.trainZ = -runtime.berthOffset;
     runtime.speed = 0;
     runtime.accel = 0;
     audio.setRollingDistance(0);
@@ -332,6 +355,9 @@ function updateBerthing(index: number): void {
     // Nouvelle rame, nouvelle chronologie d'arrêt : deux trains d'affilée à la
     // même gare ne repartent pas à la même seconde.
     randomizeStopTimings(index);
+    // Nouvelle rame, nouveau tirage de l'incident de porte.
+    resetDoorObstruction();
+    armDoorObstruction();
     // Nouvelle rame : de nouveaux visages derrière les vitres.
     seedPassengers();
     // La gare annonce son propre nom, deux fois, comme sur les quais ATOS.

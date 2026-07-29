@@ -29,10 +29,12 @@
 //           une verrière, une annonce trop rapide ne s'attrape pas.
 
 import { writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import {
   EMERGENCY_REASONS,
   approachSequence,
   departureSequence,
+  doorReleaseAnnouncement,
   doorsClosingAnnouncement,
   emergencyBrakeAnnouncement,
   emergencyResumeAnnouncement,
@@ -40,14 +42,17 @@ import {
   emergencyWaitAnnouncement,
   welcomeAnnouncement,
   type Utterance,
-} from '../src/data/announcements';
+} from '../src/data/announcements.ts';
 import {
   PLATFORM_AGENT_MESSAGES,
   PLATFORM_DELAY_CAUSES,
+  PLATFORM_DOOR_RELEASE,
   platformAgentMessage,
   platformApproachAnnouncement,
   platformArrivalAnnouncement,
   platformDelayAnnouncement,
+  platformDoorCheckAnnouncement,
+  platformDoorReleaseAnnouncement,
   platformDoorsClosingAnnouncement,
   platformGreeting,
   platformPassAnnouncement,
@@ -56,11 +61,11 @@ import {
   platformTrainEnteringAnnouncement,
   type StationUtterance,
   type StationVoice,
-} from '../src/data/stationAnnouncements';
-import { facingTrackNumber, passThroughStations } from '../src/data/passingTrains';
-import { platformFor, type LoopDirection } from '../src/data/platforms';
-import { DOOR_SIDE, STATIONS } from '../src/data/stations';
-import { clipKey } from '../src/data/clipKey';
+} from '../src/data/stationAnnouncements.ts';
+import { facingTrackNumber, passThroughStations } from '../src/data/passingTrains.ts';
+import { platformFor, type LoopDirection } from '../src/data/platforms.ts';
+import { DOOR_SIDE, STATIONS } from '../src/data/stations.ts';
+import { clipKey } from '../src/data/clipKey.ts';
 
 /** Voix de la sonorisation de la RAME (annonces de bord). */
 const CABIN_VOICE: Record<Utterance['lang'], string> = {
@@ -142,7 +147,6 @@ const JA_READINGS: [RegExp, string][] = [
   [/方面行き/g, '方面ゆき'], // « hōmen-iki » → hōmen-yuki, comme la rame
   [/人立入り/g, 'ひと立入り'], // « jinritsu-iri » → hito-tachiiri
   [/ホーム中ほど/g, 'ホームなかほど'], // « hōmu chū-hodo » → hōmu nakahodo
-  [/JR東日本/g, 'ジェイアール東日本'], // « JR » restait en lettres latines
   [/大江戸線/g, 'おおえど線'], // « dai-edo-sen » → ōedo-sen
 ];
 
@@ -161,6 +165,9 @@ for (let i = 0; i < STATIONS.length; i++) {
   utterances.push(...approachSequence(i, DOOR_SIDE[i]));
 }
 utterances.push(...doorsClosingAnnouncement());
+// Porte bloquée : la demande du conducteur, et sa version insistante.
+utterances.push(...doorReleaseAnnouncement());
+utterances.push(...doorReleaseAnnouncement(true));
 utterances.push(...welcomeAnnouncement());
 // Arrêt d'urgence : freinage, annonce d'arrêt (un clip par motif), attente, reprise.
 utterances.push(...emergencyBrakeAnnouncement());
@@ -201,6 +208,12 @@ for (let n = 0; n < PLATFORM_AGENT_MESSAGES.length; n++) {
 for (let c = 0; c < PLATFORM_DELAY_CAUSES.length; c++) {
   stationUtterances.push(...platformDelayAnnouncement(c));
 }
+// Porte bloquée : les consignes de l'agent, et l'annonce d'attente quand
+// toutes les portes ont dû être rouvertes.
+for (let n = 0; n < PLATFORM_DOOR_RELEASE.length; n++) {
+  stationUtterances.push(...platformDoorReleaseAnnouncement(n));
+}
+stationUtterances.push(...platformDoorCheckAnnouncement());
 
 // --- Déduplication ------------------------------------------------------
 
@@ -232,13 +245,25 @@ function add(u: Utterance, voice: string): void {
 for (const u of utterances) add(u, CABIN_VOICE[u.lang]);
 for (const u of stationUtterances) add(u, STATION_VOICE[u.voice]);
 
+/**
+ * Tous les textes réellement joués, dédupliqués. Exporté pour que
+ * tests/announcementClips.test.ts vérifie que chacun a bien son clip : une
+ * annonce sans MP3 retombe sur speechSynthesis, hors du graphe audio et dans
+ * une voix qui n'est celle d'aucune des quatre locutrices.
+ */
+export const ITEMS: Item[] = [...byKey.values()];
+
 const out = {
-  items: [...byKey.values()],
+  items: ITEMS,
   // Lectures de référence : le générateur vérifie que open_jtalk lit chaque
   // gare comme sa transcription kana et bascule sur le kana en cas d'écart.
   stations: STATIONS.map((s) => ({ kanji: s.kanji, kana: s.kana })),
 };
 
-const dest = process.argv[2] ?? 'announcements-texts.json';
-writeFileSync(dest, JSON.stringify(out, null, 1));
-console.log(`${out.items.length} annonces → ${dest}`);
+// Écriture seulement quand le script est LANCÉ : importé par le test, il ne
+// doit rien déposer sur le disque.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const dest = process.argv[2] ?? 'announcements-texts.json';
+  writeFileSync(dest, JSON.stringify(out, null, 1));
+  console.log(`${out.items.length} annonces → ${dest}`);
+}

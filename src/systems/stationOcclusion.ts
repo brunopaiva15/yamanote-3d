@@ -66,6 +66,8 @@ export const stationOcclusion = {
    * d'en face et son auvent se plantaient dans la clôture du tronçon.
    */
   bothSides: false,
+  /** Bord extérieur de la DALLE du quai : voir groundPush. */
+  slabOuter: PSD_X + PLATFORM_DEPTH,
 };
 
 /** À appeler après updatePlatformPresence : lit platformFade / platformSlide. */
@@ -81,6 +83,7 @@ export function updateStationOcclusion(): void {
   stationOcclusion.push = pushFor(layout);
   stationOcclusion.bothSides = layout.config === 'side';
   stationOcclusion.outer = outerOf(layout);
+  stationOcclusion.slabOuter = PSD_X + layout.depth;
   const half = layout.length / 2 + SPAN_MARGIN;
   stationOcclusion.z0 = runtime.platformSlide - half;
   stationOcclusion.z1 = runtime.platformSlide + half;
@@ -113,6 +116,41 @@ const YARD_REACH = 4 * 4.6;
 export function sidePush(side: 1 | -1): number {
   const applies = stationOcclusion.bothSides || side === stationOcclusion.side;
   return applies ? stationOcclusion.active * stationOcclusion.push : 0;
+}
+
+// --- Ce qui court AU RAS DU SOL, un mètre sous la dalle ------------------
+//
+// Deux nappes horizontales passent sous le quai : le ballast de la voie
+// (three/Wayside, de l'axe à ±5 m) et la rue de la ville (three/city, de 5 m
+// vers l'extérieur). Le quai les masque toutes deux… sauf au droit d'une
+// TRÉMIE D'ESCALIER, dont la volée descend un mètre plus bas qu'elles. Elles
+// traversaient alors la cage de part en part : un plancher gris à mi-hauteur
+// des marches, qui cachait tout le bas de la volée, le palier et son fléchage.
+//
+// Les deux se rangent donc, chacune de son côté et du strict nécessaire : le
+// ballast rentre jusqu'au bord de quai, la rue ressort au nu extérieur de la
+// dalle. Ce qu'on découvre entre les deux était de toute façon sous le quai.
+// Les ranger à la hauteur des rangs bâtis (`sidePush`, une trentaine de
+// mètres) aurait au contraire ouvert un vide entre le fond de la gare et la
+// première rue.
+
+/** Écartement de la NAPPE DE RUE, dont le bord intérieur est posé en `baseX`. */
+export function groundPush(side: 1 | -1, baseX: number): number {
+  const applies = stationOcclusion.bothSides || side === stationOcclusion.side;
+  if (!applies) return 0;
+  const want = stationOcclusion.slabOuter + 0.5 - baseX;
+  return want > 0 ? stationOcclusion.active * want : 0;
+}
+
+/** Rentrée du BALLAST, dont la rive est posée en `edgeX` (positif). */
+export function ballastTrim(side: 1 | -1, edgeX: number): number {
+  const applies = stationOcclusion.bothSides || side === stationOcclusion.side;
+  if (!applies) return 0;
+  // Le bord de quai, moins dix centimètres : sur un quai sans portes palières
+  // on se penche au-dessus de la voie, et le ballast doit encore filer sous la
+  // rive de la dalle plutôt que s'arrêter à découvert.
+  const want = edgeX - (PSD_X - 0.1);
+  return want > 0 ? stationOcclusion.active * want : 0;
 }
 
 /**

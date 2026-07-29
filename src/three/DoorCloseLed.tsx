@@ -6,8 +6,10 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
+import { PLAYER_CAR } from '../data/e235';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
+import { doorObstructionAt } from '../systems/doorObstruction';
 import { CLOSE_ANNOUNCE_LEAD, dwellDuration } from '../systems/stationCycle';
 
 // Fréquence de clignotement (~2,5 Hz), calée sur l'indicateur réel.
@@ -40,35 +42,48 @@ function isDoorClosingWarn(): boolean {
   return fromAnnounce || closing;
 }
 
+/** Clé du matériau d'une lentille : une par porte et par face. */
+function ledKey(side: 1 | -1, z: number): string {
+  return `${side}:${z}`;
+}
+
 export function DoorCloseLed() {
-  // Un matériau par face : seul le côté quai clignote.
-  const mats = useMemo(
-    () => ({
-      right: makeLedMat(),
-      left: makeLedMat(),
-    }),
-    [],
-  );
+  // Un matériau par porte et par face : le témoin d'une porte restée ouverte
+  // continue de clignoter quand tous les autres se sont éteints, et c'est
+  // exactement comme ça qu'on repère la porte qui coince depuis l'intérieur.
+  const mats = useMemo(() => {
+    const map = new Map<string, THREE.MeshBasicMaterial>();
+    for (const side of [1, -1] as const) {
+      for (const z of CONFIG.doorCenters) map.set(ledKey(side, z), makeLedMat());
+    }
+    return map;
+  }, []);
   const matsRef = useRef(mats);
   matsRef.current = mats;
 
   useFrame(({ clock }) => {
     const doorSide = useStore.getState().doorSide;
     const warn = isDoorClosingWarn();
-    const lit = warn && (clock.elapsedTime * BLINK_HZ) % 1 < 0.55;
+    const lit = (clock.elapsedTime * BLINK_HZ) % 1 < 0.55;
 
     for (const side of [1, -1] as const) {
-      const m = side === 1 ? matsRef.current.right : matsRef.current.left;
-      if (side !== doorSide) {
-        // Face opposée au quai : lentille présente mais éteinte.
-        m.color.set(COLOR_OFF);
-        continue;
-      }
-      if (warn) {
-        m.color.set(lit ? COLOR_ON : COLOR_DIM);
-      } else {
-        // Lentille toujours un peu visible sous le panneau.
-        m.color.set(COLOR_DIM);
+      for (const z of CONFIG.doorCenters) {
+        const m = matsRef.current.get(ledKey(side, z));
+        if (!m) continue;
+        if (side !== doorSide) {
+          // Face opposée au quai : lentille présente mais éteinte.
+          m.color.set(COLOR_OFF);
+          continue;
+        }
+        // La fermeture d'ensemble est finie, mais celle-ci n'est pas rentrée :
+        // son témoin ne s'éteint pas tant qu'elle n'est pas confirmée fermée.
+        const blocked = doorObstructionAt(PLAYER_CAR, z);
+        if (warn || blocked) {
+          m.color.set(lit ? COLOR_ON : COLOR_DIM);
+        } else {
+          // Lentille toujours un peu visible sous le panneau.
+          m.color.set(COLOR_DIM);
+        }
       }
     }
   });
@@ -90,7 +105,7 @@ export function DoorCloseLed() {
               position={[0, -0.268, 0.02]}
               rotation={[Math.PI / 2, 0, 0]}
               renderOrder={3}
-              material={s === 1 ? mats.right : mats.left}
+              material={mats.get(ledKey(s, z))}
             >
               <circleGeometry args={[0.032, 20]} />
             </mesh>
@@ -99,7 +114,7 @@ export function DoorCloseLed() {
               position={[0, -0.272, 0.02]}
               scale={[1, 0.4, 1]}
               renderOrder={3}
-              material={s === 1 ? mats.right : mats.left}
+              material={mats.get(ledKey(s, z))}
             >
               <sphereGeometry args={[0.026, 16, 10]} />
             </mesh>

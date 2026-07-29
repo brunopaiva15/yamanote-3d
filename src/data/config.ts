@@ -2,8 +2,9 @@
 
 export const CONFIG = {
   // Cycle station (secondes). depart et brake sont dimensionnés pour le profil
-  // physique E235 de stationCycle (~0,84 m/s² au démarrage, arrêt complet en
-  // ~21 s depuis 90 km/h).
+  // physique E235 de systems/trainPhysics (~0,84 m/s² au démarrage, arrêt
+  // complet en ~23 s depuis 90 km/h — les dernières secondes ne servant qu'à
+  // poser la rame, voir le lâcher final du freinage).
   //
   // dwellTime n'est PAS la durée d'arrêt : celle-ci est tirée par arrêt
   // (stationCycle.dwellDuration, 37 à 47 s selon la gare et l'état de la
@@ -12,8 +13,11 @@ export const CONFIG = {
   // garde à la croisière de quoi placer l'annonce de départ ET celle
   // d'approche, qui cumulent jusqu'à 71 s de parole sur une même file.
   cruiseTime: 59,
-  brakeTime: 22,
-  dwellTime: 22,
+  // Le lâcher final allonge le freinage de deux secondes ; elles sont reprises
+  // sur le forfait d'arrêt pour que la croisière — et donc l'horaire de la
+  // boucle — ne bouge pas d'une seconde.
+  brakeTime: 24,
+  dwellTime: 20,
   departTime: 17,
   doorTime: 2.6,
 

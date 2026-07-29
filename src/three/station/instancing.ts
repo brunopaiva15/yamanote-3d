@@ -73,6 +73,23 @@ export function useInstances(
   }, [ref, matrices]);
 }
 
+/**
+ * Teinte par exemplaire, sur un InstancedMesh dont le matériau reste blanc :
+ * la caisse d'un distributeur est la même tôle d'une machine à l'autre, mais
+ * jamais la même peinture. Sans cela il faudrait un appel de rendu par marque.
+ */
+export function useInstanceColors(
+  ref: React.RefObject<THREE.InstancedMesh | null>,
+  colors: THREE.Color[],
+): void {
+  useLayoutEffect(() => {
+    const im = ref.current;
+    if (!im) return;
+    for (let i = 0; i < colors.length; i++) im.setColorAt(i, colors[i]);
+    if (im.instanceColor) im.instanceColor.needsUpdate = true;
+  }, [ref, colors]);
+}
+
 /** Comme mat(), mais orientée : pour une boîte inclinée (panneau, ferme, rampe). */
 export function matOriented(
   q: THREE.Quaternion,
@@ -89,4 +106,17 @@ export function matOriented(
 /** Quaternion d'une rotation autour de l'axe z : l'inclinaison d'un versant. */
 export function tiltZ(angle: number): THREE.Quaternion {
   return new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle);
+}
+
+/**
+ * Versant incliné PUIS plié : la pente autour de z, le pli autour de x.
+ *
+ * L'ordre compte, et il est celui-là — on incline d'abord le pan dans la coupe
+ * (c'est la pente du toit), puis on le bascule le long de la voie (c'est le
+ * pli). Composé dans l'autre sens, le pli se mesurerait dans le plan déjà
+ * incliné et les arêtes de deux pans voisins ne se rejoindraient plus.
+ */
+export function tiltXZ(pitch: number, fold: number): THREE.Quaternion {
+  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), fold);
+  return q.multiply(tiltZ(pitch));
 }

@@ -95,6 +95,17 @@ export const runtime = {
   sway: 0, // balancement latéral normalisé (-1..1)
   platformFade: 0, // présence du quai 0..1 (visibilité / approche, plus d'opacité)
   platformSlide: 0, // décalage Z du quai (m) : négatif à l'approche, positif au départ
+  /**
+   * Écart d'arrêt de la rame par rapport au repère de la gare (m, positif =
+   * arrêtée un peu au-delà). Aucune rame ne se pose au millimètre sur son
+   * 定位置 : la tolérance JR East est de ±35 cm, et le TASC en garde une
+   * dizaine de centimètres. C'est ce petit décalage qu'on lit entre les portes
+   * palières et celles de la rame — sans lui, les deux baies coïncidaient
+   * parfaitement à chaque arrêt de chaque gare, ce que rien de réel ne fait.
+   *
+   * Vaut `platformSlide` à quai (repère wagon) et `−trainZ` (repère gare).
+   */
+  berthOffset: 0,
   departStartDist: 0, // runtime.distance à l'entrée de la phase depart (glissement réel du quai)
   playerX: 0, // position du joueur en repère MONDE
   playerY: 1.55,
@@ -212,6 +223,7 @@ export function resetRuntime(): void {
   runtime.sway = 0;
   runtime.platformFade = 0;
   runtime.platformSlide = 0;
+  runtime.berthOffset = 0;
   runtime.departStartDist = 0;
   runtime.playerFrame = 'car';
   runtime.playerCarX = 0;

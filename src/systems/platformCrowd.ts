@@ -11,19 +11,14 @@
 import * as THREE from 'three';
 import { isMajorHub } from '../data/announcements';
 import { CONFIG } from '../data/config';
-import { makeAppearance, type Appearance } from './appearance';
+import { SKELETON_TOP, makeAppearance, type Appearance } from './appearance';
 import { paxScale } from './perf';
 import { runtime } from './runtime';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import { placementFor, stairTopZ, stairwellAt, type StationPlacement } from './stationPlacement';
 import { layoutFor } from '../data/stationLayouts';
-import {
-  PSD_X,
-  STAIR_GOING,
-  STAIR_RISE,
-  STAIR_STEPS,
-} from '../data/stationGeometry';
+import { PSD_X, STAIR_FULL_LEN, STAIR_FULL_STEPS } from '../data/stationGeometry';
 import {
   BUSY_BRIEF,
   isPairAction,
@@ -41,6 +36,7 @@ import {
   type Temper,
 } from './paxBehavior';
 import { resolveMotion, platformPlayerCtx } from './paxMotion';
+import { PLATFORM_TOP, platformToWorld } from './playerFrame';
 import { playPaxActionSfx, paxBump } from './paxSfx';
 
 export type CrowdState =
@@ -53,12 +49,12 @@ export type CrowdState =
   /** Gagne une trémie et s'enfonce jusqu'à disparaître. */
   | 'leaving'
   /** Gagne une porte de la rame et y disparaît (relais avec systems/passengers). */
-  | 'boarding';
-
-/** Longueur totale de la volée modélisée, du nez au bas des marches. */
-const STAIR_FULL_LEN = (STAIR_STEPS + 1) * STAIR_GOING;
-/** Altitude à laquelle un voyageur qui descend n'est plus visible du quai. */
-export const STAIR_VANISH_Y = -STAIR_STEPS * STAIR_RISE + 0.35;
+  | 'boarding'
+  /**
+   * L'agent de quai rejoint une porte, s'y poste et n'en bouge plus : il a
+   * quelqu'un à faire reculer (systems/doorObstruction).
+   */
+  | 'attending';
 
 export interface CrowdPax {
   id: number;
@@ -119,6 +115,14 @@ export interface CrowdPax {
    * n'existait jamais.
    */
   holdWalk: number;
+  /**
+   * Ce n'est pas un voyageur mais l'AGENT de quai : uniforme, casquette, et
+   * un slot réservé pour lui seul. Le rendu « librairie » choisit son modèle
+   * une fois pour toutes à partir de l'apparence (voir LibraryPlatformCrowd) —
+   * on ne peut donc pas déguiser un civil en agent en cours de route, il faut
+   * qu'une place du pool soit la sienne depuis le début.
+   */
+  staff: boolean;
 }
 
 /** Capacité max du pool — assez large pour que Shinjuku/Shibuya débordent
@@ -190,12 +194,47 @@ function makeCrowd(id: number): CrowdPax {
     pushAccum: 0,
     hasDog: false,
     holdWalk: 0,
+    staff: false,
   };
+}
+
+/**
+ * L'agent de quai : costume bleu nuit, casquette, pas de sac.
+ *
+ * On ne fabrique pas son apparence de toutes pièces — on cherche dans le
+ * générateur la première silhouette de salaryman qui puisse porter
+ * l'uniforme, puis on l'habille. Le rendu « librairie » choisit son modèle
+ * d'après `archetype` et `feminine` : en partant d'un descripteur cohérent, il
+ * hérite du costume du pack au lieu d'une carrure qui ne va pas avec.
+ */
+function staffAppearance(): Appearance {
+  for (let seed = 7000; seed < 7400; seed++) {
+    const a = makeAppearance(seed);
+    if (a.archetype !== 'salaryman' || a.feminine || a.senior) continue;
+    return {
+      ...a,
+      top: { type: 'suit', color: '#1b2740' },
+      bottom: { type: 'trousers', color: '#171c28' },
+      shoes: '#14161a',
+      hat: 'cap',
+      bag: 'none',
+      scarf: false,
+      mask: false,
+      glasses: false,
+      facialHair: false,
+    };
+  }
+  return makeAppearance(7000);
 }
 
 export function initPlatformCrowd(): void {
   if (crowdList.length > 0) return;
   for (let i = 0; i < CROWD_POOL; i++) crowdList.push(makeCrowd(i));
+  // La dernière place du pool est réservée à l'agent, une fois pour toutes.
+  const agent = crowdList[CROWD_POOL - 1];
+  agent.staff = true;
+  agent.appearance = staffAppearance();
+  agent.height = agent.appearance.build.scale;
 }
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
@@ -274,8 +313,10 @@ export function seedPlatformCrowd(stationIndex: number): void {
   seededFor = stationIndex;
   const { total, walkers } = crowdCount(stationIndex);
 
-  for (let i = 0; i < CROWD_POOL; i++) {
-    const p = crowdList[i];
+  // L'agent garde sa place : la foule se peuple autour de lui.
+  const civils = crowdList.filter((p) => !p.staff);
+  for (let i = 0; i < civils.length; i++) {
+    const p = civils[i];
     if (i >= total) {
       p.state = 'hidden';
       p.role = 'waiter';
@@ -421,7 +462,7 @@ function nearestStair(p: StationPlacement, z: number) {
 
 /** Altitude du sol sous un voyageur : nulle sur le quai, négative dans une volée. */
 function floorYAt(p: StationPlacement, x: number, z: number): number {
-  return stairwellAt(p, x, z, STAIR_FULL_LEN, STAIR_STEPS)?.y ?? 0;
+  return stairwellAt(p, x, z, STAIR_FULL_LEN, STAIR_FULL_STEPS)?.y ?? 0;
 }
 
 /** Gabarit de la dernière image simulée : évite d'en résoudre un par appelant. */
@@ -436,7 +477,7 @@ export function crowdFloorY(x: number, z: number): number {
 }
 
 function freeSlot(): CrowdPax | null {
-  for (const p of crowdList) if (p.state === 'hidden') return p;
+  for (const p of crowdList) if (p.state === 'hidden' && !p.staff) return p;
   return null;
 }
 
@@ -533,6 +574,91 @@ export function crowdSendBoarder(doorLocalZ: number, ticket: number): boolean {
   best.wpi = 0;
   return true;
 }
+
+// --- L'agent de quai -----------------------------------------------------
+//
+// Une porte qui ne se ferme pas ne se règle pas au micro depuis un bureau :
+// quelqu'un vient. L'agent accourt depuis la trémie la plus proche, se poste
+// À CÔTÉ de la porte — jamais devant, il ne bouche pas le passage qu'il essaie
+// de dégager —, se tourne vers elle, et attend que ça se débloque.
+
+/** Distance latérale du poste au plan des portes palières (m). */
+const AGENT_POST_X = PSD_X + 0.85;
+/** Décalage le long du quai : il se tient au bord de la baie, pas en face. */
+const AGENT_POST_DZ = 1.15;
+/** Il ne marche pas, il presse le pas : une porte bloquée retarde la ligne. */
+const AGENT_RUN = WALK_SPEED * 1.6;
+
+/** Axe de la baie devant laquelle l'agent est appelé (repère quai). */
+let agentDoorZ = 0;
+
+/** Slot de l'agent (toujours le dernier du pool). */
+function agentSlot(): CrowdPax {
+  initPlatformCrowd();
+  return crowdList[CROWD_POOL - 1];
+}
+
+/**
+ * Fait venir l'agent devant la porte d'axe `doorLocalZ` (repère quai).
+ * Sans effet s'il est déjà en route ou en poste.
+ */
+export function summonPlatformAgent(doorLocalZ: number): void {
+  const p = agentSlot();
+  if (p.state === 'attending') return;
+  const pl = placement();
+  const side = doorLocalZ >= 0 ? -1 : 1; // il se poste du côté du centre du quai
+  const post = clampPos(AGENT_POST_X, doorLocalZ + side * AGENT_POST_DZ);
+  agentDoorZ = doorLocalZ;
+  // Il arrive par la trémie la plus proche ; à défaut, du fond du quai.
+  const stair = nearestStair(pl, doorLocalZ);
+  const start = stair
+    ? clampPos(stair.x, stairTopZ(stair))
+    : clampPos(bounds().x1, doorLocalZ + (doorLocalZ >= 0 ? -18 : 18));
+  p.pos.copy(start);
+  p.y = 0;
+  p.home.copy(post);
+  p.state = 'attending';
+  p.role = 'waiter';
+  p.action = 'none';
+  p.actionT = 0;
+  p.actionDur = 999;
+  p.partner = -1;
+  p.ticket = -1;
+  p.delay = 0;
+  p.bob = 0;
+  p.headPitch = 0;
+  p.lookYaw = 0;
+  p.waypoints = [clampPos(post.x + 0.5, (start.z + post.z) / 2), post];
+  p.wpi = 0;
+  p.yaw = Math.atan2(post.x - start.x, post.z - start.z);
+  p.targetYaw = p.yaw;
+}
+
+/** L'agent est-il arrivé à son poste ? */
+export function platformAgentPosted(): boolean {
+  const p = agentSlot();
+  return p.state === 'attending' && p.wpi >= p.waypoints.length;
+}
+
+/** Position monde de sa tête, pour accrocher ce qu'il dit. */
+export function platformAgentHead(out: { x: number; y: number; z: number }): boolean {
+  const p = agentSlot();
+  if (p.state !== 'attending') return false;
+  platformToWorld(p.pos.x, p.pos.z, tmpWorld);
+  out.x = tmpWorld.x;
+  out.y = PLATFORM_TOP + p.y + SKELETON_TOP * p.height + p.bob;
+  out.z = tmpWorld.z;
+  return true;
+}
+
+/** L'affaire est réglée : l'agent regagne la sortie. */
+export function dismissPlatformAgent(): void {
+  const p = agentSlot();
+  if (p.state !== 'attending') return;
+  if (!sendToStairs(p, placement())) p.state = 'hidden';
+}
+
+const tmpWorld = { x: 0, z: 0 };
 
 /** Jetons des voyageurs arrivés au seuil depuis le dernier appel. */
 const arrivedBoarders: number[] = [];
@@ -964,7 +1090,29 @@ export function updatePlatformCrowd(dt: number): void {
 
     p.actionT += dt;
     p.bobPhase += dt;
-    avoidPlayer(p, dt, pvx, pvz);
+    // L'agent tient son poste : ce n'est pas à lui de s'écarter.
+    if (!p.staff) avoidPlayer(p, dt, pvx, pvz);
+
+    // L'agent de quai : il accourt, puis il ne bouge plus — face à la porte,
+    // à celui qui la bloque.
+    if (p.state === 'attending') {
+      if (p.wpi < p.waypoints.length) {
+        advanceWalk(p, dt * (AGENT_RUN / WALK_SPEED), () => {
+          // Arrivé : il pivote vers la baie qu'il vient couvrir.
+          p.targetYaw = Math.atan2(PSD_X - p.pos.x, agentDoorZ - p.pos.z);
+          p.bob = 0;
+        });
+      } else {
+        // En poste : le poids passe d'un pied sur l'autre, rien de plus.
+        p.bob = Math.sin(p.bobPhase * 1.3) * 0.006;
+      }
+      let dy = p.targetYaw - p.yaw;
+      while (dy > Math.PI) dy -= Math.PI * 2;
+      while (dy < -Math.PI) dy += Math.PI * 2;
+      p.yaw += dy * Math.min(1, dt * 5);
+      p.y = floorYAt(currentPlacement, p.pos.x, p.pos.z);
+      continue;
+    }
 
     // Transits : arrivée par la trémie, départ vers la sortie, montée en rame.
     if (p.state === 'arriving' || p.state === 'leaving' || p.state === 'boarding') {
@@ -996,13 +1144,12 @@ export function updatePlatformCrowd(dt: number): void {
           p.wpi = 0;
         });
         // Les marches se descendent vraiment : l'altitude suit le profil de la
-        // volée, et on disparaît une fois passé sous la dalle.
+        // volée. On ne s'efface PAS à une altitude donnée — le voyageur
+        // s'évaporait alors en pleine volée, la tête au niveau du quai, sous
+        // les yeux de qui se penche dans la trémie. Il marche jusqu'au bout de
+        // son dernier point de passage, un mètre après le linteau : c'est la
+        // dalle qui le cache, et l'effacement ne se voit plus.
         p.y = floorYAt(currentPlacement, p.pos.x, p.pos.z);
-        if (p.state === 'leaving' && p.y <= STAIR_VANISH_Y) {
-          p.state = 'hidden';
-          p.waypoints = [];
-          p.wpi = 0;
-        }
       }
       let dy = p.targetYaw - p.yaw;
       while (dy > Math.PI) dy -= Math.PI * 2;

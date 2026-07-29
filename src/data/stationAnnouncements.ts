@@ -19,8 +19,8 @@
 // (directionAnnouncement) : le même LOOP_JP et les mêmes grands repères, pour
 // que le quai et le wagon ne se contredisent pas.
 
-import { LOOP_JP, nextHubs, type Utterance } from './announcements';
-import { STATIONS } from './stations';
+import { LOOP_JP, nextHubs, type Utterance } from './announcements.ts';
+import { STATIONS } from './stations.ts';
 
 /** Voix de synthèse visée pour un texte donné (voir le générateur Kokoro). */
 export type StationVoice = 'atos' | 'agent' | 'atos-en';
@@ -58,9 +58,13 @@ export function platformPreAnnouncement(index: number, platform: number): Statio
   return [ja(`今度の、${platform}番線の電車は、${LOOP_JP}、${b.jp}方面行きです。`)];
 }
 
-/** Remerciement d'ouverture, parfois posé avant la pré-annonce. */
+/**
+ * Remerciement d'ouverture, parfois posé avant la pré-annonce. Il remercie
+ * pour la LIGNE, jamais pour une compagnie : aucun exploitant réel n'est nommé
+ * dans le jeu.
+ */
 export function platformGreeting(): StationUtterance[] {
-  return [ja('本日も、JR東日本をご利用くださいまして、ありがとうございます。')];
+  return [ja('本日も、山手線を、ご利用くださいまして、ありがとうございます。')];
 }
 
 // --- 3. Annonce principale d'approche ------------------------------------
@@ -163,6 +167,38 @@ export function platformAlightFirstAnnouncement(): StationUtterance[] {
 
 export function platformDoorsClosingAnnouncement(platform: number): StationUtterance[] {
   return [ja(`${platform}番線、ドアが閉まります。ご注意ください。`)];
+}
+
+// --- 9. Porte bloquée ----------------------------------------------------
+//
+// Quand une porte ne se ferme pas, l'agent de quai parle par-dessus la
+// procédure : il ne lit pas un script ATOS, il s'adresse à la personne qu'il
+// voit dans l'encadrement, et sa voix se durcit à mesure que le départ traîne.
+
+// Sa formulation ne recouvre JAMAIS celle du conducteur (doorReleaseAnnouncement) :
+// un clip est identifié par le seul couple (langue, texte), donc deux voix ne
+// peuvent pas se partager une phrase — celle qui grave en dernier prendrait la
+// bouche de l'autre. C'est vrai à l'oreille aussi : le conducteur lit un script
+// depuis sa cabine, l'agent parle à quelqu'un qu'il a devant lui.
+export const PLATFORM_DOOR_RELEASE = [
+  '危ないですから、ドアから離れてください。',
+  'お荷物、お身体を、ドアからお引きください。',
+  'ドアが閉まりません。もう一度、ドアから離れてください。',
+] as const;
+
+/** La consigne numéro `n` (modulo), en voix d'agent. */
+export function platformDoorReleaseAnnouncement(n: number): StationUtterance[] {
+  const i = ((n % PLATFORM_DOOR_RELEASE.length) + PLATFORM_DOOR_RELEASE.length) %
+    PLATFORM_DOOR_RELEASE.length;
+  return [ja(PLATFORM_DOOR_RELEASE[i], 'agent')];
+}
+
+/** Toutes les portes rouvertes : l'agent vient dégager lui-même le passage. */
+export function platformDoorCheckAnnouncement(): StationUtterance[] {
+  return [
+    ja('お待たせしております。ただいま、ドアの確認を行っております。', 'agent'),
+    ja('しばらくお待ちください。', 'agent'),
+  ];
 }
 
 // --- Retard --------------------------------------------------------------

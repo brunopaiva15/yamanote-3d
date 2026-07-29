@@ -94,7 +94,7 @@ export function makeStationMaterials(p: StationPalette, textures: StationTexture
         emissive: p.tile,
         emissiveIntensity: 0.1,
       }),
-      bench: new THREE.MeshStandardMaterial({ color: '#6a5a48', roughness: 0.88 }),
+      bench: new THREE.MeshStandardMaterial({ color: p.bench ?? '#6a5a48', roughness: 0.88 }),
       metal: new THREE.MeshStandardMaterial({ color: '#7a8088', roughness: 0.45, metalness: 0.55 }),
       frame: new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.55, metalness: 0.35 }),
       lamp: new THREE.MeshStandardMaterial({
@@ -104,20 +104,29 @@ export function makeStationMaterials(p: StationPalette, textures: StationTexture
         roughness: 0.4,
       }),
       bin: new THREE.MeshStandardMaterial({ color: '#4a5058', roughness: 0.7, metalness: 0.2 }),
-      vending: new THREE.MeshStandardMaterial({ color: '#b8322c', roughness: 0.6 }),
-      vendingFace: new THREE.MeshBasicMaterial({ map: textures.ads[0], toneMapped: false }),
       kiosk: new THREE.MeshStandardMaterial({ color: '#e8e4dc', roughness: 0.78 }),
       ad: new THREE.MeshBasicMaterial({
-        map: textures.ads[1],
+        map: textures.ads[0],
         toneMapped: false,
         side: THREE.DoubleSide,
       }),
       liner: new THREE.MeshStandardMaterial({ color: '#3b3f44', roughness: 0.95 }),
-      // Gaine sous une trémie : vue de l'intérieur, depuis le quai.
-      shaft: new THREE.MeshStandardMaterial({
-        color: '#2c3035',
-        roughness: 0.97,
-        side: THREE.BackSide,
+      // Volée d'escalier : béton lissé, plus dur et plus sourd que l'enduit des
+      // joues qui l'encadrent. Sans cette différence, une trémie n'était qu'un
+      // dégradé de gris où l'on ne distinguait aucune marche.
+      stair: new THREE.MeshStandardMaterial({
+        color: p.column,
+        roughness: 0.88,
+        emissive: p.column,
+        emissiveIntensity: 0.1,
+      }),
+      // Nez de marche antidérapant : la bande jaune de toute volée JR. Un rappel
+      // d'émissif la tient lisible au fond de la trémie, où plus rien n'éclaire.
+      stairNose: new THREE.MeshStandardMaterial({
+        color: '#e5b02f',
+        roughness: 0.72,
+        emissive: '#e5b02f',
+        emissiveIntensity: 0.35,
       }),
     };
 
