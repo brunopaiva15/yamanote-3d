@@ -14,6 +14,7 @@ import { CONFIG } from '../data/config';
 import { MODELS_BASE, type CharacterManifest, type LogicalClip } from './characters/manifest';
 import { buildTemplates, cloneVariant, type CharacterClone, type CharacterTemplate } from './characters/library';
 import { applyArmGesture, applyBodyPivot, makePoseState, type PoseState } from './characters/pose';
+import { fallClipFor, fallCue, fallYawOffset } from './characters/fall';
 import { attachProps, updatePropRig, handPropFor, type PropRig } from './characters/props';
 
 const PLATFORM_Y = -0.06;
@@ -24,6 +25,12 @@ interface Slot {
   pose: PoseState;
   props: PropRig;
   currentKey: LogicalClip | '';
+  /** Part de la pose tenue par le clip de chute (0..1) — voir characters/fall.ts. */
+  fallW: number;
+  /** Fondu de sortie de la glissade en cours, mémorisé pour le retour à l'idle. */
+  fallOut: number;
+  /** Écart de cap de la glissade, lissé à part : le corps se vrille en partant. */
+  fallYaw: number;
 }
 
 function pickTemplate(templates: CharacterTemplate[], app: Appearance, id: number): CharacterTemplate {
@@ -51,7 +58,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
         const template = pickTemplate(templates, p.appearance, p.id);
         const clone = cloneVariant(template, p.appearance);
         const props = attachProps(clone.wrap, p.appearance, template.variant.bagProp !== false);
-        return { clone, pose: makePoseState(), props, currentKey: '' as LogicalClip | '' };
+        return { clone, pose: makePoseState(), props, currentKey: '' as LogicalClip | '', fallW: 0, fallOut: FADE, fallYaw: 0 };
       }),
     [templates],
   );
@@ -80,16 +87,29 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
 
       const transit = p.state === 'arriving' || p.state === 'leaving' || p.state === 'boarding';
       const walking = p.state === 'ambling' || p.state === 'patrolling' || (transit && p.delay <= 0);
-      let key: LogicalClip | '' = '';
-      if (walking) key = actions.walk ? 'walk' : actions.standIdle ? 'standIdle' : '';
-      else key = actions.standIdle ? 'standIdle' : '';
+
+      // « shift » (report de poids) n'existe que côté quai : pas d'occupation
+      // du catalogue derrière, donc pas de geste ni de chute.
+      const act = p.action === 'shift' ? 'none' : p.action;
+
+      // Glissade : le vrai clip de chute du pack, monté par characters/fall.ts.
+      const cue = walking ? null : fallCue(act, p.actionT);
+      const fallKey = cue && actions[cue.clip] ? cue.clip : '';
+      if (cue && fallKey) s.fallOut = cue.fadeOut;
+
+      let key: LogicalClip | '' = fallKey;
+      if (key === '') {
+        if (walking) key = actions.walk ? 'walk' : actions.standIdle ? 'standIdle' : '';
+        else key = actions.standIdle ? 'standIdle' : '';
+      }
 
       if (key !== s.currentKey) {
         const prev = s.currentKey ? actions[s.currentKey] : undefined;
         const next = key ? actions[key] : undefined;
-        if (prev) prev.fadeOut(FADE);
+        const fade = fallKey && cue ? cue.fadeIn : s.fallOut;
+        if (prev) prev.fadeOut(fade);
         if (next) {
-          next.reset().fadeIn(FADE).play();
+          next.reset().fadeIn(fade).play();
           next.time = (p.bobPhase % 1) * (next.getClip().duration || 1);
         }
         s.currentKey = key;
@@ -97,14 +117,23 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       if (key === 'walk' && actions.walk) {
         actions.walk.timeScale = (CONFIG.walkSpeed * 0.92) / walkClipSpeed;
       }
+      const fallAction = fallKey ? actions[fallKey] : undefined;
+      if (fallAction && cue) {
+        fallAction.paused = true;
+        fallAction.time = cue.u * (fallAction.getClip().duration || 1);
+      }
+      const ramp = dt / Math.max(0.03, fallKey && cue ? cue.fadeIn : s.fallOut);
+      s.fallW = Math.max(0, Math.min(1, s.fallW + (fallKey ? ramp : -ramp)));
+      const rigid = 1 - s.fallW; // part laissée à la bascule de groupe
+      s.fallYaw += ((fallKey ? 1 : 0) - s.fallYaw) * Math.min(1, dt * 3.5);
 
       // p.y : négatif dans une trémie d'escalier, où l'on descend vraiment.
-      body.position.set(p.pos.x, PLATFORM_Y + p.y + p.bob, p.pos.z);
+      body.position.set(p.pos.x, PLATFORM_Y + p.y + p.bob * rigid, p.pos.z);
       // YXZ : le voyageur du quai fait face à la voie — en XYZ, son « penché
       // en avant » l'inclinait sur le côté (cf. LibraryPassengers).
-      body.rotation.set(p.bodyLean, p.yaw, p.bodyRoll, 'YXZ');
+      body.rotation.set(p.bodyLean * rigid, p.yaw + fallYawOffset(p.lookYaw, s.fallYaw), p.bodyRoll * rigid, 'YXZ');
       body.scale.setScalar(p.height);
-      applyBodyPivot(body, p.bodyPivot, p.height);
+      applyBodyPivot(body, p.bodyPivot * rigid, p.height);
 
       if (s.clone.restHead && bones.head) bones.head.quaternion.copy(s.clone.restHead);
       mixer.update(dt);
@@ -116,7 +145,6 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       // Le quai a droit aux mêmes gestes que la rame : jusqu'ici seul le
       // téléphone était rigé, et les soixante autres occupations n'y bougeaient
       // que la tête.
-      const act = p.action === 'shift' ? 'none' : p.action;
       applyArmGesture(s.clone, s.pose, k, {
         action: act,
         actionT: p.actionT,
@@ -124,6 +152,10 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
         posed: p.state === 'waiting',
         strapSide: 0,
         chatRole: p.chatRole,
+        clipFall: (() => {
+          const c = fallClipFor(act);
+          return c !== null && actions[c] !== undefined;
+        })(),
       });
       const held = handPropFor(act);
       updatePropRig(s.props, bones, body, true, held !== null && s.pose.phoneW > 0.05 ? held : null, s.pose.phoneSide);

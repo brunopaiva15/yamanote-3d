@@ -19,6 +19,7 @@ import { rng } from '../textures/procedural';
 import { MODELS_BASE, type CharacterManifest } from './characters/manifest';
 import { buildTemplates, cloneVariant, type CharacterClone, type CharacterTemplate } from './characters/library';
 import { applyBodyPivot, applyPoseOverrides, makePoseState, type PoseState } from './characters/pose';
+import { fallClipFor, fallCue, fallYawOffset } from './characters/fall';
 import { attachProps, updatePropRig, handPropFor, type PropRig } from './characters/props';
 import type { LogicalClip } from './characters/manifest';
 
@@ -32,6 +33,12 @@ interface Slot {
   props: PropRig;
   currentKey: LogicalClip | '';
   seatFix: number; // décalage vertical lissé pour poser le bassin sur le coussin
+  /** Part de la pose tenue par le clip de chute (0..1) — voir characters/fall.ts. */
+  fallW: number;
+  /** Fondu de sortie de la chute en cours, mémorisé pour le retour à l'idle. */
+  fallOut: number;
+  /** Écart de cap de la chute, lissé à part : le corps se vrille en tombant. */
+  fallYaw: number;
 }
 
 // Variante déterministe par passager : filtrée par archétype et genre, tirée
@@ -57,7 +64,7 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
         const template = pickTemplate(templates, p.appearance, p.id);
         const clone = cloneVariant(template, p.appearance);
         const props = attachProps(clone.wrap, p.appearance, template.variant.bagProp !== false);
-        return { clone, pose: makePoseState(), props, currentKey: '', seatFix: 0 };
+        return { clone, pose: makePoseState(), props, currentKey: '', seatFix: 0, fallW: 0, fallOut: FADE, fallYaw: 0 };
       }),
     [templates],
   );
@@ -87,17 +94,29 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       // --- Choix du clip (avec repli si le pack n'a pas tout). Sans clip
       // assis, standIdle reste joué en sous-couche : le mixer réécrit ainsi
       // TOUS les os chaque frame (sinon les overrides additifs s'accumulent)
-      // et l'assise manuelle replie les jambes par-dessus. ---
-      let key: LogicalClip | '' = '';
-      if (seated) key = actions.sitIdle ? 'sitIdle' : actions.standIdle ? 'standIdle' : '';
-      else if (walking) key = actions.walk ? 'walk' : actions.standIdle ? 'standIdle' : '';
-      else key = actions.standIdle ? 'standIdle' : '';
+      // et l'assise manuelle replie les jambes par-dessus.
+      //
+      // La chute passe avant tout le reste : c'est un VRAI clip du pack, monté
+      // et scrubbé image par image (characters/fall.ts). La bascule de groupe
+      // plus bas s'efface d'autant — elle n'est plus qu'un repli pour les packs
+      // qui n'auraient pas de clip de chute. ---
+      const cue = walking ? null : fallCue(p.action, p.actionT);
+      const fallKey = cue && actions[cue.clip] ? cue.clip : '';
+      if (cue && fallKey) s.fallOut = cue.fadeOut;
+
+      let key: LogicalClip | '' = fallKey;
+      if (key === '') {
+        if (seated) key = actions.sitIdle ? 'sitIdle' : actions.standIdle ? 'standIdle' : '';
+        else if (walking) key = actions.walk ? 'walk' : actions.standIdle ? 'standIdle' : '';
+        else key = actions.standIdle ? 'standIdle' : '';
+      }
       if (key !== s.currentKey) {
         const prev = s.currentKey ? actions[s.currentKey] : undefined;
         const next = key ? actions[key] : undefined;
-        if (prev) prev.fadeOut(FADE);
+        const fade = fallKey && cue ? cue.fadeIn : s.fallOut;
+        if (prev) prev.fadeOut(fade);
         if (next) {
-          next.reset().fadeIn(FADE).play();
+          next.reset().fadeIn(fade).play();
           // Déphasage : la foule ne respire pas à l'unisson.
           next.time = (p.bobPhase % 1) * (next.getClip().duration || 1);
         }
@@ -106,6 +125,22 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       if (key === 'walk' && actions.walk) {
         actions.walk.timeScale = CONFIG.walkSpeed / walkClipSpeed;
       }
+      // Le clip de chute n'avance pas tout seul : c'est la piste de clés qui
+      // le positionne, image par image (temps au sol, relevé à l'envers).
+      const fallAction = fallKey ? actions[fallKey] : undefined;
+      if (fallAction && cue) {
+        fallAction.paused = true;
+        fallAction.time = cue.u * (fallAction.getClip().duration || 1);
+      }
+      // Rampe LINÉAIRE, calée sur les fondus du mixer : la bascule de repli
+      // s'éteint exactement au rythme où le clip monte.
+      const ramp = dt / Math.max(0.03, fallKey && cue ? cue.fadeIn : s.fallOut);
+      s.fallW = Math.max(0, Math.min(1, s.fallW + (fallKey ? ramp : -ramp)));
+      const rigid = 1 - s.fallW; // part laissée à la bascule de groupe
+      // Le cap, lui, se vrille plus lentement que le clip ne monte : à la
+      // vitesse du fondu (100 ms) le voyageur pivotait d'un bloc avant même
+      // d'avoir commencé à tomber.
+      s.fallYaw += ((fallKey ? 1 : 0) - s.fallYaw) * Math.min(1, dt * 3.5);
 
       // --- Transformation du groupe (identique à l'ancien rendu). ---
       const standingSway = p.state === 'standing' ? runtime.sway * 0.035 : 0;
@@ -122,28 +157,30 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       s.seatFix += (targetFix - s.seatFix) * k;
       wrap.position.set(
         p.pos.x + (p.state === 'standing' ? runtime.sway * 0.02 : 0),
-        p.pos.y + p.bob + s.seatFix,
+        // Le clip de chute descend le corps lui-même : le décalage vertical
+        // du repli s'efface avec lui.
+        p.pos.y + p.bob * rigid + s.seatFix,
         p.pos.z,
       );
       // Assis en discussion : lean/roll du wrap = 0 (sinon pieds qui glissent).
       const lean =
-        seated && isPairAction(p.action)
+        (seated && isPairAction(p.action)
           ? 0
           : seated
             ? Math.min(p.bodyLean, 0.08)
-            : p.bodyLean;
+            : p.bodyLean) * rigid;
       // YXZ : le cap d'abord, PUIS le buste dans le repère du personnage. En
       // XYZ (l'ordre par défaut), `bodyLean` bascule autour du X du MONDE : un
       // assis, tourné vers la vitre, penchait de côté au lieu de se pencher en
       // avant, et un debout sur deux tombait à la renverse.
       wrap.rotation.set(
         lean,
-        p.yaw,
-        standingSway + seatedSway + (seated ? 0 : p.bodyRoll),
+        p.yaw + fallYawOffset(p.lookYawTarget, s.fallYaw),
+        standingSway + seatedSway + (seated ? 0 : p.bodyRoll * rigid),
         'YXZ',
       );
       wrap.scale.setScalar(p.height);
-      applyBodyPivot(wrap, p.bodyPivot, p.height);
+      applyBodyPivot(wrap, p.bodyPivot * rigid, p.height);
 
       // --- Animation puis overrides d'os (le mixer réécrit la pose). Les os
       // à rotations additives repartent de leur pose de repos : si le clip
@@ -151,7 +188,11 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       if (s.clone.restHead && bones.head) bones.head.quaternion.copy(s.clone.restHead);
       if (s.clone.restSpine && bones.spine) bones.spine.quaternion.copy(s.clone.restSpine);
       mixer.update(dt);
-      applyPoseOverrides(p, s.clone, s.pose, k, manualSit);
+      // Le pack sait-il jouer CETTE chute ? La réponse ne dépend pas de
+      // l'instant : les bras suivent leur piste de clés du début à la fin de
+      // l'action, y compris une fois le clip rendu à l'idle.
+      const packFall = fallClipFor(p.action);
+      applyPoseOverrides(p, s.clone, s.pose, k, manualSit, packFall !== null && actions[packFall] !== undefined);
       const held = (seated || p.state === 'standing') ? handPropFor(p.action) : null;
       const phoneVisible = held !== null && s.pose.phoneW > 0.05;
       updatePropRig(s.props, bones, wrap, !seated, phoneVisible ? held : null, s.pose.phoneSide);
