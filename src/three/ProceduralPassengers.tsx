@@ -8,7 +8,7 @@
 // sont articulés (poignée, téléphone, poches) et le bas du corps bascule
 // entre debout et assis.
 
-import { useMemo, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
@@ -19,6 +19,7 @@ import { runtime } from '../systems/runtime';
 import { makeFaceTexture, makeStripeTexture, makePlaidTexture } from '../textures/procedural';
 import { usesHeldPose } from './characters/props';
 import { applyBodyPivot } from './characters/pose';
+import { markOwned as own, type OwnedResource } from './characters/library';
 import { ACTION_BY_ID, isFallingAction, type MotionId } from '../data/paxActions';
 
 // Repères verticaux locaux (pieds à y=0), calés sur l'ancienne silhouette.
@@ -168,20 +169,22 @@ function torsoGeometry(app: Appearance): THREE.LatheGeometry {
   return new THREE.LatheGeometry(pts, 24);
 }
 
-function buildChar(app: Appearance, id: number): CharSpec {
+// `identity` : QUI est ce voyageur (motif du haut, cravate, visage). Ce n'est
+// pas sa place dans le pool — celle-ci change de main à chaque montée.
+function buildChar(app: Appearance, identity: number): CharSpec {
   const b = app.build;
-  const skinMat = new THREE.MeshStandardMaterial({ color: app.skin, roughness: 0.7 });
+  const skinMat = own(new THREE.MeshStandardMaterial({ color: app.skin, roughness: 0.7 }));
   const bottomMat = cloth(app.bottom.color);
   const shoeMat = cloth(app.shoes, 0.6);
 
   // Haut : couleur unie, ou motif (rayures / carreaux) pour certains casual.
   let topMat: THREE.Material = cloth(app.top.color);
   const patternable = app.top.type === 'tshirt' || app.top.type === 'sweater' || app.top.type === 'hoodie' || app.top.type === 'blouse';
-  const pr = ((id * 2246822519) >>> 0) / 4294967296;
+  const pr = ((identity * 2246822519) >>> 0) / 4294967296;
   if (patternable && pr < 0.3) {
     const accent = shade(app.top.color, 0.35);
-    const tex = pr < 0.18 ? makeStripeTexture(app.top.color, accent) : makePlaidTexture(app.top.color, accent);
-    topMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 });
+    const tex = own(pr < 0.18 ? makeStripeTexture(app.top.color, accent) : makePlaidTexture(app.top.color, accent));
+    topMat = own(new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 }));
   }
 
   const lower: Part[] = [];
@@ -196,25 +199,25 @@ function buildChar(app: Appearance, id: number): CharSpec {
 
   // --- Bas du corps DEBOUT ---
   if (bare) {
-    const legGeo = new THREE.CylinderGeometry(0.041, 0.035, 0.48, 7);
+    const legGeo = own(new THREE.CylinderGeometry(0.041, 0.035, 0.48, 7));
     for (const s of [-1, 1]) {
       lower.push({ geo: legGeo, mat: skinMat, position: [s * legX, 0.27, 0] });
       lower.push({ geo: shoeGeo, mat: shoeMat, position: [s * legX, 0.03, 0.03] });
     }
     if (app.bottom.type === 'skirt') {
-      const skirtGeo = new THREE.CylinderGeometry(b.hipR + 0.01, b.hipR + 0.12, 0.34, 16, 1, true);
+      const skirtGeo = own(new THREE.CylinderGeometry(b.hipR + 0.01, b.hipR + 0.12, 0.34, 16, 1, true));
       lower.push({ geo: skirtGeo, mat: bottomMat, position: [0, 0.55, 0] });
     }
   } else if (app.bottom.type === 'shorts') {
-    const thighGeo = new THREE.CylinderGeometry(b.legR, b.legR * 0.92, 0.26, 8);
-    const shinGeo = new THREE.CylinderGeometry(0.042, 0.038, 0.26, 7);
+    const thighGeo = own(new THREE.CylinderGeometry(b.legR, b.legR * 0.92, 0.26, 8));
+    const shinGeo = own(new THREE.CylinderGeometry(0.042, 0.038, 0.26, 7));
     for (const s of [-1, 1]) {
       lower.push({ geo: thighGeo, mat: bottomMat, position: [s * legX, 0.4, 0] });
       lower.push({ geo: shinGeo, mat: skinMat, position: [s * legX, 0.16, 0] });
       lower.push({ geo: shoeGeo, mat: shoeMat, position: [s * legX, 0.03, 0.03] });
     }
   } else {
-    const legGeo = new THREE.CylinderGeometry(b.legR, b.legR * 0.85, 0.5, 8);
+    const legGeo = own(new THREE.CylinderGeometry(b.legR, b.legR * 0.85, 0.5, 8));
     for (const s of [-1, 1]) {
       lower.push({ geo: legGeo, mat: bottomMat, position: [s * legX, 0.28, 0] });
       lower.push({ geo: shoeGeo, mat: shoeMat, position: [s * legX, 0.03, 0.03] });
@@ -235,10 +238,12 @@ function buildChar(app: Appearance, id: number): CharSpec {
     const shinLen = Math.max(0.24, thighY - shoeY);
     const thighMat = bare ? skinMat : bottomMat;
     const shinMat = bare || app.bottom.type === 'shorts' ? skinMat : bottomMat;
-    const thighGeo = new THREE.CylinderGeometry(b.legR + 0.005, b.legR, 0.34, 8);
-    const shinGeo = app.feminine
-      ? new THREE.CylinderGeometry(0.039, 0.034, shinLen, 8)
-      : new THREE.CylinderGeometry(0.045, 0.04, shinLen, 8);
+    const thighGeo = own(new THREE.CylinderGeometry(b.legR + 0.005, b.legR, 0.34, 8));
+    const shinGeo = own(
+      app.feminine
+        ? new THREE.CylinderGeometry(0.039, 0.034, shinLen, 8)
+        : new THREE.CylinderGeometry(0.045, 0.04, shinLen, 8),
+    );
     for (const s of [-1, 1]) {
       seated.push({ geo: thighGeo, mat: thighMat, position: [s * legX, thighY, 0.17], rotation: [Math.PI / 2, 0, 0] });
       seated.push({ geo: shinGeo, mat: shinMat, position: [s * legX, shoeY + shinLen / 2, kneeZ] });
@@ -246,16 +251,16 @@ function buildChar(app: Appearance, id: number): CharSpec {
     }
     if (bare) {
       // Jupe / robe qui drape sur les genoux.
-      seated.push({ geo: new RoundedBoxGeometry(2 * b.hipR + 0.06, 0.1, 0.4, 3, 0.04), mat: bottomMat, position: [0, thighY + 0.02, 0.16] });
+      seated.push({ geo: own(new RoundedBoxGeometry(2 * b.hipR + 0.06, 0.1, 0.4, 3, 0.04)), mat: bottomMat, position: [0, thighY + 0.02, 0.16] });
     }
   }
 
   // --- Torse + cou + écharpe + détail de vêtement ---
-  torso.push({ geo: torsoGeometry(app), mat: topMat, position: [0, 0, 0] });
+  torso.push({ geo: own(torsoGeometry(app)), mat: topMat, position: [0, 0, 0] });
   torso.push({ geo: neckGeo, mat: skinMat, position: [0, SHOULDER_Y + 0.14, 0] });
 
   if (app.scarf) {
-    const scarfGeo = new THREE.TorusGeometry(0.085, 0.032, 8, 16);
+    const scarfGeo = own(new THREE.TorusGeometry(0.085, 0.032, 8, 16));
     torso.push({ geo: scarfGeo, mat: cloth(app.scarfColor, 0.9), position: [0, SHOULDER_Y + 0.12, 0], rotation: [Math.PI / 2, 0, 0] });
   }
 
@@ -263,7 +268,7 @@ function buildChar(app: Appearance, id: number): CharSpec {
   // contrairement à un décalque plat) : cravate, boutons, poche, fermeture.
   const chestZ = b.chestR - 0.03; // centre légèrement enfoncé → moitié visible
   if (app.top.type === 'suit') {
-    const tieColor = TIE_COLORS[id % TIE_COLORS.length];
+    const tieColor = TIE_COLORS[identity % TIE_COLORS.length];
     const tieMat = cloth(tieColor, 0.6);
     // Col de chemise clair en V (deux petits pans).
     const collarMat = cloth('#eef0ec', 0.8);
@@ -298,16 +303,16 @@ function buildChar(app: Appearance, id: number): CharSpec {
     // abaissée vers l'avant : vraie ligne de cheveux sur le haut du front.
     const buzz = app.hair.style === 'buzz';
     const capScale: [number, number, number] = buzz ? [0.88, 0.72, 0.93] : [0.85, 0.96, 0.9];
-    const capGeo = new THREE.SphereGeometry(buzz ? 0.11 : 0.116, 16, 14);
+    const capGeo = own(new THREE.SphereGeometry(buzz ? 0.11 : 0.116, 16, 14));
     head.push({ geo: capGeo, mat: hairMat, position: [0, buzz ? 0.02 : 0.012, -0.006], scale: capScale });
     if (app.hair.style === 'bun') {
-      head.push({ geo: new THREE.SphereGeometry(0.05, 10, 9), mat: hairMat, position: [0, 0.07, -0.1] });
+      head.push({ geo: own(new THREE.SphereGeometry(0.05, 10, 9)), mat: hairMat, position: [0, 0.07, -0.1] });
     } else if (app.hair.style === 'ponytail') {
-      head.push({ geo: new THREE.CylinderGeometry(0.03, 0.02, 0.2, 8), mat: hairMat, position: [0, -0.06, -0.11], rotation: [0.3, 0, 0] });
+      head.push({ geo: own(new THREE.CylinderGeometry(0.03, 0.02, 0.2, 8)), mat: hairMat, position: [0, -0.06, -0.11], rotation: [0.3, 0, 0] });
     } else if (app.hair.style === 'long') {
       // Masse arrière + deux mèches qui encadrent le visage.
-      head.push({ geo: new RoundedBoxGeometry(0.19, 0.26, 0.1, 3, 0.045), mat: hairMat, position: [0, -0.11, -0.045] });
-      const lockGeo = new RoundedBoxGeometry(0.045, 0.17, 0.075, 2, 0.02);
+      head.push({ geo: own(new RoundedBoxGeometry(0.19, 0.26, 0.1, 3, 0.045)), mat: hairMat, position: [0, -0.11, -0.045] });
+      const lockGeo = own(new RoundedBoxGeometry(0.045, 0.17, 0.075, 2, 0.02));
       for (const s of [-1, 1]) {
         head.push({ geo: lockGeo, mat: hairMat, position: [s * 0.083, -0.045, 0.015] });
       }
@@ -315,16 +320,16 @@ function buildChar(app: Appearance, id: number): CharSpec {
   }
 
   if (app.hat === 'beanie') {
-    head.push({ geo: new THREE.SphereGeometry(0.12, 14, 12), mat: cloth(app.hair.color === '#17151a' ? '#3a5a8a' : app.scarfColor, 0.9), position: [0, 0.055, 0], scale: [0.9, 0.86, 0.95] });
+    head.push({ geo: own(new THREE.SphereGeometry(0.12, 14, 12)), mat: cloth(app.hair.color === '#17151a' ? '#3a5a8a' : app.scarfColor, 0.9), position: [0, 0.055, 0], scale: [0.9, 0.86, 0.95] });
   } else if (app.hat === 'cap') {
     const capMat = cloth(app.scarfColor, 0.7);
-    head.push({ geo: new THREE.SphereGeometry(0.118, 14, 12), mat: capMat, position: [0, 0.05, 0], scale: [0.9, 0.6, 0.95] });
-    head.push({ geo: new THREE.BoxGeometry(0.15, 0.02, 0.09), mat: capMat, position: [0, 0.03, 0.105] });
+    head.push({ geo: own(new THREE.SphereGeometry(0.118, 14, 12)), mat: capMat, position: [0, 0.05, 0], scale: [0.9, 0.6, 0.95] });
+    head.push({ geo: own(new THREE.BoxGeometry(0.15, 0.02, 0.09)), mat: capMat, position: [0, 0.03, 0.105] });
   }
 
   head.push({
     geo: faceGeo,
-    mat: new THREE.MeshBasicMaterial({ map: makeFaceTexture(app, id), transparent: true, toneMapped: false }),
+    mat: own(new THREE.MeshBasicMaterial({ map: own(makeFaceTexture(app, identity)), transparent: true, toneMapped: false })),
     position: [0, -0.005, 0.102],
   });
 
@@ -365,6 +370,31 @@ function buildChar(app: Appearance, id: number): CharSpec {
     foreArmGeo: app.feminine ? foreArmGeoF : foreArmGeoM,
     handGeo: app.feminine ? handGeoF : handGeoM,
   };
+}
+
+/**
+ * Défait un corps dont le slot vient de changer d'identité (relais des portes,
+ * cf. systems/passengers). SEULES les ressources marquées par `own` en sortent :
+ * les gabarits de membres et les matériaux du cache `cloth` servent à toute la
+ * rame et leur libération viderait les autres voyageurs de leur substance.
+ */
+function disposeChar(spec: CharSpec): void {
+  const seen = new Set<OwnedResource>();
+  const drop = (res: OwnedResource | undefined): void => {
+    if (!res || !res.userData.paxOwned || seen.has(res)) return;
+    seen.add(res);
+    const map = (res as unknown as THREE.MeshBasicMaterial).map;
+    if (map?.userData.paxOwned) map.dispose();
+    res.dispose();
+  };
+  for (const parts of [spec.lower, spec.seated, spec.torso, spec.head, spec.accessories]) {
+    for (const part of parts) {
+      drop(part.geo);
+      drop(part.mat);
+    }
+  }
+  drop(spec.armMat);
+  drop(spec.skinMat);
 }
 
 function Parts({ parts }: { parts: Part[] }) {
@@ -565,13 +595,30 @@ export function ProceduralPassengers() {
     })),
   );
 
-  const perPax = useMemo(() => paxList.map((p) => buildChar(p.appearance, p.id)), []);
+  // Les corps sont bâtis d'après l'IDENTITÉ du voyageur, pas d'après sa place
+  // dans le pool : celle-ci change de main à chaque montée (systems/passengers).
+  // Quand elle change, le corps est refait et un rendu React est demandé.
+  const specs = useRef<CharSpec[]>([]);
+  const identities = useRef<number[]>([]);
+  if (specs.current.length === 0) {
+    specs.current = paxList.map((p) => buildChar(p.appearance, p.identity));
+    identities.current = paxList.map((p) => p.identity);
+  }
+  const [, bumpRev] = useState(0);
+  const perPax = specs.current;
 
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
     const k = Math.min(1, dt * 6);
+    let rebuilt = false;
     for (let i = 0; i < paxList.length; i++) {
       const p = paxList[i];
+      if (identities.current[i] !== p.identity) {
+        disposeChar(specs.current[i]);
+        specs.current[i] = buildChar(p.appearance, p.identity);
+        identities.current[i] = p.identity;
+        rebuilt = true;
+      }
       const r = refs.current[i];
       if (!r.group) continue;
       if (p.state === 'hidden') {
@@ -631,6 +678,8 @@ export function ProceduralPassengers() {
         r.phone.visible = usesHeldPose(p.action) && (seated || p.state === 'standing');
       }
     }
+    // Les nouveaux corps ne sont dans la scène qu'au prochain rendu React.
+    if (rebuilt) bumpRev((rev) => rev + 1);
   });
 
   return (

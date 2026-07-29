@@ -16,7 +16,12 @@ import { paxScale } from './perf';
 import { runtime } from './runtime';
 import { currentSegmentOccupancy } from './occupancy';
 import { makeAppearance, type Appearance } from './appearance';
-import { crowdArriveFromTrain, crowdSendBoarder, takeArrivedBoarders } from './platformCrowd';
+import {
+  crowdArriveFromTrain,
+  crowdSendBoarder,
+  swapCrowdIdentity,
+  takeArrivedBoarders,
+} from './platformCrowd';
 import { worldToPlatform } from './playerFrame';
 import {
   SEAT_SLOTS,
@@ -55,6 +60,16 @@ export type { PaxAction };
 
 export interface Pax {
   id: number;
+  /**
+   * QUI est ce voyageur, par opposition à `id` qui ne dit que quelle place du
+   * pool le porte. Apparence, caractère et modèle 3D en découlent tous.
+   *
+   * L'identité traverse la porte avec son propriétaire : un montant apporte la
+   * sienne depuis le quai, un descendant emporte la sienne dehors (voir
+   * « passage de relais » plus bas). Sans ça, franchir le seuil changeait de
+   * personne à vue.
+   */
+  identity: number;
   state: PaxState;
   pos: THREE.Vector3;
   yaw: number;
@@ -140,6 +155,7 @@ function makePax(id: number): Pax {
   const temper = temperFor(id);
   return {
     id,
+    identity: id,
     state: 'hidden',
     pos: new THREE.Vector3(0, 0, 0),
     yaw: 0,
@@ -182,6 +198,21 @@ function makePax(id: number): Pax {
 export function initPassengers(): void {
   if (paxList.length > 0) return;
   for (let i = 0; i < POOL_SIZE; i++) paxList.push(makePax(i));
+}
+
+/**
+ * Ce slot du wagon devient quelqu'un d'autre. Le rendu s'en aperçoit seul (il
+ * compare l'identité du slot à celle de son modèle) et rebâtit le personnage :
+ * on n'appelle donc ceci que sur un PNJ hors de vue, ou à l'instant précis où
+ * il paraît au seuil — jamais sur quelqu'un que le joueur regarde.
+ */
+function applyPaxIdentity(p: Pax, identity: number): void {
+  p.identity = identity;
+  p.appearance = makeAppearance(identity);
+  p.temper = temperFor(identity);
+  p.height = p.appearance.build.scale;
+  p.holdStrap = rollStrap(p.height);
+  p.pockets = p.appearance.bottom.type === 'trousers' && Math.random() < 0.4;
 }
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
@@ -389,6 +420,12 @@ function countInside(): { seated: number; standing: number; seatedPax: Pax[]; st
  * Avant, un descendant marchait jusqu'à 3,40 m sur le quai puis s'évaporait, et
  * un montant se matérialisait au même endroit : les voyageurs apparaissaient et
  * disparaissaient en plein milieu du quai.
+ *
+ * Le relais ne porte pas que la position : les deux pools ÉCHANGENT leurs
+ * identités (systems/platformCrowd.swapCrowdIdentity). Le slot qui prend la
+ * suite adopte l'apparence, le caractère et le modèle de celui qui s'efface —
+ * sans quoi le voyageur devenait quelqu'un d'autre en franchissant la porte,
+ * sous les yeux de qui attend sur le quai.
  */
 const DOOR_HANDOVER_X = 2.0;
 
@@ -439,14 +476,30 @@ function releasePending(): void {
   ticketToPax.clear();
 }
 
-/** Démarre la marche intérieure d'un montant, depuis l'embrasure de la porte. */
-function startBoardWalk(b: PendingBoard): void {
+/**
+ * Démarre la marche intérieure d'un montant, depuis l'embrasure de la porte.
+ *
+ * `crowdId` est le slot de quai qui vient d'atteindre le seuil : le montant
+ * prend son identité (et lui laisse la sienne) juste avant de devenir visible,
+ * pour que ce soit bien la même personne qui entre. -1 quand personne ne l'a
+ * précédé — quai vide, ou voyageur effacé en route.
+ */
+function startBoardWalk(b: PendingBoard, crowdId = -1): void {
   const p = paxList[b.paxId];
   // La place réservée a pu être libérée entre-temps (dégradation perf, reset).
   if (p.seatSlot < 0 && p.standSlot < 0) return;
+  if (crowdId >= 0) {
+    const swapped = swapCrowdIdentity(crowdId, p.identity);
+    if (swapped >= 0) applyPaxIdentity(p, swapped);
+  }
   p.state = 'boarding';
   clearAnchor(p);
   p.pos.set(b.side * DOOR_HANDOVER_X, 0, b.doorZ);
+  // Déjà tourné vers l'intérieur : il vient de traverser le seuil dans cet axe,
+  // et le cap resté de sa dernière apparition le ferait pivoter sur place.
+  p.yaw = -b.side * Math.PI * 0.5;
+  p.targetYaw = p.yaw;
+  p.bob = 0;
   p.waypoints = [
     new THREE.Vector3(b.side * 0.95, 0, b.doorZ),
     new THREE.Vector3(Math.sign(b.dest.x) * 0.3 || 0.3, 0, b.dest.z),
@@ -499,14 +552,14 @@ const ticketToPax = new Map<number, number>();
 
 /** Bascule les montants dont le voyageur du quai a atteint la porte. */
 function drainArrivedBoarders(dt: number): void {
-  for (const ticket of takeArrivedBoarders()) {
-    const paxId = ticketToPax.get(ticket);
-    ticketToPax.delete(ticket);
+  for (const arrived of takeArrivedBoarders()) {
+    const paxId = ticketToPax.get(arrived.ticket);
+    ticketToPax.delete(arrived.ticket);
     if (paxId === undefined) continue;
     const i = pendingBoards.findIndex((b) => b.paxId === paxId);
     if (i < 0) continue;
     const [b] = pendingBoards.splice(i, 1);
-    startBoardWalk(b);
+    startBoardWalk(b, arrived.crowdId);
   }
   // Garde-fou : un voyageur du quai peut être effacé en route (changement de
   // gare, purge de qualité). Le montant part quand même plutôt que de garder
@@ -1154,9 +1207,16 @@ export function updatePassengers(dt: number): void {
             alignStrapStand(p);
           } else {
             // Descente terminée : le voyageur passe la main à la foule du
-            // quai, qui l'emmène jusqu'à la sortie. Sans ce relais il
-            // s'évanouissait sur place, en plein milieu du quai.
-            if (p.state === 'alighting') crowdArriveFromTrain(doorPlatformZ(p.exitDoorZ));
+            // quai, qui l'emmène jusqu'à la sortie — avec son visage, son
+            // caractère et son modèle. Sans ce relais il s'évanouissait sur
+            // place, en plein milieu du quai.
+            if (p.state === 'alighting') {
+              const swapped = crowdArriveFromTrain(doorPlatformZ(p.exitDoorZ), p.identity);
+              // Ce slot du wagon retourne au pool sous l'identité laissée par
+              // le quai : deux exemplaires d'une même personne ne peuvent donc
+              // jamais coexister de part et d'autre de la porte.
+              if (swapped >= 0) applyPaxIdentity(p, swapped);
+            }
             p.exitDoorZ = 0;
             p.state = 'hidden';
           }
