@@ -11,7 +11,7 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { input, moveAxes, consumeLook } from '../systems/input';
 import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
-import { publishPlayerPose } from '../systems/playerFrame';
+import { publishPlayerLook, publishPlayerPose } from '../systems/playerFrame';
 import { AISLE_U, frameAt, groundY, resolveMove, snapInside } from '../systems/walkable';
 import { alight, board, crossNearestPortal } from '../systems/boarding';
 import { setListenerPose } from '../systems/audioEngine';
@@ -79,6 +79,7 @@ export function Player() {
         input.standRequest = true;
         e.preventDefault();
       }
+      if (e.code === 'KeyE') input.talkRequest = true;
       if (e.code === 'KeyM') useStore.getState().toggleMute();
       if (e.code === 'KeyF') {
         void document.documentElement.requestFullscreen().catch(() => undefined);
@@ -311,6 +312,8 @@ export function Player() {
     // Oreilles du joueur = caméra : les diffuseurs sont fixes dans le wagon,
     // c'est la tête qui tourne autour d'eux.
     camera.getWorldDirection(earFwd.current);
+    // Le même vecteur sert à savoir qui on a en face (systems/paxTargeting).
+    publishPlayerLook(earFwd.current.x, earFwd.current.y, earFwd.current.z);
     earUp.current.set(0, 1, 0).applyQuaternion(camera.quaternion);
     setListenerPose(
       camera.position.x,

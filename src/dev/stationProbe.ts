@@ -225,6 +225,11 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     phase: useStore.getState().phase,
     platformFade: +runtime.platformFade.toFixed(2),
     distance: Math.round(runtime.distance),
+    // Où se tient le joueur, en repère QUAI : c'est le seul repère dans
+    // lequel se lisent les cotes de gare (bord, limites de marche, mobilier).
+    frame: runtime.playerFrame,
+    platX: +runtime.playerPlatX.toFixed(2),
+    platZ: +runtime.playerPlatZ.toFixed(2),
   });
 
   // Heure de Tokyo, en minutes depuis minuit. L'horloge avance ensuite d'une

@@ -3,6 +3,11 @@
 // descente par waypoints, et une couche de « vie » tirée du catalogue
 // data/paxActions : regards, téléphone, somnolence, échanges à deux,
 // micro-gestes, décisions assis / debout.
+//
+// Le TEMPO de cette couche ne vit pas ici mais dans systems/paxBehavior :
+// chaque voyageur tient une occupation de fond pendant des minutes, s'en
+// détourne de loin en loin pour un geste bref, puis y revient. Ce module ne
+// fait qu'appliquer ces décisions au wagon.
 
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
@@ -24,13 +29,23 @@ import {
 } from './seats';
 import {
   BUSY_BRIEF,
-  PAX_ACTIONS,
   isPairAction,
   isFallingAction,
   isDramaAction,
   type PaxAction,
   type ActionWhere,
 } from '../data/paxActions';
+import {
+  actionDuration,
+  advanceBehaviorClock,
+  nextInterludeDelay,
+  nextSocialDelay,
+  pickPaxAction,
+  temperFor,
+  type PickCtx,
+  type Temper,
+} from './paxBehavior';
+import { pushPaxEvent } from './paxEvents';
 import { resolveMotion, trainPlayerCtx } from './paxMotion';
 import { playPaxActionSfx } from './paxSfx';
 import { paxBump } from './audioEngine';
@@ -58,6 +73,16 @@ export interface Pax {
   action: PaxAction;
   actionT: number;
   actionDur: number;
+  /** Caractère stable (bavard, nerveux, dormeur…) — voir systems/paxBehavior. */
+  temper: Temper;
+  /** Occupation de fond en cours : ce à quoi le voyageur revient toujours. */
+  anchor: PaxAction;
+  /** Secondes restantes de cette occupation de fond. */
+  anchorLeft: number;
+  /** Compte à rebours avant le prochain geste bref qui l'interrompra. */
+  interludeT: number;
+  /** Délai avant de pouvoir relancer un échange avec un voisin. */
+  socialT: number;
   partner: number; // id du partenaire de discussion, -1 sinon
   chatRole: 0 | 1; // déphasage des hochements de tête
   headYaw: number;
@@ -112,6 +137,7 @@ function alignStrapStand(p: Pax): void {
 
 function makePax(id: number): Pax {
   const appearance = makeAppearance(id);
+  const temper = temperFor(id);
   return {
     id,
     state: 'hidden',
@@ -130,7 +156,12 @@ function makePax(id: number): Pax {
     bob: 0,
     action: 'none',
     actionT: 0,
-    actionDur: 0.6 + Math.random() * 1.8,
+    actionDur: 4 + Math.random() * 10,
+    temper,
+    anchor: 'none',
+    anchorLeft: 0,
+    interludeT: nextInterludeDelay(temper),
+    socialT: 0,
     partner: -1,
     chatRole: 0,
     headYaw: 0,
@@ -141,7 +172,7 @@ function makePax(id: number): Pax {
     bodyRoll: 0,
     bodyPivot: 0,
     pushAccum: 0,
-    decideT: 3 + Math.random() * 8,
+    decideT: 8 + Math.random() * 30,
     holdStrap: rollStrap(appearance.build.scale),
     pockets: appearance.bottom.type === 'trousers' && Math.random() < 0.4,
     exitDoorZ: -1,
@@ -195,7 +226,14 @@ export function seedPassengers(): void {
   seedChats();
 }
 
-/** Lance des discussions silencieuses entre voisins dès le peuplement. */
+/**
+ * Lance quelques discussions silencieuses dès le peuplement, et donne à tous
+ * les autres une occupation de fond déjà entamée.
+ *
+ * Une rame de la Yamanote n'est pas une salle des fêtes : ceux qui parlent
+ * sont venus ensemble. On ne jumelle donc qu'une petite part des voyageurs,
+ * et seulement les bavards — le reste ouvre son téléphone.
+ */
 function seedChats(): void {
   const candidates = paxList.filter((p) => p.state === 'seated' || p.state === 'standing');
   // Mélange léger pour ne pas toujours jumeler les mêmes ids.
@@ -205,10 +243,11 @@ function seedChats(): void {
   }
   const used = new Set<number>();
   let pairs = 0;
-  const want = Math.max(3, Math.floor(candidates.length * 0.28));
+  const want = Math.max(1, Math.round(candidates.length * 0.11));
   for (const p of candidates) {
     if (pairs >= want) break;
     if (used.has(p.id)) continue;
+    if (p.temper.social < 0.35) continue;
     let best: Pax | null = null;
     let bestD = 1.75;
     for (const other of candidates) {
@@ -223,11 +262,26 @@ function seedChats(): void {
     used.add(p.id);
     used.add(best.id);
     const roll = Math.random();
-    const kind: PaxAction =
-      roll < 0.55 ? 'chat' : roll < 0.72 ? 'gossip' : roll < 0.85 ? 'laugh' : roll < 0.93 ? 'whisper' : 'nodAgree';
-    const dur = 6 + Math.random() * 10;
+    const kind: PaxAction = roll < 0.5 ? 'chat' : roll < 0.75 ? 'gossip' : roll < 0.9 ? 'whisper' : 'coupleLean';
+    // Une conversation entamée avant qu'on monte : elle dure encore un moment.
+    const dur = 25 + Math.random() * 70;
+    p.anchor = kind;
+    p.anchorLeft = dur;
+    best.anchor = kind;
+    best.anchorLeft = dur;
     applyAction(p, kind, dur, best);
     pairs++;
+  }
+  // Les autres ne partent pas d'un « rien » de deux secondes : ils sont déjà
+  // au milieu de quelque chose, à un instant quelconque de leur occupation.
+  for (const p of candidates) {
+    if (used.has(p.id)) continue;
+    startAnchor(p);
+    p.actionT = Math.random() * p.actionDur * 0.8;
+    // Décaler les compteurs d'interruption : sans ça, tout le wagon a été
+    // peuplé à la même seconde, et personne ne bouge de la première minute
+    // avant que tout le monde ne bouge en même temps.
+    p.interludeT *= Math.random();
   }
 }
 
@@ -260,23 +314,45 @@ function releaseSlots(p: Pax): void {
   p.standSlot = -1;
 }
 
-/** Libère un éventuel partenaire d'échange (chat, chuchotis, rire…). */
+/**
+ * Libère un éventuel partenaire d'échange (chat, chuchotis, rire…).
+ *
+ * Les deux repartent sur une occupation solo et gardent un délai avant de
+ * pouvoir relancer une conversation : sans ce répit, deux voisins bavards
+ * enchaînaient les échanges sans jamais se taire.
+ */
 function endPair(p: Pax): void {
   if (p.partner >= 0) {
     const other = paxList[p.partner];
     if (other && other.partner === p.id) {
       other.partner = -1;
+      other.anchor = 'none';
+      other.anchorLeft = 0;
+      other.socialT = nextSocialDelay(other.temper);
       other.action = 'none';
       other.actionT = 0;
       other.actionDur = 2 + Math.random() * 3;
     }
+    p.socialT = nextSocialDelay(p.temper);
   }
   p.partner = -1;
 }
 
+/**
+ * Coupe l'occupation de fond. Sans ça, un voyageur qui se lève pour descendre
+ * garderait en mémoire la sieste qu'il faisait assis et la « reprendrait »
+ * debout à l'autre bout du wagon.
+ */
+function clearAnchor(p: Pax): void {
+  p.action = 'none';
+  p.anchor = 'none';
+  p.anchorLeft = 0;
+  p.interludeT = nextInterludeDelay(p.temper);
+}
+
 function startWalk(p: Pax, dest: THREE.Vector3, afterWalk: 'seated' | 'standing' | 'hidden'): void {
   endPair(p);
-  p.action = 'none';
+  clearAnchor(p);
   p.state = 'boarding';
   p.afterWalk = afterWalk;
   const aisleX = Math.sign(dest.x) * 0.3 || 0.3;
@@ -324,7 +400,7 @@ function beginAlight(p: Pax, side: 1 | -1): void {
   const doorZ = nearestDoorZ(p.pos.z);
   releaseSlots(p);
   endPair(p);
-  p.action = 'none';
+  clearAnchor(p);
   p.state = 'alighting';
   p.afterWalk = 'hidden';
   p.exitDoorZ = doorZ;
@@ -366,7 +442,7 @@ function startBoardWalk(b: PendingBoard): void {
   // La place réservée a pu être libérée entre-temps (dégradation perf, reset).
   if (p.seatSlot < 0 && p.standSlot < 0) return;
   p.state = 'boarding';
-  p.action = 'none';
+  clearAnchor(p);
   p.pos.set(b.side * DOOR_HANDOVER_X, 0, b.doorZ);
   p.waypoints = [
     new THREE.Vector3(b.side * 0.95, 0, b.doorZ),
@@ -399,7 +475,7 @@ function beginBoard(p: Pax, side: 1 | -1, afterWalk: 'seated' | 'standing'): boo
   // Le PNJ reste invisible tant qu'il n'est pas au seuil : sa place est
   // seulement réservée.
   p.state = 'hidden';
-  p.action = 'none';
+  clearAnchor(p);
   p.waypoints = [];
   p.wpi = 0;
   const board: PendingBoard = { paxId: p.id, side, doorZ, dest, fuse: 9 };
@@ -453,7 +529,7 @@ export function trimPassengersForPerf(): void {
   const hide = (p: Pax) => {
     releaseSlots(p);
     endPair(p);
-    p.action = 'none';
+    clearAnchor(p);
     p.state = 'hidden';
     p.waypoints = [];
     p.wpi = 0;
@@ -600,86 +676,153 @@ function reactToFall(fallen: Pax, hard: boolean): void {
     while (d > Math.PI) d -= Math.PI * 2;
     while (d < -Math.PI) d += Math.PI * 2;
     other.lookYawTarget = THREE.MathUtils.clamp(d, -1.15, 1.15);
+    // Le premier témoin peut commenter la scène s'il est près du joueur.
+    if (n === 0) pushPaxEvent('car', other.id, 'fallNearby');
     if (++n >= 4) break;
   }
 }
 
-// Choix d'une nouvelle occupation via le catalogue (data/paxActions).
-function pickAction(p: Pax): void {
+function pickCtx(p: Pax, where: ActionWhere): PickCtx {
+  const playerHere = runtime.playerFrame === 'car';
+  return {
+    where,
+    appearance: p.appearance,
+    temper: p.temper,
+    scope: 'car',
+    playerDist: playerHere
+      ? Math.hypot(runtime.playerCarX - p.pos.x, runtime.playerCarZ - p.pos.z)
+      : Infinity,
+    playerHere,
+    jolt: Math.abs(runtime.sway) + Math.abs(runtime.accel) * 1.4,
+    holdStrap: p.holdStrap,
+  };
+}
+
+/**
+ * Nouvelle occupation de fond : ce que ce voyageur va faire des prochaines
+ * minutes. Les échanges à deux passent par là aussi — une conversation est
+ * une occupation, pas un geste.
+ */
+function startAnchor(p: Pax): void {
   const where = whereOf(p);
   if (!where) return;
-
-  const dxp = runtime.playerCarX - p.pos.x;
-  const dzp = runtime.playerCarZ - p.pos.z;
-  const playerDist = Math.hypot(dxp, dzp);
-  const arch = p.appearance.archetype;
-  const jolt = Math.abs(runtime.sway) + Math.abs(runtime.accel) * 1.4;
-
-  let total = 0;
-  const weights: number[] = [];
-  for (let i = 0; i < PAX_ACTIONS.length; i++) {
-    const def = PAX_ACTIONS[i];
-    let w = 0;
-    if (def.where.includes(where)) {
-      w = def.weight;
-      if (def.kind === 'player') {
-        const lim = def.playerDist ?? 3.5;
-        if (playerDist >= lim) w = 0;
-      }
-      if (def.needsMask && !p.appearance.mask) w = 0;
-      if (def.needsGlasses && !p.appearance.glasses) w = 0;
-      if (def.needsBag && p.appearance.bag === 'none') w = 0;
-      if (def.archetypes && def.archetypes.includes(arch)) {
-        w *= def.archetypeBoost ?? 1.4;
-      }
-      // Chutes : rares, amplifiées par le tangage, freinées par la poignée.
-      if (def.id === 'stumble' || def.id === 'fall') {
-        if (p.holdStrap) w *= def.id === 'fall' ? 0.2 : 0.45;
-        else w *= 1.35;
-        if (jolt > 0.35) w *= 1 + jolt * 2.5;
-        if (arch === 'senior') w *= 1.25;
-        if (arch === 'student') w *= 1.15;
-      }
-    }
-    weights[i] = w;
-    total += w;
-  }
-
-  if (total <= 0) {
-    applyAction(p, 'none', 2 + Math.random() * 4);
+  const ctx = pickCtx(p, where);
+  const def = pickPaxAction(ctx, true);
+  if (!def) {
+    p.anchor = 'none';
+    p.anchorLeft = 0;
+    applyAction(p, 'none', 6 + Math.random() * 10);
     return;
   }
+  const dur = actionDuration(def, p.temper);
 
-  let pick = Math.random() * total;
-  let chosen = PAX_ACTIONS[PAX_ACTIONS.length - 1];
-  for (let i = 0; i < PAX_ACTIONS.length; i++) {
-    pick -= weights[i];
-    if (pick <= 0) {
-      chosen = PAX_ACTIONS[i];
-      break;
-    }
-  }
-
-  const dur = chosen.dur[0] + Math.random() * (chosen.dur[1] - chosen.dur[0]);
-
-  if (chosen.kind === 'pair') {
-    const other = findPartner(p, chosen.partnerDist ?? 1.4);
+  if (def.kind === 'pair') {
+    // Ni juste après une conversation, ni avec quelqu'un qui vient d'en finir une.
+    const other = p.socialT > 0 ? null : findPartner(p, def.partnerDist ?? 1.4);
     if (other) {
-      applyAction(p, chosen.id, dur, other);
+      p.anchor = def.id;
+      p.anchorLeft = dur;
+      other.anchor = def.id;
+      other.anchorLeft = dur;
+      other.interludeT = dur + 1;
+      applyAction(p, def.id, dur, other);
+      p.interludeT = dur + 1; // pas de bâillement au milieu d'un échange
       return;
     }
-    // Pas de voisin : repli sur un regard.
-    applyAction(p, 'look', 3 + Math.random() * 3);
+    // Personne à qui parler : on retombe sur une occupation solitaire.
+    p.anchor = 'none';
+    p.anchorLeft = 12 + Math.random() * 20;
+    applyAction(p, 'none', p.anchorLeft);
+    p.interludeT = nextInterludeDelay(p.temper);
     return;
   }
 
-  applyAction(p, chosen.id, dur);
+  p.anchor = def.id;
+  p.anchorLeft = dur;
+  p.interludeT = nextInterludeDelay(p.temper);
+  applyAction(p, def.id, dur);
+}
+
+/**
+ * Geste bref qui vient interrompre l'occupation de fond : on lève les yeux,
+ * on bâille, on remonte son sac. L'occupation reprend juste après.
+ */
+function startInterlude(p: Pax): void {
+  const where = whereOf(p);
+  if (!where) return;
+  const def = pickPaxAction(pickCtx(p, where), false);
+  if (!def) {
+    p.interludeT = nextInterludeDelay(p.temper);
+    return;
+  }
+  const dur = actionDuration(def, p.temper);
+
+  if (def.kind === 'pair') {
+    const other = p.socialT > 0 ? null : findPartner(p, def.partnerDist ?? 1.4);
+    if (!other) {
+      p.interludeT = nextInterludeDelay(p.temper);
+      return;
+    }
+    // Un geste à deux met l'occupation de fond des DEUX en pause.
+    other.interludeT = dur + 1;
+    applyAction(p, def.id, dur, other);
+    return;
+  }
+
+  applyAction(p, def.id, dur);
+}
+
+/**
+ * Fait parler ce voyageur AU joueur (systems/conversation). Il lâche ce qu'il
+ * faisait, se tourne vers lui, et lui adresse la parole ; à la fin, il
+ * reprendra une occupation ordinaire comme après n'importe quel geste.
+ */
+export function paxStartTalking(id: number, dur: number): boolean {
+  const p = paxList[id];
+  if (!p) return false;
+  if (p.state !== 'seated' && p.state !== 'standing') return false;
+  endPair(p);
+  clearAnchor(p);
+  p.action = 'talkPlayer';
+  p.actionT = 0;
+  p.actionDur = dur;
+  return true;
+}
+
+/** Réplique suivante du même échange : on prolonge sans rien réinitialiser. */
+export function paxKeepTalking(id: number, dur: number): boolean {
+  const p = paxList[id];
+  if (!p || p.action !== 'talkPlayer') return false;
+  p.actionT = 0;
+  p.actionDur = dur;
+  return true;
+}
+
+/** Fin de l'échange : le voyageur retourne à sa vie. */
+export function paxStopTalking(id: number): void {
+  const p = paxList[id];
+  if (!p || p.action !== 'talkPlayer') return;
+  // La boucle verra l'occupation expirée et lui en choisira une autre.
+  p.actionT = p.actionDur;
+}
+
+/** Reprend l'occupation de fond après un geste bref, ou en choisit une autre. */
+function resumeAnchor(p: Pax): void {
+  if (p.anchorLeft > 1.5 && !isPairAction(p.anchor)) {
+    applyAction(p, p.anchor, p.anchorLeft);
+    p.interludeT = nextInterludeDelay(p.temper);
+    return;
+  }
+  startAnchor(p);
 }
 
 // Décisions occasionnelles : un debout va s'asseoir, un assis se dégourdit.
 // Renvoie true si le PNJ est parti marcher.
+//
+// Guetter une place libre est courant ; se lever d'une banquette pour aller
+// finir le trajet debout ne l'est pas — d'où le rapport d'un à quinze.
 function maybeRelocate(p: Pax): boolean {
-  if (p.state === 'standing' && Math.random() < 0.2) {
+  if (p.state === 'standing' && Math.random() < 0.18) {
     const seat = findFreeSeat();
     if (seat >= 0) {
       const s = SEAT_SLOTS[seat];
@@ -692,7 +835,7 @@ function maybeRelocate(p: Pax): boolean {
       }
     }
   }
-  if (p.state === 'seated' && Math.random() < 0.05) {
+  if (p.state === 'seated' && Math.random() < 0.012) {
     const stand = findFreeStand();
     if (stand >= 0) {
       const s = STAND_SLOTS[stand];
@@ -792,6 +935,9 @@ function resolvePlayerPush(dt: number): void {
       if (bumpCooldown <= 0 && (approach > 0.4 || overlap > 0.35)) {
         paxBump(dist, overlap > 0.55);
         bumpCooldown = 0.28;
+        // Se faire marcher dessus mérite un mot (systems/conversation en
+        // choisit un, et n'en dira pas un à chaque contact).
+        pushPaxEvent('car', p.id, 'bump');
       }
       if (p.pushAccum >= PUSH_FALL) {
         endPair(p);
@@ -814,6 +960,7 @@ function resolvePlayerPush(dt: number): void {
         if (bumpCooldown <= 0) {
           paxBump(dist, false);
           bumpCooldown = 0.35;
+          pushPaxEvent('car', p.id, 'bump');
         }
       }
       p.pushAccum = Math.max(0, p.pushAccum - dt * 0.4);
@@ -822,6 +969,9 @@ function resolvePlayerPush(dt: number): void {
 }
 
 export function updatePassengers(dt: number): void {
+  // Horloge partagée du comportement : elle sert de base au budget des
+  // événements rares, côté rame comme côté quai.
+  advanceBehaviorClock(dt);
   drainArrivedBoarders(dt);
   resolvePlayerPush(dt);
   for (const p of paxList) {
@@ -854,9 +1004,10 @@ export function updatePassengers(dt: number): void {
             p.exitDoorZ = 0;
             p.state = 'hidden';
           }
-          p.action = 'none';
+          // Arrivé à sa place : il se choisit une occupation dans la seconde.
+          clearAnchor(p);
           p.actionT = 0;
-          p.actionDur = 1 + Math.random() * 3;
+          p.actionDur = 0.6 + Math.random() * 1.4;
         }
       } else {
         tmp.normalize().multiplyScalar(step);
@@ -881,14 +1032,35 @@ export function updatePassengers(dt: number): void {
 
     if (p.state !== 'seated' && p.state !== 'standing') continue;
 
+    // Debout : le voyageur pivote vers le cap de sa place (le long de l'allée)
+    // au lieu de garder celui de son dernier pas. Il arrive à son slot par un
+    // pas LATÉRAL (l'allée en x = ±0,3 → la place en x = ±0,45) : sans ce
+    // rattrapage il restait planté face à la banquette, et surtout son cap
+    // rendu ne correspondait plus à celui qui a choisi son anneau
+    // (alignStrapStand) — d'où le bras tendu vers la poignée de DERRIÈRE.
+    if (p.state === 'standing' && !isFallingAction(p.action)) {
+      let d = p.targetYaw - p.yaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      p.yaw += d * Math.min(1, dt * 6);
+    }
+
     // --- Couche de vie des PNJ posés ---
     if (!isFallingAction(p.action)) p.bob = 0;
     p.bobPhase += dt;
     p.actionT += dt;
     p.decideT -= dt;
+    if (p.socialT > 0) p.socialT -= dt;
+    // Sur son occupation de fond : le compte à rebours de l'interruption
+    // tourne, et le temps passé décompte la durée de l'occupation.
+    const onAnchor = p.action === p.anchor;
+    if (onAnchor) {
+      p.anchorLeft -= dt;
+      p.interludeT -= dt;
+    }
 
     if (p.decideT <= 0) {
-      p.decideT = 5 + Math.random() * 9;
+      p.decideT = 20 + Math.random() * 40;
       if (maybeRelocate(p)) continue;
     }
 
@@ -900,7 +1072,10 @@ export function updatePassengers(dt: number): void {
       }
       p.actionT = 0;
       if (isPairAction(p.action)) endPair(p);
-      pickAction(p);
+      if (onAnchor) startAnchor(p);
+      else resumeAnchor(p);
+    } else if (onAnchor && p.interludeT <= 0 && p.anchorLeft > 3 && !isPairAction(p.action)) {
+      startInterlude(p);
     }
 
     // Cibles de tête selon l'action en cours (catalogue → paxMotion).

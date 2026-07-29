@@ -23,7 +23,10 @@
 //
 // La MUSIQUE du quai, elle, ne suit pas cette règle : la 発車メロディ est faite
 // pour être entendue des voyageurs déjà montés, et elle passe donc en clair par
-// les portes ouvertes (platIn direct, sans platVoiceGain).
+// les portes ouvertes (bus « melody » → platIn, sans platVoiceGain). Ce bus lui
+// est propre : il porte son niveau, calé plus bas sur le quai que dans la rame
+// (MELODY_OUTSIDE / MELODY_INSIDE), pour qu'elle sonne DEPUIS LA GARE sans
+// écraser le reste, et reste franchement audible d'une voiture à quai.
 //
 // Annonces vocales : les clips pré-générés (Kokoro, voir systems/speech.ts)
 // passent par audioManager sur le bus « PA » et sont donc pannés comme le
@@ -88,6 +91,7 @@ interface Nodes {
   platIn: Tone.Gain; // entrée du bus quai
   platVoiceIn: Tone.Gain; // voix du quai seule, lointaine depuis la rame
   platVoiceGain: Tone.Gain;
+  melodyIn: Tone.Gain; // 発車メロディ seule, calée à part du reste du quai
   platGain: Tone.Gain;
   platLp: Tone.Filter;
   platPanners: Tone.Panner3D[];
@@ -128,6 +132,9 @@ interface Nodes {
   paxFabricFilter: Tone.Filter;
   /** Clics secs (photo, écouteurs). */
   paxClick: Tone.NoiseSynth;
+  /** Murmure d'un voyageur qui s'adresse au joueur (syllabes, pas de mots). */
+  paxVoiceSynth: Tone.Synth;
+  paxVoiceFilter: Tone.Filter;
 }
 
 let nodes: Nodes | null = null;
@@ -155,6 +162,28 @@ const PLAT_VOICE_INSIDE = 0.3;
 const PLAT_BUS_CLOSED = 0.07;
 const PLAT_BUS_OPEN = 0.26;
 const PLAT_BUS_OUTSIDE = 0.34;
+
+/**
+ * Niveau propre de la 発車メロディ, en plus du bus du quai.
+ *
+ * Les clips sont normalisés en crête (voir scripts/melodies-gen.py) : envoyés
+ * tels quels sur le bus, ils sonnaient bien plus fort que tout le reste de la
+ * gare — la mélodie écrasait l'annonce qui la suit et le brouhaha du quai.
+ *
+ * Deux calages, parce que ce n'est pas le même problème des deux côtés des
+ * portes. Sur le QUAI on se tient à trois mètres sous un diffuseur : c'est là
+ * que c'était criard, et c'est là qu'on retire le plus (≈ −10 dB). DANS la
+ * rame la mélodie arrive déjà filtrée par les ouvertures, et elle doit rester
+ * ce qu'elle est pour un voyageur assis — le signal qu'il faut descendre
+ * maintenant : on n'en retire que ≈ 5 dB, de quoi la ramener au niveau des
+ * autres sons de gare sans jamais la faire passer au second plan.
+ *
+ * Le rapport entre les deux garde la mélodie DU CÔTÉ DU QUAI : à l'oreille
+ * elle reste plus présente dehors que dedans, elle vient toujours des
+ * haut-parleurs de la gare et non de la rame.
+ */
+const MELODY_INSIDE = 0.55;
+const MELODY_OUTSIDE = 0.32;
 
 // Pose de l'auditeur, tenue à jour par la caméra (voir setListenerPose).
 const listenerPos: { x: number; y: number; z: number } = { x: 0, y: CONFIG.eyeHeight, z: 4.2 };
@@ -378,17 +407,29 @@ export async function startAudio(): Promise<void> {
     envelope: { attack: 0.002, decay: 0.4, sustain: 0, release: 0.4 },
   }).connect(paIn);
 
+  // --- Bus de la 発車メロディ -------------------------------------------
+  //
+  // La mélodie de départ passe par la sono du quai comme le reste, mais avec
+  // son propre robinet : c'est le seul élément de la gare qu'on veut pouvoir
+  // baisser sans toucher au carillon ATOS ni aux annonces. Une petite bosse
+  // de présence la maintient LISIBLE une fois le niveau descendu — dans la
+  // rame, le passe-bas des portes lui coupe déjà le haut du spectre, et c'est
+  // cette bande-là qui la fait passer par-dessus le brouhaha et la clim.
+  const melodyIn = new Tone.Gain(MELODY_INSIDE);
+  const melodyPresence = new Tone.Filter({ type: 'peaking', frequency: 2100, Q: 0.8, gain: 3 });
+  melodyIn.chain(melodyPresence, platIn);
+
   // Mélodies de départ : triangle principal + harmonique douce à l'octave,
   // envoyées sur les haut-parleurs du quai.
   const melodyA = new Tone.Synth({
     oscillator: { type: 'triangle' },
     envelope: { attack: 0.01, decay: 0.18, sustain: 0.35, release: 0.25 },
-  }).connect(platIn);
+  }).connect(melodyIn);
   const melodyB = new Tone.Synth({
     oscillator: { type: 'sine' },
     envelope: { attack: 0.01, decay: 0.18, sustain: 0.25, release: 0.25 },
     volume: -14,
-  }).connect(platIn);
+  }).connect(melodyIn);
 
   // --- Ambiance du lieu -----------------------------------------------
   //
@@ -510,6 +551,18 @@ export async function startAudio(): Promise<void> {
   });
   paxClick.chain(paxClickFilter, trainBus);
 
+  // Voix d'un voyageur : jamais des mots — une bouche fermée derrière un
+  // masque, à un mètre. Une dent de scie très filtrée passée en bande étroite
+  // autour du premier formant donne la bonne matière : on entend QUE quelqu'un
+  // parle, pas CE qu'il dit — le texte, lui, est à l'écran.
+  const paxVoiceFilter = new Tone.Filter({ type: 'bandpass', frequency: 620, Q: 2.4 });
+  const paxVoiceSynth = new Tone.Synth({
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 0.02, decay: 0.09, sustain: 0.35, release: 0.06 },
+    volume: -26,
+  });
+  paxVoiceSynth.chain(paxVoiceFilter, trainBus);
+
   nodes = {
     master,
     trainBus,
@@ -541,6 +594,7 @@ export async function startAudio(): Promise<void> {
     platIn,
     platVoiceIn,
     platVoiceGain,
+    melodyIn,
     platGain,
     platLp,
     platPanners,
@@ -575,6 +629,8 @@ export async function startAudio(): Promise<void> {
     paxFabric,
     paxFabricFilter,
     paxClick,
+    paxVoiceSynth,
+    paxVoiceFilter,
   };
 
   watchContextState();
@@ -672,6 +728,9 @@ export function setListenerOutside(outside: boolean): void {
   // celle du quai n'a plus rien à traverser.
   nodes.paVoiceGain.gain.rampTo(outside ? 0 : 1, 0.3);
   nodes.platVoiceGain.gain.rampTo(outside ? 1 : PLAT_VOICE_INSIDE, 0.3);
+  // La mélodie, elle, est CALÉE PAR LIEU : sous le diffuseur elle doit se
+  // tenir, depuis la rame elle doit s'entendre. Voir MELODY_INSIDE.
+  nodes.melodyIn.gain.rampTo(outside ? MELODY_OUTSIDE : MELODY_INSIDE, 0.3);
 }
 
 /**
@@ -1006,6 +1065,53 @@ export function paxDrink(dist: number): void {
   nodes.paxClick.triggerAttackRelease(0.02, slot('paxClick', now + 0.05), v * 0.5);
 }
 
+/**
+ * Murmure d'un voyageur qui parle au joueur : une poignée de syllabes, pas
+ * des mots. La hauteur suit la personne — une voix de femme au-dessus d'une
+ * voix d'homme, un grand plus bas qu'un petit, un ancien plus voilé — et la
+ * phrase retombe à la fin, comme une phrase japonaise affirmative.
+ */
+export function paxVoice(opts: {
+  dist: number;
+  feminine: boolean;
+  senior: boolean;
+  /** Échelle du personnage (≈ taille / 1,445) : un grand parle plus bas. */
+  scale: number;
+  syllables: number;
+}): void {
+  if (!nodes) return;
+  const v = paxVel(opts.dist, 0.5);
+  if (v <= 0) return;
+  const now = Tone.now();
+  // Fondamentale : ~195 Hz pour une voix féminine, ~118 Hz pour une masculine.
+  let base = opts.feminine ? 195 : 118;
+  base *= 1 / Math.max(0.85, Math.min(1.15, opts.scale));
+  if (opts.senior) base *= 0.92;
+  nodes.paxVoiceFilter.frequency.value = opts.feminine ? 780 : 560;
+  nodes.paxVoiceSynth.envelope.sustain = opts.senior ? 0.28 : 0.35;
+  const n = Math.max(2, Math.min(10, opts.syllables));
+  let t = now;
+  for (let i = 0; i < n; i++) {
+    // La ligne mélodique descend d'un ton et demi sur la phrase, avec le
+    // petit tremblement d'une voix réelle.
+    const fall = 1 - (i / n) * 0.16;
+    const jitter = 0.94 + Math.random() * 0.13;
+    const hold = 0.09 + Math.random() * 0.06;
+    nodes.paxVoiceSynth.triggerAttackRelease(
+      base * fall * jitter,
+      hold,
+      slot('paxVoice', t),
+      v * (0.72 + Math.random() * 0.28),
+    );
+    t += hold + 0.045 + Math.random() * 0.06;
+  }
+  // Un souffle en fin de phrase : c'est ce qui fait qu'on entend quelqu'un et
+  // pas un instrument.
+  nodes.paxBreathFilter.frequency.value = 1500;
+  nodes.paxBreath.envelope.decay = 0.16;
+  nodes.paxBreath.triggerAttackRelease(0.12, slot('paxBreath', t + 0.02), v * 0.22);
+}
+
 /** Clic d'obturateur / écouteurs. */
 export function paxClick(dist: number): void {
   if (!nodes) return;
@@ -1281,8 +1387,9 @@ function resolveAudioUrl(pathOrName: string): string {
 // Un clip local rejoint le MÊME bus spatialisé que sa version synthétisée :
 // déposer un door-open.mp3 ne fait pas ressortir le son du centre de la tête.
 // Les deux entrées « …Voice » sont celles que le lieu d'écoute fait taire :
-// la voix de bord depuis le quai, celle du quai depuis la rame.
-export type Bus = 'cabin' | 'platform' | 'cabinVoice' | 'platformVoice';
+// la voix de bord depuis le quai, celle du quai depuis la rame. « melody » est
+// la sono du quai elle aussi, avec le niveau propre de la 発車メロディ.
+export type Bus = 'cabin' | 'platform' | 'cabinVoice' | 'platformVoice' | 'melody';
 /** Les deux bus de PAROLE, seuls concernés par la coupure selon le lieu. */
 export type VoiceBus = Extract<Bus, 'cabinVoice' | 'platformVoice'>;
 
@@ -1291,6 +1398,7 @@ function busInput(bus: Bus): Tone.Gain | null {
   if (bus === 'platform') return nodes.platIn;
   if (bus === 'cabinVoice') return nodes.paVoiceIn;
   if (bus === 'platformVoice') return nodes.platVoiceIn;
+  if (bus === 'melody') return nodes.melodyIn;
   return nodes.paIn;
 }
 
@@ -1527,7 +1635,7 @@ export function departureMelody(index: number, sounding: number): void {
     fallbackMelodyStation = index;
     const path = `melody-${STATIONS[index].jy}`;
     fallbackMelodyPath = path;
-    if (!(await audioManager.playOnce(path, 'platform'))) {
+    if (!(await audioManager.playOnce(path, 'melody'))) {
       fallbackMelodyPath = null;
       synthMelody(index, sounding);
     }

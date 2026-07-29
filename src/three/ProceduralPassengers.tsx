@@ -492,6 +492,9 @@ const PROC_ARMS: Partial<Record<MotionId, ProcArm>> = {
   bagFeet: { x: -0.55, z: 0.15, elbow: -0.8 },
   offer: { x: -1.15, z: 0.5, elbow: -0.35 },
   point: { x: -1.5, z: 0.5, elbow: -0.15, side: -1 },
+  // S'adresse au joueur : une main qui accompagne la phrase, sans excès —
+  // on parle à un inconnu dans un train, on ne fait pas un discours.
+  talk: { x: -0.55, z: 0.35, elbow: -1.7, side: -1, swing: [0.22, 3.6] },
   wave: { x: -2.5, z: 0.5, elbow: -0.5, swing: [0.4, 5] },
   bow: { x: -0.25, z: 0.1, elbow: -0.9, both: true },
   // Drame.

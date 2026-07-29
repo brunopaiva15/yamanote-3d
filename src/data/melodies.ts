@@ -38,6 +38,21 @@ export const INNER_MAIN_MELODY_PATH =
 export const OUTER_MAIN_MELODY_PATH =
   '/audio/melodies/02_jre-ikst-010-02_outer-main.mp3';
 
+/**
+ * Seconde version du branchement Inner principal : même rôle, autre
+ * composition (la bémol majeur, ♩=110, basse en croches continues). Les vingt
+ * quais Inner se partagent les deux versions pour ne pas tous sonner pareil.
+ */
+export const INNER_MAIN_MELODY_V2_PATH =
+  '/audio/melodies/20_jre-ikst-010-01_inner-main-v2.mp3';
+
+/** Seconde version du branchement Outer principal (pendant du V2 Inner). */
+export const OUTER_MAIN_MELODY_V2_PATH =
+  '/audio/melodies/21_jre-ikst-010-02_outer-main-v2.mp3';
+
+/** Quelle des deux versions d'un branchement principal sonne sur un quai. */
+export type MainMelodyVersion = 'v1' | 'v2';
+
 /** Chemin logique du clip Inner secondaire Ōsaki voie 2 (JRE-IKST-010-03). */
 export const OSAKI_INNER_SECONDARY_MELODY_PATH =
   '/audio/melodies/03_jre-ikst-010-03_inner-secondary-osaki.mp3';
@@ -393,6 +408,8 @@ export const IKEBUKURO_INNER_BIC_CAMERA_B = {
 export const MELODY_PATHS: readonly string[] = [
   INNER_MAIN_MELODY_PATH,
   OUTER_MAIN_MELODY_PATH,
+  INNER_MAIN_MELODY_V2_PATH,
+  OUTER_MAIN_MELODY_V2_PATH,
   OSAKI_INNER_SECONDARY_MELODY_PATH,
   OSAKI_OUTER_SECONDARY_MELODY_PATH,
   KOMAGOME_OUTER_SAKURA_A_PATH,
@@ -410,57 +427,79 @@ export const MELODY_PATHS: readonly string[] = [
   IKEBUKURO_INNER_BIC_CAMERA_B_PATH,
 ];
 
-/** Quai Inner Loop qui diffuse 01_jre-ikst-010-01_inner-main.mp3. */
+/**
+ * Quai Inner Loop qui diffuse le branchement principal. `version` choisit
+ * lequel des deux clips sort des haut-parleurs : une gare garde toujours la
+ * même version (comme dans la réalité), mais elles alternent le long de la
+ * boucle pour qu'on n'entende jamais deux fois la même d'affilée.
+ */
 export const innerMainMelodyPlatforms: Record<
   string,
-  { station: string; platform: number }
+  { station: string; platform: number; version: MainMelodyVersion }
 > = {
-  JY01: { station: 'Tokyo', platform: 4 },
-  JY03: { station: 'Akihabara', platform: 2 },
-  JY04: { station: 'Okachimachi', platform: 3 },
-  JY05: { station: 'Ueno', platform: 2 },
-  JY07: { station: 'Nippori', platform: 11 },
-  JY08: { station: 'Nishi-Nippori', platform: 3 },
-  JY09: { station: 'Tabata', platform: 2 },
-  JY16: { station: 'Shin-Okubo', platform: 2 },
-  JY17: { station: 'Shinjuku', platform: 14 },
-  JY18: { station: 'Yoyogi', platform: 2 },
-  JY19: { station: 'Harajuku', platform: 1 },
-  JY20: { station: 'Shibuya', platform: 2 },
-  JY22: { station: 'Meguro', platform: 1 },
-  JY23: { station: 'Gotanda', platform: 1 },
-  JY24: { station: 'Osaki', platform: 1 },
-  JY25: { station: 'Shinagawa', platform: 1 },
-  JY27: { station: 'Tamachi', platform: 2 },
-  JY28: { station: 'Hamamatsucho', platform: 2 },
-  JY29: { station: 'Shimbashi', platform: 5 },
-  JY30: { station: 'Yurakucho', platform: 2 },
+  JY01: { station: 'Tokyo', platform: 4, version: 'v1' },
+  JY03: { station: 'Akihabara', platform: 2, version: 'v2' },
+  JY04: { station: 'Okachimachi', platform: 3, version: 'v1' },
+  JY05: { station: 'Ueno', platform: 2, version: 'v2' },
+  JY07: { station: 'Nippori', platform: 11, version: 'v1' },
+  JY08: { station: 'Nishi-Nippori', platform: 3, version: 'v2' },
+  JY09: { station: 'Tabata', platform: 2, version: 'v1' },
+  JY16: { station: 'Shin-Okubo', platform: 2, version: 'v2' },
+  JY17: { station: 'Shinjuku', platform: 14, version: 'v1' },
+  JY18: { station: 'Yoyogi', platform: 2, version: 'v2' },
+  JY19: { station: 'Harajuku', platform: 1, version: 'v1' },
+  JY20: { station: 'Shibuya', platform: 2, version: 'v2' },
+  JY22: { station: 'Meguro', platform: 1, version: 'v1' },
+  JY23: { station: 'Gotanda', platform: 1, version: 'v2' },
+  JY24: { station: 'Osaki', platform: 1, version: 'v1' },
+  JY25: { station: 'Shinagawa', platform: 1, version: 'v2' },
+  JY27: { station: 'Tamachi', platform: 2, version: 'v1' },
+  JY28: { station: 'Hamamatsucho', platform: 2, version: 'v2' },
+  JY29: { station: 'Shimbashi', platform: 5, version: 'v1' },
+  JY30: { station: 'Yurakucho', platform: 2, version: 'v2' },
 };
 
-/** Quai Outer Loop qui diffuse 02_jre-ikst-010-02_outer-main.mp3. */
+/** Quai Outer Loop qui diffuse le branchement principal (même alternance). */
 export const outerMainMelodyPlatforms: Record<
   string,
-  { station: string; platform: number; nextStation: string }
+  { station: string; platform: number; nextStation: string; version: MainMelodyVersion }
 > = {
-  JY01: { station: 'Tokyo', platform: 5, nextStation: 'Yurakucho' },
-  JY03: { station: 'Akihabara', platform: 3, nextStation: 'Kanda' },
-  JY04: { station: 'Okachimachi', platform: 2, nextStation: 'Akihabara' },
-  JY05: { station: 'Ueno', platform: 3, nextStation: 'Okachimachi' },
-  JY08: { station: 'Nishi-Nippori', platform: 2, nextStation: 'Nippori' },
-  JY16: { station: 'Shin-Okubo', platform: 1, nextStation: 'Takadanobaba' },
-  JY17: { station: 'Shinjuku', platform: 15, nextStation: 'Shin-Okubo' },
-  JY18: { station: 'Yoyogi', platform: 1, nextStation: 'Shinjuku' },
-  JY19: { station: 'Harajuku', platform: 2, nextStation: 'Yoyogi' },
-  JY20: { station: 'Shibuya', platform: 1, nextStation: 'Harajuku' },
-  JY22: { station: 'Meguro', platform: 2, nextStation: 'Ebisu' },
-  JY23: { station: 'Gotanda', platform: 2, nextStation: 'Meguro' },
-  JY24: { station: 'Osaki', platform: 3, nextStation: 'Gotanda' },
-  JY25: { station: 'Shinagawa', platform: 3, nextStation: 'Osaki' },
-  JY27: { station: 'Tamachi', platform: 3, nextStation: 'Takanawa Gateway' },
-  JY28: { station: 'Hamamatsucho', platform: 3, nextStation: 'Tamachi' },
-  JY29: { station: 'Shimbashi', platform: 4, nextStation: 'Hamamatsucho' },
-  JY30: { station: 'Yurakucho', platform: 3, nextStation: 'Shimbashi' },
+  JY01: { station: 'Tokyo', platform: 5, nextStation: 'Yurakucho', version: 'v1' },
+  JY03: { station: 'Akihabara', platform: 3, nextStation: 'Kanda', version: 'v2' },
+  JY04: { station: 'Okachimachi', platform: 2, nextStation: 'Akihabara', version: 'v1' },
+  JY05: { station: 'Ueno', platform: 3, nextStation: 'Okachimachi', version: 'v2' },
+  JY08: { station: 'Nishi-Nippori', platform: 2, nextStation: 'Nippori', version: 'v1' },
+  JY16: { station: 'Shin-Okubo', platform: 1, nextStation: 'Takadanobaba', version: 'v2' },
+  JY17: { station: 'Shinjuku', platform: 15, nextStation: 'Shin-Okubo', version: 'v1' },
+  JY18: { station: 'Yoyogi', platform: 1, nextStation: 'Shinjuku', version: 'v2' },
+  JY19: { station: 'Harajuku', platform: 2, nextStation: 'Yoyogi', version: 'v1' },
+  JY20: { station: 'Shibuya', platform: 1, nextStation: 'Harajuku', version: 'v2' },
+  JY22: { station: 'Meguro', platform: 2, nextStation: 'Ebisu', version: 'v1' },
+  JY23: { station: 'Gotanda', platform: 2, nextStation: 'Meguro', version: 'v2' },
+  JY24: { station: 'Osaki', platform: 3, nextStation: 'Gotanda', version: 'v1' },
+  JY25: { station: 'Shinagawa', platform: 3, nextStation: 'Osaki', version: 'v2' },
+  JY27: { station: 'Tamachi', platform: 3, nextStation: 'Takanawa Gateway', version: 'v1' },
+  JY28: { station: 'Hamamatsucho', platform: 3, nextStation: 'Tamachi', version: 'v2' },
+  JY29: { station: 'Shimbashi', platform: 4, nextStation: 'Hamamatsucho', version: 'v1' },
+  JY30: { station: 'Yurakucho', platform: 3, nextStation: 'Shimbashi', version: 'v2' },
 };
+
+/**
+ * Clip Inner principal à jouer sur ce quai. Gare inconnue → version 1, la
+ * mélodie historique du branchement.
+ */
+export function innerMainMelodyPathFor(stationCode: string): string {
+  return innerMainMelodyPlatforms[stationCode]?.version === 'v2'
+    ? INNER_MAIN_MELODY_V2_PATH
+    : INNER_MAIN_MELODY_PATH;
+}
+
+/** Clip Outer principal à jouer sur ce quai (même repli que l'Inner). */
+export function outerMainMelodyPathFor(stationCode: string): string {
+  return outerMainMelodyPlatforms[stationCode]?.version === 'v2'
+    ? OUTER_MAIN_MELODY_V2_PATH
+    : OUTER_MAIN_MELODY_PATH;
+}
 
 /** État du train pertinent pour le déclenchement de la 発車メロディ. */
 export type TrainState =

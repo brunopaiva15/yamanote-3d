@@ -3,7 +3,8 @@
 Expérience web contemplative et passive : vous êtes passager d'une rame JR East
 série E235 sur la ligne Yamanote (Tokyo, boucle de 30 stations). Aucun objectif,
 aucun score : on marche dans le wagon, on s'assoit, on regarde la ville défiler,
-on écoute les annonces et les mélodies. La boucle tourne indéfiniment, en temps
+on écoute les annonces et les mélodies — et, si on s'arrête devant quelqu'un, on
+l'écoute parler. La boucle tourne indéfiniment, en temps
 quasi réel (environ 1 à 3 minutes par tronçon selon la gare, ~67 minutes la boucle).
 
 ## Lancer
@@ -25,8 +26,11 @@ npm run lint     # oxlint
   le regard capturé ; se lever : espace, un nouveau clic, ou le bouton du HUD
 - **Descendre / remonter : marcher à travers une porte ouverte.** Aucune touche —
   la porte ouverte *est* le passage
+- **Parler : E**, quand un voyageur est en face et à portée de voix — une
+  invite l'annonce sous le réticule
 - M : couper le son, F : plein écran
-- Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder, bouton s'asseoir
+- Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder,
+  bouton s'asseoir, bouton « Parler » quand quelqu'un est à portée
 
 ## Descendre en gare
 
@@ -81,6 +85,15 @@ mécanique suit : le seuil de porte ne dépend plus que de la porte de la rame
 (`three/Engine`), et on n'entend plus déverrouiller ni glisser ce qui n'existe
 pas (`systems/doorMotion`). Les boutons d'arrêt d'urgence, faute de muret pour
 les porter, passent sur des bornes en retrait de la bande podotactile.
+
+Le bord nu n'était toutefois nu **qu'à l'écran** : la marche s'y arrêtait quand
+même, 20 cm avant le vide, sur rien du tout. Les deux bords de ces deux quais
+portent donc la même limite de zone que les abouts et le pied des volées
+(`three/station/Barrier`) : une maille hexagonale rouge, éteinte de loin, qui
+s'allume au dernier pas — à la hauteur exacte du muret qui manque, pour qu'on
+regarde par-dessus. Elle reprend la trame des 44 baies et **s'ouvre au droit
+d'une porte en même temps que le portillon** de `systems/walkable` ; le bord
+d'en face, où aucune rame ne se présente, reste continu.
 
 `psd: 'partial'` — Ōsaki seul désormais — ne change rien sous nos pieds : c'est
 la voie *secondaire* qui n'est pas encore équipée (voies 2 et 4, travaux jusqu'à
@@ -589,6 +602,75 @@ Blender nécessaire) ; les clips et les os sont détectés par correspondance
 floue (conventions Quaternius / KayKit / Mixamo), avec overrides possibles
 par variante dans le manifest (`clips`, `faceYaw`, `sitHipY`, `tint`).
 
+## Ce que font les voyageurs
+
+Une centaine d'occupations vivent dans `data/paxActions`, mais l'essentiel
+n'est pas leur nombre : c'est leur **rythme**, tenu par `systems/paxBehavior`
+et partagé par la rame et le quai.
+
+- **Occupation de fond.** Un voyageur choisit ce qu'il fait des prochaines
+  minutes — téléphone, sieste, vitre, livre, conversation — et y reste. Sur dix
+  minutes de vie de wagon, le téléphone occupe environ un tiers du temps, la
+  vitre et la sieste un huitième chacune : à peu près ce qu'on observe.
+- **Gestes brefs.** De loin en loin (une dizaine de secondes chez un nerveux,
+  une demi-minute chez un placide), l'occupation est interrompue par un
+  bâillement, un coup d'œil à la montre, un sac remonté — puis **reprise**.
+- **Tempérament.** Chaque PNJ a un caractère stable tiré de son identifiant,
+  comme son apparence : bavard, nerveux, dormeur, curieux, susceptible. Sans
+  lui, tout le monde ferait tout et la foule redeviendrait uniforme.
+- **Budget d'événements rares.** Disputes, bagarres, chutes et séductions
+  passent par un compteur global, séparé pour la rame et pour le quai : une
+  dispute toutes les quelques minutes, une bagarre à peine une fois par tour de
+  boucle.
+
+Le contexte module le reste : silence de la pointe du matin, rires et
+titubements du vendredi soir, bras au corps quand c'est bondé, regards vers les
+portes à quai plutôt que par la vitre, éventails en août seulement.
+
+## Parler aux voyageurs
+
+Un voyageur regardé d'assez près (moins de 2,9 m, dans un cône de 24°) affiche
+une invite ; **E** lui délie la langue. Il se tourne, parle, et la bulle
+s'accroche à sa tête — pas au bas de l'écran : dans une rame où trente
+personnes sont à portée, il faut voir qui parle. Un second appui coupe court,
+comme on tourne les talons.
+
+Le catalogue compte **252 échanges**, écrits dans les trois langues de
+l'interface côte à côte et déclinés selon le genre du personnage là où la
+langue l'impose (« je suis descendue » / « je suis descendu », 僕 / 私,
+～だよ / ～わよ). Ce qui se dit dépend du contexte : l'heure de Tokyo, la gare
+suivante, le remplissage, l'archétype, l'âge, les accessoires, la saison, le
+jour de la semaine. Chaque contexte laisse entre cinquante et soixante
+échanges éligibles ; personne ne se répète, et ce qui vient d'être entendu est
+écarté du tirage suivant.
+
+Six situations font parler les gens **sans qu'on leur ait rien demandé** : une
+bousculade, un voisin qui s'étale, le joueur qui monte ou descend, qui s'assoit
+à côté, qui passe à un mètre, ou la rame qui entre en gare. Une réplique
+spontanée toutes les quarante à cent vingt secondes, jamais deux de suite par
+la même personne : c'est ce qui prouve que les gens sont là même quand on ne
+les regarde pas.
+
+Ils ne prononcent pas de vrais mots. La voix est un **murmure de syllabes**
+synthétisé (Tone.js), dont la hauteur suit le genre, la stature et l'âge : on
+entend que quelqu'un parle, on lit ce qu'il dit.
+
+Pour mesurer tout ça sans attendre dix minutes devant l'écran :
+
+```bash
+# dix minutes de vie de wagon, hors rendu, puis quelques échanges tirés
+node scripts/pax-probe.mjs
+
+# trente minutes de vie, douze échanges
+node scripts/pax-probe.mjs 30 --lines 12
+```
+
+La sonde imprime la part de temps passée dans chaque occupation, le nombre
+d'événements rares déclenchés, et le nombre d'échanges éligibles par contexte —
+c'est là qu'on voit tout de suite si un créneau horaire est à sec. En dev, les
+consoles `__pax`, `__crowd` et `__conversation` donnent l'état courant, et
+`__talk()` fait parler le voyageur le plus proche sans avoir à viser.
+
 ## Références visuelles (maquettes hors dépôt)
 
 Le jeu ne contient **aucun modèle 3D d'intérieur** : la coque, les banquettes et
@@ -662,9 +744,11 @@ src/
   three/station/signatures/ les charpentes propres à une gare : Takanawa, Akihabara…
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
+  data/dialogue/         les 252 conversations : conditions d'emploi et texte
+                         FR / EN / JA, décliné au féminin et au masculin
   scripts/               models:import / models:inspect (packs → public/models/),
-                         sondes navigateur : station-probe, scenery-shots,
-                         scenery-cost, pass-shots
+                         sondes navigateur : station-probe, pax-probe,
+                         scenery-shots, scenery-cost, pass-shots
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
   ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles
@@ -683,7 +767,12 @@ mélodie réelle (gamme, tempo, timbre) sans en reprendre les notes — les
 enregistrements protégés ne sont pas embarqués. Elles sont générées par
 `scripts/melodies-gen.py` dans `public/audio/melodies/` et activées via
 `ENABLE_DEPARTURE_MELODY_CLIPS = true` (`src/data/melodies.ts`) ; flag à
-`false` = retour à la synthèse Tone.js seule. La séquence de départ respecte la
+`false` = retour à la synthèse Tone.js seule. Les deux branchements principaux
+(Inner et Outer, câblés sur une vingtaine de quais chacun) existent en **deux
+versions** : chaque gare garde toujours la sienne (`version` dans
+`innerMainMelodyPlatforms` / `outerMainMelodyPlatforms`), mais elles alternent
+le long de la boucle pour qu'on n'entende jamais deux fois la même d'affilée.
+La séquence de départ respecte la
 chronologie réelle, comptée depuis l'arrêt complet : portes ouvertes à 1–3 s,
 mélodie **une vingtaine de secondes plus tard** (15–25 s selon la taille de la
 gare et l'état de la ligne, comme le chef de train qui la lance ~25 s avant le
@@ -698,10 +787,26 @@ gare. Les voix sont des clips pré-générés avec **Kokoro TTS**, stockés dans
 `scripts/announcements-export.ts` + `scripts/announcements-gen.py` ; un texte
 sans clip retombe sur `speechSynthesis`. Le japonais est synthétisé segment par
 segment, avec de vraies pauses aux 、/。 — la cadence posée des annonces
-automatiques JR (まもなく、…渋谷、…渋谷。), que Kokoro ne marque pas de
-lui-même. `--reuse` ne grave que les clips absents : un texte inchangé garde
+automatiques JR (まもなく。…渋谷。…渋谷。), que Kokoro ne marque pas de
+lui-même. Les annonces **de bord** n'écrivent plus aucune virgule (ni 、 ni
+« , ») : rien que des points, donc partout la pause longue du 。 plutôt que la
+respiration courte du 、 (`data/announcements`) ; le quai, lui, garde sa
+ponctuation. `--reuse` ne grave que les clips absents : un texte inchangé garde
 exactement le fichier qu'il avait, et une version plus récente de Kokoro ne
 fait pas dériver en douce les annonces déjà en place.
+
+**Ce que l'analyseur lit, et ce qu'il croit lire.** Kokoro ne reçoit pas du
+texte mais des phonèmes, fabriqués par misaki. Or un analyseur morphologique se
+trompe, et il se trompe surtout sur les noms propres : 「山手線内回り」 sortait
+en *yamate sen-nai mawari* — 山手 lu やまて, 線内回り recollé en un mot —, soit
+le nom de la ligne écorché dans presque chaque annonce, et 御徒町 en tête de
+phrase sortait *gotochō*. Les mots concernés sont réécrits en katakana pour la
+synthèse seule (`JA_READINGS` dans `announcements-export.ts`), le texte du jeu
+gardant son orthographe ; les noms de GARES, eux, sont vérifiés tout seuls
+contre leur transcription kana (`stations.ts`) — avec le même misaki que la
+synthèse, sans quoi le contrôle valide une lecture que personne n'entendra.
+Une correction de lecture ne change pas la clé du clip, qui hache le texte du
+jeu : il faut supprimer les MP3 concernés pour que `--reuse` les regrave.
 
 ### La gare parle aussi
 
@@ -773,6 +878,14 @@ centre de la tête.
   les portes de la rame **et** les portes palières sont dégagées, du côté qui
   s'ouvre à cette gare. Elle est faite pour être entendue des voyageurs déjà
   montés : elle porte jusque dans le wagon.
+- Elle a son **propre niveau**, à part du reste de la sono du quai (les clips
+  sont normalisés en crête et sonnaient bien plus fort que tout le reste de la
+  gare). Ce niveau dépend du lieu d'écoute : sur le quai, à trois mètres sous
+  un diffuseur, on en retire une dizaine de décibels ; dans la rame, où elle
+  arrive déjà filtrée par les ouvertures, moitié moins — plus une petite bosse
+  de présence vers 2 kHz qui la garde lisible par-dessus le brouhaha et la
+  clim. Le rapport entre les deux la maintient du côté du quai : à l'oreille,
+  elle reste plus présente dehors que dedans, elle vient toujours de la gare.
 
 Les annonces vocales (clips Kokoro) passent par ces mêmes bus : elles sont
 réellement pannées sur les diffuseurs, ceux du plafond pour la rame, ceux du

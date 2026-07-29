@@ -85,6 +85,10 @@ export interface Strings {
     stand: string;
     alight: string;
     boardTrain: string;
+    /** Invite affichée quand on a un voyageur en face de soi. */
+    talk: string;
+    /** Bouton tactile de la même action. */
+    talkShort: string;
     fullscreen: string;
     fullscreenTitle: string;
   };
@@ -127,6 +131,7 @@ const FR: Strings = {
       { keys: ['Espace'], action: 'Se lever' },
       { keys: ['Échap'], action: 'Libérer la souris' },
       { keys: ['Porte'], action: 'Descendre / monter' },
+      { keys: ['E'], action: 'Adresser la parole' },
       { keys: ['Maj'], action: 'Presser le pas' },
       { keys: ['M'], action: 'Son' },
       { keys: ['F'], action: 'Plein écran' },
@@ -136,6 +141,7 @@ const FR: Strings = {
       { gestures: ['Joystick'], action: 'Marcher' },
       { gestures: ['S’asseoir'], action: 'S’asseoir / se lever' },
       { gestures: ['Porte'], action: 'Descendre / monter' },
+      { gestures: ['Parler'], action: 'Adresser la parole' },
       { gestures: ['Son'], action: 'Couper le son' },
     ],
     tokyoTime: 'Heure à Tokyo',
@@ -167,6 +173,8 @@ const FR: Strings = {
     stand: 'Se lever',
     alight: 'Descendre sur le quai',
     boardTrain: 'Monter dans la rame',
+    talk: 'E — Adresser la parole',
+    talkShort: 'Parler',
     fullscreen: 'Plein écran',
     fullscreenTitle: 'Plein écran (F)',
   },
@@ -207,6 +215,7 @@ const EN: Strings = {
       { keys: ['Space'], action: 'Stand up' },
       { keys: ['Esc'], action: 'Release mouse' },
       { keys: ['Doorway'], action: 'Get off / board' },
+      { keys: ['E'], action: 'Say something' },
       { keys: ['Shift'], action: 'Walk faster' },
       { keys: ['M'], action: 'Sound' },
       { keys: ['F'], action: 'Fullscreen' },
@@ -216,6 +225,7 @@ const EN: Strings = {
       { gestures: ['Joystick'], action: 'Walk' },
       { gestures: ['Sit down'], action: 'Sit down / stand up' },
       { gestures: ['Doorway'], action: 'Get off / board' },
+      { gestures: ['Talk'], action: 'Say something' },
       { gestures: ['Sound'], action: 'Mute or unmute' },
     ],
     tokyoTime: 'Tokyo time',
@@ -247,6 +257,8 @@ const EN: Strings = {
     stand: 'Stand up',
     alight: 'Step onto the platform',
     boardTrain: 'Board the train',
+    talk: 'E — Say something',
+    talkShort: 'Talk',
     fullscreen: 'Fullscreen',
     fullscreenTitle: 'Fullscreen (F)',
   },
@@ -286,6 +298,7 @@ const JA: Strings = {
       { keys: ['スペース'], action: '立つ' },
       { keys: ['Esc'], action: 'マウスを解放' },
       { keys: ['出入口'], action: '降りる / 乗る' },
+      { keys: ['E'], action: '話しかける' },
       { keys: ['Shift'], action: '早歩き' },
       { keys: ['M'], action: '音声' },
       { keys: ['F'], action: '全画面' },
@@ -295,6 +308,7 @@ const JA: Strings = {
       { gestures: ['スティック'], action: '歩く' },
       { gestures: ['座る'], action: '座る / 立つ' },
       { gestures: ['出入口'], action: '降りる / 乗る' },
+      { gestures: ['話しかける'], action: '話しかける' },
       { gestures: ['音声'], action: '音を消す' },
     ],
     tokyoTime: '東京の現在時刻',
@@ -326,6 +340,8 @@ const JA: Strings = {
     stand: '立つ',
     alight: 'ホームに降りる',
     boardTrain: '電車に乗る',
+    talk: 'E — 話しかける',
+    talkShort: '話しかける',
     fullscreen: '全画面',
     fullscreenTitle: '全画面表示（F）',
   },
