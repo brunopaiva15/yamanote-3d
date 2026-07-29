@@ -53,8 +53,10 @@ export interface Strings {
     tokyoTime: string;
     /** Libellé du champ heure (écran d'accueil). */
     timeLabel: string;
-    /** Remet l'heure sur l'instant réel à Tokyo. */
+    /** Remet la date et l'heure sur l'instant réel à Tokyo. */
     timeNow: string;
+    /** Libellé du champ date (écran d'accueil) : c'est lui qui donne la saison. */
+    dateLabel: string;
     /** Libellé du sélecteur de gare. */
     stationLabel: string;
     /** Option « laisser le hasard choisir la gare ». */
@@ -77,6 +79,20 @@ export interface Strings {
       packed: string;
       crushed: string;
     };
+    /** Bulle du bandeau météo. */
+    weatherTitle: string;
+    /** Le temps qu'il fait, dans l'ordre de systems/weather. */
+    weather: {
+      clear: string;
+      fair: string;
+      overcast: string;
+      drizzle: string;
+      rain: string;
+      downpour: string;
+      thunder: string;
+      sleet: string;
+      snow: string;
+    };
     soundOn: string;
     soundOff: string;
     soundTitle: string;
@@ -85,6 +101,11 @@ export interface Strings {
     stand: string;
     alight: string;
     boardTrain: string;
+    /**
+     * Refus affiché devant une porte d'une autre voiture. `{car}` est remplacé
+     * par le numéro de la voiture du joueur.
+     */
+    wrongDoor: string;
     /** Invite affichée quand on a un voyageur en face de soi. */
     talk: string;
     /** Bouton tactile de la même action. */
@@ -147,6 +168,7 @@ const FR: Strings = {
     tokyoTime: 'Heure à Tokyo',
     timeLabel: 'Heure',
     timeNow: 'Maintenant',
+    dateLabel: 'Date',
     stationLabel: 'Arrêt',
     stationRandom: 'Aléatoire',
   },
@@ -165,6 +187,18 @@ const FR: Strings = {
       packed: 'très serré',
       crushed: 'saturé',
     },
+    weatherTitle: 'Temps à Tokyo',
+    weather: {
+      clear: 'Dégagé',
+      fair: 'Beau',
+      overcast: 'Couvert',
+      drizzle: 'Bruine',
+      rain: 'Pluie',
+      downpour: 'Averse',
+      thunder: 'Orage',
+      sleet: 'Neige fondue',
+      snow: 'Neige',
+    },
     soundOn: 'Son actif',
     soundOff: 'Son coupé',
     soundTitle: 'Couper ou rétablir le son (M)',
@@ -173,7 +207,8 @@ const FR: Strings = {
     stand: 'Se lever',
     alight: 'Descendre sur le quai',
     boardTrain: 'Monter dans la rame',
-    talk: 'E — Adresser la parole',
+    wrongDoor: 'On ne monte que par la voiture {car}',
+    talk: 'Appuyez sur E pour parler',
     talkShort: 'Parler',
     fullscreen: 'Plein écran',
     fullscreenTitle: 'Plein écran (F)',
@@ -231,6 +266,7 @@ const EN: Strings = {
     tokyoTime: 'Tokyo time',
     timeLabel: 'Time',
     timeNow: 'Now',
+    dateLabel: 'Date',
     stationLabel: 'Station',
     stationRandom: 'Random',
   },
@@ -249,6 +285,18 @@ const EN: Strings = {
       packed: 'very crowded',
       crushed: 'packed solid',
     },
+    weatherTitle: 'Tokyo weather',
+    weather: {
+      clear: 'Clear',
+      fair: 'Fair',
+      overcast: 'Overcast',
+      drizzle: 'Drizzle',
+      rain: 'Rain',
+      downpour: 'Downpour',
+      thunder: 'Thunderstorm',
+      sleet: 'Sleet',
+      snow: 'Snow',
+    },
     soundOn: 'Sound on',
     soundOff: 'Sound off',
     soundTitle: 'Mute or unmute (M)',
@@ -257,7 +305,8 @@ const EN: Strings = {
     stand: 'Stand up',
     alight: 'Step onto the platform',
     boardTrain: 'Board the train',
-    talk: 'E — Say something',
+    wrongDoor: 'You can only board car {car}',
+    talk: 'Press E to talk',
     talkShort: 'Talk',
     fullscreen: 'Fullscreen',
     fullscreenTitle: 'Fullscreen (F)',
@@ -314,6 +363,7 @@ const JA: Strings = {
     tokyoTime: '東京の現在時刻',
     timeLabel: '時刻',
     timeNow: '現在',
+    dateLabel: '日付',
     stationLabel: '駅',
     stationRandom: 'ランダム',
   },
@@ -332,6 +382,18 @@ const JA: Strings = {
       packed: '大変混雑',
       crushed: '超満員',
     },
+    weatherTitle: '東京の天気',
+    weather: {
+      clear: '快晴',
+      fair: '晴れ',
+      overcast: '曇り',
+      drizzle: '霧雨',
+      rain: '雨',
+      downpour: '大雨',
+      thunder: '雷雨',
+      sleet: 'みぞれ',
+      snow: '雪',
+    },
     soundOn: '音声オン',
     soundOff: '音声オフ',
     soundTitle: '音声のオン／オフ（M）',
@@ -340,7 +402,8 @@ const JA: Strings = {
     stand: '立つ',
     alight: 'ホームに降りる',
     boardTrain: '電車に乗る',
-    talk: 'E — 話しかける',
+    wrongDoor: 'ご乗車は{car}号車のみです',
+    talk: 'Eキーで話しかける',
     talkShort: '話しかける',
     fullscreen: '全画面',
     fullscreenTitle: '全画面表示（F）',

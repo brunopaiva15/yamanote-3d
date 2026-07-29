@@ -186,10 +186,24 @@ export function resolveClips(variant: CharacterVariant, clips: THREE.AnimationCl
   const walk =
     byName(variant.clips?.walk) ??
     findClip(clips, /walk/i, /(back|left|right|strafe|crouch|jump|gun|sword|carry|melee|combat)/i, /^walk(ing)?$/i);
+  // Chute au sol : les packs d'action livrent tous un « Death » — un corps qui
+  // perd ses jambes, s'affaisse et s'étale. C'est la seule vraie animation de
+  // chute dont on dispose, et elle vaut mille fois la bascule rigide qu'on
+  // jouait avant (voir characters/fall.ts pour le montage).
+  const collapse =
+    byName(variant.clips?.collapse) ??
+    findClip(clips, /(death|die|collapse|faint|falldown|fall)/i, /(gun|sword|combat|melee|ranged)/i, /^death$/i);
+  // Déséquilibre rattrapé : le recul encaissé des packs (« HitRecieve ») est un
+  // faux pas complet — buste plié, pied qui part en arrière, redressement.
+  const stagger =
+    byName(variant.clips?.stagger) ??
+    findClip(clips, /(hit.?rec(ie|ei)ve|hitreact|stagger|flinch|stumble|knockback)/i, /(gun|sword|death)/i, null);
   const out: Partial<Record<LogicalClip, THREE.AnimationClip>> = {};
   if (sitIdle) out.sitIdle = sitIdle;
   if (standIdle) out.standIdle = standIdle;
   if (walk) out.walk = walk;
+  if (collapse) out.collapse = collapse;
+  if (stagger) out.stagger = stagger;
   return out;
 }
 

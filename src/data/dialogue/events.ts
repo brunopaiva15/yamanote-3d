@@ -632,4 +632,285 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
       },
     ],
   },
+
+  // ——— Arrêt d'urgence : la peur ———
+  //
+  // Deux temps, et le catalogue les distingue par `moving` :
+  //
+  // - LE COUP DE FREIN. On ne sait pas encore ce qui se passe, on s'est
+  //   raccroché à ce qu'on a pu, et on le dit tout de suite.
+  // - L'IMMOBILISATION. La rame est arrêtée en pleine voie, le silence s'est
+  //   installé, et la peur change de nature : elle devient l'attente.
+  //
+  // Ces répliques sont les seules à sortir plusieurs fois de suite, par des
+  // voisins différents (systems/conversation) : un wagon qui freine en urgence
+  // ne produit pas une remarque polie, il produit un brouhaha inquiet.
+  {
+    id: 'ev.em.what',
+    when: { trigger: 'emergency', place: 'car' },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'Qu’est-ce qui se passe ?!',
+          en: 'What is going on?!',
+          ja: '今の、何ですか！',
+        },
+      },
+      {
+        gap: 0.7,
+        t: {
+          fr: 'J’ai eu peur. J’ai vraiment eu peur.',
+          en: 'That scared me. That really scared me.',
+          ja: { f: '怖かった……本当に怖かったわ。', m: '怖かった……本当に怖かった。' },
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.scared',
+    when: { trigger: 'emergency', place: 'car' },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'J’ai peur. Je n’aime pas ça du tout.',
+          en: 'I am scared. I do not like this one bit.',
+          ja: { f: '怖い。こういうの、本当に苦手なの。', m: '怖い。こういうの、本当に苦手なんだ。' },
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.heart',
+    when: { trigger: 'emergency', place: 'car' },
+    lines: [
+      {
+        t: {
+          fr: 'Mon cœur bat encore. J’ai cru qu’on avait percuté quelque chose.',
+          en: 'My heart is still going. I thought we had hit something.',
+          ja: '心臓がまだドキドキしてます。何かにぶつかったのかと思って。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.hard',
+    when: { trigger: 'emergency', place: 'car' },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'Ce n’était pas un freinage normal, ça. J’ai peur, là.',
+          en: 'That was not normal braking. I am frightened now.',
+          ja: '今のは普通のブレーキじゃないですよ。……怖いです。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.hands',
+    when: { trigger: 'emergency', place: 'car' },
+    lines: [
+      {
+        t: {
+          fr: 'Regardez, mes mains tremblent encore. J’ai eu peur.',
+          en: 'Look, my hands are still shaking. That frightened me.',
+          ja: { f: '見て、手がまだ震えてるの。怖かった。', m: '見て、手がまだ震えてる。怖かった。' },
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.hush',
+    when: { trigger: 'emergency', place: 'car' },
+    lines: [
+      {
+        t: {
+          fr: 'Tout le monde s’est tu d’un coup. C’est ça qui fait peur.',
+          en: 'Everyone went quiet at once. That is the frightening part.',
+          ja: 'みんな一斉に黙りましたね。それがまた怖い。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.window',
+    when: { trigger: 'emergency', place: 'car' },
+    lines: [
+      {
+        t: {
+          fr: 'J’ai regardé dehors et j’ai eu peur de ce que j’allais voir.',
+          en: 'I looked out and I was afraid of what I would see.',
+          ja: '外を見て、何が見えるのかと思うと怖くなりました。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.hold',
+    when: { trigger: 'emergency', place: 'car', posture: ['standing'] },
+    lines: [
+      {
+        t: {
+          fr: 'Tenez-vous bien. Ce coup de frein m’a fait peur.',
+          en: 'Hold on tight. That braking frightened me.',
+          ja: 'しっかり掴まってください。今のブレーキ、怖かったです。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.senior',
+    when: { trigger: 'emergency', place: 'car', senior: true },
+    lines: [
+      {
+        t: {
+          fr: 'À mon âge, une secousse pareille fait peur. J’ai bien cru tomber.',
+          en: 'At my age a jolt like that is frightening. I nearly went down.',
+          ja: 'この歳になると、ああいう揺れは怖いですよ。転ぶかと思いました。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.tourist',
+    when: { trigger: 'emergency', place: 'car', archetype: ['tourist'] },
+    lines: [
+      {
+        t: {
+          fr: 'C’est normal, ça ? Non ? Bon, là j’ai peur.',
+          en: 'Is this normal? No? All right, now I am scared.',
+          ja: 'これ、普通ですか？　違う？　……ちょっと怖いんですけど。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.student',
+    when: { trigger: 'emergency', place: 'car', archetype: ['student'] },
+    lines: [
+      {
+        t: {
+          fr: 'J’ai eu trop peur. Sérieux, j’ai crié.',
+          en: 'That scared me so bad. I actually screamed.',
+          ja: { f: 'めっちゃ怖かった。声出ちゃったんだけど。', m: 'めっちゃ怖かった。声出たんだけど。' },
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.crowded',
+    when: { trigger: 'emergency', place: 'car', crowdMin: 0.65 },
+    lines: [
+      {
+        t: {
+          fr: 'Serrés comme on est, si ça recommence, j’ai peur qu’on tombe tous ensemble.',
+          en: 'Packed in like this, if it happens again I am afraid we all go down together.',
+          ja: 'この混み方でもう一度来たら、みんなで倒れそうで怖いです。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.stop.silence',
+    when: { trigger: 'emergency', place: 'car', moving: false },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'On est arrêtés en pleine voie. C’est ce silence qui me fait peur.',
+          en: 'We are stopped out on the open track. It is the silence that frightens me.',
+          ja: '線路の真ん中で止まってますね。この静けさが怖いんです。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.stop.why',
+    when: { trigger: 'emergency', place: 'car', moving: false },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'Ils ne disent pas vraiment pourquoi.',
+          en: 'They are not really saying why.',
+          ja: 'はっきりした理由は言ってくれませんね。',
+        },
+      },
+      {
+        gap: 0.8,
+        t: {
+          fr: 'C’est ça qui me fait peur, en fait.',
+          en: 'That is the part that scares me, honestly.',
+          ja: { f: 'それが怖いのよね、正直。', m: 'それが怖いんだよな、正直。' },
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.stop.long',
+    when: { trigger: 'emergency', place: 'car', moving: false },
+    lines: [
+      {
+        t: {
+          fr: 'J’ai peur qu’on reste là longtemps. Je préviens chez moi.',
+          en: 'I am afraid we will be here a while. I am letting them know at home.',
+          ja: '長くなりそうで怖いです。家に連絡しておきます。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.stop.calm',
+    when: { trigger: 'emergency', place: 'car', moving: false },
+    lines: [
+      {
+        t: {
+          fr: 'Respirez. Moi aussi j’ai peur, mais ça va repartir.',
+          en: 'Just breathe. I am scared too, but it will start moving again.',
+          ja: { f: '深呼吸して。私も怖いけど、また動きますから。', m: '深呼吸して。僕も怖いけど、また動きますから。' },
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.stop.senior',
+    when: { trigger: 'emergency', place: 'car', senior: true, moving: false },
+    lines: [
+      {
+        t: {
+          fr: 'Depuis le grand tremblement de terre, un train arrêté comme ça me fait peur.',
+          en: 'Ever since the big earthquake, a train stopped like this frightens me.',
+          ja: '震災を経験してから、こうして止まると怖くてね。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.stop.night',
+    when: { trigger: 'emergency', place: 'car', moving: false, hours: [22, 26] },
+    lines: [
+      {
+        t: {
+          fr: 'La nuit, arrêtés au milieu de nulle part, ça me fait peur.',
+          en: 'At night, stopped in the middle of nowhere, this frightens me.',
+          ja: '夜にこんな所で止まると、やっぱり怖いです。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.em.stop.signal',
+    when: { trigger: 'emergency', place: 'car', moving: false },
+    lines: [
+      {
+        t: {
+          fr: 'Je n’ai presque plus de réseau. Ne pas pouvoir appeler, ça me fait peur.',
+          en: 'I have almost no signal. Not being able to call is what scares me.',
+          ja: '電波がほとんど入らない。連絡できないのが怖いです。',
+        },
+      },
+    ],
+  },
 ];

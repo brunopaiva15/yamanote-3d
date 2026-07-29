@@ -1,5 +1,5 @@
 // Catalogue des conversations, et tirage d'un échange dans le contexte du
-// moment. Les répliques elles-mêmes vivent dans les cinq modules thématiques
+// moment. Les répliques elles-mêmes vivent dans les huit modules thématiques
 // importés ci-dessous ; ce fichier n'assemble, ne filtre et ne rend.
 
 import { STATIONS } from '../stations';
@@ -8,6 +8,9 @@ import { DIALOGUE_SMALLTALK } from './smallTalk';
 import { DIALOGUE_PEOPLE } from './people';
 import { DIALOGUE_PLACES } from './places';
 import { DIALOGUE_MOMENTS } from './moments';
+import { DIALOGUE_TRAINS } from './trains';
+import { DIALOGUE_CITY } from './city';
+import { DIALOGUE_LIVES } from './lives';
 import { DIALOGUE_EVENTS } from './events';
 import { matches, type DialogueCtx, type DialogueEntry, type DialogueLine, type Gendered } from './types';
 
@@ -18,6 +21,9 @@ export const DIALOGUES: readonly DialogueEntry[] = [
   ...DIALOGUE_PEOPLE,
   ...DIALOGUE_PLACES,
   ...DIALOGUE_MOMENTS,
+  ...DIALOGUE_TRAINS,
+  ...DIALOGUE_CITY,
+  ...DIALOGUE_LIVES,
   ...DIALOGUE_EVENTS,
 ];
 

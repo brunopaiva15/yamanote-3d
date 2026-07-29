@@ -17,6 +17,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
+import { seasonNow } from '../systems/season';
 import { useStore } from '../store';
 import { CONFIG } from '../data/config';
 import { journeyProgress } from '../data/segments';
@@ -24,6 +25,7 @@ import { DISTRICTS, type Land, type LandmarkSpec } from '../data/districts';
 import { rng } from '../textures/procedural';
 import { box, glow, plane, sil, vehicle, type Ctx } from './landmarkKit';
 import { landmarkPush } from '../systems/stationOcclusion';
+import { plateauRuntime } from '../systems/plateau';
 
 const BASE_Y = -1.1; // niveau du sol extérieur.
 const FAR_X = 34; // distance latérale des silhouettes (devant la couche lointaine).
@@ -111,10 +113,16 @@ function lattice(ctx: Ctx, h: number, spread: number, body: string, plat: string
 }
 
 // Masse d'arbres (parc, forêt de sanctuaire).
+//
+// Le bois de Meiji-jingū et la lisière d'Ueno sont les deux seuls repères de la
+// boucle qui soient faits de végétal : ils prennent la couleur du jour. Les
+// silhouettes étant rebâties à chaque changement de gare, il suffit de lire la
+// saison ici — pas d'uniforme à piloter.
 function forest(ctx: Ctx, spread: number): void {
+  const se = seasonNow();
   const trunk = sil(ctx, '#5a4632');
-  const leafA = sil(ctx, '#4f9a3a');
-  const leafB = sil(ctx, '#3f8230');
+  const leafA = sil(ctx, se.foliage[0]);
+  const leafB = sil(ctx, se.foliage[2]);
   const n = 6 + Math.floor(ctx.r() * 5);
   for (let i = 0; i < n; i++) {
     const px = (ctx.r() - 0.5) * spread * 2;
@@ -363,11 +371,17 @@ export function Landmarks() {
     const silDay = 1 - 0.5 * cityNight; // silhouettes : plus sombres la nuit.
     const glowLvl = 0.28 + 0.72 * cityNight; // écrans/néons : éclatants la nuit.
 
+    // Sur le tronçon couvert par le prototype PLATEAU, les repères procéduraux
+    // s'effacent : ils sont placés « à vue » le long de la voie, sans
+    // géoréférencement, et flotteraient au milieu d'une ville qui, elle, est à
+    // sa vraie place. Ailleurs, `coverage` vaut 0 et rien ne change.
+    const plateauCity = plateauRuntime.coverage >= 0.5;
+
     const arriving = arrivingSlot.current;
     for (let s = 0; s < 2; s++) {
       const slot = pair[s];
       const closeness = s === arriving ? closeArr : closeDep;
-      const visible = closeness > 0.02;
+      const visible = closeness > 0.02 && !plateauCity;
       slot.root.visible = visible;
       if (!visible) continue;
       // depthWrite dès que le fondu est avancé : sinon les silhouettes

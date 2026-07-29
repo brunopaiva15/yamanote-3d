@@ -27,10 +27,17 @@ npm run lint     # oxlint
 - **Descendre / remonter : marcher à travers une porte ouverte.** Aucune touche —
   la porte ouverte *est* le passage
 - **Parler : E**, quand un voyageur est en face et à portée de voix — une
-  invite l'annonce sous le réticule
+  invite l'annonce sous le réticule. Depuis le quai on parle aux gens du quai,
+  jamais à travers la vitre à ceux qui sont assis dans la rame
 - M : couper le son, F : plein écran
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder,
   bouton s'asseoir, bouton « Parler » quand quelqu'un est à portée
+
+Avant de monter, le menu laisse choisir la **date**, l'heure et l'arrêt. Par
+défaut, l'instant réel à Tokyo et une gare tirée au hasard. La date n'est pas un
+détail d'état civil : c'est elle qui donne la saison — couleur des frondaisons,
+hauteur du soleil, heure de la tombée de nuit — et le temps qu'il fera ce
+jour-là. Le HUD affiche le temps qu'il fait et la température.
 
 ## Descendre en gare
 
@@ -178,9 +185,11 @@ quai — l'événement le plus physique d'un quai japonais.
 Onze gares peuvent en voir traverser (`data/passingTrains`), et deux régimes s'y
 succèdent selon l'heure de Tokyo :
 
-- **快速**, de 10 h 30 à 15 h 30, aux cinq gares que le rapide saute vraiment :
-  御徒町, 鶯谷, 西日暮里, 浜松町 (en semaine — le week-end il s'y arrête) et
-  有楽町. C'est le passage fréquent, celui qu'on finit par attendre.
+- **快速**, de 10 h 30 à 15 h 30 entre Tabata et Shinagawa, aux cinq gares que
+  le rapide saute vraiment : 御徒町 (en semaine — le week-end il s'y arrête),
+  鶯谷, 日暮里, 西日暮里 et 有楽町. C'est le passage fréquent, celui qu'on finit
+  par attendre. Il saute aussi 新橋, mais le gabarit du jeu en fait un îlot
+  Yamanote pur : aucune voie Keihin-Tōhoku n'y borde le quai.
 - **回送**, une rame vide qui rejoint son dépôt ou en sort : aux onze gares,
   rare en pleine journée, nettement moins après 22 h et avant 7 h — les
   mouvements de dépôt se font avant le premier train et après le dernier.
@@ -583,6 +592,257 @@ milieu d'un inter-gare, vise par une baie et capture, de jour comme de nuit. La
 sonde de gare, elle, se pose à l'arrêt — là où le quai masque justement tout le
 paysage.
 
+### Ville géoréférencée (prototype PLATEAU)
+
+Tout ce qui précède est **procédural** : un paysage crédible, jamais le vrai. Un
+prototype teste l'autre voie — construire le décor à partir des données ouvertes
+[Project PLATEAU](https://www.mlit.go.jp/plateau/) (modèles CityGML 3D des villes
+japonaises, 国土交通省) — sur **un seul tronçon à la fois**, par défaut
+Shibuya → Ebisu (`SEGMENTS[19]`). Le choix du tronçon compte : sur un viaduc, le
+train court sept mètres au-dessus de la rue et le regard passe par-dessus les
+toits ; dans une tranchée, le mur de soutènement masque tout, et c'est exact
+mais inutile à regarder.
+
+```bash
+npm run world:build:prototype -- --dry-run   # vérifie outils et configuration
+npm run world:build:prototype                # CityGML → GLB optimisés + manifeste
+npm run dev                                  # puis /?plateau=1
+```
+
+**Le prototype est éteint par défaut** : il faut `?plateau=1` dans l'URL, en
+développement comme en ligne. Le paramètre allume le monde géoréférencé *et*
+fait embarquer directement sur le tronçon. Sans lui, rien n'est chargé et le
+jeu est exactement celui d'avant. C'est délibéré : tant que le build tourne sur
+l'échantillon synthétique, les bâtiments sont inventés, et les montrer d'office
+ferait passer une ville fictive pour Tokyo.
+
+Le pipeline projette en JGD2011 / CS IX, sélectionne les bâtiments dans un
+corridor de ±300 m, les classe par distance à la voie, découpe en chunks de
+400 m recentrés sur leur propre origine, triangule, simplifie, compresse en
+meshopt et génère `public/world/plateau/manifest.json`. Dans le jeu, le wagon
+reste à l'origine et c'est le monde qui tourne autour de lui : on applique au
+groupe des chunks l'inverse de la transformation du train sur le tracé réel, à
+la vitesse réelle de la rame. Ailleurs sur la boucle, et sans `?plateau=1`, le
+décor procédural reprend tout.
+
+Changer de tronçon est une variable d'environnement — `PLATEAU_PROTOTYPE` —
+plus une constante à aligner côté jeu ; la validation du build refuse de publier
+un monde que le jeu chercherait ailleurs sur la boucle.
+
+⚠️ Le dépôt ne contient **aucune donnée PLATEAU** : le build par défaut tourne
+sur un échantillon CityGML *synthétique* au format PLATEAU. Tout est expliqué —
+outils, licences, limites, extension aux 30 tronçons — dans
+[`docs/PLATEAU_PIPELINE.md`](docs/PLATEAU_PIPELINE.md).
+
+## Les saisons
+
+Le décor n'avait qu'une horloge, celle des heures. Un 21 décembre s'y déroulait
+comme un 21 juin : mêmes frondaisons, même hauteur de soleil, même tombée de
+nuit. La date n'est plus un détail d'état civil — elle commande le paysage.
+
+`systems/season` dérive de `runtime.tokyoDate` **deux familles de valeurs, et il
+faut les distinguer**. Les **poids de saison**, quatre nombres qui somment à 1,
+fondus sur vingt-six jours de part et d'autre de quatre bornes — bornes qui ne
+tombent pas sur les équinoxes : au Japon l'été s'étire jusqu'à fin septembre, et
+le basculement de juin est celui de l'entrée du 梅雨. Ils servent aux réglages
+continus, teinte de l'air, portée du regard. Et les **phénomènes datés** —
+sakura, kōyō, ramure nue, tsuyu, canicule, froid —, des cloches indépendantes
+posées sur le quantième. Ils ne se déduisent PAS des poids : la floraison des
+cerisiers dure douze jours au milieu d'un printemps qui en dure quatre-vingt-sept,
+et le tsuyu chevauche la frontière printemps / été au lieu de la suivre.
+
+**La lumière du jour ne se fond pas : elle se calcule.** Deux cosinus calés sur
+les extrêmes réels de Tokyo (lever 4 h 25 / coucher 19 h 00 au solstice d'été,
+6 h 47 / 16 h 32 à celui d'hiver), et de phases différentes — le lever le plus
+précoce tombe vers le 13 juin, le coucher le plus tardif vers le 1er juillet.
+C'est cette asymétrie qui fait qu'en décembre la nuit tombe déjà à 16 h 30 sans
+que le soleil se lève plus tard qu'en janvier. `daynight` ne porte plus de
+bornes en dur : il les prend au lever et au coucher du jour. Deux heures et
+demie d'écart sur le coucher entre les deux solstices, c'est le fait saisonnier
+le plus fort de tous, et le plus facile à rater.
+
+**La hauteur du soleil** vient ensuite : 31° à midi le 21 décembre, 78° le
+21 juin. C'est la plus grande différence visible depuis une place assise — à
+31° le soleil entre par la baie et va frapper le dossier d'en face ; à 78° il
+tombe presque à pic et ne dépasse pas l'appui de fenêtre. La position est
+ramenée à un rayon constant : seule la direction compte pour une lumière
+directionnelle, mais **pas sa distance**, puisque la caméra d'ombre est posée
+dessus et que son `far` vaut cent. Elle plafonne à 73° pour la même raison —
+au-delà, l'ombre du portique caténaire cesse de balayer l'intérieur du wagon.
+
+**L'air.** Un janvier de Tokyo est sec et sans particules : la lumière bleuit,
+le lointain reste net à perte de vue — c'est en hiver qu'on voit le Fuji depuis
+les tours. Un août est chargé de vapeur : le blanc jaunit et les tours se noient
+à six cents mètres. `season.clarity` multiplie la portée de la brume,
+`season.airTone` teinte soleil, brume, fond et ciel. Sur le dôme, le voile ne se
+répand pas uniformément sur la voûte : il s'accumule dans les basses couches,
+l'horizon vire au blanc laiteux pendant que le zénith reste bleu. Un ciel teinté
+de haut en bas se lit comme un filtre de photo ; c'est le **dégradé** qui se lit
+comme de l'air.
+
+### Le feuillage n'est plus vert dans les sommets
+
+C'était le mur contre lequel butait toute idée de saison. La couleur d'instance
+**multiplie** la couleur de sommet, et un vert multiplié par un rouge d'automne
+ne donne pas du rouge : il donne de la boue. Les sommets du bosquet
+(`three/city/cityProps`) ne portent donc plus qu'un ombrage neutre — trois
+valeurs de gris, une par sujet, pour que la masse garde son relief — et c'est la
+couleur d'instance qui porte la teinte entière : verte en juillet, rousse fin
+novembre, rose lavé fin mars.
+
+Deux choses que la couleur d'instance seule ne sait toujours pas faire, et que
+le nuanceur du bosquet ajoute :
+
+- **garder le tronc brun** quand la frondaison rougit. Un attribut de sommet dit
+  qui est bois et qui est feuille ;
+- **dépouiller l'arbre**. Ce qui dit l'hiver de loin n'est pas la couleur, c'est
+  le *volume* : une frondaison de juillet est une masse pleine, une ramure de
+  janvier est un dessin. Les sommets de couronne se rétractent vers le centre de
+  leur propre sujet — mettre l'instance entière à l'échelle rapetisserait
+  l'arbre au lieu de le dénuder.
+
+La teinte n'est plus tirée par le générateur de cellules, seulement le **numéro
+de variante** : une cellule reste posée plusieurs secondes, et la saison peut
+changer sous elle. Le rendu va chercher la couleur du jour dans la palette de
+`season`. Au plus fort de la floraison, un sujet sur trois est en fleurs — pas
+davantage : au-delà, la ville devient un décor de carte postale et la floraison
+cesse d'être un événement.
+
+Pour regarder tout ça : `node scripts/season-shots.mjs /tmp/saisons` se pose au
+milieu d'un inter-gare d'Ueno — le seul quartier de la boucle où les bosquets
+remplacent franchement le bâti —, vise le bord de voie en plongée et capture six
+dates de l'année, plus les deux solstices à la même heure d'horloge. La question
+posée à chaque image est toujours la même : depuis une place assise, sait-on en
+quel mois on est ?
+
+## La météo
+
+### Ce n'est pas un tirage par image
+
+Une météo tirée au hasard à chaque instant n'est pas de la météo : c'est du
+bruit. Le temps a une **durée** — une averse tient vingt minutes, un ciel couvert
+tient l'après-midi, le tsuyu tient six semaines. `systems/weather` engendre donc
+la journée **entière** d'un coup, sous forme d'une suite d'épisodes datés, à
+partir d'une graine tirée de la date civile. Deux conséquences, et les deux
+comptent :
+
+- le temps est le même pour tout le monde un jour donné. Le 21 juin il
+  pleuvait ; on peut y revenir, et il y pleuvra encore ;
+- monter à bord à 8 h ou à 18 h ne rejoue pas le même dé : on tombe à l'endroit
+  qu'on occupe dans la journée, avec ce qui l'a précédé — le sol est encore
+  mouillé de l'averse de midi.
+
+### La climatologie de Tokyo, et non « la pluie en général »
+
+Dans l'ordre d'importance :
+
+- le **梅雨**, du 7 juin au 20 juillet : six semaines de gris et de bruine, c'est
+  LE fait météorologique de l'année à Tokyo ;
+- le **夕立**, l'averse d'orage de fin d'après-midi en plein été, qui tombe d'un
+  ciel bleu une heure plus tôt. Le poids de l'orage est nul le matin, maximal
+  entre 15 h et 19 h : c'est un phénomène de convection, il suit le
+  réchauffement du sol ;
+- l'**hiver sec et lumineux**, contre-intuitif pour qui imagine le Japon
+  pluvieux : janvier est le mois le plus ensoleillé de l'année ;
+- la **neige**, rare. Tokyo en compte quelques jours par an. Elle est donc
+  décidée au niveau de la *journée*, pas de l'épisode : simulé sur cinq années,
+  le modèle en donne de zéro à quatre par hiver, toujours entre la mi-janvier et
+  la fin février.
+
+Chaque poids est une propension, jamais un interrupteur : il pleut en janvier et
+il fait beau pendant le tsuyu — simplement pas souvent. Le bilan d'une année
+entière, tel que le modèle la tire :
+
+| mois | pluie | couvert | dégagé | T moyenne |
+|---|---|---|---|---|
+| janvier | 4 % | 14 % | 60 % | 5,4 °C |
+| juin | 24 % | 65 % | 16 % | 21,8 °C |
+| juillet | 23 % | 64 % | 21 % | 24,9 °C |
+| août | 8 % | 32 % | 39 % | 25,8 °C |
+| décembre | 5 % | 16 % | 62 % | 8,5 °C |
+
+Le badge du HUD nomme le ciel d'après **ce qu'il est**, jamais d'après l'épisode
+en cours. La distinction n'est pas cosmétique : l'épisode bascule au milieu du
+fondu de vingt minutes qui le relie au suivant, si bien qu'il annonçait
+« dégagé » dix minutes avant que la dernière goutte soit tombée — et le badge
+contredisait alors la fenêtre. Déduit de la couverture, de la pluie et de la
+neige, il ne *peut* plus les contredire.
+
+Les pourcentages comptent des *heures*, pas des jours. Les moyennes de
+température tombent à quelques dixièmes des normales de Tokyo — c'est le seul
+chiffre du modèle qui soit vérifiable directement, et il l'est.
+
+La **température** est calculée, et pas décorative : moyenne du jour (cosinus
+calé sur les normales de Tokyo, 5 °C début février, 27 °C début août), marche
+diurne qui n'est pas un cosinus — une journée ne se refroidit pas aussi vite
+qu'elle se réchauffe, minimum à 4 h, maximum à 14 h, retombée étalée sur les
+quatorze heures qui restent —, puis correction du temps qu'il fait. C'est elle
+qui arbitre pluie ou neige, et c'est elle qui décide si la neige **tient** : à
+Tokyo, une neige de midi ne tient pas, celle de 4 h du matin, oui.
+
+### La pluie à l'image
+
+Faire tomber la pluie sur les six cents mètres de décor visibles coûterait des
+centaines de milliers de gouttes pour une image où l'on ne distingue que les
+quinze premiers mètres. Au-delà, la pluie ne se voit plus goutte à goutte : elle
+se voit comme une **perte de portée**, et c'est le premier effet de la pluie bien
+avant les gouttes elles-mêmes.
+
+`three/Weather` ne modélise donc qu'une boîte de ±14 m **attachée à la caméra**,
+dans laquelle la précipitation se replie sur elle-même par un modulo : la goutte
+qui sort par le bas rentre par le haut. Personne ne peut le voir, puisque le
+repliement a lieu à quatorze mètres, hors du cône où l'œil distingue encore un
+trait de deux centimètres. Tout est calculé dans le nuanceur de sommets à partir
+d'une graine par goutte et d'une dérive repliée : aucune position n'est écrite
+depuis le processeur, et le champ entier tient en **un appel de rendu**.
+
+**L'inclinaison est tout.** Une pluie verticale vue depuis un train à
+quatre-vingt-dix, c'est la faute qui tue l'effet. Dans le repère du wagon, la
+goutte ne tombe pas : elle file vers l'arrière à la vitesse du train, et son
+trait s'incline d'autant. Le trait est donc construit dans l'espace de la
+caméra, aligné sur la vitesse **relative** — chute plus vent plus vitesse du
+train —, et sa longueur est la distance parcourue pendant le temps de pose de
+l'œil : un mètre vingt à quatre-vingt-dix. À l'arrêt en gare elle se redresse,
+et c'est en la regardant se redresser pendant le freinage qu'on sent le mieux
+qu'on ralentit. Descendu sur le quai, le joueur change de repère : la gare
+devient fixe, le terme de vitesse tombe, la pluie redevient verticale — rien de
+spécial à écrire pour ça, il suffit de lire `runtime.playerFrame`.
+
+Le flocon, lui, ne tombe pas droit : il flotte. C'est ce qui le distingue d'une
+goutte bien plus que sa forme ou sa vitesse.
+
+**Deux volumes soustraits**, et deux seulement, parce que ce sont les deux seuls
+endroits d'où l'œil regarde en étant *sous* quelque chose : l'intérieur du wagon
+— sans lui il pleut entre la banquette et le plafond, et le test de profondeur
+ne peut rien puisque la goutte est devant la paroi qu'elle devrait avoir
+derrière elle — et l'auvent du quai, dont `systems/stationOcclusion` tient déjà
+l'emprise exacte pour le décor de voie. Les deux sont retranchés en écrasant le
+quad à une aire nulle : rien à rastériser, pas de `discard`, pas de surcoût.
+
+Une averse ne tombe pas plus vite qu'une bruine : elle tombe plus **dru**. C'est
+donc le nombre d'instances affichées qui varie, pas leur vitesse ni leur
+opacité — un fondu d'opacité donnerait une pluie fantôme.
+
+Le coût : deux appels de rendu et six mille triangles au palier ultra, sous une
+averse — le tiers d'un seul immeuble de la ville. Par temps sec les deux
+maillages sont éteints, et le budget du décor (voir plus haut) est inchangé.
+
+### Ce que la pluie fait au reste du décor
+
+- **La portée du regard** tombe : `weather.visibility` multiplie le `near` et le
+  `far` de la brume, par-dessus la clarté de la saison ;
+- **le ciel se ferme** : la couverture nuageuse mange le bleu du dôme et éteint
+  la silhouette de l'horizon bien avant que les gouttes ne se voient ;
+- **les surfaces foncent.** Une chaussée mouillée est deux fois plus sombre
+  qu'une chaussée sèche, et elle **renvoie** : la nuit, sous la pluie, les néons
+  du quartier se lisent au sol. Le mouillé monte vite et sèche lentement, et une
+  averse d'août sèche en dix minutes quand une bruine de février tient
+  l'après-midi ;
+- **la neige blanchit par le haut.** Elle se pose sur ce qui regarde le ciel —
+  toitures, acrotères, ballast, frondaisons — et jamais sur une façade
+  verticale. Le nuanceur de ville le sait déjà : il distingue les faces de
+  couverture des faces de mur pour poser sa texture.
+
 ## L'extérieur de la rame
 
 `three/exterior/` modélise la rame E235-0 complète, visible depuis le quai :
@@ -681,6 +941,48 @@ Le contexte module le reste : silence de la pointe du matin, rires et
 titubements du vendredi soir, bras au corps quand c'est bondé, regards vers les
 portes à quai plutôt que par la vitre, éventails en août seulement.
 
+### Tomber
+
+Un coup de frein, une poignée lâchée, un joueur qui pousse un peu trop : il
+arrive qu'on tombe. Ces chutes étaient longtemps une **rotation** — le groupe
+du personnage basculait autour de son bassin, corps raide, jambes tendues dans
+la pose debout, et se relevait à l'endroit. De loin ça passait ; d'un mètre, le
+voyageur tombait comme une planche à repasser.
+
+Les packs livrent pourtant de vraies animations clés à clés qui ne servaient à
+rien : un corps qui perd ses jambes, s'assoit sur ses talons, part en arrière et
+s'étale, avec le contrecoup des bras et le tassement final. `characters/fall.ts`
+les **monte** au lieu de les jouer : chaque chute est une piste
+`[temps de l'action → position dans le clip]` que le rendu applique en scrubbant
+l'animation image par image. On y gagne trois choses qu'un simple `play()` ne
+donne pas :
+
+- le **rythme** propre à chaque chute — on vacille une demi-seconde, on
+  s'écroule en trois dixièmes, on reste à terre deux secondes, on se relève
+  lentement — là où le clip d'origine tient en une seconde ;
+- le **temps au sol**, en tenant le clip sur une image ;
+- le **relevé**, en repassant le clip à l'envers : un corps qui ramène ses
+  jambes sous lui et se hisse, ce qu'aucun pack ne fournit. Le milieu du clip
+  ainsi repris donne même l'**assise par terre** — jambes devant, buste en
+  arrière sur les mains — qui fait la chute plutôt que le plongeon.
+
+Trois montages : la **chute** complète en rame (4 s, du vacillement au
+redressement penaud), le **faux pas** rattrapé sur ses jambes, la **glissade**
+de quai où l'on descend à mi-hauteur avant de se reprendre. Deux couches se
+superposent au clip : le **regard** (`paxMotion`), qui joue la gêne pendant
+qu'on est au sol, et les **bras** (`characters/pose`), repris le temps de la
+bascule — moulinet, mains vers le sol — parce que le clip d'origine est une mort
+par balle, où les bras partent en arrière au lieu de chercher à se rattraper.
+
+Les temps sont calés sur les bruitages : l'impact tombe avec le `thud`, le
+relevé avec le froissement de tissu. Le cap se vrille pendant qu'on tombe, du
+côté que l'action a tiré au sort, pour que deux chutes ne soient jamais la
+même. Et la vieille bascule reste là, en **repli**, pour un pack qui n'aurait ni
+chute ni recul dans ses clips.
+
+En dev, `/rig-probe.html?fall=fall&t=2.4` rejoue une chute image par image avec
+le vrai montage du jeu (`&rigid=1` pour revoir le repli seul).
+
 ## Parler aux voyageurs
 
 Un voyageur regardé d'assez près (moins de 2,9 m, dans un cône de 24°) affiche
@@ -689,7 +991,7 @@ s'accroche à sa tête — pas au bas de l'écran : dans une rame où trente
 personnes sont à portée, il faut voir qui parle. Un second appui coupe court,
 comme on tourne les talons.
 
-Le catalogue compte **252 échanges**, écrits dans les trois langues de
+Le catalogue compte **416 échanges**, écrits dans les trois langues de
 l'interface côte à côte et déclinés selon le genre du personnage là où la
 langue l'impose (« je suis descendue » / « je suis descendu », 僕 / 私,
 ～だよ / ～わよ). Ce qui se dit dépend du contexte : l'heure de Tokyo, la gare
@@ -698,12 +1000,31 @@ jour de la semaine. Chaque contexte laisse entre cinquante et soixante
 échanges éligibles ; personne ne se répète, et ce qui vient d'être entendu est
 écarté du tirage suivant.
 
-Six situations font parler les gens **sans qu'on leur ait rien demandé** : une
+Sept situations font parler les gens **sans qu'on leur ait rien demandé** : une
 bousculade, un voisin qui s'étale, le joueur qui monte ou descend, qui s'assoit
-à côté, qui passe à un mètre, ou la rame qui entre en gare. Une réplique
-spontanée toutes les quarante à cent vingt secondes, jamais deux de suite par
-la même personne : c'est ce qui prouve que les gens sont là même quand on ne
-les regarde pas.
+à côté, qui passe à un mètre, la rame qui entre en gare — et l'arrêt d'urgence.
+Une réplique spontanée toutes les quarante à cent vingt secondes, jamais deux
+de suite par la même personne : c'est ce qui prouve que les gens sont là même
+quand on ne les regarde pas.
+
+**L'arrêt d'urgence est le seul qui fasse parler plusieurs personnes.** Les six
+autres s'adressent à un voisin ; un coup de frein d'urgence, lui, arrive à tout
+le wagon en même temps, et un wagon qui vient de freiner en urgence ne produit
+pas une remarque polie. Tout le monde sursaute d'abord — les debout qui ne
+tiennent aucune poignée partent en avant, les autres cherchent des yeux ce qui
+arrive, les assis lèvent le nez de leur écran — puis **deux à quatre voisins
+différents disent leur peur**, l'un après l'autre, la bulle passant de l'un à
+l'autre pendant une quarantaine de secondes. Ce qui se disait juste avant
+s'arrête : une conversation ne survit pas à ça.
+
+La peur se dit en deux temps, que le catalogue distingue par la vitesse de la
+rame. **Au coup de frein**, on ne sait pas encore ce qui se passe : « qu'est-ce
+qui se passe ?! », les mains qui tremblent, le cœur qui bat, la peur d'avoir
+percuté quelque chose. **Une fois la rame immobilisée** en pleine voie, la peur
+change de nature et devient celle de l'attente : le silence, le motif qu'on ne
+donne pas vraiment, le réseau qui ne passe plus, et chez les plus âgés le
+souvenir du grand séisme. Les deux vagues partent d'elles-mêmes, la seconde une
+dizaine de secondes après l'immobilisation.
 
 Ils ne prononcent pas de vrais mots. La voix est un **murmure de syllabes**
 synthétisé (Tone.js), dont la hauteur suit le genre, la stature et l'âge : on
@@ -786,10 +1107,16 @@ src/
   data/                  stations réelles JY01→JY30, correspondances, annonces, config
   systems/               logique pure : machine à états du cycle station, audio Tone.js,
                          file d'annonces vocales, PNJ, slots d'assise, runtime 60 fps
+  systems/season.ts      la saison, dérivée de la date : poids fondus, phénomènes
+                         datés, lever et coucher réels à Tokyo
+  systems/weather.ts     le temps qu'il fait : une journée d'épisodes engendrée
+                         d'un coup, semée par la date
   three/                 rendu R3F : wagon, sièges, portes, poignées, pubs, écrans LCD,
                          PNJ, caméra
   three/Wayside.tsx      l'emprise ferroviaire : plate-forme, rails, garde-corps
                          de viaduc, mobilier de voie, caténaire
+  three/Weather.tsx      pluie et neige : champ replié autour de l'œil, calculé
+                         dans le nuanceur, incliné par la vitesse du train
   three/city/            le paysage : ruban urbain instancié, matériau de façade,
                          ciel et ligne d'horizon en une passe
   three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines,
@@ -798,11 +1125,14 @@ src/
   three/station/signatures/ les charpentes propres à une gare : Takanawa, Akihabara…
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
-  data/dialogue/         les 252 conversations : conditions d'emploi et texte
+  data/dialogue/         les 416 conversations : conditions d'emploi et texte
                          FR / EN / JA, décliné au féminin et au masculin
   scripts/               models:import / models:inspect (packs → public/models/),
                          sondes navigateur : station-probe, pax-probe,
-                         scenery-shots, scenery-cost, pass-shots
+                         scenery-shots, scenery-cost, pass-shots, season-shots,
+                         weather-shots
+  scripts/plateau/       pipeline CityGML PLATEAU → GLB (docs/PLATEAU_PIPELINE.md)
+  three/PlateauWorld.tsx monde géoréférencé du prototype (un tronçon à la fois)
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
   ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles
@@ -876,6 +1206,15 @@ d'urgence subi en cours de route met la ligne en retard : les quais s'en
 excusent, motif à l'appui, pendant les quelques arrêts qui suivent
 (`data/stationAnnouncements`, `systems/stationPa`).
 
+Cet arrêt d'urgence (急停車) tombe **toutes les dix à vingt-quatre gares**, soit
+de vingt-cinq minutes à une heure de trajet — le premier plus tôt, pour qu'un
+trajet court puisse le vivre. Le train freine sec, reste immobilisé de 45 s à
+2 min 30 avec les annonces du conducteur et les écrans rouges, puis repart ; le
+chrono de phase n'avance que **au prorata de la vitesse** pendant tout
+l'événement, si bien que la gare suivante arrive au bon moment après la reprise
+et que le retard se lit sur l'horloge murale, pas sur le trajet
+(`systems/stationCycle`). Ce que ça fait aux voyageurs est décrit plus haut.
+
 **Quatre locutrices, toutes féminines**, parce que quatre sources parlent et
 qu'on doit les distinguer sans regarder : la sono de la rame (`jf_alpha`),
 l'annonce automatique du quai (`jf_gongitsune`), l'agent de quai au micro
@@ -914,6 +1253,40 @@ pour un effet que l'oreille attribue surtout à la quantité.
 L'ambiance entre par les mêmes ouvertures que la mélodie : pleine sur le quai,
 réduite dans la rame portes fermées, muette entre deux gares.
 
+### Le temps qu'il fait, à l'oreille
+
+La pluie s'entend en **deux endroits qui n'ont rien à voir**, et c'est ce qui la
+rend crédible depuis un train.
+
+Sur le **pavillon**, au-dessus de la tête : un crépitement mat, sans aigus, que
+la tôle et l'isolant ont mangés. Il ne passe pas par les portes — il est là même
+portes fermées, et c'est le seul son du jeu dont l'ouverture des portes ne change
+rien. Il appartient à la rame, donc au bus qui s'atténue quand on la regarde
+depuis le quai : là, le toit sous lequel on se tient est celui de la gare.
+L'averse y crépite plus haut que la bruine, la goutte étant plus grosse et
+frappant plus fort.
+
+**Dehors**, sur la ville et sur le quai : un souffle large et brillant, qui
+n'entre dans le wagon que par les ouvertures, comme l'ambiance de gare et pour la
+même raison. Portes fermées, il n'en reste que le grave — le vitrage coupe tout
+au-dessus de deux ou trois kilohertz. Une seule source pour les deux aurait forcé
+à choisir un timbre, et le timbre est précisément ce qui distingue les deux
+endroits.
+
+Le **tonnerre** est un grondement long, plus un claquement qui ne vaut que pour
+les coups proches : c'est le *rapport* des deux qui donne la distance, bien plus
+que le niveau. Le retard suit la même distance — trois secondes par kilomètre —,
+si bien que l'éclair lointain s'allume sept secondes avant qu'on l'entende.
+
+Le **rail mouillé** fait monter le roulement dans les aigus : c'est la pellicule
+d'eau qui siffle sous la bande de roulement, et c'est souvent à ça qu'un voyageur
+régulier devine qu'il pleut avant de regarder dehors.
+
+La **neige**, elle, n'ajoute rien : elle *retire*. Une ville sous la neige est
+plus silencieuse que d'ordinaire, la couche absorbant les aigus au lieu de les
+renvoyer. Le lit d'ambiance du lieu perd donc sa coupure haute, et c'est tout ce
+qu'il faut pour l'entendre tomber.
+
 ### Sonorisation en 3D
 
 Le son de la sonorisation est spatialisé : il sort des haut-parleurs, pas du
@@ -932,6 +1305,14 @@ centre de la tête.
   les portes de la rame **et** les portes palières sont dégagées, du côté qui
   s'ouvre à cette gare. Elle est faite pour être entendue des voyageurs déjà
   montés : elle porte jusque dans le wagon.
+- Elle a son **propre niveau**, à part du reste de la sono du quai (les clips
+  sont normalisés en crête et sonnaient bien plus fort que tout le reste de la
+  gare). Ce niveau dépend du lieu d'écoute : sur le quai, à trois mètres sous
+  un diffuseur, on en retire une dizaine de décibels ; dans la rame, où elle
+  arrive déjà filtrée par les ouvertures, moitié moins — plus une petite bosse
+  de présence vers 2 kHz qui la garde lisible par-dessus le brouhaha et la
+  clim. Le rapport entre les deux la maintient du côté du quai : à l'oreille,
+  elle reste plus présente dehors que dedans, elle vient toujours de la gare.
 
 Les annonces vocales (clips Kokoro) passent par ces mêmes bus : elles sont
 réellement pannées sur les diffuseurs, ceux du plafond pour la rame, ceux du

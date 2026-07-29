@@ -23,7 +23,10 @@
 //
 // La MUSIQUE du quai, elle, ne suit pas cette règle : la 発車メロディ est faite
 // pour être entendue des voyageurs déjà montés, et elle passe donc en clair par
-// les portes ouvertes (platIn direct, sans platVoiceGain).
+// les portes ouvertes (bus « melody » → platIn, sans platVoiceGain). Ce bus lui
+// est propre : il porte son niveau, calé plus bas sur le quai que dans la rame
+// (MELODY_OUTSIDE / MELODY_INSIDE), pour qu'elle sonne DEPUIS LA GARE sans
+// écraser le reste, et reste franchement audible d'une voiture à quai.
 //
 // Annonces vocales : les clips pré-générés (Kokoro, voir systems/speech.ts)
 // passent par audioManager sur le bus « PA » et sont donc pannés comme le
@@ -88,6 +91,7 @@ interface Nodes {
   platIn: Tone.Gain; // entrée du bus quai
   platVoiceIn: Tone.Gain; // voix du quai seule, lointaine depuis la rame
   platVoiceGain: Tone.Gain;
+  melodyIn: Tone.Gain; // 発車メロディ seule, calée à part du reste du quai
   platGain: Tone.Gain;
   platLp: Tone.Filter;
   platPanners: Tone.Panner3D[];
@@ -131,6 +135,16 @@ interface Nodes {
   /** Murmure d'un voyageur qui s'adresse au joueur (syllabes, pas de mots). */
   paxVoiceSynth: Tone.Synth;
   paxVoiceFilter: Tone.Filter;
+  // Météo : la pluie sur le pavillon, la pluie du dehors, le tonnerre.
+  rainRoof: Tone.Noise;
+  rainRoofFilter: Tone.Filter;
+  rainRoofGain: Tone.Gain;
+  rainOut: Tone.Noise;
+  rainOutFilter: Tone.Filter;
+  rainOutGain: Tone.Gain;
+  thunderNoise: Tone.NoiseSynth;
+  thunderFilter: Tone.Filter;
+  thunderCrack: Tone.Synth;
 }
 
 let nodes: Nodes | null = null;
@@ -158,6 +172,28 @@ const PLAT_VOICE_INSIDE = 0.3;
 const PLAT_BUS_CLOSED = 0.07;
 const PLAT_BUS_OPEN = 0.26;
 const PLAT_BUS_OUTSIDE = 0.34;
+
+/**
+ * Niveau propre de la 発車メロディ, en plus du bus du quai.
+ *
+ * Les clips sont normalisés en crête (voir scripts/melodies-gen.py) : envoyés
+ * tels quels sur le bus, ils sonnaient bien plus fort que tout le reste de la
+ * gare — la mélodie écrasait l'annonce qui la suit et le brouhaha du quai.
+ *
+ * Deux calages, parce que ce n'est pas le même problème des deux côtés des
+ * portes. Sur le QUAI on se tient à trois mètres sous un diffuseur : c'est là
+ * que c'était criard, et c'est là qu'on retire le plus (≈ −10 dB). DANS la
+ * rame la mélodie arrive déjà filtrée par les ouvertures, et elle doit rester
+ * ce qu'elle est pour un voyageur assis — le signal qu'il faut descendre
+ * maintenant : on n'en retire que ≈ 5 dB, de quoi la ramener au niveau des
+ * autres sons de gare sans jamais la faire passer au second plan.
+ *
+ * Le rapport entre les deux garde la mélodie DU CÔTÉ DU QUAI : à l'oreille
+ * elle reste plus présente dehors que dedans, elle vient toujours des
+ * haut-parleurs de la gare et non de la rame.
+ */
+const MELODY_INSIDE = 0.55;
+const MELODY_OUTSIDE = 0.32;
 
 // Pose de l'auditeur, tenue à jour par la caméra (voir setListenerPose).
 const listenerPos: { x: number; y: number; z: number } = { x: 0, y: CONFIG.eyeHeight, z: 4.2 };
@@ -381,17 +417,29 @@ export async function startAudio(): Promise<void> {
     envelope: { attack: 0.002, decay: 0.4, sustain: 0, release: 0.4 },
   }).connect(paIn);
 
+  // --- Bus de la 発車メロディ -------------------------------------------
+  //
+  // La mélodie de départ passe par la sono du quai comme le reste, mais avec
+  // son propre robinet : c'est le seul élément de la gare qu'on veut pouvoir
+  // baisser sans toucher au carillon ATOS ni aux annonces. Une petite bosse
+  // de présence la maintient LISIBLE une fois le niveau descendu — dans la
+  // rame, le passe-bas des portes lui coupe déjà le haut du spectre, et c'est
+  // cette bande-là qui la fait passer par-dessus le brouhaha et la clim.
+  const melodyIn = new Tone.Gain(MELODY_INSIDE);
+  const melodyPresence = new Tone.Filter({ type: 'peaking', frequency: 2100, Q: 0.8, gain: 3 });
+  melodyIn.chain(melodyPresence, platIn);
+
   // Mélodies de départ : triangle principal + harmonique douce à l'octave,
   // envoyées sur les haut-parleurs du quai.
   const melodyA = new Tone.Synth({
     oscillator: { type: 'triangle' },
     envelope: { attack: 0.01, decay: 0.18, sustain: 0.35, release: 0.25 },
-  }).connect(platIn);
+  }).connect(melodyIn);
   const melodyB = new Tone.Synth({
     oscillator: { type: 'sine' },
     envelope: { attack: 0.01, decay: 0.18, sustain: 0.25, release: 0.25 },
     volume: -14,
-  }).connect(platIn);
+  }).connect(melodyIn);
 
   // --- Ambiance du lieu -----------------------------------------------
   //
@@ -525,6 +573,50 @@ export async function startAudio(): Promise<void> {
   });
   paxVoiceSynth.chain(paxVoiceFilter, trainBus);
 
+  // --- La météo -----------------------------------------------------------
+  //
+  // La pluie s'entend en DEUX endroits qui n'ont rien à voir, et c'est ce qui
+  // la rend crédible depuis un train :
+  //
+  //   · sur le PAVILLON, au-dessus de la tête. Un crépitement mat, sourd, sans
+  //     aigus — la tôle et l'isolant les mangent. Il ne passe pas par les
+  //     portes : il est là même portes fermées, et c'est le seul son du jeu
+  //     dont l'ouverture des portes ne change rien. Il appartient à la rame,
+  //     donc au bus qui s'atténue quand on la regarde depuis le quai ;
+  //   · DEHORS, sur la ville et sur le quai. Un souffle large et brillant, qui
+  //     n'entre dans le wagon que par les ouvertures — comme l'ambiance de
+  //     gare, et pour la même raison.
+  //
+  // Une seule source de bruit pour les deux aurait forcé à choisir un timbre,
+  // et le timbre est précisément ce qui distingue les deux endroits.
+  const rainRoof = new Tone.Noise('brown');
+  const rainRoofFilter = new Tone.Filter({ type: 'lowpass', frequency: 620, rolloff: -24, Q: 0.6 });
+  const rainRoofGain = new Tone.Gain(0);
+  rainRoof.chain(rainRoofFilter, rainRoofGain, trainBus);
+  rainRoof.start();
+
+  const rainOut = new Tone.Noise('pink');
+  const rainOutFilter = new Tone.Filter({ type: 'highpass', frequency: 700, rolloff: -12, Q: 0.4 });
+  const rainOutGain = new Tone.Gain(0);
+  rainOut.chain(rainOutFilter, rainOutGain, master);
+  rainOut.start();
+
+  // Le tonnerre : un grondement long et sourd, plus un claquement qui ne vaut
+  // que pour les coups proches. C'est le RAPPORT des deux qui donne la
+  // distance, bien plus que le niveau.
+  const thunderFilter = new Tone.Filter({ type: 'lowpass', frequency: 220, rolloff: -24, Q: 1.1 });
+  const thunderNoise = new Tone.NoiseSynth({
+    noise: { type: 'brown' },
+    envelope: { attack: 0.18, decay: 3.2, sustain: 0.06, release: 2.4 },
+    volume: -6,
+  });
+  thunderNoise.chain(thunderFilter, master);
+  const thunderCrack = new Tone.Synth({
+    oscillator: { type: 'square' },
+    envelope: { attack: 0.002, decay: 0.22, sustain: 0, release: 0.2 },
+    volume: -20,
+  }).connect(thunderFilter);
+
   nodes = {
     master,
     trainBus,
@@ -556,6 +648,7 @@ export async function startAudio(): Promise<void> {
     platIn,
     platVoiceIn,
     platVoiceGain,
+    melodyIn,
     platGain,
     platLp,
     platPanners,
@@ -592,6 +685,15 @@ export async function startAudio(): Promise<void> {
     paxClick,
     paxVoiceSynth,
     paxVoiceFilter,
+    rainRoof,
+    rainRoofFilter,
+    rainRoofGain,
+    rainOut,
+    rainOutFilter,
+    rainOutGain,
+    thunderNoise,
+    thunderFilter,
+    thunderCrack,
   };
 
   watchContextState();
@@ -689,6 +791,9 @@ export function setListenerOutside(outside: boolean): void {
   // celle du quai n'a plus rien à traverser.
   nodes.paVoiceGain.gain.rampTo(outside ? 0 : 1, 0.3);
   nodes.platVoiceGain.gain.rampTo(outside ? 1 : PLAT_VOICE_INSIDE, 0.3);
+  // La mélodie, elle, est CALÉE PAR LIEU : sous le diffuseur elle doit se
+  // tenir, depuis la rame elle doit s'entendre. Voir MELODY_INSIDE.
+  nodes.melodyIn.gain.rampTo(outside ? MELODY_OUTSIDE : MELODY_INSIDE, 0.3);
 }
 
 /**
@@ -847,7 +952,14 @@ export function updateAudio(dt: number, speed01: number, braking: boolean): void
   // arrivée se lisent clairement.
   const exterior = listenerOutside ? 2.8 : 1;
   nodes.rollGain.gain.rampTo(Math.pow(speed01, 1.1) * 0.32 * exterior, 0.08);
-  nodes.rollFilter.frequency.rampTo((280 + speed01 * 1500) * (0.35 + 0.65 * far), 0.08);
+  // Rail mouillé : le roulement monte dans les aigus. C'est la pellicule d'eau
+  // qui siffle sous la bande de roulement, et tout voyageur régulier
+  // l'entend — c'est même souvent à ça qu'on devine qu'il pleut avant de
+  // regarder dehors.
+  nodes.rollFilter.frequency.rampTo(
+    (280 + speed01 * 1500) * (0.35 + 0.65 * far) * (1 + 0.3 * railWet),
+    0.08,
+  );
 
   // Le « chant » VVVF : surtout audible à l'accélération, plus discrètement
   // au freinage (récupération). L'accélération réelle est ~0,84 m/s² : le
@@ -1345,8 +1457,9 @@ function resolveAudioUrl(pathOrName: string): string {
 // Un clip local rejoint le MÊME bus spatialisé que sa version synthétisée :
 // déposer un door-open.mp3 ne fait pas ressortir le son du centre de la tête.
 // Les deux entrées « …Voice » sont celles que le lieu d'écoute fait taire :
-// la voix de bord depuis le quai, celle du quai depuis la rame.
-export type Bus = 'cabin' | 'platform' | 'cabinVoice' | 'platformVoice';
+// la voix de bord depuis le quai, celle du quai depuis la rame. « melody » est
+// la sono du quai elle aussi, avec le niveau propre de la 発車メロディ.
+export type Bus = 'cabin' | 'platform' | 'cabinVoice' | 'platformVoice' | 'melody';
 /** Les deux bus de PAROLE, seuls concernés par la coupure selon le lieu. */
 export type VoiceBus = Extract<Bus, 'cabinVoice' | 'platformVoice'>;
 
@@ -1355,6 +1468,7 @@ function busInput(bus: Bus): Tone.Gain | null {
   if (bus === 'platform') return nodes.platIn;
   if (bus === 'cabinVoice') return nodes.paVoiceIn;
   if (bus === 'platformVoice') return nodes.platVoiceIn;
+  if (bus === 'melody') return nodes.melodyIn;
   return nodes.paIn;
 }
 
@@ -1591,7 +1705,7 @@ export function departureMelody(index: number, sounding: number): void {
     fallbackMelodyStation = index;
     const path = `melody-${STATIONS[index].jy}`;
     fallbackMelodyPath = path;
-    if (!(await audioManager.playOnce(path, 'platform'))) {
+    if (!(await audioManager.playOnce(path, 'melody'))) {
       fallbackMelodyPath = null;
       synthMelody(index, sounding);
     }
@@ -1658,6 +1772,26 @@ let ambTimer = 0;
 let ambNext = 4;
 
 /**
+ * Étouffement du lieu par la neige au sol (0..1).
+ *
+ * C'est le fait le plus remarquable de toute la météo sonore, et le seul qui
+ * consiste à RETIRER : une ville sous la neige est plus silencieuse que
+ * d'ordinaire, la couche absorbant les aigus au lieu de les renvoyer. Ça ne
+ * s'ajoute pas au fond sonore, ça le rabote.
+ */
+let snowMuffle = 0;
+
+/** Humidité du rail (0..1), lue par le roulement. */
+let railWet = 0;
+
+/** Recale la coupure du lit d'ambiance : couleur de la gare, moins la neige. */
+function applyAmbienceCut(ramp: number): void {
+  if (!nodes) return;
+  const spec = AMBIENCE[ambKind] ?? AMBIENCE.street;
+  nodes.ambFilter.frequency.rampTo(spec.cut * (1 - 0.5 * snowMuffle), ramp);
+}
+
+/**
  * Règle l'ambiance du lieu.
  *
  * @param kind     couleur sonore de la gare (data/stationLayouts).
@@ -1671,7 +1805,7 @@ export function setStationAmbience(kind: string, presence: number, room: number)
   const p = Math.max(0, Math.min(1, presence));
   if (kind !== ambKind) {
     ambKind = kind;
-    nodes.ambFilter.frequency.rampTo(spec.cut, 0.6);
+    applyAmbienceCut(0.6);
     ambNext = (spec.every ?? 8) * (0.5 + Math.random());
     ambTimer = 0;
   }
@@ -1682,6 +1816,73 @@ export function setStationAmbience(kind: string, presence: number, room: number)
 }
 
 /** Pose les événements d'ambiance. À appeler chaque frame de physique. */
+/**
+ * Le temps qu'il fait, porté à l'oreille.
+ *
+ * `openings` est le produit porte de rame × porte palière, exactement comme
+ * pour l'ambiance de gare : c'est par là, et par là seulement, que le dehors
+ * entre. La pluie sur le pavillon, elle, l'ignore — elle tombe sur le toit,
+ * pas devant la porte.
+ *
+ * La neige ne fait aucun bruit, et c'est le fait le plus remarquable de toute
+ * la météo sonore : une ville sous la neige est plus SILENCIEUSE que d'ordinaire,
+ * la couche absorbant les aigus. D'où l'atténuation du dehors quand elle tient.
+ */
+export function setWeatherSound(
+  rain: number,
+  snow: number,
+  snowCover: number,
+  wet: number,
+  openings: number,
+  outside: boolean,
+): void {
+  if (!nodes) return;
+  railWet = Math.max(0, Math.min(1, wet));
+  const r = Math.max(0, Math.min(1, rain));
+  // Sur le pavillon : rien tant qu'on est dehors, sur le quai — le toit sous
+  // lequel on se tient alors est celui de la gare, pas celui de la rame.
+  const roof = outside ? 0 : r;
+  nodes.rainRoofGain.gain.rampTo(0.16 * roof * roof + 0.06 * roof, 0.4);
+  // L'averse crépite plus haut que la bruine : la goutte est plus grosse et
+  // frappe plus fort, la tôle sonne plus clair.
+  nodes.rainRoofFilter.frequency.rampTo(430 + 460 * r, 0.6);
+  // Dehors : plein pot sur le quai, filtré par les ouvertures dans la rame.
+  const through = outside ? 1 : 0.1 + 0.9 * openings;
+  const muffled = 1 - 0.45 * Math.min(1, snowCover);
+  nodes.rainOutGain.gain.rampTo(0.2 * r * through * muffled, 0.4);
+  // Portes fermées, il ne reste du dehors que le grave : le vitrage coupe tout
+  // au-dessus de deux ou trois kilohertz.
+  nodes.rainOutFilter.frequency.rampTo(outside ? 900 : 1500 - 600 * openings, 0.4);
+  // La neige n'ajoute rien ; elle retire. Le lit d'ambiance du lieu perd ses
+  // aigus, et c'est tout ce qu'il faut pour l'entendre tomber.
+  const muffle = Math.max(0, Math.min(1, snowCover * 0.7 + snow * 0.4));
+  if (Math.abs(muffle - snowMuffle) > 0.04) {
+    snowMuffle = muffle;
+    applyAmbienceCut(2);
+  }
+}
+
+/**
+ * Un coup de tonnerre. `far` va de 0 (sur nous) à 1 (à l'horizon) : il règle
+ * le retard — le son met trois secondes par kilomètre —, le niveau, et surtout
+ * la PART DE CLAQUEMENT. Un coup lointain roule sans jamais claquer ; c'est ce
+ * rapport-là qui dit la distance, pas le volume.
+ */
+export function playThunder(far: number): void {
+  if (!nodes) return;
+  const f = Math.max(0, Math.min(1, far));
+  const now = Tone.now();
+  const delay = 0.15 + f * 7;
+  const level = 1 - 0.7 * f;
+  nodes.thunderFilter.frequency.rampTo(90 + 260 * (1 - f), 0.1);
+  nodes.thunderNoise.volume.value = -10 - 16 * f;
+  nodes.thunderNoise.triggerAttackRelease(1.4 + 2.6 * f, now + delay);
+  if (f < 0.45) {
+    nodes.thunderCrack.volume.value = -18 - 30 * f;
+    nodes.thunderCrack.triggerAttackRelease(70 + 40 * level, 0.16, now + delay);
+  }
+}
+
 export function updateAmbience(dt: number): void {
   if (!nodes || dt <= 0) return;
   const spec = AMBIENCE[ambKind];

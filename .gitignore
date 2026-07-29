@@ -23,3 +23,13 @@ dist-ssr
 *.sln
 *.sw?
 public/models/raw/
+
+# Pipeline PLATEAU : données brutes, archives téléchargées et intermédiaires.
+# Les livrables (public/world/plateau/*.glb, manifest.json, route.json,
+# LICENSE.md, build-report.json) sont, eux, versionnés.
+.cache/
+work/
+
+# Échantillon CityGML synthétique : régénéré à la demande par
+# scripts/plateau/make-sample.mjs (graine fixe, sortie identique).
+data/plateau-sample/

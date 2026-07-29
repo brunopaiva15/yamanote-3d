@@ -325,6 +325,21 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       return set(0, 0.55, 0.03);
     case 'sway':
       return set(Math.sin(phase * 1.1) * 0.2, 0.02, Math.sin(phase * 1.1) * 0.05);
+    // --- Chutes ------------------------------------------------------------
+    //
+    // Ces trois cas ont DEUX consommateurs, et il faut les lire ainsi :
+    //
+    //  - le REGARD (yaw / pitch / headRoll) sert toujours : c'est lui qui joue
+    //    la gêne, par-dessus le clip de chute du pack comme sur le repli ;
+    //  - la BASCULE du groupe (lean / roll / drop / pivot) n'est plus qu'un
+    //    REPLI, pour un pack qui n'aurait ni « Death » ni « HitRecieve ». Dès
+    //    que le pack sait tomber pour de vrai, three/characters/fall.ts éteint
+    //    ces quatre canaux et joue l'animation.
+    //
+    // Le repli se termine donc EXACTEMENT quand la piste du clip se termine
+    // (4,0 s pour une chute, 1,5 s pour un faux pas, 1,5 s pour une glissade) :
+    // sinon le corps, à peine relevé par le clip, se remettait à pencher au
+    // moment où celui-ci rendait la main.
     case 'stumble': {
       // Côté figé dans lookYawTarget (±1) au démarrage de l'action.
       const side = ctx.lookYawTarget >= 0 ? 1 : -1;
@@ -339,7 +354,7 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
         return set(side * 0.5, 0.2, 0.35 * (1 - u * 0.4), 9, side * (0.7 - u * 0.35), -0.08 * (1 - u), 0, HIP * 0.35);
       }
       // Relevage gêné, coup d'œil autour.
-      const u = Math.min(1, (t - 0.9) / 0.9);
+      const u = Math.min(1, (t - 0.9) / 0.6);
       return set(side * 0.3 * (1 - u) + Math.sin(t * 3) * 0.1, 0.15, 0.05 * (1 - u), 7, side * 0.15 * (1 - u), 0, 0, HIP * 0.3 * (1 - u));
     }
     case 'fall': {
@@ -349,9 +364,9 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
         const u = t / 0.45;
         return set(side * 0.5 * u, 0.15 * u, 0.55 * u, 11, side * 0.7 * u, -0.12 * u * u, 0, HIP * u);
       }
-      if (t < 1.1) {
+      if (t < 0.9) {
         // Impact au sol : le bassin touche, le corps s'y couche autour.
-        const u = (t - 0.45) / 0.65;
+        const u = (t - 0.45) / 0.45;
         return set(
           side * (0.6 + Math.sin(u * 8) * 0.05),
           0.35,
@@ -363,18 +378,18 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
           HIP,
         );
       }
-      if (t < 2.6) {
+      if (t < 2.15) {
         // Assis par terre, gêné, regarde autour.
         const look = Math.sin(t * 1.7) * 0.55;
         return set(look, 0.25 + Math.sin(t * 2.2) * 0.05, 0.95, 5, side * 0.85, -0.66, 0, HIP);
       }
-      if (t < 3.6) {
+      if (t < 3.15) {
         // Se hisse à quatre pattes / à genoux.
-        const u = (t - 2.6) / 1.0;
+        const u = (t - 2.15) / 1.0;
         return set(side * 0.2 * (1 - u), 0.35, 0.95 - u * 0.55, 6, side * (0.85 - u * 0.6), -0.66 + u * 0.5, 0, HIP * (1 - u * 0.5));
       }
       // Se redresse, secoue la tête, un peu penaud.
-      const u = Math.min(1, (t - 3.6) / 1.4);
+      const u = Math.min(1, (t - 3.15) / 0.85);
       return set(side * 0.15 * (1 - u) + Math.sin(t * 4) * 0.08, 0.12, 0.2 * (1 - u), 5, side * 0.12 * (1 - u), -0.16 * (1 - u), 0, HIP * 0.5 * (1 - u));
     }
     case 'slip': {
@@ -387,7 +402,7 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
         const u = (t - 0.4) / 0.7;
         return set(side * 0.45, 0.25, 0.55 * (1 - u * 0.3), 9, side * (0.9 - u * 0.4), -0.16 * (1 - u * 0.5), 0, HIP * 0.5);
       }
-      const u = Math.min(1, (t - 1.1) / 1.0);
+      const u = Math.min(1, (t - 1.1) / 0.4);
       return set(side * 0.2 * (1 - u), 0.1, 0.08 * (1 - u), 6, side * 0.2 * (1 - u), 0, 0, HIP * 0.4 * (1 - u));
     }
     case 'argue': {

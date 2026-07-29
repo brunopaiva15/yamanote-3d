@@ -17,10 +17,12 @@ import { Ads } from './three/Ads';
 import { Screens } from './three/Screens';
 import { DoorCloseLed } from './three/DoorCloseLed';
 import { Wayside } from './three/Wayside';
+import { Weather } from './three/Weather';
 import { SkyDome } from './three/city/SkyDome';
 import { CityRibbon } from './three/city/CityRibbon';
 import { Landmarks } from './three/Landmarks';
 import { SegmentEnvironment } from './three/SegmentEnvironment';
+import { PlateauWorld } from './three/PlateauWorld';
 import { HubStationRoof } from './three/HubStationRoof';
 import { Station } from './three/station/Station';
 import { PlatformCrowd } from './three/PlatformCrowd';
@@ -63,6 +65,11 @@ export default function App() {
         </TrainRig>
         <SkyDome />
         <CityRibbon />
+        {/* Ville géoréférencée du prototype PLATEAU. Ne se montre que sur le
+            tronçon pour lequel elle a été produite (Sugamo → Ōtsuka) ; partout
+            ailleurs, et prototype coupé, elle ne rend rien du tout et le décor
+            procédural ci-dessus reste seul en scène. */}
+        <PlateauWorld />
         <Wayside />
         <Landmarks />
         <SegmentEnvironment />
@@ -75,6 +82,9 @@ export default function App() {
         {/* La bulle de dialogue vit dans la scène : elle suit la tête de
             celui qui parle, quel que soit le repère où il vit. */}
         <PaxSpeechBubble />
+        {/* La précipitation vit dans le monde et suit l'œil, quel que soit le
+            repère où il se trouve : dans le wagon comme sur le quai. */}
+        <Weather />
         <Player />
       </Canvas>
       <Hud />

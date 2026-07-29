@@ -31,6 +31,7 @@ import {
   type Placed,
 } from '../../systems/stationPlacement';
 import { platformDetail } from '../../systems/perf';
+import { BOARDABLE_GATES } from '../../systems/wrongDoor';
 import { layoutFor, type StationLayout } from '../../data/stationLayouts';
 import {
   GAUGE_HALF,
@@ -52,7 +53,7 @@ import {
   TRACK_HALF,
 } from '../../data/stationGeometry';
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
-import { Barrier, EdgeBarrier } from './Barrier';
+import { Barrier, EdgeBarrier, GateBarrier } from './Barrier';
 import { makeStationMaterials, type Mats } from './materials';
 import { mat, matFacingTrack, useInstances } from './instancing';
 import { OverheadSigns } from './OverheadSigns';
@@ -537,14 +538,21 @@ export function Station() {
           portes palières. Partout ailleurs, le muret arrête l'œil en même temps
           que le pas ; ici la marche s'arrêtait au ras du liseré blanc sans que
           rien ne le dise, des deux côtés de l'îlot. Le bord d'embarquement
-          s'ouvre au droit des baies quand la rame est à quai ; celui d'en face,
-          où aucune rame ne se présente, reste continu. */}
+          s'ouvre au droit des quatre SEULS seuils franchissables — ceux de la
+          voiture du joueur — et reste dressé devant les dix autres voitures ;
+          celui d'en face, où aucune rame ne se présente, reste continu. */}
       {!hasPsd && (
         <>
-          <EdgeBarrier x={PSD_X} length={layout.length} gates={gaps} />
+          <EdgeBarrier x={PSD_X} length={layout.length} gates={BOARDABLE_GATES} />
           {place.farEdgeX !== null && <EdgeBarrier x={place.farEdgeX} length={layout.length} />}
         </>
       )}
+
+      {/* Portes palières par lesquelles on ne peut pas monter : une seule
+          voiture est modélisée, et les quarante autres baies s'ouvraient sur un
+          mur invisible. La limite ne se dresse que quand on va vraiment vers
+          l'une d'elles. */}
+      {hasPsd && <GateBarrier length={layout.length} />}
 
       {/* Charpente propre à la gare, quand elle en a une. Elle était réservée
           aux deux paliers les plus riches ; elle porte maintenant l'essentiel
@@ -558,6 +566,11 @@ export function Station() {
         canopyY={canopyY}
         halfZ={halfZ}
         totemX={PSD_X + depth * 0.32}
+        // Mêmes abscisses que la trousse du quai : les poteaux sont à
+        // backX - 0,55 et font 0,30 de côté, donc leur face vers la voie est à
+        // 0,15 devant leur axe.
+        postFaceX={backX - 0.55 - 0.15}
+        columns={place.columns}
         // À Harajuku la bande est suspendue DEVANT le mur de fond : calée sur
         // backX comme sur un îlot, elle était entièrement noyée dedans.
         bandX={place.hasBackWall ? backX - 0.3 : backX}

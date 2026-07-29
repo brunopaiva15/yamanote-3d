@@ -17,6 +17,7 @@ import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { segEnv, bridgeZ, BRIDGE_COUNT, VIADUCT_RISE, WALL_MAX } from '../systems/segmentEnv';
 import { sidePush } from '../systems/stationOcclusion';
+import { weather } from '../systems/weather';
 import { SEGMENTS } from '../data/segments';
 import {
   rng,
@@ -31,6 +32,8 @@ const WALL_X = 6.6; // murs juste derrière les poteaux caténaires (±5.2)
 const DECK_X = 5.1; // joue du tablier, au ras de l'emprise de la voie
 const FENCE_X = 6.2;
 const FIELD_X = 9; // centre du plan de faisceau (s'étend de 4 à 14 m)
+/** Neige de ville : un gris bleuté, jamais du blanc pur. */
+const FIELD_SNOW = new THREE.Color('#dfe4ea');
 /**
  * Longueur couverte par une tuile de faisceau (m). Elle défilait 1,67× trop
  * vite — `repeat.y = 24` sur un plan de 400 m fait une tuile tous les 16,7 m,
@@ -289,7 +292,13 @@ export function SegmentEnvironment() {
     built.fieldTex.offset.y = runtime.distance / FIELD_TILE;
     built.fieldMat.opacity = corridor01 * 0.95;
     const fieldBase = built.fieldMat.userData.base as THREE.Color;
-    built.fieldMat.color.copy(fieldBase).multiplyScalar(nightK);
+    // Le faisceau suit le ballast : il fonce sous la pluie, il blanchit sous la
+    // neige. Il court à quatorze mètres de l'axe, là où aucune rame ne passe —
+    // la neige y tient donc mieux que sur la voie du train.
+    built.fieldMat.color
+      .copy(fieldBase)
+      .multiplyScalar(nightK * (1 - 0.36 * weather.wet))
+      .lerp(FIELD_SNOW, weather.snowCover * 0.8 * nightK);
     for (let i = 0; i < SIDES.length; i++) {
       const mesh = fieldRefs.current[i];
       const side = SIDES[i].side;

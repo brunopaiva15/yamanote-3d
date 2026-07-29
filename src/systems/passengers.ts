@@ -682,6 +682,61 @@ function reactToFall(fallen: Pax, hard: boolean): void {
   }
 }
 
+/**
+ * Freinage d'urgence : tout le wagon sursaute d'un coup.
+ *
+ * C'est le seul événement qui s'adresse à TOUT LE MONDE en même temps — un
+ * coup de frein ne choisit pas ses témoins. Les debout qui ne tiennent rien
+ * partent en avant, les autres se raccrochent et cherchent des yeux ce qui
+ * arrive, les assis lèvent le nez de leur écran. Quelques-uns diront ensuite
+ * leur peur (systems/conversation, déclencheur `emergency`).
+ *
+ * Les occupations de fond ne sont PAS effacées : passée la frayeur, chacun
+ * revient à son téléphone ou à sa vitre, comme après n'importe quel geste
+ * bref — c'est exactement ce que fait une rame qui vient de s'arrêter.
+ */
+export function startlePassengers(): void {
+  // Le sursaut passe par un chemin à part plutôt que par applyAction : celle-ci
+  // ferait réagir les voisins de chaque trébuchement (reactToFall), soit
+  // quarante témoins pour quarante frayeurs simultanées. Ici, le wagon entier
+  // est déjà le témoin.
+  let stumbles = 0;
+  let sfxLeft = 5;
+  for (const p of paxList) {
+    if (p.state !== 'seated' && p.state !== 'standing') continue;
+    // On ne coupe pas quelqu'un en train de s'adresser au joueur.
+    if (p.action === 'talkPlayer') continue;
+    endPair(p);
+    p.actionT = 0;
+
+    // Une poignée lâchée, un pas en avant : le geste le plus lisible, mais
+    // rationné — un wagon qui s'effondre en entier ferait comique.
+    const trips = p.state === 'standing' && !p.holdStrap && stumbles < 3 && Math.random() < 0.5;
+    if (trips) {
+      stumbles++;
+      p.action = 'stumble';
+      p.actionDur = 1.6 + Math.random() * 0.8;
+      p.lookYawTarget = Math.random() < 0.5 ? 1 : -1;
+    } else if (Math.random() < 0.35) {
+      p.action = 'gasp';
+      p.actionDur = 0.9 + Math.random() * 0.5;
+    } else {
+      // Chercher des yeux d'où ça vient : la vitre, le voisin, le plafond.
+      p.action = 'look';
+      p.actionDur = 1.8 + Math.random() * 2.2;
+      p.lookYawTarget = (Math.random() - 0.5) * 2;
+    }
+
+    // Le Foley ne sert que de près, et seulement quelques fois : cinquante
+    // hoquets simultanés ne font pas peur, ils font foule de dessin animé.
+    const dist = Math.hypot(p.pos.x - runtime.playerCarX, p.pos.z - runtime.playerCarZ);
+    if (sfxLeft > 0 && dist < 5) {
+      sfxLeft--;
+      playPaxActionSfx(p.action, dist);
+    }
+  }
+}
+
 function pickCtx(p: Pax, where: ActionWhere): PickCtx {
   const playerHere = runtime.playerFrame === 'car';
   return {
@@ -1031,6 +1086,19 @@ export function updatePassengers(dt: number): void {
     }
 
     if (p.state !== 'seated' && p.state !== 'standing') continue;
+
+    // Debout : le voyageur pivote vers le cap de sa place (le long de l'allée)
+    // au lieu de garder celui de son dernier pas. Il arrive à son slot par un
+    // pas LATÉRAL (l'allée en x = ±0,3 → la place en x = ±0,45) : sans ce
+    // rattrapage il restait planté face à la banquette, et surtout son cap
+    // rendu ne correspondait plus à celui qui a choisi son anneau
+    // (alignStrapStand) — d'où le bras tendu vers la poignée de DERRIÈRE.
+    if (p.state === 'standing' && !isFallingAction(p.action)) {
+      let d = p.targetYaw - p.yaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      p.yaw += d * Math.min(1, dt * 6);
+    }
 
     // --- Couche de vie des PNJ posés ---
     if (!isFallingAction(p.action)) p.bob = 0;

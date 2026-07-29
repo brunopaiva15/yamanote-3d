@@ -60,9 +60,38 @@ interface Candidate {
 
 const candidates: Candidate[] = [];
 
-/** Voyageurs de la rame et du quai, ramenés en coordonnées monde. */
+/**
+ * Voyageurs à qui l'on peut parler, ramenés en coordonnées monde.
+ *
+ * Seuls ceux du CÔTÉ OÙ L'ON SE TIENT comptent. Debout sur le quai, on est
+ * peut-être à un mètre de quelqu'un d'assis dans la rame — il y a une caisse
+ * en acier et une baie vitrée entre les deux, et on ne s'adresse pas à un
+ * voyageur au travers d'une vitre. Une fois à bord, la règle s'inverse : c'est
+ * la foule du quai qui devient hors d'atteinte.
+ *
+ * C'est aussi ce qui coupe un échange quand on descend au milieu d'une
+ * réplique : l'interlocuteur n'est plus joignable, la bulle se ferme.
+ */
 function collectCandidates(): void {
   candidates.length = 0;
+  const aboard = runtime.playerFrame === 'car';
+  if (!aboard) {
+    for (const p of crowdList) {
+      if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') continue;
+      // Un voyageur dans une trémie est à moitié sous la dalle : hors de portée.
+      if (p.y < -0.2) continue;
+      platformToWorld(p.pos.x, p.pos.z, tmpPlat);
+      candidates.push({
+        scope: 'platform',
+        id: p.id,
+        x: tmpPlat.x,
+        y: PLATFORM_TOP + p.y + headY(p.height, false) + p.bob,
+        z: tmpPlat.z,
+        feminine: p.appearance.feminine,
+      });
+    }
+    return;
+  }
   for (const p of paxList) {
     if (p.state !== 'seated' && p.state !== 'standing') continue;
     candidates.push({
@@ -71,20 +100,6 @@ function collectCandidates(): void {
       x: p.pos.x,
       y: headY(p.height, p.state === 'seated') + p.bob,
       z: carToWorldZ(p.pos.z),
-      feminine: p.appearance.feminine,
-    });
-  }
-  for (const p of crowdList) {
-    if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') continue;
-    // Un voyageur dans une trémie est à moitié sous la dalle : hors de portée.
-    if (p.y < -0.2) continue;
-    platformToWorld(p.pos.x, p.pos.z, tmpPlat);
-    candidates.push({
-      scope: 'platform',
-      id: p.id,
-      x: tmpPlat.x,
-      y: PLATFORM_TOP + p.y + headY(p.height, false) + p.bob,
-      z: tmpPlat.z,
       feminine: p.appearance.feminine,
     });
   }
@@ -157,8 +172,34 @@ export function findNearbyPax(range: number): PaxTarget | null {
   return { scope: best.scope, id: best.id, x: best.x, y: best.y, z: best.z, dist: bestD, feminine: best.feminine };
 }
 
-/** Position monde (tête) d'un voyageur donné, ou null s'il n'est plus là. */
+/**
+ * Les voyageurs à portée, du plus proche au plus loin. Sert aux réactions en
+ * chaîne : quand plusieurs voisins réagissent au même événement, il faut
+ * pouvoir passer au suivant au lieu de retomber sur le même.
+ */
+export function findNearbyPaxList(range: number, max = 8): PaxTarget[] {
+  const ex = runtime.playerX;
+  const ey = runtime.playerY;
+  const ez = runtime.playerZ;
+  collectCandidates();
+  const found: PaxTarget[] = [];
+  for (const c of candidates) {
+    const d = Math.hypot(c.x - ex, c.y - ey, c.z - ez);
+    if (d >= range) continue;
+    found.push({ scope: c.scope, id: c.id, x: c.x, y: c.y, z: c.z, dist: d, feminine: c.feminine });
+  }
+  found.sort((a, b) => a.dist - b.dist);
+  return found.length > max ? found.slice(0, max) : found;
+}
+
+/**
+ * Position monde (tête) d'un voyageur donné, ou null s'il n'est plus
+ * joignable — parti, ou passé de l'autre côté des portes.
+ */
 export function paxAnchor(scope: PaxScope, id: number): PaxTarget | null {
+  // Même règle que la visée : on ne parle pas à travers la caisse.
+  if (scope === 'car' && runtime.playerFrame !== 'car') return null;
+  if (scope === 'platform' && runtime.playerFrame !== 'platform') return null;
   if (scope === 'car') {
     const p = paxList[id];
     if (!p || (p.state !== 'seated' && p.state !== 'standing')) return null;
