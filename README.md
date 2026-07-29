@@ -27,7 +27,8 @@ npm run lint     # oxlint
 - **Descendre / remonter : marcher à travers une porte ouverte.** Aucune touche —
   la porte ouverte *est* le passage
 - **Parler : E**, quand un voyageur est en face et à portée de voix — une
-  invite l'annonce sous le réticule
+  invite l'annonce sous le réticule. Depuis le quai on parle aux gens du quai,
+  jamais à travers la vitre à ceux qui sont assis dans la rame
 - M : couper le son, F : plein écran
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder,
   bouton s'asseoir, bouton « Parler » quand quelqu'un est à portée
@@ -633,7 +634,7 @@ s'accroche à sa tête — pas au bas de l'écran : dans une rame où trente
 personnes sont à portée, il faut voir qui parle. Un second appui coupe court,
 comme on tourne les talons.
 
-Le catalogue compte **252 échanges**, écrits dans les trois langues de
+Le catalogue compte **397 échanges**, écrits dans les trois langues de
 l'interface côte à côte et déclinés selon le genre du personnage là où la
 langue l'impose (« je suis descendue » / « je suis descendu », 僕 / 私,
 ～だよ / ～わよ). Ce qui se dit dépend du contexte : l'heure de Tokyo, la gare
@@ -742,7 +743,7 @@ src/
   three/station/signatures/ les charpentes propres à une gare : Takanawa, Akihabara…
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
-  data/dialogue/         les 252 conversations : conditions d'emploi et texte
+  data/dialogue/         les 397 conversations : conditions d'emploi et texte
                          FR / EN / JA, décliné au féminin et au masculin
   scripts/               models:import / models:inspect (packs → public/models/),
                          sondes navigateur : station-probe, pax-probe,
