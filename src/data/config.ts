@@ -7,8 +7,10 @@ export const CONFIG = {
   // poser la rame, voir le lâcher final du freinage).
   //
   // dwellTime n'est PAS la durée d'arrêt : celle-ci est tirée par arrêt
-  // (stationCycle.dwellDuration, 37 à 47 s selon la gare et l'état de la
-  // ligne). C'est le forfait d'arrêt retiré de l'intervalle réel du tronçon
+  // (stationCycle.dwellDuration, 40 à 65 s selon la gare, l'état de la ligne
+  // et — surtout — la longueur de la 発車メロディ du quai, qu'on laisse aller
+  // au bout de ses deux passages). C'est le forfait d'arrêt retiré de
+  // l'intervalle réel du tronçon
   // pour dimensionner la croisière (segments.cruiseDuration) — le laisser bas
   // garde à la croisière de quoi placer l'annonce de départ ET celle
   // d'approche, qui cumulent jusqu'à 71 s de parole sur une même file.

@@ -9,7 +9,10 @@
 // « jre-ikst-… », « Sakura Sakura », etc. désignent le BRANCHEMENT historique
 // du quai (quelle mélodie y sonne dans la réalité), pas l'œuvre embarquée.
 
+import { MELODY_DURATIONS } from './melodyManifest.ts';
 import type { LoopDirection } from './platforms';
+
+export { MELODY_DURATIONS };
 
 /**
  * Clips MP3 de 発車メロディ : activés. Les fichiers sous
@@ -21,14 +24,37 @@ import type { LoopDirection } from './platforms';
 export const ENABLE_DEPARTURE_MELODY_CLIPS = true;
 
 /**
- * Plafond de passages : sur le quai, la mélodie tourne en boucle jusqu'à ce
- * que le chef de train relâche le bouton — elle est COUPÉE, elle ne se
- * termine pas. C'est stationCycle qui décide de l'instant (MELODY_SOUNDING) ;
- * deux passages suffisent à couvrir cette fenêtre pour le plus court des
- * clips, et le second est presque toujours interrompu en route.
+ * Nombre de passages : la 発車メロディ se joue DEUX FOIS, entière, avant que
+ * l'annonce de fermeture ne prenne le relais et que les portes ne se ferment.
+ *
+ * C'est ainsi qu'on l'entend sur un quai Yamanote : le chef de train appuie sur
+ * le bouton, le morceau tourne, et il ne relâche qu'une fois la boucle bouclée
+ * une seconde fois. La version précédente coupait la mélodie au bout d'une
+ * fenêtre FIXE de dix secondes — trop courte pour la plupart des clips, si bien
+ * que Sakura Sakura (13,6 s) n'arrivait même pas au bout de son premier
+ * passage. La fenêtre est maintenant taillée sur le clip lui-même
+ * (`melodyRoundsDuration`), et c'est elle qui étire le dwell d'autant : voir
+ * systems/stationCycle.
  */
 export const MELODY_REPEATS = 2;
 export const MELODY_REPEAT_GAP_S = 0.7;
+
+/**
+ * Durée d'un passage de la mélodie SYNTHÉTISÉE (repli Tone.js des quais sans
+ * clip). Vit ici, avec les autres durées, pour que la fenêtre sonore d'un arrêt
+ * puisse se calculer sans dépendre du moteur audio.
+ */
+export const SYNTH_MELODY_DURATION_S = 6.5;
+
+/**
+ * Temps que prennent MELODY_REPEATS passages d'un clip, respirations comprises.
+ * C'est la fenêtre sonore que l'arrêt doit laisser à la mélodie.
+ * Clip inconnu (ou absent du manifeste) → la longueur du repli synthétisé.
+ */
+export function melodyRoundsDuration(path: string | null): number {
+  const one = (path && MELODY_DURATIONS[path]) || SYNTH_MELODY_DURATION_S;
+  return MELODY_REPEATS * one + (MELODY_REPEATS - 1) * MELODY_REPEAT_GAP_S;
+}
 
 /** Chemin logique du clip Inner Loop principal (sous public/). */
 export const INNER_MAIN_MELODY_PATH =
@@ -993,4 +1019,98 @@ export function shouldPlayIkebukuroInnerBicCameraB(ctx: MelodyPlayContext): bool
   if (service === 'out_of_service' || service === 'terminal') return false;
 
   return true;
+}
+
+// --- Quelle mélodie sonnera, et pendant combien de temps -------------------
+//
+// La procédure de départ a besoin de le savoir AVANT de commencer : c'est la
+// longueur de la mélodie qui fixe la fenêtre sonore de l'arrêt, donc l'instant
+// de l'annonce de fermeture, celui des portes, et la durée du dwell
+// (systems/stationCycle). Or `playDepartureMelodyForContext` ne le dit qu'en
+// jouant.
+//
+// D'où cette table, qui est l'ORDRE de sélection sous forme de données, et le
+// planificateur qui la parcourt. Les deux listes sont en fait interchangeables :
+// les prédicats se distinguent par (gare, sens, quai) et jamais deux ne sont
+// vrais ensemble — tests/melodyTiming.test.ts le vérifie quai par quai, ce qui
+// rend le planificateur insensible à un ordre qui divergerait de l'autre.
+
+/** Mélodies exclusives, dans l'ordre où la procédure de départ les essaie. */
+const EXCLUSIVE_MELODIES: readonly { path: string; test: (ctx: MelodyPlayContext) => boolean }[] = [
+  { path: IKEBUKURO_INNER_BIC_CAMERA_A_PATH, test: shouldPlayIkebukuroInnerBicCameraA },
+  { path: IKEBUKURO_INNER_BIC_CAMERA_B_PATH, test: shouldPlayIkebukuroInnerBicCameraB },
+  { path: OSAKI_INNER_SECONDARY_MELODY_PATH, test: shouldPlayOsakiInnerSecondaryMelody },
+  { path: OSAKI_OUTER_SECONDARY_MELODY_PATH, test: shouldPlayOsakiOuterSecondaryMelody },
+  { path: KOMAGOME_OUTER_SAKURA_A_PATH, test: shouldPlayKomagomeOuterSakuraA },
+  { path: KOMAGOME_INNER_SAKURA_V2_PATH, test: shouldPlayKomagomeInnerSakuraV2 },
+  { path: UGUISUDANI_INNER_HARU_TREMOLO_PATH, test: shouldPlayUguisudaniInnerHaruTremolo },
+  { path: SESERAGI_MELODY_PATH, test: shouldPlaySeseragi },
+  { path: TAKADANOBABA_OUTER_ATOM_A_PATH, test: shouldPlayTakadanobabaOuterAtomA },
+  { path: TAKADANOBABA_INNER_ATOM_B_PATH, test: shouldPlayTakadanobabaInnerAtomB },
+  { path: EBISU_INNER_THIRD_MAN_F_PATH, test: shouldPlayEbisuInnerThirdManF },
+  { path: TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH, test: shouldPlayTakanawaGatewayInnerGloriousA },
+  { path: TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH, test: shouldPlayTakanawaGatewayOuterGloriousB },
+  { path: KANDA_OUTER_MONDAMIN_A_PATH, test: shouldPlayKandaOuterMondaminA },
+  { path: KANDA_INNER_MONDAMIN_B_PATH, test: shouldPlayKandaInnerMondaminB },
+];
+
+/** Exposé pour les tests : les prédicats de sélection, dans l'ordre d'essai. */
+export const EXCLUSIVE_MELODY_ORDER = EXCLUSIVE_MELODIES;
+
+/**
+ * Contexte « départ nominal » : un quai, un sens, rien qui empêche la mélodie.
+ * Les prédicats se réduisent alors à ce qui nous intéresse — quelle mélodie est
+ * CÂBLÉE sur ce quai —, sans rien dire de ce que fera l'arrêt en cours.
+ */
+function plannedContext(
+  stationCode: string,
+  direction: LoopDirection,
+  platform: number,
+): MelodyPlayContext {
+  return {
+    line: 'yamanote',
+    direction,
+    stationCode,
+    platform,
+    trainState: 'stopped_doors_open',
+    departureSequenceStarted: true,
+    serviceState: 'in_service',
+    serviceType: 'normal',
+    emergencyActive: false,
+    departureAuthorized: true,
+  };
+}
+
+/**
+ * Clip qui sonnera au départ de ce quai, ou null s'il n'y en a aucun (le quai
+ * retombera alors sur la synthèse). `nextStationCode` est volontairement omis :
+ * un quai ne dessert qu'une gare suivante dans un sens donné, et les prédicats
+ * laissent passer le contexte qui ne le précise pas.
+ */
+export function plannedDepartureMelodyPath(
+  stationCode: string,
+  direction: LoopDirection,
+  platform: number,
+): string | null {
+  if (!ENABLE_DEPARTURE_MELODY_CLIPS) return null;
+  const ctx = plannedContext(stationCode, direction, platform);
+  for (const { path, test } of EXCLUSIVE_MELODIES) {
+    if (test(ctx)) return path;
+  }
+  if (shouldPlayInnerMainMelody(ctx)) return innerMainMelodyPathFor(stationCode);
+  if (shouldPlayOuterMainMelody(ctx)) return outerMainMelodyPathFor(stationCode);
+  return null;
+}
+
+/**
+ * Fenêtre sonore à réserver au départ de ce quai : deux passages entiers de la
+ * mélodie qui y est câblée. C'est la valeur dont stationCycle déduit tout le
+ * reste de la procédure.
+ */
+export function plannedMelodySounding(
+  stationCode: string,
+  direction: LoopDirection,
+  platform: number,
+): number {
+  return melodyRoundsDuration(plannedDepartureMelodyPath(stationCode, direction, platform));
 }

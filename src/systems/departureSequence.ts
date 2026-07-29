@@ -1,9 +1,11 @@
 // Séquence de départ quai : 発車メロディ Inner / Outer / Ōsaki secondaire.
-// La mélodie est lancée une seule fois par arrêt (departureId) et boucle
-// jusqu'à ce que le chef de train la coupe (interruptDepartureMelody, appelé
-// par stationCycle) : elle n'arrive presque jamais au bout. Les étapes portes
-// / départ restent pilotées par stationCycle tant que le départ n'est pas
-// bloqué.
+// La mélodie est lancée une seule fois par arrêt (departureId) et fait DEUX
+// passages entiers — l'arrêt lui a réservé exactement ce temps-là
+// (plannedStopMelodySounding, plus bas, et systems/stationCycle). Le chef de
+// train relâche le bouton après (interruptDepartureMelody) : le fondu referme
+// un silence. Seul un incident la coupe en vol (cancelDepartureMelody). Les
+// étapes portes / départ restent pilotées par stationCycle tant que le départ
+// n'est pas bloqué.
 
 import {
   EBISU_INNER_THIRD_MAN_F_PATH,
@@ -28,6 +30,7 @@ import {
   innerMainMelodyPathFor,
   makeDepartureId,
   outerMainMelodyPathFor,
+  plannedMelodySounding,
   shouldPlayEbisuInnerThirdManF,
   shouldPlayIkebukuroInnerBicCameraA,
   shouldPlayIkebukuroInnerBicCameraB,
@@ -165,6 +168,21 @@ function nextStationCodeFor(index: number, direction: LoopDirection): string {
   return STATIONS[nextStation(index, direction)].jy;
 }
 
+/**
+ * Fenêtre sonore à réserver à la mélodie de cette gare : deux passages entiers
+ * du clip câblé sur le quai où la rame va se ranger.
+ *
+ * Appelé par stationCycle à l'entrée en freinage, AVANT que le contexte de
+ * départ n'existe : d'où la résolution du quai ici, sur le même chemin que
+ * `buildDepartureContext` (`resolvePlatform`), pour que la fenêtre mesurée soit
+ * bien celle du clip qui sortira des haut-parleurs.
+ */
+export function plannedStopMelodySounding(index: number, direction?: LoopDirection): number {
+  const station = STATIONS[index];
+  const dir = direction ?? useStore.getState().loopDirection;
+  return plannedMelodySounding(station.jy, dir, resolvePlatform(station.jy, dir));
+}
+
 export function buildDepartureContext(opts?: {
   departureSequenceStarted?: boolean;
   platform?: number;
@@ -264,9 +282,10 @@ export function cancelDepartureMelody(): void {
 }
 
 /**
- * Coupure normale, celle du chef de train qui relâche le bouton : la mélodie
- * se referme en fondu au bout de sa fenêtre sonore, sans jamais aller au bout
- * du morceau. La suite de la procédure (annonce, fermeture, départ) continue.
+ * Coupure normale, celle du chef de train qui relâche le bouton : elle tombe à
+ * la fin de la fenêtre sonore, donc APRÈS les deux passages — le fondu ne mord
+ * plus sur la musique, il referme le silence qui la suit. La suite de la
+ * procédure (annonce, fermeture, départ) continue.
  */
 export function interruptDepartureMelody(): void {
   melodyCancelGen++;

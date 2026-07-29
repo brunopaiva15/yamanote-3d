@@ -126,9 +126,11 @@ function stripDiacritics(s: string): string {
   return s.normalize('NFD').replace(/\p{M}+/gu, '');
 }
 
-// « JY-05 » → « J Y 5 » : épelé lettre à lettre, sans zéro de tête.
+// « JY. 05 » → « J Y. 5 » : épelé lettre à lettre, sans zéro de tête. Le point
+// du texte est conservé — c'est la pause entre les lettres et le nombre, et
+// c'est elle qui donne au code de gare sa diction d'annonce.
 function spellStationCode(s: string): string {
-  return s.replace(/\bJY-0*(\d+)/g, 'J Y $1');
+  return s.replace(/\bJY\.\s*0*(\d+)/g, 'J Y. $1');
 }
 
 /**
