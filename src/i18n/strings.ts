@@ -61,6 +61,10 @@ export interface Strings {
     stationLabel: string;
     /** Option « laisser le hasard choisir la gare ». */
     stationRandom: string;
+    /** Libellé du sélecteur de sens de circulation. */
+    directionLabel: string;
+    /** Option « laisser le hasard choisir le sens ». */
+    directionRandom: string;
   };
 
   hud: {
@@ -171,6 +175,8 @@ const FR: Strings = {
     dateLabel: 'Date',
     stationLabel: 'Arrêt',
     stationRandom: 'Aléatoire',
+    directionLabel: 'Sens',
+    directionRandom: 'Aléatoire',
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arrivée', dwell: 'À quai', depart: 'Départ' },
@@ -269,6 +275,8 @@ const EN: Strings = {
     dateLabel: 'Date',
     stationLabel: 'Station',
     stationRandom: 'Random',
+    directionLabel: 'Direction',
+    directionRandom: 'Random',
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arriving', dwell: 'At the platform', depart: 'Departing' },
@@ -366,6 +374,8 @@ const JA: Strings = {
     dateLabel: '日付',
     stationLabel: '駅',
     stationRandom: 'ランダム',
+    directionLabel: '方向',
+    directionRandom: 'ランダム',
   },
   hud: {
     phase: { cruise: '走行中', brake: 'まもなく到着', dwell: '停車中', depart: '発車' },

@@ -6,7 +6,8 @@ import * as THREE from 'three';
 import { AD_PALETTES, AD_SUBS, AD_WORDS } from '../data/ads';
 import { STATIONS, TRANSFERS, boardDestinations, directionBoardStations } from '../data/stations';
 import { LCD_BOARDS, type BoardEta, type BoardView } from '../data/departureBoard';
-import { PLATFORM_NUMBERS } from '../data/platforms';
+import { nextStation, prevStation } from '../data/loop';
+import { PLATFORM_NUMBERS, type LoopDirection } from '../data/platforms';
 import { lineInfo, stationExits } from '../data/lines';
 import { GENERIC, type District, type Feat } from '../data/districts';
 import type { Appearance } from '../systems/appearance';
@@ -2028,17 +2029,24 @@ function drawStationCodeBadge(
 // --- Panneau de nom de station (style JR East réel, rétroéclairé) ---
 // Disposition : badge code | kanji+kana centraux | bande verte directionnelle
 // avec gare précédente / actuelle / suivante + flèche.
-export function makeStationSign(): { canvas: HTMLCanvasElement; texture: THREE.CanvasTexture; redraw: (index: number) => void } {
+export function makeStationSign(): {
+  canvas: HTMLCanvasElement;
+  texture: THREE.CanvasTexture;
+  redraw: (index: number, dir: LoopDirection) => void;
+} {
   const W = 1400;
   const H = 420;
   const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
   const GREEN = '#80c241';
   const GREEN_LIGHT = '#a8d96a';
-  const redraw = (index: number) => {
+  // Le 駅名標 appartient à UN QUAI : les gares encadrantes qu'il porte sont
+  // celles du sens desservi. Sur le quai d'en face, la flèche pointe l'autre
+  // façon et les deux noms sont échangés.
+  const redraw = (index: number, dir: LoopDirection) => {
     const st = STATIONS[index];
-    const prev = STATIONS[(index + 29) % 30];
-    const next = STATIONS[(index + 1) % 30];
+    const prev = STATIONS[prevStation(index, dir)];
+    const next = STATIONS[nextStation(index, dir)];
 
     // Fond blanc rétroéclairé + cadre noir fin.
     g.fillStyle = '#ffffff';
@@ -2239,14 +2247,14 @@ export function makeTotemSign(): {
 // TRANSFERS), autre format : une colonne, lue de près et debout.
 export function makeTotemGuide(): {
   texture: THREE.CanvasTexture;
-  redraw: (index: number) => void;
+  redraw: (index: number, dir: LoopDirection) => void;
 } {
   const W = 480;
   const H = 1024;
   const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
 
-  const redraw = (index: number) => {
+  const redraw = (index: number, dir: LoopDirection) => {
     const st = STATIONS[index];
     const exits = stationExits(index);
     const tr = TRANSFERS[st.jy];
@@ -2256,7 +2264,7 @@ export function makeTotemGuide(): {
     const lines = tr
       ? tr.jp.split('、').map((s) => s.trim()).filter(Boolean).slice(0, 4)
       : [];
-    const ahead = lines.length ? [] : directionBoardStations(index, 3);
+    const ahead = lines.length ? [] : directionBoardStations(index, dir, 3);
 
     g.fillStyle = '#f6f5f2';
     g.fillRect(0, 0, W, H);
@@ -2450,18 +2458,18 @@ function etaRuns(eta: BoardEta, english: boolean): Run[] {
 export function makePlatformBoard(): {
   canvas: HTMLCanvasElement;
   texture: THREE.CanvasTexture;
-  redraw: (index: number, view: BoardView) => void;
+  redraw: (index: number, view: BoardView, dir: LoopDirection) => void;
 } {
   const W = 1024;
   const H = 256;
   const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
 
-  const redraw = (index: number, view: BoardView) => {
+  const redraw = (index: number, view: BoardView, dir: LoopDirection) => {
     const lcd = LCD_BOARDS.has(STATIONS[index].jy);
     // Deux repères de la boucle, et non les deux gares suivantes : un tableau
     // de Tamachi annonce 「東京・上野方面」 quand l'arrêt d'après est Hamamatsuchō.
-    const ahead = boardDestinations(index, 2);
+    const ahead = boardDestinations(index, dir, 2);
     const dest = view.english
       ? ahead.map((s) => s.romaji.toUpperCase()).join(' & ')
       : ahead.map((s) => s.kanji).join('・');
@@ -2572,15 +2580,15 @@ export function makeAccessPlate(letter: string, kind: 'stairs' | 'escalator' | '
  */
 export function makeDirectionBand(): {
   texture: THREE.CanvasTexture;
-  redraw: (index: number) => void;
+  redraw: (index: number, dir: LoopDirection) => void;
 } {
   const W = 2048;
   const H = 192;
   const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
 
-  const redraw = (index: number) => {
-    const ahead = directionBoardStations(index, 4);
+  const redraw = (index: number, dir: LoopDirection) => {
+    const ahead = directionBoardStations(index, dir, 4);
     g.fillStyle = '#5aa32c';
     g.fillRect(0, 0, W, H);
     g.fillStyle = 'rgba(255,255,255,0.14)';
@@ -2761,7 +2769,7 @@ export function makeTransferSign(): {
 
 export function makePlatformNumberSign(): {
   texture: THREE.CanvasTexture;
-  redraw: (index: number, width?: number) => void;
+  redraw: (index: number, dir: LoopDirection, width?: number) => void;
 } {
   const W = 1400;
   const H = 300;
@@ -2774,12 +2782,12 @@ export function makePlatformNumberSign(): {
   // pour 300 de haut, ramenés au canvas par une échelle horizontale — sinon
   // toute la composition s'écrasait avec lui. Sous ~2,6 m, la mise en page
   // passe en version courte : mêmes numéro et badge, chaîne des gares réduite.
-  const redraw = (index: number, width = 3.24) => {
+  const redraw = (index: number, dir: LoopDirection, width = 3.24) => {
     const jy = STATIONS[index].jy;
-    // Le jeu tourne en 内回り (voir LOOP_JP) : c'est ce quai-là, et le même
-    // numéro que celui annoncé par la sono du quai.
-    const track = PLATFORM_NUMBERS[jy]?.inner ?? 1;
-    const ahead = directionBoardStations(index, 5);
+    // Le numéro du quai DESSERVI, donc celui du sens où l'on roule : c'est le
+    // même que celui qu'annonce la sono du quai (systems/stationPa).
+    const track = PLATFORM_NUMBERS[jy]?.[dir] ?? 1;
+    const ahead = directionBoardStations(index, dir, 5);
     const L = Math.round(((width - 0.08) / 0.66) * H);
     g.setTransform(W / L, 0, 0, 1, 0, 0);
 

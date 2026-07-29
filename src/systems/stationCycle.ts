@@ -633,7 +633,7 @@ export function updateCycle(dt: number): void {
       once('berth', s.index === s.platformIndex, () => randomizeBerthOffset());
       // Séquence JR départ : 列車案内? → 次駅 → 乗換? → 案内(0–2).
       once('announce-depart', t > 0.6, () =>
-        say(departureSequence(s.index, DOOR_SIDE[s.index])),
+        say(departureSequence(s.index, DOOR_SIDE[s.index], s.loopDirection)),
       );
       // Arrêt d'urgence : la course qui le porte est décidée gares à l'avance,
       // ne reste ici qu'à choisir l'instant — en pleine course, assez tôt pour

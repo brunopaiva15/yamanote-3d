@@ -278,16 +278,16 @@ export function PlatformSignage({
     // La gare du panneau est celle du quai présent : pendant le départ, index
     // a déjà avancé mais platformIndex retient la gare quittée, quel que soit
     // le sens de la boucle.
-    const { platformIndex: signIndex, phase } = useStore.getState();
+    const { platformIndex: signIndex, phase, loopDirection } = useStore.getState();
     if (
       (phase === 'brake' || phase === 'dwell' || phase === 'depart') &&
       lastSignIndex.current !== signIndex
     ) {
       lastSignIndex.current = signIndex;
-      sign.redraw(signIndex);
+      sign.redraw(signIndex, loopDirection);
       totem.redraw(signIndex);
-      guide.redraw(signIndex);
-      band.redraw(signIndex);
+      guide.redraw(signIndex, loopDirection);
+      band.redraw(signIndex, loopDirection);
       lastView.current = null;
     }
     // L'afficheur ne se redessine que lorsqu'il a réellement changé : sinon on
@@ -297,7 +297,7 @@ export function PlatformSignage({
     const view = boardView(clock.current, signIndex);
     if (!lastView.current || !sameBoardView(lastView.current, view)) {
       lastView.current = view;
-      board.redraw(signIndex, view);
+      board.redraw(signIndex, view, loopDirection);
     }
   });
 

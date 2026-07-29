@@ -303,10 +303,10 @@ export function TrainConsist() {
     built.root.visible = visible;
     if (!visible) return;
 
-    const { doorSide, index } = useStore.getState();
+    const { doorSide, index, loopDirection } = useStore.getState();
 
     // Girouette : numéro de course, recalculé quand il change seulement.
-    const service = serviceNumberFor(index, runtime.clockMin);
+    const service = serviceNumberFor(index, runtime.clockMin, loopDirection);
     if (service !== lastService.current) {
       lastService.current = service;
       built.sign.redraw(service);

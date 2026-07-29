@@ -21,7 +21,7 @@
 //   • le tronçon lui-même (data/segments) : on parcourt le même viaduc, la même
 //     tranchée, seulement à l'envers. Seule change la façon d'y arriver.
 
-import type { LoopDirection } from './platforms';
+import type { LoopDirection } from './platforms.ts';
 
 /** Nombre de gares de la boucle. */
 export const STATION_COUNT = 30;

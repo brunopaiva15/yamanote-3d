@@ -5,6 +5,7 @@
 // neuf, la mise en cache est la responsabilité de l'appelant (useMemo).
 
 import * as THREE from 'three';
+import type { LoopDirection } from '../data/platforms';
 import { JP_FONT, rng } from './procedural';
 import { STATIONS } from '../data/stations';
 import { LIVERY } from '../data/e235';
@@ -176,10 +177,22 @@ export function makeDestinationSign(line: SignLine = YAMANOTE_SIGN): {
   return { texture, redraw };
 }
 
-/** Numéro de course plausible, dérivé de la gare et de l'heure. */
-export function serviceNumberFor(stationIndex: number, clockMin: number): string {
+/**
+ * Numéro de course plausible, dérivé de la gare, de l'heure et du SENS.
+ *
+ * La parité n'est pas décorative : chez JR East, une course 内回り porte un
+ * numéro impair et une course 外回り un numéro pair. Deux rames qui se croisent
+ * à quai ne peuvent donc pas afficher deux girouettes de même parité.
+ */
+export function serviceNumberFor(
+  stationIndex: number,
+  clockMin: number,
+  dir: LoopDirection,
+): string {
   const hour = Math.floor(clockMin / 60) % 24;
-  const n = 100 * hour + ((stationIndex * 7) % 100);
+  const raw = 100 * hour + ((stationIndex * 7) % 100);
+  // Bit de poids faible réservé au sens : impair en 内回り, pair en 外回り.
+  const n = dir === 'outer' ? raw - (raw % 2) : raw - (raw % 2) + 1;
   return `${String(n).padStart(4, '0')}G`;
 }
 
