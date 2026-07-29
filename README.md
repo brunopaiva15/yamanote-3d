@@ -58,6 +58,11 @@ prend en paramètre. Ce qu'il change :
   croisière, la progression du trajet et l'environnement traversé en dépendent ;
 - **les quartiers.** Le territoire d'une gare se déroule dans le sens de
   marche : en 外回り, Shibuya vient avant Harajuku et non après ;
+- **le remplissage.** `data/occupancy.ts` porte DEUX relevés à 08:15, un par
+  sens, et ils ne se déduisent pas l'un de l'autre : le 内回り est écrasé entre
+  Shin-Ōkubo et Shinjuku (139 %) quand le 外回り l'est entre Ueno et
+  Okachimachi (134 %) — c'est le sens qui va vers les bureaux qui se remplit.
+  Le second dormait « en réserve » ; il est branché ;
 - **ce qui est dit.** 「山手線内回り」 devient 「山手線外回り」, et les gares
   repères de la direction sont prises vers l'arrière — depuis Tamachi,
   東京・上野 en 内回り, 品川・渋谷 en 外回り. La rame et le quai tirent la

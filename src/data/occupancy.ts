@@ -27,14 +27,11 @@ export interface TokyoDate {
 // ---------------------------------------------------------------------------
 
 /**
- * Charge du TRONÇON, nommé dans le sens 内回り — pic Shin-Ōkubo→Shinjuku 139 %.
+ * Sens 内回り — index = gare de DÉPART. Pic Shin-Ōkubo→Shinjuku 139 %.
  *
- * La même table sert aux deux sens : `systems/occupancy.currentFromIndex` rend
- * l'index du tronçon, pas celui de la gare quittée, donc 外回り retrouve bien
- * la charge du morceau de ligne qu'il parcourt. C'est une approximation
- * assumée — en vrai, le pointe du matin charge davantage le sens qui va vers
- * les bureaux —, mais le relevé dont sortent ces chiffres est lui-même donné
- * par tronçon, tous sens confondus.
+ * Le pendant 外回り est plus bas, et les deux ne se déduisent pas l'un de
+ * l'autre : à la même minute, c'est le sens qui va vers les bureaux qui se
+ * remplit. `systems/occupancy` choisit la table selon `store.loopDirection`.
  */
 export const INNER_BASE_0815: readonly number[] = [
   /* 00 Tokyo→Kanda                 */ 96,
@@ -70,9 +67,13 @@ export const INNER_BASE_0815: readonly number[] = [
 ];
 
 /**
- * Sens inverse (外回り) — réserve. Index = gare de départ dans ce sens
- * (JY décroissant) : OUTER_BASE_0815[i] = taux i → (i-1+30)%30.
+ * Sens 外回り — index = gare de DÉPART dans ce sens (JY décroissant) :
+ * OUTER_BASE_0815[i] = taux du trajet i → (i-1+30)%30.
  * Pic officiel Ueno→Okachimachi = index 4.
+ *
+ * Cette table a dormi en « réserve » tant que le simulateur ne roulait que
+ * dans un sens ; elle est branchée depuis que la rame peut faire le tour dans
+ * l'autre.
  */
 export const OUTER_BASE_0815: readonly number[] = [
   /* 00 Tokyo→Yūrakuchō             */ 111,
