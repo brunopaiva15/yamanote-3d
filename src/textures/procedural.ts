@@ -34,8 +34,10 @@ function makeCanvas(w: number, h: number): { c: HTMLCanvasElement; g: CanvasRend
 }
 
 // Texte garanti dans son cadre : réduit la taille de police si nécessaire,
-// et passe maxWidth à fillText en dernier recours.
-function fitFillText(
+// et passe maxWidth à fillText en dernier recours. Exporté depuis que les
+// façades des distributeurs (textures/vending) alignent elles aussi une
+// vingtaine d'étiquettes dans des cases au millimètre.
+export function fitFillText(
   g: CanvasRenderingContext2D,
   text: string,
   x: number,

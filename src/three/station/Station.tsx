@@ -57,11 +57,12 @@ import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../
 import { Barrier, EdgeBarrier, GateBarrier } from './Barrier';
 import { makeStationMaterials, type Mats } from './materials';
 import { stationAd } from './adPool';
-import { mat, matFacingTrack, useInstances } from './instancing';
+import { mat, useInstances } from './instancing';
 import { OverheadSigns } from './OverheadSigns';
 import { PlatformAds } from './PlatformAds';
 import { PlatformKit } from './PlatformKit';
 import { PlatformSignage } from './PlatformSignage';
+import { VendingMachines } from './VendingMachines';
 import { Signature } from './signatures';
 import { psdLayout } from './psdLayout';
 
@@ -115,9 +116,9 @@ export function Station() {
     // Les picots gardent leur pas quelle que soit la largeur de la bande :
     // étirée sans ce rapport, elle donnait des ovales sur un quai sans portes.
     tactile.repeat.set(tactileW / 0.42, Math.round(layout.length / 3.4));
-    // Fonds francs, comme les caissons du quai : le distributeur et le kiosque
-    // portent des affiches, pas des aplats crème sur un décor déjà clair.
-    return { floor, tactile, ads: [makeAdTexture(4101, true, true), makeAdTexture(4102, true, true)] };
+    // Fond franc, comme les caissons du quai : le kiosque porte une affiche,
+    // pas un aplat crème sur un décor déjà clair.
+    return { floor, tactile, ads: [makeAdTexture(4102, true, true)] };
   }, [layout.length, tactileW]);
 
   const m = useMemo(() => makeStationMaterials(layout.palette, textures), [layout.palette, textures]);
@@ -258,18 +259,6 @@ export function Station() {
       ),
     [place.benches],
   );
-  const vending = useMemo(
-    () => place.vending.map((v) => mat(v.x, PLATFORM_TOP + 0.9, v.z, 0.8, 1.8, 1.4)),
-    [place.vending],
-  );
-  // Façade éclairée du distributeur : le plan doit REGARDER LA VOIE. Posé sans
-  // rotation, il était dressé perpendiculairement à la machine et la traversait
-  // de part en part comme un panneau planté là.
-  const vendingFace = useMemo(
-    () => place.vending.map((v) => matFacingTrack(v.x - 0.41, PLATFORM_TOP + 1.05, v.z, 1.2, 1.1)),
-    [place.vending],
-  );
-
   const psdRef = useRef<THREE.InstancedMesh>(null);
   const glassRef = useRef<THREE.InstancedMesh>(null);
   const bandRef = useRef<THREE.InstancedMesh>(null);
@@ -281,8 +270,6 @@ export function Station() {
   const seatRef = useRef<THREE.InstancedMesh>(null);
   const backRef = useRef<THREE.InstancedMesh>(null);
   const legRef = useRef<THREE.InstancedMesh>(null);
-  const vendRef = useRef<THREE.InstancedMesh>(null);
-  const vendFaceRef = useRef<THREE.InstancedMesh>(null);
   const leafRef = useRef<THREE.InstancedMesh>(null);
   const leafJointRef = useRef<THREE.InstancedMesh>(null);
 
@@ -297,8 +284,6 @@ export function Station() {
   useInstances(seatRef, benchSeat);
   useInstances(backRef, benchBack);
   useInstances(legRef, benchLegs);
-  useInstances(vendRef, vending);
-  useInstances(vendFaceRef, vendingFace);
 
   // --- Vantaux des portes palières, animés ---
   const leafMat = useRef(new THREE.Matrix4());
@@ -483,12 +468,10 @@ export function Station() {
       <instancedMesh name="banc-pied" ref={legRef} args={[undefined, undefined, Math.max(1, benchLegs.length)]} material={m.metal}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh name="distributeur" ref={vendRef} args={[undefined, undefined, Math.max(1, vending.length)]} material={m.vending}>
-        <boxGeometry args={[1, 1, 1]} />
-      </instancedMesh>
-      <instancedMesh name="distributeur-face" ref={vendFaceRef} args={[undefined, undefined, Math.max(1, vendingFace.length)]} material={m.vendingFace}>
-        <planeGeometry args={[1, 1]} />
-      </instancedMesh>
+
+      {/* Distributeurs : vitrine rétroéclairée, monnayeurs, volet de retrait.
+          Ils portent leur propre jeu de textures — voir VendingMachines. */}
+      <VendingMachines place={place} station={index} detail={detail} />
 
       {/* Trémies d'escalier : la dalle est percée, donc elles font partie de la
           structure — jamais retirées par un palier de qualité. */}
