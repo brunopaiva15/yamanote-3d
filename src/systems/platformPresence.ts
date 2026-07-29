@@ -1,12 +1,24 @@
 // Présence spatiale du quai : plus de fondu d'opacité. Le quai est opaque et
 // glisse le long de la voie — il arrive de l'avant pendant le freinage, reste
-// calé à l'arrêt, puis part derrière au départ. Piloté par la progression du
-// trajet (segEnv.p) et la phase, écrit dans runtime chaque frame.
+// calé à l'arrêt, puis part derrière au départ. Écrit dans runtime chaque frame.
+//
+// L'approche est pilotée par la DISTANCE QUI RESTE À PARCOURIR avant l'arrêt
+// (systems/trainPhysics, stopDistance) et non plus par une courbe de temps
+// calée sur la progression du trajet. La différence n'est pas cosmétique :
+// une courbe de temps ignore le profil de freinage, elle finissait sa course
+// plusieurs secondes avant que la rame ne s'arrête vraiment et compressait
+// tout le glissement dans les dernières secondes — sur un tronçon court
+// (Mejiro→Takadanobaba, 8 s de croisière), le quai arrivait d'un bloc alors
+// que la rame était déjà presque à l'arrêt. En posant le quai à −R, il défile
+// exactement à la vitesse du train, comme le reste du décor, et se pose de
+// lui-même : le dernier mètre dure ses quatre secondes et les dix derniers
+// centimètres se voient passer.
 
-import { journeyProgress } from '../data/segments';
+import { V_MAX } from '../data/config';
+import { cruiseDuration } from '../data/segments';
 import { useStore, type Phase } from '../store';
 import { runtime } from './runtime';
-import { segEnv } from './segmentEnv';
+import { stopDistance } from './trainPhysics';
 import { hasPlatformDoors, layoutFor } from '../data/stationLayouts';
 
 function smoothstep(a: number, b: number, x: number): number {
@@ -14,23 +26,45 @@ function smoothstep(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
+/** Le quai apparaît quand son about arrive à cette distance devant la rame (m). */
+const ENTRY_AHEAD = 34;
+/** Course du fondu d'entrée en scène, comptée sur la distance restante (m). */
+const ENTRY_FADE = 26;
+
+/**
+ * Distance restant à parcourir jusqu'au point d'arrêt (m).
+ *
+ * En freinage, c'est exactement le profil physique. En croisière, on y ajoute
+ * ce qui reste de course avant le coup de frein : la mesure est continue au
+ * changement de phase (le terme de croisière s'annule pile quand le freinage
+ * commence), et le quai peut donc entrer en scène AVANT le freinage — sur les
+ * tronçons courts, où la rame freine de 50 km/h, la distance d'arrêt seule ne
+ * suffirait pas à le faire apparaître en douceur.
+ *
+ * La vitesse d'extrapolation garde un plancher : pendant un arrêt d'urgence,
+ * la vitesse réelle tombe à zéro et l'estimation s'effondrerait, plaquant le
+ * quai sur la rame en pleine voie.
+ */
+function distanceToStop(phase: Phase, phaseT: number, index: number): number {
+  const braking = stopDistance(runtime.speed, runtime.accel);
+  if (phase === 'brake') return braking;
+  if (phase === 'cruise') {
+    const left = Math.max(0, cruiseDuration(index) - phaseT);
+    return left * Math.max(runtime.speed, V_MAX * 0.5) + braking;
+  }
+  return 0;
+}
+
 function presenceFrom(
   phase: Phase,
-  p: number,
+  phaseT: number,
+  index: number,
   halfLen: number,
   clearing: boolean,
 ): { presence: number; slide: number } {
-  // Le quai fait maintenant 224 m et non plus 96 : il ne peut plus apparaître
-  // ni s'effacer aux mêmes distances, sinon il se volatiliserait alors qu'il
-  // entoure encore la rame.
-  const entry = halfLen + 34;
-  if (phase === 'brake') {
-    // Freinage : p ≈ 0.878 → 1. Le quai entre assez tôt pour qu'on le voie
-    // glisser le long des vitres, opaque, comme une vraie approche.
-    const presence = smoothstep(0.87, 0.96, p);
-    return { presence, slide: (1 - presence) * -entry };
-  }
-  if (phase === 'dwell') return { presence: 1, slide: 0 };
+  // Le quai fait 224 m : il ne peut apparaître ni s'effacer qu'une fois son
+  // about passé, sinon il se volatiliserait alors qu'il entoure encore la rame.
+  const entry = halfLen + ENTRY_AHEAD;
   if (phase === 'depart' || (phase === 'cruise' && clearing)) {
     // Piloté par la distance RÉELLEMENT parcourue depuis l'arrêt : le quai
     // défile exactement à la vitesse du train (immobile pendant le desserrage
@@ -40,12 +74,21 @@ function presenceFrom(
     // déborde forcément sur le début de la croisière, d'où `clearing`.
     const d = Math.max(0, runtime.distance - runtime.departStartDist);
     const presence = 1 - smoothstep(halfLen * 0.7, entry, d);
-    return { presence, slide: Math.min(d, entry + 10) };
+    return { presence, slide: runtime.berthOffset + Math.min(d, entry + 10) };
+  }
+  if (phase === 'dwell') return { presence: 1, slide: runtime.berthOffset };
+  if (phase === 'brake' || phase === 'cruise') {
+    // Approche : le quai est posé à la distance qui reste à parcourir, l'écart
+    // d'arrêt de la rame en plus. Tant qu'il est trop loin pour être vu, on le
+    // gare à `entry` — sa position exacte n'a alors aucun sens.
+    const left = distanceToStop(phase, phaseT, index);
+    const presence = 1 - smoothstep(entry - ENTRY_FADE, entry, left);
+    return { presence, slide: runtime.berthOffset - Math.min(left, entry) };
   }
   return { presence: 0, slide: 0 };
 }
 
-// À appeler APRÈS updateSegmentEnv pour lire un p à jour.
+// À appeler APRÈS updateSegmentEnv (l'ordre historique de la boucle).
 export function updatePlatformPresence(): void {
   const state = useStore.getState();
   const { phase, index } = state;
@@ -75,7 +118,8 @@ export function updatePlatformPresence(): void {
   const clearing = platformIndex !== index;
   const { presence, slide } = presenceFrom(
     phase,
-    segEnv.p,
+    runtime.phaseT,
+    index,
     layoutFor(platformIndex).length / 2,
     clearing,
   );
@@ -86,15 +130,19 @@ export function updatePlatformPresence(): void {
   if (clearing && presence <= 0) state.setPlatformIndex(index);
 }
 
-// Presence immédiate pour randomizeEntry (segEnv peut ne pas être à jour).
+// Presence immédiate pour randomizeEntry, qui a déjà posé phase, vitesse et
+// distance dans runtime mais pas encore fait tourner la boucle.
 export function seedPlatformPresence(phase: Phase, phaseT: number): void {
   const { index, platformIndex } = useStore.getState();
-  // p suit la convention du trajet (index, durées variables par tronçon) ; le
-  // gabarit du quai, lui, est celui de la gare présente (platformIndex).
-  const p = journeyProgress(phase, phaseT, index);
   runtime.psdPresent = hasPlatformDoors(platformIndex);
   const half = layoutFor(platformIndex).length / 2;
-  const { presence, slide } = presenceFrom(phase, p, half, platformIndex !== index);
+  const { presence, slide } = presenceFrom(
+    phase,
+    phaseT,
+    index,
+    half,
+    platformIndex !== index,
+  );
   runtime.platformFade = presence;
   runtime.platformSlide = slide;
 }
