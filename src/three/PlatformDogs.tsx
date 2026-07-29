@@ -81,19 +81,31 @@ export function PlatformDogs({ manifest }: { manifest: AnimalManifest }) {
       body.position.set(dog.pos.x, dog.y, dog.pos.z);
       body.rotation.y = dog.yaw;
 
-      // Allure : le clip demandé, ou le plus proche que le pack fournisse.
-      const { actions } = s.clone;
+      // Allure. Pour un chien en mouvement, le cycle se choisit en comparant
+      // sa vitesse aux vitesses d'AUTEUR des deux clips : on bascule à leur
+      // moyenne géométrique, c'est-à-dire là où les deux s'écartent autant du
+      // réel. Un seuil fixe ne pouvait pas convenir — le « Walk » d'un shiba
+      // vaut 0,24 m/s, celui d'un loup le double.
+      const { actions, template } = s.clone;
+      let moveKey: AnimalClip = 'walk';
+      if (dog.gait === 'move') {
+        const cross = Math.sqrt(template.walkSpeed * template.runSpeed);
+        // Bande morte autour du seuil : sans elle, un chien qui suit à la
+        // vitesse pivot alterne marche et trot d'une image à l'autre.
+        const wasRun = s.current === 'run';
+        moveKey = dog.speed > cross * (wasRun ? 0.85 : 1.15) ? 'run' : 'walk';
+      }
       let key: AnimalClip | '' = '';
       const wanted: AnimalClip[] =
-        dog.gait === 'run'
-          ? ['run', 'walk', 'idle']
-          : dog.gait === 'walk'
-            ? ['walk', 'run', 'idle']
-            : dog.gait === 'sniff'
-              ? ['sniff', 'idle']
-              : dog.gait === 'sit'
-                ? ['sit', 'idle']
-                : ['idle', 'walk'];
+        dog.gait === 'move'
+          ? moveKey === 'run'
+            ? ['run', 'walk', 'idle']
+            : ['walk', 'run', 'idle']
+          : dog.gait === 'sniff'
+            ? ['sniff', 'idle']
+            : dog.gait === 'sit'
+              ? ['sit', 'idle']
+              : ['idle', 'walk'];
       for (const k of wanted) {
         if (actions[k]) {
           key = k;
@@ -108,11 +120,14 @@ export function PlatformDogs({ manifest }: { manifest: AnimalManifest }) {
         s.current = key;
       }
       // Cycle calé sur la vitesse réelle : sinon les pattes patinent, et un
-      // chien qui patine se voit de plus loin qu'un humain qui patine.
+      // chien qui patine se voit de plus loin qu'un humain qui patine. Le
+      // plafond est haut parce que les foulées des packs sont courtes : un
+      // petit chien qui tient l'allure d'un marcheur trottine vite, et c'est
+      // exactement ce qu'on voit dans la rue.
       if (key === 'walk' || key === 'run') {
-        const authored = key === 'run' ? s.clone.template.runSpeed : s.clone.template.walkSpeed;
+        const authored = key === 'run' ? template.runSpeed : template.walkSpeed;
         const action = actions[key];
-        if (action) action.timeScale = THREE.MathUtils.clamp(dog.speed / authored, 0.45, 2.2);
+        if (action) action.timeScale = THREE.MathUtils.clamp(dog.speed / authored, 0.4, 3);
       }
       s.clone.mixer.update(dt);
 

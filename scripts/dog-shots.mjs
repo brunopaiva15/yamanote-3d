@@ -80,12 +80,20 @@ for (let attempt = 0; attempt < 400 && shots < wanted; attempt++) {
     const owner = window.__crowd?.[dog.owner];
     if (!owner) return null;
     const side = DOOR_SIDE[store.getState().platformIndex];
+    // Le repère du quai a la voie du côté des x DÉCROISSANTS et le mur de
+    // fond du côté des x croissants, quelle que soit la gare : on y place
+    // l'œil, PUIS on convertit. Choisir le côté en monde revenait à deviner
+    // l'orientation du quai — une fois sur deux, l'image était prise depuis
+    // l'intérieur du mur.
     const toWorld = (x, z) => (side === 1 ? { x, z } : { x: -x, z: -z });
-    const a = toWorld(dog.pos.x, dog.pos.z);
-    const b = toWorld(owner.pos.x, owner.pos.z);
-    const cx = (a.x + b.x) / 2;
-    const cz = (a.z + b.z) / 2;
-    window.__freeCam({ x: cx + dist * (side === 1 ? -1 : 1), y: eye, z: cz + dist * 0.8, tx: cx, ty: look, tz: cz });
+    const lx = (dog.pos.x + owner.pos.x) / 2;
+    const lz = (dog.pos.z + owner.pos.z) / 2;
+    const c = toWorld(lx, lz);
+    // L'œil reste SUR le quai, un peu en retrait du nez de quai (x = 1,78) :
+    // reculer simplement « du côté de la voie » le plantait dans la caisse de
+    // la rame. Le recul se prend donc en z.
+    const eyePos = toWorld(Math.min(lx - 0.8, 2.6), lz + dist);
+    window.__freeCam({ x: eyePos.x, y: eye, z: eyePos.z, tx: c.x, ty: look, tz: c.z });
     return {
       station: store.getState().platformIndex,
       gait: dog.gait,

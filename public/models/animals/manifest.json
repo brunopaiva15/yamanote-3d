@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "source": "Quaternius — Ultimate Animated Animals",
+  "license": "CC0 1.0",
+  "variants": [
+    {
+      "id": "Husky",
+      "file": "husky.glb",
+      "height": 0.62
+    },
+    {
+      "id": "ShibaInu",
+      "file": "shibainu.glb",
+      "height": 0.46
+    },
+    {
+      "id": "Wolf",
+      "file": "wolf.glb",
+      "height": 0.78
+    }
+  ]
+}

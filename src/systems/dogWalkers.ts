@@ -29,7 +29,14 @@ import { paxScale } from './perf';
 import { crowdBounds, crowdFloorY, crowdList, CROWD_WALK_SPEED, STAIR_VANISH_Y, type CrowdPax } from './platformCrowd';
 import { runtime } from './runtime';
 
-export type DogGait = 'idle' | 'walk' | 'run' | 'sniff' | 'sit';
+/**
+ * `move` ne dit pas QUEL cycle jouer : marche ou trot se choisit au rendu, en
+ * comparant la vitesse réelle aux vitesses d'AUTEUR des clips du pack
+ * (characters/animals). Les packs animaliers animent des foulées courtes — le
+ * « Walk » d'un shiba vaut 0,24 m/s — et un seuil écrit en dur dans la
+ * simulation aurait fait marcher au pas un chien qui court après son maître.
+ */
+export type DogGait = 'idle' | 'move' | 'sniff' | 'sit';
 
 /** Longueur de la sangle : au-delà, le chien est rappelé. */
 export const LEASH_LENGTH = 1.5;
@@ -40,8 +47,12 @@ const TRAIL = 0.28;
 /** En transit (escalier, traversée) le chien se met dans les pas du maître. */
 const TRANSIT_SIDE = 0.16;
 const TRANSIT_TRAIL = 0.7;
-/** Vitesse de pointe : un chien rattrape toujours plus vite qu'on ne marche. */
-const DOG_TOP_SPEED = CONFIG.walkSpeed * 2.1;
+/**
+ * Vitesse de pointe : un chien rattrape plus vite qu'on ne marche, mais on ne
+ * le lance pas au sprint — au-delà, aucun cycle du pack ne suit sans que les
+ * pattes patinent (les foulées des packs animaliers sont courtes).
+ */
+const DOG_TOP_SPEED = CONFIG.walkSpeed * 1.6;
 /** Distance en deçà de laquelle le chien se contente de suivre au pas. */
 const REACHED = 0.14;
 /** Dégagement autour du joueur : on ne marche pas au travers d'un chien. */
@@ -202,7 +213,7 @@ function attach(dog: DogWalk, owner: CrowdPax): void {
   dog.orphanT = 0;
   dog.stopT = 0;
   dog.nextStop = 4 + Math.random() * 8;
-  dog.gait = 'walk';
+  dog.gait = 'move';
   dog.speed = 0;
   dog.wanderT = Math.random() * 20;
   dog.yaw = owner.yaw;
@@ -380,12 +391,8 @@ function stepDog(dog: DogWalk, owner: CrowdPax | null, dt: number): void {
   // — Allure —
   if (dog.stopT > 0) {
     // gait posé au démarrage de l'arrêt (sniff / sit), conservé tel quel.
-  } else if (dog.speed > CONFIG.walkSpeed * 1.15) {
-    dog.gait = 'run';
-  } else if (dog.speed > 0.12) {
-    dog.gait = 'walk';
   } else {
-    dog.gait = 'idle';
+    dog.gait = dog.speed > 0.12 ? 'move' : 'idle';
   }
 }
 

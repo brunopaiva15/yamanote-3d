@@ -869,8 +869,9 @@ repart par l'escalier, et son chien descend les marches derrière lui. Une gare
 sur deux environ compte un promeneur de chien quelque part sur ses 224 m ; on
 n'en croise pas la moitié.
 
-Le pack animalier s'installe à part, dans `public/models/animals/`, avec son
-propre manifeste et sa propre licence :
+Le pack animalier vit à part, dans `public/models/animals/`, avec son propre
+manifeste et sa propre licence. Trois races sont installées (shiba inu, husky,
+loup — Quaternius, CC0) ; pour en importer d'autres :
 
 ```bash
 # Quaternius — « Ultimate Animated Animals » (CC0)
@@ -886,15 +887,20 @@ Trois choses distinguent un quadrupède d'un passager, et elles sont dans
 `characters/animals.ts` :
 
 - **la taille est réelle, et par espèce.** Un personnage est toujours ramené à
-  `SKELETON_TOP` ; un chien, non — un corgi fait 32 cm, un husky 62. La hauteur
+  `SKELETON_TOP` ; un chien, non — un shiba fait 46 cm, un husky 62. La hauteur
   est donc une donnée du manifeste (`height`, en mètres), à vérifier après
-  import.
+  import ; tout le reste (échelle, longueur, vitesses) en découle.
 - **le reniflage est le clip de repas.** Aucun pack ne livre de « Sniff » ;
   leur « Eating » est exactement ça — museau au sol, corps planté — et c'est le
   geste qui fait une promenade.
-- **la vitesse d'auteur du cycle est mesurée**, pas déclarée : le déplacement
-  de la racine est relevé avant d'être aplati, ce qui donne les m/s pour
-  lesquels le pas a été animé. Sans ça, les pattes patinent.
+- **la vitesse d'auteur des cycles est mesurée**, jamais déclarée. Le
+  déplacement de la racine quand il y en a un ; sinon la **foulée** — un pied
+  posé ne glisse pas, son va-et-vient sur un cycle mesure exactement la
+  distance dont le sol défile. Les packs animaliers animent tous sur place,
+  c'est donc la foulée qui sert, et elle est courte : le « Walk » d'un shiba
+  vaut 0,24 m/s, son « Gallop » 0,59, ceux d'un loup le double. D'où le
+  choix du cycle **à la moyenne géométrique des deux** plutôt qu'à un seuil
+  écrit en dur — sinon un chien qui court après son maître marchait au pas.
 
 Le reste est dans `systems/dogWalkers` et tient à trois contraintes, qui font
 plus pour la promenade que l'animation :
