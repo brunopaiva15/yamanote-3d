@@ -5,17 +5,22 @@
 // l'expérience. La bande et les mentions 内回り／外回り restent en japonais :
 // c'est de la signalétique, pas de l'interface (cf. src/i18n).
 //
-// Avant de monter, on peut (sans y être obligé) choisir l'heure et l'arrêt :
-// par défaut, heure réelle à Tokyo et gare tirée au hasard, comme avant.
+// Avant de monter, on peut (sans y être obligé) choisir la date, l'heure et
+// l'arrêt : par défaut, instant réel à Tokyo et gare tirée au hasard, comme
+// avant. La date n'est pas un détail d'état civil — c'est elle qui donne la
+// SAISON (systems/season) : la couleur des frondaisons, la hauteur du soleil,
+// l'heure à laquelle la nuit tombe, et le temps qu'il fait dehors.
 
 import { useEffect, useState } from 'react';
 import { STATIONS } from '../data/stations';
+import type { TokyoDate } from '../data/occupancy';
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { startAudio, setVolume, setPlatformSide } from '../systems/audioEngine';
 import { initSpeech } from '../systems/speech';
 import { seedPassengers } from '../systems/passengers';
 import { runtime, tokyoNow } from '../systems/runtime';
+import { seedWeather } from '../systems/weather';
 import { randomizeEntry } from '../systems/stationCycle';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
@@ -55,6 +60,27 @@ function useCoarsePointer(): boolean {
   return coarse;
 }
 
+/** Date Tokyo → chaîne AAAA-MM-JJ pour un <input type="date">. */
+function dateToValue(d: { year: number; month: number; day: number }): string {
+  return `${String(d.year).padStart(4, '0')}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`;
+}
+
+/**
+ * Chaîne AAAA-MM-JJ → date civile Tokyo, jour de semaine compris.
+ *
+ * Le quantième est reconstruit en UTC : `new Date('2025-01-05')` est déjà de
+ * l'UTC minuit, mais `getDay()` le relit dans le fuseau du navigateur — à
+ * Paris on obtient encore le 4 au soir, donc le mauvais jour de la semaine, et
+ * avec lui la mauvaise densité de voyageurs.
+ */
+function valueToDate(value: string): TokyoDate | null {
+  const [y, m, d] = value.split('-').map(Number);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  if (Number.isNaN(utc.getTime())) return null;
+  return { year: y, month: m, day: d, weekday: utc.getUTCDay() };
+}
+
 /** Valeur sentinelle du sélecteur : laisser randomizeEntry tirer la gare. */
 const STATION_RANDOM = 'random';
 
@@ -67,20 +93,27 @@ export function StartScreen() {
   const [timeValue, setTimeValue] = useState(() => minutesToTimeValue(tokyoNow().minutes));
   // true tant que le joueur n'a pas touché le champ : on suit l'heure réelle.
   const [timePinned, setTimePinned] = useState(false);
+  const [dateValue, setDateValue] = useState(() => dateToValue(tokyoNow()));
   const [stationChoice, setStationChoice] = useState<string>(STATION_RANDOM);
 
   // Tant que l'heure n'est pas figée par le joueur, la rafraîchir doucement
   // pour que le pied de carte et le champ restent calés sur Tokyo.
   useEffect(() => {
     if (timePinned) return;
-    const tick = () => setTimeValue(minutesToTimeValue(tokyoNow().minutes));
+    const tick = () => {
+      const now = tokyoNow();
+      setTimeValue(minutesToTimeValue(now.minutes));
+      setDateValue(dateToValue(now));
+    };
     tick();
     const id = window.setInterval(tick, 5000);
     return () => window.clearInterval(id);
   }, [timePinned]);
 
   const syncTimeToNow = () => {
-    setTimeValue(minutesToTimeValue(tokyoNow().minutes));
+    const now = tokyoNow();
+    setTimeValue(minutesToTimeValue(now.minutes));
+    setDateValue(dateToValue(now));
     setTimePinned(false);
   };
 
@@ -91,12 +124,17 @@ export function StartScreen() {
     // selon heure/jour. La date civile reste celle du jour à Tokyo.
     const now = tokyoNow();
     runtime.clockMin = timeValueToMinutes(timeValue);
-    runtime.tokyoDate = {
+    // La date choisie (ou celle du jour à Tokyo) : elle commande la densité de
+    // voyageurs, la saison et, à travers elle, la météo du jour.
+    runtime.tokyoDate = valueToDate(dateValue) ?? {
       year: now.year,
       month: now.month,
       day: now.day,
       weekday: now.weekday,
     };
+    // Le temps du jour, posé à l'heure où l'on monte : on arrive au milieu
+    // d'une journée qui a déjà eu son temps, sol encore mouillé compris.
+    seedWeather();
     try {
       await startAudio();
       setVolume(useStore.getState().volume);
@@ -155,6 +193,22 @@ export function StartScreen() {
               ))}
         </ul>
         <div className="start-options">
+          <div className="start-option">
+            <label className="start-option-label" htmlFor="start-date">
+              {t.start.dateLabel}
+            </label>
+            <input
+              id="start-date"
+              className="start-time-input start-date-input"
+              type="date"
+              value={dateValue}
+              onChange={(e) => {
+                setDateValue(e.target.value);
+                setTimePinned(true);
+              }}
+              aria-label={t.start.dateLabel}
+            />
+          </div>
           <div className="start-option">
             <label className="start-option-label" htmlFor="start-time">
               {t.start.timeLabel}

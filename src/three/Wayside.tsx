@@ -35,7 +35,9 @@ import { hiddenByStation, sidePush } from '../systems/stationOcclusion';
 import { qualityLevel, usePerf } from '../systems/perf';
 import { TRACK_BED_TILE, TRACK_BED_WIDTH, makeGroundTexture } from '../textures/procedural';
 import { GAUGE_HALF } from '../data/stationGeometry';
-import { makeGroveGeometry } from './city/cityProps';
+import { makeGroveGeometry, makeGroveMaterial } from './city/cityProps';
+import { seasonNow } from '../systems/season';
+import { weather } from '../systems/weather';
 
 /** Longueur des plans au sol : la vue en biais vers le fond du wagon porte loin. */
 const PLANE_LEN = 460;
@@ -63,6 +65,9 @@ const RAILING_PANELS = 15; // ± 75 m : au-delà, un garde-corps n'est plus qu'u
 
 const TREE_COUNT = 12;
 const TREE_SPACING = 21;
+
+/** Neige de ville : un gris bleuté, jamais du blanc pur. */
+const SNOW_TONE = new THREE.Color('#dfe4ea');
 
 // --- Fabriques de géométrie fusionnée ---------------------------------------
 
@@ -227,8 +232,8 @@ export function Wayside() {
     // coûtaient trente-six appels de rendu pour douze sujets. Ils prennent
     // maintenant le bosquet de la ville — même dessin, une instance chacun.
     const groveGeo = makeGroveGeometry();
-    const groveMat = new THREE.MeshLambertMaterial({ vertexColors: true, fog: true });
-    const groves = new THREE.InstancedMesh(groveGeo, groveMat, TREE_COUNT);
+    const grove = makeGroveMaterial();
+    const groves = new THREE.InstancedMesh(groveGeo, grove.material, TREE_COUNT);
     groves.frustumCulled = false;
     groves.userData.noShadow = true;
 
@@ -283,7 +288,7 @@ export function Wayside() {
       railMat,
       railingMat,
       groveGeo,
-      groveMat,
+      grove,
       groves,
       portalGeo,
       portals,
@@ -299,13 +304,17 @@ export function Wayside() {
     };
   }, [furniture]);
 
-  // Bosquets du bord de voie : hauteur et teinte fixées par emplacement.
+  // Bosquets du bord de voie : hauteur et VARIANTE de feuillage fixées par
+  // emplacement. La teinte, elle, appartient au jour : elle est relue dans la
+  // palette de la saison à chaque image.
   const treeSpecs = useMemo(
     () =>
       Array.from({ length: TREE_COUNT }, (_, i) => ({
         x: (i % 2 === 0 ? 1 : -1) * (7.2 + ((i * 13) % 5) * 0.5),
         height: 5.4 + ((i * 29) % 10) * 0.28,
-        leaf: ['#dfe9d2', '#d4e2c6', '#e6eedc'][i % 3],
+        variant: (i * 7) & 3,
+        /** Tirage stable : ce sujet-ci est-il un cerisier ? */
+        roll: ((i * 37) % 101) / 101,
       })),
     [],
   );
@@ -328,6 +337,14 @@ export function Wayside() {
 
     // --- Plate-forme : une tuile de huit mètres tous les huit mètres ---
     built.bedTex.offset.y = runtime.distance / TRACK_BED_TILE;
+    // Le ballast est la surface la plus proche et la plus rapide du champ :
+    // c'est là qu'on lit d'abord qu'il a plu. Mouillé il fonce franchement,
+    // enneigé il blanchit — mais moins que la rue, le passage des rames
+    // dégageant la voie bien avant les trottoirs.
+    built.bedMat.color
+      .set('#d6d4ce')
+      .multiplyScalar(1 - 0.4 * weather.wet)
+      .lerp(SNOW_TONE, weather.snowCover * 0.72);
 
     /** Pose l'instance `i`, ou l'escamote si la gare l'avale. */
     const place = (mesh: THREE.InstancedMesh, i: number, z: number, x: number, yaw: number) => {
@@ -435,6 +452,9 @@ export function Wayside() {
     // --- Bosquets défilants ---
     const treeSpan = TREE_COUNT * TREE_SPACING;
     const treeScale = 1 + 0.18 * segEnv.green; // végétation renforcée (greenery)
+    const se = seasonNow();
+    built.grove.canopy.value = se.canopy;
+    built.grove.snow.value = weather.snowCover * 0.85;
     built.groves.visible = segEnv.w.trench < 0.5; // pas d'arbres entre les murs
     if (built.groves.visible) {
       for (let i = 0; i < TREE_COUNT; i++) {
@@ -453,7 +473,7 @@ export function Wayside() {
         sc.scl.set(h * 0.9, h, h * 0.9);
         sc.mtx.compose(sc.pos, sc.rot, sc.scl);
         built.groves.setMatrixAt(i, sc.mtx);
-        sc.color.set(spec.leaf);
+        sc.color.set(spec.roll < se.blossom ? se.blossomTone : se.foliage[spec.variant]);
         built.groves.setColorAt(i, sc.color);
       }
       built.groves.instanceMatrix.needsUpdate = true;

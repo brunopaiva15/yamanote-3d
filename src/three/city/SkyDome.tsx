@@ -24,6 +24,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { runtime } from '../../systems/runtime';
 import { dayNightWeights } from '../../systems/daynight';
+import { seasonNow } from '../../systems/season';
+import { weather } from '../../systems/weather';
 import { useStore } from '../../store';
 import { CONFIG } from '../../data/config';
 import { journeyProgress } from '../../data/segments';
@@ -56,6 +58,11 @@ const SIL_REPEAT = 4;
  * d'où metersPerRepeat = (π/2)·L. À 1400, la silhouette se lit à ~890 m.
  */
 const SIL_METERS_PER_REPEAT = 1400;
+
+/** Un ciel bas de nuit renvoie la lueur orangée de la ville, il ne la mange pas. */
+const NIGHT_CLOUD = new THREE.Color('#3a2f2c');
+/** Sous l'averse, la couche s'épaissit et vire au plomb. */
+const STORM_CLOUD = new THREE.Color('#6f757b');
 
 function smoothstep(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -100,6 +107,10 @@ uniform float uHazeAmt;
 uniform float uSilDark;
 uniform vec3 uGlow;
 uniform float uGlowAmt;
+uniform vec3 uSeasonTint;
+uniform float uSeasonAmt;
+uniform vec3 uCloud;
+uniform float uCloudAmt;
 varying vec2 vSkyUv;
 
 void main() {
@@ -107,6 +118,22 @@ void main() {
       texture2D(uDay, vSkyUv).rgb * uWeights.x
     + texture2D(uGolden, vSkyUv).rgb * uWeights.y
     + texture2D(uNight, vSkyUv).rgb * uWeights.z;
+
+  // La couverture nuageuse. Elle ne se pose pas non plus à plat : une couche de
+  // stratus est PLUS SOMBRE AU ZÉNITH, où on la voit par la tranche, et
+  // s'éclaircit vers l'horizon où la lumière la traverse de biais. C'est
+  // exactement l'inverse du voile de chaleur ci-dessous, et c'est ce qui
+  // distingue un ciel de pluie d'un ciel d'août.
+  float lowSky = smoothstep(uBand.y + 0.30, uBand.y - 0.04, vSkyUv.y);
+  col = mix(col, mix(uCloud * 0.82, uCloud, lowSky), uCloudAmt);
+
+  // Voile de saison. Il ne se répand pas uniformément sur la voûte : la vapeur
+  // d'eau d'un août de Tokyo s'accumule dans les basses couches, si bien que
+  // l'horizon vire au blanc laiteux pendant que le zénith reste franchement
+  // bleu. Un ciel teinté de haut en bas se lit comme un filtre de photo ; c'est
+  // le DÉGRADÉ qui se lit comme de l'air.
+  float hazeBand = 1.0 - smoothstep(uBand.y - 0.05, uBand.y + 0.42, vSkyUv.y);
+  col = mix(col, uSeasonTint, uSeasonAmt * hazeBand);
 
   // Lueur urbaine : au-dessus de Tokyo, le ciel de nuit n'est pas noir. Les
   // millions de lampes que la ville tourne vers le haut lui font un dôme
@@ -175,6 +202,10 @@ export function SkyDome() {
         uSilDark: { value: 1 },
         uGlow: { value: new THREE.Color('#c4702f') },
         uGlowAmt: { value: 0 },
+        uSeasonTint: { value: new THREE.Color('#f7edd6') },
+        uSeasonAmt: { value: 0 },
+        uCloud: { value: new THREE.Color('#a8adb2') },
+        uCloudAmt: { value: 0 },
       },
     });
 
@@ -217,6 +248,27 @@ export function SkyDome() {
     if (scene.fog instanceof THREE.Fog) (u.uHaze.value as THREE.Color).copy(scene.fog.color);
     u.uHazeAmt.value = 0.3 + 0.16 * w.day;
     u.uGlowAmt.value = 0.3 * w.night + 0.12 * w.golden;
+
+    // --- Saison ---
+    // L'air de Tokyo n'a pas la même épaisseur toute l'année : blanc laiteux
+    // et moite en août, tranchant et bleu en janvier — c'est en hiver qu'on
+    // voit le Fuji depuis les tours, jamais en été.
+    const se = seasonNow();
+    (u.uSeasonTint.value as THREE.Color).set(se.airTone);
+    u.uSeasonAmt.value = Math.max(0, (0.13 + 0.4 * se.heat - 0.09 * se.cold) * (1 - w.night));
+
+    // --- Le temps qu'il fait ---
+    // La nuit, un ciel couvert n'est pas gris : il est BAS et il renvoie la
+    // lueur de la ville. C'est même la seule nuit où le ciel est plus clair
+    // que par temps dégagé, et tout Tokyo le sait.
+    (u.uCloud.value as THREE.Color)
+      .set('#a8adb2')
+      .lerp(NIGHT_CLOUD, w.night)
+      .lerp(STORM_CLOUD, weather.rain * 0.6);
+    u.uCloudAmt.value = weather.cloud * 0.92;
+    // La silhouette de l'horizon s'efface sous la couverture bien avant que
+    // les gouttes ne se voient : c'est le premier signe que le temps tourne.
+    u.uHazeAmt.value = Math.min(1, u.uHazeAmt.value + 0.55 * weather.cloud);
   });
 
   return (

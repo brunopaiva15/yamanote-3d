@@ -53,8 +53,10 @@ export interface Strings {
     tokyoTime: string;
     /** Libellé du champ heure (écran d'accueil). */
     timeLabel: string;
-    /** Remet l'heure sur l'instant réel à Tokyo. */
+    /** Remet la date et l'heure sur l'instant réel à Tokyo. */
     timeNow: string;
+    /** Libellé du champ date (écran d'accueil) : c'est lui qui donne la saison. */
+    dateLabel: string;
     /** Libellé du sélecteur de gare. */
     stationLabel: string;
     /** Option « laisser le hasard choisir la gare ». */
@@ -76,6 +78,20 @@ export interface Strings {
       crowded: string;
       packed: string;
       crushed: string;
+    };
+    /** Bulle du bandeau météo. */
+    weatherTitle: string;
+    /** Le temps qu'il fait, dans l'ordre de systems/weather. */
+    weather: {
+      clear: string;
+      fair: string;
+      overcast: string;
+      drizzle: string;
+      rain: string;
+      downpour: string;
+      thunder: string;
+      sleet: string;
+      snow: string;
     };
     soundOn: string;
     soundOff: string;
@@ -147,6 +163,7 @@ const FR: Strings = {
     tokyoTime: 'Heure à Tokyo',
     timeLabel: 'Heure',
     timeNow: 'Maintenant',
+    dateLabel: 'Date',
     stationLabel: 'Arrêt',
     stationRandom: 'Aléatoire',
   },
@@ -164,6 +181,18 @@ const FR: Strings = {
       crowded: 'serré',
       packed: 'très serré',
       crushed: 'saturé',
+    },
+    weatherTitle: 'Temps à Tokyo',
+    weather: {
+      clear: 'Dégagé',
+      fair: 'Beau',
+      overcast: 'Couvert',
+      drizzle: 'Bruine',
+      rain: 'Pluie',
+      downpour: 'Averse',
+      thunder: 'Orage',
+      sleet: 'Neige fondue',
+      snow: 'Neige',
     },
     soundOn: 'Son actif',
     soundOff: 'Son coupé',
@@ -231,6 +260,7 @@ const EN: Strings = {
     tokyoTime: 'Tokyo time',
     timeLabel: 'Time',
     timeNow: 'Now',
+    dateLabel: 'Date',
     stationLabel: 'Station',
     stationRandom: 'Random',
   },
@@ -248,6 +278,18 @@ const EN: Strings = {
       crowded: 'crowded',
       packed: 'very crowded',
       crushed: 'packed solid',
+    },
+    weatherTitle: 'Tokyo weather',
+    weather: {
+      clear: 'Clear',
+      fair: 'Fair',
+      overcast: 'Overcast',
+      drizzle: 'Drizzle',
+      rain: 'Rain',
+      downpour: 'Downpour',
+      thunder: 'Thunderstorm',
+      sleet: 'Sleet',
+      snow: 'Snow',
     },
     soundOn: 'Sound on',
     soundOff: 'Sound off',
@@ -314,6 +356,7 @@ const JA: Strings = {
     tokyoTime: '東京の現在時刻',
     timeLabel: '時刻',
     timeNow: '現在',
+    dateLabel: '日付',
     stationLabel: '駅',
     stationRandom: 'ランダム',
   },
@@ -331,6 +374,18 @@ const JA: Strings = {
       crowded: '混雑',
       packed: '大変混雑',
       crushed: '超満員',
+    },
+    weatherTitle: '東京の天気',
+    weather: {
+      clear: '快晴',
+      fair: '晴れ',
+      overcast: '曇り',
+      drizzle: '霧雨',
+      rain: '雨',
+      downpour: '大雨',
+      thunder: '雷雨',
+      sleet: 'みぞれ',
+      snow: '雪',
     },
     soundOn: '音声オン',
     soundOff: '音声オフ',
