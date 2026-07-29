@@ -2011,11 +2011,14 @@ function drawStationCodeBadge(
   g.strokeStyle = '#80c241';
   g.lineWidth = Math.max(3, size * 0.055);
   g.strokeRect(bx, by, bw, bh);
+  // « JY » et le numéro se tiennent DANS le cadre vert : à la cote précédente
+  // le sigle mordait le filet du haut, ce qui se voyait dès que le badge était
+  // dessiné petit (plaque de poteau).
   g.fillStyle = '#1a1a1a';
-  g.font = `bold ${Math.floor(size * 0.2)}px ${JP_FONT}`;
-  g.fillText('JY', x + size / 2, by + bh * 0.32);
-  g.font = `bold ${Math.floor(size * 0.28)}px ${JP_FONT}`;
-  g.fillText(jy.slice(2), x + size / 2, by + bh * 0.72);
+  g.font = `bold ${Math.floor(size * 0.18)}px ${JP_FONT}`;
+  g.fillText('JY', x + size / 2, by + bh * 0.3);
+  g.font = `bold ${Math.floor(size * 0.26)}px ${JP_FONT}`;
+  g.fillText(jy.slice(2), x + size / 2, by + bh * 0.7);
   g.textBaseline = 'alphabetic';
 }
 
@@ -2132,16 +2135,23 @@ export function makeStationSign(): { canvas: HTMLCanvasElement; texture: THREE.C
 // l'emblème sortait en ellipse et la bande verte en deux pavés illisibles.
 //
 // Mais la plaque de poteau n'est pas le grand panneau recadré : c'est un objet
-// différent, et beaucoup plus dépouillé. JR East la référence en 9号型,
-// 75 × 15 cm ; la réplique officielle de celle du quai Yamanote de Tokyo mesure
-// 70 × 14 cm à l'échelle 70 %, soit un mètre sur vingt centimètres — un rapport
-// de 1:5. À vingt centimètres de large il n'y a de place pour rien d'autre que
-// le nom : pas de gares voisines, pas de flèches, pas de bande verte.
+// différent, avec sa propre mise en page. La référence pour la version moderne
+// est la réplique officielle sous licence JR East de celle du quai Yamanote de
+// Tokyo : 70 × 14 cm à l'échelle 70 %, soit environ 100 × 20 cm en réel, un
+// rapport de 1:5. (Le 9号型 à 75 × 15 cm est l'ancienne classification
+// normalisée d'époque JNR : même rapport, mais ce n'est pas la côte actuelle.)
 //
-// Et le nom s'y écrit en HIRAGANA, verticalement, en noir sur blanc. C'est le
-// dernier endroit où JR East a gardé la graphie kana : les caissons suspendus
-// sont passés au kanji (あきはばら → 秋葉原), les plaques de poteau non — la
-// réplique officielle de Tokyo se vend sous le nom « とうきょう ».
+// Ce qui n'y figure pas : les gares voisines, les flèches, la grande bande
+// verte directionnelle du caisson suspendu.
+//
+// Ce qui y figure, de haut en bas : un rectangle vert de couleur de ligne, le
+// nom en HIRAGANA écrit verticalement, le badge trigramme + numéro de gare, le
+// romaji, puis les graphies chinoise et coréenne. Le nom en kana est le dernier
+// endroit où JR East a gardé cette graphie — les caissons suspendus sont passés
+// au kanji (あきはばら → 秋葉原), les plaques de poteau non, et la réplique
+// officielle de Tokyo se vend sous le nom « とうきょう ». Le badge de gare, lui,
+// est bien là : la numérotation de 2016 a été portée sur les plaques comme sur
+// le reste de la signalétique, avec le passage aux quatre langues.
 export function makeTotemSign(): {
   texture: THREE.CanvasTexture;
   redraw: (index: number) => void;
@@ -2155,25 +2165,29 @@ export function makeTotemSign(): {
   const redraw = (index: number) => {
     const st = STATIONS[index];
 
-    // Tôle émaillée blanche, filet sombre au bord. Rien de rétroéclairé ici :
-    // une plaque de poteau est une plaque, pas un caisson lumineux.
+    // Plaque blanche, filet sombre au bord. Rien de rétroéclairé ici : une
+    // plaque de poteau n'est pas un caisson lumineux.
     g.fillStyle = '#ffffff';
     g.fillRect(0, 0, W, H);
     g.strokeStyle = '#1a1a1a';
-    g.lineWidth = 6;
-    g.strokeRect(3, 3, W - 6, H - 6);
+    g.lineWidth = 5;
+    g.strokeRect(2.5, 2.5, W - 5, H - 5);
 
     g.textAlign = 'center';
+
+    // Rectangle de couleur de ligne, en tête de plaque : l'uguisu du Yamanote.
+    g.fillStyle = '#80c241';
+    g.fillRect(46, 48, W - 92, 112);
 
     // Le nom en kana, un caractère par ligne. Sur une plaque réelle le corps du
     // glyphe est calibré sur la LARGEUR de la tôle, pas sur la hauteur restante :
     // c'est le plafond du pas qui joue, et les noms courts (かんだ, trois
     // caractères) respirent au lieu de s'étirer. Seuls les noms longs passent
     // sous le plafond — たかなわげーとうぇい en compte dix.
-    const top = 54;
-    const bottom = 878;
+    const top = 190;
+    const bottom = 716;
     const chars = [...st.kana];
-    const step = Math.min(160, (bottom - top) / chars.length);
+    const step = Math.min(128, (bottom - top) / chars.length);
     g.fillStyle = '#1a1a1a';
     g.font = `bold ${Math.floor(step * 0.86)}px ${JP_FONT}`;
     g.textBaseline = 'middle';
@@ -2194,8 +2208,18 @@ export function makeTotemSign(): {
     });
     g.textBaseline = 'alphabetic';
 
-    // Romaji en pied de plaque, à l'horizontale : la seule mention latine.
-    fitFillText(g, st.romaji, W / 2, 946, W - 26, 34);
+    // Badge trigramme + numéro de gare — le même que sur le caisson suspendu,
+    // à l'échelle de la plaque.
+    drawStationCodeBadge(g, (W - 124) / 2, 736, 124, st.code, st.jy);
+
+    // Pied de plaque : romaji, puis les deux autres graphies du cycle
+    // quadrilingue introduit avec la numérotation.
+    g.textAlign = 'center';
+    g.fillStyle = '#1a1a1a';
+    fitFillText(g, st.romaji, W / 2, 902, W - 26, 32);
+    g.fillStyle = '#333333';
+    fitFillText(g, st.zh, W / 2, 940, W - 34, 24, '400');
+    fitFillText(g, st.ko, W / 2, 974, W - 34, 24, '400');
 
     texture.needsUpdate = true;
   };
