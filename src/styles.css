@@ -444,6 +444,7 @@ body,
 .hud-clock,
 .hud-phase,
 .hud-station,
+.hud-weather,
 .hud-occupancy {
   background: var(--sticker);
   border: 2px solid var(--ink-line);
@@ -479,6 +480,25 @@ body,
   font-variant-numeric: tabular-nums;
   font-size: 18px;
   font-weight: 600;
+}
+
+/* Le temps qu'il fait : un pictogramme, un mot, une température. Il nomme ce
+   qu'on voit par la vitre, il ne le remplace pas — d'où la sobriété. */
+.hud-weather {
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hud-weather-glyph {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.hud-weather-temp {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
 }
 
 .hud-station {
@@ -739,6 +759,19 @@ body,
   .hud-occupancy {
     min-width: 72px;
     padding: 6px 10px;
+  }
+
+  /* Sur un téléphone la barre du haut est déjà pleine : le temps qu'il fait se
+     réduit à son pictogramme et à sa température. Le mot tombe — il se lit
+     dehors. */
+  .hud-weather {
+    padding: 6px 9px;
+    gap: 5px;
+    font-size: 11.5px;
+  }
+
+  .hud-weather-kind {
+    display: none;
   }
 
   .hud-occupancy-pct {

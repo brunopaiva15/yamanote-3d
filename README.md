@@ -32,6 +32,12 @@ npm run lint     # oxlint
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder,
   bouton s'asseoir, bouton « Parler » quand quelqu'un est à portée
 
+Avant de monter, le menu laisse choisir la **date**, l'heure et l'arrêt. Par
+défaut, l'instant réel à Tokyo et une gare tirée au hasard. La date n'est pas un
+détail d'état civil : c'est elle qui donne la saison — couleur des frondaisons,
+hauteur du soleil, heure de la tombée de nuit — et le temps qu'il fera ce
+jour-là. Le HUD affiche le temps qu'il fait et la température.
+
 ## Descendre en gare
 
 Pendant l'arrêt, on peut sortir du wagon et rester sur le quai. Le train
@@ -527,6 +533,190 @@ milieu d'un inter-gare, vise par une baie et capture, de jour comme de nuit. La
 sonde de gare, elle, se pose à l'arrêt — là où le quai masque justement tout le
 paysage.
 
+## Les saisons
+
+Le décor n'avait qu'une horloge, celle des heures. Un 21 décembre s'y déroulait
+comme un 21 juin : mêmes frondaisons, même hauteur de soleil, même tombée de
+nuit. La date n'est plus un détail d'état civil — elle commande le paysage.
+
+`systems/season` dérive de `runtime.tokyoDate` **deux familles de valeurs, et il
+faut les distinguer**. Les **poids de saison**, quatre nombres qui somment à 1,
+fondus sur vingt-six jours de part et d'autre de quatre bornes — bornes qui ne
+tombent pas sur les équinoxes : au Japon l'été s'étire jusqu'à fin septembre, et
+le basculement de juin est celui de l'entrée du 梅雨. Ils servent aux réglages
+continus, teinte de l'air, portée du regard. Et les **phénomènes datés** —
+sakura, kōyō, ramure nue, tsuyu, canicule, froid —, des cloches indépendantes
+posées sur le quantième. Ils ne se déduisent PAS des poids : la floraison des
+cerisiers dure douze jours au milieu d'un printemps qui en dure quatre-vingt-sept,
+et le tsuyu chevauche la frontière printemps / été au lieu de la suivre.
+
+**La lumière du jour ne se fond pas : elle se calcule.** Deux cosinus calés sur
+les extrêmes réels de Tokyo (lever 4 h 25 / coucher 19 h 00 au solstice d'été,
+6 h 47 / 16 h 32 à celui d'hiver), et de phases différentes — le lever le plus
+précoce tombe vers le 13 juin, le coucher le plus tardif vers le 1er juillet.
+C'est cette asymétrie qui fait qu'en décembre la nuit tombe déjà à 16 h 30 sans
+que le soleil se lève plus tard qu'en janvier. `daynight` ne porte plus de
+bornes en dur : il les prend au lever et au coucher du jour. Deux heures et
+demie d'écart sur le coucher entre les deux solstices, c'est le fait saisonnier
+le plus fort de tous, et le plus facile à rater.
+
+**La hauteur du soleil** vient ensuite : 31° à midi le 21 décembre, 78° le
+21 juin. C'est la plus grande différence visible depuis une place assise — à
+31° le soleil entre par la baie et va frapper le dossier d'en face ; à 78° il
+tombe presque à pic et ne dépasse pas l'appui de fenêtre. La position est
+ramenée à un rayon constant : seule la direction compte pour une lumière
+directionnelle, mais **pas sa distance**, puisque la caméra d'ombre est posée
+dessus et que son `far` vaut cent. Elle plafonne à 73° pour la même raison —
+au-delà, l'ombre du portique caténaire cesse de balayer l'intérieur du wagon.
+
+**L'air.** Un janvier de Tokyo est sec et sans particules : la lumière bleuit,
+le lointain reste net à perte de vue — c'est en hiver qu'on voit le Fuji depuis
+les tours. Un août est chargé de vapeur : le blanc jaunit et les tours se noient
+à six cents mètres. `season.clarity` multiplie la portée de la brume,
+`season.airTone` teinte soleil, brume, fond et ciel. Sur le dôme, le voile ne se
+répand pas uniformément sur la voûte : il s'accumule dans les basses couches,
+l'horizon vire au blanc laiteux pendant que le zénith reste bleu. Un ciel teinté
+de haut en bas se lit comme un filtre de photo ; c'est le **dégradé** qui se lit
+comme de l'air.
+
+### Le feuillage n'est plus vert dans les sommets
+
+C'était le mur contre lequel butait toute idée de saison. La couleur d'instance
+**multiplie** la couleur de sommet, et un vert multiplié par un rouge d'automne
+ne donne pas du rouge : il donne de la boue. Les sommets du bosquet
+(`three/city/cityProps`) ne portent donc plus qu'un ombrage neutre — trois
+valeurs de gris, une par sujet, pour que la masse garde son relief — et c'est la
+couleur d'instance qui porte la teinte entière : verte en juillet, rousse fin
+novembre, rose lavé fin mars.
+
+Deux choses que la couleur d'instance seule ne sait toujours pas faire, et que
+le nuanceur du bosquet ajoute :
+
+- **garder le tronc brun** quand la frondaison rougit. Un attribut de sommet dit
+  qui est bois et qui est feuille ;
+- **dépouiller l'arbre**. Ce qui dit l'hiver de loin n'est pas la couleur, c'est
+  le *volume* : une frondaison de juillet est une masse pleine, une ramure de
+  janvier est un dessin. Les sommets de couronne se rétractent vers le centre de
+  leur propre sujet — mettre l'instance entière à l'échelle rapetisserait
+  l'arbre au lieu de le dénuder.
+
+La teinte n'est plus tirée par le générateur de cellules, seulement le **numéro
+de variante** : une cellule reste posée plusieurs secondes, et la saison peut
+changer sous elle. Le rendu va chercher la couleur du jour dans la palette de
+`season`. Au plus fort de la floraison, un sujet sur trois est en fleurs — pas
+davantage : au-delà, la ville devient un décor de carte postale et la floraison
+cesse d'être un événement.
+
+Pour regarder tout ça : `node scripts/season-shots.mjs /tmp/saisons` se pose au
+milieu d'un inter-gare d'Ueno — le seul quartier de la boucle où les bosquets
+remplacent franchement le bâti —, vise le bord de voie en plongée et capture six
+dates de l'année, plus les deux solstices à la même heure d'horloge. La question
+posée à chaque image est toujours la même : depuis une place assise, sait-on en
+quel mois on est ?
+
+## La météo
+
+### Ce n'est pas un tirage par image
+
+Une météo tirée au hasard à chaque instant n'est pas de la météo : c'est du
+bruit. Le temps a une **durée** — une averse tient vingt minutes, un ciel couvert
+tient l'après-midi, le tsuyu tient six semaines. `systems/weather` engendre donc
+la journée **entière** d'un coup, sous forme d'une suite d'épisodes datés, à
+partir d'une graine tirée de la date civile. Deux conséquences, et les deux
+comptent :
+
+- le temps est le même pour tout le monde un jour donné. Le 21 juin il
+  pleuvait ; on peut y revenir, et il y pleuvra encore ;
+- monter à bord à 8 h ou à 18 h ne rejoue pas le même dé : on tombe à l'endroit
+  qu'on occupe dans la journée, avec ce qui l'a précédé — le sol est encore
+  mouillé de l'averse de midi.
+
+### La climatologie de Tokyo, et non « la pluie en général »
+
+Dans l'ordre d'importance :
+
+- le **梅雨**, du 7 juin au 20 juillet : six semaines de gris et de bruine, c'est
+  LE fait météorologique de l'année à Tokyo ;
+- le **夕立**, l'averse d'orage de fin d'après-midi en plein été, qui tombe d'un
+  ciel bleu une heure plus tôt. Le poids de l'orage est nul le matin, maximal
+  entre 15 h et 19 h : c'est un phénomène de convection, il suit le
+  réchauffement du sol ;
+- l'**hiver sec et lumineux**, contre-intuitif pour qui imagine le Japon
+  pluvieux : janvier est le mois le plus ensoleillé de l'année ;
+- la **neige**, rare. Tokyo en compte quelques jours par an. Elle est donc
+  décidée au niveau de la *journée*, pas de l'épisode : la plupart des hivers
+  n'en verront pas, et celui qui en voit s'en souviendra.
+
+Chaque poids est une propension, jamais un interrupteur : il pleut en janvier et
+il fait beau pendant le tsuyu — simplement pas souvent.
+
+La **température** est calculée, et pas décorative : moyenne du jour (cosinus
+calé sur les normales de Tokyo, 5 °C début février, 27 °C début août), marche
+diurne qui n'est pas un cosinus — une journée ne se refroidit pas aussi vite
+qu'elle se réchauffe, minimum à 4 h, maximum à 14 h, retombée étalée sur les
+quatorze heures qui restent —, puis correction du temps qu'il fait. C'est elle
+qui arbitre pluie ou neige, et c'est elle qui décide si la neige **tient** : à
+Tokyo, une neige de midi ne tient pas, celle de 4 h du matin, oui.
+
+### La pluie à l'image
+
+Faire tomber la pluie sur les six cents mètres de décor visibles coûterait des
+centaines de milliers de gouttes pour une image où l'on ne distingue que les
+quinze premiers mètres. Au-delà, la pluie ne se voit plus goutte à goutte : elle
+se voit comme une **perte de portée**, et c'est le premier effet de la pluie bien
+avant les gouttes elles-mêmes.
+
+`three/Weather` ne modélise donc qu'une boîte de ±14 m **attachée à la caméra**,
+dans laquelle la précipitation se replie sur elle-même par un modulo : la goutte
+qui sort par le bas rentre par le haut. Personne ne peut le voir, puisque le
+repliement a lieu à quatorze mètres, hors du cône où l'œil distingue encore un
+trait de deux centimètres. Tout est calculé dans le nuanceur de sommets à partir
+d'une graine par goutte et d'une dérive repliée : aucune position n'est écrite
+depuis le processeur, et le champ entier tient en **un appel de rendu**.
+
+**L'inclinaison est tout.** Une pluie verticale vue depuis un train à
+quatre-vingt-dix, c'est la faute qui tue l'effet. Dans le repère du wagon, la
+goutte ne tombe pas : elle file vers l'arrière à la vitesse du train, et son
+trait s'incline d'autant. Le trait est donc construit dans l'espace de la
+caméra, aligné sur la vitesse **relative** — chute plus vent plus vitesse du
+train —, et sa longueur est la distance parcourue pendant le temps de pose de
+l'œil : un mètre vingt à quatre-vingt-dix. À l'arrêt en gare elle se redresse,
+et c'est en la regardant se redresser pendant le freinage qu'on sent le mieux
+qu'on ralentit. Descendu sur le quai, le joueur change de repère : la gare
+devient fixe, le terme de vitesse tombe, la pluie redevient verticale — rien de
+spécial à écrire pour ça, il suffit de lire `runtime.playerFrame`.
+
+Le flocon, lui, ne tombe pas droit : il flotte. C'est ce qui le distingue d'une
+goutte bien plus que sa forme ou sa vitesse.
+
+**Deux volumes soustraits**, et deux seulement, parce que ce sont les deux seuls
+endroits d'où l'œil regarde en étant *sous* quelque chose : l'intérieur du wagon
+— sans lui il pleut entre la banquette et le plafond, et le test de profondeur
+ne peut rien puisque la goutte est devant la paroi qu'elle devrait avoir
+derrière elle — et l'auvent du quai, dont `systems/stationOcclusion` tient déjà
+l'emprise exacte pour le décor de voie. Les deux sont retranchés en écrasant le
+quad à une aire nulle : rien à rastériser, pas de `discard`, pas de surcoût.
+
+Une averse ne tombe pas plus vite qu'une bruine : elle tombe plus **dru**. C'est
+donc le nombre d'instances affichées qui varie, pas leur vitesse ni leur
+opacité — un fondu d'opacité donnerait une pluie fantôme.
+
+### Ce que la pluie fait au reste du décor
+
+- **La portée du regard** tombe : `weather.visibility` multiplie le `near` et le
+  `far` de la brume, par-dessus la clarté de la saison ;
+- **le ciel se ferme** : la couverture nuageuse mange le bleu du dôme et éteint
+  la silhouette de l'horizon bien avant que les gouttes ne se voient ;
+- **les surfaces foncent.** Une chaussée mouillée est deux fois plus sombre
+  qu'une chaussée sèche, et elle **renvoie** : la nuit, sous la pluie, les néons
+  du quartier se lisent au sol. Le mouillé monte vite et sèche lentement, et une
+  averse d'août sèche en dix minutes quand une bruine de février tient
+  l'après-midi ;
+- **la neige blanchit par le haut.** Elle se pose sur ce qui regarde le ciel —
+  toitures, acrotères, ballast, frondaisons — et jamais sur une façade
+  verticale. Le nuanceur de ville le sait déjà : il distingue les faces de
+  couverture des faces de mur pour poser sa texture.
+
 ## L'extérieur de la rame
 
 `three/exterior/` modélise la rame E235-0 complète, visible depuis le quai :
@@ -730,10 +920,16 @@ src/
   data/                  stations réelles JY01→JY30, correspondances, annonces, config
   systems/               logique pure : machine à états du cycle station, audio Tone.js,
                          file d'annonces vocales, PNJ, slots d'assise, runtime 60 fps
+  systems/season.ts      la saison, dérivée de la date : poids fondus, phénomènes
+                         datés, lever et coucher réels à Tokyo
+  systems/weather.ts     le temps qu'il fait : une journée d'épisodes engendrée
+                         d'un coup, semée par la date
   three/                 rendu R3F : wagon, sièges, portes, poignées, pubs, écrans LCD,
                          PNJ, caméra
   three/Wayside.tsx      l'emprise ferroviaire : plate-forme, rails, garde-corps
                          de viaduc, mobilier de voie, caténaire
+  three/Weather.tsx      pluie et neige : champ replié autour de l'œil, calculé
+                         dans le nuanceur, incliné par la vitesse du train
   three/city/            le paysage : ruban urbain instancié, matériau de façade,
                          ciel et ligne d'horizon en une passe
   three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines,
@@ -746,7 +942,8 @@ src/
                          FR / EN / JA, décliné au féminin et au masculin
   scripts/               models:import / models:inspect (packs → public/models/),
                          sondes navigateur : station-probe, pax-probe,
-                         scenery-shots, scenery-cost, pass-shots
+                         scenery-shots, scenery-cost, pass-shots, season-shots,
+                         weather-shots
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
   ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles
@@ -857,6 +1054,40 @@ pour un effet que l'oreille attribue surtout à la quantité.
 
 L'ambiance entre par les mêmes ouvertures que la mélodie : pleine sur le quai,
 réduite dans la rame portes fermées, muette entre deux gares.
+
+### Le temps qu'il fait, à l'oreille
+
+La pluie s'entend en **deux endroits qui n'ont rien à voir**, et c'est ce qui la
+rend crédible depuis un train.
+
+Sur le **pavillon**, au-dessus de la tête : un crépitement mat, sans aigus, que
+la tôle et l'isolant ont mangés. Il ne passe pas par les portes — il est là même
+portes fermées, et c'est le seul son du jeu dont l'ouverture des portes ne change
+rien. Il appartient à la rame, donc au bus qui s'atténue quand on la regarde
+depuis le quai : là, le toit sous lequel on se tient est celui de la gare.
+L'averse y crépite plus haut que la bruine, la goutte étant plus grosse et
+frappant plus fort.
+
+**Dehors**, sur la ville et sur le quai : un souffle large et brillant, qui
+n'entre dans le wagon que par les ouvertures, comme l'ambiance de gare et pour la
+même raison. Portes fermées, il n'en reste que le grave — le vitrage coupe tout
+au-dessus de deux ou trois kilohertz. Une seule source pour les deux aurait forcé
+à choisir un timbre, et le timbre est précisément ce qui distingue les deux
+endroits.
+
+Le **tonnerre** est un grondement long, plus un claquement qui ne vaut que pour
+les coups proches : c'est le *rapport* des deux qui donne la distance, bien plus
+que le niveau. Le retard suit la même distance — trois secondes par kilomètre —,
+si bien que l'éclair lointain s'allume sept secondes avant qu'on l'entende.
+
+Le **rail mouillé** fait monter le roulement dans les aigus : c'est la pellicule
+d'eau qui siffle sous la bande de roulement, et c'est souvent à ça qu'un voyageur
+régulier devine qu'il pleut avant de regarder dehors.
+
+La **neige**, elle, n'ajoute rien : elle *retire*. Une ville sous la neige est
+plus silencieuse que d'ordinaire, la couche absorbant les aigus au lieu de les
+renvoyer. Le lit d'ambiance du lieu perd donc sa coupure haute, et c'est tout ce
+qu'il faut pour l'entendre tomber.
 
 ### Sonorisation en 3D
 

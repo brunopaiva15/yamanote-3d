@@ -71,13 +71,41 @@ const dates = [
   [11, 28, 'fin-novembre-koyo'],
 ];
 
+/**
+ * Même abscisse pour toutes les prises.
+ *
+ * Sans elle, chaque capture voit d'autres cellules de ville — le cycle file
+ * pendant les temps morts de SwiftShader — et on compare deux quartiers au
+ * lieu de comparer deux saisons. Repose juste avant le déclenchement, pour la
+ * même raison.
+ */
+const DIST = 640;
+
+/**
+ * Beau fixe, sur toutes les prises.
+ *
+ * La météo est semée par la date : changer de mois change le temps qu'il fait,
+ * et une averse de janvier vient masquer précisément ce qu'on est venu
+ * regarder. Ici on isole la SAISON ; le temps qu'il fait a sa propre sonde
+ * (scripts/weather-shots.mjs).
+ */
+const CLEAR = { cloud: 0.05, rain: 0, snow: 0, wet: 0, snowCover: 0, visibility: 1 };
+
 for (const [month, day, name] of dates) {
-  await page.evaluate(([i, c, m, d]) => {
+  await page.evaluate(([i, c, m, d, dist, clear]) => {
     window.__probeCruise(i);
     window.__probeClock(c);
     window.__probeDate(m, d);
-  }, [STATION, NOON, month, day]);
+    window.__probeDistance(dist);
+    window.__probeWeather(clear);
+  }, [STATION, NOON, month, day, DIST, CLEAR]);
   await new Promise((r) => setTimeout(r, 1600));
+  await page.evaluate(([c, dist, clear]) => {
+    window.__probeClock(c);
+    window.__probeDistance(dist);
+    window.__probeWeather(clear);
+  }, [NOON, DIST, CLEAR]);
+  await new Promise((r) => setTimeout(r, 400));
   await page.screenshot({ path: `${out}/${name}.png` });
   console.log('→', name);
 }
@@ -86,12 +114,20 @@ for (const [month, day, name] of dates) {
 // 17 h 15. En décembre il fait nuit, en juin il fait grand jour — et c'est
 // sans doute la différence la plus violente de toute l'année.
 for (const [month, day, name] of [[12, 21, 'solstice-hiver-1715'], [6, 21, 'solstice-ete-1715']]) {
-  await page.evaluate(([i, m, d]) => {
+  await page.evaluate(([i, m, d, dist, clear]) => {
     window.__probeCruise(i);
     window.__probeClock(17 * 60 + 15);
     window.__probeDate(m, d);
-  }, [STATION, month, day]);
+    window.__probeDistance(dist);
+    window.__probeWeather(clear);
+  }, [STATION, month, day, DIST, CLEAR]);
   await new Promise((r) => setTimeout(r, 1600));
+  await page.evaluate(([dist, clear]) => {
+    window.__probeClock(17 * 60 + 15);
+    window.__probeDistance(dist);
+    window.__probeWeather(clear);
+  }, [DIST, CLEAR]);
+  await new Promise((r) => setTimeout(r, 400));
   await page.screenshot({ path: `${out}/${name}.png` });
   console.log('→', name);
 }

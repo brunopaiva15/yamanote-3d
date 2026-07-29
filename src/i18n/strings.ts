@@ -79,6 +79,20 @@ export interface Strings {
       packed: string;
       crushed: string;
     };
+    /** Bulle du bandeau météo. */
+    weatherTitle: string;
+    /** Le temps qu'il fait, dans l'ordre de systems/weather. */
+    weather: {
+      clear: string;
+      fair: string;
+      overcast: string;
+      drizzle: string;
+      rain: string;
+      downpour: string;
+      thunder: string;
+      sleet: string;
+      snow: string;
+    };
     soundOn: string;
     soundOff: string;
     soundTitle: string;
@@ -168,6 +182,18 @@ const FR: Strings = {
       packed: 'très serré',
       crushed: 'saturé',
     },
+    weatherTitle: 'Temps à Tokyo',
+    weather: {
+      clear: 'Dégagé',
+      fair: 'Beau',
+      overcast: 'Couvert',
+      drizzle: 'Bruine',
+      rain: 'Pluie',
+      downpour: 'Averse',
+      thunder: 'Orage',
+      sleet: 'Neige fondue',
+      snow: 'Neige',
+    },
     soundOn: 'Son actif',
     soundOff: 'Son coupé',
     soundTitle: 'Couper ou rétablir le son (M)',
@@ -253,6 +279,18 @@ const EN: Strings = {
       packed: 'very crowded',
       crushed: 'packed solid',
     },
+    weatherTitle: 'Tokyo weather',
+    weather: {
+      clear: 'Clear',
+      fair: 'Fair',
+      overcast: 'Overcast',
+      drizzle: 'Drizzle',
+      rain: 'Rain',
+      downpour: 'Downpour',
+      thunder: 'Thunderstorm',
+      sleet: 'Sleet',
+      snow: 'Snow',
+    },
     soundOn: 'Sound on',
     soundOff: 'Sound off',
     soundTitle: 'Mute or unmute (M)',
@@ -336,6 +374,18 @@ const JA: Strings = {
       crowded: '混雑',
       packed: '大変混雑',
       crushed: '超満員',
+    },
+    weatherTitle: '東京の天気',
+    weather: {
+      clear: '快晴',
+      fair: '晴れ',
+      overcast: '曇り',
+      drizzle: '霧雨',
+      rain: '雨',
+      downpour: '大雨',
+      thunder: '雷雨',
+      sleet: 'みぞれ',
+      snow: '雪',
     },
     soundOn: '音声オン',
     soundOff: '音声オフ',
