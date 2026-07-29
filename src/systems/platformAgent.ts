@@ -38,8 +38,8 @@ const LINES: readonly AgentLine[] = [
     ja: 'ドアから離れてください！',
   },
   {
-    fr: 'Dégagez la porte — le train ne peut pas partir.',
-    en: 'Step away from the door — the train cannot leave.',
+    fr: 'Dégagez la porte, le train ne peut pas partir.',
+    en: 'Step away from the door. The train cannot leave.',
     ja: 'ドアが閉まりません。お下がりください！',
   },
   {
