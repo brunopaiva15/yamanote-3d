@@ -22,6 +22,7 @@ import {
   makeDirectionBand,
   makePlatformBoard,
   makeStationSign,
+  makeTotemSign,
   type BoardView,
 } from '../../textures/procedural';
 import { directionBandZs, PLATFORM_TOP } from '../../data/stationGeometry';
@@ -134,6 +135,10 @@ export function PlatformSignage({
   accent,
 }: Props) {
   const sign = useMemo(() => makeStationSign(), []);
+  // Le totem a sa propre texture : la face d'un poteau est trois fois plus
+  // haute que large, le caisson suspendu trois fois plus large que haut. La
+  // même image sur les deux se déformait de dix fois sur l'un des deux.
+  const totem = useMemo(() => makeTotemSign(), []);
   const board = useMemo(() => makePlatformBoard(), []);
   const band = useMemo(() => makeDirectionBand(), []);
   const lastSignIndex = useRef(-1);
@@ -144,6 +149,12 @@ export function PlatformSignage({
     () => ({
       sign: new THREE.MeshBasicMaterial({
         map: sign.texture,
+        toneMapped: false,
+        side: THREE.DoubleSide,
+        depthWrite: true,
+      }),
+      totem: new THREE.MeshBasicMaterial({
+        map: totem.texture,
         toneMapped: false,
         side: THREE.DoubleSide,
         depthWrite: true,
@@ -160,7 +171,7 @@ export function PlatformSignage({
         side: THREE.DoubleSide,
       }),
     }),
-    [sign, board, band],
+    [sign, totem, board, band],
   );
 
   // Un panneau de nom de gare tous les ~55 m, un tableau d'affichage tous les
@@ -225,6 +236,7 @@ export function PlatformSignage({
     ) {
       lastSignIndex.current = signIndex;
       sign.redraw(signIndex);
+      totem.redraw(signIndex);
       band.redraw(signIndex);
       lastView.current = null;
     }
@@ -331,7 +343,7 @@ export function PlatformSignage({
           <mesh
             position={[-0.12, 1.55, 0]}
             rotation={[0, -Math.PI / 2, 0]}
-            material={materials.sign}
+            material={materials.totem}
           >
             <planeGeometry args={[0.3, 0.9]} />
           </mesh>
