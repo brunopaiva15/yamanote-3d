@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { Appearance } from '../../systems/appearance';
 import { SKELETON_TOP } from '../../systems/appearance';
+import { rng } from '../../textures/procedural';
 import type { CharacterManifest, CharacterVariant, LogicalClip, TintRole } from './manifest';
 
 export type LogicalBone =
@@ -319,7 +320,45 @@ function tintMaterial(mat: THREE.Material, app: Appearance, tintMap?: Record<str
   if (role && !std.map) {
     cloned.color.set(ROLE_COLOR[role](app));
   }
+  // Marqué : ce matériau n'appartient qu'à ce clone. Les matériaux NON marqués
+  // sont ceux du template, partagés par tous les PNJ — les libérer avec un
+  // clone effacerait les autres (voir disposeClone).
+  markOwned(cloned);
   return cloned;
+}
+
+/**
+ * Ressource (matériau, géométrie, texture) appartenant à UN personnage et à
+ * lui seul : elle sera libérée avec lui quand son slot changera d'identité.
+ *
+ * Tout ce qui n'est pas marqué est mutualisé entre les PNJ — le libérer avec
+ * un personnage effacerait les autres. C'est la seule règle à tenir dans les
+ * constructeurs de corps, ici comme dans les rendus procéduraux.
+ */
+export interface OwnedResource {
+  userData: Record<string, unknown>;
+  dispose(): void;
+}
+
+export function markOwned<T extends OwnedResource>(res: T): T {
+  res.userData.paxOwned = true;
+  return res;
+}
+
+/** Libère les ressources marquées sous cet objet (géométries, matériaux, textures). */
+export function disposeOwned(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (mesh.geometry?.userData?.paxOwned) mesh.geometry.dispose();
+    if (!mesh.material) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const m of mats) {
+      if (!m.userData?.paxOwned) continue;
+      const map = (m as THREE.MeshBasicMaterial).map;
+      if (map?.userData?.paxOwned) map.dispose();
+      m.dispose();
+    }
+  });
 }
 
 // --- Clonage par passager -------------------------------------------------
@@ -454,4 +493,36 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
     restHead: bones.head ? bones.head.quaternion.clone() : null,
     restSpine: bones.spine ? bones.spine.quaternion.clone() : null,
   };
+}
+
+/**
+ * Variante du pack pour une apparence donnée, tirée d'un flux seedé par
+ * l'IDENTITÉ du voyageur (et non par sa place dans le pool).
+ *
+ * C'est la même fonction des deux côtés du seuil — rame et quai — et c'est ce
+ * qui rend la bascule de la porte invisible : une identité donne partout le
+ * même modèle, quel que soit le pool qui la porte (voir systems/passengers,
+ * « passage de relais »).
+ */
+export function pickTemplate(templates: CharacterTemplate[], app: Appearance, identity: number): CharacterTemplate {
+  const r = rng(9700 + identity * 2654435761);
+  const fem = app.feminine;
+  let pool = templates.filter((t) => t.variant.archetypes.includes(app.archetype) && (t.variant.feminine ?? false) === fem);
+  if (pool.length === 0) pool = templates.filter((t) => (t.variant.feminine ?? false) === fem);
+  if (pool.length === 0) pool = templates;
+  return pool[Math.floor(r() * pool.length)];
+}
+
+/**
+ * Libère un clone dont on ne veut plus (changement d'identité d'un slot).
+ *
+ * Seuls les matériaux MARQUÉS (markOwned) sont détruits : géométries et
+ * matériaux non teintés viennent du template et servent à tous les autres PNJ.
+ */
+export function disposeClone(clone: CharacterClone): void {
+  clone.mixer.stopAllAction();
+  const root = clone.mixer.getRoot();
+  if ((root as THREE.Object3D).isObject3D) clone.mixer.uncacheRoot(root as THREE.Object3D);
+  disposeOwned(clone.wrap);
+  clone.wrap.removeFromParent();
 }

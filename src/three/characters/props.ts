@@ -14,7 +14,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { Appearance } from '../../systems/appearance';
-import type { BoneMap } from './library';
+import { markOwned, type BoneMap } from './library';
 import type { PaxAction } from '../../data/paxActions';
 import { ACTION_BY_ID } from '../../data/paxActions';
 
@@ -161,10 +161,12 @@ const sbStrapBackGeo = tube(0.175, 0.05, -0.015, -0.055, 0.28, -0.075, 0.007);
 const hbBodyGeo = new RoundedBoxGeometry(0.15, 0.11, 0.055, 3, 0.025);
 const hbHandleGeo = new THREE.TorusGeometry(0.032, 0.005, 5, 10, Math.PI);
 
+// Seuls matériaux créés par voyageur (tout le reste est partagé) : marqués,
+// donc libérés avec le clone quand le slot change d'identité (library.ts).
 function bagMats(color: string): [THREE.Material, THREE.Material] {
   return [
-    new THREE.MeshStandardMaterial({ color, roughness: 0.85 }),
-    new THREE.MeshStandardMaterial({ color: shade(color, 0.32), roughness: 0.65 }),
+    markOwned(new THREE.MeshStandardMaterial({ color, roughness: 0.85 })),
+    markOwned(new THREE.MeshStandardMaterial({ color: shade(color, 0.32), roughness: 0.65 })),
   ];
 }
 
