@@ -543,7 +543,10 @@ soit environ une fois par seconde.
 
 **Il est suspendu dans la rangée du bord de voie**, celle des caissons 番線 —
 en travers du quai, recto-verso, aligné sur eux par le bas à la hauteur libre
-commune. C'est l'assemblage réel : sur un quai japonais, le tableau des départs
+commune. Il y en a **quatre par quai**, un dans chaque intervalle de la
+rangée : les deux modèles alternent donc sur toute la longueur, un panneau
+tous les dix-huit mètres, et on n'attend jamais son train hors de vue d'un
+tableau. C'est l'assemblage réel : sur un quai japonais, le tableau des départs
 et le panneau de quai pendent côte à côte, de face pour qui marche le long du
 quai. Il pendait auparavant à côté des panneaux de nom, tourné comme eux vers
 la voie : il se lisait depuis le train et de nulle part ailleurs, alors que

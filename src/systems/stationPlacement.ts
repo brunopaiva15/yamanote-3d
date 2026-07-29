@@ -273,31 +273,45 @@ export function trackSignZs(p: StationPlacement): number[] {
 /**
  * Abscisses des 発車標, sur cette même rangée du bord de voie.
  *
- * Deux par quai, au tiers de sa longueur : c'est là qu'on attend, et un
- * tableau des départs se lit en marchant vers lui. Ils se glissent dans les
- * CREUX de la rangée — jamais sur un caisson 番線, jamais sous la traverse
- * d'une potence, qui passe juste au-dessus d'eux et les toucherait.
+ * Un dans CHAQUE intervalle de la rangée, à mi-distance de deux caissons
+ * 番線 : les deux modèles alternent donc sur toute la longueur du quai, un
+ * panneau tous les dix-huit mètres. C'est la densité réelle — sur deux cent
+ * vingt mètres, un quai de la Yamanote en porte quatre ou cinq, un par accès,
+ * et on n'attend jamais son train hors de vue d'un tableau. Deux, au tiers du
+ * quai, laissaient quatre-vingt-dix mètres sans rien : on descendait d'une
+ * rame en bout de quai sans savoir quand passerait la suivante.
  *
- * Pas de creux à portée sur un quai encombré : ce tableau-là saute, comme le
- * caisson 番線 chassé jusqu'au bout du quai. Mieux vaut un tableau de moins
- * qu'un tableau dans une traverse.
+ * Le point de départ est le MILIEU d'un intervalle réel, et non une abscisse
+ * théorique : les caissons 番線 se décalent eux-mêmes pour trouver leur creux,
+ * et l'alternance suit ce qu'ils sont devenus.
+ *
+ * Un tableau se décale ensuite s'il tombe sur une bannière, le kiosque,
+ * l'horloge, un plan de charpente — ou sous la traverse d'une potence, qui
+ * passe six centimètres au-dessus de lui et le toucherait. Pas de creux à
+ * portée sur un quai encombré : ce tableau-là saute. Mieux vaut un tableau de
+ * moins qu'un tableau dans une traverse.
  */
 export function departureBoardZs(p: StationPlacement): number[] {
   const halfZ = p.walkHalfZ;
+  const signs = trackSignZs(p);
   const taken = [
-    ...trackSignZs(p).map((z) => ({ z, r: 5.0 })),
+    ...signs.map((z) => ({ z, r: 5.0 })),
     ...gantryZs(p).map((z) => ({ z, r: 3.6 })),
   ];
+  // Les milieux d'intervalle ; à défaut de rangée (quai trop court pour deux
+  // caissons), le milieu du quai, où il servira toujours à quelqu'un.
+  const bases =
+    signs.length >= 2 ? signs.slice(1).map((z, i) => (signs[i] + z) / 2) : [0];
   const out: number[] = [];
-  for (const base of [-halfZ * 0.42, halfZ * 0.42]) {
-    for (let d = 0; d <= 12; d += 1.2) {
+  for (const base of bases) {
+    for (let d = 0; d <= 9; d += 1.2) {
       const cands = d === 0 ? [base] : [base - d, base + d];
       const z = cands.find(
         (c) =>
           Math.abs(c) <= halfZ - 8 &&
           !rowBlocked(p, c) &&
           !taken.some((t) => Math.abs(c - t.z) < t.r) &&
-          !out.some((o) => Math.abs(c - o) < 24),
+          !out.some((o) => Math.abs(c - o) < 12),
       );
       if (z !== undefined) {
         out.push(z);
