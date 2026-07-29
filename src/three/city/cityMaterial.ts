@@ -31,6 +31,10 @@ export interface CityMaterial {
   material: THREE.MeshLambertMaterial;
   /** 0..1 : proportion de nuit, pilotée chaque frame. */
   night: { value: number };
+  /** 0..1 : surfaces mouillées — elles foncent, et elles renvoient. */
+  wet: { value: number };
+  /** 0..1 : neige posée sur ce qui regarde le ciel. */
+  snow: { value: number };
   dispose(): void;
 }
 
@@ -40,7 +44,14 @@ export function makeCityMaterial(): CityMaterial {
   const socle = makeSocleTexture();
 
   const night = { value: 0 };
+  const wet = { value: 0 };
+  const snow = { value: 0 };
   const uniforms = {
+    uWet: wet,
+    uSnow: snow,
+    // La neige de ville n'est jamais blanche : elle prend tout de suite le gris
+    // du ciel qui l'éclaire et la suie qui s'y pose.
+    uSnowColor: { value: new THREE.Color('#dfe4ea') },
     uFacade: { value: facade },
     uRoof: { value: roof },
     uSocle: { value: socle },
@@ -117,6 +128,9 @@ export function makeCityMaterial(): CityMaterial {
         uniform float uRoofScale;
         uniform vec2 uSocTile;
         uniform float uNight;
+        uniform float uWet;
+        uniform float uSnow;
+        uniform vec3 uSnowColor;
         uniform vec3 uWinWarm;
         uniform vec3 uWinCool;
         uniform vec3 uShopColor;
@@ -153,7 +167,16 @@ export function makeCityMaterial(): CityMaterial {
         // façades y sont franchement sombres et ce sont les ouvertures qui
         // portent la lumière. Les seules lumières de la scène (soleil rasant,
         // hémisphérique, ambiante) laissaient les murs à mi-gris.
-        diffuseColor.rgb *= mix(1.0, 0.46, uNight);`,
+        diffuseColor.rgb *= mix(1.0, 0.46, uNight);
+        // Mouillé : une surface humide fonce, parce qu'une pellicule d'eau
+        // renvoie en miroir au lieu de diffuser. Ça se voit d'abord sur ce qui
+        // regarde le ciel — toiture, chaussée, acrotère —, et à peine sur une
+        // façade verticale, où l'eau ne stagne pas.
+        diffuseColor.rgb *= 1.0 - 0.34 * uWet * mix(0.25, 1.0, cityRoofish);
+        // Neige : elle se pose sur ce qui regarde le ciel, JAMAIS sur un mur.
+        // Le nuanceur sait déjà distinguer les deux, il le fait depuis la
+        // première tuile de toiture.
+        diffuseColor.rgb = mix(diffuseColor.rgb, uSnowColor, uSnow * cityRoofish * 0.92);`,
       )
       .replace(
         '#include <emissivemap_fragment>',
@@ -176,7 +199,11 @@ export function makeCityMaterial(): CityMaterial {
         // l'intensité — étalée sur six mètres, elle éclairait la façade ENTIÈRE
         // d'un quartier bas, et Nishi-Nippori s'allumait comme en plein jour.
         float cityBounce = exp(-vCityUp * 0.34) * (1.0 - cityRoofish);
-        cityEmit += uStreetGlow * cityBounce * uNight * 0.26;
+        // Une chaussée mouillée RENVOIE : sous la pluie, la nuit, le pied des
+        // façades reçoit deux fois plus de lumière de la rue qu'à sec. C'est ce
+        // qui fait qu'une ville sous l'averse est plus lumineuse au ras du sol,
+        // et non plus sombre.
+        cityEmit += uStreetGlow * cityBounce * uNight * (0.26 + 0.3 * uWet);
         totalEmissiveRadiance += cityEmit;`,
       );
   };
@@ -186,6 +213,8 @@ export function makeCityMaterial(): CityMaterial {
   return {
     material,
     night,
+    wet,
+    snow,
     dispose() {
       material.dispose();
       facade.dispose();

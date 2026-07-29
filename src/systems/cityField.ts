@@ -424,6 +424,17 @@ export interface CityProp {
   /** Altitude de la BASE, relative au sol de la ville (m). */
   y: number;
   tone: string;
+  /**
+   * Variante de feuillage (0..3), pour les bosquets seulement.
+   *
+   * La TEINTE n'est plus tirée ici : elle appartient à la saison, qui change
+   * pendant qu'une cellule reste posée. Le générateur ne fixe donc que le
+   * numéro de la variante ; le rendu va chercher la couleur du jour dans la
+   * palette de `systems/season`.
+   */
+  variant: number;
+  /** Tirage stable 0..1 : décide si le sujet est en fleurs à la saison des sakura. */
+  roll: number;
 }
 
 /**
@@ -450,7 +461,6 @@ const ROOFTOP_TONE = '#b4b1a8';
 const ROAD_TONE = '#5f5e5a';
 /** Tuile sombre : c'est elle qui signe un bas quartier, vue d'un viaduc. */
 const TILE_TONES = ['#4a5058', '#434a52', '#525a62', '#3e444c'];
-const FOLIAGE_TONES = ['#d8e4cc', '#cfdcc2', '#e0e8d4', '#c8d8bc'];
 
 /**
  * Dérive de la cellule bâtie tout ce qui s'y pose ou s'y substitue.
@@ -489,9 +499,16 @@ export function buildCellProps(
         t.d = b.d;
         t.h = 6 + r() * 6;
         t.y = 0;
-        t.tone = FOLIAGE_TONES[Math.floor(r() * FOLIAGE_TONES.length) % FOLIAGE_TONES.length];
+        // Variante et tirage de floraison sont HACHÉS, pas tirés du flux : ils
+        // ne doivent pas décaler la suite de la cellule, dont dépend tout le
+        // bâti. Ils restent stables d'un passage à l'autre pour autant.
+        t.variant = Math.floor(hashInt(cell * 131 + i * 17 + 3) * 4) & 3;
+        t.roll = hashInt(cell * 7919 + i * 37 + 11);
       }
       // Consommer les tirages du bâti pour que la suite ne dépende pas du cas.
+      // Six, et non plus cinq : la teinte du feuillage n'est plus tirée ici,
+      // et le flux doit rester calé sur ce qu'il était.
+      r();
       r();
       r();
       r();
@@ -603,6 +620,8 @@ export function makePropBuffer(): CityProp[] {
     h: 0,
     y: 0,
     tone: '#ffffff',
+    variant: 0,
+    roll: 0,
   }));
 }
 
