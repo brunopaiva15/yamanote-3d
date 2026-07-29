@@ -284,6 +284,21 @@ dérobent maintenant sur l'emprise du quai, et seulement là — les écarter su
 leurs quatre cent soixante mètres ouvrait un vide au-delà des abouts de quai
 (`three/groundStrip`, `systems/stationOcclusion`).
 
+C'est ce dégagement qui a libéré la place du **niveau inférieur**. La volée ne
+s'arrête plus sur une cloison : elle atteint un palier de mi-étage, passe sous
+un linteau, repart sous la dalle et débouche sur un couloir avec sa ligne de
+portillons et sa ligne de guidage peinte. Rien n'y est praticable — le joueur
+est arrêté cinq marches plus haut — mais c'est ce fond de champ qui décide si
+la trémie descend vers une gare ou s'arrête dans un puits de deux mètres. Le
+fléchage de sortie, lui, est passé du mur du fond à une potence suspendue au
+linteau : sur le mur, il bouchait la seule ouverture par laquelle on aperçoit
+maintenant le dessous.
+
+Tout y est calé sur ce qu'on peut réellement en voir : depuis le haut de la
+volée, le rayon rasant part de la sous-face du linteau et descend d'un demi-
+mètre par mètre ; à sept mètres il a rejoint le sol. Les portillons se tiennent
+donc au pied des marches, et le couloir s'arrête là où la dalle a tout mangé.
+
 ### La signalétique
 
 Le panneau de nom de gare n'a pas changé : code JY, gare précédente et suivante,

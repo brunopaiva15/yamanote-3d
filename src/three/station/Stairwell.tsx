@@ -33,7 +33,14 @@ import {
   STAIR_HANDRAIL_H,
   STAIR_LANDING_Y,
   STAIR_LAP,
-  STAIR_OPENING_Z1,
+  STAIR_LINTEL_Y,
+  STAIR_LOWER_CEIL_Y,
+  STAIR_LOWER_END,
+  STAIR_LOWER_HALF_X,
+  STAIR_LOWER_STEPS,
+  STAIR_LOWER_Y,
+  STAIR_LOWER_Z0,
+  STAIR_LOWER_Z1,
   STAIR_PARAPET_H,
   STAIR_RISE,
   STAIR_SOFFIT_Y,
@@ -59,14 +66,21 @@ const CHEEK_X = (STAIR_HALF_X + STAIR_CLEAR_HALF_X) / 2;
  * ouvrage, et le couper en deux au niveau de la dalle n'aurait fabriqué qu'un
  * joint de plus à faire coïncider.
  */
-const CHEEK_H = STAIR_PARAPET_H - STAIR_SOFFIT_Y;
-const CHEEK_Y = (STAIR_PARAPET_H + STAIR_SOFFIT_Y) / 2;
+const CHEEK_BOTTOM = STAIR_LOWER_Y - 0.3;
+const CHEEK_H = STAIR_PARAPET_H - CHEEK_BOTTOM;
+const CHEEK_Y = (STAIR_PARAPET_H + CHEEK_BOTTOM) / 2;
 
-/** Voile de tête : le fond de la volée, qui ferme le palier bas. */
+/**
+ * Voile de tête. Ce n'est plus un fond : c'est un LINTEAU. Il coiffe le chant
+ * du percement et porte le garde-corps, mais il s'arrête à la sous-face de la
+ * dalle — dessous, la volée continue vers le niveau inférieur.
+ */
 const HEAD_T = STAIR_HALF_Z - STAIR_CLEAR_Z1;
 const HEAD_Z = (STAIR_HALF_Z + STAIR_CLEAR_Z1) / 2;
 /** Il déborde dans les joues, comme les joues débordent dans la dalle. */
 const HEAD_HALF_X = STAIR_CLEAR_HALF_X + STAIR_LAP;
+const HEAD_H = STAIR_PARAPET_H - STAIR_LINTEL_Y;
+const HEAD_Y = (STAIR_PARAPET_H + STAIR_LINTEL_Y) / 2;
 
 /** Le bloc de la volée mord d'un centimètre dans chaque joue. */
 const FLIGHT_HALF_X = STAIR_CLEAR_HALF_X + 0.01;
@@ -86,8 +100,11 @@ const TREADS = Array.from({ length: STAIR_STEPS }, (_, i) => {
   const k = i + 1;
   const top = -k * STAIR_RISE;
   const z0 = NOSE + k * STAIR_GOING - STAIR_LAP;
-  // La dernière se prolonge en palier bas, jusqu'au voile de tête.
-  const z1 = k === STAIR_STEPS ? STAIR_OPENING_Z1 : NOSE + (k + 1) * STAIR_GOING;
+  // La dernière se prolonge en palier de mi-étage, sous le linteau, jusqu'au
+  // nez de la seconde volée : sans quoi le sol s'interrompait sur trente
+  // centimètres pile là où l'on passe d'une volée à l'autre.
+  const z1 =
+    k === STAIR_STEPS ? STAIR_LOWER_Z0 + STAIR_GOING : NOSE + (k + 1) * STAIR_GOING;
   return {
     k,
     y: (top + STAIR_SOFFIT_Y) / 2,
@@ -110,12 +127,13 @@ const NOSING_D = 0.07;
 /** Retrait sur l'arête : sans lui, le chant du nez et celui de la
     contremarche étaient deux faces coplanaires sur toute la volée. */
 const NOSING_SET = 0.005;
+const NOSING_D_HALF = NOSING_D / 2 + NOSING_SET;
 const NOSINGS = Array.from({ length: STAIR_STEPS }, (_, i) => {
   const k = i + 1;
   return {
     k,
     y: -(k - 1) * STAIR_RISE,
-    z: NOSE + k * STAIR_GOING - NOSING_D / 2 - NOSING_SET,
+    z: NOSE + k * STAIR_GOING - NOSING_D_HALF,
   };
 });
 
@@ -184,10 +202,65 @@ const ADS = [
 const AD_BOX_X = STAIR_HALF_X - 0.01;
 const AD_BOX_LEN = STAIR_HALF_Z * 2 - 0.3;
 
-/** Panneau de sortie du palier bas, au fond de la volée. */
-const EXIT_W = 1.6;
+/**
+ * Fléchage de sortie, SUSPENDU au linteau au-dessus du palier de mi-étage —
+ * là où on le trouve dans une vraie gare, et là où il se lit depuis le haut de
+ * la volée. Sur le voile de tête, il barrait la seule ouverture par laquelle
+ * on aperçoit maintenant le niveau inférieur.
+ */
+const EXIT_W = 1.4;
 const EXIT_H = EXIT_W * (320 / 1024);
-const EXIT_Y = STAIR_LANDING_Y + 1.12;
+const EXIT_Y = STAIR_LINTEL_Y - 0.1 - EXIT_H / 2;
+const EXIT_Z = STAIR_CLEAR_Z1 - 0.14;
+
+// --- Le niveau inférieur -------------------------------------------------
+
+/**
+ * Couloir : parois, plafond, fond. Elles prennent le relais des joues EXACTEMENT
+ * là où celles-ci s'arrêtent — bout à bout, jamais à cheval : deux nus communs
+ * sur dix-huit centimètres de recouvrement, et le passage se serait bordé du
+ * même liseré clignotant que la trémie avant qu'on la refasse.
+ */
+const LOWER_WALL_T = 0.2;
+const LOWER_WALL_X = STAIR_LOWER_HALF_X + LOWER_WALL_T / 2;
+const LOWER_BOTTOM = STAIR_LOWER_Y - 0.3;
+const LOWER_H = STAIR_LOWER_CEIL_Y - LOWER_BOTTOM;
+const LOWER_Y = (STAIR_LOWER_CEIL_Y + LOWER_BOTTOM) / 2;
+const LOWER_Z0 = STAIR_HALF_Z;
+const LOWER_MID_Z = (LOWER_Z0 + STAIR_LOWER_END) / 2;
+const LOWER_LEN = STAIR_LOWER_END - LOWER_Z0;
+
+/** Seconde volée : mêmes blocs pleins, sous la dalle du quai. */
+const LOWER_TREADS = Array.from({ length: STAIR_LOWER_STEPS }, (_, i) => {
+  const k = i + 1;
+  const top = STAIR_LANDING_Y - k * STAIR_RISE;
+  const z0 = STAIR_LOWER_Z0 + k * STAIR_GOING - STAIR_LAP;
+  const z1 =
+    k === STAIR_LOWER_STEPS ? STAIR_LOWER_END : STAIR_LOWER_Z0 + (k + 1) * STAIR_GOING;
+  return {
+    k,
+    y: (top + LOWER_BOTTOM) / 2,
+    h: top - LOWER_BOTTOM,
+    z: (z0 + z1) / 2,
+    d: z1 - z0,
+    noseY: top + STAIR_RISE,
+    noseZ: STAIR_LOWER_Z0 + k * STAIR_GOING - NOSING_D_HALF,
+  };
+});
+
+
+/**
+ * Ligne de portillons, posée juste au sortir de la volée.
+ *
+ * C'est l'objet qui dit « gare » et pas « tunnel », et il n'a que deux mètres
+ * pour le dire : au-delà de sept mètres du linteau, la dalle a mangé toute la
+ * hauteur visible. Quatre couloirs, donc, serrés au pied des marches.
+ */
+const GATE_Z = STAIR_LOWER_Z1 + 0.9;
+const GATE_H = 0.95;
+const GATE_W = 0.3;
+const GATE_D = 1.25;
+const GATES = [-1.5, -0.5, 0.5, 1.5].map((k) => k * 0.62);
 
 // --- Rendu ---------------------------------------------------------------
 
@@ -195,6 +268,8 @@ interface Props {
   place: { stairs: Placed[] };
   m: Mats;
   station: number;
+  /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
+  detail: number;
 }
 
 /**
@@ -203,7 +278,7 @@ interface Props {
  * trémie à l'autre, et redessiner un canvas de mille pixels par trémie à
  * chaque arrêt n'aurait rien ajouté.
  */
-export function Stairwells({ place, m, station }: Props) {
+export function Stairwells({ place, m, station, detail }: Props) {
   const sign = useMemo(() => makeExitSign(0), []);
   const exitMat = useMemo(
     () => new THREE.MeshBasicMaterial({ map: sign.texture, toneMapped: false }),
@@ -221,7 +296,14 @@ export function Stairwells({ place, m, station }: Props) {
   return (
     <>
       {place.stairs.map((s, i) => (
-        <Stairwell key={`stair${i}`} s={s} m={m} station={station} exitMat={exitMat} />
+        <Stairwell
+          key={`stair${i}`}
+          s={s}
+          m={m}
+          station={station}
+          exitMat={exitMat}
+          detail={detail}
+        />
       ))}
     </>
   );
@@ -232,11 +314,13 @@ function Stairwell({
   m,
   station,
   exitMat,
+  detail,
 }: {
   s: Placed;
   m: Mats;
   station: number;
   exitMat: THREE.Material;
+  detail: number;
 }) {
   return (
     <group name="trémie" position={[s.x, PLATFORM_TOP, s.z]}>
@@ -321,21 +405,35 @@ function Stairwell({
         );
       })}
 
-      {/* Voile de tête : il ferme le palier bas et porte le fléchage de
-          sortie, seule chose qu'on lise depuis le haut de la volée. */}
-      <mesh position={[0, CHEEK_Y, HEAD_Z]} material={m.wall}>
-        <boxGeometry args={[HEAD_HALF_X * 2, CHEEK_H, HEAD_T]} />
+      {/* Linteau : il coiffe le chant du percement et porte le garde-corps,
+          mais il s'arrête à la sous-face de la dalle. Dessous, on passe. */}
+      <mesh position={[0, HEAD_Y, HEAD_Z]} material={m.wall}>
+        <boxGeometry args={[HEAD_HALF_X * 2, HEAD_H, HEAD_T]} />
       </mesh>
       <mesh position={[0, CAP_Y, HEAD_Z]} material={m.metal}>
         <boxGeometry args={[HEAD_HALF_X * 2, CAP_H, HEAD_T + 0.04]} />
       </mesh>
-      <mesh
-        position={[0, EXIT_Y, STAIR_CLEAR_Z1 - 0.015]}
-        rotation={[0, Math.PI, 0]}
-        material={exitMat}
-      >
-        <planeGeometry args={[EXIT_W, EXIT_H]} />
+
+      {/* Fléchage de sortie, suspendu au linteau au-dessus du palier de
+          mi-étage : c'est la dernière chose qu'on lise avant que la volée
+          passe sous la dalle. */}
+      <mesh position={[0, EXIT_Y, EXIT_Z]} material={m.frame}>
+        <boxGeometry args={[EXIT_W + 0.06, EXIT_H + 0.06, 0.07]} />
       </mesh>
+      {[1, -1].map((d) => (
+        <mesh key={`ex${d}`} position={[0, EXIT_Y, EXIT_Z + d * 0.041]} rotation={[0, d === 1 ? 0 : Math.PI, 0]} material={exitMat}>
+          <planeGeometry args={[EXIT_W, EXIT_H]} />
+        </mesh>
+      ))}
+      {[-1, 1].map((d) => (
+        <mesh key={`eh${d}`} position={[d * (EXIT_W / 2 - 0.12), EXIT_Y + EXIT_H / 2 + 0.13, EXIT_Z]} material={m.metal}>
+          <boxGeometry args={[0.04, 0.26, 0.04]} />
+        </mesh>
+      ))}
+
+      {/* Le niveau inférieur est un fond de champ, pas une structure : c'est
+          la première chose qui saute sur une machine à la peine. */}
+      {detail <= 1 && <LowerLevel m={m} />}
 
       {/* Caisson publicitaire plaqué sur la joue côté voie : sur un vrai quai
           c'est la surface la plus rentable d'une trémie, et elle est en plein
@@ -350,6 +448,96 @@ function Stairwell({
       >
         <planeGeometry args={[AD_BOX_LEN - 0.12, 0.76]} />
       </mesh>
+    </group>
+  );
+}
+
+/**
+ * Ce qu'il y a EN DESSOUS, et qu'on ne fera qu'apercevoir.
+ *
+ * Seconde volée, couloir, ligne de portillons : rien n'est praticable, rien
+ * n'est éclairé par le jour, et la dalle du quai en coupe les trois quarts.
+ * C'est pourtant ce fond de champ qui décide si la trémie est une descente
+ * vers une gare ou un trou de deux mètres bouché par une cloison.
+ *
+ * Tout se tient BAS : depuis le haut de la volée, le rayon rasant part de la
+ * sous-face du linteau et descend d'un demi-mètre par mètre. À sept mètres il
+ * a rejoint le sol, et ce qui est au-dessus n'existe plus pour personne.
+ */
+function LowerLevel({ m }: { m: Mats }) {
+  return (
+    <group>
+      {/* Seconde volée, et ses nez — c'est par eux qu'on la lit dans le noir. */}
+      {LOWER_TREADS.map((t) => (
+        <group key={`lt${t.k}`}>
+          <mesh position={[0, t.y, t.z]} material={m.stair}>
+            <boxGeometry args={[FLIGHT_HALF_X * 2, t.h, t.d]} />
+          </mesh>
+          <mesh position={[0, t.noseY, t.noseZ]} material={m.stairNose}>
+            <boxGeometry args={[FLIGHT_HALF_X * 2 - 0.1, 0.012, NOSING_D]} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Parois, plafond et fond du couloir : le volume est clos, sinon on
+          verrait le vide par-dessous la dalle. */}
+      {[-1, 1].map((d) => (
+        <mesh key={`lw${d}`} position={[d * LOWER_WALL_X, LOWER_Y, LOWER_MID_Z]} material={m.wall}>
+          <boxGeometry args={[LOWER_WALL_T, LOWER_H, LOWER_LEN]} />
+        </mesh>
+      ))}
+      {/* Soubassement de faïence, le seul rappel de couleur du niveau bas. */}
+      {[-1, 1].map((d) => (
+        <mesh
+          key={`ld${d}`}
+          position={[d * (STAIR_LOWER_HALF_X - 0.02), STAIR_LOWER_Y + 0.55, LOWER_MID_Z]}
+          material={m.tile}
+        >
+          <boxGeometry args={[0.05, 1.1, LOWER_LEN]} />
+        </mesh>
+      ))}
+      <mesh position={[0, STAIR_LOWER_CEIL_Y - 0.05, LOWER_MID_Z]} material={m.wallDark}>
+        <boxGeometry args={[LOWER_WALL_X * 2, 0.1, LOWER_LEN]} />
+      </mesh>
+      <mesh
+        position={[0, LOWER_Y, STAIR_LOWER_END + 0.1]}
+        material={m.wall}
+      >
+        <boxGeometry args={[LOWER_WALL_X * 2, LOWER_H, 0.2]} />
+      </mesh>
+
+      {/* Deux réglettes au plafond : sans elles le couloir est un trou noir,
+          et c'est justement la lumière qui dit qu'il y a quelqu'un en bas. */}
+      {[0.3, 0.72].map((f, k) => (
+        <mesh
+          key={`ll${k}`}
+          position={[0, STAIR_LOWER_CEIL_Y - 0.12, STAIR_LOWER_Z0 + f * LOWER_LEN]}
+          material={m.lamp}
+        >
+          <boxGeometry args={[1.5, 0.06, 0.22]} />
+        </mesh>
+      ))}
+
+      {/* Ligne de guidage peinte, dans l'axe du couloir. */}
+      <mesh
+        position={[0, STAIR_LOWER_Y + 0.008, (STAIR_LOWER_Z1 + STAIR_LOWER_END) / 2]}
+        material={m.accent}
+      >
+        <boxGeometry args={[0.3, 0.016, STAIR_LOWER_END - STAIR_LOWER_Z1]} />
+      </mesh>
+
+      {/* Ligne de portillons : quatre couloirs, serrés au pied des marches
+          parce que c'est la seule bande de couloir que la dalle laisse voir. */}
+      {GATES.map((x, k) => (
+        <group key={`g${k}`} position={[x, STAIR_LOWER_Y + GATE_H / 2, GATE_Z]}>
+          <mesh material={m.psd}>
+            <boxGeometry args={[GATE_W, GATE_H, GATE_D]} />
+          </mesh>
+          <mesh position={[0, GATE_H / 2 + 0.015, 0]} material={m.accent}>
+            <boxGeometry args={[GATE_W + 0.02, 0.04, GATE_D - 0.3]} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }

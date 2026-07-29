@@ -150,6 +150,41 @@ export const STAIR_SOFFIT_Y = STAIR_LANDING_Y - 0.3;
 export const STAIR_PARAPET_H = 1.05;
 export const STAIR_HANDRAIL_H = 0.88;
 
+// --- Le niveau inférieur -------------------------------------------------
+//
+// La volée ne s'arrête pas sur un mur : elle atteint un palier de mi-étage,
+// repart SOUS LA DALLE et débouche dans un couloir de correspondance. Rien de
+// tout cela n'est praticable — le joueur est arrêté cinq marches plus haut —
+// mais c'est ce qu'on aperçoit au fond de la trémie qui dit qu'il y a une gare
+// en dessous, et pas un puits de deux mètres fermé par une cloison.
+//
+// Le volume est disponible depuis que les nappes du niveau du sol se dérobent
+// sous le quai (systems/stationOcclusion, three/groundStrip) : entre la
+// sous-face de la dalle et le vide, il n'y a plus rien à traverser.
+//
+// Ce qu'on en voit est étroitement borné : depuis le haut de la volée, le
+// rayon rasant passe par la sous-face du linteau, et tout ce qui est au-dessus
+// de lui est coupé par la dalle. À neuf mètres, il ne reste qu'un demi-mètre
+// au-dessus du sol. Tout ce qui doit se lire — la seconde volée, la ligne de
+// portillons — se tient donc BAS et PRÈS.
+
+/** Sous-face du linteau : au-delà, on passe sous la dalle du quai. */
+export const STAIR_LINTEL_Y = -0.5;
+/** Marches de la seconde volée, sous la dalle. */
+export const STAIR_LOWER_STEPS = 8;
+/** Sol du couloir inférieur. */
+export const STAIR_LOWER_Y = STAIR_LANDING_Y - STAIR_LOWER_STEPS * STAIR_RISE;
+/** Premier nez de la seconde volée : au nu du linteau, sans palier dessous. */
+export const STAIR_LOWER_Z0 = STAIR_CLEAR_Z1;
+/** Pied de la seconde volée. */
+export const STAIR_LOWER_Z1 = STAIR_LOWER_Z0 + (STAIR_LOWER_STEPS + 1) * STAIR_GOING;
+/** Fond du couloir. Au-delà, la dalle coupe la vue : inutile de modéliser. */
+export const STAIR_LOWER_END = 8.8;
+/** Demi-largeur libre du couloir : celle de la volée, prolongée telle quelle. */
+export const STAIR_LOWER_HALF_X = STAIR_CLEAR_HALF_X;
+/** Plafond du couloir, six centimètres sous la sous-face de la dalle. */
+export const STAIR_LOWER_CEIL_Y = STAIR_LINTEL_Y;
+
 // --- Ce que le joueur et la foule en font --------------------------------
 
 /** Marches réellement descendables avant la limite de zone. */

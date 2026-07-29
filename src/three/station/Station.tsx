@@ -492,7 +492,7 @@ export function Station() {
 
       {/* Trémies d'escalier : la dalle est percée, donc elles font partie de la
           structure — jamais retirées par un palier de qualité. */}
-      <Stairwells place={place} m={m} station={index} />
+      <Stairwells place={place} m={m} station={index} detail={detail} />
 
       {/* Affichage publicitaire : caissons du mur, colonnes habillées,
           bannières suspendues, allèges de portes palières. */}
