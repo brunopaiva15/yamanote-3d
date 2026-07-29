@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { useStore } from '../store';
+import { LOOP_LABEL_JP } from '../data/loop';
 import { STATIONS } from '../data/stations';
 import { BAND_COLOR, type OccupancyBand } from '../data/occupancy';
 import { useT } from '../i18n';
@@ -100,6 +101,7 @@ export function Hud() {
   const started = useStore((s) => s.started);
   const index = useStore((s) => s.index);
   const phase = useStore((s) => s.phase);
+  const loopDirection = useStore((s) => s.loopDirection);
   const muted = useStore((s) => s.muted);
   const volume = useStore((s) => s.volume);
   const seated = useStore((s) => s.seated);
@@ -145,7 +147,14 @@ export function Hud() {
           <span className="hud-weather-temp">{Math.round(sky.tempC)}&nbsp;°C</span>
         </div>
         <div className="hud-station">
-          <span className="hud-station-label">{label}</span>
+          <span className="hud-station-label">
+            {label}
+            {/* Le sens reste en japonais : c'est de la signalétique, pas de
+                l'interface — comme la bande 内回り／外回り du menu. */}
+            <span className="hud-direction" lang="ja">
+              {LOOP_LABEL_JP[loopDirection]}
+            </span>
+          </span>
           <span className="hud-station-name">
             <span className="hud-jy">{st.jy}</span> {primary} <span className="hud-kanji">{secondary}</span>
           </span>

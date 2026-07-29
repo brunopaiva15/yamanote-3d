@@ -1,6 +1,6 @@
 // Y a-t-il quelqu'un en face de moi ? Sondé à 150 ms.
 //
-// Même idiome que useNearPortal : la visée vit dans systems/conversation et
+// Même idiome que useWrongDoor : la visée vit dans systems/conversation et
 // change à 60 images par seconde ; l'invite, elle, n'a besoin que de savoir
 // si elle doit être là.
 

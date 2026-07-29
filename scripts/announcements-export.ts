@@ -96,13 +96,18 @@ const STATION_VOICE: Record<StationVoice, VoiceSetting> = {
 };
 
 /**
- * Sens de circulation pour lequel on grave les annonces de quai. Le jeu tourne
- * en 内回り (store.loopDirection), et le numéro de voie comme la direction
- * annoncée en dépendent : graver l'autre sens doublerait le poids pour des
- * clips que personne n'entendrait. Ajouter 'outer' ici le jour où la boucle
- * peut s'inverser — sans clip, le runtime retombe sur speechSynthesis.
+ * Sens de circulation pour lesquels on grave les annonces. LES DEUX : la rame
+ * roule maintenant dans un sens comme dans l'autre, et le sens change ce qui
+ * est DIT — le nom de la boucle (山手線内回り／外回り), les gares repères de la
+ * direction, et le numéro de voie desservie. Sans clip, une annonce reste
+ * muette (voir systems/speech) : un sens jouable sans clips serait un sens
+ * silencieux.
+ *
+ * Le surcoût est modeste. La plupart des textes ne dépendent pas du sens —
+ * 「次は。渋谷。お出口は右側です。」 est le même dans les deux, puisque le côté
+ * d'ouverture appartient à la gare — et la déduplication par clé les partage.
  */
-const DIRECTIONS: LoopDirection[] = ['inner'];
+const DIRECTIONS: LoopDirection[] = ['inner', 'outer'];
 
 /** Numéros de voie possibles à cette gare dans ce sens (principal + alternatif). */
 function platformsFor(jy: string, direction: LoopDirection): number[] {
@@ -150,6 +155,7 @@ function spellStationCode(s: string): string {
 const JA_READINGS: [RegExp, string][] = [
   [/山手線/g, 'ヤマノテ線'], // « yamate-sen » → yamanote-sen
   [/内回り/g, 'ウチマワリ'], // 線内回り recollé en « sennai mawari »
+  [/外回り/g, 'ソトマワリ'], // idem pour l'autre sens : 線外回り → « sengai mawari »
   [/方面行き/g, '方面ゆき'], // « hōmen-iki » → hōmen-yuki, comme la rame
   [/人立入り/g, 'ひと立入り'], // « jinritsu-iri » → hito-tachiiri
   [/ホーム中ほど/g, 'ホームなかほど'], // « hōmu chū-hodo » → hōmu nakahodo
@@ -166,9 +172,11 @@ function ttsText(u: Utterance): string {
 // --- Sonorisation de la RAME --------------------------------------------
 
 const utterances: Utterance[] = [];
-for (let i = 0; i < STATIONS.length; i++) {
-  utterances.push(...departureSequence(i, DOOR_SIDE[i]));
-  utterances.push(...approachSequence(i, DOOR_SIDE[i]));
+for (const direction of DIRECTIONS) {
+  for (let i = 0; i < STATIONS.length; i++) {
+    utterances.push(...departureSequence(i, DOOR_SIDE[i], direction));
+    utterances.push(...approachSequence(i, DOOR_SIDE[i]));
+  }
 }
 utterances.push(...doorsClosingAnnouncement());
 // Porte bloquée : la demande du conducteur, et sa version insistante.
@@ -189,8 +197,8 @@ const stationUtterances: StationUtterance[] = [];
 for (const direction of DIRECTIONS) {
   for (let i = 0; i < STATIONS.length; i++) {
     for (const platform of platformsFor(STATIONS[i].jy, direction)) {
-      stationUtterances.push(...platformPreAnnouncement(i, platform));
-      stationUtterances.push(...platformApproachAnnouncement(i, platform));
+      stationUtterances.push(...platformPreAnnouncement(i, platform, direction));
+      stationUtterances.push(...platformApproachAnnouncement(i, platform, direction));
       stationUtterances.push(...platformDoorsClosingAnnouncement(platform));
     }
     stationUtterances.push(...platformArrivalAnnouncement(i));

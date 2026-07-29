@@ -28,6 +28,7 @@ import { seasonNow } from '../../systems/season';
 import { weather } from '../../systems/weather';
 import { useStore } from '../../store';
 import { CONFIG } from '../../data/config';
+import { prevStation } from '../../data/loop';
 import { journeyProgress } from '../../data/segments';
 import { DISTRICTS } from '../../data/districts';
 import {
@@ -163,9 +164,10 @@ export function SkyDome() {
 
   const built = useMemo(() => {
     const start = CONFIG.startIndex;
+    const startDir = useStore.getState().loopDirection;
     const banks = ([0, 1] as const).map((slot) => {
       const b = makeSilhouetteBank();
-      const district = slot === 0 ? start : (start + 29) % 30;
+      const district = slot === 0 ? start : prevStation(start, startDir);
       drawCityInto(b.ctx, 2, false, DISTRICTS[district]);
       b.tex.needsUpdate = true;
       return { ...b, district };
@@ -213,7 +215,7 @@ export function SkyDome() {
   }, []);
 
   useFrame(() => {
-    const { index, phase } = useStore.getState();
+    const { index, phase, loopDirection } = useStore.getState();
     const u = built.material.uniforms;
 
     // --- Bascule de banque au changement de gare (idiome historique) ---
@@ -232,7 +234,7 @@ export function SkyDome() {
 
     // Durée d'inter-gare variable selon le tronçon : la source est
     // data/segments, partagée avec segEnv, les annonces et le quai.
-    const p = journeyProgress(phase, runtime.phaseT, index);
+    const p = journeyProgress(phase, runtime.phaseT, index, loopDirection);
     const wArr = smoothstep(0.38, 0.62, p);
     u.uSilMix.value = arrivingBank.current === 1 ? wArr : 1 - wArr;
 

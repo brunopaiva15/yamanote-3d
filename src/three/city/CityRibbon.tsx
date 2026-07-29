@@ -223,8 +223,8 @@ export function CityRibbon() {
   const ring = useRef({ first: 0, origin: 0, ready: false });
 
   useFrame(() => {
-    const { index } = useStore.getState();
-    updateCityAnchor(index, segEnv.p);
+    const { index, loopDirection } = useStore.getState();
+    updateCityAnchor(index, segEnv.p, loopDirection);
 
     const st = ring.current;
     const sc = scratch;
