@@ -220,10 +220,17 @@ export function gantryZs(p: StationPlacement): number[] {
  * occupant le plus avancé, part à backX − 1,16).
  */
 export function trackSignBox(p: StationPlacement): { x: number; w: number; hx: number } {
-  const w = Math.min(3.24, p.backX - 1.3 - (PSD_X - 0.12));
+  // Le caisson part DERRIÈRE la ligne des portes palières, et non douze
+  // centimètres devant elle : il débordait au-dessus de la voie, à vingt-six
+  // centimètres du flanc de la caisse (qui monte à 1,475 m de l'axe), et de
+  // trois quarts du quai on le voyait passer par-dessus la rame. Six
+  // centimètres de retrait, dix-huit de moins en tout — le caisson garde sa
+  // stature, il ne surplombe simplement plus le train.
+  const inner = PSD_X + 0.06;
+  const w = Math.min(3.06, p.backX - 1.3 - inner);
   return {
     w,
-    x: PSD_X - 0.12 + w / 2,
+    x: inner + w / 2,
     /** Aplomb des suspentes, depuis le centre du caisson. */
     hx: Math.max(0.35, w / 2 - 0.57),
   };
