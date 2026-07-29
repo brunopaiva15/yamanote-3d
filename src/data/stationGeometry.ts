@@ -90,6 +90,20 @@ export function directionBandZs(length: number): number[] {
   return [-halfZ + 31, -halfZ + 109, -halfZ + 161];
 }
 
+/**
+ * Poteaux de charpente qui portent une plaque de nom de gare (柱型駅名標), un
+ * sur deux.
+ *
+ * La face d'un poteau tournée vers la voie ne porte QU'UNE chose : la plaque de
+ * nom, ou le bandeau publicitaire vertical. Les deux la revendiquaient — les
+ * bandeaux étaient posés sur tous les poteaux — et la plaque se plaquait sur
+ * l'affiche. PlatformSignage lit cette liste pour poser ses plaques,
+ * PlatformAds pour s'en écarter : c'est le même arbitrage, lu au même endroit.
+ */
+export function nameplateColumns(columns: readonly number[]): number[] {
+  return columns.filter((_, i) => i % 2 === 1);
+}
+
 // --- Trémies d'escalier -------------------------------------------------
 //
 // La dalle est réellement percée : on descend la volée sur quelques marches,

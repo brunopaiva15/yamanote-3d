@@ -2226,6 +2226,123 @@ export function makeTotemSign(): {
   return { texture, redraw };
 }
 
+// --- Panneau d'un totem d'information ---
+//
+// Un totem autonome de quai ne porte PAS de plaque de nom de gare : celle-là
+// est vissée sur les poteaux de charpente, qui sont ce que 柱型駅名標 désigne
+// littéralement. Le totem porte l'orientation — par où sortir, vers quelles
+// lignes on change — et c'est ce qui manquait au quai une fois la plaque
+// remise à sa place. Mêmes données que les panneaux suspendus (stationExits,
+// TRANSFERS), autre format : une colonne, lue de près et debout.
+export function makeTotemGuide(): {
+  texture: THREE.CanvasTexture;
+  redraw: (index: number) => void;
+} {
+  const W = 480;
+  const H = 1024;
+  const { c, g } = makeCanvas(W, H);
+  const texture = toTexture(c);
+
+  const redraw = (index: number) => {
+    const st = STATIONS[index];
+    const exits = stationExits(index);
+    const tr = TRANSFERS[st.jy];
+    // Une gare sans correspondance notable — 鶯谷, 目白 — ne porte pas une
+    // section のりかえ vide : elle porte l'orientation par direction, qui est
+    // l'autre moitié de ce qu'on cherche sur un totem.
+    const lines = tr
+      ? tr.jp.split('、').map((s) => s.trim()).filter(Boolean).slice(0, 4)
+      : [];
+    const ahead = lines.length ? [] : directionBoardStations(index, 3);
+
+    g.fillStyle = '#f6f5f2';
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#141414';
+    g.lineWidth = 8;
+    g.strokeRect(4, 4, W - 8, H - 8);
+
+    // Bandeau de tête.
+    g.fillStyle = '#141414';
+    g.fillRect(16, 16, W - 32, 128);
+    g.textAlign = 'center';
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = '#f6f5f2';
+    fitFillText(g, '出口・のりかえ', W / 2, 86, W - 70, 48);
+    g.fillStyle = '#b9bcc0';
+    fitFillText(g, 'Exits & Transfers', W / 2, 124, W - 70, 26, '400');
+
+    // La gare, en rappel : un totem se lit sans savoir où l'on est.
+    g.fillStyle = '#141414';
+    fitFillText(g, st.kanji, W / 2, 204, W - 60, 40);
+    g.fillStyle = '#55585c';
+    fitFillText(g, st.romaji, W / 2, 238, W - 60, 24, '400');
+
+    /** Étiquette de section : pastille de couleur, mention JP puis EN. */
+    const label = (y: number, bg: string, ink: string, jp: string, en: string) => {
+      g.fillStyle = bg;
+      g.beginPath();
+      g.roundRect(26, y, W - 52, 44, 6);
+      g.fill();
+      g.fillStyle = ink;
+      g.textAlign = 'left';
+      fitFillText(g, jp, 40, y + 32, 150, 28);
+      g.textAlign = 'right';
+      fitFillText(g, en, W - 40, y + 31, 180, 22, '600');
+      g.textAlign = 'left';
+    };
+
+    // --- Sorties, en jaune JR ---
+    label(266, EXIT_YELLOW, '#141414', '出口', 'Exits');
+    const exitTop = 326;
+    const exitRow = 92;
+    exits.slice(0, 2).forEach((e, i) => {
+      const y = exitTop + i * exitRow;
+      g.fillStyle = '#141414';
+      drawSignArrow(g, 58, y + exitRow * 0.42, 46, i === 0 ? 0 : -Math.PI / 4);
+      fitFillText(g, e.jp, 100, y + exitRow * 0.4, W - 130, 36);
+      g.fillStyle = '#55585c';
+      fitFillText(g, e.en, 102, y + exitRow * 0.72, W - 130, 24, '400');
+      g.fillStyle = 'rgba(0,0,0,0.1)';
+      g.fillRect(100, y + exitRow - 8, W - 140, 2);
+    });
+
+    // --- Correspondances (pastille de ligne colorée), ou direction ---
+    const secTop = exitTop + Math.min(2, exits.length) * exitRow + 22;
+    const rowTop = secTop + 60;
+    /** Une entrée : pastille colorée, mention JP, mention latine dessous. */
+    const row = (i: number, h: number, color: string, jp: string, en: string) => {
+      const y = rowTop + i * h;
+      g.fillStyle = color;
+      g.beginPath();
+      g.roundRect(34, y + h * 0.18, 22, h * 0.6, 11);
+      g.fill();
+      g.fillStyle = '#141414';
+      fitFillText(g, jp, 74, y + h * (en ? 0.5 : 0.62), W - 108, Math.min(34, h * 0.36));
+      if (en) {
+        g.fillStyle = '#55585c';
+        fitFillText(g, en, 76, y + h * 0.78, W - 108, Math.min(22, h * 0.24), '400');
+      }
+    };
+
+    if (lines.length) {
+      label(secTop, '#141414', '#f6f5f2', 'のりかえ', 'Transfer');
+      const h = Math.min(112, (H - 34 - rowTop) / lines.length);
+      lines.forEach((name, i) => {
+        const info = lineInfo(name);
+        row(i, h, info.color, name, info.romaji ?? '');
+      });
+    } else {
+      label(secTop, '#141414', '#f6f5f2', '方面', 'Direction');
+      const h = Math.min(112, (H - 34 - rowTop) / ahead.length);
+      ahead.forEach((s, i) => row(i, h, '#80c241', s.kanji, s.romaji));
+    }
+
+    g.textAlign = 'center';
+    texture.needsUpdate = true;
+  };
+  return { texture, redraw };
+}
+
 // --- Tableau d'affichage suspendu (ホームの電光掲示板) ---
 /**
  * État réel affiché par le tableau des départs.

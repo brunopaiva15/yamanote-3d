@@ -22,10 +22,11 @@ import {
   makeDirectionBand,
   makePlatformBoard,
   makeStationSign,
+  makeTotemGuide,
   makeTotemSign,
   type BoardView,
 } from '../../textures/procedural';
-import { directionBandZs, PLATFORM_TOP } from '../../data/stationGeometry';
+import { directionBandZs, nameplateColumns, PLATFORM_TOP } from '../../data/stationGeometry';
 
 interface Props {
   /** Abscisse de suspension des caissons (repère quai). */
@@ -36,6 +37,14 @@ interface Props {
   halfZ: number;
   /** Abscisse des totems posés au sol. */
   totemX: number;
+  /**
+   * Face des poteaux de charpente tournée vers la voie : c'est là que se
+   * vissent les plaques de nom de gare (柱型駅名標 — littéralement la plaque
+   * DU poteau).
+   */
+  postFaceX: number;
+  /** Abscisses des poteaux de charpente, le long du quai. */
+  columns: readonly number[];
   /** Abscisse de l'épine : la bande directionnelle est suspendue au-dessus. */
   bandX: number;
   /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
@@ -126,6 +135,8 @@ export function PlatformSignage({
   canopyY,
   halfZ,
   totemX,
+  postFaceX,
+  columns,
   bandX,
   detail,
   ground,
@@ -141,6 +152,9 @@ export function PlatformSignage({
   // bande directionnelle sur l'autre. La même image sur les deux se déformait
   // d'un facteur dix.
   const totem = useMemo(() => makeTotemSign(), []);
+  // Ce que porte le totem lui-même, maintenant que la plaque de nom est
+  // remontée sur les poteaux : l'orientation.
+  const guide = useMemo(() => makeTotemGuide(), []);
   const board = useMemo(() => makePlatformBoard(), []);
   const band = useMemo(() => makeDirectionBand(), []);
   const lastSignIndex = useRef(-1);
@@ -161,6 +175,12 @@ export function PlatformSignage({
         side: THREE.DoubleSide,
         depthWrite: true,
       }),
+      guide: new THREE.MeshBasicMaterial({
+        map: guide.texture,
+        toneMapped: false,
+        side: THREE.DoubleSide,
+        depthWrite: true,
+      }),
       board: new THREE.MeshBasicMaterial({
         map: board.texture,
         toneMapped: false,
@@ -173,7 +193,7 @@ export function PlatformSignage({
         side: THREE.DoubleSide,
       }),
     }),
-    [sign, totem, board, band],
+    [sign, totem, guide, board, band],
   );
 
   // Un panneau de nom de gare tous les ~55 m, un tableau d'affichage tous les
@@ -196,6 +216,10 @@ export function PlatformSignage({
       }),
     [halfZ, avoid],
   );
+  // Les plaques de nom se vissent sur les poteaux de charpente, un sur deux.
+  // La liste est partagée avec les bandeaux publicitaires (stationGeometry) :
+  // une face de poteau ne porte qu'une chose.
+  const plateZ = useMemo(() => nameplateColumns(columns), [columns]);
   // Les totems se posaient à des z fixes, sans consulter le mobilier : ils
   // tombaient dans un distributeur une fois sur dix. Ils s'écartent de tout ce
   // qui est déjà au sol autour de l'épine — en cherchant des DEUX côtés : la
@@ -239,6 +263,7 @@ export function PlatformSignage({
       lastSignIndex.current = signIndex;
       sign.redraw(signIndex);
       totem.redraw(signIndex);
+      guide.redraw(signIndex);
       band.redraw(signIndex);
       lastView.current = null;
     }
@@ -280,6 +305,22 @@ export function PlatformSignage({
             <planeGeometry args={[3.2, 0.96]} />
           </mesh>
         </group>
+      ))}
+
+      {/* Plaques de nom de gare verticales, vissées sur les poteaux de
+          charpente — 0,18 × 0,90 m, le 1:5 de la plaque réelle (celle du quai
+          Yamanote de Tokyo mesure environ 100 × 20 cm). Le bas est à 1,55 m
+          au-dessus du quai : au-dessus du bandeau de poteau, sous la poutre. */}
+      {plateZ.map((z) => (
+        <mesh
+          name="plaque-nom"
+          key={`plate${z}`}
+          position={[postFaceX - 0.012, PLATFORM_TOP + 2.0, z]}
+          rotation={[0, -Math.PI / 2, 0]}
+          material={materials.totem}
+        >
+          <planeGeometry args={[0.18, 0.9]} />
+        </mesh>
       ))}
 
       {/* Tableaux d'affichage suspendus */}
@@ -342,14 +383,13 @@ export function PlatformSignage({
           <mesh position={[0, 1.1, 0]} material={metal}>
             <boxGeometry args={[0.22, 2.2, 0.35]} />
           </mesh>
-          {/* Plaque de poteau : 0,18 × 0,90 m, le 1:5 de la plaque réelle
-              (9号型, 75 × 15 cm ; celle du quai Yamanote de Tokyo, 100 × 20). */}
+          {/* Sorties et correspondances : ce que porte un totem autonome. */}
           <mesh
-            position={[-0.12, 1.55, 0]}
+            position={[-0.12, 1.42, 0]}
             rotation={[0, -Math.PI / 2, 0]}
-            material={materials.totem}
+            material={materials.guide}
           >
-            <planeGeometry args={[0.18, 0.9]} />
+            <planeGeometry args={[0.3, 0.64]} />
           </mesh>
           <mesh position={[0, 2.35, 0]} material={accent}>
             <boxGeometry args={[0.28, 0.12, 0.4]} />
