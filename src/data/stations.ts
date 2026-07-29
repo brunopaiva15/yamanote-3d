@@ -5,6 +5,9 @@
 // cycle quadrilingue des afficheurs E235.
 // Numéros de quai (内回り / 外回り) : voir `platforms.ts`.
 
+import { nextStation, stationAtHop } from './loop.ts';
+import type { LoopDirection } from './platforms.ts';
+
 export type Station = {
   jy: string;
   kanji: string;
@@ -49,6 +52,13 @@ export const STATIONS: Station[] = [
 ];
 
 // Côté d'ouverture des portes par index de station (1 = droite, -1 = gauche).
+//
+// LE MÊME DANS LES DEUX SENS, et ce n'est pas une simplification. Un plan de
+// voies à deux tracks est symétrique par rotation d'un demi-tour autour de
+// l'axe de la ligne, et le Japon roule à gauche : sur un îlot central les deux
+// sens ouvrent à droite, sur deux quais latéraux les deux ouvrent à gauche, et
+// sur les doubles îlots 方向別 (上野, 東京, 田町…) chacun a le sien, du même
+// côté. Le côté appartient donc à la GARE, pas au sens de circulation.
 export const DOOR_SIDE: (1 | -1)[] =
   [1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, 1, 1, -1, 1, -1, 1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, -1, 1, -1];
 
@@ -152,19 +162,19 @@ const LOOP_HUBS = ['JY01', 'JY05', 'JY13', 'JY17', 'JY20', 'JY25'];
  * Tamachi, 渋谷・品川 depuis Shinjuku, 新宿・渋谷 depuis Ikebukuro,
  * 池袋・新宿 depuis Ueno.
  */
-export function boardDestinations(index: number, max = 2): Station[] {
+export function boardDestinations(index: number, dir: LoopDirection, max = 2): Station[] {
   const out: Station[] = [];
   for (let step = 1; step < 30 && out.length < max; step++) {
-    const st = STATIONS[(index + step) % 30];
+    const st = STATIONS[stationAtHop(index, step, dir)];
     if (LOOP_HUBS.includes(st.jy)) out.push(st);
   }
   return out;
 }
 
-export function directionBoardStations(index: number, max = 5): Station[] {
-  const out: Station[] = [STATIONS[(index + 1) % 30]];
+export function directionBoardStations(index: number, dir: LoopDirection, max = 5): Station[] {
+  const out: Station[] = [STATIONS[nextStation(index, dir)]];
   for (let step = 2; step < 30 && out.length < max; step++) {
-    const st = STATIONS[(index + step) % 30];
+    const st = STATIONS[stationAtHop(index, step, dir)];
     if (TRANSFERS[st.jy]) out.push(st);
   }
   return out;

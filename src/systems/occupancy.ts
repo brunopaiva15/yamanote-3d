@@ -8,6 +8,7 @@ import {
   HOUR_CURVE,
   MONTH_COEFFS,
   INNER_BASE_0815,
+  OUTER_BASE_0815,
   dayPeriod,
   isGoldenWeek,
   isHalloweenZone,
@@ -20,7 +21,8 @@ import {
   type OccupancyBand,
   type TokyoDate,
 } from '../data/occupancy';
-import { segmentAt } from '../data/segments';
+import type { LoopDirection } from '../data/platforms';
+import { prevStation } from '../data/loop';
 import { useStore, type Phase } from '../store';
 import { runtime } from './runtime';
 
@@ -120,8 +122,18 @@ function halloweenBoost(fromIndex: number, minutes: number, date: TokyoDate): nu
   return 1;
 }
 
-function baseEstimate(fromIndex: number, minutes: number, date: TokyoDate, holiday: boolean): number {
-  const baseline = INNER_BASE_0815[fromIndex];
+function baseEstimate(
+  fromIndex: number,
+  minutes: number,
+  date: TokyoDate,
+  holiday: boolean,
+  dir: LoopDirection,
+): number {
+  // Les deux relevés ne se déduisent pas l'un de l'autre : à 8 h 15 le
+  // 内回り est écrasé entre Shin-Ōkubo et Shinjuku (139 %) quand le 外回り
+  // l'est entre Ueno et Okachimachi (134 %). Ce sont deux flux, pas un flux
+  // et son reflet — c'est le sens qui va vers les bureaux qui se remplit.
+  const baseline = (dir === 'outer' ? OUTER_BASE_0815 : INNER_BASE_0815)[fromIndex];
   const hf = hourFactor(minutes);
   const period = dayPeriod(minutes);
   const dc = dayCoeffsFor(date, holiday);
@@ -146,9 +158,12 @@ function baseEstimate(fromIndex: number, minutes: number, date: TokyoDate, holid
 }
 
 export function estimateOccupancy(args: {
+  /** Gare de DÉPART du tronçon (0–29). */
   fromIndex: number;
   minutes: number;
   date: TokyoDate;
+  /** Sens de circulation : il choisit le relevé de référence. */
+  direction: LoopDirection;
 }): OccupancyEstimate {
   const fromIndex = ((args.fromIndex % 30) + 30) % 30;
   const { minutes, date } = args;
@@ -163,7 +178,7 @@ export function estimateOccupancy(args: {
   } else if (isObon(date)) {
     percent = obonAbsolute(minutes);
   } else {
-    percent = baseEstimate(fromIndex, minutes, date, holiday);
+    percent = baseEstimate(fromIndex, minutes, date, holiday, args.direction);
 
     if (isNewYearPeriod(date) === 2) {
       const period = dayPeriod(minutes);
@@ -191,21 +206,30 @@ export function estimateOccupancy(args: {
   };
 }
 
-/** Index du tronçon courant selon la phase (gare de départ). */
-export function currentFromIndex(index: number, phase: Phase): number {
-  // cruise/brake : on roule vers `index` sur segmentAt(index).
-  // dwell : à quai à `index`, peuplement pour le prochain départ = tronçon `index`.
-  // depart : index déjà avancé vers la destination → segmentAt(index).
+/**
+ * Gare de DÉPART du tronçon courant, selon la phase.
+ *
+ * C'est bien la gare quittée, et non l'index du tronçon : les deux relevés de
+ * remplissage sont indexés par gare de départ, chacun dans son sens (voir
+ * data/occupancy). En 内回り les deux coïncident ; en 外回り, non.
+ *
+ *   cruise / brake / depart : on roule vers `index`, donc on vient de
+ *   `prevStation(index, sens)` ;
+ *   dwell : on est à quai à `index`, et le peuplement vaut pour le départ qui
+ *   vient — la gare de départ est celle-là même.
+ */
+export function currentFromIndex(index: number, phase: Phase, dir: LoopDirection): number {
   if (phase === 'dwell') return index;
-  return segmentAt(index);
+  return prevStation(index, dir);
 }
 
 export function currentSegmentOccupancy(): OccupancyEstimate {
-  const { index, phase } = useStore.getState();
-  const fromIndex = currentFromIndex(index, phase);
+  const { index, phase, loopDirection } = useStore.getState();
+  const fromIndex = currentFromIndex(index, phase, loopDirection);
   return estimateOccupancy({
     fromIndex,
     minutes: runtime.clockMin,
     date: runtime.tokyoDate,
+    direction: loopDirection,
   });
 }

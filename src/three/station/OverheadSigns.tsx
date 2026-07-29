@@ -16,6 +16,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
 import type { StationLayout } from '../../data/stationLayouts';
+import { useStore } from '../../store';
 import { runtime } from '../../systems/runtime';
 import {
   GANTRY_PULL,
@@ -42,6 +43,8 @@ interface Props {
 }
 
 export function OverheadSigns({ place, layout, station, detail }: Props) {
+  // Le caisson 番線 porte le numéro du quai DESSERVI : il change avec le sens.
+  const loopDirection = useStore((s) => s.loopDirection);
   // Deux sorties + un tableau de correspondances, redessinés au changement de
   // gare et non reconstruits : une seule texture par panneau pour la session.
   const signs = useMemo(
@@ -100,8 +103,8 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
     signs.transfer.redraw(station);
     // Le caisson 番線 se raccourcit sur les quais étroits : la texture se
     // recompose à sa proportion au lieu de s'y écraser.
-    signs.track.redraw(station, trackW);
-  }, [signs, station, trackW]);
+    signs.track.redraw(station, loopDirection, trackW);
+  }, [signs, station, loopDirection, trackW]);
 
   // Les panneaux ne s'allument pas tant que le quai n'est pas là : redessiner
   // un canvas est gratuit, mais une gare invisible n'a pas à coûter un rendu.

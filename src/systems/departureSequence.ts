@@ -49,6 +49,7 @@ import {
   type ServiceType,
   type TrainState,
 } from '../data/melodies';
+import { nextStation } from '../data/loop';
 import { platformFor, type LoopDirection } from '../data/platforms';
 import { STATIONS } from '../data/stations';
 import { useStore } from '../store';
@@ -161,8 +162,7 @@ function resolvePlatform(
 }
 
 function nextStationCodeFor(index: number, direction: LoopDirection): string {
-  const nextIndex = direction === 'outer' ? (index - 1 + 30) % 30 : (index + 1) % 30;
-  return STATIONS[nextIndex].jy;
+  return STATIONS[nextStation(index, direction)].jy;
 }
 
 export function buildDepartureContext(opts?: {

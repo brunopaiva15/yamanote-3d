@@ -103,11 +103,11 @@ const CYCLE = 3.5;
  * tronçon, dont la croisière est justement dimensionnée (data/segments).
  */
 function nextTrainsFromCar(index: number): NextTrains {
-  const { phase } = useStore.getState();
+  const { phase, loopDirection } = useStore.getState();
   const t = runtime.phaseT;
   const dwell = dwellDuration(index);
   /** D'une rame à quai à la suivante à quai : l'intervalle réel du tronçon. */
-  const cycle = journeyDuration(index) + CONFIG.dwellTime;
+  const cycle = journeyDuration(index, loopDirection) + CONFIG.dwellTime;
   switch (phase) {
     case 'brake': {
       const first = Math.max(0, CONFIG.brakeTime - t);
@@ -124,7 +124,7 @@ function nextTrainsFromCar(index: number): NextTrains {
     case 'depart':
       return { first: null, second: Math.max(60, cycle - dwell - t), leaving: true };
     default: {
-      const first = Math.max(0, cruiseDuration(index) - t) + CONFIG.brakeTime;
+      const first = Math.max(0, cruiseDuration(index, loopDirection) - t) + CONFIG.brakeTime;
       return { first, second: first + cycle, leaving: false };
     }
   }
@@ -278,16 +278,16 @@ export function PlatformSignage({
     // La gare du panneau est celle du quai présent : pendant le départ, index
     // a déjà avancé mais platformIndex retient la gare quittée, quel que soit
     // le sens de la boucle.
-    const { platformIndex: signIndex, phase } = useStore.getState();
+    const { platformIndex: signIndex, phase, loopDirection } = useStore.getState();
     if (
       (phase === 'brake' || phase === 'dwell' || phase === 'depart') &&
       lastSignIndex.current !== signIndex
     ) {
       lastSignIndex.current = signIndex;
-      sign.redraw(signIndex);
+      sign.redraw(signIndex, loopDirection);
       totem.redraw(signIndex);
-      guide.redraw(signIndex);
-      band.redraw(signIndex);
+      guide.redraw(signIndex, loopDirection);
+      band.redraw(signIndex, loopDirection);
       lastView.current = null;
     }
     // L'afficheur ne se redessine que lorsqu'il a réellement changé : sinon on
@@ -297,7 +297,7 @@ export function PlatformSignage({
     const view = boardView(clock.current, signIndex);
     if (!lastView.current || !sameBoardView(lastView.current, view)) {
       lastView.current = view;
-      board.redraw(signIndex, view);
+      board.redraw(signIndex, view, loopDirection);
     }
   });
 

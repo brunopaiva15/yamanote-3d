@@ -3,12 +3,18 @@
 // voyageurs) mais alterne viaducs urbains, larges corridors ferroviaires,
 // tranchées ouvertes et sections au niveau du sol.
 //
-// Segment i = trajet STATIONS[i] → STATIONS[(i+1)%30], dans le sens simulé
-// (内回り, ordre JY croissant).
+// Segment i = trajet STATIONS[i] ↔ STATIONS[(i+1)%30]. Il est NOMMÉ dans le
+// sens 内回り (ordre JY croissant), mais il n'appartient à aucun des deux sens :
+// c'est le même viaduc, la même tranchée, le même dépôt — parcourus à l'endroit
+// ou à l'envers. Seule la façon d'y arriver dépend du sens, d'où le paramètre
+// `dir` des fonctions ci-dessous.
 
-import { CONFIG } from './config';
-import type { LoopDirection } from './platforms';
+import { CONFIG } from './config.ts';
+import { nextStation, stationAtHop, wrapStation } from './loop.ts';
+import type { LoopDirection } from './platforms.ts';
 import type { Phase } from '../store';
+
+export { stationAtHop };
 
 export type SegmentKind = 'viaduct' | 'corridor' | 'trench' | 'ground';
 
@@ -67,9 +73,14 @@ export const SEGMENTS: Segment[] = [
 
 // Tronçon « ambiant » pour un store.index donné, valable dans TOUTES les
 // phases : index désigne la gare d'arrivée en roulant (il avance au début de
-// `depart`), donc l'environnement traversé est toujours celui du segment
-// index-1 → index.
-export const segmentAt = (stationIndex: number): number => (stationIndex + 29) % 30;
+// `depart`), donc l'environnement traversé est celui qui relie la gare
+// précédente à celle-là — au sens de marche près.
+//
+// En 内回り on arrive à `i` en venant de `i−1` : c'est le tronçon `i−1`.
+// En 外回り on arrive à `i` en venant de `i+1` : c'est le tronçon `i`, parcouru
+// à contresens de son nom.
+export const segmentAt = (stationIndex: number, dir: LoopDirection): number =>
+  dir === 'outer' ? wrapStation(stationIndex) : wrapStation(stationIndex - 1);
 
 /**
  * Intervalle arrivée→arrivée (min) par tronçon 内回り, dérivé d'un horaire
@@ -109,20 +120,14 @@ export const SEGMENT_HEADWAY_MIN: readonly number[] = [
   /* 29 Yurakucho→Tokyo         */ 2,
 ];
 
-/** Index du tronçon parcouru pour arriver à `stationIndex` (identique inner/outer). */
-export function segmentForArrival(stationIndex: number): number {
-  return segmentAt(stationIndex);
+/** Index du tronçon parcouru pour arriver à `stationIndex` dans le sens `dir`. */
+export function segmentForArrival(stationIndex: number, dir: LoopDirection): number {
+  return segmentAt(stationIndex, dir);
 }
 
 /** Index du tronçon du k-ième saut depuis `fromIndex` dans le sens `dir`. */
 export function segmentForHop(fromIndex: number, dir: LoopDirection): number {
-  return dir === 'inner' ? fromIndex : (fromIndex - 1 + 30) % 30;
-}
-
-/** Gare atteinte après k sauts depuis `fromIndex`. */
-export function stationAtHop(fromIndex: number, hops: number, dir: LoopDirection): number {
-  if (dir === 'inner') return (fromIndex + hops) % 30;
-  return (fromIndex - hops + 30) % 30;
+  return segmentForArrival(nextStation(fromIndex, dir), dir);
 }
 
 /** Somme des intervalles (min) sur `hops` tronçons consécutifs. */
@@ -142,20 +147,20 @@ export function headwayMinutesTo(fromIndex: number, hops: number, dir: LoopDirec
  * forfait (voir config.ts), le cycle complet dépasse un peu l'intervalle —
  * c'est voulu : la croisière garde de quoi dérouler les deux annonces.
  */
-export function cruiseDuration(stationIndex: number): number {
-  const headwaySec = SEGMENT_HEADWAY_MIN[segmentForArrival(stationIndex)] * 60;
+export function cruiseDuration(stationIndex: number, dir: LoopDirection): number {
+  const headwaySec = SEGMENT_HEADWAY_MIN[segmentForArrival(stationIndex, dir)] * 60;
   const fixed = CONFIG.departTime + CONFIG.brakeTime + CONFIG.dwellTime;
   return Math.max(8, headwaySec - fixed);
 }
 
 /** Trajet inter-gares sans dwell : depart + cruise + brake (s). */
-export function journeyDuration(stationIndex: number): number {
-  return CONFIG.departTime + cruiseDuration(stationIndex) + CONFIG.brakeTime;
+export function journeyDuration(stationIndex: number, dir: LoopDirection): number {
+  return CONFIG.departTime + cruiseDuration(stationIndex, dir) + CONFIG.brakeTime;
 }
 
 /** Temps écoulé au début de chaque phase pour le tronçon vers `stationIndex`. */
-export function phaseBase(phase: Phase, stationIndex: number): number {
-  const cruise = cruiseDuration(stationIndex);
+export function phaseBase(phase: Phase, stationIndex: number, dir: LoopDirection): number {
+  const cruise = cruiseDuration(stationIndex, dir);
   switch (phase) {
     case 'depart':
       return 0;
@@ -164,14 +169,19 @@ export function phaseBase(phase: Phase, stationIndex: number): number {
     case 'brake':
       return CONFIG.departTime + cruise;
     default:
-      return journeyDuration(stationIndex);
+      return journeyDuration(stationIndex, dir);
   }
 }
 
 /** Progression 0..1 du trajet inter-gares (dwell maintient p = 1). */
-export function journeyProgress(phase: Phase, phaseT: number, stationIndex: number): number {
-  const journey = journeyDuration(stationIndex);
-  return Math.min(1, Math.max(0, (phaseBase(phase, stationIndex) + phaseT) / journey));
+export function journeyProgress(
+  phase: Phase,
+  phaseT: number,
+  stationIndex: number,
+  dir: LoopDirection,
+): number {
+  const journey = journeyDuration(stationIndex, dir);
+  return Math.min(1, Math.max(0, (phaseBase(phase, stationIndex, dir) + phaseT) / journey));
 }
 
 // Gares à grande toiture : la verrière masque progressivement le ciel à

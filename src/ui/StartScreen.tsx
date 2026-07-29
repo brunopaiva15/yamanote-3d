@@ -12,6 +12,7 @@
 // l'heure à laquelle la nuit tombe, et le temps qu'il fait dehors.
 
 import { useEffect, useState } from 'react';
+import type { LoopDirection } from '../data/platforms';
 import { STATIONS } from '../data/stations';
 import type { TokyoDate } from '../data/occupancy';
 import { useStore } from '../store';
@@ -85,6 +86,9 @@ function valueToDate(value: string): TokyoDate | null {
 /** Valeur sentinelle du sélecteur : laisser randomizeEntry tirer la gare. */
 const STATION_RANDOM = 'random';
 
+/** Même sentinelle pour le sens : la boucle en fait tourner autant des deux. */
+const DIRECTION_RANDOM = 'random';
+
 export function StartScreen() {
   const start = useStore((s) => s.start);
   const t = useT();
@@ -96,6 +100,7 @@ export function StartScreen() {
   const [timePinned, setTimePinned] = useState(false);
   const [dateValue, setDateValue] = useState(() => dateToValue(tokyoNow()));
   const [stationChoice, setStationChoice] = useState<string>(STATION_RANDOM);
+  const [directionChoice, setDirectionChoice] = useState<string>(DIRECTION_RANDOM);
 
   // Tant que l'heure n'est pas figée par le joueur, la rafraîchir doucement
   // pour que le pied de carte et le champ restent calés sur Tokyo.
@@ -146,6 +151,9 @@ export function StartScreen() {
     // systématique à l'arrêt.
     const stationIndex =
       stationChoice === STATION_RANDOM ? undefined : Number(stationChoice);
+    // Le sens : 内回り, 外回り, ou pile ou face si on n'a rien demandé.
+    const direction =
+      directionChoice === DIRECTION_RANDOM ? undefined : (directionChoice as LoopDirection);
     // `?plateau=1` : embarquer directement sur le tronçon du prototype PLATEAU,
     // plutôt que d'attendre le tour de boucle qu'un tirage aléatoire
     // imposerait. Sans le paramètre, plateauEntryStation() renvoie undefined et
@@ -156,11 +164,13 @@ export function StartScreen() {
       // randomizeEntry tire aussi la phase : on relance jusqu'à tomber sur une
       // phase où le tronçon parcouru est bien celui du prototype.
       for (let attempt = 0; attempt < 32; attempt++) {
-        randomizeEntry(entryStation);
-        if (segmentAt(useStore.getState().index) === PLATEAU_SEGMENT) break;
+        // Le prototype ne couvre que le 内回り (voir systems/plateau) : le
+        // sens choisi dans le menu ne s'applique pas à cette entrée-là.
+        randomizeEntry(entryStation, 'inner');
+        if (segmentAt(useStore.getState().index, 'inner') === PLATEAU_SEGMENT) break;
       }
     } else {
-      randomizeEntry(Number.isFinite(stationIndex) ? stationIndex : undefined);
+      randomizeEntry(Number.isFinite(stationIndex) ? stationIndex : undefined, direction);
     }
     setPlatformSide(useStore.getState().doorSide);
     // Densité PNJ après le tirage, pour le tronçon / la phase choisis.
@@ -267,6 +277,24 @@ export function StartScreen() {
                   {st.jy} {st.kanji} / {st.romaji}
                 </option>
               ))}
+            </select>
+          </div>
+          <div className="start-option">
+            <label className="start-option-label" htmlFor="start-direction">
+              {t.start.directionLabel}
+            </label>
+            <select
+              id="start-direction"
+              className="quality-select start-station-select"
+              value={directionChoice}
+              onChange={(e) => setDirectionChoice(e.target.value)}
+              aria-label={t.start.directionLabel}
+            >
+              <option value={DIRECTION_RANDOM}>{t.start.directionRandom}</option>
+              {/* Les deux sens gardent leur nom japonais, comme la bande
+                  ci-dessus : c'est ainsi qu'ils sont écrits sur les quais. */}
+              <option value="inner">内回り — Uchi-mawari</option>
+              <option value="outer">外回り — Soto-mawari</option>
             </select>
           </div>
           <div className="start-option">

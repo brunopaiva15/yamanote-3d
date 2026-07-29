@@ -166,6 +166,7 @@ function buildCtx(scope: PaxScope, id: number, trigger: DialogueTrigger): Dialog
     playerSeated: store.seated,
     nextIndex: store.index,
     hereIndex: store.platformIndex,
+    direction: store.loopDirection,
     trigger,
   };
   if (scope === 'car') {
