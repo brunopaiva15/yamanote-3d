@@ -844,7 +844,7 @@ s'accroche à sa tête — pas au bas de l'écran : dans une rame où trente
 personnes sont à portée, il faut voir qui parle. Un second appui coupe court,
 comme on tourne les talons.
 
-Le catalogue compte **397 échanges**, écrits dans les trois langues de
+Le catalogue compte **416 échanges**, écrits dans les trois langues de
 l'interface côte à côte et déclinés selon le genre du personnage là où la
 langue l'impose (« je suis descendue » / « je suis descendu », 僕 / 私,
 ～だよ / ～わよ). Ce qui se dit dépend du contexte : l'heure de Tokyo, la gare
@@ -853,12 +853,31 @@ jour de la semaine. Chaque contexte laisse entre cinquante et soixante
 échanges éligibles ; personne ne se répète, et ce qui vient d'être entendu est
 écarté du tirage suivant.
 
-Six situations font parler les gens **sans qu'on leur ait rien demandé** : une
+Sept situations font parler les gens **sans qu'on leur ait rien demandé** : une
 bousculade, un voisin qui s'étale, le joueur qui monte ou descend, qui s'assoit
-à côté, qui passe à un mètre, ou la rame qui entre en gare. Une réplique
-spontanée toutes les quarante à cent vingt secondes, jamais deux de suite par
-la même personne : c'est ce qui prouve que les gens sont là même quand on ne
-les regarde pas.
+à côté, qui passe à un mètre, la rame qui entre en gare — et l'arrêt d'urgence.
+Une réplique spontanée toutes les quarante à cent vingt secondes, jamais deux
+de suite par la même personne : c'est ce qui prouve que les gens sont là même
+quand on ne les regarde pas.
+
+**L'arrêt d'urgence est le seul qui fasse parler plusieurs personnes.** Les six
+autres s'adressent à un voisin ; un coup de frein d'urgence, lui, arrive à tout
+le wagon en même temps, et un wagon qui vient de freiner en urgence ne produit
+pas une remarque polie. Tout le monde sursaute d'abord — les debout qui ne
+tiennent aucune poignée partent en avant, les autres cherchent des yeux ce qui
+arrive, les assis lèvent le nez de leur écran — puis **deux à quatre voisins
+différents disent leur peur**, l'un après l'autre, la bulle passant de l'un à
+l'autre pendant une quarantaine de secondes. Ce qui se disait juste avant
+s'arrête : une conversation ne survit pas à ça.
+
+La peur se dit en deux temps, que le catalogue distingue par la vitesse de la
+rame. **Au coup de frein**, on ne sait pas encore ce qui se passe : « qu'est-ce
+qui se passe ?! », les mains qui tremblent, le cœur qui bat, la peur d'avoir
+percuté quelque chose. **Une fois la rame immobilisée** en pleine voie, la peur
+change de nature et devient celle de l'attente : le silence, le motif qu'on ne
+donne pas vraiment, le réseau qui ne passe plus, et chez les plus âgés le
+souvenir du grand séisme. Les deux vagues partent d'elles-mêmes, la seconde une
+dizaine de secondes après l'immobilisation.
 
 Ils ne prononcent pas de vrais mots. La voix est un **murmure de syllabes**
 synthétisé (Tone.js), dont la hauteur suit le genre, la stature et l'âge : on
@@ -959,7 +978,7 @@ src/
   three/station/signatures/ les charpentes propres à une gare : Takanawa, Akihabara…
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
-  data/dialogue/         les 397 conversations : conditions d'emploi et texte
+  data/dialogue/         les 416 conversations : conditions d'emploi et texte
                          FR / EN / JA, décliné au féminin et au masculin
   scripts/               models:import / models:inspect (packs → public/models/),
                          sondes navigateur : station-probe, pax-probe,
@@ -1037,6 +1056,15 @@ la mélodie, 1番線、ドアが閉まります et les bips des portes palières
 d'urgence subi en cours de route met la ligne en retard : les quais s'en
 excusent, motif à l'appui, pendant les quelques arrêts qui suivent
 (`data/stationAnnouncements`, `systems/stationPa`).
+
+Cet arrêt d'urgence (急停車) tombe **toutes les dix à vingt-quatre gares**, soit
+de vingt-cinq minutes à une heure de trajet — le premier plus tôt, pour qu'un
+trajet court puisse le vivre. Le train freine sec, reste immobilisé de 45 s à
+2 min 30 avec les annonces du conducteur et les écrans rouges, puis repart ; le
+chrono de phase n'avance que **au prorata de la vitesse** pendant tout
+l'événement, si bien que la gare suivante arrive au bon moment après la reprise
+et que le retard se lit sur l'horloge murale, pas sur le trajet
+(`systems/stationCycle`). Ce que ça fait aux voyageurs est décrit plus haut.
 
 **Quatre locutrices, toutes féminines**, parce que quatre sources parlent et
 qu'on doit les distinguer sans regarder : la sono de la rame (`jf_alpha`),

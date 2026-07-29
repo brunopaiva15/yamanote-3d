@@ -173,6 +173,26 @@ export function findNearbyPax(range: number): PaxTarget | null {
 }
 
 /**
+ * Les voyageurs à portée, du plus proche au plus loin. Sert aux réactions en
+ * chaîne : quand plusieurs voisins réagissent au même événement, il faut
+ * pouvoir passer au suivant au lieu de retomber sur le même.
+ */
+export function findNearbyPaxList(range: number, max = 8): PaxTarget[] {
+  const ex = runtime.playerX;
+  const ey = runtime.playerY;
+  const ez = runtime.playerZ;
+  collectCandidates();
+  const found: PaxTarget[] = [];
+  for (const c of candidates) {
+    const d = Math.hypot(c.x - ex, c.y - ey, c.z - ez);
+    if (d >= range) continue;
+    found.push({ scope: c.scope, id: c.id, x: c.x, y: c.y, z: c.z, dist: d, feminine: c.feminine });
+  }
+  found.sort((a, b) => a.dist - b.dist);
+  return found.length > max ? found.slice(0, max) : found;
+}
+
+/**
  * Position monde (tête) d'un voyageur donné, ou null s'il n'est plus
  * joignable — parti, ou passé de l'autre côté des portes.
  */
