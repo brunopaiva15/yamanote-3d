@@ -309,7 +309,7 @@ export function seasonAt(month: number, day: number): SeasonState {
     clarity: 1 + 0.32 * cold - 0.3 * heat,
     // La ramure nue garde du volume — des branches, ce n'est pas rien — mais
     // beaucoup moins qu'une frondaison en juillet.
-    canopy: 1 - 0.45 * bare,
+    canopy: 1 - 0.38 * bare,
   };
 }
 

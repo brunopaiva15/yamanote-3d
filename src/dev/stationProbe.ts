@@ -211,7 +211,10 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   // Le quai est retiré, sinon il masque tout ce qu'on vient regarder.
   w.__probeCruise = (i: number) => {
     const k = ((i % 30) + 30) % 30;
-    useStore.setState({ index: k, phase: 'cruise', doorSide: DOOR_SIDE[k] });
+    // platformIndex aussi : c'est LUI qui choisit le tronçon (systems/segmentEnv
+    // retient la gare quittée tant que son quai est visible). Sans ça, on
+    // demandait Harajuku→Shibuya et on regardait le décor d'un autre tronçon.
+    useStore.setState({ index: k, platformIndex: k, phase: 'cruise', doorSide: DOOR_SIDE[k] });
     runtime.phaseT = 8;
     runtime.platformFade = 0;
     runtime.platformSlide = 0;

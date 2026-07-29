@@ -43,7 +43,8 @@ import {
 } from '../../systems/cityField';
 import { GROUND_TILE, makeCityGroundTexture, makeSignageTexture } from '../../textures/city';
 import { makeCityMaterial } from './cityMaterial';
-import { makeGroveGeometry, makeHipRoofGeometry } from './cityProps';
+import { makeGroveGeometry, makeGroveMaterial, makeHipRoofGeometry } from './cityProps';
+import { seasonNow } from '../../systems/season';
 
 /** Rebond de l'éclairage public sur le sol, la nuit. */
 const STREET_BOUNCE = new THREE.Color('#ffb877');
@@ -117,10 +118,11 @@ export function CityRibbon() {
       return { geo, mesh, accent, jitter, trim };
     };
 
-    // Bosquets : matériau à couleurs de sommets (tronc brun, feuillage vert),
-    // teinté par instance. Il ne passe pas par le matériau de ville — un
-    // feuillage n'a ni fenêtres ni devanture.
-    const groveMat = new THREE.MeshLambertMaterial({ vertexColors: true, fog: true });
+    // Bosquets : matériau propre, qui garde le tronc brun quand la frondaison
+    // rougit et qui dépouille l'arbre l'hiver. Il ne passe pas par le matériau
+    // de ville — un feuillage n'a ni fenêtres ni devanture.
+    const grove = makeGroveMaterial();
+    const groveMat = grove.material;
     // Enseignes : non éclairées, teintées par instance, dont le NIVEAU suit
     // l'heure — le panneau est terne le jour et éclate la nuit.
     const signTex = makeSignageTexture();
@@ -158,7 +160,7 @@ export function CityRibbon() {
     groundTex.repeat.set(GROUND_SPAN / GROUND_TILE, GROUND_LEN / GROUND_TILE);
     const groundMat = new THREE.MeshLambertMaterial({ map: groundTex, fog: true });
 
-    return { city, sides, groundTex, groundMat, groveMat, groveGeo, signMat, signTex, signGeo, hipGeo };
+    return { city, sides, groundTex, groundMat, grove, groveGeo, signMat, signTex, signGeo, hipGeo };
   }, [cells, props, signs]);
 
   useEffect(
@@ -174,7 +176,7 @@ export function CityRibbon() {
         s.sign?.dispose();
       }
       built.groveGeo.dispose();
-      built.groveMat.dispose();
+      built.grove.dispose();
       built.signGeo.dispose();
       built.signTex.dispose();
       built.signMat.dispose();
@@ -287,7 +289,10 @@ export function CityRibbon() {
             sc.scl.set(spread, p.h, spread);
             sc.mtx.compose(sc.pos, sc.rot, sc.scl);
             s.tree.setMatrixAt(idx, sc.mtx);
-            sc.color.set(p.tone);
+            // La teinte vient du jour, pas du générateur : c'est la saison qui
+            // décide, et une cellule reste posée plusieurs secondes.
+            const se = seasonNow();
+            sc.color.set(p.roll < se.blossom ? se.blossomTone : se.foliage[p.variant]);
             s.tree.setColorAt(idx, sc.color);
             continue;
           }
@@ -359,6 +364,12 @@ export function CityRibbon() {
 
     // --- Sol défilant ---
     built.groundTex.offset.y = runtime.distance / GROUND_TILE;
+
+    // --- Saison : l'arbre se dépouille ---
+    // Ce qui dit l'hiver de loin n'est pas la couleur mais le VOLUME. Une
+    // frondaison de juillet est une masse pleine, une ramure de janvier est un
+    // dessin — et ça se voit à cinquante mètres, à travers une vitre.
+    built.grove.canopy.value = seasonNow().canopy;
 
     // --- Nuit : les fenêtres, vitrines et néons s'allument ---
     const w = dayNightWeights(runtime.clockMin / 60);

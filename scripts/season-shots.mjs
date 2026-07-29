@@ -49,13 +49,15 @@ async function aim(dx, dy) {
   await page.mouse.move(480 + dx, 270 + dy, { steps: 3 });
   await page.mouse.up();
 }
-// De travers, plongée douce : l'angle où l'on voit à la fois le bord de voie,
-// la ville et le ciel — donc les trois endroits où la saison s'écrit.
-await aim(-230, -10);
+// De travers, plongée douce : l'angle où l'on voit à la fois le bord de voie et
+// la ville — les deux endroits où la saison s'écrit. À l'horizontale on ne
+// verrait que des façades, qui ne changent pas d'un mois à l'autre.
+await aim(-230, 15);
 
-// Ueno (index 4) : le seul quartier de la boucle où les bosquets REMPLACENT
-// franchement le bâti. C'est là que la végétation se juge.
-const STATION = 4;
+// Harajuku → Shibuya (index d'ARRIVÉE 19) : au niveau du sol, `greenery`, et le
+// bois du Meiji-jingū en repère. C'est le tronçon le plus végétal de la boucle,
+// donc celui où la saison se juge.
+const STATION = 19;
 // 12 h 30 : le soleil est à sa hauteur méridienne, celle qui change le plus
 // d'un solstice à l'autre (31° en décembre, 78° en juin).
 const NOON = 12 * 60 + 30;
