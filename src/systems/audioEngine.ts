@@ -32,8 +32,8 @@
 // systems/speech.ts), joué par audioManager sur le bus « PA » et donc panné
 // comme le reste, sous son souffle de ligne (paVoiceOpen/Close). Il n'y a plus
 // de repli speechSynthesis : cette voix-là sortait hors du graphe Web Audio,
-// impossible à panner, et s'entendait comme une cinquième locutrice au milieu
-// des quatre du jeu.
+// impossible à panner, et s'entendait comme une cinquième voix au milieu des
+// quatre du jeu.
 //
 // Hook fichiers locaux : playClip(name, fallback) joue public/audio/<name>.mp3
 // s'il existe, sinon retombe sur la synthèse. audioManager.playOnce(path) joue

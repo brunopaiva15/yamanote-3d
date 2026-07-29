@@ -4,13 +4,19 @@
 // numéro de voie et de la ligne jaune ; la rame parle de la gare suivante et
 // des correspondances.
 //
-// Trois locutrices, toutes féminines :
+// Trois voix :
 //
-//   • ATOS   — l'annonce automatique du quai. Diction posée, très segmentée,
-//              une petite pause entre la voie, la ligne, la direction.
-//   • agent  — l'agent de quai au micro. Plus humaine, moins parfaite : c'est
-//              elle qui presse les voyageurs pendant l'échange.
-//   • anglais — la voix anglaise du quai, un peu plus lente que l'ATOS.
+//   • ATOS   — l'annonce automatique du quai, dite par un HOMME là où la rame
+//              est une femme : les deux automates se répondent parfois à une
+//              seconde d'écart, et on doit savoir sans regarder lequel des deux
+//              vient de parler. Diction posée, très segmentée, une petite pause
+//              entre la voie, la ligne, la direction.
+//   • agent  — l'agent de quai au micro, une femme. Plus humaine, moins
+//              parfaite : c'est elle qui presse les voyageurs pendant
+//              l'échange, et on l'entend juste après l'automate — ce n'est
+//              plus la machine qui parle, ça s'entend au premier mot.
+//   • anglais — la voix anglaise du quai (un homme aussi), un peu plus lente
+//              que l'ATOS.
 //
 // Le canal (quelle voix synthétise quoi) est porté par `voice` et lu par
 // scripts/announcements-export.ts ; le runtime, lui, ne voit que du texte.

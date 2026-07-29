@@ -1571,13 +1571,15 @@ l'événement, si bien que la gare suivante arrive au bon moment après la repri
 et que le retard se lit sur l'horloge murale, pas sur le trajet
 (`systems/stationCycle`). Ce que ça fait aux voyageurs est décrit plus haut.
 
-**Quatre locutrices, toutes féminines**, parce que quatre sources parlent et
-qu'on doit les distinguer sans regarder : la sono de la rame (`jf_alpha`),
-l'annonce automatique du quai (`jf_gongitsune`), l'agent de quai au micro
-(`jf_nezumi`, un peu plus rapide et moins lisse — c'est une personne, pas un
-automate), et les deux voix anglaises (`af_heart` à bord, `af_sarah` au quai,
-un cran plus lente : dehors, sous une verrière, une annonce trop rapide ne
-s'attrape pas).
+**Quatre sources, et deux automates qu'on ne confond pas** : la sono de la rame
+(`jf_alpha`), l'annonce automatique du quai (`jm_kumo`, **un homme** — les deux
+machines se répondent parfois à une seconde d'écart, 「1番線、ドアが閉まります」
+sur le quai puis 「ドアが閉まります」 dans le wagon, et il ne faut pas avoir à
+chercher laquelle vient de parler), l'agent de quai au micro (`jf_nezumi`, une
+femme, un peu plus rapide et moins lisse — c'est une personne, pas un automate,
+et elle prend la parole juste après lui), et les deux voix anglaises
+(`af_heart` à bord, `am_michael` au quai, un cran plus lent : dehors, sous une
+verrière, une annonce trop rapide ne s'attrape pas).
 
 S'y ajoute, sur les gares dont l'îlot est partagé avec une autre ligne, la seule
 annonce de quai qui parle d'une voie qui n'est pas la nôtre : まもなく、1番線を、

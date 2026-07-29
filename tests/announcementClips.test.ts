@@ -1,6 +1,6 @@
 // Couverture des clips d'annonce.
 //
-// Le jeu compte quatre locutrices Kokoro et AUCUNE cinquième : dès qu'un texte
+// Le jeu compte quatre sources gravées avec Kokoro et AUCUNE cinquième : dès qu'un texte
 // joué n'a pas son MP3, systems/speech.ts retombe sur speechSynthesis, qui sort
 // hors du graphe Web Audio — pas de spatialisation, pas de souffle de ligne, et
 // un timbre système qui n'appartient ni à la rame ni au quai. C'est audible

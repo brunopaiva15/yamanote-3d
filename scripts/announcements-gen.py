@@ -6,9 +6,10 @@ Entrée : le JSON produit par scripts/announcements-export.ts (textes + vitesses
 public/audio/announcements/<clé>.mp3, et le manifeste src/data/pa-manifest.ts
 (clé → durée en secondes) consommé par le runtime.
 
-Voix : portée par chaque item (champ « voice »), toutes féminines — la sono de
-la rame et celle du quai ne doivent pas parler de la même bouche. Un item sans
-voix retombe sur la voix par défaut de sa langue. G2P : misaki en japonais
+Voix : portée par chaque item (champ « voice ») — la sono de la rame et celle du
+quai ne doivent pas parler de la même bouche, et l'automate du quai est un homme
+là où la rame est une femme. Un item sans voix retombe sur la voix par défaut de
+sa langue. G2P : misaki en japonais
 comme en anglais (repli espeak). Les noms de gare sont vérifiés avec ce même
 misaki : s'il lit un nom autrement que sa transcription kana (stations.ts), le
 katakana remplace le kanji dans le texte synthétisé — c'est ce qui rattrape
