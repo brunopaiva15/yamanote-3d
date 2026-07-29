@@ -14,6 +14,7 @@
 //   node scripts/pax-probe.mjs             → dix minutes de vie + un échange
 //   node scripts/pax-probe.mjs 30          → trente minutes de vie
 //   node scripts/pax-probe.mjs --lines 12  → douze répliques tirées d'affilée
+//   node scripts/pax-probe.mjs --lang ja   → les répliques en japonais
 
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
@@ -21,6 +22,8 @@ import { createServer } from 'vite';
 const args = process.argv.slice(2);
 const minutes = Number(args.find((a) => /^\d+$/.test(a)) ?? 10);
 const lineCount = Number(args[args.indexOf('--lines') + 1]) || (args.includes('--lines') ? 8 : 4);
+// Langue des répliques : celle du navigateur par défaut, ou celle qu'on impose.
+const lang = args.includes('--lang') ? args[args.indexOf('--lang') + 1] : null;
 
 const server = await createServer({ server: { port: 5205 }, logLevel: 'error' });
 await server.listen();
@@ -91,13 +94,14 @@ console.log(
 
 // --- Parole ---------------------------------------------------------------
 
-const talk = await page.evaluate(async (count) => {
+const talk = await page.evaluate(async ({ count, lang }) => {
   const conv = await import('/src/systems/conversation.ts');
   const pax = await import('/src/systems/passengers.ts');
   const targeting = await import('/src/systems/paxTargeting.ts');
   const dialogue = await import('/src/data/dialogue/index.ts');
   const rt = (await import('/src/systems/runtime.ts')).runtime;
   const store = (await import('/src/store.ts')).useStore;
+  if (lang) store.getState().setLang(lang);
 
   const said = [];
   for (let i = 0; i < count; i++) {
@@ -139,7 +143,7 @@ const talk = await page.evaluate(async (count) => {
     conv.endConversation();
   }
   return { catalogue: dialogue.DIALOGUE_COUNT, said };
-}, lineCount);
+}, { count: lineCount, lang });
 
 console.log(`\n— Parole : ${talk.catalogue} échanges au catalogue —`);
 for (const s of talk.said) {
