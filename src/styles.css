@@ -643,7 +643,10 @@ body,
    volontairement sobre — c'est une voix dans un train, pas une interface de
    jeu de rôle. */
 .pax-bubble {
-  max-width: 320px;
+  /* Le conteneur qui porte la bulle en 3D n'a aucune largeur : sans
+     `max-content`, la phrase se replierait en colonne d'un mot. */
+  width: max-content;
+  max-width: min(340px, 62vw);
   padding: 9px 14px;
   border-radius: 14px;
   background: rgba(16, 21, 26, 0.82);

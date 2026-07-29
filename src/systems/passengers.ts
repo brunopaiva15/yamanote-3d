@@ -45,6 +45,7 @@ import {
   type PickCtx,
   type Temper,
 } from './paxBehavior';
+import { pushPaxEvent } from './paxEvents';
 import { resolveMotion, trainPlayerCtx } from './paxMotion';
 import { playPaxActionSfx } from './paxSfx';
 import { paxBump } from './audioEngine';
@@ -675,6 +676,8 @@ function reactToFall(fallen: Pax, hard: boolean): void {
     while (d > Math.PI) d -= Math.PI * 2;
     while (d < -Math.PI) d += Math.PI * 2;
     other.lookYawTarget = THREE.MathUtils.clamp(d, -1.15, 1.15);
+    // Le premier témoin peut commenter la scène s'il est près du joueur.
+    if (n === 0) pushPaxEvent('car', other.id, 'fallNearby');
     if (++n >= 4) break;
   }
 }
@@ -932,6 +935,9 @@ function resolvePlayerPush(dt: number): void {
       if (bumpCooldown <= 0 && (approach > 0.4 || overlap > 0.35)) {
         paxBump(dist, overlap > 0.55);
         bumpCooldown = 0.28;
+        // Se faire marcher dessus mérite un mot (systems/conversation en
+        // choisit un, et n'en dira pas un à chaque contact).
+        pushPaxEvent('car', p.id, 'bump');
       }
       if (p.pushAccum >= PUSH_FALL) {
         endPair(p);
@@ -954,6 +960,7 @@ function resolvePlayerPush(dt: number): void {
         if (bumpCooldown <= 0) {
           paxBump(dist, false);
           bumpCooldown = 0.35;
+          pushPaxEvent('car', p.id, 'bump');
         }
       }
       p.pushAccum = Math.max(0, p.pushAccum - dt * 0.4);

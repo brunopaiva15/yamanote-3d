@@ -135,6 +135,28 @@ export function findTargetedPax(range = TALK_RANGE): PaxTarget | null {
   };
 }
 
+/**
+ * Le voyageur le plus proche, qu'on le regarde ou non. Sert aux répliques
+ * spontanées : quand le joueur s'assoit ou que la rame entre en gare, c'est
+ * le voisin qui parle, pas celui qu'on avait en joue.
+ */
+export function findNearbyPax(range: number): PaxTarget | null {
+  const ex = runtime.playerX;
+  const ey = runtime.playerY;
+  const ez = runtime.playerZ;
+  collectCandidates();
+  let best: Candidate | null = null;
+  let bestD = range;
+  for (const c of candidates) {
+    const d = Math.hypot(c.x - ex, c.y - ey, c.z - ez);
+    if (d >= bestD) continue;
+    bestD = d;
+    best = c;
+  }
+  if (!best) return null;
+  return { scope: best.scope, id: best.id, x: best.x, y: best.y, z: best.z, dist: bestD, feminine: best.feminine };
+}
+
 /** Position monde (tête) d'un voyageur donné, ou null s'il n'est plus là. */
 export function paxAnchor(scope: PaxScope, id: number): PaxTarget | null {
   if (scope === 'car') {

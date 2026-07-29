@@ -23,10 +23,10 @@ import {
   type DialogueEntry,
   type DialogueTrigger,
 } from '../data/dialogue';
-import { useStore } from '../store';
+import { useStore, type Phase } from '../store';
 import { currentSegmentOccupancy } from './occupancy';
 import { input } from './input';
-import { drainPaxEvents, type PaxEvent } from './paxEvents';
+import { drainPaxEvents, pushPaxEvent, pushSceneEvent, type PaxEvent } from './paxEvents';
 import {
   paxKeepTalking,
   paxList,
@@ -39,7 +39,14 @@ import {
   crowdStartTalking,
   crowdStopTalking,
 } from './platformCrowd';
-import { findTargetedPax, paxAnchor, TALK_BREAK_RANGE, type PaxScope, type PaxTarget } from './paxTargeting';
+import {
+  findNearbyPax,
+  findTargetedPax,
+  paxAnchor,
+  TALK_BREAK_RANGE,
+  type PaxScope,
+  type PaxTarget,
+} from './paxTargeting';
 import { runtime } from './runtime';
 import { paxVoice } from './audioEngine';
 
@@ -114,10 +121,33 @@ function noteSaid(scope: PaxScope, id: number, dialogueId: string): void {
   lastSpokeAt.set(k, clock);
 }
 
-/** Efface la mémoire d'un voyageur : le pool est réutilisé, pas la personne. */
-export function forgetPax(scope: PaxScope, id: number): void {
-  saidBy.delete(key(scope, id));
-  lastSpokeAt.delete(key(scope, id));
+/**
+ * Oubli des voyageurs partis.
+ *
+ * Les deux pools sont RÉUTILISÉS : le siège 12 est occupé par quelqu'un
+ * d'autre trois gares plus loin. Sans cet oubli, ce nouveau voyageur hériterait
+ * de tout ce que son prédécesseur a déjà dit et refuserait de le redire — la
+ * mémoire suivrait la place, pas la personne.
+ */
+let sweepT = 0;
+
+function forgetDeparted(dt: number): void {
+  sweepT -= dt;
+  if (sweepT > 0) return;
+  sweepT = 2;
+  for (const k of [...saidBy.keys()]) {
+    const [scope, rawId] = k.split(':');
+    const id = Number(rawId);
+    if (scope === 'car') {
+      const p = paxList[id];
+      if (p && (p.state === 'seated' || p.state === 'standing')) continue;
+    } else {
+      const p = crowdList[id];
+      if (p && p.state !== 'hidden') continue;
+    }
+    saidBy.delete(k);
+    lastSpokeAt.delete(k);
+  }
 }
 
 // --- Contexte ------------------------------------------------------------
@@ -297,17 +327,70 @@ function spontaneousInterval(): number {
 function handleEvent(e: PaxEvent): void {
   if (conversation.active) return;
   if (clock < spontaneousReadyAt) return;
-  // Une bousculade mérite toujours une réaction ; le reste attend son tour.
-  const k = key(e.scope, e.id);
-  const last = lastSpokeAt.get(k) ?? -999;
+  let scope = e.scope;
+  let id = e.id;
+  if (id < 0) {
+    // Événement sans destinataire : c'est au voisin le plus proche de relever.
+    const near = findNearbyPax(2.6);
+    if (!near) return;
+    scope = near.scope;
+    id = near.id;
+  }
+  // Personne ne se remet à parler deux fois de suite.
+  const last = lastSpokeAt.get(key(scope, id)) ?? -999;
   if (clock - last < 25) return;
-  if (startConversation(e.scope, e.id, e.trigger)) {
+  if (startConversation(scope, id, e.trigger)) {
     spontaneousReadyAt = clock + spontaneousInterval();
   }
 }
 
+// --- Ce qui arrive AU JOUEUR ---------------------------------------------
+//
+// S'asseoir, monter, descendre, entrer en gare : autant de choses que le
+// joueur provoque et qu'un voisin peut relever. Plutôt que d'aller planter
+// des appels dans le contrôleur du joueur et la machine à états des gares, on
+// guette ici les transitions de l'état global — c'est le même travail, au
+// même endroit que le reste du dialogue.
+
+let prevSeated = false;
+let prevOnPlatform = false;
+let prevPhase: Phase = 'cruise';
+let prevIndex = -1;
+let watchInit = false;
+let passbyT = 0;
+
+function watchPlayerEvents(dt: number): void {
+  const { seated, onPlatform, phase, platformIndex } = useStore.getState();
+  if (!watchInit) {
+    watchInit = true;
+    prevSeated = seated;
+    prevOnPlatform = onPlatform;
+    prevPhase = phase;
+    prevIndex = platformIndex;
+    return;
+  }
+  if (seated && !prevSeated) pushSceneEvent('satDown');
+  if (onPlatform !== prevOnPlatform) pushSceneEvent('boarding');
+  if (phase === 'dwell' && prevPhase !== 'dwell') pushSceneEvent('arrival');
+  else if (platformIndex !== prevIndex && phase === 'dwell') pushSceneEvent('arrival');
+  prevSeated = seated;
+  prevOnPlatform = onPlatform;
+  prevPhase = phase;
+  prevIndex = platformIndex;
+
+  // Frôler quelqu'un en marchant, de loin en loin : ni un choc, ni une
+  // sollicitation — juste un mot lâché au passage.
+  passbyT -= dt;
+  if (passbyT > 0) return;
+  passbyT = 4;
+  if (seated || conversation.active) return;
+  const near = findNearbyPax(1.15);
+  if (near && Math.random() < 0.22) pushPaxEvent(near.scope, near.id, 'passby');
+}
+
 export function updateConversation(dt: number): void {
   clock += dt;
+  forgetDeparted(dt);
 
   // Cible en joue : sondée dix fois par seconde, c'est bien assez pour une
   // invite, et ça évite de balayer les deux populations à chaque image.
@@ -332,6 +415,7 @@ export function updateConversation(dt: number): void {
   }
 
   // Réactions spontanées (bousculade, chute voisine, montée du joueur…).
+  watchPlayerEvents(dt);
   for (const e of drainPaxEvents()) handleEvent(e);
 
   if (!conversation.active || !talk) return;
@@ -371,11 +455,24 @@ export function updateConversation(dt: number): void {
   speakLine();
 }
 
-/** Remet le module à zéro (changement de gare, purge de qualité, reset). */
+/** Remet le module à zéro : plus personne ne se souvient de rien. */
 export function resetConversation(): void {
   endConversation();
   saidBy.clear();
   lastSpokeAt.clear();
   recentGlobal.length = 0;
   talkTarget.target = null;
+}
+
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  // Outils dev, pendants de __pax et __crowd : __conversation donne l'échange
+  // en cours et qui l'a en joue ; __talk() fait parler le voyageur visé sans
+  // avoir à viser, __forget() rouvre tout le catalogue.
+  const w = window as unknown as Record<string, unknown>;
+  w.__conversation = conversation;
+  w.__talk = (trigger: DialogueTrigger = 'ask') => {
+    const t = talkTarget.target ?? findNearbyPax(3.5);
+    return t ? startConversation(t.scope, t.id, trigger) : false;
+  };
+  w.__forget = resetConversation;
 }

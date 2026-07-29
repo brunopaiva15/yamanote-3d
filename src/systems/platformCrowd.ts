@@ -30,6 +30,7 @@ import {
   isFallingAction,
   type PaxAction,
 } from '../data/paxActions';
+import { pushPaxEvent } from './paxEvents';
 import {
   actionDuration,
   nextInterludeDelay,
@@ -864,6 +865,8 @@ function avoidPlayer(p: CrowdPax, dt: number, pvx: number, pvz: number): void {
   if (crowdBumpCd <= 0 && (approach > 0.35 || overlap > 0.3)) {
     paxBump(d, overlap > 0.5);
     crowdBumpCd = 0.3;
+    // Bousculer quelqu'un sur un quai se remarque encore plus qu'en rame.
+    if (p.state === 'waiting') pushPaxEvent('platform', p.id, 'bump');
   }
 
   if (p.pushAccum > 0.2 && p.state === 'waiting' && !isPairAction(p.action as PaxAction)) {

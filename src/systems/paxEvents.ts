@@ -14,6 +14,7 @@ import type { PaxScope } from './paxTargeting';
 
 export interface PaxEvent {
   scope: PaxScope;
+  /** -1 : personne en particulier — au moteur de désigner qui est à portée. */
   id: number;
   trigger: DialogueTrigger;
 }
@@ -26,6 +27,17 @@ export function pushPaxEvent(scope: PaxScope, id: number, trigger: DialogueTrigg
   // Un même voyageur ne fait pas la queue deux fois.
   if (queue.some((e) => e.scope === scope && e.id === id)) return;
   queue.push({ scope, id, trigger });
+}
+
+/**
+ * Événement sans destinataire : quelque chose vient d'arriver AU JOUEUR (il
+ * monte, il s'assoit, la rame entre en gare) et n'importe quel voisin peut le
+ * relever. Le moteur choisira qui.
+ */
+export function pushSceneEvent(trigger: DialogueTrigger): void {
+  if (queue.length >= MAX_QUEUED) return;
+  if (queue.some((e) => e.trigger === trigger)) return;
+  queue.push({ scope: 'car', id: -1, trigger });
 }
 
 export function drainPaxEvents(): PaxEvent[] {
