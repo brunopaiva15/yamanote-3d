@@ -74,6 +74,75 @@ export const POWER_RESTORE: readonly PowerFrame[] = [
   [2.9, 1], // les tubes montent en puissance
 ];
 
+// --- Les petits bruits électriques ---------------------------------------
+//
+// Une coupure de courant est un événement SONORE avant d'être un événement
+// visuel : ce qui se passe dans un wagon qui perd sa caténaire, c'est du
+// matériel électrique qui travaille — un disjoncteur qui s'ouvre, des
+// contacteurs qui battent, des tubes qui essaient de se réamorcer et
+// grésillent, un convertisseur dont le sifflement s'effondre.
+//
+// Ces instants sont déclarés ICI, à côté des images-clés de la lumière, et pas
+// dans le moteur audio. C'est la seule façon de garantir qu'ils restent
+// ensemble : un claquement qui arrive un dixième de seconde après son
+// clignotement se lit comme un deuxième événement, et l'illusion tombe. Régler
+// la courbe, c'est régler le son en même temps.
+
+export type PowerSoundKind =
+  /** Le disjoncteur principal s'ouvre, sous le plancher : le coup sourd. */
+  | 'breaker'
+  /** Un contacteur claque — fermeture qui tient, ou qui retombe. */
+  | 'relay'
+  /** Un tube essaie de se réamorcer : grésillement bref et aigu. */
+  | 'strike'
+  /** Ce qui reste d'énergie s'échappe : crépitement ténu, sans coup. */
+  | 'arc'
+  /** Le sifflement du convertisseur s'effondre. */
+  | 'whineDown'
+  /** …et remonte, quand il se réamorce pour de bon. */
+  | 'whineUp'
+  /** Les turbines de climatisation repartent en charge. */
+  | 'fans';
+
+/** Un petit événement électrique : instant depuis le début de la séquence (s). */
+export type PowerSound = readonly [t: number, kind: PowerSoundKind];
+
+/** Ce qu'on entend pendant la perte de la caténaire. */
+export const POWER_CUT_SOUNDS: readonly PowerSound[] = [
+  [0, 'breaker'],
+  [0.02, 'whineDown'],
+  [0.09, 'strike'], // premier décrochage
+  [0.18, 'strike'], // il se réamorce
+  [0.33, 'relay'],
+  [0.34, 'strike'], // deuxième
+  [0.45, 'strike'],
+  [0.58, 'relay'],
+  [0.59, 'strike'], // troisième
+  [0.82, 'arc'],
+  [0.93, 'arc'],
+  [1.74, 'strike'], // le soubresaut sans lendemain
+];
+
+/** Ce qu'on entend au retour de la tension. */
+export const POWER_RESTORE_SOUNDS: readonly PowerSound[] = [
+  [0.13, 'relay'],
+  [0.14, 'strike'], // première fermeture, qui ne tient pas
+  [0.24, 'arc'],
+  [0.55, 'relay'],
+  [0.56, 'strike'], // deuxième
+  [0.67, 'arc'],
+  [0.99, 'relay'], // celle qui tient
+  [1, 'strike'],
+  [1.01, 'whineUp'],
+  [1.16, 'strike'], // les tubes s'accrochent
+  [1.9, 'fans'],
+];
+
+/** Table des sons associée à une séquence de lumière. */
+function soundsFor(seq: readonly PowerFrame[]): readonly PowerSound[] {
+  return seq === POWER_CUT ? POWER_CUT_SOUNDS : POWER_RESTORE_SOUNDS;
+}
+
 /**
  * Délai avant que le relais de secours ne bascule (s). Les lampes de secours
  * n'accompagnent PAS le clignotement : elles attendent que l'alimentation
@@ -146,10 +215,27 @@ export function resetCarPower(s: CarPowerState): void {
   s.onBattery = false;
 }
 
-/** Un pas de la séquence en cours, et des lampes de secours qui la suivent. */
-export function stepCarPower(s: CarPowerState, dt: number): void {
+/**
+ * Un pas de la séquence en cours, et des lampes de secours qui la suivent.
+ *
+ * `heard` recueille les petits bruits électriques que ce pas vient de
+ * traverser — le module ne connaît pas le moteur audio, il dit seulement ce
+ * qu'il y avait à entendre. Un pas long (frame lente) en récolte plusieurs
+ * d'un coup, ce qui vaut mieux que d'en perdre : au pire ils se bousculent,
+ * au mieux la panne reste sonore même à quinze images par seconde.
+ */
+export function stepCarPower(s: CarPowerState, dt: number, heard?: PowerSoundKind[]): void {
   if (s.seq) {
+    const before = s.t;
     s.t += dt;
+    // Fenêtre semi-ouverte [before, t) : chaque bruit sort une fois et une
+    // seule, et celui posé à l'instant zéro sort dès le premier pas — c'est le
+    // disjoncteur, il ne peut pas être en retard sur sa propre coupure.
+    if (heard) {
+      for (const [t, kind] of soundsFor(s.seq)) {
+        if (t >= before && t < s.t) heard.push(kind);
+      }
+    }
     s.power = samplePower(s.seq, s.t);
     // Le relais de secours bascule pendant la chute, une fois les décrochages
     // passés — pas avant, ou il éclairerait par-dessus des néons encore vifs.

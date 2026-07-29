@@ -29,6 +29,7 @@ import {
   resetCarPower,
   restorePower,
   stepCarPower,
+  type PowerSoundKind,
 } from './carPower';
 import {
   DEPART_HOLD,
@@ -226,8 +227,32 @@ const carPower = createCarPower();
  */
 let heldPower: number | null = null;
 
+/** Bruits électriques que le pas courant vient de traverser (réutilisé). */
+const powerHeard: PowerSoundKind[] = [];
+
+/**
+ * Prochain déclic isolé dans le noir, en temps d'immobilisation (s) ;
+ * -1 = plus aucun.
+ *
+ * Une rame sur batteries n'est pas muette, et cinq minutes de silence total
+ * s'entendent comme un bug audio plutôt que comme une panne. De loin en loin,
+ * un relais travaille — assez espacé pour qu'on ne l'attende pas, assez présent
+ * pour qu'on sache que quelque chose vit encore là-dedans.
+ */
+const BATTERY_TICK_MIN = 9; // s
+const BATTERY_TICK_MAX = 26; // s
+let nextBatteryTickAt = -1;
+
+function scheduleBatteryTick(from: number): void {
+  nextBatteryTickAt = from + BATTERY_TICK_MIN + Math.random() * (BATTERY_TICK_MAX - BATTERY_TICK_MIN);
+}
+
 function updateCarPower(dt: number): void {
-  stepCarPower(carPower, dt);
+  powerHeard.length = 0;
+  stepCarPower(carPower, dt, powerHeard);
+  // Les instants sont dans la séquence, les timbres dans le moteur audio : ce
+  // qu'on voit clignoter et ce qu'on entend claquer ne peuvent pas se décaler.
+  for (const kind of powerHeard) audio.powerSound(kind);
   runtime.carPower = heldPower ?? carPower.power;
   runtime.emergencyLight = carPower.emergency;
 }
@@ -257,7 +282,6 @@ export function beginPowerOutage(): void {
   // milieu du mot. Seulement celle de la rame — la gare, elle, a son propre
   // réseau.
   cancelSpeech('cabin');
-  audio.powerCut();
   // La ligne prend du retard, et le quai en nommera la cause : c'est le seul
   // incident dont l'annonce de retard dit exactement ce que le joueur a vécu.
   notifyLineOutage();
@@ -292,6 +316,9 @@ function updatePowerOutage(dt: number): void {
         em.stage = 'stopped';
         em.t = 0;
         audio.stopSettle();
+        // Le chrono des déclics part de l'immobilisation : c'est de là que se
+        // compte l'attente, et c'est `em.t` qu'ils lisent.
+        scheduleBatteryTick(0);
       }
       break;
     case 'stopped':
@@ -305,9 +332,16 @@ function updatePowerOutage(dt: number): void {
       // cet ordre — c'est la lumière qui prévient tout le wagon, pas la voix.
       once('po-restored', em.t >= em.holdFor - OUTAGE_RESTORE_LEAD, () => {
         restorePower(carPower);
-        audio.powerRestore();
+        // Plus de déclics isolés : il y a mieux à écouter.
+        nextBatteryTickAt = -1;
         pushSceneEvent('powerBack');
       });
+      // Et pendant tout ce temps, la rame n'est pas muette : un relais
+      // travaille quelque part sous le plancher, de loin en loin.
+      if (nextBatteryTickAt >= 0 && em.t >= nextBatteryTickAt) {
+        audio.batteryTick();
+        scheduleBatteryTick(em.t);
+      }
       once(
         'po-announce',
         em.t >= em.holdFor - OUTAGE_RESTORE_LEAD + OUTAGE_RESTORE_TO_ANNOUNCE,
@@ -804,6 +838,7 @@ export function randomizeEntry(stationIndex?: number, direction?: LoopDirection)
   outageAt = -1;
   stationsToOutage = drawOutageGap(true);
   resetCarPower(carPower);
+  nextBatteryTickAt = -1;
   runtime.carPower = 1;
   runtime.emergencyLight = 0;
   runtime.phaseT = phaseT;

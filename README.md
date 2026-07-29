@@ -1636,10 +1636,13 @@ Dans l'ordre, ce que vit le wagon :
 0 s        la traction disparaît. Le chant de l'onduleur s'éteint,
            le souffle de la climatisation meurt en deux secondes.
            La rame roule sur son élan (惰行) et ne ralentit presque pas.
-0–1,8 s    ÇA CLIGNOTE. Le convertisseur de bord décroche, se réamorce sur
-           ce qui reste dans ses condensateurs, décroche encore — trois fois,
-           de plus en plus court —, puis un dernier soubresaut à 1,7 s et
-           plus rien. Un claquement de contacteur par décrochage.
+0–1,8 s    ÇA CLIGNOTE, ET ÇA CLAQUE. Le disjoncteur s'ouvre sous le
+           plancher, le convertisseur décroche, se réamorce sur ce qui reste
+           dans ses condensateurs, décroche encore — trois fois, de plus en
+           plus court —, puis un dernier soubresaut à 1,7 s et plus rien.
+           Contacteurs, grésillements de tubes qui essaient de se rallumer,
+           sifflement du convertisseur qui s'effondre : chaque bruit tombe
+           sur son clignotement, pas à côté.
            Les tubes s'affaissent progressivement ; les dalles LCD et les
            douze écrans 窓上, eux, CLAQUENT — un rétroéclairage tient ou il
            ne tient pas. À mi-décrochage le wagon est encore parfaitement
@@ -1650,10 +1653,12 @@ Dans l'ordre, ce que vit le wagon :
 2–4 s      le conducteur serre les freins. Freinage de SERVICE, au pneumatique :
            la récupération n'a plus de ligne où renvoyer son courant.
 ~14 s      première annonce, au combiné, sur les batteries de bord.
-2 min 50   à 5 min 40 d'immobilisation, portes closes.
-   à 5'40  Un rappel d'attente à mi-parcours — et la seule consigne de sécurité
-           du jeu qui vise un geste que le joueur pourrait vraiment faire :
-           ne pas toucher au robinet de secours des portes.
+2 min 50   à 5 min 40 d'immobilisation, portes closes. Le wagon n'est pas
+   à 5'40  muet pour autant : un relais travaille sous le plancher toutes
+           les 9 à 26 s. Un rappel d'attente à mi-parcours — et la seule
+           consigne de sécurité du jeu qui vise un geste que le joueur
+           pourrait vraiment faire : ne pas toucher au robinet de secours
+           des portes.
 −24 s      le courant revient, et il met trois secondes. Deux contacteurs se
            referment sans tenir, le troisième tient, puis les tubes montent
            doucement en puissance — un fluorescent ne donne pas son plein
@@ -1699,6 +1704,29 @@ trois extinctions franches à la coupure, deux retombées de contacteur au
 retour, une remontée finale qui ne redescend jamais, et un éclairage de secours
 qui ne s'allume jamais entre deux décrochages ni ne laisse le wagon dans le noir
 complet pendant que le courant revient.
+
+**Et ça fait du bruit.** Une coupure est un événement sonore avant d'être un
+événement visuel : entre les deux silences, il se passe quelque chose de très
+court et de très électrique. Le disjoncteur principal s'ouvre sous le plancher,
+des contacteurs claquent, les tubes grésillent en essayant de se réamorcer, le
+sifflement du convertisseur s'effondre en une demi-seconde — et remonte au
+retour. Rien de tout cela n'a de corps : c'est du bruit blanc très court et très
+aigu, le seul timbre du jeu qui n'ait que du haut.
+
+Ces instants sont déclarés **dans `carPower`, à côté des images-clés de la
+lumière**, et non dans le moteur audio, qui ne fournit que les timbres. C'est la
+seule façon de garantir qu'ils ne se décalent jamais : un claquement qui arrive
+un dixième de seconde après son clignotement se lit comme un deuxième
+événement. Régler la courbe, c'est régler le son en même temps — et le test le
+vérifie, chaque commutation devant tomber sur une image-clé. Une frame lente ne
+perd rien non plus : elle récolte d'un coup tous les bruits que son pas a
+traversés, ce qui vaut mieux que de les sauter.
+
+Reste ce qu'on entend **pendant** les minutes de noir, et c'est peut-être le
+plus important : de loin en loin, un relais travaille quelque part sous le
+plancher (toutes les 9 à 26 s, très ténu). Cinq minutes de silence absolu ne
+s'entendent pas comme une panne, elles s'entendent comme un bug audio ; ce sont
+ces déclics qui font qu'un wagon éteint reste habité.
 
 Une seconde valeur l'accompagne, `runtime.emergencyLight`, et ce n'est
 délibérément **pas** le complément de la première : le relais de secours ne

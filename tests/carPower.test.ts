@@ -15,7 +15,9 @@ import assert from 'node:assert/strict';
 import {
   EMERGENCY_LAMP_DELAY,
   POWER_CUT,
+  POWER_CUT_SOUNDS,
   POWER_RESTORE,
+  POWER_RESTORE_SOUNDS,
   createCarPower,
   cutPower,
   powerSeqEnd,
@@ -23,6 +25,7 @@ import {
   samplePower,
   stepCarPower,
   type CarPowerState,
+  type PowerSoundKind,
 } from '../src/systems/carPower.ts';
 
 /** Seuil au-dessous duquel une dalle LCD est éteinte (voir three/Screens). */
@@ -140,4 +143,83 @@ test('l’échantillonnage tient aux bords et entre deux images', () => {
   // les deux bornes et strictement dedans.
   const mid = samplePower(POWER_RESTORE, (1.15 + 2.9) / 2);
   assert.ok(mid > 0.5 && mid < 1, `niveau intermédiaire : ${mid}`);
+});
+
+// --- Les petits bruits électriques ---------------------------------------
+
+/** Déroule une séquence à un pas donné et récolte tous les bruits émis. */
+function heardAt(begin: (s: CarPowerState) => void, dt: number, span: number): PowerSoundKind[] {
+  const s = createCarPower();
+  if (begin === restorePower) {
+    s.power = 0;
+    s.emergency = 1;
+    s.onBattery = true;
+  }
+  begin(s);
+  const heard: PowerSoundKind[] = [];
+  for (let t = 0; t < span; t += dt) stepCarPower(s, dt, heard);
+  return heard;
+}
+
+test('chaque bruit électrique sort une fois, et une seule', () => {
+  const cut = heardAt(cutPower, 1 / 60, 3);
+  assert.equal(cut.length, POWER_CUT_SOUNDS.length);
+  assert.deepEqual(cut, POWER_CUT_SOUNDS.map(([, k]) => k));
+  const restore = heardAt(restorePower, 1 / 60, 3.5);
+  assert.equal(restore.length, POWER_RESTORE_SOUNDS.length);
+  assert.deepEqual(restore, POWER_RESTORE_SOUNDS.map(([, k]) => k));
+});
+
+test('le disjoncteur sonne dès le premier pas : il ne peut pas être en retard', () => {
+  const s = createCarPower();
+  cutPower(s);
+  const heard: PowerSoundKind[] = [];
+  stepCarPower(s, 1 / 60, heard);
+  assert.equal(heard[0], 'breaker');
+});
+
+test('une frame lente bouscule les bruits, elle n’en perd aucun', () => {
+  // Le rendu logiciel des scripts tourne à quatre images par seconde, et une
+  // machine chargée n'en fait pas beaucoup plus. Un pas grossier doit récolter
+  // toute la séquence d'un coup plutôt que de la sauter : au pire ça se
+  // bouscule, au mieux la panne reste sonore.
+  for (const dt of [1 / 30, 1 / 8, 0.4]) {
+    const cut = heardAt(cutPower, dt, 3);
+    assert.equal(cut.length, POWER_CUT_SOUNDS.length, `pas de ${dt} s`);
+  }
+});
+
+test('chaque commutation tombe sur une image-clé de la lumière', () => {
+  // C'est toute la raison d'être de la table : un claquement qui n'accompagne
+  // aucun changement de lumière se lit comme un deuxième événement. On tolère
+  // trois centièmes et demi — le temps qu'un contacteur mette à faire son arc.
+  //
+  // Un seul bruit y échappe, et c'est justifié : `fans` n'est pas une
+  // commutation mais sa CONSÉQUENCE mécanique, les turbines qui remontent en
+  // charge une seconde après que le contacteur a tenu. Elle n'a aucune raison
+  // de tomber sur un éclat de lumière — elle arrive en plein milieu de la
+  // remontée douce des tubes, et c'est très bien ainsi.
+  const near = (seq: readonly (readonly [number, number])[], t: number) =>
+    seq.some(([kt]) => Math.abs(kt - t) <= 0.035);
+  for (const [t, kind] of POWER_CUT_SOUNDS) {
+    if (kind === 'fans') continue;
+    assert.ok(near(POWER_CUT, t), `coupure : ${kind} à ${t} s n’accompagne rien`);
+  }
+  for (const [t, kind] of POWER_RESTORE_SOUNDS) {
+    if (kind === 'fans') continue;
+    assert.ok(near(POWER_RESTORE, t), `retour : ${kind} à ${t} s n’accompagne rien`);
+  }
+});
+
+test('les tables de bruits sont dans l’ordre et dans leur séquence', () => {
+  for (const [table, seq, name] of [
+    [POWER_CUT_SOUNDS, POWER_CUT, 'coupure'],
+    [POWER_RESTORE_SOUNDS, POWER_RESTORE, 'retour'],
+  ] as const) {
+    for (let i = 1; i < table.length; i++) {
+      assert.ok(table[i][0] >= table[i - 1][0], `${name} : table désordonnée`);
+    }
+    // Un bruit posé après la fin de la séquence ne sortirait jamais.
+    assert.ok(table[table.length - 1][0] < powerSeqEnd(seq), `${name} : bruit hors séquence`);
+  }
 });

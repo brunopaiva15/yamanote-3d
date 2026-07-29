@@ -56,6 +56,7 @@
 
 import * as Tone from 'tone';
 import { CABIN_SPEAKERS, CONFIG, type SpeakerPos } from '../data/config';
+import type { PowerSoundKind } from './carPower';
 import {
   MELODY_PATHS,
   MELODY_REPEATS,
@@ -85,6 +86,10 @@ interface Nodes {
   hvacNoise: Tone.Noise;
   hvacFilter: Tone.Filter;
   hvacGain: Tone.Gain;
+  spark: Tone.NoiseSynth;
+  sivOsc: Tone.Oscillator;
+  sivFilter: Tone.Filter;
+  sivGain: Tone.Gain;
   clack: Tone.NoiseSynth;
   clackFilter: Tone.Filter;
   air: Tone.NoiseSynth;
@@ -290,6 +295,29 @@ export async function startAudio(): Promise<void> {
   const hvacGain = new Tone.Gain(0);
   hvacNoise.chain(hvacFilter, hvacGain, trainBus);
   hvacNoise.start();
+
+  // Grésillement électrique : bruit blanc très court, très aigu, sans aucun
+  // grave. C'est le timbre d'un arc — un tube qui essaie de se réamorcer, un
+  // contact qui se rompt — et il ne ressemble à rien d'autre dans le wagon :
+  // tous les autres bruitages ont un corps, celui-ci n'a que du haut.
+  const sparkFilter = new Tone.Filter({ type: 'highpass', frequency: 2400, rolloff: -24, Q: 0.7 });
+  const spark = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.0004, decay: 0.02, sustain: 0 },
+    volume: -13,
+  });
+  spark.chain(sparkFilter, trainBus);
+
+  // Sifflement du convertisseur statique : le petit aigu tenu qu'on n'entend
+  // jamais tant qu'il est là. Il ne sert qu'aux transitions — il s'effondre à
+  // la coupure, il remonte au retour —, et reste à zéro le reste du temps :
+  // une note aiguë permanente dans un jeu qu'on écoute une heure serait une
+  // punition.
+  const sivOsc = new Tone.Oscillator({ type: 'triangle', frequency: 1300 });
+  const sivFilter = new Tone.Filter({ type: 'bandpass', frequency: 1300, Q: 3.5 });
+  const sivGain = new Tone.Gain(0);
+  sivOsc.chain(sivFilter, sivGain, trainBus);
+  sivOsc.start();
 
   // Joints de rail : impulsions de bruit filtré passe-bas.
   const clackFilter = new Tone.Filter({ type: 'lowpass', frequency: 420, Q: 1 });
@@ -706,6 +734,10 @@ export async function startAudio(): Promise<void> {
     hvacNoise,
     hvacFilter,
     hvacGain,
+    spark,
+    sivOsc,
+    sivFilter,
+    sivGain,
     clack,
     clackFilter,
     air,
@@ -1127,37 +1159,104 @@ export function brakeRelease(): void {
   nodes.vent.triggerAttackRelease(0.2, slot('vent', now + 1.15), 0.07 * loud);
 }
 
-/**
- * Coupure de la caténaire : le disjoncteur principal s'ouvre.
- *
- * Un coup sourd sous le plancher, et c'est tout — le reste de l'événement est
- * fait de sons qui s'ARRÊTENT (onduleur, climatisation), pas de sons qui
- * commencent. C'est ce qui le rend si reconnaissable en vrai : le wagon ne
- * fait pas de bruit, il en perd.
- */
-export function powerCut(): void {
+// --- Les petits bruits électriques ---------------------------------------
+//
+// Une coupure de caténaire est faite de sons qui s'ARRÊTENT — l'onduleur, la
+// climatisation. Mais entre les deux silences, il se passe quelque chose de
+// très sonore et de très court : du matériel électrique qui travaille. C'est
+// ce qui donne à l'événement sa texture, et sans quoi le wagon a simplement
+// l'air de s'éteindre.
+//
+// Les INSTANTS ne sont pas ici : ils vivent avec les images-clés de la lumière
+// (systems/carPower), pour que ce qu'on voit clignoter et ce qu'on entend
+// claquer restent le même événement. Ici, seulement les timbres.
+
+/** Grésillement d'arc : n impulsions très courtes, très aiguës, resserrées. */
+function crackle(now: number, count: number, spread: number, level: number): void {
   if (!nodes) return;
-  const now = Tone.now();
-  // Un battement par décrochage du convertisseur, calé sur l'affaissement de
-  // l'éclairage (POWER_CUT dans systems/stationCycle) : ce qu'on voit clignoter
-  // doit s'entendre claquer, sinon les deux se lisent comme deux événements.
-  nodes.thud.triggerAttackRelease('D1', 0.11, slot('thud', now), 0.42);
-  nodes.thud.triggerAttackRelease('C1', 0.08, slot('thud', now + 0.33), 0.3);
-  nodes.thud.triggerAttackRelease('A0', 0.1, slot('thud', now + 0.58), 0.24);
+  for (let i = 0; i < count; i++) {
+    const t = now + (i / count) * spread + Math.random() * spread * 0.35;
+    nodes.spark.triggerAttackRelease(0.012, slot('spark', t, 0.004), level * (0.5 + Math.random()));
+  }
 }
 
-/** Retour de la tension : les contacteurs se referment, les turbines repartent. */
-export function powerRestore(): void {
+/**
+ * Un petit bruit électrique de la séquence en cours.
+ *
+ * Appelé par stationCycle au moment exact où `stepCarPower` signale que la
+ * courbe vient de croiser l'événement — donc jamais décalé du clignotement
+ * qu'il accompagne.
+ */
+export function powerSound(kind: PowerSoundKind): void {
   if (!nodes) return;
   const now = Tone.now();
-  // Trois fermetures, dont deux qui ne tiennent pas — mêmes instants que
-  // POWER_RESTORE. La troisième est la bonne, et c'est elle qui claque le plus.
-  nodes.thud.triggerAttackRelease('F1', 0.08, slot('thud', now + 0.13), 0.26);
-  nodes.thud.triggerAttackRelease('F1', 0.08, slot('thud', now + 0.55), 0.3);
-  nodes.thud.triggerAttackRelease('G1', 0.1, slot('thud', now + 0.99), 0.38);
-  // Reprise des ventilateurs en charge : un appel d'air court, une seconde
-  // après le contacteur qui a tenu.
-  nodes.air.triggerAttackRelease(0.4, slot('air', now + 1.9), 0.1);
+  switch (kind) {
+    case 'breaker':
+      // Sous le plancher, et ça se sent autant que ça s'entend.
+      nodes.thud.triggerAttackRelease('D1', 0.11, slot('thud', now), 0.42);
+      crackle(now + 0.005, 3, 0.03, 0.5);
+      break;
+    case 'relay':
+      // Un contacteur : le claquement sec du noyau, et l'étincelle de rupture.
+      nodes.thud.triggerAttackRelease('A1', 0.05, slot('thud', now), 0.22);
+      nodes.clack.triggerAttackRelease(0.018, slot('clack', now + 0.004), 0.3);
+      crackle(now + 0.006, 2, 0.02, 0.35);
+      break;
+    case 'strike':
+      // Un tube qui essaie de se réamorcer : ça grésille, ça n'a pas de corps.
+      crackle(now, 5, 0.07, 0.42);
+      break;
+    case 'arc':
+      // Ce qui reste s'échappe : plus ténu, plus étalé, sans coup.
+      crackle(now, 4, 0.13, 0.2);
+      break;
+    case 'whineDown':
+      // Le sifflement du convertisseur s'effondre en une demi-seconde.
+      nodes.sivGain.gain.cancelScheduledValues(now);
+      nodes.sivGain.gain.setValueAtTime(0.02, now);
+      nodes.sivOsc.frequency.cancelScheduledValues(now);
+      nodes.sivOsc.frequency.setValueAtTime(1300, now);
+      nodes.sivOsc.frequency.exponentialRampToValueAtTime(180, now + 0.5);
+      nodes.sivFilter.frequency.rampTo(300, 0.5);
+      nodes.sivGain.gain.linearRampToValueAtTime(0, now + 0.55);
+      break;
+    case 'whineUp':
+      // …et remonte, une fois le contacteur accroché. Plus vite qu'il n'est
+      // tombé : ce qui se réamorce se réamorce d'un coup.
+      nodes.sivGain.gain.cancelScheduledValues(now);
+      nodes.sivGain.gain.setValueAtTime(0, now);
+      nodes.sivOsc.frequency.cancelScheduledValues(now);
+      nodes.sivOsc.frequency.setValueAtTime(240, now);
+      nodes.sivOsc.frequency.exponentialRampToValueAtTime(1300, now + 0.35);
+      nodes.sivFilter.frequency.rampTo(1300, 0.35);
+      nodes.sivGain.gain.linearRampToValueAtTime(0.022, now + 0.12);
+      // Puis il s'efface : à régime établi, on ne l'entend plus.
+      nodes.sivGain.gain.linearRampToValueAtTime(0, now + 1.1);
+      break;
+    case 'fans':
+      // Reprise des turbines en charge : un appel d'air court.
+      nodes.air.triggerAttackRelease(0.4, slot('air', now), 0.1);
+      break;
+  }
+}
+
+/**
+ * Un déclic isolé dans le noir.
+ *
+ * Une rame sur batteries n'est pas muette : il reste des relais qui travaillent
+ * quelque part sous le plancher, et c'est ce qu'on entend pendant les minutes
+ * d'attente. Volontairement rare et volontairement ténu — c'est ce qui fait
+ * qu'un silence de cinq minutes reste habité au lieu d'être un blanc.
+ */
+export function batteryTick(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  if (Math.random() < 0.55) {
+    nodes.clack.triggerAttackRelease(0.014, slot('clack', now), 0.12);
+    crackle(now + 0.004, 2, 0.02, 0.12);
+  } else {
+    crackle(now, 3, 0.05, 0.14);
+  }
 }
 
 // Immobilisation complète : léger tassement de caisse puis serrage à l'arrêt.
