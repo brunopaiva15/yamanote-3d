@@ -1,0 +1,30 @@
+{
+  "name": "Yamanote 3D — 山手線",
+  "short_name": "Yamanote 3D",
+  "description": "Ride Tokyo's Yamanote Line in 3D in your browser: board a JR East E235, walk the carriage, step onto the platform. Thirty stations, real announcements, no goal.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#10151a",
+  "theme_color": "#10151a",
+  "categories": ["games", "entertainment", "travel"],
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    {
+      "src": "./og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Yamanote 3D — 山手線"
+    }
+  ]
+}

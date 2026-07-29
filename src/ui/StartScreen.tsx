@@ -183,6 +183,12 @@ export function StartScreen() {
     <div className="start-screen">
       <div className="start-board">
         <LanguageSwitcher className="lang-switch-board" />
+        {/* Le titre de la page, en texte : une fois React monté, c'est le seul
+            endroit où le document nomme ce qu'il est. Il est masqué à l'œil
+            parce que le logo juste dessous le dit déjà, en plus grand — mais un
+            dessin n'est pas un titre, ni pour un lecteur d'écran ni pour un
+            moteur de recherche, et le logo est donc décoratif (voir Logo). */}
+        <h1 className="visually-hidden">Yamanote 3D — 山手線</h1>
         <Logo />
         <p className="start-tagline">{t.start.tagline}</p>
         <div className="board-band" aria-hidden="true" lang="ja">

@@ -85,6 +85,22 @@ body,
   box-shadow: 0 6px 0 var(--ink-line);
 }
 
+/* Retiré de l'écran, laissé au document : ni display:none ni visibility:hidden,
+   qui l'ôteraient aussi aux lecteurs d'écran, mais un cadre de 1 px rogné.
+   C'est le seul moyen de donner un titre en TEXTE à une page dont le titre est
+   un dessin. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .logo {
   display: block;
   width: 100%;

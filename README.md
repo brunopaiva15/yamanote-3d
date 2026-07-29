@@ -15,6 +15,7 @@ npm run dev      # développement
 npm run build    # production (tsc + vite)
 npm run preview  # servir le build
 npm run lint     # oxlint
+npm test         # node:test
 ```
 
 ## Contrôles
@@ -1150,11 +1151,13 @@ voit jamais sa propre caisse : coût nul en jeu normal.
 ## Langues
 
 L'interface (menu, HUD, contrôles tactiles) existe en **français, anglais et
-japonais**. La langue est détectée au premier lancement depuis
+japonais**. La langue se décide en trois temps, du plus explicite au plus
+deviné : le paramètre d'URL `?lang=fr|en|ja` s'il est présent, sinon le choix
+mémorisé dans `localStorage` (`yamanote.lang`), sinon la détection depuis
 `navigator.languages` — `ja-*` → japonais, `fr-*` → français, tout le reste →
-anglais — et le sélecteur FR / EN / 日本語 (menu principal et barre du HUD)
-permet d'en changer à tout moment ; le choix explicite est mémorisé dans
-`localStorage` (`yamanote.lang`) et l'emporte ensuite sur la détection.
+anglais. Le sélecteur FR / EN / 日本語 (menu principal et barre du HUD) permet
+d'en changer à tout moment ; un choix explicite est mémorisé **et** inscrit dans
+l'URL, qui devient partageable telle quelle (voir *Référencement*).
 
 Tous les libellés vivent dans `src/i18n/strings.ts` (un dictionnaire par
 langue) ; `useT()` renvoie celui de la langue courante. Ajouter une langue =
@@ -1473,6 +1476,88 @@ Le site sera servi sur `https://<utilisateur>.github.io/yamanote-3d/`
 (le build utilise des chemins relatifs, il fonctionne aussi à la racine
 d'un domaine ou sur tout autre hébergeur statique).
 
+## Référencement
+
+Le problème est celui de toutes les applications d'une seule page : ce que le
+serveur envoie, c'est `index.html` et un `<div id="root">`. Un robot qui
+n'exécute pas de JavaScript n'y trouve rien à lire ; un robot qui en exécute
+trouve un `<canvas>`. Un jeu WebGL n'a pas de contenu textuel *à indexer* — sauf
+si on le lui écrit.
+
+**Le document sans JavaScript dit déjà ce que la page est.** `index.html` porte
+un vrai contenu dans `#root` : un `<h1>`, l'accroche, ce qu'on fait à bord, et
+les trente gares en romaji et en kanji — le vocabulaire par lequel on cherche ce
+genre de page. React le remplace intégralement au premier rendu
+(`createRoot(…).render()` vide son conteneur), donc rien n'est caché à personne :
+c'est le même propos que l'écran d'accueil, servi avant lui. Effet de bord
+heureux : le visiteur n'attend plus les 730 kio du module devant un écran noir,
+il lit quelque chose tout de suite, et le plus grand élément de la page est
+peint avant que le premier octet de Three.js n'arrive.
+
+**Une fois React monté, le document se nomme encore.** Le logo est un dessin, et
+un dessin n'est pas un titre : `src/ui/Logo.tsx` est donc explicitement décoratif
+(`aria-hidden`) et l'écran d'accueil porte un `<h1>` en texte, retiré de l'écran
+par `.visually-hidden` puisque le logo le dit déjà en plus grand. Sans cela le
+titre extrait de la page serait « YAMANOTE YAMANOTE 3D 山手線 山手線 » : chaque
+mot du logo existe en deux `<text>` superposés, l'ombre puis les lettres cernées.
+
+**Trois langues, une seule page.** `?lang=fr|en|ja` force la langue, et c'est ce
+qui rend les `<link rel="alternate" hreflang>` de `index.html` honnêtes : un
+moteur qui suit l'alternate japonais doit recevoir la page en japonais. L'URL nue
+reste le `x-default`, celle qui s'adapte au visiteur — la détection automatique
+n'écrit donc *pas* `?lang=` dans l'URL, seul un choix au sélecteur le fait.
+`src/i18n/documentMeta.ts` réécrit alors `lang`, le titre, la description, les
+balises Open Graph et Twitter, la canonique et `og:url` ; il ne crée aucune
+balise, il ne fait que remplir celles que `index.html` porte déjà en anglais.
+
+**Les URL absolues ne peuvent pas être relatives.** Canonique, alternates,
+`og:url`, images sociales : un moteur les recopie telles quelles dans son index,
+un aperçu de partage les résout depuis un autre domaine. Elles désignent
+l'hébergement de référence (`https://brunopaiva15.github.io/yamanote-3d/`), et
+`index.html` en est la source unique — `documentMeta.ts` lit la canonique dans le
+document plutôt que de la redéclarer, si bien qu'un déploiement ailleurs n'a
+qu'un fichier à changer.
+
+Ce que le dépôt contient, et ce que chaque pièce sert à :
+
+| Fichier | Rôle |
+| --- | --- |
+| `index.html` | titre, description, robots, canonique, alternates, Open Graph, Twitter, JSON-LD, et le contenu de repli |
+| `src/i18n/documentMeta.ts` | les mêmes métadonnées, tenues à jour avec la langue affichée |
+| `public/robots.txt` | indexation ouverte, et le sitemap déclaré |
+| `public/sitemap.xml` | l'URL nue et ses trois variantes de langue, chacune portant le jeu complet d'alternates |
+| `public/site.webmanifest` | installation sur l'écran d'accueil : nom, description, couleurs, icônes |
+| `assets/icon.svg` | la pastille JY, source unique des favicons et icônes |
+| `scripts/seo-assets.mjs` | `npm run seo:assets` : en tire favicon, icônes PWA, icône Apple et carte de partage |
+
+Les données structurées (JSON-LD) déclarent un `VideoGame` gratuit, ses trois
+langues, son auteur, et — c'est le lien qui compte — le sujet dont il parle
+relié à sa fiche Wikidata : ce qui raccroche la page à l'**entité** « ligne
+Yamanote » plutôt qu'à la chaîne de caractères.
+
+Deux pièges qui ne se voient pas :
+
+- un robot ne lit `robots.txt` qu'à la **racine du domaine**. Servi sous
+  `/yamanote-3d/`, le nôtre atterrit en
+  `…github.io/yamanote-3d/robots.txt` et n'est donc pas celui qui fait loi —
+  c'est celui de `…github.io` qui compte. Il reste juste le jour où le site
+  passe à la racine d'un domaine, et le sitemap, lui, se déclare directement
+  dans la Search Console quelle que soit la profondeur ;
+- les images produites par `npm run seo:assets` **sont versionnées**. Un crawler
+  ou un aperçu de partage doit pouvoir les tirer du site déployé sans que
+  personne n'ait relancé le script, et un build de production ne doit pas
+  dépendre de `sharp`.
+
+Rien de tout cela ne fait échouer un build : une canonique changée à un endroit
+et pas aux trois autres, une langue ajoutée à `LANGS` sans son alternate, une
+carte de partage régénérée à d'autres dimensions que celles annoncées, un fichier
+référencé mais jamais produit — tout se voit six semaines plus tard dans un
+rapport d'indexation. D'où `tests/seo.test.mjs`, qui relit `index.html`,
+`robots.txt`, `sitemap.xml`, le manifeste et l'en-tête des PNG et vérifie qu'ils
+décrivent tous le même site, et `tests/documentMeta.test.ts`, qui tient les
+titres et descriptions des trois langues dans les longueurs qu'un moteur
+n'ampute pas.
+
 ## Stack
 
 Vite + TypeScript strict, React, React Three Fiber, drei, @react-three/postprocessing,
@@ -1516,6 +1601,7 @@ src/
                          FR / EN / JA, décliné au féminin et au masculin
   scripts/               models:import / models:inspect / animals:import
                          (packs → public/models/, public/models/animals/),
+                         seo:assets (favicons, icônes PWA, carte de partage),
                          sondes navigateur : station-probe, pax-probe,
                          scenery-shots, scenery-cost, pass-shots, season-shots,
                          weather-shots
@@ -1523,6 +1609,8 @@ src/
   three/PlateauWorld.tsx monde géoréférencé du prototype (un tronçon à la fois)
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
+  i18n/documentMeta.ts   titre, description, Open Graph et canonique, suivant
+                         la langue affichée (voir Référencement)
   ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles
 ```
 

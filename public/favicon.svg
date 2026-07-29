@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Icône maîtresse du site : la pastille JY de la Yamanote, dans le langage
+  « sticker » du logo (aplat vert de la ligne, contour d'encre épais, capitales
+  blanches cernées). C'est la source unique : `npm run seo:assets` en tire le
+  favicon SVG, les icônes PNG du manifeste et l'icône Apple.
+
+  Dessin pensé pour tenir à 16 px : deux lettres qui remplissent le cadre, un
+  seul aplat de fond, aucun détail fin qui bouillirait à la réduction. L'ovale
+  de la boucle reste en filigrane, visible seulement aux grandes tailles.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Yamanote 3D">
+  <defs>
+    <linearGradient id="icon-green" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a5db5e"/>
+      <stop offset="1" stop-color="#5da028"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#icon-green)"/>
+  <rect x="14" y="14" width="484" height="484" rx="100" fill="none" stroke="#16300a" stroke-width="28" opacity="0.55"/>
+
+  <!-- La boucle, en filigrane : elle ne se lit qu'en grand, et c'est voulu. -->
+  <g opacity="0.16">
+    <rect x="96" y="128" width="320" height="256" rx="128" fill="none" stroke="#16300a" stroke-width="26"/>
+    <circle cx="176" cy="128" r="14" fill="#16300a"/>
+    <circle cx="336" cy="128" r="14" fill="#16300a"/>
+    <circle cx="176" cy="384" r="14" fill="#16300a"/>
+    <circle cx="336" cy="384" r="14" fill="#16300a"/>
+  </g>
+
+  <!-- « JY » : le préfixe de numérotation JR East de la ligne Yamanote.
+       textLength fige la largeur, quelle que soit la police disponible. -->
+  <text x="256" y="344" text-anchor="middle" font-family="Arial Black, Liberation Sans, Arial, sans-serif"
+        font-size="240" font-weight="800" fill="#ffffff" stroke="#16300a" stroke-width="28"
+        stroke-linejoin="round" paint-order="stroke" textLength="268" lengthAdjust="spacingAndGlyphs">JY</text>
+</svg>

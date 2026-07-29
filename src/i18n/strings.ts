@@ -39,8 +39,21 @@ export interface TouchHint {
 export interface Strings {
   /** Valeur de l'attribut lang du document. */
   htmlLang: string;
+  /**
+   * Titre de l'onglet — et titre du résultat dans un moteur de recherche. Le
+   * nom d'abord (c'est lui qu'on cherche), 山手線 pour être trouvé en japonais,
+   * puis ce que la page fait. Une soixantaine de caractères : au-delà, Google
+   * tronque.
+   */
   documentTitle: string;
+  /**
+   * Description de la page, reprise telle quelle en extrait de résultat et
+   * dans les aperçus de partage. Une phrase pleine de 150 à 160 caractères :
+   * ce qu'on fait, où, et à quoi ça ressemble.
+   */
   documentDescription: string;
+  /** Étiquette de locale Open Graph (`og:locale`), au format langue_PAYS. */
+  ogLocale: string;
 
   start: {
     tagline: string;
@@ -159,9 +172,10 @@ export interface Strings {
 
 const FR: Strings = {
   htmlLang: 'fr',
-  documentTitle: 'Yamanote 3D — 山手線',
+  documentTitle: 'Yamanote 3D — 山手線 · la ligne Yamanote de Tokyo en 3D',
   documentDescription:
-    "Expérience contemplative : passager d'une rame E235 sur la ligne Yamanote, Tokyo.",
+    'La ligne Yamanote de Tokyo en 3D dans le navigateur : montez dans une rame E235, marchez dans le wagon, descendez sur le quai. Trente gares, aucun objectif.',
+  ogLocale: 'fr_FR',
   start: {
     tagline: 'Une boucle. Trente stations. Aucun objectif.',
     intro:
@@ -273,9 +287,10 @@ const FR: Strings = {
 
 const EN: Strings = {
   htmlLang: 'en',
-  documentTitle: 'Yamanote 3D — 山手線',
+  documentTitle: "Yamanote 3D — 山手線 · Ride Tokyo's Yamanote Line in 3D",
   documentDescription:
-    'A contemplative ride: riding an E235 train on the Yamanote Line, Tokyo.',
+    "Ride Tokyo's Yamanote Line in 3D in your browser: board a JR East E235, walk the carriage, step onto the platform. Thirty stations, real announcements, no goal.",
+  ogLocale: 'en_US',
   start: {
     tagline: 'One loop. Thirty stations. No objective.',
     intro:
@@ -387,8 +402,10 @@ const EN: Strings = {
 
 const JA: Strings = {
   htmlLang: 'ja',
-  documentTitle: 'Yamanote 3D — 山手線',
-  documentDescription: '東京・山手線を走るE235系電車の乗客になる、静かな体験。',
+  documentTitle: 'Yamanote 3D — 山手線 · ブラウザで巡る東京の環状線',
+  documentDescription:
+    'ブラウザで東京・山手線を3Dで一周。JR東日本E235系の乗客として車内を歩き、ホームに降り、車内放送と発車メロディに耳をすませる。三十駅、目的なし。',
+  ogLocale: 'ja_JP',
   start: {
     tagline: 'ひとつの環状線。三十の駅。目的は、なし。',
     intro:
@@ -528,8 +545,34 @@ export function detectBrowserLang(): Lang {
   return 'en';
 }
 
-/** Choix explicite mémorisé, sinon détection automatique. */
+/** Nom du paramètre d'URL qui force la langue : `?lang=ja`. */
+export const LANG_PARAM = 'lang';
+
+/**
+ * Langue imposée par l'URL, s'il y en a une.
+ *
+ * C'est le pendant des `<link rel="alternate" hreflang>` de index.html : un
+ * moteur qui indexe `?lang=ja` doit recevoir la page en japonais, sans quoi la
+ * déclaration ment. Une valeur inconnue est ignorée plutôt que corrigée — on ne
+ * devine pas ce qu'un `?lang=de` voulait dire.
+ */
+export function langFromUrl(): Lang | null {
+  if (typeof location === 'undefined') return null;
+  try {
+    const value = new URL(location.href).searchParams.get(LANG_PARAM);
+    return isLang(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * L'URL d'abord (elle est explicite et partageable), puis le choix mémorisé,
+ * puis la détection automatique.
+ */
 export function initialLang(): Lang {
+  const fromUrl = langFromUrl();
+  if (fromUrl) return fromUrl;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (isLang(stored)) return stored;
@@ -546,14 +589,4 @@ export function storeLang(lang: Lang): void {
   } catch {
     /* le jeu reste jouable, la préférence ne survivra pas au rechargement */
   }
-}
-
-/** Répercute la langue sur le document : attribut lang, titre, description. */
-export function applyDocumentLang(lang: Lang): void {
-  if (typeof document === 'undefined') return;
-  const s = STRINGS[lang];
-  document.documentElement.lang = s.htmlLang;
-  document.title = s.documentTitle;
-  const meta = document.querySelector('meta[name="description"]');
-  if (meta) meta.setAttribute('content', s.documentDescription);
 }
