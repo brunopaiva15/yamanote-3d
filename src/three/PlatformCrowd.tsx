@@ -1,8 +1,8 @@
 // Aiguillage du rendu de la foule du quai : modèles librairie si disponibles,
 // sinon personnages procéduraux. Même logique (systems/platformCrowd).
 //
-// Les chiens promenés (three/PlatformDogs) sont greffés à la branche
-// librairie : la laisse s'accroche à un os de main, que les personnages
+// Les chiens en caisse de transport (three/PlatformPets) sont greffés à la
+// branche librairie : la caisse pend à un os de main, que les personnages
 // procéduraux n'ont pas. Ils ont leur propre repli — un pack animalier absent
 // ou illisible laisse simplement le quai sans chiens.
 
@@ -11,7 +11,7 @@ import { initPlatformCrowd } from '../systems/platformCrowd';
 import { useAnimalManifest } from './characters/animals';
 import { useCharacterManifest } from './characters/manifest';
 import { LibraryPlatformCrowd } from './LibraryPlatformCrowd';
-import { PlatformDogs } from './PlatformDogs';
+import { PlatformPets } from './PlatformPets';
 import { ProceduralPlatformCrowd } from './ProceduralPlatformCrowd';
 
 class ModelErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
@@ -27,13 +27,13 @@ class ModelErrorBoundary extends Component<{ fallback: ReactNode; children: Reac
   }
 }
 
-function Dogs() {
+function Pets() {
   const animals = useAnimalManifest();
   if (!animals) return null;
   return (
     <ModelErrorBoundary fallback={null}>
       <Suspense fallback={null}>
-        <PlatformDogs manifest={animals} />
+        <PlatformPets manifest={animals} />
       </Suspense>
     </ModelErrorBoundary>
   );
@@ -49,7 +49,7 @@ export function PlatformCrowd() {
       <Suspense fallback={null}>
         <LibraryPlatformCrowd manifest={manifest} />
       </Suspense>
-      <Dogs />
+      <Pets />
     </ModelErrorBoundary>
   );
 }

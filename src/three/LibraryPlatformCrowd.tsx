@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { crowdList, initPlatformCrowd } from '../systems/platformCrowd';
-import { dogOfPax } from '../systems/dogWalkers';
+import { carrierOfPax } from '../systems/petCarriers';
 import type { Appearance } from '../systems/appearance';
 import { runtime } from '../systems/runtime';
 import { useStore } from '../store';
@@ -21,8 +21,8 @@ import { attachProps, updatePropRig, handPropFor, type PropRig } from './charact
 const PLATFORM_Y = -0.06;
 const FADE = 0.22;
 
-// Position de la main qui tient la laisse, publiée pour three/PlatformDogs.
-const vLeashHand = new THREE.Vector3();
+// Position de la main qui porte la caisse, publiée pour three/PlatformPets.
+const vCarryHand = new THREE.Vector3();
 
 interface Slot {
   clone: CharacterClone;
@@ -90,10 +90,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       body.visible = true;
 
       const transit = p.state === 'arriving' || p.state === 'leaving' || p.state === 'boarding';
-      // `holdWalk` : on attend son chien. Sans ce test, le cycle de marche
-      // continuait de tourner sur place et les pieds patinaient.
-      const walking =
-        (p.state === 'ambling' || p.state === 'patrolling' || (transit && p.delay <= 0)) && p.holdWalk <= 0;
+      const walking = p.state === 'ambling' || p.state === 'patrolling' || (transit && p.delay <= 0);
 
       // « shift » (report de poids) n'existe que côté quai : pas d'occupation
       // du catalogue derrière, donc pas de geste ni de chute.
@@ -152,16 +149,16 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       // Le quai a droit aux mêmes gestes que la rame : jusqu'ici seul le
       // téléphone était rigé, et les soixante autres occupations n'y bougeaient
       // que la tête.
-      // Un maître de chien a déjà une main prise : les gestes libres (le
+      // Qui porte une caisse a déjà une main prise : les gestes libres (le
       // téléphone, la montre) vont dans l'autre, comme le fait déjà la
       // poignée en rame — c'est exactement ce que `strapSide` sert à dire.
-      const dog = dogOfPax(p.id);
+      const carrier = carrierOfPax(p.id);
       applyArmGesture(s.clone, s.pose, k, {
         action: act,
         actionT: p.actionT,
         seated: false,
         posed: p.state === 'waiting',
-        strapSide: dog ? dog.handSide : 0,
+        strapSide: carrier ? carrier.handSide : 0,
         chatRole: p.chatRole,
         clipFall: (() => {
           const c = fallClipFor(act);
@@ -171,18 +168,21 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       const held = handPropFor(act);
       updatePropRig(s.props, bones, body, true, held !== null && s.pose.phoneW > 0.05 ? held : null, s.pose.phoneSide);
 
-      // La laisse s'accroche à l'os de main réel, après les gestes : elle suit
-      // donc le balancement du bras pendant la marche. Publiée dans le repère
-      // du GROUPE de foule, qui est celui de p.pos — three/PlatformDogs place
-      // ses chiens dans un groupe de transformation identique.
-      if (dog && wrap.current) {
+      // La caisse pend à l'os de main réel, relevé APRÈS les gestes : elle
+      // suit donc le balancement du bras pendant la marche. Publiée dans le
+      // repère du GROUPE de foule, qui est celui de p.pos — three/PlatformPets
+      // place ses caisses dans un groupe de transformation identique.
+      if (carrier && wrap.current) {
         const handBone =
-          dog.handSide === 1 ? (bones.handR ?? bones.foreArmR ?? bones.handL) : (bones.handL ?? bones.foreArmL ?? bones.handR);
+          carrier.handSide === 1
+            ? (bones.handR ?? bones.foreArmR ?? bones.handL)
+            : (bones.handL ?? bones.foreArmL ?? bones.handR);
         if (handBone) {
           handBone.updateWorldMatrix(true, false);
-          vLeashHand.setFromMatrixPosition(handBone.matrixWorld);
-          wrap.current.worldToLocal(vLeashHand);
-          dog.hand.copy(vLeashHand);
+          vCarryHand.setFromMatrixPosition(handBone.matrixWorld);
+          wrap.current.worldToLocal(vCarryHand);
+          carrier.handPos.copy(vCarryHand);
+          carrier.handSet = true;
         }
       }
     }
