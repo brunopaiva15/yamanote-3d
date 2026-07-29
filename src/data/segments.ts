@@ -175,14 +175,21 @@ export function journeyProgress(phase: Phase, phaseT: number, stationIndex: numb
 }
 
 // Gares à grande toiture : la verrière masque progressivement le ciel à
-// l'approche et au départ. Superset des MAJOR_HUBS d'announcements.ts
-// (+ Takanawa Gateway et sa verrière blanche) — ne pas fusionner les deux.
-export const ROOF_HUBS: Record<number, 'steel' | 'lattice'> = {
+// l'approche et au départ. Superset des MAJOR_HUBS d'announcements.ts — ne pas
+// fusionner les deux.
+//
+// Takanawa Gateway N'Y EST PLUS. Cette toiture-là est une dalle claire posée à
+// six mètres soixante-dix en travers de la voie ; tant que le quai n'avait
+// qu'un auvent plat, elle passait pour la verrière blanche de la gare. Depuis
+// que la charpente signature FAIT la couverture (data/stationLayouts,
+// `sigCanopy`), elle s'interposait entre l'œil et le toit plié — elle masquait
+// exactement ce qu'elle était censée évoquer. Le quai apporte désormais sa
+// propre toiture, et elle arrive avec lui pendant le freinage.
+export const ROOF_HUBS: Record<number, 'steel'> = {
   0: 'steel', // Tokyo
   4: 'steel', // Ueno
   12: 'steel', // Ikebukuro
   16: 'steel', // Shinjuku
   19: 'steel', // Shibuya
   24: 'steel', // Shinagawa
-  25: 'lattice', // Takanawa Gateway
 };

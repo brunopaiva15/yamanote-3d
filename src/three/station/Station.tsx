@@ -437,10 +437,16 @@ export function Station() {
       {/* --- Ce qu'on voit au-delà : voie, quai d'en face, clôture --- */}
       <FarSide layout={layout} place={place} wallH={wallH} m={m} detail={detail} segs={segs} />
 
-      {/* --- Auvent, poutres, piliers, néons --- */}
-      <mesh name="auvent" position={[PSD_X + depth / 2, canopyY + 0.07, 0]} material={m.canopy} receiveShadow>
-        <boxGeometry args={[depth + 0.4, 0.14, layout.length]} />
-      </mesh>
+      {/* --- Auvent, poutres, piliers, néons ---
+          La dalle tombe là où la charpente signature fait toit (Takanawa
+          Gateway) : elle masquait la seule chose qui fasse cette gare-là. La
+          trame de poutres et de néons reste — c'est à elle que pend toute la
+          signalétique. */}
+      {!layout.sigCanopy && (
+        <mesh name="auvent" position={[PSD_X + depth / 2, canopyY + 0.07, 0]} material={m.canopy} receiveShadow>
+          <boxGeometry args={[depth + 0.4, 0.14, layout.length]} />
+        </mesh>
+      )}
       <instancedMesh name="poutre" ref={beamRef} args={[undefined, undefined, Math.max(1, beams.length)]} material={m.beam}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
@@ -767,8 +773,10 @@ function FarSide({
         </>
       )}
       {/* L'auvent d'en face : on le voit, on n'y marche pas. Il tombe au
-          palier le plus léger, où la silhouette du quai suffit. */}
-      {detail <= 2 && (
+          palier le plus léger, où la silhouette du quai suffit — et là où la
+          charpente signature couvre le site d'un seul tenant, il n'y en a
+          jamais eu. */}
+      {detail <= 2 && !layout.sigCanopy && (
         <mesh position={[(oppEdge + oppBack) / 2, layout.canopyY + 0.07, 0]} material={m.canopy}>
           <boxGeometry args={[OPP_DEPTH + 0.4, 0.14, len]} />
         </mesh>

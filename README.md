@@ -153,9 +153,15 @@ sept d'entre elles. Chaque gare porte donc maintenant ses propres cotes.
 Quatorze gares déclarent une `signature`, et **toutes les quatorze sont
 dessinées**, une par fichier dans `three/station/signatures/` :
 
-- **Takanawa Gateway** — la toiture pliée de Kengo Kuma, versants d'acier blanc
-  doublés de bois clair qui enjambent d'un seul tenant les deux quais et les
-  voies, verrière de faîte, passerelles vitrées. La plus claire des trente.
+- **Takanawa Gateway** — la toiture pliée de Kengo Kuma, et c'est elle qui
+  couvre le quai : seule gare de la boucle à déclarer `sigCanopy`, elle n'a pas
+  de dalle d'auvent générique. Pans blancs cassés en accordéon tous les 4,5 m,
+  fermes triangulaires de cèdre et d'acier qui enjambent d'un seul tenant les
+  quatre voies et les deux quais, noue vitrée tous les neuf mètres, colonnes-
+  arbres, mezzanines vitrées qui franchissent tout le site, mur-rideau de fond
+  toute hauteur à meneaux blancs et traverses de cèdre. La plus claire des
+  trente — sans être la plus blanche : le bois y tient la moitié de ce qu'on
+  voit.
 - **Akihabara** — le viaduc de la Chūō–Sōbu qui franchit le site
   perpendiculairement : poutres à âme pleine, sous-face rivetée, piles posées
   hors de tout quai et de toute voie.

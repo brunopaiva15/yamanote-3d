@@ -94,7 +94,7 @@ export function makeStationMaterials(p: StationPalette, textures: StationTexture
         emissive: p.tile,
         emissiveIntensity: 0.1,
       }),
-      bench: new THREE.MeshStandardMaterial({ color: '#6a5a48', roughness: 0.88 }),
+      bench: new THREE.MeshStandardMaterial({ color: p.bench ?? '#6a5a48', roughness: 0.88 }),
       metal: new THREE.MeshStandardMaterial({ color: '#7a8088', roughness: 0.45, metalness: 0.55 }),
       frame: new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.55, metalness: 0.35 }),
       lamp: new THREE.MeshStandardMaterial({

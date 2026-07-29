@@ -107,3 +107,16 @@ export function matOriented(
 export function tiltZ(angle: number): THREE.Quaternion {
   return new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle);
 }
+
+/**
+ * Versant incliné PUIS plié : la pente autour de z, le pli autour de x.
+ *
+ * L'ordre compte, et il est celui-là — on incline d'abord le pan dans la coupe
+ * (c'est la pente du toit), puis on le bascule le long de la voie (c'est le
+ * pli). Composé dans l'autre sens, le pli se mesurerait dans le plan déjà
+ * incliné et les arêtes de deux pans voisins ne se rejoindraient plus.
+ */
+export function tiltXZ(pitch: number, fold: number): THREE.Quaternion {
+  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), fold);
+  return q.multiply(tiltZ(pitch));
+}

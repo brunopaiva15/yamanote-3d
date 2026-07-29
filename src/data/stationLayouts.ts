@@ -124,6 +124,12 @@ export interface StationPalette {
    * c'est ce qui réchauffe tout le reste.
    */
   tile: string;
+  /**
+   * Bois des bancs, quand il n'est pas le brun sombre ordinaire. Les assises de
+   * Takanawa Gateway sont en contreplaqué de cèdre clair, dessiné pour la
+   * gare : à hauteur d'œil, c'est la seule chose qui réchauffe un quai blanc.
+   */
+  bench?: string;
 }
 
 export interface StationAmenities {
@@ -196,6 +202,21 @@ export interface StationLayout {
   canopy: CanopyStyle;
   /** Hauteur de la sous-face de l'auvent (m au-dessus du plancher du wagon). */
   canopyY: number;
+  /**
+   * La charpente signature TIENT LIEU de couverture : pas de dalle d'auvent
+   * générique au-dessus des quais.
+   *
+   * Vingt-neuf gares sur trente ont un vrai auvent — une dalle basse et opaque,
+   * et ce qu'il y a par-dessus ne regarde personne. Takanawa Gateway est
+   * l'exception : le quai n'est couvert que par la grande toiture pliée, douze
+   * mètres plus haut, et c'est TOUT ce qui fait la gare. La dalle générique la
+   * masquait entièrement — on levait les yeux sur un plafond blanc et plat.
+   *
+   * Ce qui reste : la trame de poutres et de néons à hauteur d'auvent, à quoi
+   * pend la signalétique. Elle ne porte plus rien, elle éclaire — comme les
+   * passerelles techniques d'une halle.
+   */
+  sigCanopy: boolean;
   /** Entraxe des piliers (m). */
   columnSpacing: number;
   palette: StationPalette;
@@ -222,6 +243,21 @@ export function bays(length: number, spacing: number, from = -0.5, to = 0.5): nu
   const z1 = length * to - spacing * 0.4;
   for (let z = z0; z <= z1; z += spacing) out.push(z);
   return out;
+}
+
+/**
+ * Abscisses des deux mezzanines vitrées de Takanawa Gateway.
+ *
+ * Elles franchissent tout le site à six mètres et demi : c'est le seul endroit
+ * d'où l'on voit à la fois le hall, les escaliers et les quatre voies. Le plan
+ * d'implantation les lit pour en écarter poteaux et suspendus, la charpente
+ * pour les dessiner — deux valeurs divergentes, et une colonne monte au travers
+ * d'un tablier. La seconde se tient au-delà de la troisième bande
+ * directionnelle ET de la potence de l'escalier mécanique, qu'elle
+ * chevauchait tour à tour.
+ */
+export function takanawaDeckZs(length: number): number[] {
+  return [-length * 0.22, length * 0.275];
 }
 
 const PALETTES = {
@@ -295,16 +331,22 @@ const PALETTES = {
     lamp: '#ffffff',
     tile: '#c8ced2',
   },
-  // Takanawa Gateway : acier blanc, bois clair, verre. La plus lumineuse de la
+  // Takanawa Gateway : acier blanc, cèdre clair, verre. La plus lumineuse de la
   // boucle — elle empruntait jusqu'ici la palette de Shibuya, qui est grise.
+  //
+  // Blanche, mais pas BLANCHE PARTOUT : c'est le piège de cette gare-là. Le
+  // fond de travée est un mur-rideau, donc un gris bleuté de verre et non un
+  // aplat crème ; le soubassement et les bancs sont en cèdre. Le blanc reste au
+  // sol, aux poteaux et à la membrane du toit, où il est juste.
   takanawa: {
     slab: '#dcdcd6',
-    wall: '#e6e4dc',
-    column: '#d0d3d1',
+    wall: '#a9b6bd',
+    column: '#e9eae6',
     canopy: '#e9e5d9',
     accent: '#80c241',
     lamp: '#ffffff',
     tile: '#c9a97c',
+    bench: '#c2a271',
   },
   // Vieux viaduc de brique et d'acier : Yūrakuchō, Shimbashi. Piliers épais,
   // maçonnerie sombre, arcades commerçantes en dessous.
@@ -386,6 +428,8 @@ interface Spec {
   depth?: number;
   canopy?: CanopyStyle;
   canopyY?: number;
+  /** La charpente signature couvre le quai : pas de dalle d'auvent. */
+  sigCanopy?: true;
   columnSpacing?: number;
   palette?: PaletteKey;
   /** Force la présence d'un kiosque, sinon déduite de l'affluence. */
@@ -789,6 +833,8 @@ const SPECS: readonly Spec[] = [
     depth: 9,
     canopy: 'glass',
     canopyY: 6,
+    // Rien ne couvre le quai que la toiture pliée : voir `sigCanopy`.
+    sigCanopy: true,
     columnSpacing: 15,
     palette: 'takanawa',
   },
@@ -943,8 +989,8 @@ function sigPlanFor(
    * trame des piliers génériques, dont les poutres transversales montent en
    * travers de leur fût.
    */
-  const spinePosts = (zs: number[]): number[] =>
-    dodgePlanes(zs, [...accesses, ...gantries, ...bands, ...kiosk, ...clock, ...columns]);
+  const spinePosts = (zs: number[], extra: { z: number; r: number }[] = []): number[] =>
+    dodgePlanes(zs, [...accesses, ...gantries, ...bands, ...kiosk, ...clock, ...columns, ...extra]);
 
   switch (key) {
     case 'tokyo':
@@ -988,19 +1034,20 @@ function sigPlanFor(
       };
     }
     case 'takanawaGateway': {
-      const zs = spinePosts(bays(length, 27));
+      // Mezzanines vitrées : elles enjambent maintenant TOUT le site, quais
+      // compris — c'est de là qu'on voit les quatre voies d'un coup. Les
+      // colonnes-arbres s'en écartent donc à leur tour : plantées au droit
+      // d'un tablier, leurs branches le traversaient de part en part.
+      const decks = takanawaDeckZs(length).map((z) => ({ z, r: 4.2 }));
+      const zs = spinePosts(bays(length, 27), decks);
       return {
-        keepOut: [
-          ...zs.map((z) => ({ z, r: 0.6 })),
-          // Passerelles vitrées au-dessus de la voie d'en face : les bannières
-          // et les tableaux d'affichage passent au large. La seconde se tient
-          // au-delà de la troisième bande directionnelle et de la potence de
-          // l'escalier mécanique, qu'elle chevauchait tour à tour.
-          { z: -length * 0.22, r: 4.2 },
-          { z: length * 0.275, r: 4.2 },
-        ],
+        keepOut: [...zs.map((z) => ({ z, r: 0.6 })), ...decks],
         posts: zs.map((z) => ({ x: backX, z })),
-        runBlocks: [],
+        // Les branches des colonnes-arbres s'ouvrent DANS la coupe, à la cote
+        // même où courent la gouttière et le chemin de câbles : les conduites
+        // s'interrompent au droit de chaque colonne, comme elles le font aux
+        // gaines d'escalier mécanique.
+        runBlocks: zs.map((z) => ({ z0: z - 1.3, z1: z + 1.3 })),
       };
     }
     case 'hamamatsucho': {
@@ -1035,6 +1082,7 @@ function build(spec: Spec): StationLayout {
     depth,
     canopy: spec.canopy ?? f.canopy,
     canopyY: spec.canopyY ?? f.canopyY,
+    sigCanopy: spec.sigCanopy ?? false,
     columnSpacing,
     palette: PALETTES[spec.palette ?? f.palette],
     amenities: am,
