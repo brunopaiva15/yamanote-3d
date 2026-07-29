@@ -123,11 +123,26 @@ export function makeFrontCheckerTexture(): THREE.CanvasTexture {
   return toTexture(c);
 }
 
+/** Ligne affichée par une girouette : les trois valeurs qui en changent. */
+export interface SignLine {
+  kanji: string;
+  romaji: string;
+  /** Couleur LED du nom en romaji : celle de la ligne. */
+  tint: string;
+}
+
+const YAMANOTE_SIGN: SignLine = {
+  kanji: '山手線',
+  romaji: 'Yamanote Line',
+  tint: '#9fe870',
+};
+
 /**
- * Girouette LED de face avant : 山手線 / Yamanote Line sur fond noir, plus le
- * numéro de service en dessous. `redraw` change le numéro de course.
+ * Girouette LED de face avant : nom de ligne sur fond noir, plus le numéro de
+ * service en dessous. `redraw` change la seconde ligne — numéro de course pour
+ * la Yamanote, régime et destination pour une rame qui ne fait que passer.
  */
-export function makeDestinationSign(): {
+export function makeDestinationSign(line: SignLine = YAMANOTE_SIGN): {
   texture: THREE.CanvasTexture;
   redraw: (serviceNumber: string) => void;
 } {
@@ -139,14 +154,14 @@ export function makeDestinationSign(): {
   const redraw = (serviceNumber: string) => {
     g.fillStyle = '#0a0b0d';
     g.fillRect(0, 0, W, H);
-    // Bandeau supérieur : 山手線 en blanc, Yamanote Line en vert LED.
+    // Bandeau supérieur : le nom en kanji en blanc, le romaji en LED de ligne.
     g.textAlign = 'left';
     g.fillStyle = '#f4f6f8';
     g.font = `700 92px ${JP_FONT}`;
-    g.fillText('山手線', 40, 108);
-    g.fillStyle = '#9fe870';
+    g.fillText(line.kanji, 40, 108);
+    g.fillStyle = line.tint;
     g.font = `600 74px ${JP_FONT}`;
-    g.fillText('Yamanote Line', 340, 106);
+    g.fillText(line.romaji, 340, 106);
     // Numéro de course, en bleuté comme les afficheurs JR.
     g.fillStyle = '#8fb8f0';
     g.font = `600 84px ${JP_FONT}`;

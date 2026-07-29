@@ -472,6 +472,18 @@ export function say(items: Utterance[], channel: SpeechChannel = 'cabin', leadMs
   pump(channel);
 }
 
+/**
+ * Cette sono a-t-elle encore quelque chose à dire ? Vrai tant qu'un segment est
+ * en cours ou qu'il en reste en file. Sert à qui veut PARLER SANS COUPER : la
+ * file sérialise déjà les segments, mais une annonce mise en file derrière une
+ * autre sortirait trop tard pour ce qu'elle annonce (voir systems/passingTrain,
+ * qui renonce au passage plutôt que d'annoncer une rame déjà repartie).
+ */
+export function speechBusy(channel: SpeechChannel): boolean {
+  const ch = channels[channel];
+  return ch.speaking || ch.queue.length > 0;
+}
+
 /** Vide une file (ou les deux) et coupe ce qui est en train d'être dit. */
 export function cancelSpeech(channel?: SpeechChannel): void {
   const targets = channel ? [channel] : ALL_CHANNELS;

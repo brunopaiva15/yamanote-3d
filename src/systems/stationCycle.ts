@@ -37,6 +37,7 @@ import {
   paDoorsClosing,
   paPsdBeeps,
 } from './stationPa';
+import { rollPassThrough, startPassThrough } from './passingTrain';
 import { exchangePassengers } from './passengers';
 import { seedPlatformPresence } from './platformPresence';
 import { clearPlatformCrowd, seedPlatformCrowd } from './platformCrowd';
@@ -202,6 +203,13 @@ const MELODY_LEAD = CLOSE_ANNOUNCE_LEAD + MELODY_SOUNDING;
  * et se termine autour de l'arrêt.
  */
 const APPROACH_ANNOUNCE_LEAD = 20.0;
+
+/**
+ * Instant du tirage d'un passage sur la voie d'en face, en temps de dwell :
+ * après le nom de la gare, l'agent et « laissez descendre », avant l'annonce
+ * de fermeture. C'est le seul silence de l'arrêt, et il n'est pas long.
+ */
+const PASS_ROLL_AT = 12.0;
 
 /**
  * Chronologie tirée pour l'arrêt en cours. Tirée UNE fois, à l'entrée en
@@ -374,6 +382,7 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
     if (t > 0.4 + stationTimings.psdOpenDelay + 0.6) fired.add('pa-alight');
     if (t > 1.6) fired.add('exchange');
     if (t > 6) fired.add('pa-agent');
+    if (t > PASS_ROLL_AT) fired.add('pass-roll');
     if (t >= melodyStartAt(stationIndex, dwell)) fired.add('melody');
     if (t >= melodyCutAt(stationIndex, dwell)) fired.add('melody-cut');
     if (t >= dwell - CLOSE_ANNOUNCE_LEAD) fired.add('announce-close');
@@ -605,6 +614,15 @@ export function updateCycle(dt: number): void {
       once('pa-alight', t > 0.4 + stationTimings.psdOpenDelay + 0.6, () => paAlightFirst());
       once('exchange', t > 1.6, () => exchangePassengers(s.doorSide));
       once('pa-agent', t > 6, () => paAgentMessage());
+      // La voie d'en face, quand elle n'est pas la nôtre : un rapide peut la
+      // traverser pendant qu'on est à quai. Le créneau va d'ici à l'annonce de
+      // fermeture du quai — la seule chose que la gare ait encore à dire — et
+      // c'est lui qui décide si l'annonce de passage tient en japonais et en
+      // anglais, en japonais seul, ou pas du tout.
+      once('pass-roll', t > PASS_ROLL_AT, () => {
+        if (!rollPassThrough(s.index, dwell)) return;
+        startPassThrough(s.index, dwell - CLOSE_ANNOUNCE_LEAD + 1.2 - PASS_ROLL_AT);
+      });
 
       // Porte bloquée / maintien / signal / urgence : stop mélodie, reste à quai.
       if (isDepartureBlocked()) {

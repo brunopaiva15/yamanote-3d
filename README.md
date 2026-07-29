@@ -163,6 +163,61 @@ des deux il a devant lui. Le champ `backdrop`, qui nommait une famille de rendu
 au lieu d'un fait, a disparu : c'était lui qui donnait à vingt-neuf quais le
 même mur gris.
 
+### Le train qui ne s'arrête pas
+
+Cette voie d'en face restait vide en toute circonstance. Là où elle appartient
+à une autre ligne, elle voit maintenant passer, **de temps en temps, à pleine
+vitesse**, une rame qui ne ralentit même pas : le 快速 de la Keihin-Tōhoku, dix
+caisses, deux cents mètres, une quinzaine de secondes à trois mètres du bord de
+quai — l'événement le plus physique d'un quai japonais.
+
+Onze gares peuvent en voir traverser (`data/passingTrains`), et deux régimes s'y
+succèdent selon l'heure de Tokyo :
+
+- **快速**, de 10 h 30 à 15 h 30, aux cinq gares que le rapide saute vraiment :
+  御徒町, 鶯谷, 西日暮里, 浜松町 (en semaine — le week-end il s'y arrête) et
+  有楽町. C'est le passage fréquent, celui qu'on finit par attendre.
+- **回送**, une rame vide qui rejoint son dépôt ou en sort : aux onze gares,
+  rare en pleine journée, nettement moins après 22 h et avant 7 h — les
+  mouvements de dépôt se font avant le premier train et après le dernier.
+
+La gare le dit comme elle le dit en vrai — signal électronique, puis
+`まもなく、1番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、
+お下がりください。`, sa reprise anglaise, et l'avertissement court
+`電車が通過します。ご注意ください。` au moment où la rame débouche. **Le numéro
+de voie annoncé n'est pas le nôtre** : c'est celui d'en face, relevé gare par
+gare (à Ueno la Keihin-Tōhoku 北行 est la voie 1, à Okachimachi la numérotation
+est inversée et c'est la 4). Ces textes se gravent comme les autres
+(`announcements-export.ts` puis `announcements-gen.py --reuse`, qui ne
+synthétise que les clips absents) ; tant qu'ils manquent, c'est `speechSynthesis`
+qui les dit.
+
+Deux règles gouvernent le déclenchement (`systems/passingTrain`), et la première
+compte plus que le passage lui-même : **la gare ne parle jamais par-dessus
+elle-même**. Le passage n'est tiré que dans un vrai creux — sono du quai
+silencieuse et assez de temps devant soi. Le créneau décide même de la langue :
+tout le temps qu'il faut, japonais puis anglais ; un peu moins, le japonais
+seul ; pas assez, et il ne se passe rien du tout. Deux moments s'y prêtent : le
+creux entre deux rames quand on attend sur le quai (l'attente s'allonge alors un
+peu, non pas à cause de l'express mais parce que c'est dans les creux plus longs
+qu'on a le temps de voir passer autre chose), et le milieu de l'arrêt quand on
+est resté à bord, entre les consignes de l'agent et l'annonce de fermeture.
+
+Côté rendu (`three/exterior/PassingTrain`), la rame emprunte la coque du E235 et
+change de livrée : inox à deux traits bleus au lieu du vert uguisu aux portes,
+dix voitures au lieu de onze, portes closes du début à la fin — personne ne
+monte dans un train qui passe. Rien n'est construit tant qu'aucun passage n'a
+été annoncé : la rame naît pendant l'annonce, une trentaine de secondes avant
+d'entrer en gare. Côté son, c'est la seule source du jeu qui **traverse
+vraiment** l'auditeur : un `Panner3D` posé au point de la rame le plus proche de
+l'oreille (deux cents mètres de caisse ne sont pas une source ponctuelle), le
+grondement qui monte puis se referme d'un cran quand la cabine arrive à notre
+hauteur, le souffle aigu qui n'existe qu'au passage, le martèlement des joints
+et l'avertisseur à l'entrée en gare.
+
+En qualité *basse* et *très basse*, aucun passage n'est tiré : une seconde rame
+complète coûte trop cher là où le quai suffit déjà à saturer la machine.
+
 ### Paliers de qualité
 
 Tout ce que les gares ont gagné se règle par `platformDetail()` :
@@ -608,14 +663,15 @@ src/
                          de viaduc, mobilier de voie, caténaire
   three/city/            le paysage : ruban urbain instancié, matériau de façade,
                          ciel et ligne d'horizon en une passe
-  three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines
+  three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines,
+                         et la rame qui traverse la voie d'en face sans s'arrêter
   three/station/         quai praticable de 224 m, trente gabarits de gare, signalétique
   three/station/signatures/ les charpentes propres à une gare : Takanawa, Akihabara…
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
   scripts/               models:import / models:inspect (packs → public/models/),
                          sondes navigateur : station-probe, scenery-shots,
-                         scenery-cost
+                         scenery-cost, pass-shots
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
   ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles
@@ -680,6 +736,10 @@ l'annonce automatique du quai (`jf_gongitsune`), l'agent de quai au micro
 automate), et les deux voix anglaises (`af_heart` à bord, `af_sarah` au quai,
 un cran plus lente : dehors, sous une verrière, une annonce trop rapide ne
 s'attrape pas).
+
+S'y ajoute, sur les gares dont l'îlot est partagé avec une autre ligne, la seule
+annonce de quai qui parle d'une voie qui n'est pas la nôtre : まもなく、1番線を、
+電車が通過します — voir *Le train qui ne s'arrête pas*.
 
 Le numéro de voie annoncé est le vrai (`data/platforms`), y compris les voies
 secondaires d'Ikebukuro et d'Ōsaki. Les clips ne sont gravés que pour le sens
