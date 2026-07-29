@@ -94,12 +94,16 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
 
 /**
  * Ce voyageur-ci voyage-t-il avec son chien dans CETTE gare ? Le tirage mêle
- * son identifiant et la gare : la foule du quai est toujours faite des mêmes
- * personnes (leur apparence vient de leur identifiant), et sans la gare dans
- * la graine le même passant transporterait le même chien aux trente arrêts.
+ * son identité et la gare : la foule du quai est toujours faite des mêmes
+ * personnes (leur apparence vient de leur identité), et sans la gare dans la
+ * graine le même passant transporterait le même chien aux trente arrêts.
+ *
+ * C'est bien l'identité et non la place du pool : celle-ci change de main à
+ * chaque montée (systems/platformCrowd), la caisse suivrait alors le siège du
+ * quai au lieu de suivre son maître.
  */
-function carriesPetHere(paxId: number, stationIndex: number): boolean {
-  return rng(41000 + paxId * 2654435761 + stationIndex * 7919)() < PET_SHARE;
+function carriesPetHere(identity: number, stationIndex: number): boolean {
+  return rng(41000 + identity * 2654435761 + stationIndex * 7919)() < PET_SHARE;
 }
 
 /**
@@ -147,13 +151,13 @@ export function updatePetCarriers(): void {
   if (free < 0) return;
 
   for (const p of crowdList) {
-    if (taken.has(p.id) || !eligible(p) || !carriesPetHere(p.id, stationIndex) || !canAppear(p)) continue;
+    if (taken.has(p.id) || !eligible(p) || !carriesPetHere(p.identity, stationIndex) || !canAppear(p)) continue;
     const carrier = petCarriers[free];
     carrier.owner = p.id;
     carrier.handSet = false;
     // La main libre est tirée avec le voyageur : il la garde d'un quai à
     // l'autre, et les gestes du catalogue partent dans l'autre bras.
-    carrier.handSide = rng(52000 + p.id * 2654435761)() < 0.6 ? 1 : -1;
+    carrier.handSide = rng(52000 + p.identity * 2654435761)() < 0.6 ? 1 : -1;
     carrier.color = p.appearance.bagColor;
     return;
   }

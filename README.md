@@ -482,7 +482,9 @@ palières, armoires électriques, téléphone ferroviaire, bacs de tri par trois
 gouttière et descentes d'eau, chemin de câbles, ligne verte de guidage et repères
 「N号車 乗車位置」 peints au sol. Rien de tout cela ne se pose au hasard : les
 bornes d'urgence évitent les baies de portes, les diffuseurs évitent les poutres,
-et rien n'atterrit dans une file d'attente.
+et rien n'atterrit dans une file d'attente. Les diffuseurs, justement, ne sont pas
+qu'un décor : c'est de ces grilles-là que sort l'annonce (voir « Sonorisation en
+3D »), et les deux lisent la même cote.
 
 ### Les trémies d'escalier
 
@@ -1717,6 +1719,16 @@ centre de la tête.
 - Avant diffusion, tout passe par un bus « PA » (coupe-bas 300 Hz, bosse de
   présence, coupe-haut 5 kHz, compression) : le timbre d'un haut-parleur de
   wagon, pas celui d'un synthé.
+- Le quai, lui, n'est pas sonorisé par un point mais par une **ligne** de
+  diffuseurs — un tous les dix-neuf mètres sur les 224 m, ceux-là mêmes qu'on
+  voit sous l'auvent. Le graphe en panne les six plus proches de la tête, et
+  c'est la gare qui les désigne à chaque image : le diffuseur au-dessus de soi
+  change quand on marche, et l'annonce s'entend aussi bien au bout du quai que
+  devant sa porte (moins d'un décibel d'écart d'un bout à l'autre, contre plus
+  de vingt quand la sono tenait en quatre points calés sur les portes du
+  milieu). L'atténuation n'est pas celle d'une source ponctuelle : distance de
+  référence large et rolloff doux, le champ à peu près constant d'une vraie
+  sono de quai.
 - La 発車メロディ vient des haut-parleurs du **quai**, pas de la rame : sourde
   et lointaine portes fermées, elle entre franchement par les ouvertures quand
   les portes de la rame **et** les portes palières sont dégagées, du côté qui

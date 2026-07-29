@@ -69,6 +69,54 @@ export const CANOPY_Y = 3.49;
 /** Épaisseur de la dalle du quai (percée au droit des trémies d'escalier). */
 export const SLAB_H = 0.44;
 
+// --- Diffuseurs de la sonorisation --------------------------------------
+//
+// Leurs abscisses le long de la voie sont posées par systems/stationPlacement
+// (un tous les dix-neuf mètres, écarté des poutres) ; ces deux cotes-ci disent
+// où le diffuseur pend au-dessus du quai. Elles sont PARTAGÉES parce que le son
+// doit sortir de la grille qu'on voit : le rendu les lit pour poser la platine
+// et la grille (three/station/PlatformKit), le moteur audio pour y panner
+// l'annonce (systems/stationPa).
+
+/** Abscisse d'un diffuseur : en avant de l'épine, au-dessus du flux d'embarquement. */
+export function speakerX(depth: number): number {
+  return PSD_X + depth * 0.28;
+}
+
+/** Retrait de la grille sous l'auvent : c'est de là que le son part. */
+export const SPEAKER_GRILLE_DROP = 0.079;
+
+/**
+ * Les `count` diffuseurs les plus proches de `ear`, écrits dans `out` (du plus
+ * proche au plus lointain) ; renvoie combien ont été écrits.
+ *
+ * `zs` est la ligne de diffuseurs, croissante. On part du point d'écoute et on
+ * s'écarte des deux côtés à la fois, en prenant chaque fois le plus proche des
+ * deux voisins encore disponibles.
+ *
+ * Prendre les PLUS PROCHES, et rien d'autre, est ce qui rend le relais
+ * inaudible quand on marche : à l'instant où un diffuseur entre dans la
+ * sélection, celui qui en sort est à la même distance que lui, donc au même
+ * niveau. Une fenêtre glissante quelconque ferait, elle, un saut de niveau à
+ * chaque changement.
+ */
+export function nearestSpeakers(
+  zs: readonly number[],
+  ear: number,
+  count: number,
+  out: number[],
+): number {
+  let hi = 0;
+  while (hi < zs.length && zs[hi] < ear) hi++;
+  let lo = hi - 1;
+  let n = 0;
+  while (n < count && (lo >= 0 || hi < zs.length)) {
+    const takeLo = hi >= zs.length || (lo >= 0 && ear - zs[lo] <= zs[hi] - ear);
+    out[n++] = takeLo ? zs[lo--] : zs[hi++];
+  }
+  return n;
+}
+
 // --- Emprises des accès (demi-longueurs le long de la voie) --------------
 //
 // Partagées entre le placement (systems/stationPlacement), qui pose les

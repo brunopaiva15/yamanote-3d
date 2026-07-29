@@ -14,6 +14,7 @@ import { DOOR_SIDE } from '../data/stations';
 import { usesHeldPose } from './characters/props';
 import { ACTION_BY_ID, type MotionId, type PaxAction } from '../data/paxActions';
 import { applyBodyPivot } from './characters/pose';
+import { disposeOwned, markOwned } from './characters/library';
 
 const PLATFORM_Y = -0.06;
 const HEAD_Y = 1.34;
@@ -60,9 +61,12 @@ function torsoGeometry(app: Appearance): THREE.LatheGeometry {
   return new THREE.LatheGeometry(pts, 18);
 }
 
-function buildPerson(app: Appearance, id: number): THREE.Group {
+// Ce corps peut être défait (le slot change d'identité au seuil d'une porte) :
+// tout ce qui n'est créé que pour LUI est marqué, le reste est mutualisé et ne
+// doit jamais être libéré avec lui (voir characters/library, markOwned).
+function buildPerson(app: Appearance, identity: number): THREE.Group {
   const root = new THREE.Group();
-  const skin = new THREE.MeshStandardMaterial({ color: app.skin, roughness: 0.7 });
+  const skin = markOwned(new THREE.MeshStandardMaterial({ color: app.skin, roughness: 0.7 }));
   const top = cloth(app.top.color);
   const bottom = cloth(app.bottom.color);
   const shoe = cloth(app.shoes, 0.6);
@@ -71,7 +75,7 @@ function buildPerson(app: Appearance, id: number): THREE.Group {
   const legX = 0.062;
   const bare = app.bottom.type === 'skirt' || app.bottom.type === 'dress';
   if (bare) {
-    const legGeo = new THREE.CylinderGeometry(0.04, 0.034, 0.48, 7);
+    const legGeo = markOwned(new THREE.CylinderGeometry(0.04, 0.034, 0.48, 7));
     for (const s of [-1, 1]) {
       const leg = new THREE.Mesh(legGeo, skin);
       leg.position.set(s * legX, 0.27, 0);
@@ -82,14 +86,14 @@ function buildPerson(app: Appearance, id: number): THREE.Group {
     }
     if (app.bottom.type === 'skirt') {
       const skirt = new THREE.Mesh(
-        new THREE.CylinderGeometry(app.build.hipR + 0.01, app.build.hipR + 0.12, 0.34, 14, 1, true),
+        markOwned(new THREE.CylinderGeometry(app.build.hipR + 0.01, app.build.hipR + 0.12, 0.34, 14, 1, true)),
         bottom,
       );
       skirt.position.y = 0.55;
       root.add(skirt);
     }
   } else {
-    const legGeo = new THREE.CylinderGeometry(app.build.legR, app.build.legR * 0.85, 0.5, 8);
+    const legGeo = markOwned(new THREE.CylinderGeometry(app.build.legR, app.build.legR * 0.85, 0.5, 8));
     for (const s of [-1, 1]) {
       const leg = new THREE.Mesh(legGeo, bottom);
       leg.position.set(s * legX, 0.28, 0);
@@ -100,12 +104,12 @@ function buildPerson(app: Appearance, id: number): THREE.Group {
     }
   }
 
-  root.add(new THREE.Mesh(torsoGeometry(app), top));
+  root.add(new THREE.Mesh(markOwned(torsoGeometry(app)), top));
   const neck = new THREE.Mesh(neckGeo, skin);
   neck.position.y = SHOULDER_Y + 0.14;
   root.add(neck);
 
-  const armGeo = new THREE.CylinderGeometry(0.035, 0.03, 0.5, 7);
+  const armGeo = markOwned(new THREE.CylinderGeometry(0.035, 0.03, 0.5, 7));
   for (const s of [-1, 1]) {
     const armG = new THREE.Group();
     armG.position.set(s * (app.build.shoulderR + 0.02), SHOULDER_Y - 0.12, 0.02);
@@ -137,12 +141,12 @@ function buildPerson(app: Appearance, id: number): THREE.Group {
   headG.add(head);
   const face = new THREE.Mesh(
     faceGeo,
-    new THREE.MeshBasicMaterial({ map: makeFaceTexture(app, id), toneMapped: false }),
+    markOwned(new THREE.MeshBasicMaterial({ map: markOwned(makeFaceTexture(app, identity)), toneMapped: false })),
   );
   face.position.set(0, 0.02, 0.093);
   headG.add(face);
   if (app.hair.style !== 'bald') {
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hair);
+    const cap = new THREE.Mesh(markOwned(new THREE.SphereGeometry(0.11, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55)), hair);
     cap.position.y = 0.02;
     cap.scale.set(0.95, 0.85, 0.95);
     headG.add(cap);
@@ -150,11 +154,11 @@ function buildPerson(app: Appearance, id: number): THREE.Group {
   root.add(headG);
 
   if (app.bag === 'backpack') {
-    const bag = new THREE.Mesh(new RoundedBoxGeometry(0.22, 0.28, 0.12, 2, 0.04), cloth(app.bagColor, 0.75));
+    const bag = new THREE.Mesh(markOwned(new RoundedBoxGeometry(0.22, 0.28, 0.12, 2, 0.04)), cloth(app.bagColor, 0.75));
     bag.position.set(0, 0.95, -0.16);
     root.add(bag);
   } else if (app.bag !== 'none') {
-    const bag = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.18, 0.07, 2, 0.02), cloth(app.bagColor, 0.75));
+    const bag = new THREE.Mesh(markOwned(new RoundedBoxGeometry(0.14, 0.18, 0.07, 2, 0.02)), cloth(app.bagColor, 0.75));
     bag.position.set(0.18, 0.85, 0.05);
     root.add(bag);
   }
@@ -235,13 +239,20 @@ export function ProceduralPlatformCrowd() {
   const doorSide = DOOR_SIDE[platformIndex];
   const wrap = useRef<THREE.Group>(null);
 
-  const people = useMemo(() => {
-    return crowdList.map((p) => {
-      const g = buildPerson(p.appearance, p.id);
+  // Un support stable par slot : le corps y est greffé, et remplacé quand le
+  // slot change d'identité (relais des portes, cf. systems/platformCrowd).
+  const holders = useMemo(() => crowdList.map(() => new THREE.Group()), []);
+  const bodies = useRef<THREE.Group[]>([]);
+  const identities = useRef<number[]>([]);
+  if (bodies.current.length === 0) {
+    bodies.current = crowdList.map((p, i) => {
+      const g = buildPerson(p.appearance, p.identity);
       g.visible = false;
+      holders[i].add(g);
       return g;
     });
-  }, []);
+    identities.current = crowdList.map((p) => p.identity);
+  }
 
   useFrame(() => {
     if (wrap.current) {
@@ -251,7 +262,16 @@ export function ProceduralPlatformCrowd() {
     }
     for (let i = 0; i < crowdList.length; i++) {
       const p = crowdList[i];
-      const g = people[i];
+      if (identities.current[i] !== p.identity) {
+        disposeOwned(bodies.current[i]);
+        bodies.current[i].removeFromParent();
+        const rebuilt = buildPerson(p.appearance, p.identity);
+        rebuilt.visible = false;
+        holders[i].add(rebuilt);
+        bodies.current[i] = rebuilt;
+        identities.current[i] = p.identity;
+      }
+      const g = bodies.current[i];
       if (!g) continue;
       if (p.state === 'hidden' || runtime.platformFade < 0.04) {
         g.visible = false;
@@ -286,7 +306,7 @@ export function ProceduralPlatformCrowd() {
 
   return (
     <group ref={wrap} visible={false}>
-      {people.map((g, i) => (
+      {holders.map((g, i) => (
         <primitive key={crowdList[i].id} object={g} />
       ))}
     </group>

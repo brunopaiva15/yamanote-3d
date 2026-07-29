@@ -14,6 +14,8 @@
 // (platVoiceGain) et fait de la voix du quai un lointain dès qu'on est à bord.
 
 import { platformFor } from '../data/platforms';
+import { nearestSpeakers, SPEAKER_GRILLE_DROP, speakerX } from '../data/stationGeometry';
+import { layoutFor } from '../data/stationLayouts';
 import {
   platformAgentMessage,
   platformAlightFirstAnnouncement,
@@ -32,9 +34,12 @@ import {
 } from '../data/stationAnnouncements';
 import { STATIONS } from '../data/stations';
 import { useStore } from '../store';
+import { psdGates } from '../three/station/psdLayout';
 import * as audio from './audioEngine';
+import { platformToWorld } from './playerFrame';
 import { runtime } from './runtime';
 import { say } from './speech';
+import { placementFor } from './stationPlacement';
 
 /** Numéro de voie desservie, tel qu'il est annoncé (「3番線」). */
 export function currentPlatformNumber(index: number): number {
@@ -45,6 +50,60 @@ export function currentPlatformNumber(index: number): number {
     return info.alternativePlatform;
   }
   return info.platform;
+}
+
+// --- Où sonne la gare -----------------------------------------------------
+//
+// La sono du quai avait quatre points de diffusion, plantés une fois pour
+// toutes autour des portes du milieu. Cela va tant qu'on reste devant la
+// voiture 5 ; dix pas plus loin, ils sont tous derrière, et l'annonce se réduit
+// à une voix lointaine qui vient d'un seul endroit. Un vrai quai est couvert
+// d'un bout à l'autre : c'est même toute la raison d'aligner des diffuseurs
+// tous les dix-neuf mètres au lieu d'en poser un gros.
+//
+// Ces diffuseurs-là existent déjà — on les voit sous l'auvent, systems/
+// stationPlacement les répartit et three/station/PlatformKit les dessine. Il
+// suffit donc de les DONNER au moteur audio, qui garde un petit jeu de prises
+// spatialisées (audioEngine, PLATFORM_TAPS) et n'a pas à savoir d'où elles
+// sortent.
+//
+// On envoie les plus proches de la tête (nearestSpeakers) : le tri est là-bas,
+// avec la cote des diffuseurs, parce que c'est de la géométrie de quai.
+
+/** Abscisses retenues, puis positions poussées : réécrites sur place. */
+const speakerZs: number[] = [];
+const speakerBuf: [number, number, number][] = Array.from(
+  { length: audio.platformSpeakerTaps },
+  () => [0, 0, 0] as [number, number, number],
+);
+const speakerWorld = { x: 0, z: 0 };
+
+/**
+ * Assigne les prises de la sono du quai aux diffuseurs les plus proches de
+ * l'oreille. À appeler une fois par image (three/Engine), APRÈS la présence du
+ * quai : c'est elle qui pose le glissement dont dépend le repère.
+ */
+export function updatePlatformSpeakers(): void {
+  const index = useStore.getState().platformIndex;
+  const layout = layoutFor(index);
+  const x = speakerX(layout.depth);
+  const y = layout.canopyY - SPEAKER_GRILLE_DROP;
+  // La tête, ramenée au repère du quai : une ligne de diffuseurs ne se trie que
+  // sur z, et le joueur y a déjà sa position.
+  const n = nearestSpeakers(
+    placementFor(index, psdGates()).kit.speakers,
+    runtime.playerPlatZ,
+    speakerBuf.length,
+    speakerZs,
+  );
+  for (let i = 0; i < n; i++) {
+    platformToWorld(x, speakerZs[i], speakerWorld);
+    const s = speakerBuf[i];
+    s[0] = speakerWorld.x;
+    s[1] = y;
+    s[2] = speakerWorld.z;
+  }
+  audio.setPlatformSpeakers(n === speakerBuf.length ? speakerBuf : speakerBuf.slice(0, n));
 }
 
 // --- Retard de la ligne ---------------------------------------------------

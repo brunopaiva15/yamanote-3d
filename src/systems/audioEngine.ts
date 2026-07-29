@@ -13,6 +13,12 @@
 // caméra, donc le son tourne quand on tourne la tête et se rapproche quand on
 // marche sous un diffuseur.
 //
+// La sono du quai est une LIGNE de diffuseurs, pas un point : elle couvre les
+// deux cent vingt mètres du quai, et le graphe en panne les six plus proches de
+// la tête (PLATFORM_TAPS, setPlatformSpeakers — c'est systems/stationPa qui les
+// désigne). On entend donc l'annonce d'un bout du quai à l'autre, et le
+// diffuseur au-dessus de soi change quand on marche.
+//
 // Deux sonorisations, deux VOIX. Une gare a sa propre sono, indépendante de
 // celle de la rame, et on ne les entend pas au même endroit :
 //
@@ -49,7 +55,7 @@
 // distance à la rame. Sur le quai, un train qui part s'éloigne vraiment.
 
 import * as Tone from 'tone';
-import { CABIN_SPEAKERS, CONFIG, PLATFORM_SPEAKERS } from '../data/config';
+import { CABIN_SPEAKERS, CONFIG, type SpeakerPos } from '../data/config';
 import {
   MELODY_PATHS,
   MELODY_REPEATS,
@@ -99,7 +105,7 @@ interface Nodes {
   melodyIn: Tone.Gain; // 発車メロディ seule, calée à part du reste du quai
   platGain: Tone.Gain;
   platLp: Tone.Filter;
-  platPanners: Tone.Panner3D[];
+  platTaps: PlatformTap[];
   hissGain: Tone.Gain;
   paClick: Tone.NoiseSynth;
   platHissGain: Tone.Gain;
@@ -164,19 +170,55 @@ let prevSpeed01 = 0;
 const PLAT_VOICE_INSIDE = 0.3;
 
 /**
+ * Prises de la sonorisation du QUAI : le nombre de diffuseurs réellement pannés
+ * autour de l'oreille à un instant donné.
+ *
+ * Un quai n'a pas UN haut-parleur, il en a une ligne — un tous les dix-neuf
+ * mètres sous l'auvent (systems/stationPlacement) — et c'est ce qui fait qu'on
+ * entend l'annonce pareil devant la voiture 1 et au bout du quai. Le graphe
+ * garde donc six points de diffusion fixes ; ce ne sont pas six haut-parleurs
+ * donnés une fois pour toutes, mais six PRISES à qui systems/stationPa assigne,
+ * image par image, les diffuseurs les plus proches de la tête.
+ *
+ * Six suffit : au-delà, une source est à plus de cinquante mètres et n'apporte
+ * plus qu'un quarantième du champ, pour un Panner3D HRTF de plus.
+ */
+const PLATFORM_TAPS = 6;
+
+/**
+ * Une prise : son point de diffusion, et le robinet qui la coupe.
+ *
+ * Le robinet ne sert qu'aux quais qui compteraient moins de diffuseurs que le
+ * graphe n'a de prises — deux prises au même endroit doubleraient le niveau
+ * juste là, ce qui est exactement le défaut qu'on corrige ici.
+ */
+interface PlatformTap {
+  gain: Tone.Gain;
+  panner: Tone.Panner3D;
+}
+
+/**
  * Niveau du bus de la sono du QUAI, aux trois points de calage : portes
  * fermées, portes ouvertes, et debout sur le quai.
  *
- * Ce bus alimente QUATRE Panner3D qui se somment sur l'auditeur, et sur le quai
- * on se tient à trois mètres sous le plus proche : un gain qui semble modeste
- * au nœud arrive bien plus fort à l'oreille, et la gare écrasait tout le reste.
- * Les trois valeurs gardent entre elles les mêmes rapports qu'avant — la
- * mélodie entre toujours franchement par les portes, et le quai reste plus
- * ouvert que la rame — mais l'ensemble redescend d'environ 8 dB.
+ * Ce bus alimente les prises de la ligne de diffuseurs (PLATFORM_TAPS), qui se
+ * somment sur l'auditeur, et sur le quai on se tient à trois mètres sous le plus
+ * proche : un gain qui semble modeste au nœud arrive bien plus fort à l'oreille,
+ * et la gare écrasait tout le reste. Les trois valeurs gardent entre elles les
+ * mêmes rapports qu'avant — la mélodie entre toujours franchement par les
+ * portes, et le quai reste plus ouvert que la rame.
+ *
+ * Les trois ont été REPRISES quand la sono du quai est passée de quatre points
+ * fixes à une ligne de diffuseurs : là où quatre points laissaient l'oreille
+ * entre deux sources lointaines, la ligne la met toujours sous une grille, et
+ * la somme monte. Chacune est ramenée à ce qu'elle donnait AVANT au point où
+ * elle avait été calée — le quai à trois mètres sous un diffuseur, la rame au
+ * milieu de la voiture. Ce qui change n'est donc pas le niveau qu'on entend là
+ * où on l'avait réglé, mais le fait qu'on l'entende AILLEURS AUSSI.
  */
-const PLAT_BUS_CLOSED = 0.07;
-const PLAT_BUS_OPEN = 0.26;
-const PLAT_BUS_OUTSIDE = 0.34;
+const PLAT_BUS_CLOSED = 0.043;
+const PLAT_BUS_OPEN = 0.16;
+const PLAT_BUS_OUTSIDE = 0.29;
 
 /**
  * Niveau propre de la 発車メロディ, en plus du bus du quai.
@@ -396,20 +438,33 @@ export async function startAudio(): Promise<void> {
     volume: -20,
   }).connect(platIn);
 
-  const platPanners = PLATFORM_SPEAKERS.map(([x, y, z]) => {
-    const p = new Tone.Panner3D({
-      positionX: x,
-      positionY: y,
-      positionZ: z,
+  // Les prises de la sono du quai. Contrairement aux diffuseurs du wagon, dont
+  // la position est acquise une fois pour toutes, celles-ci suivent la gare :
+  // stationPa leur pousse à chaque image les diffuseurs les plus proches de
+  // l'oreille, en repère monde (setPlatformSpeakers).
+  //
+  // L'atténuation, elle, n'est pas celle d'une source ponctuelle. Une LIGNE de
+  // sources ne décroît pas comme un point : une distance de référence large et
+  // un rolloff doux donnent le champ à peu près constant d'une sono de quai —
+  // debout sous une grille ou à mi-chemin de deux, il reste moins d'un décibel
+  // d'écart, ce qui est précisément ce qu'on cherche à obtenir.
+  const platTaps: PlatformTap[] = Array.from({ length: PLATFORM_TAPS }, (_, i) => {
+    const gain = new Tone.Gain(1);
+    const panner = new Tone.Panner3D({
+      // Position d'attente : la première image de stationPa la remplace.
+      positionX: 3.3,
+      positionY: 3.4,
+      positionZ: (i - (PLATFORM_TAPS - 1) / 2) * 19,
       panningModel: 'HRTF',
       distanceModel: 'inverse',
-      refDistance: 2.6,
+      refDistance: 7,
       rolloffFactor: 0.9,
-      maxDistance: 60,
+      maxDistance: 120,
     });
-    platGain.connect(p);
-    p.connect(master);
-    return p;
+    platGain.connect(gain);
+    gain.connect(panner);
+    panner.connect(master);
+    return { gain, panner };
   });
 
   // Carillons et jingles : sortent des diffuseurs du wagon.
@@ -656,7 +711,7 @@ export async function startAudio(): Promise<void> {
     melodyIn,
     platGain,
     platLp,
-    platPanners,
+    platTaps,
     hissGain,
     paClick,
     platHissGain,
@@ -766,12 +821,29 @@ export function setListenerPose(
   l.upZ.value = uz;
 }
 
-// Côté d'ouverture : les haut-parleurs du quai basculent avec lui.
-export function setPlatformSide(side: 1 | -1): void {
+/** Combien de diffuseurs la sono du quai peut panner à la fois. */
+export const platformSpeakerTaps = PLATFORM_TAPS;
+
+/**
+ * Où sont les diffuseurs du quai à cette image, en repère MONDE — donc côté
+ * d'ouverture appliqué et glissement du quai compris. C'est systems/stationPa
+ * qui les choisit ; ici on ne fait que les poser sur les prises, dans l'ordre
+ * reçu. Les prises en trop se taisent.
+ */
+export function setPlatformSpeakers(points: readonly SpeakerPos[]): void {
   if (!nodes) return;
-  nodes.platPanners.forEach((p, i) => {
-    p.positionX.value = side * PLATFORM_SPEAKERS[i][0];
-  });
+  for (let i = 0; i < nodes.platTaps.length; i++) {
+    const { gain, panner } = nodes.platTaps[i];
+    const p = points[i];
+    if (!p) {
+      gain.gain.value = 0;
+      continue;
+    }
+    gain.gain.value = 1;
+    panner.positionX.value = p[0];
+    panner.positionY.value = p[1];
+    panner.positionZ.value = p[2];
+  }
 }
 
 /**

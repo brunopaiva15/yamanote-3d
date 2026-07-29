@@ -274,6 +274,13 @@ let passPending = false;
 function beginClear(index: number): void {
   passPending = rollPassThrough(index, HEADWAY_GAP + PASS_HEADWAY_EXTRA);
   headway = HEADWAY_GAP + (passPending ? PASS_HEADWAY_EXTRA : 0);
+  // La rame suivante est peuplée MAINTENANT, quai vide et voie déserte : elle
+  // arrivera donc avec ses voyageurs déjà en place derrière les vitres.
+  //
+  // Ce tirage se faisait à l'immobilisation, et il se voyait : la rame entrait
+  // en gare pleine des voyageurs de la précédente, puis tout le monde changeait
+  // de visage et de place à l'instant de l'arrêt, sous les yeux du quai.
+  seedPassengers();
 }
 
 function updateClear(index: number): void {
@@ -358,8 +365,8 @@ function updateBerthing(index: number): void {
     // Nouvelle rame, nouveau tirage de l'incident de porte.
     resetDoorObstruction();
     armDoorObstruction();
-    // Nouvelle rame : de nouveaux visages derrière les vitres.
-    seedPassengers();
+    // Ses voyageurs, eux, sont en place depuis le creux (beginClear) : les
+    // peupler ici les ferait tous changer de visage à l'arrêt.
     // La gare annonce son propre nom, deux fois, comme sur les quais ATOS.
     paArrival(index);
   });

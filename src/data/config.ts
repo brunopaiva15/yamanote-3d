@@ -52,12 +52,11 @@ export const CONFIG = {
   railJointGap: 23,
 
   // Sonorisation : diffuseurs de plafond du wagon (de part et d'autre du
-  // caisson central, au droit de chaque porte) et haut-parleurs du quai.
+  // caisson central, au droit de chaque porte). Ceux du QUAI ne sont pas ici :
+  // ils appartiennent à la gare, qui les répartit sur toute sa longueur
+  // (systems/stationPlacement, data/stationGeometry).
   speakerX: 1.02,
   speakerY: 2.364, // encastré dans le plafond (sous-face à 2,38 m)
-  platformSpeakerX: 4.4,
-  platformSpeakerY: 3.3,
-  platformSpeakerZ: [-9, -3, 3, 9],
 } as const;
 
 // Vitesse maximale en m/s, dérivée une fois pour toutes.
@@ -82,9 +81,4 @@ export type SpeakerPos = readonly [number, number, number];
 
 export const CABIN_SPEAKERS: readonly SpeakerPos[] = CONFIG.doorCenters.flatMap((z) =>
   [1, -1].map((s) => [s * CONFIG.speakerX, CONFIG.speakerY, z] as SpeakerPos),
-);
-
-// Quai : construit côté +x, l'abscisse est retournée selon le côté d'ouverture.
-export const PLATFORM_SPEAKERS: readonly SpeakerPos[] = CONFIG.platformSpeakerZ.map(
-  (z) => [CONFIG.platformSpeakerX, CONFIG.platformSpeakerY, z] as SpeakerPos,
 );

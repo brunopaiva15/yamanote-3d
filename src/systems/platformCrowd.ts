@@ -58,6 +58,15 @@ export type CrowdState =
 
 export interface CrowdPax {
   id: number;
+  /**
+   * QUI est ce voyageur, par opposition à `id` qui dit seulement quelle place
+   * du pool le porte. Apparence, caractère et modèle 3D en découlent tous.
+   *
+   * Une identité voyage d'un pool à l'autre : celui qui franchit la porte
+   * emporte la sienne dans la rame et rend celle du PNJ de rame qui prend sa
+   * place ici (voir swapCrowdIdentity et systems/passengers).
+   */
+  identity: number;
   state: CrowdState;
   role: 'waiter' | 'walker'; // walker = se balade en boucle
   // Position locale du quai (côté +x, avant rotation doorSide).
@@ -132,11 +141,16 @@ function bounds(): { z0: number; z1: number; x0: number; x1: number } {
 }
 const WALK_SPEED = CONFIG.walkSpeed * 0.92;
 
+/** Identités de départ du quai : une plage à part de celles de la rame. */
+const CROWD_IDENTITY_0 = 9000;
+
 function makeCrowd(id: number): CrowdPax {
-  const appearance = makeAppearance(9000 + id);
-  const temper = temperFor(9000 + id);
+  const identity = CROWD_IDENTITY_0 + id;
+  const appearance = makeAppearance(identity);
+  const temper = temperFor(identity);
   return {
     id,
+    identity,
     state: 'hidden',
     role: 'waiter',
     pos: new THREE.Vector3(),
@@ -218,6 +232,35 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   // Outil dev : __crowd donne l'état de chaque voyageur du quai (arrivées par
   // l'escalier, montées en rame, départs vers la sortie).
   (window as unknown as Record<string, unknown>).__crowd = crowdList;
+}
+
+/**
+ * Ce slot du quai devient quelqu'un d'autre. Le rendu s'en aperçoit tout seul
+ * (il compare l'identité du slot à celle de son modèle) et rebâtit le
+ * personnage : on n'appelle donc ceci que sur un slot invisible.
+ */
+function applyCrowdIdentity(p: CrowdPax, identity: number): void {
+  p.identity = identity;
+  p.appearance = makeAppearance(identity);
+  p.temper = temperFor(identity);
+  p.height = p.appearance.build.scale;
+}
+
+/**
+ * Échange d'identité au seuil d'une porte : le slot de quai `crowdId` prend
+ * `identity` et rend la sienne. C'est le pivot du relais avec la rame — celui
+ * qui monte emporte son visage à l'intérieur, celui qui descend emporte le
+ * sien sur le quai, et aucun des deux ne se transforme en chemin.
+ *
+ * @returns l'identité que ce slot portait, ou -1 s'il n'est pas échangeable.
+ */
+export function swapCrowdIdentity(crowdId: number, identity: number): number {
+  const p = crowdList[crowdId];
+  // L'agent de quai n'est pas un voyageur : son uniforme ne se troque pas.
+  if (!p || p.staff) return -1;
+  const previous = p.identity;
+  applyCrowdIdentity(p, identity);
+  return previous;
 }
 
 function crowdCountBase(stationIndex: number): { total: number; walkers: number } {
@@ -479,15 +522,25 @@ function sendToStairs(p: CrowdPax, pl: StationPlacement, delay = 0): boolean {
  * Un voyageur vient de descendre de la rame : il apparaît au seuil de la porte
  * et traverse le quai vers la sortie. C'est le relais de systems/passengers,
  * dont les PNJ vivent, eux, dans le repère du wagon.
+ *
+ * `identity` est celle du PNJ qui descend : le slot de quai la reprend telle
+ * quelle, si bien que la personne qu'on voyait derrière la vitre est
+ * exactement celle qui pose le pied sur le quai.
+ *
+ * @returns l'identité rendue en échange (à donner au PNJ de rame, qui repart
+ *          au pool), ou -1 si le quai n'avait plus de place libre.
  */
-export function crowdArriveFromTrain(doorLocalZ: number): boolean {
+export function crowdArriveFromTrain(doorLocalZ: number, identity: number): number {
   initPlatformCrowd();
   const p = freeSlot();
-  if (!p) return false;
+  if (!p) return -1;
+  const swapped = swapCrowdIdentity(p.id, identity);
   const pl = placement();
-  // Même abscisse que le relais côté rame (systems/passengers) : le voyageur
-  // continue exactement là où il s'arrête.
-  p.pos.set(2.0, 0, doorLocalZ + (Math.random() - 0.5) * 0.5);
+  // Même point EXACT que le relais côté rame (systems/passengers) : le
+  // voyageur continue précisément là où il s'arrête. Pas de dispersion en z —
+  // c'est la même personne des deux côtés du seuil depuis que l'identité
+  // traverse avec elle, et un demi-mètre d'écart se lirait comme un saut.
+  p.pos.set(2.0, 0, doorLocalZ);
   p.y = 0;
   p.home.copy(p.pos);
   p.bob = 0;
@@ -501,7 +554,7 @@ export function crowdArriveFromTrain(doorLocalZ: number): boolean {
     p.waypoints = [clampPos(bounds().x1, p.pos.z + (Math.random() - 0.5) * 12)];
     p.wpi = 0;
   }
-  return true;
+  return swapped;
 }
 
 /**
@@ -620,10 +673,17 @@ export function dismissPlatformAgent(): void {
 
 const tmpWorld = { x: 0, z: 0 };
 
-/** Jetons des voyageurs arrivés au seuil depuis le dernier appel. */
-const arrivedBoarders: number[] = [];
+/** Un voyageur du quai vient d'atteindre le seuil : jeton + qui il est. */
+export interface ArrivedBoarder {
+  ticket: number;
+  /** Slot de quai qu'il occupait — celui avec qui la rame échange l'identité. */
+  crowdId: number;
+}
 
-export function takeArrivedBoarders(): number[] {
+/** Voyageurs arrivés au seuil depuis le dernier appel. */
+const arrivedBoarders: ArrivedBoarder[] = [];
+
+export function takeArrivedBoarders(): ArrivedBoarder[] {
   if (arrivedBoarders.length === 0) return [];
   const out = arrivedBoarders.slice();
   arrivedBoarders.length = 0;
@@ -1075,8 +1135,9 @@ export function updatePlatformCrowd(dt: number): void {
       } else {
         advanceWalk(p, dt, () => {
           if (p.state === 'boarding') {
-            // Le relais est pris à l'intérieur du wagon (systems/passengers).
-            if (p.ticket >= 0) arrivedBoarders.push(p.ticket);
+            // Le relais est pris à l'intérieur du wagon (systems/passengers),
+            // qui reprendra l'identité de ce slot pour poursuivre la montée.
+            if (p.ticket >= 0) arrivedBoarders.push({ ticket: p.ticket, crowdId: p.id });
             p.ticket = -1;
             p.state = 'hidden';
           } else if (p.state === 'leaving') {

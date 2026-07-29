@@ -10,14 +10,20 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
-import { paxList, initPassengers } from '../systems/passengers';
-import type { Appearance } from '../systems/appearance';
+import * as THREE from 'three';
+import { paxList, initPassengers, type Pax } from '../systems/passengers';
 import { isPairAction } from '../data/paxActions';
 import { runtime } from '../systems/runtime';
 import { CONFIG } from '../data/config';
-import { rng } from '../textures/procedural';
 import { MODELS_BASE, type CharacterManifest } from './characters/manifest';
-import { buildTemplates, cloneVariant, type CharacterClone, type CharacterTemplate } from './characters/library';
+import {
+  buildTemplates,
+  cloneVariant,
+  disposeClone,
+  pickTemplate,
+  type CharacterClone,
+  type CharacterTemplate,
+} from './characters/library';
 import { applyBodyPivot, applyPoseOverrides, makePoseState, type PoseState } from './characters/pose';
 import { fallClipFor, fallCue, fallYawOffset } from './characters/fall';
 import { attachProps, updatePropRig, handPropFor, type PropRig } from './characters/props';
@@ -28,9 +34,13 @@ const SEAT_TOP_Y = 0.45;
 const FADE = 0.25; // durée de crossfade entre clips (s)
 
 interface Slot {
+  /** Support stable dans la scène : le clone y est greffé, et remplacé. */
+  holder: THREE.Group;
   clone: CharacterClone;
   pose: PoseState;
   props: PropRig;
+  /** Identité que ce modèle représente — comparée à celle du PNJ chaque frame. */
+  identity: number;
   currentKey: LogicalClip | '';
   seatFix: number; // décalage vertical lissé pour poser le bassin sur le coussin
   /** Part de la pose tenue par le clip de chute (0..1) — voir characters/fall.ts. */
@@ -41,15 +51,37 @@ interface Slot {
   fallYaw: number;
 }
 
-// Variante déterministe par passager : filtrée par archétype et genre, tirée
-// avec un flux seedé indépendant (l'apparence procédurale n'est pas décalée).
-function pickTemplate(templates: CharacterTemplate[], app: Appearance, id: number): CharacterTemplate {
-  const r = rng(9700 + id * 2654435761);
-  const fem = app.feminine;
-  let pool = templates.filter((t) => t.variant.archetypes.includes(app.archetype) && (t.variant.feminine ?? false) === fem);
-  if (pool.length === 0) pool = templates.filter((t) => (t.variant.feminine ?? false) === fem);
-  if (pool.length === 0) pool = templates;
-  return pool[Math.floor(r() * pool.length)];
+/**
+ * Reconstructions de modèle tolérées par frame quand le PNJ est HORS DE VUE.
+ *
+ * Une identité qui change sur un slot visible (le montant qui paraît au seuil)
+ * est rebâtie sur-le-champ : c'est le seul cas où attendre se verrait. Les
+ * autres — le slot rendu au pool en échange — patientent, et le coût d'un
+ * arrêt s'étale sur quelques frames au lieu de tomber d'un bloc.
+ */
+const HIDDEN_REBUILDS_PER_FRAME = 2;
+
+function buildBody(templates: CharacterTemplate[], p: Pax): Pick<Slot, 'clone' | 'props' | 'identity'> {
+  const template = pickTemplate(templates, p.appearance, p.identity);
+  const clone = cloneVariant(template, p.appearance);
+  const props = attachProps(clone.wrap, p.appearance, template.variant.bagProp !== false);
+  return { clone, props, identity: p.identity };
+}
+
+/** Ce slot ne représente plus la même personne : on refait son corps. */
+function rebuildSlot(s: Slot, templates: CharacterTemplate[], p: Pax): void {
+  disposeClone(s.clone);
+  const body = buildBody(templates, p);
+  s.clone = body.clone;
+  s.props = body.props;
+  s.identity = body.identity;
+  s.pose = makePoseState();
+  s.currentKey = '';
+  s.seatFix = 0;
+  s.fallW = 0;
+  s.fallOut = FADE;
+  s.fallYaw = 0;
+  s.holder.add(body.clone.wrap);
 }
 
 export function LibraryPassengers({ manifest }: { manifest: CharacterManifest }) {
@@ -61,10 +93,19 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
   const slots = useMemo<Slot[]>(
     () =>
       paxList.map((p) => {
-        const template = pickTemplate(templates, p.appearance, p.id);
-        const clone = cloneVariant(template, p.appearance);
-        const props = attachProps(clone.wrap, p.appearance, template.variant.bagProp !== false);
-        return { clone, pose: makePoseState(), props, currentKey: '', seatFix: 0, fallW: 0, fallOut: FADE, fallYaw: 0 };
+        const body = buildBody(templates, p);
+        const holder = new THREE.Group();
+        holder.add(body.clone.wrap);
+        return {
+          holder,
+          ...body,
+          pose: makePoseState(),
+          currentKey: '',
+          seatFix: 0,
+          fallW: 0,
+          fallOut: FADE,
+          fallYaw: 0,
+        };
       }),
     [templates],
   );
@@ -76,10 +117,19 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
     const k = Math.min(1, dt * 6);
+    let rebuildBudget = HIDDEN_REBUILDS_PER_FRAME;
     for (let i = 0; i < paxList.length; i++) {
       const p = paxList[i];
       const s = slotsRef.current[i];
       if (!s) continue;
+      if (s.identity !== p.identity) {
+        // Visible : tout de suite, sinon le seuil montrerait l'ancien corps.
+        if (p.state !== 'hidden') rebuildSlot(s, templates, p);
+        else if (rebuildBudget > 0) {
+          rebuildBudget--;
+          rebuildSlot(s, templates, p);
+        }
+      }
       const { wrap, mixer, actions, bones, template } = s.clone;
       if (p.state === 'hidden') {
         wrap.visible = false;
@@ -202,7 +252,7 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
   return (
     <group>
       {slots.map((s, i) => (
-        <primitive key={paxList[i].id} object={s.clone.wrap} />
+        <primitive key={paxList[i].id} object={s.holder} />
       ))}
     </group>
   );

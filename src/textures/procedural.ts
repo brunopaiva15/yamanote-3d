@@ -2754,18 +2754,27 @@ function drawRuns(
 }
 
 /**
- * Trame de la matrice à LED : une cellule de trois pixels dont l'inter-diode
- * est noirci. Un seul petit canvas pour toute la session, repassé en motif
- * par-dessus le tableau fini — c'est ce qui fait la différence entre du texte
- * sur fond noir et un afficheur.
+ * Côté d'une diode, en pixels du canvas.
+ *
+ * C'est la seule cote qui décide de la finesse de la matrice. À 3, un chiffre
+ * de 66 px tient sur vingt-deux diodes et un kanji de 50 px sur seize — la
+ * définition des vraies matrices JR, dont les polices sont dessinées sur des
+ * grilles de 16 points.
+ */
+const LED_CELL = 3;
+
+/**
+ * Trame de la matrice : une cellule dont l'inter-diode est noirci. Un seul
+ * petit canvas pour toute la session, repassé en motif par-dessus le tableau
+ * fini.
  */
 let ledCell: HTMLCanvasElement | null = null;
 function ledMask(): HTMLCanvasElement {
   if (ledCell) return ledCell;
-  const { c, g } = makeCanvas(3, 3);
+  const { c, g } = makeCanvas(LED_CELL, LED_CELL);
   g.fillStyle = 'rgba(0,0,0,0.55)';
-  g.fillRect(2, 0, 1, 3);
-  g.fillRect(0, 2, 3, 1);
+  g.fillRect(LED_CELL - 1, 0, 1, LED_CELL);
+  g.fillRect(0, LED_CELL - 1, LED_CELL, 1);
   ledCell = c;
   return c;
 }
@@ -2819,6 +2828,14 @@ export function makePlatformBoard(): {
   const H = 256;
   const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
+  // Toile réduite où la matrice à LED est réellement tramée : une diode y vaut
+  // un pixel. Le texte y est rasterisé à CETTE définition, puis rendu au bloc
+  // près sur le tableau — c'est ce qui donne aux lettres leurs marches
+  // d'escalier, là où une trame posée par-dessus du texte lisse laissait les
+  // courbes intactes entre les diodes.
+  const dotW = Math.ceil(W / LED_CELL);
+  const dotH = Math.ceil(H / LED_CELL);
+  const dot = makeCanvas(dotW, dotH);
 
   const redraw = (index: number, view: BoardView, dir: LoopDirection) => {
     const lcd = LCD_BOARDS.has(STATIONS[index].jy);
@@ -2835,49 +2852,70 @@ export function makePlatformBoard(): {
     const destColor = lcd ? '#eef3f8' : '#ff9a2e';
     const timeColor = lcd ? '#63e88a' : '#4bee63';
 
-    g.fillStyle = lcd ? '#070c14' : '#04060a';
-    g.fillRect(0, 0, W, H);
+    /**
+     * Le contenu du tableau, dans le repère du tableau. `blur` est le halo de
+     * diode, exprimé en pixels de la TOILE visée : le flou d'ombre ignore la
+     * transformation, il faut donc le donner à l'échelle où l'on peint.
+     */
+    const paint = (t: CanvasRenderingContext2D, blur: number) => {
+      t.fillStyle = lcd ? '#070c14' : '#04060a';
+      t.fillRect(0, 0, W, H);
 
-    g.textAlign = 'left';
-    g.textBaseline = 'alphabetic';
-    // Halo de diode : le texte d'un afficheur bave un peu sur son fond noir.
-    g.shadowBlur = lcd ? 0 : 10;
+      t.textAlign = 'left';
+      t.textBaseline = 'alphabetic';
+      // Halo de diode : le texte d'un afficheur bave un peu sur son fond noir.
+      t.shadowBlur = blur;
 
-    view.rows.slice(0, 2).forEach((eta, row) => {
-      const cy = 68 + row * 118;
-      const dim = view.blink && row === 0;
+      view.rows.slice(0, 2).forEach((eta, row) => {
+        const cy = 68 + row * 118;
+        const dim = view.blink && row === 0;
 
-      // Une diode éteinte est éteinte : le battement du 発車 laisse à peine la
-      // trace d'ambre que garde une matrice qu'on vient de couper.
-      g.fillStyle = g.shadowColor = dim ? '#140d05' : nameColor;
-      drawRuns(g, [{ text: view.english ? 'YAMANOTE LINE' : '山手線', px: 50 }], 30, cy, 268, 'left');
+        // Une diode éteinte est éteinte : le battement du 発車 laisse à peine
+        // la trace d'ambre que garde une matrice qu'on vient de couper.
+        t.fillStyle = t.shadowColor = dim ? '#140d05' : nameColor;
+        drawRuns(t, [{ text: view.english ? 'YAMANOTE LINE' : '山手線', px: 50 }], 30, cy, 268, 'left');
 
-      g.fillStyle = g.shadowColor = dim ? '#08120a' : timeColor;
-      drawRuns(g, etaRuns(eta, view.english), 460, cy, 290);
+        t.fillStyle = t.shadowColor = dim ? '#08120a' : timeColor;
+        drawRuns(t, etaRuns(eta, view.english), 460, cy, 290);
 
-      g.fillStyle = g.shadowColor = dim ? '#140d05' : destColor;
-      drawRuns(g, [{ text: dest, px: 46 }], W - 74, cy, 340, 'right');
+        t.fillStyle = t.shadowColor = dim ? '#140d05' : destColor;
+        drawRuns(t, [{ text: dest, px: 46 }], W - 74, cy, 340, 'right');
 
-      // 「方面」 en colonne, contre le bord droit : la mention est verticale sur
-      // les vrais tableaux, où elle tient dans la largeur d'un caractère.
-      if (!view.english) {
-        g.font = `bold 21px ${JP_FONT}`;
-        g.fillText('方', W - 60, cy - 6);
-        g.fillText('面', W - 60, cy + 20);
-      }
-    });
+        // 「方面」 en colonne, contre le bord droit : la mention est verticale
+        // sur les vrais tableaux, où elle tient dans la largeur d'un caractère.
+        if (!view.english) {
+          t.font = `bold 21px ${JP_FONT}`;
+          t.fillText('方', W - 60, cy - 6);
+          t.fillText('面', W - 60, cy + 20);
+        }
+      });
 
-    g.shadowBlur = 0;
+      t.shadowBlur = 0;
+    };
 
     if (lcd) {
+      // La dalle écrit en clair, à la définition de son écran : rien à tramer.
+      paint(g, 0);
       // Filet de séparation : la dalle sépare ses deux lignes par un trait, là
       // où la matrice à LED se contente du noir entre les diodes.
       g.fillStyle = 'rgba(255,255,255,0.12)';
       g.fillRect(24, H / 2, W - 48, 2);
     } else {
-      const dots = g.createPattern(ledMask(), 'repeat');
-      if (dots) {
-        g.fillStyle = dots;
+      // Peindre à la définition de la matrice, puis agrandir au bloc près :
+      // chaque diode devient un carré plein, et les lettres prennent l'escalier
+      // d'une police de gare. L'agrandissement est un entier exact, sinon les
+      // blocs sortiraient de largeurs inégales et la trame ne tomberait plus
+      // sur eux.
+      dot.g.setTransform(1 / LED_CELL, 0, 0, 1 / LED_CELL, 0, 0);
+      paint(dot.g, 3);
+      dot.g.setTransform(1, 0, 0, 1, 0, 0);
+      g.imageSmoothingEnabled = false;
+      g.drawImage(dot.c, 0, 0, dotW * LED_CELL, dotH * LED_CELL);
+      g.imageSmoothingEnabled = true;
+
+      const grid = g.createPattern(ledMask(), 'repeat');
+      if (grid) {
+        g.fillStyle = grid;
         g.fillRect(0, 0, W, H);
       }
     }
