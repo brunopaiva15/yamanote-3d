@@ -206,38 +206,104 @@ export function gantryZs(p: StationPlacement): number[] {
 }
 
 /**
- * Abscisses des panneaux 番線 le long de la voie.
+ * Emprise en travers d'un caisson de la rangée du bord de voie.
  *
- * Un tous les trente-six mètres, décalé jusqu'à trouver son creux : la trame
- * des bannières publicitaires, le kiosque et l'horloge occupent la même
- * hauteur sous l'auvent, et le caisson les traversait. Partagée entre le rendu
- * (OverheadSigns) et les totems (PlatformSignage), qui s'en écartent au sol.
+ * Cette rangée-là est celle qu'on lit en marchant le long du quai : les
+ * caissons y sont suspendus près du bord, en travers, et se présentent donc de
+ * face. Le 番線 y était seul ; le 発車標 l'y a rejoint, et les deux doivent
+ * s'aligner au millimètre — d'où cette cote unique.
+ *
+ * Pleine largeur tant que le quai le permet, raccourcie sur les quais étroits.
+ * À 3,24 m elle traversait l'épine centrale — bande directionnelle, horloge,
+ * chemin de câbles, gouttière — sur tous les îlots de moins de neuf mètres :
+ * elle s'arrête donc avant le couloir de l'épine (le chemin de câbles, son
+ * occupant le plus avancé, part à backX − 1,16).
  */
-export function trackSignZs(p: StationPlacement): number[] {
-  const halfZ = p.walkHalfZ;
+export function trackSignBox(p: StationPlacement): { x: number; w: number; hx: number } {
+  const w = Math.min(3.24, p.backX - 1.3 - (PSD_X - 0.12));
+  return {
+    w,
+    x: PSD_X - 0.12 + w / 2,
+    /** Aplomb des suspentes, depuis le centre du caisson. */
+    hx: Math.max(0.35, w / 2 - 0.57),
+  };
+}
+
+/**
+ * Ce qui, à hauteur de la rangée du bord de voie, interdit une abscisse.
+ *
+ * La trame des bannières publicitaires, le kiosque, l'horloge et les plans de
+ * charpente signature occupent la même tranche sous l'auvent : un caisson posé
+ * là les traverse.
+ */
+function rowBlocked(p: StationPlacement, z: number): boolean {
   const half = p.layout.length / 2;
-  // Ce qui monte jusqu'au gabarit du panneau, au milieu du quai qu'il couvre —
-  // et les plans de la charpente signature, quand elle en impose.
   const solids = [
     ...(p.kiosk ? [{ z: p.kiosk.z, r: p.kiosk.halfZ + 0.3 }] : []),
     ...(p.layout.amenities.clock ? [{ z: 0, r: 0.65 }] : []),
     ...(p.layout.sigPlan?.keepOut ?? []).map((k) => ({ z: k.z, r: k.r + 0.15 })),
   ];
+  // Les bannières courent tous les 26 m à partir de -half + 18, à la même
+  // hauteur : au croisement, les deux caissons se traversaient.
+  const d = Math.abs((((z - (-half + 18)) % 26) + 26) % 26);
+  return Math.min(d, 26 - d) <= 2.2 || solids.some((s) => Math.abs(z - s.z) < s.r);
+}
+
+/**
+ * Abscisses des panneaux 番線 le long de la voie.
+ *
+ * Un tous les trente-six mètres, décalé jusqu'à trouver son creux. Partagée
+ * entre le rendu (OverheadSigns), les totems (PlatformSignage) qui s'en
+ * écartent au sol, et les 発車標 qui partagent leur rangée.
+ */
+export function trackSignZs(p: StationPlacement): number[] {
+  const halfZ = p.walkHalfZ;
   const out: number[] = [];
   for (let k = -3; k <= 3; k++) {
     let z = k * 36;
     if (Math.abs(z) > halfZ - 8) continue;
-    // Les bannières courent tous les 26 m à partir de -half + 18, à la même
-    // hauteur : au croisement, les deux caissons se traversaient.
-    for (let guard = 0; guard < 10; guard++) {
-      const d = Math.abs((((z - (-half + 18)) % 26) + 26) % 26);
-      const nearBanner = Math.min(d, 26 - d) <= 2.2;
-      if (!nearBanner && !solids.some((s) => Math.abs(z - s.z) < s.r)) break;
-      z += 2.4;
-    }
+    for (let guard = 0; guard < 10 && rowBlocked(p, z); guard++) z += 2.4;
     // Chassé jusqu'au bout du quai sans trouver de creux : tant pis pour lui.
     if (Math.abs(z) > halfZ - 8) continue;
     out.push(z);
+  }
+  return out;
+}
+
+/**
+ * Abscisses des 発車標, sur cette même rangée du bord de voie.
+ *
+ * Deux par quai, au tiers de sa longueur : c'est là qu'on attend, et un
+ * tableau des départs se lit en marchant vers lui. Ils se glissent dans les
+ * CREUX de la rangée — jamais sur un caisson 番線, jamais sous la traverse
+ * d'une potence, qui passe juste au-dessus d'eux et les toucherait.
+ *
+ * Pas de creux à portée sur un quai encombré : ce tableau-là saute, comme le
+ * caisson 番線 chassé jusqu'au bout du quai. Mieux vaut un tableau de moins
+ * qu'un tableau dans une traverse.
+ */
+export function departureBoardZs(p: StationPlacement): number[] {
+  const halfZ = p.walkHalfZ;
+  const taken = [
+    ...trackSignZs(p).map((z) => ({ z, r: 5.0 })),
+    ...gantryZs(p).map((z) => ({ z, r: 3.6 })),
+  ];
+  const out: number[] = [];
+  for (const base of [-halfZ * 0.42, halfZ * 0.42]) {
+    for (let d = 0; d <= 12; d += 1.2) {
+      const cands = d === 0 ? [base] : [base - d, base + d];
+      const z = cands.find(
+        (c) =>
+          Math.abs(c) <= halfZ - 8 &&
+          !rowBlocked(p, c) &&
+          !taken.some((t) => Math.abs(c - t.z) < t.r) &&
+          !out.some((o) => Math.abs(c - o) < 24),
+      );
+      if (z !== undefined) {
+        out.push(z);
+        break;
+      }
+    }
   }
   return out;
 }

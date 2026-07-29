@@ -1,16 +1,22 @@
-// Signalétique du quai : panneaux de nom de gare suspendus, tableau
-// d'affichage électronique, totems, et la grande bande verte directionnelle.
+// Signalétique du quai : panneaux de nom de gare suspendus, 発車標, totems, et
+// la grande bande verte directionnelle.
 //
 // Le panneau de nom n'a pas changé : c'est la même texture et le même redraw
 // qu'avant, seulement répartis sur un quai de plus de deux cents mètres.
 //
-// Le tableau d'affichage, lui, a changé du tout au tout. Il annonçait
-// « まもなく発車 » en permanence, y compris en pleine voie entre deux gares où
-// aucun train ne longe le quai. Un afficheur de quai dit ce qui se passe
-// MAINTENANT, et c'est la seule surface animée d'une gare japonaise : il suit
-// donc l'état réel — approche, embarquement, départ, attente — et alterne
-// japonais et anglais comme un vrai. Le canvas est redessiné quand l'état
-// affiché change, pas à chaque frame : une fois par seconde environ.
+// Le 発車標, lui, dit ce qui se passe MAINTENANT — c'est la seule surface
+// animée d'une gare japonaise. Il annonce les deux prochaines rames et le
+// temps qui les sépare de nous (data/departureBoard), en alternant japonais et
+// anglais comme un vrai. Le canvas est redessiné quand l'état affiché change,
+// pas à chaque frame : une fois par seconde environ.
+//
+// Il a aussi changé de RANGÉE. Il pendait à côté des panneaux de nom, à dix
+// centimètres d'eux et tourné comme eux vers la voie : il se lisait donc
+// depuis le train, et de nulle part ailleurs. Or c'est le tableau de ceux qui
+// ATTENDENT. Il est passé dans la rangée du bord de voie, celle des caissons
+// 番線 : suspendu près du bord, en travers, recto-verso, aligné sur eux par le
+// bas — on l'a de face en marchant le long du quai, dans un sens comme dans
+// l'autre.
 
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -34,9 +40,24 @@ import {
 import { CONFIG } from '../../data/config';
 import { cruiseDuration, journeyDuration } from '../../data/segments';
 import { dwellDuration, melodyStartAt } from '../../systems/stationCycle';
-import { directionBandZs, nameplateColumns, PLATFORM_TOP } from '../../data/stationGeometry';
+import {
+  directionBandZs,
+  nameplateColumns,
+  PLATFORM_TOP,
+  SIGN_BOTTOM,
+} from '../../data/stationGeometry';
+import {
+  departureBoardZs,
+  trackSignBox,
+  type StationPlacement,
+} from '../../systems/stationPlacement';
 
 interface Props {
+  /**
+   * Le placement de la gare : le 発車標 y lit la rangée du bord de voie qu'il
+   * partage avec les caissons 番線 (emprise en travers et creux libres).
+   */
+  place: StationPlacement;
   /** Abscisse de suspension des caissons (repère quai). */
   hangX: number;
   /** Hauteur de la sous-face de l'auvent. */
@@ -154,6 +175,7 @@ function boardView(t: number, index: number): BoardView {
 }
 
 export function PlatformSignage({
+  place,
   hangX,
   canopyY,
   halfZ,
@@ -219,10 +241,9 @@ export function PlatformSignage({
     [sign, totem, guide, board, band],
   );
 
-  // Un panneau de nom de gare tous les ~55 m, un tableau d'affichage tous les
-  // ~110 m : sur un quai de 224 m, un seul de chaque serait introuvable.
-  // L'un comme l'autre se décalent des plans de charpente signature : les
-  // portiques de Yūrakuchō leur passaient au travers.
+  // Un panneau de nom de gare tous les ~55 m : sur un quai de 224 m, un seul
+  // serait introuvable. Il se décale des plans de charpente signature — les
+  // portiques de Yūrakuchō lui passaient au travers.
   const signZ = useMemo(() => {
     const out: number[] = [];
     for (let z = -halfZ + 26; z <= halfZ - 26; z += 55) {
@@ -231,14 +252,11 @@ export function PlatformSignage({
     }
     return out;
   }, [halfZ, avoid]);
-  const boardZ = useMemo(
-    () =>
-      [-halfZ * 0.45, halfZ * 0.45].flatMap((z) => {
-        const clear = clearOf(z, 1.85, avoid);
-        return clear === null ? [] : [clear];
-      }),
-    [halfZ, avoid],
-  );
+  // Deux 発車標 par quai, dans les creux de la rangée du bord de voie : c'est
+  // le placement qui les y case, entre les caissons 番線 et hors des potences
+  // dont la traverse passe juste au-dessus d'eux.
+  const boardZ = useMemo(() => departureBoardZs(place), [place]);
+  const boardBox = useMemo(() => trackSignBox(place), [place]);
   // Les plaques de nom se vissent sur les poteaux de charpente, un sur deux.
   // La liste est partagée avec les bandeaux publicitaires (stationGeometry) :
   // une face de poteau ne porte qu'une chose.
@@ -302,11 +320,24 @@ export function PlatformSignage({
   });
 
   const signY = canopyY - 0.77;
-  const boardY = canopyY - 0.39;
   // Hauteur libre entre le haut d'un caisson et la sous-face de l'auvent : les
   // suspentes se calculaient à longueur fixe et ressortaient sur le toit.
   const bandHang = Math.max(0.06, 0.5 - 0.31);
-  const boardHang = Math.max(0.06, canopyY - (boardY + 0.18));
+
+  // Le 発車標, à l'emprise de la rangée qu'il partage. L'écran garde son 4:1
+  // (le canvas fait 1024 × 256) : c'est la LARGEUR disponible qui commande sa
+  // hauteur, et le caisson suit — sur un quai étroit, le tableau rétrécit
+  // comme le caisson 番線 à côté de lui, au lieu de s'y écraser.
+  const boardScreenW = boardBox.w - 0.08;
+  const boardScreenH = boardScreenW / 4;
+  const boardCaseH = boardScreenH + 0.08;
+  /**
+   * Les caissons de la rangée s'alignent par le BAS, à la hauteur libre
+   * commune : c'est cette ligne-là qu'on lit en enfilade, et deux caissons de
+   * hauteurs différentes centrés au même niveau ne font pas une rangée.
+   */
+  const boardBottom = PLATFORM_TOP + SIGN_BOTTOM - 0.03;
+  const boardHang = Math.max(0.06, canopyY - (boardBottom + boardCaseH));
 
   return (
     <group name="signalétique">
@@ -348,25 +379,37 @@ export function PlatformSignage({
         </mesh>
       ))}
 
-      {/* Tableaux d'affichage suspendus */}
+      {/* 発車標, sur la rangée du bord de voie, en travers du quai et
+          recto-verso : c'est le tableau de ceux qui attendent, et on doit
+          l'avoir de face en marchant vers lui — d'un côté comme de l'autre. */}
       {boardZ.map((z) => (
-        <group name="afficheur" key={`board${z}`} position={[hangX - 0.1, boardY, z]}>
-          <mesh position={[0.08, 0.15, 0]} material={metal}>
-            <boxGeometry args={[0.5, 0.06, 3.4]} />
+        <group
+          name="afficheur"
+          key={`board${z}`}
+          position={[boardBox.x, boardBottom + boardCaseH / 2, z]}
+        >
+          {/* Suspentes jusqu'à la sous-face de l'auvent, au même aplomb que
+              celles des caissons 番線 de la rangée. */}
+          {[-1, 1].map((d) => (
+            <mesh
+              key={d}
+              position={[d * boardBox.hx, boardCaseH / 2 + boardHang / 2, 0]}
+              material={metal}
+            >
+              <boxGeometry args={[0.05, boardHang, 0.05]} />
+            </mesh>
+          ))}
+          <mesh material={frame}>
+            <boxGeometry args={[boardBox.w, boardCaseH, 0.09]} />
           </mesh>
-          <mesh position={[0.05, -0.28, 0]} material={metal}>
-            <boxGeometry args={[0.08, 0.88, 3.3]} />
-          </mesh>
-          <mesh
-            position={[-0.02, -0.28, 0]}
-            rotation={[0, -Math.PI / 2, 0]}
-            material={materials.board}
-          >
-            <planeGeometry args={[3.2, 0.8]} />
-          </mesh>
-          {[-1.4, 1.4].map((dz) => (
-            <mesh key={`hang${dz}`} position={[0.08, 0.18 + boardHang / 2, dz]} material={metal}>
-              <boxGeometry args={[0.04, boardHang, 0.04]} />
+          {[1, -1].map((d) => (
+            <mesh
+              key={d}
+              position={[0, 0, d * 0.051]}
+              rotation={[0, d === 1 ? 0 : Math.PI, 0]}
+              material={materials.board}
+            >
+              <planeGeometry args={[boardScreenW, boardScreenH]} />
             </mesh>
           ))}
         </group>
