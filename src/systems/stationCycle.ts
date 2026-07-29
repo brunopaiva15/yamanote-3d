@@ -38,7 +38,8 @@ import {
   paPsdBeeps,
 } from './stationPa';
 import { rollPassThrough, startPassThrough } from './passingTrain';
-import { exchangePassengers } from './passengers';
+import { exchangePassengers, startlePassengers } from './passengers';
+import { pushSceneEvent } from './paxEvents';
 import { seedPlatformPresence } from './platformPresence';
 import { clearPlatformCrowd, seedPlatformCrowd } from './platformCrowd';
 import {
@@ -60,21 +61,55 @@ function scheduleNextRunSound(from: number): void {
 }
 
 // --- Arrêt d'urgence (急停車) -------------------------------------------
-// Très rare : tiré au sort à chaque entrée en cruise, déclenché en pleine
-// course. Le train freine en
+// Rare, mais pas invisible : la course qui le portera est fixée plusieurs
+// gares à l'avance, et il se déclenche en pleine ligne. Le train freine en
 // urgence, reste immobilisé de 45 s à 2 min 30 avec les annonces conducteur,
 // puis repart. Le chrono de phase est avancé au prorata
 // de la vitesse pendant tout l'événement : gelé à l'arrêt, il ne consomme que
 // l'équivalent de la distance réellement parcourue — la gare suivante arrive
 // donc au bon moment après la reprise.
-const EMERGENCY_PROBABILITY = 0.015; // ~1 station sur 67, soit ~1 fois / 2 h
+//
+// Le tirage se faisait auparavant gare par gare, à 1,5 % : une loi géométrique
+// laissait passer près de deux trajets d'une demi-heure sur trois sans le
+// moindre arrêt d'urgence — la mécanique existait sans jamais se montrer — et
+// pouvait à l'inverse en donner deux coup sur coup. Un écart tiré entre deux
+// bornes garde la rareté et lui retire la loterie.
+
+/**
+ * Écart entre deux arrêts d'urgence, en gares (~2 min 20 l'une) : de 25 min à
+ * 1 h de trajet, 40 min en moyenne. Assez espacé pour rester un événement,
+ * assez serré pour qu'une longue boucle en croise un.
+ */
+const EMERGENCY_GAP_MIN = 10;
+const EMERGENCY_GAP_MAX = 24;
+/** Écart avant le tout premier : un trajet court doit pouvoir le vivre. */
+const EMERGENCY_FIRST_MIN = 3;
+const EMERGENCY_FIRST_MAX = 8;
+/** Au plus tôt dans la croisière : le temps d'atteindre la pleine vitesse (s). */
+const EMERGENCY_AT_MIN = 8;
+/** Largeur de la fenêtre de déclenchement à partir de ce plus tôt (s). */
+const EMERGENCY_AT_SPAN = 20;
+/**
+ * Marge gardée devant l'annonce d'approche : freiner par-dessus 「まもなく」 la
+ * couperait (cancelSpeech) sans qu'elle soit rejouée, et la gare arriverait au
+ * milieu de la reprise.
+ */
+const EMERGENCY_APPROACH_MARGIN = 2;
 // Bornes d'immobilisation : le minimum laisse l'annonce d'arrêt (~21 s à
 // partir de t=4) se terminer avant l'annonce de reprise (à holdFor − 12 s).
 const EMERGENCY_HOLD_MIN = 45; // s
 const EMERGENCY_HOLD_MAX = 150; // s
 
+/** Gares restant à parcourir avant le prochain arrêt d'urgence. */
+let stationsToEmergency = drawEmergencyGap(true);
 // Instant de déclenchement dans la phase cruise courante, -1 = aucun.
 let emergencyAt = -1;
+
+function drawEmergencyGap(first = false): number {
+  const min = first ? EMERGENCY_FIRST_MIN : EMERGENCY_GAP_MIN;
+  const max = first ? EMERGENCY_FIRST_MAX : EMERGENCY_GAP_MAX;
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
 
 /**
  * Déclenche l'arrêt d'urgence (aussi exposé en dev : __emergencyStop()).
@@ -96,6 +131,7 @@ export function beginEmergencyStop(): void {
   fired.delete('em-stopped');
   fired.delete('em-wait');
   fired.delete('em-resume');
+  fired.delete('em-scared');
   // L'urgence coupe l'annonce en cours, comme en vrai. Seulement celle de la
   // rame : la sono d'une gare qu'on n'a pas atteinte ne s'interrompt pas.
   cancelSpeech('cabin');
@@ -104,6 +140,10 @@ export function beginEmergencyStop(): void {
   notifyLineDelay(em.reason);
   audio.brakeApply();
   audio.flangeSqueal(0.8);
+  // Le wagon sursaute — on se raccroche, on trébuche, on lève le nez — et
+  // quelques voisins vont dire leur peur dans les secondes qui suivent.
+  startlePassengers();
+  pushSceneEvent('emergency');
 }
 
 // Étapes de l'arrêt d'urgence, appelées chaque frame tant qu'il est actif.
@@ -125,6 +165,11 @@ function updateEmergencyStop(dt: number): void {
     case 'stopped':
       // Annonce conducteur ~4 s après l'immobilisation.
       once('em-stopped', em.t >= 4, () => say(emergencyStopAnnouncement(em.reason)));
+      // Deuxième vague de peur, d'une autre nature : le coup de frein est
+      // passé, la rame est immobile en pleine voie et personne ne dit
+      // vraiment pourquoi. C'est l'attente qui inquiète, maintenant — le
+      // catalogue distingue les deux moments par `moving`.
+      once('em-scared', em.t >= 10, () => pushSceneEvent('emergency'));
       // Rappel d'attente à mi-arrêt, seulement si l'arrêt se prolonge.
       once('em-wait', em.holdFor >= 90 && em.t >= em.holdFor * 0.55, () =>
         say(emergencyWaitAnnouncement()),
@@ -462,6 +507,7 @@ export function randomizeEntry(stationIndex?: number): void {
   audio.setPlatformSide(doorSide);
 
   emergencyAt = -1;
+  stationsToEmergency = drawEmergencyGap(true);
   runtime.phaseT = phaseT;
   runtime.speed = sim.v;
   runtime.accel = sim.a;
@@ -547,10 +593,25 @@ export function updateCycle(dt: number): void {
       once('announce-depart', t > 0.6, () =>
         say(departureSequence(s.index, DOOR_SIDE[s.index])),
       );
-      // Arrêt d'urgence : tirage rare à l'entrée en cruise, déclenchement en
-      // pleine course — assez tôt pour avoir le temps de repartir avant la gare.
+      // Arrêt d'urgence : la course qui le porte est décidée gares à l'avance,
+      // ne reste ici qu'à choisir l'instant — en pleine course, assez tôt pour
+      // avoir le temps de repartir avant l'annonce d'approche.
       once('emergency-roll', true, () => {
-        emergencyAt = Math.random() < EMERGENCY_PROBABILITY ? 8 + Math.random() * 20 : -1;
+        emergencyAt = -1;
+        if (stationsToEmergency > 0) {
+          stationsToEmergency -= 1;
+          return;
+        }
+        const latest = Math.min(
+          EMERGENCY_AT_MIN + EMERGENCY_AT_SPAN,
+          cruiseSec - APPROACH_ANNOUNCE_LEAD - EMERGENCY_APPROACH_MARGIN,
+        );
+        // Tronçon trop court pour l'accueillir (Mejiro→Takadanobaba tient en
+        // 8 s de croisière) : l'événement n'est pas perdu, il attend la gare
+        // suivante.
+        if (latest <= EMERGENCY_AT_MIN) return;
+        emergencyAt = EMERGENCY_AT_MIN + Math.random() * (latest - EMERGENCY_AT_MIN);
+        stationsToEmergency = drawEmergencyGap();
       });
       if (emergencyAt >= 0 && t >= emergencyAt) {
         emergencyAt = -1;

@@ -17,6 +17,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
+import { seasonNow } from '../systems/season';
 import { useStore } from '../store';
 import { CONFIG } from '../data/config';
 import { journeyProgress } from '../data/segments';
@@ -112,10 +113,16 @@ function lattice(ctx: Ctx, h: number, spread: number, body: string, plat: string
 }
 
 // Masse d'arbres (parc, forêt de sanctuaire).
+//
+// Le bois de Meiji-jingū et la lisière d'Ueno sont les deux seuls repères de la
+// boucle qui soient faits de végétal : ils prennent la couleur du jour. Les
+// silhouettes étant rebâties à chaque changement de gare, il suffit de lire la
+// saison ici — pas d'uniforme à piloter.
 function forest(ctx: Ctx, spread: number): void {
+  const se = seasonNow();
   const trunk = sil(ctx, '#5a4632');
-  const leafA = sil(ctx, '#4f9a3a');
-  const leafB = sil(ctx, '#3f8230');
+  const leafA = sil(ctx, se.foliage[0]);
+  const leafB = sil(ctx, se.foliage[2]);
   const n = 6 + Math.floor(ctx.r() * 5);
   for (let i = 0; i < n; i++) {
     const px = (ctx.r() - 0.5) * spread * 2;

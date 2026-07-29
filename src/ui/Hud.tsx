@@ -9,6 +9,7 @@ import { BAND_COLOR, type OccupancyBand } from '../data/occupancy';
 import { useT } from '../i18n';
 import { runtime } from '../systems/runtime';
 import { currentSegmentOccupancy } from '../systems/occupancy';
+import { weather, type WeatherKind } from '../systems/weather';
 import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
 import { applySpeechVolume, cancelSpeech } from '../systems/speech';
 import { input } from '../systems/input';
@@ -43,6 +44,39 @@ function useEmergencyStage(): EmergencyStage {
   return stage;
 }
 
+/**
+ * Le temps qu'il fait, sondé comme l'horloge — il vit dans `systems/weather`,
+ * pas dans le store, et il change trop lentement pour mériter un re-render par
+ * image. Deux secondes suffisent largement : un ciel ne tourne pas en une
+ * seconde, et la température encore moins.
+ */
+function useWeather(): { kind: WeatherKind; tempC: number } {
+  const [w, setW] = useState<{ kind: WeatherKind; tempC: number }>({ kind: 'fair', tempC: 15 });
+  useEffect(() => {
+    const tick = () => setW({ kind: weather.kind, tempC: weather.tempC });
+    tick();
+    const id = window.setInterval(tick, 2000);
+    return () => window.clearInterval(id);
+  }, []);
+  return w;
+}
+
+/**
+ * Pictogramme du temps. Un seul caractère, sans couleur : le HUD est sobre, et
+ * c'est dehors qu'il faut regarder — le badge ne fait que nommer ce qu'on voit.
+ */
+const WEATHER_GLYPH: Record<WeatherKind, string> = {
+  clear: '☀',
+  fair: '⛅',
+  overcast: '☁',
+  drizzle: '☂',
+  rain: '☂',
+  downpour: '☂',
+  thunder: '⚡',
+  sleet: '☂',
+  snow: '❄',
+};
+
 function useOccupancy(): { percent: number; band: OccupancyBand } {
   const [occ, setOcc] = useState<{ percent: number; band: OccupancyBand }>({
     percent: 0,
@@ -75,6 +109,7 @@ export function Hud() {
   const t = useT();
   const clock = useClock();
   const occupancy = useOccupancy();
+  const sky = useWeather();
   const emergencyStage = useEmergencyStage();
   const emergency = emergencyStage === 'braking' || emergencyStage === 'stopped';
 
@@ -102,6 +137,13 @@ export function Hud() {
     <>
       <div className="hud-top">
         <div className="hud-clock">{clock}</div>
+        <div className="hud-weather" title={t.hud.weatherTitle}>
+          <span className="hud-weather-glyph" aria-hidden="true">
+            {WEATHER_GLYPH[sky.kind]}
+          </span>
+          <span className="hud-weather-kind">{t.hud.weather[sky.kind]}</span>
+          <span className="hud-weather-temp">{Math.round(sky.tempC)}&nbsp;°C</span>
+        </div>
         <div className="hud-station">
           <span className="hud-station-label">{label}</span>
           <span className="hud-station-name">

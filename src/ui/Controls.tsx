@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { input } from '../systems/input';
+import { useTalkTarget } from './useTalkTarget';
 
 const RADIUS = 52;
 
@@ -14,6 +15,7 @@ export function Controls() {
   const seated = useStore((s) => s.seated);
   const setTouch = useStore((s) => s.setTouch);
   const t = useT();
+  const talkNear = useTalkTarget();
   const baseRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
   const pointerId = useRef<number | null>(null);
@@ -81,6 +83,16 @@ export function Controls() {
       <div className="joystick" ref={baseRef}>
         <div className="joystick-knob" ref={knobRef} />
       </div>
+      {talkNear && (
+        <button
+          className="touch-talk"
+          onClick={() => {
+            input.talkRequest = true;
+          }}
+        >
+          {t.hud.talkShort}
+        </button>
+      )}
       <button
         className="touch-sit"
         onClick={() => {

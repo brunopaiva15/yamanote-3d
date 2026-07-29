@@ -9,6 +9,8 @@ export const input = {
   lookDY: 0, // deltas de regard accumulés (pixels)
   sitRequest: false, // demande s'asseoir / se lever (bouton tactile ou clic)
   standRequest: false, // demande se lever (espace)
+  /** Demande d'adresser la parole au voyageur qu'on a en face (E, ou bouton tactile). */
+  talkRequest: false,
 };
 
 // Axes de déplacement combinés (clavier physique : codes → AZERTY et QWERTY

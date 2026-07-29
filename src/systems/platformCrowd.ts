@@ -26,11 +26,20 @@ import {
 } from '../data/stationGeometry';
 import {
   BUSY_BRIEF,
-  PAX_ACTIONS,
   isPairAction,
   isFallingAction,
   type PaxAction,
 } from '../data/paxActions';
+import { pushPaxEvent } from './paxEvents';
+import {
+  actionDuration,
+  nextInterludeDelay,
+  nextSocialDelay,
+  pickPaxAction,
+  temperFor,
+  type PickCtx,
+  type Temper,
+} from './paxBehavior';
 import { resolveMotion, platformPlayerCtx } from './paxMotion';
 import { playPaxActionSfx, paxBump } from './paxSfx';
 
@@ -69,6 +78,14 @@ export interface CrowdPax {
   action: PaxAction | 'shift';
   actionT: number;
   actionDur: number;
+  /** Caractère stable (systems/paxBehavior) : bavard, nerveux, dormeur… */
+  temper: Temper;
+  /** Occupation de fond : ce à quoi ce voyageur revient entre deux gestes. */
+  anchor: PaxAction;
+  anchorLeft: number;
+  interludeT: number;
+  /** Délai avant de pouvoir relancer un échange. */
+  socialT: number;
   lookYaw: number;
   headPitch: number;
   headRoll: number;
@@ -113,6 +130,7 @@ const WALK_SPEED = CONFIG.walkSpeed * 0.92;
 
 function makeCrowd(id: number): CrowdPax {
   const appearance = makeAppearance(9000 + id);
+  const temper = temperFor(9000 + id);
   return {
     id,
     state: 'hidden',
@@ -128,7 +146,12 @@ function makeCrowd(id: number): CrowdPax {
     bob: 0,
     action: 'none',
     actionT: 0,
-    actionDur: 2 + Math.random() * 4,
+    actionDur: 4 + Math.random() * 10,
+    temper,
+    anchor: 'none',
+    anchorLeft: 0,
+    interludeT: nextInterludeDelay(temper),
+    socialT: 0,
     lookYaw: 0,
     headPitch: 0,
     headRoll: 0,
@@ -280,14 +303,19 @@ export function seedPlatformCrowd(stationIndex: number): void {
   seedCrowdChats();
 }
 
-/** Discussions silencieuses entre voyageurs en attente proches. */
+/**
+ * Discussions silencieuses entre voyageurs en attente proches. Comme en rame,
+ * seule une petite part du quai parle : les autres regardent la voie ou leur
+ * téléphone, ce qui est l'essentiel de ce qu'on voit sur un quai japonais.
+ */
 function seedCrowdChats(): void {
   const waiters = crowdList.filter((p) => p.state === 'waiting');
   const used = new Set<number>();
   let pairs = 0;
-  const want = Math.max(1, Math.floor(waiters.length * 0.35));
+  const want = Math.max(1, Math.round(waiters.length * 0.14));
   for (const p of waiters) {
     if (pairs >= want || used.has(p.id)) continue;
+    if (p.temper.social < 0.35) continue;
     let best: CrowdPax | null = null;
     let bestD = 1.6;
     for (const other of waiters) {
@@ -300,19 +328,34 @@ function seedCrowdChats(): void {
     if (!best) continue;
     used.add(p.id);
     used.add(best.id);
-    const kind: PaxAction = Math.random() < 0.6 ? 'chat' : Math.random() < 0.5 ? 'gossip' : 'laugh';
-    const dur = 5 + Math.random() * 8;
+    const kind: PaxAction = Math.random() < 0.55 ? 'sideChat' : Math.random() < 0.5 ? 'gossip' : 'whisper';
+    const dur = 20 + Math.random() * 60;
     p.action = kind;
     p.partner = best.id;
     p.chatRole = 0;
     p.actionT = 0;
     p.actionDur = dur;
+    p.anchor = kind;
+    p.anchorLeft = dur;
+    p.interludeT = dur + 1;
     best.action = kind;
     best.partner = p.id;
     best.chatRole = 1;
     best.actionT = 0;
     best.actionDur = dur;
+    best.anchor = kind;
+    best.anchorLeft = dur;
+    best.interludeT = dur + 1;
     pairs++;
+  }
+  // Les autres attendent déjà à quelque chose, pas depuis deux secondes.
+  for (const p of waiters) {
+    if (used.has(p.id)) continue;
+    startCrowdAnchor(p);
+    p.actionT = Math.random() * p.actionDur * 0.8;
+    // Compteurs décalés : le quai entier a été peuplé d'un coup, ses gestes
+    // ne doivent pas l'être.
+    p.interludeT *= Math.random();
   }
 }
 
@@ -533,6 +576,7 @@ const tmp = new THREE.Vector3();
 
 function startPatrol(p: CrowdPax): void {
   endCrowdPair(p);
+  clearCrowdAnchor(p);
   p.state = 'patrolling';
   p.action = 'shift';
   p.actionT = 0;
@@ -545,6 +589,7 @@ function startPatrol(p: CrowdPax): void {
 
 function startShortAmble(p: CrowdPax): void {
   endCrowdPair(p);
+  clearCrowdAnchor(p);
   const dist = 4 + Math.random() * 10;
   const dir = Math.random() < 0.5 ? 1 : -1;
   const dest = clampPos(
@@ -566,12 +611,23 @@ function endCrowdPair(p: CrowdPax): void {
     const other = crowdList[p.partner];
     if (other && other.partner === p.id) {
       other.partner = -1;
+      other.anchor = 'none';
+      other.anchorLeft = 0;
+      other.socialT = nextSocialDelay(other.temper);
       other.action = 'none';
       other.actionT = 0;
       other.actionDur = 1.5 + Math.random() * 2.5;
     }
+    p.socialT = nextSocialDelay(p.temper);
   }
   p.partner = -1;
+}
+
+/** Coupe l'occupation de fond (changement d'état : marche, trémie, montée). */
+function clearCrowdAnchor(p: CrowdPax): void {
+  p.anchor = 'none';
+  p.anchorLeft = 0;
+  p.interludeT = nextInterludeDelay(p.temper);
 }
 
 function findCrowdPartner(p: CrowdPax, maxDist: number): CrowdPax | null {
@@ -593,87 +649,149 @@ function findCrowdPartner(p: CrowdPax, maxDist: number): CrowdPax | null {
   return best;
 }
 
-/** Tirage d'occupation pour un voyageur en attente (catalogue waiting). */
-function pickCrowdAction(p: CrowdPax): void {
-  const player = platformPlayerCtx();
-  const playerDist = Math.hypot(p.pos.x - player.playerX, p.pos.z - player.playerZ);
-  const arch = p.appearance.archetype;
+function crowdPickCtx(p: CrowdPax): PickCtx {
+  const playerHere = runtime.playerFrame === 'platform';
+  return {
+    where: 'waiting',
+    appearance: p.appearance,
+    temper: p.temper,
+    scope: 'platform',
+    playerDist: playerHere
+      ? Math.hypot(p.pos.x - runtime.playerPlatX, p.pos.z - runtime.playerPlatZ)
+      : Infinity,
+    playerHere,
+  };
+}
 
-  let total = 0;
-  const weights: number[] = [];
-  for (let i = 0; i < PAX_ACTIONS.length; i++) {
-    const def = PAX_ACTIONS[i];
-    let w = 0;
-    if (def.where.includes('waiting')) {
-      w = def.weight;
-      if (def.kind === 'player') {
-        if (runtime.playerFrame !== 'platform' || playerDist >= (def.playerDist ?? 3.5)) w = 0;
-      }
-      if (def.needsMask && !p.appearance.mask) w = 0;
-      if (def.needsGlasses && !p.appearance.glasses) w = 0;
-      if (def.needsBag && p.appearance.bag === 'none') w = 0;
-      if (def.archetypes && def.archetypes.includes(arch)) w *= def.archetypeBoost ?? 1.4;
-    }
-    weights[i] = w;
-    total += w;
-  }
-
-  if (total <= 0) {
-    p.action = 'none';
-    p.actionDur = 1.5 + Math.random() * 2.5;
-    p.lookYaw = 0;
-    return;
-  }
-
-  let pick = Math.random() * total;
-  let chosen = PAX_ACTIONS[PAX_ACTIONS.length - 1];
-  for (let i = 0; i < PAX_ACTIONS.length; i++) {
-    pick -= weights[i];
-    if (pick <= 0) {
-      chosen = PAX_ACTIONS[i];
-      break;
-    }
-  }
-
-  const dur = chosen.dur[0] + Math.random() * (chosen.dur[1] - chosen.dur[0]);
+/** Applique une occupation tirée et joue son Foley éventuel. */
+function applyCrowdAction(p: CrowdPax, id: PaxAction, dur: number, partner: CrowdPax | null): void {
+  p.action = id;
+  p.actionT = 0;
   p.actionDur = dur;
-  if (
-    chosen.id === 'look' ||
-    chosen.id === 'lookBoard' ||
-    chosen.id === 'fidget' ||
-    chosen.id === 'curiousGlance'
-  ) {
+  if (id === 'look' || id === 'lookBoard' || id === 'fidget' || id === 'curiousGlance') {
     p.lookYaw = (Math.random() - 0.5) * 1.1;
   }
-  if (isFallingAction(chosen.id)) {
-    p.lookYaw = Math.random() < 0.5 ? 1 : -1;
+  if (isFallingAction(id)) p.lookYaw = Math.random() < 0.5 ? 1 : -1;
+  if (partner) {
+    p.partner = partner.id;
+    p.chatRole = 0;
+    partner.action = id;
+    partner.partner = p.id;
+    partner.chatRole = 1;
+    partner.actionT = 0;
+    partner.actionDur = dur;
+  } else {
+    p.partner = -1;
   }
-
-  if (chosen.kind === 'pair') {
-    const other = findCrowdPartner(p, chosen.partnerDist ?? 1.4);
-    if (other) {
-      p.action = chosen.id;
-      p.partner = other.id;
-      p.chatRole = 0;
-      other.action = chosen.id;
-      other.partner = p.id;
-      other.chatRole = 1;
-      other.actionT = 0;
-      other.actionDur = dur;
-      return;
-    }
-    p.action = 'look';
-    p.actionDur = 2 + Math.random() * 3;
-    return;
-  }
-
-  p.action = chosen.id;
-  p.partner = -1;
   const dist =
     runtime.playerFrame === 'platform'
       ? Math.hypot(p.pos.x - runtime.playerPlatX, p.pos.z - runtime.playerPlatZ)
       : 99;
-  playPaxActionSfx(chosen.id, dist);
+  playPaxActionSfx(id, dist);
+}
+
+/** Occupation de fond d'un voyageur en attente : elle tient des dizaines de secondes. */
+function startCrowdAnchor(p: CrowdPax): void {
+  const ctx = crowdPickCtx(p);
+  const def = pickPaxAction(ctx, true);
+  if (!def) {
+    p.anchor = 'none';
+    p.anchorLeft = 0;
+    applyCrowdAction(p, 'none', 6 + Math.random() * 10, null);
+    return;
+  }
+  const dur = actionDuration(def, p.temper);
+  if (def.kind === 'pair') {
+    const other = p.socialT > 0 ? null : findCrowdPartner(p, def.partnerDist ?? 1.4);
+    if (other) {
+      p.anchor = def.id;
+      p.anchorLeft = dur;
+      p.interludeT = dur + 1;
+      other.anchor = def.id;
+      other.anchorLeft = dur;
+      other.interludeT = dur + 1;
+      applyCrowdAction(p, def.id, dur, other);
+      return;
+    }
+    p.anchor = 'none';
+    p.anchorLeft = 10 + Math.random() * 18;
+    p.interludeT = nextInterludeDelay(p.temper);
+    applyCrowdAction(p, 'none', p.anchorLeft, null);
+    return;
+  }
+  p.anchor = def.id;
+  p.anchorLeft = dur;
+  p.interludeT = nextInterludeDelay(p.temper);
+  applyCrowdAction(p, def.id, dur, null);
+}
+
+/** Geste bref qui interrompt l'attente, sans lui faire perdre son fil. */
+function startCrowdInterlude(p: CrowdPax): void {
+  const def = pickPaxAction(crowdPickCtx(p), false);
+  if (!def) {
+    p.interludeT = nextInterludeDelay(p.temper);
+    return;
+  }
+  const dur = actionDuration(def, p.temper);
+  if (def.kind === 'pair') {
+    const other = p.socialT > 0 ? null : findCrowdPartner(p, def.partnerDist ?? 1.4);
+    if (!other) {
+      p.interludeT = nextInterludeDelay(p.temper);
+      return;
+    }
+    other.interludeT = dur + 1;
+    applyCrowdAction(p, def.id, dur, other);
+    return;
+  }
+  applyCrowdAction(p, def.id, dur, null);
+}
+
+/**
+ * Fait parler ce voyageur du quai AU joueur (systems/conversation). Un
+ * promeneur s'arrête pour ça : on ne s'adresse pas à quelqu'un en continuant
+ * de marcher vers le bout du quai.
+ */
+export function crowdStartTalking(id: number, dur: number): boolean {
+  const p = crowdList[id];
+  if (!p) return false;
+  if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') return false;
+  endCrowdPair(p);
+  clearCrowdAnchor(p);
+  p.state = 'waiting';
+  p.home.copy(p.pos);
+  p.waypoints = [];
+  p.wpi = 0;
+  p.bob = 0;
+  p.action = 'talkPlayer';
+  p.actionT = 0;
+  p.actionDur = dur;
+  return true;
+}
+
+/** Réplique suivante du même échange. */
+export function crowdKeepTalking(id: number, dur: number): boolean {
+  const p = crowdList[id];
+  if (!p || p.action !== 'talkPlayer') return false;
+  p.actionT = 0;
+  p.actionDur = dur;
+  return true;
+}
+
+/** Fin de l'échange : le voyageur reprend son attente ou sa promenade. */
+export function crowdStopTalking(id: number): void {
+  const p = crowdList[id];
+  if (!p || p.action !== 'talkPlayer') return;
+  p.actionT = p.actionDur;
+}
+
+/** Reprend l'occupation de fond, ou en choisit une autre si elle est épuisée. */
+function resumeCrowdAnchor(p: CrowdPax): void {
+  if (p.anchorLeft > 1.5 && !isPairAction(p.anchor)) {
+    applyCrowdAction(p, p.anchor, p.anchorLeft, null);
+    p.interludeT = nextInterludeDelay(p.temper);
+    return;
+  }
+  startCrowdAnchor(p);
 }
 
 function advanceWalk(p: CrowdPax, dt: number, onDone: () => void): void {
@@ -747,6 +865,8 @@ function avoidPlayer(p: CrowdPax, dt: number, pvx: number, pvz: number): void {
   if (crowdBumpCd <= 0 && (approach > 0.35 || overlap > 0.3)) {
     paxBump(d, overlap > 0.5);
     crowdBumpCd = 0.3;
+    // Bousculer quelqu'un sur un quai se remarque encore plus qu'en rame.
+    if (p.state === 'waiting') pushPaxEvent('platform', p.id, 'bump');
   }
 
   if (p.pushAccum > 0.2 && p.state === 'waiting' && !isPairAction(p.action as PaxAction)) {
@@ -819,9 +939,10 @@ export function updatePlatformCrowd(dt: number): void {
           } else {
             p.state = 'waiting';
             p.home.copy(p.pos);
+            clearCrowdAnchor(p);
             p.action = 'none';
             p.actionT = 0;
-            p.actionDur = 1.5 + Math.random() * 3;
+            p.actionDur = 0.6 + Math.random() * 1.4;
             p.bob = 0;
           }
           p.waypoints = [];
@@ -852,6 +973,7 @@ export function updatePlatformCrowd(dt: number): void {
         if (Math.random() < 0.22) {
           p.state = 'waiting';
           p.home.copy(p.pos);
+          clearCrowdAnchor(p);
           p.action = Math.random() < 0.5 ? 'phone' : 'look';
           p.actionT = 0;
           p.actionDur = 1.2 + Math.random() * 2.5;
@@ -866,25 +988,44 @@ export function updatePlatformCrowd(dt: number): void {
       advanceWalk(p, dt, () => {
         p.state = 'waiting';
         p.home.copy(p.pos);
+        clearCrowdAnchor(p);
         p.action = 'none';
         p.actionT = 0;
-        p.actionDur = 1.5 + Math.random() * 3;
+        p.actionDur = 0.6 + Math.random() * 1.4;
         p.bob = 0;
       });
     } else {
       // waiting
+      if (p.socialT > 0) p.socialT -= dt;
+      // Même mécanique qu'en rame : une occupation de fond qui tient, des
+      // gestes brefs qui s'y insèrent, et un retour au fil de l'attente.
+      const onAnchor = p.action === p.anchor;
+      if (onAnchor) {
+        p.anchorLeft -= dt;
+        p.interludeT -= dt;
+      }
       if (p.actionT >= p.actionDur) {
         p.actionT = 0;
         if (isPairAction(p.action as PaxAction)) endCrowdPair(p);
         if (p.role === 'walker') {
           // Les promeneurs repartent vite marcher.
           startPatrol(p);
-        } else if (Math.random() < 0.38) {
-          // Les gens qui attendent se déplacent souvent le long du quai.
+        } else if (onAnchor && Math.random() < 0.12) {
+          // On se déplace de quelques mètres le long du quai de temps à autre,
+          // on ne fait pas les cent pas entre chaque coup d'œil au téléphone.
           startShortAmble(p);
+        } else if (onAnchor) {
+          startCrowdAnchor(p);
         } else {
-          pickCrowdAction(p);
+          resumeCrowdAnchor(p);
         }
+      } else if (
+        onAnchor &&
+        p.interludeT <= 0 &&
+        p.anchorLeft > 3 &&
+        !isPairAction(p.action as PaxAction)
+      ) {
+        startCrowdInterlude(p);
       }
       if (p.state === 'waiting') {
         const partner = p.partner >= 0 ? crowdList[p.partner] : null;

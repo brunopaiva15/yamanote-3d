@@ -17,6 +17,7 @@ import { Ads } from './three/Ads';
 import { Screens } from './three/Screens';
 import { DoorCloseLed } from './three/DoorCloseLed';
 import { Wayside } from './three/Wayside';
+import { Weather } from './three/Weather';
 import { SkyDome } from './three/city/SkyDome';
 import { CityRibbon } from './three/city/CityRibbon';
 import { Landmarks } from './three/Landmarks';
@@ -26,11 +27,13 @@ import { HubStationRoof } from './three/HubStationRoof';
 import { Station } from './three/station/Station';
 import { PlatformCrowd } from './three/PlatformCrowd';
 import { Passengers } from './three/Passengers';
+import { PaxSpeechBubble } from './three/PaxSpeechBubble';
 import { Player } from './three/Player';
 import { Hud } from './ui/Hud';
 import { StartScreen } from './ui/StartScreen';
 import { Controls } from './ui/Controls';
 import { BoardingPrompt } from './ui/BoardingPrompt';
+import { TalkPrompt } from './ui/TalkPrompt';
 
 export default function App() {
   const started = useStore((s) => s.started);
@@ -76,10 +79,17 @@ export default function App() {
             le repère du quai, pas celui de la rame. */}
         <PassingTrain />
         <PlatformCrowd />
+        {/* La bulle de dialogue vit dans la scène : elle suit la tête de
+            celui qui parle, quel que soit le repère où il vit. */}
+        <PaxSpeechBubble />
+        {/* La précipitation vit dans le monde et suit l'œil, quel que soit le
+            repère où il se trouve : dans le wagon comme sur le quai. */}
+        <Weather />
         <Player />
       </Canvas>
       <Hud />
       <BoardingPrompt />
+      <TalkPrompt />
       <Controls />
       {!started && <StartScreen />}
     </div>

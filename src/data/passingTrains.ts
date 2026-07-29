@@ -11,11 +11,12 @@
 //
 // Deux régimes, et ils n'ont pas la même heure :
 //
-//   • 快速 — le rapide de la Keihin-Tōhoku, de 10 h 30 à 15 h 30. Il saute
-//     cinq des gares que la Yamanote dessert quai à quai : 御徒町, 鶯谷,
-//     西日暮里, 浜松町 (en semaine seulement — le samedi et le dimanche il s'y
-//     arrête) et 有楽町. C'est le passage qu'on voit vraiment, plusieurs fois
-//     par heure, à quelques mètres du bord de quai.
+//   • 快速 — le rapide de la Keihin-Tōhoku, de 10 h 30 à 15 h 30 entre Tabata
+//     et Shinagawa. Il saute cinq des gares que la Yamanote dessert quai à
+//     quai : 御徒町 (en semaine seulement — le samedi, le dimanche et les
+//     jours fériés il s'y arrête), 鶯谷, 日暮里, 西日暮里 et 有楽町. C'est le
+//     passage qu'on voit vraiment, plusieurs fois par heure, à quelques
+//     mètres du bord de quai.
 //   • 回送 — une rame vide qui rejoint son dépôt ou en sort. Ça n'a pas
 //     d'horaire, ça ne s'annonce pas autrement, et ça peut traverser onze de
 //     ces gares à n'importe quelle heure. Rare.
@@ -32,20 +33,29 @@ export type PassKind = 'rapid' | 'deadhead';
 
 /**
  * Gares que le 快速 de la Keihin-Tōhoku traverse sans s'arrêter, ET dont la
- * voie rapide borde le quai Yamanote. 神田 est aussi sautée par le rapide,
- * mais la Keihin-Tōhoku y occupe un autre îlot : de notre quai, on ne la voit
- * même pas.
+ * voie rapide borde le quai Yamanote.
+ *
+ * Le rapide s'arrête, entre Tabata et Shinagawa, à 田端, 上野, 秋葉原, 神田,
+ * 東京, 浜松町, 田町, 高輪ゲートウェイ et 品川 — plus 御徒町 le samedi, le
+ * dimanche et les jours fériés. Tout le reste, il le traverse.
+ *
+ * Deux de ces gares traversées n'apparaissent pas ici :
+ *   • 新橋, que le rapide saute pourtant (la ligne Tōkaidō y dessert déjà le
+ *     même flux) : le gabarit du jeu en fait un îlot Yamanote pur, sans voie
+ *     Keihin-Tōhoku au bord du quai — voir data/stationLayouts ;
+ *   • 神田, où la Keihin-Tōhoku occupe un autre îlot : de notre quai, on ne la
+ *     voit même pas.
  */
 const RAPID_PASS: Record<string, true> = {
-  JY04: true, // 御徒町
+  JY04: true, // 御徒町 — en semaine seulement
   JY06: true, // 鶯谷
+  JY07: true, // 日暮里 — le rapide le saute, les Jōban y sont déjà
   JY08: true, // 西日暮里
-  JY28: true, // 浜松町 — en semaine
   JY30: true, // 有楽町
 };
 
-/** 浜松町 : le rapide s'y arrête le samedi, le dimanche et les jours fériés. */
-const WEEKDAYS_ONLY: Record<string, true> = { JY28: true };
+/** 御徒町 : le rapide s'y arrête le samedi, le dimanche et les jours fériés. */
+const WEEKDAYS_ONLY: Record<string, true> = { JY04: true };
 
 /** Plage de circulation du 快速 (minutes depuis minuit) : 10 h 30 → 15 h 30. */
 const RAPID_FROM = 10 * 60 + 30;
