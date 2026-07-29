@@ -104,11 +104,9 @@ export function makeStationMaterials(p: StationPalette, textures: StationTexture
         roughness: 0.4,
       }),
       bin: new THREE.MeshStandardMaterial({ color: '#4a5058', roughness: 0.7, metalness: 0.2 }),
-      vending: new THREE.MeshStandardMaterial({ color: '#b8322c', roughness: 0.6 }),
-      vendingFace: new THREE.MeshBasicMaterial({ map: textures.ads[0], toneMapped: false }),
       kiosk: new THREE.MeshStandardMaterial({ color: '#e8e4dc', roughness: 0.78 }),
       ad: new THREE.MeshBasicMaterial({
-        map: textures.ads[1],
+        map: textures.ads[0],
         toneMapped: false,
         side: THREE.DoubleSide,
       }),

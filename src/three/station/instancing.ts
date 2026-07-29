@@ -73,6 +73,23 @@ export function useInstances(
   }, [ref, matrices]);
 }
 
+/**
+ * Teinte par exemplaire, sur un InstancedMesh dont le matériau reste blanc :
+ * la caisse d'un distributeur est la même tôle d'une machine à l'autre, mais
+ * jamais la même peinture. Sans cela il faudrait un appel de rendu par marque.
+ */
+export function useInstanceColors(
+  ref: React.RefObject<THREE.InstancedMesh | null>,
+  colors: THREE.Color[],
+): void {
+  useLayoutEffect(() => {
+    const im = ref.current;
+    if (!im) return;
+    for (let i = 0; i < colors.length; i++) im.setColorAt(i, colors[i]);
+    if (im.instanceColor) im.instanceColor.needsUpdate = true;
+  }, [ref, colors]);
+}
+
 /** Comme mat(), mais orientée : pour une boîte inclinée (panneau, ferme, rampe). */
 export function matOriented(
   q: THREE.Quaternion,
