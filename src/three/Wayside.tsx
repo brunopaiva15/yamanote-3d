@@ -37,6 +37,7 @@ import { TRACK_BED_TILE, TRACK_BED_WIDTH, makeGroundTexture } from '../textures/
 import { GAUGE_HALF } from '../data/stationGeometry';
 import { makeGroveGeometry, makeGroveMaterial } from './city/cityProps';
 import { seasonNow } from '../systems/season';
+import { weather } from '../systems/weather';
 
 /** Longueur des plans au sol : la vue en biais vers le fond du wagon porte loin. */
 const PLANE_LEN = 460;
@@ -64,6 +65,9 @@ const RAILING_PANELS = 15; // ± 75 m : au-delà, un garde-corps n'est plus qu'u
 
 const TREE_COUNT = 12;
 const TREE_SPACING = 21;
+
+/** Neige de ville : un gris bleuté, jamais du blanc pur. */
+const SNOW_TONE = new THREE.Color('#dfe4ea');
 
 // --- Fabriques de géométrie fusionnée ---------------------------------------
 
@@ -333,6 +337,14 @@ export function Wayside() {
 
     // --- Plate-forme : une tuile de huit mètres tous les huit mètres ---
     built.bedTex.offset.y = runtime.distance / TRACK_BED_TILE;
+    // Le ballast est la surface la plus proche et la plus rapide du champ :
+    // c'est là qu'on lit d'abord qu'il a plu. Mouillé il fonce franchement,
+    // enneigé il blanchit — mais moins que la rue, le passage des rames
+    // dégageant la voie bien avant les trottoirs.
+    built.bedMat.color
+      .set('#d6d4ce')
+      .multiplyScalar(1 - 0.4 * weather.wet)
+      .lerp(SNOW_TONE, weather.snowCover * 0.72);
 
     /** Pose l'instance `i`, ou l'escamote si la gare l'avale. */
     const place = (mesh: THREE.InstancedMesh, i: number, z: number, x: number, yaw: number) => {
@@ -442,6 +454,7 @@ export function Wayside() {
     const treeScale = 1 + 0.18 * segEnv.green; // végétation renforcée (greenery)
     const se = seasonNow();
     built.grove.canopy.value = se.canopy;
+    built.grove.snow.value = weather.snowCover * 0.85;
     built.groves.visible = segEnv.w.trench < 0.5; // pas d'arbres entre les murs
     if (built.groves.visible) {
       for (let i = 0; i < TREE_COUNT; i++) {

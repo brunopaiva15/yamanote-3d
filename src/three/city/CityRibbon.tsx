@@ -45,9 +45,12 @@ import { GROUND_TILE, makeCityGroundTexture, makeSignageTexture } from '../../te
 import { makeCityMaterial } from './cityMaterial';
 import { makeGroveGeometry, makeGroveMaterial, makeHipRoofGeometry } from './cityProps';
 import { seasonNow } from '../../systems/season';
+import { weather } from '../../systems/weather';
 
 /** Rebond de l'éclairage public sur le sol, la nuit. */
 const STREET_BOUNCE = new THREE.Color('#ffb877');
+/** Rue enneigée : le gris bleuté d'une neige de ville, jamais du blanc pur. */
+const SNOW_GROUND = new THREE.Color('#dfe4ea');
 
 /** Axe de rotation des enseignes, qui regardent toutes la voie. */
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
@@ -370,6 +373,13 @@ export function CityRibbon() {
     // frondaison de juillet est une masse pleine, une ramure de janvier est un
     // dessin — et ça se voit à cinquante mètres, à travers une vitre.
     built.grove.canopy.value = seasonNow().canopy;
+    // La neige tient sur une frondaison comme sur une toiture : c'est une
+    // surface qui regarde le ciel. Elle ne tient pas sur un tronc.
+    built.grove.snow.value = weather.snowCover * 0.85;
+
+    // --- Météo : le mouillé et la neige sur la ville ---
+    built.city.wet.value = weather.wet;
+    built.city.snow.value = weather.snowCover;
 
     // --- Nuit : les fenêtres, vitrines et néons s'allument ---
     const w = dayNightWeights(runtime.clockMin / 60);
@@ -380,7 +390,15 @@ export function CityRibbon() {
     built.signMat.color.setScalar(0.42 + 1.35 * night);
     // Le sol de la rue se relève lui aussi : il reçoit l'éclairage public et
     // les vitrines, et un asphalte parfaitement noir n'existe pas en ville.
-    built.groundMat.emissive.copy(STREET_BOUNCE).multiplyScalar(0.07 * night);
+    // Mouillé, il renvoie franchement plus : c'est là que se lisent les néons.
+    built.groundMat.emissive
+      .copy(STREET_BOUNCE)
+      .multiplyScalar(0.07 * night * (1 + 1.5 * weather.wet));
+    // La chaussée mouillée fonce de moitié ; la neige la blanchit tout à fait.
+    // Les deux cohabitent : une neige qui fond laisse un sol trempé.
+    built.groundMat.color
+      .setScalar(1 - 0.42 * weather.wet)
+      .lerp(SNOW_GROUND, weather.snowCover * 0.9);
   });
 
   return (
