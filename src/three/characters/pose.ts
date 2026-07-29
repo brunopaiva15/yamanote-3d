@@ -24,6 +24,17 @@ const STRAP_Z0 = -9.35;
 // Un humain n'attrape pas la poignée à l'aplomb de son crâne (bras vertical
 // collé à la tête) : il saisit celle qui pend DEVANT son visage — l'élection
 // de l'anneau (portée du bras à l'appui) se fait dans le bloc poignée.
+// Fenêtre d'élection, mesurée DEVANT le porteur : jamais moins que la première
+// borne (bras collé à la tête), jamais plus que la seconde (un pas de grille,
+// donc toujours un candidat quand un anneau tombe dans la fenêtre).
+const STRAP_AHEAD_MIN = 0.03;
+const STRAP_AHEAD_MAX = 0.481;
+// Marge de portée ajoutée à la longueur épaule → poignet : le solveur hausse
+// l'épaule quand le bras est trop court, et ce sont les DOIGTS qui se ferment
+// sur la barre, quelques centimètres au-dessus du poignet. Sans elle, les
+// gabarits du pack (bras courts, ~0,37 m) sont déclarés hors d'atteinte de
+// TOUT anneau et le repli tombait sur celui de derrière.
+const STRAP_STRETCH = 0.11;
 
 // Poids lissés par passager (persistent entre frames).
 export interface PoseState {
@@ -829,9 +840,14 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
     const handRel = side === 1 ? clone.armRel.handR : clone.armRel.handL;
     const facingX = Math.sin(p.yaw);
     const facingZ = Math.cos(p.yaw);
-    const dirZ = facingZ >= 0 ? 1 : -1;
+    // Sens « devant » pour choisir l'anneau : le cap de la PLACE (targetYaw),
+    // celui-là même qui a posté le voyageur sous sa poignée
+    // (systems/passengers, alignStrapStand). Le cap rendu (yaw) le rejoint en
+    // une demi-seconde après la marche : s'en servir ici ferait basculer
+    // l'anneau élu d'un cran pendant le pivot, et le bras sauterait.
+    const dirZ = Math.cos(p.targetYaw) >= 0 ? 1 : -1;
     const ringX = side * STRAP_ROW_X;
-    let ringZ = p.pos.z; // anneau élu — calculé selon la portée, voir IK
+    let ringZ = p.pos.z; // anneau élu — toujours DEVANT le porteur, voir IK
     const ref = clone.chestRef ?? clone.wrap;
     ref.updateWorldMatrix(true, false);
     ref.getWorldQuaternion(qWrap);
@@ -874,32 +890,33 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
         hand.getWorldPosition(vTarget);
         l2 = vFoot.distanceTo(vTarget); // coude → poignet
       }
-      // ÉLECTION de l'anneau : jamais celui à l'aplomb du crâne (bras
-      // vertical collé à la tête) — le plus LOIN devant dans la fenêtre
-      // [0,03 ; 0,48] plafonnée par la PORTÉE du bras. La fenêtre fait ~un
-      // pas de grille : il y a toujours un candidat devant ; repli sur le
-      // plus proche si le bras est vraiment trop court. Grands gabarits →
-      // anneau loin devant, bras en diagonale, coude souple.
+      // ÉLECTION de l'anneau : uniquement parmi ceux qui sont DEVANT le
+      // porteur — on ne se tient pas à une poignée qu'on a dans le dos, et
+      // jamais non plus à celle à l'aplomb du crâne (bras vertical collé à la
+      // tête). Dans cette fenêtre, le plus LOIN qui reste à portée du bras ;
+      // à défaut le plus PROCHE devant, quitte à ce qu'il soit un peu haut —
+      // le haussement d'épaule plus bas rattrape le déficit. Le repli ne
+      // regarde JAMAIS derrière : c'était là le bras tendu vers l'arrière.
       const wristY = STRAP_BAR_Y - 0.08;
       const dy = wristY - vBonePos.y;
       const dxRow = ringX - vBonePos.x;
-      const reach = l1 + l2 + 0.02; // marge : haussement d'épaule en secours
-      const aheadCap = Math.min(0.481, Math.sqrt(Math.max(0.01, reach * reach - dy * dy - dxRow * dxRow)));
+      const reach = l1 + l2 + STRAP_STRETCH;
+      const aheadCap = Math.min(
+        STRAP_AHEAD_MAX,
+        Math.sqrt(Math.max(0, reach * reach - dy * dy - dxRow * dxRow)),
+      );
       const k0 = Math.round((p.pos.z - STRAP_Z0) / STRAP_PITCH);
-      let bestAhead = -1;
-      let nearestAbs = Infinity;
+      let farInReach = -1;
+      let nearestAhead = Infinity;
       for (let k = k0 - 2; k <= k0 + 2; k++) {
         const z = STRAP_Z0 + k * STRAP_PITCH;
         const ahead = (z - p.pos.z) * dirZ;
-        if (Math.abs(ahead) < nearestAbs) {
-          nearestAbs = Math.abs(ahead);
-          if (bestAhead < 0) ringZ = z;
-        }
-        if (ahead >= 0.03 && ahead <= aheadCap && ahead > bestAhead) {
-          bestAhead = ahead;
-          ringZ = z;
-        }
+        if (ahead < STRAP_AHEAD_MIN || ahead > STRAP_AHEAD_MAX) continue;
+        if (ahead <= aheadCap && ahead > farInReach) farInReach = ahead;
+        if (ahead < nearestAhead) nearestAhead = ahead;
       }
+      const ahead = farInReach >= 0 ? farInReach : nearestAhead;
+      if (ahead < Infinity) ringZ = p.pos.z + ahead * dirZ;
       // Cible du poignet : sous la barre basse de l'anneau élu.
       vChest.set(ringX, wristY, ringZ);
       vDir.subVectors(vChest, vBonePos);
