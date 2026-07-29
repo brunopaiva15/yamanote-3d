@@ -14,7 +14,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- viewport-fit=cover : la scène occupe tout l'écran, encoche comprise, et
+         c'est le HUD qui se tient à l'écart via env(safe-area-inset-*). -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
 
     <title>Yamanote 3D — 山手線 · Ride Tokyo's Yamanote Line in 3D</title>
     <meta
@@ -160,7 +165,10 @@
         position: fixed;
         inset: 0;
         overflow: auto;
-        padding: 3rem 1.5rem;
+        /* Le viewport est en viewport-fit=cover : comme le HUD, cet écran se
+           tient à l'écart de l'encoche et des bords arrondis. */
+        padding: max(3rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right))
+          max(3rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
         display: flex;
         justify-content: center;
       }

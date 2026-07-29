@@ -81,7 +81,7 @@ export function Player() {
       }
       if (e.code === 'KeyE') input.talkRequest = true;
       if (e.code === 'KeyM') useStore.getState().toggleMute();
-      if (e.code === 'KeyF') {
+      if (e.code === 'KeyF' && typeof document.documentElement.requestFullscreen === 'function') {
         void document.documentElement.requestFullscreen().catch(() => undefined);
       }
     };
