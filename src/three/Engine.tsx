@@ -10,6 +10,7 @@ import { runtime } from '../systems/runtime';
 import { updateCycle } from '../systems/stationCycle';
 import { updateDoorMotion } from '../systems/doorMotion';
 import { doorObstructionOpening, updateDoorObstruction } from '../systems/doorObstruction';
+import { updatePlatformAgentSpeech } from '../systems/platformAgent';
 import { updateSegmentEnv } from '../systems/segmentEnv';
 import { updateWeather } from '../systems/weather';
 import { updatePlatformPresence } from '../systems/platformPresence';
@@ -120,6 +121,8 @@ export function Engine(): null {
       // Après le mouvement des vantaux : la procédure de porte bloquée réagit
       // au contact que la frame vient d'établir.
       updateDoorObstruction(physDt);
+      // La bulle de l'agent suit sa tête, et lui survit le temps d'être lue.
+      updatePlatformAgentSpeech(physDt);
       // Sur le quai la phase du store reste 'dwell' : le freinage réel se lit
       // sur l'accélération (rame qui arrive), sinon le crissement ne part jamais.
       updateAudio(

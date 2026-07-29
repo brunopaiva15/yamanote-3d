@@ -40,7 +40,7 @@
 // dépendance, donc testables) ; la mécanique du vantail dans systems/doorMotion.
 
 import { CONFIG } from '../data/config';
-import { CONSIST, PLAYER_CAR } from '../data/e235';
+import { CONSIST, PLAYER_CAR, carZ } from '../data/e235';
 import { doorReleaseAnnouncement } from '../data/announcements';
 import {
   MAX_ATTEMPTS,
@@ -70,6 +70,12 @@ import {
   startBlockedDoor,
 } from './doorMotion';
 import { currentSegmentOccupancy } from './occupancy';
+import { worldToPlatform } from './playerFrame';
+import {
+  callPlatformAgent,
+  platformAgentSays,
+  releasePlatformAgent,
+} from './platformAgent';
 import { holdPaxInDoorway, paxHeldInDoorway, releasePaxFromDoorway } from './passengers';
 import { say } from './speech';
 import { paDoorCheck, paDoorRelease } from './stationPa';
@@ -110,6 +116,10 @@ interface Obstruction extends ObstructionPlan {
    * qu'il faudra.
    */
   byPlayer: boolean;
+  /** Un agent de quai a été appelé devant cette porte. */
+  agentCalled: boolean;
+  /** Numéro de la dernière consigne qu'il a réellement pu donner. */
+  agentSaid: number;
 }
 
 let state: Obstruction | null = null;
@@ -151,6 +161,7 @@ export function doorObstructionOpening(): number {
 /** Remet tout à zéro : entrée en jeu, saut de phase, changement de rame. */
 export function resetDoorObstruction(): void {
   if (state?.embodied) releasePaxFromDoorway();
+  if (state?.agentCalled) releasePlatformAgent();
   state = null;
   armed = null;
   clearBlockedDoor();
@@ -234,6 +245,8 @@ export function onDoorsClosing(): void {
     cleared: false,
     embodied,
     byPlayer: false,
+    agentCalled: false,
+    agentSaid: 0,
   };
 }
 
@@ -263,6 +276,8 @@ function startPlayerObstruction(): boolean {
     cleared: false,
     embodied: false,
     byPlayer: true,
+    agentCalled: false,
+    agentSaid: 0,
   };
   return true;
 }
@@ -305,6 +320,30 @@ function beginReopen(st: Obstruction): void {
   if (st.byPlayer || st.attempt > 1) paDoorRelease(st.attempt - 1);
 }
 
+/**
+ * Fait venir l'agent de quai devant la porte concernée.
+ *
+ * Un haut-parleur n'a jamais fait reculer personne : quand quelqu'un tient une
+ * porte, quelqu'un se déplace. Il accourt depuis la trémie la plus proche et
+ * se poste à côté de la baie, tourné vers celui qui bloque.
+ */
+function callAgent(st: Obstruction): void {
+  if (st.agentCalled) return;
+  st.agentCalled = true;
+  const out = { x: 0, z: 0 };
+  worldToPlatform(0, carZ(st.car) + st.dz + runtime.trainZ, out);
+  callPlatformAgent(out.z);
+}
+
+/**
+ * Sa consigne, s'il est arrivé. Tant qu'il marche encore, on réessaie à
+ * l'image suivante : il ne parle pas de loin, il parle une fois devant.
+ */
+function agentSpeaks(st: Obstruction): void {
+  if (!st.agentCalled || st.agentSaid >= st.attempt) return;
+  if (platformAgentSays(st.attempt)) st.agentSaid = st.attempt;
+}
+
 /** Le bouton est relâché : la porte se referme, dégagée ou non. */
 function beginReclose(st: Obstruction): void {
   st.cleared = obstacleCleared(st);
@@ -334,11 +373,13 @@ function escalate(st: Obstruction): void {
   // La porte bloquée rouvre avec les autres plutôt que d'être rendue d'un coup
   // à l'ensemble : elle est entrebâillée, elle ne doit pas sauter.
   moveBlockedDoor(1);
+  callAgent(st);
   paDoorCheck();
 }
 
 /** Tout est confirmé fermé : le circuit de départ s'établit, la rame peut partir. */
 function finish(): void {
+  if (state?.agentCalled) releasePlatformAgent();
   clearBlockedDoor();
   setDepartureBlockers({ doorBlocked: false });
   state = null;
@@ -354,6 +395,8 @@ export function updateDoorObstruction(dt: number): void {
   const st = state;
   const door = blockedDoor();
   st.t += dt;
+  // Il vient peut-être d'arriver : sa consigne part dès qu'il est devant.
+  agentSpeaks(st);
 
   switch (st.stage) {
     case 'closing':
@@ -368,6 +411,10 @@ export function updateDoorObstruction(dt: number): void {
       // départ n'est plus possible.
       if (door?.touched) {
         setDepartureBlockers({ doorBlocked: true });
+        // C'est le joueur qui est dedans : un agent se met en route tout de
+        // suite. Pour une obstruction ordinaire, il n'intervient qu'en dernier
+        // recours (voir escalate).
+        if (st.byPlayer) callAgent(st);
         st.stage = 'contact';
         st.t = 0;
         st.wait = reactionDelay(st.kind, st.attempt);

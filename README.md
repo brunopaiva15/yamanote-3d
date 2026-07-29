@@ -343,7 +343,23 @@ et c'est vous qui décidez quand il repart. Un pas de côté et la porte reprend
 sa course là où elle s'était arrêtée — sans attendre la fin de la procédure si
 vous êtes parti avant.
 
-Et on vous le dit. L'agent de quai s'adresse à vous **dès la première
+**Et quelqu'un vient.** Un haut-parleur n'a jamais fait reculer personne :
+quand c'est le joueur qui tient la porte, un agent de quai se met en route dès
+le contact. Il accourt depuis la trémie la plus proche — au pas pressé, une
+porte bloquée retarde la ligne —, se poste **à côté** de la baie (jamais
+devant : il ne bouche pas le passage qu'il vient dégager), se tourne vers celui
+qui bloque et lui parle, en toutes lettres au-dessus de sa tête. Sa consigne
+monte d'un cran à chaque tentative, et il ne repart qu'une fois la porte
+fermée. Pour une obstruction ordinaire, il n'intervient qu'en dernier recours,
+quand le conducteur a renoncé à la porte seule et rouvert tout.
+
+Techniquement, une place du pool de foule lui est réservée depuis le début
+(`CrowdPax.staff`) : le rendu « librairie » choisit le modèle 3D de chaque
+voyageur **une fois pour toutes** à partir de son apparence, on ne peut donc
+pas déguiser un civil en agent en cours de route. Il hérite du costume du pack,
+teint bleu nuit, casquette, pas de sac.
+
+Et on vous le dit à l'oreille aussi. L'agent s'adresse à vous **dès la première
 réouverture** quand c'est vous qui bloquez, là où une obstruction ordinaire lui
 laisse d'abord la parole au conducteur : à cheval sur le seuil, on est déjà
 « dehors » pour le moteur audio, la sono de la rame est coupée net
