@@ -343,6 +343,16 @@ et c'est vous qui décidez quand il repart. Un pas de côté et la porte reprend
 sa course là où elle s'était arrêtée — sans attendre la fin de la procédure si
 vous êtes parti avant.
 
+Et on vous le dit. L'agent de quai s'adresse à vous **dès la première
+réouverture** quand c'est vous qui bloquez, là où une obstruction ordinaire lui
+laisse d'abord la parole au conducteur : à cheval sur le seuil, on est déjà
+« dehors » pour le moteur audio, la sono de la rame est coupée net
+(`setListenerOutside`) et le conducteur parlerait tout seul dans une voiture
+qu'on vient de quitter. Depuis l'intérieur, c'est l'inverse : la voix du quai
+est filtrée par ce que les portes laissent passer, et il fallait compter la
+porte entrebâillée sur vous — vingt-cinq centimètres à un pas de l'oreille —
+au lieu de la seule porte de référence, qui est close.
+
 Corollaire indispensable : **un seuil occupé ne devient jamais infranchissable**.
 Le volume praticable (`systems/walkable`) ferme un portillon dès que la porte
 se referme, ce qui emmurait proprement quiconque se tenait dedans. Il reste

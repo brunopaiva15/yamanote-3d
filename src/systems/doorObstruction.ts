@@ -131,6 +131,23 @@ export function doorObstructionAt(car: number, dz: number): boolean {
   return isBlockedDoor(car, dz);
 }
 
+/**
+ * Ouverture de la porte bloquée, quand c'est celle du joueur.
+ *
+ * Toutes les portes sont fermées, sauf une : celle qui s'est arrêtée sur
+ * quelqu'un, à un pas de lui. C'est par cet intervalle-là — vingt-cinq
+ * centimètres — que la sono du quai lui parvient, et le moteur audio ne peut
+ * pas le savoir en regardant la seule porte de référence, qui est close.
+ */
+export function doorObstructionOpening(): number {
+  if (!state) return 0;
+  const door = blockedDoor();
+  if (!door || door.car !== PLAYER_CAR) return 0;
+  // Une porte entrebâillée à l'autre bout de la voiture ne lui apporte rien.
+  if (Math.abs(runtime.playerCarZ - door.dz) > 4) return 0;
+  return door.pos;
+}
+
 /** Remet tout à zéro : entrée en jeu, saut de phase, changement de rame. */
 export function resetDoorObstruction(): void {
   if (state?.embodied) releasePaxFromDoorway();
@@ -278,11 +295,14 @@ function beginReopen(st: Obstruction): void {
   // La rame parle la première fois — c'est le conducteur qui a la main —, le
   // quai prend le relais ensuite : deux voix pour la même personne, comme
   // quand un agent finit par descendre sur le quai.
-  if (st.attempt === 1) say(doorReleaseAnnouncement(), 'cabin');
-  else {
-    say(doorReleaseAnnouncement(true), 'cabin');
-    paDoorRelease(st.attempt);
-  }
+  say(doorReleaseAnnouncement(st.attempt > 1), 'cabin');
+  // Sauf quand c'est le JOUEUR qui est dedans : l'agent parle dès le premier
+  // essai, et il a de bonnes raisons. À cheval sur le seuil, on est déjà
+  // « dehors » pour le moteur audio — la sono de la rame est coupée net
+  // (audioEngine.setListenerOutside) et le conducteur parlerait tout seul dans
+  // une voiture qu'on vient de quitter. Celui qui bloque la porte doit
+  // s'entendre dire de s'écarter, d'où qu'il se tienne.
+  if (st.byPlayer || st.attempt > 1) paDoorRelease(st.attempt - 1);
 }
 
 /** Le bouton est relâché : la porte se referme, dégagée ou non. */

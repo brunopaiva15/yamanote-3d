@@ -9,7 +9,7 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { updateCycle } from '../systems/stationCycle';
 import { updateDoorMotion } from '../systems/doorMotion';
-import { updateDoorObstruction } from '../systems/doorObstruction';
+import { doorObstructionOpening, updateDoorObstruction } from '../systems/doorObstruction';
 import { updateSegmentEnv } from '../systems/segmentEnv';
 import { updateWeather } from '../systems/weather';
 import { updatePlatformPresence } from '../systems/platformPresence';
@@ -131,7 +131,13 @@ export function Engine(): null {
       // faut la porte de la rame ET la porte palière en face — là où il y en a
       // une. À Shinjuku et Shibuya, la porte de la rame donne directement sur
       // le quai, et la mélodie entre dès qu'elle s'écarte.
-      const openings = runtime.doorOpen * (runtime.psdPresent ? runtime.psdOpen : 1);
+      // Une porte arrêtée sur quelqu'un juste à côté de vous est une ouverture
+      // comme une autre — la seule qui reste, en l'occurrence, et c'est par
+      // elle qu'on entend l'agent de quai s'adresser à celui qui bloque.
+      const openings = Math.max(
+        runtime.doorOpen * (runtime.psdPresent ? runtime.psdOpen : 1),
+        doorObstructionOpening(),
+      );
       setPlatformDoors(openings);
       // L'ambiance du lieu suit les mêmes ouvertures : sur le quai on est
       // dedans, dans la rame portes fermées on ne l'entend presque plus. Elle
