@@ -237,4 +237,18 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   w.__probeClock = (minutes: number) => {
     runtime.clockMin = ((minutes % 1440) + 1440) % 1440;
   };
+
+  // Date civile à Tokyo : c'est elle qui donne la saison (systems/season) et,
+  // à travers elle, la couleur des frondaisons, la hauteur du soleil et
+  // l'heure à laquelle la nuit tombe.
+  w.__probeDate = (month: number, day: number) => {
+    const d = runtime.tokyoDate;
+    const utc = new Date(Date.UTC(d.year, month - 1, day));
+    runtime.tokyoDate = {
+      year: d.year,
+      month,
+      day,
+      weekday: utc.getUTCDay(),
+    };
+  };
 }

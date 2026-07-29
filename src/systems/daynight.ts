@@ -9,10 +9,11 @@
 // Deux heures et demie d'écart sur le coucher entre les deux solstices : c'est
 // le fait saisonnier le plus fort de tous.
 //
-// Les décalages ci-dessous sont calés pour que, sur un jour moyen (lever
-// 5 h 36, coucher 17 h 46), on retrouve exactement les bornes historiques —
-// 4 h 30-5 h 30, 6 h-7 h, 16 h 30-17 h 30, 18 h 30-19 h 30. La saison ne fait
-// que translater l'ensemble.
+// Les décalages ci-dessous se lisent maintenant en crépuscule et non en heures
+// d'horloge. Celui de la tombée de nuit a été resserré au passage : à 35° de
+// latitude le crépuscule civil dure une petite demi-heure, et l'ancien réglage
+// laissait le 21 décembre en pleine heure dorée à 17 h 15 — trois quarts
+// d'heure après le coucher du soleil, alors que Tokyo est déjà allumée.
 
 import { seasonNow } from './season';
 
@@ -26,7 +27,7 @@ export interface DayNightWeights {
 const NIGHT_TO_GOLD = [-1.1, -0.1];
 const GOLD_TO_DAY = [0.4, 1.4];
 const DAY_TO_GOLD = [-1.27, -0.27];
-const GOLD_TO_NIGHT = [0.73, 1.73];
+const GOLD_TO_NIGHT = [0.35, 1.25];
 
 function smooth(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));

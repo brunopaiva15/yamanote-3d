@@ -14,6 +14,7 @@ import { CONFIG } from '../data/config';
 import { qualityLevel, usePerf, type PerfLevel } from '../systems/perf';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
+import { seasonNow } from '../systems/season';
 import { segEnv } from '../systems/segmentEnv';
 import { applyShadowFlags } from './shadowFlags';
 
@@ -81,6 +82,18 @@ const BG_COLORS = { day: new THREE.Color('#bcdaee'), golden: new THREE.Color('#e
 const HEMI_SKY = { day: new THREE.Color('#cfe6f6'), golden: new THREE.Color('#eec5ae'), night: new THREE.Color('#2c3854') };
 const AMBIENT = { day: new THREE.Color('#e9f1f5'), golden: new THREE.Color('#e3cabb'), night: new THREE.Color('#38405a') };
 
+/**
+ * Longueur horizontale conservée de la position du soleil (m) et rayon auquel
+ * elle est ramenée.
+ *
+ * La direction seule compte pour une lumière directionnelle — mais PAS sa
+ * distance : la caméra d'ombre est posée à la position de la lumière, et son
+ * `far` vaut 100. Un soleil d'été renvoyé à cent cinquante mètres de haut
+ * ferait disparaître toutes les ombres de la scène.
+ */
+const SUN_H = 30.5;
+const SUN_RADIUS = 43;
+
 function mixColor(out: THREE.Color, w: { day: number; golden: number; night: number }, set: { day: THREE.Color; golden: THREE.Color; night: THREE.Color }): THREE.Color {
   out.setRGB(
     set.day.r * w.day + set.golden.r * w.golden + set.night.r * w.night,
@@ -88,6 +101,22 @@ function mixColor(out: THREE.Color, w: { day: number; golden: number; night: num
     set.day.b * w.day + set.golden.b * w.golden + set.night.b * w.night,
   );
   return out;
+}
+
+/**
+ * Position du soleil de midi pour une hauteur méridienne donnée.
+ *
+ * À Tokyo (35,7° N), le soleil culmine à 31° le 21 décembre et à 78° le
+ * 21 juin. C'est la plus grande différence visible entre deux saisons depuis
+ * l'intérieur du wagon : à 31° le soleil entre par la baie et va frapper la
+ * banquette d'en face jusqu'au dossier ; à 78° il tombe presque à pic, ne
+ * dépasse pas l'appui de fenêtre, et l'intérieur reste dans son propre
+ * éclairage. Les rayons plafonnent à 3,2 (~73°) : au-delà, l'ombre du portique
+ * caténaire cesse de balayer le wagon et on perd le plus bel effet de la course.
+ */
+function seasonalSunPos(out: THREE.Vector3, noonAltitude: number): THREE.Vector3 {
+  const t = Math.min(3.2, Math.max(0.5, Math.tan((noonAltitude * Math.PI) / 180)));
+  return out.set(26, t * SUN_H, -16).setLength(SUN_RADIUS);
 }
 
 // Pilote lumières, brume et fond selon l'heure (jamais par re-render React).
@@ -120,6 +149,8 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
   const amb = useRef<THREE.AmbientLight>(null);
   const acc = useRef(1);
   const tmp = useRef(new THREE.Color());
+  const tint = useRef(new THREE.Color());
+  const dayPos = useRef(new THREE.Vector3());
   const bases = useRef({ sun: 1.7, fill: 0.4, hemi: 0.62, amb: 0.4, dayness: 1 });
 
   useFrame((_, dt) => {
@@ -127,31 +158,44 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
     if (acc.current >= 0.5) {
       acc.current = 0;
       const w = dayNightWeights(runtime.clockMin / 60);
+      const se = seasonNow();
+      tint.current.set(se.airTone);
+      // Le soleil d'hiver ne se contente pas d'être bas : il est FAIBLE. Il
+      // traverse une épaisseur d'atmosphère plus grande et arrive à l'oblique
+      // sur les surfaces horizontales.
+      const seasonSun = 1 - 0.2 * se.cold + 0.06 * se.heat;
       const b = bases.current;
-      b.sun = SUN.day.intensity * w.day + SUN.golden.intensity * w.golden + SUN.night.intensity * w.night;
+      b.sun =
+        (SUN.day.intensity * w.day + SUN.golden.intensity * w.golden + SUN.night.intensity * w.night) *
+        seasonSun;
       b.fill = 0.4 * w.day + 0.5 * w.golden + 0.1 * w.night;
       b.hemi = 0.62 * w.day + 0.52 * w.golden + 0.22 * w.night;
       b.amb = 0.4 * w.day + 0.35 * w.golden + 0.24 * w.night;
       b.dayness = w.day + 0.8 * w.golden + 0.25 * w.night;
       if (sun.current) {
         mixColor(sun.current.color, w, { day: SUN.day.color, golden: SUN.golden.color, night: SUN.night.color });
+        sun.current.color.lerp(tint.current, 0.3 * w.day);
         sun.current.position
           .set(0, 0, 0)
-          .addScaledVector(SUN.day.pos, w.day)
+          .addScaledVector(seasonalSunPos(dayPos.current, se.noonAltitude), w.day)
           .addScaledVector(SUN.golden.pos, w.golden)
           .addScaledVector(SUN.night.pos, w.night);
       }
-      if (hemi.current) mixColor(hemi.current.color, w, HEMI_SKY);
-      if (amb.current) mixColor(amb.current.color, w, AMBIENT);
+      if (hemi.current) mixColor(hemi.current.color, w, HEMI_SKY).lerp(tint.current, 0.22 * w.day);
+      if (amb.current) mixColor(amb.current.color, w, AMBIENT).lerp(tint.current, 0.18 * w.day);
+      // Épaisseur d'air de la saison : l'hiver sec de Tokyo porte loin, la
+      // moiteur d'août noie les tours à six cents mètres. Ce n'est pas un
+      // réglage d'humeur, c'est la portée réelle du regard.
+      const clarity = se.clarity;
       if (scene.fog instanceof THREE.Fog) {
-        mixColor(scene.fog.color, w, FOG_COLORS);
+        mixColor(scene.fog.color, w, FOG_COLORS).lerp(tint.current, 0.24 * (1 - w.night));
         // Far élargi : la ville vue à travers les baies en regardant le fond
         // du wagon est beaucoup plus loin que la distance latérale pure.
-        scene.fog.near = 30 * w.day + 22 * w.golden + 16 * w.night;
-        scene.fog.far = 220 * w.day + 170 * w.golden + 150 * w.night;
+        scene.fog.near = (30 * w.day + 22 * w.golden + 16 * w.night) * clarity;
+        scene.fog.far = (220 * w.day + 170 * w.golden + 150 * w.night) * clarity;
       }
       if (scene.background instanceof THREE.Color) {
-        mixColor(tmp.current, w, BG_COLORS);
+        mixColor(tmp.current, w, BG_COLORS).lerp(tint.current, 0.24 * (1 - w.night));
         scene.background.copy(tmp.current);
       }
     }

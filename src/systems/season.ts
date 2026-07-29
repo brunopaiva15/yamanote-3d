@@ -81,6 +81,24 @@ export interface SeasonState {
    * C'est le volume qui dit l'hiver de loin, bien avant la couleur.
    */
   canopy: number;
+
+  // --- Air ------------------------------------------------------------------
+  /**
+   * Teinte de l'air de la saison (hex, sRGB), mêlée au ciel, à la brume et à
+   * la lumière du soleil.
+   *
+   * Ce n'est pas un étalonnage d'humeur : c'est de l'air. Un janvier de Tokyo
+   * est sec et sans particules — la lumière y bleuit et le lointain reste net
+   * à perte de vue, c'est en hiver qu'on voit le Fuji depuis les tours. Un août
+   * est chargé de vapeur d'eau : le blanc jaunit, le contraste tombe et les
+   * tours d'Ikebukuro se noient à six cents mètres.
+   */
+  airTone: string;
+  /**
+   * Netteté du lointain : > 1 l'hiver (la brume recule), < 1 l'été. Multiplie
+   * directement le `near` et le `far` de la brume de scène.
+   */
+  clarity: number;
 }
 
 // --- Outils ------------------------------------------------------------------
@@ -200,6 +218,14 @@ const WINTER_LEAF = ['#6d6152', '#7a6d5c', '#635849', '#82735f'];
 /** Sakura : rose lavé, presque blanc — le rose vif est une faute d'écolier. */
 const SAKURA_TONE = '#f0cdd8';
 
+/** Teinte de l'air, par saison. */
+const AIR_TONE: Record<Season, string> = {
+  winter: '#dae8fb',
+  spring: '#f0eede',
+  summer: '#f7edd6',
+  autumn: '#f4e6cf',
+};
+
 function parseHex(hex: string): [number, number, number] {
   const v = parseInt(hex.slice(1), 16);
   return [((v >> 16) & 255) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255];
@@ -279,6 +305,8 @@ export function seasonAt(month: number, day: number): SeasonState {
     // carte postale et la floraison cesse d'être un événement.
     blossom: sakura * 0.34,
     blossomTone: SAKURA_TONE,
+    airTone: mixHex(SEASONS.map((s) => [AIR_TONE[s], w[s]] as const)),
+    clarity: 1 + 0.32 * cold - 0.3 * heat,
     // La ramure nue garde du volume — des branches, ce n'est pas rien — mais
     // beaucoup moins qu'une frondaison en juillet.
     canopy: 1 - 0.45 * bare,
