@@ -17,6 +17,7 @@ import { Ads } from './three/Ads';
 import { Screens } from './three/Screens';
 import { DoorCloseLed } from './three/DoorCloseLed';
 import { Wayside } from './three/Wayside';
+import { Weather } from './three/Weather';
 import { SkyDome } from './three/city/SkyDome';
 import { CityRibbon } from './three/city/CityRibbon';
 import { Landmarks } from './three/Landmarks';
@@ -75,6 +76,9 @@ export default function App() {
         {/* La bulle de dialogue vit dans la scène : elle suit la tête de
             celui qui parle, quel que soit le repère où il vit. */}
         <PaxSpeechBubble />
+        {/* La précipitation vit dans le monde et suit l'œil, quel que soit le
+            repère où il se trouve : dans le wagon comme sur le quai. */}
+        <Weather />
         <Player />
       </Canvas>
       <Hud />

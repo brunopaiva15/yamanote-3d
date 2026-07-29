@@ -20,6 +20,7 @@ import * as THREE from 'three';
 import { DOOR_SIDE, STATIONS } from '../data/stations';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
+import { freezeWeather, weather } from '../systems/weather';
 
 interface Volume {
   label: string;
@@ -239,6 +240,46 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   // minute par minute réelle : la valeur posée tient le temps d'une capture.
   w.__probeClock = (minutes: number) => {
     runtime.clockMin = ((minutes % 1440) + 1440) % 1440;
+  };
+
+  // Abscisse le long de la voie. Deux captures prises à la même distance
+  // voient LES MÊMES cellules de ville : c'est la seule façon de comparer deux
+  // saisons sur la même image plutôt que sur deux quartiers différents.
+  w.__probeDistance = (m: number) => {
+    runtime.distance = m;
+  };
+
+  // Temps qu'il fait, forcé. Le modèle (systems/weather) le reprendrait à la
+  // prochaine image s'il tournait — d'où le gel de l'épisode, qui laisse la
+  // valeur posée telle quelle.
+  w.__probeWeather = (patch: Partial<typeof weather>) => {
+    Object.assign(weather, patch);
+    freezeWeather(true);
+  };
+
+  // État des champs de précipitation : visibles ? combien d'instances ? quelles
+  // valeurs d'uniformes ? Une pluie qu'on ne voit pas peut l'être pour six
+  // raisons, et il faut pouvoir les distinguer sans deviner.
+  w.__probeRain = () => {
+    const out: Record<string, unknown>[] = [];
+    scene.traverse((o) => {
+      const kind = o.userData?.rainField;
+      if (!kind || !(o as THREE.Mesh).isMesh) return;
+      const mesh = o as THREE.Mesh;
+      const geo = mesh.geometry as THREE.InstancedBufferGeometry;
+      const mat = mesh.material as THREE.ShaderMaterial;
+      out.push({
+        kind,
+        visible: mesh.visible,
+        inScene: mesh.parent !== null,
+        instances: geo.instanceCount,
+        opacity: mat.uniforms.uOpacity?.value,
+        cam: (mat.uniforms.uCam?.value as THREE.Vector3)?.toArray().map((v) => +v.toFixed(2)),
+        vel: (mat.uniforms.uVel?.value as THREE.Vector3)?.toArray().map((v) => +v.toFixed(2)),
+        size: (mat.uniforms.uSize?.value as THREE.Vector2)?.toArray(),
+      });
+    });
+    return { weather: { ...weather }, fields: out };
   };
 
   // Date civile à Tokyo : c'est elle qui donne la saison (systems/season) et,
