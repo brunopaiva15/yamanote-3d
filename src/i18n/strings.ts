@@ -101,6 +101,11 @@ export interface Strings {
     stand: string;
     alight: string;
     boardTrain: string;
+    /**
+     * Refus affiché devant une porte d'une autre voiture. `{car}` est remplacé
+     * par le numéro de la voiture du joueur.
+     */
+    wrongDoor: string;
     /** Invite affichée quand on a un voyageur en face de soi. */
     talk: string;
     /** Bouton tactile de la même action. */
@@ -202,6 +207,7 @@ const FR: Strings = {
     stand: 'Se lever',
     alight: 'Descendre sur le quai',
     boardTrain: 'Monter dans la rame',
+    wrongDoor: 'On ne monte que par la voiture {car}',
     talk: 'Appuyez sur E pour parler',
     talkShort: 'Parler',
     fullscreen: 'Plein écran',
@@ -299,6 +305,7 @@ const EN: Strings = {
     stand: 'Stand up',
     alight: 'Step onto the platform',
     boardTrain: 'Board the train',
+    wrongDoor: 'You can only board car {car}',
     talk: 'Press E to talk',
     talkShort: 'Talk',
     fullscreen: 'Fullscreen',
@@ -395,6 +402,7 @@ const JA: Strings = {
     stand: '立つ',
     alight: 'ホームに降りる',
     boardTrain: '電車に乗る',
+    wrongDoor: 'ご乗車は{car}号車のみです',
     talk: 'Eキーで話しかける',
     talkShort: '話しかける',
     fullscreen: '全画面',

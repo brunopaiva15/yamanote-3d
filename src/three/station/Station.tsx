@@ -31,6 +31,7 @@ import {
   type Placed,
 } from '../../systems/stationPlacement';
 import { platformDetail } from '../../systems/perf';
+import { BOARDABLE_GATES } from '../../systems/wrongDoor';
 import { layoutFor, type StationLayout } from '../../data/stationLayouts';
 import {
   GAUGE_HALF,
@@ -53,7 +54,7 @@ import {
   TRACK_HALF,
 } from '../../data/stationGeometry';
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
-import { Barrier, EdgeBarrier } from './Barrier';
+import { Barrier, EdgeBarrier, GateBarrier } from './Barrier';
 import { makeStationMaterials, type Mats } from './materials';
 import { stationAd } from './adPool';
 import { mat, matFacingTrack, useInstances } from './instancing';
@@ -538,14 +539,21 @@ export function Station() {
           portes palières. Partout ailleurs, le muret arrête l'œil en même temps
           que le pas ; ici la marche s'arrêtait au ras du liseré blanc sans que
           rien ne le dise, des deux côtés de l'îlot. Le bord d'embarquement
-          s'ouvre au droit des baies quand la rame est à quai ; celui d'en face,
-          où aucune rame ne se présente, reste continu. */}
+          s'ouvre au droit des quatre SEULS seuils franchissables — ceux de la
+          voiture du joueur — et reste dressé devant les dix autres voitures ;
+          celui d'en face, où aucune rame ne se présente, reste continu. */}
       {!hasPsd && (
         <>
-          <EdgeBarrier x={PSD_X} length={layout.length} gates={gaps} />
+          <EdgeBarrier x={PSD_X} length={layout.length} gates={BOARDABLE_GATES} />
           {place.farEdgeX !== null && <EdgeBarrier x={place.farEdgeX} length={layout.length} />}
         </>
       )}
+
+      {/* Portes palières par lesquelles on ne peut pas monter : une seule
+          voiture est modélisée, et les quarante autres baies s'ouvraient sur un
+          mur invisible. La limite ne se dresse que quand on va vraiment vers
+          l'une d'elles. */}
+      {hasPsd && <GateBarrier length={layout.length} />}
 
       {/* Charpente propre à la gare, quand elle en a une. Elle était réservée
           aux deux paliers les plus riches ; elle porte maintenant l'essentiel

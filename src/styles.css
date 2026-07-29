@@ -663,6 +663,15 @@ body,
   white-space: nowrap;
 }
 
+/* Le refus, devant une porte d'une autre voiture : même invite, autre encre.
+   Elle reprend le rouge de la limite dressée dans la baie — la phrase et le
+   nid d'abeilles disent la même chose, et arrivent ensemble. */
+.hud-prompt--deny {
+  background: rgba(48, 13, 16, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(255, 47, 58, 0.42);
+  color: #ffd8da;
+}
+
 /* Bulle de dialogue d'un voyageur : ancrée à sa tête (three/PaxSpeechBubble),
    volontairement sobre — c'est une voix dans un train, pas une interface de
    jeu de rôle. */
