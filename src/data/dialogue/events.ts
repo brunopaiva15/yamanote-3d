@@ -913,4 +913,310 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
       },
     ],
   },
+
+  // --- Coupure de caténaire (停電) -----------------------------------------
+  //
+  // L'autre événement collectif, et il ne se dit pas comme le premier.
+  //
+  // Un coup de frein s'annonce par une secousse : on se raccroche, on a peur,
+  // on le dit tout de suite. Une coupure de courant n'a rien à rattraper. Ce
+  // qui se remarque, c'est ce qui MANQUE — le chant de l'onduleur, le souffle
+  // de la clim, les écrans au-dessus des portes. La première réplique d'une
+  // coupure n'est donc jamais « qu'est-ce qui se passe ?! » mais quelque chose
+  // de plus bas, de plus lent, et souvent un simple constat.
+  //
+  // Deux moments, comme pour l'urgence, distingués par `moving` : la rame
+  // roule encore sur son élan, puis elle est posée en pleine voie et l'attente
+  // s'installe.
+  {
+    id: 'ev.po.lights',
+    when: { trigger: 'outage', place: 'car', moving: true },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'La lumière a baissé.',
+          en: 'The lights just dropped.',
+          ja: '照明、落ちましたね。',
+        },
+      },
+      {
+        gap: 0.9,
+        t: {
+          fr: 'Et on n’entend plus le moteur.',
+          en: 'And the motors have gone quiet.',
+          ja: { f: 'モーターの音も消えたわ。', m: 'モーターの音も消えたな。' },
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.quiet',
+    when: { trigger: 'outage', place: 'car', moving: true },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'On roule sur l’élan, là. Il n’y a plus rien qui pousse.',
+          en: 'We are just coasting now. Nothing is pushing us.',
+          ja: '惰性で走ってますね。もう何も動かしてない。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.screens',
+    when: { trigger: 'outage', place: 'car' },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'Les écrans au-dessus des portes sont noirs.',
+          en: 'The screens above the doors have gone black.',
+          ja: 'ドアの上のモニター、真っ暗です。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.aircon',
+    when: { trigger: 'outage', place: 'car' },
+    lines: [
+      {
+        t: {
+          fr: 'La clim s’est arrêtée. On l’entend d’un coup, ce silence.',
+          en: 'The air conditioning has stopped. You suddenly hear how quiet it is.',
+          ja: { f: '空調が止まったわ。急に静かになったのが分かる。', m: '空調が止まったな。急に静かになったのが分かる。' },
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.teiden',
+    when: { trigger: 'outage', place: 'car', moving: false },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'C’est une panne de courant. La caténaire.',
+          en: 'It is a power failure. The overhead line.',
+          ja: '停電ですね。架線でしょう。',
+        },
+      },
+      {
+        gap: 1,
+        t: {
+          fr: 'Tant qu’il n’y a pas de courant, on ne bouge pas.',
+          en: 'With no power we are not going anywhere.',
+          ja: '電気が来ないうちは動けません。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.nobattery',
+    when: { trigger: 'outage', place: 'car', moving: false, archetype: ['student'] },
+    lines: [
+      {
+        t: {
+          fr: 'Sur les rames de Yokosuka il y a une batterie pour aller jusqu’à la gare suivante.',
+          en: 'The Yokosuka Line sets have a battery to reach the next station.',
+          ja: '横須賀線の車両には、次の駅まで行けるバッテリーが付いてるんですよ。',
+        },
+      },
+      {
+        gap: 1.1,
+        t: {
+          fr: 'Les vertes, non. On attend.',
+          en: 'The green ones do not. We wait.',
+          ja: { f: 'この緑のには無いの。だから待つしかないわ。', m: 'この緑のには無いんだ。だから待つしかない。' },
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.emergency.lamps',
+    when: { trigger: 'outage', place: 'car', moving: false },
+    lines: [
+      {
+        t: {
+          fr: 'Il reste les lampes de secours. Les batteries tiennent l’essentiel.',
+          en: 'The emergency lamps are still on. The batteries carry the essentials.',
+          ja: '非常灯は点いてます。バッテリーが最低限は持たせてくれる。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.doors',
+    when: { trigger: 'outage', place: 'car', moving: false },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'Surtout, personne n’ouvre les portes.',
+          en: 'Whatever happens, nobody opens the doors.',
+          ja: '絶対に、自分でドアを開けないでください。',
+        },
+      },
+      {
+        gap: 1,
+        t: {
+          fr: 'La voie d’à côté peut être circulée, et le courant peut revenir n’importe quand.',
+          en: 'The next track may still be running, and the power can come back any moment.',
+          ja: '隣の線路は動いてるかもしれないし、電気だっていつ戻るか分かりません。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.hot',
+    when: { trigger: 'outage', place: 'car', moving: false, months: [6, 7, 8, 9] },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'Sans ventilation, ça va monter vite ici.',
+          en: 'With no ventilation it is going to get hot in here fast.',
+          ja: '換気が止まると、ここはすぐ暑くなりますよ。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.cold',
+    when: { trigger: 'outage', place: 'car', moving: false, months: [12, 1, 2] },
+    lines: [
+      {
+        t: {
+          fr: 'Le chauffage est coupé aussi. On va le sentir passer.',
+          en: 'The heating is off as well. We are going to feel that.',
+          ja: '暖房も切れてますね。だんだん冷えてきます。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.wait',
+    when: { trigger: 'outage', place: 'car', moving: false },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'On en a pour un moment. Ça ne se répare pas en deux minutes, une caténaire.',
+          en: 'We will be here a while. Overhead wires do not get fixed in two minutes.',
+          ja: '長くなりますよ。架線はそう簡単には直りません。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.tourist',
+    when: { trigger: 'outage', place: 'car', moving: false, archetype: ['tourist'] },
+    lines: [
+      {
+        t: {
+          fr: 'Je croyais que les trains japonais ne s’arrêtaient jamais.',
+          en: 'I thought Japanese trains never stopped.',
+          ja: '日本の電車は止まらないと思っていました。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.senior',
+    when: { trigger: 'outage', place: 'car', moving: false, senior: true },
+    lines: [
+      {
+        t: {
+          fr: 'On finira à pied le long de la voie, vous verrez. Ça s’est déjà vu.',
+          en: 'We will end up walking down the track, you will see. It has happened before.',
+          ja: '線路を歩かされることになりますよ。前にもありました。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.night',
+    when: { trigger: 'outage', place: 'car', moving: false, hours: [22, 26] },
+    lines: [
+      {
+        t: {
+          fr: 'Dans le noir comme ça, on voit la ville par la vitre. C’est presque beau.',
+          en: 'Dark like this, you can actually see the city through the window. It is almost beautiful.',
+          ja: 'こう暗いと、窓から街が見えますね。少しきれいです。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.po.calm',
+    when: { trigger: 'outage', place: 'car', moving: false },
+    lines: [
+      {
+        t: {
+          fr: 'Ce n’est pas un accident, au moins. Juste du courant en moins.',
+          en: 'At least it is not an accident. Just no power.',
+          ja: { f: '事故じゃないだけましよ。電気が来ないだけ。', m: '事故じゃないだけましだ。電気が来ないだけ。' },
+        },
+      },
+    ],
+  },
+
+  // Le courant revient. Personne ne dit la même chose que pendant l'attente :
+  // ce qui se dit là, c'est le soulagement, et il est bref.
+  {
+    id: 'ev.pb.lights',
+    when: { trigger: 'powerBack', place: 'car' },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'Ah, la lumière est revenue.',
+          en: 'Ah, the lights are back.',
+          ja: 'あ、電気が戻りました。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.pb.aircon',
+    when: { trigger: 'powerBack', place: 'car' },
+    lines: [
+      {
+        t: {
+          fr: 'La clim repart. On respire.',
+          en: 'The air conditioning is starting up again. That is better.',
+          ja: '空調が動き出しましたね。助かります。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.pb.screens',
+    when: { trigger: 'powerBack', place: 'car' },
+    lines: [
+      {
+        t: {
+          fr: 'Les écrans se rallument. On va repartir.',
+          en: 'The screens are coming back on. We will be moving soon.',
+          ja: 'モニターも点きました。もう動きますよ。',
+        },
+      },
+    ],
+  },
+  {
+    id: 'ev.pb.late',
+    when: { trigger: 'powerBack', place: 'car' },
+    weight: 2,
+    lines: [
+      {
+        t: {
+          fr: 'Je vais être en retard, mais tant pis. Au moins on repart.',
+          en: 'I am going to be late, but never mind. At least we are moving.',
+          ja: { f: '遅刻だけど、まあいいわ。動くだけまし。', m: '遅刻だけど、まあいいさ。動くだけまし。' },
+        },
+      },
+    ],
+  },
 ];

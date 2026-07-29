@@ -554,6 +554,13 @@ body,
   color: #b3261e;
 }
 
+/* Coupure de caténaire : pas le rouge de l'urgence — il n'y a pas de danger,
+   il y a une rame éteinte. L'ambre est la couleur des lampes de secours. */
+.hud-phase-outage {
+  border-color: #a86b12;
+  color: #a86b12;
+}
+
 /* --- Réticule --- */
 
 .hud-reticle {

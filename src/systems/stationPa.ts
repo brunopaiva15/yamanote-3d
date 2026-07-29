@@ -15,6 +15,7 @@
 
 import { platformFor } from '../data/platforms';
 import {
+  DELAY_CAUSE_OUTAGE,
   platformAgentMessage,
   platformAlightFirstAnnouncement,
   platformApproachAnnouncement,
@@ -69,6 +70,16 @@ export function notifyLineDelay(emergencyReason: number): void {
   const i = ((emergencyReason % DELAY_FOR_EMERGENCY.length) + DELAY_FOR_EMERGENCY.length) %
     DELAY_FOR_EMERGENCY.length;
   pendingDelay = DELAY_FOR_EMERGENCY[i];
+  delayStop = runtime.stopSequence;
+}
+
+/**
+ * Retard dû à une coupure de caténaire. Le motif ne se tire pas : une panne
+ * d'alimentation s'annonce pour ce qu'elle est, et c'est le seul incident du
+ * jeu dont le quai nomme exactement la cause qu'a vécue le joueur.
+ */
+export function notifyLineOutage(): void {
+  pendingDelay = DELAY_CAUSE_OUTAGE;
   delayStop = runtime.stopSequence;
 }
 

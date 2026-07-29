@@ -393,7 +393,7 @@ function updateChain(): void {
 function handleEvent(e: PaxEvent): void {
   // Événement collectif : plusieurs voix, et il passe devant tout le reste —
   // y compris devant une conversation en cours et le quota de spontanéité.
-  if (e.trigger === 'emergency') {
+  if (e.trigger === 'emergency' || e.trigger === 'outage' || e.trigger === 'powerBack') {
     startChain(e.trigger);
     return;
   }

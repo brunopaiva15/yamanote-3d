@@ -40,6 +40,9 @@ import {
   emergencyResumeAnnouncement,
   emergencyStopAnnouncement,
   emergencyWaitAnnouncement,
+  outageRestoredAnnouncement,
+  outageStopAnnouncement,
+  outageWaitAnnouncement,
   welcomeAnnouncement,
   type Utterance,
 } from '../src/data/announcements.ts';
@@ -176,6 +179,12 @@ for (let r = 0; r < EMERGENCY_REASONS.length; r++) {
 }
 utterances.push(...emergencyWaitAnnouncement());
 utterances.push(...emergencyResumeAnnouncement());
+// Coupure de caténaire : le conducteur au combiné une fois la rame posée, le
+// rappel d'attente, et le retour de la tension. Pas d'annonce au moment de la
+// coupure — la sonorisation automatique s'éteint avec le convertisseur.
+utterances.push(...outageStopAnnouncement());
+utterances.push(...outageWaitAnnouncement());
+utterances.push(...outageRestoredAnnouncement());
 
 // --- Sonorisation du QUAI (ATOS + agent) ---------------------------------
 

@@ -3,8 +3,10 @@
 // bandes tactiles à picots, parois d'about vitrées.
 
 import { useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CABIN_SPEAKERS, CONFIG } from '../data/config';
+import { runtime } from '../systems/runtime';
 import { FREE_SPACE } from '../systems/seats';
 import { roundedRect } from './shapes';
 import {
@@ -28,6 +30,13 @@ import {
 } from '../textures/procedural';
 
 const HL = CONFIG.carHalfLength; // 10
+
+/**
+ * Émission des rampes lumineuses à pleine tension : c'est la source visuelle
+ * du wagon, elle doit se lire comme un néon franc et non comme un bandeau
+ * blanchâtre. Modulée chaque frame par `runtime.carPower`.
+ */
+const LED_EMISSIVE = 1.9;
 const HW = CONFIG.carHalfWidth; // 1.4
 const H = CONFIG.carHeight; // 2.3
 const DOOR_HW = CONFIG.doorHalfWidth; // 0.66
@@ -232,9 +241,7 @@ export function Car() {
       led: new THREE.MeshStandardMaterial({
         color: '#fff4e2',
         emissive: '#ffeed2',
-        // Rampes lumineuses continues : c'est la source visuelle du wagon, elle
-        // doit se lire comme un néon franc et non comme un bandeau blanchâtre.
-        emissiveIntensity: 1.9,
+        emissiveIntensity: LED_EMISSIVE,
         roughness: 0.4,
       }),
       vent: new THREE.MeshStandardMaterial({ map: ventMap, roughness: 0.72, metalness: 0.15 }),
@@ -298,6 +305,15 @@ export function Car() {
       extinguisher: new THREE.MeshStandardMaterial({ map: makeExtinguisherTexture(), roughness: 0.55, metalness: 0.05 }),
     };
   }, [textures]);
+
+  // Le bandeau LED suit l'alimentation de bord : sur batteries il ne reste
+  // qu'un filet de matière éteinte, et c'est bien lui qu'on regarde en premier
+  // quand la caténaire lâche — c'est LA source lumineuse du wagon, celle qui
+  // dit d'un coup d'œil si la rame est vivante ou non.
+  useFrame(() => {
+    const p = Math.pow(runtime.carPower, 1.6);
+    materials.led.emissiveIntensity = LED_EMISSIVE * p;
+  });
 
   const sides: (1 | -1)[] = [1, -1];
 

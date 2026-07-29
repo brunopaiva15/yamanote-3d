@@ -291,6 +291,75 @@ export function emergencyResumeAnnouncement(): Utterance[] {
   ];
 }
 
+// --- Coupure de caténaire (停電) ---
+// L'autre arrêt subi, et il ne se dit pas comme le premier.
+//
+// Ce qui parle ici n'est PAS la sonorisation automatique : elle est morte avec
+// le convertisseur. C'est le conducteur, au combiné, sur les batteries de bord
+// — d'où le silence des premières secondes, là où un 急停車 a son annonce
+// automatique pendant le freinage. Trois messages seulement : l'explication
+// une fois la rame posée, un rappel d'attente si ça dure, et le retour de la
+// tension. Rien entre les deux : personne ne sait quand ça revient.
+
+export function outageStopAnnouncement(): Utterance[] {
+  return [
+    {
+      text:
+        'お客様にご案内いたします。ただいま。架線の停電のため。この電車は停車しております。' +
+        '車内の照明は非常灯に切り替わっております。復旧の見通しが立ち次第。ご案内いたしますので。' +
+        '車内でお待ちください。',
+      lang: 'ja-JP',
+    },
+    {
+      text:
+        'Attention please. Due to a power failure on the overhead line. This train has stopped between stations. ' +
+        'The lighting has switched to emergency lamps. Please remain inside the train. And wait for further announcements.',
+      lang: 'en-US',
+    },
+  ];
+}
+
+/**
+ * Rappel d'attente, et la seule consigne de sécurité du jeu qui s'adresse à un
+ * geste que le voyageur pourrait vraiment faire : ouvrir soi-même une porte au
+ * robinet de secours. La voie d'à côté peut rester circulée et la caténaire
+ * être remise sous tension à tout instant.
+ */
+export function outageWaitAnnouncement(): Utterance[] {
+  return [
+    {
+      text:
+        'お客様にお待たせしております。ただいま。電力の復旧作業を行っております。' +
+        '運転再開まで。いましばらくお待ちください。危険ですので。' +
+        'ドアの非常用コックには。手を触れないでください。',
+      lang: 'ja-JP',
+    },
+    {
+      text:
+        'Thank you for your patience. Work to restore power is under way. Please wait a little longer. ' +
+        'And for your own safety. Do not operate the emergency door release.',
+      lang: 'en-US',
+    },
+  ];
+}
+
+export function outageRestoredAnnouncement(): Utterance[] {
+  return [
+    {
+      text:
+        'お待たせいたしました。ただいま。電気が復旧いたしました。車内の機器を確認のうえ。' +
+        'まもなく運転を再開いたします。ご迷惑をおかけいたしました。',
+      lang: 'ja-JP',
+    },
+    {
+      text:
+        'Thank you for waiting. Power has been restored. After equipment checks. ' +
+        'This train will shortly resume service. We apologize for the delay.',
+      lang: 'en-US',
+    },
+  ];
+}
+
 const GUIDANCE_POOL = [
   prioritySeatsAnnouncement,
   mannersAnnouncement,

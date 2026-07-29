@@ -130,6 +130,7 @@ export function Engine(): null {
         physDt,
         runtime.speed / V_MAX,
         phase === 'brake' || runtime.accel < -0.05,
+        runtime.carPower,
       );
       // Le quai n'est audible que par les ouvertures réellement dégagées : il
       // faut la porte de la rame ET la porte palière en face — là où il y en a

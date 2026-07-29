@@ -15,10 +15,19 @@ import {
   emergencyResumeAnnouncement,
   emergencyStopAnnouncement,
   emergencyWaitAnnouncement,
+  outageRestoredAnnouncement,
+  outageStopAnnouncement,
+  outageWaitAnnouncement,
 } from '../data/announcements';
 import { useStore, type Phase } from '../store';
 import { advanceClock, runtime } from './runtime';
-import { DEPART_HOLD, integrateTrain, phaseTarget, stepTrain } from './trainPhysics';
+import {
+  DEPART_HOLD,
+  integrateTrain,
+  phaseTarget,
+  stepTrain,
+  type BrakeMode,
+} from './trainPhysics';
 import {
   randomizeDoorTimings,
   seedDoorMotion,
@@ -31,6 +40,7 @@ import { cancelSpeech, say } from './speech';
 import {
   lineDelayed,
   notifyLineDelay,
+  notifyLineOutage,
   paAgentMessage,
   paAlightFirst,
   paArrival,
@@ -117,6 +127,206 @@ function drawEmergencyGap(first = false): number {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
+// --- Coupure de caténaire (停電) -----------------------------------------
+//
+// L'autre arrêt subi, et le seul dont la rame ne se relève pas toute seule.
+//
+// Ce qui se passe, dans l'ordre : la traction disparaît d'un coup et la rame
+// roule sur son élan (`coasting`) ; le conducteur la pose au frein pneumatique,
+// puisque le freinage par récupération n'a plus de caténaire où renvoyer son
+// courant (`braking`) ; elle reste immobile jusqu'au retour de la tension
+// (`stopped`), portes closes, sur ses batteries de bord ; puis elle repart.
+//
+// Le point qui fait tout : une E235-0 de la Yamanote n'a PAS de batterie de
+// traction. La fonction est arrivée plus tard, sur les E235-1000 des lignes
+// Yokosuka et Sōbu rapide — JR East l'a présentée comme une première. La rame
+// verte, elle, attend, et c'est pour ça que l'immobilisation se compte en
+// minutes là où un 急停車 se compte en secondes.
+//
+// Rareté : bien plus rare que le coup de frein — de l'ordre d'une fois par
+// heure et demie à trois heures de trajet. Assez pour qu'une session ordinaire
+// ne la voie jamais, ce qui est exactement la fréquence d'une vraie panne
+// d'alimentation ; le premier tirage est rapproché pour qu'une longue boucle
+// puisse la vivre. En développement, `__powerOutage()` la déclenche.
+
+/** Écart entre deux coupures, en gares (~2 min 20 l'une). */
+const OUTAGE_GAP_MIN = 34;
+const OUTAGE_GAP_MAX = 70;
+/** Écart avant la toute première. */
+const OUTAGE_FIRST_MIN = 14;
+const OUTAGE_FIRST_MAX = 38;
+/**
+ * Marche sur l'élan avant que le conducteur ne serre les freins (s). Le temps
+ * de comprendre que ce n'est pas un simple manque de tension passager.
+ */
+const OUTAGE_COAST_MIN = 2.2;
+const OUTAGE_COAST_MAX = 3.8;
+/**
+ * Immobilisation : de 2 min 50 à 5 min 40. Une vraie panne de caténaire tient
+ * les rames bien plus longtemps — près d'une heure lors de la panne de Tamachi
+ * du 16 janvier 2026, avant l'évacuation à pied de quelque 4 000 voyageurs —
+ * mais le jeu n'a ni évacuation ni marche le long des voies : au-delà de
+ * quelques minutes, il ne resterait plus rien à vivre qu'un écran fixe.
+ */
+const OUTAGE_HOLD_MIN = 170; // s
+const OUTAGE_HOLD_MAX = 340; // s
+/** Avance du retour de la tension sur le redémarrage (s). */
+const OUTAGE_RESTORE_LEAD = 24;
+/** Délai entre le retour de la tension et l'annonce de reprise (s). */
+const OUTAGE_RESTORE_TO_ANNOUNCE = 9;
+/** Annonce du conducteur après l'immobilisation (s) : le temps d'appeler le PC. */
+const OUTAGE_ANNOUNCE_AT = 14;
+
+/** Gares restant à parcourir avant la prochaine coupure. */
+let stationsToOutage = drawOutageGap(true);
+// Instant de déclenchement dans la phase cruise courante, -1 = aucun.
+let outageAt = -1;
+/** Durée de la marche sur l'élan tirée pour la coupure en cours (s). */
+let outageCoastFor = 0;
+
+function drawOutageGap(first = false): number {
+  const min = first ? OUTAGE_FIRST_MIN : OUTAGE_GAP_MIN;
+  const max = first ? OUTAGE_FIRST_MAX : OUTAGE_GAP_MAX;
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+// --- Alimentation de bord -------------------------------------------------
+//
+// L'éclairage ne s'éteint pas comme un interrupteur : les convertisseurs ont
+// leur réserve, la lumière s'affaisse avant de lâcher. Au retour, c'est
+// l'inverse — les contacteurs se referment en deux battements avant que ça
+// tienne, et c'est ce clignotement-là qu'on reconnaît.
+
+/** Chute de l'alimentation (s) : la réserve des convertisseurs s'épuise. */
+const POWER_FALL = 1.15;
+/** Remontée, une fois le clignotement passé (s). */
+const POWER_RISE = 0.7;
+/** Alimentation visée : 0 pendant la coupure, 1 le reste du temps. */
+let powerTarget = 1;
+/** Chrono du clignotement de retour, -1 = pas de retour en cours. */
+let powerFlickerT = -1;
+
+/**
+ * Ce qui reste éclairé, sonore et affiché suit `runtime.carPower` ; le reste
+ * du jeu n'a pas à savoir qu'une coupure existe.
+ */
+function updateCarPower(dt: number): void {
+  if (powerFlickerT >= 0) {
+    powerFlickerT += dt;
+    const f = powerFlickerT;
+    // Deux battements de contacteurs, puis la montée franche.
+    runtime.carPower =
+      f < 0.13 ? 0.5 : f < 0.28 ? 0.06 : f < 0.44 ? 0.72 : Math.min(1, 0.72 + (f - 0.44) / POWER_RISE);
+    if (runtime.carPower >= 1) {
+      runtime.carPower = 1;
+      powerFlickerT = -1;
+    }
+    return;
+  }
+  const rate = powerTarget > runtime.carPower ? dt / POWER_RISE : dt / POWER_FALL;
+  const d = powerTarget - runtime.carPower;
+  runtime.carPower += Math.max(-rate, Math.min(rate, d));
+}
+
+/**
+ * Déclenche la coupure de caténaire (aussi exposé en dev : __powerOutage()).
+ *
+ * Aucune annonce ici, et c'est le fond de l'affaire : la sonorisation
+ * automatique est morte avec le convertisseur. Ce qu'on entend au moment de la
+ * coupure, ce sont des sons qui S'ARRÊTENT — l'onduleur, la climatisation —,
+ * pas un message. Le conducteur ne parlera qu'une fois la rame posée, au
+ * combiné, sur les batteries.
+ */
+export function beginPowerOutage(): void {
+  const em = runtime.emergencyStop;
+  if (em.stage === 'coasting' || em.stage === 'braking' || em.stage === 'stopped') return;
+  if (useStore.getState().phase !== 'cruise') return;
+  em.kind = 'outage';
+  em.stage = 'coasting';
+  em.t = 0;
+  em.holdFor = OUTAGE_HOLD_MIN + Math.random() * (OUTAGE_HOLD_MAX - OUTAGE_HOLD_MIN);
+  em.reason = 0;
+  outageCoastFor = OUTAGE_COAST_MIN + Math.random() * (OUTAGE_COAST_MAX - OUTAGE_COAST_MIN);
+  for (const key of OUTAGE_KEYS) fired.delete(key);
+  powerTarget = 0;
+  powerFlickerT = -1;
+  // Une annonce en cours ne se termine pas : l'amplificateur s'éteint au
+  // milieu du mot. Seulement celle de la rame — la gare, elle, a son propre
+  // réseau.
+  cancelSpeech('cabin');
+  audio.powerCut();
+  // La ligne prend du retard, et le quai en nommera la cause : c'est le seul
+  // incident dont l'annonce de retard dit exactement ce que le joueur a vécu.
+  notifyLineOutage();
+  // Personne ne sursaute : rien n'a secoué. Ce sont les têtes qui se lèvent —
+  // vers le plafond, vers les écrans noirs, vers le voisin.
+  pushSceneEvent('outage');
+}
+
+/** Clés `fired` de la séquence de coupure, ré-armées à chaque déclenchement. */
+const OUTAGE_KEYS = ['po-stopped', 'po-wait', 'po-restored', 'po-announce', 'po-waiting-scared'];
+
+// Étapes de la coupure, appelées chaque frame tant qu'elle est active.
+function updatePowerOutage(dt: number): void {
+  const em = runtime.emergencyStop;
+  em.t += dt;
+  switch (em.stage) {
+    case 'coasting':
+      // La rame roule sur son élan. Le conducteur la freine ensuite : freinage
+      // de service au pneumatique, pas de coup de frein d'urgence — rien ne
+      // s'est mis en travers de la voie, l'alimentation a disparu.
+      if (em.t >= outageCoastFor || runtime.speed <= 0.01) {
+        em.stage = 'braking';
+        em.t = 0;
+        audio.brakeApply();
+        audio.flangeSqueal(0.4);
+      }
+      break;
+    case 'braking':
+      if (runtime.speed <= 0.01) {
+        runtime.speed = 0;
+        runtime.accel = 0;
+        em.stage = 'stopped';
+        em.t = 0;
+        audio.stopSettle();
+      }
+      break;
+    case 'stopped':
+      // Le conducteur, au combiné, une fois le PC joint.
+      once('po-stopped', em.t >= OUTAGE_ANNOUNCE_AT, () => say(outageStopAnnouncement()));
+      // Puis l'attente s'installe, et elle ne ressemble pas à celle d'un coup
+      // de frein : il n'y a rien eu à voir, juste une rame qui s'est tue.
+      once('po-waiting-scared', em.t >= OUTAGE_ANNOUNCE_AT + 22, () => pushSceneEvent('outage'));
+      once('po-wait', em.t >= em.holdFor * 0.55, () => say(outageWaitAnnouncement()));
+      // Le retour de la tension : d'abord la lumière, l'annonce ensuite. Dans
+      // cet ordre — c'est la lumière qui prévient tout le wagon, pas la voix.
+      once('po-restored', em.t >= em.holdFor - OUTAGE_RESTORE_LEAD, () => {
+        powerTarget = 1;
+        powerFlickerT = 0;
+        audio.powerRestore();
+        pushSceneEvent('powerBack');
+      });
+      once(
+        'po-announce',
+        em.t >= em.holdFor - OUTAGE_RESTORE_LEAD + OUTAGE_RESTORE_TO_ANNOUNCE,
+        () => say(outageRestoredAnnouncement()),
+      );
+      if (em.t >= em.holdFor) {
+        em.stage = 'resuming';
+        em.t = 0;
+        audio.brakeRelease();
+      }
+      break;
+    case 'resuming':
+      if (runtime.speed >= V_MAX * 0.98) {
+        em.stage = 'none';
+        em.t = 0;
+        scheduleNextRunSound(runtime.phaseT + 8);
+      }
+      break;
+  }
+}
+
 /**
  * Déclenche l'arrêt d'urgence (aussi exposé en dev : __emergencyStop()).
  * Accepté en course normale comme pendant la remontée en vitesse qui suit un
@@ -126,8 +336,9 @@ function drawEmergencyGap(first = false): number {
  */
 export function beginEmergencyStop(): void {
   const em = runtime.emergencyStop;
-  if (em.stage === 'braking' || em.stage === 'stopped') return;
+  if (em.stage === 'coasting' || em.stage === 'braking' || em.stage === 'stopped') return;
   if (useStore.getState().phase !== 'cruise') return;
+  em.kind = 'brake';
   em.stage = 'braking';
   em.t = 0;
   em.holdFor = EMERGENCY_HOLD_MIN + Math.random() * (EMERGENCY_HOLD_MAX - EMERGENCY_HOLD_MIN);
@@ -436,8 +647,10 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
     fired.add('doorside');
     fired.add('crowd-clear');
     fired.add('berth');
-    // Pas d'arrêt d'urgence sur la toute première course après l'embarquement.
+    // Ni arrêt d'urgence ni coupure sur la toute première course après
+    // l'embarquement.
     fired.add('emergency-roll');
+    fired.add('outage-roll');
     if (t > 0.6) fired.add('announce-depart');
     if (t >= cruiseDuration(stationIndex) - APPROACH_ANNOUNCE_LEAD) fired.add('announce-soon');
   } else if (phase === 'brake') {
@@ -536,6 +749,13 @@ export function randomizeEntry(stationIndex?: number): void {
 
   emergencyAt = -1;
   stationsToEmergency = drawEmergencyGap(true);
+  // On n'entre jamais en jeu dans le noir : la coupure se tire comme le reste,
+  // depuis une rame alimentée.
+  outageAt = -1;
+  stationsToOutage = drawOutageGap(true);
+  powerTarget = 1;
+  powerFlickerT = -1;
+  runtime.carPower = 1;
   runtime.phaseT = phaseT;
   runtime.speed = sim.v;
   runtime.accel = sim.a;
@@ -568,19 +788,29 @@ export function updateCycle(dt: number): void {
   const s = useStore.getState();
   if (!s.started) return;
 
-  // Pendant un arrêt d'urgence, le chrono de phase avance au prorata de la
+  // Pendant un arrêt subi, le chrono de phase avance au prorata de la
   // vitesse : gelé à l'arrêt, cohérent avec la distance pendant freinage et
   // reprise. L'horloge murale, elle, continue — c'est le retard qui se crée.
   const em = runtime.emergencyStop;
   runtime.phaseT += em.stage === 'none' ? dt : dt * (runtime.speed / V_MAX);
   advanceClock(dt);
+  // L'alimentation de bord : elle n'existe que pour la coupure, mais elle se
+  // remet en place toute seule dans tous les autres cas (reset, entrée en jeu
+  // au milieu de rien).
+  updateCarPower(dt);
 
   // --- Physique du train : profil jerk-limité type E235 ---
   // Sous-pas de 0,1 s max : un dt de rattrapage (onglet lent) resterait stable.
-  const emergencyBraking = em.stage === 'braking' || em.stage === 'stopped';
-  const target = emergencyBraking ? 0 : phaseTarget(s.phase, runtime.phaseT);
+  const stopping = em.stage === 'coasting' || em.stage === 'braking' || em.stage === 'stopped';
+  const target = stopping ? 0 : phaseTarget(s.phase, runtime.phaseT);
+  // Sur l'élan, rien ne retient la rame ; sous coup de frein d'urgence, tout
+  // la retient d'un coup ; une coupure de caténaire, elle, se termine au frein
+  // pneumatique ordinaire — la récupération n'a plus de ligne où renvoyer son
+  // courant, mais la décélération de service, elle, ne change pas.
+  const brakeMode: BrakeMode =
+    em.stage === 'coasting' ? 'coast' : em.stage === 'braking' && em.kind === 'brake' ? 'emergency' : 'service';
   const state = { v: runtime.speed, a: runtime.accel, d: runtime.distance };
-  integrateTrain(state, target, dt, em.stage === 'braking');
+  integrateTrain(state, target, dt, brakeMode);
   runtime.speed = state.v;
   runtime.accel = state.a;
   runtime.distance = state.d;
@@ -598,9 +828,10 @@ export function updateCycle(dt: number): void {
     audio.railClack(s01);
   }
 
-  // --- Arrêt d'urgence actif : la machine à phases attend la fin. ---
+  // --- Arrêt subi en cours : la machine à phases attend la fin. ---
   if (em.stage !== 'none') {
-    updateEmergencyStop(dt);
+    if (em.kind === 'outage') updatePowerOutage(dt);
+    else updateEmergencyStop(dt);
     return;
   }
 
@@ -628,11 +859,32 @@ export function updateCycle(dt: number): void {
       once('announce-depart', t > 0.6, () =>
         say(departureSequence(s.index, DOOR_SIDE[s.index])),
       );
+      // Coupure de caténaire : même tirage que l'arrêt d'urgence, mais bien
+      // plus espacé — et elle passe devant, parce qu'elle immobilise la rame
+      // plusieurs minutes là où l'autre la retient une poignée de secondes.
+      once('outage-roll', true, () => {
+        outageAt = -1;
+        if (stationsToOutage > 0) {
+          stationsToOutage -= 1;
+          return;
+        }
+        const latest = Math.min(
+          EMERGENCY_AT_MIN + EMERGENCY_AT_SPAN,
+          cruiseSec - APPROACH_ANNOUNCE_LEAD - EMERGENCY_APPROACH_MARGIN,
+        );
+        if (latest <= EMERGENCY_AT_MIN) return;
+        outageAt = EMERGENCY_AT_MIN + Math.random() * (latest - EMERGENCY_AT_MIN);
+        stationsToOutage = drawOutageGap();
+      });
       // Arrêt d'urgence : la course qui le porte est décidée gares à l'avance,
       // ne reste ici qu'à choisir l'instant — en pleine course, assez tôt pour
       // avoir le temps de repartir avant l'annonce d'approche.
       once('emergency-roll', true, () => {
         emergencyAt = -1;
+        // Une coupure est armée pour cette course : on ne lui superpose pas un
+        // coup de frein. Le compte à rebours de l'urgence n'est pas consommé,
+        // elle tombera à la gare suivante.
+        if (outageAt >= 0) return;
         if (stationsToEmergency > 0) {
           stationsToEmergency -= 1;
           return;
@@ -648,6 +900,11 @@ export function updateCycle(dt: number): void {
         emergencyAt = EMERGENCY_AT_MIN + Math.random() * (latest - EMERGENCY_AT_MIN);
         stationsToEmergency = drawEmergencyGap();
       });
+      if (outageAt >= 0 && t >= outageAt) {
+        outageAt = -1;
+        beginPowerOutage();
+        break;
+      }
       if (emergencyAt >= 0 && t >= emergencyAt) {
         emergencyAt = -1;
         beginEmergencyStop();
@@ -799,11 +1056,22 @@ export function updateCycle(dt: number): void {
 }
 
 // Outils dev, dans la console du navigateur : __emergencyStop() déclenche un
-// arrêt d'urgence, __runtime donne accès à l'état continu (vitesse, phase…),
-// __setTrainZ(z) déplace la rame le long de la voie (le décor ne bouge pas).
+// arrêt d'urgence, __powerOutage() une coupure de caténaire, __runtime donne
+// accès à l'état continu (vitesse, phase…), __setTrainZ(z) déplace la rame le
+// long de la voie (le décor ne bouge pas).
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   const w = window as unknown as Record<string, unknown>;
   w.__emergencyStop = beginEmergencyStop;
+  w.__powerOutage = beginPowerOutage;
+  // Avance dans la chronologie d'une coupure en cours : `secondsLeft` est le
+  // temps qu'on veut laisser avant le redémarrage (négatif = avant, 0 = tout
+  // de suite). Sert à regarder le retour de la tension sans attendre cinq
+  // minutes — voir scripts/outage-shots.mjs.
+  w.__outageSkip = (secondsLeft = 0) => {
+    const em = runtime.emergencyStop;
+    if (em.kind !== 'outage' || em.stage !== 'stopped') return;
+    em.t = Math.max(em.t, em.holdFor + Math.min(0, secondsLeft));
+  };
   w.__runtime = runtime;
   w.__setTrainZ = (z: number) => {
     runtime.trainZ = z;
