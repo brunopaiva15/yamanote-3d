@@ -13,6 +13,7 @@ import { updateSegmentEnv } from '../systems/segmentEnv';
 import { updatePlatformPresence } from '../systems/platformPresence';
 import { updateStationOcclusion } from '../systems/stationOcclusion';
 import { updatePlatformWait } from '../systems/platformWait';
+import { updatePassingTrain } from '../systems/passingTrain';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
 import { setPlatformDoors, setStationAmbience, updateAmbience, updateAudio } from '../systems/audioEngine';
 import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
@@ -86,6 +87,11 @@ export function Engine(): null {
       // machine à états qui mène la danse.
       if (runtime.playerFrame === 'platform') updatePlatformWait(cycleDt);
       else updateCycle(cycleDt);
+      // Le train qui traverse la voie d'en face appartient à la GARE, pas à
+      // notre rame : il avance de la même façon qu'on soit assis dedans ou
+      // debout sur le quai, et les deux machines à états ci-dessus ne font que
+      // lui ouvrir un créneau.
+      updatePassingTrain(cycleDt);
       updateSegmentEnv(cycleDt);
       updatePlatformPresence();
       // Lit platformFade / platformSlide : doit venir après.

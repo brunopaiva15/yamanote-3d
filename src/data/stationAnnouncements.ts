@@ -96,6 +96,33 @@ export function platformTrainEnteringAnnouncement(): StationUtterance[] {
   return [ja('電車がまいります。ご注意ください。')];
 }
 
+// --- 4 bis. Train qui traverse sans s'arrêter (通過) ----------------------
+//
+// Celle-là ne promet rien : personne ne monte. La gare ne nomme ni la ligne,
+// ni la direction, ni la destination — elle nomme la VOIE et demande de
+// reculer, parce que la seule chose qui compte est qu'une rame va passer à
+// pleine vitesse à trois mètres du bord. C'est aussi la seule annonce de quai
+// qui parle d'une voie qui n'est pas la nôtre (voir data/passingTrains).
+
+export function platformPassAnnouncement(platform: number): StationUtterance[] {
+  return [
+    ja(
+      `まもなく、${platform}番線を、電車が通過します。` +
+        '危ないですから、黄色い点字ブロックまで、お下がりください。',
+    ),
+    en(
+      'Your attention, please. ' +
+        `A train will pass through track number ${platform}. ` +
+        'For your safety, please stand behind the yellow line.',
+    ),
+  ];
+}
+
+/** Court et pressant, lancé quand la rame est en vue au bout du quai. */
+export function platformPassWarning(): StationUtterance[] {
+  return [ja('電車が通過します。ご注意ください。')];
+}
+
 // --- 5. Annonce d'arrivée ------------------------------------------------
 
 export function platformArrivalAnnouncement(index: number): StationUtterance[] {

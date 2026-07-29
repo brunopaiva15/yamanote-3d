@@ -50,11 +50,14 @@ import {
   platformDelayAnnouncement,
   platformDoorsClosingAnnouncement,
   platformGreeting,
+  platformPassAnnouncement,
+  platformPassWarning,
   platformPreAnnouncement,
   platformTrainEnteringAnnouncement,
   type StationUtterance,
   type StationVoice,
 } from '../src/data/stationAnnouncements';
+import { facingTrackNumber, passThroughStations } from '../src/data/passingTrains';
 import { platformFor, type LoopDirection } from '../src/data/platforms';
 import { DOOR_SIDE, STATIONS } from '../src/data/stations';
 import { clipKey } from '../src/data/clipKey';
@@ -180,6 +183,16 @@ for (const direction of DIRECTIONS) {
     stationUtterances.push(...platformArrivalAnnouncement(i));
   }
 }
+// Passage sans arrêt : la voie annoncée n'est PAS la nôtre, c'est celle d'en
+// face (data/passingTrains). On grave le numéro de voie de chaque gare qui
+// peut en voir traverser une, dans le sens réellement circulé.
+for (const direction of DIRECTIONS) {
+  for (const i of passThroughStations()) {
+    const track = facingTrackNumber(i, direction);
+    if (track != null) stationUtterances.push(...platformPassAnnouncement(track));
+  }
+}
+stationUtterances.push(...platformPassWarning());
 stationUtterances.push(...platformGreeting());
 stationUtterances.push(...platformTrainEnteringAnnouncement());
 for (let n = 0; n < PLATFORM_AGENT_MESSAGES.length; n++) {

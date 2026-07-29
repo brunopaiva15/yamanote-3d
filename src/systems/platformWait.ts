@@ -32,6 +32,7 @@ import {
   paPsdBeeps,
   paTrainEntering,
 } from './stationPa';
+import { rollPassThrough, startPassThrough } from './passingTrain';
 import { exchangePassengers, seedPassengers } from './passengers';
 import { crowdArrive, crowdDisperse, crowdPresentCount, crowdTarget } from './platformCrowd';
 import {
@@ -55,6 +56,25 @@ import {
  * heures creuses.
  */
 const HEADWAY_GAP = 60;
+
+/**
+ * Rallonge du creux quand une rame doit traverser la voie d'en face.
+ *
+ * Ce n'est pas l'express qui retarde la Yamanote — ce sont deux lignes
+ * différentes, elles ne se croisent nulle part. C'est l'inverse : la cadence
+ * de la Yamanote respire entre deux et quatre minutes, et c'est dans les
+ * creux un peu plus longs qu'on a le temps de voir passer autre chose. Sans
+ * cette rallonge, l'annonce de passage (japonais puis anglais, une trentaine
+ * de secondes) n'aurait nulle part où tenir sans marcher sur celle du train
+ * que l'on attend.
+ */
+const PASS_HEADWAY_EXTRA = 50;
+
+/**
+ * Instant du lancement de la séquence de passage, une fois l'annonce anticipée
+ * du prochain train terminée : la gare ne parle jamais par-dessus elle-même.
+ */
+const PASS_AT = 28;
 
 /** Distance au-delà de laquelle la rame qui part est hors de vue. */
 const OUT_OF_SIGHT = 320;
@@ -221,15 +241,33 @@ function updateDeparting(dt: number): void {
   }
 }
 
-/** Fenêtre de remplissage du quai entre deux rames (s après le départ). */
+/** Fenêtre de remplissage du quai entre deux rames (début, puis fin avant l'arrivée). */
 const REFILL_FROM = 6;
-const REFILL_TO = HEADWAY_GAP - 8;
+const REFILL_BEFORE = 8;
+
+/**
+ * Creux tiré pour l'attente en cours : HEADWAY_GAP, ou davantage quand une
+ * rame doit traverser la voie d'en face. Fixé à l'entrée en 'clear' et lu
+ * partout ensuite — l'annonce d'approche et l'arrivée en dépendent.
+ */
+let headway = HEADWAY_GAP;
+/** Un passage a été tiré pour ce creux : reste à le lancer à PASS_AT. */
+let passPending = false;
+
+/** Tire le creux qui commence, et le passage qui l'allonge peut-être. */
+function beginClear(index: number): void {
+  passPending = rollPassThrough(index, HEADWAY_GAP + PASS_HEADWAY_EXTRA);
+  headway = HEADWAY_GAP + (passPending ? PASS_HEADWAY_EXTRA : 0);
+}
 
 function updateClear(index: number): void {
   const t = platformWait.t;
+  // Premier tour du creux : sa durée se décide ici, et rien avant ne la lit.
+  once('roll', true, () => beginClear(index));
   // Le quai se repeuple par les escaliers, au compte-gouttes : les voyageurs
   // montent de la trémie au lieu d'apparaître d'un bloc.
-  const filled = Math.max(0, Math.min(1, (t - REFILL_FROM) / (REFILL_TO - REFILL_FROM)));
+  const refillTo = headway - REFILL_BEFORE;
+  const filled = Math.max(0, Math.min(1, (t - REFILL_FROM) / (refillTo - REFILL_FROM)));
   const want = Math.round(filled * crowdTarget(index));
   for (let guard = 0; crowdPresentCount() < want && guard < 4; guard++) {
     if (!crowdArrive(index)) break;
@@ -239,8 +277,14 @@ function updateClear(index: number): void {
   // carillon ATOS et l'annonce d'approche.
   once('delay', t >= 6, () => paDelay());
   once('pre-announce', t >= 14, () => paPreAnnouncement(index, true));
-  once('announce', t >= HEADWAY_GAP - 24, () => paApproach(index));
-  if (t >= HEADWAY_GAP) {
+  // Le passage, s'il y en a un : entre l'annonce anticipée et celle
+  // d'approche, avec tout le creux devant lui.
+  once('pass', passPending && t >= PASS_AT, () => {
+    passPending = false;
+    startPassThrough(index, headway - 24 - PASS_AT);
+  });
+  once('announce', t >= headway - 24, () => paApproach(index));
+  if (t >= headway) {
     platformWait.approachDist = brakingDistance();
     train.v = V_MAX;
     train.a = 0;

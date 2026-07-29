@@ -8,6 +8,7 @@ import { Engine } from './three/Engine';
 import { Scene } from './three/Scene';
 import { TrainRig } from './three/TrainRig';
 import { TrainConsist } from './three/exterior/TrainConsist';
+import { PassingTrain } from './three/exterior/PassingTrain';
 import { Car } from './three/Car';
 import { Seats } from './three/Seats';
 import { Doors } from './three/Doors';
@@ -65,6 +66,9 @@ export default function App() {
         <SegmentEnvironment />
         <HubStationRoof />
         <Station />
+        {/* La voie d'en face, quand une rame la traverse sans s'arrêter. Suit
+            le repère du quai, pas celui de la rame. */}
+        <PassingTrain />
         <PlatformCrowd />
         <Player />
       </Canvas>

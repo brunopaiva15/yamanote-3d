@@ -22,6 +22,8 @@ import {
   platformDelayAnnouncement,
   platformDoorsClosingAnnouncement,
   platformGreeting,
+  platformPassAnnouncement,
+  platformPassWarning,
   platformPreAnnouncement,
   platformTrainEnteringAnnouncement,
   type StationUtterance,
@@ -119,6 +121,29 @@ export function paTrainEntering(): void {
   const signal = audio.platformWarningSignal();
   sayAfterSignal(platformTrainEnteringAnnouncement(), signal);
   say(platformTrainEnteringAnnouncement(), 'platform');
+}
+
+// --- Train qui traverse ---------------------------------------------------
+
+/**
+ * Annonce de passage sans arrêt sur la voie d'EN FACE. Même signal que pour
+ * une entrée en gare — c'est un avertissement, pas une invitation — mais le
+ * numéro de voie n'est pas le nôtre (voir data/passingTrains).
+ *
+ * `withEnglish` tombe quand le créneau de silence est trop court : mieux vaut
+ * la seule version japonaise en entier que deux annonces qui débordent sur ce
+ * que la gare a d'autre à dire.
+ */
+export function paPass(track: number, withEnglish: boolean): void {
+  const signal = audio.platformWarningSignal();
+  const items = platformPassAnnouncement(track);
+  sayAfterSignal(withEnglish ? items : items.filter((u) => u.lang === 'ja-JP'), signal);
+}
+
+/** L'avertissement court, quand la rame débouche au bout du quai. */
+export function paPassWarning(): void {
+  const signal = audio.platformWarningSignal();
+  sayAfterSignal(platformPassWarning(), signal);
 }
 
 // --- À quai ---------------------------------------------------------------
