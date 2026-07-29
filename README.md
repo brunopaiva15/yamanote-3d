@@ -876,6 +876,14 @@ centre de la tête.
   les portes de la rame **et** les portes palières sont dégagées, du côté qui
   s'ouvre à cette gare. Elle est faite pour être entendue des voyageurs déjà
   montés : elle porte jusque dans le wagon.
+- Elle a son **propre niveau**, à part du reste de la sono du quai (les clips
+  sont normalisés en crête et sonnaient bien plus fort que tout le reste de la
+  gare). Ce niveau dépend du lieu d'écoute : sur le quai, à trois mètres sous
+  un diffuseur, on en retire une dizaine de décibels ; dans la rame, où elle
+  arrive déjà filtrée par les ouvertures, moitié moins — plus une petite bosse
+  de présence vers 2 kHz qui la garde lisible par-dessus le brouhaha et la
+  clim. Le rapport entre les deux la maintient du côté du quai : à l'oreille,
+  elle reste plus présente dehors que dedans, elle vient toujours de la gare.
 
 Les annonces vocales (clips Kokoro) passent par ces mêmes bus : elles sont
 réellement pannées sur les diffuseurs, ceux du plafond pour la rame, ceux du
