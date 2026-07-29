@@ -595,6 +595,21 @@ neufs ou refaits — Takanawa Gateway, Shibuya, Shinagawa — au trait plus fin 
 sans trame. Le canvas n'est redessiné que lorsque son contenu change réellement,
 soit environ une fois par seconde.
 
+**Il est suspendu dans la rangée du bord de voie**, celle des caissons 番線 —
+en travers du quai, recto-verso, aligné sur eux par le bas à la hauteur libre
+commune. Il y en a **quatre par quai**, un dans chaque intervalle de la
+rangée : les deux modèles alternent donc sur toute la longueur, un panneau
+tous les dix-huit mètres, et on n'attend jamais son train hors de vue d'un
+tableau. C'est l'assemblage réel : sur un quai japonais, le tableau des départs
+et le panneau de quai pendent côte à côte, de face pour qui marche le long du
+quai. Il pendait auparavant à côté des panneaux de nom, tourné comme eux vers
+la voie : il se lisait depuis le train et de nulle part ailleurs, alors que
+c'est le tableau de ceux qui attendent. L'emprise de la rangée et ses creux
+libres sont calculés une fois (`stationPlacement.trackSignBox` /
+`departureBoardZs`) et lus par les deux : deux caissons de la même rangée ne
+peuvent pas être en désaccord, et le tableau ne se glisse ni sur un 番線 ni
+sous la traverse d'une potence, qui passe à six centimètres au-dessus de lui.
+
 Enfin, la colonne de droite nomme les **repères de la boucle** (東京, 上野,
 池袋, 新宿, 渋谷, 品川) et non les deux gares suivantes : un tableau de Tamachi
 annonce 「東京・上野方面」 quand l'arrêt d'après est Hamamatsuchō. On ne prend

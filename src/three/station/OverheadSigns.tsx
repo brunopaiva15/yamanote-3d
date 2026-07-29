@@ -14,12 +14,13 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
+import { PLATFORM_TOP, PSD_X, SIGN_BOTTOM } from '../../data/stationGeometry';
 import type { StationLayout } from '../../data/stationLayouts';
 import { useStore } from '../../store';
 import { runtime } from '../../systems/runtime';
 import {
   GANTRY_PULL,
+  trackSignBox,
   trackSignZs,
   type StationPlacement,
 } from '../../systems/stationPlacement';
@@ -30,8 +31,7 @@ import {
   makeTransferSign,
 } from '../../textures/procedural';
 
-/** Hauteur libre sous les panneaux : on passe dessous sans se baisser. */
-const SIGN_BOTTOM = 2.35;
+/** Hauteur des panneaux de potence (la cote du bas est partagée : SIGN_BOTTOM). */
 const SIGN_H = 0.62;
 
 interface Props {
@@ -88,15 +88,9 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
     };
   }, [mats, plates]);
 
-  // Largeur du caisson 番線 : pleine tant que le quai le permet, raccourcie
-  // sur les quais étroits. À 3,24 m il traversait l'épine centrale — bande
-  // directionnelle, horloge, chemin de câbles, gouttière — sur tous les îlots
-  // de moins de neuf mètres. Il s'arrête donc avant le couloir de l'épine
-  // (le chemin de câbles, son occupant le plus avancé, part à backX − 1,16).
-  const trackW = Math.min(3.24, place.backX - 1.3 - (PSD_X - 0.12));
-  const trackX = PSD_X - 0.12 + trackW / 2;
-  /** Aplomb des suspentes du caisson, depuis son centre. */
-  const trackHx = Math.max(0.35, trackW / 2 - 0.57);
+  // Emprise de la rangée du bord de voie, partagée avec le 発車標 qui s'y
+  // aligne (systems/stationPlacement).
+  const { x: trackX, w: trackW, hx: trackHx } = trackSignBox(place);
 
   useEffect(() => {
     for (const s of signs.exits) s.redraw(station);

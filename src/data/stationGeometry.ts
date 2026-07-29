@@ -81,6 +81,16 @@ export const ESCALATOR_HALF_Z = 2.8;
 export const ELEVATOR_HALF_Z = 0.95;
 
 /**
+ * Hauteur libre sous les caissons suspendus, quelle que soit la rangée.
+ *
+ * C'est le bas de tout ce qui pend sous l'auvent — panneau de sortie, caisson
+ * 番線, 発車標 — et donc la cote à laquelle un quai se lit : on passe dessous
+ * sans se baisser, et les caissons s'alignent sur cette ligne-là plutôt que
+ * sur leurs milieux, qui ne sont pas à la même hauteur d'un modèle à l'autre.
+ */
+export const SIGN_BOTTOM = 2.35;
+
+/**
  * Abscisses des trois tronçons de la bande directionnelle verte, suspendue
  * au-dessus de l'épine (voir PlatformSignage). Chacun fait 8,2 m : les
  * charpentes signature qui portent des poteaux sur l'épine doivent l'enjamber.
