@@ -211,7 +211,9 @@ export function resolveClips(variant: CharacterVariant, clips: THREE.AnimationCl
 
 // Certains clips de marche déplacent les hanches en XZ (root motion) : le jeu
 // pilote lui-même la position, on ne garde que la composante verticale.
-function stripRootMotionXZ(clip: THREE.AnimationClip, hipsName: string): void {
+// Exporté : les animaux (characters/animals.ts) en ont autant besoin, après
+// avoir mesuré la vitesse d'auteur sur ce même déplacement.
+export function stripRootMotionXZ(clip: THREE.AnimationClip, hipsName: string): void {
   for (const track of clip.tracks) {
     if (track.name === `${hipsName}.position` && track instanceof THREE.VectorKeyframeTrack) {
       const values = track.values;

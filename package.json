@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "models:import": "node scripts/models-import.mjs",
+    "animals:import": "node scripts/animals-import.mjs",
     "models:inspect": "node scripts/models-inspect.mjs",
     "test": "node --test \"tests/**/*.test.mjs\" \"tests/**/*.test.ts\"",
     "world:route:prototype": "node scripts/plateau/fetch-route.mjs",
