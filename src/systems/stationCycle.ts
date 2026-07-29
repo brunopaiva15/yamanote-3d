@@ -46,9 +46,15 @@ import {
   cancelDepartureMelody,
   clearDepartureBlockers,
   interruptDepartureMelody,
-  isDepartureBlocked,
+  isDepartureHeldOpen,
   resetMelodyDepartureGuard,
 } from './departureSequence';
+import {
+  armDoorObstruction,
+  doorObstructionActive,
+  onDoorsClosing,
+  resetDoorObstruction,
+} from './doorObstruction';
 
 const fired = new Set<string>();
 let lastJointDistance = 0;
@@ -545,6 +551,9 @@ export function randomizeEntry(stationIndex?: number): void {
   if (phase === 'brake') randomizeDoorTimings();
   if (phase === 'dwell') seedDoorsForDwell(phaseT, index);
   else seedDoorMotion(0, 999, 0, 999);
+  // On n'entre jamais en jeu au milieu d'un incident de porte : la fermeture
+  // qui l'aurait déclenché est passée avant qu'on soit là.
+  resetDoorObstruction();
 
   seedPlatformPresence(phase, phaseT);
   if (phase === 'brake' || phase === 'dwell') seedPlatformCrowd(index);
@@ -667,6 +676,9 @@ export function updateCycle(dt: number): void {
       once('door-timings', true, () => {
         randomizeDoorTimings();
         randomizeStopTimings(s.index);
+        // Et le tirage de l'incident : cet arrêt-ci verra-t-il une porte
+        // bloquée ? La réponse dépend surtout du monde qui monte.
+        armDoorObstruction();
       });
       // Mise en action des freins : purge d'air au tout début du freinage.
       once('brake-apply', true, () => audio.brakeApply());
@@ -711,8 +723,9 @@ export function updateCycle(dt: number): void {
         startPassThrough(s.index, dwell - CLOSE_ANNOUNCE_LEAD + 1.2 - PASS_ROLL_AT);
       });
 
-      // Porte bloquée / maintien / signal / urgence : stop mélodie, reste à quai.
-      if (isDepartureBlocked()) {
+      // Maintien / signal / urgence : stop mélodie, toutes portes rouvertes.
+      // (Une porte qui coince, elle, ne rouvre pas la rame — voir plus bas.)
+      if (isDepartureHeldOpen()) {
         cancelDepartureMelody();
         if (runtime.doorTarget !== 1) setTrainDoors(1);
         if (runtime.psdTarget !== 1) setPsdDoors(1);
@@ -747,6 +760,10 @@ export function updateCycle(dt: number): void {
       once('doors-close', t >= dwell - DOORS_CLOSE_LEAD, () => {
         setTrainDoors(0);
         audio.doorCloseChime();
+        // Si une porte doit coincer à cet arrêt, c'est maintenant qu'elle
+        // quitte l'ensemble : elle part avec les autres et s'arrêtera en fin
+        // de course, sur ce qui est resté dedans.
+        onDoorsClosing();
       });
       // Puis le quai referme ses portes, nettement après la rame, avec un
       // décalage lui aussi variable selon la gare.
@@ -754,6 +771,15 @@ export function updateCycle(dt: number): void {
         setPsdDoors(0);
         paPsdBeeps();
       });
+      // Une porte tenue ouverte par un voyageur ou un objet : le circuit de
+      // départ n'est pas établi et l'indication de départ n'apparaît pas en
+      // cabine. On retient l'horloge au bord de la bascule — la chronologie de
+      // l'arrêt est finie, il ne reste plus qu'à attendre que la porte se
+      // ferme. La procédure, elle, vit dans systems/doorObstruction.
+      if (doorObstructionActive()) {
+        runtime.phaseT = Math.min(runtime.phaseT, dwell - 0.01);
+        break;
+      }
       if (t >= dwell) enterPhase('depart');
       break;
     }
@@ -799,6 +825,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     runtime.accel = sim.a;
     if (phase === 'dwell') seedDoorsForDwell(t, index);
     else seedDoorMotion(0, 999, 0, 999);
+    resetDoorObstruction();
     seedPlatformPresence(phase, t);
     if (phase === 'cruise') clearPlatformCrowd();
     else seedPlatformCrowd(index);

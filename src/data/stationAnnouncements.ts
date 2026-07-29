@@ -165,6 +165,33 @@ export function platformDoorsClosingAnnouncement(platform: number): StationUtter
   return [ja(`${platform}番線、ドアが閉まります。ご注意ください。`)];
 }
 
+// --- 9. Porte bloquée ----------------------------------------------------
+//
+// Quand une porte ne se ferme pas, l'agent de quai parle par-dessus la
+// procédure : il ne lit pas un script ATOS, il s'adresse à la personne qu'il
+// voit dans l'encadrement, et sa voix se durcit à mesure que le départ traîne.
+
+export const PLATFORM_DOOR_RELEASE = [
+  'ドアから離れてください。',
+  'お荷物、お身体を、ドアからお引きください。',
+  'ドアが閉まりません。ドアから離れてください。',
+] as const;
+
+/** La consigne numéro `n` (modulo), en voix d'agent. */
+export function platformDoorReleaseAnnouncement(n: number): StationUtterance[] {
+  const i = ((n % PLATFORM_DOOR_RELEASE.length) + PLATFORM_DOOR_RELEASE.length) %
+    PLATFORM_DOOR_RELEASE.length;
+  return [ja(PLATFORM_DOOR_RELEASE[i], 'agent')];
+}
+
+/** Toutes les portes rouvertes : l'agent vient dégager lui-même le passage. */
+export function platformDoorCheckAnnouncement(): StationUtterance[] {
+  return [
+    ja('お待たせしております。ただいま、ドアの確認を行っております。', 'agent'),
+    ja('しばらくお待ちください。', 'agent'),
+  ];
+}
+
 // --- Retard --------------------------------------------------------------
 //
 // Message dynamique : le motif est inséré dans un gabarit fixe. Diffusé sur le

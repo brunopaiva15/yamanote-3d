@@ -22,7 +22,7 @@ import * as THREE from 'three';
 import { useStore } from '../../store';
 import { DOOR_SIDE } from '../../data/stations';
 import { runtime } from '../../systems/runtime';
-import { psdDoorPos, psdGateLag } from '../../systems/doorMotion';
+import { psdDoorPosAt, psdGateLag } from '../../systems/doorMotion';
 import {
   gantryZs,
   placementFor,
@@ -316,7 +316,8 @@ export function Station() {
     const mm = leafMat.current;
     let k = 0;
     for (let g = 0; g < gaps.length; g++) {
-      const open = psdDoorPos(psdGateLag(g)) * PSD_LEAF_TRAVEL;
+      // La baie en face d'une porte bloquée suit cette porte-là, pas l'ensemble.
+      const open = psdDoorPosAt(gaps[g], psdGateLag(g)) * PSD_LEAF_TRAVEL;
       for (const dir of [1, -1] as const) {
         // Le vantail rentre de PSD_LEAF_TIP_INSET derrière son montant de rive :
         // les deux chants tombaient dans le même plan et le bout du vantail
