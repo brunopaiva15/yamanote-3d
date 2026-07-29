@@ -172,7 +172,7 @@ const RETURN_BOT_Z1 = STAIR_CLEAR_Z1 - 0.07;
 /** Consoles : la main courante est vissée à la joue, pas suspendue. */
 const BRACKET_X = (RAIL_X + STAIR_CLEAR_HALF_X) / 2;
 const BRACKET_W = STAIR_CLEAR_HALF_X - RAIL_X + 0.02;
-const BRACKETS = [1, 4, 7, 10].map((k) => onRake(k * STAIR_GOING, STAIR_HANDRAIL_H));
+const BRACKETS = [1, 4, 7, 10, 13].map((k) => onRake(k * STAIR_GOING, STAIR_HANDRAIL_H));
 
 /**
  * Bandeau lumineux plaqué sur chaque joue, sous la main courante. C'est la
@@ -203,15 +203,17 @@ const AD_BOX_X = STAIR_HALF_X - 0.01;
 const AD_BOX_LEN = STAIR_HALF_Z * 2 - 0.3;
 
 /**
- * Fléchage de sortie, SUSPENDU au linteau au-dessus du palier de mi-étage —
- * là où on le trouve dans une vraie gare, et là où il se lit depuis le haut de
- * la volée. Sur le voile de tête, il barrait la seule ouverture par laquelle
- * on aperçoit maintenant le niveau inférieur.
+ * Fléchage de sortie, posé sur le linteau AU-DESSUS du passage, comme au-dessus
+ * de n'importe quelle porte. Suspendu dans la cage, il pendait à un mètre du
+ * sol de la volée : on ne passait pas dessous, et il masquait précisément la
+ * seule ouverture par laquelle on aperçoit le niveau inférieur. Au-dessus du
+ * niveau du quai, il ne coûte plus un centimètre de hauteur libre et se lit
+ * toujours de tout le haut de la volée.
  */
-const EXIT_W = 1.4;
+const EXIT_W = 1.5;
 const EXIT_H = EXIT_W * (320 / 1024);
-const EXIT_Y = STAIR_LINTEL_Y - 0.1 - EXIT_H / 2;
-const EXIT_Z = STAIR_CLEAR_Z1 - 0.14;
+const EXIT_Y = 0.36;
+const EXIT_Z = STAIR_CLEAR_Z1 - 0.035;
 
 // --- Le niveau inférieur -------------------------------------------------
 
@@ -250,17 +252,24 @@ const LOWER_TREADS = Array.from({ length: STAIR_LOWER_STEPS }, (_, i) => {
 
 
 /**
- * Ligne de portillons, posée juste au sortir de la volée.
+ * Caissons publicitaires du couloir : ce qui dit « gare » et pas « tunnel ».
  *
- * C'est l'objet qui dit « gare » et pas « tunnel », et il n'a que deux mètres
- * pour le dire : au-delà de sept mètres du linteau, la dalle a mangé toute la
- * hauteur visible. Quatre couloirs, donc, serrés au pied des marches.
+ * Une ligne de portillons faisait le même office, mais aucune vraie gare n'en
+ * pose au pied des marches — on descend, on marche, et les portillons sont
+ * bien plus loin, hors de tout ce qu'on peut voir d'ici. Un couloir de
+ * correspondance, lui, est bordé de caissons rétroéclairés, et ceux-là tombent
+ * pile dans la bande visible.
+ *
+ * Cette bande est étroite et se referme vite : depuis le haut de la volée, le
+ * rayon rasant part de la sous-face du linteau et rejoint le sol vers neuf
+ * mètres. Les caissons se tiennent donc à hauteur d'affiche — un mètre du sol —
+ * et pas plus loin que sept.
  */
-const GATE_Z = STAIR_LOWER_Z1 + 0.9;
-const GATE_H = 0.95;
-const GATE_W = 0.3;
-const GATE_D = 1.25;
-const GATES = [-1.5, -0.5, 0.5, 1.5].map((k) => k * 0.62);
+const AD_LOW = [
+  { d: 1, z: STAIR_LOWER_Z1 + 0.55, w: 1.3, h: 0.9 },
+  { d: -1, z: STAIR_LOWER_Z1 + 2.05, w: 1.3, h: 0.9 },
+];
+const AD_LOW_Y = STAIR_LOWER_Y + 1.02;
 
 // --- Rendu ---------------------------------------------------------------
 
@@ -414,26 +423,17 @@ function Stairwell({
         <boxGeometry args={[HEAD_HALF_X * 2, CAP_H, HEAD_T + 0.04]} />
       </mesh>
 
-      {/* Fléchage de sortie, suspendu au linteau au-dessus du palier de
-          mi-étage : c'est la dernière chose qu'on lise avant que la volée
-          passe sous la dalle. */}
+      {/* Fléchage de sortie, sur le linteau au-dessus du passage. */}
       <mesh position={[0, EXIT_Y, EXIT_Z]} material={m.frame}>
         <boxGeometry args={[EXIT_W + 0.06, EXIT_H + 0.06, 0.07]} />
       </mesh>
-      {[1, -1].map((d) => (
-        <mesh key={`ex${d}`} position={[0, EXIT_Y, EXIT_Z + d * 0.041]} rotation={[0, d === 1 ? 0 : Math.PI, 0]} material={exitMat}>
-          <planeGeometry args={[EXIT_W, EXIT_H]} />
-        </mesh>
-      ))}
-      {[-1, 1].map((d) => (
-        <mesh key={`eh${d}`} position={[d * (EXIT_W / 2 - 0.12), EXIT_Y + EXIT_H / 2 + 0.13, EXIT_Z]} material={m.metal}>
-          <boxGeometry args={[0.04, 0.26, 0.04]} />
-        </mesh>
-      ))}
+      <mesh position={[0, EXIT_Y, EXIT_Z - 0.041]} rotation={[0, Math.PI, 0]} material={exitMat}>
+        <planeGeometry args={[EXIT_W, EXIT_H]} />
+      </mesh>
 
       {/* Le niveau inférieur est un fond de champ, pas une structure : c'est
           la première chose qui saute sur une machine à la peine. */}
-      {detail <= 1 && <LowerLevel m={m} />}
+      {detail <= 1 && <LowerLevel m={m} station={station} />}
 
       {/* Caisson publicitaire plaqué sur la joue côté voie : sur un vrai quai
           c'est la surface la plus rentable d'une trémie, et elle est en plein
@@ -464,7 +464,7 @@ function Stairwell({
  * sous-face du linteau et descend d'un demi-mètre par mètre. À sept mètres il
  * a rejoint le sol, et ce qui est au-dessus n'existe plus pour personne.
  */
-function LowerLevel({ m }: { m: Mats }) {
+function LowerLevel({ m, station }: { m: Mats; station: number }) {
   return (
     <group>
       {/* Seconde volée, et ses nez — c'est par eux qu'on la lit dans le noir. */}
@@ -506,16 +506,25 @@ function LowerLevel({ m }: { m: Mats }) {
         <boxGeometry args={[LOWER_WALL_X * 2, LOWER_H, 0.2]} />
       </mesh>
 
-      {/* Deux réglettes au plafond : sans elles le couloir est un trou noir,
-          et c'est justement la lumière qui dit qu'il y a quelqu'un en bas. */}
-      {[0.3, 0.72].map((f, k) => (
-        <mesh
-          key={`ll${k}`}
-          position={[0, STAIR_LOWER_CEIL_Y - 0.12, STAIR_LOWER_Z0 + f * LOWER_LEN]}
-          material={m.lamp}
-        >
-          <boxGeometry args={[1.5, 0.06, 0.22]} />
-        </mesh>
+      {/* Caissons rétroéclairés sur les parois : la seule lumière du couloir
+          qui tombe dans la bande visible — une réglette de plafond, à trois
+          mètres du sol, est coupée par la dalle avant d'atteindre l'œil. */}
+      {AD_LOW.map((a, k) => (
+        <group key={`la${k}`}>
+          <mesh
+            position={[a.d * (STAIR_LOWER_HALF_X - 0.03), AD_LOW_Y, a.z]}
+            material={m.metal}
+          >
+            <boxGeometry args={[0.06, a.h + 0.1, a.w + 0.1]} />
+          </mesh>
+          <mesh
+            position={[a.d * (STAIR_LOWER_HALF_X - 0.065), AD_LOW_Y, a.z]}
+            rotation={[0, a.d === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
+            material={stationAd(station, k + 7)}
+          >
+            <planeGeometry args={[a.w, a.h]} />
+          </mesh>
+        </group>
       ))}
 
       {/* Ligne de guidage peinte, dans l'axe du couloir. */}
@@ -523,21 +532,9 @@ function LowerLevel({ m }: { m: Mats }) {
         position={[0, STAIR_LOWER_Y + 0.008, (STAIR_LOWER_Z1 + STAIR_LOWER_END) / 2]}
         material={m.accent}
       >
-        <boxGeometry args={[0.3, 0.016, STAIR_LOWER_END - STAIR_LOWER_Z1]} />
+        <boxGeometry args={[0.22, 0.016, STAIR_LOWER_END - STAIR_LOWER_Z1]} />
       </mesh>
 
-      {/* Ligne de portillons : quatre couloirs, serrés au pied des marches
-          parce que c'est la seule bande de couloir que la dalle laisse voir. */}
-      {GATES.map((x, k) => (
-        <group key={`g${k}`} position={[x, STAIR_LOWER_Y + GATE_H / 2, GATE_Z]}>
-          <mesh material={m.psd}>
-            <boxGeometry args={[GATE_W, GATE_H, GATE_D]} />
-          </mesh>
-          <mesh position={[0, GATE_H / 2 + 0.015, 0]} material={m.accent}>
-            <boxGeometry args={[GATE_W + 0.02, 0.04, GATE_D - 0.3]} />
-          </mesh>
-        </group>
-      ))}
     </group>
   );
 }

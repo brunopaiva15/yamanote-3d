@@ -113,16 +113,25 @@ export function directionBandZs(length: number): number[] {
 // quai jusqu'à t = STAIR_GOING, et c'est là que tombe la première
 // contremarche. La marche k (k ≥ 1) a donc son nez en t = k·STAIR_GOING, son
 // giron court jusqu'en t = (k+1)·STAIR_GOING, et sa cote est −k·STAIR_RISE.
+//
+// La pente et le nombre de marches ne sont pas choisis pour eux-mêmes : ils
+// sont ce qu'il faut pour DÉGAGER LA HAUTEUR SOUS LINTEAU. La volée passe sous
+// la dalle du quai, dont la sous-face est à quarante-quatre centimètres ; pour
+// qu'un homme passe dessous, il faut être descendu de deux mètres soixante
+// avant d'y arriver, et il n'y a pour cela que cinq mètres d'emprise. À 17/34
+// on n'y descendait que de deux mètres quatre : un mètre cinquante-quatre de
+// hauteur libre, un boyau. Quinze marches de 17,5 sur 31 tiennent dans la même
+// emprise et donnent 2,15 m — la cote réglementaire d'un passage de gare.
 
-/** Contremarche et giron : pente 1:2, soit 26,6° — celle d'un quai JR. */
-export const STAIR_RISE = 0.17;
-export const STAIR_GOING = 0.34;
+/** Contremarche et giron : 29,4°, la pente d'une volée de quai JR. */
+export const STAIR_RISE = 0.175;
+export const STAIR_GOING = 0.31;
 
 /** Emprise de la trémie en travers du quai ; sa demi-longueur est ci-dessus. */
 export const STAIR_HALF_X = 1.5;
 
-/** Marches modélisées, de la première contremarche au palier bas. */
-export const STAIR_STEPS = 12;
+/** Marches modélisées, de la première contremarche au linteau. */
+export const STAIR_STEPS = 15;
 
 /**
  * GABARIT INTÉRIEUR : nu des joues et du voile de tête.
@@ -142,7 +151,7 @@ export const STAIR_OPENING_HALF_X = STAIR_CLEAR_HALF_X + STAIR_LAP;
 export const STAIR_OPENING_Z0 = -STAIR_HALF_Z + STAIR_GOING;
 export const STAIR_OPENING_Z1 = STAIR_CLEAR_Z1 + STAIR_LAP;
 
-/** Palier bas, et sous-face du bloc plein qui porte la volée. */
+/** Pied de la volée haute, et sous-face du bloc plein qui la porte. */
 export const STAIR_LANDING_Y = -STAIR_STEPS * STAIR_RISE;
 export const STAIR_SOFFIT_Y = STAIR_LANDING_Y - 0.3;
 
@@ -168,10 +177,16 @@ export const STAIR_HANDRAIL_H = 0.88;
 // au-dessus du sol. Tout ce qui doit se lire — la seconde volée, la ligne de
 // portillons — se tient donc BAS et PRÈS.
 
-/** Sous-face du linteau : au-delà, on passe sous la dalle du quai. */
-export const STAIR_LINTEL_Y = -0.5;
+/**
+ * Sous-face du linteau : au-delà, on passe sous la dalle du quai. Quatre
+ * centimètres de retombée sous la dalle, pas plus — chacun est pris sur la
+ * hauteur libre du passage, et il n'y en a que juste assez.
+ */
+export const STAIR_LINTEL_Y = -0.48;
+/** Hauteur libre sous le linteau : ce que tout le profil sert à dégager. */
+export const STAIR_HEADROOM = STAIR_LINTEL_Y - STAIR_LANDING_Y;
 /** Marches de la seconde volée, sous la dalle. */
-export const STAIR_LOWER_STEPS = 8;
+export const STAIR_LOWER_STEPS = 6;
 /** Sol du couloir inférieur. */
 export const STAIR_LOWER_Y = STAIR_LANDING_Y - STAIR_LOWER_STEPS * STAIR_RISE;
 /** Premier nez de la seconde volée : au nu du linteau, sans palier dessous. */
@@ -200,8 +215,14 @@ export const STAIR_WALK_Y = -STAIR_WALK_STEPS * STAIR_RISE;
 export const STAIR_WALK_LEN = (STAIR_WALK_STEPS + 1) * STAIR_GOING - 0.02;
 /** Demi-largeur praticable, entre les joues. */
 export const STAIR_WALK_HALF_X = 1.12;
-/** Volée entière : ce que descendent les PNJ, du nez au palier bas. */
-export const STAIR_FULL_LEN = (STAIR_STEPS + 1) * STAIR_GOING;
+/**
+ * Ce que descendent les voyageurs qui s'en vont : la volée entière, PUIS un
+ * mètre de plus sous le linteau. C'est seulement là qu'ils cessent d'être vus
+ * du quai — au pied des marches, la tête dépasse encore du rayon rasant.
+ */
+export const STAIR_FULL_LEN = (STAIR_STEPS + 1) * STAIR_GOING + 1.05;
+/** Et jusqu'où ils s'enfoncent : trois marches de la seconde volée. */
+export const STAIR_FULL_STEPS = STAIR_STEPS + 3;
 
 // --- Le profil, écrit une fois -------------------------------------------
 
