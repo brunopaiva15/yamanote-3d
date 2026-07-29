@@ -62,6 +62,43 @@ axes, plus un « portillon » par porte qui ne s'ouvre que si la porte de la ram
 seuils se ferment — on ne peut pas tomber sur la voie. Une seule voiture est
 accessible, celle du joueur : c'est la seule dont l'intérieur existe.
 
+### Se poser à quai
+
+Un train ne s'arrête pas : il se pose. La dernière seconde d'un arrêt réussi ne
+se sent pas, et c'est justement ce qui est le plus difficile à obtenir. Deux
+choses s'y jouent, et elles étaient toutes les deux fausses.
+
+Le **profil de freinage** (`systems/trainPhysics`) gardait 0,35 m/s² jusqu'au
+bout : la rame arrivait devant les portières encore à 0,3 m/s et l'arrêt se
+lisait comme une coupure. Il applique désormais le lâcher final des conducteurs
+JR — 停止直前の緩め : sous ~4 km/h le frein se relâche franchement et la vitesse
+s'éteint au lieu d'être coupée. Le dernier mètre prend près de quatre secondes,
+les dix derniers centimètres se parcourent à moins de 0,2 m/s, et on les voit
+passer. Le freinage complet dure ~23 s au lieu de 21 ; les deux secondes sont
+reprises sur le forfait d'arrêt de `data/config`, l'horaire de la boucle ne
+bouge pas.
+
+Le **glissement du quai** vu depuis le wagon, lui, n'était pas branché sur la
+physique du tout : une courbe de temps calée sur la progression du trajet, qui
+finissait sa course plusieurs secondes avant l'immobilisation réelle. Sur un
+tronçon court (Mejiro→Takadanobaba et ses 8 s de croisière), la gare entière
+arrivait d'un bloc alors que la rame était déjà presque à l'arrêt. Le quai est
+maintenant posé à **la distance qui reste à parcourir** avant l'arrêt
+(`stopDistance`, le profil intégré depuis l'état courant) : il défile donc
+exactement à la vitesse du train, comme le reste du décor, et se cale de
+lui-même — il n'y a plus de raccord à la fin, puisque la distance restante vaut
+zéro pile quand la vitesse s'annule.
+
+Reste qu'aucune rame ne se pose au millimètre sur son 定位置. La tolérance JR
+East est de ±35 cm, le TASC des lignes à portes palières en garde une dizaine de
+centimètres : chaque arrêt tire donc son **écart d'arrêt** de 3 à 11 cm, d'un
+côté ou de l'autre (`runtime.berthOffset`). Portes ouvertes, le décalage se lit
+très bien entre le montant de la baie palière et celui de la portière — et il ne
+gêne rien : une baie palière fait 1,80 m pour une porte de rame de 1,32 m.
+L'écart appartient à la rame, pas à la gare : il devient `platformSlide` dans le
+repère du wagon, `−trainZ` dans celui du quai, et se reporte de l'un à l'autre
+quand on descend ou qu'on remonte.
+
 ## Les gares
 
 Le quai fait sa vraie longueur : 224 m, onze voitures de 20 m, 44 baies de portes
