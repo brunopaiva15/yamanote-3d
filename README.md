@@ -3,7 +3,8 @@
 Expérience web contemplative et passive : vous êtes passager d'une rame JR East
 série E235 sur la ligne Yamanote (Tokyo, boucle de 30 stations). Aucun objectif,
 aucun score : on marche dans le wagon, on s'assoit, on regarde la ville défiler,
-on écoute les annonces et les mélodies. La boucle tourne indéfiniment, en temps
+on écoute les annonces et les mélodies — et, si on s'arrête devant quelqu'un, on
+l'écoute parler. La boucle tourne indéfiniment, en temps
 quasi réel (environ 1 à 3 minutes par tronçon selon la gare, ~67 minutes la boucle).
 
 ## Lancer
@@ -25,8 +26,11 @@ npm run lint     # oxlint
   le regard capturé ; se lever : espace, un nouveau clic, ou le bouton du HUD
 - **Descendre / remonter : marcher à travers une porte ouverte.** Aucune touche —
   la porte ouverte *est* le passage
+- **Parler : E**, quand un voyageur est en face et à portée de voix — une
+  invite l'annonce sous le réticule
 - M : couper le son, F : plein écran
-- Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder, bouton s'asseoir
+- Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder,
+  bouton s'asseoir, bouton « Parler » quand quelqu'un est à portée
 
 ## Descendre en gare
 
@@ -596,6 +600,75 @@ Blender nécessaire) ; les clips et les os sont détectés par correspondance
 floue (conventions Quaternius / KayKit / Mixamo), avec overrides possibles
 par variante dans le manifest (`clips`, `faceYaw`, `sitHipY`, `tint`).
 
+## Ce que font les voyageurs
+
+Une centaine d'occupations vivent dans `data/paxActions`, mais l'essentiel
+n'est pas leur nombre : c'est leur **rythme**, tenu par `systems/paxBehavior`
+et partagé par la rame et le quai.
+
+- **Occupation de fond.** Un voyageur choisit ce qu'il fait des prochaines
+  minutes — téléphone, sieste, vitre, livre, conversation — et y reste. Sur dix
+  minutes de vie de wagon, le téléphone occupe environ un tiers du temps, la
+  vitre et la sieste un huitième chacune : à peu près ce qu'on observe.
+- **Gestes brefs.** De loin en loin (une dizaine de secondes chez un nerveux,
+  une demi-minute chez un placide), l'occupation est interrompue par un
+  bâillement, un coup d'œil à la montre, un sac remonté — puis **reprise**.
+- **Tempérament.** Chaque PNJ a un caractère stable tiré de son identifiant,
+  comme son apparence : bavard, nerveux, dormeur, curieux, susceptible. Sans
+  lui, tout le monde ferait tout et la foule redeviendrait uniforme.
+- **Budget d'événements rares.** Disputes, bagarres, chutes et séductions
+  passent par un compteur global, séparé pour la rame et pour le quai : une
+  dispute toutes les quelques minutes, une bagarre à peine une fois par tour de
+  boucle.
+
+Le contexte module le reste : silence de la pointe du matin, rires et
+titubements du vendredi soir, bras au corps quand c'est bondé, regards vers les
+portes à quai plutôt que par la vitre, éventails en août seulement.
+
+## Parler aux voyageurs
+
+Un voyageur regardé d'assez près (moins de 2,9 m, dans un cône de 24°) affiche
+une invite ; **E** lui délie la langue. Il se tourne, parle, et la bulle
+s'accroche à sa tête — pas au bas de l'écran : dans une rame où trente
+personnes sont à portée, il faut voir qui parle. Un second appui coupe court,
+comme on tourne les talons.
+
+Le catalogue compte **252 échanges**, écrits dans les trois langues de
+l'interface côte à côte et déclinés selon le genre du personnage là où la
+langue l'impose (« je suis descendue » / « je suis descendu », 僕 / 私,
+～だよ / ～わよ). Ce qui se dit dépend du contexte : l'heure de Tokyo, la gare
+suivante, le remplissage, l'archétype, l'âge, les accessoires, la saison, le
+jour de la semaine. Chaque contexte laisse entre cinquante et soixante
+échanges éligibles ; personne ne se répète, et ce qui vient d'être entendu est
+écarté du tirage suivant.
+
+Six situations font parler les gens **sans qu'on leur ait rien demandé** : une
+bousculade, un voisin qui s'étale, le joueur qui monte ou descend, qui s'assoit
+à côté, qui passe à un mètre, ou la rame qui entre en gare. Une réplique
+spontanée toutes les quarante à cent vingt secondes, jamais deux de suite par
+la même personne : c'est ce qui prouve que les gens sont là même quand on ne
+les regarde pas.
+
+Ils ne prononcent pas de vrais mots. La voix est un **murmure de syllabes**
+synthétisé (Tone.js), dont la hauteur suit le genre, la stature et l'âge : on
+entend que quelqu'un parle, on lit ce qu'il dit.
+
+Pour mesurer tout ça sans attendre dix minutes devant l'écran :
+
+```bash
+# dix minutes de vie de wagon, hors rendu, puis quelques échanges tirés
+node scripts/pax-probe.mjs
+
+# trente minutes de vie, douze échanges
+node scripts/pax-probe.mjs 30 --lines 12
+```
+
+La sonde imprime la part de temps passée dans chaque occupation, le nombre
+d'événements rares déclenchés, et le nombre d'échanges éligibles par contexte —
+c'est là qu'on voit tout de suite si un créneau horaire est à sec. En dev, les
+consoles `__pax`, `__crowd` et `__conversation` donnent l'état courant, et
+`__talk()` fait parler le voyageur le plus proche sans avoir à viser.
+
 ## Références visuelles (maquettes hors dépôt)
 
 Le jeu ne contient **aucun modèle 3D d'intérieur** : la coque, les banquettes et
@@ -669,9 +742,11 @@ src/
   three/station/signatures/ les charpentes propres à une gare : Takanawa, Akihabara…
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
+  data/dialogue/         les 252 conversations : conditions d'emploi et texte
+                         FR / EN / JA, décliné au féminin et au masculin
   scripts/               models:import / models:inspect (packs → public/models/),
-                         sondes navigateur : station-probe, scenery-shots,
-                         scenery-cost, pass-shots
+                         sondes navigateur : station-probe, pax-probe,
+                         scenery-shots, scenery-cost, pass-shots
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
   ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles

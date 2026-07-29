@@ -10,6 +10,7 @@
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { useNearPortal } from './useNearPortal';
+import { useTalkTarget } from './useTalkTarget';
 
 export function BoardingPrompt() {
   const started = useStore((s) => s.started);
@@ -18,8 +19,11 @@ export function BoardingPrompt() {
   const touch = useStore((s) => s.touch);
   const t = useT();
   const near = useNearPortal();
+  const talk = useTalkTarget();
 
-  if (!started || seated || touch || !near) return null;
+  // Un voyageur en joue prime sur le seuil : les deux invites se disputent le
+  // même bout d'écran, et on vise plus précisément quelqu'un qu'une porte.
+  if (!started || seated || touch || !near || talk) return null;
 
   // Pas de touche : la porte ouverte EST le passage, on marche à travers.
   // L'invite ne fait qu'annoncer que c'est possible.

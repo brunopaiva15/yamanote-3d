@@ -17,6 +17,7 @@ import { updatePassingTrain } from '../systems/passingTrain';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
 import { setPlatformDoors, setStationAmbience, updateAmbience, updateAudio } from '../systems/audioEngine';
 import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
+import { updateConversation } from '../systems/conversation';
 import { perfLevel } from '../systems/perf';
 
 /**
@@ -128,6 +129,9 @@ export function Engine(): null {
       updateAmbience(physDt);
       updatePassengers(physDt);
       updatePlatformCrowd(physDt);
+      // Après les voyageurs : la conversation vise une tête dont la position
+      // vient d'être mise à jour, et récolte les événements de cette image.
+      updateConversation(physDt);
     }
   });
   return null;

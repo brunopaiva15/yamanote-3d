@@ -553,6 +553,17 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
     palm: { x: 0, y: -0.9, z: 0.2 },
     side: -1,
   },
+  talk: {
+    // S'adresse au joueur : une main ouverte à hauteur de taille, qui
+    // accompagne la phrase. Discret — on parle à un inconnu dans un train,
+    // on ne prononce pas un discours.
+    upper: { x: 0.45, y: -0.7, z: 0.34 },
+    fore: { x: 0.15, y: 0.05, z: 0.9 },
+    hand: { x: 0.28, y: 0.05, z: 0.85 },
+    palm: { x: 0, y: 0.92, z: 0.15 },
+    side: -1,
+    swing: { on: 'hand', axis: 'y', amp: 0.18, freq: 3.4 },
+  },
   wave: {
     // Bras levé qui salue le train qui arrive.
     upper: { x: 0.6, y: 0.7, z: 0.15 },

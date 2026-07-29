@@ -128,6 +128,9 @@ interface Nodes {
   paxFabricFilter: Tone.Filter;
   /** Clics secs (photo, écouteurs). */
   paxClick: Tone.NoiseSynth;
+  /** Murmure d'un voyageur qui s'adresse au joueur (syllabes, pas de mots). */
+  paxVoiceSynth: Tone.Synth;
+  paxVoiceFilter: Tone.Filter;
 }
 
 let nodes: Nodes | null = null;
@@ -510,6 +513,18 @@ export async function startAudio(): Promise<void> {
   });
   paxClick.chain(paxClickFilter, trainBus);
 
+  // Voix d'un voyageur : jamais des mots — une bouche fermée derrière un
+  // masque, à un mètre. Une dent de scie très filtrée passée en bande étroite
+  // autour du premier formant donne la bonne matière : on entend QUE quelqu'un
+  // parle, pas CE qu'il dit — le texte, lui, est à l'écran.
+  const paxVoiceFilter = new Tone.Filter({ type: 'bandpass', frequency: 620, Q: 2.4 });
+  const paxVoiceSynth = new Tone.Synth({
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 0.02, decay: 0.09, sustain: 0.35, release: 0.06 },
+    volume: -26,
+  });
+  paxVoiceSynth.chain(paxVoiceFilter, trainBus);
+
   nodes = {
     master,
     trainBus,
@@ -575,6 +590,8 @@ export async function startAudio(): Promise<void> {
     paxFabric,
     paxFabricFilter,
     paxClick,
+    paxVoiceSynth,
+    paxVoiceFilter,
   };
 
   watchContextState();
@@ -1004,6 +1021,53 @@ export function paxDrink(dist: number): void {
   nodes.paxBreath.envelope.decay = 0.15;
   nodes.paxBreath.triggerAttackRelease(0.12, slot('paxBreath', now + 0.55), v);
   nodes.paxClick.triggerAttackRelease(0.02, slot('paxClick', now + 0.05), v * 0.5);
+}
+
+/**
+ * Murmure d'un voyageur qui parle au joueur : une poignée de syllabes, pas
+ * des mots. La hauteur suit la personne — une voix de femme au-dessus d'une
+ * voix d'homme, un grand plus bas qu'un petit, un ancien plus voilé — et la
+ * phrase retombe à la fin, comme une phrase japonaise affirmative.
+ */
+export function paxVoice(opts: {
+  dist: number;
+  feminine: boolean;
+  senior: boolean;
+  /** Échelle du personnage (≈ taille / 1,445) : un grand parle plus bas. */
+  scale: number;
+  syllables: number;
+}): void {
+  if (!nodes) return;
+  const v = paxVel(opts.dist, 0.5);
+  if (v <= 0) return;
+  const now = Tone.now();
+  // Fondamentale : ~195 Hz pour une voix féminine, ~118 Hz pour une masculine.
+  let base = opts.feminine ? 195 : 118;
+  base *= 1 / Math.max(0.85, Math.min(1.15, opts.scale));
+  if (opts.senior) base *= 0.92;
+  nodes.paxVoiceFilter.frequency.value = opts.feminine ? 780 : 560;
+  nodes.paxVoiceSynth.envelope.sustain = opts.senior ? 0.28 : 0.35;
+  const n = Math.max(2, Math.min(10, opts.syllables));
+  let t = now;
+  for (let i = 0; i < n; i++) {
+    // La ligne mélodique descend d'un ton et demi sur la phrase, avec le
+    // petit tremblement d'une voix réelle.
+    const fall = 1 - (i / n) * 0.16;
+    const jitter = 0.94 + Math.random() * 0.13;
+    const hold = 0.09 + Math.random() * 0.06;
+    nodes.paxVoiceSynth.triggerAttackRelease(
+      base * fall * jitter,
+      hold,
+      slot('paxVoice', t),
+      v * (0.72 + Math.random() * 0.28),
+    );
+    t += hold + 0.045 + Math.random() * 0.06;
+  }
+  // Un souffle en fin de phrase : c'est ce qui fait qu'on entend quelqu'un et
+  // pas un instrument.
+  nodes.paxBreathFilter.frequency.value = 1500;
+  nodes.paxBreath.envelope.decay = 0.16;
+  nodes.paxBreath.triggerAttackRelease(0.12, slot('paxBreath', t + 0.02), v * 0.22);
 }
 
 /** Clic d'obturateur / écouteurs. */
