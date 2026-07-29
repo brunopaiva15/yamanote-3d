@@ -53,8 +53,10 @@ export interface Strings {
     tokyoTime: string;
     /** Libellé du champ heure (écran d'accueil). */
     timeLabel: string;
-    /** Remet l'heure sur l'instant réel à Tokyo. */
+    /** Remet la date et l'heure sur l'instant réel à Tokyo. */
     timeNow: string;
+    /** Libellé du champ date (écran d'accueil) : c'est lui qui donne la saison. */
+    dateLabel: string;
     /** Libellé du sélecteur de gare. */
     stationLabel: string;
     /** Option « laisser le hasard choisir la gare ». */
@@ -147,6 +149,7 @@ const FR: Strings = {
     tokyoTime: 'Heure à Tokyo',
     timeLabel: 'Heure',
     timeNow: 'Maintenant',
+    dateLabel: 'Date',
     stationLabel: 'Arrêt',
     stationRandom: 'Aléatoire',
   },
@@ -231,6 +234,7 @@ const EN: Strings = {
     tokyoTime: 'Tokyo time',
     timeLabel: 'Time',
     timeNow: 'Now',
+    dateLabel: 'Date',
     stationLabel: 'Station',
     stationRandom: 'Random',
   },
@@ -314,6 +318,7 @@ const JA: Strings = {
     tokyoTime: '東京の現在時刻',
     timeLabel: '時刻',
     timeNow: '現在',
+    dateLabel: '日付',
     stationLabel: '駅',
     stationRandom: 'ランダム',
   },
