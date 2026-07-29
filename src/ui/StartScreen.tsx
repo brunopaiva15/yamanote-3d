@@ -18,7 +18,7 @@ import { seedPassengers } from '../systems/passengers';
 import { runtime, tokyoNow } from '../systems/runtime';
 import { randomizeEntry } from '../systems/stationCycle';
 import { segmentAt } from '../data/segments';
-import { PLATEAU_SEGMENT, plateauDevStation } from '../systems/plateau';
+import { PLATEAU_SEGMENT, plateauEntryStation } from '../systems/plateau';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
 import { Logo } from './Logo';
@@ -110,16 +110,17 @@ export function StartScreen() {
     // systématique à l'arrêt.
     const stationIndex =
       stationChoice === STATION_RANDOM ? undefined : Number(stationChoice);
-    // Aide au développement (`npm run dev` + `?plateau=1`) : embarquer
-    // directement sur le tronçon du prototype PLATEAU plutôt que d'attendre un
-    // tour de boucle. plateauDevStation() renvoie undefined en production,
-    // le tirage normal reprend alors la main sans détour.
-    const devStation = plateauDevStation();
-    if (devStation !== undefined) {
+    // `?plateau=1` : embarquer directement sur le tronçon du prototype PLATEAU,
+    // plutôt que d'attendre le tour de boucle qu'un tirage aléatoire
+    // imposerait. Sans le paramètre, plateauEntryStation() renvoie undefined et
+    // le boarding normal — gare tirée au sort, ou choisie dans le menu —
+    // reprend la main sans détour.
+    const entryStation = plateauEntryStation();
+    if (entryStation !== undefined) {
       // randomizeEntry tire aussi la phase : on relance jusqu'à tomber sur une
       // phase où le tronçon parcouru est bien celui du prototype.
       for (let attempt = 0; attempt < 32; attempt++) {
-        randomizeEntry(devStation);
+        randomizeEntry(entryStation);
         if (segmentAt(useStore.getState().index) === PLATEAU_SEGMENT) break;
       }
     } else {

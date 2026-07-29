@@ -537,8 +537,15 @@ mais inutile à regarder.
 ```bash
 npm run world:build:prototype -- --dry-run   # vérifie outils et configuration
 npm run world:build:prototype                # CityGML → GLB optimisés + manifeste
-npm run dev                                  # /?plateau=1 pour y démarrer
+npm run dev                                  # puis /?plateau=1
 ```
+
+**Le prototype est éteint par défaut** : il faut `?plateau=1` dans l'URL, en
+développement comme en ligne. Le paramètre allume le monde géoréférencé *et*
+fait embarquer directement sur le tronçon. Sans lui, rien n'est chargé et le
+jeu est exactement celui d'avant. C'est délibéré : tant que le build tourne sur
+l'échantillon synthétique, les bâtiments sont inventés, et les montrer d'office
+ferait passer une ville fictive pour Tokyo.
 
 Le pipeline projette en JGD2011 / CS IX, sélectionne les bâtiments dans un
 corridor de ±300 m, les classe par distance à la voie, découpe en chunks de
@@ -546,8 +553,8 @@ corridor de ±300 m, les classe par distance à la voie, découpe en chunks de
 meshopt et génère `public/world/plateau/manifest.json`. Dans le jeu, le wagon
 reste à l'origine et c'est le monde qui tourne autour de lui : on applique au
 groupe des chunks l'inverse de la transformation du train sur le tracé réel, à
-la vitesse réelle de la rame. Ailleurs sur la boucle, et prototype coupé
-(`ENABLE_PLATEAU_PROTOTYPE = false`), le décor procédural reprend tout.
+la vitesse réelle de la rame. Ailleurs sur la boucle, et sans `?plateau=1`, le
+décor procédural reprend tout.
 
 Changer de tronçon est une variable d'environnement — `PLATEAU_PROTOTYPE` —
 plus une constante à aligner côté jeu ; la validation du build refuse de publier

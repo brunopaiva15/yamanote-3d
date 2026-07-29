@@ -1,18 +1,25 @@
 // Prototype PLATEAU : interrupteur, réglages et état partagé par frame.
 //
-// Le monde géoréférencé ne remplace le décor procédural QUE sur le tronçon
-// pour lequel il a été produit. Partout ailleurs — et prototype désactivé —
-// le jeu se comporte exactement comme avant : `plateauRuntime.coverage` reste
-// à 0 et personne ne change de branche.
+// LE PROTOTYPE EST ÉTEINT PAR DÉFAUT, ET IL FAUT LE DEMANDER : `?plateau=1`
+// dans l'URL. Sans ce paramètre, rien n'est chargé, rien n'est monté, aucun
+// composant ne change de branche — le jeu est exactement celui d'avant, y
+// compris sur le tronçon couvert.
+//
+// Ce n'est pas de la prudence de principe. Tant que le pipeline tourne sur son
+// échantillon SYNTHÉTIQUE, les bâtiments affichés sont inventés : les montrer
+// par défaut ferait passer une ville fictive pour Tokyo, là où le décor
+// procédural, lui, s'assume comme une évocation. Le jour où le monde est
+// construit à partir des vraies données PLATEAU, il suffira de repasser
+// `ENABLE_PLATEAU_PROTOTYPE` à `true`.
 
 /**
- * Interrupteur principal du prototype.
+ * Interrupteur principal du prototype, quand l'URL ne dit rien.
  *
- * `false` : plus rien de PLATEAU n'est chargé ni monté, le décor procédural
- * reprend l'intégralité de la boucle. C'est le seul réglage à toucher pour
- * revenir au comportement historique.
+ * `false` (défaut) : le prototype n'existe que sur demande explicite,
+ * `?plateau=1`. `true` : il s'applique à tout le monde sur son tronçon.
+ * Un test verrouille cette valeur — voir tests/plateauFlags.test.ts.
  */
-export const ENABLE_PLATEAU_PROTOTYPE = true;
+export const ENABLE_PLATEAU_PROTOTYPE = false;
 
 /**
  * Tronçon couvert par le prototype (index dans data/segments.ts).
@@ -59,9 +66,15 @@ export function plateauCoversSegment(segment: number): boolean {
 }
 
 /**
- * Prise en compte d'une désactivation à la volée : `?plateau=0` coupe le
- * prototype sans recompiler, `?plateau=1` le force. Réservé au développement
- * et à la vérification visuelle ; en production la constante fait foi.
+ * Le prototype doit-il s'afficher ?
+ *
+ * L'URL a le dernier mot, dans les deux sens : `?plateau=1` l'allume même si
+ * la constante est à `false`, `?plateau=0` l'éteint même si elle est à `true`.
+ * Sans paramètre, la constante décide.
+ *
+ * Le paramètre vaut aussi en production, et c'est délibéré : c'est ce qui
+ * permet de montrer le prototype sur le site déployé — à qui le demande — sans
+ * l'imposer à personne.
  */
 export function plateauEnabled(): boolean {
   const override = queryFlag();
@@ -70,19 +83,25 @@ export function plateauEnabled(): boolean {
 }
 
 /**
- * Mode de développement : `?plateau=1` fait démarrer le trajet sur le tronçon
- * du prototype au lieu du tirage aléatoire. N'a AUCUN effet hors `npm run dev`
- * — le comportement normal du jeu n'est pas touché.
- *
- * La valeur renvoyée est la gare d'ARRIVÉE du tronçon : c'est elle que
- * randomizeEntry attend, puisque le tronçon parcouru pour atteindre la gare
- * `i` est `segmentAt(i)` — soit `(i + 29) % 30`.
+ * Gare d'ARRIVÉE du tronçon couvert : c'est elle que `randomizeEntry` attend,
+ * puisque le tronçon parcouru pour atteindre la gare `i` est `segmentAt(i)`,
+ * soit `(i + 29) % 30`.
  */
-export const PLATEAU_DEV_STATION = (PLATEAU_SEGMENT + 1) % 30; // Ebisu (20)
+export const PLATEAU_ENTRY_STATION = (PLATEAU_SEGMENT + 1) % 30; // Ebisu (20)
 
-export function plateauDevStation(): number | undefined {
-  if (!import.meta.env.DEV) return undefined;
-  return queryFlag() === true ? PLATEAU_DEV_STATION : undefined;
+/**
+ * Gare sur laquelle embarquer quand le prototype est demandé par l'URL.
+ *
+ * Sans cela, `?plateau=1` serait une promesse creuse : le tirage d'entrée
+ * pose le joueur n'importe où sur la boucle, et il faudrait attendre jusqu'à
+ * une heure de trajet pour atteindre le tronçon couvert. Le paramètre fait
+ * donc les deux choses à la fois — allumer le prototype ET s'y rendre.
+ *
+ * Renvoie `undefined` dès que le paramètre est absent : le boarding normal
+ * (gare tirée au sort, ou choisie dans le menu) n'est jamais touché.
+ */
+export function plateauEntryStation(): number | undefined {
+  return queryFlag() === true ? PLATEAU_ENTRY_STATION : undefined;
 }
 
 function queryFlag(): boolean | null {

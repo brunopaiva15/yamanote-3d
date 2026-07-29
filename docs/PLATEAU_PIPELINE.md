@@ -14,7 +14,12 @@ CityGML PLATEAU ─► conversion ─► sélection corridor ─► classement p
    ─► GLB + manifeste + tracé ─► React Three Fiber
 ```
 
-> **À lire avant tout : ce dépôt ne contient AUCUNE donnée Project PLATEAU.**
+> **Le prototype est ÉTEINT par défaut : il faut `?plateau=1` dans l'URL.**
+> Sans ce paramètre, rien n'est chargé, rien n'est monté, et le jeu est
+> exactement celui d'avant — y compris sur le tronçon couvert. Voir
+> [§ Activer le prototype](#activer-le-prototype).
+>
+> **Et ce dépôt ne contient AUCUNE donnée Project PLATEAU.**
 > Le build par défaut tourne sur un échantillon CityGML **synthétique**
 > (`data/plateau-sample/`), généré par `scripts/plateau/make-sample.mjs`, dont
 > le *format* reproduit fidèlement le profil PLATEAU mais dont la *géométrie*
@@ -112,6 +117,43 @@ sans ambiguïté au Japon.
 Toute surcharge entre dans le hash de cache : changer le corridor ou la taille
 des chunks **invalide automatiquement** les étapes concernées.
 
+## Activer le prototype
+
+| URL | effet |
+| --- | --- |
+| *(rien)* | prototype éteint, décor procédural sur toute la boucle |
+| `?plateau=1` | prototype allumé **et** embarquement direct sur le tronçon |
+| `?plateau=0` | prototype éteint, même si la constante est à `true` |
+
+L'URL a le dernier mot dans les deux sens ; sans paramètre,
+`ENABLE_PLATEAU_PROTOTYPE` (`src/systems/plateau.ts`) décide. Le paramètre vaut
+**aussi en production** : c'est ce qui permet de montrer le prototype sur le
+site déployé, à qui le demande, sans l'imposer à personne.
+
+`?plateau=1` fait deux choses à la fois — allumer le prototype *et* s'y rendre.
+Sans le second effet le paramètre serait une promesse creuse : le tirage
+d'entrée pose le joueur n'importe où sur la boucle, et il faudrait attendre
+jusqu'à une heure de trajet pour atteindre le tronçon couvert.
+
+**Pourquoi éteint par défaut.** Tant que le monde est construit sur
+l'échantillon synthétique, les bâtiments affichés sont *inventés*. Les montrer
+d'office ferait passer une ville fictive pour Tokyo, là où le décor procédural,
+lui, s'assume comme une évocation. Le jour où le build tourne sur les vraies
+données PLATEAU, il suffit de repasser la constante à `true` — un test
+(`tests/plateauFlags.test.ts`) verrouille la valeur pour que ce soit une
+décision, pas un accident.
+
+Vérifié dans le navigateur, sur les trois cas :
+
+```
+(aucun paramètre)  gare= 8  segment= 7  coverage=0  requêtes réseau : aucune
+?plateau=1         gare=20  segment=19  coverage=1  manifest + route + 3 chunks
+?plateau=0         gare=13  segment=12  coverage=0  requêtes réseau : aucune
+```
+
+Éteint, le composant ne va même pas chercher le manifeste : zéro octet
+téléchargé, zéro branche modifiée dans `CityRibbon` et `Landmarks`.
+
 ## 4. Commandes disponibles
 
 ```bash
@@ -130,7 +172,7 @@ npm run world:optimize:prototype
 npm run world:validate:prototype           # relit et valide les livrables
 npm run world:check:prototype              # contrôle visuel Playwright + captures
 
-npm test                                   # 61 tests (node --test)
+npm test                                   # 67 tests (node --test)
 npm run dev                                # puis /?plateau=1
 ```
 
@@ -296,7 +338,7 @@ src/systems/plateau.ts        interrupteur + état partagé
 src/three/PlateauWorld.tsx    composant R3F
 src/three/plateau/routeMath.ts  maths du tracé (module PUR, testé)
 src/dev/plateau-probe-main.ts   probe /plateau-probe.html
-tests/                        61 tests node:test
+tests/                        67 tests node:test
 ```
 
 ## 7. Gestion du cache
@@ -594,7 +636,7 @@ npm run world:build:prototype -- --force …
 ## Vérifier
 
 ```bash
-npm test                        # 61 tests
+npm test                        # 67 tests
 npm run world:validate:prototype
 npm run world:check:prototype   # Playwright : captures + contrôles en scène
 npm run dev                     # /?plateau=1  (démarrage direct sur le tronçon)
@@ -607,7 +649,9 @@ Dans la console du jeu, en développement : `__plateauProbe()` donne l'état du
 monde (chunks montés, abscisse, sommets, distance du bâtiment le plus proche de
 l'emprise du wagon) et `__plateauSeek(0.6)` se pose à 60 % du tronçon.
 
-Pour couper complètement le prototype de façon permanente :
-`ENABLE_PLATEAU_PROTOTYPE = false` dans `src/systems/plateau.ts`.
+Le prototype étant éteint par défaut, il n'y a rien à couper : c'est
+`?plateau=1` qui l'allume. Pour l'imposer à tous les visiteurs — une fois le
+monde construit sur de vraies données — passer `ENABLE_PLATEAU_PROTOTYPE` à
+`true` dans `src/systems/plateau.ts`.
 
 [Project PLATEAU]: https://www.mlit.go.jp/plateau/

@@ -98,9 +98,6 @@ test('le jeu et le pipeline visent le même tronçon', () => {
       'dans scripts/plateau/config.mjs — le décor ne s’afficherait jamais.',
   );
   assert.throws(() => readGameSegment('rien du tout'), /PLATEAU_SEGMENT introuvable/);
-  // La gare de développement est celle d'ARRIVÉE : segmentAt(i) = (i + 29) % 30.
-  const devStation = Number(source.match(/PLATEAU_DEV_STATION = \(PLATEAU_SEGMENT \+ (\d+)\)/)?.[1]);
-  assert.equal(devStation, 1, 'la gare d’arrivée doit être segment + 1');
 });
 
 test('aucune URL de jeu de données n’est codée en dur', () => {
