@@ -38,6 +38,7 @@ import {
   paArrival,
   paDoorsClosing,
   paPsdBeeps,
+  updatePlatformSpeakers,
 } from './stationPa';
 import { rollPassThrough, startPassThrough } from './passingTrain';
 import { exchangePassengers, startlePassengers } from './passengers';
@@ -539,7 +540,7 @@ export function randomizeEntry(stationIndex?: number, direction?: LoopDirection)
   // En depart, le quai qu'on longe est encore celui de la gare quittée.
   store.setPlatformIndex(doorStation);
   store.setDoorSide(doorSide);
-  audio.setPlatformSide(doorSide);
+  updatePlatformSpeakers();
 
   emergencyAt = -1;
   stationsToEmergency = drawEmergencyGap(true);
@@ -621,7 +622,7 @@ export function updateCycle(dt: number): void {
       once('doorside', true, () => {
         s.setDoorSide(DOOR_SIDE[s.index]);
         // Les haut-parleurs du quai passent du côté qui s'ouvrira.
-        audio.setPlatformSide(DOOR_SIDE[s.index]);
+        updatePlatformSpeakers();
       });
       // La foule ne s'évapore que quand le quai qui la porte est hors de vue :
       // en début de croisière, il défile encore le long des vitres
@@ -820,7 +821,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     store.setPlatformIndex(index);
     store.setPhase(phase);
     store.setDoorSide(DOOR_SIDE[index]);
-    audio.setPlatformSide(DOOR_SIDE[index]);
+    updatePlatformSpeakers();
     randomizeStopTimings(index);
     randomizeBerthOffset();
     runtime.phaseT = t;
