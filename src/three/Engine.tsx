@@ -16,7 +16,15 @@ import { updateStationOcclusion } from '../systems/stationOcclusion';
 import { updatePlatformWait } from '../systems/platformWait';
 import { updatePassingTrain } from '../systems/passingTrain';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
-import { setPlatformDoors, setStationAmbience, updateAmbience, updateAudio } from '../systems/audioEngine';
+import {
+  playThunder,
+  setPlatformDoors,
+  setStationAmbience,
+  setWeatherSound,
+  updateAmbience,
+  updateAudio,
+} from '../systems/audioEngine';
+import { weather } from '../systems/weather';
 import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
 import { updateConversation } from '../systems/conversation';
 import { perfLevel } from '../systems/perf';
@@ -39,6 +47,9 @@ const PHYS_DT_CAP = 0.05;
 let tabJustResumed = false;
 // Dernier palier de qualité appliqué aux PNJ (voir bloc qualité dans useFrame).
 let lastPerfLevel = perfLevel();
+// Chrono du dernier coup de tonnerre, tel que le modèle le voit : il repasse à
+// zéro quand un éclair part, et c'est ce FRONT qu'on guette.
+let lastThunderT = 0;
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) tabJustResumed = true;
@@ -131,6 +142,22 @@ export function Engine(): null {
           (runtime.playerFrame === 'platform' ? 1 : 0.12 + 0.88 * openings),
         roomTone(stationIndex),
       );
+      // La météo, à l'oreille : le pavillon d'un côté, le dehors de l'autre.
+      // Elle suit les mêmes ouvertures que l'ambiance de gare — c'est par là,
+      // et par là seulement, que le dehors entre.
+      setWeatherSound(
+        weather.rain,
+        weather.snow,
+        weather.snowCover,
+        weather.wet,
+        openings,
+        runtime.playerFrame === 'platform',
+      );
+      // Le tonnerre part quand le modèle vient d'allumer un éclair : le son,
+      // lui, met trois secondes par kilomètre, et c'est playThunder qui pose
+      // ce retard-là.
+      if (weather.thunderT < lastThunderT) playThunder(weather.thunderFar);
+      lastThunderT = weather.thunderT;
       updateAmbience(physDt);
       updatePassengers(physDt);
       updatePlatformCrowd(physDt);
