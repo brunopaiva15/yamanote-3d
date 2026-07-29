@@ -620,6 +620,94 @@ body,
   accent-color: var(--green);
 }
 
+/* --- Provoquer un incident ---
+   Une icône seule en bout de barre, à demi effacée : ce n'est pas un réglage,
+   et on ne doit pas tomber dessus en cherchant le volume. Elle se réveille au
+   survol, et reste franche tant que le panneau est ouvert. */
+
+.incident-menu {
+  position: relative;
+}
+
+.incident-toggle {
+  padding: 8px 11px;
+  opacity: 0.45;
+  transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease,
+    background-color 0.1s ease;
+}
+
+.incident-toggle:hover,
+.incident-toggle[aria-expanded='true'] {
+  opacity: 1;
+}
+
+.incident-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  width: 264px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: var(--sticker);
+  border: 2px solid var(--ink-line);
+  border-radius: 12px;
+  box-shadow: var(--sticker-shadow);
+}
+
+.incident-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sticker-dim);
+}
+
+.incident-reason {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--sticker-dim);
+}
+
+.incident-choice {
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  padding: 8px 10px;
+  color: var(--sticker-ink);
+  background: transparent;
+  border: 2px solid var(--ink-line);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.incident-choice:hover:not(:disabled) {
+  background: #f1f3f5;
+}
+
+.incident-choice:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.incident-choice:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.incident-choice-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.incident-choice-note {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--sticker-dim);
+}
+
 .quality-select-hud {
   font-size: 13px;
   padding: 7px 10px;
@@ -817,6 +905,12 @@ body,
 
   .hud-volume {
     width: 70px;
+  }
+
+  /* La barre du bas se centre et passe à la ligne : le panneau, lui, est
+     ancré sur son bouton et déborderait. On le borne à la largeur utile. */
+  .incident-panel {
+    width: min(264px, calc(100vw - 40px));
   }
 
   /* La barre du bas occupe toute la largeur ici : on décolle le joystick

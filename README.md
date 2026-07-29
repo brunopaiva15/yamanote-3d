@@ -30,6 +30,10 @@ npm run lint     # oxlint
   invite l'annonce sous le réticule. Depuis le quai on parle aux gens du quai,
   jamais à travers la vitre à ceux qui sont assis dans la rame
 - M : couper le son, F : plein écran
+- Le **⚠ en bout de barre** déroule les deux arrêts en pleine voie — coup de
+  frein d'urgence, coupure de courant — et les déclenche tout de suite. Ils
+  tombent d'eux-mêmes, mais rarement : jusqu'à trois heures de trajet pour la
+  coupure. Grisé tant qu'on n'est pas entre deux gares, la rame lancée
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder,
   bouton s'asseoir, bouton « Parler » quand quelqu'un est à portée
 
@@ -1587,9 +1591,22 @@ La coupure tombe **toutes les trente-quatre à soixante-dix gares**, soit d'une
 heure et demie à trois heures de trajet — la première plus tôt. C'est
 volontairement au-delà d'une session ordinaire : une vraie panne d'alimentation
 est un événement qu'on raconte, pas un qu'on croise. Elle passe devant l'arrêt
-d'urgence quand les deux tombent sur la même course, et `__powerOutage()` la
-déclenche en développement (`__outageSkip(-n)` avance jusqu'aux abords du retour
-de la tension ; `scripts/outage-shots.mjs` en fait la planche de contrôle).
+d'urgence quand les deux tombent sur la même course.
+
+Ce qui pose un problème que la rareté ne résout pas : un événement qu'on peut
+ne jamais voir est un événement qu'on ne peut pas non plus regarder deux fois.
+D'où le **⚠ discret en bout de barre du HUD** (`ui/IncidentMenu`), qui déroule
+les deux arrêts et les déclenche à la demande. Il n'invente rien et ne double
+aucune mécanique : il appelle exactement les fonctions du tirage automatique,
+avec les mêmes conditions — la rame doit rouler en pleine voie, et rien ne doit
+être déjà en cours. Quand ce n'est pas le cas, il le DIT plutôt que de se
+contenter d'être gris. Le menu est volontairement effacé tant qu'on ne le
+survole pas : ce n'est pas un réglage, et on ne doit pas tomber dessus en
+cherchant le volume.
+
+En développement, `__emergencyStop()` et `__powerOutage()` font la même chose
+depuis la console, `__outageSkip(-n)` avance jusqu'aux abords du retour de la
+tension, et `scripts/outage-shots.mjs` en fait la planche de contrôle.
 
 **Quatre locutrices, toutes féminines**, parce que quatre sources parlent et
 qu'on doit les distinguer sans regarder : la sono de la rame (`jf_alpha`),

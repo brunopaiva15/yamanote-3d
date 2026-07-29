@@ -15,6 +15,7 @@ import { applySpeechVolume, cancelSpeech } from '../systems/speech';
 import { input } from '../systems/input';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
+import { IncidentMenu } from './IncidentMenu';
 
 function useClock(): string {
   const [clock, setClock] = useState('');
@@ -210,6 +211,8 @@ export function Hud() {
         >
           {t.hud.fullscreen}
         </button>
+        {/* En bout de barre, après les réglages : ce n'en est pas un. */}
+        <IncidentMenu />
       </div>
     </>
   );
