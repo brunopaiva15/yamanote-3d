@@ -15,6 +15,7 @@ import { updatePlatformPresence } from '../systems/platformPresence';
 import { updateStationOcclusion } from '../systems/stationOcclusion';
 import { updatePlatformWait } from '../systems/platformWait';
 import { updatePassingTrain } from '../systems/passingTrain';
+import { updateDogWalkers } from '../systems/dogWalkers';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
 import {
   playThunder,
@@ -161,6 +162,9 @@ export function Engine(): null {
       updateAmbience(physDt);
       updatePassengers(physDt);
       updatePlatformCrowd(physDt);
+      // Après la foule : un chien suit son maître, dont la position vient
+      // d'être avancée (et qui peut avoir disparu dans l'escalier).
+      updateDogWalkers(physDt);
       // Après les voyageurs : la conversation vise une tête dont la position
       // vient d'être mise à jour, et récolte les événements de cette image.
       updateConversation(physDt);

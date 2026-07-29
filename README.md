@@ -860,6 +860,67 @@ Blender nécessaire) ; les clips et les os sont détectés par correspondance
 floue (conventions Quaternius / KayKit / Mixamo), avec overrides possibles
 par variante dans le manifest (`clips`, `faceYaw`, `sitHipY`, `tint`).
 
+### Promener son chien
+
+Sur un quai, on croise **parfois** quelqu'un qui traverse la gare avec son
+chien. C'est rare et c'est voulu : au Japon un animal voyage en sac de
+transport, donc un maître tenant une laisse ne monte **jamais** en rame — il
+repart par l'escalier, et son chien descend les marches derrière lui. Une gare
+sur deux environ compte un promeneur de chien quelque part sur ses 224 m ; on
+n'en croise pas la moitié.
+
+Le pack animalier s'installe à part, dans `public/models/animals/`, avec son
+propre manifeste et sa propre licence :
+
+```bash
+# Quaternius — « Ultimate Animated Animals » (CC0)
+npm run animals:import -- ~/Téléchargements/AnimatedAnimals.zip
+
+# toutes les espèces, pas seulement celles qu'on promène en laisse :
+npm run animals:import -- pack.zip --all
+```
+
+Sans ce dossier, le quai n'a simplement pas de chiens : rien d'autre ne change.
+
+Trois choses distinguent un quadrupède d'un passager, et elles sont dans
+`characters/animals.ts` :
+
+- **la taille est réelle, et par espèce.** Un personnage est toujours ramené à
+  `SKELETON_TOP` ; un chien, non — un corgi fait 32 cm, un husky 62. La hauteur
+  est donc une donnée du manifeste (`height`, en mètres), à vérifier après
+  import.
+- **le reniflage est le clip de repas.** Aucun pack ne livre de « Sniff » ;
+  leur « Eating » est exactement ça — museau au sol, corps planté — et c'est le
+  geste qui fait une promenade.
+- **la vitesse d'auteur du cycle est mesurée**, pas déclarée : le déplacement
+  de la racine est relevé avant d'être aplati, ce qui donne les m/s pour
+  lesquels le pas a été animé. Sans ça, les pattes patinent.
+
+Le reste est dans `systems/dogWalkers` et tient à trois contraintes, qui font
+plus pour la promenade que l'animation :
+
+- **la laisse.** Une sangle de 1,5 m qui rappelle le chien au-delà, et dont la
+  flèche dit le mou : tendue, c'est une ligne droite ; lâche, elle fait un
+  ventre. Elle s'accroche à l'os de main du maître, donc elle suit le
+  balancement du bras — et le maître prend son téléphone de l'autre main, par
+  le même mécanisme que la poignée en rame.
+- **le flânage.** Le chien ne vise pas un point fixe derrière son maître mais
+  une place qui dérive devant, derrière, sur le côté — toujours du côté du mur,
+  jamais du côté de la voie. Il reprend l'allure du maître en anticipation et
+  ne corrige que l'écart : sans ce terme, il poursuit une place qui avance
+  aussi vite que lui, se stabilise un demi-mètre en arrière pour toujours, et
+  ne s'arrête plus jamais.
+- **l'arrêt à deux.** Quand le chien plante son museau, le maître **l'attend**,
+  le regarde, puis repart avant lui — le petit rappel de laisse de tout
+  promeneur pressé. Sans cette attente, la sangle se tendait en un quart de
+  seconde et le reniflage n'existait jamais.
+
+En dev, `__dogs` donne l'état de chaque chien en console (maître, allure,
+laisse), `node scripts/make-test-dog.mjs` fabrique un chien de test riggé pour
+éprouver la chaîne sans le vrai pack (à ne pas committer), et
+`node scripts/dog-shots.mjs /tmp/chiens` va chercher un promeneur sur le quai
+et le photographie — la rencontre est trop rare pour se juger en jouant.
+
 ## Ce que font les voyageurs
 
 Une centaine d'occupations vivent dans `data/paxActions`, mais l'essentiel
@@ -1069,9 +1130,14 @@ src/
   three/station/signatures/ les charpentes propres à une gare : Takanawa, Akihabara…
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
+  three/characters/animals.ts  pack animalier : taille réelle par espèce, clips
+                         du quadrupède, vitesse d'auteur mesurée sur la racine
+  systems/dogWalkers.ts  les chiens promenés sur le quai : place qui flâne,
+                         laisse qui rappelle, arrêt partagé avec le maître
   data/dialogue/         les 416 conversations : conditions d'emploi et texte
                          FR / EN / JA, décliné au féminin et au masculin
-  scripts/               models:import / models:inspect (packs → public/models/),
+  scripts/               models:import / models:inspect / animals:import
+                         (packs → public/models/, public/models/animals/),
                          sondes navigateur : station-probe, pax-probe,
                          scenery-shots, scenery-cost, pass-shots, season-shots,
                          weather-shots
