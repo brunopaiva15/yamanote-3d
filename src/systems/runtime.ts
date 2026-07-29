@@ -225,6 +225,15 @@ export const runtime = {
    * lampes de secours, sono du conducteur, interphone, signalisation de porte.
    */
   carPower: 1,
+  /**
+   * Éclairage de secours (0 = éteint, 1 = plein), sur les batteries de bord.
+   *
+   * Séparé de `carPower`, et surtout PAS son complément : le relais de secours
+   * ne bascule pas au premier décrochage du convertisseur, il attend que
+   * l'alimentation normale soit vraiment perdue. Des lampes de secours qui
+   * battraient en opposition de phase avec les néons ne ressembleraient à rien.
+   */
+  emergencyLight: 0,
   /** Identifiant stable de la rame (pour departureId anti double-lecture). */
   trainId: 'yamanote-e235-1',
   /** Compteur d'arrêts depuis le début de la session (incrémenté à chaque dwell). */
@@ -291,6 +300,7 @@ export function resetRuntime(): void {
   runtime.emergencyStop.holdFor = 0;
   runtime.emergencyStop.reason = 0;
   runtime.carPower = 1;
+  runtime.emergencyLight = 0;
   runtime.outOfService = false;
   runtime.terminusStop = false;
   runtime.useAlternativePlatform = false;

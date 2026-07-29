@@ -327,8 +327,11 @@ function CabinLights({
  * tirent sur le jaune : c'est ce contraste qui fait qu'une voiture sur
  * batteries ne ressemble à aucune autre.
  *
- * Ils s'allument en miroir de `carPower` : à pleine tension, ils n'éclairent
- * rien du tout et ne coûtent donc rien de plus qu'une intensité à zéro.
+ * Ils suivent `runtime.emergencyLight`, et NON l'inverse de `carPower` : le
+ * relais de secours attend que l'alimentation normale soit vraiment perdue au
+ * lieu de basculer à chaque décrochage du convertisseur. À pleine tension ils
+ * n'éclairent rien du tout, et ne coûtent donc rien de plus qu'une intensité à
+ * zéro.
  */
 function EmergencyLights({ positions }: { positions: [number, number, number][] }) {
   // Deux points seulement, aux tiers du wagon, quel que soit le palier de
@@ -350,8 +353,8 @@ function EmergencyLights({ positions }: { positions: [number, number, number][] 
   );
   const lamps = useRef<(THREE.PointLight | null)[]>([]);
   useFrame(() => {
-    const dark = 1 - runtime.carPower;
-    for (const l of lamps.current) if (l) l.intensity = EMERGENCY_LAMP * dark;
+    const on = runtime.emergencyLight;
+    for (const l of lamps.current) if (l) l.intensity = EMERGENCY_LAMP * on;
   });
   return (
     <>

@@ -1138,17 +1138,26 @@ export function brakeRelease(): void {
 export function powerCut(): void {
   if (!nodes) return;
   const now = Tone.now();
+  // Un battement par décrochage du convertisseur, calé sur l'affaissement de
+  // l'éclairage (POWER_CUT dans systems/stationCycle) : ce qu'on voit clignoter
+  // doit s'entendre claquer, sinon les deux se lisent comme deux événements.
   nodes.thud.triggerAttackRelease('D1', 0.11, slot('thud', now), 0.42);
+  nodes.thud.triggerAttackRelease('C1', 0.08, slot('thud', now + 0.33), 0.3);
+  nodes.thud.triggerAttackRelease('A0', 0.1, slot('thud', now + 0.58), 0.24);
 }
 
 /** Retour de la tension : les contacteurs se referment, les turbines repartent. */
 export function powerRestore(): void {
   if (!nodes) return;
   const now = Tone.now();
-  nodes.thud.triggerAttackRelease('F1', 0.09, slot('thud', now), 0.34);
+  // Trois fermetures, dont deux qui ne tiennent pas — mêmes instants que
+  // POWER_RESTORE. La troisième est la bonne, et c'est elle qui claque le plus.
+  nodes.thud.triggerAttackRelease('F1', 0.08, slot('thud', now + 0.13), 0.26);
+  nodes.thud.triggerAttackRelease('F1', 0.08, slot('thud', now + 0.55), 0.3);
+  nodes.thud.triggerAttackRelease('G1', 0.1, slot('thud', now + 0.99), 0.38);
   // Reprise des ventilateurs en charge : un appel d'air court, une seconde
-  // après les contacteurs — le temps que les convertisseurs se réamorcent.
-  nodes.air.triggerAttackRelease(0.4, slot('air', now + 0.9), 0.1);
+  // après le contacteur qui a tenu.
+  nodes.air.triggerAttackRelease(0.4, slot('air', now + 1.9), 0.1);
 }
 
 // Immobilisation complète : léger tassement de caisse puis serrage à l'arrêt.

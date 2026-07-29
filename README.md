@@ -1636,9 +1636,17 @@ Dans l'ordre, ce que vit le wagon :
 0 s        la traction disparaît. Le chant de l'onduleur s'éteint,
            le souffle de la climatisation meurt en deux secondes.
            La rame roule sur son élan (惰行) et ne ralentit presque pas.
-1–1,2 s    l'éclairage s'affaisse puis lâche. Les dalles LCD au-dessus des
-           portes et les douze écrans publicitaires 窓上 deviennent noirs.
-           Restent deux lampes de secours, froides, et les affiches de papier.
+0–1,8 s    ÇA CLIGNOTE. Le convertisseur de bord décroche, se réamorce sur
+           ce qui reste dans ses condensateurs, décroche encore — trois fois,
+           de plus en plus court —, puis un dernier soubresaut à 1,7 s et
+           plus rien. Un claquement de contacteur par décrochage.
+           Les tubes s'affaissent progressivement ; les dalles LCD et les
+           douze écrans 窓上, eux, CLAQUENT — un rétroéclairage tient ou il
+           ne tient pas. À mi-décrochage le wagon est encore parfaitement
+           lisible alors que tous les écrans sont déjà noirs.
+~1 s       le relais de secours bascule : deux lampes froides s'allument,
+           une fois les néons vraiment perdus (et pas entre deux
+           décrochages, ou elles battraient en opposition de phase).
 2–4 s      le conducteur serre les freins. Freinage de SERVICE, au pneumatique :
            la récupération n'a plus de ligne où renvoyer son courant.
 ~14 s      première annonce, au combiné, sur les batteries de bord.
@@ -1646,9 +1654,13 @@ Dans l'ordre, ce que vit le wagon :
    à 5'40  Un rappel d'attente à mi-parcours — et la seule consigne de sécurité
            du jeu qui vise un geste que le joueur pourrait vraiment faire :
            ne pas toucher au robinet de secours des portes.
-−24 s      le courant revient. D'ABORD la lumière — deux battements de
-           contacteurs, puis ça tient —, l'annonce neuf secondes plus tard.
-           C'est la lumière qui prévient le wagon, pas la voix.
+−24 s      le courant revient, et il met trois secondes. Deux contacteurs se
+           referment sans tenir, le troisième tient, puis les tubes montent
+           doucement en puissance — un fluorescent ne donne pas son plein
+           flux d'un coup. Les écrans se rallument NOIRS : la lampe revient,
+           le contrôleur redémarre derrière, l'image arrive après.
+           L'annonce, elle, tombe neuf secondes plus tard : c'est la lumière
+           qui prévient le wagon, pas la voix.
 0 s        desserrage, la rame repart.
 ```
 
@@ -1675,9 +1687,30 @@ tube ne s'éteigne).
 
 Tout cela passe par **une seule valeur**, `runtime.carPower` (0..1) : les néons
 et le bandeau LED la lisent en puissance 1,6 — un tube tient, blêmit, puis lâche
-—, les dalles et les écrans publicitaires par un seuil, le moteur audio pour
-couper l'onduleur et laisser mourir les turbines à leur propre inertie. Le reste
-du jeu n'a pas à savoir qu'une coupure existe.
+—, les dalles et les écrans publicitaires en MARCHE et non en rampe, le moteur
+audio pour couper l'onduleur et laisser mourir les turbines à leur propre
+inertie. Le reste du jeu n'a pas à savoir qu'une coupure existe.
+
+La forme des deux séquences vit dans `systems/carPower`, en images-clés plutôt
+qu'en formules : on les lit, et on les règle en déplaçant un chiffre. Le module
+n'a aucune dépendance, donc Node l'exécute tel quel et
+`tests/carPower.test.ts` vérifie ce que l'œil doit pouvoir compter — au moins
+trois extinctions franches à la coupure, deux retombées de contacteur au
+retour, une remontée finale qui ne redescend jamais, et un éclairage de secours
+qui ne s'allume jamais entre deux décrochages ni ne laisse le wagon dans le noir
+complet pendant que le courant revient.
+
+Une seconde valeur l'accompagne, `runtime.emergencyLight`, et ce n'est
+délibérément **pas** le complément de la première : le relais de secours ne
+bascule pas au premier décrochage, il attend que l'alimentation normale soit
+vraiment perdue. Des lampes de secours qui battraient en opposition de phase
+avec les néons ne ressembleraient à rien.
+
+Rien de tout cela ne se juge sur une capture d'écran : le clignotement dure
+moins de deux secondes, et le rendu logiciel des scripts tourne à quatre images
+par seconde — il le consomme en quelques frames. `__holdPower(niveau)` fige donc
+l'alimentation à un point choisi de la courbe, et `scripts/outage-shots.mjs` en
+tire une pellicule des états traversés.
 
 La coupure tombe **toutes les trente-quatre à soixante-dix gares**, soit d'une
 heure et demie à trois heures de trajet — la première plus tôt. C'est
@@ -1698,7 +1731,8 @@ cherchant le volume.
 
 En développement, `__emergencyStop()` et `__powerOutage()` font la même chose
 depuis la console, `__outageSkip(-n)` avance jusqu'aux abords du retour de la
-tension, et `scripts/outage-shots.mjs` en fait la planche de contrôle.
+tension, `__holdPower(niveau)` fige l'alimentation à un point de la courbe, et
+`scripts/outage-shots.mjs` en fait la planche de contrôle.
 
 **Quatre sources, et deux automates qu'on ne confond pas** : la sono de la rame
 (`jf_alpha`), l'annonce automatique du quai (`jm_kumo`, **un homme** — les deux

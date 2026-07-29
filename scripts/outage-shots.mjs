@@ -131,5 +131,29 @@ await page.evaluate(() => window.__outageSkip(0));
 await new Promise((r) => setTimeout(r, 2500));
 await shot('06-reprise');
 
+// --- La pellicule du clignotement ---------------------------------------
+//
+// Le décrochage du convertisseur dure moins de deux secondes. Sur un rendu
+// logiciel, où une image prend un quart de seconde, il est consommé en
+// quelques frames : à 4 images par seconde, il n'y a rien à voir et rien à
+// juger. On fige donc l'alimentation aux niveaux que la séquence traverse
+// (systems/carPower, POWER_CUT) et on regarde chacun d'eux.
+//
+// Ce que ces images doivent montrer : le décalage entre les deux. Les tubes du
+// plafond s'affaissent progressivement — à 0,34 le wagon est encore
+// parfaitement lisible — alors que les dalles, elles, ont CLAQUÉ : un
+// rétroéclairage tient ou il ne tient pas, il n'a pas de demi-teinte. C'est ce
+// décalage qui fait qu'on voit la panne arriver au lieu de la subir.
+await page.evaluate(() => window.__powerOutage());
+await page.waitForFunction(() => window.__runtime.emergencyStop.stage === 'stopped', {
+  timeout: 90000,
+});
+for (const level of [0.92, 0.62, 0.34, 0.08]) {
+  await page.evaluate((l) => window.__holdPower(l), level);
+  await new Promise((r) => setTimeout(r, 1200));
+  await shot(`07-decrochage-${String(level).replace('.', '')}`);
+}
+await page.evaluate(() => window.__holdPower(null));
+
 await browser.close();
 await server.close();

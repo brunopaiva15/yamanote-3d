@@ -79,7 +79,7 @@ export function Ads() {
     // avec l'alimentation de bord et ne reviennent qu'avec elle. Les nakazuri,
     // elles, sont du papier — une coupure de courant ne les décroche pas, et
     // c'est le seul affichage du wagon qui reste lisible dans le noir.
-    const lit = 0.05 + 0.95 * Math.max(0, (runtime.carPower - SCREEN_CUTOFF) / (1 - SCREEN_CUTOFF));
+    const lit = runtime.carPower > SCREEN_CUTOFF ? 1 : 0;
     for (const m of screenMats) m.color.setScalar(lit);
 
     for (let i = 0; i < pivots.current.length; i++) {

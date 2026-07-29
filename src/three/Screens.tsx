@@ -38,6 +38,15 @@ const YAMANOTE_GREEN = '#80c241';
  */
 const LCD_CUTOFF = 0.45;
 
+/**
+ * Alimentation au-dessus de laquelle le contrôleur de la dalle a fini de
+ * redémarrer et redessine son contenu. Entre les deux seuils, la lampe est
+ * allumée et l'écran est noir : c'est l'état d'un panneau qui repart, et le
+ * quart de seconde qu'il tient est ce qui fait qu'on le VOIT redémarrer au
+ * lieu de le voir sauter d'une image à l'autre.
+ */
+const LCD_READY = 0.97;
+
 // Afficheur fidèle à la rame réelle (11 voitures) ; le voyageur est en 3ᵉ.
 // Seule la voiture 3 est modélisée en 3D.
 const CAR_COUNT = 11;
@@ -1498,6 +1507,8 @@ export function Screens() {
   const acc = useRef(0);
   /** Vrai tant que les dalles sont éteintes : sert à forcer le redessin au retour. */
   const wasDark = useRef(false);
+  /** Vrai quand les canevas ont déjà été peints en noir pour le redémarrage. */
+  const blanked = useRef(false);
 
   const leftMat = useMemo(
     () => new THREE.MeshBasicMaterial({ map: left.texture, toneMapped: false }),
@@ -1513,25 +1524,47 @@ export function Screens() {
   );
 
   useFrame((_, dt) => {
-    // Une dalle LCD n'est pas une lampe : elle n'a pas de demi-teinte. Sous le
-    // seuil, le rétroéclairage est éteint et il ne reste que le noir un peu
-    // gris du panneau — d'où la teinte plancher, qui n'est pas zéro.
+    // Une dalle LCD n'a pas de demi-teinte : son rétroéclairage tient ou il ne
+    // tient pas. Sous le seuil le panneau est NOIR — pas gris, pas en veille :
+    // éteint. C'est pour ça que le niveau est une MARCHE et non une rampe, et
+    // c'est ce qui rend le décrochage lisible : les tubes du plafond
+    // s'affaissent progressivement pendant que les écrans, eux, claquent.
     const power = runtime.carPower;
-    const lit = 0.06 + 0.94 * Math.max(0, (power - LCD_CUTOFF) / (1 - LCD_CUTOFF));
+    const lit = power > LCD_CUTOFF ? 1 : 0;
     leftMat.color.setScalar(lit);
     rightMatA.color.setScalar(lit);
     rightMatB.color.setScalar(lit);
-    // Écrans morts : plus rien à dessiner. Au retour de la tension, ils
-    // redémarrent — on force donc un redessin, sinon la dalle rallumée
-    // afficherait l'image d'avant la coupure.
     if (power <= LCD_CUTOFF) {
       wasDark.current = true;
       return;
     }
+
+    // Le rétroéclairage est revenu, l'image pas encore. Une dalle ne rallume
+    // pas son contenu : elle rallume sa lampe, et le contrôleur redémarre
+    // derrière. Tant que la tension n'est pas franchement établie, on peint
+    // donc du noir — sinon chaque battement de contacteur ferait réapparaître,
+    // le temps d'un éclat, l'image d'avant la coupure.
     if (wasDark.current) {
+      if (power < LCD_READY) {
+        if (!blanked.current) {
+          blanked.current = true;
+          for (const s of [left, rightA, rightB]) {
+            s.g.fillStyle = '#05070a';
+            s.g.fillRect(0, 0, s.w, s.h);
+            s.texture.needsUpdate = true;
+          }
+        }
+        return;
+      }
+      // Tension établie : le contrôleur repart et redessine tout.
       wasDark.current = false;
+      blanked.current = false;
       lastKey.current = '';
       lastAd.current = -1;
+      // Le contenu n'arrive pas avec la lumière : on laisse au panneau son
+      // quart de seconde d'amorçage, dalle noire allumée.
+      acc.current = 0;
+      return;
     }
 
     acc.current += dt;

@@ -24,6 +24,13 @@ import {
 import { useStore, type Phase } from '../store';
 import { advanceClock, runtime } from './runtime';
 import {
+  createCarPower,
+  cutPower,
+  resetCarPower,
+  restorePower,
+  stepCarPower,
+} from './carPower';
+import {
   DEPART_HOLD,
   integrateTrain,
   phaseTarget,
@@ -197,40 +204,32 @@ function drawOutageGap(first = false): number {
 
 // --- Alimentation de bord -------------------------------------------------
 //
-// L'éclairage ne s'éteint pas comme un interrupteur : les convertisseurs ont
-// leur réserve, la lumière s'affaisse avant de lâcher. Au retour, c'est
-// l'inverse — les contacteurs se referment en deux battements avant que ça
-// tienne, et c'est ce clignotement-là qu'on reconnaît.
+// La forme de l'affaissement et celle du retour vivent dans systems/carPower,
+// qui n'a aucune dépendance et se teste tel quel. Ici, on ne fait que la faire
+// avancer et la publier dans runtime, où le rendu et le moteur audio la lisent.
 
-/** Chute de l'alimentation (s) : la réserve des convertisseurs s'épuise. */
-const POWER_FALL = 1.15;
-/** Remontée, une fois le clignotement passé (s). */
-const POWER_RISE = 0.7;
-/** Alimentation visée : 0 pendant la coupure, 1 le reste du temps. */
-let powerTarget = 1;
-/** Chrono du clignotement de retour, -1 = pas de retour en cours. */
-let powerFlickerT = -1;
+const carPower = createCarPower();
 
 /**
- * Ce qui reste éclairé, sonore et affiché suit `runtime.carPower` ; le reste
- * du jeu n'a pas à savoir qu'une coupure existe.
+ * Ce qui reste éclairé, sonore et affiché suit `runtime.carPower` et
+ * `runtime.emergencyLight` ; le reste du jeu n'a pas à savoir qu'une coupure
+ * existe.
  */
+/**
+ * Niveau imposé à la main, en développement seulement (`__holdPower`).
+ *
+ * Le clignotement dure moins de deux secondes et n'existe qu'en mouvement :
+ * sur un rendu logiciel, où une image prend un quart de seconde, il est
+ * consommé en quelques frames et il n'y a rien à regarder. Ce point d'arrêt
+ * fige l'alimentation à un niveau choisi pour qu'on puisse voir de quoi le
+ * wagon a l'air À MI-DÉCROCHAGE, et régler les seuils en connaissance de cause.
+ */
+let heldPower: number | null = null;
+
 function updateCarPower(dt: number): void {
-  if (powerFlickerT >= 0) {
-    powerFlickerT += dt;
-    const f = powerFlickerT;
-    // Deux battements de contacteurs, puis la montée franche.
-    runtime.carPower =
-      f < 0.13 ? 0.5 : f < 0.28 ? 0.06 : f < 0.44 ? 0.72 : Math.min(1, 0.72 + (f - 0.44) / POWER_RISE);
-    if (runtime.carPower >= 1) {
-      runtime.carPower = 1;
-      powerFlickerT = -1;
-    }
-    return;
-  }
-  const rate = powerTarget > runtime.carPower ? dt / POWER_RISE : dt / POWER_FALL;
-  const d = powerTarget - runtime.carPower;
-  runtime.carPower += Math.max(-rate, Math.min(rate, d));
+  stepCarPower(carPower, dt);
+  runtime.carPower = heldPower ?? carPower.power;
+  runtime.emergencyLight = carPower.emergency;
 }
 
 /**
@@ -253,8 +252,7 @@ export function beginPowerOutage(): void {
   em.reason = 0;
   outageCoastFor = OUTAGE_COAST_MIN + Math.random() * (OUTAGE_COAST_MAX - OUTAGE_COAST_MIN);
   for (const key of OUTAGE_KEYS) fired.delete(key);
-  powerTarget = 0;
-  powerFlickerT = -1;
+  cutPower(carPower);
   // Une annonce en cours ne se termine pas : l'amplificateur s'éteint au
   // milieu du mot. Seulement celle de la rame — la gare, elle, a son propre
   // réseau.
@@ -306,8 +304,7 @@ function updatePowerOutage(dt: number): void {
       // Le retour de la tension : d'abord la lumière, l'annonce ensuite. Dans
       // cet ordre — c'est la lumière qui prévient tout le wagon, pas la voix.
       once('po-restored', em.t >= em.holdFor - OUTAGE_RESTORE_LEAD, () => {
-        powerTarget = 1;
-        powerFlickerT = 0;
+        restorePower(carPower);
         audio.powerRestore();
         pushSceneEvent('powerBack');
       });
@@ -806,9 +803,9 @@ export function randomizeEntry(stationIndex?: number, direction?: LoopDirection)
   // depuis une rame alimentée.
   outageAt = -1;
   stationsToOutage = drawOutageGap(true);
-  powerTarget = 1;
-  powerFlickerT = -1;
+  resetCarPower(carPower);
   runtime.carPower = 1;
+  runtime.emergencyLight = 0;
   runtime.phaseT = phaseT;
   runtime.speed = sim.v;
   runtime.accel = sim.a;
@@ -1116,6 +1113,12 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   // temps qu'on veut laisser avant le redémarrage (négatif = avant, 0 = tout
   // de suite). Sert à regarder le retour de la tension sans attendre cinq
   // minutes — voir scripts/outage-shots.mjs.
+  // Fige l'alimentation de bord à un niveau (0..1), `null` pour la rendre à la
+  // simulation. Sert à regarder le clignotement image par image — voir
+  // scripts/outage-shots.mjs.
+  w.__holdPower = (level: number | null) => {
+    heldPower = level;
+  };
   w.__outageSkip = (secondsLeft = 0) => {
     const em = runtime.emergencyStop;
     if (em.kind !== 'outage' || em.stage !== 'stopped') return;
