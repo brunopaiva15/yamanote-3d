@@ -20,6 +20,7 @@ import { startAudio, setVolume, setPlatformSide } from '../systems/audioEngine';
 import { initSpeech } from '../systems/speech';
 import { seedPassengers } from '../systems/passengers';
 import { runtime, tokyoNow } from '../systems/runtime';
+import { seedWeather } from '../systems/weather';
 import { randomizeEntry } from '../systems/stationCycle';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
@@ -131,6 +132,9 @@ export function StartScreen() {
       day: now.day,
       weekday: now.weekday,
     };
+    // Le temps du jour, posé à l'heure où l'on monte : on arrive au milieu
+    // d'une journée qui a déjà eu son temps, sol encore mouillé compris.
+    seedWeather();
     try {
       await startAudio();
       setVolume(useStore.getState().volume);

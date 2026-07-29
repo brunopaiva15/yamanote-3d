@@ -15,6 +15,7 @@ import { qualityLevel, usePerf, type PerfLevel } from '../systems/perf';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { seasonNow } from '../systems/season';
+import { weather } from '../systems/weather';
 import { segEnv } from '../systems/segmentEnv';
 import { applyShadowFlags } from './shadowFlags';
 
@@ -83,6 +84,13 @@ const HEMI_SKY = { day: new THREE.Color('#cfe6f6'), golden: new THREE.Color('#ee
 const AMBIENT = { day: new THREE.Color('#e9f1f5'), golden: new THREE.Color('#e3cabb'), night: new THREE.Color('#38405a') };
 
 /**
+ * Le gris d'un ciel couvert de Tokyo. Ni bleu ni noir : un gris légèrement
+ * chaud, celui d'une couche de stratus éclairée par-derrière. C'est vers lui
+ * que brume et fond glissent à mesure que la couverture se ferme.
+ */
+const overcastTone = new THREE.Color('#a8adb2');
+
+/**
  * Longueur horizontale conservée de la position du soleil (m) et rayon auquel
  * elle est ramenée.
  *
@@ -147,6 +155,7 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
   const fill = useRef<THREE.DirectionalLight>(null);
   const hemi = useRef<THREE.HemisphereLight>(null);
   const amb = useRef<THREE.AmbientLight>(null);
+  const flash = useRef<THREE.AmbientLight>(null);
   const acc = useRef(1);
   const tmp = useRef(new THREE.Color());
   const tint = useRef(new THREE.Color());
@@ -164,13 +173,19 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
       // traverse une épaisseur d'atmosphère plus grande et arrive à l'oblique
       // sur les surfaces horizontales.
       const seasonSun = 1 - 0.2 * se.cold + 0.06 * se.heat;
+      // Le ciel couvert ne baisse pas la lumière : il la DÉPLACE. Le soleil
+      // s'éteint presque complètement — un ciel de pluie n'a pas d'ombres
+      // portées, c'est ce qui le trahit avant tout le reste — pendant que
+      // l'hémisphérique, elle, tient bon : la voûte entière devient la source.
+      const overcast = weather.cloud;
       const b = bases.current;
       b.sun =
         (SUN.day.intensity * w.day + SUN.golden.intensity * w.golden + SUN.night.intensity * w.night) *
-        seasonSun;
-      b.fill = 0.4 * w.day + 0.5 * w.golden + 0.1 * w.night;
-      b.hemi = 0.62 * w.day + 0.52 * w.golden + 0.22 * w.night;
-      b.amb = 0.4 * w.day + 0.35 * w.golden + 0.24 * w.night;
+        seasonSun *
+        (1 - 0.86 * overcast);
+      b.fill = (0.4 * w.day + 0.5 * w.golden + 0.1 * w.night) * (1 - 0.5 * overcast);
+      b.hemi = (0.62 * w.day + 0.52 * w.golden + 0.22 * w.night) * (1 - 0.18 * overcast);
+      b.amb = (0.4 * w.day + 0.35 * w.golden + 0.24 * w.night) * (1 - 0.1 * overcast);
       b.dayness = w.day + 0.8 * w.golden + 0.25 * w.night;
       if (sun.current) {
         mixColor(sun.current.color, w, { day: SUN.day.color, golden: SUN.golden.color, night: SUN.night.color });
@@ -186,16 +201,23 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
       // Épaisseur d'air de la saison : l'hiver sec de Tokyo porte loin, la
       // moiteur d'août noie les tours à six cents mètres. Ce n'est pas un
       // réglage d'humeur, c'est la portée réelle du regard.
-      const clarity = se.clarity;
+      // Portée du regard : la clarté de la saison, puis ce que le temps qu'il
+      // fait lui retire. Sous une averse, la ville s'arrête à cent mètres —
+      // c'est le premier effet de la pluie, bien avant les gouttes.
+      const clarity = se.clarity * weather.visibility;
       if (scene.fog instanceof THREE.Fog) {
-        mixColor(scene.fog.color, w, FOG_COLORS).lerp(tint.current, 0.24 * (1 - w.night));
+        mixColor(scene.fog.color, w, FOG_COLORS)
+          .lerp(tint.current, 0.24 * (1 - w.night))
+          .lerp(overcastTone, 0.55 * overcast * (1 - 0.5 * w.night));
         // Far élargi : la ville vue à travers les baies en regardant le fond
         // du wagon est beaucoup plus loin que la distance latérale pure.
         scene.fog.near = (30 * w.day + 22 * w.golden + 16 * w.night) * clarity;
         scene.fog.far = (220 * w.day + 170 * w.golden + 150 * w.night) * clarity;
       }
       if (scene.background instanceof THREE.Color) {
-        mixColor(tmp.current, w, BG_COLORS).lerp(tint.current, 0.24 * (1 - w.night));
+        mixColor(tmp.current, w, BG_COLORS)
+          .lerp(tint.current, 0.24 * (1 - w.night))
+          .lerp(overcastTone, 0.7 * overcast * (1 - 0.5 * w.night));
         scene.background.copy(tmp.current);
       }
     }
@@ -208,6 +230,10 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
     if (fill.current) fill.current.intensity = b.fill * dim;
     if (hemi.current) hemi.current.intensity = b.hemi * dim;
     if (amb.current) amb.current.intensity = b.amb * dim;
+    // L'éclair a sa propre source, et froide : mêlé aux autres il aurait fallu
+    // le fondre avec des teintes d'heure dorée recalculées deux fois par
+    // seconde, et il aurait clignoté orange.
+    if (flash.current) flash.current.intensity = weather.flash * 2.6;
   });
 
   // Paliers de qualité : ombres du soleil réduites (palier 2) puis coupées
@@ -239,6 +265,8 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
       <directionalLight ref={fill} position={[-30, 16, 18]} intensity={0.4} color="#dfeaf2" />
       <hemisphereLight ref={hemi} args={['#cfe6f6', '#8d9088', 0.62]} />
       <ambientLight ref={amb} intensity={0.4} color="#e9f1f5" />
+      {/* L'éclair : une source à part, éteinte 99 % du temps. */}
+      <ambientLight ref={flash} intensity={0} color="#dce9ff" />
     </>
   );
 }

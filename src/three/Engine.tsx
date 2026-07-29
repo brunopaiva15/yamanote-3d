@@ -10,6 +10,7 @@ import { runtime } from '../systems/runtime';
 import { updateCycle } from '../systems/stationCycle';
 import { updateDoorMotion } from '../systems/doorMotion';
 import { updateSegmentEnv } from '../systems/segmentEnv';
+import { updateWeather } from '../systems/weather';
 import { updatePlatformPresence } from '../systems/platformPresence';
 import { updateStationOcclusion } from '../systems/stationOcclusion';
 import { updatePlatformWait } from '../systems/platformWait';
@@ -94,6 +95,10 @@ export function Engine(): null {
       // lui ouvrir un créneau.
       updatePassingTrain(cycleDt);
       updateSegmentEnv(cycleDt);
+      // La météo suit l'horloge du monde et non celle de la machine : elle
+      // avance donc du dt de CYCLE, comme la course du train. Une frame lente
+      // ne doit pas figer une averse.
+      updateWeather(cycleDt);
       updatePlatformPresence();
       // Lit platformFade / platformSlide : doit venir après.
       updateStationOcclusion();
