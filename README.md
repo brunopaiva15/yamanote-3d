@@ -58,9 +58,23 @@ rejouer la mélodie ni sauter l'annonce de fermeture.
 
 Le volume praticable vit dans `systems/walkable` : des rectangles alignés sur les
 axes, plus un « portillon » par porte qui ne s'ouvre que si la porte de la rame
-**et** la porte palière en face sont réellement dégagées. Train absent, tous les
-seuils se ferment — on ne peut pas tomber sur la voie. Une seule voiture est
-accessible, celle du joueur : c'est la seule dont l'intérieur existe.
+**et** la porte palière en face sont réellement dégagées. Train absent — ou rame
+en mouvement — tous les seuils se ferment : on ne peut pas tomber sur la voie, ni
+descendre d'un train qui roule. Une seule voiture est accessible, celle du
+joueur : c'est la seule dont l'intérieur existe.
+
+Un portillon refermé garde une exception, et c'est la seule : celui qu'on occupe
+déjà reste franchissable. Une porte qui se referme sur quelqu'un ne l'emmure pas
+— elle s'arrête sur lui (`systems/doorObstruction`) et il lui reste les deux
+côtés. L'exception se lit sur les PIEDS (`runtime.stanceX/Z`) et non sur l'œil
+(`runtime.playerX/Z`), qui balance de deux centimètres avec la caisse. Lue sur
+l'œil, elle s'auto-alimentait : adossé au fond de l'alcôve pendant que la rame
+entrait en gare, un pic de roulis suffisait à faire croire qu'on avait un pied
+dans l'encadrement, ce qui autorisait le pas suivant, qui rendait la chose vraie
+à son tour — et on traversait ainsi une porte fermée, à 90 km/h, jusqu'au quai.
+Le référentiel basculait alors en pleine voie et la rame s'arrêtait net.
+`tests/walkable.test.ts` tient la règle des deux côtés : la porte fermée ne
+s'ouvre pas, et celle qui se referme sur vous ne vous enferme pas.
 
 ### Se poser à quai
 
