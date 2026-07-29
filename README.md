@@ -1531,9 +1531,22 @@ La séquence de départ respecte la
 chronologie réelle, comptée depuis l'arrêt complet : portes ouvertes à 1–3 s,
 mélodie **une vingtaine de secondes plus tard** (15–25 s selon la taille de la
 gare et l'état de la ligne, comme le chef de train qui la lance ~25 s avant le
-départ), coupée en fondu au bout d'une dizaine de secondes — elle n'arrive
-jamais au bout — l'annonce de fermeture prenant le relais sur ce silence, puis
-la fermeture vers 40 s et le départ vers 45–50 s.
+départ), **deux passages entiers**, puis l'annonce de fermeture, la fermeture
+neuf secondes plus tard et le départ.
+
+Ces deux passages ne sont pas négociables, et c'est le DWELL qui s'ajuste, pas
+la mélodie : la fenêtre sonore de chaque arrêt est taillée sur la longueur du
+clip câblé à ce quai-là (`melodyRoundsDuration`, `plannedDepartureMelodyPath`
+dans `data/melodies` ; `randomizeStopTimings` dans `systems/stationCycle`), si
+bien qu'un arrêt à Komagome — *Sakura Sakura*, 13,6 s le passage — dure une
+quinzaine de secondes de plus qu'un arrêt à Takadanobaba — *Tetsuwan Atom*,
+6,4 s. La version précédente coupait tout le monde en fondu après dix secondes
+fixes : la moitié des quais perdaient leur seconde reprise, et Komagome
+n'atteignait même pas la fin de la première. La coupure du chef de train existe
+toujours, mais elle referme désormais un silence. Les durées viennent d'un
+manifeste (`src/data/melodyManifest.ts`, gravé par
+`node scripts/melody-manifest-gen.mjs`) : `tests/melodyTiming.test.ts` échoue
+s'il a dérivé des MP3.
 Les annonces (sens de la boucle — 内回り ou 外回り — avec ses gares repères,
 次は… avec numéro JY, まもなく…, fermeture, accueil, messages de courtoisie en
 rotation) sont
@@ -1547,7 +1560,11 @@ automatiques JR (まもなく。…渋谷。…渋谷。), que Kokoro ne marque 
 lui-même. Les annonces **de bord** n'écrivent plus aucune virgule (ni 、 ni
 « , ») : rien que des points, donc partout la pause longue du 。 plutôt que la
 respiration courte du 、 (`data/announcements`) ; le quai, lui, garde sa
-ponctuation. `--reuse` ne grave que les clips absents : un texte inchangé garde
+ponctuation. Le point y marque une PAUSE et pas seulement une fin de phrase, en
+anglais comme en japonais : la voix de bord détache le nom de la gare et son
+code du reste, « The next station is. Shibuya. JY. 20. The doors on the right
+side will open. », comme 「次は。渋谷。渋谷。」 le fait de l'autre côté.
+`--reuse` ne grave que les clips absents : un texte inchangé garde
 exactement le fichier qu'il avait, et une version plus récente de Kokoro ne
 fait pas dériver en douce les annonces déjà en place.
 

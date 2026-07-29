@@ -56,7 +56,12 @@
 
 import * as Tone from 'tone';
 import { CABIN_SPEAKERS, CONFIG, type SpeakerPos } from '../data/config';
-import { MELODY_PATHS, MELODY_REPEATS, MELODY_REPEAT_GAP_S } from '../data/melodies';
+import {
+  MELODY_PATHS,
+  MELODY_REPEATS,
+  MELODY_REPEAT_GAP_S,
+  SYNTH_MELODY_DURATION_S,
+} from '../data/melodies';
 import { STATIONS } from '../data/stations';
 import {
   buildDepartureContext,
@@ -1441,28 +1446,36 @@ const SPECIALS: Record<string, Note[]> = {
 };
 
 // Durée d'un passage du motif (secondes) : le motif est bouclé jusqu'à
-// approcher cette cible (≈ 3 tours), comme un clip de quai.
-export const MELODY_DURATION = 6.5;
+// approcher cette cible, comme un clip de quai. La valeur vit dans
+// data/melodies, avec les autres durées — c'est elle qui sert de repli quand il
+// faut mesurer la fenêtre sonore d'un quai sans clip.
+export const MELODY_DURATION = SYNTH_MELODY_DURATION_S;
 
 /**
  * Repli synthétisé pour les quais sans clip. Les notes sont PLANIFIÉES à
  * l'avance dans Tone : une fois posées, on ne peut plus les rappeler. La
- * mélodie est donc écrite d'emblée à la longueur exacte que le chef de train
- * lui laissera (`seconds`), au lieu d'être coupée après coup.
+ * mélodie est donc écrite d'emblée à sa longueur définitive, au lieu d'être
+ * coupée après coup.
+ *
+ * Comme un clip, elle fait MELODY_REPEATS passages ENTIERS : la fenêtre que
+ * l'arrêt lui réserve est calculée sur MELODY_DURATION (voir
+ * data/melodies.melodyRoundsDuration), et un passage doit donc y tenir. D'où le
+ * compte de motifs fait à l'avance — on n'en démarre pas un qui déborderait —
+ * et le motif au minimum joué une fois, même s'il est plus long que la cible.
  */
-function synthMelody(index: number, seconds: number): void {
+function synthMelody(index: number): void {
   if (!nodes) return;
   const jy = STATIONS[index].jy;
   const tune = SPECIALS[jy] ?? (index % 2 === 0 ? HOUSE_A : HOUSE_B);
   const unit = 0.21;
+  const tuneLength = tune.reduce((sum, [, beats]) => sum + beats * unit, 0);
+  const loops = Math.max(1, Math.floor(MELODY_DURATION / tuneLength));
   const t0 = Tone.now() + 0.05;
   let t = t0;
-  for (let round = 0; round < MELODY_REPEATS && t - t0 < seconds; round++) {
-    const start = t;
-    while (t - start < MELODY_DURATION && t - t0 < seconds) {
+  for (let round = 0; round < MELODY_REPEATS; round++) {
+    for (let loop = 0; loop < loops; loop++) {
       for (const [note, beats] of tune) {
         const dur = beats * unit;
-        if (t - t0 >= seconds) break;
         nodes.melodyA.triggerAttackRelease(note, dur * 0.92, t, 0.42);
         nodes.melodyB.triggerAttackRelease(Tone.Frequency(note).transpose(12).toNote(), dur * 0.92, t, 0.3);
         t += dur;
@@ -1741,11 +1754,13 @@ let fallbackMelodyPath: string | null = null;
  * 発車メロディ : clips Inner/Outer Main selon quai et sens, sinon
  * melody-JYXX.mp3 déposé dans public/audio/, sinon synthèse. Délègue la
  * sélection à departureSequence (évite les doubles lectures via departureId).
- * `sounding` est le temps que le chef de train laissera à la mélodie avant de
- * la couper : les clips sont coupés en vol par interruptDepartureMelody(), la
- * synthèse — dont les notes sont planifiées d'avance — s'y ajuste à l'écriture.
+ *
+ * Aucune durée à passer : clip comme synthèse font MELODY_REPEATS passages
+ * entiers, et c'est stationCycle qui a taillé la fenêtre de l'arrêt sur eux
+ * (data/melodies.melodyRoundsDuration). La coupure du chef de train tombe donc
+ * sur un silence, pas au milieu d'une note.
  */
-export function departureMelody(index: number, sounding: number): void {
+export function departureMelody(index: number): void {
   const ctx = buildDepartureContext({
     departureSequenceStarted: true,
     stationIndex: index,
@@ -1759,7 +1774,7 @@ export function departureMelody(index: number, sounding: number): void {
     fallbackMelodyPath = path;
     if (!(await audioManager.playOnce(path, 'melody'))) {
       fallbackMelodyPath = null;
-      synthMelody(index, sounding);
+      synthMelody(index);
     }
   });
 }

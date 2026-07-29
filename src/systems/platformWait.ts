@@ -50,7 +50,6 @@ import {
 import {
   CLOSE_ANNOUNCE_LEAD,
   DOORS_CLOSE_LEAD,
-  MELODY_SOUNDING,
   dwellDuration,
   melodyCutAt,
   melodyStartAt,
@@ -195,7 +194,7 @@ function updateBoardable(dt: number, index: number, doorSide: 1 | -1): void {
   once('agent-1', t > 5, () => paAgentMessage());
   once('agent-2', t > melodyStartAt(index, dwell) - 3, () => paAgentMessage(1));
   once('melody', t >= melodyStartAt(index, dwell), () =>
-    audio.departureMelody(index, MELODY_SOUNDING),
+    audio.departureMelody(index),
   );
   // De près, la coupure du chef de train s'entend pour ce qu'elle est : la
   // mélodie se referme en pleine phrase.

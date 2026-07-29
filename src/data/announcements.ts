@@ -8,6 +8,12 @@
 // donc chaque respiration de ces annonces est désormais une pause pleine.
 // Toute chaîne ajoutée ici doit suivre la règle ; voir `noCommas` pour les
 // libellés importés d'ailleurs.
+//
+// Le point marque une PAUSE, pas seulement une fin de phrase — c'est la
+// diction des annonces automatiques, qui posent le nom de la gare et son code
+// détachés du reste : « The next station is. Shibuya. JY. 20. The doors on the
+// right side will open. » L'anglais de bord suit donc le japonais
+// (「次は。渋谷。渋谷。」) au lieu d'enchaîner ses groupes d'une traite.
 
 import { loopNameJp, prevStation, stationAtHop, wrapStation } from './loop.ts';
 import type { LoopDirection } from './platforms.ts';
@@ -77,11 +83,19 @@ function doorSideEn(side: 1 | -1): string {
   return side === 1 ? 'right' : 'left';
 }
 
-/** JY01 → JY-01 (forme parlée EN de la numérotation Yamanote). */
+/**
+ * JY01 → « JY. 01 » (forme parlée EN de la numérotation Yamanote).
+ *
+ * Le point entre les lettres et le nombre n'est pas une coquille : c'est une
+ * pause. L'annonce de bord énonce le code de gare en deux temps — les deux
+ * lettres, un souffle, le nombre —, et sans ponctuation le générateur les
+ * enchaînait d'une traite. Comme partout ici, la pause s'écrit avec un point
+ * (voir l'en-tête du fichier).
+ */
 export function spokenJy(jy: string): string {
   const m = /^([A-Z]+)(\d+)$/i.exec(jy);
   if (!m) return jy;
-  return `${m[1].toUpperCase()}-${m[2]}`;
+  return `${m[1].toUpperCase()}. ${m[2]}`;
 }
 
 // --- Blocs élémentaires ---
@@ -111,7 +125,7 @@ export function nextStationAnnouncement(index: number, side: 1 | -1): Utterance[
     },
     {
       text:
-        `The next station is ${st.romaji}. ${spokenJy(st.jy)}. ` +
+        `The next station is. ${st.romaji}. ${spokenJy(st.jy)}. ` +
         `The doors on the ${sideEn} side will open.`,
       lang: 'en-US',
     },
@@ -130,7 +144,7 @@ export function approachAnnouncement(index: number, side: 1 | -1): Utterance[] {
     },
     {
       text:
-        `The next station is ${st.romaji}. ` +
+        `The next station is. ${st.romaji}. ` +
         `The doors on the ${sideEn} side will open.`,
       lang: 'en-US',
     },
