@@ -18,12 +18,7 @@ import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import { placementFor, stairTopZ, stairwellAt, type StationPlacement } from './stationPlacement';
 import { layoutFor } from '../data/stationLayouts';
-import {
-  PSD_X,
-  STAIR_GOING,
-  STAIR_RISE,
-  STAIR_STEPS,
-} from '../data/stationGeometry';
+import { PSD_X, STAIR_FULL_LEN, STAIR_FULL_STEPS } from '../data/stationGeometry';
 import {
   BUSY_BRIEF,
   isPairAction,
@@ -54,11 +49,6 @@ export type CrowdState =
   | 'leaving'
   /** Gagne une porte de la rame et y disparaît (relais avec systems/passengers). */
   | 'boarding';
-
-/** Longueur totale de la volée modélisée, du nez au bas des marches. */
-const STAIR_FULL_LEN = (STAIR_STEPS + 1) * STAIR_GOING;
-/** Altitude à laquelle un voyageur qui descend n'est plus visible du quai. */
-const STAIR_VANISH_Y = -STAIR_STEPS * STAIR_RISE + 0.35;
 
 export interface CrowdPax {
   id: number;
@@ -395,7 +385,7 @@ function nearestStair(p: StationPlacement, z: number) {
 
 /** Altitude du sol sous un voyageur : nulle sur le quai, négative dans une volée. */
 function floorYAt(p: StationPlacement, x: number, z: number): number {
-  return stairwellAt(p, x, z, STAIR_FULL_LEN, STAIR_STEPS)?.y ?? 0;
+  return stairwellAt(p, x, z, STAIR_FULL_LEN, STAIR_FULL_STEPS)?.y ?? 0;
 }
 
 function freeSlot(): CrowdPax | null {
@@ -949,13 +939,12 @@ export function updatePlatformCrowd(dt: number): void {
           p.wpi = 0;
         });
         // Les marches se descendent vraiment : l'altitude suit le profil de la
-        // volée, et on disparaît une fois passé sous la dalle.
+        // volée. On ne s'efface PAS à une altitude donnée — le voyageur
+        // s'évaporait alors en pleine volée, la tête au niveau du quai, sous
+        // les yeux de qui se penche dans la trémie. Il marche jusqu'au bout de
+        // son dernier point de passage, un mètre après le linteau : c'est la
+        // dalle qui le cache, et l'effacement ne se voit plus.
         p.y = floorYAt(currentPlacement, p.pos.x, p.pos.z);
-        if (p.state === 'leaving' && p.y <= STAIR_VANISH_Y) {
-          p.state = 'hidden';
-          p.waypoints = [];
-          p.wpi = 0;
-        }
       }
       let dy = p.targetYaw - p.yaw;
       while (dy > Math.PI) dy -= Math.PI * 2;

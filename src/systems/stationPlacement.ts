@@ -17,13 +17,12 @@ import {
   PSD_HALF_GAP,
   PSD_X,
   TRACK_HALF,
-  STAIR_GOING,
+  STAIR_HALF_X,
   STAIR_HALF_Z,
-  STAIR_RISE,
-  STAIR_STEPS,
   STAIR_WALK_HALF_X,
   STAIR_WALK_LEN,
   STAIR_WALK_STEPS,
+  stairFloorY,
 } from '../data/stationGeometry';
 
 export interface Placed {
@@ -331,7 +330,12 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   // Piliers, trémies, escaliers mécaniques, ascenseur et kiosque sont posés par
   // le gabarit et font autorité. Tout le mobilier vient ensuite se ranger
   // autour, jamais l'inverse.
-  const stairs: Placed[] = a.stairs.map((z) => ({ x: midX + 0.4, z, halfX: 1.5, halfZ: STAIR_HALF_Z }));
+  const stairs: Placed[] = a.stairs.map((z) => ({
+    x: midX + 0.4,
+    z,
+    halfX: STAIR_HALF_X,
+    halfZ: STAIR_HALF_Z,
+  }));
   const escalators: Placed[] = a.escalators.map((z) => ({
     x: midX + 0.55,
     z,
@@ -591,13 +595,6 @@ export function stairTopZ(s: Placed): number {
   return s.z - s.halfZ;
 }
 
-/** Altitude (relative au sol du quai) à `t` mètres du nez de la volée. */
-export function stairDropAt(t: number, maxSteps = STAIR_STEPS): number {
-  if (t <= 0) return 0;
-  const step = Math.min(maxSteps, Math.floor(t / STAIR_GOING));
-  return -step * STAIR_RISE;
-}
-
 export interface StairwellHit {
   stair: Placed;
   /** Distance parcourue depuis le nez de la volée (m). */
@@ -622,7 +619,7 @@ export function stairwellAt(
     if (Math.abs(x - s.x) > STAIR_WALK_HALF_X) continue;
     const t = z - stairTopZ(s);
     if (t < 0 || t > maxLen) continue;
-    return { stair: s, t, y: stairDropAt(t, maxSteps) };
+    return { stair: s, t, y: stairFloorY(t, maxSteps) };
   }
   return null;
 }

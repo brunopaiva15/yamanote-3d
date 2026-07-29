@@ -298,6 +298,62 @@ gouttière et descentes d'eau, chemin de câbles, ligne verte de guidage et rep�
 bornes d'urgence évitent les baies de portes, les diffuseurs évitent les poutres,
 et rien n'atterrit dans une file d'attente.
 
+### Les trémies d'escalier
+
+C'est le seul endroit d'une gare où le décor doit tenir **en coupe** : la dalle
+est vraiment percée, le joueur descend dedans, sa tête passe sous le niveau du
+quai. Tout y vient d'une source unique (`data/stationGeometry`) — profil des
+marches, ligne des nez, palier bas, longueur praticable — parce que quatre
+consommateurs doivent voir exactement le même escalier : le rendu
+(`three/station/Stairwell`), le percement de la dalle, la marche du joueur
+(`systems/walkable`) et les voyageurs qui s'en vont (`systems/platformCrowd`).
+
+La volée est un **bloc plein** et non un empilement de plateaux : chaque marche
+descend jusqu'à une sous-face commune, ce qui ferme d'elle-même la gaine. Les
+joues et le voile de tête ne s'arrêtent pas au chant du percement, ils le
+**coiffent** — deux faces coplanaires sur quarante-quatre centimètres d'épaisseur
+de dalle, et la trémie se borde d'un liseré clignotant. Chaque nez de marche
+porte sa bande antidérapante jaune, la main courante descend avec la pente et
+se termine par un retour horizontal à chaque bout, et un bandeau lumineux
+encastré dans les joues éclaire ce que le jour tombant du percement n'atteint
+plus. Au fond, le fléchage de sortie de la gare courante.
+
+Le sol sur lequel on marche n'est délibérément **pas** en marches d'escalier :
+c'est la ligne des nez relevée d'une demi-contremarche, qui passe par le milieu
+de chaque giron. Un profil en escalier faisait tomber le marcheur de dix-sept
+centimètres tous les trente-quatre — quatre chutes par seconde au pas de
+promenade, pour le joueur comme pour les voyageurs.
+
+Deux nappes horizontales passaient enfin **en travers** de la cage : le ballast
+de la voie et la rue de la ville, toutes deux un mètre sous la dalle. Elles se
+dérobent maintenant sur l'emprise du quai, et seulement là — les écarter sur
+leurs quatre cent soixante mètres ouvrait un vide au-delà des abouts de quai
+(`three/groundStrip`, `systems/stationOcclusion`).
+
+C'est ce dégagement qui a libéré la place du **niveau inférieur**. La volée ne
+s'arrête plus sur une cloison : elle passe sous un linteau, repart sous la
+dalle et débouche sur un couloir de correspondance — soubassement de faïence,
+caissons publicitaires rétroéclairés, ligne de guidage peinte. Rien n'y est
+praticable — le joueur est arrêté cinq marches plus haut — mais c'est ce fond
+de champ qui décide si la trémie descend vers une gare ou s'arrête dans un
+puits de deux mètres.
+
+**C'est la hauteur sous linteau qui commande tout le profil.** La sous-face de
+la dalle est à quarante-quatre centimètres ; pour qu'un homme passe dessous, il
+faut être descendu de deux mètres soixante avant d'y arriver, et il n'y a pour
+cela que cinq mètres d'emprise. Quinze marches de 17,5 sur 31 y tiennent et
+donnent 2,15 m — la cote d'un passage de gare. Le fléchage de sortie se pose
+donc AU-DESSUS du passage, sur le linteau, et non suspendu dans la cage où il
+pendait à un mètre du sol.
+
+Le reste est calé sur ce qu'on peut réellement en voir : depuis le haut de la
+volée, le rayon rasant part de la sous-face du linteau et descend d'un demi-
+mètre par mètre ; à neuf mètres il a rejoint le sol. Les caissons se tiennent
+donc à hauteur d'affiche et pas plus loin que sept mètres — une réglette de
+plafond, elle, n'atteindrait jamais l'œil. Et les voyageurs qui s'en vont ne
+s'effacent plus à une altitude donnée : ils marchent jusqu'à un mètre après le
+linteau, où c'est la dalle qui les cache.
+
 ### La signalétique
 
 Le panneau de nom de gare n'a pas changé : code JY, gare précédente et suivante,

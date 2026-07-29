@@ -200,14 +200,59 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   w.__stationProbe = (opts?: { min?: number; ignore?: string[] }) => probeStation(scene, opts);
   // Se poser sur une gare donnée, à l'arrêt : c'est l'état où tout est monté
   // et immobile, donc le seul où une mesure a du sens.
+  //
+  // Le compteur de phase est REMIS À ZÉRO, et ce n'est pas cosmétique : il
+  // était hérité de l'état précédent, si bien qu'un saut vers une gare tombait
+  // souvent en fin de dwell. Une seconde plus tard la rame repartait, le quai
+  // se remettait à glisser sous la sonde, et une cote relevée était fausse le
+  // temps de poser la caméra dessus.
   w.__probeGoto = (i: number, phase: 'dwell' | 'brake' = 'dwell') => {
     const k = ((i % 30) + 30) % 30;
     useStore.setState({ index: k, platformIndex: k, phase, doorSide: DOOR_SIDE[k] });
+    runtime.phaseT = 0;
     runtime.platformFade = 1;
     runtime.platformSlide = 0;
   };
 
+  /**
+   * Ce que l'œil rencontre RÉELLEMENT le long d'un rayon, dans l'ordre.
+   *
+   * La sonde de volumes ne voit que la gare ; or ce qui gâche une vue vient
+   * souvent d'ailleurs — la nappe de rue qui traverse une trémie, un plan de
+   * tronçon qui passe devant un quai. Ici on tire un rayon et on lit la pile
+   * des touches, chacune avec sa filiation complète : c'est le seul moyen de
+   * nommer un intrus qui n'appartient pas à la gare.
+   */
+  w.__probeRay = (from: number[], to: number[]) => {
+    const o = new THREE.Vector3(from[0], from[1], from[2]);
+    const d = new THREE.Vector3(to[0], to[1], to[2]).sub(o).normalize();
+    return new THREE.Raycaster(o, d)
+      .intersectObject(scene, true)
+      .slice(0, 8)
+      .map((h) => {
+        const chain: string[] = [];
+        for (let c: THREE.Object3D | null = h.object; c; c = c.parent) {
+          chain.unshift(c.name || `<${c.type}>`);
+        }
+        return {
+          n: labelOf(h.object),
+          chain: chain.join('/'),
+          d: +h.distance.toFixed(2),
+          at: [+h.point.x.toFixed(2), +h.point.y.toFixed(2), +h.point.z.toFixed(2)],
+        };
+      });
+  };
+
   w.__probeName = () => STATIONS[useStore.getState().index].romaji;
+
+  // Origines des trémies, en repère MONDE. C'est le seul endroit du décor
+  // qu'on ne peut pas juger depuis la rame — il faut y poser l'œil — et sa
+  // position change d'une gare à l'autre.
+  w.__probeStairs = () =>
+    scene.getObjectsByProperty('name', 'trémie').map((o) => {
+      const p = o.getWorldPosition(new THREE.Vector3());
+      return [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)];
+    });
 
   // Se poser EN PLEINE VOIE, quartier choisi : l'état où l'on juge le décor.
   // Le quai est retiré, sinon il masque tout ce qu'on vient regarder.

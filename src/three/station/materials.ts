@@ -113,11 +113,22 @@ export function makeStationMaterials(p: StationPalette, textures: StationTexture
         side: THREE.DoubleSide,
       }),
       liner: new THREE.MeshStandardMaterial({ color: '#3b3f44', roughness: 0.95 }),
-      // Gaine sous une trémie : vue de l'intérieur, depuis le quai.
-      shaft: new THREE.MeshStandardMaterial({
-        color: '#2c3035',
-        roughness: 0.97,
-        side: THREE.BackSide,
+      // Volée d'escalier : béton lissé, plus dur et plus sourd que l'enduit des
+      // joues qui l'encadrent. Sans cette différence, une trémie n'était qu'un
+      // dégradé de gris où l'on ne distinguait aucune marche.
+      stair: new THREE.MeshStandardMaterial({
+        color: p.column,
+        roughness: 0.88,
+        emissive: p.column,
+        emissiveIntensity: 0.1,
+      }),
+      // Nez de marche antidérapant : la bande jaune de toute volée JR. Un rappel
+      // d'émissif la tient lisible au fond de la trémie, où plus rien n'éclaire.
+      stairNose: new THREE.MeshStandardMaterial({
+        color: '#e5b02f',
+        roughness: 0.72,
+        emissive: '#e5b02f',
+        emissiveIntensity: 0.35,
       }),
     };
 
