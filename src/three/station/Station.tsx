@@ -53,7 +53,7 @@ import {
   TRACK_HALF,
 } from '../../data/stationGeometry';
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
-import { Barrier } from './Barrier';
+import { Barrier, EdgeBarrier } from './Barrier';
 import { makeStationMaterials, type Mats } from './materials';
 import { stationAd } from './adPool';
 import { mat, matFacingTrack, useInstances } from './instancing';
@@ -533,6 +533,19 @@ export function Station() {
           height={2.0}
         />
       ))}
+
+      {/* Bords de quai NUS — Shinjuku et Shibuya, les deux seules gares sans
+          portes palières. Partout ailleurs, le muret arrête l'œil en même temps
+          que le pas ; ici la marche s'arrêtait au ras du liseré blanc sans que
+          rien ne le dise, des deux côtés de l'îlot. Le bord d'embarquement
+          s'ouvre au droit des baies quand la rame est à quai ; celui d'en face,
+          où aucune rame ne se présente, reste continu. */}
+      {!hasPsd && (
+        <>
+          <EdgeBarrier x={PSD_X} length={layout.length} gates={gaps} />
+          {place.farEdgeX !== null && <EdgeBarrier x={place.farEdgeX} length={layout.length} />}
+        </>
+      )}
 
       {/* Charpente propre à la gare, quand elle en a une. Elle était réservée
           aux deux paliers les plus riches ; elle porte maintenant l'essentiel

@@ -29,14 +29,18 @@ export const AISLE_U = 0.72;
 const ALCOVE_U = 1.32;
 /** Demi-longueur de l'alcôve, un peu plus large que la baie (2 × 0,66). */
 const ALCOVE_HALF_Z = 0.62;
-/** Demi-longueur du portillon : on passe droit, pas en biais. */
-const PORTAL_HALF_Z = 0.55;
+/**
+ * Demi-longueur du portillon : on passe droit, pas en biais. Exportée parce
+ * que la limite de zone d'un bord de quai NU (three/station/Barrier) doit
+ * s'ouvrir exactement là où l'on passe, et pas d'un centimètre de plus.
+ */
+export const PORTAL_HALF_Z = 0.55;
 /** Le quai commence juste derrière le liseré blanc (x = 2,02). */
 const PLATFORM_U0 = 1.98;
 /** Demi-longueur du wagon praticable. */
 const CAR_HALF_Z = 9.2;
 /** Ouverture minimale (porte rame × porte palière) pour franchir un seuil. */
-const PORTAL_MIN_OPEN = 0.55;
+export const PORTAL_MIN_OPEN = 0.55;
 
 /** Mi-seuil : au-delà, on considère que le joueur a changé de monde. */
 const PORTAL_MID_U = (ALCOVE_U + PLATFORM_U0) / 2;
@@ -73,7 +77,8 @@ function currentPlatform() {
   return placementFor(useStore.getState().platformIndex, psdGates());
 }
 
-function portalOpen(): number {
+/** Ouverture réelle d'un seuil, 0 (fermé) à 1 (dégagé). */
+export function portalOpen(): number {
   if (!runtime.trainPresent) return 0;
   // Sans portes de quai (Shinjuku, Shibuya), le seuil ne dépend que de la
   // porte de la rame : psdOpen continue de battre dans son coin, mais il n'y a
