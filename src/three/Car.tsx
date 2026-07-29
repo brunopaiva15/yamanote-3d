@@ -7,6 +7,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CABIN_SPEAKERS, CONFIG } from '../data/config';
 import { runtime } from '../systems/runtime';
+import { tubeOutput } from '../systems/carPower';
 import { FREE_SPACE } from '../systems/seats';
 import { roundedRect } from './shapes';
 import {
@@ -311,8 +312,7 @@ export function Car() {
   // quand la caténaire lâche — c'est LA source lumineuse du wagon, celle qui
   // dit d'un coup d'œil si la rame est vivante ou non.
   useFrame(() => {
-    const p = Math.pow(runtime.carPower, 1.6);
-    materials.led.emissiveIntensity = LED_EMISSIVE * p;
+    materials.led.emissiveIntensity = LED_EMISSIVE * tubeOutput(runtime.carPower);
   });
 
   const sides: (1 | -1)[] = [1, -1];

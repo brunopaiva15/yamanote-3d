@@ -18,12 +18,14 @@ import {
   POWER_CUT_SOUNDS,
   POWER_RESTORE,
   POWER_RESTORE_SOUNDS,
+  cabinShade,
   createCarPower,
   cutPower,
   powerSeqEnd,
   restorePower,
   samplePower,
   stepCarPower,
+  tubeOutput,
   type CarPowerState,
   type PowerSoundKind,
 } from '../src/systems/carPower.ts';
@@ -222,4 +224,75 @@ test('les tables de bruits sont dans l’ordre et dans leur séquence', () => {
     // Un bruit posé après la fin de la séquence ne sortirait jamais.
     assert.ok(table[table.length - 1][0] < powerSeqEnd(seq), `${name} : bruit hors séquence`);
   }
+});
+
+// --- L'ombre qui tombe dans le wagon --------------------------------------
+//
+// Couper les cinq luminaires du plafond ne changeait presque rien à l'image :
+// le moteur éclaire l'intérieur d'une ambiante posée à la main qui ne dépend
+// d'aucune alimentation, et c'est elle qui faisait toute la clarté du wagon.
+// Une coupure laissait donc la voiture pleinement éclairée — sans pénombre et
+// sans clignotement. `cabinShade` dit quelle part de cette ambiante s'en va
+// avec les tubes ; three/CabinShade la retire aux matériaux de l'intérieur.
+
+test('les tubes ne suivent pas la tension : ils tiennent, blêmissent, lâchent', () => {
+  assert.equal(tubeOutput(0), 0);
+  assert.equal(tubeOutput(1), 1);
+  // Bornes tenues : une tension hors [0, 1] ne doit pas produire de flux
+  // négatif ni de survoltage.
+  assert.equal(tubeOutput(-3), 0);
+  assert.equal(tubeOutput(9), 1);
+  // Sous la pleine tension, le flux est TOUJOURS en retard sur elle : c'est
+  // l'affaissement, et c'est ce qui rend un décrochage lisible.
+  for (const p of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+    assert.ok(tubeOutput(p) < p, `flux ${tubeOutput(p)} à la tension ${p}`);
+  }
+});
+
+test('à pleine tension le wagon n’a pas d’ombre : rien ne change hors coupure', () => {
+  // La propriété qui compte le plus : l'éclairage normal du jeu doit rester
+  // exactement ce qu'il était. Aucune part retirée tant que le courant tient,
+  // quelle que soit l'heure.
+  for (const dayness of [0, 0.5, 1]) {
+    assert.equal(cabinShade(1, dayness), 0, `ombre à midi/minuit (${dayness})`);
+  }
+});
+
+test('l’ombre est presque totale la nuit, partielle en plein jour', () => {
+  const nuit = cabinShade(0, 0);
+  const jour = cabinShade(0, 1);
+  // De nuit, la clarté diffuse du wagon EST le renvoi des tubes : elle s'en va
+  // avec eux.
+  assert.ok(nuit > 0.8, `ombre de nuit trop faible : ${nuit}`);
+  // De jour, les baies continuent d'en apporter — un wagon en panne à midi
+  // n'est pas une chambre noire.
+  assert.ok(jour < nuit - 0.05, `le jour n’allège pas l’ombre : ${jour} vs ${nuit}`);
+  assert.ok(jour > 0.3, `ombre de jour trop faible pour se voir : ${jour}`);
+  // Hors bornes : une clarté extérieure aberrante ne renverse pas le sens.
+  assert.equal(cabinShade(0, -1), nuit);
+  assert.equal(cabinShade(0, 4), jour);
+});
+
+test('l’ombre clignote avec les tubes, elle ne descend pas d’un bloc', () => {
+  // C'est la raison d'être de tout ceci : le wagon doit se rassombrir et se
+  // rééclairer au rythme des décrochages du convertisseur. On compte les
+  // alternances de l'ombre comme on compte celles de la lumière.
+  const { power } = run(cutPower, 2.4);
+  const shade = power.map((p) => cabinShade(p, 0));
+  // Même seuil que la lumière, lu à l'envers : le wagon est « sombre » quand
+  // l'ombre a mangé ce que le seuil d'extinction laissait passer.
+  const seuil = cabinShade(DARK, 0);
+  let alternances = 0;
+  let sombre = shade[0] > seuil;
+  for (const v of shade) {
+    const now = v > seuil;
+    if (now !== sombre) {
+      alternances++;
+      sombre = now;
+    }
+  }
+  // Trois assombrissements et deux éclaircies entre eux : le wagon bat.
+  assert.ok(alternances >= 5, `seulement ${alternances} alternance(s) d’ombre`);
+  // Et au bout, le wagon reste dans le noir.
+  assert.ok(shade[shade.length - 1] > 0.8, 'l’ombre finale est trop légère');
 });

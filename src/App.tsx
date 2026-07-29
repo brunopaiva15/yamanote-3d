@@ -7,6 +7,7 @@ import { CONFIG } from './data/config';
 import { Engine } from './three/Engine';
 import { Scene } from './three/Scene';
 import { TrainRig } from './three/TrainRig';
+import { CabinShade } from './three/CabinShade';
 import { TrainConsist } from './three/exterior/TrainConsist';
 import { PassingTrain } from './three/exterior/PassingTrain';
 import { Car } from './three/Car';
@@ -54,14 +55,19 @@ export default function App() {
         {/* Tout ce qui appartient à la rame : fixe à l'origine tant qu'on est
             à bord, glissant le long de la voie quand on la regarde du quai. */}
         <TrainRig>
-          <Car />
-          <Seats />
-          <Doors />
-          <Handles />
-          <Ads />
-          <Screens />
-          <DoorCloseLed />
-          <Passengers />
+          {/* L'intérieur, et lui seul : c'est ce périmètre qui s'assombrit
+              quand la caténaire lâche. La rame vue du dehors n'en fait pas
+              partie — elle reçoit le ciel comme tout le reste du monde. */}
+          <CabinShade>
+            <Car />
+            <Seats />
+            <Doors />
+            <Handles />
+            <Ads />
+            <Screens />
+            <DoorCloseLed />
+            <Passengers />
+          </CabinShade>
           <TrainConsist />
         </TrainRig>
         <SkyDome />

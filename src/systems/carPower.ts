@@ -155,6 +155,49 @@ export const EMERGENCY_LAMP_RISE = 0.45;
 /** Retombée au retour de la tension (s) : plus lente, pour ne pas laisser de trou. */
 export const EMERGENCY_LAMP_FALL = 0.9;
 
+// --- Ce que les tubes donnent, et ce que le wagon en reçoit ---------------
+
+/**
+ * Un tube fluorescent ne suit pas la tension linéairement : il tient, il
+ * blêmit, puis il lâche. Cet exposant donne l'affaissement — et il vit ici,
+ * avec la séquence, parce que TOUT ce qui s'assombrit dans le wagon doit
+ * s'assombrir sur la même courbe : les luminaires, le bandeau LED, et la
+ * lumière renvoyée par les parois.
+ */
+export const TUBE_GAMMA = 1.6;
+
+/** Flux des tubes (0..1) pour une tension d'alimentation donnée. */
+export function tubeOutput(power: number): number {
+  return Math.pow(Math.min(1, Math.max(0, power)), TUBE_GAMMA);
+}
+
+/**
+ * Part de la lumière indirecte du wagon qui s'en va avec les tubes (0..1).
+ *
+ * Le moteur n'a pas d'éclairage global : la lumière d'ambiance du wagon est
+ * posée à la main — ambiante, hémisphérique, carte d'environnement — et elle
+ * ne sait pas que le wagon est une BOÎTE. Elle entre par le plafond comme par
+ * les baies, et elle ne dépend de rien. C'est pour ça qu'une coupure ne se
+ * voyait pas : on éteignait cinq luminaires dans une voiture qui, en réalité,
+ * tirait presque toute sa clarté de cette ambiance-là.
+ *
+ * Or dans un wagon éclairé, l'essentiel de cette clarté diffuse EST le renvoi
+ * des tubes sur les parois blanches. Elle doit donc s'éteindre avec eux — la
+ * part exacte étant ce que les baies apportent par ailleurs : de nuit presque
+ * rien, en plein jour près de la moitié.
+ */
+export const CABIN_SHADE_DAY = 0.85;
+export const CABIN_SHADE_NIGHT = 0.95;
+
+/**
+ * @param power    Alimentation de bord (0..1).
+ * @param dayness  Clarté extérieure (0 = nuit noire, 1 = plein jour).
+ */
+export function cabinShade(power: number, dayness: number): number {
+  const d = Math.min(1, Math.max(0, dayness));
+  return (1 - tubeOutput(power)) * (CABIN_SHADE_NIGHT + (CABIN_SHADE_DAY - CABIN_SHADE_NIGHT) * d);
+}
+
 /** Niveau de la séquence à l'instant t, par interpolation entre deux images. */
 export function samplePower(seq: readonly PowerFrame[], t: number): number {
   if (t <= seq[0][0]) return seq[0][1];

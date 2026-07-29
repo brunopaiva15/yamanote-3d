@@ -13,6 +13,7 @@ import { BlendFunction, ToneMappingMode } from 'postprocessing';
 import { CONFIG } from '../data/config';
 import { qualityLevel, usePerf, type PerfLevel } from '../systems/perf';
 import { runtime } from '../systems/runtime';
+import { tubeOutput } from '../systems/carPower';
 import { dayNightWeights } from '../systems/daynight';
 import { seasonNow } from '../systems/season';
 import { weather } from '../systems/weather';
@@ -20,11 +21,17 @@ import { segEnv } from '../systems/segmentEnv';
 import { applyShadowFlags } from './shadowFlags';
 
 /**
- * Intensité d'un luminaire de secours (à comparer aux 3,0 d'un néon ordinaire).
- * Assez pour qu'on se voie et qu'on lise l'heure, pas assez pour qu'on lise un
- * journal : c'est exactement le cahier des charges d'un 非常灯.
+ * Intensité d'un luminaire de secours. Assez pour qu'on se voie et qu'on lise
+ * l'heure, pas assez pour qu'on lise un journal : c'est exactement le cahier
+ * des charges d'un 非常灯.
+ *
+ * Le chiffre ne se compare pas à celui d'un néon : ce sont des cônes tombant
+ * de 2,24 m sur le plancher, pas des points au milieu du volume. Il a été
+ * relevé depuis que l'ambiante du wagon s'éteint réellement avec les tubes
+ * (`cabinShade`) : ces deux lampes ne complètent plus une pièce déjà claire,
+ * elles sont tout ce qui reste.
  */
-const EMERGENCY_LAMP = 0.5;
+const EMERGENCY_LAMP = 6.0;
 
 const LAMP_POSITIONS: [number, number, number][] = [
   [0, 2.16, -7.5],
@@ -293,10 +300,7 @@ function CabinLights({
 }) {
   const lamps = useRef<(THREE.PointLight | null)[]>([]);
   useFrame(() => {
-    // Un tube fluorescent ne suit pas la tension linéairement : il tient, il
-    // blêmit, puis il lâche. La puissance 1,6 donne cet affaissement.
-    const p = Math.pow(runtime.carPower, 1.6);
-    for (const l of lamps.current) if (l) l.intensity = intensity * p;
+    for (const l of lamps.current) if (l) l.intensity = intensity * tubeOutput(runtime.carPower);
   });
   return (
     <>
@@ -336,22 +340,26 @@ function CabinLights({
 function EmergencyLights({ positions }: { positions: [number, number, number][] }) {
   // Deux points seulement, aux tiers du wagon, quel que soit le palier de
   // qualité : ce n'est pas l'éclairage normal qu'on réduit, c'en est un autre.
-  // Deux points seulement, aux tiers du wagon, quel que soit le palier de
-  // qualité : ce n'est pas l'éclairage normal qu'on réduit, c'en est un autre.
   //
-  // Ils sont posés VINGT CENTIMÈTRES sous le bandeau de plafond, là où les
-  // néons sont collés dessous. Un point de lumière contre le plafond en fait un
-  // panneau blanc, et une voiture au plafond blanc ne se lit pas comme une
-  // voiture sur batteries : ce qu'on veut éclairer, c'est l'allée et le haut
-  // des têtes, pas la tôle.
+  // Ce sont des PLAFONNIERS qui éclairent VERS LE BAS, et c'est ce détail qui
+  // les rend crédibles. Une source ponctuelle au plafond illumine tout ce qui
+  // l'entoure à bout portant — et il y a, à vingt centimètres de là, une
+  // rangée d'affiches nakazuri suspendues dans l'axe. Un point y déposait un
+  // rectangle blanc éclatant : invisible tant que le wagon baignait dans son
+  // ambiante, aveuglant dès que la coupure l'a éteinte, et la seule chose
+  // qu'on voyait encore dans une voiture censée être dans le noir.
+  //
+  // Le cône, lui, tombe le long du papier sans le prendre : ce qu'il éclaire,
+  // c'est l'allée, le haut des têtes et le devant des banquettes. C'est aussi
+  // ce que fait un vrai 非常灯 — un hublot encastré dans le plafond.
   const spots = useMemo<[number, number, number][]>(
     () => [
-      [0, 1.96, positions.length > 1 ? -5.6 : 0],
-      [0, 1.96, 5.6],
+      [-0.58, 2.24, positions.length > 1 ? -5.28 : 0.03],
+      [0.58, 2.24, 5.28],
     ],
     [positions.length],
   );
-  const lamps = useRef<(THREE.PointLight | null)[]>([]);
+  const lamps = useRef<(THREE.SpotLight | null)[]>([]);
   useFrame(() => {
     const on = runtime.emergencyLight;
     for (const l of lamps.current) if (l) l.intensity = EMERGENCY_LAMP * on;
@@ -359,15 +367,25 @@ function EmergencyLights({ positions }: { positions: [number, number, number][] 
   return (
     <>
       {spots.map((pos, i) => (
-        <pointLight
+        <spotLight
           key={`em${i}`}
           ref={(l) => {
             lamps.current[i] = l;
+            // La cible en enfant du luminaire : elle le suit, et le cône
+            // regarde le plancher où que la rame se trouve.
+            if (l && l.target.parent !== l) {
+              l.target.position.set(0, -1, 0);
+              l.add(l.target);
+            }
           }}
           position={pos}
           intensity={0}
-          distance={5.5}
-          decay={1.9}
+          // Cône large et bord très fondu : un hublot de plafond dépoli ne
+          // dessine pas de rond de projecteur sur le plancher.
+          angle={0.85}
+          penumbra={0.9}
+          distance={9}
+          decay={1.35}
           color="#dbe6f0"
         />
       ))}

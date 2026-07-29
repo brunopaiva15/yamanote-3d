@@ -1696,6 +1696,45 @@ et le bandeau LED la lisent en puissance 1,6 — un tube tient, blêmit, puis l�
 audio pour couper l'onduleur et laisser mourir les turbines à leur propre
 inertie. Le reste du jeu n'a pas à savoir qu'une coupure existe.
 
+#### Éteindre les luminaires ne suffisait pas
+
+Pendant un temps, tout ce qui précède existait sans se voir. On coupait les cinq
+luminaires du plafond et **il ne se passait rien** : le wagon restait
+pleinement éclairé, sans pénombre et sans clignotement. Mesuré à alimentation
+nulle, la clarté de l'intérieur ne tombait que d'un dixième.
+
+La cause n'était pas dans la séquence, elle était dans le moteur. Un rasteriseur
+n'a pas d'éclairage global : la lumière d'ambiance du wagon est posée à la main
+— ambiante, hémisphérique, carte d'environnement — et ces trois sources ne
+savent pas que le wagon est **une boîte fermée**. Elles éclairent le plafond
+par-dessus comme si le toit n'existait pas, et ne dépendent d'aucune
+alimentation. Les cinq luminaires ne pesaient presque rien à côté ; les couper
+revenait à souffler une bougie en plein jour.
+
+Or dans une voiture allumée, cette clarté diffuse EST le renvoi des tubes sur
+les parois blanches. Elle doit donc mourir avec eux. `cabinShade` (dans
+`systems/carPower`, donc testable sans harnais) dit quelle part s'en va : de
+nuit presque tout, en plein jour un peu plus de la moitié — ce que les baies
+apportent par ailleurs ne s'éteint pas avec la caténaire. `three/CabinShade`
+retire cette part aux matériaux de l'intérieur, et à eux seuls : la rame vue du
+dehors continue de recevoir le ciel comme le reste du monde.
+
+Le mécanisme est une **occlusion ambiante** portée par une carte d'un pixel
+noir. Le nuanceur de three.js ne l'applique qu'à la lumière indirecte : le
+soleil qui entre par la baie et les luminaires de secours, eux, continuent
+d'éclairer normalement. C'est exactement le partage qu'on cherchait, il ne coûte
+qu'un uniforme par matériau et par image, et **à pleine tension il ne retire
+rien du tout** — l'éclairage normal du jeu est celui d'avant, au pixel près.
+
+Un dernier détail a suivi. Les 非常灯 étaient deux sources ponctuelles au
+plafond, dans l'axe — c'est-à-dire à vingt centimètres de la rangée d'affiches
+nakazuri, qu'elles transformaient en rectangles blancs éclatants. Invisible tant
+que le wagon baignait dans son ambiante ; aveuglant dès que la coupure l'a
+éteinte, et la seule chose qu'on voyait encore dans une voiture censée être dans
+le noir. Ce sont maintenant des **plafonniers qui éclairent vers le bas**, comme
+les vrais : le cône tombe le long du papier sans le prendre, et ce qu'il éclaire
+est l'allée, le haut des têtes et le devant des banquettes.
+
 La forme des deux séquences vit dans `systems/carPower`, en images-clés plutôt
 qu'en formules : on les lit, et on les règle en déplaçant un chiffre. Le module
 n'a aucune dépendance, donc Node l'exécute tel quel et
