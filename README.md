@@ -1117,18 +1117,37 @@ Blender nécessaire) ; les clips et les os sont détectés par correspondance
 floue (conventions Quaternius / KayKit / Mixamo), avec overrides possibles
 par variante dans le manifest (`clips`, `faceYaw`, `sitHipY`, `tint`).
 
-### Promener son chien
+### Voyager avec son chien
 
 Sur un quai, on croise **parfois** quelqu'un qui traverse la gare avec son
-chien. C'est rare et c'est voulu : au Japon un animal voyage en sac de
-transport, donc un maître tenant une laisse ne monte **jamais** en rame — il
-repart par l'escalier, et son chien descend les marches derrière lui. Une gare
-sur deux environ compte un promeneur de chien quelque part sur ses 224 m ; on
-n'en croise pas la moitié.
+chien — mais jamais en laisse. Les règles de JR East ne laissent aucune
+latitude, et ce sont elles qui dictent tout ce qui suit :
+
+- l'animal doit être **entièrement enfermé** dans une caisse, sans sortir la
+  tête ;
+- **longueur + largeur + hauteur ≤ 120 cm** ;
+- **poids total, animal compris, ≤ 10 kg** — donc un petit chien, jamais un
+  husky ;
+- un billet **« bagage à main » à 290 ¥**, pris au guichet, la caisse présentée
+  à l'agent avant les portiques.
+
+Un chien tenu en laisse, porté dans les bras, glissé dans une écharpe ou
+promené en poussette est explicitement **interdit** à l'intérieur des
+portiques. Une première version de cette page décrivait une promenade en
+laisse le long du quai : c'était joli et c'était faux. Corollaire agréable de
+la règle vraie — un chien en caisse, lui, **monte dans le train** : son porteur
+est un voyageur comme un autre.
+
+Ces règles ont leur affiche, qu'on croise de temps en temps : une sur neuf des
+caissons portrait des quais, et l'une des quatre affiches d'about du wagon.
+Pictogrammes dessinés au trait dans `textures/procedural` — le cas autorisé
+cerclé de rouge, les trois cas barrés en dessous, les cotes en pied de page.
+Le dessin est **original**, comme les mélodies de départ : c'est la règle qu'on
+reprend, pas le visuel de la compagnie.
 
 Le pack animalier vit à part, dans `public/models/animals/`, avec son propre
-manifeste et sa propre licence. Trois races sont installées (shiba inu, husky,
-loup — Quaternius, CC0) ; pour en importer d'autres :
+manifeste et sa propre licence. Une race est installée (shiba inu — Quaternius,
+CC0) ; pour en importer d'autres :
 
 ```bash
 # Quaternius — « Ultimate Animated Animals » (CC0)
@@ -1145,44 +1164,34 @@ Trois choses distinguent un quadrupède d'un passager, et elles sont dans
 
 - **la taille est réelle, et par espèce.** Un personnage est toujours ramené à
   `SKELETON_TOP` ; un chien, non — un shiba fait 46 cm, un husky 62. La hauteur
-  est donc une donnée du manifeste (`height`, en mètres), à vérifier après
-  import ; tout le reste (échelle, longueur, vitesses) en découle.
+  est donc une donnée du manifeste (`height`, en mètres), et le manifeste garde
+  la taille **vraie** de la race : c'est le rendu qui ramène l'animal au
+  gabarit de la caisse, puisque la limite des 10 kg exclut de toute façon tout
+  ce qui n'y tiendrait pas.
 - **le reniflage est le clip de repas.** Aucun pack ne livre de « Sniff » ;
-  leur « Eating » est exactement ça — museau au sol, corps planté — et c'est le
-  geste qui fait une promenade.
+  leur « Eating » est exactement ça — museau au sol, corps planté.
 - **la vitesse d'auteur des cycles est mesurée**, jamais déclarée. Le
   déplacement de la racine quand il y en a un ; sinon la **foulée** — un pied
   posé ne glisse pas, son va-et-vient sur un cycle mesure exactement la
   distance dont le sol défile. Les packs animaliers animent tous sur place,
   c'est donc la foulée qui sert, et elle est courte : le « Walk » d'un shiba
-  vaut 0,24 m/s, son « Gallop » 0,59, ceux d'un loup le double. D'où le
-  choix du cycle **à la moyenne géométrique des deux** plutôt qu'à un seuil
-  écrit en dur — sinon un chien qui court après son maître marchait au pas.
+  vaut 0,24 m/s, son « Gallop » 0,59. Ces mesures ne servent plus au chien en
+  caisse, qui ne marche pas ; elles restent justes pour tout pack importé.
 
-Le reste est dans `systems/dogWalkers` et tient à trois contraintes, qui font
-plus pour la promenade que l'animation :
+La caisse elle-même (`characters/carrier.ts`) est modelée aux cotes que la
+règle impose — 50 × 34 × 34 cm, soit 118 cm de somme — avec coque à deux tons,
+fentes d'aération, poignée et une porte à barreaux **réellement ajourée** :
+sans vrais trous, il n'y aurait rien à voir derrière. Elle pend à l'os de main
+de son porteur, donc elle suit le balancement du bras, mais elle reste
+d'aplomb : un bagage porté ne prend pas l'orientation du poignet. Et son
+porteur prend son téléphone de l'autre main, par le mécanisme qui sert déjà à
+la poignée en rame.
 
-- **la laisse.** Une sangle de 1,5 m qui rappelle le chien au-delà, et dont la
-  flèche dit le mou : tendue, c'est une ligne droite ; lâche, elle fait un
-  ventre. Elle s'accroche à l'os de main du maître, donc elle suit le
-  balancement du bras — et le maître prend son téléphone de l'autre main, par
-  le même mécanisme que la poignée en rame.
-- **le flânage.** Le chien ne vise pas un point fixe derrière son maître mais
-  une place qui dérive devant, derrière, sur le côté — toujours du côté du mur,
-  jamais du côté de la voie. Il reprend l'allure du maître en anticipation et
-  ne corrige que l'écart : sans ce terme, il poursuit une place qui avance
-  aussi vite que lui, se stabilise un demi-mètre en arrière pour toujours, et
-  ne s'arrête plus jamais.
-- **l'arrêt à deux.** Quand le chien plante son museau, le maître **l'attend**,
-  le regarde, puis repart avant lui — le petit rappel de laisse de tout
-  promeneur pressé. Sans cette attente, la sangle se tendait en un quart de
-  seconde et le reniflage n'existait jamais.
-
-En dev, `__dogs` donne l'état de chaque chien en console (maître, allure,
-laisse), `node scripts/make-test-dog.mjs` fabrique un chien de test riggé pour
-éprouver la chaîne sans le vrai pack (à ne pas committer), et
-`node scripts/dog-shots.mjs /tmp/chiens` va chercher un promeneur sur le quai
-et le photographie — la rencontre est trop rare pour se juger en jouant.
+En dev, `__pets` donne l'état de chaque caisse en console (porteur, main),
+`node scripts/make-test-dog.mjs` fabrique un chien de test riggé pour éprouver
+la chaîne sans le vrai pack (à ne pas committer), et
+`node scripts/pet-shots.mjs /tmp/chiens` va chercher un porteur sur le quai et
+le photographie — la rencontre est trop rare pour se juger en jouant.
 
 ## Ce que font les voyageurs
 
@@ -1394,9 +1403,11 @@ src/
   three/characters/      PNJ « librairie » : manifest, chargement/clonage GLB,
                          overrides d'os (regard, tsurikawa), accessoires
   three/characters/animals.ts  pack animalier : taille réelle par espèce, clips
-                         du quadrupède, vitesse d'auteur mesurée sur la racine
-  systems/dogWalkers.ts  les chiens promenés sur le quai : place qui flâne,
-                         laisse qui rappelle, arrêt partagé avec le maître
+                         du quadrupède, vitesse d'auteur mesurée à la foulée
+  three/characters/carrier.ts  la caisse de transport, aux cotes que la règle
+                         de JR East impose (≤ 120 cm de somme, ≤ 10 kg)
+  systems/petCarriers.ts qui voyage avec son chien : tirage par gare, main qui
+                         porte — la caisse ne se simule pas, elle se porte
   data/dialogue/         les 416 conversations : conditions d'emploi et texte
                          FR / EN / JA, décliné au féminin et au masculin
   scripts/               models:import / models:inspect / animals:import
