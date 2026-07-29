@@ -101,6 +101,18 @@ export function Station() {
   const depth = layout.depth;
   const canopyY = layout.canopyY;
 
+  /**
+   * La charpente signature couvre-t-elle VRAIMENT le quai en ce moment ?
+   *
+   * `sigCanopy` dit qu'elle en a la charge (Takanawa Gateway), mais elle n'est
+   * dessinée qu'aux paliers de qualité les plus riches. Aux autres, la déclarer
+   * suffisante laissait le quai à ciel ouvert — pas de toiture pliée, et plus
+   * d'auvent non plus. La dalle générique reprend donc du service dès que la
+   * charpente n'est pas là.
+   */
+  const hasSignature = layout.signature !== undefined && detail <= 1;
+  const sigRoof = layout.sigCanopy && hasSignature;
+
   // Portes de quai : Shinjuku et Shibuya n'en ont toujours pas. Sans elles, le
   // bord est nu et c'est la bande podotactile qui prend le relais — nettement
   // plus large, comme sur tout quai japonais non équipé.
@@ -435,14 +447,14 @@ export function Station() {
       )}
 
       {/* --- Ce qu'on voit au-delà : voie, quai d'en face, clôture --- */}
-      <FarSide layout={layout} place={place} wallH={wallH} m={m} detail={detail} segs={segs} />
+      <FarSide layout={layout} place={place} wallH={wallH} m={m} detail={detail} segs={segs} sigRoof={sigRoof} />
 
       {/* --- Auvent, poutres, piliers, néons ---
           La dalle tombe là où la charpente signature fait toit (Takanawa
           Gateway) : elle masquait la seule chose qui fasse cette gare-là. La
           trame de poutres et de néons reste — c'est à elle que pend toute la
           signalétique. */}
-      {!layout.sigCanopy && (
+      {!sigRoof && (
         <mesh name="auvent" position={[PSD_X + depth / 2, canopyY + 0.07, 0]} material={m.canopy} receiveShadow>
           <boxGeometry args={[depth + 0.4, 0.14, layout.length]} />
         </mesh>
@@ -547,9 +559,7 @@ export function Station() {
       {/* Charpente propre à la gare, quand elle en a une. Elle était réservée
           aux deux paliers les plus riches ; elle porte maintenant l'essentiel
           du caractère de quatorze gares, et descend donc d'un cran. */}
-      {layout.signature && detail <= 1 && (
-        <Signature layout={layout} place={place} m={m} />
-      )}
+      {hasSignature && <Signature layout={layout} place={place} m={m} />}
 
       <PlatformSignage
         hangX={midX + 0.7}
@@ -670,6 +680,7 @@ function FarSide({
   m,
   detail,
   segs,
+  sigRoof,
 }: {
   layout: ReturnType<typeof layoutFor>;
   place: ReturnType<typeof placementFor>;
@@ -677,6 +688,8 @@ function FarSide({
   m: Mats;
   detail: number;
   segs: { z0: number; z1: number }[];
+  /** La charpente signature couvre tout le site : pas d'auvent d'en face. */
+  sigRoof: boolean;
 }) {
   const len = layout.length;
   const far = place.farEdgeX;
@@ -776,7 +789,7 @@ function FarSide({
           palier le plus léger, où la silhouette du quai suffit — et là où la
           charpente signature couvre le site d'un seul tenant, il n'y en a
           jamais eu. */}
-      {detail <= 2 && !layout.sigCanopy && (
+      {detail <= 2 && !sigRoof && (
         <mesh position={[(oppEdge + oppBack) / 2, layout.canopyY + 0.07, 0]} material={m.canopy}>
           <boxGeometry args={[OPP_DEPTH + 0.4, 0.14, len]} />
         </mesh>
