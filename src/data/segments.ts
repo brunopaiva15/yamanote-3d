@@ -9,9 +9,9 @@
 // ou à l'envers. Seule la façon d'y arriver dépend du sens, d'où le paramètre
 // `dir` des fonctions ci-dessous.
 
-import { CONFIG } from './config';
-import { nextStation, stationAtHop, wrapStation } from './loop';
-import type { LoopDirection } from './platforms';
+import { CONFIG } from './config.ts';
+import { nextStation, stationAtHop, wrapStation } from './loop.ts';
+import type { LoopDirection } from './platforms.ts';
 import type { Phase } from '../store';
 
 export { stationAtHop };

@@ -26,7 +26,16 @@ export interface TokyoDate {
 // Index i = tronçon STATIONS[i] → STATIONS[(i+1)%30].
 // ---------------------------------------------------------------------------
 
-/** Sens simulé (内回り, ordre JY croissant) — pic Shin-Ōkubo→Shinjuku 139 %. */
+/**
+ * Charge du TRONÇON, nommé dans le sens 内回り — pic Shin-Ōkubo→Shinjuku 139 %.
+ *
+ * La même table sert aux deux sens : `systems/occupancy.currentFromIndex` rend
+ * l'index du tronçon, pas celui de la gare quittée, donc 外回り retrouve bien
+ * la charge du morceau de ligne qu'il parcourt. C'est une approximation
+ * assumée — en vrai, le pointe du matin charge davantage le sens qui va vers
+ * les bureaux —, mais le relevé dont sortent ces chiffres est lui-même donné
+ * par tronçon, tous sens confondus.
+ */
 export const INNER_BASE_0815: readonly number[] = [
   /* 00 Tokyo→Kanda                 */ 96,
   /* 01 Kanda→Akihabara             */ 99,
