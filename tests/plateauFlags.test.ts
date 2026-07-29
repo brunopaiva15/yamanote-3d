@@ -53,18 +53,27 @@ test('?plateau=1 l’allume, ?plateau=0 l’éteint — l’URL a le dernier mot
 
 test('même allumé, le prototype ne couvre QUE son tronçon', () => {
   withSearch('?plateau=1', () => {
-    assert.equal(plateauCoversSegment(PLATEAU_SEGMENT), true);
+    assert.equal(plateauCoversSegment(PLATEAU_SEGMENT, 'inner'), true);
     for (let segment = 0; segment < 30; segment++) {
       if (segment === PLATEAU_SEGMENT) continue;
       assert.equal(
-        plateauCoversSegment(segment),
+        plateauCoversSegment(segment, 'inner'),
         false,
         `le tronçon ${segment} ne devrait pas être couvert`,
       );
     }
   });
   // Éteint : aucun tronçon, pas même le sien.
-  withSearch('', () => assert.equal(plateauCoversSegment(PLATEAU_SEGMENT), false));
+  withSearch('', () => assert.equal(plateauCoversSegment(PLATEAU_SEGMENT, 'inner'), false));
+});
+
+test('le prototype ne couvre que le sens 内回り', () => {
+  // Le tracé exporté est une polyligne ORIENTÉE (Shibuya → Ebisu) : en 外回り
+  // il faudrait l'inverser, chunks et origine des distances compris. Le décor
+  // procédural, symétrique, reprend la main dans l'autre sens.
+  withSearch('?plateau=1', () => {
+    assert.equal(plateauCoversSegment(PLATEAU_SEGMENT, 'outer'), false);
+  });
 });
 
 test('?plateau=1 fait aussi embarquer sur le tronçon', () => {
@@ -79,8 +88,8 @@ test('?plateau=1 fait aussi embarquer sur le tronçon', () => {
 });
 
 test('la gare d’embarquement est bien celle d’ARRIVÉE du tronçon', () => {
-  // segmentAt(i) = (i + 29) % 30 dans src/data/segments.ts : c'est la gare
-  // d'arrivée qui désigne le tronçon parcouru pour l'atteindre.
+  // segmentAt(i, 'inner') = (i + 29) % 30 dans src/data/segments.ts : c'est la
+  // gare d'arrivée qui désigne le tronçon parcouru pour l'atteindre.
   assert.equal((PLATEAU_ENTRY_STATION + 29) % 30, PLATEAU_SEGMENT);
   assert.ok(PLATEAU_ENTRY_STATION >= 0 && PLATEAU_ENTRY_STATION < 30);
 });

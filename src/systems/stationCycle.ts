@@ -5,6 +5,8 @@
 
 import { CONFIG, V_MAX } from '../data/config';
 import { DOOR_SIDE, STATIONS, TRANSFERS } from '../data/stations';
+import { nextStation, randomDirection, wrapStation } from '../data/loop';
+import type { LoopDirection } from '../data/platforms';
 import { cruiseDuration } from '../data/segments';
 import {
   EMERGENCY_REASONS,
@@ -329,8 +331,8 @@ export function melodyCutAt(stationIndex: number, dwell: number): number {
   return melodyStartAt(stationIndex, dwell) + MELODY_SOUNDING;
 }
 
-const PHASE_ORDER = (stationIndex: number) => [
-  { phase: 'cruise' as const, dur: cruiseDuration(stationIndex) },
+const PHASE_ORDER = (stationIndex: number, dir: LoopDirection) => [
+  { phase: 'cruise' as const, dur: cruiseDuration(stationIndex, dir) },
   { phase: 'brake' as const, dur: CONFIG.brakeTime },
   { phase: 'dwell' as const, dur: dwellDuration(stationIndex) },
   { phase: 'depart' as const, dur: CONFIG.departTime },
@@ -430,7 +432,7 @@ function seedDoorsForDwell(t: number, stationIndex: number): void {
 
 // Marque comme déjà joués les événements dont l'instant est passé, pour ne
 // pas les redéclencher la première frame après un spawn au milieu d'une phase.
-function seedFired(phase: Phase, t: number, stationIndex: number): void {
+function seedFired(phase: Phase, t: number, stationIndex: number, dir: LoopDirection): void {
   fired.clear();
   if (phase === 'cruise') {
     fired.add('doorside');
@@ -439,7 +441,7 @@ function seedFired(phase: Phase, t: number, stationIndex: number): void {
     // Pas d'arrêt d'urgence sur la toute première course après l'embarquement.
     fired.add('emergency-roll');
     if (t > 0.6) fired.add('announce-depart');
-    if (t >= cruiseDuration(stationIndex) - APPROACH_ANNOUNCE_LEAD) fired.add('announce-soon');
+    if (t >= cruiseDuration(stationIndex, dir) - APPROACH_ANNOUNCE_LEAD) fired.add('announce-soon');
   } else if (phase === 'brake') {
     fired.add('door-timings');
     fired.add('brake-apply');
@@ -482,7 +484,7 @@ export function resumeDwellAt(t: number, stationIndex: number): void {
   runtime.phaseT = t;
   runtime.speed = 0;
   runtime.accel = 0;
-  seedFired('dwell', t, stationIndex);
+  seedFired('dwell', t, stationIndex, store.loopDirection);
 }
 
 /**
@@ -492,23 +494,28 @@ export function resumeDwellAt(t: number, stationIndex: number): void {
  * @param stationIndex Gare choisie (0–29). Absent → tirage aléatoire.
  *   La phase reste tirée au hasard autour de cette gare (en route, freinage,
  *   à quai, départ) pour garder la variété du boarding actuel.
+ * @param direction Sens de circulation. Absent → tirage à pile ou face : la
+ *   Yamanote fait tourner autant de rames dans un sens que dans l'autre, et
+ *   monter au hasard sur la boucle, c'est monter au hasard sur l'un des deux.
  */
-export function randomizeEntry(stationIndex?: number): void {
+export function randomizeEntry(stationIndex?: number, direction?: LoopDirection): void {
   const station =
-    stationIndex == null
-      ? Math.floor(Math.random() * 30)
-      : ((stationIndex % 30) + 30) % 30;
+    stationIndex == null ? Math.floor(Math.random() * 30) : wrapStation(stationIndex);
+  const dir = direction ?? randomDirection();
+  // Le sens AVANT tout le reste : il commande la durée de croisière du tronçon
+  // (on n'arrive pas à la même gare par le même côté), donc PHASE_ORDER.
+  useStore.getState().setLoopDirection(dir);
   // Pré-positionne l'index pour que dwellDuration() voie la bonne gare, et
   // tire sa chronologie : PHASE_ORDER a besoin de la durée du dwell.
   useStore.getState().setIndex(station);
   randomizeStopTimings(station);
   randomizeBerthOffset();
 
-  const phases = PHASE_ORDER(station);
+  const phases = PHASE_ORDER(station, dir);
   const total = phases.reduce((sum, p) => sum + p.dur, 0);
   let r = Math.random() * total;
   let phase: Phase = 'cruise';
-  let dur: number = cruiseDuration(station);
+  let dur: number = cruiseDuration(station, dir);
   for (const p of phases) {
     if (r < p.dur) {
       phase = p.phase;
@@ -521,7 +528,7 @@ export function randomizeEntry(stationIndex?: number): void {
   // Évite de spawner pile à la bascule de phase.
   const phaseT = Math.random() * Math.max(0.05, dur - 0.2);
   // En depart, l'index a déjà avancé vers la gare suivante.
-  const index = phase === 'depart' ? (station + 1) % 30 : station;
+  const index = phase === 'depart' ? nextStation(station, dir) : station;
   const doorStation = phase === 'depart' ? station : index;
   const doorSide = DOOR_SIDE[doorStation];
   const sim = simulatePhaseState(phase, phaseT, phase === 'depart' ? index : station);
@@ -560,7 +567,7 @@ export function randomizeEntry(stationIndex?: number): void {
   else if (phase === 'depart') seedPlatformCrowd(doorStation);
   else clearPlatformCrowd();
 
-  seedFired(phase, phaseT, doorStation);
+  seedFired(phase, phaseT, doorStation, dir);
 }
 
 
@@ -610,7 +617,7 @@ export function updateCycle(dt: number): void {
   const t = runtime.phaseT;
   switch (s.phase) {
     case 'cruise': {
-      const cruiseSec = cruiseDuration(s.index);
+      const cruiseSec = cruiseDuration(s.index, s.loopDirection);
       once('doorside', true, () => {
         s.setDoorSide(DOOR_SIDE[s.index]);
         // Les haut-parleurs du quai passent du côté qui s'ouvrira.
@@ -784,12 +791,7 @@ export function updateCycle(dt: number): void {
       break;
     }
     case 'depart': {
-      once('advance', true, () => {
-        const dir = useStore.getState().loopDirection;
-        const next =
-          dir === 'outer' ? (s.index - 1 + 30) % 30 : (s.index + 1) % 30;
-        s.setIndex(next);
-      });
+      once('advance', true, () => s.setIndex(nextStation(s.index, s.loopDirection)));
       // Desserrage des freins juste avant la mise en mouvement.
       once('brake-release', t >= DEPART_HOLD - 1.2, () => audio.brakeRelease());
       if (t >= CONFIG.departTime) enterPhase('cruise');
@@ -800,7 +802,8 @@ export function updateCycle(dt: number): void {
 
 // Outils dev, dans la console du navigateur : __emergencyStop() déclenche un
 // arrêt d'urgence, __runtime donne accès à l'état continu (vitesse, phase…),
-// __setTrainZ(z) déplace la rame le long de la voie (le décor ne bouge pas).
+// __setTrainZ(z) déplace la rame le long de la voie (le décor ne bouge pas),
+// __setDirection('outer') retourne la rame sans quitter la boucle.
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   const w = window as unknown as Record<string, unknown>;
   w.__emergencyStop = beginEmergencyStop;
@@ -808,6 +811,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   w.__setTrainZ = (z: number) => {
     runtime.trainZ = z;
   };
+  w.__setDirection = (dir: LoopDirection) => useStore.getState().setLoopDirection(dir);
   // Saut direct à un instant d'une phase, sans attendre le cycle réel.
   w.__jumpTo = (phase: Phase, t = 0, station?: number) => {
     const store = useStore.getState();
@@ -829,6 +833,6 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     seedPlatformPresence(phase, t);
     if (phase === 'cruise') clearPlatformCrowd();
     else seedPlatformCrowd(index);
-    seedFired(phase, t, index);
+    seedFired(phase, t, index, store.loopDirection);
   };
 }

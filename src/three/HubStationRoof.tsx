@@ -91,9 +91,9 @@ export function HubStationRoof() {
 
   useFrame(() => {
     if (segEnv.seg < 0) return;
-    const { index } = useStore.getState();
+    const { index, loopDirection } = useStore.getState();
     const arrHub = ROOF_HUBS[index];
-    const depHub = ROOF_HUBS[segmentAt(index)];
+    const depHub = ROOF_HUBS[segmentAt(index, loopDirection)];
     const p = segEnv.p;
 
     // Le freinage couvre p 0.878→1 : la toiture croît sur toute l'approche,

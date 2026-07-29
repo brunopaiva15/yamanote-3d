@@ -20,6 +20,7 @@ import {
   type OccupancyBand,
   type TokyoDate,
 } from '../data/occupancy';
+import type { LoopDirection } from '../data/platforms';
 import { segmentAt } from '../data/segments';
 import { useStore, type Phase } from '../store';
 import { runtime } from './runtime';
@@ -192,17 +193,17 @@ export function estimateOccupancy(args: {
 }
 
 /** Index du tronçon courant selon la phase (gare de départ). */
-export function currentFromIndex(index: number, phase: Phase): number {
-  // cruise/brake : on roule vers `index` sur segmentAt(index).
+export function currentFromIndex(index: number, phase: Phase, dir: LoopDirection): number {
+  // cruise/brake : on roule vers `index` sur segmentAt(index, dir).
   // dwell : à quai à `index`, peuplement pour le prochain départ = tronçon `index`.
-  // depart : index déjà avancé vers la destination → segmentAt(index).
+  // depart : index déjà avancé vers la destination → segmentAt(index, dir).
   if (phase === 'dwell') return index;
-  return segmentAt(index);
+  return segmentAt(index, dir);
 }
 
 export function currentSegmentOccupancy(): OccupancyEstimate {
-  const { index, phase } = useStore.getState();
-  const fromIndex = currentFromIndex(index, phase);
+  const { index, phase, loopDirection } = useStore.getState();
+  const fromIndex = currentFromIndex(index, phase, loopDirection);
   return estimateOccupancy({
     fromIndex,
     minutes: runtime.clockMin,

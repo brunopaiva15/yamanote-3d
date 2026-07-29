@@ -103,11 +103,11 @@ const CYCLE = 3.5;
  * tronçon, dont la croisière est justement dimensionnée (data/segments).
  */
 function nextTrainsFromCar(index: number): NextTrains {
-  const { phase } = useStore.getState();
+  const { phase, loopDirection } = useStore.getState();
   const t = runtime.phaseT;
   const dwell = dwellDuration(index);
   /** D'une rame à quai à la suivante à quai : l'intervalle réel du tronçon. */
-  const cycle = journeyDuration(index) + CONFIG.dwellTime;
+  const cycle = journeyDuration(index, loopDirection) + CONFIG.dwellTime;
   switch (phase) {
     case 'brake': {
       const first = Math.max(0, CONFIG.brakeTime - t);
@@ -124,7 +124,7 @@ function nextTrainsFromCar(index: number): NextTrains {
     case 'depart':
       return { first: null, second: Math.max(60, cycle - dwell - t), leaving: true };
     default: {
-      const first = Math.max(0, cruiseDuration(index) - t) + CONFIG.brakeTime;
+      const first = Math.max(0, cruiseDuration(index, loopDirection) - t) + CONFIG.brakeTime;
       return { first, second: first + cycle, leaving: false };
     }
   }

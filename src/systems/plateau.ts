@@ -12,6 +12,8 @@
 // construit à partir des vraies données PLATEAU, il suffira de repasser
 // `ENABLE_PLATEAU_PROTOTYPE` à `true`.
 
+import type { LoopDirection } from '../data/platforms';
+
 /**
  * Interrupteur principal du prototype, quand l'URL ne dit rien.
  *
@@ -60,9 +62,17 @@ export const plateauRuntime = {
   mounted: 0,
 };
 
-/** Le prototype est-il actif pour ce tronçon ? */
-export function plateauCoversSegment(segment: number): boolean {
-  return plateauEnabled() && segment === PLATEAU_SEGMENT;
+/**
+ * Le prototype est-il actif pour ce tronçon, dans ce sens ?
+ *
+ * 内回り SEULEMENT. Le tracé exporté (`route.json`) est une polyligne orientée,
+ * de Shibuya vers Ebisu : la parcourir en 外回り demanderait de l'inverser, et
+ * avec elle l'ordre des chunks et l'origine des distances. Tant que le monde
+ * géoréférencé est un prototype sur un seul tronçon, le décor procédural —
+ * lui, symétrique — reprend la main dans l'autre sens.
+ */
+export function plateauCoversSegment(segment: number, dir: LoopDirection): boolean {
+  return plateauEnabled() && dir === 'inner' && segment === PLATEAU_SEGMENT;
 }
 
 /**
@@ -84,8 +94,8 @@ export function plateauEnabled(): boolean {
 
 /**
  * Gare d'ARRIVÉE du tronçon couvert : c'est elle que `randomizeEntry` attend,
- * puisque le tronçon parcouru pour atteindre la gare `i` est `segmentAt(i)`,
- * soit `(i + 29) % 30`.
+ * puisque le tronçon parcouru pour atteindre la gare `i` en 内回り est
+ * `segmentAt(i, 'inner')`, soit `(i + 29) % 30`.
  */
 export const PLATEAU_ENTRY_STATION = (PLATEAU_SEGMENT + 1) % 30; // Ebisu (20)
 

@@ -25,6 +25,8 @@
 // en train.
 
 import { DISTRICTS, GENERIC, type District, type Feat } from '../data/districts';
+import { directionStep, prevStation, wrapStation } from '../data/loop';
+import type { LoopDirection } from '../data/platforms';
 import { runtime } from './runtime';
 
 /** Longueur d'une cellule du ruban, le long de la voie (m). */
@@ -139,6 +141,12 @@ export const cityAnchor = {
   index: 0,
   /** Inter-gare mesuré (m). Valeur de départ : moyenne de la boucle. */
   span: 1150,
+  /**
+   * Pas d'index par inter-gare parcouru vers l'avant : +1 en 内回り, −1 en
+   * 外回り. Le territoire des quartiers se déroule dans le sens de marche —
+   * en 外回り, Shibuya vient AVANT Harajuku et non après.
+   */
+  step: 1 as 1 | -1,
 };
 
 let anchorLastIndex = -1;
@@ -147,7 +155,8 @@ let anchorLastIndex = -1;
  * À appeler une fois par frame. `index` est la gare d'ARRIVÉE (il avance au
  * début de `depart`), `p` la progression 0..1 du trajet en cours.
  */
-export function updateCityAnchor(index: number, p: number): void {
+export function updateCityAnchor(index: number, p: number, dir: LoopDirection): void {
+  cityAnchor.step = directionStep(dir);
   // Ré-amorçage : premier tick, ou saut de position (rentrée aléatoire sur la
   // boucle) qui laisserait l'ancre à des kilomètres du train.
   if (anchorLastIndex >= 0 && Math.abs(runtime.distance - cityAnchor.s) > 6 * cityAnchor.span) {
@@ -166,7 +175,7 @@ export function updateCityAnchor(index: number, p: number): void {
   // L'index vient d'avancer : le train est physiquement à la gare qu'il quitte.
   const travelled = runtime.distance - cityAnchor.s;
   if (travelled > 400 && travelled < 3000) cityAnchor.span = travelled;
-  cityAnchor.index = (index + 29) % 30;
+  cityAnchor.index = prevStation(index, dir);
   cityAnchor.s = runtime.distance;
 }
 
@@ -184,7 +193,7 @@ export function districtAt(s: number, mix: number): District {
   const BLEND = 0.09;
   let kk = k;
   if (edge < BLEND && mix > edge / BLEND) kk = k + (frac > 0 ? 1 : -1);
-  const i = (((cityAnchor.index + kk) % 30) + 30) % 30;
+  const i = wrapStation(cityAnchor.index + kk * cityAnchor.step);
   return DISTRICTS[i] ?? GENERIC;
 }
 

@@ -38,7 +38,7 @@ function smoothstep(a: number, b: number, x: number): number {
 }
 
 export const segEnv = {
-  seg: -1, // tronçon courant : segmentAt(index)
+  seg: -1, // tronçon courant : segmentAt(index, sens)
   p: 0, // progression 0..1 du trajet
   w: { viaduct: 1, corridor: 0, trench: 0, ground: 0 } as Record<SegmentKind, number>,
   green: 0, // végétation fondue (flag greenery)
@@ -80,7 +80,7 @@ export function bridgeZ(k: number): number {
 }
 
 export function updateSegmentEnv(dt: number): void {
-  const { index, phase, platformIndex } = useStore.getState();
+  const { index, phase, platformIndex, loopDirection } = useStore.getState();
   // Au début de `depart`, l'index a déjà avancé vers la gare suivante — mais
   // le quai (opaque, coulissant) est encore sous les yeux. On conserve le
   // tronçon d'arrivée jusqu'à ce que le quai soit hors de vue, sinon les
@@ -88,7 +88,7 @@ export function updateSegmentEnv(dt: number): void {
   // platformIndex retient précisément cette gare-là (17 s de depart ne
   // suffisent pas à dépasser un quai de 224 m : le défilement déborde sur la
   // croisière), et ce quel que soit le sens de la boucle.
-  const seg = segmentAt(platformIndex);
+  const seg = segmentAt(platformIndex, loopDirection);
   if (seg !== segEnv.seg) {
     const first = segEnv.seg < 0;
     segEnv.seg = seg;
@@ -104,7 +104,7 @@ export function updateSegmentEnv(dt: number): void {
   const spec = SEGMENTS[seg];
   // Progression visuelle du trajet : toujours basée sur l'index courant
   // (annonces / scenery), pas sur le hold d'environnement.
-  segEnv.p = journeyProgress(phase, runtime.phaseT, index);
+  segEnv.p = journeyProgress(phase, runtime.phaseT, index, loopDirection);
 
   // Fondu exponentiel (~2,5 s). Pendant le hold de départ on ne change pas
   // de cible (même tronçon) ; le vrai morph n'arrive qu'une fois le quai parti.

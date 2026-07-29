@@ -157,7 +157,7 @@ export function StartScreen() {
       // phase où le tronçon parcouru est bien celui du prototype.
       for (let attempt = 0; attempt < 32; attempt++) {
         randomizeEntry(entryStation);
-        if (segmentAt(useStore.getState().index) === PLATEAU_SEGMENT) break;
+        if (segmentAt(useStore.getState().index, 'inner') === PLATEAU_SEGMENT) break;
       }
     } else {
       randomizeEntry(Number.isFinite(stationIndex) ? stationIndex : undefined);
