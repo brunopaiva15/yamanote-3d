@@ -411,7 +411,6 @@ export function clearPlatformCrowd(): void {
     p.ticket = -1;
     p.partner = -1;
     p.action = 'none';
-    // Le chien est rendu par systems/dogWalkers, qui voit son maître caché.
   }
 }
 
