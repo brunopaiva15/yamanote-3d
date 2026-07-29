@@ -6,12 +6,10 @@ Entrée : le JSON produit par scripts/announcements-export.ts (textes + vitesses
 public/audio/announcements/<clé>.mp3, et le manifeste src/data/pa-manifest.ts
 (clé → durée en secondes) consommé par le runtime.
 
-Voix : portée par chaque item (champ « voice ») — la rame parle au féminin, le
-quai au masculin, la sono de la rame et celle du quai ne devant jamais parler de
-la même bouche. Un item sans voix retombe sur la voix par défaut de sa langue.
-Le champ « pitch » descend la voix APRÈS synthèse, à débit constant : Kokoro
-v1.0 n'a qu'une voix d'homme japonaise et le quai en réclame deux (l'automate
-ATOS et l'agent au micro). G2P : misaki en japonais
+Voix : portée par chaque item (champ « voice ») — la sono de la rame et celle du
+quai ne doivent pas parler de la même bouche, et l'automate du quai est un homme
+là où la rame est une femme. Un item sans voix retombe sur la voix par défaut de
+sa langue. G2P : misaki en japonais
 comme en anglais (repli espeak). Les noms de gare sont vérifiés avec ce même
 misaki : s'il lit un nom autrement que sa transcription kana (stations.ts), le
 katakana remplace le kanji dans le texte synthétisé — c'est ce qui rattrape
@@ -137,25 +135,6 @@ def trim_and_pad(samples: np.ndarray, sr: int) -> np.ndarray:
     return np.concatenate([head, samples, tail])
 
 
-def transpose(samples: np.ndarray, pitch: float) -> np.ndarray:
-    """Descend (pitch < 1) une prise sans changer sa durée ni son débit.
-
-    Rééchantillonner de `pitch` multiplie la hauteur ET la durée par `pitch` ;
-    on synthétise donc en amont à `speed / pitch` (voir synth_*), et ce qui
-    ressort ici a le débit demandé, une hauteur et des formants abaissés — la
-    voix d'un homme plus grand, pas la même voix ralentie.
-    """
-    if pitch == 1.0:
-        return samples
-    n = int(round(len(samples) / pitch))
-    stretched = np.interp(
-        np.linspace(0.0, len(samples) - 1, n),
-        np.arange(len(samples), dtype=np.float64),
-        samples.astype(np.float64),
-    )
-    return stretched.astype(np.float32)
-
-
 def split_ja_segments(text: str) -> list[str]:
     """Segments d'une annonce japonaise, ponctuation de fin incluse.
 
@@ -166,14 +145,13 @@ def split_ja_segments(text: str) -> list[str]:
 
 
 def synth_ja(
-    kokoro: Kokoro, ja_g2p, text: str, voice: str, speed: float, pitch: float
+    kokoro: Kokoro, ja_g2p, text: str, voice: str, speed: float
 ) -> tuple[np.ndarray, int]:
     """Synthèse japonaise segment par segment, silences insérés aux 、 et 。.
 
     Chaque segment est débarrassé de ses bords silencieux avant raccord : les
     pauses ont ainsi une durée exacte, indépendante de ce que Kokoro laisse
-    autour de chaque prise. La transposition est appliquée segment par segment,
-    donc AVANT les silences : descendre la voix n'allonge pas les respirations.
+    autour de chaque prise.
     """
     parts: list[np.ndarray] = []
     sr = 24000
@@ -182,10 +160,8 @@ def synth_ja(
         phonemes, _ = ja_g2p(seg)
         if not phonemes:
             continue
-        samples, sr = kokoro.create(
-            phonemes, voice=voice, speed=speed / pitch, is_phonemes=True
-        )
-        parts.append(transpose(trim_edges(np.asarray(samples, dtype=np.float32)), pitch))
+        samples, sr = kokoro.create(phonemes, voice=voice, speed=speed, is_phonemes=True)
+        parts.append(trim_edges(np.asarray(samples, dtype=np.float32)))
         if i < len(segments) - 1:
             gap = JA_SENTENCE_GAP_S if seg.endswith("。") else JA_COMMA_GAP_S
             parts.append(np.zeros(int(sr * gap), dtype=np.float32))
@@ -248,24 +224,21 @@ def main() -> None:
     for i, item in enumerate(todo, 1):
         text = item["tts"]
         voice = item.get("voice") or DEFAULT_VOICE[item["lang"]]
-        pitch = float(item.get("pitch") or 1.0)
         if item["lang"] == "ja-JP":
             for kanji, kana in replacements:
                 text = text.replace(kanji, kana)
-            samples, sr = synth_ja(kokoro, ja_g2p, text, voice, item["speed"], pitch)
+            samples, sr = synth_ja(kokoro, ja_g2p, text, voice, item["speed"])
         else:
             phonemes, _ = en_g2p(text)
             samples, sr = kokoro.create(
-                phonemes, voice=voice, speed=item["speed"] / pitch, is_phonemes=True
+                phonemes, voice=voice, speed=item["speed"], is_phonemes=True
             )
-            samples = transpose(np.asarray(samples, dtype=np.float32), pitch)
         samples = trim_and_pad(np.asarray(samples, dtype=np.float32), sr)
         mp3 = encode_mp3(samples, sr)
         (out / f"{item['key']}.mp3").write_bytes(mp3)
         manifest[item["key"]] = round(len(samples) / sr, 2)
         total_bytes += len(mp3)
-        mouth = voice if pitch == 1.0 else f"{voice}@{pitch}"
-        print(f"[{i}/{len(todo)}] {item['key']} {mouth} "
+        print(f"[{i}/{len(todo)}] {item['key']} {voice} "
               f"{manifest[item['key']]:.1f}s — {item['text'][:48]}")
 
     orphans = [p for p in out.glob("*.mp3") if p.stem not in manifest]
