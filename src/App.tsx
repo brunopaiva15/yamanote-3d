@@ -22,6 +22,7 @@ import { SkyDome } from './three/city/SkyDome';
 import { CityRibbon } from './three/city/CityRibbon';
 import { Landmarks } from './three/Landmarks';
 import { SegmentEnvironment } from './three/SegmentEnvironment';
+import { PlateauWorld } from './three/PlateauWorld';
 import { HubStationRoof } from './three/HubStationRoof';
 import { Station } from './three/station/Station';
 import { PlatformCrowd } from './three/PlatformCrowd';
@@ -64,6 +65,11 @@ export default function App() {
         </TrainRig>
         <SkyDome />
         <CityRibbon />
+        {/* Ville géoréférencée du prototype PLATEAU. Ne se montre que sur le
+            tronçon pour lequel elle a été produite (Sugamo → Ōtsuka) ; partout
+            ailleurs, et prototype coupé, elle ne rend rien du tout et le décor
+            procédural ci-dessus reste seul en scène. */}
+        <PlateauWorld />
         <Wayside />
         <Landmarks />
         <SegmentEnvironment />

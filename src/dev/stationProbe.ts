@@ -211,13 +211,18 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
 
   // Se poser EN PLEINE VOIE, quartier choisi : l'état où l'on juge le décor.
   // Le quai est retiré, sinon il masque tout ce qu'on vient regarder.
-  w.__probeCruise = (i: number) => {
+  //
+  // `phaseT` est réglable : la progression du trajet commande la hauteur des
+  // murs de tranchée (`opensAtEnd`) et l'élévation de la ville. Pouvoir s'y
+  // placer est indispensable pour juger un tronçon qui s'ouvre en fin de
+  // course — regarder par la baie à p = 0,2 ne montre que le mur.
+  w.__probeCruise = (i: number, phaseT = 8) => {
     const k = ((i % 30) + 30) % 30;
     // platformIndex aussi : c'est LUI qui choisit le tronçon (systems/segmentEnv
     // retient la gare quittée tant que son quai est visible). Sans ça, on
     // demandait Harajuku→Shibuya et on regardait le décor d'un autre tronçon.
     useStore.setState({ index: k, platformIndex: k, phase: 'cruise', doorSide: DOOR_SIDE[k] });
-    runtime.phaseT = 8;
+    runtime.phaseT = phaseT;
     runtime.platformFade = 0;
     runtime.platformSlide = 0;
   };
