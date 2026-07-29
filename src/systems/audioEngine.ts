@@ -77,6 +77,9 @@ interface Nodes {
   brakeNoise: Tone.Noise;
   brakeFilter: Tone.Filter;
   brakeGain: Tone.Gain;
+  hvacNoise: Tone.Noise;
+  hvacFilter: Tone.Filter;
+  hvacGain: Tone.Gain;
   clack: Tone.NoiseSynth;
   clackFilter: Tone.Filter;
   air: Tone.NoiseSynth;
@@ -271,6 +274,17 @@ export async function startAudio(): Promise<void> {
   const brakeGain = new Tone.Gain(0);
   brakeNoise.chain(brakeFilter, brakeGain, trainBus);
   brakeNoise.start();
+
+  // Climatisation et ventilation : le souffle qu'on n'entend plus une fois
+  // monté, et qui n'existe vraiment que le jour où il s'arrête. Bruit rose
+  // très sourd, sans aigus — la gaine est au plafond et souffle vers le bas,
+  // ce qui arrive à l'oreille n'a plus de bande passante. C'est la première
+  // chose que coupe une coupure de caténaire (voir setCarPower).
+  const hvacNoise = new Tone.Noise('pink');
+  const hvacFilter = new Tone.Filter({ type: 'lowpass', frequency: 420, Q: 0.9 });
+  const hvacGain = new Tone.Gain(0);
+  hvacNoise.chain(hvacFilter, hvacGain, trainBus);
+  hvacNoise.start();
 
   // Joints de rail : impulsions de bruit filtré passe-bas.
   const clackFilter = new Tone.Filter({ type: 'lowpass', frequency: 420, Q: 1 });
@@ -684,6 +698,9 @@ export async function startAudio(): Promise<void> {
     brakeNoise,
     brakeFilter,
     brakeGain,
+    hvacNoise,
+    hvacFilter,
+    hvacGain,
     clack,
     clackFilter,
     air,
@@ -969,11 +986,32 @@ export function psdDoorBeeps(): void {
   }
 }
 
+/**
+ * Vitesse des turbines de climatisation (0..1), qui n'est PAS l'alimentation
+ * de bord : un ventilateur a de l'inertie. La tension tombe d'un coup, le
+ * souffle met deux bonnes secondes à mourir — et il remonte plus vite qu'il
+ * n'est descendu, parce qu'au retour de la tension les moteurs sont relancés
+ * en charge.
+ */
+let hvacSpin = 1;
+const HVAC_SPIN_DOWN = 2.2; // s pour passer de 1 à 0
+const HVAC_SPIN_UP = 1.1; // s pour repartir de 0 à 1
+/** Niveau du souffle à bord, à pleine ventilation. */
+const HVAC_LEVEL = 0.019;
+
 // Mise à jour continue, pilotée par la vitesse normalisée (0..1).
-export function updateAudio(dt: number, speed01: number, braking: boolean): void {
+//
+// `power` est l'alimentation de bord (runtime.carPower) : à 0, l'onduleur est
+// muet — pas de chant VVVF, et surtout pas de freinage par récupération, la
+// rame se pose au seul frein pneumatique — et la climatisation s'éteint.
+export function updateAudio(dt: number, speed01: number, braking: boolean, power = 1): void {
   if (!nodes || dt <= 0) return;
   const accel01 = (speed01 - prevSpeed01) / dt; // par seconde
   prevSpeed01 = speed01;
+
+  // Les turbines suivent la tension avec leur propre inertie.
+  const spinRate = power > hvacSpin ? dt / HVAC_SPIN_UP : dt / HVAC_SPIN_DOWN;
+  hvacSpin += Math.max(-spinRate, Math.min(spinRate, power - hvacSpin));
 
   // Atténuation en 1/(1+d) sur TOUT le bus de la rame : roulement, onduleur,
   // freins, joints de rail, chocs de porte. Un train qui quitte la gare
@@ -1008,10 +1046,18 @@ export function updateAudio(dt: number, speed01: number, braking: boolean): void
   const boost = Math.max(accelBoost, regenBoost);
   nodes.vvvfOsc.frequency.rampTo(52 + speed01 * 170, 0.08);
   nodes.vvvfFilter.frequency.rampTo(160 + speed01 * 1900, 0.08);
+  // Sans tension à la caténaire, l'onduleur se tait dans l'instant : pas de
+  // descente de chant, pas de récupération au freinage. C'est ce silence-là
+  // qu'on entend en premier, avant même de voir l'éclairage baisser.
   nodes.vvvfGain.gain.rampTo(
-    speed01 > 0.005 ? (0.012 + boost * 0.05 * (0.35 + speed01)) * exterior : 0,
-    0.1,
+    speed01 > 0.005 ? (0.012 + boost * 0.05 * (0.35 + speed01)) * exterior * power : 0,
+    power > 0.5 ? 0.1 : 0.05,
   );
+
+  // Souffle de climatisation : plein à bord, presque rien depuis le quai — de
+  // dehors, ce qu'on entend d'un groupe de toiture n'est pas ce qui souffle
+  // dans le wagon.
+  nodes.hvacGain.gain.rampTo(HVAC_LEVEL * hvacSpin * (listenerOutside ? 0.22 : 1), 0.15);
 
   // Crissement sous ~40 % de vitesse en freinage.
   const squeal =
@@ -1074,6 +1120,30 @@ export function brakeRelease(): void {
   nodes.vent.envelope.decay = 1.3;
   nodes.vent.triggerAttackRelease(0.55, slot('vent', now), 0.2 * loud);
   nodes.vent.triggerAttackRelease(0.2, slot('vent', now + 1.15), 0.07 * loud);
+}
+
+/**
+ * Coupure de la caténaire : le disjoncteur principal s'ouvre.
+ *
+ * Un coup sourd sous le plancher, et c'est tout — le reste de l'événement est
+ * fait de sons qui s'ARRÊTENT (onduleur, climatisation), pas de sons qui
+ * commencent. C'est ce qui le rend si reconnaissable en vrai : le wagon ne
+ * fait pas de bruit, il en perd.
+ */
+export function powerCut(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.thud.triggerAttackRelease('D1', 0.11, slot('thud', now), 0.42);
+}
+
+/** Retour de la tension : les contacteurs se referment, les turbines repartent. */
+export function powerRestore(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.thud.triggerAttackRelease('F1', 0.09, slot('thud', now), 0.34);
+  // Reprise des ventilateurs en charge : un appel d'air court, une seconde
+  // après les contacteurs — le temps que les convertisseurs se réamorcent.
+  nodes.air.triggerAttackRelease(0.4, slot('air', now + 0.9), 0.1);
 }
 
 // Immobilisation complète : léger tassement de caisse puis serrage à l'arrêt.

@@ -27,6 +27,9 @@ const NK_TOP = 2.25; // le haut de l'affiche affleure le caisson de plafond
 const NK_PITCH = 1.05; // pas de la rangée : un ruban ajouré, comme sur la rame
 const NK_RAIL_Y = 2.26;
 
+/** Alimentation en dessous de laquelle les écrans 窓上 sont éteints (cf. Screens). */
+const SCREEN_CUTOFF = 0.45;
+
 export function Ads() {
   // Un pivot par affiche, à son point d'accroche : chaque nakazuri se balance
   // sur ses pinces, sans translation parasite.
@@ -72,6 +75,13 @@ export function Ads() {
   }, [nakazuri]);
 
   useFrame(() => {
+    // Les douze écrans 窓上 sont de la publicité, rien de plus : ils tombent
+    // avec l'alimentation de bord et ne reviennent qu'avec elle. Les nakazuri,
+    // elles, sont du papier — une coupure de courant ne les décroche pas, et
+    // c'est le seul affichage du wagon qui reste lisible dans le noir.
+    const lit = 0.05 + 0.95 * Math.max(0, (runtime.carPower - SCREEN_CUTOFF) / (1 - SCREEN_CUTOFF));
+    for (const m of screenMats) m.color.setScalar(lit);
+
     for (let i = 0; i < pivots.current.length; i++) {
       const p = pivots.current[i];
       if (!p) continue;

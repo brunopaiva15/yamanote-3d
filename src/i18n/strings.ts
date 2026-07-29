@@ -71,6 +71,8 @@ export interface Strings {
     phase: { cruise: string; brake: string; dwell: string; depart: string };
     /** Bandeau de phase pendant un arrêt d'urgence en pleine voie. */
     phaseEmergency: string;
+    /** Bandeau de phase pendant une coupure de caténaire (rame non alimentée). */
+    phaseOutage: string;
     currentStation: string;
     nextStation: string;
     occupancyTitle: string;
@@ -128,6 +130,25 @@ export interface Strings {
     };
   };
 
+  /**
+   * Le menu qui provoque un arrêt en pleine voie. Les deux événements
+   * arrivent d'eux-mêmes, mais rarement — celui du courant peut demander
+   * plusieurs heures de trajet. Ce menu ne les invente pas : il avance
+   * simplement le tirage.
+   */
+  incidents: {
+    /** Bouton du HUD (icône seule) : bulle et libellé pour les lecteurs d'écran. */
+    label: string;
+    /** Titre du panneau déroulé. */
+    title: string;
+    /** Pourquoi rien n'est déclenchable : on n'est pas en pleine voie. */
+    onlyOnTheRun: string;
+    /** Pourquoi rien n'est déclenchable : il y en a déjà un en cours. */
+    alreadyRunning: string;
+    brake: { name: string; note: string };
+    outage: { name: string; note: string };
+  };
+
   language: string;
 
   footer: {
@@ -179,6 +200,7 @@ const FR: Strings = {
   hud: {
     phase: { cruise: 'En route', brake: 'Arrivée', dwell: 'À quai', depart: 'Départ' },
     phaseEmergency: 'Arrêt d’urgence',
+    phaseOutage: 'Coupure de courant',
     currentStation: 'Station actuelle',
     nextStation: 'Prochaine station',
     occupancyTitle: 'Estimation calibrée (±8–12 pts un jour normal)',
@@ -226,6 +248,21 @@ const FR: Strings = {
       ultra: 'Ultra',
     },
   },
+  incidents: {
+    label: 'Provoquer un incident',
+    title: 'Arrêt en pleine voie',
+    onlyOnTheRun: 'Seulement entre deux gares, la rame lancée.',
+    alreadyRunning: 'Un arrêt est déjà en cours.',
+    brake: {
+      name: 'Arrêt d’urgence',
+      note: 'Coup de frein sec, puis 45 s à 2 min 30 d’attente.',
+    },
+    outage: {
+      name: 'Coupure de courant',
+      note: 'Caténaire coupée : plus de traction, éclairage de secours, écrans noirs. Plusieurs minutes.',
+    },
+  },
+
   language: 'Langue',
   footer: {
     disclaimer:
@@ -277,6 +314,7 @@ const EN: Strings = {
   hud: {
     phase: { cruise: 'En route', brake: 'Arriving', dwell: 'At the platform', depart: 'Departing' },
     phaseEmergency: 'Emergency stop',
+    phaseOutage: 'Power failure',
     currentStation: 'Current station',
     nextStation: 'Next station',
     occupancyTitle: 'Calibrated estimate (±8–12 pts on a normal day)',
@@ -324,6 +362,21 @@ const EN: Strings = {
       ultra: 'Ultra',
     },
   },
+  incidents: {
+    label: 'Trigger an incident',
+    title: 'Stop between stations',
+    onlyOnTheRun: 'Only between stations, with the train running.',
+    alreadyRunning: 'One is already under way.',
+    brake: {
+      name: 'Emergency stop',
+      note: 'Hard braking, then a 45 s to 2 min 30 wait.',
+    },
+    outage: {
+      name: 'Power failure',
+      note: 'Overhead line down: no traction, emergency lighting, dead screens. Several minutes.',
+    },
+  },
+
   language: 'Language',
   footer: {
     disclaimer:
@@ -374,6 +427,7 @@ const JA: Strings = {
   hud: {
     phase: { cruise: '走行中', brake: 'まもなく到着', dwell: '停車中', depart: '発車' },
     phaseEmergency: '緊急停止',
+    phaseOutage: '停電',
     currentStation: '現在の駅',
     nextStation: '次の駅',
     occupancyTitle: '推定混雑率（平常日でおよそ±8〜12ポイント）',
@@ -421,6 +475,21 @@ const JA: Strings = {
       ultra: 'ウルトラ',
     },
   },
+  incidents: {
+    label: '異常時を発生させる',
+    title: '駅間での停車',
+    onlyOnTheRun: '駅間を走行中のみ。',
+    alreadyRunning: 'すでに停車中です。',
+    brake: {
+      name: '緊急停止',
+      note: '急ブレーキののち、45秒から2分30秒の停車。',
+    },
+    outage: {
+      name: '停電',
+      note: '架線の停電。動力なし、非常灯のみ、車内モニターは消灯。数分間。',
+    },
+  },
+
   language: '言語',
   footer: {
     disclaimer:

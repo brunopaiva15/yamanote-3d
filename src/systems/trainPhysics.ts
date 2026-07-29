@@ -48,6 +48,35 @@ const JERK_DOWN = 1.0; // m/s³ : application du frein / coupure de traction
 const EMERGENCY_BRAKE = 1.7; // m/s²
 const EMERGENCY_JERK = 2.4; // m/s³ : application quasi immédiate
 
+// Marche sur l'élan (惰行), quand plus rien ne pousse ni ne retient : c'est
+// l'état d'une rame dont la caténaire vient d'être coupée. Il ne reste que la
+// résistance à l'avancement — un terme de roulement quasi constant et un terme
+// aérodynamique en v². À 90 km/h la rame perd environ 0,23 m/s², soit un
+// dixième d'un freinage de service : on ne la sent pas ralentir, on entend
+// seulement que le moteur s'est tu.
+const COAST_ROLL = 0.055; // m/s² : roulement + frottements mécaniques
+const COAST_DRAG = 0.00028; // m/s² par (m/s)² : traînée aérodynamique
+/**
+ * Coupure de traction : brutale. Le disjoncteur s'ouvre, les moteurs cessent
+ * de pousser dans l'instant — pas de relâchement progressif comme lorsqu'un
+ * conducteur lève la manette.
+ */
+const COAST_JERK = 2.0; // m/s³
+
+/** Décélération de la marche sur l'élan à la vitesse v. */
+export function coastCap(v: number): number {
+  return COAST_ROLL + COAST_DRAG * v * v;
+}
+
+/**
+ * Ce qui retient (ou non) la rame pendant un pas d'intégration.
+ *
+ * `service` : profil normal, traction et freinage ordinaires ;
+ * `emergency` : freinage d'urgence (非常ブレーキ) ;
+ * `coast` : plus de traction du tout, la rame roule sur son élan.
+ */
+export type BrakeMode = 'service' | 'emergency' | 'coast';
+
 export function accelCap(v: number): number {
   return v <= ACCEL_TAPER_V ? ACCEL_MAX : (ACCEL_MAX * ACCEL_TAPER_V) / v;
 }
@@ -71,16 +100,28 @@ export interface TrainState {
 }
 
 /** Un pas d'intégration du profil. */
-export function stepTrain(state: TrainState, target: number, dt: number, emergency = false): void {
+export function stepTrain(
+  state: TrainState,
+  target: number,
+  dt: number,
+  mode: BrakeMode = 'service',
+): void {
   let aTarget = 0;
-  if (state.v < target - 0.01) {
+  if (mode === 'coast') {
+    // Ni traction ni frein : la cible de vitesse ne veut plus rien dire, seule
+    // la résistance à l'avancement décide. Elle garde un plancher jusqu'à
+    // l'arrêt complet — une rame qui roule ne s'immobilise pas asymptotiquement,
+    // elle finit par ne plus rouler.
+    aTarget = state.v > 0 ? -coastCap(state.v) : 0;
+  } else if (state.v < target - 0.01) {
     // Approche douce de la vitesse cible : la traction se relâche d'elle-même.
     aTarget = Math.min(accelCap(state.v), (target - state.v) / 1.2);
   } else if (state.v > target + 0.001) {
-    aTarget = emergency ? -emergencyBrakeCap(state.v) : -brakeCap(state.v);
+    aTarget = mode === 'emergency' ? -emergencyBrakeCap(state.v) : -brakeCap(state.v);
   }
   const da = aTarget - state.a;
-  const lim = da > 0 ? JERK_UP * dt : -(emergency ? EMERGENCY_JERK : JERK_DOWN) * dt;
+  const fall = mode === 'emergency' ? EMERGENCY_JERK : mode === 'coast' ? COAST_JERK : JERK_DOWN;
+  const lim = da > 0 ? JERK_UP * dt : -fall * dt;
   state.a += Math.abs(da) < Math.abs(lim) ? da : lim;
   const before = state.v;
   state.v = Math.max(0, Math.min(V_MAX, state.v + state.a * dt));
@@ -96,10 +137,10 @@ export function integrateTrain(
   state: TrainState,
   target: number,
   span: number,
-  emergency = false,
+  mode: BrakeMode = 'service',
 ): void {
   for (let left = span; left > 1e-6; left -= 0.1) {
-    stepTrain(state, target, Math.min(0.1, left), emergency);
+    stepTrain(state, target, Math.min(0.1, left), mode);
   }
 }
 

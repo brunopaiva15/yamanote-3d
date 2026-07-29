@@ -50,7 +50,16 @@ export type DialogueTrigger =
    * déclencheur qui fait parler PLUSIEURS voyageurs l'un après l'autre : ce qui
    * arrive là arrive à tout le monde en même temps (systems/conversation).
    */
-  | 'emergency';
+  | 'emergency'
+  /**
+   * Coupure de la caténaire : la rame se tait, l'éclairage tombe sur les
+   * lampes de secours, les écrans s'éteignent. Collectif comme `emergency`,
+   * mais d'une autre couleur — il n'y a eu ni secousse ni bruit, et c'est le
+   * silence qui inquiète.
+   */
+  | 'outage'
+  /** Le courant revient : la lumière, les écrans, le souffle de la clim. */
+  | 'powerBack';
 
 export type Posture = 'seated' | 'standing' | 'waiting';
 

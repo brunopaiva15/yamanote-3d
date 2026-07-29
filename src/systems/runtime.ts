@@ -10,6 +10,12 @@ import type { TokyoDate } from '../data/occupancy';
  */
 export type PlayerFrame = 'car' | 'platform';
 
+/**
+ * Nature d'un arrêt subi en pleine voie : coup de frein (急停車) ou coupure de
+ * la caténaire (停電). Déclaré ici pour que runtime reste sans dépendance.
+ */
+export type EmergencyKind = 'brake' | 'outage';
+
 export interface TokyoNow {
   minutes: number;
   year: number;
@@ -179,14 +185,26 @@ export const runtime = {
    */
   autonomousDepartureSequence: false,
   /**
-   * Arrêt d'urgence en pleine voie (急停車), rare : freinage d'urgence,
-   * immobilisation de 45 s à 2 min 30 avec
-   * annonces, puis reprise. Piloté par stationCycle, uniquement pendant la
-   * phase cruise (le chrono de phase est gelé à l'arrêt, avancé au prorata
-   * de la vitesse pendant freinage/reprise).
+   * Arrêt subi en pleine voie, rare. Deux natures, et elles ne se ressemblent
+   * pas (voir `kind`) : le coup de frein (急停車) et la coupure de caténaire
+   * (停電). Piloté par stationCycle, uniquement pendant la phase cruise — le
+   * chrono de phase est gelé à l'arrêt, avancé au prorata de la vitesse
+   * pendant la décélération et la reprise.
    */
   emergencyStop: {
-    stage: 'none' as 'none' | 'braking' | 'stopped' | 'resuming',
+    /**
+     * `brake` : freinage d'urgence, immobilisation de 45 s à 2 min 30 avec
+     * annonces, puis reprise. La rame n'a jamais cessé d'être alimentée.
+     *
+     * `outage` : coupure totale de la caténaire. La traction disparaît d'un
+     * coup, la rame roule sur son élan quelques secondes, le conducteur la
+     * pose au frein pneumatique — et elle NE REPART PAS toute seule : la
+     * E235-0 de la Yamanote n'a pas de batterie de traction (celle des
+     * E235-1000 Yokosuka / Sōbu est venue après). Il faut attendre le retour
+     * de la tension.
+     */
+    kind: 'brake' as EmergencyKind,
+    stage: 'none' as 'none' | 'coasting' | 'braking' | 'stopped' | 'resuming',
     /** Temps écoulé dans l'étape courante (s). */
     t: 0,
     /** Durée d'immobilisation tirée au sort (s). */
@@ -194,6 +212,19 @@ export const runtime = {
     /** Motif (index dans EMERGENCY_REASONS). */
     reason: 0,
   },
+  /**
+   * Alimentation de bord (0 = coupée, 1 = normale).
+   *
+   * Ce n'est pas un interrupteur mais un fondu court : les convertisseurs ne
+   * s'éteignent pas instantanément, l'éclairage s'affaisse avant de lâcher, et
+   * au retour de la tension tout ne revient pas au même instant. Lue par le
+   * rendu (néons du wagon, bandeau LED, dalles LCD, écrans publicitaires) et
+   * par le moteur audio (souffle de climatisation, onduleur).
+   *
+   * Ce qui reste allumé en dessous est ce qui tient sur les batteries de bord :
+   * lampes de secours, sono du conducteur, interphone, signalisation de porte.
+   */
+  carPower: 1,
   /** Identifiant stable de la rame (pour departureId anti double-lecture). */
   trainId: 'yamanote-e235-1',
   /** Compteur d'arrêts depuis le début de la session (incrémenté à chaque dwell). */
@@ -254,10 +285,12 @@ export function resetRuntime(): void {
   runtime.departureBlockers.heldAtStation = false;
   runtime.departureBlockers.signalStop = false;
   runtime.departureBlockers.emergency = false;
+  runtime.emergencyStop.kind = 'brake';
   runtime.emergencyStop.stage = 'none';
   runtime.emergencyStop.t = 0;
   runtime.emergencyStop.holdFor = 0;
   runtime.emergencyStop.reason = 0;
+  runtime.carPower = 1;
   runtime.outOfService = false;
   runtime.terminusStop = false;
   runtime.useAlternativePlatform = false;

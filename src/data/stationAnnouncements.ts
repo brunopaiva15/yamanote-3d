@@ -225,7 +225,15 @@ export const PLATFORM_DELAY_CAUSES = [
   '車両点検',
   '線路内人立入り',
   'ホーム上の安全確認',
+  '架線の停電',
 ] as const;
+
+/**
+ * Motif annoncé sur le quai après une coupure de caténaire (voir
+ * systems/stationCycle). Nommé plutôt que compté : une insertion en tête de la
+ * liste ferait annoncer un autre incident sans que rien n'échoue.
+ */
+export const DELAY_CAUSE_OUTAGE = PLATFORM_DELAY_CAUSES.indexOf('架線の停電');
 
 export function platformDelayAnnouncement(cause: number): StationUtterance[] {
   const i = ((cause % PLATFORM_DELAY_CAUSES.length) + PLATFORM_DELAY_CAUSES.length) %

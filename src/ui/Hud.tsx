@@ -8,7 +8,7 @@ import { LOOP_LABEL_JP } from '../data/loop';
 import { STATIONS } from '../data/stations';
 import { BAND_COLOR, type OccupancyBand } from '../data/occupancy';
 import { useT } from '../i18n';
-import { runtime } from '../systems/runtime';
+import { runtime, type EmergencyKind } from '../systems/runtime';
 import { currentSegmentOccupancy } from '../systems/occupancy';
 import { weather, type WeatherKind } from '../systems/weather';
 import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
@@ -16,6 +16,7 @@ import { applySpeechVolume, cancelSpeech } from '../systems/speech';
 import { input } from '../systems/input';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
+import { IncidentMenu } from './IncidentMenu';
 
 function useClock(): string {
   const [clock, setClock] = useState('');
@@ -31,18 +32,29 @@ function useClock(): string {
   return clock;
 }
 
-// L'arrêt d'urgence vit dans runtime (pas dans le store) : on le sonde comme
-// l'horloge. Le badge ne signale l'urgence que freinage / immobilisation,
-// tandis que la remontée en vitesse ('resuming') s'affiche déjà « En route ».
+// L'arrêt subi vit dans runtime (pas dans le store) : on le sonde comme
+// l'horloge. Le badge ne le signale que pendant la décélération et
+// l'immobilisation, tandis que la remontée en vitesse ('resuming') s'affiche
+// déjà « En route ». Les deux natures ont leur libellé : un coup de frein et
+// une coupure de caténaire ne se vivent pas de la même façon, et le HUD est le
+// seul endroit du jeu qui les nomme.
 type EmergencyStage = typeof runtime.emergencyStop.stage;
 
-function useEmergencyStage(): EmergencyStage {
-  const [stage, setStage] = useState<EmergencyStage>('none');
+function useEmergency(): { stage: EmergencyStage; kind: EmergencyKind } {
+  const [state, setState] = useState<{ stage: EmergencyStage; kind: EmergencyKind }>({
+    stage: 'none',
+    kind: 'brake',
+  });
   useEffect(() => {
-    const id = window.setInterval(() => setStage(runtime.emergencyStop.stage), 500);
+    const id = window.setInterval(() => {
+      const em = runtime.emergencyStop;
+      setState((prev) =>
+        prev.stage === em.stage && prev.kind === em.kind ? prev : { stage: em.stage, kind: em.kind },
+      );
+    }, 500);
     return () => window.clearInterval(id);
   }, []);
-  return stage;
+  return state;
 }
 
 /**
@@ -112,8 +124,9 @@ export function Hud() {
   const clock = useClock();
   const occupancy = useOccupancy();
   const sky = useWeather();
-  const emergencyStage = useEmergencyStage();
-  const emergency = emergencyStage === 'braking' || emergencyStage === 'stopped';
+  const em = useEmergency();
+  const emergency = em.stage === 'coasting' || em.stage === 'braking' || em.stage === 'stopped';
+  const outage = emergency && em.kind === 'outage';
 
   // Répercuter le mute et le volume sur l'audio et la voix.
   useEffect(() => {
@@ -167,8 +180,8 @@ export function Hud() {
           <span className="hud-occupancy-pct">~{occupancy.percent}&nbsp;%</span>
           <span className="hud-occupancy-label">{t.hud.band[occupancy.band]}</span>
         </div>
-        <div className={`hud-phase hud-phase-${emergency ? 'emergency' : phase}`}>
-          {emergency ? t.hud.phaseEmergency : t.hud.phase[phase]}
+        <div className={`hud-phase hud-phase-${outage ? 'outage' : emergency ? 'emergency' : phase}`}>
+          {outage ? t.hud.phaseOutage : emergency ? t.hud.phaseEmergency : t.hud.phase[phase]}
         </div>
       </div>
 
@@ -207,6 +220,8 @@ export function Hud() {
         >
           {t.hud.fullscreen}
         </button>
+        {/* En bout de barre, après les réglages : ce n'en est pas un. */}
+        <IncidentMenu />
       </div>
     </>
   );

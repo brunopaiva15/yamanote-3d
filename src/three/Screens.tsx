@@ -28,6 +28,16 @@ import { JP_FONT, drawAdInto, rng } from '../textures/procedural';
 
 const YAMANOTE_GREEN = '#80c241';
 
+/**
+ * Alimentation de bord en dessous de laquelle les dalles LCD sont éteintes.
+ *
+ * Les écrans embarqués ne sont PAS des équipements de sécurité : ils ne sont
+ * pas tenus par les batteries et ils tombent avant les lampes de secours. Le
+ * seuil est haut pour cette raison — un panneau perd son rétroéclairage bien
+ * avant qu'un tube fluorescent ne s'éteigne.
+ */
+const LCD_CUTOFF = 0.45;
+
 // Afficheur fidèle à la rame réelle (11 voitures) ; le voyageur est en 3ᵉ.
 // Seule la voiture 3 est modélisée en 3D.
 const CAR_COUNT = 11;
@@ -1305,6 +1315,56 @@ function drawEmergencyInfo(
   }
 }
 
+// --- Coupure de caténaire (停電) ---
+// Le pendant du précédent, et il ne s'affiche JAMAIS pendant la coupure : une
+// dalle sans courant ne montre rien. Il n'apparaît qu'au retour de la tension,
+// pendant que la rame se relance — c'est-à-dire au moment exact où l'écran
+// rallumé a quelque chose à rattraper.
+function drawOutageInfo(
+  s: ReturnType<typeof makeScreen>,
+  index: number,
+  clock: string,
+  lang: ScreenLang,
+  dir: LoopDirection,
+): void {
+  const { g, w, h } = s;
+  g.fillStyle = '#f4f6f7';
+  g.fillRect(0, 0, w, h);
+  drawHeader(g, w, index, clock, 'next', lang, dir);
+
+  g.strokeStyle = '#c8362c';
+  g.lineWidth = 5;
+  g.beginPath();
+  g.roundRect(18, HEADER_H + 16, w - 36, h - HEADER_H - 32, 10);
+  g.stroke();
+
+  const ty = HEADER_H + 62;
+  g.fillStyle = '#c8362c';
+  g.beginPath();
+  g.arc(66, ty - 10, 21, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center';
+  g.font = `bold 30px ${JP_FONT}`;
+  g.fillText('!', 66, ty);
+  g.textAlign = 'left';
+  g.fillStyle = '#c8362c';
+  g.font = `bold 34px ${JP_FONT}`;
+  g.fillText(lang === 'jp' ? '停電による停車' : 'Stopped: Power Failure', 104, ty);
+
+  g.fillStyle = '#26303a';
+  g.font = `23px ${JP_FONT}`;
+  if (lang === 'jp') {
+    g.fillText('架線の停電のため、停車しておりました。', 48, ty + 56);
+    g.fillText('電力が復旧いたしましたので、', 48, ty + 92);
+    g.fillText('まもなく運転を再開いたします。', 48, ty + 128);
+  } else {
+    g.fillText('This train was stopped by a power failure', 48, ty + 56);
+    g.fillText('on the overhead line. Power has been restored', 48, ty + 92);
+    g.fillText('and service will resume shortly.', 48, ty + 128);
+  }
+}
+
 // --- État des autres lignes (他線区の運行情報) ---
 // La liste ligne par ligne du vrai afficheur : pastille de couleur, nom, et
 // statut — la ligne perturbée en ambre, les autres « 平常運転 ».
@@ -1436,8 +1496,44 @@ export function Screens() {
   const lastKey = useRef('');
   const lastAd = useRef(-1);
   const acc = useRef(0);
+  /** Vrai tant que les dalles sont éteintes : sert à forcer le redessin au retour. */
+  const wasDark = useRef(false);
+
+  const leftMat = useMemo(
+    () => new THREE.MeshBasicMaterial({ map: left.texture, toneMapped: false }),
+    [left.texture],
+  );
+  const rightMatA = useMemo(
+    () => new THREE.MeshBasicMaterial({ map: rightA.texture, toneMapped: false }),
+    [rightA.texture],
+  );
+  const rightMatB = useMemo(
+    () => new THREE.MeshBasicMaterial({ map: rightB.texture, toneMapped: false }),
+    [rightB.texture],
+  );
 
   useFrame((_, dt) => {
+    // Une dalle LCD n'est pas une lampe : elle n'a pas de demi-teinte. Sous le
+    // seuil, le rétroéclairage est éteint et il ne reste que le noir un peu
+    // gris du panneau — d'où la teinte plancher, qui n'est pas zéro.
+    const power = runtime.carPower;
+    const lit = 0.06 + 0.94 * Math.max(0, (power - LCD_CUTOFF) / (1 - LCD_CUTOFF));
+    leftMat.color.setScalar(lit);
+    rightMatA.color.setScalar(lit);
+    rightMatB.color.setScalar(lit);
+    // Écrans morts : plus rien à dessiner. Au retour de la tension, ils
+    // redémarrent — on force donc un redessin, sinon la dalle rallumée
+    // afficherait l'image d'avant la coupure.
+    if (power <= LCD_CUTOFF) {
+      wasDark.current = true;
+      return;
+    }
+    if (wasDark.current) {
+      wasDark.current = false;
+      lastKey.current = '';
+      lastAd.current = -1;
+    }
+
     acc.current += dt;
     if (acc.current < 0.25) return;
     acc.current = 0;
@@ -1464,10 +1560,14 @@ export function Screens() {
     //
     // L'arrêt d'urgence (急停車) est un événement RÉEL de la simulation
     // (stationCycle) : quand il est actif, l'écran rouge remplace toute la
-    // rotation, en alternance JP/EN. Les autres états dégradés de la propre
-    // ligne (retard persistant, interruption planifiée) restent non rendus :
-    // la simulation n'a pas ces incidents, les afficher serait annoncer au
-    // voyageur quelque chose qui n'arrive pas.
+    // rotation, en alternance JP/EN. La coupure de caténaire a son propre
+    // écran rouge, qu'on ne voit qu'au retour de la tension — pendant la
+    // coupure, la dalle est simplement éteinte et rien n'est dessiné.
+    //
+    // Les autres états dégradés de la propre ligne (retard persistant,
+    // interruption planifiée) restent non rendus : la simulation n'a pas ces
+    // incidents, les afficher serait annoncer au voyageur quelque chose qui
+    // n'arrive pas.
     const tick = Math.floor(runtime.clockMin * 4);
     const clock = fmtClock(runtime.clockMin);
     const countdown = Math.round(secondsToArrival(phase, runtime.phaseT, index, loopDirection));
@@ -1480,7 +1580,11 @@ export function Screens() {
     let status: ScreenStatus;
     if (emergency.stage !== 'none') {
       status = 'next';
-      state = tick % 2 === 0 ? 'emergencyJP' : 'emergencyEN';
+      // Une coupure et un coup de frein ne s'affichent pas de la même façon —
+      // et surtout, la coupure ne s'affiche qu'une fois le courant revenu,
+      // puisque avant cela on n'est même pas arrivé jusqu'ici.
+      const kind = emergency.kind === 'outage' ? 'outage' : 'emergency';
+      state = tick % 2 === 0 ? `${kind}JP` : `${kind}EN`;
     } else if (phase === 'brake') {
       status = 'soon';
       state = tick % 3 === 2 ? 'platform' : 'door';
@@ -1573,6 +1677,12 @@ export function Screens() {
         case 'emergencyEN':
           drawEmergencyInfo(g, index, clock, 'en', emergency.reason, loopDirection);
           break;
+        case 'outageJP':
+          drawOutageInfo(g, index, clock, 'jp', loopDirection);
+          break;
+        case 'outageEN':
+          drawOutageInfo(g, index, clock, 'en', loopDirection);
+          break;
         case 'loopJP':
           drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection);
           break;
@@ -1593,18 +1703,6 @@ export function Screens() {
   const surroundMat = useMemo(
     () => new THREE.MeshStandardMaterial({ color: '#eeece6', roughness: 0.62, metalness: 0.02 }),
     [],
-  );
-  const leftMat = useMemo(
-    () => new THREE.MeshBasicMaterial({ map: left.texture, toneMapped: false }),
-    [left.texture],
-  );
-  const rightMatA = useMemo(
-    () => new THREE.MeshBasicMaterial({ map: rightA.texture, toneMapped: false }),
-    [rightA.texture],
-  );
-  const rightMatB = useMemo(
-    () => new THREE.MeshBasicMaterial({ map: rightB.texture, toneMapped: false }),
-    [rightB.texture],
   );
 
   const sides: (1 | -1)[] = [1, -1];

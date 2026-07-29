@@ -3,7 +3,7 @@
 // pour les laqués et le chrome, post-process filmique discret
 // (bloom seuil haut, grain, vignette).
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { installStationProbe } from '../dev/stationProbe';
 import * as THREE from 'three';
@@ -18,6 +18,13 @@ import { seasonNow } from '../systems/season';
 import { weather } from '../systems/weather';
 import { segEnv } from '../systems/segmentEnv';
 import { applyShadowFlags } from './shadowFlags';
+
+/**
+ * Intensité d'un luminaire de secours (à comparer aux 3,0 d'un néon ordinaire).
+ * Assez pour qu'on se voie et qu'on lise l'heure, pas assez pour qu'on lise un
+ * journal : c'est exactement le cahier des charges d'un 非常灯.
+ */
+const EMERGENCY_LAMP = 0.5;
 
 const LAMP_POSITIONS: [number, number, number][] = [
   [0, 2.16, -7.5],
@@ -271,6 +278,100 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
   );
 }
 
+/**
+ * Les néons du wagon. Ils ne s'éteignent qu'une fois : quand la caténaire
+ * lâche (`runtime.carPower`). Le reste du temps leur intensité est fixe — un
+ * pont au-dessus de la voie n'atteint pas l'éclairage intérieur, c'est même à
+ * ça qu'on voit qu'on est dedans.
+ */
+function CabinLights({
+  positions,
+  intensity,
+}: {
+  positions: [number, number, number][];
+  intensity: number;
+}) {
+  const lamps = useRef<(THREE.PointLight | null)[]>([]);
+  useFrame(() => {
+    // Un tube fluorescent ne suit pas la tension linéairement : il tient, il
+    // blêmit, puis il lâche. La puissance 1,6 donne cet affaissement.
+    const p = Math.pow(runtime.carPower, 1.6);
+    for (const l of lamps.current) if (l) l.intensity = intensity * p;
+  });
+  return (
+    <>
+      {positions.map((pos, i) => (
+        <pointLight
+          key={i}
+          ref={(l) => {
+            lamps.current[i] = l;
+          }}
+          position={pos}
+          intensity={intensity}
+          distance={7}
+          decay={1.7}
+          color="#fff0da"
+        />
+      ))}
+    </>
+  );
+}
+
+/**
+ * L'éclairage de secours (非常灯), sur les batteries de bord.
+ *
+ * Une rame privée de caténaire ne devient pas noire : la réglementation
+ * japonaise impose que l'essentiel reste utilisable pendant une panne
+ * d'alimentation, et quelques luminaires restent allumés. Ils sont RARES —
+ * deux dans la longueur du wagon — et FROIDS, là où les néons ordinaires
+ * tirent sur le jaune : c'est ce contraste qui fait qu'une voiture sur
+ * batteries ne ressemble à aucune autre.
+ *
+ * Ils s'allument en miroir de `carPower` : à pleine tension, ils n'éclairent
+ * rien du tout et ne coûtent donc rien de plus qu'une intensité à zéro.
+ */
+function EmergencyLights({ positions }: { positions: [number, number, number][] }) {
+  // Deux points seulement, aux tiers du wagon, quel que soit le palier de
+  // qualité : ce n'est pas l'éclairage normal qu'on réduit, c'en est un autre.
+  // Deux points seulement, aux tiers du wagon, quel que soit le palier de
+  // qualité : ce n'est pas l'éclairage normal qu'on réduit, c'en est un autre.
+  //
+  // Ils sont posés VINGT CENTIMÈTRES sous le bandeau de plafond, là où les
+  // néons sont collés dessous. Un point de lumière contre le plafond en fait un
+  // panneau blanc, et une voiture au plafond blanc ne se lit pas comme une
+  // voiture sur batteries : ce qu'on veut éclairer, c'est l'allée et le haut
+  // des têtes, pas la tôle.
+  const spots = useMemo<[number, number, number][]>(
+    () => [
+      [0, 1.96, positions.length > 1 ? -5.6 : 0],
+      [0, 1.96, 5.6],
+    ],
+    [positions.length],
+  );
+  const lamps = useRef<(THREE.PointLight | null)[]>([]);
+  useFrame(() => {
+    const dark = 1 - runtime.carPower;
+    for (const l of lamps.current) if (l) l.intensity = EMERGENCY_LAMP * dark;
+  });
+  return (
+    <>
+      {spots.map((pos, i) => (
+        <pointLight
+          key={`em${i}`}
+          ref={(l) => {
+            lamps.current[i] = l;
+          }}
+          position={pos}
+          intensity={0}
+          distance={5.5}
+          decay={1.9}
+          color="#dbe6f0"
+        />
+      ))}
+    </>
+  );
+}
+
 export function Scene() {
   // Palier issu de la qualité vidéo choisie par le joueur (voir systems/perf) :
   // ne change qu'à un réglage manuel, donc quelques re-renders par session.
@@ -297,9 +398,10 @@ export function Scene() {
       <StationProbe />
 
       {/* Intérieur : chapelet de points blanc chaud sous le bandeau plafond. */}
-      {lampPositions.map((p, i) => (
-        <pointLight key={i} position={p} intensity={lampIntensity} distance={7} decay={1.7} color="#fff0da" />
-      ))}
+      <CabinLights positions={lampPositions} intensity={lampIntensity} />
+
+      {/* Lampes de secours : elles n'existent QUE dans le noir. */}
+      <EmergencyLights positions={lampPositions} />
 
       {perfLevel < 2 ? (
         <EffectComposer>

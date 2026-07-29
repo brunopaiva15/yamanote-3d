@@ -30,6 +30,10 @@ npm run lint     # oxlint
   invite l'annonce sous le réticule. Depuis le quai on parle aux gens du quai,
   jamais à travers la vitre à ceux qui sont assis dans la rame
 - M : couper le son, F : plein écran
+- Le **⚠ en bout de barre** déroule les deux arrêts en pleine voie — coup de
+  frein d'urgence, coupure de courant — et les déclenche tout de suite. Ils
+  tombent d'eux-mêmes, mais rarement : jusqu'à trois heures de trajet pour la
+  coupure. Grisé tant qu'on n'est pas entre deux gares, la rame lancée
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder,
   bouton s'asseoir, bouton « Parler » quand quelqu'un est à portée
 
@@ -1362,17 +1366,18 @@ jour de la semaine. Chaque contexte laisse entre cinquante et soixante
 échanges éligibles ; personne ne se répète, et ce qui vient d'être entendu est
 écarté du tirage suivant.
 
-Sept situations font parler les gens **sans qu'on leur ait rien demandé** : une
+Neuf situations font parler les gens **sans qu'on leur ait rien demandé** : une
 bousculade, un voisin qui s'étale, le joueur qui monte ou descend, qui s'assoit
-à côté, qui passe à un mètre, la rame qui entre en gare — et l'arrêt d'urgence.
-Une réplique spontanée toutes les quarante à cent vingt secondes, jamais deux
-de suite par la même personne : c'est ce qui prouve que les gens sont là même
-quand on ne les regarde pas.
+à côté, qui passe à un mètre, la rame qui entre en gare — et les trois moments
+d'un arrêt subi : le coup de frein d'urgence, la coupure de courant, le retour
+du courant. Une réplique spontanée toutes les quarante à cent vingt secondes,
+jamais deux de suite par la même personne : c'est ce qui prouve que les gens
+sont là même quand on ne les regarde pas.
 
-**L'arrêt d'urgence est le seul qui fasse parler plusieurs personnes.** Les six
-autres s'adressent à un voisin ; un coup de frein d'urgence, lui, arrive à tout
-le wagon en même temps, et un wagon qui vient de freiner en urgence ne produit
-pas une remarque polie. Tout le monde sursaute d'abord — les debout qui ne
+**Les arrêts subis sont les seuls à faire parler plusieurs personnes.** Les six
+autres situations s'adressent à un voisin ; un coup de frein d'urgence, lui,
+arrive à tout le wagon en même temps, et un wagon qui vient de freiner en
+urgence ne produit pas une remarque polie. Tout le monde sursaute d'abord — les debout qui ne
 tiennent aucune poignée partent en avant, les autres cherchent des yeux ce qui
 arrive, les assis lèvent le nez de leur écran — puis **deux à quatre voisins
 différents disent leur peur**, l'un après l'autre, la bulle passant de l'un à
@@ -1387,6 +1392,18 @@ change de nature et devient celle de l'attente : le silence, le motif qu'on ne
 donne pas vraiment, le réseau qui ne passe plus, et chez les plus âgés le
 souvenir du grand séisme. Les deux vagues partent d'elles-mêmes, la seconde une
 dizaine de secondes après l'immobilisation.
+
+**La coupure de courant se dit autrement**, et c'est là que le catalogue gagne
+son intérêt. Rien n'a secoué : personne ne sursaute, personne ne se raccroche.
+Ce qui se remarque est ce qui MANQUE — la lumière qui baisse, le moteur qu'on
+n'entend plus, les écrans devenus noirs, la clim qui s'arrête —, si bien que la
+première réplique n'est jamais « qu'est-ce qui se passe ?! » mais un constat, à
+voix basse. Puis vient l'attente, et avec elle des remarques qu'un coup de frein
+ne produit jamais : le wagon qui va chauffer sans ventilation en août ou se
+refroidir en janvier, la consigne de ne pas toucher au robinet de secours, la
+rame de Yokosuka qui, elle, aurait pu rejoindre la gare à la batterie. Le retour
+du courant a ses propres répliques, brèves — c'est du soulagement, ça ne
+s'étire pas.
 
 Ils ne prononcent pas de vrais mots. La voix est un **murmure de syllabes**
 synthétisé (Tone.js), dont la hauteur suit le genre, la stature et l'âge : on
@@ -1575,9 +1592,11 @@ prochain train, carillon, まもなく、1番線に…、危ないですから�
 までお下がりください, sa reprise anglaise, puis 電車がまいります répété pendant
 que la rame entre, le nom de la gare à l'arrêt, l'agent qui presse l'échange,
 la mélodie, 1番線、ドアが閉まります et les bips des portes palières. Un arrêt
-d'urgence subi en cours de route met la ligne en retard : les quais s'en
-excusent, motif à l'appui, pendant les quelques arrêts qui suivent
-(`data/stationAnnouncements`, `systems/stationPa`).
+subi en cours de route met la ligne en retard : les quais s'en excusent, motif à
+l'appui, pendant les quelques arrêts qui suivent (`data/stationAnnouncements`,
+`systems/stationPa`). Après un 急停車 le motif est tiré parmi ceux qui vont avec
+un coup de frein ; après une coupure de courant il ne se tire pas — le quai
+annonce 架線の停電, c'est-à-dire exactement ce que le joueur vient de vivre.
 
 Cet arrêt d'urgence (急停車) tombe **toutes les dix à vingt-quatre gares**, soit
 de vingt-cinq minutes à une heure de trajet — le premier plus tôt, pour qu'un
@@ -1587,6 +1606,82 @@ chrono de phase n'avance que **au prorata de la vitesse** pendant tout
 l'événement, si bien que la gare suivante arrive au bon moment après la reprise
 et que le retard se lit sur l'horloge murale, pas sur le trajet
 (`systems/stationCycle`). Ce que ça fait aux voyageurs est décrit plus haut.
+
+### La coupure de courant
+
+C'est le second arrêt subi, et il ne ressemble en rien au premier. Un coup de
+frein s'annonce par une secousse ; une coupure de caténaire (停電) ne s'annonce
+pas du tout. **Elle ne fait aucun bruit : elle en retire.**
+
+Dans l'ordre, ce que vit le wagon :
+
+```
+0 s        la traction disparaît. Le chant de l'onduleur s'éteint,
+           le souffle de la climatisation meurt en deux secondes.
+           La rame roule sur son élan (惰行) et ne ralentit presque pas.
+1–1,2 s    l'éclairage s'affaisse puis lâche. Les dalles LCD au-dessus des
+           portes et les douze écrans publicitaires 窓上 deviennent noirs.
+           Restent deux lampes de secours, froides, et les affiches de papier.
+2–4 s      le conducteur serre les freins. Freinage de SERVICE, au pneumatique :
+           la récupération n'a plus de ligne où renvoyer son courant.
+~14 s      première annonce, au combiné, sur les batteries de bord.
+2 min 50   à 5 min 40 d'immobilisation, portes closes.
+   à 5'40  Un rappel d'attente à mi-parcours — et la seule consigne de sécurité
+           du jeu qui vise un geste que le joueur pourrait vraiment faire :
+           ne pas toucher au robinet de secours des portes.
+−24 s      le courant revient. D'ABORD la lumière — deux battements de
+           contacteurs, puis ça tient —, l'annonce neuf secondes plus tard.
+           C'est la lumière qui prévient le wagon, pas la voix.
+0 s        desserrage, la rame repart.
+```
+
+Le point qui commande tout le reste : **une E235-0 de la Yamanote n'a pas de
+batterie de traction**. Elle ne peut pas rejoindre la gare suivante par ses
+propres moyens. Cette fonction est arrivée plus tard, sur les E235-1000 des
+lignes Yokosuka et Sōbu rapide, que JR East a présentées comme une première du
+genre. La rame verte, elle, attend le retour de la tension — et c'est pour ça
+que l'immobilisation se compte en minutes là où un 急停車 se compte en secondes.
+Le vrai ordre de grandeur est d'ailleurs bien pire : lors de la panne de Tamachi
+du 16 janvier 2026, deux rames de la Keihin-Tōhoku sont restées bloquées entre
+deux gares et quelque 4 000 voyageurs ont fini par descendre à pied, après une
+heure passée dans des voitures sans climatisation. Le jeu n'a ni évacuation ni
+marche le long des voies : au-delà de quelques minutes il ne resterait plus rien
+à vivre, l'événement est donc coupé court.
+
+Ce qui reste allumé est ce qui tient sur les batteries, et la liste n'est pas
+décorative : la réglementation japonaise impose que l'essentiel reste utilisable
+pendant une panne d'alimentation — sono du conducteur, interphone, signalisation
+de porte, lampes de secours. Les écrans, eux, ne sont pas des équipements de
+sécurité : ils tombent, et ils tombent les premiers (`LCD_CUTOFF` est plus haut
+que le seuil des lampes, un panneau perdant son rétroéclairage bien avant qu'un
+tube ne s'éteigne).
+
+Tout cela passe par **une seule valeur**, `runtime.carPower` (0..1) : les néons
+et le bandeau LED la lisent en puissance 1,6 — un tube tient, blêmit, puis lâche
+—, les dalles et les écrans publicitaires par un seuil, le moteur audio pour
+couper l'onduleur et laisser mourir les turbines à leur propre inertie. Le reste
+du jeu n'a pas à savoir qu'une coupure existe.
+
+La coupure tombe **toutes les trente-quatre à soixante-dix gares**, soit d'une
+heure et demie à trois heures de trajet — la première plus tôt. C'est
+volontairement au-delà d'une session ordinaire : une vraie panne d'alimentation
+est un événement qu'on raconte, pas un qu'on croise. Elle passe devant l'arrêt
+d'urgence quand les deux tombent sur la même course.
+
+Ce qui pose un problème que la rareté ne résout pas : un événement qu'on peut
+ne jamais voir est un événement qu'on ne peut pas non plus regarder deux fois.
+D'où le **⚠ discret en bout de barre du HUD** (`ui/IncidentMenu`), qui déroule
+les deux arrêts et les déclenche à la demande. Il n'invente rien et ne double
+aucune mécanique : il appelle exactement les fonctions du tirage automatique,
+avec les mêmes conditions — la rame doit rouler en pleine voie, et rien ne doit
+être déjà en cours. Quand ce n'est pas le cas, il le DIT plutôt que de se
+contenter d'être gris. Le menu est volontairement effacé tant qu'on ne le
+survole pas : ce n'est pas un réglage, et on ne doit pas tomber dessus en
+cherchant le volume.
+
+En développement, `__emergencyStop()` et `__powerOutage()` font la même chose
+depuis la console, `__outageSkip(-n)` avance jusqu'aux abords du retour de la
+tension, et `scripts/outage-shots.mjs` en fait la planche de contrôle.
 
 **Quatre sources, et deux automates qu'on ne confond pas** : la sono de la rame
 (`jf_alpha`), l'annonce automatique du quai (`jm_kumo`, **un homme** — les deux

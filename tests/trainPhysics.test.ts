@@ -14,7 +14,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CONFIG, V_MAX } from '../src/data/config.ts';
-import { integrateTrain, stopDistance, type TrainState } from '../src/systems/trainPhysics.ts';
+import {
+  coastCap,
+  integrateTrain,
+  stopDistance,
+  type TrainState,
+} from '../src/systems/trainPhysics.ts';
 
 /** Freinage complet depuis la vitesse de ligne, au pas de la boucle 60 fps. */
 function brakeRun(): { t: number; total: number; log: TrainState[]; times: number[] } {
@@ -78,4 +83,33 @@ test('la distance restante décroît à la vitesse du train et s’annule à l�
   }
   assert.ok(worst < 0.03, `écart prévision/réel sur le dernier mètre : ${worst.toFixed(3)} m`);
   assert.ok(stopDistance(0, 0) === 0);
+});
+
+// --- Marche sur l'élan (惰行) --------------------------------------------
+//
+// Ce que fait une rame dont la caténaire vient d'être coupée, les quelques
+// secondes avant que le conducteur ne serre les freins. Ce qui compte n'est pas
+// la valeur exacte de la décélération mais son ORDRE DE GRANDEUR : la rame doit
+// se taire sans se poser. Si elle perdait dix kilomètres-heure en trois
+// secondes, la coupure se lirait comme un freinage, et tout l'événement — le
+// moteur qui s'éteint alors que rien ne ralentit — tomberait à plat.
+
+test('sur l’élan, la rame ralentit à peine : on l’entend, on ne la sent pas', () => {
+  const state: TrainState = { v: V_MAX, a: 0, d: 0 };
+  integrateTrain(state, 0, 3, 'coast');
+  const lostKmh = (V_MAX - state.v) * 3.6;
+  assert.ok(lostKmh > 0, 'la rame doit ralentir : rien ne la pousse plus');
+  assert.ok(lostKmh < 4, `trois secondes sur l’élan coûtent ${lostKmh.toFixed(1)} km/h`);
+  // Un ordre de grandeur sous le freinage de service, qui est le point de tout.
+  assert.ok(coastCap(V_MAX) < 0.3, `résistance à ${V_MAX} m/s : ${coastCap(V_MAX).toFixed(3)} m/s²`);
+  assert.ok(coastCap(V_MAX) > 4 * coastCap(0), 'la traînée doit dominer à pleine vitesse');
+});
+
+test('sur l’élan, la rame finit tout de même par s’arrêter', () => {
+  // Sans cette garantie, une coupure qui durerait sans freinage laisserait le
+  // train rouler indéfiniment, et le chrono de phase (avancé au prorata de la
+  // vitesse) avec lui.
+  const state: TrainState = { v: V_MAX, a: 0, d: 0 };
+  integrateTrain(state, 0, 900, 'coast');
+  assert.equal(state.v, 0);
 });
