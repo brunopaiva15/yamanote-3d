@@ -29,6 +29,7 @@
 //           une verrière, une annonce trop rapide ne s'attrape pas.
 
 import { writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import {
   EMERGENCY_REASONS,
   approachSequence,
@@ -41,7 +42,7 @@ import {
   emergencyWaitAnnouncement,
   welcomeAnnouncement,
   type Utterance,
-} from '../src/data/announcements';
+} from '../src/data/announcements.ts';
 import {
   PLATFORM_AGENT_MESSAGES,
   PLATFORM_DELAY_CAUSES,
@@ -60,11 +61,11 @@ import {
   platformTrainEnteringAnnouncement,
   type StationUtterance,
   type StationVoice,
-} from '../src/data/stationAnnouncements';
-import { facingTrackNumber, passThroughStations } from '../src/data/passingTrains';
-import { platformFor, type LoopDirection } from '../src/data/platforms';
-import { DOOR_SIDE, STATIONS } from '../src/data/stations';
-import { clipKey } from '../src/data/clipKey';
+} from '../src/data/stationAnnouncements.ts';
+import { facingTrackNumber, passThroughStations } from '../src/data/passingTrains.ts';
+import { platformFor, type LoopDirection } from '../src/data/platforms.ts';
+import { DOOR_SIDE, STATIONS } from '../src/data/stations.ts';
+import { clipKey } from '../src/data/clipKey.ts';
 
 /** Voix de la sonorisation de la RAME (annonces de bord). */
 const CABIN_VOICE: Record<Utterance['lang'], string> = {
@@ -244,13 +245,25 @@ function add(u: Utterance, voice: string): void {
 for (const u of utterances) add(u, CABIN_VOICE[u.lang]);
 for (const u of stationUtterances) add(u, STATION_VOICE[u.voice]);
 
+/**
+ * Tous les textes réellement joués, dédupliqués. Exporté pour que
+ * tests/announcementClips.test.ts vérifie que chacun a bien son clip : une
+ * annonce sans MP3 retombe sur speechSynthesis, hors du graphe audio et dans
+ * une voix qui n'est celle d'aucune des quatre locutrices.
+ */
+export const ITEMS: Item[] = [...byKey.values()];
+
 const out = {
-  items: [...byKey.values()],
+  items: ITEMS,
   // Lectures de référence : le générateur vérifie que open_jtalk lit chaque
   // gare comme sa transcription kana et bascule sur le kana en cas d'écart.
   stations: STATIONS.map((s) => ({ kanji: s.kanji, kana: s.kana })),
 };
 
-const dest = process.argv[2] ?? 'announcements-texts.json';
-writeFileSync(dest, JSON.stringify(out, null, 1));
-console.log(`${out.items.length} annonces → ${dest}`);
+// Écriture seulement quand le script est LANCÉ : importé par le test, il ne
+// doit rien déposer sur le disque.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const dest = process.argv[2] ?? 'announcements-texts.json';
+  writeFileSync(dest, JSON.stringify(out, null, 1));
+  console.log(`${out.items.length} annonces → ${dest}`);
+}

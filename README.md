@@ -245,8 +245,8 @@ de voie annoncé n'est pas le nôtre** : c'est celui d'en face, relevé gare par
 gare (à Ueno la Keihin-Tōhoku 北行 est la voie 1, à Okachimachi la numérotation
 est inversée et c'est la 4). Ces textes se gravent comme les autres
 (`announcements-export.ts` puis `announcements-gen.py --reuse`, qui ne
-synthétise que les clips absents) ; tant qu'ils manquent, c'est `speechSynthesis`
-qui les dit.
+synthétise que les clips absents) ; tant qu'ils manquent, l'annonce ne se dit
+pas — voir *La cinquième voix*.
 
 Deux règles gouvernent le déclenchement (`systems/passingTrain`), et la première
 compte plus que le passage lui-même : **la gare ne parle jamais par-dessus
@@ -1279,8 +1279,8 @@ JY, まもなく…, fermeture, accueil, messages de courtoisie en rotation) son
 dites en japonais puis en anglais, avec les correspondances réelles de chaque
 gare. Les voix sont des clips pré-générés avec **Kokoro TTS**, stockés dans
 `public/audio/announcements/` et régénérables via
-`scripts/announcements-export.ts` + `scripts/announcements-gen.py` ; un texte
-sans clip retombe sur `speechSynthesis`. Le japonais est synthétisé segment par
+`scripts/announcements-export.ts` + `scripts/announcements-gen.py`. Le
+japonais est synthétisé segment par
 segment, avec de vraies pauses aux 、/。 — la cadence posée des annonces
 automatiques JR (まもなく。…渋谷。…渋谷。), que Kokoro ne marque pas de
 lui-même. Les annonces **de bord** n'écrivent plus aucune virgule (ni 、 ni
@@ -1337,6 +1337,33 @@ s'attrape pas).
 S'y ajoute, sur les gares dont l'îlot est partagé avec une autre ligne, la seule
 annonce de quai qui parle d'une voie qui n'est pas la nôtre : まもなく、1番線を、
 電車が通過します — voir *Le train qui ne s'arrête pas*.
+
+**La cinquième voix.** Il y en avait une de trop, et c'était la seule qu'on
+n'avait pas choisie. Neuf textes joués n'avaient pas de clip : le remerciement
+d'ouverture, dont le texte venait de changer, et toute la procédure de porte
+bloquée, ajoutée sans regravure. Faute de MP3, ils partaient sur
+`speechSynthesis` — la voix du navigateur, Kyoko ou Nanami selon la machine,
+qui sort **hors du graphe Web Audio** : ni panoramique, ni souffle de ligne,
+juste un volume approché. Sur le quai, où l'on entend l'ATOS et l'agent
+enchaîner, elle s'entendait comme une intruse.
+
+Le générateur, lui, ne pouvait plus tourner : un clip est identifié par le seul
+couple (langue, texte), et l'agent de quai disait mot pour mot la phrase du
+conducteur — 「ドアから離れてください。」. Deux voix pour une clé : l'export
+refusait de continuer, à juste titre, et personne ne pouvait plus regraver quoi
+que ce soit. L'agent a donc sa propre formulation, ce qui est d'ailleurs plus
+juste : il ne lit pas un script depuis une cabine, il parle à quelqu'un qu'il a
+devant lui (「危ないですから、ドアから離れてください。」).
+
+Les neuf clips gravés, le repli a été **supprimé** plutôt que réparé. Un texte
+sans clip ne se dit plus : une annonce muette passe inaperçue là où une voix
+étrangère casse la scène, et un clip qui ne se charge pas est simplement rejoué
+une fois avant qu'on renonce. Pour que le cas n'arrive jamais,
+`tests/announcementClips.test.ts` énumère ce que grave le générateur et vérifie
+que chaque texte a son MP3, que chaque MP3 est là, et qu'aucun ne traîne sans
+être réclamé. Retoucher un mot d'annonce sans regraver fait désormais échouer
+la suite de tests — pas le rendu sonore, trois semaines plus tard, dans une
+gare qu'on ne visitait plus.
 
 Le numéro de voie annoncé est le vrai (`data/platforms`), y compris les voies
 secondaires d'Ikebukuro et d'Ōsaki. Les clips ne sont gravés que pour le sens
@@ -1427,11 +1454,9 @@ centre de la tête.
 
 Les annonces vocales (clips Kokoro) passent par ces mêmes bus : elles sont
 réellement pannées sur les diffuseurs, ceux du plafond pour la rame, ceux du
-quai pour la gare. Seul le repli `speechSynthesis` (texte sans clip) sort hors
-du graphe Web Audio et ne peut pas être panné ; il reste ancré aux diffuseurs
-par le souffle de ligne spatialisé (la sono s'ouvre et se referme avec un
-déclic autour de chaque annonce) et par un volume qui suit la distance au
-diffuseur le plus proche.
+quai pour la gare — toutes, sans exception, puisqu'il n'existe plus de voix qui
+sorte du graphe Web Audio. Chacune est prise sous le souffle de sa ligne, qui
+s'ouvre et se referme avec un déclic autour d'elle.
 
 **Où on est décide ce qu'on entend.** Les deux voix ont chacune leur robinet, et
 il dépend du côté de la porte où se trouve la tête :

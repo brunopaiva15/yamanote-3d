@@ -17,7 +17,6 @@ import type { TokyoDate } from '../data/occupancy';
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { startAudio, setVolume, setPlatformSide } from '../systems/audioEngine';
-import { initSpeech } from '../systems/speech';
 import { seedPassengers } from '../systems/passengers';
 import { runtime, tokyoNow } from '../systems/runtime';
 import { seedWeather } from '../systems/weather';
@@ -121,7 +120,6 @@ export function StartScreen() {
 
   const board = async () => {
     setLoading(true);
-    initSpeech();
     // Horloge Tokyo (réelle ou choisie) avant peuplement et tirage : densité
     // selon heure/jour. La date civile reste celle du jour à Tokyo.
     const now = tokyoNow();
