@@ -10,7 +10,7 @@
 // session, seul leur agencement change d'une gare à l'autre.
 
 import { useMemo } from 'react';
-import { PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
+import { nameplateColumns, PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
 import type { StationLayout } from '../../data/stationLayouts';
 import { gantryZs, type StationPlacement } from '../../systems/stationPlacement';
 import { adPool, stationAd } from './adPool';
@@ -94,10 +94,13 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
   }, [layout.columnSpacing, layout.sigPlan, half, place]);
 
   // --- Bandeaux verticaux sur les piliers ----------------------------
-  const columnAds = useMemo(
-    () => (detail > 1 ? [] : place.columns.map((z, i) => ({ z, i }))),
-    [place.columns, detail],
-  );
+  // Un poteau sur deux porte la plaque de nom de gare (stationGeometry) : le
+  // bandeau va sur les autres. Posé sur tous, il passait sous la plaque.
+  const columnAds = useMemo(() => {
+    if (detail > 1) return [];
+    const taken = new Set(nameplateColumns(place.columns));
+    return place.columns.flatMap((z, i) => (taken.has(z) ? [] : [{ z, i }]));
+  }, [place.columns, detail]);
 
   // --- Affiches collées sur les murets de portes palières ------------
   // Un muret sur deux, et seulement les plus larges : les chutes de trame ne

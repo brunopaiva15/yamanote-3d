@@ -559,6 +559,11 @@ export function Station() {
         canopyY={canopyY}
         halfZ={halfZ}
         totemX={PSD_X + depth * 0.32}
+        // Mêmes abscisses que la trousse du quai : les poteaux sont à
+        // backX - 0,55 et font 0,30 de côté, donc leur face vers la voie est à
+        // 0,15 devant leur axe.
+        postFaceX={backX - 0.55 - 0.15}
+        columns={place.columns}
         // À Harajuku la bande est suspendue DEVANT le mur de fond : calée sur
         // backX comme sur un îlot, elle était entièrement noyée dedans.
         bandX={place.hasBackWall ? backX - 0.3 : backX}
