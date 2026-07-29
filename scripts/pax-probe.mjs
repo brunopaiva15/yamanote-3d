@@ -181,6 +181,10 @@ const coverage = await page.evaluate(async () => {
   for (const trigger of ['bump', 'fallNearby', 'boarding', 'satDown', 'passby', 'arrival']) {
     rows.push([trigger, count({ trigger })]);
   }
+  // L'arrêt d'urgence se lit en deux temps : le coup de frein, puis la rame
+  // immobilisée en pleine voie. Chacun tire dans son propre lot.
+  rows.push(['urgence', count({ trigger: 'emergency' })]);
+  rows.push(['urgence (arrêt)', count({ trigger: 'emergency', moving: false })]);
   return rows;
 });
 

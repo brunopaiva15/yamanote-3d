@@ -43,7 +43,13 @@ export type DialogueTrigger =
   /** Le joueur s'est assis à côté. */
   | 'satDown'
   /** La rame vient de s'arrêter en gare. */
-  | 'arrival';
+  | 'arrival'
+  /**
+   * Freinage d'urgence, puis immobilisation en pleine voie. Le seul
+   * déclencheur qui fait parler PLUSIEURS voyageurs l'un après l'autre : ce qui
+   * arrive là arrive à tout le monde en même temps (systems/conversation).
+   */
+  | 'emergency';
 
 export type Posture = 'seated' | 'standing' | 'waiting';
 

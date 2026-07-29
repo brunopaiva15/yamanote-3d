@@ -41,6 +41,7 @@ import {
 } from './platformCrowd';
 import {
   findNearbyPax,
+  findNearbyPaxList,
   findTargetedPax,
   paxAnchor,
   TALK_BREAK_RANGE,
@@ -324,7 +325,78 @@ function spontaneousInterval(): number {
   return 40 + Math.random() * 80;
 }
 
+// --- Réactions en chaîne -------------------------------------------------
+//
+// Presque tout ce qui se dit ici est affaire d'une personne : on bouscule
+// quelqu'un, quelqu'un répond. Un freinage d'urgence, lui, arrive à tout le
+// wagon d'un coup — et un wagon qui vient de freiner en urgence ne produit pas
+// une remarque polie, il produit plusieurs voix inquiètes qui se répondent
+// presque.
+//
+// La bulle n'en montre qu'une à la fois : on les met donc en file, deux à
+// quatre voisins différents qui parlent l'un après l'autre, puis le silence
+// revient. La file a une date de péremption — passé le temps de l'événement,
+// une frayeur qui s'exprime n'a plus rien à voir avec ce qui l'a causée.
+
+/** Nombre de voisins qui réagissent à un même événement collectif. */
+const CHAIN_MIN = 2;
+const CHAIN_MAX = 4;
+/** Silence entre deux réactions (s) : le temps de se retourner vers l'autre. */
+const CHAIN_GAP_MIN = 1.6;
+const CHAIN_GAP_MAX = 4.5;
+/** Au-delà, l'événement est passé : ce qui n'a pas été dit ne se dira plus. */
+const CHAIN_WINDOW = 40;
+/** Portée : plus large qu'un aparté, on entend tout le voisinage réagir. */
+const CHAIN_RANGE = 5.5;
+
+let chainTrigger: DialogueTrigger | null = null;
+let chainLeft = 0;
+let chainAt = 0;
+let chainUntil = 0;
+
+/**
+ * Ouvre une réaction collective. Ce qui se disait juste avant s'arrête : la
+ * conversation d'à côté ne survit pas à un coup de frein.
+ */
+function startChain(trigger: DialogueTrigger): void {
+  if (conversation.active) endConversation();
+  chainTrigger = trigger;
+  chainLeft = CHAIN_MIN + Math.floor(Math.random() * (CHAIN_MAX - CHAIN_MIN + 1));
+  chainAt = clock + 0.8 + Math.random() * 1.4;
+  chainUntil = clock + CHAIN_WINDOW;
+}
+
+function updateChain(): void {
+  if (chainLeft <= 0 || !chainTrigger) return;
+  if (clock > chainUntil) {
+    chainLeft = 0;
+    chainTrigger = null;
+    return;
+  }
+  if (conversation.active || clock < chainAt) return;
+  for (const cand of findNearbyPaxList(CHAIN_RANGE)) {
+    // Personne ne réagit deux fois : celui qui vient de parler est déjà
+    // marqué, la chaîne passe au voisin suivant.
+    const last = lastSpokeAt.get(key(cand.scope, cand.id)) ?? -999;
+    if (clock - last < 25) continue;
+    if (!startConversation(cand.scope, cand.id, chainTrigger)) continue;
+    chainLeft--;
+    chainAt = clock + CHAIN_GAP_MIN + Math.random() * (CHAIN_GAP_MAX - CHAIN_GAP_MIN);
+    // Le bavardage ordinaire ne reprend pas dans la foulée.
+    spontaneousReadyAt = chainAt + spontaneousInterval();
+    return;
+  }
+  // Personne de disponible autour du joueur : on retente dans un instant.
+  chainAt = clock + 1.5;
+}
+
 function handleEvent(e: PaxEvent): void {
+  // Événement collectif : plusieurs voix, et il passe devant tout le reste —
+  // y compris devant une conversation en cours et le quota de spontanéité.
+  if (e.trigger === 'emergency') {
+    startChain(e.trigger);
+    return;
+  }
   if (conversation.active) return;
   if (clock < spontaneousReadyAt) return;
   let scope = e.scope;
@@ -417,6 +489,7 @@ export function updateConversation(dt: number): void {
   // Réactions spontanées (bousculade, chute voisine, montée du joueur…).
   watchPlayerEvents(dt);
   for (const e of drainPaxEvents()) handleEvent(e);
+  updateChain();
 
   if (!conversation.active || !talk) return;
 
@@ -450,6 +523,12 @@ export function updateConversation(dt: number): void {
   conversation.revision++;
   if (gap > 0) {
     talk.gap = gap;
+    // Le silence fait partie de l'échange : on prolonge d'autant l'attention
+    // du voyageur. Sans ça, son occupation reprend dès la marge de 0,6 s
+    // écoulée, et toute réplique précédée d'un silence plus long — le temps de
+    // chercher ses mots — était perdue sans bruit.
+    if (conversation.scope === 'car') paxKeepTalking(conversation.id, gap + 0.6);
+    else crowdKeepTalking(conversation.id, gap + 0.6);
     return;
   }
   speakLine();
@@ -458,6 +537,8 @@ export function updateConversation(dt: number): void {
 /** Remet le module à zéro : plus personne ne se souvient de rien. */
 export function resetConversation(): void {
   endConversation();
+  chainTrigger = null;
+  chainLeft = 0;
   saidBy.clear();
   lastSpokeAt.clear();
   recentGlobal.length = 0;

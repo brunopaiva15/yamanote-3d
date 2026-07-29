@@ -38,7 +38,8 @@ import {
   paPsdBeeps,
 } from './stationPa';
 import { rollPassThrough, startPassThrough } from './passingTrain';
-import { exchangePassengers } from './passengers';
+import { exchangePassengers, startlePassengers } from './passengers';
+import { pushSceneEvent } from './paxEvents';
 import { seedPlatformPresence } from './platformPresence';
 import { clearPlatformCrowd, seedPlatformCrowd } from './platformCrowd';
 import {
@@ -130,6 +131,7 @@ export function beginEmergencyStop(): void {
   fired.delete('em-stopped');
   fired.delete('em-wait');
   fired.delete('em-resume');
+  fired.delete('em-scared');
   // L'urgence coupe l'annonce en cours, comme en vrai. Seulement celle de la
   // rame : la sono d'une gare qu'on n'a pas atteinte ne s'interrompt pas.
   cancelSpeech('cabin');
@@ -138,6 +140,10 @@ export function beginEmergencyStop(): void {
   notifyLineDelay(em.reason);
   audio.brakeApply();
   audio.flangeSqueal(0.8);
+  // Le wagon sursaute — on se raccroche, on trébuche, on lève le nez — et
+  // quelques voisins vont dire leur peur dans les secondes qui suivent.
+  startlePassengers();
+  pushSceneEvent('emergency');
 }
 
 // Étapes de l'arrêt d'urgence, appelées chaque frame tant qu'il est actif.
@@ -159,6 +165,11 @@ function updateEmergencyStop(dt: number): void {
     case 'stopped':
       // Annonce conducteur ~4 s après l'immobilisation.
       once('em-stopped', em.t >= 4, () => say(emergencyStopAnnouncement(em.reason)));
+      // Deuxième vague de peur, d'une autre nature : le coup de frein est
+      // passé, la rame est immobile en pleine voie et personne ne dit
+      // vraiment pourquoi. C'est l'attente qui inquiète, maintenant — le
+      // catalogue distingue les deux moments par `moving`.
+      once('em-scared', em.t >= 10, () => pushSceneEvent('emergency'));
       // Rappel d'attente à mi-arrêt, seulement si l'arrêt se prolonge.
       once('em-wait', em.holdFor >= 90 && em.t >= em.holdFor * 0.55, () =>
         say(emergencyWaitAnnouncement()),
