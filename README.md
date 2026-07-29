@@ -332,6 +332,24 @@ autres se sont éteints : c'est comme ça qu'on repère la porte qui coince sans
 rien voir d'autre. Depuis le quai, c'est un seul intervalle resté ouvert sur
 quarante-quatre.
 
+**Et si c'est vous ?** Se planter dans l'encadrement déclenche exactement la
+même chose, à un détail près, mais il est de taille : plus rien n'est tiré au
+sort. Ce n'est pas la chance qui décide qu'un joueur se dégage, c'est lui. La
+porte s'arrête sur vous, la rame ne part pas, le conducteur rouvre votre porte
+et vous demande de vous écarter — et il recommencera aussi longtemps qu'il
+faudra. Après trois tentatives il rouvre tout et un agent s'en mêle, mais rien
+ne se referme tant que vous êtes dedans : le train reste à quai, indéfiniment,
+et c'est vous qui décidez quand il repart. Un pas de côté et la porte reprend
+sa course là où elle s'était arrêtée — sans attendre la fin de la procédure si
+vous êtes parti avant.
+
+Corollaire indispensable : **un seuil occupé ne devient jamais infranchissable**.
+Le volume praticable (`systems/walkable`) ferme un portillon dès que la porte
+se referme, ce qui emmurait proprement quiconque se tenait dedans. Il reste
+désormais ouvert pour celui qui y est déjà — on n'y ENTRE plus, mais on en
+sort, des deux côtés. Sortir côté quai est d'ailleurs la façon la plus directe
+de dégager le passage : le train referme et s'en va sans vous.
+
 L'incident se tire une fois par arrêt, en même temps que la chronologie de
 l'arrêt, et sa fréquence suit le remplissage du tronçon : de l'ordre d'un arrêt
 sur vingt-cinq en heure creuse, un sur six en pointe (`data/doorObstruction`,

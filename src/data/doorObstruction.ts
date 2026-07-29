@@ -83,6 +83,16 @@ export function drawObstacle(rand: Rand = Math.random): ObstructionPlan {
 }
 
 /**
+ * L'obstacle, quand c'est VOUS : un corps, avec le jeu résiduel d'un corps.
+ *
+ * Rien n'est tiré au sort quant à l'issue — ce n'est pas la chance qui décide
+ * qu'un joueur planté dans l'encadrement se dégage, c'est lui.
+ */
+export function playerObstacle(rand: Rand = Math.random): ObstructionPlan {
+  return { kind: 'person', gap: between(PERSON_GAP_MIN, PERSON_GAP_MAX, rand) };
+}
+
+/**
  * Délai (s) entre le contact et la commande de réouverture.
  *
  * Première tentative : le conducteur arrière voit la scène sur le moniteur, ou

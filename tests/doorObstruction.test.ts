@@ -14,6 +14,7 @@ import {
   drawObstruction,
   escalationHold,
   obstructionChance,
+  playerObstacle,
   reactionDelay,
   reopenHold,
 } from '../src/data/doorObstruction.ts';
@@ -51,6 +52,17 @@ test('un corps entrebâille la porte, un objet fin la referme presque', () => {
   assert.ok(person.gap > 0.15, 'un corps laisse un vrai passage ouvert');
   assert.ok(object.gap < 0.05, 'une sangle ne se voit pas depuis la cabine');
   assert.ok(object.gap > 0, 'mais elle empêche bien le verrouillage');
+});
+
+test("l'obstacle « c'est vous » est un corps, et rien ne le dégage au hasard", () => {
+  const gap = playerObstacle(scripted([0.5])).gap;
+  const body = drawObstacle(scripted([0.9, 0.5])).gap;
+  assert.equal(playerObstacle(scripted([0.5])).kind, 'person');
+  assert.equal(gap, body, 'le jeu résiduel est celui d\'un corps, pas un cas à part');
+  // Aucune fonction de tirage ne prend le joueur en charge : c'est
+  // systems/doorObstruction qui regarde s'il a bougé (voir syncPlayerObstacle).
+  assert.ok(playerObstacle(scripted([0])).gap > 0.15);
+  assert.ok(playerObstacle(scripted([1])).gap <= 0.26);
 });
 
 test("l'objet fin se détecte plus tard que la personne", () => {

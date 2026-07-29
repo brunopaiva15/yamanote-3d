@@ -99,12 +99,36 @@ function inCar(u: number, w: number): boolean {
   return false;
 }
 
+/**
+ * Porte dont le joueur occupe le SEUIL en ce moment (centre z, repère wagon),
+ * ou null s'il est franchement dedans ou franchement dehors.
+ *
+ * Deux choses en dépendent, et ce sont deux faces du même fait : c'est ce qui
+ * fait de lui un obstacle pour la porte qui se ferme
+ * (systems/doorObstruction), et c'est ce qui garde ce seuil-là franchissable
+ * pour lui — voir `inPortal`.
+ */
+export function playerDoorwayZ(): number | null {
+  if (!runtime.trainPresent) return null;
+  const u = useStore.getState().doorSide * runtime.playerX;
+  if (u < ALCOVE_U || u > PLATFORM_U0) return null;
+  const z = runtime.playerZ - runtime.trainZ;
+  for (const dz of CONFIG.doorCenters) {
+    if (Math.abs(z - dz) <= PORTAL_HALF_Z) return dz;
+  }
+  return null;
+}
+
 function inPortal(u: number, w: number): boolean {
   if (u < ALCOVE_U || u > PLATFORM_U0) return false;
-  if (portalOpen() < PORTAL_MIN_OPEN) return false;
   const z = w - runtime.trainZ;
   for (const dz of CONFIG.doorCenters) {
-    if (Math.abs(z - dz) <= PORTAL_HALF_Z) return true;
+    if (Math.abs(z - dz) > PORTAL_HALF_Z) continue;
+    if (portalOpen() >= PORTAL_MIN_OPEN) return true;
+    // Seuil refermé : on n'y ENTRE plus, mais si on y est déjà, on en sort.
+    // Une porte qui se referme sur quelqu'un ne l'emmure pas — elle s'arrête
+    // sur lui (systems/doorObstruction), et il lui reste les deux côtés.
+    return playerDoorwayZ() === dz;
   }
   return false;
 }

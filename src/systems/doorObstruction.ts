@@ -29,6 +29,13 @@
 // Après trois tentatives, il renonce à la porte seule et rouvre tout : un
 // agent de quai vient dégager le passage lui-même.
 //
+// Le JOUEUR est un obstacle comme un autre — c'est même le seul qui décide
+// vraiment. Planté dans l'encadrement, il tient la rame à quai aussi longtemps
+// qu'il veut : aucun tirage ne le dégage à sa place, et la porte le suit à
+// l'image près (voir `syncPlayerObstacle`). Le pendant de ce pouvoir est dans
+// systems/walkable : le seuil qu'il occupe reste franchissable, sans quoi la
+// porte qui se referme sur lui l'emmurerait.
+//
 // Les timings et les chances vivent dans data/doorObstruction (sans
 // dépendance, donc testables) ; la mécanique du vantail dans systems/doorMotion.
 
@@ -41,6 +48,7 @@ import {
   drawObstacle,
   drawObstruction,
   escalationHold,
+  playerObstacle,
   reactionDelay,
   reopenHold,
   type ObstacleKind,
@@ -56,6 +64,7 @@ import {
   isBlockedDoor,
   moveBlockedDoor,
   releaseBlockedGap,
+  setBlockedGap,
   setPsdDoors,
   setTrainDoors,
   startBlockedDoor,
@@ -64,6 +73,7 @@ import { currentSegmentOccupancy } from './occupancy';
 import { holdPaxInDoorway, paxHeldInDoorway, releasePaxFromDoorway } from './passengers';
 import { say } from './speech';
 import { paDoorCheck, paDoorRelease } from './stationPa';
+import { playerDoorwayZ } from './walkable';
 
 type Stage =
   | 'none'
@@ -94,6 +104,12 @@ interface Obstruction extends ObstructionPlan {
   cleared: boolean;
   /** Un voyageur du pool est réellement planté dans l'embrasure. */
   embodied: boolean;
+  /**
+   * L'obstacle, c'est le JOUEUR. Rien ne se dégage tant qu'il n'a pas bougé :
+   * aucun tirage ne décide à sa place, et la rame attend aussi longtemps
+   * qu'il faudra.
+   */
+  byPlayer: boolean;
 }
 
 let state: Obstruction | null = null;
@@ -164,7 +180,14 @@ function pickDoor(): { car: number; dz: number } {
  * Elle se ferme comme les autres — c'est en fin de course qu'elle s'arrêtera.
  */
 export function onDoorsClosing(): void {
-  if (!armed || state) return;
+  if (state) return;
+  // Le joueur planté dans un seuil passe avant le tirage : la porte qui va se
+  // fermer sur lui est CELLE-LÀ, et pas une autre.
+  if (startPlayerObstruction()) {
+    armed = null;
+    return;
+  }
+  if (!armed) return;
   const plan = armed;
   armed = null;
   let kind = plan.kind;
@@ -193,7 +216,57 @@ export function onDoorsClosing(): void {
     dz: plan.dz,
     cleared: false,
     embodied,
+    byPlayer: false,
   };
+}
+
+/**
+ * Le joueur se tient-il dans un seuil au moment où les portes se ferment ?
+ * Alors c'est lui, l'obstacle — et il le restera tant qu'il n'aura pas fait
+ * un pas, dedans ou dehors.
+ *
+ * Vérifié aussi à chaque image tant que les portes se ferment : on peut très
+ * bien se glisser dans l'embrasure une demi-seconde APRÈS l'ordre de
+ * fermeture, et c'est même le cas le plus fréquent.
+ */
+function startPlayerObstruction(): boolean {
+  const dz = playerDoorwayZ();
+  if (dz == null) return false;
+  const plan = playerObstacle();
+  startBlockedDoor(PLAYER_CAR, dz, plan.gap);
+  state = {
+    kind: plan.kind,
+    gap: plan.gap,
+    stage: 'closing',
+    t: 0,
+    wait: 0,
+    attempt: 1,
+    car: PLAYER_CAR,
+    dz,
+    cleared: false,
+    embodied: false,
+    byPlayer: true,
+  };
+  return true;
+}
+
+/** L'obstacle est-il dégagé ? Pour le joueur, la question est : a-t-il bougé ? */
+function obstacleCleared(st: Obstruction): boolean {
+  if (st.byPlayer) return playerDoorwayZ() !== st.dz;
+  return clearsOnAttempt(st.kind, st.attempt);
+}
+
+/**
+ * Le joueur n'obéit à aucun tirage : il entre et sort de l'encadrement quand
+ * il veut, et la porte suit à l'image près. Un pas de côté et elle finit sa
+ * course ; un pas en arrière dans l'embrasure et elle le retrouve.
+ */
+function syncPlayerObstacle(st: Obstruction): void {
+  if (!st.byPlayer) return;
+  const inDoorway = playerDoorwayZ() === st.dz;
+  if (inDoorway === !st.cleared) return;
+  st.cleared = !inDoorway;
+  setBlockedGap(inDoorway ? st.gap : 0);
 }
 
 /** Le conducteur maintient la commande de réouverture, et le dit au micro. */
@@ -214,7 +287,7 @@ function beginReopen(st: Obstruction): void {
 
 /** Le bouton est relâché : la porte se referme, dégagée ou non. */
 function beginReclose(st: Obstruction): void {
-  st.cleared = clearsOnAttempt(st.kind, st.attempt);
+  st.cleared = obstacleCleared(st);
   if (st.cleared) {
     releaseBlockedGap();
     if (st.embodied) {
@@ -252,13 +325,25 @@ function finish(): void {
 }
 
 export function updateDoorObstruction(dt: number): void {
+  if (!state) {
+    // Un pas dans l'embrasure pendant que les vantaux se rapprochent : rien
+    // n'était tiré pour cet arrêt, mais il y a bel et bien quelqu'un dedans.
+    if (runtime.doorTarget === 0 && runtime.doorOpen > 0.02) startPlayerObstruction();
+    if (!state) return;
+  }
   const st = state;
-  if (!st) return;
   const door = blockedDoor();
   st.t += dt;
 
   switch (st.stage) {
     case 'closing':
+      // Un pas de côté avant même le contact : il n'y a plus d'obstacle, la
+      // porte va au bout et la procédure n'aura pas eu lieu.
+      syncPlayerObstacle(st);
+      if (st.cleared) {
+        st.stage = 'reclose';
+        break;
+      }
       // La porte finit sa course et rencontre l'obstacle : à partir de là, le
       // départ n'est plus possible.
       if (door?.touched) {
@@ -272,10 +357,20 @@ export function updateDoorObstruction(dt: number): void {
       break;
 
     case 'contact':
+      // Le joueur s'écarte avant même que le conducteur ait réagi : la porte
+      // finit sa course toute seule, et il n'y aura pas eu de procédure.
+      syncPlayerObstacle(st);
+      if (st.cleared) {
+        st.stage = 'reclose';
+        break;
+      }
       if (st.t >= st.wait) beginReopen(st);
       break;
 
     case 'reopen':
+      // Dégagé pendant que le bouton est maintenu : le conducteur le relâche
+      // dans la foulée, il n'attend pas la fin de son geste.
+      if (st.byPlayer && playerDoorwayZ() !== st.dz) st.wait = Math.min(st.wait, st.t + 0.4);
       // Bouton maintenu. Le compte part de l'APPUI, pas de la pleine ouverture :
       // une impulsion courte relâche le bouton avant que le vantail soit
       // complètement écarté, et la porte repart en arrière d'où elle en est.
@@ -284,6 +379,7 @@ export function updateDoorObstruction(dt: number): void {
       break;
 
     case 'reclose':
+      syncPlayerObstacle(st);
       if (!door) {
         finish();
       } else if (st.cleared) {
@@ -303,6 +399,15 @@ export function updateDoorObstruction(dt: number): void {
 
     case 'escalated':
       if (st.t >= st.wait) {
+        // Personne ne referme sur quelqu'un qui est encore dans l'encadrement.
+        // Le joueur qui s'obstine tient la rame à quai aussi longtemps qu'il
+        // veut : l'agent redemande, et on attend encore.
+        if (st.byPlayer && !obstacleCleared(st)) {
+          paDoorRelease(st.attempt + 1);
+          st.t = 0;
+          st.wait = escalationHold();
+          break;
+        }
         // L'agent a dégagé le passage : tout se referme, cette fois pour de bon.
         releaseBlockedGap();
         if (st.embodied) {
@@ -335,6 +440,8 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   // __blockDoor() arme une obstruction pour la prochaine fermeture ;
   // __blockDoor('object') force le cas difficile (sangle, câble d'écouteur).
   w.__blockDoor = (kind?: ObstacleKind) => forceDoorObstruction(kind);
+  // __playerDoorway() : le seuil que le joueur occupe, ou null.
+  w.__playerDoorway = () => playerDoorwayZ();
   // __doorObstruction() : où en est la procédure, et où en est le vantail.
   w.__doorObstruction = () => ({
     armed,

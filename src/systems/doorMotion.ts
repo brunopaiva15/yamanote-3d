@@ -196,9 +196,29 @@ export function moveBlockedDoor(to: 0 | 1): void {
   audio.doorClunk(0.1);
 }
 
+/**
+ * Change ce que l'obstacle laisse passer (0 = plus d'obstacle du tout).
+ *
+ * Une porte arrêtée sur un obstacle qui s'en va REPREND sa course d'où elle en
+ * est : son mouvement était fini, la rendre libre sans la relancer la ferait
+ * sauter en butée d'un seul coup.
+ */
+export function setBlockedGap(gap: number): void {
+  if (!blocked) return;
+  const stopped = blocked.touched && blocked.to === 0;
+  blocked.gap = gap;
+  if (gap === 0 && stopped) {
+    blocked.from = blocked.pos;
+    blocked.t = 0;
+    blocked.dur = partialDuration(blocked.from, 0);
+    blocked.touched = false;
+    blocked.touchT = -1;
+  }
+}
+
 /** L'obstacle est dégagé : la porte peut aller jusqu'à sa butée. */
 export function releaseBlockedGap(): void {
-  if (blocked) blocked.gap = 0;
+  setBlockedGap(0);
 }
 
 /** La porte rejoint la chorégraphie d'ensemble (fin de procédure, reset). */
