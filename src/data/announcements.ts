@@ -152,6 +152,27 @@ export function doorsClosingAnnouncement(): Utterance[] {
   ];
 }
 
+/**
+ * Porte bloquée : le conducteur demande de dégager l'encadrement.
+ *
+ * Il n'existe pas d'annonce automatique pour chaque obstruction — c'est une
+ * phrase dite au micro, courte, et qui se durcit d'une tentative à l'autre.
+ * `insist` est le deuxième ton : la porte ne se ferme toujours pas, et ça
+ * s'entend.
+ */
+export function doorReleaseAnnouncement(insist = false): Utterance[] {
+  if (insist) {
+    return [
+      { text: 'ドアが閉まりません。ドアから離れてください。', lang: 'ja-JP' },
+      { text: 'The doors cannot close. Please stand clear of the doors.', lang: 'en-US' },
+    ];
+  }
+  return [
+    { text: 'ドアから離れてください。', lang: 'ja-JP' },
+    { text: 'Please stand clear of the doors.', lang: 'en-US' },
+  ];
+}
+
 // Accueil (hors séquence standard — conservé pour usage éventuel).
 export function welcomeAnnouncement(): Utterance[] {
   return [

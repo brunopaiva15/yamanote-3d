@@ -9,6 +9,7 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { updateCycle } from '../systems/stationCycle';
 import { updateDoorMotion } from '../systems/doorMotion';
+import { updateDoorObstruction } from '../systems/doorObstruction';
 import { updateSegmentEnv } from '../systems/segmentEnv';
 import { updateWeather } from '../systems/weather';
 import { updatePlatformPresence } from '../systems/platformPresence';
@@ -116,6 +117,9 @@ export function Engine(): null {
     }
     if (physDt > 0) {
       updateDoorMotion(physDt);
+      // Après le mouvement des vantaux : la procédure de porte bloquée réagit
+      // au contact que la frame vient d'établir.
+      updateDoorObstruction(physDt);
       // Sur le quai la phase du store reste 'dwell' : le freinage réel se lit
       // sur l'accélération (rame qui arrive), sinon le crissement ne part jamais.
       updateAudio(

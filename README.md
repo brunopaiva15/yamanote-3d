@@ -231,6 +231,74 @@ et l'avertisseur à l'entrée en gare.
 En qualité *basse* et *très basse*, aucun passage n'est tiré : une seconde rame
 complète coûte trop cher là où le quai suffit déjà à saturer la machine.
 
+### La porte qui ne se ferme pas
+
+Il arrive qu'un arrêt ne se termine pas. Le conducteur a commandé la fermeture,
+les quarante-quatre portes sont parties ensemble, les portes palières une
+seconde derrière — et l'une d'elles s'arrête en chemin, parce que quelqu'un est
+resté dans l'encadrement.
+
+**Rien ne se rouvre tout seul.** C'est tout l'intérêt de la séquence, et c'est
+exactement ce qu'une porte d'ascenseur ne fait pas. Sur le E235, la détection
+est sensible et la force de maintien réduite avant le démarrage : la porte
+touche, s'arrête, relâche sa pression de deux centimètres pour qu'on puisse se
+dégager — et elle en reste là. Elle ne se verrouille pas, donc le circuit de
+départ n'est pas établi, donc l'indication de départ n'apparaît pas en cabine de
+tête, donc **la rame ne part pas**. C'est un verrouillage, pas un minuteur : le
+chrono de l'arrêt est retenu au bord de la bascule tant que la porte n'est pas
+confirmée fermée (`runtime.departureBlockers.doorBlocked`).
+
+Ce qui débloque la situation est un **geste humain** : le conducteur arrière
+utilise la commande de réouverture, le `再開閉スイッチ`. Elle ne rouvre que la ou
+les portes qui ne sont pas complètement fermées — bouton maintenu, la porte
+s'ouvre ; bouton relâché, elle se referme aussitôt. La durée d'appui dit ce
+qu'il a vu : une impulsion d'une demi-seconde pour décoincer une sangle, une à
+trois secondes quand quelqu'un est réellement en travers. Rien de tout cela ne
+touche aux quarante-trois autres portes.
+
+```
+fermeture rame → ~1 s → fermeture des portes palières
+   → contact, la porte s'arrête sans se verrouiller
+   → 0,5 à 2 s de réaction humaine
+   → 再開閉 : réouverture de la seule porte concernée
+   → 「ドアから離れてください」
+   → 1 à 3 s d'ouverture, puis nouvelle fermeture
+   → contrôle → départ
+```
+
+Deux obstacles, et ils ne se ressemblent pas. **Une personne** entrebâille la
+porte de vingt-cinq centimètres : ça se voit depuis la cabine, ça se voit sur
+les moniteurs de quai, et la réaction est rapide. **Un objet fin** — une sangle
+de sac, un câble d'écouteur — laisse les vantaux se rejoindre à deux
+centimètres près : il n'y a rien à voir, et ce qui alerte n'est pas la vue mais
+l'indication de départ qui ne vient pas. C'est le cas difficile, et il est
+modélisé comme tel : détection plus lente, réouverture plus brève, plus de
+tentatives.
+
+Après trois tentatives, le conducteur renonce à la porte seule et **rouvre
+tout** : un agent de quai vient dégager le passage lui-même, la gare explique
+l'attente, puis la rame referme et repart. C'est la seule branche où l'incident
+touche les autres portes.
+
+Côté annonces, il n'y a pas de message automatique pour une obstruction : c'est
+une phrase dite au micro, `ドアから離れてください`, par le conducteur d'abord,
+puis par l'agent de quai si ça traîne — et elle se durcit,
+`ドアが閉まりません。ドアから離れてください。`. À l'intérieur du wagon, le témoin
+orange au-dessus de la porte concernée continue de clignoter quand tous les
+autres se sont éteints : c'est comme ça qu'on repère la porte qui coince sans
+rien voir d'autre. Depuis le quai, c'est un seul intervalle resté ouvert sur
+quarante-quatre.
+
+L'incident se tire une fois par arrêt, en même temps que la chronologie de
+l'arrêt, et sa fréquence suit le remplissage du tronçon : de l'ordre d'un arrêt
+sur vingt-cinq en heure creuse, un sur six en pointe (`data/doorObstruction`,
+sans dépendance et couvert par `tests/doorObstruction.test.ts`). La procédure
+elle-même vit dans `systems/doorObstruction` ; la mécanique du vantail — course
+partielle, butée souple, porte palière asservie — dans `systems/doorMotion`, qui
+tient désormais une porte à part du reste de l'ensemble. En développement,
+`__blockDoor()` arme une obstruction pour la prochaine fermeture, et
+`__blockDoor('object')` force le cas difficile.
+
 ### Paliers de qualité
 
 Tout ce que les gares ont gagné se règle par `platformDetail()` :
