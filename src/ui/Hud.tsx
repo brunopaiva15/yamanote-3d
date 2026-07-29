@@ -2,7 +2,7 @@
 // s'asseoir, plein écran, sélecteur de langue. Réticule central discret.
 // Tous les libellés viennent du dictionnaire de la langue courante.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { LOOP_LABEL_JP } from '../data/loop';
 import { STATIONS } from '../data/stations';
@@ -90,6 +90,47 @@ const WEATHER_GLYPH: Record<WeatherKind, string> = {
   snow: '❄',
 };
 
+/**
+ * Le plein écran n'existe pas partout : iPhone ne l'expose pas du tout, et une
+ * page en iframe ne l'a que si son hôte l'autorise. Là où l'appel échouerait,
+ * le bouton ne s'affiche pas — un bouton mort mange une place précieuse dans
+ * la barre du bas d'un téléphone.
+ */
+function fullscreenAvailable(): boolean {
+  if (typeof document === 'undefined') return false;
+  if (typeof document.documentElement.requestFullscreen !== 'function') return false;
+  return document.fullscreenEnabled !== false;
+}
+
+/**
+ * La barre du bas s'enroule sur une ou deux rangées selon la langue et la
+ * largeur de l'écran. On publie sa hauteur réelle en variable CSS pour que le
+ * joystick et les boutons tactiles se posent dessus au lieu de la recouvrir —
+ * c'est ce qui faisait se chevaucher deux « s'asseoir » sur un téléphone.
+ */
+function useBarHeight(active: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = document.documentElement;
+    const bar = ref.current;
+    if (!active || !bar) {
+      root.style.removeProperty('--hud-bar-h');
+      return;
+    }
+    const apply = () => {
+      root.style.setProperty('--hud-bar-h', `${Math.round(bar.getBoundingClientRect().height)}px`);
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(bar);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty('--hud-bar-h');
+    };
+  }, [active]);
+  return ref;
+}
+
 function useOccupancy(): { percent: number; band: OccupancyBand } {
   const [occ, setOcc] = useState<{ percent: number; band: OccupancyBand }>({
     percent: 0,
@@ -117,6 +158,7 @@ export function Hud() {
   const muted = useStore((s) => s.muted);
   const volume = useStore((s) => s.volume);
   const seated = useStore((s) => s.seated);
+  const touch = useStore((s) => s.touch);
   const toggleMute = useStore((s) => s.toggleMute);
   const setVolume = useStore((s) => s.setVolume);
   const lang = useStore((s) => s.lang);
@@ -127,6 +169,8 @@ export function Hud() {
   const em = useEmergency();
   const emergency = em.stage === 'coasting' || em.stage === 'braking' || em.stage === 'stopped';
   const outage = emergency && em.kind === 'outage';
+  const barRef = useBarHeight(started);
+  const [fullscreen] = useState(fullscreenAvailable);
 
   // Répercuter le mute et le volume sur l'audio et la voix.
   useEffect(() => {
@@ -188,38 +232,48 @@ export function Hud() {
       <div className="hud-reticle" aria-hidden="true" />
 
 
-      <div className="hud-bottom">
+      <div className="hud-bottom" ref={barRef}>
         <LanguageSwitcher className="lang-switch-hud" />
         <QualitySelect className="quality-select-hud" />
-        <button className="hud-button" onClick={toggleMute} title={t.hud.soundTitle}>
-          {muted ? t.hud.soundOff : t.hud.soundOn}
-        </button>
-        <input
-          className="hud-volume"
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-          title={t.hud.volume}
-          aria-label={t.hud.volume}
-        />
-        <button
-          className="hud-button"
-          onClick={() => {
-            input.sitRequest = true;
-          }}
-        >
-          {seated ? t.hud.stand : t.hud.sit}
-        </button>
-        <button
-          className="hud-button"
-          onClick={() => void document.documentElement.requestFullscreen().catch(() => undefined)}
-          title={t.hud.fullscreenTitle}
-        >
-          {t.hud.fullscreen}
-        </button>
+        {/* Le son et son curseur voyagent ensemble quand la barre passe à la
+            ligne : un curseur seul, loin de son bouton, ne se règle pas. */}
+        <div className="hud-sound">
+          <button className="hud-button" onClick={toggleMute} title={t.hud.soundTitle}>
+            {muted ? t.hud.soundOff : t.hud.soundOn}
+          </button>
+          <input
+            className="hud-volume"
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            title={t.hud.volume}
+            aria-label={t.hud.volume}
+          />
+        </div>
+        {/* Au doigt, « s'asseoir » est déjà le gros bouton du coin bas droit
+            (ui/Controls) : le doubler ici ne ferait que se recouvrir. */}
+        {!touch && (
+          <button
+            className="hud-button"
+            onClick={() => {
+              input.sitRequest = true;
+            }}
+          >
+            {seated ? t.hud.stand : t.hud.sit}
+          </button>
+        )}
+        {fullscreen && (
+          <button
+            className="hud-button"
+            onClick={() => void document.documentElement.requestFullscreen().catch(() => undefined)}
+            title={t.hud.fullscreenTitle}
+          >
+            {t.hud.fullscreen}
+          </button>
+        )}
         {/* En bout de barre, après les réglages : ce n'en est pas un. */}
         <IncidentMenu />
       </div>

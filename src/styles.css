@@ -15,6 +15,17 @@
   --sticker-ink: #16181a;
   --sticker-dim: #5c666d;
   --sticker-shadow: 0 3px 0 rgba(16, 21, 26, 0.85);
+  /* Marges du HUD : elles suivent les encoches et la barre d'accueil des
+     téléphones, sans jamais descendre sous la marge de confort. */
+  --hud-edge: 14px;
+  --hud-safe-top: max(14px, env(safe-area-inset-top));
+  --hud-safe-bottom: max(14px, env(safe-area-inset-bottom));
+  --hud-safe-left: max(14px, env(safe-area-inset-left));
+  --hud-safe-right: max(14px, env(safe-area-inset-right));
+  /* Hauteur réelle de la barre du bas, mesurée par le HUD (ui/Hud.tsx) : elle
+     dépend de la langue et de la largeur de l'écran, et le joystick comme les
+     boutons tactiles se posent dessus. */
+  --hud-bar-h: 0px;
   font-family: 'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
 }
 
@@ -431,11 +442,14 @@ body,
 
 .hud-top {
   position: fixed;
-  top: 14px;
-  left: 14px;
-  right: 14px;
+  top: var(--hud-safe-top);
+  left: var(--hud-safe-left);
+  right: var(--hud-safe-right);
   display: flex;
   align-items: stretch;
+  /* Les cartes passent à la ligne plutôt que de sortir de l'écran : sur un
+     téléphone, elles ne tiennent pas toutes sur une rangée. */
+  flex-wrap: wrap;
   gap: 10px;
   z-index: 20;
   pointer-events: none;
@@ -506,18 +520,22 @@ body,
   align-items: flex-start;
   gap: 2px;
   margin-right: auto;
+  min-width: 0;
 }
 
 .hud-station-label {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   font-size: 11px;
   color: var(--sticker-dim);
+  white-space: nowrap;
 }
 
 /* Sens de circulation : une pastille verte, comme la bande du menu. */
 .hud-direction {
+  flex: none;
   background: var(--green);
   color: #ffffff;
   font-size: 10px;
@@ -525,11 +543,20 @@ body,
   border-radius: 6px;
   padding: 1px 6px;
   letter-spacing: 0.04em;
+  /* 外回り reste sur une ligne : à l'étroit, il se dressait à la verticale,
+     un caractère par ligne. */
+  white-space: nowrap;
 }
 
 .hud-station-name {
+  max-width: 100%;
   font-size: 16px;
   font-weight: 600;
+  /* Le nom de la gare tient sur une ligne, quitte à être coupé : replié, il
+     étirait toute la rangée de cartes en hauteur. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hud-jy {
@@ -598,12 +625,20 @@ body,
 
 .hud-bottom {
   position: fixed;
-  bottom: 14px;
-  right: 14px;
+  bottom: var(--hud-safe-bottom);
+  right: var(--hud-safe-right);
   display: flex;
   align-items: center;
   gap: 8px;
   z-index: 20;
+}
+
+/* Le bouton du son et son curseur ne se quittent pas : à l'étroit, le curseur
+   partait seul à la ligne, loin de ce qu'il règle. */
+.hud-sound {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .hud-button {
@@ -731,8 +766,8 @@ body,
 
 .joystick {
   position: fixed;
-  left: 26px;
-  bottom: 26px;
+  left: max(26px, var(--hud-safe-left));
+  bottom: max(26px, var(--hud-safe-bottom));
   width: 128px;
   height: 128px;
   border-radius: 50%;
@@ -839,12 +874,15 @@ body,
   }
 }
 
-/* Bouton tactile « parler » : au-dessus de « s'asseoir », et seulement
-   lorsqu'un voyageur est à portée. */
-.touch-talk {
+/* Boutons tactiles, empilés dans le coin bas droit : « s'asseoir » toujours,
+   « parler » seulement lorsqu'un voyageur est à portée. Ils se posent sur la
+   barre des réglages — dont la hauteur est mesurée — au lieu de la recouvrir.
+   C'est ce qui faisait doublon à l'écran : le « s'asseoir » flottant tombait
+   pile sur celui de la barre. */
+.touch-talk,
+.touch-sit {
   position: fixed;
-  right: 24px;
-  bottom: 160px;
+  right: max(24px, var(--hud-safe-right));
   z-index: 25;
   font: inherit;
   font-size: 15px;
@@ -858,30 +896,50 @@ body,
 }
 
 .touch-sit {
-  position: fixed;
-  right: 24px;
-  bottom: 96px;
-  z-index: 25;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--sticker-ink);
-  background: var(--sticker);
-  border: 2px solid var(--ink-line);
-  border-radius: 14px;
-  padding: 13px 20px;
-  box-shadow: 0 4px 0 rgba(16, 21, 26, 0.85);
+  bottom: calc(var(--hud-safe-bottom) + var(--hud-bar-h) + 14px);
+}
+
+.touch-talk {
+  bottom: calc(var(--hud-safe-bottom) + var(--hud-bar-h) + 78px);
 }
 
 /* --- Responsive --- */
 
 @media (max-width: 720px) {
+  /* Cinq cartes ne tiennent pas sur une rangée de téléphone : la prochaine
+     station — la seule qu'on lit vraiment — prend une ligne pour elle, les
+     quatre pastilles de contexte se rangent en dessous. Avant, la rangée
+     débordait de l'écran par la droite et les cartes courtes s'étiraient à la
+     hauteur du nom replié. */
+  .hud-top {
+    gap: 6px;
+  }
+
+  .hud-station {
+    order: -1;
+    flex: 1 1 100%;
+    margin-right: 0;
+  }
+
+  /* La carte prend toute la largeur : le sens de circulation s'aligne alors
+     sur son bord droit, comme le bandeau d'un panneau de quai. */
+  .hud-station-label {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .hud-station-name {
     font-size: 13px;
   }
 
   .hud-clock {
     font-size: 15px;
+    padding: 6px 10px;
+  }
+
+  .hud-phase {
+    font-size: 12px;
+    padding: 6px 10px;
   }
 
   .hud-occupancy {
@@ -911,10 +969,11 @@ body,
   }
 
   .hud-bottom {
-    left: 14px;
-    right: 14px;
+    left: var(--hud-safe-left);
+    right: var(--hud-safe-right);
     justify-content: center;
     flex-wrap: wrap;
+    gap: 6px;
   }
 
   .hud-volume {
@@ -927,10 +986,11 @@ body,
     width: min(264px, calc(100vw - 40px));
   }
 
-  /* La barre du bas occupe toute la largeur ici : on décolle le joystick
-     pour qu'il ne recouvre pas le sélecteur de langue. */
+  /* La barre du bas occupe toute la largeur ici : on pose le joystick
+     dessus, à la hauteur qu'elle occupe réellement — une ou deux rangées de
+     réglages selon la langue. */
   .joystick {
-    bottom: 64px;
+    bottom: calc(var(--hud-safe-bottom) + var(--hud-bar-h) + 14px);
   }
 
   .lang-option {
@@ -985,6 +1045,24 @@ body,
 }
 
 @media (max-width: 460px) {
+  /* Les quatre pastilles de contexte — heure, temps qu'il fait, remplissage,
+     phase — tiennent sur une seule rangée jusqu'aux plus petits écrans : on
+     resserre leur cadre plutôt que de les laisser retomber une par une. */
+  .hud-top {
+    gap: 5px;
+  }
+
+  .hud-clock,
+  .hud-weather,
+  .hud-occupancy,
+  .hud-phase {
+    padding: 6px 8px;
+  }
+
+  .hud-occupancy {
+    min-width: 64px;
+  }
+
   .start-board {
     padding: 16px 16px 18px;
     border-radius: 18px;
