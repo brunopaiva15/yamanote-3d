@@ -210,7 +210,9 @@ async function playMelodyRounds(path: string): Promise<boolean> {
       await new Promise<void>((resolve) => setTimeout(resolve, MELODY_REPEAT_GAP_S * 1000));
       if (gen !== melodyCancelGen || isDepartureBlocked()) return true;
     }
-    const ok = await audioManager.playOnce(path);
+    // Bus « melody » et non « platform » : même sono de quai, mais son propre
+    // niveau — les clips sont normalisés en crête et sonnaient trop fort.
+    const ok = await audioManager.playOnce(path, 'melody');
     if (!ok) return false;
     if (gen !== melodyCancelGen) return true;
   }

@@ -23,7 +23,10 @@
 //
 // La MUSIQUE du quai, elle, ne suit pas cette règle : la 発車メロディ est faite
 // pour être entendue des voyageurs déjà montés, et elle passe donc en clair par
-// les portes ouvertes (platIn direct, sans platVoiceGain).
+// les portes ouvertes (bus « melody » → platIn, sans platVoiceGain). Ce bus lui
+// est propre : il porte son niveau, calé plus bas sur le quai que dans la rame
+// (MELODY_OUTSIDE / MELODY_INSIDE), pour qu'elle sonne DEPUIS LA GARE sans
+// écraser le reste, et reste franchement audible d'une voiture à quai.
 //
 // Annonces vocales : les clips pré-générés (Kokoro, voir systems/speech.ts)
 // passent par audioManager sur le bus « PA » et sont donc pannés comme le
@@ -88,6 +91,7 @@ interface Nodes {
   platIn: Tone.Gain; // entrée du bus quai
   platVoiceIn: Tone.Gain; // voix du quai seule, lointaine depuis la rame
   platVoiceGain: Tone.Gain;
+  melodyIn: Tone.Gain; // 発車メロディ seule, calée à part du reste du quai
   platGain: Tone.Gain;
   platLp: Tone.Filter;
   platPanners: Tone.Panner3D[];
@@ -158,6 +162,28 @@ const PLAT_VOICE_INSIDE = 0.3;
 const PLAT_BUS_CLOSED = 0.07;
 const PLAT_BUS_OPEN = 0.26;
 const PLAT_BUS_OUTSIDE = 0.34;
+
+/**
+ * Niveau propre de la 発車メロディ, en plus du bus du quai.
+ *
+ * Les clips sont normalisés en crête (voir scripts/melodies-gen.py) : envoyés
+ * tels quels sur le bus, ils sonnaient bien plus fort que tout le reste de la
+ * gare — la mélodie écrasait l'annonce qui la suit et le brouhaha du quai.
+ *
+ * Deux calages, parce que ce n'est pas le même problème des deux côtés des
+ * portes. Sur le QUAI on se tient à trois mètres sous un diffuseur : c'est là
+ * que c'était criard, et c'est là qu'on retire le plus (≈ −10 dB). DANS la
+ * rame la mélodie arrive déjà filtrée par les ouvertures, et elle doit rester
+ * ce qu'elle est pour un voyageur assis — le signal qu'il faut descendre
+ * maintenant : on n'en retire que ≈ 5 dB, de quoi la ramener au niveau des
+ * autres sons de gare sans jamais la faire passer au second plan.
+ *
+ * Le rapport entre les deux garde la mélodie DU CÔTÉ DU QUAI : à l'oreille
+ * elle reste plus présente dehors que dedans, elle vient toujours des
+ * haut-parleurs de la gare et non de la rame.
+ */
+const MELODY_INSIDE = 0.55;
+const MELODY_OUTSIDE = 0.32;
 
 // Pose de l'auditeur, tenue à jour par la caméra (voir setListenerPose).
 const listenerPos: { x: number; y: number; z: number } = { x: 0, y: CONFIG.eyeHeight, z: 4.2 };
@@ -381,17 +407,29 @@ export async function startAudio(): Promise<void> {
     envelope: { attack: 0.002, decay: 0.4, sustain: 0, release: 0.4 },
   }).connect(paIn);
 
+  // --- Bus de la 発車メロディ -------------------------------------------
+  //
+  // La mélodie de départ passe par la sono du quai comme le reste, mais avec
+  // son propre robinet : c'est le seul élément de la gare qu'on veut pouvoir
+  // baisser sans toucher au carillon ATOS ni aux annonces. Une petite bosse
+  // de présence la maintient LISIBLE une fois le niveau descendu — dans la
+  // rame, le passe-bas des portes lui coupe déjà le haut du spectre, et c'est
+  // cette bande-là qui la fait passer par-dessus le brouhaha et la clim.
+  const melodyIn = new Tone.Gain(MELODY_INSIDE);
+  const melodyPresence = new Tone.Filter({ type: 'peaking', frequency: 2100, Q: 0.8, gain: 3 });
+  melodyIn.chain(melodyPresence, platIn);
+
   // Mélodies de départ : triangle principal + harmonique douce à l'octave,
   // envoyées sur les haut-parleurs du quai.
   const melodyA = new Tone.Synth({
     oscillator: { type: 'triangle' },
     envelope: { attack: 0.01, decay: 0.18, sustain: 0.35, release: 0.25 },
-  }).connect(platIn);
+  }).connect(melodyIn);
   const melodyB = new Tone.Synth({
     oscillator: { type: 'sine' },
     envelope: { attack: 0.01, decay: 0.18, sustain: 0.25, release: 0.25 },
     volume: -14,
-  }).connect(platIn);
+  }).connect(melodyIn);
 
   // --- Ambiance du lieu -----------------------------------------------
   //
@@ -556,6 +594,7 @@ export async function startAudio(): Promise<void> {
     platIn,
     platVoiceIn,
     platVoiceGain,
+    melodyIn,
     platGain,
     platLp,
     platPanners,
@@ -689,6 +728,9 @@ export function setListenerOutside(outside: boolean): void {
   // celle du quai n'a plus rien à traverser.
   nodes.paVoiceGain.gain.rampTo(outside ? 0 : 1, 0.3);
   nodes.platVoiceGain.gain.rampTo(outside ? 1 : PLAT_VOICE_INSIDE, 0.3);
+  // La mélodie, elle, est CALÉE PAR LIEU : sous le diffuseur elle doit se
+  // tenir, depuis la rame elle doit s'entendre. Voir MELODY_INSIDE.
+  nodes.melodyIn.gain.rampTo(outside ? MELODY_OUTSIDE : MELODY_INSIDE, 0.3);
 }
 
 /**
@@ -1345,8 +1387,9 @@ function resolveAudioUrl(pathOrName: string): string {
 // Un clip local rejoint le MÊME bus spatialisé que sa version synthétisée :
 // déposer un door-open.mp3 ne fait pas ressortir le son du centre de la tête.
 // Les deux entrées « …Voice » sont celles que le lieu d'écoute fait taire :
-// la voix de bord depuis le quai, celle du quai depuis la rame.
-export type Bus = 'cabin' | 'platform' | 'cabinVoice' | 'platformVoice';
+// la voix de bord depuis le quai, celle du quai depuis la rame. « melody » est
+// la sono du quai elle aussi, avec le niveau propre de la 発車メロディ.
+export type Bus = 'cabin' | 'platform' | 'cabinVoice' | 'platformVoice' | 'melody';
 /** Les deux bus de PAROLE, seuls concernés par la coupure selon le lieu. */
 export type VoiceBus = Extract<Bus, 'cabinVoice' | 'platformVoice'>;
 
@@ -1355,6 +1398,7 @@ function busInput(bus: Bus): Tone.Gain | null {
   if (bus === 'platform') return nodes.platIn;
   if (bus === 'cabinVoice') return nodes.paVoiceIn;
   if (bus === 'platformVoice') return nodes.platVoiceIn;
+  if (bus === 'melody') return nodes.melodyIn;
   return nodes.paIn;
 }
 
@@ -1591,7 +1635,7 @@ export function departureMelody(index: number, sounding: number): void {
     fallbackMelodyStation = index;
     const path = `melody-${STATIONS[index].jy}`;
     fallbackMelodyPath = path;
-    if (!(await audioManager.playOnce(path, 'platform'))) {
+    if (!(await audioManager.playOnce(path, 'melody'))) {
       fallbackMelodyPath = null;
       synthMelody(index, sounding);
     }
