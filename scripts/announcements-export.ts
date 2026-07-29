@@ -11,8 +11,8 @@
 // - key   : clipKey(lang, text), nom de fichier du MP3 et clé du manifeste ;
 // - text  : texte affiché / haché, identique au runtime ;
 // - tts   : texte adapté à la synthèse (macrons ASCII et « JY-xx » épelé en
-//           anglais — le japonais part tel quel, le dictionnaire open_jtalk
-//           connaît les gares) ;
+//           anglais ; en japonais, les quelques mots que l'analyseur du
+//           générateur lit de travers, réécrits en kana — voir JA_READINGS) ;
 // - voice : voix Kokoro. QUATRE locutrices, toutes féminines, parce que quatre
 //           sources parlent dans ce jeu et qu'on doit les distinguer à
 //           l'oreille sans regarder : la sono de la RAME (jf_alpha), l'annonce
@@ -112,9 +112,45 @@ function spellStationCode(s: string): string {
   return s.replace(/\bJY-0*(\d+)/g, 'J Y $1');
 }
 
+/**
+ * Mots que l'analyseur japonais du générateur (misaki, version cutlet) lit de
+ * travers, réécrits pour la SYNTHÈSE seule : le texte du jeu, lui, garde son
+ * orthographe.
+ *
+ * Le plus gênant était le nom même de la ligne. 「山手線内回り」 sortait en
+ * « yamate sennai mawari » : 山手 lu やまて au lieu de やまのて, et 線内回り
+ * recollé en un mot. La gare annonçait donc une ligne qui n'existe pas, dans
+ * chaque pré-annonce et chaque annonce d'approche.
+ *
+ * Un nom propre se réécrit en KATAKANA : en hiragana, l'analyseur le redécoupe
+ * en syllabes détachées (おかちまち → « o kachi machi ») alors que le katakana
+ * le garde d'un bloc (オカチマチ → « okachimachi »). Pour les mots ordinaires,
+ * dont la coupure ne s'entend pas, l'hiragana suffit.
+ *
+ * Aucune de ces réécritures n'introduit de 、 ou de 。 : la découpe en segments
+ * et les silences du générateur restent ceux du texte d'origine. Les noms de
+ * GARES, eux, ne sont pas ici : le générateur les vérifie tout seul contre leur
+ * transcription kana (voir station_replacements dans announcements-gen.py).
+ *
+ * Attention : corriger une lecture ici ne change PAS la clé du clip — elle
+ * hache le texte du jeu, pas le texte synthétisé. Il faut donc supprimer les
+ * MP3 concernés (ou regraver sans --reuse) pour que la correction s'entende.
+ */
+const JA_READINGS: [RegExp, string][] = [
+  [/山手線/g, 'ヤマノテ線'], // « yamate-sen » → yamanote-sen
+  [/内回り/g, 'ウチマワリ'], // 線内回り recollé en « sennai mawari »
+  [/方面行き/g, '方面ゆき'], // « hōmen-iki » → hōmen-yuki, comme la rame
+  [/人立入り/g, 'ひと立入り'], // « jinritsu-iri » → hito-tachiiri
+  [/ホーム中ほど/g, 'ホームなかほど'], // « hōmu chū-hodo » → hōmu nakahodo
+  [/JR東日本/g, 'ジェイアール東日本'], // « JR » restait en lettres latines
+  [/大江戸線/g, 'おおえど線'], // « dai-edo-sen » → ōedo-sen
+];
+
 function ttsText(u: Utterance): string {
   if (u.lang === 'en-US') return spellStationCode(stripDiacritics(u.text));
-  return u.text;
+  let out = u.text;
+  for (const [pattern, reading] of JA_READINGS) out = out.replace(pattern, reading);
+  return out;
 }
 
 // --- Sonorisation de la RAME --------------------------------------------

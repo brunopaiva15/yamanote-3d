@@ -8,10 +8,11 @@ public/audio/announcements/<clé>.mp3, et le manifeste src/data/pa-manifest.ts
 
 Voix : portée par chaque item (champ « voice »), toutes féminines — la sono de
 la rame et celle du quai ne doivent pas parler de la même bouche. Un item sans
-voix retombe sur la voix par défaut de sa langue. G2P : misaki/pyopenjtalk en
-japonais, misaki anglais (repli espeak) en anglais. Les identifiants de gare
-sont vérifiés : si open_jtalk lit un nom de gare autrement que sa transcription
-kana (stations.ts), le kana remplace le kanji dans le texte synthétisé.
+voix retombe sur la voix par défaut de sa langue. G2P : misaki en japonais
+comme en anglais (repli espeak). Les noms de gare sont vérifiés avec ce même
+misaki : s'il lit un nom autrement que sa transcription kana (stations.ts), le
+katakana remplace le kanji dans le texte synthétisé — c'est ce qui rattrape
+御徒町, que l'analyseur lit « gotochō » en tête de phrase.
 
 Cadence japonaise : Kokoro ignore presque la ponctuation quand on lui passe la
 phrase en un bloc (「まもなく、渋谷、渋谷。」sort d'une traite). Le japonais est
@@ -45,7 +46,6 @@ from pathlib import Path
 
 import lameenc
 import numpy as np
-import pyopenjtalk
 from kokoro_onnx import Kokoro
 from misaki import ja
 
@@ -74,34 +74,47 @@ def build_en_g2p():
     return en.G2P(trf=False, british=False, fallback=fallback)
 
 
-def normalize_phones(g2p_output: str) -> list[str]:
+def katakana(kana: str) -> str:
+    """Hiragana → katakana. L'analyseur garde un mot en katakana d'un bloc
+    (オカチマチ → « okachimachi ») là où il redécoupe l'hiragana en syllabes
+    détachées (おかちまち → « o kachi machi »)."""
+    return "".join(
+        chr(ord(c) + 0x60) if "ぁ" <= c <= "ゖ" else c for c in kana
+    )
+
+
+def normalize_phones(g2p_output: str) -> str:
     """Rend comparables la lecture du kanji et celle du kana épelé.
 
-    open_jtalk marque les voyelles dévoisées en majuscule (ts U) et lit les
-    longues correctement depuis le kanji (ちょう → ch o o), alors que le kana
-    épelé hors dictionnaire ressort en « o u » : on replie la casse et fusionne
-    o+u pour ne signaler que les vraies erreurs de lecture (ex. やまて au lieu
-    de やまのて), pas ces variantes phonétiquement identiques.
+    Les deux disent la même chose de plusieurs façons : le kana hors
+    dictionnaire ressort découpé mot à mot, l'allongement s'écrit tantôt « oː »
+    tantôt « oo » ou « oɯ » (ちょう), 「えい」 tantôt « eː » tantôt « ei », et le
+    ん s'assimile en « m » devant b (しんばし). On replie tout ça pour ne
+    signaler que les vraies erreurs de lecture — ごとちょう au lieu de
+    おかちまち — et pas ces variantes phonétiquement identiques.
     """
-    tokens = g2p_output.lower().split()
     out: list[str] = []
-    for t in tokens:
-        if t == "u" and out and out[-1] == "o":
-            out.append("o")
-        else:
-            out.append(t)
-    return out
+    for c in g2p_output:
+        if c == " ":
+            continue
+        out.append(out[-1] if c == "ː" and out else c)
+    s = "".join(out).replace("oɯ", "oo").replace("ei", "ee")
+    return s.replace("mb", "ɴb").replace("mp", "ɴp")
 
 
-def station_replacements(stations):
-    """Couples (kanji → kana) pour les gares que open_jtalk lit de travers."""
+def station_replacements(g2p, stations):
+    """Couples (kanji → katakana) pour les gares que l'analyseur lit de travers.
+
+    La vérification interroge le MÊME g2p que la synthèse : un analyseur qui lit
+    bien 御徒町 ne dit rien de ce qu'entendra le joueur si ce n'est pas lui qui
+    fabrique les phonèmes envoyés à Kokoro.
+    """
     out = []
     for st in stations:
-        if normalize_phones(pyopenjtalk.g2p(st["kanji"])) != normalize_phones(
-            pyopenjtalk.g2p(st["kana"])
-        ):
-            out.append((st["kanji"], st["kana"]))
-            print(f"  Lecture corrigée : {st['kanji']} → {st['kana']}")
+        kana = katakana(st["kana"])
+        if normalize_phones(g2p(st["kanji"])[0]) != normalize_phones(g2p(kana)[0]):
+            out.append((st["kanji"], kana))
+            print(f"  Lecture corrigée : {st['kanji']} → {kana}")
     # Les plus longs d'abord : 西日暮里 avant 日暮里.
     out.sort(key=lambda p: -len(p[0]))
     return out
@@ -194,12 +207,12 @@ def main() -> None:
     if not todo:
         print("Rien à synthétiser.")
 
-    print("Vérification des lectures de gares…")
-    replacements = station_replacements(data["stations"])
-
     kokoro = Kokoro(model_path, voices_path)
     ja_g2p = ja.JAG2P()
     en_g2p = build_en_g2p()
+
+    print("Vérification des lectures de gares…")
+    replacements = station_replacements(ja_g2p, data["stations"])
 
     # Le manifeste final ne décrit QUE les textes du jeu : une clé disparue du
     # code disparaît d'ici, même si son MP3 traîne encore sur le disque.
