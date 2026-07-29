@@ -885,6 +885,48 @@ Le contexte module le reste : silence de la pointe du matin, rires et
 titubements du vendredi soir, bras au corps quand c'est bondé, regards vers les
 portes à quai plutôt que par la vitre, éventails en août seulement.
 
+### Tomber
+
+Un coup de frein, une poignée lâchée, un joueur qui pousse un peu trop : il
+arrive qu'on tombe. Ces chutes étaient longtemps une **rotation** — le groupe
+du personnage basculait autour de son bassin, corps raide, jambes tendues dans
+la pose debout, et se relevait à l'endroit. De loin ça passait ; d'un mètre, le
+voyageur tombait comme une planche à repasser.
+
+Les packs livrent pourtant de vraies animations clés à clés qui ne servaient à
+rien : un corps qui perd ses jambes, s'assoit sur ses talons, part en arrière et
+s'étale, avec le contrecoup des bras et le tassement final. `characters/fall.ts`
+les **monte** au lieu de les jouer : chaque chute est une piste
+`[temps de l'action → position dans le clip]` que le rendu applique en scrubbant
+l'animation image par image. On y gagne trois choses qu'un simple `play()` ne
+donne pas :
+
+- le **rythme** propre à chaque chute — on vacille une demi-seconde, on
+  s'écroule en trois dixièmes, on reste à terre deux secondes, on se relève
+  lentement — là où le clip d'origine tient en une seconde ;
+- le **temps au sol**, en tenant le clip sur une image ;
+- le **relevé**, en repassant le clip à l'envers : un corps qui ramène ses
+  jambes sous lui et se hisse, ce qu'aucun pack ne fournit. Le milieu du clip
+  ainsi repris donne même l'**assise par terre** — jambes devant, buste en
+  arrière sur les mains — qui fait la chute plutôt que le plongeon.
+
+Trois montages : la **chute** complète en rame (4 s, du vacillement au
+redressement penaud), le **faux pas** rattrapé sur ses jambes, la **glissade**
+de quai où l'on descend à mi-hauteur avant de se reprendre. Deux couches se
+superposent au clip : le **regard** (`paxMotion`), qui joue la gêne pendant
+qu'on est au sol, et les **bras** (`characters/pose`), repris le temps de la
+bascule — moulinet, mains vers le sol — parce que le clip d'origine est une mort
+par balle, où les bras partent en arrière au lieu de chercher à se rattraper.
+
+Les temps sont calés sur les bruitages : l'impact tombe avec le `thud`, le
+relevé avec le froissement de tissu. Le cap se vrille pendant qu'on tombe, du
+côté que l'action a tiré au sort, pour que deux chutes ne soient jamais la
+même. Et la vieille bascule reste là, en **repli**, pour un pack qui n'aurait ni
+chute ni recul dans ses clips.
+
+En dev, `/rig-probe.html?fall=fall&t=2.4` rejoue une chute image par image avec
+le vrai montage du jeu (`&rigid=1` pour revoir le repli seul).
+
 ## Parler aux voyageurs
 
 Un voyageur regardé d'assez près (moins de 2,9 m, dans un cône de 24°) affiche

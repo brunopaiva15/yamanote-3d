@@ -206,6 +206,22 @@ interface Dir {
   z: number;
 }
 
+/**
+ * Clé d'un bras animé dans le temps (chutes) : les directions ci-dessous ne
+ * valent qu'à l'instant `t` de l'action, et `w` dit quelle part le geste prend
+ * au clip — 0 rend les bras à l'animation du pack.
+ */
+interface ArmKey {
+  /** Secondes depuis le début de l'action. */
+  t: number;
+  /** Poids du geste à cette clé (0..1). */
+  w: number;
+  upper: Dir;
+  fore: Dir;
+  hand: Dir;
+  palm?: Dir;
+}
+
 interface ArmGesture {
   /** Épaule → coude. */
   upper: Dir;
@@ -215,6 +231,15 @@ interface ArmGesture {
   hand: Dir;
   /** Direction que doit regarder la PAUME (sinon roulis de bind). */
   palm?: Dir;
+  /**
+   * Bras ANIMÉS, quand un clip du pack joue déjà la chute (characters/fall.ts).
+   * Le clip « Death » dont on tire la chute est une mort par balle : les bras y
+   * partent en arrière au lieu de chercher à se rattraper. On les reprend donc
+   * le temps de la bascule — moulinet, puis mains tendues vers le sol — et on
+   * les rend au clip à l'impact, dont le contrecoup est très bien tel quel.
+   * Sans clip de chute (repli rigide), ce sont les directions fixes qui servent.
+   */
+  keys?: readonly ArmKey[];
   /** Assis, le coude tombe sur la cuisse : variantes facultatives. */
   upperSit?: Dir;
   foreSit?: Dir;
@@ -236,6 +261,12 @@ const ARM_DOWN_SIT: Dir = { x: 0.1, y: -0.78, z: 0.36 }; // assis : coude vers l
 const ARM_OUT: Dir = { x: 0.42, y: -0.78, z: 0.2 }; // coude écarté du corps
 const FORE_UP_FACE: Dir = { x: -0.3, y: 0.86, z: 0.32 }; // avant-bras vers le visage
 const PALM_TO_FACE: Dir = { x: 0.05, y: -0.1, z: -0.95 }; // paume tournée vers soi
+// Assis par terre après une chute : on se tient sur les mains, posées au sol
+// EN ARRIÈRE des hanches, bras tendus, paumes à plat.
+const PROP_UPPER: Dir = { x: 0.34, y: -0.62, z: -0.7 };
+const PROP_FORE: Dir = { x: 0.2, y: -0.88, z: -0.42 };
+const PROP_HAND: Dir = { x: 0.16, y: -0.92, z: -0.34 };
+const PALM_DOWN: Dir = { x: 0, y: -0.95, z: 0.2 };
 
 /**
  * Rig de chaque occupation. Une motion absente = bras laissés au clip (repos,
@@ -631,13 +662,45 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
     roleShift: true,
   },
 
-  // — Chutes : les bras partent devant amortir —
+  // — Chutes —
+  //
+  // `upper/fore/hand` : pose d'amorti FIXE, pour un pack sans clip de chute.
+  // `keys` : bras animés par-dessus le clip, calés sur les pistes de
+  // characters/fall.ts — moulinet pendant que le corps part, mains vers le sol
+  // juste avant l'impact, puis lâcher. Au sol, les bras du clip sont meilleurs
+  // que tout ce qu'on poserait à l'aveugle, et surtout ils ne traversent pas le
+  // plancher : on ne reprend la main que pour l'assise par terre, où le clip
+  // remet les poings joints devant le visage.
   stumble: {
     upper: { x: 0.7, y: -0.5, z: 0.5 },
     fore: { x: 0.3, y: 0.15, z: 0.94 },
     hand: { x: 0.35, y: 0.05, z: 0.92 },
     palm: { x: 0, y: -0.9, z: 0.3 },
     both: true,
+    keys: [
+      { t: 0, w: 0, upper: ARM_DOWN, fore: { x: 0.1, y: -0.9, z: 0.3 }, hand: { x: 0.1, y: -0.9, z: 0.3 } },
+      // Les bras s'ouvrent EN CROIX pour retrouver l'équilibre. Tendus devant,
+      // on ne lit pas un déséquilibre mais un somnambule : c'est l'écart
+      // LATÉRAL qui dit le balancier, et le clip garde le reste.
+      {
+        t: 0.16,
+        w: 0.55,
+        upper: { x: 0.95, y: -0.05, z: 0.1 },
+        fore: { x: 0.82, y: 0.4, z: 0.2 },
+        hand: { x: 0.8, y: 0.36, z: 0.25 },
+        palm: { x: 0, y: -0.55, z: 0.75 },
+      },
+      // Ils redescendent en même temps que le pied rattrape.
+      {
+        t: 0.45,
+        w: 0.4,
+        upper: { x: 0.78, y: -0.5, z: 0.15 },
+        fore: { x: 0.55, y: -0.28, z: 0.55 },
+        hand: { x: 0.55, y: -0.32, z: 0.55 },
+        palm: { x: 0, y: -0.85, z: 0.4 },
+      },
+      { t: 0.8, w: 0, upper: ARM_DOWN, fore: { x: 0.1, y: -0.85, z: 0.4 }, hand: { x: 0.1, y: -0.85, z: 0.4 } },
+    ],
   },
   fall: {
     upper: { x: 0.8, y: -0.35, z: 0.5 },
@@ -645,6 +708,55 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
     hand: { x: 0.5, y: -0.1, z: 0.85 },
     palm: { x: 0, y: -0.95, z: 0.2 },
     both: true,
+    keys: [
+      { t: 0, w: 0, upper: ARM_DOWN, fore: { x: 0.1, y: -0.9, z: 0.3 }, hand: { x: 0.1, y: -0.9, z: 0.3 } },
+      // Moulinet : les bras montent en croix, c'est le réflexe qu'on lit de
+      // loin et qui dit « il ne se rattrapera pas ».
+      {
+        t: 0.13,
+        w: 0.85,
+        upper: { x: 0.92, y: 0.25, z: -0.1 },
+        fore: { x: 0.5, y: 0.75, z: 0.1 },
+        hand: { x: 0.45, y: 0.78, z: 0.15 },
+        palm: { x: 0, y: 0.1, z: 0.95 },
+      },
+      // Les mains cherchent le sol derrière, paumes ouvertes vers le bas.
+      {
+        t: 0.33,
+        w: 0.85,
+        upper: { x: 0.72, y: -0.3, z: -0.5 },
+        fore: { x: 0.4, y: -0.62, z: -0.55 },
+        hand: { x: 0.35, y: -0.72, z: -0.45 },
+        palm: { x: 0, y: -0.92, z: -0.25 },
+      },
+      // L'impact arrive : on rend les bras au contrecoup du clip, qui est très
+      // bien tel quel — et qui, lui, ne traverse pas le plancher.
+      {
+        t: 0.5,
+        w: 0.35,
+        upper: { x: 0.62, y: -0.5, z: -0.45 },
+        fore: { x: 0.35, y: -0.8, z: -0.3 },
+        hand: { x: 0.3, y: -0.85, z: -0.25 },
+        palm: { x: 0, y: -0.95, z: 0 },
+      },
+      { t: 0.72, w: 0, upper: ARM_DOWN, fore: { x: 0.1, y: -0.9, z: 0.2 }, hand: { x: 0.1, y: -0.9, z: 0.2 } },
+      // Assis par terre : le clip d'origine remet les mains jointes devant le
+      // visage (c'est une mort par balle, il y tenait une arme). On les repose
+      // au sol derrière les hanches — la seule façon de rester assis comme ça.
+      { t: 1.75, w: 0, upper: PROP_UPPER, fore: PROP_FORE, hand: PROP_HAND, palm: PALM_DOWN },
+      { t: 2.2, w: 0.8, upper: PROP_UPPER, fore: PROP_FORE, hand: PROP_HAND, palm: PALM_DOWN },
+      { t: 3.0, w: 0.8, upper: PROP_UPPER, fore: PROP_FORE, hand: PROP_HAND, palm: PALM_DOWN },
+      // Il pousse sur ses mains pour se remettre debout.
+      {
+        t: 3.35,
+        w: 0.5,
+        upper: { x: 0.42, y: -0.72, z: -0.35 },
+        fore: { x: 0.24, y: -0.9, z: -0.15 },
+        hand: { x: 0.2, y: -0.92, z: -0.08 },
+        palm: PALM_DOWN,
+      },
+      { t: 3.75, w: 0, upper: ARM_DOWN, fore: { x: 0.1, y: -0.88, z: 0.3 }, hand: { x: 0.1, y: -0.88, z: 0.3 } },
+    ],
   },
   slip: {
     upper: { x: 0.75, y: -0.35, z: 0.45 },
@@ -652,6 +764,28 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
     hand: { x: 0.45, y: 0.25, z: 0.85 },
     palm: { x: 0, y: -0.9, z: 0.3 },
     both: true,
+    keys: [
+      { t: 0, w: 0, upper: ARM_DOWN, fore: { x: 0.1, y: -0.9, z: 0.3 }, hand: { x: 0.1, y: -0.9, z: 0.3 } },
+      // Le grand moulinet de la peau de banane : bras hauts et écartés.
+      {
+        t: 0.12,
+        w: 0.9,
+        upper: { x: 0.85, y: 0.45, z: -0.05 },
+        fore: { x: 0.42, y: 0.86, z: 0.1 },
+        hand: { x: 0.38, y: 0.88, z: 0.15 },
+        palm: { x: 0, y: 0.1, z: 0.95 },
+      },
+      // Il tient : les bras restent ouverts en balancier, plus bas.
+      {
+        t: 0.38,
+        w: 0.75,
+        upper: { x: 0.9, y: -0.15, z: 0.1 },
+        fore: { x: 0.72, y: 0.35, z: 0.45 },
+        hand: { x: 0.7, y: 0.3, z: 0.5 },
+        palm: { x: 0, y: -0.8, z: 0.4 },
+      },
+      { t: 0.75, w: 0, upper: ARM_DOWN, fore: { x: 0.1, y: -0.85, z: 0.4 }, hand: { x: 0.1, y: -0.85, z: 0.4 } },
+    ],
   },
 };
 
@@ -671,6 +805,35 @@ const STRAP_UPPER_END = { x: 0.38, y: 0.82, z: 0.26 }; // levé DEVANT le plan d
 const dUpper = { x: 0, y: 0, z: 0 };
 const dFore = { x: 0, y: 0, z: 0 };
 const dHand = { x: 0, y: 0, z: 0 };
+const dPalm = { x: 0, y: 0, z: 0 };
+
+function mixDir(a: Dir, b: Dir, u: number, out: Dir): Dir {
+  out.x = a.x + (b.x - a.x) * u;
+  out.y = a.y + (b.y - a.y) * u;
+  out.z = a.z + (b.z - a.z) * u;
+  return out;
+}
+
+// Échantillonne une piste de bras animée (chutes) dans dUpper/dFore/dHand/dPalm ;
+// renvoie le poids du geste à cet instant. Hors piste (avant la première clé ou
+// après la dernière), le poids est nul : les bras sont au clip.
+const NO_PALM: Dir = { x: 0, y: 0, z: 0 };
+
+function sampleArmKeys(keys: readonly ArmKey[], t: number): number {
+  const last = keys[keys.length - 1];
+  if (t >= last.t) return 0;
+  let i = 1;
+  while (i < keys.length && keys[i].t <= t) i++;
+  const b = keys[Math.min(i, keys.length - 1)];
+  const a = keys[i - 1];
+  const span = b.t - a.t;
+  const u = span > 1e-4 ? (t - a.t) / span : 1;
+  mixDir(a.upper, b.upper, u, dUpper);
+  mixDir(a.fore, b.fore, u, dFore);
+  mixDir(a.hand, b.hand, u, dHand);
+  mixDir(a.palm ?? NO_PALM, b.palm ?? NO_PALM, u, dPalm);
+  return a.w + (b.w - a.w) * u;
+}
 
 function swung(base: Dir, g: ArmGesture, part: 'upper' | 'fore' | 'hand', t: number, role: number, out: Dir): Dir {
   out.x = base.x;
@@ -748,6 +911,12 @@ export interface ArmCtx {
   strapSide: 0 | 1 | -1;
   /** Rôle dans un duo : déphase les deux protagonistes. */
   chatRole: 0 | 1;
+  /**
+   * Le pack sait jouer cette chute en clip (characters/fall.ts) : les bras
+   * suivent alors leur piste de clés et se taisent hors fenêtre, au lieu de
+   * tenir la pose d'amorti fixe du repli.
+   */
+  clipFall?: boolean;
 }
 
 /**
@@ -763,7 +932,10 @@ export function applyArmGesture(clone: CharacterClone, state: PoseState, k: numb
   const wanted: MotionId | '' = motion && ARM_GESTURES[motion] ? motion : '';
 
   if (state.gesture !== wanted) {
-    state.gestureW = lerpW(state.gestureW, 0, k);
+    // Une chute ne se négocie pas : le geste en cours (téléphone, journal…)
+    // est lâché en deux images au lieu du demi-seconde habituel — sinon les
+    // bras se mettent à amortir bien après que le corps a touché le sol.
+    state.gestureW = lerpW(state.gestureW, 0, isFallingAction(ctx.action) ? Math.min(1, k * 6) : k);
     if (state.gestureW < 0.06) {
       state.gesture = wanted;
       state.gestureW = 0;
@@ -782,25 +954,42 @@ export function applyArmGesture(clone: CharacterClone, state: PoseState, k: numb
   state.phoneW = g?.prop ? state.gestureW : 0;
   if (!g || state.gestureW <= 0.001) return;
 
+  const t = ctx.actionT;
+  const role = ctx.chatRole;
+  // Chute jouée par un clip du pack : les bras suivent leur propre piste de
+  // clés et se taisent dès l'impact (voir ARM_GESTURES, section « Chutes »).
+  const keys = ctx.clipFall ? g.keys : undefined;
+  let w = state.gestureW;
+  let palm = g.palm;
+  let upper: Dir;
+  let fore: Dir;
+  let hand: Dir;
+  if (keys) {
+    w *= sampleArmKeys(keys, t);
+    if (w <= 0.001) return;
+    upper = dUpper;
+    fore = dFore;
+    hand = dHand;
+    palm = dPalm.x === 0 && dPalm.y === 0 && dPalm.z === 0 ? undefined : dPalm;
+  } else {
+    upper = swung(ctx.seated ? (g.upperSit ?? g.upper) : g.upper, g, 'upper', t, role, dUpper);
+    fore = swung(ctx.seated ? (g.foreSit ?? g.fore) : g.fore, g, 'fore', t, role, dFore);
+    hand = swung(g.hand, g, 'hand', t, role, dHand);
+  }
+
   const ref = clone.chestRef ?? clone.wrap;
   ref.updateWorldMatrix(true, false);
   ref.getWorldQuaternion(qWrap);
   clone.wrap.getWorldQuaternion(qWrapOnly);
 
-  const t = ctx.actionT;
-  const role = ctx.chatRole;
-  const upper = swung(ctx.seated ? (g.upperSit ?? g.upper) : g.upper, g, 'upper', t, role, dUpper);
-  const fore = swung(ctx.seated ? (g.foreSit ?? g.fore) : g.fore, g, 'fore', t, role, dFore);
-  const hand = swung(g.hand, g, 'hand', t, role, dHand);
-
   // Un bras accroché à un tsurikawa ne lâche pas pour faire un geste : de ce
   // côté-là, la poignée garde la main. Un geste à deux bras se joue alors à un.
   const free = (side: 1 | -1) => (ctx.strapSide === side ? 1 - state.strapW : 1);
   if (g.both) {
-    poseArm(clone, -1, upper, fore, hand, g.palm, state.gestureW * free(-1));
-    poseArm(clone, 1, upper, fore, hand, g.palm, state.gestureW * free(1));
+    poseArm(clone, -1, upper, fore, hand, palm, w * free(-1));
+    poseArm(clone, 1, upper, fore, hand, palm, w * free(1));
   } else {
-    poseArm(clone, state.gestureSide, upper, fore, hand, g.palm, state.gestureW * free(state.gestureSide));
+    poseArm(clone, state.gestureSide, upper, fore, hand, palm, w * free(state.gestureSide));
   }
 
   // Regard légèrement tourné vers l'objet tenu.
@@ -810,7 +999,14 @@ export function applyArmGesture(clone: CharacterClone, state: PoseState, k: numb
 // Applique tous les overrides d'un passager. `manualSit` : pas de clip assis
 // dans le pack → pose assise approximative par os (jambes pliées, dos rond).
 // Le clone fournit les os et les mesures de bind pose (jambes, bras).
-export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseState, k: number, manualSit: boolean): void {
+export function applyPoseOverrides(
+  p: Pax,
+  clone: CharacterClone,
+  state: PoseState,
+  k: number,
+  manualSit: boolean,
+  clipFall = false,
+): void {
   const bones = clone.bones;
   const legs = clone.legGeom;
   // --- Regard : superposé au clip (mêmes conventions que l'ancien rendu). ---
@@ -1126,5 +1322,6 @@ export function applyPoseOverrides(p: Pax, clone: CharacterClone, state: PoseSta
     posed: seated || standing,
     strapSide,
     chatRole: p.chatRole,
+    clipFall,
   });
 }

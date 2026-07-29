@@ -140,6 +140,97 @@
         }
       }
 
+      // Simulation d'une CHUTE avec le vrai montage du jeu (clip du pack
+      // scrubbé par characters/fall.ts, bascule de repli, bras et regard) :
+      //   ?fall=fall|stumble|slip&t=1.2   — t = secondes depuis le début de
+      //     l'action ; la simulation rejoue toutes les images depuis 0 pour que
+      //     les poids lissés soient ceux du jeu.
+      //   &rigid=1 — coupe le clip du pack : on revoit la bascule seule.
+      if (q.get('fall')) {
+        const action = q.get('fall');
+        const tEnd = parseFloat(q.get('t') ?? '0.6');
+        const { buildTemplates, cloneVariant } = await import('/src/three/characters/library.ts');
+        const { applyPoseOverrides, applyBodyPivot, makePoseState } = await import('/src/three/characters/pose.ts');
+        const { fallClipFor, fallCue, fallYawOffset } = await import('/src/three/characters/fall.ts');
+        const { resolveMotion } = await import('/src/systems/paxMotion.ts');
+        const { attachProps, updatePropRig } = await import('/src/three/characters/props.ts');
+        const manifest = await (await fetch('/models/manifest.json')).json();
+        const variant = manifest.variants.find((v) => v.file === file) ?? { id: file, file, archetypes: [], clips: { standIdle: 'Idle_Neutral' } };
+        const [template] = buildTemplates({ ...manifest, variants: [variant] }, [gltf]);
+        const app = { skin: '#e0bb94', hair: { color: '#241f1c' }, top: { color: '#4a7fc0' }, bottom: { color: '#3a4150' }, shoes: '#2a2622', bagColor: '#3a3128' };
+        const clone = cloneVariant(template, app);
+        gltf.scene.visible = false; // la source T-pose, APRÈS clonage
+        clone.wrap.visible = true;
+        scene.add(clone.wrap);
+        const props = attachProps(clone.wrap, app, variant.bagProp !== false);
+        const pose = makePoseState();
+        const p = {
+          state: 'standing',
+          pos: new THREE.Vector3(0, 0, 0),
+          yaw: parseFloat(q.get('yaw') ?? '0'),
+          targetYaw: parseFloat(q.get('yaw') ?? '0'),
+          height: parseFloat(q.get('h') ?? '1.08'),
+          bob: 0, bodyLean: 0, bodyRoll: 0, bodyPivot: 0,
+          headYaw: 0, headPitch: 0, headRoll: 0,
+          lookYawTarget: parseFloat(q.get('side') ?? '1'),
+          action, actionT: 0, bobPhase: 0, chatRole: 0, holdStrap: false,
+        };
+        const noClip = q.get('rigid') === '1';
+        let currentKey = '';
+        let fallW = 0;
+        let fallYaw = 0;
+        let fallOut = 0.25;
+        const dt = 1 / 60;
+        for (let i = 0; i * dt <= tEnd; i++) {
+          p.actionT = i * dt;
+          const k = Math.min(1, dt * 6);
+          const cue = noClip ? null : fallCue(p.action, p.actionT);
+          const fallKey = cue && clone.actions[cue.clip] ? cue.clip : '';
+          if (cue && fallKey) fallOut = cue.fadeOut;
+          const key = fallKey || (clone.actions.standIdle ? 'standIdle' : '');
+          if (key !== currentKey) {
+            const fade = fallKey && cue ? cue.fadeIn : fallOut;
+            if (currentKey) clone.actions[currentKey].fadeOut(fade);
+            if (key) clone.actions[key].reset().fadeIn(fade).play();
+            currentKey = key;
+          }
+          const fallAction = fallKey ? clone.actions[fallKey] : undefined;
+          if (fallAction && cue) {
+            fallAction.paused = true;
+            fallAction.time = cue.u * (fallAction.getClip().duration || 1);
+          }
+          const ramp = dt / Math.max(0.03, fallKey && cue ? cue.fadeIn : fallOut);
+          fallW = Math.max(0, Math.min(1, fallW + (fallKey ? ramp : -ramp)));
+          const rigid = 1 - fallW;
+          fallYaw += ((fallKey ? 1 : 0) - fallYaw) * Math.min(1, dt * 3.5);
+          // Cibles de tête / bascule : le même intégrateur que systems/passengers.
+          const m = resolveMotion({
+            action: p.action, actionT: p.actionT, bobPhase: p.bobPhase, chatRole: 0,
+            lookYawTarget: p.lookYawTarget, posX: 0, posZ: 0, yaw: p.yaw,
+            playerX: 0, playerY: 1.5, playerZ: 2,
+          });
+          const sm = Math.min(1, dt * m.speed * 1.25);
+          p.headYaw += (m.yaw - p.headYaw) * sm;
+          p.headPitch += (m.pitch - p.headPitch) * sm;
+          p.headRoll += (m.headRoll - p.headRoll) * sm;
+          p.bodyLean += (m.lean - p.bodyLean) * sm;
+          p.bodyRoll += (m.roll - p.bodyRoll) * sm;
+          p.bodyPivot += (m.pivot - p.bodyPivot) * sm;
+          p.bob += (m.drop - p.bob) * Math.min(1, dt * m.speed);
+          clone.wrap.position.set(p.pos.x, p.bob * rigid, p.pos.z);
+          clone.wrap.rotation.set(p.bodyLean * rigid, p.yaw + fallYawOffset(p.lookYawTarget, fallYaw), p.bodyRoll * rigid, 'YXZ');
+          clone.wrap.scale.setScalar(p.height);
+          applyBodyPivot(clone.wrap, p.bodyPivot * rigid, p.height);
+          if (clone.restHead && clone.bones.head) clone.bones.head.quaternion.copy(clone.restHead);
+          if (clone.restSpine && clone.bones.spine) clone.bones.spine.quaternion.copy(clone.restSpine);
+          clone.mixer.update(dt);
+          const packClip = fallClipFor(p.action);
+          applyPoseOverrides(p, clone, pose, k, false, !noClip && !!packClip && !!clone.actions[packClip]);
+          updatePropRig(props, clone.bones, clone.wrap, true, null, pose.phoneSide);
+        }
+        info.fall = { action, t: tEnd, fallW: +fallW.toFixed(2), clip: currentKey };
+      }
+
       // Accessoires (lunettes, masque, sacs) superposés avec le vrai code du
       // jeu : ?props=1&bag=backpack|shoulder|hand|none&mask=1&glasses=1
       if (q.get('props')) {
