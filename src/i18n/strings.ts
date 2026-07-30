@@ -160,6 +160,7 @@ export interface Strings {
     alreadyRunning: string;
     brake: { name: string; note: string };
     outage: { name: string; note: string };
+    assistance: { name: string; note: string; unavailable: string };
   };
 
   language: string;
@@ -265,7 +266,7 @@ const FR: Strings = {
   },
   incidents: {
     label: 'Provoquer un incident',
-    title: 'Arrêt en pleine voie',
+    title: 'Incidents',
     onlyOnTheRun: 'Seulement entre deux gares, la rame lancée.',
     alreadyRunning: 'Un arrêt est déjà en cours.',
     brake: {
@@ -275,6 +276,11 @@ const FR: Strings = {
     outage: {
       name: 'Coupure de courant',
       note: 'Caténaire coupée : plus de traction, éclairage de secours, écrans noirs. Plusieurs minutes.',
+    },
+    assistance: {
+      name: 'Voyageur malade',
+      note: 'Intervention du personnel à la prochaine station.',
+      unavailable: 'Disponible en marche ou à quai portes ouvertes, sans autre incident.',
     },
   },
 
@@ -381,7 +387,7 @@ const EN: Strings = {
   },
   incidents: {
     label: 'Trigger an incident',
-    title: 'Stop between stations',
+    title: 'Incidents',
     onlyOnTheRun: 'Only between stations, with the train running.',
     alreadyRunning: 'One is already under way.',
     brake: {
@@ -391,6 +397,11 @@ const EN: Strings = {
     outage: {
       name: 'Power failure',
       note: 'Overhead line down: no traction, emergency lighting, dead screens. Several minutes.',
+    },
+    assistance: {
+      name: 'Passenger assistance',
+      note: 'Staff intervention at the next station.',
+      unavailable: 'Available while running or at a station with doors open, when no other incident is active.',
     },
   },
 
@@ -497,7 +508,7 @@ const JA: Strings = {
   },
   incidents: {
     label: '異常時を発生させる',
-    title: '駅間での停車',
+    title: '異常時',
     onlyOnTheRun: '駅間を走行中のみ。',
     alreadyRunning: 'すでに停車中です。',
     brake: {
@@ -507,6 +518,11 @@ const JA: Strings = {
     outage: {
       name: '停電',
       note: '架線の停電。動力なし、非常灯のみ、車内モニターは消灯。数分間。',
+    },
+    assistance: {
+      name: 'お客さま救護',
+      note: '次の駅で係員が対応します。',
+      unavailable: '走行中またはドアが開いている停車中に限ります。',
     },
   },
 

@@ -37,7 +37,12 @@ import {
   STATION_ANNOUNCEMENT_RULES,
   PLATFORM_NOTICE_PHASES,
 } from '../src/data/stationAnnouncementRules.ts';
-import { approachSequence } from '../src/data/announcements.ts';
+import {
+  approachSequence,
+  passengerAssistanceInitialAnnouncement,
+  passengerAssistanceResumeAnnouncement,
+  passengerAssistanceWaitAnnouncement,
+} from '../src/data/announcements.ts';
 import { STATIONS } from '../src/data/stations.ts';
 import { platformFor, type LoopDirection } from '../src/data/platforms.ts';
 
@@ -53,6 +58,23 @@ test('chaque annonce jouée a son clip au manifeste', () => {
     'annonces sans clip - elles ne se diraient pas du tout ; ' +
       'regraver avec scripts/announcements-gen.py',
   );
+});
+
+test('les six annonces de prise en charge entrent dans la gravure', () => {
+  const assistance = [
+    ...passengerAssistanceInitialAnnouncement(),
+    ...passengerAssistanceWaitAnnouncement(),
+    ...passengerAssistanceResumeAnnouncement(),
+  ];
+  assert.equal(assistance.length, 6);
+  for (const utterance of assistance) {
+    const item = ITEMS.find((candidate) =>
+      candidate.lang === utterance.lang && candidate.text === utterance.text,
+    );
+    assert.ok(item, `${utterance.lang} non exporte : ${utterance.text}`);
+    assert.equal(item.role, undefined, 'une annonce de rame ne porte pas de role de quai');
+    assert.equal(item.voice, utterance.lang === 'ja-JP' ? 'jf_alpha' : 'af_heart');
+  }
 });
 
 test('chaque clip du manifeste a son MP3 sur le disque', () => {

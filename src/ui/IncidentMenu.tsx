@@ -18,6 +18,7 @@ import { useT } from '../i18n';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { beginEmergencyStop, beginPowerOutage } from '../systems/stationCycle';
+import { canForcePassengerAssistance, forcePassengerAssistance } from '../systems/passengerAssistance';
 
 /**
  * Ce que le menu a le droit de déclencher, à cet instant.
@@ -75,6 +76,7 @@ export function IncidentMenu({ className = '' }: { className?: string }) {
   }, [open]);
 
   const ready = state === 'ready';
+  const assistanceReady = canForcePassengerAssistance();
   const reason = state === 'running' ? t.incidents.alreadyRunning : t.incidents.onlyOnTheRun;
 
   function fire(begin: () => void) {
@@ -116,6 +118,18 @@ export function IncidentMenu({ className = '' }: { className?: string }) {
           >
             <span className="incident-choice-name">{t.incidents.outage.name}</span>
             <span className="incident-choice-note">{t.incidents.outage.note}</span>
+          </button>
+          <button
+            className="incident-choice"
+            role="menuitem"
+            disabled={!assistanceReady}
+            title={assistanceReady ? t.incidents.assistance.note : t.incidents.assistance.unavailable}
+            onClick={() => fire(() => { forcePassengerAssistance(); })}
+          >
+            <span className="incident-choice-name">{t.incidents.assistance.name}</span>
+            <span className="incident-choice-note">
+              {assistanceReady ? t.incidents.assistance.note : t.incidents.assistance.unavailable}
+            </span>
           </button>
         </div>
       )}
