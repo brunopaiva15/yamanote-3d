@@ -147,13 +147,16 @@ test('chaque rôle vocal est gravé avec la bonne voix Kokoro, et une seule', ()
   for (const [role, voices] of byRole) {
     assert.equal(voices.size, 1, `${role} gravé avec ${[...voices].join(', ')}`);
   }
-  // Les deux automates ne partagent pas de voix, et aucun ne prend celle de
-  // l'agent ni celle de la rame.
+  // Les deux automates et l'agent restent distincts. L'automate 内回り reprend
+  // désormais volontairement la voix japonaise de la rame : son rôle dans la
+  // clé garantit malgré tout deux MP3 indépendants.
   const voiceOf = (role: string) => [...byRole.get(role)!][0];
   const distinct = new Set([voiceOf('atos-inner'), voiceOf('atos-outer'), voiceOf('agent')]);
   assert.equal(distinct.size, 3);
   const cabinVoices = new Set(ITEMS.filter((i) => !i.role).map((i) => i.voice));
-  assert.ok(!cabinVoices.has(voiceOf('atos-inner')), 'l’automate 内回り parle comme la rame');
+  assert.equal(voiceOf('atos-inner'), 'jf_alpha', 'l’automate 内回り ne reprend pas jf_alpha');
+  const innerSpeeds = new Set(ITEMS.filter((i) => i.role === 'atos-inner').map((i) => i.speed));
+  assert.deepEqual([...innerSpeeds], [1.10], 'le débit propre au quai intérieur a dérivé');
   assert.ok(!cabinVoices.has(voiceOf('agent')), 'l’agent parle comme la rame');
 });
 

@@ -233,6 +233,20 @@ Vérification des lectures de gares…
 Puis elle affiche six lignes `[1/6]` à `[6/6]`. `--reuse` est indispensable :
 il conserve les anciens fichiers et ne synthétise que les clips absents.
 
+### Regraver une voix existante
+
+Quand le texte ne change pas mais que la voix ou son débit change, les clés des
+clips restent identiques. `--reuse` les conserverait donc par erreur. Ajouter
+`--force-role` permet de ne regraver que le rôle concerné, sans refaire toutes
+les annonces du jeu. Pour la voix féminine du quai intérieur :
+
+```powershell
+python ".\scripts\announcements-gen.py" ".\.tmp\announcements\announcements-texts.json" "C:\Temp\kokoro-v1.0\kokoro-v1.0.onnx" "C:\Temp\kokoro-v1.0\voices-v1.0.bin" ".\public\audio\announcements" ".\src\data\pa-manifest.ts" --reuse --force-role atos-inner
+```
+
+Cette commande remplace les MP3 `atos-inner`, recalcule leurs durées dans le
+manifeste et laisse tous les autres clips intacts.
+
 ## 10. Vérifier et écouter les fichiers
 
 La variable `$assistance` contient les six clés. Vérifier les fichiers :

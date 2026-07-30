@@ -31,13 +31,18 @@ Modèle : kokoro-v1.0.onnx + voices-v1.0.bin
 
 Usage :
   python scripts/announcements-gen.py textes.json kokoro-v1.0.onnx \
-      voices-v1.0.bin public/audio/announcements src/data/pa-manifest.ts [--reuse]
+      voices-v1.0.bin public/audio/announcements src/data/pa-manifest.ts \
+      [--reuse] [--force-role atos-inner]
 
 --reuse : ne synthétise que les clips ABSENTS et reprend la durée des autres
 dans le manifeste existant. Un texte inchangé garde alors exactement le fichier
 qu'il avait - une version de kokoro-onnx ou de misaki plus récente ne fait pas
 dériver, en douce, les 200 annonces déjà en place. Sans le drapeau, tout est
 regravé.
+
+--force-role RÔLE : avec --reuse, regrave tout de même les clips de ce rôle
+vocal (par exemple ``atos-inner`` après un changement de voix) et conserve les
+autres. L'option est répétable.
 
 Le dossier de sortie appartient au script : un MP3 dont plus aucun texte ne
 réclame la clé est supprimé. Corriger un mot d'annonce change son hachage, donc
@@ -197,6 +202,11 @@ def read_manifest(path: Path) -> dict[str, float]:
 def main() -> None:
     texts_path, model_path, voices_path, out_dir, manifest_path = sys.argv[1:6]
     reuse = "--reuse" in sys.argv[6:]
+    force_roles = {
+        sys.argv[i + 1]
+        for i, arg in enumerate(sys.argv[6:], start=6)
+        if arg == "--force-role" and i + 1 < len(sys.argv)
+    }
     data = json.loads(Path(texts_path).read_text(encoding="utf-8"))
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -205,7 +215,8 @@ def main() -> None:
     todo = [
         item
         for item in data["items"]
-        if not (item["key"] in known and (out / f"{item['key']}.mp3").exists())
+        if item.get("role") in force_roles
+        or not (item["key"] in known and (out / f"{item['key']}.mp3").exists())
     ]
     if reuse:
         print(f"{len(data['items']) - len(todo)} clips déjà gravés, {len(todo)} à faire.")
