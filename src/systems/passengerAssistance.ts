@@ -250,7 +250,7 @@ const defaultEffects: AssistanceEffects = {
   restorePassenger: defaultRestore,
 };
 
-function finishPassengerAlighting(effects: AssistanceEffects): void {
+function finishPassengerAlighting(): void {
   snapshot = null;
   stage = 'final-check';
   elapsed = 0;
@@ -287,19 +287,19 @@ export function updatePassengerAssistance(dt: number, effects: AssistanceEffects
     if (elapsed >= plan.assist) {
       if (!effects.beginPassengerAlight(passengerId!, plan.doorZ)) {
         effects.removePassenger(passengerId!);
-        finishPassengerAlighting(effects);
+        finishPassengerAlighting();
       } else {
         stage = 'passenger-alighting'; elapsed = 0;
       }
     }
   } else if (stage === 'passenger-alighting') {
     if (effects.passengerAlighted(passengerId!)) {
-      finishPassengerAlighting(effects);
+      finishPassengerAlighting();
     } else if (elapsed >= plan.alight) {
       // Garde-fou uniquement : waypoint bloqué ou frame perdue. Le chemin normal
       // attend le passage réel de l'embrasure vers le pool du quai.
       effects.removePassenger(passengerId!);
-      finishPassengerAlighting(effects);
+      finishPassengerAlighting();
     }
   } else if (stage === 'final-check' && elapsed >= plan.finalCheck) {
     effects.releaseAgent(); effects.announce(passengerAssistanceResumeAnnouncement());
