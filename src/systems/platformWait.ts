@@ -21,8 +21,10 @@ import { advanceClock, runtime } from './runtime';
 import { DEPART_HOLD, integrateTrain, stopDistance, type TrainState } from './trainPhysics';
 import { randomizeDoorTimings, setPsdDoors, setTrainDoors, stationTimings } from './doorMotion';
 import * as audio from './audioEngine';
+import { PLATFORM_SCHEDULE } from './platformAnnouncementPlan';
 import { cancelSpeech } from './speech';
 import {
+  currentPlatformPlan,
   paAgentMessage,
   paAlightFirst,
   paApproach,
@@ -32,6 +34,7 @@ import {
   paPreAnnouncement,
   paPsdBeeps,
   paTrainEntering,
+  planPlatformAnnouncements,
 } from './stationPa';
 import { rollPassThrough, startPassThrough } from './passingTrain';
 import { exchangePassengers, seedPassengers } from './passengers';
@@ -85,6 +88,22 @@ const PASS_AT = 28;
 
 /** Distance au-delà de laquelle la rame qui part est hors de vue. */
 const OUT_OF_SIGHT = 320;
+
+// --- Instants des annonces facultatives ----------------------------------
+//
+// Ce ne sont plus des rendez-vous : chacun de ces instants n'est que le moment
+// où la gare REGARDE si elle a quelque chose à dire. Ce qu'elle dit — ou pas —
+// vient du plan tiré à l'entrée du creux (systems/platformAnnouncementPlan), et
+// ce qui ne tient pas dans le créneau restant est abandonné plutôt que repoussé.
+
+const {
+  delayAt: DELAY_AT,
+  preAnnounceAt: PRE_ANNOUNCE_AT,
+  preAnnounceAfterDelayAt: PRE_ANNOUNCE_AFTER_DELAY_AT,
+  approachBefore: APPROACH_AT_BEFORE,
+  agentExchangeAt: AGENT_EXCHANGE_AT,
+  agentPreMelodyLead: AGENT_PRE_MELODY_LEAD,
+} = PLATFORM_SCHEDULE;
 
 /** Immobilisation avant ouverture des portes. */
 const BERTH_SETTLE = 1.6;
@@ -146,12 +165,19 @@ export function beginPlatformWait(): void {
   // parvient plus. Inutile de laisser la file se vider dans le vide.
   cancelSpeech('cabin');
 
+  // La rame est déjà là, et elle a son plan d'annonces. On le REPREND, on ne le
+  // retire pas : c'est le même arrêt, et c'est celui que la sono du wagon suivait
+  // une seconde plus tôt. En tirer un nouveau ferait dire au quai autre chose que
+  // ce qu'on venait d'entendre par les portes ouvertes.
+  currentPlatformPlan(index, HEADWAY_GAP);
+
   // Ce qui est déjà passé dans ce dwell ne doit pas se rejouer.
   if (t > 0.4) fired.add('doors-open');
   if (t > 0.4 + stationTimings.psdOpenDelay) fired.add('psd-open');
+  if (t > 0.4 + stationTimings.psdOpenDelay + 0.6) fired.add('pa-alight');
   if (t > 1.6) fired.add('exchange');
-  if (t > 5) fired.add('agent-1');
-  if (t > melodyStartAt(index, dwell) - 3) fired.add('agent-2');
+  if (t > AGENT_EXCHANGE_AT) fired.add('agent-1');
+  if (t > melodyStartAt(index, dwell) - AGENT_PRE_MELODY_LEAD) fired.add('agent-2');
   if (t >= melodyStartAt(index, dwell)) fired.add('melody');
   if (t >= melodyCutAt(index, dwell)) fired.add('melody-cut');
   if (t >= dwell - CLOSE_ANNOUNCE_LEAD) fired.add('announce-close');
@@ -181,21 +207,29 @@ export function endPlatformWait(): void {
 function updateBoardable(dt: number, index: number, doorSide: 1 | -1): void {
   const dwell = dwellDuration(index);
   const t = platformWait.t;
+  const melodyAt = melodyStartAt(index, dwell);
   once('doors-open', t > 0.4, () => {
     setTrainDoors(1);
     audio.doorOpenChime();
-    // L'agent de quai, dès que les vantaux s'écartent.
-    paAlightFirst();
   });
   once('psd-open', t > 0.4 + stationTimings.psdOpenDelay, () => setPsdDoors(1));
-  once('exchange', t > 1.6, () => exchangePassengers(doorSide));
-  // Pendant que la foule monte : une consigne de plus, puis une autre juste
-  // avant que la mélodie ne parte.
-  once('agent-1', t > 5, () => paAgentMessage());
-  once('agent-2', t > melodyStartAt(index, dwell) - 3, () => paAgentMessage(1));
-  once('melody', t >= melodyStartAt(index, dwell), () =>
-    audio.departureMelody(index),
+  // L'agent de quai, une fois les baies palières ouvertes elles aussi — et
+  // seulement si le plan de cet arrêt l'a retenu : sur un quai désert, personne
+  // n'a besoin qu'on lui demande de laisser descendre trois personnes.
+  once('pa-alight', t > 0.4 + stationTimings.psdOpenDelay + 0.6, () =>
+    paAlightFirst(index, headway),
   );
+  once('exchange', t > 1.6, () => exchangePassengers(doorSide));
+  // Pendant que la foule monte, puis une seconde fois avant la mélodie — zéro,
+  // une ou deux consignes selon le plan, et la seconde n'est diffusée que s'il
+  // reste la place de la finir avant la première note.
+  once('agent-1', t > AGENT_EXCHANGE_AT, () =>
+    paAgentMessage(index, headway, 0, melodyAt - t),
+  );
+  once('agent-2', t > melodyAt - AGENT_PRE_MELODY_LEAD, () =>
+    paAgentMessage(index, headway, 1, melodyAt - t),
+  );
+  once('melody', t >= melodyAt, () => audio.departureMelody(index));
   // De près, la coupure du chef de train s'entend pour ce qu'elle est : la
   // mélodie se referme en pleine phrase.
   once('melody-cut', t >= melodyCutAt(index, dwell), () => interruptDepartureMelody());
@@ -269,11 +303,19 @@ const REFILL_BEFORE = 8;
 let headway = HEADWAY_GAP;
 /** Un passage a été tiré pour ce creux : reste à le lancer à PASS_AT. */
 let passPending = false;
+/** Une excuse de retard a été diffusée dans ce creux : elle décale l'anticipée. */
+let delayAnnounced = false;
 
 /** Tire le creux qui commence, et le passage qui l'allonge peut-être. */
 function beginClear(index: number): void {
   passPending = rollPassThrough(index, HEADWAY_GAP + PASS_HEADWAY_EXTRA);
   headway = HEADWAY_GAP + (passPending ? PASS_HEADWAY_EXTRA : 0);
+  delayAnnounced = false;
+  // Le plan de la rame ATTENDUE, tiré maintenant que le creux est connu : c'est
+  // lui qui décide de l'annonce anticipée et du remerciement, et c'est le même
+  // qui portera « laissez descendre » et les consignes d'agent quand elle sera
+  // à quai (d'où le numéro d'arrêt de la rame à venir, et non celui qui part).
+  planPlatformAnnouncements(index, headway, runtime.stopSequence + 1);
   // La rame suivante est peuplée MAINTENANT, quai vide et voie déserte : elle
   // arrivera donc avec ses voyageurs déjà en place derrière les vitres.
   //
@@ -296,17 +338,30 @@ function updateClear(index: number): void {
     if (!crowdArrive(index)) break;
   }
   // La gare reprend la parole une fois le quai dégagé : l'excuse de retard
-  // s'il y en a une à faire, l'annonce anticipée du prochain train, puis le
-  // carillon ATOS et l'annonce d'approche.
-  once('delay', t >= 6, () => paDelay());
-  once('pre-announce', t >= 14, () => paPreAnnouncement(index, true));
+  // s'il y en a une à faire, l'annonce anticipée du prochain train quand le
+  // plan l'a retenue, puis le carillon ATOS et l'annonce d'approche.
+  //
+  // L'anticipée n'est plus un rendez-vous : elle dépend du creux, de l'heure, de
+  // la gare et du retard, et le remerciement qui la précède est lui aussi tiré.
+  // Elle passe derrière l'excuse de retard quand il y en a eu une, et tombe si
+  // elle ne tient plus avant l'annonce d'approche — qui, elle, est obligatoire.
+  once('delay', t >= DELAY_AT, () => {
+    delayAnnounced = paDelay();
+  });
+  const preAt = delayAnnounced ? PRE_ANNOUNCE_AFTER_DELAY_AT : PRE_ANNOUNCE_AT;
+  once('pre-announce', t >= preAt, () => {
+    // Le plan de la rame à venir, celui tiré à l'entrée du creux.
+    const plan = currentPlatformPlan(index, headway, runtime.stopSequence + 1);
+    if (!plan.playPreAnnouncement) return;
+    paPreAnnouncement(index, plan.playGreeting, headway - APPROACH_AT_BEFORE - t);
+  });
   // Le passage, s'il y en a un : entre l'annonce anticipée et celle
   // d'approche, avec tout le creux devant lui.
   once('pass', passPending && t >= PASS_AT, () => {
     passPending = false;
-    startPassThrough(index, headway - 24 - PASS_AT);
+    startPassThrough(index, headway - APPROACH_AT_BEFORE - PASS_AT);
   });
-  once('announce', t >= headway - 24, () => paApproach(index));
+  once('announce', t >= headway - APPROACH_AT_BEFORE, () => paApproach(index));
   if (t >= headway) {
     platformWait.approachDist = stopDistance(V_MAX, 0);
     train.v = V_MAX;

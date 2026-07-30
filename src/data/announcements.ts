@@ -17,6 +17,7 @@
 
 import { loopNameJp, prevStation, stationAtHop, wrapStation } from './loop.ts';
 import type { LoopDirection } from './platforms.ts';
+import { cabinNoticesForStation } from './stationAnnouncementRules.ts';
 import { STATIONS, TRANSFERS, type Station } from './stations.ts';
 
 export interface Utterance {
@@ -61,6 +62,10 @@ export function nextHubs(from: number, count: number, dir: LoopDirection): Stati
 /**
  * Ponctuation des annonces de bord : aucune virgule, rien que des points.
  *
+ * Exportée pour data/stationAnnouncementRules, qui écrit ses consignes locales
+ * dans la ponctuation ATOS (avec 、) et doit les rendre à la diction de la rame
+ * quand c'est la rame qui les dit.
+ *
  * Les textes de ce fichier sont écrits directement sans virgule ; cette
  * fonction sert aux libellés venus d'ailleurs (les correspondances de
  * `TRANSFERS`, énumérées avec des 、 et des virgules), qui alimentent aussi les
@@ -68,7 +73,7 @@ export function nextHubs(from: number, count: number, dir: LoopDirection): Stati
  * En anglais la lettre suivante passe en capitale : après un point, c'est une
  * nouvelle phrase.
  */
-function noCommas(text: string): string {
+export function noCommas(text: string): string {
   return text
     .replace(/、/g, '。')
     .replace(/,\s+(\p{L})/gu, (_m, c: string) => `. ${c.toUpperCase()}`)
@@ -401,26 +406,43 @@ export function guidanceAnnouncements(index: number): Utterance[] {
 // --- Séquences ---
 
 /**
- * Départ (cruise) : 列車案内? → 次駅案内 → 乗換案内? → 案内放送(0–2).
+ * Départ (cruise) : 列車案内? → 次駅案内 → consigne locale? → 乗換案内? →
+ * consigne locale? → 案内放送(0–2).
  * Direction uniquement si la gare précédente est un hub majeur.
+ *
+ * Les consignes locales sont celles de la gare vers laquelle on roule (voir
+ * data/stationAnnouncementRules) : elles ne s'insèrent qu'à l'endroit que leurs
+ * données demandent, pas partout où il y a de la place.
  */
 export function departureSequence(index: number, side: 1 | -1, dir: LoopDirection): Utterance[] {
+  const jy = STATIONS[wrapStation(index)].jy;
   const out: Utterance[] = [];
   if (isMajorHub(prevStation(index, dir))) {
     out.push(...directionAnnouncement(index, dir));
   }
   out.push(...nextStationAnnouncement(index, side));
+  out.push(...cabinNoticesForStation(jy, dir, 'after-next-station'));
   out.push(...transferAnnouncement(index));
+  out.push(...cabinNoticesForStation(jy, dir, 'after-transfers'));
   out.push(...guidanceAnnouncements(index));
   return out;
 }
 
 /**
- * Approche (brake) : まもなく案内(+portes) → 乗換案内?
+ * Approche (brake) : まもなく案内(+portes) → 乗換案内? → consigne locale?
+ *
+ * La consigne vient en DERNIER, et c'est la seule place qui tienne : celle de
+ * Shibuya parle de l'écart entre la rame et le quai, autrement dit du pas qu'on
+ * va faire dans quelques secondes.
  */
-export function approachSequence(index: number, side: 1 | -1): Utterance[] {
+export function approachSequence(
+  index: number,
+  side: 1 | -1,
+  dir: LoopDirection,
+): Utterance[] {
   const out: Utterance[] = [];
   out.push(...approachAnnouncement(index, side));
   out.push(...transferAnnouncement(index));
+  out.push(...cabinNoticesForStation(STATIONS[wrapStation(index)].jy, dir, 'during-approach'));
   return out;
 }
