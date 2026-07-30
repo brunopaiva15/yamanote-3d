@@ -3,7 +3,7 @@
 //
 // Deux points d'écoute, deux séquences :
 //
-//   • Sur le quai, on entend tout, dans l'ordre — pré-annonce, carillon ATOS,
+//   • Sur le quai, on entend tout, dans l'ordre - pré-annonce, carillon ATOS,
 //     annonce d'approche, avertissement d'entrée, arrivée, l'agent pendant
 //     l'échange, la mélodie, la fermeture, les bips des portes palières.
 //   • Dans la rame arrêtée, on n'entend que ce qui passe par les portes
@@ -55,12 +55,12 @@ import { placementFor } from './stationPlacement';
 
 /**
  * Sens desservi par le quai où l'on se trouve. Toutes les annonces automatiques
- * japonaises en dépendent — pas seulement pour ce qu'elles disent (le nom de la
+ * japonaises en dépendent - pas seulement pour ce qu'elles disent (le nom de la
  * boucle, les gares repères, le numéro de voie) mais pour la BOUCHE qui le dit :
  * l'automate du 内回り est une femme, celui du 外回り un homme (voir
  * data/stationAnnouncements.atosVoiceForDirection).
  *
- * Le sens est lu ici, une fois, et passé en argument aux fonctions de données —
+ * Le sens est lu ici, une fois, et passé en argument aux fonctions de données -
  * elles n'ont pas à connaître le store.
  */
 function dir(): LoopDirection {
@@ -87,7 +87,7 @@ export function currentPlatformNumber(index: number): number {
 // d'un bout à l'autre : c'est même toute la raison d'aligner des diffuseurs
 // tous les dix-neuf mètres au lieu d'en poser un gros.
 //
-// Ces diffuseurs-là existent déjà — on les voit sous l'auvent, systems/
+// Ces diffuseurs-là existent déjà - on les voit sous l'auvent, systems/
 // stationPlacement les répartit et three/station/PlatformKit les dessine. Il
 // suffit donc de les DONNER au moteur audio, qui garde un petit jeu de prises
 // spatialisées (audioEngine, PLATFORM_TAPS) et n'a pas à savoir d'où elles
@@ -136,7 +136,7 @@ export function updatePlatformSpeakers(): void {
 //
 // Un arrêt d'urgence met la ligne en retard, et la gare le dit. Le joueur qui
 // descend après avoir subi l'incident entend donc, en attendant la rame
-// suivante, l'excuse qui va avec — la seule annonce du quai qui parle d'autre
+// suivante, l'excuse qui va avec - la seule annonce du quai qui parle d'autre
 // chose que du train en approche.
 
 /** Motif ATOS en attente d'annonce, -1 = rien à annoncer. */
@@ -178,7 +178,7 @@ export function lineDelayed(): boolean {
 
 /**
  * Diffuse l'excuse de retard s'il y en a une à faire, et pas trop vieille.
- * @returns vrai si quelque chose a été dit — l'appelant en a besoin pour
+ * @returns vrai si quelque chose a été dit - l'appelant en a besoin pour
  *   décaler ce qu'il comptait dire ensuite.
  */
 export function paDelay(): boolean {
@@ -194,8 +194,8 @@ export function paDelay(): boolean {
 //
 // Une seule décision par rame attendue : ce qui va passer, et ce qui ne passera
 // pas. Le calcul lui-même est pur (systems/platformAnnouncementPlan) ; ce qui
-// vit ici, c'est la lecture du monde — l'heure de Tokyo, l'affluence estimée du
-// tronçon, le retard — et la mémoire du plan jusqu'au départ de la rame.
+// vit ici, c'est la lecture du monde - l'heure de Tokyo, l'affluence estimée du
+// tronçon, le retard - et la mémoire du plan jusqu'au départ de la rame.
 
 /** Affluence normalisée (0–1) à partir du taux de remplissage estimé. */
 const CROWD_FROM_PERCENT = 30;
@@ -245,7 +245,7 @@ export function platformAnnouncementContext(
 }
 
 /**
- * Établit le plan de la rame attendue. Appelé UNE fois par attente — à l'entrée
+ * Établit le plan de la rame attendue. Appelé UNE fois par attente - à l'entrée
  * du creux entre deux rames, ou à l'arrivée d'une rame pour ce qu'elle dira à
  * quai. Rappelé pour le même arrêt, il ne retire rien : la graine ne dépend que
  * de l'arrêt, donc le plan est le même.
@@ -284,7 +284,7 @@ export function currentPlatformPlan(
  *
  * `cutoffIn` est le temps qui reste avant l'annonce d'approche, qui elle n'est
  * pas facultative : si l'anticipée n'y tient pas (une excuse de retard vient de
- * passer, le creux est court), on l'abandonne. Elle ne se repousse pas — une
+ * passer, le creux est court), on l'abandonne. Elle ne se repousse pas - une
  * anticipée qui sortirait par-dessus le carillon d'approche annoncerait un train
  * déjà en train d'arriver.
  *
@@ -318,7 +318,7 @@ export function paPreAnnouncement(
  */
 const SIGNAL_TO_VOICE_MS = 300;
 
-/** Signal de la sono, puis la voix — jamais les deux en même temps. */
+/** Signal de la sono, puis la voix - jamais les deux en même temps. */
 function sayAfterSignal(items: StationUtterance[], signalS: number): void {
   say(items, 'platform', Math.round(signalS * 1000) + SIGNAL_TO_VOICE_MS);
 }
@@ -354,7 +354,7 @@ export function paTrainEntering(): void {
 
 /**
  * Annonce de passage sans arrêt sur la voie d'EN FACE. Même signal que pour
- * une entrée en gare — c'est un avertissement, pas une invitation — mais le
+ * une entrée en gare - c'est un avertissement, pas une invitation - mais le
  * numéro de voie n'est pas le nôtre (voir data/passingTrains).
  *
  * `withEnglish` tombe quand le créneau de silence est trop court : mieux vaut
@@ -388,13 +388,13 @@ export function paArrival(index: number): void {
 }
 
 /**
- * « Laissez descendre les voyageurs », à l'ouverture des portes — quand le plan
+ * « Laissez descendre les voyageurs », à l'ouverture des portes - quand le plan
  * de cet arrêt l'a retenu. Sur un quai désert, l'agent ne dit rien.
  *
  * `cutoffIn` est le temps qui reste avant la mélodie, et il est vérifié comme
  * pour n'importe quelle consigne facultative. Le message a l'air d'être en tête
  * de l'arrêt, mais il ne l'est pas : la gare vient de dire son nom, et à Shibuya
- * elle enchaîne sur la consigne d'écart en japonais PUIS en anglais — une
+ * elle enchaîne sur la consigne d'écart en japonais PUIS en anglais - une
  * quinzaine de secondes de file devant un message qui n'a de sens que pendant que
  * les voyageurs descendent. Passé ce moment, il ne se rattrape pas : « laissez
  * descendre » lancé sur la mélodie ne fait plus descendre personne.
@@ -427,7 +427,7 @@ export function paAlightFirst(
  * la mélodie), si le plan en a retenu un pour ce créneau ET s'il tient dans le
  * temps qui reste.
  *
- * `cutoffIn` est le temps avant l'annonce prioritaire suivante — la mélodie, la
+ * `cutoffIn` est le temps avant l'annonce prioritaire suivante - la mélodie, la
  * fermeture. Un message qui déborderait est ABANDONNÉ : le repousser le ferait
  * sortir par-dessus la mélodie, ou après la fermeture des portes qu'il
  * demandait de dégager.

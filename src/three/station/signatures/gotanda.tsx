@@ -1,7 +1,7 @@
-// JY23 五反田 — la différence de hauteur.
+// JY23 五反田 - la différence de hauteur.
 //
 // Ce qu'on retient de Gotanda, c'est la Tōkyū Ikegami perchée au quatrième
-// niveau : une gare complète — quai, auvent, garde-corps — suspendue une
+// niveau : une gare complète - quai, auvent, garde-corps - suspendue une
 // dizaine de mètres au-dessus de la Yamanote, et qu'on ne voit qu'en levant
 // franchement la tête. Aucune autre gare de la boucle n'a ça.
 //

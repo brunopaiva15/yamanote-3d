@@ -7,7 +7,7 @@
 // de l'étape en cours (`__outageSkip`). Ce que l'on vient vérifier tient en
 // trois questions, et aucune ne se juge sur une seule image :
 //
-//   • la rame ne devient pas noire — les lampes de secours restent, froides,
+//   • la rame ne devient pas noire - les lampes de secours restent, froides,
 //     là où les néons étaient jaunes ;
 //   • les dalles LCD et les écrans publicitaires s'éteignent, mais pas les
 //     affiches de papier ;
@@ -56,7 +56,7 @@ await new Promise((r) => setTimeout(r, 1200));
 await page.addStyleTag({ content: '.app > :not(:first-child){display:none !important}' });
 
 // Vue vers le fond du wagon : on y a d'un coup d'œil le bandeau LED, deux
-// dalles au-dessus des portes, les écrans 窓上 et la rangée de nakazuri —
+// dalles au-dessus des portes, les écrans 窓上 et la rangée de nakazuri -
 // c'est-à-dire tout ce qui s'éteint, et tout ce qui ne s'éteint pas.
 await page.mouse.move(480, 270);
 await page.mouse.down();
@@ -91,7 +91,7 @@ async function shot(name) {
   console.log('→', name, JSON.stringify(state));
 }
 
-// 22 h : la nuit est le moment où la coupure se voit le mieux — de jour, le
+// 22 h : la nuit est le moment où la coupure se voit le mieux - de jour, le
 // soleil qui entre par les baies masque une bonne partie de ce qui s'éteint.
 const NIGHT = 22 * 60;
 
@@ -117,7 +117,7 @@ await shot('03-immobilise');
 
 // Saut jusqu'aux abords du retour de la tension, qui tombe 24 s avant le
 // redémarrage. La marge est large : une frame SwiftShader dure plusieurs
-// secondes, et la simulation les consomme — à six secondes près, la prise
+// secondes, et la simulation les consomme - à six secondes près, la prise
 // « attente » se ferait courant déjà revenu.
 await page.evaluate(() => window.__outageSkip(-70));
 await new Promise((r) => setTimeout(r, 1500));
@@ -140,8 +140,8 @@ await shot('06-reprise');
 // (systems/carPower, POWER_CUT) et on regarde chacun d'eux.
 //
 // Ce que ces images doivent montrer : le décalage entre les deux. Les tubes du
-// plafond s'affaissent progressivement — à 0,34 le wagon est encore
-// parfaitement lisible — alors que les dalles, elles, ont CLAQUÉ : un
+// plafond s'affaissent progressivement - à 0,34 le wagon est encore
+// parfaitement lisible - alors que les dalles, elles, ont CLAQUÉ : un
 // rétroéclairage tient ou il ne tient pas, il n'a pas de demi-teinte. C'est ce
 // décalage qui fait qu'on voit la panne arriver au lieu de la subir.
 await page.evaluate(() => window.__powerOutage());

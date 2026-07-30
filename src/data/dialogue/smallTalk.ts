@@ -1,6 +1,6 @@
 // Ce qu'on dit à un inconnu dans un train : rien d'important.
 //
-// La banalité est le sujet. Un voyageur ne vous confie pas sa vie — il
+// La banalité est le sujet. Un voyageur ne vous confie pas sa vie - il
 // remarque qu'il fait chaud, que la rame est vide, qu'il a failli rater la
 // correspondance. C'est cette absence d'enjeu qui rend une rame vivante.
 //

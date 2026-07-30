@@ -5,7 +5,7 @@
 // On calcule leur normale par la formule de Newell, on les rabat sur le plan
 // de coordonnées le plus favorable, on triangule avec earcut, puis on remet
 // chaque triangle dans le bon sens en comparant sa normale à celle du
-// polygone — ce recollement rend le pipeline indifférent au sens de rotation
+// polygone - ce recollement rend le pipeline indifférent au sens de rotation
 // choisi par le producteur de données.
 
 import earcutModule from 'earcut';

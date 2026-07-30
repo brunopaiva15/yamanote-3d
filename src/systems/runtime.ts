@@ -106,7 +106,7 @@ export const runtime = {
    * arrêtée un peu au-delà). Aucune rame ne se pose au millimètre sur son
    * 定位置 : la tolérance JR East est de ±35 cm, et le TASC en garde une
    * dizaine de centimètres. C'est ce petit décalage qu'on lit entre les portes
-   * palières et celles de la rame — sans lui, les deux baies coïncidaient
+   * palières et celles de la rame - sans lui, les deux baies coïncidaient
    * parfaitement à chaque arrêt de chaque gare, ce que rien de réel ne fait.
    *
    * Vaut `platformSlide` à quai (repère wagon) et `−trainZ` (repère gare).
@@ -130,7 +130,7 @@ export const runtime = {
    * `playerX/Z` est l'ŒIL, et l'œil oscille avec la caisse (± 2 cm à pleine
    * vitesse, `three/Player`). C'est ce qu'il faut pour les regards, le son et
    * le viseur ; c'est exactement ce qu'il ne faut pas pour décider qui a un
-   * pied dans l'encadrement d'une porte — deux centimètres d'oscillation
+   * pied dans l'encadrement d'une porte - deux centimètres d'oscillation
    * suffisaient à le faire croire de quelqu'un simplement adossé au fond de
    * l'alcôve, et à lui ouvrir le seuil en pleine course.
    */
@@ -176,7 +176,7 @@ export const runtime = {
    * RÉSERVÉ, et sans producteur : rien ne le pose aujourd'hui, parce que la
    * boucle du jeu n'a pas de rame de service. Il reste parce que les prédicats
    * de `data/melodies` sont écrits sur le contrat réel du quai, où cet état
-   * existe — et une garde qui manque coûte plus cher qu'une garde qui dort.
+   * existe - et une garde qui manque coûte plus cher qu'une garde qui dort.
    */
   outOfService: false,
   /** Arrêt terminus : autre mélodie, ou silence. Réservé comme `outOfService`. */
@@ -194,7 +194,7 @@ export const runtime = {
   /**
    * Arrêt subi en pleine voie, rare. Deux natures, et elles ne se ressemblent
    * pas (voir `kind`) : le coup de frein (急停車) et la coupure de caténaire
-   * (停電). Piloté par stationCycle, uniquement pendant la phase cruise — le
+   * (停電). Piloté par stationCycle, uniquement pendant la phase cruise - le
    * chrono de phase est gelé à l'arrêt, avancé au prorata de la vitesse
    * pendant la décélération et la reprise.
    */
@@ -205,7 +205,7 @@ export const runtime = {
      *
      * `outage` : coupure totale de la caténaire. La traction disparaît d'un
      * coup, la rame roule sur son élan quelques secondes, le conducteur la
-     * pose au frein pneumatique — et elle NE REPART PAS toute seule : la
+     * pose au frein pneumatique - et elle NE REPART PAS toute seule : la
      * E235-0 de la Yamanote n'a pas de batterie de traction (celle des
      * E235-1000 Yokosuka / Sōbu est venue après). Il faut attendre le retour
      * de la tension.

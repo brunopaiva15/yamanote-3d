@@ -8,7 +8,7 @@
 // arrêt » zh/ko, correspondances détaillées, écrans manières (téléphone,
 // sac à dos, fuite sonore des écouteurs), places prioritaires, sécurité,
 // avertissement de FERMETURE DES PORTES en fin d'arrêt, côté d'ouverture à
-// l'approche, plan du quai, et — quand une autre ligne est perturbée —
+// l'approche, plan du quai, et - quand une autre ligne est perturbée -
 // information trafic, état des autres lignes et certificat de retard.
 // Deux CanvasTexture partagées, redessinées uniquement aux changements.
 
@@ -33,7 +33,7 @@ const YAMANOTE_GREEN = '#80c241';
  *
  * Les écrans embarqués ne sont PAS des équipements de sécurité : ils ne sont
  * pas tenus par les batteries et ils tombent avant les lampes de secours. Le
- * seuil est haut pour cette raison — un panneau perd son rétroéclairage bien
+ * seuil est haut pour cette raison - un panneau perd son rétroéclairage bien
  * avant qu'un tube fluorescent ne s'éteigne.
  */
 const LCD_CUTOFF = 0.45;
@@ -234,7 +234,7 @@ function drawHeader(
 }
 
 // --- Écran droit, vue rapprochée : la grande courbe verte, refaite sur la
-// photo réelle. La bande traverse tout l'écran — elle entre par le bord bas à
+// photo réelle. La bande traverse tout l'écran - elle entre par le bord bas à
 // gauche et file GLISSER SOUS LE BANDEAU en haut à droite (elle est dessinée
 // avant lui). Les cinq prochaines gares s'y accrochent : cercle des minutes
 // sur la bande, nom en très grand à gauche, les noms de deux kanji espacés
@@ -327,7 +327,7 @@ function drawRoute(
     let name = lang === 'jp' ? st.kanji : st.romaji;
     if (lang === 'jp' && name.length === 2) name = `${name[0]}　${name[1]}`;
     // Corps dégressif vers le haut : sur la photo 東京 est le plus grand et
-    // les gares lointaines rapetissent — c'est aussi ce qui évite que les
+    // les gares lointaines rapetissent - c'est aussi ce qui évite que les
     // noms serrés du sommet ne se chevauchent.
     const SIZES_JP = [48, 38, 38, 34, 32];
     const SIZES_EN = [33, 27, 27, 24, 23];
@@ -493,7 +493,7 @@ function drawLoopMap(
     }
 
     // Nom de gare : vertical en japonais ; en anglais, romaji INCLINÉ à 45°
-    // comme sur l'afficheur — au-dessus de la rangée haute en montant vers la
+    // comme sur l'afficheur - au-dessus de la rangée haute en montant vers la
     // droite, sous la rangée basse en descendant, ancré à la station.
     g.fillStyle = '#111214';
     if (lang === 'jp') {
@@ -798,7 +798,7 @@ function drawDoorClosing(
 // C'est la vue la plus caractéristique de l'afficheur réel, et celle qui
 // manquait : à l'approche d'une gare, l'écran passe du plan de ligne au plan
 // du QUAI. On y lit où s'arrête chaque voiture par rapport aux escaliers, aux
-// ascenseurs et aux sorties — le fond passe au bleu clair, le bandeau de tête
+// ascenseurs et aux sorties - le fond passe au bleu clair, le bandeau de tête
 // à l'orange, et la rame est dessinée voiture par voiture, celle du voyageur
 // mise en évidence.
 const PLATFORM_BLUE = '#cfe4f4';
@@ -1179,7 +1179,7 @@ function drawSafetyNotice(
 
 // --- Information trafic (運行情報) ---
 // L'afficheur réel relaie les perturbations de TOUTE la région de Tokyo, pas
-// seulement de la Yamanote — c'est presque toujours une autre ligne qui est
+// seulement de la Yamanote - c'est presque toujours une autre ligne qui est
 // touchée. C'est aussi ce qui permet de rendre cet état honnêtement : notre
 // rame roule à l'heure, l'avis concerne un réseau voisin et se conclut par la
 // mention « la Yamanote circule normalement », comme en vrai.
@@ -1272,7 +1272,7 @@ function drawTrafficInfo(
 
 // --- Arrêt d'urgence (急停車) ---
 // Affiché en boucle JP/EN tant que l'arrêt d'urgence est actif : cadre rouge,
-// pastille d'alerte, motif de l'arrêt — c'est l'écran rouge du vrai afficheur
+// pastille d'alerte, motif de l'arrêt - c'est l'écran rouge du vrai afficheur
 // quand la rame elle-même est immobilisée.
 function drawEmergencyInfo(
   s: ReturnType<typeof makeScreen>,
@@ -1327,7 +1327,7 @@ function drawEmergencyInfo(
 // --- Coupure de caténaire (停電) ---
 // Le pendant du précédent, et il ne s'affiche JAMAIS pendant la coupure : une
 // dalle sans courant ne montre rien. Il n'apparaît qu'au retour de la tension,
-// pendant que la rame se relance — c'est-à-dire au moment exact où l'écran
+// pendant que la rame se relance - c'est-à-dire au moment exact où l'écran
 // rallumé a quelque chose à rattraper.
 function drawOutageInfo(
   s: ReturnType<typeof makeScreen>,
@@ -1376,7 +1376,7 @@ function drawOutageInfo(
 
 // --- État des autres lignes (他線区の運行情報) ---
 // La liste ligne par ligne du vrai afficheur : pastille de couleur, nom, et
-// statut — la ligne perturbée en ambre, les autres « 平常運転 ».
+// statut - la ligne perturbée en ambre, les autres « 平常運転 ».
 function drawLineStatus(
   s: ReturnType<typeof makeScreen>,
   index: number,
@@ -1395,7 +1395,7 @@ function drawLineStatus(
   g.fillStyle = '#ffffff';
   g.font = `bold 22px ${JP_FONT}`;
   g.textAlign = 'left';
-  g.fillText(lang === 'jp' ? '他線区の運行情報' : 'Service Status — Other Lines', 16, HEADER_H + 29);
+  g.fillText(lang === 'jp' ? '他線区の運行情報' : 'Service Status - Other Lines', 16, HEADER_H + 29);
 
   // La Yamanote d'abord, puis la ligne perturbée, puis les autres.
   const rows: { jp: string; en: string; color: string; delayed: boolean }[] = [
@@ -1525,7 +1525,7 @@ export function Screens() {
 
   useFrame((_, dt) => {
     // Une dalle LCD n'a pas de demi-teinte : son rétroéclairage tient ou il ne
-    // tient pas. Sous le seuil le panneau est NOIR — pas gris, pas en veille :
+    // tient pas. Sous le seuil le panneau est NOIR - pas gris, pas en veille :
     // éteint. C'est pour ça que le niveau est une MARCHE et non une rampe, et
     // c'est ce qui rend le décrochage lisible : les tubes du plafond
     // s'affaissent progressivement pendant que les écrans, eux, claquent.
@@ -1542,7 +1542,7 @@ export function Screens() {
     // Le rétroéclairage est revenu, l'image pas encore. Une dalle ne rallume
     // pas son contenu : elle rallume sa lampe, et le contrôleur redémarre
     // derrière. Tant que la tension n'est pas franchement établie, on peint
-    // donc du noir — sinon chaque battement de contacteur ferait réapparaître,
+    // donc du noir - sinon chaque battement de contacteur ferait réapparaître,
     // le temps d'un éclat, l'image d'avant la coupure.
     if (wasDark.current) {
       if (power < LCD_READY) {
@@ -1594,7 +1594,7 @@ export function Screens() {
     // L'arrêt d'urgence (急停車) est un événement RÉEL de la simulation
     // (stationCycle) : quand il est actif, l'écran rouge remplace toute la
     // rotation, en alternance JP/EN. La coupure de caténaire a son propre
-    // écran rouge, qu'on ne voit qu'au retour de la tension — pendant la
+    // écran rouge, qu'on ne voit qu'au retour de la tension - pendant la
     // coupure, la dalle est simplement éteinte et rien n'est dessiné.
     //
     // Les autres états dégradés de la propre ligne (retard persistant,
@@ -1613,7 +1613,7 @@ export function Screens() {
     let status: ScreenStatus;
     if (emergency.stage !== 'none') {
       status = 'next';
-      // Une coupure et un coup de frein ne s'affichent pas de la même façon —
+      // Une coupure et un coup de frein ne s'affichent pas de la même façon -
       // et surtout, la coupure ne s'affiche qu'une fois le courant revenu,
       // puisque avant cela on n'est même pas arrivé jusqu'ici.
       const kind = emergency.kind === 'outage' ? 'outage' : 'emergency';

@@ -28,8 +28,8 @@ function str(name, fallback) {
  * Tronçons descriptibles par le pipeline.
  *
  * Changer de tronçon est un changement de CONFIGURATION, pas de code : tout ce
- * qui distingue un inter-gare d'un autre — où il commence, où il finit, à
- * quelle hauteur court la voie — tient dans cette table. Le reste du pipeline
+ * qui distingue un inter-gare d'un autre - où il commence, où il finit, à
+ * quelle hauteur court la voie - tient dans cette table. Le reste du pipeline
  * n'en sait rien.
  *
  * ⚠️ Les ancrages sont les coordonnées publiées du milieu des quais Yamanote,
@@ -83,7 +83,7 @@ export const PROTOTYPE_SEGMENTS = {
       to: { lon: 139.72855, lat: 35.73147, name: '大塚 Ōtsuka (JY12)' },
     },
     sagittaMeters: 60,
-    // Tranchée à Sugamo, qui s'ouvre en arrivant à Ōtsuka — d'où le
+    // Tranchée à Sugamo, qui s'ouvre en arrivant à Ōtsuka - d'où le
     // `opensAtEnd` de SEGMENTS[10]. Le rail est donc SOUS la rue.
     railAboveGround: -6,
     groundElevation: { start: 67, end: 67 },
@@ -173,7 +173,7 @@ export const PLATEAU_CONFIG = {
     timeoutMs: num('PLATEAU_HTTP_TIMEOUT_MS', 120_000),
   },
 
-  /** Plafond de taille par chunk GLB produit (Ko) — dépassement = échec. */
+  /** Plafond de taille par chunk GLB produit (Ko) - dépassement = échec. */
   limits: {
     maxChunkKB: num('PLATEAU_MAX_CHUNK_KB', 4096),
   },
@@ -227,7 +227,7 @@ export const PLATEAU_PORTAL = {
  *
  * Aucun arrondissement n'est publié seul : PLATEAU diffuse les 23
  * arrondissements de Tokyo en un unique paquet. C'est celui-là qu'il faut,
- * quel que soit le tronçon visé — Shibuya-ku et Meguro-ku pour
+ * quel que soit le tronçon visé - Shibuya-ku et Meguro-ku pour
  * Shibuya → Ebisu, Toshima-ku pour Sugamo → Ōtsuka.
  *
  * `url` reste VIDE par défaut, et c'est délibéré : la fiche porte plusieurs
@@ -237,10 +237,10 @@ export const PLATEAU_PORTAL = {
  */
 export const DATASETS = {
   'tokyo23ku-citygml': {
-    label: '3D都市モデル（Project PLATEAU）東京都23区 — ressource CityGML',
+    label: '3D都市モデル（Project PLATEAU）東京都23区 - ressource CityGML',
     page: PLATEAU_PORTAL.tokyo23ku,
     url: str('PLATEAU_DATASET_URL', ''),
-    /** Inconnue tant que le serveur n'a pas répondu — surtout pas devinée. */
+    /** Inconnue tant que le serveur n'a pas répondu - surtout pas devinée. */
     approxSizeMB: null,
     license: 'À VÉRIFIER sur la fiche (PLATEAU diffuse généralement en CC BY 4.0)',
     attribution: '出典：国土交通省 Project PLATEAU（東京都23区 3D都市モデル）',

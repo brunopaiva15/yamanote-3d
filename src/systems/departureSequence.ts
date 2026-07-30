@@ -1,6 +1,6 @@
 // Séquence de départ quai : 発車メロディ Inner / Outer / Ōsaki secondaire.
 // La mélodie est lancée une seule fois par arrêt (departureId) et fait DEUX
-// passages entiers — l'arrêt lui a réservé exactement ce temps-là
+// passages entiers - l'arrêt lui a réservé exactement ce temps-là
 // (plannedStopMelodySounding, plus bas, et systems/stationCycle). Le chef de
 // train relâche le bouton après (interruptDepartureMelody) : le fondu referme
 // un silence. Seul un incident la coupe en vol (cancelDepartureMelody). Les
@@ -92,7 +92,7 @@ export function isDepartureBlocked(): boolean {
 }
 
 /**
- * Blocages qui exigent la réouverture de TOUTES les portes — un ordre de
+ * Blocages qui exigent la réouverture de TOUTES les portes - un ordre de
  * maintien à quai, un signal fermé, une urgence.
  *
  * `doorBlocked` n'en fait pas partie, et c'est tout l'intérêt : une porte qui
@@ -239,7 +239,7 @@ async function playMelodyRounds(path: string): Promise<boolean> {
       if (gen !== melodyCancelGen || isDepartureBlocked()) return true;
     }
     // Bus « melody » et non « platform » : même sono de quai, mais son propre
-    // niveau — les clips sont normalisés en crête et sonnaient trop fort.
+    // niveau - les clips sont normalisés en crête et sonnaient trop fort.
     const ok = await audioManager.playOnce(path, 'melody');
     if (!ok) return false;
     if (gen !== melodyCancelGen) return true;
@@ -264,7 +264,7 @@ function clearPlayingFlags(): void {
 
 /**
  * Arrête net toute 発車メロディ en cours : blocage de départ, urgence, sortie
- * de gare. Brutal par nature — ce n'est pas une coupure de chef de train mais
+ * de gare. Brutal par nature - ce n'est pas une coupure de chef de train mais
  * un incident (voir interruptDepartureMelody pour la coupure normale).
  */
 export function cancelDepartureMelody(): void {
@@ -280,7 +280,7 @@ export function cancelDepartureMelody(): void {
 
 /**
  * Coupure normale, celle du chef de train qui relâche le bouton : elle tombe à
- * la fin de la fenêtre sonore, donc APRÈS les deux passages — le fondu ne mord
+ * la fin de la fenêtre sonore, donc APRÈS les deux passages - le fondu ne mord
  * plus sur la musique, il referme le silence qui la suit. La suite de la
  * procédure (annonce, fermeture, départ) continue.
  */
@@ -689,7 +689,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   return false;
 }
 
-// La procédure complète — mélodie, puis annonce, fermetures et départ — vivait
+// La procédure complète - mélodie, puis annonce, fermetures et départ - vivait
 // aussi ici, sous `startDepartureSequence`, derrière un drapeau
 // `runtime.autonomousDepartureSequence` que personne ne posait jamais. C'était
 // un second ordonnanceur de départ, en sommeil, en face de celui de

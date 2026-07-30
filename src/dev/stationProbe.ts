@@ -1,15 +1,15 @@
 // Sonde de gare : que se traverse-t-il, réellement ?
 //
-// Le placement du mobilier arbitre des emprises AU SOL — deux rectangles en
+// Le placement du mobilier arbitre des emprises AU SOL - deux rectangles en
 // (x, z), à hauteur de marche. C'est ce qu'il faut pour que le joueur ne
 // traverse pas un banc, et c'est tout ce que ça garantit. Or l'essentiel d'une
 // gare est SUSPENDU : panneaux, potences, bannières, bandeaux, diffuseurs,
-// caméras, chemins de câbles, gouttières — posés chacun par son fichier, avec
+// caméras, chemins de câbles, gouttières - posés chacun par son fichier, avec
 // ses propres constantes, sans que personne n'arbitre. Résultat : ça
 // s'entrechoque, et aucun contrôle en deux dimensions ne peut le voir.
 //
-// Cette sonde lit le graphe de scène tel qu'il est rendu — pas des cotes
-// re-déduites — et rapporte les paires de volumes qui s'interpénètrent. Elle
+// Cette sonde lit le graphe de scène tel qu'il est rendu - pas des cotes
+// re-déduites - et rapporte les paires de volumes qui s'interpénètrent. Elle
 // est branchée en développement seulement, et s'appelle depuis la console ou
 // depuis un navigateur piloté :
 //
@@ -82,7 +82,7 @@ function collect(root: THREE.Object3D): Volume[] {
 /**
  * Profondeur d'interpénétration de deux boîtes : le plus petit des trois
  * recouvrements. Deux volumes qui se touchent par une face en partagent un nul
- * ou presque — c'est un contact, pas un choc.
+ * ou presque - c'est un contact, pas un choc.
  */
 function penetration(a: THREE.Box3, b: THREE.Box3): number {
   const dx = Math.min(a.max.x, b.max.x) - Math.max(a.min.x, b.min.x);
@@ -150,13 +150,13 @@ export function probeStation(
 /**
  * Ce que la scène coûte réellement, tel que le pilote le voit.
  *
- * Les chiffres qui comptent — appels de rendu, triangles, programmes — ne
+ * Les chiffres qui comptent - appels de rendu, triangles, programmes - ne
  * dépendent pas de la carte : on peut donc les relever sous SwiftShader et en
  * tirer un budget valable partout. Le temps par image, lui, n'y veut rien dire.
  *
  * `gl.info` se remet à zéro à chaque `render()`, et le post-traitement en
  * appelle plusieurs par image : lu naïvement, il ne rapporte que la dernière
- * passe plein écran — un appel, un triangle. On coupe donc la remise à zéro
+ * passe plein écran - un appel, un triangle. On coupe donc la remise à zéro
  * automatique et on cumule sur un nombre d'images connu.
  */
 function probePerf(
@@ -218,7 +218,7 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
    * Ce que l'œil rencontre RÉELLEMENT le long d'un rayon, dans l'ordre.
    *
    * La sonde de volumes ne voit que la gare ; or ce qui gâche une vue vient
-   * souvent d'ailleurs — la nappe de rue qui traverse une trémie, un plan de
+   * souvent d'ailleurs - la nappe de rue qui traverse une trémie, un plan de
    * tronçon qui passe devant un quai. Ici on tire un rayon et on lit la pile
    * des touches, chacune avec sa filiation complète : c'est le seul moyen de
    * nommer un intrus qui n'appartient pas à la gare.
@@ -246,7 +246,7 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   w.__probeName = () => STATIONS[useStore.getState().index].romaji;
 
   // Origines des trémies, en repère MONDE. C'est le seul endroit du décor
-  // qu'on ne peut pas juger depuis la rame — il faut y poser l'œil — et sa
+  // qu'on ne peut pas juger depuis la rame - il faut y poser l'œil - et sa
   // position change d'une gare à l'autre.
   w.__probeStairs = () =>
     scene.getObjectsByProperty('name', 'trémie').map((o) => {
@@ -260,7 +260,7 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   // `phaseT` est réglable : la progression du trajet commande la hauteur des
   // murs de tranchée (`opensAtEnd`) et l'élévation de la ville. Pouvoir s'y
   // placer est indispensable pour juger un tronçon qui s'ouvre en fin de
-  // course — regarder par la baie à p = 0,2 ne montre que le mur.
+  // course - regarder par la baie à p = 0,2 ne montre que le mur.
   w.__probeCruise = (i: number, phaseT = 8) => {
     const k = ((i % 30) + 30) % 30;
     // platformIndex aussi : c'est LUI qui choisit le tronçon (systems/segmentEnv
@@ -301,7 +301,7 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   };
 
   // Temps qu'il fait, forcé. Le modèle (systems/weather) le reprendrait à la
-  // prochaine image s'il tournait — d'où le gel de l'épisode, qui laisse la
+  // prochaine image s'il tournait - d'où le gel de l'épisode, qui laisse la
   // valeur posée telle quelle.
   w.__probeWeather = (patch: Partial<typeof weather>) => {
     Object.assign(weather, patch);
@@ -310,7 +310,7 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
 
   // Saison telle que le monde la voit : poids, phénomènes datés, palette de
   // feuillage. Une frondaison qui n'a pas la bonne couleur peut l'être parce
-  // que le calendrier se trompe ou parce que le rendu ne la relit pas — les
+  // que le calendrier se trompe ou parce que le rendu ne la relit pas - les
   // deux se distinguent ici, et nulle part ailleurs.
   w.__probeSeason = () => seasonNow();
 

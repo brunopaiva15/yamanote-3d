@@ -1,8 +1,8 @@
-// Mathématiques du tracé PLATEAU — module PUR : aucune dépendance, aucun
+// Mathématiques du tracé PLATEAU - module PUR : aucune dépendance, aucun
 // effet de bord, aucune allocation dans les fonctions appelées par frame.
 // C'est ce qui le rend testable directement avec `node --test`.
 //
-// Repère : celui du manifeste — +X est, +Y hauteur, -Z nord, une unité = un
+// Repère : celui du manifeste - +X est, +Y hauteur, -Z nord, une unité = un
 // mètre. L'axe avant du train est -Z, comme le reste du jeu (le décor défile
 // vers +z, un train qui part s'en va vers les z négatifs).
 
@@ -76,7 +76,7 @@ export function sampleRoute(points: RoutePoint[], s: number, out: RouteSample): 
   out.z = a.z + t * (b.z - a.z);
 
   // Tangente : dérivée du segment courant. Le cap est calculé à plat (pas de
-  // tangage) — le wagon reste horizontal, seule la ville tourne autour de lui.
+  // tangage) - le wagon reste horizontal, seule la ville tourne autour de lui.
   const dx = b.x - a.x;
   const dz = b.z - a.z;
   out.yaw = dx === 0 && dz === 0 ? 0 : Math.atan2(-dx, -dz);
@@ -159,7 +159,7 @@ export function progressToDistance(progress: number, totalLength: number): numbe
  *
  * Le profil est INJECTÉ plutôt qu'importé : ce module reste sans dépendance
  * (donc testable tel quel), et le jeu lui passe le vrai profil E235 de
- * systems/trainPhysics — celui-là même qui pilote la rame. Le monde PLATEAU
+ * systems/trainPhysics - celui-là même qui pilote la rame. Le monde PLATEAU
  * défile ainsi exactement à la vitesse du train, freinages compris, au lieu de
  * suivre une progression linéaire en temps qui glisserait pendant le départ.
  */

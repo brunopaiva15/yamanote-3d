@@ -1,9 +1,9 @@
-// Étape 2 — CityGML → géométrie exploitable, restreinte au corridor.
+// Étape 2 - CityGML → géométrie exploitable, restreinte au corridor.
 //
 // TROIS MOTEURS DE CONVERSION
 // ---------------------------
 //
-// `nusamai` — PLATEAU GIS Converter, l'outil officiel (MLIT / MIERUNE, MIT).
+// `nusamai` - PLATEAU GIS Converter, l'outil officiel (MLIT / MIERUNE, MIT).
 //   C'est un binaire Rust qui possède une VRAIE interface en ligne de commande,
 //   vérifiée sur le dépôt officiel :
 //       nusamai <fichiers.gml…> --sink <format> --output <chemin> [--epsg N]
@@ -13,18 +13,18 @@
 //   On lui demande le sink `geojson` : il sort des MultiPolygon 3D, ce qui
 //   suffit à ce prototype et évite de dépendre de son sink glTF.
 //
-// `custom` — n'importe quel autre convertisseur, décrit par un gabarit de
+// `custom` - n'importe quel autre convertisseur, décrit par un gabarit de
 //   commande dans PLATEAU_CONVERTER_CMD, avec les jetons {input} {output}
 //   {epsg}. Prévu pour ogr2ogr, citygml-tools ou un script maison, sans que ce
 //   dépôt ait à deviner leurs options.
 //
-// `builtin` — lecteur CityGML intégré (lib/citygml.mjs). Il lit réellement le
+// `builtin` - lecteur CityGML intégré (lib/citygml.mjs). Il lit réellement le
 //   profil bldg LOD1/LOD2 de PLATEAU, mais IGNORE LES TEXTURES et les
 //   apparences. Voir l'en-tête de lib/citygml.mjs pour la liste exacte de ses
 //   limites. C'est le moteur par défaut lorsque aucun outil externe n'est
 //   installé ; ce n'est pas un substitut complet.
 //
-// Sortie : work/plateau/converted/<nom>.buildings.json — bâtiments déjà
+// Sortie : work/plateau/converted/<nom>.buildings.json - bâtiments déjà
 // restreints au corridor, en coordonnées projetées (est, nord, hauteur).
 
 import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
@@ -51,7 +51,7 @@ const NUSAMAI_INSTALL_HINT =
   '    sudo install -m 755 nusamai /usr/local/bin/nusamai\n' +
   '  macOS (Apple Silicon) : nusamai-<version>-aarch64-apple-darwin.tar.gz\n' +
   '  Ou passez --converter builtin pour utiliser le lecteur CityGML intégré\n' +
-  '  (LOD1/LOD2 sans textures — voir docs/PLATEAU_PIPELINE.md).';
+  '  (LOD1/LOD2 sans textures - voir docs/PLATEAU_PIPELINE.md).';
 
 /** Localise le convertisseur externe demandé, ou explique comment l'installer. */
 export function detectConverter(kind) {
@@ -90,7 +90,7 @@ export async function converterVersion(converter) {
  * Détecte l'ordre des axes d'une coordonnée GeoJSON. Les convertisseurs ne
  * s'accordent pas : RFC 7946 impose (lon, lat) mais un outil configuré sur un
  * CRS japonais peut sortir (lat, lon). Plutôt que de parier, on regarde dans
- * quelle plage tombent les valeurs — sans ambiguïté au Japon
+ * quelle plage tombent les valeurs - sans ambiguïté au Japon
  * (lat 24…46, lon 122…154).
  */
 export function detectAxisOrder(sampleCoord) {
@@ -194,7 +194,7 @@ function convertWithBuiltin(gmlPath) {
 
 /**
  * Restreint au corridor et projette. Un bâtiment est conservé si SON POINT LE
- * PLUS PROCHE de l'axe est dans le corridor — pas son centre : une barre de
+ * PLUS PROCHE de l'axe est dans le corridor - pas son centre : une barre de
  * 60 m à cheval sur la limite reste visible depuis le train.
  */
 function selectAndProject(buildings, route, halfWidth) {

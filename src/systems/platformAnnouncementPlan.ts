@@ -1,4 +1,4 @@
-// Ce que la gare VA dire pendant cette attente — décidé une fois, au début.
+// Ce que la gare VA dire pendant cette attente - décidé une fois, au début.
 //
 // Le quai parlait jusqu'ici comme une horloge : quatorze secondes après le
 // départ d'une rame, l'annonce anticipée du prochain train, précédée du
@@ -11,7 +11,7 @@
 //
 // Ce module décide donc, une seule fois par rame attendue : anticipée ou non,
 // remerciement ou non, « laissez descendre » ou non, zéro, un ou deux messages
-// d'agent et lesquels. Il est PUR — pas de store, pas d'audio, pas de
+// d'agent et lesquels. Il est PUR - pas de store, pas d'audio, pas de
 // Math.random() : le tirage entre par un argument, ce qui le rend testable et,
 // surtout, reproductible (voir seededRandom). Le plan est ensuite gardé tel quel
 // jusqu'au départ de la rame : rien ne se retire à la frame suivante parce que
@@ -133,7 +133,7 @@ export function preAnnouncementChance(context: PlatformAnnouncementContext): num
   if (isMajorHub(context.stationIndex)) p += 0.05;
   // La gare a déjà une excuse de retard à faire dans ce creux : elle enchaîne
   // moins souvent sur l'anticipée (et le créneau, lui, est vérifié à la
-  // diffusion — voir fitsBeforeCutoff).
+  // diffusion - voir fitsBeforeCutoff).
   if (context.delayed) p *= 0.85;
   return clamp(p, 0.05, 0.9);
 }
@@ -156,7 +156,7 @@ export function greetingChance(context: PlatformAnnouncementContext): number {
 /**
  * Probabilité du 降りるお客さまを先に à l'ouverture des portes. Presque certain
  * sur un quai chargé, dans un hub ou en pointe ; rare dans une petite gare
- * déserte, où il n'y a personne à faire patienter — et où l'entendre quand
+ * déserte, où il n'y a personne à faire patienter - et où l'entendre quand
  * trois personnes attendent sonne faux.
  */
 export function alightFirstChance(context: PlatformAnnouncementContext): number {
@@ -180,7 +180,7 @@ export interface AgentCountWeights {
  *
  * Les trois paliers de référence : quai calme, majoritairement silencieux ;
  * quai moyen, un message ; quai chargé, un ou deux. La pointe retire de la masse
- * au silence — un agent tenu de faire circuler ne se tait pas —, un hub en
+ * au silence - un agent tenu de faire circuler ne se tait pas -, un hub en
  * pointe déplace un peu de « un » vers « deux », et le retard divise encore le
  * silence : c'est le moment où l'on parle le plus.
  */
@@ -236,7 +236,7 @@ export function agentMessageCount(
 
 /**
  * Créneau visé : pendant l'échange des voyageurs, ou juste avant la mélodie.
- * Ce n'est pas le même propos — on fait avancer dans la rame pendant qu'on
+ * Ce n'est pas le même propos - on fait avancer dans la rame pendant qu'on
  * monte, on décourage le saut dans les portes quand elles vont se fermer.
  */
 export type AgentMessageSlot = 'exchange' | 'pre-melody';
@@ -255,7 +255,7 @@ const SLOT_AFFINITY = 2.5;
  * Trois filtres, dans cet ordre : l'affluence minimale (demander d'avancer vers
  * le milieu de la voiture à trois personnes n'a aucun sens), la réserve aux
  * heures de pointe, et l'exclusion des catégories déjà retenues ailleurs dans le
- * plan — c'est ce qui empêche « laissez descendre » de passer deux fois au même
+ * plan - c'est ce qui empêche « laissez descendre » de passer deux fois au même
  * arrêt.
  */
 export function agentMessageWeights(
@@ -351,7 +351,7 @@ export function createPlatformAnnouncementPlan(
 /**
  * Quand la gare REGARDE si elle a quelque chose à dire. Ce ne sont plus des
  * rendez-vous : à chacun de ces instants, le plan est consulté et le créneau
- * vérifié — il ne sort quelque chose que si le plan l'a retenu et si ça tient.
+ * vérifié - il ne sort quelque chose que si le plan l'a retenu et si ça tient.
  *
  * Les instants du creux (`delayAt`, `preAnnounceAt`…) sont en secondes depuis le
  * départ de la rame précédente ; ceux de l'arrêt (`agentExchangeAt`,
@@ -387,7 +387,7 @@ export const ANNOUNCEMENT_MARGIN = 1.5;
  *
  * `queueSeconds` est ce que la sono a encore à dire (systems/speech.
  * speechQueueRemaining), `clipSeconds` la durée du message, `secondsUntilCutoff`
- * le temps qui reste avant l'annonce prioritaire — la mélodie, l'annonce de
+ * le temps qui reste avant l'annonce prioritaire - la mélodie, l'annonce de
  * fermeture, l'annonce d'approche. Faux → on ABANDONNE le message : le repousser
  * le ferait sortir après le moment où il voulait dire quelque chose.
  */
@@ -408,7 +408,7 @@ export function fitsBeforeCutoff(
  * Les deux conditions ne se séparent pas, et c'est le seul endroit où elles sont
  * écrites : « laissez descendre » comme les consignes d'agent passent par ici
  * (systems/stationPa). Un message retenu par le plan mais joué trop tard est
- * exactement aussi faux qu'un message que le plan n'avait pas retenu — 「降りる
+ * exactement aussi faux qu'un message que le plan n'avait pas retenu - 「降りる
  * お客さまを先にお通しください」 lancé sur la mélodie ne fait plus descendre
  * personne.
  */

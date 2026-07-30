@@ -1,9 +1,9 @@
-// JY07 日暮里 — l'immense corridor ferroviaire.
+// JY07 日暮里 - l'immense corridor ferroviaire.
 //
 // Ce qui fait Nippori n'est pas un bâtiment, c'est une largeur : un faisceau de
 // voies JR, Keisei et Nippori–Toneri, et de grands ponts-concours qui
 // l'enjambent d'un seul tenant. Depuis le quai on ne voit pas un mur mais une
-// perspective — des rails jusqu'au bord du champ, et par-dessus, la sous-face
+// perspective - des rails jusqu'au bord du champ, et par-dessus, la sous-face
 // d'une passerelle.
 
 import * as THREE from 'three';

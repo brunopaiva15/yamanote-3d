@@ -1,6 +1,6 @@
 // Apparence des PNJ : un descripteur riche par voyageur, généré de façon
 // déterministe (rng mulberry32 par id) pour une foule tokyoïte crédible et
-// stable — silhouettes, corpulences, habits (haut ET bas indépendants),
+// stable - silhouettes, corpulences, habits (haut ET bas indépendants),
 // coiffures et accessoires variés. Consommé par three/Passengers (géométrie)
 // et textures/procedural (visage).
 //

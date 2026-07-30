@@ -3,13 +3,13 @@
 // Trois tuiles, toutes exprimées EN MÈTRES et non en fraction de bâtiment :
 // le nuanceur calcule l'UV dans l'espace monde local de chaque instance, si
 // bien qu'un étage fait trois mètres sur une tour de cinquante comme sur une
-// échoppe de six. C'est ce qui fait qu'un bâtiment a une taille — un motif
+// échoppe de six. C'est ce qui fait qu'un bâtiment a une taille - un motif
 // étiré sur toute une façade, lui, se lit comme du papier peint.
 //
 // Ce sont des DataTexture et non des CanvasTexture, à dessein : le canal alpha
 // ne porte pas de la transparence mais des MASQUES (aléa d'allumage des
 // fenêtres, bandeaux de devanture, néons), et un canvas 2D stocke ses pixels en
-// alpha prémultiplié — un alpha nul y écraserait la couleur.
+// alpha prémultiplié - un alpha nul y écraserait la couleur.
 
 import * as THREE from 'three';
 import { rng } from './procedural';
@@ -77,7 +77,7 @@ function toTexture(data: Uint8Array, W: number, H: number): THREE.DataTexture {
  * Le RGB est une MODULATION (il multiplie la teinte d'instance, propre au
  * quartier) : mur clair, meneaux et nez de dalle plus sourds, vitrage bleuté.
  * L'alpha porte, pour chaque vitrage, un tirage stable qui décide de l'ordre
- * d'allumage à la tombée du jour — les fenêtres s'allument par paquets au fil
+ * d'allumage à la tombée du jour - les fenêtres s'allument par paquets au fil
  * de la soirée au lieu de basculer toutes ensemble.
  */
 export function makeFacadeTexture(): THREE.DataTexture {
@@ -138,7 +138,7 @@ export const GROUND_TILE = 40;
 /**
  * Sol urbain vu d'en haut, entre les bâtiments : parcelles, cours, petites
  * toitures, ruelles. C'est ce qui remplace la nappe de béton uniforme de
- * cent soixante mètres qui courait sous toute la ville — la seule surface
+ * cent soixante mètres qui courait sous toute la ville - la seule surface
  * assez large pour ruiner à elle seule l'illusion de profondeur.
  *
  * Rien de directionnel : les rues du ruban sont engendrées à part et ne
@@ -150,7 +150,7 @@ export function makeCityGroundTexture(): THREE.DataTexture {
   const r = rng(0x6c0117);
   rect(d, S, S, 0, 0, S, S, 92, 91, 88, 255); // enrobé de fond
 
-  // Parcelles : dalles, cours, petites toitures. Les tons restent proches —
+  // Parcelles : dalles, cours, petites toitures. Les tons restent proches -
   // c'est la fragmentation qui compte, pas le contraste.
   for (let i = 0; i < 46; i++) {
     const w = 12 + Math.floor(r() * 46);
@@ -191,7 +191,7 @@ export function makeCityGroundTexture(): THREE.DataTexture {
 /**
  * Panneau lumineux : écran géant s'il est étalé, enseigne verticale s'il est
  * dressé. Une seule tuile pour les deux, parce que ce qui les distingue est
- * leur PROPORTION, pas leur graphisme — un écran de Shibuya vu d'un train,
+ * leur PROPORTION, pas leur graphisme - un écran de Shibuya vu d'un train,
  * c'est une grille de cellules colorées ; une enseigne de Shin-Ōkubo, la même
  * grille étirée en hauteur.
  *
@@ -229,7 +229,7 @@ export function makeSignageTexture(): THREE.DataTexture {
  */
 export function makeSocleTexture(): THREE.DataTexture {
   const W = 256; // 8 m
-  const H = 96; // 3 m — la ligne 0 est AU SOL (DataTexture ne retourne pas V).
+  const H = 96; // 3 m - la ligne 0 est AU SOL (DataTexture ne retourne pas V).
   const d = new Uint8Array(W * H * 4);
   const r = rng(0x50c1e);
   rect(d, W, H, 0, 0, W, H, 132, 128, 123, 0);

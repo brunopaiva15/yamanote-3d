@@ -1,7 +1,7 @@
 // Ce qu'on dit sans qu'on vous ait rien demandé.
 //
 // Toutes les entrées d'ici portent un `trigger` autre que `ask` : elles ne
-// sortent jamais du tirage ordinaire, seulement quand le monde les provoque —
+// sortent jamais du tirage ordinaire, seulement quand le monde les provoque -
 // on a bousculé quelqu'un, un voisin vient de s'étaler, le joueur s'assoit à
 // côté, la rame arrive en gare.
 //
@@ -11,7 +11,7 @@
 import type { DialogueEntry } from './types';
 
 export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
-  // ——— Bousculade ———
+  // --- Bousculade ---
   {
     id: 'ev.bump.polite',
     when: { trigger: 'bump' },
@@ -97,15 +97,15 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
     lines: [
       {
         t: {
-          fr: 'Oh — pardon, pardon. Je ne sais jamais de quel côté me pousser.',
-          en: 'Oh — sorry, sorry. I never know which way to move.',
+          fr: 'Oh - pardon, pardon. Je ne sais jamais de quel côté me pousser.',
+          en: 'Oh - sorry, sorry. I never know which way to move.',
           ja: 'あ、すみません。どっちに避ければいいのかいつも分からなくて。',
         },
       },
     ],
   },
 
-  // ——— Quelqu'un est tombé ———
+  // --- Quelqu'un est tombé ---
   {
     id: 'ev.fall.concern',
     when: { trigger: 'fallNearby' },
@@ -160,7 +160,7 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Le joueur vient de monter / descendre ———
+  // --- Le joueur vient de monter / descendre ---
   {
     id: 'ev.board.welcome',
     when: { trigger: 'boarding' },
@@ -230,7 +230,7 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Le joueur s'assoit à côté ———
+  // --- Le joueur s'assoit à côté ---
   {
     id: 'ev.sat.hello',
     when: { trigger: 'satDown' },
@@ -285,7 +285,7 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— On passe simplement à côté ———
+  // --- On passe simplement à côté ---
   {
     id: 'ev.pass.excuse',
     when: { trigger: 'passby' },
@@ -294,7 +294,7 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
       {
         t: {
           fr: 'Pardon, je vous laisse passer.',
-          en: 'Sorry — after you.',
+          en: 'Sorry - after you.',
           ja: 'あ、どうぞお先に。',
         },
       },
@@ -340,7 +340,7 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Arrivée en gare ———
+  // --- Arrivée en gare ---
   {
     id: 'ev.arr.here',
     when: { trigger: 'arrival' },
@@ -408,7 +408,7 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Second souffle : de quoi ne pas se répéter ———
+  // --- Second souffle : de quoi ne pas se répéter ---
   //
   // Un déclencheur qui n'aurait que deux ou trois répliques se ferait
   // reconnaître dès le deuxième trajet. Ce bloc-ci n'est conditionné à rien :
@@ -575,8 +575,8 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
     lines: [
       {
         t: {
-          fr: 'Ah — non, rien. Je vous ai pris pour quelqu’un.',
-          en: 'Ah — no, nothing. I mistook you for someone.',
+          fr: 'Ah - non, rien. Je vous ai pris pour quelqu’un.',
+          en: 'Ah - no, nothing. I mistook you for someone.',
           ja: 'あ、いえ。人違いでした。',
         },
       },
@@ -648,7 +648,7 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Arrêt d'urgence : la peur ———
+  // --- Arrêt d'urgence : la peur ---
   //
   // Deux temps, et le catalogue les distingue par `moving` :
   //
@@ -935,7 +935,7 @@ export const DIALOGUE_EVENTS: readonly DialogueEntry[] = [
   //
   // Un coup de frein s'annonce par une secousse : on se raccroche, on a peur,
   // on le dit tout de suite. Une coupure de courant n'a rien à rattraper. Ce
-  // qui se remarque, c'est ce qui MANQUE — le chant de l'onduleur, le souffle
+  // qui se remarque, c'est ce qui MANQUE - le chant de l'onduleur, le souffle
   // de la clim, les écrans au-dessus des portes. La première réplique d'une
   // coupure n'est donc jamais « qu'est-ce qui se passe ?! » mais quelque chose
   // de plus bas, de plus lent, et souvent un simple constat.

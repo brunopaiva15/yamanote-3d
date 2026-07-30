@@ -2,13 +2,13 @@
 //
 //   node scripts/scenery-cost.mjs
 //
-// Les chiffres relevés — appels de rendu, triangles, programmes — ne dépendent
+// Les chiffres relevés - appels de rendu, triangles, programmes - ne dépendent
 // pas de la carte graphique : on peut donc les prendre sous SwiftShader et en
 // tirer un budget valable partout. Le temps par image, lui, n'y voudrait rien
 // dire, et n'est pas relevé.
 //
 // Deux points de mesure par palier : en pleine voie (le décor seul) et à quai
-// (la gare, la foule et l'extérieur de la rame s'ajoutent) — c'est là que la
+// (la gare, la foule et l'extérieur de la rame s'ajoutent) - c'est là que la
 // scène est la plus lourde.
 
 import { chromium } from 'playwright';

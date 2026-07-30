@@ -1,4 +1,4 @@
-// Inspection de GLB/glTF : squelette, clips, matériaux, hauteur, triangles —
+// Inspection de GLB/glTF : squelette, clips, matériaux, hauteur, triangles -
 // pour vérifier ce qu'un pack de personnages contient et comment la détection
 // floue (os/clips) le comprend, avant import.
 //
@@ -201,7 +201,7 @@ async function extract(doc, name, dest) {
 
   // Mise à l'échelle du jeu : 1 unité = 1 mètre, plancher à y = 0, module
   // centré en X et Z. Un modèle de référence sert de calque par-dessus le
-  // wagon procédural — il doit se charger sans facteur magique.
+  // wagon procédural - il doit se charger sans facteur magique.
   const raw = worldPositions(doc);
   const rx0 = range(raw.map((p) => p[0]));
   const factor = bodyWidth / (rx0.max - rx0.min);

@@ -7,13 +7,13 @@
 //
 // La condition `station` vaut pour la gare vers laquelle on roule COMME pour
 // celle dont le quai est là (voir data/dialogue/types) : la même réplique
-// sert donc à l'approche et à l'arrêt. Les index suivent STATIONS —
+// sert donc à l'approche et à l'arrêt. Les index suivent STATIONS -
 // 0 = JY01 Tokyo, 29 = JY30 Yūrakuchō.
 
 import type { DialogueEntry } from './types';
 
 export const DIALOGUE_PLACES: readonly DialogueEntry[] = [
-  // ——— Les trente gares ———
+  // --- Les trente gares ---
   {
     id: 'pl.tokyo',
     when: { station: [0] },
@@ -634,7 +634,7 @@ export const DIALOGUE_PLACES: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Le quai ———
+  // --- Le quai ---
   {
     id: 'pl.plat.line',
     when: { place: 'platform' },

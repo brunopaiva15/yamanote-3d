@@ -1,4 +1,4 @@
-// Étape 5 — validation des livrables publiés dans public/world/plateau/.
+// Étape 5 - validation des livrables publiés dans public/world/plateau/.
 //
 // Ne suppose rien de l'étape précédente : lit le manifeste sur le disque, tel
 // que le navigateur le lira, et vérifie tout ce qui pourrait faire échouer le
@@ -14,7 +14,7 @@ import { makeIO, describe } from './lib/glb.mjs';
 
 const PUBLIC_DIR = join(PLATEAU_CONFIG.paths.root, 'public');
 
-/** Un `url` de manifeste doit rester sous public/ — jamais d'échappée. */
+/** Un `url` de manifeste doit rester sous public/ - jamais d'échappée. */
 export function resolvePublicUrl(url) {
   if (typeof url !== 'string' || url.length === 0) {
     throw new PipelineError(`URL de chunk vide ou absente dans le manifeste.`);
@@ -59,7 +59,7 @@ export function validateRoute(route) {
  *
  * `src/systems/plateau.ts` porte une constante, le manifeste porte une valeur
  * produite : rien ne les relie à la compilation, et un monde publié pour un
- * tronçon que le jeu cherche ailleurs sur la boucle ne se verrait jamais — sans
+ * tronçon que le jeu cherche ailleurs sur la boucle ne se verrait jamais - sans
  * la moindre erreur. On lit donc la constante et on compare.
  */
 export function readGameSegment(source) {
@@ -173,7 +173,7 @@ export async function validate(reporter) {
     try {
       stats = describe(await io.read(file));
     } catch (err) {
-      problems.push(`${chunk.id} : GLB final invalide — ${err.message}`);
+      problems.push(`${chunk.id} : GLB final invalide - ${err.message}`);
       continue;
     }
     totalTriangles += stats.triangles;
@@ -186,7 +186,7 @@ export async function validate(reporter) {
     }
     reporter.step(
       `${chunk.id} : ${humanBytes(size)}, ${stats.triangles} triangles, ` +
-        `${stats.materials} matériau(x), rayon ${chunk.boundingRadius} m — OK`,
+        `${stats.materials} matériau(x), rayon ${chunk.boundingRadius} m - OK`,
     );
   }
 

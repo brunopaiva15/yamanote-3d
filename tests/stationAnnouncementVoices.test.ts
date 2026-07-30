@@ -2,7 +2,7 @@
 //
 // Deux automates se répondent sur un îlot central : le 内回り est une femme, le
 // 外回り un homme. C'est la seule chose qui dise, sans lever les yeux, lequel des
-// deux quais vient d'annoncer — donc de quel côté se tourner. Une annonce qui
+// deux quais vient d'annoncer - donc de quel côté se tourner. Une annonce qui
 // retomberait sur la voix de l'autre sens ne se verrait nulle part dans le code
 // et s'entendrait immédiatement en jeu, d'où ce test.
 //

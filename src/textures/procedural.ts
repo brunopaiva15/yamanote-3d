@@ -409,7 +409,7 @@ export function makePriorityBadgeTexture(): THREE.CanvasTexture {
 
 // Teintes des sols d'about, partagées avec three/Car.tsx : la portion qui
 // passe sous les banquettes est unie, seule la partie dégagée porte le
-// marquage — sinon le texte se retrouve caché sous les sièges.
+// marquage - sinon le texte se retrouve caché sous les sièges.
 export const PRIORITY_FLOOR_COLOR = '#d81f1a';
 export const FREE_FLOOR_COLOR = '#e2197f';
 
@@ -909,12 +909,12 @@ function drawTiledRoof(g: CanvasRenderingContext2D, x: number, bw: number, bh: n
 // Dessine la ville d'un quartier dans un contexte fourni (réutilisable : les
 // banques de three/city/SkyDome re-dessinent dans leur canvas, sans allocation).
 //
-// INVARIANT DU FONDU JOUR/NUIT — À NE JAMAIS ROMPRE : pour un quartier+couche
+// INVARIANT DU FONDU JOUR/NUIT - À NE JAMAIS ROMPRE : pour un quartier+couche
 // donné, les appels day (night=false) et night (night=true) doivent produire
 // EXACTEMENT la même séquence de tirages r() et les mêmes branches. `night` ne
 // change QUE des couleurs (fillStyle), jamais un r() ni un embranchement qui
 // modifie le nombre de dessins. (Les features viennent du quartier, identiques
-// entre jour et nuit d'un même quartier — elles ne cassent donc pas l'invariant.)
+// entre jour et nuit d'un même quartier - elles ne cassent donc pas l'invariant.)
 export function drawCityInto(
   g: CanvasRenderingContext2D,
   layer: 0 | 1 | 2,
@@ -975,7 +975,7 @@ export function drawCityInto(
         : `rgba(226,206,196,${layer === 1 ? 0.35 : 0.6})`;
       g.fillRect(x, H - bh, bw, bh);
     }
-    // Toit en tuiles (vieux quartiers / temples) — bâtiments bas.
+    // Toit en tuiles (vieux quartiers / temples) - bâtiments bas.
     if (temple && layer < 2 && bh < H * 0.5) {
       drawTiledRoof(g, x, bw, bh, H, night);
     }
@@ -1125,7 +1125,7 @@ export function makeCityTexture(layer: 0 | 1 | 2, night = false, district: Distr
  * caler `repeat.y` et `offset.y` dessus : c'est la surface la plus proche et la
  * plus rapide du champ, donc celle où un défilement faux se voit le plus.
  *
- * Elle défilait justement à 1,67× la vitesse du train — `repeat.set(2, 24)` sur
+ * Elle défilait justement à 1,67× la vitesse du train - `repeat.set(2, 24)` sur
  * un plan de 400 m fait une tuile tous les 16,7 m, mais `offset.y` avançait
  * d'une tuile tous les 10 m. Le même mensonge que celui des plans de ville.
  */
@@ -1138,7 +1138,7 @@ export const TRACK_BED_WIDTH = 10;
  *
  * Les cotes sont réelles et exprimées en mètres : traverses de 2,40 m tous les
  * 65 cm, écartement de 1 435 mm, caniveaux à câbles en rive. C'est le caniveau
- * qui court le long de toute voie japonaise, et c'est ce qui manquait le plus —
+ * qui court le long de toute voie japonaise, et c'est ce qui manquait le plus -
  * la seule ligne continue que l'œil peut suivre à quatre-vingt-dix.
  */
 export function makeGroundTexture(): THREE.CanvasTexture {
@@ -1659,7 +1659,7 @@ export function drawAdInto(
 // --- Nakazuri (中吊り) : l'affiche suspendue au milieu du wagon ---
 // Proportions relevées sur photos : la bannière est BEAUCOUP plus large que
 // haute, de l'ordre de trois fois. C'est une planche unique en travers du
-// wagon, pas une affiche de format B3 — celles-là sont portrait et se posent
+// wagon, pas une affiche de format B3 - celles-là sont portrait et se posent
 // ailleurs. On rend donc un visuel continu, avec la réserve blanche de tête où
 // mordent les pinces, et un bandeau de pied qui porte la mention légale, comme
 // sur les campagnes qui prennent toute la largeur.
@@ -1752,7 +1752,7 @@ export function makeAdTexture(seed: number, portrait: boolean, bold = false): TH
 // Le contenu est celui des règles réelles de JR East, dont dépend aussi
 // systems/petCarriers : l'animal entièrement enfermé, la somme des trois cotes
 // sous 120 cm, le poids total sous 10 kg, et le billet « bagage à main » à
-// 290 ¥. Le DESSIN, lui, est original — pictogrammes construits ici au trait,
+// 290 ¥. Le DESSIN, lui, est original - pictogrammes construits ici au trait,
 // comme le reste des visuels du jeu, sans rien reprendre d'une affiche
 // existante (même principe que les mélodies de départ).
 
@@ -1889,7 +1889,7 @@ function carrierIcon(g: CanvasRenderingContext2D, x: number, y: number, w: numbe
   g.stroke();
 }
 
-/** Chien tenu en laisse — interdit à l'intérieur des portiques. */
+/** Chien tenu en laisse - interdit à l'intérieur des portiques. */
 function leashIcon(g: CanvasRenderingContext2D, x: number, y: number, w: number): void {
   dogSide(g, x, y + w * 0.14, w * 0.72);
   g.strokeStyle = MP_RED;
@@ -2009,7 +2009,7 @@ function drawMannersPoster(g: CanvasRenderingContext2D, W: number, H: number): v
   );
 
   // Pied de page réglementaire. Sur une colonne étroite, les trois règles
-  // tiennent en trois lignes — mais à une SEULE taille, calée sur la plus
+  // tiennent en trois lignes - mais à une SEULE taille, calée sur la plus
   // longue : ajustées ligne à ligne, la plus courte ressortait deux fois plus
   // grosse que les autres.
   const rules = ['3辺の和 120cm以内', '10kg以内', '手回り品きっぷ 290円'];
@@ -2086,7 +2086,7 @@ function drawMannersPoster(g: CanvasRenderingContext2D, W: number, H: number): v
 }
 
 /**
- * Affiche de manières « animaux » — glissée dans les pools publicitaires en un
+ * Affiche de manières « animaux » - glissée dans les pools publicitaires en un
  * exemplaire, pour qu'on la croise de temps en temps sans qu'elle devienne le
  * papier peint du réseau. Les dimensions sont celles du SUPPORT, en pixels :
  * l'affiche s'y compose, elle ne s'y étire pas.
@@ -2497,7 +2497,7 @@ export function makeStationSign(): {
 //
 // Le totem affichait la texture du caisson suspendu : une image de 1400 × 420
 // dessinée pour une face de 3,20 × 0,96 m, plaquée sur une face haute et
-// étroite. Un rapport de 3,33:1 écrasé dans un cadre de 1:3 — le cercle de
+// étroite. Un rapport de 3,33:1 écrasé dans un cadre de 1:3 - le cercle de
 // l'emblème sortait en ellipse et la bande verte en deux pavés illisibles.
 //
 // Mais la plaque de poteau n'est pas le grand panneau recadré : c'est un objet
@@ -2513,7 +2513,7 @@ export function makeStationSign(): {
 // Ce qui y figure, de haut en bas : un rectangle vert de couleur de ligne, le
 // nom en HIRAGANA écrit verticalement, le badge trigramme + numéro de gare, le
 // romaji, puis les graphies chinoise et coréenne. Le nom en kana est le dernier
-// endroit où JR East a gardé cette graphie — les caissons suspendus sont passés
+// endroit où JR East a gardé cette graphie - les caissons suspendus sont passés
 // au kanji (あきはばら → 秋葉原), les plaques de poteau non, et la réplique
 // officielle de Tokyo se vend sous le nom « とうきょう ». Le badge de gare, lui,
 // est bien là : la numérotation de 2016 a été portée sur les plaques comme sur
@@ -2549,7 +2549,7 @@ export function makeTotemSign(): {
     // glyphe est calibré sur la LARGEUR de la tôle, pas sur la hauteur restante :
     // c'est le plafond du pas qui joue, et les noms courts (かんだ, trois
     // caractères) respirent au lieu de s'étirer. Seuls les noms longs passent
-    // sous le plafond — たかなわげーとうぇい en compte dix.
+    // sous le plafond - たかなわげーとうぇい en compte dix.
     const top = 190;
     const bottom = 716;
     const chars = [...st.kana];
@@ -2574,7 +2574,7 @@ export function makeTotemSign(): {
     });
     g.textBaseline = 'alphabetic';
 
-    // Badge trigramme + numéro de gare — le même que sur le caisson suspendu,
+    // Badge trigramme + numéro de gare - le même que sur le caisson suspendu,
     // à l'échelle de la plaque.
     drawStationCodeBadge(g, (W - 124) / 2, 736, 124, st.code, st.jy);
 
@@ -2596,8 +2596,8 @@ export function makeTotemSign(): {
 //
 // Un totem autonome de quai ne porte PAS de plaque de nom de gare : celle-là
 // est vissée sur les poteaux de charpente, qui sont ce que 柱型駅名標 désigne
-// littéralement. Le totem porte l'orientation — par où sortir, vers quelles
-// lignes on change — et c'est ce qui manquait au quai une fois la plaque
+// littéralement. Le totem porte l'orientation - par où sortir, vers quelles
+// lignes on change - et c'est ce qui manquait au quai une fois la plaque
 // remise à sa place. Mêmes données que les panneaux suspendus (stationExits,
 // TRANSFERS), autre format : une colonne, lue de près et debout.
 export function makeTotemGuide(): {
@@ -2613,7 +2613,7 @@ export function makeTotemGuide(): {
     const st = STATIONS[index];
     const exits = stationExits(index);
     const tr = TRANSFERS[st.jy];
-    // Une gare sans correspondance notable — 鶯谷, 目白 — ne porte pas une
+    // Une gare sans correspondance notable - 鶯谷, 目白 - ne porte pas une
     // section のりかえ vide : elle porte l'orientation par direction, qui est
     // l'autre moitié de ce qu'on cherche sur un totem.
     const lines = tr
@@ -2719,7 +2719,7 @@ type Run = { text: string; px: number };
  *
  * C'est ce qui donne au 約N分後 sa physionomie d'afficheur : le chiffre est
  * deux fois plus haut que le 約 et le 分後 qui l'encadrent, et les trois
- * restent solidaires. Les tailles sont alignées sur le PLUS GRAND morceau —
+ * restent solidaires. Les tailles sont alignées sur le PLUS GRAND morceau -
  * une ligne de kana seuls ne se centre pas comme une ligne à gros chiffre.
  */
 function drawRuns(
@@ -2757,7 +2757,7 @@ function drawRuns(
  * Côté d'une diode, en pixels du canvas.
  *
  * C'est la seule cote qui décide de la finesse de la matrice. À 3, un chiffre
- * de 66 px tient sur vingt-deux diodes et un kanji de 50 px sur seize — la
+ * de 66 px tient sur vingt-deux diodes et un kanji de 50 px sur seize - la
  * définition des vraies matrices JR, dont les polices sont dessinées sur des
  * grilles de 16 points.
  */
@@ -2804,7 +2804,7 @@ function etaRuns(eta: BoardEta, english: boolean): Run[] {
 
 /**
  * Le tableau des départs, tel qu'on le lit sur un quai de la Yamanote depuis
- * 2020 : DEUX rames, l'une sous l'autre, et pour chacune la même phrase —
+ * 2020 : DEUX rames, l'une sous l'autre, et pour chacune la même phrase -
  * la ligne, dans combien de temps, et vers où.
  *
  *     山手線　約2分後　東京・上野方面
@@ -2830,7 +2830,7 @@ export function makePlatformBoard(): {
   const texture = toTexture(c);
   // Toile réduite où la matrice à LED est réellement tramée : une diode y vaut
   // un pixel. Le texte y est rasterisé à CETTE définition, puis rendu au bloc
-  // près sur le tableau — c'est ce qui donne aux lettres leurs marches
+  // près sur le tableau - c'est ce qui donne aux lettres leurs marches
   // d'escalier, là où une trame posée par-dessus du texte lisse laissait les
   // courbes intactes entre les diodes.
   const dotW = Math.ceil(W / LED_CELL);
@@ -3157,7 +3157,7 @@ export function makeTransferSign(): {
 //
 // Grand aplat uguisu, numéro de voie en réserve blanche, badge JY, 山手線 avec
 // le sens de la boucle, et la chaîne des gares desservies terminée par 方面.
-// C'est ce panneau — pas l'affiche de sortie — qu'on voit en premier sur les
+// C'est ce panneau - pas l'affiche de sortie - qu'on voit en premier sur les
 // photos de quai, et il manquait complètement.
 
 export function makePlatformNumberSign(): {
@@ -3171,8 +3171,8 @@ export function makePlatformNumberSign(): {
   const GREEN = '#7dbe3c';
 
   // Le caisson se raccourcit sur les quais étroits (voir OverheadSigns) : le
-  // dessin se fait dans un repère PROPORTIONNÉ à l'affichage — L px de large
-  // pour 300 de haut, ramenés au canvas par une échelle horizontale — sinon
+  // dessin se fait dans un repère PROPORTIONNÉ à l'affichage - L px de large
+  // pour 300 de haut, ramenés au canvas par une échelle horizontale - sinon
   // toute la composition s'écrasait avec lui. Sous ~2,6 m, la mise en page
   // passe en version courte : mêmes numéro et badge, chaîne des gares réduite.
   const redraw = (index: number, dir: LoopDirection, width = 3.24) => {
@@ -3261,8 +3261,8 @@ export function makePlatformNumberSign(): {
 //
 // Les petits équipements réglementaires qu'on ne remarque qu'en leur absence :
 // bouton d'arrêt d'urgence, armoire technique, téléphone ferroviaire, repères
-// de voiture peints au sol. Aucun ne change d'une gare à l'autre — ce sont des
-// modèles JR standard — donc chaque texture est faite une fois pour la session.
+// de voiture peints au sol. Aucun ne change d'une gare à l'autre - ce sont des
+// modèles JR standard - donc chaque texture est faite une fois pour la session.
 
 /** Repère de voiture peint au sol, sous les pieds : 「N号車」 et 乗車位置. */
 export function makeCarMarkTexture(car: number): THREE.CanvasTexture {

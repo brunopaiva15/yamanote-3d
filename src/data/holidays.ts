@@ -5,7 +5,7 @@
 // monde avance les jours d'elle-même : au 1er janvier 2028, les seize fériés de
 // l'année auraient disparu sans un mot. `morningMatrixFactor` aurait pris la
 // colonne du jour ouvrable au lieu de celle du dimanche, et le remplissage
-// annoncé aurait sauté d'environ 0,35 à 1,0 — un 元日 rendu comme un mardi de
+// annoncé aurait sauté d'environ 0,35 à 1,0 - un 元日 rendu comme un mardi de
 // pointe. Un tableau qui périme est une bombe à retardement silencieuse ; la loi,
 // elle, ne périme pas.
 //
@@ -14,7 +14,7 @@
 // スポーツの日) :
 //
 //   • les fériés à date fixe ;
-//   • les « Happy Monday » — 成人の日, 海の日, 敬老の日, スポーツの日 — posés sur
+//   • les « Happy Monday » - 成人の日, 海の日, 敬老の日, スポーツの日 - posés sur
 //     le n-ième lundi de leur mois ;
 //   • les deux équinoxes, qui ne sont pas des dates mais des instants
 //     astronomiques : le gouvernement les publie chaque février pour l'année
@@ -88,7 +88,7 @@ function statutoryHolidays(year: number): { month: number; day: number }[] {
   ];
 }
 
-/** Quantième absolu (jours depuis l'époque UTC) — pour les voisinages de dates. */
+/** Quantième absolu (jours depuis l'époque UTC) - pour les voisinages de dates. */
 function dayNumber(year: number, month: number, day: number): number {
   return Math.round(Date.UTC(year, month - 1, day) / 86400000);
 }
@@ -124,7 +124,7 @@ function computeYear(year: number): Set<string> {
   }
 
   // 国民の休日 : un jour ordinaire encadré par deux fériés en devient un. La
-  // règle porte sur les fériés NOMMÉS, pas sur les reports — d'où `named`.
+  // règle porte sur les fériés NOMMÉS, pas sur les reports - d'où `named`.
   for (const n of [...named]) {
     if (named.has(n + 2) && !observed.has(n + 1)) {
       const d = fromDayNumber(n + 1);
@@ -157,7 +157,7 @@ export function japaneseHolidaysFor(year: number): Set<string> {
  * Ce jour-là est-il férié au Japon ?
  *
  * Hors du domaine de la formule des équinoxes, on répond non plutôt que de
- * rendre une date fausse — mais la boucle ne se joue pas en 1850.
+ * rendre une date fausse - mais la boucle ne se joue pas en 1850.
  */
 export function isHoliday(date: { year: number; month: number; day: number }): boolean {
   if (date.year < HOLIDAY_YEAR_MIN || date.year > HOLIDAY_YEAR_MAX) return false;

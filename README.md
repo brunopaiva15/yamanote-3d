@@ -1,9 +1,9 @@
-# Yamanote 3D — 山手線
+# Yamanote 3D - 山手線
 
 Expérience web contemplative et passive : vous êtes passager d'une rame JR East
 série E235 sur la ligne Yamanote (Tokyo, boucle de 30 stations). Aucun objectif,
 aucun score : on marche dans le wagon, on s'assoit, on regarde la ville défiler,
-on écoute les annonces et les mélodies — et, si on s'arrête devant quelqu'un, on
+on écoute les annonces et les mélodies - et, si on s'arrête devant quelqu'un, on
 l'écoute parler. La boucle tourne indéfiniment, en temps
 quasi réel (environ 1 à 3 minutes par tronçon selon la gare, ~67 minutes la boucle).
 
@@ -25,15 +25,15 @@ npm test         # node:test
 - Marcher : ZQSD, WASD ou les flèches ; Maj pour presser le pas
 - S'asseoir : un clic net vers une place libre (ou le bouton du HUD) une fois
   le regard capturé ; se lever : espace, un nouveau clic, ou le bouton du HUD
-- **Descendre / remonter : marcher à travers une porte ouverte.** Aucune touche —
+- **Descendre / remonter : marcher à travers une porte ouverte.** Aucune touche -
   la porte ouverte *est* le passage
-- **Parler : E**, quand un voyageur est en face et à portée de voix — une
+- **Parler : E**, quand un voyageur est en face et à portée de voix - une
   invite l'annonce sous le réticule. Depuis le quai on parle aux gens du quai,
   jamais à travers la vitre à ceux qui sont assis dans la rame
 - M : couper le son, F : entrer et sortir du plein écran. Les deux ne répondent
   qu'une fois à bord, et jamais quand le curseur est dans un champ du menu
-- Le **⚠ en bout de barre** déroule les deux arrêts en pleine voie — coup de
-  frein d'urgence, coupure de courant — et les déclenche tout de suite. Ils
+- Le **⚠ en bout de barre** déroule les deux arrêts en pleine voie - coup de
+  frein d'urgence, coupure de courant - et les déclenche tout de suite. Ils
   tombent d'eux-mêmes, mais rarement : jusqu'à trois heures de trajet pour la
   coupure. Grisé tant qu'on n'est pas entre deux gares, la rame lancée
 - Mobile : joystick virtuel à gauche, glisser sur la scène pour regarder,
@@ -42,15 +42,15 @@ npm test         # node:test
 Avant de monter, le menu laisse choisir la **date**, l'heure, l'arrêt et le
 **sens de circulation**. Par défaut, l'instant réel à Tokyo, une gare tirée au
 hasard et un sens tiré à pile ou face. La date n'est pas un détail d'état
-civil : c'est elle qui donne la saison — couleur des frondaisons, hauteur du
-soleil, heure de la tombée de nuit — et le temps qu'il fera ce jour-là. Le HUD
+civil : c'est elle qui donne la saison - couleur des frondaisons, hauteur du
+soleil, heure de la tombée de nuit - et le temps qu'il fera ce jour-là. Le HUD
 affiche le temps qu'il fait et la température.
 
 ## Les deux sens
 
 La Yamanote n'a pas de terminus : elle a deux sens, et c'est tout ce qui les
 distingue. **内回り** (*uchi-mawari*, la boucle intérieure) suit l'ordre des
-codes JY — 東京 → 神田 → 上野 → 池袋 → 新宿 → 渋谷 → 品川 → 東京 ; **外回り**
+codes JY - 東京 → 神田 → 上野 → 池袋 → 新宿 → 渋谷 → 品川 → 東京 ; **外回り**
 (*soto-mawari*) fait le même tour à l'envers. On les choisit au menu, et le HUD
 porte le sens en pastille verte.
 
@@ -67,10 +67,10 @@ prend en paramètre. Ce qu'il change :
 - **le remplissage.** `data/occupancy.ts` porte DEUX relevés à 08:15, un par
   sens, et ils ne se déduisent pas l'un de l'autre : le 内回り est écrasé entre
   Shin-Ōkubo et Shinjuku (139 %) quand le 外回り l'est entre Ueno et
-  Okachimachi (134 %) — c'est le sens qui va vers les bureaux qui se remplit.
+  Okachimachi (134 %) - c'est le sens qui va vers les bureaux qui se remplit.
   Le second dormait « en réserve » ; il est branché ;
 - **ce qui est dit.** 「山手線内回り」 devient 「山手線外回り」, et les gares
-  repères de la direction sont prises vers l'arrière — depuis Tamachi,
+  repères de la direction sont prises vers l'arrière - depuis Tamachi,
   東京・上野 en 内回り, 品川・渋谷 en 外回り. La rame et le quai tirent la
   formule de la même fonction, pour ne pas pouvoir se contredire ;
 - **le numéro de voie.** `data/platforms.ts` le relève pour les deux sens : la
@@ -85,19 +85,19 @@ prend en paramètre. Ce qu'il change :
 Ce qu'il ne change **pas**, et ce n'est pas une simplification : le **côté
 d'ouverture des portes**. Un plan de voies à deux tracks est symétrique par
 rotation d'un demi-tour autour de l'axe de la ligne, et le Japon roule à
-gauche — sur un îlot central les deux sens ouvrent à droite, sur deux quais
+gauche - sur un îlot central les deux sens ouvrent à droite, sur deux quais
 latéraux les deux ouvrent à gauche, et sur les doubles îlots 方向別 (上野,
 東京, 田町…) chaque sens a le sien, du même côté. Le côté appartient à la gare.
 `DOOR_SIDE` reste donc une table de trente valeurs, et 「お出口は右側です」 se
 dit à l'identique dans les deux sens : les 次は… et les まもなく… des trente
 gares, japonais et anglais, sont gravés une seule fois pour les deux. Ne
-s'ajoutent au corpus que les textes qui NOMMENT le sens ou un numéro de voie —
+s'ajoutent au corpus que les textes qui NOMMENT le sens ou un numéro de voie -
 quatre-vingt-trois clips, contre les quatre cent douze du total.
 
 Seule exception documentée : le prototype PLATEAU (§ *Ville géoréférencée*) ne
 couvre que le 内回り. Son tracé exporté est une polyligne orientée ; la
 parcourir à l'envers demanderait d'inverser chunks et origines de distance. En
-外回り, le décor procédural — lui, symétrique — reprend la main.
+外回り, le décor procédural - lui, symétrique - reprend la main.
 
 ## Descendre en gare
 
@@ -118,20 +118,20 @@ rejouer la mélodie ni sauter l'annonce de fermeture.
 
 Le volume praticable vit dans `systems/walkable` : des rectangles alignés sur les
 axes, plus un « portillon » par porte qui ne s'ouvre que si la porte de la rame
-**et** la porte palière en face sont réellement dégagées. Train absent — ou rame
-en mouvement — tous les seuils se ferment : on ne peut pas tomber sur la voie, ni
+**et** la porte palière en face sont réellement dégagées. Train absent - ou rame
+en mouvement - tous les seuils se ferment : on ne peut pas tomber sur la voie, ni
 descendre d'un train qui roule. Une seule voiture est accessible, celle du
 joueur : c'est la seule dont l'intérieur existe.
 
 Un portillon refermé garde une exception, et c'est la seule : celui qu'on occupe
 déjà reste franchissable. Une porte qui se referme sur quelqu'un ne l'emmure pas
-— elle s'arrête sur lui (`systems/doorObstruction`) et il lui reste les deux
+- elle s'arrête sur lui (`systems/doorObstruction`) et il lui reste les deux
 côtés. L'exception se lit sur les PIEDS (`runtime.stanceX/Z`) et non sur l'œil
 (`runtime.playerX/Z`), qui balance de deux centimètres avec la caisse. Lue sur
 l'œil, elle s'auto-alimentait : adossé au fond de l'alcôve pendant que la rame
 entrait en gare, un pic de roulis suffisait à faire croire qu'on avait un pied
 dans l'encadrement, ce qui autorisait le pas suivant, qui rendait la chose vraie
-à son tour — et on traversait ainsi une porte fermée, à 90 km/h, jusqu'au quai.
+à son tour - et on traversait ainsi une porte fermée, à 90 km/h, jusqu'au quai.
 Le référentiel basculait alors en pleine voie et la rame s'arrêtait net.
 `tests/walkable.test.ts` tient la règle des deux côtés : la porte fermée ne
 s'ouvre pas, et celle qui se referme sur vous ne vous enferme pas.
@@ -145,7 +145,7 @@ choses s'y jouent, et elles étaient toutes les deux fausses.
 Le **profil de freinage** (`systems/trainPhysics`) gardait 0,35 m/s² jusqu'au
 bout : la rame arrivait devant les portières encore à 0,3 m/s et l'arrêt se
 lisait comme une coupure. Il applique désormais le lâcher final des conducteurs
-JR — 停止直前の緩め : sous ~4 km/h le frein se relâche franchement et la vitesse
+JR - 停止直前の緩め : sous ~4 km/h le frein se relâche franchement et la vitesse
 s'éteint au lieu d'être coupée. Le dernier mètre prend près de quatre secondes,
 les dix derniers centimètres se parcourent à moins de 0,2 m/s, et on les voit
 passer. Le freinage complet dure ~23 s au lieu de 21 ; les deux secondes sont
@@ -160,14 +160,14 @@ arrivait d'un bloc alors que la rame était déjà presque à l'arrêt. Le quai 
 maintenant posé à **la distance qui reste à parcourir** avant l'arrêt
 (`stopDistance`, le profil intégré depuis l'état courant) : il défile donc
 exactement à la vitesse du train, comme le reste du décor, et se cale de
-lui-même — il n'y a plus de raccord à la fin, puisque la distance restante vaut
+lui-même - il n'y a plus de raccord à la fin, puisque la distance restante vaut
 zéro pile quand la vitesse s'annule.
 
 Reste qu'aucune rame ne se pose au millimètre sur son 定位置. La tolérance JR
 East est de ±35 cm, le TASC des lignes à portes palières en garde une dizaine de
 centimètres : chaque arrêt tire donc son **écart d'arrêt** de 3 à 11 cm, d'un
 côté ou de l'autre (`runtime.berthOffset`). Portes ouvertes, le décalage se lit
-très bien entre le montant de la baie palière et celui de la portière — et il ne
+très bien entre le montant de la baie palière et celui de la portière - et il ne
 gêne rien : une baie palière fait 1,80 m pour une porte de rame de 1,32 m.
 L'écart appartient à la rame, pas à la gare : il devient `platformSlide` dans le
 repère du wagon, `−trainZ` dans celui du quai, et se reporte de l'un à l'autre
@@ -183,21 +183,21 @@ sonore.
 
 Trois axes y sont tenus séparés, parce que les confondre uniformise tout :
 
-- `elevation` — le niveau où court la voie : **sol** (12 gares), **viaduc**
+- `elevation` - le niveau où court la voie : **sol** (12 gares), **viaduc**
   (13), **tranchée** (5 : Tabata, Komagome, Sugamo, Mejiro, Meguro) ;
-- `config` — ce qu'on a de l'autre côté du quai : îlot partagé avec une autre
+- `config` - ce qu'on a de l'autre côté du quai : îlot partagé avec une autre
   ligne (13, la Keihin-Tōhoku sauf à Yoyogi), îlot Yamanote pur (14), quais
   latéraux (Harajuku, seul cas de la boucle), double îlot de terminus
   (Ikebukuro, Ōsaki) ;
-- `signature` — le caractère qui ne se paramètre pas, dessiné à part
+- `signature` - le caractère qui ne se paramètre pas, dessiné à part
   (`three/station/signatures/`).
 
 S'y ajoutent l'état des portes de quai en 2026 (`psd`) et le drapeau `works` des
 cinq gares en travaux (Shinjuku, Shibuya, Shinagawa, Tamachi, Hamamatsuchō).
 
 **Deux gares n'ont pas de portes de quai** : à Shinjuku et à Shibuya, les grands
-travaux en interdisent encore la pose. Le bord y est nu — bande podotactile
-élargie de 42 à 86 cm, joue de rive visible, ballast en contrebas — et la
+travaux en interdisent encore la pose. Le bord y est nu - bande podotactile
+élargie de 42 à 86 cm, joue de rive visible, ballast en contrebas - et la
 mécanique suit : le seuil de porte ne dépend plus que de la porte de la rame
 (`systems/walkable`), la mélodie de départ entre dès que celle-ci s'écarte
 (`three/Engine`), et on n'entend plus déverrouiller ni glisser ce qui n'existe
@@ -208,59 +208,59 @@ Le bord nu n'était toutefois nu **qu'à l'écran** : la marche s'y arrêtait qu
 même, 20 cm avant le vide, sur rien du tout. Les deux bords de ces deux quais
 portent donc la même limite de zone que les abouts et le pied des volées
 (`three/station/Barrier`) : une maille hexagonale rouge, éteinte de loin, qui
-s'allume au dernier pas — à la hauteur exacte du muret qui manque, pour qu'on
+s'allume au dernier pas - à la hauteur exacte du muret qui manque, pour qu'on
 regarde par-dessus. Elle reprend la trame des 44 baies et **s'ouvre au droit
 d'une porte en même temps que le portillon** de `systems/walkable` ; le bord
 d'en face, où aucune rame ne se présente, reste continu.
 
-`psd: 'partial'` — Ōsaki seul désormais — ne change rien sous nos pieds : c'est
+`psd: 'partial'` - Ōsaki seul désormais - ne change rien sous nos pieds : c'est
 la voie *secondaire* qui n'est pas encore équipée (voies 2 et 4, travaux jusqu'à
 fin 2026), et le jeu circule sur la principale, qui l'est. La différence se
 verra sur le quai d'en face. Ikebukuro a reçu ses portes secondaires le
 18 mars 2026 et est passé en `full`.
 
 Ces valeurs étaient auparavant **déduites du tronçon traversé**
-(`data/segments`), ce qui est une erreur de principe — un tronçon dit ce qu'on
-voit *entre* deux gares, pas comment la gare est bâtie — et sortait fausse pour
+(`data/segments`), ce qui est une erreur de principe - un tronçon dit ce qu'on
+voit *entre* deux gares, pas comment la gare est bâtie - et sortait fausse pour
 sept d'entre elles. Chaque gare porte donc maintenant ses propres cotes.
 
 Quatorze gares déclarent une `signature`, et **toutes les quatorze sont
 dessinées**, une par fichier dans `three/station/signatures/` :
 
-- **Takanawa Gateway** — la toiture pliée de Kengo Kuma, et c'est elle qui
+- **Takanawa Gateway** - la toiture pliée de Kengo Kuma, et c'est elle qui
   couvre le quai : seule gare de la boucle à déclarer `sigCanopy`, elle n'a pas
   de dalle d'auvent générique. Pans blancs cassés en accordéon tous les 4,5 m,
   fermes triangulaires de cèdre et d'acier qui enjambent d'un seul tenant les
   quatre voies et les deux quais, noue vitrée tous les neuf mètres, colonnes-
   arbres, mezzanines vitrées qui franchissent tout le site, mur-rideau de fond
   toute hauteur à meneaux blancs et traverses de cèdre. La plus claire des
-  trente — sans être la plus blanche : le bois y tient la moitié de ce qu'on
+  trente - sans être la plus blanche : le bois y tient la moitié de ce qu'on
   voit.
-- **Akihabara** — le viaduc de la Chūō–Sōbu qui franchit le site
+- **Akihabara** - le viaduc de la Chūō–Sōbu qui franchit le site
   perpendiculairement : poutres à âme pleine, sous-face rivetée, piles posées
   hors de tout quai et de toute voie.
-- **Ueno** — la halle rivetée sur la moitié sud, et l'ouverture franche vers le
+- **Ueno** - la halle rivetée sur la moitié sud, et l'ouverture franche vers le
   nord : c'est le contraste qui fait la gare, pas le détail des fermes.
-- **Nippori** — deux ponts-concours qui enjambent tout le faisceau.
-- **Harajuku** — le bâtiment blanc et vitré de 2020, son hall du niveau
+- **Nippori** - deux ponts-concours qui enjambent tout le faisceau.
+- **Harajuku** - le bâtiment blanc et vitré de 2020, son hall du niveau
   supérieur, le quai latéral d'en face et la masse sombre du Meiji-jingū.
-- **Yūrakuchō** — le vieux viaduc riveté à entraxe court, socles de brique, et
+- **Yūrakuchō** - le vieux viaduc riveté à entraxe court, socles de brique, et
   les coques de verre de l'International Forum en contrepoint.
-- **Ōtsuka** — la toiture centrale à deux pentes, et les deux extrémités du
+- **Ōtsuka** - la toiture centrale à deux pentes, et les deux extrémités du
   quai laissées à ciel ouvert : le seul auvent de la boucle qui ne court pas
   d'un bout à l'autre.
-- **Ebisu** — le complexe Atre qui enjambe les voies, sa sous-face de dalle en
+- **Ebisu** - le complexe Atre qui enjambe les voies, sa sous-face de dalle en
   guise de ciel, et la passerelle couverte qui part vers Garden Place.
-- **Gotanda** — la Tōkyū Ikegami perchée au quatrième niveau : non pas un
-  tablier vu d'en dessous, mais une gare entière — quai, auvent, garde-corps —
+- **Gotanda** - la Tōkyū Ikegami perchée au quatrième niveau : non pas un
+  tablier vu d'en dessous, mais une gare entière - quai, auvent, garde-corps -
   suspendue dix mètres au-dessus.
-- **Hamamatsuchō** — la verticalité, et le joint franc entre une moitié de quai
+- **Hamamatsuchō** - la verticalité, et le joint franc entre une moitié de quai
   sous couverture ancienne et l'autre sous charpente neuve.
-- **Shimbashi** — la couverture générale en treillis qui court sur tout le
+- **Shimbashi** - la couverture générale en treillis qui court sur tout le
   faisceau, socles de brique, poteaux centenaires.
-- **Tokyo**, **Shinjuku**, **Shibuya** — comme avant.
+- **Tokyo**, **Shinjuku**, **Shibuya** - comme avant.
 
-Cinq gares — Ueno, Nippori, Ōsaki, Shinagawa, Shimbashi — portent `openFarSide` : la
+Cinq gares - Ueno, Nippori, Ōsaki, Shinagawa, Shimbashi - portent `openFarSide` : la
 travée d'en face ne se ferme pas par un mur mais par un faisceau, des voies
 encore jusqu'au bord du champ. C'est la perspective dégagée qu'un mur de fond
 escamotait.
@@ -275,18 +275,18 @@ et par la marche : un banc dessiné à un endroit et infranchissable à un autre
 verrait au premier pas. Tout ce qui se répète passe par un `InstancedMesh`.
 
 **Il n'y a pas de mur derrière vous.** Vingt-neuf des trente gares sont des
-îlots : deux bords d'embarquement, l'ossature ramenée au milieu — piliers,
-bancs, distributeurs, caissons publicitaires dos à dos — et, au-delà du second
+îlots : deux bords d'embarquement, l'ossature ramenée au milieu - piliers,
+bancs, distributeurs, caissons publicitaires dos à dos - et, au-delà du second
 bord, une voie puis un autre quai. Laquelle voie change tout : la Keihin-Tōhoku
 à Tokyo, Ueno ou Yūrakuchō, la Yamanote elle-même en sens inverse à Kanda ou
 Mejiro, la deuxième paire de voies des terminus à Ikebukuro et Ōsaki. Ce que
-`elevation` ferme au fond — paroi de tranchée, garde-corps de viaduc, mur — se
+`elevation` ferme au fond - paroi de tranchée, garde-corps de viaduc, mur - se
 trouve alors quinze mètres plus loin, derrière le quai d'en face, et non plus à
 portée de main. Harajuku, seul quai latéral de la boucle, garde son mur et son
 soubassement carrelé.
 
-`place.backX` désigne cette ossature dans les deux cas — mur de fond ou épine
-centrale — pour que tout ce qui se pose « au fond » n'ait pas à savoir lequel
+`place.backX` désigne cette ossature dans les deux cas - mur de fond ou épine
+centrale - pour que tout ce qui se pose « au fond » n'ait pas à savoir lequel
 des deux il a devant lui. Le champ `backdrop`, qui nommait une famille de rendu
 au lieu d'un fait, a disparu : c'était lui qui donnait à vingt-neuf quais le
 même mur gris.
@@ -297,21 +297,21 @@ Cette voie d'en face restait vide en toute circonstance. Là où elle appartient
 à une autre ligne, elle voit maintenant passer, **de temps en temps, à pleine
 vitesse**, une rame qui ne ralentit même pas : le 快速 de la Keihin-Tōhoku, dix
 caisses, deux cents mètres, une quinzaine de secondes à trois mètres du bord de
-quai — l'événement le plus physique d'un quai japonais.
+quai - l'événement le plus physique d'un quai japonais.
 
 Onze gares peuvent en voir traverser (`data/passingTrains`), et deux régimes s'y
 succèdent selon l'heure de Tokyo :
 
 - **快速**, de 10 h 30 à 15 h 30 entre Tabata et Shinagawa, aux cinq gares que
-  le rapide saute vraiment : 御徒町 (en semaine — le week-end il s'y arrête),
+  le rapide saute vraiment : 御徒町 (en semaine - le week-end il s'y arrête),
   鶯谷, 日暮里, 西日暮里 et 有楽町. C'est le passage fréquent, celui qu'on finit
   par attendre. Il saute aussi 新橋, mais le gabarit du jeu en fait un îlot
   Yamanote pur : aucune voie Keihin-Tōhoku n'y borde le quai.
 - **回送**, une rame vide qui rejoint son dépôt ou en sort : aux onze gares,
-  rare en pleine journée, nettement moins après 22 h et avant 7 h — les
+  rare en pleine journée, nettement moins après 22 h et avant 7 h - les
   mouvements de dépôt se font avant le premier train et après le dernier.
 
-La gare le dit comme elle le dit en vrai — signal électronique, puis
+La gare le dit comme elle le dit en vrai - signal électronique, puis
 `まもなく、1番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、
 お下がりください。`, sa reprise anglaise, et l'avertissement court
 `電車が通過します。ご注意ください。` au moment où la rame débouche. **Le numéro
@@ -320,11 +320,11 @@ gare (à Ueno la Keihin-Tōhoku 北行 est la voie 1, à Okachimachi la numérot
 est inversée et c'est la 4). Ces textes se gravent comme les autres
 (`announcements-export.ts` puis `announcements-gen.py --reuse`, qui ne
 synthétise que les clips absents) ; tant qu'ils manquent, l'annonce ne se dit
-pas — voir *La cinquième voix*.
+pas - voir *La cinquième voix*.
 
 Deux règles gouvernent le déclenchement (`systems/passingTrain`), et la première
 compte plus que le passage lui-même : **la gare ne parle jamais par-dessus
-elle-même**. Le passage n'est tiré que dans un vrai creux — sono du quai
+elle-même**. Le passage n'est tiré que dans un vrai creux - sono du quai
 silencieuse et assez de temps devant soi. Le créneau décide même de la langue :
 tout le temps qu'il faut, japonais puis anglais ; un peu moins, le japonais
 seul ; pas assez, et il ne se passe rien du tout. Deux moments s'y prêtent : le
@@ -335,7 +335,7 @@ est resté à bord, entre les consignes de l'agent et l'annonce de fermeture.
 
 Côté rendu (`three/exterior/PassingTrain`), la rame emprunte la coque du E235 et
 change de livrée : inox à deux traits bleus au lieu du vert uguisu aux portes,
-dix voitures au lieu de onze, portes closes du début à la fin — personne ne
+dix voitures au lieu de onze, portes closes du début à la fin - personne ne
 monte dans un train qui passe. Rien n'est construit tant qu'aucun passage n'a
 été annoncé : la rame naît pendant l'annonce, une trentaine de secondes avant
 d'entrer en gare. Côté son, c'est la seule source du jeu qui **traverse
@@ -352,14 +352,14 @@ complète coûte trop cher là où le quai suffit déjà à saturer la machine.
 
 Il arrive qu'un arrêt ne se termine pas. Le conducteur a commandé la fermeture,
 les quarante-quatre portes sont parties ensemble, les portes palières une
-seconde derrière — et l'une d'elles s'arrête en chemin, parce que quelqu'un est
+seconde derrière - et l'une d'elles s'arrête en chemin, parce que quelqu'un est
 resté dans l'encadrement.
 
 **Rien ne se rouvre tout seul.** C'est tout l'intérêt de la séquence, et c'est
 exactement ce qu'une porte d'ascenseur ne fait pas. Sur le E235, la détection
 est sensible et la force de maintien réduite avant le démarrage : la porte
 touche, s'arrête, relâche sa pression de deux centimètres pour qu'on puisse se
-dégager — et elle en reste là. Elle ne se verrouille pas, donc le circuit de
+dégager - et elle en reste là. Elle ne se verrouille pas, donc le circuit de
 départ n'est pas établi, donc l'indication de départ n'apparaît pas en cabine de
 tête, donc **la rame ne part pas**. C'est un verrouillage, pas un minuteur : le
 chrono de l'arrêt est retenu au bord de la bascule tant que la porte n'est pas
@@ -367,7 +367,7 @@ confirmée fermée (`runtime.departureBlockers.doorBlocked`).
 
 Ce qui débloque la situation est un **geste humain** : le conducteur arrière
 utilise la commande de réouverture, le `再開閉スイッチ`. Elle ne rouvre que la ou
-les portes qui ne sont pas complètement fermées — bouton maintenu, la porte
+les portes qui ne sont pas complètement fermées - bouton maintenu, la porte
 s'ouvre ; bouton relâché, elle se referme aussitôt. La durée d'appui dit ce
 qu'il a vu : une impulsion d'une demi-seconde pour décoincer une sangle, une à
 trois secondes quand quelqu'un est réellement en travers. Rien de tout cela ne
@@ -385,8 +385,8 @@ fermeture rame → ~1 s → fermeture des portes palières
 
 Deux obstacles, et ils ne se ressemblent pas. **Une personne** entrebâille la
 porte de vingt-cinq centimètres : ça se voit depuis la cabine, ça se voit sur
-les moniteurs de quai, et la réaction est rapide. **Un objet fin** — une sangle
-de sac, un câble d'écouteur — laisse les vantaux se rejoindre à deux
+les moniteurs de quai, et la réaction est rapide. **Un objet fin** - une sangle
+de sac, un câble d'écouteur - laisse les vantaux se rejoindre à deux
 centimètres près : il n'y a rien à voir, et ce qui alerte n'est pas la vue mais
 l'indication de départ qui ne vient pas. C'est le cas difficile, et il est
 modélisé comme tel : détection plus lente, réouverture plus brève, plus de
@@ -399,7 +399,7 @@ touche les autres portes.
 
 Côté annonces, il n'y a pas de message automatique pour une obstruction : c'est
 une phrase dite au micro, `ドアから離れてください`, par le conducteur d'abord,
-puis par l'agent de quai si ça traîne — et elle se durcit,
+puis par l'agent de quai si ça traîne - et elle se durcit,
 `ドアが閉まりません。ドアから離れてください。`. À l'intérieur du wagon, le témoin
 orange au-dessus de la porte concernée continue de clignoter quand tous les
 autres se sont éteints : c'est comme ça qu'on repère la porte qui coince sans
@@ -410,17 +410,17 @@ quarante-quatre.
 même chose, à un détail près, mais il est de taille : plus rien n'est tiré au
 sort. Ce n'est pas la chance qui décide qu'un joueur se dégage, c'est lui. La
 porte s'arrête sur vous, la rame ne part pas, le conducteur rouvre votre porte
-et vous demande de vous écarter — et il recommencera aussi longtemps qu'il
+et vous demande de vous écarter - et il recommencera aussi longtemps qu'il
 faudra. Après trois tentatives il rouvre tout et un agent s'en mêle, mais rien
 ne se referme tant que vous êtes dedans : le train reste à quai, indéfiniment,
 et c'est vous qui décidez quand il repart. Un pas de côté et la porte reprend
-sa course là où elle s'était arrêtée — sans attendre la fin de la procédure si
+sa course là où elle s'était arrêtée - sans attendre la fin de la procédure si
 vous êtes parti avant.
 
 **Et quelqu'un vient.** Un haut-parleur n'a jamais fait reculer personne :
 quand c'est le joueur qui tient la porte, un agent de quai se met en route dès
-le contact. Il accourt depuis la trémie la plus proche — au pas pressé, une
-porte bloquée retarde la ligne —, se poste **à côté** de la baie (jamais
+le contact. Il accourt depuis la trémie la plus proche - au pas pressé, une
+porte bloquée retarde la ligne -, se poste **à côté** de la baie (jamais
 devant : il ne bouche pas le passage qu'il vient dégager), se tourne vers celui
 qui bloque et lui parle, en toutes lettres au-dessus de sa tête. Sa consigne
 monte d'un cran à chaque tentative, et il ne repart qu'une fois la porte
@@ -440,13 +440,13 @@ laisse d'abord la parole au conducteur : à cheval sur le seuil, on est déjà
 (`setListenerOutside`) et le conducteur parlerait tout seul dans une voiture
 qu'on vient de quitter. Depuis l'intérieur, c'est l'inverse : la voix du quai
 est filtrée par ce que les portes laissent passer, et il fallait compter la
-porte entrebâillée sur vous — vingt-cinq centimètres à un pas de l'oreille —
+porte entrebâillée sur vous - vingt-cinq centimètres à un pas de l'oreille -
 au lieu de la seule porte de référence, qui est close.
 
 Corollaire indispensable : **un seuil occupé ne devient jamais infranchissable**.
 Le volume praticable (`systems/walkable`) ferme un portillon dès que la porte
 se referme, ce qui emmurait proprement quiconque se tenait dedans. Il reste
-désormais ouvert pour celui qui y est déjà — on n'y ENTRE plus, mais on en
+désormais ouvert pour celui qui y est déjà - on n'y ENTRE plus, mais on en
 sort, des deux côtés. Sortir côté quai est d'ailleurs la façon la plus directe
 de dégager le passage : le train referme et s'en va sans vous.
 
@@ -454,8 +454,8 @@ L'incident se tire une fois par arrêt, en même temps que la chronologie de
 l'arrêt, et sa fréquence suit le remplissage du tronçon : de l'ordre d'un arrêt
 sur vingt-cinq en heure creuse, un sur six en pointe (`data/doorObstruction`,
 sans dépendance et couvert par `tests/doorObstruction.test.ts`). La procédure
-elle-même vit dans `systems/doorObstruction` ; la mécanique du vantail — course
-partielle, butée souple, porte palière asservie — dans `systems/doorMotion`, qui
+elle-même vit dans `systems/doorObstruction` ; la mécanique du vantail - course
+partielle, butée souple, porte palière asservie - dans `systems/doorMotion`, qui
 tient désormais une porte à part du reste de l'ensemble. En développement,
 `__blockDoor()` arme une obstruction pour la prochaine fermeture, et
 `__blockDoor('object')` force le cas difficile.
@@ -475,8 +475,8 @@ Ce qui reste à tous les paliers est ce sans quoi la gare cesserait d'être
 lisible : dalle, bords d'embarquement, portes palières, piliers, auvent, voie
 d'en face et son ballast, bacs, gouttières, ligne de guidage.
 
-Le module **range** ce mobilier au lieu de l'empiler. La structure fait autorité —
-piliers, trémies, escaliers mécaniques, ascenseur, kiosque — puis chaque famille
+Le module **range** ce mobilier au lieu de l'empiler. La structure fait autorité -
+piliers, trémies, escaliers mécaniques, ascenseur, kiosque - puis chaque famille
 vient chercher son creux, en glissant le long de la voie et en renonçant si elle
 n'en trouve pas : mieux vaut un banc de moins qu'un banc dans un poteau. La trame
 de piliers, elle, saute la travée d'une trémie ou d'une gaine d'ascenseur.
@@ -496,8 +496,8 @@ qu'un décor : c'est de ces grilles-là que sort l'annonce (voir « Sonorisation
 
 C'est le seul endroit d'une gare où le décor doit tenir **en coupe** : la dalle
 est vraiment percée, le joueur descend dedans, sa tête passe sous le niveau du
-quai. Tout y vient d'une source unique (`data/stationGeometry`) — profil des
-marches, ligne des nez, palier bas, longueur praticable — parce que quatre
+quai. Tout y vient d'une source unique (`data/stationGeometry`) - profil des
+marches, ligne des nez, palier bas, longueur praticable - parce que quatre
 consommateurs doivent voir exactement le même escalier : le rendu
 (`three/station/Stairwell`), le percement de la dalle, la marche du joueur
 (`systems/walkable`) et les voyageurs qui s'en vont (`systems/platformCrowd`).
@@ -505,7 +505,7 @@ consommateurs doivent voir exactement le même escalier : le rendu
 La volée est un **bloc plein** et non un empilement de plateaux : chaque marche
 descend jusqu'à une sous-face commune, ce qui ferme d'elle-même la gaine. Les
 joues et le voile de tête ne s'arrêtent pas au chant du percement, ils le
-**coiffent** — deux faces coplanaires sur quarante-quatre centimètres d'épaisseur
+**coiffent** - deux faces coplanaires sur quarante-quatre centimètres d'épaisseur
 de dalle, et la trémie se borde d'un liseré clignotant. Chaque nez de marche
 porte sa bande antidérapante jaune, la main courante descend avec la pente et
 se termine par un retour horizontal à chaque bout, et un bandeau lumineux
@@ -515,20 +515,20 @@ plus. Au fond, le fléchage de sortie de la gare courante.
 Le sol sur lequel on marche n'est délibérément **pas** en marches d'escalier :
 c'est la ligne des nez relevée d'une demi-contremarche, qui passe par le milieu
 de chaque giron. Un profil en escalier faisait tomber le marcheur de dix-sept
-centimètres tous les trente-quatre — quatre chutes par seconde au pas de
+centimètres tous les trente-quatre - quatre chutes par seconde au pas de
 promenade, pour le joueur comme pour les voyageurs.
 
 Deux nappes horizontales passaient enfin **en travers** de la cage : le ballast
 de la voie et la rue de la ville, toutes deux un mètre sous la dalle. Elles se
-dérobent maintenant sur l'emprise du quai, et seulement là — les écarter sur
+dérobent maintenant sur l'emprise du quai, et seulement là - les écarter sur
 leurs quatre cent soixante mètres ouvrait un vide au-delà des abouts de quai
 (`three/groundStrip`, `systems/stationOcclusion`).
 
 C'est ce dégagement qui a libéré la place du **niveau inférieur**. La volée ne
 s'arrête plus sur une cloison : elle passe sous un linteau, repart sous la
-dalle et débouche sur un couloir de correspondance — soubassement de faïence,
+dalle et débouche sur un couloir de correspondance - soubassement de faïence,
 caissons publicitaires rétroéclairés, ligne de guidage peinte. Rien n'y est
-praticable — le joueur est arrêté cinq marches plus haut — mais c'est ce fond
+praticable - le joueur est arrêté cinq marches plus haut - mais c'est ce fond
 de champ qui décide si la trémie descend vers une gare ou s'arrête dans un
 puits de deux mètres.
 
@@ -536,14 +536,14 @@ puits de deux mètres.
 la dalle est à quarante-quatre centimètres ; pour qu'un homme passe dessous, il
 faut être descendu de deux mètres soixante avant d'y arriver, et il n'y a pour
 cela que cinq mètres d'emprise. Quinze marches de 17,5 sur 31 y tiennent et
-donnent 2,15 m — la cote d'un passage de gare. Le fléchage de sortie se pose
+donnent 2,15 m - la cote d'un passage de gare. Le fléchage de sortie se pose
 donc AU-DESSUS du passage, sur le linteau, et non suspendu dans la cage où il
 pendait à un mètre du sol.
 
 Le reste est calé sur ce qu'on peut réellement en voir : depuis le haut de la
 volée, le rayon rasant part de la sous-face du linteau et descend d'un demi-
 mètre par mètre ; à neuf mètres il a rejoint le sol. Les caissons se tiennent
-donc à hauteur d'affiche et pas plus loin que sept mètres — une réglette de
+donc à hauteur d'affiche et pas plus loin que sept mètres - une réglette de
 plafond, elle, n'atteindrait jamais l'œil. Et les voyageurs qui s'en vont ne
 s'effacent plus à une altitude donnée : ils marchent jusqu'à un mètre après le
 linteau, où c'est la dalle qui les cache.
@@ -553,7 +553,7 @@ linteau, où c'est la dalle qui les cache.
 Le panneau de nom de gare n'a pas changé : code JY, gare précédente et suivante,
 bande verte directionnelle, redessiné au changement de gare.
 
-### Le 発車標 — le tableau des départs
+### Le 発車標 - le tableau des départs
 
 Les quais de la Yamanote portent un afficheur suspendu, le **発車標**
 (*hasshahyō*), qui dit dans combien de temps arrivent les prochaines rames. JR
@@ -573,14 +573,14 @@ YAMANOTE LINE   5 min.   TŌKYŌ & UENO
 
 Le tableau du jeu tenait sur une ligne et disait un ÉTAT (「ご乗車ください」,
 「まもなく発車」). Il dit maintenant ce qu'on vient y chercher : **dans combien
-de temps**. Le 約 est le mot important — ce n'est pas un compte à rebours à la
+de temps**. Le 約 est le mot important - ce n'est pas un compte à rebours à la
 seconde mais une estimation, et c'est pour cela qu'il n'y a jamais de
 「約0分後」 : sous les quarante-cinq secondes, le chiffre laisse la place à
 「まもなく」, et à 「まもなく発車」 pour la rame qui s'ébranle, seul moment où
 l'afficheur bat.
 
 **Très tôt le matin et très tard le soir** (avant 5 h 15, après 23 h 45), le
-décompte laisse la place à l'**heure de départ** — `05:12`. Les intervalles y
+décompte laisse la place à l'**heure de départ** - `05:12`. Les intervalles y
 sont trop longs pour qu'un « environ » veuille encore dire quelque chose, et ce
 sont les seuls moments où l'on regarde le tableau pour savoir si l'on a raté la
 dernière. La règle de mise en forme est isolée dans `data/departureBoard.ts`,
@@ -591,19 +591,19 @@ Les secondes, elles, viennent de deux sources selon l'endroit d'où on regarde :
 debout sur le quai c'est `platformWait`, qui sait où en est la rame et quel
 creux a été tiré pour l'attente en cours ; à bord c'est la phase du cycle
 station, où la rame qui intéresse le tableau est celle où l'on se trouve. Les
-deux durées de course qui entrent dans le calcul — dégager les 320 m du quai,
-freiner depuis la vitesse de ligne — sont **mesurées sur le profil E235
+deux durées de course qui entrent dans le calcul - dégager les 320 m du quai,
+freiner depuis la vitesse de ligne - sont **mesurées sur le profil E235
 lui-même** et non estimées : le tableau annonce des minutes, et une minute
 d'écart se voit.
 
 **Deux équipements coexistent sur la ligne**, et le dessin change avec eux : la
 matrice à LED ambre et verte, avec son inter-diode visible et son halo de
 diode, qui est l'image classique du quai japonais ; et les dalles LCD des quais
-neufs ou refaits — Takanawa Gateway, Shibuya, Shinagawa — au trait plus fin et
+neufs ou refaits - Takanawa Gateway, Shibuya, Shinagawa - au trait plus fin et
 sans trame. Le canvas n'est redessiné que lorsque son contenu change réellement,
 soit environ une fois par seconde.
 
-**Il est suspendu dans la rangée du bord de voie**, celle des caissons 番線 —
+**Il est suspendu dans la rangée du bord de voie**, celle des caissons 番線 -
 en travers du quai, recto-verso, aligné sur eux par le bas à la hauteur libre
 commune. Il y en a **quatre par quai**, un dans chaque intervalle de la
 rangée : les deux modèles alternent donc sur toute la longueur, un panneau
@@ -624,7 +624,7 @@ annonce 「東京・上野方面」 quand l'arrêt d'après est Hamamatsuchō. O
 pas la Yamanote pour la gare d'à côté.
 
 **Les accès sont balisés par lettre**, comme sur les plans officiels JR : A, B,
-C… dans l'ordre où on les rencontre en marchant, tous types confondus —
+C… dans l'ordre où on les rencontre en marchant, tous types confondus -
 escaliers, escaliers mécaniques, ascenseur. La lettre est posée au-dessus de
 l'accès et répétée en bout de potence, pour se lire de loin.
 
@@ -635,7 +635,7 @@ une flèche, les gares desservies, et rien d'autre.
 ## Le paysage
 
 La ville qui défile était peinte sur trois plans fixes, et c'est la **texture**
-qui coulait — `offset.x = distance / metersPerRepeat`. Le compte ne tombait
+qui coulait - `offset.x = distance / metersPerRepeat`. Le compte ne tombait
 juste sur aucune des trois couches : sur la plus proche, un motif couvrait 100 m
 de monde mais avançait d'une répétition tous les 60 m parcourus. La ville
 glissait donc à **1,67 fois la vitesse du train**, et à contresens de la
@@ -647,7 +647,7 @@ Elle est maintenant **bâtie dans le monde**, et c'est le train qui la dépasse.
 **Le ruban** (`systems/cityField` + `three/city/CityRibbon`) découpe la voie en
 cellules de 40 m et engendre, pour chacune, un tissu de bâtiments à partir de
 son seul index monde. Le rendu n'en garde qu'un anneau glissant de treize
-cellules par côté — 520 m, au-delà de la portée de la brume — recyclé une
+cellules par côté - 520 m, au-delà de la portée de la brume - recyclé une
 cellule à la fois, soit une réécriture toutes les 1,6 s à vitesse de croisière.
 Entre deux recyclages, plus rien ne bouge : le groupe entier recule d'un
 `runtime.distance` et les instances gardent une abscisse fixe.
@@ -656,13 +656,13 @@ Trois rangs, et c'est le point : un bord de voie **bas** (12 à 21 m de l'axe,
 deux à quatre niveaux), un rang d'îlot (22 à 38 m), un fond haut (40 à 66 m).
 C'est la stratification qui produit l'occultation mutuelle, donc la profondeur ;
 un plan unique, aussi bien dessiné soit-il, reste du carton. Le premier rang
-reste bas à dessein — un premier rang haut est un mur, et un mur ne fait pas une
+reste bas à dessein - un premier rang haut est un mur, et un mur ne fait pas une
 ville. Une cellule sur deux est traversée par une **rue perpendiculaire** qui
 perce les trois rangs au même endroit : c'est le seul moment où le regard
 s'enfonce, et le meilleur révélateur de vitesse qui soit en train.
 
 **Le sol de la ville n'est pas celui de la voie.** `elevation` ne servait
-jusqu'ici qu'à habiller — murs en tranchée, piles de pont plus hautes en
+jusqu'ici qu'à habiller - murs en tranchée, piles de pont plus hautes en
 viaduc. C'est pourtant la cote qui commande tout le paysage. Depuis un siège,
 par une baie, on ne voit d'un bâtiment posé à douze mètres qu'une **tranche de
 quatre mètres de haut** : ni ciel, ni ligne de toit. C'est exact au niveau du
@@ -672,7 +672,7 @@ mètres au-dessus de la rue et où le regard passe *par-dessus* les toits bas.
 fait remonter sur la crête des murs en tranchée ; le morph passe par les poids
 fondus de tronçon, masqué par le quai à l'arrêt, exactement comme le glissement
 vertical des murs. Un corridor ferroviaire, lui, la fait reculer de neuf mètres
-— le faisceau de voies parallèles court jusqu'à quatorze mètres de l'axe.
+- le faisceau de voies parallèles court jusqu'à quatorze mètres de l'axe.
 
 Le sol descend avec elle, et il est **fendu en deux nappes** qui laissent
 l'emprise de la voie libre : une nappe unique passerait au-dessus du train dès
@@ -682,7 +682,7 @@ ferme le vide entre le ballast et la rue.
 
 **Acrotères, édicules, chaussées.** Chaque bâtiment porte un acrotère
 légèrement débordant : c'est le détail qui manque le plus dès qu'on regarde du
-haut d'un viaduc, parce qu'une boîte nue ne se lit pas comme un immeuble — un
+haut d'un viaduc, parce qu'une boîte nue ne se lit pas comme un immeuble - un
 immeuble a un *bord* de toiture. Ce qui a des étages à desservir reçoit en plus
 un édicule de couverture, et chaque rue perpendiculaire reçoit sa chaussée, ce
 qui fait de la trouée une perspective au lieu d'un trou. Tout cela passe par un
@@ -692,11 +692,11 @@ fenêtres, ni vitrine, teinte de couverture sur toutes les faces.
 **La trame de façade se mesure en mètres**, pas en fraction de bâtiment
 (`three/city/cityMaterial`). Le nuanceur reconstitue dans le sommet les
 dimensions réelles de l'instance depuis `instanceMatrix` et choisit l'UV selon
-la face — le long de la voie sur les pignons, en profondeur sur les faces qui
+la face - le long de la voie sur les pignons, en profondeur sur les faces qui
 regardent les rails, à plat sur les toitures. Un étage fait trois mètres sur une
 tour de cinquante comme sur une échoppe de six, et c'est cette constance qui
 donne une **taille** aux bâtiments. Sous trois mètres, un second échantillon
-prend la main : la devanture, vitrine, bandeau d'enseigne et store — mais
+prend la main : la devanture, vitrine, bandeau d'enseigne et store - mais
 seulement là où le quartier est commerçant, sinon la frise redevient continue.
 
 Jour et nuit ne sont plus deux jeux de textures fondus l'un dans l'autre : la
@@ -711,7 +711,7 @@ suivait la progression `p` du trajet : le quartier changeait avec le temps, où
 qu'on regarde, y compris derrière soi. `cityField` mesure l'inter-gare réel et
 donne à chaque gare un territoire d'un demi-inter-gare de part et d'autre. On
 entre dans un quartier, on le traverse, on en sort. À la frontière, les deux
-tissus s'entremêlent bâtiment par bâtiment sur ±90 m — une ville ne change pas
+tissus s'entremêlent bâtiment par bâtiment sur ±90 m - une ville ne change pas
 de caractère sur une ligne.
 
 **Le ciel et l'horizon** tiennent en une passe (`three/city/SkyDome`) : un seul
@@ -721,7 +721,7 @@ tout le décor était transparent et n'écrivait pas la profondeur ; un ruban
 opaque posé à deux cents mètres dans l'axe de la voie passerait maintenant
 *derrière* un ciel posé à soixante-dix-huit. La silhouette lointaine est
 composée dans le même nuanceur, dans une bande de `v`, et défile par rotation
-pure — ce qui est exactement la parallaxe d'un objet infiniment loin. Le taux
+pure - ce qui est exactement la parallaxe d'un objet infiniment loin. Le taux
 est calé pour se lire à ~900 m.
 
 ### La nuit
@@ -732,7 +732,7 @@ l'est **par le bas et par elle-même**, et c'est ce renversement qu'il fallait
 modéliser.
 
 - **Le rebond de rue.** Lampadaires, vitrines, phares : les trois ou quatre
-  premiers mètres d'une façade sont, la nuit, plus clairs que ses étages —
+  premiers mètres d'une façade sont, la nuit, plus clairs que ses étages -
   l'inverse exact du jour. Une décroissance exponentielle sur `vCityUp` suffit,
   et elle coûte une ligne. La portée compte autant que l'intensité : étalée sur
   six mètres, elle éclairait la façade *entière* d'un quartier bas, et
@@ -744,20 +744,20 @@ modéliser.
   du quartier, et le fond, plus souvent tertiaire, est plus froid que le bâti bas.
 - **Les foyers d'éclairage.** Sur JR East, ils sont portés par les mâts de
   caténaire eux-mêmes ; ils héritent donc de leur entraxe, et c'est ce
-  chapelet — une lumière toutes les trente secondes de vitesse — qui dit la
+  chapelet - une lumière toutes les trente secondes de vitesse - qui dit la
   nuit mieux que n'importe quel étalonnage. Ils s'allument à la tombée du jour :
   un lampadaire allumé à quinze heures se remarque.
 - **La lueur urbaine.** Au-dessus de Tokyo, le ciel de nuit n'est pas noir. Les
   millions de lampes que la ville tourne vers le haut lui font un dôme orangé
-  qui s'éteint en montant, et c'est sur lui que les silhouettes se détachent —
+  qui s'éteint en montant, et c'est sur lui que les silhouettes se détachent -
   jamais sur du bleu nuit. Ajoutée dans le nuanceur de `SkyDome`, sous la
   composition de la silhouette. La brume de nuit se réchauffe d'autant : elle
   diffuse cette lueur, et sans elle le lointain tombait dans un aplat sombre.
 
 ### Ce qui distingue un quartier d'un autre
 
-Les `feats` de `data/districts` — Akihabara électrique, Ueno verdoyant, Shibuya
-à écrans — ne vivaient que dans la **silhouette peinte de l'horizon**, c'est-à-
+Les `feats` de `data/districts` - Akihabara électrique, Ueno verdoyant, Shibuya
+à écrans - ne vivaient que dans la **silhouette peinte de l'horizon**, c'est-à-
 dire à neuf cents mètres, dans la brume. Le long de la voie, là où on regarde,
 le tissu était partout le même aux palettes près.
 
@@ -768,7 +768,7 @@ C'est le mélange qui fait le caractère, pas l'uniformité.
 
 - **Les bosquets** (`parkGreen`, `torii`, un peu `templeLowtown`) ne s'ajoutent
   pas au tissu : ils le REMPLACENT. C'est ce qui fait la lisière du parc d'Ueno
-  ou le bois du Meiji-jingū — non pas des arbres posés le long de la voie, mais
+  ou le bois du Meiji-jingū - non pas des arbres posés le long de la voie, mais
   du bâti qui manque. Trois sujets serrés par masse, parce qu'un arbre isolé se
   lit comme du mobilier et une masse comme un lieu.
 - **Les toitures en croupe** (`templeLowtown`, `upscaleResidential`) coiffent le
@@ -793,26 +793,26 @@ lisible en mètres.
 
 `three/Wayside` (anciennement `three/Scenery`) tient le rang qui défile le plus
 vite, donc **celui qui vend la vitesse**. Il se résumait à huit portiques
-caténaires et douze arbres boules — un objet toutes les trente secondes de
+caténaires et douze arbres boules - un objet toutes les trente secondes de
 regard, là où une voie réelle en présente un par seconde.
 
 Ce qu'on en voit vraiment se calcule : l'œil est à 1,55 m dans l'allée, le bas
 de vitre à 0,85 m pour une demi-largeur de caisse de 1,40 m. Le rayon rasant
 descend donc d'un demi-mètre par mètre, et le sol n'apparaît qu'à **5,4 m de
-l'axe**. Tout ce qui est plus bas et plus près est invisible de l'intérieur —
+l'axe**. Tout ce qui est plus bas et plus près est invisible de l'intérieur -
 et une tête de signal, à cinq mètres de haut, passe au-dessus de la vitre. D'où
 ce qui est modélisé, et à quelle cote :
 
 - la **plate-forme** : ballast, traverses de 2,40 m tous les 65 cm, écartement
-  de 1 435 mm, caniveaux à câbles en rive — la seule ligne continue que l'œil
+  de 1 435 mm, caniveaux à câbles en rive - la seule ligne continue que l'œil
   puisse suivre à quatre-vingt-dix ;
 - les **rails en volume**, deux prismes métalliques : à contre-jour ce sont les
   deux seules lignes brillantes du paysage, et une texture plate ne les rend pas ;
 - le **garde-corps de viaduc**, montants tous les 2,5 m, deux lisses et une
-  plinthe — la plus forte affirmation qu'on court en l'air, et il pousse depuis
+  plinthe - la plus forte affirmation qu'on court en l'air, et il pousse depuis
   le tablier au lieu de se fondre ;
 - le **mobilier recyclé** : armoires relais tous les 52 m, bornes tous les 38 m,
-  signaux tous les 190 m avec leur feu émissif — vert en voie libre, rouge
+  signaux tous les 190 m avec leur feu émissif - vert en voie libre, rouge
   pendant un arrêt d'urgence ;
 - les **portiques caténaires**, qui portent enfin leurs fils : câble porteur en
   chaînette, fil de contact tendu, pendules. Toutes les portées étant
@@ -824,22 +824,22 @@ Chaque famille est fusionnée en une seule géométrie rendue par un
 plan coûterait plus cher que la ville entière.
 
 **Deux surfaces mentaient encore du même 1,67×.** Le ballast et le faisceau des
-corridors portaient `repeat.y = 24` sur un plan de 400 m — une tuile tous les
-16,7 m — quand `offset.y` en avançait une tous les 10. Exactement le mensonge
+corridors portaient `repeat.y = 24` sur un plan de 400 m - une tuile tous les
+16,7 m - quand `offset.y` en avançait une tous les 10. Exactement le mensonge
 des plans de ville, sur les deux surfaces les plus proches et les plus rapides
 du champ. Les tuiles sont désormais dimensionnées en mètres et le rendu s'y cale.
 
 ### Ce que ça coûte
 
 `node scripts/scenery-cost.mjs` relève la scène palier par palier, en pleine
-voie et à quai. Les chiffres retenus — appels de rendu, triangles, programmes —
+voie et à quai. Les chiffres retenus - appels de rendu, triangles, programmes -
 ne dépendent pas de la carte graphique : on peut donc les prendre sous
 SwiftShader et en tirer un budget valable partout. Le temps par image, lui, n'y
 voudrait rien dire, et n'est pas relevé.
 
 Attention au piège : `gl.info` se remet à zéro à chaque `render()`, et le
 post-traitement en appelle plusieurs par image. Lu naïvement, il ne rapporte que
-la dernière passe plein écran — un appel, un triangle. La sonde coupe donc la
+la dernière passe plein écran - un appel, un triangle. La sonde coupe donc la
 remise à zéro automatique et cumule sur un nombre d'images connu.
 
 | palier | où | appels | triangles | instances |
@@ -851,16 +851,16 @@ remise à zéro automatique et cumule sur un nombre d'images connu.
 
 Deux enseignements. D'abord, **le paysage n'est pas le poste dominant** : il pèse
 une quarantaine de maillages sur sept cent vingt visibles, et une cinquantaine
-de milliers de triangles sur deux cent soixante-treize mille — l'intérieur du
+de milliers de triangles sur deux cent soixante-treize mille - l'intérieur du
 wagon et ses passagers font le reste. Ensuite, **le grand levier du palier est
 l'ombre du soleil**, coupée à partir de `medium` : c'est elle qui fait passer de
 690 à 274 appels, en supprimant une seconde passe sur tout ce qui projette.
 
-Trois corrections sont sorties de cette première mesure — la première fois que
+Trois corrections sont sorties de cette première mesure - la première fois que
 le paysage était mesuré plutôt que supposé :
 
-- **Les emplacements réservés se paient.** Une instance dégénérée — mise à
-  l'échelle zéro faute d'objet à poser — coûte son traitement de sommets comme
+- **Les emplacements réservés se paient.** Une instance dégénérée - mise à
+  l'échelle zéro faute d'objet à poser - coûte son traitement de sommets comme
   les autres. Réserver douze emplacements de bosquet par cellule pour en remplir
   un ou deux passait **cent vingt mille triangles par image** au pilote pour
   rien. Les capacités couvrent maintenant le cas courant, pas le maximum
@@ -871,25 +871,25 @@ le paysage était mesuré plutôt que supposé :
   un appel.
 - **Toutes les ombres ne servent pas.** `userData.noShadow` permet de refuser
   explicitement : le garde-corps projette à l'aplomb du tablier, les rails sur
-  le ballast, le mobilier sur lui-même. Le portique, lui, garde la sienne — la
+  le ballast, le mobilier sur lui-même. Le portique, lui, garde la sienne - la
   barre qui balaie l'intérieur du wagon toutes les trente secondes est l'un des
   plus beaux effets de la course.
 
-Aux deux derniers paliers, acrotères, croupes et bosquets tombent — mais pas les
+Aux deux derniers paliers, acrotères, croupes et bosquets tombent - mais pas les
 enseignes : un quad par bâtiment, et c'est tout ce qui reste de reconnaissable à
 Akihabara ou Shin-Ōkubo une fois la nuit tombée.
 
 Pour regarder tout ça : `node scripts/scenery-shots.mjs /tmp/decor` se cale au
 milieu d'un inter-gare, vise par une baie et capture, de jour comme de nuit. La
-sonde de gare, elle, se pose à l'arrêt — là où le quai masque justement tout le
+sonde de gare, elle, se pose à l'arrêt - là où le quai masque justement tout le
 paysage.
 
 ### Ville géoréférencée (prototype PLATEAU)
 
 Tout ce qui précède est **procédural** : un paysage crédible, jamais le vrai. Un
-prototype teste l'autre voie — construire le décor à partir des données ouvertes
+prototype teste l'autre voie - construire le décor à partir des données ouvertes
 [Project PLATEAU](https://www.mlit.go.jp/plateau/) (modèles CityGML 3D des villes
-japonaises, 国土交通省) — sur **un seul tronçon à la fois**, par défaut
+japonaises, 国土交通省) - sur **un seul tronçon à la fois**, par défaut
 Shibuya → Ebisu (`SEGMENTS[19]`). Le choix du tronçon compte : sur un viaduc, le
 train court sept mètres au-dessus de la rue et le regard passe par-dessus les
 toits ; dans une tranchée, le mur de soutènement masque tout, et c'est exact
@@ -917,35 +917,35 @@ groupe des chunks l'inverse de la transformation du train sur le tracé réel, �
 la vitesse réelle de la rame. Ailleurs sur la boucle, et sans `?plateau=1`, le
 décor procédural reprend tout.
 
-Changer de tronçon est une variable d'environnement — `PLATEAU_PROTOTYPE` —
+Changer de tronçon est une variable d'environnement - `PLATEAU_PROTOTYPE` -
 plus une constante à aligner côté jeu ; la validation du build refuse de publier
 un monde que le jeu chercherait ailleurs sur la boucle.
 
 ⚠️ Le dépôt ne contient **aucune donnée PLATEAU** : le build par défaut tourne
-sur un échantillon CityGML *synthétique* au format PLATEAU. Tout est expliqué —
-outils, licences, limites, extension aux 30 tronçons — dans
+sur un échantillon CityGML *synthétique* au format PLATEAU. Tout est expliqué -
+outils, licences, limites, extension aux 30 tronçons - dans
 [`docs/PLATEAU_PIPELINE.md`](docs/PLATEAU_PIPELINE.md).
 
 ## Les saisons
 
 Le décor n'avait qu'une horloge, celle des heures. Un 21 décembre s'y déroulait
 comme un 21 juin : mêmes frondaisons, même hauteur de soleil, même tombée de
-nuit. La date n'est plus un détail d'état civil — elle commande le paysage.
+nuit. La date n'est plus un détail d'état civil - elle commande le paysage.
 
 `systems/season` dérive de `runtime.tokyoDate` **deux familles de valeurs, et il
 faut les distinguer**. Les **poids de saison**, quatre nombres qui somment à 1,
-fondus sur vingt-six jours de part et d'autre de quatre bornes — bornes qui ne
+fondus sur vingt-six jours de part et d'autre de quatre bornes - bornes qui ne
 tombent pas sur les équinoxes : au Japon l'été s'étire jusqu'à fin septembre, et
 le basculement de juin est celui de l'entrée du 梅雨. Ils servent aux réglages
-continus, teinte de l'air, portée du regard. Et les **phénomènes datés** —
-sakura, kōyō, ramure nue, tsuyu, canicule, froid —, des cloches indépendantes
+continus, teinte de l'air, portée du regard. Et les **phénomènes datés** -
+sakura, kōyō, ramure nue, tsuyu, canicule, froid -, des cloches indépendantes
 posées sur le quantième. Ils ne se déduisent PAS des poids : la floraison des
 cerisiers dure douze jours au milieu d'un printemps qui en dure quatre-vingt-sept,
 et le tsuyu chevauche la frontière printemps / été au lieu de la suivre.
 
 **La lumière du jour ne se fond pas : elle se calcule.** Deux cosinus calés sur
 les extrêmes réels de Tokyo (lever 4 h 25 / coucher 19 h 00 au solstice d'été,
-6 h 47 / 16 h 32 à celui d'hiver), et de phases différentes — le lever le plus
+6 h 47 / 16 h 32 à celui d'hiver), et de phases différentes - le lever le plus
 précoce tombe vers le 13 juin, le coucher le plus tardif vers le 1er juillet.
 C'est cette asymétrie qui fait qu'en décembre la nuit tombe déjà à 16 h 30 sans
 que le soleil se lève plus tard qu'en janvier. `daynight` ne porte plus de
@@ -954,16 +954,16 @@ demie d'écart sur le coucher entre les deux solstices, c'est le fait saisonnier
 le plus fort de tous, et le plus facile à rater.
 
 **La hauteur du soleil** vient ensuite : 31° à midi le 21 décembre, 78° le
-21 juin. C'est la plus grande différence visible depuis une place assise — à
+21 juin. C'est la plus grande différence visible depuis une place assise - à
 31° le soleil entre par la baie et va frapper le dossier d'en face ; à 78° il
 tombe presque à pic et ne dépasse pas l'appui de fenêtre. La position est
 ramenée à un rayon constant : seule la direction compte pour une lumière
 directionnelle, mais **pas sa distance**, puisque la caméra d'ombre est posée
-dessus et que son `far` vaut cent. Elle plafonne à 73° pour la même raison —
+dessus et que son `far` vaut cent. Elle plafonne à 73° pour la même raison -
 au-delà, l'ombre du portique caténaire cesse de balayer l'intérieur du wagon.
 
 **L'air.** Un janvier de Tokyo est sec et sans particules : la lumière bleuit,
-le lointain reste net à perte de vue — c'est en hiver qu'on voit le Fuji depuis
+le lointain reste net à perte de vue - c'est en hiver qu'on voit le Fuji depuis
 les tours. Un août est chargé de vapeur : le blanc jaunit et les tours se noient
 à six cents mètres. `season.clarity` multiplie la portée de la brume,
 `season.airTone` teinte soleil, brume, fond et ciel. Sur le dôme, le voile ne se
@@ -977,8 +977,8 @@ comme de l'air.
 C'était le mur contre lequel butait toute idée de saison. La couleur d'instance
 **multiplie** la couleur de sommet, et un vert multiplié par un rouge d'automne
 ne donne pas du rouge : il donne de la boue. Les sommets du bosquet
-(`three/city/cityProps`) ne portent donc plus qu'un ombrage neutre — trois
-valeurs de gris, une par sujet, pour que la masse garde son relief — et c'est la
+(`three/city/cityProps`) ne portent donc plus qu'un ombrage neutre - trois
+valeurs de gris, une par sujet, pour que la masse garde son relief - et c'est la
 couleur d'instance qui porte la teinte entière : verte en juillet, rousse fin
 novembre, rose lavé fin mars.
 
@@ -990,19 +990,19 @@ le nuanceur du bosquet ajoute :
 - **dépouiller l'arbre**. Ce qui dit l'hiver de loin n'est pas la couleur, c'est
   le *volume* : une frondaison de juillet est une masse pleine, une ramure de
   janvier est un dessin. Les sommets de couronne se rétractent vers le centre de
-  leur propre sujet — mettre l'instance entière à l'échelle rapetisserait
+  leur propre sujet - mettre l'instance entière à l'échelle rapetisserait
   l'arbre au lieu de le dénuder.
 
 La teinte n'est plus tirée par le générateur de cellules, seulement le **numéro
 de variante** : une cellule reste posée plusieurs secondes, et la saison peut
 changer sous elle. Le rendu va chercher la couleur du jour dans la palette de
-`season`. Au plus fort de la floraison, un sujet sur trois est en fleurs — pas
+`season`. Au plus fort de la floraison, un sujet sur trois est en fleurs - pas
 davantage : au-delà, la ville devient un décor de carte postale et la floraison
 cesse d'être un événement.
 
 Pour regarder tout ça : `node scripts/season-shots.mjs /tmp/saisons` se pose au
-milieu d'un inter-gare d'Ueno — le seul quartier de la boucle où les bosquets
-remplacent franchement le bâti —, vise le bord de voie en plongée et capture six
+milieu d'un inter-gare d'Ueno - le seul quartier de la boucle où les bosquets
+remplacent franchement le bâti -, vise le bord de voie en plongée et capture six
 dates de l'année, plus les deux solstices à la même heure d'horloge. La question
 posée à chaque image est toujours la même : depuis une place assise, sait-on en
 quel mois on est ?
@@ -1012,7 +1012,7 @@ quel mois on est ?
 ### Ce n'est pas un tirage par image
 
 Une météo tirée au hasard à chaque instant n'est pas de la météo : c'est du
-bruit. Le temps a une **durée** — une averse tient vingt minutes, un ciel couvert
+bruit. Le temps a une **durée** - une averse tient vingt minutes, un ciel couvert
 tient l'après-midi, le tsuyu tient six semaines. `systems/weather` engendre donc
 la journée **entière** d'un coup, sous forme d'une suite d'épisodes datés, à
 partir d'une graine tirée de la date civile. Deux conséquences, et les deux
@@ -1021,7 +1021,7 @@ comptent :
 - le temps est le même pour tout le monde un jour donné. Le 21 juin il
   pleuvait ; on peut y revenir, et il y pleuvra encore ;
 - monter à bord à 8 h ou à 18 h ne rejoue pas le même dé : on tombe à l'endroit
-  qu'on occupe dans la journée, avec ce qui l'a précédé — le sol est encore
+  qu'on occupe dans la journée, avec ce qui l'a précédé - le sol est encore
   mouillé de l'averse de midi.
 
 ### La climatologie de Tokyo, et non « la pluie en général »
@@ -1042,7 +1042,7 @@ Dans l'ordre d'importance :
   la fin février.
 
 Chaque poids est une propension, jamais un interrupteur : il pleut en janvier et
-il fait beau pendant le tsuyu — simplement pas souvent. Le bilan d'une année
+il fait beau pendant le tsuyu - simplement pas souvent. Le bilan d'une année
 entière, tel que le modèle la tire :
 
 | mois | pluie | couvert | dégagé | T moyenne |
@@ -1056,19 +1056,19 @@ entière, tel que le modèle la tire :
 Le badge du HUD nomme le ciel d'après **ce qu'il est**, jamais d'après l'épisode
 en cours. La distinction n'est pas cosmétique : l'épisode bascule au milieu du
 fondu de vingt minutes qui le relie au suivant, si bien qu'il annonçait
-« dégagé » dix minutes avant que la dernière goutte soit tombée — et le badge
+« dégagé » dix minutes avant que la dernière goutte soit tombée - et le badge
 contredisait alors la fenêtre. Déduit de la couverture, de la pluie et de la
 neige, il ne *peut* plus les contredire.
 
 Les pourcentages comptent des *heures*, pas des jours. Les moyennes de
-température tombent à quelques dixièmes des normales de Tokyo — c'est le seul
+température tombent à quelques dixièmes des normales de Tokyo - c'est le seul
 chiffre du modèle qui soit vérifiable directement, et il l'est.
 
 La **température** est calculée, et pas décorative : moyenne du jour (cosinus
 calé sur les normales de Tokyo, 5 °C début février, 27 °C début août), marche
-diurne qui n'est pas un cosinus — une journée ne se refroidit pas aussi vite
+diurne qui n'est pas un cosinus - une journée ne se refroidit pas aussi vite
 qu'elle se réchauffe, minimum à 4 h, maximum à 14 h, retombée étalée sur les
-quatorze heures qui restent —, puis correction du temps qu'il fait. C'est elle
+quatorze heures qui restent -, puis correction du temps qu'il fait. C'est elle
 qui arbitre pluie ou neige, et c'est elle qui décide si la neige **tient** : à
 Tokyo, une neige de midi ne tient pas, celle de 4 h du matin, oui.
 
@@ -1092,12 +1092,12 @@ depuis le processeur, et le champ entier tient en **un appel de rendu**.
 quatre-vingt-dix, c'est la faute qui tue l'effet. Dans le repère du wagon, la
 goutte ne tombe pas : elle file vers l'arrière à la vitesse du train, et son
 trait s'incline d'autant. Le trait est donc construit dans l'espace de la
-caméra, aligné sur la vitesse **relative** — chute plus vent plus vitesse du
-train —, et sa longueur est la distance parcourue pendant le temps de pose de
+caméra, aligné sur la vitesse **relative** - chute plus vent plus vitesse du
+train -, et sa longueur est la distance parcourue pendant le temps de pose de
 l'œil : un mètre vingt à quatre-vingt-dix. À l'arrêt en gare elle se redresse,
 et c'est en la regardant se redresser pendant le freinage qu'on sent le mieux
 qu'on ralentit. Descendu sur le quai, le joueur change de repère : la gare
-devient fixe, le terme de vitesse tombe, la pluie redevient verticale — rien de
+devient fixe, le terme de vitesse tombe, la pluie redevient verticale - rien de
 spécial à écrire pour ça, il suffit de lire `runtime.playerFrame`.
 
 Le flocon, lui, ne tombe pas droit : il flotte. C'est ce qui le distingue d'une
@@ -1105,18 +1105,18 @@ goutte bien plus que sa forme ou sa vitesse.
 
 **Deux volumes soustraits**, et deux seulement, parce que ce sont les deux seuls
 endroits d'où l'œil regarde en étant *sous* quelque chose : l'intérieur du wagon
-— sans lui il pleut entre la banquette et le plafond, et le test de profondeur
+- sans lui il pleut entre la banquette et le plafond, et le test de profondeur
 ne peut rien puisque la goutte est devant la paroi qu'elle devrait avoir
-derrière elle — et l'auvent du quai, dont `systems/stationOcclusion` tient déjà
+derrière elle - et l'auvent du quai, dont `systems/stationOcclusion` tient déjà
 l'emprise exacte pour le décor de voie. Les deux sont retranchés en écrasant le
 quad à une aire nulle : rien à rastériser, pas de `discard`, pas de surcoût.
 
 Une averse ne tombe pas plus vite qu'une bruine : elle tombe plus **dru**. C'est
 donc le nombre d'instances affichées qui varie, pas leur vitesse ni leur
-opacité — un fondu d'opacité donnerait une pluie fantôme.
+opacité - un fondu d'opacité donnerait une pluie fantôme.
 
 Le coût : deux appels de rendu et six mille triangles au palier ultra, sous une
-averse — le tiers d'un seul immeuble de la ville. Par temps sec les deux
+averse - le tiers d'un seul immeuble de la ville. Par temps sec les deux
 maillages sont éteints, et le budget du décor (voir plus haut) est inchangé.
 
 ### Ce que la pluie fait au reste du décor
@@ -1130,8 +1130,8 @@ maillages sont éteints, et le budget du décor (voir plus haut) est inchangé.
   du quartier se lisent au sol. Le mouillé monte vite et sèche lentement, et une
   averse d'août sèche en dix minutes quand une bruine de février tient
   l'après-midi ;
-- **la neige blanchit par le haut.** Elle se pose sur ce qui regarde le ciel —
-  toitures, acrotères, ballast, frondaisons — et jamais sur une façade
+- **la neige blanchit par le haut.** Elle se pose sur ce qui regarde le ciel -
+  toitures, acrotères, ballast, frondaisons - et jamais sur une façade
   verticale. Le nuanceur de ville le sait déjà : il distingue les faces de
   couverture des faces de mur pour poser sa texture.
 
@@ -1146,7 +1146,7 @@ de 20 m est celui sur lequel le quai est bâti : les portes tombent en face des
 portes palières.
 
 Chaque matériau ne fait qu'un `InstancedMesh` de onze instances. Le groupe entier
-reste éteint tant qu'on est à bord d'une rame immobile — de l'intérieur, on ne
+reste éteint tant qu'on est à bord d'une rame immobile - de l'intérieur, on ne
 voit jamais sa propre caisse : coût nul en jeu normal.
 
 ## Langues
@@ -1155,7 +1155,7 @@ L'interface (menu, HUD, contrôles tactiles) existe en **français, anglais et
 japonais**. La langue se décide en trois temps, du plus explicite au plus
 deviné : le paramètre d'URL `?lang=fr|en|ja` s'il est présent, sinon le choix
 mémorisé dans `localStorage` (`yamanote.lang`), sinon la détection depuis
-`navigator.languages` — `ja-*` → japonais, `fr-*` → français, tout le reste →
+`navigator.languages` - `ja-*` → japonais, `fr-*` → français, tout le reste →
 anglais. Le sélecteur FR / EN / 日本語 (menu principal et barre du HUD) permet
 d'en changer à tout moment ; un choix explicite est mémorisé **et** inscrit dans
 l'URL, qui devient partageable telle quelle (voir *Référencement*).
@@ -1181,7 +1181,7 @@ jeu (états, embarquements, regards, poignées) :
 - **Procédural** (repli automatique) : si `public/models/manifest.json` est
   absent ou qu'un GLB ne charge pas, l'ancien rendu en primitives est utilisé.
 
-Installation des modèles — les packs conseillés sont ceux de
+Installation des modèles - les packs conseillés sont ceux de
 [Quaternius](https://quaternius.com) (licence CC0, usage libre) :
 « Ultimate Modular Men/Women Pack » (personnages complets animés), ou
 « Universal Base Characters » combiné à l'« Universal Animation Library »
@@ -1213,13 +1213,13 @@ par variante dans le manifest (`clips`, `faceYaw`, `sitHipY`, `tint`).
 ### Voyager avec son chien
 
 Sur un quai, on croise **parfois** quelqu'un qui traverse la gare avec son
-chien — mais jamais en laisse. Les règles de JR East ne laissent aucune
+chien - mais jamais en laisse. Les règles de JR East ne laissent aucune
 latitude, et ce sont elles qui dictent tout ce qui suit :
 
 - l'animal doit être **entièrement enfermé** dans une caisse, sans sortir la
   tête ;
 - **longueur + largeur + hauteur ≤ 120 cm** ;
-- **poids total, animal compris, ≤ 10 kg** — donc un petit chien, jamais un
+- **poids total, animal compris, ≤ 10 kg** - donc un petit chien, jamais un
   husky ;
 - un billet **« bagage à main » à 290 ¥**, pris au guichet, la caisse présentée
   à l'agent avant les portiques.
@@ -1228,22 +1228,22 @@ Un chien tenu en laisse, porté dans les bras, glissé dans une écharpe ou
 promené en poussette est explicitement **interdit** à l'intérieur des
 portiques. Une première version de cette page décrivait une promenade en
 laisse le long du quai : c'était joli et c'était faux. Corollaire agréable de
-la règle vraie — un chien en caisse, lui, **monte dans le train** : son porteur
+la règle vraie - un chien en caisse, lui, **monte dans le train** : son porteur
 est un voyageur comme un autre.
 
 Ces règles ont leur affiche, qu'on croise de temps en temps : une sur neuf des
 caissons portrait des quais, et l'une des quatre affiches d'about du wagon.
-Pictogrammes dessinés au trait dans `textures/procedural` — le cas autorisé
+Pictogrammes dessinés au trait dans `textures/procedural` - le cas autorisé
 cerclé de rouge, les trois cas barrés en dessous, les cotes en pied de page.
 Le dessin est **original**, comme les mélodies de départ : c'est la règle qu'on
 reprend, pas le visuel de la compagnie.
 
 Le pack animalier vit à part, dans `public/models/animals/`, avec son propre
-manifeste et sa propre licence. Une race est installée (shiba inu — Quaternius,
+manifeste et sa propre licence. Une race est installée (shiba inu - Quaternius,
 CC0) ; pour en importer d'autres :
 
 ```bash
-# Quaternius — « Ultimate Animated Animals » (CC0)
+# Quaternius - « Ultimate Animated Animals » (CC0)
 npm run animals:import -- ~/Téléchargements/AnimatedAnimals.zip
 
 # toutes les espèces, pas seulement celles qu'on promène en laisse :
@@ -1256,15 +1256,15 @@ Trois choses distinguent un quadrupède d'un passager, et elles sont dans
 `characters/animals.ts` :
 
 - **la taille est réelle, et par espèce.** Un personnage est toujours ramené à
-  `SKELETON_TOP` ; un chien, non — un shiba fait 46 cm, un husky 62. La hauteur
+  `SKELETON_TOP` ; un chien, non - un shiba fait 46 cm, un husky 62. La hauteur
   est donc une donnée du manifeste (`height`, en mètres), et le manifeste garde
   la taille **vraie** de la race : c'est le rendu qui ramène l'animal au
   gabarit de la caisse, puisque la limite des 10 kg exclut de toute façon tout
   ce qui n'y tiendrait pas.
 - **le reniflage est le clip de repas.** Aucun pack ne livre de « Sniff » ;
-  leur « Eating » est exactement ça — museau au sol, corps planté.
+  leur « Eating » est exactement ça - museau au sol, corps planté.
 - **la vitesse d'auteur des cycles est mesurée**, jamais déclarée. Le
-  déplacement de la racine quand il y en a un ; sinon la **foulée** — un pied
+  déplacement de la racine quand il y en a un ; sinon la **foulée** - un pied
   posé ne glisse pas, son va-et-vient sur un cycle mesure exactement la
   distance dont le sol défile. Les packs animaliers animent tous sur place,
   c'est donc la foulée qui sert, et elle est courte : le « Walk » d'un shiba
@@ -1272,7 +1272,7 @@ Trois choses distinguent un quadrupède d'un passager, et elles sont dans
   caisse, qui ne marche pas ; elles restent justes pour tout pack importé.
 
 La caisse elle-même (`characters/carrier.ts`) est modelée aux cotes que la
-règle impose — 50 × 34 × 34 cm, soit 118 cm de somme — avec coque à deux tons,
+règle impose - 50 × 34 × 34 cm, soit 118 cm de somme - avec coque à deux tons,
 fentes d'aération, poignée et une porte à barreaux **réellement ajourée** :
 sans vrais trous, il n'y aurait rien à voir derrière. Elle pend à l'os de main
 de son porteur, donc elle suit le balancement du bras, mais elle reste
@@ -1284,7 +1284,7 @@ En dev, `__pets` donne l'état de chaque caisse en console (porteur, main),
 `node scripts/make-test-dog.mjs` fabrique un chien de test riggé pour éprouver
 la chaîne sans le vrai pack (à ne pas committer), et
 `node scripts/pet-shots.mjs /tmp/chiens` va chercher un porteur sur le quai et
-le photographie — la rencontre est trop rare pour se juger en jouant.
+le photographie - la rencontre est trop rare pour se juger en jouant.
 
 ## Ce que font les voyageurs
 
@@ -1293,12 +1293,12 @@ n'est pas leur nombre : c'est leur **rythme**, tenu par `systems/paxBehavior`
 et partagé par la rame et le quai.
 
 - **Occupation de fond.** Un voyageur choisit ce qu'il fait des prochaines
-  minutes — téléphone, sieste, vitre, livre, conversation — et y reste. Sur dix
+  minutes - téléphone, sieste, vitre, livre, conversation - et y reste. Sur dix
   minutes de vie de wagon, le téléphone occupe environ un tiers du temps, la
   vitre et la sieste un huitième chacune : à peu près ce qu'on observe.
 - **Gestes brefs.** De loin en loin (une dizaine de secondes chez un nerveux,
   une demi-minute chez un placide), l'occupation est interrompue par un
-  bâillement, un coup d'œil à la montre, un sac remonté — puis **reprise**.
+  bâillement, un coup d'œil à la montre, un sac remonté - puis **reprise**.
 - **Tempérament.** Chaque PNJ a un caractère stable tiré de son identifiant,
   comme son apparence : bavard, nerveux, dormeur, curieux, susceptible. Sans
   lui, tout le monde ferait tout et la foule redeviendrait uniforme.
@@ -1314,7 +1314,7 @@ portes à quai plutôt que par la vitre, éventails en août seulement.
 ### Tomber
 
 Un coup de frein, une poignée lâchée, un joueur qui pousse un peu trop : il
-arrive qu'on tombe. Ces chutes étaient longtemps une **rotation** — le groupe
+arrive qu'on tombe. Ces chutes étaient longtemps une **rotation** - le groupe
 du personnage basculait autour de son bassin, corps raide, jambes tendues dans
 la pose debout, et se relevait à l'endroit. De loin ça passait ; d'un mètre, le
 voyageur tombait comme une planche à repasser.
@@ -1327,21 +1327,21 @@ les **monte** au lieu de les jouer : chaque chute est une piste
 l'animation image par image. On y gagne trois choses qu'un simple `play()` ne
 donne pas :
 
-- le **rythme** propre à chaque chute — on vacille une demi-seconde, on
+- le **rythme** propre à chaque chute - on vacille une demi-seconde, on
   s'écroule en trois dixièmes, on reste à terre deux secondes, on se relève
-  lentement — là où le clip d'origine tient en une seconde ;
+  lentement - là où le clip d'origine tient en une seconde ;
 - le **temps au sol**, en tenant le clip sur une image ;
 - le **relevé**, en repassant le clip à l'envers : un corps qui ramène ses
   jambes sous lui et se hisse, ce qu'aucun pack ne fournit. Le milieu du clip
-  ainsi repris donne même l'**assise par terre** — jambes devant, buste en
-  arrière sur les mains — qui fait la chute plutôt que le plongeon.
+  ainsi repris donne même l'**assise par terre** - jambes devant, buste en
+  arrière sur les mains - qui fait la chute plutôt que le plongeon.
 
 Trois montages : la **chute** complète en rame (4 s, du vacillement au
 redressement penaud), le **faux pas** rattrapé sur ses jambes, la **glissade**
 de quai où l'on descend à mi-hauteur avant de se reprendre. Deux couches se
 superposent au clip : le **regard** (`paxMotion`), qui joue la gêne pendant
 qu'on est au sol, et les **bras** (`characters/pose`), repris le temps de la
-bascule — moulinet, mains vers le sol — parce que le clip d'origine est une mort
+bascule - moulinet, mains vers le sol - parce que le clip d'origine est une mort
 par balle, où les bras partent en arrière au lieu de chercher à se rattraper.
 
 Les temps sont calés sur les bruitages : l'impact tombe avec le `thud`, le
@@ -1357,7 +1357,7 @@ le vrai montage du jeu (`&rigid=1` pour revoir le repli seul).
 
 Un voyageur regardé d'assez près (moins de 2,9 m, dans un cône de 24°) affiche
 une invite ; **E** lui délie la langue. Il se tourne, parle, et la bulle
-s'accroche à sa tête — pas au bas de l'écran : dans une rame où trente
+s'accroche à sa tête - pas au bas de l'écran : dans une rame où trente
 personnes sont à portée, il faut voir qui parle. Un second appui coupe court,
 comme on tourne les talons.
 
@@ -1372,7 +1372,7 @@ jour de la semaine. Chaque contexte laisse entre cinquante et soixante
 
 Neuf situations font parler les gens **sans qu'on leur ait rien demandé** : une
 bousculade, un voisin qui s'étale, le joueur qui monte ou descend, qui s'assoit
-à côté, qui passe à un mètre, la rame qui entre en gare — et les trois moments
+à côté, qui passe à un mètre, la rame qui entre en gare - et les trois moments
 d'un arrêt subi : le coup de frein d'urgence, la coupure de courant, le retour
 du courant. Une réplique spontanée toutes les quarante à cent vingt secondes,
 jamais deux de suite par la même personne : c'est ce qui prouve que les gens
@@ -1381,9 +1381,9 @@ sont là même quand on ne les regarde pas.
 **Les arrêts subis sont les seuls à faire parler plusieurs personnes.** Les six
 autres situations s'adressent à un voisin ; un coup de frein d'urgence, lui,
 arrive à tout le wagon en même temps, et un wagon qui vient de freiner en
-urgence ne produit pas une remarque polie. Tout le monde sursaute d'abord — les debout qui ne
+urgence ne produit pas une remarque polie. Tout le monde sursaute d'abord - les debout qui ne
 tiennent aucune poignée partent en avant, les autres cherchent des yeux ce qui
-arrive, les assis lèvent le nez de leur écran — puis **deux à quatre voisins
+arrive, les assis lèvent le nez de leur écran - puis **deux à quatre voisins
 différents disent leur peur**, l'un après l'autre, la bulle passant de l'un à
 l'autre pendant une quarantaine de secondes. Ce qui se disait juste avant
 s'arrête : une conversation ne survit pas à ça.
@@ -1399,14 +1399,14 @@ dizaine de secondes après l'immobilisation.
 
 **La coupure de courant se dit autrement**, et c'est là que le catalogue gagne
 son intérêt. Rien n'a secoué : personne ne sursaute, personne ne se raccroche.
-Ce qui se remarque est ce qui MANQUE — la lumière qui baisse, le moteur qu'on
-n'entend plus, les écrans devenus noirs, la clim qui s'arrête —, si bien que la
+Ce qui se remarque est ce qui MANQUE - la lumière qui baisse, le moteur qu'on
+n'entend plus, les écrans devenus noirs, la clim qui s'arrête -, si bien que la
 première réplique n'est jamais « qu'est-ce qui se passe ?! » mais un constat, à
 voix basse. Puis vient l'attente, et avec elle des remarques qu'un coup de frein
 ne produit jamais : le wagon qui va chauffer sans ventilation en août ou se
 refroidir en janvier, la consigne de ne pas toucher au robinet de secours, la
 rame de Yokosuka qui, elle, aurait pu rejoindre la gare à la batterie. Le retour
-du courant a ses propres répliques, brèves — c'est du soulagement, ça ne
+du courant a ses propres répliques, brèves - c'est du soulagement, ça ne
 s'étire pas.
 
 Ils ne prononcent pas de vrais mots. La voix est un **murmure de syllabes**
@@ -1424,7 +1424,7 @@ node scripts/pax-probe.mjs 30 --lines 12
 ```
 
 La sonde imprime la part de temps passée dans chaque occupation, le nombre
-d'événements rares déclenchés, et le nombre d'échanges éligibles par contexte —
+d'événements rares déclenchés, et le nombre d'échanges éligibles par contexte -
 c'est là qu'on voit tout de suite si un créneau horaire est à sec. En dev, les
 consoles `__pax`, `__crowd` et `__conversation` donnent l'état courant, et
 `__talk()` fait parler le voyageur le plus proche sans avoir à viser.
@@ -1434,7 +1434,7 @@ consoles `__pax`, `__crowd` et `__conversation` donnent l'état courant, et
 Le jeu ne contient **aucun modèle 3D d'intérieur** : la coque, les banquettes et
 tous les aménagements sont procéduraux. Une maquette peut néanmoins servir de
 mètre-étalon pendant le développement, pour arbitrer une forme ou relever une
-cote — sans jamais finir dans le dépôt.
+cote - sans jamais finir dans le dépôt.
 
 ⚠️ **N'utiliser qu'une maquette dont on a le droit de se servir.** Sur Sketchfab,
 la licence se lit sur `https://api.sketchfab.com/v3/models/<uid>` : un
@@ -1482,12 +1482,12 @@ d'un domaine ou sur tout autre hébergeur statique).
 Le problème est celui de toutes les applications d'une seule page : ce que le
 serveur envoie, c'est `index.html` et un `<div id="root">`. Un robot qui
 n'exécute pas de JavaScript n'y trouve rien à lire ; un robot qui en exécute
-trouve un `<canvas>`. Un jeu WebGL n'a pas de contenu textuel *à indexer* — sauf
+trouve un `<canvas>`. Un jeu WebGL n'a pas de contenu textuel *à indexer* - sauf
 si on le lui écrit.
 
 **Le document sans JavaScript dit déjà ce que la page est.** `index.html` porte
 un vrai contenu dans `#root` : un `<h1>`, l'accroche, ce qu'on fait à bord, et
-les trente gares en romaji et en kanji — le vocabulaire par lequel on cherche ce
+les trente gares en romaji et en kanji - le vocabulaire par lequel on cherche ce
 genre de page. React le remplace intégralement au premier rendu
 (`createRoot(…).render()` vide son conteneur), donc rien n'est caché à personne :
 c'est le même propos que l'écran d'accueil, servi avant lui. Effet de bord
@@ -1505,7 +1505,7 @@ mot du logo existe en deux `<text>` superposés, l'ombre puis les lettres cerné
 **Trois langues, une seule page.** `?lang=fr|en|ja` force la langue, et c'est ce
 qui rend les `<link rel="alternate" hreflang>` de `index.html` honnêtes : un
 moteur qui suit l'alternate japonais doit recevoir la page en japonais. L'URL nue
-reste le `x-default`, celle qui s'adapte au visiteur — la détection automatique
+reste le `x-default`, celle qui s'adapte au visiteur - la détection automatique
 n'écrit donc *pas* `?lang=` dans l'URL, seul un choix au sélecteur le fait.
 `src/i18n/documentMeta.ts` réécrit alors `lang`, le titre, la description, les
 balises Open Graph et Twitter, la canonique et `og:url` ; il ne crée aucune
@@ -1515,7 +1515,7 @@ balise, il ne fait que remplir celles que `index.html` porte déjà en anglais.
 `og:url`, images sociales : un moteur les recopie telles quelles dans son index,
 un aperçu de partage les résout depuis un autre domaine. Elles désignent
 l'hébergement de référence (`https://brunopaiva15.github.io/yamanote-3d/`), et
-`index.html` en est la source unique — `documentMeta.ts` lit la canonique dans le
+`index.html` en est la source unique - `documentMeta.ts` lit la canonique dans le
 document plutôt que de la redéclarer, si bien qu'un déploiement ailleurs n'a
 qu'un fichier à changer.
 
@@ -1532,7 +1532,7 @@ Ce que le dépôt contient, et ce que chaque pièce sert à :
 | `scripts/seo-assets.mjs` | `npm run seo:assets` : en tire favicon, icônes PWA, icône Apple et carte de partage |
 
 Les données structurées (JSON-LD) déclarent un `VideoGame` gratuit, ses trois
-langues, son auteur, et — c'est le lien qui compte — le sujet dont il parle
+langues, son auteur, et - c'est le lien qui compte - le sujet dont il parle
 relié à sa fiche Wikidata : ce qui raccroche la page à l'**entité** « ligne
 Yamanote » plutôt qu'à la chaîne de caractères.
 
@@ -1540,7 +1540,7 @@ Deux pièges qui ne se voient pas :
 
 - un robot ne lit `robots.txt` qu'à la **racine du domaine**. Servi sous
   `/yamanote-3d/`, le nôtre atterrit en
-  `…github.io/yamanote-3d/robots.txt` et n'est donc pas celui qui fait loi —
+  `…github.io/yamanote-3d/robots.txt` et n'est donc pas celui qui fait loi -
   c'est celui de `…github.io` qui compte. Il reste juste le jour où le site
   passe à la racine d'un domaine, et le sitemap, lui, se déclare directement
   dans la Search Console quelle que soit la profondeur ;
@@ -1552,7 +1552,7 @@ Deux pièges qui ne se voient pas :
 Rien de tout cela ne fait échouer un build : une canonique changée à un endroit
 et pas aux trois autres, une langue ajoutée à `LANGS` sans son alternate, une
 carte de partage régénérée à d'autres dimensions que celles annoncées, un fichier
-référencé mais jamais produit — tout se voit six semaines plus tard dans un
+référencé mais jamais produit - tout se voit six semaines plus tard dans un
 rapport d'indexation. D'où `tests/seo.test.mjs`, qui relit `index.html`,
 `robots.txt`, `sitemap.xml`, le manifeste et l'en-tête des PNG et vérifie qu'ils
 décrivent tous le même site, et `tests/documentMeta.test.ts`, qui tient les
@@ -1597,7 +1597,7 @@ src/
   three/characters/carrier.ts  la caisse de transport, aux cotes que la règle
                          de JR East impose (≤ 120 cm de somme, ≤ 10 kg)
   systems/petCarriers.ts qui voyage avec son chien : tirage par gare, main qui
-                         porte — la caisse ne se simule pas, elle se porte
+                         porte - la caisse ne se simule pas, elle se porte
   data/dialogue/         les 416 conversations : conditions d'emploi et texte
                          FR / EN / JA, décliné au féminin et au masculin
   scripts/               models:import / models:inspect / animals:import
@@ -1624,7 +1624,7 @@ Les valeurs continues (vitesse, distance, ouverture des portes) vivent dans
 Roulement, onduleur VVVF, joints de rail, frein et carillons sont synthétisés
 (Tone.js). Les mélodies de départ (発車メロディ) sont des **compositions
 originales** du projet : une par quai câblé, inspirée du caractère de la
-mélodie réelle (gamme, tempo, timbre) sans en reprendre les notes — les
+mélodie réelle (gamme, tempo, timbre) sans en reprendre les notes - les
 enregistrements protégés ne sont pas embarqués. Elles sont générées par
 `scripts/melodies-gen.py` dans `public/audio/melodies/` et activées via
 `ENABLE_DEPARTURE_MELODY_CLIPS = true` (`src/data/melodies.ts`) ; flag à
@@ -1644,8 +1644,8 @@ Ces deux passages ne sont pas négociables, et c'est le DWELL qui s'ajuste, pas
 la mélodie : la fenêtre sonore de chaque arrêt est taillée sur la longueur du
 clip câblé à ce quai-là (`melodyRoundsDuration`, `plannedDepartureMelodyPath`
 dans `data/melodies` ; `randomizeStopTimings` dans `systems/stationCycle`), si
-bien qu'un arrêt à Komagome — *Sakura Sakura*, 13,6 s le passage — dure une
-quinzaine de secondes de plus qu'un arrêt à Takadanobaba — *Tetsuwan Atom*,
+bien qu'un arrêt à Komagome - *Sakura Sakura*, 13,6 s le passage - dure une
+quinzaine de secondes de plus qu'un arrêt à Takadanobaba - *Tetsuwan Atom*,
 6,4 s. La version précédente coupait tout le monde en fondu après dix secondes
 fixes : la moitié des quais perdaient leur seconde reprise, et Komagome
 n'atteignait même pas la fin de la première. La coupure du chef de train existe
@@ -1653,7 +1653,7 @@ toujours, mais elle referme désormais un silence. Les durées viennent d'un
 manifeste (`src/data/melodyManifest.ts`, gravé par
 `node scripts/melody-manifest-gen.mjs`) : `tests/melodyTiming.test.ts` échoue
 s'il a dérivé des MP3.
-Les annonces (sens de la boucle — 内回り ou 外回り — avec ses gares repères,
+Les annonces (sens de la boucle - 内回り ou 外回り - avec ses gares repères,
 次は… avec numéro JY, まもなく…, fermeture, accueil, messages de courtoisie en
 rotation) sont
 dites en japonais puis en anglais, avec les correspondances réelles de chaque
@@ -1661,7 +1661,7 @@ gare. Les voix sont des clips pré-générés avec **Kokoro TTS**, stockés dans
 `public/audio/announcements/` et régénérables via
 `scripts/announcements-export.ts` + `scripts/announcements-gen.py`. Le
 japonais est synthétisé segment par
-segment, avec de vraies pauses aux 、/。 — la cadence posée des annonces
+segment, avec de vraies pauses aux 、/。 - la cadence posée des annonces
 automatiques JR (まもなく。…渋谷。…渋谷。), que Kokoro ne marque pas de
 lui-même. Les annonces **de bord** n'écrivent plus aucune virgule (ni 、 ni
 « , ») : rien que des points, donc partout la pause longue du 。 plutôt que la
@@ -1677,13 +1677,13 @@ fait pas dériver en douce les annonces déjà en place.
 **Ce que l'analyseur lit, et ce qu'il croit lire.** Kokoro ne reçoit pas du
 texte mais des phonèmes, fabriqués par misaki. Or un analyseur morphologique se
 trompe, et il se trompe surtout sur les noms propres : 「山手線内回り」 sortait
-en *yamate sen-nai mawari* — 山手 lu やまて, 線内回り recollé en un mot (et
-線外回り en *sengai mawari*) —, soit
+en *yamate sen-nai mawari* - 山手 lu やまて, 線内回り recollé en un mot (et
+線外回り en *sengai mawari*) -, soit
 le nom de la ligne écorché dans presque chaque annonce, et 御徒町 en tête de
 phrase sortait *gotochō*. Les mots concernés sont réécrits en katakana pour la
 synthèse seule (`JA_READINGS` dans `announcements-export.ts`), le texte du jeu
 gardant son orthographe ; les noms de GARES, eux, sont vérifiés tout seuls
-contre leur transcription kana (`stations.ts`) — avec le même misaki que la
+contre leur transcription kana (`stations.ts`) - avec le même misaki que la
 synthèse, sans quoi le contrôle valide une lecture que personne n'entendra.
 Une correction de lecture ne change pas la clé du clip, qui hache le texte du
 jeu : il faut supprimer les MP3 concernés pour que `--reuse` les regrave.
@@ -1701,11 +1701,11 @@ la mélodie, 1番線、ドアが閉まります et les bips des portes palières
 subi en cours de route met la ligne en retard : les quais s'en excusent, motif à
 l'appui, pendant les quelques arrêts qui suivent (`data/stationAnnouncements`,
 `systems/stationPa`). Après un 急停車 le motif est tiré parmi ceux qui vont avec
-un coup de frein ; après une coupure de courant il ne se tire pas — le quai
+un coup de frein ; après une coupure de courant il ne se tire pas - le quai
 annonce 架線の停電, c'est-à-dire exactement ce que le joueur vient de vivre.
 
 Cet arrêt d'urgence (急停車) tombe **toutes les dix à vingt-quatre gares**, soit
-de vingt-cinq minutes à une heure de trajet — le premier plus tôt, pour qu'un
+de vingt-cinq minutes à une heure de trajet - le premier plus tôt, pour qu'un
 trajet court puisse le vivre. Le train freine sec, reste immobilisé de 45 s à
 2 min 30 avec les annonces du conducteur et les écrans rouges, puis repart ; le
 chrono de phase n'avance que **au prorata de la vitesse** pendant tout
@@ -1721,14 +1721,14 @@ secondes après le départ d'une rame, le remerciement d'ouverture puis l'annonc
 anticipée du prochain train ; à l'ouverture des portes, 「降りるお客さまを先に
 お通しください」 ; puis deux consignes d'agent, aux mêmes secondes, tirées dans
 l'ordre du numéro d'arrêt. À la troisième gare on connaissait la bande-son par
-cœur — et c'est exactement ce qu'un vrai quai n'est pas. ATOS saute l'anticipée
+cœur - et c'est exactement ce qu'un vrai quai n'est pas. ATOS saute l'anticipée
 quand les rames se succèdent, et un agent de quai ne prend le micro que quand il
 a quelque chose à dire.
 
 **Un plan par rame, tiré une fois.** À l'entrée du creux entre deux rames, la
 gare décide de tout ce qui est facultatif : anticipée ou non, remerciement ou
 non, « laissez descendre » ou non, zéro, un ou deux messages d'agent et
-lesquels. Le calcul est pur — ni store, ni audio, ni `Math.random()` : le tirage
+lesquels. Le calcul est pur - ni store, ni audio, ni `Math.random()` : le tirage
 entre par un argument (`systems/platformAnnouncementPlan`), ce qui le rend
 testable et surtout **reproductible**. La graine vient de l'arrêt lui-même (gare,
 numéro de rame, sens, minute simulée), si bien qu'un rerender, une chute de FPS
@@ -1739,23 +1739,23 @@ Ce qui pèse sur le plan est ce qui pèse sur un vrai quai :
 
 | Facteur | Effet |
 | --- | --- |
-| **Creux** entre deux rames | l'anticipée passe de 25 % sous 90 s à 55 % à 150 s et 80 % au-delà — c'est la place disponible |
+| **Creux** entre deux rames | l'anticipée passe de 25 % sous 90 s à 55 % à 150 s et 80 % au-delà - c'est la place disponible |
 | **Heure** (pointe 7 h–9 h 30 et 17 h–19 h 30) | rames rapprochées : l'anticipée tombe encore d'un facteur 0,6 ; l'agent, lui, parle plus |
 | **Gare** (`isMajorHub`, la liste des annonces de direction, pas une seconde) | un hub annonce un peu plus, et penche vers deux consignes en pointe |
-| **Affluence** (le modèle de remplissage, pas le nombre de PNJ — la sono ne doit pas changer avec le réglage de qualité) | quai calme : 55 % de silence complet ; quai moyen : une consigne ; quai bondé : une, parfois deux |
+| **Affluence** (le modèle de remplissage, pas le nombre de PNJ - la sono ne doit pas changer avec le réglage de qualité) | quai calme : 55 % de silence complet ; quai moyen : une consigne ; quai bondé : une, parfois deux |
 | **Retard** | le silence est divisé par deux, et les consignes de circulation et de portes passent devant |
 
 Le remerciement ne précède donc plus l'anticipée par principe : c'est une
 politesse de creux calme, et en pleine pointe personne ne remercie personne.
 「降りるお客さまを先に…」 devient presque certain sur un quai chargé, dans un hub,
-en pointe — et rare dans une petite gare déserte, où l'entendre pour trois
+en pointe - et rare dans une petite gare déserte, où l'entendre pour trois
 personnes sonnait faux.
 
 **Les consignes d'agent ont maintenant un propos.** Chaque message porte une
 catégorie, un poids, une affluence minimale et un multiplicateur de retard
 (`data/stationAnnouncements`) : demander d'avancer vers le milieu de la voiture à
 trois personnes n'a aucun sens, et 「無理なご乗車はおやめください。次の電車をご
-利用ください。」 ne se dit que quand il n'y a vraiment plus de place — c'est
+利用ください。」 ne se dit que quand il n'y a vraiment plus de place - c'est
 d'ailleurs le message que le retard rend le plus probable, parce que c'est le
 moment où l'on arrête de charger la rame pour tenir l'intervalle. Deux créneaux,
 deux registres : on fait descendre et avancer pendant l'échange, on décourage le
@@ -1766,7 +1766,7 @@ du quai n'a qu'une file : rien ne peut sonner par-dessus autre chose, mais une
 consigne mise en file derrière une autre sortirait après le moment où elle
 voulait dire quelque chose. Avant chaque message facultatif, la gare mesure ce
 qu'elle a encore à dire (`speechQueueRemaining`) et la durée du clip, et compare
-au temps qui reste avant l'annonce prioritaire suivante — la mélodie, la
+au temps qui reste avant l'annonce prioritaire suivante - la mélodie, la
 fermeture, le carillon d'approche. Si ça ne tient pas, le message tombe. L'excuse
 de retard, l'anticipée et les consignes d'agent ne se marchent donc jamais
 dessus, et **l'annonce d'approche, elle, n'est pas facultative** : une rame qui
@@ -1776,7 +1776,7 @@ entre en gare s'annonce toujours.
 
 Trente gares qui disent exactement la même chose ne s'entendent pas comme une
 ligne, elles s'entendent comme un gabarit. Quelques-unes ajoutent une consigne
-qui n'appartient qu'à elles, parce que leur quai a une particularité — et la
+qui n'appartient qu'à elles, parce que leur quai a une particularité - et la
 première est **Shibuya**, dont le quai Yamanote décrit une courbe que la réunion
 des deux voies sur un seul îlot (janvier 2023) n'a pas redressée : l'écart entre
 le seuil de la rame et le bord du quai s'y signale, dans les deux sens :
@@ -1786,25 +1786,25 @@ le seuil de la rame et le bord du quai s'y signale, dans les deux sens :
 ください」 ne dit pas dans quel sens on franchit l'écart, et vaut pour qui descend
 comme pour qui monte. L'anglais, non. *Please watch your step when you leave the
 train* est juste dans la RAME, où l'on ne parle qu'à des gens déjà à bord ; sur le
-quai, la même phrase est entendue par ceux qui attendent pour monter — et qui sont,
+quai, la même phrase est entendue par ceux qui attendent pour monter - et qui sont,
 à cette seconde précise, les plus concernés par l'écart. Le quai nomme donc l'écart
 plutôt que le geste : *Please mind the gap between the train and the platform.*
 Deux textes, deux clips, un par canal.
 
 Ces consignes vivent en **données** (`data/stationAnnouncementRules`), indexées
 par code JY, et nulle part ailleurs : pas un seul `if (index === 19)` dans le
-cycle station. Chacune choisit son canal (la rame ou le quai — ce ne sont ni les
+cycle station. Chacune choisit son canal (la rame ou le quai - ce ne sont ni les
 mêmes voix ni les mêmes oreilles), son sens (un quai en courbe ne se courbe pas
 forcément des deux côtés) et l'endroit exact où elle s'insère dans la séquence :
 après le nom de la gare, après les correspondances, pendant l'approche pour la
 rame ; derrière l'anticipée, derrière l'annonce d'approche ou derrière le nom de
 la gare pour le quai. La consigne de Shibuya passe donc à l'approche dans le
-wagon — aux gens qui vont descendre — et à l'arrivée sur le quai, aux gens qui
+wagon - aux gens qui vont descendre - et à l'arrivée sur le quai, aux gens qui
 vont monter, et à aucun autre moment.
 
 Cette séquence d'arrivée est aussi la plus longue de la ligne : le nom de la gare,
 la consigne en japonais, puis en anglais. C'est elle qui décide du sort de ce qui
-suit — « laissez descendre » n'a de sens que pendant que les voyageurs descendent,
+suit - « laissez descendre » n'a de sens que pendant que les voyageurs descendent,
 et sur l'arrêt le plus court il n'y a plus de place pour lui derrière tout cela. Il
 est alors ABANDONNÉ, comme n'importe quelle consigne facultative, plutôt que
 repoussé sur les premières notes de la mélodie (`tests/shibuyaAnnouncementTimeline`
@@ -1812,7 +1812,7 @@ rejoue l'arrêt entier, seconde par seconde, sur les durées réelles des clips)
 
 La règle de peuplement de cette table est explicite dans le fichier : **on
 n'invente pas**. Chaque entrée porte au-dessus d'elle la raison pour laquelle
-elle existe. Une gare dont on ne sait rien n'a pas d'entrée — l'architecture est
+elle existe. Une gare dont on ne sait rien n'a pas d'entrée - l'architecture est
 là, elle attend.
 
 ### La coupure de courant
@@ -1829,13 +1829,13 @@ Dans l'ordre, ce que vit le wagon :
            La rame roule sur son élan (惰行) et ne ralentit presque pas.
 0–1,8 s    ÇA CLIGNOTE, ET ÇA CLAQUE. Le disjoncteur s'ouvre sous le
            plancher, le convertisseur décroche, se réamorce sur ce qui reste
-           dans ses condensateurs, décroche encore — trois fois, de plus en
-           plus court —, puis un dernier soubresaut à 1,7 s et plus rien.
+           dans ses condensateurs, décroche encore - trois fois, de plus en
+           plus court -, puis un dernier soubresaut à 1,7 s et plus rien.
            Contacteurs, grésillements de tubes qui essaient de se rallumer,
            sifflement du convertisseur qui s'effondre : chaque bruit tombe
            sur son clignotement, pas à côté.
            Les tubes s'affaissent progressivement ; les dalles LCD et les
-           douze écrans 窓上, eux, CLAQUENT — un rétroéclairage tient ou il
+           douze écrans 窓上, eux, CLAQUENT - un rétroéclairage tient ou il
            ne tient pas. À mi-décrochage le wagon est encore parfaitement
            lisible alors que tous les écrans sont déjà noirs.
 ~1 s       le relais de secours bascule : deux lampes froides s'allument,
@@ -1846,13 +1846,13 @@ Dans l'ordre, ce que vit le wagon :
 ~14 s      première annonce, au combiné, sur les batteries de bord.
 2 min 50   à 5 min 40 d'immobilisation, portes closes. Le wagon n'est pas
    à 5'40  muet pour autant : un relais travaille sous le plancher toutes
-           les 9 à 26 s. Un rappel d'attente à mi-parcours — et la seule
+           les 9 à 26 s. Un rappel d'attente à mi-parcours - et la seule
            consigne de sécurité du jeu qui vise un geste que le joueur
            pourrait vraiment faire : ne pas toucher au robinet de secours
            des portes.
 −24 s      le courant revient, et il met trois secondes. Deux contacteurs se
            referment sans tenir, le troisième tient, puis les tubes montent
-           doucement en puissance — un fluorescent ne donne pas son plein
+           doucement en puissance - un fluorescent ne donne pas son plein
            flux d'un coup. Les écrans se rallument NOIRS : la lampe revient,
            le contrôleur redémarre derrière, l'image arrive après.
            L'annonce, elle, tombe neuf secondes plus tard : c'est la lumière
@@ -1864,7 +1864,7 @@ Le point qui commande tout le reste : **une E235-0 de la Yamanote n'a pas de
 batterie de traction**. Elle ne peut pas rejoindre la gare suivante par ses
 propres moyens. Cette fonction est arrivée plus tard, sur les E235-1000 des
 lignes Yokosuka et Sōbu rapide, que JR East a présentées comme une première du
-genre. La rame verte, elle, attend le retour de la tension — et c'est pour ça
+genre. La rame verte, elle, attend le retour de la tension - et c'est pour ça
 que l'immobilisation se compte en minutes là où un 急停車 se compte en secondes.
 Le vrai ordre de grandeur est d'ailleurs bien pire : lors de la panne de Tamachi
 du 16 janvier 2026, deux rames de la Keihin-Tōhoku sont restées bloquées entre
@@ -1875,22 +1875,22 @@ marche le long des voies : au-delà de quelques minutes il ne resterait plus rie
 
 Ce qui reste allumé est ce qui tient sur les batteries, et la liste n'est pas
 décorative : la réglementation japonaise impose que l'essentiel reste utilisable
-pendant une panne d'alimentation — sono du conducteur, interphone, signalisation
+pendant une panne d'alimentation - sono du conducteur, interphone, signalisation
 de porte, lampes de secours. Les écrans, eux, ne sont pas des équipements de
 sécurité : ils tombent, et ils tombent les premiers (`LCD_CUTOFF` est plus haut
 que le seuil des lampes, un panneau perdant son rétroéclairage bien avant qu'un
 tube ne s'éteigne).
 
 Tout cela passe par **une seule valeur**, `runtime.carPower` (0..1) : les néons
-et le bandeau LED la lisent en puissance 1,6 — un tube tient, blêmit, puis lâche
-—, les dalles et les écrans publicitaires en MARCHE et non en rampe, le moteur
+et le bandeau LED la lisent en puissance 1,6 - un tube tient, blêmit, puis lâche
+-, les dalles et les écrans publicitaires en MARCHE et non en rampe, le moteur
 audio pour couper l'onduleur et laisser mourir les turbines à leur propre
 inertie. Le reste du jeu n'a pas à savoir qu'une coupure existe.
 
 La forme des deux séquences vit dans `systems/carPower`, en images-clés plutôt
 qu'en formules : on les lit, et on les règle en déplaçant un chiffre. Le module
 n'a aucune dépendance, donc Node l'exécute tel quel et
-`tests/carPower.test.ts` vérifie ce que l'œil doit pouvoir compter — au moins
+`tests/carPower.test.ts` vérifie ce que l'œil doit pouvoir compter - au moins
 trois extinctions franches à la coupure, deux retombées de contacteur au
 retour, une remontée finale qui ne redescend jamais, et un éclairage de secours
 qui ne s'allume jamais entre deux décrochages ni ne laisse le wagon dans le noir
@@ -1900,7 +1900,7 @@ complet pendant que le courant revient.
 événement visuel : entre les deux silences, il se passe quelque chose de très
 court et de très électrique. Le disjoncteur principal s'ouvre sous le plancher,
 des contacteurs claquent, les tubes grésillent en essayant de se réamorcer, le
-sifflement du convertisseur s'effondre en une demi-seconde — et remonte au
+sifflement du convertisseur s'effondre en une demi-seconde - et remonte au
 retour. Rien de tout cela n'a de corps : c'est du bruit blanc très court et très
 aigu, le seul timbre du jeu qui n'ait que du haut.
 
@@ -1908,7 +1908,7 @@ Ces instants sont déclarés **dans `carPower`, à côté des images-clés de la
 lumière**, et non dans le moteur audio, qui ne fournit que les timbres. C'est la
 seule façon de garantir qu'ils ne se décalent jamais : un claquement qui arrive
 un dixième de seconde après son clignotement se lit comme un deuxième
-événement. Régler la courbe, c'est régler le son en même temps — et le test le
+événement. Régler la courbe, c'est régler le son en même temps - et le test le
 vérifie, chaque commutation devant tomber sur une image-clé. Une frame lente ne
 perd rien non plus : elle récolte d'un coup tous les bruits que son pas a
 traversés, ce qui vaut mieux que de les sauter.
@@ -1927,12 +1927,12 @@ avec les néons ne ressembleraient à rien.
 
 Rien de tout cela ne se juge sur une capture d'écran : le clignotement dure
 moins de deux secondes, et le rendu logiciel des scripts tourne à quatre images
-par seconde — il le consomme en quelques frames. `__holdPower(niveau)` fige donc
+par seconde - il le consomme en quelques frames. `__holdPower(niveau)` fige donc
 l'alimentation à un point choisi de la courbe, et `scripts/outage-shots.mjs` en
 tire une pellicule des états traversés.
 
 La coupure tombe **toutes les trente-quatre à soixante-dix gares**, soit d'une
-heure et demie à trois heures de trajet — la première plus tôt. C'est
+heure et demie à trois heures de trajet - la première plus tôt. C'est
 volontairement au-delà d'une session ordinaire : une vraie panne d'alimentation
 est un événement qu'on raconte, pas un qu'on croise. Elle passe devant l'arrêt
 d'urgence quand les deux tombent sur la même course.
@@ -1942,7 +1942,7 @@ ne jamais voir est un événement qu'on ne peut pas non plus regarder deux fois.
 D'où le **⚠ discret en bout de barre du HUD** (`ui/IncidentMenu`), qui déroule
 les deux arrêts et les déclenche à la demande. Il n'invente rien et ne double
 aucune mécanique : il appelle exactement les fonctions du tirage automatique,
-avec les mêmes conditions — la rame doit rouler en pleine voie, et rien ne doit
+avec les mêmes conditions - la rame doit rouler en pleine voie, et rien ne doit
 être déjà en cours. Quand ce n'est pas le cas, il le DIT plutôt que de se
 contenter d'être gris. Le menu est volontairement effacé tant qu'on ne le
 survole pas : ce n'est pas un réglage, et on ne doit pas tomber dessus en
@@ -1954,17 +1954,17 @@ tension, `__holdPower(niveau)` fige l'alimentation à un point de la courbe, et
 `scripts/outage-shots.mjs` en fait la planche de contrôle.
 
 **Cinq sources, et trois automates qu'on ne confond pas** : la sono de la rame
-(`jf_alpha`), les deux annonces automatiques du quai — **une femme sur le
-内回り** (`jf_tebukuro`) et **un homme sur le 外回り** (`jm_kumo`) —, l'agent de
-quai au micro (`jf_nezumi`, une femme, un peu plus rapide et moins lisse —
+(`jf_alpha`), les deux annonces automatiques du quai - **une femme sur le
+内回り** (`jf_tebukuro`) et **un homme sur le 外回り** (`jm_kumo`) -, l'agent de
+quai au micro (`jf_nezumi`, une femme, un peu plus rapide et moins lisse -
 c'est une personne, pas un automate, et elle prend la parole juste après lui),
 et les deux voix anglaises (`af_heart` à bord, `am_michael` au quai, un cran
 plus lent : dehors, sous une verrière, une annonce trop rapide ne s'attrape
 pas).
 
 **Pourquoi deux automates de quai.** Les machines se répondent à une seconde
-d'écart — 「1番線、ドアが閉まります」 sur le quai puis 「ドアが閉まります」 dans le
-wagon — et il ne faut pas avoir à chercher laquelle vient de parler. Sur un îlot
+d'écart - 「1番線、ドアが閉まります」 sur le quai puis 「ドアが閉まります」 dans le
+wagon - et il ne faut pas avoir à chercher laquelle vient de parler. Sur un îlot
 central, le problème est le même d'un quai à l'autre : les deux sens annoncent le
 MÊME script, mot pour mot, et 「渋谷、渋谷。ご乗車、ありがとうございます。」 est
 identique au caractère près dans un sens comme dans l'autre. La voix est alors la
@@ -1976,7 +1976,7 @@ rendre les deux quais séparables à l'oreille.
 
 Cela s'est joué dans la **clé du clip**, pas seulement dans le générateur : un
 MP3 était identifié par le couple (langue, texte), si bien que deux automates
-disant les mêmes mots se seraient partagé un fichier — le dernier gravé aurait
+disant les mêmes mots se seraient partagé un fichier - le dernier gravé aurait
 pris la bouche de l'autre, et un quai sur deux aurait parlé du mauvais sens sans
 que rien n'échoue. La clé des annonces de quai porte donc aussi le **rôle vocal**
 (`data/clipKey`) ; celle des annonces de bord, qui n'ont qu'une voix par langue,
@@ -1984,20 +1984,20 @@ n'a pas changé d'un octet.
 
 S'y ajoute, sur les gares dont l'îlot est partagé avec une autre ligne, la seule
 annonce de quai qui parle d'une voie qui n'est pas la nôtre : まもなく、1番線を、
-電車が通過します — voir *Le train qui ne s'arrête pas*.
+電車が通過します - voir *Le train qui ne s'arrête pas*.
 
 **La cinquième voix.** Il y en avait une de trop, et c'était la seule qu'on
 n'avait pas choisie. Neuf textes joués n'avaient pas de clip : le remerciement
 d'ouverture, dont le texte venait de changer, et toute la procédure de porte
 bloquée, ajoutée sans regravure. Faute de MP3, ils partaient sur
-`speechSynthesis` — la voix du navigateur, Kyoko ou Nanami selon la machine,
+`speechSynthesis` - la voix du navigateur, Kyoko ou Nanami selon la machine,
 qui sort **hors du graphe Web Audio** : ni panoramique, ni souffle de ligne,
 juste un volume approché. Sur le quai, où l'on entend l'ATOS et l'agent
 enchaîner, elle s'entendait comme une intruse.
 
 Le générateur, lui, ne pouvait plus tourner : un clip est identifié par le seul
 couple (langue, texte), et l'agent de quai disait mot pour mot la phrase du
-conducteur — 「ドアから離れてください。」. Deux voix pour une clé : l'export
+conducteur - 「ドアから離れてください。」. Deux voix pour une clé : l'export
 refusait de continuer, à juste titre, et personne ne pouvait plus regraver quoi
 que ce soit. L'agent a donc sa propre formulation, ce qui est d'ailleurs plus
 juste : il ne lit pas un script depuis une cabine, il parle à quelqu'un qu'il a
@@ -2010,7 +2010,7 @@ une fois avant qu'on renonce. Pour que le cas n'arrive jamais,
 `tests/announcementClips.test.ts` énumère ce que grave le générateur et vérifie
 que chaque texte a son MP3, que chaque MP3 est là, et qu'aucun ne traîne sans
 être réclamé. Retoucher un mot d'annonce sans regraver fait désormais échouer
-la suite de tests — pas le rendu sonore, trois semaines plus tard, dans une
+la suite de tests - pas le rendu sonore, trois semaines plus tard, dans une
 gare qu'on ne visitait plus.
 
 Le numéro de voie annoncé est le vrai (`data/platforms`), y compris les voies
@@ -2022,7 +2022,7 @@ mêmes.
 ### L'ambiance du lieu
 
 Ce qu'on entend **par-dessus** la sonorisation, et qui n'est pas le même d'une
-gare à l'autre : les oiseaux d'Uguisudani — 鶯谷, « la vallée du rossignol » —,
+gare à l'autre : les oiseaux d'Uguisudani - 鶯谷, « la vallée du rossignol » -,
 le timbre du tram à Ōtsuka, le passage feutré du monorail à Hamamatsuchō, la
 rumeur d'Ameyoko sous Okachimachi, le silence d'une tranchée à Mejiro. Chaque
 gare porte sa clé `ambience` (`data/stationLayouts`), et un lit de bruit filtré
@@ -2045,7 +2045,7 @@ La pluie s'entend en **deux endroits qui n'ont rien à voir**, et c'est ce qui l
 rend crédible depuis un train.
 
 Sur le **pavillon**, au-dessus de la tête : un crépitement mat, sans aigus, que
-la tôle et l'isolant ont mangés. Il ne passe pas par les portes — il est là même
+la tôle et l'isolant ont mangés. Il ne passe pas par les portes - il est là même
 portes fermées, et c'est le seul son du jeu dont l'ouverture des portes ne change
 rien. Il appartient à la rame, donc au bus qui s'atténue quand on la regarde
 depuis le quai : là, le toit sous lequel on se tient est celui de la gare.
@@ -2054,14 +2054,14 @@ frappant plus fort.
 
 **Dehors**, sur la ville et sur le quai : un souffle large et brillant, qui
 n'entre dans le wagon que par les ouvertures, comme l'ambiance de gare et pour la
-même raison. Portes fermées, il n'en reste que le grave — le vitrage coupe tout
+même raison. Portes fermées, il n'en reste que le grave - le vitrage coupe tout
 au-dessus de deux ou trois kilohertz. Une seule source pour les deux aurait forcé
 à choisir un timbre, et le timbre est précisément ce qui distingue les deux
 endroits.
 
 Le **tonnerre** est un grondement long, plus un claquement qui ne vaut que pour
 les coups proches : c'est le *rapport* des deux qui donne la distance, bien plus
-que le niveau. Le retard suit la même distance — trois secondes par kilomètre —,
+que le niveau. Le retard suit la même distance - trois secondes par kilomètre -,
 si bien que l'éclair lointain s'allume sept secondes avant qu'on l'entende.
 
 Le **rail mouillé** fait monter le roulement dans les aigus : c'est la pellicule
@@ -2087,7 +2087,7 @@ centre de la tête.
   présence, coupe-haut 5 kHz, compression) : le timbre d'un haut-parleur de
   wagon, pas celui d'un synthé.
 - Le quai, lui, n'est pas sonorisé par un point mais par une **ligne** de
-  diffuseurs — un tous les dix-neuf mètres sur les 224 m, ceux-là mêmes qu'on
+  diffuseurs - un tous les dix-neuf mètres sur les 224 m, ceux-là mêmes qu'on
   voit sous l'auvent. Le graphe en panne les six plus proches de la tête, et
   c'est la gare qui les désigne à chaque image : le diffuseur au-dessus de soi
   change quand on marche, et l'annonce s'entend aussi bien au bout du quai que
@@ -2105,21 +2105,21 @@ centre de la tête.
   sont normalisés en crête et sonnaient bien plus fort que tout le reste de la
   gare). Ce niveau dépend du lieu d'écoute : sur le quai, à trois mètres sous
   un diffuseur, on en retire une dizaine de décibels ; dans la rame, où elle
-  arrive déjà filtrée par les ouvertures, moitié moins — plus une petite bosse
+  arrive déjà filtrée par les ouvertures, moitié moins - plus une petite bosse
   de présence vers 2 kHz qui la garde lisible par-dessus le brouhaha et la
   clim. Le rapport entre les deux la maintient du côté du quai : à l'oreille,
   elle reste plus présente dehors que dedans, elle vient toujours de la gare.
 
 Les annonces vocales (clips Kokoro) passent par ces mêmes bus : elles sont
 réellement pannées sur les diffuseurs, ceux du plafond pour la rame, ceux du
-quai pour la gare — toutes, sans exception, puisqu'il n'existe plus de voix qui
+quai pour la gare - toutes, sans exception, puisqu'il n'existe plus de voix qui
 sorte du graphe Web Audio. Chacune est prise sous le souffle de sa ligne, qui
 s'ouvre et se referme avec un déclic autour d'elle.
 
 **Où on est décide ce qu'on entend.** Les deux voix ont chacune leur robinet, et
 il dépend du côté de la porte où se trouve la tête :
 
-- sur le **quai**, la voix de bord est muette — les diffuseurs sont dans le
+- sur le **quai**, la voix de bord est muette - les diffuseurs sont dans le
   wagon, derrière les vitres. On n'entend que la gare, et en clair ;
 - dans la **rame arrêtée**, la voix du quai n'est qu'un lointain qui entre par
   les portes ouvertes : assez pour reconnaître qu'une annonce passe dehors et
@@ -2129,7 +2129,7 @@ Ce partage ne vaut que pour la **parole**. Les carillons de porte, le jingle
 d'arrivée, le carillon ATOS, les bips des portes palières et la mélodie de
 départ sont des signaux : ils traversent, dans les deux sens. Chaque
 sonorisation a sa propre file d'annonces, si bien que la gare et la rame
-peuvent parler en même temps — ce qu'elles font vraiment quand on est assis
+peuvent parler en même temps - ce qu'elles font vraiment quand on est assis
 porte ouverte et que le quai annonce la fermeture une seconde après le wagon.
 
 Optionnel : déposez d'autres enregistrements dans `public/audio/`

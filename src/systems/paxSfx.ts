@@ -1,5 +1,5 @@
 // Déclenche les bruitages voyageurs au démarrage d'une action.
-// Sons synthétiques discrets (audioEngine) — jamais via la sono PA.
+// Sons synthétiques discrets (audioEngine) - jamais via la sono PA.
 
 import type { PaxAction } from '../data/paxActions';
 import {

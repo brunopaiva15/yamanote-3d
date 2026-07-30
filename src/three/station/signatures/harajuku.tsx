@@ -1,9 +1,9 @@
-// JY19 原宿 — le seul couple de quais latéraux de la boucle.
+// JY19 原宿 - le seul couple de quais latéraux de la boucle.
 //
 // Deux choses font Harajuku, et elles s'opposent : le bâtiment clair et vitré
 // de 2020, tout en blanc et en verre, avec son hall au niveau supérieur ; et
 // de l'autre côté, la masse sombre et continue des arbres du Meiji-jingū. Entre
-// les deux, deux voies et le quai d'en face — celui de l'autre sens, qu'on voit
+// les deux, deux voies et le quai d'en face - celui de l'autre sens, qu'on voit
 // en entier puisqu'il n'y a rien pour le masquer.
 //
 // C'est la seule gare où le décor d'en face se trouve du côté NÉGATIF : notre
@@ -23,7 +23,7 @@ export function Harajuku({ layout, place }: SigProps) {
   const backX = place.backX;
   const top = layout.canopyY;
   // Deux quais latéraux, deux voies entre eux. La seconde voie court à
-  // TRACK_SPACING de la nôtre, et le quai d'en face la borde — donc tout cela
+  // TRACK_SPACING de la nôtre, et le quai d'en face la borde - donc tout cela
   // se trouve en x NÉGATIF, du côté d'où le train est arrivé.
   const otherTrackX = -TRACK_SPACING;
   const oppEdge = otherTrackX - TRACK_HALF;

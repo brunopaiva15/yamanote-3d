@@ -3,13 +3,13 @@
 // Une ligne qu'on prend deux fois par jour finit par se raconter : la couleur
 // des rames, l'heure du dernier train, la façon dont le conducteur freine, le
 // numéro qu'on n'a jamais regardé au-dessus de la porte. Ce fichier est celui
-// des gens qui remarquent tout ça — et de ceux qui, à force, ne le remarquent
+// des gens qui remarquent tout ça - et de ceux qui, à force, ne le remarquent
 // plus.
 
 import type { DialogueEntry } from './types';
 
 export const DIALOGUE_TRAINS: readonly DialogueEntry[] = [
-  // ——— La ligne ———
+  // --- La ligne ---
   {
     id: 'tr.length',
     lines: [
@@ -170,7 +170,7 @@ export const DIALOGUE_TRAINS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Les autres lignes ———
+  // --- Les autres lignes ---
   {
     id: 'tr.chuo',
     lines: [
@@ -233,7 +233,7 @@ export const DIALOGUE_TRAINS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Le personnel ———
+  // --- Le personnel ---
   {
     id: 'tr.driver',
     lines: [
@@ -297,7 +297,7 @@ export const DIALOGUE_TRAINS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Incidents et retards ———
+  // --- Incidents et retards ---
   {
     id: 'tr.delay.wind',
     lines: [
@@ -360,7 +360,7 @@ export const DIALOGUE_TRAINS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Étiquette ———
+  // --- Étiquette ---
   {
     id: 'tr.etiquette.queue',
     when: { place: 'platform' },
@@ -451,7 +451,7 @@ export const DIALOGUE_TRAINS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Billetterie et portiques ———
+  // --- Billetterie et portiques ---
   {
     id: 'tr.suica',
     lines: [
@@ -503,7 +503,7 @@ export const DIALOGUE_TRAINS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Amateurs ———
+  // --- Amateurs ---
   {
     id: 'tr.fan.photo',
     when: { place: 'platform' },

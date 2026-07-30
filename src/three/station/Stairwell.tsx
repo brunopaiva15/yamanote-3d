@@ -73,7 +73,7 @@ const CHEEK_Y = (STAIR_PARAPET_H + CHEEK_BOTTOM) / 2;
 /**
  * Voile de tête. Ce n'est plus un fond : c'est un LINTEAU. Il coiffe le chant
  * du percement et porte le garde-corps, mais il s'arrête à la sous-face de la
- * dalle — dessous, la volée continue vers le niveau inférieur.
+ * dalle - dessous, la volée continue vers le niveau inférieur.
  */
 const HEAD_T = STAIR_HALF_Z - STAIR_CLEAR_Z1;
 const HEAD_Z = (STAIR_HALF_Z + STAIR_CLEAR_Z1) / 2;
@@ -92,7 +92,7 @@ const CAP_W = CHEEK_T + 0.04;
 
 /**
  * Marches. Chacune est un bloc plein, du giron à la sous-face commune, et
- * remonte de STAIR_LAP sous la marche précédente — sous la DALLE, pour la
+ * remonte de STAIR_LAP sous la marche précédente - sous la DALLE, pour la
  * première : c'est ce recouvrement qui masque le chant du percement côté
  * entrée, le seul des quatre que les joues et le voile de tête ne coiffent pas.
  */
@@ -115,7 +115,7 @@ const TREADS = Array.from({ length: STAIR_STEPS }, (_, i) => {
 });
 
 /**
- * Nez de marche antidérapants — la bande jaune de toute volée JR, et ce qui
+ * Nez de marche antidérapants - la bande jaune de toute volée JR, et ce qui
  * fait qu'on LIT une volée au lieu d'y deviner un dégradé de gris.
  *
  * Le nez de la marche k est l'arête HAUTE de sa contremarche : il appartient
@@ -178,7 +178,7 @@ const BRACKETS = [1, 4, 7, 10, 13].map((k) => onRake(k * STAIR_GOING, STAIR_HAND
  * Bandeau lumineux plaqué sur chaque joue, sous la main courante. C'est la
  * seule lumière propre de la trémie : sans lui, la volée n'est éclairée que
  * par le jour qui tombe du percement et devient un puits noir dès la sixième
- * marche — juste après l'endroit où le joueur s'arrête.
+ * marche - juste après l'endroit où le joueur s'arrête.
  */
 const GLOW_LIFT = 0.34;
 const [GLOW_Y, GLOW_Z] = onRake(RAKE_MID_T, GLOW_LIFT);
@@ -219,7 +219,7 @@ const EXIT_Z = STAIR_CLEAR_Z1 - 0.035;
 
 /**
  * Couloir : parois, plafond, fond. Elles prennent le relais des joues EXACTEMENT
- * là où celles-ci s'arrêtent — bout à bout, jamais à cheval : deux nus communs
+ * là où celles-ci s'arrêtent - bout à bout, jamais à cheval : deux nus communs
  * sur dix-huit centimètres de recouvrement, et le passage se serait bordé du
  * même liseré clignotant que la trémie avant qu'on la refasse.
  */
@@ -255,14 +255,14 @@ const LOWER_TREADS = Array.from({ length: STAIR_LOWER_STEPS }, (_, i) => {
  * Caissons publicitaires du couloir : ce qui dit « gare » et pas « tunnel ».
  *
  * Une ligne de portillons faisait le même office, mais aucune vraie gare n'en
- * pose au pied des marches — on descend, on marche, et les portillons sont
+ * pose au pied des marches - on descend, on marche, et les portillons sont
  * bien plus loin, hors de tout ce qu'on peut voir d'ici. Un couloir de
  * correspondance, lui, est bordé de caissons rétroéclairés, et ceux-là tombent
  * pile dans la bande visible.
  *
  * Cette bande est étroite et se referme vite : depuis le haut de la volée, le
  * rayon rasant part de la sous-face du linteau et rejoint le sol vers neuf
- * mètres. Les caissons se tiennent donc à hauteur d'affiche — un mètre du sol —
+ * mètres. Les caissons se tiennent donc à hauteur d'affiche - un mètre du sol -
  * et pas plus loin que sept.
  */
 const AD_LOW = [
@@ -467,7 +467,7 @@ function Stairwell({
 function LowerLevel({ m, station }: { m: Mats; station: number }) {
   return (
     <group>
-      {/* Seconde volée, et ses nez — c'est par eux qu'on la lit dans le noir. */}
+      {/* Seconde volée, et ses nez - c'est par eux qu'on la lit dans le noir. */}
       {LOWER_TREADS.map((t) => (
         <group key={`lt${t.k}`}>
           <mesh position={[0, t.y, t.z]} material={m.stair}>
@@ -507,7 +507,7 @@ function LowerLevel({ m, station }: { m: Mats; station: number }) {
       </mesh>
 
       {/* Caissons rétroéclairés sur les parois : la seule lumière du couloir
-          qui tombe dans la bande visible — une réglette de plafond, à trois
+          qui tombe dans la bande visible - une réglette de plafond, à trois
           mètres du sol, est coupée par la dalle avant d'atteindre l'œil. */}
       {AD_LOW.map((a, k) => (
         <group key={`la${k}`}>

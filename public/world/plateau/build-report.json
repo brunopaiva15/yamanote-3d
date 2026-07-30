@@ -11,14 +11,14 @@
   },
   "source": {
     "name": "Échantillon synthétique (PAS de données Project PLATEAU)",
-    "dataset": "data/plateau-sample — généré par scripts/plateau/make-sample.mjs",
+    "dataset": "data/plateau-sample - généré par scripts/plateau/make-sample.mjs",
     "license": "CC0 1.0 (production de ce dépôt)",
     "synthetic": true
   },
   "route": {
     "file": "/home/user/yamanote-3d/data/geo/shibuya-ebisu.geojson",
     "source": "Approximation géométrique (arc de cercle entre les deux gares)",
-    "license": "CC0 — produit par ce dépôt, ne contient aucune donnée tierce",
+    "license": "CC0 - produit par ce dépôt, ne contient aucune donnée tierce",
     "points": 41,
     "totalLength": 1514.5685016518564
   },
@@ -376,7 +376,7 @@
     "PLATEAU GIS Converter introuvable dans le PATH et PLATEAU_CONVERTER_PATH non défini : le pipeline utilisera le lecteur CityGML intégré (LOD1/LOD2 sans textures).",
     "Source = ÉCHANTILLON SYNTHÉTIQUE (data/plateau-sample). Ce ne sont PAS des données Project PLATEAU.",
     "Aucun convertisseur externe détecté : repli sur le lecteur CityGML intégré (LOD1/LOD2 géométrique, SANS textures ni apparences).",
-    "  Installez-le ou définissez PLATEAU_CONVERTER_PATH.\n  Linux x86_64 : téléchargez nusamai-<version>-x86_64-unknown-linux-gnu.tar.gz depuis\n    https://github.com/MIERUNE/plateau-gis-converter/releases\n    tar -xzf nusamai-<version>-x86_64-unknown-linux-gnu.tar.gz\n    sudo install -m 755 nusamai /usr/local/bin/nusamai\n  macOS (Apple Silicon) : nusamai-<version>-aarch64-apple-darwin.tar.gz\n  Ou passez --converter builtin pour utiliser le lecteur CityGML intégré\n  (LOD1/LOD2 sans textures — voir docs/PLATEAU_PIPELINE.md)."
+    "  Installez-le ou définissez PLATEAU_CONVERTER_PATH.\n  Linux x86_64 : téléchargez nusamai-<version>-x86_64-unknown-linux-gnu.tar.gz depuis\n    https://github.com/MIERUNE/plateau-gis-converter/releases\n    tar -xzf nusamai-<version>-x86_64-unknown-linux-gnu.tar.gz\n    sudo install -m 755 nusamai /usr/local/bin/nusamai\n  macOS (Apple Silicon) : nusamai-<version>-aarch64-apple-darwin.tar.gz\n  Ou passez --converter builtin pour utiliser le lecteur CityGML intégré\n  (LOD1/LOD2 sans textures - voir docs/PLATEAU_PIPELINE.md)."
   ],
   "errors": [],
   "totalSeconds": 5.331

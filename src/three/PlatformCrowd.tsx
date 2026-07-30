@@ -3,7 +3,7 @@
 //
 // Les chiens en caisse de transport (three/PlatformPets) sont greffés à la
 // branche librairie : la caisse pend à un os de main, que les personnages
-// procéduraux n'ont pas. Ils ont leur propre repli — un pack animalier absent
+// procéduraux n'ont pas. Ils ont leur propre repli - un pack animalier absent
 // ou illisible laisse simplement le quai sans chiens.
 
 import { Component, Suspense, type ReactNode } from 'react';

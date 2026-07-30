@@ -49,7 +49,7 @@ export interface CharacterTemplate {
   standHipY: number; // hanches au repos, unités normalisées (fallback assis manuel)
 }
 
-// Géométrie des jambes mesurée sur la bind pose, en unités normalisées —
+// Géométrie des jambes mesurée sur la bind pose, en unités normalisées -
 // consommée par l'assise manuelle (pose.ts) pour poser les pieds au sol.
 export interface LegGeom {
   shinLen: number; // distance genou → pivot du pied
@@ -71,7 +71,7 @@ export interface CharacterClone {
   bones: BoneMap;
   legGeom: LegGeom | null;
   // Orientations de repos des os des bras, RELATIVES à la poitrine (chestRef)
-  // — la vrille du buste, commune aux deux côtés, est ainsi factorisée.
+  // - la vrille du buste, commune aux deux côtés, est ainsi factorisée.
   armRest: Partial<Record<ArmBoneKey, THREE.Quaternion>>;
   // Offsets de bind PARENT → ENFANT au sein de chaque bras (bras→avant-bras,
   // avant-bras→main), par côté : ils prolongent une chaîne posée SANS
@@ -81,7 +81,7 @@ export interface CharacterClone {
   // Os de référence des repos des bras (parent des clavicules) ; wrap à défaut.
   chestRef: THREE.Object3D | null;
   // Chaîne du buste (au-dessus des hanches jusqu'à la poitrine, racine en
-  // premier) : symétrisée pendant l'assise — la vrille animée du torse décale
+  // premier) : symétrisée pendant l'assise - la vrille animée du torse décale
   // les épaules et fausse bras et mains.
   spineChain: THREE.Bone[];
   // Clavicules (parents des bras) et leur rotation LOCALE de bind pose : le
@@ -187,7 +187,7 @@ export function resolveClips(variant: CharacterVariant, clips: THREE.AnimationCl
   const walk =
     byName(variant.clips?.walk) ??
     findClip(clips, /walk/i, /(back|left|right|strafe|crouch|jump|gun|sword|carry|melee|combat)/i, /^walk(ing)?$/i);
-  // Chute au sol : les packs d'action livrent tous un « Death » — un corps qui
+  // Chute au sol : les packs d'action livrent tous un « Death » - un corps qui
   // perd ses jambes, s'affaisse et s'étale. C'est la seule vraie animation de
   // chute dont on dispose, et elle vaut mille fois la bascule rigide qu'on
   // jouait avant (voir characters/fall.ts pour le montage).
@@ -195,7 +195,7 @@ export function resolveClips(variant: CharacterVariant, clips: THREE.AnimationCl
     byName(variant.clips?.collapse) ??
     findClip(clips, /(death|die|collapse|faint|falldown|fall)/i, /(gun|sword|combat|melee|ranged)/i, /^death$/i);
   // Déséquilibre rattrapé : le recul encaissé des packs (« HitRecieve ») est un
-  // faux pas complet — buste plié, pied qui part en arrière, redressement.
+  // faux pas complet - buste plié, pied qui part en arrière, redressement.
   const stagger =
     byName(variant.clips?.stagger) ??
     findClip(clips, /(hit.?rec(ie|ei)ve|hitreact|stagger|flinch|stumble|knockback)/i, /(gun|sword|death)/i, null);
@@ -230,7 +230,7 @@ export function stripRootMotionXZ(clip: THREE.AnimationClip, hipsName: string): 
 }
 
 // Hauteur monde (locale au modèle brut) des hanches après application d'un
-// clip sur un clone sonde — sert à caler le bassin sur le coussin.
+// clip sur un clone sonde - sert à caler le bassin sur le coussin.
 function measureHipY(template: { scene: THREE.Object3D }, clip: THREE.AnimationClip | null): number | null {
   const probe = cloneSkeleton(template.scene);
   const bones = resolveBones(probe);
@@ -321,7 +321,7 @@ function tintMaterial(mat: THREE.Material, app: Appearance, tintMap?: Record<str
     cloned.color.set(ROLE_COLOR[role](app));
   }
   // Marqué : ce matériau n'appartient qu'à ce clone. Les matériaux NON marqués
-  // sont ceux du template, partagés par tous les PNJ — les libérer avec un
+  // sont ceux du template, partagés par tous les PNJ - les libérer avec un
   // clone effacerait les autres (voir disposeClone).
   markOwned(cloned);
   return cloned;
@@ -331,7 +331,7 @@ function tintMaterial(mat: THREE.Material, app: Appearance, tintMap?: Record<str
  * Ressource (matériau, géométrie, texture) appartenant à UN personnage et à
  * lui seul : elle sera libérée avec lui quand son slot changera d'identité.
  *
- * Tout ce qui n'est pas marqué est mutualisé entre les PNJ — le libérer avec
+ * Tout ce qui n'est pas marqué est mutualisé entre les PNJ - le libérer avec
  * un personnage effacerait les autres. C'est la seule règle à tenir dans les
  * constructeurs de corps, ici comme dans les rendus procéduraux.
  */
@@ -364,7 +364,7 @@ export function disposeOwned(root: THREE.Object3D): void {
 // --- Clonage par passager -------------------------------------------------
 
 // Accessoires incongrus livrés avec certains packs (le costume Quaternius
-// tient un pistolet) : masqués au clonage — rien de tout ça dans la Yamanote.
+// tient un pistolet) : masqués au clonage - rien de tout ça dans la Yamanote.
 const HIDDEN_PROP_RE = /pistol|gun|revolver|rifle|weapon|knife|sword|blade/i;
 
 export function cloneVariant(template: CharacterTemplate, app: Appearance): CharacterClone {
@@ -409,11 +409,11 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
   //
   // ATTENTION : cette pose de repos n'est PAS symétrique dans ces packs
   // (frame posée : torse vrillé, bras non miroirs). Seul le côté GAUCHE sert
-  // de référence — l'assise manuelle construit le bras gauche puis assigne au
+  // de référence - l'assise manuelle construit le bras gauche puis assigne au
   // droit le miroir sagittal exact du résultat (voir pose.ts).
   wrap.updateMatrixWorld(true);
   // Référence : le parent des clavicules (poitrine). Les repos sont pris
-  // RELATIFS à lui — la vrille du buste (Y), posée ou animée, tourne les deux
+  // RELATIFS à lui - la vrille du buste (Y), posée ou animée, tourne les deux
   // bras dans le MÊME sens et casserait une référence prise en espace monde.
   const clavParentL = bones.upperArmL?.parent;
   const chestRef = clavParentL && (clavParentL as THREE.Bone).isBone ? clavParentL.parent : null;
@@ -499,7 +499,7 @@ export function cloneVariant(template: CharacterTemplate, app: Appearance): Char
  * Variante du pack pour une apparence donnée, tirée d'un flux seedé par
  * l'IDENTITÉ du voyageur (et non par sa place dans le pool).
  *
- * C'est la même fonction des deux côtés du seuil — rame et quai — et c'est ce
+ * C'est la même fonction des deux côtés du seuil - rame et quai - et c'est ce
  * qui rend la bascule de la porte invisible : une identité donne partout le
  * même modèle, quel que soit le pool qui la porte (voir systems/passengers,
  * « passage de relais »).

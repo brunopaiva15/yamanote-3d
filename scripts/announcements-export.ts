@@ -9,26 +9,26 @@
 //
 // Chaque entrée : { key, lang, text, tts, voice, speed }
 // - key   : clipKey(lang, text) pour la rame, clipKey(lang, texte, rôle) pour le
-//           quai — nom de fichier du MP3 et clé du manifeste. Le rôle entre dans
+//           quai - nom de fichier du MP3 et clé du manifeste. Le rôle entre dans
 //           la clé du quai parce que deux automates y disent les MÊMES mots :
 //           sans lui, un seul des deux MP3 survivrait à la gravure et un quai
 //           sur deux parlerait avec la voix de l'autre sens ;
 // - text  : texte affiché / haché, identique au runtime ;
 // - tts   : texte adapté à la synthèse (macrons ASCII et « JY-xx » épelé en
 //           anglais ; en japonais, les quelques mots que l'analyseur du
-//           générateur lit de travers, réécrits en kana — voir JA_READINGS) ;
+//           générateur lit de travers, réécrits en kana - voir JA_READINGS) ;
 // - voice : voix Kokoro. CINQ sources parlent dans ce jeu et on doit les
 //           distinguer à l'oreille sans regarder : la sono de la RAME
-//           (jf_alpha), les deux automates du QUAI — une femme sur le 内回り
+//           (jf_alpha), les deux automates du QUAI - une femme sur le 内回り
 //           (jf_tebukuro), un homme sur le 外回り (jm_kumo), de sorte qu'on sait
-//           sans lever les yeux lequel des deux quais vient d'annoncer —,
-//           l'AGENT de quai au micro (jf_nezumi, moins lisse — c'est une
+//           sans lever les yeux lequel des deux quais vient d'annoncer -,
+//           l'AGENT de quai au micro (jf_nezumi, moins lisse - c'est une
 //           personne, pas un automate), et les deux voix anglaises (af_heart à
 //           bord, am_michael au quai).
 // - speed : vitesse Kokoro. Le japonais est au-dessus du rythme natif pour
 //           COMPENSER la découpe en segments du générateur : synthétisé seul,
 //           un segment reçoit une intonation de fin de phrase et s'allonge
-//           d'environ 25 % — à vitesse 1.0 la voix articulait donc plus
+//           d'environ 25 % - à vitesse 1.0 la voix articulait donc plus
 //           lentement qu'avant l'ajout des pauses. Les silences aux 、/。
 //           eux-mêmes sont posés par le générateur, pas par le débit.
 //           L'anglais du quai est un cran sous celui de la rame : dehors, sous
@@ -98,18 +98,18 @@ const CABIN_VOICE: Record<Utterance['lang'], VoiceSetting> = {
  * DEUX automates, un par sens : une femme sur le 内回り, un homme sur le 外回り.
  * Sur un îlot central, les deux quais annoncent à quelques secondes d'écart le
  * même script mot pour mot ; la voix est alors la seule chose qui dise lequel
- * des deux vient de parler — donc de quel côté il faut se tourner. Ce n'est pas
+ * des deux vient de parler - donc de quel côté il faut se tourner. Ce n'est pas
  * une imitation des voix réelles de JR East, seulement la distinction
  * féminin/masculin qui rend les deux quais séparables à l'oreille.
  *
  * jf_tebukuro pour le 内回り : la seule voix féminine japonaise de Kokoro qui ne
- * soit ni celle de la rame (jf_alpha) ni celle de l'agent de quai (jf_nezumi) —
+ * soit ni celle de la rame (jf_alpha) ni celle de l'agent de quai (jf_nezumi) -
  * il faut trois femmes distinctes, puisque les trois peuvent parler dans la même
  * minute. Le débit est celui de l'autre automate : c'est la même machine, elle
  * ne parle pas plus vite parce que le quai est en face.
  *
  * L'agent reste une femme, la même dans les deux sens : c'est une PERSONNE, elle
- * est sur le quai, elle n'a qu'une voix. Et on l'entend juste après l'automate —
+ * est sur le quai, elle n'a qu'une voix. Et on l'entend juste après l'automate -
  * on doit savoir tout de suite lequel des deux vient de prendre le micro.
  */
 const STATION_VOICE: Record<StationVoice, VoiceSetting> = {
@@ -123,14 +123,14 @@ const STATION_VOICE: Record<StationVoice, VoiceSetting> = {
 /**
  * Sens de circulation pour lesquels on grave les annonces. LES DEUX : la rame
  * roule maintenant dans un sens comme dans l'autre, et le sens change ce qui
- * est DIT — le nom de la boucle (山手線内回り／外回り), les gares repères de la
+ * est DIT - le nom de la boucle (山手線内回り／外回り), les gares repères de la
  * direction, et le numéro de voie desservie. Sans clip, une annonce reste
  * muette (voir systems/speech) : un sens jouable sans clips serait un sens
  * silencieux.
  *
- * Le surcoût est modeste. La plupart des textes ne dépendent pas du sens —
+ * Le surcoût est modeste. La plupart des textes ne dépendent pas du sens -
  * 「次は。渋谷。お出口は右側です。」 est le même dans les deux, puisque le côté
- * d'ouverture appartient à la gare — et la déduplication par clé les partage.
+ * d'ouverture appartient à la gare - et la déduplication par clé les partage.
  */
 const DIRECTIONS: LoopDirection[] = ['inner', 'outer'];
 
@@ -149,7 +149,7 @@ function stripDiacritics(s: string): string {
 }
 
 // « JY. 05 » → « J Y. 5 » : épelé lettre à lettre, sans zéro de tête. Le point
-// du texte est conservé — c'est la pause entre les lettres et le nombre, et
+// du texte est conservé - c'est la pause entre les lettres et le nombre, et
 // c'est elle qui donne au code de gare sa diction d'annonce.
 function spellStationCode(s: string): string {
   return s.replace(/\bJY\.\s*0*(\d+)/g, 'J Y. $1');
@@ -175,7 +175,7 @@ function spellStationCode(s: string): string {
  * GARES, eux, ne sont pas ici : le générateur les vérifie tout seul contre leur
  * transcription kana (voir station_replacements dans announcements-gen.py).
  *
- * Attention : corriger une lecture ici ne change PAS la clé du clip — elle
+ * Attention : corriger une lecture ici ne change PAS la clé du clip - elle
  * hache le texte du jeu, pas le texte synthétisé. Il faut donc supprimer les
  * MP3 concernés (ou regraver sans --reuse) pour que la correction s'entende.
  */
@@ -222,7 +222,7 @@ utterances.push(...emergencyWaitAnnouncement());
 utterances.push(...emergencyResumeAnnouncement());
 // Coupure de caténaire : le conducteur au combiné une fois la rame posée, le
 // rappel d'attente, et le retour de la tension. Pas d'annonce au moment de la
-// coupure — la sonorisation automatique s'éteint avec le convertisseur.
+// coupure - la sonorisation automatique s'éteint avec le convertisseur.
 utterances.push(...outageStopAnnouncement());
 utterances.push(...outageWaitAnnouncement());
 utterances.push(...outageRestoredAnnouncement());
@@ -232,7 +232,7 @@ utterances.push(...outageRestoredAnnouncement());
 // TOUT ce qui suit est gravé dans LES DEUX SENS : le sens ne change pas
 // seulement le texte (le nom de la boucle, les gares repères, la voie), il change
 // la VOIX. Une annonce qui n'existerait que dans un sens laisserait l'autre quai
-// muet, ou — pire, avant que le rôle n'entre dans la clé du clip — le ferait
+// muet, ou - pire, avant que le rôle n'entre dans la clé du clip - le ferait
 // parler avec la voix d'en face.
 const stationUtterances: StationUtterance[] = [];
 for (const direction of DIRECTIONS) {

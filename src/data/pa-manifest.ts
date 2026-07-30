@@ -1,4 +1,4 @@
-// GÉNÉRÉ par scripts/announcements-gen.py — ne pas éditer à la main.
+// GÉNÉRÉ par scripts/announcements-gen.py - ne pas éditer à la main.
 // Clé = clipKey(lang, texte) ; valeur = durée du MP3 en secondes.
 
 export const PA_CLIPS: Record<string, number> = {

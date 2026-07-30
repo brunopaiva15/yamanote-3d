@@ -29,7 +29,7 @@ import { runtime } from './runtime';
 function pushFor(layout: StationLayout): number {
   // Bord près → bord d'en face, puis la voie (2 × 1,78 m) et le quai d'en face.
   // La marge est large à dessein : au-delà de la travée, les charpentes
-  // signature débordent encore — le faisceau de Nippori, l'International Forum
+  // signature débordent encore - le faisceau de Nippori, l'International Forum
   // de Yūrakuchō, le bois du Meiji-jingū derrière Harajuku. Un mur de
   // soutènement écarté au plus juste ressortait en plein milieu.
   const island = layout.config !== 'side';
@@ -55,14 +55,14 @@ export const stationOcclusion = {
   /**
    * Bord extérieur de l'emprise BÂTIE : le fond du quai d'en face, faisceau
    * compris. À distinguer de `push`, qui est volontairement large pour ranger
-   * des plans de quatre cents mètres — un repère de quartier, lui, doit se
+   * des plans de quatre cents mètres - un repère de quartier, lui, doit se
    * poser juste derrière la gare, pas à l'horizon.
    */
   outer: PLATFORM_DEPTH,
   /**
    * L'écartement vaut-il des DEUX côtés ? Sur un îlot, tout est du côté du
-   * quai et l'autre rive reste au décor de tronçon. À Harajuku — seul quai
-   * latéral de la boucle — il y a une gare de chaque côté de la voie : le quai
+   * quai et l'autre rive reste au décor de tronçon. À Harajuku - seul quai
+   * latéral de la boucle - il y a une gare de chaque côté de la voie : le quai
    * d'en face et son auvent se plantaient dans la clôture du tronçon.
    */
   bothSides: false,
@@ -162,7 +162,7 @@ export function ballastTrim(side: 1 | -1, edgeX: number): number {
  * d'Ōtsuka et la poutre de monorail de Hamamatsuchō se retrouvaient plantés
  * dans le ballast de la voie opposée.
  *
- * On les range donc juste DERRIÈRE l'emprise bâtie — pas à l'horizon : un tram
+ * On les range donc juste DERRIÈRE l'emprise bâtie - pas à l'horizon : un tram
  * qui longe la gare doit rester lisible depuis le quai.
  */
 export function landmarkPush(side: 1 | -1, baseX: number): number {

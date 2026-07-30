@@ -54,7 +54,7 @@ export type DialogueTrigger =
   /**
    * Coupure de la caténaire : la rame se tait, l'éclairage tombe sur les
    * lampes de secours, les écrans s'éteignent. Collectif comme `emergency`,
-   * mais d'une autre couleur — il n'y a eu ni secousse ni bruit, et c'est le
+   * mais d'une autre couleur - il n'y a eu ni secousse ni bruit, et c'est le
    * silence qui inquiète.
    */
   | 'outage'
@@ -80,7 +80,7 @@ export interface DialogueWhen {
   readonly crowdMin?: number;
   readonly crowdMax?: number;
   readonly phase?: readonly Phase[];
-  /** Index de gare (0 = JY01 Tokyo) concernés — la gare visée par la réplique. */
+  /** Index de gare (0 = JY01 Tokyo) concernés - la gare visée par la réplique. */
   readonly station?: readonly number[];
   /** Sens de circulation exigé : une réplique qui NOMME 内回り ou 外回り. */
   readonly direction?: LoopDirection;
@@ -132,7 +132,7 @@ export interface DialogueCtx {
 
 /**
  * Créneau horaire, minuit compris. Une nuit s'écrit aussi bien [22, 2] que
- * [22, 26] — la seconde forme se lit mieux quand on pense « jusqu'à deux
+ * [22, 26] - la seconde forme se lit mieux quand on pense « jusqu'à deux
  * heures du matin », et c'est celle qu'on écrit sans y penser.
  */
 function inHours(hour: number, [from, to]: readonly [number, number]): boolean {

@@ -8,7 +8,7 @@
 //   --overpass  interroge l'API Overpass d'OpenStreetMap et extrait la
 //               géométrie réelle de la 山手線 entre les deux gares.
 //               Résultat sous licence ODbL 1.0 (© les contributeurs
-//               OpenStreetMap) — l'attribution est écrite dans le GeoJSON et
+//               OpenStreetMap) - l'attribution est écrite dans le GeoJSON et
 //               reprise dans public/world/plateau/LICENSE.md.
 //
 //   (défaut)    régénère le tracé APPROCHÉ livré avec le dépôt : un arc de
@@ -32,7 +32,7 @@ import { PipelineError, createReporter, runMain } from './lib/log.mjs';
 const PROTO = PLATEAU_CONFIG.prototype;
 const DEFAULT_OUT = join(PLATEAU_CONFIG.paths.geo, `${PROTO.name}.geojson`);
 
-/** Repères des deux gares (JGD2011, degrés décimaux) — voir config.mjs. */
+/** Repères des deux gares (JGD2011, degrés décimaux) - voir config.mjs. */
 export const STATION_ANCHORS = PROTO.anchors;
 
 /**
@@ -68,7 +68,7 @@ function buildApproximateAlignment() {
 
   // La Yamanote ne fait pas de ligne droite entre deux gares : on bombe la
   // corde d'une flèche configurée, ce qui donne un rayon de courbure de
-  // l'ordre de 2 000 à 5 000 m — l'ordre de grandeur usuel sur la boucle.
+  // l'ordre de 2 000 à 5 000 m - l'ordre de grandeur usuel sur la boucle.
   // Le signe choisit le côté ; la normale ci-dessous est celle de GAUCHE dans
   // le sens de marche.
   const sagitta = PROTO.sagittaMeters;
@@ -250,13 +250,13 @@ export function makeFeatureCollection(coordinates, source) {
 const OSM_SOURCE = {
   source: 'OpenStreetMap (Overpass API)',
   license: 'ODbL 1.0',
-  attribution: '© les contributeurs OpenStreetMap — https://www.openstreetmap.org/copyright',
+  attribution: '© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright',
   approximate: false,
 };
 
 const APPROX_SOURCE = {
   source: 'Approximation géométrique (arc de cercle entre les deux gares)',
-  license: 'CC0 — produit par ce dépôt, ne contient aucune donnée tierce',
+  license: 'CC0 - produit par ce dépôt, ne contient aucune donnée tierce',
   attribution: null,
   approximate: true,
   note:

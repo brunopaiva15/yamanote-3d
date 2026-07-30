@@ -2,11 +2,11 @@
 // (src/systems/carPower.ts).
 //
 // Le module n'a aucune dépendance : Node 22 l'exécute tel quel (effacement de
-// types natif), sans compilateur ni harnais — même régime que trainPhysics.
+// types natif), sans compilateur ni harnais - même régime que trainPhysics.
 //
 // Ce qui se joue ici n'est pas une constante mais une LECTURE : une lumière qui
 // s'éteint en fondu ressemble à une nuit qui tombe, pas à une panne. Les
-// assertions décrivent donc ce que l'œil doit pouvoir compter — des
+// assertions décrivent donc ce que l'œil doit pouvoir compter - des
 // extinctions franches, des retours, et un éclairage de secours qui ne bat
 // jamais en opposition de phase avec les néons.
 
@@ -192,12 +192,12 @@ test('une frame lente bouscule les bruits, elle n’en perd aucun', () => {
 test('chaque commutation tombe sur une image-clé de la lumière', () => {
   // C'est toute la raison d'être de la table : un claquement qui n'accompagne
   // aucun changement de lumière se lit comme un deuxième événement. On tolère
-  // trois centièmes et demi — le temps qu'un contacteur mette à faire son arc.
+  // trois centièmes et demi - le temps qu'un contacteur mette à faire son arc.
   //
   // Un seul bruit y échappe, et c'est justifié : `fans` n'est pas une
   // commutation mais sa CONSÉQUENCE mécanique, les turbines qui remontent en
   // charge une seconde après que le contacteur a tenu. Elle n'a aucune raison
-  // de tomber sur un éclat de lumière — elle arrive en plein milieu de la
+  // de tomber sur un éclat de lumière - elle arrive en plein milieu de la
   // remontée douce des tubes, et c'est très bien ainsi.
   const near = (seq: readonly (readonly [number, number])[], t: number) =>
     seq.some(([kt]) => Math.abs(kt - t) <= 0.035);

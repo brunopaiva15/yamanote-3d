@@ -1,7 +1,7 @@
 // Descendre et remonter : la bascule du joueur entre le repère du wagon et
 // celui du quai.
 //
-// Le franchissement lui-même n'est pas scripté — on marche à travers la porte
+// Le franchissement lui-même n'est pas scripté - on marche à travers la porte
 // ouverte et `walkable` fait basculer le repère. Ce module ne s'occupe que des
 // conséquences : état discret pour le HUD, retenue du train, siège libéré,
 // téléportation au seuil pour le raccourci clavier et le bouton tactile.

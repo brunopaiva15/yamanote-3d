@@ -5,7 +5,7 @@
 //
 // Segment i = trajet STATIONS[i] ↔ STATIONS[(i+1)%30]. Il est NOMMÉ dans le
 // sens 内回り (ordre JY croissant), mais il n'appartient à aucun des deux sens :
-// c'est le même viaduc, la même tranchée, le même dépôt — parcourus à l'endroit
+// c'est le même viaduc, la même tranchée, le même dépôt - parcourus à l'endroit
 // ou à l'envers. Seule la façon d'y arriver dépend du sens, d'où le paramètre
 // `dir` des fonctions ci-dessous.
 
@@ -75,7 +75,7 @@ export const SEGMENTS: Segment[] = [
 // Tronçon « ambiant » pour un store.index donné, valable dans TOUTES les
 // phases : index désigne la gare d'arrivée en roulant (il avance au début de
 // `depart`), donc l'environnement traversé est celui qui relie la gare
-// précédente à celle-là — au sens de marche près.
+// précédente à celle-là - au sens de marche près.
 //
 // En 内回り on arrive à `i` en venant de `i−1` : c'est le tronçon `i−1`.
 // En 外回り on arrive à `i` en venant de `i+1` : c'est le tronçon `i`, parcouru
@@ -145,7 +145,7 @@ export function headwayMinutesTo(fromIndex: number, hops: number, dir: LoopDirec
 /**
  * Durée de croisière (s) : l'intervalle du tronçon moins depart/brake et le
  * forfait d'arrêt CONFIG.dwellTime. L'arrêt réel étant plus long que ce
- * forfait (voir config.ts), le cycle complet dépasse un peu l'intervalle —
+ * forfait (voir config.ts), le cycle complet dépasse un peu l'intervalle -
  * c'est voulu : la croisière garde de quoi dérouler les deux annonces.
  */
 export function cruiseDuration(stationIndex: number, dir: LoopDirection): number {
@@ -178,11 +178,11 @@ export const DEPART_ANNOUNCE_AT = 0.6;
  * (tests/announceOrder.test.ts).
  *
  * Le tronçon Mejiro ↔ Takadanobaba ne compte qu'une minute d'intervalle : une
- * fois le forfait d'arrêt retiré il ne reste que 8 s de croisière — le plancher
- * de `cruiseDuration` —, contre 59 ou 119 s partout ailleurs. `cruiseSec − 20`
+ * fois le forfait d'arrêt retiré il ne reste que 8 s de croisière - le plancher
+ * de `cruiseDuration` -, contre 59 ou 119 s partout ailleurs. `cruiseSec − 20`
  * y valait −12 : la condition était donc déjà vraie à la PREMIÈRE image de la
  * croisière, et la file de la rame recevait 「まもなく高田馬場」 avant
- * 「次は、高田馬場」 pour les jouer dans cet ordre — l'approche annoncée avant le
+ * 「次は、高田馬場」 pour les jouer dans cet ordre - l'approche annoncée avant le
  * départ, dans les deux sens. La borne remet la séquence d'aplomb sans toucher à
  * l'horaire, et protège d'avance tout tronçon qu'on raccourcirait.
  */
@@ -226,7 +226,7 @@ export function journeyProgress(
 //
 // Ce sont exactement les six gares repères de la boucle (data/stations,
 // `LOOP_HUB_JY`), et cette liste en est dérivée. Elle était écrite en dur, avec
-// un commentaire qui la disait « superset des MAJOR_HUBS d'announcements.ts —
+// un commentaire qui la disait « superset des MAJOR_HUBS d'announcements.ts -
 // ne pas fusionner les deux » : c'était vrai du temps où Takanawa Gateway en
 // faisait partie, et faux depuis son retrait. Trois copies du même ensemble,
 // dont une accompagnée d'une consigne de ne pas les réunir.
@@ -236,7 +236,7 @@ export function journeyProgress(
 // tant que le quai n'avait qu'un auvent plat, elle passait pour la verrière
 // blanche de la gare. Depuis que la charpente signature FAIT la couverture
 // (data/stationLayouts, `sigCanopy`), elle s'interposait entre l'œil et le toit
-// plié — elle masquait exactement ce qu'elle était censée évoquer. Le quai
+// plié - elle masquait exactement ce qu'elle était censée évoquer. Le quai
 // apporte désormais sa propre toiture, et elle arrive avec lui pendant le
 // freinage. Takanawa Gateway n'étant pas une gare repère, la dérivation
 // l'exclut d'elle-même.

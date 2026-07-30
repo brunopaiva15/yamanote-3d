@@ -55,7 +55,7 @@ export function Player() {
   const earFwd = useRef(new THREE.Vector3());
   const earUp = useRef(new THREE.Vector3());
 
-  // Outil dev : franchir le seuil le plus proche sans avoir à y marcher —
+  // Outil dev : franchir le seuil le plus proche sans avoir à y marcher -
   // la marche reste le seul moyen en jeu.
   useEffect(() => {
     if (!import.meta.env.DEV || typeof window === 'undefined') return;
@@ -97,7 +97,7 @@ export function Player() {
     // Une touche relâchée dans une AUTRE fenêtre ne nous parvient jamais :
     // Alt-Tab en pleine marche, et le joueur repartait tout seul, sans fin, au
     // retour sur l'onglet. Tout ce qui fait perdre le clavier vide le jeu de
-    // touches — changement de fenêtre, onglet masqué, sortie du verrou de
+    // touches - changement de fenêtre, onglet masqué, sortie du verrou de
     // pointeur.
     const releaseKeys = () => input.keys.clear();
     const onVisibility = () => {
@@ -333,7 +333,7 @@ export function Player() {
     publishPlayerPose(camera.position.x, camera.position.y, camera.position.z);
     // Et son appui, pris AVANT le balancement : `camBase` est la position de
     // marche (ou l'assise), la caméra est l'œil qui oscille autour d'elle. Le
-    // seuil de porte se décide sur les pieds — deux centimètres de roulis ne
+    // seuil de porte se décide sur les pieds - deux centimètres de roulis ne
     // font pas entrer dans l'encadrement (systems/walkable).
     publishPlayerStance(camBase.current.x, camBase.current.z);
 

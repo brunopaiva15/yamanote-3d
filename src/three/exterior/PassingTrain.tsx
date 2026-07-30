@@ -3,7 +3,7 @@
 //
 // Ce n'est pas notre rame, et ça se voit : caisse inox à deux traits bleus
 // (livrée E233-1000) là où la nôtre porte le vert uguisu aux portes, dix
-// voitures au lieu de onze, portes closes du début à la fin — personne ne
+// voitures au lieu de onze, portes closes du début à la fin - personne ne
 // monte dans un train qui passe.
 //
 // La coque, elle, est celle du E235 (three/exterior/carShellGeometry) : à
@@ -17,7 +17,7 @@
 // d'entrer en gare, et resservira ensuite jusqu'à la fin de la session.
 //
 // Repère : le groupe extérieur reprend celui du QUAI (demi-tour selon le côté
-// d'ouverture, glissement `platformSlide`), exactement comme three/station —
+// d'ouverture, glissement `platformSlide`), exactement comme three/station -
 // c'est le seul moyen que la voie d'en face reste la voie d'en face.
 
 import { useEffect, useRef } from 'react';
@@ -42,7 +42,7 @@ import { buildCab } from './cabGeometry';
 
 /**
  * Livrée Keihin-Tōhoku : la caisse est l'inox de tout le monde, la ligne tient
- * dans son bleu — スカイブルー, le même depuis 1957 — posé en deux traits, un
+ * dans son bleu - スカイブルー, le même depuis 1957 - posé en deux traits, un
  * large à la ceinture de caisse et un fin sous le pavillon.
  */
 const KT = {
@@ -114,7 +114,7 @@ function build(): Built {
       }),
     ),
     stripe: track(new THREE.MeshStandardMaterial({ color: KT.blue, roughness: 0.5 })),
-    // Masque de cabine : de l'inox lisse, sans la trame de caisse — le nez
+    // Masque de cabine : de l'inox lisse, sans la trame de caisse - le nez
     // est moulé d'une pièce et n'a pas les nervures des flancs.
     mask: track(
       new THREE.MeshStandardMaterial({ color: '#d3d6da', roughness: 0.46, metalness: 0.55 }),

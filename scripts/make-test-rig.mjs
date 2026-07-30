@@ -274,10 +274,10 @@ for (const v of VARIANTS) {
 
 const manifest = {
   version: 1,
-  source: 'RIG DE TEST make-test-rig.mjs — NE PAS COMMITTER',
+  source: 'RIG DE TEST make-test-rig.mjs - NE PAS COMMITTER',
   license: 'dev-only',
   walkClipSpeed: 1.4,
   variants: manifestVariants,
 };
 writeFileSync(resolve(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2));
-console.log('écrit manifest.json —', manifestVariants.length, 'variantes');
+console.log('écrit manifest.json -', manifestVariants.length, 'variantes');

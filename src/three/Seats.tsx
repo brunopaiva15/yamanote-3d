@@ -34,7 +34,7 @@ const RACK_TILT = 0.36;
 const RACK_BAR_OFFSETS = [-0.18, -0.09, 0, 0.09, 0.18];
 
 // Dossier : panneau garni quasi vertical, du haut de l'assise à hauteur
-// d'omoplates. La rame n'a pas de traversin roulé — c'est une plaque.
+// d'omoplates. La rame n'a pas de traversin roulé - c'est une plaque.
 const BACK_X = WALL_X - 0.155; // 1,245 : centre du panneau
 const BACK_Y = 0.675; // centre : le bas affleure le coussin (0,455), le haut à 0,90
 const BACK_DEPTH = 0.1;
@@ -46,7 +46,7 @@ const POLE_X = 0.765;
 const POLE_TOP = 1.42;
 
 // Répétitions de la tuile de moquette par mètre, pour des carreaux d'environ
-// 2,5 cm de côté — la maille d'un tissu de siège, pas d'une mosaïque.
+// 2,5 cm de côté - la maille d'un tissu de siège, pas d'une mosaïque.
 const CHECKER_PER_M = 1 / (CHECKER_CELLS * 0.025);
 
 // Pas d'une banquette de n places, lu sur les segments réels : les coussins
@@ -76,7 +76,7 @@ function makePanelGeometry(): THREE.ExtrudeGeometry {
   shape.quadraticCurveTo(0.26, 1.53, 0, 1.53);
   shape.lineTo(0, 0.05);
   // Grand hublot vitré : sur l'E235 le panneau d'about est percé d'une baie
-  // largement arrondie, pas d'un simple oculus — c'est elle qui donne au
+  // largement arrondie, pas d'un simple oculus - c'est elle qui donne au
   // panneau sa silhouette et qui laisse passer le regard vers la porte.
   shape.holes.push(roundedRect(PANEL_WINDOW.w, PANEL_WINDOW.h, 0.13, PANEL_WINDOW.x, PANEL_WINDOW.y));
   const geo = new THREE.ExtrudeGeometry(shape, {
@@ -136,7 +136,7 @@ export function Seats() {
       midR: makeMidStanchionGeometry(1),
       midL: makeMidStanchionGeometry(-1),
       // Coussins : jointifs, à la longueur exacte du pas de la banquette, pour
-      // former une assise continue creusée d'un sillon par place — c'est ce que
+      // former une assise continue creusée d'un sillon par place - c'est ce que
       // montre la rame, pas une file de galettes séparées par des jours.
       cushion7: new RoundedBoxGeometry(0.45, 0.11, benchPitch(7), 3, 0.03),
       cushion3: new RoundedBoxGeometry(0.45, 0.11, benchPitch(3), 3, 0.03),
@@ -148,7 +148,7 @@ export function Seats() {
   );
 
   // Porte-bagages : pas une tablette pleine mais un claire-voie de tubes
-  // longitudinaux, comme sur la rame — on voit au travers, et le plafond reste
+  // longitudinaux, comme sur la rame - on voit au travers, et le plafond reste
   // lisible depuis l'allée. Un tube unitaire (hauteur 1, axe Y) instancié
   // partout : une seule géométrie, un seul draw call pour tout le wagon, la
   // longueur étant portée par l'échelle de chaque instance.
@@ -219,7 +219,7 @@ export function Seats() {
         const m = src.clone();
         const tex = (src.map as THREE.Texture).clone();
         // Le dossier est une face de boîte : U court sur la longueur, V sur la
-        // hauteur. Le pas se calcule donc en mètres, pas en nombre de places —
+        // hauteur. Le pas se calcule donc en mètres, pas en nombre de places -
         // la tuile fait 16 carreaux, on vise des carreaux de ~4,5 cm.
         const bench = BENCHES.find((b) => b.n === n);
         const len = bench ? bench.z1 - bench.z0 - 0.06 : 1;

@@ -3,7 +3,7 @@
 // La rame en dit deux par tronçon, sur la MÊME file (systems/speech, canal
 // « cabin ») : 「次は、高田馬場」 quand elle s'ébranle, puis 「まもなく高田馬場」
 // quand elle approche. La file étant sérielle, l'ordre des mises en file EST
-// l'ordre d'écoute — et une annonce d'approche mise en file la première annonce
+// l'ordre d'écoute - et une annonce d'approche mise en file la première annonce
 // l'arrivée avant le départ.
 //
 // C'est exactement ce qui se passait entre Mejiro et Takadanobaba : une minute

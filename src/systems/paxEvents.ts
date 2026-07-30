@@ -3,7 +3,7 @@
 // Les PNJ vivent dans systems/passengers et systems/platformCrowd ; les mots
 // dans systems/conversation. Si les premiers appelaient directement le second,
 // les trois modules s'importeraient en rond. Ils déposent donc ici un
-// événement — « le joueur m'a bousculé », « il vient de s'asseoir à côté » —
+// événement - « le joueur m'a bousculé », « il vient de s'asseoir à côté » -
 // que le moteur relève à son tour de boucle.
 //
 // La file est courte à dessein : une bousculade d'il y a dix secondes ne
@@ -14,7 +14,7 @@ import type { PaxScope } from './paxTargeting';
 
 export interface PaxEvent {
   scope: PaxScope;
-  /** -1 : personne en particulier — au moteur de désigner qui est à portée. */
+  /** -1 : personne en particulier - au moteur de désigner qui est à portée. */
   id: number;
   trigger: DialogueTrigger;
 }

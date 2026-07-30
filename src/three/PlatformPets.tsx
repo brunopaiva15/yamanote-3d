@@ -6,7 +6,7 @@
 // quai, côté des portes) : le repère local y est donc celui de `CrowdPax.pos`,
 // ce qui permet à la main publiée par LibraryPlatformCrowd de s'y retrouver.
 //
-// La caisse ne suit PAS l'orientation du poignet — un bagage porté à la main
+// La caisse ne suit PAS l'orientation du poignet - un bagage porté à la main
 // reste d'aplomb, quoi que fasse la main qui le tient. Elle prend donc la
 // position de la main et le CAP DU CORPS, ce qui la garde de niveau et alignée
 // sur la marche.

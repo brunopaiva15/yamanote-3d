@@ -1,4 +1,4 @@
-// JY03 秋葉原 — la structure superposée emblématique de la boucle.
+// JY03 秋葉原 - la structure superposée emblématique de la boucle.
 //
 // Les voies 5 et 6 de la Chūō–Sōbu franchissent PERPENDICULAIREMENT le site, à
 // un niveau supérieur. C'est le seul endroit de la Yamanote où l'on voit un
@@ -6,7 +6,7 @@
 // à âme pleine, sous-face rivetée sombre, piles massives, et cette impression
 // d'être au fond d'une faille entre deux ouvrages.
 //
-// Les piles se posent hors de tout quai et de toute voie — ni dans le passage
+// Les piles se posent hors de tout quai et de toute voie - ni dans le passage
 // du joueur, ni au milieu du ballast.
 
 import * as THREE from 'three';
@@ -84,7 +84,7 @@ export function Akihabara({ place, m }: SigProps) {
 
       {/* Sous le franchissement, le plafond du quai descend et s'assombrit :
           c'est la zone basse et sourde d'Akihabara. La retombée couvre l'allée
-          du bord d'en face — la seule bande sans pilier, sans bande
+          du bord d'en face - la seule bande sans pilier, sans bande
           directionnelle et sans conduites : centrée sur l'épine, elle
           traversait tout ce qui y vit. */}
       <mesh position={[place.backX + 0.86, PLATFORM_TOP + 3.3, 0]} material={m.wallDark}>

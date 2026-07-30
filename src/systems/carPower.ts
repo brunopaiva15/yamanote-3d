@@ -2,26 +2,26 @@
 // station.
 //
 // Une lumière qui s'éteint en fondu ne dit rien : ça ressemble à une nuit qui
-// tombe, pas à une panne. Une caténaire qui lâche, ça CLIGNOTE — et c'est à ce
+// tombe, pas à une panne. Une caténaire qui lâche, ça CLIGNOTE - et c'est à ce
 // clignotement qu'on reconnaît une panne d'alimentation, avant même de se
 // demander pourquoi le train ralentit.
 //
 // Ce qui se passe réellement, et qui explique la forme des courbes : le
 // convertisseur de bord ne s'arrête pas avec la caténaire, il continue de
 // tourner sur l'énergie stockée dans ses condensateurs. La tension s'effondre,
-// il décroche, se réamorce sur ce qui reste, décroche encore — deux ou trois
-// fois, de plus en plus court —, puis il n'y a plus rien à réamorcer. Les tubes
+// il décroche, se réamorce sur ce qui reste, décroche encore - deux ou trois
+// fois, de plus en plus court -, puis il n'y a plus rien à réamorcer. Les tubes
 // fluorescents suivent : ils s'éteignent et se rallument au rythme des
 // décrochages, jusqu'au dernier.
 //
 // Au retour, c'est la manœuvre inverse et elle est plus lente : les contacteurs
 // se referment un par un, chacun donnant un éclat bref avant de retomber, puis
-// ça tient et les tubes montent doucement en puissance — un fluorescent
+// ça tient et les tubes montent doucement en puissance - un fluorescent
 // n'atteint pas son plein flux d'un coup.
 //
 // Les deux séquences sont écrites en images-clés plutôt qu'en formules : on les
 // LIT, et on les règle en déplaçant un chiffre. Le module n'a aucune
-// dépendance, donc Node l'exécute tel quel — c'est ce qui rend la forme du
+// dépendance, donc Node l'exécute tel quel - c'est ce qui rend la forme du
 // clignotement testable sans harnais (tests/carPower.test.ts).
 
 /** Une image de la séquence : temps depuis le début (s), niveau visé (0..1). */
@@ -29,7 +29,7 @@ export type PowerFrame = readonly [t: number, level: number];
 
 /**
  * Perte de la caténaire. Trois décrochages du convertisseur, de plus en plus
- * brefs et de moins en moins hauts, puis le noir — et, une seconde plus tard,
+ * brefs et de moins en moins hauts, puis le noir - et, une seconde plus tard,
  * un dernier soubresaut sans lendemain.
  */
 export const POWER_CUT: readonly PowerFrame[] = [
@@ -55,7 +55,7 @@ export const POWER_CUT: readonly PowerFrame[] = [
 
 /**
  * Retour de la tension. Deux fermetures de contacteur qui ne tiennent pas, une
- * troisième qui tient, puis la montée douce des tubes — près de deux secondes,
+ * troisième qui tient, puis la montée douce des tubes - près de deux secondes,
  * parce que c'est le temps qu'un fluorescent met à donner tout son flux.
  */
 export const POWER_RESTORE: readonly PowerFrame[] = [
@@ -78,7 +78,7 @@ export const POWER_RESTORE: readonly PowerFrame[] = [
 //
 // Une coupure de courant est un événement SONORE avant d'être un événement
 // visuel : ce qui se passe dans un wagon qui perd sa caténaire, c'est du
-// matériel électrique qui travaille — un disjoncteur qui s'ouvre, des
+// matériel électrique qui travaille - un disjoncteur qui s'ouvre, des
 // contacteurs qui battent, des tubes qui essaient de se réamorcer et
 // grésillent, un convertisseur dont le sifflement s'effondre.
 //
@@ -91,7 +91,7 @@ export const POWER_RESTORE: readonly PowerFrame[] = [
 export type PowerSoundKind =
   /** Le disjoncteur principal s'ouvre, sous le plancher : le coup sourd. */
   | 'breaker'
-  /** Un contacteur claque — fermeture qui tient, ou qui retombe. */
+  /** Un contacteur claque - fermeture qui tient, ou qui retombe. */
   | 'relay'
   /** Un tube essaie de se réamorcer : grésillement bref et aigu. */
   | 'strike'
@@ -219,7 +219,7 @@ export function resetCarPower(s: CarPowerState): void {
  * Un pas de la séquence en cours, et des lampes de secours qui la suivent.
  *
  * `heard` recueille les petits bruits électriques que ce pas vient de
- * traverser — le module ne connaît pas le moteur audio, il dit seulement ce
+ * traverser - le module ne connaît pas le moteur audio, il dit seulement ce
  * qu'il y avait à entendre. Un pas long (frame lente) en récolte plusieurs
  * d'un coup, ce qui vaut mieux que d'en perdre : au pire ils se bousculent,
  * au mieux la panne reste sonore même à quinze images par seconde.
@@ -229,7 +229,7 @@ export function stepCarPower(s: CarPowerState, dt: number, heard?: PowerSoundKin
     const before = s.t;
     s.t += dt;
     // Fenêtre semi-ouverte [before, t) : chaque bruit sort une fois et une
-    // seule, et celui posé à l'instant zéro sort dès le premier pas — c'est le
+    // seule, et celui posé à l'instant zéro sort dès le premier pas - c'est le
     // disjoncteur, il ne peut pas être en retard sur sa propre coupure.
     if (heard) {
       for (const [t, kind] of soundsFor(s.seq)) {
@@ -238,7 +238,7 @@ export function stepCarPower(s: CarPowerState, dt: number, heard?: PowerSoundKin
     }
     s.power = samplePower(s.seq, s.t);
     // Le relais de secours bascule pendant la chute, une fois les décrochages
-    // passés — pas avant, ou il éclairerait par-dessus des néons encore vifs.
+    // passés - pas avant, ou il éclairerait par-dessus des néons encore vifs.
     if (s.seq === POWER_CUT && s.t >= EMERGENCY_LAMP_DELAY) s.onBattery = true;
     if (s.t >= powerSeqEnd(s.seq)) {
       s.power = s.seq[s.seq.length - 1][1];

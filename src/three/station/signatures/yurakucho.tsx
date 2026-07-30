@@ -1,4 +1,4 @@
-// JY30 有楽町 — le vieux viaduc de brique et d'acier.
+// JY30 有楽町 - le vieux viaduc de brique et d'acier.
 //
 // Le quai le plus étroit du secteur, sous une charpente rivetée basse et serrée,
 // portée par des piliers épais. C'est un ouvrage du début du siècle dernier,
@@ -45,7 +45,7 @@ export function Yurakucho({ layout, place }: SigProps) {
 
   // La trame des portiques vient du PLAN (data/stationLayouts) : c'est lui qui
   // les écarte des escaliers mécaniques, des débouchés d'accès, des piliers et
-  // des miroirs — et c'est lui que la signalétique suspendue consulte pour
+  // des miroirs - et c'est lui que la signalétique suspendue consulte pour
   // s'écarter d'eux en retour.
   const frameZ = useMemo(
     () => (layout.sigPlan?.keepOut ?? []).map((k) => k.z),

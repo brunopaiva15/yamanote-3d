@@ -4,7 +4,7 @@
 // Les noms japonais sont exactement ceux de data/stations.ts (TRANSFERS), qui
 // sert aux annonces : une seule orthographe, deux usages. Les couleurs sont
 // celles des chartes JR East / Tokyo Metro / Toei ; pour quelques compagnies
-// privées elles sont approchées — l'important à l'écran est qu'une pastille
+// privées elles sont approchées - l'important à l'écran est qu'une pastille
 // orange ne se retrouve pas là où tout le monde attend du bleu.
 //
 // Sortie de secours pour une ligne absente de la table : pastille grise et pas

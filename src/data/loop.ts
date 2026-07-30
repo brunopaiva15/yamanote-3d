@@ -7,7 +7,7 @@
 //
 // Le simulateur ne roulait qu'en 内回り, et l'hypothèse était partout : « la
 // gare suivante, c'est index + 1 ». Ce module la remplace par une seule
-// question — dans quel sens roule-t-on ? — pour que les trente autres modules
+// question - dans quel sens roule-t-on ? - pour que les trente autres modules
 // n'aient plus à la reposer chacun à leur façon.
 //
 // Ce qui NE dépend PAS du sens, et qu'on ne trouvera donc pas ici :
@@ -15,7 +15,7 @@
 //   • le côté d'ouverture des portes (data/stations, DOOR_SIDE). Un plan de
 //     voies à deux tracks est symétrique par rotation d'un demi-tour autour de
 //     l'axe de la ligne : la rame qui le parcourt à l'envers a le quai du même
-//     bord. Le côté est donc une propriété de la GARE, pas du sens — ce qui ne
+//     bord. Le côté est donc une propriété de la GARE, pas du sens - ce qui ne
 //     veut pas dire qu'il se calcule à partir du plan de voies ; c'est un
 //     relevé, voir la note de DOOR_SIDE ;
 //   • le tronçon lui-même (data/segments) : on parcourt le même viaduc, la même
@@ -66,7 +66,7 @@ export function hopsBetween(from: number, to: number, dir: LoopDirection): numbe
 }
 
 /**
- * Nom du sens tel qu'il est ÉCRIT et DIT — sur les bandeaux de quai, dans les
+ * Nom du sens tel qu'il est ÉCRIT et DIT - sur les bandeaux de quai, dans les
  * annonces, sur le 発車標. C'est de la signalétique : elle reste en japonais,
  * comme les 内回り／外回り du menu (voir src/i18n).
  */

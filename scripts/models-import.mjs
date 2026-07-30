@@ -123,7 +123,7 @@ for (const file of files) {
   if (entries.length >= maxVariants) break;
   const id = variantIdFromPath(file);
   if (!keepAll && EXCLUDE.test(id)) {
-    skipped.push(`${id} (thème hors sujet — relancer avec --all pour l'inclure)`);
+    skipped.push(`${id} (thème hors sujet - relancer avec --all pour l'inclure)`);
     continue;
   }
   let doc;
@@ -148,7 +148,7 @@ for (const file of files) {
     d = describeDocument(doc);
   }
   if (!d.logicalClips.standIdle && !d.logicalClips.walk) {
-    skipped.push(`${id} (aucun clip Idle/Walk exploitable — pack d'animations séparé ? utiliser --anims)`);
+    skipped.push(`${id} (aucun clip Idle/Walk exploitable - pack d'animations séparé ? utiliser --anims)`);
     continue;
   }
 

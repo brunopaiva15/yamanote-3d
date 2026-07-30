@@ -3,7 +3,7 @@
 // Un quai japonais n'est pas une nappe de béton clair : c'est un couloir tapissé
 // d'affiches. Caissons lumineux au mur du fond, colonnes habillées de bandeaux
 // verticaux, bannières suspendues dans l'axe, panneaux collés sur les portes
-// palières. Sans eux, la gare rendait exactement ce que le joueur a signalé —
+// palières. Sans eux, la gare rendait exactement ce que le joueur a signalé -
 // blanc et gris d'un bout à l'autre.
 //
 // Les visuels viennent du pool commun (adPool) : construits une fois pour la
@@ -34,7 +34,7 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
   /**
    * Y a-t-il un vrai mur derrière ? Seulement à Harajuku, le quai latéral de la
    * boucle : le caisson s'y encastre. Partout ailleurs on est sur un îlot, et
-   * les caissons se dressent sur pieds au milieu, DOS À DOS — c'est la façon
+   * les caissons se dressent sur pieds au milieu, DOS À DOS - c'est la façon
    * dont un îlot japonais se meuble, et ce qui fait qu'on ne voit jamais l'autre
    * bord en enfilade.
    */
@@ -51,7 +51,7 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
       ...[...place.stairs, ...place.escalators].map((s) => ({ z: s.z, r: s.halfZ + 2.2 })),
       ...[-1, 1].map((d) => ({ z: d * half * 0.45, r: 3.1 })),
       // Plans de la charpente signature : passerelles de Takanawa, poteaux de
-      // halle sur l'épine — la bannière passait au travers.
+      // halle sur l'épine - la bannière passait au travers.
       ...(layout.sigPlan?.keepOut ?? []).map((k) => ({ z: k.z, r: k.r + 1.2 })),
     ];
     const out: { z: number; i: number }[] = [];
@@ -64,7 +64,7 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
 
   // --- Caissons du fond de quai --------------------------------------
   const wallAds = useMemo(() => {
-    // Tout ce qui monte assez haut pour masquer l'affiche — ou pour la
+    // Tout ce qui monte assez haut pour masquer l'affiche - ou pour la
     // traverser. La liste ne connaissait ni les armoires ni les escaliers
     // mécaniques : le caisson leur rentrait dedans. Ni les potences
     // d'orientation, qui enjambent l'épine à hauteur du caisson : leurs
@@ -121,8 +121,8 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
 
   // Totem d'îlot : centre du caisson à 2,02 m au-dessus du dallage. Les pieds
   // rejoignent le sol (plus deux centimètres d'encastrement, comme un montant
-  // planté). Ils dataient d'avant le basculement en îlot — quand le caisson
-  // s'asseyait sur un garde-corps d'un mètre vingt — et s'arrêtaient donc à
+  // planté). Ils dataient d'avant le basculement en îlot - quand le caisson
+  // s'asseyait sur un garde-corps d'un mètre vingt - et s'arrêtaient donc à
   // mi-hauteur, soixante centimètres au-dessus de la dalle.
   const totemY = 2.02;
   const frameH = 1.36;
@@ -133,7 +133,7 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
     <group name="publicité">
       {/* Caissons lumineux du fond de quai : monture noire, visuel rétroéclairé.
           Calés au-dessus du liseré qui couronne la faïence (1,10 m) et du
-          dossier des bancs — rien ne vient mordre l'affiche. */}
+          dossier des bancs - rien ne vient mordre l'affiche. */}
       {wallAds.map(({ z, i }) => (
         <group
           name="caisson-mur"
@@ -147,7 +147,7 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
             <planeGeometry args={[2.0, 1.2]} />
           </mesh>
           {/* Sans mur derrière : le caisson est un totem à deux faces, planté
-              sur l'épine centrale, et il porte donc une affiche de CHAQUE côté —
+              sur l'épine centrale, et il porte donc une affiche de CHAQUE côté -
               celle du bord d'en face n'est pas la nôtre. Deux pieds le tiennent. */}
           {!onWall && (
             <>
@@ -191,7 +191,7 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
 
       {/* Bannières suspendues, recto-verso : elles ferment la perspective du
           quai comme les nakazuri ferment celle du wagon. Sur un îlot elles
-          pendent au-dessus de l'allée du bord d'EN FACE — la seule travée sans
+          pendent au-dessus de l'allée du bord d'EN FACE - la seule travée sans
           gouttière ni chemin de câbles : dans l'allée près, leur chant montait
           droit dans les conduites, à toutes les gares. Elles meublent du même
           coup une moitié de quai qui n'avait rien de suspendu. Sur le quai
@@ -220,7 +220,7 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
       ))}
 
       {/* Portes palières : bandeau publicitaire sur l'allège, sous la partie
-          vitrée du muret — c'est la seule surface pleine disponible. */}
+          vitrée du muret - c'est la seule surface pleine disponible. */}
       {psdAds.map(({ z, i }) => (
         <mesh
           key={`pa${z}`}

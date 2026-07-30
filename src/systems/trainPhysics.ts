@@ -5,7 +5,7 @@
 // limité) jusqu'à ~0,84 m/s² (3,0 km/h/s), qui s'essouffle au-delà de
 // ~40 km/h (zone à puissance constante). 90 km/h est atteint en ~45 s.
 // Freinage : application progressive, ~1,35 m/s² en service, puis desserrage
-// graduel sous ~11 km/h et LÂCHER FINAL sous ~4 km/h — la rame se pose au lieu
+// graduel sous ~11 km/h et LÂCHER FINAL sous ~4 km/h - la rame se pose au lieu
 // de s'arrêter (~23 s depuis 90 km/h, dont près de quatre secondes rien que
 // pour le dernier mètre).
 //
@@ -14,7 +14,7 @@
 // la rame vue depuis le quai (platformWait).
 
 // Extension explicite : `data/config` n'a aucune dépendance et ce module non
-// plus, donc Node exécute les deux tels quels — c'est ce qui rend le profil de
+// plus, donc Node exécute les deux tels quels - c'est ce qui rend le profil de
 // freinage testable sans harnais (tests/trainPhysics.test.ts).
 import { V_MAX } from '../data/config.ts';
 import type { Phase } from '../store';
@@ -32,7 +32,7 @@ const BRAKE_EASE_V = 3; // m/s : desserrage progressif sous cette vitesse
  *
  * Un train ne s'arrête pas : il se pose. Sous ~4 km/h, le conducteur (ou le
  * TASC) relâche franchement pour que la vitesse s'éteigne au lieu d'être
- * coupée — le dernier mètre se parcourt en près de quatre secondes, les dix
+ * coupée - le dernier mètre se parcourt en près de quatre secondes, les dix
  * derniers centimètres à moins de 0,2 m/s. Sans ce lâcher, le profil gardait
  * 0,35 m/s² jusqu'au bout : la rame arrivait devant les portières encore à
  * 0,3 m/s et l'immobilisation se lisait comme un à-coup, exactement ce qu'un
@@ -44,13 +44,13 @@ const JERK_UP = 0.55; // m/s³ : montée de traction / relâchement du frein
 const JERK_DOWN = 1.0; // m/s³ : application du frein / coupure de traction
 
 // Freinage d'urgence (非常ブレーキ) : plus fort que le freinage de service et
-// appliqué d'un coup — c'est la secousse qui fait l'événement.
+// appliqué d'un coup - c'est la secousse qui fait l'événement.
 const EMERGENCY_BRAKE = 1.7; // m/s²
 const EMERGENCY_JERK = 2.4; // m/s³ : application quasi immédiate
 
 // Marche sur l'élan (惰行), quand plus rien ne pousse ni ne retient : c'est
 // l'état d'une rame dont la caténaire vient d'être coupée. Il ne reste que la
-// résistance à l'avancement — un terme de roulement quasi constant et un terme
+// résistance à l'avancement - un terme de roulement quasi constant et un terme
 // aérodynamique en v². À 90 km/h la rame perd environ 0,23 m/s², soit un
 // dixième d'un freinage de service : on ne la sent pas ralentir, on entend
 // seulement que le moteur s'est tu.
@@ -58,7 +58,7 @@ const COAST_ROLL = 0.055; // m/s² : roulement + frottements mécaniques
 const COAST_DRAG = 0.00028; // m/s² par (m/s)² : traînée aérodynamique
 /**
  * Coupure de traction : brutale. Le disjoncteur s'ouvre, les moteurs cessent
- * de pousser dans l'instant — pas de relâchement progressif comme lorsqu'un
+ * de pousser dans l'instant - pas de relâchement progressif comme lorsqu'un
  * conducteur lève la manette.
  */
 const COAST_JERK = 2.0; // m/s³
@@ -110,7 +110,7 @@ export function stepTrain(
   if (mode === 'coast') {
     // Ni traction ni frein : la cible de vitesse ne veut plus rien dire, seule
     // la résistance à l'avancement décide. Elle garde un plancher jusqu'à
-    // l'arrêt complet — une rame qui roule ne s'immobilise pas asymptotiquement,
+    // l'arrêt complet - une rame qui roule ne s'immobilise pas asymptotiquement,
     // elle finit par ne plus rouler.
     aTarget = state.v > 0 ? -coastCap(state.v) : 0;
   } else if (state.v < target - 0.01) {

@@ -6,7 +6,7 @@ Entrée : le JSON produit par scripts/announcements-export.ts (textes + vitesses
 public/audio/announcements/<clé>.mp3, et le manifeste src/data/pa-manifest.ts
 (clé → durée en secondes) consommé par le runtime.
 
-Voix : portée par chaque item (champ « voice ») — la sono de la rame et celle du
+Voix : portée par chaque item (champ « voice ») - la sono de la rame et celle du
 quai ne doivent pas parler de la même bouche, et le quai a DEUX automates, une
 femme sur le 内回り et un homme sur le 外回り (deux quais qui annoncent le même
 script à quelques secondes d'écart doivent rester séparables à l'oreille). Deux
@@ -16,13 +16,13 @@ src/data/clipKey.ts). Un item sans voix retombe sur la voix par défaut de sa
 langue. G2P : misaki en japonais
 comme en anglais (repli espeak). Les noms de gare sont vérifiés avec ce même
 misaki : s'il lit un nom autrement que sa transcription kana (stations.ts), le
-katakana remplace le kanji dans le texte synthétisé — c'est ce qui rattrape
+katakana remplace le kanji dans le texte synthétisé - c'est ce qui rattrape
 御徒町, que l'analyseur lit « gotochō » en tête de phrase.
 
 Cadence japonaise : Kokoro ignore presque la ponctuation quand on lui passe la
 phrase en un bloc (「まもなく、渋谷、渋谷。」sort d'une traite). Le japonais est
 donc synthétisé segment par segment (découpe aux 、 et 。) et les segments sont
-raccordés avec de vraies plages de silence — la respiration des annonces
+raccordés avec de vraies plages de silence - la respiration des annonces
 automatiques JR East. L'anglais, correctement rythmé d'un bloc, reste entier.
 
 Dépendances : pip install kokoro-onnx "misaki[en,ja]" lameenc
@@ -35,7 +35,7 @@ Usage :
 
 --reuse : ne synthétise que les clips ABSENTS et reprend la durée des autres
 dans le manifeste existant. Un texte inchangé garde alors exactement le fichier
-qu'il avait — une version de kokoro-onnx ou de misaki plus récente ne fait pas
+qu'il avait - une version de kokoro-onnx ou de misaki plus récente ne fait pas
 dériver, en douce, les 200 annonces déjà en place. Sans le drapeau, tout est
 regravé.
 
@@ -74,7 +74,7 @@ def build_en_g2p():
         from misaki import espeak
 
         fallback = espeak.EspeakFallback(british=False)
-    except Exception as exc:  # noqa: BLE001 — espeak est un confort, pas un requis
+    except Exception as exc:  # noqa: BLE001 - espeak est un confort, pas un requis
         print(f"  (espeak indisponible, repli lexique seul : {exc})")
     return en.G2P(trf=False, british=False, fallback=fallback)
 
@@ -95,8 +95,8 @@ def normalize_phones(g2p_output: str) -> str:
     dictionnaire ressort découpé mot à mot, l'allongement s'écrit tantôt « oː »
     tantôt « oo » ou « oɯ » (ちょう), 「えい」 tantôt « eː » tantôt « ei », et le
     ん s'assimile en « m » devant b (しんばし). On replie tout ça pour ne
-    signaler que les vraies erreurs de lecture — ごとちょう au lieu de
-    おかちまち — et pas ces variantes phonétiquement identiques.
+    signaler que les vraies erreurs de lecture - ごとちょう au lieu de
+    おかちまち - et pas ces variantes phonétiquement identiques.
     """
     out: list[str] = []
     for c in g2p_output:
@@ -243,7 +243,7 @@ def main() -> None:
         manifest[item["key"]] = round(len(samples) / sr, 2)
         total_bytes += len(mp3)
         print(f"[{i}/{len(todo)}] {item['key']} {voice} "
-              f"{manifest[item['key']]:.1f}s — {item['text'][:48]}")
+              f"{manifest[item['key']]:.1f}s - {item['text'][:48]}")
 
     orphans = [p for p in out.glob("*.mp3") if p.stem not in manifest]
     for p in orphans:
@@ -255,7 +255,7 @@ def main() -> None:
         f"  {json.dumps(k)}: {v}," for k, v in sorted(manifest.items())
     )
     Path(manifest_path).write_text(
-        "// GÉNÉRÉ par scripts/announcements-gen.py — ne pas éditer à la main.\n"
+        "// GÉNÉRÉ par scripts/announcements-gen.py - ne pas éditer à la main.\n"
         "// Clé = clipKey(lang, texte) ; valeur = durée du MP3 en secondes.\n\n"
         "export const PA_CLIPS: Record<string, number> = {\n"
         f"{entries}\n"

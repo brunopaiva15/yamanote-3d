@@ -73,7 +73,7 @@ export function buildRoute(coordinates, { sampleMeters }) {
 
   // Abscisse curviligne sur la polyligne d'origine (plan horizontal : la pente
   // d'un chemin de fer urbain est sous 3,5 %, son effet sur la longueur est
-  // sous 0,06 % — retenir la projection horizontale garde `s` comparable à la
+  // sous 0,06 % - retenir la projection horizontale garde `s` comparable à la
   // distance parcourue par le train dans le jeu).
   const rawCum = [0];
   for (let i = 1; i < raw.length; i++) {

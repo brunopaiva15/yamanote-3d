@@ -11,7 +11,7 @@ export interface BenchSegment {
   freeSpaceSide?: 1 | -1; // côté où la banquette cède la place à la フリースペース
 }
 
-// Segments de banquette entre les portes (z), identiques des deux côtés — sauf
+// Segments de banquette entre les portes (z), identiques des deux côtés - sauf
 // là où la zone libre remplace une banquette.
 //
 // L'E235 a une フリースペース (fauteuils roulants et poussettes) dans CHAQUE

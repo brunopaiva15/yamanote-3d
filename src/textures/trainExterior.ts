@@ -96,7 +96,7 @@ export function makeStainlessRoughness(): THREE.CanvasTexture {
 
 /**
  * Face avant : le vert uguisu s'estompe vers le bas en un damier de carrés
- * noirs de plus en plus serrés — la signature graphique du E235. Renvoyée en
+ * noirs de plus en plus serrés - la signature graphique du E235. Renvoyée en
  * texture à alpha, posée par-dessus le masque vert.
  */
 export function makeFrontCheckerTexture(): THREE.CanvasTexture {
@@ -140,7 +140,7 @@ const YAMANOTE_SIGN: SignLine = {
 
 /**
  * Girouette LED de face avant : nom de ligne sur fond noir, plus le numéro de
- * service en dessous. `redraw` change la seconde ligne — numéro de course pour
+ * service en dessous. `redraw` change la seconde ligne - numéro de course pour
  * la Yamanote, régime et destination pour une rame qui ne fait que passer.
  */
 export function makeDestinationSign(line: SignLine = YAMANOTE_SIGN): {

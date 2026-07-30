@@ -3,7 +3,7 @@
 //
 // Les nakazuri ne sont pas orientées le long du wagon mais EN TRAVERS : leur
 // face regarde l'avant et l'arrière de la rame. C'est ce qui donne, quand on
-// regarde dans l'axe de l'allée, ce tunnel d'affiches qui fuit vers le fond —
+// regarde dans l'axe de l'allée, ce tunnel d'affiches qui fuit vers le fond -
 // et c'est ainsi qu'on les lit, assis sur les banquettes latérales.
 //
 // Proportions relevées sur photos : la bannière est bien plus large que haute,
@@ -77,7 +77,7 @@ export function Ads() {
   useFrame(() => {
     // Les douze écrans 窓上 sont de la publicité, rien de plus : ils tombent
     // avec l'alimentation de bord et ne reviennent qu'avec elle. Les nakazuri,
-    // elles, sont du papier — une coupure de courant ne les décroche pas, et
+    // elles, sont du papier - une coupure de courant ne les décroche pas, et
     // c'est le seul affichage du wagon qui reste lisible dans le noir.
     const lit = runtime.carPower > SCREEN_CUTOFF ? 1 : 0;
     for (const m of screenMats) m.color.setScalar(lit);

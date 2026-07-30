@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 
-// Rectangle à coins arrondis, centré sur (cx, cy) — l'origine par défaut.
+// Rectangle à coins arrondis, centré sur (cx, cy) - l'origine par défaut.
 export function roundedRect(w: number, h: number, r: number, cx = 0, cy = 0): THREE.Shape {
   const s = new THREE.Shape();
   const x = cx - w / 2;

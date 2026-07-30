@@ -1,6 +1,6 @@
 // Les nombres de la porte bloquée (src/data/doorObstruction.ts).
 //
-// Le module n'a aucune dépendance — ni React, ni three, ni runtime — et prend
+// Le module n'a aucune dépendance - ni React, ni three, ni runtime - et prend
 // son générateur aléatoire en argument : Node l'exécute tel quel, et un tirage
 // scripté suffit à vérifier que la procédure ne dérive pas vers une porte
 // d'ascenseur (réouverture immédiate, systématique, et en grand).

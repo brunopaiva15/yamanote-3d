@@ -3,14 +3,14 @@
 // Le cycle jour / nuit était jusqu'ici la seule horloge du décor : le monde
 // changeait d'heure en heure, jamais de mois en mois. Or sur la Yamanote, ce
 // qu'on voit par la vitre en février et ce qu'on voit en août n'ont pas la même
-// couleur, pas la même lumière, et pas la même durée de jour — c'est ce que ce
+// couleur, pas la même lumière, et pas la même durée de jour - c'est ce que ce
 // module modélise, pour que la saison soit VISIBLE DEPUIS DEHORS.
 //
 // Deux familles de valeurs, et il faut les distinguer :
 //
 //   · les POIDS DE SAISON (`w`), quatre nombres qui somment à 1, fondus sur
 //     ~26 jours de part et d'autre de quatre bornes. Ils servent aux réglages
-//     continus — teinte du ciel, dureté de la lumière, portée de la brume ;
+//     continus - teinte du ciel, dureté de la lumière, portée de la brume ;
 //   · les PHÉNOMÈNES DATÉS (`sakura`, `koyo`, `tsuyu`, `heat`, `bare`…), des
 //     cloches indépendantes posées sur le quantième. Ils ne se déduisent PAS
 //     des poids : la floraison des cerisiers dure douze jours au milieu d'un
@@ -19,7 +19,7 @@
 //
 // La lumière du jour, elle, ne se fond pas : elle se calcule. Tokyo (35,7° N)
 // voit le soleil se lever à 4 h 25 au solstice d'été et à 6 h 47 à celui
-// d'hiver, se coucher à 19 h 00 puis à 16 h 32 — deux heures et demie d'écart
+// d'hiver, se coucher à 19 h 00 puis à 16 h 32 - deux heures et demie d'écart
 // sur le coucher, c'est le fait saisonnier le plus fort de tous, et le plus
 // facile à rater. `daynight` s'y recale.
 //
@@ -38,7 +38,7 @@ export interface SeasonState {
   doy: number;
   /** Poids fondus des quatre saisons. Somme = 1, deux au plus sont non nuls. */
   w: Record<Season, number>;
-  /** Saison dominante — pour l'affichage, jamais pour un réglage continu. */
+  /** Saison dominante - pour l'affichage, jamais pour un réglage continu. */
   dominant: Season;
 
   // --- Phénomènes datés (0..1) ---------------------------------------------
@@ -46,7 +46,7 @@ export interface SeasonState {
   sakura: number;
   /** 若葉 : le vert cru et clair des feuilles neuves, d'avril à fin mai. */
   newGreen: number;
-  /** 紅葉 : rougeoiement, tardif à Tokyo — pic fin novembre / début décembre. */
+  /** 紅葉 : rougeoiement, tardif à Tokyo - pic fin novembre / début décembre. */
   koyo: number;
   /** Ramure nue : décembre à mi-mars. */
   bare: number;
@@ -88,7 +88,7 @@ export interface SeasonState {
    * la lumière du soleil.
    *
    * Ce n'est pas un étalonnage d'humeur : c'est de l'air. Un janvier de Tokyo
-   * est sec et sans particules — la lumière y bleuit et le lointain reste net
+   * est sec et sans particules - la lumière y bleuit et le lointain reste net
    * à perte de vue, c'est en hiver qu'on voit le Fuji depuis les tours. Un août
    * est chargé de vapeur d'eau : le blanc jaunit, le contraste tombe et les
    * tours d'Ikebukuro se noient à six cents mètres.
@@ -209,13 +209,13 @@ function sunTimes(doy: number): { sunriseH: number; sunsetH: number; noonAltitud
  * multiplication, et l'automne resterait donc un été terne.
  */
 const SUMMER_LEAF = ['#4b8a3a', '#569a44', '#3f7c33', '#61a54c'];
-/** Le vert cru et clair des feuilles neuves — il ne ressemble à rien d'autre. */
+/** Le vert cru et clair des feuilles neuves - il ne ressemble à rien d'autre. */
 const SPRING_LEAF = ['#77b955', '#8ac762', '#6aa94b', '#95cf6d'];
 /** 紅葉 : à Tokyo c'est autant le jaune des ginkgos que le rouge des érables. */
 const AUTUMN_LEAF = ['#c8722c', '#d8a33a', '#b4472c', '#c98f34'];
 /** Ramure nue : ce qui reste est du bois et de la brindille, pas du feuillage. */
 const WINTER_LEAF = ['#6d6152', '#7a6d5c', '#635849', '#82735f'];
-/** Sakura : rose lavé, presque blanc — le rose vif est une faute d'écolier. */
+/** Sakura : rose lavé, presque blanc - le rose vif est une faute d'écolier. */
 const SAKURA_TONE = '#f0cdd8';
 
 /** Teinte de l'air, par saison. */
@@ -271,7 +271,7 @@ export function seasonAt(month: number, day: number): SeasonState {
 
   // Le feuillage n'est pas la saison : il est la somme de trois phénomènes
   // datés posés sur un fond d'été. Une frondaison ne devient pas rouge parce
-  // qu'on est « en automne » — elle le devient dix jours fin novembre.
+  // qu'on est « en automne » - elle le devient dix jours fin novembre.
   const summer = Math.max(0, 1 - koyo - bare * 0.9 - newGreen * 0.8);
   const foliage = SUMMER_LEAF.map((_, i) =>
     mixHex([
@@ -307,7 +307,7 @@ export function seasonAt(month: number, day: number): SeasonState {
     blossomTone: SAKURA_TONE,
     airTone: mixHex(SEASONS.map((s) => [AIR_TONE[s], w[s]] as const)),
     clarity: 1 + 0.32 * cold - 0.3 * heat,
-    // La ramure nue garde du volume — des branches, ce n'est pas rien — mais
+    // La ramure nue garde du volume - des branches, ce n'est pas rien - mais
     // beaucoup moins qu'une frondaison en juillet.
     canopy: 1 - 0.38 * bare,
   };

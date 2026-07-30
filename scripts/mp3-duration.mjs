@@ -3,7 +3,7 @@
 // Le jeu a besoin de connaître la longueur des 発車メロディ AVANT de les jouer :
 // la fenêtre sonore d'un arrêt est taillée pour deux passages entiers, et c'est
 // elle qui fixe la durée du dwell (voir systems/stationCycle). Un décodeur
-// complet serait de trop pour ça — la somme des trames suffit, et se calcule
+// complet serait de trop pour ça - la somme des trames suffit, et se calcule
 // sans dépendance.
 //
 // Utilisé par scripts/melody-manifest-gen.mjs (qui grave src/data/melodyManifest.ts)

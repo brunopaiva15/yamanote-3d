@@ -4,9 +4,9 @@
 //
 // Deux choses se jugent ici, et une seule est la pluie elle-même :
 //
-//   · les gouttes — leur inclinaison surtout, qui doit suivre la vitesse du
+//   · les gouttes - leur inclinaison surtout, qui doit suivre la vitesse du
 //     train, et leur absence sous le pavillon du wagon ;
-//   · TOUT LE RESTE — la portée du regard qui tombe, le ciel qui se ferme, le
+//   · TOUT LE RESTE - la portée du regard qui tombe, le ciel qui se ferme, le
 //     ballast et la chaussée qui foncent, la neige qui blanchit ce qui regarde
 //     le ciel. C'est ce reste qui fait qu'il pleut ; les gouttes ne font que
 //     le confirmer.

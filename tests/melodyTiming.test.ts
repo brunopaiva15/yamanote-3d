@@ -4,16 +4,16 @@
 // diverger en silence :
 //
 // 1. le manifeste des durées (src/data/melodyManifest.ts) et les MP3 réellement
-//    posés sous public/audio/melodies — une regravure sans `node
+//    posés sous public/audio/melodies - une regravure sans `node
 //    scripts/melody-manifest-gen.mjs` taillerait la fenêtre sur des longueurs
 //    périmées ;
 // 2. le PLANIFICATEUR (`plannedDepartureMelodyPath`) et le sélecteur qui joue
 //    vraiment (`playDepartureMelodyForContext`) : deux listes, deux ordres. On
-//    ne les compare pas ligne à ligne — on vérifie que jamais deux prédicats ne
+//    ne les compare pas ligne à ligne - on vérifie que jamais deux prédicats ne
 //    sont vrais sur un même quai, ce qui rend l'ordre indifférent ;
 // systems/stationCycle, lui, n'est pas importable ici (il tire tout le moteur
-// audio) : ce qu'il fait de cette fenêtre — la mélodie d'abord, l'annonce de
-// fermeture ensuite, les portes en dernier — se lit dans « Chronologie de
+// audio) : ce qu'il fait de cette fenêtre - la mélodie d'abord, l'annonce de
+// fermeture ensuite, les portes en dernier - se lit dans « Chronologie de
 // l'arrêt ».
 
 import test from 'node:test';
@@ -67,7 +67,7 @@ function platforms(): { jy: string; direction: LoopDirection; platform: number }
 
 test('chaque clip de mélodie a sa durée au manifeste, et elle est juste', () => {
   const missing = MELODY_PATHS.filter((p) => !(p in MELODY_DURATIONS));
-  assert.deepEqual(missing, [], 'mélodies sans durée — relancer melody-manifest-gen.mjs');
+  assert.deepEqual(missing, [], 'mélodies sans durée - relancer melody-manifest-gen.mjs');
 
   const drifted: string[] = [];
   for (const [path, declared] of Object.entries(MELODY_DURATIONS)) {
@@ -76,7 +76,7 @@ test('chaque clip de mélodie a sa durée au manifeste, et elle est juste', () =
     // 0,05 s de tolérance : le manifeste arrondit au centième.
     if (Math.abs(mp3Duration(file) - declared) > 0.05) drifted.push(path);
   }
-  assert.deepEqual(drifted, [], 'durées périmées — relancer melody-manifest-gen.mjs');
+  assert.deepEqual(drifted, [], 'durées périmées - relancer melody-manifest-gen.mjs');
 });
 
 test('la fenêtre sonore tient deux passages entiers, respiration comprise', () => {
@@ -119,7 +119,7 @@ test('les quais sans clip sont ceux qu’on sait, et leur fenêtre reste pleine'
   // Sept quais n'ont aucun clip câblé et retombent sur la synthèse Tone.js :
   // Ebisu Outer (ver.E jamais fournie), Ikebukuro Outer, et cinq quais du nord
   // que ni les tables principales ni Seseragi ne listent à ce numéro de voie.
-  // La liste est figée ici pour qu'un branchement ajouté — ou perdu — se voie.
+  // La liste est figée ici pour qu'un branchement ajouté - ou perdu - se voie.
   const silent = platforms().filter(
     ({ jy, direction, platform }) => plannedDepartureMelodyPath(jy, direction, platform) === null,
   );

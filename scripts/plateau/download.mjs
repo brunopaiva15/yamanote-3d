@@ -1,4 +1,4 @@
-// Étape 1 — obtention des données sources.
+// Étape 1 - obtention des données sources.
 //
 // DEUX SOURCES POSSIBLES :
 //
@@ -73,10 +73,10 @@ function datasetUrl(args) {
     throw new PipelineError(
       `Aucune URL configurée pour le jeu de données « ${id} ».`,
       `PLATEAU diffuse ses données via le G空間情報センター.\n` +
-        `  Fiche du jeu Tokyo 23区 — unique et SANS millésime depuis avril 2022 :\n` +
+        `  Fiche du jeu Tokyo 23区 - unique et SANS millésime depuis avril 2022 :\n` +
         `    ${PLATEAU_PORTAL.tokyo23ku}\n` +
         `  Prenez-y la ressource CityGML : ni OBJ, ni FBX, ni 3D Tiles, ni MVT,\n` +
-        `  ni GeoTIFF — ce sont des dérivés dont ce pipeline ne peut rien faire.\n` +
+        `  ni GeoTIFF - ce sont des dérivés dont ce pipeline ne peut rien faire.\n` +
         `  Puis relancez avec\n` +
         `    --url <URL>   (ou PLATEAU_DATASET_URL=<URL>)\n` +
         `  Autres entrées possibles :\n` +
@@ -193,7 +193,7 @@ async function download(url, reporter, args) {
 /**
  * Nature d'une archive, lue dans ses premiers octets. PLATEAU publie certaines
  * ressources en 7z ; les ouvrir avec un lecteur zip ne donne pas une erreur
- * franche, juste zéro fichier — et un message trompeur en bout de chaîne.
+ * franche, juste zéro fichier - et un message trompeur en bout de chaîne.
  */
 export function detectArchive(path) {
   const fd = openSync(path, 'r');
@@ -344,7 +344,7 @@ export async function ensureSources(args, reporter) {
           'seront tous analysés, y compris les thèmes non bâtis (ignorés à la lecture).',
       );
     }
-    reporter.info(`Livraison locale : ${source.path} — ${files.length} fichier(s) CityGML.`);
+    reporter.info(`Livraison locale : ${source.path} - ${files.length} fichier(s) CityGML.`);
     if (!args.dryRun) writeMarker('download', { inputHash, outputs: files, extra: { dir: source.path } });
     return { kind: 'dir', files, inputHash };
   }

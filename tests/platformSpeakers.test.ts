@@ -75,7 +75,7 @@ test('aucun diffuseur ne sert deux prises', () => {
 test('le relais se fait à distance égale : pas de saut de niveau', () => {
   // On marche le long du quai en relevant chaque changement de sélection. À
   // chacun, l'entrant et le sortant doivent être à la même distance de la tête
-  // — c'est la condition pour que l'échange soit inaudible.
+  // - c'est la condition pour que l'échange soit inaudible.
   let prev = pick(-100);
   let relays = 0;
   for (let ear = -100; ear <= 100; ear += 0.05) {

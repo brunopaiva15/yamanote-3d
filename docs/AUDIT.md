@@ -1,4 +1,4 @@
-# Audit — bugs et incohérences
+# Audit - bugs et incohérences
 
 Relevé au 29 juillet 2026 sur `claude/yamanote-3d-audit-e5d99a`, **puis corrigé**.
 Chaque entrée porte son état : ✅ corrigé, ⚠️ corrigé en partie, ↺ demande une
@@ -18,7 +18,7 @@ défauts relevés ici n'étaient attrapés par aucune barrière existante.
 
 À quoi se sont ajoutées une relecture des systèmes et de l'interface, des
 scripts de recoupement lancés sur les modules réels, et **une session pilotée
-dans Chromium** — c'est elle qui a livré le défaut n° 1, que ni la relecture ni
+dans Chromium** - c'est elle qui a livré le défaut n° 1, que ni la relecture ni
 les tests ne pouvaient voir, et c'est elle qui a validé sa correction.
 
 Sévérité : **A** = casse l'expérience, **B** = contradiction franche,
@@ -41,7 +41,7 @@ const physDt  = Math.min(raw, PHYS_DT_CAP);                  // 0,05 s par IMAGE
 En dessous de 20 fps (1 / 0,05), l'animation des portes n'avançait plus qu'à la
 fraction `fps / 20` du temps réel pendant que `updateCycle` consommait tout le
 temps écoulé. L'écart n'était pas borné : il grandissait tant que le cadre
-restait bas. Mesuré en session (rendu logiciel, ~0,3 fps — cas extrême, mécanisme
+restait bas. Mesuré en session (rendu logiciel, ~0,3 fps - cas extrême, mécanisme
 linéaire à partir de 20 fps) :
 
 ```
@@ -60,7 +60,7 @@ automatique, sur une scène qui porte 224 m de quai, la ville et des dizaines de
 PNJ.
 
 **Correction.** Le temps écoulé est désormais *parcouru* en autant de sous-pas de
-0,05 s qu'il faut, au lieu d'être tronqué — comme le fait déjà `integrateTrain`.
+0,05 s qu'il faut, au lieu d'être tronqué - comme le fait déjà `integrateTrain`.
 Ce qui intègre du temps (portes, obstruction, PNJ, foule, dialogue, audio,
 ambiance) est dans la boucle ; ce qui ne fait que publier l'état courant
 (niveaux, ambiance de gare, tonnerre) reste après, une fois par image. Un
@@ -79,7 +79,7 @@ Portes grandes ouvertes tout l'arrêt, fermées sur toute la course, plus de sau
 
 ---
 
-## B1 ↺ Le côté d'ouverture ne se déduit pas du plan de voies — et ne le prétend plus
+## B1 ↺ Le côté d'ouverture ne se déduit pas du plan de voies - et ne le prétend plus
 
 `src/data/stations.ts`, `src/data/loop.ts`
 
@@ -87,7 +87,7 @@ Portes grandes ouvertes tout l'arrêt, fermées sur toute la course, plus de sau
 que « 13 gares sur 30 contredisent la règle », avec un tableau des côtés
 attendus. Ce tableau était faux : je l'avais construit en tenant `sharedIsland`
 pour un îlot central, alors qu'un îlot 方向別 partagé avec le Keihin-Tōhoku est
-au contraire *à l'extérieur* de la paire de voies Yamanote — le côté attendu s'y
+au contraire *à l'extérieur* de la paire de voies Yamanote - le côté attendu s'y
 inverse. Recoupement des trois lectures possibles de la règle contre les données
 réelles :
 
@@ -104,7 +104,7 @@ dérivable de `config`, sous aucune lecture.** C'est un relevé écrit à la mai
 quasi alternant (18 à droite, 12 à gauche).
 
 Le défaut réel était donc plus étroit, et c'est celui-là qui est corrigé : le
-commentaire de `DOOR_SIDE` — repris mot pour mot dans `data/loop.ts` — énonçait
+commentaire de `DOOR_SIDE` - repris mot pour mot dans `data/loop.ts` - énonçait
 la règle d'une façon qui se lisait comme une dérivation, et conduisait tout
 lecteur à conclure qu'une des deux tables était cassée. Les deux commentaires
 distinguent maintenant ce qui est garanti (le côté est le même dans les deux
@@ -117,7 +117,7 @@ invariants qui tiennent : trente entrées, toutes ±1, indexées par gare seule.
 gare par gare est une question de terrain, pas de code : rien dans le dépôt ne
 permet de la trancher, et retourner treize quais sur une déduction que les
 données démentent aurait été pire que de ne rien faire. Si le relevé doit être
-révisé, c'est une passe de vérification sur les trente gares — dis-le et je la
+révisé, c'est une passe de vérification sur les trente gares - dis-le et je la
 prépare, table en main.
 
 ---
@@ -138,7 +138,7 @@ joueur de côté quand on réglait le volume aux flèches.
 **Correction.** `isTypingTarget()` rend le clavier au champ qui a le focus
 (`INPUT`, `SELECT`, `TEXTAREA`, `contentEditable`), et rien ne s'applique avant
 d'être monté à bord. Vérifié en session : `muted` reste `false` après M depuis le
-champ date, pas de plein écran après F, Espace rendu au `<select>` — et M
+champ date, pas de plein écran après F, Espace rendu au `<select>` - et M
 fonctionne toujours une fois à bord.
 
 ---
@@ -174,7 +174,7 @@ clips au manifeste : 19 | atteignables en jeu : 16
 ```
 
 **Correction.** La voie est tirée à chaque arrêt, au début de
-`randomizeStopTimings` — donc avant la mesure de la fenêtre sonore, puisque c'est
+`randomizeStopTimings` - donc avant la mesure de la fenêtre sonore, puisque c'est
 le quai qui décide de la mélodie et la mélodie qui décide de la durée de
 l'arrêt. Un seul point d'entrée pour les deux : l'ordre ne peut plus se perdre.
 Ōsaki 28 %, Ikebukuro 12 %, rien ailleurs. Vérifié en session sur 400 tirages par
@@ -182,7 +182,7 @@ gare : les trois clips sortent, et Mejiro ne tire jamais de voie secondaire.
 
 `terminusStop` et `outOfService` restent sans producteur, et c'est assumé : la
 boucle du jeu n'a pas de rame de service ni de terminus. Ils sont documentés
-comme réservés — les prédicats de `data/melodies` sont écrits sur le contrat réel
+comme réservés - les prédicats de `data/melodies` sont écrits sur le contrat réel
 du quai, où ces états existent, et une garde qui dort coûte moins cher qu'une
 garde qui manque. En revanche `autonomousDepartureSequence` et
 `startDepartureSequence` sont partis : c'était un **second ordonnanceur de
@@ -195,8 +195,8 @@ départ**, en sommeil, en face de celui de `stationCycle` qui mène l'arrêt.
 `src/data/segments.ts`, `src/systems/stationCycle.ts`
 
 Le tronçon 13 porte une minute d'intervalle, seul de la boucle : après retrait du
-forfait d'arrêt il ne reste que **8 s de croisière** — le plancher de
-`cruiseDuration` —, contre 59 ou 119 s partout ailleurs. `cruiseSec − 20` y
+forfait d'arrêt il ne reste que **8 s de croisière** - le plancher de
+`cruiseDuration` -, contre 59 ou 119 s partout ailleurs. `cruiseSec − 20` y
 valait −12, donc la condition de l'annonce d'approche était déjà vraie à la
 première image :
 
@@ -206,7 +206,7 @@ once('announce-depart', t > 0.6, ...)                                // 0,6 s pl
 ```
 
 La file de la rame étant sérielle, elle recevait 「まもなく高田馬場」 avant
-「次は、高田馬場」 et les jouait dans cet ordre — les deux sens touchés.
+「次は、高田馬場」 et les jouait dans cet ordre - les deux sens touchés.
 
 **Correction.** `approachAnnounceAt()` borne l'instant pour qu'il ne passe jamais
 devant l'annonce de départ. La fonction et ses deux constantes ont migré dans
@@ -228,16 +228,16 @@ défaut la date réelle à Tokyo et l'horloge du monde avance les jours d'elle-m
 au 1er janvier 2028, `isJapaneseHoliday()` aurait rendu faux pour les seize
 fériés de l'année, `morningMatrixFactor` aurait pris la colonne du jour ouvrable
 au lieu de celle du dimanche, et le remplissage annoncé aurait sauté d'environ
-0,35 à 1,0 — un 元日 rendu comme un mardi de pointe, sans un mot.
+0,35 à 1,0 - un 元日 rendu comme un mardi de pointe, sans un mot.
 
 **Correction.** Les fériés sont **calculés** depuis le 祝日法 : dates fixes,
 Happy Monday (n-ième lundi), les deux équinoxes par la formule valable
 1980–2099, le 振替休日 (report du dimanche au premier jour non férié) et le
-国民の休日 (jour ordinaire pris en sandwich — c'est lui qui donne le 22 septembre
+国民の休日 (jour ordinaire pris en sandwich - c'est lui qui donne le 22 septembre
 2026). Un tableau qui périme est une bombe à retardement silencieuse ; la loi ne
 périme pas.
 
-Le calcul reproduit les trois années publiées à la date près — **et trouve deux
+Le calcul reproduit les trois années publiées à la date près - **et trouve deux
 fériés que la table oubliait** : le 23 novembre 2025 et le 21 mars 2027, tous
 deux des dimanches dont elle ne gardait que le report. Huit tests couvrent la
 conformité aux calendriers du Cabinet Office et les invariants sur les 120 années
@@ -252,7 +252,7 @@ du domaine.
 Les deux chemins n'appelaient que `requestFullscreen()` : une fois dedans, le
 bouton du HUD restait affiché sans plus rien faire, et **F** non plus, alors que
 le pense-bête du menu promet « F : plein écran ». `toggleFullscreen()` bascule
-maintenant dans les deux sens, depuis un seul endroit — le bouton et la touche ne
+maintenant dans les deux sens, depuis un seul endroit - le bouton et la touche ne
 peuvent plus diverger. Le README le dit.
 
 ---
@@ -261,14 +261,14 @@ peuvent plus diverger. Le README le dit.
 
 `src/systems/walkable.ts`
 
-Tout ce qui touche au repère du quai passe par `DOOR_SIDE[platformIndex]` — la
+Tout ce qui touche au repère du quai passe par `DOOR_SIDE[platformIndex]` - la
 gare, la foule, les animaux, la rame croisée, `playerFrame`. `walkable`, seul,
 lisait `store.doorSide`, qui bascule vers la gare suivante dès la première image
 de la croisière alors que `platformIndex` retient la gare quittée jusqu'à ce que
 son quai soit hors de vue. Pendant cette fenêtre, `platformFloorY()` calculait
 son `u` avec le côté de la gare à venir tout en interrogeant l'emprise de la gare
-précédente. Sans conséquence tant que le joueur est à bord — `inCar` est
-symétrique en `u` — mais rien ne garantissait qu'il y reste. Les huit lectures
+précédente. Sans conséquence tant que le joueur est à bord - `inCar` est
+symétrique en `u` - mais rien ne garantissait qu'il y reste. Les huit lectures
 passent par `walkFlip()`, qui est `platformFlip()`.
 
 ---
@@ -278,13 +278,13 @@ passent par `walkFlip()`, qui est `platformFlip()`.
 | # | Constat | Correction |
 | --- | --- | --- |
 | D1 | `PLATFORM_TOP` déclaré deux fois ; `walkable` lisait l'une, `paxTargeting` l'autre. | `playerFrame` le ré-exporte depuis `data/stationGeometry`, source unique. |
-| D2 | Les six gares repères définies **trois fois** (`LOOP_HUBS`, `MAJOR_HUBS`, `ROOF_HUBS`), toutes égales — avec un commentaire affirmant que `ROOF_HUBS` en était un « superset », ce qui n'était plus vrai depuis le retrait de Takanawa Gateway. | `LOOP_HUB_JY` / `LOOP_HUB_INDICES` dans `data/stations` ; les deux autres en dérivent. Takanawa Gateway, qui n'est pas une gare repère, s'exclut de lui-même. |
-| D3 | `CONFIG.cruiseTime` (59) et `CONFIG.exposure` (0,85) lus nulle part — réglables sans effet. | Supprimés, avec la note de ce qui les remplace. |
+| D2 | Les six gares repères définies **trois fois** (`LOOP_HUBS`, `MAJOR_HUBS`, `ROOF_HUBS`), toutes égales - avec un commentaire affirmant que `ROOF_HUBS` en était un « superset », ce qui n'était plus vrai depuis le retrait de Takanawa Gateway. | `LOOP_HUB_JY` / `LOOP_HUB_INDICES` dans `data/stations` ; les deux autres en dérivent. Takanawa Gateway, qui n'est pas une gare repère, s'exclut de lui-même. |
+| D3 | `CONFIG.cruiseTime` (59) et `CONFIG.exposure` (0,85) lus nulle part - réglables sans effet. | Supprimés, avec la note de ce qui les remplace. |
 | D4 | `sort(() => Math.random() - 0.5)` décidait qui descend à chaque arrêt : un comparateur aléatoire n'est pas un ordre, et la permutation n'est pas uniforme. | Fisher-Yates. |
 | D5 | Exports sans consommateur : `trainStateFromRuntime`, `melodyDepartureGuardState`, `playOuterMainMelodyOncePerStop`. | Le premier redevient interne, les deux autres partent. |
-| D6 | « Le quai fait 96 m de long » — il en fait 224. | Corrigé. |
+| D6 | « Le quai fait 96 m de long » - il en fait 224. | Corrigé. |
 | D7 | `__jumpTo()` ne remettait pas `runtime.emergencyStop` à zéro : le badge du HUD restait figé sur « arrêt d'urgence » et `beginPowerOutage()` refusait de partir. | L'outil remet l'incident, l'alimentation et les tirages à zéro. |
-| D8 ⚠️ | Deux dépréciations three.js à chaque lancement. | `shadows="percentage"` (PCFShadowMap, ce que le moteur choisissait déjà) : plus d'avertissement. **`THREE.Clock` vient de `@react-three/fiber`**, pas du projet — rien à corriger ici, il partira avec une mise à jour de la dépendance. |
+| D8 ⚠️ | Deux dépréciations three.js à chaque lancement. | `shadows="percentage"` (PCFShadowMap, ce que le moteur choisissait déjà) : plus d'avertissement. **`THREE.Clock` vient de `@react-three/fiber`**, pas du projet - rien à corriger ici, il partira avec une mise à jour de la dépendance. |
 | D9 | `updateBlockedDoor` faisait partir la porte palière de la position du vantail de la RAME. | Elle part de la sienne (`psdFrom`), tenue à jour à chaque reprise de mouvement. |
 | D10 | Bundle de 2,38 Mo en un seul chunk. | three.js et Tone.js sortis dans leurs propres chunks : le morceau du jeu tombe à 746 ko (250 ko gzip) et le reste, qui ne change jamais, tient en cache d'un déploiement au suivant. |
 | D11 | Paramètre `dt` d'`updateBoardable` jamais utilisé (`void dt`). | Retiré. |
@@ -303,7 +303,7 @@ d'ordinaire passent ici sans une divergence.
   et `tests/announcementClips.test.ts` garantit dans les deux sens que chaque
   texte joué a son clip et qu'aucun clip n'est orphelin.
 - **Les places.** 51 assises et 30 debout, exactement les plafonds de
-  `PAX_CURVE` — la courbe de remplissage ne peut pas demander plus que le wagon
+  `PAX_CURVE` - la courbe de remplissage ne peut pas demander plus que le wagon
   n'offre.
 - **Le profil de traction**, testé sans harnais, marche sur l'élan et lâcher
   final du freinage compris.

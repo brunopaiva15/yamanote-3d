@@ -5,14 +5,14 @@
 // remplace le clamp d'allée qui enfermait le joueur au milieu du wagon.
 //
 // Repère de travail : (u, w). `w` est le z du monde. `u` est l'abscisse
-// mesurée POSITIVEMENT VERS LE QUAI — c'est-à-dire `platformFlip() * x`, le
+// mesurée POSITIVEMENT VERS LE QUAI - c'est-à-dire `platformFlip() * x`, le
 // côté du quai qui est physiquement là (voir `walkFlip`). Ce choix
 // fait disparaître le retournement du quai : `u` est exactement l'abscisse
 // locale dans laquelle Platform construit sa géométrie, et le wagon, symétrique,
 // s'y décrit aussi bien d'un côté que de l'autre.
 //
 // Le seuil de porte est un « portillon » : un rectangle qui n'existe que si la
-// porte de la rame ET la porte palière en face sont réellement dégagées — le
+// porte de la rame ET la porte palière en face sont réellement dégagées - le
 // même prédicat que celui qui laisse entrer le son du quai. Train absent, tous
 // les portillons se ferment : on ne peut pas tomber sur la voie.
 
@@ -28,14 +28,14 @@ import { placementFor, stairwellAt } from './stationPlacement';
 /**
  * Sens du repère de marche : `u` est compté positivement vers le quai.
  *
- * C'est `DOOR_SIDE[platformIndex]` — le côté du quai PRÉSENT — et non
+ * C'est `DOOR_SIDE[platformIndex]` - le côté du quai PRÉSENT - et non
  * `store.doorSide`, qui bascule vers la gare suivante dès la première image de
  * la croisière alors que le quai précédent défile encore. Tout ce qui touche au
  * repère du quai lit déjà celui-là (le rendu de la gare, la foule, les animaux,
  * la rame croisée, `playerFrame`) ; ce module était le seul à lire l'autre, et
  * calculait donc son `u` avec le côté de la gare à venir tout en interrogeant
  * l'emprise de la gare quittée. Sans conséquence tant que le joueur est à bord
- * pendant cette fenêtre — `inCar` est symétrique en `u` —, mais rien ne
+ * pendant cette fenêtre - `inCar` est symétrique en `u` -, mais rien ne
  * garantissait qu'il y reste.
  */
 const walkFlip = platformFlip;
@@ -85,7 +85,7 @@ const PLATFORM_REGION: Region = { frame: 'platform', y: PLATFORM_TOP };
 
 /**
  * Emprise du quai de la gare courante : bornes de marche et mobilier, tirées
- * de la même source que le rendu — un banc dessiné ici et infranchissable là
+ * de la même source que le rendu - un banc dessiné ici et infranchissable là
  * se verrait au premier pas.
  */
 function currentPlatform() {
@@ -107,7 +107,7 @@ export function portalOpen(): number {
   // Une rame qui roule n'a pas de seuil. La chorégraphie des portes ne les
   // ouvre jamais en marche, mais c'est une conséquence de la chronologie, pas
   // une garantie : on la pose ici, là où le passage se décide. Vu du quai,
-  // `runtime.speed` est celle de la rame qui arrive ou qui s'en va — et on ne
+  // `runtime.speed` est celle de la rame qui arrive ou qui s'en va - et on ne
   // monte pas non plus dans un train en mouvement.
   if (Math.abs(runtime.speed) > STOPPED_V) return 0;
   // Sans portes de quai (Shinjuku, Shibuya), le seuil ne dépend que de la
@@ -136,7 +136,7 @@ function inCar(u: number, w: number): boolean {
  * Deux choses en dépendent, et ce sont deux faces du même fait : c'est ce qui
  * fait de lui un obstacle pour la porte qui se ferme
  * (systems/doorObstruction), et c'est ce qui garde ce seuil-là franchissable
- * pour lui — voir `inPortal`.
+ * pour lui - voir `inPortal`.
  *
  * Deux précautions, et ce sont les deux moitiés du même bug. La position lue
  * est celle des PIEDS (`runtime.stanceX/Z`) et non celle de l'œil, qui
@@ -144,7 +144,7 @@ function inCar(u: number, w: number): boolean {
  * centimètres mettaient dans l'encadrement quelqu'un qui n'y était pas. Et les
  * bornes sont STRICTES : posé pile sur l'une ou l'autre, on est encore dans
  * l'alcôve ou déjà sur le quai, pas dans le seuil. Sans quoi le seuil
- * s'auto-alimentait — la clause de sortie de `inPortal` autorisait le pas
+ * s'auto-alimentait - la clause de sortie de `inPortal` autorisait le pas
  * suivant, qui la rendait vraie à son tour, et on traversait ainsi une porte
  * fermée, en pleine course.
  */
@@ -166,7 +166,7 @@ function inPortal(u: number, w: number): boolean {
     if (Math.abs(z - dz) > PORTAL_HALF_Z) continue;
     if (portalOpen() >= PORTAL_MIN_OPEN) return true;
     // Seuil refermé : on n'y ENTRE plus, mais si on y est déjà, on en sort.
-    // Une porte qui se referme sur quelqu'un ne l'emmure pas — elle s'arrête
+    // Une porte qui se referme sur quelqu'un ne l'emmure pas - elle s'arrête
     // sur lui (systems/doorObstruction), et il lui reste les deux côtés.
     //
     // « Y être déjà » se lit sur les pieds, strictement entre l'alcôve et le
@@ -255,7 +255,7 @@ export function resolveMove(pos: THREE.Vector3, dx: number, dz: number): void {
 }
 
 /**
- * Ramène une position monde dans le volume praticable — utile après un
+ * Ramène une position monde dans le volume praticable - utile après un
  * changement de côté d'ouverture ou de géométrie de gare.
  */
 export function snapInside(pos: THREE.Vector3): void {

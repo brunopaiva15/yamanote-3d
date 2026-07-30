@@ -1,7 +1,7 @@
 // Captures du décor extérieur AU FIL DE L'ANNÉE, vues depuis le wagon.
 //
-// Même dispositif que scripts/scenery-shots.mjs — on se cale au milieu d'un
-// inter-gare, on vise par une baie — mais ce qu'on fait varier n'est plus
+// Même dispositif que scripts/scenery-shots.mjs - on se cale au milieu d'un
+// inter-gare, on vise par une baie - mais ce qu'on fait varier n'est plus
 // l'heure, c'est la DATE. On cherche à répondre à une seule question : depuis
 // une place assise, sait-on en quel mois on est ?
 //
@@ -50,7 +50,7 @@ async function aim(dx, dy) {
   await page.mouse.up();
 }
 // De travers, plongée douce : l'angle où l'on voit à la fois le bord de voie et
-// la ville — les deux endroits où la saison s'écrit. À l'horizontale on ne
+// la ville - les deux endroits où la saison s'écrit. À l'horizontale on ne
 // verrait que des façades, qui ne changent pas d'un mois à l'autre.
 await aim(-230, 15);
 
@@ -74,8 +74,8 @@ const dates = [
 /**
  * Même abscisse pour toutes les prises.
  *
- * Sans elle, chaque capture voit d'autres cellules de ville — le cycle file
- * pendant les temps morts de SwiftShader — et on compare deux quartiers au
+ * Sans elle, chaque capture voit d'autres cellules de ville - le cycle file
+ * pendant les temps morts de SwiftShader - et on compare deux quartiers au
  * lieu de comparer deux saisons. Repose juste avant le déclenchement, pour la
  * même raison.
  */
@@ -111,7 +111,7 @@ for (const [month, day, name] of dates) {
 }
 
 // La tombée de la nuit, aux deux solstices, à la même heure de l'horloge :
-// 17 h 15. En décembre il fait nuit, en juin il fait grand jour — et c'est
+// 17 h 15. En décembre il fait nuit, en juin il fait grand jour - et c'est
 // sans doute la différence la plus violente de toute l'année.
 for (const [month, day, name] of [[12, 21, 'solstice-hiver-1715'], [6, 21, 'solstice-ete-1715']]) {
   await page.evaluate(([i, m, d, dist, clear]) => {

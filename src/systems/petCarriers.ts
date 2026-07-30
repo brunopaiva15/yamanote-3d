@@ -3,14 +3,14 @@
 // C'est la SEULE façon dont un chien peut légalement se trouver là. Les règles
 // de JR East l'imposent : l'animal doit être entièrement enfermé, sans sortir
 // la tête, dans une caisse dont la somme des trois cotes ne dépasse pas 120 cm
-// et dont le poids total, animal compris, reste sous 10 kg — et son maître
+// et dont le poids total, animal compris, reste sous 10 kg - et son maître
 // prend pour lui un billet « bagage à main » à 290 ¥. Un chien tenu en laisse,
 // porté dans les bras, glissé dans une écharpe ou promené en poussette est
 // explicitement interdit à l'intérieur des portiques.
 //
 // Ce module ne simule donc rien : la caisse est portée à bout de bras et suit
 // son porteur, point. Il ne fait que DÉSIGNER qui en porte une, et de quelle
-// main — le rendu (three/PlatformPets) accroche le reste à l'os de la main.
+// main - le rendu (three/PlatformPets) accroche le reste à l'os de la main.
 //
 // Corollaire agréable : contrairement à un chien en laisse, un chien en caisse
 // MONTE dans le train. Le porteur est un voyageur comme un autre, et rien dans
@@ -26,7 +26,7 @@ import { runtime } from './runtime';
 /**
  * Part des voyageurs tirés au sort par gare. Le filtre d'apparition ci-dessous
  * ne laisse passer, quai visible, que les promeneurs et ceux qui montent de
- * l'escalier — soit une poignée de personnes par gare, pas la douzaine
+ * l'escalier - soit une poignée de personnes par gare, pas la douzaine
  * présente. D'où une part plus haute qu'il n'y paraît pour un résultat qui
  * reste rare : une gare sur trois environ voit passer une caisse, quelque part
  * sur ses 224 m, et on n'en croise pas la moitié.
@@ -34,7 +34,7 @@ import { runtime } from './runtime';
 const PET_SHARE = 0.055;
 
 export interface PetCarrier {
-  /** Race du pack animalier — égale à l'indice de la niche. */
+  /** Race du pack animalier - égale à l'indice de la niche. */
   variant: number;
   /** Voyageur qui la porte, -1 quand la niche est libre. */
   owner: number;
@@ -109,8 +109,8 @@ function carriesPetHere(identity: number, stationIndex: number): boolean {
 /**
  * Une caisse ne doit jamais apparaître sous les yeux du joueur. Trois
  * fenêtres : le quai encore lointain (la foule vient d'être semée), un porteur
- * qui monte de la trémie d'escalier — il arrive avec son chien, ce qui est
- * précisément ce qu'on veut voir — ou un porteur assez loin sur le quai.
+ * qui monte de la trémie d'escalier - il arrive avec son chien, ce qui est
+ * précisément ce qu'on veut voir - ou un porteur assez loin sur le quai.
  */
 function canAppear(owner: CrowdPax): boolean {
   if (owner.state === 'arriving' || runtime.platformFade < 0.5) return true;
@@ -127,7 +127,7 @@ function eligible(p: CrowdPax): boolean {
 }
 
 /**
- * Assignation seulement — aucun mouvement à intégrer : la caisse est portée.
+ * Assignation seulement - aucun mouvement à intégrer : la caisse est portée.
  * Appelé après la foule du quai (three/Engine), dont il lit les états.
  */
 export function updatePetCarriers(): void {

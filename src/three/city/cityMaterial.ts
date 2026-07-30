@@ -5,7 +5,7 @@
 // depuis `instanceMatrix`, puis choisit l'UV selon la face : le long de la voie
 // sur les pignons, en profondeur sur les faces qui regardent les rails, à plat
 // sur les toitures. Un étage fait donc trois mètres partout, sur une tour de
-// cinquante comme sur une échoppe de six — c'est cette constance qui donne une
+// cinquante comme sur une échoppe de six - c'est cette constance qui donne une
 // TAILLE aux bâtiments, ce qu'aucune silhouette peinte ne peut faire.
 //
 // Trois échantillons cohabitent, choisis par la géométrie et non par un
@@ -14,7 +14,7 @@
 //
 // Le jour et la nuit ne sont plus deux jeux de textures fondus l'un dans
 // l'autre : la ville est ÉCLAIRÉE (soleil, hémisphérique, ambiante de
-// three/Scene), et la nuit n'ajoute que l'émissif — fenêtres qui s'allument par
+// three/Scene), et la nuit n'ajoute que l'émissif - fenêtres qui s'allument par
 // paquets, vitrines, néons.
 
 import * as THREE from 'three';
@@ -31,7 +31,7 @@ export interface CityMaterial {
   material: THREE.MeshLambertMaterial;
   /** 0..1 : proportion de nuit, pilotée chaque frame. */
   night: { value: number };
-  /** 0..1 : surfaces mouillées — elles foncent, et elles renvoient. */
+  /** 0..1 : surfaces mouillées - elles foncent, et elles renvoient. */
   wet: { value: number };
   /** 0..1 : neige posée sur ce qui regarde le ciel. */
   snow: { value: number };
@@ -62,7 +62,7 @@ export function makeCityMaterial(): CityMaterial {
     uWinWarm: { value: new THREE.Color('#ffdca8').multiplyScalar(1.35) },
     uWinCool: { value: new THREE.Color('#d8e6ff').multiplyScalar(1.25) },
     uShopColor: { value: new THREE.Color('#ffc98a').multiplyScalar(1.15) },
-    // Rebond de rue : une ville de nuit est éclairée par le bas — lampadaires,
+    // Rebond de rue : une ville de nuit est éclairée par le bas - lampadaires,
     // vitrines, phares. Sans lui, les six premiers mètres d'une façade sont
     // plus sombres que ses étages, ce qui n'arrive jamais en ville.
     uStreetGlow: { value: new THREE.Color('#ffb877') },
@@ -170,7 +170,7 @@ export function makeCityMaterial(): CityMaterial {
         diffuseColor.rgb *= mix(1.0, 0.46, uNight);
         // Mouillé : une surface humide fonce, parce qu'une pellicule d'eau
         // renvoie en miroir au lieu de diffuser. Ça se voit d'abord sur ce qui
-        // regarde le ciel — toiture, chaussée, acrotère —, et à peine sur une
+        // regarde le ciel - toiture, chaussée, acrotère -, et à peine sur une
         // façade verticale, où l'eau ne stagne pas.
         diffuseColor.rgb *= 1.0 - 0.34 * uWet * mix(0.25, 1.0, cityRoofish);
         // Neige : elle se pose sur ce qui regarde le ciel, JAMAIS sur un mur.
@@ -196,7 +196,7 @@ export function makeCityMaterial(): CityMaterial {
         cityEmit += vCityAccent * cityNeon * (0.05 + 1.5 * uNight) * vCityTrim.x;
         // Rebond de rue : décroissance rapide sur les trois ou quatre premiers
         // mètres, sur les seules faces verticales. La portée compte autant que
-        // l'intensité — étalée sur six mètres, elle éclairait la façade ENTIÈRE
+        // l'intensité - étalée sur six mètres, elle éclairait la façade ENTIÈRE
         // d'un quartier bas, et Nishi-Nippori s'allumait comme en plein jour.
         float cityBounce = exp(-vCityUp * 0.34) * (1.0 - cityRoofish);
         // Une chaussée mouillée RENVOIE : sous la pluie, la nuit, le pied des

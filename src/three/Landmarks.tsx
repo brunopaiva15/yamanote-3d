@@ -118,7 +118,7 @@ function lattice(ctx: Ctx, h: number, spread: number, body: string, plat: string
 // Le bois de Meiji-jingū et la lisière d'Ueno sont les deux seuls repères de la
 // boucle qui soient faits de végétal : ils prennent la couleur du jour. Les
 // silhouettes étant rebâties à chaque changement de gare, il suffit de lire la
-// saison ici — pas d'uniforme à piloter.
+// saison ici - pas d'uniforme à piloter.
 function forest(ctx: Ctx, spread: number): void {
   const se = seasonNow();
   const trunk = sil(ctx, '#5a4632');

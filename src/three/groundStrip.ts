@@ -3,14 +3,14 @@
 // Deux surfaces horizontales courent le long de la voie, un mètre sous la
 // dalle du quai : le ballast (three/Wayside, de l'axe à ±5 m) et la rue de la
 // ville (three/city/CityRibbon, de 5 m vers l'extérieur). Le quai les masque
-// toutes deux — sauf au droit d'une TRÉMIE D'ESCALIER, dont la volée descend
+// toutes deux - sauf au droit d'une TRÉMIE D'ESCALIER, dont la volée descend
 // plus bas qu'elles. Elles traversaient alors la cage de part en part : un
 // plancher gris à mi-hauteur des marches, qui cachait le bas de la volée, le
 // palier et son fléchage de sortie.
 //
 // Les écarter sur TOUTE leur longueur ne marche pas : elles font quatre cent
 // soixante mètres, le quai deux cent vingt, et au-delà de ses abouts il n'y a
-// plus rien pour couvrir ce qu'on découvre — on voyait le ciel entre le
+// plus rien pour couvrir ce qu'on découvre - on voyait le ciel entre le
 // ballast et la première rue. Une nappe se dérobe donc PAR TRONÇONS : pleine
 // largeur partout, rentrée seulement sur l'emprise du quai, et le raccord se
 // fait en biseau sur une vingtaine de mètres pour qu'aucune arête ne coure en
@@ -43,7 +43,7 @@ export interface GroundStrip {
  * Une nappe horizontale, à plat dans le plan (x, z) et prête à se dérober.
  *
  * `width` × `length` et les UV sont exactement ceux d'un PlaneGeometry couché
- * — c'est d'ailleurs de là qu'ils viennent, pour que le calage de texture des
+ * - c'est d'ailleurs de là qu'ils viennent, pour que le calage de texture des
  * appelants (repeat, offset défilant) continue de valoir mot pour mot.
  */
 export function makeGroundStrip(width: number, length: number): GroundStrip {

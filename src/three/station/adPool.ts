@@ -4,8 +4,8 @@
 //
 // Construit UNE FOIS pour toute la session, et non par gare : dessiner vingt
 // canvas à chaque arrêt coûterait une saccade à chaque entrée en gare. C'est
-// l'AGENCEMENT qui change d'une gare à l'autre — décalage du tirage par index
-// de gare — pas les images.
+// l'AGENCEMENT qui change d'une gare à l'autre - décalage du tirage par index
+// de gare - pas les images.
 //
 // Les visuels sont des caissons RÉTROÉCLAIRÉS : MeshBasicMaterial, hors
 // éclairage et hors tone mapping. C'est ce qui les rend francs de jour et
@@ -35,7 +35,7 @@ export function adPool(): AdPool {
   // béton clair ne se voit tout simplement pas.
   const basic = (seed: number, portrait: boolean) =>
     new THREE.MeshBasicMaterial({ map: makeAdTexture(seed, portrait, true), toneMapped: false });
-  // Une affiche sur neuf n'est pas une réclame mais un rappel de manières —
+  // Une affiche sur neuf n'est pas une réclame mais un rappel de manières -
   // celle des animaux, dont les règles pilotent aussi systems/petCarriers.
   // Une seule dans le pool : on la croise de loin en loin, et pas deux fois
   // dans le même champ de vision.

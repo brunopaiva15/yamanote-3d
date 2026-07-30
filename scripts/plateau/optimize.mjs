@@ -1,25 +1,25 @@
-// Étape 4 — optimisation des GLB de chunk et publication dans
+// Étape 4 - optimisation des GLB de chunk et publication dans
 // public/world/plateau/.
 //
 // CHAÎNE APPLIQUÉE (dans cet ordre, chaque étape mesurée)
-//   1. dedup()      — accesseurs, matériaux et maillages identiques fusionnés.
-//   2. weld()       — indexation réelle : les sommets identiques (position,
+//   1. dedup()      - accesseurs, matériaux et maillages identiques fusionnés.
+//   2. weld()       - indexation réelle : les sommets identiques (position,
 //                     normale, couleur) deviennent un seul sommet. C'est ce
 //                     qui divise le plus le poids, la géométrie sortant de
 //                     process.mjs étant volontairement non indexée.
-//   3. simplifyPrimitive() par BANDE de distance — voir « LOD » ci-dessous.
-//   4. prune()      — tout ce qui n'est plus référencé.
-//   5. textureCompress() — WebP + réduction de résolution, via sharp (déjà une
+//   3. simplifyPrimitive() par BANDE de distance - voir « LOD » ci-dessous.
+//   4. prune()      - tout ce qui n'est plus référencé.
+//   5. textureCompress() - WebP + réduction de résolution, via sharp (déjà une
 //                     dépendance du projet). Sans effet tant que la source est
 //                     du LOD1 sans apparence : le rapport l'indique alors
 //                     honnêtement (0 texture).
-//   6. meshopt()    — compression EXT_meshopt_compression, décodée nativement
+//   6. meshopt()    - compression EXT_meshopt_compression, décodée nativement
 //                     par drei/useGLTF (même choix que scripts/models-import.mjs).
 //   7. relecture du GLB écrit : un fichier qui ne se relit pas est un échec.
 //
-// LOD — CE QUI MARCHE ET CE QUI NE MARCHE PAS
+// LOD - CE QUI MARCHE ET CE QUI NE MARCHE PAS
 //   La simplification est tentée par bande (medium et far), primitive par
-//   primitive, avec un budget d'erreur. Sur du LOD1 — des prismes droits — il
+//   primitive, avec un budget d'erreur. Sur du LOD1 - des prismes droits - il
 //   n'y a presque rien à retirer sans détruire la silhouette : meshoptimizer
 //   refuse alors de descendre au ratio demandé, et le rapport le montre
 //   (`achievedRatio` proche de 1). L'allègement réel du lointain vient de
@@ -65,7 +65,7 @@ async function simplifyByBand(doc) {
       if (!BANDS.includes(band)) {
         throw new PipelineError(
           `Primitive sans bande de distance exploitable (extras=${JSON.stringify(extras)}).`,
-          'Le GLB brut ne vient pas de scripts/plateau/process.mjs — relancez avec --force.',
+          'Le GLB brut ne vient pas de scripts/plateau/process.mjs - relancez avec --force.',
         );
       }
       const ratio = ratioForBand(band);
@@ -179,7 +179,7 @@ export async function optimizeAll(args, reporter) {
     } catch (err) {
       throw new PipelineError(
         `GLB final invalide : ${out}`,
-        `Relecture impossible après compression meshopt — ${err.message}`,
+        `Relecture impossible après compression meshopt - ${err.message}`,
       );
     }
 
@@ -187,7 +187,7 @@ export async function optimizeAll(args, reporter) {
     if (sizeAfter > maxBytes) {
       throw new PipelineError(
         `Le chunk ${chunk.id} dépasse la taille maximale configurée.`,
-        `${humanBytes(sizeAfter)} > ${humanBytes(maxBytes)} — réduisez PLATEAU_CHUNK_M, ` +
+        `${humanBytes(sizeAfter)} > ${humanBytes(maxBytes)} - réduisez PLATEAU_CHUNK_M, ` +
           'durcissez les seuils de distance, ou relevez PLATEAU_MAX_CHUNK_KB.',
       );
     }

@@ -18,7 +18,7 @@
 // 3. BUDGET D'ÉVÉNEMENTS RARES. Disputes, chutes, bagarres et séductions
 //    passent par un compteur global : une dispute toutes les quelques minutes,
 //    une bagarre à peine une fois par tour de boucle. Le budget est compté
-//    séparément pour la rame et pour le quai — ce sont deux lieux.
+//    séparément pour la rame et pour le quai - ce sont deux lieux.
 //
 // Le contexte (heure de Tokyo, remplissage, phase du cycle) module ensuite les
 // poids : silence du matin, rire du vendredi soir, bras au corps quand c'est

@@ -5,7 +5,7 @@
 // Pourquoi côté client alors que le référencement aime le statique ? Parce que
 // le site est UNE page servie telle quelle : index.html porte déjà la version
 // anglaise complète, celle que lit un robot qui n'exécute rien. Ce module ne
-// crée aucune balise — il réécrit celles qui sont déjà là, et seulement quand
+// crée aucune balise - il réécrit celles qui sont déjà là, et seulement quand
 // la langue réelle du visiteur diffère de l'anglais par défaut. Un moteur qui
 // exécute le JavaScript (Googlebot, Bingbot) voit la page dans la langue
 // annoncée par l'alternate qu'il a suivi ; un moteur qui ne l'exécute pas voit
@@ -17,7 +17,7 @@ import { LANG_PARAM, LANGS, STRINGS, langFromUrl, type Lang } from './strings';
  * URL canonique du site, lue une fois dans le document plutôt que recopiée
  * ici : index.html en est la source unique, et un déploiement ailleurs (racine
  * d'un domaine, autre hébergeur) n'a qu'un fichier à changer. Sans balise
- * canonique — page ouverte depuis un fichier local, test hors navigateur — on
+ * canonique - page ouverte depuis un fichier local, test hors navigateur - on
  * se rabat sur l'URL courante, privée de sa requête.
  */
 function readSiteUrl(): string {
@@ -91,7 +91,7 @@ export function applyDocumentLang(lang: Lang, pinToUrl = false): void {
   }
 
   // La canonique suit l'URL réellement affichée : `?lang=…` si la langue y est
-  // épinglée, l'URL nue sinon. og:url la recopie — les deux ne doivent jamais
+  // épinglée, l'URL nue sinon. og:url la recopie - les deux ne doivent jamais
   // se contredire, un aperçu de partage se fie à og:url.
   const pinned = pinToUrl ? lang : langFromUrl();
   const canonical = canonicalFor(pinned);

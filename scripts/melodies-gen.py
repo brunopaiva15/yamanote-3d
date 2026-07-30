@@ -53,7 +53,7 @@ def freq_of(name: str) -> float:
 # ---------------------------------------------------------------------------
 
 INSTRUMENTS = {
-    # Cloche synthétique glassy — la voix classique des 発車メロディ JR.
+    # Cloche synthétique glassy - la voix classique des 発車メロディ JR.
     "synthbell": {
         "partials": [(1.0, 1.0), (2.756, 0.40), (5.404, 0.20), (8.933, 0.07)],
         "tau": 0.9,
@@ -238,7 +238,7 @@ def encode_mp3(buf: np.ndarray, path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 MELODIES = [
-    # Inner Loop principal — inspirée du rôle de JRE-IKST-010-01 : cloche
+    # Inner Loop principal - inspirée du rôle de JRE-IKST-010-01 : cloche
     # douce, arpège ascendant « la boucle tourne ». Sol majeur, 6/8 feutré.
     dict(
         file="01_jre-ikst-010-01_inner-main.mp3",
@@ -259,7 +259,7 @@ MELODIES = [
             (11, 2, ("D4", "A4", "F#5")), (13, 2.5, ("G3", "D4", "B4")),
         ],
     ),
-    # Outer Loop principal — pendant descendant de la précédente, ré majeur.
+    # Outer Loop principal - pendant descendant de la précédente, ré majeur.
     dict(
         file="02_jre-ikst-010-02_outer-main.mp3",
         title="Sotomawari no Kaze (外回りの風)",
@@ -280,7 +280,7 @@ MELODIES = [
             (12, 4, ("D4", "A4", "F#5")),
         ],
     ),
-    # Ōsaki Inner voie 2 — variante mineure recueillie du motif intérieur.
+    # Ōsaki Inner voie 2 - variante mineure recueillie du motif intérieur.
     dict(
         file="03_jre-ikst-010-03_inner-secondary-osaki.mp3",
         title="Meguri no Yube (めぐりの夕べ)",
@@ -299,7 +299,7 @@ MELODIES = [
             (7, 3, ("G3", "D4", "B4")), (10, 4.5, ("E3", "B3", "G4")),
         ],
     ),
-    # Ōsaki Outer voie 4 — do majeur allant, réponse claire à la voie 3.
+    # Ōsaki Outer voie 4 - do majeur allant, réponse claire à la voie 3.
     dict(
         file="04_jre-ikst-010-05_outer-secondary-osaki.mp3",
         title="Asa no Hikari (朝の光)",
@@ -320,7 +320,7 @@ MELODIES = [
             (10, 4, ("C4", "G4", "E5")),
         ],
     ),
-    # Komagome Outer voie 1 — printemps au koto, gamme miyako-bushi (la si do
+    # Komagome Outer voie 1 - printemps au koto, gamme miyako-bushi (la si do
     # mi fa) : évoque les cerisiers sans citer « Sakura Sakura ».
     dict(
         file="05_sakura-sakura-a.mp3",
@@ -336,7 +336,7 @@ MELODIES = [
         ],
         tail=2.0,
     ),
-    # Komagome Inner voie 2 — même gamme une octave plus haut, contour inversé.
+    # Komagome Inner voie 2 - même gamme une octave plus haut, contour inversé.
     dict(
         file="06_sakura-sakura-b.mp3",
         title="Hanafubuki (花吹雪)",
@@ -351,7 +351,7 @@ MELODIES = [
         ],
         tail=2.0,
     ),
-    # Uguisudani Inner voie 2 — mandoline en trémolo, pastorale de printemps
+    # Uguisudani Inner voie 2 - mandoline en trémolo, pastorale de printemps
     # (l'uguisu chante) ; même timbre que l'original, mélodie neuve.
     dict(
         file="08_haru-tremolo.mp3",
@@ -369,7 +369,7 @@ MELODIES = [
             (8, 2, ("A3", "E4", "C5")), (10, 5, ("C4", "G4", "E5")),
         ],
     ),
-    # Six quais Outer « Seseragi » — ruisseau : ostinato de doubles croches
+    # Six quais Outer « Seseragi » - ruisseau : ostinato de doubles croches
     # pincées sous une mélodie flottante. Fa majeur.
     dict(
         file="09_seseragi.mp3",
@@ -396,7 +396,7 @@ MELODIES = [
         ],
         tail=1.8,
     ),
-    # Takadanobaba Outer voie 1 — petite marche futuriste staccato (clin d'œil
+    # Takadanobaba Outer voie 1 - petite marche futuriste staccato (clin d'œil
     # à l'esprit robot du quai, sans citer Astro Boy).
     dict(
         file="10_tetsuwan-atom-a.mp3",
@@ -415,7 +415,7 @@ MELODIES = [
             (6, 2, ("G3", "D4", "B4")), (8, 4, ("C4", "G4", "E5")),
         ],
     ),
-    # Takadanobaba Inner voie 2 — la même marche vue depuis sol majeur.
+    # Takadanobaba Inner voie 2 - la même marche vue depuis sol majeur.
     dict(
         file="11_tetsuwan-atom-b.mp3",
         title="Mirai March ver.B (未来マーチ ver.B)",
@@ -433,7 +433,7 @@ MELODIES = [
             (6, 2, ("D4", "A4", "F#5")), (8, 3, ("G3", "D4", "B4")),
         ],
     ),
-    # Ebisu Inner voie 2 — valse à la cithare (l'original est une valse de
+    # Ebisu Inner voie 2 - valse à la cithare (l'original est une valse de
     # cithare) : trois temps pincés, mélodie neuve en ré majeur.
     dict(
         file="13_the-third-man-f.mp3",
@@ -454,7 +454,7 @@ MELODIES = [
             (17, 3, ("A3", "E4", "C#5")), (20, 4, ("D4", "A4", "F#5")),
         ],
     ),
-    # Takanawa Gateway Inner voie 1 — cloches aériennes, la majeur add9,
+    # Takanawa Gateway Inner voie 1 - cloches aériennes, la majeur add9,
     # moderne comme la gare.
     dict(
         file="14_glorious-gateway-a.mp3",
@@ -472,7 +472,7 @@ MELODIES = [
             (9, 4, ("E4", "B4", "G#4")), (13, 4, ("A3", "E4", "C#5", "B4")),
         ],
     ),
-    # Takanawa Gateway Outer voie 2 — miroir descendant de la version A.
+    # Takanawa Gateway Outer voie 2 - miroir descendant de la version A.
     dict(
         file="15_glorious-gateway-b.mp3",
         title="Aurora Gate ver.B",
@@ -489,7 +489,7 @@ MELODIES = [
             (9, 4, ("E4", "B4", "G#4")), (13, 3, ("A3", "E4", "C#5", "B4")),
         ],
     ),
-    # Kanda Outer voie 2 — jingle publicitaire guilleret (l'esprit CM song),
+    # Kanda Outer voie 2 - jingle publicitaire guilleret (l'esprit CM song),
     # fa majeur rebondi.
     dict(
         file="16_mondamin-cm-song-a.mp3",
@@ -510,7 +510,7 @@ MELODIES = [
             (10, 3.5, ("F3", "C4", "A4")),
         ],
     ),
-    # Kanda Inner voie 3 — même jingle, phrase répondue en descente.
+    # Kanda Inner voie 3 - même jingle, phrase répondue en descente.
     dict(
         file="17_mondamin-cm-song-b.mp3",
         title="Asa no Jingle ver.B (朝のジングル ver.B)",
@@ -529,7 +529,7 @@ MELODIES = [
             (6, 2, ("C4", "G4", "E5")), (8, 4.5, ("F3", "C4", "A4")),
         ],
     ),
-    # Ikebukuro Inner voie 5 — pop électrique syncopée, sol majeur brillant.
+    # Ikebukuro Inner voie 5 - pop électrique syncopée, sol majeur brillant.
     dict(
         file="18_bic-camera-theme-a.mp3",
         title="Denki Pop ver.A (電気ポップ ver.A)",
@@ -550,7 +550,7 @@ MELODIES = [
             (11, 3, ("G3", "D4", "B4")),
         ],
     ),
-    # Ikebukuro Inner voie 6 — même pop, réponse dans l'aigu.
+    # Ikebukuro Inner voie 6 - même pop, réponse dans l'aigu.
     dict(
         file="19_bic-camera-theme-b.mp3",
         title="Denki Pop ver.B (電気ポップ ver.B)",
@@ -569,7 +569,7 @@ MELODIES = [
             (6, 3, ("D4", "A4", "F#5")), (9, 3.5, ("G3", "D4", "B4")),
         ],
     ),
-    # Inner Loop principal ver.B — seconde version du même branchement, pour que
+    # Inner Loop principal ver.B - seconde version du même branchement, pour que
     # les vingt quais Inner ne sonnent pas tous pareil. Se rapproche du CARACTÈRE
     # du 010-01 réel : la bémol majeur (quatre bémols), ♩=110, guirlandes de
     # doubles croches, notes de passage chromatiques et basse en croches
@@ -616,7 +616,7 @@ MELODIES = [
             (13, 1, ("Eb3", "Bb3", "G4")), (14, 2, ("Ab3", "Eb4", "C5")),
         ],
     ),
-    # Outer Loop principal ver.B — pendant de la précédente pour les dix-huit
+    # Outer Loop principal ver.B - pendant de la précédente pour les dix-huit
     # quais Outer : même la bémol majeur et même ♩=110, mais départ syncopé
     # (après le temps), contour retombant et cadence V–I sous la tonique tenue.
     dict(
@@ -676,7 +676,7 @@ def main() -> None:
         path = out_dir / m["file"]
         encode_mp3(buf, path)
         dur = buf.shape[0] / SR
-        print(f"  {m['file']:44s} {dur:5.1f} s  — {m['title']}")
+        print(f"  {m['file']:44s} {dur:5.1f} s  - {m['title']}")
 
     print("\nReporter ces durées dans les constantes *_SECS de src/systems/stationCycle.ts.")
 

@@ -111,7 +111,7 @@ export function tiltZ(angle: number): THREE.Quaternion {
 /**
  * Versant incliné PUIS plié : la pente autour de z, le pli autour de x.
  *
- * L'ordre compte, et il est celui-là — on incline d'abord le pan dans la coupe
+ * L'ordre compte, et il est celui-là - on incline d'abord le pan dans la coupe
  * (c'est la pente du toit), puis on le bascule le long de la voie (c'est le
  * pli). Composé dans l'autre sens, le pli se mesurerait dans le plan déjà
  * incliné et les arêtes de deux pans voisins ne se rejoindraient plus.

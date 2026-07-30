@@ -203,12 +203,12 @@ test('« laissez descendre » ne passe que s’il finit avant la mélodie', () =
 
 test('aucun message facultatif ne déborde sur la mélodie', () => {
   // Toutes les longueurs d'arrêt admises (systems/stationCycle : 15 à 25 s après
-  // l'immobilisation — Shibuya ne descend en pratique pas sous 17,5 s, mais on
+  // l'immobilisation - Shibuya ne descend en pratique pas sous 17,5 s, mais on
   // éprouve la borne basse quand même), les deux sens, un plan qui demande tout.
   //
   // La règle ne porte que sur le FACULTATIF, et c'est voulu : la séquence
   // d'arrivée, elle, est obligatoire, et à Shibuya elle peut encore parler quand
-  // la mélodie part sur l'arrêt le plus court. Ce n'est pas un conflit de file —
+  // la mélodie part sur l'arrêt le plus court. Ce n'est pas un conflit de file -
   // la 発車メロディ n'est pas dans la file de la sono, c'est une autre source, et
   // un vrai quai laisse très bien la version anglaise finir sous les premières
   // notes. Ce qu'on refuse, c'est de RAJOUTER une consigne par-dessus.
@@ -233,7 +233,7 @@ test('aucun message facultatif ne déborde sur la mélodie', () => {
   }
 });
 
-test('sur l’arrêt le plus court, c’est la consigne obligatoire qui reste — pas une de plus', () => {
+test('sur l’arrêt le plus court, c’est la consigne obligatoire qui reste - pas une de plus', () => {
   // Le cas limite, nommé : mélodie 15 s après l'arrêt. La séquence d'arrivée de
   // Shibuya (nom + consigne ja + consigne en) occupe tout, donc aucun message
   // facultatif ne passe, et le seul dépassement possible est celui d'un segment
@@ -297,8 +297,8 @@ test('la file du quai ne recouvre jamais son propre segment précédent', () => 
 });
 
 test('le canal de la rame reste indépendant de celui du quai', () => {
-  // Les deux sonorisations parlent en même temps à Shibuya — la rame finit sa
-  // séquence d'approche pendant que le quai annonce le nom de la gare — et elles
+  // Les deux sonorisations parlent en même temps à Shibuya - la rame finit sa
+  // séquence d'approche pendant que le quai annonce le nom de la gare - et elles
   // ne peuvent pas se partager un fichier : les clips du quai portent leur rôle
   // vocal dans leur clé, ceux de la rame n'en ont pas.
   for (const direction of DIRECTIONS) {
@@ -312,7 +312,7 @@ test('le canal de la rame reste indépendant de celui du quai', () => {
     for (const key of platformKeys) {
       assert.ok(!cabinKeys.has(key), `clip partagé entre la rame et le quai : ${key}`);
     }
-    // Et la consigne japonaise, elle, existe des deux côtés — deux textes
+    // Et la consigne japonaise, elle, existe des deux côtés - deux textes
     // différents (ponctuation de bord) et donc deux clips.
     const cabinJp = approachSequence(SHIBUYA, 1, direction).filter((u) =>
       u.text.includes('足元にご注意ください'),

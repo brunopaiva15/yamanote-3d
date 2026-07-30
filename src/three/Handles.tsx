@@ -2,7 +2,7 @@
 // prioritaire, aux extrémités du wagon), refaites d'après photos. Il n'y a
 // PAS de sangle souple accrochée à un rail noir : chaque poignée est un
 // COLLIER de plastique articulé serré sur une barre chromée, prolongé d'une
-// courte attache rigide, puis l'anneau — le tout d'une seule teinte. La barre
+// courte attache rigide, puis l'anneau - le tout d'une seule teinte. La barre
 // est portée par de petits pendards fixés au plafond.
 // Les rangées oscillent avec le balancement du train.
 
@@ -15,7 +15,7 @@ import { runtime } from '../systems/runtime';
 
 // Barre chromée un peu plus basse que l'ancien rail, mais attache COURTE :
 // le bas de l'anneau remonte à ~1,70 m, au-dessus de la tête du joueur (yeux
-// à 1,55 m) — on ne se prend plus les poignées en marchant. Cette hauteur est
+// à 1,55 m) - on ne se prend plus les poignées en marchant. Cette hauteur est
 // reprise par three/characters/pose.ts (STRAP_RING_Y ≈ centre d'anneau) et
 // par le seuil d'atteinte des PNJ (systems/passengers).
 const RAIL_Y = 2.0;
@@ -24,7 +24,7 @@ const PRIORITY_Z = 8.1; // au-delà : zone prioritaire
 // Pas relevé sur la rame : 45 cm.
 const RING_PITCH = 0.451;
 
-// Anneau : triangle à coins arrondis, pointe en haut, 22 cm hors tout —
+// Anneau : triangle à coins arrondis, pointe en haut, 22 cm hors tout -
 // mesuré sur la maquette de référence. On échantillonne chaque côté (sommet +
 // trois points intermédiaires) avant de passer le tout à une Catmull-Rom
 // fermée : les côtés restent tendus et seuls les angles s'arrondissent.
@@ -46,7 +46,7 @@ function makeRingGeometry(): THREE.TubeGeometry {
   }
   const curve = new THREE.CatmullRomCurve3(points, true);
   // 24 pas le long du parcours et 6 faces de section : suffisant pour un
-  // objet de 22 cm répété 84 fois — au-delà, on paie très cher.
+  // objet de 22 cm répété 84 fois - au-delà, on paie très cher.
   return new THREE.TubeGeometry(curve, 24, RING_TUBE, 6, true);
 }
 

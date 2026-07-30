@@ -8,7 +8,7 @@
 //
 // Une potence au droit de chaque trémie et de chaque escalier mécanique : c'est
 // là qu'elles servent, puisqu'elles indiquent par où sortir. Recto-verso, avec
-// la MÊME texture des deux côtés — un panneau imprimé en miroir se remarque
+// la MÊME texture des deux côtés - un panneau imprimé en miroir se remarque
 // tout de suite.
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -78,7 +78,7 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
 
   // Rien d'une gare quittée ne ressert. `mats` se reconstruit à chaque gare
   // puisque les plaques en dépendent : c'est TOUT l'objet qu'il faut rendre,
-  // pas seulement les plaques — sinon les cinq autres matériaux s'accumulaient
+  // pas seulement les plaques - sinon les cinq autres matériaux s'accumulaient
   // à chaque arrêt, un tour de boucle après l'autre.
   useEffect(() => {
     const all = [mats.transfer, mats.track, mats.frame, mats.strut, ...mats.exits, ...mats.plates];
@@ -110,7 +110,7 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
   // Une potence par accès. Décalée d'un mètre vers le milieu du quai : plantée
   // pile au-dessus de la trémie, elle serait masquée par le fléchage de sortie
   // qui coiffe déjà celle-ci. Chacune porte la lettre de l'accès qu'elle
-  // annonce — c'est par elle qu'on se repère sur deux cent vingt mètres.
+  // annonce - c'est par elle qu'on se repère sur deux cent vingt mètres.
   const gantries = useMemo(
     () =>
       place.accesses
@@ -127,7 +127,7 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
   );
 
   // Largeur utile : d'un bord de quai à l'autre, moins les abouts. Sur un îlot
-  // la potence enjambe les DEUX bords — calée sur l'épine centrale, elle n'en
+  // la potence enjambe les DEUX bords - calée sur l'épine centrale, elle n'en
   // couvrait que la moitié et les panneaux se retrouvaient tous du même côté.
   const x0 = PSD_X + 0.75;
   const x1 = (place.farEdgeX ?? place.backX) - 0.75;
@@ -139,16 +139,16 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
   const top = SIGN_BOTTOM + SIGN_H;
   /**
    * Hauteur d'une plaque d'accès. Sur une trémie, à 2,62 m, on la lit sans
-   * lever la tête ; sur l'ascenseur elle se pose SUR la cage — au même niveau,
+   * lever la tête ; sur l'ascenseur elle se pose SUR la cage - au même niveau,
    * elle s'enfonçait de vingt centimètres dans le chapeau (2,50 m).
    */
   const plateY = (kind: string): number => (kind === 'elevator' ? 2.83 : 2.62);
 
   // Panneaux 番線, suspendus près du bord de quai et espacés de trente-six
   // mètres : quel que soit l'endroit où l'on descend de la rame, il y en a
-  // toujours un dans le champ — c'est le repère qu'on cherche des yeux en
+  // toujours un dans le champ - c'est le repère qu'on cherche des yeux en
   // arrivant sur un quai. Leurs abscisses viennent du placement, qui les
-  // écarte des bannières, du kiosque et de l'horloge — et que les totems
+  // écarte des bannières, du kiosque et de l'horloge - et que les totems
   // consultent à leur tour pour ne pas se dresser dessous.
   const trackSigns = useMemo(() => trackSignZs(place), [place]);
 

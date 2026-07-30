@@ -1,7 +1,7 @@
 // Captures des CHIENS EN CAISSE DE TRANSPORT sur le quai (systems/petCarriers).
 //
-// La rencontre est rare par construction — une gare sur quatre environ, quelque
-// part sur 224 m de quai — donc on ne peut pas juger le rendu en jouant : on
+// La rencontre est rare par construction - une gare sur quatre environ, quelque
+// part sur 224 m de quai - donc on ne peut pas juger le rendu en jouant : on
 // gèle la présence du quai, on attend qu'un porteur passe, et on pose la caméra
 // libre à côté de lui. C'est le moyen de vérifier un pack animalier fraîchement
 // importé : la bête tient-elle dans la caisse, la voit-on par les barreaux, la
@@ -14,7 +14,7 @@
 //
 // Le rendu passe par SwiftShader : une frame dure plusieurs secondes, et le
 // cycle station file pendant les temps morts. La lecture caisse + porteur est
-// donc SYNCHRONE — un `await` entre les deux laisse passer des images, et le
+// donc SYNCHRONE - un `await` entre les deux laisse passer des images, et le
 // porteur peut être monté en rame entre-temps.
 
 import { chromium } from 'playwright';
@@ -66,12 +66,12 @@ if (breeds === 0) {
   await server.close();
   process.exit(1);
 }
-console.log(`${breeds} race(s) installée(s) — en attente d'un porteur…`);
+console.log(`${breeds} race(s) installée(s) - en attente d'un porteur…`);
 
 let shots = 0;
 for (let attempt = 0; attempt < 400 && shots < wanted; attempt++) {
   // Œil bas, à hauteur de la caisse : c'est elle qu'on vient regarder, et de
-  // près — les barreaux et ce qu'il y a derrière ne se lisent pas de loin.
+  // près - les barreaux et ce qu'il y a derrière ne se lisent pas de loin.
   const close = shots % 2 === 1;
   const info = await page.evaluate(([dist, eye, look]) => {
     const { DOOR_SIDE, store } = window.__petProbe;
@@ -83,7 +83,7 @@ for (let attempt = 0; attempt < 400 && shots < wanted; attempt++) {
     // Le repère du quai a la voie du côté des x DÉCROISSANTS et le mur de
     // fond du côté des x croissants, quelle que soit la gare : on y place
     // l'œil, PUIS on convertit. L'œil reste SUR le quai, en retrait du nez de
-    // quai (x = 1,78) — sinon on le plante dans la caisse de la rame.
+    // quai (x = 1,78) - sinon on le plante dans la caisse de la rame.
     const toWorld = (x, z) => (side === 1 ? { x, z } : { x: -x, z: -z });
     const target = toWorld(owner.pos.x, owner.pos.z);
     const eyePos = toWorld(Math.min(owner.pos.x - 0.8, 2.6), owner.pos.z + dist);
@@ -107,7 +107,7 @@ for (let attempt = 0; attempt < 400 && shots < wanted; attempt++) {
   shots++;
   await new Promise((r) => setTimeout(r, 2500));
 }
-if (shots === 0) console.log('aucun porteur croisé — le tirage est par gare, réessayer.');
+if (shots === 0) console.log('aucun porteur croisé - le tirage est par gare, réessayer.');
 
 await browser.close();
 await server.close();

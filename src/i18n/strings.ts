@@ -3,7 +3,7 @@
 // store.ts (état initial) que par les composants d'interface.
 //
 // À noter : la signalétique EMBARQUÉE (annonces sonores, écrans LCD, affiches,
-// panneaux de quai) reste en japonais/anglais comme dans une vraie rame —
+// panneaux de quai) reste en japonais/anglais comme dans une vraie rame -
 // c'est du décor, pas de l'interface. Seul le HUD du joueur est traduit.
 
 export type Lang = 'fr' | 'en' | 'ja';
@@ -17,7 +17,7 @@ export const LANG_LABEL: Record<Lang, string> = {
   ja: '日本語',
 };
 
-/** Libellé court du sélecteur — tient dans la barre du HUD. */
+/** Libellé court du sélecteur - tient dans la barre du HUD. */
 export const LANG_SHORT: Record<Lang, string> = {
   fr: 'FR',
   en: 'EN',
@@ -40,7 +40,7 @@ export interface Strings {
   /** Valeur de l'attribut lang du document. */
   htmlLang: string;
   /**
-   * Titre de l'onglet — et titre du résultat dans un moteur de recherche. Le
+   * Titre de l'onglet - et titre du résultat dans un moteur de recherche. Le
    * nom d'abord (c'est lui qu'on cherche), 山手線 pour être trouvé en japonais,
    * puis ce que la page fait. Une soixantaine de caractères : au-delà, Google
    * tronque.
@@ -145,7 +145,7 @@ export interface Strings {
 
   /**
    * Le menu qui provoque un arrêt en pleine voie. Les deux événements
-   * arrivent d'eux-mêmes, mais rarement — celui du courant peut demander
+   * arrivent d'eux-mêmes, mais rarement - celui du courant peut demander
    * plusieurs heures de trajet. Ce menu ne les invente pas : il avance
    * simplement le tirage.
    */
@@ -172,7 +172,7 @@ export interface Strings {
 
 const FR: Strings = {
   htmlLang: 'fr',
-  documentTitle: 'Yamanote 3D — 山手線 · la ligne Yamanote de Tokyo en 3D',
+  documentTitle: 'Yamanote 3D - 山手線 · la ligne Yamanote de Tokyo en 3D',
   documentDescription:
     'La ligne Yamanote de Tokyo en 3D dans le navigateur : montez dans une rame E235, marchez dans le wagon, descendez sur le quai. Trente gares, aucun objectif.',
   ogLocale: 'fr_FR',
@@ -287,7 +287,7 @@ const FR: Strings = {
 
 const EN: Strings = {
   htmlLang: 'en',
-  documentTitle: "Yamanote 3D — 山手線 · Ride Tokyo's Yamanote Line in 3D",
+  documentTitle: "Yamanote 3D - 山手線 · Ride Tokyo's Yamanote Line in 3D",
   documentDescription:
     "Ride Tokyo's Yamanote Line in 3D in your browser: board a JR East E235, walk the carriage, step onto the platform. Thirty stations, real announcements, no goal.",
   ogLocale: 'en_US',
@@ -402,7 +402,7 @@ const EN: Strings = {
 
 const JA: Strings = {
   htmlLang: 'ja',
-  documentTitle: 'Yamanote 3D — 山手線 · ブラウザで巡る東京の環状線',
+  documentTitle: 'Yamanote 3D - 山手線 · ブラウザで巡る東京の環状線',
   documentDescription:
     'ブラウザで東京・山手線を3Dで一周。JR東日本E235系の乗客として車内を歩き、ホームに降り、車内放送と発車メロディに耳をすませる。三十駅、目的なし。',
   ogLocale: 'ja_JP',
@@ -553,7 +553,7 @@ export const LANG_PARAM = 'lang';
  *
  * C'est le pendant des `<link rel="alternate" hreflang>` de index.html : un
  * moteur qui indexe `?lang=ja` doit recevoir la page en japonais, sans quoi la
- * déclaration ment. Une valeur inconnue est ignorée plutôt que corrigée — on ne
+ * déclaration ment. Une valeur inconnue est ignorée plutôt que corrigée - on ne
  * devine pas ce qu'un `?lang=de` voulait dire.
  */
 export function langFromUrl(): Lang | null {

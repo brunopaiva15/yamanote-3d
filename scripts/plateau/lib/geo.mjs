@@ -24,7 +24,7 @@ export const GRS80 = { a: 6378137.0, f: 1 / 298.257222101 };
 /**
  * Systèmes de coordonnées planes japonaises (平面直角座標系).
  * Origines officielles : loi n°9 de 2002 du 国土地理院.
- * Zone IX (EPSG:6677) = Tokyo et sa région — celle qui nous concerne.
+ * Zone IX (EPSG:6677) = Tokyo et sa région - celle qui nous concerne.
  */
 export const JAPAN_PLANE_ZONES = {
   6677: { zone: 'IX', lat0: 36.0, lon0: 139 + 30 / 60, k0: 0.9999, falseE: 0, falseN: 0 },

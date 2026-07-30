@@ -1,14 +1,14 @@
 // Ce que dit le 発車標 (src/data/departureBoard.ts).
 //
-// Le module est pur — des secondes et une heure d'horloge en entrée, du texte
-// à afficher en sortie — et n'importe rien : Node 22 l'exécute tel quel, sans
+// Le module est pur - des secondes et une heure d'horloge en entrée, du texte
+// à afficher en sortie - et n'importe rien : Node 22 l'exécute tel quel, sans
 // compilateur ni harnais, comme routeMath et trainPhysics.
 //
 // Ce qui se joue ici n'est pas de l'arithmétique mais une CONVENTION de lecture,
 // celle des quais de la Yamanote depuis 2020 : deux rames annoncées, un 約 qui
 // dit bien que c'est une estimation, jamais de « 0 分後 », 「まもなく」 quand la
 // rame est en vue, et l'heure de départ aux seules premières et dernières
-// circulations — les moments où l'on regarde le tableau pour savoir si l'on a
+// circulations - les moments où l'on regarde le tableau pour savoir si l'on a
 // raté la dernière.
 
 import test from 'node:test';
@@ -29,7 +29,7 @@ const NOON = 12 * 60;
 test('le régime normal est le décompte, arrondi à la minute', () => {
   assert.deepEqual(boardEta(120, NOON), { kind: 'minutes', minutes: 2 });
   assert.deepEqual(boardEta(300, NOON), { kind: 'minutes', minutes: 5 });
-  // 約 : on arrondit, on ne tronque pas — 2 min 40 s se lit « environ 3 ».
+  // 約 : on arrondit, on ne tronque pas - 2 min 40 s se lit « environ 3 ».
   assert.deepEqual(boardEta(160, NOON), { kind: 'minutes', minutes: 3 });
 });
 
@@ -37,7 +37,7 @@ test('jamais « 約0分後 » : sous la minute, le tableau dit まもなく', ()
   assert.equal(boardEta(SOON_UNDER, NOON).kind, 'soon');
   assert.equal(boardEta(10, NOON).kind, 'soon');
   assert.equal(boardEta(0, NOON).kind, 'soon');
-  // Juste au-dessus du seuil, le décompte reprend — et jamais à zéro.
+  // Juste au-dessus du seuil, le décompte reprend - et jamais à zéro.
   const eta = boardEta(SOON_UNDER + 1, NOON);
   assert.equal(eta.kind, 'minutes');
   assert.ok(eta.kind === 'minutes' && eta.minutes >= 1);

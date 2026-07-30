@@ -13,8 +13,8 @@ export function applyShadowFlags(root: THREE.Object3D): void {
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
-    // Refus explicite : ce dont l'ombre tombe là où personne ne regarde — le
-    // ballast, la plate-forme — mais qui serait sinon dessiné deux fois.
+    // Refus explicite : ce dont l'ombre tombe là où personne ne regarde - le
+    // ballast, la plate-forme - mais qui serait sinon dessiné deux fois.
     if (mesh.userData.noShadow) return;
     const mat = mesh.material as THREE.Material;
     if (mat instanceof THREE.MeshStandardMaterial) {

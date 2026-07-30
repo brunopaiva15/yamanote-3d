@@ -128,7 +128,7 @@ body,
 }
 
 /* Bande à la couleur de la ligne, toute la largeur du panneau, avec les deux
-   sens de circulation — l'élément le plus reconnaissable d'un ekimeiban. */
+   sens de circulation - l'élément le plus reconnaissable d'un ekimeiban. */
 .board-band {
   display: flex;
   align-items: center;
@@ -513,7 +513,7 @@ body,
 }
 
 /* Le temps qu'il fait : un pictogramme, un mot, une température. Il nomme ce
-   qu'on voit par la vitre, il ne le remplace pas — d'où la sobriété. */
+   qu'on voit par la vitre, il ne le remplace pas - d'où la sobriété. */
 .hud-weather {
   gap: 7px;
   font-size: 13px;
@@ -611,7 +611,7 @@ body,
   color: #b3261e;
 }
 
-/* Coupure de caténaire : pas le rouge de l'urgence — il n'y a pas de danger,
+/* Coupure de caténaire : pas le rouge de l'urgence - il n'y a pas de danger,
    il y a une rame éteinte. L'ambre est la couleur des lampes de secours. */
 .hud-phase-outage {
   border-color: #a86b12;
@@ -824,7 +824,7 @@ body,
 }
 
 /* Le refus, devant une porte d'une autre voiture : même invite, autre encre.
-   Elle reprend le rouge de la limite dressée dans la baie — la phrase et le
+   Elle reprend le rouge de la limite dressée dans la baie - la phrase et le
    nid d'abeilles disent la même chose, et arrivent ensemble. */
 .hud-prompt--deny {
   background: rgba(48, 13, 16, 0.72);
@@ -833,7 +833,7 @@ body,
 }
 
 /* Bulle de dialogue d'un voyageur : ancrée à sa tête (three/PaxSpeechBubble),
-   volontairement sobre — c'est une voix dans un train, pas une interface de
+   volontairement sobre - c'est une voix dans un train, pas une interface de
    jeu de rôle. */
 .pax-bubble {
   /* Le conteneur qui porte la bulle en 3D n'a aucune largeur : sans
@@ -856,7 +856,7 @@ body,
 }
 
 /* Réplique non sollicitée (on l'a bousculé, il réagit) : plus discrète, en
-   retrait — on ne lui a rien demandé. */
+   retrait - on ne lui a rien demandé. */
 .pax-bubble-aside {
   background: rgba(16, 21, 26, 0.62);
   font-style: italic;
@@ -865,7 +865,7 @@ body,
 
 /* L'agent de quai : ce n'est pas une conversation, c'est une consigne. Le
    liseré vert de la ligne la distingue au premier coup d'œil de ce que dit un
-   voyageur — on comprend avant de lire que c'est le personnel qui parle. */
+   voyageur - on comprend avant de lire que c'est le personnel qui parle. */
 .pax-bubble-staff {
   background: rgba(12, 20, 16, 0.88);
   border-color: rgba(155, 201, 63, 0.55);
@@ -892,7 +892,7 @@ body,
 
 /* Boutons tactiles, empilés dans le coin bas droit : « s'asseoir » toujours,
    « parler » seulement lorsqu'un voyageur est à portée. Ils se posent sur la
-   barre des réglages — dont la hauteur est mesurée — au lieu de la recouvrir.
+   barre des réglages - dont la hauteur est mesurée - au lieu de la recouvrir.
    C'est ce qui faisait doublon à l'écran : le « s'asseoir » flottant tombait
    pile sur celui de la barre. */
 .touch-talk,
@@ -923,7 +923,7 @@ body,
 
 @media (max-width: 720px) {
   /* Cinq cartes ne tiennent pas sur une rangée de téléphone : la prochaine
-     station — la seule qu'on lit vraiment — prend une ligne pour elle, les
+     station - la seule qu'on lit vraiment - prend une ligne pour elle, les
      quatre pastilles de contexte se rangent en dessous. Avant, la rangée
      débordait de l'écran par la droite et les cartes courtes s'étiraient à la
      hauteur du nom replié. */
@@ -964,7 +964,7 @@ body,
   }
 
   /* Sur un téléphone la barre du haut est déjà pleine : le temps qu'il fait se
-     réduit à son pictogramme et à sa température. Le mot tombe — il se lit
+     réduit à son pictogramme et à sa température. Le mot tombe - il se lit
      dehors. */
   .hud-weather {
     padding: 6px 9px;
@@ -1003,7 +1003,7 @@ body,
   }
 
   /* La barre du bas occupe toute la largeur ici : on pose le joystick
-     dessus, à la hauteur qu'elle occupe réellement — une ou deux rangées de
+     dessus, à la hauteur qu'elle occupe réellement - une ou deux rangées de
      réglages selon la langue. */
   .joystick {
     bottom: calc(var(--hud-safe-bottom) + var(--hud-bar-h) + 14px);
@@ -1061,8 +1061,8 @@ body,
 }
 
 @media (max-width: 460px) {
-  /* Les quatre pastilles de contexte — heure, temps qu'il fait, remplissage,
-     phase — tiennent sur une seule rangée jusqu'aux plus petits écrans : on
+  /* Les quatre pastilles de contexte - heure, temps qu'il fait, remplissage,
+     phase - tiennent sur une seule rangée jusqu'aux plus petits écrans : on
      resserre leur cadre plutôt que de les laisser retomber une par une. */
   .hud-top {
     gap: 5px;

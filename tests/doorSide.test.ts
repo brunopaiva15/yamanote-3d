@@ -6,7 +6,7 @@
 // le volume praticable (systems/walkable). Une entrée qui manque ou qui vaut
 // autre chose que ±1 ne casse pas au chargement : elle retourne un quai.
 //
-// Ce qui est vérifié ici est ce qui est GARANTI — la forme de la table et son
+// Ce qui est vérifié ici est ce qui est GARANTI - la forme de la table et son
 // indépendance au sens de circulation. Le relevé lui-même (quelle gare ouvre de
 // quel côté) est un fait de terrain : il ne se déduit d'aucune autre donnée du
 // dépôt, et notamment pas du plan de voies de `data/stationLayouts`. Le dernier
@@ -32,8 +32,8 @@ test('chaque entrée vaut exactement +1 ou -1', () => {
 
 test('le côté est une propriété de la gare, pas du sens de circulation', () => {
   // C'est la garantie sur laquelle repose toute la géométrie du quai : la même
-  // gare rend le même côté, quel que soit le sens. Elle est structurelle — la
-  // table n'a pas de colonne de sens — et ce test la fige : donner à DOOR_SIDE
+  // gare rend le même côté, quel que soit le sens. Elle est structurelle - la
+  // table n'a pas de colonne de sens - et ce test la fige : donner à DOOR_SIDE
   // une seconde dimension casserait ici avant de casser à l'écran.
   for (let i = 0; i < STATION_COUNT; i++) {
     assert.equal(typeof DOOR_SIDE[i], 'number', `gare ${i}`);

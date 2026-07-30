@@ -1,5 +1,5 @@
 // Présence spatiale du quai : plus de fondu d'opacité. Le quai est opaque et
-// glisse le long de la voie — il arrive de l'avant pendant le freinage, reste
+// glisse le long de la voie - il arrive de l'avant pendant le freinage, reste
 // calé à l'arrêt, puis part derrière au départ. Écrit dans runtime chaque frame.
 //
 // L'approche est pilotée par la DISTANCE QUI RESTE À PARCOURIR avant l'arrêt
@@ -7,7 +7,7 @@
 // calée sur la progression du trajet. La différence n'est pas cosmétique :
 // une courbe de temps ignore le profil de freinage, elle finissait sa course
 // plusieurs secondes avant que la rame ne s'arrête vraiment et compressait
-// tout le glissement dans les dernières secondes — sur un tronçon court
+// tout le glissement dans les dernières secondes - sur un tronçon court
 // (Mejiro→Takadanobaba, 8 s de croisière), le quai arrivait d'un bloc alors
 // que la rame était déjà presque à l'arrêt. En posant le quai à −R, il défile
 // exactement à la vitesse du train, comme le reste du décor, et se pose de
@@ -37,7 +37,7 @@ const ENTRY_FADE = 26;
  * En freinage, c'est exactement le profil physique. En croisière, on y ajoute
  * ce qui reste de course avant le coup de frein : la mesure est continue au
  * changement de phase (le terme de croisière s'annule pile quand le freinage
- * commence), et le quai peut donc entrer en scène AVANT le freinage — sur les
+ * commence), et le quai peut donc entrer en scène AVANT le freinage - sur les
  * tronçons courts, où la rame freine de 50 km/h, la distance d'arrêt seule ne
  * suffirait pas à le faire apparaître en douceur.
  *
@@ -70,7 +70,7 @@ function presenceFrom(
     // défile exactement à la vitesse du train (immobile pendant le desserrage
     // des freins, puis accélération progressive) et ne s'efface qu'une fois
     // sa dernière travée dépassée. En 17 s de phase depart la rame ne parcourt
-    // que ~74 m — moins que la demi-longueur du quai : la fin du défilement
+    // que ~74 m - moins que la demi-longueur du quai : la fin du défilement
     // déborde forcément sur le début de la croisière, d'où `clearing`.
     const d = Math.max(0, runtime.distance - runtime.departStartDist);
     const presence = 1 - smoothstep(halfLen * 0.7, entry, d);
@@ -80,7 +80,7 @@ function presenceFrom(
   if (phase === 'brake' || phase === 'cruise') {
     // Approche : le quai est posé à la distance qui reste à parcourir, l'écart
     // d'arrêt de la rame en plus. Tant qu'il est trop loin pour être vu, on le
-    // gare à `entry` — sa position exacte n'a alors aucun sens.
+    // gare à `entry` - sa position exacte n'a alors aucun sens.
     const left = distanceToStop(phase, phaseT, index);
     const presence = 1 - smoothstep(entry - ENTRY_FADE, entry, left);
     return { presence, slide: runtime.berthOffset - Math.min(left, entry) };
@@ -95,7 +95,7 @@ export function updatePlatformPresence(): void {
   let platformIndex = state.platformIndex;
   // `index` avance vers la gare suivante dès l'entrée en depart ; le quai
   // visible, lui, reste celui de la gare quittée (`platformIndex`) tant qu'il
-  // défile encore. Hors de ce défilement, les deux doivent coïncider — toute
+  // défile encore. Hors de ce défilement, les deux doivent coïncider - toute
   // bascule de phase inattendue (spawn, saut dev) se résout ici.
   if (platformIndex !== index && phase !== 'depart' && phase !== 'cruise') {
     state.setPlatformIndex(index);
@@ -105,11 +105,11 @@ export function updatePlatformPresence(): void {
   // (systems/walkable), le son du quai (three/Engine) et la mécanique des
   // vantaux (systems/doorMotion) doivent tous savoir si cette gare-ci a des
   // portes de quai. C'est la même gare que celle dont on lit le gabarit
-  // ci-dessous — la cohérence est acquise, pas à retrouver.
+  // ci-dessous - la cohérence est acquise, pas à retrouver.
   runtime.psdPresent = hasPlatformDoors(platformIndex);
 
   // Le joueur est descendu : c'est la gare qui devient le repère fixe. Elle ne
-  // glisse plus et ne disparaît plus — c'est la rame qui s'en va (runtime.trainZ).
+  // glisse plus et ne disparaît plus - c'est la rame qui s'en va (runtime.trainZ).
   if (runtime.playerFrame === 'platform') {
     runtime.platformFade = 1;
     runtime.platformSlide = 0;
@@ -126,7 +126,7 @@ export function updatePlatformPresence(): void {
   runtime.platformFade = presence;
   runtime.platformSlide = slide;
   // Dernière travée dépassée : le quai suivant peut prendre l'identité de la
-  // scène. C'est la SEULE bascule en roulant — jamais au coup de sifflet.
+  // scène. C'est la SEULE bascule en roulant - jamais au coup de sifflet.
   if (clearing && presence <= 0) state.setPlatformIndex(index);
 }
 

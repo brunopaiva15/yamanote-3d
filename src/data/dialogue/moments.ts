@@ -3,13 +3,13 @@
 // La même personne ne dit pas la même chose à sept heures du matin et à une
 // heure du matin. C'est l'heure de Tokyo qui commande ici : le silence tendu
 // de la pointe, l'ennui suspendu de l'après-midi, la fatigue heureuse du
-// dernier train. Le reste vient de l'état du trajet — à quai, en approche,
+// dernier train. Le reste vient de l'état du trajet - à quai, en approche,
 // bondé, désert.
 
 import type { DialogueEntry } from './types';
 
 export const DIALOGUE_MOMENTS: readonly DialogueEntry[] = [
-  // ——— Premier train ———
+  // --- Premier train ---
   {
     id: 'mo.first.train',
     when: { hours: [4, 6] },
@@ -50,7 +50,7 @@ export const DIALOGUE_MOMENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Pointe du matin ———
+  // --- Pointe du matin ---
   {
     id: 'mo.rush.silence',
     when: { hours: [7, 10], crowdMin: 0.6 },
@@ -117,7 +117,7 @@ export const DIALOGUE_MOMENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Milieu de journée ———
+  // --- Milieu de journée ---
   {
     id: 'mo.midday.calm',
     when: { hours: [10, 16] },
@@ -138,7 +138,7 @@ export const DIALOGUE_MOMENTS: readonly DialogueEntry[] = [
       {
         t: {
           fr: 'Le soleil traverse tout le wagon quand on tourne. Là, à l’instant.',
-          en: 'The sun sweeps right through the carriage on the curves. There — just then.',
+          en: 'The sun sweeps right through the carriage on the curves. There - just then.',
           ja: 'カーブで日差しが車内を横切るんです。ほら、今。',
         },
       },
@@ -171,7 +171,7 @@ export const DIALOGUE_MOMENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Pointe du soir ———
+  // --- Pointe du soir ---
   {
     id: 'mo.evening.tired',
     when: { hours: [17, 21] },
@@ -212,7 +212,7 @@ export const DIALOGUE_MOMENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Nuit ———
+  // --- Nuit ---
   {
     id: 'mo.night.last',
     when: { hours: [23, 26] },
@@ -279,7 +279,7 @@ export const DIALOGUE_MOMENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Phase du trajet ———
+  // --- Phase du trajet ---
   {
     id: 'mo.dwell.doors',
     when: { phase: ['dwell'] },
@@ -372,7 +372,7 @@ export const DIALOGUE_MOMENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Foule ———
+  // --- Foule ---
   {
     id: 'mo.crowd.record',
     when: { crowdMin: 0.85 },
@@ -439,7 +439,7 @@ export const DIALOGUE_MOMENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Le joueur ———
+  // --- Le joueur ---
   {
     id: 'mo.player.seated',
     when: { playerSeated: true },
@@ -491,7 +491,7 @@ export const DIALOGUE_MOMENTS: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Saisons ———
+  // --- Saisons ---
   {
     id: 'mo.season.typhoon',
     when: { months: [8, 9, 10] },

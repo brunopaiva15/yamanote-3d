@@ -3,7 +3,7 @@
 // --- Pourquoi ce n'est pas un tirage par image ---
 //
 // Une météo tirée au hasard à chaque instant n'est pas de la météo : c'est du
-// bruit. Le temps a une DURÉE — une averse tient vingt minutes, un ciel couvert
+// bruit. Le temps a une DURÉE - une averse tient vingt minutes, un ciel couvert
 // tient l'après-midi, le tsuyu tient six semaines. Le modèle engendre donc la
 // journée ENTIÈRE d'un coup, sous forme d'une suite d'épisodes datés, à partir
 // d'une graine tirée de la date civile. Deux conséquences, et les deux comptent :
@@ -22,12 +22,12 @@
 //     c'est LE fait météorologique de l'année à Tokyo ;
 //   · le 夕立, l'averse d'orage de fin d'après-midi en plein été, qui tombe
 //     d'un ciel qui était bleu une heure plus tôt ;
-//   · l'hiver sec et lumineux — contre-intuitif pour qui imagine le Japon
+//   · l'hiver sec et lumineux - contre-intuitif pour qui imagine le Japon
 //     pluvieux : janvier est le mois le plus ensoleillé de l'année ;
 //   · la neige, RARE. Tokyo compte quelques jours de neige par an. Elle est
 //     donc décidée au niveau de la JOURNÉE, pas de l'épisode. Simulé sur cinq
 //     années, le modèle en donne de zéro à quatre par hiver, toujours entre la
-//     mi-janvier et la fin février — c'est l'ordre de grandeur réel, et c'est
+//     mi-janvier et la fin février - c'est l'ordre de grandeur réel, et c'est
 //     assez rare pour que le jour où l'on tombe dessus se remarque.
 
 import { runtime } from './runtime';
@@ -37,7 +37,7 @@ export type WeatherKind =
   | 'clear' // ciel bleu
   | 'fair' // beau, quelques nuages
   | 'overcast' // couvert
-  | 'drizzle' // bruine — le fond de sauce du tsuyu
+  | 'drizzle' // bruine - le fond de sauce du tsuyu
   | 'rain' // pluie franche
   | 'downpour' // averse
   | 'thunder' // 夕立 : orage d'été
@@ -57,7 +57,7 @@ export const weather = {
    * La distinction n'est pas cosmétique. L'épisode bascule au milieu du fondu
    * de vingt minutes qui le relie au suivant : nommer le ciel d'après lui,
    * c'est annoncer « dégagé » dix minutes avant que la dernière goutte soit
-   * tombée — et le badge du HUD contredisait alors la fenêtre. Déduit de
+   * tombée - et le badge du HUD contredisait alors la fenêtre. Déduit de
    * `cloud`, `rain` et `snow`, il ne PEUT plus les contredire.
    */
   kind: 'fair' as WeatherKind,
@@ -177,7 +177,7 @@ function diurnal(hour: number): number {
  * Tirage d'un temps, à une heure donnée d'une saison donnée.
  *
  * Chaque poids est une propension, jamais un interrupteur : il pleut en
- * janvier et il fait beau pendant le tsuyu — simplement pas souvent.
+ * janvier et il fait beau pendant le tsuyu - simplement pas souvent.
  */
 function drawKind(r: () => number, se: SeasonState, minute: number, snowy: boolean): WeatherKind {
   const hour = minute / 60;
@@ -209,7 +209,7 @@ function drawKind(r: () => number, se: SeasonState, minute: number, snowy: boole
 function buildDay(year: number, month: number, day: number, se: SeasonState): WeatherDay {
   const r = stream(year * 10000 + month * 100 + day + 0x5eed);
   // Jour de neige : Tokyo en compte quelques-uns par an. La porte ne s'ouvre
-  // que si la journée est vraiment froide — sa moyenne, pas sa nuit.
+  // que si la journée est vraiment froide - sa moyenne, pas sa nuit.
   const mean = dailyMeanTemp(se.doy);
   const snowChance = Math.max(0, Math.min(0.34, (6.5 - mean) * 0.055)) * se.cold;
   const snowy = r() < snowChance;
@@ -298,8 +298,8 @@ export function seedWeather(): void {
 /**
  * Nomme le ciel d'après ce qu'il est, et non d'après ce que le modèle vise.
  *
- * Les seuils sont posés SOUS les valeurs nominales de `TRAITS` — une pluie
- * franche vaut 0,6 et se nomme dès 0,42 — parce que tout ce qui est lu ici a
+ * Les seuils sont posés SOUS les valeurs nominales de `TRAITS` - une pluie
+ * franche vaut 0,6 et se nomme dès 0,42 - parce que tout ce qui est lu ici a
  * traversé un fondu d'épisode puis un lissage temporel, et n'atteint sa valeur
  * nominale qu'au bout d'une minute. Un seuil calé sur le nominal ne serait
  * atteint qu'au milieu de l'averse.
@@ -351,13 +351,13 @@ export function updateWeather(dt: number): void {
   weather.wind = approach(weather.wind, windT, dt, KIND_TAU);
 
   // Température : moyenne du jour, marche diurne, et la correction du temps
-  // qu'il fait — un ciel couvert coupe le réchauffement de l'après-midi, une
+  // qu'il fait - un ciel couvert coupe le réchauffement de l'après-midi, une
   // averse rafraîchit franchement.
   const mean = dailyMeanTemp(se.doy);
   const swing = diurnal(minute / 60) * TEMP_DIURNAL;
   weather.tempC = mean + swing * (1 - 0.55 * weather.cloud) - 2.6 * weather.rain - 1.2 * weather.cloud;
 
-  // Mouillé : la pluie mouille vite, le soleil sèche lentement — et une averse
+  // Mouillé : la pluie mouille vite, le soleil sèche lentement - et une averse
   // d'août sèche en dix minutes quand une bruine de février tient l'après-midi.
   if (weather.rain > 0.02 || weather.snow > 0.02) {
     weather.wet = approach(weather.wet, Math.min(1, weather.rain * 1.5 + weather.snow * 0.6), dt, 25);

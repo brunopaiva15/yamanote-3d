@@ -9,7 +9,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
  * Toiture en croupe, unitaire.
  *
  * Un cylindre à quatre pans tourné d'un huitième de tour EST une pyramide
- * tronquée à base carrée — soit exactement une croupe. Le faîte n'est pas
+ * tronquée à base carrée - soit exactement une croupe. Le faîte n'est pas
  * réduit à une arête : sur une maison de ville japonaise il court sur une
  * bonne moitié de la longueur.
  */
@@ -27,8 +27,8 @@ export function makeHipRoofGeometry(): THREE.BufferGeometry {
  * Il l'était, et c'était le mur contre lequel butait toute idée de saison :
  * la couleur d'instance MULTIPLIE la couleur de sommet, et un vert multiplié
  * par un rouge d'automne ne donne pas du rouge, il donne de la boue. Les
- * sommets ne portent donc plus qu'un ombrage neutre — trois valeurs de gris,
- * une par sujet, pour que la masse garde du relief — et c'est la couleur
+ * sommets ne portent donc plus qu'un ombrage neutre - trois valeurs de gris,
+ * une par sujet, pour que la masse garde du relief - et c'est la couleur
  * d'instance qui porte la teinte entière, verte en juillet, rousse fin
  * novembre, rose fin mars.
  *
@@ -93,7 +93,7 @@ export function makeGroveGeometry(): THREE.BufferGeometry {
     trunk.translate(x, h * 0.225, z);
     parts.push(tagged(trunk, TRUNK, true, [x, h * 0.225, z]));
     // Huit méridiens, cinq parallèles : au-delà, on paie de la rondeur que la
-    // brume et la distance mangent — et il s'en instancie des centaines.
+    // brume et la distance mangent - et il s'en instancie des centaines.
     const crown = new THREE.SphereGeometry(rad, 8, 5);
     crown.scale(1, 0.86, 1);
     crown.translate(x, h * 0.68, z);
@@ -125,7 +125,7 @@ export interface GroveMaterial {
  *   · DÉPOUILLER L'ARBRE. Ce qui dit l'hiver de loin, ce n'est pas la couleur,
  *     c'est le VOLUME : une frondaison de juillet est une masse pleine, une
  *     ramure de janvier est un dessin. Les sommets de couronne se rétractent
- *     vers le centre de leur propre sujet — mettre à l'échelle l'instance
+ *     vers le centre de leur propre sujet - mettre à l'échelle l'instance
  *     entière rapetisserait l'arbre au lieu de le dénuder.
  */
 export function makeGroveMaterial(): GroveMaterial {

@@ -1,7 +1,7 @@
 // Tous les matériaux d'une gare, dérivés de sa palette.
 //
 // Extraits de Station.tsx : les charpentes signature (three/station/signatures)
-// en ont besoin des mêmes, et Station importe déjà les signatures — les laisser
+// en ont besoin des mêmes, et Station importe déjà les signatures - les laisser
 // là-bas aurait fermé le cycle.
 
 import * as THREE from 'three';

@@ -1,16 +1,16 @@
 // Le ruban urbain : la ville en volume, posée dans le monde, que le train
-// dépasse. Deux InstancedMesh par côté — les corps de bâtiment et leurs volumes
-// secondaires (acrotères, édicules de toiture, chaussées) — découpés en
+// dépasse. Deux InstancedMesh par côté - les corps de bâtiment et leurs volumes
+// secondaires (acrotères, édicules de toiture, chaussées) - découpés en
 // cellules de 40 m (voir systems/cityField) tenues dans un anneau glissant.
 //
 // Le groupe entier recule d'un `runtime.distance` : les instances gardent donc
 // une abscisse FIXE et ne sont réécrites qu'au recyclage d'une cellule, soit
 // une fois toutes les ~1,6 s à vitesse de croisière. Rien ne bouge par rapport
-// au monde, tout bouge par rapport au train — c'est la seule façon d'obtenir
+// au monde, tout bouge par rapport au train - c'est la seule façon d'obtenir
 // une parallaxe juste entre le bord de voie, l'îlot et le fond.
 //
 // TROIS DÉPLACEMENTS D'ENSEMBLE, dans cet ordre de nidification :
-//   · l'élévation du tronçon (segEnv.cityY) — la ville descend de sept mètres
+//   · l'élévation du tronçon (segEnv.cityY) - la ville descend de sept mètres
 //     sous un viaduc, remonte sur la crête des murs en tranchée ;
 //   · le recul du monde en z ;
 //   · l'écartement latéral, par côté : celui de la gare (stationOcclusion) et
@@ -18,7 +18,7 @@
 //
 // Le sol urbain vit ici aussi, et non plus dans Wayside : il porte la même
 // élévation que la ville, et il est fendu en deux nappes qui laissent
-// l'emprise de la voie libre — une nappe unique passerait au-dessus du train
+// l'emprise de la voie libre - une nappe unique passerait au-dessus du train
 // dès qu'elle monte sur les murs d'une tranchée.
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -82,7 +82,7 @@ function tuning(level: PerfLevel): {
   if (level <= 1) return { cells: 13, rankScale: 1, props: true, signs: true };
   if (level === 2) return { cells: 12, rankScale: 0.8, props: true, signs: true };
   if (level === 3) return { cells: 11, rankScale: 0.6, props: true, signs: true };
-  // Aux deux derniers paliers, acrotères, croupes et bosquets tombent — mais
+  // Aux deux derniers paliers, acrotères, croupes et bosquets tombent - mais
   // pas les enseignes : un quad par bâtiment, et c'est tout ce qui reste de
   // reconnaissable à Akihabara ou Shin-Ōkubo une fois la nuit tombée.
   return { cells: 11, rankScale: 0.4, props: false, signs: true };
@@ -132,11 +132,11 @@ export function CityRibbon() {
 
     // Bosquets : matériau propre, qui garde le tronc brun quand la frondaison
     // rougit et qui dépouille l'arbre l'hiver. Il ne passe pas par le matériau
-    // de ville — un feuillage n'a ni fenêtres ni devanture.
+    // de ville - un feuillage n'a ni fenêtres ni devanture.
     const grove = makeGroveMaterial();
     const groveMat = grove.material;
     // Enseignes : non éclairées, teintées par instance, dont le NIVEAU suit
-    // l'heure — le panneau est terne le jour et éclate la nuit.
+    // l'heure - le panneau est terne le jour et éclate la nuit.
     const signTex = makeSignageTexture();
     const signMat = new THREE.MeshBasicMaterial({
       map: signTex,
@@ -353,7 +353,7 @@ export function CityRibbon() {
     if (!st.ready || Math.abs(want - st.first) > cells || drift < 0 || drift > 12000) {
       // Reprise à froid, saut de position, ou dérive numérique : on rebâtit
       // l'anneau entier et on ré-ancre l'origine (une poignée de fois par heure,
-      // pour quelques centaines de matrices — invisible).
+      // pour quelques centaines de matrices - invisible).
       st.origin = Math.floor(runtime.distance / CELL_LEN) * CELL_LEN;
       st.first = want;
       for (let k = 0; k < cells; k++) writeCell(want + k);
@@ -371,7 +371,7 @@ export function CityRibbon() {
       zRoot.current.position.z = runtime.distance - st.origin;
       // Le prototype PLATEAU pose une ville RÉELLE sur son tronçon : le ruban
       // procédural s'efface alors, sinon deux villes se superposeraient. Le sol
-      // urbain, lui, reste — les données PLATEAU ne portent aucun terrain. La
+      // urbain, lui, reste - les données PLATEAU ne portent aucun terrain. La
       // bascule a lieu au départ d'une gare, masquée par le quai, exactement
       // comme le changement de type de tronçon.
       zRoot.current.visible = plateauRuntime.coverage < 0.5;
@@ -405,7 +405,7 @@ export function CityRibbon() {
     // --- Saison : l'arbre se dépouille ---
     // Ce qui dit l'hiver de loin n'est pas la couleur mais le VOLUME. Une
     // frondaison de juillet est une masse pleine, une ramure de janvier est un
-    // dessin — et ça se voit à cinquante mètres, à travers une vitre.
+    // dessin - et ça se voit à cinquante mètres, à travers une vitre.
     built.grove.canopy.value = seasonNow().canopy;
     // La neige tient sur une frondaison comme sur une toiture : c'est une
     // surface qui regarde le ciel. Elle ne tient pas sur un tronc.
@@ -419,7 +419,7 @@ export function CityRibbon() {
     const w = dayNightWeights(runtime.clockMin / 60);
     const night = Math.min(1, w.night + w.golden * 0.35);
     built.city.night.value = night;
-    // Un écran géant existe le jour — il est simplement terne. La nuit, il
+    // Un écran géant existe le jour - il est simplement terne. La nuit, il
     // devient la source lumineuse la plus forte du quartier.
     built.signMat.color.setScalar(0.42 + 1.35 * night);
     // Le sol de la rue se relève lui aussi : il reçoit l'éclairage public et

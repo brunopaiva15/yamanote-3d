@@ -1,4 +1,4 @@
-// Étape 3 — sélection, classement, découpage, recentrage, export GLB.
+// Étape 3 - sélection, classement, découpage, recentrage, export GLB.
 //
 // ENTRÉE : work/plateau/converted/*.buildings.json (coordonnées projetées).
 // SORTIE : work/plateau/processed/<name>-NNN.glb + le tracé local route.json
@@ -7,11 +7,11 @@
 // CE QUI SE JOUE ICI
 //   · Classement par distance à l'axe : near / medium / far, seuils
 //     configurables (PLATEAU_CONFIG.distances). Au-delà de `far` un bâtiment
-//     n'existe plus — le filtrage a déjà eu lieu à la conversion.
+//     n'existe plus - le filtrage a déjà eu lieu à la conversion.
 //   · Élagage des volumes invisibles depuis le train (voir `visibleFromTrack`).
 //   · Affectation à un chunk : celui qui contient l'abscisse curviligne du
 //     point du bâtiment LE PLUS PROCHE de la voie. Un bâtiment à cheval sur
-//     deux chunks n'est donc jamais coupé — il appartient entièrement au chunk
+//     deux chunks n'est donc jamais coupé - il appartient entièrement au chunk
 //     où le voyageur le voit passer.
 //   · Recentrage : chaque chunk a sa propre origine locale (le point du tracé
 //     au milieu du chunk). Les sommets restent à quelques centaines de mètres
@@ -43,7 +43,7 @@ export function bandOf(distance, distances) {
  * Un volume est-il susceptible d'être vu depuis le train ?
  *
  * Le critère est volontairement grossier et prudent : on n'écarte que ce qui
- * est à la fois LOIN et MINUSCULE — un abri de jardin à 250 m ne se distingue
+ * est à la fois LOIN et MINUSCULE - un abri de jardin à 250 m ne se distingue
  * pas, mais il coûte autant de triangles qu'une façade de front de voie. On ne
  * tente aucun calcul d'occlusion réel : sans MNT ni géométrie de la tranchée,
  * un test de visibilité géométrique donnerait une fausse assurance.
@@ -58,7 +58,7 @@ export function visibleFromTrack(building, band) {
 /**
  * Palette de façades, alignée sur celles du décor procédural
  * (data/districts.ts, WARM_DAY / OLD_DAY) : béton peint, carrelage
- * beige, crépi. Aucune saturation forte — un quartier de Toshima n'est pas
+ * beige, crépi. Aucune saturation forte - un quartier de Toshima n'est pas
  * coloré, il est nuancé.
  */
 const FACADE_PALETTE = [
@@ -87,7 +87,7 @@ function facadeTint(id, index) {
   return [base[0] * shade, base[1] * shade, base[2] * shade];
 }
 
-/** Toitures : bitume, tôle et bacs techniques — nettement plus sombres. */
+/** Toitures : bitume, tôle et bacs techniques - nettement plus sombres. */
 const ROOF_TINT = [0.4, 0.41, 0.43];
 
 export async function processAll(args, reporter) {
@@ -343,7 +343,7 @@ export async function processAll(args, reporter) {
   });
 
   reporter.info(
-    `${chunkStats.length} chunk(s) — proche ${counts.near}, intermédiaire ${counts.medium}, ` +
+    `${chunkStats.length} chunk(s) - proche ${counts.near}, intermédiaire ${counts.medium}, ` +
       `éloigné ${counts.far}, élagué ${counts.culled}.`,
   );
   reporter.info(`Tracé local : ${routePath} (${routeJson.points.length} points)`);

@@ -132,7 +132,7 @@ function baseEstimate(
   // Les deux relevés ne se déduisent pas l'un de l'autre : à 8 h 15 le
   // 内回り est écrasé entre Shin-Ōkubo et Shinjuku (139 %) quand le 外回り
   // l'est entre Ueno et Okachimachi (134 %). Ce sont deux flux, pas un flux
-  // et son reflet — c'est le sens qui va vers les bureaux qui se remplit.
+  // et son reflet - c'est le sens qui va vers les bureaux qui se remplit.
   const baseline = (dir === 'outer' ? OUTER_BASE_0815 : INNER_BASE_0815)[fromIndex];
   const hf = hourFactor(minutes);
   const period = dayPeriod(minutes);
@@ -216,7 +216,7 @@ export function estimateOccupancy(args: {
  *   cruise / brake / depart : on roule vers `index`, donc on vient de
  *   `prevStation(index, sens)` ;
  *   dwell : on est à quai à `index`, et le peuplement vaut pour le départ qui
- *   vient — la gare de départ est celle-là même.
+ *   vient - la gare de départ est celle-là même.
  */
 export function currentFromIndex(index: number, phase: Phase, dir: LoopDirection): number {
   if (phase === 'dwell') return index;

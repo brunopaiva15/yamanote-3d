@@ -7,7 +7,7 @@
 // test serait faire porter au jeu le poids du harnais. Ce hook fait l'inverse :
 // vingt lignes côté test, rien à changer côté jeu.
 //
-// Il ne touche qu'aux chemins RELATIFS sans extension — les paquets de
+// Il ne touche qu'aux chemins RELATIFS sans extension - les paquets de
 // node_modules et les imports déjà explicites passent leur chemin.
 
 import { existsSync } from 'node:fs';

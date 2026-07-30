@@ -36,7 +36,7 @@ import { perfLevel } from '../systems/perf';
 /**
  * Plafond du dt cycle : borne les trous que l'API Visibility ne signale pas
  * (mise en veille machine, page restée « visible »). Une frame lente mais
- * visible avance le cycle de tout son temps écoulé — le seuil ne sert qu'à
+ * visible avance le cycle de tout son temps écoulé - le seuil ne sert qu'à
  * éviter de téléporter le train de plusieurs gares d'un coup.
  */
 const CYCLE_DT_CAP = 5;
@@ -47,7 +47,7 @@ const CYCLE_DT_CAP = 5;
  * Ce n'est PAS un plafond par image. Ç'en était un, et c'était le bug : la
  * frame consommait 0,05 s de mouvement de porte quel que soit le temps
  * réellement écoulé, pendant que le cycle station avançait, lui, en temps réel.
- * Sous vingt images par seconde les deux horloges divergeaient sans borne — la
+ * Sous vingt images par seconde les deux horloges divergeaient sans borne - la
  * rame partait à 90 km/h vantaux à demi ouverts, la porte sautait d'un coup à
  * l'ordre de fermeture, et l'ouverture ne franchissait jamais le seuil de 0,55
  * qui autorise à descendre : sur une machine lente, on ne pouvait plus sortir
@@ -59,7 +59,7 @@ const PHYS_STEP = 0.05;
  * Temps de physique simulé au plus par image (s).
  *
  * Le sous-pas rend la borne inoffensive tant qu'on tient une image par seconde
- * — vingt sous-pas —, et il faut bien une borne : une frame de rattrapage de
+ * - vingt sous-pas -, et il faut bien une borne : une frame de rattrapage de
  * cinq secondes ferait tourner quatre-vingts fois la mise à jour de tous les
  * PNJ et n'arrangerait rien.
  */
@@ -67,7 +67,7 @@ const PHYS_SPAN_CAP = 1.0;
 
 // Onglet repris après masquage : rAF était en pause, la première frame porte
 // tout le temps caché. On saute l'avance du cycle sur cette frame-là (évite
-// de sauter des gares) — mais UNIQUEMENT elle : une frame lente sur un onglet
+// de sauter des gares) - mais UNIQUEMENT elle : une frame lente sur un onglet
 // visible (shaders, GC, GPU saturé) doit compter en entier, sinon le cycle
 // gèle sous charge et le prochain arrêt n'arrive jamais.
 let tabJustResumed = false;
@@ -175,11 +175,11 @@ export function Engine(): null {
       // une caisse, et qui vient de disparaître dans l'escalier ou en rame.
       updatePetCarriers();
       // Le quai n'est audible que par les ouvertures réellement dégagées : il
-      // faut la porte de la rame ET la porte palière en face — là où il y en a
+      // faut la porte de la rame ET la porte palière en face - là où il y en a
       // une. À Shinjuku et Shibuya, la porte de la rame donne directement sur
       // le quai, et la mélodie entre dès qu'elle s'écarte.
       // Une porte arrêtée sur quelqu'un juste à côté de vous est une ouverture
-      // comme une autre — la seule qui reste, en l'occurrence, et c'est par
+      // comme une autre - la seule qui reste, en l'occurrence, et c'est par
       // elle qu'on entend l'agent de quai s'adresser à celui qui bloque.
       const openings = Math.max(
         runtime.doorOpen * (runtime.psdPresent ? runtime.psdOpen : 1),
@@ -205,7 +205,7 @@ export function Engine(): null {
         roomTone(stationIndex),
       );
       // La météo, à l'oreille : le pavillon d'un côté, le dehors de l'autre.
-      // Elle suit les mêmes ouvertures que l'ambiance de gare — c'est par là,
+      // Elle suit les mêmes ouvertures que l'ambiance de gare - c'est par là,
       // et par là seulement, que le dehors entre.
       setWeatherSound(
         weather.rain,

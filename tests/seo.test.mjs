@@ -1,6 +1,6 @@
 // Cohérence du référencement : index.html, robots.txt, sitemap.xml, le
 // manifeste et les images sociales décrivent tous le même site, et rien ne les
-// force à rester d'accord — sauf ce fichier.
+// force à rester d'accord - sauf ce fichier.
 //
 // Ce qui casse en silence sans lui : une URL canonique changée à un endroit et
 // pas aux trois autres, une langue ajoutée à `LANGS` sans son alternate, une
@@ -191,7 +191,7 @@ test("le sitemap liste l'URL nue et une variante par langue", () => {
 });
 
 test('le manifeste décrit la même application, avec ses icônes', () => {
-  assert.equal(MANIFEST.name, 'Yamanote 3D — 山手線');
+  assert.equal(MANIFEST.name, 'Yamanote 3D - 山手線');
   assert.ok(MANIFEST.description?.length >= 110);
   // Chemins relatifs : le build sert aussi bien sous /yamanote-3d/ qu'à la
   // racine d'un domaine (voir `base: './'` dans vite.config.ts).

@@ -1,18 +1,18 @@
-// Animaux « librairie » : le pack animalier (Quaternius — Ultimate Animated
+// Animaux « librairie » : le pack animalier (Quaternius - Ultimate Animated
 // Animals) chargé et préparé comme les personnages, mais avec trois
 // différences qui comptent pour un quadrupède :
 //
 //   - la NORMALISATION se fait à une taille RÉELLE et par espèce. Un
-//     personnage est toujours haut de SKELETON_TOP ; un chien, non — un corgi
+//     personnage est toujours haut de SKELETON_TOP ; un chien, non - un corgi
 //     fait 30 cm au sommet du crâne, un husky 62. La hauteur est donc une
 //     donnée du manifeste, pas une constante.
 //   - les CLIPS ne sont pas les mêmes (Idle / Walk / Run / Eating), et le
-//     reniflage du sol — le geste qui fait un chien en promenade — se trouve
+//     reniflage du sol - le geste qui fait un chien en promenade - se trouve
 //     dans le clip de repas des packs.
 //   - la VITESSE D'AUTEUR des cycles est MESURÉE, jamais déclarée : aucun pack
 //     ne l'annonce et elle varie du simple au double d'une espèce à l'autre.
 //     Deux façons de la lire, dans cet ordre : le déplacement de la racine
-//     quand il y en a un, sinon la FOULÉE — le va-et-vient d'un pied posé, qui
+//     quand il y en a un, sinon la FOULÉE - le va-et-vient d'un pied posé, qui
 //     mesure exactement la distance dont le sol défile. Les packs animaliers
 //     testés animent tous sur place, c'est donc la seconde qui sert. Sans
 //     elle, les pattes patinent.
@@ -31,7 +31,7 @@ import { MODELS_BASE } from './manifest';
 export const ANIMALS_BASE = `${MODELS_BASE}animals/`;
 
 // `sniff` : museau au sol, le geste de promenade. Les packs ne le livrent pas
-// sous ce nom — c'est leur clip de repas (« Eating »), qui est exactement ça.
+// sous ce nom - c'est leur clip de repas (« Eating »), qui est exactement ça.
 export type AnimalClip = 'idle' | 'walk' | 'run' | 'sniff' | 'sit';
 
 export interface AnimalVariant {
@@ -43,7 +43,7 @@ export interface AnimalVariant {
   faceYaw?: number;
   /** Noms exacts des clips si la détection floue se trompe. */
   clips?: Partial<Record<AnimalClip, string>>;
-  /** Vitesses (m/s) « auteur » des cycles — sinon mesurées sur la racine. */
+  /** Vitesses (m/s) « auteur » des cycles - sinon mesurées sur la racine. */
   walkClipSpeed?: number;
   runClipSpeed?: number;
 }
@@ -96,8 +96,8 @@ export function useAnimalManifest(): AnimalManifest | null | undefined {
 // une chaîne « Neck1 / Neck2 / Neck3 ». On ne cherche que deux choses :
 //
 //   - la RACINE, seule cible possible d'un éventuel déplacement d'auteur (root
-//     motion). On la prend par la STRUCTURE — l'os dont le parent n'est pas un
-//     os — et non par son nom : c'est vrai de tous les rigs, quel que soit le
+//     motion). On la prend par la STRUCTURE - l'os dont le parent n'est pas un
+//     os - et non par son nom : c'est vrai de tous les rigs, quel que soit le
 //     pack.
 //   - le COLLIER, où s'accroche la laisse : le DERNIER maillon du cou (celui
 //     qui porte la tête), sinon la tête elle-même.
@@ -158,7 +158,7 @@ function resolveAnimalClips(variant: AnimalVariant, clips: THREE.AnimationClip[]
   // plus, et aucun pack n'a de clip « petit trot en laisse ».
   const run = byName(variant.clips?.run) ?? findClip(clips, /(run|gallop|trot)/i, /(swim|attack)/i, /^run(ning)?$/i);
   // Museau au sol : c'est le clip de repas des packs, joué là où le chien
-  // s'arrête renifler — la tête descend, le corps reste planté.
+  // s'arrête renifler - la tête descend, le corps reste planté.
   const sniff = byName(variant.clips?.sniff) ?? findClip(clips, /(eat|graze|feed|sniff|smell|bite)/i, /(attack|death)/i, /^eating$/i);
   const sit = byName(variant.clips?.sit) ?? findClip(clips, /(sit|lay|lie|rest)/i, /(stand|up|down_to|attack)/i, /^sit(ting)?$/i);
   if (idle) out.idle = idle;
@@ -196,13 +196,13 @@ function measureRootSpeed(clip: THREE.AnimationClip, rootName: string, normScale
 }
 
 /**
- * Vitesse d'auteur d'un cycle animé SUR PLACE — c'est le cas de tous les packs
+ * Vitesse d'auteur d'un cycle animé SUR PLACE - c'est le cas de tous les packs
  * animaliers testés : rien ne bouge à la racine, il n'y a donc rien à y lire.
  *
  * On la relève alors sur la FOULÉE. Un pied posé ne glisse pas : sur un cycle,
  * son va-et-vient d'avant en arrière mesure exactement la distance dont le sol
- * défile. Les pieds sont trouvés par leur géométrie — les os qui restent près
- * du sol et qui voyagent le plus — et non par leur nom : ces rigs pilotent
+ * défile. Les pieds sont trouvés par leur géométrie - les os qui restent près
+ * du sol et qui voyagent le plus - et non par leur nom : ces rigs pilotent
  * leurs pattes par des cibles IK dont aucun pack ne nomme les os pareil.
  *
  * `probe` est un clone jetable : jouer un clip déforme le squelette, et le
@@ -307,7 +307,7 @@ export function buildAnimalTemplates(manifest: AnimalManifest, gltfs: LoadedGltf
     let runSpeed = variant.runClipSpeed ?? 0;
     if ((!walkSpeed && clips.walk) || (!runSpeed && clips.run)) {
       // Clone jetable : la mesure de foulée joue les clips, ce qui déforme le
-      // squelette — le template, lui, doit rester dans sa pose de repos.
+      // squelette - le template, lui, doit rester dans sa pose de repos.
       const probe = cloneSkeleton(scene);
       const rootName = bones.root?.name ?? null;
       if (!walkSpeed && clips.walk) walkSpeed = authoredSpeedOf(clips.walk, rootName, probe, normScale, rawHeight) ?? 0;
@@ -334,7 +334,7 @@ export function buildAnimalTemplates(manifest: AnimalManifest, gltfs: LoadedGltf
       walkSpeed: walkSpeed || 0.5,
       runSpeed: runSpeed || 1.6,
       // Repli du collier : à l'avant du gabarit, aux trois quarts de la
-      // hauteur — la base du cou d'un quadrupède, à quelques centimètres près.
+      // hauteur - la base du cou d'un quadrupède, à quelques centimètres près.
       collarLocal: new THREE.Vector3(0, variant.height * 0.74, length * 0.36),
     };
   });

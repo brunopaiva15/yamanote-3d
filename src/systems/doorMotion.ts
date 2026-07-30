@@ -15,7 +15,7 @@ import * as audio from './audioEngine';
 // Retards retirés au sort à chaque station : quelle porte de la rame part en
 // premier, de combien traînent les autres, le retard propre de chaque
 // portique du quai et le décalage global quai/rame changent d'une gare à
-// l'autre — jamais deux arrêts identiques.
+// l'autre - jamais deux arrêts identiques.
 const trainLags: Record<number, number> = {};
 let sortedTrainLags: number[] = [];
 let psdGateLags: number[] = [];
@@ -102,8 +102,8 @@ export function psdDoorPos(lag = 0): number {
 // --- La porte qui rencontre un obstacle ----------------------------------
 //
 // Une porte bloquée quitte la chorégraphie d'ensemble : elle a sa propre
-// horloge, sa propre course — jamais une course pleine, elle repart d'où elle
-// est — et une butée souple qui l'empêche d'atteindre sa position fermée.
+// horloge, sa propre course - jamais une course pleine, elle repart d'où elle
+// est - et une butée souple qui l'empêche d'atteindre sa position fermée.
 // La porte palière en vis-à-vis suit le même mouvement, avec le retard
 // habituel du quai sur la rame.
 //
@@ -139,7 +139,7 @@ let blocked: BlockedDoor | null = null;
 
 /**
  * Retard de la porte palière sur la porte de la rame concernée. C'est le même
- * décalage que pour l'ensemble — le quai suit toujours la rame — mais fixé
+ * décalage que pour l'ensemble - le quai suit toujours la rame - mais fixé
  * ici : le tirage de la gare porte sur la fermeture d'ensemble, pas sur une
  * réouverture décidée porte par porte.
  */
@@ -352,8 +352,8 @@ export function setPsdDoors(target: 0 | 1): void {
   runtime.psdTarget = target;
   runtime.psdT = 0;
   psdImpactFired = false;
-  // La cinématique continue de tourner même sans portes de quai — le cycle
-  // station n'a pas à connaître la gare — mais on n'entend pas déverrouiller
+  // La cinématique continue de tourner même sans portes de quai - le cycle
+  // station n'a pas à connaître la gare - mais on n'entend pas déverrouiller
   // ce qui n'existe pas.
   if (runtime.psdPresent) audio.psdClunk(0.09);
 }
@@ -369,7 +369,7 @@ export function updateDoorMotion(dt: number): void {
   const psd = psdDoorPos(0);
   // `doorOpen` reste la porte de RÉFÉRENCE : c'est elle qui décide des seuils
   // franchissables, de ce que le quai laisse entendre et de l'ambiance. Une
-  // porte bloquée qui rouvre seule n'ouvre pas la rame — et n'a d'ailleurs
+  // porte bloquée qui rouvre seule n'ouvre pas la rame - et n'a d'ailleurs
   // jamais servi à monter : quelqu'un est dedans.
   runtime.doorOpen = train;
   runtime.psdOpen = psd;

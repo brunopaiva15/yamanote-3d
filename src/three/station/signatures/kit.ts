@@ -2,7 +2,7 @@
 //
 // Chaque gare-signature reçoit exactement le même contexte : son gabarit, le
 // placement de son quai, et les matériaux de sa palette. À elle de puiser ce
-// dont elle a besoin — la travée d'en face pour une halle qui l'enjambe, la
+// dont elle a besoin - la travée d'en face pour une halle qui l'enjambe, la
 // trame de piliers pour une ferme qui prend appui dessus.
 
 import { useLayoutEffect, useMemo } from 'react';
@@ -50,7 +50,7 @@ export function useSigMaterials<T extends Record<string, THREE.Material>>(
  * Il s'interrompt au droit de la bande directionnelle, des débouchés d'accès
  * (où pend une plaque et sa suspente) et des gaines d'escalier mécanique qui
  * montent jusqu'à l'auvent : continu, il les transperçait tous. La borne de
- * fin est STRICTE — un intervalle bloqué au-delà d'elle produisait un tronçon
+ * fin est STRICTE - un intervalle bloqué au-delà d'elle produisait un tronçon
  * inversé, c'est-à-dire une boîte fantôme au milieu du quai.
  */
 export function clearSpineSpans(
@@ -79,7 +79,7 @@ export function clearSpineSpans(
  * Barre tendue entre deux points de la COUPE, à l'abscisse z donnée.
  *
  * Une ferme ne se décrit pas en positions et en angles : elle se décrit par ses
- * nœuds. Diagonales de treillis, montants, branches de colonne — tout ce qui
+ * nœuds. Diagonales de treillis, montants, branches de colonne - tout ce qui
  * joint deux points d'un même plan de coupe se pose ici, et l'inclinaison s'en
  * déduit au lieu de se recalculer à la main à chaque membrure.
  */

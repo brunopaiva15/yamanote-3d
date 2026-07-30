@@ -48,7 +48,7 @@ function mulberry32(seed) {
  * Niveau de la rue (hauteur ellipsoïdale, m) au droit d'un point.
  *
  * Il n'est PAS choisi indépendamment : il se déduit de la cote de la voie au
- * même endroit, moins `railAboveGround` — le paramètre qui dit si le tronçon
+ * même endroit, moins `railAboveGround` - le paramètre qui dit si le tronçon
  * est en viaduc (positif) ou en tranchée (négatif). C'est ce qui garantit que
  * l'échantillon et le tracé ne peuvent pas diverger quand on change de
  * tronçon. On y ajoute une ondulation douce, pour que le sol ne soit pas une
@@ -91,7 +91,7 @@ function footprint(rand, cx, cy, angle, width, depth) {
 
 function ringToPosList(ring, projector) {
   // PLATEAU écrit ses posList en EPSG:6697, c'est-à-dire (latitude longitude
-  // hauteur) — l'ordre des axes du CRS, pas l'ordre « x y » habituel.
+  // hauteur) - l'ordre des axes du CRS, pas l'ordre « x y » habituel.
   const parts = [];
   for (const [east, north, up] of ring) {
     const g = projector.inverse(east, north);
@@ -255,7 +255,7 @@ export function generateSample({ route, count, seed }) {
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ÉCHANTILLON SYNTHÉTIQUE — CE FICHIER NE CONTIENT AUCUNE DONNÉE PLATEAU.
+  ÉCHANTILLON SYNTHÉTIQUE - CE FICHIER NE CONTIENT AUCUNE DONNÉE PLATEAU.
 
   Généré par scripts/plateau/make-sample.mjs (graine ${seed}) pour permettre
   d'exécuter le pipeline PLATEAU du dépôt yamanote-3d sans télécharger les

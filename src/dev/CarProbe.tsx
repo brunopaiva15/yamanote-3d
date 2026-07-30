@@ -41,7 +41,7 @@ const num = (key: string, fallback: number) => {
 runtime.clockMin = num('h', CONFIG.clockStart / 60) * 60;
 
 // Prépare la maquette une fois chargée : on masque tout ce qui passe sous le
-// plancher (châssis, bogies, coffres) — invisible en jeu, et ça encombre la vue.
+// plancher (châssis, bogies, coffres) - invisible en jeu, et ça encombre la vue.
 function prepare(root: THREE.Object3D): void {
   const box = new THREE.Box3();
   root.traverse((obj) => {
@@ -161,7 +161,7 @@ export function CarProbe() {
         <OrbitControls target={[num('tx', 0), num('ty', 1.4), num('tz', -2)]} makeDefault />
       </Canvas>
       <div className="probe-hud">
-        <b>car-probe</b> — <kbd>R</kbd> maquette {showRef ? 'on' : 'off'} · <kbd>P</kbd> procédural{' '}
+        <b>car-probe</b> - <kbd>R</kbd> maquette {showRef ? 'on' : 'off'} · <kbd>P</kbd> procédural{' '}
         {showProc ? 'on' : 'off'} · <kbd>S</kbd> style {style}
         <br />
         maquette en z = {refZ} m · heure {(runtime.clockMin / 60).toFixed(1)} h (<code>?h=</code>)

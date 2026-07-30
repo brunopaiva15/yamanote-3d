@@ -39,7 +39,7 @@ if (import.meta.env.DEV) {
 export const DIALOGUE_COUNT = DIALOGUES.length;
 
 /**
- * Choisit un échange. `recent` écarte ce qui vient d'être entendu — la
+ * Choisit un échange. `recent` écarte ce qui vient d'être entendu - la
  * variété d'un catalogue de deux cents entrées ne sert à rien si le tirage
  * ressort la même réplique trois fois de suite.
  */
@@ -84,7 +84,7 @@ function stationName(index: number, lang: Lang): string {
 
 /**
  * Rend une réplique : langue de l'interface, genre du PNJ, et noms de gares
- * substitués — `{next}` la gare vers laquelle on roule, `{here}` celle dont le
+ * substitués - `{next}` la gare vers laquelle on roule, `{here}` celle dont le
  * quai est là.
  */
 export function renderLine(line: DialogueLine, lang: Lang, feminine: boolean, ctx: DialogueCtx): string {

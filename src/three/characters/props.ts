@@ -1,5 +1,5 @@
 // Accessoires « Tokyo » superposés aux personnages librairie : lunettes,
-// masque chirurgical, sacs, téléphone. Les modèles des packs n'en ont pas —
+// masque chirurgical, sacs, téléphone. Les modèles des packs n'en ont pas -
 // on attache de petits volumes à des groupes « suiveurs » recalés chaque
 // frame sur la transformation monde des os (tête, buste, main), en unités
 // normalisées (le personnage fait SKELETON_TOP=1.445 unités, comme l'ancien
@@ -39,14 +39,14 @@ export function handPropFor(action: PaxAction): 'phone' | 'book' | 'bottle' | 'm
  * Pose bras « objet tenu » (téléphone / livre / bouteille / plan / ticket).
  *
  * C'est aussi ce qui autorise l'affichage de l'objet : un `handProp` absent
- * d'ici ne sort jamais de la main. Le ticket manquait — `ticketGlance` levait
+ * d'ici ne sort jamais de la main. Le ticket manquait - `ticketGlance` levait
  * donc le regard sur un billet invisible.
  */
 export function usesHeldPose(action: PaxAction): boolean {
   return handPropFor(action) !== null || action === 'sharePhone';
 }
 
-// Assombrit une couleur hex — accents des sacs (sangles, rabats, poches).
+// Assombrit une couleur hex - accents des sacs (sangles, rabats, poches).
 function shade(hex: string, k: number): string {
   const n = parseInt(hex.slice(1), 16);
   const r = Math.round(((n >> 16) & 255) * (1 - k));
@@ -78,7 +78,7 @@ const bridgeGeo = new THREE.BoxGeometry(0.03, 0.008, 0.012);
 const templeGeo = new THREE.BoxGeometry(0.008, 0.008, 0.1);
 
 // Position des yeux / du bas du visage par rapport à l'origine de l'os de
-// tête (base du crâne), en unités normalisées — vaut pour des proportions
+// tête (base du crâne), en unités normalisées - vaut pour des proportions
 // humaines standard après normalisation.
 const EYE_Y = 0.09;
 const FACE_Z = 0.1;
@@ -218,7 +218,7 @@ function makeHandBag(color: string): THREE.Group {
 // --- Téléphone -------------------------------------------------------------
 // Smartphone tenu dans la paume : coque sombre + dalle légèrement émissive.
 // La pose téléphone (characters/pose.ts) impose l'orientation MONDE de la
-// main — la prise est donc réglée une fois pour toutes dans le repère de
+// main - la prise est donc réglée une fois pour toutes dans le repère de
 // l'os de main (+Y poignet → doigts, +Z côté paume, rigs Quaternius).
 
 const phoneBodyGeo = new RoundedBoxGeometry(0.042, 0.082, 0.009, 2, 0.004);
@@ -233,7 +233,7 @@ const phoneScreenMat = new THREE.MeshStandardMaterial({
 });
 
 // Prise MAIN DROITE réglée à la main (probe ?grip=) : téléphone couché en
-// diagonale DANS la paume — côté -Z de l'os (la paume, +Z étant le dos de la
+// diagonale DANS la paume - côté -Z de l'os (la paume, +Z étant le dos de la
 // main), écran retourné vers l'extérieur de la paume (Ry ≈ π), incliné vers
 // le visage. Légèrement surdimensionné pour les mains stylisées des packs.
 const PHONE_GRIP_POS = new THREE.Vector3(0, 0.09, -0.022);
@@ -241,7 +241,7 @@ const PHONE_GRIP_ROT = new THREE.Euler(0.15, Math.PI, 0.3);
 const PHONE_GRIP_SCALE = 1.28;
 
 // `side` : 1 = prise droite, -1 = prise gauche. La gauche est le MIROIR
-// SAGITTAL exact de la droite — licite parce que pose.ts force les
+// SAGITTAL exact de la droite - licite parce que pose.ts force les
 // orientations monde des deux mains à être miroirs l'une de l'autre : dans le
 // repère de l'os, le miroir s'écrit position (-x, y, z) et quaternion
 // (x, -y, -z, w), la coque du téléphone étant symétrique sur son axe x.
@@ -419,10 +419,10 @@ function followBone(follow: THREE.Group | null, bone: THREE.Bone | undefined, wr
 }
 
 // Recale les groupes suiveurs sur les os (à appeler après les overrides).
-// `bagVisible` : les sacs sont posés pour la station debout — on les masque
+// `bagVisible` : les sacs sont posés pour la station debout - on les masque
 // quand le passager est assis (sinon le sac flotte à côté de lui).
 // `handProp` : objet tenu (téléphone, livre, bouteille, plan, ticket).
-// `phoneSide` : main qui le tient (PoseState.phoneSide) — la gauche quand la
+// `phoneSide` : main qui le tient (PoseState.phoneSide) - la gauche quand la
 // droite est déjà à la poignée.
 export function updatePropRig(
   rig: PropRig,

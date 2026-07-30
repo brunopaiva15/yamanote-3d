@@ -16,7 +16,7 @@ import { PLATEAU_CONFIG } from '../scripts/plateau/config.mjs';
 import { geodesicDistance } from '../scripts/plateau/lib/geo.mjs';
 
 // Rien ici n'est câblé sur un tronçon donné : les bornes sont dérivées de la
-// configuration. Ces tests doivent survivre à un changement de tronçon — c'est
+// configuration. Ces tests doivent survivre à un changement de tronçon - c'est
 // justement la propriété qu'on veut protéger.
 const PROTO = PLATEAU_CONFIG.prototype;
 const GEOJSON = join(PLATEAU_CONFIG.paths.geo, `${PROTO.name}.geojson`);
@@ -162,7 +162,7 @@ test('corridor : polygone fermé, en coordonnées géographiques', () => {
   assert.ok(ring.length > 20);
   assert.deepEqual(ring[0], ring.at(-1));
   // Chaque sommet du corridor doit être à `half` mètres de l'axe, à la
-  // tolérance des coins près — et donc jamais plus loin que half·1,5.
+  // tolérance des coins près - et donc jamais plus loin que half·1,5.
   for (const [lon, lat] of ring) {
     const p = route.projector.forward(lon, lat);
     const d = locateOnRoute(route, p.east, p.north).distance;

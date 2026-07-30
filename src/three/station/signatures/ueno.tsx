@@ -1,9 +1,9 @@
-// JY05 上野 — la halle rivetée, et son ouverture au nord.
+// JY05 上野 - la halle rivetée, et son ouverture au nord.
 //
 // Ueno n'est pas couverte d'un bout à l'autre : la moitié sud disparaît sous
 // les anciennes charpentes et les bâtiments, la moitié nord s'ouvre sur le
-// faisceau et le ciel. C'est ce contraste — la longue perspective sombre qui
-// débouche d'un coup — qui fait la gare, bien plus que le détail des fermes.
+// faisceau et le ciel. C'est ce contraste - la longue perspective sombre qui
+// débouche d'un coup - qui fait la gare, bien plus que le détail des fermes.
 
 import { PLATFORM_TOP, PSD_X } from '../../../data/stationGeometry';
 import { bays, siteCut, useSigMaterials, type SigProps } from './kit';
@@ -87,7 +87,7 @@ export function Ueno({ layout, place, m }: SigProps) {
       </mesh>
 
       {/* Bandeau lumineux sous la halle : la moitié couverte reste éclairée.
-          Il court SOUS les poutres et EN RETRAIT de l'épine — sur l'axe, il
+          Il court SOUS les poutres et EN RETRAIT de l'épine - sur l'axe, il
           traversait les gaines d'escalier mécanique, la bande directionnelle
           et les suspentes des plaques d'accès ; à 1,6 m, c'était l'horloge et
           les suspentes du panneau 番線 ; à 2,23 m, celles des potences. Le

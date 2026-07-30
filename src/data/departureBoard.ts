@@ -1,5 +1,5 @@
-// Ce que dit un 発車標 (hasshahyō) — le tableau des départs suspendu au-dessus
-// du quai — et sous quelle forme.
+// Ce que dit un 発車標 (hasshahyō) - le tableau des départs suspendu au-dessus
+// du quai - et sous quelle forme.
 //
 // Le tableau du jeu annonçait UNE rame et son état (approche, embarquement,
 // départ, attente). Un vrai 発車標 de la Yamanote en annonce DEUX, l'une sous
@@ -9,7 +9,7 @@
 //     山手線　約5分後　東京・上野方面
 //
 // Le 約 est le mot important : ce n'est pas un compte à rebours à la seconde
-// mais une estimation, et c'est pour cela qu'il n'y a jamais de « 0 分後 » —
+// mais une estimation, et c'est pour cela qu'il n'y a jamais de « 0 分後 » -
 // sous la minute le tableau bascule sur 「まもなく」. JR East a équipé les
 // trente gares de la ligne de ce décompte entre novembre 2019 et juillet 2020.
 //
@@ -30,7 +30,7 @@
  * classique du quai japonais, et c'est encore ce qu'on lit dans la plupart des
  * gares ; les quais neufs ou refaits ont reçu des dalles LCD, plus fines de
  * trait et sans inter-diode. Le partage ci-dessous n'est pas un relevé : ce
- * sont les trois quais de la ligne dont l'équipement est le plus récent —
+ * sont les trois quais de la ligne dont l'équipement est le plus récent -
  * Takanawa Gateway, ouverte en 2020, Shibuya et Shinagawa, refaites depuis.
  */
 export const LCD_BOARDS: ReadonlySet<string> = new Set(['JY20', 'JY25', 'JY26']);
@@ -48,7 +48,7 @@ export type BoardEta =
 
 /** L'état complet du tableau à un instant donné. */
 export interface BoardView {
-  /** Les deux prochaines rames, dans l'ordre — le tableau en montre deux. */
+  /** Les deux prochaines rames, dans l'ordre - le tableau en montre deux. */
   rows: BoardEta[];
   /** Le tableau alterne japonais et anglais, comme un vrai. */
   english: boolean;
@@ -70,7 +70,7 @@ export interface NextTrains {
  * En deçà, le tableau ne compte plus : il dit 「まもなく」.
  *
  * Un vrai afficheur ne descend jamais à 「約1分後」 quand la rame est en vue au
- * bout du quai — c'est le mot qui remplace le chiffre, et il tombe à peu près
+ * bout du quai - c'est le mot qui remplace le chiffre, et il tombe à peu près
  * au moment où l'annonce d'approche se déclenche.
  */
 export const SOON_UNDER = 45;
@@ -133,7 +133,7 @@ function sameEta(a: BoardEta, b: BoardEta): boolean {
 
 /**
  * Deux vues sont-elles identiques ? Le canvas ne se redessine que lorsqu'elles
- * diffèrent — sinon on repeindrait 1024 × 256 pixels soixante fois par seconde
+ * diffèrent - sinon on repeindrait 1024 × 256 pixels soixante fois par seconde
  * pour un tableau qui n'a pas bougé.
  */
 export function sameBoardView(a: BoardView, b: BoardView): boolean {

@@ -2,7 +2,7 @@
 
 Chaîne automatisée qui va des données ouvertes japonaises [Project PLATEAU]
 (CityGML 3D des villes du Japon, 国土交通省) à des GLB optimisés affichés dans
-Yamanote 3D, sur **un seul tronçon** à la fois — par défaut Shibuya → Ebisu,
+Yamanote 3D, sur **un seul tronçon** à la fois - par défaut Shibuya → Ebisu,
 `SEGMENTS[19]`, en viaduc.
 
 Le tronçon est un **paramètre**, pas du code : voir
@@ -16,15 +16,15 @@ CityGML PLATEAU ─► conversion ─► sélection corridor ─► classement p
 
 > **Le prototype est ÉTEINT par défaut : il faut `?plateau=1` dans l'URL.**
 > Sans ce paramètre, rien n'est chargé, rien n'est monté, et le jeu est
-> exactement celui d'avant — y compris sur le tronçon couvert. Voir
+> exactement celui d'avant - y compris sur le tronçon couvert. Voir
 > [§ Activer le prototype](#activer-le-prototype).
 >
 > **Et ce dépôt ne contient AUCUNE donnée Project PLATEAU.**
 > Le build par défaut tourne sur un échantillon CityGML **synthétique**
 > (`data/plateau-sample/`), généré par `scripts/plateau/make-sample.mjs`, dont
 > le *format* reproduit fidèlement le profil PLATEAU mais dont la *géométrie*
-> est inventée. Le pipeline sait consommer les vraies données — voir
-> [§ Travailler sur les données réelles](#travailler-sur-les-données-réelles) —
+> est inventée. Le pipeline sait consommer les vraies données - voir
+> [§ Travailler sur les données réelles](#travailler-sur-les-données-réelles) -
 > mais cette conversion-là n'a pas été exécutée dans l'environnement où le
 > prototype a été écrit (pas d'accès réseau vers geospatial.jp).
 
@@ -35,17 +35,17 @@ CityGML PLATEAU ─► conversion ─► sélection corridor ─► classement p
 | Élément | Version | Obligatoire | Rôle |
 | --- | --- | --- | --- |
 | Node.js | ≥ 22 | oui | tout le pipeline, et `node --test` pour les tests |
-| npm install | — | oui | `@gltf-transform/*`, `meshoptimizer`, `earcut`, `sharp`, `fflate` |
+| npm install | - | oui | `@gltf-transform/*`, `meshoptimizer`, `earcut`, `sharp`, `fflate` |
 | PLATEAU GIS Converter (`nusamai`) | ≥ 1.0 | **non** | conversion CityGML « officielle », y compris les textures LOD2 |
-| GDAL (`ogr2ogr`) | — | non | convertisseur alternatif via `--converter custom` |
-| Blender | — | **non utilisé** | voir [§ Pourquoi pas Blender](#pourquoi-pas-blender) |
+| GDAL (`ogr2ogr`) | - | non | convertisseur alternatif via `--converter custom` |
+| Blender | - | **non utilisé** | voir [§ Pourquoi pas Blender](#pourquoi-pas-blender) |
 
 Aucun outil externe n'est nécessaire pour faire tourner le prototype : le
 lecteur CityGML intégré prend le relais, avec les limites décrites plus bas.
 
 ## 2. Installation des outils externes
 
-### PLATEAU GIS Converter — le convertisseur officiel
+### PLATEAU GIS Converter - le convertisseur officiel
 
 C'est le convertisseur CityGML publié par le MLIT (développé par MIERUNE,
 licence MIT). Contrairement à ce qu'on lit souvent, **il a bien une CLI** : le
@@ -55,7 +55,7 @@ binaire s'appelle `nusamai` et son interface est
 README, « CLI のインストール手順 »).
 
 ```bash
-# Linux x86_64 — depuis https://github.com/MIERUNE/plateau-gis-converter/releases
+# Linux x86_64 - depuis https://github.com/MIERUNE/plateau-gis-converter/releases
 tar -xzf nusamai-<version>-x86_64-unknown-linux-gnu.tar.gz
 sudo install -m 755 nusamai /usr/local/bin/nusamai
 
@@ -95,13 +95,13 @@ sans ambiguïté au Japon.
 | --- | --- | --- |
 | `PLATEAU_PROTOTYPE` | `shibuya-ebisu` | tronçon traité (clé de `PROTOTYPE_SEGMENTS`) |
 | `PLATEAU_SAMPLE_DENSITY` | `900` | bâtiments par km pour l'échantillon synthétique |
-| `PLATEAU_DATASET_URL` | — | URL de l'archive CityGML à télécharger |
+| `PLATEAU_DATASET_URL` | - | URL de l'archive CityGML à télécharger |
 | `PLATEAU_DATASET` | `tokyo23ku-citygml` | identifiant dans `DATASETS` |
-| `--dir <dossier>` | — | livraison déjà extraite (contourne le 7z) |
+| `--dir <dossier>` | - | livraison déjà extraite (contourne le 7z) |
 | `PLATEAU_SOURCE` | auto | `sample` ou `dataset` |
 | `PLATEAU_CONVERTER` | `auto` | `auto`, `builtin`, `nusamai`, `custom` |
-| `PLATEAU_CONVERTER_PATH` | — | chemin du binaire `nusamai` |
-| `PLATEAU_CONVERTER_CMD` | — | gabarit de commande (`custom`) |
+| `PLATEAU_CONVERTER_PATH` | - | chemin du binaire `nusamai` |
+| `PLATEAU_CONVERTER_CMD` | - | gabarit de commande (`custom`) |
 | `PLATEAU_CORRIDOR_M` | `300` | demi-largeur du corridor (m) |
 | `PLATEAU_CHUNK_M` | `400` | longueur d'un chunk (m) |
 | `PLATEAU_ROUTE_SAMPLE_M` | `8` | pas d'échantillonnage du tracé (m) |
@@ -130,7 +130,7 @@ L'URL a le dernier mot dans les deux sens ; sans paramètre,
 **aussi en production** : c'est ce qui permet de montrer le prototype sur le
 site déployé, à qui le demande, sans l'imposer à personne.
 
-`?plateau=1` fait deux choses à la fois — allumer le prototype *et* s'y rendre.
+`?plateau=1` fait deux choses à la fois - allumer le prototype *et* s'y rendre.
 Sans le second effet le paramètre serait une promesse creuse : le tirage
 d'entrée pose le joueur n'importe où sur la boucle, et il faudrait attendre
 jusqu'à une heure de trajet pour atteindre le tronçon couvert.
@@ -139,7 +139,7 @@ jusqu'à une heure de trajet pour atteindre le tronçon couvert.
 l'échantillon synthétique, les bâtiments affichés sont *inventés*. Les montrer
 d'office ferait passer une ville fictive pour Tokyo, là où le décor procédural,
 lui, s'assume comme une évocation. Le jour où le build tourne sur les vraies
-données PLATEAU, il suffit de repasser la constante à `true` — un test
+données PLATEAU, il suffit de repasser la constante à `true` - un test
 (`tests/plateauFlags.test.ts`) verrouille la valeur pour que ce soit une
 décision, pas un accident.
 
@@ -207,7 +207,7 @@ deux de diverger.
 
 * `--source sample` (défaut) : utilise / régénère l'échantillon synthétique.
 * `--dir <dossier>` : livraison **déjà extraite** sur le disque. C'est la
-  sortie de secours quand la ressource n'est pas un ZIP — PLATEAU publie aussi
+  sortie de secours quand la ressource n'est pas un ZIP - PLATEAU publie aussi
   du 7z, que ce pipeline ne sait pas ouvrir.
 * `--source dataset` : télécharge l'archive PLATEAU, avec cache par URL,
   **reprise par `Range`**, `HEAD` préalable pour annoncer la taille, et deux
@@ -216,7 +216,7 @@ deux de diverger.
 
 L'extraction est **sélective et en flux** (`fflate.Unzip`) : seuls les
 `udx/bldg/*.gml` sortent de l'archive. Une livraison PLATEAU contient aussi le
-MNT, la végétation, le mobilier, les codelists — inutiles ici et volumineux.
+MNT, la végétation, le mobilier, les codelists - inutiles ici et volumineux.
 
 ### 5.3 Conversion (`convert.mjs`)
 
@@ -224,8 +224,8 @@ Trois moteurs :
 
 | Moteur | Ce qu'il sait faire | Ce qu'il ne sait pas faire |
 | --- | --- | --- |
-| `nusamai` | tout le profil PLATEAU, textures comprises | — |
-| `custom` | ce que fait la commande fournie | — |
+| `nusamai` | tout le profil PLATEAU, textures comprises | - |
+| `custom` | ce que fait la commande fournie | - |
 | `builtin` | LOD1/LOD2 géométrique, anneaux intérieurs, `BuildingPart` | **apparences et textures**, résolution de `xlink` inter-fichiers, attributs i-UR |
 
 Le lecteur intégré (`lib/citygml.mjs`) n'est pas un bouche-trou symbolique : il
@@ -239,14 +239,14 @@ tête de fichier : sur du LOD2 texturé, il rendra la géométrie sans les textu
 La sélection au corridor a lieu **pendant** la conversion : c'est ce qui rend
 le traitement d'un jeu de plusieurs gigaoctets tenable, l'intermédiaire ne contenant que les
 bâtiments à ±300 m de l'axe. Un bâtiment est retenu si **son point le plus
-proche** de l'axe est dans le corridor — pas son centre : une barre de 60 m à
+proche** de l'axe est dans le corridor - pas son centre : une barre de 60 m à
 cheval sur la limite reste visible depuis le train.
 
 ### 5.4 Découpage, recentrage et export (`process.mjs`)
 
 * **Projection** : EPSG:6697 (géographique) → EPSG:6677 (JGD2011 / Japan Plane
   Rectangular CS IX, la zone officielle de Tokyo). Transverse Mercator par
-  série de Krüger, implémentée dans `lib/geo.mjs` — testée par aller-retour au
+  série de Krüger, implémentée dans `lib/geo.mjs` - testée par aller-retour au
   millimètre et par comparaison à la distance géodésique de Vincenty.
 * **Repère local** : origine au milieu du tracé, arrondie à 10 m. Convention
   three.js du projet : `+X` est, `+Y` hauteur, `-Z` nord, 1 unité = 1 m.
@@ -263,7 +263,7 @@ cheval sur la limite reste visible depuis le train.
   sommets restent à ±350 m de zéro.
 * **Triangulation** : normale de Newell, rabattement sur l'axe dominant,
   `earcut` avec trous, puis recollement du sens de chaque triangle sur la
-  normale du polygone — le pipeline est donc indifférent au sens de rotation
+  normale du polygone - le pipeline est donc indifférent au sens de rotation
   choisi par le producteur des données.
 * **Faces inférieures jetées** : la dalle du bas d'un solide LOD1 est
   invisible depuis la rue et vaut un sixième des triangles d'une boîte.
@@ -297,7 +297,7 @@ worldMatrix.copy(trainMatrix).invert();
 
 La position sur le tracé ne vient **pas** d'une interpolation linéaire en
 temps : elle suit la distance réellement parcourue, intégrée avec le profil de
-traction/freinage de `systems/trainPhysics` — celui-là même qui pilote la rame.
+traction/freinage de `systems/trainPhysics` - celui-là même qui pilote la rame.
 Sans cela, la ville défilerait à vitesse constante pendant que le train
 accélère encore. La distance est rapportée à la distance totale du trajet
 simulé, ce qui garantit : **progression 0 = début du tronçon, progression 1 =
@@ -345,7 +345,7 @@ tests/                        67 tests node:test
 
 `.cache/plateau/<étape>.json` porte, par étape, le hash de ses entrées
 (paramètres de config concernés + empreinte des fichiers sources) et la liste
-des fichiers produits. Une étape est sautée si — et seulement si — le marqueur
+des fichiers produits. Une étape est sautée si - et seulement si - le marqueur
 existe, le hash correspond et **tous** les fichiers déclarés sont encore là.
 
 ```
@@ -396,7 +396,7 @@ Points d'attention :
    liens vers `geospatial.jp` de ce dépôt sont ceux qui sont *cités par des
    dépôts officiels de Project PLATEAU*, pas des liens vérifiés en les
    ouvrant. Une première version du pipeline contenait une URL extrapolée
-   (`plateau-tokyo23ku-2023`) qui renvoyait un 404 — la convention à année
+   (`plateau-tokyo23ku-2023`) qui renvoyait un 404 - la convention à année
    avait été abandonnée en 2022 au profit du jeu unique `plateau-tokyo23ku`.
    Plus aucune URL de ressource n'est codée en dur.
 3. **Les hauteurs sont ellipsoïdales**, pas orthométriques. L'ondulation du
@@ -412,7 +412,7 @@ Points d'attention :
    tourné sur Sugamo → Ōtsuka (`SEGMENTS[10]`, en tranchée) : le mur de
    soutènement procédural, haut de cinq mètres, masquait le bas de la ville
    depuis une baie latérale pendant les deux tiers du parcours. C'était fidèle
-   à la réalité — on ne voit effectivement rien depuis un train en tranchée —
+   à la réalité - on ne voit effectivement rien depuis un train en tranchée -
    mais parfaitement contre-productif pour juger un pipeline. D'où le passage
    à Shibuya → Ebisu (`SEGMENTS[19]`, en viaduc), où le train court sept
    mètres au-dessus de la rue et où le regard passe par-dessus les toits bas.
@@ -461,7 +461,7 @@ Poids et contenu par chunk (voir `build-report.json` pour le détail complet) :
 
 Total 223 Ko pour 1 515 m de corridor (1 363 bâtiments : 402 proches,
 388 intermédiaires, 566 éloignés, 7 élagués), contre 1,7 Mo avant
-optimisation — **−87 %**. Mémoire de textures : nulle, faute de textures dans
+optimisation - **−87 %**. Mémoire de textures : nulle, faute de textures dans
 le LOD1.
 
 ### Sur la mémoire
@@ -475,7 +475,7 @@ matériaux et textures restent en mémoire GPU. À l'échelle du prototype
 1. suivre les chunks montés dans un compteur de références ;
 2. à la sortie d'un tronçon, pour chaque chunk dont le compteur retombe à 0 :
    `useGLTF.clear(url)` **puis** parcourir la scène mise en cache pour appeler
-   `geometry.dispose()`, `material.dispose()` et `texture.dispose()` — `clear`
+   `geometry.dispose()`, `material.dispose()` et `texture.dispose()` - `clear`
    seul ne libère que l'entrée de cache, pas les ressources WebGL ;
 3. ou remplacer `useGLTF` par un `GLTFLoader` piloté à la main, avec un cache
    LRU borné (par exemple 8 chunks) et un `dispose()` explicite à l'éviction.
@@ -495,7 +495,7 @@ budget. Marche à suivre :
    (corridor, chunks, bandes, textures) restent globaux.
 3. **Sélection spatiale.** Aujourd'hui `convert.mjs` charge un tracé et filtre
    dessus. Charger les 30 tracés et tester chaque bâtiment contre l'union des
-   corridors — avec un index spatial (grille de 200 m) pour ne pas faire
+   corridors - avec un index spatial (grille de 200 m) pour ne pas faire
    30 × N projections. C'est le seul endroit qui demande un vrai changement
    d'algorithme.
 4. **Données.** Le jeu Tokyo 23 区 couvre toute la boucle et pèse plusieurs
@@ -573,8 +573,8 @@ tranchée, jamais « au niveau de la voie »).
 
 ## Pourquoi pas Blender
 
-Blender aurait été un détour : tout ce dont le pipeline a besoin — dedup,
-weld, simplification, compression meshopt, recompression de textures — est
+Blender aurait été un détour : tout ce dont le pipeline a besoin - dedup,
+weld, simplification, compression meshopt, recompression de textures - est
 fourni par `@gltf-transform/*`, `meshoptimizer` et `sharp`, **déjà dépendances
 du projet**, sans processus externe ni format intermédiaire. Ajouter Blender
 aurait coûté une dépendance de plusieurs centaines de mégaoctets, un script
@@ -586,7 +586,7 @@ dépliage UV automatique, remaillage, cuisson d'occlusion ambiante.
 
 ### Quel jeu de données prendre
 
-**`https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku`** — sans millésime.
+**`https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku`** - sans millésime.
 
 Depuis le 1er avril 2022, PLATEAU a consolidé Tokyo 23 区 dans un jeu unique
 mis à jour en place ; tous les anciens jeux par format et par année
@@ -595,7 +595,7 @@ mis à jour en place ; tous les anciens jeux par format et par année
 année a donc été abandonnée : `plateau-tokyo23ku-2023` n'existe pas, et
 l'extrapoler donne un 404.
 
-Dans la fiche, prendre la ressource **CityGML** — pas OBJ, FBX, 3D Tiles, MVT
+Dans la fiche, prendre la ressource **CityGML** - pas OBJ, FBX, 3D Tiles, MVT
 ni GeoTIFF, qui sont des dérivés dont le pipeline ne peut rien faire. Les deux
 dépôts officiels (`PLATEAU-GIS-Converter`, `plateau-qgis-plugin`) prennent pour
 exemple la ressource étiquetée **« CityGML (v2) »** : c'est celle à privilégier.
@@ -650,8 +650,8 @@ monde (chunks montés, abscisse, sommets, distance du bâtiment le plus proche d
 l'emprise du wagon) et `__plateauSeek(0.6)` se pose à 60 % du tronçon.
 
 Le prototype étant éteint par défaut, il n'y a rien à couper : c'est
-`?plateau=1` qui l'allume. Pour l'imposer à tous les visiteurs — une fois le
-monde construit sur de vraies données — passer `ENABLE_PLATEAU_PROTOTYPE` à
+`?plateau=1` qui l'allume. Pour l'imposer à tous les visiteurs - une fois le
+monde construit sur de vraies données - passer `ENABLE_PLATEAU_PROTOTYPE` à
 `true` dans `src/systems/plateau.ts`.
 
 [Project PLATEAU]: https://www.mlit.go.jp/plateau/

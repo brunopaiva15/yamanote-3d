@@ -228,7 +228,7 @@ function buildDog() {
   // 3 m/s : le trot du rattrapage.
   const run = new THREE.AnimationClip('Run', 0.55, [rootTrack(0.55, 3, 0.08), ...gaitTracks(0.55, 0.85)]);
 
-  // Eating : museau au sol — c'est le reniflage de la promenade.
+  // Eating : museau au sol - c'est le reniflage de la promenade.
   const sniffHead = [mul('Head', E(0.5, 0, 0)), mul('Head', E(0.62, 0.06, 0)), mul('Head', E(0.5, 0, 0))];
   const eating = new THREE.AnimationClip('Eating', 1.6, [
     quatTrack('Neck', [0, 0.8, 1.6], [mul('Neck', E(0.85, 0, 0)), mul('Neck', E(0.95, 0, 0)), mul('Neck', E(0.85, 0, 0))]),
@@ -263,7 +263,7 @@ writeFileSync(
   JSON.stringify(
     {
       version: 1,
-      source: 'RIG DE TEST make-test-dog.mjs — NE PAS COMMITTER',
+      source: 'RIG DE TEST make-test-dog.mjs - NE PAS COMMITTER',
       license: 'dev-only',
       variants: [{ id: 'test_dog', file: 'test_dog.glb', height: REAL_HEIGHT }],
     },
@@ -271,4 +271,4 @@ writeFileSync(
     2,
   ),
 );
-console.log('écrit animals/manifest.json — 1 race de test');
+console.log('écrit animals/manifest.json - 1 race de test');

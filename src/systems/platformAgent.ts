@@ -2,7 +2,7 @@
 //
 // La sono du quai dit déjà les consignes en japonais (systems/stationPa), et
 // elle continue : c'est le haut-parleur, il porte loin. Mais un haut-parleur
-// n'a jamais fait reculer personne — quand quelqu'un tient une porte, un agent
+// n'a jamais fait reculer personne - quand quelqu'un tient une porte, un agent
 // se déplace, se plante devant la baie et s'adresse à LUI. C'est ce
 // déplacement-là que met en scène systems/platformCrowd ; ce module ne tient
 // que sa parole : une phrase courte, dans la langue de l'interface, accrochée
@@ -78,7 +78,7 @@ export function platformAgentReady(): boolean {
 
 /**
  * Il dit sa `n`-ième consigne (1, 2, 3…), s'il est bien là pour la dire.
- * @returns false s'il n'est pas encore arrivé — l'appelant réessaiera.
+ * @returns false s'il n'est pas encore arrivé - l'appelant réessaiera.
  */
 export function platformAgentSays(n: number): boolean {
   if (!platformAgentPosted()) return false;

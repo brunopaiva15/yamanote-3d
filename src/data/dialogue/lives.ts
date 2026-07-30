@@ -2,14 +2,14 @@
 //
 // Le fond du catalogue : ce qu'on ne dit qu'à un inconnu, justement parce
 // qu'on ne le reverra pas. Une confidence de deux stations, un souvenir, une
-// décision prise entre deux gares. C'est ici que le genre pèse le plus —
-// « je suis restée », « je suis resté » —, et ici qu'il faut le plus se retenir
+// décision prise entre deux gares. C'est ici que le genre pèse le plus -
+// « je suis restée », « je suis resté » -, et ici qu'il faut le plus se retenir
 // d'en faire trop : personne ne raconte sa vie entière à un voisin de wagon.
 
 import type { DialogueEntry } from './types';
 
 export const DIALOGUE_LIVES: readonly DialogueEntry[] = [
-  // ——— Confidences ———
+  // --- Confidences ---
   {
     id: 'lv.decision',
     lines: [
@@ -60,7 +60,7 @@ export const DIALOGUE_LIVES: readonly DialogueEntry[] = [
     lines: [
       {
         t: {
-          fr: 'J’oublie les noms, maintenant. Les visages, non — les noms seulement.',
+          fr: 'J’oublie les noms, maintenant. Les visages, non - les noms seulement.',
           en: 'I forget names now. Not faces. Just the names.',
           ja: '名前が出てこなくなりました。顔は覚えてるんですけどね。',
         },
@@ -180,7 +180,7 @@ export const DIALOGUE_LIVES: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Souvenirs ———
+  // --- Souvenirs ---
   {
     id: 'lv.first.day',
     lines: [
@@ -265,7 +265,7 @@ export const DIALOGUE_LIVES: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Projets ———
+  // --- Projets ---
   {
     id: 'lv.plan.quit.city',
     lines: [
@@ -342,7 +342,7 @@ export const DIALOGUE_LIVES: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Petites joies ———
+  // --- Petites joies ---
   {
     id: 'lv.joy.seat',
     when: { posture: ['seated'], crowdMin: 0.6 },
@@ -407,7 +407,7 @@ export const DIALOGUE_LIVES: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Étrange, drôle ———
+  // --- Étrange, drôle ---
   {
     id: 'lv.odd.same.seat',
     lines: [
@@ -507,7 +507,7 @@ export const DIALOGUE_LIVES: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Le tour de la boucle ———
+  // --- Le tour de la boucle ---
   {
     id: 'lv.loop.think',
     lines: [

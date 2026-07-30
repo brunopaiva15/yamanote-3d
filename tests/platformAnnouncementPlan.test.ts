@@ -10,7 +10,7 @@
 //   • une heure de pointe fait parler davantage ;
 //   • un retard pousse les messages de circulation et de portes ;
 //   • une petite gare déserte peut ne rien dire du tout ;
-//   • et le plan ne se retire pas : relu, il est le même — aucun tirage n'a lieu
+//   • et le plan ne se retire pas : relu, il est le même - aucun tirage n'a lieu
 //     à la frame.
 //
 // Le module est pur : ni store, ni audio, ni Math.random(). Le dernier point se
@@ -37,7 +37,7 @@ const {
 } = await import('../src/systems/platformAnnouncementPlan.ts');
 const { PLATFORM_AGENT_MESSAGES } = await import('../src/data/stationAnnouncements.ts');
 
-/** Shinjuku (16) est un hub, Uguisudani (5) non — voir isMajorHub. */
+/** Shinjuku (16) est un hub, Uguisudani (5) non - voir isMajorHub. */
 const HUB = 16;
 const SMALL = 5;
 
@@ -105,7 +105,7 @@ test('à tirage égal, le creux long l’annonce et le creux court non', () => {
 
 test('l’anticipée n’est plus systématique, et le remerciement encore moins', () => {
   // Sur une centaine de creux ordinaires, ni l'une ni l'autre ne passe à tous
-  // les coups — c'était précisément le défaut de l'ancienne horloge.
+  // les coups - c'était précisément le défaut de l'ancienne horloge.
   let pre = 0;
   let greet = 0;
   for (let stop = 0; stop < 120; stop++) {

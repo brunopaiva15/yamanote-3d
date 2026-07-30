@@ -1,11 +1,11 @@
 // Environnement du tronçon courant : poids fondus par type (viaduc, corridor,
 // tranchée, sol), hauteur de mur effective, ombrage des ponts routiers et des
 // toitures de gare. Valeurs mutées chaque frame (idiome runtime.ts), lues par
-// les composants three dans leur useFrame — aucun état React.
+// les composants three dans leur useFrame - aucun état React.
 //
 // L'environnement appartient au tronçon ENTIER. L'index avance au début de
 // `depart`, mais on retient le tronçon d'arrivée tant que le quai est encore
-// visible — sinon murs / clôtures du prochain segment remplacent le mur de
+// visible - sinon murs / clôtures du prochain segment remplacent le mur de
 // gare sous les yeux. Voir data/segments.ts pour la classification.
 
 import { SEGMENTS, journeyProgress, segmentAt, type SegmentKind } from '../data/segments';
@@ -53,7 +53,7 @@ export const segEnv = {
    * `elevation` ne servait jusqu'ici qu'à habiller : murs en tranchée, piles de
    * pont plus hautes en viaduc. Or c'est la cote qui commande tout le paysage.
    * Depuis un siège, par une baie, on ne voit d'un bâtiment posé à douze mètres
-   * qu'une tranche de quatre mètres de haut — ni ciel, ni ligne de toit. C'est
+   * qu'une tranche de quatre mètres de haut - ni ciel, ni ligne de toit. C'est
    * exact au niveau du sol ; ça ne l'est pas sur les treize tronçons en viaduc,
    * où l'on court sept mètres au-dessus de la rue et où le regard passe
    * PAR-DESSUS les toits bas. En tranchée, symétriquement, la ville s'assied
@@ -81,7 +81,7 @@ export function bridgeZ(k: number): number {
 
 export function updateSegmentEnv(dt: number): void {
   const { index, phase, platformIndex, loopDirection } = useStore.getState();
-  // Au début de `depart`, l'index a déjà avancé vers la gare suivante — mais
+  // Au début de `depart`, l'index a déjà avancé vers la gare suivante - mais
   // le quai (opaque, coulissant) est encore sous les yeux. On conserve le
   // tronçon d'arrivée jusqu'à ce que le quai soit hors de vue, sinon les
   // murs / clôtures du prochain segment « remplacent » le mur de gare.
@@ -127,7 +127,7 @@ export function updateSegmentEnv(dt: number): void {
   // (zéro allocation) depuis la position des deux tabliers recyclés.
   // Le gate suit AUSSI la hauteur de mur : le tablier est posé sur les murs
   // de la tranchée, et quand elle s'ouvre à l'approche d'une gare, les murs
-  // fondent — sans ce facteur, le tablier descendait avec eux jusqu'à
+  // fondent - sans ce facteur, le tablier descendait avec eux jusqu'à
   // traverser le wagon. Il s'estompe dès que les murs passent sous ~3,9 m,
   // la hauteur qui le tient au-dessus de la caisse (le rendu borne en plus
   // la hauteur du tablier, ceinture et bretelles).

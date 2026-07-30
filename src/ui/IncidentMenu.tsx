@@ -1,7 +1,7 @@
 // Le bouton qui provoque un arrêt en pleine voie.
 //
-// Les deux événements arrivent d'eux-mêmes — c'est même tout leur intérêt qu'ils
-// tombent sans prévenir —, mais ils sont RARES : dix à vingt-quatre gares pour
+// Les deux événements arrivent d'eux-mêmes - c'est même tout leur intérêt qu'ils
+// tombent sans prévenir -, mais ils sont RARES : dix à vingt-quatre gares pour
 // le coup de frein, trente-quatre à soixante-dix pour la coupure de courant,
 // soit jusqu'à trois heures de trajet. Une session ordinaire peut n'en croiser
 // aucun. Ce menu n'invente donc rien et ne double aucune mécanique : il appelle
@@ -10,7 +10,7 @@
 //
 // D'où la discrétion voulue : une icône seule, en bout de barre, plus effacée
 // que les réglages voisins tant qu'on ne la survole pas. Ce n'est pas un
-// réglage, c'est une provocation — on ne tombe pas dessus en cherchant le
+// réglage, c'est une provocation - on ne tombe pas dessus en cherchant le
 // volume.
 
 import { useEffect, useRef, useState } from 'react';
@@ -24,7 +24,7 @@ import { beginEmergencyStop, beginPowerOutage } from '../systems/stationCycle';
  *
  * Les deux mêmes conditions que `beginEmergencyStop` / `beginPowerOutage` :
  * la rame doit rouler en pleine voie, et rien ne doit être déjà en cours. On
- * les recopie ici pour pouvoir DIRE pourquoi c'est grisé — un bouton mort sans
+ * les recopie ici pour pouvoir DIRE pourquoi c'est grisé - un bouton mort sans
  * explication est pire qu'un bouton absent.
  */
 type Availability = 'ready' | 'notCruising' | 'running';
@@ -47,7 +47,7 @@ export function IncidentMenu({ className = '' }: { className?: string }) {
   const root = useRef<HTMLDivElement>(null);
 
   // L'état vit dans runtime, pas dans le store : on le sonde comme l'horloge du
-  // HUD, et seulement panneau ouvert — il n'y a personne pour le lire sinon.
+  // HUD, et seulement panneau ouvert - il n'y a personne pour le lire sinon.
   useEffect(() => {
     if (!open) return;
     const tick = () => setState(availability(useStore.getState().phase));

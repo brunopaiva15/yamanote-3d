@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "source": "Quaternius — Ultimate Animated Animals",
+  "source": "Quaternius - Ultimate Animated Animals",
   "license": "CC0 1.0",
   "variants": [
     {
@@ -9,5 +9,5 @@
       "height": 0.46
     }
   ],
-  "note": "Limite JR East : chien + caisse ≤ 10 kg, cotes cumulées ≤ 120 cm. Husky et loup ne passent pas — seule une petite race voyage sur la Yamanote."
+  "note": "Limite JR East : chien + caisse ≤ 10 kg, cotes cumulées ≤ 120 cm. Husky et loup ne passent pas - seule une petite race voyage sur la Yamanote."
 }
