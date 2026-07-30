@@ -17,14 +17,12 @@
 // - tts   : texte adapté à la synthèse (macrons ASCII et « JY-xx » épelé en
 //           anglais ; en japonais, les quelques mots que l'analyseur du
 //           générateur lit de travers, réécrits en kana - voir JA_READINGS) ;
-// - voice : voix Kokoro. CINQ sources parlent dans ce jeu et on doit les
-//           distinguer à l'oreille sans regarder : la sono de la RAME
-//           (jf_alpha), les deux automates du QUAI - une femme sur le 内回り
-//           (jf_tebukuro), un homme sur le 外回り (jm_kumo), de sorte qu'on sait
-//           sans lever les yeux lequel des deux quais vient d'annoncer -,
-//           l'AGENT de quai au micro (jf_nezumi, moins lisse - c'est une
-//           personne, pas un automate), et les deux voix anglaises (af_heart à
-//           bord, am_michael au quai).
+// - voice : voix Kokoro. CINQ rôles parlent dans ce jeu : la sono de la RAME
+//           (jf_alpha), les deux automates du QUAI - jf_alpha également sur le
+//           内回り, un homme (jm_kumo) sur le 外回り, de sorte que les deux quais
+//           restent séparables à l'oreille -, l'AGENT de quai au micro
+//           (jf_nezumi, moins lisse : c'est une personne, pas un automate), et
+//           les deux voix anglaises (af_heart à bord, am_michael au quai).
 // - speed : vitesse Kokoro. Le japonais est au-dessus du rythme natif pour
 //           COMPENSER la découpe en segments du générateur : synthétisé seul,
 //           un segment reçoit une intonation de fin de phrase et s'allonge
@@ -105,18 +103,18 @@ const CABIN_VOICE: Record<Utterance['lang'], VoiceSetting> = {
  * une imitation des voix réelles de JR East, seulement la distinction
  * féminin/masculin qui rend les deux quais séparables à l'oreille.
  *
- * jf_tebukuro pour le 内回り : la seule voix féminine japonaise de Kokoro qui ne
- * soit ni celle de la rame (jf_alpha) ni celle de l'agent de quai (jf_nezumi) -
- * il faut trois femmes distinctes, puisque les trois peuvent parler dans la même
- * minute. Le débit est celui de l'autre automate : c'est la même machine, elle
- * ne parle pas plus vite parce que le quai est en face.
+ * jf_alpha pour le 内回り : c'est volontairement la même voix que l'annonce
+ * japonaise dans la rame. Son débit un peu plus posé (1.10 contre 1.15 à bord)
+ * suffit à lui donner une couleur de quai sans retrouver le registre très aigu
+ * de jf_tebukuro. Le rôle reste dans la clé du clip : les MP3 du quai et de la
+ * rame demeurent deux prises indépendantes malgré la voix commune.
  *
  * L'agent reste une femme, la même dans les deux sens : c'est une PERSONNE, elle
  * est sur le quai, elle n'a qu'une voix. Et on l'entend juste après l'automate -
  * on doit savoir tout de suite lequel des deux vient de prendre le micro.
  */
 const STATION_VOICE: Record<StationVoice, VoiceSetting> = {
-  'atos-inner': { voice: 'jf_tebukuro', speed: 1.15 },
+  'atos-inner': { voice: 'jf_alpha', speed: 1.10 },
   'atos-outer': { voice: 'jm_kumo', speed: 1.15 },
   // L'agent parle un peu plus vite : elle improvise, elle n'articule pas un script.
   agent: { voice: 'jf_nezumi', speed: 1.22 },
