@@ -75,6 +75,7 @@
           height: parseFloat(q.get('h') ?? '1.08'),
           bob: 0, bodyLean: 0, headYaw: 0.2, headPitch: 0.05,
           holdStrap: q.get('strap') === '1', action: q.get('action') ?? 'none',
+          identity: parseInt(q.get('id') ?? '0'),
         };
         if (p.action === 'phone') {
           p.headYaw = 0;

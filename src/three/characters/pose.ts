@@ -1273,38 +1273,70 @@ export function applyPoseOverrides(
         applyWorld(bones.upperArmL, qLTarget, handWL * 0.95);
         if (bones.upperArmR) applyWorld(bones.upperArmR, mirrorWorld(qLTarget, qWrapOnly, qMirror), handWR * 0.95);
       }
-      // 2) Avant-bras : chacun vise le dessus de SON genou.
+      // 2) Avant-bras : les mains REPOSENT, elles ne flottent plus au-dessus du
+      // genou. Deux assises tirées de façon stable par voyageur, pour casser
+      // l'uniformité qui faisait « poser pour la photo » toute la banquette :
+      //   - cuisses : chaque avant-bras se couche sur SA cuisse, main vers le
+      //     genou (le repos par défaut) ;
+      //   - giron : les deux mains se réunissent dans le giron, l'une près de
+      //     l'autre - la posture tranquille du trajet.
+      // La cible visait le dessus du genou + 10 cm : la main planait dans le
+      // vide. Elle se pose maintenant SUR la cuisse (lerp hanche→genou), au ras.
+      const sitVar = (((p.identity ?? p.id ?? 0) * 0.6180339887) % 1 + 1) % 1;
+      const lapRest = sitVar < 0.4;
+      // Centre du giron : entre les deux hanches, un peu en avant, à hauteur de
+      // cuisse. Les deux avant-bras y convergent (variante mains réunies).
+      let lapX = 0;
+      let lapY = 0;
+      let lapZ = 0;
+      if (lapRest && bones.upLegL && bones.upLegR) {
+        bones.upLegL.updateWorldMatrix(true, false);
+        bones.upLegL.getWorldPosition(vBonePos);
+        bones.upLegR.updateWorldMatrix(true, false);
+        bones.upLegR.getWorldPosition(vTarget);
+        lapX = (vBonePos.x + vTarget.x) / 2 + sinY * 0.13;
+        lapY = (vBonePos.y + vTarget.y) / 2 + 0.03;
+        lapZ = (vBonePos.z + vTarget.z) / 2 + cosY * 0.13;
+      }
       const foreRest = clone.armRest.foreArmL;
       if (bones.foreArmL && foreRest) {
-        const kneeAim = (fore: THREE.Bone, knee: THREE.Bone | undefined): boolean => {
-          if (!knee) return false;
+        // Direction coude → cible de repos (cuisse ou giron), renvoyée dans vTarget.
+        const restAim = (fore: THREE.Bone, hip: THREE.Bone | undefined, knee: THREE.Bone | undefined): boolean => {
           fore.updateWorldMatrix(true, false);
           fore.getWorldPosition(vBonePos); // coude
-          knee.updateWorldMatrix(true, false);
-          knee.getWorldPosition(vTarget);
-          vTarget.y += 0.1; // dessus du genou (marge : les doigts ne doivent pas le traverser)
-          vTarget.addScaledVector(vDir, -0.03);
+          if (lapRest) {
+            vTarget.set(lapX, lapY, lapZ);
+          } else {
+            if (!hip || !knee) return false;
+            hip.updateWorldMatrix(true, false);
+            hip.getWorldPosition(vFoot); // hanche
+            knee.updateWorldMatrix(true, false);
+            knee.getWorldPosition(vChest); // genou
+            vTarget.copy(vFoot).lerp(vChest, 0.8); // sur la cuisse, vers le genou
+            vTarget.y += 0.015; // au ras du dessus de cuisse
+          }
           vTarget.sub(vBonePos);
           return vTarget.lengthSq() > 1e-6;
         };
-        vDir.set(sinY, 0, cosY);
-        if (kneeAim(bones.foreArmL, bones.legL)) {
+        if (restAim(bones.foreArmL, bones.upLegL, bones.legL)) {
           worldTarget(foreRest, qWrap, vTarget.x, vTarget.y, vTarget.z, qLTarget);
           applyWorld(bones.foreArmL, qLTarget, handWL);
           if (bones.foreArmR) {
             // NB : alignY ne supporte pas out === q (aliasing) - sortie séparée.
             mirrorWorld(qLTarget, qWrapOnly, qMirror);
-            if (kneeAim(bones.foreArmR, bones.legR)) alignY(qMirror, vTarget.x, vTarget.y, vTarget.z, qLTarget);
+            if (restAim(bones.foreArmR, bones.upLegR, bones.legR)) alignY(qMirror, vTarget.x, vTarget.y, vTarget.z, qLTarget);
             else qLTarget.copy(qMirror);
             applyWorld(bones.foreArmR, qLTarget, handWR);
           }
         }
       }
-      // 3) Mains : presque à plat sur le genou (un drapé trop plongeant fait
-      // traverser les doigts), miroir exact.
+      // 3) Mains : presque à plat (un drapé trop plongeant fait traverser les
+      // doigts). Dans le giron, elles se tournent un peu l'une vers l'autre.
       const handRest = clone.armRest.handL;
       if (bones.handL && handRest) {
-        worldTarget(handRest, qWrap, sinY, -0.12, cosY, qLTarget);
+        const hx = lapRest ? sinY * 0.7 - cosY * 0.35 : sinY;
+        const hz = lapRest ? cosY * 0.7 + sinY * 0.35 : cosY;
+        worldTarget(handRest, qWrap, hx, -0.12, hz, qLTarget);
         applyWorld(bones.handL, qLTarget, handWL);
         if (bones.handR) applyWorld(bones.handR, mirrorWorld(qLTarget, qWrapOnly, qMirror), handWR);
       }
