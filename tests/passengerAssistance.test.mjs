@@ -23,6 +23,7 @@ test('les conflits interdisent le demarrage et un armement attend le dwell porte
   }
   assert.match(machine, /stage === 'none'.*\(phase === 'cruise'/s);
   assert.match(machine, /stage = 'armed'/);
+  assert.match(machine, /runtime\.phaseT < SELECT_AFTER_EXCHANGE/);
 });
 
 test('le bloqueur dedie tient les portes et est retire avant la sequence normale', () => {
@@ -46,6 +47,21 @@ test('le plan aleatoire est tire une fois et injectable', () => {
   for (const duration of ['reaction:', 'assist,', 'alight:', 'finalCheck:', 'resume:']) assert.ok(machine.includes(duration));
   assert.match(machine, /const GAP_MIN = 52/);
   assert.match(machine, /const GAP_MAX = 104/);
+});
+
+test('le voyageur suit une vraie trajectoire vers la porte puis le quai', () => {
+  assert.match(machine, /beginPassengerAlight\(id: number, doorZ: number\): boolean/);
+  assert.match(machine, /p\.state = 'alighting'/);
+  assert.match(machine, /new THREE\.Vector3\(side \* 0\.95, 0, doorZ\)/);
+  assert.match(machine, /new THREE\.Vector3\(side \* DOOR_HANDOVER_X, 0, doorZ\)/);
+  ordered('effects.beginPassengerAlight(passengerId!, plan.doorZ)', "stage = 'passenger-alighting'", 'effects.passengerAlighted(passengerId!)');
+  assert.match(machine, /function finishPassengerAlighting[\s\S]*stage = 'final-check'/);
+});
+
+test('la disparition au chrono ne sert plus que de garde-fou', () => {
+  assert.match(machine, /if \(effects\.passengerAlighted\(passengerId!\)\)/);
+  assert.match(machine, /else if \(elapsed >= plan\.alight\)[\s\S]*effects\.removePassenger/);
+  assert.match(machine, /if \(!snapshot\)[\s\S]*p\.bodyLean = 0\.42/);
 });
 
 test('voyageur et agent sont nettoyes sans neutraliser les obstructions suivantes', () => {
