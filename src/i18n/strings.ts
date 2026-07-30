@@ -165,6 +165,7 @@ export interface Strings {
   language: string;
 
   footer: {
+    about: string;
     disclaimer: string;
     support: string;
   };
@@ -279,6 +280,7 @@ const FR: Strings = {
 
   language: 'Langue',
   footer: {
+    about: 'À propos du projet',
     disclaimer:
       'Projet indépendant, sans lien avec JR East, Tokyo Metro, Toei Subway ni aucune autre compagnie ferroviaire ou titulaire de marque. Les noms, logos et éléments visuels cités appartiennent à leurs propriétaires respectifs.',
     support: 'Soutenir le projet',
@@ -394,6 +396,7 @@ const EN: Strings = {
 
   language: 'Language',
   footer: {
+    about: 'About the project',
     disclaimer:
       'Independent project, not affiliated with JR East, Tokyo Metro, Toei Subway, or any other railway operator or trademark holder. Names, logos, and visual elements mentioned belong to their respective owners.',
     support: 'Support the project',
@@ -509,6 +512,7 @@ const JA: Strings = {
 
   language: '言語',
   footer: {
+    about: 'プロジェクトについて',
     disclaimer:
       '独立プロジェクトであり、JR東日本、東京メトロ、都営地下鉄その他いかなる鉄道事業者・商標権者とも提携・後援・スポンサー関係にありません。記載の名称・ロゴ・視覚要素は各権利者に帰属します。',
     support: 'プロジェクトを支援する',

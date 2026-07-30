@@ -146,171 +146,23 @@
       }
     </script>
 
-    <!--
-      Habillage de l'écran d'attente ci-dessous. Il vit ici et pas dans
-      styles.css : cette feuille-là arrive avec le module JavaScript, c'est-à-dire
-      trop tard pour la seule chose que cet écran doit faire - exister avant lui.
-      Mêmes valeurs que `--ink-line`, `--text`, `--text-dim` et `--green` dans
-      src/styles.css.
-    -->
+    <!-- Empêche un flash blanc avant le chargement de la feuille principale. -->
     <style>
       html,
       body {
         margin: 0;
         background: #10151a;
-        color: #eef1f2;
-        font-family: 'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
-      }
-      .boot {
-        position: fixed;
-        inset: 0;
-        overflow: auto;
-        /* Le viewport est en viewport-fit=cover : comme le HUD, cet écran se
-           tient à l'écart de l'encoche et des bords arrondis. */
-        padding: max(3rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right))
-          max(3rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
-        display: flex;
-        justify-content: center;
-      }
-      .boot-inner {
-        max-width: 44rem;
-      }
-      .boot h1 {
-        font-size: clamp(1.8rem, 6vw, 2.8rem);
-        line-height: 1.15;
-        margin: 0 0 0.4rem;
-      }
-      .boot h2 {
-        font-size: 0.95rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #80c241;
-        margin: 2rem 0 0.6rem;
-      }
-      .boot p,
-      .boot li {
-        line-height: 1.6;
-        color: #aeb8bd;
-      }
-      .boot p {
-        margin: 0 0 0.8rem;
-      }
-      .boot .boot-tagline {
-        color: #eef1f2;
-        font-size: 1.1rem;
-      }
-      .boot ul {
-        margin: 0;
-        padding-left: 1.2rem;
-      }
-      .boot .boot-stations {
-        list-style: none;
-        padding: 0;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.35rem 0.7rem;
-      }
-      .boot a {
-        color: #80c241;
-      }
-      .boot small {
-        display: block;
-        margin-top: 2rem;
-        color: #5c666d;
       }
     </style>
   </head>
   <body>
-    <!--
-      Le contenu ci-dessous est le document tel qu'il existe SANS JavaScript :
-      c'est lui que lit un robot qui n'exécute rien, et c'est lui que voit un
-      visiteur pendant que le module se charge. React le remplace intégralement
-      au premier rendu (`createRoot(...).render()` vide son conteneur) : rien
-      n'est caché à personne, ce texte dit ce que la page fait, dans les mêmes
-      termes que l'écran d'accueil.
-    -->
-    <div id="root">
-      <div class="boot">
-        <div class="boot-inner">
-          <h1>Yamanote 3D - 山手線</h1>
-          <p class="boot-tagline">One loop. Thirty stations. No objective.</p>
-          <p>
-            A contemplative browser ride on Tokyo's Yamanote Line: you are a passenger on a
-            JR East E235 series train, going round the thirty-station loop in near real time -
-            about sixty-seven minutes a lap. Nothing to win, nothing to score. Walk the
-            carriage, sit down, watch the city drift past, listen to the announcements and the
-            departure melodies.
-          </p>
-          <p>Loading the ride…</p>
-
-          <h2>On board</h2>
-          <ul>
-            <li>Walk the carriage in first person, sit down on a seat, hold a strap.</li>
-            <li>
-              Step off through an open door and stay on the platform: the train leaves without
-              you, and the next one comes about two minutes later.
-            </li>
-            <li>
-              Real announcements and 発車メロディ departure melodies, in Japanese and English,
-              for each of the thirty stations and both directions of travel - 内回り and 外回り.
-            </li>
-            <li>
-              Pick the date and time before boarding: the season colours the trees, the sun
-              sits where it really would, and that day's weather follows.
-            </li>
-            <li>Talk to fellow passengers. Interface in English, French and Japanese.</li>
-          </ul>
-
-          <h2>The thirty stations</h2>
-          <ul class="boot-stations">
-            <li>JY01 Tokyo 東京</li>
-            <li>JY02 Kanda 神田</li>
-            <li>JY03 Akihabara 秋葉原</li>
-            <li>JY04 Okachimachi 御徒町</li>
-            <li>JY05 Ueno 上野</li>
-            <li>JY06 Uguisudani 鶯谷</li>
-            <li>JY07 Nippori 日暮里</li>
-            <li>JY08 Nishi-Nippori 西日暮里</li>
-            <li>JY09 Tabata 田端</li>
-            <li>JY10 Komagome 駒込</li>
-            <li>JY11 Sugamo 巣鴨</li>
-            <li>JY12 Ōtsuka 大塚</li>
-            <li>JY13 Ikebukuro 池袋</li>
-            <li>JY14 Mejiro 目白</li>
-            <li>JY15 Takadanobaba 高田馬場</li>
-            <li>JY16 Shin-Ōkubo 新大久保</li>
-            <li>JY17 Shinjuku 新宿</li>
-            <li>JY18 Yoyogi 代々木</li>
-            <li>JY19 Harajuku 原宿</li>
-            <li>JY20 Shibuya 渋谷</li>
-            <li>JY21 Ebisu 恵比寿</li>
-            <li>JY22 Meguro 目黒</li>
-            <li>JY23 Gotanda 五反田</li>
-            <li>JY24 Ōsaki 大崎</li>
-            <li>JY25 Shinagawa 品川</li>
-            <li>JY26 Takanawa Gateway 高輪ゲートウェイ</li>
-            <li>JY27 Tamachi 田町</li>
-            <li>JY28 Hamamatsuchō 浜松町</li>
-            <li>JY29 Shimbashi 新橋</li>
-            <li>JY30 Yūrakuchō 有楽町</li>
-          </ul>
-
-          <noscript>
-            <h2>JavaScript required</h2>
-            <p>
-              Yamanote 3D renders in real time with WebGL 2. Enable JavaScript, then reload
-              this page to board the train.
-            </p>
-          </noscript>
-
-          <small>
-            A fan-made, non-commercial project by
-            <a href="https://vergasta.ch" rel="author">Vergasta Digital</a>. Not affiliated with,
-            endorsed by, or connected to East Japan Railway Company (JR East).
-          </small>
-        </div>
-      </div>
-    </div>
+    <!-- Le conteneur reste volontairement vide : aucun texte ne doit flasher
+         avant que React affiche l'écran d'accueil. -->
+    <div id="root"></div>
+    <noscript>
+      <p>Yamanote 3D requires JavaScript and WebGL 2.</p>
+      <p><a href="./about.html">Read about the project</a></p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -385,6 +385,11 @@ body,
   margin-inline: auto;
 }
 
+.site-footer-about {
+  margin-top: 8px;
+  font-size: 11px;
+}
+
 .site-footer-support {
   margin-top: 8px;
 }
