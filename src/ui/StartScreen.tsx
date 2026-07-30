@@ -17,15 +17,9 @@ import { STATIONS } from '../data/stations';
 import type { TokyoDate } from '../data/occupancy';
 import { useStore } from '../store';
 import { useT } from '../i18n';
-import { startAudio, setVolume } from '../systems/audioEngine';
-import { seedPassengers } from '../systems/passengers';
 import { runtime, tokyoNow } from '../systems/runtime';
-import { seedWeather } from '../systems/weather';
-import { randomizeEntry } from '../systems/stationCycle';
-import { updatePlatformSpeakers } from '../systems/stationPa';
-import { segmentAt } from '../data/segments';
-import { PLATEAU_SEGMENT, plateauEntryStation } from '../systems/plateau';
 import { presenceEnabled, subscribeOnlineCount } from '../systems/presence';
+import { loadGame } from '../gameLoader';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
 import { Logo } from './Logo';
@@ -138,6 +132,12 @@ export function StartScreen() {
 
   const board = async () => {
     setLoading(true);
+    // C'est seulement cette action utilisateur qui ouvre le chunk du jeu.
+    // Le téléchargement se fait en parallèle de la préparation de la partie.
+    const gamePromise = loadGame();
+    const {
+      prepareGame,
+    } = await import('../systems/startGame');
     // Horloge Tokyo (réelle ou choisie) avant peuplement et tirage : densité
     // selon heure/jour. La date civile reste celle du jour à Tokyo.
     const now = tokyoNow();
@@ -150,15 +150,6 @@ export function StartScreen() {
       day: now.day,
       weekday: now.weekday,
     };
-    // Le temps du jour, posé à l'heure où l'on monte : on arrive au milieu
-    // d'une journée qui a déjà eu son temps, sol encore mouillé compris.
-    seedWeather();
-    try {
-      await startAudio();
-      setVolume(useStore.getState().volume);
-    } catch {
-      /* l'expérience reste jouable sans audio */
-    }
     // Gare choisie, ou point aléatoire sur la boucle (en route, freinage,
     // à quai, départ…) : plus de message d'accueil fixe ni de départ
     // systématique à l'arrêt.
@@ -172,22 +163,10 @@ export function StartScreen() {
     // imposerait. Sans le paramètre, plateauEntryStation() renvoie undefined et
     // le boarding normal - gare tirée au sort, ou choisie dans le menu -
     // reprend la main sans détour.
-    const entryStation = plateauEntryStation();
-    if (entryStation !== undefined) {
-      // randomizeEntry tire aussi la phase : on relance jusqu'à tomber sur une
-      // phase où le tronçon parcouru est bien celui du prototype.
-      for (let attempt = 0; attempt < 32; attempt++) {
-        // Le prototype ne couvre que le 内回り (voir systems/plateau) : le
-        // sens choisi dans le menu ne s'applique pas à cette entrée-là.
-        randomizeEntry(entryStation, 'inner');
-        if (segmentAt(useStore.getState().index, 'inner') === PLATEAU_SEGMENT) break;
-      }
-    } else {
-      randomizeEntry(Number.isFinite(stationIndex) ? stationIndex : undefined, direction);
-    }
-    updatePlatformSpeakers();
-    // Densité PNJ après le tirage, pour le tronçon / la phase choisis.
-    seedPassengers();
+    await Promise.all([
+      gamePromise,
+      prepareGame(Number.isFinite(stationIndex) ? stationIndex : undefined, direction),
+    ]);
     start();
   };
 
