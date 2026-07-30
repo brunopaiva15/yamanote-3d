@@ -1,0 +1,4176 @@
+{
+ "items": [
+  {
+   "key": "a7c993f2",
+   "lang": "ja-JP",
+   "text": "次は。東京。東京。お出口は。右側です。",
+   "tts": "次は。東京。東京。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "d24e7332",
+   "lang": "en-US",
+   "text": "The next station is. Tokyo. JY. 01. The doors on the right side will open.",
+   "tts": "The next station is. Tokyo. J Y. 1. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "4c8edffb",
+   "lang": "ja-JP",
+   "text": "中央線。京浜東北線。東海道線。横須賀線。総武線快速。京葉線。上野東京ライン。東海道新幹線。東京メトロ丸ノ内線は。お乗換です。",
+   "tts": "中央線。京浜東北線。東海道線。横須賀線。総武線快速。京葉線。上野東京ライン。東海道新幹線。東京メトロ丸ノ内線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "4894bb12",
+   "lang": "en-US",
+   "text": "Please change here for the Chuo. Keihin-Tohoku. Tokaido. Yokosuka. Sobu. Keiyo and Ueno-Tokyo Lines. The Tokaido Shinkansen. And the Tokyo Metro Marunouchi Line.",
+   "tts": "Please change here for the Chuo. Keihin-Tohoku. Tokaido. Yokosuka. Sobu. Keiyo and Ueno-Tokyo Lines. The Tokaido Shinkansen. And the Tokyo Metro Marunouchi Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "80f9104f",
+   "lang": "ja-JP",
+   "text": "まもなく。東京。東京。お出口は。右側です。",
+   "tts": "まもなく。東京。東京。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "d2edd8a8",
+   "lang": "en-US",
+   "text": "The next station is. Tokyo. The doors on the right side will open.",
+   "tts": "The next station is. Tokyo. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "5868f4d7",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線内回り。上野・池袋方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ウチマワリ。上野・池袋方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "58a12fc8",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Ueno and Ikebukuro.",
+   "tts": "This is a Yamanote Line train bound for Ueno and Ikebukuro.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "d0663a07",
+   "lang": "ja-JP",
+   "text": "次は。神田。神田。お出口は。左側です。",
+   "tts": "次は。神田。神田。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "9e8f9b45",
+   "lang": "en-US",
+   "text": "The next station is. Kanda. JY. 02. The doors on the left side will open.",
+   "tts": "The next station is. Kanda. J Y. 2. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "efcbfb8f",
+   "lang": "ja-JP",
+   "text": "京浜東北線。中央線。東京メトロ銀座線は。お乗換です。",
+   "tts": "京浜東北線。中央線。東京メトロ銀座線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "7f949a7b",
+   "lang": "en-US",
+   "text": "Please change here for the Keihin-Tohoku and Chuo Lines. And the Tokyo Metro Ginza Line.",
+   "tts": "Please change here for the Keihin-Tohoku and Chuo Lines. And the Tokyo Metro Ginza Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "7df8f876",
+   "lang": "ja-JP",
+   "text": "まもなく。神田。神田。お出口は。左側です。",
+   "tts": "まもなく。神田。神田。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "ba22ad1c",
+   "lang": "en-US",
+   "text": "The next station is. Kanda. The doors on the left side will open.",
+   "tts": "The next station is. Kanda. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "9f5bd23c",
+   "lang": "ja-JP",
+   "text": "次は。秋葉原。秋葉原。お出口は。右側です。",
+   "tts": "次は。秋葉原。秋葉原。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "3b8c2b5e",
+   "lang": "en-US",
+   "text": "The next station is. Akihabara. JY. 03. The doors on the right side will open.",
+   "tts": "The next station is. Akihabara. J Y. 3. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "81e54283",
+   "lang": "ja-JP",
+   "text": "京浜東北線。中央・総武線。東京メトロ日比谷線。つくばエクスプレスは。お乗換です。",
+   "tts": "京浜東北線。中央・総武線。東京メトロ日比谷線。つくばエクスプレスは。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "1668688e",
+   "lang": "en-US",
+   "text": "Please change here for the Keihin-Tohoku and Chuo-Sobu Lines. The Tokyo Metro Hibiya Line. And the Tsukuba Express.",
+   "tts": "Please change here for the Keihin-Tohoku and Chuo-Sobu Lines. The Tokyo Metro Hibiya Line. And the Tsukuba Express.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "ad3e1d39",
+   "lang": "ja-JP",
+   "text": "まもなく。秋葉原。秋葉原。お出口は。右側です。",
+   "tts": "まもなく。秋葉原。秋葉原。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "aeae0f7a",
+   "lang": "en-US",
+   "text": "The next station is. Akihabara. The doors on the right side will open.",
+   "tts": "The next station is. Akihabara. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "c40e5fac",
+   "lang": "ja-JP",
+   "text": "次は。御徒町。御徒町。お出口は。右側です。",
+   "tts": "次は。御徒町。御徒町。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "8fa8973c",
+   "lang": "en-US",
+   "text": "The next station is. Okachimachi. JY. 04. The doors on the right side will open.",
+   "tts": "The next station is. Okachimachi. J Y. 4. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "f311869b",
+   "lang": "ja-JP",
+   "text": "京浜東北線。東京メトロ銀座線。日比谷線。都営大江戸線は。お乗換です。",
+   "tts": "京浜東北線。東京メトロ銀座線。日比谷線。都営おおえど線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "c185eced",
+   "lang": "en-US",
+   "text": "Please change here for the Keihin-Tohoku Line. The Tokyo Metro Ginza and Hibiya Lines. And the Toei Oedo Line.",
+   "tts": "Please change here for the Keihin-Tohoku Line. The Tokyo Metro Ginza and Hibiya Lines. And the Toei Oedo Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "6061b3d9",
+   "lang": "ja-JP",
+   "text": "まもなく。御徒町。御徒町。お出口は。右側です。",
+   "tts": "まもなく。御徒町。御徒町。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "16a36cb9",
+   "lang": "en-US",
+   "text": "The next station is. Okachimachi. The doors on the right side will open.",
+   "tts": "The next station is. Okachimachi. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "7961d1cf",
+   "lang": "ja-JP",
+   "text": "次は。上野。上野。お出口は。左側です。",
+   "tts": "次は。上野。上野。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "c4639d64",
+   "lang": "en-US",
+   "text": "The next station is. Ueno. JY. 05. The doors on the left side will open.",
+   "tts": "The next station is. Ueno. J Y. 5. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "e4b5245b",
+   "lang": "ja-JP",
+   "text": "京浜東北線。宇都宮線。高崎線。常磐線。上野東京ライン。東北・上越新幹線。東京メトロ銀座線。日比谷線。京成線は。お乗換です。",
+   "tts": "京浜東北線。宇都宮線。高崎線。常磐線。上野東京ライン。東北・上越新幹線。東京メトロ銀座線。日比谷線。京成線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "bfe036c2",
+   "lang": "en-US",
+   "text": "Please change here for the Keihin-Tohoku. Utsunomiya. Takasaki. Joban and Ueno-Tokyo Lines. The Tohoku and Joetsu Shinkansen. The Tokyo Metro Ginza and Hibiya Lines. And the Keisei Line.",
+   "tts": "Please change here for the Keihin-Tohoku. Utsunomiya. Takasaki. Joban and Ueno-Tokyo Lines. The Tohoku and Joetsu Shinkansen. The Tokyo Metro Ginza and Hibiya Lines. And the Keisei Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "f52585ea",
+   "lang": "ja-JP",
+   "text": "まもなく。上野。上野。お出口は。左側です。",
+   "tts": "まもなく。上野。上野。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "7c5b5066",
+   "lang": "en-US",
+   "text": "The next station is. Ueno. The doors on the left side will open.",
+   "tts": "The next station is. Ueno. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "87e58356",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線内回り。池袋・新宿方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ウチマワリ。池袋・新宿方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "bbd52a2c",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Ikebukuro and Shinjuku.",
+   "tts": "This is a Yamanote Line train bound for Ikebukuro and Shinjuku.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "4571f4a8",
+   "lang": "ja-JP",
+   "text": "次は。鶯谷。鶯谷。お出口は。右側です。",
+   "tts": "次は。鶯谷。鶯谷。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "610e29bf",
+   "lang": "en-US",
+   "text": "The next station is. Uguisudani. JY. 06. The doors on the right side will open.",
+   "tts": "The next station is. Uguisudani. J Y. 6. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "ac727b62",
+   "lang": "ja-JP",
+   "text": "この電車には。優先席があります。優先席を必要とされるお客様がいらっしゃいましたら。席をお譲りください。お客様のご協力をお願いいたします。",
+   "tts": "この電車には。優先席があります。優先席を必要とされるお客様がいらっしゃいましたら。席をお譲りください。お客様のご協力をお願いいたします。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "67044f9e",
+   "lang": "en-US",
+   "text": "There are priority seats in most cars. Please offer your seat to those who may need it.",
+   "tts": "There are priority seats in most cars. Please offer your seat to those who may need it.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "316a9331",
+   "lang": "ja-JP",
+   "text": "まもなく。鶯谷。鶯谷。お出口は。右側です。",
+   "tts": "まもなく。鶯谷。鶯谷。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "5a8e5dcc",
+   "lang": "en-US",
+   "text": "The next station is. Uguisudani. The doors on the right side will open.",
+   "tts": "The next station is. Uguisudani. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "6e144f77",
+   "lang": "ja-JP",
+   "text": "次は。日暮里。日暮里。お出口は。左側です。",
+   "tts": "次は。日暮里。日暮里。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "6e2ddc8a",
+   "lang": "en-US",
+   "text": "The next station is. Nippori. JY. 07. The doors on the left side will open.",
+   "tts": "The next station is. Nippori. J Y. 7. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "48cb8e1d",
+   "lang": "ja-JP",
+   "text": "京浜東北線。常磐線。京成線。日暮里・舎人ライナーは。お乗換です。",
+   "tts": "京浜東北線。常磐線。京成線。日暮里・舎人ライナーは。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "df142d58",
+   "lang": "en-US",
+   "text": "Please change here for the Keihin-Tohoku and Joban Lines. The Keisei Line. And the Nippori-Toneri Liner.",
+   "tts": "Please change here for the Keihin-Tohoku and Joban Lines. The Keisei Line. And the Nippori-Toneri Liner.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "f1d28816",
+   "lang": "ja-JP",
+   "text": "まもなく。日暮里。日暮里。お出口は。左側です。",
+   "tts": "まもなく。日暮里。日暮里。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "087f92d6",
+   "lang": "en-US",
+   "text": "The next station is. Nippori. The doors on the left side will open.",
+   "tts": "The next station is. Nippori. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "249691c8",
+   "lang": "ja-JP",
+   "text": "次は。西日暮里。西日暮里。お出口は。右側です。",
+   "tts": "次は。西日暮里。西日暮里。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "76fbad84",
+   "lang": "en-US",
+   "text": "The next station is. Nishi-Nippori. JY. 08. The doors on the right side will open.",
+   "tts": "The next station is. Nishi-Nippori. J Y. 8. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "b2e5022e",
+   "lang": "ja-JP",
+   "text": "京浜東北線。東京メトロ千代田線。日暮里・舎人ライナーは。お乗換です。",
+   "tts": "京浜東北線。東京メトロ千代田線。日暮里・舎人ライナーは。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "46009f92",
+   "lang": "en-US",
+   "text": "Please change here for the Keihin-Tohoku Line. The Tokyo Metro Chiyoda Line. And the Nippori-Toneri Liner.",
+   "tts": "Please change here for the Keihin-Tohoku Line. The Tokyo Metro Chiyoda Line. And the Nippori-Toneri Liner.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "2c867041",
+   "lang": "ja-JP",
+   "text": "まもなく。西日暮里。西日暮里。お出口は。右側です。",
+   "tts": "まもなく。西日暮里。西日暮里。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "f4f5a125",
+   "lang": "en-US",
+   "text": "The next station is. Nishi-Nippori. The doors on the right side will open.",
+   "tts": "The next station is. Nishi-Nippori. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "a10f7456",
+   "lang": "ja-JP",
+   "text": "次は。田端。田端。お出口は。右側です。",
+   "tts": "次は。田端。田端。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "d891bbd3",
+   "lang": "en-US",
+   "text": "The next station is. Tabata. JY. 09. The doors on the right side will open.",
+   "tts": "The next station is. Tabata. J Y. 9. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "7869045c",
+   "lang": "ja-JP",
+   "text": "京浜東北線は。お乗換です。",
+   "tts": "京浜東北線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "4313d4ea",
+   "lang": "en-US",
+   "text": "Please change here for the Keihin-Tohoku Line.",
+   "tts": "Please change here for the Keihin-Tohoku Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "92371e3f",
+   "lang": "ja-JP",
+   "text": "まもなく。田端。田端。お出口は。右側です。",
+   "tts": "まもなく。田端。田端。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "2c136091",
+   "lang": "en-US",
+   "text": "The next station is. Tabata. The doors on the right side will open.",
+   "tts": "The next station is. Tabata. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "b4af5087",
+   "lang": "ja-JP",
+   "text": "次は。駒込。駒込。お出口は。左側です。",
+   "tts": "次は。駒込。駒込。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "0ba44535",
+   "lang": "en-US",
+   "text": "The next station is. Komagome. JY. 10. The doors on the left side will open.",
+   "tts": "The next station is. Komagome. J Y. 10. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "301fd025",
+   "lang": "ja-JP",
+   "text": "東京メトロ南北線は。お乗換です。",
+   "tts": "東京メトロ南北線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "0786e393",
+   "lang": "en-US",
+   "text": "Please change here for the Tokyo Metro Namboku Line.",
+   "tts": "Please change here for the Tokyo Metro Namboku Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "02d5e1c6",
+   "lang": "ja-JP",
+   "text": "まもなく。駒込。駒込。お出口は。左側です。",
+   "tts": "まもなく。駒込。駒込。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "7606897d",
+   "lang": "en-US",
+   "text": "The next station is. Komagome. The doors on the left side will open.",
+   "tts": "The next station is. Komagome. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "fddeb826",
+   "lang": "ja-JP",
+   "text": "次は。巣鴨。巣鴨。お出口は。右側です。",
+   "tts": "次は。巣鴨。巣鴨。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "5645b4d3",
+   "lang": "en-US",
+   "text": "The next station is. Sugamo. JY. 11. The doors on the right side will open.",
+   "tts": "The next station is. Sugamo. J Y. 11. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "89e0c37a",
+   "lang": "ja-JP",
+   "text": "都営三田線は。お乗換です。",
+   "tts": "都営三田線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "bb48333f",
+   "lang": "en-US",
+   "text": "Please change here for the Toei Mita Line.",
+   "tts": "Please change here for the Toei Mita Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "ecdea887",
+   "lang": "ja-JP",
+   "text": "まもなく。巣鴨。巣鴨。お出口は。右側です。",
+   "tts": "まもなく。巣鴨。巣鴨。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "877fbb58",
+   "lang": "en-US",
+   "text": "The next station is. Sugamo. The doors on the right side will open.",
+   "tts": "The next station is. Sugamo. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "b041ba26",
+   "lang": "ja-JP",
+   "text": "次は。大塚。大塚。お出口は。右側です。",
+   "tts": "次は。大塚。大塚。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "63663c1e",
+   "lang": "en-US",
+   "text": "The next station is. Ōtsuka. JY. 12. The doors on the right side will open.",
+   "tts": "The next station is. Otsuka. J Y. 12. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "f722a947",
+   "lang": "ja-JP",
+   "text": "都電荒川線は。お乗換です。",
+   "tts": "都電荒川線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "0139925d",
+   "lang": "en-US",
+   "text": "Please change here for the Toden Arakawa Line.",
+   "tts": "Please change here for the Toden Arakawa Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "04b20c43",
+   "lang": "ja-JP",
+   "text": "まもなく。大塚。大塚。お出口は。右側です。",
+   "tts": "まもなく。大塚。大塚。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "b10467d0",
+   "lang": "en-US",
+   "text": "The next station is. Ōtsuka. The doors on the right side will open.",
+   "tts": "The next station is. Otsuka. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "166055c6",
+   "lang": "ja-JP",
+   "text": "次は。池袋。池袋。お出口は。右側です。",
+   "tts": "次は。池袋。池袋。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "dda0b3ea",
+   "lang": "en-US",
+   "text": "The next station is. Ikebukuro. JY. 13. The doors on the right side will open.",
+   "tts": "The next station is. Ikebukuro. J Y. 13. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "d64194df",
+   "lang": "ja-JP",
+   "text": "埼京線。湘南新宿ライン。東京メトロ丸ノ内線。有楽町線。副都心線。東武東上線。西武池袋線は。お乗換です。",
+   "tts": "埼京線。湘南新宿ライン。東京メトロ丸ノ内線。有楽町線。副都心線。東武東上線。西武池袋線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "5f5d1718",
+   "lang": "en-US",
+   "text": "Please change here for the Saikyo and Shonan-Shinjuku Lines. The Tokyo Metro Marunouchi. Yurakucho and Fukutoshin Lines. The Tobu Tojo Line. And the Seibu Ikebukuro Line.",
+   "tts": "Please change here for the Saikyo and Shonan-Shinjuku Lines. The Tokyo Metro Marunouchi. Yurakucho and Fukutoshin Lines. The Tobu Tojo Line. And the Seibu Ikebukuro Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "f8558fd7",
+   "lang": "ja-JP",
+   "text": "まもなく。池袋。池袋。お出口は。右側です。",
+   "tts": "まもなく。池袋。池袋。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "cd7bc64f",
+   "lang": "en-US",
+   "text": "The next station is. Ikebukuro. The doors on the right side will open.",
+   "tts": "The next station is. Ikebukuro. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "f264872f",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線内回り。新宿・渋谷方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ウチマワリ。新宿・渋谷方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "b3c57af8",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Shinjuku and Shibuya.",
+   "tts": "This is a Yamanote Line train bound for Shinjuku and Shibuya.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "cb2779e5",
+   "lang": "ja-JP",
+   "text": "次は。目白。目白。お出口は。左側です。",
+   "tts": "次は。目白。目白。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "57f904cd",
+   "lang": "en-US",
+   "text": "The next station is. Mejiro. JY. 14. The doors on the left side will open.",
+   "tts": "The next station is. Mejiro. J Y. 14. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "24990a00",
+   "lang": "ja-JP",
+   "text": "まもなく。目白。目白。お出口は。左側です。",
+   "tts": "まもなく。目白。目白。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "73456201",
+   "lang": "en-US",
+   "text": "The next station is. Mejiro. The doors on the left side will open.",
+   "tts": "The next station is. Mejiro. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "f8f9a1a4",
+   "lang": "ja-JP",
+   "text": "次は。高田馬場。高田馬場。お出口は。右側です。",
+   "tts": "次は。高田馬場。高田馬場。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "f7b288c4",
+   "lang": "en-US",
+   "text": "The next station is. Takadanobaba. JY. 15. The doors on the right side will open.",
+   "tts": "The next station is. Takadanobaba. J Y. 15. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "0ee3fbef",
+   "lang": "ja-JP",
+   "text": "西武新宿線。東京メトロ東西線は。お乗換です。",
+   "tts": "西武新宿線。東京メトロ東西線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "cec5127a",
+   "lang": "en-US",
+   "text": "Please change here for the Seibu Shinjuku Line and the Tokyo Metro Tozai Line.",
+   "tts": "Please change here for the Seibu Shinjuku Line and the Tokyo Metro Tozai Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "c8f69135",
+   "lang": "ja-JP",
+   "text": "まもなく。高田馬場。高田馬場。お出口は。右側です。",
+   "tts": "まもなく。高田馬場。高田馬場。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "b4096443",
+   "lang": "en-US",
+   "text": "The next station is. Takadanobaba. The doors on the right side will open.",
+   "tts": "The next station is. Takadanobaba. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "40361d75",
+   "lang": "ja-JP",
+   "text": "次は。新大久保。新大久保。お出口は。左側です。",
+   "tts": "次は。新大久保。新大久保。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "baf352fd",
+   "lang": "en-US",
+   "text": "The next station is. Shin-Ōkubo. JY. 16. The doors on the left side will open.",
+   "tts": "The next station is. Shin-Okubo. J Y. 16. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "a09525ac",
+   "lang": "ja-JP",
+   "text": "お客様にお願いいたします。優先席付近では。携帯電話の電源をお切りください。それ以外の場所では。マナーモードに設定のうえ。通話はお控えください。ご協力をお願いいたします。",
+   "tts": "お客様にお願いいたします。優先席付近では。携帯電話の電源をお切りください。それ以外の場所では。マナーモードに設定のうえ。通話はお控えください。ご協力をお願いいたします。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "7cfeea80",
+   "lang": "en-US",
+   "text": "Please switch off your mobile phone when you are near the priority seats. In other areas. Please set it to silent mode and refrain from talking on the phone.",
+   "tts": "Please switch off your mobile phone when you are near the priority seats. In other areas. Please set it to silent mode and refrain from talking on the phone.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "d10cd310",
+   "lang": "ja-JP",
+   "text": "まもなく。新大久保。新大久保。お出口は。左側です。",
+   "tts": "まもなく。新大久保。新大久保。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "41a2a933",
+   "lang": "en-US",
+   "text": "The next station is. Shin-Ōkubo. The doors on the left side will open.",
+   "tts": "The next station is. Shin-Okubo. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "2904f416",
+   "lang": "ja-JP",
+   "text": "次は。新宿。新宿。お出口は。右側です。",
+   "tts": "次は。新宿。新宿。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "36dd7244",
+   "lang": "en-US",
+   "text": "The next station is. Shinjuku. JY. 17. The doors on the right side will open.",
+   "tts": "The next station is. Shinjuku. J Y. 17. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "92537c7d",
+   "lang": "ja-JP",
+   "text": "中央線。中央・総武線。埼京線。湘南新宿ライン。小田急線。京王線。東京メトロ丸ノ内線。都営新宿線。大江戸線は。お乗換です。",
+   "tts": "中央線。中央・総武線。埼京線。湘南新宿ライン。小田急線。京王線。東京メトロ丸ノ内線。都営新宿線。おおえど線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "69af94d9",
+   "lang": "en-US",
+   "text": "Please change here for the Chuo. Chuo-Sobu. Saikyo and Shonan-Shinjuku Lines. The Odakyu Line. The Keio Line. The Tokyo Metro Marunouchi Line. And the Toei Shinjuku and Oedo Lines.",
+   "tts": "Please change here for the Chuo. Chuo-Sobu. Saikyo and Shonan-Shinjuku Lines. The Odakyu Line. The Keio Line. The Tokyo Metro Marunouchi Line. And the Toei Shinjuku and Oedo Lines.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "c99f5fff",
+   "lang": "ja-JP",
+   "text": "まもなく。新宿。新宿。お出口は。右側です。",
+   "tts": "まもなく。新宿。新宿。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "a53ee4b5",
+   "lang": "en-US",
+   "text": "The next station is. Shinjuku. The doors on the right side will open.",
+   "tts": "The next station is. Shinjuku. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "6812d270",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線内回り。渋谷・品川方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ウチマワリ。渋谷・品川方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "18870eb8",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Shibuya and Shinagawa.",
+   "tts": "This is a Yamanote Line train bound for Shibuya and Shinagawa.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "4f27b263",
+   "lang": "ja-JP",
+   "text": "次は。代々木。代々木。お出口は。左側です。",
+   "tts": "次は。代々木。代々木。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "bb5831c9",
+   "lang": "en-US",
+   "text": "The next station is. Yoyogi. JY. 18. The doors on the left side will open.",
+   "tts": "The next station is. Yoyogi. J Y. 18. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "03c9f2a8",
+   "lang": "ja-JP",
+   "text": "中央・総武線。都営大江戸線は。お乗換です。",
+   "tts": "中央・総武線。都営おおえど線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "fd68ffae",
+   "lang": "en-US",
+   "text": "Please change here for the Chuo-Sobu Line and the Toei Oedo Line.",
+   "tts": "Please change here for the Chuo-Sobu Line and the Toei Oedo Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "d78f2292",
+   "lang": "ja-JP",
+   "text": "まもなく。代々木。代々木。お出口は。左側です。",
+   "tts": "まもなく。代々木。代々木。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "5df4fec9",
+   "lang": "en-US",
+   "text": "The next station is. Yoyogi. The doors on the left side will open.",
+   "tts": "The next station is. Yoyogi. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "70138718",
+   "lang": "ja-JP",
+   "text": "次は。原宿。原宿。お出口は。右側です。",
+   "tts": "次は。原宿。原宿。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "83f5dc38",
+   "lang": "en-US",
+   "text": "The next station is. Harajuku. JY. 19. The doors on the right side will open.",
+   "tts": "The next station is. Harajuku. J Y. 19. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "10c84666",
+   "lang": "ja-JP",
+   "text": "東京メトロ千代田線。副都心線は。お乗換です。",
+   "tts": "東京メトロ千代田線。副都心線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "71be6c27",
+   "lang": "en-US",
+   "text": "Please change here for the Tokyo Metro Chiyoda and Fukutoshin Lines.",
+   "tts": "Please change here for the Tokyo Metro Chiyoda and Fukutoshin Lines.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "ed1f19e1",
+   "lang": "ja-JP",
+   "text": "まもなく。原宿。原宿。お出口は。右側です。",
+   "tts": "まもなく。原宿。原宿。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "b9161edb",
+   "lang": "en-US",
+   "text": "The next station is. Harajuku. The doors on the right side will open.",
+   "tts": "The next station is. Harajuku. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "79a29270",
+   "lang": "ja-JP",
+   "text": "次は。渋谷。渋谷。お出口は。右側です。",
+   "tts": "次は。渋谷。渋谷。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "fa0b3edc",
+   "lang": "en-US",
+   "text": "The next station is. Shibuya. JY. 20. The doors on the right side will open.",
+   "tts": "The next station is. Shibuya. J Y. 20. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "29bdd551",
+   "lang": "ja-JP",
+   "text": "埼京線。湘南新宿ライン。東京メトロ銀座線。半蔵門線。副都心線。東急東横線。田園都市線。京王井の頭線は。お乗換です。",
+   "tts": "埼京線。湘南新宿ライン。東京メトロ銀座線。半蔵門線。副都心線。東急東横線。田園都市線。京王井の頭線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "2ff7b159",
+   "lang": "en-US",
+   "text": "Please change here for the Saikyo and Shonan-Shinjuku Lines. The Tokyo Metro Ginza. Hanzomon and Fukutoshin Lines. The Tokyu Toyoko and Den-en-toshi Lines. And the Keio Inokashira Line.",
+   "tts": "Please change here for the Saikyo and Shonan-Shinjuku Lines. The Tokyo Metro Ginza. Hanzomon and Fukutoshin Lines. The Tokyu Toyoko and Den-en-toshi Lines. And the Keio Inokashira Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "63787ed1",
+   "lang": "ja-JP",
+   "text": "まもなく。渋谷。渋谷。お出口は。右側です。",
+   "tts": "まもなく。渋谷。渋谷。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "3cd06d7f",
+   "lang": "en-US",
+   "text": "The next station is. Shibuya. The doors on the right side will open.",
+   "tts": "The next station is. Shibuya. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "1568aabd",
+   "lang": "ja-JP",
+   "text": "電車とホームの間が空いているところがありますので。足元にご注意ください。",
+   "tts": "電車とホームの間が空いているところがありますので。足元にご注意ください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "f8b4bc7c",
+   "lang": "en-US",
+   "text": "Please watch your step when you leave the train.",
+   "tts": "Please watch your step when you leave the train.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "e8ff2991",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線内回り。品川・東京方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ウチマワリ。品川・東京方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "84e10f49",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Shinagawa and Tokyo.",
+   "tts": "This is a Yamanote Line train bound for Shinagawa and Tokyo.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "d77f6387",
+   "lang": "ja-JP",
+   "text": "次は。恵比寿。恵比寿。お出口は。左側です。",
+   "tts": "次は。恵比寿。恵比寿。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "b61d7ef1",
+   "lang": "en-US",
+   "text": "The next station is. Ebisu. JY. 21. The doors on the left side will open.",
+   "tts": "The next station is. Ebisu. J Y. 21. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "05fdf075",
+   "lang": "ja-JP",
+   "text": "埼京線。湘南新宿ライン。東京メトロ日比谷線は。お乗換です。",
+   "tts": "埼京線。湘南新宿ライン。東京メトロ日比谷線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "a8fad6f7",
+   "lang": "en-US",
+   "text": "Please change here for the Saikyo and Shonan-Shinjuku Lines. And the Tokyo Metro Hibiya Line.",
+   "tts": "Please change here for the Saikyo and Shonan-Shinjuku Lines. And the Tokyo Metro Hibiya Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "4ddfd106",
+   "lang": "ja-JP",
+   "text": "まもなく。恵比寿。恵比寿。お出口は。左側です。",
+   "tts": "まもなく。恵比寿。恵比寿。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "7b539491",
+   "lang": "en-US",
+   "text": "The next station is. Ebisu. The doors on the left side will open.",
+   "tts": "The next station is. Ebisu. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "cc29675c",
+   "lang": "ja-JP",
+   "text": "次は。目黒。目黒。お出口は。右側です。",
+   "tts": "次は。目黒。目黒。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "c489ddb8",
+   "lang": "en-US",
+   "text": "The next station is. Meguro. JY. 22. The doors on the right side will open.",
+   "tts": "The next station is. Meguro. J Y. 22. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "6b536441",
+   "lang": "ja-JP",
+   "text": "東京メトロ南北線。都営三田線。東急目黒線は。お乗換です。",
+   "tts": "東京メトロ南北線。都営三田線。東急目黒線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "1adb141f",
+   "lang": "en-US",
+   "text": "Please change here for the Tokyo Metro Namboku Line. The Toei Mita Line. And the Tokyu Meguro Line.",
+   "tts": "Please change here for the Tokyo Metro Namboku Line. The Toei Mita Line. And the Tokyu Meguro Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "97e3a655",
+   "lang": "ja-JP",
+   "text": "まもなく。目黒。目黒。お出口は。右側です。",
+   "tts": "まもなく。目黒。目黒。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "31fe2e99",
+   "lang": "en-US",
+   "text": "The next station is. Meguro. The doors on the right side will open.",
+   "tts": "The next station is. Meguro. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "d2a9ec4f",
+   "lang": "ja-JP",
+   "text": "次は。五反田。五反田。お出口は。左側です。",
+   "tts": "次は。五反田。五反田。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "6f025133",
+   "lang": "en-US",
+   "text": "The next station is. Gotanda. JY. 23. The doors on the left side will open.",
+   "tts": "The next station is. Gotanda. J Y. 23. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "979be197",
+   "lang": "ja-JP",
+   "text": "都営浅草線。東急池上線は。お乗換です。",
+   "tts": "都営浅草線。東急池上線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "e4f1cd2e",
+   "lang": "en-US",
+   "text": "Please change here for the Toei Asakusa Line and the Tokyu Ikegami Line.",
+   "tts": "Please change here for the Toei Asakusa Line and the Tokyu Ikegami Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "684a38fe",
+   "lang": "ja-JP",
+   "text": "まもなく。五反田。五反田。お出口は。左側です。",
+   "tts": "まもなく。五反田。五反田。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "053fcecd",
+   "lang": "en-US",
+   "text": "The next station is. Gotanda. The doors on the left side will open.",
+   "tts": "The next station is. Gotanda. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "b8540bc6",
+   "lang": "ja-JP",
+   "text": "次は。大崎。大崎。お出口は。右側です。",
+   "tts": "次は。大崎。大崎。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "40af399d",
+   "lang": "en-US",
+   "text": "The next station is. Ōsaki. JY. 24. The doors on the right side will open.",
+   "tts": "The next station is. Osaki. J Y. 24. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "7b5144dc",
+   "lang": "ja-JP",
+   "text": "埼京線。湘南新宿ライン。りんかい線は。お乗換です。",
+   "tts": "埼京線。湘南新宿ライン。りんかい線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "046feb02",
+   "lang": "en-US",
+   "text": "Please change here for the Saikyo and Shonan-Shinjuku Lines. And the Rinkai Line.",
+   "tts": "Please change here for the Saikyo and Shonan-Shinjuku Lines. And the Rinkai Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "84936dfb",
+   "lang": "ja-JP",
+   "text": "まもなく。大崎。大崎。お出口は。右側です。",
+   "tts": "まもなく。大崎。大崎。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "c4c83dd6",
+   "lang": "en-US",
+   "text": "The next station is. Ōsaki. The doors on the right side will open.",
+   "tts": "The next station is. Osaki. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "adcb0450",
+   "lang": "ja-JP",
+   "text": "次は。品川。品川。お出口は。右側です。",
+   "tts": "次は。品川。品川。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "3fa0056d",
+   "lang": "en-US",
+   "text": "The next station is. Shinagawa. JY. 25. The doors on the right side will open.",
+   "tts": "The next station is. Shinagawa. J Y. 25. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "5fd30cd9",
+   "lang": "ja-JP",
+   "text": "東海道線。横須賀線。京浜東北線。上野東京ライン。東海道新幹線。京急線は。お乗換です。",
+   "tts": "東海道線。横須賀線。京浜東北線。上野東京ライン。東海道新幹線。京急線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "de5a5713",
+   "lang": "en-US",
+   "text": "Please change here for the Tokaido. Yokosuka. Keihin-Tohoku and Ueno-Tokyo Lines. The Tokaido Shinkansen. And the Keikyu Line.",
+   "tts": "Please change here for the Tokaido. Yokosuka. Keihin-Tohoku and Ueno-Tokyo Lines. The Tokaido Shinkansen. And the Keikyu Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "f4543e01",
+   "lang": "ja-JP",
+   "text": "まもなく。品川。品川。お出口は。右側です。",
+   "tts": "まもなく。品川。品川。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "1b960ed9",
+   "lang": "en-US",
+   "text": "The next station is. Shinagawa. The doors on the right side will open.",
+   "tts": "The next station is. Shinagawa. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "37571e51",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線内回り。東京・上野方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ウチマワリ。東京・上野方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "1602818f",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Tokyo and Ueno.",
+   "tts": "This is a Yamanote Line train bound for Tokyo and Ueno.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "6450aa8d",
+   "lang": "ja-JP",
+   "text": "次は。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。左側です。",
+   "tts": "次は。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "d4b2553a",
+   "lang": "en-US",
+   "text": "The next station is. Takanawa Gateway. JY. 26. The doors on the left side will open.",
+   "tts": "The next station is. Takanawa Gateway. J Y. 26. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "d6f639b0",
+   "lang": "ja-JP",
+   "text": "お客様にお願いいたします。電車は事故防止のため。やむを得ず急停車することがありますので。お立ちのお客様は。つり革や手すりにおつかまりください。",
+   "tts": "お客様にお願いいたします。電車は事故防止のため。やむを得ず急停車することがありますので。お立ちのお客様は。つり革や手すりにおつかまりください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "7a773ad4",
+   "lang": "en-US",
+   "text": "It may be necessary for the train to stop suddenly to prevent an accident. So please be careful.",
+   "tts": "It may be necessary for the train to stop suddenly to prevent an accident. So please be careful.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "1a475104",
+   "lang": "ja-JP",
+   "text": "まもなく。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。左側です。",
+   "tts": "まもなく。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "6d1112e1",
+   "lang": "en-US",
+   "text": "The next station is. Takanawa Gateway. The doors on the left side will open.",
+   "tts": "The next station is. Takanawa Gateway. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "b1186d3c",
+   "lang": "ja-JP",
+   "text": "次は。田町。田町。お出口は。右側です。",
+   "tts": "次は。田町。田町。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "215e255d",
+   "lang": "en-US",
+   "text": "The next station is. Tamachi. JY. 27. The doors on the right side will open.",
+   "tts": "The next station is. Tamachi. J Y. 27. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "3304a451",
+   "lang": "ja-JP",
+   "text": "まもなく。田町。田町。お出口は。右側です。",
+   "tts": "まもなく。田町。田町。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "270ce82b",
+   "lang": "en-US",
+   "text": "The next station is. Tamachi. The doors on the right side will open.",
+   "tts": "The next station is. Tamachi. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "1d06a957",
+   "lang": "ja-JP",
+   "text": "次は。浜松町。浜松町。お出口は。左側です。",
+   "tts": "次は。浜松町。浜松町。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "a2a7833b",
+   "lang": "en-US",
+   "text": "The next station is. Hamamatsuchō. JY. 28. The doors on the left side will open.",
+   "tts": "The next station is. Hamamatsucho. J Y. 28. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "bed291d5",
+   "lang": "ja-JP",
+   "text": "京浜東北線。東京モノレール。都営浅草線。大江戸線は。お乗換です。",
+   "tts": "京浜東北線。東京モノレール。都営浅草線。おおえど線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "e56d570b",
+   "lang": "en-US",
+   "text": "Please change here for the Keihin-Tohoku Line. The Tokyo Monorail. And the Toei Asakusa and Oedo Lines.",
+   "tts": "Please change here for the Keihin-Tohoku Line. The Tokyo Monorail. And the Toei Asakusa and Oedo Lines.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "372ce16e",
+   "lang": "ja-JP",
+   "text": "まもなく。浜松町。浜松町。お出口は。左側です。",
+   "tts": "まもなく。浜松町。浜松町。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "e178554a",
+   "lang": "en-US",
+   "text": "The next station is. Hamamatsuchō. The doors on the left side will open.",
+   "tts": "The next station is. Hamamatsucho. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "2e516b06",
+   "lang": "ja-JP",
+   "text": "次は。新橋。新橋。お出口は。右側です。",
+   "tts": "次は。新橋。新橋。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "28bd285c",
+   "lang": "en-US",
+   "text": "The next station is. Shimbashi. JY. 29. The doors on the right side will open.",
+   "tts": "The next station is. Shimbashi. J Y. 29. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "abcc1bed",
+   "lang": "ja-JP",
+   "text": "東海道線。横須賀線。京浜東北線。上野東京ライン。東京メトロ銀座線。都営浅草線。ゆりかもめは。お乗換です。",
+   "tts": "東海道線。横須賀線。京浜東北線。上野東京ライン。東京メトロ銀座線。都営浅草線。ゆりかもめは。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "7f1d1edc",
+   "lang": "en-US",
+   "text": "Please change here for the Tokaido. Yokosuka. Keihin-Tohoku and Ueno-Tokyo Lines. The Tokyo Metro Ginza Line. The Toei Asakusa Line. And the Yurikamome.",
+   "tts": "Please change here for the Tokaido. Yokosuka. Keihin-Tohoku and Ueno-Tokyo Lines. The Tokyo Metro Ginza Line. The Toei Asakusa Line. And the Yurikamome.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "8a431397",
+   "lang": "ja-JP",
+   "text": "まもなく。新橋。新橋。お出口は。右側です。",
+   "tts": "まもなく。新橋。新橋。お出口は。右側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "2cbecf14",
+   "lang": "en-US",
+   "text": "The next station is. Shimbashi. The doors on the right side will open.",
+   "tts": "The next station is. Shimbashi. The doors on the right side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "ecaf1d0b",
+   "lang": "ja-JP",
+   "text": "次は。有楽町。有楽町。お出口は。左側です。",
+   "tts": "次は。有楽町。有楽町。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "d3deb272",
+   "lang": "en-US",
+   "text": "The next station is. Yūrakuchō. JY. 30. The doors on the left side will open.",
+   "tts": "The next station is. Yurakucho. J Y. 30. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "99bc73e3",
+   "lang": "ja-JP",
+   "text": "京浜東北線。東京メトロ有楽町線は。お乗換です。",
+   "tts": "京浜東北線。東京メトロ有楽町線は。お乗換です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "92efe89c",
+   "lang": "en-US",
+   "text": "Please change here for the Keihin-Tohoku Line and the Tokyo Metro Yurakucho Line.",
+   "tts": "Please change here for the Keihin-Tohoku Line and the Tokyo Metro Yurakucho Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "fd7ce7ea",
+   "lang": "ja-JP",
+   "text": "まもなく。有楽町。有楽町。お出口は。左側です。",
+   "tts": "まもなく。有楽町。有楽町。お出口は。左側です。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "2830ff88",
+   "lang": "en-US",
+   "text": "The next station is. Yūrakuchō. The doors on the left side will open.",
+   "tts": "The next station is. Yurakucho. The doors on the left side will open.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "f4d6af80",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線外回り。東京・品川方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ソトマワリ。東京・品川方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "fc643681",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Tokyo and Shinagawa.",
+   "tts": "This is a Yamanote Line train bound for Tokyo and Shinagawa.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "45320ff8",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線外回り。上野・東京方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ソトマワリ。上野・東京方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "1a1a0471",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Ueno and Tokyo.",
+   "tts": "This is a Yamanote Line train bound for Ueno and Tokyo.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "2613145e",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線外回り。池袋・上野方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ソトマワリ。池袋・上野方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "a4ef9f98",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Ikebukuro and Ueno.",
+   "tts": "This is a Yamanote Line train bound for Ikebukuro and Ueno.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "e8950135",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線外回り。新宿・池袋方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ソトマワリ。新宿・池袋方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "3eb1fd5c",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Shinjuku and Ikebukuro.",
+   "tts": "This is a Yamanote Line train bound for Shinjuku and Ikebukuro.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "ea8b3f52",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線外回り。渋谷・新宿方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ソトマワリ。渋谷・新宿方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "6d496ab4",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Shibuya and Shinjuku.",
+   "tts": "This is a Yamanote Line train bound for Shibuya and Shinjuku.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "b4af7517",
+   "lang": "ja-JP",
+   "text": "この電車は。山手線外回り。品川・渋谷方面ゆきです。",
+   "tts": "この電車は。ヤマノテ線ソトマワリ。品川・渋谷方面ゆきです。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "bdb646a4",
+   "lang": "en-US",
+   "text": "This is a Yamanote Line train bound for Shinagawa and Shibuya.",
+   "tts": "This is a Yamanote Line train bound for Shinagawa and Shibuya.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "9ba8a6b7",
+   "lang": "ja-JP",
+   "text": "ドアが閉まります。ご注意ください。",
+   "tts": "ドアが閉まります。ご注意ください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "60301ff4",
+   "lang": "en-US",
+   "text": "The doors are closing. Please stand clear of the doors.",
+   "tts": "The doors are closing. Please stand clear of the doors.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "2025dbbc",
+   "lang": "ja-JP",
+   "text": "ドアから離れてください。",
+   "tts": "ドアから離れてください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "7ace7fb3",
+   "lang": "en-US",
+   "text": "Please stand clear of the doors.",
+   "tts": "Please stand clear of the doors.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "bf3321ea",
+   "lang": "ja-JP",
+   "text": "ドアが閉まりません。ドアから離れてください。",
+   "tts": "ドアが閉まりません。ドアから離れてください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "0e1616c8",
+   "lang": "en-US",
+   "text": "The doors cannot close. Please stand clear of the doors.",
+   "tts": "The doors cannot close. Please stand clear of the doors.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "f03cf63f",
+   "lang": "ja-JP",
+   "text": "本日も。山手線を。ご利用くださいまして。ありがとうございます。",
+   "tts": "本日も。ヤマノテ線を。ご利用くださいまして。ありがとうございます。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "14347dfa",
+   "lang": "en-US",
+   "text": "Thank you for using the Yamanote Line.",
+   "tts": "Thank you for using the Yamanote Line.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "3d09ec0d",
+   "lang": "ja-JP",
+   "text": "急停車します。ご注意ください。",
+   "tts": "急停車します。ご注意ください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "e10838c3",
+   "lang": "en-US",
+   "text": "This train will make an emergency stop. Please hold on.",
+   "tts": "This train will make an emergency stop. Please hold on.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "3da72155",
+   "lang": "ja-JP",
+   "text": "お客様にご案内いたします。ただいま。信号確認のため。急停車いたしました。安全の確認を行っておりますので。恐れ入りますが。いましばらくお待ちください。",
+   "tts": "お客様にご案内いたします。ただいま。信号確認のため。急停車いたしました。安全の確認を行っておりますので。恐れ入りますが。いましばらくお待ちください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "011fe079",
+   "lang": "en-US",
+   "text": "Attention please. This train has made an emergency stop due to a signal check. Please wait while safety checks are carried out.",
+   "tts": "Attention please. This train has made an emergency stop due to a signal check. Please wait while safety checks are carried out.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "68693bf0",
+   "lang": "ja-JP",
+   "text": "お客様にご案内いたします。ただいま。線路内の安全確認のため。急停車いたしました。安全の確認を行っておりますので。恐れ入りますが。いましばらくお待ちください。",
+   "tts": "お客様にご案内いたします。ただいま。線路内の安全確認のため。急停車いたしました。安全の確認を行っておりますので。恐れ入りますが。いましばらくお待ちください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "0ad0ff96",
+   "lang": "en-US",
+   "text": "Attention please. This train has made an emergency stop due to a track safety check. Please wait while safety checks are carried out.",
+   "tts": "Attention please. This train has made an emergency stop due to a track safety check. Please wait while safety checks are carried out.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "24ab7c9a",
+   "lang": "ja-JP",
+   "text": "お客様にご案内いたします。ただいま。車両の点検のため。急停車いたしました。安全の確認を行っておりますので。恐れ入りますが。いましばらくお待ちください。",
+   "tts": "お客様にご案内いたします。ただいま。車両の点検のため。急停車いたしました。安全の確認を行っておりますので。恐れ入りますが。いましばらくお待ちください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "8f923f5d",
+   "lang": "en-US",
+   "text": "Attention please. This train has made an emergency stop due to a train inspection. Please wait while safety checks are carried out.",
+   "tts": "Attention please. This train has made an emergency stop due to a train inspection. Please wait while safety checks are carried out.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "4b0f0f0b",
+   "lang": "ja-JP",
+   "text": "お客様にご案内いたします。ただいま。安全の確認を行っております。運転再開まで。いましばらくお待ちください。ご迷惑をおかけいたします。",
+   "tts": "お客様にご案内いたします。ただいま。安全の確認を行っております。運転再開まで。いましばらくお待ちください。ご迷惑をおかけいたします。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "454b0ebd",
+   "lang": "en-US",
+   "text": "Safety checks are still under way. We apologize for the delay. And thank you for your patience.",
+   "tts": "Safety checks are still under way. We apologize for the delay. And thank you for your patience.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "18ab45e6",
+   "lang": "ja-JP",
+   "text": "お待たせいたしました。安全の確認がとれましたので。まもなく運転を再開いたします。",
+   "tts": "お待たせいたしました。安全の確認がとれましたので。まもなく運転を再開いたします。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "5196c9f9",
+   "lang": "en-US",
+   "text": "Thank you for waiting. Safety has been confirmed. And this train will shortly resume service.",
+   "tts": "Thank you for waiting. Safety has been confirmed. And this train will shortly resume service.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "884d0057",
+   "lang": "ja-JP",
+   "text": "お客様にご案内いたします。ただいま。架線の停電のため。この電車は停車しております。車内の照明は非常灯に切り替わっております。復旧の見通しが立ち次第。ご案内いたしますので。車内でお待ちください。",
+   "tts": "お客様にご案内いたします。ただいま。架線の停電のため。この電車は停車しております。車内の照明は非常灯に切り替わっております。復旧の見通しが立ち次第。ご案内いたしますので。車内でお待ちください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "8793735b",
+   "lang": "en-US",
+   "text": "Attention please. Due to a power failure on the overhead line. This train has stopped between stations. The lighting has switched to emergency lamps. Please remain inside the train. And wait for further announcements.",
+   "tts": "Attention please. Due to a power failure on the overhead line. This train has stopped between stations. The lighting has switched to emergency lamps. Please remain inside the train. And wait for further announcements.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "c0f9990a",
+   "lang": "ja-JP",
+   "text": "お客様にお待たせしております。ただいま。電力の復旧作業を行っております。運転再開まで。いましばらくお待ちください。危険ですので。ドアの非常用コックには。手を触れないでください。",
+   "tts": "お客様にお待たせしております。ただいま。電力の復旧作業を行っております。運転再開まで。いましばらくお待ちください。危険ですので。ドアの非常用コックには。手を触れないでください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "432d996c",
+   "lang": "en-US",
+   "text": "Thank you for your patience. Work to restore power is under way. Please wait a little longer. And for your own safety. Do not operate the emergency door release.",
+   "tts": "Thank you for your patience. Work to restore power is under way. Please wait a little longer. And for your own safety. Do not operate the emergency door release.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "a9ec526b",
+   "lang": "ja-JP",
+   "text": "お待たせいたしました。ただいま。電気が復旧いたしました。車内の機器を確認のうえ。まもなく運転を再開いたします。ご迷惑をおかけいたしました。",
+   "tts": "お待たせいたしました。ただいま。電気が復旧いたしました。車内の機器を確認のうえ。まもなく運転を再開いたします。ご迷惑をおかけいたしました。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "b5068cee",
+   "lang": "en-US",
+   "text": "Thank you for waiting. Power has been restored. After equipment checks. This train will shortly resume service. We apologize for the delay.",
+   "tts": "Thank you for waiting. Power has been restored. After equipment checks. This train will shortly resume service. We apologize for the delay.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "2fc01d17",
+   "lang": "ja-JP",
+   "text": "お客様にご案内いたします。ただいま。お客様の救護を行っております。発車まで。いましばらくお待ちください。",
+   "tts": "お客様にご案内いたします。ただいま。お客様の救護を行っております。発車まで。いましばらくお待ちください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "183d959d",
+   "lang": "en-US",
+   "text": "Attention please. We are currently assisting a passenger. Please wait a little longer before departure.",
+   "tts": "Attention please. We are currently assisting a passenger. Please wait a little longer before departure.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "d9ec7f97",
+   "lang": "ja-JP",
+   "text": "お客様をお待たせしております。引き続き。お客様の救護を行っております。発車まで。いましばらくお待ちください。",
+   "tts": "お客様をお待たせしております。引き続き。お客様の救護を行っております。発車まで。いましばらくお待ちください。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "513cba45",
+   "lang": "en-US",
+   "text": "Thank you for your patience. We are still assisting a passenger. Please wait a little longer before departure.",
+   "tts": "Thank you for your patience. We are still assisting a passenger. Please wait a little longer before departure.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "5820f7b8",
+   "lang": "ja-JP",
+   "text": "お待たせいたしました。お客様の救護が終了しましたので。まもなく発車いたします。",
+   "tts": "お待たせいたしました。お客様の救護が終了しましたので。まもなく発車いたします。",
+   "voice": "jf_alpha",
+   "speed": 1.15
+  },
+  {
+   "key": "76db2bea",
+   "lang": "en-US",
+   "text": "Thank you for waiting. Assistance has been completed. This train will depart shortly.",
+   "tts": "Thank you for waiting. Assistance has been completed. This train will depart shortly.",
+   "voice": "af_heart",
+   "speed": 0.93
+  },
+  {
+   "key": "859f725d",
+   "lang": "ja-JP",
+   "text": "今度の、4番線の電車は、山手線内回り、上野・池袋方面行きです。",
+   "tts": "今度の、4番線の電車は、ヤマノテ線ウチマワリ、上野・池袋方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "cbf79f7e",
+   "lang": "ja-JP",
+   "text": "まもなく、4番線に、山手線内回り、上野・池袋方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、4番線に、ヤマノテ線ウチマワリ、上野・池袋方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "72587c66",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "75a243d6",
+   "lang": "ja-JP",
+   "text": "4番線、ドアが閉まります。ご注意ください。",
+   "tts": "4番線、ドアが閉まります。ご注意ください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "f40fee63",
+   "lang": "ja-JP",
+   "text": "東京、東京。ご乗車、ありがとうございます。",
+   "tts": "東京、東京。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "b534c514",
+   "lang": "ja-JP",
+   "text": "今度の、3番線の電車は、山手線内回り、上野・池袋方面行きです。",
+   "tts": "今度の、3番線の電車は、ヤマノテ線ウチマワリ、上野・池袋方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "15f3508f",
+   "lang": "ja-JP",
+   "text": "まもなく、3番線に、山手線内回り、上野・池袋方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、3番線に、ヤマノテ線ウチマワリ、上野・池袋方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "e8aee3bd",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "264073a7",
+   "lang": "ja-JP",
+   "text": "3番線、ドアが閉まります。ご注意ください。",
+   "tts": "3番線、ドアが閉まります。ご注意ください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "b0e4ca01",
+   "lang": "ja-JP",
+   "text": "神田、神田。ご乗車、ありがとうございます。",
+   "tts": "神田、神田。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "ce51987f",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線内回り、上野・池袋方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ウチマワリ、上野・池袋方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "f9acc5b8",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線内回り、上野・池袋方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ウチマワリ、上野・池袋方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "a98d6c8c",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "e41e89d4",
+   "lang": "ja-JP",
+   "text": "2番線、ドアが閉まります。ご注意ください。",
+   "tts": "2番線、ドアが閉まります。ご注意ください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "4fceafcb",
+   "lang": "ja-JP",
+   "text": "秋葉原、秋葉原。ご乗車、ありがとうございます。",
+   "tts": "秋葉原、秋葉原。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "c157ecb7",
+   "lang": "ja-JP",
+   "text": "御徒町、御徒町。ご乗車、ありがとうございます。",
+   "tts": "御徒町、御徒町。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "3a47dd1e",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線内回り、池袋・新宿方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ウチマワリ、池袋・新宿方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "73c46267",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線内回り、池袋・新宿方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ウチマワリ、池袋・新宿方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "ea2fb840",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "ed0d7ff9",
+   "lang": "ja-JP",
+   "text": "上野、上野。ご乗車、ありがとうございます。",
+   "tts": "上野、上野。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "127708f5",
+   "lang": "ja-JP",
+   "text": "鶯谷、鶯谷。ご乗車、ありがとうございます。",
+   "tts": "鶯谷、鶯谷。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "df16d2ee",
+   "lang": "ja-JP",
+   "text": "今度の、11番線の電車は、山手線内回り、池袋・新宿方面行きです。",
+   "tts": "今度の、11番線の電車は、ヤマノテ線ウチマワリ、池袋・新宿方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "a53cee31",
+   "lang": "ja-JP",
+   "text": "まもなく、11番線に、山手線内回り、池袋・新宿方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、11番線に、ヤマノテ線ウチマワリ、池袋・新宿方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "94810232",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 11. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 11. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "b3565256",
+   "lang": "ja-JP",
+   "text": "11番線、ドアが閉まります。ご注意ください。",
+   "tts": "11番線、ドアが閉まります。ご注意ください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "15dbe52b",
+   "lang": "ja-JP",
+   "text": "日暮里、日暮里。ご乗車、ありがとうございます。",
+   "tts": "日暮里、日暮里。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "7f35c615",
+   "lang": "ja-JP",
+   "text": "今度の、3番線の電車は、山手線内回り、池袋・新宿方面行きです。",
+   "tts": "今度の、3番線の電車は、ヤマノテ線ウチマワリ、池袋・新宿方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "c3c421cc",
+   "lang": "ja-JP",
+   "text": "まもなく、3番線に、山手線内回り、池袋・新宿方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、3番線に、ヤマノテ線ウチマワリ、池袋・新宿方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "1e441381",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "70108f09",
+   "lang": "ja-JP",
+   "text": "西日暮里、西日暮里。ご乗車、ありがとうございます。",
+   "tts": "西日暮里、西日暮里。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "7a1fb387",
+   "lang": "ja-JP",
+   "text": "田端、田端。ご乗車、ありがとうございます。",
+   "tts": "田端、田端。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "ad3d7019",
+   "lang": "ja-JP",
+   "text": "駒込、駒込。ご乗車、ありがとうございます。",
+   "tts": "駒込、駒込。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "2e508e0b",
+   "lang": "ja-JP",
+   "text": "巣鴨、巣鴨。ご乗車、ありがとうございます。",
+   "tts": "巣鴨、巣鴨。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "f71ef86b",
+   "lang": "ja-JP",
+   "text": "今度の、1番線の電車は、山手線内回り、池袋・新宿方面行きです。",
+   "tts": "今度の、1番線の電車は、ヤマノテ線ウチマワリ、池袋・新宿方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "a6f2381a",
+   "lang": "ja-JP",
+   "text": "まもなく、1番線に、山手線内回り、池袋・新宿方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、1番線に、ヤマノテ線ウチマワリ、池袋・新宿方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "f90de2c7",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "336c3345",
+   "lang": "ja-JP",
+   "text": "1番線、ドアが閉まります。ご注意ください。",
+   "tts": "1番線、ドアが閉まります。ご注意ください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "71e2860b",
+   "lang": "ja-JP",
+   "text": "大塚、大塚。ご乗車、ありがとうございます。",
+   "tts": "大塚、大塚。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "c0cb8783",
+   "lang": "ja-JP",
+   "text": "今度の、6番線の電車は、山手線内回り、新宿・渋谷方面行きです。",
+   "tts": "今度の、6番線の電車は、ヤマノテ線ウチマワリ、新宿・渋谷方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "c6b68f34",
+   "lang": "ja-JP",
+   "text": "まもなく、6番線に、山手線内回り、新宿・渋谷方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、6番線に、ヤマノテ線ウチマワリ、新宿・渋谷方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "79584c64",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 6. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 6. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "933cf100",
+   "lang": "ja-JP",
+   "text": "6番線、ドアが閉まります。ご注意ください。",
+   "tts": "6番線、ドアが閉まります。ご注意ください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "0ed4b50e",
+   "lang": "ja-JP",
+   "text": "今度の、5番線の電車は、山手線内回り、新宿・渋谷方面行きです。",
+   "tts": "今度の、5番線の電車は、ヤマノテ線ウチマワリ、新宿・渋谷方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "14b10379",
+   "lang": "ja-JP",
+   "text": "まもなく、5番線に、山手線内回り、新宿・渋谷方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、5番線に、ヤマノテ線ウチマワリ、新宿・渋谷方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "5f1df7fb",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "368a35e1",
+   "lang": "ja-JP",
+   "text": "5番線、ドアが閉まります。ご注意ください。",
+   "tts": "5番線、ドアが閉まります。ご注意ください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "2808f517",
+   "lang": "ja-JP",
+   "text": "池袋、池袋。ご乗車、ありがとうございます。",
+   "tts": "池袋、池袋。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "54e7a562",
+   "lang": "ja-JP",
+   "text": "今度の、1番線の電車は、山手線内回り、新宿・渋谷方面行きです。",
+   "tts": "今度の、1番線の電車は、ヤマノテ線ウチマワリ、新宿・渋谷方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "f04597ed",
+   "lang": "ja-JP",
+   "text": "まもなく、1番線に、山手線内回り、新宿・渋谷方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、1番線に、ヤマノテ線ウチマワリ、新宿・渋谷方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "a44c7117",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "c69d48b7",
+   "lang": "ja-JP",
+   "text": "目白、目白。ご乗車、ありがとうございます。",
+   "tts": "目白、目白。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "dcc5c397",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線内回り、新宿・渋谷方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ウチマワリ、新宿・渋谷方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "3572c1e8",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線内回り、新宿・渋谷方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ウチマワリ、新宿・渋谷方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "3978ac90",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "4faabc0d",
+   "lang": "ja-JP",
+   "text": "高田馬場、高田馬場。ご乗車、ありがとうございます。",
+   "tts": "高田馬場、高田馬場。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "5246687b",
+   "lang": "ja-JP",
+   "text": "新大久保、新大久保。ご乗車、ありがとうございます。",
+   "tts": "新大久保、新大久保。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "92df78a3",
+   "lang": "ja-JP",
+   "text": "今度の、14番線の電車は、山手線内回り、渋谷・品川方面行きです。",
+   "tts": "今度の、14番線の電車は、ヤマノテ線ウチマワリ、渋谷・品川方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "7caee094",
+   "lang": "ja-JP",
+   "text": "まもなく、14番線に、山手線内回り、渋谷・品川方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、14番線に、ヤマノテ線ウチマワリ、渋谷・品川方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "e72b69c3",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 14. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 14. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "45bb17c5",
+   "lang": "ja-JP",
+   "text": "14番線、ドアが閉まります。ご注意ください。",
+   "tts": "14番線、ドアが閉まります。ご注意ください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "12bfce27",
+   "lang": "ja-JP",
+   "text": "新宿、新宿。ご乗車、ありがとうございます。",
+   "tts": "新宿、新宿。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "99a7c374",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線内回り、渋谷・品川方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ウチマワリ、渋谷・品川方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "1fa99155",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線内回り、渋谷・品川方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ウチマワリ、渋谷・品川方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "c894026c",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "3f02b93b",
+   "lang": "ja-JP",
+   "text": "代々木、代々木。ご乗車、ありがとうございます。",
+   "tts": "代々木、代々木。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "0d6180f5",
+   "lang": "ja-JP",
+   "text": "今度の、1番線の電車は、山手線内回り、渋谷・品川方面行きです。",
+   "tts": "今度の、1番線の電車は、ヤマノテ線ウチマワリ、渋谷・品川方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "b656a6d4",
+   "lang": "ja-JP",
+   "text": "まもなく、1番線に、山手線内回り、渋谷・品川方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、1番線に、ヤマノテ線ウチマワリ、渋谷・品川方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "fb400183",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "9918c295",
+   "lang": "ja-JP",
+   "text": "原宿、原宿。ご乗車、ありがとうございます。",
+   "tts": "原宿、原宿。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "e243b279",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線内回り、品川・東京方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ウチマワリ、品川・東京方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "12e46b52",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線内回り、品川・東京方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ウチマワリ、品川・東京方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "e3fa29cf",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Tokyo will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Tokyo will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "eae9c07d",
+   "lang": "ja-JP",
+   "text": "渋谷、渋谷。ご乗車、ありがとうございます。",
+   "tts": "渋谷、渋谷。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "a4a6411a",
+   "lang": "ja-JP",
+   "text": "電車とホームの間が空いているところがありますので、足元にご注意ください。",
+   "tts": "電車とホームの間が空いているところがありますので、足元にご注意ください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "bf575135",
+   "lang": "en-US",
+   "text": "Please mind the gap between the train and the platform.",
+   "tts": "Please mind the gap between the train and the platform.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "bff7f0ff",
+   "lang": "ja-JP",
+   "text": "恵比寿、恵比寿。ご乗車、ありがとうございます。",
+   "tts": "恵比寿、恵比寿。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "d29f66c4",
+   "lang": "ja-JP",
+   "text": "今度の、1番線の電車は、山手線内回り、品川・東京方面行きです。",
+   "tts": "今度の、1番線の電車は、ヤマノテ線ウチマワリ、品川・東京方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "b7e6dc73",
+   "lang": "ja-JP",
+   "text": "まもなく、1番線に、山手線内回り、品川・東京方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、1番線に、ヤマノテ線ウチマワリ、品川・東京方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "a88fe9a8",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Tokyo will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Tokyo will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "60c79809",
+   "lang": "ja-JP",
+   "text": "目黒、目黒。ご乗車、ありがとうございます。",
+   "tts": "目黒、目黒。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "7cbc241b",
+   "lang": "ja-JP",
+   "text": "五反田、五反田。ご乗車、ありがとうございます。",
+   "tts": "五反田、五反田。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "34efc7a3",
+   "lang": "ja-JP",
+   "text": "大崎、大崎。ご乗車、ありがとうございます。",
+   "tts": "大崎、大崎。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "bd190548",
+   "lang": "ja-JP",
+   "text": "今度の、1番線の電車は、山手線内回り、東京・上野方面行きです。",
+   "tts": "今度の、1番線の電車は、ヤマノテ線ウチマワリ、東京・上野方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "b1af8457",
+   "lang": "ja-JP",
+   "text": "まもなく、1番線に、山手線内回り、東京・上野方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、1番線に、ヤマノテ線ウチマワリ、東京・上野方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "69a02886",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "b457d3c9",
+   "lang": "ja-JP",
+   "text": "品川、品川。ご乗車、ありがとうございます。",
+   "tts": "品川、品川。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "4c7b946b",
+   "lang": "ja-JP",
+   "text": "高輪ゲートウェイ、高輪ゲートウェイ。ご乗車、ありがとうございます。",
+   "tts": "高輪ゲートウェイ、高輪ゲートウェイ。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "fa3a9f51",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線内回り、東京・上野方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ウチマワリ、東京・上野方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "9af287aa",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線内回り、東京・上野方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ウチマワリ、東京・上野方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "793eebb9",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "3b67c855",
+   "lang": "ja-JP",
+   "text": "田町、田町。ご乗車、ありがとうございます。",
+   "tts": "田町、田町。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "0f5e318f",
+   "lang": "ja-JP",
+   "text": "浜松町、浜松町。ご乗車、ありがとうございます。",
+   "tts": "浜松町、浜松町。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "9d352ec4",
+   "lang": "ja-JP",
+   "text": "今度の、5番線の電車は、山手線内回り、東京・上野方面行きです。",
+   "tts": "今度の、5番線の電車は、ヤマノテ線ウチマワリ、東京・上野方面ゆきです。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "c170fbd3",
+   "lang": "ja-JP",
+   "text": "まもなく、5番線に、山手線内回り、東京・上野方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、5番線に、ヤマノテ線ウチマワリ、東京・上野方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "3447810a",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "be28cbd7",
+   "lang": "ja-JP",
+   "text": "新橋、新橋。ご乗車、ありがとうございます。",
+   "tts": "新橋、新橋。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "559a227b",
+   "lang": "ja-JP",
+   "text": "有楽町、有楽町。ご乗車、ありがとうございます。",
+   "tts": "有楽町、有楽町。ご乗車、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "98705fc5",
+   "lang": "ja-JP",
+   "text": "今度の、5番線の電車は、山手線外回り、品川・渋谷方面行きです。",
+   "tts": "今度の、5番線の電車は、ヤマノテ線ソトマワリ、品川・渋谷方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "8b3d9460",
+   "lang": "ja-JP",
+   "text": "まもなく、5番線に、山手線外回り、品川・渋谷方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、5番線に、ヤマノテ線ソトマワリ、品川・渋谷方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "f434ae9b",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "ba3bd0b2",
+   "lang": "ja-JP",
+   "text": "5番線、ドアが閉まります。ご注意ください。",
+   "tts": "5番線、ドアが閉まります。ご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "7354c070",
+   "lang": "ja-JP",
+   "text": "東京、東京。ご乗車、ありがとうございます。",
+   "tts": "東京、東京。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "afb93927",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線外回り、東京・品川方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ソトマワリ、東京・品川方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "8f6af440",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線外回り、東京・品川方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ソトマワリ、東京・品川方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "ed84d5c7",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Tokyo and Shinagawa will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Tokyo and Shinagawa will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "994527cb",
+   "lang": "ja-JP",
+   "text": "2番線、ドアが閉まります。ご注意ください。",
+   "tts": "2番線、ドアが閉まります。ご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "ec3cf41e",
+   "lang": "ja-JP",
+   "text": "神田、神田。ご乗車、ありがとうございます。",
+   "tts": "神田、神田。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "6feda450",
+   "lang": "ja-JP",
+   "text": "今度の、3番線の電車は、山手線外回り、東京・品川方面行きです。",
+   "tts": "今度の、3番線の電車は、ヤマノテ線ソトマワリ、東京・品川方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "45b1033f",
+   "lang": "ja-JP",
+   "text": "まもなく、3番線に、山手線外回り、東京・品川方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、3番線に、ヤマノテ線ソトマワリ、東京・品川方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "a4e7ac2e",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Tokyo and Shinagawa will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Tokyo and Shinagawa will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "5fe09c18",
+   "lang": "ja-JP",
+   "text": "3番線、ドアが閉まります。ご注意ください。",
+   "tts": "3番線、ドアが閉まります。ご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "003bcbb0",
+   "lang": "ja-JP",
+   "text": "秋葉原、秋葉原。ご乗車、ありがとうございます。",
+   "tts": "秋葉原、秋葉原。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "fc2f3864",
+   "lang": "ja-JP",
+   "text": "御徒町、御徒町。ご乗車、ありがとうございます。",
+   "tts": "御徒町、御徒町。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "5f1c2352",
+   "lang": "ja-JP",
+   "text": "上野、上野。ご乗車、ありがとうございます。",
+   "tts": "上野、上野。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "a1026758",
+   "lang": "ja-JP",
+   "text": "今度の、3番線の電車は、山手線外回り、上野・東京方面行きです。",
+   "tts": "今度の、3番線の電車は、ヤマノテ線ソトマワリ、上野・東京方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "9a3202c7",
+   "lang": "ja-JP",
+   "text": "まもなく、3番線に、山手線外回り、上野・東京方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、3番線に、ヤマノテ線ソトマワリ、上野・東京方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "551a243a",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "ff0e2b86",
+   "lang": "ja-JP",
+   "text": "鶯谷、鶯谷。ご乗車、ありがとうございます。",
+   "tts": "鶯谷、鶯谷。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "9cc7612e",
+   "lang": "ja-JP",
+   "text": "今度の、10番線の電車は、山手線外回り、上野・東京方面行きです。",
+   "tts": "今度の、10番線の電車は、ヤマノテ線ソトマワリ、上野・東京方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "fad2ec57",
+   "lang": "ja-JP",
+   "text": "まもなく、10番線に、山手線外回り、上野・東京方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、10番線に、ヤマノテ線ソトマワリ、上野・東京方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "62a3998a",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 10. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 10. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "b1d5f968",
+   "lang": "ja-JP",
+   "text": "10番線、ドアが閉まります。ご注意ください。",
+   "tts": "10番線、ドアが閉まります。ご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "6bad14d0",
+   "lang": "ja-JP",
+   "text": "日暮里、日暮里。ご乗車、ありがとうございます。",
+   "tts": "日暮里、日暮里。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "46305b6b",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線外回り、上野・東京方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ソトマワリ、上野・東京方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "80680664",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線外回り、上野・東京方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ソトマワリ、上野・東京方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "2e36f5f3",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "551e4e02",
+   "lang": "ja-JP",
+   "text": "西日暮里、西日暮里。ご乗車、ありがとうございます。",
+   "tts": "西日暮里、西日暮里。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "bd662478",
+   "lang": "ja-JP",
+   "text": "田端、田端。ご乗車、ありがとうございます。",
+   "tts": "田端、田端。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "2b52748a",
+   "lang": "ja-JP",
+   "text": "今度の、1番線の電車は、山手線外回り、上野・東京方面行きです。",
+   "tts": "今度の、1番線の電車は、ヤマノテ線ソトマワリ、上野・東京方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "f93bf7e5",
+   "lang": "ja-JP",
+   "text": "まもなく、1番線に、山手線外回り、上野・東京方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、1番線に、ヤマノテ線ソトマワリ、上野・東京方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "d583c09c",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "7e4f25ee",
+   "lang": "ja-JP",
+   "text": "1番線、ドアが閉まります。ご注意ください。",
+   "tts": "1番線、ドアが閉まります。ご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "741177ae",
+   "lang": "ja-JP",
+   "text": "駒込、駒込。ご乗車、ありがとうございます。",
+   "tts": "駒込、駒込。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "a89d66bc",
+   "lang": "ja-JP",
+   "text": "巣鴨、巣鴨。ご乗車、ありがとうございます。",
+   "tts": "巣鴨、巣鴨。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "296bf8b0",
+   "lang": "ja-JP",
+   "text": "大塚、大塚。ご乗車、ありがとうございます。",
+   "tts": "大塚、大塚。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "d9bfdafc",
+   "lang": "ja-JP",
+   "text": "今度の、7番線の電車は、山手線外回り、上野・東京方面行きです。",
+   "tts": "今度の、7番線の電車は、ヤマノテ線ソトマワリ、上野・東京方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "64ad7473",
+   "lang": "ja-JP",
+   "text": "まもなく、7番線に、山手線外回り、上野・東京方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、7番線に、ヤマノテ線ソトマワリ、上野・東京方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "bcdfce36",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 7. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 7. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "a0e3eb0c",
+   "lang": "ja-JP",
+   "text": "7番線、ドアが閉まります。ご注意ください。",
+   "tts": "7番線、ドアが閉まります。ご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "911a241d",
+   "lang": "ja-JP",
+   "text": "今度の、8番線の電車は、山手線外回り、上野・東京方面行きです。",
+   "tts": "今度の、8番線の電車は、ヤマノテ線ソトマワリ、上野・東京方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "8f39497a",
+   "lang": "ja-JP",
+   "text": "まもなく、8番線に、山手線外回り、上野・東京方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、8番線に、ヤマノテ線ソトマワリ、上野・東京方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "a82d5685",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 8. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 8. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "25655811",
+   "lang": "ja-JP",
+   "text": "8番線、ドアが閉まります。ご注意ください。",
+   "tts": "8番線、ドアが閉まります。ご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "0d74bf70",
+   "lang": "ja-JP",
+   "text": "池袋、池袋。ご乗車、ありがとうございます。",
+   "tts": "池袋、池袋。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "ce501ed1",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線外回り、池袋・上野方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ソトマワリ、池袋・上野方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "dbeb54ca",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線外回り、池袋・上野方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ソトマワリ、池袋・上野方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "675ccd7c",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "98fa9df0",
+   "lang": "ja-JP",
+   "text": "目白、目白。ご乗車、ありがとうございます。",
+   "tts": "目白、目白。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "d24c133c",
+   "lang": "ja-JP",
+   "text": "今度の、1番線の電車は、山手線外回り、池袋・上野方面行きです。",
+   "tts": "今度の、1番線の電車は、ヤマノテ線ソトマワリ、池袋・上野方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "0a840ff3",
+   "lang": "ja-JP",
+   "text": "まもなく、1番線に、山手線外回り、池袋・上野方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、1番線に、ヤマノテ線ソトマワリ、池袋・上野方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "cb04b953",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "11372d6e",
+   "lang": "ja-JP",
+   "text": "高田馬場、高田馬場。ご乗車、ありがとうございます。",
+   "tts": "高田馬場、高田馬場。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "9bc93ddc",
+   "lang": "ja-JP",
+   "text": "新大久保、新大久保。ご乗車、ありがとうございます。",
+   "tts": "新大久保、新大久保。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "3059fb1f",
+   "lang": "ja-JP",
+   "text": "今度の、15番線の電車は、山手線外回り、池袋・上野方面行きです。",
+   "tts": "今度の、15番線の電車は、ヤマノテ線ソトマワリ、池袋・上野方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "7be44b9e",
+   "lang": "ja-JP",
+   "text": "まもなく、15番線に、山手線外回り、池袋・上野方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、15番線に、ヤマノテ線ソトマワリ、池袋・上野方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "834f499a",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 15. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 15. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "099407cf",
+   "lang": "ja-JP",
+   "text": "15番線、ドアが閉まります。ご注意ください。",
+   "tts": "15番線、ドアが閉まります。ご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "f0d0ec58",
+   "lang": "ja-JP",
+   "text": "新宿、新宿。ご乗車、ありがとうございます。",
+   "tts": "新宿、新宿。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "3b5447cb",
+   "lang": "ja-JP",
+   "text": "今度の、1番線の電車は、山手線外回り、新宿・池袋方面行きです。",
+   "tts": "今度の、1番線の電車は、ヤマノテ線ソトマワリ、新宿・池袋方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "598222de",
+   "lang": "ja-JP",
+   "text": "まもなく、1番線に、山手線外回り、新宿・池袋方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、1番線に、ヤマノテ線ソトマワリ、新宿・池袋方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "ad596777",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Ikebukuro will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Ikebukuro will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "5d44b128",
+   "lang": "ja-JP",
+   "text": "代々木、代々木。ご乗車、ありがとうございます。",
+   "tts": "代々木、代々木。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "879a24a2",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線外回り、新宿・池袋方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ソトマワリ、新宿・池袋方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "6b6658f3",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線外回り、新宿・池袋方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ソトマワリ、新宿・池袋方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "24ce2970",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Ikebukuro will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Ikebukuro will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "5feedb96",
+   "lang": "ja-JP",
+   "text": "原宿、原宿。ご乗車、ありがとうございます。",
+   "tts": "原宿、原宿。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "cb1f715e",
+   "lang": "ja-JP",
+   "text": "渋谷、渋谷。ご乗車、ありがとうございます。",
+   "tts": "渋谷、渋谷。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "ddea24eb",
+   "lang": "ja-JP",
+   "text": "電車とホームの間が空いているところがありますので、足元にご注意ください。",
+   "tts": "電車とホームの間が空いているところがありますので、足元にご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "1a403458",
+   "lang": "ja-JP",
+   "text": "今度の、1番線の電車は、山手線外回り、渋谷・新宿方面行きです。",
+   "tts": "今度の、1番線の電車は、ヤマノテ線ソトマワリ、渋谷・新宿方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "44dce6ef",
+   "lang": "ja-JP",
+   "text": "まもなく、1番線に、山手線外回り、渋谷・新宿方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、1番線に、ヤマノテ線ソトマワリ、渋谷・新宿方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "6e02aadb",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "68fab8ac",
+   "lang": "ja-JP",
+   "text": "恵比寿、恵比寿。ご乗車、ありがとうございます。",
+   "tts": "恵比寿、恵比寿。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "f85a8771",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線外回り、渋谷・新宿方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ソトマワリ、渋谷・新宿方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "3b974d62",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線外回り、渋谷・新宿方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ソトマワリ、渋谷・新宿方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "730c5f44",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "4df0e552",
+   "lang": "ja-JP",
+   "text": "目黒、目黒。ご乗車、ありがとうございます。",
+   "tts": "目黒、目黒。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "9e1f1580",
+   "lang": "ja-JP",
+   "text": "五反田、五反田。ご乗車、ありがとうございます。",
+   "tts": "五反田、五反田。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "88d048a2",
+   "lang": "ja-JP",
+   "text": "今度の、3番線の電車は、山手線外回り、渋谷・新宿方面行きです。",
+   "tts": "今度の、3番線の電車は、ヤマノテ線ソトマワリ、渋谷・新宿方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "24558b55",
+   "lang": "ja-JP",
+   "text": "まもなく、3番線に、山手線外回り、渋谷・新宿方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、3番線に、ヤマノテ線ソトマワリ、渋谷・新宿方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "fdd21115",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "ae4023fb",
+   "lang": "ja-JP",
+   "text": "今度の、4番線の電車は、山手線外回り、渋谷・新宿方面行きです。",
+   "tts": "今度の、4番線の電車は、ヤマノテ線ソトマワリ、渋谷・新宿方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "c22a4b38",
+   "lang": "ja-JP",
+   "text": "まもなく、4番線に、山手線外回り、渋谷・新宿方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、4番線に、ヤマノテ線ソトマワリ、渋谷・新宿方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "21bc181e",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "78f8493d",
+   "lang": "ja-JP",
+   "text": "4番線、ドアが閉まります。ご注意ください。",
+   "tts": "4番線、ドアが閉まります。ご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "05b761b0",
+   "lang": "ja-JP",
+   "text": "大崎、大崎。ご乗車、ありがとうございます。",
+   "tts": "大崎、大崎。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "1b02455a",
+   "lang": "ja-JP",
+   "text": "品川、品川。ご乗車、ありがとうございます。",
+   "tts": "品川、品川。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "450fa49c",
+   "lang": "ja-JP",
+   "text": "今度の、2番線の電車は、山手線外回り、品川・渋谷方面行きです。",
+   "tts": "今度の、2番線の電車は、ヤマノテ線ソトマワリ、品川・渋谷方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "cf3d4ae5",
+   "lang": "ja-JP",
+   "text": "まもなく、2番線に、山手線外回り、品川・渋谷方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、2番線に、ヤマノテ線ソトマワリ、品川・渋谷方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "f8762230",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "c5e91fc0",
+   "lang": "ja-JP",
+   "text": "高輪ゲートウェイ、高輪ゲートウェイ。ご乗車、ありがとうございます。",
+   "tts": "高輪ゲートウェイ、高輪ゲートウェイ。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "f25398c7",
+   "lang": "ja-JP",
+   "text": "今度の、3番線の電車は、山手線外回り、品川・渋谷方面行きです。",
+   "tts": "今度の、3番線の電車は、ヤマノテ線ソトマワリ、品川・渋谷方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "000be896",
+   "lang": "ja-JP",
+   "text": "まもなく、3番線に、山手線外回り、品川・渋谷方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、3番線に、ヤマノテ線ソトマワリ、品川・渋谷方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "4da88931",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "3b33ad82",
+   "lang": "ja-JP",
+   "text": "田町、田町。ご乗車、ありがとうございます。",
+   "tts": "田町、田町。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "7b014264",
+   "lang": "ja-JP",
+   "text": "浜松町、浜松町。ご乗車、ありがとうございます。",
+   "tts": "浜松町、浜松町。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "b2f36882",
+   "lang": "ja-JP",
+   "text": "今度の、4番線の電車は、山手線外回り、品川・渋谷方面行きです。",
+   "tts": "今度の、4番線の電車は、ヤマノテ線ソトマワリ、品川・渋谷方面ゆきです。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "5105920f",
+   "lang": "ja-JP",
+   "text": "まもなく、4番線に、山手線外回り、品川・渋谷方面行きがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、4番線に、ヤマノテ線ソトマワリ、品川・渋谷方面ゆきがまいります。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "a62a82e2",
+   "lang": "en-US",
+   "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "eaad8ad0",
+   "lang": "ja-JP",
+   "text": "新橋、新橋。ご乗車、ありがとうございます。",
+   "tts": "新橋、新橋。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "387a53e8",
+   "lang": "ja-JP",
+   "text": "有楽町、有楽町。ご乗車、ありがとうございます。",
+   "tts": "有楽町、有楽町。ご乗車、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "b1d2b7d6",
+   "lang": "ja-JP",
+   "text": "まもなく、3番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、3番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "a2da7058",
+   "lang": "en-US",
+   "text": "Your attention, please. A train will pass through track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. A train will pass through track number 3. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "505d5218",
+   "lang": "ja-JP",
+   "text": "まもなく、1番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、1番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "5c6efcc6",
+   "lang": "en-US",
+   "text": "Your attention, please. A train will pass through track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. A train will pass through track number 1. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "7a07bd1b",
+   "lang": "ja-JP",
+   "text": "まもなく、4番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、4番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "68fd5203",
+   "lang": "en-US",
+   "text": "Your attention, please. A train will pass through track number 4. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. A train will pass through track number 4. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "97d8e5d2",
+   "lang": "ja-JP",
+   "text": "まもなく、12番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、12番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "5cacb626",
+   "lang": "en-US",
+   "text": "Your attention, please. A train will pass through track number 12. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. A train will pass through track number 12. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "faddacf4",
+   "lang": "ja-JP",
+   "text": "まもなく、6番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、6番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "b065e51d",
+   "lang": "en-US",
+   "text": "Your attention, please. A train will pass through track number 6. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. A train will pass through track number 6. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "add52202",
+   "lang": "ja-JP",
+   "text": "まもなく、4番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、4番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "49b5c40d",
+   "lang": "ja-JP",
+   "text": "まもなく、1番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、1番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "df953635",
+   "lang": "ja-JP",
+   "text": "まもなく、9番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "tts": "まもなく、9番線を、電車が通過します。危ないですから、黄色い点字ブロックまで、お下がりください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "ef46e35e",
+   "lang": "en-US",
+   "text": "Your attention, please. A train will pass through track number 9. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. A train will pass through track number 9. For your safety, please stand behind the yellow line.",
+   "voice": "am_michael",
+   "speed": 0.88,
+   "role": "atos-en"
+  },
+  {
+   "key": "25c9d2df",
+   "lang": "ja-JP",
+   "text": "電車が通過します。ご注意ください。",
+   "tts": "電車が通過します。ご注意ください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "b486ac7a",
+   "lang": "ja-JP",
+   "text": "本日も、山手線を、ご利用くださいまして、ありがとうございます。",
+   "tts": "本日も、ヤマノテ線を、ご利用くださいまして、ありがとうございます。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "980c5610",
+   "lang": "ja-JP",
+   "text": "電車がまいります。ご注意ください。",
+   "tts": "電車がまいります。ご注意ください。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "23eac41d",
+   "lang": "ja-JP",
+   "text": "山手線は、お客さま救護の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、お客さま救護の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "cfcb8c72",
+   "lang": "ja-JP",
+   "text": "山手線は、ドア点検の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、ドア点検の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "f37b4a64",
+   "lang": "ja-JP",
+   "text": "山手線は、車両点検の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、車両点検の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "631967f8",
+   "lang": "ja-JP",
+   "text": "山手線は、線路内人立入りの影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、線路内ひと立入りの影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "869327ed",
+   "lang": "ja-JP",
+   "text": "山手線は、ホーム上の安全確認の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、ホーム上の安全確認の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "f36926ef",
+   "lang": "ja-JP",
+   "text": "山手線は、架線の停電の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、架線の停電の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jf_tebukuro",
+   "speed": 1.15,
+   "role": "atos-inner"
+  },
+  {
+   "key": "9aa06fdc",
+   "lang": "ja-JP",
+   "text": "電車が通過します。ご注意ください。",
+   "tts": "電車が通過します。ご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "9abc6bf9",
+   "lang": "ja-JP",
+   "text": "本日も、山手線を、ご利用くださいまして、ありがとうございます。",
+   "tts": "本日も、ヤマノテ線を、ご利用くださいまして、ありがとうございます。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "51711027",
+   "lang": "ja-JP",
+   "text": "電車がまいります。ご注意ください。",
+   "tts": "電車がまいります。ご注意ください。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "e6511fc4",
+   "lang": "ja-JP",
+   "text": "山手線は、お客さま救護の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、お客さま救護の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "7caff5e7",
+   "lang": "ja-JP",
+   "text": "山手線は、ドア点検の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、ドア点検の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "502bcb31",
+   "lang": "ja-JP",
+   "text": "山手線は、車両点検の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、車両点検の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "57728b83",
+   "lang": "ja-JP",
+   "text": "山手線は、線路内人立入りの影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、線路内ひと立入りの影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "1f57731e",
+   "lang": "ja-JP",
+   "text": "山手線は、ホーム上の安全確認の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、ホーム上の安全確認の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "63d62eb8",
+   "lang": "ja-JP",
+   "text": "山手線は、架線の停電の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "tts": "ヤマノテ線は、架線の停電の影響で、一部の電車に遅れが出ています。お急ぎのところ、ご迷惑をおかけいたします。",
+   "voice": "jm_kumo",
+   "speed": 1.15,
+   "role": "atos-outer"
+  },
+  {
+   "key": "d18d9f69",
+   "lang": "ja-JP",
+   "text": "降りるお客さまを先にお通しください。",
+   "tts": "降りるお客さまを先にお通しください。",
+   "voice": "jf_nezumi",
+   "speed": 1.22,
+   "role": "agent"
+  },
+  {
+   "key": "e2f3f31b",
+   "lang": "ja-JP",
+   "text": "ドア付近のお客さまは、車内中ほどまでお進みください。",
+   "tts": "ドア付近のお客さまは、車内中ほどまでお進みください。",
+   "voice": "jf_nezumi",
+   "speed": 1.22,
+   "role": "agent"
+  },
+  {
+   "key": "2f68b854",
+   "lang": "ja-JP",
+   "text": "ホーム中ほどまでお進みください。",
+   "tts": "ホームなかほどまでお進みください。",
+   "voice": "jf_nezumi",
+   "speed": 1.22,
+   "role": "agent"
+  },
+  {
+   "key": "08503ace",
+   "lang": "ja-JP",
+   "text": "駆け込み乗車は、おやめください。",
+   "tts": "駆け込み乗車は、おやめください。",
+   "voice": "jf_nezumi",
+   "speed": 1.22,
+   "role": "agent"
+  },
+  {
+   "key": "90833f45",
+   "lang": "ja-JP",
+   "text": "無理なご乗車はおやめください。次の電車をご利用ください。",
+   "tts": "無理なご乗車はおやめください。次の電車をご利用ください。",
+   "voice": "jf_nezumi",
+   "speed": 1.22,
+   "role": "agent"
+  },
+  {
+   "key": "a3594775",
+   "lang": "ja-JP",
+   "text": "お荷物、お身体を、ドアからお引きください。",
+   "tts": "お荷物、お身体を、ドアからお引きください。",
+   "voice": "jf_nezumi",
+   "speed": 1.22,
+   "role": "agent"
+  },
+  {
+   "key": "87acb67f",
+   "lang": "ja-JP",
+   "text": "危ないですから、ドアから離れてください。",
+   "tts": "危ないですから、ドアから離れてください。",
+   "voice": "jf_nezumi",
+   "speed": 1.22,
+   "role": "agent"
+  },
+  {
+   "key": "d9849698",
+   "lang": "ja-JP",
+   "text": "ドアが閉まりません。もう一度、ドアから離れてください。",
+   "tts": "ドアが閉まりません。もう一度、ドアから離れてください。",
+   "voice": "jf_nezumi",
+   "speed": 1.22,
+   "role": "agent"
+  },
+  {
+   "key": "715b2273",
+   "lang": "ja-JP",
+   "text": "お待たせしております。ただいま、ドアの確認を行っております。",
+   "tts": "お待たせしております。ただいま、ドアの確認を行っております。",
+   "voice": "jf_nezumi",
+   "speed": 1.22,
+   "role": "agent"
+  },
+  {
+   "key": "b3493013",
+   "lang": "ja-JP",
+   "text": "しばらくお待ちください。",
+   "tts": "しばらくお待ちください。",
+   "voice": "jf_nezumi",
+   "speed": 1.22,
+   "role": "agent"
+  }
+ ],
+ "stations": [
+  {
+   "kanji": "東京",
+   "kana": "とうきょう"
+  },
+  {
+   "kanji": "神田",
+   "kana": "かんだ"
+  },
+  {
+   "kanji": "秋葉原",
+   "kana": "あきはばら"
+  },
+  {
+   "kanji": "御徒町",
+   "kana": "おかちまち"
+  },
+  {
+   "kanji": "上野",
+   "kana": "うえの"
+  },
+  {
+   "kanji": "鶯谷",
+   "kana": "うぐいすだに"
+  },
+  {
+   "kanji": "日暮里",
+   "kana": "にっぽり"
+  },
+  {
+   "kanji": "西日暮里",
+   "kana": "にしにっぽり"
+  },
+  {
+   "kanji": "田端",
+   "kana": "たばた"
+  },
+  {
+   "kanji": "駒込",
+   "kana": "こまごめ"
+  },
+  {
+   "kanji": "巣鴨",
+   "kana": "すがも"
+  },
+  {
+   "kanji": "大塚",
+   "kana": "おおつか"
+  },
+  {
+   "kanji": "池袋",
+   "kana": "いけぶくろ"
+  },
+  {
+   "kanji": "目白",
+   "kana": "めじろ"
+  },
+  {
+   "kanji": "高田馬場",
+   "kana": "たかだのばば"
+  },
+  {
+   "kanji": "新大久保",
+   "kana": "しんおおくぼ"
+  },
+  {
+   "kanji": "新宿",
+   "kana": "しんじゅく"
+  },
+  {
+   "kanji": "代々木",
+   "kana": "よよぎ"
+  },
+  {
+   "kanji": "原宿",
+   "kana": "はらじゅく"
+  },
+  {
+   "kanji": "渋谷",
+   "kana": "しぶや"
+  },
+  {
+   "kanji": "恵比寿",
+   "kana": "えびす"
+  },
+  {
+   "kanji": "目黒",
+   "kana": "めぐろ"
+  },
+  {
+   "kanji": "五反田",
+   "kana": "ごたんだ"
+  },
+  {
+   "kanji": "大崎",
+   "kana": "おおさき"
+  },
+  {
+   "kanji": "品川",
+   "kana": "しながわ"
+  },
+  {
+   "kanji": "高輪ゲートウェイ",
+   "kana": "たかなわげーとうぇい"
+  },
+  {
+   "kanji": "田町",
+   "kana": "たまち"
+  },
+  {
+   "kanji": "浜松町",
+   "kana": "はままつちょう"
+  },
+  {
+   "kanji": "新橋",
+   "kana": "しんばし"
+  },
+  {
+   "kanji": "有楽町",
+   "kana": "ゆうらくちょう"
+  }
+ ]
+}
