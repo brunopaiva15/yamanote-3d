@@ -70,12 +70,22 @@ export interface StationAnnouncementRule {
 }
 
 /**
- * Consigne de prudence commune à ces deux entrées : l'écart entre le seuil de
- * la rame et le bord du quai. Écrite une fois — le même texte doit sortir des
- * deux sonorisations, à la ponctuation de bord près (voir plus bas).
+ * Consigne de prudence des deux entrées de Shibuya : l'écart entre le seuil de
+ * la rame et le bord du quai.
+ *
+ * Le JAPONAIS est commun aux deux canaux — 「足元にご注意ください」 ne dit pas dans
+ * quel sens on franchit l'écart, et vaut donc pour qui descend comme pour qui
+ * monte (à la ponctuation de bord près, voir plus bas).
+ *
+ * L'ANGLAIS, lui, ne peut pas l'être. « When you leave the train » s'adresse à
+ * ceux qui descendent : c'est juste dans la rame, où l'on ne parle qu'à des gens
+ * déjà à bord, et faux sur le quai, où la même phrase est entendue par ceux qui
+ * attendent pour monter — et qui sont, à cet instant précis, les plus concernés
+ * par l'écart. Le quai nomme donc l'écart lui-même plutôt que le geste.
  */
 const GAP_JP = '電車とホームの間が空いているところがありますので、足元にご注意ください。';
-const GAP_EN = 'Please watch your step when you leave the train.';
+const GAP_EN_CABIN = 'Please watch your step when you leave the train.';
+const GAP_EN_PLATFORM = 'Please mind the gap between the train and the platform.';
 
 export const STATION_ANNOUNCEMENT_RULES: Partial<Record<string, StationAnnouncementRule>> = {
   // JY20 渋谷 — quai en courbe, donc écart variable entre la rame et le bord.
@@ -89,10 +99,11 @@ export const STATION_ANNOUNCEMENT_RULES: Partial<Record<string, StationAnnouncem
   // Deux canaux, et ce n'est pas la même chose : la rame le dit à l'approche,
   // aux gens qui vont descendre ; le quai le redit à l'arrivée, aux gens qui
   // sont sur le point de mettre le pied dans le train. Aucun des deux ne
-  // reprend la phrase de l'autre au même instant.
+  // reprend la phrase de l'autre au même instant — et en anglais, aucun des deux
+  // ne dit tout à fait la même chose (voir GAP_EN_CABIN / GAP_EN_PLATFORM).
   JY20: {
-    cabin: [{ jp: GAP_JP, en: GAP_EN, position: 'during-approach' }],
-    platform: [{ jp: GAP_JP, en: GAP_EN, phase: 'arrival' }],
+    cabin: [{ jp: GAP_JP, en: GAP_EN_CABIN, position: 'during-approach' }],
+    platform: [{ jp: GAP_JP, en: GAP_EN_PLATFORM, phase: 'arrival' }],
   },
 };
 

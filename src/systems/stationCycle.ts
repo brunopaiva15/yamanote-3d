@@ -543,9 +543,15 @@ const APPROACH_ANNOUNCE_LEAD = 20.0;
 const PLATFORM_PLAN_HEADWAY = 120;
 
 /**
- * Avance du second message d'agent sur la mélodie (s) : le même créneau que sur
- * le quai — la chronologie est partagée (systems/platformAnnouncementPlan).
+ * Créneaux des messages d'agent, en temps de dwell : les MÊMES que sur le quai.
+ *
+ * La chronologie est partagée (systems/platformAnnouncementPlan) et ne se
+ * redéclare nulle part : ce qu'on entend par les portes ouvertes et ce qu'on
+ * entend debout sur le quai sont la même sonorisation, et un écart de quelques
+ * secondes entre les deux points d'écoute ferait dire deux choses différentes au
+ * même haut-parleur selon l'endroit où l'on se tient.
  */
+const AGENT_EXCHANGE_AT = PLATFORM_SCHEDULE.agentExchangeAt;
 const AGENT_PRE_MELODY_LEAD = PLATFORM_SCHEDULE.agentPreMelodyLead;
 
 /**
@@ -778,7 +784,7 @@ function seedFired(phase: Phase, t: number, stationIndex: number, dir: LoopDirec
     if (t > 0.4 + stationTimings.psdOpenDelay) fired.add('psd-open');
     if (t > 0.4 + stationTimings.psdOpenDelay + 0.6) fired.add('pa-alight');
     if (t > 1.6) fired.add('exchange');
-    if (t > 6) fired.add('pa-agent');
+    if (t > AGENT_EXCHANGE_AT) fired.add('pa-agent');
     if (t > agentSecondAt(stationIndex, dwell)) fired.add('pa-agent-2');
     if (t > PASS_ROLL_AT) fired.add('pass-roll');
     if (t >= melodyStartAt(stationIndex, dwell)) fired.add('melody');
@@ -1091,10 +1097,10 @@ export function updateCycle(dt: number): void {
       // messages selon l'affluence, l'heure, la gare et le retard — et plus
       // « laissez descendre » à chaque ouverture de portes.
       once('pa-alight', t > 0.4 + stationTimings.psdOpenDelay + 0.6, () =>
-        paAlightFirst(s.index, PLATFORM_PLAN_HEADWAY),
+        paAlightFirst(s.index, PLATFORM_PLAN_HEADWAY, melodyStartAt(s.index, dwell) - t),
       );
       once('exchange', t > 1.6, () => exchangePassengers(s.doorSide));
-      once('pa-agent', t > 6, () =>
+      once('pa-agent', t > AGENT_EXCHANGE_AT, () =>
         paAgentMessage(s.index, PLATFORM_PLAN_HEADWAY, 0, melodyStartAt(s.index, dwell) - t),
       );
       // Et le second, s'il y en a un, avant la mélodie et après le tirage du

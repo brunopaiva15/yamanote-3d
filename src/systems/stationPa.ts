@@ -42,6 +42,7 @@ import * as audio from './audioEngine';
 import {
   createPlatformAnnouncementPlan,
   fitsBeforeCutoff,
+  optionalMessagePlays,
   platformPlanSeed,
   seededRandom,
   type PlatformAnnouncementContext,
@@ -390,11 +391,34 @@ export function paArrival(index: number): void {
  * « Laissez descendre les voyageurs », à l'ouverture des portes — quand le plan
  * de cet arrêt l'a retenu. Sur un quai désert, l'agent ne dit rien.
  *
+ * `cutoffIn` est le temps qui reste avant la mélodie, et il est vérifié comme
+ * pour n'importe quelle consigne facultative. Le message a l'air d'être en tête
+ * de l'arrêt, mais il ne l'est pas : la gare vient de dire son nom, et à Shibuya
+ * elle enchaîne sur la consigne d'écart en japonais PUIS en anglais — une
+ * quinzaine de secondes de file devant un message qui n'a de sens que pendant que
+ * les voyageurs descendent. Passé ce moment, il ne se rattrape pas : « laissez
+ * descendre » lancé sur la mélodie ne fait plus descendre personne.
+ *
  * @returns vrai si le message a été diffusé.
  */
-export function paAlightFirst(index: number, headwaySeconds: number): boolean {
-  if (!currentPlatformPlan(index, headwaySeconds).playAlightFirstMessage) return false;
-  say(platformAlightFirstAnnouncement(), 'platform');
+export function paAlightFirst(
+  index: number,
+  headwaySeconds: number,
+  cutoffIn: number,
+): boolean {
+  const plan = currentPlatformPlan(index, headwaySeconds);
+  const items = platformAlightFirstAnnouncement();
+  if (
+    !optionalMessagePlays(
+      plan.playAlightFirstMessage,
+      utteranceDuration(items),
+      speechQueueRemaining('platform'),
+      cutoffIn,
+    )
+  ) {
+    return false;
+  }
+  say(items, 'platform');
   return true;
 }
 
@@ -417,11 +441,14 @@ export function paAgentMessage(
   cutoffIn = Number.POSITIVE_INFINITY,
 ): boolean {
   const messages = currentPlatformPlan(index, headwaySeconds).agentMessages;
-  if (slot >= messages.length) return false;
-  const items = platformAgentMessage(messages[slot]);
+  const items = slot < messages.length ? platformAgentMessage(messages[slot]) : [];
   if (
-    cutoffIn !== Number.POSITIVE_INFINITY &&
-    !fitsBeforeCutoff(utteranceDuration(items), speechQueueRemaining('platform'), cutoffIn)
+    !optionalMessagePlays(
+      slot < messages.length,
+      utteranceDuration(items),
+      speechQueueRemaining('platform'),
+      cutoffIn,
+    )
   ) {
     return false;
   }

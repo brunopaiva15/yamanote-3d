@@ -24,29 +24,64 @@ const {
   PLATFORM_SCHEDULE,
   createPlatformAnnouncementPlan,
   fitsBeforeCutoff,
+  optionalMessagePlays,
 } = await import('../src/systems/platformAnnouncementPlan.ts');
 const { announcementClipDuration } = await import('../src/data/announcementClips.ts');
 const {
   PLATFORM_AGENT_MESSAGES,
   PLATFORM_DELAY_CAUSES,
   platformAgentMessage,
+  platformAlightFirstAnnouncement,
   platformApproachAnnouncement,
+  platformArrivalAnnouncement,
   platformDelayAnnouncement,
+  platformDoorsClosingAnnouncement,
   platformGreeting,
   platformPreAnnouncement,
 } = await import('../src/data/stationAnnouncements.ts');
+const { platformNoticesForStation } = await import(
+  '../src/data/stationAnnouncementRules.ts'
+);
 const { STATIONS } = await import('../src/data/stations.ts');
 const { platformFor } = await import('../src/data/platforms.ts');
 const { DEPART_HOLD } = await import('../src/systems/trainPhysics.ts');
-const { platformDoorsClosingAnnouncement } = await import(
-  '../src/data/stationAnnouncements.ts'
-);
+
+const { readFileSync } = await import('node:fs');
+const { fileURLToPath } = await import('node:url');
+const { dirname, join } = await import('node:path');
+
+const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'systems');
+const readSystem = (name) => readFileSync(join(SRC, name), 'utf8');
 
 const DIRECTIONS = ['inner', 'outer'] as const;
 
 /** Durée gravée d'une séquence (s) ; 0 pour un texte sans clip. */
 const durationOf = (items) =>
   items.reduce((s, u) => s + (announcementClipDuration(u.lang, u.text, u.voice) ?? 0), 0);
+
+const platformOf = (index, direction) =>
+  platformFor(STATIONS[index].jy, direction)?.platform ?? 1;
+
+// Les trois séquences que la gare construit VRAIMENT (systems/stationPa) :
+// consignes locales comprises. Les mesurer sans elles reviendrait à chronométrer
+// autre chose que ce qui sort des haut-parleurs — à Shibuya, la consigne d'écart
+// double presque la séquence d'arrivée.
+
+const approachItems = (index, direction) => [
+  ...platformApproachAnnouncement(index, platformOf(index, direction), direction),
+  ...platformNoticesForStation(STATIONS[index].jy, direction, 'approach'),
+];
+
+const preAnnounceItems = (index, direction, withGreeting) => [
+  ...(withGreeting ? platformGreeting(direction) : []),
+  ...platformPreAnnouncement(index, platformOf(index, direction), direction),
+  ...platformNoticesForStation(STATIONS[index].jy, direction, 'pre-approach'),
+];
+
+const arrivalItems = (index, direction) => [
+  ...platformArrivalAnnouncement(index, direction),
+  ...platformNoticesForStation(STATIONS[index].jy, direction, 'arrival'),
+];
 
 /**
  * Bornes du dwell rappelées de systems/stationCycle : le plus tôt où la mélodie
@@ -89,11 +124,13 @@ test('l’annonce d’approche a dit l’essentiel avant que la rame ne paraisse
   // sur un vrai quai, où la version anglaise finit souvent devant la rame déjà
   // à l'arrêt. Ce qui ne doit pas arriver, c'est qu'elle déborde jusqu'à
   // l'annonce du nom de la gare, une trentaine de secondes plus loin.
+  //
+  // Séquence complète, consignes locales comprises : c'est ce que la gare met en
+  // file, pas seulement l'annonce d'approche seule.
   const untilArrival = PLATFORM_SCHEDULE.approachBefore;
   for (const direction of DIRECTIONS) {
     for (let i = 0; i < STATIONS.length; i++) {
-      const platform = platformFor(STATIONS[i].jy, direction)?.platform ?? 1;
-      const items = platformApproachAnnouncement(i, platform, direction);
+      const items = approachItems(i, direction);
       const jp = durationOf(items.filter((u) => u.lang === 'ja-JP'));
       const all = durationOf(items);
       const where = `${STATIONS[i].jy} (${direction})`;
@@ -121,16 +158,16 @@ test('l’excuse de retard est terminée avant le rendez-vous décalé de l’an
 test('l’anticipée facultative ne retarde pas l’annonce d’approche', () => {
   // Créneau réel du creux le plus court : de son rendez-vous à l'annonce
   // d'approche. Ce qui n'y tient pas est abandonné (paPreAnnouncement vérifie
-  // fitsBeforeCutoff) — jamais joué en retard.
+  // fitsBeforeCutoff) — jamais joué en retard. Les consignes locales de phase
+  // 'pre-approach' comptent : c'est la séquence entière qui doit tenir.
   const cutoff = HEADWAY_GAP - PLATFORM_SCHEDULE.approachBefore - PLATFORM_SCHEDULE.preAnnounceAt;
   let fitting = 0;
   for (const direction of DIRECTIONS) {
     for (let i = 0; i < STATIONS.length; i++) {
-      const platform = platformFor(STATIONS[i].jy, direction)?.platform ?? 1;
-      const alone = durationOf(platformPreAnnouncement(i, platform, direction));
-      const withGreeting =
-        durationOf(platformGreeting(direction)) + alone;
+      const alone = durationOf(preAnnounceItems(i, direction, false));
+      const withGreeting = durationOf(preAnnounceItems(i, direction, true));
       assert.ok(alone > 0, `anticipée sans clip à ${STATIONS[i].jy} (${direction})`);
+      assert.ok(withGreeting > alone, 'le remerciement rallonge la séquence');
       if (fitsBeforeCutoff(alone, 0, cutoff)) fitting++;
       // Rien ne DOIT tenir, mais tout doit être tranché par le même test : la
       // version avec remerciement est plus longue, donc jamais plus permissive.
@@ -142,6 +179,122 @@ test('l’anticipée facultative ne retarde pas l’annonce d’approche', () =>
   // Et le créneau du creux court laisse quand même passer l'anticipée seule :
   // sans cela, elle ne s'entendrait jamais.
   assert.ok(fitting > 0, 'aucune anticipée ne tient dans un creux de 60 s');
+});
+
+test('la séquence d’arrivée est mesurée telle qu’elle sort, consignes comprises', () => {
+  // C'est elle qui occupe la file quand « laissez descendre » se présente, et
+  // c'est là que Shibuya se distingue : le nom de la gare, puis la consigne
+  // d'écart en japonais et en anglais.
+  const shibuya = STATIONS.findIndex((st) => st.jy === 'JY20');
+  for (const direction of DIRECTIONS) {
+    for (let i = 0; i < STATIONS.length; i++) {
+      const items = arrivalItems(i, direction);
+      const where = `${STATIONS[i].jy} (${direction})`;
+      for (const u of items) {
+        assert.ok(
+          (announcementClipDuration(u.lang, u.text, u.voice) ?? 0) > 0,
+          `${where} : « ${u.text} » sans clip`,
+        );
+      }
+      // Elle doit rester finie avant la mélodie la plus précoce, sinon la gare
+      // parlerait encore quand le morceau part.
+      const d = durationOf(items);
+      assert.ok(d < MELODY_START_MIN, `${where} : arrivée de ${d.toFixed(1)} s`);
+    }
+    // Et à Shibuya, elle est nettement plus longue qu'ailleurs : c'est
+    // précisément ce qui peut repousser un message facultatif hors de son sens.
+    const withNotice = durationOf(arrivalItems(shibuya, direction));
+    const plain = durationOf(arrivalItems(STATIONS.findIndex((st) => st.jy === 'JY06'), direction));
+    assert.ok(
+      withNotice > plain * 2,
+      `Shibuya ${withNotice.toFixed(1)} s contre ${plain.toFixed(1)} s ailleurs`,
+    );
+  }
+});
+
+test('« laissez descendre » n’est diffusé que s’il tient dans son créneau', () => {
+  // Le message a l'air d'être en tête de l'arrêt, mais il passe DERRIÈRE
+  // l'annonce d'arrivée : à Shibuya, le nom de la gare puis la consigne d'écart
+  // en japonais et en anglais. La décision est celle de systems/stationPa
+  // (optionalMessagePlays), avec les durées réellement gravées.
+  const shibuya = STATIONS.findIndex((st) => st.jy === 'JY20');
+  const alight = durationOf(platformAlightFirstAnnouncement());
+  assert.ok(alight > 0, '« laissez descendre » sans clip');
+
+  for (const direction of DIRECTIONS) {
+    const queue = durationOf(arrivalItems(shibuya, direction));
+    const openAt = 0.4 + 0.85 + 0.6; // ouverture + retard des baies palières
+    const untilMelody = MELODY_START_MIN - openAt;
+
+    // Prévu par le plan, file vide : il passe.
+    assert.equal(optionalMessagePlays(true, alight, 0, untilMelody), true);
+
+    // Non retenu par le plan : rien, même avec tout le temps du monde.
+    assert.equal(optionalMessagePlays(false, alight, 0, untilMelody), false);
+    assert.equal(optionalMessagePlays(false, alight, 0, 60), false);
+
+    // Derrière la séquence d'arrivée de Shibuya sur l'arrêt le plus court : il
+    // ne tient pas, et il est ABANDONNÉ plutôt que repoussé sur la mélodie.
+    assert.equal(
+      optionalMessagePlays(true, alight, queue, untilMelody),
+      false,
+      `Shibuya ${direction} : ${queue.toFixed(1)} s de file pour ${untilMelody.toFixed(1)} s`,
+    );
+
+    // Sur un arrêt qui prend son temps (mélodie à 25 s après l'arrêt), la même
+    // file lui laisse la place : la décision suit le créneau, pas la gare.
+    const longStop = 25 - 1 - openAt;
+    assert.equal(optionalMessagePlays(true, alight, queue, longStop), true);
+
+    // Et il ne déborde jamais : la limite est exactement la marge de silence.
+    const exact = queue + alight + ANNOUNCEMENT_MARGIN;
+    assert.equal(optionalMessagePlays(true, alight, queue, exact), true);
+    assert.equal(optionalMessagePlays(true, alight, queue, exact - 0.01), false);
+  }
+
+  // Une gare sans consigne locale, elle, laisse largement la place même sur
+  // l'arrêt le plus court : le message n'a pas disparu, c'est bien la longueur
+  // de la file qui décide.
+  const plainQueue = durationOf(arrivalItems(STATIONS.findIndex((st) => st.jy === 'JY06'), 'inner'));
+  assert.equal(optionalMessagePlays(true, alight, plainQueue, MELODY_START_MIN - 1.85), true);
+});
+
+test('les deux points d’écoute partagent l’instant du premier message d’agent', () => {
+  // Le quai et la rame entendent la MÊME sonorisation : si l'un déclenche la
+  // première consigne d'agent à la cinquième seconde et l'autre à la sixième, le
+  // même haut-parleur dit deux choses différentes selon l'endroit où l'on se
+  // tient. L'instant n'a donc qu'une seule définition, et ces deux modules la
+  // lisent — ils ne la redéclarent pas.
+  const cycle = readSystem('stationCycle.ts');
+  const wait = readSystem('platformWait.ts');
+
+  for (const [name, src] of [
+    ['stationCycle.ts', cycle],
+    ['platformWait.ts', wait],
+  ]) {
+    assert.ok(
+      /PLATFORM_SCHEDULE\.agentExchangeAt|agentExchangeAt: AGENT_EXCHANGE_AT/.test(src),
+      `${name} ne lit pas PLATFORM_SCHEDULE.agentExchangeAt`,
+    );
+  }
+
+  // Les lignes qui ARMENT le premier message (une dans le cycle, une dans
+  // l'attente sur le quai, plus leurs reprises de spawn) passent toutes par la
+  // constante et ne contiennent plus de seuil écrit à la main.
+  const triggers = [...cycle.split('\n'), ...wait.split('\n')].filter((line) =>
+    /'pa-agent'|'agent-1'/.test(line),
+  );
+  assert.ok(triggers.length >= 4, `déclencheurs trouvés : ${triggers.length}`);
+  for (const line of triggers) {
+    assert.ok(line.includes('AGENT_EXCHANGE_AT'), `seuil écrit à la main : ${line.trim()}`);
+    assert.ok(
+      !/t\s*>=?\s*\d/.test(line),
+      `valeur codée en dur pour le premier message d'agent : ${line.trim()}`,
+    );
+  }
+
+  // Et la valeur elle-même est bien celle du créneau partagé — pas l'ancien 6.
+  assert.equal(PLATFORM_SCHEDULE.agentExchangeAt, 5);
 });
 
 test('un message d’agent tient dans l’échange, même sur l’arrêt le plus court', () => {

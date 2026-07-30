@@ -217,7 +217,7 @@ function updateBoardable(dt: number, index: number, doorSide: 1 | -1): void {
   // seulement si le plan de cet arrêt l'a retenu : sur un quai désert, personne
   // n'a besoin qu'on lui demande de laisser descendre trois personnes.
   once('pa-alight', t > 0.4 + stationTimings.psdOpenDelay + 0.6, () =>
-    paAlightFirst(index, headway),
+    paAlightFirst(index, headway, melodyAt - t),
   );
   once('exchange', t > 1.6, () => exchangePassengers(doorSide));
   // Pendant que la foule monte, puis une seconde fois avant la mélodie — zéro,
