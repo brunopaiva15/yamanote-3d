@@ -1499,8 +1499,9 @@ Pour l'activer :
    (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`). Le fichier `.env` est ignoré
    par git.
 3. **En production** : les définir dans le dépôt GitHub via
-   Settings → Secrets and variables → Actions → onglet **Variables**. Le
-   workflow de déploiement les injecte au moment du build.
+   Settings → Secrets and variables → Actions. Le workflow accepte les deux
+   onglets - **Variables** (recommandé, la clé anon est publique) ou
+   **Secrets** - et les injecte au moment du build.
 
 ## Référencement
 
