@@ -385,24 +385,32 @@ export function outageRestoredAnnouncement(): Utterance[] {
   ];
 }
 
-const GUIDANCE_POOL = [
-  prioritySeatsAnnouncement,
-  mannersAnnouncement,
-  suddenStopAnnouncement,
-] as const;
+export type GuidanceAnnouncementId = 'priority-seats' | 'mobile-phone' | 'sudden-stop';
+export interface GuidanceScheduleEntry {
+  direction?: LoopDirection; afterStationCode?: string; beforeStationCode: string;
+  announcement: GuidanceAnnouncementId; probability?: number; peakOnly?: boolean;
+  confidence: 'unverified';
+}
+export const GUIDANCE_SCHEDULE: readonly GuidanceScheduleEntry[] = [
+  { beforeStationCode: 'JY06', announcement: 'priority-seats', confidence: 'unverified' },
+  { beforeStationCode: 'JY16', announcement: 'mobile-phone', confidence: 'unverified' },
+  { beforeStationCode: 'JY26', announcement: 'sudden-stop', confidence: 'unverified' },
+];
+const GUIDANCE_BY_ID = {
+  'priority-seats': prioritySeatsAnnouncement, 'mobile-phone': mannersAnnouncement,
+  'sudden-stop': suddenStopAnnouncement,
+} as const;
 
 /**
  * Messages de courtoisie : seulement à certaines gares (pas à chaque arrêt),
  * un seul à la fois, en rotation. En vraie vie ils ne passent qu'occasionnellement
  * (téléphone / priorité / freinage d'urgence ≈ 1 fois par boucle chacun).
  */
-export function guidanceAnnouncements(index: number): Utterance[] {
-  // 1 gare sur 10 → chaque type ~1× par boucle de 30. Décalée sur les gares
-  // calmes (鶯谷, 新大久保, 高輪GW) : à Tokyo, direction + correspondances
-  // remplissent déjà presque toute la croisière.
-  if (index % 10 !== 5) return [];
-  const which = Math.floor(index / 10) % GUIDANCE_POOL.length;
-  return GUIDANCE_POOL[which]();
+export function guidanceAnnouncements(index: number, direction?: LoopDirection): Utterance[] {
+  const stationCode = STATIONS[wrapStation(index)].jy;
+  const entry = GUIDANCE_SCHEDULE.find((candidate) => candidate.beforeStationCode === stationCode
+    && (!candidate.direction || candidate.direction === direction));
+  return entry ? GUIDANCE_BY_ID[entry.announcement]() : [];
 }
 
 // --- Séquences ---
@@ -426,7 +434,7 @@ export function departureSequence(index: number, side: 1 | -1, dir: LoopDirectio
   out.push(...cabinNoticesForStation(jy, dir, 'after-next-station'));
   out.push(...transferAnnouncement(index));
   out.push(...cabinNoticesForStation(jy, dir, 'after-transfers'));
-  out.push(...guidanceAnnouncements(index));
+  out.push(...guidanceAnnouncements(index, dir));
   return out;
 }
 
