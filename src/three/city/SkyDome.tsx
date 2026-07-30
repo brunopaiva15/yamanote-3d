@@ -70,6 +70,18 @@ function smoothstep(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
+// La pollution lumineuse n'est pas constante d'un bout de la nuit à l'autre.
+// Elle culmine le soir — enseignes allumées, bureaux pleins, trains encore
+// fréquents — puis retombe à mesure que la ville s'éteint, pour atteindre son
+// minimum aux petites heures (~3 h 30) avant de remonter à l'approche de
+// l'aube. Sans ça, 1 h du matin renvoyait autant d'orange que 20 h, et le ciel
+// ne devenait jamais franchement nocturne. On garde un plancher : même morte,
+// une mégapole ne rend jamais l'horizon totalement noir.
+function civicGlow(h: number): number {
+  const activity = 0.5 - 0.5 * Math.cos(((h - 3.5) / 12) * Math.PI);
+  return 0.34 + 0.66 * activity;
+}
+
 function makeSilhouetteBank(): { ctx: CanvasRenderingContext2D; tex: THREE.CanvasTexture } {
   const [w, h] = cityTexSize(2);
   const canvas = document.createElement('canvas');
@@ -139,8 +151,10 @@ void main() {
   // Lueur urbaine : au-dessus de Tokyo, le ciel de nuit n'est pas noir. Les
   // millions de lampes que la ville tourne vers le haut lui font un dôme
   // orangé qui s'éteint en montant — et c'est sur lui que les silhouettes se
-  // détachent, jamais sur du bleu nuit.
-  col += uGlow * uGlowAmt * (1.0 - smoothstep(uBand.y - 0.02, uBand.y + 0.26, vSkyUv.y));
+  // détachent, jamais sur du bleu nuit. Mais elle reste BASSE : la pollution
+  // lumineuse se concentre sur l'horizon et s'efface vite en montant, sinon
+  // c'est toute la voûte qui vire à l'orange au lieu de rester noire au zénith.
+  col += uGlow * uGlowAmt * (1.0 - smoothstep(uBand.y - 0.02, uBand.y + 0.13, vSkyUv.y));
 
   float bv = (vSkyUv.y - uBand.x) / (uBand.y - uBand.x);
   if (bv > 0.0 && bv < 1.0) {
@@ -242,14 +256,17 @@ export function SkyDome() {
     u.uSilOffset.value = -runtime.distance / SIL_METERS_PER_REPEAT;
 
     // --- Heure de Tokyo ---
-    const w = dayNightWeights(runtime.clockMin / 60);
+    const hourNow = ((runtime.clockMin / 60) % 24 + 24) % 24;
+    const w = dayNightWeights(hourNow);
     (u.uWeights.value as THREE.Vector3).set(w.day, w.golden, w.night);
     const cityNight = Math.min(1, w.night + w.golden * 0.45);
     u.uSilDark.value = 1 - 0.62 * cityNight;
     // La brume de l'horizon est celle de la scène : une seule source de vérité.
     if (scene.fog instanceof THREE.Fog) (u.uHaze.value as THREE.Color).copy(scene.fog.color);
     u.uHazeAmt.value = 0.3 + 0.16 * w.day;
-    u.uGlowAmt.value = 0.3 * w.night + 0.12 * w.golden;
+    // Lueur de fond, resserrée sur l'horizon puis modulée par l'activité de la
+    // ville : forte le soir, presque éteinte au cœur de la nuit.
+    u.uGlowAmt.value = (0.22 * w.night + 0.1 * w.golden) * civicGlow(hourNow);
 
     // --- Saison ---
     // L'air de Tokyo n'a pas la même épaisseur toute l'année : blanc laiteux
