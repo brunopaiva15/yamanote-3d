@@ -1375,3 +1375,11 @@ export function updatePassengers(dt: number): void {
     }
   }
 }
+
+// Re-tirage de la population du wagon depuis la console ou un navigateur piloté :
+// même arrêt, autres visages et autres places. Développement seulement - sert à
+// choisir une composition dégagée pour une capture (l'allée n'est pas toujours
+// libre là où l'on pose la caméra).
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__reseedPax = () => seedPassengers();
+}
