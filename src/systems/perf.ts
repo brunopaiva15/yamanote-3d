@@ -42,7 +42,10 @@ function isQuality(value: string | null | undefined): value is Quality {
   return (QUALITIES as readonly string[]).includes(value ?? '');
 }
 
-/** Choix mémorisé, sinon pleine qualité (le joueur ajuste depuis le menu). */
+/**
+ * Choix mémorisé, sinon qualité haute à la première visite, sur mobile comme
+ * sur ordinateur. Une préférence existante prime toujours sur cette valeur.
+ */
 function initialQuality(): Quality {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -50,7 +53,7 @@ function initialQuality(): Quality {
   } catch {
     /* localStorage indisponible (mode privé, iframe cloisonnée) */
   }
-  return 'ultra';
+  return 'high';
 }
 
 interface PerfState {
