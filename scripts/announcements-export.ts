@@ -49,6 +49,9 @@ import {
   outageRestoredAnnouncement,
   outageStopAnnouncement,
   outageWaitAnnouncement,
+  passengerAssistanceInitialAnnouncement,
+  passengerAssistanceResumeAnnouncement,
+  passengerAssistanceWaitAnnouncement,
   welcomeAnnouncement,
   type Utterance,
 } from '../src/data/announcements.ts';
@@ -226,6 +229,13 @@ utterances.push(...emergencyResumeAnnouncement());
 utterances.push(...outageStopAnnouncement());
 utterances.push(...outageWaitAnnouncement());
 utterances.push(...outageRestoredAnnouncement());
+// Prise en charge d'un voyageur a quai : ces messages sortent de la rame et
+// gardent donc les voix conducteur jf_alpha / af_heart definies ci-dessus.
+// Le rappel long doit etre grave lui aussi, meme s'il ne joue que pour les
+// interventions dont le plan depasse son seuil.
+utterances.push(...passengerAssistanceInitialAnnouncement());
+utterances.push(...passengerAssistanceWaitAnnouncement());
+utterances.push(...passengerAssistanceResumeAnnouncement());
 
 // --- Sonorisation du QUAI (ATOS + agent) ---------------------------------
 

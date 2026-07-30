@@ -169,6 +169,7 @@ export const runtime = {
     heldAtStation: false,
     signalStop: false,
     emergency: false,
+    passengerAssistance: false,
   },
   /**
    * Train hors service : la 発車メロディ ne sonne pas.
@@ -301,6 +302,7 @@ export function resetRuntime(): void {
   runtime.departureBlockers.heldAtStation = false;
   runtime.departureBlockers.signalStop = false;
   runtime.departureBlockers.emergency = false;
+  runtime.departureBlockers.passengerAssistance = false;
   runtime.emergencyStop.kind = 'brake';
   runtime.emergencyStop.stage = 'none';
   runtime.emergencyStop.t = 0;
