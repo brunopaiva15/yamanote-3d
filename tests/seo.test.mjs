@@ -18,6 +18,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 
 const HTML = read('index.html');
+const ABOUT_HTML = read('about.html');
 const ROBOTS = read('public/robots.txt');
 const SITEMAP = read('public/sitemap.xml');
 const MANIFEST = JSON.parse(read('public/site.webmanifest'));
@@ -108,7 +109,10 @@ test('les fichiers référencés par index.html existent bien dans public/', () 
   const refs = [...HTML.matchAll(/(?:href|content)="\.\/([^"]+)"/g)].map((m) => m[1]);
   assert.ok(refs.length > 0, 'plus aucune ressource locale référencée ?');
   for (const ref of new Set(refs)) {
-    assert.ok(existsSync(join(ROOT, 'public', ref)), `public/${ref} est référencé mais absent`);
+    assert.ok(
+      existsSync(join(ROOT, 'public', ref)) || existsSync(join(ROOT, ref)),
+      `${ref} est référencé mais absent`,
+    );
   }
 });
 
@@ -211,8 +215,8 @@ test('le manifeste décrit la même application, avec ses icônes', () => {
   }
 });
 
-test('le document sans JavaScript dit déjà ce que la page est', () => {
-  const body = HTML.slice(HTML.indexOf('<body>'));
+test('la présentation détaillée vit sur la page À propos', () => {
+  const body = ABOUT_HTML.slice(ABOUT_HTML.indexOf('<body>'));
   // Un seul h1, et il nomme le jeu.
   const h1 = [...body.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/g)].map((m) => m[1].trim());
   assert.equal(h1.length, 1, 'il faut exactement un <h1>');
@@ -231,5 +235,6 @@ test('le document sans JavaScript dit déjà ce que la page est', () => {
   for (const jy of ['JY01', 'JY15', 'JY30']) assert.ok(text.includes(jy), `${jy} absent du repli`);
   assert.ok(text.includes('Shinjuku') && text.includes('新宿'));
 
-  assert.match(body, /<noscript>/, 'aucun message pour les navigateurs sans JavaScript');
+  assert.match(HTML, /<noscript>/, 'aucun message pour les navigateurs sans JavaScript');
+  assert.match(HTML, /about\.html/, 'la page de chargement ne renvoie pas vers la présentation');
 });
