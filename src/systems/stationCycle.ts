@@ -84,6 +84,12 @@ import {
   onDoorsClosing,
   resetDoorObstruction,
 } from './doorObstruction';
+import {
+  finishReleasedPassengerAssistance,
+  resetPassengerAssistance,
+  rollPassengerAssistance,
+  updatePassengerAssistance,
+} from './passengerAssistance';
 
 const fired = new Set<string>();
 let lastJointDistance = 0;
@@ -719,7 +725,10 @@ function enterPhase(phase: Phase): void {
     // Le quai glisse désormais avec la distance réellement parcourue.
     runtime.departStartDist = runtime.distance;
   }
-  if (phase === 'cruise') scheduleNextRunSound(6);
+  if (phase === 'cruise') {
+    scheduleNextRunSound(6);
+    rollPassengerAssistance();
+  }
   if (phase !== 'dwell') {
     cancelDepartureMelody();
     // La rame quitte le quai : ce que la gare avait encore à dire reste
@@ -933,6 +942,7 @@ export function randomizeEntry(stationIndex?: number, direction?: LoopDirection)
   // On n'entre jamais en jeu au milieu d'un incident de porte : la fermeture
   // qui l'aurait déclenché est passée avant qu'on soit là.
   resetDoorObstruction();
+  resetPassengerAssistance();
 
   seedPlatformPresence(phase, phaseT);
   if (phase === 'brake' || phase === 'dwell') seedPlatformCrowd(index);
@@ -1114,6 +1124,11 @@ export function updateCycle(dt: number): void {
     }
     case 'dwell': {
       const dwell = dwellDuration(s.index);
+      // Machine dediee: elle attend l'ouverture effective puis tient le meme
+      // bloqueur de depart que les autres incidents. Son chrono reste reel
+      // tandis que phaseT est retenu avant la melodie ci-dessous.
+      updatePassengerAssistance(dt);
+      finishReleasedPassengerAssistance();
       // La sono du QUAI, entendue de l'intérieur : seulement ce qui passe par
       // les portes ouvertes. Le carillon d'approche et l'avertissement
       // d'entrée sont déjà finis quand on s'arrête ; restent le nom de la gare,

@@ -177,6 +177,29 @@ export function doorsClosingAnnouncement(): Utterance[] {
   ];
 }
 
+// Reconstitutions courtes et plausibles d'une intervention manuelle; elles ne
+// pretendent pas transcrire un script officiel d'un operateur ferroviaire.
+export function passengerAssistanceInitialAnnouncement(): Utterance[] {
+  return [
+    { text: 'お客様にご案内いたします。ただいま。お客様の救護を行っております。発車まで。いましばらくお待ちください。', lang: 'ja-JP' },
+    { text: 'Attention please. We are currently assisting a passenger. Please wait a little longer before departure.', lang: 'en-US' },
+  ];
+}
+
+export function passengerAssistanceWaitAnnouncement(): Utterance[] {
+  return [
+    { text: 'お客様をお待たせしております。引き続き。お客様の救護を行っております。発車まで。いましばらくお待ちください。', lang: 'ja-JP' },
+    { text: 'Thank you for your patience. We are still assisting a passenger. Please wait a little longer before departure.', lang: 'en-US' },
+  ];
+}
+
+export function passengerAssistanceResumeAnnouncement(): Utterance[] {
+  return [
+    { text: 'お待たせいたしました。お客様の救護が終了しましたので。まもなく発車いたします。', lang: 'ja-JP' },
+    { text: 'Thank you for waiting. Assistance has been completed. This train will depart shortly.', lang: 'en-US' },
+  ];
+}
+
 /**
  * Porte bloquée : le conducteur demande de dégager l'encadrement.
  *

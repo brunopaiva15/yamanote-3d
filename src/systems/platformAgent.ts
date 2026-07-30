@@ -91,6 +91,21 @@ export function platformAgentSays(n: number): boolean {
   return true;
 }
 
+/** Consigne unique et neutre pendant la prise en charge d'un voyageur. */
+export function platformAgentAssistanceSays(): boolean {
+  if (!platformAgentPosted() || !platformAgentHead(head)) return false;
+  const line: AgentLine = {
+    fr: 'Laissez le passage, s’il vous plaît.',
+    en: 'Please make way.',
+    ja: '道を空けてください。',
+  };
+  platformAgentSpeech.active = true;
+  platformAgentSpeech.text = line[useStore.getState().lang];
+  platformAgentSpeech.t = 0;
+  platformAgentSpeech.revision++;
+  return true;
+}
+
 /** L'affaire est réglée : il regagne la sortie (sa dernière phrase reste). */
 export function releasePlatformAgent(): void {
   dismissPlatformAgent();

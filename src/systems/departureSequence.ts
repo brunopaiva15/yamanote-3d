@@ -69,6 +69,8 @@ export type DepartureBlockers = {
   heldAtStation: boolean;
   signalStop: boolean;
   emergency: boolean;
+  /** Voyageur pris en charge a quai; les portes sont saines mais maintenues ouvertes. */
+  passengerAssistance: boolean;
 };
 
 /** Fondu de la coupure par le chef de train (s) : bref, mais pas un couperet. */
@@ -88,7 +90,7 @@ let bicCameraBPlaying = false;
 
 export function isDepartureBlocked(): boolean {
   const b = runtime.departureBlockers;
-  return b.doorBlocked || b.heldAtStation || b.signalStop || b.emergency;
+  return b.doorBlocked || b.heldAtStation || b.signalStop || b.emergency || b.passengerAssistance;
 }
 
 /**
@@ -101,7 +103,7 @@ export function isDepartureBlocked(): boolean {
  */
 export function isDepartureHeldOpen(): boolean {
   const b = runtime.departureBlockers;
-  return b.heldAtStation || b.signalStop || b.emergency;
+  return b.heldAtStation || b.signalStop || b.emergency || b.passengerAssistance;
 }
 
 export function setDepartureBlockers(partial: Partial<DepartureBlockers>): void {
@@ -116,6 +118,7 @@ export function clearDepartureBlockers(): void {
   runtime.departureBlockers.heldAtStation = false;
   runtime.departureBlockers.signalStop = false;
   runtime.departureBlockers.emergency = false;
+  runtime.departureBlockers.passengerAssistance = false;
 }
 
 /** Remet à zéro l'anti-double-lecture (après départ ou reset). */

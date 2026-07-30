@@ -125,6 +125,21 @@ const EXCHANGE_RESERVE = 15;
 export const POOL_SIZE = MAX_SEATED + MAX_STANDING + EXCHANGE_RESERVE;
 export const paxList: Pax[] = [];
 
+/**
+ * Retire proprement un voyageur pris en charge: les reservations de siege ou
+ * de station debout sont liberees avant de rendre l'entree au pool.
+ */
+export function removeAssistedPassenger(id: number): boolean {
+  const p = paxList[id];
+  if (!p || (p.state !== 'seated' && p.state !== 'standing')) return false;
+  endPair(p);
+  releaseSlots(p);
+  p.state = 'hidden';
+  p.waypoints.length = 0;
+  p.partner = -1;
+  return true;
+}
+
 // Le bas de l'anneau des tsurikawa est à ~1,71 m (poignées remontées pour le
 // confort de marche du joueur) : en dessous de cette échelle, un PNJ ne
 // l'atteint qu'en s'étirant bras tendu - pas naturel - et garde les bras
