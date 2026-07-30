@@ -41,6 +41,12 @@ jobs:
 
       - name: Build (tsc + vite)
         run: npm run build
+        # Compteur « voyageurs en ligne » (facultatif). Renseigner ces deux
+        # valeurs dans Settings → Secrets and variables → Actions → Variables
+        # pour l'activer. Absentes, le build réussit et le compteur reste masqué.
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - name: Configuration de Pages
         uses: actions/configure-pages@v5

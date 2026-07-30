@@ -98,6 +98,10 @@ export interface Strings {
       packed: string;
       crushed: string;
     };
+    /** Étiquette du badge « voyageurs en ligne » (après le nombre). */
+    online: string;
+    /** Bulle du badge « voyageurs en ligne ». */
+    onlineTitle: string;
     /** Bulle du bandeau météo. */
     weatherTitle: string;
     /** Le temps qu'il fait, dans l'ordre de systems/weather. */
@@ -229,6 +233,8 @@ const FR: Strings = {
       packed: 'très serré',
       crushed: 'saturé',
     },
+    online: 'en ligne',
+    onlineTitle: 'Voyageurs connectés au site en ce moment',
     weatherTitle: 'Temps à Tokyo',
     weather: {
       clear: 'Dégagé',
@@ -350,6 +356,8 @@ const EN: Strings = {
       packed: 'very crowded',
       crushed: 'packed solid',
     },
+    online: 'online',
+    onlineTitle: 'Travellers connected to the site right now',
     weatherTitle: 'Tokyo weather',
     weather: {
       clear: 'Clear',
@@ -471,6 +479,8 @@ const JA: Strings = {
       packed: '大変混雑',
       crushed: '超満員',
     },
+    online: 'オンライン',
+    onlineTitle: 'いま接続している利用者数',
     weatherTitle: '東京の天気',
     weather: {
       clear: '快晴',

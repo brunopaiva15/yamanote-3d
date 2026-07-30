@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Variables d'environnement locales (clés Supabase du compteur, etc.).
+# Le modèle versionné est .env.example ; les vraies valeurs restent hors dépôt.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
