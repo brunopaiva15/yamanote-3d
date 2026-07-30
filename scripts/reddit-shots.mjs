@@ -6,10 +6,10 @@
 // par SwiftShader : une frame dure plusieurs secondes et le cycle station file
 // pendant les temps morts. D'où la re-pose de l'état juste avant chaque déclenchement.
 //
-//   1. quai-attente  — debout sur le quai, on attend le prochain train (heure dorée)
+//   1. quai-attente  — debout sur le quai d'Ueno, on attend le prochain train
 //   2. bord-jour     — assis dans le wagon, la ville de jour défile par la baie
 //   3. bord-nuit     — le même wagon, la nuit, devant les néons de Shibuya
-//   4. express       — le rapide Keihin-Tōhoku qui traverse la voie d'en face
+//   4. a-bord-nuit   — dans l'allée du wagon, la nuit, vers Shinjuku
 //
 // La scène du quai (1) est rendue EN DERNIER : y descendre bascule le référentiel
 // du joueur sur le quai (playerFrame), ce qui perturberait les scènes de wagon.
@@ -61,6 +61,10 @@ function platformPose(i, e, t) {
   return { x: e[0] * f, y: e[1], z: e[2] * f, tx: t[0] * f, ty: t[1], tz: t[2] * f };
 }
 
+// Ciel dégagé forcé : sans lui, un épisode de crachin tiré au hasard couvre le
+// quai de traînées de pluie.
+const CLEAR = { kind: 'clear', rain: 0, cloud: 0.2, wet: 0, tempC: 17, visibility: 1 };
+
 // ---------------------------------------------------------------------------
 // 2. Assis à bord, ville de jour — viaduc, arrivée sur Nishi-Nippori (index 7)
 // ---------------------------------------------------------------------------
@@ -92,57 +96,40 @@ function platformPose(i, e, t) {
 }
 
 // ---------------------------------------------------------------------------
-// 4. L'express Keihin-Tōhoku qui passe — Okachimachi (index 3), midi
+// 4. À bord la nuit, dans l'allée — arrivée sur Shinjuku (index 17), 21 h 30
 // ---------------------------------------------------------------------------
 {
-  const i = 3;
-  await page.evaluate((k) => {
-    window.__freeCam(null);
-    window.__probeGoto(k, 'dwell');
-    window.__passRate(0);
-    window.__passAt(0);
-  }, i);
-  await sleep(1600);
-  const s = await page.evaluate(() => {
-    const r = window.__passConsist;
-    r.updateWorldMatrix(true, true);
-    return r.getWorldPosition(new r.position.constructor()).x < 0 ? -1 : 1;
-  });
-  const cam = [7.6, 1.6, 8];
-  const target = [9.9, 1.4, -30];
-  const nose = -60;
-  for (let k = 0; k < 2; k++) {
-    await page.evaluate(
-      ([idx, c, tg, z]) => {
-        window.__freeCam({ x: c[0], y: c[1], z: c[2], tx: tg[0], ty: tg[1], tz: tg[2] });
-        window.__probeGoto(idx, 'dwell');
-        window.__runtime.phaseT = 6;
-        window.__probeClock(12 * 60);
-        window.__passRate(0);
-        window.__passAt(z);
-      },
-      [i, [s * cam[0], cam[1], s * cam[2]], [s * target[0], target[1], s * target[2]], nose],
-    );
-    await sleep(1600);
-  }
-  await page.screenshot({ path: `${out}/4-express.png` });
-  console.log('→ 4-express');
+  await page.evaluate((w) => {
+    window.__probeCruise(17, 8);
+    window.__probeDate(11, 20);
+    window.__probeClock(21 * 60 + 30);
+    window.__probeWeather(w);
+    window.__freeCam({ x: 0.35, y: 1.42, z: -8.3, tx: -0.1, ty: 1.12, tz: 9 });
+  }, CLEAR);
+  await sleep(2200);
+  await page.screenshot({ path: `${out}/4-a-bord-nuit.png` });
+  console.log('→ 4-a-bord-nuit');
 }
 
 // ---------------------------------------------------------------------------
-// 1. Sur le quai, en attente — Takanawa Gateway (index 25), heure dorée. EN DERNIER.
+// 1. Sur le quai, en attente — Ueno (index 4, halle rivetée). EN DERNIER : y
+//    descendre bascule le référentiel du joueur sur le quai.
 // ---------------------------------------------------------------------------
 {
-  const i = 25;
+  const i = 4;
   await page.evaluate((k) => {
     window.__freeCam(null);
     window.__probeGoto(k, 'dwell');
     window.__runtime.phaseT = 6;      // milieu de l'arrêt : portes ouvertes
   }, i);
-  await sleep(3000);
-  // Franchir le seuil ouvert : le joueur passe sur le quai, le train repartira
-  // sans lui (et le référentiel bascule pour de bon).
-  const crossed = await page.evaluate(() => window.__crossPortal());
+  // Franchir le seuil ouvert : on ré-essaie jusqu'à ce que les portes soient
+  // réellement ouvertes (sous SwiftShader, l'ouverture prend un nombre de frames
+  // variable). Le joueur passe alors sur le quai et le train repart sans lui.
+  let crossed = false;
+  for (let k = 0; k < 25 && !crossed; k++) {
+    await sleep(700);
+    crossed = await page.evaluate(() => window.__crossPortal());
+  }
   if (!crossed) console.error('  ⚠ franchissement du seuil refusé (portes fermées ?)');
   await page.evaluate(() => window.__platformWaitSpeed(14));
   await page.waitForFunction(() => window.__platformWait.stage === 'clear', { timeout: 60000 });
@@ -151,14 +138,15 @@ function platformPose(i, e, t) {
   await page.waitForFunction(() => window.__platformWait.t >= 42, { timeout: 60000 });
   await page.evaluate(() => window.__platformWaitSpeed(0.02));
   const pose = platformPose(i, [3.7, 1.55, -9], [1.95, 1.35, 11]);
-  await page.evaluate(([c]) => {
+  await page.evaluate(([c, w]) => {
     window.__freeCam(c);
-    window.__probeDate(11, 12);       // mi-novembre : le jour tombe tôt
-    window.__probeClock(16 * 60);     // heure dorée
-  }, [pose]);
-  await sleep(2000);
+    window.__probeDate(10, 25);       // fin octobre
+    window.__probeClock(15 * 60 + 40);
+    window.__probeWeather(w);
+  }, [pose, CLEAR]);
+  await sleep(2200);
   await page.screenshot({ path: `${out}/1-quai-attente.png` });
-  console.log('→ 1-quai-attente');
+  console.log('→ 1-quai-attente (Ueno)');
 }
 
 await browser.close();
