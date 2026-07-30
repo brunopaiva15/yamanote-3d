@@ -9,7 +9,7 @@
 // (anon) - aucun backend à écrire de notre côté.
 //
 // Sans configuration (clés absentes), le module reste totalement inerte : aucun
-// import réseau, et le HUD n'affiche simplement pas le badge. Le jeu tourne
+// import réseau, et le menu n'affiche simplement pas le compteur. Le jeu tourne
 // exactement comme avant.
 
 import type { RealtimeChannel } from '@supabase/supabase-js';

@@ -25,6 +25,7 @@ import { randomizeEntry } from '../systems/stationCycle';
 import { updatePlatformSpeakers } from '../systems/stationPa';
 import { segmentAt } from '../data/segments';
 import { PLATEAU_SEGMENT, plateauEntryStation } from '../systems/plateau';
+import { presenceEnabled, subscribeOnlineCount } from '../systems/presence';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
 import { Logo } from './Logo';
@@ -90,10 +91,21 @@ const STATION_RANDOM = 'random';
 /** Même sentinelle pour le sens : la boucle en fait tourner autant des deux. */
 const DIRECTION_RANDOM = 'random';
 
+/** Compteur optionnel, abonné uniquement tant que le menu principal est ouvert. */
+function useOnlineCount(): number | null {
+  const [online, setOnline] = useState<number | null>(presenceEnabled ? 0 : null);
+  useEffect(() => {
+    if (!presenceEnabled) return;
+    return subscribeOnlineCount(setOnline);
+  }, []);
+  return online;
+}
+
 export function StartScreen() {
   const start = useStore((s) => s.start);
   const t = useT();
   const coarsePointer = useCoarsePointer();
+  const online = useOnlineCount();
   const [loading, setLoading] = useState(false);
   // Heure de départ : figée à l'ouverture du menu (Tokyo), modifiable ensuite.
   const [timeValue, setTimeValue] = useState(() => minutesToTimeValue(tokyoNow().minutes));
@@ -313,6 +325,16 @@ export function StartScreen() {
           {t.start.tokyoTime}
           <strong>{timeValue}</strong>
         </p>
+        {/* Information secondaire : visible avant d'embarquer seulement, près
+            du pied de menu plutôt que dans le HUD de l'expérience. */}
+        {online != null && online > 0 && (
+          <p className="start-online" title={t.hud.onlineTitle}>
+            <span className="start-online-dot" aria-hidden="true" />
+            <span>
+              {online} {t.hud.online}
+            </span>
+          </p>
+        )}
         <Footer />
       </div>
     </div>

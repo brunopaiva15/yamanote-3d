@@ -15,7 +15,6 @@ import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
 import { applySpeechVolume, cancelSpeech } from '../systems/speech';
 import { input } from '../systems/input';
 import { fullscreenAvailable, toggleFullscreen } from '../systems/browser';
-import { presenceEnabled, subscribeOnlineCount } from '../systems/presence';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
 import { IncidentMenu } from './IncidentMenu';
@@ -140,20 +139,6 @@ function useOccupancy(): { percent: number; band: OccupancyBand } {
   return occ;
 }
 
-/**
- * Nombre de voyageurs actuellement en ligne, ou `null` quand le compteur n'est
- * pas configuré (pas de projet Supabase) - le badge reste alors caché. Vit dans
- * systems/presence : le HUD ne fait que l'afficher.
- */
-function useOnlineCount(): number | null {
-  const [online, setOnline] = useState<number | null>(presenceEnabled ? 0 : null);
-  useEffect(() => {
-    if (!presenceEnabled) return;
-    return subscribeOnlineCount(setOnline);
-  }, []);
-  return online;
-}
-
 export function Hud() {
   const started = useStore((s) => s.started);
   const index = useStore((s) => s.index);
@@ -168,7 +153,6 @@ export function Hud() {
   const lang = useStore((s) => s.lang);
   const t = useT();
   const clock = useClock();
-  const online = useOnlineCount();
   const occupancy = useOccupancy();
   const sky = useWeather();
   const em = useEmergency();
@@ -201,15 +185,6 @@ export function Hud() {
     <>
       <div className="hud-top">
         <div className="hud-clock">{clock}</div>
-        {/* Voyageurs en ligne : caché tant que le compteur n'est pas configuré
-            ou qu'on n'a pas encore une présence confirmée (au moins soi-même). */}
-        {online != null && online > 0 && (
-          <div className="hud-online" title={t.hud.onlineTitle}>
-            <span className="hud-online-dot" aria-hidden="true" />
-            <span className="hud-online-count">{online}</span>
-            <span className="hud-online-label">{t.hud.online}</span>
-          </div>
-        )}
         <div className="hud-weather" title={t.hud.weatherTitle}>
           <span className="hud-weather-glyph" aria-hidden="true">
             {WEATHER_GLYPH[sky.kind]}
