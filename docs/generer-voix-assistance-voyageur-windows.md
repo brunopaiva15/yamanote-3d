@@ -77,15 +77,17 @@ Rouvrir PowerShell, revenir dans le dépôt, puis réactiver l'environnement.
 
 ## 4. Installer toutes les dépendances Python
 
-Les extras de Misaki ne suffisent pas toujours sous Windows : installer
-explicitement UniDic Lite pour Fugashi et `click` pour spaCy évite les deux
-erreurs rencontrées pendant la génération.
+Les extras de Misaki ne suffisent pas toujours sous Windows. Misaki installe le
+paquet Python `unidic`, mais pas nécessairement les données de son dictionnaire :
+`python -m unidic download` est donc obligatoire. Installer aussi UniDic Lite
+comme repli pour Fugashi et `click` pour spaCy.
 
 ```powershell
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install --upgrade kokoro-onnx "misaki[en,ja]" lameenc
 python -m pip install --upgrade unidic-lite "fugashi[unidic-lite]"
 python -m pip install --upgrade "click>=8.1,<9" spacy
+python -m unidic download
 python -m pip check
 ```
 
@@ -98,16 +100,17 @@ No broken requirements found.
 ### Vérifier le japonais
 
 ```powershell
-$dic = python -c "import unidic_lite; print(unidic_lite.DICDIR)"
+$dic = python -c "import unidic; print(unidic.DICDIR)"
 Write-Host "Dictionnaire : $dic"
 Test-Path $dic
+Test-Path (Join-Path $dic "mecabrc")
 Remove-Item Env:MECABRC -ErrorAction SilentlyContinue
 python -c "from fugashi import Tagger; print(Tagger()('お客様の救護を行っております。'))"
 python -c "from misaki import ja; print(ja.JAG2P()('お客様の救護を行っております。'))"
 ```
 
-`Test-Path` doit retourner `True` et les deux commandes Python doivent afficher
-une analyse, sans référence à `C:\mecab\mecabrc`.
+Les deux `Test-Path` doivent retourner `True` et les deux commandes Python
+doivent afficher une analyse, sans erreur relative à `mecabrc`.
 
 ### Vérifier l'anglais
 
@@ -420,15 +423,26 @@ Test-Path ".\.tmp\announcements\announcements-export.mjs"
 
 retourne `True` avant d'appeler Node.
 
-### `no such file or directory: c:\mecab\mecabrc`
+### `unidic\dicdir\mecabrc` absent ou `c:\mecab\mecabrc` absent
 
-Le dictionnaire japonais manque ou une ancienne variable `MECABRC` force MeCab :
+Le paquet `unidic` est installé mais ses données n'ont pas été téléchargées, ou
+une ancienne variable `MECABRC` force MeCab vers un autre emplacement. Dans
+l'environnement virtuel actif, exécuter exactement :
 
 ```powershell
-python -m pip install --upgrade unidic-lite "fugashi[unidic-lite]"
 Remove-Item Env:MECABRC -ErrorAction SilentlyContinue
+python -m pip install --upgrade unidic unidic-lite "fugashi[unidic-lite]"
+python -m unidic download
+$dic = python -c "import unidic; print(unidic.DICDIR)"
+Test-Path $dic
+Test-Path (Join-Path $dic "mecabrc")
 python -c "from fugashi import Tagger; print(Tagger()('日本語'))"
+python -c "from misaki import ja; print(ja.JAG2P()('日本語'))"
 ```
+
+Les deux chemins doivent retourner `True` avant de relancer le générateur. Une
+erreur survenue pendant `ja.JAG2P()` arrive avant l'écriture du premier MP3 : il
+est donc sûr de relancer ensuite la même commande `--reuse --force-role`.
 
 ### `ModuleNotFoundError: No module named 'click'`
 
