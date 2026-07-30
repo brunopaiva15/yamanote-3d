@@ -1807,7 +1807,7 @@ var CABIN_VOICE = {
   "en-US": { voice: "af_heart", speed: 0.93 }
 };
 var STATION_VOICE = {
-  "atos-inner": { voice: "jf_tebukuro", speed: 1.15 },
+  "atos-inner": { voice: "jf_alpha", speed: 1.1 },
   "atos-outer": { voice: "jm_kumo", speed: 1.15 },
   // L'agent parle un peu plus vite : elle improvise, elle n'articule pas un script.
   agent: { voice: "jf_nezumi", speed: 1.22 },
