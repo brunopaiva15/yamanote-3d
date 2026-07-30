@@ -28,6 +28,7 @@ import type { Utterance } from '../data/announcements';
 import { announcementClipDuration, announcementClipPath } from '../data/announcementClips';
 import { useStore } from '../store';
 import { audioManager, paVoiceClose, paVoiceOpen, type VoiceBus } from './audioEngine';
+import { speechPlaybackRate } from './speechTuning';
 
 /** Qui parle : la sono de la rame, ou celle de la gare. */
 export type SpeechChannel = 'cabin' | 'platform';
@@ -47,7 +48,7 @@ const BUS: Record<SpeechChannel, VoiceBus> = {
 };
 
 type QueueItem =
-  | { kind: 'clip'; path: string; text: string; tries: number; dur: number }
+  | { kind: 'clip'; path: string; text: string; tries: number; dur: number; playbackRate: number }
   | { kind: 'pause'; ms: number };
 
 /**
@@ -152,7 +153,7 @@ function playClipItem(channel: SpeechChannel, item: QueueItem & { kind: 'clip' }
   ch.currentDur = item.dur;
   ch.currentStart = nowS();
   const g = ch.generation;
-  void audioManager.playOnce(item.path, BUS[channel]).then((played) => {
+  void audioManager.playOnce(item.path, BUS[channel], item.playbackRate).then((played) => {
     if (g !== ch.generation) return;
     ch.currentClipPath = null;
     ch.speaking = false;
@@ -197,12 +198,14 @@ export function say(
       console.warn(`[speech] Aucun clip pour « ${item.text} » - annonce muette.`);
       continue;
     }
+    const playbackRate = speechPlaybackRate(item.voice);
     ch.queue.push({
       kind: 'clip',
       path: clip,
       text: item.text,
       tries: 0,
-      dur: announcementClipDuration(item.lang, item.text, item.voice) ?? 0,
+      dur: (announcementClipDuration(item.lang, item.text, item.voice) ?? 0) / playbackRate,
+      playbackRate,
     });
   }
   if (ch.queue.length > 0) openLine(channel);
@@ -216,7 +219,9 @@ export function say(
 export function utteranceDuration(items: readonly SpeechItem[]): number {
   let s = 0;
   for (const item of items) {
-    s += announcementClipDuration(item.lang, item.text, item.voice) ?? 0;
+    s +=
+      (announcementClipDuration(item.lang, item.text, item.voice) ?? 0) /
+      speechPlaybackRate(item.voice);
   }
   return s;
 }

@@ -1781,9 +1781,9 @@ interface ClipHandle {
 }
 
 /** Lance un buffer décodé sur un bus. Le player se démonte tout seul. */
-function startClip(buf: Tone.ToneAudioBuffer, bus: Bus): ClipHandle {
+function startClip(buf: Tone.ToneAudioBuffer, bus: Bus, playbackRate = 1): ClipHandle {
   const dest = busInput(bus);
-  const player = new Tone.Player({ url: buf });
+  const player = new Tone.Player({ url: buf, playbackRate });
   if (dest) player.connect(dest);
   else player.toDestination();
 
@@ -1803,7 +1803,7 @@ function startClip(buf: Tone.ToneAudioBuffer, bus: Bus): ClipHandle {
   };
   // Filet : si onstop n'arrive jamais (contexte suspendu en cours de route),
   // la file d'annonces ne doit pas rester bloquée sur ce clip.
-  const guard = window.setTimeout(finish, (buf.duration + 2) * 1000);
+  const guard = window.setTimeout(finish, (buf.duration / playbackRate + 2) * 1000);
   player.onstop = finish;
   player.start();
 
@@ -1856,7 +1856,7 @@ const stopEpoch = new Map<string, number>();
  * @returns false si le fichier est introuvable (l'appelant peut alors se
  * rabattre sur la synthèse ou sur speechSynthesis).
  */
-async function playOnce(path: string, bus: Bus = 'platform'): Promise<boolean> {
+async function playOnce(path: string, bus: Bus = 'platform', playbackRate = 1): Promise<boolean> {
   const existing = activeByPath.get(path);
   if (existing) {
     await existing.ended;
@@ -1877,7 +1877,7 @@ async function playOnce(path: string, bus: Bus = 'platform'): Promise<boolean> {
     return true;
   }
 
-  const handle = startClip(buf, bus);
+  const handle = startClip(buf, bus, playbackRate);
   activeByPath.set(path, handle);
   void handle.ended.then(() => {
     if (activeByPath.get(path) === handle) activeByPath.delete(path);
