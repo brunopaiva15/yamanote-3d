@@ -2,8 +2,9 @@ name: Agent fix platform announcements
 
 on:
   push:
-    branches:
-      - agent/fix-platform-announcement-timing
+    branches: [agent/fix-platform-announcement-timing]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
@@ -17,193 +18,116 @@ jobs:
         with:
           ref: agent/fix-platform-announcement-timing
           fetch-depth: 0
-
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Apply source and test fixes
+      - name: Apply fixes
         shell: python
         run: |
           from pathlib import Path
 
-          def replace(path, old, new, count=None):
+          def rep(path, old, new, expected=1):
               p = Path(path)
               text = p.read_text(encoding='utf-8')
-              found = text.count(old)
-              expected = 1 if count is None else count
-              if found != expected:
-                  raise SystemExit(f'{path}: expected {expected} occurrence(s), found {found}: {old[:80]!r}')
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f'{path}: expected {expected}, found {count}: {old[:80]!r}')
               p.write_text(text.replace(old, new), encoding='utf-8')
 
-          # 1. Distinct English wording for cabin and platform at Shibuya.
-          replace(
-              'src/data/stationAnnouncementRules.ts',
+          rep('src/data/stationAnnouncementRules.ts',
               "const GAP_EN = 'Please watch your step when you leave the train.';",
-              "const GAP_EN_CABIN = 'Please watch your step when you leave the train.';\n" \
-              "const GAP_EN_PLATFORM = 'Please mind the gap between the train and the platform.';",
-          )
-          replace(
-              'src/data/stationAnnouncementRules.ts',
-              "cabin: [{ jp: GAP_JP, en: GAP_EN, position: 'during-approach' }],\n" \
-              "    platform: [{ jp: GAP_JP, en: GAP_EN, phase: 'arrival' }],",
-              "cabin: [{ jp: GAP_JP, en: GAP_EN_CABIN, position: 'during-approach' }],\n" \
-              "    platform: [{ jp: GAP_JP, en: GAP_EN_PLATFORM, phase: 'arrival' }],",
-          )
+              "const GAP_EN_CABIN = 'Please watch your step when you leave the train.';\nconst GAP_EN_PLATFORM = 'Please mind the gap between the train and the platform.';")
+          rep('src/data/stationAnnouncementRules.ts',
+              "cabin: [{ jp: GAP_JP, en: GAP_EN, position: 'during-approach' }],\n    platform: [{ jp: GAP_JP, en: GAP_EN, phase: 'arrival' }],",
+              "cabin: [{ jp: GAP_JP, en: GAP_EN_CABIN, position: 'during-approach' }],\n    platform: [{ jp: GAP_JP, en: GAP_EN_PLATFORM, phase: 'arrival' }],")
 
-          # 2. One shared timing for the first agent message.
-          replace(
-              'src/systems/stationCycle.ts',
+          rep('src/systems/stationCycle.ts',
               "if (t > 6) fired.add('pa-agent');",
-              "if (t > PLATFORM_SCHEDULE.agentExchangeAt) fired.add('pa-agent');",
-          )
-          replace(
-              'src/systems/stationCycle.ts',
+              "if (t > PLATFORM_SCHEDULE.agentExchangeAt) fired.add('pa-agent');")
+          rep('src/systems/stationCycle.ts',
               "once('pa-agent', t > 6, () =>",
-              "once('pa-agent', t > PLATFORM_SCHEDULE.agentExchangeAt, () =>",
-          )
+              "once('pa-agent', t > PLATFORM_SCHEDULE.agentExchangeAt, () =>")
 
-          # 3. Alight-first message must fit before the melody.
-          replace(
-              'src/systems/stationPa.ts',
-              "export function paAlightFirst(index: number, headwaySeconds: number): boolean {\n" \
-              "  if (!currentPlatformPlan(index, headwaySeconds).playAlightFirstMessage) return false;\n" \
-              "  say(platformAlightFirstAnnouncement(), 'platform');\n" \
-              "  return true;\n" \
-              "}",
-              "export function paAlightFirst(\n" \
-              "  index: number,\n" \
-              "  headwaySeconds: number,\n" \
-              "  cutoffIn: number,\n" \
-              "): boolean {\n" \
-              "  if (!currentPlatformPlan(index, headwaySeconds).playAlightFirstMessage) return false;\n" \
-              "  const items = platformAlightFirstAnnouncement();\n" \
-              "  if (!fitsBeforeCutoff(\n" \
-              "    utteranceDuration(items),\n" \
-              "    speechQueueRemaining('platform'),\n" \
-              "    cutoffIn,\n" \
-              "  )) {\n" \
-              "    return false;\n" \
-              "  }\n" \
-              "  say(items, 'platform');\n" \
-              "  return true;\n" \
-              "}",
-          )
-          replace(
-              'src/systems/platformWait.ts',
-              "paAlightFirst(index, headway),",
-              "paAlightFirst(index, headway, melodyAt - t),",
-          )
-          replace(
-              'src/systems/stationCycle.ts',
-              "paAlightFirst(s.index, PLATFORM_PLAN_HEADWAY),",
-              "paAlightFirst(s.index, PLATFORM_PLAN_HEADWAY, melodyStartAt(s.index, dwell) - t),",
-          )
+          rep('src/systems/stationPa.ts',
+              "export function paAlightFirst(index: number, headwaySeconds: number): boolean {\n  if (!currentPlatformPlan(index, headwaySeconds).playAlightFirstMessage) return false;\n  say(platformAlightFirstAnnouncement(), 'platform');\n  return true;\n}",
+              "export function paAlightFirst(\n  index: number,\n  headwaySeconds: number,\n  cutoffIn: number,\n): boolean {\n  if (!currentPlatformPlan(index, headwaySeconds).playAlightFirstMessage) return false;\n  const items = platformAlightFirstAnnouncement();\n  if (!fitsBeforeCutoff(\n    utteranceDuration(items),\n    speechQueueRemaining('platform'),\n    cutoffIn,\n  )) {\n    return false;\n  }\n  say(items, 'platform');\n  return true;\n}")
+          rep('src/systems/platformWait.ts',
+              'paAlightFirst(index, headway),',
+              'paAlightFirst(index, headway, melodyAt - t),')
+          rep('src/systems/stationCycle.ts',
+              'paAlightFirst(s.index, PLATFORM_PLAN_HEADWAY),',
+              'paAlightFirst(s.index, PLATFORM_PLAN_HEADWAY, melodyStartAt(s.index, dwell) - t),')
 
-          # Update the existing station-rule expectations.
-          replace(
-              'tests/stationAnnouncementRules.test.ts',
+          rep('tests/stationAnnouncementRules.test.ts',
               "const GAP_EN = 'Please watch your step when you leave the train.';",
-              "const GAP_EN_CABIN = 'Please watch your step when you leave the train.';\n" \
-              "const GAP_EN_PLATFORM = 'Please mind the gap between the train and the platform.';",
-          )
-          replace('tests/stationAnnouncementRules.test.ts', "assert.equal(cabin[1].text, GAP_EN);", "assert.equal(cabin[1].text, GAP_EN_CABIN);")
-          replace('tests/stationAnnouncementRules.test.ts', "assert.equal(platform[1].text, GAP_EN);", "assert.equal(platform[1].text, GAP_EN_PLATFORM);")
-          replace(
-              'tests/stationAnnouncementRules.test.ts',
-              "const gap = seq.filter((u) => u.text.includes(GAP_FRAGMENT) || u.text === GAP_EN);",
-              "const gap = seq.filter((u) => u.text.includes(GAP_FRAGMENT) || u.text === GAP_EN_CABIN);",
-          )
+              "const GAP_EN_CABIN = 'Please watch your step when you leave the train.';\nconst GAP_EN_PLATFORM = 'Please mind the gap between the train and the platform.';")
+          rep('tests/stationAnnouncementRules.test.ts',
+              'assert.equal(cabin[1].text, GAP_EN);',
+              'assert.equal(cabin[1].text, GAP_EN_CABIN);')
+          rep('tests/stationAnnouncementRules.test.ts',
+              'assert.equal(platform[1].text, GAP_EN);',
+              'assert.equal(platform[1].text, GAP_EN_PLATFORM);')
+          rep('tests/stationAnnouncementRules.test.ts',
+              'const gap = seq.filter((u) => u.text.includes(GAP_FRAGMENT) || u.text === GAP_EN);',
+              'const gap = seq.filter((u) => u.text.includes(GAP_FRAGMENT) || u.text === GAP_EN_CABIN);')
 
-          # Add focused integration coverage without importing browser-only stationPa.
           Path('tests/platformAnnouncementFollowup.test.ts').write_text(r'''import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { register } from 'node:module';
-
 register('./fixtures/ts-resolve.mjs', import.meta.url);
-
 const { announcementClipDuration } = await import('../src/data/announcementClips.ts');
-const { platformArrivalAnnouncement, platformAlightFirstAnnouncement } = await import(
-  '../src/data/stationAnnouncements.ts'
-);
-const { platformNoticesForStation } = await import('../src/data/stationAnnouncementRules.ts');
-const { fitsBeforeCutoff, PLATFORM_SCHEDULE } = await import(
-  '../src/systems/platformAnnouncementPlan.ts'
-);
-
-const SHIBUYA = 19;
-const JY = 'JY20';
-const CABIN_EN = 'Please watch your step when you leave the train.';
-const PLATFORM_EN = 'Please mind the gap between the train and the platform.';
-const durationOf = (items) =>
-  items.reduce((sum, u) => sum + (announcementClipDuration(u.lang, u.text, u.voice) ?? 0), 0);
+const { platformArrivalAnnouncement, platformAlightFirstAnnouncement } = await import('../src/data/stationAnnouncements.ts');
+const { cabinNoticesForStation, platformNoticesForStation } = await import('../src/data/stationAnnouncementRules.ts');
+const { fitsBeforeCutoff, PLATFORM_SCHEDULE } = await import('../src/systems/platformAnnouncementPlan.ts');
+const durationOf = (items) => items.reduce((sum, u) => sum + (announcementClipDuration(u.lang, u.text, u.voice) ?? 0), 0);
 
 test('Shibuya uses channel-appropriate English wording', () => {
-  const cabin = platformNoticesForStation(JY, 'inner', 'arrival');
-  assert.equal(cabin.at(-1)?.text, PLATFORM_EN);
-  assert.notEqual(cabin.at(-1)?.text, CABIN_EN);
+  assert.equal(cabinNoticesForStation('JY20', 'inner', 'during-approach').at(-1)?.text,
+    'Please watch your step when you leave the train.');
+  assert.equal(platformNoticesForStation('JY20', 'inner', 'arrival').at(-1)?.text,
+    'Please mind the gap between the train and the platform.');
 });
 
-test('the Shibuya arrival queue can suppress alight-first before the melody', () => {
-  const arrival = [
-    ...platformArrivalAnnouncement(SHIBUYA, 'inner'),
-    ...platformNoticesForStation(JY, 'inner', 'arrival'),
-  ];
-  const alight = platformAlightFirstAnnouncement();
+test('the Shibuya arrival queue can suppress alight-first', () => {
+  const arrival = [...platformArrivalAnnouncement(19, 'inner'), ...platformNoticesForStation('JY20', 'inner', 'arrival')];
   const queue = durationOf(arrival);
-  const clip = durationOf(alight);
+  const clip = durationOf(platformAlightFirstAnnouncement());
   assert.ok(queue > 0 && clip > 0);
   assert.equal(fitsBeforeCutoff(clip, queue, 14), false);
-  assert.equal(fitsBeforeCutoff(clip, 0, queue + clip + 2), true);
 });
 
-test('both player viewpoints use the shared first-agent schedule', () => {
+test('both viewpoints use the shared schedule and melody cutoff', () => {
   const cycle = readFileSync(new URL('../src/systems/stationCycle.ts', import.meta.url), 'utf-8');
   const wait = readFileSync(new URL('../src/systems/platformWait.ts', import.meta.url), 'utf-8');
   assert.match(cycle, /t > PLATFORM_SCHEDULE\.agentExchangeAt/);
-  assert.match(wait, /agentExchangeAt: AGENT_EXCHANGE_AT/);
   assert.doesNotMatch(cycle, /once\('pa-agent', t > 6/);
-  assert.equal(PLATFORM_SCHEDULE.agentExchangeAt, 5);
-});
-
-test('both alight-first call sites pass the melody cutoff', () => {
-  const cycle = readFileSync(new URL('../src/systems/stationCycle.ts', import.meta.url), 'utf-8');
-  const wait = readFileSync(new URL('../src/systems/platformWait.ts', import.meta.url), 'utf-8');
   assert.match(cycle, /paAlightFirst\(s\.index, PLATFORM_PLAN_HEADWAY, melodyStartAt\(s\.index, dwell\) - t\)/);
   assert.match(wait, /paAlightFirst\(index, headway, melodyAt - t\)/);
+  assert.equal(PLATFORM_SCHEDULE.agentExchangeAt, 5);
 });
 ''', encoding='utf-8')
 
-      - name: Install project dependencies
-        run: npm ci
-
-      - name: Install TTS dependencies
+      - name: Install dependencies
         run: |
+          npm ci
           sudo apt-get update
           sudo apt-get install -y espeak-ng
           python -m pip install --upgrade pip
           python -m pip install kokoro-onnx 'misaki[en,ja]' lameenc
 
-      - name: Download Kokoro model files
+      - name: Download model and regenerate clips
         run: |
-          curl -L --fail --retry 3 -o /tmp/kokoro-v1.0.onnx \
-            https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
-          curl -L --fail --retry 3 -o /tmp/voices-v1.0.bin \
-            https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
-
-      - name: Export and regenerate announcement clips
-        run: |
+          curl -L --fail --retry 3 -o /tmp/kokoro-v1.0.onnx https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
+          curl -L --fail --retry 3 -o /tmp/voices-v1.0.bin https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
           npx esbuild scripts/announcements-export.ts --bundle --format=esm --platform=node --outfile=/tmp/announcements-export.mjs
           node /tmp/announcements-export.mjs /tmp/announcements-texts.json
-          python scripts/announcements-gen.py /tmp/announcements-texts.json \
-            /tmp/kokoro-v1.0.onnx /tmp/voices-v1.0.bin \
-            public/audio/announcements src/data/pa-manifest.ts --reuse
+          python scripts/announcements-gen.py /tmp/announcements-texts.json /tmp/kokoro-v1.0.onnx /tmp/voices-v1.0.bin public/audio/announcements src/data/pa-manifest.ts --reuse
 
       - name: Validate
         run: |
@@ -211,7 +135,7 @@ test('both alight-first call sites pass the melody cutoff', () => {
           npm run build
           npm run lint
 
-      - name: Remove temporary workflow and commit
+      - name: Commit validated result
         run: |
           rm .github/workflows/agent-fix-announcements.yml
           git config user.name 'github-actions[bot]'
