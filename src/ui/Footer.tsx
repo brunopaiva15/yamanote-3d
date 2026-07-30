@@ -13,6 +13,9 @@ export function Footer() {
           Vergasta Digital
         </a>
       </p>
+      <p className="site-footer-about">
+        <a href="./about.html">{t.footer.about}</a>
+      </p>
       <p className="site-footer-disclaimer">{t.footer.disclaimer}</p>
       <p className="site-footer-support">
         <a
