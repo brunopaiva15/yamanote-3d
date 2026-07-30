@@ -10,9 +10,11 @@
 // libellés importés d'ailleurs.
 //
 // Le point marque une PAUSE, pas seulement une fin de phrase - c'est la
-// diction des annonces automatiques, qui posent le nom de la gare et son code
-// détachés du reste : « The next station is. Shibuya. JY. 20. The doors on the
-// right side will open. » L'anglais de bord suit donc le japonais
+// diction de l'annonce automatique donnée après le départ, qui pose le nom de
+// la gare et son code détachés du reste : « The next station is. Shibuya. JY.
+// 20. The doors on the right side will open. » Ce n'est pas une règle pour
+// chaque occurrence du nom : la seconde annonce, à l'approche, omet le code.
+// L'anglais de bord suit donc le japonais
 // (「次は。渋谷。渋谷。」) au lieu d'enchaîner ses groupes d'une traite.
 
 import { loopNameJp, prevStation, stationAtHop, wrapStation } from './loop.ts';
@@ -120,7 +122,7 @@ export function directionAnnouncement(index: number, dir: LoopDirection): Uttera
   ];
 }
 
-// « 次は… » : station à venir + côté de sortie (forme distance courte).
+// « 次は… » après le départ : station à venir + code JY + côté de sortie.
 export function nextStationAnnouncement(index: number, side: 1 | -1): Utterance[] {
   const st = STATIONS[index];
   const sideJp = doorSideJp(side);
@@ -139,7 +141,7 @@ export function nextStationAnnouncement(index: number, side: 1 | -1): Utterance[
   ];
 }
 
-// « まもなく… » : approche + côté de sortie.
+// « まもなく… » : approche + côté de sortie. Le code JY n'est pas répété.
 export function approachAnnouncement(index: number, side: 1 | -1): Utterance[] {
   const st = STATIONS[index];
   const sideJp = doorSideJp(side);
