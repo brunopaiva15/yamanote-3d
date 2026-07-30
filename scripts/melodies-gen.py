@@ -19,8 +19,8 @@ Le script imprime la durée de chaque clip : reporter ces valeurs dans les
 constantes *_SECS de src/systems/stationCycle.ts si les mélodies changent.
 """
 
+import argparse
 import re
-import sys
 from pathlib import Path
 
 import lameenc
@@ -667,18 +667,41 @@ MELODIES = [
 
 
 def main() -> None:
-    out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("public/audio/melodies")
+    parser = argparse.ArgumentParser(description=__doc__)
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--only", help="file name or stem of one composition")
+    selection.add_argument("--missing", action="store_true", help="generate only absent assets")
+    parser.add_argument("--output", type=Path, default=Path("public/audio/melodies"))
+    parser.add_argument("--force", action="store_true", help="replace an explicitly selected asset")
+    args = parser.parse_args()
+    if args.force and not args.only:
+        parser.error("--force is only allowed with --only")
+    out_dir = args.output
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    selected = MELODIES
+    if args.only:
+        needle = args.only.removesuffix(".mp3")
+        selected = [m for m in MELODIES if Path(m["file"]).stem == needle or m["file"] == args.only]
+        if not selected:
+            parser.error(f"unknown composition: {args.only}")
+    elif not args.missing:
+        parser.error("refusing to overwrite the library: use --missing or --only")
+
     print("Génération des 発車メロディ originales :")
-    for m in MELODIES:
-        buf = render_melody(m)
+    generated = 0
+    for m in selected:
         path = out_dir / m["file"]
+        if path.exists() and not args.force:
+            print(f"  skip {m['file']} (already exists)")
+            continue
+        buf = render_melody(m)
         encode_mp3(buf, path)
+        generated += 1
         dur = buf.shape[0] / SR
         print(f"  {m['file']:44s} {dur:5.1f} s  - {m['title']}")
 
-    print("\nReporter ces durées dans les constantes *_SECS de src/systems/stationCycle.ts.")
+    print(f"\n{generated} asset(s) generated; existing files were preserved.")
 
 
 if __name__ == "__main__":

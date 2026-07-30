@@ -152,6 +152,25 @@ export const TRANSFERS: Record<string, { jp: string; en: string }> = {
   JY30: { jp: '京浜東北線、東京メトロ有楽町線', en: 'the Keihin-Tohoku Line and the Tokyo Metro Yurakucho Line' },
 };
 
+export type TransferText = { jp: string; en: string };
+export interface StationTransferProfile {
+  default: TransferText; inner?: TransferText; outer?: TransferText;
+  originating?: TransferText; terminating?: TransferText;
+}
+export interface ServiceContext { originating?: boolean; terminating?: boolean }
+
+/** Résolution parlée; les écrans gardent la liste complète et aucune exception n'est inventée. */
+export function transferAnnouncementFor(
+  stationCode: string, direction: LoopDirection, context: ServiceContext = {},
+): TransferText | undefined {
+  const fallback = TRANSFERS[stationCode];
+  if (!fallback) return undefined;
+  const profile: StationTransferProfile = { default: fallback };
+  if (context.terminating && profile.terminating) return profile.terminating;
+  if (context.originating && profile.originating) return profile.originating;
+  return profile[direction] ?? profile.default;
+}
+
 /**
  * Gares listées sur le panneau de direction suspendu au-dessus du quai
  * (「原宿・代々木・新宿・池袋・上野方面」).

@@ -55,6 +55,15 @@ export function atosVoiceForDirection(direction: LoopDirection): StationVoice {
   return direction === 'inner' ? 'atos-inner' : 'atos-outer';
 }
 
+/** Point d'extension par quai; aucune exception n'est activée sans preuve datée. */
+export function atosVoiceForPlatform(
+  _stationCode: string,
+  direction: LoopDirection,
+  _platform: number,
+): StationVoice {
+  return atosVoiceForDirection(direction);
+}
+
 function ja(text: string, voice: StationVoice): StationUtterance {
   return { text, lang: 'ja-JP', voice };
 }

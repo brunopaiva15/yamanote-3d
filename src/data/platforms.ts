@@ -10,6 +10,55 @@
 
 export type LoopDirection = 'inner' | 'outer';
 
+import { DOOR_SIDE, STATIONS } from './stations.ts';
+import { hasPlatformDoors, layoutFor } from './stationLayouts.ts';
+import type { SourcedValue } from './evidence.ts';
+
+export type DoorSide = 'left' | 'right';
+export type PlatformServiceRole =
+  | 'through'
+  | 'originating'
+  | 'terminating'
+  | 'depot-access'
+  | 'alternative';
+
+export interface PlatformEvidence {
+  doorSide?: SourcedValue<DoorSide>;
+  platformDoors?: SourcedValue<boolean>;
+  approachChime?: SourcedValue<string>;
+  automaticVoice?: SourcedValue<'atos-inner' | 'atos-outer'>;
+}
+
+export interface YamanotePlatformProfile {
+  stationCode: string;
+  direction: LoopDirection;
+  platform: number;
+  nextStationCode: string;
+  doorSide: DoorSide;
+  serviceRoles: PlatformServiceRole[];
+  platformDoors: {
+    installed: boolean;
+    type?: 'half-height' | 'full-height';
+    openDelay?: number;
+    closeDelay?: number;
+  };
+  approachChime?: { profileId: string };
+  departureMelody: { compositionId: string };
+  automaticVoice?: { japaneseRole?: 'atos-inner' | 'atos-outer'; englishRole?: 'atos-en' };
+  evidence?: PlatformEvidence;
+}
+
+export interface DirectionPlatformSet {
+  primary: YamanotePlatformProfile;
+  alternatives: YamanotePlatformProfile[];
+}
+
+export interface YamanoteStationPlatformSet {
+  stationCode: string;
+  inner: DirectionPlatformSet;
+  outer: DirectionPlatformSet;
+}
+
 export type PlatformInfo = {
   /** Quai principal pour ce sens. */
   platform: number;
@@ -249,7 +298,121 @@ export const YAMANOTE_PLATFORMS: Record<string, StationPlatforms> = {
 
 /** Quai pour un code JY et un sens (undefined si code inconnu). */
 export function platformFor(jy: string, direction: LoopDirection): PlatformInfo | undefined {
-  return YAMANOTE_PLATFORMS[jy]?.[direction];
+  const legacy = YAMANOTE_PLATFORMS[jy]?.[direction];
+  if (!legacy) return undefined;
+  const profile = platformProfileFor(jy, direction);
+  return {
+    platform: profile.platform,
+    nextStation: legacy.nextStation,
+    ...(legacy.alternativePlatform === undefined
+      ? {}
+      : { alternativePlatform: legacy.alternativePlatform }),
+  };
+}
+
+function profileFromLegacy(
+  stationCode: string,
+  direction: LoopDirection,
+  platform: number,
+  alternative: boolean,
+): YamanotePlatformProfile {
+  const legacy = YAMANOTE_PLATFORMS[stationCode]?.[direction];
+  if (!legacy) throw new Error(`Unknown Yamanote platform: ${stationCode}/${direction}`);
+  const stationIndex = STATIONS.findIndex((station) => station.jy === stationCode);
+  if (stationIndex < 0) throw new Error(`Unknown Yamanote station: ${stationCode}`);
+  const nextIndex = (stationIndex + (direction === 'inner' ? 1 : -1) + STATIONS.length)
+    % STATIONS.length;
+  const nextStationCode = STATIONS[nextIndex].jy;
+  const installed = layoutFor(stationIndex).psd === 'partial'
+    ? platform === legacy.platform
+    : hasPlatformDoors(stationIndex);
+  return {
+    stationCode,
+    direction,
+    platform,
+    nextStationCode,
+    doorSide: DOOR_SIDE[stationIndex] === 1 ? 'right' : 'left',
+    serviceRoles: alternative
+      ? ['alternative', 'originating', 'terminating', 'depot-access']
+      : ['through'],
+    platformDoors: { installed, ...(installed ? { type: 'half-height' as const } : {}) },
+    departureMelody: { compositionId: `${stationCode.toLowerCase()}-${direction}-${platform}` },
+    automaticVoice: {
+      japaneseRole: direction === 'inner' ? 'atos-inner' : 'atos-outer',
+      englishRole: 'atos-en',
+    },
+    evidence: {
+      doorSide: {
+        value: DOOR_SIDE[stationIndex] === 1 ? 'right' : 'left',
+        confidence: 'unverified',
+        sourceNote: 'Valeur héritée du relevé station-only; aucune correction factuelle appliquée.',
+      },
+      platformDoors: {
+        value: installed,
+        confidence: 'estimated',
+        checkedAt: '2026-07-30',
+        sourceNote: 'Fallback conservateur de stationLayouts.psd pendant la migration par quai.',
+      },
+    },
+  };
+}
+
+/** Source centrale composée à partir de la matrice historique, sans seconde liste divergente. */
+export function platformProfileFor(
+  stationCode: string,
+  direction: LoopDirection,
+  options: { alternative?: boolean; platform?: number } = {},
+): YamanotePlatformProfile {
+  const legacy = YAMANOTE_PLATFORMS[stationCode]?.[direction];
+  if (!legacy) throw new Error(`Unknown Yamanote platform: ${stationCode}/${direction}`);
+  const requestedAlternative = options.alternative === true;
+  const platform = options.platform
+    ?? (requestedAlternative ? legacy.alternativePlatform : undefined)
+    ?? legacy.platform;
+  const alternative = platform !== legacy.platform;
+  if (alternative && platform !== legacy.alternativePlatform) {
+    throw new Error(`Unknown platform ${platform} for ${stationCode}/${direction}`);
+  }
+  return profileFromLegacy(stationCode, direction, platform, alternative);
+}
+
+export function stationPlatformSetFor(stationCode: string): YamanoteStationPlatformSet {
+  const setFor = (direction: LoopDirection): DirectionPlatformSet => {
+    const legacy = YAMANOTE_PLATFORMS[stationCode]?.[direction];
+    if (!legacy) throw new Error(`Unknown Yamanote station: ${stationCode}`);
+    return {
+      primary: platformProfileFor(stationCode, direction),
+      alternatives: legacy.alternativePlatform === undefined
+        ? []
+        : [platformProfileFor(stationCode, direction, { alternative: true })],
+    };
+  };
+  return { stationCode, inner: setFor('inner'), outer: setFor('outer') };
+}
+
+export function doorSideNameFor(
+  stationCode: string,
+  direction: LoopDirection,
+  platform?: number,
+): DoorSide {
+  return platformProfileFor(stationCode, direction, { platform }).doorSide;
+}
+
+/** Adaptateur numérique temporaire pour la physique et les annonces existantes. */
+export function doorSideFor(
+  stationCode: string,
+  direction: LoopDirection,
+  platform?: number,
+): 1 | -1 {
+  return doorSideNameFor(stationCode, direction, platform) === 'right' ? 1 : -1;
+}
+
+export function hasPlatformDoorsFor(
+  stationCode: string,
+  direction: LoopDirection,
+  platform: number,
+): boolean {
+  return platformProfileFor(stationCode, direction, { platform }).platformDoors.installed;
 }
 
 /**
