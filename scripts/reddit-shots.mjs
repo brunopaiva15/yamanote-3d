@@ -10,6 +10,9 @@
 //   2. bord-jour     — assis dans le wagon, la ville de jour défile par la baie
 //   3. bord-nuit     — le même wagon, la nuit, devant les néons de Shibuya
 //   4. express       — le rapide Keihin-Tōhoku qui traverse la voie d'en face
+//
+// La scène du quai (1) est rendue EN DERNIER : y descendre bascule le référentiel
+// du joueur sur le quai (playerFrame), ce qui perturberait les scènes de wagon.
 
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
@@ -59,38 +62,6 @@ function platformPose(i, e, t) {
 }
 
 // ---------------------------------------------------------------------------
-// 1. Sur le quai, en attente — Takanawa Gateway (26e gare, index 25), heure dorée
-// ---------------------------------------------------------------------------
-{
-  const i = 25;
-  await page.evaluate((k) => {
-    window.__probeGoto(k, 'dwell');
-  }, i);
-  await sleep(1200);
-  await page.evaluate(() => {
-    window.__probeDate(11, 12);      // mi-novembre : nuit qui tombe tôt, lumière rasante
-    window.__probeClock(16 * 60 + 20);
-    window.__alight();               // on descend : le train partira sans nous
-    window.__platformWaitSpeed(14);  // on accélère jusqu'au quai vide
-  });
-  // Attendre que la rame soit partie et que le creux d'attente commence.
-  await page.waitForFunction(() => window.__platformWait.stage === 'clear', { timeout: 60000 });
-  // Laisser le quai se repeupler par les escaliers, puis figer.
-  await page.evaluate(() => window.__platformWaitSpeed(3));
-  await page.waitForFunction(() => window.__platformWait.t >= 40, { timeout: 60000 });
-  await page.evaluate(() => window.__platformWaitSpeed(0.02));
-  const pose = platformPose(i, [3.7, 1.55, -9], [1.95, 1.35, 11]);
-  await page.evaluate(([c, clk]) => {
-    window.__freeCam(c);
-    window.__probeClock(clk);
-  }, [pose, 16 * 60 + 20]);
-  await sleep(1800);
-  await page.screenshot({ path: `${out}/1-quai-attente.png` });
-  console.log('→ 1-quai-attente');
-  await page.evaluate(() => { window.__freeCam(null); window.__board(); });
-}
-
-// ---------------------------------------------------------------------------
 // 2. Assis à bord, ville de jour — viaduc, arrivée sur Nishi-Nippori (index 7)
 // ---------------------------------------------------------------------------
 {
@@ -100,7 +71,7 @@ function platformPose(i, e, t) {
     window.__probeClock(11 * 60 + 30);
     window.__freeCam({ x: 0.98, y: 1.22, z: -6.4, tx: -0.55, ty: 1.02, tz: 7.5 });
   });
-  await sleep(1800);
+  await sleep(2000);
   await page.screenshot({ path: `${out}/2-bord-jour.png` });
   console.log('→ 2-bord-jour');
 }
@@ -115,7 +86,7 @@ function platformPose(i, e, t) {
     window.__probeClock(19 * 60 + 40);
     window.__freeCam({ x: 0.15, y: 1.16, z: -2.2, tx: 5.5, ty: 0.95, tz: 6.5 });
   });
-  await sleep(1800);
+  await sleep(2000);
   await page.screenshot({ path: `${out}/3-bord-nuit.png` });
   console.log('→ 3-bord-nuit');
 }
@@ -156,6 +127,38 @@ function platformPose(i, e, t) {
   }
   await page.screenshot({ path: `${out}/4-express.png` });
   console.log('→ 4-express');
+}
+
+// ---------------------------------------------------------------------------
+// 1. Sur le quai, en attente — Takanawa Gateway (index 25), heure dorée. EN DERNIER.
+// ---------------------------------------------------------------------------
+{
+  const i = 25;
+  await page.evaluate((k) => {
+    window.__freeCam(null);
+    window.__probeGoto(k, 'dwell');
+    window.__runtime.phaseT = 6;      // milieu de l'arrêt : portes ouvertes
+  }, i);
+  await sleep(3000);
+  // Franchir le seuil ouvert : le joueur passe sur le quai, le train repartira
+  // sans lui (et le référentiel bascule pour de bon).
+  const crossed = await page.evaluate(() => window.__crossPortal());
+  if (!crossed) console.error('  ⚠ franchissement du seuil refusé (portes fermées ?)');
+  await page.evaluate(() => window.__platformWaitSpeed(14));
+  await page.waitForFunction(() => window.__platformWait.stage === 'clear', { timeout: 60000 });
+  // Laisser le quai se repeupler par les escaliers, puis figer l'attente.
+  await page.evaluate(() => window.__platformWaitSpeed(3));
+  await page.waitForFunction(() => window.__platformWait.t >= 42, { timeout: 60000 });
+  await page.evaluate(() => window.__platformWaitSpeed(0.02));
+  const pose = platformPose(i, [3.7, 1.55, -9], [1.95, 1.35, 11]);
+  await page.evaluate(([c]) => {
+    window.__freeCam(c);
+    window.__probeDate(11, 12);       // mi-novembre : le jour tombe tôt
+    window.__probeClock(16 * 60);     // heure dorée
+  }, [pose]);
+  await sleep(2000);
+  await page.screenshot({ path: `${out}/1-quai-attente.png` });
+  console.log('→ 1-quai-attente');
 }
 
 await browser.close();
