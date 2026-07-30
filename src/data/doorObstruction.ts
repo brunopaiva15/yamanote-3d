@@ -2,7 +2,7 @@
 //
 // Sur le E235, un voyageur resté dans l'encadrement ne déclenche pas le
 // réflexe d'un ascenseur. La porte rencontre une résistance, s'arrête là où
-// elle est, ne se verrouille pas — et RIEN ne bouge tant qu'un humain n'a pas
+// elle est, ne se verrouille pas - et RIEN ne bouge tant qu'un humain n'a pas
 // agi. Ce qui se passe ensuite tient à trois décisions : combien de temps le
 // conducteur met à réagir, combien de temps il maintient la commande de
 // réouverture (再開閉スイッチ), et si ça suffit.
@@ -15,7 +15,7 @@
 /**
  * Ce qui est pris dans la porte.
  *
- * `person` : un corps, franc, que la détection sensible voit tout de suite —
+ * `person` : un corps, franc, que la détection sensible voit tout de suite -
  * la porte reste largement entrebâillée.
  * `object` : une sangle de sac, un câble d'écouteur. C'est le cas DIFFICILE :
  * les vantaux se rejoignent presque, il n'y a rien à voir depuis la cabine, et
@@ -45,7 +45,7 @@ const OBJECT_SHARE = 0.28;
 /** Ouverture résiduelle : un corps tient la porte largement ouverte. */
 const PERSON_GAP_MIN = 0.17;
 const PERSON_GAP_MAX = 0.26;
-/** Une sangle ne tient que quelques centimètres — d'où la difficulté. */
+/** Une sangle ne tient que quelques centimètres - d'où la difficulté. */
 const OBJECT_GAP_MIN = 0.012;
 const OBJECT_GAP_MAX = 0.035;
 
@@ -85,7 +85,7 @@ export function drawObstacle(rand: Rand = Math.random): ObstructionPlan {
 /**
  * L'obstacle, quand c'est VOUS : un corps, avec le jeu résiduel d'un corps.
  *
- * Rien n'est tiré au sort quant à l'issue — ce n'est pas la chance qui décide
+ * Rien n'est tiré au sort quant à l'issue - ce n'est pas la chance qui décide
  * qu'un joueur planté dans l'encadrement se dégage, c'est lui.
  */
 export function playerObstacle(rand: Rand = Math.random): ObstructionPlan {
@@ -96,7 +96,7 @@ export function playerObstacle(rand: Rand = Math.random): ObstructionPlan {
  * Délai (s) entre le contact et la commande de réouverture.
  *
  * Première tentative : le conducteur arrière voit la scène sur le moniteur, ou
- * ne la voit pas — un objet fin ne se remarque qu'à l'indication de départ qui
+ * ne la voit pas - un objet fin ne se remarque qu'à l'indication de départ qui
  * ne vient pas, et ça prend plus longtemps. Ensuite il ne quitte plus la porte
  * des yeux, et la main est déjà sur la commande.
  */
@@ -110,7 +110,7 @@ export function reactionDelay(kind: ObstacleKind, attempt: number, rand: Rand = 
  *
  * Ce n'est pas une durée d'ouverture : c'est un temps d'APPUI, et il court dès
  * l'instant où le conducteur presse. Un vantail met environ deux secondes à
- * s'écarter en grand — une impulsion de six dixièmes ne l'ouvre donc qu'à
+ * s'écarter en grand - une impulsion de six dixièmes ne l'ouvre donc qu'à
  * moitié avant de le renvoyer en arrière, et c'est précisément le geste qu'on
  * fait pour décoincer une sangle. Une tentative qui a échoué appelle la
  * suivante plus généreuse.

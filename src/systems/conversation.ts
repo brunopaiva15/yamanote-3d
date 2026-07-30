@@ -5,7 +5,7 @@
 // - SOLLICITÉE : on regarde quelqu'un d'assez près, une invite s'affiche, et
 //   la touche « parler » lui délie la langue.
 // - SPONTANÉE : personne n'a rien demandé. On l'a bousculé, on vient de
-//   s'asseoir à côté, quelqu'un est tombé devant lui — il réagit tout seul
+//   s'asseoir à côté, quelqu'un est tombé devant lui - il réagit tout seul
 //   (voir systems/paxEvents pour l'aiguillage des déclencheurs).
 //
 // Le catalogue (data/dialogue) décide de CE QUI se dit selon le contexte :
@@ -127,7 +127,7 @@ function noteSaid(scope: PaxScope, id: number, dialogueId: string): void {
  *
  * Les deux pools sont RÉUTILISÉS : le siège 12 est occupé par quelqu'un
  * d'autre trois gares plus loin. Sans cet oubli, ce nouveau voyageur hériterait
- * de tout ce que son prédécesseur a déjà dit et refuserait de le redire — la
+ * de tout ce que son prédécesseur a déjà dit et refuserait de le redire - la
  * mémoire suivrait la place, pas la personne.
  */
 let sweepT = 0;
@@ -330,13 +330,13 @@ function spontaneousInterval(): number {
 //
 // Presque tout ce qui se dit ici est affaire d'une personne : on bouscule
 // quelqu'un, quelqu'un répond. Un freinage d'urgence, lui, arrive à tout le
-// wagon d'un coup — et un wagon qui vient de freiner en urgence ne produit pas
+// wagon d'un coup - et un wagon qui vient de freiner en urgence ne produit pas
 // une remarque polie, il produit plusieurs voix inquiètes qui se répondent
 // presque.
 //
 // La bulle n'en montre qu'une à la fois : on les met donc en file, deux à
 // quatre voisins différents qui parlent l'un après l'autre, puis le silence
-// revient. La file a une date de péremption — passé le temps de l'événement,
+// revient. La file a une date de péremption - passé le temps de l'événement,
 // une frayeur qui s'exprime n'a plus rien à voir avec ce qui l'a causée.
 
 /** Nombre de voisins qui réagissent à un même événement collectif. */
@@ -392,7 +392,7 @@ function updateChain(): void {
 }
 
 function handleEvent(e: PaxEvent): void {
-  // Événement collectif : plusieurs voix, et il passe devant tout le reste —
+  // Événement collectif : plusieurs voix, et il passe devant tout le reste -
   // y compris devant une conversation en cours et le quota de spontanéité.
   if (e.trigger === 'emergency' || e.trigger === 'outage' || e.trigger === 'powerBack') {
     startChain(e.trigger);
@@ -422,7 +422,7 @@ function handleEvent(e: PaxEvent): void {
 // S'asseoir, monter, descendre, entrer en gare : autant de choses que le
 // joueur provoque et qu'un voisin peut relever. Plutôt que d'aller planter
 // des appels dans le contrôleur du joueur et la machine à états des gares, on
-// guette ici les transitions de l'état global — c'est le même travail, au
+// guette ici les transitions de l'état global - c'est le même travail, au
 // même endroit que le reste du dialogue.
 
 let prevSeated = false;
@@ -452,7 +452,7 @@ function watchPlayerEvents(dt: number): void {
   prevIndex = platformIndex;
 
   // Frôler quelqu'un en marchant, de loin en loin : ni un choc, ni une
-  // sollicitation — juste un mot lâché au passage.
+  // sollicitation - juste un mot lâché au passage.
   passbyT -= dt;
   if (passbyT > 0) return;
   passbyT = 4;
@@ -526,8 +526,8 @@ export function updateConversation(dt: number): void {
     talk.gap = gap;
     // Le silence fait partie de l'échange : on prolonge d'autant l'attention
     // du voyageur. Sans ça, son occupation reprend dès la marge de 0,6 s
-    // écoulée, et toute réplique précédée d'un silence plus long — le temps de
-    // chercher ses mots — était perdue sans bruit.
+    // écoulée, et toute réplique précédée d'un silence plus long - le temps de
+    // chercher ses mots - était perdue sans bruit.
     if (conversation.scope === 'car') paxKeepTalking(conversation.id, gap + 0.6);
     else crowdKeepTalking(conversation.id, gap + 0.6);
     return;

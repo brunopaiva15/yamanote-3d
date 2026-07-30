@@ -1,5 +1,5 @@
 // Lecteur CityGML : la fixture exerce ce que le générateur d'échantillon ne
-// produit PAS — préfixes exotiques, LOD2 dans boundedBy, anneaux intérieurs,
+// produit PAS - préfixes exotiques, LOD2 dans boundedBy, anneaux intérieurs,
 // gml:pos, BuildingPart, bâtiment sans géométrie.
 
 import test from 'node:test';

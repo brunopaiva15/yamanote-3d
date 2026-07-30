@@ -1,4 +1,4 @@
-// JY21 恵比寿 — la gare avalée par son centre commercial.
+// JY21 恵比寿 - la gare avalée par son centre commercial.
 //
 // Ebisu est un quai de viaduc coiffé du complexe Atre : un bâtiment entier
 // enjambe les voies, et depuis le quai on ne voit pas le ciel mais une
@@ -66,7 +66,7 @@ export function Ebisu({ layout, place }: SigProps) {
       ))}
       {/* Descentes de charge : au droit de l'épine et du fond de la travée.
           Leur trame vient du plan (data/stationLayouts), qui les écarte des
-          escaliers mécaniques, des potences et de la bande directionnelle —
+          escaliers mécaniques, des potences et de la bande directionnelle -
           l'une d'elles se plantait en plein milieu d'un escalier mécanique. */}
       {(layout.sigPlan?.posts ?? []).map(({ z }) =>
         [place.backX, oppBackX].map((x) => (
@@ -86,7 +86,7 @@ export function Ebisu({ layout, place }: SigProps) {
 
       {/* La passerelle couverte vers Garden Place : elle quitte la gare par une
           extrémité et s'en va au-dessus de la ville. On n'en modélise que la
-          première portée — l'arche de Garden Place, à laquelle elle mène, est
+          première portée - l'arche de Garden Place, à laquelle elle mène, est
           déjà dans le décor de quartier, plus loin. */}
       <group position={[0, 0, layout.length * 0.4]}>
         <mesh position={[oppBackX + 5, soffit + 0.6, 0]} material={s.wall}>

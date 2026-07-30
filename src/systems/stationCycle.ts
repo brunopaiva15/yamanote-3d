@@ -1,7 +1,7 @@
 // Machine à états du cycle station : cruise → brake → dwell → depart, avec
 // timing quasi réel (~2 min à 2 min 40 par station, selon la durée d'arrêt
 // tirée). Déclenche annonces, carillons, mélodies et échanges de passagers aux
-// bons instants — voir « Chronologie de l'arrêt » plus bas.
+// bons instants - voir « Chronologie de l'arrêt » plus bas.
 
 import { CONFIG, V_MAX } from '../data/config';
 import { DOOR_SIDE, STATIONS, TRANSFERS } from '../data/stations';
@@ -101,12 +101,12 @@ function scheduleNextRunSound(from: number): void {
 // urgence, reste immobilisé de 45 s à 2 min 30 avec les annonces conducteur,
 // puis repart. Le chrono de phase est avancé au prorata
 // de la vitesse pendant tout l'événement : gelé à l'arrêt, il ne consomme que
-// l'équivalent de la distance réellement parcourue — la gare suivante arrive
+// l'équivalent de la distance réellement parcourue - la gare suivante arrive
 // donc au bon moment après la reprise.
 //
 // Le tirage se faisait auparavant gare par gare, à 1,5 % : une loi géométrique
 // laissait passer près de deux trajets d'une demi-heure sur trois sans le
-// moindre arrêt d'urgence — la mécanique existait sans jamais se montrer — et
+// moindre arrêt d'urgence - la mécanique existait sans jamais se montrer - et
 // pouvait à l'inverse en donner deux coup sur coup. Un écart tiré entre deux
 // bornes garde la rareté et lui retire la loterie.
 
@@ -158,11 +158,11 @@ function drawEmergencyGap(first = false): number {
 //
 // Le point qui fait tout : une E235-0 de la Yamanote n'a PAS de batterie de
 // traction. La fonction est arrivée plus tard, sur les E235-1000 des lignes
-// Yokosuka et Sōbu rapide — JR East l'a présentée comme une première. La rame
+// Yokosuka et Sōbu rapide - JR East l'a présentée comme une première. La rame
 // verte, elle, attend, et c'est pour ça que l'immobilisation se compte en
 // minutes là où un 急停車 se compte en secondes.
 //
-// Rareté : bien plus rare que le coup de frein — de l'ordre d'une fois par
+// Rareté : bien plus rare que le coup de frein - de l'ordre d'une fois par
 // heure et demie à trois heures de trajet. Assez pour qu'une session ordinaire
 // ne la voie jamais, ce qui est exactement la fréquence d'une vraie panne
 // d'alimentation ; le premier tirage est rapproché pour qu'une longue boucle
@@ -182,8 +182,8 @@ const OUTAGE_COAST_MIN = 2.2;
 const OUTAGE_COAST_MAX = 3.8;
 /**
  * Immobilisation : de 2 min 50 à 5 min 40. Une vraie panne de caténaire tient
- * les rames bien plus longtemps — près d'une heure lors de la panne de Tamachi
- * du 16 janvier 2026, avant l'évacuation à pied de quelque 4 000 voyageurs —
+ * les rames bien plus longtemps - près d'une heure lors de la panne de Tamachi
+ * du 16 janvier 2026, avant l'évacuation à pied de quelque 4 000 voyageurs -
  * mais le jeu n'a ni évacuation ni marche le long des voies : au-delà de
  * quelques minutes, il ne resterait plus rien à vivre qu'un écran fixe.
  */
@@ -242,7 +242,7 @@ const powerHeard: PowerSoundKind[] = [];
  *
  * Une rame sur batteries n'est pas muette, et cinq minutes de silence total
  * s'entendent comme un bug audio plutôt que comme une panne. De loin en loin,
- * un relais travaille — assez espacé pour qu'on ne l'attende pas, assez présent
+ * un relais travaille - assez espacé pour qu'on ne l'attende pas, assez présent
  * pour qu'on sache que quelque chose vit encore là-dedans.
  */
 const BATTERY_TICK_MIN = 9; // s
@@ -268,7 +268,7 @@ function updateCarPower(dt: number): void {
  *
  * Aucune annonce ici, et c'est le fond de l'affaire : la sonorisation
  * automatique est morte avec le convertisseur. Ce qu'on entend au moment de la
- * coupure, ce sont des sons qui S'ARRÊTENT — l'onduleur, la climatisation —,
+ * coupure, ce sont des sons qui S'ARRÊTENT - l'onduleur, la climatisation -,
  * pas un message. Le conducteur ne parlera qu'une fois la rame posée, au
  * combiné, sur les batteries.
  */
@@ -285,13 +285,13 @@ export function beginPowerOutage(): void {
   for (const key of OUTAGE_KEYS) fired.delete(key);
   cutPower(carPower);
   // Une annonce en cours ne se termine pas : l'amplificateur s'éteint au
-  // milieu du mot. Seulement celle de la rame — la gare, elle, a son propre
+  // milieu du mot. Seulement celle de la rame - la gare, elle, a son propre
   // réseau.
   cancelSpeech('cabin');
   // La ligne prend du retard, et le quai en nommera la cause : c'est le seul
   // incident dont l'annonce de retard dit exactement ce que le joueur a vécu.
   notifyLineOutage();
-  // Personne ne sursaute : rien n'a secoué. Ce sont les têtes qui se lèvent —
+  // Personne ne sursaute : rien n'a secoué. Ce sont les têtes qui se lèvent -
   // vers le plafond, vers les écrans noirs, vers le voisin.
   pushSceneEvent('outage');
 }
@@ -306,7 +306,7 @@ function updatePowerOutage(dt: number): void {
   switch (em.stage) {
     case 'coasting':
       // La rame roule sur son élan. Le conducteur la freine ensuite : freinage
-      // de service au pneumatique, pas de coup de frein d'urgence — rien ne
+      // de service au pneumatique, pas de coup de frein d'urgence - rien ne
       // s'est mis en travers de la voie, l'alimentation a disparu.
       if (em.t >= outageCoastFor || runtime.speed <= 0.01) {
         em.stage = 'braking';
@@ -335,7 +335,7 @@ function updatePowerOutage(dt: number): void {
       once('po-waiting-scared', em.t >= OUTAGE_ANNOUNCE_AT + 22, () => pushSceneEvent('outage'));
       once('po-wait', em.t >= em.holdFor * 0.55, () => say(outageWaitAnnouncement()));
       // Le retour de la tension : d'abord la lumière, l'annonce ensuite. Dans
-      // cet ordre — c'est la lumière qui prévient tout le wagon, pas la voix.
+      // cet ordre - c'est la lumière qui prévient tout le wagon, pas la voix.
       once('po-restored', em.t >= em.holdFor - OUTAGE_RESTORE_LEAD, () => {
         restorePower(carPower);
         // Plus de déclics isolés : il y a mieux à écouter.
@@ -399,7 +399,7 @@ export function beginEmergencyStop(): void {
   notifyLineDelay(em.reason);
   audio.brakeApply();
   audio.flangeSqueal(0.8);
-  // Le wagon sursaute — on se raccroche, on trébuche, on lève le nez — et
+  // Le wagon sursaute - on se raccroche, on trébuche, on lève le nez - et
   // quelques voisins vont dire leur peur dans les secondes qui suivent.
   startlePassengers();
   pushSceneEvent('emergency');
@@ -426,7 +426,7 @@ function updateEmergencyStop(dt: number): void {
       once('em-stopped', em.t >= 4, () => say(emergencyStopAnnouncement(em.reason)));
       // Deuxième vague de peur, d'une autre nature : le coup de frein est
       // passé, la rame est immobile en pleine voie et personne ne dit
-      // vraiment pourquoi. C'est l'attente qui inquiète, maintenant — le
+      // vraiment pourquoi. C'est l'attente qui inquiète, maintenant - le
       // catalogue distingue les deux moments par `moving`.
       once('em-scared', em.t >= 10, () => pushSceneEvent('emergency'));
       // Rappel d'attente à mi-arrêt, seulement si l'arrêt se prolonge.
@@ -456,7 +456,7 @@ function updateEmergencyStop(dt: number): void {
 // Le début de l'arrêt est calé sur l'immobilisation du train ; la FIN, elle,
 // est calée sur la mélodie. La 発車メロディ se joue deux fois, entière, et
 // c'est seulement une fois qu'elle s'est tue que l'annonce de fermeture part et
-// que les portes se ferment — le quai n'expédie pas le morceau pour tenir un
+// que les portes se ferment - le quai n'expédie pas le morceau pour tenir un
 // horaire. Séquence visée, en secondes après l'immobilisation :
 //
 //   0 s       arrêt du E235
@@ -491,7 +491,7 @@ const MELODY_STATION_BIAS = 2.5;
  * Fenêtre sonore laissée à la mélodie, par défaut (s).
  *
  * C'était autrefois une constante, et la mélodie était coupée dessus quoi qu'il
- * arrive : dix secondes, alors que les clips vont de 6,4 s à 13,6 s — Sakura
+ * arrive : dix secondes, alors que les clips vont de 6,4 s à 13,6 s - Sakura
  * Sakura à Komagome n'atteignait donc jamais la fin de son PREMIER passage. La
  * fenêtre est maintenant tirée par arrêt, sur le clip réellement câblé au quai
  * (`randomizeStopTimings` → `melodySounding`), et vaut deux passages entiers.
@@ -516,7 +516,7 @@ function melodySounding(): number {
  * Avance de l'annonce de fermeture sur la fin du dwell. Elle tombe sur la
  * coupure de la mélodie : la voix prend la place du silence, comme sur le quai.
  * Les clips ja + en durent ~6,5 s à eux deux et doivent être finis avant que la
- * rame ne s'ébranle (fin du dwell + DEPART_HOLD) — ils le sont largement.
+ * rame ne s'ébranle (fin du dwell + DEPART_HOLD) - ils le sont largement.
  */
 export const CLOSE_ANNOUNCE_LEAD = 13.0;
 /** Avance de la fermeture des portes sur la fin du dwell. */
@@ -532,7 +532,7 @@ function melodyLead(): number {
 /**
  * Creux annoncé au plan d'annonces du quai quand on est DANS la rame (s).
  *
- * De l'intérieur, on n'entend jamais l'annonce anticipée du prochain train — la
+ * De l'intérieur, on n'entend jamais l'annonce anticipée du prochain train - la
  * seule décision du plan qui dépende du creux. La valeur ne sert donc qu'à
  * remplir le contexte, et c'est l'intervalle ordinaire de la Yamanote.
  */
@@ -560,7 +560,7 @@ const PASS_ROLL_AT = 12.0;
 /**
  * Instant du second message d'agent (temps de dwell).
  *
- * Il vise la mélodie — assez tôt pour finir dessus —, mais il laisse d'abord
+ * Il vise la mélodie - assez tôt pour finir dessus -, mais il laisse d'abord
  * passer le tirage du train qui traverse : celui-là exige le silence de la sono
  * du quai (`rollPassThrough` renonce si elle parle), et une consigne de plus
  * vaut moins qu'un rapide à trois mètres du bord. Si le passage est tiré, c'est
@@ -577,7 +577,7 @@ function agentSecondAt(stationIndex: number, dwell: number): number {
 /**
  * Chronologie tirée pour l'arrêt en cours. Tirée UNE fois, à l'entrée en
  * freinage : dwellDuration() est appelée à chaque frame par le cycle, par le
- * quai et par l'affichage — elle doit rendre la même valeur du début à la fin
+ * quai et par l'affichage - elle doit rendre la même valeur du début à la fin
  * de l'arrêt.
  */
 export const stopTimings = {
@@ -599,12 +599,12 @@ function stationBias(stationIndex: number): number {
 /**
  * Écart d'arrêt (m) : la rame ne se pose pas au millimètre sur son 定位置.
  *
- * Bornes tirées de la pratique JR East — la tolérance réglementaire est de
+ * Bornes tirées de la pratique JR East - la tolérance réglementaire est de
  * ±35 cm, le TASC des lignes équipées de portes palières tient la dizaine de
  * centimètres. On reste dans cette dizaine : de trois à onze centimètres, d'un
  * côté ou de l'autre du repère. C'est assez pour que les portières et les
- * baies palières ne coïncident jamais exactement — le décalage se lit très
- * bien, portes ouvertes, entre les deux montants — et bien trop peu pour gêner
+ * baies palières ne coïncident jamais exactement - le décalage se lit très
+ * bien, portes ouvertes, entre les deux montants - et bien trop peu pour gêner
  * le passage : une baie palière fait 1,80 m, une porte de rame 1,32 m.
  */
 const BERTH_OFFSET_MIN = 0.03;
@@ -625,7 +625,7 @@ export function randomizeBerthOffset(): void {
  * l'aiguillage du dépôt de Tōkaidō et voit passer beaucoup de départs et de
  * terminus : sa voie secondaire sert souvent. Celle d'Ikebukuro est plus rare.
  *
- * Le drapeau `runtime.useAlternativePlatform` existait, était lu quatre fois —
+ * Le drapeau `runtime.useAlternativePlatform` existait, était lu quatre fois -
  * et n'était écrit nulle part. Trois clips de 発車メロディ sur dix-neuf étaient
  * donc injouables, avec les prédicats et les fonctions qui allaient avec :
  * JRE-IKST-010-03 (Ōsaki 内 voie 2), JRE-IKST-010-05 (Ōsaki 外 voie 4) et Bic
@@ -685,7 +685,7 @@ export function melodyStartAt(_stationIndex: number, dwell: number): number {
 
 /**
  * Instant de la coupure : le chef de train relâche le bouton une fois les deux
- * passages faits. Le fondu qui suit ne mord donc sur rien — il referme un
+ * passages faits. Le fondu qui suit ne mord donc sur rien - il referme un
  * silence (voir MELODY_TAIL_S).
  */
 export function melodyCutAt(stationIndex: number, dwell: number): number {
@@ -834,7 +834,7 @@ function seedFired(phase: Phase, t: number, stationIndex: number, dir: LoopDirec
 }
 
 /**
- * Reprend le cycle station à un instant donné du dwell — utilisé quand le
+ * Reprend le cycle station à un instant donné du dwell - utilisé quand le
  * joueur remonte dans une rame après avoir attendu sur le quai. Les portes
  * sont déjà dans le bon état (platformWait a joué la même chorégraphie) ;
  * seul le jeu d'événements déjà déclenchés doit être rétabli, sans quoi la
@@ -949,7 +949,7 @@ export function updateCycle(dt: number): void {
 
   // Pendant un arrêt subi, le chrono de phase avance au prorata de la
   // vitesse : gelé à l'arrêt, cohérent avec la distance pendant freinage et
-  // reprise. L'horloge murale, elle, continue — c'est le retard qui se crée.
+  // reprise. L'horloge murale, elle, continue - c'est le retard qui se crée.
   const em = runtime.emergencyStop;
   runtime.phaseT += em.stage === 'none' ? dt : dt * (runtime.speed / V_MAX);
   advanceClock(dt);
@@ -964,7 +964,7 @@ export function updateCycle(dt: number): void {
   const target = stopping ? 0 : phaseTarget(s.phase, runtime.phaseT);
   // Sur l'élan, rien ne retient la rame ; sous coup de frein d'urgence, tout
   // la retient d'un coup ; une coupure de caténaire, elle, se termine au frein
-  // pneumatique ordinaire — la récupération n'a plus de ligne où renvoyer son
+  // pneumatique ordinaire - la récupération n'a plus de ligne où renvoyer son
   // courant, mais la décélération de service, elle, ne change pas.
   const brakeMode: BrakeMode =
     em.stage === 'coasting' ? 'coast' : em.stage === 'braking' && em.kind === 'brake' ? 'emergency' : 'service';
@@ -996,7 +996,7 @@ export function updateCycle(dt: number): void {
 
   // --- Phases ---
   // (La présence spatiale du quai est pilotée après updateSegmentEnv, dans
-  // Engine — plus de fondu d'opacité à basse vitesse.)
+  // Engine - plus de fondu d'opacité à basse vitesse.)
   const t = runtime.phaseT;
   switch (s.phase) {
     case 'cruise': {
@@ -1019,7 +1019,7 @@ export function updateCycle(dt: number): void {
         say(departureSequence(s.index, DOOR_SIDE[s.index], s.loopDirection)),
       );
       // Coupure de caténaire : même tirage que l'arrêt d'urgence, mais bien
-      // plus espacé — et elle passe devant, parce qu'elle immobilise la rame
+      // plus espacé - et elle passe devant, parce qu'elle immobilise la rame
       // plusieurs minutes là où l'autre la retient une poignée de secondes.
       once('outage-roll', true, () => {
         outageAt = -1;
@@ -1036,7 +1036,7 @@ export function updateCycle(dt: number): void {
         stationsToOutage = drawOutageGap();
       });
       // Arrêt d'urgence : la course qui le porte est décidée gares à l'avance,
-      // ne reste ici qu'à choisir l'instant — en pleine course, assez tôt pour
+      // ne reste ici qu'à choisir l'instant - en pleine course, assez tôt pour
       // avoir le temps de repartir avant l'annonce d'approche.
       once('emergency-roll', true, () => {
         emergencyAt = -1;
@@ -1088,7 +1088,7 @@ export function updateCycle(dt: number): void {
     }
     case 'brake': {
       // Nouveau tirage des retards de portes et de la chronologie de l'arrêt
-      // pour cette gare — avant le dwell, dont il fixe la durée.
+      // pour cette gare - avant le dwell, dont il fixe la durée.
       once('door-timings', true, () => {
         randomizeDoorTimings();
         randomizeStopTimings(s.index);
@@ -1128,7 +1128,7 @@ export function updateCycle(dt: number): void {
       once('psd-open', t > 0.4 + stationTimings.psdOpenDelay, () => setPsdDoors(1));
       // Ce que l'agent de quai dit par les portes ouvertes suit le même plan que
       // sur le quai (systems/platformAnnouncementPlan) : zéro, un ou deux
-      // messages selon l'affluence, l'heure, la gare et le retard — et plus
+      // messages selon l'affluence, l'heure, la gare et le retard - et plus
       // « laissez descendre » à chaque ouverture de portes.
       once('pa-alight', t > 0.4 + stationTimings.psdOpenDelay + 0.6, () =>
         paAlightFirst(s.index, PLATFORM_PLAN_HEADWAY, melodyStartAt(s.index, dwell) - t),
@@ -1144,7 +1144,7 @@ export function updateCycle(dt: number): void {
       );
       // La voie d'en face, quand elle n'est pas la nôtre : un rapide peut la
       // traverser pendant qu'on est à quai. Le créneau va d'ici à l'annonce de
-      // fermeture du quai — la seule chose que la gare ait encore à dire — et
+      // fermeture du quai - la seule chose que la gare ait encore à dire - et
       // c'est lui qui décide si l'annonce de passage tient en japonais et en
       // anglais, en japonais seul, ou pas du tout.
       once('pass-roll', t > PASS_ROLL_AT, () => {
@@ -1153,7 +1153,7 @@ export function updateCycle(dt: number): void {
       });
 
       // Maintien / signal / urgence : stop mélodie, toutes portes rouvertes.
-      // (Une porte qui coince, elle, ne rouvre pas la rame — voir plus bas.)
+      // (Une porte qui coince, elle, ne rouvre pas la rame - voir plus bas.)
       if (isDepartureHeldOpen()) {
         cancelDepartureMelody();
         if (runtime.doorTarget !== 1) setTrainDoors(1);
@@ -1174,7 +1174,7 @@ export function updateCycle(dt: number): void {
 
       // Séquence de départ fidèle : la mélodie (発車メロディ) démarre une
       // vingtaine de secondes après l'arrêt, portes ouvertes depuis longtemps,
-      // tourne une dizaine de secondes, puis le chef de train la coupe —
+      // tourne une dizaine de secondes, puis le chef de train la coupe -
       // l'annonce de fermeture prend le relais sur ce silence.
       once('melody', t >= melodyStartAt(s.index, dwell), () =>
         audio.departureMelody(s.index),
@@ -1202,7 +1202,7 @@ export function updateCycle(dt: number): void {
       });
       // Une porte tenue ouverte par un voyageur ou un objet : le circuit de
       // départ n'est pas établi et l'indication de départ n'apparaît pas en
-      // cabine. On retient l'horloge au bord de la bascule — la chronologie de
+      // cabine. On retient l'horloge au bord de la bascule - la chronologie de
       // l'arrêt est finie, il ne reste plus qu'à attendre que la porte se
       // ferme. La procédure, elle, vit dans systems/doorObstruction.
       if (doorObstructionActive()) {
@@ -1234,9 +1234,9 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   // Avance dans la chronologie d'une coupure en cours : `secondsLeft` est le
   // temps qu'on veut laisser avant le redémarrage (négatif = avant, 0 = tout
   // de suite). Sert à regarder le retour de la tension sans attendre cinq
-  // minutes — voir scripts/outage-shots.mjs.
+  // minutes - voir scripts/outage-shots.mjs.
   // Fige l'alimentation de bord à un niveau (0..1), `null` pour la rendre à la
-  // simulation. Sert à regarder le clignotement image par image — voir
+  // simulation. Sert à regarder le clignotement image par image - voir
   // scripts/outage-shots.mjs.
   w.__holdPower = (level: number | null) => {
     heldPower = level;

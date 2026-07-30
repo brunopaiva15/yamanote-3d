@@ -70,7 +70,7 @@ const HEADWAY_GAP = 60;
 /**
  * Rallonge du creux quand une rame doit traverser la voie d'en face.
  *
- * Ce n'est pas l'express qui retarde la Yamanote — ce sont deux lignes
+ * Ce n'est pas l'express qui retarde la Yamanote - ce sont deux lignes
  * différentes, elles ne se croisent nulle part. C'est l'inverse : la cadence
  * de la Yamanote respire entre deux et quatre minutes, et c'est dans les
  * creux un peu plus longs qu'on a le temps de voir passer autre chose. Sans
@@ -92,7 +92,7 @@ const OUT_OF_SIGHT = 320;
 // --- Instants des annonces facultatives ----------------------------------
 //
 // Ce ne sont plus des rendez-vous : chacun de ces instants n'est que le moment
-// où la gare REGARDE si elle a quelque chose à dire. Ce qu'elle dit — ou pas —
+// où la gare REGARDE si elle a quelque chose à dire. Ce qu'elle dit - ou pas -
 // vient du plan tiré à l'entrée du creux (systems/platformAnnouncementPlan), et
 // ce qui ne tient pas dans le créneau restant est abandonné plutôt que repoussé.
 
@@ -213,14 +213,14 @@ function updateBoardable(index: number, doorSide: 1 | -1): void {
     audio.doorOpenChime();
   });
   once('psd-open', t > 0.4 + stationTimings.psdOpenDelay, () => setPsdDoors(1));
-  // L'agent de quai, une fois les baies palières ouvertes elles aussi — et
+  // L'agent de quai, une fois les baies palières ouvertes elles aussi - et
   // seulement si le plan de cet arrêt l'a retenu : sur un quai désert, personne
   // n'a besoin qu'on lui demande de laisser descendre trois personnes.
   once('pa-alight', t > 0.4 + stationTimings.psdOpenDelay + 0.6, () =>
     paAlightFirst(index, headway, melodyAt - t),
   );
   once('exchange', t > 1.6, () => exchangePassengers(doorSide));
-  // Pendant que la foule monte, puis une seconde fois avant la mélodie — zéro,
+  // Pendant que la foule monte, puis une seconde fois avant la mélodie - zéro,
   // une ou deux consignes selon le plan, et la seconde n'est diffusée que s'il
   // reste la place de la finir avant la première note.
   once('agent-1', t > AGENT_EXCHANGE_AT, () =>
@@ -297,7 +297,7 @@ const REFILL_BEFORE = 8;
 /**
  * Creux tiré pour l'attente en cours : HEADWAY_GAP, ou davantage quand une
  * rame doit traverser la voie d'en face. Fixé à l'entrée en 'clear' et lu
- * partout ensuite — l'annonce d'approche et l'arrivée en dépendent.
+ * partout ensuite - l'annonce d'approche et l'arrivée en dépendent.
  */
 let headway = HEADWAY_GAP;
 /** Un passage a été tiré pour ce creux : reste à le lancer à PASS_AT. */
@@ -343,7 +343,7 @@ function updateClear(index: number): void {
   // L'anticipée n'est plus un rendez-vous : elle dépend du creux, de l'heure, de
   // la gare et du retard, et le remerciement qui la précède est lui aussi tiré.
   // Elle passe derrière l'excuse de retard quand il y en a eu une, et tombe si
-  // elle ne tient plus avant l'annonce d'approche — qui, elle, est obligatoire.
+  // elle ne tient plus avant l'annonce d'approche - qui, elle, est obligatoire.
   once('delay', t >= DELAY_AT, () => {
     delayAnnounced = paDelay();
   });
@@ -382,7 +382,7 @@ function updateApproaching(dt: number): void {
   integrateTrain(train, 0, dt);
   // Ce qu'il reste à parcourir se lit sur l'état de la rame, et non sur une
   // distance de freinage estimée d'avance : elle se pose ainsi exactement sur
-  // son repère — à l'écart d'arrêt près — sans le recalage final que laissait
+  // son repère - à l'écart d'arrêt près - sans le recalage final que laissait
   // la soustraction.
   const left = stopDistance(train.v, train.a);
   // La rame est en vue au bout du quai : l'avertissement court prend le relais
@@ -432,7 +432,7 @@ function updateBerthing(index: number): void {
 /**
  * Durées mesurées une fois sur le profil E235 lui-même, et non estimées : le
  * tableau des départs annonce des minutes, et une minute d'écart se voit. Ce
- * sont exactement les deux courses que les étapes ci-dessus font tourner —
+ * sont exactement les deux courses que les étapes ci-dessus font tourner -
  * dégager les 320 m du quai, et freiner depuis la vitesse de ligne.
  */
 function runTime(from: number, to: number, until: (s: TrainState) => boolean): number {
@@ -462,7 +462,7 @@ function approachRunTime(): number {
 
 /**
  * Dans combien de temps la prochaine rame sera à quai, portes ouvertes, et
- * celle d'après — les deux lignes du 発車標.
+ * celle d'après - les deux lignes du 発車標.
  *
  * `first` vaut null tant qu'une rame est là : le tableau écrit alors 「まもなく」
  * ou 「まもなく発車」 selon qu'elle embarque ou qu'elle s'ébranle, et sa seconde

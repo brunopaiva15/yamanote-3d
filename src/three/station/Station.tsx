@@ -11,7 +11,7 @@
 // de fond. Voir FarEdge et FarSide en fin de fichier.
 //
 // Construit côté +x puis retourné d'un demi-tour selon le côté d'ouverture, et
-// glissant le long de la voie — comme avant. Tout ce qui se répète (murets de
+// glissant le long de la voie - comme avant. Tout ce qui se répète (murets de
 // portes palières, vantaux, piliers, poutres, néons, bancs, marquages au sol)
 // passe par un InstancedMesh : le quai a beau être deux fois et demie plus
 // long, il coûte dix fois moins d'appels de rendu.
@@ -84,7 +84,7 @@ const YARD_PITCH = 4.6;
 export function Station() {
   // La gare rendue est celle dont le quai est physiquement là (platformIndex),
   // pas la prochaine du trajet (index) : au départ, index avance dès le coup de
-  // sifflet alors que le quai défile encore le long des vitres — reconstruire
+  // sifflet alors que le quai défile encore le long des vitres - reconstruire
   // ici sur index transformait la gare sous les yeux du joueur. Le côté
   // d'ouverture suit la même logique : store.doorSide bascule vers la gare
   // suivante en début de croisière, quand ce quai-ci est encore visible.
@@ -106,7 +106,7 @@ export function Station() {
    *
    * `sigCanopy` dit qu'elle en a la charge (Takanawa Gateway), mais elle n'est
    * dessinée qu'aux paliers de qualité les plus riches. Aux autres, la déclarer
-   * suffisante laissait le quai à ciel ouvert — pas de toiture pliée, et plus
+   * suffisante laissait le quai à ciel ouvert - pas de toiture pliée, et plus
    * d'auvent non plus. La dalle générique reprend donc du service dès que la
    * charpente n'est pas là.
    */
@@ -114,7 +114,7 @@ export function Station() {
   const sigRoof = layout.sigCanopy && hasSignature;
 
   // Portes de quai : Shinjuku et Shibuya n'en ont toujours pas. Sans elles, le
-  // bord est nu et c'est la bande podotactile qui prend le relais — nettement
+  // bord est nu et c'est la bande podotactile qui prend le relais - nettement
   // plus large, comme sur tout quai japonais non équipé.
   const hasPsd = layout.psd !== 'none';
   const tactileW = hasPsd ? 0.42 : 0.86;
@@ -203,7 +203,7 @@ export function Station() {
   );
   // Bandeau vert du muret : six millimètres PLUS COURT que le muret qu'il
   // couronne. À égalité, ses deux bouts tombaient dans le plan des bouts du
-  // muret — deux faces confondues, en pleine vue depuis la baie de porte, là
+  // muret - deux faces confondues, en pleine vue depuis la baie de porte, là
   // où le regard se pose en montant.
   const psdBand = useMemo(
     () =>
@@ -236,7 +236,7 @@ export function Station() {
   );
   // Néons : le tube AFFLEURE la sous-face de l'auvent (elle est à canopyY) au
   // lieu de flotter huit centimètres dessous, et se décale toujours des
-  // poutres — au droit d'un pilier il disparaissait purement et simplement
+  // poutres - au droit d'un pilier il disparaissait purement et simplement
   // dans la poutre transversale.
   const lamps = useMemo(() => {
     const y = canopyY - 0.025;
@@ -344,7 +344,7 @@ export function Station() {
             // À peine plus épais et un rien plus haut que le vantail : le joint
             // affleure de trois millimètres de chaque côté et de cinq en tête
             // comme en pied. Il coiffe ainsi complètement la rive rentrée du
-            // vantail — plus une seule face confondue, donc plus de
+            // vantail - plus une seule face confondue, donc plus de
             // scintillement au bout du portique.
             S.set(0.076, PSD_H - 0.05, PSD_LEAF_JOINT_W),
           );
@@ -365,7 +365,7 @@ export function Station() {
   const wallH = canopyY - 0.07 - PLATFORM_TOP;
 
   // Ce que les totems doivent contourner : le mobilier au sol, mais aussi
-  // l'aplomb des panneaux 番線 et des potences — leur chapeau montait pile
+  // l'aplomb des panneaux 番線 et des potences - leur chapeau montait pile
   // dans les caissons suspendus.
   const signageGround = useMemo(
     () => [
@@ -433,8 +433,8 @@ export function Station() {
       {/* --- Le bord d'en face, sur notre propre quai -------------------
           Vingt-neuf des trente gares sont des îlots : ce qu'on a dans le dos
           n'est pas un mur, c'est un SECOND BORD D'EMBARQUEMENT. Il reçoit donc
-          exactement le même traitement que celui-ci — liseré, bande
-          podotactile, muret de portes palières — mais retourné. */}
+          exactement le même traitement que celui-ci - liseré, bande
+          podotactile, muret de portes palières - mais retourné. */}
       {place.farEdgeX !== null && (
         <FarEdge
           farX={place.farEdgeX}
@@ -452,7 +452,7 @@ export function Station() {
       {/* --- Auvent, poutres, piliers, néons ---
           La dalle tombe là où la charpente signature fait toit (Takanawa
           Gateway) : elle masquait la seule chose qui fasse cette gare-là. La
-          trame de poutres et de néons reste — c'est à elle que pend toute la
+          trame de poutres et de néons reste - c'est à elle que pend toute la
           signalétique. */}
       {!sigRoof && (
         <mesh name="auvent" position={[PSD_X + depth / 2, canopyY + 0.07, 0]} material={m.canopy} receiveShadow>
@@ -490,11 +490,11 @@ export function Station() {
       </instancedMesh>
 
       {/* Distributeurs : vitrine rétroéclairée, monnayeurs, volet de retrait.
-          Ils portent leur propre jeu de textures — voir VendingMachines. */}
+          Ils portent leur propre jeu de textures - voir VendingMachines. */}
       <VendingMachines place={place} station={index} detail={detail} />
 
       {/* Trémies d'escalier : la dalle est percée, donc elles font partie de la
-          structure — jamais retirées par un palier de qualité. */}
+          structure - jamais retirées par un palier de qualité. */}
       <Stairwells place={place} m={m} station={index} detail={detail} />
 
       {/* Affichage publicitaire : caissons du mur, colonnes habillées,
@@ -511,7 +511,7 @@ export function Station() {
       {detail <= 2 && <Amenities place={place} canopyY={canopyY} m={m} />}
 
       {/* Limites de zone : bouts du quai et pied de chaque volée. Le panneau
-          est posé un peu AU-DELÀ de la limite de marche — collé dessus, le
+          est posé un peu AU-DELÀ de la limite de marche - collé dessus, le
           joueur aurait le nez dans le halo et n'en verrait plus la trame. */}
       {[-1, 1].map((d) => (
         <Barrier
@@ -536,12 +536,12 @@ export function Station() {
         />
       ))}
 
-      {/* Bords de quai NUS — Shinjuku et Shibuya, les deux seules gares sans
+      {/* Bords de quai NUS - Shinjuku et Shibuya, les deux seules gares sans
           portes palières. Partout ailleurs, le muret arrête l'œil en même temps
           que le pas ; ici la marche s'arrêtait au ras du liseré blanc sans que
           rien ne le dise, des deux côtés de l'îlot. Le bord d'embarquement
-          s'ouvre au droit des quatre SEULS seuils franchissables — ceux de la
-          voiture du joueur — et reste dressé devant les dix autres voitures ;
+          s'ouvre au droit des quatre SEULS seuils franchissables - ceux de la
+          voiture du joueur - et reste dressé devant les dix autres voitures ;
           celui d'en face, où aucune rame ne se présente, reste continu. */}
       {!hasPsd && (
         <>
@@ -591,7 +591,7 @@ export function Station() {
  *
  * Même dessin qu'au bord près, retourné : liseré caoutchouc, ligne blanche,
  * bande podotactile et muret de portes palières. Les vantaux, eux, ne sont pas
- * animés — aucune rame ne s'y présente, et à huit mètres un portique fermé se
+ * animés - aucune rame ne s'y présente, et à huit mètres un portique fermé se
  * lit comme un muret continu.
  */
 function FarEdge({
@@ -643,7 +643,7 @@ function FarEdge({
           </mesh>
           {/* Le bandeau uguisu est INTERROMPU à chaque baie, comme au bord près.
               Continu sur deux cent vingt mètres, il traçait une barre verte
-              franche à la hauteur exacte des vitres de porte de la rame — qui
+              franche à la hauteur exacte des vitres de porte de la rame - qui
               ne sont opaques qu'à neuf pour cent : vues du wagon, elles
               viraient au vert d'un bout à l'autre du quai. */}
           <instancedMesh
@@ -663,8 +663,8 @@ function FarEdge({
 /**
  * Ce qu'on a derrière soi quand on regarde la voie.
  *
- * Jusqu'ici, quatre familles de rendu abstraites — mur, garde-corps, paroi de
- * tranchée, « deuxième voie » — dont vingt-neuf gares tiraient à peu près le
+ * Jusqu'ici, quatre familles de rendu abstraites - mur, garde-corps, paroi de
+ * tranchée, « deuxième voie » - dont vingt-neuf gares tiraient à peu près le
  * même fond gris. La vérité est ailleurs : la Yamanote n'a qu'UN quai latéral
  * sur toute la boucle, Harajuku. Partout ailleurs on est sur un îlot, et
  * derrière soi il y a une voie, puis un autre quai.
@@ -787,7 +787,7 @@ function FarSide({
         </>
       )}
       {/* L'auvent d'en face : on le voit, on n'y marche pas. Il tombe au
-          palier le plus léger, où la silhouette du quai suffit — et là où la
+          palier le plus léger, où la silhouette du quai suffit - et là où la
           charpente signature couvre le site d'un seul tenant, il n'y en a
           jamais eu. */}
       {detail <= 2 && !sigRoof && (
@@ -798,7 +798,7 @@ function FarSide({
 
       {/* Faisceau : là où rien ne ferme la travée, des voies encore, jusqu'au
           bord du champ. C'est la perspective dégagée de Nippori et d'Ueno, et
-          les huit voies parallèles de Shimbashi — qu'un mur escamotait. */}
+          les huit voies parallèles de Shimbashi - qu'un mur escamotait. */}
       {layout.openFarSide && (
         <group>
           <mesh
@@ -821,7 +821,7 @@ function FarSide({
         </group>
       )}
 
-      {/* Ce qui ferme la travée, selon le niveau où court la voie — au fond du
+      {/* Ce qui ferme la travée, selon le niveau où court la voie - au fond du
           quai d'en face, ou au bout du faisceau quand il y en a un. */}
       <Closure x={oppBack + (layout.openFarSide ? YARD_TRACKS * YARD_PITCH : 0)} elevation={layout.elevation} wallH={wallH} len={len} m={m} />
     </group>
@@ -886,7 +886,7 @@ function Closure({
 /**
  * Soubassement carrelé du mur de fond : un aplat chaud d'un mètre de haut,
  * couronné du liseré uguisu de la ligne. Sans lui le fond du quai est un aplat
- * de béton clair sur toute sa hauteur — le « trop blanc et gris » du décor.
+ * de béton clair sur toute sa hauteur - le « trop blanc et gris » du décor.
  */
 function Wainscot({ backX, len, m }: { backX: number; len: number; m: Mats }) {
   return (
@@ -897,7 +897,7 @@ function Wainscot({ backX, len, m }: { backX: number; len: number; m: Mats }) {
       {/* Le liseré déborde de cinq millimètres du nu de la faïence : il la
           couronne comme une moulure. À nu commun, sa face avant et celle du
           carrelage étaient dans le même plan sur les deux cent vingt mètres du
-          mur de fond — une ligne qui scintillait droit devant soi. */}
+          mur de fond - une ligne qui scintillait droit devant soi. */}
       <mesh position={[backX - 0.02, PLATFORM_TOP + 1.07, 0]} material={m.accent}>
         <boxGeometry args={[0.07, 0.07, len]} />
       </mesh>
@@ -949,7 +949,7 @@ function Amenities({
         </group>
       )}
 
-      {/* Horloge de quai, suspendue à l'auvent — par une vraie potence : le
+      {/* Horloge de quai, suspendue à l'auvent - par une vraie potence : le
           boîtier flottait à trente-cinq centimètres du plafond, sans rien. */}
       {place.layout.amenities.clock && (
         <group name="horloge" position={[place.backX - 1.6, canopyY - 0.62, 0]}>
@@ -976,7 +976,7 @@ const ESCALATOR_SLOPE = Math.PI / 6;
  * poutre porteuse qui part du sol, marches posées dessus, balustrades de même
  * pente, et une trémie qui rejoint la sous-face de l'auvent.
  *
- * La version précédente empilait trois éléments indépendants — une rampe qui
+ * La version précédente empilait trois éléments indépendants - une rampe qui
  * commençait sous la dalle et s'arrêtait à 2,90 m en plein ciel, neuf marches
  * suspendues soixante centimètres au-dessus d'elle, deux balustrades encore
  * plus longues : de loin, un tas de planches flottantes.

@@ -2,8 +2,8 @@
 //
 // Sur douze gares de la boucle, la Yamanote partage son îlot avec une autre
 // ligne (`sharedWith` dans data/stationLayouts) : la voie qu'on a dans le dos
-// n'est pas la nôtre, et ce qui y roule ne nous doit rien. C'est là — et
-// nulle part ailleurs — qu'une rame peut traverser la gare à pleine vitesse
+// n'est pas la nôtre, et ce qui y roule ne nous doit rien. C'est là - et
+// nulle part ailleurs - qu'une rame peut traverser la gare à pleine vitesse
 // sans même ralentir, l'événement le plus spectaculaire d'un quai japonais.
 //
 // Sur un îlot Yamanote pur, la voie d'en face est la Yamanote en sens
@@ -11,13 +11,13 @@
 //
 // Deux régimes, et ils n'ont pas la même heure :
 //
-//   • 快速 — le rapide de la Keihin-Tōhoku, de 10 h 30 à 15 h 30 entre Tabata
+//   • 快速 - le rapide de la Keihin-Tōhoku, de 10 h 30 à 15 h 30 entre Tabata
 //     et Shinagawa. Il saute cinq des gares que la Yamanote dessert quai à
-//     quai : 御徒町 (en semaine seulement — le samedi, le dimanche et les
+//     quai : 御徒町 (en semaine seulement - le samedi, le dimanche et les
 //     jours fériés il s'y arrête), 鶯谷, 日暮里, 西日暮里 et 有楽町. C'est le
 //     passage qu'on voit vraiment, plusieurs fois par heure, à quelques
 //     mètres du bord de quai.
-//   • 回送 — une rame vide qui rejoint son dépôt ou en sort. Ça n'a pas
+//   • 回送 - une rame vide qui rejoint son dépôt ou en sort. Ça n'a pas
 //     d'horaire, ça ne s'annonce pas autrement, et ça peut traverser onze de
 //     ces gares à n'importe quelle heure. Rare.
 //
@@ -36,20 +36,20 @@ export type PassKind = 'rapid' | 'deadhead';
  * voie rapide borde le quai Yamanote.
  *
  * Le rapide s'arrête, entre Tabata et Shinagawa, à 田端, 上野, 秋葉原, 神田,
- * 東京, 浜松町, 田町, 高輪ゲートウェイ et 品川 — plus 御徒町 le samedi, le
+ * 東京, 浜松町, 田町, 高輪ゲートウェイ et 品川 - plus 御徒町 le samedi, le
  * dimanche et les jours fériés. Tout le reste, il le traverse.
  *
  * Deux de ces gares traversées n'apparaissent pas ici :
  *   • 新橋, que le rapide saute pourtant (la ligne Tōkaidō y dessert déjà le
  *     même flux) : le gabarit du jeu en fait un îlot Yamanote pur, sans voie
- *     Keihin-Tōhoku au bord du quai — voir data/stationLayouts ;
+ *     Keihin-Tōhoku au bord du quai - voir data/stationLayouts ;
  *   • 神田, où la Keihin-Tōhoku occupe un autre îlot : de notre quai, on ne la
  *     voit même pas.
  */
 const RAPID_PASS: Record<string, true> = {
-  JY04: true, // 御徒町 — en semaine seulement
+  JY04: true, // 御徒町 - en semaine seulement
   JY06: true, // 鶯谷
-  JY07: true, // 日暮里 — le rapide le saute, les Jōban y sont déjà
+  JY07: true, // 日暮里 - le rapide le saute, les Jōban y sont déjà
   JY08: true, // 西日暮里
   JY30: true, // 有楽町
 };
@@ -62,7 +62,7 @@ const RAPID_FROM = 10 * 60 + 30;
 const RAPID_TO = 15 * 60 + 30;
 
 /**
- * Chance qu'une rame traverse, PAR TRANCHE DE DEUX MINUTES passées en gare —
+ * Chance qu'une rame traverse, PAR TRANCHE DE DEUX MINUTES passées en gare -
  * l'appelant met sa propre durée à l'échelle.
  *
  * Le rapide n'est pas un train sur deux : dans la plage où il circule, TOUS les
@@ -106,11 +106,11 @@ export function passChance(kind: PassKind, clockMin: number): number {
 }
 
 /**
- * Numéro de la voie d'EN FACE, gare par gare et par sens — celui que la gare
+ * Numéro de la voie d'EN FACE, gare par gare et par sens - celui que la gare
  * annonce, et qui n'est jamais le nôtre.
  *
  * Relevé, pas déduit. Sur un îlot japonais les deux voies vont dans le même
- * sens, et la voie d'en face porte le numéro voisin du nôtre — mais tantôt
+ * sens, et la voie d'en face porte le numéro voisin du nôtre - mais tantôt
  * au-dessus, tantôt en dessous : à Ueno 内回り est la voie 2 et la
  * Keihin-Tōhoku 北行 la 1, à Okachimachi la numérotation est inversée
  * (内回り 3, Keihin-Tōhoku 北行 4). Le déduire du numéro Yamanote
@@ -123,13 +123,13 @@ export function passChance(kind: PassKind, clockMin: number): number {
  * l'îlot 1-2-3-4 des autres.
  */
 const FACING_TRACK: Record<string, { inner: number; outer: number }> = {
-  JY01: { inner: 3, outer: 6 }, // 東京 — îlots 3・4 et 5・6
+  JY01: { inner: 3, outer: 6 }, // 東京 - îlots 3・4 et 5・6
   JY03: { inner: 1, outer: 4 }, // 秋葉原
-  JY04: { inner: 4, outer: 1 }, // 御徒町 — numérotation inversée
+  JY04: { inner: 4, outer: 1 }, // 御徒町 - numérotation inversée
   JY05: { inner: 1, outer: 4 }, // 上野
   JY06: { inner: 1, outer: 4 }, // 鶯谷
-  JY07: { inner: 12, outer: 9 }, // 日暮里 — voies 9 à 12
-  JY08: { inner: 4, outer: 1 }, // 西日暮里 — comme 御徒町
+  JY07: { inner: 12, outer: 9 }, // 日暮里 - voies 9 à 12
+  JY08: { inner: 4, outer: 1 }, // 西日暮里 - comme 御徒町
   JY09: { inner: 1, outer: 4 }, // 田端
   JY27: { inner: 1, outer: 4 }, // 田町
   JY28: { inner: 1, outer: 4 }, // 浜松町

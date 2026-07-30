@@ -1,4 +1,4 @@
-# Licences — monde PLATEAU (prototype Shibuya → Ebisu)
+# Licences - monde PLATEAU (prototype Shibuya → Ebisu)
 
 Généré automatiquement par `npm run world:build:prototype`.
 Ne pas éditer à la main : le fichier est réécrit à chaque build.
@@ -27,7 +27,7 @@ Les licences ci-dessous s'appliqueront alors.
 
 - Fichier : `data/geo/shibuya-ebisu.geojson`
 - Source déclarée : Approximation géométrique (arc de cercle entre les deux gares)
-- Licence : CC0 — produit par ce dépôt, ne contient aucune donnée tierce
+- Licence : CC0 - produit par ce dépôt, ne contient aucune donnée tierce
 - Attribution requise : aucune (tracé approché produit par ce dépôt)
 
   Le tracé livré est une **approximation géométrique**, pas un relevé. Pour

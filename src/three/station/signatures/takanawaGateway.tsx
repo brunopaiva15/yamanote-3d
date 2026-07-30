@@ -1,4 +1,4 @@
-// JY26 高輪ゲートウェイ — la seule gare de la boucle dont l'architecture est
+// JY26 高輪ゲートウェイ - la seule gare de la boucle dont l'architecture est
 // entièrement propre.
 //
 // Kengo Kuma. Une immense toiture blanche, décrite par JR East comme inspirée
@@ -9,16 +9,16 @@
 // de Takanawa Gateway la gare la plus claire des trente.
 //
 // La version précédente était juste et invisible. Elle dessinait tout ça
-// AU-DESSUS de la dalle d'auvent générique — un plafond blanc, plat et opaque à
-// six mètres — si bien que du quai on ne voyait ni le pli, ni le bois, ni le
+// AU-DESSUS de la dalle d'auvent générique - un plafond blanc, plat et opaque à
+// six mètres - si bien que du quai on ne voyait ni le pli, ni le bois, ni le
 // verre : rien qu'un aplat blanc, exactement ce que cette gare-là n'est pas.
 // Le gabarit déclare donc maintenant `sigCanopy` et la dalle tombe : la
 // toiture pliée EST la couverture du quai, et tout ce qui suit se regarde d'en
 // dessous.
 //
 // Ce qui doit se reconnaître au premier coup d'œil, dans cet ordre :
-//   · le pli — vingt-cinq travées de pans blancs cassés en accordéon ;
-//   · le cèdre — membrures, arbalétriers, branches, mains courantes ;
+//   · le pli - vingt-cinq travées de pans blancs cassés en accordéon ;
+//   · le cèdre - membrures, arbalétriers, branches, mains courantes ;
 //   · les noues de verre, une bande de jour tous les neuf mètres ;
 //   · les colonnes-arbres, dont les branches ouvrent sous les fermes ;
 //   · les mezzanines vitrées qui franchissent tout le site ;
@@ -47,7 +47,7 @@ const PITCH = 0.2;
  * enjambe les quatre voies les enjambe toutes, la nôtre comprise.
  */
 const EAVES = 4.4;
-/** Pli d'un pan entre deux fermes — l'accordéon, mesuré le long de la voie. */
+/** Pli d'un pan entre deux fermes - l'accordéon, mesuré le long de la voie. */
 const PLEAT = 0.115;
 /** Largeur de la noue vitrée laissée entre deux pans. */
 const VALLEY = 1;
@@ -102,7 +102,7 @@ export function TakanawaGateway({ layout, place, m }: SigProps) {
         emissiveIntensity: 0.16,
       }),
       // Verre des noues et des façades : très transparent, il ne doit rien
-      // assombrir — c'est lui qui fait entrer le jour.
+      // assombrir - c'est lui qui fait entrer le jour.
       pane: new THREE.MeshStandardMaterial({
         color: '#dfeaf0',
         roughness: 0.08,
@@ -151,7 +151,7 @@ export function TakanawaGateway({ layout, place, m }: SigProps) {
         );
 
         // Treillis : montants et diagonales entre membrure et arbalétrier.
-        // Le montant du faîte (u = 0) n'appartient à personne — il ne se pose
+        // Le montant du faîte (u = 0) n'appartient à personne - il ne se pose
         // qu'une fois, avec le versant de droite.
         for (let k = d < 0 ? 1 : 0; k < 4; k++) {
           const u = k / 4;
@@ -227,7 +227,7 @@ export function TakanawaGateway({ layout, place, m }: SigProps) {
     const fork = PLATFORM_TOP + 4.4;
 
     for (const p of posts ?? []) {
-      // Sur l'épine de notre quai, et sur celle du quai d'en face — en retrait
+      // Sur l'épine de notre quai, et sur celle du quai d'en face - en retrait
       // du mur-rideau, pas encastrée dedans.
       for (const x of [p.x, oppBackX - 1.5]) {
         wood.push(mat(x, (PLATFORM_TOP + fork) / 2, p.z, 0.42, fork - PLATFORM_TOP, 0.42));
@@ -247,7 +247,7 @@ export function TakanawaGateway({ layout, place, m }: SigProps) {
   // --- Mezzanines vitrées ------------------------------------------------
   // Elles franchissent TOUT le site : depuis le quai on les a au-dessus de la
   // tête, et c'est de là-haut qu'on voit à la fois le hall et les quatre voies.
-  // La première ressort au-delà du mur-rideau — ce sont les passerelles qui
+  // La première ressort au-delà du mur-rideau - ce sont les passerelles qui
   // mènent aux tours de Takanawa Gateway City.
   const decks = useMemo(() => {
     const white: THREE.Matrix4[] = [];
@@ -354,7 +354,7 @@ export function TakanawaGateway({ layout, place, m }: SigProps) {
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
 
-      {/* Le quai reçoit son bandeau lumineux d'égout — calé SOUS les poutres
+      {/* Le quai reçoit son bandeau lumineux d'égout - calé SOUS les poutres
           transversales : au ras de la sous-face, il les traversait toutes. */}
       {[PSD_X + 0.8, place.farEdgeX !== null ? place.farEdgeX - 0.8 : place.backX].map((x) => (
         <mesh key={`l${x}`} position={[x, top - 0.215, 0]} material={m.lamp}>

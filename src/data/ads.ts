@@ -1,5 +1,5 @@
 // Pools de contenu pour les publicités japonaises procédurales.
-// Slogans plausibles, non déposés — assez nombreux pour que chaque seed
+// Slogans plausibles, non déposés - assez nombreux pour que chaque seed
 // du wagon (nakazuri, 窓上, affiches d'about, boucle LCD) tombe sur un
 // visuel distinct sans recycler les mêmes dix phrases.
 

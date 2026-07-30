@@ -1,9 +1,9 @@
-// JY12 大塚 — le quai aérien à toiture centrale.
+// JY12 大塚 - le quai aérien à toiture centrale.
 //
 // Ōtsuka n'est couverte qu'en son milieu : une toiture à deux pentes coiffe la
 // partie centrale du quai, et les deux extrémités restent à ciel ouvert. C'est
 // ce qui la distingue de toutes les autres gares aériennes de la boucle, où
-// l'auvent court d'un bout à l'autre — et ce qui explique qu'on y sente la
+// l'auvent court d'un bout à l'autre - et ce qui explique qu'on y sente la
 // rue, immédiatement en dessous, bien plus qu'ailleurs.
 //
 // Le tram Arakawa, lui, est déjà dans le décor de quartier (three/Landmarks) :

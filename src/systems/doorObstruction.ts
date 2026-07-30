@@ -5,7 +5,7 @@
 // ne peut partir, parce que le circuit de départ n'est établi que si TOUTES
 // les portes de la rame et TOUTES les portes palières sont confirmées fermées.
 // Tant que ce n'est pas le cas, l'indication de départ n'apparaît pas en
-// cabine de tête, et la rame reste à quai — c'est ce verrouillage-là, et non
+// cabine de tête, et la rame reste à quai - c'est ce verrouillage-là, et non
 // un minuteur, qui tient le train (voir runtime.departureBlockers.doorBlocked).
 //
 // Déroulé, tel qu'il se joue :
@@ -20,8 +20,8 @@
 //
 // Ce qu'il ne faut surtout pas faire, c'est une porte d'ascenseur : sur le
 // E235, rien ne se rouvre tout seul et rien ne se rouvre en grand. La
-// détection est sensible et la force de maintien réduite avant le démarrage —
-// la porte s'arrête et relâche sa pression pour qu'on puisse se dégager — mais
+// détection est sensible et la force de maintien réduite avant le démarrage -
+// la porte s'arrête et relâche sa pression pour qu'on puisse se dégager - mais
 // la réouverture est un GESTE, celui du conducteur arrière, et sa durée dit ce
 // qu'il a vu : une impulsion pour une sangle, une ouverture franche pour
 // quelqu'un qui est réellement en travers.
@@ -29,7 +29,7 @@
 // Après trois tentatives, il renonce à la porte seule et rouvre tout : un
 // agent de quai vient dégager le passage lui-même.
 //
-// Le JOUEUR est un obstacle comme un autre — c'est même le seul qui décide
+// Le JOUEUR est un obstacle comme un autre - c'est même le seul qui décide
 // vraiment. Planté dans l'encadrement, il tient la rame à quai aussi longtemps
 // qu'il veut : aucun tirage ne le dégage à sa place, et la porte le suit à
 // l'image près (voir `syncPlayerObstacle`). Le pendant de ce pouvoir est dans
@@ -145,8 +145,8 @@ export function doorObstructionAt(car: number, dz: number): boolean {
  * Ouverture de la porte bloquée, quand c'est celle du joueur.
  *
  * Toutes les portes sont fermées, sauf une : celle qui s'est arrêtée sur
- * quelqu'un, à un pas de lui. C'est par cet intervalle-là — vingt-cinq
- * centimètres — que la sono du quai lui parvient, et le moteur audio ne peut
+ * quelqu'un, à un pas de lui. C'est par cet intervalle-là - vingt-cinq
+ * centimètres - que la sono du quai lui parvient, et le moteur audio ne peut
  * pas le savoir en regardant la seule porte de référence, qui est close.
  */
 export function doorObstructionOpening(): number {
@@ -205,7 +205,7 @@ function pickDoor(): { car: number; dz: number } {
 /**
  * Les portes viennent de recevoir l'ordre de fermeture : si une obstruction est
  * tirée pour cet arrêt, la porte concernée quitte l'ensemble dès maintenant.
- * Elle se ferme comme les autres — c'est en fin de course qu'elle s'arrêtera.
+ * Elle se ferme comme les autres - c'est en fin de course qu'elle s'arrêtera.
  */
 export function onDoorsClosing(): void {
   if (state) return;
@@ -252,7 +252,7 @@ export function onDoorsClosing(): void {
 
 /**
  * Le joueur se tient-il dans un seuil au moment où les portes se ferment ?
- * Alors c'est lui, l'obstacle — et il le restera tant qu'il n'aura pas fait
+ * Alors c'est lui, l'obstacle - et il le restera tant qu'il n'aura pas fait
  * un pas, dedans ou dehors.
  *
  * Vérifié aussi à chaque image tant que les portes se ferment : on peut très
@@ -307,13 +307,13 @@ function beginReopen(st: Obstruction): void {
   st.stage = 'reopen';
   st.t = 0;
   st.wait = reopenHold(st.kind, st.attempt);
-  // La rame parle la première fois — c'est le conducteur qui a la main —, le
+  // La rame parle la première fois - c'est le conducteur qui a la main -, le
   // quai prend le relais ensuite : deux voix pour la même personne, comme
   // quand un agent finit par descendre sur le quai.
   say(doorReleaseAnnouncement(st.attempt > 1), 'cabin');
   // Sauf quand c'est le JOUEUR qui est dedans : l'agent parle dès le premier
   // essai, et il a de bonnes raisons. À cheval sur le seuil, on est déjà
-  // « dehors » pour le moteur audio — la sono de la rame est coupée net
+  // « dehors » pour le moteur audio - la sono de la rame est coupée net
   // (audioEngine.setListenerOutside) et le conducteur parlerait tout seul dans
   // une voiture qu'on vient de quitter. Celui qui bloque la porte doit
   // s'entendre dire de s'écarter, d'où qu'il se tienne.

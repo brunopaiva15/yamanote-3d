@@ -1,7 +1,7 @@
 // La rame vue de dehors : onze caisses E235-0, de la cabine de tête à celle de
 // queue.
 //
-// Rien de tout ceci n'est visible depuis l'intérieur du wagon — les baies
+// Rien de tout ceci n'est visible depuis l'intérieur du wagon - les baies
 // regardent perpendiculairement à la caisse et le hublot d'intercirculation
 // donne sur une plaque sombre. Le groupe entier reste donc éteint tant que le
 // joueur est à bord d'une rame à l'arrêt : coût nul en jeu normal.
@@ -52,7 +52,7 @@ const GLASS_FLIP = new THREE.Matrix4().makeRotationY(Math.PI);
 
 /**
  * Repose les 176 vantaux extérieurs. `open` est la course de la porte de
- * référence, `side` le côté qui s'ouvre — l'autre reste fermé, comme à
+ * référence, `side` le côté qui s'ouvre - l'autre reste fermé, comme à
  * l'intérieur.
  */
 function layoutLeaves(built: Built, side: 1 | -1, open: boolean): void {
@@ -65,7 +65,7 @@ function layoutLeaves(built: Built, side: 1 | -1, open: boolean): void {
       // millimètres, les deux faces sont exactement confondues et le bout de la
       // porte clignote pendant tout l'arrêt (voir DOOR_POCKET_TUCK).
       // Porte par porte : depuis le quai, une porte bloquée sur une caisse
-      // voisine se voit à ça — un seul intervalle resté ouvert sur quarante-quatre.
+      // voisine se voit à ça - un seul intervalle resté ouvert sur quarante-quatre.
       const slide = open ? trainDoorPosAt(i, dz) * (E235.doorHalfW + DOOR_POCKET_TUCK) : 0;
       for (const s of [1, -1] as const) {
         const shift = s === side ? slide : 0;

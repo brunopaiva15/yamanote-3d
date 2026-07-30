@@ -1,14 +1,14 @@
 // Le seuil de porte (src/systems/walkable.ts).
 //
 // Une seule règle, et elle tient tout : on ne franchit une porte que si elle
-// est ouverte. Le reste du jeu en dépend — descendre sur le quai renverse le
+// est ouverte. Le reste du jeu en dépend - descendre sur le quai renverse le
 // référentiel (systems/platformWait), gèle `runtime.distance` et arrête la
 // rame. Franchi au mauvais moment, le seuil ne fait pas une petite erreur de
 // position : il arrête un train en pleine voie.
 //
 // Ce qui est reproduit ici, c'est la fin de frame de `three/Player` : l'ŒIL
 // (`playerX`) porte le balancement de la caisse, les PIEDS (`stanceX`) non.
-// Deux centimètres d'écart, et pendant longtemps ils ont suffi — collé au fond
+// Deux centimètres d'écart, et pendant longtemps ils ont suffi - collé au fond
 // de l'alcôve pendant que la rame entrait en gare, on passait à travers une
 // porte fermée, un pas après l'autre.
 
@@ -55,7 +55,7 @@ function scene({ speed, open, present = true }: Scene): void {
 /**
  * Une frame de marche, publication comprise. Le balancement de caisse est celui
  * de `systems/stationCycle` et son report sur la caméra celui de `three/Player`
- * — c'est le couple exact que le bug exploitait.
+ * - c'est le couple exact que le bug exploitait.
  */
 function step(pos: THREE.Vector3, dx: number): 'car' | 'platform' | null {
   resolveMove(pos, dx, 0);

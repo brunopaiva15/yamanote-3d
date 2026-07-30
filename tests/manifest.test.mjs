@@ -95,7 +95,7 @@ test('le jeu et le pipeline visent le même tronçon', () => {
     readGameSegment(source),
     PROTO.segment,
     'PLATEAU_SEGMENT (src/systems/plateau.ts) ne correspond pas au tronçon configuré ' +
-      'dans scripts/plateau/config.mjs — le décor ne s’afficherait jamais.',
+      'dans scripts/plateau/config.mjs - le décor ne s’afficherait jamais.',
   );
   assert.throws(() => readGameSegment('rien du tout'), /PLATEAU_SEGMENT introuvable/);
 });
@@ -103,8 +103,8 @@ test('le jeu et le pipeline visent le même tronçon', () => {
 test('aucune URL de jeu de données n’est codée en dur', () => {
   // Régression : une première version portait une URL de fiche CKAN
   // extrapolée (« plateau-tokyo23ku-2023 ») qui renvoyait un 404. Le slug d'un
-  // jeu PLATEAU n'est pas déductible — la convention a changé entre millésimes
-  // — donc le pipeline ne doit en deviner aucun : il pointe le catalogue et
+  // jeu PLATEAU n'est pas déductible - la convention a changé entre millésimes
+  // - donc le pipeline ne doit en deviner aucun : il pointe le catalogue et
   // attend une --url de l'utilisateur.
   for (const [id, entry] of Object.entries(DATASETS)) {
     assert.equal(entry.url, '', `${id} : une URL est codée en dur (${entry.url})`);
@@ -225,7 +225,7 @@ test('les livrables publiés sont cohérents avec le manifeste', (t) => {
   const dir = PLATEAU_CONFIG.paths.out;
   const manifestPath = join(dir, 'manifest.json');
   if (!existsSync(manifestPath)) {
-    t.skip('aucun build publié — lancez `npm run world:build:prototype`');
+    t.skip('aucun build publié - lancez `npm run world:build:prototype`');
     return;
   }
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));

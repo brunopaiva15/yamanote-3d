@@ -57,7 +57,7 @@ interface PerfState {
   quality: Quality;
 }
 
-/** Qualité courante — lue par React (Scene, HUD) comme par les systèmes hors React. */
+/** Qualité courante - lue par React (Scene, HUD) comme par les systèmes hors React. */
 export const usePerf = create<PerfState>(() => ({ quality: initialQuality() }));
 
 export function setQuality(quality: Quality): void {

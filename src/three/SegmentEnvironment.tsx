@@ -4,7 +4,7 @@
 // `viaduct` est l'identité : aucun ajout, le look historique est préservé.
 //
 // Tout est construit une fois (useMemo) et piloté par les poids fondus de
-// segEnv dans un seul useFrame — la bascule d'un type à l'autre a lieu à
+// segEnv dans un seul useFrame - la bascule d'un type à l'autre a lieu à
 // l'arrêt, masquée par le quai. Les murs sont OPAQUES et glissent
 // verticalement (jamais de fondu d'opacité) : ils occultent ainsi proprement
 // les plans ville et le ciel (transparents, depthWrite:false) sous la ligne
@@ -36,7 +36,7 @@ const FIELD_X = 9; // centre du plan de faisceau (s'étend de 4 à 14 m)
 const FIELD_SNOW = new THREE.Color('#dfe4ea');
 /**
  * Longueur couverte par une tuile de faisceau (m). Elle défilait 1,67× trop
- * vite — `repeat.y = 24` sur un plan de 400 m fait une tuile tous les 16,7 m,
+ * vite - `repeat.y = 24` sur un plan de 400 m fait une tuile tous les 16,7 m,
  * quand `offset.y` en avançait une tous les 10. Même mensonge que celui des
  * plans de ville, sur la surface la plus rapide du champ.
  */
@@ -293,7 +293,7 @@ export function SegmentEnvironment() {
     built.fieldMat.opacity = corridor01 * 0.95;
     const fieldBase = built.fieldMat.userData.base as THREE.Color;
     // Le faisceau suit le ballast : il fonce sous la pluie, il blanchit sous la
-    // neige. Il court à quatorze mètres de l'axe, là où aucune rame ne passe —
+    // neige. Il court à quatorze mètres de l'axe, là où aucune rame ne passe -
     // la neige y tient donc mieux que sur la voie du train.
     built.fieldMat.color
       .copy(fieldBase)

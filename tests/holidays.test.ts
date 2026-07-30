@@ -2,7 +2,7 @@
 //
 // Ce qui est en jeu n'est pas une curiosité de calendrier : le férié commande la
 // colonne de `MORNING_MATRIX` que prend le modèle de remplissage. Se tromper,
-// c'est rendre un 元日 comme un mardi de pointe — d'environ 0,35 à 1,0 sur le
+// c'est rendre un 元日 comme un mardi de pointe - d'environ 0,35 à 1,0 sur le
 // taux annoncé, le HUD, la densité de PNJ et la foule du quai.
 //
 // Le module était une liste littérale 2025–2027 qui aurait péri en silence au
@@ -129,7 +129,7 @@ test('hors du domaine de la formule, on répond non plutôt que faux', () => {
 });
 
 test('le 22 septembre est férié quand敬老の日 et秋分の日 l’encadrent', () => {
-  // 国民の休日 : 2026 est l'année type — lundi 21 et mercredi 23 fériés, le
+  // 国民の休日 : 2026 est l'année type - lundi 21 et mercredi 23 fériés, le
   // mardi 22 le devient. En 2025 (15 et 23 septembre) il ne l'est pas.
   assert.ok(isHoliday({ year: 2026, month: 9, day: 22 }));
   assert.equal(isHoliday({ year: 2025, month: 9, day: 22 }), false);

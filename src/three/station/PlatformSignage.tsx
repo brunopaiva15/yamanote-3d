@@ -4,7 +4,7 @@
 // Le panneau de nom n'a pas changé : c'est la même texture et le même redraw
 // qu'avant, seulement répartis sur un quai de plus de deux cents mètres.
 //
-// Le 発車標, lui, dit ce qui se passe MAINTENANT — c'est la seule surface
+// Le 発車標, lui, dit ce qui se passe MAINTENANT - c'est la seule surface
 // animée d'une gare japonaise. Il annonce les deux prochaines rames et le
 // temps qui les sépare de nous (data/departureBoard), en alternant japonais et
 // anglais comme un vrai. Le canvas est redessiné quand l'état affiché change,
@@ -15,7 +15,7 @@
 // depuis le train, et de nulle part ailleurs. Or c'est le tableau de ceux qui
 // ATTENDENT. Il est passé dans la rangée du bord de voie, celle des caissons
 // 番線 : suspendu près du bord, en travers, recto-verso, aligné sur eux par le
-// bas — on l'a de face en marchant le long du quai, dans un sens comme dans
+// bas - on l'a de face en marchant le long du quai, dans un sens comme dans
 // l'autre.
 
 import { useMemo, useRef } from 'react';
@@ -68,7 +68,7 @@ interface Props {
   totemX: number;
   /**
    * Face des poteaux de charpente tournée vers la voie : c'est là que se
-   * vissent les plaques de nom de gare (柱型駅名標 — littéralement la plaque
+   * vissent les plaques de nom de gare (柱型駅名標 - littéralement la plaque
    * DU poteau).
    */
   postFaceX: number;
@@ -92,7 +92,7 @@ interface Props {
 
 /**
  * Décale `z` hors des plans à éviter, en cherchant des deux côtés ; null si
- * aucun creux à portée — le caisson saute plutôt que de transpercer un
+ * aucun creux à portée - le caisson saute plutôt que de transpercer un
  * portique. `halfZ` est la demi-longueur du caisson à caser.
  */
 function clearOf(
@@ -120,7 +120,7 @@ const CYCLE = 3.5;
  *
  * À bord, la rame qui intéresse le tableau est CELLE OÙ L'ON EST : elle
  * s'annonce d'elle-même pendant le freinage, occupe le quai pendant l'arrêt,
- * puis le libère. La suivante vient un intervalle plus tard — l'intervalle du
+ * puis le libère. La suivante vient un intervalle plus tard - l'intervalle du
  * tronçon, dont la croisière est justement dimensionnée (data/segments).
  */
 function nextTrainsFromCar(index: number): NextTrains {
@@ -156,7 +156,7 @@ function nextTrainsFromCar(index: number): NextTrains {
  *
  * Deux sources selon l'endroit d'où l'on regarde : debout sur le quai, c'est
  * `platformWait` qui mène la danse ; à bord, c'est la phase du cycle station.
- * Les deux disent la même chose de la même rame, vue de deux côtés — et la
+ * Les deux disent la même chose de la même rame, vue de deux côtés - et la
  * mise en forme (約N分後, まもなく, ou l'heure aux premières et dernières
  * circulations) est la même pour les deux : data/departureBoard.
  */
@@ -193,7 +193,7 @@ export function PlatformSignage({
   const sign = useMemo(() => makeStationSign(), []);
   // Le totem a sa propre texture : une plaque de poteau est cinq fois plus
   // haute que large, le caisson suspendu trois fois plus large que haut, et
-  // les deux ne portent pas la même chose — kana vertical sur l'une, kanji et
+  // les deux ne portent pas la même chose - kana vertical sur l'une, kanji et
   // bande directionnelle sur l'autre. La même image sur les deux se déformait
   // d'un facteur dix.
   const totem = useMemo(() => makeTotemSign(), []);
@@ -242,7 +242,7 @@ export function PlatformSignage({
   );
 
   // Un panneau de nom de gare tous les ~55 m : sur un quai de 224 m, un seul
-  // serait introuvable. Il se décale des plans de charpente signature — les
+  // serait introuvable. Il se décale des plans de charpente signature - les
   // portiques de Yūrakuchō lui passaient au travers.
   const signZ = useMemo(() => {
     const out: number[] = [];
@@ -263,7 +263,7 @@ export function PlatformSignage({
   const plateZ = useMemo(() => nameplateColumns(columns), [columns]);
   // Les totems se posaient à des z fixes, sans consulter le mobilier : ils
   // tombaient dans un distributeur une fois sur dix. Ils s'écartent de tout ce
-  // qui est déjà au sol autour de l'épine — en cherchant des DEUX côtés : la
+  // qui est déjà au sol autour de l'épine - en cherchant des DEUX côtés : la
   // dérive à sens unique pouvait chasser un totem d'obstacle en obstacle sans
   // jamais trouver de creux, et le laisser planté dans le dernier.
   const totemZ = useMemo(
@@ -284,7 +284,7 @@ export function PlatformSignage({
   // La bande directionnelle est suspendue à l'auvent, au-dessus de l'épine.
   // Ses trois tronçons se posent dans les CREUX de la trame des bannières
   // publicitaires (une tous les 26 m, à partir de -halfZ + 18) : d'un seul
-  // tenant, ou calée n'importe où, elle les aurait traversées — et elle passe
+  // tenant, ou calée n'importe où, elle les aurait traversées - et elle passe
   // aussi au large des trémies et des escaliers mécaniques.
   // Abscisses partagées (data/stationGeometry) : les charpentes signature qui
   // plantent des poteaux sur l'épine enjambent ces trois tronçons.
@@ -326,7 +326,7 @@ export function PlatformSignage({
 
   // Le 発車標, à l'emprise de la rangée qu'il partage. L'écran garde son 4:1
   // (le canvas fait 1024 × 256) : c'est la LARGEUR disponible qui commande sa
-  // hauteur, et le caisson suit — sur un quai étroit, le tableau rétrécit
+  // hauteur, et le caisson suit - sur un quai étroit, le tableau rétrécit
   // comme le caisson 番線 à côté de lui, au lieu de s'y écraser.
   const boardScreenW = boardBox.w - 0.08;
   const boardScreenH = boardScreenW / 4;
@@ -364,7 +364,7 @@ export function PlatformSignage({
       ))}
 
       {/* Plaques de nom de gare verticales, vissées sur les poteaux de
-          charpente — 0,18 × 0,90 m, le 1:5 de la plaque réelle (celle du quai
+          charpente - 0,18 × 0,90 m, le 1:5 de la plaque réelle (celle du quai
           Yamanote de Tokyo mesure environ 100 × 20 cm). Le bas est à 1,55 m
           au-dessus du quai : au-dessus du bandeau de poteau, sous la poutre. */}
       {plateZ.map((z) => (
@@ -381,7 +381,7 @@ export function PlatformSignage({
 
       {/* 発車標, sur la rangée du bord de voie, en travers du quai et
           recto-verso : c'est le tableau de ceux qui attendent, et on doit
-          l'avoir de face en marchant vers lui — d'un côté comme de l'autre. */}
+          l'avoir de face en marchant vers lui - d'un côté comme de l'autre. */}
       {boardZ.map((z) => (
         <group
           name="afficheur"

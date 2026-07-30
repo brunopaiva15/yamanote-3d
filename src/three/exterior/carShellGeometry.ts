@@ -51,7 +51,7 @@ export const WINDOWS = WALL_SEGMENTS.flatMap(windowsOf);
 /**
  * Un flanc entier d'un seul tenant : un rectangle percé de toutes les baies et
  * de toutes les ouvertures de porte. Construit à plat dans (X = z, Y = y) puis
- * redressé — même tour de main que les parois intérieures.
+ * redressé - même tour de main que les parois intérieures.
  */
 function sideShape(): THREE.Shape {
   const outer = new THREE.Shape();
@@ -92,7 +92,7 @@ function sideShape(): THREE.Shape {
  * Profil de toit : arc surbaissé d'un bord de pavillon à l'autre.
  *
  * Le dessous DOIT rester au-dessus du plafond intérieur (CONFIG.carHeight).
- * L'ancienne version fermait la forme à y ≈ 2,23 — sous le plafond (2,38).
+ * L'ancienne version fermait la forme à y ≈ 2,23 - sous le plafond (2,38).
  * Dès que la coque s'allume (sortie sur le quai), on lisait donc une dalle
  * grise à la place du plafond, uniquement hors du wagon.
  */
@@ -170,7 +170,7 @@ function buildBody(): THREE.BufferGeometry {
 /**
  * Habillage uguisu au-dessus des portes.
  *
- * Il y avait ici un bandeau continu d'un about à l'autre — c'est faux pour le
+ * Il y avait ici un bandeau continu d'un about à l'autre - c'est faux pour le
  * E235-0 : le vert n'est QU'AUX PORTES et il monte du bas de caisse jusqu'au
  * pavillon, formant un montant d'un seul tenant par baie ; entre deux portes,
  * le haut de caisse reste inox. Les vantaux couvrent la partie basse (ce sont
@@ -267,7 +267,7 @@ function buildBogies(): THREE.BufferGeometry {
 /**
  * Vitrage teinté des baies, POSÉ DANS L'ÉPAISSEUR de la peau de caisse.
  *
- * Il était auparavant à HW − SKIN − 0,005, soit exactement 1,400 — c'est-à-dire
+ * Il était auparavant à HW − SKIN − 0,005, soit exactement 1,400 - c'est-à-dire
  * pile sur le nu extérieur du vitrage INTÉRIEUR de la voiture du joueur
  * (Car.tsx : boîte de 2 cm centrée à 1,39). Deux surfaces transparentes
  * coplanaires : depuis le quai, les vitres scintillaient en z-fighting dès que
@@ -295,7 +295,7 @@ function buildGlass(): THREE.BufferGeometry {
  * boîte vue de l'intérieur, qui donne du fond aux vitres et aux portes
  * ouvertes au lieu de laisser voir à travers la rame.
  *
- * Le dessus s'arrête juste sous le plafond réel — le pavillon extérieur
+ * Le dessus s'arrête juste sous le plafond réel - le pavillon extérieur
  * (gris) commence au-dessus, il ne doit plus jamais servir de plafond.
  */
 function buildLiner(): THREE.BufferGeometry {
@@ -305,7 +305,7 @@ function buildLiner(): THREE.BufferGeometry {
   return g;
 }
 
-/** Hauteur / largeur du hublot de vantail — partagées avec le verre. */
+/** Hauteur / largeur du hublot de vantail - partagées avec le verre. */
 const LEAF_WIN_W = 0.44;
 const LEAF_WIN_H = 0.8;
 const LEAF_WIN_Y = 1.3;
@@ -316,7 +316,7 @@ const LEAF_WIN_Y = 1.3;
  * Avant, c'était une boîte pleine sur laquelle on plaquait une vitre
  * transparente : depuis le quai, on voyait du vert uguisu à travers le
  * « hublot », jamais l'intérieur. Même tour de main que les vantaux
- * intérieurs (Doors.tsx) — la découpe laisse enfin voir au travers.
+ * intérieurs (Doors.tsx) - la découpe laisse enfin voir au travers.
  */
 function buildDoorLeaf(): THREE.BufferGeometry {
   const w = E235.doorHalfW;
@@ -334,7 +334,7 @@ function buildDoorLeaf(): THREE.BufferGeometry {
  * Hublot d'un vantail, décalé vers +x par rapport au vantail. L'instance du
  * côté −x le reçoit retourné d'un demi-tour (voir layoutLeaves) : sans cela il
  * se retrouvait DERRIÈRE le vantail, face tournée vers l'intérieur et à 3 mm de
- * son panneau — le hublot y clignotait au lieu de s'afficher.
+ * son panneau - le hublot y clignotait au lieu de s'afficher.
  */
 function buildDoorGlass(): THREE.BufferGeometry {
   const g = new THREE.PlaneGeometry(LEAF_WIN_W, LEAF_WIN_H);

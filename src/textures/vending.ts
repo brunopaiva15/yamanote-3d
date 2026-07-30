@@ -2,7 +2,7 @@
 //
 // Un 自販機 japonais ne se résume pas à sa couleur. C'est une vitrine
 // rétroéclairée où les échantillons sont posés sur des tablettes, chacun avec
-// son étiquette de prix et son bouton — rouge pour le chaud, bleu pour le
+// son étiquette de prix et son bouton - rouge pour le chaud, bleu pour le
 // froid ; un bandeau d'enseigne allumé en tête ; une platine de monnayeurs
 // (fente à pièces, avaleur de billets, lecteur sans contact, afficheur du
 // crédit, levier de rendu) ; et tout en bas le volet du 取出口 avec sa sébile.
@@ -68,7 +68,7 @@ export const VENDING_BRANDS: readonly VendingBrand[] = [
  * Marque d'une machine donnée.
  *
  * La machine à manger n'arrive qu'en renfort, sur les quais qui en portent au
- * moins trois — et c'est toujours la dernière de la file. Les autres tournent
+ * moins trois - et c'est toujours la dernière de la file. Les autres tournent
  * sur les quatre enseignes de boissons par pas premier avec leur nombre : deux
  * machines voisines ne portent jamais la même, ce qu'un tirage libre donnait
  * une fois sur quatre, et une file de trois blanches ne trompe personne.
@@ -184,7 +184,7 @@ function drawBag(
   g.quadraticCurveTo(cx - w * 0.62, baseY - h * 0.5, cx - w * 0.32, baseY - h);
   g.closePath();
   g.fill();
-  // Soudures : plus claires, aplaties — c'est ce pincement haut et bas qui
+  // Soudures : plus claires, aplaties - c'est ce pincement haut et bas qui
   // distingue un sachet d'une boîte de loin.
   g.fillStyle = shade(tone, 1.35);
   g.fillRect(cx - w * 0.32, baseY - h, w * 0.64, h * 0.11);
@@ -240,7 +240,7 @@ function drawCoil(g: CanvasRenderingContext2D, x0: number, x1: number, y: number
 /**
  * La vitrine : trois tablettes d'échantillons pour une machine à boissons,
  * quatre rangées de spirales pour une machine à manger. Sous chaque case, sa
- * plaquette de prix et son bouton — c'est ce contraste rouge/bleu qui fait
+ * plaquette de prix et son bouton - c'est ce contraste rouge/bleu qui fait
  * reconnaître un distributeur japonais avant même d'en lire l'enseigne.
  */
 export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): THREE.CanvasTexture {
@@ -264,7 +264,7 @@ export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): TH
     const railH = y0 + rowH - shelfY;
 
     // Rétroéclairage : un tube sous chaque tablette, le fond descend vers
-    // l'ombre — sans ce dégradé la vitrine est un aplat de papier.
+    // l'ombre - sans ce dégradé la vitrine est un aplat de papier.
     const bg = g.createLinearGradient(0, y0, 0, shelfY);
     bg.addColorStop(0, '#ffffff');
     bg.addColorStop(0.16, '#f7f6f1');
@@ -344,7 +344,7 @@ export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): TH
       g.roundRect(tx, ty, tw, th, 3);
       g.fill();
       // Pastille : chaud ou froid sur une machine à boissons, code de couloir
-      // sur une machine à manger — là, rien n'est ni chaud ni froid.
+      // sur une machine à manger - là, rien n'est ni chaud ni froid.
       g.fillStyle = snack ? '#3f4650' : hot ? '#c8322b' : '#1f5fbf';
       g.beginPath();
       g.roundRect(tx, ty, tw * 0.3, th, 3);
@@ -700,7 +700,7 @@ export function makeVendingPortTexture(): THREE.CanvasTexture {
 
 /**
  * Le verre de la vitrine : rien qu'un reflet. Les tubes de l'auvent y tracent
- * une bande claire en haut, plus une diagonale — sans elle, la vitre est un
+ * une bande claire en haut, plus une diagonale - sans elle, la vitre est un
  * trou et l'objet redevient une affiche.
  */
 export function makeVendingGlassTexture(): THREE.CanvasTexture {
@@ -792,7 +792,7 @@ export function makeVendingSideTexture(): THREE.CanvasTexture {
   g.stroke();
 
   // Modelé du flanc : la lumière du quai vient de l'avant, l'arrière tombe dans
-  // l'ombre — sans ce dégradé la tôle est un carton découpé.
+  // l'ombre - sans ce dégradé la tôle est un carton découpé.
   const back = g.createLinearGradient(W * 0.45, 0, W, 0);
   back.addColorStop(0, 'rgba(24,26,28,0)');
   back.addColorStop(1, 'rgba(24,26,28,0.3)');

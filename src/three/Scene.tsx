@@ -101,7 +101,7 @@ const overcastTone = new THREE.Color('#a8adb2');
  * Longueur horizontale conservée de la position du soleil (m) et rayon auquel
  * elle est ramenée.
  *
- * La direction seule compte pour une lumière directionnelle — mais PAS sa
+ * La direction seule compte pour une lumière directionnelle - mais PAS sa
  * distance : la caméra d'ombre est posée à la position de la lumière, et son
  * `far` vaut 100. Un soleil d'été renvoyé à cent cinquante mètres de haut
  * ferait disparaître toutes les ombres de la scène.
@@ -181,8 +181,8 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
       // sur les surfaces horizontales.
       const seasonSun = 1 - 0.2 * se.cold + 0.06 * se.heat;
       // Le ciel couvert ne baisse pas la lumière : il la DÉPLACE. Le soleil
-      // s'éteint presque complètement — un ciel de pluie n'a pas d'ombres
-      // portées, c'est ce qui le trahit avant tout le reste — pendant que
+      // s'éteint presque complètement - un ciel de pluie n'a pas d'ombres
+      // portées, c'est ce qui le trahit avant tout le reste - pendant que
       // l'hémisphérique, elle, tient bon : la voûte entière devient la source.
       const overcast = weather.cloud;
       const b = bases.current;
@@ -209,7 +209,7 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
       // moiteur d'août noie les tours à six cents mètres. Ce n'est pas un
       // réglage d'humeur, c'est la portée réelle du regard.
       // Portée du regard : la clarté de la saison, puis ce que le temps qu'il
-      // fait lui retire. Sous une averse, la ville s'arrête à cent mètres —
+      // fait lui retire. Sous une averse, la ville s'arrête à cent mètres -
       // c'est le premier effet de la pluie, bien avant les gouttes.
       const clarity = se.clarity * weather.visibility;
       if (scene.fog instanceof THREE.Fog) {
@@ -280,7 +280,7 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
 
 /**
  * Les néons du wagon. Ils ne s'éteignent qu'une fois : quand la caténaire
- * lâche (`runtime.carPower`). Le reste du temps leur intensité est fixe — un
+ * lâche (`runtime.carPower`). Le reste du temps leur intensité est fixe - un
  * pont au-dessus de la voie n'atteint pas l'éclairage intérieur, c'est même à
  * ça qu'on voit qu'on est dedans.
  */
@@ -322,8 +322,8 @@ function CabinLights({
  *
  * Une rame privée de caténaire ne devient pas noire : la réglementation
  * japonaise impose que l'essentiel reste utilisable pendant une panne
- * d'alimentation, et quelques luminaires restent allumés. Ils sont RARES —
- * deux dans la longueur du wagon — et FROIDS, là où les néons ordinaires
+ * d'alimentation, et quelques luminaires restent allumés. Ils sont RARES -
+ * deux dans la longueur du wagon - et FROIDS, là où les néons ordinaires
  * tirent sur le jaune : c'est ce contraste qui fait qu'une voiture sur
  * batteries ne ressemble à aucune autre.
  *
@@ -381,7 +381,7 @@ export function Scene() {
   const perfLevel = usePerf((s) => qualityLevel(s.quality));
 
   // Palier 2 : néons du wagon espacés (un pointLight sur deux) ; palier 4 :
-  // deux seulement — à chaque fois légèrement poussés pour garder une
+  // deux seulement - à chaque fois légèrement poussés pour garder une
   // luminosité d'ensemble comparable.
   const lampPositions = perfLevel >= 4
     ? [LAMP_POSITIONS[1], LAMP_POSITIONS[3]]
@@ -439,7 +439,7 @@ export function Scene() {
           <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.05} />
           <Vignette eskil={false} offset={0.32} darkness={0.42} />
         </EffectComposer>
-      ) : null /* Paliers 4-5 : rendu direct, aucun post-processing — le tone
+      ) : null /* Paliers 4-5 : rendu direct, aucun post-processing - le tone
            mapping filmique par défaut du renderer prend le relais. */}
     </>
   );

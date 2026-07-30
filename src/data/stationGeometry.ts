@@ -22,8 +22,8 @@ export const PSD_LEAF_TRAVEL = 0.92;
 
 /**
  * Montant de rive d'un vantail : le joint sombre de son bord de fermeture.
- * Sans lui, les deux vantaux fermés d'un même portique — même blanc, même
- * plan — se lisent comme un seul panneau de deux mètres.
+ * Sans lui, les deux vantaux fermés d'un même portique - même blanc, même
+ * plan - se lisent comme un seul panneau de deux mètres.
  */
 export const PSD_LEAF_JOINT_W = 0.04;
 
@@ -32,8 +32,8 @@ export const PSD_LEAF_JOINT_W = 0.04;
  *
  * Le montant était calé PILE sur le chant du vantail : les deux boîtes se
  * terminaient dans le même plan, et ces deux faces confondues se disputaient le
- * tampon de profondeur. Portique ouvert, le bout du vantail — la seule partie
- * qui dépasse encore du muret — clignotait entre blanc et gris sombre. Le
+ * tampon de profondeur. Portique ouvert, le bout du vantail - la seule partie
+ * qui dépasse encore du muret - clignotait entre blanc et gris sombre. Le
  * vantail rentre donc de quatre millimètres et c'est le montant qui coiffe la
  * rive, comme le joint caoutchouc d'une vraie ホームドア.
  */
@@ -131,8 +131,8 @@ export const ELEVATOR_HALF_Z = 0.95;
 /**
  * Hauteur libre sous les caissons suspendus, quelle que soit la rangée.
  *
- * C'est le bas de tout ce qui pend sous l'auvent — panneau de sortie, caisson
- * 番線, 発車標 — et donc la cote à laquelle un quai se lit : on passe dessous
+ * C'est le bas de tout ce qui pend sous l'auvent - panneau de sortie, caisson
+ * 番線, 発車標 - et donc la cote à laquelle un quai se lit : on passe dessous
  * sans se baisser, et les caissons s'alignent sur cette ligne-là plutôt que
  * sur leurs milieux, qui ne sont pas à la même hauteur d'un modèle à l'autre.
  */
@@ -153,8 +153,8 @@ export function directionBandZs(length: number): number[] {
  * sur deux.
  *
  * La face d'un poteau tournée vers la voie ne porte QU'UNE chose : la plaque de
- * nom, ou le bandeau publicitaire vertical. Les deux la revendiquaient — les
- * bandeaux étaient posés sur tous les poteaux — et la plaque se plaquait sur
+ * nom, ou le bandeau publicitaire vertical. Les deux la revendiquaient - les
+ * bandeaux étaient posés sur tous les poteaux - et la plaque se plaquait sur
  * l'affiche. PlatformSignage lit cette liste pour poser ses plaques,
  * PlatformAds pour s'en écarter : c'est le même arbitrage, lu au même endroit.
  */
@@ -168,10 +168,10 @@ export function nameplateColumns(columns: readonly number[]): number[] {
 // salle des billets. On s'y engage sur quelques marches, puis une limite de
 // zone (three/station/Barrier) barre le passage.
 //
-// Ces cotes ont QUATRE consommateurs — le rendu (three/station/Stairwell), le
+// Ces cotes ont QUATRE consommateurs - le rendu (three/station/Stairwell), le
 // percement de la dalle (three/station/Station), la marche du joueur
 // (systems/walkable) et les voyageurs qui quittent le quai
-// (systems/platformCrowd) — et il n'existe pas de vue d'ensemble où l'on
+// (systems/platformCrowd) - et il n'existe pas de vue d'ensemble où l'on
 // verrait qu'ils ont divergé : le joueur descend une volée qu'il ne voit pas,
 // et regarde une volée sur laquelle il ne marche pas. Tout est donc ici, y
 // compris le profil, écrit une fois en fonctions.
@@ -193,7 +193,7 @@ export function nameplateColumns(columns: readonly number[]): number[] {
 // avant d'y arriver, et il n'y a pour cela que cinq mètres d'emprise. À 17/34
 // on n'y descendait que de deux mètres quatre : un mètre cinquante-quatre de
 // hauteur libre, un boyau. Quinze marches de 17,5 sur 31 tiennent dans la même
-// emprise et donnent 2,15 m — la cote réglementaire d'un passage de gare.
+// emprise et donnent 2,15 m - la cote réglementaire d'un passage de gare.
 
 /** Contremarche et giron : 29,4°, la pente d'une volée de quai JR. */
 export const STAIR_RISE = 0.175;
@@ -235,7 +235,7 @@ export const STAIR_HANDRAIL_H = 0.88;
 //
 // La volée ne s'arrête pas sur un mur : elle atteint un palier de mi-étage,
 // repart SOUS LA DALLE et débouche dans un couloir de correspondance. Rien de
-// tout cela n'est praticable — le joueur est arrêté cinq marches plus haut —
+// tout cela n'est praticable - le joueur est arrêté cinq marches plus haut -
 // mais c'est ce qu'on aperçoit au fond de la trémie qui dit qu'il y a une gare
 // en dessous, et pas un puits de deux mètres fermé par une cloison.
 //
@@ -246,12 +246,12 @@ export const STAIR_HANDRAIL_H = 0.88;
 // Ce qu'on en voit est étroitement borné : depuis le haut de la volée, le
 // rayon rasant passe par la sous-face du linteau, et tout ce qui est au-dessus
 // de lui est coupé par la dalle. À neuf mètres, il ne reste qu'un demi-mètre
-// au-dessus du sol. Tout ce qui doit se lire — la seconde volée, la ligne de
-// portillons — se tient donc BAS et PRÈS.
+// au-dessus du sol. Tout ce qui doit se lire - la seconde volée, la ligne de
+// portillons - se tient donc BAS et PRÈS.
 
 /**
  * Sous-face du linteau : au-delà, on passe sous la dalle du quai. Quatre
- * centimètres de retombée sous la dalle, pas plus — chacun est pris sur la
+ * centimètres de retombée sous la dalle, pas plus - chacun est pris sur la
  * hauteur libre du passage, et il n'y en a que juste assez.
  */
 export const STAIR_LINTEL_Y = -0.48;
@@ -290,7 +290,7 @@ export const STAIR_WALK_HALF_X = 1.12;
 /**
  * Ce que descendent les voyageurs qui s'en vont : la volée entière, PUIS un
  * mètre de plus sous le linteau. C'est seulement là qu'ils cessent d'être vus
- * du quai — au pied des marches, la tête dépasse encore du rayon rasant.
+ * du quai - au pied des marches, la tête dépasse encore du rayon rasant.
  */
 export const STAIR_FULL_LEN = (STAIR_STEPS + 1) * STAIR_GOING + 1.05;
 /** Et jusqu'où ils s'enfoncent : trois marches de la seconde volée. */
@@ -300,7 +300,7 @@ export const STAIR_FULL_STEPS = STAIR_STEPS + 3;
 
 /**
  * Ligne des NEZ de marche : altitude de l'arête de giron en `t`. C'est la
- * droite sur laquelle se cale tout ce qui suit la pente — main courante,
+ * droite sur laquelle se cale tout ce qui suit la pente - main courante,
  * bandeau lumineux, affiches de joue.
  */
 export function stairPitchY(t: number): number {
@@ -313,7 +313,7 @@ export function stairPitchY(t: number): number {
  * Ce n'est délibérément PAS un profil en marches d'escalier : c'est la ligne
  * des nez relevée d'une demi-contremarche, qui passe donc exactement par le
  * MILIEU de chaque giron. Un sol en escalier faisait tomber le marcheur de
- * dix-sept centimètres tous les trente-quatre — quatre chutes par seconde au
+ * dix-sept centimètres tous les trente-quatre - quatre chutes par seconde au
  * pas de promenade, pour le joueur comme pour les voyageurs, dont l'altitude
  * n'est lissée nulle part. L'écart au giron réel ne dépasse jamais la
  * demi-contremarche, soit huit centimètres et demi, et il ne se voit pas.

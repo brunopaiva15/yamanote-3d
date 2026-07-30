@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { wrongDoor } from '../systems/wrongDoor';
 
 /**
- * La limite rouge affleure dès qu'on tourne la tête vers la baie — c'est bien,
+ * La limite rouge affleure dès qu'on tourne la tête vers la baie - c'est bien,
  * elle est faite pour ça. La phrase, elle, ne doit pas clignoter au passage :
  * elle n'arrive qu'une fois la limite franchement allumée, et ne s'en va qu'en
  * redescendant nettement plus bas.

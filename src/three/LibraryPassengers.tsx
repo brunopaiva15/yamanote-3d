@@ -1,7 +1,7 @@
 // Rendu des PNJ à partir de modèles 3D riggés/animés (packs « librairie »,
 // voir public/models/manifest.json et scripts/models-import.mjs). Consomme le
 // MÊME état que l'ancien rendu procédural (systems/passengers) : machine à
-// états, waypoints, regards, poignées — seul le « corps » change. Chaque slot
+// états, waypoints, regards, poignées - seul le « corps » change. Chaque slot
 // du pool reçoit un clone (SkeletonUtils) d'une variante choisie de façon
 // déterministe selon l'archétype ; les clips Sit/Idle/Walk sont mixés en
 // crossfade, puis les overrides d'os (regard, tsurikawa, téléphone) et les
@@ -29,7 +29,7 @@ import { fallClipFor, fallCue, fallYawOffset } from './characters/fall';
 import { attachProps, updatePropRig, handPropFor, type PropRig } from './characters/props';
 import type { LogicalClip } from './characters/manifest';
 
-// Haut utile du coussin (monde) — même repère que Seats.tsx / rendu procédural.
+// Haut utile du coussin (monde) - même repère que Seats.tsx / rendu procédural.
 const SEAT_TOP_Y = 0.45;
 const FADE = 0.25; // durée de crossfade entre clips (s)
 
@@ -39,11 +39,11 @@ interface Slot {
   clone: CharacterClone;
   pose: PoseState;
   props: PropRig;
-  /** Identité que ce modèle représente — comparée à celle du PNJ chaque frame. */
+  /** Identité que ce modèle représente - comparée à celle du PNJ chaque frame. */
   identity: number;
   currentKey: LogicalClip | '';
   seatFix: number; // décalage vertical lissé pour poser le bassin sur le coussin
-  /** Part de la pose tenue par le clip de chute (0..1) — voir characters/fall.ts. */
+  /** Part de la pose tenue par le clip de chute (0..1) - voir characters/fall.ts. */
   fallW: number;
   /** Fondu de sortie de la chute en cours, mémorisé pour le retour à l'idle. */
   fallOut: number;
@@ -56,7 +56,7 @@ interface Slot {
  *
  * Une identité qui change sur un slot visible (le montant qui paraît au seuil)
  * est rebâtie sur-le-champ : c'est le seul cas où attendre se verrait. Les
- * autres — le slot rendu au pool en échange — patientent, et le coût d'un
+ * autres - le slot rendu au pool en échange - patientent, et le coût d'un
  * arrêt s'étale sur quelques frames au lieu de tomber d'un bloc.
  */
 const HIDDEN_REBUILDS_PER_FRAME = 2;
@@ -148,7 +148,7 @@ export function LibraryPassengers({ manifest }: { manifest: CharacterManifest })
       //
       // La chute passe avant tout le reste : c'est un VRAI clip du pack, monté
       // et scrubbé image par image (characters/fall.ts). La bascule de groupe
-      // plus bas s'efface d'autant — elle n'est plus qu'un repli pour les packs
+      // plus bas s'efface d'autant - elle n'est plus qu'un repli pour les packs
       // qui n'auraient pas de clip de chute. ---
       const cue = walking ? null : fallCue(p.action, p.actionT);
       const fallKey = cue && actions[cue.clip] ? cue.clip : '';

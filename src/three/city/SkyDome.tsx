@@ -5,7 +5,7 @@
 // TOUT le décor était transparent et n'écrivait pas la profondeur, l'ordre de
 // rendu suffisait. Le ruban urbain (three/city/CityRibbon) est opaque et écrit
 // la profondeur : un ciel transparent posé à 78 m repasserait par-dessus les
-// immeubles situés à deux cents mètres dans l'axe de la voie — là précisément
+// immeubles situés à deux cents mètres dans l'axe de la voie - là précisément
 // où l'on regarde en se plaçant au bout du wagon.
 //
 // La réponse est celle d'une boîte à ciel : un seul cylindre OPAQUE, test de
@@ -15,7 +15,7 @@
 // La silhouette lointaine y est composée dans le même nuanceur, dans une bande
 // de v. Elle défile par rotation de texture, ce qui n'a de sens que sur un
 // cylindre centré sur l'œil : une rotation uniforme, c'est exactement la
-// parallaxe d'un objet infiniment loin. Le taux est calé pour lire à ~900 m —
+// parallaxe d'un objet infiniment loin. Le taux est calé pour lire à ~900 m -
 // un plan latéral posé à 42 m qu'on faisait glisser 1,67× trop vite, c'était le
 // cœur de l'effet « décor tiré au fil ».
 
@@ -71,8 +71,8 @@ function smoothstep(a: number, b: number, x: number): number {
 }
 
 // La pollution lumineuse n'est pas constante d'un bout de la nuit à l'autre.
-// Elle culmine le soir — enseignes allumées, bureaux pleins, trains encore
-// fréquents — puis retombe à mesure que la ville s'éteint, pour atteindre son
+// Elle culmine le soir - enseignes allumées, bureaux pleins, trains encore
+// fréquents - puis retombe à mesure que la ville s'éteint, pour atteindre son
 // minimum aux petites heures (~3 h 30) avant de remonter à l'approche de
 // l'aube. Sans ça, 1 h du matin renvoyait autant d'orange que 20 h, et le ciel
 // ne devenait jamais franchement nocturne. On garde un plancher : même morte,
@@ -150,7 +150,7 @@ void main() {
 
   // Lueur urbaine : au-dessus de Tokyo, le ciel de nuit n'est pas noir. Les
   // millions de lampes que la ville tourne vers le haut lui font un dôme
-  // orangé qui s'éteint en montant — et c'est sur lui que les silhouettes se
+  // orangé qui s'éteint en montant - et c'est sur lui que les silhouettes se
   // détachent, jamais sur du bleu nuit. Mais elle reste BASSE : la pollution
   // lumineuse se concentre sur l'horizon et s'efface vite en montant, sinon
   // c'est toute la voûte qui vire à l'orange au lieu de rester noire au zénith.
@@ -270,7 +270,7 @@ export function SkyDome() {
 
     // --- Saison ---
     // L'air de Tokyo n'a pas la même épaisseur toute l'année : blanc laiteux
-    // et moite en août, tranchant et bleu en janvier — c'est en hiver qu'on
+    // et moite en août, tranchant et bleu en janvier - c'est en hiver qu'on
     // voit le Fuji depuis les tours, jamais en été.
     const se = seasonNow();
     (u.uSeasonTint.value as THREE.Color).set(se.airTone);

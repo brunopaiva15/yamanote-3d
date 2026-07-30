@@ -1,16 +1,16 @@
 // La porte qui n'est pas la vôtre.
 //
-// Le quai compte quarante-quatre baies — onze voitures, quatre portes chacune —
+// Le quai compte quarante-quatre baies - onze voitures, quatre portes chacune -
 // et la rame les dessert toutes : quand elle est à quai, les quarante-quatre
 // vantaux s'écartent ensemble. Mais une seule voiture est modélisée, et c'est
 // la seule où l'on puisse monter : `walkable` n'ouvre de portillon qu'au droit
 // de CONFIG.doorCenters. Devant les quarante autres baies, la marche s'arrêtait
-// au ras du liseré sans que rien ne le dise — porte grande ouverte, mur
+// au ras du liseré sans que rien ne le dise - porte grande ouverte, mur
 // invisible.
 //
 // Ce module tient le prédicat commun aux deux façons de le dire : la limite
 // rouge qui se dresse dans la baie (three/station/Barrier → GateBarrier) et le
-// message du HUD (ui/BoardingPrompt). Même géométrie, même seuil — sinon le
+// message du HUD (ui/BoardingPrompt). Même géométrie, même seuil - sinon le
 // panneau s'allumerait sans phrase, ou l'inverse.
 //
 // Tout s'y lit en repère QUAI (celui de Platform.tsx, côté +x avant la rotation
@@ -44,7 +44,7 @@ const FADE_NEAR = 0.25;
  * Le regard décide. Le joueur longe le bord du quai à vingt centimètres du
  * plan des portes : sans cette condition, une baie sur deux se serait allumée
  * en marchant, tous les cinq mètres sur deux cent vingt. Il faut se TOURNER
- * vers la voie — vers la porte qu'on croit prendre — pour que la limite monte.
+ * vers la voie - vers la porte qu'on croit prendre - pour que la limite monte.
  */
 const FACING_MIN = 0.3;
 const FACING_FULL = 0.72;
@@ -91,7 +91,7 @@ export interface WrongDoor {
 /**
  * Le joueur cherche-t-il à monter par une porte qui n'est pas la sienne ?
  * Renvoie la baie visée et l'intensité de la limite, ou null s'il n'y a rien à
- * refuser — à bord, portes fermées, loin du bord, ou simplement de passage.
+ * refuser - à bord, portes fermées, loin du bord, ou simplement de passage.
  *
  * La trame est celle du quai PRÉSENT (platformIndex), comme tout ce qui touche
  * au repère quai : au départ, `index` désigne déjà la gare suivante.

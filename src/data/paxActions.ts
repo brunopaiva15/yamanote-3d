@@ -1,7 +1,7 @@
 // Catalogue des occupations ambiantes des PNJ (rame + quai).
 // Les 7 actions historiques (none / look / phone / doze / stare / chat / sneeze)
-// restent ; le reste est une couche de vie silencieuse — gestes, regards,
-// échanges à deux — sans dialogue ni UI.
+// restent ; le reste est une couche de vie silencieuse - gestes, regards,
+// échanges à deux - sans dialogue ni UI.
 //
 // Trois familles, et c'est ce découpage qui donne le RYTHME (voir
 // systems/paxBehavior) :
@@ -14,7 +14,7 @@
 //   Ils s'insèrent dans une occupation de fond et la rendent à son propriétaire.
 // - Les ÉVÉNEMENTS RARES (`rare`) : disputes, bagarres, chutes, séduction. Ils
 //   passent par un budget global (au plus un toutes les quelques minutes, une
-//   bagarre à peine une fois par tour de boucle) — sans quoi le wagon devient
+//   bagarre à peine une fois par tour de boucle) - sans quoi le wagon devient
 //   un ring, ce qui n'arrive pas sur la Yamanote.
 
 import type { Archetype } from '../systems/appearance';
@@ -29,7 +29,7 @@ export type PaxAction =
   | 'stare'
   | 'chat'
   | 'sneeze'
-  // Solo — micro-gestes.
+  // Solo - micro-gestes.
   | 'yawn'
   | 'stretch'
   | 'cough'
@@ -293,7 +293,7 @@ export function isFallingAction(a: PaxAction): boolean {
   return a === 'fall' || a === 'stumble' || a === 'slip';
 }
 
-/** Scènes dramatiques (bagarre, dispute…) — motions plus amples. */
+/** Scènes dramatiques (bagarre, dispute…) - motions plus amples. */
 export function isDramaAction(a: PaxAction): boolean {
   return (
     a === 'argue' ||
@@ -333,11 +333,11 @@ export function actionShowsBottle(a: PaxAction): boolean {
  * occupations de fond (`anchor`) sont tirées entre elles quand un voyageur
  * choisit ce qu'il va faire des prochaines minutes, les gestes brefs entre eux
  * quand il s'interrompt. Un téléphone à 105 face à un livre à 16 dit donc « sur
- * dix personnes occupées, une lit » — et non « un geste sur dix est une page
+ * dix personnes occupées, une lit » - et non « un geste sur dix est une page
  * tournée ».
  */
 export const PAX_ACTIONS: readonly PaxActionDef[] = [
-  // ——— Historiques ———
+  // --- Historiques ---
   {
     id: 'chat',
     weight: 26,
@@ -405,7 +405,7 @@ export const PAX_ACTIONS: readonly PaxActionDef[] = [
     anchor: true,
   },
 
-  // ——— Solo micro-gestes ———
+  // --- Solo micro-gestes ---
   {
     id: 'yawn',
     weight: 4.5,
@@ -802,7 +802,7 @@ export const PAX_ACTIONS: readonly PaxActionDef[] = [
     rare: 'fall',
   },
 
-  // ——— Drama : spectaculaire, donc rationné (voir systems/paxBehavior) ———
+  // --- Drama : spectaculaire, donc rationné (voir systems/paxBehavior) ---
   {
     id: 'argue',
     weight: 0.9,
@@ -900,7 +900,7 @@ export const PAX_ACTIONS: readonly PaxActionDef[] = [
     rare: 'comic',
   },
 
-  // ——— Sociales ———
+  // --- Sociales ---
   {
     id: 'whisper',
     weight: 5.0,
@@ -998,7 +998,7 @@ export const PAX_ACTIONS: readonly PaxActionDef[] = [
     partnerDist: 1.6,
   },
 
-  // ——— Joueur ———
+  // --- Joueur ---
   {
     id: 'curiousGlance',
     weight: 3.0,
@@ -1063,7 +1063,7 @@ export const PAX_ACTIONS: readonly PaxActionDef[] = [
     playerDist: 3.0,
   },
 
-  // ——— Quai ———
+  // --- Quai ---
   {
     id: 'lookBoard',
     weight: 6.0,

@@ -13,7 +13,7 @@ const BEVEL = 0.15;
 /** Profondeur d'extrusion : le chanfrein ajoute son épaisseur aux deux bouts. */
 const DEPTH = E235.cabLen - 2 * BEVEL;
 const CAB_BACK_Z = CAB_FRONT_Z - E235.cabLen + BEVEL;
-/** Nu réel de la face avant, chanfrein compris — c'est là que se posent les
+/** Nu réel de la face avant, chanfrein compris - c'est là que se posent les
  *  vitres, la girouette et les feux. Le rater les enfouit dans le masque. */
 const FACE_Z = CAB_BACK_Z + DEPTH + BEVEL + 0.006;
 
@@ -52,7 +52,7 @@ export function buildCab(mats: CabMaterials): THREE.Group {
   const face = FACE_Z;
 
   // Pare-brise : une grande glace unique, très inclinée sur le E235 mais
-  // rendue à plat ici — c'est sa masse noire qui fait la silhouette. Elle
+  // rendue à plat ici - c'est sa masse noire qui fait la silhouette. Elle
   // occupe presque toute la largeur, comme sur la série.
   const glassW = E235.halfWidth * 2 - 0.5;
   const glassH = E235.windshieldTop - E235.windshieldBottom;

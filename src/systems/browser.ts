@@ -4,7 +4,7 @@
 // Elles vivent ensemble parce qu'elles sont réclamées des deux côtés de la
 // frontière React : le HUD (`ui/Hud`) a un bouton plein écran, la boucle de
 // contrôle (`three/Player`) a la touche F, et les deux doivent faire exactement
-// la même chose — sinon l'une bascule quand l'autre ne fait qu'ouvrir.
+// la même chose - sinon l'une bascule quand l'autre ne fait qu'ouvrir.
 
 /**
  * Le focus est-il dans un champ de saisie ?
@@ -30,7 +30,7 @@ export function isTypingTarget(target: EventTarget | null): boolean {
  *
  * Il n'existe pas partout : iPhone ne l'expose pas du tout, et une page en
  * iframe ne l'a que si son hôte l'autorise. Le HUD s'en sert pour ne pas
- * afficher un bouton mort — dans la barre du bas d'un téléphone, la place est
+ * afficher un bouton mort - dans la barre du bas d'un téléphone, la place est
  * comptée.
  */
 export function fullscreenAvailable(): boolean {

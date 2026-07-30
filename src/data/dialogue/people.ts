@@ -12,7 +12,7 @@
 import type { DialogueEntry } from './types';
 
 export const DIALOGUE_PEOPLE: readonly DialogueEntry[] = [
-  // ——— Salaryman ———
+  // --- Salaryman ---
   {
     id: 'pp.sal.meeting',
     when: { archetype: ['salaryman'], hours: [7, 11] },
@@ -126,7 +126,7 @@ export const DIALOGUE_PEOPLE: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Office lady ———
+  // --- Office lady ---
   {
     id: 'pp.ol.late',
     when: { archetype: ['officeLady'], hours: [7, 10] },
@@ -214,7 +214,7 @@ export const DIALOGUE_PEOPLE: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Étudiants ———
+  // --- Étudiants ---
   {
     id: 'pp.stu.exam',
     when: { archetype: ['student'] },
@@ -307,7 +307,7 @@ export const DIALOGUE_PEOPLE: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Séniors ———
+  // --- Séniors ---
   {
     id: 'pp.sen.before',
     when: { senior: true },
@@ -400,7 +400,7 @@ export const DIALOGUE_PEOPLE: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Touristes ———
+  // --- Touristes ---
   {
     id: 'pp.tou.lost',
     when: { archetype: ['tourist'] },
@@ -414,8 +414,8 @@ export const DIALOGUE_PEOPLE: readonly DialogueEntry[] = [
       },
       {
         t: {
-          fr: 'Enfin — sur une ligne circulaire, est-ce qu’on peut vraiment être perdu ?',
-          en: 'Then again — on a loop line, can you really be lost?',
+          fr: 'Enfin - sur une ligne circulaire, est-ce qu’on peut vraiment être perdu ?',
+          en: 'Then again - on a loop line, can you really be lost?',
           ja: 'でも環状線で迷うって、あり得るんでしょうか。',
         },
         gap: 0.7,
@@ -514,7 +514,7 @@ export const DIALOGUE_PEOPLE: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Décontractés ———
+  // --- Décontractés ---
   {
     id: 'pp.cas.nowhere',
     when: { archetype: ['casual'] },
@@ -568,7 +568,7 @@ export const DIALOGUE_PEOPLE: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Accessoires ———
+  // --- Accessoires ---
   {
     id: 'pp.acc.mask',
     when: { needs: ['mask'] },
@@ -661,7 +661,7 @@ export const DIALOGUE_PEOPLE: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Genre / vie personnelle ———
+  // --- Genre / vie personnelle ---
   {
     id: 'pp.her.night',
     when: { feminine: true, hours: [22, 26] },

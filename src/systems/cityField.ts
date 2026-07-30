@@ -4,7 +4,7 @@
 //
 // C'était le défaut de fond du décor précédent. La ville y était peinte sur
 // trois plans fixes et c'est la TEXTURE qui coulait (`offset.x = distance /
-// metersPerRepeat`), à une vitesse sans rapport avec celle du train — 1,67×
+// metersPerRepeat`), à une vitesse sans rapport avec celle du train - 1,67×
 // sur la couche proche. L'œil lit ça immédiatement comme un décor tiré au fil.
 //
 // --- Découpage ---
@@ -87,7 +87,7 @@ interface Rank {
 // baie : posée à 8 m, la façade la plus proche remplissait toute la vitre de
 // son seul rez-de-chaussée, et on ne voyait plus ni le ciel ni le fond.
 //
-// Le premier rang reste BAS — deux à quatre niveaux, comme un bord de voie
+// Le premier rang reste BAS - deux à quatre niveaux, comme un bord de voie
 // réel. C'est ce qui laisse passer le regard vers les rangs suivants ; un
 // premier rang haut, c'est un mur, et un mur ne fait pas une ville.
 const RANKS: Rank[] = [
@@ -143,7 +143,7 @@ export const cityAnchor = {
   span: 1150,
   /**
    * Pas d'index par inter-gare parcouru vers l'avant : +1 en 内回り, −1 en
-   * 外回り. Le territoire des quartiers se déroule dans le sens de marche —
+   * 外回り. Le territoire des quartiers se déroule dans le sens de marche -
    * en 外回り, Shibuya vient AVANT Harajuku et non après.
    */
   step: 1 as 1 | -1,
@@ -182,7 +182,7 @@ export function updateCityAnchor(index: number, p: number, dir: LoopDirection): 
 /**
  * Quartier d'une abscisse monde. `mix` (0..1) est un tirage propre au bâtiment :
  * au voisinage de la frontière entre deux quartiers, les deux tissus
- * s'entremêlent au lieu de se succéder d'un bloc — une ville ne change pas de
+ * s'entremêlent au lieu de se succéder d'un bloc - une ville ne change pas de
  * caractère sur une ligne.
  */
 export function districtAt(s: number, mix: number): District {
@@ -204,8 +204,8 @@ export function districtAt(s: number, mix: number): District {
  *
  * Ils ne vivaient jusqu'ici que dans la silhouette peinte de l'horizon
  * (`drawCityInto`), c'est-à-dire à neuf cents mètres, dans la brume : Ueno et
- * Akihabara y étaient déjà deux villes, mais le long de la voie — là où on
- * regarde — le tissu était partout le même, aux palettes près.
+ * Akihabara y étaient déjà deux villes, mais le long de la voie - là où on
+ * regarde - le tissu était partout le même, aux palettes près.
  *
  * Chaque champ est une PROPORTION de bâtiments concernés, pas un interrupteur :
  * un quartier de temples garde des immeubles, un quartier électrique garde des
@@ -415,11 +415,11 @@ export function buildCell(
  * Ce qu'un bâtiment porte, ou ce qui le remplace. Quatre familles, chacune
  * rendue par son propre InstancedMesh :
  *
- *   · `box`  — acrotère, édicule de toiture, chaussée : volumes nus, matériau
+ *   · `box`  - acrotère, édicule de toiture, chaussée : volumes nus, matériau
  *              de la ville avec le drapeau « nu » ;
- *   · `hip`  — toiture en croupe des bas quartiers et du résidentiel ;
- *   · `tree` — masse d'arbres à la place d'un bâtiment ;
- *   · `sign` — panneau lumineux plaqué sur la face qui regarde la voie.
+ *   · `hip`  - toiture en croupe des bas quartiers et du résidentiel ;
+ *   · `tree` - masse d'arbres à la place d'un bâtiment ;
+ *   · `sign` - panneau lumineux plaqué sur la face qui regarde la voie.
  */
 export type PropKind = 'box' | 'hip' | 'tree' | 'sign';
 
@@ -449,8 +449,8 @@ export interface CityProp {
 /**
  * Capacité par famille et par cellule.
  *
- * Ce ne sont PAS les maxima théoriques. Une instance dégénérée — mise à
- * l'échelle zéro faute d'objet à poser — coûte son traitement de sommets comme
+ * Ce ne sont PAS les maxima théoriques. Une instance dégénérée - mise à
+ * l'échelle zéro faute d'objet à poser - coûte son traitement de sommets comme
  * les autres, et réserver douze emplacements de bosquet par cellule pour en
  * remplir un ou deux passait cent mille triangles par image au pilote pour
  * rien. Les valeurs ci-dessous couvrent le cas courant ; au-delà, le
@@ -476,7 +476,7 @@ const TILE_TONES = ['#4a5058', '#434a52', '#525a62', '#3e444c'];
  *
  * L'acrotère est le détail qui manque le plus dès qu'on regarde du haut d'un
  * viaduc : une boîte nue ne se lit pas comme un immeuble, un immeuble a un
- * BORD de toiture. Il déborde légèrement, comme une corniche — sauf sous une
+ * BORD de toiture. Il déborde légèrement, comme une corniche - sauf sous une
  * toiture en croupe, qui a son propre débord.
  */
 export function buildCellProps(

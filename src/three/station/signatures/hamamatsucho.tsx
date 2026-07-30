@@ -1,8 +1,8 @@
-// JY28 浜松町 — le vertical, et le neuf greffé sur l'ancien.
+// JY28 浜松町 - le vertical, et le neuf greffé sur l'ancien.
 //
 // Deux choses font Hamamatsuchō. La première est la verticalité : des immeubles
 // étroits et hauts serrés contre la gare, si près qu'on ne voit plus le ciel
-// qu'en bande. La seconde est le chantier permanent — une moitié de quai sous
+// qu'en bande. La seconde est le chantier permanent - une moitié de quai sous
 // une couverture ancienne et sombre, l'autre sous une charpente neuve et claire,
 // et une jonction franche entre les deux.
 //
@@ -74,7 +74,7 @@ export function Hamamatsucho({ layout, place }: SigProps) {
 
   return (
     <group>
-      {/* Moitié ancienne : poutrelles tous les quatre mètres, très présentes —
+      {/* Moitié ancienne : poutrelles tous les quatre mètres, très présentes -
           amincies et PLAQUÉES à la sous-face : plus creuses, elles balayaient
           la bande directionnelle, la gouttière et les bannières. */}
       {bays(len, 4, -0.5, JOINT).filter(clearBay).map((z) => (
@@ -114,7 +114,7 @@ export function Hamamatsucho({ layout, place }: SigProps) {
 
       {/* Les immeubles, serrés contre la gare : c'est eux qui ferment le ciel.
           Ils commencent au-delà de la poutre de monorail, que le décor de
-          quartier range juste derrière l'emprise bâtie — plus près, ils
+          quartier range juste derrière l'emprise bâtie - plus près, ils
           l'auraient avalée. */}
       {bays(len, 22).map((z, k) => (
         <group key={`t${z}`} position={[oppBackX + 9 + (k % 2) * 2.4, 0, z]}>

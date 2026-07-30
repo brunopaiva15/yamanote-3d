@@ -1,10 +1,10 @@
-// JY01 東京 — la halle de Marunouchi.
+// JY01 東京 - la halle de Marunouchi.
 //
 // Fermes rivetées sombres, arcs surbaissés, entraxe large : depuis les quais
 // Yamanote, l'impression n'est pas celle d'une façade de brique mais d'un
 // gigantesque environnement ferroviaire couvert. La Yamanote y est sur un îlot
 // partagé avec la Keihin-Tōhoku, et les colonnes de la halle prennent appui sur
-// chaque bord de quai — pas sur un mur de fond, que Tokyo n'a pas.
+// chaque bord de quai - pas sur un mur de fond, que Tokyo n'a pas.
 
 import { useMemo } from 'react';
 import { PLATFORM_TOP, PSD_X } from '../../../data/stationGeometry';

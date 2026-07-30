@@ -1,4 +1,4 @@
-// Rendu procédural des PNJ — SOLUTION DE REPLI utilisée quand aucun pack de
+// Rendu procédural des PNJ - SOLUTION DE REPLI utilisée quand aucun pack de
 // modèles n'est installé dans public/models/ (voir Passengers.tsx et
 // scripts/models-import.mjs). Pool de groupes réutilisés, synchronisés chaque
 // frame sur l'état de systems/passengers. Chaque voyageur est construit une
@@ -32,7 +32,7 @@ const HEAD_Y = 1.34;
 // monde via 1/scale : le pivot du buste (groupe « upper ») descend exactement
 // sur le haut du coussin, le buste est légèrement compressé en Y (SEATED_SQUASH),
 // et les jambes assises sont construites par gabarit (cuisses sur le coussin,
-// semelles au sol) quel que soit le gabarit — ni enfoncé, ni en lévitation.
+// semelles au sol) quel que soit le gabarit - ni enfoncé, ni en lévitation.
 const PELVIS_Y = 0.46;
 const SEAT_TOP_Y = 0.45; // haut utile du coussin (monde) : boîte 0,4+0,055, arrondi déduit
 const SEATED_SQUASH = 0.8; // tête assise ≈ 0,45 + 0,70 × scale (~1,15-1,30 m)
@@ -170,7 +170,7 @@ function torsoGeometry(app: Appearance): THREE.LatheGeometry {
 }
 
 // `identity` : QUI est ce voyageur (motif du haut, cravate, visage). Ce n'est
-// pas sa place dans le pool — celle-ci change de main à chaque montée.
+// pas sa place dans le pool - celle-ci change de main à chaque montée.
 function buildChar(app: Appearance, identity: number): CharSpec {
   const b = app.build;
   const skinMat = own(new THREE.MeshStandardMaterial({ color: app.skin, roughness: 0.7 }));
@@ -457,8 +457,8 @@ function Arm({
 
 // Gestes des bras du rendu de secours. Le rig « librairie » (characters/pose)
 // pose chaque os par sa direction ; ici le bras n'a que deux articulations à
-// un axe, on se contente donc des FAMILLES de gestes — main au visage, bras
-// levé, bras croisés, bras tendus — mais plus aucune occupation ne se joue
+// un axe, on se contente donc des FAMILLES de gestes - main au visage, bras
+// levé, bras croisés, bras tendus - mais plus aucune occupation ne se joue
 // les bras ballants.
 interface ProcArm {
   /** Épaule : rotation X (avant), Z (écart, multipliée par le côté). */
@@ -522,7 +522,7 @@ const PROC_ARMS: Partial<Record<MotionId, ProcArm>> = {
   bagFeet: { x: -0.55, z: 0.15, elbow: -0.8 },
   offer: { x: -1.15, z: 0.5, elbow: -0.35 },
   point: { x: -1.5, z: 0.5, elbow: -0.15, side: -1 },
-  // S'adresse au joueur : une main qui accompagne la phrase, sans excès —
+  // S'adresse au joueur : une main qui accompagne la phrase, sans excès -
   // on parle à un inconnu dans un train, on ne fait pas un discours.
   talk: { x: -0.55, z: 0.35, elbow: -1.7, side: -1, swing: [0.22, 3.6] },
   wave: { x: -2.5, z: 0.5, elbow: -0.5, swing: [0.4, 5] },
@@ -554,7 +554,7 @@ function armTarget(
   if (g) {
     const side = g.side ?? (strapSide === 1 ? -1 : 1);
     // Une main déjà à la poignée n'en descend pas pour faire un geste ; une
-    // chute, si — c'est même souvent pour ça qu'on tombe.
+    // chute, si - c'est même souvent pour ça qu'on tombe.
     const strapBusy = p.state === 'standing' && p.holdStrap && s === strapSide && !isFallingAction(p.action);
     if ((g.both || side === s) && !strapBusy) {
       const wob = g.swing ? Math.sin(p.actionT * g.swing[1] + p.chatRole * Math.PI) * g.swing[0] : 0;
@@ -653,7 +653,7 @@ export function ProceduralPassengers() {
       if (r.lower) r.lower.visible = !seated;
       if (r.seated) r.seated.visible = seated;
       // Assise : le pivot du buste descend sur le haut du coussin (compensé
-      // par 1/scale) et le buste est compressé — bassin posé, jamais enfoncé.
+      // par 1/scale) et le buste est compressé - bassin posé, jamais enfoncé.
       if (r.upper) {
         const target = seated ? SEATED_SQUASH : 1;
         r.upper.scale.y += (target - r.upper.scale.y) * k;

@@ -1,4 +1,4 @@
-// Mélodies de départ (発車メロディ) par quai — Inner / Outer Loop principaux.
+// Mélodies de départ (発車メロディ) par quai - Inner / Outer Loop principaux.
 // Diffusées par les haut-parleurs du quai, uniquement pendant la procédure
 // de départ (train à l'arrêt, portes ouvertes).
 //
@@ -17,7 +17,7 @@ export { MELODY_DURATIONS };
 /**
  * Clips MP3 de 発車メロディ : activés. Les fichiers sous
  * `public/audio/melodies/` sont des compositions originales libres de droits
- * (voir scripts/melodies-gen.py) — les enregistrements réels, protégés,
+ * (voir scripts/melodies-gen.py) - les enregistrements réels, protégés,
  * restaient interdits sans autorisation. Repasser à `false` pour revenir à la
  * synthèse Tone.js seule.
  */
@@ -30,7 +30,7 @@ export const ENABLE_DEPARTURE_MELODY_CLIPS = true;
  * C'est ainsi qu'on l'entend sur un quai Yamanote : le chef de train appuie sur
  * le bouton, le morceau tourne, et il ne relâche qu'une fois la boucle bouclée
  * une seconde fois. La version précédente coupait la mélodie au bout d'une
- * fenêtre FIXE de dix secondes — trop courte pour la plupart des clips, si bien
+ * fenêtre FIXE de dix secondes - trop courte pour la plupart des clips, si bien
  * que Sakura Sakura (13,6 s) n'arrivait même pas au bout de son premier
  * passage. La fenêtre est maintenant taillée sur le clip lui-même
  * (`melodyRoundsDuration`), et c'est elle qui étire le dwell d'autant : voir
@@ -115,7 +115,7 @@ export const OSAKI_OUTER_SECONDARY_MELODY = {
   type: 'departure_melody' as const,
 };
 
-/** Chemin : Sakura Sakura A — Komagome Outer voie 1. */
+/** Chemin : Sakura Sakura A - Komagome Outer voie 1. */
 export const KOMAGOME_OUTER_SAKURA_A_PATH = '/audio/melodies/05_sakura-sakura-a.mp3';
 
 /** Config exclusive : Komagome Outer Loop plateforme 1 → Tabata. */
@@ -135,7 +135,7 @@ export const KOMAGOME_OUTER_SAKURA_A = {
   nextStationName: 'Tabata',
 };
 
-/** Chemin : Sakura Sakura B / V2 — Komagome Inner voie 2. */
+/** Chemin : Sakura Sakura B / V2 - Komagome Inner voie 2. */
 export const KOMAGOME_INNER_SAKURA_V2_PATH = '/audio/melodies/06_sakura-sakura-b.mp3';
 
 /** Config exclusive : Komagome Inner Loop plateforme 2 → Sugamo. */
@@ -155,7 +155,7 @@ export const KOMAGOME_INNER_SAKURA_V2 = {
   nextStationName: 'Sugamo',
 };
 
-/** Chemin : Haru Tremolo — Uguisudani Inner voie 2. */
+/** Chemin : Haru Tremolo - Uguisudani Inner voie 2. */
 export const UGUISUDANI_INNER_HARU_TREMOLO_PATH = '/audio/melodies/08_haru-tremolo.mp3';
 
 /** Config exclusive : Uguisudani Inner Loop plateforme 2 → Nippori. */
@@ -175,7 +175,7 @@ export const UGUISUDANI_INNER_HARU_TREMOLO = {
   nextStationName: 'Nippori',
 };
 
-/** Chemin : Seseragi — six quais Outer Yamanote. */
+/** Chemin : Seseragi - six quais Outer Yamanote. */
 export const SESERAGI_MELODY_PATH = '/audio/melodies/09_seseragi.mp3';
 
 export const SESERAGI_MELODY = {
@@ -242,7 +242,7 @@ export const SESERAGI_PLATFORMS: Record<
   },
 };
 
-/** Chemin : Tetsuwan Atom ver.A — Takadanobaba Outer voie 1. */
+/** Chemin : Tetsuwan Atom ver.A - Takadanobaba Outer voie 1. */
 export const TAKADANOBABA_OUTER_ATOM_A_PATH = '/audio/melodies/10_tetsuwan-atom-a.mp3';
 
 /** Config exclusive : Takadanobaba Outer Loop plateforme 1 → Mejiro. */
@@ -262,7 +262,7 @@ export const TAKADANOBABA_OUTER_ATOM_A = {
   nextStationName: 'Mejiro',
 };
 
-/** Chemin : Tetsuwan Atom ver.B — Takadanobaba Inner voie 2. */
+/** Chemin : Tetsuwan Atom ver.B - Takadanobaba Inner voie 2. */
 export const TAKADANOBABA_INNER_ATOM_B_PATH = '/audio/melodies/11_tetsuwan-atom-b.mp3';
 
 /** Config exclusive : Takadanobaba Inner Loop plateforme 2 → Shin-Okubo. */
@@ -282,7 +282,7 @@ export const TAKADANOBABA_INNER_ATOM_B = {
   nextStationName: 'Shin-Okubo',
 };
 
-/** Chemin : The Third Man ver.F — Ebisu Inner voie 2. */
+/** Chemin : The Third Man ver.F - Ebisu Inner voie 2. */
 export const EBISU_INNER_THIRD_MAN_F_PATH = '/audio/melodies/13_the-third-man-f.mp3';
 
 /** Config exclusive : Ebisu Inner Loop plateforme 2 → Meguro. */
@@ -302,7 +302,7 @@ export const EBISU_INNER_THIRD_MAN_F = {
   nextStationName: 'Meguro',
 };
 
-/** Chemin : Glorious Gateway A — Takanawa Gateway Inner voie 1. */
+/** Chemin : Glorious Gateway A - Takanawa Gateway Inner voie 1. */
 export const TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH =
   '/audio/melodies/14_glorious-gateway-a.mp3';
 
@@ -322,7 +322,7 @@ export const TAKANAWA_GATEWAY_INNER_GLORIOUS_A = {
   nextStationName: 'Tamachi',
 };
 
-/** Chemin : Glorious Gateway B — Takanawa Gateway Outer voie 2. */
+/** Chemin : Glorious Gateway B - Takanawa Gateway Outer voie 2. */
 export const TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH =
   '/audio/melodies/15_glorious-gateway-b.mp3';
 
@@ -342,7 +342,7 @@ export const TAKANAWA_GATEWAY_OUTER_GLORIOUS_B = {
   nextStationName: 'Shinagawa',
 };
 
-/** Chemin : Mondamin CM Song ver.A — Kanda Outer voie 2. */
+/** Chemin : Mondamin CM Song ver.A - Kanda Outer voie 2. */
 export const KANDA_OUTER_MONDAMIN_A_PATH =
   '/audio/melodies/16_mondamin-cm-song-a.mp3';
 
@@ -363,7 +363,7 @@ export const KANDA_OUTER_MONDAMIN_A = {
   nextStationName: 'Tokyo',
 };
 
-/** Chemin : Mondamin CM Song ver.B — Kanda Inner voie 3. */
+/** Chemin : Mondamin CM Song ver.B - Kanda Inner voie 3. */
 export const KANDA_INNER_MONDAMIN_B_PATH =
   '/audio/melodies/17_mondamin-cm-song-b.mp3';
 
@@ -384,7 +384,7 @@ export const KANDA_INNER_MONDAMIN_B = {
   nextStationName: 'Akihabara',
 };
 
-/** Chemin : Bic Camera Theme Song ver.A — Ikebukuro Inner voie 5 (secondaire). */
+/** Chemin : Bic Camera Theme Song ver.A - Ikebukuro Inner voie 5 (secondaire). */
 export const IKEBUKURO_INNER_BIC_CAMERA_A_PATH =
   '/audio/melodies/18_bic-camera-theme-a.mp3';
 
@@ -405,7 +405,7 @@ export const IKEBUKURO_INNER_BIC_CAMERA_A = {
   nextStationName: 'Mejiro',
 };
 
-/** Chemin : Bic Camera Theme Song ver.B — Ikebukuro Inner voie 6 (principale). */
+/** Chemin : Bic Camera Theme Song ver.B - Ikebukuro Inner voie 6 (principale). */
 export const IKEBUKURO_INNER_BIC_CAMERA_B_PATH =
   '/audio/melodies/19_bic-camera-theme-b.mp3';
 
@@ -1032,7 +1032,7 @@ export function shouldPlayIkebukuroInnerBicCameraB(ctx: MelodyPlayContext): bool
 // D'où cette table, qui est l'ORDRE de sélection sous forme de données, et le
 // planificateur qui la parcourt. Les deux listes sont en fait interchangeables :
 // les prédicats se distinguent par (gare, sens, quai) et jamais deux ne sont
-// vrais ensemble — tests/melodyTiming.test.ts le vérifie quai par quai, ce qui
+// vrais ensemble - tests/melodyTiming.test.ts le vérifie quai par quai, ce qui
 // rend le planificateur insensible à un ordre qui divergerait de l'autre.
 
 /** Mélodies exclusives, dans l'ordre où la procédure de départ les essaie. */
@@ -1059,8 +1059,8 @@ export const EXCLUSIVE_MELODY_ORDER = EXCLUSIVE_MELODIES;
 
 /**
  * Contexte « départ nominal » : un quai, un sens, rien qui empêche la mélodie.
- * Les prédicats se réduisent alors à ce qui nous intéresse — quelle mélodie est
- * CÂBLÉE sur ce quai —, sans rien dire de ce que fera l'arrêt en cours.
+ * Les prédicats se réduisent alors à ce qui nous intéresse - quelle mélodie est
+ * CÂBLÉE sur ce quai -, sans rien dire de ce que fera l'arrêt en cours.
  */
 function plannedContext(
   stationCode: string,

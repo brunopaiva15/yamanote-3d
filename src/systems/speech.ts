@@ -11,14 +11,14 @@
 // TOUT passe par un clip Kokoro pré-généré (scripts/announcements-gen.py), joué
 // par audioManager sur le bus voulu, donc réellement spatialisé. Il n'existe
 // AUCUN repli speechSynthesis : la voix du navigateur sort hors du graphe Web
-// Audio — pas de panoramique, pas de souffle de ligne — et son timbre n'est
+// Audio - pas de panoramique, pas de souffle de ligne - et son timbre n'est
 // celui d'aucune des cinq voix du jeu. Elle s'entendait comme une sixième
 // voix, plaquée, au milieu d'annonces gravées.
 //
 // La contrepartie est qu'un texte sans clip ne se dit pas. C'est voulu : une
 // annonce muette passe inaperçue là où une voix étrangère casse la scène. Pour
 // que le cas n'arrive jamais, tests/announcementClips.test.ts vérifie que
-// chaque texte réellement joué a son MP3 — retoucher un mot d'annonce sans
+// chaque texte réellement joué a son MP3 - retoucher un mot d'annonce sans
 // regraver fait échouer la suite de tests, pas le rendu sonore.
 //
 // Les deux files sont vraiment simultanées : deux clips peuvent sonner en même
@@ -33,11 +33,11 @@ import { audioManager, paVoiceClose, paVoiceOpen, type VoiceBus } from './audioE
 export type SpeechChannel = 'cabin' | 'platform';
 
 /**
- * Ce que la file sait dire : un texte, sa langue, et — pour le quai — le RÔLE
+ * Ce que la file sait dire : un texte, sa langue, et - pour le quai - le RÔLE
  * VOCAL qui le dit (data/stationAnnouncements). Le rôle n'est pas décoratif :
  * il entre dans la clé du clip, donc c'est lui qui choisit entre la voix du
  * 内回り et celle du 外回り pour un texte que les deux partagent. Les annonces de
- * bord n'en ont pas — une seule voix par langue.
+ * bord n'en ont pas - une seule voix par langue.
  */
 export type SpeechItem = Utterance & { voice?: string };
 
@@ -194,7 +194,7 @@ export function say(
     // Sans clip, rien : voir l'en-tête. Le test de couverture est là pour que
     // ce cas ne se produise pas en jeu.
     if (!clip) {
-      console.warn(`[speech] Aucun clip pour « ${item.text} » — annonce muette.`);
+      console.warn(`[speech] Aucun clip pour « ${item.text} » - annonce muette.`);
       continue;
     }
     ch.queue.push({

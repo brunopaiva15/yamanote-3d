@@ -1,24 +1,24 @@
 // L'emprise ferroviaire : tout ce qui borde la voie à moins de dix mètres.
 //
 // C'est le rang qui défile le plus vite, donc CELUI QUI VEND LA VITESSE. Il
-// s'est longtemps résumé à huit portiques caténaires et douze arbres boules —
+// s'est longtemps résumé à huit portiques caténaires et douze arbres boules -
 // un objet toutes les trente secondes de regard, là où une voie réelle en
 // présente un par seconde.
 //
 // Ce qu'on en voit vraiment, depuis une baie : assis, l'œil est à 1,16 m et le
 // bas de vitre à 0,95 m ; le rayon rasant ne touche le sol que vers quatre
 // mètres. Tout ce qui est plus bas et plus près est invisible de l'intérieur.
-// D'où le choix de ce qui est modélisé ici — ce qui se tient entre un demi-mètre
+// D'où le choix de ce qui est modélisé ici - ce qui se tient entre un demi-mètre
 // et trois mètres de haut, à quatre à huit mètres de l'axe :
 //
-//   · la plate-forme — ballast, traverses, rails, caniveaux à câbles ;
+//   · la plate-forme - ballast, traverses, rails, caniveaux à câbles ;
 //   · le garde-corps de viaduc, la plus forte affirmation qu'on court en l'air ;
-//   · le mobilier de voie recyclé — signaux, armoires relais, bornes ;
+//   · le mobilier de voie recyclé - signaux, armoires relais, bornes ;
 //   · les portiques caténaires, désormais porteurs de leurs fils.
 //
 // Chaque famille est fusionnée en UNE géométrie rendue par un InstancedMesh :
 // un signal, ce sont cinq volumes, et il en passe un tous les cent soixante
-// mètres — sans fusion, le premier plan coûterait plus cher que la ville.
+// mètres - sans fusion, le premier plan coûterait plus cher que la ville.
 //
 // Tout est recyclé le long de z par `runtime.distance`, et tout s'efface dans
 // l'emprise longitudinale du quai (systems/stationOcclusion) : la gare porte sa
@@ -119,7 +119,7 @@ function makePortalGeometry(): THREE.BufferGeometry {
     parts.push(cylAt(0.09, 0.13, 7, 8, s * POLE_X, 2.2, 0));
     parts.push(boxAt(0.16, 0.16, 0.16, s * POLE_X, 5.72, 0)); // tête de mât
     // Potence d'éclairage : sur JR East, les foyers sont portés par les mâts
-    // de caténaire eux-mêmes. Ils héritent donc de leur entraxe — et c'est ce
+    // de caténaire eux-mêmes. Ils héritent donc de leur entraxe - et c'est ce
     // chapelet, une lumière toutes les trente mètres, qui dit la nuit.
     parts.push(boxAt(LAMP_REACH, 0.07, 0.07, s * (POLE_X - LAMP_REACH / 2), LAMP_Y, 0));
     parts.push(boxAt(0.34, 0.09, 0.2, s * (POLE_X - LAMP_REACH), LAMP_Y - 0.07, 0));
@@ -178,7 +178,7 @@ function makeCabinetGeometry(): THREE.BufferGeometry {
   ) as THREE.BufferGeometry;
 }
 
-/** Borne : poteau et plaque — repère kilométrique, limite de vitesse. */
+/** Borne : poteau et plaque - repère kilométrique, limite de vitesse. */
 function makePostGeometry(): THREE.BufferGeometry {
   return mergeGeometries(
     [cylAt(0.045, 0.055, 1.7, 6, 0, 0.85, 0), boxAt(0.06, 0.46, 0.46, 0, 1.62, 0)],
@@ -202,7 +202,7 @@ interface Kit {
 export function Wayside() {
   const perfLevel = usePerf((s) => qualityLevel(s.quality));
   // Paliers 4-5 : le mobilier de voie disparaît ; la plate-forme, les rails et
-  // les portiques restent — le strict nécessaire pour lire la vitesse.
+  // les portiques restent - le strict nécessaire pour lire la vitesse.
   const furniture = perfLevel < 4;
   // La plate-forme de la voie se dérobe sous le quai : sa nappe est donc
   // découpée en tronçons plutôt que d'un seul tenant (voir three/groundStrip).
@@ -235,7 +235,7 @@ export function Wayside() {
 
     // Arbres du bord de voie : ils partageaient la géométrie de personne et
     // coûtaient trente-six appels de rendu pour douze sujets. Ils prennent
-    // maintenant le bosquet de la ville — même dessin, une instance chacun.
+    // maintenant le bosquet de la ville - même dessin, une instance chacun.
     const groveGeo = makeGroveGeometry();
     const grove = makeGroveMaterial();
     const groves = new THREE.InstancedMesh(groveGeo, grove.material, TREE_COUNT);
@@ -256,7 +256,7 @@ export function Wayside() {
           // Depuis un siège, le champ visible s'arrête vers 2,8 m de haut à
           // cinq mètres de l'axe : la tête d'un signal passe au-dessus de la
           // vitre. Ce sont donc les armoires et les bornes, basses et serrées,
-          // qui donnent le rythme — le signal, lui, se regarde du quai.
+          // qui donnent le rythme - le signal, lui, se regarde du quai.
           { key: 'signal', geo: makeSignalGeometry(), color: '#6d7278', metalness: 0.3, count: 3, spacing: 190, x: 4.9, phase: 40 },
           { key: 'cabinet', geo: makeCabinetGeometry(), color: '#8c9096', metalness: 0.25, count: 9, spacing: 52, x: 4.55, phase: 12 },
           { key: 'post', geo: makePostGeometry(), color: '#d8d6cf', metalness: 0.1, count: 12, spacing: 38, x: 4.45, phase: 57 },
@@ -344,14 +344,14 @@ export function Wayside() {
     built.bedTex.offset.y = runtime.distance / TRACK_BED_TILE;
     // Le ballast est la surface la plus proche et la plus rapide du champ :
     // c'est là qu'on lit d'abord qu'il a plu. Mouillé il fonce franchement,
-    // enneigé il blanchit — mais moins que la rue, le passage des rames
+    // enneigé il blanchit - mais moins que la rue, le passage des rames
     // dégageant la voie bien avant les trottoirs.
     built.bedMat.color
       .set('#d6d4ce')
       .multiplyScalar(1 - 0.4 * weather.wet)
       .lerp(SNOW_TONE, weather.snowCover * 0.72);
 
-    // Ses RIVES, elles, passent sous le quai — et donc en travers des trémies
+    // Ses RIVES, elles, passent sous le quai - et donc en travers des trémies
     // d'escalier, dont la volée descend plus bas qu'elles. Celle du côté du
     // quai se rentre jusqu'au bord de quai, mais seulement au droit du quai :
     // voir ballastTrim (systems/stationOcclusion) et three/groundStrip.
@@ -515,7 +515,7 @@ export function Wayside() {
 
       {/* Rails en volume : à contre-jour ce sont les deux seules lignes
           brillantes du paysage, et une texture plate ne les rend pas. La gare
-          pose déjà ceux de la voie d'en face — même profil, même altitude. */}
+          pose déjà ceux de la voie d'en face - même profil, même altitude. */}
       {([-1, 1] as const).map((s) => (
         <mesh
           key={`rail${s}`}

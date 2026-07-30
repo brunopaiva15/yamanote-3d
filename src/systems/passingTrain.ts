@@ -3,7 +3,7 @@
 // Sur les gares où la Yamanote partage son îlot avec une autre ligne, la voie
 // d'en face n'est pas la nôtre : elle est vide la plupart du temps, et de
 // temps en temps une rame la traverse à pleine vitesse sans même lever le
-// pied. C'est l'événement le plus physique d'un quai japonais — la gare
+// pied. C'est l'événement le plus physique d'un quai japonais - la gare
 // avertit, tout le monde recule d'un pas, et deux cents mètres de caisse
 // passent à trois mètres du bord en une quinzaine de secondes.
 //
@@ -64,7 +64,7 @@ const WARN_AHEAD = 95;
 /**
  * Silence nécessaire devant soi, en secondes, pour l'annonce complète
  * (signal + japonais + anglais, puis l'avertissement court pendant l'entrée)
- * et pour la version japonaise seule — celle-ci dure une dizaine de secondes,
+ * et pour la version japonaise seule - celle-ci dure une dizaine de secondes,
  * les cinq de rabiot laissent la gare reprendre la parole sans se bousculer.
  */
 const FULL_NEED = 36;
@@ -92,7 +92,7 @@ export const passingTrain = {
   z: 0,
   /** Abscisse de la voie d'en face dans le repère du quai (m). */
   trackX: 0,
-  /** Vitesse instantanée (m/s) — constante, mais lue par le rendu et l'audio. */
+  /** Vitesse instantanée (m/s) - constante, mais lue par le rendu et l'audio. */
   speed: 0,
   /** Ce qui traverse : la girouette de la rame n'affiche pas la même chose. */
   kind: 'rapid' as PassKind,
@@ -131,7 +131,7 @@ function reset(): void {
  * lancer la séquence (voir platformWait, qui allonge l'attente).
  *
  * @param opportunityS durée du créneau (s). La table donne des chances par
- *                     tranche de deux minutes — la cadence à laquelle un
+ *                     tranche de deux minutes - la cadence à laquelle un
  *                     rapide se présente dans le sens qui borde notre quai.
  */
 export function rollPassThrough(index: number, opportunityS: number): boolean {
@@ -149,7 +149,7 @@ export function rollPassThrough(index: number, opportunityS: number): boolean {
  *
  * @param quietFor secondes de silence que l'appelant garantit sur la sono du
  *                 quai. C'est LUI qui connaît sa propre chronologie ; ce module
- *                 ne fait qu'y loger ce qui tient — et renonce si rien ne tient.
+ *                 ne fait qu'y loger ce qui tient - et renonce si rien ne tient.
  */
 export function startPassThrough(index: number, quietFor: number): boolean {
   if (stage !== 'idle') return false;
@@ -192,7 +192,7 @@ export function updatePassingTrain(rawDt: number): void {
   if (stage === 'idle') return;
   const dt = rawDt * passingTrain.rate;
   // Le quai n'est plus là : on a quitté la gare pendant le passage. Tout ce
-  // qui suit est calé sur son repère — sans lui, la rame d'en face resterait
+  // qui suit est calé sur son repère - sans lui, la rame d'en face resterait
   // suspendue à la dernière position connue, et son grondement avec.
   if (runtime.playerFrame !== 'platform' && runtime.platformFade <= 0.02) {
     cancelPassThrough();
@@ -224,7 +224,7 @@ export function updatePassingTrain(rawDt: number): void {
   const side = DOOR_SIDE[useStore.getState().platformIndex];
   const listenerZ = (runtime.playerZ - runtime.platformSlide) * side;
   // Une rame de 200 m n'est pas une source ponctuelle : elle sonne depuis son
-  // point le plus proche de l'oreille — le nez tant qu'elle arrive, notre
+  // point le plus proche de l'oreille - le nez tant qu'elle arrive, notre
   // hauteur tant qu'elle défile, la queue une fois passée.
   const nose = passingTrain.z;
   const tail = nose + PASS_LENGTH;

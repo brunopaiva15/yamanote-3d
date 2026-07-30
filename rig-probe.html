@@ -50,9 +50,9 @@
 
       // Simulation ASSISE / DEBOUT avec le vrai code du jeu (clone, clips
       // flous, alignement du bassin, overrides d'os, accessoires) :
-      //   ?sit=1  — banc de référence dessiné à SEAT_TOP_Y=0.45, sol à y=0.
-      //   ?stand=1 [&strap=1] — debout, option bras à la poignée (anneau dessiné).
-      //   &action=phone — pose téléphone (regard baissé, prop dans la main).
+      //   ?sit=1  - banc de référence dessiné à SEAT_TOP_Y=0.45, sol à y=0.
+      //   ?stand=1 [&strap=1] - debout, option bras à la poignée (anneau dessiné).
+      //   &action=phone - pose téléphone (regard baissé, prop dans la main).
       if (q.get('sit') || q.get('stand')) {
         const { buildTemplates, cloneVariant } = await import('/src/three/characters/library.ts');
         const { applyPoseOverrides, makePoseState } = await import('/src/three/characters/pose.ts');
@@ -95,7 +95,7 @@
         }
         if (p.holdStrap) {
           // Rangée d'anneaux (repères) AUX POSITIONS RÉELLES du jeu
-          // (Handles.tsx : z = -9.35 + k * 0.451) — la pose choisit celui
+          // (Handles.tsx : z = -9.35 + k * 0.451) - la pose choisit celui
           // devant le PNJ, pas celui à l'aplomb du crâne.
           const ringMat = new THREE.MeshStandardMaterial({ color: '#e8e4dc' });
           for (let k = 19; k <= 23; k++) {
@@ -105,7 +105,7 @@
           }
         }
         const props = attachProps(clone.wrap, app, variant.bagProp !== false);
-        // ?grip=rx,ry,rz,py,pz,s — essai de prise du téléphone (main droite).
+        // ?grip=rx,ry,rz,py,pz,s - essai de prise du téléphone (main droite).
         const grip = q.get('grip');
         if (grip && props.phoneR) {
           const [rx, ry, rz, py, pz, s] = grip.split(',').map(Number);
@@ -133,7 +133,7 @@
           const phoneVisible = p.action === 'phone' && pose.phoneW > 0.05;
           updatePropRig(props, clone.bones, clone.wrap, !seated, phoneVisible, pose.phoneSide);
         }
-        // ?axes=handR — trièdre local d'un os (x rouge, y vert, z bleu).
+        // ?axes=handR - trièdre local d'un os (x rouge, y vert, z bleu).
         const axesBone = q.get('axes');
         if (axesBone && clone.bones[axesBone]) {
           clone.bones[axesBone].add(new THREE.AxesHelper(0.22));
@@ -142,10 +142,10 @@
 
       // Simulation d'une CHUTE avec le vrai montage du jeu (clip du pack
       // scrubbé par characters/fall.ts, bascule de repli, bras et regard) :
-      //   ?fall=fall|stumble|slip&t=1.2   — t = secondes depuis le début de
+      //   ?fall=fall|stumble|slip&t=1.2   - t = secondes depuis le début de
       //     l'action ; la simulation rejoue toutes les images depuis 0 pour que
       //     les poids lissés soient ceux du jeu.
-      //   &rigid=1 — coupe le clip du pack : on revoit la bascule seule.
+      //   &rigid=1 - coupe le clip du pack : on revoit la bascule seule.
       if (q.get('fall')) {
         const action = q.get('fall');
         const tEnd = parseFloat(q.get('t') ?? '0.6');
@@ -259,7 +259,7 @@
       }
 
       // Simulation des overrides du jeu (bras vers l'anneau, regard) sur la
-      // scène BRUTE — sans objet quand la simulation complète (sit/stand) tourne.
+      // scène BRUTE - sans objet quand la simulation complète (sit/stand) tourne.
       if (!q.get('sit') && !q.get('stand') && (q.get('strap') || q.get('gaze'))) {
         const bones = {};
         gltf.scene.traverse((o) => {

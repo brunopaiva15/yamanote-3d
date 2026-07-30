@@ -1,11 +1,11 @@
-// JY29 新橋 — la gare de bureaux sous son vieux viaduc.
+// JY29 新橋 - la gare de bureaux sous son vieux viaduc.
 //
-// Shimbashi tient de Yūrakuchō par l'ouvrage — même acier ancien, même
-// couverture dense — mais elle est bien plus large : huit voies parallèles sous
+// Shimbashi tient de Yūrakuchō par l'ouvrage - même acier ancien, même
+// couverture dense - mais elle est bien plus large : huit voies parallèles sous
 // la même charpente, et c'est le faisceau (`openFarSide`) qui le donne à voir.
 // Ce qui lui est propre, c'est la couverture CONTINUE qui court par-dessus
 // tout ce faisceau, portée par des fermes en treillis qui enjambent les voies
-// d'un seul tenant — là où Yūrakuchō n'a que des portiques au-dessus du quai.
+// d'un seul tenant - là où Yūrakuchō n'a que des portiques au-dessus du quai.
 //
 // Les tours de Shiodome sont déjà dans le décor de quartier, et la locomotive
 // de la place aussi (three/Landmarks) : rien à redessiner ici.
@@ -16,7 +16,7 @@ import { PLATFORM_TOP, PSD_X } from '../../../data/stationGeometry';
 import { mat, useInstances } from '../instancing';
 import { siteCut, useSigMaterials, type SigProps } from './kit';
 
-/** Portée du faisceau au-delà du quai d'en face — cf. Station.tsx. */
+/** Portée du faisceau au-delà du quai d'en face - cf. Station.tsx. */
 const YARD_REACH = 4 * 4.6;
 
 export function Shimbashi({ layout, place }: SigProps) {
@@ -50,7 +50,7 @@ export function Shimbashi({ layout, place }: SigProps) {
 
   // La trame des fermes vient du plan (data/stationLayouts) : c'est lui qui
   // écarte les poteaux d'épine des accès, du kiosque, des potences et de la
-  // bande directionnelle — et que mobilier et caissons consultent en retour.
+  // bande directionnelle - et que mobilier et caissons consultent en retour.
   const trussZ = useMemo(
     () => (layout.sigPlan?.posts ?? []).map((p) => p.z),
     [layout.sigPlan],

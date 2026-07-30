@@ -1,8 +1,8 @@
 // L'interrupteur du prototype PLATEAU.
 //
 // Ces tests portent sur la seule chose qui décide de ce que voit un joueur en
-// production. `src/systems/plateau.ts` n'a aucune dépendance — ni React, ni
-// three, ni `import.meta.env` — donc Node l'exécute tel quel.
+// production. `src/systems/plateau.ts` n'a aucune dépendance - ni React, ni
+// three, ni `import.meta.env` - donc Node l'exécute tel quel.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -42,7 +42,7 @@ test('le prototype est ÉTEINT par défaut', () => {
   withSearch(null, () => assert.equal(plateauEnabled(), false));
 });
 
-test('?plateau=1 l’allume, ?plateau=0 l’éteint — l’URL a le dernier mot', () => {
+test('?plateau=1 l’allume, ?plateau=0 l’éteint - l’URL a le dernier mot', () => {
   for (const on of ['?plateau=1', '?plateau=true', '?plateau=yes', '?plateau=']) {
     withSearch(on, () => assert.equal(plateauEnabled(), true, `${on} devrait allumer`));
   }

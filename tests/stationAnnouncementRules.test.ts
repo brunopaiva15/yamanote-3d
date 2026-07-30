@@ -2,7 +2,7 @@
 //
 // Ce qui doit rester vrai de ces règles : elles sont RARES (une gare sans entrée
 // ne dit rien de plus), elles respectent le sens, elles sortent en japonais puis
-// en anglais, elles s'insèrent à l'endroit que leurs données demandent — et
+// en anglais, elles s'insèrent à l'endroit que leurs données demandent - et
 // jamais deux fois dans la même séquence.
 //
 // Le filtrage se teste sur une table injectée : le jeu n'a pour l'instant qu'une
@@ -45,7 +45,7 @@ test('Shibuya porte bien son avertissement de prudence', () => {
 test('l’anglais du quai ne parle pas à ceux qui descendent', () => {
   // « When you leave the train » est juste dans la rame, où tout le monde est
   // déjà à bord. Sur le quai, la même phrase est entendue par ceux qui attendent
-  // pour MONTER — et ce sont eux qui vont franchir l'écart. Les deux versions ne
+  // pour MONTER - et ce sont eux qui vont franchir l'écart. Les deux versions ne
   // peuvent donc pas être la même phrase.
   for (const dir of ['inner', 'outer'] as const) {
     const cabin = cabinNoticesForStation(SHIBUYA_JY, dir, 'during-approach');

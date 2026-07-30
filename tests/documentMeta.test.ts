@@ -1,6 +1,6 @@
 // Les métadonnées traduites, et la langue lue dans l'URL.
 //
-// index.html ne porte que l'anglais — c'est la version servie, celle que lit un
+// index.html ne porte que l'anglais - c'est la version servie, celle que lit un
 // robot sans JavaScript. Les deux autres langues n'existent que dans
 // `src/i18n/strings.ts`, et elles finissent pourtant en titre d'onglet, en
 // extrait de résultat de recherche et en carte de partage. Personne ne les

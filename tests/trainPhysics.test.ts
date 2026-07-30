@@ -2,12 +2,12 @@
 //
 // Le module n'a qu'une dépendance, `data/config`, qui n'en a aucune : Node 22
 // exécute les deux tels quels (effacement de types natif), sans compilateur ni
-// harnais — même régime que routeMath.
+// harnais - même régime que routeMath.
 //
 // Ce qui se joue ici n'est pas une constante mais une SENSATION : un train ne
 // s'arrête pas, il se pose. Les seuils ci-dessous décrivent la fin d'un arrêt
-// réussi vue du quai — le dernier mètre au pas, les dix derniers centimètres
-// qu'on voit passer — et le budget de temps que le cycle station lui réserve
+// réussi vue du quai - le dernier mètre au pas, les dix derniers centimètres
+// qu'on voit passer - et le budget de temps que le cycle station lui réserve
 // (CONFIG.brakeTime). Les trois tiennent ensemble : desserrer le freinage sans
 // rallonger la phase ferait basculer en dwell une rame encore en mouvement.
 
@@ -74,8 +74,8 @@ test('la distance restante décroît à la vitesse du train et s’annule à l�
     // Monotone : le quai posé à −left ne recule jamais.
     assert.ok(left <= previous + 1e-9, 'la distance restante est repartie à la hausse');
     previous = left;
-    // Et elle colle à ce qui reste vraiment à parcourir. L'écart — les deux
-    // intégrations ne tournent pas au même pas de temps — se résorbe à mesure
+    // Et elle colle à ce qui reste vraiment à parcourir. L'écart - les deux
+    // intégrations ne tournent pas au même pas de temps - se résorbe à mesure
     // qu'on approche : deux centimètres au plus sur le dernier mètre, rien du
     // tout à l'arrivée. C'est ce qui fait qu'il n'y a aucun raccord final : la
     // gare se cale d'elle-même.
@@ -91,8 +91,8 @@ test('la distance restante décroît à la vitesse du train et s’annule à l�
 // secondes avant que le conducteur ne serre les freins. Ce qui compte n'est pas
 // la valeur exacte de la décélération mais son ORDRE DE GRANDEUR : la rame doit
 // se taire sans se poser. Si elle perdait dix kilomètres-heure en trois
-// secondes, la coupure se lirait comme un freinage, et tout l'événement — le
-// moteur qui s'éteint alors que rien ne ralentit — tomberait à plat.
+// secondes, la coupure se lirait comme un freinage, et tout l'événement - le
+// moteur qui s'éteint alors que rien ne ralentit - tomberait à plat.
 
 test('sur l’élan, la rame ralentit à peine : on l’entend, on ne la sent pas', () => {
   const state: TrainState = { v: V_MAX, a: 0, d: 0 };

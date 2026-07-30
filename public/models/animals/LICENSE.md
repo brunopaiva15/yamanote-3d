@@ -1,6 +1,6 @@
 # Modèles d'animaux
 
-- Source : Quaternius — Ultimate Animated Animals
+- Source : Quaternius - Ultimate Animated Animals
 - Licence : CC0 1.0
 
 Les packs Quaternius (https://quaternius.com) sont publiés en CC0 1.0 :

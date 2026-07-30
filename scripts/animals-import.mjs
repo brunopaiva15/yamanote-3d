@@ -1,4 +1,4 @@
-// Import d'un pack ANIMALIER (Quaternius — Ultimate Animated Animals, …) vers
+// Import d'un pack ANIMALIER (Quaternius - Ultimate Animated Animals, …) vers
 // public/models/animals/ : extraction (zip/dossier), filtrage des espèces
 // qu'on promène vraiment en laisse, optimisation (dedup/prune/resample +
 // compression meshopt, décodée nativement par drei), mesures, puis génération
@@ -50,7 +50,7 @@ if (inputs.length === 0) {
 
 // --- Espèces promenables et leur taille réelle -----------------------------
 //
-// Hauteur TOTALE du modèle debout (oreilles comprises), en mètres — c'est ce
+// Hauteur TOTALE du modèle debout (oreilles comprises), en mètres - c'est ce
 // que mesure la boîte englobante du GLB, et donc ce que le jeu normalise.
 // Un quai de la Yamanote se traverse avec un shiba ou un corgi ; le loup et le
 // mouton sont là pour --all, où l'on assume ce qu'on fait.
@@ -118,7 +118,7 @@ for (const file of files) {
   const id = variantIdFromPath(file);
   const breed = guessBreed(id);
   if (!keepAll && !breed.walkable) {
-    skipped.push(`${id} (on ne promène pas ça sur un quai — relancer avec --all pour l'inclure)`);
+    skipped.push(`${id} (on ne promène pas ça sur un quai - relancer avec --all pour l'inclure)`);
     continue;
   }
   let doc;

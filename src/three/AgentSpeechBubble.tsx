@@ -2,7 +2,7 @@
 //
 // Même habillage que celle des voyageurs (three/PaxSpeechBubble), mais une
 // source différente : lui ne discute pas, il donne une consigne, et il la
-// donne sans qu'on lui ait rien demandé — d'où la variante « aside », plus
+// donne sans qu'on lui ait rien demandé - d'où la variante « aside », plus
 // discrète, du même style.
 
 import { useRef, useState } from 'react';

@@ -44,7 +44,7 @@ export function Doors() {
       // distance, aucun décalage de polygones n'est nécessaire. Et il était
       // NUISIBLE : porte ouverte, ces deux décalques sont enfouis dans la paroi
       // du wagon, et un polygonOffset négatif les faisait ressortir au travers
-      // sous les angles rasants — le chant de la porte scintillait.
+      // sous les angles rasants - le chant de la porte scintillait.
       edge: new THREE.MeshBasicMaterial({
         map: makeDoorEdgeTexture(),
         transparent: true,
@@ -59,7 +59,7 @@ export function Doors() {
     [],
   );
 
-  // Vitres à coins arrondis (comme sur l'E235) et leur encadrement — et
+  // Vitres à coins arrondis (comme sur l'E235) et leur encadrement - et
   // surtout le VANTAIL lui-même, percé de la même baie : la vitre était
   // plaquée sur un panneau plein, on voyait la tôle au travers au lieu du
   // dehors. Le panneau est extrudé autour de la découpe.
@@ -125,7 +125,7 @@ export function Doors() {
                 {/* Vitre du vantail, coins arrondis. Trois millimètres plus en
                     dedans qu'avant : à x = ±1,40 elle tombait exactement sur le
                     nu extérieur des vitres de la paroi, et porte ouverte les
-                    deux verres — tous deux transparents et à double face — se
+                    deux verres - tous deux transparents et à double face - se
                     disputaient le même plan sur toute la baie. */}
                 <mesh
                   geometry={windowGeos.glass}

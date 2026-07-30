@@ -2,7 +2,7 @@
 // chaque frame, on superpose donc ici le regard (headYaw/headPitch calculés
 // par systems/passengers), le bras levé vers la poignée (tsurikawa), la pose
 // téléphone, et une assise manuelle de secours si le pack n'a pas de clip
-// assis. Technique : « aim » en espace monde — on oriente l'axe +Y de l'os
+// assis. Technique : « aim » en espace monde - on oriente l'axe +Y de l'os
 // (convention glTF/Blender : l'os pointe vers son enfant) vers une cible,
 // avec un poids lissé pour des transitions douces.
 
@@ -13,7 +13,7 @@ import { ACTION_BY_ID, isFallingAction, type MotionId, type PaxAction } from '..
 
 // Géométrie des tsurikawa, reprise de three/Handles.tsx : rangées en
 // x = ±0,45, anneaux tous les 0,451 m à partir de z = -9,35 ; centre d'anneau
-// à 1,77 m (barre à 2,0 m, attache courte — anneaux remontés pour que le
+// à 1,77 m (barre à 2,0 m, attache courte - anneaux remontés pour que le
 // joueur ne se les prenne plus dans la tête). L'anneau est un TRIANGLE pointe
 // en haut : on l'agrippe par sa barre BASSE, à centre - R/2.
 const STRAP_RING_Y = 1.77;
@@ -22,7 +22,7 @@ const STRAP_ROW_X = 0.45;
 const STRAP_PITCH = 0.451;
 const STRAP_Z0 = -9.35;
 // Un humain n'attrape pas la poignée à l'aplomb de son crâne (bras vertical
-// collé à la tête) : il saisit celle qui pend DEVANT son visage — l'élection
+// collé à la tête) : il saisit celle qui pend DEVANT son visage - l'élection
 // de l'anneau (portée du bras à l'appui) se fait dans le bloc poignée.
 // Fenêtre d'élection, mesurée DEVANT le porteur : jamais moins que la première
 // borne (bras collé à la tête), jamais plus que la seconde (un pas de grille,
@@ -171,7 +171,7 @@ const vPivotUp = new THREE.Vector3();
  * Déplace le groupe pour que la rotation se fasse autour d'un point situé à
  * `pivot` × taille du corps, et non autour de l'origine du groupe (les PIEDS).
  *
- * Une inclinaison légère pivote bien aux chevilles — c'est le cas par défaut,
+ * Une inclinaison légère pivote bien aux chevilles - c'est le cas par défaut,
  * pivot = 0. Une chute, non : basculée aux pieds, elle COUCHE le corps en le
  * translatant d'un mètre et demi sur le côté. Le voyageur au sol finissait
  * dans la banquette ou au travers de la caisse, invisible depuis l'allée.
@@ -190,14 +190,14 @@ export function applyBodyPivot(wrap: THREE.Object3D, pivot: number, height: numb
 // --- Gestes des bras ------------------------------------------------------
 //
 // Un seul geste avait son rig : le téléphone. Les soixante-cinq occupations
-// ajoutées depuis ne bougeaient que la tête et le buste — on « se grattait la
+// ajoutées depuis ne bougeaient que la tête et le buste - on « se grattait la
 // tête » les bras ballants, on « regardait sa montre » sans lever le poignet,
 // on se prenait le visage sans main, on se battait sans bras. Chaque motion du
 // catalogue reçoit donc ici les directions de ses trois os.
 //
 // Directions cibles (axe +Y de chaque os) construites pour le bras GAUCHE en
 // espace wrap (+X = gauche du PNJ, +Y en haut, +Z devant lui) ; le bras droit
-// reçoit le MIROIR SAGITTAL exact du résultat gauche — seule référence fiable
+// reçoit le MIROIR SAGITTAL exact du résultat gauche - seule référence fiable
 // de ces rigs, dont la bind pose n'est pas symétrique et dont les clips le
 // sont encore moins.
 interface Dir {
@@ -209,7 +209,7 @@ interface Dir {
 /**
  * Clé d'un bras animé dans le temps (chutes) : les directions ci-dessous ne
  * valent qu'à l'instant `t` de l'action, et `w` dit quelle part le geste prend
- * au clip — 0 rend les bras à l'animation du pack.
+ * au clip - 0 rend les bras à l'animation du pack.
  */
 interface ArmKey {
   /** Secondes depuis le début de l'action. */
@@ -235,7 +235,7 @@ interface ArmGesture {
    * Bras ANIMÉS, quand un clip du pack joue déjà la chute (characters/fall.ts).
    * Le clip « Death » dont on tire la chute est une mort par balle : les bras y
    * partent en arrière au lieu de chercher à se rattraper. On les reprend donc
-   * le temps de la bascule — moulinet, puis mains tendues vers le sol — et on
+   * le temps de la bascule - moulinet, puis mains tendues vers le sol - et on
    * les rend au clip à l'impact, dont le contrecoup est très bien tel quel.
    * Sans clip de chute (repli rigide), ce sont les directions fixes qui servent.
    */
@@ -274,7 +274,7 @@ const PALM_DOWN: Dir = { x: 0, y: -0.95, z: 0.2 };
  * joue pas avec les mains (regards, somnolence, balancement, marche…).
  */
 const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
-  // — Objets tenus : la pose historique du téléphone, déclinée par objet —
+  // - Objets tenus : la pose historique du téléphone, déclinée par objet -
   phone: {
     upper: ARM_DOWN,
     upperSit: ARM_DOWN_SIT,
@@ -339,7 +339,7 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
     prop: true,
   },
 
-  // — Main au visage —
+  // - Main au visage -
   sneeze: { upper: ARM_OUT, fore: FORE_UP_FACE, hand: { x: -0.4, y: 0.7, z: -0.05 }, palm: PALM_TO_FACE },
   cough: { upper: ARM_OUT, fore: FORE_UP_FACE, hand: { x: -0.45, y: 0.65, z: 0 }, palm: PALM_TO_FACE },
   yawn: { upper: ARM_OUT, fore: FORE_UP_FACE, hand: { x: -0.5, y: 0.62, z: 0.05 }, palm: PALM_TO_FACE },
@@ -410,7 +410,7 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
     side: 1,
   },
   chin: {
-    // Menton posé dans la paume — assis, le coude s'appuie sur la cuisse.
+    // Menton posé dans la paume - assis, le coude s'appuie sur la cuisse.
     upper: { x: 0.2, y: -0.86, z: 0.3 },
     upperSit: { x: 0.2, y: -0.8, z: 0.45 },
     fore: { x: -0.32, y: 0.88, z: 0.28 },
@@ -442,11 +442,11 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
     swing: { on: 'hand', axis: 'z', amp: 0.15, freq: 1.6 },
   },
 
-  // — Bras et buste —
+  // - Bras et buste -
   crossArms: {
     // Bras croisés : avant-bras en travers du VENTRE (à hauteur de poitrine,
     // les deux se rejoignaient en une seule masse sous le menton), chaque main
-    // s'arrêtant SOUS le coude opposé — poussées plus loin en travers, elles
+    // s'arrêtant SOUS le coude opposé - poussées plus loin en travers, elles
     // ressortaient de part et d'autre du corps.
     upper: { x: 0.2, y: -0.95, z: 0.1 },
     fore: { x: -0.6, y: -0.3, z: 0.74 },
@@ -597,7 +597,7 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
   },
   talk: {
     // S'adresse au joueur : une main ouverte à hauteur de taille, qui
-    // accompagne la phrase. Discret — on parle à un inconnu dans un train,
+    // accompagne la phrase. Discret - on parle à un inconnu dans un train,
     // on ne prononce pas un discours.
     upper: { x: 0.45, y: -0.7, z: 0.34 },
     fore: { x: 0.15, y: 0.05, z: 0.9 },
@@ -623,7 +623,7 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
     both: true,
   },
 
-  // — Drame —
+  // - Drame -
   argue: {
     // Index levé qui ponctue, coude haut.
     upper: { x: 0.5, y: -0.55, z: 0.5 },
@@ -662,11 +662,11 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
     roleShift: true,
   },
 
-  // — Chutes —
+  // - Chutes -
   //
   // `upper/fore/hand` : pose d'amorti FIXE, pour un pack sans clip de chute.
   // `keys` : bras animés par-dessus le clip, calés sur les pistes de
-  // characters/fall.ts — moulinet pendant que le corps part, mains vers le sol
+  // characters/fall.ts - moulinet pendant que le corps part, mains vers le sol
   // juste avant l'impact, puis lâcher. Au sol, les bras du clip sont meilleurs
   // que tout ce qu'on poserait à l'aveugle, et surtout ils ne traversent pas le
   // plancher : on ne reprend la main que pour l'assise par terre, où le clip
@@ -730,7 +730,7 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
         palm: { x: 0, y: -0.92, z: -0.25 },
       },
       // L'impact arrive : on rend les bras au contrecoup du clip, qui est très
-      // bien tel quel — et qui, lui, ne traverse pas le plancher.
+      // bien tel quel - et qui, lui, ne traverse pas le plancher.
       {
         t: 0.5,
         w: 0.35,
@@ -742,7 +742,7 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
       { t: 0.72, w: 0, upper: ARM_DOWN, fore: { x: 0.1, y: -0.9, z: 0.2 }, hand: { x: 0.1, y: -0.9, z: 0.2 } },
       // Assis par terre : le clip d'origine remet les mains jointes devant le
       // visage (c'est une mort par balle, il y tenait une arme). On les repose
-      // au sol derrière les hanches — la seule façon de rester assis comme ça.
+      // au sol derrière les hanches - la seule façon de rester assis comme ça.
       { t: 1.75, w: 0, upper: PROP_UPPER, fore: PROP_FORE, hand: PROP_HAND, palm: PALM_DOWN },
       { t: 2.2, w: 0.8, upper: PROP_UPPER, fore: PROP_FORE, hand: PROP_HAND, palm: PALM_DOWN },
       { t: 3.0, w: 0.8, upper: PROP_UPPER, fore: PROP_FORE, hand: PROP_HAND, palm: PALM_DOWN },
@@ -789,10 +789,10 @@ const ARM_GESTURES: Partial<Record<MotionId, ArmGesture>> = {
   },
 };
 
-// Bras à la poignée. SEULE l'épaule est posée en absolu — construction
+// Bras à la poignée. SEULE l'épaule est posée en absolu - construction
 // gauche + miroir, en DEUX temps (écart latéral puis levée : depuis le
 // repos, une seule rotation « minimale » vers le haut est un retournement
-// ~180° au roulis indéfini — le bras finissait vrillé vers l'arrière au gré
+// ~180° au roulis indéfini - le bras finissait vrillé vers l'arrière au gré
 // de la frame du clip). L'avant-bras et la main PROLONGENT ensuite la
 // chaîne par les offsets de bind parent→enfant (clone.armRel) : zéro vrille
 // relative au coude et au poignet par construction. Les flexions restantes
@@ -900,7 +900,7 @@ export function armTaken(state: PoseState, side: 1 | -1): number {
   return state.gestureSide === side ? state.gestureW : 0;
 }
 
-/** Contexte minimal d'un geste — commun aux PNJ de rame et à la foule du quai. */
+/** Contexte minimal d'un geste - commun aux PNJ de rame et à la foule du quai. */
 export interface ArmCtx {
   action: PaxAction;
   actionT: number;
@@ -933,7 +933,7 @@ export function applyArmGesture(clone: CharacterClone, state: PoseState, k: numb
 
   if (state.gesture !== wanted) {
     // Une chute ne se négocie pas : le geste en cours (téléphone, journal…)
-    // est lâché en deux images au lieu du demi-seconde habituel — sinon les
+    // est lâché en deux images au lieu du demi-seconde habituel - sinon les
     // bras se mettent à amortir bien après que le corps a touché le sol.
     state.gestureW = lerpW(state.gestureW, 0, isFallingAction(ctx.action) ? Math.min(1, k * 6) : k);
     if (state.gestureW < 0.06) {
@@ -1043,7 +1043,7 @@ export function applyPoseOverrides(
     // l'anneau élu d'un cran pendant le pivot, et le bras sauterait.
     const dirZ = Math.cos(p.targetYaw) >= 0 ? 1 : -1;
     const ringX = side * STRAP_ROW_X;
-    let ringZ = p.pos.z; // anneau élu — toujours DEVANT le porteur, voir IK
+    let ringZ = p.pos.z; // anneau élu - toujours DEVANT le porteur, voir IK
     const ref = clone.chestRef ?? clone.wrap;
     ref.updateWorldMatrix(true, false);
     ref.getWorldQuaternion(qWrap);
@@ -1054,7 +1054,7 @@ export function applyPoseOverrides(
       if (arm && clav === arm.parent) clav.quaternion.slerp(rest, sw);
     }
     // Épaule : deux temps depuis le repos (roulis de bind conservé), miroir
-    // pour le bras droit — fixe le ROULIS de toute la chaîne.
+    // pour le bras droit - fixe le ROULIS de toute la chaîne.
     if (arm && clone.armRest.upperArmL) {
       vDir.set(STRAP_UPPER_MID.x, STRAP_UPPER_MID.y, STRAP_UPPER_MID.z).applyQuaternion(qWrapOnly);
       worldTarget(clone.armRest.upperArmL, qWrap, vDir.x, vDir.y, vDir.z, qLTarget);
@@ -1071,7 +1071,7 @@ export function applyPoseOverrides(
         applyWorld(fore, qRestW, sw);
       }
       // …puis IK à DEUX OS : longueurs mesurées sur le squelette (invariantes
-      // à la pose), coude posé sur le cercle solution côté extérieur-bas —
+      // à la pose), coude posé sur le cercle solution côté extérieur-bas -
       // le POIGNET atterrit sous l'anneau quel que soit le gabarit, là où un
       // aim purement directionnel sur- ou sous-dépassait selon le modèle
       // (doigts au travers de l'anneau, ou main qui flotte dessous).
@@ -1087,10 +1087,10 @@ export function applyPoseOverrides(
         l2 = vFoot.distanceTo(vTarget); // coude → poignet
       }
       // ÉLECTION de l'anneau : uniquement parmi ceux qui sont DEVANT le
-      // porteur — on ne se tient pas à une poignée qu'on a dans le dos, et
+      // porteur - on ne se tient pas à une poignée qu'on a dans le dos, et
       // jamais non plus à celle à l'aplomb du crâne (bras vertical collé à la
       // tête). Dans cette fenêtre, le plus LOIN qui reste à portée du bras ;
-      // à défaut le plus PROCHE devant, quitte à ce qu'il soit un peu haut —
+      // à défaut le plus PROCHE devant, quitte à ce qu'il soit un peu haut -
       // le haussement d'épaule plus bas rattrape le déficit. Le repli ne
       // regarde JAMAIS derrière : c'était là le bras tendu vers l'arrière.
       const wristY = STRAP_BAR_Y - 0.08;
@@ -1117,8 +1117,8 @@ export function applyPoseOverrides(
       vChest.set(ringX, wristY, ringZ);
       vDir.subVectors(vChest, vBonePos);
       // Portée insuffisante (petits gabarits / bras courts) : HAUSSEMENT
-      // d'épaule progressif — la clavicule vise plus haut, comme un humain
-      // qui se hisse — puis l'épaule est relue avant l'IK.
+      // d'épaule progressif - la clavicule vise plus haut, comme un humain
+      // qui se hisse - puis l'épaule est relue avant l'IK.
       const deficit = vDir.length() - (l1 + l2 - 0.02);
       if (deficit > 0 && arm.parent && (arm.parent as THREE.Bone).isBone) {
         const shrug = Math.min(1, deficit / 0.05) * sw;
@@ -1137,7 +1137,7 @@ export function applyPoseOverrides(
       // PERSONNAGE (+X = sa gauche, bras droit → -X), orthogonalisé à l'axe
       // épaule→cible. Un pole exprimé en espace monde (side de pos.x) tombait
       // du mauvais côté pour la moitié des orientations : le coude passait en
-      // travers, PAR-DESSUS la tête — le fameux bras tordu vers l'arrière.
+      // travers, PAR-DESSUS la tête - le fameux bras tordu vers l'arrière.
       vTarget.set(-side * 0.9, -0.3, 0.15).applyQuaternion(qWrapOnly);
       vTarget.addScaledVector(vDir, -vTarget.dot(vDir));
       if (vTarget.lengthSq() < 1e-6) vTarget.set(-side, 0, 0).applyQuaternion(qWrapOnly);
@@ -1147,8 +1147,8 @@ export function applyPoseOverrides(
       aimBone(fore, vChest, sw); // avant-bras vers le poignet cible
     }
     // Main : prolonge l'avant-bras (poignet sans vrille), puis un CASSÉ net
-    // du poignet — les doigts montent par-dessus la barre basse de l'anneau,
-    // légèrement vers l'avant — et la PAUME est résolue vers le visage :
+    // du poignet - les doigts montent par-dessus la barre basse de l'anneau,
+    // légèrement vers l'avant - et la PAUME est résolue vers le visage :
     // vue de l'extérieur on voit le dos/la tranche de la main qui agrippe,
     // plus une paume ouverte à plat.
     if (fore && hand && handRel) {
@@ -1173,11 +1173,11 @@ export function applyPoseOverrides(
     const cosY = Math.cos(p.yaw);
     clone.wrap.getWorldQuaternion(qWrapOnly);
     // Buste SYMÉTRISÉ : le clip idle vrille le torse (Y), déplaçant une
-    // épaule en avant et l'autre en arrière — bras et mains finissent
+    // épaule en avant et l'autre en arrière - bras et mains finissent
     // inégaux. Chaque os de la chaîne (racine d'abord) est ramené à
     // l'orientation symétrique la plus proche : la moyenne entre lui-même et
-    // son propre miroir sagittal (la composante symétrique — pitch de
-    // respiration — survit, la vrille et l'inclinaison latérale s'annulent).
+    // son propre miroir sagittal (la composante symétrique - pitch de
+    // respiration - survit, la vrille et l'inclinaison latérale s'annulent).
     for (const b of clone.spineChain) {
       b.updateWorldMatrix(true, false);
       b.getWorldQuaternion(qRestW);
@@ -1219,7 +1219,7 @@ export function applyPoseOverrides(
       if (!foot) continue;
       if (legs?.footDetached && foot.parent) {
         // Rigs Quaternius : le pied est un os DÉTACHÉ (cible IK, animé en
-        // position par les clips) — il ne suit pas le tibia. On le POSE à la
+        // position par les clips) - il ne suit pas le tibia. On le POSE à la
         // cheville calculée, sinon la chaussure reste plantée à sa position
         // debout (sous le plancher, mesh étiré) ; le clip garde le pied à
         // plat, aucune rotation à forcer.
@@ -1228,7 +1228,7 @@ export function applyPoseOverrides(
         vFoot.copy(vTarget).applyMatrix4(mParentInv);
         foot.position.lerp(vFoot, w);
       } else {
-        // Rig FK classique : le pied suit le tibia — on l'aplatit seulement
+        // Rig FK classique : le pied suit le tibia - on l'aplatit seulement
         // (sinon il pointe vers le sol dans l'axe du tibia).
         foot.updateWorldMatrix(true, false);
         foot.getWorldPosition(vBonePos);
@@ -1239,7 +1239,7 @@ export function applyPoseOverrides(
     // Bras posés sur les cuisses, CHACUN au-dessus de sa propre jambe. Les
     // orientations sont reconstruites depuis la BIND POSE (poseBone) et non
     // depuis la pose du clip : le clip idle est asymétrique (roulis des
-    // poignets différent par côté) et un simple « aim » le conservait — les
+    // poignets différent par côté) et un simple « aim » le conservait - les
     // deux mains n'étaient pas égales. Le bras entier descend le long du
     // buste (coude près de la hanche, léger écart pour ne pas rentrer dans le
     // torse), l'avant-bras se couche sur la cuisse vers le genou, les doigts
@@ -1260,10 +1260,10 @@ export function applyPoseOverrides(
       ref.getWorldQuaternion(qWrap);
       clone.wrap.getWorldQuaternion(qWrapOnly);
       // Le bras GAUCHE est construit depuis son repos ; le bras DROIT reçoit
-      // le MIROIR SAGITTAL du résultat gauche (roulis rigoureusement égal —
+      // le MIROIR SAGITTAL du résultat gauche (roulis rigoureusement égal -
       // le buste animé, vrillé, fausserait toute référence par côté). Les
       // ORIENTATIONS seules ne suffisent pas : la vrille décale aussi les
-      // POSITIONS des épaules — chaque avant-bras vise donc SON genou (les
+      // POSITIONS des épaules - chaque avant-bras vise donc SON genou (les
       // jambes assises, elles, sont posées symétriquement), le miroir ne
       // fournissant que le roulis.
       // 1) Bras : le long du buste, coude avancé, léger écart extérieur.
@@ -1292,7 +1292,7 @@ export function applyPoseOverrides(
           worldTarget(foreRest, qWrap, vTarget.x, vTarget.y, vTarget.z, qLTarget);
           applyWorld(bones.foreArmL, qLTarget, handWL);
           if (bones.foreArmR) {
-            // NB : alignY ne supporte pas out === q (aliasing) — sortie séparée.
+            // NB : alignY ne supporte pas out === q (aliasing) - sortie séparée.
             mirrorWorld(qLTarget, qWrapOnly, qMirror);
             if (kneeAim(bones.foreArmR, bones.legR)) alignY(qMirror, vTarget.x, vTarget.y, vTarget.z, qLTarget);
             else qLTarget.copy(qMirror);
@@ -1312,7 +1312,7 @@ export function applyPoseOverrides(
     if (bones.spine) bones.spine.rotation.x += 0.12 * w;
   }
 
-  // --- Geste de l'occupation : EN DERNIER — il se superpose au clip debout
+  // --- Geste de l'occupation : EN DERNIER - il se superpose au clip debout
   // comme à l'assise manuelle (dont il remplace la ou les mains engagées), et
   // laisse le bras de la poignée accroché à son anneau. ---
   applyArmGesture(clone, state, k, {

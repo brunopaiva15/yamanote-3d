@@ -1,11 +1,11 @@
 // Moteur audio (Tone.js) : roulement, onduleur VVVF, joints de rail, freinage,
-// carillons de porte, jingle d'arrivée — synthétisés — et mélodies de départ
+// carillons de porte, jingle d'arrivée - synthétisés - et mélodies de départ
 // (発車メロディ) : clip quai réel quand disponible (voir data/melodies.ts),
 // sinon synthèse. Démarré uniquement au clic « Monter à bord ».
 //
 // Spatialisation : tout ce qui sort de la SONORISATION (carillons de porte,
 // jingle d'arrivée, souffle de ligne des annonces) passe par un bus « PA »
-// — filtrage passe-bande + compression, le timbre d'un haut-parleur de wagon —
+// - filtrage passe-bande + compression, le timbre d'un haut-parleur de wagon -
 // puis est diffusé par un Panner3D PAR DIFFUSEUR de plafond (voir
 // CABIN_SPEAKERS). La mélodie de départ (発車メロディ) et les annonces ATOS,
 // elles, viennent des haut-parleurs du QUAI : elles sont étouffées portes
@@ -15,14 +15,14 @@
 //
 // La sono du quai est une LIGNE de diffuseurs, pas un point : elle couvre les
 // deux cent vingt mètres du quai, et le graphe en panne les six plus proches de
-// la tête (PLATFORM_TAPS, setPlatformSpeakers — c'est systems/stationPa qui les
+// la tête (PLATFORM_TAPS, setPlatformSpeakers - c'est systems/stationPa qui les
 // désigne). On entend donc l'annonce d'un bout du quai à l'autre, et le
 // diffuseur au-dessus de soi change quand on marche.
 //
 // Deux sonorisations, deux VOIX. Une gare a sa propre sono, indépendante de
 // celle de la rame, et on ne les entend pas au même endroit :
 //
-//   • sur le QUAI, la voix de bord est inaudible — les diffuseurs sont dans le
+//   • sur le QUAI, la voix de bord est inaudible - les diffuseurs sont dans le
 //     wagon, derrière les vitres (paVoiceGain tombe à zéro) ;
 //   • DANS la rame arrêtée en gare, la voix du quai n'est qu'un lointain qui
 //     entre par les portes (platVoiceGain très en retrait).
@@ -47,7 +47,7 @@
 // locaux passent eux aussi par le bus spatialisé.
 //
 // Les clips sont TÉLÉCHARGÉS ET DÉCODÉS, puis joués par un Tone.Player : ils ne
-// passent plus par un <audio> (voir le bloc « Clips » plus bas — c'est ce qui
+// passent plus par un <audio> (voir le bloc « Clips » plus bas - c'est ce qui
 // les rendait muets sur téléphone).
 //
 // Distance : tout ce qui est porté par la RAME (roulement, onduleur, freins,
@@ -181,8 +181,8 @@ const PLAT_VOICE_INSIDE = 0.3;
  * Prises de la sonorisation du QUAI : le nombre de diffuseurs réellement pannés
  * autour de l'oreille à un instant donné.
  *
- * Un quai n'a pas UN haut-parleur, il en a une ligne — un tous les dix-neuf
- * mètres sous l'auvent (systems/stationPlacement) — et c'est ce qui fait qu'on
+ * Un quai n'a pas UN haut-parleur, il en a une ligne - un tous les dix-neuf
+ * mètres sous l'auvent (systems/stationPlacement) - et c'est ce qui fait qu'on
  * entend l'annonce pareil devant la voiture 1 et au bout du quai. Le graphe
  * garde donc six points de diffusion fixes ; ce ne sont pas six haut-parleurs
  * donnés une fois pour toutes, mais six PRISES à qui systems/stationPa assigne,
@@ -197,7 +197,7 @@ const PLATFORM_TAPS = 6;
  * Une prise : son point de diffusion, et le robinet qui la coupe.
  *
  * Le robinet ne sert qu'aux quais qui compteraient moins de diffuseurs que le
- * graphe n'a de prises — deux prises au même endroit doubleraient le niveau
+ * graphe n'a de prises - deux prises au même endroit doubleraient le niveau
  * juste là, ce qui est exactement le défaut qu'on corrige ici.
  */
 interface PlatformTap {
@@ -213,14 +213,14 @@ interface PlatformTap {
  * somment sur l'auditeur, et sur le quai on se tient à trois mètres sous le plus
  * proche : un gain qui semble modeste au nœud arrive bien plus fort à l'oreille,
  * et la gare écrasait tout le reste. Les trois valeurs gardent entre elles les
- * mêmes rapports qu'avant — la mélodie entre toujours franchement par les
+ * mêmes rapports qu'avant - la mélodie entre toujours franchement par les
  * portes, et le quai reste plus ouvert que la rame.
  *
  * Les trois ont été REPRISES quand la sono du quai est passée de quatre points
  * fixes à une ligne de diffuseurs : là où quatre points laissaient l'oreille
  * entre deux sources lointaines, la ligne la met toujours sous une grille, et
  * la somme monte. Chacune est ramenée à ce qu'elle donnait AVANT au point où
- * elle avait été calée — le quai à trois mètres sous un diffuseur, la rame au
+ * elle avait été calée - le quai à trois mètres sous un diffuseur, la rame au
  * milieu de la voiture. Ce qui change n'est donc pas le niveau qu'on entend là
  * où on l'avait réglé, mais le fait qu'on l'entende AILLEURS AUSSI.
  */
@@ -233,13 +233,13 @@ const PLAT_BUS_OUTSIDE = 0.29;
  *
  * Les clips sont normalisés en crête (voir scripts/melodies-gen.py) : envoyés
  * tels quels sur le bus, ils sonnaient bien plus fort que tout le reste de la
- * gare — la mélodie écrasait l'annonce qui la suit et le brouhaha du quai.
+ * gare - la mélodie écrasait l'annonce qui la suit et le brouhaha du quai.
  *
  * Deux calages, parce que ce n'est pas le même problème des deux côtés des
  * portes. Sur le QUAI on se tient à trois mètres sous un diffuseur : c'est là
  * que c'était criard, et c'est là qu'on retire le plus (≈ −10 dB). DANS la
  * rame la mélodie arrive déjà filtrée par les ouvertures, et elle doit rester
- * ce qu'elle est pour un voyageur assis — le signal qu'il faut descendre
+ * ce qu'elle est pour un voyageur assis - le signal qu'il faut descendre
  * maintenant : on n'en retire que ≈ 5 dB, de quoi la ramener au niveau des
  * autres sons de gare sans jamais la faire passer au second plan.
  *
@@ -287,7 +287,7 @@ export async function startAudio(): Promise<void> {
 
   // Climatisation et ventilation : le souffle qu'on n'entend plus une fois
   // monté, et qui n'existe vraiment que le jour où il s'arrête. Bruit rose
-  // très sourd, sans aigus — la gaine est au plafond et souffle vers le bas,
+  // très sourd, sans aigus - la gaine est au plafond et souffle vers le bas,
   // ce qui arrive à l'oreille n'a plus de bande passante. C'est la première
   // chose que coupe une coupure de caténaire (voir setCarPower).
   const hvacNoise = new Tone.Noise('pink');
@@ -297,8 +297,8 @@ export async function startAudio(): Promise<void> {
   hvacNoise.start();
 
   // Grésillement électrique : bruit blanc très court, très aigu, sans aucun
-  // grave. C'est le timbre d'un arc — un tube qui essaie de se réamorcer, un
-  // contact qui se rompt — et il ne ressemble à rien d'autre dans le wagon :
+  // grave. C'est le timbre d'un arc - un tube qui essaie de se réamorcer, un
+  // contact qui se rompt - et il ne ressemble à rien d'autre dans le wagon :
   // tous les autres bruitages ont un corps, celui-ci n'a que du haut.
   const sparkFilter = new Tone.Filter({ type: 'highpass', frequency: 2400, rolloff: -24, Q: 0.7 });
   const spark = new Tone.NoiseSynth({
@@ -309,8 +309,8 @@ export async function startAudio(): Promise<void> {
   spark.chain(sparkFilter, trainBus);
 
   // Sifflement du convertisseur statique : le petit aigu tenu qu'on n'entend
-  // jamais tant qu'il est là. Il ne sert qu'aux transitions — il s'effondre à
-  // la coupure, il remonte au retour —, et reste à zéro le reste du temps :
+  // jamais tant qu'il est là. Il ne sert qu'aux transitions - il s'effondre à
+  // la coupure, il remonte au retour -, et reste à zéro le reste du temps :
   // une note aiguë permanente dans un jeu qu'on écoute une heure serait une
   // punition.
   const sivOsc = new Tone.Oscillator({ type: 'triangle', frequency: 1300 });
@@ -420,7 +420,7 @@ export async function startAudio(): Promise<void> {
 
   // Voix de bord : tout ce que DIT la rame passe par ce robinet, et lui seul se
   // ferme quand le joueur descend sur le quai. Les carillons de porte et le
-  // jingle d'arrivée restent branchés en direct sur paIn — eux, on les entend
+  // jingle d'arrivée restent branchés en direct sur paIn - eux, on les entend
   // très bien depuis le quai.
   const paVoiceGain = new Tone.Gain(1).connect(paIn);
   const paVoiceIn = new Tone.Gain(1).connect(paVoiceGain);
@@ -450,7 +450,7 @@ export async function startAudio(): Promise<void> {
   platIn.chain(platHp, platLp, platGain);
   // Voix du quai (annonces ATOS, agent de quai) : même sono que la mélodie,
   // mais elle passe par un robinet à part. La musique est faite pour porter
-  // jusque dans la rame ; la parole du quai, non — depuis une voiture arrêtée
+  // jusque dans la rame ; la parole du quai, non - depuis une voiture arrêtée
   // on n'en saisit qu'un lointain, même portes ouvertes.
   const platVoiceGain = new Tone.Gain(PLAT_VOICE_INSIDE).connect(platIn);
   const platVoiceIn = new Tone.Gain(1).connect(platVoiceGain);
@@ -467,7 +467,7 @@ export async function startAudio(): Promise<void> {
 
   // Carillon ATOS (avant l'annonce d'approche) et bips de service : le signal
   // électronique de l'entrée en gare, les bips des portes palières. Branchés
-  // en direct sur platIn — ce sont des signaux, pas de la parole, et ils
+  // en direct sur platIn - ce sont des signaux, pas de la parole, et ils
   // portent jusque dans la rame.
   const platChime = new Tone.Synth({
     oscillator: { type: 'sine' },
@@ -487,7 +487,7 @@ export async function startAudio(): Promise<void> {
   //
   // L'atténuation, elle, n'est pas celle d'une source ponctuelle. Une LIGNE de
   // sources ne décroît pas comme un point : une distance de référence large et
-  // un rolloff doux donnent le champ à peu près constant d'une sono de quai —
+  // un rolloff doux donnent le champ à peu près constant d'une sono de quai -
   // debout sous une grille ou à mi-chemin de deux, il reste moins d'un décibel
   // d'écart, ce qui est précisément ce qu'on cherche à obtenir.
   const platTaps: PlatformTap[] = Array.from({ length: PLATFORM_TAPS }, (_, i) => {
@@ -524,7 +524,7 @@ export async function startAudio(): Promise<void> {
   // La mélodie de départ passe par la sono du quai comme le reste, mais avec
   // son propre robinet : c'est le seul élément de la gare qu'on veut pouvoir
   // baisser sans toucher au carillon ATOS ni aux annonces. Une petite bosse
-  // de présence la maintient LISIBLE une fois le niveau descendu — dans la
+  // de présence la maintient LISIBLE une fois le niveau descendu - dans la
   // rame, le passe-bas des portes lui coupe déjà le haut du spectre, et c'est
   // cette bande-là qui la fait passer par-dessus le brouhaha et la clim.
   const melodyIn = new Tone.Gain(MELODY_INSIDE);
@@ -548,7 +548,7 @@ export async function startAudio(): Promise<void> {
   // Ce n'est ni la rame ni la sonorisation : c'est ce qu'on entend PAR-DESSUS,
   // et qui n'est pas le même à Uguisudani, dans sa vallée d'arbres, qu'à
   // Shinjuku sous sa dalle. Un lit de bruit filtré donne la couleur du lieu ;
-  // trois petits générateurs y posent des événements — un chant d'oiseau, un
+  // trois petits générateurs y posent des événements - un chant d'oiseau, un
   // timbre de tram, le passage feutré d'un monorail.
   const ambIn = new Tone.Gain(1);
   const ambFilter = new Tone.Filter({ type: 'lowpass', frequency: 900, rolloff: -12, Q: 0.5 });
@@ -592,12 +592,12 @@ export async function startAudio(): Promise<void> {
   //
   // Rien de tout cela n'appartient à la rame du joueur : ni le bus train (qui
   // s'atténue avec SA distance), ni la sono. C'est une source à part, posée
-  // dans l'espace et qui balaie l'auditeur en quelques secondes — le seul son
+  // dans l'espace et qui balaie l'auditeur en quelques secondes - le seul son
   // du jeu qui passe VRAIMENT d'un côté à l'autre de la tête.
   //
   // Deux couches, parce qu'un passage à 90 km/h s'entend en deux temps : le
   // grondement, qui monte longtemps à l'avance et porte loin, et le souffle
-  // aigu — l'air déplacé, le crissement des boudins — qui n'existe qu'au
+  // aigu - l'air déplacé, le crissement des boudins - qui n'existe qu'au
   // moment où la caisse est là.
   const passPanner = new Tone.Panner3D({
     panningModel: 'HRTF',
@@ -663,10 +663,10 @@ export async function startAudio(): Promise<void> {
   });
   paxClick.chain(paxClickFilter, trainBus);
 
-  // Voix d'un voyageur : jamais des mots — une bouche fermée derrière un
+  // Voix d'un voyageur : jamais des mots - une bouche fermée derrière un
   // masque, à un mètre. Une dent de scie très filtrée passée en bande étroite
   // autour du premier formant donne la bonne matière : on entend QUE quelqu'un
-  // parle, pas CE qu'il dit — le texte, lui, est à l'écran.
+  // parle, pas CE qu'il dit - le texte, lui, est à l'écran.
   const paxVoiceFilter = new Tone.Filter({ type: 'bandpass', frequency: 620, Q: 2.4 });
   const paxVoiceSynth = new Tone.Synth({
     oscillator: { type: 'sawtooth' },
@@ -681,12 +681,12 @@ export async function startAudio(): Promise<void> {
   // la rend crédible depuis un train :
   //
   //   · sur le PAVILLON, au-dessus de la tête. Un crépitement mat, sourd, sans
-  //     aigus — la tôle et l'isolant les mangent. Il ne passe pas par les
+  //     aigus - la tôle et l'isolant les mangent. Il ne passe pas par les
   //     portes : il est là même portes fermées, et c'est le seul son du jeu
   //     dont l'ouverture des portes ne change rien. Il appartient à la rame,
   //     donc au bus qui s'atténue quand on la regarde depuis le quai ;
   //   · DEHORS, sur la ville et sur le quai. Un souffle large et brillant, qui
-  //     n'entre dans le wagon que par les ouvertures — comme l'ambiance de
+  //     n'entre dans le wagon que par les ouvertures - comme l'ambiance de
   //     gare, et pour la même raison.
   //
   // Une seule source de bruit pour les deux aurait forcé à choisir un timbre,
@@ -874,7 +874,7 @@ export function setListenerPose(
 export const platformSpeakerTaps = PLATFORM_TAPS;
 
 /**
- * Où sont les diffuseurs du quai à cette image, en repère MONDE — donc côté
+ * Où sont les diffuseurs du quai à cette image, en repère MONDE - donc côté
  * d'ouverture appliqué et glissement du quai compris. C'est systems/stationPa
  * qui les choisit ; ici on ne fait que les poser sur les prises, dans l'ordre
  * reçu. Les prises en trop se taisent.
@@ -944,8 +944,8 @@ export function setPlatformDoors(open01: number): void {
 // Un instrument Tone refuse tout déclenchement antérieur ou égal au dernier
 // programmé : « Start time must be strictly greater than previous start time ».
 // Sur une frame longue (onglet repris, GPU saturé, machine lente), plusieurs
-// événements du cycle tombent au MÊME instant audio — deux portes qui claquent,
-// l'immobilisation et un choc de porte — et l'assertion cassait la frame.
+// événements du cycle tombent au MÊME instant audio - deux portes qui claquent,
+// l'immobilisation et un choc de porte - et l'assertion cassait la frame.
 // Chaque instrument à déclenchements multiples réserve donc son créneau ici.
 const lastTriggerAt = new Map<string, number>();
 
@@ -979,7 +979,7 @@ export function paVoiceClose(bus: VoiceBus = 'cabinVoice'): void {
 
 /**
  * Carillon ATOS : le motif de quelques notes qui précède l'annonce d'approche.
- * Ce n'est pas la mélodie de départ — c'est un signal d'attention, court, sur
+ * Ce n'est pas la mélodie de départ - c'est un signal d'attention, court, sur
  * lequel personne ne se retourne mais que tout le monde reconnaît.
  *
  * @returns la durée du motif (s). Le carillon PRÉCÈDE l'annonce, il ne la
@@ -1026,7 +1026,7 @@ export function psdDoorBeeps(): void {
 /**
  * Vitesse des turbines de climatisation (0..1), qui n'est PAS l'alimentation
  * de bord : un ventilateur a de l'inertie. La tension tombe d'un coup, le
- * souffle met deux bonnes secondes à mourir — et il remonte plus vite qu'il
+ * souffle met deux bonnes secondes à mourir - et il remonte plus vite qu'il
  * n'est descendu, parce qu'au retour de la tension les moteurs sont relancés
  * en charge.
  */
@@ -1039,8 +1039,8 @@ const HVAC_LEVEL = 0.019;
 // Mise à jour continue, pilotée par la vitesse normalisée (0..1).
 //
 // `power` est l'alimentation de bord (runtime.carPower) : à 0, l'onduleur est
-// muet — pas de chant VVVF, et surtout pas de freinage par récupération, la
-// rame se pose au seul frein pneumatique — et la climatisation s'éteint.
+// muet - pas de chant VVVF, et surtout pas de freinage par récupération, la
+// rame se pose au seul frein pneumatique - et la climatisation s'éteint.
 export function updateAudio(dt: number, speed01: number, braking: boolean, power = 1): void {
   if (!nodes || dt <= 0) return;
   const accel01 = (speed01 - prevSpeed01) / dt; // par seconde
@@ -1068,7 +1068,7 @@ export function updateAudio(dt: number, speed01: number, braking: boolean, power
   nodes.rollGain.gain.rampTo(Math.pow(speed01, 1.1) * 0.32 * exterior, 0.08);
   // Rail mouillé : le roulement monte dans les aigus. C'est la pellicule d'eau
   // qui siffle sous la bande de roulement, et tout voyageur régulier
-  // l'entend — c'est même souvent à ça qu'on devine qu'il pleut avant de
+  // l'entend - c'est même souvent à ça qu'on devine qu'il pleut avant de
   // regarder dehors.
   nodes.rollFilter.frequency.rampTo(
     (280 + speed01 * 1500) * (0.35 + 0.65 * far) * (1 + 0.3 * railWet),
@@ -1091,7 +1091,7 @@ export function updateAudio(dt: number, speed01: number, braking: boolean, power
     power > 0.5 ? 0.1 : 0.05,
   );
 
-  // Souffle de climatisation : plein à bord, presque rien depuis le quai — de
+  // Souffle de climatisation : plein à bord, presque rien depuis le quai - de
   // dehors, ce qu'on entend d'un groupe de toiture n'est pas ce qui souffle
   // dans le wagon.
   nodes.hvacGain.gain.rampTo(HVAC_LEVEL * hvacSpin * (listenerOutside ? 0.22 : 1), 0.15);
@@ -1122,7 +1122,7 @@ export function doorClunk(vel: number): void {
  * La porte rencontre quelqu'un, ou quelque chose.
  *
  * Ce n'est pas un choc de butée : rien ne claque, rien ne verrouille. Un coup
- * sourd, court, amorti par ce qui est pris dedans — c'est exactement à ça
+ * sourd, court, amorti par ce qui est pris dedans - c'est exactement à ça
  * qu'on entend, depuis l'intérieur, qu'une porte ne s'est pas fermée.
  */
 export function doorObstacleBump(vel: number): void {
@@ -1161,7 +1161,7 @@ export function brakeRelease(): void {
 
 // --- Les petits bruits électriques ---------------------------------------
 //
-// Une coupure de caténaire est faite de sons qui s'ARRÊTENT — l'onduleur, la
+// Une coupure de caténaire est faite de sons qui s'ARRÊTENT - l'onduleur, la
 // climatisation. Mais entre les deux silences, il se passe quelque chose de
 // très sonore et de très court : du matériel électrique qui travaille. C'est
 // ce qui donne à l'événement sa texture, et sans quoi le wagon a simplement
@@ -1184,7 +1184,7 @@ function crackle(now: number, count: number, spread: number, level: number): voi
  * Un petit bruit électrique de la séquence en cours.
  *
  * Appelé par stationCycle au moment exact où `stepCarPower` signale que la
- * courbe vient de croiser l'événement — donc jamais décalé du clignotement
+ * courbe vient de croiser l'événement - donc jamais décalé du clignotement
  * qu'il accompagne.
  */
 export function powerSound(kind: PowerSoundKind): void {
@@ -1245,7 +1245,7 @@ export function powerSound(kind: PowerSoundKind): void {
  *
  * Une rame sur batteries n'est pas muette : il reste des relais qui travaillent
  * quelque part sous le plancher, et c'est ce qu'on entend pendant les minutes
- * d'attente. Volontairement rare et volontairement ténu — c'est ce qui fait
+ * d'attente. Volontairement rare et volontairement ténu - c'est ce qui fait
  * qu'un silence de cinq minutes reste habité au lieu d'être un blanc.
  */
 export function batteryTick(): void {
@@ -1372,8 +1372,8 @@ export function paxDrink(dist: number): void {
 
 /**
  * Murmure d'un voyageur qui parle au joueur : une poignée de syllabes, pas
- * des mots. La hauteur suit la personne — une voix de femme au-dessus d'une
- * voix d'homme, un grand plus bas qu'un petit, un ancien plus voilé — et la
+ * des mots. La hauteur suit la personne - une voix de femme au-dessus d'une
+ * voix d'homme, un grand plus bas qu'un petit, un ancien plus voilé - et la
  * phrase retombe à la fin, comme une phrase japonaise affirmative.
  */
 export function paxVoice(opts: {
@@ -1533,7 +1533,7 @@ export function passByStart(): void {
  * @param x,y,z   point de la rame le plus proche de l'auditeur (repère monde)
  * @param closing −1 (rame déjà passée) … +1 (rame encore devant) : c'est le
  *                seul effet Doppler qu'on puisse donner à du bruit large bande,
- *                et c'est celui qu'on entend — le grondement se referme d'un
+ *                et c'est celui qu'on entend - le grondement se referme d'un
  *                cran au moment exact où la cabine arrive à notre hauteur.
  */
 export function setPassBy(x: number, y: number, z: number, closing: number): void {
@@ -1625,7 +1625,7 @@ const SPECIALS: Record<string, Note[]> = {
 
 // Durée d'un passage du motif (secondes) : le motif est bouclé jusqu'à
 // approcher cette cible, comme un clip de quai. La valeur vit dans
-// data/melodies, avec les autres durées — c'est elle qui sert de repli quand il
+// data/melodies, avec les autres durées - c'est elle qui sert de repli quand il
 // faut mesurer la fenêtre sonore d'un quai sans clip.
 export const MELODY_DURATION = SYNTH_MELODY_DURATION_S;
 
@@ -1638,7 +1638,7 @@ export const MELODY_DURATION = SYNTH_MELODY_DURATION_S;
  * Comme un clip, elle fait MELODY_REPEATS passages ENTIERS : la fenêtre que
  * l'arrêt lui réserve est calculée sur MELODY_DURATION (voir
  * data/melodies.melodyRoundsDuration), et un passage doit donc y tenir. D'où le
- * compte de motifs fait à l'avance — on n'en démarre pas un qui déborderait —
+ * compte de motifs fait à l'avance - on n'en démarre pas un qui déborderait -
  * et le motif au minimum joué une fois, même s'il est plus long que la cible.
  */
 function synthMelody(index: number): void {
@@ -1674,7 +1674,7 @@ function synthMelody(index: number): void {
 //    dans un geste utilisateur. Le clic « Monter à bord » débloque le contexte
 //    Web Audio, pas les éléments créés dix minutes plus tard : chaque annonce
 //    partait en NotAllowedError, avalée par le `.catch()`. Pire, playOnce
-//    renvoyait quand même `true` — donc pas même de repli speechSynthesis.
+//    renvoyait quand même `true` - donc pas même de repli speechSynthesis.
 //    D'où le symptôme : tout s'entend sauf les voix.
 // 2. MediaElementSource. WebKit rend régulièrement du silence pour un élément
 //    détaché du document branché sur le graphe audio.
@@ -1895,7 +1895,7 @@ function stop(path: string): void {
   handle.stop();
 }
 
-/** Même chose, mais en fondu — coupure de la 発車メロディ par le chef de train. */
+/** Même chose, mais en fondu - coupure de la 発車メロディ par le chef de train. */
 function fadeOut(path: string, seconds: number): void {
   stopEpoch.set(path, (stopEpoch.get(path) ?? 0) + 1);
   const handle = activeByPath.get(path);
@@ -1978,8 +1978,8 @@ export function stopDepartureMelodyClips(): void {
 // --- Ambiance de gare ----------------------------------------------------
 //
 // Ce qu'on entend PAR-DESSUS la sonorisation, et qui n'est pas le même d'une
-// gare à l'autre : les oiseaux d'Uguisudani — dont le nom veut dire « vallée du
-// rossignol » —, le timbre du tram à Ōtsuka, le passage feutré du monorail à
+// gare à l'autre : les oiseaux d'Uguisudani - dont le nom veut dire « vallée du
+// rossignol » -, le timbre du tram à Ōtsuka, le passage feutré du monorail à
 // Hamamatsuchō, la rumeur d'un quai de bureaux ou le silence d'une tranchée.
 //
 // Deux réglages seulement, mais qui suffisent : la COULEUR du lit sonore, et la
@@ -2066,7 +2066,7 @@ export function setStationAmbience(kind: string, presence: number, room: number)
  *
  * `openings` est le produit porte de rame × porte palière, exactement comme
  * pour l'ambiance de gare : c'est par là, et par là seulement, que le dehors
- * entre. La pluie sur le pavillon, elle, l'ignore — elle tombe sur le toit,
+ * entre. La pluie sur le pavillon, elle, l'ignore - elle tombe sur le toit,
  * pas devant la porte.
  *
  * La neige ne fait aucun bruit, et c'est le fait le plus remarquable de toute
@@ -2084,7 +2084,7 @@ export function setWeatherSound(
   if (!nodes) return;
   railWet = Math.max(0, Math.min(1, wet));
   const r = Math.max(0, Math.min(1, rain));
-  // Sur le pavillon : rien tant qu'on est dehors, sur le quai — le toit sous
+  // Sur le pavillon : rien tant qu'on est dehors, sur le quai - le toit sous
   // lequel on se tient alors est celui de la gare, pas celui de la rame.
   const roof = outside ? 0 : r;
   nodes.rainRoofGain.gain.rampTo(0.16 * roof * roof + 0.06 * roof, 0.4);
@@ -2109,7 +2109,7 @@ export function setWeatherSound(
 
 /**
  * Un coup de tonnerre. `far` va de 0 (sur nous) à 1 (à l'horizon) : il règle
- * le retard — le son met trois secondes par kilomètre —, le niveau, et surtout
+ * le retard - le son met trois secondes par kilomètre -, le niveau, et surtout
  * la PART DE CLAQUEMENT. Un coup lointain roule sans jamais claquer ; c'est ce
  * rapport-là qui dit la distance, pas le volume.
  */

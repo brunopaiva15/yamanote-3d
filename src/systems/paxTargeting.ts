@@ -1,6 +1,6 @@
 // Qui le joueur a en face de lui.
 //
-// Le jeu savait déjà où est le joueur — les PNJ tournent la tête vers lui
+// Le jeu savait déjà où est le joueur - les PNJ tournent la tête vers lui
 // depuis longtemps. Pour lui ADRESSER la parole (systems/conversation), il
 // faut l'inverse : désigner un voyageur précis, celui qu'on regarde et dont on
 // est assez près pour qu'un mot passe.
@@ -64,7 +64,7 @@ const candidates: Candidate[] = [];
  * Voyageurs à qui l'on peut parler, ramenés en coordonnées monde.
  *
  * Seuls ceux du CÔTÉ OÙ L'ON SE TIENT comptent. Debout sur le quai, on est
- * peut-être à un mètre de quelqu'un d'assis dans la rame — il y a une caisse
+ * peut-être à un mètre de quelqu'un d'assis dans la rame - il y a une caisse
  * en acier et une baie vitrée entre les deux, et on ne s'adresse pas à un
  * voyageur au travers d'une vitre. Une fois à bord, la règle s'inverse : c'est
  * la foule du quai qui devient hors d'atteinte.
@@ -194,7 +194,7 @@ export function findNearbyPaxList(range: number, max = 8): PaxTarget[] {
 
 /**
  * Position monde (tête) d'un voyageur donné, ou null s'il n'est plus
- * joignable — parti, ou passé de l'autre côté des portes.
+ * joignable - parti, ou passé de l'autre côté des portes.
  */
 export function paxAnchor(scope: PaxScope, id: number): PaxTarget | null {
   // Même règle que la visée : on ne parle pas à travers la caisse.

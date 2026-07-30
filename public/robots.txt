@@ -1,9 +1,9 @@
-# Yamanote 3D — rien à cacher : tout est indexable.
+# Yamanote 3D - rien à cacher : tout est indexable.
 #
 # Attention à l'emplacement réel : un robot ne lit le robots.txt qu'à la RACINE
 # du domaine. Servi sur GitHub Pages sous /yamanote-3d/, ce fichier atterrit en
 # https://brunopaiva15.github.io/yamanote-3d/robots.txt et n'est donc PAS celui
-# que les robots consultent — c'est celui de brunopaiva15.github.io qui fait
+# que les robots consultent - c'est celui de brunopaiva15.github.io qui fait
 # loi. Il reste juste et utile le jour où le site passe à la racine d'un
 # domaine, et le sitemap ci-dessous, lui, se déclare directement dans la Search
 # Console quelle que soit la profondeur.

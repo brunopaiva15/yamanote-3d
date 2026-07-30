@@ -1,6 +1,6 @@
 # Modèles de personnages
 
-- Source : Quaternius — Ultimate Animated Character Pack
+- Source : Quaternius - Ultimate Animated Character Pack
 - Licence : CC0 1.0
 
 Les packs Quaternius (https://quaternius.com) et KayKit

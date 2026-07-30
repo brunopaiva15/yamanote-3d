@@ -44,7 +44,7 @@ export function worldToCarZ(z: number): number {
 // --- Repère quai <-> monde ----------------------------------------------
 // rotation.y = π quand le quai s'ouvre côté -1 : (x, z) → (-x, -z). La
 // translation platformSlide, elle, est posée dans le repère parent (donc en
-// monde). Le côté est celui du quai PRÉSENT (platformIndex) — store.doorSide
+// monde). Le côté est celui du quai PRÉSENT (platformIndex) - store.doorSide
 // bascule vers la gare suivante en début de croisière, alors que ce quai-ci
 // défile encore et que sa foule vit toujours dans son repère.
 
@@ -96,7 +96,7 @@ export function publishPlayerPose(worldX: number, worldY: number, worldZ: number
 /**
  * Publie la position d'APPUI : celle de la marche, avant que le balancement de
  * la caisse ne soit ajouté à la caméra. Tout ce qui relève de la géométrie du
- * volume praticable — au premier chef le seuil de porte (systems/walkable) —
+ * volume praticable - au premier chef le seuil de porte (systems/walkable) -
  * se décide là-dessus et non sur l'œil, qui oscille.
  */
 export function publishPlayerStance(worldX: number, worldZ: number): void {

@@ -59,7 +59,7 @@ function useEmergency(): { stage: EmergencyStage; kind: EmergencyKind } {
 }
 
 /**
- * Le temps qu'il fait, sondé comme l'horloge — il vit dans `systems/weather`,
+ * Le temps qu'il fait, sondé comme l'horloge - il vit dans `systems/weather`,
  * pas dans le store, et il change trop lentement pour mériter un re-render par
  * image. Deux secondes suffisent largement : un ciel ne tourne pas en une
  * seconde, et la température encore moins.
@@ -77,7 +77,7 @@ function useWeather(): { kind: WeatherKind; tempC: number } {
 
 /**
  * Pictogramme du temps. Un seul caractère, sans couleur : le HUD est sobre, et
- * c'est dehors qu'il faut regarder — le badge ne fait que nommer ce qu'on voit.
+ * c'est dehors qu'il faut regarder - le badge ne fait que nommer ce qu'on voit.
  */
 const WEATHER_GLYPH: Record<WeatherKind, string> = {
   clear: '☀',
@@ -94,7 +94,7 @@ const WEATHER_GLYPH: Record<WeatherKind, string> = {
 /**
  * La barre du bas s'enroule sur une ou deux rangées selon la langue et la
  * largeur de l'écran. On publie sa hauteur réelle en variable CSS pour que le
- * joystick et les boutons tactiles se posent dessus au lieu de la recouvrir —
+ * joystick et les boutons tactiles se posent dessus au lieu de la recouvrir -
  * c'est ce qui faisait se chevaucher deux « s'asseoir » sur un téléphone.
  */
 function useBarHeight(active: boolean) {
@@ -177,7 +177,7 @@ export function Hud() {
   const label = phase === 'dwell' ? t.hud.currentStation : t.hud.nextStation;
   const color = BAND_COLOR[occupancy.band];
   // En japonais, le nom en kanji passe devant et le rōmaji devient la mention
-  // secondaire — l'inverse des deux autres langues.
+  // secondaire - l'inverse des deux autres langues.
   const primary = lang === 'ja' ? st.kanji : st.romaji;
   const secondary = lang === 'ja' ? st.romaji : st.kanji;
 
@@ -196,7 +196,7 @@ export function Hud() {
           <span className="hud-station-label">
             {label}
             {/* Le sens reste en japonais : c'est de la signalétique, pas de
-                l'interface — comme la bande 内回り／外回り du menu. */}
+                l'interface - comme la bande 内回り／外回り du menu. */}
             <span className="hud-direction" lang="ja">
               {LOOP_LABEL_JP[loopDirection]}
             </span>

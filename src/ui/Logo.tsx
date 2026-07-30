@@ -33,7 +33,7 @@ export function Logo() {
     // faut parce que chaque mot du dessin existe ici en DEUX <text> superposés,
     // l'ombre puis les lettres cernées : nommer le logo ici donnerait
     // « YAMANOTE YAMANOTE 3D 山手線 山手線 » à qui extrait le texte du
-    // document — lecteur d'écran comme robot d'indexation.
+    // document - lecteur d'écran comme robot d'indexation.
     <svg className="logo" viewBox="0 40 560 175" aria-hidden="true" focusable="false">
       <defs>
         <linearGradient id="logo-green" x1="0" y1="0" x2="0" y2="1">
@@ -119,7 +119,7 @@ export function Logo() {
       </g>
 
       {/* 山手線, serré sous le mot-symbole et centré sur lui (l'axe du mot,
-          x=224, pas celui du SVG — la plaque 3D déborde à droite). */}
+          x=224, pas celui du SVG - la plaque 3D déborde à droite). */}
       <text
         x="227"
         y="201"

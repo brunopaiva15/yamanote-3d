@@ -1,6 +1,6 @@
 // Comportement des commandes du pipeline : --dry-run, détection des outils
 // manquants, garde-fous de configuration. Ces tests lancent réellement les
-// scripts en sous-processus — c'est le seul moyen de vérifier les codes de
+// scripts en sous-processus - c'est le seul moyen de vérifier les codes de
 // sortie et les messages que verra l'utilisateur.
 
 import test from 'node:test';

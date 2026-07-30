@@ -9,7 +9,7 @@ import type { Archetype } from '../../systems/appearance';
 // Clips logiques consommés par le rendu ; les noms réels des packs sont
 // résolus par correspondance floue (voir library.ts), avec override possible.
 // `collapse` : chute complète au sol (clip « Death » des packs, joué à
-// l'endroit puis à l'envers pour le relevé — voir characters/fall.ts).
+// l'endroit puis à l'envers pour le relevé - voir characters/fall.ts).
 // `stagger` : déséquilibre rattrapé sur ses jambes (clip « HitRecieve »).
 export type LogicalClip = 'sitIdle' | 'standIdle' | 'walk' | 'collapse' | 'stagger';
 

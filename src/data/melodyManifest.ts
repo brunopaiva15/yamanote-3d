@@ -1,9 +1,9 @@
-// Durée (s) de chaque clip de 発車メロディ. GÉNÉRÉ — ne pas éditer à la main :
+// Durée (s) de chaque clip de 発車メロディ. GÉNÉRÉ - ne pas éditer à la main :
 // `node scripts/melody-manifest-gen.mjs` après toute regravure des mélodies.
 //
 // Pourquoi un manifeste : la fenêtre sonore d'un arrêt est taillée pour DEUX
 // passages entiers de la mélodie du quai, et cette fenêtre fixe la durée du
-// dwell — donc l'instant de l'annonce de fermeture et celui des portes. Il faut
+// dwell - donc l'instant de l'annonce de fermeture et celui des portes. Il faut
 // donc la longueur du clip avant même de l'avoir chargé (voir data/melodies,
 // `melodyRoundsDuration`, et systems/stationCycle).
 

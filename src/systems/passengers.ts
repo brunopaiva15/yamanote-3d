@@ -88,7 +88,7 @@ export interface Pax {
   action: PaxAction;
   actionT: number;
   actionDur: number;
-  /** Caractère stable (bavard, nerveux, dormeur…) — voir systems/paxBehavior. */
+  /** Caractère stable (bavard, nerveux, dormeur…) - voir systems/paxBehavior. */
   temper: Temper;
   /** Occupation de fond en cours : ce à quoi le voyageur revient toujours. */
   anchor: PaxAction;
@@ -127,7 +127,7 @@ export const paxList: Pax[] = [];
 
 // Le bas de l'anneau des tsurikawa est à ~1,71 m (poignées remontées pour le
 // confort de marche du joueur) : en dessous de cette échelle, un PNJ ne
-// l'atteint qu'en s'étirant bras tendu — pas naturel — et garde les bras
+// l'atteint qu'en s'étirant bras tendu - pas naturel - et garde les bras
 // baissés.
 const STRAP_MIN_SCALE = 1.06;
 
@@ -136,7 +136,7 @@ function rollStrap(scale: number): boolean {
 }
 
 // Grille des anneaux de tsurikawa (three/Handles.tsx) : un porteur ne se
-// poste PAS à l'aplomb d'un anneau — il se décale pour en avoir un ~0,28 m
+// poste PAS à l'aplomb d'un anneau - il se décale pour en avoir un ~0,28 m
 // DEVANT lui et l'attraper bras en diagonale (characters/pose.ts vise ce
 // même anneau). Décalage ≤ un demi-pas (0,23 m), invisible dans la foule.
 const STRAP_Z0 = -9.35;
@@ -204,7 +204,7 @@ export function initPassengers(): void {
  * Ce slot du wagon devient quelqu'un d'autre. Le rendu s'en aperçoit seul (il
  * compare l'identité du slot à celle de son modèle) et rebâtit le personnage :
  * on n'appelle donc ceci que sur un PNJ hors de vue, ou à l'instant précis où
- * il paraît au seuil — jamais sur quelqu'un que le joueur regarde.
+ * il paraît au seuil - jamais sur quelqu'un que le joueur regarde.
  */
 function applyPaxIdentity(p: Pax, identity: number): void {
   p.identity = identity;
@@ -217,7 +217,7 @@ function applyPaxIdentity(p: Pax, identity: number): void {
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   // Outil dev : __pax donne l'état de chaque voyageur de la rame (posture,
-  // occupation en cours, partenaire d'échange) — pendant de __crowd.
+  // occupation en cours, partenaire d'échange) - pendant de __crowd.
   (window as unknown as Record<string, unknown>).__pax = paxList;
 }
 
@@ -266,7 +266,7 @@ export function seedPassengers(): void {
  *
  * Une rame de la Yamanote n'est pas une salle des fêtes : ceux qui parlent
  * sont venus ensemble. On ne jumelle donc qu'une petite part des voyageurs,
- * et seulement les bavards — le reste ouvre son téléphone.
+ * et seulement les bavards - le reste ouvre son téléphone.
  */
 function seedChats(): void {
   const candidates = paxList.filter((p) => p.state === 'seated' || p.state === 'standing');
@@ -423,7 +423,7 @@ function countInside(): { seated: number; standing: number; seatedPax: Pax[]; st
  *
  * Le relais ne porte pas que la position : les deux pools ÉCHANGENT leurs
  * identités (systems/platformCrowd.swapCrowdIdentity). Le slot qui prend la
- * suite adopte l'apparence, le caractère et le modèle de celui qui s'efface —
+ * suite adopte l'apparence, le caractère et le modèle de celui qui s'efface -
  * sans quoi le voyageur devenait quelqu'un d'autre en franchissant la porte,
  * sous les yeux de qui attend sur le quai.
  */
@@ -482,7 +482,7 @@ function releasePending(): void {
  * `crowdId` est le slot de quai qui vient d'atteindre le seuil : le montant
  * prend son identité (et lui laisse la sienne) juste avant de devenir visible,
  * pour que ce soit bien la même personne qui entre. -1 quand personne ne l'a
- * précédé — quai vide, ou voyageur effacé en route.
+ * précédé - quai vide, ou voyageur effacé en route.
  */
 function startBoardWalk(b: PendingBoard, crowdId = -1): void {
   const p = paxList[b.paxId];
@@ -621,7 +621,7 @@ export function exchangePassengers(side: 1 | -1): void {
 
   // Fisher-Yates, et pas `sort(() => Math.random() - 0.5)` : un comparateur
   // aléatoire n'est pas un ordre, et le tri qui s'appuie dessus ne rend pas une
-  // permutation uniforme — les premiers éléments restent statistiquement
+  // permutation uniforme - les premiers éléments restent statistiquement
   // devant. C'est ce tirage qui décide QUI descend à chaque arrêt : biaisé, ce
   // sont toujours à peu près les mêmes places qui se vident.
   const shuffle = <T,>(arr: readonly T[]): T[] => {
@@ -663,7 +663,7 @@ export function exchangePassengers(side: 1 | -1): void {
 // encore entré en scène, on le plante dans l'embrasure, et on l'y laisse : il
 // ne marche plus, il ne s'assoit pas, il attend qu'on le dégage. C'est la
 // seule position du wagon qui ne soit ni une place assise, ni un slot debout,
-// ni un point de passage — d'où son traitement à part dans updatePassengers.
+// ni un point de passage - d'où son traitement à part dans updatePassengers.
 
 /** Voyageur immobilisé dans l'embrasure, -1 si personne. */
 let doorwayHolder = -1;
@@ -673,7 +673,7 @@ const DOORWAY_U = 1.24;
 
 /**
  * Plante un voyageur dans l'embrasure de la porte `doorZ`, côté quai.
- * @returns false si le pool n'a personne de libre — l'obstruction se rabattra
+ * @returns false si le pool n'a personne de libre - l'obstruction se rabattra
  *          alors sur un objet, qui n'a besoin de personne.
  */
 export function holdPaxInDoorway(doorZ: number, side: 1 | -1): boolean {
@@ -733,7 +733,7 @@ export function paxHeldInDoorway(): boolean {
 
 /**
  * Le voyageur coincé, image par image : il ne marche pas, mais il n'est pas
- * une statue non plus — il se ramasse sur lui-même, regarde la porte, puis le
+ * une statue non plus - il se ramasse sur lui-même, regarde la porte, puis le
  * fond du wagon. Sans ça, la scène la plus tendue de l'arrêt serait jouée par
  * un mannequin.
  */
@@ -792,7 +792,7 @@ function applyAction(p: Pax, id: PaxAction, dur: number, partner: Pax | null = n
   if (isFallingAction(id)) {
     // Signe de la chute (côté), figé pour toute la durée.
     p.lookYawTarget = Math.random() < 0.5 ? 1 : -1;
-    // Lâche la poignée — c'est souvent pour ça qu'on tombe.
+    // Lâche la poignée - c'est souvent pour ça qu'on tombe.
     if (id === 'fall') p.holdStrap = false;
   }
   if (partner) {
@@ -826,7 +826,7 @@ function reactToFall(fallen: Pax, hard: boolean): void {
     if (fallen.pos.distanceTo(other.pos) > radius) continue;
     // Regard vers le malheureux. `stare` suit le JOUEUR et `laugh` exige un
     // partenaire : ni l'un ni l'autre ne sait viser un tiers. On oriente donc
-    // un `look` vers le tombé — une chute franche retient le regard plus
+    // un `look` vers le tombé - une chute franche retient le regard plus
     // longtemps, ce qui suffit à lire la gêne du wagon.
     endPair(other);
     other.action = 'look';
@@ -846,7 +846,7 @@ function reactToFall(fallen: Pax, hard: boolean): void {
 /**
  * Freinage d'urgence : tout le wagon sursaute d'un coup.
  *
- * C'est le seul événement qui s'adresse à TOUT LE MONDE en même temps — un
+ * C'est le seul événement qui s'adresse à TOUT LE MONDE en même temps - un
  * coup de frein ne choisit pas ses témoins. Les debout qui ne tiennent rien
  * partent en avant, les autres se raccrochent et cherchent des yeux ce qui
  * arrive, les assis lèvent le nez de leur écran. Quelques-uns diront ensuite
@@ -854,7 +854,7 @@ function reactToFall(fallen: Pax, hard: boolean): void {
  *
  * Les occupations de fond ne sont PAS effacées : passée la frayeur, chacun
  * revient à son téléphone ou à sa vitre, comme après n'importe quel geste
- * bref — c'est exactement ce que fait une rame qui vient de s'arrêter.
+ * bref - c'est exactement ce que fait une rame qui vient de s'arrêter.
  */
 export function startlePassengers(): void {
   // Le sursaut passe par un chemin à part plutôt que par applyAction : celle-ci
@@ -871,7 +871,7 @@ export function startlePassengers(): void {
     p.actionT = 0;
 
     // Une poignée lâchée, un pas en avant : le geste le plus lisible, mais
-    // rationné — un wagon qui s'effondre en entier ferait comique.
+    // rationné - un wagon qui s'effondre en entier ferait comique.
     const trips = p.state === 'standing' && !p.holdStrap && stumbles < 3 && Math.random() < 0.5;
     if (trips) {
       stumbles++;
@@ -916,7 +916,7 @@ function pickCtx(p: Pax, where: ActionWhere): PickCtx {
 
 /**
  * Nouvelle occupation de fond : ce que ce voyageur va faire des prochaines
- * minutes. Les échanges à deux passent par là aussi — une conversation est
+ * minutes. Les échanges à deux passent par là aussi - une conversation est
  * une occupation, pas un geste.
  */
 function startAnchor(p: Pax): void {
@@ -1036,7 +1036,7 @@ function resumeAnchor(p: Pax): void {
 // Renvoie true si le PNJ est parti marcher.
 //
 // Guetter une place libre est courant ; se lever d'une banquette pour aller
-// finir le trajet debout ne l'est pas — d'où le rapport d'un à quinze.
+// finir le trajet debout ne l'est pas - d'où le rapport d'un à quinze.
 function maybeRelocate(p: Pax): boolean {
   if (p.state === 'standing' && Math.random() < 0.18) {
     const seat = findFreeSeat();
@@ -1219,7 +1219,7 @@ export function updatePassengers(dt: number): void {
             alignStrapStand(p);
           } else {
             // Descente terminée : le voyageur passe la main à la foule du
-            // quai, qui l'emmène jusqu'à la sortie — avec son visage, son
+            // quai, qui l'emmène jusqu'à la sortie - avec son visage, son
             // caractère et son modèle. Sans ce relais il s'évanouissait sur
             // place, en plein milieu du quai.
             if (p.state === 'alighting') {
@@ -1265,7 +1265,7 @@ export function updatePassengers(dt: number): void {
     // pas LATÉRAL (l'allée en x = ±0,3 → la place en x = ±0,45) : sans ce
     // rattrapage il restait planté face à la banquette, et surtout son cap
     // rendu ne correspondait plus à celui qui a choisi son anneau
-    // (alignStrapStand) — d'où le bras tendu vers la poignée de DERRIÈRE.
+    // (alignStrapStand) - d'où le bras tendu vers la poignée de DERRIÈRE.
     if (p.state === 'standing' && !isFallingAction(p.action)) {
       let d = p.targetYaw - p.yaw;
       while (d > Math.PI) d -= Math.PI * 2;
@@ -1332,7 +1332,7 @@ export function updatePassengers(dt: number): void {
       seatSide,
     });
     const speedMul = isDramaAction(p.action) || isFallingAction(p.action) ? 1.25 : 1;
-    // Assis : la discussion ne doit bouger que la tête — lean/roll du groupe
+    // Assis : la discussion ne doit bouger que la tête - lean/roll du groupe
     // faisait glisser les pieds / décaler latéralement sur le coussin.
     if (p.state === 'seated') {
       m.roll = 0;

@@ -12,7 +12,7 @@
         "direction": "inner (内回り)",
         "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
         "source": "Approximation géométrique (arc de cercle entre les deux gares)",
-        "license": "CC0 — produit par ce dépôt, ne contient aucune donnée tierce",
+        "license": "CC0 - produit par ce dépôt, ne contient aucune donnée tierce",
         "attribution": null,
         "approximate": true,
         "note": "Tracé APPROCHÉ, pas un relevé : arc calé sur les coordonnées publiées des quais Sugamo et Ōtsuka, flèche de 60 m vers le nord. Régénérer avec --overpass pour obtenir la géométrie OSM réelle (ODbL).",

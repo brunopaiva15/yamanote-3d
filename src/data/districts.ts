@@ -3,7 +3,7 @@
 // 3D). Indexé 0..29, exactement dans l'ordre de STATIONS / DOOR_SIDE / store.index.
 //
 // Tout reste procédural et stylisé (esprit Shashingo) : aucune donnée
-// géographique réelle, aucune marque déposée — juste le CARACTÈRE reconnaissable
+// géographique réelle, aucune marque déposée - juste le CARACTÈRE reconnaissable
 // de chaque quartier (Akihabara électrique, Ueno verdoyant, Shibuya écrans…).
 //
 // `erasableSyntaxOnly` interdit les enum : on utilise des unions de littéraux.
@@ -69,7 +69,7 @@ export interface District {
   density: number; // 0..1 → inverse de gapChance (plus dense = moins de trouées).
   maxHeight: number; // 0..1 → multiplie la hauteur des blocs.
   facades?: string[]; // palette façade jour (sinon défaut du module procédural).
-  nightFacades?: string[]; // palette façade nuit — MÊME longueur/ordre (invariant du fondu).
+  nightFacades?: string[]; // palette façade nuit - MÊME longueur/ordre (invariant du fondu).
   neon?: string[]; // palette enseignes/néon (sinon défaut).
   accent: string; // teinte dominante des enseignes / ambiance.
   words: string[]; // enseignes plausibles du quartier (jamais de marque réelle).
@@ -111,7 +111,7 @@ export const GENERIC: District = {
 
 // --- Les 30 quartiers (JY01 → JY30), dans l'ordre de STATIONS ---
 export const DISTRICTS: District[] = [
-  // 0 · JY01 Tokyo — Marunouchi : tours de verre + gare de brique rouge.
+  // 0 · JY01 Tokyo - Marunouchi : tours de verre + gare de brique rouge.
   {
     name: 'Tokyo',
     density: 0.9,
@@ -124,7 +124,7 @@ export const DISTRICTS: District[] = [
     feats: ['glassTowers', 'officeTowers', 'redBrick'],
     landmarks: [{ kind: 'glassTowerCluster', side: -1, scale: 1.15 }],
   },
-  // 1 · JY02 Kanda — izakaya sous la voie, arches de brique.
+  // 1 · JY02 Kanda - izakaya sous la voie, arches de brique.
   {
     name: 'Kanda',
     density: 0.72,
@@ -137,7 +137,7 @@ export const DISTRICTS: District[] = [
     feats: ['elevatedIzakaya', 'salarymanIzakaya', 'brickArch'],
     landmarks: [],
   },
-  // 2 · JY03 Akihabara — Electric Town : néons, panneaux « anime ».
+  // 2 · JY03 Akihabara - Electric Town : néons, panneaux « anime ».
   {
     name: 'Akihabara',
     density: 0.95,
@@ -152,7 +152,7 @@ export const DISTRICTS: District[] = [
       { kind: 'stackedSignFacade', side: 1 },
     ],
   },
-  // 3 · JY04 Okachimachi — Ameyoko : marché bas, échoppes.
+  // 3 · JY04 Okachimachi - Ameyoko : marché bas, échoppes.
   {
     name: 'Okachimachi',
     density: 0.85,
@@ -163,7 +163,7 @@ export const DISTRICTS: District[] = [
     feats: ['lowriseMarket', 'shotengai'],
     landmarks: [],
   },
-  // 4 · JY05 Ueno — parc et musées : verdure généreuse.
+  // 4 · JY05 Ueno - parc et musées : verdure généreuse.
   {
     name: 'Ueno',
     density: 0.4,
@@ -178,7 +178,7 @@ export const DISTRICTS: District[] = [
       { kind: 'museumFacade', side: 1 },
     ],
   },
-  // 5 · JY06 Uguisudani — hôtels/ryokan, temples, arrière discret.
+  // 5 · JY06 Uguisudani - hôtels/ryokan, temples, arrière discret.
   {
     name: 'Uguisudani',
     density: 0.6,
@@ -194,7 +194,7 @@ export const DISTRICTS: District[] = [
       { kind: 'forestMass', side: -1, scale: 0.7 },
     ],
   },
-  // 6 · JY07 Nippori — vieux quartier du tissu, temples.
+  // 6 · JY07 Nippori - vieux quartier du tissu, temples.
   {
     name: 'Nippori',
     density: 0.55,
@@ -209,7 +209,7 @@ export const DISTRICTS: District[] = [
       { kind: 'latticeTower', side: -1, scale: 1.3 },
     ],
   },
-  // 7 · JY08 Nishi-Nippori — résidentiel, temples.
+  // 7 · JY08 Nishi-Nippori - résidentiel, temples.
   {
     name: 'Nishi-Nippori',
     density: 0.5,
@@ -221,7 +221,7 @@ export const DISTRICTS: District[] = [
     feats: ['templeLowtown', 'upscaleResidential'],
     landmarks: [{ kind: 'templeRoof', side: 1 }],
   },
-  // 8 · JY09 Tabata — résidentiel calme.
+  // 8 · JY09 Tabata - résidentiel calme.
   {
     name: 'Tabata',
     density: 0.45,
@@ -233,7 +233,7 @@ export const DISTRICTS: District[] = [
     feats: ['upscaleResidential', 'parkGreen'],
     landmarks: [{ kind: 'forestMass', side: -1, scale: 0.7 }],
   },
-  // 9 · JY10 Komagome — jardins, torii, cerisiers.
+  // 9 · JY10 Komagome - jardins, torii, cerisiers.
   {
     name: 'Komagome',
     density: 0.4,
@@ -245,7 +245,7 @@ export const DISTRICTS: District[] = [
     feats: ['parkGreen', 'torii', 'upscaleResidential'],
     landmarks: [{ kind: 'forestMass', side: -1, scale: 0.9 }],
   },
-  // 10 · JY11 Sugamo — shotengai des anciens, temple Jizō.
+  // 10 · JY11 Sugamo - shotengai des anciens, temple Jizō.
   {
     name: 'Sugamo',
     density: 0.65,
@@ -256,7 +256,7 @@ export const DISTRICTS: District[] = [
     feats: ['shotengai', 'templeLowtown'],
     landmarks: [{ kind: 'templeRoof', side: -1 }],
   },
-  // 11 · JY12 Ōtsuka — tramway Toden, izakaya.
+  // 11 · JY12 Ōtsuka - tramway Toden, izakaya.
   {
     name: 'Otsuka',
     density: 0.6,
@@ -268,7 +268,7 @@ export const DISTRICTS: District[] = [
     feats: ['tram', 'shotengai', 'salarymanIzakaya'],
     landmarks: [{ kind: 'tramCar', side: 1, near: true }],
   },
-  // 12 · JY13 Ikebukuro — gratte-ciel, grands magasins.
+  // 12 · JY13 Ikebukuro - gratte-ciel, grands magasins.
   {
     name: 'Ikebukuro',
     density: 0.9,
@@ -284,7 +284,7 @@ export const DISTRICTS: District[] = [
       { kind: 'giantScreenWall', side: 1 },
     ],
   },
-  // 13 · JY14 Mejiro — résidentiel haut de gamme, verdure.
+  // 13 · JY14 Mejiro - résidentiel haut de gamme, verdure.
   {
     name: 'Mejiro',
     density: 0.4,
@@ -296,7 +296,7 @@ export const DISTRICTS: District[] = [
     feats: ['upscaleResidential', 'parkGreen'],
     landmarks: [{ kind: 'forestMass', side: 1, scale: 1.0 }],
   },
-  // 14 · JY15 Takadanobaba — quartier étudiant, arcades.
+  // 14 · JY15 Takadanobaba - quartier étudiant, arcades.
   {
     name: 'Takadanobaba',
     density: 0.9,
@@ -307,7 +307,7 @@ export const DISTRICTS: District[] = [
     feats: ['studentArcade', 'shotengai', 'electricNeon'],
     landmarks: [{ kind: 'stackedSignFacade', side: 1 }],
   },
-  // 15 · JY16 Shin-Ōkubo — Koreatown, enseignes denses.
+  // 15 · JY16 Shin-Ōkubo - Koreatown, enseignes denses.
   {
     name: 'Shin-Okubo',
     density: 0.98,
@@ -318,7 +318,7 @@ export const DISTRICTS: District[] = [
     feats: ['koreatownSigns', 'electricNeon'],
     landmarks: [{ kind: 'stackedSignFacade', side: 1, scale: 1.1 }],
   },
-  // 16 · JY17 Shinjuku — gratte-ciels + néons massifs.
+  // 16 · JY17 Shinjuku - gratte-ciels + néons massifs.
   {
     name: 'Shinjuku',
     density: 1.0,
@@ -334,7 +334,7 @@ export const DISTRICTS: District[] = [
       { kind: 'giantScreenWall', side: 1 },
     ],
   },
-  // 17 · JY18 Yoyogi — bureaux, lisière de parc, flèche fine.
+  // 17 · JY18 Yoyogi - bureaux, lisière de parc, flèche fine.
   {
     name: 'Yoyogi',
     density: 0.7,
@@ -349,7 +349,7 @@ export const DISTRICTS: District[] = [
       { kind: 'forestMass', side: -1, scale: 1.0 },
     ],
   },
-  // 18 · JY19 Harajuku — mode/Takeshita, forêt de Meiji.
+  // 18 · JY19 Harajuku - mode/Takeshita, forêt de Meiji.
   {
     name: 'Harajuku',
     density: 0.6,
@@ -360,7 +360,7 @@ export const DISTRICTS: District[] = [
     feats: ['fashionBoutique', 'torii', 'parkGreen'],
     landmarks: [{ kind: 'forestMass', side: -1, scale: 1.1 }],
   },
-  // 19 · JY20 Shibuya — écrans géants, mode, néon.
+  // 19 · JY20 Shibuya - écrans géants, mode, néon.
   {
     name: 'Shibuya',
     density: 0.92,
@@ -375,7 +375,7 @@ export const DISTRICTS: District[] = [
       { kind: 'cylinderFashion', side: 1 },
     ],
   },
-  // 20 · JY21 Ebisu — bureaux, brique, chic (Garden Place).
+  // 20 · JY21 Ebisu - bureaux, brique, chic (Garden Place).
   {
     name: 'Ebisu',
     density: 0.7,
@@ -387,7 +387,7 @@ export const DISTRICTS: District[] = [
     feats: ['officeTowers', 'redBrick', 'upscaleResidential'],
     landmarks: [{ kind: 'gardenPlaceArch', side: 1 }],
   },
-  // 21 · JY22 Meguro — résidentiel haut de gamme, coteaux.
+  // 21 · JY22 Meguro - résidentiel haut de gamme, coteaux.
   {
     name: 'Meguro',
     density: 0.55,
@@ -402,7 +402,7 @@ export const DISTRICTS: District[] = [
       { kind: 'templeRoof', side: -1 },
     ],
   },
-  // 22 · JY23 Gotanda — bureaux, izakaya sous la voie.
+  // 22 · JY23 Gotanda - bureaux, izakaya sous la voie.
   {
     name: 'Gotanda',
     density: 0.7,
@@ -415,7 +415,7 @@ export const DISTRICTS: District[] = [
     feats: ['officeTowers', 'elevatedIzakaya', 'salarymanIzakaya'],
     landmarks: [{ kind: 'officeBlock', side: 1 }],
   },
-  // 23 · JY24 Ōsaki — tours de verre modernes, passerelles.
+  // 23 · JY24 Ōsaki - tours de verre modernes, passerelles.
   {
     name: 'Osaki',
     density: 0.8,
@@ -428,7 +428,7 @@ export const DISTRICTS: District[] = [
     feats: ['glassTowers', 'modernWhite', 'officeTowers'],
     landmarks: [{ kind: 'glassTowerCluster', side: 1, scale: 1.1 }],
   },
-  // 24 · JY25 Shinagawa — tours de bureaux, shinkansen.
+  // 24 · JY25 Shinagawa - tours de bureaux, shinkansen.
   {
     name: 'Shinagawa',
     density: 0.85,
@@ -444,7 +444,7 @@ export const DISTRICTS: District[] = [
       { kind: 'shinkansenSet', side: 1, near: true },
     ],
   },
-  // 25 · JY26 Takanawa Gateway — architecture blanche moderne.
+  // 25 · JY26 Takanawa Gateway - architecture blanche moderne.
   {
     name: 'Takanawa Gateway',
     density: 0.6,
@@ -460,7 +460,7 @@ export const DISTRICTS: District[] = [
       { kind: 'glassTowerCluster', side: -1, scale: 0.95 },
     ],
   },
-  // 26 · JY27 Tamachi — bureaux, petit shotengai.
+  // 26 · JY27 Tamachi - bureaux, petit shotengai.
   {
     name: 'Tamachi',
     density: 0.65,
@@ -472,7 +472,7 @@ export const DISTRICTS: District[] = [
     feats: ['officeTowers', 'shotengai', 'upscaleResidential'],
     landmarks: [{ kind: 'officeBlock', side: 1 }],
   },
-  // 27 · JY28 Hamamatsuchō — bureaux, monorail.
+  // 27 · JY28 Hamamatsuchō - bureaux, monorail.
   {
     name: 'Hamamatsucho',
     density: 0.7,
@@ -484,7 +484,7 @@ export const DISTRICTS: District[] = [
     feats: ['officeTowers', 'monorail'],
     landmarks: [{ kind: 'monorailBeam', side: 1, near: true }],
   },
-  // 28 · JY29 Shimbashi — salaryman izakaya, Shiodome.
+  // 28 · JY29 Shimbashi - salaryman izakaya, Shiodome.
   {
     name: 'Shimbashi',
     density: 0.9,
@@ -500,7 +500,7 @@ export const DISTRICTS: District[] = [
       { kind: 'steamLoco', side: 1, near: true },
     ],
   },
-  // 29 · JY30 Yūrakuchō — arches de brique, abords de Ginza.
+  // 29 · JY30 Yūrakuchō - arches de brique, abords de Ginza.
   {
     name: 'Yurakucho',
     density: 0.75,

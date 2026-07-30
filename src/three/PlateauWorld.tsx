@@ -1,7 +1,7 @@
-// Monde géoréférencé PLATEAU — prototype, un tronçon à la fois.
+// Monde géoréférencé PLATEAU - prototype, un tronçon à la fois.
 //
 // Le tronçon couvert est celui de PLATEAU_SEGMENT (systems/plateau.ts), qui
-// doit correspondre à celui du monde publié — la validation du build le
+// doit correspondre à celui du monde publié - la validation du build le
 // vérifie. Par défaut : Shibuya → Ebisu, en viaduc.
 //
 // PRINCIPE
@@ -16,13 +16,13 @@
 //     worldMatrix.copy(trainMatrix).invert()
 //
 // Le décor tourne alors autour du wagon dans les courbes, au lieu de défiler en
-// ligne droite — ce qui est tout l'intérêt d'avoir des bâtiments géolocalisés.
+// ligne droite - ce qui est tout l'intérêt d'avoir des bâtiments géolocalisés.
 //
 // PROGRESSION
 // -----------
 // L'abscisse sur le tracé ne vient pas d'une interpolation linéaire en temps :
 // elle suit la DISTANCE réellement parcourue par la rame, obtenue avec le
-// profil de traction/freinage de systems/trainPhysics — le même qui pilote le
+// profil de traction/freinage de systems/trainPhysics - le même qui pilote le
 // train. Sans cela, la ville défilerait à vitesse constante pendant que le
 // train accélère encore. La distance est normalisée par la longueur totale du
 // trajet simulé, de sorte que progression 0 = début du tronçon et
@@ -105,7 +105,7 @@ function Chunk({ chunk }: { chunk: PlateauChunkDefinition }) {
 
   // La scène glTF est partagée par le cache de drei : on la clone une seule
   // fois par montage. Sans clone, remonter le même chunk après un aller-retour
-  // le déplacerait dans le graphe au lieu de le dupliquer — ici il n'y a
+  // le déplacerait dans le graphe au lieu de le dupliquer - ici il n'y a
   // qu'un porteur par chunk, mais le clone garde le cache intact et permet de
   // fixer les drapeaux de rendu sans toucher l'original.
   const object = useMemo(() => {
@@ -175,7 +175,7 @@ export function PlateauWorld() {
   const worldRef = useRef<THREE.Group>(null);
 
   // Sonde de développement : `__plateauProbe()` dans la console rapporte l'état
-  // du monde géoréférencé et — c'est là son intérêt — la distance du bâtiment
+  // du monde géoréférencé et - c'est là son intérêt - la distance du bâtiment
   // le plus proche à l'emprise du wagon. Un volume qui traverse la rame est le
   // défaut le plus visible d'un pipeline de ce genre, et il ne se voit pas dans
   // un manifeste. Jamais montée hors développement.
@@ -285,7 +285,7 @@ export function PlateauWorld() {
     // Recalage : à l'activation, mais aussi si la distance parcourue sort
     // franchement du tronçon. Cela arrive quand le cycle saute (onglet repris
     // après une longue veille, sonde de développement qui repositionne le
-    // train) — sans ce garde-fou, le monde resterait bloqué à une extrémité.
+    // train) - sans ce garde-fou, le monde resterait bloqué à une extrémité.
     if (!(travelled > -25 && travelled < total + 25)) {
       const elapsed = Math.min(
         phaseBase(phase, index, 'inner') + runtime.phaseT,
@@ -312,7 +312,7 @@ export function PlateauWorld() {
     plateauRuntime.coverage = 1;
 
     // Fenêtre de chunks : ne change qu'au franchissement d'une limite, donc
-    // quelques re-rendus React par tronçon — jamais par frame.
+    // quelques re-rendus React par tronçon - jamais par frame.
     const next = selectChunks(manifest.chunks, s, {
       ahead: PLATEAU_SETTINGS.chunksAhead,
       behind: PLATEAU_SETTINGS.chunksBehind,

@@ -57,7 +57,7 @@ export async function checkTools(args, reporter) {
       report.converterVersion = await converterVersion(converter);
       reporter.info(
         `Convertisseur : ${converter.kind}${report.converterVersion ? ` (${report.converterVersion})` : ''}` +
-          `${converter.path ? ` — ${converter.path}` : ''}`,
+          `${converter.path ? ` - ${converter.path}` : ''}`,
       );
     } else {
       report.converter = 'builtin';
@@ -70,7 +70,7 @@ export async function checkTools(args, reporter) {
 
   // Outils facultatifs, signalés pour information.
   for (const [name, why] of [
-    ['ogr2ogr', 'GDAL — utilisable via --converter custom'],
+    ['ogr2ogr', 'GDAL - utilisable via --converter custom'],
     ['blender', 'non utilisé par ce pipeline'],
   ]) {
     const found = whichTool(name);
@@ -108,14 +108,14 @@ async function dryRun(args, reporter) {
   }
   const line = readLineString(geojson);
   reporter.info(
-    `Tracé : ${geojson} — ${line.coordinates.length} points, source « ${line.properties.source} »`,
+    `Tracé : ${geojson} - ${line.coordinates.length} points, source « ${line.properties.source} »`,
   );
   reporter.endPhase();
 
   reporter.beginPhase('Sources de données');
   const source = resolveSource(args);
   if (source.kind === 'sample') {
-    reporter.info('Source : ÉCHANTILLON SYNTHÉTIQUE (data/plateau-sample) — aucun téléchargement.');
+    reporter.info('Source : ÉCHANTILLON SYNTHÉTIQUE (data/plateau-sample) - aucun téléchargement.');
     const dir = join(PLATEAU_CONFIG.paths.sample, 'udx', 'bldg');
     reporter.info(`  ${existsSync(dir) ? 'présent' : 'sera généré'} : ${dir}`);
   } else if (source.kind === 'zip') {
@@ -127,7 +127,7 @@ async function dryRun(args, reporter) {
     reporter.info(`Source : ${entry?.label ?? id}`);
     reporter.info(`  Catalogue : ${PLATEAU_PORTAL.catalog}`);
     reporter.info(`  Fiche du jeu de données : ${entry?.page ?? '(inconnue)'}`);
-    reporter.info(`  URL : ${url || '(non configurée — --url requis)'}`);
+    reporter.info(`  URL : ${url || '(non configurée - --url requis)'}`);
     // Aucune taille annoncée « de mémoire » : seule celle du serveur compte.
     reporter.info('  Taille : établie par une requête HEAD avant tout téléchargement');
     reporter.info(
@@ -296,7 +296,7 @@ function describeSource(args) {
       kind: 'sample',
       manifest: {
         name: 'Échantillon synthétique (PAS de données Project PLATEAU)',
-        dataset: 'data/plateau-sample — généré par scripts/plateau/make-sample.mjs',
+        dataset: 'data/plateau-sample - généré par scripts/plateau/make-sample.mjs',
         license: 'CC0 1.0 (production de ce dépôt)',
         synthetic: true,
       },

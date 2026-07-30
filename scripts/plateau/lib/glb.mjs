@@ -13,7 +13,7 @@
 // Un primitive par couple (bande de distance, type de surface) : deux
 // matériaux en tout et pour tout, et une granularité suffisante pour appliquer
 // une simplification différente par bande à l'étape d'optimisation.
-// La variété des façades passe par COLOR_0, pas par des matériaux distincts —
+// La variété des façades passe par COLOR_0, pas par des matériaux distincts -
 // mille matériaux, c'est mille changements d'état de rendu par image.
 
 import { Document, NodeIO } from '@gltf-transform/core';
@@ -83,7 +83,7 @@ export function buildChunkDocument({ id, groups, metadata }) {
       .setName(key)
       // glTF ne stocke PAS le nom d'un primitive (mesh.primitives[] n'a pas de
       // champ `name`) : il disparaît au premier aller-retour. `extras`, lui,
-      // est sérialisé — c'est donc là que vit la bande de distance, que
+      // est sérialisé - c'est donc là que vit la bande de distance, que
       // l'étape d'optimisation doit pouvoir relire.
       .setExtras({ band, surface })
       .setMaterial(materialFor(surface))

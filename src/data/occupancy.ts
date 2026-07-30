@@ -1,6 +1,6 @@
 // Modèle d'estimation du taux de remplissage Yamanote (tronçon × heure ×
 // jour × mois). Calibré sur les taux officiels MLIT / JR East 2024 et les
-// profils temporels décrits dans la doc produit — pas une mesure temps réel.
+// profils temporels décrits dans la doc produit - pas une mesure temps réel.
 
 import { isHoliday } from './holidays.ts';
 
@@ -29,7 +29,7 @@ export interface TokyoDate {
 // ---------------------------------------------------------------------------
 
 /**
- * Sens 内回り — index = gare de DÉPART. Pic Shin-Ōkubo→Shinjuku 139 %.
+ * Sens 内回り - index = gare de DÉPART. Pic Shin-Ōkubo→Shinjuku 139 %.
  *
  * Le pendant 外回り est plus bas, et les deux ne se déduisent pas l'un de
  * l'autre : à la même minute, c'est le sens qui va vers les bureaux qui se
@@ -69,7 +69,7 @@ export const INNER_BASE_0815: readonly number[] = [
 ];
 
 /**
- * Sens 外回り — index = gare de DÉPART dans ce sens (JY décroissant) :
+ * Sens 外回り - index = gare de DÉPART dans ce sens (JY décroissant) :
  * OUTER_BASE_0815[i] = taux du trajet i → (i-1+30)%30.
  * Pic officiel Ueno→Okachimachi = index 4.
  *
@@ -115,11 +115,11 @@ export const OUTER_BASE_0815: readonly number[] = [
 // Points = milieu des plages de la section 5, normalisés sur ~125 %.
 // ---------------------------------------------------------------------------
 
-/** [minutes depuis minuit, facteur] — boucle sur 24 h. */
+/** [minutes depuis minuit, facteur] - boucle sur 24 h. */
 export const HOUR_CURVE: readonly (readonly [number, number])[] = [
   [0, 0.5],
   [30, 0.4],
-  [150, 0.14], // 2:30 — hors service typique / très faible
+  [150, 0.14], // 2:30 - hors service typique / très faible
   [270, 0.14], // 4:30
   [330, 0.28], // 5:30
   [390, 0.44], // 6:30
@@ -147,7 +147,7 @@ export const HOUR_CURVE: readonly (readonly [number, number])[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Coefficients jour (réf. mardi/mercredi ouvrable) — section 8.
+// Coefficients jour (réf. mardi/mercredi ouvrable) - section 8.
 // Index weekday 0=dim … 6=sam ; 7 = jour férié.
 // ---------------------------------------------------------------------------
 
@@ -176,7 +176,7 @@ export const HOLIDAY_DAY_COEFFS: DayCoeffs = {
 };
 
 // ---------------------------------------------------------------------------
-// Coefficients mois — section 11. Index 0 = janvier.
+// Coefficients mois - section 11. Index 0 = janvier.
 // ---------------------------------------------------------------------------
 
 export interface MonthCoeffs {
@@ -201,7 +201,7 @@ export const MONTH_COEFFS: readonly MonthCoeffs[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Matrice mois × jour pour la pointe du matin — section 14.
+// Matrice mois × jour pour la pointe du matin - section 14.
 // [month 0–11][weekday 0–6], dimanche partagé avec férié.
 // ---------------------------------------------------------------------------
 
@@ -228,12 +228,12 @@ export function morningMatrixFactor(month: number, weekday: number, holiday: boo
 }
 
 // ---------------------------------------------------------------------------
-// Jours fériés japonais — CALCULÉS (voir data/holidays.ts).
+// Jours fériés japonais - CALCULÉS (voir data/holidays.ts).
 //
 // C'était une liste littérale de dates, 2025 à 2027. Elle périmait : le menu
 // propose la date réelle à Tokyo et l'horloge du monde avance les jours d'
 // elle-même, si bien qu'au 1er janvier 2028 les seize fériés de l'année auraient
-// disparu en silence — un 元日 rendu comme un mardi de pointe. Et elle était
+// disparu en silence - un 元日 rendu comme un mardi de pointe. Et elle était
 // déjà incomplète : elle omettait les fériés tombant un dimanche (23 novembre
 // 2025, 21 mars 2027) pour ne garder que leur report.
 // ---------------------------------------------------------------------------
@@ -300,7 +300,7 @@ export const BAND_COLOR: Record<OccupancyBand, string> = {
   crushed: '#8a1f2a',
 };
 
-/** Cibles PNJ (voiture unique) selon le % — représentation, pas 1:1 physique. */
+/** Cibles PNJ (voiture unique) selon le % - représentation, pas 1:1 physique. */
 export interface PaxTargets {
   seated: number;
   standing: number;

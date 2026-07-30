@@ -57,21 +57,21 @@ export const STATIONS: Station[] = [
 // une simplification. Un plan de voies à deux tracks est symétrique par rotation
 // d'un demi-tour autour de l'axe de la ligne : la rame qui roule à l'endroit et
 // celle qui roule à l'envers ont le quai du même bord. Le côté appartient donc à
-// la GARE, pas au sens de circulation — et c'est pour cela que cette table est
+// la GARE, pas au sens de circulation - et c'est pour cela que cette table est
 // indexée par gare seule, sans colonne de sens.
 //
 // CE QUI NE L'EST PAS : le côté ne se DÉDUIT PAS du plan de voies déclaré dans
 // `data/stationLayouts` (`config`). Ce commentaire portait une règle
-// — « sur un îlot central les deux sens ouvrent à droite, sur deux quais
-// latéraux les deux ouvrent à gauche » — qui se lisait comme une dérivation.
+// - « sur un îlot central les deux sens ouvrent à droite, sur deux quais
+// latéraux les deux ouvrent à gauche » - qui se lisait comme une dérivation.
 // Elle n'en est pas une : recoupée avec `config`, aucune de ses lectures
 // possibles n'explique plus de dix-sept gares sur trente, et les treize gares
 // dites `island` se partagent le côté sept-sept. La table ci-dessous est un
-// RELEVÉ, gare par gare, et c'est ainsi qu'il faut la corriger — en regardant
+// RELEVÉ, gare par gare, et c'est ainsi qu'il faut la corriger - en regardant
 // la gare, pas en calculant.
 //
-// (`config` reste juste dans son registre : il dit ce qu'on a en face du quai —
-// une voie Keihin-Tōhoku, la voie Yamanote opposée, un mur — et le rendu s'en
+// (`config` reste juste dans son registre : il dit ce qu'on a en face du quai -
+// une voie Keihin-Tōhoku, la voie Yamanote opposée, un mur - et le rendu s'en
 // sert pour le fond de travée. Les deux tables décrivent deux choses
 // différentes ; le tort était de les présenter comme liées.)
 export const DOOR_SIDE: (1 | -1)[] =
@@ -157,7 +157,7 @@ export const TRANSFERS: Record<string, { jp: string; en: string }> = {
  * (「原宿・代々木・新宿・池袋・上野方面」).
  *
  * Un vrai panneau ne liste pas les gares suivantes une à une : il donne la
- * prochaine, puis les repères — celles où l'on change de ligne. TRANSFERS est
+ * prochaine, puis les repères - celles où l'on change de ligne. TRANSFERS est
  * exactement cette liste, et sert déjà aux annonces de correspondance.
  */
 /**
@@ -168,12 +168,12 @@ export const TRANSFERS: Record<string, { jp: string; en: string }> = {
  * bien que Hamamatsuchō soit l'arrêt suivant : on ne prend pas la Yamanote pour
  * la gare d'après, on la prend pour un de ces six points.
  *
- * SOURCE UNIQUE. Le même ensemble était écrit trois fois — ici en codes JY, en
+ * SOURCE UNIQUE. Le même ensemble était écrit trois fois - ici en codes JY, en
  * indices dans `data/announcements` (`MAJOR_HUBS`) et encore dans
  * `data/segments` (`ROOF_HUBS`, dont le commentaire prétendait à tort en être un
  * superset). Les deux autres le dérivent maintenant d'ici : ces six gares sont
  * les mêmes pour la signalétique, pour les annonces et pour les verrières,
- * parce que c'est le même fait — ce sont les grandes gares de la boucle.
+ * parce que c'est le même fait - ce sont les grandes gares de la boucle.
  */
 export const LOOP_HUB_JY: readonly string[] = ['JY01', 'JY05', 'JY13', 'JY17', 'JY20', 'JY25'];
 

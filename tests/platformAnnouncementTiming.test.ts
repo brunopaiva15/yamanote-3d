@@ -2,7 +2,7 @@
 //
 // La sono du quai n'a qu'une file (systems/speech, canal 'platform') : deux
 // annonces ne peuvent pas sonner en même temps, mais la seconde peut très bien
-// sortir trop tard — par-dessus la mélodie, après la fermeture des portes
+// sortir trop tard - par-dessus la mélodie, après la fermeture des portes
 // qu'elle demandait de dégager, ou sur le carillon du train qui arrive. C'est le
 // vrai risque une fois les messages devenus facultatifs : ce qui n'est pas
 // obligatoire doit être ABANDONNÉ plutôt que repoussé.
@@ -10,7 +10,7 @@
 // Ce fichier croise donc trois choses qui peuvent diverger en silence : la
 // chronologie (PLATFORM_SCHEDULE), la longueur RÉELLE des clips gravés
 // (pa-manifest) et les bornes du dwell (systems/stationCycle, dont les valeurs
-// sont rappelées ici — le module tire tout le moteur audio et n'est pas
+// sont rappelées ici - le module tire tout le moteur audio et n'est pas
 // importable dans Node, comme pour tests/melodyTiming).
 
 import test from 'node:test';
@@ -64,7 +64,7 @@ const platformOf = (index, direction) =>
 
 // Les trois séquences que la gare construit VRAIMENT (systems/stationPa) :
 // consignes locales comprises. Les mesurer sans elles reviendrait à chronométrer
-// autre chose que ce qui sort des haut-parleurs — à Shibuya, la consigne d'écart
+// autre chose que ce qui sort des haut-parleurs - à Shibuya, la consigne d'écart
 // double presque la séquence d'arrivée.
 
 const approachItems = (index, direction) => [
@@ -120,7 +120,7 @@ test('l’annonce d’approche n’est pas facultative', () => {
 test('l’annonce d’approche a dit l’essentiel avant que la rame ne paraisse', () => {
   // Elle part à headway − 24 s. Le JAPONAIS doit être fini quand la rame se
   // présente : c'est lui qui dit la voie, le sens et la consigne de recul.
-  // L'anglais, lui, peut courir sur l'entrée en gare — c'est ce qui se passe
+  // L'anglais, lui, peut courir sur l'entrée en gare - c'est ce qui se passe
   // sur un vrai quai, où la version anglaise finit souvent devant la rame déjà
   // à l'arrêt. Ce qui ne doit pas arriver, c'est qu'elle déborde jusqu'à
   // l'annonce du nom de la gare, une trentaine de secondes plus loin.
@@ -158,7 +158,7 @@ test('l’excuse de retard est terminée avant le rendez-vous décalé de l’an
 test('l’anticipée facultative ne retarde pas l’annonce d’approche', () => {
   // Créneau réel du creux le plus court : de son rendez-vous à l'annonce
   // d'approche. Ce qui n'y tient pas est abandonné (paPreAnnouncement vérifie
-  // fitsBeforeCutoff) — jamais joué en retard. Les consignes locales de phase
+  // fitsBeforeCutoff) - jamais joué en retard. Les consignes locales de phase
   // 'pre-approach' comptent : c'est la séquence entière qui doit tenir.
   const cutoff = HEADWAY_GAP - PLATFORM_SCHEDULE.approachBefore - PLATFORM_SCHEDULE.preAnnounceAt;
   let fitting = 0;
@@ -264,7 +264,7 @@ test('les deux points d’écoute partagent l’instant du premier message d’a
   // première consigne d'agent à la cinquième seconde et l'autre à la sixième, le
   // même haut-parleur dit deux choses différentes selon l'endroit où l'on se
   // tient. L'instant n'a donc qu'une seule définition, et ces deux modules la
-  // lisent — ils ne la redéclarent pas.
+  // lisent - ils ne la redéclarent pas.
   const cycle = readSystem('stationCycle.ts');
   const wait = readSystem('platformWait.ts');
 
@@ -293,7 +293,7 @@ test('les deux points d’écoute partagent l’instant du premier message d’a
     );
   }
 
-  // Et la valeur elle-même est bien celle du créneau partagé — pas l'ancien 6.
+  // Et la valeur elle-même est bien celle du créneau partagé - pas l'ancien 6.
   assert.equal(PLATFORM_SCHEDULE.agentExchangeAt, 5);
 });
 
@@ -343,7 +343,7 @@ test('aucune annonce de quai ne survit au départ de la rame', () => {
       assert.ok(d <= window, `voie ${platform} (${direction}) : ${d.toFixed(1)} s pour ${window} s`);
     }
   }
-  // Et le second message d'agent, lui, est fini avant même la mélodie — donc
+  // Et le second message d'agent, lui, est fini avant même la mélodie - donc
   // très loin du départ (voir le test précédent).
   assert.ok(PLATFORM_SCHEDULE.agentPreMelodyLead > 0);
 });

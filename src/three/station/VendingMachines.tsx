@@ -3,7 +3,7 @@
 // Ils étaient un bloc rouge de 0,80 × 1,80 × 1,40 avec une affiche collée
 // devant : la silhouette d'un caisson publicitaire couché, pas celle d'un
 // 自販機. Un vrai distributeur JR, c'est une caisse peinte de 1,14 m de large
-// pour 1,83 m de haut et 0,72 m de fond, CREUSÉE de trois niches — et ce sont
+// pour 1,83 m de haut et 0,72 m de fond, CREUSÉE de trois niches - et ce sont
 // ces creux qui le font reconnaître de loin :
 //
 //   · la vitrine, encadrement saillant de 7 cm, verre en avant, échantillons au
@@ -14,7 +14,7 @@
 //
 // Par-dessus, le bandeau d'enseigne allumé ; en dessous, un socle en retrait
 // qui décolle la caisse de la dalle. La vitrine et l'enseigne sont les seules
-// pièces propres à la marque : tout le reste s'instancie, la caisse comprise —
+// pièces propres à la marque : tout le reste s'instancie, la caisse comprise -
 // sa peinture est posée par exemplaire (useInstanceColors), pas par matériau.
 //
 // Quatre machines par quai au plus (data/stationLayouts), soit une dizaine
@@ -71,7 +71,7 @@ const WINDOW: Band = { y0: 1.06, y1: 1.64, w: 1.0, reveal: 0.07 };
 const HEADER: Band = { y0: 1.68, y1: 1.83, w: 1.06, reveal: 0 };
 
 /** Décollement des façades du nu de la caisse : trois millimètres, comme la
- *  trousse de quai — à égalité elles partagent son plan et clignotent. */
+ *  trousse de quai - à égalité elles partagent son plan et clignotent. */
 const SKIN = 0.004;
 
 /** Le plan regarde +z (un flanc de machine) ; l'autre flanc est à l'opposé. */
@@ -84,7 +84,7 @@ const yOf = (b: Band) => PLATFORM_TOP + (b.y0 + b.y1) / 2;
 
 /**
  * Encadrement d'une niche : quatre tôles autour de l'ouverture, en saillie
- * devant la façade. C'est ce cadre qui donne la profondeur — l'échantillon est
+ * devant la façade. C'est ce cadre qui donne la profondeur - l'échantillon est
  * au fond, le verre au nu du cadre, et l'écart se voit de trois quarts.
  */
 function revealFrame(fx: number, z: number, b: Band, t: number): THREE.Matrix4[] {
@@ -230,12 +230,12 @@ export function VendingMachines({ place, station, detail }: Props) {
   );
   // Le volet est au FOND de sa niche : la profondeur vient de l'encadrement
   // qui avance de 4,5 cm devant lui, et l'ombre du creux fait le reste. Le plan
-  // reste DEVANT le nu de la caisse — derrière, la tôle le masquerait.
+  // reste DEVANT le nu de la caisse - derrière, la tôle le masquerait.
   const ports = useMemo(
     () => machines.map((v) => matFacingTrack(v.fx - SKIN, yOf(PORT), v.z, PORT.w, PORT.y1 - PORT.y0)),
     [machines],
   );
-  // Le verre, lui, est au nu de l'encadrement — 7 cm devant les échantillons.
+  // Le verre, lui, est au nu de l'encadrement - 7 cm devant les échantillons.
   const glasses = useMemo(
     () =>
       full

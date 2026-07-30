@@ -19,15 +19,15 @@ interface AppState {
   /**
    * Gare dont le quai est physiquement là, autour de la rame. Égal à `index`
    * sauf pendant le départ : `index` avance vers la gare suivante dès l'entrée
-   * en `depart`, alors que le quai qu'on longe encore — géométrie, palette,
-   * signalétique — reste celui de la gare quittée, jusqu'à être hors de vue.
+   * en `depart`, alors que le quai qu'on longe encore - géométrie, palette,
+   * signalétique - reste celui de la gare quittée, jusqu'à être hors de vue.
    */
   platformIndex: number;
   phase: Phase;
   doorSide: 1 | -1;
   /**
    * Sens de circulation. Posé une fois par `randomizeEntry` au moment de
-   * monter — choisi au menu, ou tiré à pile ou face — et constant ensuite : on
+   * monter - choisi au menu, ou tiré à pile ou face - et constant ensuite : on
    * ne se retourne pas en cours de boucle, on descend et on change de quai.
    * La valeur initiale ci-dessous n'est qu'un défaut avant embarquement.
    */

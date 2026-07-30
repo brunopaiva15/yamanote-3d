@@ -2,7 +2,7 @@
 //
 // Le passage dure une quinzaine de secondes et ne se déclenche que dans un
 // creux : impossible à attraper en attendant qu'il arrive, et impossible à
-// photographier au vol — sous SwiftShader une frame dure plus d'une seconde,
+// photographier au vol - sous SwiftShader une frame dure plus d'une seconde,
 // pendant laquelle la rame parcourt trente mètres. On la FIGE donc en place
 // (`__passRate(0)`), on repose l'état de la gare à chaque déclenchement, et on
 // laisse passer une frame avant de capturer.

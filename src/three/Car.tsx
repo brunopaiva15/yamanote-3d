@@ -164,7 +164,7 @@ export function Car() {
   // image en se retournant. Seeds 200–203 : hors des bandes nakazuri (0–N),
   // 窓上 (100–111) et boucle LCD portes (300+).
   //
-  // La dernière n'est pas une réclame mais l'affiche de manières « animaux » —
+  // La dernière n'est pas une réclame mais l'affiche de manières « animaux » -
   // une sur quatre, et à l'about du wagon : on tombe dessus en levant les yeux
   // de temps en temps, pas à chaque trajet.
   const endPosterMats = useMemo(
@@ -264,7 +264,7 @@ export function Car() {
         polygonOffsetUnits: -2,
       }),
       // Sols d'about : revêtement teinté à part entière, donc éclairé comme le
-      // reste du plancher et aussi brillant que lui — pas un décalque plat.
+      // reste du plancher et aussi brillant que lui - pas un décalque plat.
       priorityFloor: new THREE.MeshStandardMaterial({
         map: textures.priorityFloor,
         roughness: 0.42,
@@ -308,7 +308,7 @@ export function Car() {
 
   // Le bandeau LED suit l'alimentation de bord : sur batteries il ne reste
   // qu'un filet de matière éteinte, et c'est bien lui qu'on regarde en premier
-  // quand la caténaire lâche — c'est LA source lumineuse du wagon, celle qui
+  // quand la caténaire lâche - c'est LA source lumineuse du wagon, celle qui
   // dit d'un coup d'œil si la rame est vivante ou non.
   useFrame(() => {
     const p = Math.pow(runtime.carPower, 1.6);
@@ -369,14 +369,14 @@ export function Car() {
       ))}
 
       {/* Gaine de climatisation : un diffuseur linéaire continu au milieu du
-          caisson, d'un bout à l'autre du wagon — pas quatre grilles isolées. */}
+          caisson, d'un bout à l'autre du wagon - pas quatre grilles isolées. */}
       <mesh position={[0, H - 0.028, 0]} material={materials.vent}>
         <boxGeometry args={[0.5, 0.03, DUCT_LENGTH]} />
       </mesh>
 
       {/* Diffuseurs de la sonorisation : une grille perforée encastrée dans le
           plafond de part et d'autre du caisson, au droit de chaque porte.
-          Mêmes positions que les Panner3D du moteur audio — c'est de ces
+          Mêmes positions que les Panner3D du moteur audio - c'est de ces
           grilles-là que sortent carillons et annonces. */}
       {CABIN_SPEAKERS.map(([x, y, z]) => (
         <group key={`spk${x}-${z}`} position={[x, y, z]}>

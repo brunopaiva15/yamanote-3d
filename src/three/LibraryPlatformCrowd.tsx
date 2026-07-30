@@ -35,10 +35,10 @@ interface Slot {
   clone: CharacterClone;
   pose: PoseState;
   props: PropRig;
-  /** Identité que ce modèle représente — comparée à celle du PNJ chaque frame. */
+  /** Identité que ce modèle représente - comparée à celle du PNJ chaque frame. */
   identity: number;
   currentKey: LogicalClip | '';
-  /** Part de la pose tenue par le clip de chute (0..1) — voir characters/fall.ts. */
+  /** Part de la pose tenue par le clip de chute (0..1) - voir characters/fall.ts. */
   fallW: number;
   /** Fondu de sortie de la glissade en cours, mémorisé pour le retour à l'idle. */
   fallOut: number;
@@ -73,7 +73,7 @@ function rebuildSlot(s: Slot, templates: CharacterTemplate[], p: CrowdPax): void
 
 export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest }) {
   initPlatformCrowd();
-  // Même côté que le quai présent (platformIndex) — voir ProceduralPlatformCrowd.
+  // Même côté que le quai présent (platformIndex) - voir ProceduralPlatformCrowd.
   const platformIndex = useStore((s) => s.platformIndex);
   const doorSide = DOOR_SIDE[platformIndex];
   const wrap = useRef<THREE.Group>(null);
@@ -116,7 +116,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       const s = slots[i];
       if (!s) continue;
       if (s.identity !== p.identity) {
-        // Visible : tout de suite — sinon le seuil montrerait l'ancien corps.
+        // Visible : tout de suite - sinon le seuil montrerait l'ancien corps.
         if (p.state !== 'hidden') rebuildSlot(s, templates, p);
         else if (rebuildBudget > 0) {
           rebuildBudget--;
@@ -175,7 +175,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
 
       // p.y : négatif dans une trémie d'escalier, où l'on descend vraiment.
       body.position.set(p.pos.x, PLATFORM_Y + p.y + p.bob * rigid, p.pos.z);
-      // YXZ : le voyageur du quai fait face à la voie — en XYZ, son « penché
+      // YXZ : le voyageur du quai fait face à la voie - en XYZ, son « penché
       // en avant » l'inclinait sur le côté (cf. LibraryPassengers).
       body.rotation.set(p.bodyLean * rigid, p.yaw + fallYawOffset(p.lookYaw, s.fallYaw), p.bodyRoll * rigid, 'YXZ');
       body.scale.setScalar(p.height);
@@ -193,7 +193,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
       // que la tête.
       // Qui porte une caisse a déjà une main prise : les gestes libres (le
       // téléphone, la montre) vont dans l'autre, comme le fait déjà la
-      // poignée en rame — c'est exactement ce que `strapSide` sert à dire.
+      // poignée en rame - c'est exactement ce que `strapSide` sert à dire.
       const carrier = carrierOfPax(p.id);
       applyArmGesture(s.clone, s.pose, k, {
         action: act,
@@ -212,7 +212,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
 
       // La caisse pend à l'os de main réel, relevé APRÈS les gestes : elle
       // suit donc le balancement du bras pendant la marche. Publiée dans le
-      // repère du GROUPE de foule, qui est celui de p.pos — three/PlatformPets
+      // repère du GROUPE de foule, qui est celui de p.pos - three/PlatformPets
       // place ses caisses dans un groupe de transformation identique.
       if (carrier && wrap.current) {
         const handBone =

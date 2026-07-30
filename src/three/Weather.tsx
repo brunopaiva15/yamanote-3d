@@ -5,7 +5,7 @@
 // Faire tomber la pluie sur les six cents mètres de décor visibles coûterait
 // des centaines de milliers de gouttes pour une image où l'on n'en distingue
 // que celles des quinze premiers mètres. Au-delà, la pluie ne se voit plus
-// goutte à goutte : elle se voit comme une PERTE DE PORTÉE — c'est
+// goutte à goutte : elle se voit comme une PERTE DE PORTÉE - c'est
 // `weather.visibility` qui s'en charge, dans la brume de scène, et c'est le
 // premier effet de la pluie bien avant les gouttes elles-mêmes.
 //
@@ -23,7 +23,7 @@
 // À l'arrêt en gare elle se redresse, et c'est en la regardant se redresser
 // pendant le freinage qu'on sent le mieux qu'on ralentit. Le trait est donc
 // construit dans l'espace de la caméra, aligné sur la vitesse RELATIVE de la
-// goutte — chute plus vent plus vitesse du train — et non sur la verticale.
+// goutte - chute plus vent plus vitesse du train - et non sur la verticale.
 //
 // Descendu sur le quai, le joueur change de repère : la gare devient fixe, le
 // terme de vitesse tombe, et la pluie redevient verticale. Rien de spécial à
@@ -35,7 +35,7 @@
 // endroits où l'œil se trouve SOUS quelque chose :
 //
 //   · l'intérieur du wagon. Sans lui, il pleut entre la banquette et le
-//     plafond — le test de profondeur ne peut rien, la goutte est devant la
+//     plafond - le test de profondeur ne peut rien, la goutte est devant la
 //     paroi qu'elle devrait avoir derrière elle ;
 //   · l'auvent du quai, dont on connaît l'emprise exacte (systems/
 //     stationOcclusion la tient déjà à jour pour le décor de voie).
@@ -73,7 +73,7 @@ const SNOW_FALL = 1.1;
  *
  * Une trace, c'est deux triangles et aucune texture : le poste n'est pas le
  * remplissage mais le nombre de sommets. Trois mille gouttes valent six mille
- * triangles — le tiers d'un seul immeuble de la ville — pour un seul appel de
+ * triangles - le tiers d'un seul immeuble de la ville - pour un seul appel de
  * rendu.
  */
 function counts(level: PerfLevel): { rain: number; snow: number } {
@@ -102,7 +102,7 @@ void main() {
   vec3 span = uBox * 2.0;
   vec3 origin = uCam - uBox;
   // Repliement : la goutte qui sort par le bas rentre par le haut, et le champ
-  // reste centré sur l'œil quoi qu'il arrive — y compris quand le joueur
+  // reste centré sur l'œil quoi qu'il arrive - y compris quand le joueur
   // change de repère en descendant sur le quai.
   vec3 p = mod(aSeed * span + uDrift - origin, span) + origin;
   // Le flocon ne tombe pas droit : il flotte. C'est ce qui le distingue d'une
@@ -132,7 +132,7 @@ void main() {
 
   // Fondu au bord de la boîte : sans lui, les traces apparaissent sur un plan.
   // Il ne commence qu'à quatre-vingt-dix pour cent du rayon, et il s'étale
-  // au-delà — les coins de la boîte sont à 1,7 rayon. Un fondu qui démarrait à
+  // au-delà - les coins de la boîte sont à 1,7 rayon. Un fondu qui démarrait à
   // mi-rayon éteignait NEUF gouttes sur DIX : le champ semblait vide alors
   // qu'il était plein.
   float d = length(p - uCam);
@@ -198,7 +198,7 @@ function makeField(count: number, round: boolean): Field {
     // Un quad billboardé n'a pas de « bon » côté : l'orientation dépend de
     // l'inclinaison de la trace, qui change avec la vitesse du train.
     side: THREE.DoubleSide,
-    // Test de profondeur OUI — une goutte passe derrière un immeuble —, mais
+    // Test de profondeur OUI - une goutte passe derrière un immeuble -, mais
     // écriture NON : mille traces translucides qui s'écrivent en profondeur se
     // masquent les unes les autres selon l'ordre de rendu.
     depthWrite: false,
@@ -230,7 +230,7 @@ function makeField(count: number, round: boolean): Field {
   // défaut de three, et il n'y a pas lieu de le changer ici). Une pluie
   // dessinée après lui était donc intégralement rejetée par le test de
   // profondeur : la vitre est à un mètre quarante, les gouttes à cinq. On ne
-  // voyait rien, et rien ne le disait — ni erreur de nuanceur, ni instance
+  // voyait rien, et rien ne le disait - ni erreur de nuanceur, ni instance
   // manquante, ni matériau muet.
   //
   // Dessinée avant, la pluie est composée d'abord et la vitre vient la teinter
@@ -279,7 +279,7 @@ export function Weather() {
     const gust = weather.wind * 3.4;
 
     // L'auvent du quai : emprise exacte, celle que le décor de voie utilise
-    // déjà. Il n'abrite que si le joueur y est vraiment sous — mais le test
+    // déjà. Il n'abrite que si le joueur y est vraiment sous - mais le test
     // vaut aussi pour les gouttes vues depuis le wagon, et c'est heureux :
     // il ne pleut pas sous l'auvent d'en face non plus.
     const sheltered = stationOcclusion.active > 0.4 ? stationOcclusion.side : 0;
@@ -300,7 +300,7 @@ export function Weather() {
       const u = f.mat.uniforms;
 
       // Une averse ne tombe pas plus vite qu'une bruine : elle tombe plus
-      // DRU. C'est le nombre de traces affichées qui varie, pas leur vitesse —
+      // DRU. C'est le nombre de traces affichées qui varie, pas leur vitesse -
       // d'où le découpage du tampon d'instances plutôt qu'un fondu d'opacité,
       // qui donnerait une pluie fantôme.
       const cap = round ? snowCount : rainCount;
@@ -321,7 +321,7 @@ export function Weather() {
       const size = u.uSize.value as THREE.Vector2;
       // Largeur : une trace de moins de deux ou trois pixels disparaît dans
       // l'échantillonnage. À dix mètres et 70° de champ, un pixel vaut treize
-      // millimètres — d'où ces trois centimètres et demi, qui ne sont pas la
+      // millimètres - d'où ces trois centimètres et demi, qui ne sont pas la
       // largeur d'une goutte mais celle de sa TRACE.
       if (round) size.set(0.07 + 0.04 * amount, 0.07 + 0.04 * amount);
       else size.set(0.035 + 0.02 * amount, Math.min(1.15, 0.2 + speed * 0.036));

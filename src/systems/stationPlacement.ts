@@ -50,7 +50,7 @@ export interface StationKit {
   /**
    * Abscisse de ces boutons : plaqués sur la face pleine du muret là où il y a
    * des portes de quai, sur une borne en retrait de la bande podotactile là où
-   * il n'y en a pas — à Shinjuku et Shibuya, il n'y a aucun muret pour les
+   * il n'y en a pas - à Shinjuku et Shibuya, il n'y a aucun muret pour les
    * porter.
    */
   emergencyStopX: number;
@@ -63,7 +63,7 @@ export interface StationKit {
   /** Repères de voiture peints au sol : 「N号車 乗車位置」. */
   carMarks: { z: number; car: number }[];
   /**
-   * Tronçons libres pour les conduites qui courent le long du quai —
+   * Tronçons libres pour les conduites qui courent le long du quai -
    * gouttière, chemin de câbles.
    *
    * D'un seul tenant sur deux cent vingt mètres, une conduite traverse tout ce
@@ -79,7 +79,7 @@ export interface StationKit {
  *
  * Les plans officiels JR balisent chaque escalier, escalier mécanique et
  * ascenseur par une lettre, et c'est par elle qu'on se repère : « rendez-vous
- * en B ». La lettre suit l'ordre le long de la voie, tous types confondus —
+ * en B ». La lettre suit l'ordre le long de la voie, tous types confondus -
  * c'est ainsi qu'un plan se lit, pas par famille.
  */
 export interface Access {
@@ -97,7 +97,7 @@ export interface StationPlacement {
    * Abscisse de l'ossature du quai : ce à quoi tout s'adosse.
    *
    * Sur un quai latéral (Harajuku, seul cas de la boucle) c'est le nu intérieur
-   * du mur de fond. Sur les vingt-neuf autres — des îlots — il n'y a AUCUN mur :
+   * du mur de fond. Sur les vingt-neuf autres - des îlots - il n'y a AUCUN mur :
    * c'est l'épine centrale, entre les deux bords d'embarquement, celle où
    * s'alignent piliers, bancs, distributeurs et caissons publicitaires.
    *
@@ -186,7 +186,7 @@ export const GANTRY_PULL = 1.6;
  *
  * La volée s'ouvre côté -z : c'est par là qu'on y entre, que la foule s'y
  * dirige, et que la potence d'orientation se tient. L'emprise de la cage
- * elle-même ne couvre pas ce débouché — sans cette réserve, un banc ou un
+ * elle-même ne couvre pas ce débouché - sans cette réserve, un banc ou un
  * pilier s'y calait juste devant l'entrée.
  */
 const ACCESS_APPROACH = 2.0;
@@ -194,7 +194,7 @@ const ACCESS_APPROACH = 2.0;
 /**
  * Abscisses des potences d'orientation le long de la voie.
  *
- * Une par escalier et par escalier mécanique, un peu avant l'entrée — c'est le
+ * Une par escalier et par escalier mécanique, un peu avant l'entrée - c'est le
  * rendu (OverheadSigns) qui les dessine, mais leur position est une affaire de
  * placement : les caissons publicitaires de l'épine et les totems doivent la
  * connaître pour s'en écarter, sinon les panneaux se traversent.
@@ -211,11 +211,11 @@ export function gantryZs(p: StationPlacement): number[] {
  * Cette rangée-là est celle qu'on lit en marchant le long du quai : les
  * caissons y sont suspendus près du bord, en travers, et se présentent donc de
  * face. Le 番線 y était seul ; le 発車標 l'y a rejoint, et les deux doivent
- * s'aligner au millimètre — d'où cette cote unique.
+ * s'aligner au millimètre - d'où cette cote unique.
  *
  * Pleine largeur tant que le quai le permet, raccourcie sur les quais étroits.
- * À 3,24 m elle traversait l'épine centrale — bande directionnelle, horloge,
- * chemin de câbles, gouttière — sur tous les îlots de moins de neuf mètres :
+ * À 3,24 m elle traversait l'épine centrale - bande directionnelle, horloge,
+ * chemin de câbles, gouttière - sur tous les îlots de moins de neuf mètres :
  * elle s'arrête donc avant le couloir de l'épine (le chemin de câbles, son
  * occupant le plus avancé, part à backX − 1,16).
  */
@@ -224,7 +224,7 @@ export function trackSignBox(p: StationPlacement): { x: number; w: number; hx: n
   // centimètres devant elle : il débordait au-dessus de la voie, à vingt-six
   // centimètres du flanc de la caisse (qui monte à 1,475 m de l'axe), et de
   // trois quarts du quai on le voyait passer par-dessus la rame. Six
-  // centimètres de retrait, dix-huit de moins en tout — le caisson garde sa
+  // centimètres de retrait, dix-huit de moins en tout - le caisson garde sa
   // stature, il ne surplombe simplement plus le train.
   const inner = PSD_X + 0.06;
   const w = Math.min(3.06, p.backX - 1.3 - inner);
@@ -282,7 +282,7 @@ export function trackSignZs(p: StationPlacement): number[] {
  *
  * Un dans CHAQUE intervalle de la rangée, à mi-distance de deux caissons
  * 番線 : les deux modèles alternent donc sur toute la longueur du quai, un
- * panneau tous les dix-huit mètres. C'est la densité réelle — sur deux cent
+ * panneau tous les dix-huit mètres. C'est la densité réelle - sur deux cent
  * vingt mètres, un quai de la Yamanote en porte quatre ou cinq, un par accès,
  * et on n'attend jamais son train hors de vue d'un tableau. Deux, au tiers du
  * quai, laissaient quatre-vingt-dix mètres sans rien : on descendait d'une
@@ -293,7 +293,7 @@ export function trackSignZs(p: StationPlacement): number[] {
  * et l'alternance suit ce qu'ils sont devenus.
  *
  * Un tableau se décale ensuite s'il tombe sur une bannière, le kiosque,
- * l'horloge, un plan de charpente — ou sous la traverse d'une potence, qui
+ * l'horloge, un plan de charpente - ou sous la traverse d'une potence, qui
  * passe six centimètres au-dessus de lui et le toucherait. Pas de creux à
  * portée sur un quai encombré : ce tableau-là saute. Mieux vaut un tableau de
  * moins qu'un tableau dans une traverse.
@@ -347,7 +347,7 @@ function hits(a: Placed, b: Placed): boolean {
  * était libre : sur les trente gares, soixante-cinq bancs traversaient un
  * pilier, et des distributeurs sortaient d'une trémie. Chaque candidat glisse
  * donc le long de la voie jusqu'à trouver son creux, et renonce s'il n'en
- * trouve pas — mieux vaut un banc de moins qu'un banc dans un poteau.
+ * trouve pas - mieux vaut un banc de moins qu'un banc dans un poteau.
  *
  * `taken` est enrichi au fur et à mesure : l'ordre d'appel EST l'ordre de
  * priorité, la structure d'abord, le mobilier ensuite.
@@ -374,7 +374,7 @@ function fit(candidates: Placed[], taken: Placed[], reach = 3.2): Placed[] {
 /**
  * Décale `z` hors de toute baie de porte palière, pour y plaquer un
  * équipement. Rien ne se pose au droit d'une baie : c'est par là qu'on entre
- * dans la rame — ni dans la POCHE DE REFOULEMENT du vantail, qui glisse
+ * dans la rame - ni dans la POCHE DE REFOULEMENT du vantail, qui glisse
  * ouvert jusqu'à 1,90 m de l'axe de la baie et passait au travers du caisson.
  * Trop près d'une baie, le point se cale au milieu du muret plein voisin :
  * à mi-chemin de deux baies au pas de cinq mètres, tout y est hors d'atteinte.
@@ -398,7 +398,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
 
   // Quai latéral : un mur de fond, et la circulation devant. Îlot : deux bords
   // d'embarquement, et toute l'ossature ramenée au milieu. `depth` est la
-  // largeur du quai dans les deux cas — de bord à mur, ou de bord à bord.
+  // largeur du quai dans les deux cas - de bord à mur, ou de bord à bord.
   const hasBackWall = layout.config === 'side';
   const farEdgeX = hasBackWall ? null : PSD_X + layout.depth;
   const backX = hasBackWall ? PSD_X + layout.depth - 0.15 : PSD_X + layout.depth / 2;
@@ -406,7 +406,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   // Le mobilier s'adosse à l'ossature, la circulation reste devant.
   const wallX = backX - 0.85;
   // Trémies et escaliers mécaniques : au tiers du quai contre un mur de fond,
-  // mais PILE SUR L'ÉPINE sur un îlot — c'est la seule position qui laisse
+  // mais PILE SUR L'ÉPINE sur un îlot - c'est la seule position qui laisse
   // passer des deux côtés. Décentrés, ils étranglaient le bord près à moins de
   // cinquante centimètres sur les quais étroits.
   const midX = hasBackWall ? PSD_X + layout.depth * 0.55 : backX - 0.4;
@@ -445,8 +445,8 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   ];
 
   // Réserve devant le nez des accès verticaux : mobilier seulement. Ce n'est
-  // pas un obstacle de marche — le joueur et la foule doivent pouvoir s'y
-  // présenter — mais bancs et piliers n'ont rien à y faire.
+  // pas un obstacle de marche - le joueur et la foule doivent pouvoir s'y
+  // présenter - mais bancs et piliers n'ont rien à y faire.
   const approachClear: Placed[] = [
     ...stairs.map((s) => ({
       x: s.x,
@@ -463,7 +463,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   ];
 
   // La trame de piliers saute la travée occupée par une trémie, une gaine
-  // d'ascenseur ou un kiosque — et le débouché devant leur entrée — comme sur
+  // d'ascenseur ou un kiosque - et le débouché devant leur entrée - comme sur
   // un vrai quai, où le poteau est reporté plutôt que planté au milieu de la
   // cage ou juste devant.
   const columns: number[] = [];
@@ -480,7 +480,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     ...columns.map((z) => ({ x: backX - 0.55, z, halfX: 0.34, halfZ: 0.34 })),
     ...structure,
     // Poteaux de la charpente signature : plantés jusqu'au sol, ils sont déjà
-    // écartés des accès et de la bande directionnelle par le plan (data) — le
+    // écartés des accès et de la bande directionnelle par le plan (data) - le
     // mobilier, lui, s'écarte d'eux ici, et la marche les contournera puisque
     // `taken` devient la liste des obstacles.
     ...(layout.sigPlan?.posts ?? []).map((s) => ({ x: s.x, z: s.z, halfX: 0.35, halfZ: 0.35 })),
@@ -500,8 +500,8 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     spread(3, usable, 8.9).map((z) => ({ x: backX - 0.36, z, halfX: 0.3, halfZ: 0.55 })),
     taken,
   );
-  // Un bac n'est jamais seul sur un quai japonais : ils vont par trois —
-  // bouteilles, canettes, papiers — sous une même armature. L'emprise s'élargit
+  // Un bac n'est jamais seul sur un quai japonais : ils vont par trois -
+  // bouteilles, canettes, papiers - sous une même armature. L'emprise s'élargit
   // d'autant, et la batterie se pose au bout d'un banc sur deux.
   const bins = fit(
     benches
@@ -529,8 +529,8 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
 
   // La trousse réglementaire.
   //
-  // Les boutons d'arrêt d'urgence se posent là où ils servent — au droit de
-  // chaque accès, d'où l'on débouche sur le quai — et aux deux abouts, mais sur
+  // Les boutons d'arrêt d'urgence se posent là où ils servent - au droit de
+  // chaque accès, d'où l'on débouche sur le quai - et aux deux abouts, mais sur
   // la face pleine des portes palières : sur une borne plantée près du bord ils
   // se seraient trouvés en plein dans une file d'attente, devant une porte.
   // Les miroirs de départ, eux, se suspendent à l'auvent au droit des cabines
@@ -542,7 +542,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   const barePlatform = layout.psd === 'none';
   const emergencyStopX = barePlatform ? PSD_X + 1.32 : PSD_X + 0.05;
   // Un diffuseur affleure la sous-face de l'auvent : au droit d'un pilier, il
-  // disparaîtrait dans la poutre transversale — exactement le défaut que les
+  // disparaîtrait dans la poutre transversale - exactement le défaut que les
   // néons ont déjà eu. Il s'écarte donc du poteau le plus proche.
   const nearestColumn = (z: number): number =>
     columns.reduce((best, c) => (Math.abs(z - c) < Math.abs(z - best) ? c : best), columns[0]);
@@ -594,7 +594,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
             return { z0: g - 1.2, z1: g + 1.2 };
           })
         : []),
-      // Et au droit des plans profonds de la charpente signature — le portique
+      // Et au droit des plans profonds de la charpente signature - le portique
       // de jonction d'Hamamatsuchō descend en travers de leur cote.
       ...(layout.sigPlan?.runBlocks ?? []),
     ]),
@@ -618,7 +618,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     backX,
     hasBackWall,
     farEdgeX,
-    // Le joueur marche du liseré blanc jusqu'à 35 cm du mur de fond — ou, sur
+    // Le joueur marche du liseré blanc jusqu'à 35 cm du mur de fond - ou, sur
     // un îlot, jusqu'au liseré d'en face, exactement comme de ce côté-ci. Ce
     // qui l'arrête au milieu, ce sont les obstacles de l'épine, pas une borne.
     walkX0: PSD_X + 0.2,

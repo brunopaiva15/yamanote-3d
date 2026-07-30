@@ -9,7 +9,7 @@
 //     rendu : dix minutes de vie se mesurent en quelques secondes, et le
 //     résultat ne dépend pas du framerate de la machine.
 //   - la PAROLE. Viser quelqu'un, lui adresser la parole, et vérifier ce que
-//     le moteur publie — texte accordé, animation posée, bulle ancrée.
+//     le moteur publie - texte accordé, animation posée, bulle ancrée.
 //
 //   node scripts/pax-probe.mjs             → dix minutes de vie + un échange
 //   node scripts/pax-probe.mjs 30          → trente minutes de vie
@@ -79,7 +79,7 @@ const rhythm = await page.evaluate(async (mins) => {
   return { active, changes, changesPerPaxPerMin: +(changes / Math.max(1, active) / mins).toFixed(2), share, starts };
 }, minutes);
 
-console.log(`\n— Rythme sur ${minutes} min de vie, ${rhythm.active} voyageurs à bord —`);
+console.log(`\n- Rythme sur ${minutes} min de vie, ${rhythm.active} voyageurs à bord -`);
 console.log(`changements d'occupation : ${rhythm.changesPerPaxPerMin} par voyageur et par minute`);
 console.log('\ntemps passé (top 12) :');
 for (const [id, pct] of rhythm.share.slice(0, 12)) {
@@ -145,7 +145,7 @@ const talk = await page.evaluate(async ({ count, lang }) => {
   return { catalogue: dialogue.DIALOGUE_COUNT, said };
 }, { count: lineCount, lang });
 
-console.log(`\n— Parole : ${talk.catalogue} échanges au catalogue —`);
+console.log(`\n- Parole : ${talk.catalogue} échanges au catalogue -`);
 for (const s of talk.said) {
   if (s.error) console.log(`  ⚠ ${s.error}`);
   else console.log(`  ${String(s.qui).padEnd(20)} « ${s.texte} »`);
@@ -188,7 +188,7 @@ const coverage = await page.evaluate(async () => {
   return rows;
 });
 
-console.log('\n— Couverture : échanges éligibles par contexte —');
+console.log('\n- Couverture : échanges éligibles par contexte -');
 for (const [label, n] of coverage) {
   console.log(`  ${String(label).padEnd(12)} ${String(n).padStart(3)}${n < 5 ? '  ⚠ maigre' : ''}`);
 }

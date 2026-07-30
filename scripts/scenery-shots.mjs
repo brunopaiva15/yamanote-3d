@@ -2,7 +2,7 @@
 //
 // La sonde de gare (scripts/station-probe.mjs) se pose à l'arrêt, là où le quai
 // masque tout le paysage : elle ne peut rien dire du décor. Celle-ci fait
-// l'inverse — on se cale au milieu d'un inter-gare, on vise par une baie, et on
+// l'inverse - on se cale au milieu d'un inter-gare, on vise par une baie, et on
 // regarde ce qui défile, de jour comme de nuit.
 //
 //   node scripts/scenery-shots.mjs /tmp/decor

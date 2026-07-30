@@ -8,7 +8,7 @@
 import type { DialogueEntry } from './types';
 
 export const DIALOGUE_CITY: readonly DialogueEntry[] = [
-  // ——— Vivre ici ———
+  // --- Vivre ici ---
   {
     id: 'ct.rent',
     lines: [
@@ -134,7 +134,7 @@ export const DIALOGUE_CITY: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Manger ———
+  // --- Manger ---
   {
     id: 'ct.ramen',
     when: { hours: [11, 15] },
@@ -237,7 +237,7 @@ export const DIALOGUE_CITY: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Les quartiers ———
+  // --- Les quartiers ---
   {
     id: 'ct.west.east',
     lines: [
@@ -379,7 +379,7 @@ export const DIALOGUE_CITY: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Le ciel et les saisons ———
+  // --- Le ciel et les saisons ---
   {
     id: 'ct.skytree',
     when: { moving: true },
@@ -485,7 +485,7 @@ export const DIALOGUE_CITY: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Travail et argent ———
+  // --- Travail et argent ---
   {
     id: 'ct.job.change',
     when: { archetype: ['salaryman', 'officeLady', 'casual'] },
@@ -565,7 +565,7 @@ export const DIALOGUE_CITY: readonly DialogueEntry[] = [
     ],
   },
 
-  // ——— Aller et venir ———
+  // --- Aller et venir ---
   {
     id: 'ct.hometown',
     lines: [

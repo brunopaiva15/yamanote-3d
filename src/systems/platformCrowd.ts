@@ -1,6 +1,6 @@
 // Foule du quai : pool de voyageurs en attente et en promenade (distincts
 // des PNJ de la rame). Une part reste près des portes, l'autre se balade
-// le long du quai en continu — comme dans une vraie gare tokyoïte.
+// le long du quai en continu - comme dans une vraie gare tokyoïte.
 //
 // Le quai n'est plus une population qui apparaît et disparaît d'un bloc : les
 // voyageurs ARRIVENT par les trémies d'escalier, montent dans la rame par les
@@ -113,14 +113,14 @@ export interface CrowdPax {
   /**
    * Ce n'est pas un voyageur mais l'AGENT de quai : uniforme, casquette, et
    * un slot réservé pour lui seul. Le rendu « librairie » choisit son modèle
-   * une fois pour toutes à partir de l'apparence (voir LibraryPlatformCrowd) —
+   * une fois pour toutes à partir de l'apparence (voir LibraryPlatformCrowd) -
    * on ne peut donc pas déguiser un civil en agent en cours de route, il faut
    * qu'une place du pool soit la sienne depuis le début.
    */
   staff: boolean;
 }
 
-/** Capacité max du pool — assez large pour que Shinjuku/Shibuya débordent
+/** Capacité max du pool - assez large pour que Shinjuku/Shibuya débordent
  *  vraiment de voyageurs en attente, sans plafonner tous les hubs au même
  *  effectif (Shinjuku à 2,2× peut monter au-dessus de Tokyo à 2,0×). */
 export const CROWD_POOL = 40;
@@ -192,7 +192,7 @@ function makeCrowd(id: number): CrowdPax {
 /**
  * L'agent de quai : costume bleu nuit, casquette, pas de sac.
  *
- * On ne fabrique pas son apparence de toutes pièces — on cherche dans le
+ * On ne fabrique pas son apparence de toutes pièces - on cherche dans le
  * générateur la première silhouette de salaryman qui puisse porter
  * l'uniforme, puis on l'habille. Le rendu « librairie » choisit son modèle
  * d'après `archetype` et `feminine` : en partant d'un descripteur cohérent, il
@@ -248,7 +248,7 @@ function applyCrowdIdentity(p: CrowdPax, identity: number): void {
 
 /**
  * Échange d'identité au seuil d'une porte : le slot de quai `crowdId` prend
- * `identity` et rend la sienne. C'est le pivot du relais avec la rame — celui
+ * `identity` et rend la sienne. C'est le pivot du relais avec la rame - celui
  * qui monte emporte son visage à l'intérieur, celui qui descend emporte le
  * sien sur le quai, et aucun des deux ne se transforme en chemin.
  *
@@ -276,8 +276,8 @@ function crowdCountBase(stationIndex: number): { total: number; walkers: number 
 }
 
 /**
- * Densité réelle : le gabarit de la gare pèse autant que son statut de hub —
- * Uguisudani reste vide quand Shinjuku déborde — et la qualité vidéo réduit
+ * Densité réelle : le gabarit de la gare pèse autant que son statut de hub -
+ * Uguisudani reste vide quand Shinjuku déborde - et la qualité vidéo réduit
  * l'ensemble comme pour les PNJ de la rame.
  *
  * Quand le total est plafonné par CROWD_POOL, on conserve le ratio
@@ -537,7 +537,7 @@ export function crowdArriveFromTrain(doorLocalZ: number, identity: number): numb
   const swapped = swapCrowdIdentity(p.id, identity);
   const pl = placement();
   // Même point EXACT que le relais côté rame (systems/passengers) : le
-  // voyageur continue précisément là où il s'arrête. Pas de dispersion en z —
+  // voyageur continue précisément là où il s'arrête. Pas de dispersion en z -
   // c'est la même personne des deux côtés du seuil depuis que l'identité
   // traverse avec elle, et un demi-mètre d'écart se lirait comme un saut.
   p.pos.set(2.0, 0, doorLocalZ);
@@ -592,8 +592,8 @@ export function crowdSendBoarder(doorLocalZ: number, ticket: number): boolean {
 //
 // Une porte qui ne se ferme pas ne se règle pas au micro depuis un bureau :
 // quelqu'un vient. L'agent accourt depuis la trémie la plus proche, se poste
-// À CÔTÉ de la porte — jamais devant, il ne bouche pas le passage qu'il essaie
-// de dégager —, se tourne vers elle, et attend que ça se débloque.
+// À CÔTÉ de la porte - jamais devant, il ne bouche pas le passage qu'il essaie
+// de dégager -, se tourne vers elle, et attend que ça se débloque.
 
 /** Distance latérale du poste au plan des portes palières (m). */
 const AGENT_POST_X = PSD_X + 0.85;
@@ -676,7 +676,7 @@ const tmpWorld = { x: 0, z: 0 };
 /** Un voyageur du quai vient d'atteindre le seuil : jeton + qui il est. */
 export interface ArrivedBoarder {
   ticket: number;
-  /** Slot de quai qu'il occupait — celui avec qui la rame échange l'identité. */
+  /** Slot de quai qu'il occupait - celui avec qui la rame échange l'identité. */
   crowdId: number;
 }
 
@@ -693,7 +693,7 @@ export function takeArrivedBoarders(): ArrivedBoarder[] {
 /**
  * Le train est parti : ceux qui restent sur le quai gagnent la sortie, chacun
  * à son rythme. C'est ce qui remplace l'effacement d'un bloc de toute la foule
- * — vu du quai, c'était un claquement de doigts.
+ * - vu du quai, c'était un claquement de doigts.
  */
 export function crowdDisperse(): void {
   seededFor = -1;
@@ -1036,7 +1036,7 @@ function avoidPlayer(p: CrowdPax, dt: number, pvx: number, pvz: number): void {
 
   // L'écart reste SUR LE QUAI : sans borne, insister contre quelqu'un le
   // poussait par-dessus le nez de quai, dans la voie, ou au travers du mur
-  // de fond — un voyageur ne recule pas dans le vide pour nous laisser passer.
+  // de fond - un voyageur ne recule pas dans le vide pour nous laisser passer.
   const push = (PLAYER_CLEARANCE - d) / d;
   const bounded = clampPos(p.pos.x + dx * push, p.pos.z + dz * push);
   p.pos.x = bounded.x;
@@ -1106,7 +1106,7 @@ export function updatePlatformCrowd(dt: number): void {
     // L'agent tient son poste : ce n'est pas à lui de s'écarter.
     if (!p.staff) avoidPlayer(p, dt, pvx, pvz);
 
-    // L'agent de quai : il accourt, puis il ne bouge plus — face à la porte,
+    // L'agent de quai : il accourt, puis il ne bouge plus - face à la porte,
     // à celui qui la bloque.
     if (p.state === 'attending') {
       if (p.wpi < p.waypoints.length) {
@@ -1158,7 +1158,7 @@ export function updatePlatformCrowd(dt: number): void {
           p.wpi = 0;
         });
         // Les marches se descendent vraiment : l'altitude suit le profil de la
-        // volée. On ne s'efface PAS à une altitude donnée — le voyageur
+        // volée. On ne s'efface PAS à une altitude donnée - le voyageur
         // s'évaporait alors en pleine volée, la tête au niveau du quai, sous
         // les yeux de qui se penche dans la trémie. Il marche jusqu'au bout de
         // son dernier point de passage, un mètre après le linteau : c'est la

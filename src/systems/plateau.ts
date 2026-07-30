@@ -2,7 +2,7 @@
 //
 // LE PROTOTYPE EST ÉTEINT PAR DÉFAUT, ET IL FAUT LE DEMANDER : `?plateau=1`
 // dans l'URL. Sans ce paramètre, rien n'est chargé, rien n'est monté, aucun
-// composant ne change de branche — le jeu est exactement celui d'avant, y
+// composant ne change de branche - le jeu est exactement celui d'avant, y
 // compris sur le tronçon couvert.
 //
 // Ce n'est pas de la prudence de principe. Tant que le pipeline tourne sur son
@@ -19,7 +19,7 @@ import type { LoopDirection } from '../data/platforms';
  *
  * `false` (défaut) : le prototype n'existe que sur demande explicite,
  * `?plateau=1`. `true` : il s'applique à tout le monde sur son tronçon.
- * Un test verrouille cette valeur — voir tests/plateauFlags.test.ts.
+ * Un test verrouille cette valeur - voir tests/plateauFlags.test.ts.
  */
 export const ENABLE_PLATEAU_PROTOTYPE = false;
 
@@ -56,7 +56,7 @@ export const PLATEAU_SETTINGS = {
  */
 export const plateauRuntime = {
   coverage: 0,
-  /** Abscisse courante sur le tracé (m) — utile en console pour déboguer. */
+  /** Abscisse courante sur le tracé (m) - utile en console pour déboguer. */
   distance: 0,
   /** Chunks actuellement montés. */
   mounted: 0,
@@ -68,8 +68,8 @@ export const plateauRuntime = {
  * 内回り SEULEMENT. Le tracé exporté (`route.json`) est une polyligne orientée,
  * de Shibuya vers Ebisu : la parcourir en 外回り demanderait de l'inverser, et
  * avec elle l'ordre des chunks et l'origine des distances. Tant que le monde
- * géoréférencé est un prototype sur un seul tronçon, le décor procédural —
- * lui, symétrique — reprend la main dans l'autre sens.
+ * géoréférencé est un prototype sur un seul tronçon, le décor procédural -
+ * lui, symétrique - reprend la main dans l'autre sens.
  */
 export function plateauCoversSegment(segment: number, dir: LoopDirection): boolean {
   return plateauEnabled() && dir === 'inner' && segment === PLATEAU_SEGMENT;
@@ -83,7 +83,7 @@ export function plateauCoversSegment(segment: number, dir: LoopDirection): boole
  * Sans paramètre, la constante décide.
  *
  * Le paramètre vaut aussi en production, et c'est délibéré : c'est ce qui
- * permet de montrer le prototype sur le site déployé — à qui le demande — sans
+ * permet de montrer le prototype sur le site déployé - à qui le demande - sans
  * l'imposer à personne.
  */
 export function plateauEnabled(): boolean {
@@ -105,7 +105,7 @@ export const PLATEAU_ENTRY_STATION = (PLATEAU_SEGMENT + 1) % 30; // Ebisu (20)
  * Sans cela, `?plateau=1` serait une promesse creuse : le tirage d'entrée
  * pose le joueur n'importe où sur la boucle, et il faudrait attendre jusqu'à
  * une heure de trajet pour atteindre le tronçon couvert. Le paramètre fait
- * donc les deux choses à la fois — allumer le prototype ET s'y rendre.
+ * donc les deux choses à la fois - allumer le prototype ET s'y rendre.
  *
  * Renvoie `undefined` dès que le paramètre est absent : le boarding normal
  * (gare tirée au sort, ou choisie dans le menu) n'est jamais touché.

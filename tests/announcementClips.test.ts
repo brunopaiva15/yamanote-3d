@@ -1,7 +1,7 @@
 // Couverture des clips d'annonce.
 //
 // Le jeu compte cinq sources gravées avec Kokoro et AUCUNE sixième : dès qu'un texte
-// joué n'a pas son MP3, systems/speech.ts ne dit RIEN — il n'existe aucun repli
+// joué n'a pas son MP3, systems/speech.ts ne dit RIEN - il n'existe aucun repli
 // speechSynthesis, et une annonce muette passe inaperçue à la relecture d'un
 // diff. Il suffit de retoucher un mot d'annonce pour changer sa clé et perdre
 // son clip, en silence.
@@ -9,7 +9,7 @@
 // Depuis que le quai a deux automates (une femme sur le 内回り, un homme sur le
 // 外回り), la clé porte aussi le RÔLE VOCAL : deux annonces identiques au mot près
 // ont deux fichiers. C'est ce que vérifie « chaque annonce de quai a un clip par
-// rôle » — sans quoi un quai sur deux parlerait avec la voix de l'autre sens, ce
+// rôle » - sans quoi un quai sur deux parlerait avec la voix de l'autre sens, ce
 // que rien dans le code ne signalerait.
 //
 // Ce test est donc le filet. Il énumère exactement ce que grave le générateur
@@ -50,7 +50,7 @@ test('chaque annonce jouée a son clip au manifeste', () => {
   assert.deepEqual(
     missing.map((i) => `${i.voice} : ${i.text}`),
     [],
-    'annonces sans clip — elles ne se diraient pas du tout ; ' +
+    'annonces sans clip - elles ne se diraient pas du tout ; ' +
       'regraver avec scripts/announcements-gen.py',
   );
 });
@@ -166,7 +166,7 @@ test('la rame et le quai ne partagent aucun clip', () => {
   // les fichiers : aucun clip ne peut être réclamé par les deux canaux, sinon un
   // texte joué à bord sortirait avec une voix de quai (ou l'inverse) selon
   // l'ordre de gravure. Depuis que le rôle vocal entre dans la clé, c'est
-  // structurellement impossible — ce test le fige.
+  // structurellement impossible - ce test le fige.
   const cabin = new Set(ITEMS.filter((i) => !i.role).map((i) => i.key));
   const platform = new Set(ITEMS.filter((i) => i.role).map((i) => i.key));
   const shared = [...cabin].filter((k) => platform.has(k));

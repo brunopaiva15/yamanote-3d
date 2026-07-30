@@ -1,4 +1,4 @@
-// Caisse de transport pour animal — le seul contenant dans lequel un chien
+// Caisse de transport pour animal - le seul contenant dans lequel un chien
 // peut légalement franchir les portiques de la Yamanote.
 //
 // Les règles de JR East ne laissent aucune latitude, et ce sont ELLES qui
@@ -6,17 +6,17 @@
 //
 //   - l'animal doit être ENTIÈREMENT enfermé, sans sortir la tête ;
 //   - longueur + largeur + hauteur de la caisse ≤ 120 cm ;
-//   - poids total (animal + caisse) ≤ 10 kg — donc un petit chien, jamais un
+//   - poids total (animal + caisse) ≤ 10 kg - donc un petit chien, jamais un
 //     husky ni rien d'approchant ;
 //   - un billet « bagage à main » à 290 ¥, pris au guichet.
 //
 // D'où 50 × 34 × 34 cm : 118 cm de somme, sous la limite, et l'ordre de
 // grandeur de ce qu'on croise réellement sur un quai. Un chien tenu en laisse,
 // porté dans les bras, glissé dans une écharpe ou promené en poussette est
-// interdit — c'est exactement ce que barre le pictogramme de JR East.
+// interdit - c'est exactement ce que barre le pictogramme de JR East.
 //
 // La caisse est MODELÉE dans l'esprit de characters/props.ts : coque à deux
-// tons, fentes d'aération, porte à barreaux (ajourée pour de bon — c'est par
+// tons, fentes d'aération, porte à barreaux (ajourée pour de bon - c'est par
 // là qu'on voit le chien), poignée de portage et quatre pieds. Toutes les
 // géométries sont transformées « en dur » à la construction du module et
 // partagées ; seuls les matériaux teintés sont créés par passager.
@@ -40,7 +40,7 @@ export const CARRIER_INNER_L = CARRIER_L - WALL * 2;
 const baseGeo = new RoundedBoxGeometry(CARRIER_W, CARRIER_H * 0.52, CARRIER_L, 2, 0.022);
 const lidGeo = new RoundedBoxGeometry(CARRIER_W * 0.99, CARRIER_H * 0.5, CARRIER_L * 0.99, 2, 0.026);
 // Creusé : la caisse est un contenant, pas un bloc. On ne modélise pas
-// l'intérieur (invisible) — on retire seulement la face avant, remplacée par
+// l'intérieur (invisible) - on retire seulement la face avant, remplacée par
 // la porte à barreaux, et le volume que le chien occupe.
 const cavityGeo = new THREE.BoxGeometry(CARRIER_W - WALL * 2, CARRIER_INNER_H, CARRIER_INNER_L);
 
@@ -84,7 +84,7 @@ function mergeGeometries(list: THREE.BufferGeometry[]): THREE.BufferGeometry {
 
 const ventsGeo = ventGeo();
 
-// Porte : un cadre plein et une grille de barreaux croisés, AJOURÉE — c'est
+// Porte : un cadre plein et une grille de barreaux croisés, AJOURÉE - c'est
 // par là qu'on voit le chien, et sans vrais trous il n'y aurait rien à voir.
 function doorGeo(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
@@ -151,7 +151,7 @@ export interface Carrier {
 }
 
 /**
- * Fabrique une caisse. `color` teinte la demi-coque basse — la couleur du sac
+ * Fabrique une caisse. `color` teinte la demi-coque basse - la couleur du sac
  * du voyageur, pour que ses affaires aillent ensemble.
  */
 export function makeCarrier(color: string): Carrier {

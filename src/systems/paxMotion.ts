@@ -22,7 +22,7 @@ export interface MotionTargets {
    * Hauteur du PIVOT du corps, en fraction de la taille (0 = les pieds).
    *
    * Une inclinaison légère pivote aux chevilles : les pieds restent au sol,
-   * c'est le cas par défaut. Une CHUTE, non — elle bascule autour du bassin.
+   * c'est le cas par défaut. Une CHUTE, non - elle bascule autour du bassin.
    * Pivoter une chute aux pieds couche le corps en le translatant de plus
    * d'un mètre : le voyageur au sol partait dans la banquette, quand ce
    * n'était pas au travers de la caisse.
@@ -141,7 +141,7 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
         return set(yaw, 0.1 + Math.max(0, Math.sin(t * 4.2)) * 0.12, 0, 7, 0, 0, Math.sin(t * 1.3) * 0.08);
       }
       if (speaking) {
-        // Parole silencieuse : hochements rythmés — pas de lean (sinon les
+        // Parole silencieuse : hochements rythmés - pas de lean (sinon les
         // pieds glissent sur le coussin quand on est assis).
         const jab = Math.max(0, Math.sin(t * (motion === 'gossip' ? 9 : 7.5)));
         return set(
@@ -505,7 +505,7 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
     case 'talk': {
       // S'adresse au joueur : tête tournée vers lui pour de bon, avec les
       // hochements et le léger buste en avant de quelqu'un qui parle. Le
-      // rythme est celui d'une phrase, pas d'un tic — deux temps par seconde.
+      // rythme est celui d'une phrase, pas d'un tic - deux temps par seconde.
       const yaw = headYawToward(ctx, ctx.playerX, ctx.playerZ);
       const pitch = THREE.MathUtils.clamp((1.35 - ctx.playerY) * 0.32, -0.28, 0.3);
       const beat = Math.sin(t * 5.2);

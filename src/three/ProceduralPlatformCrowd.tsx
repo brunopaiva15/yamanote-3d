@@ -1,5 +1,5 @@
 // Foule du quai en rendu procédural (repli si les GLB manquent). Voyageurs
-// debout avec apparence complète — plus de capsules grises.
+// debout avec apparence complète - plus de capsules grises.
 
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -169,7 +169,7 @@ function buildPerson(app: Appearance, identity: number): THREE.Group {
 
 // Familles de gestes du bras droit (rotX = levée, rotZ = écart). Le corps de
 // secours n'a qu'une articulation d'épaule : on ne distingue que les grandes
-// familles — main au visage, bras levé, bras tendu, objet tenu.
+// familles - main au visage, bras levé, bras tendu, objet tenu.
 const CROWD_ARMS: Partial<Record<MotionId, [number, number, number?, number?]>> = {
   phone: [-1.15, 0.35],
   read: [-1.05, 0.3],
@@ -234,7 +234,7 @@ export function ProceduralPlatformCrowd() {
   initPlatformCrowd();
   // Le côté de la foule est celui du quai présent (platformIndex), pas
   // store.doorSide : celui-ci bascule vers la gare suivante en début de
-  // croisière, alors que ce quai — et sa foule — défilent encore.
+  // croisière, alors que ce quai - et sa foule - défilent encore.
   const platformIndex = useStore((s) => s.platformIndex);
   const doorSide = DOOR_SIDE[platformIndex];
   const wrap = useRef<THREE.Group>(null);

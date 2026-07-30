@@ -6,7 +6,7 @@
 // l'écran, on butait dans le vide.
 //
 // D'où ce panneau : invisible tant qu'on est loin, il s'allume à mesure qu'on
-// s'en approche — nid d'abeilles rouge, halo autour du point où l'on va le
+// s'en approche - nid d'abeilles rouge, halo autour du point où l'on va le
 // toucher. Purement décoratif : la collision, elle, est dans walkable.
 //
 // Trois formes, une seule encre :
@@ -14,13 +14,13 @@
 //                     pour les deux abouts et le pied de chaque volée ;
 //   - `EdgeBarrier` : la limite du BORD DE QUAI, tout du long (normale selon x) ;
 //   - `GateBarrier` : la baie de porte palière par laquelle on ne peut pas
-//                     monter — les quarante autres voitures de la rame.
+//                     monter - les quarante autres voitures de la rame.
 //
-// La deuxième n'existe que là où il n'y a pas de portes palières — Shinjuku et
+// La deuxième n'existe que là où il n'y a pas de portes palières - Shinjuku et
 // Shibuya. Ailleurs, c'est le muret qui arrête l'œil en même temps que le pas ;
 // sur ces deux quais-là le bord était nu des deux côtés, et le joueur butait
 // sur un mur invisible au ras du liseré blanc. Elle s'ouvre au droit des baies
-// de porte, exactement quand walkable y laisse passer — c'est-à-dire aux
+// de porte, exactement quand walkable y laisse passer - c'est-à-dire aux
 // quatre portes de la voiture du joueur, et à elles seules.
 //
 // La troisième prend le relais partout où le muret existe : là, la baie est
@@ -41,7 +41,7 @@ const FADE_NEAR = 0.6;
 
 /**
  * Hauteur de la limite d'un bord de quai nu : celle du muret qui manque. On
- * regarde PAR-DESSUS, exactement comme par-dessus des portes palières — à
+ * regarde PAR-DESSUS, exactement comme par-dessus des portes palières - à
  * hauteur d'homme, elle barrait le ciel et la ville d'un bout à l'autre.
  */
 const EDGE_H = PSD_H;
@@ -52,7 +52,7 @@ const EDGE_H = PSD_H;
  */
 const EDGE_SPAN = 5;
 /**
- * Le bord, lui, se longe en permanence — on descend du train à 75 cm de ce
+ * Le bord, lui, se longe en permanence - on descend du train à 75 cm de ce
  * plan. Il s'allume donc bien plus tard qu'un about de quai, qu'on ne va
  * chercher qu'une fois : à un pas de la limite, pas trois.
  */
@@ -70,7 +70,7 @@ const VERT = /* glsl */ `
 /**
  * L'encre d'une limite de zone, commune aux trois formes : la maille, le halo
  * autour du point de contact et le balayage. Les coordonnées sont en MÈTRES
- * dans le plan du panneau — (largeur, hauteur) pour un panneau en travers,
+ * dans le plan du panneau - (largeur, hauteur) pour un panneau en travers,
  * (z du quai, hauteur) pour un bord. Chaque forme dissout ensuite l'opacité
  * sur ses propres bords, et règle la portée du halo : on lit un about de quai
  * de trois mètres, on longe un bord de quai le nez dessus.
@@ -251,10 +251,10 @@ const FRAG_EDGE = /* glsl */ `
     vec4 c = ink(vP, uHit, uStrength, uTime, 3.6, 0.22);
     float a = c.a;
 
-    // Baie de porte : la limite s'efface le temps que le passage soit dégagé —
+    // Baie de porte : la limite s'efface le temps que le passage soit dégagé -
     // le même seuil que celui qui ouvre le portillon dans walkable. Les joues
     // de la baie, elles, restent FRANCHES : c'est un jambage de porte, pas un
-    // bord perdu — adoucies, elles creusaient une rainure sombre tous les
+    // bord perdu - adoucies, elles creusaient une rainure sombre tous les
     // cinq mètres, baies fermées comprises.
     a *= mix(1.0, 1.0 - uOpen, vBay);
 
@@ -335,12 +335,12 @@ export interface EdgeBarrierProps {
   /** Longueur du quai (m). */
   length: number;
   /**
-   * Axes des SEUILS FRANCHISSABLES, quand ce bord en a — la limite s'y ouvre
+   * Axes des SEUILS FRANCHISSABLES, quand ce bord en a - la limite s'y ouvre
    * dès que la rame est à quai, portes dégagées. Sans eux, le bord est continu.
    *
    * Ce sont les quatre portes de la voiture du joueur, pas les quarante-quatre
    * baies de la rame : devant les autres voitures, la rame est là, ses portes
-   * s'écartent, et pourtant on ne peut pas monter — la limite doit y rester.
+   * s'écartent, et pourtant on ne peut pas monter - la limite doit y rester.
    */
   gates?: readonly number[];
   /** Hauteur de la limite (m au-dessus du sol du quai). */
@@ -484,11 +484,11 @@ const FRAG_GATE = /* glsl */ `
     float a = c.a;
 
     // Une SEULE baie s'allume : celle qu'on a devant soi. Les quarante autres
-    // restent éteintes — c'est une porte qu'on refuse, pas le quai entier.
+    // restent éteintes - c'est une porte qu'on refuse, pas le quai entier.
     a *= 1.0 - smoothstep(0.1, 0.9, abs(vGate - uGate));
 
     // Le seuil et le linteau : la trame naît du sol et meurt sous le bandeau.
-    // Les jambages, eux, restent FRANCS — c'est une baie de porte, pas un bord
+    // Les jambages, eux, restent FRANCS - c'est une baie de porte, pas un bord
     // perdu : la limite affleure le montant, comme un vantail qu'on n'a pas.
     a *= smoothstep(0.0, 0.08, vP.y - uY.x) * (1.0 - smoothstep(uY.y - 0.18, uY.y, vP.y));
 
@@ -538,7 +538,7 @@ export interface GateBarrierProps {
  * La rame a onze voitures et le quai quarante-quatre baies, mais une seule
  * voiture est modélisée : devant les quarante autres portes, grandes ouvertes
  * elles aussi, `walkable` n'ouvre aucun portillon. On y venait, on s'y cognait,
- * et rien ne le disait — c'était le seul mur invisible du quai.
+ * et rien ne le disait - c'était le seul mur invisible du quai.
  *
  * La limite ne se dresse que quand on va vraiment vers cette porte-là : les
  * portes sont dégagées, on est au bord, et on s'est tourné vers la voie

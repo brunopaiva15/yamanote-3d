@@ -6,29 +6,29 @@
 //
 // Quatre voix, et le sens de circulation en commande deux :
 //
-//   • atos-inner — l'automate du quai 内回り, une FEMME.
-//   • atos-outer — l'automate du quai 外回り, un HOMME.
+//   • atos-inner - l'automate du quai 内回り, une FEMME.
+//   • atos-outer - l'automate du quai 外回り, un HOMME.
 //
 //     Les deux disent le même script, et c'est justement pour cela qu'ils ne
 //     disent pas de la même bouche : sur un îlot central, les deux quais
 //     annoncent à quelques secondes d'écart, et la voix est ce qui dit lequel
-//     des deux vient de parler — donc de quel côté il faut se tourner. Le choix
+//     des deux vient de parler - donc de quel côté il faut se tourner. Le choix
 //     passe par `atosVoiceForDirection` : aucune annonce automatique ne fixe sa
 //     voix elle-même.
 //
-//   • agent    — l'agent de quai au micro, une femme. Plus humaine, moins
+//   • agent    - l'agent de quai au micro, une femme. Plus humaine, moins
 //                parfaite : c'est elle qui presse les voyageurs pendant
-//                l'échange, et on l'entend juste après l'automate — ce n'est
+//                l'échange, et on l'entend juste après l'automate - ce n'est
 //                plus la machine qui parle, ça s'entend au premier mot. Sa voix
 //                ne dépend PAS du sens : c'est une personne, elle est sur le
 //                quai, elle n'a qu'une voix.
-//   • atos-en  — la voix anglaise du quai (un homme), un peu plus lente que
+//   • atos-en  - la voix anglaise du quai (un homme), un peu plus lente que
 //                l'ATOS japonais, et la même dans les deux sens : la version
 //                anglaise ne double pas les repères sonores du japonais.
 //
 // Le canal (quelle voix synthétise quoi) est porté par `voice`, lu par
 // scripts/announcements-export.ts pour la gravure ET par data/clipKey pour la
-// clé du clip — deux automates qui disent les mêmes mots ont donc deux MP3.
+// clé du clip - deux automates qui disent les mêmes mots ont donc deux MP3.
 //
 // La direction annoncée reprend mot pour mot celle de la rame
 // (directionAnnouncement) : le même `loopJp(sens)` et les mêmes grands repères,
@@ -78,7 +78,7 @@ function bound(index: number, dir: LoopDirection): { jp: string; en: string } {
 //
 // Pas systématique sur la Yamanote : quand les rames se succèdent, ATOS la
 // saute. Elle n'est donc diffusée qu'une fois le quai vidé du train précédent,
-// et pas à chaque creux — c'est le plan d'annonces qui en décide
+// et pas à chaque creux - c'est le plan d'annonces qui en décide
 // (systems/platformAnnouncementPlan).
 
 export function platformPreAnnouncement(
@@ -115,7 +115,7 @@ export function platformGreeting(dir: LoopDirection): StationUtterance[] {
 // --- 3. Annonce principale d'approche ------------------------------------
 //
 // Vient après le carillon ATOS (synthétisé, voir audioEngine.platformChime).
-// La forme moderne dit 黄色い点字ブロック — les bandes podotactiles — là où
+// La forme moderne dit 黄色い点字ブロック - les bandes podotactiles - là où
 // l'ancienne disait 黄色い線の内側.
 
 export function platformApproachAnnouncement(
@@ -150,7 +150,7 @@ export function platformTrainEnteringAnnouncement(dir: LoopDirection): StationUt
 // --- 4 bis. Train qui traverse sans s'arrêter (通過) ----------------------
 //
 // Celle-là ne promet rien : personne ne monte. La gare ne nomme ni la ligne,
-// ni la direction, ni la destination — elle nomme la VOIE et demande de
+// ni la direction, ni la destination - elle nomme la VOIE et demande de
 // reculer, parce que la seule chose qui compte est qu'une rame va passer à
 // pleine vitesse à trois mètres du bord. C'est aussi la seule annonce de quai
 // qui parle d'une voie qui n'est pas la nôtre (voir data/passingTrains).
@@ -197,8 +197,8 @@ export function platformArrivalAnnouncement(
 // --- 6. Messages pendant l'échange des voyageurs -------------------------
 //
 // Ceux-là ne viennent pas du script ATOS mais de l'agent de quai : le ton est
-// plus variable, il parle de ce qu'il voit. Combien il en dit — zéro, un ou
-// deux — et lesquels ne se décident pas ici mais dans le plan d'annonces
+// plus variable, il parle de ce qu'il voit. Combien il en dit - zéro, un ou
+// deux - et lesquels ne se décident pas ici mais dans le plan d'annonces
 // (systems/platformAnnouncementPlan), à partir de l'affluence, de l'heure, de
 // la gare et du retard éventuel.
 
@@ -230,7 +230,7 @@ export interface PlatformAgentMessage {
  * Les poids ne sont pas des fréquences observées : ce sont des priorités de
  * quai. Faire descendre avant de faire monter passe partout ; demander de
  * prendre le train suivant ne se dit que quand il n'y a vraiment plus de place,
- * et le retard le rend nettement plus probable — c'est le moment où l'on
+ * et le retard le rend nettement plus probable - c'est le moment où l'on
  * arrête de charger la rame pour tenir l'intervalle.
  */
 export const PLATFORM_AGENT_MESSAGES: readonly PlatformAgentMessage[] = [
@@ -291,7 +291,7 @@ export function agentMessageIndex(category: AgentMessageCategory): number {
 /**
  * « Laissez descendre », à l'ouverture des portes. Plus systématique : c'est le
  * plan d'annonces qui décide s'il passe, et il ne passe presque jamais dans une
- * petite gare déserte — il n'y a personne à faire patienter.
+ * petite gare déserte - il n'y a personne à faire patienter.
  */
 export function platformAlightFirstAnnouncement(): StationUtterance[] {
   return platformAgentMessage(agentMessageIndex('alighting'));
@@ -347,7 +347,7 @@ export function platformDoorCheckAnnouncement(): StationUtterance[] {
 // --- Retard --------------------------------------------------------------
 //
 // Message dynamique : le motif est inséré dans un gabarit fixe. Diffusé sur le
-// quai quand la ligne accuse du retard — ce qui arrive après un arrêt d'urgence.
+// quai quand la ligne accuse du retard - ce qui arrive après un arrêt d'urgence.
 //
 // Il ne parle d'aucune rame en particulier, mais il sort des diffuseurs de
 // NOTRE quai : c'est donc l'automate de ce quai qui le lit, comme le reste. Un

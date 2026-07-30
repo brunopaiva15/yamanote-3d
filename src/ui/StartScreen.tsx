@@ -7,7 +7,7 @@
 //
 // Avant de monter, on peut (sans y être obligé) choisir la date, l'heure et
 // l'arrêt : par défaut, instant réel à Tokyo et gare tirée au hasard, comme
-// avant. La date n'est pas un détail d'état civil — c'est elle qui donne la
+// avant. La date n'est pas un détail d'état civil - c'est elle qui donne la
 // SAISON (systems/season) : la couleur des frondaisons, la hauteur du soleil,
 // l'heure à laquelle la nuit tombe, et le temps qu'il fait dehors.
 
@@ -72,7 +72,7 @@ function dateToValue(d: { year: number; month: number; day: number }): string {
  * Chaîne AAAA-MM-JJ → date civile Tokyo, jour de semaine compris.
  *
  * Le quantième est reconstruit en UTC : `new Date('2025-01-05')` est déjà de
- * l'UTC minuit, mais `getDay()` le relit dans le fuseau du navigateur — à
+ * l'UTC minuit, mais `getDay()` le relit dans le fuseau du navigateur - à
  * Paris on obtient encore le 4 au soir, donc le mauvais jour de la semaine, et
  * avec lui la mauvaise densité de voyageurs.
  */
@@ -158,7 +158,7 @@ export function StartScreen() {
     // `?plateau=1` : embarquer directement sur le tronçon du prototype PLATEAU,
     // plutôt que d'attendre le tour de boucle qu'un tirage aléatoire
     // imposerait. Sans le paramètre, plateauEntryStation() renvoie undefined et
-    // le boarding normal — gare tirée au sort, ou choisie dans le menu —
+    // le boarding normal - gare tirée au sort, ou choisie dans le menu -
     // reprend la main sans détour.
     const entryStation = plateauEntryStation();
     if (entryStation !== undefined) {
@@ -185,10 +185,10 @@ export function StartScreen() {
         <LanguageSwitcher className="lang-switch-board" />
         {/* Le titre de la page, en texte : une fois React monté, c'est le seul
             endroit où le document nomme ce qu'il est. Il est masqué à l'œil
-            parce que le logo juste dessous le dit déjà, en plus grand — mais un
+            parce que le logo juste dessous le dit déjà, en plus grand - mais un
             dessin n'est pas un titre, ni pour un lecteur d'écran ni pour un
             moteur de recherche, et le logo est donc décoratif (voir Logo). */}
-        <h1 className="visually-hidden">Yamanote 3D — 山手線</h1>
+        <h1 className="visually-hidden">Yamanote 3D - 山手線</h1>
         <Logo />
         <p className="start-tagline">{t.start.tagline}</p>
         <div className="board-band" aria-hidden="true" lang="ja">
@@ -300,8 +300,8 @@ export function StartScreen() {
               <option value={DIRECTION_RANDOM}>{t.start.directionRandom}</option>
               {/* Les deux sens gardent leur nom japonais, comme la bande
                   ci-dessus : c'est ainsi qu'ils sont écrits sur les quais. */}
-              <option value="inner">内回り — Uchi-mawari</option>
-              <option value="outer">外回り — Soto-mawari</option>
+              <option value="inner">内回り - Uchi-mawari</option>
+              <option value="outer">外回り - Soto-mawari</option>
             </select>
           </div>
           <div className="start-option">

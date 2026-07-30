@@ -1,5 +1,5 @@
 // Annonces enregistrées (Kokoro TTS : jf_alpha en japonais à bord, af_heart en
-// anglais à bord, et les trois voix du quai — voir data/stationAnnouncements),
+// anglais à bord, et les trois voix du quai - voir data/stationAnnouncements),
 // pré-générées par scripts/announcements-gen.py dans
 // public/audio/announcements/<clé>.mp3. La clé est le hachage du couple
 // (langue, texte), plus le RÔLE VOCAL quand il y en a un : un texte inchangé

@@ -3,7 +3,7 @@
 //
 // Les bornes ne sont plus des constantes : elles suivent le LEVER et le
 // COUCHER RÉELS du jour de l'année (systems/season). C'était le mensonge le
-// plus voyant du décor une fois la saison introduite — un 21 décembre où la
+// plus voyant du décor une fois la saison introduite - un 21 décembre où la
 // nuit tombe à 19 h 30, alors qu'à Tokyo il fait nuit noire à 17 h 30, et un
 // 21 juin où le jour se lève à 7 h quand le soleil est dehors depuis 4 h 25.
 // Deux heures et demie d'écart sur le coucher entre les deux solstices : c'est
@@ -12,7 +12,7 @@
 // Les décalages ci-dessous se lisent maintenant en crépuscule et non en heures
 // d'horloge. Celui de la tombée de nuit a été resserré au passage : à 35° de
 // latitude le crépuscule civil dure une petite demi-heure, et l'ancien réglage
-// laissait le 21 décembre en pleine heure dorée à 17 h 15 — trois quarts
+// laissait le 21 décembre en pleine heure dorée à 17 h 15 - trois quarts
 // d'heure après le coucher du soleil, alors que Tokyo est déjà allumée.
 
 import { seasonNow } from './season';

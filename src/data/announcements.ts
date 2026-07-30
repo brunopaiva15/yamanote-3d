@@ -4,12 +4,12 @@
 //
 // Ponctuation : la sonorisation de la RAME n'utilise aucune virgule (ni 、 ni
 // « , »), rien que des points. Le générateur de clips découpe le japonais sur
-// la ponctuation et pose un silence par coupure — plus long au 。 qu'au 、 —,
+// la ponctuation et pose un silence par coupure - plus long au 。 qu'au 、 -,
 // donc chaque respiration de ces annonces est désormais une pause pleine.
 // Toute chaîne ajoutée ici doit suivre la règle ; voir `noCommas` pour les
 // libellés importés d'ailleurs.
 //
-// Le point marque une PAUSE, pas seulement une fin de phrase — c'est la
+// Le point marque une PAUSE, pas seulement une fin de phrase - c'est la
 // diction des annonces automatiques, qui posent le nom de la gare et son code
 // détachés du reste : « The next station is. Shibuya. JY. 20. The doors on the
 // right side will open. » L'anglais de bord suit donc le japonais
@@ -29,7 +29,7 @@ export interface Utterance {
  * Sens de circulation, tel qu'il est annoncé.
  *
  * 内回り : STATIONS[i] → STATIONS[i+1], soit 東京 → 神田 → 上野 → 池袋 →
- * 新宿 → 渋谷 → 品川 → 東京 — la boucle INTÉRIEURE. 外回り fait le même tour
+ * 新宿 → 渋谷 → 品川 → 東京 - la boucle INTÉRIEURE. 外回り fait le même tour
  * dans l'autre sens. Une seule fonction, pour la rame et pour le quai : les
  * deux sonorisations ne peuvent pas se contredire sur le sens du train
  * qu'elles annoncent.
@@ -38,7 +38,7 @@ export const loopJp = loopNameJp;
 
 // Grandes gares de la boucle, servant de repères pour l'annonce du sens :
 // 東京, 上野, 池袋, 新宿, 渋谷, 品川. Dérivées de `data/stations`
-// (`LOOP_HUB_JY`), qui les tient pour la signalétique — un seul relevé, trois
+// (`LOOP_HUB_JY`), qui les tient pour la signalétique - un seul relevé, trois
 // lecteurs.
 const MAJOR_HUBS = new Set(LOOP_HUB_INDICES);
 
@@ -50,7 +50,7 @@ export function isMajorHub(index: number): boolean {
 // Les 1 à 2 prochains grands hubs à partir de `from`, dans le sens `dir`.
 // Partagé avec les annonces de quai (data/stationAnnouncements) : la gare et la
 // rame doivent nommer les mêmes repères de direction. En 外回り on rencontre
-// évidemment les mêmes six gares, mais dans l'ordre inverse — depuis Tamachi,
+// évidemment les mêmes six gares, mais dans l'ordre inverse - depuis Tamachi,
 // 品川・渋谷 au lieu de 東京・上野.
 export function nextHubs(from: number, count: number, dir: LoopDirection): Station[] {
   const out: Station[] = [];
@@ -71,7 +71,7 @@ export function nextHubs(from: number, count: number, dir: LoopDirection): Stati
  * Les textes de ce fichier sont écrits directement sans virgule ; cette
  * fonction sert aux libellés venus d'ailleurs (les correspondances de
  * `TRANSFERS`, énumérées avec des 、 et des virgules), qui alimentent aussi les
- * écrans embarqués — on convertit donc à la lecture, sans toucher aux données.
+ * écrans embarqués - on convertit donc à la lecture, sans toucher aux données.
  * En anglais la lettre suivante passe en capitale : après un point, c'est une
  * nouvelle phrase.
  */
@@ -94,8 +94,8 @@ function doorSideEn(side: 1 | -1): string {
  * JY01 → « JY. 01 » (forme parlée EN de la numérotation Yamanote).
  *
  * Le point entre les lettres et le nombre n'est pas une coquille : c'est une
- * pause. L'annonce de bord énonce le code de gare en deux temps — les deux
- * lettres, un souffle, le nombre —, et sans ponctuation le générateur les
+ * pause. L'annonce de bord énonce le code de gare en deux temps - les deux
+ * lettres, un souffle, le nombre -, et sans ponctuation le générateur les
  * enchaînait d'une traite. Comme partout ici, la pause s'écrit avec un point
  * (voir l'en-tête du fichier).
  */
@@ -180,7 +180,7 @@ export function doorsClosingAnnouncement(): Utterance[] {
 /**
  * Porte bloquée : le conducteur demande de dégager l'encadrement.
  *
- * Il n'existe pas d'annonce automatique pour chaque obstruction — c'est une
+ * Il n'existe pas d'annonce automatique pour chaque obstruction - c'est une
  * phrase dite au micro, courte, et qui se durcit d'une tentative à l'autre.
  * `insist` est le deuxième ton : la porte ne se ferme toujours pas, et ça
  * s'entend.
@@ -198,7 +198,7 @@ export function doorReleaseAnnouncement(insist = false): Utterance[] {
   ];
 }
 
-// Accueil (hors séquence standard — conservé pour usage éventuel).
+// Accueil (hors séquence standard - conservé pour usage éventuel).
 export function welcomeAnnouncement(): Utterance[] {
   return [
     { text: '本日も。山手線を。ご利用くださいまして。ありがとうございます。', lang: 'ja-JP' },
@@ -321,7 +321,7 @@ export function emergencyResumeAnnouncement(): Utterance[] {
 //
 // Ce qui parle ici n'est PAS la sonorisation automatique : elle est morte avec
 // le convertisseur. C'est le conducteur, au combiné, sur les batteries de bord
-// — d'où le silence des premières secondes, là où un 急停車 a son annonce
+// - d'où le silence des premières secondes, là où un 急停車 a son annonce
 // automatique pendant le freinage. Trois messages seulement : l'explication
 // une fois la rame posée, un rappel d'attente si ça dure, et le retour de la
 // tension. Rien entre les deux : personne ne sait quand ça revient.

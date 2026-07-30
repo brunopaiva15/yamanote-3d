@@ -6,8 +6,8 @@
 // descentes d'eau, gouttière, chemin de câbles et
 // repères de voiture peints au sol.
 //
-// Aucun de ces objets ne change d'une gare à l'autre — ce sont des modèles JR
-// standard — mais leur nombre et leur répartition, si : ils suivent les piliers,
+// Aucun de ces objets ne change d'une gare à l'autre - ce sont des modèles JR
+// standard - mais leur nombre et leur répartition, si : ils suivent les piliers,
 // les accès et l'affluence, que systems/stationPlacement calcule déjà pour le
 // mobilier et pour la marche du joueur.
 //
@@ -57,7 +57,7 @@ interface Props {
 
 /**
  * Suspentes d'un tronçon de conduite : une tous les dix mètres environ,
- * décalée du pilier le plus proche — au droit d'un poteau, elle traversait la
+ * décalée du pilier le plus proche - au droit d'un poteau, elle traversait la
  * poutre transversale, et la caméra qui y est parfois vissée.
  */
 function hangers(sp: { z0: number; z1: number }, columns: readonly number[]): number[] {
@@ -86,7 +86,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
 
   // Abscisses partagées par tout le fichier.
   //
-  // Sur un îlot — vingt-neuf gares sur trente — il n'y a pas de mur de fond :
+  // Sur un îlot - vingt-neuf gares sur trente - il n'y a pas de mur de fond :
   // l'ossature est une épine centrale, et tout ce qui s'y accroche doit tenir
   // DANS l'emprise du poteau, sinon on lui rentre dedans en passant. D'où la
   // descente d'eau plaquée sur la face du pilier, et les coffrets vissés
@@ -172,7 +172,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
 
   // --- Matrices ------------------------------------------------------
   // Diffuseurs : plaque affleurant la sous-face de l'auvent, grille tournée
-  // vers le bas — c'est de là que sortent réellement les annonces.
+  // vers le bas - c'est de là que sortent réellement les annonces.
   const speakerPlates = useMemo(
     () => kit.speakers.map((z) => mat(speakerX, canopyY - 0.04, z, 0.4, 0.07, 0.4)),
     [kit.speakers, speakerX, canopyY],
@@ -364,7 +364,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
       </instancedMesh>
 
       {/* Chemin de câbles : mêmes tronçons que la gouttière, sous les poutres,
-          et suspendu — il pendait dans le vide sur toute sa longueur. */}
+          et suspendu - il pendait dans le vide sur toute sa longueur. */}
       {kit.runSpans.map((sp) => (
         <group name="chemin-câbles" key={`ct${sp.z0}`}>
           <mesh position={[trayX, canopyY - 0.5, (sp.z0 + sp.z1) / 2]} material={m.metal}>

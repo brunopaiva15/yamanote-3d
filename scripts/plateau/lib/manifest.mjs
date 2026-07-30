@@ -1,4 +1,4 @@
-// Manifeste, licences et rapport de build — les trois fichiers que le jeu et
+// Manifeste, licences et rapport de build - les trois fichiers que le jeu et
 // le lecteur humain consomment.
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -54,7 +54,7 @@ export function buildManifest({ chunks, source, route }) {
 
 /**
  * Licences. Le fichier distingue explicitement les DONNÉES sources, les
- * transformations, les outils et les attributions dues — parce qu'elles ne
+ * transformations, les outils et les attributions dues - parce qu'elles ne
  * relèvent pas de la même licence et qu'un fichier unique « MIT » serait faux.
  */
 export function buildLicense({ source, routeProperties }) {
@@ -62,7 +62,7 @@ export function buildLicense({ source, routeProperties }) {
   const synthetic = source.kind === 'sample';
   const routeIsOsm = routeProperties?.source?.includes('OpenStreetMap');
 
-  return `# Licences — monde PLATEAU (prototype ${PLATEAU_CONFIG.prototype.from} → ${PLATEAU_CONFIG.prototype.to})
+  return `# Licences - monde PLATEAU (prototype ${PLATEAU_CONFIG.prototype.from} → ${PLATEAU_CONFIG.prototype.to})
 
 Généré automatiquement par \`npm run world:build:prototype\`.
 Ne pas éditer à la main : le fichier est réécrit à chaque build.

@@ -1,4 +1,4 @@
-// JY20 渋谷 — le quai unifié de 2023.
+// JY20 渋谷 - le quai unifié de 2023.
 //
 // Arcs d'acier blanc, verrières entre les arcs, hauteur libre : depuis janvier
 // 2023 les deux sens tiennent sur un unique quai central, large mais fortement
@@ -39,7 +39,7 @@ export function Shibuya({ layout, place, m }: SigProps) {
           </mesh>
         </group>
       ))}
-      {/* Bandeau lumineux continu au droit de chaque bord de quai — calé SOUS
+      {/* Bandeau lumineux continu au droit de chaque bord de quai - calé SOUS
           les poutres transversales, qu'il traversait au ras de la sous-face. */}
       <mesh position={[PSD_X + 0.9, top - 0.215, 0]} material={m.lamp}>
         <boxGeometry args={[0.5, 0.07, layout.length - 8]} />

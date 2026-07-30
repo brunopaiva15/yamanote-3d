@@ -3,7 +3,7 @@
   "generatedAt": "2026-07-29T09:19:28.700Z",
   "source": {
     "name": "Échantillon synthétique (PAS de données Project PLATEAU)",
-    "dataset": "data/plateau-sample — généré par scripts/plateau/make-sample.mjs",
+    "dataset": "data/plateau-sample - généré par scripts/plateau/make-sample.mjs",
     "license": "CC0 1.0 (production de ce dépôt)",
     "synthetic": true
   },

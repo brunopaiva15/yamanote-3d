@@ -1,4 +1,4 @@
-// Ce qui change d'une gare de la boucle à l'autre — table explicite, gare par gare.
+// Ce qui change d'une gare de la boucle à l'autre - table explicite, gare par gare.
 //
 // Tant qu'on ne voyait le quai que par les vitres, une seule gare générique
 // suffisait. Dès qu'on y marche, l'uniformité saute aux yeux : une gare de
@@ -9,7 +9,7 @@
 // La version précédente DÉDUISAIT la typologie du tronçon traversé
 // (data/segments) avant de corriger par exceptions. C'était une erreur de
 // principe : un tronçon dit ce qu'on voit ENTRE deux gares, pas comment la gare
-// est bâtie. Sept gares en sortaient fausses — Tabata et Komagome sont en
+// est bâtie. Sept gares en sortaient fausses - Tabata et Komagome sont en
 // tranchée alors que leurs tronçons sont au sol, Ōtsuka, Takadanobaba,
 // Shin-Ōkubo, Gotanda et Hamamatsuchō sont sur viaduc alors que les leurs sont
 // au sol ou en tranchée. Chaque gare porte donc maintenant ses propres cotes,
@@ -22,8 +22,8 @@
 //   - `signature`     : le caractère architectural, quand il ne se paramètre pas.
 //
 // Le fond de quai découle désormais de ces deux premiers axes, et de rien
-// d'autre : `config` dit ce qu'on a dans le dos — une voie Keihin-Tōhoku, la
-// voie Yamanote opposée, un mur — et `elevation` dit ce qu'on voit au-delà.
+// d'autre : `config` dit ce qu'on a dans le dos - une voie Keihin-Tōhoku, la
+// voie Yamanote opposée, un mur - et `elevation` dit ce qu'on voit au-delà.
 // Le champ `backdrop`, qui nommait une famille de rendu au lieu d'un fait, a
 // disparu : c'était lui qui donnait à vingt-neuf quais le même mur.
 
@@ -46,7 +46,7 @@ export type Elevation =
   /** En tranchée : parois de soutènement des deux côtés, la gare est au-dessus. */
   | 'trench';
 
-/** Ce qu'on a de l'autre côté du quai — la différence à ne surtout pas uniformiser. */
+/** Ce qu'on a de l'autre côté du quai - la différence à ne surtout pas uniformiser. */
 export type PlatformConfig =
   /** Quai partagé avec une autre ligne : la voie d'en face n'est pas la Yamanote. */
   | 'sharedIsland'
@@ -157,8 +157,8 @@ export interface StationAmenities {
  * ses retombées ne la regardent pas seule : un portique riveté descend en plein
  * gabarit des panneaux suspendus, un poteau de halle se plante sur l'épine où
  * le placement range bancs et distributeurs. Le plan est donc calculé ICI, dans
- * les données — c'est la seule couche que le placement (systems) et le rendu
- * (three) peuvent lire tous les deux — et la charpente le CONSOMME au lieu de
+ * les données - c'est la seule couche que le placement (systems) et le rendu
+ * (three) peuvent lire tous les deux - et la charpente le CONSOMME au lieu de
  * recalculer sa trame dans son coin.
  */
 export interface SigPlan {
@@ -171,7 +171,7 @@ export interface SigPlan {
   /**
    * Poteaux qui descendent jusqu'au sol du quai : le mobilier s'en écarte et
    * la marche les contourne. Déjà écartés des accès, des potences et de la
-   * bande directionnelle — c'est le rôle de ce plan.
+   * bande directionnelle - c'est le rôle de ce plan.
    */
   posts: { x: number; z: number }[];
   /** Tronçons interdits aux conduites (gouttière, chemin de câbles). */
@@ -190,8 +190,8 @@ export interface StationLayout {
   works: boolean;
   /**
    * La travée d'en face ne se ferme pas par un mur mais par un faisceau : des
-   * voies encore, jusqu'au bord du champ. C'est ce qui fait Nippori et Ueno —
-   * « perspectives dégagées sur tout le faisceau » — et ce que Shinagawa et
+   * voies encore, jusqu'au bord du champ. C'est ce qui fait Nippori et Ueno -
+   * « perspectives dégagées sur tout le faisceau » - et ce que Shinagawa et
    * Ōsaki donnent à voir de leurs quais parallèles.
    */
   openFarSide: boolean;
@@ -206,14 +206,14 @@ export interface StationLayout {
    * La charpente signature TIENT LIEU de couverture : pas de dalle d'auvent
    * générique au-dessus des quais.
    *
-   * Vingt-neuf gares sur trente ont un vrai auvent — une dalle basse et opaque,
+   * Vingt-neuf gares sur trente ont un vrai auvent - une dalle basse et opaque,
    * et ce qu'il y a par-dessus ne regarde personne. Takanawa Gateway est
    * l'exception : le quai n'est couvert que par la grande toiture pliée, douze
    * mètres plus haut, et c'est TOUT ce qui fait la gare. La dalle générique la
-   * masquait entièrement — on levait les yeux sur un plafond blanc et plat.
+   * masquait entièrement - on levait les yeux sur un plafond blanc et plat.
    *
    * Ce qui reste : la trame de poutres et de néons à hauteur d'auvent, à quoi
-   * pend la signalétique. Elle ne porte plus rien, elle éclaire — comme les
+   * pend la signalétique. Elle ne porte plus rien, elle éclaire - comme les
    * passerelles techniques d'une halle.
    */
   sigCanopy: boolean;
@@ -233,7 +233,7 @@ export interface StationLayout {
 export const FULL_PLATFORM_LEN = 224;
 
 /**
- * Positions régulières sur la longueur du quai — la trame de toutes les
+ * Positions régulières sur la longueur du quai - la trame de toutes les
  * charpentes signature. Partagée avec leur rendu (signatures/kit la
  * ré-exporte) : la même formule des deux côtés, ou rien ne coïncide.
  */
@@ -251,7 +251,7 @@ export function bays(length: number, spacing: number, from = -0.5, to = 0.5): nu
  * Elles franchissent tout le site à six mètres et demi : c'est le seul endroit
  * d'où l'on voit à la fois le hall, les escaliers et les quatre voies. Le plan
  * d'implantation les lit pour en écarter poteaux et suspendus, la charpente
- * pour les dessiner — deux valeurs divergentes, et une colonne monte au travers
+ * pour les dessiner - deux valeurs divergentes, et une colonne monte au travers
  * d'un tablier. La seconde se tient au-delà de la troisième bande
  * directionnelle ET de la potence de l'escalier mécanique, qu'elle
  * chevauchait tour à tour.
@@ -332,7 +332,7 @@ const PALETTES = {
     tile: '#c8ced2',
   },
   // Takanawa Gateway : acier blanc, cèdre clair, verre. La plus lumineuse de la
-  // boucle — elle empruntait jusqu'ici la palette de Shibuya, qui est grise.
+  // boucle - elle empruntait jusqu'ici la palette de Shibuya, qui est grise.
   //
   // Blanche, mais pas BLANCHE PARTOUT : c'est le piège de cette gare-là. Le
   // fond de travée est un mur-rideau, donc un gris bleuté de verre et non un
@@ -451,7 +451,7 @@ const KT = 'Keihin-Tōhoku';
  */
 const SPECS: readonly Spec[] = [
   {
-    // JY01 — halle monumentale, voies 4 et 5 sur deux quais partagés avec la
+    // JY01 - halle monumentale, voies 4 et 5 sur deux quais partagés avec la
     // Keihin-Tōhoku. Depuis le quai, ce n'est pas la façade de brique qu'on
     // voit, c'est un gigantesque environnement ferroviaire couvert.
     name: 'JY01 Tokyo',
@@ -470,7 +470,7 @@ const SPECS: readonly Spec[] = [
     palette: 'tokyo',
   },
   {
-    // JY02 — viaduc à trois quais centraux ; les voies 2 et 3 sont réunies sur
+    // JY02 - viaduc à trois quais centraux ; les voies 2 et 3 sont réunies sur
     // le même îlot. Quai étroit, charpente sombre, immeubles à toucher.
     name: 'JY02 Kanda',
     elevation: 'elevated',
@@ -482,7 +482,7 @@ const SPECS: readonly Spec[] = [
     canopyY: 3.7,
   },
   {
-    // JY03 — viaducs croisés : les voies 5 et 6 de la Chūō–Sōbu passent
+    // JY03 - viaducs croisés : les voies 5 et 6 de la Chūō–Sōbu passent
     // perpendiculairement au niveau supérieur. Poutres massives, plafonds bas,
     // plusieurs couches de circulation visibles à la fois.
     name: 'JY03 Akihabara',
@@ -498,7 +498,7 @@ const SPECS: readonly Spec[] = [
     columnSpacing: 9.5,
   },
   {
-    // JY04 — quatre voies parallèles sur viaduc, quais rectilignes et étroits,
+    // JY04 - quatre voies parallèles sur viaduc, quais rectilignes et étroits,
     // couverture métallique presque continue. Ameyoko est juste dessous.
     name: 'JY04 Okachimachi',
     elevation: 'elevated',
@@ -510,7 +510,7 @@ const SPECS: readonly Spec[] = [
     depth: PLATFORM_DEPTH + 0.9,
   },
   {
-    // JY05 — voies élevées, voies terminales et niveaux souterrains. Le quai
+    // JY05 - voies élevées, voies terminales et niveaux souterrains. Le quai
     // Yamanote est plus resserré qu'à Tokyo, mais le faisceau donne au décor
     // une profondeur considérable.
     name: 'JY05 Ueno',
@@ -529,7 +529,7 @@ const SPECS: readonly Spec[] = [
     palette: 'hub',
   },
   {
-    // JY06 — la plus discrète de la boucle : deux quais centraux au sol,
+    // JY06 - la plus discrète de la boucle : deux quais centraux au sol,
     // toitures anciennes, garde-corps simples, vue sur les temples et les
     // arbres d'Ueno. « Vallée du rossignol » : les oiseaux font partie du lieu.
     name: 'JY06 Uguisudani',
@@ -544,7 +544,7 @@ const SPECS: readonly Spec[] = [
     clock: false,
   },
   {
-    // JY07 — immense corridor ferroviaire au sol, voies 10 et 11 séparées.
+    // JY07 - immense corridor ferroviaire au sol, voies 10 et 11 séparées.
     // Quais longs, ponts-concours au-dessus des rails, faisceau dégagé.
     name: 'JY07 Nippori',
     openFarSide: true,
@@ -559,7 +559,7 @@ const SPECS: readonly Spec[] = [
     canopyY: 4.2,
   },
   {
-    // JY08 — compacte mais verticalement complexe : quais JR au niveau
+    // JY08 - compacte mais verticalement complexe : quais JR au niveau
     // supérieur, hall en dessous. Quais sobres, étroits, très techniques.
     name: 'JY08 Nishi-Nippori',
     elevation: 'elevated',
@@ -572,7 +572,7 @@ const SPECS: readonly Spec[] = [
     canopyY: 3.6,
   },
   {
-    // JY09 — quatre voies en TRANCHÉE sous le bâtiment de gare, pas au sol :
+    // JY09 - quatre voies en TRANCHÉE sous le bâtiment de gare, pas au sol :
     // murs de soutènement, passerelles, grande gare-pont au-dessus.
     name: 'JY09 Tabata',
     elevation: 'trench',
@@ -583,7 +583,7 @@ const SPECS: readonly Spec[] = [
     crowd: 0.8,
   },
   {
-    // JY10 — unique quai central en tranchée, étroit et calme, talus
+    // JY10 - unique quai central en tranchée, étroit et calme, talus
     // végétalisés et azalées le long de la voie. Là encore une tranchée, que
     // le tronçon au sol ne laissait pas deviner.
     name: 'JY10 Komagome',
@@ -595,7 +595,7 @@ const SPECS: readonly Spec[] = [
     depth: PLATFORM_DEPTH + 0.5,
   },
   {
-    // JY11 — quai central en tranchée, murs latéraux proches, toiture
+    // JY11 - quai central en tranchée, murs latéraux proches, toiture
     // partielle, bâtiment de gare posé au-dessus des voies.
     name: 'JY11 Sugamo',
     elevation: 'trench',
@@ -605,7 +605,7 @@ const SPECS: readonly Spec[] = [
     crowd: 0.85,
   },
   {
-    // JY12 — quai aérien ouvert, la rue passe immédiatement en dessous et le
+    // JY12 - quai aérien ouvert, la rue passe immédiatement en dessous et le
     // tram Arakawa traverse à côté. Le tronçon est en tranchée, la gare non.
     name: 'JY12 Otsuka',
     elevation: 'elevated',
@@ -618,7 +618,7 @@ const SPECS: readonly Spec[] = [
     canopyY: 4,
   },
   {
-    // JY13 — quatre voies Yamanote (5 à 8) sur deux quais centraux : c'est ce
+    // JY13 - quatre voies Yamanote (5 à 8) sur deux quais centraux : c'est ce
     // qui permet départs et terminus. Quais très larges, cages d'escalier
     // nombreuses, panneaux suspendus volumineux. Les voies 5 et 8, longtemps
     // nues, ont reçu leurs portes le 18 mars 2026 : la gare est désormais
@@ -636,7 +636,7 @@ const SPECS: readonly Spec[] = [
     palette: 'hub',
   },
   {
-    // JY14 — un seul bâtiment-pont au-dessus du quai, peu de locaux, vue
+    // JY14 - un seul bâtiment-pont au-dessus du quai, peu de locaux, vue
     // dégagée. L'une des deux seules gares sans correspondance ferroviaire.
     name: 'JY14 Mejiro',
     elevation: 'trench',
@@ -647,7 +647,7 @@ const SPECS: readonly Spec[] = [
     depth: PLATFORM_DEPTH + 0.6,
   },
   {
-    // JY15 — quai aérien étroit, toiture métallique continue, colonnes
+    // JY15 - quai aérien étroit, toiture métallique continue, colonnes
     // nombreuses, lignes Seibu visibles juste à côté. Forte affluence
     // étudiante et accumulation de panneaux.
     name: 'JY15 Takadanobaba',
@@ -661,7 +661,7 @@ const SPECS: readonly Spec[] = [
     columnSpacing: 9.5,
   },
   {
-    // JY16 — quai central étroit, toiture simple, ville extrêmement proche.
+    // JY16 - quai central étroit, toiture simple, ville extrêmement proche.
     // Le bâtiment actuel est plus vertical que l'ancienne petite gare.
     name: 'JY16 Shin-Okubo',
     elevation: 'elevated',
@@ -673,7 +673,7 @@ const SPECS: readonly Spec[] = [
     canopyY: 3.8,
   },
   {
-    // JY17 — quai central des voies 14 et 15, au niveau du sol. Alignement
+    // JY17 - quai central des voies 14 et 15, au niveau du sol. Alignement
     // massif de quais, toiture presque continue, forêt de poteaux, visibilité
     // coupée par les autres quais. Pas encore de portes de quai Yamanote : la
     // restructuration en cours l'interdit.
@@ -693,7 +693,7 @@ const SPECS: readonly Spec[] = [
     palette: 'shinjuku',
   },
   {
-    // JY18 — quatre voies imbriquant Yamanote et Chūō–Sōbu : les voies 1 et 2
+    // JY18 - quatre voies imbriquant Yamanote et Chūō–Sōbu : les voies 1 et 2
     // sont sur DEUX quais différents, chacune adossée à une voie Chūō–Sōbu.
     // Quais légèrement courbes, anciennes marquises, organisation asymétrique.
     name: 'JY18 Yoyogi',
@@ -707,7 +707,7 @@ const SPECS: readonly Spec[] = [
     canopyY: 3.8,
   },
   {
-    // JY19 — LE seul couple de quais latéraux de la boucle, depuis la refonte
+    // JY19 - LE seul couple de quais latéraux de la boucle, depuis la refonte
     // qui a remplacé l'ancien quai central. Takeshita d'un côté, la végétation
     // du Meiji-jingū de l'autre ; bâtiment clair et vitré, quais courbes.
     name: 'JY19 Harajuku',
@@ -723,7 +723,7 @@ const SPECS: readonly Spec[] = [
     palette: 'harajuku',
   },
   {
-    // JY20 — depuis 2023 les deux sens tiennent sur un unique quai central très
+    // JY20 - depuis 2023 les deux sens tiennent sur un unique quai central très
     // large, mais fortement courbé. Parois et plafonds provisoires, panneaux de
     // chantier partout, et toujours pas de portes de quai en 2026.
     name: 'JY20 Shibuya',
@@ -742,7 +742,7 @@ const SPECS: readonly Spec[] = [
     palette: 'shibuya',
   },
   {
-    // JY21 — quai central couvert sur viaduc, parallèle au quai
+    // JY21 - quai central couvert sur viaduc, parallèle au quai
     // Saikyō/Shōnan–Shinjuku, très intégré au complexe Atre. L'extrémité est
     // se prolonge vers la longue passerelle d'Ebisu Garden Place.
     name: 'JY21 Ebisu',
@@ -756,7 +756,7 @@ const SPECS: readonly Spec[] = [
     canopyY: 4.2,
   },
   {
-    // JY22 — quai central en tranchée, murs latéraux proches, Atre posé
+    // JY22 - quai central en tranchée, murs latéraux proches, Atre posé
     // au-dessus. Large au centre, effilé aux extrémités.
     name: 'JY22 Meguro',
     elevation: 'trench',
@@ -767,7 +767,7 @@ const SPECS: readonly Spec[] = [
     depth: PLATFORM_DEPTH + 1,
   },
   {
-    // JY23 — quai central légèrement courbé sur viaduc, ville et façades
+    // JY23 - quai central légèrement courbé sur viaduc, ville et façades
     // commerciales à toucher, et la Tōkyū Ikegami spectaculairement perchée au
     // quatrième niveau. Le tronçon est en tranchée, la gare non.
     name: 'JY23 Gotanda',
@@ -781,7 +781,7 @@ const SPECS: readonly Spec[] = [
     canopyY: 3.9,
   },
   {
-    // JY24 — quatre voies Yamanote (1 à 4) sur deux quais centraux : point
+    // JY24 - quatre voies Yamanote (1 à 4) sur deux quais centraux : point
     // opérationnel de départ, de terminus et d'accès au dépôt. Portes en place
     // sur les voies principales 1 et 3 ; les secondaires 2 et 4 sont encore
     // en travaux civils (笠石) jusqu'à novembre 2026 au moins.
@@ -799,7 +799,7 @@ const SPECS: readonly Spec[] = [
     palette: 'hub',
   },
   {
-    // JY25 — très grande gare au sol. Voies 1 et 3 sur deux quais séparés :
+    // JY25 - très grande gare au sol. Voies 1 et 3 sur deux quais séparés :
     // la numérotation n'est plus continue depuis le remaniement. Immense
     // toiture industrielle, longues perspectives, escaliers massifs, et
     // plusieurs secteurs encore en travaux sur le plan de 2026.
@@ -819,7 +819,7 @@ const SPECS: readonly Spec[] = [
     palette: 'hub',
   },
   {
-    // JY26 — grand quai central, second quai central pour la Keihin-Tōhoku.
+    // JY26 - grand quai central, second quai central pour la Keihin-Tōhoku.
     // Toiture blanche inspirée de l'origami, acier et bois clair, façades
     // vitrées, atrium visible depuis le quai : la plus lumineuse de la boucle,
     // et la seule dont l'architecture est entièrement propre.
@@ -839,7 +839,7 @@ const SPECS: readonly Spec[] = [
     palette: 'takanawa',
   },
   {
-    // JY27 — quatre voies sur deux quais centraux, les extérieures à la
+    // JY27 - quatre voies sur deux quais centraux, les extérieures à la
     // Keihin-Tōhoku. Longues marquises, quais rectilignes, vaste
     // bâtiment-pont, et une partie du hall en travaux en 2026.
     name: 'JY27 Tamachi',
@@ -853,7 +853,7 @@ const SPECS: readonly Spec[] = [
     depth: PLATFORM_DEPTH + 1.8,
   },
   {
-    // JY28 — quatre voies au niveau supérieur. Environnement très vertical, le
+    // JY28 - quatre voies au niveau supérieur. Environnement très vertical, le
     // monorail de Haneda immédiatement à côté, éléments anciens mêlés aux
     // structures neuves et plusieurs zones en construction.
     name: 'JY28 Hamamatsucho',
@@ -869,7 +869,7 @@ const SPECS: readonly Spec[] = [
     canopyY: 4,
   },
   {
-    // JY29 — grande gare élevée, quai central des voies 4 et 5. Vieux viaduc
+    // JY29 - grande gare élevée, quai central des voies 4 et 5. Vieux viaduc
     // métallique, couverture dense, quais parallèles multiples ; dessous, les
     // arcades et les couloirs bas contrastent avec les tours de Shiodome.
     name: 'JY29 Shimbashi',
@@ -886,7 +886,7 @@ const SPECS: readonly Spec[] = [
     palette: 'brickViaduct',
   },
   {
-    // JY30 — viaduc ancien en acier et maçonnerie, piliers épais, quai couvert
+    // JY30 - viaduc ancien en acier et maçonnerie, piliers épais, quai couvert
     // et étroit. Restaurants et petites cellules commerciales sous les voies ;
     // à l'ouest, l'International Forum tranche par sa modernité.
     name: 'JY30 Yurakucho',
@@ -923,7 +923,7 @@ function amenities(scale: number, kiosk: boolean, clock: boolean): StationAmenit
 
 /**
  * Écarte chaque plan de charpente des créneaux déjà pris, en cherchant des
- * deux côtés ; un plan qui ne trouve pas de creux est abandonné — mieux vaut
+ * deux côtés ; un plan qui ne trouve pas de creux est abandonné - mieux vaut
  * une travée plus large qu'un portique dans un escalier mécanique.
  */
 function dodgePlanes(zs: number[], solids: { z: number; r: number }[]): number[] {
@@ -985,7 +985,7 @@ function sigPlanFor(
   const mirrors = [-1, 1].map((d) => ({ z: d * (halfConsist + 1.2), r: 0.5 }));
 
   /**
-   * Poteaux d'épine : écartés de tout ce qui vit déjà sur l'épine — et de la
+   * Poteaux d'épine : écartés de tout ce qui vit déjà sur l'épine - et de la
    * trame des piliers génériques, dont les poutres transversales montent en
    * travers de leur fût.
    */
@@ -1035,7 +1035,7 @@ function sigPlanFor(
     }
     case 'takanawaGateway': {
       // Mezzanines vitrées : elles enjambent maintenant TOUT le site, quais
-      // compris — c'est de là qu'on voit les quatre voies d'un coup. Les
+      // compris - c'est de là qu'on voit les quatre voies d'un coup. Les
       // colonnes-arbres s'en écartent donc à leur tour : plantées au droit
       // d'un tablier, leurs branches le traversaient de part en part.
       const decks = takanawaDeckZs(length).map((z) => ({ z, r: 4.2 }));

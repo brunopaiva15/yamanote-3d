@@ -5,7 +5,7 @@
 // remontait à l'endroit à la fin. De loin ça passait ; d'un mètre, un voyageur
 // « tombait » comme une planche à repasser.
 //
-// Les packs livrent pourtant de vraies animations clés à clés — un corps qui
+// Les packs livrent pourtant de vraies animations clés à clés - un corps qui
 // perd ses jambes, s'assoit sur ses talons, part en arrière et s'étale, avec le
 // contrecoup des bras et le tassement final. C'est le clip « Death » (résolu en
 // `collapse`, voir library.ts) ; le « HitRecieve » (`stagger`) est, lui, le faux
@@ -20,7 +20,7 @@
 //     à terre longtemps, on se relève lentement) alors que le clip d'origine
 //     tient en une seconde ;
 //   - le TEMPS AU SOL, en tenant le clip sur sa dernière image ;
-//   - le RELEVÉ, en repassant le clip à l'envers — un corps qui ramène ses
+//   - le RELEVÉ, en repassant le clip à l'envers - un corps qui ramène ses
 //     jambes sous lui et se hisse, ce qu'aucun pack ne fournit.
 //
 // Les temps sont calés sur les bruitages (systems/audioEngine, paxFall/paxSlip) :
@@ -42,12 +42,12 @@ interface FallCut {
 }
 
 const FALL_CUTS: Partial<Record<PaxAction, FallCut>> = {
-  // Chute complète (rame). Impact au sol à 0,55 s — le `thud` de paxFall ;
-  // départ du relevé à 2,80 s — son froissement de tissu ; debout à 4,0 s,
+  // Chute complète (rame). Impact au sol à 0,55 s - le `thud` de paxFall ;
+  // départ du relevé à 2,80 s - son froissement de tissu ; debout à 4,0 s,
   // dans la plus courte des durées du catalogue (4,2 s).
   //
-  // Le milieu du clip, repris à l'envers, donne l'assise par terre — jambes
-  // devant, buste en arrière sur les mains — qu'aucun pack n'anime : c'est
+  // Le milieu du clip, repris à l'envers, donne l'assise par terre - jambes
+  // devant, buste en arrière sur les mains - qu'aucun pack n'anime : c'est
   // elle qui fait la chute plutôt que le plongeon, et qui laisse au voyageur
   // le temps de regarder autour de lui, penaud.
   fall: {
@@ -82,8 +82,8 @@ const FALL_CUTS: Partial<Record<PaxAction, FallCut>> = {
     fadeIn: 0.08,
     fadeOut: 0.28,
   },
-  // Glissade (quai) : le pied part, il descend jusqu'à mi-hauteur — choc à
-  // 0,35 s, le `thud` de paxSlip — puis se rattrape sans toucher le sol.
+  // Glissade (quai) : le pied part, il descend jusqu'à mi-hauteur - choc à
+  // 0,35 s, le `thud` de paxSlip - puis se rattrape sans toucher le sol.
   // Le clip de chute repassé à l'envers EST ce rattrapage.
   slip: {
     clip: 'collapse',
@@ -106,7 +106,7 @@ const FALL_CUTS: Partial<Record<PaxAction, FallCut>> = {
  * Le clip tombe toujours droit en arrière : sans ça, les six chutes d'un tour
  * de boucle seraient rigoureusement la même. On fait donc pivoter le voyageur
  * pendant qu'il perd l'équilibre, du côté que l'action a déjà tiré au sort
- * (`lookYawTarget`, ±1) — il part en arrière ET de biais, comme quand on se
+ * (`lookYawTarget`, ±1) - il part en arrière ET de biais, comme quand on se
  * rattrape d'un pied.
  */
 export function fallYawOffset(side: number, fallW: number): number {
@@ -133,7 +133,7 @@ const cue: FallCue = { clip: 'collapse', u: 0, fadeIn: 0.1, fadeOut: 0.3 };
  * pas une chute (ou si elle a dépassé sa dernière clé : le voyageur est debout,
  * l'idle reprend la main).
  *
- * L'objet renvoyé est réutilisé d'un appel à l'autre — à consommer sur place.
+ * L'objet renvoyé est réutilisé d'un appel à l'autre - à consommer sur place.
  */
 export function fallCue(action: PaxAction, actionT: number): FallCue | null {
   const cut = FALL_CUTS[action];

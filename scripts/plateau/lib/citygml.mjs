@@ -1,4 +1,4 @@
-// Lecteur CityGML intégré — profil « bâtiment » de PLATEAU.
+// Lecteur CityGML intégré - profil « bâtiment » de PLATEAU.
 //
 // CE QUE CE MODULE FAIT RÉELLEMENT
 // --------------------------------
@@ -13,7 +13,7 @@
 // Les anneaux extérieurs ET intérieurs (gml:interior) sont conservés, ainsi
 // que la dimension déclarée par srsDimension.
 //
-// CE QU'IL NE FAIT PAS — et il faut le savoir avant de s'en servir
+// CE QU'IL NE FAIT PAS - et il faut le savoir avant de s'en servir
 // ----------------------------------------------------------------
 //   · Aucune APPARENCE : app:Appearance, ParameterizedTexture, coordonnées UV
 //     et images associées sont ignorées. Un LOD2 texturé sera donc rendu SANS
@@ -23,7 +23,7 @@
 //     fichier ce n'est pas nécessaire pour le profil PLATEAU (les polygones
 //     LOD2 sont écrits dans bldg:boundedBy ; lod2Solid ne fait que les
 //     référencer), mais un CityGML qui factoriserait ses surfaces ailleurs
-//     perdrait de la géométrie — le lecteur le signale alors comme
+//     perdrait de la géométrie - le lecteur le signale alors comme
 //     « bâtiment sans géométrie exploitable ».
 //   · Aucun attribut i-UR (uro:*) hors ceux listés ci-dessus.
 //   · Aucun autre thème que bldg (tran, veg, frn, dem…).
@@ -78,7 +78,7 @@ export function readSrs(xml) {
   }
   const epsg = Number(code[1]);
   // Ordre des axes : les CRS géographiques japonais et le WGS 84 3D déclarent
-  // (latitude, longitude[, hauteur]) — pas (lon, lat).
+  // (latitude, longitude[, hauteur]) - pas (lon, lat).
   const LAT_LON = new Set([6697, 6668, 4326, 4979, 4612]);
   if (!LAT_LON.has(epsg)) {
     throw new PipelineError(
@@ -227,7 +227,7 @@ const LOD_SOURCES = [
  *
  * Travailler sur une tranche est indispensable : `String.indexOf` ne sait pas
  * s'arrêter à une borne, donc chercher un élément absent dans un fichier de
- * 50 Mo le reparcourt en entier — une fois par bâtiment et par LOD candidat.
+ * 50 Mo le reparcourt en entier - une fois par bâtiment et par LOD candidat.
  * Découper une fois ramène le coût de quadratique à linéaire.
  */
 function readOneBuilding(chunk, ns, tag, defaultDim) {

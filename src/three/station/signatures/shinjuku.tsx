@@ -1,4 +1,4 @@
-// JY17 新宿 — la forêt de piliers.
+// JY17 新宿 - la forêt de piliers.
 //
 // Dalle basse, poteaux carrés serrés, chemins de câbles et néons rapprochés :
 // la gare la plus fréquentée du monde n'a rien d'aérien. On y avance sous un
