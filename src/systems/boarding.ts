@@ -55,3 +55,14 @@ export function crossNearestPortal(pos: THREE.Vector3): boolean {
   else board();
   return true;
 }
+
+// Descendre / remonter depuis la console ou un navigateur piloté, sans avoir à
+// marcher jusqu'à une porte : __alight() bascule le référentiel sur le quai et
+// démarre l'attente, __board() rend la main au cycle station. Développement
+// seulement - c'est la seule façon d'atteindre l'état « debout sur le quai » de
+// façon reproductible pour une capture.
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  const w = window as unknown as Record<string, unknown>;
+  w.__alight = () => alight();
+  w.__board = () => board();
+}
