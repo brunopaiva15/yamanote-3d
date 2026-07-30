@@ -193,6 +193,11 @@ export function forceDoorObstruction(kind?: ObstacleKind): void {
   }
 }
 
+/** L'assistance voyageurs a priorite sur un tirage pas encore materialise. */
+export function cancelArmedDoorObstruction(): void {
+  armed = null;
+}
+
 function pickDoor(): { car: number; dz: number } {
   // La moitié du temps la voiture du joueur, sinon une caisse voisine.
   const offset = Math.random() < 0.5 ? 0 : 1 + Math.floor(Math.random() * 3);
