@@ -1477,6 +1477,32 @@ Le site sera servi sur `https://<utilisateur>.github.io/yamanote-3d/`
 (le build utilise des chemins relatifs, il fonctionne aussi à la racine
 d'un domaine ou sur tout autre hébergeur statique).
 
+### Compteur « voyageurs en ligne » (facultatif)
+
+Le HUD peut afficher le nombre de personnes actuellement connectées au site,
+mis à jour en temps réel. Le site étant purement statique, un fichier ne peut
+pas compter qui est là : le décompte passe par le canal *Realtime Presence* de
+[Supabase](https://supabase.com), contacté directement depuis le navigateur.
+Aucun backend à écrire, aucune table ni SQL - seulement le canal de présence.
+
+La fonctionnalité est **désactivée par défaut** : sans configuration, le badge
+reste masqué, le jeu tourne à l'identique et la bibliothèque Supabase (chargée
+en import dynamique) n'est jamais téléchargée par le visiteur.
+
+Pour l'activer :
+
+1. Créer un projet gratuit sur Supabase, puis relever, dans
+   Project Settings → API, l'« URL » du projet et la clé **anon public**
+   (publique par nature : elle finit dans le code livré, c'est prévu - ne
+   jamais utiliser la clé `service_role`).
+2. **En local** : copier `.env.example` en `.env` et y coller les deux valeurs
+   (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`). Le fichier `.env` est ignoré
+   par git.
+3. **En production** : les définir dans le dépôt GitHub via
+   Settings → Secrets and variables → Actions. Le workflow accepte les deux
+   onglets - **Variables** (recommandé, la clé anon est publique) ou
+   **Secrets** - et les injecte au moment du build.
+
 ## Référencement
 
 Le problème est celui de toutes les applications d'une seule page : ce que le
