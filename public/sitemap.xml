@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Une application d'une seule page : le plan du site tient en une URL, déclinée
+  en trois variantes de langue (?lang=…) qui se désignent mutuellement par
+  xhtml:link, exactement comme les alternates de index.html. L'URL nue sert de
+  x-default : c'est celle qui détecte la langue du navigateur.
+
+  `tests/seo.test.mjs` vérifie que cette liste et les balises de index.html ne
+  divergent pas.
+-->
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml"
+>
+  <url>
+    <loc>https://brunopaiva15.github.io/yamanote-3d/</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://brunopaiva15.github.io/yamanote-3d/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://brunopaiva15.github.io/yamanote-3d/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://brunopaiva15.github.io/yamanote-3d/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://brunopaiva15.github.io/yamanote-3d/?lang=ja" />
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://brunopaiva15.github.io/yamanote-3d/?lang=en</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://brunopaiva15.github.io/yamanote-3d/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://brunopaiva15.github.io/yamanote-3d/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://brunopaiva15.github.io/yamanote-3d/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://brunopaiva15.github.io/yamanote-3d/?lang=ja" />
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://brunopaiva15.github.io/yamanote-3d/?lang=fr</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://brunopaiva15.github.io/yamanote-3d/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://brunopaiva15.github.io/yamanote-3d/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://brunopaiva15.github.io/yamanote-3d/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://brunopaiva15.github.io/yamanote-3d/?lang=ja" />
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://brunopaiva15.github.io/yamanote-3d/?lang=ja</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://brunopaiva15.github.io/yamanote-3d/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://brunopaiva15.github.io/yamanote-3d/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://brunopaiva15.github.io/yamanote-3d/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://brunopaiva15.github.io/yamanote-3d/?lang=ja" />
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

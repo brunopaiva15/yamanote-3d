@@ -7,15 +7,18 @@ import { STRINGS, type Strings } from './strings';
 export {
   LANGS,
   LANG_LABEL,
+  LANG_PARAM,
   LANG_SHORT,
   STRINGS,
-  applyDocumentLang,
   detectBrowserLang,
   initialLang,
+  langFromUrl,
   storeLang,
   type Lang,
   type Strings,
 } from './strings';
+
+export { applyDocumentLang, canonicalFor } from './documentMeta';
 
 /** Dictionnaire de la langue courante. */
 export function useT(): Strings {

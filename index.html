@@ -1,17 +1,316 @@
 <!doctype html>
+<!--
+  L'anglais est la langue par défaut du document servi : c'est ce que voient les
+  robots d'indexation, qui n'ont ni langue de navigateur ni localStorage.
+  `src/i18n/documentMeta.ts` réécrit lang, titre, description et balises
+  sociales dès que le store connaît la langue réelle du visiteur.
+
+  Les URL absolues ci-dessous (canonique, alternates, og:url, images sociales)
+  ne peuvent pas être relatives : un moteur les recopie telles quelles dans son
+  index et un aperçu de partage les résout depuis un autre domaine. Elles
+  pointent l'hébergement de référence (GitHub Pages) ; `tests/seo.test.mjs`
+  vérifie qu'elles restent d'accord entre elles, avec robots.txt et sitemap.xml.
+-->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="description" content="A contemplative ride: riding an E235 train on the Yamanote Line, Tokyo." />
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2380c241'/%3E%3Ctext x='16' y='22' font-family='sans-serif' font-size='13' font-weight='bold' fill='white' text-anchor='middle'%3EJY%3C/text%3E%3C/svg%3E"
+    <!-- viewport-fit=cover : la scène occupe tout l'écran, encoche comprise, et
+         c'est le HUD qui se tient à l'écart via env(safe-area-inset-*). -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <title>Yamanote 3D — 山手線</title>
+
+    <title>Yamanote 3D — 山手線 · Ride Tokyo's Yamanote Line in 3D</title>
+    <meta
+      name="description"
+      content="Ride Tokyo's Yamanote Line in 3D in your browser: board a JR East E235, walk the carriage, step onto the platform. Thirty stations, real announcements, no goal."
+    />
+
+    <!-- Indexation : tout ouvert, et les grands aperçus autorisés — le jeu se
+         montre par l'image. max-snippet:-1 lève la limite de longueur d'extrait. -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="author" content="Vergasta Digital" />
+    <meta name="application-name" content="Yamanote 3D" />
+    <meta name="apple-mobile-web-app-title" content="Yamanote 3D" />
+    <meta name="theme-color" content="#10151a" />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Une seule page, une seule URL canonique. Les trois langues ne sont pas
+         des documents distincts mais le même document paramétré : elles se
+         déclarent en alternates, et x-default renvoie l'URL nue, celle qui
+         détecte la langue du navigateur. -->
+    <link rel="canonical" href="https://brunopaiva15.github.io/yamanote-3d/" />
+    <link rel="alternate" hreflang="en" href="https://brunopaiva15.github.io/yamanote-3d/?lang=en" />
+    <link rel="alternate" hreflang="fr" href="https://brunopaiva15.github.io/yamanote-3d/?lang=fr" />
+    <link rel="alternate" hreflang="ja" href="https://brunopaiva15.github.io/yamanote-3d/?lang=ja" />
+    <link rel="alternate" hreflang="x-default" href="https://brunopaiva15.github.io/yamanote-3d/" />
+
+    <!-- Icônes : le SVG pour les navigateurs modernes, le PNG en repli, l'icône
+         opaque pour iOS. Toutes produites par `npm run seo:assets`. -->
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="./favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./site.webmanifest" />
+    <link rel="author" href="https://vergasta.ch" />
+
+    <!-- Open Graph : ce que recopient Discord, Slack, Facebook, LinkedIn,
+         Bluesky, Mastodon. og:locale suit la langue affichée (réécrite au vol) ;
+         les deux autres restent déclarées en alternate. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Yamanote 3D" />
+    <meta property="og:url" content="https://brunopaiva15.github.io/yamanote-3d/" />
+    <meta property="og:title" content="Yamanote 3D — 山手線 · Ride Tokyo's Yamanote Line in 3D" />
+    <meta
+      property="og:description"
+      content="Ride Tokyo's Yamanote Line in 3D in your browser: board a JR East E235, walk the carriage, step onto the platform. Thirty stations, real announcements, no goal."
+    />
+    <meta property="og:image" content="https://brunopaiva15.github.io/yamanote-3d/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Yamanote 3D — 山手線" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="fr_FR" />
+    <meta property="og:locale:alternate" content="ja_JP" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Yamanote 3D — 山手線 · Ride Tokyo's Yamanote Line in 3D" />
+    <meta
+      name="twitter:description"
+      content="Ride Tokyo's Yamanote Line in 3D in your browser: board a JR East E235, walk the carriage, step onto the platform. Thirty stations, real announcements, no goal."
+    />
+    <meta name="twitter:image" content="https://brunopaiva15.github.io/yamanote-3d/og-image.png" />
+    <meta name="twitter:image:alt" content="Yamanote 3D — 山手線" />
+
+    <!-- Données structurées. Un jeu web gratuit, ses langues, son auteur, et le
+         sujet dont il parle relié à sa fiche Wikidata : c'est ce lien-là qui
+         raccroche la page à l'entité « ligne Yamanote » plutôt qu'à la chaîne
+         de caractères. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://brunopaiva15.github.io/yamanote-3d/#website",
+            "url": "https://brunopaiva15.github.io/yamanote-3d/",
+            "name": "Yamanote 3D",
+            "alternateName": "山手線 3D",
+            "inLanguage": ["en", "fr", "ja"],
+            "publisher": { "@id": "https://vergasta.ch/#organization" }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://vergasta.ch/#organization",
+            "name": "Vergasta Digital",
+            "url": "https://vergasta.ch"
+          },
+          {
+            "@type": "VideoGame",
+            "@id": "https://brunopaiva15.github.io/yamanote-3d/#game",
+            "name": "Yamanote 3D",
+            "alternateName": "山手線 3D",
+            "url": "https://brunopaiva15.github.io/yamanote-3d/",
+            "description": "A contemplative browser ride: you are a passenger on a JR East E235 series train on Tokyo's Yamanote Line. Thirty stations, an endless loop, no score — walk the carriage, sit down, get off onto the platform, listen to the announcements and the departure melodies.",
+            "image": "https://brunopaiva15.github.io/yamanote-3d/og-image.png",
+            "screenshot": "https://brunopaiva15.github.io/yamanote-3d/og-image.png",
+            "genre": ["Simulation", "Walking simulator", "Train simulator"],
+            "gamePlatform": "Web browser",
+            "playMode": "SinglePlayer",
+            "applicationCategory": "GameApplication",
+            "operatingSystem": "Any device with a WebGL 2 browser",
+            "browserRequirements": "Requires JavaScript and WebGL 2",
+            "inLanguage": ["en", "fr", "ja"],
+            "isAccessibleForFree": true,
+            "isFamilyFriendly": true,
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "availability": "https://schema.org/InStock"
+            },
+            "author": { "@id": "https://vergasta.ch/#organization" },
+            "publisher": { "@id": "https://vergasta.ch/#organization" },
+            "about": {
+              "@type": "Thing",
+              "name": "Yamanote Line",
+              "alternateName": "山手線",
+              "sameAs": [
+                "https://en.wikipedia.org/wiki/Yamanote_Line",
+                "https://www.wikidata.org/wiki/Q800585"
+              ]
+            }
+          }
+        ]
+      }
+    </script>
+
+    <!--
+      Habillage de l'écran d'attente ci-dessous. Il vit ici et pas dans
+      styles.css : cette feuille-là arrive avec le module JavaScript, c'est-à-dire
+      trop tard pour la seule chose que cet écran doit faire — exister avant lui.
+      Mêmes valeurs que `--ink-line`, `--text`, `--text-dim` et `--green` dans
+      src/styles.css.
+    -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #10151a;
+        color: #eef1f2;
+        font-family: 'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+      }
+      .boot {
+        position: fixed;
+        inset: 0;
+        overflow: auto;
+        /* Le viewport est en viewport-fit=cover : comme le HUD, cet écran se
+           tient à l'écart de l'encoche et des bords arrondis. */
+        padding: max(3rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right))
+          max(3rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
+        display: flex;
+        justify-content: center;
+      }
+      .boot-inner {
+        max-width: 44rem;
+      }
+      .boot h1 {
+        font-size: clamp(1.8rem, 6vw, 2.8rem);
+        line-height: 1.15;
+        margin: 0 0 0.4rem;
+      }
+      .boot h2 {
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #80c241;
+        margin: 2rem 0 0.6rem;
+      }
+      .boot p,
+      .boot li {
+        line-height: 1.6;
+        color: #aeb8bd;
+      }
+      .boot p {
+        margin: 0 0 0.8rem;
+      }
+      .boot .boot-tagline {
+        color: #eef1f2;
+        font-size: 1.1rem;
+      }
+      .boot ul {
+        margin: 0;
+        padding-left: 1.2rem;
+      }
+      .boot .boot-stations {
+        list-style: none;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 0.7rem;
+      }
+      .boot a {
+        color: #80c241;
+      }
+      .boot small {
+        display: block;
+        margin-top: 2rem;
+        color: #5c666d;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      Le contenu ci-dessous est le document tel qu'il existe SANS JavaScript :
+      c'est lui que lit un robot qui n'exécute rien, et c'est lui que voit un
+      visiteur pendant que le module se charge. React le remplace intégralement
+      au premier rendu (`createRoot(...).render()` vide son conteneur) : rien
+      n'est caché à personne, ce texte dit ce que la page fait, dans les mêmes
+      termes que l'écran d'accueil.
+    -->
+    <div id="root">
+      <div class="boot">
+        <div class="boot-inner">
+          <h1>Yamanote 3D — 山手線</h1>
+          <p class="boot-tagline">One loop. Thirty stations. No objective.</p>
+          <p>
+            A contemplative browser ride on Tokyo's Yamanote Line: you are a passenger on a
+            JR East E235 series train, going round the thirty-station loop in near real time —
+            about sixty-seven minutes a lap. Nothing to win, nothing to score. Walk the
+            carriage, sit down, watch the city drift past, listen to the announcements and the
+            departure melodies.
+          </p>
+          <p>Loading the ride…</p>
+
+          <h2>On board</h2>
+          <ul>
+            <li>Walk the carriage in first person, sit down on a seat, hold a strap.</li>
+            <li>
+              Step off through an open door and stay on the platform: the train leaves without
+              you, and the next one comes about two minutes later.
+            </li>
+            <li>
+              Real announcements and 発車メロディ departure melodies, in Japanese and English,
+              for each of the thirty stations and both directions of travel — 内回り and 外回り.
+            </li>
+            <li>
+              Pick the date and time before boarding: the season colours the trees, the sun
+              sits where it really would, and that day's weather follows.
+            </li>
+            <li>Talk to fellow passengers. Interface in English, French and Japanese.</li>
+          </ul>
+
+          <h2>The thirty stations</h2>
+          <ul class="boot-stations">
+            <li>JY01 Tokyo 東京</li>
+            <li>JY02 Kanda 神田</li>
+            <li>JY03 Akihabara 秋葉原</li>
+            <li>JY04 Okachimachi 御徒町</li>
+            <li>JY05 Ueno 上野</li>
+            <li>JY06 Uguisudani 鶯谷</li>
+            <li>JY07 Nippori 日暮里</li>
+            <li>JY08 Nishi-Nippori 西日暮里</li>
+            <li>JY09 Tabata 田端</li>
+            <li>JY10 Komagome 駒込</li>
+            <li>JY11 Sugamo 巣鴨</li>
+            <li>JY12 Ōtsuka 大塚</li>
+            <li>JY13 Ikebukuro 池袋</li>
+            <li>JY14 Mejiro 目白</li>
+            <li>JY15 Takadanobaba 高田馬場</li>
+            <li>JY16 Shin-Ōkubo 新大久保</li>
+            <li>JY17 Shinjuku 新宿</li>
+            <li>JY18 Yoyogi 代々木</li>
+            <li>JY19 Harajuku 原宿</li>
+            <li>JY20 Shibuya 渋谷</li>
+            <li>JY21 Ebisu 恵比寿</li>
+            <li>JY22 Meguro 目黒</li>
+            <li>JY23 Gotanda 五反田</li>
+            <li>JY24 Ōsaki 大崎</li>
+            <li>JY25 Shinagawa 品川</li>
+            <li>JY26 Takanawa Gateway 高輪ゲートウェイ</li>
+            <li>JY27 Tamachi 田町</li>
+            <li>JY28 Hamamatsuchō 浜松町</li>
+            <li>JY29 Shimbashi 新橋</li>
+            <li>JY30 Yūrakuchō 有楽町</li>
+          </ul>
+
+          <noscript>
+            <h2>JavaScript required</h2>
+            <p>
+              Yamanote 3D renders in real time with WebGL 2. Enable JavaScript, then reload
+              this page to board the train.
+            </p>
+          </noscript>
+
+          <small>
+            A fan-made, non-commercial project by
+            <a href="https://vergasta.ch" rel="author">Vergasta Digital</a>. Not affiliated with,
+            endorsed by, or connected to East Japan Railway Company (JR East).
+          </small>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

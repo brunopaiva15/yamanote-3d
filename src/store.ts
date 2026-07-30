@@ -6,7 +6,8 @@ import { create } from 'zustand';
 import { CONFIG } from './data/config';
 import type { LoopDirection } from './data/platforms';
 import { DOOR_SIDE } from './data/stations';
-import { applyDocumentLang, initialLang, storeLang, type Lang } from './i18n/strings';
+import { applyDocumentLang } from './i18n/documentMeta';
+import { initialLang, storeLang, type Lang } from './i18n/strings';
 
 export type Phase = 'cruise' | 'brake' | 'dwell' | 'depart';
 
@@ -77,7 +78,9 @@ export const useStore = create<AppState>((set) => ({
   },
   setLang: (lang) => {
     storeLang(lang);
-    applyDocumentLang(lang);
+    // Choix explicite : l'URL prend `?lang=…` et devient partageable telle
+    // quelle (voir applyDocumentLang).
+    applyDocumentLang(lang, true);
     set({ lang });
   },
   toggleMute: () => set((s) => ({ muted: !s.muted })),

@@ -8,19 +8,23 @@
 //   node <tmp>/announcements-export.mjs <sortie.json>
 //
 // Chaque entrée : { key, lang, text, tts, voice, speed }
-// - key   : clipKey(lang, text), nom de fichier du MP3 et clé du manifeste ;
+// - key   : clipKey(lang, text) pour la rame, clipKey(lang, texte, rôle) pour le
+//           quai — nom de fichier du MP3 et clé du manifeste. Le rôle entre dans
+//           la clé du quai parce que deux automates y disent les MÊMES mots :
+//           sans lui, un seul des deux MP3 survivrait à la gravure et un quai
+//           sur deux parlerait avec la voix de l'autre sens ;
 // - text  : texte affiché / haché, identique au runtime ;
 // - tts   : texte adapté à la synthèse (macrons ASCII et « JY-xx » épelé en
 //           anglais ; en japonais, les quelques mots que l'analyseur du
 //           générateur lit de travers, réécrits en kana — voir JA_READINGS) ;
-// - voice : voix Kokoro. QUATRE sources parlent dans ce jeu et on doit les
+// - voice : voix Kokoro. CINQ sources parlent dans ce jeu et on doit les
 //           distinguer à l'oreille sans regarder : la sono de la RAME
-//           (jf_alpha), l'annonce automatique du QUAI (jm_kumo — un homme, là
-//           où la rame est une femme : deux sonos qui se répondent à une
-//           seconde d'écart ne se confondent plus), l'AGENT de quai au micro
-//           (jf_nezumi, moins lisse — c'est une personne, pas un automate, et
-//           ce n'est pas la machine qui vient de parler), et les deux voix
-//           anglaises (af_heart à bord, am_michael au quai).
+//           (jf_alpha), les deux automates du QUAI — une femme sur le 内回り
+//           (jf_tebukuro), un homme sur le 外回り (jm_kumo), de sorte qu'on sait
+//           sans lever les yeux lequel des deux quais vient d'annoncer —,
+//           l'AGENT de quai au micro (jf_nezumi, moins lisse — c'est une
+//           personne, pas un automate), et les deux voix anglaises (af_heart à
+//           bord, am_michael au quai).
 // - speed : vitesse Kokoro. Le japonais est au-dessus du rythme natif pour
 //           COMPENSER la découpe en segments du générateur : synthétisé seul,
 //           un segment reçoit une intonation de fin de phrase et s'allonge
@@ -67,6 +71,10 @@ import {
   type StationUtterance,
   type StationVoice,
 } from '../src/data/stationAnnouncements.ts';
+import {
+  PLATFORM_NOTICE_PHASES,
+  platformNoticesForStation,
+} from '../src/data/stationAnnouncementRules.ts';
 import { facingTrackNumber, passThroughStations } from '../src/data/passingTrains.ts';
 import { platformFor, type LoopDirection } from '../src/data/platforms.ts';
 import { DOOR_SIDE, STATIONS } from '../src/data/stations.ts';
@@ -86,13 +94,27 @@ const CABIN_VOICE: Record<Utterance['lang'], VoiceSetting> = {
 
 /**
  * Voix de la sonorisation du QUAI, par rôle (voir data/stationAnnouncements).
- * L'AUTOMATE est un homme : c'est lui qu'on entend par-dessus la sono de bord,
- * et deux machines qui se répondent doivent se distinguer d'un mot. L'agent
- * reste une femme — d'autant mieux qu'on l'entend juste après l'automate, et
- * qu'on doit savoir tout de suite lequel des deux vient de prendre le micro.
+ *
+ * DEUX automates, un par sens : une femme sur le 内回り, un homme sur le 外回り.
+ * Sur un îlot central, les deux quais annoncent à quelques secondes d'écart le
+ * même script mot pour mot ; la voix est alors la seule chose qui dise lequel
+ * des deux vient de parler — donc de quel côté il faut se tourner. Ce n'est pas
+ * une imitation des voix réelles de JR East, seulement la distinction
+ * féminin/masculin qui rend les deux quais séparables à l'oreille.
+ *
+ * jf_tebukuro pour le 内回り : la seule voix féminine japonaise de Kokoro qui ne
+ * soit ni celle de la rame (jf_alpha) ni celle de l'agent de quai (jf_nezumi) —
+ * il faut trois femmes distinctes, puisque les trois peuvent parler dans la même
+ * minute. Le débit est celui de l'autre automate : c'est la même machine, elle
+ * ne parle pas plus vite parce que le quai est en face.
+ *
+ * L'agent reste une femme, la même dans les deux sens : c'est une PERSONNE, elle
+ * est sur le quai, elle n'a qu'une voix. Et on l'entend juste après l'automate —
+ * on doit savoir tout de suite lequel des deux vient de prendre le micro.
  */
 const STATION_VOICE: Record<StationVoice, VoiceSetting> = {
-  atos: { voice: 'jm_kumo', speed: 1.15 },
+  'atos-inner': { voice: 'jf_tebukuro', speed: 1.15 },
+  'atos-outer': { voice: 'jm_kumo', speed: 1.15 },
   // L'agent parle un peu plus vite : elle improvise, elle n'articule pas un script.
   agent: { voice: 'jf_nezumi', speed: 1.22 },
   'atos-en': { voice: 'am_michael', speed: 0.88 },
@@ -179,8 +201,11 @@ function ttsText(u: Utterance): string {
 const utterances: Utterance[] = [];
 for (const direction of DIRECTIONS) {
   for (let i = 0; i < STATIONS.length; i++) {
+    // Les consignes propres à une gare (data/stationAnnouncementRules) sont
+    // dedans : elles s'insèrent dans ces deux séquences, et une règle limitée à
+    // un sens ne sort que dans ce sens-là.
     utterances.push(...departureSequence(i, DOOR_SIDE[i], direction));
-    utterances.push(...approachSequence(i, DOOR_SIDE[i]));
+    utterances.push(...approachSequence(i, DOOR_SIDE[i], direction));
   }
 }
 utterances.push(...doorsClosingAnnouncement());
@@ -204,15 +229,25 @@ utterances.push(...outageRestoredAnnouncement());
 
 // --- Sonorisation du QUAI (ATOS + agent) ---------------------------------
 
+// TOUT ce qui suit est gravé dans LES DEUX SENS : le sens ne change pas
+// seulement le texte (le nom de la boucle, les gares repères, la voie), il change
+// la VOIX. Une annonce qui n'existerait que dans un sens laisserait l'autre quai
+// muet, ou — pire, avant que le rôle n'entre dans la clé du clip — le ferait
+// parler avec la voix d'en face.
 const stationUtterances: StationUtterance[] = [];
 for (const direction of DIRECTIONS) {
   for (let i = 0; i < STATIONS.length; i++) {
     for (const platform of platformsFor(STATIONS[i].jy, direction)) {
       stationUtterances.push(...platformPreAnnouncement(i, platform, direction));
       stationUtterances.push(...platformApproachAnnouncement(i, platform, direction));
-      stationUtterances.push(...platformDoorsClosingAnnouncement(platform));
+      stationUtterances.push(...platformDoorsClosingAnnouncement(platform, direction));
     }
-    stationUtterances.push(...platformArrivalAnnouncement(i));
+    stationUtterances.push(...platformArrivalAnnouncement(i, direction));
+    // Consignes propres à cette gare, à chacun des moments où le quai peut les
+    // glisser (voir data/stationAnnouncementRules).
+    for (const phase of PLATFORM_NOTICE_PHASES) {
+      stationUtterances.push(...platformNoticesForStation(STATIONS[i].jy, direction, phase));
+    }
   }
 }
 // Passage sans arrêt : la voie annoncée n'est PAS la nôtre, c'est celle d'en
@@ -221,17 +256,20 @@ for (const direction of DIRECTIONS) {
 for (const direction of DIRECTIONS) {
   for (const i of passThroughStations()) {
     const track = facingTrackNumber(i, direction);
-    if (track != null) stationUtterances.push(...platformPassAnnouncement(track));
+    if (track != null) stationUtterances.push(...platformPassAnnouncement(track, direction));
   }
 }
-stationUtterances.push(...platformPassWarning());
-stationUtterances.push(...platformGreeting());
-stationUtterances.push(...platformTrainEnteringAnnouncement());
+for (const direction of DIRECTIONS) {
+  stationUtterances.push(...platformPassWarning(direction));
+  stationUtterances.push(...platformGreeting(direction));
+  stationUtterances.push(...platformTrainEnteringAnnouncement(direction));
+  for (let c = 0; c < PLATFORM_DELAY_CAUSES.length; c++) {
+    stationUtterances.push(...platformDelayAnnouncement(c, direction));
+  }
+}
+// L'agent, elle, n'a qu'une voix : ses messages ne se gravent qu'une fois.
 for (let n = 0; n < PLATFORM_AGENT_MESSAGES.length; n++) {
   stationUtterances.push(...platformAgentMessage(n));
-}
-for (let c = 0; c < PLATFORM_DELAY_CAUSES.length; c++) {
-  stationUtterances.push(...platformDelayAnnouncement(c));
 }
 // Porte bloquée : les consignes de l'agent, et l'annonce d'attente quand
 // toutes les portes ont dû être rouvertes.
@@ -249,18 +287,24 @@ interface Item {
   tts: string;
   voice: string;
   speed: number;
+  /** Rôle vocal du quai, absent pour les annonces de bord. */
+  role?: StationVoice;
 }
 
 const byKey = new Map<string, Item>();
 
-function add(u: Utterance, setting: VoiceSetting): void {
-  const key = clipKey(u.lang, u.text);
+function add(u: Utterance, setting: VoiceSetting, role?: StationVoice): void {
+  // Le rôle entre dans la clé pour le quai (voir data/clipKey) : deux automates
+  // qui disent les mêmes mots ont deux fichiers, et personne n'hérite de la voix
+  // de l'autre sens. Les annonces de bord n'ont pas de rôle et gardent donc
+  // exactement la clé qu'elles avaient.
+  const key = clipKey(u.lang, u.text, role);
   const existing = byKey.get(key);
   if (existing && existing.text !== u.text) {
     throw new Error(`Collision de clé ${key} : « ${existing.text} » / « ${u.text} »`);
   }
-  // Même texte, deux voix : la clé ne porte pas la voix, l'un des deux clips
-  // écraserait l'autre. Il faut alors différencier les textes.
+  // Deux voix pour une même clé : il ne reste plus rien pour les distinguer, et
+  // l'un des deux clips écraserait l'autre à la gravure.
   if (existing && existing.voice !== setting.voice) {
     throw new Error(`Texte « ${u.text} » réclamé par ${existing.voice} et ${setting.voice}`);
   }
@@ -271,11 +315,12 @@ function add(u: Utterance, setting: VoiceSetting): void {
     tts: ttsText(u),
     voice: setting.voice,
     speed: setting.speed,
+    ...(role ? { role } : {}),
   });
 }
 
 for (const u of utterances) add(u, CABIN_VOICE[u.lang]);
-for (const u of stationUtterances) add(u, STATION_VOICE[u.voice]);
+for (const u of stationUtterances) add(u, STATION_VOICE[u.voice], u.voice);
 
 /**
  * Tous les textes réellement joués, dédupliqués. Exporté pour que

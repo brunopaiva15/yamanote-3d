@@ -15,6 +15,7 @@ npm run dev      # développement
 npm run build    # production (tsc + vite)
 npm run preview  # servir le build
 npm run lint     # oxlint
+npm test         # node:test
 ```
 
 ## Contrôles
@@ -1151,11 +1152,13 @@ voit jamais sa propre caisse : coût nul en jeu normal.
 ## Langues
 
 L'interface (menu, HUD, contrôles tactiles) existe en **français, anglais et
-japonais**. La langue est détectée au premier lancement depuis
+japonais**. La langue se décide en trois temps, du plus explicite au plus
+deviné : le paramètre d'URL `?lang=fr|en|ja` s'il est présent, sinon le choix
+mémorisé dans `localStorage` (`yamanote.lang`), sinon la détection depuis
 `navigator.languages` — `ja-*` → japonais, `fr-*` → français, tout le reste →
-anglais — et le sélecteur FR / EN / 日本語 (menu principal et barre du HUD)
-permet d'en changer à tout moment ; le choix explicite est mémorisé dans
-`localStorage` (`yamanote.lang`) et l'emporte ensuite sur la détection.
+anglais. Le sélecteur FR / EN / 日本語 (menu principal et barre du HUD) permet
+d'en changer à tout moment ; un choix explicite est mémorisé **et** inscrit dans
+l'URL, qui devient partageable telle quelle (voir *Référencement*).
 
 Tous les libellés vivent dans `src/i18n/strings.ts` (un dictionnaire par
 langue) ; `useT()` renvoie celui de la langue courante. Ajouter une langue =
@@ -1474,6 +1477,88 @@ Le site sera servi sur `https://<utilisateur>.github.io/yamanote-3d/`
 (le build utilise des chemins relatifs, il fonctionne aussi à la racine
 d'un domaine ou sur tout autre hébergeur statique).
 
+## Référencement
+
+Le problème est celui de toutes les applications d'une seule page : ce que le
+serveur envoie, c'est `index.html` et un `<div id="root">`. Un robot qui
+n'exécute pas de JavaScript n'y trouve rien à lire ; un robot qui en exécute
+trouve un `<canvas>`. Un jeu WebGL n'a pas de contenu textuel *à indexer* — sauf
+si on le lui écrit.
+
+**Le document sans JavaScript dit déjà ce que la page est.** `index.html` porte
+un vrai contenu dans `#root` : un `<h1>`, l'accroche, ce qu'on fait à bord, et
+les trente gares en romaji et en kanji — le vocabulaire par lequel on cherche ce
+genre de page. React le remplace intégralement au premier rendu
+(`createRoot(…).render()` vide son conteneur), donc rien n'est caché à personne :
+c'est le même propos que l'écran d'accueil, servi avant lui. Effet de bord
+heureux : le visiteur n'attend plus les 730 kio du module devant un écran noir,
+il lit quelque chose tout de suite, et le plus grand élément de la page est
+peint avant que le premier octet de Three.js n'arrive.
+
+**Une fois React monté, le document se nomme encore.** Le logo est un dessin, et
+un dessin n'est pas un titre : `src/ui/Logo.tsx` est donc explicitement décoratif
+(`aria-hidden`) et l'écran d'accueil porte un `<h1>` en texte, retiré de l'écran
+par `.visually-hidden` puisque le logo le dit déjà en plus grand. Sans cela le
+titre extrait de la page serait « YAMANOTE YAMANOTE 3D 山手線 山手線 » : chaque
+mot du logo existe en deux `<text>` superposés, l'ombre puis les lettres cernées.
+
+**Trois langues, une seule page.** `?lang=fr|en|ja` force la langue, et c'est ce
+qui rend les `<link rel="alternate" hreflang>` de `index.html` honnêtes : un
+moteur qui suit l'alternate japonais doit recevoir la page en japonais. L'URL nue
+reste le `x-default`, celle qui s'adapte au visiteur — la détection automatique
+n'écrit donc *pas* `?lang=` dans l'URL, seul un choix au sélecteur le fait.
+`src/i18n/documentMeta.ts` réécrit alors `lang`, le titre, la description, les
+balises Open Graph et Twitter, la canonique et `og:url` ; il ne crée aucune
+balise, il ne fait que remplir celles que `index.html` porte déjà en anglais.
+
+**Les URL absolues ne peuvent pas être relatives.** Canonique, alternates,
+`og:url`, images sociales : un moteur les recopie telles quelles dans son index,
+un aperçu de partage les résout depuis un autre domaine. Elles désignent
+l'hébergement de référence (`https://brunopaiva15.github.io/yamanote-3d/`), et
+`index.html` en est la source unique — `documentMeta.ts` lit la canonique dans le
+document plutôt que de la redéclarer, si bien qu'un déploiement ailleurs n'a
+qu'un fichier à changer.
+
+Ce que le dépôt contient, et ce que chaque pièce sert à :
+
+| Fichier | Rôle |
+| --- | --- |
+| `index.html` | titre, description, robots, canonique, alternates, Open Graph, Twitter, JSON-LD, et le contenu de repli |
+| `src/i18n/documentMeta.ts` | les mêmes métadonnées, tenues à jour avec la langue affichée |
+| `public/robots.txt` | indexation ouverte, et le sitemap déclaré |
+| `public/sitemap.xml` | l'URL nue et ses trois variantes de langue, chacune portant le jeu complet d'alternates |
+| `public/site.webmanifest` | installation sur l'écran d'accueil : nom, description, couleurs, icônes |
+| `assets/icon.svg` | la pastille JY, source unique des favicons et icônes |
+| `scripts/seo-assets.mjs` | `npm run seo:assets` : en tire favicon, icônes PWA, icône Apple et carte de partage |
+
+Les données structurées (JSON-LD) déclarent un `VideoGame` gratuit, ses trois
+langues, son auteur, et — c'est le lien qui compte — le sujet dont il parle
+relié à sa fiche Wikidata : ce qui raccroche la page à l'**entité** « ligne
+Yamanote » plutôt qu'à la chaîne de caractères.
+
+Deux pièges qui ne se voient pas :
+
+- un robot ne lit `robots.txt` qu'à la **racine du domaine**. Servi sous
+  `/yamanote-3d/`, le nôtre atterrit en
+  `…github.io/yamanote-3d/robots.txt` et n'est donc pas celui qui fait loi —
+  c'est celui de `…github.io` qui compte. Il reste juste le jour où le site
+  passe à la racine d'un domaine, et le sitemap, lui, se déclare directement
+  dans la Search Console quelle que soit la profondeur ;
+- les images produites par `npm run seo:assets` **sont versionnées**. Un crawler
+  ou un aperçu de partage doit pouvoir les tirer du site déployé sans que
+  personne n'ait relancé le script, et un build de production ne doit pas
+  dépendre de `sharp`.
+
+Rien de tout cela ne fait échouer un build : une canonique changée à un endroit
+et pas aux trois autres, une langue ajoutée à `LANGS` sans son alternate, une
+carte de partage régénérée à d'autres dimensions que celles annoncées, un fichier
+référencé mais jamais produit — tout se voit six semaines plus tard dans un
+rapport d'indexation. D'où `tests/seo.test.mjs`, qui relit `index.html`,
+`robots.txt`, `sitemap.xml`, le manifeste et l'en-tête des PNG et vérifie qu'ils
+décrivent tous le même site, et `tests/documentMeta.test.ts`, qui tient les
+titres et descriptions des trois langues dans les longueurs qu'un moteur
+n'ampute pas.
+
 ## Stack
 
 Vite + TypeScript strict, React, React Three Fiber, drei, @react-three/postprocessing,
@@ -1517,6 +1602,7 @@ src/
                          FR / EN / JA, décliné au féminin et au masculin
   scripts/               models:import / models:inspect / animals:import
                          (packs → public/models/, public/models/animals/),
+                         seo:assets (favicons, icônes PWA, carte de partage),
                          sondes navigateur : station-probe, pax-probe,
                          scenery-shots, scenery-cost, pass-shots, season-shots,
                          weather-shots
@@ -1524,6 +1610,8 @@ src/
   three/PlateauWorld.tsx monde géoréférencé du prototype (un tronçon à la fois)
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
+  i18n/documentMeta.ts   titre, description, Open Graph et canonique, suivant
+                         la langue affichée (voir Référencement)
   ui/                    HUD, menu principal, logo, sélecteur de langue, contrôles tactiles
 ```
 
@@ -1624,6 +1712,92 @@ chrono de phase n'avance que **au prorata de la vitesse** pendant tout
 l'événement, si bien que la gare suivante arrive au bon moment après la reprise
 et que le retard se lit sur l'horloge murale, pas sur le trajet
 (`systems/stationCycle`). Ce que ça fait aux voyageurs est décrit plus haut.
+
+### Ce que la gare ne dit pas toujours
+
+La séquence ci-dessus est ce qu'une gare PEUT dire, pas ce qu'elle dit à chaque
+rame. Elle se déroulait pourtant intégralement, tous les tours : quatorze
+secondes après le départ d'une rame, le remerciement d'ouverture puis l'annonce
+anticipée du prochain train ; à l'ouverture des portes, 「降りるお客さまを先に
+お通しください」 ; puis deux consignes d'agent, aux mêmes secondes, tirées dans
+l'ordre du numéro d'arrêt. À la troisième gare on connaissait la bande-son par
+cœur — et c'est exactement ce qu'un vrai quai n'est pas. ATOS saute l'anticipée
+quand les rames se succèdent, et un agent de quai ne prend le micro que quand il
+a quelque chose à dire.
+
+**Un plan par rame, tiré une fois.** À l'entrée du creux entre deux rames, la
+gare décide de tout ce qui est facultatif : anticipée ou non, remerciement ou
+non, « laissez descendre » ou non, zéro, un ou deux messages d'agent et
+lesquels. Le calcul est pur — ni store, ni audio, ni `Math.random()` : le tirage
+entre par un argument (`systems/platformAnnouncementPlan`), ce qui le rend
+testable et surtout **reproductible**. La graine vient de l'arrêt lui-même (gare,
+numéro de rame, sens, minute simulée), si bien qu'un rerender, une chute de FPS
+ou un aller-retour entre le quai et la rame ne rejouent pas les dés au milieu
+d'un arrêt. La rame suivante, elle, obtient un autre plan.
+
+Ce qui pèse sur le plan est ce qui pèse sur un vrai quai :
+
+| Facteur | Effet |
+| --- | --- |
+| **Creux** entre deux rames | l'anticipée passe de 25 % sous 90 s à 55 % à 150 s et 80 % au-delà — c'est la place disponible |
+| **Heure** (pointe 7 h–9 h 30 et 17 h–19 h 30) | rames rapprochées : l'anticipée tombe encore d'un facteur 0,6 ; l'agent, lui, parle plus |
+| **Gare** (`isMajorHub`, la liste des annonces de direction, pas une seconde) | un hub annonce un peu plus, et penche vers deux consignes en pointe |
+| **Affluence** (le modèle de remplissage, pas le nombre de PNJ — la sono ne doit pas changer avec le réglage de qualité) | quai calme : 55 % de silence complet ; quai moyen : une consigne ; quai bondé : une, parfois deux |
+| **Retard** | le silence est divisé par deux, et les consignes de circulation et de portes passent devant |
+
+Le remerciement ne précède donc plus l'anticipée par principe : c'est une
+politesse de creux calme, et en pleine pointe personne ne remercie personne.
+「降りるお客さまを先に…」 devient presque certain sur un quai chargé, dans un hub,
+en pointe — et rare dans une petite gare déserte, où l'entendre pour trois
+personnes sonnait faux.
+
+**Les consignes d'agent ont maintenant un propos.** Chaque message porte une
+catégorie, un poids, une affluence minimale et un multiplicateur de retard
+(`data/stationAnnouncements`) : demander d'avancer vers le milieu de la voiture à
+trois personnes n'a aucun sens, et 「無理なご乗車はおやめください。次の電車をご
+利用ください。」 ne se dit que quand il n'y a vraiment plus de place — c'est
+d'ailleurs le message que le retard rend le plus probable, parce que c'est le
+moment où l'on arrête de charger la rame pour tenir l'intervalle. Deux créneaux,
+deux registres : on fait descendre et avancer pendant l'échange, on décourage le
+saut dans les portes juste avant la mélodie.
+
+**Et ce qui ne tient pas dans son créneau est abandonné, pas repoussé.** La sono
+du quai n'a qu'une file : rien ne peut sonner par-dessus autre chose, mais une
+consigne mise en file derrière une autre sortirait après le moment où elle
+voulait dire quelque chose. Avant chaque message facultatif, la gare mesure ce
+qu'elle a encore à dire (`speechQueueRemaining`) et la durée du clip, et compare
+au temps qui reste avant l'annonce prioritaire suivante — la mélodie, la
+fermeture, le carillon d'approche. Si ça ne tient pas, le message tombe. L'excuse
+de retard, l'anticipée et les consignes d'agent ne se marchent donc jamais
+dessus, et **l'annonce d'approche, elle, n'est pas facultative** : une rame qui
+entre en gare s'annonce toujours.
+
+### Ce que certaines gares disent en plus
+
+Trente gares qui disent exactement la même chose ne s'entendent pas comme une
+ligne, elles s'entendent comme un gabarit. Quelques-unes ajoutent une consigne
+qui n'appartient qu'à elles, parce que leur quai a une particularité — et la
+première est **Shibuya**, dont le quai Yamanote décrit une courbe que la réunion
+des deux voies sur un seul îlot (janvier 2023) n'a pas redressée : l'écart entre
+le seuil de la rame et le bord du quai s'y signale, dans les deux sens.
+「電車とホームの間が空いているところがありますので、足元にご注意ください。」 /
+*Please watch your step when you leave the train.*
+
+Ces consignes vivent en **données** (`data/stationAnnouncementRules`), indexées
+par code JY, et nulle part ailleurs : pas un seul `if (index === 19)` dans le
+cycle station. Chacune choisit son canal (la rame ou le quai — ce ne sont ni les
+mêmes voix ni les mêmes oreilles), son sens (un quai en courbe ne se courbe pas
+forcément des deux côtés) et l'endroit exact où elle s'insère dans la séquence :
+après le nom de la gare, après les correspondances, pendant l'approche pour la
+rame ; derrière l'anticipée, derrière l'annonce d'approche ou derrière le nom de
+la gare pour le quai. La consigne de Shibuya passe donc à l'approche dans le
+wagon — aux gens qui vont descendre — et à l'arrivée sur le quai, aux gens qui
+vont monter, et à aucun autre moment.
+
+La règle de peuplement de cette table est explicite dans le fichier : **on
+n'invente pas**. Chaque entrée porte au-dessus d'elle la raison pour laquelle
+elle existe. Une gare dont on ne sait rien n'a pas d'entrée — l'architecture est
+là, elle attend.
 
 ### La coupure de courant
 
@@ -1763,15 +1937,34 @@ depuis la console, `__outageSkip(-n)` avance jusqu'aux abords du retour de la
 tension, `__holdPower(niveau)` fige l'alimentation à un point de la courbe, et
 `scripts/outage-shots.mjs` en fait la planche de contrôle.
 
-**Quatre sources, et deux automates qu'on ne confond pas** : la sono de la rame
-(`jf_alpha`), l'annonce automatique du quai (`jm_kumo`, **un homme** — les deux
-machines se répondent parfois à une seconde d'écart, 「1番線、ドアが閉まります」
-sur le quai puis 「ドアが閉まります」 dans le wagon, et il ne faut pas avoir à
-chercher laquelle vient de parler), l'agent de quai au micro (`jf_nezumi`, une
-femme, un peu plus rapide et moins lisse — c'est une personne, pas un automate,
-et elle prend la parole juste après lui), et les deux voix anglaises
-(`af_heart` à bord, `am_michael` au quai, un cran plus lent : dehors, sous une
-verrière, une annonce trop rapide ne s'attrape pas).
+**Cinq sources, et trois automates qu'on ne confond pas** : la sono de la rame
+(`jf_alpha`), les deux annonces automatiques du quai — **une femme sur le
+内回り** (`jf_tebukuro`) et **un homme sur le 外回り** (`jm_kumo`) —, l'agent de
+quai au micro (`jf_nezumi`, une femme, un peu plus rapide et moins lisse —
+c'est une personne, pas un automate, et elle prend la parole juste après lui),
+et les deux voix anglaises (`af_heart` à bord, `am_michael` au quai, un cran
+plus lent : dehors, sous une verrière, une annonce trop rapide ne s'attrape
+pas).
+
+**Pourquoi deux automates de quai.** Les machines se répondent à une seconde
+d'écart — 「1番線、ドアが閉まります」 sur le quai puis 「ドアが閉まります」 dans le
+wagon — et il ne faut pas avoir à chercher laquelle vient de parler. Sur un îlot
+central, le problème est le même d'un quai à l'autre : les deux sens annoncent le
+MÊME script, mot pour mot, et 「渋谷、渋谷。ご乗車、ありがとうございます。」 est
+identique au caractère près dans un sens comme dans l'autre. La voix est alors la
+seule chose qui dise laquelle des deux voies vient d'annoncer, donc de quel côté
+se tourner. Le sens choisit l'automate en un seul endroit
+(`atosVoiceForDirection`), et aucune annonce automatique ne fixe sa voix
+elle-même. Il ne s'agit pas d'imiter les voix réelles de JR East, seulement de
+rendre les deux quais séparables à l'oreille.
+
+Cela s'est joué dans la **clé du clip**, pas seulement dans le générateur : un
+MP3 était identifié par le couple (langue, texte), si bien que deux automates
+disant les mêmes mots se seraient partagé un fichier — le dernier gravé aurait
+pris la bouche de l'autre, et un quai sur deux aurait parlé du mauvais sens sans
+que rien n'échoue. La clé des annonces de quai porte donc aussi le **rôle vocal**
+(`data/clipKey`) ; celle des annonces de bord, qui n'ont qu'une voix par langue,
+n'a pas changé d'un octet.
 
 S'y ajoute, sur les gares dont l'îlot est partagé avec une autre ligne, la seule
 annonce de quai qui parle d'une voie qui n'est pas la nôtre : まもなく、1番線を、

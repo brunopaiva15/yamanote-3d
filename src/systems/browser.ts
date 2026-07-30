@@ -26,6 +26,20 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /**
+ * Le plein écran existe-t-il ici ?
+ *
+ * Il n'existe pas partout : iPhone ne l'expose pas du tout, et une page en
+ * iframe ne l'a que si son hôte l'autorise. Le HUD s'en sert pour ne pas
+ * afficher un bouton mort — dans la barre du bas d'un téléphone, la place est
+ * comptée.
+ */
+export function fullscreenAvailable(): boolean {
+  if (typeof document === 'undefined') return false;
+  if (typeof document.documentElement.requestFullscreen !== 'function') return false;
+  return document.fullscreenEnabled !== false;
+}
+
+/**
  * Bascule le plein écran, dans les deux sens.
  *
  * `requestFullscreen` seul ne fait pas un interrupteur : une fois dedans, le
@@ -35,6 +49,7 @@ export function isTypingTarget(target: EventTarget | null): boolean {
  * remonter dans la console du joueur.
  */
 export async function toggleFullscreen(): Promise<void> {
+  if (!fullscreenAvailable()) return;
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
     else await document.documentElement.requestFullscreen();
