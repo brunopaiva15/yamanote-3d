@@ -27,18 +27,50 @@ const { STATIONS } = await import('../src/data/stations.ts');
 const SHIBUYA = 19;
 const SHIBUYA_JY = 'JY20';
 const GAP_FRAGMENT = '足元にご注意ください';
-const GAP_EN = 'Please watch your step when you leave the train.';
+const GAP_EN_CABIN = 'Please watch your step when you leave the train.';
+const GAP_EN_PLATFORM = 'Please mind the gap between the train and the platform.';
 
 test('Shibuya porte bien son avertissement de prudence', () => {
   const cabin = cabinNoticesForStation(SHIBUYA_JY, 'inner', 'during-approach');
   assert.equal(cabin.length, 2);
   assert.ok(cabin[0].text.includes(GAP_FRAGMENT), cabin[0].text);
-  assert.equal(cabin[1].text, GAP_EN);
+  assert.equal(cabin[1].text, GAP_EN_CABIN);
 
   const platform = platformNoticesForStation(SHIBUYA_JY, 'inner', 'arrival');
   assert.equal(platform.length, 2);
   assert.ok(platform[0].text.includes(GAP_FRAGMENT), platform[0].text);
-  assert.equal(platform[1].text, GAP_EN);
+  assert.equal(platform[1].text, GAP_EN_PLATFORM);
+});
+
+test('l’anglais du quai ne parle pas à ceux qui descendent', () => {
+  // « When you leave the train » est juste dans la rame, où tout le monde est
+  // déjà à bord. Sur le quai, la même phrase est entendue par ceux qui attendent
+  // pour MONTER — et ce sont eux qui vont franchir l'écart. Les deux versions ne
+  // peuvent donc pas être la même phrase.
+  for (const dir of ['inner', 'outer'] as const) {
+    const cabin = cabinNoticesForStation(SHIBUYA_JY, dir, 'during-approach');
+    const platform = platformNoticesForStation(SHIBUYA_JY, dir, 'arrival');
+    const cabinEn = cabin.filter((u) => u.lang === 'en-US');
+    const platformEn = platform.filter((u) => u.lang === 'en-US');
+    assert.deepEqual(
+      cabinEn.map((u) => u.text),
+      [GAP_EN_CABIN],
+      `rame (${dir})`,
+    );
+    assert.deepEqual(
+      platformEn.map((u) => u.text),
+      [GAP_EN_PLATFORM],
+      `quai (${dir})`,
+    );
+    assert.notEqual(cabinEn[0].text, platformEn[0].text);
+    // Et le quai ne dit surtout pas « leave the train » à des gens qui montent.
+    assert.ok(!platformEn[0].text.includes('leave the train'), platformEn[0].text);
+  }
+  // Le japonais, lui, reste commun : 「足元にご注意ください」 ne dit pas dans quel
+  // sens on franchit l'écart.
+  const cabinJp = cabinNoticesForStation(SHIBUYA_JY, 'inner', 'during-approach')[0].text;
+  const platformJp = platformNoticesForStation(SHIBUYA_JY, 'inner', 'arrival')[0].text;
+  assert.equal(cabinJp.replace(/。/g, ''), platformJp.replace(/[、。]/g, ''));
 });
 
 test('la consigne du quai parle avec l’automate du sens desservi', () => {
@@ -139,7 +171,7 @@ test('la consigne de la rame s’insère à la fin de la séquence d’approche'
 test('aucune consigne n’est jouée deux fois dans la même approche', () => {
   for (const dir of ['inner', 'outer'] as const) {
     const seq = approachSequence(SHIBUYA, 1, dir);
-    const gap = seq.filter((u) => u.text.includes(GAP_FRAGMENT) || u.text === GAP_EN);
+    const gap = seq.filter((u) => u.text.includes(GAP_FRAGMENT) || u.text === GAP_EN_CABIN);
     assert.equal(gap.length, 2, `japonais + anglais, une seule fois (${dir})`);
     // Et la séquence de départ vers Shibuya ne la reprend pas : la règle ne
     // demande que l'approche.

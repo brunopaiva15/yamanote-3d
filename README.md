@@ -1779,9 +1779,17 @@ ligne, elles s'entendent comme un gabarit. Quelques-unes ajoutent une consigne
 qui n'appartient qu'à elles, parce que leur quai a une particularité — et la
 première est **Shibuya**, dont le quai Yamanote décrit une courbe que la réunion
 des deux voies sur un seul îlot (janvier 2023) n'a pas redressée : l'écart entre
-le seuil de la rame et le bord du quai s'y signale, dans les deux sens.
-「電車とホームの間が空いているところがありますので、足元にご注意ください。」 /
-*Please watch your step when you leave the train.*
+le seuil de la rame et le bord du quai s'y signale, dans les deux sens :
+「電車とホームの間が空いているところがありますので、足元にご注意ください。」
+
+**Et pas dans les mêmes mots des deux côtés.** Le japonais, oui : 「足元にご注意
+ください」 ne dit pas dans quel sens on franchit l'écart, et vaut pour qui descend
+comme pour qui monte. L'anglais, non. *Please watch your step when you leave the
+train* est juste dans la RAME, où l'on ne parle qu'à des gens déjà à bord ; sur le
+quai, la même phrase est entendue par ceux qui attendent pour monter — et qui sont,
+à cette seconde précise, les plus concernés par l'écart. Le quai nomme donc l'écart
+plutôt que le geste : *Please mind the gap between the train and the platform.*
+Deux textes, deux clips, un par canal.
 
 Ces consignes vivent en **données** (`data/stationAnnouncementRules`), indexées
 par code JY, et nulle part ailleurs : pas un seul `if (index === 19)` dans le
@@ -1793,6 +1801,14 @@ rame ; derrière l'anticipée, derrière l'annonce d'approche ou derrière le no
 la gare pour le quai. La consigne de Shibuya passe donc à l'approche dans le
 wagon — aux gens qui vont descendre — et à l'arrivée sur le quai, aux gens qui
 vont monter, et à aucun autre moment.
+
+Cette séquence d'arrivée est aussi la plus longue de la ligne : le nom de la gare,
+la consigne en japonais, puis en anglais. C'est elle qui décide du sort de ce qui
+suit — « laissez descendre » n'a de sens que pendant que les voyageurs descendent,
+et sur l'arrêt le plus court il n'y a plus de place pour lui derrière tout cela. Il
+est alors ABANDONNÉ, comme n'importe quelle consigne facultative, plutôt que
+repoussé sur les premières notes de la mélodie (`tests/shibuyaAnnouncementTimeline`
+rejoue l'arrêt entier, seconde par seconde, sur les durées réelles des clips).
 
 La règle de peuplement de cette table est explicite dans le fichier : **on
 n'invente pas**. Chaque entrée porte au-dessus d'elle la raison pour laquelle

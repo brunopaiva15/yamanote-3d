@@ -400,3 +400,25 @@ export function fitsBeforeCutoff(
   if (clipSeconds <= 0) return false;
   return queueSeconds + clipSeconds + margin <= secondsUntilCutoff;
 }
+
+/**
+ * La décision complète d'un message facultatif : le plan l'a-t-il retenu, ET
+ * tient-il encore dans ce qu'il reste de créneau ?
+ *
+ * Les deux conditions ne se séparent pas, et c'est le seul endroit où elles sont
+ * écrites : « laissez descendre » comme les consignes d'agent passent par ici
+ * (systems/stationPa). Un message retenu par le plan mais joué trop tard est
+ * exactement aussi faux qu'un message que le plan n'avait pas retenu — 「降りる
+ * お客さまを先にお通しください」 lancé sur la mélodie ne fait plus descendre
+ * personne.
+ */
+export function optionalMessagePlays(
+  planned: boolean,
+  clipSeconds: number,
+  queueSeconds: number,
+  secondsUntilCutoff: number,
+  margin = ANNOUNCEMENT_MARGIN,
+): boolean {
+  if (!planned) return false;
+  return fitsBeforeCutoff(clipSeconds, queueSeconds, secondsUntilCutoff, margin);
+}
