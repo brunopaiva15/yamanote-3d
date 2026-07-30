@@ -233,6 +233,114 @@ Vérification des lectures de gares…
 Puis elle affiche six lignes `[1/6]` à `[6/6]`. `--reuse` est indispensable :
 il conserve les anciens fichiers et ne synthétise que les clips absents.
 
+### Regraver une voix existante
+
+Quand le texte ne change pas mais que la voix ou son débit change, les clés des
+clips restent identiques. `--reuse` les conserverait donc par erreur. Ajouter
+`--force-role` permet de ne regraver que le rôle concerné, sans refaire toutes
+les annonces du jeu. Pour la voix féminine du quai intérieur :
+
+```powershell
+python ".\scripts\announcements-gen.py" ".\.tmp\announcements\announcements-texts.json" "C:\Temp\kokoro-v1.0\kokoro-v1.0.onnx" "C:\Temp\kokoro-v1.0\voices-v1.0.bin" ".\public\audio\announcements" ".\src\data\pa-manifest.ts" --reuse --force-role atos-inner
+```
+
+Cette commande remplace les MP3 `atos-inner`, recalcule leurs durées dans le
+manifeste et laisse tous les autres clips intacts.
+
+#### Procédure complète pour la nouvelle voix `jf_alpha` du quai intérieur
+
+Voici toutes les commandes à exécuter, dans l'ordre, à partir de l'activation
+de l'environnement. Elles supposent que le dépôt est dans
+`C:\Temp\GitHub\yamanote-3d` et les deux fichiers Kokoro dans
+`C:\Temp\kokoro-v1.0`. Ne sauter ni le nouvel export JSON ni sa vérification :
+un ancien JSON regraverait encore `jf_tebukuro`.
+
+```powershell
+& "$HOME\venvs\yamanote-kokoro\Scripts\Activate.ps1"
+cd "C:\Temp\GitHub\yamanote-3d"
+
+python -m pip check
+python -c "import kokoro_onnx, lameenc, click, spacy, unidic_lite; print('Imports Python OK')"
+if (-not (Test-Path "C:\Temp\kokoro-v1.0\kokoro-v1.0.onnx")) { throw "Modèle ONNX absent" }
+if (-not (Test-Path "C:\Temp\kokoro-v1.0\voices-v1.0.bin")) { throw "Fichier de voix absent" }
+
+npm install
+New-Item -ItemType Directory -Force ".\.tmp\announcements" | Out-Null
+npx esbuild ".\scripts\announcements-export.ts" --bundle --format=esm --platform=node --outfile=".\.tmp\announcements\announcements-export.mjs"
+if (-not (Test-Path ".\.tmp\announcements\announcements-export.mjs")) { throw "Exporteur non compilé" }
+
+node ".\.tmp\announcements\announcements-export.mjs" ".\.tmp\announcements\announcements-texts.json"
+if (-not (Test-Path ".\.tmp\announcements\announcements-texts.json")) { throw "JSON non généré" }
+
+$data = Get-Content ".\.tmp\announcements\announcements-texts.json" -Raw -Encoding UTF8 | ConvertFrom-Json
+$inner = @($data.items | Where-Object { $_.role -eq "atos-inner" })
+$inner | Group-Object voice, speed | Select-Object Count, Name | Format-Table
+if ($inner.Count -eq 0) { throw "Aucun clip atos-inner dans le JSON" }
+if (@($inner | Where-Object { $_.voice -ne "jf_alpha" }).Count -ne 0) { throw "La voix atos-inner n'est pas jf_alpha" }
+if (@($inner | Where-Object { [double]$_.speed -ne 1.10 }).Count -ne 0) { throw "Le débit atos-inner n'est pas 1.10" }
+
+Copy-Item ".\public\audio\announcements" ".\.tmp\announcements\audio-backup-atos-inner" -Recurse -Force
+Copy-Item ".\src\data\pa-manifest.ts" ".\.tmp\announcements\pa-manifest.before-atos-inner.ts" -Force
+$beforeHashes = @{}
+$inner | ForEach-Object {
+  $path = ".\public\audio\announcements\$($_.key).mp3"
+  if (-not (Test-Path $path)) { throw "MP3 existant absent : $path" }
+  $beforeHashes[$_.key] = (Get-FileHash $path -Algorithm SHA256).Hash
+}
+
+$batchSize = 10
+$batchCount = [math]::Ceiling($inner.Count / $batchSize)
+
+1..$batchCount | ForEach-Object {
+  $batchNumber = $_
+  Write-Host "`n=== Lot $batchNumber sur $batchCount ===" -ForegroundColor Cyan
+  python ".\scripts\announcements-gen.py" ".\.tmp\announcements\announcements-texts.json" "C:\Temp\kokoro-v1.0\kokoro-v1.0.onnx" "C:\Temp\kokoro-v1.0\voices-v1.0.bin" ".\public\audio\announcements" ".\src\data\pa-manifest.ts" --reuse --force-role atos-inner --batch-size $batchSize --batch-number $batchNumber --jobs $batchSize
+  if ($LASTEXITCODE -ne 0) { throw "La génération Kokoro a échoué au lot $batchNumber" }
+  if ($batchNumber -lt $batchCount) { Read-Host "Lot terminé. Entrée pour lancer le suivant" }
+}
+
+$changed = @()
+$inner | ForEach-Object {
+  $path = ".\public\audio\announcements\$($_.key).mp3"
+  if (-not (Test-Path $path)) { throw "MP3 généré absent : $path" }
+  if ((Get-FileHash $path -Algorithm SHA256).Hash -ne $beforeHashes[$_.key]) {
+    $changed += $_
+  }
+}
+Write-Host "$($changed.Count) MP3 atos-inner modifiés sur $($inner.Count)"
+if ($changed.Count -ne $inner.Count) { throw "Certains MP3 atos-inner n'ont pas été remplacés" }
+
+$sample = $inner | Where-Object { $_.text -like "2番線、ドアが閉まります*" } | Select-Object -First 1
+if ($null -eq $sample) { throw "Échantillon de fermeture des portes introuvable" }
+Start-Process (Resolve-Path ".\public\audio\announcements\$($sample.key).mp3")
+```
+
+Écouter entièrement l'échantillon avant de continuer. Il doit employer le même
+timbre que la rame, avec un débit très légèrement plus posé, et ne doit plus
+avoir la voix aiguë `jf_tebukuro`. Puis valider et préparer le commit :
+
+```powershell
+npm test
+npx tsc -b --pretty false
+npm run lint
+npm run build
+git diff --check
+
+# Ces deux fichiers temporaires sont suivis historiquement mais ne font pas
+# partie de la regravure : revenir à leur version du commit.
+git restore ".\.tmp\announcements\announcements-export.mjs" ".\.tmp\announcements\announcements-texts.json"
+
+git status --short
+git add ".\src\data\pa-manifest.ts" ".\public\audio\announcements"
+git diff --cached --stat
+git commit -m "Regenerate inner platform announcements with cabin voice"
+git push
+```
+
+Avant `git commit`, le diff indexé doit contenir `src/data/pa-manifest.ts` et
+les MP3 de `public/audio/announcements`, mais aucun fichier `.tmp`, modèle
+ONNX, fichier `voices-v1.0.bin` ou environnement virtuel.
+
 ## 10. Vérifier et écouter les fichiers
 
 La variable `$assistance` contient les six clés. Vérifier les fichiers :

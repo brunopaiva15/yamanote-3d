@@ -31,13 +31,28 @@ Modèle : kokoro-v1.0.onnx + voices-v1.0.bin
 
 Usage :
   python scripts/announcements-gen.py textes.json kokoro-v1.0.onnx \
-      voices-v1.0.bin public/audio/announcements src/data/pa-manifest.ts [--reuse]
+      voices-v1.0.bin public/audio/announcements src/data/pa-manifest.ts \
+      [--reuse] [--force-role atos-inner] \
+      [--batch-size 10 --batch-number 1] [--jobs 10]
 
 --reuse : ne synthétise que les clips ABSENTS et reprend la durée des autres
 dans le manifeste existant. Un texte inchangé garde alors exactement le fichier
 qu'il avait - une version de kokoro-onnx ou de misaki plus récente ne fait pas
 dériver, en douce, les 200 annonces déjà en place. Sans le drapeau, tout est
 regravé.
+
+--force-role RÔLE : avec --reuse, regrave tout de même les clips de ce rôle
+vocal (par exemple ``atos-inner`` après un changement de voix) et conserve les
+autres. L'option est répétable.
+
+--batch-size N / --batch-number N° : limite les rôles forcés au lot indiqué
+(numéroté à partir de 1). Par exemple, ``--batch-size 10 --batch-number 2``
+regrave les clips 11 à 20 du rôle forcé. Le manifeste conserve les durées des
+autres lots, ce qui permet de relancer le script dix clips à la fois.
+
+--jobs N : synthétise jusqu'à N clips en parallèle. ``--jobs 10`` lance donc
+dix inférences Kokoro en même temps, puis prend les clips suivants au fur et à
+mesure que les précédents se terminent. La valeur par défaut reste 1.
 
 Le dossier de sortie appartient au script : un MP3 dont plus aucun texte ne
 réclame la clé est supprimé. Corriger un mot d'annonce change son hachage, donc
@@ -47,6 +62,8 @@ son fichier ; sans ce balayage l'ancien resterait là, muet et lourd.
 import json
 import re
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import lameenc
@@ -197,15 +214,48 @@ def read_manifest(path: Path) -> dict[str, float]:
 def main() -> None:
     texts_path, model_path, voices_path, out_dir, manifest_path = sys.argv[1:6]
     reuse = "--reuse" in sys.argv[6:]
+    force_roles = {
+        sys.argv[i + 1]
+        for i, arg in enumerate(sys.argv[6:], start=6)
+        if arg == "--force-role" and i + 1 < len(sys.argv)
+    }
+    option_args = sys.argv[6:]
+
+    def int_option(name: str, default: int) -> int:
+        if name not in option_args:
+            return default
+        i = option_args.index(name)
+        if i + 1 >= len(option_args):
+            raise ValueError(f"{name} attend un entier")
+        value = int(option_args[i + 1])
+        if value < 1:
+            raise ValueError(f"{name} doit être supérieur ou égal à 1")
+        return value
+
+    batch_size = int_option("--batch-size", 0)
+    batch_number = int_option("--batch-number", 1)
+    jobs = int_option("--jobs", 1)
+    if batch_size and not force_roles:
+        raise ValueError("--batch-size nécessite au moins un --force-role")
     data = json.loads(Path(texts_path).read_text(encoding="utf-8"))
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
 
     known = read_manifest(Path(manifest_path)) if reuse else {}
+    forced = [item for item in data["items"] if item.get("role") in force_roles]
+    if batch_size:
+        start = (batch_number - 1) * batch_size
+        forced = forced[start : start + batch_size]
+        print(
+            f"Lot forcé {batch_number} : clips {start + 1} à "
+            f"{start + len(forced)} ({len(forced)} clip(s))."
+        )
+    forced_keys = {item["key"] for item in forced}
     todo = [
         item
         for item in data["items"]
-        if not (item["key"] in known and (out / f"{item['key']}.mp3").exists())
+        if item["key"] in forced_keys
+        or not (item["key"] in known and (out / f"{item['key']}.mp3").exists())
     ]
     if reuse:
         print(f"{len(data['items']) - len(todo)} clips déjà gravés, {len(todo)} à faire.")
@@ -225,25 +275,54 @@ def main() -> None:
         item["key"]: known[item["key"]] for item in data["items"] if item["key"] in known
     }
     total_bytes = 0
-    for i, item in enumerate(todo, 1):
+
+    # Misaki/Fugashi conserve un état interne : on sérialise uniquement le G2P,
+    # très court, puis les inférences ONNX et l'encodage MP3 tournent en parallèle.
+    ja_g2p_lock = threading.Lock()
+    en_g2p_lock = threading.Lock()
+
+    def generate(item):
         text = item["tts"]
         voice = item.get("voice") or DEFAULT_VOICE[item["lang"]]
         if item["lang"] == "ja-JP":
             for kanji, kana in replacements:
                 text = text.replace(kanji, kana)
-            samples, sr = synth_ja(kokoro, ja_g2p, text, voice, item["speed"])
+            with ja_g2p_lock:
+                segments = []
+                for seg in split_ja_segments(text):
+                    phonemes, _ = ja_g2p(seg)
+                    segments.append((seg, phonemes))
+            parts = []
+            sr = 24000
+            for n, (seg, phonemes) in enumerate(segments):
+                if not phonemes:
+                    continue
+                samples, sr = kokoro.create(
+                    phonemes, voice=voice, speed=item["speed"], is_phonemes=True
+                )
+                parts.append(trim_edges(np.asarray(samples, dtype=np.float32)))
+                if n < len(segments) - 1:
+                    gap = JA_SENTENCE_GAP_S if seg.endswith("。") else JA_COMMA_GAP_S
+                    parts.append(np.zeros(int(sr * gap), dtype=np.float32))
+            samples = np.concatenate(parts) if parts else np.zeros(1, dtype=np.float32)
         else:
-            phonemes, _ = en_g2p(text)
+            with en_g2p_lock:
+                phonemes, _ = en_g2p(text)
             samples, sr = kokoro.create(
                 phonemes, voice=voice, speed=item["speed"], is_phonemes=True
             )
         samples = trim_and_pad(np.asarray(samples, dtype=np.float32), sr)
         mp3 = encode_mp3(samples, sr)
-        (out / f"{item['key']}.mp3").write_bytes(mp3)
-        manifest[item["key"]] = round(len(samples) / sr, 2)
-        total_bytes += len(mp3)
-        print(f"[{i}/{len(todo)}] {item['key']} {voice} "
-              f"{manifest[item['key']]:.1f}s - {item['text'][:48]}")
+        return item, voice, mp3, round(len(samples) / sr, 2)
+
+    with ThreadPoolExecutor(max_workers=jobs) as executor:
+        generated = executor.map(generate, todo)
+        for i, (item, voice, mp3, duration) in enumerate(generated, 1):
+            (out / f"{item['key']}.mp3").write_bytes(mp3)
+            manifest[item["key"]] = duration
+            total_bytes += len(mp3)
+            print(f"[{i}/{len(todo)}] {item['key']} {voice} "
+                  f"{manifest[item['key']]:.1f}s - {item['text'][:48]}")
 
     orphans = [p for p in out.glob("*.mp3") if p.stem not in manifest]
     for p in orphans:
