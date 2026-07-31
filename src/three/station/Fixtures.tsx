@@ -404,7 +404,9 @@ function Konbini({
         <boxGeometry args={[w * 0.32, 0.03, 0.16]} />
       </mesh>
       {/* Bandeau d'enseigne, allumé. */}
-      <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.04]} material={kit.konbiniSign}>
+      {/* La face de l'enseigne avance légèrement devant le cadre : posée sur
+          son nu exact, elle partageait son tampon de profondeur et clignotait. */}
+      <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.034]} material={kit.konbiniSign}>
         <planeGeometry args={[w - 0.24, SIGN_H]} />
       </mesh>
       <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.1]} material={m.frame}>
@@ -533,13 +535,21 @@ function Office({
   face: THREE.Material;
   m: Mats;
 }) {
+  const shell = height - 0.14;
   return (
     <group>
-      <mesh position={[0, (height - 0.14) / 2, -d / 2 + 0.08]} material={m.hall}>
-        <boxGeometry args={[w, height - 0.14, 0.16]} />
+      {/* Le guichet est une pièce fermée, pas une façade posée devant le
+          couloir : fond et retours latéraux rejoignent tous le plafond. */}
+      <mesh position={[0, shell / 2, -d / 2 + 0.08]} material={m.hall}>
+        <boxGeometry args={[w, shell, 0.16]} />
       </mesh>
-      <mesh position={[0, (height - 0.14) / 2, d / 2 - 0.06]} material={face}>
-        <planeGeometry args={[w - 0.1, height - 0.26]} />
+      {[-1, 1].map((s) => (
+        <mesh key={`side${s}`} position={[s * (w - 0.16) / 2, shell / 2, 0]} material={m.hall}>
+          <boxGeometry args={[0.16, shell, d]} />
+        </mesh>
+      ))}
+      <mesh position={[0, shell / 2, d / 2 - 0.06]} material={face}>
+        <planeGeometry args={[w - 0.1, shell - 0.12]} />
       </mesh>
       {/* Tablette de guichet, en saillie : on y pose son billet. */}
       <mesh position={[0, 1.02, d / 2 + 0.06]} material={m.metal}>

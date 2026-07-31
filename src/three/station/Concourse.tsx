@@ -26,6 +26,7 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
 import type { StationInterior, InteriorRect } from '../../data/stationInterior';
+import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
 import { makeConcourseGuideTexture, type GuideKind } from '../../textures/concourse';
 import type { Mats } from './materials';
@@ -128,6 +129,24 @@ export function Concourse({
           </mesh>
         </group>
       ))}
+
+      {/* Le hall est plus large que le couloir qui arrive de la trémie. Fermer
+          les deux retours au droit de l'entrée empêche de voir les voies et le
+          décor extérieur par les bandes laissées de part et d'autre. */}
+      {[-1, 1].map((d) => {
+        const inner = midX + d * STAIR_LOWER_HALF_X;
+        const outer = d < 0 ? it.paid.x0 : it.paid.x1;
+        const panelWidth = Math.abs(outer - inner);
+        return (
+          <mesh
+            key={`entrance${d}`}
+            position={[(outer + inner) / 2, midY, z0 + WALL_T / 2]}
+            material={m.hall}
+          >
+            <boxGeometry args={[panelWidth, height, WALL_T]} />
+          </mesh>
+        );
+      })}
 
       {/* Fond du hall, percé des bouches de sortie. Elles ne se franchissent pas
           encore - la volée qui monte à la rue reste à dessiner - mais le jour
