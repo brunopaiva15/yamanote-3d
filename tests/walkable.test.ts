@@ -25,6 +25,20 @@ const { frameAt, playerDoorwayZ, resolveMove } = await import('../src/systems/wa
 const { runtime } = await import('../src/systems/runtime.ts');
 const { useStore } = await import('../src/store.ts');
 const { CONFIG, V_MAX } = await import('../src/data/config.ts');
+const { DOOR_SIDE } = await import('../src/data/stations.ts');
+
+/**
+ * Une gare dont le quai est du côté +x.
+ *
+ * Tout ce fichier marche vers les x croissants pour sortir du wagon, ce qui
+ * n'a de sens que si le quai est de ce côté-là. C'était écrit `index: 0` -
+ * Tokyo -, donc vrai par coïncidence : le relevé de janvier 2026 a fait passer
+ * Tokyo à gauche, et les deux tests de franchissement se sont mis à marcher
+ * vers la voie d'en face. Le seuil de porte ne dépend pas de la gare choisie ;
+ * on prend donc la première qui ouvre du bon côté, et le sens de marche cesse
+ * d'être une hypothèse tacite.
+ */
+const SIDE_PLUS = DOOR_SIDE.indexOf(1);
 
 const DT = 1 / 60;
 /** Axe d'une baie de porte, en repère wagon. */
@@ -40,7 +54,12 @@ interface Scene {
 }
 
 function scene({ speed, open, present = true }: Scene): void {
-  useStore.setState({ doorSide: 1, index: 0, platformIndex: 0, started: true });
+  useStore.setState({
+    doorSide: 1,
+    index: SIDE_PLUS,
+    platformIndex: SIDE_PLUS,
+    started: true,
+  });
   runtime.trainPresent = present;
   runtime.trainZ = 0;
   runtime.platformSlide = 0;

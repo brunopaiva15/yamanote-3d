@@ -310,6 +310,43 @@ export function platformFor(jy: string, direction: LoopDirection): PlatformInfo 
   };
 }
 
+/**
+ * Les voies qui n'ouvrent pas du côté de leur gare.
+ *
+ * `DOOR_SIDE` appartient à la GARE et non au sens (data/stations) : sur un plan
+ * à deux voies, la rame qui le parcourt à l'envers a le quai du même bord. Ce
+ * n'est plus vrai dès qu'une gare a QUATRE voies Yamanote, ou deux quais qui ne
+ * se répondent pas : la voie change, donc le bord change.
+ *
+ *   • Ikebukuro - voies régulières 6 et 7 au centre des deux îlots (portes à
+ *     gauche, comme la gare) ; voies terminales 5 et 8 sur la face extérieure
+ *     de chaque îlot, donc à DROITE.
+ *   • Ōsaki - la voie extérieure régulière 3 borde son quai par la gauche,
+ *     alors que l'intérieure 1 ouvre à droite ; les terminales 2 et 4 suivent
+ *     chacune leur îlot.
+ *
+ * Clé : `JYxx/voie`. Tout ce qui n'y figure pas prend le côté de la gare.
+ * Relevé JR East de janvier 2026.
+ */
+const DOOR_SIDE_BY_TRACK: Record<string, DoorSide> = {
+  'JY13/5': 'right',
+  'JY13/6': 'left',
+  'JY13/7': 'left',
+  'JY13/8': 'right',
+  'JY24/1': 'right',
+  'JY24/2': 'left',
+  'JY24/3': 'left',
+  'JY24/4': 'right',
+};
+
+/** Côté d'ouverture d'une voie précise : l'exception si elle existe, la gare sinon. */
+function doorSideOfTrack(stationCode: string, stationIndex: number, platform: number): DoorSide {
+  return (
+    DOOR_SIDE_BY_TRACK[`${stationCode}/${platform}`]
+    ?? (DOOR_SIDE[stationIndex] === 1 ? 'right' : 'left')
+  );
+}
+
 function profileFromLegacy(
   stationCode: string,
   direction: LoopDirection,
@@ -331,7 +368,7 @@ function profileFromLegacy(
     direction,
     platform,
     nextStationCode,
-    doorSide: DOOR_SIDE[stationIndex] === 1 ? 'right' : 'left',
+    doorSide: doorSideOfTrack(stationCode, stationIndex, platform),
     serviceRoles: alternative
       ? ['alternative', 'originating', 'terminating', 'depot-access']
       : ['through'],
@@ -343,9 +380,11 @@ function profileFromLegacy(
     },
     evidence: {
       doorSide: {
-        value: DOOR_SIDE[stationIndex] === 1 ? 'right' : 'left',
-        confidence: 'unverified',
-        sourceNote: 'Valeur héritée du relevé station-only; aucune correction factuelle appliquée.',
+        value: doorSideOfTrack(stationCode, stationIndex, platform),
+        confidence: 'high',
+        checkedAt: '2026-01-31',
+        sourceNote:
+          "Relevé JR East de janvier 2026, croisé avec les plans de voies ; côté par voie à Ikebukuro et Ōsaki.",
       },
       platformDoors: {
         value: installed,

@@ -443,11 +443,12 @@ const KT = 'Keihin-Tōhoku';
 /**
  * Les trente gares, dans l'ordre JY01 → JY30.
  *
- * Les configurations de quai reprennent le relevé : onze gares où la Yamanote
- * partage son îlot avec la Keihin-Tōhoku, Yoyogi avec la Chūō–Sōbu, Shinagawa
- * de nouveau avec la Keihin-Tōhoku ; quatorze îlots Yamanote purs ; un seul
- * couple de quais latéraux, Harajuku ; deux gares à quatre voies Yamanote qui
- * permettent départs et terminus, Ikebukuro et Ōsaki.
+ * Les configurations de quai reprennent le relevé de janvier 2026 : seize gares
+ * où la Yamanote partage ses deux îlots avec une autre ligne - la
+ * Keihin-Tōhoku sur tout le côté est, la Chūō–Sōbu à Yoyogi et à Shinjuku ;
+ * onze îlots Yamanote purs ; un seul couple de quais latéraux, Harajuku ; deux
+ * gares à quatre voies Yamanote qui permettent départs et terminus, Ikebukuro
+ * et Ōsaki.
  */
 const SPECS: readonly Spec[] = [
   {
@@ -474,8 +475,13 @@ const SPECS: readonly Spec[] = [
     // le même îlot. Quai étroit, charpente sombre, immeubles à toucher.
     name: 'JY02 Kanda',
     elevation: 'elevated',
-    config: 'island',
-    parallel: [KT, 'Chūō', 'Ginza'],
+    // Deux îlots partagés avec la Keihin-Tōhoku, et non un îlot Yamanote : les
+    // voies 2 et 3 sont la paire CENTRALE, chacune adossée à une voie
+    // Keihin-Tōhoku sur son quai. C'est ce qui met les portes à gauche dans les
+    // deux sens, comme partout sur le côté est de la boucle.
+    config: 'sharedIsland',
+    sharedWith: KT,
+    parallel: ['Chūō', 'Ginza'],
     ambience: 'street',
     crowd: 1,
     depth: PLATFORM_DEPTH + 0.6,
@@ -679,8 +685,13 @@ const SPECS: readonly Spec[] = [
     // restructuration en cours l'interdit.
     name: 'JY17 Shinjuku',
     elevation: 'ground',
-    config: 'island',
-    parallel: ['Chūō', 'Chūō–Sōbu', 'Saikyō', 'Shōnan–Shinjuku', 'Odakyū', 'Keiō'],
+    // Les deux voies Yamanote ne se font PAS face sur un même îlot : la 14 et
+    // la 15 bordent deux quais différents, chacun partagé avec la Chūō–Sōbu.
+    // C'est la même disposition qu'à Yoyogi, deux gares plus loin, et c'est
+    // elle qui met les portes à gauche dans les deux sens.
+    config: 'sharedIsland',
+    sharedWith: 'Chūō–Sōbu',
+    parallel: ['Chūō', 'Saikyō', 'Shōnan–Shinjuku', 'Odakyū', 'Keiō'],
     psd: 'none',
     works: true,
     signature: 'shinjuku',
@@ -876,7 +887,10 @@ const SPECS: readonly Spec[] = [
     // Huit voies parallèles sous la même couverture : rien ne ferme la travée.
     openFarSide: true,
     elevation: 'elevated',
-    config: 'island',
+    // Deux îlots partagés avec la Keihin-Tōhoku : voies 4 et 5 au centre du
+    // faisceau, une voie Keihin-Tōhoku au dos de chaque quai.
+    config: 'sharedIsland',
+    sharedWith: KT,
     parallel: ['Tōkaidō', 'Yokosuka', 'Ginza', 'Asakusa', 'Yurikamome'],
     signature: 'shimbashi',
     ambience: 'office',
