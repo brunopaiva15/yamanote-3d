@@ -186,9 +186,10 @@ Trois axes y sont tenus séparés, parce que les confondre uniformise tout :
 - `elevation` - le niveau où court la voie : **sol** (12 gares), **viaduc**
   (13), **tranchée** (5 : Tabata, Komagome, Sugamo, Mejiro, Meguro) ;
 - `config` - ce qu'on a de l'autre côté du quai : îlot partagé avec une autre
-  ligne (13, la Keihin-Tōhoku sauf à Yoyogi), îlot Yamanote pur (14), quais
-  latéraux (Harajuku, seul cas de la boucle), double îlot de terminus
-  (Ikebukuro, Ōsaki) ;
+  ligne (16 au relevé de janvier 2026, la Keihin-Tōhoku partout sauf à Yoyogi et
+  Shinjuku, où c'est la Chūō–Sōbu), îlot Yamanote pur (11), quais latéraux
+  (Harajuku, seul cas de la boucle), double îlot de terminus (Ikebukuro,
+  Ōsaki) ;
 - `signature` - le caractère qui ne se paramètre pas, dessiné à part
   (`three/station/signatures/`).
 
@@ -278,8 +279,9 @@ verrait au premier pas. Tout ce qui se répète passe par un `InstancedMesh`.
 îlots : deux bords d'embarquement, l'ossature ramenée au milieu - piliers,
 bancs, distributeurs, caissons publicitaires dos à dos - et, au-delà du second
 bord, une voie puis un autre quai. Laquelle voie change tout : la Keihin-Tōhoku
-à Tokyo, Ueno ou Yūrakuchō, la Yamanote elle-même en sens inverse à Kanda ou
-Mejiro, la deuxième paire de voies des terminus à Ikebukuro et Ōsaki. Ce que
+à Tokyo, Ueno, Kanda ou Yūrakuchō, la Yamanote elle-même en sens inverse à
+Mejiro ou Komagome, la deuxième paire de voies des terminus à Ikebukuro et
+Ōsaki. Ce que
 `elevation` ferme au fond - paroi de tranchée, garde-corps de viaduc, mur - se
 trouve alors quinze mètres plus loin, derrière le quai d'en face, et non plus à
 portée de main. Harajuku, seul quai latéral de la boucle, garde son mur et son
@@ -547,6 +549,50 @@ donc à hauteur d'affiche et pas plus loin que sept mètres - une réglette de
 plafond, elle, n'atteindrait jamais l'œil. Et les voyageurs qui s'en vont ne
 s'effacent plus à une altitude donnée : ils marchent jusqu'à un mètre après le
 linteau, où c'est la dalle qui les cache.
+
+### Entrer dans la gare
+
+Ce couloir se terminait sur un mur, et le joueur était de toute façon arrêté
+cinq marches plus haut, sur rien du tout. **Une trémie par gare descend
+maintenant jusqu'au bout** - première volée, palier de mi-étage, seconde volée,
+couloir - et débouche sur le niveau de correspondance : zone payante, ligne de
+portillons, zone libre, bouches de sortie. On y marche, on franchit un
+portillon, on va lire ce qui est écrit dessus.
+
+`data/stationInterior` pose les rectangles, `three/station/Concourse` les
+dessine, `systems/walkable` les fait respecter - la même table pour les deux,
+sinon une borne se contourne là où elle est dessinée et barre là où elle ne
+l'est pas. Le tout est écrit dans le repère du quai, donc se retourne avec lui,
+et tient DANS l'emprise de la dalle : au-delà, la nappe de rue reprend sa place
+un mètre sous le quai (`three/groundStrip`) et couperait le hall à hauteur
+d'épaule.
+
+**Une seule trémie y mène**, la plus proche du milieu du quai. Les autres
+gardent leur couloir borgne - c'est aussi ce que fait une vraie gare, où toutes
+les volées d'un quai ne débouchent pas au même endroit, ni toutes sur un
+endroit.
+
+Ce que ça change sous les pieds : il y a désormais **deux sols à une même
+abscisse**, la dalle du quai et le hall trois mètres et demi dessous. Aucune
+coordonnée ne dit lequel des deux porte le marcheur ; `runtime.playerLevel` le
+porte, et il ne bascule **que dans une trémie** - le seul endroit où les deux
+n'en font qu'un. Sans cet état, on traversait la ligne de portillons en marchant
+sur son plafond.
+
+Le nom écrit au-dessus des portillons est un relevé, gare par gare -
+電気街口 à Akihabara, ハチ公改札 à Shibuya, 早稲田口 à Takadanobaba ; les gares
+dont le nom n'est pas établi portent 中央改札, qui est réel et courant. Les
+sorties, elles, ne sont pas renommées : chaque bouche porte **le même panneau
+jaune que les potences du quai**, tiré du même relevé (`data/lines`) - une gare
+ne fléche pas 八重洲中央口 en haut des marches et autre chose en bas.
+
+**Six gares déclarent leur hall sans le construire.** Les cinq tranchées
+(Tabata, Komagome, Sugamo, Mejiro, Meguro) et Nippori ont leur billetterie
+**au-dessus** des voies, sur le bâtiment qui enjambe - c'est ce que montre le
+plan de Mejiro, et c'est l'inverse d'une gare de viaduc. La donnée le dit, la
+marche le supporte, mais la volée MONTANTE reste à dessiner : `built` le déclare
+faux plutôt que de laisser croire. Le découpage complet est dans
+`docs/STATION_INTERIOR.md`.
 
 ### La signalétique
 

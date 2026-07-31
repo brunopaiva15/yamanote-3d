@@ -274,7 +274,7 @@ const AD_LOW_Y = STAIR_LOWER_Y + 1.02;
 // --- Rendu ---------------------------------------------------------------
 
 interface Props {
-  place: { stairs: Placed[] };
+  place: { stairs: Placed[]; mainStair: Placed };
   m: Mats;
   station: number;
   /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
@@ -312,6 +312,9 @@ export function Stairwells({ place, m, station, detail }: Props) {
           station={station}
           exitMat={exitMat}
           detail={detail}
+          // La trémie principale ne se ferme pas au fond : son couloir débouche
+          // sur le hall (three/station/Concourse), et l'on y marche.
+          open={s === place.mainStair}
         />
       ))}
     </>
@@ -324,10 +327,13 @@ function Stairwell({
   station,
   exitMat,
   detail,
+  open,
 }: {
   s: Placed;
   m: Mats;
   station: number;
+  /** Le couloir débouche-t-il sur le hall, au lieu de se fermer sur un mur ? */
+  open: boolean;
   exitMat: THREE.Material;
   detail: number;
 }) {
@@ -433,7 +439,7 @@ function Stairwell({
 
       {/* Le niveau inférieur est un fond de champ, pas une structure : c'est
           la première chose qui saute sur une machine à la peine. */}
-      {detail <= 1 && <LowerLevel m={m} station={station} />}
+      {detail <= 1 && <LowerLevel m={m} station={station} open={open} />}
 
       {/* Caisson publicitaire plaqué sur la joue côté voie : sur un vrai quai
           c'est la surface la plus rentable d'une trémie, et elle est en plein
@@ -464,7 +470,7 @@ function Stairwell({
  * sous-face du linteau et descend d'un demi-mètre par mètre. À sept mètres il
  * a rejoint le sol, et ce qui est au-dessus n'existe plus pour personne.
  */
-function LowerLevel({ m, station }: { m: Mats; station: number }) {
+function LowerLevel({ m, station, open }: { m: Mats; station: number; open: boolean }) {
   return (
     <group>
       {/* Seconde volée, et ses nez - c'est par eux qu'on la lit dans le noir. */}
@@ -499,12 +505,13 @@ function LowerLevel({ m, station }: { m: Mats; station: number }) {
       <mesh position={[0, STAIR_LOWER_CEIL_Y - 0.05, LOWER_MID_Z]} material={m.wallDark}>
         <boxGeometry args={[LOWER_WALL_X * 2, 0.1, LOWER_LEN]} />
       </mesh>
-      <mesh
-        position={[0, LOWER_Y, STAIR_LOWER_END + 0.1]}
-        material={m.wall}
-      >
-        <boxGeometry args={[LOWER_WALL_X * 2, LOWER_H, 0.2]} />
-      </mesh>
+      {/* Fond de couloir - sauf quand il n'y en a pas : la trémie principale
+          continue dans le hall, et un mur planté là l'emmurerait. */}
+      {!open && (
+        <mesh position={[0, LOWER_Y, STAIR_LOWER_END + 0.1]} material={m.wall}>
+          <boxGeometry args={[LOWER_WALL_X * 2, LOWER_H, 0.2]} />
+        </mesh>
+      )}
 
       {/* Caissons rétroéclairés sur les parois : la seule lumière du couloir
           qui tombe dans la bande visible - une réglette de plafond, à trois

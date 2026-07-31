@@ -35,6 +35,7 @@
 // le dit sans mentir.
 
 import { layoutFor } from './stationLayouts.ts';
+import { stationExits } from './lines.ts';
 import {
   PSD_X,
   STAIR_LOWER_CEIL_Y,
@@ -89,8 +90,13 @@ export interface ConcourseExit {
   /** Axe de la bouche. */
   x: number;
   halfWidth: number;
-  /** Numéro ou nom de la sortie, tel qu'il est fléché. */
-  label: string;
+  /**
+   * Rang de la sortie dans `stationExits`. Les noms ne sont PAS recopiés ici :
+   * ce sont ceux des potences du quai (data/lines), et une gare qui fléche
+   * 八重洲中央口 en haut des marches ne peut pas fléchier autre chose en bas.
+   * Le rendu tire son panneau du même `makeExitSign(slot)` que le quai.
+   */
+  slot: number;
 }
 
 export interface StationInterior {
@@ -162,55 +168,57 @@ interface Spec {
   /** Nom de la sortie principale, tel qu'il est écrit au-dessus des portillons. */
   gateJp: string;
   gate: string;
-  /** Bouches de sortie fléchées depuis la zone libre. */
-  exits: [string] | [string, string];
 }
 
 /**
  * Les trente gares, dans l'ordre JY01 → JY30.
  *
- * LES NOMS DE SORTIE SONT UN RELEVÉ, pas une génération. Une gare japonaise ne
- * numérote pas ses portillons : elle les NOMME, et le nom dit où l'on sort -
+ * LES NOMS DE PORTILLON SONT UN RELEVÉ, pas une génération. Une gare japonaise
+ * ne numérote pas ses改札 : elle les NOMME, et le nom dit où l'on sort -
  * 電気街口 à Akihabara, ハチ公改札 à Shibuya, 早稲田口 à Takadanobaba. Les
- * gares dont le nom de sortie n'est pas établi ici portent 中央改札, qui est
- * réel, courant, et n'invente rien : c'est la valeur prudente, pas un défaut
+ * gares dont le nom n'est pas établi ici portent 中央改札, qui est réel,
+ * courant, et n'invente rien : c'est la valeur prudente, pas un défaut
  * technique. Une par une, elles se remplaceront par le relevé.
+ *
+ * Les SORTIES, elles, ne figurent pas ici : elles sont déjà relevées pour les
+ * potences du quai (data/lines, `stationExits`), et une gare ne peut pas
+ * flécher 八重洲中央口 en haut des marches et autre chose en bas.
  */
 const SPECS: readonly Spec[] = [
-  { name: 'JY01 Tokyo', gateJp: '丸の内中央口', gate: 'Marunouchi Central', exits: ['丸の内', '八重洲'] },
-  { name: 'JY02 Kanda', gateJp: '西口改札', gate: 'West', exits: ['西口', '東口'] },
-  { name: 'JY03 Akihabara', gateJp: '電気街口', gate: 'Electric Town', exits: ['電気街口', '昭和通り口'] },
-  { name: 'JY04 Okachimachi', gateJp: '北口改札', gate: 'North', exits: ['北口', '南口'] },
+  { name: 'JY01 Tokyo', gateJp: '丸の内中央口', gate: 'Marunouchi Central' },
+  { name: 'JY02 Kanda', gateJp: '西口改札', gate: 'West' },
+  { name: 'JY03 Akihabara', gateJp: '電気街口', gate: 'Electric Town' },
+  { name: 'JY04 Okachimachi', gateJp: '北口改札', gate: 'North' },
   // Le plan de quai d'Ueno en montre quatre, sur deux niveaux : 不忍 et 中央 en
   // M2F et 1F au sud, 公園 et 入谷 en 3F au nord. Deux groupes d'accès, donc
   // deux halls - c'est une gare à part, et elle attend sa phase.
-  { name: 'JY05 Ueno', gateJp: '中央改札', gate: 'Central', exits: ['不忍口', '公園口'] },
-  { name: 'JY06 Uguisudani', gateJp: '南口改札', gate: 'South', exits: ['南口', '北口'] },
+  { name: 'JY05 Ueno', gateJp: '中央改札', gate: 'Central' },
+  { name: 'JY06 Uguisudani', gateJp: '南口改札', gate: 'South' },
   // Deux ponts-concours enjambent tout le faisceau : le hall est dessus.
-  { name: 'JY07 Nippori', place: 'over', gateJp: '南改札', gate: 'South', exits: ['東口', '西口'] },
-  { name: 'JY08 Nishi-Nippori', gateJp: '南改札', gate: 'South', exits: ['東口', '西口'] },
-  { name: 'JY09 Tabata', place: 'over', gateJp: '北口改札', gate: 'North', exits: ['北口', '南口'] },
-  { name: 'JY10 Komagome', place: 'over', gateJp: '北口改札', gate: 'North', exits: ['北口', '南口'] },
-  { name: 'JY11 Sugamo', place: 'over', gateJp: '北口改札', gate: 'North', exits: ['北口', '南口'] },
-  { name: 'JY12 Ōtsuka', gateJp: '北口改札', gate: 'North', exits: ['北口', '南口'] },
-  { name: 'JY13 Ikebukuro', gateJp: '中央改札', gate: 'Central', exits: ['東口', '西口'] },
-  { name: 'JY14 Mejiro', place: 'over', gateJp: '中央改札', gate: 'Central', exits: ['駅前'] },
-  { name: 'JY15 Takadanobaba', gateJp: '早稲田口', gate: 'Waseda', exits: ['早稲田口', '戸山口'] },
-  { name: 'JY16 Shin-Ōkubo', gateJp: '中央改札', gate: 'Central', exits: ['駅前'] },
-  { name: 'JY17 Shinjuku', gateJp: '東口改札', gate: 'East', exits: ['東口', '西口'] },
-  { name: 'JY18 Yoyogi', gateJp: '北口改札', gate: 'North', exits: ['北口', '西口'] },
-  { name: 'JY19 Harajuku', gateJp: '西口改札', gate: 'West', exits: ['表参道口', '竹下口'] },
-  { name: 'JY20 Shibuya', gateJp: 'ハチ公改札', gate: 'Hachikō', exits: ['ハチ公口', '南口'] },
-  { name: 'JY21 Ebisu', gateJp: '西口改札', gate: 'West', exits: ['西口', '東口'] },
-  { name: 'JY22 Meguro', place: 'over', gateJp: '中央改札', gate: 'Central', exits: ['西口', '東口'] },
-  { name: 'JY23 Gotanda', gateJp: '中央改札', gate: 'Central', exits: ['西口', '東口'] },
-  { name: 'JY24 Ōsaki', gateJp: '南改札', gate: 'South', exits: ['東口', '西口'] },
-  { name: 'JY25 Shinagawa', gateJp: '中央改札', gate: 'Central', exits: ['高輪口', '港南口'] },
-  { name: 'JY26 Takanawa Gateway', gateJp: '改札口', gate: 'Gate', exits: ['西口', '東口'] },
-  { name: 'JY27 Tamachi', gateJp: '北口改札', gate: 'North', exits: ['三田口', '芝浦口'] },
-  { name: 'JY28 Hamamatsuchō', gateJp: '北口改札', gate: 'North', exits: ['北口', '南口'] },
-  { name: 'JY29 Shimbashi', gateJp: '烏森口', gate: 'Karasumori', exits: ['烏森口', '日比谷口'] },
-  { name: 'JY30 Yūrakuchō', gateJp: '中央口', gate: 'Central', exits: ['中央口', '国際フォーラム口'] },
+  { name: 'JY07 Nippori', place: 'over', gateJp: '南改札', gate: 'South' },
+  { name: 'JY08 Nishi-Nippori', gateJp: '南改札', gate: 'South' },
+  { name: 'JY09 Tabata', place: 'over', gateJp: '北口改札', gate: 'North' },
+  { name: 'JY10 Komagome', place: 'over', gateJp: '北口改札', gate: 'North' },
+  { name: 'JY11 Sugamo', place: 'over', gateJp: '北口改札', gate: 'North' },
+  { name: 'JY12 Ōtsuka', gateJp: '北口改札', gate: 'North' },
+  { name: 'JY13 Ikebukuro', gateJp: '中央改札', gate: 'Central' },
+  { name: 'JY14 Mejiro', place: 'over', gateJp: '中央改札', gate: 'Central' },
+  { name: 'JY15 Takadanobaba', gateJp: '早稲田口', gate: 'Waseda' },
+  { name: 'JY16 Shin-Ōkubo', gateJp: '中央改札', gate: 'Central' },
+  { name: 'JY17 Shinjuku', gateJp: '東口改札', gate: 'East' },
+  { name: 'JY18 Yoyogi', gateJp: '北口改札', gate: 'North' },
+  { name: 'JY19 Harajuku', gateJp: '西口改札', gate: 'West' },
+  { name: 'JY20 Shibuya', gateJp: 'ハチ公改札', gate: 'Hachikō' },
+  { name: 'JY21 Ebisu', gateJp: '西口改札', gate: 'West' },
+  { name: 'JY22 Meguro', place: 'over', gateJp: '中央改札', gate: 'Central' },
+  { name: 'JY23 Gotanda', gateJp: '中央改札', gate: 'Central' },
+  { name: 'JY24 Ōsaki', gateJp: '南改札', gate: 'South' },
+  { name: 'JY25 Shinagawa', gateJp: '中央改札', gate: 'Central' },
+  { name: 'JY26 Takanawa Gateway', gateJp: '改札口', gate: 'Gate' },
+  { name: 'JY27 Tamachi', gateJp: '北口改札', gate: 'North' },
+  { name: 'JY28 Hamamatsuchō', gateJp: '北口改札', gate: 'North' },
+  { name: 'JY29 Shimbashi', gateJp: '烏森口', gate: 'Karasumori' },
+  { name: 'JY30 Yūrakuchō', gateJp: '中央口', gate: 'Central' },
 ];
 
 // --- Construction ---------------------------------------------------------
@@ -289,11 +297,13 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
   const freeZ1 = freeZ0 + FREE_LEN;
 
   const gate = buildGate(spec, layout.crowdScale, x0, x1, gateZ);
-  const exits: ConcourseExit[] = spec.exits.map((label, k) => ({
-    // Une bouche au tiers, l'autre aux deux tiers ; une seule, au milieu.
-    x: x0 + (x1 - x0) * (spec.exits.length === 1 ? 0.5 : (k + 1) / (spec.exits.length + 1)),
+  // Autant de bouches que la gare a de sorties fléchées, réparties en travers
+  // du fond : une au tiers, l'autre aux deux tiers.
+  const slots = stationExits(i);
+  const exits: ConcourseExit[] = slots.map((_, k) => ({
+    x: x0 + (x1 - x0) * (slots.length === 1 ? 0.5 : (k + 1) / (slots.length + 1)),
     halfWidth: EXIT_HALF_X,
-    label,
+    slot: k,
   }));
 
   return {

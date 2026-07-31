@@ -69,7 +69,12 @@ de niveaux et les liens verticaux entre eux.
 - la volée se descend **entière**, jusqu'au palier puis au couloir bas ;
 - le couloir débouche sur le hall, qui se parcourt ;
 - le portillon se franchit, et l'on passe en zone libre ;
-- le repère de marche `'concourse'` s'ajoute à `'car'` et `'platform'` ;
+- `runtime.playerLevel` porte l'étage courant. Ce n'est PAS un troisième repère
+  de coordonnées - le hall vit dans celui du quai, il se retourne avec lui et la
+  gare y reste épinglée. Ce qui change, c'est qu'à une même abscisse il y a
+  maintenant deux sols, et que rien dans les coordonnées ne dit lequel est sous
+  les pieds. L'étage ne bascule que dans une trémie, seul endroit où les deux
+  n'en font qu'un ;
 - la rame repart sans nous : c'est déjà le cas sur le quai, et rien dans la
   descente ne le change.
 
@@ -80,8 +85,13 @@ mêmes cotes que la marche.
 
 - sol, plafond, soubassement de faïence, bandeau lumineux, poteaux ;
 - ligne de portillons : bornes, lecteurs IC, volets, feux de passage ;
-- signalétique : nom de la sortie, fléchage, plan de quartier ;
-- le mur de fond du couloir bas s'efface là où le hall commence.
+- signalétique : le bandeau 改札 porte le nom réel du passage, et chaque bouche
+  de sortie porte le MÊME panneau jaune que les potences du quai - tiré du même
+  relevé (`data/lines`), parce qu'une gare ne fléche pas 八重洲中央口 en haut
+  des marches et autre chose en bas ;
+- le mur de fond du couloir bas s'efface là où le hall commence ;
+- vérifié à pied, dans un vrai navigateur : `__probeInterior` donne l'itinéraire
+  du quai à la zone libre, `__probeGo` le parcourt avec le `resolveMove` du jeu.
 
 ## Phase 4 — La sortie et la rue
 

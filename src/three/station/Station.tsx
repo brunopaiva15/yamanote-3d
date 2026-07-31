@@ -63,6 +63,7 @@ import { PlatformSignage } from './PlatformSignage';
 import { VendingMachines } from './VendingMachines';
 import { Signature } from './signatures';
 import { Stairwells } from './Stairwell';
+import { Concourse } from './Concourse';
 import { psdLayout } from './psdLayout';
 
 const UP = new THREE.Quaternion();
@@ -496,6 +497,15 @@ export function Station() {
       {/* Trémies d'escalier : la dalle est percée, donc elles font partie de la
           structure - jamais retirées par un palier de qualité. */}
       <Stairwells place={place} m={m} station={index} detail={detail} />
+
+      {/* Le niveau de correspondance, au bout du couloir de la trémie
+          principale. Il n'existe que là où l'on peut y aller : une gare dont le
+          hall est au-dessus du quai le déclare sans le construire, faute de
+          volée montante (data/stationInterior). Comme le reste du fond de
+          champ, il saute au palier de qualité le plus bas. */}
+      {place.interior.built && detail <= 2 && (
+        <Concourse it={place.interior} m={m} station={index} detail={detail} />
+      )}
 
       {/* Affichage publicitaire : caissons du mur, colonnes habillées,
           bannières suspendues, allèges de portes palières. */}

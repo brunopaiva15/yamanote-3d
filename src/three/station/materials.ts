@@ -86,6 +86,27 @@ export function makeStationMaterials(p: StationPalette, textures: StationTexture
         emissiveIntensity: 0.14,
       }),
       wallDark: new THREE.MeshStandardMaterial({ color: p.column, roughness: 0.9 }),
+      // Parois et plafond du niveau de correspondance.
+      //
+      // Ce ne sont PAS celles du quai, et les prendre telles quelles donnait un
+      // couloir de brique sombre sous la halle de Tokyo : la palette de quai
+      // décrit ce qu'on voit à ciel ouvert - maçonnerie, acier peint, verrières
+      // -, alors qu'un souterrain de gare est un volume clos, éclairé
+      // artificiellement, et donc PÂLE. Il l'est d'autant plus que la lumière
+      // n'y vient que des réglettes : un ton sombre y devient noir en trois
+      // mètres. On garde la teinte de la gare, tirée vers le blanc.
+      hall: new THREE.MeshStandardMaterial({
+        color: new THREE.Color(p.wall).lerp(new THREE.Color('#f4f2ec'), 0.68),
+        roughness: 0.92,
+        emissive: new THREE.Color(p.wall).lerp(new THREE.Color('#ffffff'), 0.6),
+        emissiveIntensity: 0.16,
+      }),
+      hallCeil: new THREE.MeshStandardMaterial({
+        color: new THREE.Color(p.canopy).lerp(new THREE.Color('#e8e8e4'), 0.55),
+        roughness: 0.95,
+        emissive: new THREE.Color(p.canopy).lerp(new THREE.Color('#ffffff'), 0.5),
+        emissiveIntensity: 0.12,
+      }),
       // Faïence de soubassement : c'est elle qui casse le tout-gris du fond.
       tile: new THREE.MeshStandardMaterial({
         color: p.tile,

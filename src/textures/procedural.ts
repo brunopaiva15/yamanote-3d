@@ -3067,6 +3067,51 @@ function drawSignArrow(
 }
 
 /**
+ * Bandeau 改札 suspendu au-dessus d'une ligne de portillons.
+ *
+ * Ce n'est ni un panneau de sortie ni un panneau de correspondance : c'est le
+ * NOM du passage, écrit très gros sur fond blanc, avec sa transcription
+ * dessous et le mot 改札口 en réserve. C'est la seule chose qu'on lit en
+ * arrivant au bas des marches, et c'est elle qui dit dans quelle gare on est.
+ */
+export function makeGateSign(): {
+  texture: THREE.CanvasTexture;
+  redraw: (jp: string, romaji: string) => void;
+} {
+  const W = 1024;
+  const H = 256;
+  const { c, g } = makeCanvas(W, H);
+  const texture = toTexture(c);
+  const redraw = (jp: string, romaji: string) => {
+    g.fillStyle = '#f7f6f3';
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#1c1c1a';
+    g.lineWidth = 10;
+    g.strokeRect(5, 5, W - 10, H - 10);
+
+    // Le nom, en noir, sur les deux tiers de gauche.
+    g.fillStyle = '#141414';
+    g.textAlign = 'left';
+    g.textBaseline = 'alphabetic';
+    fitFillText(g, jp, 44, H * 0.56, W * 0.58, 96, 'bold');
+    g.fillStyle = '#4a4a46';
+    fitFillText(g, romaji, 46, H * 0.82, W * 0.58, 44);
+
+    // 改札口 / Gates, en réserve verte : le vert JR de la signalétique.
+    g.fillStyle = '#0d8a3e';
+    g.fillRect(W * 0.66, 26, W * 0.3, H - 52);
+    g.fillStyle = '#ffffff';
+    g.textAlign = 'center';
+    fitFillText(g, '改札口', W * 0.81, H * 0.52, W * 0.26, 72, 'bold');
+    fitFillText(g, 'Gates', W * 0.81, H * 0.78, W * 0.26, 40);
+    g.textAlign = 'left';
+
+    texture.needsUpdate = true;
+  };
+  return { texture, redraw };
+}
+
+/**
  * Panneau jaune de sortie. `slot` choisit laquelle des deux sorties de la gare
  * est affichée, et le sens de la flèche.
  */

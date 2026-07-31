@@ -19,6 +19,7 @@ import {
 } from '../src/data/stationGeometry.ts';
 import { STATION_COUNT } from '../src/data/loop.ts';
 import { STATIONS } from '../src/data/stations.ts';
+import { stationExits } from '../src/data/lines.ts';
 
 /** Une trémie plausible : le placement les pose vers le milieu du quai. */
 const ACCESS_Z = 11.2;
@@ -102,11 +103,13 @@ test('la ligne de portillons barre toute la largeur, sauf ses passages', () => {
   }
 });
 
-test('les bouches de sortie sont dans le hall libre', () => {
-  for (const { name, interior } of ALL) {
+test('les bouches de sortie sont dans le hall libre, et fléchées par le relevé', () => {
+  for (const { i, name, interior } of ALL) {
+    // Une bouche par sortie fléchée du quai : mêmes noms, même source.
+    assert.equal(interior.exits.length, stationExits(i).length, name);
     for (const exit of interior.exits) {
-      assert.ok(exit.x - exit.halfWidth >= interior.free.x0 - 1e-9, `${name} ${exit.label}`);
-      assert.ok(exit.x + exit.halfWidth <= interior.free.x1 + 1e-9, `${name} ${exit.label}`);
+      assert.ok(exit.x - exit.halfWidth >= interior.free.x0 - 1e-9, `${name} sortie ${exit.slot}`);
+      assert.ok(exit.x + exit.halfWidth <= interior.free.x1 + 1e-9, `${name} sortie ${exit.slot}`);
     }
   }
 });
