@@ -64,6 +64,21 @@ test("le malade conserve son rig assis jusqu'au debut de sa descente", () => {
   assert.doesNotMatch(machine, /posePassenger[\s\S]*?p\.state = 'alighting'[\s\S]*?function releasePassengerSlots/);
 });
 
+test('le malade se redresse au debut de sa descente (plus de pli a 45 dans le siege)', () => {
+  // Une fois l'etat passe a `alighting`, le rendu ne bride plus l'inclinaison
+  // assise : la pose « souffrant » doit etre remise a plat au moment de la
+  // descente, sinon le voyageur reste plie dans son siege.
+  const alight = machine.slice(machine.indexOf('function defaultBeginAlight'), machine.indexOf('function defaultPassengerAlighted'));
+  for (const reset of ['p.bodyLean = 0;', 'p.bodyRoll = 0;', 'p.headPitch = 0;', 'p.headRoll = 0;']) {
+    assert.ok(alight.includes(reset), `remise a plat absente dans defaultBeginAlight: ${reset}`);
+  }
+  const stateAt = alight.indexOf("p.state = 'alighting'");
+  assert.ok(alight.indexOf('p.bodyLean = 0;') > stateAt, 'la remise a plat doit suivre le passage en alighting');
+  // Le garde-fou de disparition efface aussi la pose avant le retour au pool.
+  const remove = machine.slice(machine.indexOf('function defaultRemove'), machine.indexOf('function defaultRestore'));
+  assert.ok(remove.includes('p.bodyLean = 0;'), 'defaultRemove doit aussi remettre la pose a plat');
+});
+
 test('la disparition au chrono ne sert plus que de garde-fou', () => {
   assert.match(machine, /if \(effects\.passengerAlighted\(passengerId!\)\)/);
   assert.match(machine, /else if \(elapsed >= plan\.alight\)[\s\S]*effects\.removePassenger/);

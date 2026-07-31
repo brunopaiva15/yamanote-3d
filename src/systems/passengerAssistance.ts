@@ -192,6 +192,16 @@ function defaultBeginAlight(id: number, doorZ: number): boolean {
   p.state = 'alighting';
   p.afterWalk = 'hidden';
   p.exitDoorZ = doorZ;
+  // Le malade se redresse pour descendre. Sans ça, la pose « souffrant »
+  // (buste plié ~0,42 rad, tête basse) reste posée alors que l'état n'est plus
+  // `seated` : le rendu ne bride plus l'inclinaison assise (cf.
+  // LibraryPassengers/ProceduralPassengers) et le voyageur apparaît plié à 45°
+  // dans son siège pendant toute la descente - jusqu'à la marche qui la relâche,
+  // voire toute la fenêtre du garde-fou si le pas se bloque.
+  p.bodyLean = 0;
+  p.bodyRoll = 0;
+  p.headPitch = 0;
+  p.headRoll = 0;
   p.waypoints = [
     new THREE.Vector3(side * 0.3, 0, p.pos.z),
     new THREE.Vector3(side * 0.95, 0, doorZ),
@@ -213,6 +223,12 @@ function defaultRemove(id: number): void {
   p.waypoints.length = 0;
   p.wpi = 0;
   p.partner = -1;
+  // On efface aussi la pose « souffrant » : le slot retourne au pool et ne doit
+  // pas ressurgir plié en avant avant que la montée ne la relâche.
+  p.bodyLean = 0;
+  p.bodyRoll = 0;
+  p.headPitch = 0;
+  p.headRoll = 0;
 }
 
 function defaultRestore(id: number): void {
