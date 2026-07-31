@@ -35,15 +35,38 @@ export const MESSENGER_Y = 6.05;
 // --- Cotes internes de la structure --------------------------------------
 /** Flèche du porteur à mi-portée (m). */
 const MESSENGER_SAG = 0.55;
-/** Membrures de la poutre-treillis : hauteur haute et basse (m). */
-const BEAM_TOP = 5.54;
-const BEAM_BOT = 5.06;
+/** Flèche du fil de contact : quasi nul, tenu droit par les pendules. */
+const CONTACT_SAG = 0.02;
+/**
+ * Désaxement (zigzag) du fil de contact (m). Sur voie réelle le fil serpente
+ * de part et d'autre de l'axe pour user la bande du pantographe sur toute sa
+ * largeur ; c'est ce serpentement qu'on lit en levant les yeux. Ici il revient
+ * au même côté à chaque portique, de sorte qu'une portée unique se recopie sans
+ * couture le long de la voie.
+ */
+const STAGGER = 0.2;
+/**
+ * La poutre est HAUTE : porteur et fil de contact pendent sous elle. Autrefois
+ * le porteur passait au-dessus d'une barre basse, sans rien pour l'accrocher -
+ * on remonte donc la poutre au-dessus du porteur (6,05) et tout descend d'elle.
+ */
+const BEAM_BOT = 6.2;
+const BEAM_TOP = 6.66;
 /** Demi-largeur hors-tout de la poutre : elle coiffe les deux mâts. */
 const BEAM_HALF = POLE_X + 0.14;
 /** Écartement des deux plans du treillis (m). */
 const BEAM_DEPTH = 0.16;
 /** Sommet du mât (le fût dépasse un peu la poutre). */
-const MAST_TOP = 5.72;
+const MAST_TOP = 6.84;
+
+/** Abscisse du fil de contact le long d'une portée (paramètre t ∈ [0,1]). */
+function contactX(t: number): number {
+  return -STAGGER * Math.cos(2 * Math.PI * t);
+}
+/** Hauteur d'un fil parabolique au paramètre t. */
+function wireY(y0: number, sag: number, t: number): number {
+  return y0 - sag * 4 * t * (1 - t);
+}
 
 // --- Petites fabriques ----------------------------------------------------
 
@@ -139,7 +162,7 @@ function buildStructure(): THREE.BufferGeometry {
   for (const s of [-1, 1]) {
     const x = s * POLE_X;
     // Mât octogonal légèrement fuselé, du pied jusqu'au-dessus de la poutre.
-    parts.push(cylAt(0.1, 0.14, 7.2, 8, x, 2.3, 0));
+    parts.push(cylAt(0.1, 0.15, 8.3, 8, x, 2.75, 0));
     // Embase : platine et écrou de scellement, le mât ne « pousse » plus nu.
     parts.push(boxAt(0.42, 0.09, 0.42, x, -0.86, 0));
     parts.push(cylAt(0.17, 0.2, 0.34, 8, x, -0.68, 0));
@@ -157,23 +180,41 @@ function buildStructure(): THREE.BufferGeometry {
   // Poutre-treillis transversale.
   parts.push(buildBeam());
 
-  // Pendules : ils relient le porteur au fil de contact.
-  const drops = 5;
+  // Suspente du porteur : au portique il pend juste sous la membrure basse.
+  parts.push(boxAt(0.035, BEAM_BOT - MESSENGER_Y + 0.05, 0.035, 0, (BEAM_BOT + MESSENGER_Y) / 2, 0));
+
+  // Bras de rappel : un hauban oblique descend de la poutre au fil de contact
+  // et le tient à son désaxement ; une griffe marque le point d'accroche.
+  const cx = contactX(0);
+  parts.push(strut(0.02, BEAM_BOT - 0.05, cx, CONTACT_Y + 0.18, 0, 0.03, 0.03));
+  parts.push(strut(cx - 0.34, CONTACT_Y + 0.12, cx, CONTACT_Y + 0.05, 0, 0.028, 0.028));
+  parts.push(boxAt(0.06, 0.13, 0.06, cx, CONTACT_Y + 0.05, 0));
+
+  // Pendules : ils relient le porteur (axe) au fil de contact (désaxé), et
+  // c'est leur rythme qu'on lit en passant dessous, plus que les fils.
+  const drops = 7;
   for (let i = 1; i < drops; i++) {
     const t = i / drops;
-    const top = MESSENGER_Y - MESSENGER_SAG * 4 * t * (1 - t);
-    parts.push(boxAt(0.03, top - CONTACT_Y, 0.03, 0, (top + CONTACT_Y) / 2, t * POLE_SPACING));
+    const my = wireY(MESSENGER_Y, MESSENGER_SAG, t);
+    const cy = wireY(CONTACT_Y, CONTACT_SAG, t);
+    parts.push(strut(0, my, contactX(t), cy, t * POLE_SPACING, 0.022, 0.022));
   }
 
   return mergeGeometries(parts, false) as THREE.BufferGeometry;
 }
 
-/** Fil de contact (cuivre). */
+/** Fil de contact (cuivre) : quasi droit, mais serpentant (désaxement). */
 function buildContact(): THREE.BufferGeometry {
-  return wire(CONTACT_Y, 0.04, POLE_SPACING, 0.03);
+  const pts: THREE.Vector3[] = [];
+  const N = 16;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    pts.push(new THREE.Vector3(contactX(t), wireY(CONTACT_Y, CONTACT_SAG, t), t * POLE_SPACING));
+  }
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), N, 0.028, 5, false);
 }
 
-/** Câble porteur (acier sombre). */
+/** Câble porteur (acier sombre), tendu dans l'axe avec sa flèche. */
 function buildMessenger(): THREE.BufferGeometry {
   return wire(MESSENGER_Y, MESSENGER_SAG, POLE_SPACING, 0.035);
 }
