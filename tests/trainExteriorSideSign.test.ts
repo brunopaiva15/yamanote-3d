@@ -46,11 +46,12 @@ test('un départ actualise la prochaine gare depuis store.index', () => {
   assert.match(consistSource, /built\.sideSign\.redraw\(index, loopDirection, sideView\)/);
 });
 
-test('les afficheurs restent petits et encadrent les quatre portes', () => {
+test('un seul petit afficheur par flanc précède les quatre portes', () => {
   assert.match(consistSource, /RoundedBoxGeometry\(1, 0\.28, 0\.055, 3, 0\.075\)/);
   assert.match(consistSource, /PlaneGeometry\(0\.9, 0\.2\)/);
-  assert.match(consistSource, /doorCenters\[0\] - END_SIGN_INSET/);
-  assert.match(consistSource, /doorCenters\[E235\.doorCenters\.length - 1\] \+ END_SIGN_INSET/);
+  assert.match(consistSource, /sideSignCount = CARS \* 2/);
+  assert.match(consistSource, /signOffset = E235\.doorCenters\[0\] - END_SIGN_INSET/);
+  assert.doesNotMatch(consistSource, /doorCenters\[E235\.doorCenters\.length - 1\]/);
 });
 
 test('le boîtier est ancré dans la caisse et seule la dalle évite le z-fighting', () => {
