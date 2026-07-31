@@ -149,6 +149,9 @@ function build(): Built {
     black: track(
       new THREE.MeshStandardMaterial({ color: '#16181b', roughness: 0.22, metalness: 0.1 }),
     ),
+    windshield: track(
+      new THREE.MeshStandardMaterial({ color: '#0e1114', roughness: 0.06, metalness: 0.55 }),
+    ),
     sign: track(new THREE.MeshBasicMaterial({ map: sign.texture, toneMapped: false })),
     headlight: track(
       new THREE.MeshStandardMaterial({
@@ -158,13 +161,19 @@ function build(): Built {
         roughness: 0.3,
       }),
     ),
+    headlightOff: track(
+      new THREE.MeshStandardMaterial({ color: '#b8bcc0', roughness: 0.35, metalness: 0.2 }),
+    ),
     taillight: track(
       new THREE.MeshStandardMaterial({
         color: '#8c1414',
         emissive: '#c81f1f',
-        emissiveIntensity: 0.5,
+        emissiveIntensity: 0.9,
         roughness: 0.4,
       }),
+    ),
+    taillightOff: track(
+      new THREE.MeshStandardMaterial({ color: '#5a1c1c', roughness: 0.45, metalness: 0.15 }),
     ),
     metal: track(
       new THREE.MeshStandardMaterial({ color: '#7d838a', roughness: 0.42, metalness: 0.6 }),
@@ -254,20 +263,28 @@ function build(): Built {
   // Le damier du E235 n'existe pas sur cette série : sous le pare-brise, la
   // face avant porte le bleu de la ligne, d'un montant à l'autre.
   const front = track(new THREE.MeshBasicMaterial({ color: KT.blue, toneMapped: false }));
+  // Elle traverse vers les z décroissants (`passingTrain.z` diminue) : la
+  // voiture 1 mène, et c'est la seule à porter des phares.
   for (const [i, dir] of [
     [0, -1],
     [PASS_CARS - 1, 1],
   ] as const) {
-    const cab = buildCab({
-      green: mats.mask,
-      black: mats.black,
-      checker: front,
-      sign: mats.sign,
-      headlight: mats.headlight,
-      taillight: mats.taillight,
-      underframe: mats.underframe,
-      metal: mats.metal,
-    });
+    const cab = buildCab(
+      {
+        green: mats.mask,
+        black: mats.black,
+        windshield: mats.windshield,
+        checker: front,
+        sign: mats.sign,
+        headlight: mats.headlight,
+        headlightOff: mats.headlightOff,
+        taillight: mats.taillight,
+        taillightOff: mats.taillightOff,
+        underframe: mats.underframe,
+        metal: mats.metal,
+      },
+      { tail: dir === 1 },
+    );
     cab.position.z = carZ(i);
     if (dir === -1) cab.rotation.y = Math.PI;
     root.add(cab);

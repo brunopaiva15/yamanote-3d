@@ -163,6 +163,15 @@ function build(): Built {
       new THREE.MeshStandardMaterial({ map: bellowsTex, color: '#25282c', roughness: 0.95 }),
     ),
     black: track(new THREE.MeshStandardMaterial({ color: LIVERY.black, roughness: 0.22, metalness: 0.1 })),
+    // Vitrage de cabine : presque un miroir. Le pare-brise du E235 ne laisse
+    // rien voir de jour - il rend le ciel et les caténaires.
+    windshield: track(
+      new THREE.MeshStandardMaterial({
+        color: '#0e1114',
+        roughness: 0.06,
+        metalness: 0.55,
+      }),
+    ),
     checker: track(
       new THREE.MeshBasicMaterial({ map: checkerTex, transparent: true, toneMapped: false }),
     ),
@@ -175,13 +184,20 @@ function build(): Built {
         roughness: 0.3,
       }),
     ),
+    // Bloc éteint : le verre dépoli d'un phare au repos, gris et mat.
+    headlightOff: track(
+      new THREE.MeshStandardMaterial({ color: '#b8bcc0', roughness: 0.35, metalness: 0.2 }),
+    ),
     taillight: track(
       new THREE.MeshStandardMaterial({
         color: '#8c1414',
         emissive: '#c81f1f',
-        emissiveIntensity: 0.5,
+        emissiveIntensity: 0.9,
         roughness: 0.4,
       }),
+    ),
+    taillightOff: track(
+      new THREE.MeshStandardMaterial({ color: '#5a1c1c', roughness: 0.45, metalness: 0.15 }),
     ),
     metal: track(new THREE.MeshStandardMaterial({ color: '#7d838a', roughness: 0.42, metalness: 0.6 })),
     insulator: track(new THREE.MeshStandardMaterial({ color: '#5c4a3a', roughness: 0.7 })),
@@ -236,11 +252,15 @@ function build(): Built {
   leafGlass.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
   // Cabines : le même nez aux deux bouts, celui de queue retourné.
+  //
+  // La rame roule vers les z décroissants (runtime.trainZ diminue au départ) :
+  // la voiture 1, la plus basse en z, est donc TOUJOURS en tête. C'est elle qui
+  // porte les phares ; celle de queue n'allume que ses feux rouges.
   for (const [i, dir] of [
     [0, -1],
     [CARS - 1, 1],
   ] as const) {
-    const cab = buildCab({ ...mats, green: mats.band });
+    const cab = buildCab({ ...mats, green: mats.band }, { tail: dir === 1 });
     cab.position.z = carZ(i);
     if (dir === -1) cab.rotation.y = Math.PI;
     root.add(cab);

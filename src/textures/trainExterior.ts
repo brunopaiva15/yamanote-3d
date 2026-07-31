@@ -95,32 +95,44 @@ export function makeStainlessRoughness(): THREE.CanvasTexture {
 }
 
 /**
- * Face avant : le vert uguisu s'estompe vers le bas en un damier de carrés
- * noirs de plus en plus serrés - la signature graphique du E235. Renvoyée en
- * texture à alpha, posée par-dessus le masque vert.
+ * Face avant : sous le pare-brise, le vert uguisu se dissout vers le bas en une
+ * trame de carrés noirs de plus en plus gros, jusqu'à l'aplat - la signature
+ * graphique du E235. Renvoyée en texture à alpha, posée sur le masque vert.
+ *
+ * Trois choses font la différence avec un simple damier : les carrés grandissent
+ * jusqu'à se toucher (la trame se referme d'elle-même en bas), les rangées sont
+ * décalées d'une demi-case (une grille franche ferait un quadrillage, pas un
+ * dégradé), et les dernières rangées sont noyées dans un aplat noir - c'est là
+ * que la face rejoint la traverse de choc.
  */
 export function makeFrontCheckerTexture(): THREE.CanvasTexture {
   const W = 512;
   const H = 256;
   const { c, g } = makeCanvas(W, H);
   g.clearRect(0, 0, W, H);
-  const cell = 16;
-  const cols = W / cell;
-  const rows = H / cell;
+  const cell = 13;
+  const rows = Math.ceil(H / cell);
+  const cols = Math.ceil(W / cell) + 1;
+  g.fillStyle = 'rgba(13,15,17,0.96)';
   for (let j = 0; j < rows; j++) {
-    // Densité croissante vers le bas : en haut rien, en bas presque plein.
-    const t = j / (rows - 1);
-    const fill = Math.pow(t, 1.35);
+    // Le remplissage part de zéro en haut de bandeau et sature avant le bas.
+    const t = Math.min(1, (j / (rows - 1)) * 1.18);
+    const size = cell * Math.pow(t, 1.5);
+    if (size < 0.7) continue;
+    const off = (cell - size) / 2;
+    // Demi-case de décalage une rangée sur deux : la trame reste organique.
+    const shift = j % 2 === 0 ? 0 : cell / 2;
     for (let i = 0; i < cols; i++) {
-      // Damier : une case sur deux, agrandie au fur et à mesure.
-      const stagger = (i + j) % 2 === 0;
-      const size = cell * Math.min(1, fill * (stagger ? 1.25 : 0.75) * 1.6);
-      if (size < 0.6) continue;
-      const off = (cell - size) / 2;
-      g.fillStyle = 'rgba(14,16,18,0.94)';
-      g.fillRect(i * cell + off, j * cell + off, size, size);
+      g.fillRect(i * cell - shift + off, j * cell + off, size, size);
     }
   }
+  // Aplat des dernières rangées, fondu pour ne pas marquer de ligne franche.
+  const foot = H * 0.16;
+  const grad = g.createLinearGradient(0, H - foot * 2, 0, H);
+  grad.addColorStop(0, 'rgba(13,15,17,0)');
+  grad.addColorStop(1, 'rgba(13,15,17,0.96)');
+  g.fillStyle = grad;
+  g.fillRect(0, H - foot * 2, W, foot * 2);
   return toTexture(c);
 }
 
