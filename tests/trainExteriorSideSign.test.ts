@@ -50,8 +50,12 @@ test('un seul petit afficheur par flanc précède les quatre portes', () => {
   assert.match(consistSource, /RoundedBoxGeometry\(1, 0\.28, 0\.055, 3, 0\.075\)/);
   assert.match(consistSource, /PlaneGeometry\(0\.9, 0\.2\)/);
   assert.match(consistSource, /sideSignCount = CARS \* 2/);
-  assert.match(consistSource, /signOffset = E235\.doorCenters\[0\] - END_SIGN_INSET/);
-  assert.doesNotMatch(consistSource, /doorCenters\[E235\.doorCenters\.length - 1\]/);
+  assert.match(consistSource, /signOffset = -s \* \(E235\.doorCenters\[E235\.doorCenters\.length - 1\] \+ END_SIGN_INSET\)/);
+});
+
+test('la position est mise en miroir sur les deux flancs', () => {
+  assert.match(consistSource, /const signOffset = -s \*/);
+  assert.match(consistSource, /carZ\(i\) \+ signOffset/);
 });
 
 test('le boîtier est ancré dans la caisse et seule la dalle évite le z-fighting', () => {

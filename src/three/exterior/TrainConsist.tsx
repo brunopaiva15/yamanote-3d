@@ -258,8 +258,12 @@ function build(): Built {
   const signFaces = instanced(signFaceGeo, mats.sideSign, sideSignCount);
   let signIndex = 0;
   const END_SIGN_INSET = 0.9;
-  const signOffset = E235.doorCenters[0] - END_SIGN_INSET;
   for (let i = 0; i < CARS; i++) for (const s of [1, -1] as const) {
+    // « Avant la porte 1 » se lit dans le sens où l'on regarde chaque flanc :
+    // l'ordre longitudinal est inversé sur le côté −x. Une coordonnée z
+    // identique sur les deux côtés mettait donc l'afficheur après la dernière
+    // porte depuis le quai. Le signe de `s` restitue le motif en miroir.
+    const signOffset = -s * (E235.doorCenters[E235.doorCenters.length - 1] + END_SIGN_INSET);
     // Le boîtier traverse la peau depuis l'intérieur : son centre est en retrait
     // dans la caisse. Seule la dalle dépasse de 3 mm, juste assez pour éviter
     // le z-fighting sans donner l'impression d'un panneau collé sur la rame.
