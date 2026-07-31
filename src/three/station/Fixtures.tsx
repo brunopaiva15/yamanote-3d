@@ -404,7 +404,9 @@ function Konbini({
         <boxGeometry args={[w * 0.32, 0.03, 0.16]} />
       </mesh>
       {/* Bandeau d'enseigne, allumé. */}
-      <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.04]} material={kit.konbiniSign}>
+      {/* La face de l'enseigne avance légèrement devant le cadre : posée sur
+          son nu exact, elle partageait son tampon de profondeur et clignotait. */}
+      <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.034]} material={kit.konbiniSign}>
         <planeGeometry args={[w - 0.24, SIGN_H]} />
       </mesh>
       <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.1]} material={m.frame}>
