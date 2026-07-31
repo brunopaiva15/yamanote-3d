@@ -51,11 +51,17 @@ test('le plan aleatoire est tire une fois et injectable', () => {
 
 test('le voyageur suit une vraie trajectoire vers la porte puis le quai', () => {
   assert.match(machine, /beginPassengerAlight\(id: number, doorZ: number\): boolean/);
+  assert.match(machine, /p\.state !== 'seated' && p\.state !== 'standing'/);
   assert.match(machine, /p\.state = 'alighting'/);
   assert.match(machine, /new THREE\.Vector3\(side \* 0\.95, 0, doorZ\)/);
   assert.match(machine, /new THREE\.Vector3\(side \* DOOR_HANDOVER_X, 0, doorZ\)/);
   ordered('effects.beginPassengerAlight(passengerId!, plan.doorZ)', "stage = 'passenger-alighting'", 'effects.passengerAlighted(passengerId!)');
   assert.match(machine, /function finishPassengerAlighting[\s\S]*stage = 'final-check'/);
+});
+
+test("le malade conserve son rig assis jusqu'au debut de sa descente", () => {
+  ordered('snapshot = {', 'p.state = snapshot?.state ?? p.state', 'function defaultBeginAlight', "p.state = 'alighting'");
+  assert.doesNotMatch(machine, /posePassenger[\s\S]*?p\.state = 'alighting'[\s\S]*?function releasePassengerSlots/);
 });
 
 test('la disparition au chrono ne sert plus que de garde-fou', () => {
