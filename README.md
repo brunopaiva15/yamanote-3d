@@ -648,6 +648,41 @@ dont les pots sont tronconiques sous un couvercle d'aluminium. Deux silhouettes
 qu'on distingue à dix mètres sans lire une lettre — c'est tout ce qu'on demande
 à une vitrine.
 
+### Les piliers, et la trame
+
+Un pilier de quai était une boîte de 30 × 30 avec une bague verte. Il a
+maintenant un **socle** de béton plus large que le fût - sans lui le poteau
+semble posé sur la dalle comme un meuble - et des **cornières d'inox** sur ses
+quatre arêtes jusqu'à 1,60 m. Ces cornières existent parce qu'on cogne les
+valises dedans, et ce sont elles qui attrapent la lumière rasante d'un quai : un
+fût nu reste un aplat gris quelle que soit l'heure. La descente d'eau, qui
+descendait jusqu'à la dalle, s'arrête maintenant **sur** ce socle, comme toute
+descente d'eau sur son ouvrage de pied.
+
+Le hall a sa propre trame : des **pilastres engagés** dans les deux parois, à
+5,20 m d'entraxe. Elle est calculée **avant** le mobilier, comme au quai — un
+distributeur l'esquive, une devanture de plus de trois mètres l'enjambe et
+l'absorbe (le poteau passe derrière la vitrine, comme en vrai), et la travée des
+portillons en est exclue, parce qu'elle est tenue par ses propres joues.
+
+C'est cette trame qui porte les affiches : une par pilastre sur deux. C'est là
+qu'un caisson se pose dans une gare — sur la face d'un poteau, pas en plein mur.
+
+### ecute, atré
+
+Une galerie de gare n'est pas un konbini plus long. Elle s'ouvre par des
+**baies** — trois travées vitrées séparées par des trumeaux — au lieu d'une
+seule devanture, et son bandeau est long, bas, en bas-de-casse fine, avec le nom
+de la gare à côté de la marque : `ecute 上野`, `atré 恵比寿`. Une galerie
+appartient à sa gare.
+
+Sept gares en déclarent une, et **la liste est prudente et incomplète à
+dessein** : n'y figurent que celles dont l'enseigne est établie. Une gare absente
+n'affirme pas qu'elle n'a rien — elle affirme qu'on ne l'a pas relevé, ce qui
+n'est pas la même chose et se corrige ligne à ligne. Tabata, elle, la déclare et
+ne l'obtient pas : 3,60 m de fond dans un hall de 5,50 m ne laisseraient plus
+deux mètres de passage, et c'est la règle du passage libre qui tranche.
+
 Le découpage complet du garnissage est dans `docs/STATION_DETAIL.md`.
 
 ### La signalétique

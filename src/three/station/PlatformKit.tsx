@@ -71,6 +71,9 @@ function hangers(sp: { z0: number; z1: number }, columns: readonly number[]): nu
   });
 }
 
+/** Pied d'une descente d'eau : le dessus du socle de pilier (three/station/Station). */
+const PIPE_FOOT = PLATFORM_TOP + 0.15;
+
 /** Couvercles des bacs de tri : bouteilles, papiers, tout-venant. */
 const BIN_LIDS = ['#2f6fb5', '#d8b52a', '#4b5157'] as const;
 /** Écartement des trois bacs d'une même batterie (m). */
@@ -284,8 +287,11 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   const pipeTop = canopyY - 0.36;
   const pipes = useMemo(
     () =>
+      // Elle ne descend plus jusqu'à la dalle : elle s'arrête SUR le socle du
+      // pilier, comme toute descente d'eau s'arrête sur son ouvrage de pied.
+      // Poussée jusqu'au sol, elle traversait le socle de part en part.
       kit.downpipes.map((z) =>
-        mat(pipeX, PLATFORM_TOP + (pipeTop - PLATFORM_TOP) / 2, z, 1, pipeTop - PLATFORM_TOP, 1),
+        mat(pipeX, PIPE_FOOT + (pipeTop - PIPE_FOOT) / 2, z, 1, pipeTop - PIPE_FOOT, 1),
       ),
     [kit.downpipes, pipeX, pipeTop],
   );

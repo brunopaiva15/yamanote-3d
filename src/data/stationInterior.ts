@@ -125,7 +125,19 @@ export type FixtureKind =
   /** Batterie de tri : trois bacs côte à côte. */
   | 'bin'
   /** 周辺案内図 - le plan de quartier, panneau mural. */
-  | 'map';
+  | 'map'
+  /** ecute / atré - la galerie commerciale de gare, sous marque réelle. */
+  | 'gallery'
+  /** Coffret d'extincteur, rouge, à hauteur de main. */
+  | 'extinguisher'
+  /** Armoire de défibrillateur (AED), verte. */
+  | 'aed'
+  /** Porte-parapluies, près des bouches de sortie. */
+  | 'umbrella'
+  /** Bac à plante : le seul vert d'un hall souterrain. */
+  | 'plant'
+  /** Panneau d'affichage de service : horaires, travaux, objets trouvés. */
+  | 'notice';
 
 /** Un meuble posé le long d'une paroi du hall. */
 export interface Fixture {
@@ -162,8 +174,21 @@ export interface StationInterior {
   /** Zone libre (改札外), de la ligne de portillons aux bouches de sortie. */
   free: InteriorRect;
   exits: ConcourseExit[];
+  /** Enseigne de la galerie commerciale de la gare, quand elle en a une. */
+  brand?: GalleryBrand;
   /** Le mobilier du niveau, rangé le long des deux parois. */
   fixtures: Fixture[];
+  /**
+   * Pilastres : la trame porteuse, engagée dans les deux parois.
+   *
+   * Un souterrain de gare n'est pas une boîte lisse - il est porté, et ses
+   * poteaux se voient. Ils sont ENGAGÉS dans la paroi et non plantés au milieu,
+   * pour deux raisons : c'est ce que fait un couloir étroit dans la réalité, et
+   * une rangée centrale couperait en deux un passage qui fait déjà à peine
+   * cinq mètres. Ils sautent les travées occupées - on ne plante pas un poteau
+   * au milieu d'une devanture de konbini.
+   */
+  pilasters: InteriorRect[];
   /**
    * Tout ce qui occupe le sol et se contourne : bornes de portillons, joues
    * latérales de la ligne, mobilier. Le rendu les dessine, la marche les évite,
@@ -198,6 +223,15 @@ const PASSAGE_WIDE_W = 0.92;
 const GATE_MARGIN = 0.4;
 /** Demi-largeur d'une bouche de sortie. */
 const EXIT_HALF_X = 1.15;
+/**
+ * Longueur au-delà de laquelle un meuble est une DEVANTURE et non un meuble :
+ * il enjambe la trame porteuse au lieu de l'esquiver.
+ */
+const LONG_FRONT = 3;
+/** Entraxe des pilastres, et leur saillie devant la paroi. */
+const PILASTER_PITCH = 5.2;
+const PILASTER_DEPTH = 0.22;
+const PILASTER_LEN = 0.62;
 
 /**
  * Hauteur du niveau au-dessus du quai, quand il est dessus.
@@ -211,6 +245,16 @@ const OVER_FLOOR_Y = 6.4;
 
 // --- Ce qui change d'une gare à l'autre ----------------------------------
 
+/**
+ * Les deux galeries commerciales de gare de JR East présentes sur la boucle.
+ *
+ * Ce ne sont pas des konbini : ce sont des ENSEIGNES DE GARE, exploitées par le
+ * groupe JR, et une gare qui en porte une l'annonce sur ses plans de quai -
+ * c'est d'ailleurs comme cela qu'on les lit sur le relevé d'Ueno, où `ecute` et
+ * `atré` figurent chacune de son côté du quai.
+ */
+export type GalleryBrand = 'ecute' | 'atre';
+
 interface Spec {
   /** Code JY et nom, pour se relire : l'ordre suit STATIONS. */
   name: string;
@@ -219,6 +263,15 @@ interface Spec {
   /** Nom de la sortie principale, tel qu'il est écrit au-dessus des portillons. */
   gateJp: string;
   gate: string;
+  /**
+   * Galerie commerciale de la gare, quand elle en a une.
+   *
+   * Liste PRUDENTE et incomplète à dessein : n'y figurent que les gares dont
+   * l'enseigne est établie. Une gare absente d'ici n'affirme pas qu'elle n'a
+   * rien - elle affirme qu'on ne l'a pas relevé, ce qui n'est pas la même
+   * chose et se corrige ligne à ligne.
+   */
+  brand?: GalleryBrand;
 }
 
 /**
@@ -238,17 +291,17 @@ interface Spec {
 const SPECS: readonly Spec[] = [
   { name: 'JY01 Tokyo', gateJp: '丸の内中央口', gate: 'Marunouchi Central' },
   { name: 'JY02 Kanda', gateJp: '西口改札', gate: 'West' },
-  { name: 'JY03 Akihabara', gateJp: '電気街口', gate: 'Electric Town' },
+  { name: 'JY03 Akihabara', brand: 'atre', gateJp: '電気街口', gate: 'Electric Town' },
   { name: 'JY04 Okachimachi', gateJp: '北口改札', gate: 'North' },
   // Le plan de quai d'Ueno en montre quatre, sur deux niveaux : 不忍 et 中央 en
   // M2F et 1F au sud, 公園 et 入谷 en 3F au nord. Deux groupes d'accès, donc
   // deux halls - c'est une gare à part, et elle attend sa phase.
-  { name: 'JY05 Ueno', gateJp: '中央改札', gate: 'Central' },
+  { name: 'JY05 Ueno', brand: 'ecute', gateJp: '中央改札', gate: 'Central' },
   { name: 'JY06 Uguisudani', gateJp: '南口改札', gate: 'South' },
   // Deux ponts-concours enjambent tout le faisceau : le hall est dessus.
-  { name: 'JY07 Nippori', place: 'over', gateJp: '南改札', gate: 'South' },
+  { name: 'JY07 Nippori', brand: 'ecute', place: 'over', gateJp: '南改札', gate: 'South' },
   { name: 'JY08 Nishi-Nippori', gateJp: '南改札', gate: 'South' },
-  { name: 'JY09 Tabata', place: 'over', gateJp: '北口改札', gate: 'North' },
+  { name: 'JY09 Tabata', brand: 'atre', place: 'over', gateJp: '北口改札', gate: 'North' },
   { name: 'JY10 Komagome', place: 'over', gateJp: '北口改札', gate: 'North' },
   { name: 'JY11 Sugamo', place: 'over', gateJp: '北口改札', gate: 'North' },
   { name: 'JY12 Ōtsuka', gateJp: '北口改札', gate: 'North' },
@@ -260,17 +313,26 @@ const SPECS: readonly Spec[] = [
   { name: 'JY18 Yoyogi', gateJp: '北口改札', gate: 'North' },
   { name: 'JY19 Harajuku', gateJp: '西口改札', gate: 'West' },
   { name: 'JY20 Shibuya', gateJp: 'ハチ公改札', gate: 'Hachikō' },
-  { name: 'JY21 Ebisu', gateJp: '西口改札', gate: 'West' },
-  { name: 'JY22 Meguro', place: 'over', gateJp: '中央改札', gate: 'Central' },
+  { name: 'JY21 Ebisu', brand: 'atre', gateJp: '西口改札', gate: 'West' },
+  { name: 'JY22 Meguro', brand: 'atre', place: 'over', gateJp: '中央改札', gate: 'Central' },
   { name: 'JY23 Gotanda', gateJp: '中央改札', gate: 'Central' },
   { name: 'JY24 Ōsaki', gateJp: '南改札', gate: 'South' },
-  { name: 'JY25 Shinagawa', gateJp: '中央改札', gate: 'Central' },
+  { name: 'JY25 Shinagawa', brand: 'ecute', gateJp: '中央改札', gate: 'Central' },
   { name: 'JY26 Takanawa Gateway', gateJp: '改札口', gate: 'Gate' },
   { name: 'JY27 Tamachi', gateJp: '北口改札', gate: 'North' },
   { name: 'JY28 Hamamatsuchō', gateJp: '北口改札', gate: 'North' },
   { name: 'JY29 Shimbashi', gateJp: '烏森口', gate: 'Karasumori' },
   { name: 'JY30 Yūrakuchō', gateJp: '中央口', gate: 'Central' },
 ];
+
+/**
+ * Ce qui est plaqué sur la paroi et ne se contourne pas.
+ *
+ * La règle n'est pas « c'est petit » mais « c'est DANS le mur » : moins de
+ * vingt-cinq centimètres de saillie, on passe devant sans le toucher, et en
+ * faire un obstacle rétrécirait le hall pour rien.
+ */
+const FLUSH = new Set<FixtureKind>(['map', 'extinguisher', 'aed', 'notice']);
 
 // --- Construction ---------------------------------------------------------
 
@@ -348,6 +410,14 @@ const SIZES: Record<FixtureKind, { len: number; depth: number }> = {
   bench: { len: 1.8, depth: 0.56 },
   bin: { len: 1.35, depth: 0.5 },
   map: { len: 1.6, depth: 0.16 },
+  // Une galerie n'est pas un konbini : elle est plus longue, plus profonde, et
+  // c'est ELLE qui donne son échelle au hall quand la gare en a une.
+  gallery: { len: 9.5, depth: 3.6 },
+  extinguisher: { len: 0.5, depth: 0.22 },
+  aed: { len: 0.55, depth: 0.24 },
+  umbrella: { len: 0.7, depth: 0.34 },
+  plant: { len: 0.6, depth: 0.6 },
+  notice: { len: 1.4, depth: 0.14 },
 };
 
 /**
@@ -365,10 +435,23 @@ interface Want {
   from?: number;
   /** Combien d'exemplaires, quand il en faut plusieurs à la suite. */
   count?: number;
+  /** Ne se pose que si la gare déclare une enseigne de galerie. */
+  needsBrand?: true;
+  /**
+   * Se range en partant du FOND de la zone, et avant tout le reste.
+   *
+   * Certains meubles ne sont pas rangés où il reste de la place : ils sont là
+   * où on en a besoin. L'ajusteur de fin de course est de ceux-là - on le
+   * cherche juste avant les portillons, une fois qu'on a compris qu'on est
+   * descendu trop loin - et rangé dans l'ordre d'arrivée il tombait le dernier,
+   * donc jamais, dans les gares bien garnies.
+   */
+  atEnd?: true;
 }
 
 /** Zone payante (改札内) : ce qu'on croise entre le bas des marches et la sortie. */
 const PAID_NEAR: Want[] = [
+  { kind: 'extinguisher' },
   { kind: 'vending' },
   { kind: 'vendingFood', from: 0.9 },
   { kind: 'bin' },
@@ -376,8 +459,9 @@ const PAID_NEAR: Want[] = [
 ];
 const PAID_FAR: Want[] = [
   { kind: 'map' },
+  { kind: 'plant', from: 0.9 },
   { kind: 'bench' },
-  { kind: 'fareAdjust' },
+  { kind: 'fareAdjust', atEnd: true },
 ];
 /** Zone libre (改札外) : la billetterie, les commerces, les consignes. */
 const FREE_NEAR: Want[] = [
@@ -387,12 +471,18 @@ const FREE_NEAR: Want[] = [
   { kind: 'stamp' },
   { kind: 'ticket' },
   { kind: 'office', from: 1.3 },
-  { kind: 'map' },
+  { kind: 'notice' },
+  { kind: 'aed' },
+  { kind: 'umbrella' },
 ];
 const FREE_FAR: Want[] = [
+  // La galerie passe avant le konbini : une gare qui a l'une n'a pas besoin de
+  // l'autre au même endroit, et c'est la galerie qu'on voit d'abord.
+  { kind: 'gallery', needsBrand: true },
   { kind: 'konbini', from: 1.2 },
   { kind: 'lockers', from: 0.9 },
   { kind: 'vending' },
+  { kind: 'map' },
   { kind: 'bin' },
 ];
 
@@ -433,29 +523,105 @@ function fitWall(
   crowd: number,
   width: number,
   counter: Map<FixtureKind, number>,
+  brand: GalleryBrand | undefined,
+  pilasters: readonly InteriorRect[],
 ): Fixture[] {
   const out: Fixture[] = [];
   let z = zone.z0 + ZONE_MARGIN;
-  const zEnd = zone.z1 - ZONE_MARGIN;
+  let zEnd = zone.z1 - ZONE_MARGIN;
+  /**
+   * Repousse `z` au-delà du premier pilastre qu'un meuble chevauche.
+   *
+   * Sauf s'il est LONG : une devanture de plusieurs mètres n'esquive pas un
+   * poteau, elle est bâtie autour - un konbini de gare enjambe la trame, et
+   * c'est le poteau qui disparaît derrière sa vitrine, pas la vitrine qui se
+   * décale. Au-delà de trois mètres, on laisse donc passer, et le pilastre
+   * consommé sera retiré de la trame.
+   */
+  const clearPilaster = (start: number, len: number): number => {
+    if (len >= LONG_FRONT) return start;
+    let at = start;
+    for (const p of pilasters) {
+      if (at < p.z1 + 0.12 && at + len > p.z0 - 0.12) at = p.z1 + 0.12;
+    }
+    return at;
+  };
+  const place = (kind: FixtureKind, z0: number, len: number, depth: number) => {
+    const slot = counter.get(kind) ?? 0;
+    counter.set(kind, slot + 1);
+    out.push({
+      kind,
+      rect: wall === -1
+        ? { x0: zone.x0 + WALL_CLEAR, x1: zone.x0 + WALL_CLEAR + depth, z0, z1: z0 + len }
+        : { x0: zone.x1 - WALL_CLEAR - depth, x1: zone.x1 - WALL_CLEAR, z0, z1: z0 + len },
+      facing: wall === -1 ? 1 : -1,
+      slot,
+    });
+  };
+
+  // Ce qui se range par la fin, d'abord : sa place est réservée avant que le
+  // reste ne la prenne.
   for (const want of wants) {
+    if (!want.atEnd || crowd < (want.from ?? 0)) continue;
+    const size = SIZES[want.kind];
+    if (width - size.depth < AISLE_MIN) continue;
+    let start = zEnd - size.len;
+    for (const p of pilasters) {
+      if (start < p.z1 + 0.12 && start + size.len > p.z0 - 0.12) start = p.z0 - 0.12 - size.len;
+    }
+    if (start < z) continue;
+    place(want.kind, start, size.len, size.depth);
+    zEnd = start - FIXTURE_GAP;
+  }
+
+  for (const want of wants) {
+    if (want.atEnd) continue;
     if (crowd < (want.from ?? 0)) continue;
+    if (want.needsBrand && !brand) continue;
     const size = SIZES[want.kind];
     // Le passage du milieu passe avant le meuble : ce qui l'étranglerait tombe.
     if (width - size.depth < AISLE_MIN) continue;
     for (let k = 0; k < (want.count ?? 1); k++) {
+      z = clearPilaster(z, size.len);
       if (z + size.len > zEnd) break;
-      const slot = counter.get(want.kind) ?? 0;
-      counter.set(want.kind, slot + 1);
-      out.push({
-        kind: want.kind,
-        rect: wall === -1
-          ? { x0: zone.x0 + WALL_CLEAR, x1: zone.x0 + WALL_CLEAR + size.depth, z0: z, z1: z + size.len }
-          : { x0: zone.x1 - WALL_CLEAR - size.depth, x1: zone.x1 - WALL_CLEAR, z0: z, z1: z + size.len },
-        facing: wall === -1 ? 1 : -1,
-        slot,
-      });
+      place(want.kind, z, size.len, size.depth);
       z += size.len + FIXTURE_GAP;
     }
+  }
+  return out;
+}
+
+/**
+ * La trame de pilastres d'une paroi, sur toute la longueur du niveau.
+ *
+ * ELLE PASSE AVANT LE MOBILIER, et c'est l'ordre qui compte : une trame
+ * porteuse ne se déplace pas parce qu'un distributeur voudrait sa place. C'est
+ * déjà la règle du quai - « piliers et trémies sont posés par le gabarit et
+ * font autorité, tout le mobilier vient ensuite se ranger autour » - et il n'y
+ * avait aucune raison d'en changer sous terre. Le rangement du mobilier lit
+ * donc cette liste et saute par-dessus.
+ */
+function pilastersFor(
+  wall: -1 | 1,
+  x0: number,
+  x1: number,
+  z0: number,
+  z1: number,
+  gate: FareGateLine,
+): InteriorRect[] {
+  const near = wall === -1;
+  const out: InteriorRect[] = [];
+  for (let z = z0 + PILASTER_PITCH / 2; z < z1 - 0.4; z += PILASTER_PITCH) {
+    // La travée des portillons n'appartient pas à la trame : elle est tenue par
+    // ses propres joues, qui montent au plafond d'une paroi à l'autre. Un
+    // pilastre qui y tombait sortait au travers d'une borne.
+    if (z > gate.z0 - PILASTER_LEN && z < gate.z1 + PILASTER_LEN) continue;
+    out.push({
+      x0: near ? x0 : x1 - PILASTER_DEPTH,
+      x1: near ? x0 + PILASTER_DEPTH : x1,
+      z0: z - PILASTER_LEN / 2,
+      z1: z + PILASTER_LEN / 2,
+    });
   }
   return out;
 }
@@ -499,11 +665,30 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
   // Un seul compteur pour toute la gare : le premier distributeur du hall et
   // celui d'en face ne montrent pas la même vitrine.
   const counter = new Map<FixtureKind, number>();
+  // La trame porteuse d'abord, sur toute la longueur du niveau et par paroi ;
+  // le mobilier se range ensuite dans ce qu'elle laisse.
+  const nearPosts = pilastersFor(-1, x0, x1, z0, freeZ1, gate);
+  const farPosts = pilastersFor(1, x0, x1, z0, freeZ1, gate);
   const fixtures = [
-    ...fitWall(PAID_NEAR, -1, paid, crowd, width, counter),
-    ...fitWall(PAID_FAR, 1, paid, crowd, width, counter),
-    ...fitWall(FREE_NEAR, -1, free, crowd, width, counter),
-    ...fitWall(FREE_FAR, 1, free, crowd, width, counter),
+    ...fitWall(PAID_NEAR, -1, paid, crowd, width, counter, spec.brand, nearPosts),
+    ...fitWall(PAID_FAR, 1, paid, crowd, width, counter, spec.brand, farPosts),
+    ...fitWall(FREE_NEAR, -1, free, crowd, width, counter, spec.brand, nearPosts),
+    ...fitWall(FREE_FAR, 1, free, crowd, width, counter, spec.brand, farPosts),
+  ];
+
+  // Les pilastres qu'une devanture enjambe sont retirés de la trame : ils sont
+  // dans le mur de la boutique, pas dans le hall, et les laisser les ferait
+  // ressortir au travers d'une vitrine.
+  const swallowed = (p: InteriorRect, wall: -1 | 1) =>
+    fixtures.some(
+      (f) => f.facing === -wall
+        && f.rect.z1 - f.rect.z0 >= LONG_FRONT
+        && f.rect.z0 - 0.12 < p.z1
+        && f.rect.z1 + 0.12 > p.z0,
+    );
+  const pilasters = [
+    ...nearPosts.filter((p) => !swallowed(p, -1)),
+    ...farPosts.filter((p) => !swallowed(p, 1)),
   ];
 
   return {
@@ -516,12 +701,17 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
     gate,
     free,
     exits,
+    brand: spec.brand,
     fixtures,
-    // Un plan mural ne se contourne pas : il est DANS la paroi, seize
-    // centimètres de saillie. Tout le reste barre.
+    pilasters,
+    // Ce qui est DANS la paroi ne se contourne pas : un plan mural, un coffret
+    // d'extincteur, une armoire de défibrillateur, un panneau d'affichage font
+    // moins de vingt-cinq centimètres de saillie et l'on passe devant sans les
+    // toucher. Tout le reste barre - pilastres compris.
     obstacles: [
       ...gate.cabinets,
-      ...fixtures.filter((f) => f.kind !== 'map').map((f) => f.rect),
+      ...fixtures.filter((f) => !FLUSH.has(f.kind)).map((f) => f.rect),
+      ...pilasters,
     ],
   };
 }

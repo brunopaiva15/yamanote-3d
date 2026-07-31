@@ -20,8 +20,10 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
 import type { Fixture, StationInterior } from '../../data/stationInterior';
+import type { GalleryBrand } from '../../data/stationInterior';
 import {
   makeAreaMapTexture,
+  makeGallerySignTexture,
   makeFareAdjustTexture,
   makeKonbiniInteriorTexture,
   makeKonbiniSignTexture,
@@ -39,6 +41,7 @@ import {
   vendingBrand,
 } from '../../textures/vending';
 import type { Mats } from './materials';
+import { stationAd } from './adPool';
 
 /** Hauteurs de référence, communes à plusieurs familles (m). */
 const MACHINE_H = 1.92;
@@ -66,6 +69,12 @@ function useFixtureKit(station: number) {
     const book = makeStampBookTexture(station);
     const stampSign = makeStampSignTexture();
     const office = makeOfficeTexture();
+    // Les deux enseignes de galerie : une seule sert par gare, mais laquelle
+    // dépend du relevé, et les deux canvas coûtent moins qu'un aller-retour.
+    const gallery = {
+      ecute: makeGallerySignTexture('ecute', station),
+      atre: makeGallerySignTexture('atre', station),
+    };
     // Les deux machines à manger : la caisse et la vitrine changent avec
     // l'enseigne, pas la géométrie.
     const food = FOOD_BRANDS.map((brand, i) => ({
@@ -84,7 +93,8 @@ function useFixtureKit(station: number) {
       };
     });
     return {
-      textures: [ticket, fare, locker, konbiniSign, konbiniIn, map, stamp, book, stampSign, office],
+      textures: [ticket, fare, locker, konbiniSign, konbiniIn, map, stamp, book, stampSign,
+        office, gallery.ecute, gallery.atre],
       ticket: flat(ticket),
       fare: flat(fare),
       locker: flat(locker),
@@ -95,6 +105,7 @@ function useFixtureKit(station: number) {
       book: flat(book),
       stampSign: flat(stampSign),
       office: flat(office),
+      gallery: { ecute: flat(gallery.ecute), atre: flat(gallery.atre) } as Record<GalleryBrand, THREE.MeshBasicMaterial>,
       food,
       drinks,
     };
@@ -104,7 +115,8 @@ function useFixtureKit(station: number) {
     () => () => {
       for (const t of kit.textures) t.dispose();
       for (const m of [kit.ticket, kit.fare, kit.locker, kit.konbiniSign, kit.konbiniIn,
-        kit.map, kit.stamp, kit.book, kit.stampSign, kit.office]) m.dispose();
+        kit.map, kit.stamp, kit.book, kit.stampSign, kit.office,
+        kit.gallery.ecute, kit.gallery.atre]) m.dispose();
       for (const set of [...kit.food, ...kit.drinks]) {
         set.display.dispose();
         set.header.dispose();
@@ -133,6 +145,61 @@ export function Fixtures({
   const kit = useFixtureKit(station);
   return (
     <group name="gare/hall/mobilier">
+      {/* Pilastres : la trame porteuse, engagée dans les deux parois. Elle
+          passe avant le mobilier - une devanture l'enjambe, un distributeur
+          l'esquive. */}
+      {it.pilasters.map((p, i) => {
+        const px = (p.x0 + p.x1) / 2;
+        const pz = (p.z0 + p.z1) / 2;
+        const h = it.ceilY - it.floorY - 0.12;
+        // Le pilastre de la paroi côté fond regarde vers l'axe de la voie : son
+        // affiche et ses cornières se retournent avec lui.
+        const face = Math.abs(p.x0 - it.paid.x0) < 1e-9 ? 1 : -1;
+        return (
+          <group
+            key={`pil${i}`}
+            name="gare/hall/trame"
+            position={[px, it.floorY, pz]}
+            rotation={[0, face === 1 ? 0 : Math.PI, 0]}
+          >
+            <mesh position={[0, h / 2, 0]} material={m.hall}>
+              <boxGeometry args={[p.x1 - p.x0, h, p.z1 - p.z0]} />
+            </mesh>
+            {/* Cornières d'angle sur les deux arêtes exposées, et socle : les
+                mêmes ouvrages qu'au quai, pour les mêmes raisons. */}
+            {[-1, 1].map((d) => (
+              <mesh
+                key={`guard${d}`}
+                position={[(p.x1 - p.x0) / 2 - 0.03, 0.85, (d * (p.z1 - p.z0)) / 2 - d * 0.03]}
+                material={m.metal}
+              >
+                <boxGeometry args={[0.05, 1.6, 0.05]} />
+              </mesh>
+            ))}
+            <mesh position={[0, 0.07, 0]} material={m.wallDark}>
+              <boxGeometry args={[p.x1 - p.x0 + 0.04, 0.14, p.z1 - p.z0 + 0.08]} />
+            </mesh>
+            {/* Une affiche sur deux pilastres : c'est LÀ qu'un caisson se pose
+                dans une gare, sur la face d'un poteau, et non en plein mur. Les
+                deux caissons flottants du hall ont disparu avec cette trame -
+                ils tombaient au droit d'un pilastre une fois sur trois. */}
+            {i % 2 === 0 && (
+              <mesh
+                position={[
+                  (p.x1 - p.x0) / 2 + 0.006,
+                  1.42,
+                  0,
+                ]}
+                rotation={[0, Math.PI / 2, 0]}
+                material={stationAd(station, i + 5, true)}
+              >
+                <planeGeometry args={[(p.z1 - p.z0) * 0.78, (p.z1 - p.z0) * 1.1]} />
+              </mesh>
+            )}
+          </group>
+        );
+      })}
+
       {it.fixtures.map((f, i) => {
         const cx = (f.rect.x0 + f.rect.x1) / 2;
         const cz = (f.rect.z0 + f.rect.z1) / 2;
@@ -142,7 +209,7 @@ export function Fixtures({
         const yaw = f.facing === 1 ? Math.PI / 2 : -Math.PI / 2;
         return (
           <group key={`fx${i}`} position={[cx, it.floorY, cz]} rotation={[0, yaw, 0]}>
-            <Piece f={f} kit={kit} m={m} height={it.ceilY - it.floorY} />
+            <Piece f={f} kit={kit} m={m} height={it.ceilY - it.floorY} brand={it.brand ?? 'ecute'} />
           </group>
         );
       })}
@@ -160,11 +227,13 @@ function Piece({
   kit,
   m,
   height,
+  brand,
 }: {
   f: Fixture;
   kit: Kit;
   m: Mats;
   height: number;
+  brand: GalleryBrand;
 }) {
   const { w, d } = span(f);
   switch (f.kind) {
@@ -190,6 +259,18 @@ function Piece({
       return <Bins w={w} d={d} m={m} />;
     case 'map':
       return <WallMap w={w} face={kit.map} m={m} />;
+    case 'gallery':
+      return <Gallery w={w} d={d} height={height} brand={brand} kit={kit} m={m} />;
+    case 'extinguisher':
+      return <WallBox w={w} d={d} tone="#b8322c" label m={m} />;
+    case 'aed':
+      return <WallBox w={w} d={d} tone="#1d6f4a" label m={m} />;
+    case 'notice':
+      return <Notice w={w} m={m} />;
+    case 'umbrella':
+      return <UmbrellaStand w={w} d={d} m={m} />;
+    case 'plant':
+      return <Plant w={w} m={m} />;
     default:
       return null;
   }
@@ -533,6 +614,178 @@ function WallMap({ w, face, m }: { w: number; face: THREE.Material; m: Mats }) {
       <mesh position={[0, h / 2 + 0.09, 0.1]} rotation={[0.6, 0, 0]} material={m.lamp}>
         <boxGeometry args={[w - 0.2, 0.05, 0.1]} />
       </mesh>
+    </group>
+  );
+}
+
+/**
+ * La galerie commerciale : ecute, atré.
+ *
+ * Ce n'est pas un konbini plus long. Une galerie s'ouvre par des BAIES - trois
+ * travées vitrées séparées par des trumeaux - au lieu d'une seule devanture, et
+ * son bandeau est bas, large et sombre (ou crème), écrit en bas-de-casse fine.
+ * C'est le seul commerce du hall qui ait une architecture plutôt qu'une façade.
+ */
+function Gallery({
+  w,
+  d,
+  height,
+  brand,
+  kit,
+  m,
+}: {
+  w: number;
+  d: number;
+  height: number;
+  brand: GalleryBrand;
+  kit: Kit;
+  m: Mats;
+}) {
+  const shell = height - 0.14;
+  const SIGN_H = 0.5;
+  const glassH = shell - SIGN_H - 0.12;
+  const bays = 3;
+  const bayW = (w - 0.4) / bays;
+  return (
+    <group>
+      <mesh position={[0, shell / 2, -d / 2 + 0.06]} material={m.hall}>
+        <boxGeometry args={[w, shell, 0.12]} />
+      </mesh>
+      {[-1, 1].map((s) => (
+        <mesh key={`side${s}`} position={[(s * (w - 0.12)) / 2, shell / 2, 0]} material={m.hall}>
+          <boxGeometry args={[0.12, shell, d]} />
+        </mesh>
+      ))}
+      {Array.from({ length: bays }, (_, i) => {
+        const x = (i - (bays - 1) / 2) * (bayW + 0.14);
+        return (
+          <group key={`bay${i}`} position={[x, 0, 0]}>
+            {/* L'intérieur, peint, puis la baie vitrée devant. */}
+            <mesh position={[0, glassH / 2 + 0.12, -d / 2 + 0.16]} material={kit.konbiniIn}>
+              <planeGeometry args={[bayW - 0.1, glassH - 0.24]} />
+            </mesh>
+            <mesh position={[0, glassH / 2 + 0.12, d / 2 - 0.03]} material={m.glass}>
+              <planeGeometry args={[bayW, glassH]} />
+            </mesh>
+            {/* Trumeau entre deux baies. */}
+            <mesh position={[bayW / 2 + 0.07, shell / 2, d / 2 - 0.05]} material={m.hall}>
+              <boxGeometry args={[0.14, shell, 0.1]} />
+            </mesh>
+          </group>
+        );
+      })}
+      {/* Bandeau d'enseigne, bas et large. */}
+      <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.06]} material={m.frame}>
+        <boxGeometry args={[w - 0.14, SIGN_H + 0.06, 0.1]} />
+      </mesh>
+      <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.005]} material={kit.gallery[brand]}>
+        <planeGeometry args={[w - 0.22, SIGN_H]} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * Coffret mural : extincteur (rouge) ou défibrillateur (vert).
+ *
+ * Les deux ont la même silhouette et ce n'est pas une économie : ce sont les
+ * mêmes armoires normalisées, et seule la couleur les distingue - c'est
+ * exactement ce qui permet de les repérer sans lire, y compris en courant.
+ */
+function WallBox({
+  w,
+  d,
+  tone,
+  label,
+  m,
+}: {
+  w: number;
+  d: number;
+  tone: string;
+  label: boolean;
+  m: Mats;
+}) {
+  const h = w * 1.15;
+  return (
+    <group position={[0, 1.25, 0]}>
+      <mesh>
+        <boxGeometry args={[w, h, d]} />
+        <meshStandardMaterial color={tone} roughness={0.5} metalness={0.1} />
+      </mesh>
+      {/* Vitre du coffret, et la croix ou la bouteille qu'on devine derrière. */}
+      <mesh position={[0, 0.03, d / 2 + 0.004]} material={m.glass}>
+        <planeGeometry args={[w * 0.72, h * 0.62]} />
+      </mesh>
+      {label && (
+        <mesh position={[0, -h / 2 + 0.09, d / 2 + 0.005]} material={m.lamp}>
+          <boxGeometry args={[w * 0.8, 0.09, 0.01]} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+/** Panneau d'affichage de service : horaires, travaux, objets trouvés. */
+function Notice({ w, m }: { w: number; m: Mats }) {
+  return (
+    <group position={[0, 1.5, 0]}>
+      <mesh material={m.frame}>
+        <boxGeometry args={[w, w * 0.62, 0.07]} />
+      </mesh>
+      <mesh position={[0, 0, 0.045]} material={m.kiosk}>
+        <planeGeometry args={[w - 0.08, w * 0.62 - 0.08]} />
+      </mesh>
+      {/* Trois feuilles punaisées : c'est le désordre qui fait le panneau. */}
+      {[[-0.26, 0.08], [0.02, -0.04], [0.28, 0.06]].map(([dx, dy], i) => (
+        <mesh key={i} position={[dx * w, dy * w, 0.05]} rotation={[0, 0, (i - 1) * 0.03]} material={m.psd}>
+          <planeGeometry args={[w * 0.24, w * 0.32]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Porte-parapluies : la grille à fentes des jours de pluie. */
+function UmbrellaStand({ w, d, m }: { w: number; d: number; m: Mats }) {
+  return (
+    <group>
+      <mesh position={[0, 0.28, 0]} material={m.metal}>
+        <boxGeometry args={[w, 0.56, d]} />
+      </mesh>
+      {/* Les fentes : cinq traits sombres, et l'objet se lit. */}
+      {[-2, -1, 0, 1, 2].map((k) => (
+        <mesh key={k} position={[(k * w) / 6, 0.42, d / 2 + 0.004]} material={m.frame}>
+          <boxGeometry args={[w * 0.09, 0.22, 0.01]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Bac à plante : le seul vert d'un hall souterrain, et il est artificiel. */
+function Plant({ w, m }: { w: number; m: Mats }) {
+  return (
+    <group>
+      <mesh position={[0, 0.24, 0]} material={m.wallDark}>
+        <cylinderGeometry args={[w * 0.42, w * 0.36, 0.48, 12]} />
+      </mesh>
+      {/* Le feuillage : trois masses décalées et APLATIES, jamais deux boules
+          empilées - deux sphères sur un pot font un bonhomme de neige, pas un
+          arbuste. Ce qui fait lire une plante, c'est l'irrégularité. */}
+      {[
+        { x: -0.22, y: 0.52, r: 0.34, flat: 0.72, tone: '#3c6b3a' },
+        { x: 0.2, y: 0.62, r: 0.3, flat: 0.8, tone: '#487a42' },
+        { x: -0.04, y: 0.84, r: 0.26, flat: 0.86, tone: '#568c4a' },
+      ].map((leaf, i) => (
+        <mesh
+          key={i}
+          position={[leaf.x * w, leaf.y, (i - 1) * w * 0.12]}
+          scale={[1, leaf.flat, 1]}
+        >
+          <sphereGeometry args={[w * leaf.r, 9, 7]} />
+          <meshStandardMaterial color={leaf.tone} roughness={0.92} />
+        </mesh>
+      ))}
     </group>
   );
 }

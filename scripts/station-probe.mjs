@@ -42,6 +42,10 @@ await page.evaluate((p) => { globalThis.__probePhase = p; }, phase);
 // Paires dont l'interpénétration est VOULUE : une affiche est collée sur son
 // caisson, un coffret vissé sur son poteau, un vantail coulisse dans son muret.
 const IGNORE = [
+  // Un socle est un COLLIER : il enveloppe le pied du poteau, donc il le
+  // traverse par construction. Le déclarer ici plutôt que de le rétrécir
+  // jusqu'à ne plus rien envelopper.
+  'gare/pilier ✕ gare/socle-pilier',
   // Portes palières : le vitrage est encastré dans le muret, le bandeau le
   // couronne, les vantaux coulissent dedans.
   'gare/bandeau-psd ✕ gare/muret-psd',

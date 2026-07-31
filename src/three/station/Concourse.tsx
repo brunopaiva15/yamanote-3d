@@ -29,7 +29,6 @@ import type { StationInterior, InteriorRect } from '../../data/stationInterior';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
 import { makeConcourseGuideTexture, type GuideKind } from '../../textures/concourse';
 import type { Mats } from './materials';
-import { stationAd } from './adPool';
 import { Fixtures } from './Fixtures';
 
 /** Hauteur des bornes de portillon : on voit par-dessus, on ne passe pas. */
@@ -43,10 +42,6 @@ const DADO_H = 1.15;
 const WALL_T = 0.24;
 /** Entraxe des réglettes de plafond. */
 const LAMP_PITCH = 4.2;
-/** Hauteur des caissons publicitaires du hall. */
-const AD_H = 1.15;
-const AD_W = 1.7;
-const AD_Y = 1.35;
 
 function centre(r: InteriorRect): [number, number] {
   return [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2];
@@ -205,34 +200,6 @@ export function Concourse({
           par une borne. */}
       {detail <= 1 && <Guideline it={it} m={m} />}
 
-      {/* Caissons publicitaires en zone payante : un hall de gare en est
-          tapissé, et ce sont eux qui donnent l'échelle des parois nues. */}
-      {detail <= 1
-        && [0, 1].map((k) => (
-          <group key={`ad${k}`}>
-            <mesh
-              position={[
-                it.paid.x0 + (k === 0 ? 0.06 : width - 0.06),
-                it.floorY + AD_Y,
-                it.paid.z0 + 3.2 + k * 4.1,
-              ]}
-              material={m.metal}
-            >
-              <boxGeometry args={[0.08, AD_H + 0.12, AD_W + 0.12]} />
-            </mesh>
-            <mesh
-              position={[
-                it.paid.x0 + (k === 0 ? 0.11 : width - 0.11),
-                it.floorY + AD_Y,
-                it.paid.z0 + 3.2 + k * 4.1,
-              ]}
-              rotation={[0, k === 0 ? Math.PI / 2 : -Math.PI / 2, 0]}
-              material={stationAd(station, k + 9)}
-            >
-              <planeGeometry args={[AD_W, AD_H]} />
-            </mesh>
-          </group>
-        ))}
     </group>
   );
 }

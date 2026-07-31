@@ -210,3 +210,58 @@ test('chaque gare a son tampon, et il est unique', () => {
   }
   assert.equal(seen.size, STATION_COUNT);
 });
+
+test('la trame porteuse passe avant le mobilier, et les devantures l’enjambent', () => {
+  for (const { name, interior } of ALL) {
+    assert.ok(interior.pilasters.length >= 4, `${name} : hall sans trame`);
+    for (const p of interior.pilasters) {
+      const near = Math.abs(p.x0 - interior.paid.x0) < 1e-9;
+      for (const f of interior.fixtures) {
+        // Un meuble de la MÊME paroi ne recouvre jamais un pilastre : soit il
+        // l'a esquivé, soit c'est une devanture et le pilastre a été retiré.
+        if ((f.facing === 1) !== near) continue;
+        const overlap = f.rect.z0 < p.z1 && f.rect.z1 > p.z0;
+        assert.ok(!overlap, `${name} : ${f.kind} recouvre un pilastre`);
+      }
+    }
+  }
+});
+
+test('l’ajusteur de fin de course est toujours là, et juste avant les portillons', () => {
+  // Il ne se range pas où il reste de la place : on le cherche une fois qu'on a
+  // compris qu'on est descendu trop loin, donc au bout de la zone payante.
+  for (const { name, interior } of ALL) {
+    const fare = interior.fixtures.find((f) => f.kind === 'fareAdjust');
+    assert.ok(fare, `${name} : pas d'ajusteur`);
+    assert.ok(
+      interior.paid.z1 - fare!.rect.z1 < 3,
+      `${name} : ajusteur à ${(interior.paid.z1 - fare!.rect.z1).toFixed(1)} m des portillons`,
+    );
+  }
+});
+
+test('une galerie ne se pose que là où la gare en déclare une', () => {
+  const declared = ALL.filter((s) => s.interior.brand);
+  assert.deepEqual(declared.map((s) => s.name), [
+    'JY03 Akihabara',
+    'JY05 Ueno',
+    'JY07 Nippori',
+    'JY09 Tabata',
+    'JY21 Ebisu',
+    'JY22 Meguro',
+    'JY25 Shinagawa',
+  ]);
+  // Une galerie n'apparaît que là où l'enseigne est déclarée - jamais ailleurs.
+  for (const { name, interior } of ALL) {
+    const has = interior.fixtures.some((f) => f.kind === 'gallery');
+    if (!interior.brand) assert.ok(!has, `${name} : galerie sans enseigne`);
+  }
+  // Et là où elle est déclarée, elle se pose - sauf si le hall est trop étroit
+  // pour ses 3,60 m de fond. Tabata est la seule dans ce cas, et c'est la règle
+  // du passage libre qui tranche, pas un oubli.
+  const missing = declared.filter((s) => !s.interior.fixtures.some((f) => f.kind === 'gallery'));
+  assert.deepEqual(missing.map((s) => s.name), ['JY09 Tabata']);
+  for (const s of missing) {
+    assert.ok(s.interior.paid.x1 - s.interior.paid.x0 - 3.6 < 2, `${s.name} : place de reste`);
+  }
+});

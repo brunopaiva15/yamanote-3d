@@ -233,6 +233,35 @@ export function Station() {
     () => place.columns.map((z) => mat(backX - 0.55, PLATFORM_TOP + 1.4, z, 0.33, 0.16, 0.33)),
     [place.columns, backX],
   );
+  /**
+   * Ce qui fait qu'un pilier n'est pas une boîte : un SOCLE, des CORNIÈRES et
+   * un CHAPITEAU.
+   *
+   * Aucun des trois n'est décoratif. Le socle est un ouvrage de béton coulé
+   * plus large que le fût, et sans lui le poteau semble posé sur la dalle comme
+   * un meuble. Les cornières d'angle sont de l'inox vissé sur les quatre arêtes
+   * jusqu'à hauteur d'épaule : elles existent parce qu'on cogne les valises
+   * dedans, et ce sont elles qui attrapent la lumière rasante d'un quai - un
+   * fût nu reste un aplat gris quelle que soit l'heure. Le chapiteau, enfin,
+   * élargit la tête du poteau sous la poutre - mais celui-là, on s'en passe :
+   * la poutre transversale POSE déjà sur le poteau et en tient lieu, et un
+   * chapiteau de plus venait buter dans la gouttière qui court à la même cote.
+   */
+  const columnPlinths = useMemo(
+    () => place.columns.map((z) => mat(backX - 0.55, PLATFORM_TOP + 0.07, z, 0.42, 0.14, 0.42)),
+    [place.columns, backX],
+  );
+  const columnGuards = useMemo(() => {
+    // Elles s'arrêtent à 1,60 m : au-delà, plus rien ne cogne, et une cornière
+    // qui monterait jusqu'à la poutre ferait un poteau d'acier, pas de béton.
+    const h = 1.6;
+    const c = 0.145;
+    return place.columns.flatMap((z) =>
+      [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([dx, dz]) =>
+        mat(backX - 0.55 + dx * c, PLATFORM_TOP + h / 2, z + dz * c, 0.05, h, 0.05),
+      ),
+    );
+  }, [place.columns, backX]);
   const beams = useMemo(
     () => place.columns.map((z) => mat(PSD_X + depth / 2, canopyY - 0.09, z, depth - 0.2, 0.18, 0.24)),
     [place.columns, depth, canopyY],
@@ -280,6 +309,8 @@ export function Station() {
   const bandRef = useRef<THREE.InstancedMesh>(null);
   const columnRef = useRef<THREE.InstancedMesh>(null);
   const columnBandRef = useRef<THREE.InstancedMesh>(null);
+  const plinthRef = useRef<THREE.InstancedMesh>(null);
+  const guardRef = useRef<THREE.InstancedMesh>(null);
   const beamRef = useRef<THREE.InstancedMesh>(null);
   const lampRef = useRef<THREE.InstancedMesh>(null);
   const queueRef = useRef<THREE.InstancedMesh>(null);
@@ -294,6 +325,8 @@ export function Station() {
   useInstances(bandRef, psdBand);
   useInstances(columnRef, columns);
   useInstances(columnBandRef, columnBands);
+  useInstances(plinthRef, columnPlinths);
+  useInstances(guardRef, columnGuards);
   useInstances(beamRef, beams);
   useInstances(lampRef, lamps);
   useInstances(queueRef, queue);
@@ -475,6 +508,14 @@ export function Station() {
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
       <instancedMesh name="bague-pilier" ref={columnBandRef} args={[undefined, undefined, Math.max(1, columnBands.length)]} material={m.accent}>
+        <boxGeometry args={[1, 1, 1]} />
+      </instancedMesh>
+      {/* Socle et cornières d'angle : deux instances de plus pour toute la
+          gare, et le pilier cesse d'être une boîte. */}
+      <instancedMesh name="socle-pilier" ref={plinthRef} args={[undefined, undefined, Math.max(1, columnPlinths.length)]} material={m.wallDark}>
+        <boxGeometry args={[1, 1, 1]} />
+      </instancedMesh>
+      <instancedMesh name="cornière-pilier" ref={guardRef} args={[undefined, undefined, Math.max(1, columnGuards.length)]} material={m.metal}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
       <instancedMesh name="néon" ref={lampRef} args={[undefined, undefined, Math.max(1, lamps.length)]} material={m.lamp}>

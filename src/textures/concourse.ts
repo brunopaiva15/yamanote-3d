@@ -801,3 +801,40 @@ export function makeConcourseGuideTexture(kind: GuideKind, dir: -1 | 0 | 1): THR
   g.fillText(skin.en, textX + 4, H * 0.84, W - 400);
   return toTexture(c);
 }
+
+/**
+ * Enseigne d'une galerie commerciale de gare : ecute ou atré.
+ *
+ * Ce ne sont pas des konbini et leur bandeau ne leur ressemble pas : il est
+ * long, bas, écrit en bas-de-casse fine, et il porte le NOM DE LA GARE à côté
+ * de la marque - `ecute 上野`, `atré 恵比寿`. C'est ce couple qui la distingue
+ * d'une boutique quelconque : une galerie appartient à sa gare.
+ */
+export function makeGallerySignTexture(brand: 'ecute' | 'atre', index: number): THREE.CanvasTexture {
+  const W = 1024;
+  const H = 160;
+  const { c, g } = makeCanvas(W, H);
+  const station = STATIONS[((index % 30) + 30) % 30];
+  const skin = brand === 'ecute'
+    ? { bg: '#f4f2ee', ink: '#b0343f', word: 'ecute' }
+    : { bg: '#2c2a2e', ink: '#e8c86a', word: 'atré' };
+
+  g.fillStyle = skin.bg;
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = skin.ink;
+  g.fillRect(0, H - 8, W, 8);
+
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+  g.fillStyle = skin.ink;
+  // Bas-de-casse et lettrage large : la marque ne crie pas, elle s'étale.
+  g.font = `300 ${Math.round(H * 0.6)}px ${JP_FONT}`;
+  g.fillText(skin.word, 46, H * 0.72);
+  const wordW = g.measureText(skin.word).width;
+  g.fillStyle = brand === 'ecute' ? '#3a3a38' : '#f2efe8';
+  fitFillText(g, station.kanji, 66 + wordW, H * 0.68, W * 0.3, Math.round(H * 0.42), '500');
+  g.fillStyle = brand === 'ecute' ? '#8a8a86' : '#9a968e';
+  g.font = `500 26px ${JP_FONT}`;
+  g.fillText('SHOPPING & DINING', W * 0.66, H * 0.62);
+  return toTexture(c);
+}

@@ -109,26 +109,62 @@ couleur seule.
 - **au sol** — la bande de guidage mène du couloir au passage large. Les flèches
   peintes et les files d'attente restent à faire.
 
-## Phase 7 — Les piliers, et ce qu'ils portent
+## Phase 7 — Les piliers, et ce qu'ils portent ✅
 
-**À faire.** Ils sont des boîtes nues, au quai comme au hall. Un pilier de gare
-porte : habillage émaillé, cornières d'angle, plaque de nom de gare, affiches
-portrait, coffret d'incendie, boîtier de caméra, chemin de câbles, et souvent un
-banc adossé.
+**Livré.** Au quai comme au hall, et la règle est la même des deux côtés : la
+trame porteuse passe AVANT le mobilier.
 
-## Phase 8 — Les petits détails, et le désordre
+- **au quai** — socle de béton plus large que le fût, cornières d'inox sur les
+  quatre arêtes jusqu'à 1,60 m (elles existent parce qu'on cogne les valises
+  dedans, et ce sont elles qui attrapent la lumière rasante) ; le chapiteau,
+  lui, a été abandonné : la poutre transversale POSE déjà sur le poteau et en
+  tient lieu. La descente d'eau s'arrête maintenant SUR le socle, comme toute
+  descente d'eau sur son ouvrage de pied ;
+- **au hall** — une trame de pilastres engagés dans les deux parois, à 5,20 m
+  d'entraxe. Elle est calculée avant le mobilier : un distributeur l'esquive,
+  une devanture de plus de trois mètres l'enjambe et l'absorbe (le poteau passe
+  derrière la vitrine, comme en vrai), et la travée des portillons en est
+  exclue - elle est tenue par ses propres joues ;
+- **et ce qu'ils portent** : une affiche portrait sur un pilastre sur deux.
+  C'est là qu'un caisson se pose dans une gare, sur la face d'un poteau, et non
+  en plein mur - les deux caissons flottants du hall ont disparu avec cette
+  trame, qu'ils percutaient une fois sur trois.
 
-**À faire.** Ce qui reste, et qui fait la différence entre un décor et un lieu :
-poubelles de tri, porte-parapluies, extincteurs, DAE, miroirs de couloir,
-plantes en bac, panneaux d'affichage de service, cônes de chantier, chariot de
-ménage, rideaux de fer baissés hors des heures d'ouverture, traces d'usure au
-sol devant les portillons.
+## Phase 8 — Les petits détails, et le désordre ✅
 
-## Phase 9 — Les commerces sous marque
+**Livré, en partie.** Cinq familles de plus, rangées par le même moteur :
 
-**À faire.** `ecute` à Ueno et Shinagawa, `atré` à Meguro, Tabata et Ebisu :
-ce ne sont pas des konbini mais des galeries, et elles changent la forme du
-hall. À traiter avec les gares spéciales (`docs/STATION_INTERIOR.md`, phase 6).
+- **coffret d'extincteur** (rouge) et **armoire de défibrillateur** (verte) —
+  même silhouette normalisée, seule la couleur les distingue, et c'est
+  exactement ce qui permet de les repérer sans lire, y compris en courant ;
+- **panneau d'affichage de service** — trois feuilles punaisées de travers :
+  c'est le désordre qui fait le panneau ;
+- **porte-parapluies** en zone libre, près des sorties ;
+- **bac à plante** — trois masses de feuillage décalées et aplaties, jamais
+  deux boules empilées : deux sphères sur un pot font un bonhomme de neige.
+
+Ce qui est plaqué sur la paroi (coffrets, panneaux, plans) ne se contourne pas :
+moins de vingt-cinq centimètres de saillie, on passe devant sans les toucher, et
+en faire des obstacles rétrécirait le hall pour rien.
+
+**Restent** : miroirs de couloir, cônes et chariot de ménage, rideaux de fer hors
+des heures d'ouverture, traces d'usure au sol devant les portillons.
+
+## Phase 9 — Les commerces sous marque ✅
+
+**Livré.** Une galerie n'est pas un konbini plus long : elle s'ouvre par des
+BAIES - trois travées vitrées séparées par des trumeaux - au lieu d'une seule
+devanture, et son bandeau est long, bas, écrit en bas-de-casse fine avec le nom
+de la gare à côté de la marque : `ecute 上野`, `atré 恵比寿`. Une galerie
+appartient à sa gare, et c'est ce couple qui la distingue d'une boutique.
+
+Sept gares en déclarent une, et la liste est **prudente et incomplète à
+dessein** : n'y figurent que celles dont l'enseigne est établie. Une gare absente
+n'affirme pas qu'elle n'a rien, elle affirme qu'on ne l'a pas relevé.
+
+Tabata la déclare et ne l'obtient pas : 3,60 m de fond dans un hall de 5,50 m ne
+laisseraient plus deux mètres de passage, et c'est la règle du passage libre qui
+tranche - pas un oubli.
 
 ---
 
