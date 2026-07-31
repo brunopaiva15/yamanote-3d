@@ -35,6 +35,15 @@ export const MESSENGER_Y = 6.05;
 // --- Cotes internes de la structure --------------------------------------
 /** Flèche du porteur à mi-portée (m). */
 const MESSENGER_SAG = 0.55;
+/** Membrures de la poutre-treillis : hauteur haute et basse (m). */
+const BEAM_TOP = 5.54;
+const BEAM_BOT = 5.06;
+/** Demi-largeur hors-tout de la poutre : elle coiffe les deux mâts. */
+const BEAM_HALF = POLE_X + 0.14;
+/** Écartement des deux plans du treillis (m). */
+const BEAM_DEPTH = 0.16;
+/** Sommet du mât (le fût dépasse un peu la poutre). */
+const MAST_TOP = 5.72;
 
 // --- Petites fabriques ----------------------------------------------------
 
@@ -48,6 +57,64 @@ function cylAt(rt: number, rb: number, h: number, seg: number, x: number, y: num
   const g = new THREE.CylinderGeometry(rt, rb, h, seg);
   g.translate(x, y, z);
   return g;
+}
+
+/**
+ * Barre droite entre deux points du plan xy (membrure ou diagonale de
+ * treillis) : une boîte mise à la longueur et inclinée dans le plan.
+ */
+function strut(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  z: number,
+  t: number,
+  depth: number,
+): THREE.BufferGeometry {
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const len = Math.hypot(dx, dy);
+  const g = new THREE.BoxGeometry(len, t, depth);
+  g.rotateZ(Math.atan2(dy, dx));
+  g.translate((x0 + x1) / 2, (y0 + y1) / 2, z);
+  return g;
+}
+
+/**
+ * Poutre-treillis transversale (門型ビーム) : deux plans verticaux identiques
+ * (avant/arrière), chacun deux membrures reliées par une âme en zigzag de
+ * type Warren, et quelques entretoises entre les plans pour la profondeur.
+ * C'est ce dessin-là qui dit « poutre de chemin de fer » plutôt que « barre ».
+ */
+function buildBeam(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const panels = 12;
+  const step = (BEAM_HALF * 2) / panels;
+  const node = (i: number) => -BEAM_HALF + i * step;
+  const zf = BEAM_DEPTH / 2;
+
+  for (const z of [zf, -zf]) {
+    // Membrures haute et basse.
+    parts.push(boxAt(BEAM_HALF * 2, 0.075, 0.06, 0, BEAM_TOP, z));
+    parts.push(boxAt(BEAM_HALF * 2, 0.075, 0.06, 0, BEAM_BOT, z));
+    // Âme : diagonales alternées (Warren) + montants aux nœuds.
+    for (let i = 0; i < panels; i++) {
+      const xa = node(i);
+      const xb = node(i + 1);
+      if (i % 2 === 0) parts.push(strut(xa, BEAM_BOT, xb, BEAM_TOP, z, 0.032, 0.045));
+      else parts.push(strut(xa, BEAM_TOP, xb, BEAM_BOT, z, 0.032, 0.045));
+    }
+    for (let i = 0; i <= panels; i += 2) {
+      parts.push(boxAt(0.036, BEAM_TOP - BEAM_BOT, 0.045, node(i), (BEAM_TOP + BEAM_BOT) / 2, z));
+    }
+  }
+  // Entretoises entre les deux plans, une sur trois nœuds.
+  for (let i = 0; i <= panels; i += 3) {
+    parts.push(boxAt(0.05, 0.05, BEAM_DEPTH, node(i), BEAM_TOP, 0));
+    parts.push(boxAt(0.05, 0.05, BEAM_DEPTH, node(i), BEAM_BOT, 0));
+  }
+  return mergeGeometries(parts, false) as THREE.BufferGeometry;
 }
 
 /** Fil tendu entre deux portiques, avec sa flèche parabolique. */
@@ -70,17 +137,25 @@ function buildStructure(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
 
   for (const s of [-1, 1]) {
-    // Mât octogonal légèrement fuselé.
-    parts.push(cylAt(0.09, 0.13, 7, 8, s * POLE_X, 2.2, 0));
+    const x = s * POLE_X;
+    // Mât octogonal légèrement fuselé, du pied jusqu'au-dessus de la poutre.
+    parts.push(cylAt(0.1, 0.14, 7.2, 8, x, 2.3, 0));
+    // Embase : platine et écrou de scellement, le mât ne « pousse » plus nu.
+    parts.push(boxAt(0.42, 0.09, 0.42, x, -0.86, 0));
+    parts.push(cylAt(0.17, 0.2, 0.34, 8, x, -0.68, 0));
     // Tête de mât.
-    parts.push(boxAt(0.16, 0.16, 0.16, s * POLE_X, 5.72, 0));
+    parts.push(boxAt(0.19, 0.16, 0.19, x, MAST_TOP, 0));
+    // Goussets : deux plaques inclinées reliant le fût aux membrures.
+    const gx = s * (POLE_X - 0.16);
+    parts.push(strut(x, BEAM_TOP - 0.02, gx, BEAM_BOT - 0.26, 0.07, 0.05, BEAM_DEPTH + 0.05));
+    parts.push(strut(x, BEAM_TOP - 0.02, gx, BEAM_BOT - 0.26, -0.07, 0.05, BEAM_DEPTH + 0.05));
     // Potence d'éclairage (le foyer émissif est posé à part par Wayside).
     parts.push(boxAt(LAMP_REACH, 0.07, 0.07, s * (POLE_X - LAMP_REACH / 2), LAMP_Y, 0));
     parts.push(boxAt(0.34, 0.09, 0.2, s * (POLE_X - LAMP_REACH), LAMP_Y - 0.07, 0));
   }
 
-  // Poutre transversale (Phase 2 : deviendra un treillis).
-  parts.push(boxAt(10.6, 0.14, 0.14, 0, 5.4, 0));
+  // Poutre-treillis transversale.
+  parts.push(buildBeam());
 
   // Pendules : ils relient le porteur au fil de contact.
   const drops = 5;
