@@ -24,6 +24,7 @@ export function isOnPlatform(): boolean {
 export function alight(): void {
   if (runtime.playerFrame === 'platform') return;
   runtime.playerFrame = 'platform';
+  runtime.playerZone = 'platform';
   useStore.getState().setOnPlatform(true);
   beginPlatformWait();
 }
@@ -36,6 +37,7 @@ export function board(): void {
   if (runtime.playerFrame === 'car') return;
   const elapsed = boardableElapsed();
   runtime.playerFrame = 'car';
+  runtime.playerZone = 'car';
   useStore.getState().setOnPlatform(false);
   endPlatformWait();
   resumeDwellAt(elapsed, useStore.getState().index);

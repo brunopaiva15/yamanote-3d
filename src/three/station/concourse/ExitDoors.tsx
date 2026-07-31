@@ -1,0 +1,2 @@
+import type { ExitDoorSpec } from '../../../data/stationCirculation';
+export function ExitDoors({ exits, yFor }: { exits: ExitDoorSpec[]; yFor: (level: ExitDoorSpec['level']) => number }) { return <>{exits.map((e) => <group key={e.id} position={[e.x, yFor(e.level), e.z]} rotation={[0, e.yaw, 0]}><mesh position={[0, 1.15, 0]}><boxGeometry args={[e.width, 2.3, .12]} /><meshStandardMaterial color="#8ca3ad" transparent opacity={.65} /></mesh><mesh position={[0, 2.55, 0]}><boxGeometry args={[e.width, .42, .14]} /><meshBasicMaterial color="#f4c431" /></mesh></group>)}</> }

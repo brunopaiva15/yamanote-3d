@@ -22,6 +22,7 @@ import * as THREE from 'three';
 register('./fixtures/ts-resolve.mjs', import.meta.url);
 
 const { frameAt, playerDoorwayZ, resolveMove } = await import('../src/systems/walkable.ts');
+const { activePlatformFlip } = await import('../src/systems/playerFrame.ts');
 const { runtime } = await import('../src/systems/runtime.ts');
 const { useStore } = await import('../src/store.ts');
 const { CONFIG, V_MAX } = await import('../src/data/config.ts');
@@ -40,7 +41,9 @@ interface Scene {
 }
 
 function scene({ speed, open, present = true }: Scene): void {
-  useStore.setState({ doorSide: 1, index: 0, platformIndex: 0, started: true });
+  // JY10 ouvre à droite dans les deux sens : les coordonnées historiques
+  // de ce test restent positives sans contourner l'API de profil active.
+  useStore.setState({ doorSide: 1, index: 9, platformIndex: 9, loopDirection: 'inner', started: true });
   runtime.trainPresent = present;
   runtime.trainZ = 0;
   runtime.platformSlide = 0;
@@ -49,6 +52,7 @@ function scene({ speed, open, present = true }: Scene): void {
   runtime.psdPresent = true;
   runtime.speed = speed;
   runtime.playerFrame = 'car';
+  runtime.useAlternativePlatform = false;
   runtime.swayTime = 0;
 }
 
@@ -58,7 +62,7 @@ function scene({ speed, open, present = true }: Scene): void {
  * - c'est le couple exact que le bug exploitait.
  */
 function step(pos: THREE.Vector3, dx: number): 'car' | 'platform' | null {
-  resolveMove(pos, dx, 0);
+  resolveMove(pos, dx * activePlatformFlip(), 0);
   runtime.swayTime += DT;
   const s01 = runtime.speed / V_MAX;
   const sway =

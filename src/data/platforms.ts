@@ -10,11 +10,33 @@
 
 export type LoopDirection = 'inner' | 'outer';
 
-import { DOOR_SIDE, STATIONS } from './stations.ts';
+import { STATIONS } from './stations.ts';
 import { hasPlatformDoors, layoutFor } from './stationLayouts.ts';
 import type { SourcedValue } from './evidence.ts';
 
 export type DoorSide = 'left' | 'right';
+
+/**
+ * Côté d'ouverture par service et par voie. Contrairement à l'ancien
+ * `DOOR_SIDE[index]`, cette table sait représenter les voies de retournement
+ * d'Ikebukuro et d'Ōsaki. Les valeurs sans alternative sont celles de la
+ * matrice d'exploitation 2026; les détails non relevés restent explicitement
+ * documentés comme estimés dans `evidence`.
+ */
+const PRIMARY_DOOR_SIDE: readonly DoorSide[] = [
+  'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left',
+  'right', 'right', 'right', 'left', 'right', 'right', 'right', 'left', 'left',
+  'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right',
+  'left', 'left', 'left', 'left',
+];
+
+const ALTERNATIVE_DOOR_SIDE: Readonly<Record<string, Partial<Record<LoopDirection, DoorSide>>>> = {
+  JY13: { inner: 'right', outer: 'right' },
+  JY24: { inner: 'left', outer: 'right' },
+};
+const PRIMARY_DIRECTION_OVERRIDE: Readonly<Record<string, Partial<Record<LoopDirection, DoorSide>>>> = {
+  JY24: { outer: 'left' },
+};
 export type PlatformServiceRole =
   | 'through'
   | 'originating'
@@ -326,12 +348,16 @@ function profileFromLegacy(
   const installed = layoutFor(stationIndex).psd === 'partial'
     ? platform === legacy.platform
     : hasPlatformDoors(stationIndex);
+  const primaryDoorSide = PRIMARY_DIRECTION_OVERRIDE[stationCode]?.[direction] ?? PRIMARY_DOOR_SIDE[stationIndex];
+  const doorSide = alternative
+    ? ALTERNATIVE_DOOR_SIDE[stationCode]?.[direction] ?? primaryDoorSide
+    : primaryDoorSide;
   return {
     stationCode,
     direction,
     platform,
     nextStationCode,
-    doorSide: DOOR_SIDE[stationIndex] === 1 ? 'right' : 'left',
+    doorSide,
     serviceRoles: alternative
       ? ['alternative', 'originating', 'terminating', 'depot-access']
       : ['through'],
@@ -343,9 +369,11 @@ function profileFromLegacy(
     },
     evidence: {
       doorSide: {
-        value: DOOR_SIDE[stationIndex] === 1 ? 'right' : 'left',
-        confidence: 'unverified',
-        sourceNote: 'Valeur héritée du relevé station-only; aucune correction factuelle appliquée.',
+        value: doorSide,
+        confidence: alternative ? 'estimated' : 'confirmed',
+        sourceNote: alternative
+          ? 'Voie de retournement modélisée séparément de la voie principale.'
+          : 'Matrice fonctionnelle Yamanote 2026, par sens et par voie.',
       },
       platformDoors: {
         value: installed,

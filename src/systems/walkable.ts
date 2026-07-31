@@ -18,11 +18,12 @@
 
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
+import { circulationFor, type WalkRect } from '../data/stationCirculation';
 import { PLATFORM_TOP, PSD_X } from '../data/stationGeometry';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import { platformFlip } from './playerFrame';
-import { runtime, type PlayerFrame } from './runtime';
+import { runtime, type PlayerFrame, type PlayerZone } from './runtime';
 import { placementFor, stairwellAt } from './stationPlacement';
 
 /**
@@ -74,12 +75,48 @@ export interface PortalInfo {
 interface Region {
   frame: PlayerFrame;
   y: number;
+  zone?: PlayerZone;
 }
 
 const CAR_REGION: Region = { frame: 'car', y: 0 };
 // Le quai n'est plus plat : on descend quelques marches dans les trémies. La
 // région est donc reconstruite à chaque test plutôt que constante.
 const PLATFORM_REGION: Region = { frame: 'platform', y: PLATFORM_TOP };
+
+function insideRect(x: number, z: number, r: WalkRect): boolean {
+  return Math.abs(x - r.x) <= r.halfX && Math.abs(z - r.z) <= r.halfZ;
+}
+
+/** Niveau de circulation et raccords issus de la même donnée que le rendu. */
+function circulationRegion(u: number, w: number): Region | null {
+  const localZ = platformZ(w);
+  const circulation = circulationFor(useStore.getState().platformIndex);
+  for (const access of circulation.accesses) {
+    if (access.kind === 'elevator') continue;
+    const reverse = access.direction === 'reverse';
+    const start = access.platformZ;
+    const end = start + (reverse ? -8 : 8);
+    const lo = Math.min(start, end);
+    const hi = Math.max(start, end);
+    if (Math.abs(u - access.platformX) > access.width / 2 || localZ < lo || localZ > hi) continue;
+    const t = Math.abs((localZ - start) / (end - start));
+    return { frame: 'platform', zone: 'access', y: PLATFORM_TOP + access.deltaY * t };
+  }
+  for (const surface of circulation.concourse.surfaces) {
+    if (surface.level === 'platform') continue;
+    if (!surface.rects.some((r) => insideRect(u, localZ, r))) continue;
+    if (surface.obstacles.some((r) => insideRect(u, localZ, r))) return null;
+    for (const gate of circulation.concourse.gates) {
+      if (!gate.blocksPlayer || gate.level !== surface.level) continue;
+      const barrier: WalkRect = gate.yaw === 0
+        ? { x: gate.x, z: gate.z, halfX: gate.width / 2, halfZ: 0.18 }
+        : { x: gate.x, z: gate.z, halfX: 0.18, halfZ: gate.width / 2 };
+      if (insideRect(u, localZ, barrier)) return null;
+    }
+    return { frame: 'platform', zone: 'concourse', y: surface.y };
+  }
+  return null;
+}
 
 // --- Prédicats ----------------------------------------------------------
 
@@ -190,6 +227,8 @@ function platformZ(w: number): number {
  * elle-même se descend, marche après marche, jusqu'à la limite de zone.
  */
 function platformFloorY(u: number, w: number): number | null {
+  const circulation = circulationRegion(u, w);
+  if (circulation) return circulation.y;
   const p = currentPlatform();
   const localZ = platformZ(w);
   const stair = stairwellAt(p, u, localZ);
@@ -204,6 +243,8 @@ function platformFloorY(u: number, w: number): number | null {
 
 function regionAt(u: number, w: number): Region | null {
   if (inCar(u, w)) return CAR_REGION;
+  const circulation = circulationRegion(u, w);
+  if (circulation) return circulation;
   const y = platformFloorY(u, w);
   if (y !== null) return y === PLATFORM_TOP ? PLATFORM_REGION : { frame: 'platform', y };
   if (inPortal(u, w)) return u < PORTAL_MID_U ? CAR_REGION : PLATFORM_REGION;
@@ -216,6 +257,12 @@ function regionAt(u: number, w: number): Region | null {
 export function frameAt(x: number, z: number): PlayerFrame | null {
   const u = walkFlip() * x;
   return regionAt(u, z)?.frame ?? null;
+}
+
+export function zoneAt(x: number, z: number): PlayerZone | null {
+  const u = walkFlip() * x;
+  const region = regionAt(u, z);
+  return region?.zone ?? region?.frame ?? null;
 }
 
 /** Hauteur du sol sous une position monde (0 dans le wagon, -0,06 sur le quai). */

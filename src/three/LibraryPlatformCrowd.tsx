@@ -8,7 +8,7 @@ import { crowdList, initPlatformCrowd, type CrowdPax } from '../systems/platform
 import { carrierOfPax } from '../systems/petCarriers';
 import { runtime } from '../systems/runtime';
 import { useStore } from '../store';
-import { DOOR_SIDE } from '../data/stations';
+import { activePlatformFlip } from '../systems/playerFrame';
 import { CONFIG } from '../data/config';
 import { MODELS_BASE, type CharacterManifest, type LogicalClip } from './characters/manifest';
 import {
@@ -74,8 +74,8 @@ function rebuildSlot(s: Slot, templates: CharacterTemplate[], p: CrowdPax): void
 export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest }) {
   initPlatformCrowd();
   // Même côté que le quai présent (platformIndex) - voir ProceduralPlatformCrowd.
-  const platformIndex = useStore((s) => s.platformIndex);
-  const doorSide = DOOR_SIDE[platformIndex];
+  useStore((s) => s.platformIndex);
+  const doorSide = activePlatformFlip();
   const wrap = useRef<THREE.Group>(null);
   const urls = useMemo(() => manifest.variants.map((v) => MODELS_BASE + v.file), [manifest]);
   const gltfs = useGLTF(urls);

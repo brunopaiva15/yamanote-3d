@@ -13,7 +13,7 @@ import { input, moveAxes, consumeLook } from '../systems/input';
 import { isTypingTarget, toggleFullscreen } from '../systems/browser';
 import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
 import { publishPlayerLook, publishPlayerPose, publishPlayerStance } from '../systems/playerFrame';
-import { AISLE_U, frameAt, groundY, resolveMove, snapInside } from '../systems/walkable';
+import { AISLE_U, frameAt, groundY, resolveMove, snapInside, zoneAt } from '../systems/walkable';
 import { alight, board, crossNearestPortal } from '../systems/boarding';
 import { setListenerPose } from '../systems/audioEngine';
 
@@ -304,6 +304,7 @@ export function Player() {
       const frame = frameAt(pos.current.x, pos.current.z);
       if (frame === 'platform') alight();
       else if (frame === 'car') board();
+      runtime.playerZone = zoneAt(pos.current.x, pos.current.z) ?? runtime.playerZone;
       targetPos = pos.current;
     }
 

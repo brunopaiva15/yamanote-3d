@@ -20,7 +20,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../../store';
-import { DOOR_SIDE } from '../../data/stations';
+import { activePlatformFlip } from '../../systems/playerFrame';
 import { runtime } from '../../systems/runtime';
 import { psdDoorPosAt, psdGateLag } from '../../systems/doorMotion';
 import {
@@ -63,6 +63,7 @@ import { PlatformSignage } from './PlatformSignage';
 import { VendingMachines } from './VendingMachines';
 import { Signature } from './signatures';
 import { Stairwells } from './Stairwell';
+import { Concourse } from './concourse/Concourse';
 import { psdLayout } from './psdLayout';
 
 const UP = new THREE.Quaternion();
@@ -89,7 +90,7 @@ export function Station() {
   // d'ouverture suit la même logique : store.doorSide bascule vers la gare
   // suivante en début de croisière, quand ce quai-ci est encore visible.
   const index = useStore((s) => s.platformIndex);
-  const doorSide = DOOR_SIDE[index];
+  const doorSide = activePlatformFlip();
   const root = useRef<THREE.Group>(null);
 
   const layout = layoutFor(index);
@@ -496,6 +497,7 @@ export function Station() {
       {/* Trémies d'escalier : la dalle est percée, donc elles font partie de la
           structure - jamais retirées par un palier de qualité. */}
       <Stairwells place={place} m={m} station={index} detail={detail} />
+      <Concourse station={index} />
 
       {/* Affichage publicitaire : caissons du mur, colonnes habillées,
           bannières suspendues, allèges de portes palières. */}

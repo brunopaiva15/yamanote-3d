@@ -31,7 +31,7 @@ import { E235 } from '../data/e235';
 import { facingTrackNumber, passChance, passKindAt, type PassKind } from '../data/passingTrains';
 import { PSD_X, TRACK_HALF } from '../data/stationGeometry';
 import { layoutFor } from '../data/stationLayouts';
-import { DOOR_SIDE } from '../data/stations';
+import { activePlatformFlip } from './playerFrame';
 import { useStore } from '../store';
 import * as audio from './audioEngine';
 import { perfLevel } from './perf';
@@ -221,7 +221,7 @@ export function updatePassingTrain(rawDt: number): void {
   // Repère du quai → repère monde : la gare est bâtie côté +x puis retournée
   // d'un demi-tour selon le côté d'ouverture (x et z changent alors de signe),
   // et elle glisse de platformSlide le long de la voie.
-  const side = DOOR_SIDE[useStore.getState().platformIndex];
+  const side = activePlatformFlip();
   const listenerZ = (runtime.playerZ - runtime.platformSlide) * side;
   // Une rame de 200 m n'est pas une source ponctuelle : elle sonne depuis son
   // point le plus proche de l'oreille - le nez tant qu'elle arrive, notre

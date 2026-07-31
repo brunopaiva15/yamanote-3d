@@ -1,0 +1,1 @@
+export function ConcourseSigns({ y, z }: { y: number; z: number }) { return <group position={[5.2, y + 2.2, z]}><mesh><boxGeometry args={[4.8, .5, .12]} /><meshBasicMaterial color="#263238" /></mesh><mesh position={[-1.7, 0, -.065]}><boxGeometry args={[1.1, .3, .02]} /><meshBasicMaterial color="#f4c431" /></mesh></group> }

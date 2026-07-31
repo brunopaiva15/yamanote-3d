@@ -22,6 +22,40 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { freezeWeather, weather } from '../systems/weather';
 import { seasonNow } from '../systems/season';
+import { circulationFor, STATION_CIRCULATION } from '../data/stationCirculation';
+import { layoutFor } from '../data/stationLayouts';
+import { platformProfileFor, type LoopDirection } from '../data/platforms';
+
+export function stationDataProbe(index: number, direction: LoopDirection) {
+  const station = STATIONS[index];
+  const platform = platformProfileFor(station.jy, direction, { alternative: runtime.useAlternativePlatform });
+  const alternative = platformProfileFor(station.jy, direction, { alternative: true });
+  const layout = layoutFor(index); const circulation = circulationFor(index);
+  return {
+    stationCode: station.jy, direction, primaryTrack: platform.platform,
+    alternativeTrack: alternative.platform === platform.platform ? undefined : alternative.platform,
+    doorSide: platform.doorSide, platformDoors: platform.platformDoors,
+    layoutConfig: layout.config, elevation: layout.elevation,
+    circulationFamily: circulation.concourse.family, levels: circulation.concourse.levels,
+    accesses: circulation.accesses, gates: circulation.concourse.gates, exits: circulation.concourse.exits,
+  };
+}
+
+export function validateStationCirculation(): string[] {
+  const errors: string[] = [];
+  for (const [index, c] of STATION_CIRCULATION.entries()) {
+    const surfaces = new Set(c.concourse.surfaces.map((s) => s.level));
+    const ids = new Set<string>();
+    for (const item of [...c.accesses, ...c.concourse.surfaces, ...c.concourse.gates, ...c.concourse.exits]) {
+      if (ids.has(item.id)) errors.push(`${c.stationCode}: duplicate ${item.id}`);
+      ids.add(item.id);
+    }
+    for (const a of c.accesses) if (!surfaces.has(a.fromLevel) || !surfaces.has(a.toLevel)) errors.push(`${c.stationCode}: isolated ${a.id}`);
+    for (const e of c.concourse.exits) if (!surfaces.has(e.level)) errors.push(`${c.stationCode}: unreachable ${e.id}`);
+    if (c.stationCode !== STATIONS[index].jy) errors.push(`${c.stationCode}: wrong index ${index}`);
+  }
+  return errors;
+}
 
 interface Volume {
   label: string;

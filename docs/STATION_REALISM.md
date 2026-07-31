@@ -8,3 +8,8 @@
 - **Unverified:** direction/platform-specific door sides, platform voice exceptions, spoken transfer exceptions, courtesy-message locations, and historical platform-specific chime branching.
 
 The visual signatures already present are preserved. Missing bespoke signatures remain future work until their distinctive geometry can be checked without replacing the established station kit.
+# Circulation jouable
+
+Les 30 gares disposent désormais d'un graphe de circulation hors quai. Voir
+[`STATION_CIRCULATION.md`](./STATION_CIRCULATION.md) pour la distinction entre
+données confirmées, estimations et simplifications de gameplay.

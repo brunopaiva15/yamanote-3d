@@ -55,7 +55,10 @@ export type PlatformConfig =
   /** Quai latéral : mur dans le dos, quai opposé au-delà des deux voies. */
   | 'side'
   /** Deux îlots Yamanote : quatre voies, départs et terminus. */
-  | 'terminusIsland';
+  | 'terminusIsland'
+  // Faces Yamanote séparées/asymétriques (Shinjuku et Yoyogi).
+  // Le rendu de base reste un îlot ouvert, complété par une signature.
+  | 'special';
 
 /** Portes de quai, à la situation documentée en 2026. */
 export type PsdState =
@@ -474,7 +477,8 @@ const SPECS: readonly Spec[] = [
     // le même îlot. Quai étroit, charpente sombre, immeubles à toucher.
     name: 'JY02 Kanda',
     elevation: 'elevated',
-    config: 'island',
+    config: 'sharedIsland',
+    sharedWith: KT,
     parallel: [KT, 'Chūō', 'Ginza'],
     ambience: 'street',
     crowd: 1,
@@ -679,7 +683,7 @@ const SPECS: readonly Spec[] = [
     // restructuration en cours l'interdit.
     name: 'JY17 Shinjuku',
     elevation: 'ground',
-    config: 'island',
+    config: 'special',
     parallel: ['Chūō', 'Chūō–Sōbu', 'Saikyō', 'Shōnan–Shinjuku', 'Odakyū', 'Keiō'],
     psd: 'none',
     works: true,
@@ -698,7 +702,7 @@ const SPECS: readonly Spec[] = [
     // Quais légèrement courbes, anciennes marquises, organisation asymétrique.
     name: 'JY18 Yoyogi',
     elevation: 'ground',
-    config: 'sharedIsland',
+    config: 'special',
     sharedWith: 'Chūō–Sōbu',
     parallel: ['Ōedo'],
     ambience: 'street',
@@ -876,7 +880,8 @@ const SPECS: readonly Spec[] = [
     // Huit voies parallèles sous la même couverture : rien ne ferme la travée.
     openFarSide: true,
     elevation: 'elevated',
-    config: 'island',
+    config: 'sharedIsland',
+    sharedWith: KT,
     parallel: ['Tōkaidō', 'Yokosuka', 'Ginza', 'Asakusa', 'Yurikamome'],
     signature: 'shimbashi',
     ambience: 'office',

@@ -10,6 +10,7 @@ import { clearLineDisruption } from './lineDisruption';
  * non dans systems/playerFrame) pour que runtime reste sans dépendance.
  */
 export type PlayerFrame = 'car' | 'platform';
+export type PlayerZone = 'car' | 'platform' | 'access' | 'concourse';
 
 /**
  * Nature d'un arrêt subi en pleine voie : coup de frein (急停車) ou coupure de
@@ -124,6 +125,7 @@ export const runtime = {
    * séparée ci-dessous.
    */
   playerFrame: 'car' as PlayerFrame,
+  playerZone: 'car' as PlayerZone,
   /**
    * Position d'APPUI du joueur en repère monde : où il a les pieds, sans le
    * balancement de caméra.

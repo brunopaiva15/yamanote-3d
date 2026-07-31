@@ -33,10 +33,7 @@ test('la liste gelée des accès directs à DOOR_SIDE ne peut pas grandir', () =
   assert.deepEqual(files, [
     'scripts/announcements-export.ts', 'scripts/pet-shots.mjs', 'src/data/districts.ts',
     'src/data/loop.ts', 'src/data/platforms.ts', 'src/data/stations.ts', 'src/dev/stationProbe.ts',
-    'src/store.ts', 'src/systems/passingTrain.ts', 'src/systems/platformWait.ts',
-    'src/systems/playerFrame.ts', 'src/systems/stationCycle.ts', 'src/systems/stationOcclusion.ts',
-    'src/systems/walkable.ts', 'src/three/LibraryPlatformCrowd.tsx', 'src/three/PlatformPets.tsx',
-    'src/three/ProceduralPlatformCrowd.tsx', 'src/three/exterior/PassingTrain.tsx',
-    'src/three/station/Station.tsx',
+    'src/store.ts', 'src/systems/platformWait.ts', 'src/systems/stationCycle.ts',
+    'src/systems/walkable.ts',
   ]);
 });

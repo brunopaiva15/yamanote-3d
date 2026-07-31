@@ -15,7 +15,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { DOOR_SIDE } from '../data/stations';
+import { activePlatformFlip } from '../systems/playerFrame';
 import { crowdList } from '../systems/platformCrowd';
 import { petCarriers, setPetBreedCount } from '../systems/petCarriers';
 import { runtime } from '../systems/runtime';
@@ -39,8 +39,8 @@ interface Slot {
 }
 
 export function PlatformPets({ manifest }: { manifest: AnimalManifest }) {
-  const platformIndex = useStore((s) => s.platformIndex);
-  const doorSide = DOOR_SIDE[platformIndex];
+  useStore((s) => s.platformIndex);
+  const doorSide = activePlatformFlip();
   const wrap = useRef<THREE.Group>(null);
   const urls = useMemo(() => manifest.variants.map((v) => ANIMALS_BASE + v.file), [manifest]);
   const gltfs = useGLTF(urls);

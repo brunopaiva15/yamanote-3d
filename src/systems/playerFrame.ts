@@ -13,11 +13,12 @@
 // +x, avant la rotation de π appliquée quand doorSide === -1.
 
 import { PLATFORM_TOP } from '../data/stationGeometry';
-import { DOOR_SIDE } from '../data/stations';
+import { platformProfileFor, type YamanotePlatformProfile } from '../data/platforms';
+import { STATIONS } from '../data/stations';
 import { useStore } from '../store';
 import { runtime } from './runtime';
 
-export type { PlayerFrame } from './runtime';
+export type { PlayerFrame, PlayerZone } from './runtime';
 
 /**
  * Sol du quai, 6 cm sous le plancher du wagon.
@@ -53,8 +54,19 @@ export function worldToCarZ(z: number): number {
  * parce qu'une DIRECTION (le regard, par exemple) se ramène au repère quai par
  * ce seul facteur, sans passer par une conversion de point.
  */
+export function activePlatformProfile(): YamanotePlatformProfile {
+  const state = useStore.getState();
+  return platformProfileFor(STATIONS[state.platformIndex].jy, state.loopDirection, {
+    alternative: runtime.useAlternativePlatform,
+  });
+}
+
+export function activePlatformFlip(): 1 | -1 {
+  return activePlatformProfile().doorSide === 'right' ? 1 : -1;
+}
+
 export function platformFlip(): 1 | -1 {
-  return DOOR_SIDE[useStore.getState().platformIndex];
+  return activePlatformFlip();
 }
 
 export function platformToWorld(x: number, z: number, out: { x: number; z: number }): void {

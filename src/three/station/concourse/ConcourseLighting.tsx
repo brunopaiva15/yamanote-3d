@@ -1,0 +1,1 @@
+export function ConcourseLighting({ y, z, width }: { y: number; z: number; width: number }) { return <>{[-.6, 0, .6].map((d) => <pointLight key={d} position={[5.2 + d * width, y + 2.45, z]} intensity={8} distance={10} color="#fff2d4" />)}</> }

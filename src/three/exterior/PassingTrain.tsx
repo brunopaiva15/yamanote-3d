@@ -24,8 +24,7 @@ import { useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { E235 } from '../../data/e235';
-import { DOOR_SIDE } from '../../data/stations';
-import { useStore } from '../../store';
+import { activePlatformFlip } from '../../systems/playerFrame';
 import { runtime } from '../../systems/runtime';
 import { PASS_CARS, PASS_LENGTH, passingTrain } from '../../systems/passingTrain';
 import {
@@ -336,7 +335,7 @@ export function PassingTrain() {
 
     // Même repère que le quai : demi-tour selon le côté d'ouverture, puis
     // glissement le long de la voie.
-    const side = DOOR_SIDE[useStore.getState().platformIndex];
+    const side = activePlatformFlip();
     g.rotation.y = side === 1 ? 0 : Math.PI;
     g.position.z = runtime.platformSlide;
     b.root.position.x = passingTrain.trackX;

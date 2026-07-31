@@ -10,7 +10,7 @@ import type { Appearance } from '../systems/appearance';
 import { makeFaceTexture } from '../textures/procedural';
 import { runtime } from '../systems/runtime';
 import { useStore } from '../store';
-import { DOOR_SIDE } from '../data/stations';
+import { activePlatformFlip } from '../systems/playerFrame';
 import { usesHeldPose } from './characters/props';
 import { ACTION_BY_ID, type MotionId, type PaxAction } from '../data/paxActions';
 import { applyBodyPivot } from './characters/pose';
@@ -235,8 +235,8 @@ export function ProceduralPlatformCrowd() {
   // Le côté de la foule est celui du quai présent (platformIndex), pas
   // store.doorSide : celui-ci bascule vers la gare suivante en début de
   // croisière, alors que ce quai - et sa foule - défilent encore.
-  const platformIndex = useStore((s) => s.platformIndex);
-  const doorSide = DOOR_SIDE[platformIndex];
+  useStore((s) => s.platformIndex);
+  const doorSide = activePlatformFlip();
   const wrap = useRef<THREE.Group>(null);
 
   // Un support stable par slot : le corps y est greffé, et remplacé quand le
