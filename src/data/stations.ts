@@ -51,7 +51,8 @@ export const STATIONS: Station[] = [
   { jy: 'JY30', kanji: '有楽町', kana: 'ゆうらくちょう', romaji: 'Yūrakuchō', code: 'YUR', zh: '有乐町', ko: '유라쿠초' },
 ];
 
-// Côté d'ouverture des portes par index de station (1 = droite, -1 = gauche).
+// Côté d'ouverture des portes par index de station (1 = droite, -1 = gauche),
+// au relevé JR East de janvier 2026.
 //
 // CE QUI EST GARANTI : le côté est LE MÊME DANS LES DEUX SENS, et ce n'est pas
 // une simplification. Un plan de voies à deux tracks est symétrique par rotation
@@ -60,22 +61,47 @@ export const STATIONS: Station[] = [
 // la GARE, pas au sens de circulation - et c'est pour cela que cette table est
 // indexée par gare seule, sans colonne de sens.
 //
-// CE QUI NE L'EST PAS : le côté ne se DÉDUIT PAS du plan de voies déclaré dans
-// `data/stationLayouts` (`config`). Ce commentaire portait une règle
-// - « sur un îlot central les deux sens ouvrent à droite, sur deux quais
-// latéraux les deux ouvrent à gauche » - qui se lisait comme une dérivation.
-// Elle n'en est pas une : recoupée avec `config`, aucune de ses lectures
-// possibles n'explique plus de dix-sept gares sur trente, et les treize gares
-// dites `island` se partagent le côté sept-sept. La table ci-dessous est un
-// RELEVÉ, gare par gare, et c'est ainsi qu'il faut la corriger - en regardant
-// la gare, pas en calculant.
+// Les rares voies qui font exception - la voie extérieure d'Ōsaki, les voies
+// terminales d'Ikebukuro et d'Ōsaki, qui bordent la face EXTÉRIEURE de leur
+// îlot - ne sont pas des gares qui ouvriraient des deux côtés : ce sont
+// d'AUTRES VOIES, et c'est `data/platforms` qui les porte, par voie.
 //
-// (`config` reste juste dans son registre : il dit ce qu'on a en face du quai -
-// une voie Keihin-Tōhoku, la voie Yamanote opposée, un mur - et le rendu s'en
-// sert pour le fond de travée. Les deux tables décrivent deux choses
-// différentes ; le tort était de les présenter comme liées.)
-export const DOOR_SIDE: (1 | -1)[] =
-  [1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, 1, 1, -1, 1, -1, 1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, -1, 1, -1];
+// CE QUI CHANGE AVEC CE RELEVÉ : la table précédente était héritée et déclarée
+// `unverified` de bout en bout ; recoupée avec le plan de voies, elle ne
+// s'expliquait par rien, et les gares en îlot s'y partageaient le côté
+// sept-sept. Le relevé de janvier 2026 en corrige quinze, et le résultat, lui,
+// s'explique - non pas parce qu'on l'a calculé, mais parce que la géométrie et
+// la circulation à gauche se rejoignent :
+//
+//   • ÎLOT CENTRAL (`island`) : le quai est ENTRE les deux voies. À gauche,
+//     chaque rame a le milieu du faisceau à sa droite -> portes à DROITE.
+//     Komagome, Sugamo, Ōtsuka, Mejiro, Takadanobaba, Shin-Ōkubo, Shibuya,
+//     Ebisu, Meguro, Gotanda, Takanawa Gateway, Shinagawa, Harajuku.
+//   • ÎLOT PARTAGÉ (`sharedIsland`) : les deux voies Yamanote sont la paire
+//     CENTRALE, encadrée par la Keihin-Tōhoku ; chaque quai est donc à
+//     l'extérieur de la paire -> portes à GAUCHE. Tout le côté est de la
+//     boucle, de Tokyo à Yūrakuchō, plus Yoyogi et Shinjuku.
+//   • TERMINUS À QUATRE VOIES : voies régulières au centre, portes à gauche
+//     (Ikebukuro 6 et 7) ; voies terminales à l'extérieur, portes à droite.
+//
+// Ce n'est pas une dérivation et il ne faut pas la coder comme telle - Ōsaki et
+// Shinagawa n'y entrent pas, chacune pour une raison de site. C'est une
+// LECTURE : elle dit à quoi ressemble une ligne fausse, et c'est tout ce qu'on
+// lui demande. `tests/stationTrackPlan` gèle le relevé ligne à ligne.
+export const DOOR_SIDE: (1 | -1)[] = [
+  // JY01 Tokyo     JY02 Kanda     JY03 Akihabara  JY04 Okachimachi JY05 Ueno
+  -1, -1, -1, -1, -1,
+  // JY06 Uguisudani JY07 Nippori  JY08 N.-Nippori JY09 Tabata      JY10 Komagome
+  -1, -1, -1, -1, 1,
+  // JY11 Sugamo    JY12 Ōtsuka    JY13 Ikebukuro  JY14 Mejiro      JY15 Takadanobaba
+  1, 1, -1, 1, 1,
+  // JY16 Shin-Ōkubo JY17 Shinjuku JY18 Yoyogi     JY19 Harajuku    JY20 Shibuya
+  1, -1, -1, 1, 1,
+  // JY21 Ebisu     JY22 Meguro    JY23 Gotanda    JY24 Ōsaki       JY25 Shinagawa
+  1, 1, 1, 1, 1,
+  // JY26 Takanawa G. JY27 Tamachi JY28 Hamamatsu. JY29 Shimbashi   JY30 Yūrakuchō
+  1, -1, -1, -1, -1,
+];
 
 // Correspondances réelles (pour les annonces). Clé = code JY.
 // jp = parlé japonais, en = parlé anglais. Gares sans correspondance notable : omises.

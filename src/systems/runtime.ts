@@ -12,6 +12,23 @@ import { clearLineDisruption } from './lineDisruption';
 export type PlayerFrame = 'car' | 'platform';
 
 /**
+ * Étage où le joueur pose les pieds, DANS le repère de la gare.
+ *
+ * À ne pas confondre avec `PlayerFrame`, qui est un repère de coordonnées : le
+ * hall de correspondance vit dans le repère du QUAI, il se retourne avec lui et
+ * la gare y reste épinglée comme sur le quai. Ce qui change, c'est l'altitude -
+ * et surtout le fait qu'à une même abscisse il y a désormais DEUX sols, celui
+ * du quai et celui du hall trois mètres et demi dessous. Sans état, la marche
+ * n'a aucun moyen de dire lequel des deux est sous les pieds : elle rendait le
+ * quai, et l'on traversait la ligne de portillons en marchant sur le plafond.
+ *
+ * Le seul lien entre les deux est la trémie, où l'ambiguïté n'existe pas : la
+ * volée n'a qu'un sol. C'est donc là, et nulle part ailleurs, que l'étage
+ * change.
+ */
+export type PlayerLevel = 'platform' | 'concourse';
+
+/**
  * Nature d'un arrêt subi en pleine voie : coup de frein (急停車) ou coupure de
  * la caténaire (停電). Déclaré ici pour que runtime reste sans dépendance.
  */
@@ -124,6 +141,8 @@ export const runtime = {
    * séparée ci-dessous.
    */
   playerFrame: 'car' as PlayerFrame,
+  /** Étage courant dans la gare : le quai, ou le niveau de correspondance. */
+  playerLevel: 'platform' as PlayerLevel,
   /**
    * Position d'APPUI du joueur en repère monde : où il a les pieds, sans le
    * balancement de caméra.
@@ -289,6 +308,7 @@ export function resetRuntime(): void {
   runtime.berthOffset = 0;
   runtime.departStartDist = 0;
   runtime.playerFrame = 'car';
+  runtime.playerLevel = 'platform';
   runtime.stanceX = 0;
   runtime.stanceZ = 4.2;
   runtime.playerCarX = 0;

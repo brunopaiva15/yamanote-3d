@@ -186,9 +186,10 @@ Trois axes y sont tenus séparés, parce que les confondre uniformise tout :
 - `elevation` - le niveau où court la voie : **sol** (12 gares), **viaduc**
   (13), **tranchée** (5 : Tabata, Komagome, Sugamo, Mejiro, Meguro) ;
 - `config` - ce qu'on a de l'autre côté du quai : îlot partagé avec une autre
-  ligne (13, la Keihin-Tōhoku sauf à Yoyogi), îlot Yamanote pur (14), quais
-  latéraux (Harajuku, seul cas de la boucle), double îlot de terminus
-  (Ikebukuro, Ōsaki) ;
+  ligne (16 au relevé de janvier 2026, la Keihin-Tōhoku partout sauf à Yoyogi et
+  Shinjuku, où c'est la Chūō–Sōbu), îlot Yamanote pur (11), quais latéraux
+  (Harajuku, seul cas de la boucle), double îlot de terminus (Ikebukuro,
+  Ōsaki) ;
 - `signature` - le caractère qui ne se paramètre pas, dessiné à part
   (`three/station/signatures/`).
 
@@ -278,8 +279,9 @@ verrait au premier pas. Tout ce qui se répète passe par un `InstancedMesh`.
 îlots : deux bords d'embarquement, l'ossature ramenée au milieu - piliers,
 bancs, distributeurs, caissons publicitaires dos à dos - et, au-delà du second
 bord, une voie puis un autre quai. Laquelle voie change tout : la Keihin-Tōhoku
-à Tokyo, Ueno ou Yūrakuchō, la Yamanote elle-même en sens inverse à Kanda ou
-Mejiro, la deuxième paire de voies des terminus à Ikebukuro et Ōsaki. Ce que
+à Tokyo, Ueno, Kanda ou Yūrakuchō, la Yamanote elle-même en sens inverse à
+Mejiro ou Komagome, la deuxième paire de voies des terminus à Ikebukuro et
+Ōsaki. Ce que
 `elevation` ferme au fond - paroi de tranchée, garde-corps de viaduc, mur - se
 trouve alors quinze mètres plus loin, derrière le quai d'en face, et non plus à
 portée de main. Harajuku, seul quai latéral de la boucle, garde son mur et son
@@ -547,6 +549,141 @@ donc à hauteur d'affiche et pas plus loin que sept mètres - une réglette de
 plafond, elle, n'atteindrait jamais l'œil. Et les voyageurs qui s'en vont ne
 s'effacent plus à une altitude donnée : ils marchent jusqu'à un mètre après le
 linteau, où c'est la dalle qui les cache.
+
+### Entrer dans la gare
+
+Ce couloir se terminait sur un mur, et le joueur était de toute façon arrêté
+cinq marches plus haut, sur rien du tout. **Une trémie par gare descend
+maintenant jusqu'au bout** - première volée, palier de mi-étage, seconde volée,
+couloir - et débouche sur le niveau de correspondance : zone payante, ligne de
+portillons, zone libre, bouches de sortie. On y marche, on franchit un
+portillon, on va lire ce qui est écrit dessus.
+
+`data/stationInterior` pose les rectangles, `three/station/Concourse` les
+dessine, `systems/walkable` les fait respecter - la même table pour les deux,
+sinon une borne se contourne là où elle est dessinée et barre là où elle ne
+l'est pas. Le tout est écrit dans le repère du quai, donc se retourne avec lui,
+et tient DANS l'emprise de la dalle : au-delà, la nappe de rue reprend sa place
+un mètre sous le quai (`three/groundStrip`) et couperait le hall à hauteur
+d'épaule.
+
+**Une seule trémie y mène**, la plus proche du milieu du quai. Les autres
+gardent leur couloir borgne - c'est aussi ce que fait une vraie gare, où toutes
+les volées d'un quai ne débouchent pas au même endroit, ni toutes sur un
+endroit.
+
+Ce que ça change sous les pieds : il y a désormais **deux sols à une même
+abscisse**, la dalle du quai et le hall trois mètres et demi dessous. Aucune
+coordonnée ne dit lequel des deux porte le marcheur ; `runtime.playerLevel` le
+porte, et il ne bascule **que dans une trémie** - le seul endroit où les deux
+n'en font qu'un. Sans cet état, on traversait la ligne de portillons en marchant
+sur son plafond.
+
+Le nom écrit au-dessus des portillons est un relevé, gare par gare -
+電気街口 à Akihabara, ハチ公改札 à Shibuya, 早稲田口 à Takadanobaba ; les gares
+dont le nom n'est pas établi portent 中央改札, qui est réel et courant. Les
+sorties, elles, ne sont pas renommées : chaque bouche porte **le même panneau
+jaune que les potences du quai**, tiré du même relevé (`data/lines`) - une gare
+ne fléche pas 八重洲中央口 en haut des marches et autre chose en bas.
+
+**Six gares déclarent leur hall sans le construire.** Les cinq tranchées
+(Tabata, Komagome, Sugamo, Mejiro, Meguro) et Nippori ont leur billetterie
+**au-dessus** des voies, sur le bâtiment qui enjambe - c'est ce que montre le
+plan de Mejiro, et c'est l'inverse d'une gare de viaduc. La donnée le dit, la
+marche le supporte, mais la volée MONTANTE reste à dessiner : `built` le déclare
+faux plutôt que de laisser croire. Le découpage complet est dans
+`docs/STATION_INTERIOR.md`.
+
+### Ce qu'il y a dans le hall
+
+Un hall vide n'est pas un hall. Une gare japonaise est **saturée**, et c'est
+cette saturation qui la fait reconnaître : `data/stationInterior` range donc le
+mobilier le long des deux parois, zone par zone, et
+`three/station/Fixtures` le dessine — la même liste que la marche contourne.
+
+Ce qui est en **zone payante** ne peut pas se retrouver en zone libre, et
+réciproquement : l'ajusteur de fin de course (精算機, jaune, pour qu'on le
+trouve sans lire) est derrière les portillons ; les distributeurs de titres
+(券売機), les consignes, le konbini, le guichet et le tampon sont devant. Un
+distributeur de titres derrière les portillons ne servirait à personne.
+
+**L'affluence commande la liste.** Une gare à 0,55 — Uguisudani — n'a ni
+konbini, ni guichet, ni consigne : deux distributeurs, un banc, une poubelle de
+tri, un plan. Shinjuku a tout. Et la largeur tranche en dernier : un konbini
+fait 3,20 m de fond, et le moteur le refuse plutôt que d'étrangler à moins de
+deux mètres le passage du milieu.
+
+**Un meuble se reconnaît à sa silhouette, pas à sa texture.** Une batterie de
+券売機 se lit à son bandeau vert continu et à ses écrans inclinés ; une consigne
+à sa trame de portes carrées numérotées, avec sa borne de paiement plus haute à
+un bout ; un konbini à sa devanture vitrée pleine hauteur sous une enseigne
+allumée, gondoles et vitrine réfrigérée visibles au travers. C'est la règle qui
+a fait refaire le **kiosque du quai** : c'était une boîte blanche de 2,50 × 4,80
+avec une affiche collée sur un flanc, c'est maintenant deux comptoirs ouverts
+sous un auvent, des présentoirs à journaux et magazines, une armoire réfrigérée
+et un bandeau d'enseigne qui affiche ses prix.
+
+### 駅スタンプ
+
+Le tampon de gare est le détail que les voyageurs viennent chercher, et il ne se
+paramètre pas. Sa table est le premier meuble qu'on trouve en sortant des
+portillons — c'est là qu'il est en vrai, près de la fenêtre du bureau — avec son
+plateau incliné, son encreur, son tampon à poignée de bois et le cahier d'essai
+ouvert, deux empreintes déjà prises dessus.
+
+**Trente empreintes, une par gare.** La composition ne change jamais — double
+cercle, motif au centre, nom de la gare en haut, code JY et 記念スタンプ en bas,
+à l'encre violet-rouge — et c'est justement cette constance qui fait qu'on les
+collectionne. Huit motifs tournent (la halle de brique, le chien, le torii, la
+tour, le tram, la lanterne, le pont-concours, le faisceau de voies) et le
+cartouche fait le reste : le motif dit le quartier, le texte dit la gare.
+
+### Les distributeurs, tous
+
+`textures/vending` savait faire les boissons — trois enseignes froides, une
+chaude, une à sachets. Deux familles s'y ajoutent, sur la même caisse creusée et
+au même coût : le **bac à glaces** (アイス), bleu givré, dont les pots sont deux
+fois plus larges que hauts, et la machine à **nouilles instantanées** (カップめん)
+dont les pots sont tronconiques sous un couvercle d'aluminium. Deux silhouettes
+qu'on distingue à dix mètres sans lire une lettre — c'est tout ce qu'on demande
+à une vitrine.
+
+### Les piliers, et la trame
+
+Un pilier de quai était une boîte de 30 × 30 avec une bague verte. Il a
+maintenant un **socle** de béton plus large que le fût - sans lui le poteau
+semble posé sur la dalle comme un meuble - et des **cornières d'inox** sur ses
+quatre arêtes jusqu'à 1,60 m. Ces cornières existent parce qu'on cogne les
+valises dedans, et ce sont elles qui attrapent la lumière rasante d'un quai : un
+fût nu reste un aplat gris quelle que soit l'heure. La descente d'eau, qui
+descendait jusqu'à la dalle, s'arrête maintenant **sur** ce socle, comme toute
+descente d'eau sur son ouvrage de pied.
+
+Le hall a sa propre trame : des **pilastres engagés** dans les deux parois, à
+5,20 m d'entraxe. Elle est calculée **avant** le mobilier, comme au quai — un
+distributeur l'esquive, une devanture de plus de trois mètres l'enjambe et
+l'absorbe (le poteau passe derrière la vitrine, comme en vrai), et la travée des
+portillons en est exclue, parce qu'elle est tenue par ses propres joues.
+
+C'est cette trame qui porte les affiches : une par pilastre sur deux. C'est là
+qu'un caisson se pose dans une gare — sur la face d'un poteau, pas en plein mur.
+
+### ecute, atré
+
+Une galerie de gare n'est pas un konbini plus long. Elle s'ouvre par des
+**baies** — trois travées vitrées séparées par des trumeaux — au lieu d'une
+seule devanture, et son bandeau est long, bas, en bas-de-casse fine, avec le nom
+de la gare à côté de la marque : `ecute 上野`, `atré 恵比寿`. Une galerie
+appartient à sa gare.
+
+Sept gares en déclarent une, et **la liste est prudente et incomplète à
+dessein** : n'y figurent que celles dont l'enseigne est établie. Une gare absente
+n'affirme pas qu'elle n'a rien — elle affirme qu'on ne l'a pas relevé, ce qui
+n'est pas la même chose et se corrige ligne à ligne. Tabata, elle, la déclare et
+ne l'obtient pas : 3,60 m de fond dans un hall de 5,50 m ne laisseraient plus
+deux mètres de passage, et c'est la règle du passage libre qui tranche.
+
+Le découpage complet du garnissage est dans `docs/STATION_DETAIL.md`.
 
 ### La signalétique
 

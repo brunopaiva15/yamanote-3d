@@ -18,12 +18,24 @@
 
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
-import { PLATFORM_TOP, PSD_X } from '../data/stationGeometry';
+import {
+  DESCENT_LEN,
+  DESCENT_LOWER_T,
+  descentFloorY,
+  PLATFORM_TOP,
+  PSD_X,
+  STAIR_WALK_HALF_X,
+} from '../data/stationGeometry';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import { platformFlip } from './playerFrame';
-import { runtime, type PlayerFrame } from './runtime';
-import { placementFor, stairwellAt } from './stationPlacement';
+import { runtime, type PlayerFrame, type PlayerLevel } from './runtime';
+import {
+  placementFor,
+  stairTopZ,
+  stairwellAt,
+  type StationPlacement,
+} from './stationPlacement';
 
 /**
  * Sens du repère de marche : `u` est compté positivement vers le quai.
@@ -74,12 +86,18 @@ export interface PortalInfo {
 interface Region {
   frame: PlayerFrame;
   y: number;
+  /**
+   * Étage atteint. Il ne change que dans une trémie - le seul endroit où les
+   * deux sols n'en font qu'un - et c'est `resolveMove` qui l'entérine, une fois
+   * le pas accepté.
+   */
+  level: PlayerLevel;
 }
 
-const CAR_REGION: Region = { frame: 'car', y: 0 };
+const CAR_REGION: Region = { frame: 'car', y: 0, level: 'platform' };
 // Le quai n'est plus plat : on descend quelques marches dans les trémies. La
 // région est donc reconstruite à chaque test plutôt que constante.
-const PLATFORM_REGION: Region = { frame: 'platform', y: PLATFORM_TOP };
+const PLATFORM_REGION: Region = { frame: 'platform', y: PLATFORM_TOP, level: 'platform' };
 
 // --- Prédicats ----------------------------------------------------------
 
@@ -184,29 +202,87 @@ function platformZ(w: number): number {
 }
 
 /**
- * Altitude du sol du quai sous (u, w), ou null si l'endroit n'est pas
- * praticable. Les trémies d'escalier sont testées EN PREMIER : leur emprise
- * reste un obstacle (on ne tombe pas dans le trou par le côté), mais la volée
- * elle-même se descend, marche après marche, jusqu'à la limite de zone.
+ * Altitude du sol sous (u, w) dans la volée d'une trémie, ou null.
+ *
+ * La trémie PRINCIPALE - celle qui mène au niveau de correspondance - se
+ * descend en entier : première volée, palier de mi-étage, seconde volée,
+ * couloir. Les autres gardent la limite de zone à cinq marches : leur couloir
+ * est borgne, et s'y enfoncer ne mènerait qu'à un mur, deux mètres plus bas.
  */
-function platformFloorY(u: number, w: number): number | null {
+function stairFloorAt(p: StationPlacement, u: number, localZ: number): Region | null {
+  const main = p.mainStair;
+  if (p.interior.built && Math.abs(u - main.x) <= STAIR_WALK_HALF_X) {
+    const t = localZ - stairTopZ(main);
+    if (t >= 0 && t <= DESCENT_LEN) {
+      // L'étage bascule au passage sous le linteau, à mi-descente : au-dessus
+      // on est encore de la gare du haut, au-dessous on n'en revient que par
+      // ces mêmes marches. C'est le seul point de bascule des deux étages.
+      const level: PlayerLevel = t > DESCENT_LOWER_T ? 'concourse' : 'platform';
+      return { frame: 'platform', y: PLATFORM_TOP + descentFloorY(t), level };
+    }
+  }
+  const hit = stairwellAt(p, u, localZ);
+  return hit ? { frame: 'platform', y: PLATFORM_TOP + hit.y, level: 'platform' } : null;
+}
+
+/**
+ * Altitude du sol du niveau de correspondance sous (u, localZ), ou null.
+ *
+ * Le hall est un seul rectangle, du débouché du couloir au fond de la zone
+ * libre : la ligne de portillons n'y fait pas de coupure, ce sont ses BORNES
+ * qui barrent, et elles sont dans `obstacles`. Une baie franchissable est donc
+ * exactement le vide entre deux bornes - celui-là même que le rendu dessine.
+ */
+function concourseFloorY(p: StationPlacement, u: number, localZ: number): number | null {
+  const it = p.interior;
+  if (!it.built) return null;
+  if (u < it.paid.x0 || u > it.paid.x1) return null;
+  if (localZ < it.paid.z0 || localZ > it.free.z1) return null;
+  for (const o of it.obstacles) {
+    if (u >= o.x0 && u <= o.x1 && localZ >= o.z0 && localZ <= o.z1) return null;
+  }
+  return it.floorY;
+}
+
+/**
+ * Région de la GARE sous (u, w), ou null si l'endroit n'est pas praticable.
+ *
+ * Trois sols peuvent se présenter, et l'ordre du test n'est pas indifférent :
+ *
+ *   1. la trémie, d'abord - son emprise reste un obstacle (on ne tombe pas
+ *      dans le trou par le côté), mais la volée elle-même se descend ;
+ *   2. le hall, si l'on est DÉJÀ descendu - c'est là que l'étage courant
+ *      tranche : à l'aplomb du hall, il y a aussi la dalle du quai, et rien
+ *      dans les coordonnées ne dit sur laquelle des deux on marche ;
+ *   3. le quai, sinon.
+ */
+function stationRegionAt(u: number, w: number): Region | null {
   const p = currentPlatform();
   const localZ = platformZ(w);
-  const stair = stairwellAt(p, u, localZ);
-  if (stair) return PLATFORM_TOP + stair.y;
+  const stair = stairFloorAt(p, u, localZ);
+  if (stair) return stair;
+  if (runtime.playerLevel === 'concourse') {
+    const y = concourseFloorY(p, u, localZ);
+    return y === null ? null : { frame: 'platform', y: PLATFORM_TOP + y, level: 'concourse' };
+  }
   if (u < p.walkX0 || u > p.walkX1) return null;
   if (Math.abs(localZ) > p.walkHalfZ) return null;
   for (const o of p.obstacles) {
     if (Math.abs(u - o.x) <= o.halfX && Math.abs(localZ - o.z) <= o.halfZ) return null;
   }
-  return PLATFORM_TOP;
+  return PLATFORM_REGION;
 }
 
 function regionAt(u: number, w: number): Region | null {
-  if (inCar(u, w)) return CAR_REGION;
-  const y = platformFloorY(u, w);
-  if (y !== null) return y === PLATFORM_TOP ? PLATFORM_REGION : { frame: 'platform', y };
-  if (inPortal(u, w)) return u < PORTAL_MID_U ? CAR_REGION : PLATFORM_REGION;
+  // Sous le quai, il n'y a ni rame ni seuil de porte : la question ne se pose
+  // qu'à l'étage du quai, et la poser quand même ferait remonter d'un étage
+  // quiconque passe à l'aplomb d'une porte ouverte.
+  if (runtime.playerLevel === 'platform' && inCar(u, w)) return CAR_REGION;
+  const station = stationRegionAt(u, w);
+  if (station) return station;
+  if (runtime.playerLevel === 'platform' && inPortal(u, w)) {
+    return u < PORTAL_MID_U ? CAR_REGION : PLATFORM_REGION;
+  }
   return null;
 }
 
@@ -221,7 +297,7 @@ export function frameAt(x: number, z: number): PlayerFrame | null {
 /** Hauteur du sol sous une position monde (0 dans le wagon, -0,06 sur le quai). */
 export function groundY(x: number, z: number): number {
   const u = walkFlip() * x;
-  if (u > ALCOVE_U && u < PLATFORM_U0) {
+  if (runtime.playerLevel === 'platform' && u > ALCOVE_U && u < PLATFORM_U0) {
     // Dans le seuil : la marche de 6 cm se descend progressivement.
     const t = (u - ALCOVE_U) / (PLATFORM_U0 - ALCOVE_U);
     return THREE.MathUtils.lerp(0, PLATFORM_TOP, t);
@@ -242,16 +318,27 @@ export function resolveMove(pos: THREE.Vector3, dx: number, dz: number): void {
 
   let outU = nu;
   let outW = nw;
-  if (!regionAt(nu, nw)) {
-    if (regionAt(nu, w)) outW = w;
-    else if (regionAt(u, nw)) outU = u;
+  let region = regionAt(nu, nw);
+  if (!region) {
+    // Glissement le long de l'obstacle : on garde celui des deux axes qui
+    // passe encore. Le pas retenu est celui dont on ENTÉRINE l'étage.
+    region = regionAt(nu, w);
+    if (region) outW = w;
     else {
-      outU = u;
-      outW = w;
+      region = regionAt(u, nw);
+      if (region) outU = u;
+      else {
+        outU = u;
+        outW = w;
+        region = regionAt(u, w);
+      }
     }
   }
   pos.x = side * outU;
   pos.z = outW;
+  // L'étage ne change que dans une trémie, et seulement une fois le pas
+  // accepté : un pas refusé ne fait pas changer de gare d'étage.
+  if (region) runtime.playerLevel = region.level;
 }
 
 /**
@@ -262,6 +349,10 @@ export function snapInside(pos: THREE.Vector3): void {
   const side = walkFlip();
   const u = side * pos.x;
   if (regionAt(u, pos.z)) return;
+  // On repart de l'allée du wagon : c'est le seul endroit dont on soit sûr, et
+  // il est à l'étage du quai. Le rattrapage ramène donc aussi l'étage, sans
+  // quoi on se retrouverait à bord en cherchant le sol du hall.
+  runtime.playerLevel = 'platform';
   pos.x = side * THREE.MathUtils.clamp(u, -AISLE_U, AISLE_U);
   pos.z = THREE.MathUtils.clamp(pos.z - runtime.trainZ, -CAR_HALF_Z, CAR_HALF_Z) + runtime.trainZ;
 }

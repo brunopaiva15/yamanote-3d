@@ -325,3 +325,40 @@ export function stairFloorY(t: number, maxSteps = STAIR_STEPS): number {
   const steps = Math.min(maxSteps, Math.max(0, t / STAIR_GOING - 0.5));
   return -steps * STAIR_RISE;
 }
+
+/**
+ * `t` du nez de l'emprise auquel commence la SECONDE volée.
+ *
+ * La première s'arrête sur un palier de mi-étage - c'est ce palier qui donne la
+ * hauteur libre sous le linteau -, et la seconde repart de son nez, qui est au
+ * nu du linteau (STAIR_LOWER_Z0). Les deux volées se mesurent dans le même `t`,
+ * compté depuis le nez du percement, à 2,60 m en amont du centre de la trémie.
+ */
+export const DESCENT_LOWER_T = STAIR_LOWER_Z0 + STAIR_HALF_Z;
+
+/**
+ * Le profil COMPLET de la descente : première volée, palier de mi-étage,
+ * seconde volée, puis le couloir de plain-pied.
+ *
+ * `stairFloorY` s'arrête au palier, parce que c'était tout ce qui se descendait :
+ * le joueur était bloqué cinq marches plus haut et les voyageurs s'effaçaient
+ * sous le linteau. Dès qu'on va jusqu'au bout, il faut la suite - et elle
+ * s'écrit ici, une fois, avec la même convention que la première volée (la
+ * ligne des nez relevée d'une demi-contremarche, qui passe par le milieu de
+ * chaque giron) plutôt qu'en marches, qui ferait tomber le marcheur de dix-sept
+ * centimètres tous les trente et un.
+ */
+export function descentFloorY(t: number): number {
+  if (t <= DESCENT_LOWER_T) return stairFloorY(t, STAIR_STEPS);
+  const steps = Math.min(
+    STAIR_LOWER_STEPS,
+    Math.max(0, (t - DESCENT_LOWER_T) / STAIR_GOING - 0.5),
+  );
+  return STAIR_LANDING_Y - steps * STAIR_RISE;
+}
+
+/**
+ * Longueur de la descente, du nez du percement au fond du couloir bas. Au-delà,
+ * on n'est plus dans la trémie : on est dans la gare (data/stationInterior).
+ */
+export const DESCENT_LEN = STAIR_LOWER_END + STAIR_HALF_Z;

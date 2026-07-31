@@ -20,6 +20,9 @@ import * as THREE from 'three';
 import { DOOR_SIDE, STATIONS } from '../data/stations';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
+import { input } from '../systems/input';
+import { placementFor } from '../systems/stationPlacement';
+import { psdGates } from '../three/station/psdLayout';
 import { freezeWeather, weather } from '../systems/weather';
 import { seasonNow } from '../systems/season';
 
@@ -244,6 +247,66 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   };
 
   w.__probeName = () => STATIONS[useStore.getState().index].romaji;
+
+  /**
+   * Marcher, réellement, pendant `ms` millisecondes.
+   *
+   * Poser la caméra à une cote choisie ne prouve rien : c'est justement ce que
+   * fait le reste de cette sonde, et c'est pour cela qu'elle ne voit pas ce qui
+   * ARRÊTE le pas. Il n'y a qu'une façon de vérifier qu'on descend vraiment
+   * dans une gare - descendre - et il n'y a qu'une entrée pour cela, celle du
+   * joueur. On la pilote donc telle quelle : les mêmes touches, le même regard,
+   * la même boucle.
+   *
+   * `yaw` est un delta de regard en pixels, appliqué d'un coup avant de partir.
+   */
+  w.__probeWalk = (ms: number, keys: string[] = ['KeyW'], yaw = 0) =>
+    new Promise<void>((resolve) => {
+      input.lookDX += yaw;
+      for (const k of keys) input.keys.add(k);
+      setTimeout(() => {
+        for (const k of keys) input.keys.delete(k);
+        resolve();
+      }, ms);
+    });
+
+  /**
+   * L'itinéraire qui mène du quai au hall, en repère MONDE : le nez de la
+   * trémie principale, le fond de son couloir, la zone payante, le portillon
+   * large, la zone libre. C'est ce que le pilote suit pour aller voir sur
+   * pièces - lu dans les données de la gare, jamais recopié à la main.
+   */
+  w.__probeInterior = () => {
+    const index = useStore.getState().platformIndex;
+    const flip = DOOR_SIDE[index];
+    const p = placementFor(index, psdGates());
+    const it = p.interior;
+    const stair = p.mainStair;
+    const wide = it.gate.passages[it.gate.passages.length - 1];
+    const midX = (it.paid.x0 + it.paid.x1) / 2;
+    const point = (x: number, z: number) => [flip * x, flip * z];
+    // Où l'on se met, et ce qu'on regarde : les deux, sinon on se retrouve le
+    // nez sur le meuble qu'on voulait cadrer.
+    const legs: [string, number, number, number, number][] = [
+      ['01-tremie', ...point(stair.x, stair.z - 3), ...point(stair.x, stair.z + 6)],
+      ['02-couloir', ...point(stair.x, stair.z + 8), ...point(midX, it.paid.z1)],
+      ['03-zone-payante', ...point(midX, it.paid.z0 + 3), ...point(it.paid.x1, it.paid.z1 - 2)],
+      ['04-portillon', ...point(wide.x, it.paid.z1 - 3), ...point(wide.x, it.free.z0 + 4)],
+      ['05-zone-libre', ...point(midX, it.free.z0 + 2.5), ...point(it.free.x1, it.free.z0 + 9)],
+      ['06-billetterie', ...point(midX, it.free.z0 + 8), ...point(it.free.x0, it.free.z0 + 5)],
+      ['07-sorties', ...point(midX, it.free.z1 - 7), ...point(midX, it.free.z1 + 4)],
+    ].map((r) => r as [string, number, number, number, number]);
+    return { flip, placement: legs };
+  };
+
+  /** Où en est le joueur : repère, étage, position de ses pieds. */
+  w.__probeWhere = () => ({
+    frame: runtime.playerFrame,
+    level: runtime.playerLevel,
+    x: +runtime.stanceX.toFixed(2),
+    y: +runtime.playerY.toFixed(2),
+    z: +runtime.stanceZ.toFixed(2),
+  });
 
   // Origines des trémies, en repère MONDE. C'est le seul endroit du décor
   // qu'on ne peut pas juger depuis la rame - il faut y poser l'œil - et sa

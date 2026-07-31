@@ -59,8 +59,45 @@ export function Player() {
   // la marche reste le seul moyen en jeu.
   useEffect(() => {
     if (!import.meta.env.DEV || typeof window === 'undefined') return;
-    (window as unknown as Record<string, unknown>).__crossPortal = () =>
-      crossNearestPortal(pos.current);
+    const w = window as unknown as Record<string, unknown>;
+    w.__crossPortal = () => crossNearestPortal(pos.current);
+    // Tourner le regard vers un point du MONDE, pour pouvoir marcher dessus.
+    // Vérifier qu'on descend vraiment dans une gare suppose d'y aller à pied
+    // (voir __probeWalk), et l'on ne va nulle part sans savoir se diriger. Le
+    // cap est ici et pas dans la sonde : c'est le seul endroit qui tient le
+    // lacet de la caméra. Avant : forward = (-sin θ, -cos θ).
+    w.__lookAt = (x: number, z: number) => {
+      yaw.current = Math.atan2(pos.current.x - x, pos.current.z - z);
+    };
+    /**
+     * Marcher jusqu'à un point du monde, PAR LA MARCHE, mais sans attendre les
+     * images.
+     *
+     * Piloter les touches ne marche pas ici : sous SwiftShader la scène tourne
+     * à une image par seconde et le pas est plafonné à 0,05 s d'avance par
+     * image, soit neuf centimètres par seconde - quarante mètres de couloir
+     * prendraient sept minutes. On refait donc la boucle de marche à la main,
+     * au pas du jeu, avec le MÊME `resolveMove` : c'est bien la marche qui est
+     * vérifiée, y compris le changement d'étage, seule l'horloge change.
+     *
+     * Rend le nombre de pas réellement faits : s'il sature, c'est qu'on a buté.
+     */
+    w.__probeGo = (x: number, z: number, maxSteps = 4000) => {
+      const step = CONFIG.walkSpeed / 60;
+      let n = 0;
+      for (; n < maxSteps; n++) {
+        const dx = x - pos.current.x;
+        const dz = z - pos.current.z;
+        const d = Math.hypot(dx, dz);
+        if (d < 0.2) break;
+        const k = Math.min(step, d) / d;
+        resolveMove(pos.current, dx * k, dz * k);
+      }
+      runtime.stanceX = pos.current.x;
+      runtime.stanceZ = pos.current.z;
+      pos.current.y = groundY(pos.current.x, pos.current.z) + CONFIG.eyeHeight;
+      return { steps: n, x: +pos.current.x.toFixed(2), z: +pos.current.z.toFixed(2) };
+    };
   }, []);
 
   // --- Entrées : clavier + souris + tactile ---
