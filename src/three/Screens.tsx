@@ -123,6 +123,13 @@ function fitText(g: CanvasRenderingContext2D, text: string, maxWidth: number, ba
 const AD_LOOP_FIRST_SEED = 300;
 const AD_LOOP_COUNT = 120;
 
+// Dalle unique au-dessus de la porte d'intercirculation, aux deux abouts du
+// wagon. Sur la rame réelle c'est un écran de plus de la boucle publicitaire -
+// jamais d'info voyageurs. Bande de graines distincte (500+) pour qu'on ne
+// retrouve pas, en se retournant, le spot déjà affiché au-dessus des portes.
+const END_AD_FIRST_SEED = 500;
+const END_AD_COUNT = 60;
+
 function drawLeftAd(s: ReturnType<typeof makeScreen>, seed: number): void {
   const { g, w, h } = s;
   drawAdInto(g, w, h, seed);
@@ -1502,8 +1509,12 @@ export function Screens() {
   // diffère physiquement d'un côté à l'autre de la rame.
   const rightA = useMemo(() => makeScreen(768, 384), []);
   const rightB = useMemo(() => makeScreen(768, 384), []);
+  // Dalle des abouts : une seule texture pour les deux extrémités, on n'en voit
+  // jamais deux à la fois de près.
+  const end = useMemo(() => makeScreen(512, 288), []);
   const lastKey = useRef('');
   const lastAd = useRef(-1);
+  const lastEndAd = useRef(-1);
   const acc = useRef(0);
   /** Vrai tant que les dalles sont éteintes : sert à forcer le redessin au retour. */
   const wasDark = useRef(false);
@@ -1522,6 +1533,10 @@ export function Screens() {
     () => new THREE.MeshBasicMaterial({ map: rightB.texture, toneMapped: false }),
     [rightB.texture],
   );
+  const endMat = useMemo(
+    () => new THREE.MeshBasicMaterial({ map: end.texture, toneMapped: false }),
+    [end.texture],
+  );
 
   useFrame((_, dt) => {
     // Une dalle LCD n'a pas de demi-teinte : son rétroéclairage tient ou il ne
@@ -1534,6 +1549,7 @@ export function Screens() {
     leftMat.color.setScalar(lit);
     rightMatA.color.setScalar(lit);
     rightMatB.color.setScalar(lit);
+    endMat.color.setScalar(lit);
     if (power <= LCD_CUTOFF) {
       wasDark.current = true;
       return;
@@ -1548,7 +1564,7 @@ export function Screens() {
       if (power < LCD_READY) {
         if (!blanked.current) {
           blanked.current = true;
-          for (const s of [left, rightA, rightB]) {
+          for (const s of [left, rightA, rightB, end]) {
             s.g.fillStyle = '#05070a';
             s.g.fillRect(0, 0, s.w, s.h);
             s.texture.needsUpdate = true;
@@ -1561,6 +1577,7 @@ export function Screens() {
       blanked.current = false;
       lastKey.current = '';
       lastAd.current = -1;
+      lastEndAd.current = -1;
       // Le contenu n'arrive pas avec la lumière : on laisse au panneau son
       // quart de seconde d'amorçage, dalle noire allumée.
       acc.current = 0;
@@ -1578,6 +1595,15 @@ export function Screens() {
       lastAd.current = adSeed;
       drawLeftAd(left, adSeed);
       left.texture.needsUpdate = true;
+    }
+
+    // Dalles des abouts : même boucle publicitaire, mais décalée d'un tiers de
+    // spot pour qu'elles ne basculent pas en même temps que celles des portes.
+    const endSeed = END_AD_FIRST_SEED + (Math.floor(runtime.clockMin * 4 + 2) % END_AD_COUNT);
+    if (endSeed !== lastEndAd.current) {
+      lastEndAd.current = endSeed;
+      drawLeftAd(end, endSeed);
+      end.texture.needsUpdate = true;
     }
 
     // Écran droit : machine à états calée sur la phase du cycle.
@@ -1769,6 +1795,28 @@ export function Screens() {
           </group>
         )),
       )}
+
+      {/* Dalle unique au-dessus de la porte d'intercirculation, aux deux
+          abouts du wagon : c'est l'écran qu'on a en face de soi quand on est
+          adossé à la paroi d'about, et le seul qu'on voie depuis le fond de la
+          travée prioritaire. Format 16:9, encastré dans l'imposte rose. */}
+      {sides.map((e) => (
+        <group
+          key={`endscr${e}`}
+          position={[0, 2.12, e * (CONFIG.carHalfLength - 0.045)]}
+          rotation={[0, e === 1 ? Math.PI : 0, 0]}
+        >
+          <mesh position={[0, 0, -0.032]} material={surroundMat}>
+            <boxGeometry args={[0.68, 0.4, 0.064]} />
+          </mesh>
+          <mesh position={[0, 0, -0.012]} material={frameMat}>
+            <boxGeometry args={[0.6, 0.345, 0.03]} />
+          </mesh>
+          <mesh position={[0, 0, 0.004]} material={endMat}>
+            <planeGeometry args={[0.56, 0.315]} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }

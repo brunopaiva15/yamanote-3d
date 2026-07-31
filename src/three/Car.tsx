@@ -124,6 +124,43 @@ function buildEndFloors(): FloorStrip[] {
 
 const END_FLOORS = buildEndFloors();
 
+// --- Porte d'intercirculation ---
+// Ce n'était qu'une plaque d'acier posée devant un trou, avec un cadre plaqué
+// dessus en guise de hublot : ça se lisait comme un décalque. Le vantail est
+// donc désormais un panneau PERCÉ (le hublot a de l'épaisseur, donc une
+// tranche visible), tenu dans un dormant en alu brossé - deux montants, un
+// linteau, un seuil - comme n'importe quelle porte d'about de rame.
+const GANGWAY_TOP = 1.83; // hauteur de l'ouverture, sous l'imposte
+const GANGWAY_JAMB = 0.05; // section du dormant
+const GANGWAY_LEAF_W = GANGWAY_HALF * 2 - GANGWAY_JAMB * 2;
+const GANGWAY_LEAF_H = GANGWAY_TOP - GANGWAY_JAMB;
+const GANGWAY_LEAF_T = 0.05;
+// Hublot : haut et étroit, à coins largement adoucis comme les baies latérales.
+const GANGWAY_WIN_W = 0.5;
+const GANGWAY_WIN_H = 0.9;
+const GANGWAY_WIN_Y = 1.23; // axe du hublot, au-dessus du regard assis
+const GANGWAY_WIN_R = 0.13;
+
+// Vantail percé de son hublot, construit à plat (x = largeur, y = hauteur) et
+// extrudé sur l'épaisseur, recentré sur elle. L'origine est au milieu du
+// vantail, pas au sol : le mesh se pose donc à GANGWAY_LEAF_H / 2.
+function makeGangwayLeafGeometry(): THREE.ExtrudeGeometry {
+  const outer = new THREE.Shape();
+  const hw = GANGWAY_LEAF_W / 2;
+  const hh = GANGWAY_LEAF_H / 2;
+  outer.moveTo(-hw, -hh);
+  outer.lineTo(hw, -hh);
+  outer.lineTo(hw, hh);
+  outer.lineTo(-hw, hh);
+  outer.closePath();
+  outer.holes.push(
+    roundedRect(GANGWAY_WIN_W, GANGWAY_WIN_H, GANGWAY_WIN_R, 0, GANGWAY_WIN_Y - hh),
+  );
+  const geo = new THREE.ExtrudeGeometry(outer, { depth: GANGWAY_LEAF_T, bevelEnabled: false });
+  geo.translate(0, 0, -GANGWAY_LEAF_T / 2);
+  return geo;
+}
+
 // Bandeau de paroi percé d'une baie à coins arrondis, pour un segment donné.
 // Construit à plat (x = longueur, y = hauteur) puis redressé à l'usage par une
 // rotation d'un quart de tour ; l'extrusion est recentrée sur l'épaisseur.
@@ -179,10 +216,13 @@ export function Car() {
     [],
   );
 
-  // Encadrement du hublot de la porte d'intercirculation.
+  const gangwayLeafGeo = useMemo(makeGangwayLeafGeometry, []);
+
+  // Joint d'encadrement du hublot : une simple couronne posée sur la face
+  // intérieure du vantail, qui masque la jonction vitre/tôle.
   const gangwayFrameGeo = useMemo(() => {
-    const frame = roundedRect(0.66, 1.15, 0.11);
-    frame.holes.push(roundedRect(0.56, 1.05, 0.09));
+    const frame = roundedRect(GANGWAY_WIN_W + 0.05, GANGWAY_WIN_H + 0.05, GANGWAY_WIN_R + 0.025);
+    frame.holes.push(roundedRect(GANGWAY_WIN_W, GANGWAY_WIN_H, GANGWAY_WIN_R));
     return new THREE.ShapeGeometry(frame, 16);
   }, []);
 
@@ -230,6 +270,16 @@ export function Car() {
         roughness: 0.82,
       }),
       steel: new THREE.MeshStandardMaterial({ color: '#c8ccd0', roughness: 0.38, metalness: 0.85 }),
+      // Dormant de la porte d'about : alu brossé, mat et clair - il doit se
+      // détacher du vantail sans faire miroir comme les mains courantes.
+      gangwayFrame: new THREE.MeshStandardMaterial({ color: '#b9bec3', roughness: 0.46, metalness: 0.6 }),
+      // Vantail : tôle laquée satinée, très légèrement plus chaude que les
+      // parois, pour qu'on la lise comme une porte et non comme un panneau.
+      gangwayLeaf: new THREE.MeshStandardMaterial({
+        map: makeSurfaceTexture('#e8e6df'),
+        roughness: 0.5,
+        metalness: 0.25,
+      }),
       glass: new THREE.MeshStandardMaterial({
         color: '#cfd8da',
         transparent: true,
@@ -486,38 +536,82 @@ export function Car() {
               </mesh>
             </group>
           ))}
-          {/* Interphone SOS, au-dessus de la porte côté gauche */}
-          <mesh position={[-0.5, 1.92, e * (HL - 0.056)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.sos}>
+          {/* Interphone SOS, au-dessus de la porte côté gauche. Calé au-delà de
+              la barre verticale (x = -0,52) : à -0,50 le poteau lui passait en
+              plein travers. */}
+          <mesh position={[-0.64, 1.92, e * (HL - 0.056)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.sos}>
             <planeGeometry args={[0.12, 0.15]} />
           </mesh>
           {/* Plaque de numéro de voiture */}
           <mesh position={[0.95, 2.12, e * (HL - 0.056)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.carNumber}>
             <planeGeometry args={[0.32, 0.072]} />
           </mesh>
-          {/* Coffret d'extincteur, au sol contre la porte */}
-          <mesh position={[-0.62, 0.62, e * (HL - 0.09)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.extinguisher}>
+          {/* Coffret d'extincteur, au sol contre la porte. Lui aussi décalé
+              au-delà de la barre : le poteau le traversait de haut en bas. */}
+          <mesh position={[-0.82, 0.62, e * (HL - 0.09)]} rotation={[0, e === 1 ? Math.PI : 0, 0]} material={materials.extinguisher}>
             <boxGeometry args={[0.24, 0.62, 0.07]} />
           </mesh>
           {/* Imposte au-dessus de la porte d'intercirculation : un centimètre
               plus large de chaque côté, donc noyée dans les parois roses qui
               l'encadrent. À 0,84 exactement, ses deux flancs tombaient dans le
-              plan de ceux de la porte. */}
-          <mesh position={[0, 2.05, e * HL]} material={materials.pinkPartition}>
-            <boxGeometry args={[0.86, 0.5, 0.09]} />
+              plan de ceux de la porte. Elle démarre exactement au linteau du
+              dormant - avant, elle chevauchait la porte de dix centimètres. */}
+          <mesh position={[0, (GANGWAY_TOP + H) / 2, e * HL]} material={materials.pinkPartition}>
+            <boxGeometry args={[0.86, H - GANGWAY_TOP, 0.09]} />
           </mesh>
-          <mesh position={[0, 0.95, e * HL - e * 0.01]} material={materials.steel}>
-            <boxGeometry args={[0.84, 1.9, 0.06]} />
+
+          {/* Dormant : deux montants et un linteau, affleurant les parois. */}
+          {([-1, 1] as const).map((sx) => (
+            <mesh
+              key={`gjamb${sx}`}
+              position={[sx * (GANGWAY_HALF - GANGWAY_JAMB / 2), GANGWAY_TOP / 2, e * HL]}
+              material={materials.gangwayFrame}
+            >
+              <boxGeometry args={[GANGWAY_JAMB, GANGWAY_TOP, 0.1]} />
+            </mesh>
+          ))}
+          <mesh
+            position={[0, GANGWAY_TOP - GANGWAY_JAMB / 2, e * HL]}
+            material={materials.gangwayFrame}
+          >
+            <boxGeometry args={[GANGWAY_HALF * 2, GANGWAY_JAMB, 0.1]} />
           </mesh>
-          {/* Encadrement du hublot, mêmes angles adoucis que les vitres de
-              porte : sans lui la porte d'intercirculation reste une plaque. */}
+          {/* Seuil : la plaque d'alu qu'on enjambe en passant d'un wagon à
+              l'autre, et la seule chose qui coupait franchement le sol rouge. */}
+          <mesh position={[0, 0.011, e * HL]} material={materials.gangwayFrame}>
+            <boxGeometry args={[GANGWAY_HALF * 2, 0.022, 0.16]} />
+          </mesh>
+
+          {/* Vantail percé de son hublot */}
+          <mesh
+            geometry={gangwayLeafGeo}
+            position={[0, GANGWAY_LEAF_H / 2, e * HL]}
+            material={materials.gangwayLeaf}
+          />
+          {/* Plinthe de protection, en bas du vantail */}
+          <mesh
+            position={[0, 0.1, e * (HL - GANGWAY_LEAF_T / 2 - 0.004)]}
+            material={materials.gangwayFrame}
+          >
+            <boxGeometry args={[GANGWAY_LEAF_W, 0.16, 0.008]} />
+          </mesh>
+          {/* Poignée verticale encastrée, côté ouvrant */}
+          <mesh
+            position={[0.3, 1.05, e * (HL - GANGWAY_LEAF_T / 2 - 0.012)]}
+            material={materials.steel}
+          >
+            <boxGeometry args={[0.035, 0.26, 0.024]} />
+          </mesh>
+          {/* Joint d'encadrement du hublot, mêmes angles adoucis que les vitres
+              de porte : il masque la jonction vitre/tôle. */}
           <mesh
             geometry={gangwayFrameGeo}
-            position={[0, 1.25, e * HL - e * 0.042]}
+            position={[0, GANGWAY_WIN_Y, e * (HL - GANGWAY_LEAF_T / 2 - 0.002)]}
             rotation={[0, e === 1 ? Math.PI : 0, 0]}
             material={materials.seam}
           />
-          <mesh position={[0, 1.25, e * HL - e * 0.045]} material={materials.glass}>
-            <boxGeometry args={[0.56, 1.05, 0.02]} />
+          <mesh position={[0, GANGWAY_WIN_Y, e * HL]} material={materials.glass}>
+            <boxGeometry args={[GANGWAY_WIN_W, GANGWAY_WIN_H, 0.012]} />
           </mesh>
           {/* Barres verticales de part et d'autre de la porte d'about */}
           {[-0.52, 0.52].map((x) => (
