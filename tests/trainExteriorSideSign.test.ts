@@ -54,8 +54,10 @@ test('les afficheurs restent petits et dans les baies, loin des soufflets', () =
   assert.doesNotMatch(consistSource, /doorCenters\[0\] - 1\.55/);
 });
 
-test('le dessin reprend la nappe verte, le blanc froid et le 方面 ambre des E235', () => {
-  assert.match(textureSource, /fillStyle = '#36d34d'/);
+test('le dessin reprend la nappe verte dégradée, le blanc froid et le 方面 ambre des E235', () => {
+  assert.match(textureSource, /createLinearGradient\(0, top, 0, top \+ height\)/);
+  assert.match(textureSource, /addColorStop\(0, '#06391f'\)/);
+  assert.match(textureSource, /addColorStop\(1, '#b5ec58'\)/);
   assert.match(textureSource, /fillStyle = '#f5f7f2'/);
   assert.match(textureSource, /fillStyle = '#ffd33d'/);
   assert.match(textureSource, /fillText\('方面'/);

@@ -335,20 +335,32 @@ export function makeSideSign(
     t.fillRect(0, 0, W, H);
     t.textAlign = 'left';
     t.textBaseline = 'alphabetic';
+    const greenBand = (top: number, height: number) => {
+      // Sur la dalle réelle, le vert n'est pas un aplat : les rangées hautes
+      // restent émeraude sombre tandis que les diodes du bas tirent vers le
+      // jaune-vert, avec une zone lumineuse au milieu. Le dégradé est créé sur
+      // la toile matricielle avant agrandissement pour que chaque diode garde
+      // une couleur unique et nette.
+      const green = t.createLinearGradient(0, top, 0, top + height);
+      green.addColorStop(0, '#06391f');
+      green.addColorStop(0.38, '#159447');
+      green.addColorStop(0.72, '#66d84d');
+      green.addColorStop(1, '#b5ec58');
+      t.fillStyle = green;
+      t.fillRect(10, top, W - 20, height);
+    };
     if (view === 'line') {
       // La nappe verte de diodes allumées est caractéristique des afficheurs
       // E235 : elle reste visible sous chacune des vues, pas seulement comme
       // couleur de texte.
-      t.fillStyle = '#36d34d';
-      t.fillRect(10, 83, W - 20, 32);
+      greenBand(83, 32);
       t.fillStyle = '#f5f7f2';
       t.font = `700 72px ${JP_FONT}`;
       t.fillText('山手線', 18, 76);
       t.font = `700 31px ${JP_FONT}`;
       t.fillText('Yamanote Line', 238, 72, 258);
     } else if (view === 'japanese') {
-      t.fillStyle = '#36d34d';
-      t.fillRect(10, 75, W - 20, 40);
+      greenBand(75, 40);
       t.fillStyle = '#f5f7f2';
       fitFillText(t, destinations.map((station) => station.kanji).join('・'), 16, 64, 386, 58, '700');
       t.fillStyle = '#ffd33d';
@@ -360,8 +372,7 @@ export function makeSideSign(
       t.fillStyle = '#f5f7f2';
       fitFillText(t, next.kanji, 104, 111, 382, 48, '700');
     } else {
-      t.fillStyle = '#36d34d';
-      t.fillRect(10, 78, W - 20, 37);
+      greenBand(78, 37);
       t.fillStyle = '#ffd33d';
       t.font = `700 20px ${JP_FONT}`;
       t.fillText('Bound for', 16, 25);
