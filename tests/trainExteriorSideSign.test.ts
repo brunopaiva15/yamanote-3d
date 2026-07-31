@@ -47,8 +47,17 @@ test('un départ actualise la prochaine gare depuis store.index', () => {
 });
 
 test('les afficheurs restent petits et dans les baies, loin des soufflets', () => {
-  assert.match(consistSource, /PlaneGeometry\(0\.88, 0\.16\)/);
+  assert.match(consistSource, /RoundedBoxGeometry\(1, 0\.28, 0\.055, 3, 0\.075\)/);
+  assert.match(consistSource, /PlaneGeometry\(0\.9, 0\.2\)/);
   assert.match(consistSource, /doorCenters\[0\] \+ E235\.doorCenters\[1\]/);
   assert.match(consistSource, /doorCenters\[2\] \+ E235\.doorCenters\[3\]/);
   assert.doesNotMatch(consistSource, /doorCenters\[0\] - 1\.55/);
+});
+
+test('le dessin reprend la nappe verte, le blanc froid et le 方面 ambre des E235', () => {
+  assert.match(textureSource, /fillStyle = '#36d34d'/);
+  assert.match(textureSource, /fillStyle = '#f5f7f2'/);
+  assert.match(textureSource, /fillStyle = '#ffd33d'/);
+  assert.match(textureSource, /fillText\('方面'/);
+  assert.match(textureSource, /fillText\('Bound for'/);
 });

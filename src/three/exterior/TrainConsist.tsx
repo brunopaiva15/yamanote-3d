@@ -12,6 +12,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { DOOR_POCKET_TUCK } from '../../data/config';
 import { CONSIST, E235, LIVERY, PLAYER_CAR, carZ } from '../../data/e235';
 import { useStore } from '../../store';
@@ -246,8 +247,12 @@ function build(): Built {
   // collait aux soufflets et produisait visuellement une paire entre voitures.
   // Toutes les occurrences partagent le canvas et les deux matériaux.
   const sideSignCount = CARS * 4;
-  const signBox = instanced(new THREE.BoxGeometry(0.055, 0.23, 0.98), mats.black, sideSignCount);
-  const signFaceGeo = new THREE.PlaneGeometry(0.88, 0.16);
+  // Cadre noir aux angles très arrondis et dalle 4:1, comme le boîtier encastré
+  // visible sur les vraies E235 (et non un rectangle de signalétique de quai).
+  const signBoxGeo = new RoundedBoxGeometry(1, 0.28, 0.055, 3, 0.075);
+  signBoxGeo.rotateY(Math.PI / 2);
+  const signBox = instanced(signBoxGeo, mats.black, sideSignCount);
+  const signFaceGeo = new THREE.PlaneGeometry(0.9, 0.2);
   signFaceGeo.rotateY(Math.PI / 2);
   const signFaces = instanced(signFaceGeo, mats.sideSign, sideSignCount);
   let signIndex = 0;

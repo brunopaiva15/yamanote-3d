@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import type { LoopDirection } from '../data/platforms';
-import { JP_FONT, LED_CELL, ledMask, rng } from './procedural';
+import { fitFillText, JP_FONT, LED_CELL, ledMask, rng } from './procedural';
 import { boardDestinations, STATIONS } from '../data/stations';
 import { nextStation, wrapStation } from '../data/loop';
 import { LIVERY } from '../data/e235';
@@ -336,30 +336,42 @@ export function makeSideSign(
     t.textAlign = 'left';
     t.textBaseline = 'alphabetic';
     if (view === 'line') {
+      // La nappe verte de diodes allumées est caractéristique des afficheurs
+      // E235 : elle reste visible sous chacune des vues, pas seulement comme
+      // couleur de texte.
+      t.fillStyle = '#36d34d';
+      t.fillRect(10, 83, W - 20, 32);
       t.fillStyle = '#f5f7f2';
-      t.font = `700 58px ${JP_FONT}`;
-      t.fillText('山手線', 18, 66);
-      t.fillStyle = '#58dc70';
-      t.font = `700 34px ${JP_FONT}`;
-      t.fillText('Yamanote Line', 18, 108);
+      t.font = `700 72px ${JP_FONT}`;
+      t.fillText('山手線', 18, 76);
+      t.font = `700 31px ${JP_FONT}`;
+      t.fillText('Yamanote Line', 238, 72, 258);
     } else if (view === 'japanese') {
-      t.fillStyle = '#ff9a2e';
-      t.font = `700 42px ${JP_FONT}`;
-      t.fillText(destinations.map((station) => station.kanji).join('・'), 16, 50, W - 32);
+      t.fillStyle = '#36d34d';
+      t.fillRect(10, 75, W - 20, 40);
       t.fillStyle = '#f5f7f2';
-      t.font = `700 25px ${JP_FONT}`;
-      t.fillText('次は', 16, 99);
-      t.font = `700 42px ${JP_FONT}`;
-      t.fillText(next.kanji, 90, 103, W - 106);
+      fitFillText(t, destinations.map((station) => station.kanji).join('・'), 16, 64, 386, 58, '700');
+      t.fillStyle = '#ffd33d';
+      t.font = `700 45px ${JP_FONT}`;
+      t.fillText('方面', 408, 64, 90);
+      t.fillStyle = '#ff9a2e';
+      t.font = `700 34px ${JP_FONT}`;
+      t.fillText('次は', 16, 108);
+      t.fillStyle = '#f5f7f2';
+      fitFillText(t, next.kanji, 104, 111, 382, 48, '700');
     } else {
-      t.fillStyle = '#ff9a2e';
-      t.font = `700 24px ${JP_FONT}`;
-      t.fillText(`Bound for ${destinations.map((station) => station.romaji).join(' & ')}`, 14, 45, W - 28);
+      t.fillStyle = '#36d34d';
+      t.fillRect(10, 78, W - 20, 37);
+      t.fillStyle = '#ffd33d';
+      t.font = `700 20px ${JP_FONT}`;
+      t.fillText('Bound for', 16, 25);
       t.fillStyle = '#f5f7f2';
-      t.font = `700 24px ${JP_FONT}`;
-      t.fillText('Next', 14, 98);
-      t.font = `700 36px ${JP_FONT}`;
-      t.fillText(next.romaji, 88, 103, W - 102);
+      fitFillText(t, destinations.map((station) => station.romaji).join(' & '), 16, 68, W - 32, 43, '700');
+      t.fillStyle = '#ffd33d';
+      t.font = `700 27px ${JP_FONT}`;
+      t.fillText('Next', 16, 108);
+      t.fillStyle = '#f5f7f2';
+      fitFillText(t, next.romaji, 92, 110, 398, 38, '700');
     }
     t.setTransform(1, 0, 0, 1, 0, 0);
     g.imageSmoothingEnabled = false;
