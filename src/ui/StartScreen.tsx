@@ -132,6 +132,10 @@ export function StartScreen() {
 
   const board = async () => {
     setLoading(true);
+    // Laisser React peindre l'état de chargement avant d'entamer les imports et
+    // la préparation synchrones, qui peuvent sinon monopoliser le thread
+    // principal jusqu'au premier écran (gris) de la scène 3D.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     // C'est seulement cette action utilisateur qui ouvre le chunk du jeu.
     // Le téléchargement se fait en parallèle de la préparation de la partie.
     const gamePromise = loadGame();
