@@ -242,9 +242,9 @@ function build(): Built {
   const leafGlass = instanced(geos.doorGlass, mats.glass, LEAVES);
   leafGlass.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-  // Deux afficheurs par flanc et par voiture, dans les baies d'extrémité :
-  // entre les portes 1–2 et 3–4. Les placer au-delà des portes extrêmes les
-  // collait aux soufflets et produisait visuellement une paire entre voitures.
+  // Deux afficheurs par flanc et par voiture : un dans la baie qui précède la
+  // porte 1, l'autre dans celle qui suit la porte 4. Le motif latéral complet
+  // est donc bien afficheur–porte–baie–porte–baie–porte–baie–porte–afficheur.
   // Toutes les occurrences partagent le canvas et les deux matériaux.
   const sideSignCount = CARS * 4;
   // Cadre noir aux angles très arrondis et dalle 4:1, comme le boîtier encastré
@@ -256,14 +256,18 @@ function build(): Built {
   signFaceGeo.rotateY(Math.PI / 2);
   const signFaces = instanced(signFaceGeo, mats.sideSign, sideSignCount);
   let signIndex = 0;
+  const END_SIGN_INSET = 0.9;
   const signOffsets = [
-    (E235.doorCenters[0] + E235.doorCenters[1]) / 2,
-    (E235.doorCenters[2] + E235.doorCenters[3]) / 2,
+    E235.doorCenters[0] - END_SIGN_INSET,
+    E235.doorCenters[E235.doorCenters.length - 1] + END_SIGN_INSET,
   ];
   for (let i = 0; i < CARS; i++) for (const s of [1, -1] as const) for (const dz of signOffsets) {
-    signBox.setMatrixAt(signIndex, m.makeTranslation(s * (E235.halfWidth + 0.03), 2.08, carZ(i) + dz));
+    // Le boîtier traverse la peau depuis l'intérieur : son centre est en retrait
+    // dans la caisse. Seule la dalle dépasse de 3 mm, juste assez pour éviter
+    // le z-fighting sans donner l'impression d'un panneau collé sur la rame.
+    signBox.setMatrixAt(signIndex, m.makeTranslation(s * (E235.halfWidth - 0.025), 2.08, carZ(i) + dz));
     m.makeRotationY(s === 1 ? 0 : Math.PI);
-    m.setPosition(s * (E235.halfWidth + 0.06), 2.08, carZ(i) + dz);
+    m.setPosition(s * (E235.halfWidth + 0.003), 2.08, carZ(i) + dz);
     signFaces.setMatrixAt(signIndex, m);
     signIndex++;
   }
