@@ -22,8 +22,8 @@
 // Deux sonorisations, deux VOIX. Une gare a sa propre sono, indépendante de
 // celle de la rame, et on ne les entend pas au même endroit :
 //
-//   • sur le QUAI, la voix de bord est inaudible - les diffuseurs sont dans le
-//     wagon, derrière les vitres (paVoiceGain tombe à zéro) ;
+//   • sur le QUAI, la voix de bord n'est plus qu'un lointain - les diffuseurs
+//     sont dans le wagon, derrière les vitres (paVoiceGain tombe très bas) ;
 //   • DANS la rame arrêtée en gare, la voix du quai n'est qu'un lointain qui
 //     entre par les portes (platVoiceGain très en retrait).
 //
@@ -176,6 +176,14 @@ let prevSpeed01 = 0;
  * couvrir celle du wagon : c'est ce qu'on entend vraiment, assis porte ouverte.
  */
 const PLAT_VOICE_INSIDE = 0.3;
+
+/**
+ * Niveau de la voix de BORD entendue depuis le quai. Elle doit continuer à
+ * provenir des diffuseurs spatialisés de la rame, mais rester bien plus
+ * discrète que la voix du quai : juste ce qui traverse une porte ouverte et
+ * permet d'entendre la fin d'une phrase après être descendu.
+ */
+const CABIN_VOICE_OUTSIDE = 0.08;
 
 /**
  * Prises de la sonorisation du QUAI : le nombre de diffuseurs réellement pannés
@@ -418,10 +426,10 @@ export async function startAudio(): Promise<void> {
   const paVerbGain = new Tone.Gain(0.16);
   paBus.chain(paVerb, paVerbGain, master);
 
-  // Voix de bord : tout ce que DIT la rame passe par ce robinet, et lui seul se
-  // ferme quand le joueur descend sur le quai. Les carillons de porte et le
-  // jingle d'arrivée restent branchés en direct sur paIn - eux, on les entend
-  // très bien depuis le quai.
+  // Voix de bord : tout ce que DIT la rame passe par ce robinet, et lui seul
+  // tombe à un niveau lointain quand le joueur descend sur le quai. Les
+  // carillons de porte et le jingle d'arrivée restent branchés en direct sur
+  // paIn - eux, on les entend très bien depuis le quai.
   const paVoiceGain = new Tone.Gain(1).connect(paIn);
   const paVoiceIn = new Tone.Gain(1).connect(paVoiceGain);
 
@@ -910,9 +918,9 @@ export function setListenerOutside(outside: boolean): void {
     nodes.platGain.gain.rampTo(PLAT_BUS_OUTSIDE, 0.25);
   }
   // Debout sur le quai, la sono du wagon est derrière les vitres : les
-  // diffuseurs sont à l'intérieur, la voix de bord ne sort pas. À l'inverse,
-  // celle du quai n'a plus rien à traverser.
-  nodes.paVoiceGain.gain.rampTo(outside ? 0 : 1, 0.3);
+  // diffuseurs sont à l'intérieur, mais un peu de voix traverse encore les
+  // portes ouvertes. À l'inverse, celle du quai n'a plus rien à traverser.
+  nodes.paVoiceGain.gain.rampTo(outside ? CABIN_VOICE_OUTSIDE : 1, 0.3);
   nodes.platVoiceGain.gain.rampTo(outside ? 1 : PLAT_VOICE_INSIDE, 0.3);
   // La mélodie, elle, est CALÉE PAR LIEU : sous le diffuseur elle doit se
   // tenir, depuis la rame elle doit s'entendre. Voir MELODY_INSIDE.
