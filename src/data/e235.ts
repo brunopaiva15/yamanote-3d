@@ -57,10 +57,15 @@ export const E235 = {
    */
   doorGreenTop: 2.38,
 
-  /** Nez de cabine : longueur du masque vert et hauteur de son pare-brise. */
+  /**
+   * Nez de cabine. La ceinture noire de face avant n'est pas un rectangle :
+   * son bord haut épouse la voûte du pavillon, seul son bord bas est droit.
+   * D'où deux cotes seulement - le plancher de la ceinture, et le haut du
+   * bandeau qui porte la girouette et les blocs optiques.
+   */
   cabLen: 2.1,
   windshieldBottom: 1.02,
-  windshieldTop: 2.16,
+  windshieldTop: 2.3,
 } as const;
 
 /** Voiture dans laquelle voyage le joueur (la 6e sur 11 : la rame reste centrée). */

@@ -1,18 +1,22 @@
-// Nez de cabine du E235-0 : le masque vert, sa ceinture noire, le pare-brise
-// incliné, le dégradé pointillé qui court dessous, la girouette LED, les blocs
-// optiques et l'attelage. Construit pour l'extrémité +z d'une voiture ; la
-// voiture de queue reçoit le même objet, retourné d'un demi-tour.
+// Nez de cabine du E235-0 : le masque vert, sa ceinture noire, le pare-brise,
+// le dégradé pointillé qui court dessous, la girouette LED, les blocs optiques
+// et l'attelage. Construit pour l'extrémité +z d'une voiture ; la voiture de
+// queue reçoit le même objet, retourné d'un demi-tour.
 //
 // Le masque n'est PAS une plaque extrudée : c'est un loft. On part de la
-// section exacte de la caisse (flancs droits + voûte de pavillon) à l'about,
-// et on la referme en quart d'ellipse sur les soixante derniers centimètres -
-// c'est ce qui donne au nez son galbe, et c'est ce qui permet au pavillon de
-// se poursuivre jusqu'à la face avant sans la marche que laissait la plaque.
+// section exacte de la caisse - flancs droits ET voûte de pavillon - et on la
+// referme en quart d'ellipse sur les soixante derniers centimètres. Le nez
+// reste donc à la largeur de la rame jusqu'au bout, avec un simple roulé
+// d'une dizaine de centimètres sur l'arête : c'est ce que montrent les photos
+// de la série, une face franche, pas un cône.
 //
-// La face avant est COUCHÉE : au-dessus du bas de pare-brise elle recule de
-// `RAKE` mètre par mètre de hauteur. Tout ce qui s'y pose (vitrage, girouette,
-// feux, essuie-glaces) passe par `onFace`, qui reprend cette inclinaison -
-// poser un élément à plat le ferait saillir du masque par le haut.
+// De là découle tout le reste : le CONTOUR VERT ÉPOUSE LA SECTION DE CAISSE, et
+// la ceinture noire épouse le contour vert. Ni l'un ni l'autre n'est un
+// rectangle - leur bord haut suit la voûte du pavillon. C'est `sectionShape`
+// qui les découpe tous les deux dans le même profil, décalé vers l'intérieur.
+//
+// La face est plane et d'aplomb : rien n'est incliné, tout ce qui s'y pose
+// tient en (x, y) à z = CAB_FRONT_Z.
 //
 // Toutes les pièces sont fusionnées par matériau : une cabine complète tient
 // en une dizaine d'appels de rendu, pour quatre cabines dans la scène (deux
@@ -23,11 +27,12 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { E235 } from '../../data/e235';
 import { roundedRect } from '../shapes';
 
-/** Abscisse longitudinale du point le plus avancé du nez, en repère voiture. */
+/** Abscisse longitudinale de la face avant, en repère voiture. */
 export const CAB_FRONT_Z = E235.bodyHalfLen + 0.6;
 
-/** Saillie du masque au-delà de l'about de caisse : la longueur du galbe. */
+/** Saillie du masque au-delà de l'about de caisse : la longueur du roulé. */
 const PROTRUDE = CAB_FRONT_Z - E235.bodyHalfLen;
+
 /**
  * Recouvrement du masque sur la caisse, et de combien il la déborde.
  *
@@ -40,19 +45,6 @@ const PROTRUDE = CAB_FRONT_Z - E235.bodyHalfLen;
  */
 const TUCK = 0.05;
 const OUTSET = 0.003;
-
-/** Recul du haut de face, en mètre par mètre de hauteur (tan de l'inclinaison). */
-const RAKE = 0.18;
-/** Hauteur de la charnière : sous elle, la face reste verticale. */
-const RAKE_PIVOT = E235.windshieldBottom;
-const RAKE_ANGLE = Math.atan(RAKE);
-const RAKE_COS = Math.cos(RAKE_ANGLE);
-const RAKE_SIN = Math.sin(RAKE_ANGLE);
-
-/** Abscisse de la face avant à la hauteur `y`. */
-function faceZ(y: number): number {
-  return CAB_FRONT_Z - RAKE * Math.max(0, y - RAKE_PIVOT);
-}
 
 export interface CabMaterials {
   /** Masque : uguisu chez nous, inox nu sur la rame d'en face. */
@@ -88,7 +80,8 @@ export interface CabOptions {
 /**
  * Un profil de caisse vu de face : coins bas adoucis, flancs droits jusqu'aux
  * gouttières, voûte de pavillon au-dessus. Le loft interpole ces cinq cotes
- * entre l'about de caisse et la face avant.
+ * entre l'about de caisse et la face avant ; `inset` en tire les contours de
+ * la ceinture noire et du dégradé.
  */
 interface Section {
   hw: number;
@@ -117,20 +110,19 @@ const BODY: Section = {
 };
 
 /**
- * À la face : plus étroite et plus basse que la caisse, coins très ouverts -
- * c'est ce galbe qui fait reconnaître la série de loin.
+ * À la face : la même section, à peine resserrée.
  *
- * Le sommet ne descend que d'une dizaine de centimètres sous le pavillon. Il
- * était bien plus bas au premier jet : le nez s'en trouvait décapité, et
- * depuis le quai on voyait le toit gris par-dessus la face avant, ce qu'aucune
- * photo de la série ne montre.
+ * Une dizaine de centimètres de moins en tout et pour tout - c'est le roulé de
+ * l'arête, pas un fuseau. Le nez avait été bien plus effilé au premier jet :
+ * de face on lisait alors deux bandes d'inox de part et d'autre du vert, et le
+ * toit gris par-dessus. Sur la série, le vert va d'un bord à l'autre.
  */
 const FACE: Section = {
-  hw: 1.3,
-  yBot: 0.04,
-  r: 0.4,
-  eaves: 2.42,
-  crown: 2.5,
+  hw: E235.halfWidth - 0.1,
+  yBot: 0.02,
+  r: 0.34,
+  eaves: E235.roofY - 0.07,
+  crown: E235.roofCrownY - 0.1,
 };
 
 function lerpSection(a: Section, b: Section, t: number): Section {
@@ -141,6 +133,17 @@ function lerpSection(a: Section, b: Section, t: number): Section {
     r: k(a.r, b.r),
     eaves: k(a.eaves, b.eaves),
     crown: k(a.crown, b.crown),
+  };
+}
+
+/** Le même profil, rentré de `d` sur tout son pourtour. */
+function inset(s: Section, d: number): Section {
+  return {
+    hw: s.hw - d,
+    yBot: s.yBot + d,
+    r: Math.max(0.05, s.r - d),
+    eaves: s.eaves - d,
+    crown: s.crown - d,
   };
 }
 
@@ -189,32 +192,47 @@ function ring(s: Section): THREE.Vector2[] {
   return pts;
 }
 
-/** Tranches du galbe, en plus de celle qui reste dans la caisse. */
+/**
+ * Le contour d'une section en THREE.Shape, éventuellement rogné par deux
+ * horizontales - c'est ainsi que la ceinture noire garde la voûte du pavillon
+ * en haut et un bord droit en bas, et que le dégradé garde le galbe du bas de
+ * masque et un bord droit en haut.
+ *
+ * Le rognage rabat les points hors bornes SUR la borne plutôt que de couper le
+ * contour : la ligne droite se forme d'elle-même, et le contour reste fermé.
+ */
+function sectionShape(s: Section, yMin = -Infinity, yMax = Infinity): THREE.Shape {
+  const pts: THREE.Vector2[] = [];
+  for (const p of ring(s)) {
+    const y = THREE.MathUtils.clamp(p.y, yMin, yMax);
+    const last = pts[pts.length - 1];
+    // Les points rabattus se superposent : les doublons feraient des triangles
+    // dégénérés à la triangulation.
+    if (last && Math.abs(last.x - p.x) < 1e-4 && Math.abs(last.y - y) < 1e-4) continue;
+    pts.push(new THREE.Vector2(p.x, y));
+  }
+  return new THREE.Shape(pts);
+}
+
+/** Tranches du roulé, en plus de celle qui reste dans la caisse. */
 const SLICES = 12;
 
 /**
  * Peau du masque, plus son bouchon de face avant.
  *
- * Le galbe est paramétré par un angle θ ∈ [0, π/2] et non par z : l'avancée
+ * Le roulé est paramétré par un angle θ ∈ [0, π/2] et non par z : l'avancée
  * suit sin θ, le resserrement 1 − cos θ. Les tranches se répartissent ainsi le
  * long de l'arc et non du seul axe - sinon tout le rayon se jouerait entre les
- * deux dernières et le nez serait facetté.
+ * deux dernières et l'arête serait facettée.
  */
 function buildMask(): THREE.BufferGeometry {
-  const rings: THREE.Vector2[][] = [];
-  const zs: number[] = [];
-  const shears: number[] = [];
-
-  rings.push(ring(BODY));
-  zs.push(E235.bodyHalfLen - TUCK);
-  shears.push(0);
+  const rings: THREE.Vector2[][] = [ring(BODY)];
+  const zs: number[] = [E235.bodyHalfLen - TUCK];
 
   for (let j = 0; j <= SLICES; j++) {
     const th = (j / SLICES) * (Math.PI / 2);
-    const k = 1 - Math.cos(th);
-    rings.push(ring(lerpSection(BODY, FACE, k)));
+    rings.push(ring(lerpSection(BODY, FACE, 1 - Math.cos(th))));
     zs.push(E235.bodyHalfLen + PROTRUDE * Math.sin(th));
-    shears.push(k);
   }
 
   const rows = rings.length;
@@ -226,9 +244,7 @@ function buildMask(): THREE.BufferGeometry {
       const n = j * RING + i;
       pos[n * 3] = p.x;
       pos[n * 3 + 1] = p.y;
-      // Le couchage croît avec le galbe : nul à l'about, entier à la face, où
-      // il doit retomber exactement sur faceZ().
-      pos[n * 3 + 2] = zs[j] - RAKE * shears[j] * Math.max(0, p.y - RAKE_PIVOT);
+      pos[n * 3 + 2] = zs[j];
       uv[n * 2] = i / RING;
       uv[n * 2 + 1] = j / (rows - 1);
     }
@@ -249,26 +265,10 @@ function buildMask(): THREE.BufferGeometry {
   skin.setIndex(idx);
   skin.computeVertexNormals();
 
-  // Bouchon : le contour de face en éventail. L'apex est mis à la charnière
-  // pour que le pli du couchage passe par lui, et non en travers des triangles.
-  const face = rings[rows - 1];
-  const capPos: number[] = [];
-  const capUv: number[] = [];
-  const push = (x: number, y: number) => {
-    capPos.push(x, y, faceZ(y));
-    capUv.push(0.5 + x / (FACE.hw * 2), (y - FACE.yBot) / (FACE.crown - FACE.yBot));
-  };
-  for (let i = 0; i < RING; i++) {
-    const p = face[i];
-    const q = face[(i + 1) % RING];
-    push(0, RAKE_PIVOT);
-    push(p.x, p.y);
-    push(q.x, q.y);
-  }
-  const cap = new THREE.BufferGeometry();
-  cap.setAttribute('position', new THREE.Float32BufferAttribute(capPos, 3));
-  cap.setAttribute('uv', new THREE.Float32BufferAttribute(capUv, 2));
-  cap.computeVertexNormals();
+  // Bouchon : le contour de face, plan. Il est découpé dans le MÊME profil que
+  // la dernière tranche du loft, donc leurs bords coïncident exactement.
+  const cap = shapeGeo(sectionShape(FACE));
+  cap.translate(0, 0, CAB_FRONT_Z);
 
   return merge([skin, cap], 'masque de cabine');
 }
@@ -285,28 +285,34 @@ function merge(parts: THREE.BufferGeometry[], what: string): THREE.BufferGeometr
 }
 
 /**
- * Pose une géométrie construite à plat dans le plan XY sur la face couchée.
- * `out` est le déport le long de la normale - la saillie hors du masque.
+ * Remplissage d'un contour, UV renormalisées sur son encombrement.
+ *
+ * ShapeGeometry pose comme UV les coordonnées du plan telles quelles : une
+ * texture posée dessus sans ce recalage part en morceaux.
  */
-function onFace(geo: THREE.BufferGeometry, x: number, y: number, out: number): THREE.BufferGeometry {
-  geo.rotateX(-RAKE_ANGLE);
-  geo.translate(x, y + out * RAKE_SIN, faceZ(y) + out * RAKE_COS);
-  return geo;
-}
-
-/**
- * Panneau plat à coins arrondis, centré sur l'origine, prêt pour `onFace`.
- * Les UV de ShapeGeometry valent les coordonnées du plan : elles sont
- * renormalisées ici, sinon toute texture posée dessus part en morceaux.
- */
-function panel(w: number, h: number, r: number): THREE.BufferGeometry {
-  const g = new THREE.ShapeGeometry(roundedRect(w, h, Math.min(r, Math.min(w, h) / 2)), 8);
+function shapeGeo(shape: THREE.Shape): THREE.BufferGeometry {
+  const g = new THREE.ShapeGeometry(shape, 8);
+  g.computeBoundingBox();
+  const bb = g.boundingBox!;
+  const w = bb.max.x - bb.min.x;
+  const h = bb.max.y - bb.min.y;
   const p = g.getAttribute('position');
   const uv = g.getAttribute('uv');
   for (let i = 0; i < p.count; i++) {
-    uv.setXY(i, p.getX(i) / w + 0.5, p.getY(i) / h + 0.5);
+    uv.setXY(i, (p.getX(i) - bb.min.x) / w, (p.getY(i) - bb.min.y) / h);
   }
   return g;
+}
+
+/** Pose une géométrie construite à plat dans le plan XY sur la face avant. */
+function onFace(geo: THREE.BufferGeometry, x: number, y: number, out: number): THREE.BufferGeometry {
+  geo.translate(x, y, CAB_FRONT_Z + out);
+  return geo;
+}
+
+/** Panneau rectangulaire à coins arrondis, centré sur l'origine. */
+function panel(w: number, h: number, r: number): THREE.BufferGeometry {
+  return shapeGeo(roundedRect(w, h, Math.min(r, Math.min(w, h) / 2)));
 }
 
 /** Boîte posée à plat dans le repère voiture. */
@@ -318,13 +324,15 @@ function box(w: number, h: number, d: number, x: number, y: number, z: number): 
 
 // --- Cotes de la face avant ---------------------------------------------
 
-/** Ceinture noire : elle englobe le pare-brise ET le bandeau des feux. */
-const VISOR = { hw: 1.22, y0: 1.0, y1: 2.32, r: 0.18 };
+/** Marge de vert entre le bord du masque et la ceinture noire. */
+const VISOR_MARGIN = 0.1;
+/** Marge de vert autour du dégradé pointillé. */
+const CHECKER_MARGIN = 0.055;
 /** Pare-brise : large et peu haut, comme sur la série. */
-const GLASS = { hw: 1.14, y0: 1.06, y1: 1.88, pillar: 0.26, pillarW: 0.055 };
+const GLASS = { hw: 1.16, y0: 1.08, y1: 1.92, pillar: 0.26, pillarW: 0.055 };
 /** Bandeau supérieur : girouette au centre, blocs optiques aux extrémités. */
-const BAND_Y = 2.1;
-const LAMP_X = 1.0;
+const LAMP = { w: 0.44, h: 0.34, x: 0.96 };
+const BAND_Y = E235.windshieldTop - LAMP.h / 2;
 
 export function buildCab(mats: CabMaterials, opts: CabOptions = {}): THREE.Group {
   const g = new THREE.Group();
@@ -340,10 +348,17 @@ export function buildCab(mats: CabMaterials, opts: CabOptions = {}): THREE.Group
 
   add('green', buildMask());
 
-  // --- Ceinture noire et pare-brise ---
+  // --- Ceinture noire ---
+  // Son bord haut et ses montants suivent le masque à dix centimètres ; seul
+  // son plancher est droit. C'est ce contour-là qui fait la face du E235.
   add(
     'black',
-    onFace(panel(VISOR.hw * 2, VISOR.y1 - VISOR.y0, VISOR.r), 0, (VISOR.y0 + VISOR.y1) / 2, 0.004),
+    onFace(
+      shapeGeo(sectionShape(inset(FACE, VISOR_MARGIN), E235.windshieldBottom)),
+      0,
+      0,
+      0.004,
+    ),
   );
 
   // Deux glaces séparées par le montant de cabine, décalé côté conducteur.
@@ -358,18 +373,18 @@ export function buildCab(mats: CabMaterials, opts: CabOptions = {}): THREE.Group
   add('metal', onFace(panel(GLASS.hw * 2 + 0.03, 0.028, 0.012), 0, GLASS.y0 - 0.03, 0.016));
 
   // --- Girouette et blocs optiques ---
-  add('sign', onFace(new THREE.PlaneGeometry(1.36, 0.24), 0.04, BAND_Y, 0.016));
+  add('sign', onFace(new THREE.PlaneGeometry(1.36, 0.24), 0.02, BAND_Y, 0.016));
 
   for (const s of [1, -1] as const) {
     // Capot du bloc, en légère saillie de la ceinture.
-    add('metal', onFace(panel(0.44, 0.34, 0.06), s * LAMP_X, BAND_Y, 0.01));
-    add('black', onFace(panel(0.4, 0.3, 0.05), s * LAMP_X, BAND_Y, 0.014));
+    add('metal', onFace(panel(LAMP.w, LAMP.h, 0.06), s * LAMP.x, BAND_Y, 0.01));
+    add('black', onFace(panel(LAMP.w - 0.04, LAMP.h - 0.04, 0.05), s * LAMP.x, BAND_Y, 0.014));
     // Phare : deux pastilles LED côte à côte, comme sur la série.
     for (const d of [-1, 1] as const) {
-      add(head, onFace(panel(0.15, 0.1, 0.03), s * LAMP_X + d * 0.088, BAND_Y + 0.08, 0.022));
+      add(head, onFace(panel(0.15, 0.1, 0.03), s * LAMP.x + d * 0.088, BAND_Y + 0.08, 0.022));
     }
     // Feu rouge, sous le phare dans le même capot.
-    add(tail, onFace(panel(0.32, 0.085, 0.03), s * LAMP_X, BAND_Y - 0.09, 0.022));
+    add(tail, onFace(panel(0.32, 0.085, 0.03), s * LAMP.x, BAND_Y - 0.09, 0.022));
   }
 
   // --- Essuie-glaces, au repos en bas de glace ---
@@ -390,21 +405,25 @@ export function buildCab(mats: CabMaterials, opts: CabOptions = {}): THREE.Group
   }
 
   // --- Dégradé pointillé sous le pare-brise ---
-  // Sous la charnière la face est verticale : rien à coucher ici. Le panneau
-  // est arrondi comme le bas du masque, sinon ses angles en dépassent.
-  const checker = panel(2.36, 0.82, 0.3);
-  checker.translate(0, 0.55, CAB_FRONT_Z + 0.006);
-  add('checker', checker);
+  // Même découpe que la ceinture, à l'envers : bord droit en haut, et le galbe
+  // du bas de masque en bas. Un rectangle y montrerait ses angles hors du vert.
+  add(
+    'checker',
+    onFace(
+      shapeGeo(sectionShape(inset(FACE, CHECKER_MARGIN), -Infinity, E235.windshieldBottom - 0.07)),
+      0,
+      0,
+      0.006,
+    ),
+  );
 
   // --- Traverse de choc, jupes et attelage ---
   // Traverse pleine largeur sous le masque : c'est elle qui referme la face en
-  // bas. Elle court jusqu'à l'about, où le châssis de caisse la relaie ; entre
-  // les deux, on verrait le dessous du masque.
-  // Elle est plus large que la face : le bord bas du masque doit tomber dedans,
-  // sans quoi il dépasse en langue verte sous le nez.
-  add('underframe', box(2.72, 0.26, 0.72, 0, -0.05, CAB_FRONT_Z - 0.36));
+  // bas. Elle est plus large que le bas du masque, qui doit tomber dedans, et
+  // court jusqu'à l'about où le châssis de caisse la relaie.
+  add('underframe', box(2.72, 0.26, 0.72, 0, -0.03, CAB_FRONT_Z - 0.36));
   // Nervure d'anti-chevauchement, qui casse l'aplat noir de trois quarts.
-  add('underframe', box(2.5, 0.03, 0.04, 0, -0.15, CAB_FRONT_Z + 0.008));
+  add('underframe', box(2.5, 0.03, 0.04, 0, -0.13, CAB_FRONT_Z + 0.008));
   // Deux jupes latérales, et non un tablier plein : c'est l'échancrure entre
   // les deux qui laisse voir l'attelage, comme sur la série.
   for (const s of [1, -1] as const) {
@@ -425,7 +444,7 @@ export function buildCab(mats: CabMaterials, opts: CabOptions = {}): THREE.Group
   }
 
   // --- Toit de cabine ---
-  // Antenne fouet sur son socle, juste en arrière du galbe.
+  // Antenne fouet sur son socle, juste en arrière du roulé.
   add('metal', box(0.24, 0.08, 0.5, 0.42, E235.roofCrownY + 0.02, E235.bodyHalfLen - 0.9));
   add('metal', box(0.035, 0.44, 0.035, 0.42, E235.roofCrownY + 0.26, E235.bodyHalfLen - 0.9));
   // Capot d'avertisseur, sur l'arête du pavillon.
