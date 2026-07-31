@@ -2781,6 +2781,7 @@ function ledMask(): HTMLCanvasElement {
 
 /** Ce qu'écrit la colonne du milieu, en morceaux de tailles mêlées. */
 function etaRuns(eta: BoardEta, english: boolean): Run[] {
+  if (eta.kind === 'unknown') return [{ text: english ? 'SUSPENDED' : '運転見合わせ', px: 34 }];
   switch (eta.kind) {
     case 'soon':
       return [{ text: english ? 'Soon' : 'まもなく', px: 46 }];
@@ -2889,6 +2890,20 @@ export function makePlatformBoard(): {
           t.fillText('面', W - 60, cy + 20);
         }
       });
+
+      if (view.serviceStatus.kind !== 'normal') {
+        const status = view.english ? view.serviceStatus.english : view.serviceStatus.japanese;
+        const eta = view.serviceStatus.estimatedResumeClockMin;
+        const resume = eta == null ? '' : view.english
+          ? `  Expected ${String(Math.floor(eta / 60) % 24).padStart(2, '0')}:${String(Math.floor(eta) % 60).padStart(2, '0')}`
+          : `　運転再開見込 ${String(Math.floor(eta / 60) % 24).padStart(2, '0')}:${String(Math.floor(eta) % 60).padStart(2, '0')}頃`;
+        t.shadowBlur = blur;
+        t.fillStyle = view.serviceStatus.kind === 'suspended' ? '#ff664c' : '#ffd24a';
+        t.fillRect(0, H - 38, W, 38);
+        t.fillStyle = '#080b10';
+        t.textAlign = 'center';
+        fitFillText(t, status + resume, W / 2, H - 8, W - 36, 27, 'bold');
+      }
 
       t.shadowBlur = 0;
     };

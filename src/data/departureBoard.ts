@@ -23,6 +23,8 @@
 // secondes appartient à qui sait où en est la rame (systems/platformWait pour
 // le quai, le cycle station pour le bord).
 
+import type { DisruptionCause } from './platformDisruptions.ts';
+
 /**
  * Gares dont le 発車標 est un écran LCD et non la matrice à LED historique.
  *
@@ -44,7 +46,13 @@ export type BoardEta =
   /** 「約N分後」 : le régime normal, toute la journée. */
   | { kind: 'minutes'; minutes: number }
   /** 「05:12」 : premières et dernières circulations. */
-  | { kind: 'time'; hhmm: string };
+  | { kind: 'time'; hhmm: string }
+  /** Aucune prévision fiable pendant une suspension. */
+  | { kind: 'unknown' };
+
+export type BoardServiceStatus =
+  | { kind: 'normal' }
+  | { kind: 'delayed' | 'suspended'; cause: DisruptionCause; japanese: string; english: string; estimatedResumeClockMin?: number | null };
 
 /** L'état complet du tableau à un instant donné. */
 export interface BoardView {
@@ -54,14 +62,15 @@ export interface BoardView {
   english: boolean;
   /** Clignotement, réservé à la rame qui s'ébranle. */
   blink: boolean;
+  serviceStatus: BoardServiceStatus;
 }
 
 /** Attente des deux prochaines rames, en secondes. */
 export interface NextTrains {
   /** Secondes avant la prochaine rame ; `null` quand elle est déjà à quai. */
-  first: number | null;
+  first: number | null | 'unknown';
   /** Secondes avant celle d'après. */
-  second: number;
+  second: number | 'unknown';
   /** La rame à quai s'ébranle : le tableau la garde encore une ligne. */
   leaving: boolean;
 }
@@ -114,12 +123,14 @@ export function boardEta(seconds: number, clockMin: number): BoardEta {
  */
 export function boardRows(next: NextTrains, clockMin: number): BoardEta[] {
   const head: BoardEta =
-    next.first === null
+    next.first === 'unknown' ? { kind: 'unknown' } : next.first === null
       ? next.leaving
         ? { kind: 'departing' }
         : { kind: 'soon' }
       : boardEta(next.first, clockMin);
-  const second = Math.max(next.second, (next.first ?? 0) + 60);
+  if (next.second === 'unknown') return [head, { kind: 'unknown' }];
+  const firstSeconds = typeof next.first === 'number' ? next.first : 0;
+  const second = Math.max(next.second, firstSeconds + 60);
   return [head, boardEta(second, clockMin)];
 }
 
@@ -140,6 +151,7 @@ export function sameBoardView(a: BoardView, b: BoardView): boolean {
   return (
     a.english === b.english &&
     a.blink === b.blink &&
+    JSON.stringify(a.serviceStatus) === JSON.stringify(b.serviceStatus) &&
     a.rows.length === b.rows.length &&
     a.rows.every((row, i) => sameEta(row, b.rows[i]))
   );

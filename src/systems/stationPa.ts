@@ -17,12 +17,12 @@ import { platformFor, type LoopDirection } from '../data/platforms';
 import { nearestSpeakers, SPEAKER_GRILLE_DROP, speakerX } from '../data/stationGeometry';
 import { layoutFor } from '../data/stationLayouts';
 import {
-  DELAY_CAUSE_OUTAGE,
   platformAgentMessage,
   platformAlightFirstAnnouncement,
   platformApproachAnnouncement,
   platformArrivalAnnouncement,
-  platformDelayAnnouncement,
+  platformDisruptionAnnouncement,
+  platformDisruptionResumeAnnouncement,
   platformDoorCheckAnnouncement,
   platformDoorReleaseAnnouncement,
   platformDoorsClosingAnnouncement,
@@ -52,6 +52,7 @@ import { platformToWorld } from './playerFrame';
 import { runtime } from './runtime';
 import { say, speechQueueRemaining, utteranceDuration } from './speech';
 import { placementFor } from './stationPlacement';
+import { lineDisruption, lineDelayed } from './lineDisruption';
 
 /**
  * Sens desservi par le quai où l'on se trouve. Toutes les annonces automatiques
@@ -133,61 +134,32 @@ export function updatePlatformSpeakers(): void {
 }
 
 // --- Retard de la ligne ---------------------------------------------------
-//
-// Un arrêt d'urgence met la ligne en retard, et la gare le dit. Le joueur qui
-// descend après avoir subi l'incident entend donc, en attendant la rame
-// suivante, l'excuse qui va avec - la seule annonce du quai qui parle d'autre
-// chose que du train en approche.
+// L'état et sa durée vivent exclusivement dans systems/lineDisruption. Ce
+// module transforme son instantané en paroles et ne mémorise aucun incident.
 
-/** Motif ATOS en attente d'annonce, -1 = rien à annoncer. */
-let pendingDelay = -1;
-/** Arrêt auquel l'incident a eu lieu : passé quelques gares, il ne se dit plus. */
-let delayStop = Number.NEGATIVE_INFINITY;
-
-/** Nombre d'arrêts pendant lesquels la gare s'excuse encore de l'incident. */
-const DELAY_LIFETIME_STOPS = 6;
-
-/** Correspondance motif d'arrêt d'urgence → motif annoncé sur le quai. */
-const DELAY_FOR_EMERGENCY = [4, 3, 2];
-
-export function notifyLineDelay(emergencyReason: number): void {
-  const i = ((emergencyReason % DELAY_FOR_EMERGENCY.length) + DELAY_FOR_EMERGENCY.length) %
-    DELAY_FOR_EMERGENCY.length;
-  pendingDelay = DELAY_FOR_EMERGENCY[i];
-  delayStop = runtime.stopSequence;
+function disruptionContext() {
+  if (!lineDisruption.cause || lineDisruption.locationStationIndex == null || !lineDisruption.affectedDirections) return null;
+  return {
+    cause: lineDisruption.cause, direction: lineDisruption.affectedDirections, voiceDirection: dir(),
+    locationStationIndex: lineDisruption.locationStationIndex,
+    locationNextStationIndex: lineDisruption.locationNextStationIndex,
+    estimatedResumeClockMin: lineDisruption.estimatedResumeClockMin,
+  };
 }
 
-/**
- * Retard dû à une coupure de caténaire. Le motif ne se tire pas : une panne
- * d'alimentation s'annonce pour ce qu'elle est, et c'est le seul incident du
- * jeu dont le quai nomme exactement la cause qu'a vécue le joueur.
- */
-export function notifyLineOutage(): void {
-  pendingDelay = DELAY_CAUSE_OUTAGE;
-  delayStop = runtime.stopSequence;
+/** Met en file une information de perturbation si le prochain message prioritaire le permet. */
+export function paLineDisruption(cutoffIn = Number.POSITIVE_INFINITY): boolean {
+  const context = disruptionContext(); if (!context) return false;
+  const items = platformDisruptionAnnouncement(context, lineDisruption.phase === 'suspended');
+  if (!fitsBeforeCutoff(utteranceDuration(items), speechQueueRemaining('platform'), cutoffIn)) return false;
+  say(items, 'platform'); return true;
 }
 
-/**
- * La ligne traîne-t-elle encore le retard d'un incident récent ? Vrai même une
- * fois l'excuse diffusée : ce qui compte ici n'est pas l'annonce mais le
- * rattrapage, qui presse les échanges pendant quelques gares.
- */
-export function lineDelayed(): boolean {
-  return runtime.stopSequence - delayStop <= DELAY_LIFETIME_STOPS;
-}
-
-/**
- * Diffuse l'excuse de retard s'il y en a une à faire, et pas trop vieille.
- * @returns vrai si quelque chose a été dit - l'appelant en a besoin pour
- *   décaler ce qu'il comptait dire ensuite.
- */
-export function paDelay(): boolean {
-  if (pendingDelay < 0) return false;
-  const cause = pendingDelay;
-  pendingDelay = -1;
-  if (runtime.stopSequence - delayStop > DELAY_LIFETIME_STOPS) return false;
-  say(platformDelayAnnouncement(cause, dir()), 'platform');
-  return true;
+export function paLineDisruptionResume(cutoffIn = Number.POSITIVE_INFINITY): boolean {
+  const context = disruptionContext(); if (!context) return false;
+  const items = platformDisruptionResumeAnnouncement({ ...context, resumedAtClockMin: runtime.clockMin });
+  if (!fitsBeforeCutoff(utteranceDuration(items), speechQueueRemaining('platform'), cutoffIn)) return false;
+  say(items, 'platform'); return true;
 }
 
 // --- Le plan d'annonces de l'attente en cours ----------------------------
