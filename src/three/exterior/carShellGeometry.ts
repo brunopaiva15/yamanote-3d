@@ -346,10 +346,15 @@ function buildDoorGlass(): THREE.BufferGeometry {
 /** Soufflet d'intercirculation, posé dans l'intervalle entre deux caisses. */
 function buildBellows(): THREE.BufferGeometry {
   const gap = E235.pitch - HALF * 2;
-  // Assez haut et assez large pour masquer la paroi d'about de l'intérieur,
-  // qui dépasse dans l'intervalle (elle est modélisée à z = ±10, la caisse
-  // extérieure s'arrête à ±9,8).
-  const g = new THREE.BoxGeometry(2.72, 2.62, gap + 0.5);
+  // Assez haut et assez large pour masquer TOUT l'intérieur qui déborde dans
+  // l'intervalle : non seulement la paroi d'about (à z = ±10, alors que la
+  // caisse extérieure s'arrête à ±9,8), mais aussi les parois latérales de la
+  // zone prioritaire, dont le nu extérieur rose est à x = 1,44. À 2,72 de large
+  // (±1,36) le soufflet passait DERRIÈRE ce nu : depuis le quai on lisait un
+  // liseré rose au droit de chaque about. Élargi à ±1,46, il couvre la paroi
+  // (1,44) tout en restant en retrait de la peau de caisse (nu extérieur 1,475),
+  // donc sans jamais saillir sur le flanc.
+  const g = new THREE.BoxGeometry(2.92, 2.62, gap + 0.5);
   g.translate(0, 1.24, 0);
   return g;
 }
