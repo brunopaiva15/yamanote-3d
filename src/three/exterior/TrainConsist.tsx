@@ -242,11 +242,10 @@ function build(): Built {
   const leafGlass = instanced(geos.doorGlass, mats.glass, LEAVES);
   leafGlass.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-  // Un afficheur par flanc et par voiture, dans la baie qui précède la porte 1.
-  // L'afficheur suivant est celui de la voiture suivante, après la porte 4 :
-  // afficheur–porte–baie–porte–baie–porte–baie–porte–afficheur. Deux afficheurs
-  // par voiture raccourcissaient à tort le motif et les faisaient apparaître
-  // deux fois dans le champ d'une même caisse.
+  // Un afficheur par flanc et par voiture. On reprend exactement la première
+  // des deux positions initialement validées — au centre de la baie entre les
+  // portes 1 et 2 — et on supprime simplement la seconde occurrence. Ainsi la
+  // fréquence est divisée par deux sans déplacer l'afficheur restant.
   const sideSignCount = CARS * 2;
   // Cadre noir aux angles très arrondis et dalle 4:1, comme le boîtier encastré
   // visible sur les vraies E235 (et non un rectangle de signalétique de quai).
@@ -257,13 +256,8 @@ function build(): Built {
   signFaceGeo.rotateY(Math.PI / 2);
   const signFaces = instanced(signFaceGeo, mats.sideSign, sideSignCount);
   let signIndex = 0;
-  const END_SIGN_INSET = 0.9;
+  const signOffset = (E235.doorCenters[0] + E235.doorCenters[1]) / 2;
   for (let i = 0; i < CARS; i++) for (const s of [1, -1] as const) {
-    // Les deux flancs sont en miroir, mais le repère du modèle regarde +z sur
-    // le côté +x : l'afficheur précède donc la première porte avec le MÊME
-    // signe que `s`. Le signe opposé le plaçait dans la petite baie contre le
-    // soufflet (après la quatrième porte), comme sur les captures de contrôle.
-    const signOffset = s * (E235.doorCenters[E235.doorCenters.length - 1] + END_SIGN_INSET);
     // Le boîtier traverse la peau depuis l'intérieur : son centre est en retrait
     // dans la caisse. Seule la dalle dépasse de 3 mm, juste assez pour éviter
     // le z-fighting sans donner l'impression d'un panneau collé sur la rame.

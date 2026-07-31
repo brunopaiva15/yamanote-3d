@@ -46,15 +46,15 @@ test('un départ actualise la prochaine gare depuis store.index', () => {
   assert.match(consistSource, /built\.sideSign\.redraw\(index, loopDirection, sideView\)/);
 });
 
-test('un seul petit afficheur par flanc précède les quatre portes', () => {
+test('un seul petit afficheur par flanc conserve la première position validée', () => {
   assert.match(consistSource, /RoundedBoxGeometry\(1, 0\.28, 0\.055, 3, 0\.075\)/);
   assert.match(consistSource, /PlaneGeometry\(0\.9, 0\.2\)/);
   assert.match(consistSource, /sideSignCount = CARS \* 2/);
-  assert.match(consistSource, /signOffset = s \* \(E235\.doorCenters\[E235\.doorCenters\.length - 1\] \+ END_SIGN_INSET\)/);
+  assert.match(consistSource, /signOffset = \(E235\.doorCenters\[0\] \+ E235\.doorCenters\[1\]\) \/ 2/);
 });
 
-test('la position est mise en miroir sur les deux flancs', () => {
-  assert.match(consistSource, /const signOffset = s \*/);
+test('la fréquence est réduite sans décaler la position selon le flanc', () => {
+  assert.doesNotMatch(consistSource, /const signOffset = s \*/);
   assert.match(consistSource, /carZ\(i\) \+ signOffset/);
 });
 
