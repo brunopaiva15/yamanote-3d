@@ -187,7 +187,7 @@ const FR: Strings = {
     intro:
       "Une boucle de trente stations autour de Tokyo, en temps quasi réel. Rien à gagner : on s'assoit, on regarde la ville, on écoute les annonces.",
     board: 'Monter à bord',
-    loading: 'Préparation…',
+    loading: 'Chargement…',
     controls: [
       { keys: ['Clic'], action: 'Regarder autour' },
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: 'Marcher' },
@@ -310,7 +310,7 @@ const EN: Strings = {
     intro:
       'A thirty-station loop around Tokyo, in near real time. Nothing to win: sit down, watch the city drift past, listen to the announcements.',
     board: 'Board the train',
-    loading: 'Preparing…',
+    loading: 'Loading…',
     controls: [
       { keys: ['Click'], action: 'Look around' },
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: 'Walk' },
@@ -433,7 +433,7 @@ const JA: Strings = {
     intro:
       '東京をぐるりと一周する三十駅のループを、ほぼ実時間で。勝ち負けはありません。座って、流れる街を眺めて、車内放送に耳をすませるだけです。',
     board: '乗車する',
-    loading: '準備中…',
+    loading: '読み込み中…',
     controls: [
       { keys: ['クリック'], action: '見まわす' },
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: '歩く' },
