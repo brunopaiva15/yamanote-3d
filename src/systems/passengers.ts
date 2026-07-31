@@ -54,6 +54,7 @@ import { pushPaxEvent } from './paxEvents';
 import { resolveMotion, trainPlayerCtx } from './paxMotion';
 import { playPaxActionSfx } from './paxSfx';
 import { paxBump } from './audioEngine';
+import { selectEmergencyFallers } from './emergencyPassengerFalls';
 
 export type PaxState = 'hidden' | 'seated' | 'standing' | 'boarding' | 'alighting';
 export type { PaxAction };
@@ -876,31 +877,42 @@ export function startlePassengers(): void {
   // ferait réagir les voisins de chaque trébuchement (reactToFall), soit
   // quarante témoins pour quarante frayeurs simultanées. Ici, le wagon entier
   // est déjà le témoin.
+  // Parmi tous les voyageurs debout, 20 % tombent vraiment et jouent le
+  // montage `fall`; le tirage sans remise ne favorise aucun slot. Une urgence
+  // interrompt même une conversation si son interlocuteur fait partie du lot.
+  const fallers = selectEmergencyFallers(paxList.filter((p) => p.state === 'standing'));
   let stumbles = 0;
   let sfxLeft = 5;
   for (const p of paxList) {
     if (p.state !== 'seated' && p.state !== 'standing') continue;
-    // On ne coupe pas quelqu'un en train de s'adresser au joueur.
-    if (p.action === 'talkPlayer') continue;
+    // Hors chute, on ne coupe pas quelqu'un en train de s'adresser au joueur.
+    if (p.action === 'talkPlayer' && !fallers.has(p)) continue;
     endPair(p);
     p.actionT = 0;
 
-    // Une poignée lâchée, un pas en avant : le geste le plus lisible, mais
-    // rationné - un wagon qui s'effondre en entier ferait comique.
-    const trips = p.state === 'standing' && !p.holdStrap && stumbles < 3 && Math.random() < 0.5;
-    if (trips) {
-      stumbles++;
-      p.action = 'stumble';
-      p.actionDur = 1.6 + Math.random() * 0.8;
+    if (fallers.has(p)) {
+      p.action = 'fall';
+      p.actionDur = 4.2 + Math.random() * 1.6;
       p.lookYawTarget = Math.random() < 0.5 ? 1 : -1;
-    } else if (Math.random() < 0.35) {
-      p.action = 'gasp';
-      p.actionDur = 0.9 + Math.random() * 0.5;
+      p.holdStrap = false;
     } else {
-      // Chercher des yeux d'où ça vient : la vitre, le voisin, le plafond.
-      p.action = 'look';
-      p.actionDur = 1.8 + Math.random() * 2.2;
-      p.lookYawTarget = (Math.random() - 0.5) * 2;
+      // Une poignée lâchée, un pas en avant : le geste reste possible pour
+      // quelques non-tombés, mais sans empiéter sur les 20 % de vraies chutes.
+      const trips = p.state === 'standing' && !p.holdStrap && stumbles < 3 && Math.random() < 0.5;
+      if (trips) {
+        stumbles++;
+        p.action = 'stumble';
+        p.actionDur = 1.6 + Math.random() * 0.8;
+        p.lookYawTarget = Math.random() < 0.5 ? 1 : -1;
+      } else if (Math.random() < 0.35) {
+        p.action = 'gasp';
+        p.actionDur = 0.9 + Math.random() * 0.5;
+      } else {
+        // Chercher des yeux d'où ça vient : la vitre, le voisin, le plafond.
+        p.action = 'look';
+        p.actionDur = 1.8 + Math.random() * 2.2;
+        p.lookYawTarget = (Math.random() - 0.5) * 2;
+      }
     }
 
     // Le Foley ne sert que de près, et seulement quelques fois : cinquante
