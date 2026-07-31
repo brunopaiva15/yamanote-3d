@@ -1,30 +1,46 @@
 // Catalogue des conversations, et tirage d'un échange dans le contexte du
-// moment. Les répliques elles-mêmes vivent dans les huit modules thématiques
+// moment. Les répliques elles-mêmes vivent dans les modules thématiques
 // importés ci-dessous ; ce fichier n'assemble, ne filtre et ne rend.
 
 import { STATIONS } from '../stations';
 import type { Lang } from '../../i18n/strings';
 import { DIALOGUE_SMALLTALK } from './smallTalk';
+import { DIALOGUE_SMALLTALK_EXPANSION } from './smallTalkExpansion';
 import { DIALOGUE_PEOPLE } from './people';
+import { DIALOGUE_PEOPLE_EXPANSION } from './peopleExpansion';
 import { DIALOGUE_PLACES } from './places';
+import { DIALOGUE_PLACES_EXPANSION } from './placesExpansion';
 import { DIALOGUE_MOMENTS } from './moments';
+import { DIALOGUE_MOMENTS_EXPANSION } from './momentsExpansion';
 import { DIALOGUE_TRAINS } from './trains';
+import { DIALOGUE_TRAINS_EXPANSION } from './trainsExpansion';
 import { DIALOGUE_CITY } from './city';
+import { DIALOGUE_CITY_EXPANSION } from './cityExpansion';
 import { DIALOGUE_LIVES } from './lives';
+import { DIALOGUE_LIVES_EXPANSION } from './livesExpansion';
 import { DIALOGUE_EVENTS } from './events';
+import { DIALOGUE_EVENTS_EXPANSION } from './eventsExpansion';
 import { matches, type DialogueCtx, type DialogueEntry, type DialogueLine, type Gendered } from './types';
 
 export * from './types';
 
 export const DIALOGUES: readonly DialogueEntry[] = [
   ...DIALOGUE_SMALLTALK,
+  ...DIALOGUE_SMALLTALK_EXPANSION,
   ...DIALOGUE_PEOPLE,
+  ...DIALOGUE_PEOPLE_EXPANSION,
   ...DIALOGUE_PLACES,
+  ...DIALOGUE_PLACES_EXPANSION,
   ...DIALOGUE_MOMENTS,
+  ...DIALOGUE_MOMENTS_EXPANSION,
   ...DIALOGUE_TRAINS,
+  ...DIALOGUE_TRAINS_EXPANSION,
   ...DIALOGUE_CITY,
+  ...DIALOGUE_CITY_EXPANSION,
   ...DIALOGUE_LIVES,
+  ...DIALOGUE_LIVES_EXPANSION,
   ...DIALOGUE_EVENTS,
+  ...DIALOGUE_EVENTS_EXPANSION,
 ];
 
 if (import.meta.env.DEV) {
