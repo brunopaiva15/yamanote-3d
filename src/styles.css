@@ -857,6 +857,70 @@ body,
   color: #ffd8da;
 }
 
+/* Message de chantier du hall : il apparaît dès que les pieds passent sous
+   le linteau de la trémie et reste assez haut pour ne masquer ni le réticule,
+   ni les commandes tactiles. */
+.station-development {
+  position: fixed;
+  left: 50%;
+  top: max(96px, calc(var(--hud-safe-top) + 72px));
+  z-index: 24;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: calc(100vw - var(--hud-safe-left) - var(--hud-safe-right));
+  padding: 11px 16px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 205, 64, 0.55);
+  border-left: 4px solid #ffcd40;
+  border-radius: 12px;
+  background: rgba(16, 21, 26, 0.9);
+  color: var(--text);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  animation: station-development-in 220ms ease-out;
+}
+
+.station-development-icon {
+  font-size: 23px;
+  line-height: 1;
+}
+
+.station-development strong,
+.station-development small {
+  display: block;
+}
+
+.station-development strong {
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+.station-development small {
+  margin-top: 2px;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+@keyframes station-development-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-development {
+    animation: none;
+  }
+}
+
 /* Bulle de dialogue d'un voyageur : ancrée à sa tête (three/PaxSpeechBubble),
    volontairement sobre - c'est une voix dans un train, pas une interface de
    jeu de rôle. */
