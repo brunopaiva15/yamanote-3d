@@ -241,20 +241,24 @@ function build(): Built {
   const leafGlass = instanced(geos.doorGlass, mats.glass, LEAVES);
   leafGlass.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-  // Deux afficheurs par flanc et par voiture : un avant la première porte,
-  // l'autre après la quatrième. Toutes les occurrences partagent le canvas
-  // et les deux matériaux ; seules leurs matrices diffèrent.
+  // Deux afficheurs par flanc et par voiture, dans les baies d'extrémité :
+  // entre les portes 1–2 et 3–4. Les placer au-delà des portes extrêmes les
+  // collait aux soufflets et produisait visuellement une paire entre voitures.
+  // Toutes les occurrences partagent le canvas et les deux matériaux.
   const sideSignCount = CARS * 4;
-  const signBox = instanced(new THREE.BoxGeometry(0.07, 0.43, 1.82), mats.black, sideSignCount);
-  const signFaceGeo = new THREE.PlaneGeometry(1.68, 0.34);
+  const signBox = instanced(new THREE.BoxGeometry(0.055, 0.23, 0.98), mats.black, sideSignCount);
+  const signFaceGeo = new THREE.PlaneGeometry(0.88, 0.16);
   signFaceGeo.rotateY(Math.PI / 2);
   const signFaces = instanced(signFaceGeo, mats.sideSign, sideSignCount);
   let signIndex = 0;
-  const signOffsets = [E235.doorCenters[0] - 1.55, E235.doorCenters[E235.doorCenters.length - 1] + 1.55];
+  const signOffsets = [
+    (E235.doorCenters[0] + E235.doorCenters[1]) / 2,
+    (E235.doorCenters[2] + E235.doorCenters[3]) / 2,
+  ];
   for (let i = 0; i < CARS; i++) for (const s of [1, -1] as const) for (const dz of signOffsets) {
-    signBox.setMatrixAt(signIndex, m.makeTranslation(s * (E235.halfWidth + 0.035), 1.92, carZ(i) + dz));
+    signBox.setMatrixAt(signIndex, m.makeTranslation(s * (E235.halfWidth + 0.03), 2.08, carZ(i) + dz));
     m.makeRotationY(s === 1 ? 0 : Math.PI);
-    m.setPosition(s * (E235.halfWidth + 0.073), 1.92, carZ(i) + dz);
+    m.setPosition(s * (E235.halfWidth + 0.06), 2.08, carZ(i) + dz);
     signFaces.setMatrixAt(signIndex, m);
     signIndex++;
   }

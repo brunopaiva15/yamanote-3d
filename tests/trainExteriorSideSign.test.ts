@@ -45,3 +45,10 @@ test('un départ actualise la prochaine gare depuis store.index', () => {
   assert.match(consistSource, /const \{ doorSide, index, loopDirection \} = useStore\.getState\(\)/);
   assert.match(consistSource, /built\.sideSign\.redraw\(index, loopDirection, sideView\)/);
 });
+
+test('les afficheurs restent petits et dans les baies, loin des soufflets', () => {
+  assert.match(consistSource, /PlaneGeometry\(0\.88, 0\.16\)/);
+  assert.match(consistSource, /doorCenters\[0\] \+ E235\.doorCenters\[1\]/);
+  assert.match(consistSource, /doorCenters\[2\] \+ E235\.doorCenters\[3\]/);
+  assert.doesNotMatch(consistSource, /doorCenters\[0\] - 1\.55/);
+});
