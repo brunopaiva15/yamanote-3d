@@ -65,7 +65,7 @@ export const E235 = {
    */
   cabLen: 2.1,
   windshieldBottom: 1.02,
-  windshieldTop: 2.3,
+  windshieldTop: 2.22,
 } as const;
 
 /** Voiture dans laquelle voyage le joueur (la 6e sur 11 : la rame reste centrée). */

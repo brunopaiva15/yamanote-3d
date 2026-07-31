@@ -4,11 +4,11 @@
 // queue reçoit le même objet, retourné d'un demi-tour.
 //
 // Le masque n'est PAS une plaque extrudée : c'est un loft. On part de la
-// section exacte de la caisse - flancs droits ET voûte de pavillon - et on la
-// referme en quart d'ellipse sur les soixante derniers centimètres. Le nez
-// reste donc à la largeur de la rame jusqu'au bout, avec un simple roulé
-// d'une dizaine de centimètres sur l'arête : c'est ce que montrent les photos
-// de la série, une face franche, pas un cône.
+// section exacte de la caisse - flancs droits ET voûte de pavillon - on la
+// prolonge telle quelle au-delà de l'about, et on ne la referme en quart
+// d'ellipse que sur les vingt-cinq derniers centimètres. Le nez garde donc la
+// largeur de la rame jusqu'au bord, où il roule d'un coup : c'est ce que
+// montrent les photos de la série, une face franche, pas un cône.
 //
 // De là découle tout le reste : le CONTOUR VERT ÉPOUSE LA SECTION DE CAISSE, et
 // la ceinture noire épouse le contour vert. Ni l'un ni l'autre n'est un
@@ -30,8 +30,20 @@ import { roundedRect } from '../shapes';
 /** Abscisse longitudinale de la face avant, en repère voiture. */
 export const CAB_FRONT_Z = E235.bodyHalfLen + 0.6;
 
-/** Saillie du masque au-delà de l'about de caisse : la longueur du roulé. */
-const PROTRUDE = CAB_FRONT_Z - E235.bodyHalfLen;
+/**
+ * Le masque avance de soixante centimètres au-delà de l'about, mais il ne se
+ * resserre que sur les vingt-cinq derniers : jusque-là, il garde EXACTEMENT la
+ * section de caisse.
+ *
+ * Ces deux cotes ne sont pas un détail de forme. Quand le resserrement courait
+ * sur toute la saillie, la face était partout plus étroite que ce qu'il y avait
+ * derrière : de trois quarts on voyait l'inox du flanc et le gris du pavillon
+ * border le vert sur toute la hauteur, et le nez se lisait comme une boîte
+ * rapportée. Resserré sur le seul bord, ce qui déborde de la face est le
+ * masque lui-même - donc du vert, et la caisse ne réapparaît qu'à l'about.
+ */
+const STRAIGHT_TO = CAB_FRONT_Z - 0.25;
+const ROLL = CAB_FRONT_Z - STRAIGHT_TO;
 
 /**
  * Recouvrement du masque sur la caisse, et de combien il la déborde.
@@ -110,19 +122,18 @@ const BODY: Section = {
 };
 
 /**
- * À la face : la même section, à peine resserrée.
+ * À la face : la section de caisse rentrée d'une quinzaine de centimètres.
  *
- * Une dizaine de centimètres de moins en tout et pour tout - c'est le roulé de
- * l'arête, pas un fuseau. Le nez avait été bien plus effilé au premier jet :
- * de face on lisait alors deux bandes d'inox de part et d'autre du vert, et le
- * toit gris par-dessus. Sur la série, le vert va d'un bord à l'autre.
+ * C'est le rayon du bord, pas un fuseau : le resserrement se joue tout entier
+ * sur les vingt-cinq derniers centimètres (voir STRAIGHT_TO), si bien que ce
+ * qui borde la face avant, tout autour, est le masque lui-même.
  */
 const FACE: Section = {
-  hw: E235.halfWidth - 0.1,
-  yBot: 0.02,
+  hw: E235.halfWidth - 0.16,
+  yBot: 0.06,
   r: 0.34,
-  eaves: E235.roofY - 0.07,
-  crown: E235.roofCrownY - 0.1,
+  eaves: E235.roofY - 0.14,
+  crown: E235.roofCrownY - 0.14,
 };
 
 function lerpSection(a: Section, b: Section, t: number): Section {
@@ -226,13 +237,14 @@ const SLICES = 12;
  * deux dernières et l'arête serait facettée.
  */
 function buildMask(): THREE.BufferGeometry {
-  const rings: THREE.Vector2[][] = [ring(BODY)];
-  const zs: number[] = [E235.bodyHalfLen - TUCK];
+  // Partie droite : la section de caisse, de l'about jusqu'au départ du bord.
+  const rings: THREE.Vector2[][] = [ring(BODY), ring(BODY)];
+  const zs: number[] = [E235.bodyHalfLen - TUCK, STRAIGHT_TO];
 
-  for (let j = 0; j <= SLICES; j++) {
+  for (let j = 1; j <= SLICES; j++) {
     const th = (j / SLICES) * (Math.PI / 2);
     rings.push(ring(lerpSection(BODY, FACE, 1 - Math.cos(th))));
-    zs.push(E235.bodyHalfLen + PROTRUDE * Math.sin(th));
+    zs.push(STRAIGHT_TO + ROLL * Math.sin(th));
   }
 
   const rows = rings.length;
@@ -329,9 +341,9 @@ const VISOR_MARGIN = 0.1;
 /** Marge de vert autour du dégradé pointillé. */
 const CHECKER_MARGIN = 0.055;
 /** Pare-brise : large et peu haut, comme sur la série. */
-const GLASS = { hw: 1.16, y0: 1.08, y1: 1.92, pillar: 0.26, pillarW: 0.055 };
+const GLASS = { hw: 1.1, y0: 1.08, y1: 1.84, pillar: 0.26, pillarW: 0.055 };
 /** Bandeau supérieur : girouette au centre, blocs optiques aux extrémités. */
-const LAMP = { w: 0.44, h: 0.34, x: 0.96 };
+const LAMP = { w: 0.44, h: 0.34, x: 0.92 };
 const BAND_Y = E235.windshieldTop - LAMP.h / 2;
 
 export function buildCab(mats: CabMaterials, opts: CabOptions = {}): THREE.Group {
@@ -373,7 +385,7 @@ export function buildCab(mats: CabMaterials, opts: CabOptions = {}): THREE.Group
   add('metal', onFace(panel(GLASS.hw * 2 + 0.03, 0.028, 0.012), 0, GLASS.y0 - 0.03, 0.016));
 
   // --- Girouette et blocs optiques ---
-  add('sign', onFace(new THREE.PlaneGeometry(1.36, 0.24), 0.02, BAND_Y, 0.016));
+  add('sign', onFace(new THREE.PlaneGeometry(1.24, 0.24), 0.02, BAND_Y, 0.016));
 
   for (const s of [1, -1] as const) {
     // Capot du bloc, en légère saillie de la ceinture.
@@ -421,9 +433,13 @@ export function buildCab(mats: CabMaterials, opts: CabOptions = {}): THREE.Group
   // Traverse pleine largeur sous le masque : c'est elle qui referme la face en
   // bas. Elle est plus large que le bas du masque, qui doit tomber dedans, et
   // court jusqu'à l'about où le châssis de caisse la relaie.
-  add('underframe', box(2.72, 0.26, 0.72, 0, -0.03, CAB_FRONT_Z - 0.36));
+  //
+  // Sa face AVANCE de deux centimètres sur celle du masque. Affleurantes, les
+  // deux surfaces sont coplanaires sur les quatre centimètres où elles se
+  // recouvrent, et ce liseré se met à clignoter d'un pas de caméra à l'autre.
+  add('underframe', box(2.94, 0.3, 0.74, 0, -0.03, CAB_FRONT_Z - 0.35));
   // Nervure d'anti-chevauchement, qui casse l'aplat noir de trois quarts.
-  add('underframe', box(2.5, 0.03, 0.04, 0, -0.13, CAB_FRONT_Z + 0.008));
+  add('underframe', box(2.7, 0.03, 0.04, 0, -0.1, CAB_FRONT_Z + 0.03));
   // Deux jupes latérales, et non un tablier plein : c'est l'échancrure entre
   // les deux qui laisse voir l'attelage, comme sur la série.
   for (const s of [1, -1] as const) {
