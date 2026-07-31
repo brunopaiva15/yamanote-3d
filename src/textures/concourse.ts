@@ -665,7 +665,7 @@ export function makeOfficeTexture(): THREE.CanvasTexture {
   g.textAlign = 'left';
   fitFillText(g, 'みどりの窓口', 34, 68, W * 0.45, 60, 'bold');
   g.font = `500 32px ${JP_FONT}`;
-  g.fillText('JR Ticket Office', W * 0.5, 66);
+  g.fillText('Ticket Office', W * 0.5, 66);
 
   // Vitre : trois postes, une banque, des écrans allumés.
   g.fillStyle = 'rgba(158,180,196,0.4)';

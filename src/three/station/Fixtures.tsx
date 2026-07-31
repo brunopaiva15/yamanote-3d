@@ -535,13 +535,21 @@ function Office({
   face: THREE.Material;
   m: Mats;
 }) {
+  const shell = height - 0.14;
   return (
     <group>
-      <mesh position={[0, (height - 0.14) / 2, -d / 2 + 0.08]} material={m.hall}>
-        <boxGeometry args={[w, height - 0.14, 0.16]} />
+      {/* Le guichet est une pièce fermée, pas une façade posée devant le
+          couloir : fond et retours latéraux rejoignent tous le plafond. */}
+      <mesh position={[0, shell / 2, -d / 2 + 0.08]} material={m.hall}>
+        <boxGeometry args={[w, shell, 0.16]} />
       </mesh>
-      <mesh position={[0, (height - 0.14) / 2, d / 2 - 0.06]} material={face}>
-        <planeGeometry args={[w - 0.1, height - 0.26]} />
+      {[-1, 1].map((s) => (
+        <mesh key={`side${s}`} position={[s * (w - 0.16) / 2, shell / 2, 0]} material={m.hall}>
+          <boxGeometry args={[0.16, shell, d]} />
+        </mesh>
+      ))}
+      <mesh position={[0, shell / 2, d / 2 - 0.06]} material={face}>
+        <planeGeometry args={[w - 0.1, shell - 0.12]} />
       </mesh>
       {/* Tablette de guichet, en saillie : on y pose son billet. */}
       <mesh position={[0, 1.02, d / 2 + 0.06]} material={m.metal}>
