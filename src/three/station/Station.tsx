@@ -26,7 +26,6 @@ import { psdDoorPosAt, psdGateLag } from '../../systems/doorMotion';
 import {
   gantryZs,
   placementFor,
-  stairTopZ,
   trackSignZs,
   type Placed,
 } from '../../systems/stationPlacement';
@@ -44,16 +43,13 @@ import {
   PSD_LEAF_W,
   PSD_X,
   SLAB_H,
-  STAIR_CLEAR_HALF_X,
   STAIR_OPENING_HALF_X,
   STAIR_OPENING_Z0,
   STAIR_OPENING_Z1,
-  STAIR_WALK_LEN,
-  STAIR_WALK_Y,
   TRACK_HALF,
 } from '../../data/stationGeometry';
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
-import { Barrier, EdgeBarrier, GateBarrier } from './Barrier';
+import { EdgeBarrier, GateBarrier } from './Barrier';
 import { makeStationMaterials, type Mats } from './materials';
 import { mat, useInstances } from './instancing';
 import { OverheadSigns } from './OverheadSigns';
@@ -74,9 +70,6 @@ const S = new THREE.Vector3();
 /** Référence stable pour les gares sans charpente signature. */
 const EMPTY_AVOID: { z: number; r: number }[] = [];
 
-
-/** Recul du panneau de limite derrière la limite de marche réelle (m). */
-const BARRIER_STANDOFF = 0.35;
 
 /** Voies du faisceau, au-delà du quai d'en face, là où rien ne ferme la travée. */
 const YARD_TRACKS = 4;
@@ -562,32 +555,6 @@ export function Station() {
       <PlatformKit place={place} layout={layout} detail={detail} materials={m} />
 
       {detail <= 2 && <Amenities place={place} canopyY={canopyY} m={m} station={index} />}
-
-      {/* Limites de zone : bouts du quai et pied de chaque volée. Le panneau
-          est posé un peu AU-DELÀ de la limite de marche - collé dessus, le
-          joueur aurait le nez dans le halo et n'en verrait plus la trame. */}
-      {[-1, 1].map((d) => (
-        <Barrier
-          key={`end${d}`}
-          x={(place.walkX0 + place.walkX1) / 2}
-          y={PLATFORM_TOP + 1.25}
-          z={d * (place.walkHalfZ + BARRIER_STANDOFF)}
-          width={place.walkX1 - place.walkX0}
-          height={2.5}
-        />
-      ))}
-      {place.stairs.map((s, i) => (
-        <Barrier
-          key={`lim${i}`}
-          // Le panneau tient dans la trémie, entre les joues : il monte du
-          // giron où l'on s'arrête jusqu'à hauteur de dalle, pas au-delà.
-          x={s.x}
-          y={PLATFORM_TOP + STAIR_WALK_Y + 1.0}
-          z={stairTopZ(s) + STAIR_WALK_LEN + BARRIER_STANDOFF}
-          width={STAIR_CLEAR_HALF_X * 2}
-          height={2.0}
-        />
-      ))}
 
       {/* Bords de quai NUS - Shinjuku et Shibuya, les deux seules gares sans
           portes palières. Partout ailleurs, le muret arrête l'œil en même temps
