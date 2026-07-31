@@ -133,6 +133,11 @@ export interface Strings {
     talkShort: string;
     fullscreen: string;
     fullscreenTitle: string;
+    /** Avertissement affiché dans les espaces souterrains encore inachevés. */
+    stationDevelopment: {
+      title: string;
+      detail: string;
+    };
   };
 
   quality: {
@@ -258,6 +263,10 @@ const FR: Strings = {
     talkShort: 'Parler',
     fullscreen: 'Plein écran',
     fullscreenTitle: 'Plein écran (F)',
+    stationDevelopment: {
+      title: 'Gare en cours de développement',
+      detail: 'Cet espace souterrain est encore en construction.',
+    },
   },
   quality: {
     label: 'Qualité vidéo',
@@ -381,6 +390,10 @@ const EN: Strings = {
     talkShort: 'Talk',
     fullscreen: 'Fullscreen',
     fullscreenTitle: 'Fullscreen (F)',
+    stationDevelopment: {
+      title: 'Station under development',
+      detail: 'This underground area is still being built.',
+    },
   },
   quality: {
     label: 'Video quality',
@@ -504,6 +517,10 @@ const JA: Strings = {
     talkShort: '話しかける',
     fullscreen: '全画面',
     fullscreenTitle: '全画面表示（F）',
+    stationDevelopment: {
+      title: '駅構内は開発中です',
+      detail: 'この地下エリアは現在制作中です。',
+    },
   },
   quality: {
     label: '画質',

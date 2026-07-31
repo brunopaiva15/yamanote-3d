@@ -33,6 +33,7 @@ import { Hud } from './ui/Hud';
 import { Controls } from './ui/Controls';
 import { BoardingPrompt } from './ui/BoardingPrompt';
 import { TalkPrompt } from './ui/TalkPrompt';
+import { StationDevelopmentNotice } from './ui/StationDevelopmentNotice';
 
 export default function Game() {
   return (
@@ -74,6 +75,7 @@ export default function Game() {
       <Hud />
       <BoardingPrompt />
       <TalkPrompt />
+      <StationDevelopmentNotice />
       <Controls />
     </>
   );
