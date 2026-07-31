@@ -39,25 +39,16 @@ import { makeGroveGeometry, makeGroveMaterial } from './city/cityProps';
 import { seasonNow } from '../systems/season';
 import { weather } from '../systems/weather';
 import { makeGroundStrip, underStation } from './groundStrip';
+import { buildCatenary, LAMP_REACH, LAMP_Y, POLE_COUNT, POLE_SPACING, POLE_X } from './catenary';
 
 /** Longueur des plans au sol : la vue en biais vers le fond du wagon porte loin. */
 const PLANE_LEN = 460;
 /** Niveau de la plate-forme. */
 const RAIL_Y = -1.15;
 
-const POLE_X = 5.2;
-const POLE_COUNT = 8;
-const POLE_SPACING = 30;
-/** Hauteur du foyer d'éclairage porté par les mâts (m). */
-const LAMP_Y = 5.15;
-/** Déport du foyer vers la voie (m). */
-const LAMP_REACH = 0.95;
-/** Hauteur du fil de contact au-dessus du rail (m). */
-const CONTACT_Y = 4.9;
-/** Hauteur du câble porteur à l'aplomb d'un portique (m). */
-const MESSENGER_Y = 6.05;
-/** Flèche du porteur à mi-portée (m). */
-const MESSENGER_SAG = 0.55;
+// Cotes et géométrie du portique caténaire : voir three/catenary. Wayside n'en
+// garde que ce qui sert au PLACEMENT (POLE_X, LAMP_*, CONTACT_Y…), la forme
+// vivant désormais dans son propre module.
 
 /** Le garde-corps se pose SUR le tablier, dont la joue est en 5,1. */
 const RAILING_X = 5.0;
@@ -90,52 +81,6 @@ function cylAt(
   const g = new THREE.CylinderGeometry(rt, rb, h, seg);
   g.translate(x, y, z);
   return g;
-}
-
-/** Fil tendu entre deux portiques, avec sa flèche. */
-function wire(y0: number, sag: number, span: number, radius: number): THREE.BufferGeometry {
-  const pts: THREE.Vector3[] = [];
-  const N = 8;
-  for (let i = 0; i <= N; i++) {
-    const t = i / N;
-    // Chaînette approchée par une parabole : à cette échelle l'œil ne fait pas
-    // la différence, et la courbe coûte huit points au lieu d'une intégrale.
-    pts.push(new THREE.Vector3(0, y0 - sag * 4 * t * (1 - t), t * span));
-  }
-  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), N, radius, 4, false);
-}
-
-/**
- * Portique caténaire et la portée qu'il porte : deux mâts, une traverse, le
- * câble porteur, le fil de contact et leurs pendules.
- *
- * Les portées sont identiques et espacées de POLE_SPACING : une portée
- * accrochée à chaque portique pave donc la voie sans couture, y compris au
- * recyclage.
- */
-function makePortalGeometry(): THREE.BufferGeometry {
-  const parts: THREE.BufferGeometry[] = [];
-  for (const s of [-1, 1]) {
-    parts.push(cylAt(0.09, 0.13, 7, 8, s * POLE_X, 2.2, 0));
-    parts.push(boxAt(0.16, 0.16, 0.16, s * POLE_X, 5.72, 0)); // tête de mât
-    // Potence d'éclairage : sur JR East, les foyers sont portés par les mâts
-    // de caténaire eux-mêmes. Ils héritent donc de leur entraxe - et c'est ce
-    // chapelet, une lumière toutes les trente mètres, qui dit la nuit.
-    parts.push(boxAt(LAMP_REACH, 0.07, 0.07, s * (POLE_X - LAMP_REACH / 2), LAMP_Y, 0));
-    parts.push(boxAt(0.34, 0.09, 0.2, s * (POLE_X - LAMP_REACH), LAMP_Y - 0.07, 0));
-  }
-  parts.push(boxAt(10.6, 0.14, 0.14, 0, 5.4, 0));
-  // Pendules : ils relient le porteur au fil de contact, et c'est leur rythme
-  // qu'on lit en passant dessous, bien plus que les fils eux-mêmes.
-  const drops = 5;
-  for (let i = 1; i < drops; i++) {
-    const t = i / drops;
-    const top = MESSENGER_Y - MESSENGER_SAG * 4 * t * (1 - t);
-    parts.push(boxAt(0.03, top - CONTACT_Y, 0.03, 0, (top + CONTACT_Y) / 2, t * POLE_SPACING));
-  }
-  parts.push(wire(MESSENGER_Y, MESSENGER_SAG, POLE_SPACING, 0.035));
-  parts.push(wire(CONTACT_Y, 0.04, POLE_SPACING, 0.03));
-  return mergeGeometries(parts, false) as THREE.BufferGeometry;
 }
 
 /** Panneau de garde-corps de viaduc : montants, deux lisses et une plinthe. */
@@ -214,7 +159,15 @@ export function Wayside() {
     bedTex.repeat.set(1, PLANE_LEN / TRACK_BED_TILE);
     const bedMat = new THREE.MeshBasicMaterial({ map: bedTex, fog: true, color: '#d6d4ce' });
 
-    const steel = new THREE.MeshStandardMaterial({ color: '#4a4f55', roughness: 0.7, metalness: 0.3 });
+    // Trois matériaux pour la caténaire : la structure NOIRE (mâts, poutre,
+    // bras, pendules), le fil de contact en cuivre patiné (plus clair, il
+    // accroche la lumière) et le câble porteur en acier gris foncé. Les
+    // séparer sort la caténaire du « paquet de fils noirs » d'un seul ton.
+    const catSteel = new THREE.MeshStandardMaterial({ color: '#16181b', roughness: 0.62, metalness: 0.38 });
+    const catContact = new THREE.MeshStandardMaterial({ color: '#7c6650', roughness: 0.5, metalness: 0.6 });
+    const catMessenger = new THREE.MeshStandardMaterial({ color: '#2b2e33', roughness: 0.58, metalness: 0.4 });
+    // Porcelaine des isolateurs : gris chaud clair, elle ressort sur l'acier.
+    const catInsulator = new THREE.MeshStandardMaterial({ color: '#b7ad9f', roughness: 0.55, metalness: 0.05 });
     const railMat = new THREE.MeshStandardMaterial({
       color: '#b9bcc2',
       roughness: 0.28,
@@ -226,12 +179,23 @@ export function Wayside() {
       metalness: 0.35,
     });
 
-    const portalGeo = makePortalGeometry();
-    const portals = new THREE.InstancedMesh(portalGeo, steel, POLE_COUNT);
-    portals.frustumCulled = false;
-    // Le portique, lui, garde son ombre : la barre qui balaie l'intérieur du
-    // wagon toutes les trente secondes est l'un des plus beaux effets de la
-    // course, et elle ne coûte qu'une géométrie.
+    // Une portée = trois géométries posées par les MÊMES matrices d'instance.
+    // Le portique garde son ombre : la barre qui balaie l'intérieur du wagon
+    // toutes les trente secondes est l'un des plus beaux effets de la course.
+    const cat = buildCatenary();
+    const mkPortal = (geo: THREE.BufferGeometry, mat: THREE.Material) => {
+      const mesh = new THREE.InstancedMesh(geo, mat, POLE_COUNT);
+      mesh.frustumCulled = false;
+      return mesh;
+    };
+    const portalStruct = mkPortal(cat.structure, catSteel);
+    const portalContact = mkPortal(cat.contact, catContact);
+    const portalMsg = mkPortal(cat.messenger, catMessenger);
+    const portalInsul = mkPortal(cat.insulator, catInsulator);
+    portalContact.userData.noShadow = true;
+    portalMsg.userData.noShadow = true;
+    portalInsul.userData.noShadow = true;
+    const portalMeshes = [portalStruct, portalContact, portalMsg, portalInsul];
 
     // Arbres du bord de voie : ils partageaient la géométrie de personne et
     // coûtaient trente-six appels de rendu pour douze sujets. Ils prennent
@@ -289,14 +253,20 @@ export function Wayside() {
     return {
       bedTex,
       bedMat,
-      steel,
+      catSteel,
+      catContact,
+      catMessenger,
       railMat,
       railingMat,
       groveGeo,
       grove,
       groves,
-      portalGeo,
-      portals,
+      cat,
+      portalStruct,
+      portalContact,
+      portalMsg,
+      portalInsul,
+      portalMeshes,
       railingGeo,
       railings,
       kitMeshes,
@@ -385,7 +355,8 @@ export function Wayside() {
     const portalSpan = POLE_COUNT * POLE_SPACING;
     for (let i = 0; i < POLE_COUNT; i++) {
       const z = ((runtime.distance + i * POLE_SPACING) % portalSpan) - portalSpan / 2;
-      place(built.portals, i, z, 0, 0);
+      // Structure, fil de contact et porteur : même portée, mêmes matrices.
+      for (const mesh of built.portalMeshes) place(mesh, i, z, 0, 0);
       // Sous-face des deux foyers : posée sous la potence, elle regarde le sol.
       for (let s2 = 0; s2 < 2; s2++) {
         const idx = i * 2 + s2;
@@ -401,7 +372,7 @@ export function Wayside() {
         built.lamps.setMatrixAt(idx, sc.mtx);
       }
     }
-    built.portals.instanceMatrix.needsUpdate = true;
+    for (const mesh of built.portalMeshes) mesh.instanceMatrix.needsUpdate = true;
     built.lamps.instanceMatrix.needsUpdate = true;
 
     // --- Garde-corps de viaduc ---
@@ -503,7 +474,10 @@ export function Wayside() {
   return (
     <group>
       <primitive object={built.groves} />
-      <primitive object={built.portals} />
+      <primitive object={built.portalStruct} />
+      <primitive object={built.portalContact} />
+      <primitive object={built.portalMsg} />
+      <primitive object={built.portalInsul} />
       {built.railings.map((r) => (
         <primitive key={`railing${r.side}`} object={r.mesh} />
       ))}

@@ -192,17 +192,33 @@ function buildBand(): THREE.BufferGeometry {
   return merge(parts, 'habillage de porte');
 }
 
-/** Pavillon + carénages de climatisation + antennes. */
+/**
+ * Pavillon + équipements de toiture (gris) : deux blocs de climatisation
+ * tiérés, coffrets techniques, grilles et antenne. Les gros conduits de câbles
+ * noirs, eux, sont propres aux voitures à pantographe (buildRoofCables).
+ */
 function buildRoof(): THREE.BufferGeometry {
   const geo = new THREE.ExtrudeGeometry(roofShape(), { depth: HALF * 2, bevelEnabled: false });
   geo.translate(0, 0, -HALF);
   const parts: THREE.BufferGeometry[] = [geo];
-  // Carénage de clim : un gros bloc central, comme sur le E235.
-  parts.push(box(1.9, E235.acTopY - E235.roofCrownY + 0.06, 5.4, 0, (E235.acTopY + E235.roofCrownY) / 2, 0));
-  parts.push(box(2.05, 0.06, 5.0, 0, E235.acTopY, 0));
-  // Deux coffrets techniques et une antenne.
-  for (const z of [-7.2, 7.2]) parts.push(box(1.1, 0.18, 1.6, 0, E235.roofCrownY + 0.09, z));
-  parts.push(box(0.12, 0.3, 0.9, 0.5, E235.roofCrownY + 0.15, -8.6));
+  const cy = E235.roofCrownY;
+
+  // Unité de climatisation principale (côté −z) : un corps surmonté d'un capot
+  // central plus étroit - la silhouette à deux étages du E235.
+  parts.push(box(2.0, 0.4, 3.7, 0, cy + 0.13, -1.7));
+  parts.push(box(1.5, 0.12, 3.3, 0, cy + 0.37, -1.7));
+  // Persiennes d'échange thermique : fines nervures en travers du capot.
+  for (let i = -6; i <= 6; i++) parts.push(box(1.5, 0.13, 0.03, 0, cy + 0.38, -1.7 + i * 0.24));
+
+  // Unité secondaire (côté +z), plus basse et à capot bombé simplifié.
+  parts.push(box(1.86, 0.3, 2.3, 0, cy + 0.1, 2.9));
+  parts.push(box(1.42, 0.1, 1.95, 0, cy + 0.26, 2.9));
+
+  // Coffrets techniques d'about et petites boîtes de toiture.
+  for (const z of [-6.7, 6.7]) parts.push(box(1.25, 0.17, 1.25, 0, cy + 0.085, z));
+  for (const z of [-4.3, 0.7, 5.0]) parts.push(box(0.72, 0.12, 0.52, 0.5, cy + 0.06, z));
+  // Antenne longitudinale.
+  parts.push(box(0.1, 0.3, 0.95, 0.5, cy + 0.16, -8.5));
   return merge(parts, 'toit');
 }
 
@@ -346,10 +362,15 @@ function buildDoorGlass(): THREE.BufferGeometry {
 /** Soufflet d'intercirculation, posé dans l'intervalle entre deux caisses. */
 function buildBellows(): THREE.BufferGeometry {
   const gap = E235.pitch - HALF * 2;
-  // Assez haut et assez large pour masquer la paroi d'about de l'intérieur,
-  // qui dépasse dans l'intervalle (elle est modélisée à z = ±10, la caisse
-  // extérieure s'arrête à ±9,8).
-  const g = new THREE.BoxGeometry(2.72, 2.62, gap + 0.5);
+  // Assez haut et assez large pour masquer TOUT l'intérieur qui déborde dans
+  // l'intervalle : non seulement la paroi d'about (à z = ±10, alors que la
+  // caisse extérieure s'arrête à ±9,8), mais aussi les parois latérales de la
+  // zone prioritaire, dont le nu extérieur rose est à x = 1,44. À 2,72 de large
+  // (±1,36) le soufflet passait DERRIÈRE ce nu : depuis le quai on lisait un
+  // liseré rose au droit de chaque about. Élargi à ±1,46, il couvre la paroi
+  // (1,44) tout en restant en retrait de la peau de caisse (nu extérieur 1,475),
+  // donc sans jamais saillir sur le flanc.
+  const g = new THREE.BoxGeometry(2.92, 2.62, gap + 0.5);
   g.translate(0, 1.24, 0);
   return g;
 }
@@ -367,6 +388,68 @@ export function buildCarGeometries(): CarGeometries {
     doorGlass: buildDoorGlass(),
     bellows: buildBellows(),
   };
+}
+
+// --- Équipements de toiture des voitures à pantographe -------------------
+
+/**
+ * Conduits de câbles haute tension du toit, isolateurs et coffret : le faisceau
+ * noir qui court du pantographe vers l'appareillage, cerclé de colliers. Propre
+ * aux voitures motrices à panto (buildRoof pose le reste, commun à toutes).
+ * Repère : centre de caisse, panto à z ≈ +5,6.
+ */
+export function buildRoofCables(mats: {
+  black: THREE.Material;
+  metal: THREE.Material;
+  insulator: THREE.Material;
+}): THREE.Group {
+  const g = new THREE.Group();
+  // Sur l'épaule du toit, à CÔTÉ des carénages de clim (qui montent à x ≈ 0,93),
+  // sinon le faisceau passe dessous et ne se voit plus.
+  const y = E235.roofCrownY - 0.02;
+  const x = 1.04;
+  const add = (geo: THREE.BufferGeometry, mat: THREE.Material) => g.add(new THREE.Mesh(geo, mat));
+  const tubeZ = (len: number, xx: number, yy: number, zz: number) => {
+    const c = new THREE.CylinderGeometry(0.05, 0.05, len, 8);
+    c.rotateX(Math.PI / 2);
+    c.translate(xx, yy, zz);
+    return c;
+  };
+
+  // Trois conduits parallèles, du coffret (z ≈ 0) au pied du pantographe.
+  const z0 = 0.2;
+  const z1 = 4.9;
+  const zc = (z0 + z1) / 2;
+  for (const dx of [-0.13, 0, 0.13]) add(tubeZ(z1 - z0, x + dx, y + (dx === 0 ? 0.02 : 0), zc), mats.black);
+  // Colliers de fixation métalliques cerclant le faisceau.
+  for (const zz of [z0 + 0.5, zc, z1 - 0.5]) add(box(0.44, 0.11, 0.06, x, y, zz), mats.metal);
+  // Coude qui plonge dans le coffret côté −z.
+  {
+    const c = new THREE.CylinderGeometry(0.05, 0.05, 0.5, 8);
+    c.rotateX(Math.PI / 4);
+    c.translate(x, y - 0.14, z0 - 0.12);
+    add(c, mats.black);
+  }
+  // Traverse ramenant le faisceau vers le pied du panto (dans l'axe).
+  {
+    const c = new THREE.CylinderGeometry(0.05, 0.05, x - 0.35, 8);
+    c.rotateZ(Math.PI / 2);
+    c.translate((x + 0.35) / 2, y + 0.02, z1 + 0.12);
+    add(c, mats.black);
+  }
+  // Coffret d'appareillage où plongent les câbles.
+  add(box(0.62, 0.32, 0.9, x, y + 0.05, z0 - 0.45), mats.black);
+  // Isolateurs de toit (porcelaine claire) près du pied du pantographe.
+  for (const [ix, iz] of [
+    [x - 0.35, 4.6],
+    [x - 0.35, 5.2],
+    [0.35, 4.9],
+  ] as const) {
+    const ins = new THREE.CylinderGeometry(0.06, 0.07, 0.2, 10);
+    ins.translate(ix, E235.roofCrownY + 0.06, iz);
+    add(ins, mats.insulator);
+  }
+  return g;
 }
 
 // --- Pantographe --------------------------------------------------------
