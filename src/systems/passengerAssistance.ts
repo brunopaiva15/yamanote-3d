@@ -158,9 +158,13 @@ function defaultPose(id: number, _doorZ: number): void {
   p.anchorLeft = 0;
   p.interludeT = 999;
   p.partner = -1;
-  // L'état de marche sans waypoint le sort de l'échange et de la couche de vie,
-  // tout en le gardant visible et immobile jusqu'au départ accompagné.
-  p.state = 'alighting';
+  // Conserver ici l'état visuel d'origine est essentiel pour un voyageur assis :
+  // `alighting` ferait immédiatement afficher son rig debout, alors que sa
+  // position et son cap restent ceux du siège. Le modèle apparaissait donc
+  // planté de biais dans le coussin pendant toute l'intervention. Les compteurs
+  // ordinaires ne peuvent pas l'emporter (la sélection suit déjà l'échange) et
+  // cette pose est réappliquée à chaque frame jusqu'au vrai départ accompagné.
+  p.state = snapshot?.state ?? p.state;
   p.afterWalk = 'hidden';
   p.waypoints.length = 0;
   p.wpi = 0;
@@ -178,7 +182,7 @@ function releasePassengerSlots(p: Pax): void {
 
 function defaultBeginAlight(id: number, doorZ: number): boolean {
   const p = paxList[id];
-  if (!p || p.state !== 'alighting') return false;
+  if (!p || (p.state !== 'seated' && p.state !== 'standing')) return false;
   const side = useStore.getState().doorSide;
   releasePassengerSlots(p);
   p.action = 'none';
