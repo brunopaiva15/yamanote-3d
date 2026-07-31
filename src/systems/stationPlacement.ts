@@ -10,6 +10,7 @@
 
 import { CONSIST, E235 } from '../data/e235';
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
+import { interiorFor, type StationInterior } from '../data/stationInterior';
 import {
   ELEVATOR_HALF_Z,
   ESCALATOR_HALF_Z,
@@ -131,6 +132,18 @@ export interface StationPlacement {
   kit: StationKit;
   /** Toutes les emprises qui barrent le passage. */
   obstacles: Placed[];
+  /**
+   * La trémie par laquelle on descend DANS la gare, et le niveau qu'elle
+   * dessert.
+   *
+   * Une seule des trémies mène au hall : les autres gardent le couloir borgne
+   * qu'elles avaient - c'est aussi ce que fait une vraie gare, où toutes les
+   * volées d'un quai ne débouchent pas sur le même endroit, ni toutes sur un
+   * endroit. Celle-ci est la plus proche du milieu du quai, parce que c'est
+   * celle qu'on trouve en descendant du train.
+   */
+  mainStair: Placed;
+  interior: StationInterior;
 }
 
 const CACHE = new Map<number, StationPlacement>();
@@ -613,6 +626,9 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     }
   }
 
+  // La trémie qui descend dans la gare : la plus proche du milieu du quai.
+  const mainStair = stairs.reduce((a, b) => (Math.abs(b.z) < Math.abs(a.z) ? b : a));
+
   const placement: StationPlacement = {
     layout,
     backX,
@@ -637,6 +653,8 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     accesses,
     kit,
     obstacles,
+    mainStair,
+    interior: interiorFor(i, mainStair.z),
   };
   CACHE.set(i, placement);
   return placement;
