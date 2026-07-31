@@ -166,6 +166,8 @@ export function Wayside() {
     const catSteel = new THREE.MeshStandardMaterial({ color: '#16181b', roughness: 0.62, metalness: 0.38 });
     const catContact = new THREE.MeshStandardMaterial({ color: '#7c6650', roughness: 0.5, metalness: 0.6 });
     const catMessenger = new THREE.MeshStandardMaterial({ color: '#2b2e33', roughness: 0.58, metalness: 0.4 });
+    // Porcelaine des isolateurs : gris chaud clair, elle ressort sur l'acier.
+    const catInsulator = new THREE.MeshStandardMaterial({ color: '#b7ad9f', roughness: 0.55, metalness: 0.05 });
     const railMat = new THREE.MeshStandardMaterial({
       color: '#b9bcc2',
       roughness: 0.28,
@@ -189,9 +191,11 @@ export function Wayside() {
     const portalStruct = mkPortal(cat.structure, catSteel);
     const portalContact = mkPortal(cat.contact, catContact);
     const portalMsg = mkPortal(cat.messenger, catMessenger);
+    const portalInsul = mkPortal(cat.insulator, catInsulator);
     portalContact.userData.noShadow = true;
     portalMsg.userData.noShadow = true;
-    const portalMeshes = [portalStruct, portalContact, portalMsg];
+    portalInsul.userData.noShadow = true;
+    const portalMeshes = [portalStruct, portalContact, portalMsg, portalInsul];
 
     // Arbres du bord de voie : ils partageaient la géométrie de personne et
     // coûtaient trente-six appels de rendu pour douze sujets. Ils prennent
@@ -261,6 +265,7 @@ export function Wayside() {
       portalStruct,
       portalContact,
       portalMsg,
+      portalInsul,
       portalMeshes,
       railingGeo,
       railings,
@@ -472,6 +477,7 @@ export function Wayside() {
       <primitive object={built.portalStruct} />
       <primitive object={built.portalContact} />
       <primitive object={built.portalMsg} />
+      <primitive object={built.portalInsul} />
       {built.railings.map((r) => (
         <primitive key={`railing${r.side}`} object={r.mesh} />
       ))}

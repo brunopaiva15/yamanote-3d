@@ -219,17 +219,45 @@ function buildMessenger(): THREE.BufferGeometry {
   return wire(MESSENGER_Y, MESSENGER_SAG, POLE_SPACING, 0.035);
 }
 
+/** Un isolateur : quelques ailettes empilées, à l'aplomb d'un ancrage. */
+function insulatorAt(x: number, y: number): THREE.BufferGeometry[] {
+  return [
+    cylAt(0.045, 0.045, 0.05, 8, x, y, 0),
+    cylAt(0.075, 0.075, 0.028, 8, x, y - 0.045, 0),
+    cylAt(0.05, 0.05, 0.05, 8, x, y - 0.09, 0),
+    cylAt(0.078, 0.078, 0.028, 8, x, y - 0.13, 0),
+  ];
+}
+
+/**
+ * Isolateurs porcelaine : matériau clair à part, ils accrochent l'œil aux
+ * points d'ancrage (porteur, bras de rappel, cantilevers) et cassent le
+ * tout-noir de l'acier.
+ */
+function buildInsulators(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  // Ancrage du porteur sous la poutre.
+  parts.push(...insulatorAt(0, BEAM_BOT - 0.02));
+  // Ancrage du bras de rappel.
+  parts.push(...insulatorAt(0.02, BEAM_BOT - 0.08));
+  // Cantilevers près des mâts.
+  for (const s of [-1, 1]) parts.push(...insulatorAt(s * (POLE_X - 0.55), BEAM_BOT - 0.12));
+  return mergeGeometries(parts, false) as THREE.BufferGeometry;
+}
+
 export interface CatenaryParts {
   structure: THREE.BufferGeometry;
   contact: THREE.BufferGeometry;
   messenger: THREE.BufferGeometry;
+  insulator: THREE.BufferGeometry;
 }
 
-/** Les trois familles d'une portée, à poser par les mêmes matrices. */
+/** Les familles d'une portée, à poser par les mêmes matrices. */
 export function buildCatenary(): CatenaryParts {
   return {
     structure: buildStructure(),
     contact: buildContact(),
     messenger: buildMessenger(),
+    insulator: buildInsulators(),
   };
 }
