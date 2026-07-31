@@ -2761,7 +2761,7 @@ function drawRuns(
  * définition des vraies matrices JR, dont les polices sont dessinées sur des
  * grilles de 16 points.
  */
-const LED_CELL = 3;
+export const LED_CELL = 3;
 
 /**
  * Trame de la matrice : une cellule dont l'inter-diode est noirci. Un seul
@@ -2769,7 +2769,7 @@ const LED_CELL = 3;
  * fini.
  */
 let ledCell: HTMLCanvasElement | null = null;
-function ledMask(): HTMLCanvasElement {
+export function ledMask(): HTMLCanvasElement {
   if (ledCell) return ledCell;
   const { c, g } = makeCanvas(LED_CELL, LED_CELL);
   g.fillStyle = 'rgba(0,0,0,0.55)';

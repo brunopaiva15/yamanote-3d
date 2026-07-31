@@ -6,8 +6,9 @@
 
 import * as THREE from 'three';
 import type { LoopDirection } from '../data/platforms';
-import { JP_FONT, rng } from './procedural';
-import { STATIONS } from '../data/stations';
+import { JP_FONT, LED_CELL, ledMask, rng } from './procedural';
+import { boardDestinations, STATIONS } from '../data/stations';
+import { nextStation, wrapStation } from '../data/loop';
 import { LIVERY } from '../data/e235';
 
 function makeCanvas(w: number, h: number): { c: HTMLCanvasElement; g: CanvasRenderingContext2D } {
@@ -308,30 +309,70 @@ export function makeBellowsTexture(): THREE.CanvasTexture {
   return t;
 }
 
-/** Indicateur latéral de destination, petit afficheur LED au-dessus des baies. */
-export function makeSideSign(): {
+export type SideSignView = 'line' | 'japanese' | 'english';
+
+/** Indicateur latéral de destination, rasterisé sur sa vraie matrice LED. */
+export function makeSideSign(
+  initialIndex = 0,
+  initialDirection: LoopDirection = 'inner',
+  initialView: SideSignView = 'line',
+): {
   texture: THREE.CanvasTexture;
-  redraw: (stationIndex: number) => void;
+  redraw: (stationIndex: number, direction: LoopDirection, view: SideSignView) => void;
 } {
   const W = 512;
   const H = 128;
   const { c, g } = makeCanvas(W, H);
+  const dot = makeCanvas(Math.ceil(W / LED_CELL), Math.ceil(H / LED_CELL));
   const texture = toTexture(c);
-  const redraw = (stationIndex: number) => {
-    const st = STATIONS[stationIndex % STATIONS.length];
-    g.fillStyle = '#0a0b0d';
-    g.fillRect(0, 0, W, H);
-    g.textAlign = 'left';
-    g.fillStyle = '#9fe870';
-    g.font = `700 52px ${JP_FONT}`;
-    g.fillText('山手線', 16, 60);
-    g.fillStyle = '#f0a03c';
-    g.font = `600 34px ${JP_FONT}`;
-    g.fillText(`${st.kanji}方面`, 16, 108);
-    g.fillStyle = 'rgba(0,0,0,0.32)';
-    for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1);
+  const redraw = (stationIndex: number, direction: LoopDirection, view: SideSignView) => {
+    const index = wrapStation(stationIndex);
+    const next = STATIONS[nextStation(index, direction)];
+    const destinations = boardDestinations(index, direction, 2);
+    const t = dot.g;
+    t.setTransform(1 / LED_CELL, 0, 0, 1 / LED_CELL, 0, 0);
+    t.fillStyle = '#040609';
+    t.fillRect(0, 0, W, H);
+    t.textAlign = 'left';
+    t.textBaseline = 'alphabetic';
+    if (view === 'line') {
+      t.fillStyle = '#f5f7f2';
+      t.font = `700 58px ${JP_FONT}`;
+      t.fillText('山手線', 18, 66);
+      t.fillStyle = '#58dc70';
+      t.font = `700 34px ${JP_FONT}`;
+      t.fillText('Yamanote Line', 18, 108);
+    } else if (view === 'japanese') {
+      t.fillStyle = '#ff9a2e';
+      t.font = `700 42px ${JP_FONT}`;
+      t.fillText(destinations.map((station) => station.kanji).join('・'), 16, 50, W - 32);
+      t.fillStyle = '#f5f7f2';
+      t.font = `700 25px ${JP_FONT}`;
+      t.fillText('次は', 16, 99);
+      t.font = `700 42px ${JP_FONT}`;
+      t.fillText(next.kanji, 90, 103, W - 106);
+    } else {
+      t.fillStyle = '#ff9a2e';
+      t.font = `700 24px ${JP_FONT}`;
+      t.fillText(`Bound for ${destinations.map((station) => station.romaji).join(' & ')}`, 14, 45, W - 28);
+      t.fillStyle = '#f5f7f2';
+      t.font = `700 24px ${JP_FONT}`;
+      t.fillText('Next', 14, 98);
+      t.font = `700 36px ${JP_FONT}`;
+      t.fillText(next.romaji, 88, 103, W - 102);
+    }
+    t.setTransform(1, 0, 0, 1, 0, 0);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(dot.c, 0, 0, dot.c.width * LED_CELL, dot.c.height * LED_CELL);
+    const grid = g.createPattern(ledMask(), 'repeat');
+    if (grid) {
+      g.fillStyle = grid;
+      g.fillRect(0, 0, W, H);
+    }
     texture.needsUpdate = true;
   };
-  redraw(0);
+  texture.minFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.NearestFilter;
+  redraw(initialIndex, initialDirection, initialView);
   return { texture, redraw };
 }

@@ -25,6 +25,8 @@ import {
   makeDestinationSign,
   makeFrontCheckerTexture,
   makeRoofTexture,
+  makeSideSign,
+  type SideSignView,
   makeStainlessRoughness,
   makeStainlessTexture,
   serviceNumberFor,
@@ -42,6 +44,7 @@ interface Built {
   leaves: THREE.InstancedMesh;
   leafGlass: THREE.InstancedMesh;
   sign: { texture: THREE.CanvasTexture; redraw: (s: string) => void };
+  sideSign: { texture: THREE.CanvasTexture; redraw: (index: number, direction: import('../../data/platforms').LoopDirection, view: SideSignView) => void };
   dispose: () => void;
 }
 
@@ -116,6 +119,8 @@ function build(): Built {
   const checkerTex = track(makeFrontCheckerTexture());
   const sign = makeDestinationSign();
   track(sign.texture);
+  const sideSign = makeSideSign();
+  track(sideSign.texture);
 
   const mats = {
     body: track(
@@ -167,6 +172,7 @@ function build(): Built {
       new THREE.MeshBasicMaterial({ map: checkerTex, transparent: true, toneMapped: false }),
     ),
     sign: track(new THREE.MeshBasicMaterial({ map: sign.texture, toneMapped: false })),
+    sideSign: track(new THREE.MeshBasicMaterial({ map: sideSign.texture, toneMapped: false })),
     headlight: track(
       new THREE.MeshStandardMaterial({
         color: '#fff8e8',
@@ -235,6 +241,26 @@ function build(): Built {
   const leafGlass = instanced(geos.doorGlass, mats.glass, LEAVES);
   leafGlass.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
+  // Deux afficheurs par flanc et par voiture : un avant la première porte,
+  // l'autre après la quatrième. Toutes les occurrences partagent le canvas
+  // et les deux matériaux ; seules leurs matrices diffèrent.
+  const sideSignCount = CARS * 4;
+  const signBox = instanced(new THREE.BoxGeometry(0.07, 0.43, 1.82), mats.black, sideSignCount);
+  const signFaceGeo = new THREE.PlaneGeometry(1.68, 0.34);
+  signFaceGeo.rotateY(Math.PI / 2);
+  const signFaces = instanced(signFaceGeo, mats.sideSign, sideSignCount);
+  let signIndex = 0;
+  const signOffsets = [E235.doorCenters[0] - 1.55, E235.doorCenters[E235.doorCenters.length - 1] + 1.55];
+  for (let i = 0; i < CARS; i++) for (const s of [1, -1] as const) for (const dz of signOffsets) {
+    signBox.setMatrixAt(signIndex, m.makeTranslation(s * (E235.halfWidth + 0.035), 1.92, carZ(i) + dz));
+    m.makeRotationY(s === 1 ? 0 : Math.PI);
+    m.setPosition(s * (E235.halfWidth + 0.073), 1.92, carZ(i) + dz);
+    signFaces.setMatrixAt(signIndex, m);
+    signIndex++;
+  }
+  signBox.instanceMatrix.needsUpdate = true;
+  signFaces.instanceMatrix.needsUpdate = true;
+
   // Cabines : le même nez aux deux bouts, celui de queue retourné.
   for (const [i, dir] of [
     [0, -1],
@@ -283,6 +309,7 @@ function build(): Built {
     leaves,
     leafGlass,
     sign,
+    sideSign,
     dispose: () => {
       for (const d of disposables) d.dispose();
     },
@@ -298,6 +325,7 @@ export function TrainConsist() {
   const lastOpen = useRef(-1);
   const lastBlocked = useRef(-1);
   const lastService = useRef('');
+  const lastSideSign = useRef('');
 
   useFrame(() => {
     // Éteinte tant qu'on est à bord d'une rame immobile : depuis l'intérieur,
@@ -307,6 +335,15 @@ export function TrainConsist() {
     if (!visible) return;
 
     const { doorSide, index, loopDirection } = useStore.getState();
+
+    // Le temps simulé fournit un intervalle stable, indépendant du framerate.
+    const views: SideSignView[] = ['line', 'japanese', 'english'];
+    const sideView = views[Math.floor((runtime.clockMin * 60) / 5) % views.length];
+    const sideKey = `${index}:${loopDirection}:${sideView}`;
+    if (sideKey !== lastSideSign.current) {
+      lastSideSign.current = sideKey;
+      built.sideSign.redraw(index, loopDirection, sideView);
+    }
 
     // Girouette : numéro de course, recalculé quand il change seulement.
     const service = serviceNumberFor(index, runtime.clockMin, loopDirection);
