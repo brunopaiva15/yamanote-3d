@@ -30,7 +30,7 @@ import {
   serviceNumberFor,
 } from '../../textures/trainExterior';
 import { applyShadowFlags } from '../shadowFlags';
-import { buildCarGeometries, buildPantograph } from './carShellGeometry';
+import { buildCarGeometries, buildPantograph, buildRoofCables } from './carShellGeometry';
 import { buildCab } from './cabGeometry';
 
 const CARS = CONSIST.length;
@@ -246,12 +246,15 @@ function build(): Built {
     root.add(cab);
   }
 
-  // Pantographes.
+  // Pantographes et leur appareillage de toiture (conduits, isolateurs).
   for (let i = 0; i < CARS; i++) {
     if (!CONSIST[i].panto) continue;
     const p = buildPantograph({ metal: mats.metal, insulator: mats.insulator });
     p.position.z = carZ(i) + 5.6;
     root.add(p);
+    const cables = buildRoofCables({ black: mats.black, metal: mats.metal, insulator: mats.insulator });
+    cables.position.z = carZ(i);
+    root.add(cables);
   }
 
   // Plaques de numéro de voiture, en bas de caisse près de chaque about.
