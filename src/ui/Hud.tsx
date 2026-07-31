@@ -33,6 +33,22 @@ function useClock(): string {
   return clock;
 }
 
+/**
+ * La vitesse est une valeur continue du runtime. La sonder dix fois par
+ * seconde garde l'affichage réactif sans faire re-rendre le HUD à 60 fps.
+ * Le runtime travaille en m/s ; le voyageur, lui, la lit en km/h.
+ */
+function useSpeed(): number {
+  const [speed, setSpeed] = useState(0);
+  useEffect(() => {
+    const tick = () => setSpeed(Math.max(0, Math.round(runtime.speed * 3.6)));
+    tick();
+    const id = window.setInterval(tick, 100);
+    return () => window.clearInterval(id);
+  }, []);
+  return speed;
+}
+
 // L'arrêt subi vit dans runtime (pas dans le store) : on le sonde comme
 // l'horloge. Le badge ne le signale que pendant la décélération et
 // l'immobilisation, tandis que la remontée en vitesse ('resuming') s'affiche
@@ -153,6 +169,7 @@ export function Hud() {
   const lang = useStore((s) => s.lang);
   const t = useT();
   const clock = useClock();
+  const speed = useSpeed();
   const occupancy = useOccupancy();
   const sky = useWeather();
   const em = useEmergency();
@@ -185,6 +202,12 @@ export function Hud() {
     <>
       <div className="hud-top">
         <div className="hud-clock">{clock}</div>
+        <div className="hud-speed" title={t.hud.speedTitle} aria-label={`${t.hud.speedTitle}: ${speed} km/h`}>
+          <span className="hud-speed-value">{speed}</span>
+          <span className="hud-speed-unit" aria-hidden="true">
+            km/h
+          </span>
+        </div>
         <div className="hud-weather" title={t.hud.weatherTitle}>
           <span className="hud-weather-glyph" aria-hidden="true">
             {WEATHER_GLYPH[sky.kind]}
@@ -205,11 +228,7 @@ export function Hud() {
             <span className="hud-jy">{st.jy}</span> {primary} <span className="hud-kanji">{secondary}</span>
           </span>
         </div>
-        <div
-          className="hud-occupancy"
-          style={{ borderColor: color, color }}
-          title={t.hud.occupancyTitle}
-        >
+        <div className="hud-occupancy" style={{ borderColor: color, color }} title={t.hud.occupancyTitle}>
           <span className="hud-occupancy-pct">~{occupancy.percent}&nbsp;%</span>
           <span className="hud-occupancy-label">{t.hud.band[occupancy.band]}</span>
         </div>
@@ -219,7 +238,6 @@ export function Hud() {
       </div>
 
       <div className="hud-reticle" aria-hidden="true" />
-
 
       <div className="hud-bottom" ref={barRef}>
         <LanguageSwitcher className="lang-switch-hud" />

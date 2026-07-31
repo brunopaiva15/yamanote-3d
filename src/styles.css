@@ -26,7 +26,8 @@
      dépend de la langue et de la largeur de l'écran, et le joystick comme les
      boutons tactiles se posent dessus. */
   --hud-bar-h: 0px;
-  font-family: 'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+  font-family:
+    'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
 }
 
 * {
@@ -167,7 +168,10 @@ body,
   padding: 12px 44px;
   cursor: pointer;
   box-shadow: 0 4px 0 var(--ink-line);
-  transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.1s ease;
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease,
+    background-color 0.1s ease;
 }
 
 .start-button:hover:not(:disabled) {
@@ -423,7 +427,9 @@ body,
   color: #8b4513;
   text-decoration: none;
   box-shadow: 0 2px 0 var(--ink-line);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
 }
 
 .site-footer-support a:hover {
@@ -459,7 +465,9 @@ body,
   padding: 6px 9px;
   cursor: pointer;
   line-height: 1.1;
-  transition: color 0.12s ease, background-color 0.12s ease;
+  transition:
+    color 0.12s ease,
+    background-color 0.12s ease;
 }
 
 .lang-option:hover {
@@ -497,6 +505,7 @@ body,
 }
 
 .hud-clock,
+.hud-speed,
 .hud-phase,
 .hud-station,
 .hud-weather,
@@ -535,6 +544,26 @@ body,
   font-variant-numeric: tabular-nums;
   font-size: 18px;
   font-weight: 600;
+}
+
+/* Compteur compact, calé sur l'horloge : les chiffres restent stables quand
+   la vitesse varie et l'unité s'efface visuellement derrière la mesure. */
+.hud-speed {
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.hud-speed-value {
+  min-width: 2ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.hud-speed-unit {
+  color: var(--sticker-dim);
+  font-size: 11px;
 }
 
 /* Le temps qu'il fait : un pictogramme, un mot, une température. Il nomme ce
@@ -659,9 +688,6 @@ body,
   pointer-events: none;
 }
 
-
-
-
 /* --- Barre du bas --- */
 
 .hud-bottom {
@@ -693,7 +719,10 @@ body,
   padding: 8px 14px;
   cursor: pointer;
   box-shadow: var(--sticker-shadow);
-  transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.1s ease;
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease,
+    background-color 0.1s ease;
 }
 
 .hud-button:hover {
@@ -722,7 +751,10 @@ body,
 .incident-toggle {
   padding: 8px 11px;
   opacity: 0.45;
-  transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease,
+  transition:
+    opacity 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.1s ease,
     background-color 0.1s ease;
 }
 
@@ -1042,6 +1074,19 @@ body,
     padding: 6px 10px;
   }
 
+  .hud-speed {
+    padding: 6px 9px;
+    gap: 4px;
+  }
+
+  .hud-speed-value {
+    font-size: 15px;
+  }
+
+  .hud-speed-unit {
+    font-size: 9px;
+  }
+
   .hud-phase {
     font-size: 12px;
     padding: 6px 10px;
@@ -1158,6 +1203,7 @@ body,
   }
 
   .hud-clock,
+  .hud-speed,
   .hud-weather,
   .hud-occupancy,
   .hud-phase {
