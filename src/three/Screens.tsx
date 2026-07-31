@@ -1799,11 +1799,17 @@ export function Screens() {
       {/* Dalle unique au-dessus de la porte d'intercirculation, aux deux
           abouts du wagon : c'est l'écran qu'on a en face de soi quand on est
           adossé à la paroi d'about, et le seul qu'on voie depuis le fond de la
-          travée prioritaire. Format 16:9, encastré dans l'imposte rose. */}
+          travée prioritaire. Format 16:9, encastré dans l'imposte rose.
+
+          Le groupe est décalé d'un centimètre EN AVANT de la face intérieure de
+          l'imposte (à ±0,045 du plan d'about), comme les dalles des portes le
+          sont de leur paroi. Posé à 0,045 pile, le panneau blanc et l'imposte
+          se partageaient exactement le même plan : les deux surfaces se
+          disputaient le pixel et la bordure scintillait. */}
       {sides.map((e) => (
         <group
           key={`endscr${e}`}
-          position={[0, 2.12, e * (CONFIG.carHalfLength - 0.045)]}
+          position={[0, 2.12, e * (CONFIG.carHalfLength - 0.055)]}
           rotation={[0, e === 1 ? Math.PI : 0, 0]}
         >
           <mesh position={[0, 0, -0.032]} material={surroundMat}>
