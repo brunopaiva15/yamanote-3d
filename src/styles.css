@@ -351,6 +351,48 @@ body,
   color: #16181a;
 }
 
+/* Voyageurs en ligne : une mention discrète sous l'heure, dans le même gris que
+   le pied de carte. Une petite pastille verte suffit à dire « en direct ». */
+.start-online {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+  color: #868f95;
+}
+
+.start-online-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #35c46a;
+  box-shadow: 0 0 0 0 rgba(53, 196, 106, 0.55);
+  animation: start-online-pulse 2.4s ease-out infinite;
+}
+
+@keyframes start-online-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(53, 196, 106, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(53, 196, 106, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(53, 196, 106, 0);
+  }
+}
+
+/* Moins d'animation à la demande : la pastille reste fixe. */
+@media (prefers-reduced-motion: reduce) {
+  .start-online-dot {
+    animation: none;
+  }
+}
+
 /* --- Pied de page (écran d'accueil) --- */
 
 .site-footer {
@@ -480,7 +522,6 @@ body,
 .hud-phase,
 .hud-station,
 .hud-weather,
-.hud-online,
 .hud-occupancy {
   background: var(--sticker);
   border: 2px solid var(--ink-line);
@@ -535,53 +576,6 @@ body,
 .hud-weather-temp {
   font-variant-numeric: tabular-nums;
   opacity: 0.7;
-}
-
-/* Voyageurs en ligne : une pastille verte qui bat doucement, un nombre, un mot.
-   Même carte que l'horloge et la météo pour rester dans la même famille. */
-.hud-online {
-  gap: 7px;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.hud-online-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #35c46a;
-  box-shadow: 0 0 0 0 rgba(53, 196, 106, 0.6);
-  animation: hud-online-pulse 2.4s ease-out infinite;
-}
-
-.hud-online-count {
-  font-variant-numeric: tabular-nums;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.hud-online-label {
-  opacity: 0.7;
-}
-
-@keyframes hud-online-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(53, 196, 106, 0.55);
-  }
-  70% {
-    box-shadow: 0 0 0 7px rgba(53, 196, 106, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(53, 196, 106, 0);
-  }
-}
-
-/* Certains visiteurs demandent moins d'animations : la pastille reste fixe. */
-@media (prefers-reduced-motion: reduce) {
-  .hud-online-dot {
-    animation: none;
-  }
 }
 
 .hud-station {
@@ -1029,21 +1023,6 @@ body,
     display: none;
   }
 
-  /* Idem pour le compteur : la pastille et le nombre suffisent, le mot tombe. */
-  .hud-online {
-    padding: 6px 9px;
-    gap: 5px;
-    font-size: 11.5px;
-  }
-
-  .hud-online-label {
-    display: none;
-  }
-
-  .hud-online-count {
-    font-size: 14px;
-  }
-
   .hud-occupancy-pct {
     font-size: 14px;
   }
@@ -1138,7 +1117,6 @@ body,
 
   .hud-clock,
   .hud-weather,
-  .hud-online,
   .hud-occupancy,
   .hud-phase {
     padding: 6px 8px;

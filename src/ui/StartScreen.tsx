@@ -17,6 +17,7 @@ import { STATIONS } from '../data/stations';
 import type { TokyoDate } from '../data/occupancy';
 import { useStore } from '../store';
 import { useT } from '../i18n';
+import { presenceEnabled, subscribeOnlineCount } from '../systems/presence';
 import { startAudio, setVolume } from '../systems/audioEngine';
 import { seedPassengers } from '../systems/passengers';
 import { runtime, tokyoNow } from '../systems/runtime';
@@ -84,6 +85,20 @@ function valueToDate(value: string): TokyoDate | null {
   return { year: y, month: m, day: d, weekday: utc.getUTCDay() };
 }
 
+/**
+ * Nombre de personnes actuellement connectées au site, ou `null` quand le
+ * compteur n'est pas configuré (pas de projet Supabase) - la mention reste alors
+ * absente. Le décompte vit dans systems/presence ; le menu ne fait que l'afficher.
+ */
+function useOnlineCount(): number | null {
+  const [online, setOnline] = useState<number | null>(presenceEnabled ? 0 : null);
+  useEffect(() => {
+    if (!presenceEnabled) return;
+    return subscribeOnlineCount(setOnline);
+  }, []);
+  return online;
+}
+
 /** Valeur sentinelle du sélecteur : laisser randomizeEntry tirer la gare. */
 const STATION_RANDOM = 'random';
 
@@ -94,6 +109,7 @@ export function StartScreen() {
   const start = useStore((s) => s.start);
   const t = useT();
   const coarsePointer = useCoarsePointer();
+  const online = useOnlineCount();
   const [loading, setLoading] = useState(false);
   // Heure de départ : figée à l'ouverture du menu (Tokyo), modifiable ensuite.
   const [timeValue, setTimeValue] = useState(() => minutesToTimeValue(tokyoNow().minutes));
@@ -313,6 +329,17 @@ export function StartScreen() {
           {t.start.tokyoTime}
           <strong>{timeValue}</strong>
         </p>
+        {/* Voyageurs en ligne : mention discrète, absente tant que le compteur
+            n'est pas configuré ou qu'aucune présence n'est encore confirmée. */}
+        {online != null && online > 0 && (
+          <p className="start-online" title={t.start.onlineTitle}>
+            <span className="start-online-dot" aria-hidden="true" />
+            {(online === 1 ? t.start.online.one : t.start.online.other).replace(
+              '{n}',
+              String(online),
+            )}
+          </p>
+        )}
         <Footer />
       </div>
     </div>

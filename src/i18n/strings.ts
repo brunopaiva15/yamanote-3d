@@ -78,6 +78,13 @@ export interface Strings {
     directionLabel: string;
     /** Option « laisser le hasard choisir le sens ». */
     directionRandom: string;
+    /**
+     * Compteur discret « voyageurs en ligne » du menu. `{n}` est remplacé par
+     * le nombre ; `one` sert au singulier, `other` au reste.
+     */
+    online: { one: string; other: string };
+    /** Bulle (title) du même compteur. */
+    onlineTitle: string;
   };
 
   hud: {
@@ -98,10 +105,6 @@ export interface Strings {
       packed: string;
       crushed: string;
     };
-    /** Étiquette du badge « voyageurs en ligne » (après le nombre). */
-    online: string;
-    /** Bulle du badge « voyageurs en ligne ». */
-    onlineTitle: string;
     /** Bulle du bandeau météo. */
     weatherTitle: string;
     /** Le temps qu'il fait, dans l'ordre de systems/weather. */
@@ -216,6 +219,8 @@ const FR: Strings = {
     stationRandom: 'Aléatoire',
     directionLabel: 'Sens',
     directionRandom: 'Aléatoire',
+    online: { one: '{n} voyageur en ligne', other: '{n} voyageurs en ligne' },
+    onlineTitle: 'Personnes connectées au site en ce moment',
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arrivée', dwell: 'À quai', depart: 'Départ' },
@@ -233,8 +238,6 @@ const FR: Strings = {
       packed: 'très serré',
       crushed: 'saturé',
     },
-    online: 'en ligne',
-    onlineTitle: 'Voyageurs connectés au site en ce moment',
     weatherTitle: 'Temps à Tokyo',
     weather: {
       clear: 'Dégagé',
@@ -339,6 +342,8 @@ const EN: Strings = {
     stationRandom: 'Random',
     directionLabel: 'Direction',
     directionRandom: 'Random',
+    online: { one: '{n} traveller online', other: '{n} travellers online' },
+    onlineTitle: 'People connected to the site right now',
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arriving', dwell: 'At the platform', depart: 'Departing' },
@@ -356,8 +361,6 @@ const EN: Strings = {
       packed: 'very crowded',
       crushed: 'packed solid',
     },
-    online: 'online',
-    onlineTitle: 'Travellers connected to the site right now',
     weatherTitle: 'Tokyo weather',
     weather: {
       clear: 'Clear',
@@ -462,6 +465,8 @@ const JA: Strings = {
     stationRandom: 'ランダム',
     directionLabel: '方向',
     directionRandom: 'ランダム',
+    online: { one: '接続中 {n} 人', other: '接続中 {n} 人' },
+    onlineTitle: 'いまサイトに接続している人数',
   },
   hud: {
     phase: { cruise: '走行中', brake: 'まもなく到着', dwell: '停車中', depart: '発車' },
@@ -479,8 +484,6 @@ const JA: Strings = {
       packed: '大変混雑',
       crushed: '超満員',
     },
-    online: 'オンライン',
-    onlineTitle: 'いま接続している利用者数',
     weatherTitle: '東京の天気',
     weather: {
       clear: '快晴',

@@ -1479,8 +1479,9 @@ d'un domaine ou sur tout autre hébergeur statique).
 
 ### Compteur « voyageurs en ligne » (facultatif)
 
-Le HUD peut afficher le nombre de personnes actuellement connectées au site,
-mis à jour en temps réel. Le site étant purement statique, un fichier ne peut
+L'écran d'accueil peut afficher, discrètement sous l'heure de Tokyo, le nombre
+de personnes actuellement connectées au site, mis à jour en temps réel. Le site
+étant purement statique, un fichier ne peut
 pas compter qui est là : le décompte passe par le canal *Realtime Presence* de
 [Supabase](https://supabase.com), contacté directement depuis le navigateur.
 Aucun backend à écrire, aucune table ni SQL - seulement le canal de présence.
