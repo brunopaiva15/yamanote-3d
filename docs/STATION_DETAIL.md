@@ -90,16 +90,24 @@ part mais le pavillon du parc à Ueno, le tram à Ōtsuka, la halle de brique à
 Tokyo. C'est le détail que les voyageurs viennent chercher, et il ne se
 paramètre pas : c'est une table de trente lignes.
 
-## Phase 6 — Le fléchage du hall
+## Phase 6 — Le fléchage du hall ✅
 
-**À faire.** Une gare japonaise se lit à trois hauteurs, et il en manque deux :
+**Livré, en partie.** Une gare japonaise se lit à trois couleurs et jamais à
+autre chose : le jaune mène dehors, le blanc mène aux trains, le bleu mène aux
+installations. Un voyageur qui ne lit pas un mot de japonais s'oriente sur la
+couleur seule.
 
-- **suspendu** — potences de sortie jaunes, correspondances blanches,
-  installations en bleu, au-dessus des circulations ;
-- **mural** — plan de quartier (周辺案内図), plan de ligne, tarifs, plan des
-  sorties numérotées ;
-- **au sol** — flèches peintes, files d'attente, bandes de guidage vers chaque
-  portillon.
+- **suspendu** — quatre caissons, et leur position est le message : celui qui
+  accueille en bas des marches dit la sortie, celui du milieu les installations,
+  celui qui suit les portillons les quais (à l'envers, pour qui arrive de la
+  rue), le dernier vers quelle bouche aller. Ils se calent dans le passage
+  RÉELLEMENT libre, lu dans l'implantation - centré bêtement, un panneau rentre
+  dans le konbini, qui fait 3,20 m de fond et monte au plafond ;
+- **mural** — le plan de quartier (周辺案内図) est posé, un par gare, avec sa
+  trame de rues, son parc, sa rivière et son point rouge. Le plan de ligne, les
+  tarifs et le plan des sorties numérotées restent à faire ;
+- **au sol** — la bande de guidage mène du couloir au passage large. Les flèches
+  peintes et les files d'attente restent à faire.
 
 ## Phase 7 — Les piliers, et ce qu'ils portent
 

@@ -363,12 +363,15 @@ function Vending({
       <mesh position={[0, PLINTH_H + (H - PLINTH_H) / 2, 0]} material={set.body}>
         <boxGeometry args={[bw, H - PLINTH_H, d]} />
       </mesh>
-      {/* Vitrine : en saillie de 7 cm, c'est ce décalage qui la fait lire. */}
-      <mesh position={[0, 1.35, d / 2 + 0.035]} material={set.display}>
-        <planeGeometry args={[bw * 0.88, 0.58]} />
+      {/* Vitrine : en saillie, c'est ce décalage qui la fait lire. L'ENCADREMENT
+          se pose derrière l'affichage et non devant - posé devant, sa face
+          avant passait à quatre millimètres du plan imprimé et le mangeait
+          entièrement : la machine n'avait plus qu'un trou noir au milieu. */}
+      <mesh position={[0, 1.35, d / 2 + 0.015]} material={m.frame}>
+        <boxGeometry args={[bw * 0.92, 0.64, 0.03]} />
       </mesh>
-      <mesh position={[0, 1.35, d / 2 + 0.02]} material={m.frame}>
-        <boxGeometry args={[bw * 0.92, 0.64, 0.04]} />
+      <mesh position={[0, 1.35, d / 2 + 0.032]} material={set.display}>
+        <planeGeometry args={[bw * 0.88, 0.58]} />
       </mesh>
       {/* Bandeau d'enseigne. */}
       <mesh position={[0, 1.75, d / 2 + 0.015]} material={set.header}>

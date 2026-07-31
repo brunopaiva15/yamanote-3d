@@ -729,3 +729,75 @@ export function makeKioskSignTexture(): THREE.CanvasTexture {
   g.textAlign = 'left';
   return toTexture(c);
 }
+
+/** Ce qu'un panneau suspendu du hall annonce. */
+export type GuideKind =
+  /** Jaune : la sortie. */
+  | 'exit'
+  /** Blanc : les quais, en remontant. */
+  | 'platform'
+  /** Blanc : les portillons, depuis la zone libre. */
+  | 'gates'
+  /** Bleu : les installations - toilettes, ascenseur, consignes. */
+  | 'facility';
+
+/**
+ * Panneau suspendu du hall.
+ *
+ * Une gare japonaise se lit à TROIS COULEURS et jamais à autre chose : le jaune
+ * mène dehors, le blanc mène aux trains, le bleu mène aux installations. Un
+ * voyageur qui ne lit pas un mot de japonais s'oriente sur la couleur seule -
+ * c'est le service que rend cette signalétique, et c'est pourquoi elle ne
+ * s'invente pas.
+ *
+ * `dir` oriente la flèche : -1 vers la gauche, 0 tout droit, +1 vers la droite.
+ */
+export function makeConcourseGuideTexture(kind: GuideKind, dir: -1 | 0 | 1): THREE.CanvasTexture {
+  const W = 1024;
+  const H = 256;
+  const { c, g } = makeCanvas(W, H);
+
+  const skin = {
+    exit: { bg: CAUTION, ink: '#1c1c1a', jp: '出口', en: 'Exit' },
+    platform: { bg: '#ffffff', ink: '#1c1c1a', jp: 'のりば', en: 'Platforms' },
+    gates: { bg: '#ffffff', ink: '#1c1c1a', jp: '改札口', en: 'Gates' },
+    facility: { bg: '#1f5fbf', ink: '#ffffff', jp: 'お手洗い・ロッカー', en: 'Toilets / Lockers' },
+  }[kind];
+
+  g.fillStyle = skin.bg;
+  g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#1c1c1a';
+  g.lineWidth = 10;
+  g.strokeRect(5, 5, W - 10, H - 10);
+
+  // La flèche, toujours du côté où l'on va : c'est elle qu'on lit en premier.
+  const ax = dir === 1 ? W - 130 : 130;
+  g.save();
+  g.translate(ax, H / 2);
+  // La flèche de base pointe à gauche. « Tout droit » se dit VERS LE HAUT sur
+  // un panneau japonais - vers le bas, c'est « descendre », ce qui n'est pas la
+  // même consigne du tout.
+  if (dir === 1) g.rotate(Math.PI);
+  else if (dir === 0) g.rotate(Math.PI / 2);
+  g.fillStyle = skin.ink;
+  g.beginPath();
+  g.moveTo(-72, 0);
+  g.lineTo(-14, -58);
+  g.lineTo(-14, -22);
+  g.lineTo(72, -22);
+  g.lineTo(72, 22);
+  g.lineTo(-14, 22);
+  g.lineTo(-14, 58);
+  g.closePath();
+  g.fill();
+  g.restore();
+
+  const textX = dir === 1 ? 46 : 236;
+  g.fillStyle = skin.ink;
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+  fitFillText(g, skin.jp, textX, H * 0.56, W - 400, 78, 'bold');
+  g.font = `500 40px ${JP_FONT}`;
+  g.fillText(skin.en, textX + 4, H * 0.84, W - 400);
+  return toTexture(c);
+}

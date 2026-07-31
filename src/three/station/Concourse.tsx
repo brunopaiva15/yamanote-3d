@@ -27,6 +27,7 @@ import * as THREE from 'three';
 
 import type { StationInterior, InteriorRect } from '../../data/stationInterior';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
+import { makeConcourseGuideTexture, type GuideKind } from '../../textures/concourse';
 import type { Mats } from './materials';
 import { stationAd } from './adPool';
 import { Fixtures } from './Fixtures';
@@ -190,6 +191,9 @@ export function Concourse({
           <boxGeometry args={[Math.min(width - 1.2, 2.6), 0.08, 0.34]} />
         </mesh>
       ))}
+
+      {/* Le fléchage suspendu : trois couleurs, et jamais autre chose. */}
+      <Guides it={it} m={m} />
 
       {/* Le mobilier : billetterie, konbini, consignes, distributeurs, tampon.
           L'implantation vient de data/stationInterior - la même liste que la
@@ -404,6 +408,116 @@ function Guideline({ it, m }: { it: StationInterior; m: Mats }) {
       >
         <boxGeometry args={[0.3, 0.016, it.free.z1 - it.free.z0]} />
       </mesh>
+    </group>
+  );
+}
+
+/**
+ * Le fléchage suspendu du hall.
+ *
+ * Trois couleurs, et jamais autre chose : le jaune mène dehors, le blanc mène
+ * aux trains, le bleu mène aux installations. Un voyageur qui ne lit pas un mot
+ * de japonais s'oriente sur la couleur seule, et c'est tout le service que rend
+ * cette signalétique.
+ *
+ * Quatre panneaux, et leur POSITION est le message : celui qui accueille en bas
+ * des marches dit la sortie, celui du milieu dit les installations, celui qui
+ * suit les portillons dit les quais - à l'envers, pour qui arrive de la rue -
+ * et le dernier dit vers quelle bouche aller. Un panneau de plus serait du
+ * bruit ; c'est déjà ce qu'on reproche aux gares réelles.
+ */
+function Guides({ it, m }: { it: StationInterior; m: Mats }) {
+  // Bas du panneau à 2,10 m : on passe dessous sans se baisser, et il reste
+  // sous la dalle de plafond, qui est basse dans un souterrain.
+  const y = it.floorY + 2.32;
+
+  /**
+   * Le passage réellement libre à une abscisse donnée.
+   *
+   * Un panneau se suspend AU-DESSUS DE LA CIRCULATION, et la circulation n'est
+   * pas le milieu du hall : elle est ce qui reste entre les meubles. Un konbini
+   * fait 3,20 m de fond et monte jusqu'au plafond - centré bêtement, le panneau
+   * lui rentrait dedans. On lit donc l'implantation, la même que la marche
+   * contourne.
+   */
+  const aisleAt = (z: number) => {
+    let x0 = it.paid.x0;
+    let x1 = it.paid.x1;
+    for (const f of it.fixtures) {
+      if (f.rect.z1 < z - 0.7 || f.rect.z0 > z + 0.7) continue;
+      if (f.facing === 1) x0 = Math.max(x0, f.rect.x1);
+      else x1 = Math.min(x1, f.rect.x0);
+    }
+    return { mid: (x0 + x1) / 2, width: x1 - x0 };
+  };
+
+  const signs = useMemo(
+    () => {
+      const make = (kind: GuideKind, dir: -1 | 0 | 1) =>
+        new THREE.MeshBasicMaterial({
+          map: makeConcourseGuideTexture(kind, dir),
+          toneMapped: false,
+        });
+      return {
+        exit: make('exit', 0),
+        facility: make('facility', 1),
+        platform: make('platform', 0),
+        exitLeft: make('exit', -1),
+      };
+    },
+    [],
+  );
+  useEffect(
+    () => () => {
+      for (const mat of Object.values(signs)) {
+        mat.map?.dispose();
+        mat.dispose();
+      }
+    },
+    [signs],
+  );
+
+  // z, matériau, et sens dans lequel le panneau est lisible.
+  const posts: [number, THREE.Material, boolean][] = [
+    [it.paid.z0 + 2.6, signs.exit, true],
+    [it.paid.z1 - 4.2, signs.facility, true],
+    [it.free.z0 + 2.2, signs.platform, false],
+    [it.free.z1 - 4.5, signs.exitLeft, true],
+  ];
+
+  return (
+    <group name="gare/hall/fléchage">
+      {posts.map(([z, face, forward], k) => {
+        const aisle = aisleAt(z);
+        const w = Math.min(aisle.width - 0.5, 2.9);
+        const h = w / 4;
+        return (
+        <group key={`guide${k}`} position={[aisle.mid, y, z]}>
+          {/* Caisson : deux faces possibles, mais une seule imprimée - on ne
+              lit un panneau que du côté où l'on vient. */}
+          <mesh material={m.frame}>
+            <boxGeometry args={[w + 0.08, h + 0.08, 0.09]} />
+          </mesh>
+          <mesh
+            position={[0, 0, forward ? -0.048 : 0.048]}
+            rotation={[0, forward ? Math.PI : 0, 0]}
+            material={face}
+          >
+            <planeGeometry args={[w, h]} />
+          </mesh>
+          {/* Tiges de suspension jusqu'à la dalle. */}
+          {[-1, 1].map((s) => (
+            <mesh
+              key={`rod${s}`}
+              position={[(s * w) / 2.6, (it.ceilY - 0.12 - y) / 2 + h / 2, 0]}
+              material={m.metal}
+            >
+              <boxGeometry args={[0.04, it.ceilY - 0.12 - y - h / 2, 0.04]} />
+            </mesh>
+          ))}
+        </group>
+        );
+      })}
     </group>
   );
 }
