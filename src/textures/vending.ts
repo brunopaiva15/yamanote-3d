@@ -40,8 +40,20 @@ function shade(hex: string, f: number): string {
   return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
 }
 
-/** Ce que vend la machine : la vitrine ne se garnit pas de la même façon. */
-export type VendingKind = 'drink' | 'coffee' | 'snack';
+/**
+ * Ce que vend la machine : la vitrine ne se garnit pas de la même façon.
+ *
+ * Trois familles se garnissent en SPIRALES - sachets, bacs, pots - et deux en
+ * bouteilles. C'est la seule distinction qui compte pour la vitrine : une
+ * spirale impose des couloirs plus larges, une réglette de code de couloir au
+ * lieu du chaud / froid, et pas de tube de rétroéclairage par tablette.
+ */
+export type VendingKind = 'drink' | 'coffee' | 'snack' | 'ice' | 'noodle';
+
+/** Les familles servies par spirale : tout ce qui ne se boit pas au goulot. */
+export function isSolidVending(kind: VendingKind): boolean {
+  return kind === 'snack' || kind === 'ice' || kind === 'noodle';
+}
 
 export interface VendingBrand {
   /** Teinte de la caisse : tôle peinte, c'est elle qu'on voit de loin. */
@@ -62,7 +74,16 @@ export const VENDING_BRANDS: readonly VendingBrand[] = [
   { body: '#e6e4dc', band: '#1d6f4a', ink: '#ffffff', name: 'CHAEN', nameJp: '茶園の茶', kind: 'drink' },
   { body: '#6d3a1c', band: '#4e2711', ink: '#f0d9a8', name: 'KOHI', nameJp: '東京珈琲', kind: 'coffee' },
   { body: '#e2a021', band: '#c07d12', ink: '#2e1d06', name: 'EKIMAE', nameJp: '駅前スナック', kind: 'snack' },
+  // Les deux machines à manger des couloirs de correspondance. Le bac à glaces
+  // est bleu pâle et givré, la machine à nouilles rouge sombre : ce sont deux
+  // silhouettes qu'on distingue à dix mètres sans lire une lettre.
+  { body: '#8fc7dd', band: '#2f7fa8', ink: '#ffffff', name: 'KOORI', nameJp: '氷屋アイス', kind: 'ice' },
+  { body: '#9c2b22', band: '#7a1e16', ink: '#f7e6c8', name: 'MEN-YA', nameJp: '駅麺屋', kind: 'noodle' },
 ];
+
+/** Les deux enseignes de nourriture, dans l'ordre où on les pose. */
+export const FOOD_BRANDS: readonly VendingBrand[] = VENDING_BRANDS.filter((b) =>
+  b.kind === 'ice' || b.kind === 'noodle');
 
 /**
  * Marque d'une machine donnée.
@@ -76,7 +97,7 @@ export const VENDING_BRANDS: readonly VendingBrand[] = [
 export function vendingBrand(station: number, slot: number, count: number): VendingBrand {
   const snack = VENDING_BRANDS.find((b) => b.kind === 'snack');
   if (snack && count >= 3 && slot === count - 1) return snack;
-  const drinks = VENDING_BRANDS.filter((b) => b.kind !== 'snack');
+  const drinks = VENDING_BRANDS.filter((b) => b.kind === 'drink' || b.kind === 'coffee');
   const r = rng(station * 977 + 41);
   const base = Math.floor(r() * drinks.length);
   const step = 1 + 2 * Math.floor(r() * 2);
@@ -200,6 +221,81 @@ function drawBag(
   g.fillRect(cx - w * 0.3, baseY - h * 0.88, w * 0.12, h * 0.76);
 }
 
+/**
+ * Bac de glace : bas, large, couvercle clair et manchon coloré.
+ *
+ * Ce qui le distingue d'une boîte, à trente pixels de haut, n'est pas le détail
+ * mais la PROPORTION - deux fois plus large que haut - et le liseré givré du
+ * couvercle. C'est tout ce qu'on lit à travers une vitre, et c'est assez.
+ */
+function drawTub(
+  g: CanvasRenderingContext2D,
+  cx: number,
+  baseY: number,
+  h: number,
+  w: number,
+  tone: string,
+): void {
+  // Corps, légèrement tronconique : plus large en haut, comme tout pot moulé.
+  g.fillStyle = tone;
+  g.beginPath();
+  g.moveTo(cx - w * 0.44, baseY);
+  g.lineTo(cx + w * 0.44, baseY);
+  g.lineTo(cx + w * 0.5, baseY - h * 0.78);
+  g.lineTo(cx - w * 0.5, baseY - h * 0.78);
+  g.closePath();
+  g.fill();
+  // Manchon de marque.
+  g.fillStyle = 'rgba(255,255,255,0.92)';
+  g.fillRect(cx - w * 0.46, baseY - h * 0.56, w * 0.92, h * 0.24);
+  // Couvercle : plus clair, débordant, avec son ourlet.
+  g.fillStyle = shade(tone, 1.5);
+  g.fillRect(cx - w * 0.54, baseY - h, w * 1.08, h * 0.24);
+  g.fillStyle = 'rgba(255,255,255,0.75)';
+  g.fillRect(cx - w * 0.54, baseY - h, w * 1.08, h * 0.07);
+}
+
+/**
+ * Pot de nouilles instantanées : tronconique franc, couvercle d'aluminium.
+ *
+ * La silhouette est l'inverse de celle du bac - haute et évasée -, et le
+ * couvercle brillant la termine. Deux formes qu'on ne confond pas, ce qui est
+ * exactement le service que rend une vitrine.
+ */
+function drawCup(
+  g: CanvasRenderingContext2D,
+  cx: number,
+  baseY: number,
+  h: number,
+  w: number,
+  tone: string,
+): void {
+  g.fillStyle = tone;
+  g.beginPath();
+  g.moveTo(cx - w * 0.3, baseY);
+  g.lineTo(cx + w * 0.3, baseY);
+  g.lineTo(cx + w * 0.5, baseY - h * 0.86);
+  g.lineTo(cx - w * 0.5, baseY - h * 0.86);
+  g.closePath();
+  g.fill();
+  // Bandeau de marque, et le filet sombre du bas de l'étiquette.
+  g.fillStyle = 'rgba(255,255,255,0.9)';
+  g.beginPath();
+  g.moveTo(cx - w * 0.42, baseY - h * 0.62);
+  g.lineTo(cx + w * 0.42, baseY - h * 0.62);
+  g.lineTo(cx + w * 0.46, baseY - h * 0.34);
+  g.lineTo(cx - w * 0.46, baseY - h * 0.34);
+  g.closePath();
+  g.fill();
+  g.fillStyle = shade(tone, 0.6);
+  g.fillRect(cx - w * 0.44, baseY - h * 0.32, w * 0.88, h * 0.06);
+  // Couvercle d'aluminium : le seul reflet franc de la vitrine.
+  g.fillStyle = '#d9dde0';
+  g.fillRect(cx - w * 0.52, baseY - h, w * 1.04, h * 0.16);
+  g.fillStyle = 'rgba(255,255,255,0.8)';
+  g.fillRect(cx - w * 0.52, baseY - h, w * 0.4, h * 0.08);
+}
+
 /** Boîte cartonnée : biscuits, chocolat, nouilles en pot. */
 function drawBox(
   g: CanvasRenderingContext2D,
@@ -248,7 +344,7 @@ export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): TH
   const H = 372;
   const { c, g } = makeCanvas(W, H);
   const r = rng(seed);
-  const snack = brand.kind === 'snack';
+  const snack = isSolidVending(brand.kind);
   const rows = 3;
   // Un sachet est deux fois plus large qu'une bouteille : quatre couloirs au
   // lieu de cinq, sinon l'échantillon ne tient pas dans sa case.
@@ -310,8 +406,17 @@ export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): TH
       if (soldOut) g.globalAlpha = 0.42;
       if (snack) {
         const tone = SNACK_TONES[Math.floor(r() * SNACK_TONES.length)];
-        if (r() < 0.55) drawBag(g, cx, baseY, rowH * 0.55, colW * 0.5, tone);
-        else drawBox(g, cx, baseY, rowH * 0.56, colW * 0.34, tone);
+        if (brand.kind === 'ice') {
+          // Un bac de glace : un cylindre bas, couvercle clair, manchon coloré.
+          drawTub(g, cx, baseY, rowH * 0.4, colW * 0.4, tone);
+        } else if (brand.kind === 'noodle') {
+          // Un pot de nouilles : tronconique, couvercle d'aluminium.
+          drawCup(g, cx, baseY, rowH * 0.52, colW * 0.42, tone);
+        } else if (r() < 0.55) {
+          drawBag(g, cx, baseY, rowH * 0.55, colW * 0.5, tone);
+        } else {
+          drawBox(g, cx, baseY, rowH * 0.56, colW * 0.34, tone);
+        }
       } else {
         const labels = hot ? HOT_LABELS : COLD_LABELS;
         const label = labels[Math.floor(r() * labels.length)];
@@ -448,12 +553,16 @@ export function makeVendingHeaderTexture(brand: VendingBrand): THREE.CanvasTextu
   // les machines mixtes.
   g.textAlign = 'center';
   const tags: [string, string][] =
-    brand.kind === 'snack'
-      ? [['#3a3f45', '24時間']]
-      : [
-          ['#c8322b', 'あたたかい'],
-          ['#1f5fbf', 'つめたい'],
-        ];
+    brand.kind === 'ice'
+      ? [['#2f7fa8', 'アイス']]
+      : brand.kind === 'noodle'
+        ? [['#9c2b22', 'カップめん'], ['#c8322b', 'お湯あり']]
+        : brand.kind === 'snack'
+          ? [['#3a3f45', '24時間']]
+          : [
+            ['#c8322b', 'あたたかい'],
+            ['#1f5fbf', 'つめたい'],
+          ];
   let tx = W - 20;
   for (const [color, text] of tags.reverse()) {
     const tw = 190;

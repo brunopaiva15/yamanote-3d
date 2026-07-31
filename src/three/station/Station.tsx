@@ -64,6 +64,7 @@ import { VendingMachines } from './VendingMachines';
 import { Signature } from './signatures';
 import { Stairwells } from './Stairwell';
 import { Concourse } from './Concourse';
+import { Kiosk } from './Kiosk';
 import { psdLayout } from './psdLayout';
 
 const UP = new THREE.Quaternion();
@@ -134,6 +135,7 @@ export function Station() {
   }, [layout.length, tactileW]);
 
   const m = useMemo(() => makeStationMaterials(layout.palette, textures), [layout.palette, textures]);
+
 
   // --- Dalle percée au droit des trémies -------------------------------
   // Une boîte ne peut pas avoir de trou : la dalle est extrudée depuis un
@@ -518,7 +520,7 @@ export function Station() {
           d'urgence, armoires, bacs de tri, gouttières, marquages au sol. */}
       <PlatformKit place={place} layout={layout} detail={detail} materials={m} />
 
-      {detail <= 2 && <Amenities place={place} canopyY={canopyY} m={m} />}
+      {detail <= 2 && <Amenities place={place} canopyY={canopyY} m={m} station={index} />}
 
       {/* Limites de zone : bouts du quai et pied de chaque volée. Le panneau
           est posé un peu AU-DELÀ de la limite de marche - collé dessus, le
@@ -920,10 +922,12 @@ function Amenities({
   place,
   canopyY,
   m,
+  station,
 }: {
   place: ReturnType<typeof placementFor>;
   canopyY: number;
   m: Mats;
+  station: number;
 }) {
   return (
     <group>
@@ -944,19 +948,11 @@ function Amenities({
         </group>
       )}
 
-      {/* Kiosque de quai. */}
+      {/* Kiosque de quai : comptoirs ouverts des deux côtés, présentoirs,
+          armoire réfrigérée, auvent et bandeau d'enseigne. Il était une boîte
+          blanche avec une affiche collée sur un flanc. */}
       {place.kiosk && (
-        <group name="kiosque" position={[place.kiosk.x, PLATFORM_TOP, place.kiosk.z]}>
-          <mesh position={[0, 1.2, 0]} material={m.kiosk}>
-            <boxGeometry args={[place.kiosk.halfX * 2, 2.4, place.kiosk.halfZ * 2]} />
-          </mesh>
-          <mesh position={[-place.kiosk.halfX - 0.05, 1.55, 0]} rotation={[0, -Math.PI / 2, 0]} material={m.ad}>
-            <planeGeometry args={[place.kiosk.halfZ * 1.7, 1.2]} />
-          </mesh>
-          <mesh position={[0, 2.5, 0]} material={m.accent}>
-            <boxGeometry args={[place.kiosk.halfX * 2 + 0.2, 0.22, place.kiosk.halfZ * 2 + 0.2]} />
-          </mesh>
-        </group>
+        <Kiosk k={place.kiosk} m={m} station={station} />
       )}
 
       {/* Horloge de quai, suspendue à l'auvent - par une vraie potence : le

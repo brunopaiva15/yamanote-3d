@@ -283,14 +283,19 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     const it = p.interior;
     const stair = p.mainStair;
     const wide = it.gate.passages[it.gate.passages.length - 1];
+    const midX = (it.paid.x0 + it.paid.x1) / 2;
     const point = (x: number, z: number) => [flip * x, flip * z];
-    const legs: [string, number, number, number][] = [
-      ['01-tremie', ...point(stair.x, stair.z - 3), 4200],
-      ['02-couloir', ...point(stair.x, stair.z + 8), 4200],
-      ['03-zone-payante', ...point(wide.x, it.paid.z1 - 2), 5200],
-      ['04-portillon', ...point(wide.x, it.free.z0 + 1), 3000],
-      ['05-zone-libre', ...point(wide.x, it.free.z0 + 2.5), 3000],
-    ].map(([n, x, z, ms]) => [n as string, x as number, z as number, ms as number]);
+    // Où l'on se met, et ce qu'on regarde : les deux, sinon on se retrouve le
+    // nez sur le meuble qu'on voulait cadrer.
+    const legs: [string, number, number, number, number][] = [
+      ['01-tremie', ...point(stair.x, stair.z - 3), ...point(stair.x, stair.z + 6)],
+      ['02-couloir', ...point(stair.x, stair.z + 8), ...point(midX, it.paid.z1)],
+      ['03-zone-payante', ...point(midX, it.paid.z0 + 3), ...point(it.paid.x1, it.paid.z1 - 2)],
+      ['04-portillon', ...point(wide.x, it.paid.z1 - 3), ...point(wide.x, it.free.z0 + 4)],
+      ['05-zone-libre', ...point(midX, it.free.z0 + 2.5), ...point(it.free.x1, it.free.z0 + 9)],
+      ['06-billetterie', ...point(midX, it.free.z0 + 8), ...point(it.free.x0, it.free.z0 + 5)],
+      ['07-sorties', ...point(midX, it.free.z1 - 7), ...point(midX, it.free.z1 + 4)],
+    ].map((r) => r as [string, number, number, number, number]);
     return { flip, placement: legs };
   };
 

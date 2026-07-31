@@ -99,6 +99,48 @@ export interface ConcourseExit {
   slot: number;
 }
 
+/**
+ * Ce qui meuble le hall. Chaque famille se reconnaît à sa SILHOUETTE : c'est ce
+ * qui décide de sa profondeur, et donc de la place qu'elle prend.
+ */
+export type FixtureKind =
+  /** 券売機 - la batterie de distributeurs de titres, en zone libre. */
+  | 'ticket'
+  /** 精算機 - l'ajusteur de fin de course, côté payant, isolé et signalé. */
+  | 'fareAdjust'
+  /** コインロッカー - la grille de consignes, trois tailles de portes. */
+  | 'lockers'
+  /** NEWDAYS - le konbini de gare, devanture vitrée pleine hauteur. */
+  | 'konbini'
+  /** 自販機 - boissons, la caisse creusée de trois niches. */
+  | 'vending'
+  /** アイス / カップ麺 / 軽食 - la même caisse, un autre contenu. */
+  | 'vendingFood'
+  /** 駅スタンプ - la table du tampon de gare, avec son cahier. */
+  | 'stamp'
+  /** みどりの窓口 - le comptoir vitré, sa banque et ses écrans. */
+  | 'office'
+  /** Banc adossé à la paroi. */
+  | 'bench'
+  /** Batterie de tri : trois bacs côte à côte. */
+  | 'bin'
+  /** 周辺案内図 - le plan de quartier, panneau mural. */
+  | 'map';
+
+/** Un meuble posé le long d'une paroi du hall. */
+export interface Fixture {
+  kind: FixtureKind;
+  /** Emprise au sol. C'est aussi, telle quelle, l'obstacle de marche. */
+  rect: InteriorRect;
+  /**
+   * Sens dans lequel la façade regarde, le long de x : -1 vers l'axe de la
+   * voie, +1 vers le fond de quai. C'est l'opposé de la paroi qui le porte.
+   */
+  facing: -1 | 1;
+  /** Rang dans sa famille : sert à varier visuels et contenus sans hasard. */
+  slot: number;
+}
+
 export interface StationInterior {
   /**
    * Le niveau est-il réellement construit ?
@@ -120,6 +162,8 @@ export interface StationInterior {
   /** Zone libre (改札外), de la ligne de portillons aux bouches de sortie. */
   free: InteriorRect;
   exits: ConcourseExit[];
+  /** Le mobilier du niveau, rangé le long des deux parois. */
+  fixtures: Fixture[];
   /**
    * Tout ce qui occupe le sol et se contourne : bornes de portillons, joues
    * latérales de la ligne, mobilier. Le rendu les dessine, la marche les évite,
@@ -131,11 +175,18 @@ export interface StationInterior {
 // --- Cotes du niveau ------------------------------------------------------
 
 /** Longueur de la zone payante, du débouché du couloir aux portillons. */
-const PAID_LEN = 11;
+const PAID_LEN = 12;
 /** Emprise en z de la ligne de portillons : la longueur d'une borne. */
 const GATE_DEPTH = 1.7;
-/** Longueur de la zone libre, des portillons aux bouches de sortie. */
-const FREE_LEN = 9;
+/**
+ * Longueur de la zone libre, des portillons aux bouches de sortie.
+ *
+ * Elle a grandi avec ce qu'elle contient : neuf mètres suffisaient à un hall
+ * nu, pas à une billetterie SUIVIE d'un guichet et d'un plan, avec un konbini
+ * et des consignes en face. La place est gratuite - le quai fait deux cent
+ * vingt-quatre mètres et le hall en occupe une quarantaine.
+ */
+const FREE_LEN = 15;
 /** Retrait des parois latérales par rapport aux rives de la dalle. */
 const SIDE_INSET = 0.35;
 /** Demi-largeur d'une borne de portillon. */
@@ -274,6 +325,141 @@ function buildGate(
   return { nameJp: spec.gateJp, nameRomaji: spec.gate, z0, z1, cabinets, passages };
 }
 
+// --- Le mobilier, rangé le long des parois -------------------------------
+
+/**
+ * Encombrement d'une famille de meubles : sa longueur le long de la paroi et sa
+ * profondeur devant elle.
+ *
+ * La profondeur n'est pas décorative : c'est ce qui reste de passage au milieu.
+ * Un konbini de 3,20 m de fond dans un hall de 5,30 m de large ne laisserait
+ * plus qu'un mètre pour passer - c'est pourquoi il ne se pose que dans les
+ * halls larges, et le moteur le refuse ailleurs plutôt que de l'y tasser.
+ */
+const SIZES: Record<FixtureKind, { len: number; depth: number }> = {
+  ticket: { len: 3.4, depth: 0.72 },
+  fareAdjust: { len: 1.0, depth: 0.72 },
+  lockers: { len: 2.6, depth: 0.62 },
+  konbini: { len: 6.4, depth: 3.2 },
+  vending: { len: 1.2, depth: 0.78 },
+  vendingFood: { len: 1.2, depth: 0.78 },
+  stamp: { len: 1.1, depth: 0.68 },
+  office: { len: 3.6, depth: 1.9 },
+  bench: { len: 1.8, depth: 0.56 },
+  bin: { len: 1.35, depth: 0.5 },
+  map: { len: 1.6, depth: 0.16 },
+};
+
+/**
+ * Ce qu'une gare mérite, par zone et par paroi, dans l'ordre où on le range.
+ *
+ * L'ordre EST le classement par priorité : ce qui vient en premier est posé en
+ * premier, au plus près de l'endroit d'où l'on arrive, et ce qui ne rentre plus
+ * tombe. Le seuil d'affluence dit à partir de quelle gare la famille apparaît -
+ * une gare à 0,7 n'a ni konbini, ni consigne, ni guichet, exactement comme en
+ * vrai.
+ */
+interface Want {
+  kind: FixtureKind;
+  /** Affluence minimale (`crowdScale`) au-dessous de laquelle on s'en passe. */
+  from?: number;
+  /** Combien d'exemplaires, quand il en faut plusieurs à la suite. */
+  count?: number;
+}
+
+/** Zone payante (改札内) : ce qu'on croise entre le bas des marches et la sortie. */
+const PAID_NEAR: Want[] = [
+  { kind: 'vending' },
+  { kind: 'vendingFood', from: 0.9 },
+  { kind: 'bin' },
+  { kind: 'bench' },
+];
+const PAID_FAR: Want[] = [
+  { kind: 'map' },
+  { kind: 'bench' },
+  { kind: 'fareAdjust' },
+];
+/** Zone libre (改札外) : la billetterie, les commerces, les consignes. */
+const FREE_NEAR: Want[] = [
+  // Le tampon est le premier meuble qu'on trouve en sortant des portillons :
+  // c'est là qu'il est dans une vraie gare, à côté de la fenêtre du bureau, et
+  // c'est ce que les voyageurs viennent chercher.
+  { kind: 'stamp' },
+  { kind: 'ticket' },
+  { kind: 'office', from: 1.3 },
+  { kind: 'map' },
+];
+const FREE_FAR: Want[] = [
+  { kind: 'konbini', from: 1.2 },
+  { kind: 'lockers', from: 0.9 },
+  { kind: 'vending' },
+  { kind: 'bin' },
+];
+
+/** Jeu laissé entre deux meubles voisins d'une même paroi. */
+const FIXTURE_GAP = 0.55;
+/**
+ * Retrait d'un meuble devant sa paroi.
+ *
+ * Un meuble n'est pas dans le mur : il est devant le SOUBASSEMENT DE FAÏENCE,
+ * qui déborde de cinq centimètres. Sans ce retrait, chaque caisse mordait dans
+ * la faïence - invisible à l'œil, mais la sonde de volumes le voyait, et elle a
+ * raison : deux surfaces qui se traversent finissent toujours par se voir.
+ */
+const WALL_CLEAR = 0.06;
+/** Retrait des meubles par rapport aux deux bouts d'une zone. */
+const ZONE_MARGIN = 1.1;
+/**
+ * Passage libre à garder au milieu, quoi qu'il arrive.
+ *
+ * C'est la seule contrainte qui refuse un meuble sans discuter : un hall où
+ * l'on ne peut plus passer n'est pas meublé, il est bouché. Deux mètres, la
+ * largeur d'un couloir de correspondance JR.
+ */
+const AISLE_MIN = 2.0;
+
+/**
+ * Range une liste de souhaits le long d'une paroi d'une zone.
+ *
+ * `wall` vaut -1 pour la paroi côté voie, +1 pour celle du fond de quai ; la
+ * façade du meuble regarde toujours vers le milieu. On avance depuis le bord
+ * `z0` de la zone, et l'on s'arrête quand il n'y a plus de place - jamais on ne
+ * tasse, jamais on ne superpose.
+ */
+function fitWall(
+  wants: readonly Want[],
+  wall: -1 | 1,
+  zone: InteriorRect,
+  crowd: number,
+  width: number,
+  counter: Map<FixtureKind, number>,
+): Fixture[] {
+  const out: Fixture[] = [];
+  let z = zone.z0 + ZONE_MARGIN;
+  const zEnd = zone.z1 - ZONE_MARGIN;
+  for (const want of wants) {
+    if (crowd < (want.from ?? 0)) continue;
+    const size = SIZES[want.kind];
+    // Le passage du milieu passe avant le meuble : ce qui l'étranglerait tombe.
+    if (width - size.depth < AISLE_MIN) continue;
+    for (let k = 0; k < (want.count ?? 1); k++) {
+      if (z + size.len > zEnd) break;
+      const slot = counter.get(want.kind) ?? 0;
+      counter.set(want.kind, slot + 1);
+      out.push({
+        kind: want.kind,
+        rect: wall === -1
+          ? { x0: zone.x0 + WALL_CLEAR, x1: zone.x0 + WALL_CLEAR + size.depth, z0: z, z1: z + size.len }
+          : { x0: zone.x1 - WALL_CLEAR - size.depth, x1: zone.x1 - WALL_CLEAR, z0: z, z1: z + size.len },
+        facing: wall === -1 ? 1 : -1,
+        slot,
+      });
+      z += size.len + FIXTURE_GAP;
+    }
+  }
+  return out;
+}
+
 /**
  * Le niveau de correspondance d'une gare, ancré sur l'accès qui y mène.
  *
@@ -306,17 +492,37 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
     slot: k,
   }));
 
+  const paid: InteriorRect = { x0, x1, z0, z1: gateZ };
+  const free: InteriorRect = { x0, x1, z0: freeZ0, z1: freeZ1 };
+  const width = x1 - x0;
+  const crowd = layout.crowdScale;
+  // Un seul compteur pour toute la gare : le premier distributeur du hall et
+  // celui d'en face ne montrent pas la même vitrine.
+  const counter = new Map<FixtureKind, number>();
+  const fixtures = [
+    ...fitWall(PAID_NEAR, -1, paid, crowd, width, counter),
+    ...fitWall(PAID_FAR, 1, paid, crowd, width, counter),
+    ...fitWall(FREE_NEAR, -1, free, crowd, width, counter),
+    ...fitWall(FREE_FAR, 1, free, crowd, width, counter),
+  ];
+
   return {
     // Un hall sous les voies se dessine ; un hall dessus attend sa volée.
     built: place === 'under',
     place,
     floorY: place === 'under' ? STAIR_LOWER_Y : OVER_FLOOR_Y,
     ceilY: place === 'under' ? STAIR_LOWER_CEIL_Y : OVER_FLOOR_Y + 3.2,
-    paid: { x0, x1, z0, z1: gateZ },
+    paid,
     gate,
-    free: { x0, x1, z0: freeZ0, z1: freeZ1 },
+    free,
     exits,
-    obstacles: gate.cabinets,
+    fixtures,
+    // Un plan mural ne se contourne pas : il est DANS la paroi, seize
+    // centimètres de saillie. Tout le reste barre.
+    obstacles: [
+      ...gate.cabinets,
+      ...fixtures.filter((f) => f.kind !== 'map').map((f) => f.rect),
+    ],
   };
 }
 

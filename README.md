@@ -594,6 +594,62 @@ marche le supporte, mais la volée MONTANTE reste à dessiner : `built` le décl
 faux plutôt que de laisser croire. Le découpage complet est dans
 `docs/STATION_INTERIOR.md`.
 
+### Ce qu'il y a dans le hall
+
+Un hall vide n'est pas un hall. Une gare japonaise est **saturée**, et c'est
+cette saturation qui la fait reconnaître : `data/stationInterior` range donc le
+mobilier le long des deux parois, zone par zone, et
+`three/station/Fixtures` le dessine — la même liste que la marche contourne.
+
+Ce qui est en **zone payante** ne peut pas se retrouver en zone libre, et
+réciproquement : l'ajusteur de fin de course (精算機, jaune, pour qu'on le
+trouve sans lire) est derrière les portillons ; les distributeurs de titres
+(券売機), les consignes, le konbini, le guichet et le tampon sont devant. Un
+distributeur de titres derrière les portillons ne servirait à personne.
+
+**L'affluence commande la liste.** Une gare à 0,55 — Uguisudani — n'a ni
+konbini, ni guichet, ni consigne : deux distributeurs, un banc, une poubelle de
+tri, un plan. Shinjuku a tout. Et la largeur tranche en dernier : un konbini
+fait 3,20 m de fond, et le moteur le refuse plutôt que d'étrangler à moins de
+deux mètres le passage du milieu.
+
+**Un meuble se reconnaît à sa silhouette, pas à sa texture.** Une batterie de
+券売機 se lit à son bandeau vert continu et à ses écrans inclinés ; une consigne
+à sa trame de portes carrées numérotées, avec sa borne de paiement plus haute à
+un bout ; un konbini à sa devanture vitrée pleine hauteur sous une enseigne
+allumée, gondoles et vitrine réfrigérée visibles au travers. C'est la règle qui
+a fait refaire le **kiosque du quai** : c'était une boîte blanche de 2,50 × 4,80
+avec une affiche collée sur un flanc, c'est maintenant deux comptoirs ouverts
+sous un auvent, des présentoirs à journaux et magazines, une armoire réfrigérée
+et un bandeau d'enseigne qui affiche ses prix.
+
+### 駅スタンプ
+
+Le tampon de gare est le détail que les voyageurs viennent chercher, et il ne se
+paramètre pas. Sa table est le premier meuble qu'on trouve en sortant des
+portillons — c'est là qu'il est en vrai, près de la fenêtre du bureau — avec son
+plateau incliné, son encreur, son tampon à poignée de bois et le cahier d'essai
+ouvert, deux empreintes déjà prises dessus.
+
+**Trente empreintes, une par gare.** La composition ne change jamais — double
+cercle, motif au centre, nom de la gare en haut, code JY et 記念スタンプ en bas,
+à l'encre violet-rouge — et c'est justement cette constance qui fait qu'on les
+collectionne. Huit motifs tournent (la halle de brique, le chien, le torii, la
+tour, le tram, la lanterne, le pont-concours, le faisceau de voies) et le
+cartouche fait le reste : le motif dit le quartier, le texte dit la gare.
+
+### Les distributeurs, tous
+
+`textures/vending` savait faire les boissons — trois enseignes froides, une
+chaude, une à sachets. Deux familles s'y ajoutent, sur la même caisse creusée et
+au même coût : le **bac à glaces** (アイス), bleu givré, dont les pots sont deux
+fois plus larges que hauts, et la machine à **nouilles instantanées** (カップめん)
+dont les pots sont tronconiques sous un couvercle d'aluminium. Deux silhouettes
+qu'on distingue à dix mètres sans lire une lettre — c'est tout ce qu'on demande
+à une vitrine.
+
+Le découpage complet du garnissage est dans `docs/STATION_DETAIL.md`.
+
 ### La signalétique
 
 Le panneau de nom de gare n'a pas changé : code JY, gare précédente et suivante,

@@ -29,6 +29,7 @@ import type { StationInterior, InteriorRect } from '../../data/stationInterior';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
 import type { Mats } from './materials';
 import { stationAd } from './adPool';
+import { Fixtures } from './Fixtures';
 
 /** Hauteur des bornes de portillon : on voit par-dessus, on ne passe pas. */
 const CABINET_H = 0.98;
@@ -189,6 +190,11 @@ export function Concourse({
           <boxGeometry args={[Math.min(width - 1.2, 2.6), 0.08, 0.34]} />
         </mesh>
       ))}
+
+      {/* Le mobilier : billetterie, konbini, consignes, distributeurs, tampon.
+          L'implantation vient de data/stationInterior - la même liste que la
+          marche contourne. */}
+      {detail <= 1 && <Fixtures it={it} m={m} station={station} />}
 
       {/* Ligne de guidage podotactile, dans l'axe, du couloir aux portillons
           puis des portillons aux sorties : elle traverse par un passage, jamais

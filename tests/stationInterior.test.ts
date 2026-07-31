@@ -140,3 +140,73 @@ test('les cinq gares en tranchée ont toutes leur hall au-dessus', () => {
     assert.equal(interior.place, 'over', name);
   }
 });
+
+test('le mobilier tient contre ses parois, sans se chevaucher', () => {
+  for (const { name, interior } of ALL) {
+    for (const f of interior.fixtures) {
+      // Adossé : le meuble se tient contre la paroi de son côté, à un retrait
+      // près - il est devant le soubassement de faïence, pas dedans.
+      const onNear = Math.abs(f.rect.x0 - interior.paid.x0) < 0.1;
+      const onFar = Math.abs(f.rect.x1 - interior.paid.x1) < 0.1;
+      assert.ok(onNear || onFar, `${name} ${f.kind} : pas adossé`);
+      assert.equal(f.facing, onNear ? 1 : -1, `${name} ${f.kind} : façade à l'envers`);
+    }
+    // Deux meubles d'une même paroi ne se recouvrent jamais en z.
+    for (const wall of [interior.paid.x0, interior.paid.x1]) {
+      const line = interior.fixtures
+        .filter((f) => Math.abs(f.rect.x0 - wall) < 0.1 || Math.abs(f.rect.x1 - wall) < 0.1)
+        .sort((a, b) => a.rect.z0 - b.rect.z0);
+      for (let k = 1; k < line.length; k++) {
+        assert.ok(
+          line[k].rect.z0 >= line[k - 1].rect.z1 - 1e-9,
+          `${name} : ${line[k - 1].kind} et ${line[k].kind} se chevauchent`,
+        );
+      }
+    }
+  }
+});
+
+test('le passage du milieu ne se referme jamais', () => {
+  // C'est la contrainte qui refuse un meuble sans discuter : un hall où l'on ne
+  // passe plus n'est pas meublé, il est bouché.
+  for (const { name, interior } of ALL) {
+    for (const zone of [interior.paid, interior.free]) {
+      const inZone = (f: (typeof interior.fixtures)[number]) =>
+        f.rect.z0 >= zone.z0 - 1e-9 && f.rect.z1 <= zone.z1 + 1e-9;
+      const near = interior.fixtures.filter((f) => inZone(f) && f.facing === 1);
+      const far = interior.fixtures.filter((f) => inZone(f) && f.facing === -1);
+      const deepNear = Math.max(0, ...near.map((f) => f.rect.x1 - f.rect.x0));
+      const deepFar = Math.max(0, ...far.map((f) => f.rect.x1 - f.rect.x0));
+      const width = zone.x1 - zone.x0;
+      // Les deux parois ne s'additionnent que là où deux meubles se font
+      // réellement face ; la borne large tient dans tous les cas.
+      assert.ok(width - Math.max(deepNear, deepFar) >= 2 - 1e-9, `${name} : passage étranglé`);
+    }
+  }
+});
+
+test('la zone payante et la zone libre ne se prêtent pas leur mobilier', () => {
+  // Un distributeur de titres derrière les portillons ne servirait à personne,
+  // et un ajusteur de fin de course devant eux non plus.
+  const PAID_ONLY = new Set(['fareAdjust']);
+  const FREE_ONLY = new Set(['ticket', 'lockers', 'konbini', 'office', 'stamp']);
+  for (const { name, interior } of ALL) {
+    for (const f of interior.fixtures) {
+      const paid = f.rect.z1 <= interior.paid.z1 + 1e-9;
+      if (PAID_ONLY.has(f.kind)) assert.ok(paid, `${name} ${f.kind} hors zone payante`);
+      if (FREE_ONLY.has(f.kind)) assert.ok(!paid, `${name} ${f.kind} en zone payante`);
+    }
+  }
+});
+
+test('chaque gare a son tampon, et il est unique', () => {
+  // Trente gares, trente empreintes : c'est ce qui se collectionne. Le motif se
+  // partage, le cartouche jamais.
+  const seen = new Set<string>();
+  for (const { i } of ALL) {
+    const key = `${STATIONS[i].kanji}/${STATIONS[i].jy}`;
+    assert.ok(!seen.has(key), `tampon en double : ${key}`);
+    seen.add(key);
+  }
+  assert.equal(seen.size, STATION_COUNT);
+});
