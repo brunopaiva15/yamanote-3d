@@ -15,6 +15,7 @@
 
 import { CONFIG, V_MAX } from '../data/config';
 import type { NextTrains } from '../data/departureBoard';
+import type { DisruptionCause, DisruptionSeverity } from '../data/platformDisruptions';
 import { DOOR_SIDE } from '../data/stations';
 import { useStore } from '../store';
 import { advanceClock, runtime } from './runtime';
@@ -22,20 +23,26 @@ import { DEPART_HOLD, integrateTrain, stopDistance, type TrainState } from './tr
 import { randomizeDoorTimings, setPsdDoors, setTrainDoors, stationTimings } from './doorMotion';
 import * as audio from './audioEngine';
 import { PLATFORM_SCHEDULE } from './platformAnnouncementPlan';
-import { cancelSpeech } from './speech';
+import { cancelSpeech, speechQueueRemaining } from './speech';
 import {
   currentPlatformPlan,
   paAgentMessage,
   paAlightFirst,
   paApproach,
   paArrival,
-  paDelay,
+  paLineDisruption,
+  paLineDisruptionResume,
   paDoorsClosing,
   paPreAnnouncement,
   paPsdBeeps,
   paTrainEntering,
   planPlatformAnnouncements,
 } from './stationPa';
+import {
+  beginPlatformDisruption, clearLineDisruption, consumeRecoveryTrain, disruptionAffects,
+  disruptionExtraSeconds, disruptionHasKnownEta, lineDisruption, nextTrainBlocked,
+  resolveLineDisruption, updateLineDisruption,
+} from './lineDisruption';
 import { rollPassThrough, startPassThrough } from './passingTrain';
 import { exchangePassengers, seedPassengers } from './passengers';
 import { crowdArrive, crowdDisperse, crowdPresentCount, crowdTarget } from './platformCrowd';
@@ -217,17 +224,17 @@ function updateBoardable(index: number, doorSide: 1 | -1): void {
   // seulement si le plan de cet arrêt l'a retenu : sur un quai désert, personne
   // n'a besoin qu'on lui demande de laisser descendre trois personnes.
   once('pa-alight', t > 0.4 + stationTimings.psdOpenDelay + 0.6, () =>
-    paAlightFirst(index, headway, melodyAt - t),
+    paAlightFirst(index, baseHeadway, melodyAt - t),
   );
   once('exchange', t > 1.6, () => exchangePassengers(doorSide));
   // Pendant que la foule monte, puis une seconde fois avant la mélodie - zéro,
   // une ou deux consignes selon le plan, et la seconde n'est diffusée que s'il
   // reste la place de la finir avant la première note.
   once('agent-1', t > AGENT_EXCHANGE_AT, () =>
-    paAgentMessage(index, headway, 0, melodyAt - t),
+    paAgentMessage(index, baseHeadway, 0, melodyAt - t),
   );
   once('agent-2', t > melodyAt - AGENT_PRE_MELODY_LEAD, () =>
-    paAgentMessage(index, headway, 1, melodyAt - t),
+    paAgentMessage(index, baseHeadway, 1, melodyAt - t),
   );
   once('melody', t >= melodyAt, () => audio.departureMelody(index));
   // De près, la coupure du chef de train s'entend pour ce qu'elle est : la
@@ -299,7 +306,8 @@ const REFILL_BEFORE = 8;
  * rame doit traverser la voie d'en face. Fixé à l'entrée en 'clear' et lu
  * partout ensuite - l'annonce d'approche et l'arrivée en dépendent.
  */
-let headway = HEADWAY_GAP;
+let baseHeadway = HEADWAY_GAP;
+let effectiveReleaseAt = HEADWAY_GAP;
 /** Un passage a été tiré pour ce creux : reste à le lancer à PASS_AT. */
 let passPending = false;
 /** Une excuse de retard a été diffusée dans ce creux : elle décale l'anticipée. */
@@ -307,14 +315,19 @@ let delayAnnounced = false;
 
 /** Tire le creux qui commence, et le passage qui l'allonge peut-être. */
 function beginClear(index: number): void {
-  passPending = rollPassThrough(index, HEADWAY_GAP + PASS_HEADWAY_EXTRA);
-  headway = HEADWAY_GAP + (passPending ? PASS_HEADWAY_EXTRA : 0);
+  const direction = useStore.getState().loopDirection;
+  const date = runtime.tokyoDate;
+  const seed = `${runtime.stopSequence}:${index}:${direction}:${date.year}-${date.month}-${date.day}`;
+  beginPlatformDisruption({ direction, stationIndex: index, seed, clockMin: runtime.clockMin, stopSequence: runtime.stopSequence });
+  passPending = lineDisruption.phase === 'inactive' && rollPassThrough(index, HEADWAY_GAP + PASS_HEADWAY_EXTRA);
+  baseHeadway = HEADWAY_GAP + (passPending ? PASS_HEADWAY_EXTRA : 0);
+  effectiveReleaseAt = baseHeadway + disruptionExtraSeconds(direction);
   delayAnnounced = false;
   // Le plan de la rame ATTENDUE, tiré maintenant que le creux est connu : c'est
   // lui qui décide de l'annonce anticipée et du remerciement, et c'est le même
   // qui portera « laissez descendre » et les consignes d'agent quand elle sera
   // à quai (d'où le numéro d'arrêt de la rame à venir, et non celui qui part).
-  planPlatformAnnouncements(index, headway, runtime.stopSequence + 1);
+  planPlatformAnnouncements(index, effectiveReleaseAt, runtime.stopSequence + 1);
   // La rame suivante est peuplée MAINTENANT, quai vide et voie déserte : elle
   // arrivera donc avec ses voyageurs déjà en place derrière les vitres.
   //
@@ -326,13 +339,23 @@ function beginClear(index: number): void {
 
 function updateClear(index: number): void {
   const t = platformWait.t;
+  const direction = useStore.getState().loopDirection;
   // Premier tour du creux : sa durée se décide ici, et rien avant ne la lit.
   once('roll', true, () => beginClear(index));
   // Le quai se repeuple par les escaliers, au compte-gouttes : les voyageurs
   // montent de la trémie au lieu d'apparaître d'un bloc.
-  const refillTo = headway - REFILL_BEFORE;
+  if (disruptionAffects(direction)) {
+    if (lineDisruption.phase === 'delayed' || lineDisruption.phase === 'suspended') {
+      effectiveReleaseAt = Math.max(effectiveReleaseAt, baseHeadway + lineDisruption.elapsedSeconds + lineDisruption.holdRemainingSeconds);
+    } else if (lineDisruption.phase === 'resuming') {
+      effectiveReleaseAt = Math.max(effectiveReleaseAt, t + lineDisruption.releaseBufferSeconds);
+    }
+  }
+  const refillTo = Math.max(baseHeadway, effectiveReleaseAt) - REFILL_BEFORE;
   const filled = Math.max(0, Math.min(1, (t - REFILL_FROM) / (refillTo - REFILL_FROM)));
-  const want = Math.round(filled * crowdTarget(index));
+  const delayedFor = disruptionAffects(direction) ? lineDisruption.elapsedSeconds : 0;
+  const delayCrowdMultiplier = 1 + Math.min(delayedFor / 300, 0.35);
+  const want = Math.round(filled * crowdTarget(index) * delayCrowdMultiplier);
   for (let guard = 0; crowdPresentCount() < want && guard < 4; guard++) {
     if (!crowdArrive(index)) break;
   }
@@ -344,24 +367,34 @@ function updateClear(index: number): void {
   // la gare et du retard, et le remerciement qui la précède est lui aussi tiré.
   // Elle passe derrière l'excuse de retard quand il y en a eu une, et tombe si
   // elle ne tient plus avant l'annonce d'approche - qui, elle, est obligatoire.
-  once('delay', t >= DELAY_AT, () => {
-    delayAnnounced = paDelay();
-  });
+  if (lineDisruption.phase !== 'inactive' && !lineDisruption.initialAnnouncementPlayed && t >= Math.max(8, DELAY_AT)) {
+    delayAnnounced = paLineDisruption();
+    if (delayAnnounced) lineDisruption.initialAnnouncementPlayed = true;
+  }
+  if (lineDisruption.estimateRevisionCount > 0 && !lineDisruption.updateAnnouncementPlayed) {
+    if (paLineDisruption()) lineDisruption.updateAnnouncementPlayed = true;
+  }
+  if ((lineDisruption.phase === 'resuming' || lineDisruption.phase === 'recovering') && !lineDisruption.resumeAnnouncementPlayed) {
+    if (paLineDisruptionResume()) lineDisruption.resumeAnnouncementPlayed = true;
+  }
   const preAt = delayAnnounced ? PRE_ANNOUNCE_AFTER_DELAY_AT : PRE_ANNOUNCE_AT;
   once('pre-announce', t >= preAt, () => {
     // Le plan de la rame à venir, celui tiré à l'entrée du creux.
-    const plan = currentPlatformPlan(index, headway, runtime.stopSequence + 1);
+    const plan = currentPlatformPlan(index, effectiveReleaseAt, runtime.stopSequence + 1);
     if (!plan.playPreAnnouncement) return;
-    paPreAnnouncement(index, plan.playGreeting, headway - APPROACH_AT_BEFORE - t);
+    paPreAnnouncement(index, plan.playGreeting, effectiveReleaseAt - APPROACH_AT_BEFORE - t);
   });
   // Le passage, s'il y en a un : entre l'annonce anticipée et celle
   // d'approche, avec tout le creux devant lui.
   once('pass', passPending && t >= PASS_AT, () => {
     passPending = false;
-    startPassThrough(index, headway - APPROACH_AT_BEFORE - PASS_AT);
+    startPassThrough(index, effectiveReleaseAt - APPROACH_AT_BEFORE - PASS_AT);
   });
-  once('announce', t >= headway - APPROACH_AT_BEFORE, () => paApproach(index));
-  if (t >= headway) {
+  const disruptionReady = !disruptionAffects(direction) ||
+    (lineDisruption.resumeAnnouncementPlayed && speechQueueRemaining('platform') <= 0.05);
+  const released = !nextTrainBlocked(direction) && disruptionReady && t >= effectiveReleaseAt;
+  once('announce', released && t >= effectiveReleaseAt - APPROACH_AT_BEFORE, () => paApproach(index));
+  if (released) {
     platformWait.approachDist = stopDistance(V_MAX, 0);
     train.v = V_MAX;
     train.a = 0;
@@ -372,6 +405,7 @@ function updateClear(index: number): void {
     randomizeBerthOffset();
     runtime.trainZ = platformWait.approachDist - runtime.berthOffset;
     randomizeDoorTimings();
+    consumeRecoveryTrain();
     enter('approaching');
   }
 }
@@ -478,7 +512,12 @@ export function nextTrainsFromPlatform(index: number): NextTrains {
   /** Du bout du quai aux portes ouvertes. */
   const arrive = approachRunTime() + BERTH_SETTLE;
   /** D'un départ de rame à l'arrivée de la suivante. */
-  const gap = clearRunTime() + headway + arrive;
+  const direction = useStore.getState().loopDirection;
+  const extra = disruptionExtraSeconds(direction);
+  const releaseAt = platformWait.stage === 'clear'
+    ? Math.max(baseHeadway, effectiveReleaseAt, nextTrainBlocked(direction) ? t + extra : baseHeadway)
+    : baseHeadway + extra;
+  const gap = clearRunTime() + releaseAt + arrive;
   /** D'une rame à quai à la suivante à quai. */
   const cycle = dwell + gap;
   switch (platformWait.stage) {
@@ -493,11 +532,12 @@ export function nextTrainsFromPlatform(index: number): NextTrains {
     case 'departing':
       return {
         first: null,
-        second: Math.max(0, clearRunTime() - t) + headway + arrive,
+        second: Math.max(0, clearRunTime() - t) + baseHeadway + extra + arrive,
         leaving: true,
       };
     case 'clear': {
-      const first = Math.max(0, headway - t) + arrive;
+      if (!disruptionHasKnownEta(direction) && nextTrainBlocked(direction)) return { first: 'unknown', second: 'unknown', leaving: false };
+      const first = Math.max(0, releaseAt - t) + arrive;
       return { first, second: first + cycle, leaving: false };
     }
     case 'approaching': {
@@ -516,6 +556,7 @@ export function nextTrainsFromPlatform(index: number): NextTrains {
 /** Appelée à la place d'updateCycle tant que le joueur est sur le quai. */
 export function updatePlatformWait(rawDt: number): void {
   const dt = rawDt * platformWait.rate;
+  updateLineDisruption(dt);
   // L'horloge de Tokyo ne s'arrête pas parce qu'on est descendu : sans cela le
   // cycle jour/nuit gèlerait le temps de l'attente.
   advanceClock(rawDt);
@@ -551,4 +592,13 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   w.__platformWaitSpeed = (k: number) => {
     platformWait.rate = Math.max(0.1, k);
   };
+  const force = (severity: DisruptionSeverity, cause?: DisruptionCause, seconds?: number) => {
+    const { index, loopDirection } = useStore.getState();
+    beginPlatformDisruption({ cause, severity, seconds, source: 'development', direction: loopDirection, stationIndex: index, clockMin: runtime.clockMin, stopSequence: runtime.stopSequence, force: true });
+  };
+  w.__platformDelay = (cause?: DisruptionCause, seconds?: number) => force('minor', cause, seconds);
+  w.__platformSuspension = (cause?: DisruptionCause, seconds?: number) => force('suspended', cause, seconds);
+  w.__resolvePlatformDelay = resolveLineDisruption;
+  w.__clearPlatformDelay = clearLineDisruption;
+  w.__platformDelayState = () => ({ ...lineDisruption });
 }

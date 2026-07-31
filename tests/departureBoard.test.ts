@@ -96,27 +96,36 @@ test('rame à quai : まもなく, puis まもなく発車 quand elle s’ébran
   assert.deepEqual(leaving[1], { kind: 'minutes', minutes: 3 });
 });
 
+test('une suspension sans estimation reste inconnue et ne devient jamais まもなく', () => {
+  const rows = boardRows({ first: 'unknown', second: 'unknown', leaving: false }, NOON);
+  assert.deepEqual(rows, [{ kind: 'unknown' }, { kind: 'unknown' }]);
+});
+
 test('le canvas ne se redessine que lorsque le tableau a vraiment changé', () => {
   const rows: BoardEta[] = [{ kind: 'minutes', minutes: 2 }, { kind: 'minutes', minutes: 5 }];
-  const view = { rows, english: false, blink: false };
-  assert.equal(sameBoardView(view, { rows: [...rows], english: false, blink: false }), true);
+  const normal = { kind: 'normal' as const };
+  const view = { rows, english: false, blink: false, serviceStatus: normal };
+  assert.equal(sameBoardView(view, { rows: [...rows], english: false, blink: false, serviceStatus: normal }), true);
   // La minute qui tombe, la langue qui alterne, le clignotement : tout compte.
   assert.equal(
     sameBoardView(view, {
       rows: [{ kind: 'minutes', minutes: 1 }, { kind: 'minutes', minutes: 5 }],
       english: false,
       blink: false,
+      serviceStatus: normal,
     }),
     false,
   );
-  assert.equal(sameBoardView(view, { rows, english: true, blink: false }), false);
-  assert.equal(sameBoardView(view, { rows, english: false, blink: true }), false);
+  assert.equal(sameBoardView(view, { rows, english: true, blink: false, serviceStatus: normal }), false);
+  assert.equal(sameBoardView(view, { rows, english: false, blink: true, serviceStatus: normal }), false);
+  assert.equal(sameBoardView(view, { rows, english: false, blink: false, serviceStatus: { kind: 'delayed', cause: 'door-inspection', japanese: '遅れ', english: 'Delayed' } }), false);
   // Même minute, mais l'un donne l'heure et l'autre un délai.
   assert.equal(
     sameBoardView(view, {
       rows: [{ kind: 'time', hhmm: '05:12' }, { kind: 'minutes', minutes: 5 }],
       english: false,
       blink: false,
+      serviceStatus: normal,
     }),
     false,
   );

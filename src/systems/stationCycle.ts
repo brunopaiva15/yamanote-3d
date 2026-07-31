@@ -53,9 +53,6 @@ import {
 import * as audio from './audioEngine';
 import { cancelSpeech, say } from './speech';
 import {
-  lineDelayed,
-  notifyLineDelay,
-  notifyLineOutage,
   paAgentMessage,
   paAlightFirst,
   paArrival,
@@ -63,6 +60,7 @@ import {
   paPsdBeeps,
   updatePlatformSpeakers,
 } from './stationPa';
+import { lineDelayed, notifyOnboardEmergency, notifyPowerOutage } from './lineDisruption';
 import { rollPassThrough, startPassThrough } from './passingTrain';
 import { exchangePassengers, startlePassengers } from './passengers';
 import { pushSceneEvent } from './paxEvents';
@@ -296,7 +294,7 @@ export function beginPowerOutage(): void {
   cancelSpeech('cabin');
   // La ligne prend du retard, et le quai en nommera la cause : c'est le seul
   // incident dont l'annonce de retard dit exactement ce que le joueur a vécu.
-  notifyLineOutage();
+  notifyPowerOutage(useStore.getState().loopDirection, useStore.getState().index, runtime.clockMin, runtime.stopSequence);
   // Personne ne sursaute : rien n'a secoué. Ce sont les têtes qui se lèvent -
   // vers le plafond, vers les écrans noirs, vers le voisin.
   pushSceneEvent('outage');
@@ -402,7 +400,7 @@ export function beginEmergencyStop(): void {
   cancelSpeech('cabin');
   say(emergencyBrakeAnnouncement());
   // La ligne prend du retard, et les quais le diront à la prochaine attente.
-  notifyLineDelay(em.reason);
+  notifyOnboardEmergency(em.reason, useStore.getState().loopDirection, useStore.getState().index, runtime.clockMin, runtime.stopSequence);
   audio.brakeApply();
   audio.flangeSqueal(0.8);
   // Le wagon sursaute - on se raccroche, on trébuche, on lève le nez - et

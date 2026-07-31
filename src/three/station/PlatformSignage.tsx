@@ -40,6 +40,8 @@ import {
 import { CONFIG } from '../../data/config';
 import { cruiseDuration, journeyDuration } from '../../data/segments';
 import { dwellDuration, melodyStartAt } from '../../systems/stationCycle';
+import { definitionFor } from '../../data/platformDisruptions';
+import { disruptionAffects, lineDisruption } from '../../systems/lineDisruption';
 import {
   directionBandZs,
   nameplateColumns,
@@ -164,6 +166,16 @@ function boardView(t: number, index: number): BoardView {
   const english = Math.floor(t / CYCLE) % 2 === 1;
   const next =
     runtime.playerFrame === 'platform' ? nextTrainsFromPlatform(index) : nextTrainsFromCar(index);
+  const direction = useStore.getState().loopDirection;
+  const serviceStatus = disruptionAffects(direction) && lineDisruption.cause
+    ? (() => {
+        const cause = definitionFor(lineDisruption.cause!);
+        const suspended = lineDisruption.phase === 'suspended';
+        return { kind: suspended ? 'suspended' as const : 'delayed' as const, cause: cause.cause,
+          japanese: suspended ? '運転見合わせ' : '遅れ', english: suspended ? 'Service suspended' : 'Delayed',
+          estimatedResumeClockMin: lineDisruption.estimatedResumeClockMin };
+      })()
+    : { kind: 'normal' as const };
   return {
     rows: boardRows(next, runtime.clockMin),
     english,
@@ -171,6 +183,7 @@ function boardView(t: number, index: number): BoardView {
     // mélodie, mais une ligne qui clignote une demi-minute durant ne se lit
     // plus. Les vantaux sont le signal, d'où qu'on regarde.
     blink: next.leaving && runtime.doorTarget === 0 && Math.floor(t * 2) % 2 === 0,
+    serviceStatus,
   };
 }
 

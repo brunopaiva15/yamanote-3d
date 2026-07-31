@@ -38,6 +38,7 @@ import { loopJp, nextHubs, type Utterance } from './announcements.ts';
 import { nextStation } from './loop.ts';
 import type { LoopDirection } from './platforms.ts';
 import { STATIONS } from './stations.ts';
+import { definitionFor, type AffectedDirections, type DisruptionCause } from './platformDisruptions.ts';
 
 /** Voix de synthèse visée pour un texte donné (voir le générateur Kokoro). */
 export type StationVoice = 'atos-inner' | 'atos-outer' | 'agent' | 'atos-en';
@@ -391,5 +392,55 @@ export function platformDelayAnnouncement(
         'お急ぎのところ、ご迷惑をおかけいたします。',
       atosVoiceForDirection(dir),
     ),
+  ];
+}
+
+function disruptionDirection(direction: AffectedDirections): { jp: string; en: string } {
+  if (direction === 'both') return { jp: '内・外回り', en: 'inner and outer loop' };
+  return direction === 'inner' ? { jp: '内回り', en: 'inner loop' } : { jp: '外回り', en: 'outer loop' };
+}
+
+export interface DisruptionAnnouncementContext {
+  cause: DisruptionCause;
+  direction: AffectedDirections;
+  voiceDirection: LoopDirection;
+  locationStationIndex: number;
+  locationNextStationIndex: number | null;
+  estimatedResumeClockMin?: number | null;
+  resumedAtClockMin?: number;
+}
+
+function disruptionLocation(c: DisruptionAnnouncementContext): { jp: string; en: string } {
+  const a = STATIONS[c.locationStationIndex];
+  if (c.locationNextStationIndex == null) return { jp: `${a.kanji}駅`, en: `${a.romaji} Station` };
+  const b = STATIONS[c.locationNextStationIndex];
+  return { jp: `${a.kanji}・${b.kanji}駅間`, en: `between ${a.romaji} and ${b.romaji}` };
+}
+
+function disruptionTime(clockMin: number): string {
+  const m = Math.floor(((clockMin % 1440) + 1440) % 1440);
+  return `${Math.floor(m / 60)}時${String(m % 60).padStart(2, '0')}分`;
+}
+
+export function platformDisruptionAnnouncement(c: DisruptionAnnouncementContext, suspended: boolean): StationUtterance[] {
+  const cause = definitionFor(c.cause); const loc = disruptionLocation(c); const direction = disruptionDirection(c.direction);
+  const jaMain = suspended
+    ? `山手線は、${loc.jp}での${cause.japaneseCause}の影響で、${direction.jp}電車で運転を見合わせています。`
+    : `山手線は、${loc.jp}での${cause.japaneseCause}の影響で、${direction.jp}電車に遅れがでています。お急ぎのところ、ご迷惑をおかけいたします。`;
+  const enMain = suspended
+    ? `Yamanote Line service on the ${direction.en} is suspended due to ${cause.englishCause} ${loc.en}.`
+    : `Yamanote Line trains on the ${direction.en} are delayed due to ${cause.englishCause} ${loc.en}. We apologize for the inconvenience.`;
+  const eta = c.estimatedResumeClockMin == null
+    ? suspended ? [ja('現在のところ、運転再開見込は立っていません。', atosVoiceForDirection(c.voiceDirection)), en('There is currently no estimate for when service will resume.')] : []
+    : [ja(`運転再開は${disruptionTime(c.estimatedResumeClockMin)}頃を見込んでいます。時刻は状況により前後する場合があります。`, atosVoiceForDirection(c.voiceDirection)), en(`Service is expected to resume around ${disruptionTime(c.estimatedResumeClockMin).replace('時', ':').replace('分', '')}. This estimate may change.`)];
+  return [ja(jaMain, atosVoiceForDirection(c.voiceDirection)), en(enMain), ...eta];
+}
+
+export function platformDisruptionResumeAnnouncement(c: DisruptionAnnouncementContext): StationUtterance[] {
+  const cause = definitionFor(c.cause); const direction = disruptionDirection(c.direction);
+  const time = disruptionTime(c.resumedAtClockMin ?? 0);
+  return [
+    ja(`山手線は、${cause.japaneseCause}の影響で運転を見合わせていましたが、${time}頃に運転を再開し、${direction.jp}電車に遅れがでています。`, atosVoiceForDirection(c.voiceDirection)),
+    en(`Yamanote Line service has resumed following ${cause.englishCause}. Trains on the ${direction.en} remain delayed.`),
   ];
 }

@@ -3,6 +3,7 @@
 
 import { CONFIG } from '../data/config';
 import type { TokyoDate } from '../data/occupancy';
+import { clearLineDisruption } from './lineDisruption';
 
 /**
  * Repère de marche du joueur : dans le wagon, ou sur le quai. Défini ici (et
@@ -268,6 +269,7 @@ export function advanceClock(dtSeconds: number): void {
 }
 
 export function resetRuntime(): void {
+  clearLineDisruption();
   runtime.speed = 0;
   runtime.accel = 0;
   runtime.distance = 0;
