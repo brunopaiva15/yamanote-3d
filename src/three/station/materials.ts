@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import type { StationPalette } from '../../data/stationLayouts';
+import { stationWallTextures } from '../../textures/stationWall';
 
 export type StationTextures = {
   floor: THREE.Texture;
@@ -14,6 +15,17 @@ export type StationTextures = {
 };
 
 export function makeStationMaterials(p: StationPalette, textures: StationTextures) {
+  // Les défauts des parois : béton banché, enduit peint, faïence, dalles de
+  // plafond. Ils ne dépendent PAS de la gare - un mur d'Ōtsuka a les mêmes
+  // coulures qu'un mur de Nippori, pas la même teinte - et sont donc dessinés
+  // une fois pour la boucle entière (textures/stationWall).
+  //
+  // Chaque carte de couleur sert aussi d'emissiveMap. Sans cela, le rappel
+  // d'émissif qui empêche ces surfaces de virer au noir sous un auvent ou dans
+  // un souterrain repeignait par-dessus un aplat parfaitement uniforme : le
+  // grain était là, mais noyé sous une lumière plate qui ne venait de nulle
+  // part. Modulé par la même image, il éclaire les creux moins que les reliefs.
+  const s = stationWallTextures();
   return {
       slab: new THREE.MeshStandardMaterial({
         map: textures.floor,
@@ -80,11 +92,23 @@ export function makeStationMaterials(p: StationPalette, textures: StationTexture
         emissiveIntensity: 0.16,
       }),
       wall: new THREE.MeshStandardMaterial({
+        map: s.wall,
+        roughnessMap: s.wallRough,
+        emissiveMap: s.wall,
         color: p.wall,
-        roughness: 0.92,
+        // La rugosité est PORTÉE par la carte (0,80 à 1,00) : la garder ici à
+        // 0,92 l'aurait multipliée par 0,92 de plus, et rendu le mur uniforme
+        // par le bas de l'échelle - ce qu'on cherchait justement à quitter.
+        roughness: 1,
         emissive: p.wall,
         emissiveIntensity: 0.14,
       }),
+      // Volontairement SANS carte. Ce matériau ne couvre que des profils :
+      // bandeaux, larmiers, plinthes, joues de rive - des boîtes de trente
+      // centimètres de haut et de deux cents mètres de long. Une tuile de mur
+      // tendue là-dessus n'aurait pas donné du grain mais une traînée : un
+      // trou de banche étiré sur cent mètres, un joint devenu dégradé. Ces
+      // profils se lisent par leur ombre portée, pas par leur surface.
       wallDark: new THREE.MeshStandardMaterial({ color: p.column, roughness: 0.9 }),
       // Parois et plafond du niveau de correspondance.
       //
@@ -96,21 +120,33 @@ export function makeStationMaterials(p: StationPalette, textures: StationTexture
       // n'y vient que des réglettes : un ton sombre y devient noir en trois
       // mètres. On garde la teinte de la gare, tirée vers le blanc.
       hall: new THREE.MeshStandardMaterial({
+        map: s.hall,
+        roughnessMap: s.hallRough,
+        emissiveMap: s.hall,
         color: new THREE.Color(p.wall).lerp(new THREE.Color('#f4f2ec'), 0.68),
-        roughness: 0.92,
+        roughness: 1,
         emissive: new THREE.Color(p.wall).lerp(new THREE.Color('#ffffff'), 0.6),
         emissiveIntensity: 0.16,
       }),
       hallCeil: new THREE.MeshStandardMaterial({
+        map: s.ceiling,
+        roughnessMap: s.ceilingRough,
+        emissiveMap: s.ceiling,
         color: new THREE.Color(p.canopy).lerp(new THREE.Color('#e8e8e4'), 0.55),
-        roughness: 0.95,
+        roughness: 1,
         emissive: new THREE.Color(p.canopy).lerp(new THREE.Color('#ffffff'), 0.5),
         emissiveIntensity: 0.12,
       }),
       // Faïence de soubassement : c'est elle qui casse le tout-gris du fond.
       tile: new THREE.MeshStandardMaterial({
+        map: s.dado,
+        roughnessMap: s.dadoRough,
+        emissiveMap: s.dado,
         color: p.tile,
-        roughness: 0.42,
+        // Le joint est mat, l'émail est brillant : c'est ce seul écart qui fait
+        // lire du carrelage plutôt qu'un bandeau de couleur. La carte le porte
+        // de 0,24 à 0,72 - une valeur unique ne pouvait pas le dire.
+        roughness: 1,
         metalness: 0.04,
         emissive: p.tile,
         emissiveIntensity: 0.1,
@@ -125,6 +161,16 @@ export function makeStationMaterials(p: StationPalette, textures: StationTexture
         roughness: 0.4,
       }),
       bin: new THREE.MeshStandardMaterial({ color: '#4a5058', roughness: 0.7, metalness: 0.2 }),
+      // Coffret d'incendie : le seul rouge d'un mur de gare, et il y en a un
+      // tous les quarante mètres. Sur deux cent vingt mètres de béton clair,
+      // c'est lui qui donne l'échelle et qui casse la monotonie.
+      hydrant: new THREE.MeshStandardMaterial({
+        color: '#b8362c',
+        roughness: 0.52,
+        metalness: 0.2,
+        emissive: '#5a1410',
+        emissiveIntensity: 0.28,
+      }),
       kiosk: new THREE.MeshStandardMaterial({ color: '#e8e4dc', roughness: 0.78 }),
       ad: new THREE.MeshBasicMaterial({
         map: textures.ads[0],

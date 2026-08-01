@@ -62,8 +62,11 @@ import {
   TRACK_HALF,
 } from '../../data/stationGeometry';
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
+import { DADO_MODULE, WALL_MODULE } from '../../textures/stationWall';
 import { EdgeBarrier, GateBarrier } from './Barrier';
 import { makeStationMaterials, type Mats } from './materials';
+import { useWallBox } from './wallBox';
+import { WallDetails, type WallObstacle } from './WallDetails';
 import { mat, useInstances } from './instancing';
 import { OverheadSigns } from './OverheadSigns';
 import { PlatformAds } from './PlatformAds';
@@ -829,20 +832,15 @@ function FarSide({
   // Harajuku : le seul quai latéral de la boucle. Un vrai mur, un vrai
   // soubassement carrelé, et rien à voir au-delà.
   if (far === null) {
-    const backX = place.backX;
     return (
-      <group name="mur-fond">
-        <mesh position={[backX, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
-          <boxGeometry args={[0.18, wallH, len]} />
-        </mesh>
-        <Wainscot backX={backX - 0.09} len={len} m={m} />
-        <mesh position={[backX - 0.02, PLATFORM_TOP + wallH - 0.6, 0]} material={m.wallDark}>
-          <boxGeometry args={[0.2, 0.35, len]} />
-        </mesh>
-        <mesh position={[backX - 0.03, PLATFORM_TOP + wallH - 0.92, 0]} material={m.accent}>
-          <boxGeometry args={[0.08, 0.1, len]} />
-        </mesh>
-      </group>
+      <BackWall
+        backX={place.backX}
+        wallH={wallH}
+        len={len}
+        m={m}
+        detail={detail}
+        obstacles={place.obstacles}
+      />
     );
   }
 
@@ -933,7 +931,63 @@ function FarSide({
 
       {/* Ce qui ferme la travée, selon le niveau où court la voie - au fond du
           quai d'en face, ou au bout du faisceau quand il y en a un. */}
-      <Closure x={oppBack + (layout.openFarSide ? YARD_TRACKS * YARD_PITCH : 0)} elevation={layout.elevation} wallH={wallH} len={len} m={m} />
+      <Closure
+        x={oppBack + (layout.openFarSide ? YARD_TRACKS * YARD_PITCH : 0)}
+        elevation={layout.elevation}
+        wallH={wallH}
+        len={len}
+        m={m}
+        detail={detail}
+        sigRoof={sigRoof}
+      />
+    </group>
+  );
+}
+
+/**
+ * Le mur de fond d'un quai latéral - Harajuku, et elle seule.
+ *
+ * On le longe sur toute sa longueur, à un mètre : c'est le mur le plus REGARDÉ
+ * de la boucle. D'où les UV à l'échelle réelle (three/station/wallBox) plutôt
+ * qu'une tuile étirée sur deux cent vingt-quatre mètres, et la quincaillerie
+ * de WallDetails - sans elle, un plan de béton texturé reste un plan.
+ */
+function BackWall({
+  backX,
+  wallH,
+  len,
+  m,
+  detail,
+  obstacles,
+}: {
+  backX: number;
+  wallH: number;
+  len: number;
+  m: Mats;
+  detail: number;
+  obstacles: readonly WallObstacle[];
+}) {
+  const geo = useWallBox(0.18, wallH, len, WALL_MODULE);
+  return (
+    <group name="mur-fond">
+      <mesh position={[backX, PLATFORM_TOP + wallH / 2, 0]} geometry={geo} material={m.wall} />
+      <Wainscot backX={backX - 0.09} len={len} m={m} />
+      <WallDetails
+        faceX={backX - 0.09}
+        dir={-1}
+        y0={PLATFORM_TOP}
+        h={wallH}
+        len={len}
+        m={m}
+        detail={detail}
+        obstacles={obstacles}
+      />
+      <mesh position={[backX - 0.02, PLATFORM_TOP + wallH - 0.6, 0]} material={m.wallDark}>
+        <boxGeometry args={[0.2, 0.35, len]} />
+      </mesh>
+      <mesh position={[backX - 0.03, PLATFORM_TOP + wallH - 0.92, 0]} material={m.accent}>
+        <boxGeometry args={[0.08, 0.1, len]} />
+      </mesh>
     </group>
   );
 }
@@ -945,50 +999,101 @@ function Closure({
   wallH,
   len,
   m,
+  detail,
+  sigRoof,
 }: {
   x: number;
   elevation: StationLayout['elevation'];
   wallH: number;
   len: number;
   m: Mats;
+  detail: number;
+  /** La charpente signature couvre-t-elle le site d'un seul tenant ? */
+  sigRoof: boolean;
 }) {
-  if (elevation === 'trench') {
-    // Tranchée : la paroi de soutènement monte bien au-delà de l'auvent.
-    return (
-      <group>
-        <mesh position={[x, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
-          <boxGeometry args={[0.24, wallH, len]} />
-        </mesh>
-        <Wainscot backX={x - 0.13} len={len} m={m} />
+  if (elevation === 'elevated') return <Parapet x={x} len={len} m={m} />;
+  // Tranchée ou au sol : le même mur, à l'épaisseur près - et, en tranchée, un
+  // couronnement qui monte bien au-delà de l'auvent.
+  return (
+    <ClosureWall
+      x={x}
+      thickness={elevation === 'trench' ? 0.24 : 0.2}
+      crowned={elevation === 'trench'}
+      wallH={wallH}
+      len={len}
+      m={m}
+      detail={detail}
+      bare={sigRoof}
+    />
+  );
+}
+
+/** Viaduc : garde-corps ajouré, la ville se voit par-dessus. */
+function Parapet({ x, len, m }: { x: number; len: number; m: Mats }) {
+  const geo = useWallBox(0.18, 1.2, len, WALL_MODULE);
+  return (
+    <group>
+      <mesh position={[x, PLATFORM_TOP + 0.6, 0]} geometry={geo} material={m.wall} />
+      <mesh position={[x, PLATFORM_TOP + 1.24, 0]} material={m.metal}>
+        <boxGeometry args={[0.1, 0.08, len]} />
+      </mesh>
+      <mesh position={[x, PLATFORM_TOP + 1.9, 0]} material={m.metal}>
+        <boxGeometry args={[0.08, 0.06, len]} />
+      </mesh>
+    </group>
+  );
+}
+
+function ClosureWall({
+  x,
+  thickness,
+  crowned,
+  wallH,
+  len,
+  m,
+  detail,
+  bare,
+}: {
+  x: number;
+  thickness: number;
+  crowned: boolean;
+  wallH: number;
+  len: number;
+  m: Mats;
+  detail: number;
+  /** Mur nu : quelque chose d'autre occupe déjà ce nu. */
+  bare: boolean;
+}) {
+  const geo = useWallBox(thickness, wallH, len, WALL_MODULE);
+  const faceX = x - thickness / 2;
+  return (
+    <group>
+      <mesh position={[x, PLATFORM_TOP + wallH / 2, 0]} geometry={geo} material={m.wall} />
+      <Wainscot backX={faceX - 0.01} len={len} m={m} />
+      {/* La quincaillerie est vue d'en face, par-dessus deux voies : ce sont
+          ses ombres portées qui la font lire, pas son détail. Elle tombe donc
+          au palier le plus léger, où le mur redevient un plan texturé.
+
+          Et elle disparaît là où la charpente signature couvre tout le site :
+          à Takanawa Gateway, ce nu-là n'est pas une paroi de soutènement mais
+          la file de piles de la halle, et les descentes d'eau génériques s'y
+          plantaient dedans sur toute la longueur. */}
+      {detail <= 2 && !bare && (
+        <WallDetails
+          faceX={faceX}
+          dir={-1}
+          y0={PLATFORM_TOP}
+          h={wallH}
+          len={len}
+          m={m}
+          detail={detail}
+        />
+      )}
+      {crowned && (
         <mesh position={[x + 0.12, PLATFORM_TOP + wallH + 1.7, 0]} material={m.wallDark}>
           <boxGeometry args={[0.42, 3.4, len]} />
         </mesh>
-      </group>
-    );
-  }
-  if (elevation === 'elevated') {
-    // Viaduc : garde-corps ajouré, la ville se voit par-dessus.
-    return (
-      <group>
-        <mesh position={[x, PLATFORM_TOP + 0.6, 0]} material={m.wall}>
-          <boxGeometry args={[0.18, 1.2, len]} />
-        </mesh>
-        <mesh position={[x, PLATFORM_TOP + 1.24, 0]} material={m.metal}>
-          <boxGeometry args={[0.1, 0.08, len]} />
-        </mesh>
-        <mesh position={[x, PLATFORM_TOP + 1.9, 0]} material={m.metal}>
-          <boxGeometry args={[0.08, 0.06, len]} />
-        </mesh>
-      </group>
-    );
-  }
-  // Au sol : un mur de fond ordinaire, avec sa faïence.
-  return (
-    <group>
-      <mesh position={[x, PLATFORM_TOP + wallH / 2, 0]} material={m.wall}>
-        <boxGeometry args={[0.2, wallH, len]} />
-      </mesh>
-      <Wainscot backX={x - 0.11} len={len} m={m} />
+      )}
     </group>
   );
 }
@@ -999,11 +1104,14 @@ function Closure({
  * de béton clair sur toute sa hauteur - le « trop blanc et gris » du décor.
  */
 function Wainscot({ backX, len, m }: { backX: number; len: number; m: Mats }) {
+  const geo = useWallBox(0.05, 1.04, len, DADO_MODULE);
   return (
     <group>
-      <mesh position={[backX - 0.015, PLATFORM_TOP + 0.52, 0]} material={m.tile}>
-        <boxGeometry args={[0.05, 1.04, len]} />
-      </mesh>
+      <mesh
+        position={[backX - 0.015, PLATFORM_TOP + 0.52, 0]}
+        geometry={geo}
+        material={m.tile}
+      />
       {/* Le liseré déborde de cinq millimètres du nu de la faïence : il la
           couronne comme une moulure. À nu commun, sa face avant et celle du
           carrelage étaient dans le même plan sur les deux cent vingt mètres du
