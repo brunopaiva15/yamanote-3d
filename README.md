@@ -626,6 +626,28 @@ tri, un plan. Shinjuku a tout. Et la largeur tranche en dernier : un konbini
 fait 3,40 m de fond, et le moteur le refuse plutôt que d'étrangler à moins de
 deux mètres le passage du milieu.
 
+**Ce passage se mesure entre les DEUX parois, pas contre une seule.** La règle
+a longtemps été écrite comme si le mur d'en face était nu : on comparait la
+largeur du hall à la profondeur du meuble, chaque paroi de son côté. Elle
+passait, et pendant ce temps la galerie d'Akihabara et le guichet qui lui fait
+face laissaient huit centimètres entre eux — un mur de mobilier en travers du
+hall, qu'on ne voyait pas au rendu et sur lequel la marche butait. Trois
+conséquences, toutes vérifiables :
+
+- le guichet (みどりの窓口) se range désormais par le **fond** de la zone libre,
+  au bout des 券売機, là où il est en vrai — c'est le seul meuble profond de sa
+  paroi, donc le seul capable d'interdire une devanture en face de lui ;
+- une devanture qui trouve un meuble profond en face d'elle ne disparaît pas,
+  elle **se décale** le long du quai jusqu'où la paroi d'en face est nue ;
+- ce qui ne passe **nulle part** est refusé : à 5,70 m entre parois, un hall ne
+  peut pas mettre une boutique de 3,40 m en face d'un distributeur de titres, et
+  Akihabara, Takadanobaba, Harajuku et Meguro n'ont donc pas de commerce dans
+  leur hall générique. Elles sont, toutes les quatre, sur la liste des gares
+  qui se dessineront à part.
+
+Le test balaie le niveau tous les cinq centimètres et mesure le plus large
+passage **continu** entre les obstacles : c'est ce qui se traverse vraiment.
+
 **Un meuble se reconnaît à sa silhouette, pas à sa texture.** Une batterie de
 券売機 se lit à son bandeau vert continu et à ses écrans inclinés ; une consigne
 à sa trame de portes carrées numérotées, avec sa borne de paiement plus haute à

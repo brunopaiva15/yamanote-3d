@@ -524,10 +524,16 @@ const FREE_NEAR: Want[] = [
   // c'est ce que les voyageurs viennent chercher.
   { kind: 'stamp' },
   { kind: 'ticket' },
-  { kind: 'office', from: 1.3 },
   { kind: 'notice' },
   { kind: 'aed' },
   { kind: 'umbrella' },
+  // Le guichet se range par le FOND, et ce n'est pas un détail d'implantation :
+  // c'est le seul meuble profond de cette paroi, donc le seul qui puisse
+  // interdire une devanture en face de lui. Rangé dans l'ordre d'arrivée, il
+  // tombait juste devant la boutique et le hall perdait l'une ou l'autre ;
+  // rangé au fond, il laisse à la devanture la longueur qui suit les
+  // portillons - et c'est là qu'il est en vrai, au bout des 券売機.
+  { kind: 'office', from: 1.3, atEnd: true },
 ];
 const FREE_FAR: Want[] = [
   // La galerie passe avant le konbini : une gare qui a l'une n'a pas besoin de
@@ -569,6 +575,13 @@ const AISLE_MIN = 2.0;
  * façade du meuble regarde toujours vers le milieu. On avance depuis le bord
  * `z0` de la zone, et l'on s'arrête quand il n'y a plus de place - jamais on ne
  * tasse, jamais on ne superpose.
+ *
+ * `facing` porte ce qui est DÉJÀ posé sur la paroi d'en face, et il n'est pas
+ * décoratif : le passage du milieu n'est pas creusé par un meuble mais par
+ * DEUX, et la seconde paroi ne peut pas décider comme si la première était nue.
+ * Sans lui, une devanture de 3,60 m passait le contrôle sur un hall de 5,70 m -
+ * il restait 2,10 m, donc « assez » - alors qu'un distributeur lui faisait déjà
+ * face et que le passage réel tombait sous le mètre et demi.
  */
 function fitWall(
   wants: readonly Want[],
@@ -579,10 +592,25 @@ function fitWall(
   counter: Map<FixtureKind, number>,
   brand: GalleryBrand | undefined,
   pilasters: readonly InteriorRect[],
+  facing: readonly Fixture[],
 ): Fixture[] {
   const out: Fixture[] = [];
   let z = zone.z0 + ZONE_MARGIN;
   let zEnd = zone.z1 - ZONE_MARGIN;
+  /**
+   * Ce qui resterait de passage si l'on posait ce meuble-là, à cet endroit-là :
+   * la largeur de la zone, moins les deux retraits de faïence, moins le meuble,
+   * moins le plus profond de ceux d'en face qui le regardent.
+   */
+  const aisleLeft = (z0: number, len: number, depth: number): number => {
+    let opposite = 0;
+    for (const f of facing) {
+      if (f.rect.z0 < z0 + len && f.rect.z1 > z0) {
+        opposite = Math.max(opposite, f.rect.x1 - f.rect.x0);
+      }
+    }
+    return width - 2 * WALL_CLEAR - depth - opposite;
+  };
   /**
    * Repousse `z` au-delà du premier pilastre qu'un meuble chevauche.
    *
@@ -597,6 +625,27 @@ function fitWall(
     let at = start;
     for (const p of pilasters) {
       if (at < p.z1 + 0.12 && at + len > p.z0 - 0.12) at = p.z1 + 0.12;
+    }
+    return at;
+  };
+  /**
+   * Repousse `z` au-delà de ce qui, EN FACE, étranglerait le passage.
+   *
+   * Un meuble profond qui en trouve un autre profond en face ne disparaît pas :
+   * il se range plus loin, là où la paroi d'en face est nue. C'est ce que fait
+   * une gare - le guichet n'est pas en face de la boutique, il est après - et
+   * c'est ce qui permet à un hall de 6,70 m d'avoir les deux. Seul disparaît ce
+   * qui ne passe nulle part, parce que le hall est trop étroit pour lui.
+   */
+  const clearFacing = (start: number, len: number, depth: number): number => {
+    let at = start;
+    for (let pass = 0; pass < facing.length + 1; pass++) {
+      const blocker = facing.find(
+        (f) => f.rect.z0 < at + len && f.rect.z1 > at
+          && width - 2 * WALL_CLEAR - depth - (f.rect.x1 - f.rect.x0) < AISLE_MIN,
+      );
+      if (!blocker) break;
+      at = blocker.rect.z1 + FIXTURE_GAP;
     }
     return at;
   };
@@ -618,12 +667,12 @@ function fitWall(
   for (const want of wants) {
     if (!want.atEnd || crowd < (want.from ?? 0)) continue;
     const size = SIZES[want.kind];
-    if (width - size.depth < AISLE_MIN) continue;
     let start = zEnd - size.len;
     for (const p of pilasters) {
       if (start < p.z1 + 0.12 && start + size.len > p.z0 - 0.12) start = p.z0 - 0.12 - size.len;
     }
     if (start < z) continue;
+    if (aisleLeft(start, size.len, size.depth) < AISLE_MIN) continue;
     place(want.kind, start, size.len, size.depth);
     zEnd = start - FIXTURE_GAP;
   }
@@ -633,11 +682,16 @@ function fitWall(
     if (crowd < (want.from ?? 0)) continue;
     if (want.needsBrand && !brand) continue;
     const size = SIZES[want.kind];
-    // Le passage du milieu passe avant le meuble : ce qui l'étranglerait tombe.
-    if (width - size.depth < AISLE_MIN) continue;
+    // Le passage du milieu passe avant le meuble. Contre une paroi NUE d'en
+    // face, il ne reste déjà pas deux mètres : le hall est trop étroit pour
+    // cette famille-là, et aucun décalage n'y changera rien.
+    if (width - 2 * WALL_CLEAR - size.depth < AISLE_MIN) continue;
     for (let k = 0; k < (want.count ?? 1); k++) {
       z = clearPilaster(z, size.len);
+      z = clearFacing(z, size.len, size.depth);
+      z = clearPilaster(z, size.len);
       if (z + size.len > zEnd) break;
+      if (aisleLeft(z, size.len, size.depth) < AISLE_MIN) break;
       place(want.kind, z, size.len, size.depth);
       z += size.len + FIXTURE_GAP;
     }
@@ -727,12 +781,17 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
   // le mobilier se range ensuite dans ce qu'elle laisse.
   const nearPosts = pilastersFor(-1, x0, x1, z0, freeZ1, gate);
   const farPosts = pilastersFor(1, x0, x1, z0, freeZ1, gate);
-  const fixtures = [
-    ...fitWall(PAID_NEAR, -1, paid, crowd, width, counter, spec.brand, nearPosts),
-    ...fitWall(PAID_FAR, 1, paid, crowd, width, counter, spec.brand, farPosts),
-    ...fitWall(FREE_NEAR, -1, free, crowd, width, counter, spec.brand, nearPosts),
-    ...fitWall(FREE_FAR, 1, free, crowd, width, counter, spec.brand, farPosts),
-  ];
+  // L'ORDRE DES DEUX PAROIS EST UNE DÉCISION, pas une commodité d'écriture :
+  // la seconde rangée voit ce que la première a posé en face d'elle, donc c'est
+  // elle qui cède. On garnit d'abord le côté voie, celui des INDISPENSABLES -
+  // une gare sans 券売機 n'est pas une gare, alors qu'une gare sans boutique
+  // court la ligne -, et le fond ensuite, avec ses devantures. Ce qui ne trouve
+  // pas deux mètres de passage y renonce, ou se range plus loin.
+  const paidNear = fitWall(PAID_NEAR, -1, paid, crowd, width, counter, spec.brand, nearPosts, []);
+  const paidFar = fitWall(PAID_FAR, 1, paid, crowd, width, counter, spec.brand, farPosts, paidNear);
+  const freeNear = fitWall(FREE_NEAR, -1, free, crowd, width, counter, spec.brand, nearPosts, []);
+  const freeFar = fitWall(FREE_FAR, 1, free, crowd, width, counter, spec.brand, farPosts, freeNear);
+  const fixtures = [...paidNear, ...paidFar, ...freeNear, ...freeFar];
 
   // Les pilastres qu'une devanture enjambe sont retirés de la trame : ils sont
   // dans le mur de la boutique, pas dans le hall, et les laisser les ferait

@@ -9,7 +9,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { interiorFor } from '../src/data/stationInterior.ts';
+import { interiorFor, type InteriorRect } from '../src/data/stationInterior.ts';
 import { layoutFor } from '../src/data/stationLayouts.ts';
 import {
   ASCENT_FLOOR_Y,
@@ -191,18 +191,33 @@ test('le mobilier tient contre ses parois, sans se chevaucher', () => {
 test('le passage du milieu ne se referme jamais', () => {
   // C'est la contrainte qui refuse un meuble sans discuter : un hall où l'on ne
   // passe plus n'est pas meublé, il est bouché.
+  //
+  // Et la question ne se pose PAS paroi par paroi. Ce test a longtemps comparé
+  // la largeur du hall au plus profond des meubles, chaque paroi de son côté ;
+  // il passait, et pendant ce temps le guichet d'Akihabara et sa galerie se
+  // faisaient face à huit centimètres près - un mur de mobilier en travers du
+  // hall, que la marche cognait et que le rendu ne montrait pas. On balaie donc
+  // le niveau le long de z et l'on mesure ce qui se traverse VRAIMENT : le plus
+  // large passage continu entre les obstacles, à cette abscisse-là.
+  const widest = (zone: InteriorRect, obs: readonly InteriorRect[], z: number): number => {
+    const cut = obs.filter((o) => z >= o.z0 && z <= o.z1).sort((a, b) => a.x0 - b.x0);
+    let best = 0;
+    let at = zone.x0;
+    for (const o of cut) {
+      if (o.x0 > at) best = Math.max(best, o.x0 - at);
+      at = Math.max(at, o.x1);
+    }
+    return Math.max(best, zone.x1 - at);
+  };
   for (const { name, interior } of ALL) {
     for (const zone of [interior.paid, interior.free]) {
-      const inZone = (f: (typeof interior.fixtures)[number]) =>
-        f.rect.z0 >= zone.z0 - 1e-9 && f.rect.z1 <= zone.z1 + 1e-9;
-      const near = interior.fixtures.filter((f) => inZone(f) && f.facing === 1);
-      const far = interior.fixtures.filter((f) => inZone(f) && f.facing === -1);
-      const deepNear = Math.max(0, ...near.map((f) => f.rect.x1 - f.rect.x0));
-      const deepFar = Math.max(0, ...far.map((f) => f.rect.x1 - f.rect.x0));
-      const width = zone.x1 - zone.x0;
-      // Les deux parois ne s'additionnent que là où deux meubles se font
-      // réellement face ; la borne large tient dans tous les cas.
-      assert.ok(width - Math.max(deepNear, deepFar) >= 2 - 1e-9, `${name} : passage étranglé`);
+      for (let z = zone.z0 + 0.05; z <= zone.z1 - 0.05; z += 0.05) {
+        const w = widest(zone, interior.obstacles, z);
+        assert.ok(
+          w >= 2 - 1e-9,
+          `${name} : passage étranglé à ${w.toFixed(2)} m en z=${z.toFixed(2)}`,
+        );
+      }
     }
   }
 });
@@ -279,11 +294,18 @@ test('une galerie ne se pose que là où la gare en déclare une', () => {
     if (!interior.brand) assert.ok(!has, `${name} : galerie sans enseigne`);
   }
   // Et là où elle est déclarée, elle se pose - sauf si le hall est trop étroit
-  // pour ses 3,60 m de fond. Tabata est la seule dans ce cas, et c'est la règle
-  // du passage libre qui tranche, pas un oubli.
+  // pour ses 3,60 m de fond, et ils sont trois dans ce cas. C'est la règle du
+  // passage libre qui tranche, pas un oubli : 5,70 m de hall moins 3,60 m de
+  // devanture moins les deux retraits de faïence, il reste 1,98 m, et il en
+  // faut deux. Deux centimètres, mais dans le bon sens - le hall qui garde sa
+  // galerie est celui qu'on ne traverse plus.
   const missing = declared.filter((s) => !s.interior.fixtures.some((f) => f.kind === 'gallery'));
-  assert.deepEqual(missing.map((s) => s.name), ['JY09 Tabata']);
+  assert.deepEqual(missing.map((s) => s.name), [
+    'JY03 Akihabara',
+    'JY09 Tabata',
+    'JY22 Meguro',
+  ]);
   for (const s of missing) {
-    assert.ok(s.interior.paid.x1 - s.interior.paid.x0 - 3.6 < 2, `${s.name} : place de reste`);
+    assert.ok(s.interior.paid.x1 - s.interior.paid.x0 - 3.6 - 0.12 < 2, `${s.name} : place de reste`);
   }
 });

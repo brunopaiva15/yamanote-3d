@@ -110,20 +110,26 @@ test('le konbini n’a coûté sa boutique à aucune gare en grandissant', () =>
   const withKonbini = ALL.filter(({ place }) =>
     place.interior.fixtures.some((f) => f.kind === 'konbini'),
   );
-  const eligible = ALL.filter(({ layout, place }) => {
-    const width = place.interior.free.x1 - place.interior.free.x0;
-    // Une gare qui déclare une galerie l'obtient à la place du konbini : la
-    // galerie passe avant, et une gare qui a l'une n'a pas besoin de l'autre.
-    const gallery = place.interior.fixtures.some((f) => f.kind === 'gallery');
-    return layout.crowdScale >= 1.2 && width >= 3.4 + 2 && !gallery;
-  });
-  for (const e of eligible) {
-    assert.ok(
-      withKonbini.some((k) => k.i === e.i),
-      `${e.name} : konbini perdu`,
-    );
+  // La liste est GELÉE, et non recalculée à côté du moteur : la place d'un
+  // konbini ne tient pas à la largeur du hall seule, mais à ce qu'il a EN FACE
+  // de lui. Une règle écrite ici (« assez large pour 3,40 m plus deux mètres »)
+  // décrivait un hall aux parois nues, qui n'existe nulle part : à 5,70 m,
+  // Akihabara ne peut même pas mettre une boutique en face d'un distributeur de
+  // titres, et le moteur a raison de refuser.
+  assert.deepEqual(withKonbini.map((k) => k.name), [
+    'JY01 Tokyo',
+    'JY13 Ikebukuro',
+    'JY17 Shinjuku',
+    'JY20 Shibuya',
+    'JY24 Ōsaki',
+    'JY29 Shimbashi',
+  ]);
+  // Et chacune est bien assez fréquentée et assez large pour l'avoir méritée.
+  for (const k of withKonbini) {
+    const width = k.place.interior.free.x1 - k.place.interior.free.x0;
+    assert.ok(k.layout.crowdScale >= 1.2, `${k.name} : konbini dans une gare calme`);
+    assert.ok(width >= 3.4 + 2 + 0.12, `${k.name} : konbini dans un hall trop étroit`);
   }
-  assert.ok(withKonbini.length >= 6, `trop peu de konbini : ${withKonbini.length}`);
 });
 
 test('le konbini laisse deux mètres de passage dans le hall', () => {
