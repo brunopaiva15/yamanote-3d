@@ -33,6 +33,12 @@ import { PLATFORM_TOP, PSD_H, PSD_HALF_GAP, PSD_X } from '../../data/stationGeom
 import { runtime } from '../../systems/runtime';
 import { PORTAL_HALF_Z, PORTAL_MIN_OPEN, portalOpen } from '../../systems/walkable';
 import { blockedGates, wrongDoor } from '../../systems/wrongDoor';
+import {
+  gpuKit,
+  type BarrierEdgeUniforms,
+  type BarrierGateUniforms,
+  type BarrierPanelUniforms,
+} from '../webgpu/kit';
 
 /** Distance à laquelle le panneau commence à apparaître (m). */
 const FADE_FAR = 3.0;
@@ -150,29 +156,29 @@ export interface BarrierProps {
  */
 export function Barrier({ x, y, z, width, height }: BarrierProps) {
   const mesh = useRef<THREE.Mesh>(null);
-  const uniforms = useMemo(
-    () => ({
+  const { material, uniforms } = useMemo(() => {
+    const kit = gpuKit();
+    if (kit) return kit.makeBarrierPanelMaterial(width, height);
+    const u: BarrierPanelUniforms = {
       uSize: { value: new THREE.Vector2(width, height) },
       uHit: { value: new THREE.Vector2(0.5, 0.5) },
       uStrength: { value: 0 },
       uTime: { value: 0 },
       uColor: { value: new THREE.Color('#ff2f3a') },
-    }),
-    [width, height],
-  );
-  const material = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
+    };
+    return {
+      material: new THREE.ShaderMaterial({
         vertexShader: VERT,
         fragmentShader: FRAG,
-        uniforms,
+        uniforms: u as unknown as Record<string, THREE.IUniform>,
         transparent: true,
         depthWrite: false,
         side: THREE.DoubleSide,
         toneMapped: false,
-      }),
-    [uniforms],
-  );
+      }) as THREE.Material,
+      uniforms: u,
+    };
+  }, [width, height]);
 
   // Un panneau de limite est reconstruit à chaque gare : son programme de
   // shader ne survit pas au départ.
@@ -360,8 +366,10 @@ export function EdgeBarrier({ x, length, gates, height = EDGE_H }: EdgeBarrierPr
   const y1 = PLATFORM_TOP + height;
 
   const geometry = useMemo(() => edgeGeometry(edgeSpans(length, gates), y0, y1), [length, gates, y0, y1]);
-  const uniforms = useMemo(
-    () => ({
+  const { material, uniforms } = useMemo(() => {
+    const kit = gpuKit();
+    if (kit) return kit.makeBarrierEdgeMaterial(y0, y1, length, EDGE_SPAN);
+    const u: BarrierEdgeUniforms = {
       uHit: { value: new THREE.Vector2(0, y0) },
       uStrength: { value: 0 },
       uTime: { value: 0 },
@@ -370,22 +378,20 @@ export function EdgeBarrier({ x, length, gates, height = EDGE_H }: EdgeBarrierPr
       uZ: { value: new THREE.Vector2(-length / 2, length / 2) },
       uSpan: { value: EDGE_SPAN },
       uOpen: { value: 0 },
-    }),
-    [y0, y1, length],
-  );
-  const material = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
+    };
+    return {
+      material: new THREE.ShaderMaterial({
         vertexShader: VERT_EDGE,
         fragmentShader: FRAG_EDGE,
-        uniforms,
+        uniforms: u as unknown as Record<string, THREE.IUniform>,
         transparent: true,
         depthWrite: false,
         side: THREE.DoubleSide,
         toneMapped: false,
-      }),
-    [uniforms],
-  );
+      }) as THREE.Material,
+      uniforms: u,
+    };
+  }, [y0, y1, length]);
 
   useLayoutEffect(
     () => () => {
@@ -551,30 +557,30 @@ export function GateBarrier({ length }: GateBarrierProps) {
 
   const gates = useMemo(() => blockedGates(length), [length]);
   const geometry = useMemo(() => gateGeometry(gates, y0, y1), [gates, y0, y1]);
-  const uniforms = useMemo(
-    () => ({
+  const { material, uniforms } = useMemo(() => {
+    const kit = gpuKit();
+    if (kit) return kit.makeBarrierGateMaterial(y0, y1);
+    const u: BarrierGateUniforms = {
       uHit: { value: new THREE.Vector2(0, y0) },
       uStrength: { value: 0 },
       uTime: { value: 0 },
       uColor: { value: new THREE.Color('#ff2f3a') },
       uY: { value: new THREE.Vector2(y0, y1) },
       uGate: { value: 0 },
-    }),
-    [y0, y1],
-  );
-  const material = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
+    };
+    return {
+      material: new THREE.ShaderMaterial({
         vertexShader: VERT_GATE,
         fragmentShader: FRAG_GATE,
-        uniforms,
+        uniforms: u as unknown as Record<string, THREE.IUniform>,
         transparent: true,
         depthWrite: false,
         side: THREE.DoubleSide,
         toneMapped: false,
-      }),
-    [uniforms],
-  );
+      }) as THREE.Material,
+      uniforms: u,
+    };
+  }, [y0, y1]);
 
   useLayoutEffect(
     () => () => {

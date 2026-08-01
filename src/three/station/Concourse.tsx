@@ -25,15 +25,14 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
-import type { StationInterior, InteriorRect } from '../../data/stationInterior';
+import type { StationInterior } from '../../data/stationInterior';
 import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
 import { makeConcourseGuideTexture, type GuideKind } from '../../textures/concourse';
 import type { Mats } from './materials';
+import { FareGates } from './FareGates';
 import { Fixtures } from './Fixtures';
 
-/** Hauteur des bornes de portillon : on voit par-dessus, on ne passe pas. */
-const CABINET_H = 0.98;
 /** Hauteur du panneau 改札 suspendu au-dessus de la ligne. */
 const GATE_SIGN_Y = 2.32;
 const GATE_SIGN_H = 0.44;
@@ -43,10 +42,6 @@ const DADO_H = 1.15;
 const WALL_T = 0.24;
 /** Entraxe des réglettes de plafond. */
 const LAMP_PITCH = 4.2;
-
-function centre(r: InteriorRect): [number, number] {
-  return [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2];
-}
 
 /**
  * Le hall d'une gare, du débouché du couloir aux bouches de sortie.
@@ -153,38 +148,10 @@ export function Concourse({
           qui en tombe dit d'où il vient, et le fléchage dit où elles mènent. */}
       <ExitWall it={it} m={m} station={station} width={width} height={height} midX={midX} midY={midY} />
 
-      {/* La ligne de portillons. */}
-      {it.gate.cabinets.map((c, k) => {
-        const [cx, cz] = centre(c);
-        const w = c.x1 - c.x0;
-        const d = c.z1 - c.z0;
-        // Une joue de rive - ce qui reste entre la dernière borne et la paroi -
-        // monte jusqu'au plafond : ce n'est pas un portillon, c'est un mur.
-        const jamb = w > 0.5;
-        const h = jamb ? height : CABINET_H;
-        const y = jamb ? midY : it.floorY + h / 2;
-        return (
-          <group key={`cab${k}`}>
-            <mesh position={[cx, y, cz]} material={jamb ? m.hall : m.psd}>
-              <boxGeometry args={[w, h, d]} />
-            </mesh>
-            {/* Dessus de borne : le noir mat où se pose la carte, et le feu. */}
-            {!jamb && (
-              <>
-                <mesh position={[cx, it.floorY + CABINET_H + 0.01, cz]} material={m.frame}>
-                  <boxGeometry args={[w + 0.02, 0.03, d]} />
-                </mesh>
-                <mesh
-                  position={[cx, it.floorY + CABINET_H + 0.04, cz - d / 2 + 0.34]}
-                  material={m.accent}
-                >
-                  <boxGeometry args={[w - 0.06, 0.04, 0.2]} />
-                </mesh>
-              </>
-            )}
-          </group>
-        );
-      })}
+      {/* La ligne de portillons : bornes, battants, lecteurs et feux. Elle
+          n'est plus une rangée de boîtes - elle s'ouvre, elle se ferme, et
+          `systems/fareGate` la pilote. */}
+      <FareGates it={it} m={m} height={height} midY={midY} />
 
       {/* Le bandeau 改札, suspendu au-dessus de la ligne, face à qui arrive. */}
       <mesh position={[midX, GATE_SIGN_Y + it.floorY, it.gate.z0 - 0.12]} material={m.frame}>

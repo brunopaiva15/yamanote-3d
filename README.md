@@ -623,18 +623,88 @@ distributeur de titres derrière les portillons ne servirait à personne.
 **L'affluence commande la liste.** Une gare à 0,55 — Uguisudani — n'a ni
 konbini, ni guichet, ni consigne : deux distributeurs, un banc, une poubelle de
 tri, un plan. Shinjuku a tout. Et la largeur tranche en dernier : un konbini
-fait 3,20 m de fond, et le moteur le refuse plutôt que d'étrangler à moins de
+fait 3,40 m de fond, et le moteur le refuse plutôt que d'étrangler à moins de
 deux mètres le passage du milieu.
 
 **Un meuble se reconnaît à sa silhouette, pas à sa texture.** Une batterie de
 券売機 se lit à son bandeau vert continu et à ses écrans inclinés ; une consigne
 à sa trame de portes carrées numérotées, avec sa borne de paiement plus haute à
 un bout ; un konbini à sa devanture vitrée pleine hauteur sous une enseigne
-allumée, gondoles et vitrine réfrigérée visibles au travers. C'est la règle qui
-a fait refaire le **kiosque du quai** : c'était une boîte blanche de 2,50 × 4,80
-avec une affiche collée sur un flanc, c'est maintenant deux comptoirs ouverts
-sous un auvent, des présentoirs à journaux et magazines, une armoire réfrigérée
-et un bandeau d'enseigne qui affiche ses prix.
+allumée.
+
+### Les deux commerces
+
+Une silhouette se lit de loin, et c'est son objet. De près, elle ne suffit pas :
+le konbini n'avait aucune profondeur — son « fond de magasin » était un plan
+peint à seize centimètres de la vitre — et le kiosque du quai, une boîte de
+2,50 × 4,80, était trop petit pour ce qu'un kiosque contient. On les
+reconnaissait ; on ne les croyait pas. À côté d'une rame dont on compte les
+rivets, c'était le contraste le plus voyant qui restât dans une gare.
+
+**NEWDAYS, dans le hall, est une pièce** de 7,80 × 3,40 qu'on regarde jusqu'au
+fond : mur de vitrines réfrigérées sous leur bandeau ドリンク, meuble froid
+ouvert à onigiri et sandwichs en trois gradins garnis, gondole centrale sur son
+socle rouge coiffée d'un fronton d'enseigne, bac à glaces vitré en plein
+passage, présentoir à magazines contre la vitre, comptoir de caisse avec son
+écran client, son bac à friture, sa machine à café et l'armoire à cigarettes au
+mur derrière. Portes coulissantes 自動ドア, cinq luminaires au plafond, et un
+carrelage de grès terracotta qui n'est pas le sol du hall — c'est le changement
+de sol qui fait le seuil.
+
+**Un konbini est un lieu CHAUD**, et c'est ce qui manquait le plus longtemps :
+carrelage terracotta, tôle crème plutôt que blanche, socles laqués rouges,
+pare-chocs et frise orange, rail d'étiquettes blanc sur le nez de chaque
+étagère. En gris et blanc, la boutique la mieux garnie du monde ressemble à une
+pharmacie. La référence assumée est *inKonbini*.
+
+**NEWDAYS KIOSK, sur le quai, est un îlot servi des deux bords.** Il fait
+3,00 × 6,40, et cette cote se déduit plutôt qu'elle ne se choisit : deux
+comptoirs de 0,80 m dos à dos, plus 1,30 m de passage pour le vendeur. On y
+trouve l'étalage de journaux à plat, les râteliers à magazines en gradins sous
+le comptoir côté client, les paniers à hauteur de main, la claie suspendue
+garnie jusqu'à l'auvent — c'est elle qui lui donne sa masse —, l'armoire
+réfrigérée vitrée à un bout, et les cartes de prix pendues sous le nez de
+l'auvent, sans lesquelles une boutique paraît fermée toutes lumières allumées.
+L'auvent est épais et sa rive EST le bandeau d'enseigne, qui ceinture les
+quatre faces : un kiosque d'îlot se voit d'en face comme par le bout.
+
+Il est désormais **centré sur l'épine**, comme les trémies et pour la même
+raison. Décalé de 1,35 m vers la voie comme il l'était, il ne laissait que
+vingt-cinq centimètres de passage sur le quai le plus étroit qui en porte un, et
+le comptoir de ce côté-là donnait sur un mur d'air.
+
+**La marchandise est en volume, pas en image**, et elle a des FORMES : brique
+de lait, paquet, canette, bouteille à col — on les distingue à trois mètres
+parce que ce sont quatre silhouettes, et non quatre couleurs de cube. Chacune
+porte son bandeau d'étiquette. Un millier d'articles par boutique, teintés par
+exemplaire, rangés par *facings* (le même article répété deux à cinq fois,
+comme dans un vrai linéaire) — et **deux appels de rendu**, quel qu'en soit le
+nombre : une bouteille n'est pas une troisième famille de forme, c'est un corps
+rond coiffé d'un col. Un rayon où chaque boîte diffère de sa voisine est un
+vide-grenier, pas un commerce.
+
+**Et il y a quelqu'un dedans.** Un vendeur en uniforme se tient derrière chaque
+caisse : une boutique garnie jusqu'au plafond mais vide ne se lit pas comme « le
+vendeur revient », elle se lit comme un décor. C'est un **voyageur** qui tient la
+caisse — le même modèle, le même gabarit, le même repli procédural que les gens
+de la rame et du quai, avec l'apparence tirée comme la leur puis mise en
+uniforme. Un vendeur est une personne de plus dans la gare, pas une famille à
+part : il respire comme tout le monde. Dehors, chaque commerce jette sa
+flaque de lumière sur le sol — peinte plutôt qu'éclairée, et qui ne s'allume
+qu'à la tombée du jour sur le quai, comme les foyers de la voie.
+
+**Et l'on y entre.** Les deux vantaux de la porte automatique s'écartent quand
+on approche et se referment quand on s'éloigne — à 1,90 m pour ouvrir, 2,50 m
+pour fermer, parce qu'une porte à seuil unique bat sans fin sur quelqu'un qui
+s'arrête pile à la limite. Passé le seuil, le konbini se parcourt : on longe la
+gondole, on contourne le bac à glaces, on va jusqu'au fond devant le meuble
+froid. Son emprise ne barre plus d'un seul tenant — ce sont ses parois, sa
+devanture *en deux morceaux* de part et d'autre de la baie, ses meubles et son
+vendeur qui barrent, et la même liste sert au rendu et à la marche.
+
+`/shop-probe.html` pose les deux commerces seuls sous une caméra qu'on tourne
+autour : le konbini est au fond du hall, deux niveaux sous le quai, et
+descendre l'y chercher à chaque essai n'était pas tenable.
 
 ### 駅スタンプ
 
@@ -1735,10 +1805,178 @@ décrivent tous le même site, et `tests/documentMeta.test.ts`, qui tient les
 titres et descriptions des trois langues dans les longueurs qu'un moteur
 n'ampute pas.
 
+## Le mode Extraordinaire (bêta WebGPU)
+
+Le sélecteur de qualité comptait six préréglages, du plus léger au plus riche,
+et ils décrivaient tous la même chose : combien de décor, combien d'ombres,
+combien de PNJ. Le septième - **« Extraordinaire ⚠︎ »** - n'est pas un cran de
+plus sur cette échelle. C'est **un autre moteur** : le rendu WebGPU de three.js
+et son système de nœuds (TSL), avec son propre pipeline de post-traitement.
+
+Il partage volontairement le palier interne d'Ultra - mêmes ombres, même
+densité de décor, mêmes néons - pour que la comparaison porte sur ce qui change
+vraiment, et sur rien d'autre.
+
+### Ce qu'il ajoute
+
+- **Éclairage indirect en espace écran (SSGI).** C'est le cœur du mode, et la
+  seule chose que le chemin WebGL ne pouvait pas approcher. En WebGL,
+  l'occlusion ambiante ne fait que SOUSTRAIRE de la lumière dans les angles ;
+  rien n'en apporte. Ici, chaque pixel parcourt son hémisphère et récolte la
+  lumière réellement présente à l'image. La lueur orange d'une fenêtre à
+  l'heure dorée se pose sur la cloison d'en face, les néons du plafond
+  remontent du sol vers le dessous des banquettes, et la ville de nuit passée à
+  travers les vitres teinte l'intérieur du wagon. Le même parcours donne
+  l'occlusion ambiante : une passe pour les deux, là où WebGL en dépensait une
+  entière rien que pour l'AO.
+- **Réflexions en espace écran (SSR).** Tracées à l'écran, pilotées par la
+  rugosité et la métallicité de chaque pixel - c'est pour ça que la passe de
+  scène écrit ces deux valeurs dans un attachement à part. Le sol vernis du
+  wagon, les vitres, les mains courantes en inox et la chaussée mouillée
+  renvoient la scène elle-même au lieu de la sonde d'environnement générique.
+- **Profondeur de champ à bokeh.** Le chemin WebGL n'en a aucune. Le plan net
+  suit **le visage qu'on regarde** : le jeu sait déjà lequel, c'est celui à qui
+  l'on pourrait adresser la parole (`systems/paxTargeting`). À défaut, l'œil se
+  pose à cinq mètres dans le wagon, à onze sur le quai, et l'accommodation met
+  un tiers de seconde comme la vraie.
+- **Pluie et neige calculées sur le GPU.** La position de chaque goutte vit
+  dans un tampon de stockage qu'un nuanceur de calcul avance à chaque image.
+  Chaque goutte a sa propre vitesse de chute (une averse n'est pas un peigne)
+  et son propre flottement ; le sommet, lui, ne fait plus que lire une
+  position. Le champ passe de 3 200 à 11 000 traces.
+- **Plus de monde, et une ville plus dense.** La rame et le quai se remplissent
+  d'un quart de plus, et les rangs du ruban urbain se resserrent jusqu'au
+  plafond de la cellule - la densité de Tokyo, pas son étendue : la brume
+  arrête le regard bien avant le bout de l'anneau.
+
+### L'ordre du pipeline, et pourquoi
+
+`scène (MRT : couleur, normales, matière)` → **SSGI** → **SSR** → **bokeh** →
+**bloom** → **étalonnage filmique** → **grain + vignetage**.
+
+SSGI avant SSR : une réflexion doit renvoyer une image DÉJÀ éclairée par
+l'indirect, sinon le sol renvoie une pièce plus sombre que celle où l'on se
+trouve. Bokeh avant bloom : un flou net qui déborderait ensuite en halo est la
+signature d'un pipeline monté à l'envers. Grain et vignetage tout à la fin, sur
+l'image étalonnée : ce sont des défauts d'OBJECTIF, ils n'ont rien à faire dans
+une image linéaire.
+
+Le filtrage temporel du SSGI est **coupé**, et c'est délibéré : la rame file à
+quatre-vingt-dix, le décor traverse l'écran en deux secondes, et une
+reprojection temporelle y laisse des traînées sur tout ce qui défile. On paie
+l'échantillonnage comptant et on débruite spatialement.
+
+### Ce que ça coûte
+
+C'est une **bêta**, et l'étiquette porte un ⚠︎ pour cette raison : le mode
+n'est pas encore optimisé. Il est nettement plus cher qu'Ultra. Il rend à la
+densité native comme Ultra - un mode qu'on choisit pour sa beauté ne doit pas
+commencer par être moins net que celui qu'on quitte - et la seule économie
+prise d'avance est le SSR en demi-résolution, une réflexion étant floue par
+nature dès que la rugosité dépasse quelques centièmes.
+
+Le premier essai sur GPU a corrigé quatre réglages, et il vaut la peine de dire
+lesquels parce qu'ils se ressemblent tous à l'écran :
+
+- **le SSR était le vrai coupable du « tout est flou ».** Le nœud pondère la
+  réflexion d'un diélectrique par un Fresnel approché qui tend vers 1 en
+  incidence rasante - donc presque partout dans un couloir de 2,60 m. À 0,85
+  d'intensité, chaque siège, chaque cloison et chaque visage recevait une copie
+  floue de la scène par-dessus lui. Il est descendu à 0,22 ;
+- **l'occlusion ambiante n'était pas débruitée**, seul l'indirect l'était. Elle
+  sort d'un tampon 8 bits sur un canal et multipliait toute l'image par un
+  tirage par pixel : c'était le poivre et sel visible sur les surfaces lisses ;
+- **le SSGI tournait à moitié des échantillons requis** (2×8). Sans filtrage
+  temporel, sa documentation en demande deux fois plus : il est passé à 3×12 ;
+- **la profondeur de champ rendait tout flou pour de bon.** `focalLength` est
+  la distance au-delà de laquelle un objet est COMPLÈTEMENT flou, et elle était
+  calée à 0,62 × la distance de mise au point : le regard se posait sur un
+  visage à 1,50 m, la rampe faisait 90 cm, et le reste de la voiture était au
+  flou maximal. Elle a un plancher de six mètres - à l'intérieur du wagon, plus
+  rien n'atteint jamais le flou maximal, et c'est la ville derrière la vitre
+  qui se dénoue.
+
+Limite connue : la passe unique en MRT fait aussi écrire les matériaux
+TRANSPARENTS dans les attachements de normale et de matière. Là où une trace de
+pluie passe devant le décor, la normale lue par le SSGI et le SSR est
+légèrement tirée vers celle du quad. C'est supportable parce que ces surfaces
+n'écrivent pas la profondeur - les positions reconstruites restent celles du
+décor opaque - mais c'est le premier chantier d'une passe transparente séparée.
+
+### Ce qu'il fallait réécrire pour y arriver
+
+Le rendu WebGPU **ne compile pas de GLSL**. Tout ce que le jeu écrivait à la
+main dans un nuanceur devait donc exister une seconde fois, en nœuds :
+
+| ce qui est en GLSL | son jumeau en nœuds |
+|---|---|
+| `three/city/SkyDome` - ciel, silhouette d'horizon | `three/webgpu/impl/sky.ts` |
+| `three/Weather` - pluie et neige | `three/webgpu/impl/precipitation.ts` |
+| `three/station/Barrier` - les trois limites de zone | `three/webgpu/impl/barrier.ts` |
+| `three/city/cityMaterial` + `cityProps` (greffes `onBeforeCompile`) | `three/webgpu/impl/city.ts` |
+
+Les deux versions exposent **exactement le même dictionnaire d'uniformes** : un
+nœud `uniform()` de TSL porte un `.value`, comme la case d'un `ShaderMaterial`.
+Tout le code d'animation par frame - le fondu jour/nuit du ciel, l'inclinaison
+des traces de pluie, le halo d'une limite de zone - est donc partagé mot pour
+mot entre les deux moteurs, et il n'existe qu'une fois.
+
+Les deux greffes `onBeforeCompile` de la ville n'ont pas d'équivalent côté
+nœuds ; elles sont refaites en dérivant `MeshLambertNodeMaterial` et en
+redéfinissant les deux crochets qui correspondent aux deux points d'injection
+du GLSL : `setupPosition` (← `begin_vertex`, avant l'instanciation, ce qui
+permet de dépouiller un arbre sans le rapetisser) et `setupDiffuseColor`
+(← `color_fragment` + `map_fragment`, ce qui garde la couleur d'instance au
+bon endroit : le bandeau d'enseigne REMPLACE la teinte de façade au lieu de la
+multiplier).
+
+Une seule concession de données : le nuanceur de façade relisait les dimensions
+du bâtiment dans `instanceMatrix`, à laquelle le système de nœuds ne donne pas
+accès. `three/city/CityRibbon` écrit désormais ces trois nombres dans un
+attribut d'instance `aScale` - il les a sous la main, c'est même lui qui les
+fabrique.
+
+### Disponibilité et repli
+
+Le mode est réservé à **l'ordinateur**, et l'option est grisée sur téléphone et
+tablette : deux tampons de plus, un parcours d'hémisphère et un tracé de rayons
+par pixel, ce n'est pas « lent » sur une puce mobile, c'est un diaporama qui
+vide la batterie. Le test est `(pointer: coarse) and (hover: none)` - le doigt
+SEUL, donc un mobile ; un portable à écran tactile a aussi une souris et n'est
+pas exclu.
+
+Il demande ensuite WebGPU, et l'option reste grisée là où `navigator.gpu`
+n'existe pas. Là où il existe, l'adaptateur est interrogé AVANT de monter la
+toile : s'il refuse - pilote sur liste noire, machine virtuelle sans GPU - la
+qualité redescend sur Ultra et le HUD le dit, plutôt que d'ouvrir sur un écran
+noir.
+
+Le paquet WebGPU (build `three/webgpu`, TSL, nœuds de post-traitement, environ
+200 ko compressés) est **chargé à la demande**. Un joueur qui reste en Ultra ne
+le télécharge jamais : `vite.config.ts` l'isole dans son propre morceau, et
+c'est le seul intérêt de la règle `three-webgpu` qu'on y trouve.
+
+Changer de mode **remonte la toile** (`key` sur le `<Canvas>`) : un renderer ne
+se remplace pas à chaud, la toile, le contexte, les textures et tous les
+programmes en dépendent. Pendant ce temps il n'y a rien à afficher, et c'est le
+rôle du voile d'attente (`ui/RenderLoading`) : il est posé DÈS le départ du jeu,
+dans toutes les qualités - construire trente gabarits de gare et peindre les
+textures au canevas prend déjà plusieurs secondes en WebGL -, et il n'est levé
+que lorsque le moteur tourne vraiment. « Tourne vraiment » n'est pas « a dessiné
+une image » : la première version rendait la main au bout de 113 ms, alors que
+la plus grosse interruption du démarrage arrivait douze secondes plus tard.
+`three/RenderBootSignal` attend donc six images consécutives d'intervalle
+raisonnable - une gare qui se construit ou un nuanceur qui se compile bloque le
+fil principal, l'image suivante arrive en retard, et le compte repart à zéro.
+
 ## Stack
 
 Vite + TypeScript strict, React, React Three Fiber, drei, @react-three/postprocessing,
 zustand, Tone.js, Web Speech API. Aucune autre dépendance runtime.
+
+Le mode Extraordinaire ajoute le rendu **WebGPU** de three.js (`three/webgpu`),
+son système de nœuds (`three/tsl`) et quelques nœuds de post-traitement des
+addons - le tout chargé à la demande, jamais dans le paquet de départ.
 
 ## Architecture
 
@@ -1760,6 +1998,11 @@ src/
                          de viaduc, mobilier de voie, caténaire
   three/Weather.tsx      pluie et neige : champ replié autour de l'œil, calculé
                          dans le nuanceur, incliné par la vitesse du train
+  three/webgpu/kit.ts    le contrat entre la scène et le moteur WebGPU - sans
+                         aucune dépendance lourde, donc sans poids pour WebGL
+  three/webgpu/impl/     le mode Extraordinaire : matériaux en nœuds (ciel,
+                         ville, limites de zone), pluie sur nuanceur de calcul,
+                         pipeline SSGI → SSR → bokeh → bloom → étalonnage
   three/city/            le paysage : ruban urbain instancié, matériau de façade,
                          ciel et ligne d'horizon en une passe
   three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines,

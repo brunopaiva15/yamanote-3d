@@ -31,6 +31,9 @@ import { updatePlatformSpeakers } from '../systems/stationPa';
 import { weather } from '../systems/weather';
 import { updatePassengers, trimPassengersForPerf } from '../systems/passengers';
 import { updateConversation } from '../systems/conversation';
+import { updateHeldItem, updateInteraction } from '../systems/interaction';
+import { updateFareGates } from '../systems/fareGate';
+import { setPickCamera } from '../systems/pick';
 import { perfLevel } from '../systems/perf';
 
 /**
@@ -95,6 +98,7 @@ const CONCOURSE_MUFFLE = 0.2;
 
 export function Engine(): null {
   const gl = useThree((s) => s.gl);
+  const camera = useThree((s) => s.camera);
 
   // Outil dev : __renderInfo() donne le coût de la frame précédente. Sert à
   // vérifier qu'ajouter la gare et l'extérieur de la rame ne change rien au
@@ -108,6 +112,13 @@ export function Engine(): null {
       textures: gl.info.memory.textures,
     });
   }, [gl]);
+
+  // La visée part de la caméra : c'est elle, et rien d'autre, qui dit ce que le
+  // réticule touche (systems/pick).
+  useEffect(() => {
+    setPickCamera(camera);
+    return () => setPickCamera(null);
+  }, [camera]);
 
   useFrame((_, rawDt) => {
     const raw = Math.max(0, rawDt);
@@ -178,9 +189,16 @@ export function Engine(): null {
         updateAmbience(step);
         updatePassengers(step);
         updatePlatformCrowd(step);
+        // Les battants des portillons, puis ce qu'on a devant soi. L'ordre
+        // compte : la touche d'action est UNIQUE (voir systems/interaction) et
+        // ces deux appels l'encadrent - un appareil visé passe avant un voisin
+        // à qui parler, ce qu'on tient passe après.
+        updateFareGates(step);
+        updateInteraction(step);
         // Après les voyageurs : la conversation vise une tête dont la position
         // vient d'être mise à jour, et récolte les événements de ce sous-pas.
         updateConversation(step);
+        updateHeldItem();
       }
       // Après la foule : c'est elle qui dit qui est encore là pour porter
       // une caisse, et qui vient de disparaître dans l'escalier ou en rame.

@@ -38,6 +38,7 @@ import {
   makeSunsetSkyTexture,
   makeNightSkyTexture,
 } from '../../textures/procedural';
+import { gpuKit, type SkyTextures, type SkyUniforms } from '../webgpu/kit';
 
 // Cylindre de ciel : mêmes angles apparents qu'avant (bord bas à −14°, faîte à
 // +29,7° depuis la hauteur d'œil), simplement porté plus loin.
@@ -170,6 +171,53 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
+/**
+ * Le ciel en GLSL : le chemin historique, celui des six qualités WebGL. Son
+ * jumeau à nœuds vit dans three/webgpu/impl/sky et expose EXACTEMENT le même
+ * dictionnaire d'uniformes - c'est ce qui permet à tout le code d'animation
+ * ci-dessous d'ignorer lequel des deux tourne.
+ */
+function makeSkyMaterialGL(tex: SkyTextures): {
+  material: THREE.Material;
+  uniforms: SkyUniforms;
+} {
+  const uniforms = {
+    uDay: { value: tex.day },
+    uGolden: { value: tex.golden },
+    uNight: { value: tex.night },
+    uSilA: { value: tex.silA },
+    uSilB: { value: tex.silB },
+    uWeights: { value: new THREE.Vector3(1, 0, 0) },
+    uSilMix: { value: 0 },
+    uSilOffset: { value: 0 },
+    uSilRepeat: { value: tex.repeat },
+    uBand: { value: new THREE.Vector2(tex.band[0], tex.band[1]) },
+    uHaze: { value: new THREE.Color('#d6e8f2') },
+    uHazeAmt: { value: 0.5 },
+    uSilDark: { value: 1 },
+    uGlow: { value: new THREE.Color('#c4702f') },
+    uGlowAmt: { value: 0 },
+    uSeasonTint: { value: new THREE.Color('#f7edd6') },
+    uSeasonAmt: { value: 0 },
+    uCloud: { value: new THREE.Color('#a8adb2') },
+    uCloudAmt: { value: 0 },
+  };
+  const material = new THREE.ShaderMaterial({
+    vertexShader: VERT,
+    fragmentShader: FRAG,
+    side: THREE.BackSide,
+    // Boîte à ciel : jamais testée ni écrite en profondeur, dessinée avant
+    // tout le reste. C'est ce qui la met « à l'infini » sans la reculer.
+    depthTest: false,
+    depthWrite: false,
+    transparent: false,
+    fog: false,
+    toneMapped: false,
+    uniforms,
+  });
+  return { material, uniforms };
+}
+
 export function SkyDome() {
   const scene = useThree((s) => s.scene);
   const arrivingBank = useRef<0 | 1>(0);
@@ -191,46 +239,24 @@ export function SkyDome() {
     const golden = makeSunsetSkyTexture();
     const night = makeNightSkyTexture();
 
-    const material = new THREE.ShaderMaterial({
-      vertexShader: VERT,
-      fragmentShader: FRAG,
-      side: THREE.BackSide,
-      // Boîte à ciel : jamais testée ni écrite en profondeur, dessinée avant
-      // tout le reste. C'est ce qui la met « à l'infini » sans la reculer.
-      depthTest: false,
-      depthWrite: false,
-      transparent: false,
-      fog: false,
-      toneMapped: false,
-      uniforms: {
-        uDay: { value: day },
-        uGolden: { value: golden },
-        uNight: { value: night },
-        uSilA: { value: banks[0].tex },
-        uSilB: { value: banks[1].tex },
-        uWeights: { value: new THREE.Vector3(1, 0, 0) },
-        uSilMix: { value: 0 },
-        uSilOffset: { value: 0 },
-        uSilRepeat: { value: SIL_REPEAT },
-        uBand: { value: new THREE.Vector2(V0, V1) },
-        uHaze: { value: new THREE.Color('#d6e8f2') },
-        uHazeAmt: { value: 0.5 },
-        uSilDark: { value: 1 },
-        uGlow: { value: new THREE.Color('#c4702f') },
-        uGlowAmt: { value: 0 },
-        uSeasonTint: { value: new THREE.Color('#f7edd6') },
-        uSeasonAmt: { value: 0 },
-        uCloud: { value: new THREE.Color('#a8adb2') },
-        uCloudAmt: { value: 0 },
-      },
-    });
+    const tex: SkyTextures = {
+      day,
+      golden,
+      night,
+      silA: banks[0].tex,
+      silB: banks[1].tex,
+      band: [V0, V1],
+      repeat: SIL_REPEAT,
+    };
+    const kit = gpuKit();
+    const { material, uniforms } = kit ? kit.makeSkyMaterial(tex) : makeSkyMaterialGL(tex);
 
-    return { banks, day, golden, night, material };
+    return { banks, day, golden, night, material, uniforms };
   }, []);
 
   useFrame(() => {
     const { index, phase, loopDirection } = useStore.getState();
-    const u = built.material.uniforms;
+    const u = built.uniforms;
 
     // --- Bascule de banque au changement de gare (idiome historique) ---
     if (index !== lastIndex.current) {

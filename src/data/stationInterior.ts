@@ -34,6 +34,7 @@
 // sur une volée posée dessus qui perce l'auvent. Ce sont deux ouvrages, pas un
 // signe qui change (voir data/stationGeometry).
 
+import { konbiniPlan } from './konbiniPlan.ts';
 import { layoutFor } from './stationLayouts.ts';
 import { stationExits } from './lines.ts';
 import {
@@ -350,6 +351,36 @@ const SPECS: readonly Spec[] = [
  */
 const FLUSH = new Set<FixtureKind>(['map', 'extinguisher', 'aed', 'notice']);
 
+/**
+ * Ce qu'un meuble oppose RÉELLEMENT à la marche.
+ *
+ * Pour tout le mobilier, c'est son emprise, et il n'y a rien à ajouter : un
+ * distributeur de titres se contourne, une consigne aussi. Le konbini fait
+ * exception depuis qu'on y entre : sa devanture est percée d'une baie, et
+ * l'intérieur est du sol comme un autre. Ce qui barre chez lui, ce sont ses
+ * parois - la devanture EN DEUX MORCEAUX, un de chaque côté de l'entrée - et
+ * ses meubles, décrits une seule fois dans `data/konbiniPlan` et lus aussi bien
+ * ici que par le rendu.
+ *
+ * Le rabattement du repère de la boutique dans celui du quai tient en quatre
+ * lignes, et elles sont l'exact inverse du quart de tour que le rendu applique
+ * à son groupe (`three/station/Fixtures`, `yaw`) : une façade qui regarde vers
+ * +x tourne son x local vers -z, et l'autre vers +z. Se tromper de sens ne se
+ * verrait pas au rendu - il est symétrique - mais mettrait la porte du côté du
+ * mur.
+ */
+function interiorSolids(f: Fixture): InteriorRect[] {
+  if (f.kind !== 'konbini') return [f.rect];
+  const cx = (f.rect.x0 + f.rect.x1) / 2;
+  const cz = (f.rect.z0 + f.rect.z1) / 2;
+  const plan = konbiniPlan(f.rect.z1 - f.rect.z0, f.rect.x1 - f.rect.x0);
+  return plan.solids.map((s) =>
+    f.facing === 1
+      ? { x0: cx + s.z0, x1: cx + s.z1, z0: cz - s.x1, z1: cz - s.x0 }
+      : { x0: cx - s.z1, x1: cx - s.z0, z0: cz + s.x0, z1: cz + s.x1 },
+  );
+}
+
 // --- Construction ---------------------------------------------------------
 
 /**
@@ -418,7 +449,14 @@ const SIZES: Record<FixtureKind, { len: number; depth: number }> = {
   ticket: { len: 3.4, depth: 0.72 },
   fareAdjust: { len: 1.0, depth: 0.72 },
   lockers: { len: 2.6, depth: 0.62 },
-  konbini: { len: 6.4, depth: 3.2 },
+  // Le konbini a grandi avec ce qu'il contient : 6,40 m suffisaient à une
+  // vitrine plaquée devant une boîte, pas à une boutique où l'on distingue le
+  // comptoir, la gondole, le mur de vitrines et le meuble à magazines. Sa
+  // PROFONDEUR, elle, ne bouge presque pas - c'est elle qui décide des gares
+  // qui l'obtiennent, et 3,40 m est la dernière cote qui laisse encore deux
+  // mètres de passage dans le hall le plus étroit de la boucle (Takadanobaba,
+  // 5,40 m entre parois). Un centimètre de plus et deux gares le perdaient.
+  konbini: { len: 7.8, depth: 3.4 },
   vending: { len: 1.2, depth: 0.78 },
   vendingFood: { len: 1.2, depth: 0.78 },
   stamp: { len: 1.1, depth: 0.68 },
@@ -732,9 +770,13 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
     // d'extincteur, une armoire de défibrillateur, un panneau d'affichage font
     // moins de vingt-cinq centimètres de saillie et l'on passe devant sans les
     // toucher. Tout le reste barre - pilastres compris.
+    //
+    // Sauf le konbini, qui n'est plus un bloc mais un LIEU : on y entre. Son
+    // emprise cesse donc de barrer d'un seul tenant, et ce sont ses parois et
+    // ses meubles qui prennent le relais - voir `interiorSolids`.
     obstacles: [
       ...gate.cabinets,
-      ...fixtures.filter((f) => !FLUSH.has(f.kind)).map((f) => f.rect),
+      ...fixtures.filter((f) => !FLUSH.has(f.kind)).flatMap(interiorSolids),
       ...pilasters,
     ],
   };

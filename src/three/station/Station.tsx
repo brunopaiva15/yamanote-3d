@@ -590,7 +590,7 @@ export function Station() {
 
       {/* Distributeurs : vitrine rétroéclairée, monnayeurs, volet de retrait.
           Ils portent leur propre jeu de textures - voir VendingMachines. */}
-      <VendingMachines place={place} station={index} detail={detail} />
+      <VendingMachines place={place} station={index} detail={detail} m={m} />
 
       {/* Trémies d'escalier : la dalle est percée, donc elles font partie de la
           structure - jamais retirées par un palier de qualité. La volée

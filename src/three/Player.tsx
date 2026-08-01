@@ -66,8 +66,14 @@ export function Player() {
     // (voir __probeWalk), et l'on ne va nulle part sans savoir se diriger. Le
     // cap est ici et pas dans la sonde : c'est le seul endroit qui tient le
     // lacet de la caméra. Avant : forward = (-sin θ, -cos θ).
-    w.__lookAt = (x: number, z: number) => {
+    // `y` est facultatif : sans lui le regard reste horizontal, avec lui il
+    // pique vers le point visé. Il l'a fallu pour les organes bas d'une machine
+    // - une fente à monnaie est à hauteur de hanche, et on la regarde.
+    w.__lookAt = (x: number, z: number, y?: number) => {
       yaw.current = Math.atan2(pos.current.x - x, pos.current.z - z);
+      if (y === undefined) return;
+      const d = Math.hypot(x - pos.current.x, z - pos.current.z);
+      pitch.current = Math.atan2(y - pos.current.y, d);
     };
     /**
      * Marcher jusqu'à un point du monde, PAR LA MARCHE, mais sans attendre les

@@ -129,6 +129,22 @@ export const ESCALATOR_HALF_Z = 2.8;
 export const ELEVATOR_HALF_Z = 0.95;
 
 /**
+ * Emprise du kiosque de quai : 3,00 m en travers, 6,40 m le long de la voie.
+ *
+ * C'est la taille d'un vrai NEWDAYS KIOSK, et elle se déduit de ce qu'il y a
+ * dedans : deux comptoirs de service qui se tournent le dos (0,80 m chacun) et
+ * le passage du vendeur entre les deux (1,30 m) font les trois mètres ; la
+ * longueur est celle qu'il faut pour aligner l'étalage de journaux, le râtelier
+ * à magazines, la caisse et l'armoire réfrigérée sans que rien ne se chevauche.
+ *
+ * Elle est ici, et non dans le placement, parce que les gabarits de charpente
+ * (data/stationLayouts) doivent écarter leurs poteaux du kiosque : deux
+ * valeurs divergentes, et un poteau d'auvent tombe dans la boutique.
+ */
+export const KIOSK_HALF_X = 1.5;
+export const KIOSK_HALF_Z = 3.2;
+
+/**
  * Hauteur libre sous les caissons suspendus, quelle que soit la rangée.
  *
  * C'est le bas de tout ce qui pend sous l'auvent - panneau de sortie, caisson

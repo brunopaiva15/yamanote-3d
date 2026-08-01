@@ -278,6 +278,100 @@ body,
   flex: none;
 }
 
+/* --- Voile d'attente, entre le clic et la première image ---
+   Même vert de ligne et même carton blanc cerné d'encre que l'écran d'accueil :
+   la bascule doit se lire comme une suite, pas comme un trou. */
+.render-boot {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #6cb032;
+  /* Au-dessus de tout, y compris du HUD, qui est déjà monté derrière. */
+  z-index: 40;
+}
+
+.render-boot-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  text-align: center;
+  background: var(--sticker);
+  color: var(--sticker-ink);
+  border: 3px solid var(--ink-line);
+  border-radius: 22px;
+  padding: 24px 28px;
+  box-shadow: 0 6px 0 var(--ink-line);
+}
+
+.render-boot-card strong {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.render-boot-card small {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #5c666d;
+}
+
+/* Un anneau qui tourne : la seule chose qui distingue « ça travaille » de
+   « c'est figé » quand il n'y a aucune progression à montrer. */
+.render-boot-spinner {
+  width: 30px;
+  height: 30px;
+  border: 4px solid #d5dade;
+  border-top-color: #6cb032;
+  border-radius: 50%;
+  animation: render-boot-spin 900ms linear infinite;
+}
+
+@keyframes render-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mouvement réduit : l'anneau cesse de tourner et se contente de respirer. */
+@media (prefers-reduced-motion: reduce) {
+  .render-boot-spinner {
+    animation: render-boot-pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes render-boot-pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+}
+
+/* Avertissement du mode Extraordinaire (bêta WebGPU) et repli sur Ultra. */
+.quality-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #7a5a1e;
+  background: #fdf3dc;
+  border: 1px solid #e8d29a;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+/* En cours de partie, le même message se pose au-dessus de la barre du HUD. */
+.quality-note-hud {
+  position: fixed;
+  left: 12px;
+  bottom: 92px;
+  max-width: min(340px, calc(100vw - 24px));
+  z-index: 24;
+  pointer-events: none;
+}
+
 .start-time-row {
   display: flex;
   align-items: center;
@@ -1314,4 +1408,36 @@ body,
     padding-top: 10px;
     font-size: 10px;
   }
+}
+
+/* --- Les appareils de gare ---------------------------------------------
+   Distributeurs, billetterie, portillons. Trois familles d'affichage, et
+   elles n'occupent pas le même terrain : l'invite est sous le réticule comme
+   celle du dialogue, le bandeau du portillon flotte au-dessus, et l'écran
+   d'une machine prend le milieu de l'écran - c'est le seul moment du jeu où
+   quelque chose passe devant la scène. */
+
+/* L'invite d'appareil : la même que celle du dialogue, mais bordée d'un liseré
+   clair - on ne parle pas à une machine, et il ne faut pas les confondre. */
+.hud-prompt--device {
+  box-shadow: inset 0 0 0 1px rgba(238, 244, 247, 0.28);
+}
+
+/* Le bouton d'action tactile : il remplace la touche E, et il dit la même
+   chose que l'invite - donc il ne s'affiche jamais en même temps qu'elle. */
+.touch-act {
+  position: fixed;
+  right: max(24px, var(--hud-safe-right));
+  bottom: calc(var(--hud-safe-bottom) + var(--hud-bar-h) + 78px);
+  z-index: 25;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--sticker-ink);
+  background: var(--sticker);
+  border: 2px solid var(--ink-line);
+  border-radius: 14px;
+  padding: 13px 20px;
+  box-shadow: 0 4px 0 rgba(16, 21, 26, 0.85);
+  max-width: 46vw;
 }

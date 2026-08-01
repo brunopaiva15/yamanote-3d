@@ -60,6 +60,11 @@ export interface Strings {
     intro: string;
     board: string;
     loading: string;
+    /**
+     * Sous-titre du voile d'attente : ce qui se construit pendant que l'écran
+     * est vide. « Chargement… » seul ne dit pas si c'est long ou si c'est cassé.
+     */
+    loadingNote: string;
     controls: readonly ControlHint[];
     /** Affiché à la place de `controls` sur un écran tactile. */
     touchControls: readonly TouchHint[];
@@ -142,6 +147,72 @@ export interface Strings {
     };
   };
 
+  /**
+   * Les appareils de la gare : distributeurs, billetterie, portillons.
+   *
+   * C'est la seule partie du jeu où la signalétique du monde et l'interface se
+   * touchent : la VITRINE reste japonaise - c'est du décor - mais l'invite sous
+   * le réticule et la ligne d'état d'un écran doivent se comprendre, sans quoi
+   * on ne sait pas pourquoi rien ne tombe. `{n}` est remplacé par un montant en
+   * yens, `{s}` par un nombre de gorgées.
+   */
+  devices: {
+    /** L'invite sous le réticule, selon ce qu'on a devant soi. */
+    prompt: {
+      buy: string;
+      soldOut: string;
+      insertCoin: string;
+      insertBill: string;
+      tapIc: string;
+      tapIcOff: string;
+      lever: string;
+      take: string;
+      ticketFare: string;
+      ticketCharge: string;
+      ticketCard: string;
+      ticketPage: string;
+      settle: string;
+      tapIn: string;
+      tapOut: string;
+      throwAway: string;
+      openDrink: string;
+      drink: string;
+      emptyHands: string;
+    };
+    /**
+     * La ligne d'état écrite SUR la machine - l'afficheur du 券売機, la dalle
+     * verte d'une borne de portillon. Ce n'est pas du HUD : c'est peint sur
+     * l'appareil, à l'endroit où la vraie machine l'écrit.
+     */
+    notice: {
+      insertMore: string;
+      soldOut: string;
+      noCash: string;
+      icLow: string;
+      noIc: string;
+      icReady: string;
+      takeIt: string;
+      ticketOut: string;
+      charged: string;
+      cardBought: string;
+      nothingDue: string;
+      settled: string;
+      hasTicket: string;
+      change: string;
+      /** Au repos : ce qu'un écran de 券売機 affiche quand personne ne touche. */
+      idle: string;
+    };
+    /** Ce qu'affiche la dalle d'une borne de portillon après un passage. */
+    gate: {
+      entered: string;
+      exited: string;
+      noMedia: string;
+      lowBalance: string;
+      shortFare: string;
+      balance: string;
+    };
+  };
+
   quality: {
     label: string;
     levels: {
@@ -151,7 +222,26 @@ export interface Strings {
       high: string;
       veryHigh: string;
       ultra: string;
+      extraordinary: string;
     };
+    /**
+     * Le mode Extraordinaire n'est pas offert partout, et il faut le dire en
+     * termes de ce que le joueur VOIT et de ce que ça lui coûte : personne
+     * n'achète un réglage parce qu'on lui parle d'espace écran.
+     * `beta` s'affiche quand il est choisi, `mobile` et `unsupported` quand
+     * l'option est grisée, `failed` quand le moteur a refusé de démarrer.
+     */
+    extraordinaryBeta: string;
+    extraordinaryMobile: string;
+    extraordinaryUnsupported: string;
+    extraordinaryFailed: string;
+    /**
+     * Le voile d'attente pendant que le moteur démarre : le paquet se
+     * télécharge, le périphérique se négocie et les nuanceurs se compilent.
+     * Plusieurs secondes, pendant lesquelles il n'y a rien à l'écran.
+     */
+    extraordinaryLoading: string;
+    extraordinaryLoadingNote: string;
   };
 
   /**
@@ -195,6 +285,7 @@ const FR: Strings = {
       "Une boucle de trente stations autour de Tokyo, en temps quasi réel. Rien à gagner : on s'assoit, on regarde la ville, on écoute les annonces.",
     board: 'Monter à bord',
     loading: 'Chargement…',
+    loadingNote: 'La rame se prépare : la gare, la ville, les voyageurs.',
     controls: [
       { keys: ['Clic'], action: 'Regarder autour' },
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: 'Marcher' },
@@ -271,6 +362,54 @@ const FR: Strings = {
       detail: 'Cet espace de la gare est encore en construction.',
     },
   },
+  devices: {
+    prompt: {
+      buy: 'E — {name} · {n} ¥',
+      soldOut: 'Épuisé',
+      insertCoin: 'E — Glisser une pièce',
+      insertBill: 'E — Glisser un billet de 1 000 ¥',
+      tapIc: 'E — Poser sa carte',
+      tapIcOff: 'E — Retirer sa carte',
+      lever: 'E — Reprendre ses {n} ¥',
+      take: 'E — Prendre',
+      ticketFare: 'E — Billet à {n} ¥',
+      ticketCharge: 'E — Recharger de {n} ¥',
+      ticketCard: 'E — Acheter une carte ({n} ¥)',
+      ticketPage: 'E — Changer d’écran',
+      settle: 'E — Régler {n} ¥',
+      tapIn: 'E — Valider pour entrer',
+      tapOut: 'E — Valider pour sortir',
+      throwAway: 'E — Jeter',
+      openDrink: 'E — Ouvrir',
+      drink: 'E — Boire une gorgée',
+      emptyHands: 'Vide — à jeter dans un bac de tri',
+    },
+    notice: {
+      insertMore: 'Il manque {n} ¥',
+      soldOut: 'Épuisé',
+      noCash: 'Plus d’espèces',
+      icLow: 'Solde insuffisant : {n} ¥',
+      noIc: 'Pas de carte IC',
+      icReady: 'Carte lue — solde {n} ¥',
+      takeIt: 'Servi — à prendre',
+      ticketOut: 'Billet imprimé',
+      charged: 'Rechargée de {n} ¥',
+      cardBought: 'Carte délivrée — {n} ¥',
+      nothingDue: 'Rien à régler',
+      settled: 'Complément {n} ¥ réglé',
+      hasTicket: 'Vous avez déjà un billet',
+      change: 'Monnaie rendue',
+      idle: 'Insérer / Toucher',
+    },
+    gate: {
+      entered: 'ENTRÉE',
+      exited: '{n} ¥',
+      noMedia: 'PAS DE TITRE',
+      lowBalance: 'SOLDE {n} ¥',
+      shortFare: 'COMPLÉMENT {n} ¥',
+      balance: 'Solde {n} ¥',
+    },
+  },
   quality: {
     label: 'Qualité vidéo',
     levels: {
@@ -280,7 +419,16 @@ const FR: Strings = {
       high: 'Haute',
       veryHigh: 'Très haute',
       ultra: 'Ultra',
+      extraordinary: 'Extraordinaire ⚠︎',
     },
+    extraordinaryBeta:
+      'Bêta : une lumière plus riche, de vrais reflets et un arrière-plan qui se floute. Très gourmand - pour les machines puissantes.',
+    extraordinaryMobile: 'Sur ordinateur seulement : trop lourd pour un téléphone.',
+    extraordinaryUnsupported: 'Ce navigateur ne sait pas encore l’afficher.',
+    extraordinaryFailed: 'Ce mode n’a pas pu démarrer ici : retour à Ultra.',
+    extraordinaryLoading: 'Préparation du mode Extraordinaire…',
+    extraordinaryLoadingNote:
+      'Le moteur se met en route et prépare ses effets. Quelques secondes la première fois.',
   },
   incidents: {
     label: 'Provoquer un incident',
@@ -323,6 +471,7 @@ const EN: Strings = {
       'A thirty-station loop around Tokyo, in near real time. Nothing to win: sit down, watch the city drift past, listen to the announcements.',
     board: 'Board the train',
     loading: 'Loading…',
+    loadingNote: 'Getting the train ready: the station, the city, the passengers.',
     controls: [
       { keys: ['Click'], action: 'Look around' },
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: 'Walk' },
@@ -399,6 +548,54 @@ const EN: Strings = {
       detail: 'This part of the station is still being built.',
     },
   },
+  devices: {
+    prompt: {
+      buy: 'E — {name} · ¥{n}',
+      soldOut: 'Sold out',
+      insertCoin: 'E — Drop a coin in',
+      insertBill: 'E — Feed a ¥1,000 note',
+      tapIc: 'E — Tap your card',
+      tapIcOff: 'E — Take your card back',
+      lever: 'E — Take your ¥{n} back',
+      take: 'E — Take it',
+      ticketFare: 'E — ¥{n} ticket',
+      ticketCharge: 'E — Charge ¥{n}',
+      ticketCard: 'E — Buy a card (¥{n})',
+      ticketPage: 'E — Switch screen',
+      settle: 'E — Pay ¥{n}',
+      tapIn: 'E — Tap in',
+      tapOut: 'E — Tap out',
+      throwAway: 'E — Throw away',
+      openDrink: 'E — Open',
+      drink: 'E — Take a sip',
+      emptyHands: 'Empty — drop it in a recycling bin',
+    },
+    notice: {
+      insertMore: '¥{n} short',
+      soldOut: 'Sold out',
+      noCash: 'Out of cash',
+      icLow: 'Balance short by ¥{n}',
+      noIc: 'No IC card',
+      icReady: 'Card read — ¥{n}',
+      takeIt: 'Dispensed — take it',
+      ticketOut: 'Ticket printed',
+      charged: 'Charged ¥{n}',
+      cardBought: 'Card issued — ¥{n}',
+      nothingDue: 'Nothing to pay',
+      settled: '¥{n} settled',
+      hasTicket: 'You already hold a ticket',
+      change: 'Change returned',
+      idle: 'Insert / Touch',
+    },
+    gate: {
+      entered: 'ENTRY',
+      exited: '¥{n}',
+      noMedia: 'NO TICKET',
+      lowBalance: 'SHORT ¥{n}',
+      shortFare: 'FARE ¥{n}',
+      balance: 'Balance ¥{n}',
+    },
+  },
   quality: {
     label: 'Video quality',
     levels: {
@@ -408,7 +605,16 @@ const EN: Strings = {
       high: 'High',
       veryHigh: 'Very High',
       ultra: 'Ultra',
+      extraordinary: 'Extraordinary ⚠︎',
     },
+    extraordinaryBeta:
+      'Beta: richer light, real reflections and a background that softens. Very demanding - for powerful machines.',
+    extraordinaryMobile: 'Desktop only: too heavy for a phone.',
+    extraordinaryUnsupported: 'This browser cannot show it yet.',
+    extraordinaryFailed: 'This mode could not start here: back to Ultra.',
+    extraordinaryLoading: 'Preparing Extraordinary mode…',
+    extraordinaryLoadingNote:
+      'The renderer is starting up and building its effects. A few seconds the first time.',
   },
   incidents: {
     label: 'Trigger an incident',
@@ -452,6 +658,7 @@ const JA: Strings = {
       '東京をぐるりと一周する三十駅のループを、ほぼ実時間で。勝ち負けはありません。座って、流れる街を眺めて、車内放送に耳をすませるだけです。',
     board: '乗車する',
     loading: '読み込み中…',
+    loadingNote: '車両を準備しています：駅、街、乗客。',
     controls: [
       { keys: ['クリック'], action: '見まわす' },
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: '歩く' },
@@ -528,6 +735,54 @@ const JA: Strings = {
       detail: 'この駅構内エリアは現在制作中です。',
     },
   },
+  devices: {
+    prompt: {
+      buy: 'E — {name} · {n}円',
+      soldOut: '売切',
+      insertCoin: 'E — 硬貨を入れる',
+      insertBill: 'E — 千円札を入れる',
+      tapIc: 'E — カードをタッチ',
+      tapIcOff: 'E — カードをしまう',
+      lever: 'E — {n}円を返却',
+      take: 'E — 取り出す',
+      ticketFare: 'E — {n}円のきっぷ',
+      ticketCharge: 'E — {n}円チャージ',
+      ticketCard: 'E — カードを買う（{n}円）',
+      ticketPage: 'E — 画面を切り替える',
+      settle: 'E — {n}円を精算',
+      tapIn: 'E — タッチして入場',
+      tapOut: 'E — タッチして出場',
+      throwAway: 'E — 捨てる',
+      openDrink: 'E — 開ける',
+      drink: 'E — 一口飲む',
+      emptyHands: '空 — リサイクルボックスへ',
+    },
+    notice: {
+      insertMore: '{n}円不足',
+      soldOut: '売切',
+      noCash: '現金がありません',
+      icLow: '残額不足 {n}円',
+      noIc: 'ICカードなし',
+      icReady: 'カード読取 残額{n}円',
+      takeIt: '商品をお取りください',
+      ticketOut: 'きっぷが出ました',
+      charged: '{n}円チャージ',
+      cardBought: 'カード発行 残額{n}円',
+      nothingDue: '精算不要',
+      settled: '{n}円精算しました',
+      hasTicket: 'きっぷをお持ちです',
+      change: 'おつりをどうぞ',
+      idle: 'お金を入れる / タッチ',
+    },
+    gate: {
+      entered: '入場',
+      exited: '{n}円',
+      noMedia: 'きっぷなし',
+      lowBalance: '残額不足 {n}円',
+      shortFare: '乗り越し {n}円',
+      balance: '残額{n}円',
+    },
+  },
   quality: {
     label: '画質',
     levels: {
@@ -537,7 +792,15 @@ const JA: Strings = {
       high: '高',
       veryHigh: '最高',
       ultra: 'ウルトラ',
+      extraordinary: 'エクストラオーディナリー ⚠︎',
     },
+    extraordinaryBeta:
+      'ベータ版：光の回り込み、映り込み、背景のぼけ。負荷がとても高く、高性能なパソコン向けです。',
+    extraordinaryMobile: 'パソコン専用：スマートフォンには重すぎます。',
+    extraordinaryUnsupported: 'このブラウザーではまだ表示できません。',
+    extraordinaryFailed: 'この環境では起動できませんでした。ウルトラに戻します。',
+    extraordinaryLoading: 'エクストラオーディナリーを準備中…',
+    extraordinaryLoadingNote: '描画エンジンを起動し、効果を準備しています。初回は数秒かかります。',
   },
   incidents: {
     label: '異常時を発生させる',

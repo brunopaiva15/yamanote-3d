@@ -61,6 +61,15 @@ function collect(root: THREE.Object3D): Volume[] {
   root.traverseVisible((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh || !mesh.geometry) return;
+    // LES GENS NE SONT PAS DES OUVRAGES. Cette sonde cherche des fautes de
+    // construction - un panneau planté dans une poutre, une borne dans un
+    // muret - et un corps humain n'en produit aucune : ses morceaux se
+    // recouvrent par nature (le crâne dans la calotte, le pied dans la jambe),
+    // et sa boîte englobante est celle de la pose de REPOS, pas de la pose
+    // jouée, donc elle ne dit rien de vrai sur l'endroit qu'il occupe. Depuis
+    // que le vendeur des commerces se tient DANS la gare - la foule du quai,
+    // elle, est rendue en dehors -, ces boîtes-là noyaient tout le rapport.
+    if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) return;
     if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
     const bb = mesh.geometry.boundingBox;
     if (!bb) return;
@@ -307,6 +316,23 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     y: +runtime.playerY.toFixed(2),
     z: +runtime.stanceZ.toFixed(2),
   });
+
+  /**
+   * Où se trouve, en repère MONDE, un ouvrage nommé du décor.
+   *
+   * Les cotes de gare se lisent dans le repère du quai, mais on ne MARCHE
+   * qu'en repère monde (`__probeGo`), et entre les deux il y a le côté
+   * d'ouverture, la glissade du quai et la position de la rame. Plutôt que de
+   * refaire cette chaîne dans chaque script de contrôle - et de se tromper une
+   * fois sur deux -, on demande à la scène où elle a posé la chose.
+   *
+   *   __probeAnchor('konbini/porte')  → [[x, y, z], …]
+   */
+  w.__probeAnchor = (name: string) =>
+    scene.getObjectsByProperty('name', name).map((o) => {
+      const p = o.getWorldPosition(new THREE.Vector3());
+      return [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)];
+    });
 
   // Origines des trémies, en repère MONDE. C'est le seul endroit du décor
   // qu'on ne peut pas juger depuis la rame - il faut y poser l'œil - et sa

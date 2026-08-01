@@ -19,14 +19,13 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
-import type { Fixture, StationInterior } from '../../data/stationInterior';
+import type { Fixture, FixtureKind, StationInterior } from '../../data/stationInterior';
 import type { GalleryBrand } from '../../data/stationInterior';
 import {
   makeAreaMapTexture,
   makeGallerySignTexture,
   makeFareAdjustTexture,
   makeKonbiniInteriorTexture,
-  makeKonbiniSignTexture,
   makeLockerTexture,
   makeOfficeTexture,
   makeStampBookTexture,
@@ -34,19 +33,16 @@ import {
   makeStampTexture,
   makeTicketFaceTexture,
 } from '../../textures/concourse';
-import {
-  FOOD_BRANDS,
-  makeVendingDisplayTexture,
-  makeVendingHeaderTexture,
-  vendingBrand,
-} from '../../textures/vending';
+import { FOOD_BRANDS, makeVendingHeaderTexture, vendingBrand } from '../../textures/vending';
 import type { Mats } from './materials';
 import { stationAd } from './adPool';
+import { Konbini } from './Konbini';
+import { VendingBox } from './VendingBox';
+import { TicketMachine } from './TicketMachine';
+import { usePickable } from './pickable';
 
 /** Hauteurs de référence, communes à plusieurs familles (m). */
-const MACHINE_H = 1.92;
 const COUNTER_H = 0.95;
-const PLINTH_H = 0.09;
 
 /**
  * Jeux de matériaux et de textures du niveau, construits une fois par gare.
@@ -62,7 +58,6 @@ function useFixtureKit(station: number) {
     const ticket = makeTicketFaceTexture();
     const fare = makeFareAdjustTexture();
     const locker = makeLockerTexture();
-    const konbiniSign = makeKonbiniSignTexture();
     const konbiniIn = makeKonbiniInteriorTexture();
     const map = makeAreaMapTexture(station);
     const stamp = makeStampTexture(station);
@@ -77,28 +72,35 @@ function useFixtureKit(station: number) {
     };
     // Les deux machines à manger : la caisse et la vitrine changent avec
     // l'enseigne, pas la géométrie.
-    const food = FOOD_BRANDS.map((brand, i) => ({
+    // `hot` dit si la machine a une moitié chaude : elle décide de la couleur
+    // des bandeaux de bouton (rouge あたたか～い / bleu つめた～い), qui est le
+    // code visuel auquel on reconnaît un 自販機 avant même d'en lire un mot.
+    // Une machine à glaces et une machine à sachets n'en ont jamais.
+    const hotOf = (b: (typeof FOOD_BRANDS)[number]) => b.kind !== 'ice' && b.kind !== 'snack';
+    // La VITRINE n'est plus ici : elle appartient à la machine, qui la
+    // redessine quand son crédit change (three/station/vendingParts). Ne
+    // restent que l'enseigne et la peinture, qui, elles, ne bougent jamais.
+    const food = FOOD_BRANDS.map((brand) => ({
       brand,
-      display: flat(makeVendingDisplayTexture(brand, station * 31 + i * 7 + 3)),
       header: flat(makeVendingHeaderTexture(brand)),
       body: new THREE.MeshStandardMaterial({ color: brand.body, roughness: 0.52, metalness: 0.12 }),
+      hot: hotOf(brand),
     }));
     const drinks = [0, 1].map((i) => {
       const brand = vendingBrand(station, i, 2);
       return {
         brand,
-        display: flat(makeVendingDisplayTexture(brand, station * 17 + i * 5)),
         header: flat(makeVendingHeaderTexture(brand)),
         body: new THREE.MeshStandardMaterial({ color: brand.body, roughness: 0.52, metalness: 0.12 }),
+        hot: hotOf(brand),
       };
     });
     return {
-      textures: [ticket, fare, locker, konbiniSign, konbiniIn, map, stamp, book, stampSign,
+      textures: [ticket, fare, locker, konbiniIn, map, stamp, book, stampSign,
         office, gallery.ecute, gallery.atre],
       ticket: flat(ticket),
       fare: flat(fare),
       locker: flat(locker),
-      konbiniSign: flat(konbiniSign),
       konbiniIn: flat(konbiniIn),
       map: flat(map),
       stamp: flat(stamp),
@@ -114,14 +116,12 @@ function useFixtureKit(station: number) {
   useEffect(
     () => () => {
       for (const t of kit.textures) t.dispose();
-      for (const m of [kit.ticket, kit.fare, kit.locker, kit.konbiniSign, kit.konbiniIn,
+      for (const m of [kit.ticket, kit.fare, kit.locker, kit.konbiniIn,
         kit.map, kit.stamp, kit.book, kit.stampSign, kit.office,
         kit.gallery.ecute, kit.gallery.atre]) m.dispose();
       for (const set of [...kit.food, ...kit.drinks]) {
-        set.display.dispose();
         set.header.dispose();
         set.body.dispose();
-        set.display.map?.dispose();
         set.header.map?.dispose();
       }
     },
@@ -209,12 +209,37 @@ export function Fixtures({
         const yaw = f.facing === 1 ? Math.PI / 2 : -Math.PI / 2;
         return (
           <group key={`fx${i}`} position={[cx, it.floorY, cz]} rotation={[0, yaw, 0]}>
-            <Piece f={f} kit={kit} m={m} height={it.ceilY - it.floorY} brand={it.brand ?? 'ecute'} />
+            {/* `deviceId` est ce par quoi le meuble a un ÉTAT : c'est lui qui
+                garde le crédit inséré et qui fait battre le volet de cette
+                machine-là quand on y ramasse sa boisson. */}
+            <Piece
+              f={f}
+              kit={kit}
+              m={m}
+              height={it.ceilY - it.floorY}
+              brand={it.brand ?? 'ecute'}
+              deviceId={deviceId(f.kind, i)}
+              station={station}
+            />
           </group>
         );
       })}
     </group>
   );
+}
+
+/**
+ * L'identifiant d'un meuble qui répond.
+ *
+ * Le préfixe n'est pas décoratif : c'est lui qui dit à quelle famille l'état
+ * appartient (systems/machines), et un 券売機 rangé sous le préfixe des
+ * distributeurs se serait vu attribuer un rayon de boissons.
+ */
+function deviceId(kind: FixtureKind, index: number): string {
+  if (kind === 'ticket') return `ct${index}`;
+  if (kind === 'fareAdjust') return `cadj${index}`;
+  if (kind === 'bin') return `cb${index}`;
+  return `cf${index}`;
 }
 
 /** Largeur (le long de la paroi) et profondeur d'un meuble, en repère local. */
@@ -228,27 +253,48 @@ function Piece({
   m,
   height,
   brand,
+  deviceId,
+  station,
 }: {
   f: Fixture;
   kit: Kit;
   m: Mats;
   height: number;
   brand: GalleryBrand;
+  deviceId: string;
+  station: number;
 }) {
   const { w, d } = span(f);
   switch (f.kind) {
     case 'ticket':
-      return <Machine w={w} d={d} h={MACHINE_H} face={kit.ticket} m={m} />;
+      return <TicketMachine w={w} d={d} m={m} id={deviceId} adjust={false} />;
     case 'fareAdjust':
-      return <Machine w={w} d={d} h={MACHINE_H} face={kit.fare} m={m} />;
+      return <TicketMachine w={w} d={d} m={m} id={deviceId} adjust />;
     case 'lockers':
       return <Lockers w={w} d={d} face={kit.locker} m={m} />;
     case 'konbini':
-      return <Konbini w={w} d={d} height={height} kit={kit} m={m} />;
+      return (
+        <Konbini
+          w={w}
+          d={d}
+          height={height}
+          station={station}
+          anchor={{
+            cx: (f.rect.x0 + f.rect.x1) / 2,
+            cz: (f.rect.z0 + f.rect.z1) / 2,
+            facing: f.facing,
+          }}
+          m={m}
+        />
+      );
     case 'vending':
-      return <Vending w={w} d={d} set={kit.drinks[f.slot % kit.drinks.length]} m={m} />;
+      return (
+        <VendingBox w={w} d={d} set={kit.drinks[f.slot % kit.drinks.length]} m={m} deviceId={deviceId} />
+      );
     case 'vendingFood':
-      return <Vending w={w} d={d} set={kit.food[f.slot % kit.food.length]} m={m} />;
+      return (
+        <VendingBox w={w} d={d} set={kit.food[f.slot % kit.food.length]} m={m} deviceId={deviceId} />
+      );
     case 'stamp':
       return <StampDesk w={w} d={d} kit={kit} m={m} />;
     case 'office':
@@ -256,7 +302,7 @@ function Piece({
     case 'bench':
       return <Bench w={w} d={d} m={m} />;
     case 'bin':
-      return <Bins w={w} d={d} m={m} />;
+      return <Bins w={w} d={d} m={m} deviceId={deviceId} />;
     case 'map':
       return <WallMap w={w} face={kit.map} m={m} />;
     case 'gallery':
@@ -274,43 +320,6 @@ function Piece({
     default:
       return null;
   }
-}
-
-/**
- * Caisse de machine : billetterie, ajusteur. Socle en retrait, corps, façade
- * imprimée, et un chapeau plus sombre - c'est lui qui donne l'épaisseur.
- */
-function Machine({
-  w,
-  d,
-  h,
-  face,
-  m,
-}: {
-  w: number;
-  d: number;
-  h: number;
-  face: THREE.Material;
-  m: Mats;
-}) {
-  return (
-    <group>
-      <mesh position={[0, PLINTH_H / 2, 0]} material={m.frame}>
-        <boxGeometry args={[w - 0.08, PLINTH_H, d - 0.1]} />
-      </mesh>
-      <mesh position={[0, PLINTH_H + (h - PLINTH_H) / 2, 0]} material={m.psd}>
-        <boxGeometry args={[w, h - PLINTH_H, d]} />
-      </mesh>
-      <mesh position={[0, PLINTH_H + (h - PLINTH_H) / 2, d / 2 + 0.004]} material={face}>
-        <planeGeometry args={[w - 0.02, h - PLINTH_H - 0.02]} />
-      </mesh>
-      {/* Chapeau : la tôle repliée du dessus, toujours plus sombre. Il déborde
-          VERS L'AVANT seulement - derrière, il y a la paroi. */}
-      <mesh position={[0, h + 0.02, 0.025]} material={m.metal}>
-        <boxGeometry args={[w, 0.05, d]} />
-      </mesh>
-    </group>
-  );
 }
 
 /**
@@ -340,133 +349,6 @@ function Lockers({ w, d, face, m }: { w: number; d: number; face: THREE.Material
       </mesh>
       <mesh position={[bank / 2, 0.86, d / 2 + 0.01]} material={m.accent}>
         <boxGeometry args={[colW - 0.16, 0.12, 0.03]} />
-      </mesh>
-    </group>
-  );
-}
-
-/**
- * Le konbini : ce n'est pas un meuble, c'est une PIÈCE.
- *
- * Trois parois pleines, une devanture entièrement vitrée sous un bandeau
- * d'enseigne allumé, et derrière le verre l'intérieur peint - gondoles,
- * vitrine réfrigérée, lumière franche. C'est le point le plus lumineux du hall,
- * et c'est ce qui le fait voir de l'autre bout.
- */
-function Konbini({
-  w,
-  d,
-  height,
-  kit,
-  m,
-}: {
-  w: number;
-  d: number;
-  height: number;
-  kit: Kit;
-  m: Mats;
-}) {
-  const SIGN_H = 0.62;
-  // La dalle de plafond fait douze centimètres : la coque s'arrête dessous,
-  // elle ne la traverse pas.
-  const shell = height - 0.14;
-  const glassH = shell - SIGN_H - 0.1;
-  return (
-    <group>
-      {/* Coque : fond et joues, jusqu'au plafond. */}
-      <mesh position={[0, shell / 2, -d / 2 + 0.06]} material={m.hall}>
-        <boxGeometry args={[w, shell, 0.12]} />
-      </mesh>
-      {[-1, 1].map((s) => (
-        <mesh key={`side${s}`} position={[(s * (w - 0.12)) / 2, shell / 2, 0]} material={m.hall}>
-          <boxGeometry args={[0.12, shell, d]} />
-        </mesh>
-      ))}
-      {/* Intérieur peint, plaqué juste derrière la vitre. */}
-      <mesh position={[0, glassH / 2 + 0.1, -d / 2 + 0.16]} material={kit.konbiniIn}>
-        <planeGeometry args={[w - 0.3, glassH - 0.2]} />
-      </mesh>
-      {/* Devanture vitrée pleine hauteur, et ses deux meneaux. */}
-      <mesh position={[0, glassH / 2 + 0.1, d / 2 - 0.02]} material={m.glass}>
-        <planeGeometry args={[w - 0.24, glassH]} />
-      </mesh>
-      {[-1, 1].map((s) => (
-        <mesh
-          key={`mullion${s}`}
-          position={[s * w * 0.16, glassH / 2 + 0.1, d / 2 - 0.01]}
-          material={m.metal}
-        >
-          <boxGeometry args={[0.06, glassH, 0.05]} />
-        </mesh>
-      ))}
-      {/* Seuil de porte coulissante, au milieu : le rail et sa bande jaune. */}
-      <mesh position={[0, 0.015, d / 2 - 0.1]} material={m.metal}>
-        <boxGeometry args={[w * 0.32, 0.03, 0.16]} />
-      </mesh>
-      {/* Bandeau d'enseigne, allumé. */}
-      {/* La face de l'enseigne avance légèrement devant le cadre : posée sur
-          son nu exact, elle partageait son tampon de profondeur et clignotait. */}
-      <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.034]} material={kit.konbiniSign}>
-        <planeGeometry args={[w - 0.24, SIGN_H]} />
-      </mesh>
-      <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.1]} material={m.frame}>
-        <boxGeometry args={[w - 0.18, SIGN_H + 0.08, 0.12]} />
-      </mesh>
-    </group>
-  );
-}
-
-/**
- * Distributeur automatique, version hall : la même caisse qu'au quai, montée en
- * boîtes plutôt qu'instanciée.
- *
- * Le quai en pose quatre par gare et les instancie, ce qui vaut le détour ; le
- * hall en pose deux ou trois, et une deuxième mécanique d'instanciation pour
- * trois caisses coûterait plus cher qu'elle ne rapporte. La silhouette, elle,
- * est la même : socle, corps peint, vitrine en saillie, platine, volet.
- */
-function Vending({
-  w,
-  d,
-  set,
-  m,
-}: {
-  w: number;
-  d: number;
-  set: { display: THREE.Material; header: THREE.Material; body: THREE.Material };
-  m: Mats;
-}) {
-  const H = 1.83;
-  const bw = Math.min(w - 0.06, 1.14);
-  return (
-    <group>
-      <mesh position={[0, PLINTH_H / 2, 0]} material={m.frame}>
-        <boxGeometry args={[bw - 0.08, PLINTH_H, d - 0.1]} />
-      </mesh>
-      <mesh position={[0, PLINTH_H + (H - PLINTH_H) / 2, 0]} material={set.body}>
-        <boxGeometry args={[bw, H - PLINTH_H, d]} />
-      </mesh>
-      {/* Vitrine : en saillie, c'est ce décalage qui la fait lire. L'ENCADREMENT
-          se pose derrière l'affichage et non devant - posé devant, sa face
-          avant passait à quatre millimètres du plan imprimé et le mangeait
-          entièrement : la machine n'avait plus qu'un trou noir au milieu. */}
-      <mesh position={[0, 1.35, d / 2 + 0.015]} material={m.frame}>
-        <boxGeometry args={[bw * 0.92, 0.64, 0.03]} />
-      </mesh>
-      <mesh position={[0, 1.35, d / 2 + 0.032]} material={set.display}>
-        <planeGeometry args={[bw * 0.88, 0.58]} />
-      </mesh>
-      {/* Bandeau d'enseigne. */}
-      <mesh position={[0, 1.75, d / 2 + 0.015]} material={set.header}>
-        <planeGeometry args={[bw * 0.94, 0.15]} />
-      </mesh>
-      {/* Platine des monnayeurs, à hauteur de main. */}
-      <mesh position={[bw * 0.28, 0.86, d / 2 + 0.012]} material={m.frame}>
-        <boxGeometry args={[bw * 0.36, 0.32, 0.03]} />
-      </mesh>
-      {/* Volet de retrait, au ras du sol, dans sa niche. */}
-      <mesh position={[0, 0.34, d / 2 - 0.03]} material={m.frame}>
-        <boxGeometry args={[bw * 0.8, 0.36, 0.05]} />
       </mesh>
     </group>
   );
@@ -585,11 +467,17 @@ function Bench({ w, d, m }: { w: number; d: number; m: Mats }) {
 }
 
 /** Batterie de tri : trois bacs, trois couvercles de couleur, un cadre. */
-function Bins({ w, d, m }: { w: number; d: number; m: Mats }) {
+function Bins({ w, d, m, deviceId }: { w: number; d: number; m: Mats; deviceId: string }) {
+  const target = usePickable<THREE.Mesh>({ id: deviceId, kind: 'bin' });
   const tones = ['#2f7a44', '#1f5fbf', '#c8332b'];
   const bw = (w - 0.12) / 3;
   return (
     <group>
+      {/* La fente : c'est par là qu'on jette, et c'est elle qu'on vise. */}
+      <mesh ref={target} position={[0, 0.95, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[w, d]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} colorWrite={false} />
+      </mesh>
       {tones.map((tone, i) => (
         <group key={tone} position={[(i - 1) * bw, 0, 0]}>
           <mesh position={[0, 0.42, 0]} material={m.bin}>

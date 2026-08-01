@@ -31,6 +31,7 @@ import {
   directionBandZs,
   ELEVATOR_HALF_Z,
   ESCALATOR_HALF_Z,
+  KIOSK_HALF_Z,
   PLATFORM_DEPTH,
   PSD_X,
   STAIR_HALF_Z,
@@ -989,8 +990,9 @@ function sigPlanFor(
     ...am.escalators.map((z) => ({ z: z - ESCALATOR_HALF_Z + 0.1, r: 0.6 })),
   ];
   const bands = directionBandZs(length).map((z) => ({ z, r: 4.65 }));
-  // Kiosque : même position que systems/stationPlacement (usable × 0,36).
-  const kiosk = am.kiosk ? [{ z: usable * 0.36, r: 3.15 }] : [];
+  // Kiosque : même position que systems/stationPlacement (usable × 0,36), et
+  // la même demi-emprise, augmentée du dégagement qu'on laisse aux accès.
+  const kiosk = am.kiosk ? [{ z: usable * 0.36, r: KIOSK_HALF_Z + 0.75 }] : [];
   const clock = am.clock ? [{ z: 0, r: 0.8 }] : [];
   // Trame des piliers génériques : tous les `spacing` mètres depuis -usable,
   // comme systems/stationPlacement les pose.

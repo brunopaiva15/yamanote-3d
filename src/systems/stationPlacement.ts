@@ -14,6 +14,8 @@ import { interiorFor, type StationInterior } from '../data/stationInterior';
 import {
   ELEVATOR_HALF_Z,
   ESCALATOR_HALF_Z,
+  KIOSK_HALF_X,
+  KIOSK_HALF_Z,
   OPP_DEPTH,
   PSD_HALF_GAP,
   PSD_X,
@@ -457,8 +459,17 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     a.elevator === null
       ? null
       : { x: backX - 1.05, z: a.elevator, halfX: 0.95, halfZ: ELEVATOR_HALF_Z };
+  // Le kiosque, PILE SUR L'ÉPINE - et c'est la même raison que pour les
+  // trémies : il s'ouvre des DEUX côtés, et une boutique décentrée n'a plus
+  // qu'un côté servi. Décalé de 1,35 m vers la voie comme il l'était, il ne
+  // laissait que vingt-cinq centimètres entre lui et le bord d'embarquement à
+  // Takadanobaba - on ne passait plus, et le comptoir de ce côté-là donnait
+  // sur un mur d'air. Centré, les deux côtés ont le même passage, et il fait
+  // 3,00 × 6,40 au lieu de 2,50 × 4,80 : la taille d'un vrai NEWDAYS KIOSK,
+  // celle qu'il faut pour deux comptoirs, une armoire réfrigérée et un vendeur
+  // entre les deux.
   const kiosk: Placed | null = a.kiosk
-    ? { x: backX - 1.35, z: usable * 0.36, halfX: 1.25, halfZ: 2.4 }
+    ? { x: hasBackWall ? backX - KIOSK_HALF_X : backX, z: usable * 0.36, halfX: KIOSK_HALF_X, halfZ: KIOSK_HALF_Z }
     : null;
 
   // L'accès qui mène dans la gare : la trémie la plus proche du milieu du quai.

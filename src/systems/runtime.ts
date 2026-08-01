@@ -158,6 +158,11 @@ export const runtime = {
   /** Étage courant dans la gare : le quai, ou le niveau de correspondance. */
   playerLevel: 'platform' as PlayerLevel,
   /**
+   * Carte IC présentée au lecteur (0..1) : la main qui s'avance et se retire.
+   * Purement visuel, mais c'est ce geste-là qu'on refait dix fois par jour.
+   */
+  cardTap: 0,
+  /**
    * Position d'APPUI du joueur en repère monde : où il a les pieds, sans le
    * balancement de caméra.
    *
@@ -323,6 +328,7 @@ export function resetRuntime(): void {
   runtime.departStartDist = 0;
   runtime.playerFrame = 'car';
   runtime.playerLevel = 'platform';
+  runtime.cardTap = 0;
   runtime.stanceX = 0;
   runtime.stanceZ = 4.2;
   runtime.playerCarX = 0;
