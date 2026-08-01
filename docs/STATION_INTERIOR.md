@@ -162,8 +162,12 @@ Ce qui marche maintenant (`systems/concourseRoute`, `systems/platformCrowd`) :
   konbini**, où l'on fait le tour des rayons avant de passer à la caisse
   (`data/konbiniPlan`, `stops`) ;
 - **le portillon fait son ピッ** à chaque validation, et son feu s'allume.
-  Il n'ouvre que pour celui qui a validé : un voyageur qui passe devant ne
-  laisse pas le joueur entrer derrière lui (`systems/fareGate`, `paxGrantT`) ;
+  On **bipe avant de passer**, du côté d'où l'on vient — côté libre pour qui
+  entre, côté payant pour qui sort (`systems/concourseRoute`, `paidLegs`) — et
+  les **battants se rabattent** devant qui s'approche sans avoir rien présenté,
+  la foule comme le joueur : ils claquent, on pose sa carte, ils s'écartent, on
+  passe. La baie n'ouvre que pour celui qui a validé : un voyageur qui la
+  franchit ne laisse pas le joueur entrer derrière lui (`systems/fareGate`) ;
 - **on peut leur parler** : descendu au niveau du hall, c'est la foule d'EN BAS
   qui devient joignable, et celle du quai qui cesse de l'être
   (`systems/paxTargeting`).

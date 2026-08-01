@@ -1244,14 +1244,20 @@ export function gateDeny(): void {
   nodes.devBeep.triggerAttackRelease('E4', 0.26, slot('devBeep', now + 0.19), 0.42);
 }
 
-/** Les battants du portillon qui se ferment ou se rouvrent. */
-export function gateFlap(closing: boolean): void {
+/**
+ * Les battants du portillon qui se ferment ou se rouvrent.
+ *
+ * `gain` sert aux baies qui ne sont pas la nôtre : la ligne entière claque au
+ * passage de la foule (systems/fareGate), et un vantail à vingt mètres ne
+ * s'entend pas comme celui qu'on a devant le nez.
+ */
+export function gateFlap(closing: boolean, gain = 1): void {
   if (!nodes) return;
   const now = Tone.now();
   nodes.devHissFilter.frequency.value = 900;
   nodes.devHiss.envelope.decay = 0.12;
-  nodes.devHiss.triggerAttackRelease(0.09, slot('devHiss', now), closing ? 0.5 : 0.35);
-  nodes.devClick.triggerAttackRelease(0.02, slot('devClick', now + 0.14), closing ? 0.5 : 0.25);
+  nodes.devHiss.triggerAttackRelease(0.09, slot('devHiss', now), (closing ? 0.5 : 0.35) * gain);
+  nodes.devClick.triggerAttackRelease(0.02, slot('devClick', now + 0.14), (closing ? 0.5 : 0.25) * gain);
 }
 
 /**
