@@ -274,7 +274,12 @@ const AD_LOW_Y = STAIR_LOWER_Y + 1.02;
 // --- Rendu ---------------------------------------------------------------
 
 interface Props {
-  place: { stairs: Placed[]; mainStair: Placed };
+  place: {
+    stairs: Placed[];
+    mainStair: Placed;
+    /** Le hall du bas est-il RÉELLEMENT construit ? Voir `open` plus bas. */
+    interior: { built: boolean };
+  };
   m: Mats;
   station: number;
   /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
@@ -314,7 +319,14 @@ export function Stairwells({ place, m, station, detail }: Props) {
           detail={detail}
           // La trémie principale ne se ferme pas au fond : son couloir débouche
           // sur le hall (three/station/Concourse), et l'on y marche.
-          open={s === place.mainStair}
+          //
+          // ENCORE FAUT-IL QUE LE HALL SOIT LÀ. Nippori déclare le sien
+          // au-dessus des voies et ne le construit pas (data/stationInterior) :
+          // Station ne dessinait donc aucun hall, mais le couloir s'ouvrait
+          // quand même - une trémie qui descendait sur le vide, panneau 中央口
+          // à l'appui. Là où rien n'est bâti, la trémie reste borgne, comme
+          // toutes les autres du quai.
+          open={s === place.mainStair && place.interior.built}
         />
       ))}
     </>

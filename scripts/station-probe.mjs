@@ -110,11 +110,6 @@ const IGNORE = [
   'gare/auvent ✕ gare/charpente-ebisu',
   'gare/auvent ✕ gare/charpente-shimbashi',
   'gare/auvent ✕ gare/charpente-takanawaGateway',
-  // La gaine d'escalier mécanique monte PAR CONSTRUCTION jusqu'à la sous-face
-  // de l'auvent ; et les balustrades inclinées gonflent leur boîte englobante
-  // (la sonde travaille en AABB), d'où de faux contacts avec les néons.
-  'gare/auvent ✕ gare/escalator',
-  'gare/escalator ✕ gare/néon',
 ];
 
 const totals = new Map();

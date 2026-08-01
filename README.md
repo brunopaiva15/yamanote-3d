@@ -550,6 +550,35 @@ plafond, elle, n'atteindrait jamais l'œil. Et les voyageurs qui s'en vont ne
 s'effacent plus à une altitude donnée : ils marchent jusqu'à un mètre après le
 linteau, où c'est la dalle qui les cache.
 
+### Les escaliers mécaniques descendent
+
+Ils montaient, et ils ne montaient **nulle part** : une volée de 2,77 m coiffée
+d'une gaine borgne plaquée sous l'auvent, sans percement au-dessus ni palier au
+bout ; sur les quais sans auvent - Nippori, les tranchées - elle s'arrêtait
+carrément en plein ciel. Or l'accès à pied d'à côté descend, et la billetterie
+est en dessous : dans les trente gares, un escalier mécanique de quai dessert le
+même niveau que la trémie voisine.
+
+Il descend donc, et **la dalle est réellement percée sous lui**, aux mêmes
+règles que la trémie : les joues coiffent le chant du percement de deux
+centimètres, le nez de peigne coiffe le quatrième chant que ni les joues ni le
+voile de tête ne reprennent, et le puits est clos sur ses quatre côtés - sans
+quoi on verrait le ballast par-dessous le quai. Au fond, le sol du couloir bas
+et un soubassement de faïence : ce qui dit qu'on regarde une gare et pas une
+fosse.
+
+L'emprise n'est pas choisie, elle se **déduit** : à 30° - la pente d'un escalier
+mécanique, partout - il faut 6,37 m pour perdre les 3,675 m qui séparent le quai
+du couloir, plus un palier de peigne à chaque bout. `ESCALATOR_HALF_Z` passe donc
+de 2,80 m à 3,60 m, et tout ce qui se range autour d'un accès - piliers,
+potences, publicité, charpentes signature - suit d'office : la valeur est
+partagée (`data/stationGeometry`), et c'est elle que le placement et les
+gabarits lisent tous les deux.
+
+Le percement suit le **palier de qualité de la volée qui le remplit** : au niveau
+le plus bas, l'escalier mécanique n'est plus dessiné, et le quai n'aurait plus
+qu'un trou.
+
 ### Entrer dans la gare
 
 Ce couloir se terminait sur un mur, et le joueur était de toute façon arrêté
@@ -605,7 +634,11 @@ mi-hauteur.
 correspondance - dessinés par sa charpente, sous-face à 5,10 m, la cote exacte
 d'un hall d'en haut. Y poser le hall générique reviendrait à bâtir deux fois la
 même chose, l'une dans l'autre : elle attend son traitement propre. Le
-découpage complet est dans `docs/STATION_INTERIOR.md`.
+découpage complet est dans `docs/STATION_INTERIOR.md`. Et tant qu'il n'est pas
+bâti, **sa trémie principale reste borgne** comme les autres : elle s'ouvrait au
+fond sur le vide - un couloir sans hall au bout, panneau 中央口 à l'appui, parce
+que le fond de couloir se retirait sur « c'est la trémie principale » et non sur
+« le hall existe ».
 
 ### Ce qu'il y a dans le hall
 
