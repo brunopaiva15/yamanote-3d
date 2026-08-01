@@ -125,6 +125,33 @@ test('les bouches de sortie sont dans le hall libre, et fléchées par le relev�
   }
 });
 
+test('deux bouches de sortie gardent leur trumeau, et leur retour de paroi', () => {
+  // Posées bêtement au tiers et aux deux tiers, deux bouches de 2,30 m se
+  // chevauchaient sur les halls étroits : le mur qui les sépare disparaissait,
+  // les deux volées se touchaient, et les deux panneaux jaunes se superposaient
+  // dans le même plan - le z-fighting qu'on voit à l'écran. Une bouche rétrécit
+  // plutôt que de mordre sur sa voisine.
+  for (const { name, interior } of ALL) {
+    const cuts = [...interior.exits].sort((a, b) => a.x - b.x);
+    assert.ok(
+      cuts[0].x - cuts[0].halfWidth - interior.free.x0 >= 0.4,
+      `${name} retour de paroi à gauche`,
+    );
+    assert.ok(
+      interior.free.x1 - (cuts[cuts.length - 1].x + cuts[cuts.length - 1].halfWidth) >= 0.4,
+      `${name} retour de paroi à droite`,
+    );
+    for (let k = 1; k < cuts.length; k += 1) {
+      const pier = (cuts[k].x - cuts[k].halfWidth) - (cuts[k - 1].x + cuts[k - 1].halfWidth);
+      assert.ok(pier >= 0.6, `${name} trumeau entre les bouches ${k - 1} et ${k} : ${pier}`);
+    }
+    // Et une bouche reste une bouche : jamais une meurtrière.
+    for (const exit of cuts) {
+      assert.ok(exit.halfWidth >= 0.75, `${name} sortie ${exit.slot} trop étroite`);
+    }
+  }
+});
+
 test('les halls sont construits des deux côtés du quai, sauf Nippori', () => {
   // Six gares ont leur billetterie AU-DESSUS des voies : les cinq tranchées, et
   // Nippori que ses deux ponts-concours enjambent. Elles ont longtemps déclaré

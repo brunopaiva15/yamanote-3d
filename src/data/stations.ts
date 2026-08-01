@@ -88,6 +88,15 @@ export const STATIONS: Station[] = [
 // Shinagawa n'y entrent pas, chacune pour une raison de site. C'est une
 // LECTURE : elle dit à quoi ressemble une ligne fausse, et c'est tout ce qu'on
 // lui demande. `tests/stationTrackPlan` gèle le relevé ligne à ligne.
+//
+// TOUCHER À CETTE TABLE, C'EST REGRAVER DES ANNONCES. Le côté est DIT :
+// 「お出口は。右側です。」 entre dans le texte de 次は… et de まもなく…, donc dans
+// la clé de leur clip (data/clipKey). Un 1 changé en -1 laisse la rame MUETTE à
+// cette gare - pas d'erreur, pas de repli, plus de nom d'arrêt ni de côté
+// d'ouverture -, et c'est exactement ce qui est arrivé au relevé de janvier
+// 2026. Après toute correction ici : réexporter les textes puis regraver
+// (scripts/announcements-export.ts → scripts/announcements-gen.py --reuse) et
+// vérifier avec `tests/announcementClips`, qui refuse une annonce sans MP3.
 export const DOOR_SIDE: (1 | -1)[] = [
   // JY01 Tokyo     JY02 Kanda     JY03 Akihabara  JY04 Okachimachi JY05 Ueno
   -1, -1, -1, -1, -1,

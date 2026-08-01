@@ -39,6 +39,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Le lint et tsc ne voient pas les régressions de DONNÉES : un côté
+      # d'ouverture corrigé dans DOOR_SIDE change le texte de l'annonce, donc sa
+      # clé de clip, et la rame se tait à cette gare sans qu'aucun type ne
+      # bronche (tests/announcementClips.test.ts est là pour ça). La suite tourne
+      # donc avant le build, et non plus seulement en local.
+      - name: Tests
+        run: npm test
+
       - name: Build (tsc + vite)
         run: npm run build
         # Compteur « voyageurs en ligne » (facultatif). Renseigner ces deux
