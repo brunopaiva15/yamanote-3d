@@ -586,13 +586,26 @@ sorties, elles, ne sont pas renommées : chaque bouche porte **le même panneau
 jaune que les potences du quai**, tiré du même relevé (`data/lines`) - une gare
 ne fléche pas 八重洲中央口 en haut des marches et autre chose en bas.
 
-**Six gares déclarent leur hall sans le construire.** Les cinq tranchées
-(Tabata, Komagome, Sugamo, Mejiro, Meguro) et Nippori ont leur billetterie
-**au-dessus** des voies, sur le bâtiment qui enjambe - c'est ce que montre le
-plan de Mejiro, et c'est l'inverse d'une gare de viaduc. La donnée le dit, la
-marche le supporte, mais la volée MONTANTE reste à dessiner : `built` le déclare
-faux plutôt que de laisser croire. Le découpage complet est dans
-`docs/STATION_INTERIOR.md`.
+**Cinq gares ont leur hall en haut.** Les tranchées - Tabata, Komagome, Sugamo,
+Mejiro, Meguro - ont leur billetterie **au-dessus** des voies, sur le bâtiment
+qui enjambe : c'est ce que montre le plan de Mejiro, et c'est l'inverse d'une
+gare de viaduc. Ce n'est pas la trémie avec un signe changé, c'est un autre
+ouvrage : la volée ne perce pas la dalle, elle se **pose** dessus - donc pas de
+joues qui coiffent un percement, pas de linteau -, sa **sous-face** est visible
+et c'est même la première chose qu'on en voit du quai, elle perce en revanche
+l'**auvent**, et elle monte cinq mètres en deux volées séparées d'un palier :
+vingt-neuf marches d'un trait n'existent dans aucune gare.
+
+Onze mètres de long, ce n'est pas l'emprise d'une trémie : poteaux, poutres,
+néons, diffuseurs et conduites la sautent comme ils sautent une gaine
+d'ascenseur, sans quoi une poutre transversale passait en travers des marches à
+mi-hauteur.
+
+**Nippori reste à part.** Ses deux ponts-concours SONT son niveau de
+correspondance - dessinés par sa charpente, sous-face à 5,10 m, la cote exacte
+d'un hall d'en haut. Y poser le hall générique reviendrait à bâtir deux fois la
+même chose, l'une dans l'autre : elle attend son traitement propre. Le
+découpage complet est dans `docs/STATION_INTERIOR.md`.
 
 ### Ce qu'il y a dans le hall
 

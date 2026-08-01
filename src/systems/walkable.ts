@@ -19,6 +19,9 @@
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
 import {
+  ASCENT_LANDING_Y,
+  ASCENT_LEN,
+  ascentFloorY,
   DESCENT_LEN,
   DESCENT_LOWER_T,
   descentFloorY,
@@ -213,12 +216,17 @@ function stairFloorAt(p: StationPlacement, u: number, localZ: number): Region | 
   const main = p.mainStair;
   if (p.interior.built && Math.abs(u - main.x) <= STAIR_WALK_HALF_X) {
     const t = localZ - stairTopZ(main);
-    if (t >= 0 && t <= DESCENT_LEN) {
-      // L'étage bascule au passage sous le linteau, à mi-descente : au-dessus
-      // on est encore de la gare du haut, au-dessous on n'en revient que par
-      // ces mêmes marches. C'est le seul point de bascule des deux étages.
-      const level: PlayerLevel = t > DESCENT_LOWER_T ? 'concourse' : 'platform';
-      return { frame: 'platform', y: PLATFORM_TOP + descentFloorY(t), level };
+    const up = p.mainRise === 'up';
+    const len = up ? ASCENT_LEN : DESCENT_LEN;
+    if (t >= 0 && t <= len) {
+      // L'étage bascule à MI-VOLÉE, et le repère est le même dans les deux
+      // sens : le linteau sous lequel on passe en descendant, le palier de
+      // mi-étage qu'on franchit en montant. Au-delà, on ne revient que par ces
+      // mêmes marches - c'est le seul point de bascule des deux étages.
+      const y = up ? ascentFloorY(t) : descentFloorY(t);
+      const crossed = up ? y > ASCENT_LANDING_Y : t > DESCENT_LOWER_T;
+      const level: PlayerLevel = crossed ? 'concourse' : 'platform';
+      return { frame: 'platform', y: PLATFORM_TOP + y, level };
     }
   }
   const hit = stairwellAt(p, u, localZ);

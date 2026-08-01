@@ -107,13 +107,29 @@ Elle apporte aussi les distributeurs de titres, les consignes, les toilettes,
 le bureau de la gare (みどりの窓口) et les commerces sous marque réelle qu'on
 voit sur les plans (ecute à Ueno, atré à Meguro et Tabata).
 
-## Phase 5 — Les accès montants
+## Phase 5 — Les accès montants ✅
 
-**À faire.** Cinq gares en tranchée et une partie des gares au sol ont leur
-hall **au-dessus** des voies. La donnée le dit déjà (phase 1, `rise > 0`) et la
-marche le supporte, mais le rendu de la volée montante — percement de l'auvent,
-sous-face des marches, tablier de la passerelle — reste à dessiner. En
-attendant, ces gares déclarent leur hall et n'en rendent que l'accès.
+**Livré.** Cinq gares en tranchée ont leur hall **au-dessus** des voies, et ce
+n'est pas la trémie avec un signe changé — c'est un autre ouvrage :
+
+- elle ne perce **pas** la dalle, elle se pose dessus : ni joues qui coiffent un
+  percement, ni linteau, ni voile de tête ;
+- sa **sous-face** est visible, et c'est même la première chose qu'on en voit du
+  quai — une volée montante se lit par en dessous ;
+- elle perce en revanche l'**auvent**, qui devient une dalle extrudée à trou,
+  comme celle du quai l'est déjà pour les trémies ;
+- elle monte cinq mètres au lieu de trois et demi, en **deux volées** séparées
+  d'un palier : vingt-neuf marches d'un trait n'existent dans aucune gare.
+
+Son emprise entre dans la trame : poteaux, poutres, néons, diffuseurs et
+conduites la sautent, comme ils sautent une gaine d'ascenseur — une volée de
+onze mètres n'a pas l'emprise d'une trémie de cinq.
+
+**Nippori reste à part**, et pour une raison précise : ses deux ponts-concours
+SONT son niveau de correspondance, dessinés par sa charpente, sous-face à
+5,10 m — la cote exacte d'un hall d'en haut. Y poser le hall générique
+reviendrait à bâtir deux fois la même chose, l'une dans l'autre. Elle rejoint
+donc la phase 6, où elle était déjà attendue.
 
 ## Phase 6 — Les gares qui ne se paramètrent pas
 

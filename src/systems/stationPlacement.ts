@@ -23,6 +23,7 @@ import {
   STAIR_WALK_HALF_X,
   STAIR_WALK_LEN,
   STAIR_WALK_STEPS,
+  ASCENT_LEN,
   stairFloorY,
 } from '../data/stationGeometry';
 
@@ -143,6 +144,16 @@ export interface StationPlacement {
    * celle qu'on trouve en descendant du train.
    */
   mainStair: Placed;
+  /**
+   * Cet accès DESCEND-il, ou monte-t-il ?
+   *
+   * Publié ici parce que trois consommateurs doivent en tomber d'accord au
+   * centimètre : le percement de la dalle (une volée montante n'en fait pas),
+   * le rendu de l'accès, et la marche. C'est `interior.place` qui décide - le
+   * hall est sous les voies ou dessus - et cette ligne évite que chacun aille
+   * le relire à sa façon.
+   */
+  mainRise: 'down' | 'up';
   interior: StationInterior;
 }
 
@@ -450,11 +461,40 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     ? { x: backX - 1.35, z: usable * 0.36, halfX: 1.25, halfZ: 2.4 }
     : null;
 
+  // L'accès qui mène dans la gare : la trémie la plus proche du milieu du quai.
+  const mainStair = stairs.reduce((a, b) => (Math.abs(b.z) < Math.abs(a.z) ? b : a));
+  const interior = interiorFor(i, mainStair.z);
+  // Une volée montante n'a de sens que si elle mène quelque part : là où le
+  // niveau est déclaré sans être construit, l'accès reste la trémie borgne
+  // qu'il était.
+  const mainRise = interior.built && interior.place === 'over' ? ('up' as const) : ('down' as const);
+
+  // Une volée MONTANTE n'a pas l'emprise d'une trémie : elle court onze mètres
+  // le long du quai et traverse l'auvent. Tout ce qui se pose en hauteur -
+  // poteaux, poutres, néons, tous dérivés de la trame de piliers - doit la
+  // sauter, sinon une poutre transversale passe en travers des marches à
+  // mi-hauteur. Et elle barre le passage latéral : c'est un ouvrage posé sur la
+  // dalle, pas un trou dedans.
+  //
+  // L'emprise commence PILE au nez de la volée et pas un centimètre avant : la
+  // marche n'accepte les marches qu'à partir de là, et quarante centimètres de
+  // marge en amont faisaient un mur invisible devant l'escalier - on butait sur
+  // la première contremarche sans jamais y poser le pied.
+  const risingMain: Placed | null = mainRise === 'up'
+    ? {
+      x: mainStair.x,
+      z: mainStair.z - STAIR_HALF_Z + (ASCENT_LEN + 0.4) / 2,
+      halfX: STAIR_HALF_X + 0.3,
+      halfZ: (ASCENT_LEN + 0.4) / 2,
+    }
+    : null;
+
   const structure: Placed[] = [
     ...stairs,
     ...escalators,
     ...(elevator ? [elevator] : []),
     ...(kiosk ? [kiosk] : []),
+    ...(risingMain ? [risingMain] : []),
   ];
 
   // Réserve devant le nez des accès verticaux : mobilier seulement. Ce n'est
@@ -571,7 +611,13 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   };
 
   const kit: StationKit = {
-    speakers: every(19, usable, 4.1).map(offPost),
+    // Un diffuseur pend à l'auvent ; une volée montante monte au-dessus de lui.
+    // Ceux qui tombent dans son emprise sont retirés plutôt que décalés : la
+    // ligne a dix-neuf mètres de pas, un trou ne s'entend pas (le relais prend
+    // les DEUX plus proches, systems/stationPa).
+    speakers: every(19, usable, 4.1)
+      .map(offPost)
+      .filter((z) => !risingMain || Math.abs(z - risingMain.z) > risingMain.halfZ + 0.6),
     cameras: columns.filter((_, k) => k % 3 === 1),
     // Extincteur et téléphone se vissent sur un poteau. Le mur de fond ne
     // portait qu'à Harajuku : partout ailleurs, l'îlot n'en a pas et ils
@@ -610,6 +656,12 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
       // Et au droit des plans profonds de la charpente signature - le portique
       // de jonction d'Hamamatsuchō descend en travers de leur cote.
       ...(layout.sigPlan?.runBlocks ?? []),
+      // Une volée MONTANTE traverse la cote des conduites de part en part :
+      // elle monte à cinq mètres, elles courent à trois et demi. Elles
+      // s'interrompent donc sur toute sa longueur, comme à une gaine.
+      ...(risingMain
+        ? [{ z0: risingMain.z - risingMain.halfZ - 0.5, z1: risingMain.z + risingMain.halfZ + 0.5 }]
+        : []),
     ]),
   };
 
@@ -626,8 +678,10 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     }
   }
 
-  // La trémie qui descend dans la gare : la plus proche du milieu du quai.
-  const mainStair = stairs.reduce((a, b) => (Math.abs(b.z) < Math.abs(a.z) ? b : a));
+  // Une volée montante n'est pas un trou dans la dalle : c'est un OUVRAGE posé
+  // dessus, et l'on ne le traverse pas par le côté. Son emprise entre donc dans
+  // les obstacles, alors qu'une trémie s'y trouvait déjà par sa seule cage.
+  if (risingMain) obstacles.push(risingMain);
 
   const placement: StationPlacement = {
     layout,
@@ -654,7 +708,8 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     kit,
     obstacles,
     mainStair,
-    interior: interiorFor(i, mainStair.z),
+    mainRise,
+    interior,
   };
   CACHE.set(i, placement);
   return placement;

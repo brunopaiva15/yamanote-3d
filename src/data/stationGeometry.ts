@@ -362,3 +362,67 @@ export function descentFloorY(t: number): number {
  * on n'est plus dans la trémie : on est dans la gare (data/stationInterior).
  */
 export const DESCENT_LEN = STAIR_LOWER_END + STAIR_HALF_Z;
+
+// --- Et la volée qui MONTE ------------------------------------------------
+//
+// Cinq gares en tranchée et Nippori ont leur billetterie AU-DESSUS des voies,
+// sur le bâtiment qui les enjambe : la rue y est plus haute que le quai, et la
+// gare avec elle. C'est l'inverse exact d'une gare de viaduc, et cela ne se
+// paramètre pas en changeant un signe - une volée montante est un ouvrage
+// différent :
+//
+//   · elle ne perce PAS la dalle du quai, elle se pose dessus. Pas de trémie,
+//     pas de joues qui coiffent un percement, pas de linteau ;
+//   · elle perce en revanche l'AUVENT, qu'elle traverse aux deux tiers de sa
+//     hauteur, et c'est ce percement-là qu'il faut ménager ;
+//   · elle est plus longue, parce qu'elle monte plus haut : cinq mètres au lieu
+//     de trois et demi, pour passer au-dessus du gabarit de la rame.
+
+/** Marches de la première volée, jusqu'au palier de mi-étage. */
+export const ASCENT_STEPS_A = 15;
+/** Longueur du palier : quatre girons, de quoi souffler et tourner la tête. */
+export const ASCENT_LANDING_LEN = 4 * STAIR_GOING;
+/** Marches de la seconde volée, du palier au plancher du hall. */
+export const ASCENT_STEPS_B = 14;
+
+/**
+ * Plancher du niveau de correspondance quand il est AU-DESSUS du quai.
+ *
+ * Ce n'est pas une valeur d'ambiance : c'est ce qui fait passer un tablier
+ * au-dessus d'une rame. Vingt-neuf contremarches de 17,5 cm - la même marche
+ * que partout ailleurs dans cette gare, parce qu'un escalier public n'a qu'un
+ * seul profil.
+ */
+export const ASCENT_FLOOR_Y = (ASCENT_STEPS_A + ASCENT_STEPS_B) * STAIR_RISE;
+
+/** `t` auquel finit la première volée, et auquel commence la seconde. */
+const ASCENT_A_END = (ASCENT_STEPS_A + 0.5) * STAIR_GOING;
+const ASCENT_B_START = ASCENT_A_END + ASCENT_LANDING_LEN;
+
+/** Altitude du palier de mi-étage. */
+export const ASCENT_LANDING_Y = ASCENT_STEPS_A * STAIR_RISE;
+
+/**
+ * Altitude du sol sous les pieds de qui MONTE, en `t` du pied de la volée.
+ *
+ * Même convention que la descente - la ligne des nez relevée d'une
+ * demi-contremarche, qui passe par le milieu de chaque giron - pour la même
+ * raison : un profil en marches ferait sauter le marcheur de dix-sept
+ * centimètres tous les trente et un.
+ */
+export function ascentFloorY(t: number): number {
+  if (t <= ASCENT_A_END) {
+    return Math.min(ASCENT_STEPS_A, Math.max(0, t / STAIR_GOING - 0.5)) * STAIR_RISE;
+  }
+  const up = Math.min(
+    ASCENT_STEPS_B,
+    Math.max(0, (t - ASCENT_B_START) / STAIR_GOING - 0.5),
+  );
+  return ASCENT_LANDING_Y + up * STAIR_RISE;
+}
+
+/** Longueur de la volée montante, du pied au plancher du hall. */
+export const ASCENT_LEN = ASCENT_B_START + (ASCENT_STEPS_B + 0.5) * STAIR_GOING + 0.6;
+
+/** Demi-largeur praticable de la volée montante : celle de la descente. */
+export const ASCENT_WALK_HALF_X = STAIR_WALK_HALF_X;

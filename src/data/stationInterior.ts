@@ -29,17 +29,20 @@
 // LE SENS DU NIVEAU. `place` dit de quel côté du quai il se trouve, et cela ne
 // se décrète pas : une gare sur viaduc a sa billetterie dessous, au niveau de
 // la rue ; une gare en TRANCHÉE l'a dessus, sur le bâtiment qui enjambe la
-// tranchée - c'est exactement ce que montre le plan de Mejiro. Les gares
-// `over` déclarent donc leur hall et ne le construisent pas encore : la volée
-// MONTANTE reste à dessiner (voir docs/STATION_INTERIOR, phase 5), et `built`
-// le dit sans mentir.
+// tranchée - c'est exactement ce que montre le plan de Mejiro. Les deux sens
+// sont bâtis : la volée descend dans une trémie qui perce la dalle, ou monte
+// sur une volée posée dessus qui perce l'auvent. Ce sont deux ouvrages, pas un
+// signe qui change (voir data/stationGeometry).
 
 import { layoutFor } from './stationLayouts.ts';
 import { stationExits } from './lines.ts';
 import {
+  ASCENT_FLOOR_Y,
+  ASCENT_LEN,
+  DESCENT_LEN,
   PSD_X,
+  STAIR_HALF_Z,
   STAIR_LOWER_CEIL_Y,
-  STAIR_LOWER_END,
   STAIR_LOWER_Y,
 } from './stationGeometry.ts';
 
@@ -157,10 +160,12 @@ export interface StationInterior {
   /**
    * Le niveau est-il réellement construit ?
    *
-   * Faux tant que l'accès qui y mène n'est pas dessiné - les gares dont le hall
-   * est AU-DESSUS du quai attendent leur volée montante. Le rendu et la marche
-   * lisent le même drapeau : on ne marche pas dans un hall qui n'est pas là, et
-   * on ne dessine pas un hall où l'on ne peut pas aller.
+   * Il l'a longtemps été pour les seules gares dont le hall est SOUS le quai,
+   * faute de volée montante pour les autres. Les deux sens d'accès étant
+   * maintenant dessinés, le drapeau vaut partout - il reste parce que la
+   * question se reposera : une gare spéciale peut avoir un niveau qu'on
+   * déclare avant de savoir le construire, et le rendu comme la marche doivent
+   * lire la même réponse.
    */
   built: boolean;
   place: ConcoursePlace;
@@ -236,12 +241,13 @@ const PILASTER_LEN = 0.62;
 /**
  * Hauteur du niveau au-dessus du quai, quand il est dessus.
  *
- * Ce n'est pas la symétrique du niveau bas : une passerelle passe au-dessus du
- * gabarit de la caténaire, pas seulement au-dessus des têtes. La valeur est
- * posée ici pour que la donnée soit complète ; la volée qui y monte reste à
- * dessiner.
+ * Ce n'est pas la symétrique du niveau bas, et ce n'est pas non plus un chiffre
+ * d'ambiance : c'est ce qui fait passer un tablier au-dessus d'une rame. La
+ * cote vient de la volée elle-même (`data/stationGeometry`) - vingt-neuf
+ * contremarches de 17,5 cm - parce que c'est l'escalier qui décide de la
+ * hauteur du plancher, jamais l'inverse.
  */
-const OVER_FLOOR_Y = 6.4;
+const OVER_FLOOR_Y = ASCENT_FLOOR_Y;
 
 // --- Ce qui change d'une gare à l'autre ----------------------------------
 
@@ -272,6 +278,11 @@ interface Spec {
    * chose et se corrige ligne à ligne.
    */
   brand?: GalleryBrand;
+  /**
+   * Gare dont le niveau ne se paramètre pas : on le déclare, on ne le construit
+   * pas ici.
+   */
+  bespoke?: true;
 }
 
 /**
@@ -299,7 +310,12 @@ const SPECS: readonly Spec[] = [
   { name: 'JY05 Ueno', brand: 'ecute', gateJp: '中央改札', gate: 'Central' },
   { name: 'JY06 Uguisudani', gateJp: '南口改札', gate: 'South' },
   // Deux ponts-concours enjambent tout le faisceau : le hall est dessus.
-  { name: 'JY07 Nippori', brand: 'ecute', place: 'over', gateJp: '南改札', gate: 'South' },
+  // Nippori a déjà son niveau de correspondance : ce sont ses DEUX
+  // PONTS-CONCOURS, dessinés par sa charpente signature, dont la sous-face est
+  // à 5,10 m - exactement la cote d'un hall d'en haut. Y poser en plus le hall
+  // générique reviendrait à bâtir deux fois la même chose, l'une dans l'autre.
+  // Elle attend son traitement propre (docs/STATION_INTERIOR, phase 6).
+  { name: 'JY07 Nippori', brand: 'ecute', place: 'over', bespoke: true, gateJp: '南改札', gate: 'South' },
   { name: 'JY08 Nishi-Nippori', gateJp: '南改札', gate: 'South' },
   { name: 'JY09 Tabata', brand: 'atre', place: 'over', gateJp: '北口改札', gate: 'North' },
   { name: 'JY10 Komagome', place: 'over', gateJp: '北口改札', gate: 'North' },
@@ -642,8 +658,12 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
 
   const x0 = PSD_X + SIDE_INSET;
   const x1 = PSD_X + layout.depth - SIDE_INSET;
-  // Le hall commence là où le couloir de la trémie finit.
-  const z0 = accessZ + STAIR_LOWER_END;
+  // Le hall commence là où l'accès finit - au fond du couloir bas quand on
+  // descend, au sommet de la volée quand on monte. Les deux se mesurent depuis
+  // le même point, le NEZ de l'accès, à 2,60 m en amont de son centre : c'est
+  // la seule façon d'être sûr que le sol ne se coupe pas au raccord.
+  const under = place === 'under';
+  const z0 = accessZ - STAIR_HALF_Z + (under ? DESCENT_LEN : ASCENT_LEN);
   const gateZ = z0 + PAID_LEN;
   const freeZ0 = gateZ + GATE_DEPTH;
   const freeZ1 = freeZ0 + FREE_LEN;
@@ -692,11 +712,15 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
   ];
 
   return {
-    // Un hall sous les voies se dessine ; un hall dessus attend sa volée.
-    built: place === 'under',
+    // Les deux sens d'accès sont dessinés : le hall existe partout, sauf là où
+    // la gare en a déjà un qui lui est propre.
+    built: spec.bespoke !== true,
     place,
-    floorY: place === 'under' ? STAIR_LOWER_Y : OVER_FLOOR_Y,
-    ceilY: place === 'under' ? STAIR_LOWER_CEIL_Y : OVER_FLOOR_Y + 3.2,
+    floorY: under ? STAIR_LOWER_Y : OVER_FLOOR_Y,
+    // Sous les voies, le plafond est la sous-face de la dalle du quai et rien
+    // d'autre ne décide. Au-dessus, c'est un bâtiment : on lui donne la hauteur
+    // libre d'un hall de gare, deux mètres quatre-vingt-dix plus la retombée.
+    ceilY: under ? STAIR_LOWER_CEIL_Y : OVER_FLOOR_Y + 3.1,
     paid,
     gate,
     free,

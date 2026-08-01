@@ -186,8 +186,16 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
           sur un quai de deux cent vingt mètres. */}
       {detail <= 2 && place.accesses.map((a, k) => {
         const hang = Math.max(0.06, layout.canopyY - PLATFORM_TOP - plateY(a.kind) - 0.31);
+        // Devant une volée MONTANTE, la plaque se recule d'un mètre : posée au
+        // droit du nez comme sur une trémie, elle se retrouvait à l'intérieur
+        // des premières marches. On lit une plaque avant de s'engager, jamais
+        // en montant.
+        const rising = place.mainRise === 'up'
+          && a.kind === 'stairs'
+          && Math.abs(a.z - place.mainStair.z) < 0.01;
+        const plateZ = a.z - a.halfZ + (rising ? -1.05 : 0.1);
         return (
-        <group name="plaque-accès" key={`ap${k}`} position={[a.x, PLATFORM_TOP + plateY(a.kind), a.z - a.halfZ + 0.1]}>
+        <group name="plaque-accès" key={`ap${k}`} position={[a.x, PLATFORM_TOP + plateY(a.kind), plateZ]}>
           {/* Suspente jusqu'à l'auvent : la plaque flottait, sans rien. */}
           <mesh position={[0, 0.31 + hang / 2, 0]} material={mats.strut}>
             <boxGeometry args={[0.05, hang, 0.05]} />

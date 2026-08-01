@@ -268,7 +268,7 @@ const FR: Strings = {
     fullscreenTitle: 'Plein écran (F)',
     stationDevelopment: {
       title: 'Gare en cours de développement',
-      detail: 'Cet espace souterrain est encore en construction.',
+      detail: 'Cet espace de la gare est encore en construction.',
     },
   },
   quality: {
@@ -396,7 +396,7 @@ const EN: Strings = {
     fullscreenTitle: 'Fullscreen (F)',
     stationDevelopment: {
       title: 'Station under development',
-      detail: 'This underground area is still being built.',
+      detail: 'This part of the station is still being built.',
     },
   },
   quality: {
@@ -525,7 +525,7 @@ const JA: Strings = {
     fullscreenTitle: '全画面表示（F）',
     stationDevelopment: {
       title: '駅構内は開発中です',
-      detail: 'この地下エリアは現在制作中です。',
+      detail: 'この駅構内エリアは現在制作中です。',
     },
   },
   quality: {

@@ -12,8 +12,11 @@ import assert from 'node:assert/strict';
 import { interiorFor } from '../src/data/stationInterior.ts';
 import { layoutFor } from '../src/data/stationLayouts.ts';
 import {
+  ASCENT_FLOOR_Y,
+  ASCENT_LEN,
+  DESCENT_LEN,
   PSD_X,
-  STAIR_LOWER_END,
+  STAIR_HALF_Z,
   STAIR_LOWER_Y,
   STAIR_WALK_HALF_X,
 } from '../src/data/stationGeometry.ts';
@@ -38,12 +41,20 @@ test('les trente gares déclarent un niveau de correspondance', () => {
   }
 });
 
-test('le hall se raccorde au couloir de la trémie, sans marche ni décrochement', () => {
+test('le hall se raccorde à son accès, sans marche ni décrochement', () => {
+  // Les deux sens se mesurent depuis le même point - le NEZ de l'accès, à
+  // 2,60 m en amont de son centre - et le hall commence exactement là où
+  // l'accès finit. C'est ce raccord qui garantit qu'on ne tombe pas dans un
+  // trou de sol au dernier pas.
+  const nose = ACCESS_Z - STAIR_HALF_Z;
   for (const { name, interior } of ALL) {
-    if (!interior.built) continue;
-    // Le couloir bas finit là, exactement, et à la même altitude.
-    assert.equal(interior.paid.z0, ACCESS_Z + STAIR_LOWER_END, name);
-    assert.equal(interior.floorY, STAIR_LOWER_Y, name);
+    if (interior.place === 'under') {
+      assert.equal(interior.paid.z0, nose + DESCENT_LEN, name);
+      assert.equal(interior.floorY, STAIR_LOWER_Y, name);
+    } else {
+      assert.equal(interior.paid.z0, nose + ASCENT_LEN, name);
+      assert.equal(interior.floorY, ASCENT_FLOOR_Y, name);
+    }
   }
 });
 
@@ -114,10 +125,15 @@ test('les bouches de sortie sont dans le hall libre, et fléchées par le relev�
   }
 });
 
-test('un hall n’est construit que du côté où l’accès est dessiné', () => {
-  // Les gares dont le hall est AU-DESSUS du quai attendent leur volée montante :
-  // elles déclarent le niveau, elles ne le construisent pas. Le jour où la
-  // volée existera, c'est cette liste qui bougera - et rien d'autre.
+test('les halls sont construits des deux côtés du quai, sauf Nippori', () => {
+  // Six gares ont leur billetterie AU-DESSUS des voies : les cinq tranchées, et
+  // Nippori que ses deux ponts-concours enjambent. Elles ont longtemps déclaré
+  // leur niveau sans le construire, faute de volée montante ; elle existe.
+  //
+  // Nippori reste à part, et pour une raison précise : ses ponts-concours SONT
+  // son niveau de correspondance, dessinés par sa charpente, sous-face à
+  // 5,10 m - la cote exacte d'un hall d'en haut. Y poser le hall générique
+  // reviendrait à bâtir deux fois la même chose, l'une dans l'autre.
   const over = ALL.filter((s) => s.interior.place === 'over').map((s) => s.name);
   assert.deepEqual(over, [
     'JY07 Nippori',
@@ -127,8 +143,14 @@ test('un hall n’est construit que du côté où l’accès est dessiné', () =
     'JY14 Mejiro',
     'JY22 Meguro',
   ]);
+  const unbuilt = ALL.filter((s) => !s.interior.built).map((s) => s.name);
+  assert.deepEqual(unbuilt, ['JY07 Nippori']);
   for (const { name, interior } of ALL) {
-    assert.equal(interior.built, interior.place === 'under', name);
+    if (!interior.built) continue;
+    // Un hall d'en haut passe au-dessus du gabarit de la rame ; un hall d'en
+    // bas passe sous la dalle. Aucun des deux ne traverse le quai.
+    if (interior.place === 'over') assert.ok(interior.floorY > 4.5, name);
+    else assert.ok(interior.ceilY < 0, name);
   }
 });
 
