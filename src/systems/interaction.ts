@@ -294,6 +294,14 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   };
   w.__prompt = () => ({ ...prompt });
   w.__held = () => useStore.getState().held;
+  // Mettre un objet dans la main sans passer par l'achat : juger le GESTE ne
+  // demande pas de rejouer la monnaie, et la visée d'une sonde dérive.
+  w.__give = (id: string) => {
+    const p = productById(id);
+    if (!p) return null;
+    useStore.getState().setHeld({ productId: p.id, sips: p.sips, maxSips: p.sips, opened: true });
+    return p.id;
+  };
   w.__machine = (id: string) => {
     const s = machineState(id);
     return {
