@@ -199,7 +199,10 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
         action: act,
         actionT: p.actionT,
         seated: false,
-        posed: p.state === 'waiting',
+        // Une HALTE vaut une attente : celui qui s'est arrêté devant le rayon
+        // frais du konbini ou devant un distributeur de titres fait le geste,
+        // il ne reste pas les bras ballants au milieu du hall.
+        posed: p.state === 'waiting' || (transit && p.delay > 0),
         strapSide: carrier ? carrier.handSide : 0,
         chatRole: p.chatRole,
         clipFall: (() => {

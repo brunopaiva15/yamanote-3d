@@ -1173,10 +1173,13 @@ export function deviceButton(): void {
  * fois par heure à Shinjuku - et il tient en soixante millisecondes d'onde
  * carrée. La version d'entrée et celle de sortie ne diffèrent pas : ce qui
  * change, c'est ce que dit l'afficheur.
+ *
+ * `gain` sert aux bips qui ne sont pas les nôtres : ceux de la file d'à côté,
+ * qui ponctuent le hall sans être adressés à personne (systems/fareGate).
  */
-export function gateBeep(): void {
+export function gateBeep(gain = 1): void {
   if (!nodes) return;
-  nodes.devBeep.triggerAttackRelease('D7', 0.075, slot('devBeep', Tone.now()), 0.5);
+  nodes.devBeep.triggerAttackRelease('D7', 0.075, slot('devBeep', Tone.now()), 0.5 * gain);
 }
 
 /**

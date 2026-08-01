@@ -45,6 +45,15 @@ export interface GateState {
   grantT: number;
   /** Sens dans lequel la validation a été faite. */
   grantDir: 1 | -1;
+  /**
+   * Validation d'un VOYAGEUR, tenue à part de celle du joueur.
+   *
+   * Elle allume le feu et fait le ピッ, et elle ne fait que cela : elle ne
+   * tient PAS les battants ouverts pour qui se présente derrière. Un portillon
+   * dont la baie reste béante parce que quelqu'un vient de valider laisserait
+   * passer sans payer - c'est ce que fait un talonneur, pas un portillon.
+   */
+  paxGrantT: number;
   /** Ce que la dalle de la borne affiche, et pour combien de temps encore. */
   verdict: GateVerdict | null;
   verdictT: number;
@@ -80,6 +89,7 @@ function ensure(): GateState[] {
       lightT: 0,
       grantT: 0,
       grantDir: 1 as 1 | -1,
+      paxGrantT: 0,
       verdict: null,
       verdictT: 0,
     }));
@@ -183,6 +193,36 @@ export function tapGate(id: string, dir: 1 | -1): boolean {
   return true;
 }
 
+/**
+ * Un VOYAGEUR passe sa carte : le ピッ, et le feu qui s'allume une seconde.
+ *
+ * C'EST LE SON D'UNE GARE JAPONAISE. Pas les annonces, pas les mélodies : ce
+ * petit bip toutes les deux secondes, vingt fois par minute, chacun le sien.
+ * Une ligne de portillons silencieuse pendant qu'une file la franchit s'entend
+ * tout de suite - c'est ce qui manquait au hall.
+ *
+ * Ce qu'il ne fait PAS : ouvrir la baie pour le joueur qui suivrait. Le
+ * portillon reste ce qu'il est - il s'ouvre pour qui a validé, et pour lui
+ * seul (voir `paxGrantT`).
+ *
+ * `dist` est la distance au joueur, en mètres : un bip à trente mètres à
+ * travers une dalle de béton ne s'entend pas, et on ne le joue pas.
+ */
+export function paxTapGate(passage: number, dist: number): void {
+  const list = ensure();
+  const s = list[passage];
+  if (!s) return;
+  s.paxGrantT = GRANT;
+  if (s.light === 'open') {
+    s.light = 'ok';
+    s.lightT = 1.1;
+  }
+  if (runtime.playerLevel !== 'concourse' || dist > 26) return;
+  // Le bip est SEC et près : il ne porte pas, il ponctue. Au-delà de vingt
+  // mètres, le hall l'a déjà avalé.
+  gateBeep(Math.max(0, 1 - dist / 26) ** 1.6);
+}
+
 // --- Blocage de la marche -------------------------------------------------
 
 /**
@@ -236,6 +276,7 @@ export function updateFareGates(dt: number): void {
     const s = list[i];
     const p = it.gate.passages[i];
     if (s.grantT > 0) s.grantT -= dt;
+    if (s.paxGrantT > 0) s.paxGrantT -= dt;
     if (s.lightT > 0) {
       s.lightT -= dt;
       if (s.lightT <= 0) s.light = 'open';

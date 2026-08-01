@@ -11,9 +11,9 @@
 // « à deux mètres devant moi » veut dire quelque chose.
 
 import { paxList } from './passengers';
-import { crowdList } from './platformCrowd';
+import { crowdAddressable, crowdList } from './platformCrowd';
 import { carToWorldZ, platformToWorld, PLATFORM_TOP } from './playerFrame';
-import { onPlatformDeck, runtime } from './runtime';
+import { runtime } from './runtime';
 
 /** Population d'origine du voyageur visé. */
 export type PaxScope = 'car' | 'platform';
@@ -67,7 +67,12 @@ const candidates: Candidate[] = [];
  * peut-être à un mètre de quelqu'un d'assis dans la rame - il y a une caisse
  * en acier et une baie vitrée entre les deux, et on ne s'adresse pas à un
  * voyageur au travers d'une vitre. Une fois à bord, la règle s'inverse : c'est
- * la foule du quai qui devient hors d'atteinte.
+ * la foule du quai qui devient hors d'atteinte. Et une fois DESCENDU dans le
+ * hall, elle s'inverse une troisième fois : c'est la foule d'en bas qu'on
+ * peut interpeller - celle qui fait la queue au konbini ou qui remonte des
+ * portillons - et celle du quai qui passe de l'autre côté d'une dalle de
+ * béton. `crowdAddressable` porte la règle, parce que c'est la foule qui sait
+ * à quel étage elle est (systems/platformCrowd).
  *
  * C'est aussi ce qui coupe un échange quand on descend au milieu d'une
  * réplique : l'interlocuteur n'est plus joignable, la bulle se ferme.
@@ -75,15 +80,13 @@ const candidates: Candidate[] = [];
 function collectCandidates(): void {
   candidates.length = 0;
   const aboard = runtime.playerFrame === 'car';
-  // Descendu dans le hall, la foule du quai est hors d'atteinte : elle est de
-  // l'autre côté d'une dalle. Le fichier écartait déjà « un voyageur dans une
-  // trémie, à moitié sous la dalle » ; il manquait le cas symétrique, celui du
-  // joueur passé dessous.
-  if (!aboard && onPlatformDeck()) {
+  // Hors de la rame, on ne parle qu'aux gens du MÊME ÉTAGE - la foule du quai
+  // quand on est sur la dalle, celle du hall quand on est descendu. C'est
+  // `crowdAddressable` qui tranche, parce que c'est la foule qui sait où elle
+  // est (systems/platformCrowd).
+  if (!aboard) {
     for (const p of crowdList) {
-      if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') continue;
-      // Un voyageur dans une trémie est à moitié sous la dalle : hors de portée.
-      if (p.y < -0.2) continue;
+      if (!crowdAddressable(p)) continue;
       platformToWorld(p.pos.x, p.pos.z, tmpPlat);
       candidates.push({
         scope: 'platform',
@@ -203,10 +206,6 @@ export function findNearbyPaxList(range: number, max = 8): PaxTarget[] {
 export function paxAnchor(scope: PaxScope, id: number): PaxTarget | null {
   // Même règle que la visée : on ne parle pas à travers la caisse.
   if (scope === 'car' && runtime.playerFrame !== 'car') return null;
-  // Descendu dans le hall, on ne parle plus à ceux qui attendent là-haut :
-  // c'est la même règle que « on ne parle pas à travers la caisse », appliquée
-  // à l'autre paroi.
-  if (scope === 'platform' && !onPlatformDeck()) return null;
   if (scope === 'car') {
     const p = paxList[id];
     if (!p || (p.state !== 'seated' && p.state !== 'standing')) return null;
@@ -223,9 +222,10 @@ export function paxAnchor(scope: PaxScope, id: number): PaxTarget | null {
       feminine: p.appearance.feminine,
     };
   }
+  // Et la même règle pour tenir l'échange : dès qu'on change d'étage ou qu'on
+  // remonte à bord, l'interlocuteur n'est plus joignable et la bulle se ferme.
   const p = crowdList[id];
-  if (!p) return null;
-  if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') return null;
+  if (!p || !crowdAddressable(p)) return null;
   platformToWorld(p.pos.x, p.pos.z, tmpPlat);
   const y = PLATFORM_TOP + p.y + headY(p.height, false) + p.bob;
   return {

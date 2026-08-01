@@ -18,28 +18,14 @@
 
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
-import {
-  ASCENT_LANDING_Y,
-  ASCENT_LEN,
-  ascentFloorY,
-  DESCENT_LEN,
-  DESCENT_LOWER_T,
-  descentFloorY,
-  PLATFORM_TOP,
-  PSD_X,
-  STAIR_WALK_HALF_X,
-} from '../data/stationGeometry';
+import { PLATFORM_TOP, PSD_X } from '../data/stationGeometry';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import { gateBlocks, passageAt } from './fareGate';
 import { platformFlip } from './playerFrame';
 import { runtime, type PlayerFrame, type PlayerLevel } from './runtime';
-import {
-  placementFor,
-  stairTopZ,
-  stairwellAt,
-  type StationPlacement,
-} from './stationPlacement';
+import { concourseFloorAt, mainAccessFloor } from './stationLevels';
+import { placementFor, stairwellAt, type StationPlacement } from './stationPlacement';
 
 /**
  * Sens du repère de marche : `u` est compté positivement vers le quai.
@@ -214,22 +200,11 @@ function platformZ(w: number): number {
  * est borgne, et s'y enfoncer ne mènerait qu'à un mur, deux mètres plus bas.
  */
 function stairFloorAt(p: StationPlacement, u: number, localZ: number): Region | null {
-  const main = p.mainStair;
-  if (p.interior.built && Math.abs(u - main.x) <= STAIR_WALK_HALF_X) {
-    const t = localZ - stairTopZ(main);
-    const up = p.mainRise === 'up';
-    const len = up ? ASCENT_LEN : DESCENT_LEN;
-    if (t >= 0 && t <= len) {
-      // L'étage bascule à MI-VOLÉE, et le repère est le même dans les deux
-      // sens : le linteau sous lequel on passe en descendant, le palier de
-      // mi-étage qu'on franchit en montant. Au-delà, on ne revient que par ces
-      // mêmes marches - c'est le seul point de bascule des deux étages.
-      const y = up ? ascentFloorY(t) : descentFloorY(t);
-      const crossed = up ? y > ASCENT_LANDING_Y : t > DESCENT_LOWER_T;
-      const level: PlayerLevel = crossed ? 'concourse' : 'platform';
-      return { frame: 'platform', y: PLATFORM_TOP + y, level };
-    }
-  }
+  // L'accès principal relie les deux étages, et il est le SEUL à le faire :
+  // c'est `systems/stationLevels` qui le décrit, pour le joueur comme pour la
+  // foule qui descend derrière lui.
+  const access = mainAccessFloor(p, u, localZ);
+  if (access) return { frame: 'platform', y: PLATFORM_TOP + access.y, level: access.level };
   const hit = stairwellAt(p, u, localZ);
   return hit ? { frame: 'platform', y: PLATFORM_TOP + hit.y, level: 'platform' } : null;
 }
@@ -249,16 +224,11 @@ function stairFloorAt(p: StationPlacement, u: number, localZ: number): Region | 
  * pied - ce qui aurait été pire que de ne pas les dessiner du tout.
  */
 function concourseFloorY(p: StationPlacement, u: number, localZ: number): number | null {
-  const it = p.interior;
-  if (!it.built) return null;
-  if (u < it.paid.x0 || u > it.paid.x1) return null;
-  if (localZ < it.paid.z0 || localZ > it.free.z1) return null;
-  for (const o of it.obstacles) {
-    if (u >= o.x0 && u <= o.x1 && localZ >= o.z0 && localZ <= o.z1) return null;
-  }
+  const floor = concourseFloorAt(p, u, localZ);
+  if (floor === null) return null;
   const passage = passageAt(u, localZ);
   if (passage >= 0 && gateBlocks(passage)) return null;
-  return it.floorY;
+  return floor;
 }
 
 /**

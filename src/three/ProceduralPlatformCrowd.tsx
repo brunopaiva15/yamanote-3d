@@ -292,8 +292,11 @@ export function ProceduralPlatformCrowd() {
       // Le bras du quai suit les mêmes familles de gestes que la rame (le
       // corps de secours n'a qu'un bras articulé : c'est le droit qui joue).
       const act = p.action === 'shift' ? 'none' : p.action;
-      const onPhone = usesHeldPose(act) && p.state === 'waiting';
-      const arm = p.state === 'waiting' ? crowdArmTarget(act, p.actionT) : null;
+      // Une HALTE dans le hall vaut une attente sur le quai : celui qui s'est
+      // arrêté devant un rayon fait le geste (voir LibraryPlatformCrowd).
+      const posed = p.state === 'waiting' || p.delay > 0;
+      const onPhone = usesHeldPose(act) && posed;
+      const arm = posed ? crowdArmTarget(act, p.actionT) : null;
       const armR = g.getObjectByName('crowd-arm-r');
       if (armR) {
         armR.rotation.x = arm ? arm[0] : 0;

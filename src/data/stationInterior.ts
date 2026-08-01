@@ -34,7 +34,7 @@
 // sur une volée posée dessus qui perce l'auvent. Ce sont deux ouvrages, pas un
 // signe qui change (voir data/stationGeometry).
 
-import { konbiniPlan } from './konbiniPlan.ts';
+import { konbiniPlan, type KonbiniPlan } from './konbiniPlan.ts';
 import { layoutFor } from './stationLayouts.ts';
 import { stationExits } from './lines.ts';
 import {
@@ -256,6 +256,56 @@ const PILASTER_DEPTH = 0.22;
 const PILASTER_LEN = 0.62;
 
 /**
+ * Épaisseur des parois du hall.
+ *
+ * Publiée parce que la BOUCHE DE SORTIE se mesure depuis le nu du fond, et que
+ * deux consommateurs doivent tomber d'accord dessus au centimètre : le rendu
+ * (`three/station/Concourse`) qui l'empile, et les voyageurs qui la montent
+ * (`systems/concourseRoute`).
+ */
+export const HALL_WALL_T = 0.24;
+
+// --- La volée d'une bouche de sortie -------------------------------------
+//
+// Ce qu'on voit au fond d'une bouche n'est pas un aplat lumineux : c'est une
+// VOLÉE, six marches prises à contre-jour, et le jour derrière elles. Elle ne
+// se monte pas - `systems/walkable` arrête le joueur au nu du fond, la volée
+// vers la rue reste à dessiner (docs/STATION_INTERIOR, phase 4).
+//
+// Les VOYAGEURS, eux, s'en vont par là, et il fallait bien qu'ils aillent
+// quelque part : ils s'y engagent et montent jusqu'à passer derrière le
+// linteau. C'est la même règle que dans une trémie de quai - on ne s'efface
+// pas à découvert, on s'efface là où le bâti cache -, et elle demande le
+// PROFIL de la volée, pas seulement son image. D'où ces cotes ici : le rendu
+// les empile, la marche des PNJ les monte.
+
+/** Marches dessinées au fond d'une bouche. */
+export const EXIT_MOUTH_STEPS = 6;
+/** Giron, hauteur de la première contremarche, puis des suivantes. */
+export const EXIT_MOUTH_GOING = 0.31;
+export const EXIT_MOUTH_FIRST = 0.18;
+export const EXIT_MOUTH_RISE = 0.35;
+/** Nez de la première marche, mesuré depuis le NU INTÉRIEUR du fond du hall. */
+export const EXIT_MOUTH_Z0 = HALL_WALL_T + 0.025;
+/** Fin de la volée : au-delà, la cage se ferme. */
+export const EXIT_MOUTH_END = EXIT_MOUTH_Z0 + EXIT_MOUTH_GOING * EXIT_MOUTH_STEPS;
+
+/**
+ * Altitude du sol dans une bouche, en `t` compté depuis le nu du fond du hall.
+ *
+ * Même convention que les volées de quai (`data/stationGeometry`) : la ligne
+ * des nez relevée d'une demi-contremarche, qui passe par le milieu de chaque
+ * giron. Un profil en marches ferait sauter le marcheur de trente-cinq
+ * centimètres tous les trente et un.
+ */
+export function exitMouthFloorY(t: number): number {
+  const u = (t - EXIT_MOUTH_Z0) / EXIT_MOUTH_GOING;
+  if (u <= 0) return 0;
+  if (u <= 0.5) return EXIT_MOUTH_FIRST * (u / 0.5);
+  return EXIT_MOUTH_FIRST + Math.min(EXIT_MOUTH_STEPS - 1, u - 0.5) * EXIT_MOUTH_RISE;
+}
+
+/**
  * Hauteur du niveau au-dessus du quai, quand il est dessus.
  *
  * Ce n'est pas la symétrique du niveau bas, et ce n'est pas non plus un chiffre
@@ -368,6 +418,31 @@ const SPECS: readonly Spec[] = [
 const FLUSH = new Set<FixtureKind>(['map', 'extinguisher', 'aed', 'notice']);
 
 /**
+ * Un point du repère de la BOUTIQUE, rabattu dans celui du quai.
+ *
+ * Deux lignes, et elles sont l'exact inverse du quart de tour que le rendu
+ * applique à son groupe (`three/station/Fixtures`, `yaw`) : une façade qui
+ * regarde vers +x tourne son x local vers -z, et l'autre vers +z. Se tromper de
+ * sens ne se verrait pas au rendu - il est symétrique - mais mettrait la porte
+ * du côté du mur.
+ *
+ * Trois lecteurs en dépendent maintenant, et c'est pour cela qu'elle est
+ * publiée : les emprises qui barrent (`interiorSolids`, juste dessous), les
+ * clients qui entrent faire leurs courses (`systems/concourseRoute`), et le
+ * test qui tient les deux bouts.
+ */
+export function shopToHall(f: Fixture, lx: number, lz: number): { x: number; z: number } {
+  const cx = (f.rect.x0 + f.rect.x1) / 2;
+  const cz = (f.rect.z0 + f.rect.z1) / 2;
+  return f.facing === 1 ? { x: cx + lz, z: cz - lx } : { x: cx - lz, z: cz + lx };
+}
+
+/** L'agencement de CETTE boutique, aux cotes de son emprise. */
+export function shopPlan(f: Fixture): KonbiniPlan {
+  return konbiniPlan(f.rect.z1 - f.rect.z0, f.rect.x1 - f.rect.x0);
+}
+
+/**
  * Ce qu'un meuble oppose RÉELLEMENT à la marche.
  *
  * Pour tout le mobilier, c'est son emprise, et il n'y a rien à ajouter : un
@@ -377,24 +452,19 @@ const FLUSH = new Set<FixtureKind>(['map', 'extinguisher', 'aed', 'notice']);
  * parois - la devanture EN DEUX MORCEAUX, un de chaque côté de l'entrée - et
  * ses meubles, décrits une seule fois dans `data/konbiniPlan` et lus aussi bien
  * ici que par le rendu.
- *
- * Le rabattement du repère de la boutique dans celui du quai tient en quatre
- * lignes, et elles sont l'exact inverse du quart de tour que le rendu applique
- * à son groupe (`three/station/Fixtures`, `yaw`) : une façade qui regarde vers
- * +x tourne son x local vers -z, et l'autre vers +z. Se tromper de sens ne se
- * verrait pas au rendu - il est symétrique - mais mettrait la porte du côté du
- * mur.
  */
 function interiorSolids(f: Fixture): InteriorRect[] {
   if (f.kind !== 'konbini') return [f.rect];
-  const cx = (f.rect.x0 + f.rect.x1) / 2;
-  const cz = (f.rect.z0 + f.rect.z1) / 2;
-  const plan = konbiniPlan(f.rect.z1 - f.rect.z0, f.rect.x1 - f.rect.x0);
-  return plan.solids.map((s) =>
-    f.facing === 1
-      ? { x0: cx + s.z0, x1: cx + s.z1, z0: cz - s.x1, z1: cz - s.x0 }
-      : { x0: cx - s.z1, x1: cx - s.z0, z0: cz + s.x0, z1: cz + s.x1 },
-  );
+  return shopPlan(f).solids.map((s) => {
+    const a = shopToHall(f, s.x0, s.z0);
+    const b = shopToHall(f, s.x1, s.z1);
+    return {
+      x0: Math.min(a.x, b.x),
+      x1: Math.max(a.x, b.x),
+      z0: Math.min(a.z, b.z),
+      z1: Math.max(a.z, b.z),
+    };
+  });
 }
 
 // --- Construction ---------------------------------------------------------
