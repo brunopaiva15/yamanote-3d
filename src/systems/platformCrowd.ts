@@ -18,7 +18,14 @@ import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import { placementFor, stairTopZ, stairwellAt, type StationPlacement } from './stationPlacement';
 import { layoutFor } from '../data/stationLayouts';
-import { PSD_X, STAIR_FULL_LEN, STAIR_FULL_STEPS } from '../data/stationGeometry';
+import {
+  ASCENT_LEN,
+  ascentFloorY,
+  PSD_X,
+  STAIR_FULL_LEN,
+  STAIR_FULL_STEPS,
+  STAIR_WALK_HALF_X,
+} from '../data/stationGeometry';
 import {
   BUSY_BRIEF,
   isPairAction,
@@ -477,8 +484,25 @@ function nearestStair(p: StationPlacement, z: number) {
   return best;
 }
 
-/** Altitude du sol sous un voyageur : nulle sur le quai, négative dans une volée. */
+/**
+ * Altitude du sol sous un voyageur : nulle sur le quai, négative dans une
+ * trémie qui descend, POSITIVE sur une volée qui monte.
+ *
+ * Le troisième cas manquait, et il se voyait : là où l'accès principal monte
+ * (les cinq gares en tranchée), un voyageur engagé dans la volée gardait
+ * l'altitude du quai et se retrouvait planté jusqu'à la taille dans les
+ * marches. `stairwellAt` ne connaît que la descente - c'est le profil d'une
+ * cage, pas d'un ouvrage posé sur la dalle.
+ */
 function floorYAt(p: StationPlacement, x: number, z: number): number {
+  if (p.mainRise === 'up') {
+    const main = p.mainStair;
+    if (Math.abs(x - main.x) <= STAIR_WALK_HALF_X) {
+      const t = z - stairTopZ(main);
+      if (t >= 0 && t <= ASCENT_LEN) return ascentFloorY(t);
+    }
+    // Les autres trémies de la gare descendent comme partout ailleurs.
+  }
   return stairwellAt(p, x, z, STAIR_FULL_LEN, STAIR_FULL_STEPS)?.y ?? 0;
 }
 
@@ -510,9 +534,17 @@ function sendToStairs(p: CrowdPax, pl: StationPlacement, delay = 0): boolean {
   p.headPitch = 0;
   p.lookYaw = 0;
   p.delay = delay;
+  // Une volée qui MONTE est plus longue qu'une trémie : s'arrêter à la longueur
+  // d'une descente laissait le voyageur s'évanouir au milieu des marches, en
+  // plein champ. Il monte donc jusqu'en haut, où le tablier le cache.
+  const rising = pl.mainRise === 'up' && s === pl.mainStair;
   p.waypoints = [
     clampPos(s.x + lane, stairTopZ(s) - 1.5),
-    new THREE.Vector3(s.x + lane * 0.35, 0, stairTopZ(s) + STAIR_FULL_LEN),
+    new THREE.Vector3(
+      s.x + lane * 0.35,
+      0,
+      stairTopZ(s) + (rising ? ASCENT_LEN - 0.4 : STAIR_FULL_LEN),
+    ),
   ];
   p.wpi = 0;
   return true;
