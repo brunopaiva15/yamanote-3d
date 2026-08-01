@@ -26,9 +26,10 @@ import {
   makeRoofTexture,
   makeSocleTexture,
 } from '../../textures/city';
+import { gpuKit } from '../webgpu/kit';
 
 export interface CityMaterial {
-  material: THREE.MeshLambertMaterial;
+  material: THREE.Material;
   /** 0..1 : proportion de nuit, pilotée chaque frame. */
   night: { value: number };
   /** 0..1 : surfaces mouillées - elles foncent, et elles renvoient. */
@@ -42,6 +43,32 @@ export function makeCityMaterial(): CityMaterial {
   const facade = makeFacadeTexture();
   const roof = makeRoofTexture();
   const socle = makeSocleTexture();
+
+  // Mode Extraordinaire : la même ville, écrite en nœuds. Les textures et les
+  // trames sont les mêmes objets - seul le nuanceur change de langue.
+  const kit = gpuKit();
+  if (kit) {
+    const made = kit.makeCityMaterial({
+      facade,
+      roof,
+      socle,
+      facadeTile: FACADE_TILE,
+      roofScale: FACADE_TILE / ROOF_TILE,
+      socleTile: [SOCLE_TILE[0], SOCLE_TILE[1]],
+    });
+    return {
+      material: made.material,
+      night: made.uniforms.night,
+      wet: made.uniforms.wet,
+      snow: made.uniforms.snow,
+      dispose() {
+        made.material.dispose();
+        facade.dispose();
+        roof.dispose();
+        socle.dispose();
+      },
+    };
+  }
 
   const night = { value: 0 };
   const wet = { value: 0 };

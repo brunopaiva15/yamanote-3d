@@ -41,6 +41,24 @@ export default defineConfig({
       output: {
         codeSplitting: {
           groups: [
+            // Le build WebGPU de three (et le système de nœuds qui va avec)
+            // pèse à lui seul plus que tout le reste de three, et ne sert
+            // qu'au mode « Extraordinaire ». Il est isolé AVANT la règle
+            // générale pour qu'il reste dans le morceau chargé à la demande
+            // par three/webgpu/kit : sans cette ligne, il retomberait dans le
+            // morceau `three`, que tout le monde télécharge au démarrage.
+            // Le tronc commun de three (`three.core.js`) est revendiqué EN
+            // PREMIER par le morceau eager : il est importé par les deux
+            // builds, et sans cette règle il suivait le build WebGPU, qui
+            // redevenait alors une dépendance statique de tout le monde.
+            {
+              name: 'three',
+              test: /node_modules[\\/]three[\\/]build[\\/]three\.(core|module)\.js/,
+            },
+            {
+              name: 'three-webgpu',
+              test: /node_modules[\\/]three[\\/](build[\\/]three\.(webgpu|tsl)\.js|examples[\\/]jsm[\\/]tsl[\\/])/,
+            },
             { name: 'three', test: /node_modules[\\/](three|@react-three|postprocessing)[\\/]/ },
             { name: 'tone', test: /node_modules[\\/]tone[\\/]/ },
           ],

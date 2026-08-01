@@ -402,7 +402,14 @@ const SIZES: Record<FixtureKind, { len: number; depth: number }> = {
   ticket: { len: 3.4, depth: 0.72 },
   fareAdjust: { len: 1.0, depth: 0.72 },
   lockers: { len: 2.6, depth: 0.62 },
-  konbini: { len: 6.4, depth: 3.2 },
+  // Le konbini a grandi avec ce qu'il contient : 6,40 m suffisaient à une
+  // vitrine plaquée devant une boîte, pas à une boutique où l'on distingue le
+  // comptoir, la gondole, le mur de vitrines et le meuble à magazines. Sa
+  // PROFONDEUR, elle, ne bouge presque pas - c'est elle qui décide des gares
+  // qui l'obtiennent, et 3,40 m est la dernière cote qui laisse encore deux
+  // mètres de passage dans le hall le plus étroit de la boucle (Takadanobaba,
+  // 5,40 m entre parois). Un centimètre de plus et deux gares le perdaient.
+  konbini: { len: 7.8, depth: 3.4 },
   vending: { len: 1.2, depth: 0.78 },
   vendingFood: { len: 1.2, depth: 0.78 },
   stamp: { len: 1.1, depth: 0.68 },

@@ -6,32 +6,20 @@
 // procéduraux n'ont pas. Ils ont leur propre repli - un pack animalier absent
 // ou illisible laisse simplement le quai sans chiens.
 
-import { Component, Suspense, type ReactNode } from 'react';
+import { Suspense } from 'react';
 import { initPlatformCrowd } from '../systems/platformCrowd';
 import { useAnimalManifest } from './characters/animals';
 import { useCharacterManifest } from './characters/manifest';
+import { ModelErrorBoundary } from './characters/ModelErrorBoundary';
 import { LibraryPlatformCrowd } from './LibraryPlatformCrowd';
 import { PlatformPets } from './PlatformPets';
 import { ProceduralPlatformCrowd } from './ProceduralPlatformCrowd';
-
-class ModelErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError(): { failed: boolean } {
-    return { failed: true };
-  }
-  componentDidCatch(error: unknown): void {
-    console.warn('Modèles de foule de quai illisibles, rendu procédural :', error);
-  }
-  render(): ReactNode {
-    return this.state.failed ? this.props.fallback : this.props.children;
-  }
-}
 
 function Pets() {
   const animals = useAnimalManifest();
   if (!animals) return null;
   return (
-    <ModelErrorBoundary fallback={null}>
+    <ModelErrorBoundary what="Modèles animaliers" fallback={null}>
       <Suspense fallback={null}>
         <PlatformPets manifest={animals} />
       </Suspense>
@@ -45,7 +33,7 @@ export function PlatformCrowd() {
   if (manifest === undefined) return null;
   if (manifest === null) return <ProceduralPlatformCrowd />;
   return (
-    <ModelErrorBoundary fallback={<ProceduralPlatformCrowd />}>
+    <ModelErrorBoundary what="Modèles de foule de quai" fallback={<ProceduralPlatformCrowd />}>
       <Suspense fallback={null}>
         <LibraryPlatformCrowd manifest={manifest} />
       </Suspense>

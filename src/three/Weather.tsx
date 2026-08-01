@@ -44,14 +44,15 @@
 // une aire nulle : rien à rastériser, pas de `discard`, pas de surcoût.
 
 import { useEffect, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
 import { CANOPY_Y, PLATFORM_DEPTH, PSD_X } from '../data/stationGeometry';
 import { runtime } from '../systems/runtime';
 import { weather } from '../systems/weather';
 import { stationOcclusion } from '../systems/stationOcclusion';
-import { qualityLevel, usePerf, type PerfLevel } from '../systems/perf';
+import { qualityLevel, usePerf, type Quality } from '../systems/perf';
+import { gpuKit, type PrecipitationField, type PrecipitationParams } from './webgpu/kit';
 
 /**
  * Demi-emprise du volume de précipitation (m).
@@ -76,7 +77,13 @@ const SNOW_FALL = 1.1;
  * triangles - le tiers d'un seul immeuble de la ville - pour un seul appel de
  * rendu.
  */
-function counts(level: PerfLevel): { rain: number; snow: number } {
+function counts(quality: Quality): { rain: number; snow: number } {
+  // Le mode Extraordinaire intègre la précipitation dans un nuanceur de calcul
+  // et ne dessine plus qu'une position par sommet : le champ peut être trois
+  // fois plus dense pour un sommet devenu trois fois moins cher. Sous une
+  // averse, c'est le changement le plus visible du mode.
+  if (quality === 'extraordinary') return { rain: 11000, snow: 5200 };
+  const level = qualityLevel(quality);
   if (level <= 1) return { rain: 3200, snow: 1600 };
   if (level === 2) return { rain: 2400, snow: 1200 };
   if (level === 3) return { rain: 1600, snow: 900 };
@@ -159,17 +166,17 @@ void main() {
   gl_FragColor = vec4(uColor, a);
 }`;
 
-interface Field {
-  mesh: THREE.Mesh;
-  geo: THREE.InstancedBufferGeometry;
-  mat: THREE.ShaderMaterial;
-  drift: THREE.Vector3;
-}
-
 /** Teinte de référence des traces : la précipitation tire vers le blanc. */
 const WHITE = new THREE.Color('#ffffff');
 
-function makeField(count: number, round: boolean): Field {
+/**
+ * Le champ de précipitation GLSL - le chemin historique, celui des six
+ * qualités WebGL. Son jumeau WebGPU (three/webgpu/impl/precipitation) intègre
+ * les positions dans un nuanceur de calcul ; les deux exposent le même
+ * `PrecipitationField`, si bien que la logique météo ci-dessous est la même
+ * mot pour mot d'un moteur à l'autre.
+ */
+function makeFieldGL(count: number, round: boolean): PrecipitationField {
   // Le quad est écrit à la main plutôt que pris d'une PlaneGeometry : celle-ci
   // devrait être conservée pour être libérée, et la libérer libérerait les
   // tampons que la géométrie instanciée lui emprunte.
@@ -238,7 +245,37 @@ function makeField(count: number, round: boolean): Field {
   // décor opaque, lui, qui a écrit sa profondeur au passage précédent.
   mesh.renderOrder = -1;
   mesh.visible = false;
-  return { mesh, geo, mat, drift: new THREE.Vector3() };
+
+  const drift = new THREE.Vector3();
+  const u = mat.uniforms;
+  return {
+    mesh,
+    setCount(n: number) {
+      geo.instanceCount = Math.max(1, Math.min(count, n));
+    },
+    update(dt: number, p: PrecipitationParams) {
+      // La dérive est GLOBALE : toutes les gouttes partagent la même, et c'est
+      // la graine d'instance qui les distingue. C'est la limite du chemin
+      // WebGL, et exactement ce que le nuanceur de calcul lève.
+      drift.addScaledVector(p.vel, dt);
+      wrapDrift(drift);
+      (u.uDrift.value as THREE.Vector3).copy(drift);
+      (u.uCam.value as THREE.Vector3).copy(p.cam);
+      (u.uVel.value as THREE.Vector3).copy(p.vel);
+      (u.uSize.value as THREE.Vector2).copy(p.size);
+      u.uSwirl.value = p.swirl;
+      (u.uColor.value as THREE.Color).copy(p.color);
+      u.uOpacity.value = p.opacity;
+      (u.uCar.value as THREE.Vector4).copy(p.car);
+      (u.uShelter.value as THREE.Vector4).copy(p.shelter);
+      (u.uShelterZ.value as THREE.Vector2).copy(p.shelterZ);
+      u.uTime.value = (u.uTime.value + dt) % 1000;
+    },
+    dispose() {
+      geo.dispose();
+      mat.dispose();
+    },
+  };
 }
 
 /** Replie une dérive dans [0, span) : la précision du float y survit sans fin. */
@@ -249,25 +286,43 @@ function wrapDrift(v: THREE.Vector3): void {
 }
 
 export function Weather() {
-  const level = usePerf((s) => qualityLevel(s.quality));
-  const { rain: rainCount, snow: snowCount } = counts(level);
+  const quality = usePerf((s) => s.quality);
+  const gl = useThree((state) => state.gl);
+  const { rain: rainCount, snow: snowCount } = counts(quality);
 
-  const built = useMemo(
-    () => ({ rain: makeField(rainCount, false), snow: makeField(snowCount, true) }),
-    [rainCount, snowCount],
-  );
+  const built = useMemo(() => {
+    const kit = gpuKit();
+    const make = (count: number, round: boolean) =>
+      kit ? kit.makePrecipitation(gl, count, round, BOX) : makeFieldGL(count, round);
+    return { rain: make(rainCount, false), snow: make(snowCount, true) };
+  }, [gl, rainCount, snowCount]);
 
   useEffect(
     () => () => {
-      for (const f of [built.rain, built.snow]) {
-        f.geo.dispose();
-        f.mat.dispose();
-      }
+      built.rain.dispose();
+      built.snow.dispose();
     },
     [built],
   );
 
-  const scratch = useMemo(() => ({ cam: new THREE.Vector3(), tone: new THREE.Color() }), []);
+  const scratch = useMemo(
+    () => ({
+      cam: new THREE.Vector3(),
+      tone: new THREE.Color(),
+      params: {
+        cam: new THREE.Vector3(),
+        vel: new THREE.Vector3(),
+        size: new THREE.Vector2(),
+        swirl: 0,
+        color: new THREE.Color(),
+        opacity: 0,
+        car: new THREE.Vector4(),
+        shelter: new THREE.Vector4(),
+        shelterZ: new THREE.Vector2(),
+      } satisfies PrecipitationParams,
+    }),
+    [],
+  );
 
   useFrame(({ camera, scene }, rawDt) => {
     const dt = Math.min(0.05, Math.max(0, rawDt));
@@ -290,56 +345,51 @@ export function Weather() {
     if (scene.fog instanceof THREE.Fog) scratch.tone.copy(scene.fog.color);
     else scratch.tone.set('#c9d6e2');
 
-    for (const [f, amount, fall, round] of [
-      [built.rain, weather.rain, RAIN_FALL, false],
-      [built.snow, weather.snow, SNOW_FALL, true],
+    const p = scratch.params;
+    for (const [f, amount, fall, cap, round] of [
+      [built.rain, weather.rain, RAIN_FALL, rainCount, false],
+      [built.snow, weather.snow, SNOW_FALL, snowCount, true],
     ] as const) {
       const visible = amount > 0.015;
       f.mesh.visible = visible;
       if (!visible) continue;
-      const u = f.mat.uniforms;
 
       // Une averse ne tombe pas plus vite qu'une bruine : elle tombe plus
       // DRU. C'est le nombre de traces affichées qui varie, pas leur vitesse -
       // d'où le découpage du tampon d'instances plutôt qu'un fondu d'opacité,
       // qui donnerait une pluie fantôme.
-      const cap = round ? snowCount : rainCount;
-      f.geo.instanceCount = Math.max(1, Math.round(cap * Math.min(1, amount)));
+      f.setCount(Math.round(cap * Math.min(1, amount)));
 
-      const vel = u.uVel.value as THREE.Vector3;
-      vel.set(gust * (round ? 0.8 : 0.45), -fall, along + gust * 0.3);
-      f.drift.addScaledVector(vel, dt);
-      wrapDrift(f.drift);
-      (u.uDrift.value as THREE.Vector3).copy(f.drift);
-      (u.uCam.value as THREE.Vector3).copy(scratch.cam);
-      u.uTime.value = (u.uTime.value + dt) % 1000;
+      p.cam.copy(scratch.cam);
+      p.vel.set(gust * (round ? 0.8 : 0.45), -fall, along + gust * 0.3);
 
       // Longueur de la trace : c'est la distance parcourue pendant le temps de
       // pose de l'œil, donc elle s'allonge avec la vitesse. À quatre-vingt-dix,
       // une goutte trace un mètre vingt.
-      const speed = vel.length();
-      const size = u.uSize.value as THREE.Vector2;
+      const speed = p.vel.length();
       // Largeur : une trace de moins de deux ou trois pixels disparaît dans
       // l'échantillonnage. À dix mètres et 70° de champ, un pixel vaut treize
       // millimètres - d'où ces trois centimètres et demi, qui ne sont pas la
       // largeur d'une goutte mais celle de sa TRACE.
-      if (round) size.set(0.07 + 0.04 * amount, 0.07 + 0.04 * amount);
-      else size.set(0.035 + 0.02 * amount, Math.min(1.15, 0.2 + speed * 0.036));
-      u.uSwirl.value = round ? 0.35 + 0.5 * weather.wind : 0;
+      if (round) p.size.set(0.07 + 0.04 * amount, 0.07 + 0.04 * amount);
+      else p.size.set(0.035 + 0.02 * amount, Math.min(1.15, 0.2 + speed * 0.036));
+      p.swirl = round ? 0.35 + 0.5 * weather.wind : 0;
 
-      (u.uColor.value as THREE.Color).copy(scratch.tone).lerp(WHITE, round ? 0.75 : 0.5);
-      u.uOpacity.value = round ? 0.72 : 0.45 + 0.25 * amount;
+      p.color.copy(scratch.tone).lerp(WHITE, round ? 0.75 : 0.5);
+      p.opacity = round ? 0.72 : 0.45 + 0.25 * amount;
 
       // Wagon : seul l'intérieur de NOTRE voiture existe, et c'est le seul
       // endroit d'où l'on regarde par une vitre.
-      (u.uCar.value as THREE.Vector4).set(
+      p.car.set(
         CONFIG.carHalfWidth + 0.05,
         CONFIG.carHeight + 0.12,
         runtime.trainZ,
         CONFIG.carHalfLength + 0.4,
       );
-      (u.uShelter.value as THREE.Vector4).set(PSD_X - 0.4, PSD_X + PLATFORM_DEPTH + 0.4, CANOPY_Y, sheltered);
-      (u.uShelterZ.value as THREE.Vector2).set(stationOcclusion.z0, stationOcclusion.z1);
+      p.shelter.set(PSD_X - 0.4, PSD_X + PLATFORM_DEPTH + 0.4, CANOPY_Y, sheltered);
+      p.shelterZ.set(stationOcclusion.z0, stationOcclusion.z1);
+
+      f.update(dt, p);
     }
   });
 

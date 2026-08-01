@@ -60,6 +60,11 @@ export interface Strings {
     intro: string;
     board: string;
     loading: string;
+    /**
+     * Sous-titre du voile d'attente : ce qui se construit pendant que l'écran
+     * est vide. « Chargement… » seul ne dit pas si c'est long ou si c'est cassé.
+     */
+    loadingNote: string;
     controls: readonly ControlHint[];
     /** Affiché à la place de `controls` sur un écran tactile. */
     touchControls: readonly TouchHint[];
@@ -217,7 +222,26 @@ export interface Strings {
       high: string;
       veryHigh: string;
       ultra: string;
+      extraordinary: string;
     };
+    /**
+     * Le mode Extraordinaire n'est pas offert partout, et il faut le dire en
+     * termes de ce que le joueur VOIT et de ce que ça lui coûte : personne
+     * n'achète un réglage parce qu'on lui parle d'espace écran.
+     * `beta` s'affiche quand il est choisi, `mobile` et `unsupported` quand
+     * l'option est grisée, `failed` quand le moteur a refusé de démarrer.
+     */
+    extraordinaryBeta: string;
+    extraordinaryMobile: string;
+    extraordinaryUnsupported: string;
+    extraordinaryFailed: string;
+    /**
+     * Le voile d'attente pendant que le moteur démarre : le paquet se
+     * télécharge, le périphérique se négocie et les nuanceurs se compilent.
+     * Plusieurs secondes, pendant lesquelles il n'y a rien à l'écran.
+     */
+    extraordinaryLoading: string;
+    extraordinaryLoadingNote: string;
   };
 
   /**
@@ -261,6 +285,7 @@ const FR: Strings = {
       "Une boucle de trente stations autour de Tokyo, en temps quasi réel. Rien à gagner : on s'assoit, on regarde la ville, on écoute les annonces.",
     board: 'Monter à bord',
     loading: 'Chargement…',
+    loadingNote: 'La rame se prépare : la gare, la ville, les voyageurs.',
     controls: [
       { keys: ['Clic'], action: 'Regarder autour' },
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: 'Marcher' },
@@ -394,7 +419,16 @@ const FR: Strings = {
       high: 'Haute',
       veryHigh: 'Très haute',
       ultra: 'Ultra',
+      extraordinary: 'Extraordinaire ⚠︎',
     },
+    extraordinaryBeta:
+      'Bêta : une lumière plus riche, de vrais reflets et un arrière-plan qui se floute. Très gourmand - pour les machines puissantes.',
+    extraordinaryMobile: 'Sur ordinateur seulement : trop lourd pour un téléphone.',
+    extraordinaryUnsupported: 'Ce navigateur ne sait pas encore l’afficher.',
+    extraordinaryFailed: 'Ce mode n’a pas pu démarrer ici : retour à Ultra.',
+    extraordinaryLoading: 'Préparation du mode Extraordinaire…',
+    extraordinaryLoadingNote:
+      'Le moteur se met en route et prépare ses effets. Quelques secondes la première fois.',
   },
   incidents: {
     label: 'Provoquer un incident',
@@ -437,6 +471,7 @@ const EN: Strings = {
       'A thirty-station loop around Tokyo, in near real time. Nothing to win: sit down, watch the city drift past, listen to the announcements.',
     board: 'Board the train',
     loading: 'Loading…',
+    loadingNote: 'Getting the train ready: the station, the city, the passengers.',
     controls: [
       { keys: ['Click'], action: 'Look around' },
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: 'Walk' },
@@ -570,7 +605,16 @@ const EN: Strings = {
       high: 'High',
       veryHigh: 'Very High',
       ultra: 'Ultra',
+      extraordinary: 'Extraordinary ⚠︎',
     },
+    extraordinaryBeta:
+      'Beta: richer light, real reflections and a background that softens. Very demanding - for powerful machines.',
+    extraordinaryMobile: 'Desktop only: too heavy for a phone.',
+    extraordinaryUnsupported: 'This browser cannot show it yet.',
+    extraordinaryFailed: 'This mode could not start here: back to Ultra.',
+    extraordinaryLoading: 'Preparing Extraordinary mode…',
+    extraordinaryLoadingNote:
+      'The renderer is starting up and building its effects. A few seconds the first time.',
   },
   incidents: {
     label: 'Trigger an incident',
@@ -614,6 +658,7 @@ const JA: Strings = {
       '東京をぐるりと一周する三十駅のループを、ほぼ実時間で。勝ち負けはありません。座って、流れる街を眺めて、車内放送に耳をすませるだけです。',
     board: '乗車する',
     loading: '読み込み中…',
+    loadingNote: '車両を準備しています：駅、街、乗客。',
     controls: [
       { keys: ['クリック'], action: '見まわす' },
       { keys: ['WASD', 'ZQSD', '↑←↓→'], action: '歩く' },
@@ -747,7 +792,15 @@ const JA: Strings = {
       high: '高',
       veryHigh: '最高',
       ultra: 'ウルトラ',
+      extraordinary: 'エクストラオーディナリー ⚠︎',
     },
+    extraordinaryBeta:
+      'ベータ版：光の回り込み、映り込み、背景のぼけ。負荷がとても高く、高性能なパソコン向けです。',
+    extraordinaryMobile: 'パソコン専用：スマートフォンには重すぎます。',
+    extraordinaryUnsupported: 'このブラウザーではまだ表示できません。',
+    extraordinaryFailed: 'この環境では起動できませんでした。ウルトラに戻します。',
+    extraordinaryLoading: 'エクストラオーディナリーを準備中…',
+    extraordinaryLoadingNote: '描画エンジンを起動し、効果を準備しています。初回は数秒かかります。',
   },
   incidents: {
     label: '異常時を発生させる',

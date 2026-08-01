@@ -26,7 +26,6 @@ import {
   makeGallerySignTexture,
   makeFareAdjustTexture,
   makeKonbiniInteriorTexture,
-  makeKonbiniSignTexture,
   makeLockerTexture,
   makeOfficeTexture,
   makeStampBookTexture,
@@ -37,6 +36,7 @@ import {
 import { FOOD_BRANDS, makeVendingHeaderTexture, vendingBrand } from '../../textures/vending';
 import type { Mats } from './materials';
 import { stationAd } from './adPool';
+import { Konbini } from './Konbini';
 import { VendingBox } from './VendingBox';
 import { TicketMachine } from './TicketMachine';
 import { usePickable } from './pickable';
@@ -58,7 +58,6 @@ function useFixtureKit(station: number) {
     const ticket = makeTicketFaceTexture();
     const fare = makeFareAdjustTexture();
     const locker = makeLockerTexture();
-    const konbiniSign = makeKonbiniSignTexture();
     const konbiniIn = makeKonbiniInteriorTexture();
     const map = makeAreaMapTexture(station);
     const stamp = makeStampTexture(station);
@@ -97,12 +96,11 @@ function useFixtureKit(station: number) {
       };
     });
     return {
-      textures: [ticket, fare, locker, konbiniSign, konbiniIn, map, stamp, book, stampSign,
+      textures: [ticket, fare, locker, konbiniIn, map, stamp, book, stampSign,
         office, gallery.ecute, gallery.atre],
       ticket: flat(ticket),
       fare: flat(fare),
       locker: flat(locker),
-      konbiniSign: flat(konbiniSign),
       konbiniIn: flat(konbiniIn),
       map: flat(map),
       stamp: flat(stamp),
@@ -118,7 +116,7 @@ function useFixtureKit(station: number) {
   useEffect(
     () => () => {
       for (const t of kit.textures) t.dispose();
-      for (const m of [kit.ticket, kit.fare, kit.locker, kit.konbiniSign, kit.konbiniIn,
+      for (const m of [kit.ticket, kit.fare, kit.locker, kit.konbiniIn,
         kit.map, kit.stamp, kit.book, kit.stampSign, kit.office,
         kit.gallery.ecute, kit.gallery.atre]) m.dispose();
       for (const set of [...kit.food, ...kit.drinks]) {
@@ -211,10 +209,9 @@ export function Fixtures({
         const yaw = f.facing === 1 ? Math.PI / 2 : -Math.PI / 2;
         return (
           <group key={`fx${i}`} position={[cx, it.floorY, cz]} rotation={[0, yaw, 0]}>
-            {/* `deviceId` doit être celui du registre d'appareils
-                (systems/devices, `cf${i}`) : c'est lui qui fait battre le volet
-                de CETTE machine-là quand on y ramasse sa boisson. Les deux
-                listes sont la même, dans le même ordre. */}
+            {/* `deviceId` est ce par quoi le meuble a un ÉTAT : c'est lui qui
+                garde le crédit inséré et qui fait battre le volet de cette
+                machine-là quand on y ramasse sa boisson. */}
             <Piece
               f={f}
               kit={kit}
@@ -222,6 +219,7 @@ export function Fixtures({
               height={it.ceilY - it.floorY}
               brand={it.brand ?? 'ecute'}
               deviceId={deviceId(f.kind, i)}
+              station={station}
             />
           </group>
         );
@@ -256,6 +254,7 @@ function Piece({
   height,
   brand,
   deviceId,
+  station,
 }: {
   f: Fixture;
   kit: Kit;
@@ -263,6 +262,7 @@ function Piece({
   height: number;
   brand: GalleryBrand;
   deviceId: string;
+  station: number;
 }) {
   const { w, d } = span(f);
   switch (f.kind) {
@@ -273,7 +273,7 @@ function Piece({
     case 'lockers':
       return <Lockers w={w} d={d} face={kit.locker} m={m} />;
     case 'konbini':
-      return <Konbini w={w} d={d} height={height} kit={kit} m={m} />;
+      return <Konbini w={w} d={d} height={height} station={station} m={m} />;
     case 'vending':
       return (
         <VendingBox w={w} d={d} set={kit.drinks[f.slot % kit.drinks.length]} m={m} deviceId={deviceId} />
@@ -336,77 +336,6 @@ function Lockers({ w, d, face, m }: { w: number; d: number; face: THREE.Material
       </mesh>
       <mesh position={[bank / 2, 0.86, d / 2 + 0.01]} material={m.accent}>
         <boxGeometry args={[colW - 0.16, 0.12, 0.03]} />
-      </mesh>
-    </group>
-  );
-}
-
-/**
- * Le konbini : ce n'est pas un meuble, c'est une PIÈCE.
- *
- * Trois parois pleines, une devanture entièrement vitrée sous un bandeau
- * d'enseigne allumé, et derrière le verre l'intérieur peint - gondoles,
- * vitrine réfrigérée, lumière franche. C'est le point le plus lumineux du hall,
- * et c'est ce qui le fait voir de l'autre bout.
- */
-function Konbini({
-  w,
-  d,
-  height,
-  kit,
-  m,
-}: {
-  w: number;
-  d: number;
-  height: number;
-  kit: Kit;
-  m: Mats;
-}) {
-  const SIGN_H = 0.62;
-  // La dalle de plafond fait douze centimètres : la coque s'arrête dessous,
-  // elle ne la traverse pas.
-  const shell = height - 0.14;
-  const glassH = shell - SIGN_H - 0.1;
-  return (
-    <group>
-      {/* Coque : fond et joues, jusqu'au plafond. */}
-      <mesh position={[0, shell / 2, -d / 2 + 0.06]} material={m.hall}>
-        <boxGeometry args={[w, shell, 0.12]} />
-      </mesh>
-      {[-1, 1].map((s) => (
-        <mesh key={`side${s}`} position={[(s * (w - 0.12)) / 2, shell / 2, 0]} material={m.hall}>
-          <boxGeometry args={[0.12, shell, d]} />
-        </mesh>
-      ))}
-      {/* Intérieur peint, plaqué juste derrière la vitre. */}
-      <mesh position={[0, glassH / 2 + 0.1, -d / 2 + 0.16]} material={kit.konbiniIn}>
-        <planeGeometry args={[w - 0.3, glassH - 0.2]} />
-      </mesh>
-      {/* Devanture vitrée pleine hauteur, et ses deux meneaux. */}
-      <mesh position={[0, glassH / 2 + 0.1, d / 2 - 0.02]} material={m.glass}>
-        <planeGeometry args={[w - 0.24, glassH]} />
-      </mesh>
-      {[-1, 1].map((s) => (
-        <mesh
-          key={`mullion${s}`}
-          position={[s * w * 0.16, glassH / 2 + 0.1, d / 2 - 0.01]}
-          material={m.metal}
-        >
-          <boxGeometry args={[0.06, glassH, 0.05]} />
-        </mesh>
-      ))}
-      {/* Seuil de porte coulissante, au milieu : le rail et sa bande jaune. */}
-      <mesh position={[0, 0.015, d / 2 - 0.1]} material={m.metal}>
-        <boxGeometry args={[w * 0.32, 0.03, 0.16]} />
-      </mesh>
-      {/* Bandeau d'enseigne, allumé. */}
-      {/* La face de l'enseigne avance légèrement devant le cadre : posée sur
-          son nu exact, elle partageait son tampon de profondeur et clignotait. */}
-      <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.034]} material={kit.konbiniSign}>
-        <planeGeometry args={[w - 0.24, SIGN_H]} />
-      </mesh>
-      <mesh position={[0, shell - SIGN_H / 2 - 0.06, d / 2 - 0.1]} material={m.frame}>
-        <boxGeometry args={[w - 0.18, SIGN_H + 0.08, 0.12]} />
       </mesh>
     </group>
   );

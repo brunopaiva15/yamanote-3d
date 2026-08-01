@@ -278,6 +278,100 @@ body,
   flex: none;
 }
 
+/* --- Voile d'attente, entre le clic et la première image ---
+   Même vert de ligne et même carton blanc cerné d'encre que l'écran d'accueil :
+   la bascule doit se lire comme une suite, pas comme un trou. */
+.render-boot {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #6cb032;
+  /* Au-dessus de tout, y compris du HUD, qui est déjà monté derrière. */
+  z-index: 40;
+}
+
+.render-boot-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  text-align: center;
+  background: var(--sticker);
+  color: var(--sticker-ink);
+  border: 3px solid var(--ink-line);
+  border-radius: 22px;
+  padding: 24px 28px;
+  box-shadow: 0 6px 0 var(--ink-line);
+}
+
+.render-boot-card strong {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.render-boot-card small {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #5c666d;
+}
+
+/* Un anneau qui tourne : la seule chose qui distingue « ça travaille » de
+   « c'est figé » quand il n'y a aucune progression à montrer. */
+.render-boot-spinner {
+  width: 30px;
+  height: 30px;
+  border: 4px solid #d5dade;
+  border-top-color: #6cb032;
+  border-radius: 50%;
+  animation: render-boot-spin 900ms linear infinite;
+}
+
+@keyframes render-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mouvement réduit : l'anneau cesse de tourner et se contente de respirer. */
+@media (prefers-reduced-motion: reduce) {
+  .render-boot-spinner {
+    animation: render-boot-pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes render-boot-pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+}
+
+/* Avertissement du mode Extraordinaire (bêta WebGPU) et repli sur Ultra. */
+.quality-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #7a5a1e;
+  background: #fdf3dc;
+  border: 1px solid #e8d29a;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+/* En cours de partie, le même message se pose au-dessus de la barre du HUD. */
+.quality-note-hud {
+  position: fixed;
+  left: 12px;
+  bottom: 92px;
+  max-width: min(340px, calc(100vw - 24px));
+  z-index: 24;
+  pointer-events: none;
+}
+
 .start-time-row {
   display: flex;
   align-items: center;
