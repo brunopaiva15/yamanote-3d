@@ -2176,6 +2176,26 @@ que chaque texte a son MP3, que chaque MP3 est là, et qu'aucun ne traîne sans
 la suite de tests - pas le rendu sonore, trois semaines plus tard, dans une
 gare qu'on ne visitait plus.
 
+**Quinze gares attendent leur regravure.** Le relevé de janvier 2026 a corrigé
+le côté d'ouverture de quinze gares (voir *Les gares*), et une annonce d'arrivée
+DIT ce côté : 「お出口は。左側です。」. Le texte a donc changé, la clé de clip
+avec lui, et comme le repli a été supprimé, **ces quinze gares sont muettes**
+tant que les MP3 ne sont pas regravés - 128 clips, arrivée et approche, japonais
+et anglais, à bord et au quai. Tokyo, Akihabara, Okachimachi, Uguisudani,
+Nishi-Nippori, Tabata, Komagome, Ikebukuro, Mejiro, Shin-Ōkubo, Shinjuku,
+Ebisu, Gotanda, Tamachi et Shimbashi.
+
+C'est exactement le cas que `tests/announcementClips` est là pour attraper, et
+il l'a attrapé. La regravure est incrémentale :
+
+```bash
+python scripts/announcements-gen.py textes.json kokoro-v1.0.onnx \
+    voices-v1.0.bin public/audio/announcements src/data/pa-manifest.ts --reuse
+```
+
+`--reuse` ne synthétise que les clips absents et supprime au passage ceux que
+plus personne ne réclame : les 200 annonces déjà en place ne dérivent pas.
+
 Le numéro de voie annoncé est le vrai (`data/platforms`), y compris les voies
 secondaires d'Ikebukuro et d'Ōsaki. Les clips ne sont gravés que pour le sens
 réellement circulé (`DIRECTIONS` dans `scripts/announcements-export.ts`) : dans
