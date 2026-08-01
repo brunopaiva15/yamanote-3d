@@ -34,6 +34,13 @@
 // (MELODY_OUTSIDE / MELODY_INSIDE), pour qu'elle sonne DEPUIS LA GARE sans
 // écraser le reste, et reste franchement audible d'une voiture à quai.
 //
+// Les PORTES PALIÈRES, elles, ont leur propre bouche, et c'est une troisième
+// ligne : l'avertisseur d'ouverture ne sort ni des diffuseurs du wagon ni de
+// ceux de l'auvent, mais d'un petit haut-parleur vissé sur le linteau de
+// chaque baie. On l'entend donc DEVANT soi, à hauteur d'épaule et à un pas -
+// et c'est à cela qu'on sait quelle porte s'ouvre (voir data/psdOpenChime et
+// le bloc « L'avertisseur des PORTES PALIÈRES » plus bas).
+//
 // Annonces vocales : elles passent TOUTES par un clip pré-généré (Kokoro, voir
 // systems/speech.ts), joué par audioManager sur le bus « PA » et donc panné
 // comme le reste, sous son souffle de ligne (paVoiceOpen/Close). Il n'y a plus
@@ -64,6 +71,7 @@ import {
   MELODY_REPEAT_GAP_S,
   SYNTH_MELODY_DURATION_S,
 } from '../data/melodies';
+import { PSD_CHIME_DURATION, PSD_CHIME_NOTE_HOLD, psdOpenChimeScore } from '../data/psdOpenChime';
 import { STATIONS } from '../data/stations';
 import {
   buildDepartureContext,
@@ -115,6 +123,12 @@ interface Nodes {
   platGain: Tone.Gain;
   platLp: Tone.Filter;
   platTaps: PlatformTap[];
+  // Avertisseur des portes palières : sa propre voix, sa propre ligne de
+  // diffusion (voir « Le signal d'ouverture des portes palières » plus bas).
+  psdChime: Tone.PolySynth<Tone.Synth>;
+  psdChimeClick: Tone.NoiseSynth;
+  psdChimeDoor: Tone.Gain;
+  psdTaps: PlatformTap[];
   hissGain: Tone.Gain;
   paClick: Tone.NoiseSynth;
   platHissGain: Tone.Gain;
@@ -218,6 +232,18 @@ const CABIN_VOICE_OUTSIDE = 0.08;
 const PLATFORM_TAPS = 6;
 
 /**
+ * Prises de l'avertisseur des PORTES PALIÈRES : les baies dont on entend le
+ * petit haut-parleur de linteau.
+ *
+ * Une baie tous les cinq mètres environ, et un avertisseur par baie : elles
+ * sonnent toutes ensemble, mais au-delà de la quatrième la source est à plus
+ * de quinze mètres et ne pèse plus rien devant celle qu'on a sous le nez.
+ * Quatre suffisent donc à donner la LIGNE - c'est ce qui fait qu'on entend le
+ * signal courir le long du quai plutôt que sortir d'un point.
+ */
+const PSD_TAPS = 4;
+
+/**
  * Une prise : son point de diffusion, et le robinet qui la coupe.
  *
  * Le robinet ne sert qu'aux quais qui compteraient moins de diffuseurs que le
@@ -273,6 +299,44 @@ const PLAT_BUS_OUTSIDE = 0.29;
  */
 const MELODY_INSIDE = 0.55;
 const MELODY_OUTSIDE = 0.32;
+
+/**
+ * Niveau de l'avertisseur des portes palières, à l'entrée de sa ligne.
+ *
+ * Il est calé pour que la somme des quatre prises, atténuation de distance
+ * comprise, arrive à l'oreille au niveau d'un signal de service : plus présent
+ * que les bips de fermeture (qui, eux, passent par la sono lointaine de
+ * l'auvent), très en dessous de la 発車メロディ. On est debout à un mètre de
+ * la baie ; ce qui semble modeste au nœud arrive fort au tympan.
+ */
+const PSD_CHIME_LEVEL = 0.07;
+
+/**
+ * Ce que les portes de la RAME laissent passer de l'avertisseur, portes
+ * fermées puis grandes ouvertes.
+ *
+ * Il ne s'agit pas d'un filtrage - le signal est déjà étroit - mais d'un
+ * simple retrait : le portique sonne à deux mètres, derrière une paroi de
+ * caisse et une baie vitrée. En pratique les portes de la rame sont déjà
+ * ouvertes quand le quai lance son signal ; ce robinet n'existe que pour les
+ * cas où elles ne le sont pas encore tout à fait.
+ */
+const PSD_CHIME_DOORS_CLOSED = 0.28;
+const PSD_CHIME_DOORS_OPEN = 1;
+
+/**
+ * Réflexions du linteau et du muret, les seules qu'on ajoute au signal.
+ *
+ * Neuf et dix-huit millisecondes : ce sont les trois et six mètres qui
+ * séparent la baie de la face de la rame et du fond du quai. Ce n'est PAS une
+ * réverbération - un avertisseur de quai n'en a pas, et une queue le
+ * transformerait en carillon. Deux retours très faibles suffisent à lui donner
+ * le grain d'un petit haut-parleur posé dehors plutôt qu'en studio.
+ */
+const PSD_CHIME_REFLECTIONS: [delay: number, gain: number][] = [
+  [0.009, 0.055],
+  [0.018, 0.026],
+];
 
 // Pose de l'auditeur, tenue à jour par la caméra (voir setListenerPose).
 const listenerPos: { x: number; y: number; z: number } = { x: 0, y: CONFIG.eyeHeight, z: 4.2 };
@@ -567,6 +631,81 @@ export async function startAudio(): Promise<void> {
       maxDistance: 120,
     });
     platGain.connect(gain);
+    gain.connect(panner);
+    panner.connect(master);
+    return { gain, panner };
+  });
+
+  // --- L'avertisseur des PORTES PALIÈRES ---------------------------------
+  //
+  // Le signal d'ouverture (data/psdOpenChime) ne sort ni de la rame ni de la
+  // sono de l'auvent : il sort des BAIES, d'un haut-parleur gros comme la main
+  // vissé sur chaque linteau. Il lui faut donc sa propre chaîne, et elle est
+  // faite pour imiter ce haut-parleur-là, pas pour sonner joli.
+  //
+  // Le timbre est presque un sinus : 82 % de fondamentale, 13 % de deuxième
+  // harmonique, 5,5 % de troisième, 1,8 % de cinquième - et rien sur la
+  // quatrième, dont la présence donnerait tout de suite le corps d'un carillon.
+  // C'est ce qui distingue un buzzer tonal d'un vibraphone : les partiels sont
+  // là pour rendre le signal PERÇANT, pas chantant.
+  const psdChime = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'custom', partials: [0.82, 0.13, 0.055, 0, 0.018] },
+    // Attaque franche, plateau constant, coupure nette : une enveloppe de
+    // machine. Le `decay` ne sert qu'à rejoindre le plateau ; il n'y a aucune
+    // décroissance musicale, et le `release` de douze millisecondes coupe le
+    // son au lieu de le laisser mourir.
+    envelope: { attack: 0.0025, decay: 0.01, sustain: 0.94, release: 0.012 },
+    // Trois décibels de marge sous la pleine échelle, mesurés sur le SIGNAL
+    // ENTIER à l'entrée du robinet de niveau : recouvrement des notes et
+    // réflexions sommés. Réglé par rendu hors ligne, parce que ce n'est pas la
+    // crête d'une note qui compte - à -3 dB par voix, la somme atteignait
+    // +2,9 dBFS. Le placement dans le mixage, lui, est PSD_CHIME_LEVEL.
+    volume: -8.9,
+  });
+  // La petite attaque électronique du haut-parleur : le tout début de l'onde
+  // qui met la membrane en route. Une milliseconde et demie de bruit très
+  // haut, sous le seuil de la conscience - on ne l'entend pas, on entend
+  // seulement que la note DÉMARRE au lieu d'apparaître.
+  const psdChimeClickHp = new Tone.Filter({ type: 'highpass', frequency: 3200, Q: 0.6 });
+  const psdChimeClick = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.0004, decay: 0.005, sustain: 0 },
+    volume: -30,
+  });
+  const psdChimeIn = new Tone.Gain(PSD_CHIME_LEVEL);
+  psdChime.connect(psdChimeIn);
+  psdChimeClick.chain(psdChimeClickHp, psdChimeIn);
+  // Le haut-parleur : petit, en plastique, sur un quai. Il ne monte pas.
+  const psdChimeLp = new Tone.Filter({ type: 'lowpass', frequency: 6200, rolloff: -12, Q: 0.5 });
+  const psdChimeMix = new Tone.Gain(1);
+  psdChimeIn.chain(psdChimeLp, psdChimeMix);
+  for (const [time, level] of PSD_CHIME_REFLECTIONS) {
+    const tap = new Tone.Delay(time);
+    const g = new Tone.Gain(level);
+    psdChimeLp.chain(tap, g, psdChimeMix);
+  }
+  const psdChimeDoor = new Tone.Gain(PSD_CHIME_DOORS_CLOSED);
+  psdChimeMix.connect(psdChimeDoor);
+
+  // Les prises de la ligne des baies, sur le même principe que celles de
+  // l'auvent - stationPa leur pousse les baies les plus proches de l'oreille.
+  // La décroissance, elle, est bien plus RAIDE : ces haut-parleurs-là sont
+  // petits et bas, on est dessus ou on ne l'est pas, et c'est justement à ce
+  // gradient qu'on reconnaît quelle baie s'ouvre devant soi.
+  const psdTaps: PlatformTap[] = Array.from({ length: PSD_TAPS }, (_, i) => {
+    const gain = new Tone.Gain(1);
+    const panner = new Tone.Panner3D({
+      // Position d'attente : la première image de stationPa la remplace.
+      positionX: 1.86,
+      positionY: 1.46,
+      positionZ: (i - (PSD_TAPS - 1) / 2) * 4.9,
+      panningModel: 'HRTF',
+      distanceModel: 'inverse',
+      refDistance: 4,
+      rolloffFactor: 1.1,
+      maxDistance: 90,
+    });
+    psdChimeDoor.connect(gain);
     gain.connect(panner);
     panner.connect(master);
     return { gain, panner };
@@ -894,6 +1033,10 @@ export async function startAudio(): Promise<void> {
     platGain,
     platLp,
     platTaps,
+    psdChime,
+    psdChimeClick,
+    psdChimeDoor,
+    psdTaps,
     hissGain,
     paClick,
     platHissGain,
@@ -1040,6 +1183,31 @@ export function setPlatformSpeakers(points: readonly SpeakerPos[]): void {
   }
 }
 
+/** Combien de baies palières l'avertisseur peut panner à la fois. */
+export const psdChimeTaps = PSD_TAPS;
+
+/**
+ * Où sonnent les avertisseurs de baie à cette image, en repère MONDE. Même
+ * contrat que setPlatformSpeakers : stationPa choisit les baies, on ne fait
+ * que les poser sur les prises. Une liste vide - gare sans portes palières -
+ * fait taire la ligne entière.
+ */
+export function setPsdBuzzers(points: readonly SpeakerPos[]): void {
+  if (!nodes) return;
+  for (let i = 0; i < nodes.psdTaps.length; i++) {
+    const { gain, panner } = nodes.psdTaps[i];
+    const p = points[i];
+    if (!p) {
+      gain.gain.value = 0;
+      continue;
+    }
+    gain.gain.value = 1;
+    panner.positionX.value = p[0];
+    panner.positionY.value = p[1];
+    panner.positionZ.value = p[2];
+  }
+}
+
 /**
  * L'auditeur est-il dehors, sur le quai ? Le filtrage du bus quai simule le
  * son entendu À TRAVERS les ouvertures de la rame ; debout sous les
@@ -1062,6 +1230,8 @@ export function setListenerOutside(outside: boolean): void {
   // La mélodie, elle, est CALÉE PAR LIEU : sous le diffuseur elle doit se
   // tenir, depuis la rame elle doit s'entendre. Voir MELODY_INSIDE.
   nodes.melodyIn.gain.rampTo(outside ? MELODY_OUTSIDE : MELODY_INSIDE, 0.3);
+  // Debout sur le quai, plus rien ne s'interpose entre le linteau et l'oreille.
+  if (outside) nodes.psdChimeDoor.gain.rampTo(PSD_CHIME_DOORS_OPEN, 0.25);
 }
 
 /**
@@ -1084,6 +1254,10 @@ export function setPlatformDoors(open01: number): void {
   const o = Math.max(0, Math.min(1, open01));
   nodes.platLp.frequency.rampTo(750 + o * 3600, 0.12);
   nodes.platGain.gain.rampTo(PLAT_BUS_CLOSED + o * (PLAT_BUS_OPEN - PLAT_BUS_CLOSED), 0.12);
+  nodes.psdChimeDoor.gain.rampTo(
+    PSD_CHIME_DOORS_CLOSED + o * (PSD_CHIME_DOORS_OPEN - PSD_CHIME_DOORS_CLOSED),
+    0.12,
+  );
 }
 
 // Un instrument Tone refuse tout déclenchement antérieur ou égal au dernier
@@ -1164,6 +1338,39 @@ export function platformWarningSignal(): number {
   nodes.platBeep.triggerAttackRelease('E6', 0.14, slot('platBeep', now), 0.4);
   nodes.platBeep.triggerAttackRelease('E6', 0.14, slot('platBeep', now + gap), 0.4);
   return gap + tail;
+}
+
+/** Fin du signal d'ouverture en cours, sur l'horloge audio. */
+let psdChimeUntil = 0;
+
+/**
+ * Le signal d'OUVERTURE des portes palières : neuf fois Fa5–La5–Do6, en trois
+ * blocs de trois, depuis les baies elles-mêmes.
+ *
+ * La partition est dans data/psdOpenChime ; ici on ne fait que la poser sur
+ * l'horloge audio, d'un seul coup. Tout est programmé à l'avance plutôt que
+ * suivi image par image : trois secondes et demie de signal ne doivent pas
+ * boiter parce qu'une frame a duré cent millisecondes.
+ *
+ * Les notes se RECOUVRENT de sept millisecondes, d'où le PolySynth : un synthé
+ * monophonique verrait l'attaque de La5 arriver avant le relâchement de Fa5 et
+ * couperait la note en plein milieu.
+ *
+ * @returns la durée du signal (s), ou 0 si l'audio n'est pas démarré.
+ */
+export function psdOpenChime(): number {
+  if (!nodes) return 0;
+  // Un signal déjà en cours n'est pas relancé : une baie qui repart pendant
+  // que la précédente sonne encore doublerait les vingt-sept notes.
+  const now = Tone.now() + 0.02;
+  if (now < psdChimeUntil) return 0;
+  for (const note of psdOpenChimeScore()) {
+    const at = now + note.at;
+    nodes.psdChime.triggerAttackRelease(note.freq, PSD_CHIME_NOTE_HOLD, at);
+    nodes.psdChimeClick.triggerAttackRelease(0.004, slot('psdChimeClick', at), 0.6);
+  }
+  psdChimeUntil = now + PSD_CHIME_DURATION;
+  return PSD_CHIME_DURATION;
 }
 
 /** Bips des portes palières pendant leur fermeture. */

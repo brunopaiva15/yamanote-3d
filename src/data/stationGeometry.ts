@@ -16,6 +16,23 @@ export const PSD_H = 1.32;
 /** Demi-largeur d'une baie de porte palière. */
 export const PSD_HALF_GAP = 0.9;
 
+/**
+ * Où sonne l'avertisseur d'une baie palière : sur le linteau du portique, côté
+ * quai.
+ *
+ * Le signal d'ouverture (data/psdOpenChime) ne sort PAS de la sono suspendue à
+ * l'auvent - celle-là est à quatre mètres au-dessus de la tête et couvre le
+ * quai entier. Il sort d'un petit haut-parleur vissé sur la baie elle-même, à
+ * hauteur d'épaule et à un pas devant soi, et c'est ce qui fait qu'on sait
+ * quelle porte s'ouvre : on l'entend DEVANT, pas au-dessus.
+ *
+ * Ces deux cotes sont ici, avec le reste de la géométrie du portique, parce
+ * qu'elles décrivent un point du quai ; c'est systems/stationPa qui les donne
+ * au moteur audio, comme il le fait déjà des diffuseurs de l'auvent.
+ */
+export const PSD_BUZZER_X = PSD_X + 0.08;
+export const PSD_BUZZER_Y = PSD_H + 0.14;
+
 /** Largeur d'un vantail de porte palière et sa course d'ouverture. */
 export const PSD_LEAF_W = 0.98;
 export const PSD_LEAF_TRAVEL = 0.92;

@@ -355,7 +355,14 @@ export function setPsdDoors(target: 0 | 1): void {
   // La cinématique continue de tourner même sans portes de quai - le cycle
   // station n'a pas à connaître la gare - mais on n'entend pas déverrouiller
   // ce qui n'existe pas.
-  if (runtime.psdPresent) audio.psdClunk(0.09);
+  if (!runtime.psdPresent) return;
+  audio.psdClunk(0.09);
+  // Et à l'OUVERTURE, les baies s'annoncent : le signal part avec le
+  // déverrouillage, pas à la fin de la course. C'est un avertissement - il ne
+  // sert qu'à ceux qui sont encore devant les vantaux. Il sonne à chaque
+  // ouverture, y compris une réouverture après porte bloquée : sur un vrai
+  // quai, une baie qui repart resonne (voir systems/doorObstruction).
+  if (target === 1) audio.psdOpenChime();
 }
 
 // À appeler chaque frame : avance les horloges, publie les positions de
