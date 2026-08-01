@@ -14,7 +14,13 @@
 // (platVoiceGain) et fait de la voix du quai un lointain dès qu'on est à bord.
 
 import { platformFor, type LoopDirection } from '../data/platforms';
-import { nearestSpeakers, SPEAKER_GRILLE_DROP, speakerX } from '../data/stationGeometry';
+import {
+  nearestSpeakers,
+  PSD_BUZZER_X,
+  PSD_BUZZER_Y,
+  SPEAKER_GRILLE_DROP,
+  speakerX,
+} from '../data/stationGeometry';
 import { layoutFor } from '../data/stationLayouts';
 import {
   platformAgentMessage,
@@ -37,7 +43,7 @@ import { platformNoticesForStation } from '../data/stationAnnouncementRules';
 import { STATIONS } from '../data/stations';
 import { estimateOccupancy } from './occupancy';
 import { useStore } from '../store';
-import { psdGates } from '../three/station/psdLayout';
+import { psdGates, psdLayout } from '../three/station/psdLayout';
 import * as audio from './audioEngine';
 import {
   createPlatformAnnouncementPlan,
@@ -131,6 +137,50 @@ export function updatePlatformSpeakers(): void {
     s[2] = speakerWorld.z;
   }
   audio.setPlatformSpeakers(n === speakerBuf.length ? speakerBuf : speakerBuf.slice(0, n));
+  updatePsdBuzzers(layout.length);
+}
+
+// --- Où sonnent les baies palières ---------------------------------------
+//
+// L'avertisseur d'ouverture (data/psdOpenChime) ne sort pas de l'auvent : il
+// sort du linteau de chaque baie, à hauteur d'épaule et à un pas devant soi.
+// Sa ligne se pousse donc exactement comme celle des diffuseurs, mais elle est
+// bien plus serrée - une baie tous les cinq mètres - et le moteur n'en panne
+// que les quatre plus proches (audioEngine, PSD_TAPS).
+
+/** Axes des baies, par longueur de quai : la trame ne dépend que d'elle. */
+let psdGateCache: { length: number; gates: number[] } | null = null;
+
+function psdGateZs(length: number): number[] {
+  if (!psdGateCache || psdGateCache.length !== length) {
+    psdGateCache = { length, gates: psdLayout(length).gaps };
+  }
+  return psdGateCache.gates;
+}
+
+const psdZs: number[] = [];
+const psdBuf: [number, number, number][] = Array.from(
+  { length: audio.psdChimeTaps },
+  () => [0, 0, 0] as [number, number, number],
+);
+const psdWorld = { x: 0, z: 0 };
+
+function updatePsdBuzzers(length: number): void {
+  // Deux gares de la boucle n'ont pas de portes palières du tout : là, la
+  // ligne se tait entièrement plutôt que de sonner depuis un bord de quai nu.
+  if (!runtime.psdPresent) {
+    audio.setPsdBuzzers([]);
+    return;
+  }
+  const n = nearestSpeakers(psdGateZs(length), runtime.playerPlatZ, psdBuf.length, psdZs);
+  for (let i = 0; i < n; i++) {
+    platformToWorld(PSD_BUZZER_X, psdZs[i], psdWorld);
+    const b = psdBuf[i];
+    b[0] = psdWorld.x;
+    b[1] = PSD_BUZZER_Y;
+    b[2] = psdWorld.z;
+  }
+  audio.setPsdBuzzers(n === psdBuf.length ? psdBuf : psdBuf.slice(0, n));
 }
 
 // --- Retard de la ligne ---------------------------------------------------
