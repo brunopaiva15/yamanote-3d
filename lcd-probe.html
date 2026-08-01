@@ -52,9 +52,11 @@
         ['loopJP', (s) => drawLoopMap(s, station, phase, countdown, clock, status, 'jp', dir)],
         ['loopEN', (s) => drawLoopMap(s, station, phase, countdown, clock, status, 'en', dir)],
         ['transfers', (s) => drawTransfers(s, station, clock, dir)],
-        ['approachJP', (s) => drawApproach(s, station, clock, 'jp', true, dir)],
-        ['approachJP-other', (s) => drawApproach(s, station, clock, 'jp', false, dir)],
-        ['approachEN', (s) => drawApproach(s, station, clock, 'en', true, dir)],
+        ['approach0', (s) => drawApproach(s, station, clock, 'jp', true, dir, 0)],
+        ['approach1', (s) => drawApproach(s, station, clock, 'jp', true, dir, 1)],
+        ['approach2', (s) => drawApproach(s, station, clock, 'jp', true, dir, 2)],
+        ['approach-other', (s) => drawApproach(s, station, clock, 'jp', false, dir, 2)],
+        ['approachEN', (s) => drawApproach(s, station, clock, 'en', true, dir, 2)],
       ];
 
       const out = document.getElementById('out');

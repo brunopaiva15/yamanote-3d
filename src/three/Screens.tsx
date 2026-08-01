@@ -15,6 +15,8 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { CLOSE_ANNOUNCE_LEAD, dwellDuration } from '../systems/stationCycle';
 import {
+  ANIM_PERIOD,
+  ANIM_PHASES,
   AD_LOOP_COUNT,
   AD_LOOP_FIRST_SEED,
   END_AD_COUNT,
@@ -61,6 +63,8 @@ export function Screens() {
   const lastAd = useRef(-1);
   const lastEndAd = useRef(-1);
   const acc = useRef(0);
+  /** Phase courante de l'animation des écrans (vantaux, repères clignotants). */
+  const animPhase = useRef(0);
   /** Vrai tant que les dalles sont éteintes : sert à forcer le redessin au retour. */
   const wasDark = useRef(false);
   /** Vrai quand les canevas ont déjà été peints en noir pour le redémarrage. */
@@ -130,8 +134,14 @@ export function Screens() {
     }
 
     acc.current += dt;
-    if (acc.current < 0.25) return;
+    if (acc.current < ANIM_PERIOD) return;
     acc.current = 0;
+    // Horloge d'animation : elle avance d'une phase à chaque réveil, et c'est
+    // ELLE qui rythme les vantaux du plan de quai et le clignotement des
+    // repères de position. Elle entre dans la clé de redessin, sinon rien ne
+    // bougerait tant que la minute affichée reste la même.
+    animPhase.current = (animPhase.current + 1) % ANIM_PHASES;
+    const anim = animPhase.current;
     const { index, phase, doorSide, loopDirection } = useStore.getState();
 
     // Écran gauche : une pub toutes les ~15 s, boucle de AD_LOOP_COUNT spots.
@@ -219,7 +229,11 @@ export function Screens() {
       state = rotation[tick % rotation.length];
     }
 
-    const key = `${index}|${phase}|${state}|${mannerVariant}|${clock}|${doorSide}|${state.startsWith('loop') || state.startsWith('zoom') ? countdown : 0}`;
+    // Les états animés (plan du quai, plans de ligne) entrent dans la clé avec
+    // leur phase : eux seuls se redessinent à chaque battement, les écrans
+    // fixes gardent leur texture tant que rien d'autre ne change.
+    const animated = state.startsWith('approach') || state.startsWith('loop') || state.startsWith('zoom');
+    const key = `${index}|${phase}|${state}|${mannerVariant}|${clock}|${doorSide}|${animated ? anim : 0}|${state.startsWith('loop') || state.startsWith('zoom') ? countdown : 0}`;
     if (key === lastKey.current) return;
     lastKey.current = key;
 
@@ -230,10 +244,10 @@ export function Screens() {
       const g = screen;
       switch (state) {
         case 'approachJP':
-          drawApproach(g, index, clock, 'jp', doorSide === side, loopDirection);
+          drawApproach(g, index, clock, 'jp', doorSide === side, loopDirection, anim);
           break;
         case 'approachEN':
-          drawApproach(g, index, clock, 'en', doorSide === side, loopDirection);
+          drawApproach(g, index, clock, 'en', doorSide === side, loopDirection, anim);
           break;
         case 'doorClosing':
           drawDoorClosing(g, index, clock, loopDirection);
@@ -258,19 +272,19 @@ export function Screens() {
           break;
         case 'trafficJP':
           if (notice) drawTrafficInfo(g, index, clock, 'jp', notice, loopDirection);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection);
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection, anim);
           break;
         case 'trafficEN':
           if (notice) drawTrafficInfo(g, index, clock, 'en', notice, loopDirection);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection);
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection, anim);
           break;
         case 'statusJP':
           if (notice) drawLineStatus(g, index, clock, 'jp', notice, loopDirection);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection);
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection, anim);
           break;
         case 'statusEN':
           if (notice) drawLineStatus(g, index, clock, 'en', notice, loopDirection);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection);
+          else drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection, anim);
           break;
         case 'certJP':
           drawDelayCert(g, index, clock, 'jp', loopDirection);
@@ -291,16 +305,16 @@ export function Screens() {
           drawOutageInfo(g, index, clock, 'en', loopDirection);
           break;
         case 'loopJP':
-          drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection);
+          drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection, anim);
           break;
         case 'loopEN':
-          drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection);
+          drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection, anim);
           break;
         case 'zoomEN':
-          drawRoute(g, index, phase, countdown, clock, status, 'en', loopDirection);
+          drawRoute(g, index, phase, countdown, clock, status, 'en', loopDirection, anim);
           break;
         default:
-          drawRoute(g, index, phase, countdown, clock, status, 'jp', loopDirection);
+          drawRoute(g, index, phase, countdown, clock, status, 'jp', loopDirection, anim);
       }
       g.texture.needsUpdate = true;
     }

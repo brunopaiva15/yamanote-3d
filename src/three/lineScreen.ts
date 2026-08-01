@@ -574,19 +574,49 @@ function drawHerePentagon(g: CanvasRenderingContext2D, x: number, y: number, ang
   g.restore();
 }
 
-/** Chevron du sens de marche : pointe vers +x avant rotation. */
+/**
+ * Cadence d'animation des écrans : quatre phases d'une demi-seconde.
+ *
+ * Une seule horloge pour tout ce qui bouge - les vantaux du plan de quai, le
+ * triangle qui désigne la voiture, et le clignotement des repères de position
+ * des deux plans de ligne. Sur la rame ces trois choses battent ensemble ;
+ * leur donner chacune sa cadence les ferait dériver, et l'écran se mettrait à
+ * scintiller au lieu de respirer.
+ */
+export const ANIM_PHASES = 4;
+export const ANIM_PERIOD = 0.5;
+
+/** Les repères de position sont allumés une phase sur deux (1 s / 1 s). */
+const markerLit = (anim: number): boolean => anim % ANIM_PHASES < 2;
+
+/**
+ * Chevron du sens de marche, pointe vers +x avant rotation.
+ *
+ * Ce n'est pas une flèche : c'est un CROCHET d'épaisseur constante. Les deux
+ * bords - l'extérieur et l'échancrure du dos - sont deux V PARALLÈLES, décalés
+ * de 10,7 px, chacun avançant de 5,4 px sur 15 de demi-hauteur. Le dessiner
+ * comme un dard (dos plat, pointe filante) donnait une forme qui n'a jamais
+ * existé sur l'afficheur - c'est exactement ce qu'on lui reprochait.
+ * Relevé ligne par ligne sur le plan de boucle : 16,1 × 30.
+ */
 function drawWayChevron(g: CanvasRenderingContext2D, x: number, y: number, angle: number, s = 1): void {
   g.save();
   g.translate(x, y);
   g.rotate(angle);
   g.scale(s, s);
-  g.fillStyle = MARKER_RED;
   g.beginPath();
-  g.moveTo(-9, -15.5);
-  g.lineTo(9, 0);
-  g.lineTo(-9, 15.5);
-  g.lineTo(0, 0);
+  g.moveTo(-8.05, -15);
+  g.lineTo(2.65, -15);
+  g.lineTo(8.05, 0);
+  g.lineTo(2.65, 15);
+  g.lineTo(-8.05, 15);
+  g.lineTo(-2.65, 0);
   g.closePath();
+  g.strokeStyle = '#f0f0ee';
+  g.lineWidth = 2.2;
+  g.lineJoin = 'round';
+  g.stroke();
+  g.fillStyle = MARKER_RED;
   g.fill();
   g.restore();
 }
@@ -600,6 +630,7 @@ export function drawRoute(
   status: ScreenStatus,
   lang: ScreenLang,
   dir: LoopDirection,
+  anim = 0,
 ): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
@@ -685,12 +716,14 @@ export function drawRoute(
 
   // Repère de position : sur la gare quand on y est, un peu en arrière sur la
   // bande quand on roule.
-  if (atStation) {
-    drawHerePentagon(g, ZOOM_SLOTS[0].cx, ZOOM_SLOTS[0].cy, 0.16);
-  } else {
-    // Sur la bande, juste EN ARRIÈRE de la gare visée, pointé vers elle.
-    const a = Math.atan2(ZOOM_SLOTS[0].cy - ZOOM_SLOTS[1].cy, ZOOM_SLOTS[0].cx - ZOOM_SLOTS[1].cx);
-    drawWayChevron(g, ZOOM_SLOTS[0].cx + 22, ZOOM_SLOTS[0].cy + 30, a + Math.PI, 1.25);
+  if (markerLit(anim)) {
+    if (atStation) {
+      drawHerePentagon(g, ZOOM_SLOTS[0].cx, ZOOM_SLOTS[0].cy, 0.16);
+    } else {
+      // Sur la bande, juste EN ARRIÈRE de la gare visée, pointé vers elle.
+      const a = Math.atan2(ZOOM_SLOTS[0].cy - ZOOM_SLOTS[1].cy, ZOOM_SLOTS[0].cx - ZOOM_SLOTS[1].cx);
+      drawWayChevron(g, ZOOM_SLOTS[0].cx + 20, ZOOM_SLOTS[0].cy + 27, a + Math.PI, 1.25);
+    }
   }
 
   // ----- Pavé des correspondances de la prochaine gare, à gauche -----
@@ -888,6 +921,7 @@ export function drawLoopMap(
   status: ScreenStatus,
   lang: ScreenLang,
   dir: LoopDirection,
+  anim = 0,
 ): void {
   const { g, w, h } = s;
   g.fillStyle = SCREEN_BG;
@@ -932,7 +966,7 @@ export function drawLoopMap(
     // À quai, la gare où l'on est ne porte pas « 0 » : elle porte le
     // pentagramme de position, à la place de son cercle.
     if (atStation && k === 0) {
-      drawHerePentagon(g, x, y, 0, 0.42);
+      if (markerLit(anim)) drawHerePentagon(g, x, y, 0, 0.42);
     } else if (k < MINUTES_SHOWN) {
       // Cercle des minutes. La prochaine gare est en ambre cerclé d'or ; les
       // autres en blanc ; au-delà de la portée d'affichage, un point gris.
@@ -1008,7 +1042,7 @@ export function drawLoopMap(
   if (delta < -LOOP_PERIM / 2) delta += LOOP_PERIM;
   // …et seulement quand on roule : à quai, c'est le pentagramme posé sur la
   // gare qui tient ce rôle, plus haut.
-  if (!atStation) {
+  if (!atStation && markerLit(anim)) {
     const way = delta >= 0 ? 1 : -1;
     const mk = loopPointAt(tNext - way * 25);
     drawWayChevron(g, mk.x, mk.y, mk.angle + (way > 0 ? 0 : Math.PI));
@@ -1290,8 +1324,13 @@ const APPROACH_PLAT_H = 115;
 const APPROACH_CARS_Y = 291;
 const APPROACH_CARS_H = 35;
 const APPROACH_FOOT_Y = 328;
-const APPROACH_X0 = 20;
-const APPROACH_X1 = 748;
+/**
+ * Échelle du plan : la rame (onze voitures de 20 m) tient dans 660 px, centrés.
+ * C'est ELLE qui donne l'échelle du quai, pas l'inverse - les pictogrammes
+ * d'accès s'y accrochent, sinon un escalier annoncé « devant la 4 » ne tombe
+ * pas devant la case 4.
+ */
+const APPROACH_PX_PER_M = 660 / (CONSIST.length * E235.pitch);
 
 /**
  * Escalier fixe, vu en plongée : le PROFIL en marches, pas une série de
@@ -1363,6 +1402,90 @@ interface Access {
   kind: 'stair' | 'escalator' | 'elevator';
 }
 
+/**
+ * L'écran d'approche N'EST PAS FIXE, et c'est la moitié de ce qu'il dit.
+ *
+ * Les deux vantaux du pictogramme s'écartent, tiennent ouverts le temps qu'un
+ * triangle rouge sorte du seuil, puis se referment ; le même triangle
+ * apparaît, au même instant, au-dessus de la case rouge de la rame. Un
+ * pictogramme figé n'annonce pas une ouverture, il décrit une porte.
+ *
+ * Quatre phases relevées sur trois images de la séquence : le débattement des
+ * vantaux (2 → 12 → 31 px depuis l'axe) n'est pas linéaire - l'ouverture
+ * s'accélère, comme une vraie porte pneumatique.
+ */
+const DOOR_PHASES = [2, 12, 31, 12];
+const doorPhase = (anim: number): number => anim % DOOR_PHASES.length;
+
+/** Le pictogramme de portes du bandeau bas, à la phase `anim`. */
+function drawDoorGlyph(g: CanvasRenderingContext2D, mine: boolean, anim: number): void {
+  const phase = doorPhase(anim);
+  const off = DOOR_PHASES[phase];
+  const cx = 150;
+  const top = 333;
+  const bot = 418;
+  const leafW = 46;
+  const open = off > 4;
+
+  // Seuil jaune, fixe : c'est le quai, il ne bouge pas avec les portes.
+  g.fillStyle = '#e8c81e';
+  g.fillRect(cx - 58, bot, 116, 10);
+
+  // Baie visible entre les vantaux dès qu'ils s'écartent, et le triangle rouge
+  // qui en sort une fois grande ouverte.
+  if (open) {
+    g.fillStyle = '#1c4a86';
+    g.fillRect(cx - off, bot - 23, off * 2, 23);
+    if (phase === 2) {
+      g.fillStyle = '#c4232b';
+      g.beginPath();
+      g.moveTo(cx - 22, bot - 1);
+      g.lineTo(cx, bot - 18);
+      g.lineTo(cx + 22, bot - 1);
+      g.closePath();
+      g.fill();
+    }
+  }
+
+  for (const sgn of [-1, 1] as const) {
+    const inner = cx + sgn * off;
+    const lx = sgn < 0 ? inner - leafW : inner;
+    // Corps du vantail, puis sa vitre, puis le joint jaune du bord d'attaque.
+    g.fillStyle = '#e2e9f4';
+    g.strokeStyle = '#9fb0cb';
+    g.lineWidth = 1;
+    g.fillRect(lx, top, leafW, bot - top);
+    g.strokeRect(lx + 0.5, top + 0.5, leafW - 1, bot - top - 1);
+    const win = g.createLinearGradient(0, top + 5, 0, top + 52);
+    win.addColorStop(0, '#0d3a72');
+    win.addColorStop(1, '#bcd8ef');
+    g.fillStyle = win;
+    g.fillRect(lx + 6, top + 5, leafW - 12, 47);
+    g.fillStyle = '#e8d022';
+    g.fillRect(sgn < 0 ? inner - 4 : inner, top, 4, bot - top);
+  }
+
+  // Flèches : elles suivent les vantaux, et ne sortent que du côté qui ouvre.
+  if (mine) {
+    g.fillStyle = '#eef2fa';
+    for (const sgn of [-1, 1] as const) {
+      const tail = cx + sgn * (off + leafW + 8);
+      const tip = tail + sgn * 22;
+      const my = (top + bot) / 2;
+      g.beginPath();
+      g.moveTo(tip, my);
+      g.lineTo(tail + sgn * 9, my - 13);
+      g.lineTo(tail + sgn * 9, my - 6);
+      g.lineTo(tail, my - 6);
+      g.lineTo(tail, my + 6);
+      g.lineTo(tail + sgn * 9, my + 6);
+      g.lineTo(tail + sgn * 9, my + 13);
+      g.closePath();
+      g.fill();
+    }
+  }
+}
+
 export function drawApproach(
   s: ReturnType<typeof makeScreen>,
   index: number,
@@ -1370,6 +1493,7 @@ export function drawApproach(
   lang: 'jp' | 'en',
   mine: boolean,
   dir: LoopDirection,
+  anim: number,
 ): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
@@ -1401,8 +1525,8 @@ export function drawApproach(
   // --- Repère longitudinal : le quai fait `layout.length` mètres et la rame
   // roule vers les z DÉCROISSANTS, donc la tête de rame (voiture 1) se pose à
   // DROITE de l'écran, comme le triangle du sens de marche.
-  const scale = (APPROACH_X1 - APPROACH_X0) / layout.length;
-  const cx = (APPROACH_X0 + APPROACH_X1) / 2;
+  const scale = APPROACH_PX_PER_M;
+  const cx = w / 2;
   const px = (z: number) => cx - z * scale;
 
   // --- Les accès relevés de la gare, du plus à gauche au plus à droite.
@@ -1417,7 +1541,7 @@ export function drawApproach(
   for (const a of access) {
     const draw =
       a.kind === 'stair' ? drawStairGlyph : a.kind === 'escalator' ? drawEscalatorGlyph : drawElevatorGlyph;
-    draw(g, a.x, glyphY, 40);
+    draw(g, a.x, glyphY, 46);
   }
 
   // --- Cartouches jaunes : un par GROUPE d'accès voisins, relié à chacun par
@@ -1436,8 +1560,13 @@ export function drawApproach(
 
   g.fillStyle = '#c3d4f4';
   g.fillRect(0, APPROACH_BAND_Y, w, APPROACH_BAND_H);
-  for (const gr of groups) {
-    const gx = gr.reduce((sum, a) => sum + a.x, 0) / gr.length;
+  const ly = APPROACH_BAND_Y + 4;
+  const lh = APPROACH_BAND_H - 8;
+
+  // Les cartouches sont d'abord CALCULÉS, puis désempilés : deux accès voisins
+  // donnaient deux étiquettes qui se chevauchaient, et un plan de quai illisible
+  // à l'endroit précis où il compte le plus.
+  const boxes = groups.map((gr) => {
     const isGate = gr === gateGroup;
     // Le groupe se nomme par son accès le plus « fort » : un escalier de
     // correspondance prime sur l'escalier mécanique, qui prime sur l'ascenseur.
@@ -1449,68 +1578,87 @@ export function drawApproach(
     const label = base + (isGate ? `・${gate.jp}` : '');
     g.font = `13px ${JP_FONT}`;
     const tw = Math.min(232, g.measureText(label).width + 14);
-    const lx = Math.max(4, Math.min(w - tw - 4, gx - tw / 2));
-    const ly = APPROACH_BAND_Y + 4;
-    const lh = APPROACH_BAND_H - 8;
+    const gx = gr.reduce((sum, a) => sum + a.x, 0) / gr.length;
+    return { gr, isGate, label, tw, x: gx - tw / 2 };
+  });
+  for (let i = 1; i < boxes.length; i++) {
+    const prev = boxes[i - 1];
+    boxes[i].x = Math.max(boxes[i].x, prev.x + prev.tw + 6);
+  }
+  // Si la file déborde à droite, on la repousse en bloc vers la gauche.
+  const overflow = boxes.length ? boxes[boxes.length - 1].x + boxes[boxes.length - 1].tw - (w - 4) : 0;
+  if (overflow > 0) for (let i = boxes.length - 1; i >= 0; i--) boxes[i].x -= overflow;
+  for (let i = 1; i < boxes.length; i++) {
+    boxes[i - 1].x = Math.min(boxes[i - 1].x, boxes[i].x - boxes[i - 1].tw - 6);
+  }
+
+  for (const b of boxes) {
+    const lx = Math.max(4, b.x);
 
     // Suspentes : du bas du cartouche à chaque pictogramme.
     g.strokeStyle = '#dde5f7';
     g.lineWidth = 1.6;
-    for (const a of gr) {
+    for (const a of b.gr) {
       g.beginPath();
-      g.moveTo(a.x, ly + lh);
-      g.lineTo(a.x, glyphY - 18);
+      g.moveTo(Math.max(lx + 4, Math.min(lx + b.tw - 4, a.x)), ly + lh);
+      g.lineTo(a.x, glyphY - 20);
       g.stroke();
     }
 
     g.fillStyle = '#f4e34a';
-    g.fillRect(lx, ly, tw, lh);
+    g.fillRect(lx, ly, b.tw, lh);
     g.fillStyle = '#1a1a10';
     g.textAlign = 'center';
-    fitText(g, label, tw - 10, 13, '');
-    g.fillText(label, lx + tw / 2, isGate ? ly + 15 : ly + 20);
-    if (isGate) {
+    fitText(g, b.label, b.tw - 10, 13, '');
+    g.fillText(b.label, lx + b.tw / 2, b.isGate ? ly + 15 : ly + 20);
+    if (b.isGate) {
       g.font = `9px ${JP_FONT}`;
-      fitText(g, `${gate.romaji} Gate`, tw - 10, 9, '');
-      g.fillText(`${gate.romaji} Gate`, lx + tw / 2, ly + 26);
+      fitText(g, `${gate.romaji} Gate`, b.tw - 10, 9, '');
+      g.fillText(`${gate.romaji} Gate`, lx + b.tw / 2, ly + 26);
     }
     g.textAlign = 'left';
   }
 
-  // --- La rame : onze cases, celle du voyageur en rouge, triangle du sens de
-  // marche en bout de file.
+  // --- La rame : une seule barre en gélule, divisée en onze cases. Ce ne sont
+  // PAS onze pastilles séparées - les cases se touchent, et seules les deux du
+  // bout sont arrondies. La case du voyageur est rouge, et le triangle qui la
+  // désigne CLIGNOTE avec l'ouverture des portes du bandeau bas : c'est la
+  // même information, dite deux fois au même moment.
   g.fillStyle = '#c3d4f4';
   g.fillRect(0, APPROACH_CARS_Y, w, APPROACH_CARS_H);
   const boxW = E235.pitch * scale;
+  const boxY = APPROACH_CARS_Y + 4;
+  const boxH = APPROACH_CARS_H - 8;
+  const cap = boxH / 2;
   for (let i = 0; i < CONSIST.length; i++) {
     const bx = px(carZ(i)) - boxW / 2;
     const isMine = i === PLAYER_CAR;
+    const first = i === CONSIST.length - 1; // voiture 11 : bout gauche
+    const last = i === 0; // voiture 1 : bout droit
     g.fillStyle = isMine ? '#c4232b' : '#f2f5fc';
-    g.strokeStyle = '#5a6a92';
+    g.strokeStyle = isMine ? '#e8909a' : '#5a6a92';
     g.lineWidth = 1.4;
     g.beginPath();
-    g.roundRect(bx + 1.5, APPROACH_CARS_Y + 4, boxW - 3, APPROACH_CARS_H - 8, 4);
+    g.roundRect(bx, boxY, boxW, boxH, [first ? cap : 3, last ? cap : 3, last ? cap : 3, first ? cap : 3]);
     g.fill();
     g.stroke();
     g.fillStyle = isMine ? '#ffffff' : '#14203f';
     g.textAlign = 'center';
     g.font = `italic bold 17px ${JP_FONT}`;
     g.fillText(String(CONSIST[i].no), bx + boxW / 2, APPROACH_CARS_Y + 25);
-    // Pointeur rouge sur SA voiture : il désigne l'endroit du quai où elle
-    // s'arrête, juste au-dessus de la case.
-    if (isMine) {
+    if (isMine && doorPhase(anim) === 2) {
       g.fillStyle = '#c4232b';
       g.beginPath();
-      g.moveTo(bx + boxW / 2 - 8, APPROACH_CARS_Y + 3);
-      g.lineTo(bx + boxW / 2, APPROACH_CARS_Y - 8);
-      g.lineTo(bx + boxW / 2 + 8, APPROACH_CARS_Y + 3);
+      g.moveTo(bx + boxW / 2 - 12, boxY);
+      g.lineTo(bx + boxW / 2, boxY - 14);
+      g.lineTo(bx + boxW / 2 + 12, boxY);
       g.closePath();
       g.fill();
     }
   }
   g.textAlign = 'left';
   g.fillStyle = '#14203f';
-  const tipX = px(carZ(0)) + boxW / 2 + 6;
+  const tipX = px(carZ(0)) + boxW / 2 + 7;
   g.beginPath();
   g.moveTo(tipX, APPROACH_CARS_Y + 7);
   g.lineTo(tipX + 13, APPROACH_CARS_Y + APPROACH_CARS_H / 2);
@@ -1526,42 +1674,17 @@ export function drawApproach(
     g.fillStyle = foot;
     g.fillRect(0, APPROACH_FOOT_Y, w, h - APPROACH_FOOT_Y);
 
-    // Pictogramme : deux vantaux sur leur seuil jaune. Les flèches ne sortent
-    // que du côté qui s'ouvre - c'est tout ce qui distingue les deux parois,
-    // et c'est ce que le voyageur regarde.
-    const dcx = 128;
-    const dcy = APPROACH_FOOT_Y + 44;
-    for (const sgn of [-1, 1] as const) {
-      const lx = dcx + sgn * 8 - (sgn < 0 ? 34 : 0);
-      g.fillStyle = '#e8eefb';
-      g.fillRect(lx, dcy - 34, 34, 68);
-      g.fillStyle = '#2f6fbd';
-      g.fillRect(lx + 5, dcy - 28, 24, 40);
-    }
-    g.fillStyle = '#e0c22a';
-    g.fillRect(dcx - 60, dcy + 38, 120, 7);
-    if (mine) {
-      g.fillStyle = '#e8eefb';
-      for (const sgn of [-1, 1] as const) {
-        const ax = dcx + sgn * 62;
-        g.beginPath();
-        g.moveTo(ax + sgn * 16, dcy);
-        g.lineTo(ax, dcy - 11);
-        g.lineTo(ax, dcy + 11);
-        g.closePath();
-        g.fill();
-      }
-    }
+    drawDoorGlyph(g, mine, anim);
 
     g.textAlign = 'left';
     g.fillStyle = '#ffffff';
     const jp = mine ? 'こちら側のドアが開きます' : '反対側のドアが開きます';
-    fitText(g, jp, w - 250, 34, '');
-    g.fillText(jp, 226, APPROACH_FOOT_Y + 42);
+    fitText(g, jp, w - 316, 34, '');
+    g.fillText(jp, 300, APPROACH_FOOT_Y + 42);
     g.fillStyle = '#b9c6e8';
     const en = mine ? 'Doors on this side will open.' : 'Doors on the other side will open.';
-    fitText(g, en, w - 250, 21, '');
-    g.fillText(en, 228, APPROACH_FOOT_Y + 72);
+    fitText(g, en, w - 316, 21, '');
+    g.fillText(en, 302, APPROACH_FOOT_Y + 72);
   } else {
     g.fillStyle = '#c3d4f4';
     g.fillRect(0, APPROACH_FOOT_Y, w, h - APPROACH_FOOT_Y);
