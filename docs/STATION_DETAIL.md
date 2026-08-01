@@ -20,7 +20,8 @@ Le dépôt a déjà tranché deux fois, et ça ne se rejoue pas :
 2. **Ce qui se répète s'instancie.** Une gare tient dans quelques dizaines
    d'appels de rendu, pas quelques centaines. Les caisses passent par
    `InstancedMesh` (`three/station/instancing`), les visuels par un pool
-   construit une fois pour la session (`three/station/adPool`).
+   construit une fois pour la session (`three/station/adPool`, et
+   `three/station/shopKit` pour tout ce qui garnit un commerce).
 
 Et une troisième, propre à ce chantier :
 
@@ -69,6 +70,10 @@ portillons.
 - **le kiosque du quai** cesse d'être une boîte blanche : auvent, présentoir à
   journaux et magazines, réfrigérateur à boissons, comptoir, bandeau d'enseigne.
 
+Cette phase a posé les SILHOUETTES, et rien de plus : les deux commerces sont
+refaits en volume à la **phase 10**, où leurs cotes et leur garniture sont
+décrites. Ce qui suit ici n'a plus cours que comme point de départ.
+
 ## Phase 4 — Les distributeurs, tous ✅
 
 **Livré.** `textures/vending` savait faire les boissons. Trois familles de plus,
@@ -102,7 +107,7 @@ couleur seule.
   celui qui suit les portillons les quais (à l'envers, pour qui arrive de la
   rue), le dernier vers quelle bouche aller. Ils se calent dans le passage
   RÉELLEMENT libre, lu dans l'implantation - centré bêtement, un panneau rentre
-  dans le konbini, qui fait 3,20 m de fond et monte au plafond ;
+  dans le konbini, qui fait 3,40 m de fond et monte au plafond ;
 - **mural** — le plan de quartier (周辺案内図) est posé, un par gare, avec sa
   trame de rues, son parc, sa rivière et son point rouge. Le plan de ligne, les
   tarifs et le plan des sorties numérotées restent à faire ;
@@ -165,6 +170,117 @@ n'affirme pas qu'elle n'a rien, elle affirme qu'on ne l'a pas relevé.
 Tabata la déclare et ne l'obtient pas : 3,60 m de fond dans un hall de 5,50 m ne
 laisseraient plus deux mètres de passage, et c'est la règle du passage libre qui
 tranche - pas un oubli.
+
+## Phase 10 — Les commerces, vraiment ✅
+
+**Livré.** Les phases 3 et 9 avaient posé les SILHOUETTES : une devanture
+vitrée sous une enseigne allumée, un auvent sur deux comptoirs. Elles se
+lisaient de loin, et c'était leur objet. De près, elles ne tenaient pas : le
+konbini n'avait aucune profondeur - son « fond de magasin » était un plan peint
+à seize centimètres de la vitre - et le kiosque, à 2,50 × 4,80, était trop
+petit pour ce qu'un kiosque contient. On les reconnaissait ; on ne les croyait
+pas. À côté d'une rame dont on compte les rivets, c'était le contraste le plus
+voyant qui restât dans une gare.
+
+Les deux sont refaits en VOLUME. Ce qui change, et pourquoi :
+
+- **le konbini est une pièce** (`three/station/Konbini`) : mur de vitrines
+  réfrigérées au fond, meuble froid ouvert à onigiri, gondole centrale garnie
+  des DEUX côtés, présentoir à magazines contre la vitre, comptoir de caisse
+  avec écran client, bac à friture, machine à café, armoire à cigarettes au
+  mur derrière, îlot promotionnel, pile de paniers, portes 自動ドア et cinq
+  réglettes nues au plafond. Emprise : 6,40 × 3,20 → **7,80 × 3,40** ;
+- **le kiosque est un îlot servi des deux bords** (`three/station/Kiosk`) :
+  2,50 × 4,80 → **3,00 × 6,40**, et cette cote se déduit plutôt qu'elle ne se
+  choisit - deux comptoirs de 0,80 m dos à dos plus 1,30 m de passage pour le
+  vendeur. Dedans : étalage de journaux à plat, râteliers à magazines en
+  gradins sous le comptoir côté client, paniers à hauteur de main, claie
+  suspendue garnie jusqu'à l'auvent, armoire réfrigérée vitrée à un bout, épine
+  de rangement entre les deux comptoirs (interrompue au droit de la caisse, par
+  où le vendeur passe), auvent ÉPAIS dont la rive EST le bandeau d'enseigne,
+  ceinturant les quatre faces ;
+- **il est enfin centré sur l'épine**, comme les trémies et pour la même
+  raison. Décalé de 1,35 m vers la voie comme il l'était, il ne laissait que
+  vingt-cinq centimètres de passage à Takadanobaba, et le comptoir de ce
+  côté-là donnait sur un mur d'air ;
+- **un vendeur derrière chaque caisse** (`three/station/ShopStaff`). Une
+  boutique garnie jusqu'au plafond mais vide ne se lit pas comme « le vendeur
+  revient » : elle se lit comme un décor. C'est un VOYAGEUR qui tient la
+  caisse — même chemin que les PNJ de la rame et la foule du quai (modèles GLB
+  de `three/characters/library`, repli procédural, même frontière d'erreur),
+  et non une silhouette à part : il n'a aucune raison d'avoir un autre
+  gabarit, d'autres matériaux ni d'être le seul personnage du jeu qui ne
+  respire pas. Son apparence est celle d'un voyageur, mise en uniforme — haut
+  bleu NEWDAYS, bas anthracite, ni sac ni écharpe ;
+- **la flaque de lumière** que chaque commerce jette au sol - peinte, non
+  éclairée, et suivant la tombée du jour au quai comme les foyers de la voie.
+
+**La marchandise est en volume, pas en image.** Les centaines d'articles en
+rayon passent par un `InstancedMesh` et un seul appel de rendu par boutique
+(`three/station/shopKit`), teintés par exemplaire, rangés par FACINGS - le même
+article répété deux à cinq fois, comme dans un vrai linéaire. Un rayon où
+chaque boîte diffère de sa voisine est un vide-grenier, pas un commerce.
+
+**Les images sont mutualisées pour la session**, sur le modèle du pool
+d'affiches : le même paquet de biscuits est sur la même étagère à Ueno et à
+Shinagawa, et les redessiner à chaque arrivée en gare aurait coûté une
+quarantaine de canvas par arrêt. Seul le bandeau d'enseigne appartient à la
+gare - il porte son nom, `NEWDAYS 池袋`, comme les enseignes de galerie.
+
+**Ce qui a été vérifié.** Sonde de gare sur les trente gares : zéro paire de
+volumes en interpénétration (`node scripts/station-probe.mjs`). Et
+`tests/stationShops.test.ts` tient les cotes de passage, que rien au rendu ne
+montre : 1,20 m libre de chaque côté du kiosque, deux mètres dans le hall
+devant le konbini, et aucune gare qui perde sa boutique en la voyant grandir -
+3,40 m de fond est la dernière profondeur qui les garde toutes.
+
+**Pour juger sur pièces :** `/shop-probe.html`, qui pose les deux commerces
+seuls sous une caméra qu'on tourne autour. Le konbini est au fond du hall, deux
+niveaux sous le quai, derrière une trémie, une ligne de portillons et quarante
+mètres de couloir : descendre l'y chercher à chaque essai n'était pas tenable.
+
+## Phase 11 — L'intérieur, et sa température ✅
+
+**Livré.** La phase 10 avait donné à la boutique un VOLUME ; il lui manquait
+encore une AMBIANCE. Garnie jusqu'au plafond mais peinte en gris et blanc, elle
+ressemblait à une pharmacie — pas à ce lieu chaud, saturé et un peu encombré
+qu'est un konbini.
+
+**La couleur d'abord, parce que c'est elle qu'on voit avant tout le reste.**
+
+- **le sol** est un carrelage de grès TERRACOTTA de 45 cm, à joints apparents,
+  chaque carreau tiré à part (dans un vrai grès, deux carreaux voisins ne sont
+  jamais du même bain). C'est lui qui donne sa température à la pièce : peint
+  en vinyle gris pâle, il refroidissait tout ce qui était posé dessus ;
+- **le mobilier** passe du blanc au CRÈME, et gagne ce qu'il n'avait pas : un
+  socle laqué ROUGE qui l'ancre au sol, un pare-chocs ORANGE à hauteur de
+  chariot sur les meubles froids, une frise orange en haut des parois ;
+- **les parois vues du dedans** sont doublées de tôle crème et non du béton
+  pâle du hall — ce sont justement les bords qu'on voit de trois quarts.
+
+**La marchandise prend forme.** Tout était en cubes, et c'est ce qui trahissait
+le plus vite un rayon : dans un vrai konbini, on distingue à trois mètres une
+canette d'une brique de lait et d'une bouteille, parce que ce sont trois
+SILHOUETTES. Quatre gabarits (brique, paquet, canette, bouteille) et un bandeau
+d'étiquette en travers de chaque article. Deux familles de forme suffisent — le
+prisme et le révolutionné — donc **deux appels de rendu par boutique**, quel que
+soit le nombre d'articles : une bouteille n'est pas une troisième famille, c'est
+un corps rond coiffé d'un col plus étroit.
+
+**Et ce qui manquait autour.** Le rail d'étiquettes blanc sur le nez de chaque
+étagère (une planche sans son rail est une planche ; avec, c'est un rayon), le
+fronton de gondole aux couleurs de l'enseigne, les bandeaux de famille sur les
+meubles froids (bleu pour les boissons, rouge pour le frais, cyan pour les
+glaces), le meuble froid ouvert reconstruit en trois gradins garnis sous leurs
+tubes, le bac à glaces vitré en plein passage, les luminaires de plafond qui
+ont enfin une réglette autour de leur tube.
+
+La référence assumée est *inKonbini* : la densité, la chaleur et le désordre
+rangé d'une supérette japonaise.
+
+**Vérifié :** sonde de gare à zéro paire sur les gares à commerces — le bac à
+glaces, posé d'abord au droit de la gondole, s'y plantait de dix centimètres et
+la sonde l'a trouvé du premier coup.
 
 ---
 

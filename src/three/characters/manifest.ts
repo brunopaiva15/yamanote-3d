@@ -47,19 +47,37 @@ function isValidManifest(data: unknown): data is CharacterManifest {
   return m.version === 1 && Array.isArray(m.variants) && m.variants.length > 0 && m.variants.every((v) => typeof v.file === 'string' && Array.isArray(v.archetypes));
 }
 
+/**
+ * Le manifest, lu UNE FOIS pour la session.
+ *
+ * Deux consommateurs permanents - les PNJ de la rame et la foule du quai -
+ * n'auraient jamais rendu ce cache nécessaire : ils se montent au démarrage et
+ * ne se démontent plus. Les commerces, eux, se montent et se démontent à
+ * CHAQUE gare, et leur vendeur demande le manifest en arrivant : sans cache,
+ * c'était deux requêtes de plus par arrêt, soixante par tour de boucle, pour
+ * un fichier qui ne change jamais.
+ *
+ * La promesse est mémorisée, pas seulement son résultat : deux composants qui
+ * se montent dans la même image partagent la requête en vol.
+ */
+let pending: Promise<CharacterManifest | null> | null = null;
+
+function loadManifest(): Promise<CharacterManifest | null> {
+  pending ??= fetch(`${MODELS_BASE}manifest.json`, { cache: 'no-cache' })
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data: unknown) => (isValidManifest(data) ? data : null))
+    .catch(() => null);
+  return pending;
+}
+
 // undefined = vérification en cours, null = absent/invalide → fallback procédural.
 export function useCharacterManifest(): CharacterManifest | null | undefined {
   const [manifest, setManifest] = useState<CharacterManifest | null | undefined>(undefined);
   useEffect(() => {
     let alive = true;
-    fetch(`${MODELS_BASE}manifest.json`, { cache: 'no-cache' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (alive) setManifest(isValidManifest(data) ? data : null);
-      })
-      .catch(() => {
-        if (alive) setManifest(null);
-      });
+    loadManifest().then((data) => {
+      if (alive) setManifest(data);
+    });
     return () => {
       alive = false;
     };
