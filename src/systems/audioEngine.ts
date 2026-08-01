@@ -1,10 +1,10 @@
 // Moteur audio (Tone.js) : roulement, onduleur VVVF, joints de rail, freinage,
-// carillons de porte, jingle d'arrivée - synthétisés - et mélodies de départ
+// carillons de porte - synthétisés - et mélodies de départ
 // (発車メロディ) : clip quai réel quand disponible (voir data/melodies.ts),
 // sinon synthèse. Démarré uniquement au clic « Monter à bord ».
 //
 // Spatialisation : tout ce qui sort de la SONORISATION (carillons de porte,
-// jingle d'arrivée, souffle de ligne des annonces) passe par un bus « PA »
+// souffle de ligne des annonces) passe par un bus « PA »
 // - filtrage passe-bande + compression, le timbre d'un haut-parleur de wagon -
 // puis est diffusé par un Panner3D PAR DIFFUSEUR de plafond (voir
 // CABIN_SPEAKERS). La mélodie de départ (発車メロディ) et les annonces ATOS,
@@ -109,7 +109,6 @@ interface Nodes {
   slidePsdGain: Tone.Gain;
   thud: Tone.MembraneSynth;
   chime: Tone.Synth;
-  bell: Tone.Synth;
   melodyA: Tone.Synth;
   melodyB: Tone.Synth;
   // Sonorisation.
@@ -508,8 +507,8 @@ export async function startAudio(): Promise<void> {
 
   // Voix de bord : tout ce que DIT la rame passe par ce robinet, et lui seul
   // tombe à un niveau lointain quand le joueur descend sur le quai. Les
-  // carillons de porte et le jingle d'arrivée restent branchés en direct sur
-  // paIn - eux, on les entend très bien depuis le quai.
+  // carillons de porte, eux, restent branchés en direct sur paIn - on les
+  // entend très bien depuis le quai.
   const paVoiceGain = new Tone.Gain(1).connect(paIn);
   const paVoiceIn = new Tone.Gain(1).connect(paVoiceGain);
 
@@ -587,7 +586,7 @@ export async function startAudio(): Promise<void> {
     ...chimeVoice,
     modulationIndex: 2.4,
     envelope: { attack: 0.005, decay: 0.22, sustain: 0.03, release: 0.5 },
-    volume: -9,
+    volume: -7,
   }).connect(chimeShelf);
   // La finale tenue (Sol♯5). Même timbre, deux différences : sa décroissance
   // court sur 1,2 s au lieu de 0,22, et sa modulation est plus discrète - la
@@ -599,7 +598,7 @@ export async function startAudio(): Promise<void> {
     ...chimeVoice,
     modulationIndex: 1.6,
     envelope: { attack: 0.005, decay: 1.2, sustain: 0.05, release: 0.55 },
-    volume: -10,
+    volume: -8,
   }).connect(chimeShelf);
   const platBeep = new Tone.Synth({
     oscillator: { type: 'square' },
@@ -711,14 +710,10 @@ export async function startAudio(): Promise<void> {
     return { gain, panner };
   });
 
-  // Carillons et jingles : sortent des diffuseurs du wagon.
+  // Carillons de porte : ils sortent des diffuseurs du wagon.
   const chime = new Tone.Synth({
     oscillator: { type: 'sine' },
     envelope: { attack: 0.005, decay: 0.25, sustain: 0.15, release: 0.35 },
-  }).connect(paIn);
-  const bell = new Tone.Synth({
-    oscillator: { type: 'triangle' },
-    envelope: { attack: 0.002, decay: 0.4, sustain: 0, release: 0.4 },
   }).connect(paIn);
 
   // --- Bus de la 発車メロディ -------------------------------------------
@@ -1020,7 +1015,6 @@ export async function startAudio(): Promise<void> {
     slidePsdGain,
     thud,
     chime,
-    bell,
     melodyA,
     melodyB,
     paIn,
@@ -2107,7 +2101,7 @@ export function passByHorn(): void {
   nodes.passHornB.triggerAttackRelease('C#5', 0.75, slot('passHornB', now), loud);
 }
 
-// --- Carillons et jingles (synthèse, avec hook fichiers locaux) ---
+// --- Carillons de porte (synthèse, avec hook fichiers locaux) ---
 
 function synthDoorOpen(): void {
   if (!nodes) return;
@@ -2122,13 +2116,6 @@ function synthDoorClose(): void {
   nodes.chime.triggerAttackRelease('A5', 0.16, slot('chime', now), 0.5);
   nodes.chime.triggerAttackRelease('E5', 0.3, slot('chime', now + 0.18), 0.5);
   nodes.air.triggerAttackRelease(0.5, slot('air', now + 0.5), 0.18);
-}
-
-function synthArrival(): void {
-  if (!nodes) return;
-  const now = Tone.now();
-  const notes = ['G5', 'C6', 'E6', 'G6'];
-  notes.forEach((n, i) => nodes!.bell.triggerAttackRelease(n, 0.3, slot('bell', now + i * 0.17), 0.4));
 }
 
 // --- Mélodies de départ (発車メロディ), compositions ORIGINALES ---
@@ -2448,9 +2435,6 @@ export function doorOpenChime(): void {
 }
 export function doorCloseChime(): void {
   void playClip('door-close', synthDoorClose);
-}
-export function arrivalJingle(): void {
-  void playClip('arrival', synthArrival);
 }
 
 /** Gare dont le repli est déjà lancé, pour ne pas l'empiler sur lui-même. */

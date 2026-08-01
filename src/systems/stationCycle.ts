@@ -815,7 +815,6 @@ function seedFired(phase: Phase, t: number, stationIndex: number, dir: LoopDirec
   } else if (phase === 'brake') {
     fired.add('door-timings');
     fired.add('brake-apply');
-    fired.add('jingle');
     fired.add('crowd-seed');
     if (speedFor('brake', t, stationIndex) <= 0.01) fired.add('stop-settle');
   } else if (phase === 'dwell') {
@@ -1106,7 +1105,6 @@ export function updateCycle(dt: number): void {
       });
       // Mise en action des freins : purge d'air au tout début du freinage.
       once('brake-apply', true, () => audio.brakeApply());
-      once('jingle', true, () => audio.arrivalJingle());
       // Foule déjà en place dès le début du freinage : on la voit arriver
       // avec le quai, opaque, le long des vitres.
       once('crowd-seed', true, () => seedPlatformCrowd(s.index));
