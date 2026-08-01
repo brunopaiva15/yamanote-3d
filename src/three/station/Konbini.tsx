@@ -12,11 +12,15 @@
 //
 //   · le meuble à magazines contre la vitre - c'est là qu'il est dans toutes
 //     les gares du monde, et c'est ce qu'on voit d'abord en passant ;
-//   · la gondole centrale, quatre plateaux garnis des DEUX côtés de vraies
-//     boîtes, pas d'une image ;
-//   · le mur de vitrines réfrigérées, portes vitrées et bandeau lumineux, qui
-//     tient tout le fond ;
-//   · le meuble froid ouvert à onigiri et sandwichs, à gauche du fond ;
+//   · la gondole centrale sur son socle rouge, quatre plateaux garnis des DEUX
+//     côtés d'articles en volume - briques, paquets, canettes, bouteilles -
+//     chaque nez portant son rail d'étiquettes, le tout coiffé d'un fronton
+//     aux couleurs de l'enseigne ;
+//   · le mur de vitrines réfrigérées, socle sombre, pare-chocs orange et
+//     bandeau de famille, qui tient tout le fond ;
+//   · le meuble froid OUVERT à onigiri et sandwichs, trois gradins garnis sous
+//     leurs tubes, à gauche du fond ;
+//   · le bac à glaces vitré, en plein passage ;
 //   · le comptoir de caisse près de l'entrée, avec son écran client, son bac à
 //     friture, sa machine à café, et l'armoire à cigarettes au mur derrière.
 //
@@ -24,19 +28,24 @@
 // derrière sa caisse : un konbini n'a d'ombre nulle part et n'est jamais vide,
 // c'est ce qui le distingue du hall où il se trouve.
 //
-// LE BUDGET. Tout ce qui se répète - les centaines de produits en rayon - tient
-// dans un InstancedMesh et un seul appel de rendu (`shopKit`). Toutes les
+// LA COULEUR. Un konbini est un lieu CHAUD, et c'est ce qui manquait le plus :
+// carrelage de grès terracotta, tôle crème plutôt que blanche, socles rouges,
+// pare-chocs et frise orange. En gris et blanc, la boutique la mieux garnie du
+// monde ressemble à une pharmacie.
+//
+// LE BUDGET. Tout ce qui se répète - le millier d'articles en rayon - tient
+// dans deux InstancedMesh et deux appels de rendu (`shopKit`). Toutes les
 // images sont celles du pool de session, partagées par les trente gares ; seul
 // le bandeau d'enseigne appartient à la gare, puisqu'il porte son nom, et il se
 // construit et se libère avec la boutique.
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
 import { makeNewDaysBandTexture } from '../../textures/konbini';
 import type { Mats } from './materials';
-import { useInstanceColors, useInstances } from './instancing';
 import { fillUnit, pick, shopPool } from './shopKit';
+import { Goods } from './Goods';
 import { ShopClerk } from './ShopStaff';
 
 /** Épaisseur des parois de la coque. */
@@ -52,8 +61,15 @@ const COOL_VALANCE = 0.36;
 const CHILL_H = 1.6;
 /** Gondole centrale : assez basse pour qu'on voie le fond par-dessus. */
 const GOND_H = 1.42;
-/** Présentoir à magazines, contre la vitre. */
-const RACK_H = 1.34;
+/**
+ * Présentoir à magazines, contre la vitre.
+ *
+ * Volontairement plus BAS que la gondole : c'est le meuble le plus proche du
+ * regard depuis le hall, et à un mètre trente-quatre il masquait tout ce qu'il
+ * y avait derrière lui. Un râtelier de konbini arrive à la poitrine, pas à
+ * l'épaule.
+ */
+const RACK_H = 1.12;
 /** Allée laissée devant les vitrines du fond. */
 const BACK_AISLE = 0.68;
 
@@ -143,11 +159,21 @@ export function Konbini({
     return [
       ...fillUnit(station * 3 + 1, { ...shelf, z: gondZ + gondD / 2, face: 1, depth: gondD * 0.44 }),
       ...fillUnit(station * 3 + 2, { ...shelf, z: gondZ - gondD / 2, face: -1, depth: gondD * 0.44 }),
+      // Le meuble froid ouvert est garni pour de vrai lui aussi : c'est le
+      // rayon qu'on longe le plus près en entrant, et une image plaquée au
+      // fond d'un meuble à trois gradins ne tient pas à un mètre.
+      ...fillUnit(station * 3 + 5, {
+        x0: -hw + 0.16,
+        x1: leftEnd - 0.16,
+        y0: 0.44,
+        y1: CHILL_H - 0.12,
+        decks: 3,
+        z: zb + coolD - 0.04,
+        face: 1,
+        depth: coolD * 0.55,
+      }),
     ];
-  }, [station, gondX0, gondX1, gondZ, gondD]);
-  const goodsRef = useRef<THREE.InstancedMesh>(null);
-  useInstances(goodsRef, useMemo(() => goods.map((g) => g.m), [goods]));
-  useInstanceColors(goodsRef, useMemo(() => goods.map((g) => g.color), [goods]));
+  }, [station, gondX0, gondX1, gondZ, gondD, hw, leftEnd, zb, coolD]);
 
   return (
     <group name="konbini">
@@ -169,117 +195,209 @@ export function Konbini({
       <mesh position={[0, shell - 0.04, 0]} rotation={[Math.PI / 2, 0, 0]} material={p.ceiling}>
         <planeGeometry args={[2 * hw, d - WALL]} />
       </mesh>
-      {/* Cinq réglettes nues : un konbini est éclairé À PLAT, sans ombre portée
+      {/* Cinq luminaires : un konbini est éclairé À PLAT, sans ombre portée
           nulle part, et c'est cette lumière-là qu'on voit du bout du hall bien
-          avant de lire l'enseigne. Le plafond est celui de la BOUTIQUE et non
-          celui du hall : la dalle grise du couloir, reprise telle quelle,
-          éteignait tout ce qu'il y avait dessous. */}
-      {Array.from({ length: 5 }, (_, i) => (
+          avant de lire l'enseigne. Le tube est NU dans sa réglette - c'est ce
+          qu'on voit au plafond de tous les konbini du monde - et la réglette
+          elle-même se voit : un simple trait lumineux collé sous la dalle
+          n'avait ni épaisseur ni ombre, et le plafond restait un aplat. */}
+      {Array.from({ length: 5 }, (_, i) => {
+        const lx = -hw + ((i + 0.5) * 2 * hw) / 5;
+        return (
+          <group key={`neon${i}`} position={[lx, shell - 0.1, (zb + zf) / 2 - 0.1]}>
+            <mesh position={[0, 0.05, 0]} material={p.casework}>
+              <boxGeometry args={[0.3, 0.09, d - 0.5]} />
+            </mesh>
+            <mesh material={p.lit}>
+              <boxGeometry args={[0.19, 0.05, d - 0.56]} />
+            </mesh>
+          </group>
+        );
+      })}
+      {/* Les parois, vues du dedans : de la tôle crème, et non le béton pâle du
+          hall. Une boutique chaude bordée de murs gris se refroidissait par les
+          bords - et ce sont justement les bords qu'on voit à travers la vitrine
+          quand on passe de trois quarts. Le fond compte autant : au-dessus des
+          vitrines, il reste soixante centimètres de mur en plein champ. */}
+      {[-1, 1].map((s) => (
         <mesh
-          key={`neon${i}`}
-          position={[-hw + ((i + 0.5) * 2 * hw) / 5, shell - 0.1, (zb + zf) / 2 - 0.1]}
-          material={p.lit}
+          key={`doublage${s}`}
+          position={[s * (hw - 0.008), (shell - 0.2) / 2, 0]}
+          rotation={[0, (-s * Math.PI) / 2, 0]}
+          material={p.casework}
         >
-          <boxGeometry args={[0.22, 0.06, d - 0.52]} />
+          <planeGeometry args={[d - WALL, shell - 0.2]} />
+        </mesh>
+      ))}
+      <mesh position={[0, (shell - 0.2) / 2, zb + 0.008]} material={p.casework}>
+        <planeGeometry args={[2 * hw, shell - 0.2]} />
+      </mesh>
+      {/* Le filet orange en haut des parois : la frise que porte tout konbini,
+          juste sous le nu haut de la vitrine. Elle ne sert à rien qu'à
+          réchauffer le blanc, et c'est exactement ce qui manquait. Posée plus
+          haut - sous le plafond, où elle serait en vrai -, elle disparaissait
+          derrière le caisson d'enseigne et ne servait plus à personne. */}
+      <mesh position={[0, glassH - 0.16, zb + 0.02]} material={p.bumper}>
+        <boxGeometry args={[2 * hw, 0.12, 0.03]} />
+      </mesh>
+      {[-1, 1].map((s) => (
+        <mesh key={`frise${s}`} position={[s * (hw - 0.02), glassH - 0.16, 0]} material={p.bumper}>
+          <boxGeometry args={[0.03, 0.12, d - WALL]} />
         </mesh>
       ))}
 
-      {/* --- Le mur de vitrines réfrigérées ---------------------------- */}
+      {/* --- Le mur de vitrines réfrigérées ----------------------------
+          Trois choses font un meuble réfrigéré japonais, et aucune n'est la
+          porte : le SOCLE sombre sur lequel il pose, le PARE-CHOCS orange qui
+          court à hauteur de chariot, et le BANDEAU de famille qui le coiffe.
+          Sans eux, une batterie de portes vitrées n'est qu'un mur de verre. */}
       <group name="konbini/vitrines">
+        <mesh position={[(coolX0 + coolX1) / 2, 0.06, zb + coolD / 2]} material={p.plinth}>
+          <boxGeometry args={[coolX1 - coolX0, 0.12, coolD + 0.03]} />
+        </mesh>
         <mesh
-          position={[(coolX0 + coolX1) / 2, (COOL_H + COOL_VALANCE) / 2, zb + coolD / 2]}
+          position={[(coolX0 + coolX1) / 2, (COOL_H + COOL_VALANCE) / 2 + 0.06, zb + coolD / 2]}
           material={p.casework}
         >
           <boxGeometry args={[coolX1 - coolX0, COOL_H + COOL_VALANCE, coolD]} />
         </mesh>
         {Array.from({ length: doors }, (_, i) => (
-          <mesh
-            key={`porte${i}`}
-            position={[coolX0 + (i + 0.5) * doorPitch, COOL_H / 2 + 0.06, zb + coolD + 0.004]}
-            material={pick(p.coolers, station, i)}
-          >
-            <planeGeometry args={[doorPitch - 0.04, COOL_H - 0.1]} />
-          </mesh>
+          <group key={`porte${i}`} position={[coolX0 + (i + 0.5) * doorPitch, 0, 0]}>
+            <mesh position={[0, COOL_H / 2 + 0.14, zb + coolD + 0.004]} material={pick(p.coolers, station, i)}>
+              <planeGeometry args={[doorPitch - 0.06, COOL_H - 0.14]} />
+            </mesh>
+            {/* Le montant qui sépare deux portes, et sa poignée verticale. */}
+            <mesh position={[doorPitch / 2, COOL_H / 2 + 0.14, zb + coolD + 0.02]} material={p.chrome}>
+              <boxGeometry args={[0.05, COOL_H - 0.1, 0.05]} />
+            </mesh>
+          </group>
         ))}
-        {/* Le bandeau lumineux au-dessus des portes : toute vitrine en a un, et
-            c'est lui qui fait que le fond de la boutique est plus clair que
-            l'avant - l'inverse d'un décor peint. */}
         <mesh
-          position={[(coolX0 + coolX1) / 2, COOL_H + COOL_VALANCE / 2, zb + coolD + 0.006]}
-          material={p.lit}
+          position={[(coolX0 + coolX1) / 2, 0.14, zb + coolD + 0.02]}
+          material={p.bumper}
         >
-          <planeGeometry args={[coolX1 - coolX0 - 0.06, COOL_VALANCE - 0.08]} />
+          <boxGeometry args={[coolX1 - coolX0, 0.16, 0.05]} />
+        </mesh>
+        <mesh
+          position={[(coolX0 + coolX1) / 2, COOL_H + COOL_VALANCE / 2 + 0.06, zb + coolD + 0.008]}
+          material={p.bands.drinks}
+        >
+          <planeGeometry args={[coolX1 - coolX0 - 0.04, COOL_VALANCE - 0.04]} />
         </mesh>
       </group>
 
-      {/* --- Le meuble froid ouvert : onigiri, sandwichs, bentō -------- */}
+      {/* --- Le meuble froid ouvert : onigiri, sandwichs, bentō --------
+          Ouvert veut dire qu'on y PREND À MAIN NUE : il n'a pas de porte, il a
+          trois gradins garnis, un tube sous chaque casquette, un pare-chocs et
+          son bandeau. C'est le rayon qu'on longe le plus près en entrant, et
+          c'est celui qui souffrait le plus d'être une image collée au fond. */}
       <group name="konbini/meuble-froid">
-        <mesh
-          position={[(-hw + leftEnd) / 2, CHILL_H / 2, zb + coolD / 2]}
-          material={p.casework}
-        >
-          <boxGeometry args={[leftEnd + hw - 0.06, CHILL_H, coolD]} />
+        <mesh position={[(-hw + leftEnd) / 2, 0.06, zb + coolD / 2]} material={p.plinth}>
+          <boxGeometry args={[leftEnd + hw - 0.06, 0.12, coolD + 0.03]} />
         </mesh>
-        <mesh
-          position={[(-hw + leftEnd) / 2, CHILL_H * 0.56, zb + coolD + 0.004]}
-          material={pick(p.chilled, station, 1)}
-        >
-          <planeGeometry args={[leftEnd + hw - 0.16, CHILL_H * 0.78]} />
+        {/* Caisson : joues et fond, mais pas de face - c'est ce creux qui fait
+            le meuble ouvert. */}
+        <mesh position={[(-hw + leftEnd) / 2, CHILL_H / 2 + 0.06, zb + 0.05]} material={pick(p.chilled, station, 1)}>
+          <boxGeometry args={[leftEnd + hw - 0.06, CHILL_H, 0.1]} />
         </mesh>
-        {/* Casquette du meuble, et son tube : un meuble froid ouvert est
-            toujours éclairé par le dessus, sinon il fait un trou noir. */}
-        <mesh
-          position={[(-hw + leftEnd) / 2, CHILL_H + 0.05, zb + coolD * 0.62]}
-          material={p.casework}
-        >
-          <boxGeometry args={[leftEnd + hw - 0.06, 0.1, coolD * 1.2]} />
-        </mesh>
-        <mesh
-          position={[(-hw + leftEnd) / 2, CHILL_H - 0.02, zb + coolD + 0.09]}
-          material={p.lit}
-        >
-          <boxGeometry args={[leftEnd + hw - 0.2, 0.05, 0.06]} />
-        </mesh>
-      </group>
-
-      {/* --- La gondole centrale, garnie des deux côtés ---------------- */}
-      <group name="konbini/gondole">
-        <mesh position={[(gondX0 + gondX1) / 2, 0.11, gondZ]} material={p.casework}>
-          <boxGeometry args={[gondX1 - gondX0, 0.22, gondD * 0.86]} />
-        </mesh>
-        <mesh position={[(gondX0 + gondX1) / 2, GOND_H / 2 + 0.11, gondZ]} material={p.casework}>
-          <boxGeometry args={[gondX1 - gondX0, GOND_H - 0.22, 0.05]} />
-        </mesh>
-        {/* Les plateaux : quatre planches en porte-à-faux de part et d'autre du
-            dos. C'est cette silhouette en arête de poisson qui fait une
-            gondole, et non un meuble plein. */}
-        {[0, 1, 2, 3].map((k) => {
-          const y = 0.24 + (k * (GOND_H - 0.28)) / 4;
+        {[-1, 1].map((s) => {
+          const cx = (-hw + leftEnd) / 2 + (s * (leftEnd + hw - 0.06)) / 2;
           return (
-            <mesh
-              key={`plateau${k}`}
-              position={[(gondX0 + gondX1) / 2, y - 0.012, gondZ]}
-              material={p.lip}
-            >
-              <boxGeometry args={[gondX1 - gondX0 - 0.02, 0.024, gondD]} />
+            <mesh key={`joue${s}`} position={[cx, CHILL_H / 2 + 0.06, zb + coolD / 2]} material={p.casework}>
+              <boxGeometry args={[0.07, CHILL_H, coolD]} />
             </mesh>
           );
         })}
-        {/* Le fronton de rayon, au-dessus : la pancarte de catégorie. */}
-        <mesh
-          position={[(gondX0 + gondX1) / 2, GOND_H + 0.14, gondZ + gondD / 2]}
-          material={pick(p.pops, station, 3)}
-        >
-          <planeGeometry args={[Math.min(0.8, (gondX1 - gondX0) * 0.3), 0.2]} />
+        {/* Les trois gradins, chacun avec son rail de prix et son tube. */}
+        {[0, 1, 2].map((k) => {
+          const y = 0.44 + (k * (CHILL_H - 0.56)) / 3;
+          return (
+            <group key={`gradin${k}`} position={[(-hw + leftEnd) / 2, y, 0]}>
+              <mesh position={[0, -0.02, zb + coolD / 2]} material={p.lip}>
+                <boxGeometry args={[leftEnd + hw - 0.14, 0.03, coolD - 0.06]} />
+              </mesh>
+              <mesh position={[0, -0.035, zb + coolD - 0.03]} material={p.rail}>
+                <planeGeometry args={[leftEnd + hw - 0.14, 0.05]} />
+              </mesh>
+              <mesh position={[0, 0.24, zb + coolD - 0.1]} material={p.lit}>
+                <boxGeometry args={[leftEnd + hw - 0.24, 0.025, 0.04]} />
+              </mesh>
+            </group>
+          );
+        })}
+        <mesh position={[(-hw + leftEnd) / 2, 0.2, zb + coolD + 0.01]} material={p.bumper}>
+          <boxGeometry args={[leftEnd + hw - 0.06, 0.24, 0.06]} />
         </mesh>
-        <instancedMesh
-          name="konbini/marchandise"
-          ref={goodsRef}
-          args={[undefined, undefined, Math.max(1, goods.length)]}
-          material={p.goods}
+        <mesh position={[(-hw + leftEnd) / 2, CHILL_H + 0.14, zb + coolD * 0.6]} material={p.casework}>
+          <boxGeometry args={[leftEnd + hw - 0.06, 0.28, coolD * 1.24]} />
+        </mesh>
+        <mesh
+          position={[(-hw + leftEnd) / 2, CHILL_H + 0.14, zb + coolD * 1.22]}
+          material={p.bands.chilled}
         >
-          <boxGeometry args={[1, 1, 1]} />
-        </instancedMesh>
+          <planeGeometry args={[leftEnd + hw - 0.12, 0.24]} />
+        </mesh>
+      </group>
+
+      {/* --- La gondole centrale, garnie des deux côtés ----------------
+          Une gondole de konbini n'est pas une étagère : c'est un SOCLE ROUGE
+          laqué qui l'ancre au sol, des plateaux crème dont chaque nez porte son
+          rail de prix, des montants chromés aux deux bouts, et par-dessus le
+          tout un FRONTON aux couleurs de l'enseigne. Sans le socle elle
+          flottait ; sans le fronton, elle appartenait à un entrepôt. */}
+      <group name="konbini/gondole">
+        <mesh position={[(gondX0 + gondX1) / 2, 0.08, gondZ]} material={p.plinth}>
+          <boxGeometry args={[gondX1 - gondX0, 0.16, gondD * 0.92]} />
+        </mesh>
+        <mesh position={[(gondX0 + gondX1) / 2, GOND_H / 2 + 0.16, gondZ]} material={p.casework}>
+          <boxGeometry args={[gondX1 - gondX0, GOND_H - 0.32, 0.05]} />
+        </mesh>
+        {[-1, 1].map((s) => (
+          <mesh
+            key={`montant${s}`}
+            position={[(gondX0 + gondX1) / 2 + (s * (gondX1 - gondX0)) / 2, GOND_H / 2 + 0.16, gondZ]}
+            material={p.chrome}
+          >
+            <boxGeometry args={[0.04, GOND_H - 0.2, gondD * 0.9]} />
+          </mesh>
+        ))}
+        {[0, 1, 2, 3].map((k) => {
+          const y = 0.24 + (k * (GOND_H - 0.28)) / 4;
+          return (
+            <group key={`plateau${k}`} position={[(gondX0 + gondX1) / 2, y, gondZ]}>
+              <mesh position={[0, -0.012, 0]} material={p.lip}>
+                <boxGeometry args={[gondX1 - gondX0 - 0.02, 0.024, gondD]} />
+              </mesh>
+              {/* Le rail d'étiquettes, sur les deux nez : c'est LUI qui fait
+                  d'une planche un rayon, et il coûte un plan. */}
+              {[-1, 1].map((s) => (
+                <mesh
+                  key={`rail${s}`}
+                  position={[0, -0.031, (s * gondD) / 2 + s * 0.002]}
+                  rotation={[0, s > 0 ? 0 : Math.PI, 0]}
+                  material={p.rail}
+                >
+                  <planeGeometry args={[gondX1 - gondX0 - 0.02, 0.045]} />
+                </mesh>
+              ))}
+            </group>
+          );
+        })}
+        {/* Le fronton : légèrement incliné vers l'avant, comme une casquette. */}
+        <mesh position={[(gondX0 + gondX1) / 2, GOND_H + 0.18, gondZ]} material={p.casework}>
+          <boxGeometry args={[gondX1 - gondX0 + 0.06, 0.26, gondD * 0.72]} />
+        </mesh>
+        {[-1, 1].map((s) => (
+          <mesh
+            key={`fronton${s}`}
+            position={[(gondX0 + gondX1) / 2, GOND_H + 0.18, (s * gondD * 0.72) / 2 + gondZ + s * 0.004]}
+            rotation={[0, s > 0 ? 0 : Math.PI, 0]}
+            material={p.gondolaHeader}
+          >
+            <planeGeometry args={[gondX1 - gondX0 + 0.02, 0.22]} />
+          </mesh>
+        ))}
+        <Goods goods={goods} name="konbini/marchandise" />
       </group>
 
       {/* --- Le présentoir à magazines, contre la vitre ---------------- */}
@@ -289,8 +407,8 @@ export function Konbini({
         </mesh>
         {/* Quatre étages inclinés : un râtelier présente ses couvertures en
             arrière, jamais d'aplomb - c'est ce qui les rend lisibles debout. */}
-        {[0, 1, 2, 3].map((k) => (
-          <group key={`etage${k}`} position={[0, 0.28 + k * 0.32, 0]}>
+        {[0, 1, 2].map((k) => (
+          <group key={`etage${k}`} position={[0, 0.26 + k * 0.31, 0]}>
             <mesh position={[0, -0.02, 0]} material={p.lip}>
               <boxGeometry args={[rackX1 - rackX0 - 0.04, 0.03, rackD]} />
             </mesh>
@@ -398,36 +516,62 @@ export function Konbini({
 
         {/* Pile de paniers, à l'entrée : on en prend un en passant, et c'est le
             premier objet de toute boutique japonaise. */}
-        <group position={[doorX - doorW / 2 - 0.28, 0, zf - 0.5]}>
+        <group position={[Math.min(hw - 0.24, doorX + doorW / 2 + 0.3), 0, zf - 0.5]}>
           {[0, 1, 2, 3, 4].map((k) => (
-            <mesh
+            <group
               key={`panier${k}`}
               position={[0, 0.05 + k * 0.1, 0]}
               rotation={[0, (k % 2 ? 1 : -1) * 0.03, 0]}
-              scale={[1, 1, 1 + k * 0.012]}
             >
-              {/* Un panier emboîté ne dépasse que de son bord : la pile est une
-                  suite de LIGNES, pas un bloc. Sans le jeu qui les sépare, les
-                  cinq paniers fondaient en un cube bleu. */}
-              <boxGeometry args={[0.36, 0.07, 0.26]} />
-              <meshStandardMaterial color="#3f6fb8" roughness={0.6} />
-            </mesh>
+              {/* Un panier emboîté ne dépasse que de son BORD : la pile est une
+                  suite de lignes, pas un bloc. Le corps est en retrait sous un
+                  bord plus large et plus sombre - sans ce redan, cinq paniers
+                  fondaient en un pavé bleu. */}
+              <mesh position={[0, -0.02, 0]}>
+                <boxGeometry args={[0.33, 0.06, 0.23]} />
+                <meshStandardMaterial color="#3f6fb8" roughness={0.6} />
+              </mesh>
+              <mesh position={[0, 0.02, 0]}>
+                <boxGeometry args={[0.37, 0.03, 0.27]} />
+                <meshStandardMaterial color="#2a4f88" roughness={0.55} />
+              </mesh>
+            </group>
           ))}
         </group>
 
-        {/* L'îlot promotionnel : un bac de carton posé en plein passage, garni
-            de ce qui se vend cette semaine. Aucun konbini n'a le sol vide au
-            milieu, et c'est cette pile-là qui l'occupe. */}
-        <group position={[doorX - doorW * 0.55, 0, zf - 1.2]}>
-          <mesh position={[0, 0.3, 0]}>
-            <boxGeometry args={[0.72, 0.6, 0.5]} />
-            <meshStandardMaterial color="#c8a878" roughness={0.9} />
+        {/* Le bac à glaces, en plein passage : un coffre bas à couvercles
+            vitrés coulissants, joue orange, plinthe sombre. C'est le meuble le
+            plus reconnaissable d'un konbini après le mur de vitrines, et le
+            seul qu'on regarde par le DESSUS - il occupe le milieu du sol, que
+            personne ne laisse vide. */}
+        {/* Il se pose DEVANT la gondole, jamais à son droit : un mètre trente
+            de coffre planté dans un rayon ne se voit sur aucune capture prise
+            de face, et la sonde de gare le trouve du premier coup. */}
+        <group name="konbini/bac-glaces" position={[doorX - doorW * 0.42, 0, zf - 0.84]}>
+          <mesh position={[0, 0.05, 0]} material={p.plinth}>
+            <boxGeometry args={[1.24, 0.1, 0.7]} />
           </mesh>
-          <mesh position={[0, 0.66, 0]} material={p.lip}>
-            <boxGeometry args={[0.66, 0.14, 0.44]} />
+          <mesh position={[0, 0.44, 0]} material={p.bumper}>
+            <boxGeometry args={[1.3, 0.7, 0.76]} />
           </mesh>
-          <mesh position={[0, 0.92, 0.02]} material={pick(p.pops, station, 2)}>
-            <planeGeometry args={[0.5, 0.25]} />
+          <mesh position={[0, 0.52, 0]} material={p.casework}>
+            <boxGeometry args={[1.18, 0.22, 0.78]} />
+          </mesh>
+          <mesh position={[0, 0.82, 0]} material={p.chrome}>
+            <boxGeometry args={[1.32, 0.06, 0.78]} />
+          </mesh>
+          {/* Les deux couvercles vitrés, et le froid bleuté qu'on voit dessous. */}
+          {[-1, 1].map((s) => (
+            <mesh key={`couvercle${s}`} position={[s * 0.31, 0.86, 0]} material={m.glass}>
+              <boxGeometry args={[0.58, 0.03, 0.66]} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.78, 0]}>
+            <boxGeometry args={[1.2, 0.02, 0.68]} />
+            <meshBasicMaterial color="#bfe4f2" toneMapped={false} />
+          </mesh>
+          <mesh position={[0, 0.44, 0.385]} material={p.bands.ice}>
+            <planeGeometry args={[1.1, 0.3]} />
           </mesh>
         </group>
 

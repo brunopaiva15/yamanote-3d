@@ -239,6 +239,49 @@ seuls sous une caméra qu'on tourne autour. Le konbini est au fond du hall, deux
 niveaux sous le quai, derrière une trémie, une ligne de portillons et quarante
 mètres de couloir : descendre l'y chercher à chaque essai n'était pas tenable.
 
+## Phase 11 — L'intérieur, et sa température ✅
+
+**Livré.** La phase 10 avait donné à la boutique un VOLUME ; il lui manquait
+encore une AMBIANCE. Garnie jusqu'au plafond mais peinte en gris et blanc, elle
+ressemblait à une pharmacie — pas à ce lieu chaud, saturé et un peu encombré
+qu'est un konbini.
+
+**La couleur d'abord, parce que c'est elle qu'on voit avant tout le reste.**
+
+- **le sol** est un carrelage de grès TERRACOTTA de 45 cm, à joints apparents,
+  chaque carreau tiré à part (dans un vrai grès, deux carreaux voisins ne sont
+  jamais du même bain). C'est lui qui donne sa température à la pièce : peint
+  en vinyle gris pâle, il refroidissait tout ce qui était posé dessus ;
+- **le mobilier** passe du blanc au CRÈME, et gagne ce qu'il n'avait pas : un
+  socle laqué ROUGE qui l'ancre au sol, un pare-chocs ORANGE à hauteur de
+  chariot sur les meubles froids, une frise orange en haut des parois ;
+- **les parois vues du dedans** sont doublées de tôle crème et non du béton
+  pâle du hall — ce sont justement les bords qu'on voit de trois quarts.
+
+**La marchandise prend forme.** Tout était en cubes, et c'est ce qui trahissait
+le plus vite un rayon : dans un vrai konbini, on distingue à trois mètres une
+canette d'une brique de lait et d'une bouteille, parce que ce sont trois
+SILHOUETTES. Quatre gabarits (brique, paquet, canette, bouteille) et un bandeau
+d'étiquette en travers de chaque article. Deux familles de forme suffisent — le
+prisme et le révolutionné — donc **deux appels de rendu par boutique**, quel que
+soit le nombre d'articles : une bouteille n'est pas une troisième famille, c'est
+un corps rond coiffé d'un col plus étroit.
+
+**Et ce qui manquait autour.** Le rail d'étiquettes blanc sur le nez de chaque
+étagère (une planche sans son rail est une planche ; avec, c'est un rayon), le
+fronton de gondole aux couleurs de l'enseigne, les bandeaux de famille sur les
+meubles froids (bleu pour les boissons, rouge pour le frais, cyan pour les
+glaces), le meuble froid ouvert reconstruit en trois gradins garnis sous leurs
+tubes, le bac à glaces vitré en plein passage, les luminaires de plafond qui
+ont enfin une réglette autour de leur tube.
+
+La référence assumée est *inKonbini* : la densité, la chaleur et le désordre
+rangé d'une supérette japonaise.
+
+**Vérifié :** sonde de gare à zéro paire sur les gares à commerces — le bac à
+glaces, posé d'abord au droit de la gondole, s'y plantait de dix centimètres et
+la sonde l'a trouvé du premier coup.
+
 ---
 
 ## Ce qui ne doit pas grossir

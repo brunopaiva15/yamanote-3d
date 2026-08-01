@@ -63,154 +63,26 @@ const POP_YELLOW = '#f5c518';
  * ne ressemble à rien, un rayon tout blanc non plus.
  */
 export const GOODS_TONES: readonly string[] = [
-  '#f4f1e8',
-  '#ffffff',
-  '#e9e3d2',
+  '#f2ead6',
+  '#fdf8ec',
+  '#e6d9bc',
   '#d8452e',
+  '#e8801f',
   '#1f5fbf',
-  '#2f7a44',
-  '#e0a51f',
-  '#c86a18',
-  '#f0e0c0',
+  '#2f8a4c',
+  '#e8b81f',
+  '#c8541a',
   '#8a3f9c',
   '#3aa0c8',
   '#b8322c',
+  '#7ab648',
+  '#e05a86',
 ];
 
 /** Une teinte de rayon, tirée avec le biais de la palette (les premières sortent plus). */
 export function goodsTone(r: () => number): string {
   const k = Math.floor(r() ** 1.6 * GOODS_TONES.length);
   return GOODS_TONES[Math.min(GOODS_TONES.length - 1, k)];
-}
-
-/**
- * Un produit posé sur une étagère, dessiné de face.
- *
- * Trois silhouettes suffisent à peupler un konbini entier, parce que ce sont
- * les trois qui existent : la BOÎTE (biscuits, riz, boîtes de conserve), le
- * SACHET (chips, bonbons - épaules molles, soudure en haut), et le POT
- * (nouilles instantanées, gobelets - tronconique, couvercle clair). Ce qui les
- * distingue à trois mètres est leur profil, pas leur étiquette.
- */
-function drawItem(
-  g: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  tone: string,
-  kind: 0 | 1 | 2,
-  r: () => number,
-): void {
-  g.fillStyle = tone;
-  if (kind === 0) {
-    g.fillRect(x, y - h, w, h);
-  } else if (kind === 1) {
-    // Sachet : les épaules s'arrondissent et la soudure du haut dépasse.
-    const s = Math.min(w * 0.3, h * 0.22);
-    g.beginPath();
-    g.moveTo(x, y);
-    g.lineTo(x, y - h + s);
-    g.quadraticCurveTo(x, y - h, x + s, y - h);
-    g.lineTo(x + w - s, y - h);
-    g.quadraticCurveTo(x + w, y - h, x + w, y - h + s);
-    g.lineTo(x + w, y);
-    g.closePath();
-    g.fill();
-    g.fillStyle = 'rgba(255,255,255,0.55)';
-    g.fillRect(x + w * 0.12, y - h - 2, w * 0.76, 4);
-  } else {
-    // Pot : plus large en haut qu'en bas, et coiffé d'un opercule clair.
-    const taper = w * 0.14;
-    g.beginPath();
-    g.moveTo(x + taper, y);
-    g.lineTo(x, y - h + 6);
-    g.lineTo(x + w, y - h + 6);
-    g.lineTo(x + w - taper, y);
-    g.closePath();
-    g.fill();
-    g.fillStyle = '#dcd7cc';
-    g.fillRect(x - 1, y - h, w + 2, 7);
-  }
-  // Le bandeau de marque : une bande franche en travers, comme sur tout
-  // emballage japonais. C'est elle qui empêche le produit d'être un aplat.
-  if (r() > 0.3) {
-    g.fillStyle = r() > 0.5 ? 'rgba(20,24,32,0.72)' : 'rgba(255,255,255,0.7)';
-    const by = y - h * (0.42 + r() * 0.22);
-    g.fillRect(x + 1, by, w - 2, Math.max(3, h * 0.11));
-  }
-}
-
-/**
- * Le nez d'étagère : le rail d'étiquettes qui court sous chaque rangée.
- *
- * Sans lui, une étagère est une planche ; avec lui, c'est un rayon. Toute la
- * lisibilité d'un konbini tient à cette ligne blanche répétée tous les vingt
- * centimètres, et elle coûte trois traits.
- */
-function drawShelfLip(g: CanvasRenderingContext2D, y: number, W: number, r: () => number): void {
-  g.fillStyle = '#c9c3b4';
-  g.fillRect(0, y, W, 12);
-  g.fillStyle = '#fbfaf6';
-  g.fillRect(0, y + 2, W, 8);
-  let x = 4;
-  while (x < W - 6) {
-    const w = 26 + r() * 30;
-    g.fillStyle = r() > 0.78 ? '#d8452e' : '#3c4148';
-    g.fillRect(x + 3, y + 4, Math.min(w - 8, 16), 4);
-    x += w;
-  }
-}
-
-/**
- * Un pan de rayonnage garni, vu de face : quatre à six étages pleins.
- *
- * C'est la texture la plus employée du commerce - elle habille le fond du
- * konbini, les joues de la gondole et le corps du kiosque - et c'est pourquoi
- * elle prend une graine : deux pans identiques côte à côte se voient tout de
- * suite, deux pans tirés de la même palette ne se voient pas du tout.
- */
-export function makeShelfGoodsTexture(seed: number, rows = 5): THREE.CanvasTexture {
-  const W = 1024;
-  const H = 512;
-  const { c, g } = makeCanvas(W, H);
-  const r = rng(9100 + seed * 7919);
-
-  // Le fond d'une gondole est une tôle claire, pas un trou noir : elle renvoie
-  // la lumière des réglettes du plafond, et c'est ce qui fait qu'un konbini
-  // n'a d'ombre nulle part.
-  const back = g.createLinearGradient(0, 0, 0, H);
-  back.addColorStop(0, '#fbf9f2');
-  back.addColorStop(1, '#e4e0d4');
-  g.fillStyle = back;
-  g.fillRect(0, 0, W, H);
-
-  const pitch = H / rows;
-  for (let row = 0; row < rows; row++) {
-    const deck = Math.round((row + 1) * pitch) - 14;
-    // Le fond de l'étage, un ton plus sourd : c'est l'ombre du produit sur la
-    // tôle, et sans elle les rangs flottent.
-    g.fillStyle = 'rgba(120,116,104,0.16)';
-    g.fillRect(0, deck - pitch + 16, W, pitch - 16);
-    let x = 5;
-    // Un rang est une SÉRIE : le même produit se répète deux à cinq fois avant
-    // que le suivant commence. C'est le facing d'un vrai rayon, et c'est ce
-    // qui distingue un konbini d'un vide-grenier.
-    while (x < W - 12) {
-      const tone = goodsTone(r);
-      const kind = (Math.floor(r() * 3) % 3) as 0 | 1 | 2;
-      const w = 26 + r() * 40;
-      const h = Math.min(pitch - 26, 34 + r() * 44);
-      const facings = 2 + Math.floor(r() * 4);
-      for (let f = 0; f < facings && x < W - 12; f++) {
-        drawItem(g, x, deck, w, h, tone, kind, r);
-        x += w + 2;
-      }
-      x += 4 + r() * 6;
-    }
-    drawShelfLip(g, deck, W, r);
-  }
-  return toTexture(c);
 }
 
 /**
@@ -705,41 +577,194 @@ export function makeRegisterScreenTexture(): THREE.CanvasTexture {
 }
 
 /**
- * Le sol d'un commerce de gare : vinyle clair, grands carreaux, joints fins.
+ * Le sol d'un konbini : carrelage de grès TERRACOTTA, carreaux de 45 cm.
  *
- * Il ne se voit qu'à travers la vitrine et par la porte, mais il se voit : un
- * sol qui prolongerait le béton du hall ferait de la boutique un renfoncement
- * plutôt qu'un lieu. Le changement de sol EST le seuil.
+ * C'est le premier écart au réel, et le plus gros. Un konbini japonais n'a pas
+ * un sol de vinyle clair - il a un carrelage BRUN CHAUD, mat, à joints
+ * apparents, et c'est lui qui donne à la boutique sa température de couleur.
+ * Peint en gris pâle, tout le reste - la tôle crème du mobilier, l'orange des
+ * bandeaux, le rouge des socles - virait au froid par contraste, et l'ensemble
+ * ressemblait à une pharmacie.
+ *
+ * Chaque carreau est TIRÉ À PART : dans un vrai grès, deux carreaux voisins ne
+ * sont jamais du même bain. Sans cette variation, un carrelage répété est une
+ * grille, pas un sol.
  */
 export function makeShopFloorTexture(): THREE.CanvasTexture {
   const W = 512;
   const H = 512;
   const { c, g } = makeCanvas(W, H);
   const r = rng(8814);
-  g.fillStyle = '#e9e6dd';
+  // Le joint : gris-brun, plus sombre que le carreau, et c'est tout ce qu'on
+  // en voit. Il occupe le fond ; les carreaux se posent dessus en retrait.
+  g.fillStyle = '#6f5b4c';
   g.fillRect(0, 0, W, H);
-  // Le moucheté du vinyle : trois mille points, et la surface cesse d'être un
-  // aplat mort sous l'éclairage rasant du hall.
-  for (let i = 0; i < 3000; i++) {
-    const v = r();
-    g.fillStyle = v > 0.6 ? 'rgba(150,146,136,0.35)' : 'rgba(255,255,255,0.5)';
-    g.fillRect(r() * W, r() * H, 2 + r() * 3, 2 + r() * 3);
-  }
-  g.strokeStyle = 'rgba(160,156,146,0.55)';
-  g.lineWidth = 2;
-  for (let k = 0; k <= 2; k++) {
-    const p = (k * W) / 2;
-    g.beginPath();
-    g.moveTo(p, 0);
-    g.lineTo(p, H);
-    g.moveTo(0, p);
-    g.lineTo(W, p);
-    g.stroke();
+
+  const TILES = 2;
+  const cell = W / TILES;
+  for (let ty = 0; ty < TILES; ty++) {
+    for (let tx = 0; tx < TILES; tx++) {
+      const x = tx * cell + 3;
+      const y = ty * cell + 3;
+      const s = cell - 6;
+      // Bain du carreau : un brun chaud, tiré autour de la même teinte.
+      const base = 150 + r() * 22;
+      g.fillStyle = `rgb(${(base + 12) | 0},${(base * 0.8) | 0},${(base * 0.64) | 0})`;
+      g.fillRect(x, y, s, s);
+      // Nuage de grès : des taches à peine plus claires ou plus sombres.
+      for (let i = 0; i < 220; i++) {
+        const v = r();
+        g.fillStyle = v > 0.5 ? 'rgba(255,236,214,0.13)' : 'rgba(96,70,54,0.13)';
+        const rr = 2 + r() * 9;
+        g.beginPath();
+        g.arc(x + r() * s, y + r() * s, rr, 0, Math.PI * 2);
+        g.fill();
+      }
+      // Le biseau du carreau : une lumière en haut à gauche, une ombre en bas
+      // à droite. C'est lui qui donne au sol son relief sous un éclairage à
+      // plat, et sans lui un carrelage n'est qu'un damier peint.
+      g.fillStyle = 'rgba(255,240,220,0.22)';
+      g.fillRect(x, y, s, 3);
+      g.fillRect(x, y, 3, s);
+      g.fillStyle = 'rgba(70,50,38,0.28)';
+      g.fillRect(x, y + s - 3, s, 3);
+      g.fillRect(x + s - 3, y, 3, s);
+    }
   }
   const t = toTexture(c);
   t.wrapS = THREE.RepeatWrapping;
   t.wrapT = THREE.RepeatWrapping;
   return t;
+}
+
+/**
+ * Le rail d'étiquettes qui court sur le nez de chaque étagère.
+ *
+ * C'est le détail le plus répété d'un commerce et le plus vite manquant : une
+ * planche sans son rail est une planche, avec son rail c'est un RAYON. Il est
+ * blanc, il porte des prix en petits caractères tous les vingt centimètres, et
+ * on ne les lit pas - on lit la ligne.
+ */
+export function makeShelfRailTexture(): THREE.CanvasTexture {
+  const W = 1024;
+  const H = 64;
+  const { c, g } = makeCanvas(W, H);
+  const r = rng(3311);
+  g.fillStyle = '#f7f4ec';
+  g.fillRect(0, 0, W, H);
+  // Le profil du rail : une gorge sombre en pied, un liseré clair en tête.
+  g.fillStyle = 'rgba(255,255,255,0.85)';
+  g.fillRect(0, 0, W, 6);
+  g.fillStyle = 'rgba(110,98,84,0.4)';
+  g.fillRect(0, H - 7, W, 7);
+
+  const CARDS = 12;
+  const pitch = W / CARDS;
+  g.textBaseline = 'alphabetic';
+  for (let i = 0; i < CARDS; i++) {
+    const x = i * pitch + 5;
+    const w = pitch - 12;
+    g.fillStyle = '#ffffff';
+    g.fillRect(x, 8, w, H - 22);
+    g.strokeStyle = '#c8bfae';
+    g.lineWidth = 1.5;
+    g.strokeRect(x, 8, w, H - 22);
+    // Une étiquette sur quatre est une promotion : fond jaune, prix rouge.
+    const hot = r() > 0.74;
+    if (hot) {
+      g.fillStyle = '#f5c518';
+      g.fillRect(x + 1, 9, w - 2, H - 24);
+    }
+    g.fillStyle = '#3a3128';
+    g.font = `600 12px ${JP_FONT}`;
+    g.textAlign = 'left';
+    g.fillText('本体', x + 5, 24);
+    g.fillStyle = hot ? '#b8231c' : '#1f1a14';
+    g.textAlign = 'right';
+    fitFillText(g, `¥${[98, 115, 128, 150, 178, 198, 230, 298][Math.floor(r() * 8)]}`, x + w - 5, H - 20, w - 12, 24, 'bold');
+  }
+  const t = toTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  return t;
+}
+
+/**
+ * Le fronton d'une gondole : le bandeau de marque qui la coiffe.
+ *
+ * Dans un konbini japonais, aucune gondole n'a le dessus nu : elle porte un
+ * fronton incliné aux couleurs de l'enseigne, et c'est ce couronnement - autant
+ * que les rayons - qui fait qu'on voit un COMMERCE et non un rayonnage
+ * d'entrepôt. C'est aussi ce qui manquait le plus à la boutique de gare.
+ */
+export function makeGondolaHeaderTexture(): THREE.CanvasTexture {
+  const W = 1024;
+  const H = 128;
+  const { c, g } = makeCanvas(W, H);
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#f5e2b4');
+  grad.addColorStop(1, '#e8c98a');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = '#d8452e';
+  g.fillRect(0, H - 9, W, 9);
+  g.fillStyle = NEWDAYS_BLUE;
+  g.fillRect(0, 0, W, 5);
+
+  // La marque UNE FOIS par motif, et le motif fait un mètre trente au montage :
+  // un fronton n'est pas un ruban de logos. Répétée trois fois par image, elle
+  // revenait cinq fois sur une gondole de deux mètres soixante et le meuble
+  // avait l'air d'un présentoir de foire.
+  g.textAlign = 'center';
+  g.textBaseline = 'alphabetic';
+  g.fillStyle = NEWDAYS_BLUE;
+  fitFillText(g, 'NEWDAYS', W / 2, H * 0.6, W * 0.42, 74, 'bold');
+  g.fillStyle = '#b8231c';
+  g.font = `600 30px ${JP_FONT}`;
+  g.fillText('おトクがいっぱい', W / 2, H * 0.88);
+  const t = toTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  return t;
+}
+
+/** Ce qu'annonce le bandeau d'un meuble froid. */
+export type ChillerBand = 'drinks' | 'chilled' | 'ice';
+
+/**
+ * Le bandeau d'un meuble réfrigéré : un aplat de couleur et deux mots.
+ *
+ * Chaque famille a SA couleur, et c'est elle qu'on lit avant le texte : bleu
+ * pour les boissons, rouge-orange pour le frais, cyan givré pour les glaces.
+ * Un rayon dont on ne sait pas ce qu'il vend n'est qu'un mur de portes.
+ */
+export function makeChillerBandTexture(kind: ChillerBand): THREE.CanvasTexture {
+  const W = 1024;
+  const H = 128;
+  const { c, g } = makeCanvas(W, H);
+  const skin = {
+    drinks: { bg: '#1b62b4', ink: '#ffffff', jp: 'ドリンク', sub: '冷えた飲みもの' },
+    chilled: { bg: '#d8452e', ink: '#fff4e2', jp: 'おにぎり・お弁当', sub: '毎日つくりたて' },
+    ice: { bg: '#3aa8c8', ink: '#ffffff', jp: 'アイスクリーム', sub: 'つめたいおやつ' },
+  }[kind];
+
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, skin.bg);
+  grad.addColorStop(1, `rgba(0,0,0,0.25)`);
+  g.fillStyle = skin.bg;
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = grad;
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(255,255,255,0.9)';
+  g.fillRect(0, 0, W, 6);
+  g.fillStyle = 'rgba(255,255,255,0.35)';
+  g.fillRect(0, H - 5, W, 5);
+
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+  g.fillStyle = skin.ink;
+  fitFillText(g, skin.jp, 40, H * 0.66, W * 0.42, 70, 'bold');
+  g.font = `600 30px ${JP_FONT}`;
+  g.fillText(skin.sub, W * 0.5, H * 0.62);
+  return toTexture(c);
 }
 
 /** Où se pose un bandeau NEWDAYS : au-dessus d'une devanture, ou sur un auvent. */

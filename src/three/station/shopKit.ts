@@ -17,11 +17,11 @@
 //
 // LES PRODUITS SONT EN VOLUME, PAS EN IMAGE. Un rayon peint suffit derrière une
 // vitre, à trois mètres et de trois quarts ; il ne suffit plus quand on a le
-// nez dessus, sous l'auvent d'un kiosque. Les étagères du premier plan portent
-// donc de vraies boîtes - quelques centaines, dans un seul InstancedMesh et un
-// seul appel de rendu, teintées par exemplaire. C'est la règle du chantier
-// (« ce qui se répète s'instancie ») appliquée à ce qui se répète le plus dans
-// une gare : les marchandises.
+// nez dessus, sous l'auvent d'un kiosque. Les étagères portent donc de vrais
+// articles - huit cents à mille par boutique, teintés par exemplaire, en DEUX
+// InstancedMesh (le prisme et le révolutionné, voir `Good`) et donc deux appels
+// de rendu quel qu'en soit le nombre. C'est la règle du chantier (« ce qui se
+// répète s'instancie ») appliquée à ce qui se répète le plus dans une gare.
 
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
@@ -30,25 +30,26 @@ import { runtime } from '../../systems/runtime';
 import {
   goodsTone,
   makeChilledCaseTexture,
+  makeChillerBandTexture,
   makeCoolerDoorTexture,
+  makeGondolaHeaderTexture,
   makeMagazineRowTexture,
   makeNewspaperRowTexture,
   makePopCardTexture,
   makePromoPosterTexture,
   makeRegisterScreenTexture,
-  makeShelfGoodsTexture,
+  makeShelfRailTexture,
   makeShopFloorTexture,
   makeShopGlowTexture,
   makeShutterTexture,
   makeTobaccoWallTexture,
   makeAutoDoorDecalTexture,
+  type ChillerBand,
 } from '../../textures/konbini';
 import { rng } from '../../textures/procedural';
 import { mat } from './instancing';
 
 export interface ShopPool {
-  /** Pans de rayonnage garnis, vus de face. */
-  shelves: THREE.MeshBasicMaterial[];
   /** Portes de vitrine réfrigérée. */
   coolers: THREE.MeshBasicMaterial[];
   /** Meuble froid ouvert : onigiri, sandwichs. */
@@ -67,7 +68,7 @@ export interface ShopPool {
   screen: THREE.MeshBasicMaterial;
   /** Bandeau 自動ドア collé sur les vantaux. */
   autoDoor: THREE.MeshBasicMaterial;
-  /** Sol vinyle de la boutique. */
+  /** Carrelage terracotta de la boutique. */
   floor: THREE.MeshStandardMaterial;
   /** Rideau métallique des bouts fermés. */
   shutter: THREE.MeshStandardMaterial;
@@ -75,6 +76,25 @@ export interface ShopPool {
   casework: THREE.MeshStandardMaterial;
   /** Nez d'étagère et rails d'étiquettes : plus clairs que la tôle. */
   lip: THREE.MeshStandardMaterial;
+  /**
+   * Le socle des gondoles : rouge sombre, et jamais de la couleur du meuble.
+   *
+   * Une gondole de konbini pose sur une plinthe LAQUÉE ROUGE - c'est ce qui
+   * l'ancre au sol et lui donne son assise. Peinte de la même tôle crème que
+   * les étagères, elle avait l'air de flotter, et le meuble entier perdait son
+   * poids.
+   */
+  plinth: THREE.MeshStandardMaterial;
+  /** Pare-chocs et joues des meubles froids : l'orange chaud des enseignes. */
+  bumper: THREE.MeshStandardMaterial;
+  /** Montants, corbeilles et arceaux : l'acier chromé du mobilier de vente. */
+  chrome: THREE.MeshStandardMaterial;
+  /** Rail d'étiquettes du nez d'étagère, avec ses prix. */
+  rail: THREE.MeshBasicMaterial;
+  /** Fronton de gondole, aux couleurs de l'enseigne. */
+  gondolaHeader: THREE.MeshBasicMaterial;
+  /** Bandeaux de meubles froids, par famille. */
+  bands: Record<ChillerBand, THREE.MeshBasicMaterial>;
   /** Réglette de plafond et bandeau lumineux des meubles. */
   lit: THREE.MeshBasicMaterial;
   /** Dalle de plafond de la boutique : blanche, et jamais celle du hall. */
@@ -122,15 +142,20 @@ export function shopPool(): ShopPool {
   if (pool) return pool;
   const flat = (t: THREE.Texture) => new THREE.MeshBasicMaterial({ map: t, toneMapped: false });
   const floorMap = makeShopFloorTexture();
-  // Un carreau de vinyle fait soixante centimètres : la répétition suit le
-  // meuble qui la porte, pas l'inverse.
-  floorMap.repeat.set(6, 3);
+  // L'image porte DEUX carreaux de côté, et un carreau de grès fait 45 cm : la
+  // répétition se calcule sur la boutique la plus courante (7,80 × 3,40) pour
+  // que les joints tombent carrés. Un carrelage étiré se voit tout de suite -
+  // c'est même la seule chose qu'on remarque d'un sol.
+  floorMap.repeat.set(7.8 / 0.9, 3.4 / 0.9);
   const shutterMap = makeShutterTexture();
   shutterMap.repeat.set(3, 1);
   const glowMap = makeShopGlowTexture();
+  const railMap = makeShelfRailTexture();
+  railMap.repeat.set(3, 1);
+  const headerMap = makeGondolaHeaderTexture();
+  headerMap.repeat.set(2, 1);
 
   pool = {
-    shelves: [0, 1, 2, 3].map((i) => flat(makeShelfGoodsTexture(i, i === 3 ? 4 : 5))),
     coolers: [0, 1, 2].map((i) => flat(makeCoolerDoorTexture(i))),
     chilled: [0, 1].map((i) => flat(makeChilledCaseTexture(i))),
     // Cinq à sept couvertures par rangée, et pas douze : un râtelier fait un
@@ -150,37 +175,64 @@ export function shopPool(): ShopPool {
     }),
     floor: new THREE.MeshStandardMaterial({
       map: floorMap,
-      roughness: 0.62,
+      roughness: 0.55,
       metalness: 0.02,
-      emissive: '#d8d5cc',
-      emissiveIntensity: 0.24,
+      // Le grès renvoie la lumière des tubes : c'est le SOL qui éclaire le bas
+      // des rayons dans un konbini, et son reflet chaud est pour moitié dans
+      // l'ambiance du lieu.
+      emissive: '#8a6a52',
+      emissiveIntensity: 0.3,
     }),
     shutter: new THREE.MeshStandardMaterial({
       map: shutterMap,
       roughness: 0.44,
       metalness: 0.55,
     }),
-    // Le mobilier de vente est de la tôle laquée BLANCHE sous des tubes nus :
-    // sans rappel d'émissif, il prenait le gris du hall à travers la vitrine et
-    // la boutique paraissait éteinte de l'extérieur - l'inverse exact de ce
-    // qu'un konbini fait à un couloir de gare.
+    // Le mobilier de vente est de la tôle laquée CRÈME sous des tubes nus, et
+    // non blanche : un konbini est un lieu CHAUD - carrelage terracotta, bois,
+    // bandeaux orange - et du blanc pur au milieu de tout cela y faisait un
+    // trou froid. Le rappel d'émissif est là pour une autre raison : sans lui,
+    // le mobilier prenait le gris du hall à travers la vitrine et la boutique
+    // paraissait éteinte du dehors.
     casework: new THREE.MeshStandardMaterial({
-      color: '#f4f3ee',
+      color: '#f2e9d6',
       roughness: 0.5,
-      metalness: 0.08,
-      emissive: '#e8e6de',
-      emissiveIntensity: 0.28,
-    }),
-    lip: new THREE.MeshStandardMaterial({
-      color: '#fdfcf8',
-      roughness: 0.42,
-      emissive: '#f2f0e8',
+      metalness: 0.06,
+      emissive: '#e6dcc4',
       emissiveIntensity: 0.3,
     }),
+    lip: new THREE.MeshStandardMaterial({
+      color: '#fbf6ea',
+      roughness: 0.42,
+      emissive: '#f0e8d6',
+      emissiveIntensity: 0.32,
+    }),
+    plinth: new THREE.MeshStandardMaterial({
+      color: '#8f3226',
+      roughness: 0.6,
+      metalness: 0.08,
+      emissive: '#4a1a12',
+      emissiveIntensity: 0.2,
+    }),
+    bumper: new THREE.MeshStandardMaterial({
+      color: '#e6a03c',
+      roughness: 0.52,
+      metalness: 0.06,
+      emissive: '#8a5c18',
+      emissiveIntensity: 0.22,
+    }),
+    chrome: new THREE.MeshStandardMaterial({ color: '#c8ccd0', roughness: 0.3, metalness: 0.65 }),
+    rail: flat(railMap),
+    gondolaHeader: flat(headerMap),
+    bands: {
+      drinks: flat(makeChillerBandTexture('drinks')),
+      chilled: flat(makeChillerBandTexture('chilled')),
+      ice: flat(makeChillerBandTexture('ice')),
+    },
     ceiling: new THREE.MeshStandardMaterial({
-      color: '#f6f5f0',
+      color: '#f6f2e8',
       roughness: 0.9,
-      emissive: '#efeee8',
+      emissive: '#efe8d8',
       emissiveIntensity: 0.35,
     }),
     // Un commerce est le point le plus lumineux de son décor, et il l'est parce
@@ -226,11 +278,42 @@ export function useShopGlow(): void {
   });
 }
 
-/** Une marchandise posée sur une étagère : sa matrice et sa teinte. */
+/**
+ * Un morceau de marchandise : une matrice, une teinte, et la FAMILLE de forme
+ * à laquelle il appartient.
+ *
+ * Tout était en cubes, et c'est ce qui trahissait le plus vite un rayon : dans
+ * un vrai konbini, on distingue à trois mètres une canette d'une brique de
+ * lait et d'un pot de nouilles, parce que ce sont trois SILHOUETTES. Alignés en
+ * boîtes de la même famille, deux cents produits font une mosaïque, pas un
+ * rayon.
+ *
+ * Deux familles suffisent, et pas une de plus : le PRISME (briques, paquets,
+ * boîtes, sachets) et le RÉVOLUTIONNÉ (canettes, bouteilles, pots, gobelets).
+ * Une bouteille n'est pas une troisième famille - c'est un corps cylindrique
+ * coiffé d'un col plus étroit, donc deux exemplaires de la seconde. Un article
+ * coûte ainsi deux ou trois exemplaires au lieu d'un, mais l'ensemble tient
+ * toujours en DEUX appels de rendu par boutique.
+ */
+export type GoodShape = 'box' | 'round';
+
 export interface Good {
+  shape: GoodShape;
   m: THREE.Matrix4;
   color: THREE.Color;
 }
+
+/** Les matrices et teintes d'une famille, prêtes pour son InstancedMesh. */
+export function ofShape(goods: Good[], shape: GoodShape): Good[] {
+  return goods.filter((g) => g.shape === shape);
+}
+
+/** Assombrit une teinte : le bandeau d'étiquette, ou l'ombre d'un opercule. */
+function shade(hex: THREE.Color, k: number): THREE.Color {
+  return hex.clone().multiplyScalar(1 - k);
+}
+
+const WHITE = new THREE.Color('#f6f2e6');
 
 /**
  * Garnit une étagère : une rangée de produits alignés au nu du rayon.
@@ -275,25 +358,87 @@ export interface ShelfSpan {
   along?: 'x' | 'z';
 }
 
+/**
+ * Les quatre articles qui remplissent un konbini, et leurs proportions.
+ *
+ * Ce ne sont pas des catégories de commerce mais des GABARITS : ce qui compte
+ * n'est pas qu'un produit soit du thé ou du dentifrice, c'est qu'il soit haut
+ * et mince (brique), bas et large (paquet), rond et court (canette) ou rond et
+ * élancé avec un col (bouteille). La proportion fait la reconnaissance.
+ */
+const KINDS = [
+  /** Brique : lait, thé, jus. Haute, étroite, plus profonde que large. */
+  { shape: 'box' as const, w: [0.06, 0.085], h: [0.16, 0.24], d: [0.055, 0.075], band: 0.42, neck: 0 },
+  /** Paquet et boîte : biscuits, riz, savon. Large, bas, mince. */
+  { shape: 'box' as const, w: [0.075, 0.13], h: [0.09, 0.16], d: [0.035, 0.06], band: 0.34, neck: 0 },
+  /** Canette : courte, ronde, cerclée d'un bandeau au milieu. */
+  { shape: 'round' as const, w: [0.055, 0.068], h: [0.1, 0.135], d: [0, 0], band: 0.5, neck: 0 },
+  /** Bouteille : plus haute, corps rond, col étroit et bouchon. */
+  { shape: 'round' as const, w: [0.06, 0.075], h: [0.18, 0.26], d: [0, 0], band: 0.4, neck: 0.34 },
+] as const;
+
+const span = (r: () => number, [a, b]: readonly [number, number]) => a + r() * (b - a);
+
 export function fillShelf(r: () => number, o: ShelfSpan): Good[] {
   const out: Good[] = [];
   const alongZ = o.along === 'z';
+  /** Pose une pièce dans le repère du linéaire, quel que soit son axe. */
+  const put = (
+    shape: GoodShape,
+    run: number,
+    y: number,
+    front: number,
+    a: number,
+    h: number,
+    b: number,
+    color: THREE.Color,
+  ) => {
+    out.push({
+      shape,
+      m: alongZ ? mat(front, y, run, b, h, a) : mat(run, y, front, a, h, b),
+      color,
+    });
+  };
+
   let x = o.x0 + 0.01;
   while (x < o.x1 - 0.05) {
-    const tone = goodsTone(r);
-    const w = 0.045 + r() * 0.075;
-    const h = Math.min(o.clear - 0.03, 0.08 + r() * 0.2);
-    const d = Math.min(o.depth, 0.05 + r() * 0.12);
-    const facings = 1 + Math.floor(r() * 4);
+    const kind = KINDS[Math.floor(r() * KINDS.length)];
+    const tone = new THREE.Color(goodsTone(r));
+    const label = r() > 0.45 ? shade(tone, 0.42) : WHITE;
+    const w = span(r, kind.w);
+    // La hauteur reste bornée par l'entre-étages : un article qui traverse
+    // l'étagère du dessus se voit tout de suite, et aucune texture ne le
+    // rattrape. Le col d'une bouteille compte DANS cette hauteur.
+    const h = Math.min(o.clear - 0.03, span(r, kind.h));
+    const d = kind.shape === 'round' ? w : Math.min(o.depth, span(r, kind.d));
+    const bodyH = h * (1 - kind.neck);
+    // Un rang est une SÉRIE : le même article se répète deux à cinq fois avant
+    // que le suivant commence. C'est le facing d'un vrai linéaire, et c'est ce
+    // qui distingue un konbini d'un vide-grenier.
+    const facings = 2 + Math.floor(r() * 4);
     for (let f = 0; f < facings && x < o.x1 - w; f++) {
       const run = x + w / 2;
       const front = o.z - o.face * d * 0.5;
-      out.push({
-        m: alongZ
-          ? mat(front, o.y + h / 2, run, d, h, w * 0.92)
-          : mat(run, o.y + h / 2, front, w * 0.92, h, d),
-        color: new THREE.Color(tone),
-      });
+      put(kind.shape, run, o.y + bodyH / 2, front, w * 0.94, bodyH, d, tone);
+      // Le bandeau d'étiquette : une tranche à peine plus large, d'une autre
+      // couleur, en travers du corps. Il ne coûte rien - c'est un exemplaire de
+      // plus dans le même InstancedMesh - et c'est LUI qui empêche un rayon
+      // d'être une rangée d'aplats.
+      put(
+        kind.shape,
+        run,
+        o.y + bodyH * kind.band,
+        front,
+        w * 0.98,
+        bodyH * 0.24,
+        d * 1.04,
+        label,
+      );
+      if (kind.neck > 0) {
+        // Col et bouchon : deux tranches étroites, et la bouteille se lit.
+        put(kind.shape, run, o.y + bodyH + (h - bodyH) * 0.4, front, w * 0.42, (h - bodyH) * 0.8, d * 0.42, tone);
+        put(kind.shape, run, o.y + h - (h - bodyH) * 0.12, front, w * 0.5, (h - bodyH) * 0.26, d * 0.5, label);
+      }
       x += w + 0.004;
     }
     // Le petit vide entre deux références : un rayon n'est pas soudé.

@@ -629,12 +629,20 @@ reconnaissait ; on ne les croyait pas. À côté d'une rame dont on compte les
 rivets, c'était le contraste le plus voyant qui restât dans une gare.
 
 **NEWDAYS, dans le hall, est une pièce** de 7,80 × 3,40 qu'on regarde jusqu'au
-fond : mur de vitrines réfrigérées, meuble froid ouvert à onigiri et
-sandwichs, gondole centrale garnie des deux côtés, présentoir à magazines
-contre la vitre, comptoir de caisse avec son écran client, son bac à friture,
-sa machine à café et l'armoire à cigarettes au mur derrière. Portes coulissantes
-自動ドア, cinq réglettes nues au plafond, et un sol de vinyle qui n'est pas
-celui du hall — c'est le changement de sol qui fait le seuil.
+fond : mur de vitrines réfrigérées sous leur bandeau ドリンク, meuble froid
+ouvert à onigiri et sandwichs en trois gradins garnis, gondole centrale sur son
+socle rouge coiffée d'un fronton d'enseigne, bac à glaces vitré en plein
+passage, présentoir à magazines contre la vitre, comptoir de caisse avec son
+écran client, son bac à friture, sa machine à café et l'armoire à cigarettes au
+mur derrière. Portes coulissantes 自動ドア, cinq luminaires au plafond, et un
+carrelage de grès terracotta qui n'est pas le sol du hall — c'est le changement
+de sol qui fait le seuil.
+
+**Un konbini est un lieu CHAUD**, et c'est ce qui manquait le plus longtemps :
+carrelage terracotta, tôle crème plutôt que blanche, socles laqués rouges,
+pare-chocs et frise orange, rail d'étiquettes blanc sur le nez de chaque
+étagère. En gris et blanc, la boutique la mieux garnie du monde ressemble à une
+pharmacie. La référence assumée est *inKonbini*.
 
 **NEWDAYS KIOSK, sur le quai, est un îlot servi des deux bords.** Il fait
 3,00 × 6,40, et cette cote se déduit plutôt qu'elle ne se choisit : deux
@@ -652,11 +660,15 @@ raison. Décalé de 1,35 m vers la voie comme il l'était, il ne laissait que
 vingt-cinq centimètres de passage sur le quai le plus étroit qui en porte un, et
 le comptoir de ce côté-là donnait sur un mur d'air.
 
-**La marchandise est en volume, pas en image** : quelques centaines d'articles
-par boutique, dans un seul appel de rendu, teintés par exemplaire et rangés par
-*facings* — le même article répété deux à cinq fois, comme dans un vrai
-linéaire. Un rayon où chaque boîte diffère de sa voisine est un vide-grenier,
-pas un commerce.
+**La marchandise est en volume, pas en image**, et elle a des FORMES : brique
+de lait, paquet, canette, bouteille à col — on les distingue à trois mètres
+parce que ce sont quatre silhouettes, et non quatre couleurs de cube. Chacune
+porte son bandeau d'étiquette. Un millier d'articles par boutique, teintés par
+exemplaire, rangés par *facings* (le même article répété deux à cinq fois,
+comme dans un vrai linéaire) — et **deux appels de rendu**, quel qu'en soit le
+nombre : une bouteille n'est pas une troisième famille de forme, c'est un corps
+rond coiffé d'un col. Un rayon où chaque boîte diffère de sa voisine est un
+vide-grenier, pas un commerce.
 
 **Et il y a quelqu'un dedans.** Un vendeur en uniforme se tient derrière chaque
 caisse : une boutique garnie jusqu'au plafond mais vide ne se lit pas comme « le

@@ -27,18 +27,19 @@
 //
 // LE BUDGET. Le kiosque est unique par gare : tout y est en géométrie franche.
 // Les seules répétitions - les centaines d'articles en claie et sur le
-// comptoir - passent par l'InstancedMesh du `shopKit`, un appel de rendu pour
-// tout le magasin, et les images viennent du pool de session. Seul le bandeau,
-// qui porte le nom de la gare, se construit et se libère avec le kiosque.
+// comptoir - passent par les deux InstancedMesh du `shopKit` (le prisme et le
+// révolutionné), deux appels de rendu pour tout le magasin, et les images
+// viennent du pool de session. Seul le bandeau, qui porte le nom de la gare, se
+// construit et se libère avec le kiosque.
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { PLATFORM_TOP } from '../../data/stationGeometry';
 import type { Placed } from '../../systems/stationPlacement';
 import { makeNewDaysBandTexture } from '../../textures/konbini';
 import type { Mats } from './materials';
-import { useInstanceColors, useInstances } from './instancing';
 import { fillShelf, fillUnit, pick, shopPool, useShopGlow, type Good } from './shopKit';
+import { Goods } from './Goods';
 import { ShopClerk } from './ShopStaff';
 import { rng } from '../../textures/procedural';
 
@@ -142,9 +143,6 @@ export function Kiosk({ k, m, station }: { k: Placed; m: Mats; station: number }
     }
     return out;
   }, [station, z0, z1, coolZ0, outX]);
-  const goodsRef = useRef<THREE.InstancedMesh>(null);
-  useInstances(goodsRef, useMemo(() => goods.map((g) => g.m), [goods]));
-  useInstanceColors(goodsRef, useMemo(() => goods.map((g) => g.color), [goods]));
 
   return (
     <group name="kiosque" position={[k.x, PLATFORM_TOP, k.z]}>
@@ -349,15 +347,10 @@ export function Kiosk({ k, m, station }: { k: Placed; m: Mats; station: number }
         ))}
       </group>
 
-      {/* La marchandise : claies et comptoirs, en un seul appel de rendu. */}
-      <instancedMesh
-        name="kiosque/marchandise"
-        ref={goodsRef}
-        args={[undefined, undefined, Math.max(1, goods.length)]}
-        material={p.goods}
-      >
-        <boxGeometry args={[1, 1, 1]} />
-      </instancedMesh>
+      {/* La marchandise des claies et des comptoirs : briques et paquets d'un
+          côté, canettes, bouteilles et pots de l'autre, deux appels de rendu
+          pour tout le magasin. */}
+      <Goods goods={goods} name="kiosque/marchandise" />
 
       {/* --- L'auvent, et la ceinture d'enseigne ----------------------
           L'auvent est ÉPAIS, et son épaisseur EST le bandeau : sur une dalle
