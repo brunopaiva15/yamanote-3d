@@ -610,18 +610,63 @@ distributeur de titres derrière les portillons ne servirait à personne.
 **L'affluence commande la liste.** Une gare à 0,55 — Uguisudani — n'a ni
 konbini, ni guichet, ni consigne : deux distributeurs, un banc, une poubelle de
 tri, un plan. Shinjuku a tout. Et la largeur tranche en dernier : un konbini
-fait 3,20 m de fond, et le moteur le refuse plutôt que d'étrangler à moins de
+fait 3,40 m de fond, et le moteur le refuse plutôt que d'étrangler à moins de
 deux mètres le passage du milieu.
 
 **Un meuble se reconnaît à sa silhouette, pas à sa texture.** Une batterie de
 券売機 se lit à son bandeau vert continu et à ses écrans inclinés ; une consigne
 à sa trame de portes carrées numérotées, avec sa borne de paiement plus haute à
 un bout ; un konbini à sa devanture vitrée pleine hauteur sous une enseigne
-allumée, gondoles et vitrine réfrigérée visibles au travers. C'est la règle qui
-a fait refaire le **kiosque du quai** : c'était une boîte blanche de 2,50 × 4,80
-avec une affiche collée sur un flanc, c'est maintenant deux comptoirs ouverts
-sous un auvent, des présentoirs à journaux et magazines, une armoire réfrigérée
-et un bandeau d'enseigne qui affiche ses prix.
+allumée.
+
+### Les deux commerces
+
+Une silhouette se lit de loin, et c'est son objet. De près, elle ne suffit pas :
+le konbini n'avait aucune profondeur — son « fond de magasin » était un plan
+peint à seize centimètres de la vitre — et le kiosque du quai, une boîte de
+2,50 × 4,80, était trop petit pour ce qu'un kiosque contient. On les
+reconnaissait ; on ne les croyait pas. À côté d'une rame dont on compte les
+rivets, c'était le contraste le plus voyant qui restât dans une gare.
+
+**NEWDAYS, dans le hall, est une pièce** de 7,80 × 3,40 qu'on regarde jusqu'au
+fond : mur de vitrines réfrigérées, meuble froid ouvert à onigiri et
+sandwichs, gondole centrale garnie des deux côtés, présentoir à magazines
+contre la vitre, comptoir de caisse avec son écran client, son bac à friture,
+sa machine à café et l'armoire à cigarettes au mur derrière. Portes coulissantes
+自動ドア, cinq réglettes nues au plafond, et un sol de vinyle qui n'est pas
+celui du hall — c'est le changement de sol qui fait le seuil.
+
+**NEWDAYS KIOSK, sur le quai, est un îlot servi des deux bords.** Il fait
+3,00 × 6,40, et cette cote se déduit plutôt qu'elle ne se choisit : deux
+comptoirs de 0,80 m dos à dos, plus 1,30 m de passage pour le vendeur. On y
+trouve l'étalage de journaux à plat, les râteliers à magazines en gradins sous
+le comptoir côté client, les paniers à hauteur de main, la claie suspendue
+garnie jusqu'à l'auvent — c'est elle qui lui donne sa masse —, l'armoire
+réfrigérée vitrée à un bout, et les cartes de prix pendues sous le nez de
+l'auvent, sans lesquelles une boutique paraît fermée toutes lumières allumées.
+L'auvent est épais et sa rive EST le bandeau d'enseigne, qui ceinture les
+quatre faces : un kiosque d'îlot se voit d'en face comme par le bout.
+
+Il est désormais **centré sur l'épine**, comme les trémies et pour la même
+raison. Décalé de 1,35 m vers la voie comme il l'était, il ne laissait que
+vingt-cinq centimètres de passage sur le quai le plus étroit qui en porte un, et
+le comptoir de ce côté-là donnait sur un mur d'air.
+
+**La marchandise est en volume, pas en image** : quelques centaines d'articles
+par boutique, dans un seul appel de rendu, teintés par exemplaire et rangés par
+*facings* — le même article répété deux à cinq fois, comme dans un vrai
+linéaire. Un rayon où chaque boîte diffère de sa voisine est un vide-grenier,
+pas un commerce.
+
+**Et il y a quelqu'un dedans.** Un vendeur en uniforme se tient derrière chaque
+caisse : une boutique garnie jusqu'au plafond mais vide ne se lit pas comme « le
+vendeur revient », elle se lit comme un décor. Dehors, chaque commerce jette sa
+flaque de lumière sur le sol — peinte plutôt qu'éclairée, et qui ne s'allume
+qu'à la tombée du jour sur le quai, comme les foyers de la voie.
+
+`/shop-probe.html` pose les deux commerces seuls sous une caméra qu'on tourne
+autour : le konbini est au fond du hall, deux niveaux sous le quai, et
+descendre l'y chercher à chaque essai n'était pas tenable.
 
 ### 駅スタンプ
 
