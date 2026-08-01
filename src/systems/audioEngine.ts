@@ -56,6 +56,7 @@
 
 import * as Tone from 'tone';
 import { CABIN_SPEAKERS, CONFIG, type SpeakerPos } from '../data/config';
+import { APPROACH_CHIME_SCORE, APPROACH_CHIME_TOTAL_S } from '../data/approachChimes';
 import type { PowerSoundKind } from './carPower';
 import {
   MELODY_PATHS,
@@ -118,7 +119,8 @@ interface Nodes {
   paClick: Tone.NoiseSynth;
   platHissGain: Tone.Gain;
   platClick: Tone.NoiseSynth;
-  platChime: Tone.Synth;
+  platChime: Tone.PolySynth<Tone.FMSynth>;
+  platChimeHold: Tone.FMSynth;
   platBeep: Tone.Synth;
   // Ambiance de gare : le fond sonore du LIEU, distinct de la sonorisation.
   ambBed: Tone.Noise;
@@ -489,13 +491,52 @@ export async function startAudio(): Promise<void> {
 
   // Carillon ATOS (avant l'annonce d'approche) et bips de service : le signal
   // électronique de l'entrée en gare, les bips des portes palières. Branchés
-  // en direct sur platIn - ce sont des signaux, pas de la parole, et ils
-  // portent jusque dans la rame.
-  const platChime = new Tone.Synth({
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.004, decay: 0.7, sustain: 0.05, release: 0.6 },
-    volume: -6,
-  }).connect(platIn);
+  // sur le bus quai sans passer par platVoiceIn - ce sont des signaux, pas de
+  // la parole, et ils portent jusque dans la rame.
+  //
+  // Le timbre visé est celui d'un vibraphone ÉLECTRONIQUE, ou d'une cloche
+  // numérique de sono ferroviaire des années 1990-2000 : clair, brillant, un
+  // peu métallique, franchement synthétique. Ni piano, ni xylophone de bois, ni
+  // bourdon d'église. D'où une FM à porteuse et modulante sinusoïdales,
+  // d'harmonicité 3,01 - juste à côté du rang 3, donc légèrement inharmonique,
+  // ce qui suffit à faire entendre du métal - dont l'enveloppe de modulation
+  // retombe en 90 ms : le métal n'est QUE dans l'attaque, la queue redevient
+  // une sinusoïde propre.
+  const chimeVoice = {
+    harmonicity: 3.01,
+    oscillator: { type: 'sine' as const },
+    modulation: { type: 'sine' as const },
+    modulationEnvelope: { attack: 0.002, decay: 0.09, sustain: 0, release: 0.08 },
+  };
+  // Le motif part d'un Mi3 à 164,8 Hz, soit une demi-octave SOUS le passe-haut
+  // du bus quai : sans rien, la note de fondation arrive huit décibels sous le
+  // reste et la montée démarre dans le vide. Ce shelf ne rend au carillon que ce
+  // que la sono lui prend, et lui seul en profite - le passe-haut du bus, lui,
+  // ne bouge pas : c'est ce qui fait sonner haut-parleur de quai.
+  const chimeShelf = new Tone.Filter({ type: 'lowshelf', frequency: 220, gain: 5 }).connect(platIn);
+  // Les six premières notes du motif. Polyphonique non pas pour jouer des
+  // accords - la partition reste monophonique, voir data/approachChimes - mais
+  // parce que les attaques tombent toutes les 200 ms alors que les résonances
+  // durent le triple : sur un synthé mono, chaque note couperait la queue de la
+  // précédente et le carillon sonnerait comme un bloc-notes.
+  const platChime = new Tone.PolySynth(Tone.FMSynth, {
+    ...chimeVoice,
+    modulationIndex: 2.4,
+    envelope: { attack: 0.005, decay: 0.22, sustain: 0.03, release: 0.5 },
+    volume: -9,
+  }).connect(chimeShelf);
+  // La finale tenue (Sol♯5). Même timbre, deux différences : sa décroissance
+  // court sur 1,2 s au lieu de 0,22, et sa modulation est plus discrète - la
+  // dernière note dure beaucoup plus longtemps, elle ne doit pas frapper plus
+  // fort pour autant. Instrument à part plutôt qu'un `set()` de dernière
+  // minute : les notes sont programmées d'avance, un réglage posé maintenant
+  // s'appliquerait aussi à celles qui n'ont pas encore sonné.
+  const platChimeHold = new Tone.FMSynth({
+    ...chimeVoice,
+    modulationIndex: 1.6,
+    envelope: { attack: 0.005, decay: 1.2, sustain: 0.05, release: 0.55 },
+    volume: -10,
+  }).connect(chimeShelf);
   const platBeep = new Tone.Synth({
     oscillator: { type: 'square' },
     envelope: { attack: 0.002, decay: 0.1, sustain: 0.3, release: 0.06 },
@@ -858,6 +899,7 @@ export async function startAudio(): Promise<void> {
     platHissGain,
     platClick,
     platChime,
+    platChimeHold,
     platBeep,
     ambBed,
     ambFilter,
@@ -1081,25 +1123,32 @@ export function paVoiceClose(bus: VoiceBus = 'cabinVoice'): void {
 // --- Signaux de la sono du quai -----------------------------------------
 
 /**
- * Carillon ATOS : le motif de quelques notes qui précède l'annonce d'approche.
- * Ce n'est pas la mélodie de départ - c'est un signal d'attention, court, sur
- * lequel personne ne se retourne mais que tout le monde reconnaît.
+ * Carillon ATOS : le motif de sept notes qui précède l'annonce d'approche. Ce
+ * n'est pas la mélodie de départ - c'est un signal d'attention, sur lequel
+ * personne ne se retourne mais que tout le monde reconnaît.
  *
- * @returns la durée du motif (s). Le carillon PRÉCÈDE l'annonce, il ne la
- *          couvre pas : l'appelant attend ce délai avant de faire parler la
- *          gare (voir stationPa.paApproach).
+ * La partition est dans data/approachChimes ; ici on ne fait que la jouer, à
+ * l'instant près : six attaques régulières puis la finale tenue.
+ *
+ * @returns la durée du motif (s), queue comprise. Le carillon PRÉCÈDE
+ *          l'annonce, il ne la couvre pas : l'appelant attend ce délai avant de
+ *          faire parler la gare (voir stationPa.paApproach).
  */
 export function platformChime(): number {
   if (!nodes) return 0;
   const lead = 0.05;
-  const step = 0.3;
-  const tail = 0.6;
-  const now = Tone.now() + lead;
-  const notes = ['C#6', 'G#5', 'B5', 'E5', 'G#5'];
-  notes.forEach((n, i) => {
-    nodes!.platChime.triggerAttackRelease(n, 0.6, slot('platChime', now + i * step), 0.42);
+  // UNE seule réservation, pour la phrase entière. En réservant note à note, un
+  // carillon déclenché pendant qu'un autre résonne verrait ses premières
+  // attaques repoussées les unes contre les autres : les 200 ms régulières se
+  // tasseraient, et la montée deviendrait un roulement. Le créneau demandé vaut
+  // donc tout le motif - deux carillons ne peuvent pas se chevaucher.
+  const start = slot('platChime', Tone.now() + lead, APPROACH_CHIME_TOTAL_S);
+  const last = APPROACH_CHIME_SCORE.length - 1;
+  APPROACH_CHIME_SCORE.forEach((n, i) => {
+    const voice = i === last ? nodes!.platChimeHold : nodes!.platChime;
+    voice.triggerAttackRelease(n.note, n.hold, start + n.at, n.velocity);
   });
-  return lead + (notes.length - 1) * step + tail;
+  return lead + APPROACH_CHIME_TOTAL_S;
 }
 
 /**
