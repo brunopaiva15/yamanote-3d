@@ -2259,6 +2259,19 @@ l'appui, pendant les quelques arrêts qui suivent (`data/stationAnnouncements`,
 un coup de frein ; après une coupure de courant il ne se tire pas - le quai
 annonce 架線の停電, c'est-à-dire exactement ce que le joueur vient de vivre.
 
+Le **carillon** qui ouvre cette séquence est écrit, pas improvisé
+(`data/approachChimes`) : sept notes, une seule à la fois, à 300 BPM - donc une
+attaque toutes les 200 ms. Mi3, La3, Mi4, Si4, Mi5, La5 : une montée par
+quartes et quintes, jamais une gamme, qui gagne un rien de présence à chaque
+note ; puis un Sol♯5 qui retombe d'un demi-ton et se tient 1,2 s, plus doux que
+le La5 qui le précède. Deux secondes quarante de musique, un peu moins de trois
+avec la queue de réverbération, après quoi la gare parle. Le timbre est celui
+d'un vibraphone électronique - une FM sinusoïdale d'harmonicité 3,01 dont la
+modulation retombe en 90 ms, si bien que le métal n'est que dans l'attaque et
+que la queue redevient une sinusoïde propre. C'est une composition originale, à
+l'image des mélodies de départ : ni notes ni enregistrement d'un carillon ATOS
+existant.
+
 Cet arrêt d'urgence (急停車) tombe **toutes les dix à vingt-quatre gares**, soit
 de vingt-cinq minutes à une heure de trajet - le premier plus tôt, pour qu'un
 trajet court puisse le vivre. Le train freine sec, reste immobilisé de 45 s à
