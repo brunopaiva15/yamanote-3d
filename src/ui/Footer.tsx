@@ -2,6 +2,16 @@
 
 import { useT } from '../i18n';
 
+// Badge Product Hunt : le SVG renvoyé par l'API contient le compteur de votes
+// du moment. Le paramètre « t » sert de cache-buster ; on l'horodate au
+// chargement du module (donc une fois par ouverture de page) pour que chaque
+// rafraîchissement aille rechercher un badge à jour plutôt que la copie en
+// cache. La valeur reste stable d'un rendu React à l'autre : l'image n'est pas
+// retéléchargée à chaque re-rendu du pied de page.
+const PRODUCT_HUNT_BADGE_SRC =
+  'https://api.producthunt.com/widgets/embed-image/v1/featured.svg' +
+  `?post_id=1211399&theme=light&t=${Date.now()}`;
+
 export function Footer() {
   const t = useT();
 
@@ -36,7 +46,7 @@ export function Footer() {
             alt="Yamanote 3D - Ride Tokyo&rsquo;s Yamanote Line in a 3D world | Product Hunt"
             width="250"
             height="54"
-            src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1211399&theme=light&t=1785584654749"
+            src={PRODUCT_HUNT_BADGE_SRC}
           />
         </a>
       </p>
