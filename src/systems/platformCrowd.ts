@@ -783,6 +783,39 @@ function interiorCount(): number {
   return n;
 }
 
+/**
+ * Combien de voyageurs se dirigent DÉJÀ vers chacun des passages du portillon.
+ *
+ * C'est ce qui permet à celui qui part de choisir une baie libre plutôt que de
+ * se ranger derrière tout le monde (`systems/concourseRoute`, `pickPassage`).
+ * La charge se LIT dans les itinéraires en cours au lieu de se tenir à part :
+ * un compteur qu'il faudrait décrémenter se serait désynchronisé au premier
+ * voyageur effacé en route - un changement de gare, un pool remis à zéro - et
+ * la ligne se serait retrouvée pleine de files fantômes.
+ *
+ * Seule compte la validation ENCORE À VENIR : passé son ピッ, on ne pèse plus
+ * sur la baie qu'on vient de franchir.
+ */
+function passageLoad(n: number): number[] {
+  const load = new Array<number>(n).fill(0);
+  if (n <= 0) return load;
+  for (const p of crowdList) {
+    if (p.state === 'hidden' || !p.inStation) continue;
+    for (let i = p.routeI; i < p.route.length; i++) {
+      const t = p.route[i].tap;
+      if (t === undefined) continue;
+      if (t >= 0 && t < n) load[t]++;
+      break;
+    }
+  }
+  return load;
+}
+
+/** La charge de la ligne de portillons de la gare courante. */
+function gateLoad(pl: StationPlacement): number[] {
+  return passageLoad(pl.interior.built ? pl.interior.gate.passages.length : 0);
+}
+
 /** Une trémie qui n'est PAS l'accès au hall : le couloir borgne d'à côté. */
 function blindStair(pl: StationPlacement, z: number): Placed | null {
   let best: Placed | null = null;
@@ -834,7 +867,7 @@ function sendToStairs(p: CrowdPax, pl: StationPlacement, delay = 0): boolean {
     // On ne traverse pas deux cents mètres de quai pour prendre l'accès qui
     // mène au hall : c'est celui qu'on a devant soi, ou rien.
     && nearestStair(pl, p.pos.z) === pl.mainStair
-    ? routeToStreet(pl)
+    ? routeToStreet(pl, gateLoad(pl))
     : null;
   const s = full ? pl.mainStair : blindStair(pl, p.pos.z) ?? nearestStair(pl, p.pos.z);
   if (!s) return false;
@@ -1120,7 +1153,7 @@ export function crowdArrive(stationIndex: number): boolean {
   // bout du quai, que le hall ne voit pas.
   const inHall = runtime.playerLevel === 'concourse';
   const fromStreet = interiorCount() < INTERIOR_CAP && (inHall || Math.random() < 0.45)
-    ? routeFromStreet(pl)
+    ? routeFromStreet(pl, gateLoad(pl))
     : null;
   if (fromStreet) {
     p.inStation = true;

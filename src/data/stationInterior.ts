@@ -225,6 +225,17 @@ const CABINET_HALF_X = 0.18;
 /** Largeur libre d'un passage ordinaire, et d'un passage large. */
 const PASSAGE_W = 0.62;
 const PASSAGE_WIDE_W = 0.92;
+/**
+ * Marge latérale du fuseau d'un passage : jusqu'où l'on est « dans sa file ».
+ *
+ * On se présente à un portillon en visant sa baie, pas en s'alignant au
+ * centimètre. Trente-cinq centimètres de part et d'autre, et c'est la même
+ * cote pour tout le monde : ce qui fait claquer les battants devant quelqu'un
+ * (`systems/fareGate`) et ce qui dit quelle baie est déjà prise
+ * (`systems/concourseRoute`) doivent se répondre, sans quoi l'on écarte une
+ * file qui n'existe pas ou l'on se range dans une baie où l'on n'est pas.
+ */
+export const PASSAGE_SLACK = 0.35;
 /** Marge laissée entre le bout de la ligne de portillons et la paroi. */
 const GATE_MARGIN = 0.4;
 /** Demi-largeur d'une bouche de sortie, quand le hall est assez large. */
