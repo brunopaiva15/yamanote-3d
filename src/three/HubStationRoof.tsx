@@ -15,6 +15,7 @@ import { dayNightWeights } from '../systems/daynight';
 import { useStore } from '../store';
 import { segEnv } from '../systems/segmentEnv';
 import { ROOF_HUBS, SEGMENTS, segmentAt } from '../data/segments';
+import { PLATFORM_TOP } from '../data/stationGeometry';
 
 const ROOF_LEN = 180;
 const ROOF_W = 26;
@@ -64,6 +65,29 @@ function roofBuilder(): {
   return { roof, mat, glow, box };
 }
 
+/**
+ * Pied des colonnes.
+ *
+ * Une colonne de halle PREND APPUI SUR LE QUAI. La sienne descendait un mètre
+ * plus bas, à −1,10, et cela ne se voyait pas tant que la gare s'arrêtait à sa
+ * dalle : le quai est opaque, et un pied enterré sous lui n'existe pour
+ * personne. Depuis qu'on DESCEND dans les gares, ce mètre est passé de l'autre
+ * côté - la sous-face de la dalle est le plafond du hall souterrain, à −0,60, et
+ * ce qui traverse ressort DEDANS. Chaque colonne pendait donc au plafond du
+ * hall, un demi-mètre de bloc gris sans ombre ni texture (la toiture est en
+ * `MeshBasicMaterial`), au-dessus des portillons de Tokyo, d'Ueno, d'Ikebukuro,
+ * de Shinjuku, de Shibuya et de Shinagawa.
+ *
+ * Le pied s'arrête donc au nu du quai, avec deux centimètres d'engravure pour
+ * ne pas laisser deux faces coplanaires - assez pour asseoir la colonne, trop
+ * peu pour ressortir sous une dalle qui fait cinquante centimètres.
+ */
+const COL_FOOT_Y = PLATFORM_TOP - 0.02;
+/** Tête des colonnes : dans la dalle de toiture, qu'elles portent. */
+const COL_HEAD_Y = 6.3;
+const COL_H = COL_HEAD_Y - COL_FOOT_Y;
+const COL_Y = (COL_HEAD_Y + COL_FOOT_Y) / 2;
+
 // Toiture acier sombre : dalle, fermes transversales, colonnes, bandeaux
 // lumineux chauds (gares classiques).
 function buildSteelRoof(): Roof {
@@ -77,8 +101,8 @@ function buildSteelRoof(): Roof {
   box(slab, ROOF_W, 0.5, ROOF_LEN, 0, 6.3, 0);
   for (let z = -81; z <= 81; z += 18) box(truss, ROOF_W, 0.6, 0.6, 0, 5.95, z);
   for (let z = -75; z <= 75; z += 30) {
-    box(col, 0.55, 7.4, 0.55, -10, 2.6, z);
-    box(col, 0.55, 7.4, 0.55, 10, 2.6, z);
+    box(col, 0.55, COL_H, 0.55, -10, COL_Y, z);
+    box(col, 0.55, COL_H, 0.55, 10, COL_Y, z);
   }
   box(lamp, 0.3, 0.08, ROOF_LEN - 4, -4.5, 6.0, 0);
   box(lamp, 0.3, 0.08, ROOF_LEN - 4, 4.5, 6.0, 0);
