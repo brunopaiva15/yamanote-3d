@@ -1875,7 +1875,16 @@ c'est le seul intérêt de la règle `three-webgpu` qu'on y trouve.
 
 Changer de mode **remonte la toile** (`key` sur le `<Canvas>`) : un renderer ne
 se remplace pas à chaud, la toile, le contexte, les textures et tous les
-programmes en dépendent.
+programmes en dépendent. Pendant ce temps il n'y a rien à afficher, et c'est le
+rôle du voile d'attente (`ui/RenderLoading`) : il est posé DÈS le départ du jeu,
+dans toutes les qualités - construire trente gabarits de gare et peindre les
+textures au canevas prend déjà plusieurs secondes en WebGL -, et il n'est levé
+que lorsque le moteur tourne vraiment. « Tourne vraiment » n'est pas « a dessiné
+une image » : la première version rendait la main au bout de 113 ms, alors que
+la plus grosse interruption du démarrage arrivait douze secondes plus tard.
+`three/RenderBootSignal` attend donc six images consécutives d'intervalle
+raisonnable - une gare qui se construit ou un nuanceur qui se compile bloque le
+fil principal, l'image suivante arrive en retard, et le compte repart à zéro.
 
 ## Stack
 

@@ -11,10 +11,11 @@
 // Le paquet WebGPU (three/webgpu, TSL, nœuds de post-traitement) est chargé à
 // la demande. Un joueur qui reste en Ultra ne le télécharge jamais.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Canvas, type GLProps } from '@react-three/fiber';
 import { CONFIG } from './data/config';
 import { Engine } from './three/Engine';
+import { RenderBootSignal } from './three/RenderBootSignal';
 import { Scene } from './three/Scene';
 import { TrainRig } from './three/TrainRig';
 import { TrainConsist } from './three/exterior/TrainConsist';
@@ -48,6 +49,7 @@ import { StationDevelopmentNotice } from './ui/StationDevelopmentNotice';
 import { QualityNotice } from './ui/QualityNotice';
 import { extraordinaryAvailable, reportWebgpuFailure, usePerf } from './systems/perf';
 import { clearGpuKit, loadGpuKit } from './three/webgpu/kit';
+import { beginRenderBoot, endRenderBoot } from './systems/renderBoot';
 
 /**
  * Le moteur demandé est-il prêt ?
@@ -77,8 +79,15 @@ function useRenderPath(): 'webgl' | 'webgpu' | 'pending' {
   useEffect(() => {
     if (!wanted) {
       setReady(false);
+      endRenderBoot();
       return;
     }
+    // Le voile d'attente se lève tout seul, mais il se pose ICI : c'est le
+    // premier instant où la toile va disparaître. Il ne retombera qu'à la
+    // première image réellement dessinée par le pipeline (three/Scene), pas à
+    // la fin du téléchargement - entre les deux il reste la négociation du
+    // périphérique et la compilation des nuanceurs, qui sont le plus long.
+    beginRenderBoot();
     let alive = true;
     void (async () => {
       try {
@@ -89,7 +98,10 @@ function useRenderPath(): 'webgl' | 'webgpu' | 'pending' {
       } catch {
         // L'adaptateur a refusé, ou le paquet n'a pas pu être chargé. On le dit
         // et on redescend sur Ultra plutôt que d'ouvrir sur une toile noire.
-        if (alive) reportWebgpuFailure();
+        if (alive) {
+          endRenderBoot();
+          reportWebgpuFailure();
+        }
       }
     })();
     return () => {
@@ -115,6 +127,20 @@ const webgpuRenderer = (async (props: { canvas: HTMLCanvasElement }) => {
 export default function Game() {
   const path = useRenderPath();
 
+  // Le voile d'attente est posé par App et se lève à la première image. Il
+  // faut seulement le REPOSER quand on change de moteur en cours de trajet :
+  // là, la toile est démontée pour de bon et tout est à reconstruire.
+  //
+  // Effet de mise en page et non effet ordinaire : celui-ci s'exécute avant que
+  // le navigateur ne peigne, celui-là après - la différence est une image de
+  // fond gris, exactement celle qu'on cherche à supprimer.
+  const firstPath = useRef(path);
+  useLayoutEffect(() => {
+    if (path === firstPath.current) return;
+    firstPath.current = path;
+    beginRenderBoot();
+  }, [path]);
+
   return (
     <>
       {path === 'pending' ? null : (
@@ -131,6 +157,7 @@ export default function Game() {
       >
         <Scene />
         <Engine />
+        <RenderBootSignal />
         <TrainRig>
           <Car />
           <Seats />
