@@ -534,22 +534,23 @@ function drawJyBadge(g: CanvasRenderingContext2D, jy: string, x: number, cy: num
 }
 
 /**
- * Les DEUX repères de position, et ils ne veulent pas dire la même chose.
- *
- * Le pentagramme est relevé au pixel sur l'afficheur : cinq sommets, un
- * bord SUPÉRIEUR HORIZONTAL, 71,6 × 59,6, cerné d'un filet clair de 13 et
- * percé d'un œil de 19,8 × 15,4 légèrement décentré. Il ne se penche pas
- * pour suivre la bande - lui donner l'inclinaison de l'arc suffisait à
- * casser sa silhouette, qui ne tient qu'à ce bord du haut bien à plat.
+ * Les repères de position, et ils ne veulent pas tous dire la même chose.
  *
  * L'afficheur distingue « la rame est ICI » de « la rame va LÀ ». À l'arrêt,
- * la gare où l'on est perd son cercle de minutes et reçoit le PENTAGRAMME
- * grenat à œil clair - un jeton posé sur la bande, pas une flèche : on ne va
- * nulle part, on y est. Dès que la rame repart, ce jeton disparaît, la
- * prochaine gare s'allume en ambre et c'est le CHEVRON qui apparaît derrière
- * elle, pointé dans le sens de marche.
- *
+ * la gare où l'on est perd son cercle de minutes et reçoit le jeton grenat à
+ * œil clair - pas une flèche : on ne va nulle part, on y est. Dès que la rame
+ * repart, ce jeton disparaît, la prochaine gare s'allume en ambre et c'est le
+ * CHEVRON qui apparaît derrière elle, pointé dans le sens de marche.
  * Confondre les deux, c'était annoncer un mouvement à quai.
+ *
+ * Et le jeton n'a pas la même forme sur les deux plans. Sur la vue rapprochée
+ * c'est un PENTAGRAMME de guingois, taillé pour se poser sur une bande qui
+ * descend en biais : cinq sommets, bord supérieur horizontal, 71,6 × 59,8,
+ * filet clair de 13, œil de 19,8 × 15,4 décalé. Sur le plan de boucle, où la
+ * bande est droite, c'est un BLOC symétrique - dos vertical, bords haut et bas
+ * horizontaux, pointe dans le sens de marche - qui ne se penche jamais.
+ * Réduire le pentagramme pour le poser sur l'anneau donnait un jeton de
+ * travers sur une bande droite : la bonne forme, au mauvais endroit.
  */
 function drawHerePentagon(g: CanvasRenderingContext2D, x: number, y: number, angle: number, s = 1): void {
   g.save();
@@ -589,6 +590,37 @@ function drawHerePentagon(g: CanvasRenderingContext2D, x: number, y: number, ang
   g.fillStyle = '#f2f2f2';
   g.beginPath();
   g.ellipse(-2.2, -2.4, 9.9, 7.7, 0, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+}
+
+/**
+ * Jeton « vous êtes ici » du PLAN DE BOUCLE : bloc symétrique de 29,5 × 23,9,
+ * dos vertical, bords haut et bas horizontaux, pointe de 5 dans le sens de
+ * marche, œil rond de rayon 4,6. Pointe vers +x avant rotation, et ne prend
+ * jamais d'autre angle que celui de sa rangée - un jeton de guingois sur une
+ * bande droite se lit comme un défaut d'affichage.
+ */
+function drawHereBlock(g: CanvasRenderingContext2D, x: number, y: number, angle: number): void {
+  g.save();
+  g.translate(x, y);
+  g.rotate(angle);
+  g.beginPath();
+  g.moveTo(-14.75, -11.95);
+  g.lineTo(9.75, -11.95);
+  g.lineTo(14.75, 0);
+  g.lineTo(9.75, 11.95);
+  g.lineTo(-14.75, 11.95);
+  g.closePath();
+  g.strokeStyle = '#f0f0ee';
+  g.lineWidth = 3;
+  g.lineJoin = 'round';
+  g.stroke();
+  g.fillStyle = MARKER_RED;
+  g.fill();
+  g.fillStyle = '#f2f2f2';
+  g.beginPath();
+  g.arc(-1, 0, 4.6, 0, Math.PI * 2);
   g.fill();
   g.restore();
 }
@@ -977,15 +1009,25 @@ export function drawLoopMap(
   const atStation = phase === 'dwell';
   const MINUTES_SHOWN = 14; // au-delà (~30 min), simple pastille grise
 
+  // Sens de marche le long de l'anneau, calculé une fois : il oriente le jeton
+  // « ici » comme le chevron, et tous deux restent d'aplomb sur leur rangée.
+  const tNext = loopArc(loopSlot(index));
+  const tAfter = loopArc(loopSlot(stationAtHop(index, 1, dir)));
+  let delta = tAfter - tNext;
+  if (delta > LOOP_PERIM / 2) delta -= LOOP_PERIM;
+  if (delta < -LOOP_PERIM / 2) delta += LOOP_PERIM;
+  const way = delta >= 0 ? 1 : -1;
+  const rowAngle = (top: boolean) => (top ? 0 : Math.PI) + (way > 0 ? 0 : Math.PI);
+
   for (let stIdx = 0; stIdx < 30; stIdx++) {
     const slot = loopSlot(stIdx);
     const [x, y] = at(slot);
     const k = rank[stIdx];
 
-    // À quai, la gare où l'on est ne porte pas « 0 » : elle porte le
-    // pentagramme de position, à la place de son cercle.
+    // À quai, la gare où l'on est ne porte pas « 0 » : elle porte le jeton de
+    // position, à la place de son cercle, pointé dans le sens de marche.
     if (atStation && k === 0) {
-      if (markerLit(anim)) drawHerePentagon(g, x, y, 0, 0.46);
+      if (markerLit(anim)) drawHereBlock(g, x, y, rowAngle(slot.top));
     } else if (k < MINUTES_SHOWN) {
       // Cercle des minutes. La prochaine gare est en ambre cerclé d'or ; les
       // autres en blanc ; au-delà de la portée d'affichage, un point gris.
@@ -1052,24 +1094,15 @@ export function drawLoopMap(
   // train et sens de marche. Il ne se pose pas au milieu du segment - sur
   // l'afficheur il colle au cercle de la prochaine gare, du côté d'où l'on
   // vient, et c'est ce qui se lit comme « la rame arrive ».
-  const tNext = loopArc(loopSlot(index));
-  const tAfter = loopArc(loopSlot(stationAtHop(index, 1, dir)));
-  // Sens de marche le long de l'anneau : + si la gare suivante est plus loin
-  // dans le sens horaire (au plus court, la boucle étant fermée).
-  let delta = tAfter - tNext;
-  if (delta > LOOP_PERIM / 2) delta -= LOOP_PERIM;
-  if (delta < -LOOP_PERIM / 2) delta += LOOP_PERIM;
-  // …et seulement quand on roule : à quai, c'est le pentagramme posé sur la
-  // gare qui tient ce rôle, plus haut.
+  // …et seulement quand on roule : à quai, c'est le jeton posé sur la gare qui
+  // tient ce rôle, plus haut.
   if (!atStation && markerLit(anim)) {
-    const way = delta >= 0 ? 1 : -1;
     const mk = loopPointAt(tNext - way * 22);
     // Le chevron reste D'APLOMB sur sa rangée, même quand il déborde de
     // quelques pixels sur l'about arrondi : sur l'afficheur ses bords haut et
     // bas sont horizontaux, et la moindre rotation cisaille le V - à trente
     // pixels de haut, sept degrés suffisent à le rendre bancal.
-    const rowAngle = loopSlot(index).top ? 0 : Math.PI;
-    drawWayChevron(g, mk.x, mk.y, rowAngle + (way > 0 ? 0 : Math.PI));
+    drawWayChevron(g, mk.x, mk.y, rowAngle(loopSlot(index).top));
   }
   g.textAlign = 'left';
 
