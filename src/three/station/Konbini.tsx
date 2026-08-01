@@ -20,8 +20,9 @@
 //   · le comptoir de caisse près de l'entrée, avec son écran client, son bac à
 //     friture, sa machine à café, et l'armoire à cigarettes au mur derrière.
 //
-// Et au-dessus de tout cela, quatre réglettes nues au plafond : un konbini
-// n'a d'ombre nulle part, c'est ce qui le distingue du hall où il se trouve.
+// Et au-dessus de tout cela, cinq réglettes nues au plafond, plus le vendeur
+// derrière sa caisse : un konbini n'a d'ombre nulle part et n'est jamais vide,
+// c'est ce qui le distingue du hall où il se trouve.
 //
 // LE BUDGET. Tout ce qui se répète - les centaines de produits en rayon - tient
 // dans un InstancedMesh et un seul appel de rendu (`shopKit`). Toutes les
@@ -36,13 +37,14 @@ import { makeNewDaysBandTexture } from '../../textures/konbini';
 import type { Mats } from './materials';
 import { useInstanceColors, useInstances } from './instancing';
 import { fillUnit, pick, shopPool } from './shopKit';
+import { ShopClerk } from './ShopStaff';
 
 /** Épaisseur des parois de la coque. */
 const WALL = 0.12;
 /** Hauteur du bandeau d'enseigne, au-dessus de la devanture. */
 const SIGN_H = 0.62;
 /** Plan de travail du comptoir de caisse : la hauteur de toute caisse. */
-const COUNTER_H = 1.02;
+const COUNTER_H = 0.94;
 /** Vitrines réfrigérées : hauteur des portes, puis du bandeau lumineux. */
 const COOL_H = 2.02;
 const COOL_VALANCE = 0.36;
@@ -444,6 +446,23 @@ export function Konbini({
           <planeGeometry args={[w - 0.2, SIGN_H]} />
         </mesh>
       </group>
+      {/* Le vendeur, derrière sa caisse, tourné vers le client. */}
+      <ShopClerk
+        x={(-hw + leftEnd) / 2 - 0.25}
+        z={zb + coolD + 0.5}
+        yaw={0}
+        seed={station * 5 + 1}
+      />
+
+      {/* La flaque de lumière que la boutique jette sur le sol du hall. Sous
+          terre, elle ne varie pas : rien de ce qui l'entoure ne varie. */}
+      <mesh
+        position={[0, 0.03, zf + 1.1]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={p.glowSteady}
+      >
+        <planeGeometry args={[w + 2.4, 4.4]} />
+      </mesh>
     </group>
   );
 }

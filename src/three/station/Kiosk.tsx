@@ -38,11 +38,12 @@ import type { Placed } from '../../systems/stationPlacement';
 import { makeNewDaysBandTexture } from '../../textures/konbini';
 import type { Mats } from './materials';
 import { useInstanceColors, useInstances } from './instancing';
-import { fillShelf, fillUnit, pick, shopPool, type Good } from './shopKit';
+import { fillShelf, fillUnit, pick, shopPool, useShopGlow, type Good } from './shopKit';
+import { ShopClerk } from './ShopStaff';
 import { rng } from '../../textures/procedural';
 
 /** Hauteur du comptoir : celle de toute caisse où l'on pose une pièce. */
-const COUNTER_H = 1.02;
+const COUNTER_H = 0.94;
 /** Profondeur d'un comptoir de service, mesurée depuis le nu extérieur. */
 const COUNTER_D = 0.8;
 /** Sous-face de l'auvent, et hauteur du bandeau d'enseigne qui le ceinture. */
@@ -56,9 +57,8 @@ const COOLER_H = 1.86;
 
 export function Kiosk({ k, m, station }: { k: Placed; m: Mats; station: number }) {
   const p = shopPool();
+  useShopGlow();
 
-  // Le bandeau porte le nom de la gare : il ne peut pas venir du pool, et il
-  // n'a aucune raison de survivre à la gare qui l'a demandé.
   // Le bandeau porte le nom de la gare : il ne peut pas venir du pool, et il
   // n'a aucune raison de survivre à la gare qui l'a demandé.
   //
@@ -148,6 +148,13 @@ export function Kiosk({ k, m, station }: { k: Placed; m: Mats; station: number }
 
   return (
     <group name="kiosque" position={[k.x, PLATFORM_TOP, k.z]}>
+      {/* La flaque de lumière que le kiosque jette sur la dalle, la nuit
+          venue. C'est à elle qu'on le repère du bout du quai, bien avant de
+          lire l'enseigne. */}
+      <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]} material={p.glow}>
+        <planeGeometry args={[hd * 2 + 5, hl * 2 + 3.4]} />
+      </mesh>
+
       {/* Socle : un kiosque POSE sur le quai, il n'y flotte pas. Le débord de
           quelques centimètres est ce qui le fait lire comme un ouvrage et non
           comme un meuble déposé là. */}
@@ -387,6 +394,11 @@ export function Kiosk({ k, m, station }: { k: Placed; m: Mats; station: number }
           <planeGeometry args={[f.len - 0.02, SIGN_H]} />
         </mesh>
       ))}
+
+      {/* Le vendeur, dans le passage, tourné vers le comptoir de gauche - celui
+          où est la caisse. Une boutique garnie jusqu'au plafond mais vide se
+          lit comme un décor, pas comme un commerce fermé deux minutes. */}
+      <ShopClerk x={0.26} y={0.14} z={0.42} yaw={-Math.PI / 2} seed={station * 5 + 3} />
 
       {/* Les cartes de prix suspendues sous le nez de l'auvent. Sans elles, une
           boutique paraît fermée toutes lumières allumées - c'est le détail le

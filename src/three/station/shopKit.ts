@@ -24,6 +24,9 @@
 // une gare : les marchandises.
 
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
+import { dayNightWeights } from '../../systems/daynight';
+import { runtime } from '../../systems/runtime';
 import {
   goodsTone,
   makeChilledCaseTexture,
@@ -35,6 +38,7 @@ import {
   makeRegisterScreenTexture,
   makeShelfGoodsTexture,
   makeShopFloorTexture,
+  makeShopGlowTexture,
   makeShutterTexture,
   makeTobaccoWallTexture,
   makeAutoDoorDecalTexture,
@@ -76,6 +80,22 @@ export interface ShopPool {
   /** Dalle de plafond de la boutique : blanche, et jamais celle du hall. */
   ceiling: THREE.MeshStandardMaterial;
   /**
+   * La flaque de lumière au sol, en mélange additif. Deux états, et c'est un
+   * fait d'éclairage, pas une commodité :
+   *
+   *   · `glow` est celle du QUAI, à ciel ouvert ou sous auvent. Elle n'existe
+   *     qu'à la tombée du jour et s'éteint tout à fait de jour - une flaque de
+   *     lumière à quinze heures se remarque ;
+   *   · `glowSteady` est celle du HALL, deux niveaux sous terre, où il fait
+   *     nuit à toute heure. Elle ne varie jamais, parce que rien de ce qui
+   *     l'entoure ne varie.
+   *
+   * `glow` est le seul matériau du pool dont l'état change en cours de route,
+   * et un seul objet le pilote : il n'y a qu'un kiosque par gare.
+   */
+  glow: THREE.MeshBasicMaterial;
+  glowSteady: THREE.MeshBasicMaterial;
+  /**
    * Marchandise instanciée : blanc, teinté par exemplaire.
    *
    * Un rayon de konbini est éclairé à plat par des tubes au plafond, sans
@@ -87,6 +107,17 @@ export interface ShopPool {
 
 let pool: ShopPool | null = null;
 
+function glowMaterial(map: THREE.Texture, opacity: number): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({
+    map,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  });
+}
+
 export function shopPool(): ShopPool {
   if (pool) return pool;
   const flat = (t: THREE.Texture) => new THREE.MeshBasicMaterial({ map: t, toneMapped: false });
@@ -96,6 +127,7 @@ export function shopPool(): ShopPool {
   floorMap.repeat.set(6, 3);
   const shutterMap = makeShutterTexture();
   shutterMap.repeat.set(3, 1);
+  const glowMap = makeShopGlowTexture();
 
   pool = {
     shelves: [0, 1, 2, 3].map((i) => flat(makeShelfGoodsTexture(i, i === 3 ? 4 : 5))),
@@ -156,6 +188,8 @@ export function shopPool(): ShopPool {
     // jour et rayonnants la nuit.
     lit: new THREE.MeshBasicMaterial({ color: '#fffdf2', toneMapped: false }),
     goods: new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.58, metalness: 0.02 }),
+    glow: glowMaterial(glowMap, 0),
+    glowSteady: glowMaterial(glowMap, 0.34),
   };
   return pool;
 }
@@ -171,6 +205,25 @@ export function shopPool(): ShopPool {
  */
 export function pick<T>(list: T[], station: number, i: number): T {
   return list[(((station * 3 + i) % list.length) + list.length) % list.length];
+}
+
+/**
+ * Allume la flaque de lumière du quai à la tombée du jour.
+ *
+ * Même règle que les foyers de la voie (three/Wayside) : l'heure dorée compte
+ * pour moitié, et de plein jour la flaque disparaît entièrement plutôt que de
+ * rester à un fond visible. Le réglage se fait par image parce que l'heure
+ * avance en jeu, mais il ne coûte qu'une affectation - aucune géométrie ne
+ * bouge, aucune matrice ne se recompose.
+ */
+export function useShopGlow(): void {
+  useFrame(() => {
+    const w = dayNightWeights(runtime.clockMin / 60);
+    const on = Math.min(1, w.night + w.golden * 0.55);
+    const g = shopPool().glow;
+    g.opacity = on * 0.5;
+    g.visible = on > 0.03;
+  });
 }
 
 /** Une marchandise posée sur une étagère : sa matrice et sa teinte. */

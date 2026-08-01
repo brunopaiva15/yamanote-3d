@@ -884,6 +884,34 @@ export function makeAutoDoorDecalTexture(): THREE.CanvasTexture {
 }
 
 /**
+ * La flaque de lumière qu'un commerce jette autour de lui.
+ *
+ * Un konbini éclaire le trottoir devant lui, et un kiosque éclaire le quai
+ * sous son auvent - c'est même à cette flaque qu'on les repère de loin, la
+ * nuit, bien avant de lire l'enseigne. Le décor n'a pas de sources ponctuelles
+ * (tout y est émissif, voir three/station/Concourse), et en ajouter une par
+ * boutique coûterait une passe d'éclairage pour un seul objet.
+ *
+ * On peint donc la flaque : un dégradé radial posé à plat sur le sol, en
+ * mélange ADDITIF, dont l'opacité suit la tombée du jour. De jour elle
+ * n'existe pas - une flaque de lumière à quinze heures se remarque, exactement
+ * comme un lampadaire allumé (three/Wayside applique la même règle à ses
+ * foyers).
+ */
+export function makeShopGlowTexture(): THREE.CanvasTexture {
+  const S = 256;
+  const { c, g } = makeCanvas(S, S);
+  const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  grad.addColorStop(0, 'rgba(255,250,232,0.85)');
+  grad.addColorStop(0.42, 'rgba(255,246,220,0.34)');
+  grad.addColorStop(0.78, 'rgba(240,232,200,0.08)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, S, S);
+  return toTexture(c);
+}
+
+/**
  * Le rideau métallique, baissé.
  *
  * Il ne sert qu'aux bouts fermés d'un kiosque - les deux petits côtés, qu'on
