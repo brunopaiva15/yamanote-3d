@@ -32,6 +32,7 @@
 // sans de quoi payer renvoie au 精算機, exactement comme dans la vraie vie.
 
 import { fareFor, FARES } from '../data/products';
+import { PASSAGE_SLACK } from '../data/stationInterior';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import { gateBeep, gateDeny, gateFlap } from './audioEngine';
@@ -70,14 +71,6 @@ const GRANT = 3.6;
 const DENY_SHOW = 2.4;
 /** Distance à laquelle les battants se ferment devant qui n'a rien présenté. */
 const CLOSE_AT = 1.9;
-/**
- * Marge latérale du fuseau d'un passage.
- *
- * On se présente à un portillon en visant sa baie, pas en s'alignant au
- * centimètre : trente-cinq centimètres de part et d'autre, et l'on est bien
- * dans la file de celui-là plutôt que dans celle du voisin.
- */
-const LANE_SLACK = 0.35;
 /**
  * Portée d'un claquement de battants, en mètres.
  *
@@ -286,7 +279,7 @@ export function paxNearGate(x: number, z: number, granted: boolean): void {
   if (dz >= CLOSE_AT) return;
   for (let i = 0; i < it.gate.passages.length; i++) {
     const p = it.gate.passages[i];
-    if (Math.abs(x - p.x) > p.width / 2 + LANE_SLACK) continue;
+    if (Math.abs(x - p.x) > p.width / 2 + PASSAGE_SLACK) continue;
     const a = paxAt[i];
     // Entre les bornes, on ne pince personne : c'est la règle du joueur, et
     // elle ne dépend pas de qui est là.
@@ -385,7 +378,7 @@ function playerAtGate(passage: number): PlayerAtGate {
   const it = placementFor(useStore.getState().platformIndex, psdGates()).interior;
   if (!it.built) return 'away';
   const p = it.gate.passages[passage];
-  if (!p || Math.abs(runtime.playerPlatX - p.x) >= p.width / 2 + LANE_SLACK) return 'away';
+  if (!p || Math.abs(runtime.playerPlatX - p.x) >= p.width / 2 + PASSAGE_SLACK) return 'away';
   const pz = runtime.playerPlatZ;
   const dz = pz < it.gate.z0 ? it.gate.z0 - pz : pz > it.gate.z1 ? pz - it.gate.z1 : 0;
   if (dz === 0) return 'holds';

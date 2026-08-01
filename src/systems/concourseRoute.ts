@@ -27,6 +27,7 @@ import {
   EXIT_MOUTH_GOING,
   EXIT_MOUTH_STEPS,
   EXIT_MOUTH_Z0,
+  PASSAGE_SLACK,
   shopPlan,
   shopToHall,
   type Fixture,
@@ -201,26 +202,72 @@ function axisPath(p: StationPlacement, z0: number, z1: number): RouteStop[] {
 }
 
 /**
- * Le passage de portillon qu'un voyageur emprunte.
+ * Longueur de file qu'un passage porte : au-delà, on n'y est pas encore.
  *
- * Il prend celui qui est le plus LOIN du joueur quand le joueur est là, et
- * c'est réfléchi : les battants se ferment devant qui n'a pas validé
- * (systems/fareGate), et le joueur qui hésite devant sa borne n'a pas à voir
- * quelqu'un traverser des vantaux rabattus. Chacun sa baie.
+ * Six mètres devant la ligne, c'est ce qu'une baie tient sans que sa file
+ * déborde dans la voisine. Le fuseau LATÉRAL, lui, est celui du portillon
+ * lui-même (`PASSAGE_SLACK`) : on regarde la ligne comme elle nous regarde.
  */
-function pickPassage(it: StationInterior): number {
+const LANE_QUEUE = 6;
+
+/**
+ * Ce que le joueur occupe de la ligne : le passage devant lequel il se tient.
+ *
+ * -1 s'il est ailleurs, ou entre deux baies. Les battants se ferment devant
+ * qui n'a pas validé, et le joueur qui hésite devant sa borne n'a pas à voir
+ * quelqu'un traverser des vantaux rabattus : sa baie n'est pas à prendre.
+ */
+function playerLane(it: StationInterior): number {
+  if (runtime.playerLevel !== 'concourse') return -1;
+  const z = runtime.playerPlatZ;
+  const dz = z < it.gate.z0 ? it.gate.z0 - z : z > it.gate.z1 ? z - it.gate.z1 : 0;
+  if (dz > LANE_QUEUE) return -1;
+  for (let i = 0; i < it.gate.passages.length; i++) {
+    const p = it.gate.passages[i];
+    if (Math.abs(runtime.playerPlatX - p.x) <= p.width / 2 + PASSAGE_SLACK) return i;
+  }
+  return -1;
+}
+
+/**
+ * Le passage de portillon qu'un voyageur emprunte : celui qui est LIBRE.
+ *
+ * On ne choisit pas sa baie en la calculant, on la choisit en regardant : on
+ * vise celle devant laquelle il n'y a personne, et l'on prend la voisine si
+ * quelqu'un s'y engage déjà. Toute la ligne se remplit ainsi, alors qu'une
+ * règle fixe - « la plus loin du joueur » - envoyait la gare entière dans le
+ * même vantail, l'un derrière l'autre, la ligne d'à côté déserte.
+ *
+ * `busy` dit combien de voyageurs se dirigent déjà vers chaque passage
+ * (`systems/platformCrowd`, `passageLoad`). Il PÈSE sans interdire : deux
+ * files se forment très bien dans un hall chargé, et une gare où l'on ne
+ * verrait jamais personne attendre son tour serait fausse dans l'autre sens.
+ *
+ * Le passage LARGE est celui qu'on laisse à qui pousse une valise : il se tire
+ * moins souvent, sans jamais s'exclure.
+ */
+function pickPassage(it: StationInterior, busy: readonly number[]): number {
   const n = it.gate.passages.length;
   if (n === 0) return -1;
-  if (runtime.playerLevel !== 'concourse') return Math.floor(Math.random() * n);
-  let best = 0;
-  let bestD = -1;
-  for (let i = 0; i < n; i++) {
-    const d = Math.abs(it.gate.passages[i].x - runtime.playerPlatX);
-    if (d <= bestD) continue;
-    bestD = d;
-    best = i;
+  const mine = playerLane(it);
+  const weights = it.gate.passages.map((p, i) => {
+    if (i === mine) return 0;
+    return (p.wide ? 0.55 : 1) / (1 + 3 * (busy[i] ?? 0));
+  });
+  let total = weights.reduce((a, w) => a + w, 0);
+  // Tout est pris - ou le joueur bouche la seule baie de la gare. On tire alors
+  // au hasard plein : mieux vaut faire la queue derrière quelqu'un que de ne
+  // plus jamais franchir de portillon.
+  if (total <= 1e-6) {
+    weights.fill(1);
+    total = n;
   }
-  return best;
+  let r = Math.random() * total;
+  for (let i = 0; i < n; i++) {
+    r -= weights[i];
+    if (r <= 0) return i;
+  }
+  return n - 1;
 }
 
 /** Bouche de sortie tirée au sort, avec un écart latéral dans sa largeur. */
@@ -447,11 +494,14 @@ function freeLegs(p: StationPlacement, door: StreetDoor, inbound: boolean): Rout
  * (`systems/platformCrowd`, `stairApron`). Le dernier point est en haut de la
  * volée d'une bouche - au-delà, il n'y a plus rien à montrer, et c'est là que
  * le voyageur s'efface.
+ *
+ * `busy` est la charge de chaque passage de portillon (voir `pickPassage`) :
+ * on prend une baie libre plutôt que de se ranger derrière quelqu'un.
  */
-export function routeToStreet(p: StationPlacement): RouteStop[] | null {
+export function routeToStreet(p: StationPlacement, busy: readonly number[] = []): RouteStop[] | null {
   if (!stationInteriorOpen(p)) return null;
   const it = p.interior;
-  const passage = pickPassage(it);
+  const passage = pickPassage(it, busy);
   if (passage < 0) return null;
   const main = p.mainStair;
   const door = pickExit(it);
@@ -472,10 +522,13 @@ export function routeToStreet(p: StationPlacement): RouteStop[] | null {
  * qui suit - déboucher sur la dalle et gagner sa place d'attente devant une
  * porte - est l'affaire de la foule du quai, qui sait déjà le faire.
  */
-export function routeFromStreet(p: StationPlacement): { from: StreetDoor; stops: RouteStop[] } | null {
+export function routeFromStreet(
+  p: StationPlacement,
+  busy: readonly number[] = [],
+): { from: StreetDoor; stops: RouteStop[] } | null {
   if (!stationInteriorOpen(p)) return null;
   const it = p.interior;
-  const passage = pickPassage(it);
+  const passage = pickPassage(it, busy);
   if (passage < 0) return null;
   const main = p.mainStair;
   const door = pickExit(it);

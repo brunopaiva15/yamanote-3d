@@ -162,6 +162,65 @@ test('on passe le portillon, une fois, et par un vrai passage', () => {
   }
 });
 
+test('on ne s’engouffre pas tous dans le même vantail', () => {
+  // La ligne se remplit : sur cent départs, chacune des baies sert. Une règle
+  // fixe - « la plus loin du joueur » - envoyait la gare entière dans le même
+  // passage, l'un derrière l'autre, les autres déserts.
+  for (const { name, place } of INSIDE) {
+    const n = place.interior.gate.passages.length;
+    const seen = new Set<number>();
+    for (let k = 0; k < 100; k++) {
+      const stops = routeToStreet(place);
+      assert.ok(stops);
+      seen.add(stops.find((s) => s.tap !== undefined)?.tap as number);
+    }
+    assert.equal(seen.size, n, `${name} : ${seen.size} baies servies sur ${n}`);
+  }
+});
+
+test('une baie déjà prise se cède à la voisine', () => {
+  for (const { name, place } of INSIDE) {
+    const n = place.interior.gate.passages.length;
+    // Trois voyageurs déjà en route vers la baie 0 : on va ailleurs. Pas
+    // JAMAIS - deux files se forment très bien dans un hall chargé - mais
+    // presque, et c'est cet écart-là qui se vérifie.
+    const busy = new Array<number>(n).fill(0);
+    busy[0] = 3;
+    let same = 0;
+    for (let k = 0; k < 200; k++) {
+      const stops = routeToStreet(place, busy);
+      assert.ok(stops);
+      if (stops.find((s) => s.tap !== undefined)?.tap === 0) same++;
+    }
+    // La ligne la plus étroite du réseau en fait 7 % ; une baie sur cinq
+    // voudrait dire que la charge n'a pas été lue du tout.
+    assert.ok(same < 40, `${name} : ${same}/200 départs sur une baie encombrée`);
+  }
+});
+
+test('la baie devant laquelle le joueur se tient n’est pas à prendre', () => {
+  const { name, place } = INSIDE[0];
+  const gate = place.interior.gate;
+  const n = gate.passages.length;
+  runtime.playerLevel = 'concourse';
+  runtime.playerPlatX = gate.passages[1].x;
+  runtime.playerPlatZ = gate.z0 - 1;
+  try {
+    const seen = new Set<number>();
+    for (let k = 0; k < 120; k++) {
+      const stops = routeToStreet(place);
+      assert.ok(stops);
+      seen.add(stops.find((s) => s.tap !== undefined)?.tap as number);
+    }
+    assert.ok(!seen.has(1), `${name} : on passe dans la baie où le joueur hésite`);
+    // Toutes les autres, en revanche : ce n'est pas une baie qu'on choisit,
+    // c'est une baie qu'on écarte.
+    assert.equal(seen.size, n - 1, `${name} : ${seen.size} baies servies sur ${n - 1}`);
+  } finally {
+    runtime.playerLevel = 'platform';
+  }
+});
+
 test('on s’efface en haut de la volée d’une bouche, jamais en plein hall', () => {
   for (const { name, place } of INSIDE) {
     const it = place.interior;
