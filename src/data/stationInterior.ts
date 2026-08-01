@@ -222,8 +222,24 @@ const PASSAGE_W = 0.62;
 const PASSAGE_WIDE_W = 0.92;
 /** Marge laissée entre le bout de la ligne de portillons et la paroi. */
 const GATE_MARGIN = 0.4;
-/** Demi-largeur d'une bouche de sortie. */
+/** Demi-largeur d'une bouche de sortie, quand le hall est assez large. */
 const EXIT_HALF_X = 1.15;
+/**
+ * Trumeau minimal entre deux bouches, et retour minimal contre une paroi.
+ *
+ * Un hall de gare fait cinq mètres trente au plus étroit (Yūrakuchō) : deux
+ * bouches de 2,30 m posées au tiers et aux deux tiers s'y CHEVAUCHAIENT de
+ * cinquante centimètres. Le mur qui les sépare disparaissait - les deux volées
+ * se touchaient - et les deux panneaux jaunes suspendus au-dessus, superposés
+ * dans le même plan, se disputaient le tampon de profondeur.
+ *
+ * D'où ces deux cotes : une bouche RÉTRÉCIT plutôt que de mordre sur sa voisine
+ * ou sur la paroi, et l'entraxe s'ouvre pour garder le trumeau. Là où le hall
+ * est large, rien ne change - la bouche reste à sa cote nominale, au tiers et
+ * aux deux tiers.
+ */
+const EXIT_PIER = 0.7;
+const EXIT_JAMB = 0.5;
 /**
  * Longueur au-delà de laquelle un meuble est une DEVANTURE et non un meuble :
  * il enjambe la trame porteuse au lieu de l'esquiver.
@@ -688,11 +704,18 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
 
   const gate = buildGate(spec, layout.crowdScale, x0, x1, gateZ);
   // Autant de bouches que la gare a de sorties fléchées, réparties en travers
-  // du fond : une au tiers, l'autre aux deux tiers.
+  // du fond : une au tiers, l'autre aux deux tiers. Sur un hall étroit elles se
+  // resserrent et rétrécissent, mais elles gardent leur trumeau - deux bouches
+  // qui se recouvrent ne sont plus deux sorties, c'est un trou.
   const slots = stationExits(i);
+  const hallW = x1 - x0;
+  const room = (hallW - 2 * EXIT_JAMB - (slots.length - 1) * EXIT_PIER) / (2 * slots.length);
+  const exitHalf = Math.min(EXIT_HALF_X, room);
+  const pitch = Math.max(hallW / (slots.length + 1), 2 * exitHalf + EXIT_PIER);
+  const exitMid = (x0 + x1) / 2;
   const exits: ConcourseExit[] = slots.map((_, k) => ({
-    x: x0 + (x1 - x0) * (slots.length === 1 ? 0.5 : (k + 1) / (slots.length + 1)),
-    halfWidth: EXIT_HALF_X,
+    x: exitMid + (k - (slots.length - 1) / 2) * pitch,
+    halfWidth: exitHalf,
     slot: k,
   }));
 

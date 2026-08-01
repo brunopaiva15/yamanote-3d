@@ -30,12 +30,15 @@ import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
 import { makeConcourseGuideTexture, type GuideKind } from '../../textures/concourse';
 import type { Mats } from './materials';
+import { Barrier } from './Barrier';
 import { FareGates } from './FareGates';
 import { Fixtures } from './Fixtures';
 
 /** Hauteur du panneau 改札 suspendu au-dessus de la ligne. */
 const GATE_SIGN_Y = 2.32;
 const GATE_SIGN_H = 0.44;
+/** Hauteur libre d'une bouche de sortie : au-dessus, c'est le linteau. */
+const EXIT_OPENING_H = 2.15;
 /** Hauteur du soubassement de faïence. */
 const DADO_H = 1.15;
 /** Épaisseur des parois du hall. */
@@ -146,7 +149,7 @@ export function Concourse({
       {/* Fond du hall, percé des bouches de sortie. Elles ne se franchissent pas
           encore - la volée qui monte à la rue reste à dessiner - mais le jour
           qui en tombe dit d'où il vient, et le fléchage dit où elles mènent. */}
-      <ExitWall it={it} m={m} station={station} width={width} height={height} midX={midX} midY={midY} />
+      <ExitWall it={it} m={m} station={station} height={height} midY={midY} />
 
       {/* La ligne de portillons : bornes, battants, lecteurs et feux. Elle
           n'est plus une rangée de boîtes - elle s'ouvre, elle se ferme, et
@@ -196,22 +199,20 @@ export function Concourse({
  * Une bouche n'est pas encore un passage : la volée qui monte à la rue reste à
  * dessiner. Mais ce n'est pas non plus un mur peint - c'est un percement, avec
  * du jour au fond, et c'est cette lueur qui dit qu'il y a une ville au-dessus.
+ * Ce que la marche refuse, la limite de zone le DIT : la même maille rouge que
+ * dans les baies de porte palière par lesquelles on ne peut pas monter.
  */
 function ExitWall({
   it,
   m,
   station,
-  width,
   height,
-  midX,
   midY,
 }: {
   it: StationInterior;
   m: Mats;
   station: number;
-  width: number;
   height: number;
-  midX: number;
   midY: number;
 }) {
   // Le panneau jaune de chaque bouche : le MÊME que celui des potences du quai,
@@ -251,12 +252,22 @@ function ExitWall({
           <boxGeometry args={[p.x1 - p.x0, height, WALL_T]} />
         </mesh>
       ))}
-      {/* Linteau au-dessus des bouches : le percement ne monte pas au plafond. */}
-      <mesh position={[midX, it.floorY + 2.55, z]} material={m.hall}>
-        <boxGeometry args={[width, height - 2.4, WALL_T]} />
-      </mesh>
       {cuts.map((exit, k) => (
         <group key={`exit${k}`}>
+          {/* Linteau : le percement ne monte pas au plafond. Un par bouche, à
+              l'exacte largeur de la sienne - une bande courant tout du long
+              recouvrait les panneaux pleins dans leur propre plan, et les deux
+              faces se disputaient le tampon de profondeur. */}
+          <mesh
+            position={[
+              exit.x,
+              it.floorY + (EXIT_OPENING_H + height) / 2,
+              z,
+            ]}
+            material={m.hall}
+          >
+            <boxGeometry args={[exit.halfWidth * 2, height - EXIT_OPENING_H, WALL_T]} />
+          </mesh>
           {/* Ce qu'on voit au fond n'est pas un aplat lumineux : c'est une
               VOLÉE, six marches montantes prises à contre-jour, et le jour
               derrière elles. C'est la différence entre une sortie et un néon -
@@ -323,6 +334,20 @@ function ExitWall({
           >
             <planeGeometry args={[exit.halfWidth * 2, 0.36]} />
           </mesh>
+          {/* La volée qui monte à la rue se VOIT mais ne se monte pas encore :
+              `systems/walkable` arrête la marche au nu du fond, et rien ne le
+              disait - on butait dans un mur invisible en plein milieu d'un
+              percement grand ouvert. La limite de zone se dresse donc dans la
+              bouche, exactement comme dans une baie de porte palière par
+              laquelle on ne peut pas monter : maille rouge, halo au point de
+              contact, invisible tant qu'on n'y va pas. */}
+          <Barrier
+            x={exit.x}
+            y={it.floorY + EXIT_OPENING_H / 2}
+            z={z - WALL_T / 2}
+            width={exit.halfWidth * 2}
+            height={EXIT_OPENING_H}
+          />
         </group>
       ))}
     </group>
@@ -376,8 +401,9 @@ function Guideline({ it, m }: { it: StationInterior; m: Mats }) {
  * Quatre panneaux, et leur POSITION est le message : celui qui accueille en bas
  * des marches dit la sortie, celui du milieu dit les installations, celui qui
  * suit les portillons dit les quais - à l'envers, pour qui arrive de la rue -
- * et le dernier dit vers quelle bouche aller. Un panneau de plus serait du
- * bruit ; c'est déjà ce qu'on reproche aux gares réelles.
+ * et le dernier redit la sortie, tout droit, au moment où l'on voit les bouches.
+ * Un panneau de plus serait du bruit ; c'est déjà ce qu'on reproche aux gares
+ * réelles.
  */
 function Guides({ it, m }: { it: StationInterior; m: Mats }) {
   // Bas du panneau à 2,10 m : on passe dessous sans se baisser, et il reste
@@ -415,7 +441,6 @@ function Guides({ it, m }: { it: StationInterior; m: Mats }) {
         exit: make('exit', 0),
         facility: make('facility', 1),
         platform: make('platform', 0),
-        exitLeft: make('exit', -1),
       };
     },
     [],
@@ -431,11 +456,16 @@ function Guides({ it, m }: { it: StationInterior; m: Mats }) {
   );
 
   // z, matériau, et sens dans lequel le panneau est lisible.
+  //
+  // Le dernier est le seul qui se lise le nez sur les bouches, et sa flèche
+  // pointait à GAUCHE : les deux bouches sont droit devant, dans le fond du
+  // hall, et rien à gauche ne mène dehors. Une flèche qui ment coûte plus cher
+  // que pas de flèche du tout - c'est celle-là qu'on suit en marchant.
   const posts: [number, THREE.Material, boolean][] = [
     [it.paid.z0 + 2.6, signs.exit, true],
     [it.paid.z1 - 4.2, signs.facility, true],
     [it.free.z0 + 2.2, signs.platform, false],
-    [it.free.z1 - 4.5, signs.exitLeft, true],
+    [it.free.z1 - 4.5, signs.exit, true],
   ];
 
   return (
@@ -444,6 +474,13 @@ function Guides({ it, m }: { it: StationInterior; m: Mats }) {
         const aisle = aisleAt(z);
         const w = Math.min(aisle.width - 0.5, 2.9);
         const h = w / 4;
+        // Les tiges vont du DESSUS DU CAISSON, cadre compris, à la sous-face de
+        // la dalle - ni plus, ni moins. Calculées à mi-hauteur du panneau, elles
+        // s'arrêtaient un quart de caisson trop haut et repartaient d'autant à
+        // travers le plafond : le panneau semblait flotter sous deux poteaux
+        // qui ne le touchaient pas.
+        const rodBottom = h / 2 + 0.04;
+        const rodH = Math.max(0.06, it.ceilY - 0.12 - y - rodBottom);
         return (
         <group key={`guide${k}`} position={[aisle.mid, y, z]}>
           {/* Caisson : deux faces possibles, mais une seule imprimée - on ne
@@ -458,14 +495,14 @@ function Guides({ it, m }: { it: StationInterior; m: Mats }) {
           >
             <planeGeometry args={[w, h]} />
           </mesh>
-          {/* Tiges de suspension jusqu'à la dalle. */}
+          {/* Tiges de suspension : du dessus du caisson jusqu'à la dalle. */}
           {[-1, 1].map((s) => (
             <mesh
               key={`rod${s}`}
-              position={[(s * w) / 2.6, (it.ceilY - 0.12 - y) / 2 + h / 2, 0]}
+              position={[(s * w) / 2.6, rodBottom + rodH / 2, 0]}
               material={m.metal}
             >
-              <boxGeometry args={[0.04, it.ceilY - 0.12 - y - h / 2, 0.04]} />
+              <boxGeometry args={[0.04, rodH, 0.04]} />
             </mesh>
           ))}
         </group>
