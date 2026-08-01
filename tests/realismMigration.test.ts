@@ -1,8 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { execFileSync } from 'node:child_process';
+import { readdirSync, readFileSync } from 'node:fs';
 import { ORIGINAL_MELODY_DEFINITIONS } from '../src/data/melodyDefinitions.ts';
 import { createMelodyOperationPlan } from '../src/data/melodyOperation.ts';
+
+// Le grep est fait en Node plutôt qu'en déléguant à `rg` : ripgrep est présent
+// sur nos machines mais pas sur les runners GitHub, où le test cassait avec
+// « spawnSync rg ENOENT ». On saute les entrées cachées, comme le ferait rg.
+function grepFiles(root: string, pattern: RegExp): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    const path = `${root}/${entry.name}`;
+    if (entry.isDirectory()) found.push(...grepFiles(path, pattern));
+    else if (entry.isFile() && pattern.test(readFileSync(path, 'utf8'))) found.push(path);
+  }
+  return found;
+}
 
 test('les 19 mélodies historiques ont des métadonnées originales', () => {
   assert.equal(ORIGINAL_MELODY_DEFINITIONS.length, 19);
@@ -28,8 +42,10 @@ test('le plan mélodique couvre saut, passage et second passage sans hasard cach
 });
 
 test('la liste gelée des accès directs à DOOR_SIDE ne peut pas grandir', () => {
-  const files = execFileSync('rg', ['-l', '\\bDOOR_SIDE\\b', 'src', 'scripts'], { encoding: 'utf8' })
-    .trim().split('\n').sort();
+  const files = [
+    ...grepFiles('src', /\bDOOR_SIDE\b/),
+    ...grepFiles('scripts', /\bDOOR_SIDE\b/),
+  ].sort();
   assert.deepEqual(files, [
     'scripts/announcements-export.ts', 'scripts/pet-shots.mjs', 'src/data/districts.ts',
     'src/data/loop.ts', 'src/data/platforms.ts', 'src/data/stations.ts', 'src/dev/stationProbe.ts',
