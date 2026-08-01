@@ -1786,12 +1786,32 @@ l'échantillonnage comptant et on débruite spatialement.
 ### Ce que ça coûte
 
 C'est une **bêta**, et l'étiquette porte un ⚠︎ pour cette raison : le mode
-n'est pas encore optimisé. Il est nettement plus cher qu'Ultra. Deux
-arbitrages sont déjà pris : le SSR est calculé en demi-résolution (une
-réflexion est floue par nature dès que la rugosité dépasse quelques
-centièmes), et la densité de rendu est plafonnée à 1,5 au lieu du natif -
-SSGI, SSR et bokeh sont tous des effets à la résolution, et le budget est mieux
-placé dans les rebonds de lumière que dans des pixels qu'on va flouter.
+n'est pas encore optimisé. Il est nettement plus cher qu'Ultra. Il rend à la
+densité native comme Ultra - un mode qu'on choisit pour sa beauté ne doit pas
+commencer par être moins net que celui qu'on quitte - et la seule économie
+prise d'avance est le SSR en demi-résolution, une réflexion étant floue par
+nature dès que la rugosité dépasse quelques centièmes.
+
+Le premier essai sur GPU a corrigé quatre réglages, et il vaut la peine de dire
+lesquels parce qu'ils se ressemblent tous à l'écran :
+
+- **le SSR était le vrai coupable du « tout est flou ».** Le nœud pondère la
+  réflexion d'un diélectrique par un Fresnel approché qui tend vers 1 en
+  incidence rasante - donc presque partout dans un couloir de 2,60 m. À 0,85
+  d'intensité, chaque siège, chaque cloison et chaque visage recevait une copie
+  floue de la scène par-dessus lui. Il est descendu à 0,22 ;
+- **l'occlusion ambiante n'était pas débruitée**, seul l'indirect l'était. Elle
+  sort d'un tampon 8 bits sur un canal et multipliait toute l'image par un
+  tirage par pixel : c'était le poivre et sel visible sur les surfaces lisses ;
+- **le SSGI tournait à moitié des échantillons requis** (2×8). Sans filtrage
+  temporel, sa documentation en demande deux fois plus : il est passé à 3×12 ;
+- **la profondeur de champ rendait tout flou pour de bon.** `focalLength` est
+  la distance au-delà de laquelle un objet est COMPLÈTEMENT flou, et elle était
+  calée à 0,62 × la distance de mise au point : le regard se posait sur un
+  visage à 1,50 m, la rampe faisait 90 cm, et le reste de la voiture était au
+  flou maximal. Elle a un plancher de six mètres - à l'intérieur du wagon, plus
+  rien n'atteint jamais le flou maximal, et c'est la ville derrière la vitre
+  qui se dénoue.
 
 Limite connue : la passe unique en MRT fait aussi écrire les matériaux
 TRANSPARENTS dans les attachements de normale et de matière. Là où une trace de
