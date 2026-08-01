@@ -45,9 +45,6 @@ import {
   GAUGE_HALF,
   OPP_DEPTH,
   PLATFORM_TOP,
-  PSD_APRON_H,
-  PSD_GLASS_T,
-  PSD_GLASS_TOP,
   PSD_H,
   PSD_LEAF_JOINT_W,
   PSD_LEAF_T,
@@ -84,7 +81,7 @@ import { Overbridge } from './Overbridge';
 import { Concourse } from './Concourse';
 import { Kiosk } from './Kiosk';
 import { GatePlates } from './GatePlates';
-import { psdLayout, psdWall } from './psdLayout';
+import { psdLayout } from './psdLayout';
 import { psdLeafFrameGeometry, psdLeafGlassGeometry } from './psdParts';
 
 const UP = new THREE.Quaternion();
@@ -286,46 +283,16 @@ export function Station() {
   useLayoutEffect(() => () => slabGeo.dispose(), [slabGeo]);
 
   // --- Matrices des éléments répétés ---
-  /**
-   * Le muret n'est pas un mur : c'est une menuiserie percée.
-   *
-   * Chaque tronçon entre deux baies porte à ses deux bouts la POCHE où le
-   * vantail s'efface - pleine sur toute sa hauteur, et c'est elle qui reçoit la
-   * plaque de baie et les affiches - puis, au milieu, un panneau fixe : allège
-   * pleine à hauteur de hanche, VITRE au-dessus. Tout plein, les quarante baies
-   * d'un quai traçaient un bandeau gris de deux cent vingt mètres devant
-   * exactement ce qu'on vient regarder : la rame.
-   */
-  const wall = useMemo(() => psdWall(segs), [segs]);
-  const psdSegs = useMemo(() => {
-    const full = (s: { z0: number; z1: number }, y0: number, y1: number) =>
-      mat(PSD_X, PLATFORM_TOP + (y0 + y1) / 2, (s.z0 + s.z1) / 2, PSD_WALL_T, y1 - y0, s.z1 - s.z0);
-    return [
-      ...wall.solids.map((s) => full(s, 0, PSD_H)),
-      ...wall.aprons.map((s) => full(s, 0, PSD_APRON_H)),
-      // Traverse haute du panneau fixe : sans elle, le bandeau uguisu (qui
-      // s'arrête deux centimètres sous le couronnement) laissait une fente
-      // ouverte sur la voie au sommet de chaque vitre.
-      ...wall.aprons.map((s) => full(s, PSD_GLASS_TOP, PSD_H)),
-    ];
-  }, [wall]);
-  // Deux centimètres de plus que sa baie de chaque côté : le verre ENTRE dans
-  // les poches qui l'encadrent. Arrêté pile à leur nu, il laissait une fente
-  // ouverte sur la voie à chaque bout de panneau - deux centimètres de jour à
-  // hauteur de visage, tous les cinq mètres.
+  const psdSegs = useMemo(
+    () => segs.map((s) => mat(PSD_X, PLATFORM_TOP + PSD_H / 2, (s.z0 + s.z1) / 2, PSD_WALL_T, PSD_H, s.z1 - s.z0)),
+    [segs],
+  );
   const psdGlass = useMemo(
     () =>
-      wall.panes.map((s) =>
-        mat(
-          PSD_X,
-          PLATFORM_TOP + (PSD_APRON_H + PSD_GLASS_TOP) / 2,
-          (s.z0 + s.z1) / 2,
-          PSD_GLASS_T,
-          PSD_GLASS_TOP - PSD_APRON_H,
-          s.z1 - s.z0 + 0.04,
-        ),
+      segs.map((s) =>
+        mat(PSD_X + 0.02, PLATFORM_TOP + PSD_H * 0.72, (s.z0 + s.z1) / 2, 0.02, PSD_H * 0.42, s.z1 - s.z0 - 0.16),
       ),
-    [wall],
+    [segs],
   );
   // Bandeau vert du muret : six millimètres PLUS COURT que le muret qu'il
   // couronne. À égalité, ses deux bouts tombaient dans le plan des bouts du
@@ -462,12 +429,11 @@ export function Station() {
   //
   // Un vantail est un CADRE et une VITRE, posés par la même matrice : deux
   // traverses, deux montants, du verre entre les quatre. C'est ce qui fait
-  // qu'on voit arriver la rame derrière une baie fermée - et, une fois à bord,
-  // qu'on voit le quai à travers les portes du côté qui ne s'ouvre pas.
+  // qu'on voit arriver la rame derrière une baie fermée.
   //
-  // Il coulisse à mi-épaisseur du MURET (x = PSD_X), pas devant : rentré, il
-  // est enfermé dans sa poche au lieu d'en raser la face, et c'est ce qui rend
-  // cette face disponible d'un bout à l'autre du quai.
+  // Il coulisse à mi-épaisseur du MURET, pas devant : rentré, il est enfermé
+  // dans son muret au lieu d'en raser la face, et la plaque de baie peut se
+  // coller sur cette face sans être traversée deux fois par arrêt.
   const leafFrameGeo = useMemo(() => psdLeafFrameGeometry(), []);
   const leafGlassGeo = useMemo(() => psdLeafGlassGeometry(), []);
   useLayoutEffect(
@@ -522,7 +488,7 @@ export function Station() {
             UP,
             // Plus épais que le MURET, et non plus que le seul vantail : c'est
             // la seule pièce du portique qui doit rester visible quand la porte
-            // est rentrée. Le vantail, lui, disparaît dans sa poche ; son joint
+            // est rentrée. Le vantail, lui, disparaît dans le muret ; son joint
             // de rive dépasse d'un centimètre et tient le jambage, comme le
             // caoutchouc noir au bord d'une vraie ホームドア ouverte. Fermé, les
             // deux joints se touchent et tracent la ligne sombre qui partage le
@@ -595,7 +561,7 @@ export function Station() {
       <instancedMesh name="muret-psd" ref={psdRef} args={[undefined, undefined, Math.max(1, psdSegs.length)]} material={m.psd}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh name="vitrage-psd" ref={glassRef} args={[undefined, undefined, Math.max(1, psdGlass.length)]} material={m.psdGlass}>
+      <instancedMesh name="vitrage-psd" ref={glassRef} args={[undefined, undefined, Math.max(1, psdGlass.length)]} material={m.glass}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
       <instancedMesh name="bandeau-psd" ref={bandRef} args={[undefined, undefined, Math.max(1, psdBand.length)]} material={m.accent}>
@@ -623,7 +589,7 @@ export function Station() {
       >
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      {/* La plaque 「N号車 M番ドア」 de chaque baie, sur le caisson de gauche.
+      {/* La plaque 「N号車 M番ドア」 de chaque baie, sur le muret de gauche.
           Elle saute au palier de qualité le plus bas, comme les affiches : à ce
           niveau-là, on ne s'arrête plus devant une porte pour la lire. */}
       {detail <= 2 && <GatePlates gates={gaps} segs={segs} />}
@@ -826,25 +792,11 @@ function FarEdge({
       </mesh>
       {hasPsd && (
         <>
-          {/* Même coupe qu'au bord près : allège pleine, vitrage au-dessus,
-              traverse sous le bandeau. Les baies ne sont pas modélisées ici -
-              aucune rame ne s'y présente - et le vitrage court donc d'un bout à
-              l'autre : à huit mètres, une file de portes fermées ne se lit pas
-              autrement. */}
-          <mesh position={[farX - 0.05, PLATFORM_TOP + PSD_APRON_H / 2, 0]} material={m.psd}>
-            <boxGeometry args={[PSD_WALL_T, PSD_APRON_H, len]} />
+          <mesh position={[farX - 0.05, PLATFORM_TOP + PSD_H / 2, 0]} material={m.psd}>
+            <boxGeometry args={[0.1, PSD_H, len]} />
           </mesh>
-          <mesh
-            position={[farX - 0.05, PLATFORM_TOP + (PSD_GLASS_TOP + PSD_H) / 2, 0]}
-            material={m.psd}
-          >
-            <boxGeometry args={[PSD_WALL_T, PSD_H - PSD_GLASS_TOP, len]} />
-          </mesh>
-          <mesh
-            position={[farX - 0.05, PLATFORM_TOP + (PSD_APRON_H + PSD_GLASS_TOP) / 2, 0]}
-            material={m.psdGlass}
-          >
-            <boxGeometry args={[PSD_GLASS_T, PSD_GLASS_TOP - PSD_APRON_H, len]} />
+          <mesh position={[farX - 0.11, PLATFORM_TOP + PSD_H * 0.72, 0]} material={m.glass}>
+            <boxGeometry args={[0.02, PSD_H * 0.42, len - 0.4]} />
           </mesh>
           {/* Le bandeau uguisu est INTERROMPU à chaque baie, comme au bord près.
               Continu sur deux cent vingt mètres, il traçait une barre verte

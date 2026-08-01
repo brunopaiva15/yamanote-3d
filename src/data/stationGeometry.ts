@@ -72,60 +72,30 @@ export const PSD_LEAF_JOINT_W = 0.04;
  */
 export const PSD_LEAF_TIP_INSET = 0.004;
 
-// --- Ce qui est PLEIN et ce qui est VITRÉ ------------------------------
+// --- Le muret, et ce que le vantail fait dedans -----------------------
 //
-// Une ホームドア n'est pas un muret : c'est une MENUISERIE. Le plein s'arrête à
-// l'allège ; au-dessus, on voit la rame au travers - sa livrée verte, ses
-// portes, les gens debout derrière. C'est même à cela qu'on sait qu'un train
-// est à quai avant que quoi que ce soit ne bouge. Rendues opaques, les quarante
-// baies d'un quai formaient un bandeau gris continu de deux cent vingt mètres
-// qui cachait précisément ce qu'on vient regarder.
+// Le muret entre deux baies est PLEIN, de la dalle au bandeau : c'est un
+// caisson blanc, pas une menuiserie. Ce qui est vitré, ce sont les VANTAUX -
+// et c'est par eux qu'on voit la rame, sa livrée verte et les gens debout
+// derrière une porte fermée.
 //
-// Reste que tout n'est pas vitré : chaque baie a ses deux POCHES, les caissons
-// pleins où les vantaux s'effacent, et c'est sur elles que se collent la plaque
-// de baie et les affiches. Entre deux poches, un panneau fixe vitré.
+// Le vantail, lui, coulisse dans l'épaisseur de ce caisson. Ce n'est pas un
+// détail de rendu : c'est ce qui rend la face du quai disponible sur toute sa
+// longueur, et donc ce qui permet d'y coller la plaque de baie sans qu'une
+// porte la traverse deux fois par arrêt.
 
 /**
- * Longueur d'une poche de refoulement, mesurée depuis le chant de la baie.
- *
- * Elle vaut exactement ce qu'il faut pour avaler un vantail grand ouvert : sa
- * largeur, sa course, son retrait, moins la demi-baie déjà comptée - plus cinq
- * centimètres de garde, faute de quoi le bout du vantail ressortait dans le
- * panneau vitré, portique ouvert.
+ * Longueur de muret qu'il faut pour avaler un vantail grand ouvert, mesurée
+ * depuis le chant de la baie : sa largeur, sa course, son retrait, moins la
+ * demi-baie déjà comptée - plus cinq centimètres de garde.
  */
 export const PSD_POCKET_LEN = PSD_LEAF_W + PSD_LEAF_TRAVEL + PSD_LEAF_TIP_INSET - PSD_HALF_GAP + 0.05;
 
-/**
- * Hauteur d'allège : la plinthe pleine sous le vitrage.
- *
- * Dix-huit centimètres, pas davantage. Sur une ホームドア, le verre descend
- * presque au sol : il occupe les quatre cinquièmes du panneau, et c'est ce qui
- * en fait une vitre plutôt qu'une fenêtre percée dans un mur. Ce qui se visse
- * (affiche, arrêt d'urgence) va sur les POCHES, seule partie pleine de toute
- * hauteur - et depuis que le vantail coulisse dans le muret, elles sont
- * libres.
- */
-export const PSD_APRON_H = 0.18;
-
-/** Sous-face du bandeau uguisu : le vitrage s'arrête là, il n'y a pas de jour. */
-export const PSD_GLASS_TOP = PSD_H - 0.12;
-
-/** Épaisseur du muret, et celle - plus mince - d'un panneau vitré. */
+/** Épaisseur du muret. Le vantail passe dedans, à mi-bois. */
 export const PSD_WALL_T = 0.1;
-export const PSD_GLASS_T = 0.03;
 
-/** Face du muret côté quai : c'est là que se visse tout ce qu'on lit dessus. */
+/** Face du muret côté quai : c'est là que se colle ce qu'on lit dessus. */
 export const PSD_FACE_X = PSD_X + PSD_WALL_T / 2;
-
-/**
- * Axe d'un coffret plaqué sur une poche, compté depuis l'axe de la baie.
- *
- * Deux poches par tronçon, et elles ne servent pas à la même chose : celle qui
- * est à GAUCHE d'une baie (vers +z) porte sa plaque 「N号車 M番ドア」, celle
- * qui est à sa droite est libre. Ce qui se plaque - arrêt d'urgence, affiche -
- * va donc toujours chercher la poche de DROITE de la baie la plus proche.
- */
-export const PSD_FITTING_DZ = PSD_HALF_GAP + PSD_POCKET_LEN / 2;
 
 /** Longueur du quai (m). */
 export const PLATFORM_LEN = 96;

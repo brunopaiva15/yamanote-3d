@@ -17,8 +17,6 @@ import {
   KIOSK_HALF_X,
   KIOSK_HALF_Z,
   OPP_DEPTH,
-  PSD_FACE_X,
-  PSD_FITTING_DZ,
   PSD_HALF_GAP,
   PSD_X,
   TRACK_HALF,
@@ -402,23 +400,15 @@ function fit(candidates: Placed[], taken: Placed[], reach = 3.2): Placed[] {
 /**
  * Décale `z` hors de toute baie de porte palière, pour y plaquer un
  * équipement. Rien ne se pose au droit d'une baie : c'est par là qu'on entre
- * dans la rame.
- *
- * Sur un quai à portes palières, le point se cale sur une POCHE - le caisson
- * plein qui avale le vantail, seule partie du muret qui monte jusqu'en haut.
- * Le reste du tronçon est vitré, et un coffret rouge collé au milieu d'une
- * vitre ne tient pas debout. On prend toujours la poche de DROITE de la baie
- * la plus proche : celle de gauche porte déjà la plaque 「N号車 M番ドア」.
- *
- * Sur un quai NU (Shinjuku, Shibuya), il n'y a pas de muret : c'est une borne
- * plantée au sol, et ce qui compte est qu'elle ne barre pas le chemin de qui
- * descend. Elle se range donc à 1,60 m du chant de la baie, comme avant.
+ * dans la rame - ni dans la POCHE DE REFOULEMENT du vantail, qui glisse
+ * ouvert jusqu'à 1,90 m de l'axe de la baie et passait au travers du caisson.
+ * Trop près d'une baie, le point se cale au milieu du muret plein voisin :
+ * à mi-chemin de deux baies au pas de cinq mètres, tout y est hors d'atteinte.
  */
-function offGate(z: number, gates: readonly number[], onWall: boolean): number {
+function offGate(z: number, gates: readonly number[]): number {
   if (!gates.length) return z;
   let g = gates[0];
   for (const cand of gates) if (Math.abs(z - cand) < Math.abs(z - g)) g = cand;
-  if (onWall) return g - PSD_FITTING_DZ;
   if (Math.abs(z - g) >= 2.15) return z;
   return g + (z >= g ? 1 : -1) * (PSD_HALF_GAP + 1.6);
 }
@@ -614,7 +604,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   // borne, plantée derrière la bande podotactile élargie.
   const halfConsist = ((CONSIST.length - 1) / 2) * E235.pitch;
   const barePlatform = layout.psd === 'none';
-  const emergencyStopX = barePlatform ? PSD_X + 1.32 : PSD_FACE_X - 0.02;
+  const emergencyStopX = barePlatform ? PSD_X + 1.32 : PSD_X + 0.05;
   // Un diffuseur affleure la sous-face de l'auvent : au droit d'un pilier, il
   // disparaîtrait dans la poutre transversale - exactement le défaut que les
   // néons ont déjà eu. Il s'écarte donc du poteau le plus proche.
@@ -650,7 +640,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
       ...stairs.map((s) => s.z - s.halfZ - 0.8),
       ...escalators.map((e) => e.z - e.halfZ - 0.8),
     ]
-      .map((z) => offGate(z, gates, !barePlatform))
+      .map((z) => offGate(z, gates))
       .sort((p, q) => p - q),
     emergencyStopX,
     mirrors: [-halfConsist - 1.2, halfConsist + 1.2],

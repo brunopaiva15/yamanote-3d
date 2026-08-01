@@ -4,7 +4,7 @@
 import { CONFIG } from '../../data/config';
 import { E235 } from '../../data/e235';
 import { CONSIST } from '../../data/e235';
-import { PSD_HALF_GAP, PSD_POCKET_LEN } from '../../data/stationGeometry';
+import { PSD_HALF_GAP } from '../../data/stationGeometry';
 
 export interface PsdLayout {
   /** Murets pleins entre les baies. */
@@ -37,54 +37,10 @@ export function psdLayout(length: number): PsdLayout {
   return { segs, gaps };
 }
 
-// --- Coupe d'un muret : ce qui est plein, ce qui est vitré ---------------
-
+/** Un tronçon de muret, entre deux baies ou entre une baie et le bout du quai. */
 export interface PsdSpan {
   z0: number;
   z1: number;
-}
-
-export interface PsdWall {
-  /**
-   * Caissons pleins, toute hauteur : les poches où les vantaux s'effacent, et
-   * les chutes de trame trop courtes pour qu'on y perce une baie vitrée.
-   */
-  solids: PsdSpan[];
-  /** Allèges pleines, sous le vitrage des panneaux fixes. */
-  aprons: PsdSpan[];
-  /** Panneaux fixes vitrés, entre deux poches. */
-  panes: PsdSpan[];
-}
-
-/**
- * Un panneau vitré plus étroit que ça n'en est pas un : deux montants collés.
- * En dessous, le tronçon reste plein - c'est ce qui arrive aux bouts de quai,
- * où la trame des baies tombe où elle tombe.
- */
-const MIN_PANE = 0.45;
-
-/**
- * Découpe des murets en caissons pleins et panneaux vitrés.
- *
- * Chaque tronçon entre deux baies porte une poche à chaque bout - le caisson
- * qui avale le vantail ouvert, et qui est PLEIN sur toute sa hauteur - et, au
- * milieu, un panneau fixe : allège pleine jusqu'à hauteur de hanche, vitrage
- * au-dessus jusque sous le bandeau.
- */
-export function psdWall(segs: readonly PsdSpan[]): PsdWall {
-  const wall: PsdWall = { solids: [], aprons: [], panes: [] };
-  for (const s of segs) {
-    const mid = { z0: s.z0 + PSD_POCKET_LEN, z1: s.z1 - PSD_POCKET_LEN };
-    if (mid.z1 - mid.z0 < MIN_PANE) {
-      wall.solids.push({ z0: s.z0, z1: s.z1 });
-      continue;
-    }
-    wall.solids.push({ z0: s.z0, z1: mid.z0 });
-    wall.solids.push({ z0: mid.z1, z1: s.z1 });
-    wall.aprons.push(mid);
-    wall.panes.push(mid);
-  }
-  return wall;
 }
 
 // --- Ce que dit la plaque d'une baie -------------------------------------
