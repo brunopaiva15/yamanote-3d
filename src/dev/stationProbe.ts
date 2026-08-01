@@ -428,6 +428,67 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     return { weather: { ...weather }, fields: out };
   };
 
+  /**
+   * Ce qui EST DANS LE WAGON sans avoir rien à y faire.
+   *
+   * La sonde de volumes ne regarde que sous `gare` ; un décor de gare posé au
+   * mauvais endroit se retrouve pourtant DANS la rame, et rien ne le dit. Ici
+   * on balaie la scène entière et on retient tout maillage visible dont la
+   * boîte englobante empiète sur le volume habitable d'une caisse - filiation
+   * complète, pour pouvoir nommer l'intrus.
+   */
+  w.__probeIntruders = (halfLen = 10, aisle = false) => {
+    const car = aisle
+      ? new THREE.Box3(new THREE.Vector3(-0.7, 0.06, -halfLen), new THREE.Vector3(0.7, 1.7, halfLen))
+      : new THREE.Box3(new THREE.Vector3(-1.35, 0.05, -halfLen), new THREE.Vector3(1.35, 2.3, halfLen));
+    const out: Record<string, unknown>[] = [];
+    const bbox = new THREE.Box3();
+    const m = new THREE.Matrix4();
+    scene.updateWorldMatrix(true, true);
+    scene.traverseVisible((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || !mesh.geometry) return;
+      // Les corps ne sont pas des ouvrages : leur boîte est celle de la pose de
+      // repos, et la foule qui monte est DANS le wagon par construction.
+      if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) return;
+      // La rame elle-même, ses gens et leurs affaires sont chez eux - sauf
+      // quand c'est justement L'ALLÉE qu'on inspecte : là, tout est suspect.
+      if (!aisle) {
+        for (let c: THREE.Object3D | null = mesh; c; c = c.parent) {
+          if (c.name && /^(rame|wagon|voyageurs|joueur)$/.test(c.name)) return;
+        }
+      }
+      if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+      const bb = mesh.geometry.boundingBox;
+      if (!bb) return;
+      const chain: string[] = [];
+      for (let c: THREE.Object3D | null = mesh; c; c = c.parent) chain.unshift(c.name || `<${c.type}>`);
+      const push = (box: THREE.Box3) => {
+        if (!box.intersectsBox(car)) return;
+        const c = box.getCenter(new THREE.Vector3());
+        const s = box.getSize(new THREE.Vector3());
+        const mat = mesh.material as THREE.MeshStandardMaterial;
+        out.push({
+          chain: chain.join('/'),
+          at: [+c.x.toFixed(2), +c.y.toFixed(2), +c.z.toFixed(2)],
+          size: [+s.x.toFixed(2), +s.y.toFixed(2), +s.z.toFixed(2)],
+          color: mat?.color ? `#${mat.color.getHexString()}` : null,
+        });
+      };
+      const im = mesh as THREE.InstancedMesh;
+      if (im.isInstancedMesh) {
+        for (let i = 0; i < im.count; i++) {
+          im.getMatrixAt(i, m);
+          m.premultiply(im.matrixWorld);
+          push(bbox.copy(bb).applyMatrix4(m));
+        }
+        return;
+      }
+      push(bbox.copy(bb).applyMatrix4(mesh.matrixWorld));
+    });
+    return out;
+  };
+
   // Date civile à Tokyo : c'est elle qui donne la saison (systems/season) et,
   // à travers elle, la couleur des frondaisons, la hauteur du soleil et
   // l'heure à laquelle la nuit tombe.
