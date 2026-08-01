@@ -154,6 +154,20 @@ interface Nodes {
   /** Murmure d'un voyageur qui s'adresse au joueur (syllabes, pas de mots). */
   paxVoiceSynth: Tone.Synth;
   paxVoiceFilter: Tone.Filter;
+  // Appareils de gare : distributeurs, billetterie, portillons. Tout ce qu'on
+  // actionne SOI-MÊME, donc toujours à bout de bras - d'où un bus à part, sans
+  // atténuation de distance, mais envoyé dans la réverbération du lieu.
+  devBus: Tone.Gain;
+  devClick: Tone.NoiseSynth;
+  devClickFilter: Tone.Filter;
+  devBeep: Tone.Synth;
+  devCoin: Tone.MetalSynth;
+  devMotor: Tone.Noise;
+  devMotorFilter: Tone.Filter;
+  devMotorGain: Tone.Gain;
+  devThud: Tone.MembraneSynth;
+  devHiss: Tone.NoiseSynth;
+  devHissFilter: Tone.Filter;
   // Météo : la pluie sur le pavillon, la pluie du dehors, le tonnerre.
   rainRoof: Tone.Noise;
   rainRoofFilter: Tone.Filter;
@@ -683,6 +697,76 @@ export async function startAudio(): Promise<void> {
   });
   paxVoiceSynth.chain(paxVoiceFilter, trainBus);
 
+  // --- Les appareils de gare ---------------------------------------------
+  //
+  // Un distributeur, un 券売機, un portillon : on ne les entend jamais de loin,
+  // on les entend PARCE QU'ON EST DEVANT. Ils n'appartiennent donc ni au bus de
+  // la rame (qui s'atténue quand elle s'éloigne) ni à la sonorisation. Un bus à
+  // part, à niveau fixe, envoyé dans la réverbération du lieu : sous une dalle
+  // souterraine, le fracas d'une canette qui tombe traîne, et c'est ce qui fait
+  // qu'on l'entend comme un son de gare et non comme un bruitage.
+  const devBus = new Tone.Gain(1).connect(master);
+  devBus.connect(roomSend);
+
+  // Le clic des touches, l'arête d'une pièce sur la fente, le déclic d'un
+  // volet : très court, très haut, jamais tonique.
+  const devClickFilter = new Tone.Filter({ type: 'highpass', frequency: 2600, Q: 0.6 });
+  const devClick = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.03, sustain: 0 },
+    volume: -14,
+  });
+  devClick.chain(devClickFilter, devBus);
+
+  // Le bip. C'est LE son d'une gare japonaise - le ピッ du portillon, le
+  // carillon de confirmation d'un distributeur - et il est toujours le même :
+  // une onde carrée nue, très courte, sans queue. Ce qui change d'un appareil
+  // à l'autre, c'est la hauteur et le nombre.
+  const devBeep = new Tone.Synth({
+    oscillator: { type: 'square' },
+    envelope: { attack: 0.001, decay: 0.05, sustain: 0.85, release: 0.012 },
+    volume: -17,
+  }).connect(devBus);
+
+  // La pièce : un métal court qui rebondit deux fois au fond du monnayeur.
+  const devCoin = new Tone.MetalSynth({
+    envelope: { attack: 0.001, decay: 0.14, release: 0.02 },
+    harmonicity: 6.2,
+    modulationIndex: 26,
+    resonance: 5200,
+    octaves: 1.4,
+    volume: -26,
+  }).connect(devBus);
+
+  // Le moteur : la spirale qui tourne, le rouleau d'une imprimante thermique,
+  // le mécanisme d'un battant. Un souffle qu'on ouvre et qu'on referme, pas un
+  // événement - sa durée est celle du geste.
+  const devMotorFilter = new Tone.Filter({ type: 'bandpass', frequency: 420, Q: 2.2 });
+  const devMotorGain = new Tone.Gain(0);
+  const devMotor = new Tone.Noise('brown');
+  devMotor.chain(devMotorFilter, devMotorGain, devBus);
+  devMotor.start();
+
+  // Le fond de la sébile : une canette de 350 g qui tombe de quatre-vingts
+  // centimètres sur une tôle. C'est le son le plus reconnaissable de tout un
+  // quai, et il est grave, pas claquant.
+  const devThud = new Tone.MembraneSynth({
+    pitchDecay: 0.06,
+    octaves: 3.5,
+    envelope: { attack: 0.001, decay: 0.32, sustain: 0, release: 0.1 },
+    volume: -12,
+  }).connect(devBus);
+
+  // Le souffle : la décapsulation, le volet de retrait qu'on soulève, le
+  // battant du portique qui chasse l'air.
+  const devHissFilter = new Tone.Filter({ type: 'highpass', frequency: 1400, Q: 0.5 });
+  const devHiss = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.004, decay: 0.3, sustain: 0 },
+    volume: -20,
+  });
+  devHiss.chain(devHissFilter, devBus);
+
   // --- La météo -----------------------------------------------------------
   //
   // La pluie s'entend en DEUX endroits qui n'ont rien à voir, et c'est ce qui
@@ -802,6 +886,17 @@ export async function startAudio(): Promise<void> {
     paxClick,
     paxVoiceSynth,
     paxVoiceFilter,
+    devBus,
+    devClick,
+    devClickFilter,
+    devBeep,
+    devCoin,
+    devMotor,
+    devMotorFilter,
+    devMotorGain,
+    devThud,
+    devHiss,
+    devHissFilter,
     rainRoof,
     rainRoofFilter,
     rainRoofGain,
@@ -1029,6 +1124,168 @@ export function psdDoorBeeps(): void {
   for (let i = 0; i < 5; i++) {
     nodes.platBeep.triggerAttackRelease('B5', 0.1, slot('platBeep', now + i * 0.36), 0.3);
   }
+}
+
+// --- Les appareils de gare ------------------------------------------------
+//
+// Tout ce qu'on actionne soi-même : le monnayeur, les touches, la spirale, la
+// sébile, le volet, le portillon, l'imprimante à billets. Ces sons ne sont pas
+// du décor - ils sont la RÉPONSE à un geste, et c'est à ça qu'on juge qu'un
+// appareil fonctionne. Un distributeur muet reste un meuble, même s'il rend une
+// canette.
+
+/** Une pièce qui tombe dans le monnayeur, et rebondit au fond. */
+export function deviceCoin(value = 100): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  // Une pièce de 500 sonne plus grave qu'une de 10 : c'est la masse.
+  const f = value >= 500 ? 3200 : value >= 100 ? 4200 : 5400;
+  nodes.devCoin.triggerAttackRelease(f, 0.05, slot('devCoin', now), 0.5);
+  nodes.devCoin.triggerAttackRelease(f * 1.18, 0.03, slot('devCoin', now + 0.07), 0.22);
+  nodes.devClick.triggerAttackRelease(0.02, slot('devClick', now + 0.13), 0.3);
+}
+
+/** Un billet avalé : le rouleau qui l'entraîne, puis le déclic du lecteur. */
+export function deviceBillFeed(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.devMotorFilter.frequency.value = 780;
+  nodes.devMotorGain.gain.cancelScheduledValues(now);
+  nodes.devMotorGain.gain.setValueAtTime(0, now);
+  nodes.devMotorGain.gain.linearRampToValueAtTime(0.06, now + 0.05);
+  nodes.devMotorGain.gain.setValueAtTime(0.06, now + 0.55);
+  nodes.devMotorGain.gain.linearRampToValueAtTime(0, now + 0.68);
+  nodes.devClick.triggerAttackRelease(0.02, slot('devClick', now + 0.7), 0.35);
+}
+
+/** Une touche du clavier tarifaire, ou un bouton de sélection. */
+export function deviceButton(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.devClick.triggerAttackRelease(0.015, slot('devClick', now), 0.45);
+  nodes.devBeep.triggerAttackRelease('A6', 0.045, slot('devBeep', now + 0.005), 0.3);
+}
+
+/**
+ * Le ピッ du portillon : UN bip court et clair, et rien d'autre.
+ *
+ * C'est le son de gare japonais par excellence, celui qu'on entend deux mille
+ * fois par heure à Shinjuku - et il tient en soixante millisecondes d'onde
+ * carrée. La version d'entrée et celle de sortie ne diffèrent pas : ce qui
+ * change, c'est ce que dit l'afficheur.
+ */
+export function gateBeep(): void {
+  if (!nodes) return;
+  nodes.devBeep.triggerAttackRelease('D7', 0.075, slot('devBeep', Tone.now()), 0.5);
+}
+
+/**
+ * Le refus : deux notes descendantes, graves, désagréables à dessein.
+ *
+ * Un portillon qui refuse ne fait pas un bip plus long - il fait un AUTRE son,
+ * et c'est ce contraste qui fait qu'on s'arrête sans avoir à lire l'écran.
+ */
+export function gateDeny(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.devBeep.triggerAttackRelease('A4', 0.16, slot('devBeep', now), 0.42);
+  nodes.devBeep.triggerAttackRelease('E4', 0.26, slot('devBeep', now + 0.19), 0.42);
+}
+
+/** Les battants du portillon qui se ferment ou se rouvrent. */
+export function gateFlap(closing: boolean): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.devHissFilter.frequency.value = 900;
+  nodes.devHiss.envelope.decay = 0.12;
+  nodes.devHiss.triggerAttackRelease(0.09, slot('devHiss', now), closing ? 0.5 : 0.35);
+  nodes.devClick.triggerAttackRelease(0.02, slot('devClick', now + 0.14), closing ? 0.5 : 0.25);
+}
+
+/**
+ * La spirale du distributeur qui tourne, puis l'objet qui tombe dans la sébile.
+ *
+ * `heavy` distingue la bouteille de 550 ml de la petite boîte de café : ce
+ * n'est pas la même chute, et c'est au bruit qu'on sait ce qu'on va ramasser.
+ */
+export function vendingDispense(heavy: boolean): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  // Le mécanisme : un moteur lent, une seconde à peine.
+  nodes.devMotorFilter.frequency.value = 320;
+  nodes.devMotorGain.gain.cancelScheduledValues(now);
+  nodes.devMotorGain.gain.setValueAtTime(0, now);
+  nodes.devMotorGain.gain.linearRampToValueAtTime(0.09, now + 0.08);
+  nodes.devMotorGain.gain.setValueAtTime(0.09, now + 0.62);
+  nodes.devMotorGain.gain.linearRampToValueAtTime(0, now + 0.78);
+  // La chute : le fond de la sébile, puis un rebond plus sec.
+  const drop = now + 0.86;
+  nodes.devThud.triggerAttackRelease(heavy ? 'F1' : 'A1', 0.12, slot('devThud', drop), heavy ? 0.85 : 0.6);
+  nodes.devCoin.triggerAttackRelease(heavy ? 2400 : 3600, 0.04, slot('devCoin', drop + 0.02), heavy ? 0.3 : 0.42);
+  nodes.devThud.triggerAttackRelease('C2', 0.06, slot('devThud', drop + 0.13), 0.3);
+}
+
+/** Le volet du 取出口 qu'on pousse, et qui retombe tout seul derrière la main. */
+export function vendingFlap(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.devHissFilter.frequency.value = 1800;
+  nodes.devHiss.envelope.decay = 0.09;
+  nodes.devHiss.triggerAttackRelease(0.06, slot('devHiss', now), 0.3);
+  nodes.devClick.triggerAttackRelease(0.02, slot('devClick', now + 0.02), 0.35);
+  nodes.devClick.triggerAttackRelease(0.03, slot('devClick', now + 0.26), 0.28);
+}
+
+/** La monnaie rendue : trois pièces qui dégringolent dans la sébile. */
+export function vendingChange(coins: number): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  const n = Math.max(1, Math.min(6, coins));
+  for (let i = 0; i < n; i++) {
+    const t = now + i * (0.055 + Math.random() * 0.04);
+    nodes.devCoin.triggerAttackRelease(3400 + Math.random() * 1800, 0.05, slot('devCoin', t), 0.4);
+  }
+  nodes.devThud.triggerAttackRelease('C2', 0.05, slot('devThud', now + 0.04), 0.2);
+}
+
+/**
+ * L'imprimante d'un 券売機 : le rouleau, la découpe, et le billet qui sort.
+ *
+ * Le carillon de confirmation vient AVANT - c'est lui qui annonce que la
+ * machine a compris - et l'impression suit. Cet ordre-là n'est pas décoratif :
+ * il est ce qui fait qu'on retire la main de l'écran et qu'on regarde la fente.
+ */
+export function ticketPrint(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.devBeep.triggerAttackRelease('E6', 0.07, slot('devBeep', now), 0.34);
+  nodes.devBeep.triggerAttackRelease('A6', 0.11, slot('devBeep', now + 0.1), 0.34);
+  nodes.devMotorFilter.frequency.value = 1250;
+  nodes.devMotorGain.gain.cancelScheduledValues(now);
+  nodes.devMotorGain.gain.setValueAtTime(0, now + 0.25);
+  nodes.devMotorGain.gain.linearRampToValueAtTime(0.05, now + 0.32);
+  nodes.devMotorGain.gain.setValueAtTime(0.05, now + 0.95);
+  nodes.devMotorGain.gain.linearRampToValueAtTime(0, now + 1.05);
+  nodes.devClick.triggerAttackRelease(0.02, slot('devClick', now + 1.08), 0.4);
+}
+
+/** Décapsulation : le déclic de l'anneau, puis le gaz qui s'échappe. */
+export function canOpen(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.devClick.triggerAttackRelease(0.015, slot('devClick', now), 0.5);
+  nodes.devHissFilter.frequency.value = 3200;
+  nodes.devHiss.envelope.decay = 0.42;
+  nodes.devHiss.triggerAttackRelease(0.3, slot('devHiss', now + 0.02), 0.34);
+}
+
+/** Une canette vide jetée dans le bac : le fond de plastique, puis le roulé. */
+export function binToss(): void {
+  if (!nodes) return;
+  const now = Tone.now();
+  nodes.devThud.triggerAttackRelease('D2', 0.09, slot('devThud', now + 0.18), 0.45);
+  nodes.devCoin.triggerAttackRelease(3000, 0.04, slot('devCoin', now + 0.2), 0.28);
+  nodes.devCoin.triggerAttackRelease(2600, 0.03, slot('devCoin', now + 0.32), 0.16);
 }
 
 /**

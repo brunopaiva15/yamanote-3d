@@ -55,6 +55,22 @@ export function isSolidVending(kind: VendingKind): boolean {
   return kind === 'snack' || kind === 'ice' || kind === 'noodle';
 }
 
+/**
+ * Ce qu'une case de vitrine montre.
+ *
+ * Volontairement structural et non importé de `data/products` : ce module
+ * dessine des surfaces, il n'a pas à connaître le catalogue. C'est le contrat
+ * minimal qu'un article doit remplir pour être dessinable - et `Product` le
+ * remplit tel quel.
+ */
+export interface VendingItem {
+  price: number;
+  tone: string;
+  liquid?: string;
+  shape: 'bottle' | 'can' | 'canSlim' | 'cup' | 'noodle' | 'ice';
+  hot: boolean;
+}
+
 export interface VendingBrand {
   /** Teinte de la caisse : tôle peinte, c'est elle qu'on voit de loin. */
   body: string;
@@ -106,17 +122,7 @@ export function vendingBrand(station: number, slot: number, count: number): Vend
 
 // --- Échantillons ----------------------------------------------------
 
-/** Étiquettes des boissons froides : thé, eau, soda, jus. */
-const COLD_LABELS = ['#2f7a44', '#1f5fbf', '#c8332b', '#e08a1e', '#7a3fb0', '#0f8a90'];
-/** Étiquettes des boissons chaudes : café, thé au lait, soupe. */
-const HOT_LABELS = ['#5a3418', '#8a4a1c', '#b02a20', '#3d2b1a'];
-/** Contenus visibles à travers le PET. */
-const LIQUIDS = ['#d8c88a', '#e9edf0', '#c8892f', '#8c5a24', '#cfe0b0'];
-/** Sachets et boîtes de la machine à manger. */
-const SNACK_TONES = ['#d8452e', '#2f7a44', '#e0a51f', '#1f5fbf', '#8a3f9c', '#c86a18'];
 
-const PRICES = [130, 140, 150, 160, 170, 180, 190];
-const SNACK_PRICES = [120, 150, 180, 200, 230, 260, 300];
 
 /** Bouteille PET : corps teinté par son contenu, épaule, goulot, manchon. */
 function drawBottle(
@@ -339,16 +345,77 @@ function drawCoil(g: CanvasRenderingContext2D, x0: number, x1: number, y: number
  * plaquette de prix et son bouton - c'est ce contraste rouge/bleu qui fait
  * reconnaître un distributeur japonais avant même d'en lire l'enseigne.
  */
-export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): THREE.CanvasTexture {
-  const W = 640;
-  const H = 372;
-  const { c, g } = makeCanvas(W, H);
-  const r = rng(seed);
+/** Trame de la vitrine : cinq couloirs pour des bouteilles, quatre pour des
+ *  sachets - un sachet est deux fois plus large. C'est aussi la trame que le
+ *  réticule découpe en visant (systems/pick), d'où l'export. */
+export const VENDING_ROWS = 3;
+export function vendingCols(brand: VendingBrand): number {
+  return isSolidVending(brand.kind) ? 4 : 5;
+}
+
+/**
+ * La vitrine : trois tablettes d'échantillons pour une machine à boissons,
+ * quatre rangées de spirales pour une machine à manger. Sous chaque case, sa
+ * plaquette de prix et son bouton - c'est ce contraste rouge/bleu qui fait
+ * reconnaître un distributeur japonais avant même d'en lire l'enseigne.
+ *
+ * ELLE MONTRE LE RAYON RÉEL. Les échantillons, les prix et les 売切 étaient
+ * tirés au sort pour faire joli ; ils viennent maintenant de `slots`, la liste
+ * de ce que la machine vend réellement couloir par couloir (data/products,
+ * `machineSlots`). C'est ce qui permet de VISER une case : ce qu'on lit sur la
+ * plaquette est ce qu'on paie, et ce qui tombe est ce qu'on regardait.
+ *
+ * `lit` dit quelles cases ont leur bouton allumé - celles qu'on peut acheter
+ * avec le crédit inséré. C'est le seul retour qu'une machine donne avant
+ * qu'on appuie, et c'est à lui qu'on sait qu'on a mis assez.
+ */
+export function makeVendingDisplayTexture(
+  brand: VendingBrand,
+  slots: readonly (VendingItem | null)[],
+  lit: readonly boolean[] = [],
+): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(DISPLAY_W, DISPLAY_H);
+  drawDisplay(g, brand, slots, lit);
+  return toTexture(c);
+}
+
+/**
+ * La même vitrine, mais REDESSINABLE.
+ *
+ * Les lampes des boutons s'allument à mesure qu'on glisse des pièces : la
+ * surface change, donc elle ne peut pas être un canevas jeté une fois pour
+ * toutes. C'est le même idiome que les afficheurs (textures/ticket) - on garde
+ * le canevas, on le repeint, et la texture se déclare périmée.
+ */
+export function makeVendingDisplay(): {
+  texture: THREE.CanvasTexture;
+  redraw: (brand: VendingBrand, slots: readonly (VendingItem | null)[], lit: readonly boolean[]) => void;
+} {
+  const { c, g } = makeCanvas(DISPLAY_W, DISPLAY_H);
+  const texture = toTexture(c);
+  return {
+    texture,
+    redraw: (brand, slots, lit) => {
+      drawDisplay(g, brand, slots, lit);
+      texture.needsUpdate = true;
+    },
+  };
+}
+
+const DISPLAY_W = 640;
+const DISPLAY_H = 372;
+
+function drawDisplay(
+  g: CanvasRenderingContext2D,
+  brand: VendingBrand,
+  slots: readonly (VendingItem | null)[],
+  lit: readonly boolean[],
+): void {
+  const W = DISPLAY_W;
+  const H = DISPLAY_H;
   const snack = isSolidVending(brand.kind);
-  const rows = 3;
-  // Un sachet est deux fois plus large qu'une bouteille : quatre couloirs au
-  // lieu de cinq, sinon l'échantillon ne tient pas dans sa case.
-  const cols = snack ? 4 : 5;
+  const rows = VENDING_ROWS;
+  const cols = vendingCols(brand);
   const rowH = H / rows;
   const colW = W / cols;
   g.textAlign = 'center';
@@ -382,18 +449,14 @@ export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): TH
 
     if (snack) drawCoil(g, 6, W - 6, shelfY - 4, cols * 3);
 
-    // La rangée du bas d'une machine mixte est la rangée chaude : c'est
-    // toujours en bas qu'on met les canettes tièdes, sous les tubes.
-    const rowHot = brand.kind === 'coffee' ? row >= 1 : !snack && row === rows - 1;
-
     for (let col = 0; col < cols; col++) {
+      const index = row * cols + col;
+      const item = slots[index] ?? null;
       const cx = (col + 0.5) * colW;
       const baseY = shelfY - 4;
-      const hot = rowHot;
-      const soldOut = r() < 0.1;
-      const price = snack
-        ? SNACK_PRICES[Math.floor(r() * SNACK_PRICES.length)]
-        : PRICES[Math.floor(r() * PRICES.length)];
+      const hot = !!item?.hot;
+      const soldOut = !item;
+      const price = item?.price ?? 0;
 
       // Ombre portée : sans elle l'échantillon flotte devant la tablette.
       g.fillStyle = 'rgba(0,0,0,0.2)';
@@ -401,43 +464,31 @@ export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): TH
       g.ellipse(cx, baseY + 2, colW * 0.24, 5, 0, 0, Math.PI * 2);
       g.fill();
 
-      g.save();
-      // Une case vide reste éclairée, l'échantillon y est simplement éteint.
-      if (soldOut) g.globalAlpha = 0.42;
-      if (snack) {
-        const tone = SNACK_TONES[Math.floor(r() * SNACK_TONES.length)];
-        if (brand.kind === 'ice') {
-          // Un bac de glace : un cylindre bas, couvercle clair, manchon coloré.
-          drawTub(g, cx, baseY, rowH * 0.4, colW * 0.4, tone);
-        } else if (brand.kind === 'noodle') {
-          // Un pot de nouilles : tronconique, couvercle d'aluminium.
-          drawCup(g, cx, baseY, rowH * 0.52, colW * 0.42, tone);
-        } else if (r() < 0.55) {
-          drawBag(g, cx, baseY, rowH * 0.55, colW * 0.5, tone);
-        } else {
-          drawBox(g, cx, baseY, rowH * 0.56, colW * 0.34, tone);
+      if (item) {
+        g.save();
+        switch (item.shape) {
+          case 'ice':
+            drawTub(g, cx, baseY, rowH * 0.4, colW * 0.4, item.tone);
+            break;
+          case 'cup':
+            drawCup(g, cx, baseY, rowH * 0.52, colW * 0.42, item.tone);
+            break;
+          case 'noodle':
+            // Sachets et boîtes : la forme suit l'enseigne, pas l'article -
+            // un paquet de biscuits et un sachet de bonbons ont la même
+            // silhouette, et c'est le couloir qui les distingue.
+            if (snack) drawBag(g, cx, baseY, rowH * 0.55, colW * 0.5, item.tone);
+            else drawBox(g, cx, baseY, rowH * 0.56, colW * 0.34, item.tone);
+            break;
+          case 'can':
+          case 'canSlim':
+            drawCan(g, cx, baseY, rowH * (item.shape === 'canSlim' ? 0.4 : 0.47), colW * 0.34, item.tone);
+            break;
+          default:
+            drawBottle(g, cx, baseY, rowH * 0.57, colW * 0.33, item.liquid ?? item.tone, item.tone, shade(item.tone, 0.75));
         }
-      } else {
-        const labels = hot ? HOT_LABELS : COLD_LABELS;
-        const label = labels[Math.floor(r() * labels.length)];
-        // Le chaud se vend en petite canette, le froid surtout en bouteille.
-        const can = hot ? r() < 0.82 : r() < 0.3;
-        if (can) {
-          drawCan(g, cx, baseY, rowH * (hot ? 0.4 : 0.47), colW * 0.34, label);
-        } else {
-          drawBottle(
-            g,
-            cx,
-            baseY,
-            rowH * 0.57,
-            colW * 0.33,
-            LIQUIDS[Math.floor(r() * LIQUIDS.length)],
-            label,
-            shade(label, 0.75),
-          );
-        }
+        g.restore();
       }
-      g.restore();
 
       // --- Réglette : plaquette de prix, puis bouton --------------------
       const tw = colW * 0.78;
@@ -458,7 +509,7 @@ export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): TH
       const tag = snack ? `${'ABC'[row]}${col + 1}` : hot ? '温' : '冷';
       fitFillText(g, tag, tx + tw * 0.15, ty + th * 0.78, tw * 0.26, th * 0.8);
       g.fillStyle = '#15181b';
-      fitFillText(g, `¥${price}`, tx + tw * 0.64, ty + th * 0.78, tw * 0.62, th * 0.82);
+      if (price) fitFillText(g, `¥${price}`, tx + tw * 0.64, ty + th * 0.78, tw * 0.62, th * 0.82);
 
       const bw = colW * 0.74;
       const bh = railH * 0.36;
@@ -472,12 +523,13 @@ export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): TH
         g.fillStyle = '#ffdcd8';
         fitFillText(g, '売切', cx, by + bh * 0.78, bw * 0.8, bh * 0.9);
       } else {
+        const on = lit[index] ?? false;
         const btn = hot ? '#cf3a2c' : '#2266cc';
         g.fillStyle = shade(btn, 0.72);
         g.beginPath();
         g.roundRect(bx, by, bw, bh, bh * 0.4);
         g.fill();
-        g.fillStyle = btn;
+        g.fillStyle = on ? shade(btn, 1.35) : btn;
         g.beginPath();
         g.roundRect(bx + 2, by + 1, bw - 4, bh - 4, bh * 0.36);
         g.fill();
@@ -486,9 +538,11 @@ export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): TH
         g.beginPath();
         g.roundRect(bx + 5, by + 3, bw - 10, bh * 0.3, bh * 0.15);
         g.fill();
-        g.fillStyle = '#ffe9a8';
+        // La lampe : éteinte tant qu'il n'y a pas de quoi payer, franche dès
+        // que le crédit suffit. C'est elle qu'on regarde en glissant sa pièce.
+        g.fillStyle = on ? '#ffe9a8' : 'rgba(255,233,168,0.25)';
         g.beginPath();
-        g.arc(bx + bw - 9, by + bh * 0.52, bh * 0.16, 0, Math.PI * 2);
+        g.arc(bx + bw - 9, by + bh * 0.52, bh * (on ? 0.2 : 0.16), 0, Math.PI * 2);
         g.fill();
       }
     }
@@ -506,7 +560,6 @@ export function makeVendingDisplayTexture(brand: VendingBrand, seed: number): TH
   }
 
   g.textAlign = 'left';
-  return toTexture(c);
 }
 
 /** Le caisson d'enseigne, en tête de machine : allumé jour et nuit. */
