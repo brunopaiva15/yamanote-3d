@@ -206,15 +206,26 @@ export function makeGateDisplay(): Redrawable<[head: string, sub: string, deny: 
 }
 
 /**
- * Le bandeau d'enseigne d'un poste : 「きっぷうりば」 ou 「のりこし精算」.
+ * Le bandeau d'enseigne d'une batterie : 「きっぷうりば」 ou 「のりこし精算」.
  *
  * Blanc sur le vert JR, en gros, et l'anglais dessous en petit : c'est la seule
  * chose qu'on lit d'un bout de couloir, et c'est elle qui dit à quoi sert la
  * machine avant qu'on soit assez près pour voir l'écran.
+ *
+ * `aspect` EST LE SUJET DE CETTE FONCTION. Le canevas était carrément carré -
+ * 512 × 128, quatre pour un - et la bande qui le porte fait plus de trois
+ * mètres pour vingt-six centimètres, soit treize pour un : la texture était
+ * donc étirée trois fois en largeur, et 「きっぷうりば」 s'étalait sur toute la
+ * batterie comme une enseigne de fête foraine. Le canevas prend maintenant la
+ * forme de la bande, et le texte y est dessiné à sa taille normale, calé à
+ * gauche - c'est ainsi qu'un vrai bandeau de gare est composé : le nom au
+ * début, le pictogramme au bout, et du vert entre les deux.
  */
-export function makeTicketHeaderTexture(adjust: boolean): THREE.CanvasTexture {
-  const W = 512;
+export function makeTicketHeaderTexture(adjust: boolean, aspect = 4): THREE.CanvasTexture {
   const H = 128;
+  // La bande peut être très longue (quatre postes) ou courte (un seul 精算機) :
+  // on suit sa forme, en gardant des bornes qui tiennent en mémoire de texture.
+  const W = Math.round(H * Math.min(24, Math.max(3, aspect)));
   const { c, g } = makeCanvas(W, H);
   const green = '#0f8a44';
   const bg = g.createLinearGradient(0, 0, 0, H);
@@ -222,20 +233,41 @@ export function makeTicketHeaderTexture(adjust: boolean): THREE.CanvasTexture {
   bg.addColorStop(1, green);
   g.fillStyle = bg;
   g.fillRect(0, 0, W, H);
+  // Le filet clair du haut : la tôle prend le jour par l'arête.
   g.fillStyle = 'rgba(255,255,255,0.22)';
   g.fillRect(0, 0, W, 5);
+
+  const pad = Math.round(H * 0.24);
   g.fillStyle = '#ffffff';
   g.textAlign = 'left';
-  fitFillText(g, adjust ? 'のりこし精算' : 'きっぷうりば', 26, H * 0.56, W * 0.62, H * 0.46);
-  g.font = `500 ${Math.round(H * 0.2)}px ${JP_FONT}`;
-  g.fillText(adjust ? 'Fare adjustment' : 'Ticket vending', 28, H * 0.84);
-  // Le pictogramme de billet, à droite : deux rectangles et quatre encoches.
-  g.fillStyle = '#ffffff';
-  g.fillRect(W - 128, 30, 100, 46);
-  g.fillStyle = green;
-  g.fillRect(W - 118, 40, 80, 26);
-  g.fillStyle = '#ffffff';
-  for (let i = 0; i < 4; i++) g.fillRect(W - 110 + i * 20, 47, 10, 12);
+  g.textBaseline = 'alphabetic';
+  // Le japonais à sa taille propre, et non « étalé sur la largeur disponible » :
+  // la largeur maximale est celle du mot, pas celle de la bande.
+  const jp = adjust ? 'のりこし精算' : 'きっぷうりば';
+  fitFillText(g, jp, pad, H * 0.58, H * 3.4, H * 0.5);
+  const jpWidth = g.measureText(jp).width;
+  g.font = `500 ${Math.round(H * 0.21)}px ${JP_FONT}`;
+  g.fillStyle = 'rgba(255,255,255,0.9)';
+  g.fillText(adjust ? 'Fare adjustment' : 'Ticket vending', pad, H * 0.86);
+
+  // Le pictogramme de billet, au bout de la bande - et seulement si la bande
+  // est assez longue pour qu'il ne vienne pas se coller au texte.
+  const picW = Math.round(H * 0.78);
+  if (W - pad - jpWidth > picW * 1.8) {
+    const px = W - pad - picW;
+    const py = Math.round(H * 0.24);
+    const ph = Math.round(H * 0.36);
+    g.fillStyle = '#ffffff';
+    g.fillRect(px, py, picW, ph);
+    g.fillStyle = green;
+    g.fillRect(px + 8, py + 8, picW - 16, ph - 16);
+    g.fillStyle = '#ffffff';
+    const n = 4;
+    const step = (picW - 24) / n;
+    for (let i = 0; i < n; i++) {
+      g.fillRect(px + 12 + i * step, py + ph * 0.32, step * 0.45, ph * 0.36);
+    }
+  }
   return toTex(c);
 }
 

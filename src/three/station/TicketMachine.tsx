@@ -65,7 +65,13 @@ export function TicketMachine({
   const posts = Math.max(1, Math.round(w / POST_W));
   const pw = w / posts;
 
-  const header = useMemo(() => makeTicketHeaderTexture(adjust), [adjust]);
+  // Le bandeau prend la FORME de la bande qui le porte : sans quoi la texture
+  // s'étire sur toute la batterie et le nom de la machine avec elle.
+  const bandW = w - 0.05;
+  const header = useMemo(
+    () => makeTicketHeaderTexture(adjust, bandW / HEAD_H),
+    [adjust, bandW],
+  );
   const headerMat = useMemo(
     () => new THREE.MeshBasicMaterial({ map: header, toneMapped: false }),
     [header],
@@ -93,15 +99,15 @@ export function TicketMachine({
       </mesh>
       {/* Bandeau d'enseigne, en tête, sur toute la batterie. */}
       <mesh position={[0, H - HEAD_H / 2 - 0.02, d / 2 + 0.008]} material={headerMat}>
-        <planeGeometry args={[w - 0.05, HEAD_H]} />
+        <planeGeometry args={[bandW, HEAD_H]} />
       </mesh>
       {Array.from({ length: posts - 1 }, (_, k) => (
         <mesh
           key={`joint${k}`}
           position={[-w / 2 + pw * (k + 1), PLINTH + (H - PLINTH) / 2, d / 2 + 0.004]}
-          material={m.frame}
+          material={m.metal}
         >
-          <boxGeometry args={[0.022, H - PLINTH - HEAD_H, 0.012]} />
+          <boxGeometry args={[0.012, H - PLINTH - HEAD_H, 0.008]} />
         </mesh>
       ))}
 

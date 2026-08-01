@@ -473,14 +473,23 @@ export function updateConversation(dt: number): void {
     talkTarget.target = conversation.active ? null : findTargetedPax();
   }
 
+  // La demande n'est CONSOMMÉE que si le dialogue en fait quelque chose.
+  //
+  // Elle l'était inconditionnellement, et c'était un bug de chaîne : la touche
+  // d'action est unique (systems/interaction) et passe de main en main - une
+  // machine visée, puis un voisin à qui parler, puis ce qu'on tient. Le
+  // dialogue, au milieu, l'éteignait même quand il n'avait personne en face, si
+  // bien qu'on n'ouvrait jamais la canette qu'on venait d'acheter : l'invite
+  // disait « E — Ouvrir » et la touche mourait avant d'arriver à la main.
   if (input.talkRequest) {
-    input.talkRequest = false;
     if (conversation.active) {
       // Deuxième appui : on coupe court, comme on tourne les talons.
+      input.talkRequest = false;
       endConversation();
     } else {
       const t = talkTarget.target;
       if (t) {
+        input.talkRequest = false;
         startConversation(t.scope, t.id, 'ask');
         talkTarget.target = null;
       }

@@ -264,17 +264,22 @@ export function updateInteraction(dt: number): void {
 }
 
 /**
- * Seconde moitié : boire.
+ * Seconde moitié : boire. Et le DERNIER MAILLON de la chaîne.
  *
  * Appelée APRÈS `updateConversation`. Si la demande est encore là, c'est que ni
  * une machine ni un voisin ne l'a prise - alors on porte à ses lèvres ce qu'on
  * a dans la main.
+ *
+ * Elle éteint la demande QUOI QU'IL ARRIVE, même les mains vides. Une touche
+ * d'action qui passe de main en main doit mourir quelque part : laissée
+ * allumée, elle attendrait la première machine devant laquelle on passe et
+ * l'actionnerait toute seule, une image plus tard, sans que personne n'ait rien
+ * appuyé.
  */
 export function updateHeldItem(): void {
   if (!input.talkRequest) return;
-  const store = useStore.getState();
-  if (!store.held) return;
   input.talkRequest = false;
+  if (!useStore.getState().held) return;
   consumeHeld();
 }
 
@@ -288,6 +293,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     input.talkRequest = true;
   };
   w.__prompt = () => ({ ...prompt });
+  w.__held = () => useStore.getState().held;
   w.__machine = (id: string) => {
     const s = machineState(id);
     return {
