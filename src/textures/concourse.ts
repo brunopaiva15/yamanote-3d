@@ -216,49 +216,17 @@ export function makeLockerTexture(): THREE.CanvasTexture {
 // --- Commerce ------------------------------------------------------------
 
 /**
- * Bandeau d'enseigne du konbini de gare.
+ * Ce qu'on voit à travers la baie d'une GALERIE : des gondoles, peintes.
  *
- * NEWDAYS est une marque JR East et son bandeau est bleu, blanc et vert ; on
- * n'imite pas un logo, on en garde la STRUCTURE - un aplat franc, le nom en
- * capitales, et la mention 24時間 quand la boutique est ouverte en continu,
- * parce que c'est elle qu'on cherche à quatre heures du matin.
- */
-export function makeKonbiniSignTexture(): THREE.CanvasTexture {
-  const W = 1024;
-  const H = 192;
-  const { c, g } = makeCanvas(W, H);
-  const grad = g.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#1a4f9c');
-  grad.addColorStop(1, '#12417f');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, W, H);
-  // Filet vert en pied : le rappel JR.
-  g.fillStyle = JR_GREEN;
-  g.fillRect(0, H - 16, W, 16);
-
-  g.fillStyle = '#ffffff';
-  g.textAlign = 'left';
-  g.textBaseline = 'alphabetic';
-  fitFillText(g, 'NEWDAYS', 44, H * 0.68, W * 0.52, 104, 'bold');
-  g.fillStyle = '#cfe0f5';
-  g.font = `600 40px ${JP_FONT}`;
-  g.fillText('コンビニエンスストア', W * 0.6, H * 0.45);
-  g.fillStyle = CAUTION;
-  g.fillRect(W * 0.6, H * 0.56, 190, 52);
-  g.fillStyle = '#241f10';
-  g.textAlign = 'center';
-  fitFillText(g, '24時間', W * 0.6 + 95, H * 0.56 + 40, 170, 38, 'bold');
-  return toTexture(c);
-}
-
-/**
- * Ce qu'on voit à travers la vitrine d'un konbini : des gondoles.
+ * C'était aussi l'intérieur du konbini, et ça ne l'est plus : une boutique
+ * qu'on longe à un mètre a besoin d'un volume, pas d'un poster à seize
+ * centimètres de sa vitre (voir three/station/Konbini). Une galerie, elle,
+ * n'ouvre pas sur un commerce mais sur un ENFILADE de commerces qu'on ne fera
+ * jamais - on n'en voit que la première travée, de trois quarts, derrière un
+ * verre : c'est exactement le cas où un plan peint reste le bon choix.
  *
- * Peint plutôt que modélisé, et c'est un choix de budget assumé - l'intérieur
- * n'est visible que de trois quarts, à travers un verre, et une gondole
- * modélisée coûterait cent fois ce qu'elle rapporte. Ce qui compte est la
- * STRATIFICATION : des rayonnages horizontaux, des couleurs par étage, et de la
- * lumière au fond.
+ * Ce qui compte est la STRATIFICATION : des rayonnages horizontaux, des
+ * couleurs par étage, et de la lumière au fond.
  */
 export function makeKonbiniInteriorTexture(): THREE.CanvasTexture {
   const W = 1024;

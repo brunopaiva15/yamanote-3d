@@ -302,62 +302,120 @@ export function makeCoolerDoorTexture(seed: number): THREE.CanvasTexture {
 }
 
 /**
- * Une couverture de magazine, format portrait.
+ * Une couverture de magazine, dessinée dans le rectangle qu'on lui donne.
  *
  * Un présentoir n'a pas besoin de titres lisibles : ce qui fait une couverture
  * japonaise, c'est le BANDEAU de titre en haut, la grande photo au milieu, et
  * la colonne de manchettes verticales sur un bord. Trois blocs, et l'objet est
  * reconnu.
  */
-export function makeMagazineTexture(seed: number): THREE.CanvasTexture {
-  const W = 256;
-  const H = 340;
-  const { c, g } = makeCanvas(W, H);
-  const r = rng(2200 + seed * 4231);
+function drawCover(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  W: number,
+  H: number,
+  r: () => number,
+): void {
+  // Une couverture japonaise n'est jamais pastel : elle est SATURÉE et
+  // contrastée, parce qu'elle est faite pour être vue de trois quarts, à deux
+  // mètres, dans un râtelier où douze autres se battent pour le même regard.
   const skins = [
-    { bg: '#f3ede0', band: '#c8332b', ink: '#2a2622' },
-    { bg: '#dfe8ef', band: '#1f5fbf', ink: '#1c2430' },
-    { bg: '#efe4ee', band: '#8a3f9c', ink: '#2c2130' },
-    { bg: '#e6efe2', band: '#2f7a44', ink: '#212a22' },
-    { bg: '#fdf3d8', band: '#e0851f', ink: '#33291a' },
+    { photo: '#8c2c26', band: '#c8332b', ink: '#1e1a17' },
+    { photo: '#1b3f74', band: '#1f5fbf', ink: '#12181f' },
+    { photo: '#54246a', band: '#8a3f9c', ink: '#1f1526' },
+    { photo: '#1f5233', band: '#2f7a44', ink: '#141c15' },
+    { photo: '#8a5410', band: '#e0851f', ink: '#241b0f' },
+    { photo: '#2b2f36', band: '#e8e4d8', ink: '#15181c' },
   ];
   const s = skins[Math.floor(r() * skins.length)];
 
-  g.fillStyle = s.bg;
-  g.fillRect(0, 0, W, H);
-  // La photo : un dégradé sourd, plus une masse claire au tiers - un visage,
-  // un plat, une façade. À cette taille, personne ne cherche à savoir.
-  const ph = g.createLinearGradient(0, H * 0.16, W, H);
-  ph.addColorStop(0, `rgba(${40 + r() * 90 | 0},${50 + r() * 90 | 0},${60 + r() * 80 | 0},1)`);
-  ph.addColorStop(1, `rgba(${120 + r() * 90 | 0},${110 + r() * 80 | 0},${100 + r() * 70 | 0},1)`);
+  g.save();
+  g.translate(x, y);
+  // La photo mange TOUTE la couverture : un magazine n'a pas de marge blanche.
+  // Elle reste SOMBRE de bout en bout - un dégradé qui finissait crème donnait
+  // des couvertures pastel, et un râtelier pastel ne ressemble à rien.
+  const ph = g.createLinearGradient(0, 0, W * 0.7, H);
+  ph.addColorStop(0, s.photo);
+  ph.addColorStop(0.62, s.photo);
+  ph.addColorStop(1, s.band);
   g.fillStyle = ph;
-  g.fillRect(0, H * 0.16, W, H * 0.84);
-  g.fillStyle = 'rgba(255,255,255,0.24)';
+  g.fillRect(0, 0, W, H);
+  // La masse claire au tiers : un visage, un plat, une façade. À cette taille,
+  // personne ne cherche à savoir - mais son absence rend la couverture plate.
+  g.fillStyle = 'rgba(255,244,226,0.3)';
   g.beginPath();
-  g.ellipse(W * 0.46, H * 0.52, W * 0.24, H * 0.2, 0, 0, Math.PI * 2);
+  g.ellipse(W * 0.48, H * 0.54, W * 0.22, H * 0.19, 0, 0, Math.PI * 2);
   g.fill();
 
-  // Bandeau de titre.
+  // Bandeau de titre : le tiers haut, en aplat de marque, avec le logotype en
+  // réserve. C'est la seule zone qui se lise vraiment de loin.
   g.fillStyle = s.band;
-  g.fillRect(0, 0, W, H * 0.16);
+  g.fillRect(0, 0, W, H * 0.2);
   g.fillStyle = '#ffffff';
-  for (let i = 0; i < 4; i++) {
-    g.fillRect(14 + i * 42, H * 0.05, 30, H * 0.07);
-  }
+  for (let i = 0; i < 4; i++) g.fillRect(W * (0.07 + i * 0.21), H * 0.05, W * 0.15, H * 0.1);
   // Colonne de manchettes, verticale, sur un bord : la signature du kiosque.
+  // Blanches sur la photo sombre, et jamais l'inverse.
   const side = r() > 0.5;
-  g.fillStyle = s.ink;
-  for (let i = 0; i < 7; i++) {
-    const bw = 8 + r() * 6;
-    const bh = H * (0.1 + r() * 0.16);
-    g.fillRect(side ? 10 + i * 15 : W - 22 - i * 15, H * 0.22, bw, bh);
+  for (let i = 0; i < 5; i++) {
+    const bw = W * (0.05 + r() * 0.03);
+    const bh = H * (0.14 + r() * 0.2);
+    const bx = side ? W * 0.05 + i * W * 0.09 : W * 0.83 - i * W * 0.09;
+    g.fillStyle = 'rgba(20,18,16,0.5)';
+    g.fillRect(bx + 2, H * 0.25 + 2, bw, bh);
+    g.fillStyle = i === 1 ? '#f7d64a' : '#ffffff';
+    g.fillRect(bx, H * 0.25, bw, bh);
   }
   // Le prix, en pied : un magazine en porte toujours un.
   g.fillStyle = '#ffffff';
-  g.fillRect(W * 0.58, H - 34, W * 0.36, 24);
+  g.fillRect(W * 0.56, H * 0.89, W * 0.38, H * 0.082);
   g.fillStyle = s.ink;
   g.textAlign = 'center';
-  fitFillText(g, `¥${[490, 580, 690, 780, 890][Math.floor(r() * 5)]}`, W * 0.76, H - 15, W * 0.32, 20, 'bold');
+  fitFillText(
+    g,
+    `¥${[490, 580, 690, 780, 890][Math.floor(r() * 5)]}`,
+    W * 0.75,
+    H * 0.955,
+    W * 0.34,
+    H * 0.07,
+    'bold',
+  );
+  g.restore();
+}
+
+/** Une couverture seule, pour un magazine posé à plat ou tenu à la main. */
+export function makeMagazineTexture(seed: number): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(256, 340);
+  drawCover(g, 0, 0, 256, 340, rng(2200 + seed * 4231));
+  return toTexture(c);
+}
+
+/**
+ * Un étage de présentoir à magazines : la rangée entière, en une image.
+ *
+ * Une couverture par plan aurait fait dix appels de rendu par étage, et trente
+ * pour un présentoir - pour des objets de vingt centimètres qu'on regarde de
+ * loin. La rangée se dessine donc d'un coup, avec ses couvertures qui se
+ * CHEVAUCHENT légèrement : c'est ce recouvrement, et lui seul, qui fait qu'un
+ * râtelier est plein plutôt qu'aligné.
+ */
+export function makeMagazineRowTexture(seed: number, count = 9): THREE.CanvasTexture {
+  const W = 1024;
+  const H = 340;
+  const { c, g } = makeCanvas(W, H);
+  const r = rng(1900 + seed * 6673);
+  // Le fond du râtelier : la tôle qu'on aperçoit entre deux couvertures.
+  g.fillStyle = '#cfcabb';
+  g.fillRect(0, 0, W, H);
+  const pitch = W / count;
+  const cw = pitch * 1.16;
+  for (let i = 0; i < count; i++) {
+    // Chaque couverture porte l'ombre de sa voisine de gauche : sans elle, la
+    // rangée est un damier et non une pile.
+    drawCover(g, i * pitch, H * 0.04, cw, H * 0.94, r);
+    g.fillStyle = 'rgba(40,38,34,0.28)';
+    g.fillRect(i * pitch, H * 0.04, 5, H * 0.94);
+  }
   return toTexture(c);
 }
 
@@ -369,46 +427,87 @@ export function makeMagazineTexture(seed: number): THREE.CanvasTexture {
  * carrée. Il n'a AUCUNE couleur - c'est ce qui le distingue des magazines
  * posés à côté, et c'est tout ce qu'on demande à cette image.
  */
-export function makeNewspaperTexture(seed: number): THREE.CanvasTexture {
-  const W = 512;
-  const H = 340;
-  const { c, g } = makeCanvas(W, H);
-  const r = rng(6600 + seed * 3571);
-
+function drawPaper(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  W: number,
+  H: number,
+  r: () => number,
+): void {
+  g.save();
+  g.translate(x, y);
   g.fillStyle = ['#efece3', '#eae6db', '#f2f0e8'][Math.floor(r() * 3)];
   g.fillRect(0, 0, W, H);
 
   // Le bandeau de titre : un pavé noir plein, et le filet sous lui.
   g.fillStyle = '#1a1a18';
-  g.fillRect(24, 20, W * 0.42, 44);
-  g.fillRect(24, 76, W - 48, 3);
+  g.fillRect(W * 0.05, H * 0.06, W * 0.42, H * 0.13);
+  g.fillRect(W * 0.05, H * 0.22, W * 0.9, H * 0.01);
   g.fillStyle = '#5a5a54';
-  g.fillRect(W * 0.5, 30, W * 0.4, 10);
-  g.fillRect(W * 0.5, 46, W * 0.28, 10);
+  g.fillRect(W * 0.5, H * 0.09, W * 0.4, H * 0.03);
+  g.fillRect(W * 0.5, H * 0.14, W * 0.28, H * 0.03);
 
   // Colonnes verticales : un journal japonais se compose en colonnes, et c'est
   // ce sens-là qu'on reconnaît sans lire.
   const cols = 9;
-  const cw = (W - 56) / cols;
+  const cw = (W * 0.9) / cols;
   for (let i = 0; i < cols; i++) {
-    const x = 28 + i * cw;
-    let y = 96;
-    while (y < H - 18) {
-      const seg = 10 + r() * 26;
+    const cx = W * 0.05 + i * cw;
+    let cy = H * 0.28;
+    while (cy < H * 0.95) {
+      const seg = H * (0.03 + r() * 0.08);
       g.fillStyle = `rgba(30,30,28,${0.32 + r() * 0.3})`;
-      g.fillRect(x, y, cw - 5, seg);
-      y += seg + 5 + r() * 6;
+      g.fillRect(cx, cy, cw * 0.8, seg);
+      cy += seg + H * (0.015 + r() * 0.02);
     }
   }
   // Une photo, en haut à droite ou au milieu : le seul aplat de la page.
   const px = r() > 0.5 ? W * 0.58 : W * 0.12;
   g.fillStyle = '#9b9a92';
-  g.fillRect(px, 104, W * 0.3, H * 0.26);
+  g.fillRect(px, H * 0.3, W * 0.3, H * 0.26);
   g.fillStyle = '#7d7c74';
-  g.fillRect(px, 104 + H * 0.18, W * 0.3, H * 0.08);
+  g.fillRect(px, H * 0.48, W * 0.3, H * 0.08);
   // Le pli : une ombre en travers, parce qu'un journal de kiosque est plié.
   g.fillStyle = 'rgba(90,88,80,0.16)';
-  g.fillRect(0, H / 2 - 4, W, 8);
+  g.fillRect(0, H / 2 - H * 0.012, W, H * 0.024);
+  g.restore();
+}
+
+/** Un quotidien seul, à plat. */
+export function makeNewspaperTexture(seed: number): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(512, 340);
+  drawPaper(g, 0, 0, 512, 340, rng(6600 + seed * 3571));
+  return toTexture(c);
+}
+
+/**
+ * L'étalage de journaux d'un kiosque, vu de dessus : quatre piles côte à côte.
+ *
+ * C'est L'IMAGE du kiosque de quai - avant les magazines, avant les boissons,
+ * c'est la rangée de quotidiens à plat sur le comptoir qu'on reconnaît, et
+ * c'est elle qui manquait. Les piles se recouvrent d'un doigt, comme des
+ * journaux qu'on a posés en tas et non alignés à l'équerre.
+ */
+export function makeNewspaperRowTexture(seed: number, count = 4): THREE.CanvasTexture {
+  const W = 1024;
+  const H = 340;
+  const { c, g } = makeCanvas(W, H);
+  const r = rng(4040 + seed * 9973);
+  g.fillStyle = '#8f8b80';
+  g.fillRect(0, 0, W, H);
+  const pitch = W / count;
+  for (let i = 0; i < count; i++) {
+    // L'ombre de la pile sur le comptoir, puis le journal du dessus, posé de
+    // travers de quelques degrés : une pile n'est jamais d'aplomb.
+    g.fillStyle = 'rgba(30,28,24,0.35)';
+    g.fillRect(i * pitch + 6, H * 0.07, pitch - 10, H * 0.9);
+    g.save();
+    g.translate(i * pitch + pitch / 2, H / 2);
+    g.rotate((r() - 0.5) * 0.06);
+    drawPaper(g, -pitch / 2 + 10, -H * 0.43, pitch - 20, H * 0.86, r);
+    g.restore();
+  }
   return toTexture(c);
 }
 
@@ -828,13 +927,16 @@ export function makeChilledCaseTexture(seed: number): THREE.CanvasTexture {
   const { c, g } = makeCanvas(W, H);
   const r = rng(5150 + seed * 2909);
 
-  g.fillStyle = '#eef2f2';
+  // Le fond d'un meuble froid ouvert est SOMBRE : la tôle y est dans l'ombre de
+  // ses propres gradins, et c'est ce contraste qui fait ressortir les triangles
+  // blancs. Peint clair, le rayon d'onigiri disparaissait derrière sa vitre.
+  g.fillStyle = '#5d6d75';
   g.fillRect(0, 0, W, H);
   const rows = 3;
   const pitch = H / rows;
   for (let row = 0; row < rows; row++) {
     const deck = Math.round((row + 1) * pitch) - 12;
-    g.fillStyle = 'rgba(120,140,150,0.14)';
+    g.fillStyle = 'rgba(24,34,40,0.4)';
     g.fillRect(0, deck - pitch + 12, W, pitch - 12);
     let x = 8;
     while (x < W - 40) {
