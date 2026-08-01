@@ -223,26 +223,51 @@ export function Kiosk({ k, m, station }: { k: Placed; m: Mats; station: number }
                 Deux blocs de 1,55 m plutôt qu'un long : chaque image de rangée
                 dessine six couvertures, et une couverture fait vingt-cinq
                 centimètres. Étirée sur trois mètres, la même rangée donnait des
-                magazines d'un demi-mètre de large. */}
-            {[0, 1].map((b) =>
-              [0, 1, 2].map((t) => (
-                <group
-                  key={`grad${b}${t}`}
-                  position={[s * outX, 0.3 + t * 0.32, z0 + 0.95 + b * 1.65]}
-                >
-                  <mesh position={[s * 0.11, -0.02, 0]} material={p.lip}>
-                    <boxGeometry args={[0.22, 0.03, 1.55]} />
-                  </mesh>
-                  <mesh
-                    position={[s * 0.05, 0.14, 0]}
-                    rotation={[0, (s * Math.PI) / 2, -s * 0.32]}
-                    material={pick(p.magazines, station, t + b)}
-                  >
-                    <planeGeometry args={[1.55, 0.29]} />
-                  </mesh>
-                </group>
-              )),
-            )}
+                magazines d'un demi-mètre de large.
+
+                LE GROUPE PORTE L'ORIENTATION, LA COUVERTURE PORTE L'INCLINAISON,
+                et l'ordre des deux n'est pas indifférent. Cumulées sur le même
+                objet - un quart de tour en y pour regarder le quai, puis une
+                inclinaison en z -, les deux rotations ne se composent pas comme
+                on l'espère : le z tourne la couverture AUTOUR DE SA PROPRE
+                NORMALE, c'est-à-dire dans son plan. Les magazines partaient en
+                diagonale au lieu de se coucher en arrière, et l'on aurait dit
+                un présentoir renversé. Le remède ne coûte rien : le groupe est
+                tourné vers le client, et à l'intérieur la couverture bascule
+                autour de SON x - qui est devenu la longueur du râtelier. */}
+            {[0, 1].map((b) => (
+              <group
+                key={`ratelier${b}`}
+                position={[s * outX, 0, z0 + 0.95 + b * 1.65]}
+                rotation={[0, (s * Math.PI) / 2, 0]}
+              >
+                {/* Le dos du râtelier : sans lui, on voyait la joue du comptoir
+                    entre deux gradins et les couvertures flottaient. */}
+                <mesh position={[0, 0.62, 0.015]} material={p.casework}>
+                  <boxGeometry args={[1.57, 0.98, 0.03]} />
+                </mesh>
+                {[0, 1, 2].map((t) => (
+                  <group key={`grad${t}`} position={[0, 0.3 + t * 0.32, 0]}>
+                    <mesh position={[0, -0.02, 0.11]} material={p.lip}>
+                      <boxGeometry args={[1.55, 0.03, 0.22]} />
+                    </mesh>
+                    <mesh
+                      position={[0, 0.14, 0.07]}
+                      rotation={[-0.34, 0, 0]}
+                      material={pick(p.magazines, station, t + b)}
+                    >
+                      <planeGeometry args={[1.55, 0.3]} />
+                    </mesh>
+                    {/* La barre de retenue, devant : c'est elle qui empêche les
+                        magazines de glisser d'un gradin incliné, et c'est aussi
+                        elle qui le fait lire comme un râtelier. */}
+                    <mesh position={[0, 0.05, 0.215]} material={p.chrome}>
+                      <boxGeometry args={[1.55, 0.014, 0.014]} />
+                    </mesh>
+                  </group>
+                ))}
+              </group>
+            ))}
             {/* Un carton de prix collé sur la joue du comptoir, plus loin : la
                 travée sans râtelier n'est pas une surface blanche nue. */}
             <mesh
