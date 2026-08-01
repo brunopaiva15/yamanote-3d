@@ -536,6 +536,12 @@ function drawJyBadge(g: CanvasRenderingContext2D, jy: string, x: number, cy: num
 /**
  * Les DEUX repères de position, et ils ne veulent pas dire la même chose.
  *
+ * Le pentagramme est relevé au pixel sur l'afficheur : cinq sommets, un
+ * bord SUPÉRIEUR HORIZONTAL, 71,6 × 59,6, cerné d'un filet clair de 13 et
+ * percé d'un œil de 19,8 × 15,4 légèrement décentré. Il ne se penche pas
+ * pour suivre la bande - lui donner l'inclinaison de l'arc suffisait à
+ * casser sa silhouette, qui ne tient qu'à ce bord du haut bien à plat.
+ *
  * L'afficheur distingue « la rame est ICI » de « la rame va LÀ ». À l'arrêt,
  * la gare où l'on est perd son cercle de minutes et reçoit le PENTAGRAMME
  * grenat à œil clair - un jeton posé sur la bande, pas une flèche : on ne va
@@ -552,15 +558,28 @@ function drawHerePentagon(g: CanvasRenderingContext2D, x: number, y: number, ang
   g.scale(s, s);
   const path = () => {
     g.beginPath();
-    g.moveTo(-31, -16);
-    g.lineTo(-16, -36);
-    g.lineTo(25, -36);
-    g.lineTo(34, 22);
-    g.lineTo(-27, 36);
+    g.moveTo(-19.2, -29.8);
+    g.lineTo(10.2, -29.8);
+    g.lineTo(35.3, 7.7);
+    g.lineTo(-16.5, 30.0);
+    g.lineTo(-35.6, -10.9);
     g.closePath();
   };
+  // Ombre portée bleu-gris en bas à droite : c'est elle qui décolle le jeton
+  // de la bande et lui donne son épaisseur.
+  g.save();
+  g.translate(3, 4);
+  g.strokeStyle = 'rgba(70,92,124,0.22)';
+  g.lineWidth = 13;
+  g.lineJoin = 'round';
+  path();
+  g.stroke();
+  g.fillStyle = 'rgba(70,92,124,0.22)';
+  g.fill();
+  g.restore();
+
   g.strokeStyle = '#f2f2f2';
-  g.lineWidth = 12;
+  g.lineWidth = 13;
   g.lineJoin = 'round';
   path();
   g.stroke();
@@ -569,7 +588,7 @@ function drawHerePentagon(g: CanvasRenderingContext2D, x: number, y: number, ang
   g.fill();
   g.fillStyle = '#f2f2f2';
   g.beginPath();
-  g.ellipse(0, 0, 11, 8.5, 0, 0, Math.PI * 2);
+  g.ellipse(-2.2, -2.4, 9.9, 7.7, 0, 0, Math.PI * 2);
   g.fill();
   g.restore();
 }
@@ -718,7 +737,7 @@ export function drawRoute(
   // bande quand on roule.
   if (markerLit(anim)) {
     if (atStation) {
-      drawHerePentagon(g, ZOOM_SLOTS[0].cx, ZOOM_SLOTS[0].cy, 0.16);
+      drawHerePentagon(g, ZOOM_SLOTS[0].cx + 3.5, ZOOM_SLOTS[0].cy + 2.5, 0);
     } else {
       // Sur la bande, juste EN ARRIÈRE de la gare visée, pointé vers elle.
       const a = Math.atan2(ZOOM_SLOTS[0].cy - ZOOM_SLOTS[1].cy, ZOOM_SLOTS[0].cx - ZOOM_SLOTS[1].cx);
@@ -966,7 +985,7 @@ export function drawLoopMap(
     // À quai, la gare où l'on est ne porte pas « 0 » : elle porte le
     // pentagramme de position, à la place de son cercle.
     if (atStation && k === 0) {
-      if (markerLit(anim)) drawHerePentagon(g, x, y, 0, 0.42);
+      if (markerLit(anim)) drawHerePentagon(g, x, y, 0, 0.46);
     } else if (k < MINUTES_SHOWN) {
       // Cercle des minutes. La prochaine gare est en ambre cerclé d'or ; les
       // autres en blanc ; au-delà de la portée d'affichage, un point gris.
