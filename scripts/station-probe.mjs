@@ -134,11 +134,26 @@ for (const i of stations) {
     [i, IGNORE],
   );
   const name = await page.evaluate(() => window.__probeName());
+  // Ce qui est DANS LE WAGON sans être de la rame. Le contrôle de volumes
+  // ci-dessus ne regarde que sous `gare` : un décor de gare posé au mauvais
+  // endroit ne s'y entrechoque avec rien, il se contente d'être debout au
+  // milieu de l'allée. C'est arrivé - un cube d'un mètre à l'origine du repère
+  // de gare, tous murets de portes palières empilés faute d'avoir été posés.
+  const intruders = await page.evaluate(() => window.__probeIntruders());
   const worst = res.pairs.slice(0, 4).map((p) => `${p.a} ✕ ${p.b} (${p.worst.toFixed(2)} m ×${p.count})`);
   console.log(
     `${String(i + 1).padStart(2, '0')} ${name.padEnd(18)} ${String(res.volumes).padStart(5)} volumes  ${String(res.pairs.length).padStart(3)} paires`,
   );
   for (const w of worst) console.log(`      ${w}`);
+  const seenIntruder = new Set();
+  for (const h of intruders) {
+    // La voûte de ciel englobe tout : elle n'entre nulle part.
+    if (h.size[0] > 100) continue;
+    const k = h.chain + JSON.stringify(h.size);
+    if (seenIntruder.has(k)) continue;
+    seenIntruder.add(k);
+    console.log(`      ⚠ DANS LE WAGON  ${JSON.stringify(h.size)} en ${JSON.stringify(h.at)}  ${h.chain}`);
+  }
   for (const p of res.pairs) {
     const k = `${p.a} ✕ ${p.b}`;
     const cur = totals.get(k) ?? { n: 0, worst: 0, stations: 0 };

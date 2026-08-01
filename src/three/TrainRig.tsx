@@ -19,5 +19,9 @@ export function TrainRig({ children }: { children: ReactNode }) {
     if (root.current) root.current.position.z = runtime.trainZ;
   });
 
-  return <group ref={root}>{children}</group>;
+  return (
+    <group ref={root} name="rame">
+      {children}
+    </group>
+  );
 }
