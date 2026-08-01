@@ -37,6 +37,8 @@ import {
 import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
 import { makeConcourseGuideTexture, type GuideKind } from '../../textures/concourse';
+import { CEILING_MODULE, DADO_MODULE, HALL_MODULE } from '../../textures/stationWall';
+import { usePanelBox, useWallBox } from './wallBox';
 import type { Mats } from './materials';
 import { Barrier } from './Barrier';
 import { FareGates } from './FareGates';
@@ -114,6 +116,15 @@ export function Concourse({
   const shellZ = midZ + WALL_T / 2;
   const shellLen = length + WALL_T;
 
+  // Parois, soubassement et plafond aux UV de l'ÉCHELLE RÉELLE. Une paroi de
+  // hall fait trente mètres de long : la même image tendue d'un bout à l'autre
+  // rendait ses défauts (textures/stationWall) illisibles - une seule coulure
+  // large de deux mètres, un seul carreau de faïence par paroi. Voir
+  // three/station/wallBox pour pourquoi ce n'est pas `repeat` qui s'en charge.
+  const sideGeo = useWallBox(WALL_T, height, shellLen, HALL_MODULE);
+  const dadoGeo = useWallBox(0.05, DADO_H, shellLen, DADO_MODULE);
+  const ceilGeo = usePanelBox(width + 2 * WALL_T, 0.12, shellLen, CEILING_MODULE);
+
   return (
     <group name="gare/hall">
       {/* Sol, plafond, et les deux parois longues. Le volume est clos : sans
@@ -121,23 +132,38 @@ export function Concourse({
       <mesh position={[midX, it.floorY - 0.06, shellZ]} material={m.slab}>
         <boxGeometry args={[width + 2 * WALL_T, 0.12, shellLen]} />
       </mesh>
-      <mesh position={[midX, it.ceilY - 0.06, shellZ]} material={m.hallCeil}>
-        <boxGeometry args={[width + 2 * WALL_T, 0.12, shellLen]} />
-      </mesh>
+      <mesh
+        position={[midX, it.ceilY - 0.06, shellZ]}
+        geometry={ceilGeo}
+        material={m.hallCeil}
+      />
       {[-1, 1].map((d) => (
         <group key={`side${d}`}>
           <mesh
             position={[midX + (d * (width + WALL_T)) / 2, midY, shellZ]}
+            geometry={sideGeo}
             material={m.hall}
-          >
-            <boxGeometry args={[WALL_T, height, shellLen]} />
-          </mesh>
+          />
           {/* Soubassement de faïence : à hauteur de main, c'est lui qu'on voit. */}
           <mesh
             position={[midX + (d * (width - 0.04)) / 2, it.floorY + DADO_H / 2, shellZ]}
+            geometry={dadoGeo}
             material={m.tile}
+          />
+          {/* Plinthe : la ligne d'ombre au pied de la paroi, et la seule chose
+              qui distingue un couloir fini d'une boîte enduite jusqu'au sol.
+              Elle court d'un seul tenant - un couloir n'a pas de plinthe par
+              tronçons - et sort MOINS que le soubassement au-dessus d'elle :
+              tout ce qui saille davantage finit dans la vitrine d'un commerce
+              ou dans une borne de portillon, à une gare ou à une autre. Rien
+              au-dessus du soubassement pour la même raison : la hauteur
+              d'épaule d'un hall appartient au mobilier (three/station/Fixtures)
+              et à la signalétique, pas à la paroi. */}
+          <mesh
+            position={[midX + (d * (width - 0.02)) / 2, it.floorY + 0.07, shellZ]}
+            material={m.wallDark}
           >
-            <boxGeometry args={[0.05, DADO_H, shellLen]} />
+            <boxGeometry args={[0.04, 0.14, shellLen]} />
           </mesh>
         </group>
       ))}

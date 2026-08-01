@@ -49,7 +49,9 @@ import {
 } from '../../data/stationGeometry';
 import type { Placed } from '../../systems/stationPlacement';
 import { makeExitSign } from '../../textures/procedural';
+import { DADO_MODULE, WALL_MODULE } from '../../textures/stationWall';
 import { stationAd } from './adPool';
+import { wallBoxGeometry } from './wallBox';
 import type { Mats } from './materials';
 
 // --- Cotes dérivées, calculées une fois pour toutes les gares ------------
@@ -232,6 +234,23 @@ const LOWER_Z0 = STAIR_HALF_Z;
 const LOWER_MID_Z = (LOWER_Z0 + STAIR_LOWER_END) / 2;
 const LOWER_LEN = STAIR_LOWER_END - LOWER_Z0;
 
+/**
+ * Les trois surfaces de la trémie dont les UV sont mises à l'échelle réelle :
+ * joue, paroi de couloir, soubassement (three/station/wallBox).
+ *
+ * Elles sont ici, en constantes de module, et pas dans un `useMemo` : une
+ * trémie a exactement les mêmes cotes dans les trente gares, et refaire trois
+ * BoxGeometry à chaque changement de gare pour obtenir le même résultat
+ * n'aurait rien acheté.
+ */
+// Le module suit le MATÉRIAU, pas le lieu : joue et parois de couloir portent
+// toutes les deux `m.wall`, donc la trame de banche de 2,40 m. Régler le
+// couloir sur celle du hall (1,80) aurait serré ses joints sans que la texture
+// posée dessus en sache rien.
+const CHEEK_GEO = wallBoxGeometry(CHEEK_T, CHEEK_H, STAIR_HALF_Z * 2, WALL_MODULE);
+const LOWER_WALL_GEO = wallBoxGeometry(LOWER_WALL_T, LOWER_H, LOWER_LEN, WALL_MODULE);
+const LOWER_DADO_GEO = wallBoxGeometry(0.05, 1.1, LOWER_LEN, DADO_MODULE);
+
 /** Seconde volée : mêmes blocs pleins, sous la dalle du quai. */
 const LOWER_TREADS = Array.from({ length: STAIR_LOWER_STEPS }, (_, i) => {
   const k = i + 1;
@@ -355,9 +374,7 @@ function Stairwell({
       {/* Joues : garde-corps au-dessus de la dalle, voile de gaine dessous. */}
       {[-1, 1].map((d) => (
         <group key={`c${d}`}>
-          <mesh position={[d * CHEEK_X, CHEEK_Y, 0]} material={m.wall}>
-            <boxGeometry args={[CHEEK_T, CHEEK_H, STAIR_HALF_Z * 2]} />
-          </mesh>
+          <mesh position={[d * CHEEK_X, CHEEK_Y, 0]} geometry={CHEEK_GEO} material={m.wall} />
           <mesh position={[d * CHEEK_X, CAP_Y, 0]} material={m.metal}>
             <boxGeometry args={[CAP_W, CAP_H, STAIR_HALF_Z * 2]} />
           </mesh>
@@ -488,19 +505,21 @@ function LowerLevel({ m, station, open }: { m: Mats; station: number; open: bool
       {/* Parois, plafond et fond du couloir : le volume est clos, sinon on
           verrait le vide par-dessous la dalle. */}
       {[-1, 1].map((d) => (
-        <mesh key={`lw${d}`} position={[d * LOWER_WALL_X, LOWER_Y, LOWER_MID_Z]} material={m.wall}>
-          <boxGeometry args={[LOWER_WALL_T, LOWER_H, LOWER_LEN]} />
-        </mesh>
+        <mesh
+          key={`lw${d}`}
+          position={[d * LOWER_WALL_X, LOWER_Y, LOWER_MID_Z]}
+          geometry={LOWER_WALL_GEO}
+          material={m.wall}
+        />
       ))}
       {/* Soubassement de faïence, le seul rappel de couleur du niveau bas. */}
       {[-1, 1].map((d) => (
         <mesh
           key={`ld${d}`}
           position={[d * (STAIR_LOWER_HALF_X - 0.02), STAIR_LOWER_Y + 0.55, LOWER_MID_Z]}
+          geometry={LOWER_DADO_GEO}
           material={m.tile}
-        >
-          <boxGeometry args={[0.05, 1.1, LOWER_LEN]} />
-        </mesh>
+        />
       ))}
       <mesh position={[0, STAIR_LOWER_CEIL_Y - 0.05, LOWER_MID_Z]} material={m.wallDark}>
         <boxGeometry args={[LOWER_WALL_X * 2, 0.1, LOWER_LEN]} />
