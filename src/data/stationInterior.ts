@@ -29,18 +29,21 @@
 // LE SENS DU NIVEAU. `place` dit de quel côté du quai il se trouve, et cela ne
 // se décrète pas : une gare sur viaduc a sa billetterie dessous, au niveau de
 // la rue ; une gare en TRANCHÉE l'a dessus, sur le bâtiment qui enjambe la
-// tranchée - c'est exactement ce que montre le plan de Mejiro. Les gares
-// `over` déclarent donc leur hall et ne le construisent pas encore : la volée
-// MONTANTE reste à dessiner (voir docs/STATION_INTERIOR, phase 5), et `built`
-// le dit sans mentir.
+// tranchée - c'est exactement ce que montre le plan de Mejiro. Les deux sens
+// sont bâtis : la volée descend dans une trémie qui perce la dalle, ou monte
+// sur une volée posée dessus qui perce l'auvent. Ce sont deux ouvrages, pas un
+// signe qui change (voir data/stationGeometry).
 
 import { konbiniPlan } from './konbiniPlan.ts';
 import { layoutFor } from './stationLayouts.ts';
 import { stationExits } from './lines.ts';
 import {
+  ASCENT_FLOOR_Y,
+  ASCENT_LEN,
+  DESCENT_LEN,
   PSD_X,
+  STAIR_HALF_Z,
   STAIR_LOWER_CEIL_Y,
-  STAIR_LOWER_END,
   STAIR_LOWER_Y,
 } from './stationGeometry.ts';
 
@@ -158,10 +161,12 @@ export interface StationInterior {
   /**
    * Le niveau est-il réellement construit ?
    *
-   * Faux tant que l'accès qui y mène n'est pas dessiné - les gares dont le hall
-   * est AU-DESSUS du quai attendent leur volée montante. Le rendu et la marche
-   * lisent le même drapeau : on ne marche pas dans un hall qui n'est pas là, et
-   * on ne dessine pas un hall où l'on ne peut pas aller.
+   * Il l'a longtemps été pour les seules gares dont le hall est SOUS le quai,
+   * faute de volée montante pour les autres. Les deux sens d'accès étant
+   * maintenant dessinés, le drapeau vaut partout - il reste parce que la
+   * question se reposera : une gare spéciale peut avoir un niveau qu'on
+   * déclare avant de savoir le construire, et le rendu comme la marche doivent
+   * lire la même réponse.
    */
   built: boolean;
   place: ConcoursePlace;
@@ -253,12 +258,13 @@ const PILASTER_LEN = 0.62;
 /**
  * Hauteur du niveau au-dessus du quai, quand il est dessus.
  *
- * Ce n'est pas la symétrique du niveau bas : une passerelle passe au-dessus du
- * gabarit de la caténaire, pas seulement au-dessus des têtes. La valeur est
- * posée ici pour que la donnée soit complète ; la volée qui y monte reste à
- * dessiner.
+ * Ce n'est pas la symétrique du niveau bas, et ce n'est pas non plus un chiffre
+ * d'ambiance : c'est ce qui fait passer un tablier au-dessus d'une rame. La
+ * cote vient de la volée elle-même (`data/stationGeometry`) - vingt-neuf
+ * contremarches de 17,5 cm - parce que c'est l'escalier qui décide de la
+ * hauteur du plancher, jamais l'inverse.
  */
-const OVER_FLOOR_Y = 6.4;
+const OVER_FLOOR_Y = ASCENT_FLOOR_Y;
 
 // --- Ce qui change d'une gare à l'autre ----------------------------------
 
@@ -289,6 +295,11 @@ interface Spec {
    * chose et se corrige ligne à ligne.
    */
   brand?: GalleryBrand;
+  /**
+   * Gare dont le niveau ne se paramètre pas : on le déclare, on ne le construit
+   * pas ici.
+   */
+  bespoke?: true;
 }
 
 /**
@@ -316,7 +327,12 @@ const SPECS: readonly Spec[] = [
   { name: 'JY05 Ueno', brand: 'ecute', gateJp: '中央改札', gate: 'Central' },
   { name: 'JY06 Uguisudani', gateJp: '南口改札', gate: 'South' },
   // Deux ponts-concours enjambent tout le faisceau : le hall est dessus.
-  { name: 'JY07 Nippori', brand: 'ecute', place: 'over', gateJp: '南改札', gate: 'South' },
+  // Nippori a déjà son niveau de correspondance : ce sont ses DEUX
+  // PONTS-CONCOURS, dessinés par sa charpente signature, dont la sous-face est
+  // à 5,10 m - exactement la cote d'un hall d'en haut. Y poser en plus le hall
+  // générique reviendrait à bâtir deux fois la même chose, l'une dans l'autre.
+  // Elle attend son traitement propre (docs/STATION_INTERIOR, phase 6).
+  { name: 'JY07 Nippori', brand: 'ecute', place: 'over', bespoke: true, gateJp: '南改札', gate: 'South' },
   { name: 'JY08 Nishi-Nippori', gateJp: '南改札', gate: 'South' },
   { name: 'JY09 Tabata', brand: 'atre', place: 'over', gateJp: '北口改札', gate: 'North' },
   { name: 'JY10 Komagome', place: 'over', gateJp: '北口改札', gate: 'North' },
@@ -524,10 +540,16 @@ const FREE_NEAR: Want[] = [
   // c'est ce que les voyageurs viennent chercher.
   { kind: 'stamp' },
   { kind: 'ticket' },
-  { kind: 'office', from: 1.3 },
   { kind: 'notice' },
   { kind: 'aed' },
   { kind: 'umbrella' },
+  // Le guichet se range par le FOND, et ce n'est pas un détail d'implantation :
+  // c'est le seul meuble profond de cette paroi, donc le seul qui puisse
+  // interdire une devanture en face de lui. Rangé dans l'ordre d'arrivée, il
+  // tombait juste devant la boutique et le hall perdait l'une ou l'autre ;
+  // rangé au fond, il laisse à la devanture la longueur qui suit les
+  // portillons - et c'est là qu'il est en vrai, au bout des 券売機.
+  { kind: 'office', from: 1.3, atEnd: true },
 ];
 const FREE_FAR: Want[] = [
   // La galerie passe avant le konbini : une gare qui a l'une n'a pas besoin de
@@ -569,6 +591,13 @@ const AISLE_MIN = 2.0;
  * façade du meuble regarde toujours vers le milieu. On avance depuis le bord
  * `z0` de la zone, et l'on s'arrête quand il n'y a plus de place - jamais on ne
  * tasse, jamais on ne superpose.
+ *
+ * `facing` porte ce qui est DÉJÀ posé sur la paroi d'en face, et il n'est pas
+ * décoratif : le passage du milieu n'est pas creusé par un meuble mais par
+ * DEUX, et la seconde paroi ne peut pas décider comme si la première était nue.
+ * Sans lui, une devanture de 3,60 m passait le contrôle sur un hall de 5,70 m -
+ * il restait 2,10 m, donc « assez » - alors qu'un distributeur lui faisait déjà
+ * face et que le passage réel tombait sous le mètre et demi.
  */
 function fitWall(
   wants: readonly Want[],
@@ -579,10 +608,25 @@ function fitWall(
   counter: Map<FixtureKind, number>,
   brand: GalleryBrand | undefined,
   pilasters: readonly InteriorRect[],
+  facing: readonly Fixture[],
 ): Fixture[] {
   const out: Fixture[] = [];
   let z = zone.z0 + ZONE_MARGIN;
   let zEnd = zone.z1 - ZONE_MARGIN;
+  /**
+   * Ce qui resterait de passage si l'on posait ce meuble-là, à cet endroit-là :
+   * la largeur de la zone, moins les deux retraits de faïence, moins le meuble,
+   * moins le plus profond de ceux d'en face qui le regardent.
+   */
+  const aisleLeft = (z0: number, len: number, depth: number): number => {
+    let opposite = 0;
+    for (const f of facing) {
+      if (f.rect.z0 < z0 + len && f.rect.z1 > z0) {
+        opposite = Math.max(opposite, f.rect.x1 - f.rect.x0);
+      }
+    }
+    return width - 2 * WALL_CLEAR - depth - opposite;
+  };
   /**
    * Repousse `z` au-delà du premier pilastre qu'un meuble chevauche.
    *
@@ -597,6 +641,27 @@ function fitWall(
     let at = start;
     for (const p of pilasters) {
       if (at < p.z1 + 0.12 && at + len > p.z0 - 0.12) at = p.z1 + 0.12;
+    }
+    return at;
+  };
+  /**
+   * Repousse `z` au-delà de ce qui, EN FACE, étranglerait le passage.
+   *
+   * Un meuble profond qui en trouve un autre profond en face ne disparaît pas :
+   * il se range plus loin, là où la paroi d'en face est nue. C'est ce que fait
+   * une gare - le guichet n'est pas en face de la boutique, il est après - et
+   * c'est ce qui permet à un hall de 6,70 m d'avoir les deux. Seul disparaît ce
+   * qui ne passe nulle part, parce que le hall est trop étroit pour lui.
+   */
+  const clearFacing = (start: number, len: number, depth: number): number => {
+    let at = start;
+    for (let pass = 0; pass < facing.length + 1; pass++) {
+      const blocker = facing.find(
+        (f) => f.rect.z0 < at + len && f.rect.z1 > at
+          && width - 2 * WALL_CLEAR - depth - (f.rect.x1 - f.rect.x0) < AISLE_MIN,
+      );
+      if (!blocker) break;
+      at = blocker.rect.z1 + FIXTURE_GAP;
     }
     return at;
   };
@@ -618,12 +683,12 @@ function fitWall(
   for (const want of wants) {
     if (!want.atEnd || crowd < (want.from ?? 0)) continue;
     const size = SIZES[want.kind];
-    if (width - size.depth < AISLE_MIN) continue;
     let start = zEnd - size.len;
     for (const p of pilasters) {
       if (start < p.z1 + 0.12 && start + size.len > p.z0 - 0.12) start = p.z0 - 0.12 - size.len;
     }
     if (start < z) continue;
+    if (aisleLeft(start, size.len, size.depth) < AISLE_MIN) continue;
     place(want.kind, start, size.len, size.depth);
     zEnd = start - FIXTURE_GAP;
   }
@@ -633,11 +698,16 @@ function fitWall(
     if (crowd < (want.from ?? 0)) continue;
     if (want.needsBrand && !brand) continue;
     const size = SIZES[want.kind];
-    // Le passage du milieu passe avant le meuble : ce qui l'étranglerait tombe.
-    if (width - size.depth < AISLE_MIN) continue;
+    // Le passage du milieu passe avant le meuble. Contre une paroi NUE d'en
+    // face, il ne reste déjà pas deux mètres : le hall est trop étroit pour
+    // cette famille-là, et aucun décalage n'y changera rien.
+    if (width - 2 * WALL_CLEAR - size.depth < AISLE_MIN) continue;
     for (let k = 0; k < (want.count ?? 1); k++) {
       z = clearPilaster(z, size.len);
+      z = clearFacing(z, size.len, size.depth);
+      z = clearPilaster(z, size.len);
       if (z + size.len > zEnd) break;
+      if (aisleLeft(z, size.len, size.depth) < AISLE_MIN) break;
       place(want.kind, z, size.len, size.depth);
       z += size.len + FIXTURE_GAP;
     }
@@ -696,8 +766,12 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
 
   const x0 = PSD_X + SIDE_INSET;
   const x1 = PSD_X + layout.depth - SIDE_INSET;
-  // Le hall commence là où le couloir de la trémie finit.
-  const z0 = accessZ + STAIR_LOWER_END;
+  // Le hall commence là où l'accès finit - au fond du couloir bas quand on
+  // descend, au sommet de la volée quand on monte. Les deux se mesurent depuis
+  // le même point, le NEZ de l'accès, à 2,60 m en amont de son centre : c'est
+  // la seule façon d'être sûr que le sol ne se coupe pas au raccord.
+  const under = place === 'under';
+  const z0 = accessZ - STAIR_HALF_Z + (under ? DESCENT_LEN : ASCENT_LEN);
   const gateZ = z0 + PAID_LEN;
   const freeZ0 = gateZ + GATE_DEPTH;
   const freeZ1 = freeZ0 + FREE_LEN;
@@ -730,12 +804,17 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
   // le mobilier se range ensuite dans ce qu'elle laisse.
   const nearPosts = pilastersFor(-1, x0, x1, z0, freeZ1, gate);
   const farPosts = pilastersFor(1, x0, x1, z0, freeZ1, gate);
-  const fixtures = [
-    ...fitWall(PAID_NEAR, -1, paid, crowd, width, counter, spec.brand, nearPosts),
-    ...fitWall(PAID_FAR, 1, paid, crowd, width, counter, spec.brand, farPosts),
-    ...fitWall(FREE_NEAR, -1, free, crowd, width, counter, spec.brand, nearPosts),
-    ...fitWall(FREE_FAR, 1, free, crowd, width, counter, spec.brand, farPosts),
-  ];
+  // L'ORDRE DES DEUX PAROIS EST UNE DÉCISION, pas une commodité d'écriture :
+  // la seconde rangée voit ce que la première a posé en face d'elle, donc c'est
+  // elle qui cède. On garnit d'abord le côté voie, celui des INDISPENSABLES -
+  // une gare sans 券売機 n'est pas une gare, alors qu'une gare sans boutique
+  // court la ligne -, et le fond ensuite, avec ses devantures. Ce qui ne trouve
+  // pas deux mètres de passage y renonce, ou se range plus loin.
+  const paidNear = fitWall(PAID_NEAR, -1, paid, crowd, width, counter, spec.brand, nearPosts, []);
+  const paidFar = fitWall(PAID_FAR, 1, paid, crowd, width, counter, spec.brand, farPosts, paidNear);
+  const freeNear = fitWall(FREE_NEAR, -1, free, crowd, width, counter, spec.brand, nearPosts, []);
+  const freeFar = fitWall(FREE_FAR, 1, free, crowd, width, counter, spec.brand, farPosts, freeNear);
+  const fixtures = [...paidNear, ...paidFar, ...freeNear, ...freeFar];
 
   // Les pilastres qu'une devanture enjambe sont retirés de la trame : ils sont
   // dans le mur de la boutique, pas dans le hall, et les laisser les ferait
@@ -753,11 +832,15 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
   ];
 
   return {
-    // Un hall sous les voies se dessine ; un hall dessus attend sa volée.
-    built: place === 'under',
+    // Les deux sens d'accès sont dessinés : le hall existe partout, sauf là où
+    // la gare en a déjà un qui lui est propre.
+    built: spec.bespoke !== true,
     place,
-    floorY: place === 'under' ? STAIR_LOWER_Y : OVER_FLOOR_Y,
-    ceilY: place === 'under' ? STAIR_LOWER_CEIL_Y : OVER_FLOOR_Y + 3.2,
+    floorY: under ? STAIR_LOWER_Y : OVER_FLOOR_Y,
+    // Sous les voies, le plafond est la sous-face de la dalle du quai et rien
+    // d'autre ne décide. Au-dessus, c'est un bâtiment : on lui donne la hauteur
+    // libre d'un hall de gare, deux mètres quatre-vingt-dix plus la retombée.
+    ceilY: under ? STAIR_LOWER_CEIL_Y : OVER_FLOOR_Y + 3.1,
     paid,
     gate,
     free,

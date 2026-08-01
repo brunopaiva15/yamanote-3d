@@ -586,13 +586,26 @@ sorties, elles, ne sont pas renommées : chaque bouche porte **le même panneau
 jaune que les potences du quai**, tiré du même relevé (`data/lines`) - une gare
 ne fléche pas 八重洲中央口 en haut des marches et autre chose en bas.
 
-**Six gares déclarent leur hall sans le construire.** Les cinq tranchées
-(Tabata, Komagome, Sugamo, Mejiro, Meguro) et Nippori ont leur billetterie
-**au-dessus** des voies, sur le bâtiment qui enjambe - c'est ce que montre le
-plan de Mejiro, et c'est l'inverse d'une gare de viaduc. La donnée le dit, la
-marche le supporte, mais la volée MONTANTE reste à dessiner : `built` le déclare
-faux plutôt que de laisser croire. Le découpage complet est dans
-`docs/STATION_INTERIOR.md`.
+**Cinq gares ont leur hall en haut.** Les tranchées - Tabata, Komagome, Sugamo,
+Mejiro, Meguro - ont leur billetterie **au-dessus** des voies, sur le bâtiment
+qui enjambe : c'est ce que montre le plan de Mejiro, et c'est l'inverse d'une
+gare de viaduc. Ce n'est pas la trémie avec un signe changé, c'est un autre
+ouvrage : la volée ne perce pas la dalle, elle se **pose** dessus - donc pas de
+joues qui coiffent un percement, pas de linteau -, sa **sous-face** est visible
+et c'est même la première chose qu'on en voit du quai, elle perce en revanche
+l'**auvent**, et elle monte cinq mètres en deux volées séparées d'un palier :
+vingt-neuf marches d'un trait n'existent dans aucune gare.
+
+Onze mètres de long, ce n'est pas l'emprise d'une trémie : poteaux, poutres,
+néons, diffuseurs et conduites la sautent comme ils sautent une gaine
+d'ascenseur, sans quoi une poutre transversale passait en travers des marches à
+mi-hauteur.
+
+**Nippori reste à part.** Ses deux ponts-concours SONT son niveau de
+correspondance - dessinés par sa charpente, sous-face à 5,10 m, la cote exacte
+d'un hall d'en haut. Y poser le hall générique reviendrait à bâtir deux fois la
+même chose, l'une dans l'autre : elle attend son traitement propre. Le
+découpage complet est dans `docs/STATION_INTERIOR.md`.
 
 ### Ce qu'il y a dans le hall
 
@@ -612,6 +625,28 @@ konbini, ni guichet, ni consigne : deux distributeurs, un banc, une poubelle de
 tri, un plan. Shinjuku a tout. Et la largeur tranche en dernier : un konbini
 fait 3,40 m de fond, et le moteur le refuse plutôt que d'étrangler à moins de
 deux mètres le passage du milieu.
+
+**Ce passage se mesure entre les DEUX parois, pas contre une seule.** La règle
+a longtemps été écrite comme si le mur d'en face était nu : on comparait la
+largeur du hall à la profondeur du meuble, chaque paroi de son côté. Elle
+passait, et pendant ce temps la galerie d'Akihabara et le guichet qui lui fait
+face laissaient huit centimètres entre eux — un mur de mobilier en travers du
+hall, qu'on ne voyait pas au rendu et sur lequel la marche butait. Trois
+conséquences, toutes vérifiables :
+
+- le guichet (みどりの窓口) se range désormais par le **fond** de la zone libre,
+  au bout des 券売機, là où il est en vrai — c'est le seul meuble profond de sa
+  paroi, donc le seul capable d'interdire une devanture en face de lui ;
+- une devanture qui trouve un meuble profond en face d'elle ne disparaît pas,
+  elle **se décale** le long du quai jusqu'où la paroi d'en face est nue ;
+- ce qui ne passe **nulle part** est refusé : à 5,70 m entre parois, un hall ne
+  peut pas mettre une boutique de 3,40 m en face d'un distributeur de titres, et
+  Akihabara, Takadanobaba, Harajuku et Meguro n'ont donc pas de commerce dans
+  leur hall générique. Elles sont, toutes les quatre, sur la liste des gares
+  qui se dessineront à part.
+
+Le test balaie le niveau tous les cinq centimètres et mesure le plus large
+passage **continu** entre les obstacles : c'est ce qui se traverse vraiment.
 
 **Un meuble se reconnaît à sa silhouette, pas à sa texture.** Une batterie de
 券売機 se lit à son bandeau vert continu et à ses écrans inclinés ; une consigne
@@ -2418,6 +2453,26 @@ que chaque texte a son MP3, que chaque MP3 est là, et qu'aucun ne traîne sans
 être réclamé. Retoucher un mot d'annonce sans regraver fait désormais échouer
 la suite de tests - pas le rendu sonore, trois semaines plus tard, dans une
 gare qu'on ne visitait plus.
+
+**Quinze gares attendent leur regravure.** Le relevé de janvier 2026 a corrigé
+le côté d'ouverture de quinze gares (voir *Les gares*), et une annonce d'arrivée
+DIT ce côté : 「お出口は。左側です。」. Le texte a donc changé, la clé de clip
+avec lui, et comme le repli a été supprimé, **ces quinze gares sont muettes**
+tant que les MP3 ne sont pas regravés - 128 clips, arrivée et approche, japonais
+et anglais, à bord et au quai. Tokyo, Akihabara, Okachimachi, Uguisudani,
+Nishi-Nippori, Tabata, Komagome, Ikebukuro, Mejiro, Shin-Ōkubo, Shinjuku,
+Ebisu, Gotanda, Tamachi et Shimbashi.
+
+C'est exactement le cas que `tests/announcementClips` est là pour attraper, et
+il l'a attrapé. La regravure est incrémentale :
+
+```bash
+python scripts/announcements-gen.py textes.json kokoro-v1.0.onnx \
+    voices-v1.0.bin public/audio/announcements src/data/pa-manifest.ts --reuse
+```
+
+`--reuse` ne synthétise que les clips absents et supprime au passage ceux que
+plus personne ne réclame : les 200 annonces déjà en place ne dérivent pas.
 
 Le numéro de voie annoncé est le vrai (`data/platforms`), y compris les voies
 secondaires d'Ikebukuro et d'Ōsaki. Les clips ne sont gravés que pour le sens

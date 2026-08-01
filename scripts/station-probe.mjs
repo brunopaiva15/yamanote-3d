@@ -42,6 +42,13 @@ await page.evaluate((p) => { globalThis.__probePhase = p; }, phase);
 // Paires dont l'interpénétration est VOULUE : une affiche est collée sur son
 // caisson, un coffret vissé sur son poteau, un vantail coulisse dans son muret.
 const IGNORE = [
+  // Une volée MONTANTE traverse la dalle du quai à son pied - elle y prend
+  // appui - et l'auvent à mi-hauteur, par un percement. Ni l'un ni l'autre ne
+  // se voit ici : la dalle et l'auvent sont chacun UN SEUL maillage extrudé, et
+  // une boîte englobante ne sait pas exprimer un trou. Les deux paires sont
+  // donc structurellement indétectables, pas tolérées par lassitude.
+  'gare/dalle ✕ gare/volée-montante',
+  'gare/auvent ✕ gare/volée-montante',
   // Un socle est un COLLIER : il enveloppe le pied du poteau, donc il le
   // traverse par construction. Le déclarer ici plutôt que de le rétrécir
   // jusqu'à ne plus rien envelopper.

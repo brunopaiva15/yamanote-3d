@@ -13,7 +13,7 @@
 import { paxList } from './passengers';
 import { crowdList } from './platformCrowd';
 import { carToWorldZ, platformToWorld, PLATFORM_TOP } from './playerFrame';
-import { runtime } from './runtime';
+import { onPlatformDeck, runtime } from './runtime';
 
 /** Population d'origine du voyageur visé. */
 export type PaxScope = 'car' | 'platform';
@@ -75,7 +75,11 @@ const candidates: Candidate[] = [];
 function collectCandidates(): void {
   candidates.length = 0;
   const aboard = runtime.playerFrame === 'car';
-  if (!aboard) {
+  // Descendu dans le hall, la foule du quai est hors d'atteinte : elle est de
+  // l'autre côté d'une dalle. Le fichier écartait déjà « un voyageur dans une
+  // trémie, à moitié sous la dalle » ; il manquait le cas symétrique, celui du
+  // joueur passé dessous.
+  if (!aboard && onPlatformDeck()) {
     for (const p of crowdList) {
       if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') continue;
       // Un voyageur dans une trémie est à moitié sous la dalle : hors de portée.
@@ -199,7 +203,10 @@ export function findNearbyPaxList(range: number, max = 8): PaxTarget[] {
 export function paxAnchor(scope: PaxScope, id: number): PaxTarget | null {
   // Même règle que la visée : on ne parle pas à travers la caisse.
   if (scope === 'car' && runtime.playerFrame !== 'car') return null;
-  if (scope === 'platform' && runtime.playerFrame !== 'platform') return null;
+  // Descendu dans le hall, on ne parle plus à ceux qui attendent là-haut :
+  // c'est la même règle que « on ne parle pas à travers la caisse », appliquée
+  // à l'autre paroi.
+  if (scope === 'platform' && !onPlatformDeck()) return null;
   if (scope === 'car') {
     const p = paxList[id];
     if (!p || (p.state !== 'seated' && p.state !== 'standing')) return null;

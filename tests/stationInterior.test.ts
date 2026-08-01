@@ -9,11 +9,14 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { interiorFor } from '../src/data/stationInterior.ts';
+import { interiorFor, type InteriorRect } from '../src/data/stationInterior.ts';
 import { layoutFor } from '../src/data/stationLayouts.ts';
 import {
+  ASCENT_FLOOR_Y,
+  ASCENT_LEN,
+  DESCENT_LEN,
   PSD_X,
-  STAIR_LOWER_END,
+  STAIR_HALF_Z,
   STAIR_LOWER_Y,
   STAIR_WALK_HALF_X,
 } from '../src/data/stationGeometry.ts';
@@ -38,12 +41,20 @@ test('les trente gares déclarent un niveau de correspondance', () => {
   }
 });
 
-test('le hall se raccorde au couloir de la trémie, sans marche ni décrochement', () => {
+test('le hall se raccorde à son accès, sans marche ni décrochement', () => {
+  // Les deux sens se mesurent depuis le même point - le NEZ de l'accès, à
+  // 2,60 m en amont de son centre - et le hall commence exactement là où
+  // l'accès finit. C'est ce raccord qui garantit qu'on ne tombe pas dans un
+  // trou de sol au dernier pas.
+  const nose = ACCESS_Z - STAIR_HALF_Z;
   for (const { name, interior } of ALL) {
-    if (!interior.built) continue;
-    // Le couloir bas finit là, exactement, et à la même altitude.
-    assert.equal(interior.paid.z0, ACCESS_Z + STAIR_LOWER_END, name);
-    assert.equal(interior.floorY, STAIR_LOWER_Y, name);
+    if (interior.place === 'under') {
+      assert.equal(interior.paid.z0, nose + DESCENT_LEN, name);
+      assert.equal(interior.floorY, STAIR_LOWER_Y, name);
+    } else {
+      assert.equal(interior.paid.z0, nose + ASCENT_LEN, name);
+      assert.equal(interior.floorY, ASCENT_FLOOR_Y, name);
+    }
   }
 });
 
@@ -141,10 +152,15 @@ test('deux bouches de sortie gardent leur trumeau, et leur retour de paroi', () 
   }
 });
 
-test('un hall n’est construit que du côté où l’accès est dessiné', () => {
-  // Les gares dont le hall est AU-DESSUS du quai attendent leur volée montante :
-  // elles déclarent le niveau, elles ne le construisent pas. Le jour où la
-  // volée existera, c'est cette liste qui bougera - et rien d'autre.
+test('les halls sont construits des deux côtés du quai, sauf Nippori', () => {
+  // Six gares ont leur billetterie AU-DESSUS des voies : les cinq tranchées, et
+  // Nippori que ses deux ponts-concours enjambent. Elles ont longtemps déclaré
+  // leur niveau sans le construire, faute de volée montante ; elle existe.
+  //
+  // Nippori reste à part, et pour une raison précise : ses ponts-concours SONT
+  // son niveau de correspondance, dessinés par sa charpente, sous-face à
+  // 5,10 m - la cote exacte d'un hall d'en haut. Y poser le hall générique
+  // reviendrait à bâtir deux fois la même chose, l'une dans l'autre.
   const over = ALL.filter((s) => s.interior.place === 'over').map((s) => s.name);
   assert.deepEqual(over, [
     'JY07 Nippori',
@@ -154,8 +170,14 @@ test('un hall n’est construit que du côté où l’accès est dessiné', () =
     'JY14 Mejiro',
     'JY22 Meguro',
   ]);
+  const unbuilt = ALL.filter((s) => !s.interior.built).map((s) => s.name);
+  assert.deepEqual(unbuilt, ['JY07 Nippori']);
   for (const { name, interior } of ALL) {
-    assert.equal(interior.built, interior.place === 'under', name);
+    if (!interior.built) continue;
+    // Un hall d'en haut passe au-dessus du gabarit de la rame ; un hall d'en
+    // bas passe sous la dalle. Aucun des deux ne traverse le quai.
+    if (interior.place === 'over') assert.ok(interior.floorY > 4.5, name);
+    else assert.ok(interior.ceilY < 0, name);
   }
 });
 
@@ -196,18 +218,33 @@ test('le mobilier tient contre ses parois, sans se chevaucher', () => {
 test('le passage du milieu ne se referme jamais', () => {
   // C'est la contrainte qui refuse un meuble sans discuter : un hall où l'on ne
   // passe plus n'est pas meublé, il est bouché.
+  //
+  // Et la question ne se pose PAS paroi par paroi. Ce test a longtemps comparé
+  // la largeur du hall au plus profond des meubles, chaque paroi de son côté ;
+  // il passait, et pendant ce temps le guichet d'Akihabara et sa galerie se
+  // faisaient face à huit centimètres près - un mur de mobilier en travers du
+  // hall, que la marche cognait et que le rendu ne montrait pas. On balaie donc
+  // le niveau le long de z et l'on mesure ce qui se traverse VRAIMENT : le plus
+  // large passage continu entre les obstacles, à cette abscisse-là.
+  const widest = (zone: InteriorRect, obs: readonly InteriorRect[], z: number): number => {
+    const cut = obs.filter((o) => z >= o.z0 && z <= o.z1).sort((a, b) => a.x0 - b.x0);
+    let best = 0;
+    let at = zone.x0;
+    for (const o of cut) {
+      if (o.x0 > at) best = Math.max(best, o.x0 - at);
+      at = Math.max(at, o.x1);
+    }
+    return Math.max(best, zone.x1 - at);
+  };
   for (const { name, interior } of ALL) {
     for (const zone of [interior.paid, interior.free]) {
-      const inZone = (f: (typeof interior.fixtures)[number]) =>
-        f.rect.z0 >= zone.z0 - 1e-9 && f.rect.z1 <= zone.z1 + 1e-9;
-      const near = interior.fixtures.filter((f) => inZone(f) && f.facing === 1);
-      const far = interior.fixtures.filter((f) => inZone(f) && f.facing === -1);
-      const deepNear = Math.max(0, ...near.map((f) => f.rect.x1 - f.rect.x0));
-      const deepFar = Math.max(0, ...far.map((f) => f.rect.x1 - f.rect.x0));
-      const width = zone.x1 - zone.x0;
-      // Les deux parois ne s'additionnent que là où deux meubles se font
-      // réellement face ; la borne large tient dans tous les cas.
-      assert.ok(width - Math.max(deepNear, deepFar) >= 2 - 1e-9, `${name} : passage étranglé`);
+      for (let z = zone.z0 + 0.05; z <= zone.z1 - 0.05; z += 0.05) {
+        const w = widest(zone, interior.obstacles, z);
+        assert.ok(
+          w >= 2 - 1e-9,
+          `${name} : passage étranglé à ${w.toFixed(2)} m en z=${z.toFixed(2)}`,
+        );
+      }
     }
   }
 });
@@ -284,11 +321,18 @@ test('une galerie ne se pose que là où la gare en déclare une', () => {
     if (!interior.brand) assert.ok(!has, `${name} : galerie sans enseigne`);
   }
   // Et là où elle est déclarée, elle se pose - sauf si le hall est trop étroit
-  // pour ses 3,60 m de fond. Tabata est la seule dans ce cas, et c'est la règle
-  // du passage libre qui tranche, pas un oubli.
+  // pour ses 3,60 m de fond, et ils sont trois dans ce cas. C'est la règle du
+  // passage libre qui tranche, pas un oubli : 5,70 m de hall moins 3,60 m de
+  // devanture moins les deux retraits de faïence, il reste 1,98 m, et il en
+  // faut deux. Deux centimètres, mais dans le bon sens - le hall qui garde sa
+  // galerie est celui qu'on ne traverse plus.
   const missing = declared.filter((s) => !s.interior.fixtures.some((f) => f.kind === 'gallery'));
-  assert.deepEqual(missing.map((s) => s.name), ['JY09 Tabata']);
+  assert.deepEqual(missing.map((s) => s.name), [
+    'JY03 Akihabara',
+    'JY09 Tabata',
+    'JY22 Meguro',
+  ]);
   for (const s of missing) {
-    assert.ok(s.interior.paid.x1 - s.interior.paid.x0 - 3.6 < 2, `${s.name} : place de reste`);
+    assert.ok(s.interior.paid.x1 - s.interior.paid.x0 - 3.6 - 0.12 < 2, `${s.name} : place de reste`);
   }
 });

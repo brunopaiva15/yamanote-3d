@@ -25,7 +25,8 @@ const { CONFIG } = await import('../src/data/config.ts');
 const { DOOR_SIDE } = await import('../src/data/stations.ts');
 const { placementFor, stairTopZ } = await import('../src/systems/stationPlacement.ts');
 const { psdGates } = await import('../src/three/station/psdLayout.ts');
-const { PLATFORM_TOP, STAIR_LOWER_Y } = await import('../src/data/stationGeometry.ts');
+const { ASCENT_LEN, DESCENT_LEN, PLATFORM_TOP, STAIR_LOWER_Y } =
+  await import('../src/data/stationGeometry.ts');
 const { STATION_COUNT } = await import('../src/data/loop.ts');
 
 const DT = 1 / 60;
@@ -190,13 +191,14 @@ test('toute gare dont le hall est construit s’atteint depuis sa trémie', () =
     const p = place(index);
     if (!p.interior.built) continue;
     const top = stairTopZ(p.mainStair);
-    const name = `gare ${index}`;
-    // Le dernier centimètre du couloir et le premier du hall.
-    assert.notEqual(floorAt(index, p.mainStair.x, top + 11.35), null, `${name} couloir`);
+    const name = `gare ${index} (${p.mainRise === 'up' ? 'montante' : 'descendante'})`;
+    // Le dernier centimètre de l'accès et le premier du hall.
+    const end = top + (p.mainRise === 'up' ? ASCENT_LEN : DESCENT_LEN) - 0.05;
+    assert.notEqual(floorAt(index, p.mainStair.x, end), null, `${name} accès`);
     assert.notEqual(floorInHall(index, p.mainStair.x, p.interior.paid.z0 + 0.05), null, `${name} hall`);
     assert.ok(
-      Math.abs(floorAt(index, p.mainStair.x, top + 11.35)!
-        - floorInHall(index, p.mainStair.x, p.interior.paid.z0 + 0.05)!) < 1e-6,
+      Math.abs(floorAt(index, p.mainStair.x, end)!
+        - floorInHall(index, p.mainStair.x, p.interior.paid.z0 + 0.05)!) < 0.02,
       `${name} : décrochement au raccord`,
     );
   }

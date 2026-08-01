@@ -33,6 +33,7 @@ import { platformDetail } from '../../systems/perf';
 import { BOARDABLE_GATES } from '../../systems/wrongDoor';
 import { layoutFor, type StationLayout } from '../../data/stationLayouts';
 import {
+  ASCENT_LEN,
   GAUGE_HALF,
   OPP_DEPTH,
   PLATFORM_TOP,
@@ -43,6 +44,8 @@ import {
   PSD_LEAF_W,
   PSD_X,
   SLAB_H,
+  STAIR_HALF_X,
+  STAIR_HALF_Z,
   STAIR_OPENING_HALF_X,
   STAIR_OPENING_Z0,
   STAIR_OPENING_Z1,
@@ -59,6 +62,7 @@ import { PlatformSignage } from './PlatformSignage';
 import { VendingMachines } from './VendingMachines';
 import { Signature } from './signatures';
 import { Stairwells } from './Stairwell';
+import { Overbridge } from './Overbridge';
 import { Concourse } from './Concourse';
 import { Kiosk } from './Kiosk';
 import { psdLayout } from './psdLayout';
@@ -129,6 +133,62 @@ export function Station() {
 
   const m = useMemo(() => makeStationMaterials(layout.palette, textures), [layout.palette, textures]);
 
+  /**
+   * Les trémies qui DESCENDENT réellement.
+   *
+   * Là où l'accès principal monte, son emprise reste dans `place.stairs` - la
+   * marche et le mobilier la contournent - mais il n'y a ni percement, ni
+   * couloir bas, ni fléchage de fond de cage à dessiner : il n'y a pas de cage.
+   */
+  const descending = useMemo(
+    () => (place.mainRise === 'up'
+      ? { ...place, stairs: place.stairs.filter((s) => s !== place.mainStair) }
+      : place),
+    [place],
+  );
+
+
+  /**
+   * Auvent, percé au droit d'une volée montante.
+   *
+   * Une boîte ne peut pas avoir de trou, et c'est le même problème que la dalle
+   * du quai : on extrude un contour à trous. Sans percement, la volée traversait
+   * l'auvent de part en part - trois marches dedans, la main courante ressortant
+   * au-dessus - dans les six gares dont le hall est en haut.
+   */
+  const canopyGeo = useMemo(() => {
+    const half = layout.length / 2;
+    const x0 = PSD_X - 0.2;
+    const x1 = PSD_X + depth + 0.2;
+    const shape = new THREE.Shape();
+    shape.moveTo(x0, -half);
+    shape.lineTo(x1, -half);
+    shape.lineTo(x1, half);
+    shape.lineTo(x0, half);
+    shape.closePath();
+    if (place.mainRise === 'up') {
+      const s = place.mainStair;
+      // La trémie plus une marge : ce qui passe au travers, ce sont les joues
+      // et les mains courantes, plus larges que la volée elle-même.
+      const ix = STAIR_HALF_X + 0.25;
+      const hole = new THREE.Path();
+      hole.moveTo(s.x - ix, s.z - STAIR_HALF_Z - 0.3);
+      hole.lineTo(s.x - ix, s.z - STAIR_HALF_Z + ASCENT_LEN + 0.4);
+      hole.lineTo(s.x + ix, s.z - STAIR_HALF_Z + ASCENT_LEN + 0.4);
+      hole.lineTo(s.x + ix, s.z - STAIR_HALF_Z - 0.3);
+      hole.closePath();
+      shape.holes.push(hole);
+    }
+    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.14, bevelEnabled: false });
+    // Le plan de tracé se couche, et l'extrusion descend depuis l'origine - la
+    // même mécanique que la dalle du quai. La dalle d'auvent doit donc être
+    // posée par son DESSUS, sinon elle tombe de son épaisseur et vient buter
+    // dans tout ce qui pend à sa sous-face : poutres, néons, caméras, miroirs,
+    // diffuseurs, potences.
+    g.rotateX(Math.PI / 2);
+    g.translate(0, 0.14, 0);
+    return g;
+  }, [layout.length, depth, place.mainRise, place.mainStair]);
 
   // --- Dalle percée au droit des trémies -------------------------------
   // Une boîte ne peut pas avoir de trou : la dalle est extrudée depuis un
@@ -145,6 +205,10 @@ export function Station() {
     shape.lineTo(x0, half);
     shape.closePath();
     for (const s of place.stairs) {
+      // Une volée MONTANTE ne perce rien : elle se pose sur la dalle. Son
+      // emprise reste dans `stairs` - la marche et le mobilier la contournent
+      // toujours -, mais il n'y a pas de trou à ménager dessous.
+      if (place.mainRise === 'up' && s === place.mainStair) continue;
       // Le percement vient tel quel du gabarit de la trémie : le premier giron
       // est la dalle elle-même, l'ouverture ne commence donc qu'au nez de la
       // première contremarche, et ses quatre chants sont coiffés par les joues,
@@ -172,7 +236,7 @@ export function Station() {
     }
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     return g;
-  }, [layout.length, depth, place.stairs]);
+  }, [layout.length, depth, place.stairs, place.mainRise, place.mainStair]);
 
   // Les matériaux, textures et géométries d'une gare quittée ne resservent pas.
   useLayoutEffect(() => {
@@ -484,9 +548,7 @@ export function Station() {
           trame de poutres et de néons reste - c'est à elle que pend toute la
           signalétique. */}
       {!sigRoof && (
-        <mesh name="auvent" position={[PSD_X + depth / 2, canopyY + 0.07, 0]} material={m.canopy} receiveShadow>
-          <boxGeometry args={[depth + 0.4, 0.14, layout.length]} />
-        </mesh>
+        <mesh name="auvent" position={[0, canopyY, 0]} geometry={canopyGeo} material={m.canopy} receiveShadow />
       )}
       <instancedMesh name="poutre" ref={beamRef} args={[undefined, undefined, Math.max(1, beams.length)]} material={m.beam}>
         <boxGeometry args={[1, 1, 1]} />
@@ -531,8 +593,10 @@ export function Station() {
       <VendingMachines place={place} station={index} detail={detail} m={m} />
 
       {/* Trémies d'escalier : la dalle est percée, donc elles font partie de la
-          structure - jamais retirées par un palier de qualité. */}
-      <Stairwells place={place} m={m} station={index} detail={detail} />
+          structure - jamais retirées par un palier de qualité. La volée
+          MONTANTE, elle, n'est pas une trémie : elle se dessine à part. */}
+      <Stairwells place={descending} m={m} station={index} detail={detail} />
+      {place.mainRise === 'up' && <Overbridge s={place.mainStair} m={m} />}
 
       {/* Le niveau de correspondance, au bout du couloir de la trémie
           principale. Il n'existe que là où l'on peut y aller : une gare dont le
