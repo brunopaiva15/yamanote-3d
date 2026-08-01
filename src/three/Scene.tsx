@@ -40,28 +40,23 @@ const LAMP_POSITIONS: [number, number, number][] = [
 // goulot sur les écrans haute densité). En dessous, densité native (cap 2,
 // comme le dpr initial du Canvas). Palier 5 (Très basse) : rendu sous la
 // résolution de l'écran.
-function AdaptiveDpr({ level, webgpu }: { level: PerfLevel; webgpu: boolean }): null {
+function AdaptiveDpr({ level }: { level: PerfLevel }): null {
   const setDpr = useThree((s) => s.setDpr);
   useEffect(() => {
     const native = Math.min(window.devicePixelRatio || 1, 2);
-    // Mode Extraordinaire : plafond à 1,5 malgré le palier 0.
+    // Le mode Extraordinaire rend à la densité NATIVE, comme Ultra.
     //
-    // Ce n'est pas un renoncement, c'est l'arbitrage juste. SSGI, SSR et bokeh
-    // sont tous des effets à la RÉSOLUTION : passer de 1,5 à 2 sur un écran
-    // dense multiplie leur coût par 1,8 pour un gain de netteté que le bokeh
-    // et le débruiteur mangent aussitôt. Le budget est mieux placé dans les
-    // rebonds de lumière que dans des pixels qu'on va flouter.
-    const cap = webgpu
-      ? 1.5
-      : level >= 5
-        ? 0.75
-        : level >= 4
-          ? 1
-          : level >= 3
-            ? 1.25
-            : native;
+    // Il a d'abord été plafonné à 1,5, au motif que SSGI, SSR et bokeh sont
+    // des effets à la résolution et qu'on rendrait mieux le budget en rebonds
+    // de lumière qu'en pixels. C'était une erreur d'arbitrage : sur un écran
+    // dense, un quart de pixels en moins par axe se voit immédiatement et sur
+    // TOUTE l'image, quand les rebonds ne se voient que là où il y en a. Un
+    // mode qu'on choisit pour sa beauté ne doit pas commencer par être moins
+    // net que celui qu'on quitte.
+    const cap =
+      level >= 5 ? 0.75 : level >= 4 ? 1 : level >= 3 ? 1.25 : native;
     setDpr(Math.min(native, cap));
-  }, [level, webgpu, setDpr]);
+  }, [level, setDpr]);
   return null;
 }
 
@@ -108,11 +103,13 @@ const FOCUS_IDLE_PLATFORM = 11;
 /** Portée de la recherche du visage regardé : au-delà, on ne le fixe plus. */
 const FOCUS_RANGE = 7.5;
 /**
- * Taille du bokeh. Assez pour qu'un visage se détache de la ville qui défile,
- * pas assez pour que lire une affiche demande un effort - la profondeur de
- * champ est là pour DIRIGER le regard, pas pour l'empêcher.
+ * Taille du bokeh, en pixels de rayon à flou maximal.
+ *
+ * La profondeur de champ est là pour DÉTACHER le fond, pas pour empêcher de
+ * lire une affiche. Avec la rampe large que `setFocus` impose désormais, rien
+ * de ce qui est dans le wagon n'atteint ce rayon-là.
  */
-const BOKEH = 1.8;
+const BOKEH = 1.1;
 /** Vitesse d'accommodation (1/s) : l'œil met un tiers de seconde, pas zéro. */
 const FOCUS_EASE = 4.5;
 
@@ -497,7 +494,7 @@ export function Scene() {
     <>
       <color attach="background" args={['#bcdaee']} />
       <fog attach="fog" args={['#d6e8f2', 30, 220]} />
-      <AdaptiveDpr level={perfLevel} webgpu={webgpu} />
+      <AdaptiveDpr level={perfLevel} />
       <EnvironmentMap />
       <ShadowFlags />
       <DayNightLighting level={perfLevel} />

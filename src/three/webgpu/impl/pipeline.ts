@@ -132,17 +132,30 @@ export function makePipeline(
     // reprojection temporelle y laisse des traînées sur tout ce qui défile.
     // On paie donc l'échantillonnage comptant, et on débruite spatialement.
     gi.useTemporalFiltering = false;
-    gi.sliceCount.value = 2;
-    gi.stepCount.value = 8;
+    // Sans filtrage temporel, la documentation de SSGINode demande DEUX fois
+    // plus d'échantillons - c'est le prix du refus des traînées. Le premier
+    // jet tournait à 2×8, la moitié de ce qu'il faut : le résultat était un
+    // poivre et sel fixe sur toutes les surfaces lisses.
+    gi.sliceCount.value = 3;
+    gi.stepCount.value = 12;
     // Six mètres : la largeur du wagon. Au-delà, l'indirect qu'on récolterait
     // vient de l'autre bout de la voiture et n'a plus de rapport physique
     // avec le point qu'on éclaire.
     gi.radius.value = 6;
-    gi.giIntensity.value = 5.5;
-    gi.aoIntensity.value = 1.1;
+    // L'indirect s'AJOUTE au direct. À 5,5, il ajoutait plus de lumière que
+    // les néons n'en donnent, et un wagon déjà clair virait au blanc laiteux.
+    // À 2, il se voit là où il doit se voir - sous les banquettes, dans
+    // l'angle du plafond, sur la cloison en face d'une fenêtre - sans
+    // relever le fond.
+    gi.giIntensity.value = 2;
+    gi.aoIntensity.value = 1;
     gi.thickness.value = 0.5;
 
-    const ao = gi.getAONode();
+    // Les DEUX sorties sont débruitées, et pas seulement l'indirect.
+    // L'occlusion sort d'un tampon huit bits sur un seul canal ; brute, elle
+    // multipliait toute l'image par un tirage par pixel, et c'est ce grain-là
+    // qu'on voyait partout.
+    const ao = asV4(denoise(gi.getAONode(), depth, asNormal(normalTex), camera));
     const bounce = asV4(denoise(gi.getGINode(), depth, asNormal(normalTex), camera));
     lit = vec4(beauty.rgb.mul(ao.r).add(bounce.rgb), beauty.a);
   }
@@ -165,7 +178,21 @@ export function makePipeline(
     refl.maxDistance.value = 14;
     refl.thickness.value = 0.12;
     refl.quality.value = 0.5;
-    refl.intensity.value = 0.85;
+    // Et surtout : DISCRÈTE.
+    //
+    // Le nœud pondère la réflexion d'un diélectrique par un coefficient de
+    // Fresnel approché qui tend vers 1 en incidence rasante - c'est-à-dire
+    // presque partout dans un couloir de deux mètres soixante. À 0,85, chaque
+    // siège, chaque cloison et chaque visage recevait donc une copie floue de
+    // la scène par-dessus lui : l'image entière prenait un voile laiteux et
+    // perdait son piqué, ce qu'on lisait comme « tout est flou » alors que
+    // rien n'était réellement défocalisé.
+    //
+    // Un diélectrique renvoie quatre pour cent en incidence normale. 0,22 est
+    // le compromis : le sol vernis, la vitre et la chaussée mouillée renvoient
+    // encore, l'inox des barres aussi, et le tissu des banquettes redevient du
+    // tissu.
+    refl.intensity.value = 0.22;
     lit = vec4(lit.rgb.add(asV4(refl).rgb), lit.a);
   }
 
@@ -174,8 +201,8 @@ export function makePipeline(
   // au-delà de laquelle un objet est complètement flou. Les deux sont pilotées
   // par la scène : l'œil accommode sur ce qu'il regarde.
   const uFocus = uniform(4.5);
-  const uFocalLength = uniform(6);
-  const uBokeh = uniform(2.4);
+  const uFocalLength = uniform(9);
+  const uBokeh = uniform(1.1);
 
   if (options.dof) {
     lit = asV4(dof(lit, scenePass.getViewZNode(), uFocus, uFocalLength, uBokeh));
@@ -198,6 +225,9 @@ export function makePipeline(
     .add(uint(screenCoordinate.y).mul(4093))
     .add(uint(frameId).mul(9973));
   const grain = hash(seed).sub(0.5);
+  // Trois pour cent, et non cinq : l'image sort déjà d'un échantillonnage
+  // stochastique. Deux grains superposés ne font pas de la pellicule, ils font
+  // du bruit.
 
   // Vignetage : la même formule que l'effet du chemin WebGL (offset 0,32,
   // obscurité 0,42), pour que les deux modes cadrent pareil.
@@ -216,7 +246,7 @@ export function makePipeline(
   ).oneMinus();
 
   const finalNode = vec4(
-    graded.rgb.mul(float(1).add(grain.mul(0.05))).mul(vignette),
+    graded.rgb.mul(float(1).add(grain.mul(0.03))).mul(vignette),
     graded.a,
   );
 
@@ -234,10 +264,18 @@ export function makePipeline(
     },
     setFocus(distance: number, aperture: number) {
       uFocus.value = distance;
-      // Une mise au point rapprochée a une profondeur de champ plus courte :
-      // c'est de l'optique, pas un réglage d'humeur. À 1,5 m le plan net fait
-      // une soixantaine de centimètres, à 20 m il en fait douze.
-      uFocalLength.value = Math.max(0.9, distance * 0.62);
+      // La profondeur de champ se resserre en mise au point rapprochée : c'est
+      // de l'optique. Mais `focalLength` est la distance au-delà de laquelle
+      // un objet est COMPLÈTEMENT flou, et le premier jet la calait à
+      // 0,62 × la distance : le regard se posait sur un visage à un mètre
+      // cinquante, la rampe faisait quatre-vingt-dix centimètres, et tout le
+      // reste de la voiture - à deux mètres comme à quatorze - était rendu au
+      // maximum de flou. On ne voyait plus rien.
+      //
+      // Le plancher de six mètres change tout : à l'intérieur du wagon, plus
+      // rien n'atteint jamais le flou maximal. Ce qui se dénoue, c'est la
+      // ville derrière la vitre - ce qu'on demande à une profondeur de champ.
+      uFocalLength.value = Math.max(6, distance * 1.8);
       uBokeh.value = aperture;
     },
     dispose() {
