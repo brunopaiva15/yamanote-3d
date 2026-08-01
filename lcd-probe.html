@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- Page de probe DEV : rend les vues de l'écran de ligne (dalle droite des
+     doubles écrans au-dessus des portes) hors du monde 3D, à leur résolution
+     native de 768 × 432, pour les comparer au pixel avec des captures de
+     l'afficheur réel.
+
+     /lcd-probe.html?station=0&phase=dwell     (東京, à quai)
+     /lcd-probe.html?station=1&phase=cruise    (つぎは 神田)
+
+     Chaque vue est empilée sous son titre ; scripts/lcd-shots.mjs les capture
+     une à une. -->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>lcd-probe - écrans de ligne à l'échelle</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #14171c;
+        color: #cfd6df;
+        font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      figure {
+        margin: 0 0 20px;
+      }
+      figcaption {
+        padding: 4px 0;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="out"></div>
+    <script type="module">
+      import { makeScreen, drawRoute, drawLoopMap, drawTransfers } from '/src/three/lineScreen.ts';
+
+      const q = new URLSearchParams(location.search);
+      const station = Number(q.get('station') ?? 0);
+      const phase = q.get('phase') ?? 'dwell';
+      const clock = q.get('clock') ?? '0:00';
+      const dir = q.get('dir') === 'outer' ? 'outer' : 'inner';
+      const countdown = Number(q.get('countdown') ?? 0);
+      const status = phase === 'dwell' ? 'now' : phase === 'brake' ? 'soon' : 'next';
+
+      const views = [
+        ['zoomJP', (s) => drawRoute(s, station, phase, countdown, clock, status, 'jp', dir)],
+        ['zoomEN', (s) => drawRoute(s, station, phase, countdown, clock, status, 'en', dir)],
+        ['loopJP', (s) => drawLoopMap(s, station, phase, countdown, clock, status, 'jp', dir)],
+        ['loopEN', (s) => drawLoopMap(s, station, phase, countdown, clock, status, 'en', dir)],
+        ['transfers', (s) => drawTransfers(s, station, clock, dir)],
+      ];
+
+      const out = document.getElementById('out');
+      for (const [name, draw] of views) {
+        const s = makeScreen(768, 432);
+        draw(s);
+        const fig = document.createElement('figure');
+        const cap = document.createElement('figcaption');
+        cap.textContent = name;
+        fig.append(cap, s.g.canvas);
+        s.g.canvas.dataset.view = name;
+        out.append(fig);
+      }
+    </script>
+  </body>
+</html>
