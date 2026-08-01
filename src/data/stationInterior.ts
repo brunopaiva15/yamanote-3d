@@ -34,6 +34,7 @@
 // MONTANTE reste à dessiner (voir docs/STATION_INTERIOR, phase 5), et `built`
 // le dit sans mentir.
 
+import { konbiniPlan } from './konbiniPlan.ts';
 import { layoutFor } from './stationLayouts.ts';
 import { stationExits } from './lines.ts';
 import {
@@ -333,6 +334,36 @@ const SPECS: readonly Spec[] = [
  * faire un obstacle rétrécirait le hall pour rien.
  */
 const FLUSH = new Set<FixtureKind>(['map', 'extinguisher', 'aed', 'notice']);
+
+/**
+ * Ce qu'un meuble oppose RÉELLEMENT à la marche.
+ *
+ * Pour tout le mobilier, c'est son emprise, et il n'y a rien à ajouter : un
+ * distributeur de titres se contourne, une consigne aussi. Le konbini fait
+ * exception depuis qu'on y entre : sa devanture est percée d'une baie, et
+ * l'intérieur est du sol comme un autre. Ce qui barre chez lui, ce sont ses
+ * parois - la devanture EN DEUX MORCEAUX, un de chaque côté de l'entrée - et
+ * ses meubles, décrits une seule fois dans `data/konbiniPlan` et lus aussi bien
+ * ici que par le rendu.
+ *
+ * Le rabattement du repère de la boutique dans celui du quai tient en quatre
+ * lignes, et elles sont l'exact inverse du quart de tour que le rendu applique
+ * à son groupe (`three/station/Fixtures`, `yaw`) : une façade qui regarde vers
+ * +x tourne son x local vers -z, et l'autre vers +z. Se tromper de sens ne se
+ * verrait pas au rendu - il est symétrique - mais mettrait la porte du côté du
+ * mur.
+ */
+function interiorSolids(f: Fixture): InteriorRect[] {
+  if (f.kind !== 'konbini') return [f.rect];
+  const cx = (f.rect.x0 + f.rect.x1) / 2;
+  const cz = (f.rect.z0 + f.rect.z1) / 2;
+  const plan = konbiniPlan(f.rect.z1 - f.rect.z0, f.rect.x1 - f.rect.x0);
+  return plan.solids.map((s) =>
+    f.facing === 1
+      ? { x0: cx + s.z0, x1: cx + s.z1, z0: cz - s.x1, z1: cz - s.x0 }
+      : { x0: cx - s.z1, x1: cx - s.z0, z0: cz + s.x0, z1: cz + s.x1 },
+  );
+}
 
 // --- Construction ---------------------------------------------------------
 
@@ -715,9 +746,13 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
     // d'extincteur, une armoire de défibrillateur, un panneau d'affichage font
     // moins de vingt-cinq centimètres de saillie et l'on passe devant sans les
     // toucher. Tout le reste barre - pilastres compris.
+    //
+    // Sauf le konbini, qui n'est plus un bloc mais un LIEU : on y entre. Son
+    // emprise cesse donc de barrer d'un seul tenant, et ce sont ses parois et
+    // ses meubles qui prennent le relais - voir `interiorSolids`.
     obstacles: [
       ...gate.cabinets,
-      ...fixtures.filter((f) => !FLUSH.has(f.kind)).map((f) => f.rect),
+      ...fixtures.filter((f) => !FLUSH.has(f.kind)).flatMap(interiorSolids),
       ...pilasters,
     ],
   };

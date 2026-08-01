@@ -135,12 +135,41 @@ function glowMaterial(map: THREE.Texture, opacity: number): THREE.MeshBasicMater
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     toneMapped: false,
+    // Elle est POSÉE sur le sol, à trois millimètres : sans décalage, elle
+    // clignote au ras de la dalle dès qu'on s'en éloigne.
+    polygonOffset: true,
+    polygonOffsetFactor: -3,
+    polygonOffsetUnits: -3,
   });
 }
 
 export function shopPool(): ShopPool {
   if (pool) return pool;
-  const flat = (t: THREE.Texture) => new THREE.MeshBasicMaterial({ map: t, toneMapped: false });
+  /**
+   * Une surface IMPRIMÉE, collée sur ce qui la porte.
+   *
+   * Toutes sans exception - bandeaux, rails d'étiquettes, frontons, portes de
+   * vitrine, affiches, écrans - sont des DÉCALCOMANIES : elles n'ont pas
+   * d'épaisseur, et elles se posent au nu du meuble sur lequel elles sont
+   * collées. C'est exactement la situation qui produit du z-fighting, et la
+   * poser un millimètre devant ne la règle pas : à trois mètres d'une caméra
+   * dont le plan proche est à dix centimètres, un millimètre tombe SOUS la
+   * précision du tampon de profondeur, et le bandeau se met à grésiller par
+   * bandes dès qu'on tourne la tête.
+   *
+   * Le décalage de polygone est fait pour ça, et le dépôt s'en sert déjà pour
+   * tout ce qui est peint SUR une autre surface - bande podotactile, liseré de
+   * quai, repères d'attente (`three/station/materials`). Une décalcomanie de
+   * commerce n'est rien d'autre.
+   */
+  const flat = (t: THREE.Texture) =>
+    new THREE.MeshBasicMaterial({
+      map: t,
+      toneMapped: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
   const floorMap = makeShopFloorTexture();
   // L'image porte DEUX carreaux de côté, et un carreau de grès fait 45 cm : la
   // répétition se calcule sur la boutique la plus courante (7,80 × 3,40) pour
@@ -172,6 +201,9 @@ export function shopPool(): ShopPool {
       map: makeAutoDoorDecalTexture(),
       toneMapped: false,
       transparent: true,
+      polygonOffset: true,
+      polygonOffsetFactor: -3,
+      polygonOffsetUnits: -3,
     }),
     floor: new THREE.MeshStandardMaterial({
       map: floorMap,
