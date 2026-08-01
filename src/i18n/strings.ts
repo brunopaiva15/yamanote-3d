@@ -154,11 +154,14 @@ export interface Strings {
       extraordinary: string;
     };
     /**
-     * Le mode Extraordinaire demande WebGPU, et n'est donc pas offert partout.
-     * Les deux messages servent l'un dans le sélecteur (option grisée), l'autre
-     * dans le bandeau qui s'affiche si le moteur refuse de démarrer.
+     * Le mode Extraordinaire n'est pas offert partout, et il faut le dire en
+     * termes de ce que le joueur VOIT et de ce que ça lui coûte : personne
+     * n'achète un réglage parce qu'on lui parle d'espace écran.
+     * `beta` s'affiche quand il est choisi, `mobile` et `unsupported` quand
+     * l'option est grisée, `failed` quand le moteur a refusé de démarrer.
      */
     extraordinaryBeta: string;
+    extraordinaryMobile: string;
     extraordinaryUnsupported: string;
     extraordinaryFailed: string;
   };
@@ -292,9 +295,10 @@ const FR: Strings = {
       extraordinary: 'Extraordinaire ⚠︎',
     },
     extraordinaryBeta:
-      'Bêta : rendu WebGPU. Éclairage indirect, reflets en espace écran, profondeur de champ et pluie calculée sur le GPU. Exigeant, et pas encore optimisé.',
-    extraordinaryUnsupported: 'Ce navigateur n’expose pas WebGPU.',
-    extraordinaryFailed: 'WebGPU n’a pas démarré sur cette machine : retour à Ultra.',
+      'Bêta : une lumière plus riche, de vrais reflets et un arrière-plan qui se floute. Très gourmand - pour les machines puissantes.',
+    extraordinaryMobile: 'Sur ordinateur seulement : trop lourd pour un téléphone.',
+    extraordinaryUnsupported: 'Ce navigateur ne sait pas encore l’afficher.',
+    extraordinaryFailed: 'Ce mode n’a pas pu démarrer ici : retour à Ultra.',
   },
   incidents: {
     label: 'Provoquer un incident',
@@ -425,9 +429,10 @@ const EN: Strings = {
       extraordinary: 'Extraordinary ⚠︎',
     },
     extraordinaryBeta:
-      'Beta: WebGPU renderer. Indirect lighting, screen-space reflections, depth of field and GPU-computed rain. Demanding, and not yet optimised.',
-    extraordinaryUnsupported: 'This browser does not expose WebGPU.',
-    extraordinaryFailed: 'WebGPU failed to start on this machine: falling back to Ultra.',
+      'Beta: richer light, real reflections and a background that softens. Very demanding - for powerful machines.',
+    extraordinaryMobile: 'Desktop only: too heavy for a phone.',
+    extraordinaryUnsupported: 'This browser cannot show it yet.',
+    extraordinaryFailed: 'This mode could not start here: back to Ultra.',
   },
   incidents: {
     label: 'Trigger an incident',
@@ -559,9 +564,10 @@ const JA: Strings = {
       extraordinary: 'エクストラオーディナリー ⚠︎',
     },
     extraordinaryBeta:
-      'ベータ版：WebGPU レンダリング。間接光、スクリーンスペース反射、被写界深度、GPU で計算する雨。負荷が高く、最適化はこれからです。',
-    extraordinaryUnsupported: 'このブラウザーは WebGPU に対応していません。',
-    extraordinaryFailed: 'この環境では WebGPU を起動できませんでした。ウルトラに戻します。',
+      'ベータ版：光の回り込み、映り込み、背景のぼけ。負荷がとても高く、高性能なパソコン向けです。',
+    extraordinaryMobile: 'パソコン専用：スマートフォンには重すぎます。',
+    extraordinaryUnsupported: 'このブラウザーではまだ表示できません。',
+    extraordinaryFailed: 'この環境では起動できませんでした。ウルトラに戻します。',
   },
   incidents: {
     label: '異常時を発生させる',

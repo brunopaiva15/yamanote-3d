@@ -1835,10 +1835,18 @@ fabrique.
 
 ### Disponibilité et repli
 
-Le mode demande WebGPU. L'option est **grisée** là où `navigator.gpu` n'existe
-pas. Là où il existe, l'adaptateur est interrogé AVANT de monter la toile : s'il
-refuse - pilote sur liste noire, machine virtuelle sans GPU - la qualité
-redescend sur Ultra et le HUD le dit, plutôt que d'ouvrir sur un écran noir.
+Le mode est réservé à **l'ordinateur**, et l'option est grisée sur téléphone et
+tablette : deux tampons de plus, un parcours d'hémisphère et un tracé de rayons
+par pixel, ce n'est pas « lent » sur une puce mobile, c'est un diaporama qui
+vide la batterie. Le test est `(pointer: coarse) and (hover: none)` - le doigt
+SEUL, donc un mobile ; un portable à écran tactile a aussi une souris et n'est
+pas exclu.
+
+Il demande ensuite WebGPU, et l'option reste grisée là où `navigator.gpu`
+n'existe pas. Là où il existe, l'adaptateur est interrogé AVANT de monter la
+toile : s'il refuse - pilote sur liste noire, machine virtuelle sans GPU - la
+qualité redescend sur Ultra et le HUD le dit, plutôt que d'ouvrir sur un écran
+noir.
 
 Le paquet WebGPU (build `three/webgpu`, TSL, nœuds de post-traitement, environ
 200 ko compressés) est **chargé à la demande**. Un joueur qui reste en Ultra ne

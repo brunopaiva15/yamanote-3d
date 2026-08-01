@@ -75,15 +75,40 @@ function isQuality(value: string | null | undefined): value is Quality {
   return (QUALITIES as readonly string[]).includes(value ?? '');
 }
 
+/** Pourquoi « Extraordinaire » n'est pas proposé ici. `null` = il l'est. */
+export type ExtraordinaryBlock = 'mobile' | 'unsupported' | null;
+
 /**
- * WebGPU est-il seulement exposé par ce navigateur ?
+ * Téléphone ou tablette ?
  *
- * Ce n'est qu'un test de PRÉSENCE : l'adaptateur peut encore être refusé à la
- * demande (pilote sur liste noire, machine sans GPU). L'échec réel est traité
- * au montage du rendu, qui redescend alors sur Ultra en le disant.
+ * Pointeur grossier ET aucun survol : c'est le doigt seul, donc un appareil
+ * mobile. Un portable à écran tactile a bien un pointeur grossier, mais il a
+ * aussi une souris - il répond `hover: hover` et n'est pas exclu.
+ *
+ * Le mode demande deux tampons de plus, un parcours d'hémisphère et un tracé
+ * de rayons par pixel. Sur une puce mobile, ce n'est pas « lent » : c'est un
+ * diaporama qui vide la batterie. Autant ne pas l'offrir.
  */
-export function webgpuAvailable(): boolean {
-  return typeof navigator !== 'undefined' && 'gpu' in navigator;
+function mobileDevice(): boolean {
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
+  return window.matchMedia('(pointer: coarse) and (hover: none)').matches;
+}
+
+/**
+ * Ce qui empêche le mode Extraordinaire, s'il y a quelque chose.
+ *
+ * Le test WebGPU n'est qu'un test de PRÉSENCE : l'adaptateur peut encore être
+ * refusé à la demande (pilote sur liste noire, machine sans GPU). L'échec réel
+ * est traité au montage du rendu, qui redescend alors sur Ultra en le disant.
+ */
+export function extraordinaryBlock(): ExtraordinaryBlock {
+  if (mobileDevice()) return 'mobile';
+  if (typeof navigator === 'undefined' || !('gpu' in navigator)) return 'unsupported';
+  return null;
+}
+
+export function extraordinaryAvailable(): boolean {
+  return extraordinaryBlock() === null;
 }
 
 /** Le moteur qu'un préréglage demande. */
@@ -114,7 +139,7 @@ function initialQuality(): Quality {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (isQuality(stored)) {
-      if (stored === 'extraordinary' && !webgpuAvailable()) return 'ultra';
+      if (stored === 'extraordinary' && !extraordinaryAvailable()) return 'ultra';
       return stored;
     }
   } catch {

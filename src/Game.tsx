@@ -46,7 +46,7 @@ import { BoardingPrompt } from './ui/BoardingPrompt';
 import { TalkPrompt } from './ui/TalkPrompt';
 import { StationDevelopmentNotice } from './ui/StationDevelopmentNotice';
 import { QualityNotice } from './ui/QualityNotice';
-import { reportWebgpuFailure, usePerf, webgpuAvailable } from './systems/perf';
+import { extraordinaryAvailable, reportWebgpuFailure, usePerf } from './systems/perf';
 import { clearGpuKit, loadGpuKit } from './three/webgpu/kit';
 
 /**
@@ -60,7 +60,7 @@ import { clearGpuKit, loadGpuKit } from './three/webgpu/kit';
  */
 function useRenderPath(): 'webgl' | 'webgpu' | 'pending' {
   const quality = usePerf((s) => s.quality);
-  const wanted = quality === 'extraordinary' && webgpuAvailable();
+  const wanted = quality === 'extraordinary' && extraordinaryAvailable();
   const [ready, setReady] = useState(false);
 
   // Retrait du sac WebGPU PENDANT le rendu, et non dans un effet.
