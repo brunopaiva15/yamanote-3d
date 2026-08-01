@@ -251,7 +251,20 @@ function Piece({
     case 'lockers':
       return <Lockers w={w} d={d} face={kit.locker} m={m} />;
     case 'konbini':
-      return <Konbini w={w} d={d} height={height} station={station} m={m} />;
+      return (
+        <Konbini
+          w={w}
+          d={d}
+          height={height}
+          station={station}
+          anchor={{
+            cx: (f.rect.x0 + f.rect.x1) / 2,
+            cz: (f.rect.z0 + f.rect.z1) / 2,
+            facing: f.facing,
+          }}
+          m={m}
+        />
+      );
     case 'vending':
       return <Vending w={w} d={d} set={kit.drinks[f.slot % kit.drinks.length]} m={m} />;
     case 'vendingFood':

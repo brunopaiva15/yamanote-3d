@@ -282,6 +282,49 @@ rangé d'une supérette japonaise.
 glaces, posé d'abord au droit de la gondole, s'y plantait de dix centimètres et
 la sonde l'a trouvé du premier coup.
 
+## Phase 12 — On entre dans le konbini ✅
+
+**Livré.** La boutique était un lieu qu'on regardait. C'en est un où l'on va.
+
+**L'implantation d'abord, parce que tout en découle.** Tant que le konbini était
+un bloc plein, ses cotes intérieures n'intéressaient que le rendu : personne
+n'entrait, donc personne n'avait besoin de savoir où était la gondole. Elles
+sont maintenant dans `data/konbiniPlan`, que lisent AUSSI BIEN le rendu que
+l'implantation du hall — c'est la première règle du chantier, « une
+implantation, deux lecteurs », et elle vaut à l'intérieur d'un meuble comme
+ailleurs. Son emprise cesse donc de barrer d'un seul tenant : ce qui barre, ce
+sont ses parois — la devanture **en deux morceaux**, un de chaque côté de la
+baie — et ses meubles, le vendeur compris.
+
+**Et la porte s'ouvre.** Le rail, le détecteur et le bandeau 自動ドア disaient
+qu'elle était automatique ; ils ne le prouvaient pas, et une porte de konbini
+qui reste close pendant qu'on la traverse est pire qu'une porte peinte. Les deux
+vantaux s'écartent quand on entre dans le rayon du détecteur et se referment
+quand on s'éloigne — avec **deux seuils** et non un seul : elle s'ouvre à 1,90 m
+et ne se referme qu'à 2,50 m. Sans cette hystérésis, quelqu'un qui s'arrête pile
+à la limite fait battre les vantaux jusqu'à ce qu'il s'en aille, et c'est le
+défaut le plus reconnaissable d'une porte mal réglée.
+
+Le détecteur travaille en **repère de quai** — le seul où la position du joueur
+se lise sans reconstruire toute la chaîne de transformations — et il regarde
+l'ÉTAGE autant que la distance : à l'aplomb de la boutique il y a aussi la dalle
+du quai deux niveaux plus haut, et une porte qui s'ouvrirait parce que quelqu'un
+passe là-haut n'aurait aucun sens.
+
+**Ce qui est tenu par les tests** (`tests/stationShops.test.ts`) : on passe par
+la baie et par elle seule ; les meubles restent infranchissables, chacun testé
+en son centre ; et surtout, **depuis le seuil on atteint le fond de la
+boutique** — un parcours en largeur sur une grille de dix centimètres, parce
+que c'est le jeu des meubles ENTRE EUX qui bouche un passage, et qu'aucune cote
+prise séparément ne le dirait. Un premier essai vérifiait qu'une ligne droite
+traversait la boutique : il butait sur le bac à glaces, qui est au milieu du
+passage parce que c'est là qu'il est en vrai. On contourne, donc on cherche un
+chemin, pas une droite.
+
+**Vérifié à pied, dans le jeu** : descendre du train, traverser le hall, entrer
+par la porte (`__probeGo`, la vraie boucle de marche), et mesurer l'écartement
+des vantaux de loin puis de près.
+
 ---
 
 ## Ce qui ne doit pas grossir
