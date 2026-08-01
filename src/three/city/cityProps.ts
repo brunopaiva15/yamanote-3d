@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { gpuKit } from '../webgpu/kit';
 
 /**
  * Toiture en croupe, unitaire.
@@ -106,7 +107,7 @@ export function makeGroveGeometry(): THREE.BufferGeometry {
 const TRUNK_TONE = new THREE.Color('#6a533c').convertSRGBToLinear();
 
 export interface GroveMaterial {
-  material: THREE.MeshLambertMaterial;
+  material: THREE.Material;
   /** 1 en pleine feuille, ~0,6 sur une ramure nue. */
   canopy: { value: number };
   /** Blanchiment de la frondaison par la neige (0..1). */
@@ -129,6 +130,23 @@ export interface GroveMaterial {
  *     entière rapetisserait l'arbre au lieu de le dénuder.
  */
 export function makeGroveMaterial(): GroveMaterial {
+  // Mode Extraordinaire : le même bosquet, en nœuds. La rétraction de la
+  // frondaison y est greffée AVANT l'instanciation, comme ici avant
+  // `begin_vertex` - c'est la condition pour dépouiller l'arbre sans le
+  // rapetisser.
+  const kit = gpuKit();
+  if (kit) {
+    const made = kit.makeGroveMaterial(TRUNK_TONE);
+    return {
+      material: made.material,
+      canopy: made.uniforms.canopy,
+      snow: made.uniforms.snow,
+      dispose() {
+        made.material.dispose();
+      },
+    };
+  }
+
   const canopy = { value: 1 };
   const snow = { value: 0 };
   const material = new THREE.MeshLambertMaterial({ vertexColors: true, fog: true });

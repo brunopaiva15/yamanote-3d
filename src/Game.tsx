@@ -1,7 +1,18 @@
 // L'expérience 3D est isolée du menu afin que Three.js, la scène et ses
 // ressources ne soient téléchargés qu'après une action explicite du joueur.
+//
+// Deux moteurs cohabitent ici, et un seul est monté à la fois. Les six
+// qualités historiques rendent en WebGL ; « Extraordinaire » rend en WebGPU,
+// avec son propre pipeline (three/webgpu). Le choix est fait AVANT le montage
+// de la toile - `key` force un remontage complet si le joueur change d'avis en
+// cours de trajet - parce qu'un renderer ne se remplace pas à chaud : la toile,
+// le contexte, les textures et tous les programmes en dépendent.
+//
+// Le paquet WebGPU (three/webgpu, TSL, nœuds de post-traitement) est chargé à
+// la demande. Un joueur qui reste en Ultra ne le télécharge jamais.
 
-import { Canvas } from '@react-three/fiber';
+import { useEffect, useState } from 'react';
+import { Canvas, type GLProps } from '@react-three/fiber';
 import { CONFIG } from './data/config';
 import { Engine } from './three/Engine';
 import { Scene } from './three/Scene';
@@ -34,13 +45,87 @@ import { Controls } from './ui/Controls';
 import { BoardingPrompt } from './ui/BoardingPrompt';
 import { TalkPrompt } from './ui/TalkPrompt';
 import { StationDevelopmentNotice } from './ui/StationDevelopmentNotice';
+import { QualityNotice } from './ui/QualityNotice';
+import { reportWebgpuFailure, usePerf, webgpuAvailable } from './systems/perf';
+import { clearGpuKit, loadGpuKit } from './three/webgpu/kit';
+
+/**
+ * Le moteur demandé est-il prêt ?
+ *
+ * Trois états, et non deux : « WebGL » (le cas courant), « WebGPU prêt », et
+ * l'entre-deux où l'on interroge l'adaptateur et où l'on télécharge le paquet.
+ * La toile n'est PAS montée pendant cet entre-deux : la monter en WebGL pour la
+ * remonter en WebGPU une seconde plus tard reconstruirait toute la scène deux
+ * fois, textures procédurales comprises.
+ */
+function useRenderPath(): 'webgl' | 'webgpu' | 'pending' {
+  const quality = usePerf((s) => s.quality);
+  const wanted = quality === 'extraordinary' && webgpuAvailable();
+  const [ready, setReady] = useState(false);
+
+  // Retrait du sac WebGPU PENDANT le rendu, et non dans un effet.
+  //
+  // C'est la seule fenêtre qui convienne. Les matériaux de la scène (ciel,
+  // ville, pluie, limites de zone) consultent `gpuKit()` dans leur `useMemo`,
+  // et ces `useMemo` tournent quand react-three-fiber monte sa racine - donc
+  // dans un effet de MISE EN PAGE de la toile, qui précède les effets de ce
+  // composant-ci. Un nettoyage différé arriverait après : la toile WebGL
+  // serait déjà peuplée de matériaux à nœuds qu'elle ne sait pas compiler.
+  // L'affectation est idempotente et ne touche rien d'autre.
+  if (!wanted) clearGpuKit();
+
+  useEffect(() => {
+    if (!wanted) {
+      setReady(false);
+      return;
+    }
+    let alive = true;
+    void (async () => {
+      try {
+        const { probeWebgpu } = await import('./three/webgpu/renderer');
+        if (!(await probeWebgpu())) throw new Error('Aucun adaptateur WebGPU');
+        await loadGpuKit();
+        if (alive) setReady(true);
+      } catch {
+        // L'adaptateur a refusé, ou le paquet n'a pas pu être chargé. On le dit
+        // et on redescend sur Ultra plutôt que d'ouvrir sur une toile noire.
+        if (alive) reportWebgpuFailure();
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [wanted]);
+
+  if (!wanted) return 'webgl';
+  return ready ? 'webgpu' : 'pending';
+}
+
+/**
+ * Fabrique de renderer passée à react-three-fiber, qui l'attend et s'en sert
+ * telle quelle. Le transtypage tient à un détail de typage : `DefaultGLProps`
+ * décrit sa toile avec la déclaration d'`OffscreenCanvas` de three, distincte
+ * de celle de la bibliothèque standard alors qu'elles décrivent le même objet.
+ */
+const webgpuRenderer = (async (props: { canvas: HTMLCanvasElement }) => {
+  const { createWebGPURenderer } = await import('./three/webgpu/renderer');
+  return createWebGPURenderer(props);
+}) as unknown as GLProps;
 
 export default function Game() {
+  const path = useRenderPath();
+
   return (
     <>
+      {path === 'pending' ? null : (
       <Canvas
+        key={path}
         dpr={[1, 2]}
-        gl={{ powerPreference: 'high-performance', antialias: true }}
+        gl={
+          path === 'webgpu'
+            ? webgpuRenderer
+            : { powerPreference: 'high-performance', antialias: true }
+        }
         camera={{ fov: 70, near: 0.05, far: 260, position: [0, CONFIG.eyeHeight, 4.2] }}
         shadows="percentage"
       >
@@ -72,10 +157,12 @@ export default function Game() {
         <Weather />
         <Player />
       </Canvas>
+      )}
       <Hud />
       <BoardingPrompt />
       <TalkPrompt />
       <StationDevelopmentNotice />
+      <QualityNotice className="quality-note-hud" failureOnly />
       <Controls />
     </>
   );

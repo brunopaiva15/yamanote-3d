@@ -31,7 +31,7 @@ import { segEnv } from '../../systems/segmentEnv';
 import { groundPush, sidePush, stationOcclusion } from '../../systems/stationOcclusion';
 import { plateauRuntime } from '../../systems/plateau';
 import { useStore } from '../../store';
-import { qualityLevel, usePerf, type PerfLevel } from '../../systems/perf';
+import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
 import {
   CELL_CAPACITY,
   CELL_LEN,
@@ -73,12 +73,18 @@ const GROUND_LEN = 460;
  * de jour, en deçà on verrait la ville apparaître à vue. Ce qui s'allège, c'est
  * la DENSITÉ de chaque rang, pas l'étendue.
  */
-function tuning(level: PerfLevel): {
+function tuning(quality: Quality): {
   cells: number;
   rankScale: number;
   props: boolean;
   signs: boolean;
 } {
+  // Mode Extraordinaire : la ville se remplit. `rankScale` au-dessus de 1 ne
+  // pousse pas l'anneau plus loin - la brume l'arrête de toute façon - il
+  // resserre les rangs jusqu'au plafond de la cellule, là où le regard porte.
+  // C'est la densité de Tokyo, pas son étendue, qui manquait.
+  if (quality === 'extraordinary') return { cells: 13, rankScale: 1.3, props: true, signs: true };
+  const level = qualityLevel(quality);
   if (level <= 1) return { cells: 13, rankScale: 1, props: true, signs: true };
   if (level === 2) return { cells: 12, rankScale: 0.8, props: true, signs: true };
   if (level === 3) return { cells: 11, rankScale: 0.6, props: true, signs: true };
@@ -89,8 +95,8 @@ function tuning(level: PerfLevel): {
 }
 
 export function CityRibbon() {
-  const level = usePerf((s) => qualityLevel(s.quality));
-  const { cells, rankScale, props, signs } = tuning(level);
+  const quality = usePerf((s) => s.quality);
+  const { cells, rankScale, props, signs } = tuning(quality);
 
   const yRoot = useRef<THREE.Group>(null);
   const zRoot = useRef<THREE.Group>(null);
@@ -114,12 +120,20 @@ export function CityRibbon() {
       const accent = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
       const jitter = new THREE.InstancedBufferAttribute(new Float32Array(count * 2), 2);
       const trim = new THREE.InstancedBufferAttribute(new Float32Array(count * 4), 4);
+      // Les dimensions de l'instance, écrites en clair. Le nuanceur GLSL les
+      // relit de `instanceMatrix` ; le nuanceur à nœuds du mode Extraordinaire
+      // n'a pas accès à cette matrice et lit cet attribut. Trois flottants par
+      // instance : à côté des seize de la matrice, ce n'est rien, et ça évite
+      // deux chemins de code dans la boucle de remplissage.
+      const scale = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
       accent.setUsage(THREE.DynamicDrawUsage);
       jitter.setUsage(THREE.DynamicDrawUsage);
       trim.setUsage(THREE.DynamicDrawUsage);
+      scale.setUsage(THREE.DynamicDrawUsage);
       geo.setAttribute('aAccent', accent);
       geo.setAttribute('aJitter', jitter);
       geo.setAttribute('aTrim', trim);
+      geo.setAttribute('aScale', scale);
       const mesh = new THREE.InstancedMesh(geo, city.material, count);
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       // L'anneau couvre ± 220 m de part et d'autre : la sphère englobante de la
@@ -127,7 +141,7 @@ export function CityRibbon() {
       mesh.frustumCulled = false;
       mesh.castShadow = false;
       mesh.receiveShadow = false;
-      return { geo, mesh, accent, jitter, trim };
+      return { geo, mesh, accent, jitter, trim, scale };
     };
 
     // Bosquets : matériau propre, qui garde le tronc brun quand la frondaison
@@ -248,6 +262,7 @@ export function CityRibbon() {
           sc.scl.set(b.d, b.h, b.w);
           sc.mtx.compose(sc.pos, sc.rot, sc.scl);
           s.body.mesh.setMatrixAt(idx, sc.mtx);
+          s.body.scale.setXYZ(idx, sc.scl.x, sc.scl.y, sc.scl.z);
           sc.color.set(b.facade).multiplyScalar(b.shade);
           s.body.mesh.setColorAt(idx, sc.color);
           sc.accent.set(b.accent);
@@ -260,6 +275,7 @@ export function CityRibbon() {
         s.body.accent.needsUpdate = true;
         s.body.jitter.needsUpdate = true;
         s.body.trim.needsUpdate = true;
+        s.body.scale.needsUpdate = true;
 
         // --- Acrotères, croupes, bosquets, enseignes ---
         if (!s.sign) continue;
@@ -319,6 +335,7 @@ export function CityRibbon() {
           target.accent.setXYZ(idx, 1, 1, 1);
           target.jitter.setXY(idx, 0, 0);
           target.trim.setXYZW(idx, 0, 0, 1, 1);
+          target.scale.setXYZ(idx, sc.scl.x, sc.scl.y, sc.scl.z);
         }
         // Escamoter les emplacements non pourvus de la cellule.
         for (const kind of PROP_KINDS) {
@@ -338,6 +355,7 @@ export function CityRibbon() {
           m.accent.needsUpdate = true;
           m.jitter.needsUpdate = true;
           m.trim.needsUpdate = true;
+          m.scale.needsUpdate = true;
         }
         for (const m of [s.tree, s.sign]) {
           if (!m) continue;
