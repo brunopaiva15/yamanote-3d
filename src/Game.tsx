@@ -41,10 +41,12 @@ import { Passengers } from './three/Passengers';
 import { PaxSpeechBubble } from './three/PaxSpeechBubble';
 import { AgentSpeechBubble } from './three/AgentSpeechBubble';
 import { Player } from './three/Player';
+import { HeldItem } from './three/HeldItem';
 import { Hud } from './ui/Hud';
 import { Controls } from './ui/Controls';
 import { BoardingPrompt } from './ui/BoardingPrompt';
 import { TalkPrompt } from './ui/TalkPrompt';
+import { DevicePrompt } from './ui/DevicePrompt';
 import { StationDevelopmentNotice } from './ui/StationDevelopmentNotice';
 import { QualityNotice } from './ui/QualityNotice';
 import { extraordinaryAvailable, reportWebgpuFailure, usePerf } from './systems/perf';
@@ -183,11 +185,14 @@ export default function Game() {
         <AgentSpeechBubble />
         <Weather />
         <Player />
+        {/* Ce qu'on tient : accroché à la caméra, donc rendu après elle. */}
+        <HeldItem />
       </Canvas>
       )}
       <Hud />
       <BoardingPrompt />
       <TalkPrompt />
+      <DevicePrompt />
       <StationDevelopmentNotice />
       <QualityNotice className="quality-note-hud" failureOnly />
       <Controls />

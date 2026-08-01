@@ -25,22 +25,24 @@ import * as THREE from 'three';
 import { PLATFORM_TOP } from '../../data/stationGeometry';
 import type { StationPlacement } from '../../systems/stationPlacement';
 import {
-  makeVendingDisplayTexture,
   makeVendingGlassTexture,
   makeVendingGlowTexture,
   makeVendingHeaderTexture,
-  makeVendingPanelTexture,
-  makeVendingPortTexture,
   makeVendingSideTexture,
   vendingBrand,
 } from '../../textures/vending';
 import { mat, matFacing, matFacingTrack, useInstanceColors, useInstances } from './instancing';
+import { VendingPlate, VendingShowcase, VendingTray } from './vendingParts';
+import { HEADER, PORT, WINDOW } from './vendingGeometry';
+import type { Mats } from './materials';
 
 interface Props {
   place: StationPlacement;
   station: number;
   /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
   detail: number;
+  /** Palette de la gare : les organes de la machine y puisent leurs matières. */
+  m: Mats;
 }
 
 /** Largeur (le long du quai), hauteur, profondeur de la caisse (m). */
@@ -56,23 +58,7 @@ const DX = 0.03;
 /** Socle en retrait : la caisse ne touche pas la dalle. */
 const PLINTH_H = 0.1;
 
-/** Une niche de la façade : sa tranche de hauteur, sa largeur, sa saillie. */
-interface Band {
-  y0: number;
-  y1: number;
-  w: number;
-  /** Saillie de l'encadrement devant le nu de la caisse (m). 0 = à plat. */
-  reveal: number;
-}
 
-const PORT: Band = { y0: 0.16, y1: 0.56, w: 1.0, reveal: 0.045 };
-const MONEY: Band = { y0: 0.68, y1: 1.0, w: 1.04, reveal: 0 };
-const WINDOW: Band = { y0: 1.06, y1: 1.64, w: 1.0, reveal: 0.07 };
-const HEADER: Band = { y0: 1.68, y1: 1.83, w: 1.06, reveal: 0 };
-
-/** Décollement des façades du nu de la caisse : trois millimètres, comme la
- *  trousse de quai - à égalité elles partagent son plan et clignotent. */
-const SKIN = 0.004;
 
 /** Le plan regarde +z (un flanc de machine) ; l'autre flanc est à l'opposé. */
 const FACING_Z = new THREE.Quaternion();
@@ -80,14 +66,19 @@ const FACING_MINUS_Z = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3
 /** Rabattu à l'horizontale, face vers le haut : la flaque de lumière au sol. */
 const FACING_UP = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
 
-const yOf = (b: Band) => PLATFORM_TOP + (b.y0 + b.y1) / 2;
+const yOf = (b: { y0: number; y1: number }) => PLATFORM_TOP + (b.y0 + b.y1) / 2;
 
 /**
  * Encadrement d'une niche : quatre tôles autour de l'ouverture, en saillie
  * devant la façade. C'est ce cadre qui donne la profondeur - l'échantillon est
  * au fond, le verre au nu du cadre, et l'écart se voit de trois quarts.
  */
-function revealFrame(fx: number, z: number, b: Band, t: number): THREE.Matrix4[] {
+function revealFrame(
+  fx: number,
+  z: number,
+  b: { y0: number; y1: number; w: number; reveal: number },
+  t: number,
+): THREE.Matrix4[] {
   const x = fx - b.reveal / 2;
   const hz = b.w / 2;
   const h = b.y1 - b.y0;
@@ -99,7 +90,7 @@ function revealFrame(fx: number, z: number, b: Band, t: number): THREE.Matrix4[]
   ];
 }
 
-export function VendingMachines({ place, station, detail }: Props) {
+export function VendingMachines({ place, station, detail, m }: Props) {
   /** Le verre, les décalcomanies de flanc et le chapeau tombent au palier bas. */
   const full = detail <= 2;
   /** La flaque de lumière au sol : le luxe, réservé aux deux meilleurs paliers. */
@@ -123,12 +114,9 @@ export function VendingMachines({ place, station, detail }: Props) {
   // seules la vitrine et l'enseigne sont refaites par machine.
   const tex = useMemo(
     () => ({
-      panel: makeVendingPanelTexture(),
-      port: makeVendingPortTexture(),
       glass: makeVendingGlassTexture(),
       side: makeVendingSideTexture(),
       glow: makeVendingGlowTexture(),
-      displays: machines.map((mch) => makeVendingDisplayTexture(mch.brand, mch.seed)),
       headers: machines.map((mch) => makeVendingHeaderTexture(mch.brand)),
     }),
     [machines],
@@ -143,8 +131,6 @@ export function VendingMachines({ place, station, detail }: Props) {
       body: new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.44, metalness: 0.14 }),
       trim: new THREE.MeshStandardMaterial({ color: '#3a3e43', roughness: 0.52, metalness: 0.26 }),
       cap: new THREE.MeshStandardMaterial({ color: '#2c3035', roughness: 0.66, metalness: 0.18 }),
-      panel: lit(tex.panel),
-      port: lit(tex.port),
       glass: new THREE.MeshStandardMaterial({
         map: tex.glass,
         transparent: true,
@@ -160,7 +146,6 @@ export function VendingMachines({ place, station, detail }: Props) {
         blending: THREE.AdditiveBlending,
         toneMapped: false,
       }),
-      displays: tex.displays.map(lit),
       headers: tex.headers.map(lit),
     };
   }, [tex]);
@@ -170,15 +155,12 @@ export function VendingMachines({ place, station, detail }: Props) {
       mats.body,
       mats.trim,
       mats.cap,
-      mats.panel,
-      mats.port,
       mats.glass,
       mats.side,
       mats.glow,
-      ...mats.displays,
       ...mats.headers,
     ];
-    const texs = [tex.panel, tex.port, tex.glass, tex.side, tex.glow, ...tex.displays, ...tex.headers];
+    const texs = [tex.glass, tex.side, tex.glow, ...tex.headers];
     return () => {
       for (const x of all) x.dispose();
       for (const t of texs) t.dispose();
@@ -224,17 +206,6 @@ export function VendingMachines({ place, station, detail }: Props) {
     [machines],
   );
 
-  const panels = useMemo(
-    () => machines.map((v) => matFacingTrack(v.fx - SKIN, yOf(MONEY), v.z, MONEY.w, MONEY.y1 - MONEY.y0)),
-    [machines],
-  );
-  // Le volet est au FOND de sa niche : la profondeur vient de l'encadrement
-  // qui avance de 4,5 cm devant lui, et l'ombre du creux fait le reste. Le plan
-  // reste DEVANT le nu de la caisse - derrière, la tôle le masquerait.
-  const ports = useMemo(
-    () => machines.map((v) => matFacingTrack(v.fx - SKIN, yOf(PORT), v.z, PORT.w, PORT.y1 - PORT.y0)),
-    [machines],
-  );
   // Le verre, lui, est au nu de l'encadrement - 7 cm devant les échantillons.
   const glasses = useMemo(
     () =>
@@ -267,8 +238,6 @@ export function VendingMachines({ place, station, detail }: Props) {
   const plinthRef = useRef<THREE.InstancedMesh>(null);
   const capRef = useRef<THREE.InstancedMesh>(null);
   const trimRef = useRef<THREE.InstancedMesh>(null);
-  const panelRef = useRef<THREE.InstancedMesh>(null);
-  const portRef = useRef<THREE.InstancedMesh>(null);
   const glassRef = useRef<THREE.InstancedMesh>(null);
   const sideRef = useRef<THREE.InstancedMesh>(null);
   const glowRef = useRef<THREE.InstancedMesh>(null);
@@ -278,8 +247,6 @@ export function VendingMachines({ place, station, detail }: Props) {
   useInstances(plinthRef, plinths);
   useInstances(capRef, caps);
   useInstances(trimRef, trims);
-  useInstances(panelRef, panels);
-  useInstances(portRef, ports);
   useInstances(glassRef, glasses);
   useInstances(sideRef, sides);
   useInstances(glowRef, glows);
@@ -324,42 +291,29 @@ export function VendingMachines({ place, station, detail }: Props) {
         </instancedMesh>
       )}
 
-      {/* Platine des monnayeurs et volet de retrait : matériel standard, donc
-          une seule façade pour tout le quai. */}
-      <instancedMesh
-        name="distributeur-monnayeur"
-        ref={panelRef}
-        args={[undefined, undefined, count(panels.length)]}
-        material={mats.panel}
-      >
-        <planeGeometry args={[1, 1]} />
-      </instancedMesh>
-      <instancedMesh
-        name="distributeur-volet"
-        ref={portRef}
-        args={[undefined, undefined, count(ports.length)]}
-        material={mats.port}
-      >
-        <planeGeometry args={[1, 1]} />
-      </instancedMesh>
+      {/* Ce qui est PROPRE à chaque machine, et ce qu'on touche.
+          L'enseigne d'abord - elle seule change avec la marque - puis les
+          organes : la vitrine dont les lampes s'allument, la platine des
+          monnayeurs, le volet de retrait. Ce sont exactement les mêmes pièces
+          que dans le hall (three/station/vendingParts) : c'est le même
+          matériel, on l'écrit une fois.
 
-      {/* Vitrine et enseigne : propres à la marque, un plan chacune. */}
+          Le groupe tourne d'un quart de tour parce que ces pièces se décrivent
+          face à soi, façade en +z local, et que la façade d'un distributeur de
+          quai regarde la voie. */}
       {machines.map((v, i) => (
-        <group key={`vm${i}`} name="distributeur-façade">
-          <mesh
-            position={[v.fx - SKIN, yOf(WINDOW), v.z]}
-            rotation={[0, -Math.PI / 2, 0]}
-            material={mats.displays[i]}
-          >
-            <planeGeometry args={[WINDOW.w, WINDOW.y1 - WINDOW.y0]} />
-          </mesh>
-          <mesh
-            position={[v.fx - SKIN, yOf(HEADER), v.z]}
-            rotation={[0, -Math.PI / 2, 0]}
-            material={mats.headers[i]}
-          >
+        <group
+          key={`vm${i}`}
+          name="distributeur-façade"
+          position={[v.cx, PLATFORM_TOP, v.z]}
+          rotation={[0, -Math.PI / 2, 0]}
+        >
+          <mesh position={[0, yOf(HEADER) - PLATFORM_TOP, D / 2 + 0.011]} material={mats.headers[i]}>
             <planeGeometry args={[HEADER.w, HEADER.y1 - HEADER.y0]} />
           </mesh>
+          <VendingShowcase id={`pv${i}`} d={D} />
+          <VendingPlate id={`pv${i}`} bw={W} d={D} m={m} />
+          <VendingTray id={`pv${i}`} d={D} m={m} />
         </group>
       ))}
 

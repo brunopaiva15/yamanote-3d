@@ -28,6 +28,7 @@ import {
 } from '../data/stationGeometry';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
+import { gateBlocks, passageAt } from './fareGate';
 import { platformFlip } from './playerFrame';
 import { runtime, type PlayerFrame, type PlayerLevel } from './runtime';
 import {
@@ -232,6 +233,12 @@ function stairFloorAt(p: StationPlacement, u: number, localZ: number): Region | 
  * libre : la ligne de portillons n'y fait pas de coupure, ce sont ses BORNES
  * qui barrent, et elles sont dans `obstacles`. Une baie franchissable est donc
  * exactement le vide entre deux bornes - celui-là même que le rendu dessine.
+ *
+ * À une exception près, et c'est toute la différence entre un trou et un
+ * portillon : les BATTANTS. Une baie dont les battants sont rabattus barre
+ * comme une borne, et se rouvre quand on a validé (systems/fareGate). Sans ce
+ * test, les battants dessinés en travers du passage se seraient traversés à
+ * pied - ce qui aurait été pire que de ne pas les dessiner du tout.
  */
 function concourseFloorY(p: StationPlacement, u: number, localZ: number): number | null {
   const it = p.interior;
@@ -241,6 +248,8 @@ function concourseFloorY(p: StationPlacement, u: number, localZ: number): number
   for (const o of it.obstacles) {
     if (u >= o.x0 && u <= o.x1 && localZ >= o.z0 && localZ <= o.z1) return null;
   }
+  const passage = passageAt(u, localZ);
+  if (passage >= 0 && gateBlocks(passage)) return null;
   return it.floorY;
 }
 
