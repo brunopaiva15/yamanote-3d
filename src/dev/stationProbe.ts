@@ -317,6 +317,23 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     z: +runtime.stanceZ.toFixed(2),
   });
 
+  /**
+   * Où se trouve, en repère MONDE, un ouvrage nommé du décor.
+   *
+   * Les cotes de gare se lisent dans le repère du quai, mais on ne MARCHE
+   * qu'en repère monde (`__probeGo`), et entre les deux il y a le côté
+   * d'ouverture, la glissade du quai et la position de la rame. Plutôt que de
+   * refaire cette chaîne dans chaque script de contrôle - et de se tromper une
+   * fois sur deux -, on demande à la scène où elle a posé la chose.
+   *
+   *   __probeAnchor('konbini/porte')  → [[x, y, z], …]
+   */
+  w.__probeAnchor = (name: string) =>
+    scene.getObjectsByProperty('name', name).map((o) => {
+      const p = o.getWorldPosition(new THREE.Vector3());
+      return [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)];
+    });
+
   // Origines des trémies, en repère MONDE. C'est le seul endroit du décor
   // qu'on ne peut pas juger depuis la rame - il faut y poser l'œil - et sa
   // position change d'une gare à l'autre.

@@ -680,6 +680,15 @@ part : il respire comme tout le monde. Dehors, chaque commerce jette sa
 flaque de lumière sur le sol — peinte plutôt qu'éclairée, et qui ne s'allume
 qu'à la tombée du jour sur le quai, comme les foyers de la voie.
 
+**Et l'on y entre.** Les deux vantaux de la porte automatique s'écartent quand
+on approche et se referment quand on s'éloigne — à 1,90 m pour ouvrir, 2,50 m
+pour fermer, parce qu'une porte à seuil unique bat sans fin sur quelqu'un qui
+s'arrête pile à la limite. Passé le seuil, le konbini se parcourt : on longe la
+gondole, on contourne le bac à glaces, on va jusqu'au fond devant le meuble
+froid. Son emprise ne barre plus d'un seul tenant — ce sont ses parois, sa
+devanture *en deux morceaux* de part et d'autre de la baie, ses meubles et son
+vendeur qui barrent, et la même liste sert au rendu et à la marche.
+
 `/shop-probe.html` pose les deux commerces seuls sous une caméra qu'on tourne
 autour : le konbini est au fond du hall, deux niveaux sous le quai, et
 descendre l'y chercher à chaque essai n'était pas tenable.

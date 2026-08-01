@@ -39,17 +39,18 @@
 // le bandeau d'enseigne appartient à la gare, puisqu'il porte son nom, et il se
 // construit et se libère avec la boutique.
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
+import { KONBINI_WALL as WALL, konbiniPlan } from '../../data/konbiniPlan';
+import { runtime } from '../../systems/runtime';
 import { makeNewDaysBandTexture } from '../../textures/konbini';
 import type { Mats } from './materials';
 import { fillUnit, pick, shopPool } from './shopKit';
 import { Goods } from './Goods';
 import { ShopClerk } from './ShopStaff';
 
-/** Épaisseur des parois de la coque. */
-const WALL = 0.12;
 /** Hauteur du bandeau d'enseigne, au-dessus de la devanture. */
 const SIGN_H = 0.62;
 /** Plan de travail du comptoir de caisse : la hauteur de toute caisse. */
@@ -70,20 +71,26 @@ const GOND_H = 1.42;
  * l'épaule.
  */
 const RACK_H = 1.12;
-/** Allée laissée devant les vitrines du fond. */
-const BACK_AISLE = 0.68;
 
 export function Konbini({
   w,
   d,
   height,
   station,
+  anchor,
   m,
 }: {
   w: number;
   d: number;
   height: number;
   station: number;
+  /**
+   * Où la boutique est posée dans le repère du QUAI, et de quel côté elle
+   * regarde. Elle n'en a besoin que pour une chose - savoir où se trouve sa
+   * porte quand le joueur s'en approche - mais sans cela, la porte ne peut pas
+   * s'ouvrir : rien d'autre dans le repère local ne dit où l'on est.
+   */
+  anchor?: { cx: number; cz: number; facing: -1 | 1 };
   m: Mats;
 }) {
   const p = shopPool();
@@ -104,50 +111,50 @@ export function Konbini({
 
   // --- Le gabarit de la boutique ------------------------------------
   //
-  // Tout se déduit de l'emprise reçue : la coque prend son épaisseur dessus, et
-  // les meubles se rangent DANS ce qui reste. Rien n'est écrit en dur qui
-  // dépende d'une largeur particulière - une boutique de 6,40 m et une de 8 m
-  // se meublent de la même façon, avec moins de portes de vitrine.
+  // Il ne se calcule PAS ici : il vient de `data/konbiniPlan`, que lit aussi
+  // l'implantation du hall pour en tirer les obstacles de marche. Depuis qu'on
+  // entre dans la boutique, ses cotes intérieures ne regardent plus le seul
+  // rendu - une gondole dessinée à un endroit et contournée à un autre se voit
+  // au premier pas, et c'est la règle du chantier depuis le début.
   const shell = height - 0.14;
   const glassH = shell - SIGN_H - 0.1;
-  /** Demi-largeur intérieure, nu des joues. */
-  const hw = w / 2 - WALL;
-  /** Nu intérieur du fond, et nu de la devanture. */
-  const zb = -d / 2 + WALL;
-  const zf = d / 2;
+  const {
+    hw,
+    zb,
+    zf,
+    leftEnd,
+    doorW,
+    doorX,
+    doorL,
+    coolD,
+    gondD,
+    gondZ,
+    gondX0,
+    gondX1,
+    rackD,
+    rackZ,
+    rackX0,
+    rackX1,
+    coolX0,
+    coolX1,
+    doors,
+    doorPitch,
+    counter,
+    chest,
+    baskets,
+    clerk,
+  } = useMemo(() => konbiniPlan(w, d), [w, d]);
 
-  /** Le bloc de gauche : caisse devant, meuble froid derrière, personnel entre. */
-  const leftEnd = -hw + Math.min(2.2, w * 0.28);
-  /** La baie d'entrée, à droite, avec un panneau fixe de chaque côté. */
-  const doorW = Math.min(1.7, w * 0.22);
-  const doorX = hw - doorW / 2 - Math.min(0.6, w * 0.08);
-  const doorL = doorX - doorW / 2;
-
-  const coolD = Math.min(0.68, d * 0.2);
-  const gondD = Math.min(0.56, d * 0.17);
-  const gondZ = zb + coolD + BACK_AISLE + gondD / 2;
-  const gondX0 = leftEnd + 0.12;
-  const gondX1 = doorL - 0.34;
-  /**
-   * Le présentoir à magazines : plaqué contre la vitre, jamais en retrait.
-   *
-   * Il ne prend qu'un TIERS de la devanture, et c'est la seule cote qui compte
-   * ici. Sur toute la largeur - ce qu'il faisait d'abord - il masquait la
-   * boutique entière depuis le hall : on ne voyait plus ni la gondole, ni le
-   * mur de vitrines, ni la caisse, seulement trois étages de couvertures. Un
-   * konbini de gare se donne à voir en entier par sa vitre ; le râtelier est
-   * un objet DEVANT, pas un rideau.
-   */
-  const rackD = 0.3;
-  const rackZ = zf - 0.08 - rackD / 2;
-  const rackX0 = gondX0 + 0.2;
-  const rackX1 = Math.min(gondX1 - 0.2, rackX0 + (gondX1 - gondX0) * 0.46);
-
-  // Portes de vitrine réfrigérée : autant qu'il en tient, jamais moins de deux.
-  const coolX0 = leftEnd + 0.1;
-  const coolX1 = hw - 0.04;
-  const doors = Math.max(2, Math.round((coolX1 - coolX0) / 1.05));
-  const doorPitch = (coolX1 - coolX0) / doors;
+  /** L'axe de la baie, rabattu une fois pour toutes dans le repère du quai. */
+  const sensor = useMemo(
+    () =>
+      anchor
+        ? anchor.facing === 1
+          ? { x: anchor.cx + zf, z: anchor.cz - doorX }
+          : { x: anchor.cx - zf, z: anchor.cz + doorX }
+        : null,
+    [anchor, zf, doorX],
+  );
 
   // --- La marchandise, en volume ------------------------------------
   //
@@ -316,7 +323,10 @@ export function Konbini({
               <mesh position={[0, -0.02, zb + coolD / 2]} material={p.lip}>
                 <boxGeometry args={[leftEnd + hw - 0.14, 0.03, coolD - 0.06]} />
               </mesh>
-              <mesh position={[0, -0.035, zb + coolD - 0.03]} material={p.rail}>
+              {/* Le rail se pose DEVANT le nez du gradin, jamais à son nu : à
+                  la même cote que la face qu'il habille, les deux surfaces se
+                  disputaient le tampon de profondeur. */}
+              <mesh position={[0, -0.035, zb + coolD - 0.015]} material={p.rail}>
                 <planeGeometry args={[leftEnd + hw - 0.14, 0.05]} />
               </mesh>
               <mesh position={[0, 0.24, zb + coolD - 0.1]} material={p.lit}>
@@ -331,8 +341,13 @@ export function Konbini({
         <mesh position={[(-hw + leftEnd) / 2, CHILL_H + 0.14, zb + coolD * 0.6]} material={p.casework}>
           <boxGeometry args={[leftEnd + hw - 0.06, 0.28, coolD * 1.24]} />
         </mesh>
+        {/* Le bandeau avance de deux centimètres sur le nu de la casquette. Il
+            était EXACTEMENT dessus, et c'est le grésillement qu'on voyait
+            courir en travers de 「おにぎり・お弁当」 dès qu'on bougeait la tête :
+            deux surfaces à la même cote, et le tampon de profondeur tranche au
+            hasard, pixel par pixel. */}
         <mesh
-          position={[(-hw + leftEnd) / 2, CHILL_H + 0.14, zb + coolD * 1.22]}
+          position={[(-hw + leftEnd) / 2, CHILL_H + 0.14, zb + coolD * 1.22 + 0.02]}
           material={p.bands.chilled}
         >
           <planeGeometry args={[leftEnd + hw - 0.12, 0.24]} />
@@ -429,10 +444,10 @@ export function Konbini({
           d'arrière-caisse - à cinquante, le vendeur était pris en sandwich
           entre deux meubles. */}
       <Checkout
-        x0={-hw + 0.04}
-        x1={leftEnd - 0.06}
-        z0={zb + coolD + 0.92}
-        depth={Math.min(0.72, d * 0.21)}
+        x0={counter.x0}
+        x1={counter.x1}
+        z0={counter.z0}
+        depth={counter.depth}
         wallX={-hw}
         station={station}
         m={m}
@@ -512,11 +527,11 @@ export function Konbini({
           </mesh>
         ))}
 
-        <SlidingDoors x={doorX} width={doorW} height={glassH} z={zf} m={m} />
+        <SlidingDoors x={doorX} width={doorW} height={glassH} z={zf} sensor={sensor} m={m} />
 
         {/* Pile de paniers, à l'entrée : on en prend un en passant, et c'est le
             premier objet de toute boutique japonaise. */}
-        <group position={[Math.min(hw - 0.24, doorX + doorW / 2 + 0.3), 0, zf - 0.5]}>
+        <group position={[baskets.x, 0, baskets.z]}>
           {[0, 1, 2, 3, 4].map((k) => (
             <group
               key={`panier${k}`}
@@ -547,7 +562,7 @@ export function Konbini({
         {/* Il se pose DEVANT la gondole, jamais à son droit : un mètre trente
             de coffre planté dans un rayon ne se voit sur aucune capture prise
             de face, et la sonde de gare le trouve du premier coup. */}
-        <group name="konbini/bac-glaces" position={[doorX - doorW * 0.42, 0, zf - 0.84]}>
+        <group name="konbini/bac-glaces" position={[chest.x, 0, chest.z]}>
           <mesh position={[0, 0.05, 0]} material={p.plinth}>
             <boxGeometry args={[1.24, 0.1, 0.7]} />
           </mesh>
@@ -591,12 +606,7 @@ export function Konbini({
         </mesh>
       </group>
       {/* Le vendeur, derrière sa caisse, tourné vers le client. */}
-      <ShopClerk
-        x={(-hw + leftEnd) / 2 - 0.25}
-        z={zb + coolD + 0.5}
-        yaw={0}
-        seed={station * 5 + 1}
-      />
+      <ShopClerk x={clerk.x} z={clerk.z} yaw={0} seed={station * 5 + 1} />
 
       {/* La flaque de lumière que la boutique jette sur le sol du hall. Sous
           terre, elle ne varie pas : rien de ce qui l'entoure ne varie. */}
@@ -705,30 +715,78 @@ function Checkout({
 }
 
 /**
- * La porte automatique : deux vantaux vitrés qui se rejoignent au milieu.
+ * Rayon du détecteur, et le jeu qui l'empêche de battre.
  *
- * Ils sont dessinés FERMÉS, et c'est un choix. Une porte de konbini passe sa
- * journée fermée - elle ne s'ouvre que sur quelqu'un - et deux vantaux écartés
- * sans personne devant auraient fait un trou noir dans une devanture par
- * ailleurs pleine. Ce qui dit qu'elle s'ouvre, ce n'est pas son ouverture :
- * c'est le rail au-dessus, le détecteur, et le bandeau 自動ドア à hauteur d'œil
- * qu'aucune porte coulissante japonaise n'omet.
+ * Une porte automatique n'a pas UN seuil mais deux : elle s'ouvre plus près
+ * qu'elle ne se referme. Sans cette hystérésis, quelqu'un qui s'arrête pile à
+ * la limite fait battre les vantaux jusqu'à ce qu'il s'en aille - c'est le
+ * défaut le plus reconnaissable d'une porte mal réglée, et le plus agaçant.
+ */
+const DOOR_OPEN_R = 1.9;
+const DOOR_SHUT_R = 2.5;
+/** Temps d'ouverture d'une porte de commerce : à peu près une seconde. */
+const DOOR_SPEED = 3.4;
+
+/**
+ * La porte automatique : deux vantaux vitrés qui s'écartent quand on approche.
+ *
+ * ELLE S'OUVRE PARCE QU'ON VIENT, et c'est tout ce qui la définit. Le rail, le
+ * détecteur et le bandeau 自動ドア disaient qu'elle était automatique ; ils ne
+ * le prouvaient pas, et une porte de konbini qui reste close pendant qu'on la
+ * traverse est pire qu'une porte peinte.
+ *
+ * LE DÉTECTEUR TRAVAILLE EN REPÈRE DE QUAI, et pas dans celui de la boutique :
+ * c'est le seul repère où la position du joueur se lise sans reconstruire la
+ * chaîne de transformations qui mène jusqu'ici (`runtime.playerPlatX/Z`, posés
+ * par `systems/playerFrame`). L'axe de la baie y est donc rabattu une fois, à
+ * la construction, exactement comme `data/stationInterior` rabat les emprises.
+ *
+ * `level` compte autant que la distance : à l'aplomb de la boutique, il y a
+ * aussi la dalle du quai deux étages plus haut, et rien dans les coordonnées ne
+ * dit sur laquelle des deux on marche. Une porte qui s'ouvre parce que
+ * quelqu'un passe SUR le quai n'aurait aucun sens.
  */
 function SlidingDoors({
   x,
   width,
   height,
   z,
+  sensor,
   m,
 }: {
   x: number;
   width: number;
   height: number;
   z: number;
+  /** Axe de la baie, en repère QUAI. Null : la boutique n'est pas située. */
+  sensor: { x: number; z: number } | null;
   m: Mats;
 }) {
   const p = shopPool();
   const leaf = width / 2;
+  const leaves = useRef<(THREE.Group | null)[]>([null, null]);
+  const open = useRef(0);
+  const wanted = useRef(false);
+
+  useFrame((_, rawDt) => {
+    const dt = Math.min(rawDt, 0.05);
+    if (sensor) {
+      const dx = runtime.playerPlatX - sensor.x;
+      const dz = runtime.playerPlatZ - sensor.z;
+      const r = Math.hypot(dx, dz);
+      const near = runtime.playerLevel === 'concourse';
+      wanted.current = near && (wanted.current ? r < DOOR_SHUT_R : r < DOOR_OPEN_R);
+    }
+    const target = wanted.current ? 1 : 0;
+    open.current += (target - open.current) * Math.min(1, dt * DOOR_SPEED);
+    // Le vantail s'efface DERRIÈRE le panneau fixe voisin : il ne disparaît pas
+    // dans le mur, il glisse le long de la vitrine, et l'on voit son montant de
+    // rive passer derrière le verre.
+    for (const [i, g] of leaves.current.entries()) {
+      if (g) g.position.x = ((i === 0 ? -1 : 1) * leaf) / 2 - (i === 0 ? 1 : -1) * open.current * leaf * 0.94;
+    }
+  });
+
   return (
     <group name="konbini/porte" position={[x, 0, z]}>
       {/* Rail d'entraînement et son capot. Il tient SOUS le nu haut de la
@@ -749,8 +807,15 @@ function SlidingDoors({
           <boxGeometry args={[0.07, height, 0.09]} />
         </mesh>
       ))}
-      {[-1, 1].map((s) => (
-        <group key={`vantail${s}`} position={[(s * leaf) / 2, 0, -0.06]}>
+      {[-1, 1].map((s, i) => (
+        <group
+          key={`vantail${s}`}
+          name="konbini/porte/vantail"
+          ref={(g) => {
+            leaves.current[i] = g;
+          }}
+          position={[(s * leaf) / 2, 0, -0.06]}
+        >
           <mesh position={[0, height / 2, 0]} material={m.glass}>
             <planeGeometry args={[leaf - 0.03, height - 0.1]} />
           </mesh>

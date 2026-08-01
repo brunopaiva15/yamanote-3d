@@ -179,3 +179,122 @@ test('les emprises déclarées sont bien celles que le rendu emploie', () => {
     assert.ok(k.x + k.halfX <= PSD_X + layout.depth, `${name} : kiosque hors dalle`);
   }
 });
+
+// --- Le konbini, praticable ----------------------------------------------
+//
+// La boutique a cessé d'être un bloc : on y entre. C'est le genre de bascule
+// qui marche du premier coup à l'écran et se casse en silence six mois plus
+// tard, quand une cote de meuble bouge d'un côté sans bouger de l'autre. Ce
+// qui suit tient les deux bouts : on passe par où il faut, et nulle part
+// ailleurs.
+
+const { konbiniPlan } = await import('../src/data/konbiniPlan.ts');
+
+/** Les konbini réellement posés, avec leur emprise et leur sens de façade. */
+const SHOPS = ALL.flatMap(({ name, place }) =>
+  place.interior.fixtures
+    .filter((f) => f.kind === 'konbini')
+    .map((f) => ({ name, it: place.interior, f })),
+);
+
+/** Un point du repère LOCAL de la boutique, rabattu en repère quai. */
+function toStation(f: { rect: { x0: number; x1: number; z0: number; z1: number }; facing: -1 | 1 }, lx: number, lz: number) {
+  const cx = (f.rect.x0 + f.rect.x1) / 2;
+  const cz = (f.rect.z0 + f.rect.z1) / 2;
+  return f.facing === 1 ? { x: cx + lz, z: cz - lx } : { x: cx - lz, z: cz + lx };
+}
+
+/** Le sol du hall existe-t-il sous ce point ? (même règle que systems/walkable) */
+function walkable(it: { paid: { x0: number; x1: number; z0: number }; free: { z1: number }; obstacles: { x0: number; x1: number; z0: number; z1: number }[] }, x: number, z: number): boolean {
+  if (x < it.paid.x0 || x > it.paid.x1) return false;
+  if (z < it.paid.z0 || z > it.free.z1) return false;
+  return !it.obstacles.some((o) => x >= o.x0 && x <= o.x1 && z >= o.z0 && z <= o.z1);
+}
+
+test('on entre dans le konbini par sa porte, et par elle seule', () => {
+  assert.ok(SHOPS.length >= 6, `trop peu de konbini : ${SHOPS.length}`);
+  for (const { name, it, f } of SHOPS) {
+    const plan = konbiniPlan(f.rect.z1 - f.rect.z0, f.rect.x1 - f.rect.x0);
+    // Dans l'axe de la baie, au nu de la devanture : on passe.
+    const door = toStation(f, plan.doorX, plan.zf - 0.02);
+    assert.ok(walkable(it, door.x, door.z), `${name} : porte murée`);
+    // À un mètre de l'axe, sur le panneau fixe : on ne passe pas.
+    const wall = toStation(f, plan.doorL - 0.5, plan.zf - 0.02);
+    assert.ok(!walkable(it, wall.x, wall.z), `${name} : on traverse la vitrine`);
+  }
+});
+
+test('depuis la porte, on atteint le fond de la boutique', () => {
+  // LA SEULE PROPRIÉTÉ QUI COMPTE, et elle n'est pas géométrique : la
+  // CONNEXITÉ. Une boutique dont l'allée serait coupée en deux redeviendrait
+  // une vitrine, et aucune cote prise séparément ne le dirait - c'est le jeu
+  // des meubles ENTRE EUX qui bouche un passage. Un premier essai vérifiait
+  // qu'une ligne droite traversait la boutique : il tombait sur le bac à
+  // glaces, qui est en plein milieu du passage parce que c'est là qu'il est en
+  // vrai. On contourne, donc on cherche un CHEMIN, pas une droite.
+  //
+  // Le pas de dix centimètres n'est pas un réglage : c'est quatre fois le pas
+  // du joueur à soixante images par seconde, donc largement de quoi ne rater
+  // aucun goulet que la marche saurait franchir.
+  const STEP = 0.1;
+  for (const { name, it, f } of SHOPS) {
+    const plan = konbiniPlan(f.rect.z1 - f.rect.z0, f.rect.x1 - f.rect.x0);
+    const nx = Math.ceil((2 * plan.hw) / STEP);
+    const nz = Math.ceil((plan.zf - plan.zb) / STEP);
+    const at = (ix: number, iz: number) => {
+      const q = toStation(f, -plan.hw + (ix + 0.5) * STEP, plan.zb + (iz + 0.5) * STEP);
+      return walkable(it, q.x, q.z);
+    };
+    const seen = new Set<number>();
+    // On part du seuil, dans l'axe de la baie.
+    const start: [number, number] = [
+      Math.floor((plan.doorX + plan.hw) / STEP),
+      Math.floor((plan.zf - 0.05 - plan.zb) / STEP),
+    ];
+    assert.ok(at(start[0], start[1]), `${name} : seuil infranchissable`);
+    const queue: [number, number][] = [start];
+    seen.add(start[0] * 1000 + start[1]);
+    while (queue.length) {
+      const [ix, iz] = queue.pop()!;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const jx = ix + dx;
+        const jz = iz + dz;
+        const key = jx * 1000 + jz;
+        if (jx < 0 || jz < 0 || jx >= nx || jz >= nz || seen.has(key)) continue;
+        if (!at(jx, jz)) continue;
+        seen.add(key);
+        queue.push([jx, jz]);
+      }
+    }
+    // Le fond de la boutique : le coin le plus éloigné de la porte, devant le
+    // meuble froid. Si on l'atteint, tout ce qu'il y a entre les deux est
+    // atteint. On le prend à quarante centimètres de la joue - au milieu, on
+    // tombait sur le VENDEUR, qui est un obstacle comme un autre.
+    const deepX = -plan.hw + 0.4;
+    const deepZ = plan.zb + plan.coolD + 0.3;
+    const deep = toStation(f, deepX, deepZ);
+    assert.ok(walkable(it, deep.x, deep.z), `${name} : le fond n'est pas du sol`);
+    const dix = Math.floor((deepX + plan.hw) / STEP);
+    const diz = Math.floor((deepZ - plan.zb) / STEP);
+    assert.ok(seen.has(dix * 1000 + diz), `${name} : le fond de la boutique est coupé de la porte`);
+  }
+});
+
+test('les meubles du konbini restent infranchissables', () => {
+  // On entre dans la boutique, pas dans la gondole. Chaque meuble est testé en
+  // son CENTRE : c'est le point qu'aucune tolérance de bord ne sauve.
+  for (const { name, it, f } of SHOPS) {
+    const plan = konbiniPlan(f.rect.z1 - f.rect.z0, f.rect.x1 - f.rect.x0);
+    const middles: [string, number, number][] = [
+      ['gondole', (plan.gondX0 + plan.gondX1) / 2, plan.gondZ],
+      ['vitrines', (plan.coolX0 + plan.coolX1) / 2, plan.zb + plan.coolD / 2],
+      ['comptoir', (plan.counter.x0 + plan.counter.x1) / 2, plan.counter.z0 + plan.counter.depth / 2],
+      ['bac à glaces', plan.chest.x, plan.chest.z],
+      ['magazines', (plan.rackX0 + plan.rackX1) / 2, plan.rackZ],
+    ];
+    for (const [what, lx, lz] of middles) {
+      const q = toStation(f, lx, lz);
+      assert.ok(!walkable(it, q.x, q.z), `${name} : on traverse ${what}`);
+    }
+  }
+});
