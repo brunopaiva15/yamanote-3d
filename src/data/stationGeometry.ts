@@ -56,6 +56,42 @@ export const PSD_LEAF_JOINT_W = 0.04;
  */
 export const PSD_LEAF_TIP_INSET = 0.004;
 
+// --- Ce qui est PLEIN et ce qui est VITRÉ ------------------------------
+//
+// Une ホームドア n'est pas un muret : c'est une MENUISERIE. Le plein s'arrête à
+// l'allège ; au-dessus, on voit la rame au travers - sa livrée verte, ses
+// portes, les gens debout derrière. C'est même à cela qu'on sait qu'un train
+// est à quai avant que quoi que ce soit ne bouge. Rendues opaques, les quarante
+// baies d'un quai formaient un bandeau gris continu de deux cent vingt mètres
+// qui cachait précisément ce qu'on vient regarder.
+//
+// Reste que tout n'est pas vitré : chaque baie a ses deux POCHES, les caissons
+// pleins où les vantaux s'effacent, et c'est sur elles que se collent la plaque
+// de baie et les affiches. Entre deux poches, un panneau fixe vitré.
+
+/**
+ * Longueur d'une poche de refoulement, mesurée depuis le chant de la baie.
+ *
+ * Elle vaut exactement ce qu'il faut pour avaler un vantail grand ouvert : sa
+ * largeur, sa course, son retrait, moins la demi-baie déjà comptée - plus cinq
+ * centimètres de garde, faute de quoi le bout du vantail ressortait dans le
+ * panneau vitré, portique ouvert.
+ */
+export const PSD_POCKET_LEN = PSD_LEAF_W + PSD_LEAF_TRAVEL + PSD_LEAF_TIP_INSET - PSD_HALF_GAP + 0.05;
+
+/**
+ * Hauteur d'allège : le plein sous le vitrage, celui qui porte les affiches
+ * (three/station/PlatformAds les cale à 0,37 m, sur 0,50 de haut).
+ */
+export const PSD_APRON_H = 0.64;
+
+/** Sous-face du bandeau uguisu : le vitrage s'arrête là, il n'y a pas de jour. */
+export const PSD_GLASS_TOP = PSD_H - 0.12;
+
+/** Épaisseur du muret, et celle - plus mince - d'un panneau vitré. */
+export const PSD_WALL_T = 0.1;
+export const PSD_GLASS_T = 0.03;
+
 /** Longueur du quai (m). */
 export const PLATFORM_LEN = 96;
 

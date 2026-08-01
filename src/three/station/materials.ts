@@ -67,6 +67,20 @@ export function makeStationMaterials(p: StationPalette, textures: StationTexture
         opacity: 0.35,
         depthWrite: false,
       }),
+      // Vitrage des portes palières. Ce n'est PAS le verre de vitrine des
+      // distributeurs, opaque au tiers : une ホームドア est une baie claire, on
+      // lit la livrée verte de la rame au travers, et c'est même à cela qu'on
+      // voit qu'un train est à quai avant que le premier vantail ne bouge. Il
+      // ne reste du trempé réel que son chant très légèrement vert.
+      psdGlass: new THREE.MeshStandardMaterial({
+        color: '#dde8e4',
+        roughness: 0.06,
+        metalness: 0,
+        transparent: true,
+        opacity: 0.17,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
       accent: new THREE.MeshStandardMaterial({ color: p.accent, roughness: 0.68 }),
       canopy: new THREE.MeshStandardMaterial({
         color: p.canopy,
