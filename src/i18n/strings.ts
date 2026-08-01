@@ -88,6 +88,8 @@ export interface Strings {
     phaseOutage: string;
     currentStation: string;
     nextStation: string;
+    /** Bulle et libellé accessible de l'indicateur de vitesse. */
+    speedTitle: string;
     occupancyTitle: string;
     band: {
       empty: string;
@@ -228,6 +230,7 @@ const FR: Strings = {
     phaseOutage: 'Coupure de courant',
     currentStation: 'Station actuelle',
     nextStation: 'Prochaine station',
+    speedTitle: 'Vitesse du train',
     occupancyTitle: 'Estimation calibrée (±8–12 pts un jour normal)',
     band: {
       empty: 'très fluide',
@@ -355,6 +358,7 @@ const EN: Strings = {
     phaseOutage: 'Power failure',
     currentStation: 'Current station',
     nextStation: 'Next station',
+    speedTitle: 'Train speed',
     occupancyTitle: 'Calibrated estimate (±8–12 pts on a normal day)',
     band: {
       empty: 'very light',
@@ -422,7 +426,8 @@ const EN: Strings = {
     assistance: {
       name: 'Passenger assistance',
       note: 'Staff intervention at the next station.',
-      unavailable: 'Available while running or at a station with doors open, when no other incident is active.',
+      unavailable:
+        'Available while running or at a station with doors open, when no other incident is active.',
     },
   },
 
@@ -482,6 +487,7 @@ const JA: Strings = {
     phaseOutage: '停電',
     currentStation: '現在の駅',
     nextStation: '次の駅',
+    speedTitle: '列車の速度',
     occupancyTitle: '推定混雑率（平常日でおよそ±8〜12ポイント）',
     band: {
       empty: '非常に空いている',
