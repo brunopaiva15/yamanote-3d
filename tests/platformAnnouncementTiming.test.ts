@@ -25,11 +25,13 @@ const {
   createPlatformAnnouncementPlan,
   fitsBeforeCutoff,
   optionalMessagePlays,
+  trainEnteringPasses,
 } = await import('../src/systems/platformAnnouncementPlan.ts');
 const { announcementClipDuration } = await import('../src/data/announcementClips.ts');
 const {
   PLATFORM_AGENT_MESSAGES,
   PLATFORM_DELAY_CAUSES,
+  platformTrainEnteringAnnouncement,
   platformAgentMessage,
   platformAlightFirstAnnouncement,
   platformApproachAnnouncement,
@@ -44,7 +46,11 @@ const { platformNoticesForStation } = await import(
 );
 const { STATIONS } = await import('../src/data/stations.ts');
 const { platformFor } = await import('../src/data/platforms.ts');
-const { DEPART_HOLD } = await import('../src/systems/trainPhysics.ts');
+const { APPROACH_CHIME_TOTAL_S } = await import('../src/data/approachChimes.ts');
+const { V_MAX } = await import('../src/data/config.ts');
+const { DEPART_HOLD, integrateTrain, stopDistance } = await import(
+  '../src/systems/trainPhysics.ts'
+);
 
 const { readFileSync } = await import('node:fs');
 const { fileURLToPath } = await import('node:url');
@@ -139,6 +145,120 @@ test('l’annonce d’approche a dit l’essentiel avant que la rame ne paraisse
       assert.ok(all <= untilArrival + 12, `${where} : ${all.toFixed(1)} s au total`);
     }
   }
+});
+
+// --- L'entrée en gare, du carillon aux portes ----------------------------
+//
+// Les instants de cette séquence sont rappelés ici pour la même raison que les
+// bornes du dwell : ils vivent dans des modules qui tirent le moteur audio et
+// ne s'importent pas dans Node.
+
+/** Silence entre un signal de la sono et le premier mot (systems/stationPa). */
+const SIGNAL_TO_VOICE = 0.3;
+/** Attaque du carillon ATOS (audioEngine.platformChime, `lead`). */
+const CHIME_LEAD = 0.05;
+/** Du déclenchement du carillon au premier mot de l'annonce d'approche. */
+const APPROACH_VOICE_AT = CHIME_LEAD + APPROACH_CHIME_TOTAL_S + SIGNAL_TO_VOICE;
+/** Les deux bips du signal d'entrée (audioEngine.PLATFORM_WARNING_SIGNAL_S). */
+const WARNING_SIGNAL = 0.24 + 0.14;
+/** Du déclenchement du signal au premier mot de l'avertissement d'entrée. */
+const WARNING_VOICE_AT = WARNING_SIGNAL + SIGNAL_TO_VOICE;
+/** Distance restant à parcourir à laquelle il part (systems/platformWait). */
+const ENTERING_AT_LEFT = 150;
+
+/**
+ * Le freinage tel que le quai le voit : quand la rame paraît au bout du quai
+ * (t = 0, elle roule à V_MAX), quand elle arrive à portée de l'avertissement
+ * d'entrée, et quand elle s'immobilise.
+ */
+function brakingRun(): { warningAt: number; stopAt: number } {
+  const s = { v: V_MAX, a: 0, d: 0 };
+  const dt = 1 / 30;
+  let t = 0;
+  let warningAt = 0;
+  while (s.v > 0.02 && t < 120) {
+    integrateTrain(s, 0, dt);
+    t += dt;
+    if (!warningAt && stopDistance(s.v, s.a) <= ENTERING_AT_LEFT) warningAt = t;
+  }
+  return { warningAt, stopAt: t };
+}
+
+test('l’annonce d’approche part AVANT la rame, pas avec elle', () => {
+  // La régression que ce test verrouille : le déclencheur de l'annonce
+  // d'approche avait été mis sous condition du LÂCHER de la rame
+  // (`released && t >= releaseAt - APPROACH_AT_BEFORE`), or `released` contient
+  // déjà `t >= releaseAt`. L'annonce partait donc à la seconde où la rame
+  // s'élançait vers le quai : « the train will soon arrive » sur une rame en
+  // train d'entrer, puis 「電車がまいります」 repoussé derrière ses trente
+  // secondes de parole, jusqu'après l'ouverture des portes.
+  const line = readSystem('platformWait.ts')
+    .split('\n')
+    .find((l) => l.includes("once('announce'"));
+  assert.ok(line, "aucun déclencheur 'announce' dans platformWait.ts");
+  assert.ok(
+    line.includes('APPROACH_AT_BEFORE'),
+    `l'annonce d'approche ne lit pas son avance : ${line.trim()}`,
+  );
+  assert.ok(
+    !/\breleased\b/.test(line),
+    `l'annonce d'approche attend le lâcher de la rame : ${line.trim()}`,
+  );
+});
+
+test('l’avertissement d’entrée sort pendant l’entrée, deux fois, et pas après', () => {
+  // Bout à bout, sur la file du quai : le carillon puis l'annonce d'approche
+  // partent APPROACH_AT_BEFORE avant que la rame ne paraisse ; l'avertissement
+  // d'entrée se présente pendant le freinage, derrière ce qu'il en reste - le
+  // plus souvent la version anglaise. Les deux passages doivent tenir avant
+  // l'immobilisation, sans quoi ils sortiraient sur les portes qui s'ouvrent.
+  const { warningAt, stopAt } = brakingRun();
+  assert.ok(warningAt > 0 && warningAt < stopAt, 'avertissement hors du freinage');
+  for (const direction of DIRECTIONS) {
+    const warning = durationOf(platformTrainEnteringAnnouncement(direction));
+    assert.ok(warning > 0, `avertissement d'entrée sans clip (${direction})`);
+    for (let i = 0; i < STATIONS.length; i++) {
+      const where = `${STATIONS[i].jy} (${direction})`;
+      // Origine des temps : l'instant où la rame paraît au bout du quai.
+      const approachEndsAt =
+        -PLATFORM_SCHEDULE.approachBefore + APPROACH_VOICE_AT + durationOf(approachItems(i, direction));
+      assert.ok(
+        approachEndsAt < warningAt + ANNOUNCEMENT_MARGIN,
+        `${where} : l'annonce d'approche parle encore à ${approachEndsAt.toFixed(1)} s`,
+      );
+      const queue = Math.max(0, approachEndsAt - warningAt);
+      assert.equal(
+        trainEnteringPasses(warning, WARNING_VOICE_AT, queue, stopAt - warningAt),
+        2,
+        `${where} : ${queue.toFixed(1)} s de file pour ${(stopAt - warningAt).toFixed(1)} s`,
+      );
+    }
+  }
+});
+
+test('l’avertissement d’entrée est abandonné plutôt que dit à une rame posée', () => {
+  const warning = durationOf(platformTrainEnteringAnnouncement('inner'));
+  const window = 20;
+  // File pleine : le second passage tombe d'abord, puis le premier.
+  assert.equal(trainEnteringPasses(warning, WARNING_VOICE_AT, 0, window), 2);
+  /** Ce que la file doit laisser pour un passage, et pour deux. */
+  const forOne = WARNING_VOICE_AT + warning + ANNOUNCEMENT_MARGIN;
+  const forTwo = forOne + warning;
+  assert.equal(trainEnteringPasses(warning, WARNING_VOICE_AT, window - forTwo, window), 2);
+  assert.equal(
+    trainEnteringPasses(warning, WARNING_VOICE_AT, window - forTwo + 0.01, window),
+    1,
+  );
+  assert.equal(trainEnteringPasses(warning, WARNING_VOICE_AT, window - forOne, window), 1);
+  assert.equal(
+    trainEnteringPasses(warning, WARNING_VOICE_AT, window - forOne + 0.01, window),
+    0,
+  );
+  assert.equal(trainEnteringPasses(warning, WARNING_VOICE_AT, window, window), 0);
+  // Et jamais rien à moins d'une marge de silence de l'immobilisation.
+  const exact = WARNING_VOICE_AT + warning + ANNOUNCEMENT_MARGIN;
+  assert.equal(trainEnteringPasses(warning, WARNING_VOICE_AT, 0, exact), 1);
+  assert.equal(trainEnteringPasses(warning, WARNING_VOICE_AT, 0, exact - 0.01), 0);
 });
 
 test('l’excuse de retard est terminée avant le rendez-vous décalé de l’anticipée', () => {

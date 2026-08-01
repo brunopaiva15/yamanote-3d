@@ -1319,6 +1319,18 @@ export function platformChime(): number {
   return lead + APPROACH_CHIME_TOTAL_S;
 }
 
+/** Écart entre les deux bips du signal d'entrée, puis extinction du second (s). */
+const WARNING_BEEP_GAP = 0.24;
+const WARNING_BEEP_TAIL = 0.14;
+
+/**
+ * Durée du signal d'entrée (s). Elle est publique parce qu'elle se CHIFFRE
+ * avant de sonner : l'avertissement qui la suit n'est diffusé que s'il tient
+ * avant l'arrêt de la rame (stationPa.paTrainEntering), et rien ne doit sortir
+ * des haut-parleurs tant que cette décision n'est pas prise.
+ */
+export const PLATFORM_WARNING_SIGNAL_S = WARNING_BEEP_GAP + WARNING_BEEP_TAIL;
+
 /**
  * Signal électronique avant 「電車がまいります」 : deux bips secs.
  *
@@ -1327,11 +1339,11 @@ export function platformChime(): number {
 export function platformWarningSignal(): number {
   if (!nodes) return 0;
   const now = Tone.now();
-  const gap = 0.24;
-  const tail = 0.14;
   nodes.platBeep.triggerAttackRelease('E6', 0.14, slot('platBeep', now), 0.4);
-  nodes.platBeep.triggerAttackRelease('E6', 0.14, slot('platBeep', now + gap), 0.4);
-  return gap + tail;
+  nodes.platBeep.triggerAttackRelease(
+    'E6', 0.14, slot('platBeep', now + WARNING_BEEP_GAP), 0.4,
+  );
+  return PLATFORM_WARNING_SIGNAL_S;
 }
 
 /** Fin du signal d'ouverture en cours, sur l'horloge audio. */

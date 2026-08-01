@@ -96,6 +96,14 @@ const PASS_AT = 28;
 /** Distance au-delà de laquelle la rame qui part est hors de vue. */
 const OUT_OF_SIGHT = 320;
 
+/**
+ * Distance restant à parcourir (m) à laquelle la rame qui arrive est assez
+ * proche pour que l'avertissement d'entrée prenne le relais de l'annonce
+ * d'approche : elle est alors au bout du quai, et il reste une vingtaine de
+ * secondes de freinage.
+ */
+const ENTERING_AT_LEFT = 150;
+
 // --- Instants des annonces facultatives ----------------------------------
 //
 // Ce ne sont plus des rendez-vous : chacun de ces instants n'est que le moment
@@ -312,6 +320,12 @@ let effectiveReleaseAt = HEADWAY_GAP;
 let passPending = false;
 /** Une excuse de retard a été diffusée dans ce creux : elle décale l'anticipée. */
 let delayAnnounced = false;
+/**
+ * Instant où l'annonce d'approche est partie (s dans le creux), −1 tant qu'elle
+ * n'a pas été dite. Il RETIENT la rame : elle ne paraît qu'une fois l'annonce
+ * lancée, et pas avant qu'elle ait eu son avance.
+ */
+let approachAnnouncedAt = -1;
 
 /** Tire le creux qui commence, et le passage qui l'allonge peut-être. */
 function beginClear(index: number): void {
@@ -323,6 +337,7 @@ function beginClear(index: number): void {
   baseHeadway = HEADWAY_GAP + (passPending ? PASS_HEADWAY_EXTRA : 0);
   effectiveReleaseAt = baseHeadway + disruptionExtraSeconds(direction);
   delayAnnounced = false;
+  approachAnnouncedAt = -1;
   // Le plan de la rame ATTENDUE, tiré maintenant que le creux est connu : c'est
   // lui qui décide de l'annonce anticipée et du remerciement, et c'est le même
   // qui portera « laissez descendre » et les consignes d'agent quand elle sera
@@ -392,8 +407,26 @@ function updateClear(index: number): void {
   });
   const disruptionReady = !disruptionAffects(direction) ||
     (lineDisruption.resumeAnnouncementPlayed && speechQueueRemaining('platform') <= 0.05);
+  // L'annonce d'approche part AVANT la rame - c'est tout ce qu'elle dit :
+  // 「まもなく…がまいります」, « will soon arrive ». Elle ne peut donc pas
+  // attendre le lâcher de la rame : lancée avec lui, elle annonce une rame déjà
+  // en train d'entrer, et ses trente secondes de parole repoussent
+  // l'avertissement d'entrée jusqu'après l'ouverture des portes. Ce qu'elle
+  // attend, c'est de savoir que la rame VA venir - pas qu'elle soit là.
+  once('announce', disruptionReady && t >= effectiveReleaseAt - APPROACH_AT_BEFORE, () => {
+    approachAnnouncedAt = t;
+    paApproach(index);
+  });
+  // Et la rame ne paraît pas avant que l'annonce ait eu son avance. Dans le
+  // creux ordinaire, cela ne change rien - l'annonce part pile à
+  // effectiveReleaseAt − APPROACH_AT_BEFORE. Sur une reprise après incident,
+  // où la gare finissait d'expliquer le retard quand le créneau est arrivé, le
+  // lâcher recule d'autant : le tableau des départs lit le même instant
+  // (nextTrainsFromPlatform), il reste donc honnête.
+  if (approachAnnouncedAt >= 0) {
+    effectiveReleaseAt = Math.max(effectiveReleaseAt, approachAnnouncedAt + APPROACH_AT_BEFORE);
+  }
   const released = !nextTrainBlocked(direction) && disruptionReady && t >= effectiveReleaseAt;
-  once('announce', released && t >= effectiveReleaseAt - APPROACH_AT_BEFORE, () => paApproach(index));
   if (released) {
     platformWait.approachDist = stopDistance(V_MAX, 0);
     train.v = V_MAX;
@@ -419,8 +452,12 @@ function updateApproaching(dt: number): void {
   // la soustraction.
   const left = stopDistance(train.v, train.a);
   // La rame est en vue au bout du quai : l'avertissement court prend le relais
-  // de l'annonce d'approche, plus fort et répété.
-  once('entering', left <= 150, () => paTrainEntering());
+  // de l'annonce d'approche, plus fort et répété. Il ne vaut que TANT QUE la
+  // rame entre - d'où le temps qu'il reste avant l'immobilisation : ce qui n'y
+  // tiendrait pas est abandonné plutôt que dit à une rame déjà posée.
+  once('entering', left <= ENTERING_AT_LEFT, () =>
+    paTrainEntering(approachRunTime() - platformWait.t),
+  );
   runtime.trainZ = left - runtime.berthOffset;
   runtime.speed = train.v;
   runtime.accel = train.a;
