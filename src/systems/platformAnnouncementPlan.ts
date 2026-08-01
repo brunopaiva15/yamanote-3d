@@ -402,6 +402,36 @@ export function fitsBeforeCutoff(
 }
 
 /**
+ * Combien de fois 「電車がまいります」 tient avant l'immobilisation de la rame.
+ *
+ * L'avertissement d'entrée se dit DEUX fois - c'est un avertissement, pas une
+ * information - mais les deux passages ne sont pas dus : ils n'ont de sens que
+ * pendant que la rame entre. `queueSeconds` est ce que la gare a encore à dire
+ * (la fin de l'annonce d'approche, le plus souvent), `leadSeconds` le signal
+ * électronique qui ouvre l'avertissement et le silence qui le suit,
+ * `secondsUntilStop` ce qu'il reste de freinage.
+ *
+ * On retire le second passage avant le premier, et le premier avant de tout
+ * abandonner : mieux vaut un seul 「電車がまいります」 pendant l'entrée que deux
+ * qui sortent portes ouvertes, sur une rame déjà à quai.
+ */
+export function trainEnteringPasses(
+  clipSeconds: number,
+  leadSeconds: number,
+  queueSeconds: number,
+  secondsUntilStop: number,
+  margin = ANNOUNCEMENT_MARGIN,
+): 0 | 1 | 2 {
+  if (fitsBeforeCutoff(leadSeconds + clipSeconds * 2, queueSeconds, secondsUntilStop, margin)) {
+    return 2;
+  }
+  if (fitsBeforeCutoff(leadSeconds + clipSeconds, queueSeconds, secondsUntilStop, margin)) {
+    return 1;
+  }
+  return 0;
+}
+
+/**
  * La décision complète d'un message facultatif : le plan l'a-t-il retenu, ET
  * tient-il encore dans ce qu'il reste de créneau ?
  *

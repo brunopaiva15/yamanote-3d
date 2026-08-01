@@ -51,6 +51,7 @@ import {
   optionalMessagePlays,
   platformPlanSeed,
   seededRandom,
+  trainEnteringPasses,
   type PlatformAnnouncementContext,
   type PlatformAnnouncementPlan,
 } from './platformAnnouncementPlan';
@@ -364,12 +365,33 @@ export function paApproach(index: number): void {
   );
 }
 
-/** La rame est en vue : signal électronique, puis l'avertissement court, répété. */
-export function paTrainEntering(): void {
-  const direction = dir();
-  const signal = audio.platformWarningSignal();
-  sayAfterSignal(platformTrainEnteringAnnouncement(direction), signal);
-  say(platformTrainEnteringAnnouncement(direction), 'platform');
+/**
+ * La rame est en vue : signal électronique, puis l'avertissement court, répété.
+ *
+ * `cutoffIn` est le temps qui reste avant l'immobilisation de la rame. Les deux
+ * passages ne sont pas dus : l'avertissement n'a de sens que pendant l'entrée,
+ * et la gare a souvent encore l'anglais de l'annonce d'approche à finir. Ce qui
+ * ne tient pas est ABANDONNÉ - 「電車がまいります」 sorti pendant que les portes
+ * s'ouvrent avertit d'une rame qui est déjà là.
+ *
+ * Rien ne sonne avant la décision, signal compris : c'est pour cela que sa
+ * durée se lit sur une constante (audioEngine.PLATFORM_WARNING_SIGNAL_S) au
+ * lieu d'être le retour de l'appel qui le joue.
+ *
+ * @returns le nombre de passages diffusés (0, 1 ou 2).
+ */
+export function paTrainEntering(cutoffIn = Number.POSITIVE_INFINITY): number {
+  const items = platformTrainEnteringAnnouncement(dir());
+  const passes = trainEnteringPasses(
+    utteranceDuration(items),
+    audio.PLATFORM_WARNING_SIGNAL_S + SIGNAL_TO_VOICE_MS / 1000,
+    speechQueueRemaining('platform'),
+    cutoffIn,
+  );
+  if (passes === 0) return 0;
+  sayAfterSignal(items, audio.platformWarningSignal());
+  if (passes === 2) say(items, 'platform');
+  return passes;
 }
 
 // --- Train qui traverse ---------------------------------------------------
