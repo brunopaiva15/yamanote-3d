@@ -605,16 +605,16 @@ function drawWayChevron(g: CanvasRenderingContext2D, x: number, y: number, angle
   g.rotate(angle);
   g.scale(s, s);
   g.beginPath();
-  g.moveTo(-8.05, -15);
-  g.lineTo(2.65, -15);
+  g.moveTo(-8.05, -15.5);
+  g.lineTo(2.65, -15.5);
   g.lineTo(8.05, 0);
-  g.lineTo(2.65, 15);
-  g.lineTo(-8.05, 15);
+  g.lineTo(2.65, 15.5);
+  g.lineTo(-8.05, 15.5);
   g.lineTo(-2.65, 0);
   g.closePath();
   g.strokeStyle = '#f0f0ee';
-  g.lineWidth = 2.2;
-  g.lineJoin = 'round';
+  g.lineWidth = 1.6;
+  g.lineJoin = 'miter';
   g.stroke();
   g.fillStyle = MARKER_RED;
   g.fill();
@@ -1044,8 +1044,13 @@ export function drawLoopMap(
   // gare qui tient ce rôle, plus haut.
   if (!atStation && markerLit(anim)) {
     const way = delta >= 0 ? 1 : -1;
-    const mk = loopPointAt(tNext - way * 25);
-    drawWayChevron(g, mk.x, mk.y, mk.angle + (way > 0 ? 0 : Math.PI));
+    const mk = loopPointAt(tNext - way * 22);
+    // Le chevron reste D'APLOMB sur sa rangée, même quand il déborde de
+    // quelques pixels sur l'about arrondi : sur l'afficheur ses bords haut et
+    // bas sont horizontaux, et la moindre rotation cisaille le V - à trente
+    // pixels de haut, sept degrés suffisent à le rendre bancal.
+    const rowAngle = loopSlot(index).top ? 0 : Math.PI;
+    drawWayChevron(g, mk.x, mk.y, rowAngle + (way > 0 ? 0 : Math.PI));
   }
   g.textAlign = 'left';
 
