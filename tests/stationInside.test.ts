@@ -121,9 +121,19 @@ test('de la rue au quai, on ne traverse rien non plus', () => {
 
 test('on passe le portillon, une fois, et par un vrai passage', () => {
   for (const { name, place } of INSIDE) {
-    const n = place.interior.gate.passages.length;
+    const gate = place.interior.gate;
+    const n = gate.passages.length;
     for (let k = 0; k < 20; k++) {
-      for (const stops of [routeToStreet(place), routeFromStreet(place)?.stops]) {
+      // Sortir se valide côté PAYANT, entrer côté LIBRE : dans les deux cas,
+      // du côté d'où l'on vient. On bipe avant de s'engager, jamais après -
+      // c'est le geste même du 改札, et une validation posée de l'autre côté
+      // de la ligne ferait passer le portillon pour un tourniquet de métro
+      // parisien qu'on paie en sortant.
+      const ways = [
+        { stops: routeToStreet(place), from: 'le quai', side: -1 },
+        { stops: routeFromStreet(place)?.stops, from: 'la rue', side: 1 },
+      ] as const;
+      for (const { stops, from, side } of ways) {
         assert.ok(stops);
         const taps = stops.filter((s) => s.tap !== undefined);
         assert.equal(taps.length, 1, `${name} : ${taps.length} validations dans un trajet`);
@@ -131,9 +141,20 @@ test('on passe le portillon, une fois, et par un vrai passage', () => {
         assert.ok(tap >= 0 && tap < n, `${name} : passage ${tap} inexistant`);
         // On valide DEVANT la borne, pas dedans : le geste se voit, et le
         // portillon a le temps de s'ouvrir avant qu'on l'atteigne.
+        const z = taps[0].z;
+        const edge = side < 0 ? gate.z0 : gate.z1;
         assert.ok(
-          taps[0].z < place.interior.gate.z0 && taps[0].z > place.interior.gate.z0 - 2,
-          `${name} : validation à ${taps[0].z.toFixed(2)}, hors d'atteinte du lecteur`,
+          side < 0 ? z < edge && z > edge - 2 : z > edge && z < edge + 2,
+          `${name} : en venant de ${from}, validation à ${z.toFixed(2)} -`
+            + ` hors d'atteinte du lecteur, ou de l'autre côté de la ligne`,
+        );
+        // Et AVANT de la franchir : le point de validation précède tout point
+        // posé au-delà de la ligne.
+        const crossed = stops.findIndex((s) => (side < 0 ? s.z > gate.z1 : s.z < gate.z0));
+        const at = stops.findIndex((s) => s.tap !== undefined);
+        assert.ok(
+          crossed < 0 || at < crossed,
+          `${name} : en venant de ${from}, on franchit la ligne avant de biper`,
         );
         assert.ok((taps[0].hold ?? 0) > 0, `${name} : on ne s'arrête pas pour valider`);
       }

@@ -16,9 +16,16 @@
 //      file fluide ;
 //   2. ils se ferment à l'APPROCHE de quelqu'un qui n'a rien présenté, pas au
 //      moment où il les touche. Un demi-mètre avant, avec le claquement sec du
-//      mécanisme : on s'arrête tout seul ;
+//      mécanisme : on s'arrête tout seul. QUELQU'UN, et pas seulement le
+//      joueur - la foule les fait claquer aussi, et se les prend devant elle
+//      une demi-seconde avant de poser sa carte (systems/platformCrowd) ;
 //   3. la validation ouvre pour quelques secondes, le temps de passer - pas
 //      pour toujours. Repasser demande de retaper.
+//
+// ON BIPE AVANT DE PASSER, jamais après : le lecteur est sur le dessus de la
+// borne, à l'entrée du passage, et l'on s'y présente du côté d'où l'on vient.
+// Entrer en gare se valide côté zone libre, sortir se valide côté zone payante
+// (systems/concourseRoute, `paidLegs`).
 //
 // Le tarif est réel : la carte retient d'où l'on est parti (store.pocket.entry)
 // et la sortie facture le nombre d'arrêts (data/products, `fareFor`). Sortir
@@ -45,15 +52,6 @@ export interface GateState {
   grantT: number;
   /** Sens dans lequel la validation a été faite. */
   grantDir: 1 | -1;
-  /**
-   * Validation d'un VOYAGEUR, tenue à part de celle du joueur.
-   *
-   * Elle allume le feu et fait le ピッ, et elle ne fait que cela : elle ne
-   * tient PAS les battants ouverts pour qui se présente derrière. Un portillon
-   * dont la baie reste béante parce que quelqu'un vient de valider laisserait
-   * passer sans payer - c'est ce que fait un talonneur, pas un portillon.
-   */
-  paxGrantT: number;
   /** Ce que la dalle de la borne affiche, et pour combien de temps encore. */
   verdict: GateVerdict | null;
   verdictT: number;
@@ -72,8 +70,41 @@ const GRANT = 3.6;
 const DENY_SHOW = 2.4;
 /** Distance à laquelle les battants se ferment devant qui n'a rien présenté. */
 const CLOSE_AT = 1.9;
+/**
+ * Marge latérale du fuseau d'un passage.
+ *
+ * On se présente à un portillon en visant sa baie, pas en s'alignant au
+ * centimètre : trente-cinq centimètres de part et d'autre, et l'on est bien
+ * dans la file de celui-là plutôt que dans celle du voisin.
+ */
+const LANE_SLACK = 0.35;
+/**
+ * Portée d'un claquement de battants, en mètres.
+ *
+ * Moins que celle du ピッ (26 m) : un vantail est un bruit MAT, il ne porte pas
+ * comme un bip. Et il en faut une, maintenant que la foule les fait claquer -
+ * sans elle, on entendait la ligne entière s'agiter depuis le quai, à travers
+ * une dalle de béton, pour des baies qu'on ne voit même pas.
+ */
+const FLAP_EARSHOT = 18;
+
+/**
+ * Ce que les VOYAGEURS présentent à un passage, ce sous-pas-ci.
+ *
+ * Remis à zéro à chaque tour de `updateFareGates` et rempli entre-temps par la
+ * foule (`systems/platformCrowd`, qui marche juste avant). Le portillon ne
+ * garde donc rien d'eux d'une image sur l'autre : il voit qui est devant lui
+ * MAINTENANT, ce qui est exactement ce que fait une cellule.
+ */
+interface PaxAtGate {
+  /** Distance à la ligne du plus proche qui n'a PAS validé (∞ si personne). */
+  near: number;
+  /** Quelqu'un a validé, ou est déjà entre les bornes : on n'ose pas fermer. */
+  hold: boolean;
+}
 
 let states: GateState[] = [];
+let paxAt: PaxAtGate[] = [];
 let builtFor = -1;
 
 function ensure(): GateState[] {
@@ -89,10 +120,10 @@ function ensure(): GateState[] {
       lightT: 0,
       grantT: 0,
       grantDir: 1 as 1 | -1,
-      paxGrantT: 0,
       verdict: null,
       verdictT: 0,
     }));
+    paxAt = Array.from({ length: n }, () => ({ near: Infinity, hold: false }));
   }
   return states;
 }
@@ -194,16 +225,19 @@ export function tapGate(id: string, dir: 1 | -1): boolean {
 }
 
 /**
- * Un VOYAGEUR passe sa carte : le ピッ, et le feu qui s'allume une seconde.
+ * Un VOYAGEUR passe sa carte : le ピッ, le feu, et la baie qui se rouvre.
  *
  * C'EST LE SON D'UNE GARE JAPONAISE. Pas les annonces, pas les mélodies : ce
  * petit bip toutes les deux secondes, vingt fois par minute, chacun le sien.
  * Une ligne de portillons silencieuse pendant qu'une file la franchit s'entend
  * tout de suite - c'est ce qui manquait au hall.
  *
- * Ce qu'il ne fait PAS : ouvrir la baie pour le joueur qui suivrait. Le
- * portillon reste ce qu'il est - il s'ouvre pour qui a validé, et pour lui
- * seul (voir `paxGrantT`).
+ * Les battants S'ÉCARTENT ici, parce qu'ils se sont rabattus juste avant : le
+ * voyageur qui s'approche sans avoir encore validé les fait claquer comme le
+ * joueur les fait claquer (`updateFareGates`), et c'est cet enchaînement-là -
+ * ils se ferment sur vous, vous posez la carte, ils s'ouvrent - qui fait le
+ * portillon. La baie ne s'ouvre pas pour autant à qui suivrait sans valider :
+ * un talonneur retrouve devant lui des vantaux rabattus, la foule y compris.
  *
  * `dist` est la distance au joueur, en mètres : un bip à trente mètres à
  * travers une dalle de béton ne s'entend pas, et on ne le joue pas.
@@ -212,15 +246,67 @@ export function paxTapGate(passage: number, dist: number): void {
   const list = ensure();
   const s = list[passage];
   if (!s) return;
-  s.paxGrantT = GRANT;
-  if (s.light === 'open') {
+  if (s.light === 'open' || s.light === 'deny') {
     s.light = 'ok';
     s.lightT = 1.1;
+  }
+  // Le joueur qui se présente au même passage sans avoir validé garde la main :
+  // ce n'est pas dans le dos de quelqu'un qu'on entre en gare.
+  if (s.target !== 1 && playerAtGate(passage) !== 'blocks') {
+    s.target = 1;
+    const heard = flapGain(passage);
+    if (heard > 0) gateFlap(false, heard);
   }
   if (runtime.playerLevel !== 'concourse' || dist > 26) return;
   // Le bip est SEC et près : il ne porte pas, il ponctue. Au-delà de vingt
   // mètres, le hall l'a déjà avalé.
   gateBeep(Math.max(0, 1 - dist / 26) ** 1.6);
+}
+
+/**
+ * Un voyageur se présente à la ligne : où en est-il, et a-t-il validé ?
+ *
+ * Appelé par la foule à chaque sous-pas, pour chacun des siens qui est au
+ * niveau du hall. C'est le PENDANT de ce que `updateFareGates` mesure tout
+ * seul pour le joueur - la même distance, le même fuseau, le même seuil - et
+ * les deux se rejoignent dans la même décision : des battants qui se rabattent
+ * devant qui n'a rien présenté.
+ *
+ * `granted` dit que ce voyageur-là a validé et n'a pas fini de traverser. Il
+ * est porté par le voyageur et non par le portillon, et c'est ce qui empêche
+ * une file de s'engouffrer sur la validation du premier : la baie ne reste
+ * ouverte que le temps que CELUI QUI A BIPÉ la franchisse.
+ */
+export function paxNearGate(x: number, z: number, granted: boolean): void {
+  const list = ensure();
+  if (!list.length) return;
+  const it = placementFor(useStore.getState().platformIndex, psdGates()).interior;
+  if (!it.built) return;
+  const dz = z < it.gate.z0 ? it.gate.z0 - z : z > it.gate.z1 ? z - it.gate.z1 : 0;
+  if (dz >= CLOSE_AT) return;
+  for (let i = 0; i < it.gate.passages.length; i++) {
+    const p = it.gate.passages[i];
+    if (Math.abs(x - p.x) > p.width / 2 + LANE_SLACK) continue;
+    const a = paxAt[i];
+    // Entre les bornes, on ne pince personne : c'est la règle du joueur, et
+    // elle ne dépend pas de qui est là.
+    if (granted || dz === 0) a.hold = true;
+    else a.near = Math.min(a.near, dz);
+    return;
+  }
+}
+
+/**
+ * Ce passage est-il fermé POUR CE VOYAGEUR-LÀ ?
+ *
+ * La foule s'en sert comme le joueur s'en sert (`systems/walkable`) : des
+ * battants rabattus arrêtent. Qui a validé passe - sinon la baie se refermerait
+ * sur celui-là même qu'elle vient de laisser entrer.
+ */
+export function gateShutFor(x: number, z: number, granted: boolean): boolean {
+  if (granted || !states.length) return false;
+  const passage = passageAt(x, z);
+  return passage >= 0 && gateBlocks(passage);
 }
 
 // --- Blocage de la marche -------------------------------------------------
@@ -260,23 +346,61 @@ export function passageAt(localX: number, localZ: number): number {
 
 // --- Boucle ---------------------------------------------------------------
 
+/**
+ * Ce qu'on entend d'ici du mécanisme de ce passage-là, de 0 à 1.
+ *
+ * Zéro depuis le quai : la dalle est entre nous et la ligne, et le portillon
+ * du hall ne s'entend pas plus que le hall lui-même.
+ */
+function flapGain(passage: number): number {
+  if (runtime.playerLevel !== 'concourse') return 0;
+  const it = placementFor(useStore.getState().platformIndex, psdGates()).interior;
+  if (!it.built) return 0;
+  const p = it.gate.passages[passage];
+  if (!p) return 0;
+  const d = Math.hypot(
+    runtime.playerPlatX - p.x,
+    runtime.playerPlatZ - (it.gate.z0 + it.gate.z1) / 2,
+  );
+  return d >= FLAP_EARSHOT ? 0 : (1 - d / FLAP_EARSHOT) ** 1.4;
+}
+
+/** Ce que le JOUEUR demande à un passage, là, tout de suite. */
+type PlayerAtGate = 'away' | 'holds' | 'blocks';
+
+/**
+ * Le joueur, vu par un passage : loin, dedans, ou dessus sans avoir validé.
+ *
+ * Le fuseau du passage, un peu élargi, et une approche de part et d'autre de
+ * la ligne. Quelqu'un DANS le passage n'y est jamais enfermé (dz nul) : les
+ * battants ne se referment pas sur lui parce que sa validation a expiré
+ * pendant qu'il hésitait. Un portillon réel ne pince personne - il attend
+ * d'être libre.
+ */
+function playerAtGate(passage: number): PlayerAtGate {
+  const s = states[passage];
+  if (!s) return 'away';
+  if (s.grantT > 0) return 'holds';
+  if (runtime.playerLevel !== 'concourse') return 'away';
+  const it = placementFor(useStore.getState().platformIndex, psdGates()).interior;
+  if (!it.built) return 'away';
+  const p = it.gate.passages[passage];
+  if (!p || Math.abs(runtime.playerPlatX - p.x) >= p.width / 2 + LANE_SLACK) return 'away';
+  const pz = runtime.playerPlatZ;
+  const dz = pz < it.gate.z0 ? it.gate.z0 - pz : pz > it.gate.z1 ? pz - it.gate.z1 : 0;
+  if (dz === 0) return 'holds';
+  return dz < CLOSE_AT ? 'blocks' : 'away';
+}
+
 export function updateFareGates(dt: number): void {
   const list = ensure();
   if (!list.length) return;
-  const store = useStore.getState();
-  const place = placementFor(store.platformIndex, psdGates());
-  const it = place.interior;
-  const px = runtime.playerPlatX;
-  const pz = runtime.playerPlatZ;
-  const near = runtime.playerLevel === 'concourse';
 
   runtime.cardTap = Math.max(0, runtime.cardTap - dt * 1.6);
 
   for (let i = 0; i < list.length; i++) {
     const s = list[i];
-    const p = it.gate.passages[i];
     if (s.grantT > 0) s.grantT -= dt;
-    if (s.paxGrantT > 0) s.paxGrantT -= dt;
     if (s.lightT > 0) {
       s.lightT -= dt;
       if (s.lightT <= 0) s.light = 'open';
@@ -286,25 +410,29 @@ export function updateFareGates(dt: number): void {
       if (s.verdictT <= 0) s.verdict = null;
     }
 
-    // Quelqu'un se présente-t-il ? Le fuseau du passage, un peu élargi, et une
-    // approche de part et d'autre de la ligne.
-    const inLane = near && Math.abs(px - p.x) < p.width / 2 + 0.35;
-    const dz = pz < it.gate.z0 ? it.gate.z0 - pz : pz > it.gate.z1 ? pz - it.gate.z1 : 0;
-    const coming = inLane && dz < CLOSE_AT;
-    // Quelqu'un DANS le passage n'y est jamais enfermé : les battants ne se
-    // referment pas sur lui parce que sa validation a expiré pendant qu'il
-    // hésitait. Un portillon réel ne pince personne - il attend d'être libre.
-    const inside = inLane && dz === 0;
-    const want = !coming || inside || s.grantT > 0 ? 1 : 0;
+    // Qui se présente sans avoir validé ferme les battants, et l'on ne
+    // distingue pas le joueur de la foule : une cellule ne sait pas qui elle
+    // coupe. Le joueur garde seulement ceci de particulier - il ferme MÊME si
+    // un voyageur vient de valider dans la même baie, pour qu'on ne passe pas
+    // dans le dos de quelqu'un qui a payé.
+    const pax = paxAt[i];
+    const me = playerAtGate(i);
+    const shut = me === 'blocks' || (me !== 'holds' && !pax.hold && pax.near < CLOSE_AT);
+    const want = shut ? 0 : 1;
     if (want !== s.target) {
       s.target = want;
-      gateFlap(want === 0);
+      const heard = flapGain(i);
+      if (heard > 0) gateFlap(want === 0, heard);
       if (want === 0 && s.light === 'open') {
         s.light = 'deny';
         s.lightT = 1.2;
       }
     }
     s.flap += Math.sign(s.target - s.flap) * Math.min(Math.abs(s.target - s.flap), FLAP_RATE * dt);
+    // La foule se redéclare à chaque sous-pas : le portillon voit qui est
+    // devant lui maintenant, et rien de plus.
+    pax.near = Infinity;
+    pax.hold = false;
   }
 }
 
@@ -312,4 +440,5 @@ export function updateFareGates(dt: number): void {
 export function resetFareGates(): void {
   builtFor = -1;
   states = [];
+  paxAt = [];
 }

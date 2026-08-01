@@ -88,7 +88,7 @@ import {
   walkerCramped,
   type StationLevel,
 } from './stationLevels';
-import { paxTapGate } from './fareGate';
+import { gateShutFor, paxNearGate, paxTapGate } from './fareGate';
 
 export type CrowdState =
   | 'hidden'
@@ -174,6 +174,15 @@ export interface CrowdPax {
    */
   route: RouteStop[];
   routeI: number;
+  /**
+   * Secondes de validation encore valables au portillon, pour LUI.
+   *
+   * Elle est portée par le voyageur et non par le portillon, et c'est tout ce
+   * qui empêche une file de s'engouffrer sur le ピッ du premier : la baie ne
+   * reste ouverte que le temps que celui qui a bipé la franchisse, et le
+   * suivant retrouve devant lui des battants rabattus.
+   */
+  gateOkT: number;
   walkDir: 1 | -1; // sens de promenade le long du quai
   laneX: number;
   /** Jeton rendu à systems/passengers quand ce voyageur atteint la porte. */
@@ -352,6 +361,7 @@ function makeCrowd(id: number): CrowdPax {
     bodyPivot: 0,
     route: [],
     routeI: 0,
+    gateOkT: 0,
     walkDir: Math.random() < 0.5 ? 1 : -1,
     laneX: 3.2,
     ticket: -1,
@@ -834,6 +844,7 @@ function sendToStairs(p: CrowdPax, pl: StationPlacement, delay = 0): boolean {
   p.lookYaw = 0;
   p.delay = delay;
   p.stuck = 0;
+  p.gateOkT = 0;
   p.inStation = full !== null;
   const lane = (Math.random() - 0.5) * 1.4;
   const apron = stairApron(s, lane, p.pos.x);
@@ -1092,6 +1103,7 @@ export function crowdArrive(stationIndex: number): boolean {
   p.headPitch = 0;
   p.lookYaw = 0;
   p.stuck = 0;
+  p.gateOkT = 0;
   p.home.set(home.x, 0, home.z);
   p.state = 'arriving';
   p.routeI = 0;
@@ -1474,7 +1486,13 @@ function resumeCrowdAnchor(p: CrowdPax): void {
  */
 function stepAround(p: CrowdPax, pl: StationPlacement, dx: number, dz: number): boolean {
   const { x, z } = p.pos;
-  const free = (cx: number, cz: number) => !walkerBlocked(pl, p.level, cx, cz);
+  // Les battants ARRÊTENT, et pas seulement le joueur (`systems/walkable`) :
+  // un voyageur qui n'a pas encore posé sa carte se heurte au vantail rabattu
+  // devant lui, exactement comme nous. Celui qui vient de valider passe - sans
+  // quoi la baie se refermerait sur celui-là même qu'elle laisse entrer.
+  const free = (cx: number, cz: number) =>
+    !walkerBlocked(pl, p.level, cx, cz)
+    && !(p.level === 'concourse' && gateShutFor(cx, cz, p.gateOkT > 0));
   if (free(x + dx, z + dz)) {
     p.pos.x = x + dx;
     p.pos.z = z + dz;
@@ -1567,6 +1585,17 @@ function skirtDecor(
 const SKIRT_R = 1.45;
 
 /**
+ * Validité d'un coup de carte, du côté du voyageur.
+ *
+ * Large : ce n'est pas un compte à rebours qu'on regarde passer, c'est de quoi
+ * franchir les trois mètres qui séparent le lecteur de l'autre bord de la
+ * ligne même en se faisant contourner en chemin. Ce qui referme réellement la
+ * baie, c'est de N'ÊTRE PLUS DEVANT - au-delà de `CLOSE_AT`, le portillon ne
+ * voit plus personne et se rouvre tout seul.
+ */
+const GATE_CROSS = 6;
+
+/**
  * Contourner le joueur, plutôt que buter dedans.
  *
  * LE JOUEUR N'EST PAS UNE EMPRISE DU DÉCOR : `systems/stationLevels` ne le
@@ -1619,9 +1648,12 @@ function skirtPlayer(p: CrowdPax, ux: number, uz: number): [number, number] {
  * Ce qu'on fait en arrivant à une étape : s'arrêter, regarder, valider.
  *
  * Le coup de carte au portillon est le seul de ces gestes qui sorte du
- * personnage : il fait le ピッ et allume le feu de la borne
- * (`systems/fareGate`). C'est le son d'un hall de gare japonaise, et il ne
- * s'entend que de près.
+ * personnage : il fait le ピッ, allume le feu de la borne et rouvre la baie
+ * qui vient de se rabattre devant lui (`systems/fareGate`). C'est le son d'un
+ * hall de gare japonaise, et il ne s'entend que de près.
+ *
+ * L'étape de validation est DEVANT la ligne, du côté d'où l'on vient
+ * (`systems/concourseRoute`) : on bipe avant de s'engager, jamais après.
  */
 function applyStop(p: CrowdPax, s: RouteStop): void {
   if (s.tap !== undefined) {
@@ -1629,6 +1661,9 @@ function applyStop(p: CrowdPax, s: RouteStop): void {
       ? Math.hypot(p.pos.x - runtime.playerPlatX, p.pos.z - runtime.playerPlatZ)
       : 99;
     paxTapGate(s.tap, d);
+    // De quoi traverser : au-delà, la validation retombe et la baie se referme
+    // derrière soi, comme elle le fait pour le joueur.
+    p.gateOkT = GATE_CROSS;
   }
   if (!s.hold) return;
   p.delay = s.hold;
@@ -1872,6 +1907,15 @@ export function updatePlatformCrowd(dt: number): void {
     // Transits : arrivée par la trémie ou par la rue, départ vers la sortie,
     // montée en rame.
     if (p.state === 'arriving' || p.state === 'leaving' || p.state === 'boarding') {
+      if (p.gateOkT > 0) p.gateOkT -= dt;
+      // SE DÉCLARER À LA LIGNE, à chaque sous-pas et même à l'arrêt : c'est ce
+      // qui fait claquer les battants devant celui qui s'approche sans avoir
+      // bipé, et c'est ce qui les tient écartés le temps qu'il traverse une
+      // fois qu'il l'a fait (`systems/fareGate`). La halte compte autant que la
+      // marche - on reste devant le lecteur une demi-seconde, la baie fermée.
+      if (p.inStation && p.level === 'concourse') {
+        paxNearGate(p.pos.x, p.pos.z, p.gateOkT > 0);
+      }
       if (p.delay > 0) {
         // Une halte : devant un rayon du konbini, au distributeur de titres,
         // le temps de passer sa carte. Le corps y vit comme celui d'un

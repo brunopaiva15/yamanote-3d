@@ -387,30 +387,40 @@ function stairLane(): number {
  */
 const ZONE_EDGE = 0.75;
 
-/** La zone payante, du bas des marches à la ligne de portillons. */
+/**
+ * La zone payante, du bas des marches à la ligne de portillons.
+ *
+ * ON VALIDE DU CÔTÉ D'OÙ L'ON VIENT, et c'est tout le sujet : le lecteur d'un
+ * portillon est sur le dessus de la borne, à l'entrée du passage, et la carte
+ * s'y pose AVANT de s'engager - jamais après. Celui qui entre en gare arrive
+ * de la zone libre, donc il bipe côté libre (`freeSide`) ; celui qui sort
+ * arrive de la zone payante, donc il bipe côté payant (`paidSide`). Les deux
+ * points sont posés dans la marge où le mobilier ne descend pas, à un pas de
+ * la ligne : de quoi voir le geste, et de quoi laisser aux battants le temps
+ * de s'écarter avant qu'on les atteigne.
+ */
 function paidLegs(p: StationPlacement, passage: number, inbound: boolean): RouteStop[] {
   const it = p.interior;
   const gate = it.gate.passages[passage];
-  /** Devant la ligne, dans la marge où rien n'est posé : on y valide. */
-  const front = { x: gate.x, z: it.gate.z0 - ZONE_EDGE };
-  const back = { x: gate.x, z: it.gate.z1 + ZONE_EDGE };
+  const paidSide = { x: gate.x, z: it.gate.z0 - ZONE_EDGE };
+  const freeSide = { x: gate.x, z: it.gate.z1 + ZONE_EDGE };
   const foot = it.paid.z0 + ZONE_EDGE;
   const tap = { tap: passage, hold: 0.55, action: 'ticketGlance' as PaxAction };
   if (inbound) {
-    // On arrive de la zone libre : on valide côté sortie de la ligne, puis on
-    // remonte la zone payante vers l'accès.
+    // On arrive de la zone libre : on valide devant la ligne, on la franchit,
+    // puis on remonte la zone payante vers l'accès.
     return [
-      back,
-      { ...front, ...tap },
-      onAxis(p, front.z),
-      ...hallLeg(p, front.z, foot, browseIn(p, it.paid.z0, it.gate.z0, 0.18)),
+      { ...freeSide, ...tap },
+      paidSide,
+      onAxis(p, paidSide.z),
+      ...hallLeg(p, paidSide.z, foot, browseIn(p, it.paid.z0, it.gate.z0, 0.18)),
     ];
   }
   return [
     onAxis(p, foot),
-    ...hallLeg(p, foot, front.z, browseIn(p, it.paid.z0, it.gate.z0, 0.22)),
-    { ...front, ...tap },
-    back,
+    ...hallLeg(p, foot, paidSide.z, browseIn(p, it.paid.z0, it.gate.z0, 0.22)),
+    { ...paidSide, ...tap },
+    freeSide,
   ];
 }
 
