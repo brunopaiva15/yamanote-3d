@@ -949,17 +949,24 @@ function loopPointAt(t: number): { x: number; y: number; angle: number } {
   };
 }
 
-/** Marque de rupture (l'anneau « continue ») sur un about de la boucle. */
+/**
+ * Marque de rupture sur un about de la boucle - le trait qui dit « l'anneau
+ * continue au-delà de l'écran ».
+ *
+ * C'est un CHEVRON à deux segments, pointe en haut, qui traverse le bras de
+ * l'anneau de part en part : 30 de large, 6,6 de flèche, 3,2 d'épaisseur, à
+ * mi-hauteur. En zigzag à trois segments il se lisait comme un éclair - un
+ * symbole qui, sur un plan de ligne, veut dire tout autre chose.
+ */
 function drawLoopBreak(g: CanvasRenderingContext2D, x: number, y: number): void {
   g.strokeStyle = SCREEN_BG;
-  g.lineWidth = 4.5;
+  g.lineWidth = 3.2;
   g.lineCap = 'butt';
   g.lineJoin = 'miter';
   g.beginPath();
-  g.moveTo(x - 14, y - 9);
-  g.lineTo(x + 3, y - 3);
-  g.lineTo(x - 3, y + 3);
-  g.lineTo(x + 14, y + 9);
+  g.moveTo(x - 15, y + 3.3);
+  g.lineTo(x, y - 3.3);
+  g.lineTo(x + 15, y + 3.3);
   g.stroke();
 }
 
