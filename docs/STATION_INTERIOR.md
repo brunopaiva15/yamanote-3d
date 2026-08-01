@@ -16,6 +16,7 @@ phase est livrable seule, se teste seule, et ne casse pas la précédente.
 | Gabarit par gare | `data/stationLayouts` | élévation, configuration, auvent, palette, équipements |
 | Implantation du mobilier | `systems/stationPlacement` | source unique du rendu ET de la marche |
 | Volume praticable | `systems/walkable` | rectangles, seuils de porte, descente bornée |
+| Étage et altitude | `systems/stationLevels` | quel des deux sols est sous les pieds — joueur ET foule |
 | Rendu de la trémie | `three/station/Stairwell` | volée pleine, palier, couloir bas, fond de champ |
 
 Trois principes du dépôt s'appliquent tels quels et ne se négocient pas :
@@ -146,11 +147,31 @@ paramètre pas se dessine à part.
 
 ## Phase 7 — La vie intérieure
 
-**À faire.** Un hall vide n'est pas un hall.
+**La foule est livrée ; le son reste à faire.** Un hall vide n'est pas un hall.
 
-- la foule traverse : elle descend du quai, franchit un portillon, sort ;
+Ce qui marche maintenant (`systems/concourseRoute`, `systems/platformCrowd`) :
+
+- **la foule traverse, dans les deux sens.** Un voyageur qui quitte le quai
+  descend la volée principale, traverse la zone payante, **valide** au
+  portillon, ressort côté libre et ne s'efface qu'en haut de la volée d'une
+  bouche de sortie, là où le linteau le cache. Une part des arrivants fait le
+  chemin inverse depuis la rue. Il s'effaçait jusqu'ici au fond du couloir
+  bas — invisible depuis le quai, en plein champ depuis le hall ;
+- **on s'y arrête.** Devant les distributeurs de titres, le plan de quartier,
+  l'ajusteur de fin de course, le tampon de gare ; et l'on **entre au
+  konbini**, où l'on fait le tour des rayons avant de passer à la caisse
+  (`data/konbiniPlan`, `stops`) ;
+- **le portillon fait son ピッ** à chaque validation, et son feu s'allume.
+  Il n'ouvre que pour celui qui a validé : un voyageur qui passe devant ne
+  laisse pas le joueur entrer derrière lui (`systems/fareGate`, `paxGrantT`) ;
+- **on peut leur parler** : descendu au niveau du hall, c'est la foule d'EN BAS
+  qui devient joignable, et celle du quai qui cesse de l'être
+  (`systems/paxTargeting`).
+
+Ce qui reste :
+
 - le son change de pièce : la sonorisation du quai s'assourdit, le hall a sa
-  propre réverbération, le portillon a son ピッ ;
+  propre réverbération ;
 - on entend la mélodie de départ d'en bas, et l'on peut remonter à temps —
   ou pas.
 

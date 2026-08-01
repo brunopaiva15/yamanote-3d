@@ -547,8 +547,10 @@ volée, le rayon rasant part de la sous-face du linteau et descend d'un demi-
 mètre par mètre ; à neuf mètres il a rejoint le sol. Les caissons se tiennent
 donc à hauteur d'affiche et pas plus loin que sept mètres - une réglette de
 plafond, elle, n'atteindrait jamais l'œil. Et les voyageurs qui s'en vont ne
-s'effacent plus à une altitude donnée : ils marchent jusqu'à un mètre après le
-linteau, où c'est la dalle qui les cache.
+s'effacent plus à une altitude donnée : ils marchent jusqu'au bout de leur
+dernier point de passage, là où c'est le bâti qui les cache. Par une trémie
+borgne, c'est la dalle ; par celle qui mène au hall, ils ne s'effacent plus du
+tout à cet endroit-là - ils continuent (voir « La gare est traversée »).
 
 ### Entrer dans la gare
 
@@ -606,6 +608,51 @@ correspondance - dessinés par sa charpente, sous-face à 5,10 m, la cote exacte
 d'un hall d'en haut. Y poser le hall générique reviendrait à bâtir deux fois la
 même chose, l'une dans l'autre : elle attend son traitement propre. Le
 découpage complet est dans `docs/STATION_INTERIOR.md`.
+
+### La gare est traversée
+
+Un hall qu'on est seul à parcourir n'est pas une gare, c'est un plan en
+volume. Le défaut se voyait d'autant mieux qu'on venait de descendre : la foule
+du quai s'engageait dans la trémie et **s'effaçait au fond du couloir bas**,
+c'est-à-dire en plein champ pour qui se tenait dans le hall, à trois mètres de
+là, sans jamais franchir un portillon ni entrer nulle part.
+
+**Ils vont donc jusqu'à la rue.** Un voyageur qui quitte le quai longe le bord
+jusqu'à la volée, la descend, traverse la zone payante, **pose sa carte** sur le
+lecteur d'un passage - le ピッ et le feu vert -, ressort côté libre, s'arrête
+peut-être devant les distributeurs de titres ou entre au konbini, puis s'engage
+dans une bouche de sortie et **monte la volée** jusqu'à ce que le linteau
+l'ait coupé. Une part des arrivants fait exactement l'inverse, depuis la rue :
+c'est ce qui donne au hall ses deux sens de circulation.
+
+**Une visite de konbini n'est pas une traversée.** On entre, on va voir le
+rayon frais du fond, on revient par le goulet des magazines, on regarde la
+gondole, et l'on passe à la caisse - toujours, on ne ressort pas d'un konbini
+les mains vides. L'enchaînement n'est pas décoratif : la boutique fait trente
+centimètres de passage au plus serré, ses trois couloirs ne se rejoignent qu'en
+deux endroits, et c'est le seul ordre qui les emprunte tous sans traverser un
+meuble (`data/konbiniPlan`, `stops`).
+
+Ce que cela demandait, et qui n'existait pas :
+
+- **un étage chez les PNJ.** À une même abscisse il y a deux sols ; le joueur
+  avait `runtime.playerLevel` pour dire lequel, la foule n'avait rien.
+  `systems/stationLevels` répond maintenant à la question pour les deux, avec
+  la même règle : l'étage ne bascule que dans la volée, seul endroit où les
+  deux sols n'en font qu'un ;
+- **des itinéraires, pas des lignes droites.** `systems/concourseRoute` longe
+  la bande libre du hall mesurée à chaque pas - le konbini fait 3,40 m de fond
+  dans un couloir qui en fait cinq et demi, l'axe géométrique tombe DANS la
+  boutique - et ne s'en écarte qu'à l'équerre, au droit de ce qu'on va voir ;
+- **un portillon qui ne se laisse pas talonner.** La validation d'un voyageur
+  allume le feu et fait le bip, et ne tient PAS les battants ouverts pour qui
+  suivrait : sinon on entrait dans la zone payante derrière quelqu'un, sans
+  payer.
+
+**On leur parle, aussi.** Descendu au niveau des portillons, c'est la foule
+d'en bas qui devient joignable et celle du quai qui cesse de l'être - la même
+règle que « on ne parle pas à travers la caisse d'une rame », appliquée à une
+dalle de béton.
 
 ### Ce qu'il y a dans le hall
 
@@ -1552,6 +1599,40 @@ et partagé par la rame et le quai.
 Le contexte module le reste : silence de la pointe du matin, rires et
 titubements du vendredi soir, bras au corps quand c'est bondé, regards vers les
 portes à quai plutôt que par la vitre, éventails en août seulement.
+
+### Ils contournent le mobilier
+
+Le quai est meublé - bancs, poteaux, batteries de tri, distributeurs, cages
+d'escalier - et la foule le traversait de part en part : des gens assis dans un
+banc jusqu'à la taille, des promeneurs qui sortaient d'un poteau, la quatrième
+rangée d'une file d'attente plantée dans un distributeur. Les emprises étaient
+pourtant publiées depuis toujours (`systems/stationPlacement`, `obstacles`) -
+ce sont exactement celles que la marche du joueur respecte. Il ne manquait
+qu'un pas qui les lise.
+
+Trois choses en découlent, et aucune n'est un test de position :
+
+- **la circulation d'un quai est une bande**, du liseré blanc à la première
+  chose plantée au sol. Sur un îlot, l'ossature centrale en prend trois mètres
+  sur cinq et demi. Les files d'attente s'y rangent, et leur profondeur n'est
+  plus une cote fixe : c'est ce que l'épine laisse **à cet endroit-là** du
+  quai, plus large là où il est nu, resserrée au droit d'un banc ;
+- **un promeneur se range.** Son trajet n'est plus une droite tirée d'un bout
+  du quai à l'autre - ce qui traverse tout ce qu'il y a entre les deux - mais
+  une voie qu'il tient là où le quai est libre et qu'il rapproche du bord au
+  droit d'un obstacle ;
+- **on ne traverse pas l'épine en diagonale** pour rejoindre un escalier : on
+  longe le bord jusqu'à sa hauteur, puis on coupe dans la réserve d'approche -
+  les deux mètres devant chaque nez de volée où le placement s'interdit de
+  poser quoi que ce soit. C'est le seul endroit de l'épine qui soit dégagé d'un
+  bord à l'autre, et c'est pour cela qu'il existe.
+
+Et le pas lui-même **longe** ce qu'il rencontre, comme celui du joueur, à une
+nuance près qui décide de tout : le pas de côté se fait au **pas entier**. Un
+voyageur vise un point, sa composante latérale est presque nulle - réduit à
+elle, il longeait l'obstacle à deux millimètres par seconde sans jamais en
+sortir. C'est ce qu'on voyait quand on s'arrêtait au milieu du couloir du hall :
+une file entière massée dans son dos, sans personne pour le contourner.
 
 ### Tomber
 

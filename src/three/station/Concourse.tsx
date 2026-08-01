@@ -25,7 +25,15 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
-import type { StationInterior } from '../../data/stationInterior';
+import {
+  EXIT_MOUTH_FIRST,
+  EXIT_MOUTH_GOING,
+  EXIT_MOUTH_RISE,
+  EXIT_MOUTH_STEPS,
+  EXIT_MOUTH_Z0,
+  HALL_WALL_T,
+  type StationInterior,
+} from '../../data/stationInterior';
 import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
 import { makeConcourseGuideTexture, type GuideKind } from '../../textures/concourse';
@@ -41,8 +49,14 @@ const GATE_SIGN_H = 0.44;
 const EXIT_OPENING_H = 2.15;
 /** Hauteur du soubassement de faïence. */
 const DADO_H = 1.15;
-/** Épaisseur des parois du hall. */
-const WALL_T = 0.24;
+/**
+ * Épaisseur des parois du hall.
+ *
+ * Elle vient des données depuis que les voyageurs S'EN VONT par les bouches de
+ * sortie : la volée qu'on empile ici est celle qu'ils montent, et son premier
+ * nez se mesure depuis le nu du fond (`data/stationInterior`).
+ */
+const WALL_T = HALL_WALL_T;
 /** Entraxe des réglettes de plafond. */
 const LAMP_PITCH = 4.2;
 
@@ -272,19 +286,25 @@ function ExitWall({
               VOLÉE, six marches montantes prises à contre-jour, et le jour
               derrière elles. C'est la différence entre une sortie et un néon -
               on lit d'un coup d'œil que ça monte, et vers où. */}
-          {Array.from({ length: 6 }, (_, s) => (
-            <mesh
-              key={`step${s}`}
-              position={[
-                exit.x,
-                it.floorY + 0.09 + s * 0.175,
-                z + WALL_T / 2 + 0.18 + s * 0.31,
-              ]}
-              material={m.stair}
-            >
-              <boxGeometry args={[exit.halfWidth * 2 - 0.12, 0.18 + s * 0.35, 0.31]} />
-            </mesh>
-          ))}
+          {Array.from({ length: EXIT_MOUTH_STEPS }, (_, s) => {
+            // Le dessus de la marche : c'est LUI la cote partagée, puisque
+            // c'est dessus qu'on met le pied. La boîte se déduit - elle
+            // descend jusqu'au sol du hall, comme une marche maçonnée.
+            const top = EXIT_MOUTH_FIRST + s * EXIT_MOUTH_RISE;
+            return (
+              <mesh
+                key={`step${s}`}
+                position={[
+                  exit.x,
+                  it.floorY + top / 2,
+                  z - WALL_T / 2 + EXIT_MOUTH_Z0 + EXIT_MOUTH_GOING * (s + 0.5),
+                ]}
+                material={m.stair}
+              >
+                <boxGeometry args={[exit.halfWidth * 2 - 0.12, top, EXIT_MOUTH_GOING]} />
+              </mesh>
+            );
+          })}
           {/* La cage se ferme derrière : sans elle, le percement donnait sur le
               vide et l'on voyait le décor du quai par-dessous la dalle. */}
           {[-1, 1].map((d) => (

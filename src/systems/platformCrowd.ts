@@ -7,6 +7,27 @@
 // portes, et ceux qui en descendent traversent le quai puis s'en vont par ces
 // mêmes trémies. Vu du quai, un train qui part ne fait plus s'évaporer tout le
 // monde d'un coup.
+//
+// ET ILS VONT JUSQU'AU BOUT. Un voyageur qui s'engageait dans la trémie
+// principale s'effaçait au fond du couloir bas : invisible depuis le quai - la
+// dalle cache -, mais en plein champ depuis le HALL, où l'on descend
+// maintenant. Il descend donc pour de bon : il traverse la zone payante,
+// VALIDE au portillon, ressort côté libre, entre parfois au konbini, et ne
+// s'efface qu'en haut de la volée d'une bouche de sortie. Et symétriquement,
+// une part des arrivants monte de la rue par ces mêmes bouches au lieu de
+// naître au pied des marches. L'itinéraire est décrit dans
+// `systems/concourseRoute` ; ce fichier tient les pieds.
+//
+// DEUX ÉTAGES, DONC. `CrowdPax.level` dit lequel des deux sols est sous les
+// pieds - même question, même réponse et même bascule que pour le joueur
+// (`systems/stationLevels`) : elle n'a lieu que dans la volée, seul endroit où
+// les deux n'en font qu'un.
+//
+// ET ON CONTOURNE. Bancs, poteaux, distributeurs, batteries de tri, cages
+// d'escalier : le quai est meublé, et la foule le traversait de part en part.
+// Les emprises sont publiées depuis toujours (`systems/stationPlacement`,
+// `obstacles`) - c'est celles que la marche du joueur respecte - il ne
+// manquait qu'un pas qui les lise.
 
 import * as THREE from 'three';
 import { isMajorHub } from '../data/announcements';
@@ -16,7 +37,13 @@ import { paxScale } from './perf';
 import { onPlatformDeck, runtime } from './runtime';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
-import { placementFor, stairTopZ, stairwellAt, type StationPlacement } from './stationPlacement';
+import {
+  placementFor,
+  stairTopZ,
+  stairwellAt,
+  type Placed,
+  type StationPlacement,
+} from './stationPlacement';
 import { layoutFor } from '../data/stationLayouts';
 import {
   ASCENT_LEN,
@@ -45,6 +72,21 @@ import {
 import { resolveMotion, platformPlayerCtx } from './paxMotion';
 import { PLATFORM_TOP, platformToWorld } from './playerFrame';
 import { playPaxActionSfx, paxBump } from './paxSfx';
+import {
+  routeFromStreet,
+  routeToStreet,
+  stationInteriorOpen,
+  type RouteStop,
+} from './concourseRoute';
+import {
+  CLEAR_DECK,
+  concourseFloorAt,
+  exitMouthFloorAt,
+  mainAccessFloor,
+  walkerBlocked,
+  type StationLevel,
+} from './stationLevels';
+import { paxTapGate } from './fareGate';
 
 export type CrowdState =
   | 'hidden'
@@ -80,6 +122,22 @@ export interface CrowdPax {
   pos: THREE.Vector3;
   /** Altitude relative au sol du quai : négative dans une trémie. */
   y: number;
+  /**
+   * Étage sous les pieds. Il ne change que dans la volée principale, exactement
+   * comme celui du joueur - et pour la même raison : partout ailleurs, il y a
+   * deux sols à la même abscisse et rien dans les coordonnées ne dit lequel.
+   */
+  level: StationLevel;
+  /**
+   * Ce voyageur suit-il un itinéraire de GARE (hall, portillons, sortie) ?
+   *
+   * Sert à plafonner le monde qu'on envoie sous la dalle : le pool est
+   * commun avec le quai, et trente personnes en promenade dans le hall, c'est
+   * autant qui manquent devant les portes.
+   */
+  inStation: boolean;
+  /** Secondes passées à buter sur un obstacle : au-delà, on renonce. */
+  stuck: number;
   home: THREE.Vector3;
   yaw: number;
   targetYaw: number;
@@ -105,8 +163,15 @@ export interface CrowdPax {
   bodyRoll: number;
   /** Hauteur du pivot du corps (fraction de la taille) : 0 = les pieds. */
   bodyPivot: number;
-  waypoints: THREE.Vector3[];
-  wpi: number;
+  /**
+   * L'itinéraire en cours : où l'on va, et ce qu'on y fait en arrivant.
+   *
+   * Une promenade sur le quai n'y met que des points ; une descente en gare y
+   * met aussi des haltes et un coup de carte au portillon
+   * (`systems/concourseRoute`).
+   */
+  route: RouteStop[];
+  routeI: number;
   walkDir: 1 | -1; // sens de promenade le long du quai
   laneX: number;
   /** Jeton rendu à systems/passengers quand ce voyageur atteint la porte. */
@@ -133,6 +198,68 @@ export interface CrowdPax {
 export const CROWD_POOL = 40;
 export const crowdList: CrowdPax[] = [];
 
+// --- Ce qui barre le passage --------------------------------------------
+//
+// Le quai est MEUBLÉ, et la foule le traversait de part en part : bancs,
+// poteaux, distributeurs, batteries de tri, cages d'escalier. Les emprises
+// sont publiées depuis toujours (`systems/stationPlacement`, `obstacles`) -
+// ce sont exactement celles que la marche du joueur contourne, il n'y a pas
+// deux mobiliers - et il ne manquait qu'un pas qui les lise.
+
+/** Un point du repère quai, sans altitude : l'étage la donne. */
+interface Spot {
+  x: number;
+  z: number;
+}
+
+/**
+ * Jusqu'où l'on peut s'écarter du bord avant de rentrer dans l'épine.
+ *
+ * Vue en coupe, la circulation d'un quai de la Yamanote tient en une bande :
+ * du liseré blanc à la première chose plantée au sol. Sur un îlot, ce qui la
+ * ferme est l'ossature centrale - poteaux, bancs, distributeurs, cage
+ * d'escalier - qui prend trois mètres des cinq et demi. `reach` la mesure à
+ * une abscisse DONNÉE quand on la connaît : une file d'attente peut s'étaler
+ * là où le quai est nu, et se resserre au droit d'un banc.
+ *
+ * La travée d'en face d'un îlot n'est pas de cette bande, et c'est voulu : on
+ * n'y attend pas notre train, on y attend celui de l'autre sens - que le jeu
+ * ne fait pas passer.
+ */
+function reach(p: StationPlacement, z: number | null = null, window = 0.6): number {
+  let near = Math.min(p.walkX1 - 0.4, p.walkX0 + 4.2);
+  for (const o of p.obstacles) {
+    if (z !== null && Math.abs(z - o.z) > o.halfZ + window) continue;
+    near = Math.min(near, o.x - o.halfX - CLEAR_DECK);
+  }
+  return Math.max(p.walkX0 + 0.5, near);
+}
+
+/** Directions d'esquive, le bord de quai d'abord : c'est là qu'il y a la place. */
+const AWAY: readonly [number, number][] = [
+  [-1, 0], [0, 1], [0, -1], [-0.7, 0.7], [-0.7, -0.7], [1, 0], [0.7, 0.7], [0.7, -0.7],
+];
+
+/**
+ * Le point libre le plus proche d'un point voulu, sur le quai.
+ *
+ * Les emplacements d'attente, les voies de promenade et les points de rebond
+ * sont calculés à la trigonométrie, pas relevés un par un : il en tombe
+ * fatalement dans un banc. Plutôt que de renoncer à la place - un quai à qui
+ * il manque des files d'attente se voit -, on la décale d'un pas de côté.
+ */
+function freeSpot(p: StationPlacement, x: number, z: number): Spot {
+  if (!walkerBlocked(p, 'platform', x, z)) return { x, z };
+  for (let r = 0.3; r <= 3.6; r += 0.3) {
+    for (const [dx, dz] of AWAY) {
+      const cx = x + dx * r;
+      const cz = z + dz * r;
+      if (!walkerBlocked(p, 'platform', cx, cz)) return { x: cx, z: cz };
+    }
+  }
+  return { x, z };
+}
+
 // Bornes de la foule, tirées du gabarit de la gare courante : le quai fait
 // désormais 224 m et sa profondeur varie d'une typologie à l'autre.
 function bounds(): { z0: number; z1: number; x0: number; x1: number } {
@@ -143,6 +270,11 @@ function bounds(): { z0: number; z1: number; x0: number; x1: number } {
     z0: -p.walkHalfZ + 2,
     z1: p.walkHalfZ - 2,
     x0: p.walkX0 + 0.5,
+    // La borne haute reste celle du gabarit, et non la bande libre la plus
+    // étroite de tout le quai : deux cages d'escalier prennent dix mètres sur
+    // deux cent vingt-quatre, et les y faire obéir sur toute la longueur
+    // rangerait la foule entière en file indienne le long du liseré. Ce qui
+    // fait la circulation, c'est `reach` mesuré À L'ENDROIT où l'on est.
     x1: Math.min(p.walkX1 - 0.6, p.walkX0 + 4.2),
   };
 }
@@ -162,6 +294,9 @@ function makeCrowd(id: number): CrowdPax {
     role: 'waiter',
     pos: new THREE.Vector3(),
     y: 0,
+    level: 'platform',
+    inStation: false,
+    stuck: 0,
     home: new THREE.Vector3(),
     yaw: 0,
     targetYaw: 0,
@@ -183,8 +318,8 @@ function makeCrowd(id: number): CrowdPax {
     bodyLean: 0,
     bodyRoll: 0,
     bodyPivot: 0,
-    waypoints: [],
-    wpi: 0,
+    route: [],
+    routeI: 0,
     walkDir: Math.random() < 0.5 ? 1 : -1,
     laneX: 3.2,
     ticket: -1,
@@ -235,7 +370,11 @@ export function initPlatformCrowd(): void {
   agent.height = agent.appearance.build.scale;
 }
 
-if (import.meta.env.DEV && typeof window !== 'undefined') {
+// `import.meta.env` n'existe que sous Vite. L'interrogation est là pour le
+// TEST, qui charge ce fichier avec Node et fait marcher la foule pour de vrai
+// (`tests/platformCrowdWalk`) : une foule qui traverse un banc ne se voit qu'en
+// avançant, donc en la faisant avancer.
+if (import.meta.env?.DEV && typeof window !== 'undefined') {
   // Outil dev : __crowd donne l'état de chaque voyageur du quai (arrivées par
   // l'escalier, montées en rame, départs vers la sortie).
   (window as unknown as Record<string, unknown>).__crowd = crowdList;
@@ -299,37 +438,72 @@ function crowdCount(stationIndex: number): { total: number; walkers: number } {
   return { total, walkers };
 }
 
-function clampPos(x: number, z: number): THREE.Vector3 {
-  return new THREE.Vector3(
-    THREE.MathUtils.clamp(x, bounds().x0, bounds().x1),
-    0,
-    THREE.MathUtils.clamp(z, bounds().z0, bounds().z1),
+/** Un point ramené dans les bornes du quai, ET hors du mobilier. */
+function clampPos(x: number, z: number): Spot {
+  const b = bounds();
+  const p = placementFor(useStore.getState().platformIndex, psdGates());
+  return freeSpot(
+    p,
+    THREE.MathUtils.clamp(x, b.x0, b.x1),
+    THREE.MathUtils.clamp(z, b.z0, b.z1),
   );
 }
 
 // Emplacements d'attente près des portes. Quatre files quand la file est
 // dense, pour que les hubs ne s'empilent pas sur trois lignes seulement.
-function waitSlot(i: number, n: number, bias: number): THREE.Vector3 {
+//
+// La profondeur des files n'est plus une cote fixe : c'est ce que l'épine
+// laisse À CET ENDROIT-LÀ du quai. Quatre rangées de 0,65 m menaient la
+// dernière à 4,40 m du bord, c'est-à-dire dans les bancs et les poteaux -
+// quatre rangées dont une traverse un banc ne sont pas quatre rangées.
+function waitSlot(i: number, n: number, bias: number): Spot {
   const doors = CONFIG.doorCenters;
   const doorZ = doors[i % doors.length];
+  const b = bounds();
+  const spread = (i / Math.max(1, n - 1) - 0.5) * 12;
+  const z = THREE.MathUtils.clamp(
+    doorZ + ((i * 13) % 11 - 5) * 0.45 + bias + spread * 0.25,
+    b.z0,
+    b.z1,
+  );
+  const p = placementFor(useStore.getState().platformIndex, psdGates());
   const lanes = n > 14 ? 4 : 3;
   const lane = i % lanes;
-  const x = 2.45 + lane * 0.65 + ((i * 17) % 7) * 0.03;
-  const z = doorZ + ((i * 13) % 11 - 5) * 0.45 + bias;
-  const spread = (i / Math.max(1, n - 1) - 0.5) * 12;
-  return clampPos(x, z + spread * 0.25);
+  const step = Math.min(0.65, Math.max(0, (reach(p, z) - b.x0) / (lanes - 1)));
+  const x = b.x0 + lane * step + ((i * 17) % 7) * 0.03;
+  return freeSpot(p, x, z);
 }
 
-function patrolWaypoints(laneX: number, fromZ: number, dir: 1 | -1): THREE.Vector3[] {
-  // Trajet long le long du quai, avec un léger écart de voie au demi-tour.
+/**
+ * Pas de la promenade, qui est aussi la fenêtre sur laquelle on mesure la
+ * bande libre : c'est ce qui rend le trajet sûr sans avoir à le vérifier après
+ * coup. Un segment est encadré par deux mesures qui le couvrent toutes deux,
+ * donc l'abscisse ne sort de la bande à aucun moment.
+ */
+const STROLL_STEP = 4;
+
+/**
+ * Le trajet d'un promeneur, du bout du quai à l'autre.
+ *
+ * Ce n'était qu'une droite, et c'est ce qui la rendait fausse : une droite
+ * tirée entre deux bouts de quai traverse tout ce qu'il y a entre eux. Le
+ * promeneur SE RANGE - il tient sa voie là où le quai est nu, et se rapproche
+ * du bord au droit d'un banc, d'un poteau ou d'une cage d'escalier. C'est ce
+ * que fait n'importe qui marchant sur un quai, et cela se voit d'autant mieux
+ * qu'ils sont plusieurs à ne pas se ranger au même endroit.
+ */
+function patrolWaypoints(laneX: number, fromZ: number, dir: 1 | -1): RouteStop[] {
   const b = bounds();
+  const p = placementFor(useStore.getState().platformIndex, psdGates());
   const endZ = dir > 0 ? b.z1 - 1 - Math.random() * 4 : b.z0 + 1 + Math.random() * 4;
-  const midZ = (fromZ + endZ) * 0.5;
   const sway = (Math.random() - 0.5) * 0.45;
-  return [
-    clampPos(laneX + sway * 0.3, midZ),
-    clampPos(laneX + sway, endZ),
-  ];
+  const n = Math.max(1, Math.ceil(Math.abs(endZ - fromZ) / STROLL_STEP));
+  return Array.from({ length: n }, (_, i) => {
+    const t = (i + 1) / n;
+    const z = fromZ + (endZ - fromZ) * t;
+    const x = Math.min(laneX + sway * t, reach(p, z, STROLL_STEP));
+    return freeSpot(p, Math.max(b.x0, x), z);
+  });
 }
 
 let seededFor = -1;
@@ -347,27 +521,37 @@ export function seedPlatformCrowd(stationIndex: number): void {
     if (i >= total) {
       p.state = 'hidden';
       p.role = 'waiter';
+      p.inStation = false;
+      p.level = 'platform';
       continue;
     }
 
     const isWalker = i < walkers;
+    const wb = bounds();
     p.y = 0;
+    p.level = 'platform';
+    p.inStation = false;
+    p.stuck = 0;
     p.ticket = -1;
     p.role = isWalker ? 'walker' : 'waiter';
     p.walkDir = i % 2 === 0 ? 1 : -1;
-    p.laneX = isWalker ? 3.0 + (i % 3) * 0.7 : 2.7 + (i % 3) * 0.7;
+    // La voie de promenade se prend DANS les bornes du quai, et non à une
+    // abscisse écrite d'avance : à 3,00 m du bord, un promeneur longeait les
+    // bancs par l'intérieur et traversait un poteau sur deux. Ce n'est qu'une
+    // PRÉFÉRENCE - le trajet la rabat au droit de ce qui encombre.
+    p.laneX = THREE.MathUtils.lerp(wb.x0, wb.x1, isWalker ? 0.1 + (i % 3) * 0.22 : 0.05 + (i % 3) * 0.18);
     p.bobPhase = Math.random() * Math.PI * 2;
-    p.waypoints = [];
-    p.wpi = 0;
+    p.route = [];
+    p.routeI = 0;
 
     if (isWalker) {
-      const wb = bounds();
       const z0 = THREE.MathUtils.lerp(wb.z0 + 4, wb.z1 - 4, (i + 0.5) / walkers);
-      p.pos.copy(clampPos(p.laneX, z0));
+      const at = clampPos(p.laneX, z0);
+      p.pos.set(at.x, 0, at.z);
       p.home.copy(p.pos);
       p.state = 'patrolling';
-      p.waypoints = patrolWaypoints(p.laneX, z0, p.walkDir);
-      p.wpi = 0;
+      p.route = patrolWaypoints(p.laneX, z0, p.walkDir);
+      p.routeI = 0;
       p.action = 'shift';
       p.actionT = 0;
       p.actionDur = 20;
@@ -377,8 +561,8 @@ export function seedPlatformCrowd(stationIndex: number): void {
       p.headPitch = 0;
     } else {
       const home = waitSlot(i - walkers, total - walkers, (stationIndex % 5) * 0.1);
-      p.home.copy(home);
-      p.pos.copy(home);
+      p.home.set(home.x, 0, home.z);
+      p.pos.copy(p.home);
       p.state = 'waiting';
       p.yaw = -Math.PI / 2 + (Math.random() - 0.5) * 0.7;
       p.targetYaw = p.yaw;
@@ -455,9 +639,12 @@ export function clearPlatformCrowd(): void {
   arrivedBoarders.length = 0;
   for (const p of crowdList) {
     p.state = 'hidden';
-    p.waypoints = [];
-    p.wpi = 0;
+    p.route = [];
+    p.routeI = 0;
     p.y = 0;
+    p.level = 'platform';
+    p.inStation = false;
+    p.stuck = 0;
     p.ticket = -1;
     p.partner = -1;
     p.action = 'none';
@@ -485,25 +672,38 @@ function nearestStair(p: StationPlacement, z: number) {
 }
 
 /**
- * Altitude du sol sous un voyageur : nulle sur le quai, négative dans une
- * trémie qui descend, POSITIVE sur une volée qui monte.
+ * Altitude du sol sous un voyageur, ET l'étage où il se trouve.
  *
- * Le troisième cas manquait, et il se voyait : là où l'accès principal monte
- * (les cinq gares en tranchée), un voyageur engagé dans la volée gardait
- * l'altitude du quai et se retrouvait planté jusqu'à la taille dans les
- * marches. `stairwellAt` ne connaît que la descente - c'est le profil d'une
- * cage, pas d'un ouvrage posé sur la dalle.
+ * C'est la seule chose qui, chez un voyageur, ne se déduit pas de sa position
+ * seule : à l'aplomb du hall il y a aussi la dalle du quai. Comme pour le
+ * joueur, c'est la VOLÉE qui tranche - elle n'a qu'un sol - et l'étage ne
+ * change nulle part ailleurs (`systems/stationLevels`).
+ *
+ * Les trémies secondaires, elles, restent ce qu'elles étaient : un couloir
+ * borgne où l'on s'enfonce et où la dalle finit par cacher.
  */
-function floorYAt(p: StationPlacement, x: number, z: number): number {
+function floorYAt(p: StationPlacement, pax: CrowdPax): number {
+  const access = mainAccessFloor(p, pax.pos.x, pax.pos.z);
+  if (access) {
+    pax.level = access.level;
+    return access.y;
+  }
+  if (pax.level === 'concourse') {
+    const mouth = exitMouthFloorAt(p, pax.pos.x, pax.pos.z);
+    if (mouth !== null) return mouth;
+    return concourseFloorAt(p, pax.pos.x, pax.pos.z) ?? p.interior.floorY;
+  }
+  // Une volée MONTANTE ne perce pas la dalle : `stairwellAt` ne connaît que la
+  // descente, et sans ce cas le voyageur restait planté jusqu'à la taille dans
+  // les marches des cinq gares en tranchée.
   if (p.mainRise === 'up') {
     const main = p.mainStair;
-    if (Math.abs(x - main.x) <= STAIR_WALK_HALF_X) {
-      const t = z - stairTopZ(main);
+    if (Math.abs(pax.pos.x - main.x) <= STAIR_WALK_HALF_X) {
+      const t = pax.pos.z - stairTopZ(main);
       if (t >= 0 && t <= ASCENT_LEN) return ascentFloorY(t);
     }
-    // Les autres trémies de la gare descendent comme partout ailleurs.
   }
-  return stairwellAt(p, x, z, STAIR_FULL_LEN, STAIR_FULL_STEPS)?.y ?? 0;
+  return stairwellAt(p, pax.pos.x, pax.pos.z, STAIR_FULL_LEN, STAIR_FULL_STEPS)?.y ?? 0;
 }
 
 function freeSlot(): CrowdPax | null {
@@ -524,29 +724,106 @@ export function crowdPresentCount(): number {
   return n;
 }
 
+/**
+ * Combien de voyageurs peuvent être DANS la gare en même temps.
+ *
+ * Le pool est commun avec le quai : dix personnes en promenade dans le hall,
+ * c'est dix de moins devant les portes, et le hall n'a pas besoin de plus pour
+ * paraître vivant - il fait quarante mètres de long. Au-delà, les partants
+ * prennent la trémie borgne de l'autre bout du quai, où la dalle les cache
+ * comme elle l'a toujours fait.
+ */
+const INTERIOR_CAP = 10;
+
+function interiorCount(): number {
+  let n = 0;
+  for (const p of crowdList) if (p.inStation) n++;
+  return n;
+}
+
+/** Une trémie qui n'est PAS l'accès au hall : le couloir borgne d'à côté. */
+function blindStair(pl: StationPlacement, z: number): Placed | null {
+  let best: Placed | null = null;
+  let bestD = Infinity;
+  for (const s of pl.stairs) {
+    if (s === pl.mainStair && stationInteriorOpen(pl)) continue;
+    const d = Math.abs(s.z - z);
+    if (d >= bestD) continue;
+    bestD = d;
+    best = s;
+  }
+  return best;
+}
+
+/**
+ * Le raccord entre la circulation du quai et le nez d'une volée.
+ *
+ * ON NE TRAVERSE PAS L'ÉPINE EN DIAGONALE. Le quai circule le long du bord ;
+ * les escaliers sont au milieu, DERRIÈRE les bancs, les poteaux et les
+ * distributeurs. Un voyageur qui visait le nez de la volée depuis l'autre bout
+ * du quai coupait droit dans le mobilier et finissait coincé entre un banc et
+ * une cage - c'est exactement ce qu'on lui reprochait.
+ *
+ * Il longe donc le bord jusqu'à la hauteur de la volée, puis coupe en travers
+ * DANS LA RÉSERVE D'APPROCHE : les deux mètres devant chaque nez où le
+ * placement s'interdit de poser quoi que ce soit (`ACCESS_APPROACH`,
+ * systems/stationPlacement). C'est le seul endroit de l'épine qui soit dégagé
+ * d'un bord à l'autre, et c'est pour cela qu'il existe.
+ */
+function stairApron(s: Placed, lane: number, laneX: number): RouteStop[] {
+  const nose = stairTopZ(s);
+  const edge = clampPos(laneX, nose - 1.9);
+  return [edge, { x: s.x + lane, z: nose - 0.9 }];
+}
+
+/**
+ * Ce voyageur s'en va. Il descend DANS la gare quand il y a une gare où
+ * descendre, et s'enfonce dans un couloir borgne sinon.
+ *
+ * C'est ici que se joue tout le défaut d'origine : un partant s'arrêtait au
+ * fond du couloir bas et s'y effaçait. Invisible depuis le quai - c'est la
+ * dalle qui cache - mais en plein champ depuis le hall, à trois mètres de qui
+ * s'y promène. Il va maintenant jusqu'à la rue, portillon compris.
+ */
 function sendToStairs(p: CrowdPax, pl: StationPlacement, delay = 0): boolean {
-  const s = nearestStair(pl, p.pos.z);
-  if (!s) return false;
-  const lane = (Math.random() - 0.5) * 1.4;
   endCrowdPair(p);
+  const full = stationInteriorOpen(pl)
+    && interiorCount() < INTERIOR_CAP
+    // On ne traverse pas deux cents mètres de quai pour prendre l'accès qui
+    // mène au hall : c'est celui qu'on a devant soi, ou rien.
+    && nearestStair(pl, p.pos.z) === pl.mainStair
+    ? routeToStreet(pl)
+    : null;
+  const s = full ? pl.mainStair : blindStair(pl, p.pos.z) ?? nearestStair(pl, p.pos.z);
+  if (!s) return false;
   p.state = 'leaving';
   p.action = 'none';
   p.headPitch = 0;
   p.lookYaw = 0;
   p.delay = delay;
+  p.stuck = 0;
+  p.inStation = full !== null;
+  const lane = (Math.random() - 0.5) * 1.4;
+  const apron = stairApron(s, lane, p.pos.x);
+  if (full) {
+    // L'itinéraire de gare part du nez de la volée : le raccord avec le bord
+    // du quai est l'affaire de celui qui l'emprunte, pas celle de la gare.
+    p.route = [...apron, ...full];
+    p.routeI = 0;
+    return true;
+  }
   // Une volée qui MONTE est plus longue qu'une trémie : s'arrêter à la longueur
   // d'une descente laissait le voyageur s'évanouir au milieu des marches, en
   // plein champ. Il monte donc jusqu'en haut, où le tablier le cache.
   const rising = pl.mainRise === 'up' && s === pl.mainStair;
-  p.waypoints = [
-    clampPos(s.x + lane, stairTopZ(s) - 1.5),
-    new THREE.Vector3(
-      s.x + lane * 0.35,
-      0,
-      stairTopZ(s) + (rising ? ASCENT_LEN - 0.4 : STAIR_FULL_LEN),
-    ),
+  p.route = [
+    ...apron,
+    {
+      x: s.x + lane * 0.35,
+      z: stairTopZ(s) + (rising ? ASCENT_LEN - 0.4 : STAIR_FULL_LEN),
+    },
   ];
-  p.wpi = 0;
+  p.routeI = 0;
   return true;
 }
 
@@ -574,6 +851,9 @@ export function crowdArriveFromTrain(doorLocalZ: number, identity: number): numb
   // traverse avec elle, et un demi-mètre d'écart se lirait comme un saut.
   p.pos.set(2.0, 0, doorLocalZ);
   p.y = 0;
+  p.level = 'platform';
+  p.inStation = false;
+  p.stuck = 0;
   p.home.copy(p.pos);
   p.bob = 0;
   p.yaw = Math.PI / 2;
@@ -583,8 +863,8 @@ export function crowdArriveFromTrain(doorLocalZ: number, identity: number): numb
     // Gare sans trémie : le voyageur rejoint simplement le fond du quai.
     p.state = 'ambling';
     p.action = 'none';
-    p.waypoints = [clampPos(bounds().x1, p.pos.z + (Math.random() - 0.5) * 12)];
-    p.wpi = 0;
+    p.route = [clampPos(bounds().x1, p.pos.z + (Math.random() - 0.5) * 12)];
+    p.routeI = 0;
   }
   return swapped;
 }
@@ -612,11 +892,12 @@ export function crowdSendBoarder(doorLocalZ: number, ticket: number): boolean {
   best.headPitch = 0;
   best.lookYaw = 0;
   best.ticket = ticket;
-  best.waypoints = [
+  best.stuck = 0;
+  best.route = [
     clampPos(PSD_X + 1.2, doorLocalZ + (Math.random() - 0.5) * 0.6),
-    new THREE.Vector3(2.0, 0, doorLocalZ),
+    { x: 2.0, z: doorLocalZ },
   ];
-  best.wpi = 0;
+  best.routeI = 0;
   return true;
 }
 
@@ -654,14 +935,20 @@ export function summonPlatformAgent(doorLocalZ: number): void {
   const side = doorLocalZ >= 0 ? -1 : 1; // il se poste du côté du centre du quai
   const post = clampPos(AGENT_POST_X, doorLocalZ + side * AGENT_POST_DZ);
   agentDoorZ = doorLocalZ;
-  // Il arrive par la trémie la plus proche ; à défaut, du fond du quai.
+  // Il arrive par la trémie la plus proche ; à défaut, du fond du quai. Le nez
+  // de la volée ne se ramène PAS dans la bande de circulation : c'est
+  // justement le seul endroit du quai où l'on a le droit d'être au droit de
+  // l'épine, et l'agent en sort.
   const stair = nearestStair(pl, doorLocalZ);
-  const start = stair
-    ? clampPos(stair.x, stairTopZ(stair))
+  const start: Spot = stair
+    ? { x: stair.x, z: stairTopZ(stair) }
     : clampPos(bounds().x1, doorLocalZ + (doorLocalZ >= 0 ? -18 : 18));
-  p.pos.copy(start);
+  p.pos.set(start.x, 0, start.z);
   p.y = 0;
-  p.home.copy(post);
+  p.level = 'platform';
+  p.inStation = false;
+  p.stuck = 0;
+  p.home.set(post.x, 0, post.z);
   p.state = 'attending';
   p.role = 'waiter';
   p.action = 'none';
@@ -673,8 +960,8 @@ export function summonPlatformAgent(doorLocalZ: number): void {
   p.bob = 0;
   p.headPitch = 0;
   p.lookYaw = 0;
-  p.waypoints = [clampPos(post.x + 0.5, (start.z + post.z) / 2), post];
-  p.wpi = 0;
+  p.route = [clampPos(post.x + 0.5, (start.z + post.z) / 2), post];
+  p.routeI = 0;
   p.yaw = Math.atan2(post.x - start.x, post.z - start.z);
   p.targetYaw = p.yaw;
 }
@@ -682,7 +969,7 @@ export function summonPlatformAgent(doorLocalZ: number): void {
 /** L'agent est-il arrivé à son poste ? */
 export function platformAgentPosted(): boolean {
   const p = agentSlot();
-  return p.state === 'attending' && p.wpi >= p.waypoints.length;
+  return p.state === 'attending' && p.routeI >= p.route.length;
 }
 
 /** Position monde de sa tête, pour accrocher ce qu'il dit. */
@@ -747,7 +1034,16 @@ export function crowdDisperse(): void {
   }
 }
 
-/** Fait monter un voyageur par une trémie, pour la rame suivante. */
+/**
+ * Fait monter un voyageur vers le quai, pour la rame suivante.
+ *
+ * Une part vient de la RUE : elle descend une bouche de sortie, traverse la
+ * zone libre, valide au portillon et remonte par la volée principale. C'est le
+ * mouvement inverse du départ, et c'est ce qui fait qu'un hall n'est pas un
+ * couloir mort - on y croise du monde dans les deux sens. Le reste monte d'une
+ * trémie borgne comme avant : trente-cinq mètres de marche avant d'atteindre
+ * le quai, cela ne remplit pas un quai en quarante secondes.
+ */
 export function crowdArrive(stationIndex: number): boolean {
   initPlatformCrowd();
   const p = freeSlot();
@@ -755,7 +1051,6 @@ export function crowdArrive(stationIndex: number): boolean {
   const pl = placement();
   const total = crowdCount(stationIndex).total;
   const home = waitSlot(Math.floor(Math.random() * Math.max(1, total)), total, 0);
-  const s = nearestStair(pl, (Math.random() - 0.5) * pl.walkHalfZ * 1.6);
   // Une part des arrivants ne prend pas ce train : ils arpentent le quai.
   p.role = Math.random() < 0.35 ? 'walker' : 'waiter';
   p.ticket = -1;
@@ -764,21 +1059,54 @@ export function crowdArrive(stationIndex: number): boolean {
   p.action = 'none';
   p.headPitch = 0;
   p.lookYaw = 0;
-  p.home.copy(home);
+  p.stuck = 0;
+  p.home.set(home.x, 0, home.z);
   p.state = 'arriving';
-  p.wpi = 0;
+  p.routeI = 0;
+  p.inStation = false;
+  p.level = 'platform';
+
+  // ON NE FAIT NAÎTRE PERSONNE SOUS LES YEUX DU JOUEUR. Tant qu'il est
+  // là-haut, la dalle cache tout ce qui se passe dessous et un arrivant peut
+  // paraître au milieu de la volée - c'est ce que la foule a toujours fait,
+  // et c'est aussi ce qui remplit un quai en quarante secondes, ce qu'un
+  // trajet depuis la rue ne saurait faire. Dès qu'il est DESCENDU, la même
+  // apparition se produirait en plein champ : tout le monde vient alors de la
+  // rue, et ceux qui ne le peuvent pas montent du couloir borgne de l'autre
+  // bout du quai, que le hall ne voit pas.
+  const inHall = runtime.playerLevel === 'concourse';
+  const fromStreet = interiorCount() < INTERIOR_CAP && (inHall || Math.random() < 0.45)
+    ? routeFromStreet(pl)
+    : null;
+  if (fromStreet) {
+    p.inStation = true;
+    p.level = 'concourse';
+    p.pos.set(fromStreet.from.x, 0, fromStreet.from.z);
+    p.y = floorYAt(pl, p);
+    // Le raccord du nez de la volée au bord du quai, à l'envers : on débouche
+    // dans la réserve d'approche, puis on gagne la circulation.
+    const out = stairApron(pl.mainStair, (Math.random() - 0.5) * 1.2, home.x);
+    p.route = [...fromStreet.stops, out[1], out[0], home];
+    p.yaw = Math.PI;
+    p.targetYaw = p.yaw;
+    return true;
+  }
+
+  const zPick = (Math.random() - 0.5) * pl.walkHalfZ * 1.6;
+  const s = inHall ? blindStair(pl, zPick) ?? nearestStair(pl, zPick) : nearestStair(pl, zPick);
   if (s) {
     const lane = (Math.random() - 0.5) * 1.2;
     p.pos.set(s.x + lane * 0.35, 0, stairTopZ(s) + STAIR_FULL_LEN);
-    p.y = floorYAt(pl, p.pos.x, p.pos.z);
-    p.waypoints = [clampPos(s.x + lane, stairTopZ(s) - 1.4), home];
+    p.y = floorYAt(pl, p);
+    const out = stairApron(s, lane, home.x);
+    p.route = [out[1], out[0], home];
     p.yaw = Math.PI;
   } else {
     // Sans trémie, le voyageur entre par un bout du quai.
     const from = Math.random() < 0.5 ? -pl.walkHalfZ + 1 : pl.walkHalfZ - 1;
     p.pos.set(bounds().x1, 0, from);
     p.y = 0;
-    p.waypoints = [home];
+    p.route = [home];
     p.yaw = p.pos.z > 0 ? Math.PI : 0;
   }
   p.targetYaw = p.yaw;
@@ -790,8 +1118,6 @@ export function crowdTarget(stationIndex: number): number {
   return crowdCount(stationIndex).total;
 }
 
-const tmp = new THREE.Vector3();
-
 function startPatrol(p: CrowdPax): void {
   endCrowdPair(p);
   clearCrowdAnchor(p);
@@ -799,8 +1125,9 @@ function startPatrol(p: CrowdPax): void {
   p.action = 'shift';
   p.actionT = 0;
   p.actionDur = 30;
-  p.waypoints = patrolWaypoints(p.laneX, p.pos.z, p.walkDir);
-  p.wpi = 0;
+  p.route = patrolWaypoints(p.laneX, p.pos.z, p.walkDir);
+  p.routeI = 0;
+  p.stuck = 0;
   p.headPitch = 0;
   p.lookYaw = 0;
 }
@@ -820,8 +1147,9 @@ function startShortAmble(p: CrowdPax): void {
   p.action = 'shift';
   p.actionDur = 12;
   p.actionT = 0;
-  p.waypoints = [mid, dest];
-  p.wpi = 0;
+  p.route = [mid, dest];
+  p.routeI = 0;
+  p.stuck = 0;
 }
 
 function endCrowdPair(p: CrowdPax): void {
@@ -973,13 +1301,23 @@ function startCrowdInterlude(p: CrowdPax): void {
 export function crowdStartTalking(id: number, dur: number): boolean {
   const p = crowdList[id];
   if (!p) return false;
-  if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') return false;
+  const transit = p.state === 'arriving' || p.state === 'leaving';
+  if (!transit && p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') {
+    return false;
+  }
   endCrowdPair(p);
   clearCrowdAnchor(p);
-  p.state = 'waiting';
-  p.home.copy(p.pos);
-  p.waypoints = [];
-  p.wpi = 0;
+  if (transit) {
+    // On ne renonce pas à son train pour bavarder : le voyageur en route
+    // s'arrête où il est, répond, et repart. `delay` est déjà ce qui
+    // l'immobilise à une halte - il n'en fallait pas d'autre.
+    p.delay = Math.max(p.delay, dur + 0.4);
+  } else {
+    p.state = 'waiting';
+    p.home.copy(p.pos);
+    p.route = [];
+    p.routeI = 0;
+  }
   p.bob = 0;
   p.action = 'talkPlayer';
   p.actionT = 0;
@@ -993,14 +1331,85 @@ export function crowdKeepTalking(id: number, dur: number): boolean {
   if (!p || p.action !== 'talkPlayer') return false;
   p.actionT = 0;
   p.actionDur = dur;
+  if (p.state === 'arriving' || p.state === 'leaving') p.delay = Math.max(p.delay, dur + 0.4);
   return true;
 }
 
-/** Fin de l'échange : le voyageur reprend son attente ou sa promenade. */
+/** Fin de l'échange : le voyageur reprend son attente, sa promenade, sa route. */
 export function crowdStopTalking(id: number): void {
   const p = crowdList[id];
   if (!p || p.action !== 'talkPlayer') return;
   p.actionT = p.actionDur;
+  if (p.state === 'arriving' || p.state === 'leaving') p.delay = 0;
+}
+
+/**
+ * Peut-on adresser la parole à ce voyageur ?
+ *
+ * Une seule question, posée deux fois ailleurs (`systems/paxTargeting`, pour
+ * viser et pour tenir l'échange) : est-il DE CE CÔTÉ-CI ? On ne parle pas à
+ * travers la caisse d'une rame, pas à travers une dalle de béton, et pas à
+ * quelqu'un dont on ne voit que les épaules au fond d'une trémie.
+ *
+ * Depuis que la foule descend dans le hall, la réponse ne se lit plus sur le
+ * seul repère : il faut le MÊME ÉTAGE. Et l'inverse est vrai aussi - descendu
+ * au niveau des portillons, on peut demander sa route à qui fait la queue au
+ * konbini, ce qui n'était possible nulle part.
+ */
+export function crowdAddressable(p: CrowdPax): boolean {
+  if (p.staff || p.state === 'hidden' || p.state === 'boarding' || p.state === 'attending') {
+    return false;
+  }
+  if (runtime.playerFrame !== 'platform' || p.level !== runtime.playerLevel) return false;
+  if (p.level === 'concourse') {
+    // Engagé dans une bouche de sortie, il est déjà à moitié dans la rue.
+    return p.y <= placement().interior.floorY + 0.05;
+  }
+  // Un voyageur dans une trémie est à moitié sous la dalle : hors de portée.
+  if (p.y < -0.2) return false;
+  return p.state === 'waiting' || p.state === 'ambling' || p.state === 'patrolling';
+}
+
+/**
+ * Le corps qui vit sur place : tête, regard, buste, respiration.
+ *
+ * Sorti du bloc « attente » parce qu'une HALTE en vaut une autre : celui qui
+ * s'arrête devant le rayon frais du konbini ou devant un distributeur de
+ * titres n'est pas moins vivant que celui qui attend son train. Sans cela, le
+ * hall se peuplait de mannequins arrêtés en pleine marche.
+ */
+function applyMotion(p: CrowdPax, dt: number, partner: CrowdPax | null = null): void {
+  const player = platformPlayerCtx();
+  const act = p.action === 'shift' ? 'none' : (p.action as PaxAction);
+  const m = resolveMotion({
+    action: act,
+    actionT: p.actionT,
+    bobPhase: p.bobPhase,
+    chatRole: p.chatRole,
+    lookYawTarget: p.lookYaw,
+    posX: p.pos.x,
+    posZ: p.pos.z,
+    yaw: p.yaw,
+    partnerX: partner?.pos.x,
+    partnerZ: partner?.pos.z,
+    playerX: player.playerX,
+    playerY: player.playerY,
+    playerZ: player.playerZ,
+  });
+  p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed);
+  p.lookYaw += (m.yaw - p.lookYaw) * Math.min(1, dt * Math.min(m.speed, 4));
+  p.headRoll += (m.headRoll - p.headRoll) * Math.min(1, dt * m.speed);
+  p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed);
+  p.bodyRoll += (m.roll - p.bodyRoll) * Math.min(1, dt * m.speed);
+  p.bodyPivot += (m.pivot - p.bodyPivot) * Math.min(1, dt * m.speed);
+  if (isFallingAction(act) || Math.abs(m.drop) > 0.001) {
+    p.bob += (m.drop - p.bob) * Math.min(1, dt * m.speed);
+  } else {
+    p.bob = Math.sin(p.bobPhase * 1.1) * 0.004;
+    p.bodyLean *= Math.max(0, 1 - dt * 5);
+    p.bodyRoll *= Math.max(0, 1 - dt * 5);
+    p.bodyPivot *= Math.max(0, 1 - dt * 5);
+  }
 }
 
 /** Reprend l'occupation de fond, ou en choisit une autre si elle est épuisée. */
@@ -1013,24 +1422,225 @@ function resumeCrowdAnchor(p: CrowdPax): void {
   startCrowdAnchor(p);
 }
 
-function advanceWalk(p: CrowdPax, dt: number, onDone: () => void): void {
-  const wp = p.waypoints[p.wpi];
+/**
+ * Un pas, en contournant ce qui barre.
+ *
+ * Pas de physique - le dépôt s'en passe partout ailleurs et n'en a pas besoin
+ * ici : quand le pas complet ne passe pas, on longe.
+ *
+ * LE PAS DE CÔTÉ SE FAIT AU PAS ENTIER, et c'est tout ce qui le distingue du
+ * glissement du joueur (`systems/walkable`, `resolveMove`). Le joueur TIENT UNE
+ * DIRECTION : lui rendre la composante qui passe est exactement ce qu'il
+ * demande. Un voyageur, lui, VISE UN POINT, et sa composante latérale est
+ * presque nulle - il marche droit vers son but. Réduit à cette composante-là,
+ * il longeait l'obstacle à deux millimètres par seconde sans jamais en sortir :
+ * c'est ce qu'on voyait quand le joueur s'arrêtait au milieu du couloir du
+ * hall, une file entière massée contre lui sans le contourner. Le pas de côté
+ * vaut donc un pas, et l'on essaie les deux côtés.
+ *
+ * @returns false si rien ne passe : l'appelant décide alors quoi faire.
+ */
+function stepAround(p: CrowdPax, pl: StationPlacement, dx: number, dz: number): boolean {
+  const { x, z } = p.pos;
+  const free = (cx: number, cz: number) => !walkerBlocked(pl, p.level, cx, cz);
+  if (free(x + dx, z + dz)) {
+    p.pos.x = x + dx;
+    p.pos.z = z + dz;
+    return true;
+  }
+  const len = Math.hypot(dx, dz);
+  if (len < 1e-6) return false;
+  // L'axe du pas d'abord - c'est là qu'on veut aller -, l'autre ensuite, dans
+  // le sens qui rapproche du but puis dans celui qui en éloigne : contourner
+  // par la mauvaise main vaut mieux que ne pas contourner.
+  const alongZ = Math.abs(dz) >= Math.abs(dx);
+  const sx = dx >= 0 ? 1 : -1;
+  const sz = dz >= 0 ? 1 : -1;
+  const tries: readonly [number, number][] = alongZ
+    ? [[0, sz * len], [sx * len, 0], [-sx * len, 0]]
+    : [[sx * len, 0], [0, sz * len], [0, -sz * len]];
+  for (const [ax, az] of tries) {
+    if (!free(x + ax, z + az)) continue;
+    p.pos.x = x + ax;
+    p.pos.z = z + az;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Distance à laquelle on commence à s'écarter de quelqu'un qu'on a devant soi.
+ * Un pas et demi : de quoi infléchir sa marche sans avoir l'air de l'éviter.
+ */
+const SKIRT_R = 1.45;
+
+/**
+ * Contourner le joueur, plutôt que buter dedans.
+ *
+ * LE JOUEUR N'EST PAS UNE EMPRISE DU DÉCOR : `systems/stationLevels` ne le
+ * connaît pas, et l'écart qu'il impose (`avoidPlayer`) est un RECUL - le
+ * voyageur est repoussé à soixante centimètres, à chaque image, sans jamais
+ * changer de cap. Les deux ensemble faisaient un équilibre parfait : le
+ * voyageur avançait de deux centimètres vers son but, se faisait repousser
+ * d'autant, et recommençait. Debout au milieu du couloir du hall, on voyait
+ * une file entière s'immobiliser dans son dos jusqu'à ce qu'on bouge.
+ *
+ * Le cap s'infléchit donc TANGENTIELLEMENT, d'autant plus qu'on est près, et
+ * du côté où l'on penche déjà. C'est ce que fait n'importe qui dans un couloir,
+ * et cela ne coûte qu'une rotation.
+ */
+function skirtPlayer(p: CrowdPax, ux: number, uz: number): [number, number] {
+  if (runtime.playerFrame !== 'platform' || runtime.playerLevel !== p.level) return [ux, uz];
+  const dx = runtime.playerPlatX - p.pos.x;
+  const dz = runtime.playerPlatZ - p.pos.z;
+  const d = Math.hypot(dx, dz);
+  if (d > SKIRT_R || d < 1e-4) return [ux, uz];
+  const nx = dx / d;
+  const nz = dz / d;
+  const ahead = ux * nx + uz * nz;
+  // Il est franchement derrière : rien à contourner.
+  if (ahead <= -0.1) return [ux, uz];
+  // La TANGENTE, c'est-à-dire ce qui reste du cap une fois retirée la part
+  // qui pointe vers lui. Prise ainsi, elle va toujours de l'avant : de face
+  // elle s'annule (et l'on prend alors une perpendiculaire franche), de côté
+  // elle vaut le cap lui-même - on ne fait donc pas demi-tour autour de
+  // quelqu'un qu'on est en train de doubler, ce qui remettait la file en
+  // boucle devant lui.
+  let tx = ux - ahead * nx;
+  let tz = uz - ahead * nz;
+  let t = Math.hypot(tx, tz);
+  if (t < 0.2) {
+    // Pile en face : on choisit une main, et c'est celle du côté où le
+    // couloir est le plus large qui se trouve être aussi celle de la marche.
+    tx = -nz;
+    tz = nx;
+    t = 1;
+  }
+  const k = Math.min(1, (SKIRT_R - d) / Math.max(0.1, SKIRT_R - PLAYER_CLEARANCE));
+  const mx = ux * (1 - k) + (tx / t) * k;
+  const mz = uz * (1 - k) + (tz / t) * k;
+  const m = Math.hypot(mx, mz);
+  return m < 1e-6 ? [ux, uz] : [mx / m, mz / m];
+}
+
+/**
+ * Ce qu'on fait en arrivant à une étape : s'arrêter, regarder, valider.
+ *
+ * Le coup de carte au portillon est le seul de ces gestes qui sorte du
+ * personnage : il fait le ピッ et allume le feu de la borne
+ * (`systems/fareGate`). C'est le son d'un hall de gare japonaise, et il ne
+ * s'entend que de près.
+ */
+function applyStop(p: CrowdPax, s: RouteStop): void {
+  if (s.tap !== undefined) {
+    const d = runtime.playerLevel === 'concourse'
+      ? Math.hypot(p.pos.x - runtime.playerPlatX, p.pos.z - runtime.playerPlatZ)
+      : 99;
+    paxTapGate(s.tap, d);
+  }
+  if (!s.hold) return;
+  p.delay = s.hold;
+  p.bob = 0;
+  p.action = s.action ?? 'none';
+  p.actionT = 0;
+  p.actionDur = s.hold;
+  if (s.yaw !== undefined) p.targetYaw = s.yaw;
+}
+
+/** Le joueur est-il assez près pour écarter ce voyageur de son chemin ? */
+function pushedByPlayer(p: CrowdPax): boolean {
+  if (runtime.playerFrame !== 'platform' || runtime.playerLevel !== p.level) return false;
+  const d = Math.hypot(p.pos.x - runtime.playerPlatX, p.pos.z - runtime.playerPlatZ);
+  return d < PLAYER_CLEARANCE + 0.4;
+}
+
+/**
+ * A-t-on DÉPASSÉ le point qu'on visait ?
+ *
+ * Cela n'arrive pas en marchant : on s'arrête dessus. Cela arrive quand on
+ * s'est fait écarter juste après l'avoir visé - le joueur qui se tient dans le
+ * couloir repousse à soixante centimètres (`avoidPlayer`), et si le point
+ * était plus près que cela, on se retrouve DERRIÈRE lui. Sans cette clause, on
+ * revenait le chercher, on se faisait repousser, et l'on recommençait pour
+ * toujours : une file entière figée dans le dos du joueur, à un mètre d'un
+ * point de passage déjà franchi.
+ *
+ * Une HALTE ne se dépasse pas, elle : on va vraiment poser sa carte sur le
+ * lecteur du portillon, et vraiment devant le rayon qu'on voulait voir.
+ */
+function passedStop(p: CrowdPax): boolean {
+  const wp = p.route[p.routeI];
+  const next = p.route[p.routeI + 1];
+  if (!wp || !next || wp.hold || wp.tap !== undefined) return false;
+  // ET SEULEMENT SOUS LA POUSSÉE DU JOUEUR. Ailleurs, un voyageur ne dépasse
+  // pas son point de passage - il s'arrête dessus -, et laisser la règle jouer
+  // partout reviendrait à autoriser les raccourcis : celui qui longe la
+  // vitrine du konbini viserait le rayon suivant à travers le verre.
+  if (!pushedByPlayer(p)) return false;
+  const leg = Math.hypot(next.x - wp.x, next.z - wp.z);
+  const left = Math.hypot(next.x - p.pos.x, next.z - p.pos.z);
+  return left + 0.15 < leg;
+}
+
+/**
+ * Ce point est-il OCCUPÉ par le joueur ?
+ *
+ * Alors on ne l'atteindra jamais : l'écart qu'il impose est plus large que ce
+ * qui reste à parcourir, et l'on resterait à quinze centimètres de son but
+ * pour l'éternité - debout dans l'axe du couloir, on bloquait ainsi tout un
+ * flux sans le savoir. Le voyageur fait donc ce que fait n'importe qui : il
+ * considère qu'il y est, et passe à la suite. La carte se pose de là où il
+ * est, et le portillon ne s'en offusque pas.
+ */
+function stopTakenByPlayer(p: CrowdPax, wp: RouteStop): boolean {
+  if (runtime.playerFrame !== 'platform' || runtime.playerLevel !== p.level) return false;
+  const d = Math.hypot(wp.x - runtime.playerPlatX, wp.z - runtime.playerPlatZ);
+  return d < PLAYER_CLEARANCE + 0.05;
+}
+
+function advanceWalk(p: CrowdPax, dt: number, pl: StationPlacement, onDone: () => void): void {
+  while (passedStop(p)) p.routeI++;
+  const wp = p.route[p.routeI];
   if (!wp) {
     onDone();
     return;
   }
-  tmp.subVectors(wp, p.pos);
-  const dist = tmp.length();
+  const dx = wp.x - p.pos.x;
+  const dz = wp.z - p.pos.z;
+  const dist = Math.hypot(dx, dz);
   const step = WALK_SPEED * dt;
-  if (dist <= step) {
-    p.pos.copy(wp);
-    p.wpi++;
-    if (p.wpi >= p.waypoints.length) onDone();
+  const reached = dist <= step
+    || (dist < PLAYER_CLEARANCE + 0.35 && stopTakenByPlayer(p, wp));
+  if (reached) {
+    // On ne se POSE sur le point que si on l'a vraiment rejoint : s'y
+    // téléporter parce que le joueur s'y tient reviendrait à lui rentrer
+    // dedans.
+    if (dist <= step) p.pos.set(wp.x, 0, wp.z);
+    p.routeI++;
+    p.stuck = 0;
+    applyStop(p, wp);
+    if (p.routeI >= p.route.length) onDone();
   } else {
-    tmp.normalize().multiplyScalar(step);
-    p.pos.add(tmp);
-    p.targetYaw = Math.atan2(tmp.x, tmp.z);
-    p.bob = Math.abs(Math.sin(p.bobPhase * 9.5)) * 0.028;
+    const [sx, sz] = skirtPlayer(p, dx / dist, dz / dist);
+    const ux = sx * step;
+    const uz = sz * step;
+    if (stepAround(p, pl, ux, uz)) {
+      p.stuck = 0;
+      // Le cap suit le pas RÉELLEMENT fait, pas celui qu'on voulait faire :
+      // quelqu'un qui longe un banc regarde là où il va.
+      p.targetYaw = Math.atan2(ux, uz);
+      p.bob = Math.abs(Math.sin(p.bobPhase * 9.5)) * 0.028;
+    } else {
+      // Coincé : on renonce à cette étape-là plutôt que de piétiner. Le cas est
+      // rare - les points d'itinéraire sont posés sur du sol libre - mais un
+      // voyageur qui bourdonne contre un poteau pour l'éternité se verrait.
+      p.stuck += dt;
+      if (p.stuck > 1.2) {
+        p.stuck = 0;
+        p.routeI++;
+        if (p.routeI >= p.route.length) onDone();
+      }
+    }
   }
   p.lookYaw *= Math.max(0, 1 - dt * 4);
   p.headPitch += (0 - p.headPitch) * Math.min(1, dt * 5);
@@ -1047,8 +1657,10 @@ let prevPlatX = 0;
 let prevPlatZ = 0;
 let prevPlatInit = false;
 
-function avoidPlayer(p: CrowdPax, dt: number, pvx: number, pvz: number): void {
-  if (runtime.playerFrame !== 'platform') {
+function avoidPlayer(p: CrowdPax, dt: number, pvx: number, pvz: number, pl: StationPlacement): void {
+  // Même repère ET même étage : de l'autre côté d'une dalle de béton, il n'y a
+  // personne à esquiver.
+  if (runtime.playerFrame !== 'platform' || runtime.playerLevel !== p.level) {
     p.pushAccum = Math.max(0, p.pushAccum - dt * 0.8);
     return;
   }
@@ -1065,15 +1677,15 @@ function avoidPlayer(p: CrowdPax, dt: number, pvx: number, pvz: number): void {
     p.pushAccum = 0;
     return;
   }
-  if (p.state !== 'waiting' && p.state !== 'ambling' && p.state !== 'patrolling') return;
+  if (p.state === 'boarding' || p.state === 'attending') return;
 
-  // L'écart reste SUR LE QUAI : sans borne, insister contre quelqu'un le
-  // poussait par-dessus le nez de quai, dans la voie, ou au travers du mur
-  // de fond - un voyageur ne recule pas dans le vide pour nous laisser passer.
+  // L'écart reste SUR DU SOL : sans borne, insister contre quelqu'un le
+  // poussait par-dessus le nez de quai, dans la voie, au travers du mur de
+  // fond ou d'une vitrine de konbini - un voyageur ne recule pas dans le vide
+  // pour nous laisser passer. `stepAround` s'en charge exactement comme pour
+  // un pas ordinaire : ce qui ne passe pas, ne passe pas.
   const push = (PLAYER_CLEARANCE - d) / d;
-  const bounded = clampPos(p.pos.x + dx * push, p.pos.z + dz * push);
-  p.pos.x = bounded.x;
-  p.pos.z = bounded.z;
+  stepAround(p, pl, dx * push, dz * push);
 
   const nx = dx / d;
   const nz = dz / d;
@@ -1139,13 +1751,13 @@ export function updatePlatformCrowd(dt: number): void {
     p.actionT += dt;
     p.bobPhase += dt;
     // L'agent tient son poste : ce n'est pas à lui de s'écarter.
-    if (!p.staff) avoidPlayer(p, dt, pvx, pvz);
+    if (!p.staff) avoidPlayer(p, dt, pvx, pvz, currentPlacement);
 
     // L'agent de quai : il accourt, puis il ne bouge plus - face à la porte,
     // à celui qui la bloque.
     if (p.state === 'attending') {
-      if (p.wpi < p.waypoints.length) {
-        advanceWalk(p, dt * (AGENT_RUN / WALK_SPEED), () => {
+      if (p.routeI < p.route.length) {
+        advanceWalk(p, dt * (AGENT_RUN / WALK_SPEED), currentPlacement, () => {
           // Arrivé : il pivote vers la baie qu'il vient couvrir.
           p.targetYaw = Math.atan2(PSD_X - p.pos.x, agentDoorZ - p.pos.z);
           p.bob = 0;
@@ -1158,17 +1770,29 @@ export function updatePlatformCrowd(dt: number): void {
       while (dy > Math.PI) dy -= Math.PI * 2;
       while (dy < -Math.PI) dy += Math.PI * 2;
       p.yaw += dy * Math.min(1, dt * 5);
-      p.y = floorYAt(currentPlacement, p.pos.x, p.pos.z);
+      p.y = floorYAt(currentPlacement, p);
       continue;
     }
 
-    // Transits : arrivée par la trémie, départ vers la sortie, montée en rame.
+    // Transits : arrivée par la trémie ou par la rue, départ vers la sortie,
+    // montée en rame.
     if (p.state === 'arriving' || p.state === 'leaving' || p.state === 'boarding') {
       if (p.delay > 0) {
+        // Une halte : devant un rayon du konbini, au distributeur de titres,
+        // le temps de passer sa carte. Le corps y vit comme celui d'un
+        // voyageur en attente - sinon la gare est pleine de mannequins.
         p.delay -= dt;
-        p.bob = Math.sin(p.bobPhase * 1.1) * 0.004;
+        applyMotion(p, dt);
+        if (p.delay <= 0 && p.action !== 'none') {
+          p.action = 'none';
+          p.actionT = 0;
+          p.actionDur = 1;
+        }
       } else {
-        advanceWalk(p, dt, () => {
+        advanceWalk(p, dt, currentPlacement, () => {
+          // Le trajet est fini : la place qu'il occupait dans la gare se
+          // libère, qu'il ait rejoint le quai, la rame ou la rue.
+          p.inStation = false;
           if (p.state === 'boarding') {
             // Le relais est pris à l'intérieur du wagon (systems/passengers),
             // qui reprendra l'identité de ce slot pour poursuivre la montée.
@@ -1189,16 +1813,17 @@ export function updatePlatformCrowd(dt: number): void {
             p.actionDur = 0.6 + Math.random() * 1.4;
             p.bob = 0;
           }
-          p.waypoints = [];
-          p.wpi = 0;
+          p.route = [];
+          p.routeI = 0;
         });
         // Les marches se descendent vraiment : l'altitude suit le profil de la
-        // volée. On ne s'efface PAS à une altitude donnée - le voyageur
-        // s'évaporait alors en pleine volée, la tête au niveau du quai, sous
-        // les yeux de qui se penche dans la trémie. Il marche jusqu'au bout de
-        // son dernier point de passage, un mètre après le linteau : c'est la
-        // dalle qui le cache, et l'effacement ne se voit plus.
-        p.y = floorYAt(currentPlacement, p.pos.x, p.pos.z);
+        // volée, et l'étage bascule à mi-parcours. On ne s'efface PAS à une
+        // altitude donnée - le voyageur s'évaporait alors en pleine volée, la
+        // tête au niveau du quai, sous les yeux de qui se penche dans la
+        // trémie. Il marche jusqu'au bout de son dernier point de passage : le
+        // fond d'un couloir borgne, ou le haut de la volée d'une bouche de
+        // sortie. C'est le bâti qui le cache, et l'effacement ne se voit plus.
+        p.y = floorYAt(currentPlacement, p);
       }
       let dy = p.targetYaw - p.yaw;
       while (dy > Math.PI) dy -= Math.PI * 2;
@@ -1208,7 +1833,7 @@ export function updatePlatformCrowd(dt: number): void {
     }
 
     if (p.state === 'patrolling') {
-      advanceWalk(p, dt, () => {
+      advanceWalk(p, dt, currentPlacement, () => {
         // Bout du quai : demi-tour et nouveau trajet.
         p.walkDir = p.walkDir > 0 ? -1 : 1;
         p.laneX = THREE.MathUtils.clamp(p.laneX + (Math.random() - 0.5) * 0.35, bounds().x0 + 0.15, bounds().x1 - 0.15);
@@ -1228,7 +1853,7 @@ export function updatePlatformCrowd(dt: number): void {
         }
       });
     } else if (p.state === 'ambling') {
-      advanceWalk(p, dt, () => {
+      advanceWalk(p, dt, currentPlacement, () => {
         p.state = 'waiting';
         p.home.copy(p.pos);
         clearCrowdAnchor(p);
@@ -1276,37 +1901,7 @@ export function updatePlatformCrowd(dt: number): void {
           endCrowdPair(p);
           p.action = 'none';
         }
-        const player = platformPlayerCtx();
-        const act = p.action === 'shift' ? 'none' : (p.action as PaxAction);
-        const m = resolveMotion({
-          action: act,
-          actionT: p.actionT,
-          bobPhase: p.bobPhase,
-          chatRole: p.chatRole,
-          lookYawTarget: p.lookYaw,
-          posX: p.pos.x,
-          posZ: p.pos.z,
-          yaw: p.yaw,
-          partnerX: partner?.pos.x,
-          partnerZ: partner?.pos.z,
-          playerX: player.playerX,
-          playerY: player.playerY,
-          playerZ: player.playerZ,
-        });
-        p.headPitch += (m.pitch - p.headPitch) * Math.min(1, dt * m.speed);
-        p.lookYaw += (m.yaw - p.lookYaw) * Math.min(1, dt * Math.min(m.speed, 4));
-        p.headRoll += (m.headRoll - p.headRoll) * Math.min(1, dt * m.speed);
-        p.bodyLean += (m.lean - p.bodyLean) * Math.min(1, dt * m.speed);
-        p.bodyRoll += (m.roll - p.bodyRoll) * Math.min(1, dt * m.speed);
-        p.bodyPivot += (m.pivot - p.bodyPivot) * Math.min(1, dt * m.speed);
-        if (isFallingAction(act) || Math.abs(m.drop) > 0.001) {
-          p.bob += (m.drop - p.bob) * Math.min(1, dt * m.speed);
-        } else {
-          p.bob = Math.sin(p.bobPhase * 1.1) * 0.004;
-          p.bodyLean *= Math.max(0, 1 - dt * 5);
-          p.bodyRoll *= Math.max(0, 1 - dt * 5);
-          p.bodyPivot *= Math.max(0, 1 - dt * 5);
-        }
+        applyMotion(p, dt, partner);
         p.targetYaw = -Math.PI / 2 + p.lookYaw * 0.35;
       }
     }

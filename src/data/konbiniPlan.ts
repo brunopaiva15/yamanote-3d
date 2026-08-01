@@ -36,6 +36,40 @@ export interface LocalRect {
   z1: number;
 }
 
+/** Un point du repère local de la boutique. */
+export interface LocalPoint {
+  x: number;
+  z: number;
+}
+
+/**
+ * Où se tient un CLIENT dans la boutique.
+ *
+ * Un konbini n'est pas un couloir qu'on traverse : on y entre, on regarde un
+ * rayon, on prend quelque chose, on paie, on ressort. Ces six points sont les
+ * seuls endroits où l'on s'arrête, et l'ordre dans lequel on les enchaîne EST
+ * la visite (systems/concourseRoute).
+ *
+ * Ils ne sont pas placés à l'oeil : chacun se déduit des meubles qui
+ * l'entourent, et se retrouve donc au MILIEU du passage laissé entre eux. Un
+ * point écrit en dur aurait fini dans une gondole le jour où une cote de
+ * meuble bouge - et le fichier qui la fait bouger est celui-ci.
+ */
+export interface KonbiniStops {
+  /** Devant la baie, DEHORS : d'où l'on entre, et où l'on ressort. */
+  door: LocalPoint;
+  /** Juste dedans, entre le bac à glaces et les paniers. */
+  entry: LocalPoint;
+  /** L'allée du fond, devant les vitrines réfrigérées. */
+  cold: LocalPoint;
+  /** Le passage laissé entre le présentoir à magazines et le bac à glaces. */
+  gap: LocalPoint;
+  /** Devant la gondole centrale. */
+  aisle: LocalPoint;
+  /** Devant la caisse, côté client. */
+  till: LocalPoint;
+}
+
 export interface KonbiniPlan {
   w: number;
   d: number;
@@ -75,6 +109,8 @@ export interface KonbiniPlan {
   baskets: { x: number; z: number };
   /** Où se tient le vendeur, derrière sa caisse. */
   clerk: { x: number; z: number };
+  /** Les six points où un client s'arrête - et par lesquels il circule. */
+  stops: KonbiniStops;
   /**
    * Tout ce qui BARRE, en emprises au sol.
    *
@@ -137,6 +173,28 @@ export function konbiniPlan(w: number, d: number): KonbiniPlan {
   const baskets = { x: Math.min(hw - 0.24, doorR + 0.3), z: zf - 0.5 };
   const clerk = { x: (-hw + leftEnd) / 2 - 0.25, z: zb + coolD + 0.5 };
 
+  // --- Par où passe un client, et où il s'arrête -----------------------
+  //
+  // Les trois couloirs de la boutique, chacun pris en son milieu :
+  //   · à DROITE du bac à glaces, de la baie jusqu'au fond ;
+  //   · le long de la VITRINE, entre le bac à glaces et le verre ;
+  //   · le GOULET entre le présentoir à magazines et le bac à glaces, seul
+  //     passage vers la moitié gauche de la boutique.
+  // Un konbini de gare est étroit - trente centimètres au plus serré - et
+  // c'est ce qui fait qu'on s'y frôle. Personne ne s'y croise de front, et
+  // c'est très bien ainsi.
+  const rightLane = (chest.x + chest.w / 2 + Math.min(hw, baskets.x - 0.24)) / 2;
+  const frontLane = (chest.z + chest.d / 2 + zf - KONBINI_WALL) / 2;
+  const gapX = (rackX1 + chest.x - chest.w / 2) / 2;
+  const stops: KonbiniStops = {
+    door: { x: doorX, z: zf + 0.55 },
+    entry: { x: rightLane, z: frontLane },
+    cold: { x: rightLane, z: (zb + coolD + gondZ - gondD / 2) / 2 },
+    gap: { x: gapX, z: frontLane },
+    aisle: { x: gapX, z: (gondZ + gondD / 2 + rackZ - rackD / 2) / 2 },
+    till: { x: (counter.x0 + counter.x1) / 2, z: counter.z0 + counter.depth + 0.42 },
+  };
+
   const solids: LocalRect[] = [
     // La coque : fond et joues.
     { x0: -w / 2, x1: w / 2, z0: -d / 2, z1: zb },
@@ -185,6 +243,7 @@ export function konbiniPlan(w: number, d: number): KonbiniPlan {
     chest,
     baskets,
     clerk,
+    stops,
     solids,
   };
 }
