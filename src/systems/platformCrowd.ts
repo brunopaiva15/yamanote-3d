@@ -80,10 +80,12 @@ import {
 } from './concourseRoute';
 import {
   CLEAR_DECK,
+  CLEAR_ROOM,
   concourseFloorAt,
   exitMouthFloorAt,
   mainAccessFloor,
   walkerBlocked,
+  walkerCramped,
   type StationLevel,
 } from './stationLevels';
 import { paxTapGate } from './fareGate';
@@ -213,6 +215,17 @@ interface Spot {
 }
 
 /**
+ * Largeur minimale de la bande de circulation, depuis le liseré.
+ *
+ * Ce qui la rétrécit en deçà n'est plus l'épine, c'est un obstacle isolé - et
+ * un obstacle isolé se contourne. Le chiffre se lit sur les trente quais : la
+ * rangée de bancs la plus proche du bord en laisse 1,03 m (Komagome,
+ * Shin-Ōkubo), une borne d'arrêt d'urgence 0,54. Quatre-vingt-dix centimètres
+ * passent entre les deux, et il n'y a rien d'autre à trancher.
+ */
+const MIN_BAND = 0.9;
+
+/**
  * Jusqu'où l'on peut s'écarter du bord avant de rentrer dans l'épine.
  *
  * Vue en coupe, la circulation d'un quai de la Yamanote tient en une bande :
@@ -225,14 +238,25 @@ interface Spot {
  * La travée d'en face d'un îlot n'est pas de cette bande, et c'est voulu : on
  * n'y attend pas notre train, on y attend celui de l'autre sens - que le jeu
  * ne fait pas passer.
+ *
+ * La bande s'arrête au JOUR qu'on se garde, et non au gabarit : longer une
+ * rangée de bancs à l'épaisseur d'une épaule, c'est la longer en frottant.
  */
 function reach(p: StationPlacement, z: number | null = null, window = 0.6): number {
   let near = Math.min(p.walkX1 - 0.4, p.walkX0 + 4.2);
   for (const o of p.obstacles) {
     if (z !== null && Math.abs(z - o.z) > o.halfZ + window) continue;
-    near = Math.min(near, o.x - o.halfX - CLEAR_DECK);
+    near = Math.min(near, o.x - o.halfX - CLEAR_DECK - CLEAR_ROOM);
   }
-  return Math.max(p.walkX0 + 0.5, near);
+  // ET ELLE A UNE LARGEUR MINIMALE, c'est elle qui manquait. Une borne d'arrêt
+  // d'urgence est plantée À UN MÈTRE DU LISERÉ, en pleine circulation
+  // (Shinjuku et Shibuya, les deux quais sans portes palières). Prise pour
+  // l'épine, elle rabattait tout le monde entre elle et le vide, dans un
+  // couloir de vingt-quatre centimètres : chacun passait donc à l'épaisseur
+  // d'un buste du caisson jaune, et l'on voyait les gens le traverser au lieu
+  // d'en faire le tour. Sous ce plancher, la chose est un OBJET DANS la bande :
+  // elle se contourne (`skirtDecor`, `freeSpot`), elle ne la ferme pas.
+  return Math.max(p.walkX0 + MIN_BAND, near);
 }
 
 /** Directions d'esquive, le bord de quai d'abord : c'est là qu'il y a la place. */
@@ -249,12 +273,20 @@ const AWAY: readonly [number, number][] = [
  * il manque des files d'attente se voit -, on la décale d'un pas de côté.
  */
 function freeSpot(p: StationPlacement, x: number, z: number): Spot {
-  if (!walkerBlocked(p, 'platform', x, z)) return { x, z };
-  for (let r = 0.3; r <= 3.6; r += 0.3) {
-    for (const [dx, dz] of AWAY) {
-      const cx = x + dx * r;
-      const cz = z + dz * r;
-      if (!walkerBlocked(p, 'platform', cx, cz)) return { x: cx, z: cz };
+  // Deux passes, et c'est toute la différence entre debout À CÔTÉ d'une borne
+  // et debout CONTRE : la première cherche une place où l'on a ses aises, la
+  // seconde se contente de ce qui est du sol. Sans la première, le décalage
+  // s'arrêtait à la première case libre venue - c'est-à-dire pile sur la
+  // frontière de l'emprise, l'épaule dans le caisson, et pour tout l'arrêt.
+  for (const tight of [false, true]) {
+    const taken = tight ? walkerBlocked : walkerCramped;
+    if (!taken(p, 'platform', x, z)) return { x, z };
+    for (let r = 0.3; r <= 3.6; r += 0.3) {
+      for (const [dx, dz] of AWAY) {
+        const cx = x + dx * r;
+        const cz = z + dz * r;
+        if (!taken(p, 'platform', cx, cz)) return { x: cx, z: cz };
+      }
     }
   }
   return { x, z };
@@ -1459,13 +1491,73 @@ function stepAround(p: CrowdPax, pl: StationPlacement, dx: number, dz: number): 
   const tries: readonly [number, number][] = alongZ
     ? [[0, sz * len], [sx * len, 0], [-sx * len, 0]]
     : [[sx * len, 0], [0, sz * len], [0, -sz * len]];
-  for (const [ax, az] of tries) {
-    if (!free(x + ax, z + az)) continue;
-    p.pos.x = x + ax;
-    p.pos.z = z + az;
-    return true;
+  // Le pas de côté cherche D'ABORD celui qui dégage vraiment : longer une
+  // emprise au ras de sa frontière, c'est la frôler pendant tout le temps qu'on
+  // met à en sortir. Ce qui est trop juste reste permis - un couloir de hall ne
+  // se traverse pas autrement - mais en second choix.
+  for (const tight of [false, true]) {
+    for (const [ax, az] of tries) {
+      if (tight ? !free(x + ax, z + az) : walkerCramped(pl, p.level, x + ax, z + az)) continue;
+      p.pos.x = x + ax;
+      p.pos.z = z + az;
+      return true;
+    }
   }
   return false;
+}
+
+/**
+ * Distance à laquelle on voit venir ce qui barre : un peu plus d'un pas.
+ *
+ * C'est la moitié du défaut, et la plus visible : un voyageur marchait DROIT
+ * sur le poteau jusqu'à le toucher, et ne s'en écartait qu'une fois collé
+ * dessus, deux centimètres par image, l'épaule dedans pendant tout le
+ * décalage. Personne ne marche comme cela. On voit la chose venir, et l'on
+ * infléchit son cap AVANT.
+ */
+const DECOR_LOOK = 0.8;
+
+/** Écarts de cap essayés, du plus doux au plus franc (radians). */
+const DECOR_TURNS = [0.3, 0.6, 0.9, 1.2, 1.55];
+
+/**
+ * Infléchir son cap pour passer À CÔTÉ de ce qu'on a devant soi.
+ *
+ * On regarde un point en avant du pas : s'il est trop juste, on cherche le cap
+ * le plus proche du sien qui dégage, en essayant les deux mains. À écart égal
+ * c'est celle du BORD DE QUAI qui l'emporte, parce que c'est de ce côté qu'il y
+ * a la place - c'est déjà l'ordre de `AWAY`, et celui d'un quai réel, dont
+ * l'épine est au fond.
+ *
+ * La portée est bornée par ce qu'il reste à parcourir : une halte se prend
+ * souvent au ras d'une chose - le rayon d'un konbini, un distributeur de titres
+ * -, et se détourner du but à un demi-mètre de lui reviendrait à ne jamais y
+ * arriver.
+ */
+function skirtDecor(
+  p: CrowdPax,
+  pl: StationPlacement,
+  ux: number,
+  uz: number,
+  dist: number,
+): [number, number] {
+  const look = Math.min(DECOR_LOOK, dist);
+  if (look < 0.05) return [ux, uz];
+  const clear = (kx: number, kz: number) =>
+    !walkerCramped(pl, p.level, p.pos.x + kx * look, p.pos.z + kz * look);
+  if (clear(ux, uz)) return [ux, uz];
+  for (const a of DECOR_TURNS) {
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    const hands: [number, number][] = [
+      [ux * c - uz * s, ux * s + uz * c],
+      [ux * c + uz * s, -ux * s + uz * c],
+    ];
+    // Le bord de quai d'abord : la main dont le cap tire vers les x faibles.
+    if (hands[1][0] < hands[0][0]) hands.reverse();
+    for (const [rx, rz] of hands) if (clear(rx, rz)) return [rx, rz];
+  }
+  return [ux, uz];
 }
 
 /**
@@ -1621,7 +1713,10 @@ function advanceWalk(p: CrowdPax, dt: number, pl: StationPlacement, onDone: () =
     applyStop(p, wp);
     if (p.routeI >= p.route.length) onDone();
   } else {
-    const [sx, sz] = skirtPlayer(p, dx / dist, dz / dist);
+    // Le joueur d'abord - il bouge, et c'est lui qu'on a dans les jambes -,
+    // puis le décor, qui ne bouge pas mais qu'on doit voir venir.
+    const [px, pz] = skirtPlayer(p, dx / dist, dz / dist);
+    const [sx, sz] = skirtDecor(p, pl, px, pz, dist);
     const ux = sx * step;
     const uz = sz * step;
     if (stepAround(p, pl, ux, uz)) {

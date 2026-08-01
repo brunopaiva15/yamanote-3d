@@ -28,8 +28,10 @@ const {
   seedPlatformCrowd,
   updatePlatformCrowd,
 } = await import('../src/systems/platformCrowd.ts');
-const { walkerBlocked } = await import('../src/systems/stationLevels.ts');
-const { placementFor } = await import('../src/systems/stationPlacement.ts');
+const { CLEAR_DECK, CLEAR_ROOM, mainAccessFloor, walkerBlocked } =
+  await import('../src/systems/stationLevels.ts');
+const { placementFor, stairwellAt } = await import('../src/systems/stationPlacement.ts');
+const { STAIR_FULL_LEN, STAIR_FULL_STEPS } = await import('../src/data/stationGeometry.ts');
 const { psdGates } = await import('../src/three/station/psdLayout.ts');
 const { runtime } = await import('../src/systems/runtime.ts');
 const { useStore } = await import('../src/store.ts');
@@ -39,15 +41,17 @@ const { STATIONS } = await import('../src/data/stations.ts');
 const DT = 1 / 60;
 
 /**
- * Les quatre gabarits qui comptent, plutôt que les trente.
+ * Les cinq gabarits qui comptent, plutôt que les trente.
  *
  * Tokyo : le quai le plus large et le hall le plus garni. Shinjuku : le plus
  * fréquenté, donc quatre rangées d'attente. Harajuku : le seul quai LATÉRAL de
  * la boucle, avec un vrai mur de fond. Mejiro : accès MONTANT, un ouvrage posé
  * sur la dalle et non un trou dedans - c'est le seul cas où l'emprise de
- * l'escalier barre pour de bon.
+ * l'escalier barre pour de bon. Shibuya : SANS PORTES PALIÈRES, donc les
+ * boutons d'arrêt d'urgence sur borne libre, plantés en pleine circulation à un
+ * mètre du liseré - le seul mobilier que la marche rencontre de face.
  */
-const CASES = [0, 16, 18, 13];
+const CASES = [0, 16, 18, 13, 19];
 
 function stage(index: number): void {
   useStore.setState({
@@ -116,6 +120,94 @@ test('le flux d’arrivées et de départs reste sur du sol, hall compris', () =
       updatePlatformCrowd(DT);
       if (i % 30 === 0) check(index, `à ${(i * DT).toFixed(0)} s du départ`);
     }
+  }
+});
+
+/**
+ * Distance d'un point à une emprise, en mètres. Zéro dedans.
+ */
+function gap(x: number, z: number, o: { x: number; z: number; halfX: number; halfZ: number }): number {
+  return Math.hypot(
+    Math.max(Math.abs(x - o.x) - o.halfX, 0),
+    Math.max(Math.abs(z - o.z) - o.halfZ, 0),
+  );
+}
+
+/** Une volée est du SOL : son emprise ne se contourne pas, elle se descend. */
+function onStairs(place: ReturnType<typeof placementFor>, x: number, z: number): boolean {
+  return !!stairwellAt(place, x, z, STAIR_FULL_LEN, STAIR_FULL_STEPS)
+    || !!mainAccessFloor(place, x, z);
+}
+
+test('on ne longe pas le mobilier en le frottant', () => {
+  // NE PAS TRAVERSER NE SUFFIT PAS. `CLEAR_DECK` est un gabarit d'épaule : posé
+  // pile dessus, on ne viole aucune règle et l'on FRÔLE - le bras qui balance
+  // et le sac à dos passent dans le caisson. Et l'on s'y posait
+  // systématiquement, parce que les trajets visaient exactement cette
+  // frontière-là : la bande de circulation était mesurée au gabarit, et le pas
+  // de côté s'arrêtait à la première case libre venue.
+  //
+  // Ce test compte le TEMPS passé au contact. Avant, un quai sur trois le
+  // passait à plus de vingt pour cent, Mejiro à quarante-cinq.
+  const BERTH = CLEAR_DECK + CLEAR_ROOM;
+  for (const index of CASES) {
+    stage(index);
+    const place = placementFor(index, psdGates());
+    const name = `${STATIONS[index].jy} ${STATIONS[index].romaji}`;
+    let seen = 0;
+    let close = 0;
+    for (let i = 0; i < 90 * 60; i++) {
+      if (i % 90 === 0) crowdArrive(index);
+      updatePlatformCrowd(DT);
+      if (i % 5) continue;
+      for (const p of crowdList) {
+        if (p.state === 'hidden' || p.level !== 'platform') continue;
+        if (onStairs(place, p.pos.x, p.pos.z)) continue;
+        seen++;
+        if (place.obstacles.some((o) => gap(p.pos.x, p.pos.z, o) < BERTH)) close++;
+      }
+    }
+    const share = (100 * close) / Math.max(1, seen);
+    assert.ok(
+      share < 3,
+      `${name} : ${share.toFixed(1)} % du temps au contact du mobilier (${close}/${seen})`,
+    );
+  }
+});
+
+test('personne ne s’installe contre une borne d’arrêt d’urgence', () => {
+  // LE DÉFAUT SIGNALÉ, et le voici en clair : à Shibuya, un voyageur restait
+  // planté l'épaule dans le caisson jaune pour tout l'arrêt. La borne est
+  // plantée à un mètre du liseré ; la bande de circulation se rabattait sur
+  // elle, il ne restait que vingt-quatre centimètres entre elle et le vide, et
+  // c'est là que tout le monde passait et attendait.
+  //
+  // On ne demande pas de ne jamais l'approcher - on passe à côté d'un poteau,
+  // c'est la vie d'un quai - mais de ne pas s'y INSTALLER : le contact se
+  // compte en fractions de seconde, pas en minutes.
+  const BERTH = CLEAR_DECK + CLEAR_ROOM;
+  for (const index of [19, 16]) {
+    stage(index);
+    const place = placementFor(index, psdGates());
+    const name = `${STATIONS[index].jy} ${STATIONS[index].romaji}`;
+    const bornes = place.obstacles.filter((o) => o.halfX === 0.16 && o.halfZ === 0.16);
+    assert.ok(bornes.length > 0, `${name} : pas de borne libre à éprouver`);
+    const streak = new Map<string, number>();
+    let worst = 0;
+    for (let i = 0; i < 90 * 60; i++) {
+      updatePlatformCrowd(DT);
+      for (const p of crowdList) {
+        if (p.state === 'hidden' || p.level !== 'platform') continue;
+        for (let k = 0; k < bornes.length; k++) {
+          const key = `${p.id}/${k}`;
+          const near = gap(p.pos.x, p.pos.z, bornes[k]) < BERTH;
+          const t = near ? (streak.get(key) ?? 0) + DT : 0;
+          streak.set(key, t);
+          worst = Math.max(worst, t);
+        }
+      }
+    }
+    assert.ok(worst < 2, `${name} : quelqu'un reste ${worst.toFixed(1)} s collé à une borne`);
   }
 });
 

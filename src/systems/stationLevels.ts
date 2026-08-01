@@ -134,6 +134,23 @@ export const CLEAR_DECK = 0.22;
 export const CLEAR_HALL = 0.05;
 
 /**
+ * Le JOUR qu'on garde entre soi et une chose, quand on a la place.
+ *
+ * `CLEAR_DECK` est un gabarit : c'est la largeur d'une épaule, et un voyageur
+ * posé pile dessus ne traverse rien - il FRÔLE. Vingt-deux centimètres du
+ * caisson d'une borne d'arrêt d'urgence, c'est la largeur du buste : le bras
+ * qui balance et le sac à dos passent dedans, et l'on voit quelqu'un rentrer
+ * dans le mobilier alors qu'aucune règle n'est violée.
+ *
+ * D'où deux mesures et non une : ce qu'on ne TRAVERSE pas (`CLEAR_DECK`, dur,
+ * il décide de ce qui est du sol), et ce qu'on se GARDE (celle-ci, molle, elle
+ * décide de ce qu'on préfère). Un couloir trop étroit pour la seconde se
+ * franchit quand même - toutes les places qui la lisent retombent sur la
+ * première quand rien de mieux ne se présente.
+ */
+export const CLEAR_ROOM = 0.2;
+
+/**
  * Ce point est-il interdit à un voyageur, à l'étage où il se trouve ?
  *
  * C'est la règle de marche des PNJ, et elle vit ici plutôt que dans
@@ -145,12 +162,18 @@ export const CLEAR_HALL = 0.05;
  * Le joueur, lui, a la sienne (`systems/walkable`) : il n'a pas d'épaisseur,
  * il peut tomber dans les seuils de porte de rame, et un portillon rabattu
  * l'arrête. Les deux se ressemblent sans se confondre.
+ *
+ * `berth` élargit le MOBILIER, et lui seul : les bornes du quai ne bougent pas
+ * (on a le droit de marcher au ras du liseré) et le nez des volées s'ouvre
+ * d'autant (sans quoi la garde ferait un mur invisible devant la première
+ * contremarche - le défaut que ce fichier a déjà eu deux fois).
  */
 export function walkerBlocked(
   p: StationPlacement,
   level: StationLevel,
   x: number,
   z: number,
+  berth = 0,
 ): boolean {
   // La volée principale, d'abord et quel que soit l'étage : c'est le seul
   // endroit qui appartient aux deux, et c'est du sol des deux côtés. Sans ce
@@ -162,7 +185,8 @@ export function walkerBlocked(
   // centimètres d'encombrement font un mur invisible juste devant la première
   // contremarche, et l'on butait sans jamais pouvoir y poser le pied. Le dépôt
   // s'est déjà fait prendre par ce défaut-là en posant la volée montante.
-  if (mainAccessFloor(p, x, z) || mainAccessFloor(p, x, z + CLEAR_DECK)) return false;
+  const guard = CLEAR_DECK + berth;
+  if (mainAccessFloor(p, x, z) || mainAccessFloor(p, x, z + guard)) return false;
   if (level === 'concourse') {
     // Une bouche de sortie n'est pas du sol de hall : c'est par là qu'on s'en
     // va, et elle monte.
@@ -178,13 +202,30 @@ export function walkerBlocked(
   // prend en travers, jamais pour qui l'emprunte par son nez - et le nez se
   // regarde avec la même garde en avant que celui de l'accès principal.
   if (stairwellAt(p, x, z, STAIR_FULL_LEN, STAIR_FULL_STEPS)) return false;
-  if (stairwellAt(p, x, z + CLEAR_DECK, STAIR_FULL_LEN, STAIR_FULL_STEPS)) return false;
+  if (stairwellAt(p, x, z + guard, STAIR_FULL_LEN, STAIR_FULL_STEPS)) return false;
   if (x < p.walkX0 || x > p.walkX1) return true;
   if (Math.abs(z) > p.walkHalfZ) return true;
   for (const o of p.obstacles) {
-    if (Math.abs(x - o.x) < o.halfX + CLEAR_DECK && Math.abs(z - o.z) < o.halfZ + CLEAR_DECK) {
+    if (Math.abs(x - o.x) < o.halfX + guard && Math.abs(z - o.z) < o.halfZ + guard) {
       return true;
     }
   }
   return false;
+}
+
+/**
+ * Ce point est-il TROP JUSTE pour un voyageur ?
+ *
+ * Le mobilier du quai y est élargi du jour qu'on se garde (`CLEAR_ROOM`) : ce
+ * n'est pas une interdiction, c'est une préférence. Le hall, lui, répond comme
+ * `walkerBlocked` - ses couloirs font trente centimètres au plus serré, une
+ * garde de plus les fermerait tous, et le konbini avec.
+ */
+export function walkerCramped(
+  p: StationPlacement,
+  level: StationLevel,
+  x: number,
+  z: number,
+): boolean {
+  return walkerBlocked(p, level, x, z, level === 'platform' ? CLEAR_ROOM : 0);
 }
