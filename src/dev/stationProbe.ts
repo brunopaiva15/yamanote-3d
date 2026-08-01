@@ -61,6 +61,15 @@ function collect(root: THREE.Object3D): Volume[] {
   root.traverseVisible((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh || !mesh.geometry) return;
+    // LES GENS NE SONT PAS DES OUVRAGES. Cette sonde cherche des fautes de
+    // construction - un panneau planté dans une poutre, une borne dans un
+    // muret - et un corps humain n'en produit aucune : ses morceaux se
+    // recouvrent par nature (le crâne dans la calotte, le pied dans la jambe),
+    // et sa boîte englobante est celle de la pose de REPOS, pas de la pose
+    // jouée, donc elle ne dit rien de vrai sur l'endroit qu'il occupe. Depuis
+    // que le vendeur des commerces se tient DANS la gare - la foule du quai,
+    // elle, est rendue en dehors -, ces boîtes-là noyaient tout le rapport.
+    if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) return;
     if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
     const bb = mesh.geometry.boundingBox;
     if (!bb) return;

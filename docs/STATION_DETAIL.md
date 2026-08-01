@@ -205,7 +205,13 @@ Les deux sont refaits en VOLUME. Ce qui change, et pourquoi :
   côté-là donnait sur un mur d'air ;
 - **un vendeur derrière chaque caisse** (`three/station/ShopStaff`). Une
   boutique garnie jusqu'au plafond mais vide ne se lit pas comme « le vendeur
-  revient » : elle se lit comme un décor ;
+  revient » : elle se lit comme un décor. C'est un VOYAGEUR qui tient la
+  caisse — même chemin que les PNJ de la rame et la foule du quai (modèles GLB
+  de `three/characters/library`, repli procédural, même frontière d'erreur),
+  et non une silhouette à part : il n'a aucune raison d'avoir un autre
+  gabarit, d'autres matériaux ni d'être le seul personnage du jeu qui ne
+  respire pas. Son apparence est celle d'un voyageur, mise en uniforme — haut
+  bleu NEWDAYS, bas anthracite, ni sac ni écharpe ;
 - **la flaque de lumière** que chaque commerce jette au sol - peinte, non
   éclairée, et suivant la tombée du jour au quai comme les foyers de la voie.
 

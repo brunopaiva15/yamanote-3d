@@ -660,7 +660,11 @@ pas un commerce.
 
 **Et il y a quelqu'un dedans.** Un vendeur en uniforme se tient derrière chaque
 caisse : une boutique garnie jusqu'au plafond mais vide ne se lit pas comme « le
-vendeur revient », elle se lit comme un décor. Dehors, chaque commerce jette sa
+vendeur revient », elle se lit comme un décor. C'est un **voyageur** qui tient la
+caisse — le même modèle, le même gabarit, le même repli procédural que les gens
+de la rame et du quai, avec l'apparence tirée comme la leur puis mise en
+uniforme. Un vendeur est une personne de plus dans la gare, pas une famille à
+part : il respire comme tout le monde. Dehors, chaque commerce jette sa
 flaque de lumière sur le sol — peinte plutôt qu'éclairée, et qui ne s'allume
 qu'à la tombée du jour sur le quai, comme les foyers de la voie.
 
