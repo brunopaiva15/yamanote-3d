@@ -34,6 +34,14 @@ import { BOARDABLE_GATES } from '../../systems/wrongDoor';
 import { layoutFor, type StationLayout } from '../../data/stationLayouts';
 import {
   ASCENT_LEN,
+  ESCALATOR_CLEAR_HALF_X,
+  ESCALATOR_DROP,
+  ESCALATOR_LANDING,
+  ESCALATOR_OPENING_HALF_X,
+  ESCALATOR_OPENING_Z0,
+  ESCALATOR_OPENING_Z1,
+  ESCALATOR_RUN,
+  ESCALATOR_SLOPE,
   GAUGE_HALF,
   OPP_DEPTH,
   PLATFORM_TOP,
@@ -49,6 +57,8 @@ import {
   STAIR_OPENING_HALF_X,
   STAIR_OPENING_Z0,
   STAIR_OPENING_Z1,
+  STAIR_LINTEL_Y,
+  STAIR_PARAPET_H,
   TRACK_HALF,
 } from '../../data/stationGeometry';
 import { makeAdTexture, makePlatformFloorTexture, makeTactileTexture } from '../../textures/procedural';
@@ -224,6 +234,22 @@ export function Station() {
       hole.closePath();
       shape.holes.push(hole);
     }
+    // Les escaliers mécaniques percent la dalle comme les trémies : ils
+    // descendent au même couloir. Le percement suit donc le même palier de
+    // qualité que la volée qui le remplit (voir Amenities) - sans elle, le
+    // quai n'aurait plus qu'un trou.
+    if (detail <= 2) {
+      for (const e of place.escalators) {
+        const ix = ESCALATOR_OPENING_HALF_X;
+        const hole = new THREE.Path();
+        hole.moveTo(e.x - ix, e.z + ESCALATOR_OPENING_Z0);
+        hole.lineTo(e.x - ix, e.z + ESCALATOR_OPENING_Z1);
+        hole.lineTo(e.x + ix, e.z + ESCALATOR_OPENING_Z1);
+        hole.lineTo(e.x + ix, e.z + ESCALATOR_OPENING_Z0);
+        hole.closePath();
+        shape.holes.push(hole);
+      }
+    }
     const g = new THREE.ExtrudeGeometry(shape, { depth: SLAB_H, bevelEnabled: false });
     // Le plan de tracé (x, z) se couche à l'horizontale, l'extrusion descend.
     g.rotateX(Math.PI / 2);
@@ -236,7 +262,7 @@ export function Station() {
     }
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     return g;
-  }, [layout.length, depth, place.stairs, place.mainRise, place.mainStair]);
+  }, [layout.length, depth, place.stairs, place.escalators, place.mainRise, place.mainStair, detail]);
 
   // Les matériaux, textures et géométries d'une gare quittée ne resservent pas.
   useLayoutEffect(() => {
@@ -1003,9 +1029,10 @@ function Amenities({
 }) {
   return (
     <group>
-      {/* Escaliers mécaniques : la volée monte vers la mezzanine. */}
+      {/* Escaliers mécaniques : la volée descend au niveau de la billetterie,
+          par un percement de la dalle - comme la trémie d'à côté. */}
       {place.escalators.map((e, i) => (
-        <Escalator key={`esc${i}`} e={e} canopyY={canopyY} m={m} />
+        <Escalator key={`esc${i}`} e={e} m={m} />
       ))}
 
       {/* Ascenseur vitré. */}
@@ -1046,75 +1073,199 @@ function Amenities({
   );
 }
 
-/** Pente normalisée d'un escalier mécanique : 30°. */
-const ESCALATOR_SLOPE = Math.PI / 6;
+// --- L'escalier mécanique ------------------------------------------------
+//
+// Il DESCEND, et la dalle est réellement percée sous lui : le profil vient de
+// data/stationGeometry, qui sert aussi au percement ci-dessus. Il menait
+// auparavant à la sous-face de l'auvent, sans rien percer ni desservir - une
+// volée de 2,77 m coiffée d'une gaine borgne, et rien au-dessus.
+//
+// Les règles sont celles de la trémie voisine, pour la même raison : ici aussi
+// le décor doit tenir EN COUPE. Les joues et le voile de tête COIFFENT le chant
+// du percement de deux centimètres ; aucune face de la gaine n'est coplanaire
+// avec une face de la dalle ; le puits est CLOS, sinon on verrait le ballast
+// par-dessous le quai.
+
+/** Nez de la volée, pied de la volée : les deux bouts de la partie inclinée. */
+const ESC_Z0 = ESCALATOR_OPENING_Z0;
+const ESC_Z1 = ESC_Z0 + ESCALATOR_RUN;
+/** Longueur mesurée SUR la pente : celle des balustrades et de la poutre. */
+const ESC_INCLINE = ESCALATOR_RUN / Math.cos(ESCALATOR_SLOPE);
+/** Marches modélisées : une tous les quarante centimètres de volée. */
+const ESC_STEPS = 16;
+const ESC_STEP_D = ESCALATOR_RUN / ESC_STEPS;
+
+/** Joues : du nu intérieur, qui coiffe le percement, au nu extérieur. */
+const ESC_CHEEK_T = 0.18;
+const ESC_CHEEK_X = ESCALATOR_CLEAR_HALF_X + ESC_CHEEK_T / 2;
+/**
+ * Sol du puits : le niveau du couloir bas, celui où débouche la trémie. C'est
+ * lui qui a dicté la longueur de la volée, pas l'inverse (stationGeometry).
+ */
+const ESC_PIT_Y = -ESCALATOR_DROP;
+/** Sous-face commune de tout ce qui borde le puits. */
+const ESC_BOTTOM = ESC_PIT_Y - 0.36;
+/** Une joue est d'un seul tenant : garde-corps dessus, voile de puits dessous. */
+const ESC_CHEEK_Z0 = ESC_Z0 - 0.24;
+const ESC_CHEEK_Z1 = ESCALATOR_OPENING_Z1;
+const ESC_CHEEK_LEN = ESC_CHEEK_Z1 - ESC_CHEEK_Z0;
+const ESC_CHEEK_Z = (ESC_CHEEK_Z0 + ESC_CHEEK_Z1) / 2;
+const ESC_CHEEK_H = STAIR_PARAPET_H - ESC_BOTTOM;
+const ESC_CHEEK_Y = (STAIR_PARAPET_H + ESC_BOTTOM) / 2;
+/** Couronnement métallique posé sur les joues, comme sur celles d'une trémie. */
+const ESC_CAP_Y = STAIR_PARAPET_H + 0.035;
+
+/** Voile de tête : il coiffe le chant du fond, et ferme le puits derrière. */
+const ESC_HEAD_HALF_X = ESCALATOR_CLEAR_HALF_X + 0.02;
+const ESC_HEAD_T = 0.26;
+const ESC_HEAD_Z = ESCALATOR_OPENING_Z1 + ESC_HEAD_T / 2 - 0.02;
 
 /**
- * Un escalier mécanique montant, d'un seul tenant : palier bas au ras du quai,
- * poutre porteuse qui part du sol, marches posées dessus, balustrades de même
- * pente, et une trémie qui rejoint la sous-face de l'auvent.
- *
- * La version précédente empilait trois éléments indépendants - une rampe qui
- * commençait sous la dalle et s'arrêtait à 2,90 m en plein ciel, neuf marches
- * suspendues soixante centimètres au-dessus d'elle, deux balustrades encore
- * plus longues : de loin, un tas de planches flottantes.
+ * Un escalier mécanique descendant, d'un seul tenant : palier de peigne de
+ * plain-pied avec le quai, poutre porteuse qui plonge sous la dalle, marches
+ * posées dessus, balustrades de même pente, joues qui coiffent le percement, et
+ * un puits clos et éclairé au pied.
  */
-function Escalator({ e, canopyY, m }: { e: Placed; canopyY: number; m: Mats }) {
-  const run = e.halfZ * 2 - 0.8; // volée utile, dans l'emprise de collision
-  const rise = run * Math.tan(ESCALATOR_SLOPE);
-  const incline = run / Math.cos(ESCALATOR_SLOPE);
-  /** Hauteur libre sous l'auvent, depuis le sol du quai. */
-  const clear = canopyY - PLATFORM_TOP;
-  const hoodH = Math.max(0.3, clear - rise);
-  const hoodZ = (run / 2 + e.halfZ) / 2;
-  const hoodLen = Math.max(0.3, e.halfZ - run / 2);
-  const STEPS = 12;
-
+function Escalator({ e, m }: { e: Placed; m: Mats }) {
   return (
     <group name="escalator" position={[e.x, PLATFORM_TOP, e.z]}>
-      {/* Palier bas : plaque à peigne, au ras du sol. */}
-      <mesh position={[0, 0.03, -run / 2 - 0.3]} material={m.metal}>
-        <boxGeometry args={[1.3, 0.06, 0.6]} />
+      {/* Palier haut : plaque à peigne, de plain-pied avec la dalle. */}
+      <mesh position={[0, 0.008, (-e.halfZ + ESC_Z0) / 2]} material={m.metal}>
+        <boxGeometry args={[1.4, 0.016, ESCALATOR_LANDING]} />
       </mesh>
-      {/* Poutre porteuse : son extrémité basse s'enfonce sous la dalle. */}
-      <mesh position={[0, rise / 2 - 0.22, 0]} rotation={[-ESCALATOR_SLOPE, 0, 0]} material={m.metal}>
-        <boxGeometry args={[1.2, 0.44, incline]} />
+      {/* Nez de peigne : il DÉBORDE dans le percement, et c'est lui qui coiffe
+          le seul des quatre chants que ni les joues ni le voile de tête ne
+          reprennent. Sur un vrai escalier mécanique il recouvre aussi la
+          première marche - c'est la même pièce. */}
+      <mesh position={[0, -0.14, ESC_Z0 + 0.04]} material={m.metal}>
+        <boxGeometry args={[2 * ESCALATOR_OPENING_HALF_X + 0.04, 0.34, 0.28]} />
       </mesh>
-      {/* Marches, posées SUR la poutre. */}
-      {Array.from({ length: STEPS }, (_, k) => {
-        const t = (k + 0.5) / STEPS;
+      <mesh position={[0, 0.022, ESC_Z0 - 0.06]} material={m.stairNose}>
+        <boxGeometry args={[1.3, 0.02, 0.09]} />
+      </mesh>
+
+      {/* Poutre porteuse. Une rotation autour de x d'un angle POSITIF envoie
+          +z vers le bas : c'est l'inverse exact de la volée montante d'à côté
+          (three/station/Overbridge), et au mauvais signe la poutre ressortait
+          au-dessus du quai. */}
+      <mesh
+        position={[0, -ESCALATOR_DROP / 2 - 0.26, (ESC_Z0 + ESC_Z1) / 2]}
+        rotation={[ESCALATOR_SLOPE, 0, 0]}
+        material={m.metal}
+      >
+        <boxGeometry args={[1.2, 0.44, ESC_INCLINE]} />
+      </mesh>
+
+      {/* Marches : des BLOCS, du giron à la poutre. En plaques de six
+          centimètres, une volée vue de dessus - et c'est ainsi qu'on voit une
+          volée descendante - n'était qu'une pile de lames flottantes. */}
+      {Array.from({ length: ESC_STEPS }, (_, k) => {
+        const t = (k + 0.5) / ESC_STEPS;
+        const y = -t * ESCALATOR_DROP;
+        const z = ESC_Z0 + t * ESCALATOR_RUN;
         return (
-          <mesh key={k} position={[0, t * rise + 0.03, -run / 2 + t * run]} material={m.metal}>
-            <boxGeometry args={[1.02, 0.06, run / STEPS]} />
-          </mesh>
+          <group key={k}>
+            <mesh position={[0, y - 0.12, z]} material={m.metal}>
+              <boxGeometry args={[1.02, 0.24, ESC_STEP_D]} />
+            </mesh>
+            {/* Nez de marche : sur le bord AVAL du giron, celui d'où part la
+                contremarche. Sur le bord amont, il se collait contre la marche
+                précédente et la volée n'était plus qu'un dégradé de gris. */}
+            <mesh position={[0, y + 0.005, z + ESC_STEP_D / 2 - 0.03]} material={m.stairNose}>
+              <boxGeometry args={[0.98, 0.01, 0.05]} />
+            </mesh>
+          </group>
         );
       })}
-      {/* Balustrades vitrées, exactement la pente de la volée. */}
+
+      {/* Balustrades vitrées et leur main courante, à la pente de la volée. */}
       {[-1, 1].map((d) => (
-        <mesh
-          key={d}
-          position={[d * 0.62, rise / 2 + 0.5, 0]}
-          rotation={[-ESCALATOR_SLOPE, 0, 0]}
-          material={m.glass}
-        >
-          <boxGeometry args={[0.05, 0.95, incline]} />
-        </mesh>
+        <group key={`b${d}`}>
+          <mesh
+            position={[d * 0.62, -ESCALATOR_DROP / 2 + 0.48, (ESC_Z0 + ESC_Z1) / 2]}
+            rotation={[ESCALATOR_SLOPE, 0, 0]}
+            material={m.glass}
+          >
+            <boxGeometry args={[0.05, 0.95, ESC_INCLINE]} />
+          </mesh>
+          <mesh
+            position={[d * 0.62, -ESCALATOR_DROP / 2 + 0.99, (ESC_Z0 + ESC_Z1) / 2]}
+            rotation={[ESCALATOR_SLOPE, 0, 0]}
+            material={m.metal}
+          >
+            <boxGeometry args={[0.11, 0.07, ESC_INCLINE]} />
+          </mesh>
+        </group>
       ))}
-      {/* Trémie de sortie : joues et fond jusqu'à l'auvent, retombée devant.
-          Le fond et la retombée sont MOINS LARGES que l'écartement des joues
-          et légèrement en retrait : à égalité de largeur et de nu, les trois
-          panneaux partageaient leurs faces d'angle et l'arête verticale de la
-          trémie clignotait sur toute sa hauteur. */}
+
+      {/* Joues : garde-corps au-dessus de la dalle, voile de puits en dessous.
+          C'est le même ouvrage, et le couper au niveau de la dalle n'aurait
+          fabriqué qu'un joint de plus à faire coïncider. */}
       {[-1, 1].map((d) => (
-        <mesh key={`h${d}`} position={[d * 0.63, rise + hoodH / 2, hoodZ]} material={m.wall}>
-          <boxGeometry args={[0.11, hoodH, hoodLen]} />
-        </mesh>
+        <group key={`c${d}`}>
+          <mesh position={[d * ESC_CHEEK_X, ESC_CHEEK_Y, ESC_CHEEK_Z]} material={m.wall}>
+            <boxGeometry args={[ESC_CHEEK_T, ESC_CHEEK_H, ESC_CHEEK_LEN]} />
+          </mesh>
+          <mesh position={[d * ESC_CHEEK_X, ESC_CAP_Y, ESC_CHEEK_Z]} material={m.metal}>
+            <boxGeometry args={[ESC_CHEEK_T + 0.04, 0.07, ESC_CHEEK_LEN]} />
+          </mesh>
+          {/* Bandeau lumineux, à la pente : sans lui le puits est un trou noir
+              dès la troisième marche, juste là où l'œil s'y engage. */}
+          <mesh
+            position={[
+              d * (ESCALATOR_CLEAR_HALF_X - 0.02),
+              -ESCALATOR_DROP / 2 + 1.26,
+              (ESC_Z0 + ESC_Z1) / 2,
+            ]}
+            rotation={[ESCALATOR_SLOPE, 0, 0]}
+            material={m.lamp}
+          >
+            <boxGeometry args={[0.06, 0.055, ESC_INCLINE - 0.4]} />
+          </mesh>
+        </group>
       ))}
-      <mesh position={[0, rise + hoodH / 2 + 0.01, e.halfZ - 0.07]} material={m.wall}>
-        <boxGeometry args={[1.34, hoodH - 0.02, 0.12]} />
+
+      {/* Voile de tête, et fermeture derrière le palier haut : le puits est
+          clos sur ses quatre côtés, sinon on verrait le vide par-dessous la
+          dalle du quai. */}
+      <mesh
+        position={[0, (STAIR_PARAPET_H + ESC_BOTTOM) / 2, ESC_HEAD_Z]}
+        material={m.wall}
+      >
+        <boxGeometry args={[ESC_HEAD_HALF_X * 2, ESC_CHEEK_H, ESC_HEAD_T]} />
       </mesh>
-      <mesh position={[0, clear - 0.26, run / 2 + 0.07]} material={m.wallDark}>
-        <boxGeometry args={[1.34, 0.52, 0.12]} />
+      <mesh position={[0, ESC_CAP_Y, ESC_HEAD_Z]} material={m.metal}>
+        <boxGeometry args={[ESC_HEAD_HALF_X * 2, 0.07, ESC_HEAD_T + 0.04]} />
+      </mesh>
+      {/* Fermeture derrière le palier haut. Elle monte JUSQUE DANS le nez de
+          peigne : arrêtée à la sous-face de la dalle, elle laissait une fente
+          de dix-sept centimètres par laquelle on voyait sous le quai. */}
+      <mesh
+        position={[0, (-0.28 + ESC_BOTTOM) / 2, ESC_Z0 - 0.11]}
+        material={m.wall}
+      >
+        <boxGeometry args={[ESC_HEAD_HALF_X * 2, -0.28 - ESC_BOTTOM, 0.22]} />
+      </mesh>
+
+      {/* Fond du puits, au niveau du couloir bas. Il MORD dans les deux voiles
+          qui le bordent : à nu commun, les deux faces se disputaient le tampon
+          de profondeur au fond du puits, là où l'œil descend. */}
+      <mesh
+        position={[0, ESC_PIT_Y - 0.06, (ESC_Z0 - 0.15 + ESC_CHEEK_Z1 + 0.1) / 2]}
+        material={m.slab}
+      >
+        <boxGeometry args={[ESC_HEAD_HALF_X * 2, 0.12, ESC_CHEEK_Z1 + 0.1 - ESC_Z0 + 0.15]} />
+      </mesh>
+      {/* Soubassement de faïence sur le voile de tête : le seul rappel de
+          couleur du fond de puits, et ce qui dit qu'on regarde une GARE. */}
+      <mesh
+        position={[0, ESC_PIT_Y + 0.55, ESC_HEAD_Z - ESC_HEAD_T / 2 - 0.025]}
+        material={m.tile}
+      >
+        <boxGeometry args={[ESC_HEAD_HALF_X * 2 - 0.1, 1.1, 0.05]} />
+      </mesh>
+      <mesh position={[0, STAIR_LINTEL_Y - 0.14, ESC_Z1 + 0.3]} material={m.lamp}>
+        <boxGeometry args={[0.9, 0.08, 0.3]} />
       </mesh>
     </group>
   );

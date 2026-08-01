@@ -125,7 +125,18 @@ export function nearestSpeakers(
 // un portique se plante dans un escalier mécanique.
 
 export const STAIR_HALF_Z = 2.6;
-export const ESCALATOR_HALF_Z = 2.8;
+/**
+ * Emprise d'un escalier mécanique.
+ *
+ * Elle n'est pas choisie : elle est ce qu'il faut pour DESCENDRE AU COULOIR
+ * BAS. À 30° - la pente d'un escalier mécanique, partout - il faut 6,37 m
+ * d'emprise horizontale pour perdre les 3,675 m qui séparent le quai du sol du
+ * couloir, plus un palier de peigne à chaque bout. À 2,80 m de demi-emprise, la
+ * volée s'arrêtait 90 cm trop haut, et faute de percement elle montait au lieu
+ * de descendre : elle finissait dans la sous-face de l'auvent, un escalier qui
+ * ne menait nulle part.
+ */
+export const ESCALATOR_HALF_Z = 3.6;
 export const ELEVATOR_HALF_Z = 0.95;
 
 /**
@@ -378,6 +389,55 @@ export function descentFloorY(t: number): number {
  * on n'est plus dans la trémie : on est dans la gare (data/stationInterior).
  */
 export const DESCENT_LEN = STAIR_LOWER_END + STAIR_HALF_Z;
+
+// --- L'escalier mécanique -------------------------------------------------
+//
+// Il va OÙ VA LA TRÉMIE : en bas. Vingt-cinq gares sur trente ont leur
+// billetterie sous les voies, les cinq autres l'ont au-dessus mais gardent des
+// trémies borgnes qui descendent - dans les trente, l'accès mécanisé d'un quai
+// dessert le même niveau que l'accès à pied d'à côté.
+//
+// Il montait, et il ne montait nulle part : une volée de 2,77 m coiffée d'une
+// gaine borgne plaquée sous l'auvent, sans percement au-dessus ni palier au
+// bout. Sur les quais sans auvent, elle s'arrêtait carrément en plein ciel.
+//
+// Le profil se pose donc comme celui de la trémie : par sa DESTINATION. Le
+// pied de la volée est le sol du couloir bas, la pente est celle d'un escalier
+// mécanique, et l'emprise s'en déduit - jamais l'inverse.
+//
+// REPÈRE LOCAL : origine au centre de l'emprise, y = 0 au sol du quai. On
+// s'engage côté −z, la volée descend vers +z. C'est le sens de la trémie, et
+// c'est ce que supposent le débouché dégagé (systems/stationPlacement) et la
+// plaque de balisage suspendue à l'entrée (three/station/OverheadSigns).
+
+/** Pente normalisée d'un escalier mécanique : 30°. */
+export const ESCALATOR_SLOPE = Math.PI / 6;
+/** Dénivelé de la volée : du sol du quai à celui du couloir bas. */
+export const ESCALATOR_DROP = -STAIR_LOWER_Y;
+/** Emprise horizontale de la partie inclinée. */
+export const ESCALATOR_RUN = ESCALATOR_DROP / Math.tan(ESCALATOR_SLOPE);
+/** Palier de peigne à chaque bout : ce que l'emprise laisse au-delà de la volée. */
+export const ESCALATOR_LANDING = ESCALATOR_HALF_Z - ESCALATOR_RUN / 2;
+
+/** Demi-largeur libre de la gaine, entre les deux joues. */
+export const ESCALATOR_CLEAR_HALF_X = 0.72;
+/**
+ * Percement de la dalle, en repère local - même convention que la trémie : les
+ * joues et le voile de tête COIFFENT ses chants de STAIR_LAP, aucune face de la
+ * gaine n'est coplanaire avec une face de la dalle.
+ *
+ * Il commence au nez de la volée, pas au bout de l'emprise : le palier haut est
+ * de plain-pied avec le quai, on marche encore sur la dalle.
+ */
+export const ESCALATOR_OPENING_HALF_X = ESCALATOR_CLEAR_HALF_X + STAIR_LAP;
+export const ESCALATOR_OPENING_Z0 = -ESCALATOR_RUN / 2;
+/**
+ * Le percement s'arrête 24 cm EN DEÇÀ du bout de l'emprise, et pas dessus : le
+ * voile de tête qui coiffe ce chant-là doit tenir dans l'emprise, sinon il
+ * déborde de vingt centimètres dans le passage du quai - un obstacle qu'aucune
+ * collision ne déclare.
+ */
+export const ESCALATOR_OPENING_Z1 = ESCALATOR_HALF_Z - 0.24;
 
 // --- Et la volée qui MONTE ------------------------------------------------
 //
