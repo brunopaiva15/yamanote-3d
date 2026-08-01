@@ -26,7 +26,7 @@ import {
   drawBackpackManner,
   drawDelayCert,
   drawDoorClosing,
-  drawDoorSide,
+  drawApproach,
   drawEmergencyInfo,
   drawHeadphoneManner,
   drawLeftAd,
@@ -35,7 +35,6 @@ import {
   drawNextStationLang,
   drawOutageInfo,
   drawPhoneManner,
-  drawPlatformDiagram,
   drawPriorityNotice,
   drawRoute,
   drawSafetyNotice,
@@ -192,14 +191,17 @@ export function Screens() {
       state = tick % 2 === 0 ? `${kind}JP` : `${kind}EN`;
     } else if (phase === 'brake') {
       status = 'soon';
-      state = tick % 3 === 2 ? 'platform' : 'door';
+      // À l'approche, l'écran ne montre QUE le plan du quai, et il alterne
+      // ses deux moitiés basses : avis d'ouverture des portes en japonais,
+      // correspondances en anglais - c'est le cycle du vrai afficheur.
+      state = tick % 2 === 0 ? 'approachJP' : 'approachEN';
     } else if (phase === 'dwell') {
       status = 'now';
       // L'écran passe au pictogramme « portes qui ferment » avec l'annonce.
       state =
         runtime.phaseT >= dwellDuration(index) - CLOSE_ANNOUNCE_LEAD
           ? 'doorClosing'
-          : ['loopJP', 'loopEN', 'nextZH', 'nextKO', 'zoomJP', 'zoomEN', 'platform'][tick % 7];
+          : ['loopJP', 'loopEN', 'nextZH', 'nextKO', 'zoomJP', 'zoomEN', 'approachEN'][tick % 7];
     } else {
       status = 'next';
       const rotation = notice
@@ -227,14 +229,14 @@ export function Screens() {
     ] as const) {
       const g = screen;
       switch (state) {
-        case 'door':
-          drawDoorSide(g, index, clock, doorSide === side, loopDirection);
+        case 'approachJP':
+          drawApproach(g, index, clock, 'jp', doorSide === side, loopDirection);
+          break;
+        case 'approachEN':
+          drawApproach(g, index, clock, 'en', doorSide === side, loopDirection);
           break;
         case 'doorClosing':
           drawDoorClosing(g, index, clock, loopDirection);
-          break;
-        case 'platform':
-          drawPlatformDiagram(g, index, clock, loopDirection);
           break;
         case 'transfers':
           drawTransfers(g, index, clock, loopDirection);

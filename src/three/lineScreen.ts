@@ -16,9 +16,12 @@
 import * as THREE from 'three';
 import { EMERGENCY_REASONS } from '../data/announcements';
 import { CONFIG } from '../data/config';
+import { CONSIST, E235, PLAYER_CAR, carZ } from '../data/e235';
 import { stationAtHop } from '../data/loop';
 import type { LoopDirection } from '../data/platforms';
 import { cruiseDuration, headwayMinutesTo } from '../data/segments';
+import { gateNameFor } from '../data/stationInterior';
+import { layoutFor } from '../data/stationLayouts';
 import { STATIONS, TRANSFERS } from '../data/stations';
 import type { Phase } from '../store';
 import { JP_FONT, drawAdInto, rng } from '../textures/procedural';
@@ -65,10 +68,12 @@ export const LCD_CUTOFF = 0.45;
  */
 export const LCD_READY = 0.97;
 
-// Afficheur fidèle à la rame réelle (11 voitures) ; le voyageur est en 3ᵉ.
-// Seule la voiture 3 est modélisée en 3D.
-const CAR_COUNT = 11;
-const PLAYER_CAR = 3;
+// Numéro de voiture affiché : celui de la voiture où l'on est RÉELLEMENT, pas
+// une constante à part. L'écran annonçait « 3号車 » pendant que la rame plaçait
+// le joueur dans la 6e (`e235.PLAYER_CAR`), que l'invite d'embarquement lui
+// disait 6 et que le plan du quai surlignait la 3e - trois chiffres pour une
+// seule voiture. Il n'y en a plus qu'un, et il vient de la rame.
+const CAR_NO = CONSIST[PLAYER_CAR].no;
 
 // Grandes gares pour le « Bound for … & … ».
 const MAJOR_INDICES = [0, 4, 12, 16, 19, 24];
@@ -165,7 +170,7 @@ export type ScreenLang = 'jp' | 'en' | 'zh' | 'ko';
 const STATUS_LABEL: Record<ScreenStatus, Record<ScreenLang, string>> = {
   now: { jp: 'ただいま', en: 'Now stopping at', zh: '当前车站', ko: '이번 역' },
   next: { jp: 'つぎは', en: 'Next', zh: '下一站', ko: '다음은' },
-  soon: { jp: 'まもなく', en: 'Soon', zh: '即将到达', ko: '잠시 후' },
+  soon: { jp: 'まもなく', en: 'Arriving at', zh: '即将到达', ko: '잠시 후' },
 };
 
 // Nom de gare dans la langue du cycle d'affichage.
@@ -185,7 +190,7 @@ const STATUS_LABEL: Record<ScreenStatus, Record<ScreenLang, string>> = {
 const LCD_ROMAJI: Record<string, string> = { JY01: 'Tōkyō' };
 
 function stationName(st: (typeof STATIONS)[number], lang: ScreenLang, status: ScreenStatus = 'now'): string {
-  if (lang === 'jp') return status === 'now' ? st.kanji : st.kana;
+  if (lang === 'jp') return status === 'next' ? st.kana : st.kanji;
   if (lang === 'en') return LCD_ROMAJI[st.jy] ?? st.romaji;
   return lang === 'zh' ? st.zh : st.ko;
 }
@@ -328,8 +333,8 @@ function drawHeader(
     : 'Car No.';
   g.fillStyle = CAR_NUM_COLOR;
   g.font = `italic bold 38px ${JP_FONT}`;
-  const carNumW = g.measureText(String(PLAYER_CAR)).width;
-  g.fillText(String(PLAYER_CAR), 763, 34);
+  const carNumW = g.measureText(String(CAR_NO)).width;
+  g.fillText(String(CAR_NO), 763, 34);
   g.fillStyle = CAR_LABEL_COLOR;
   if (lang === 'en') {
     // « Car No. » se range À GAUCHE du chiffre, sur la même ligne.
@@ -361,7 +366,9 @@ const LINE_BADGES: { match: RegExp; code: string; color: string; round?: boolean
   { match: /中央・総武/, code: 'JB', color: '#ffd400' },
   { match: /中央線/, code: 'JC', color: '#f15a24' },
   { match: /上野東京/, code: 'JT|JU', color: '#f68b1e' },
-  { match: /東海道線|宇都宮|高崎|常磐/, code: 'JT', color: '#f68b1e' },
+  { match: /常磐/, code: 'JJ', color: '#00b48d' },
+  { match: /宇都宮|高崎/, code: 'JU', color: '#f68b1e' },
+  { match: /東海道線/, code: 'JT', color: '#f68b1e' },
   { match: /横須賀/, code: 'JO', color: '#0067c0' },
   { match: /京葉/, code: 'JE', color: '#c9252b' },
   { match: /埼京|川越/, code: 'JA', color: '#00ac9a' },
@@ -389,6 +396,7 @@ const LINE_BADGES: { match: RegExp; code: string; color: string; round?: boolean
   { match: /りんかい/, code: 'R', color: '#0079c1' },
   { match: /モノレール/, code: 'MO', color: '#0a6eb4' },
   { match: /つくば/, code: 'TX', color: '#00a7db' },
+  { match: /舎人ライナー/, code: 'NT', color: '#c7176b' },
   { match: /ライナー|荒川線/, code: '', color: '#6d7a83' },
 ];
 
@@ -525,11 +533,23 @@ function drawJyBadge(g: CanvasRenderingContext2D, jy: string, x: number, cy: num
   g.textAlign = 'left';
 }
 
-/** Repère de position : pentagone grenat cerné de blanc, à œil clair. */
-function drawPositionMarker(g: CanvasRenderingContext2D, x: number, y: number, angle: number): void {
+/**
+ * Les DEUX repères de position, et ils ne veulent pas dire la même chose.
+ *
+ * L'afficheur distingue « la rame est ICI » de « la rame va LÀ ». À l'arrêt,
+ * la gare où l'on est perd son cercle de minutes et reçoit le PENTAGRAMME
+ * grenat à œil clair - un jeton posé sur la bande, pas une flèche : on ne va
+ * nulle part, on y est. Dès que la rame repart, ce jeton disparaît, la
+ * prochaine gare s'allume en ambre et c'est le CHEVRON qui apparaît derrière
+ * elle, pointé dans le sens de marche.
+ *
+ * Confondre les deux, c'était annoncer un mouvement à quai.
+ */
+function drawHerePentagon(g: CanvasRenderingContext2D, x: number, y: number, angle: number, s = 1): void {
   g.save();
   g.translate(x, y);
   g.rotate(angle);
+  g.scale(s, s);
   const path = () => {
     g.beginPath();
     g.moveTo(-31, -16);
@@ -550,6 +570,23 @@ function drawPositionMarker(g: CanvasRenderingContext2D, x: number, y: number, a
   g.fillStyle = '#f2f2f2';
   g.beginPath();
   g.ellipse(0, 0, 11, 8.5, 0, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+}
+
+/** Chevron du sens de marche : pointe vers +x avant rotation. */
+function drawWayChevron(g: CanvasRenderingContext2D, x: number, y: number, angle: number, s = 1): void {
+  g.save();
+  g.translate(x, y);
+  g.rotate(angle);
+  g.scale(s, s);
+  g.fillStyle = MARKER_RED;
+  g.beginPath();
+  g.moveTo(-9, -15.5);
+  g.lineTo(9, 0);
+  g.lineTo(-9, 15.5);
+  g.lineTo(0, 0);
+  g.closePath();
   g.fill();
   g.restore();
 }
@@ -609,7 +646,8 @@ export function drawRoute(
       const minutes = etaMinutes(index, k, atStation, countdown, dir);
       g.beginPath();
       g.arc(slot.cx, slot.cy, slot.r, 0, Math.PI * 2);
-      g.fillStyle = '#f4f4f2';
+      // Ambre pour la gare où l'on VA - jamais à quai, où l'on n'y va plus.
+      g.fillStyle = !atStation && k === 0 ? '#efa61c' : '#f4f4f2';
       g.fill();
       g.fillStyle = '#141414';
       g.font = `bold ${Math.round(slot.r * 1.55)}px ${JP_FONT}`;
@@ -647,10 +685,13 @@ export function drawRoute(
 
   // Repère de position : sur la gare quand on y est, un peu en arrière sur la
   // bande quand on roule.
-  const mk = atStation
-    ? ZOOM_SLOTS[0]
-    : { cx: ZOOM_SLOTS[0].cx + 11, cy: ZOOM_SLOTS[0].cy + 15 };
-  drawPositionMarker(g, mk.cx, mk.cy, 0.16);
+  if (atStation) {
+    drawHerePentagon(g, ZOOM_SLOTS[0].cx, ZOOM_SLOTS[0].cy, 0.16);
+  } else {
+    // Sur la bande, juste EN ARRIÈRE de la gare visée, pointé vers elle.
+    const a = Math.atan2(ZOOM_SLOTS[0].cy - ZOOM_SLOTS[1].cy, ZOOM_SLOTS[0].cx - ZOOM_SLOTS[1].cx);
+    drawWayChevron(g, ZOOM_SLOTS[0].cx + 22, ZOOM_SLOTS[0].cy + 30, a + Math.PI, 1.25);
+  }
 
   // ----- Pavé des correspondances de la prochaine gare, à gauche -----
   const tr = TRANSFERS[next.jy];
@@ -888,16 +929,19 @@ export function drawLoopMap(
     const [x, y] = at(slot);
     const k = rank[stIdx];
 
-    // Pastille / cercle des minutes sur l'anneau. La prochaine gare est en
-    // ambre cerclé d'or ; les autres en blanc ; au-delà de la portée
-    // d'affichage, un simple point gris.
-    if (k < MINUTES_SHOWN) {
+    // À quai, la gare où l'on est ne porte pas « 0 » : elle porte le
+    // pentagramme de position, à la place de son cercle.
+    if (atStation && k === 0) {
+      drawHerePentagon(g, x, y, 0, 0.42);
+    } else if (k < MINUTES_SHOWN) {
+      // Cercle des minutes. La prochaine gare est en ambre cerclé d'or ; les
+      // autres en blanc ; au-delà de la portée d'affichage, un point gris.
       const minutes = etaMinutes(index, k, atStation, countdown, dir);
       g.beginPath();
       g.arc(x, y, 11.1, 0, Math.PI * 2);
-      g.fillStyle = k === 0 ? '#efc22a' : '#f6f6f4';
+      g.fillStyle = !atStation && k === 0 ? '#efc22a' : '#f6f6f4';
       g.fill();
-      if (k === 0) {
+      if (!atStation && k === 0) {
         g.strokeStyle = '#b8901c';
         g.lineWidth = 2.4;
         g.stroke();
@@ -906,12 +950,16 @@ export function drawLoopMap(
       g.font = `bold 18px ${JP_FONT}`;
       g.textAlign = 'center';
       g.fillText(String(minutes), x, y + 6.5);
-      if (k === MINUTES_SHOWN - 1) {
-        // « (分) » contre le cercle le plus lointain, du côté des plus proches.
-        const [fx] = at(loopSlot(stationAtHop(index, MINUTES_SHOWN - 2, dir)));
+      // « (分) » ferme CHAQUE série numérotée : quand la suite des minutes
+      // passe d'une rangée à l'autre, l'afficheur le répète en bout de
+      // chacune - sinon la rangée qui n'en a pas se lit comme des numéros de
+      // gare. Il se pose toujours à droite du cercle, légèrement plus bas.
+      const endsRun =
+        k === MINUTES_SHOWN - 1 || loopSlot(stationAtHop(index, k + 1, dir)).top !== slot.top;
+      if (endsRun) {
         g.font = `10px ${JP_FONT}`;
-        g.textAlign = fx >= x ? 'left' : 'right';
-        g.fillText('(分)', x + (fx >= x ? 12 : -12), y + 12);
+        g.textAlign = 'left';
+        g.fillText('(分)', x + 12, y + 12);
       }
     } else {
       g.beginPath();
@@ -958,20 +1006,13 @@ export function drawLoopMap(
   let delta = tAfter - tNext;
   if (delta > LOOP_PERIM / 2) delta -= LOOP_PERIM;
   if (delta < -LOOP_PERIM / 2) delta += LOOP_PERIM;
-  const way = delta >= 0 ? 1 : -1;
-  const mk = loopPointAt(tNext - way * 25);
-  g.fillStyle = MARKER_RED;
-  g.save();
-  g.translate(mk.x, mk.y);
-  g.rotate(mk.angle + (way > 0 ? 0 : Math.PI));
-  g.beginPath();
-  g.moveTo(-9, -15.5);
-  g.lineTo(9, 0);
-  g.lineTo(-9, 15.5);
-  g.lineTo(0, 0);
-  g.closePath();
-  g.fill();
-  g.restore();
+  // …et seulement quand on roule : à quai, c'est le pentagramme posé sur la
+  // gare qui tient ce rôle, plus haut.
+  if (!atStation) {
+    const way = delta >= 0 ? 1 : -1;
+    const mk = loopPointAt(tNext - way * 25);
+    drawWayChevron(g, mk.x, mk.y, mk.angle + (way > 0 ? 0 : Math.PI));
+  }
   g.textAlign = 'left';
 
   // Mention basse.
@@ -1222,218 +1263,340 @@ export function drawDoorClosing(
   g.textAlign = 'left';
 }
 
-// --- Écran droit, plan du quai (駅構内図) ---
-// C'est la vue la plus caractéristique de l'afficheur réel, et celle qui
-// manquait : à l'approche d'une gare, l'écran passe du plan de ligne au plan
-// du QUAI. On y lit où s'arrête chaque voiture par rapport aux escaliers, aux
-// ascenseurs et aux sorties - le fond passe au bleu clair, le bandeau de tête
-// à l'orange, et la rame est dessinée voiture par voiture, celle du voyageur
-// mise en évidence.
-const PLATFORM_BLUE = '#cfe4f4';
-const PLATFORM_ORANGE = '#e8722a';
+// --- Écran d'approche (まもなく / Arriving at) : plan du quai --------------
+//
+// C'est l'écran le plus utile de tout le cycle, et c'était le plus faux. Il
+// n'y avait ici qu'un « côté d'ouverture » abstrait - deux vantaux gris et des
+// flèches - et, à part, un plan de quai à bandeau orange que l'afficheur réel
+// n'a jamais eu. Le vrai écran est UN SEUL : un plan de quai en plongée, sur
+// fond bleu nuit, où l'on lit d'un coup où sont les accès, où s'arrête SA
+// voiture par rapport à eux, et de quel côté les portes vont s'ouvrir.
+//
+// De haut en bas : le bandeau habituel ; une bande claire portant les
+// cartouches jaunes qui NOMMENT les accès ; le quai lui-même, avec ses
+// pictogrammes reliés à leur cartouche par une suspente ; la rame en onze
+// cases numérotées, celle du voyageur en rouge, avec le triangle du sens de
+// marche en bout ; puis, en bandeau bas, l'avis d'ouverture des portes (passage
+// japonais) ou la liste des correspondances (passage anglais).
+//
+// Les accès ne sont plus tirés au sort : ce sont ceux de `stationLayouts`,
+// donc EXACTEMENT ceux que le joueur voit en descendant, et le nom du portillon
+// vient du relevé de `stationInterior`. Un plan de quai qui ment sur le quai
+// qu'on a sous les yeux ne vaut pas mieux que pas de plan.
+const APPROACH_BAND_Y = HEADER_H;
+const APPROACH_BAND_H = 39;
+const APPROACH_PLAT_Y = APPROACH_BAND_Y + APPROACH_BAND_H;
+const APPROACH_PLAT_H = 115;
+const APPROACH_CARS_Y = 291;
+const APPROACH_CARS_H = 35;
+const APPROACH_FOOT_Y = 328;
+const APPROACH_X0 = 20;
+const APPROACH_X1 = 748;
 
-export function drawPlatformDiagram(
-  s: ReturnType<typeof makeScreen>,
-  index: number,
-  clock: string,
-  dir: LoopDirection,
-): void {
-  const { g, w, h } = s;
-  const next = STATIONS[index];
-  const r = rng(1700 + index * 31);
-
-  g.fillStyle = PLATFORM_BLUE;
-  g.fillRect(0, 0, w, h);
-
-  // --- Bandeau de tête : つぎは + nom de gare + pastille JY ---
-  const HEAD = 96;
-  g.fillStyle = '#ffffff';
-  g.fillRect(0, 0, w, HEAD);
-  g.fillStyle = PLATFORM_ORANGE;
-  g.fillRect(0, HEAD - 6, w, 6);
-
-  g.fillStyle = '#3d4650';
-  g.font = `20px ${JP_FONT}`;
-  g.textAlign = 'left';
-  g.fillText('つぎは', 16, 34);
-  g.fillStyle = '#14181c';
-  g.font = `bold 52px ${JP_FONT}`;
-  g.fillText(next.kanji, 16, 82);
-  g.fillStyle = '#525c66';
-  g.font = `22px ${JP_FONT}`;
-  g.fillText(next.romaji, 24 + g.measureText(next.kanji).width * 1.6, 80);
-
-  // Pastille de ligne, à droite comme sur l'afficheur.
-  const bx = w - 74;
+/**
+ * Escalier fixe, vu en plongée : le PROFIL en marches, pas une série de
+ * barres. Dessiné en colonnes de hauteur croissante, le pictogramme se lisait
+ * comme un histogramme ; ce qui fait l'escalier, c'est la ligne brisée
+ * giron-contremarche qui court le long du dessus.
+ */
+function drawStairGlyph(g: CanvasRenderingContext2D, x: number, y: number, s: number): void {
+  const n = 4;
+  const step = s / n;
   g.beginPath();
-  g.arc(bx, HEAD / 2 - 4, 38, 0, Math.PI * 2);
-  g.fillStyle = YAMANOTE_GREEN;
+  g.moveTo(x - s / 2, y + s * 0.5);
+  for (let i = 0; i < n; i++) {
+    g.lineTo(x - s / 2 + i * step, y + s * 0.5 - (i + 1) * step);
+    g.lineTo(x - s / 2 + (i + 1) * step, y + s * 0.5 - (i + 1) * step);
+  }
+  g.lineTo(x + s / 2, y + s * 0.5);
+  g.closePath();
+  g.fillStyle = '#eef2fb';
   g.fill();
-  g.lineWidth = 5;
-  g.strokeStyle = '#ffffff';
+  g.strokeStyle = '#33427a';
+  g.lineWidth = 1.2;
   g.stroke();
-  g.fillStyle = '#ffffff';
-  g.textAlign = 'center';
-  g.font = `bold 18px ${JP_FONT}`;
-  g.fillText('JY', bx, HEAD / 2 - 12);
-  g.font = `bold 30px ${JP_FONT}`;
-  g.fillText(next.jy.slice(2), bx, HEAD / 2 + 16);
-
-  // --- Bandeau de correspondances, sur fond crème ---
-  const tr = TRANSFERS[next.jy];
-  const BAND = HEAD + 40;
-  g.fillStyle = '#f6e7b8';
-  g.fillRect(0, HEAD, w, 40);
-  g.fillStyle = '#4a4231';
-  g.textAlign = 'left';
-  g.font = `19px ${JP_FONT}`;
-  const lines = tr ? tr.jp.split('、').slice(0, 4).join('  ') : 'のりかえ なし';
-  fitText(g, lines, w - 200, 19);
-  g.fillText(lines, 14, HEAD + 27);
-  g.textAlign = 'right';
-  g.font = `bold 20px ${JP_FONT}`;
-  g.fillStyle = '#7a4a12';
-  g.fillText(clock, w - 14, HEAD + 27);
-  g.textAlign = 'left';
-
-  // --- Plan du quai ---
-  const top = BAND + 26;
-  const platY = h - 74; // ligne de nez de quai
-  const x0 = 58;
-  const x1 = w - 24;
-  const carW = (x1 - x0) / CAR_COUNT;
-
-  // Sens de marche, en tête à gauche.
-  g.fillStyle = '#2c343c';
-  g.font = `20px ${JP_FONT}`;
-  g.fillText(`${STATIONS[stationAtHop(index, 4, dir)].kanji}ゆき`, 14, top + 4);
-
-  // Quai : bande grise, nez de quai orange.
-  g.fillStyle = '#e9eef2';
-  g.fillRect(x0 - 34, platY, x1 - x0 + 58, 46);
-  g.fillStyle = PLATFORM_ORANGE;
-  g.fillRect(x0 - 34, platY, x1 - x0 + 58, 5);
-
-  // Les voitures, numérotées, celle du voyageur en vert.
-  for (let i = 0; i < CAR_COUNT; i++) {
-    const cx = x0 + i * carW;
-    const isMine = i + 1 === PLAYER_CAR;
-    g.fillStyle = isMine ? YAMANOTE_GREEN : '#ffffff';
-    g.strokeStyle = '#7d8a95';
-    g.lineWidth = 2;
-    g.beginPath();
-    g.roundRect(cx + 3, platY - 40, carW - 6, 34, 5);
-    g.fill();
-    g.stroke();
-    g.fillStyle = isMine ? '#ffffff' : '#2c343c';
-    g.textAlign = 'center';
-    g.font = `bold 19px ${JP_FONT}`;
-    g.fillText(String(i + 1), cx + carW / 2, platY - 15);
-  }
-  g.textAlign = 'left';
-
-  // Escaliers, ascenseur et sorties, répartis d'une gare à l'autre : la
-  // disposition est tirée du numéro de gare, donc stable pour une gare donnée
-  // et différente de la suivante.
-  const marks: { car: number; label: string }[] = [
-    { car: 1 + Math.floor(r() * 3), label: '階段' },
-    { car: 4 + Math.floor(r() * 3), label: 'エスカレーター' },
-    { car: 8 + Math.floor(r() * 3), label: 'エレベーター' },
-  ];
-  for (const m of marks) {
-    const cx = x0 + (m.car - 0.5) * carW;
-    g.strokeStyle = '#5b6a76';
-    g.lineWidth = 3;
-    g.beginPath();
-    g.moveTo(cx, platY + 46);
-    g.lineTo(cx, top + 44);
-    g.stroke();
-    g.fillStyle = '#ffffff';
-    g.strokeStyle = '#5b6a76';
-    g.lineWidth = 2;
-    const tw = g.measureText(m.label).width * 0.9 + 18;
-    g.beginPath();
-    g.roundRect(cx - tw / 2, top + 18, tw, 28, 6);
-    g.fill();
-    g.stroke();
-    g.fillStyle = '#2c343c';
-    g.font = `16px ${JP_FONT}`;
-    g.textAlign = 'center';
-    g.fillText(m.label, cx, top + 38);
-  }
-  g.textAlign = 'left';
-
-  // Sortie principale, à l'une des deux extrémités.
-  const gateLeft = r() > 0.5;
-  const gx = gateLeft ? x0 - 30 : x1 - 4;
-  g.fillStyle = '#f6d24a';
-  g.beginPath();
-  g.roundRect(gx - 26, platY + 52, 96, 26, 5);
-  g.fill();
-  g.fillStyle = '#2c343c';
-  g.font = `bold 16px ${JP_FONT}`;
-  g.textAlign = 'center';
-  g.fillText('改札口', gx + 22, platY + 71);
-  g.textAlign = 'left';
 }
 
+/** Escalier mécanique : la même volée, mais lissée en rampe, avec sa pastille. */
+function drawEscalatorGlyph(g: CanvasRenderingContext2D, x: number, y: number, s: number): void {
+  g.fillStyle = '#eef2fb';
+  g.strokeStyle = '#33427a';
+  g.lineWidth = 1.2;
+  g.beginPath();
+  g.moveTo(x - s * 0.46, y + s * 0.45);
+  g.lineTo(x + s * 0.18, y - s * 0.45);
+  g.lineTo(x + s * 0.46, y - s * 0.45);
+  g.lineTo(x + s * 0.46, y + s * 0.45);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#33427a';
+  g.beginPath();
+  g.arc(x - s * 0.26, y + s * 0.26, s * 0.12, 0, Math.PI * 2);
+  g.fill();
+}
 
-// --- État « côté d'ouverture » (まもなく) ---
-// Les deux faces du wagon n'affichent PAS la même chose : chaque écran indique
-// si les portes qui s'ouvrent sont de son côté ou de l'autre. C'est la seule
-// vue qui diffère physiquement d'une paroi à l'autre, d'où deux canevas.
-export function drawDoorSide(
+/** Ascenseur : cabine et double flèche. */
+function drawElevatorGlyph(g: CanvasRenderingContext2D, x: number, y: number, s: number): void {
+  g.fillStyle = '#eef2fb';
+  g.strokeStyle = '#3a4a78';
+  g.lineWidth = 1;
+  g.beginPath();
+  g.rect(x - s * 0.32, y - s * 0.5, s * 0.64, s);
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#3a4a78';
+  g.beginPath();
+  g.moveTo(x - s * 0.14, y - s * 0.06);
+  g.lineTo(x - s * 0.02, y - s * 0.3);
+  g.lineTo(x + s * 0.1, y - s * 0.06);
+  g.closePath();
+  g.moveTo(x - s * 0.14, y + s * 0.1);
+  g.lineTo(x - s * 0.02, y + s * 0.34);
+  g.lineTo(x + s * 0.1, y + s * 0.1);
+  g.closePath();
+  g.fill();
+}
+
+interface Access {
+  x: number;
+  kind: 'stair' | 'escalator' | 'elevator';
+}
+
+export function drawApproach(
   s: ReturnType<typeof makeScreen>,
   index: number,
   clock: string,
+  lang: 'jp' | 'en',
   mine: boolean,
   dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
-  g.fillStyle = '#eceae5';
-  g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'soon', 'jp', dir);
+  const next = STATIONS[index];
+  const layout = layoutFor(index);
+  const gate = gateNameFor(index);
+  const hasTransfer = Boolean(TRANSFERS[next.jy]);
 
-  const cy = h * 0.56;
-  // Vantaux stylisés, entrouverts du bon côté.
-  const dw = 62;
-  const gap = mine ? 26 : 4;
-  for (const dir of [-1, 1]) {
-    g.fillStyle = '#9aa3ab';
-    g.strokeStyle = '#5d666e';
-    g.lineWidth = 3;
+  g.fillStyle = '#0a1738';
+  g.fillRect(0, 0, w, h);
+
+  // --- Le quai, en plongée : dégradé bleu et bandes podotactiles jaunes.
+  const grad = g.createLinearGradient(0, APPROACH_PLAT_Y, 0, APPROACH_PLAT_Y + APPROACH_PLAT_H);
+  grad.addColorStop(0, '#4a63a8');
+  grad.addColorStop(0.55, '#8b9ccb');
+  grad.addColorStop(1, '#5d72b0');
+  g.fillStyle = grad;
+  g.fillRect(0, APPROACH_PLAT_Y, w, APPROACH_PLAT_H);
+  g.strokeStyle = '#d8c65a';
+  g.lineWidth = 1.6;
+  g.setLineDash([7, 6]);
+  for (const y of [APPROACH_PLAT_Y + 8, APPROACH_PLAT_Y + APPROACH_PLAT_H - 8]) {
     g.beginPath();
-    g.roundRect(w / 2 + dir * (gap / 2) - (dir < 0 ? dw : 0), cy - 58, dw, 116, 6);
-    g.fill();
+    g.moveTo(0, y);
+    g.lineTo(w, y);
     g.stroke();
   }
+  g.setLineDash([]);
 
-  // Flèches vertes divergentes : elles ne s'affichent que si c'est ce côté.
-  if (mine) {
-    g.fillStyle = YAMANOTE_GREEN;
-    for (const dir of [-1, 1]) {
-      const bx = w / 2 + dir * 150;
+  // --- Repère longitudinal : le quai fait `layout.length` mètres et la rame
+  // roule vers les z DÉCROISSANTS, donc la tête de rame (voiture 1) se pose à
+  // DROITE de l'écran, comme le triangle du sens de marche.
+  const scale = (APPROACH_X1 - APPROACH_X0) / layout.length;
+  const cx = (APPROACH_X0 + APPROACH_X1) / 2;
+  const px = (z: number) => cx - z * scale;
+
+  // --- Les accès relevés de la gare, du plus à gauche au plus à droite.
+  const am = layout.amenities;
+  const access: Access[] = [
+    ...am.stairs.map((z) => ({ x: px(z), kind: 'stair' as const })),
+    ...am.escalators.map((z) => ({ x: px(z), kind: 'escalator' as const })),
+    ...(am.elevator !== null ? [{ x: px(am.elevator), kind: 'elevator' as const }] : []),
+  ].sort((a, b) => a.x - b.x);
+
+  const glyphY = APPROACH_PLAT_Y + APPROACH_PLAT_H * 0.6;
+  for (const a of access) {
+    const draw =
+      a.kind === 'stair' ? drawStairGlyph : a.kind === 'escalator' ? drawEscalatorGlyph : drawElevatorGlyph;
+    draw(g, a.x, glyphY, 40);
+  }
+
+  // --- Cartouches jaunes : un par GROUPE d'accès voisins, relié à chacun par
+  // une suspente. Le groupe le plus proche d'un about porte en plus le nom du
+  // portillon, avec sa ligne anglaise - c'est la seule légende bilingue de
+  // l'écran, et c'est celle qu'on cherche quand on veut sortir.
+  const groups: Access[][] = [];
+  for (const a of access) {
+    const last = groups[groups.length - 1];
+    if (last && a.x - last[last.length - 1].x < 62) last.push(a);
+    else groups.push([a]);
+  }
+  const gateGroup = groups.reduce((best, gr) =>
+    Math.abs(gr[0].x - cx) > Math.abs(best[0].x - cx) ? gr : best,
+  );
+
+  g.fillStyle = '#c3d4f4';
+  g.fillRect(0, APPROACH_BAND_Y, w, APPROACH_BAND_H);
+  for (const gr of groups) {
+    const gx = gr.reduce((sum, a) => sum + a.x, 0) / gr.length;
+    const isGate = gr === gateGroup;
+    // Le groupe se nomme par son accès le plus « fort » : un escalier de
+    // correspondance prime sur l'escalier mécanique, qui prime sur l'ascenseur.
+    const kinds = new Set(gr.map((a) => a.kind));
+    const base =
+      kinds.has('stair') ? (hasTransfer ? 'のりかえ階段' : '階段')
+      : kinds.has('escalator') ? 'エスカレーター'
+      : 'エレベーター';
+    const label = base + (isGate ? `・${gate.jp}` : '');
+    g.font = `13px ${JP_FONT}`;
+    const tw = Math.min(232, g.measureText(label).width + 14);
+    const lx = Math.max(4, Math.min(w - tw - 4, gx - tw / 2));
+    const ly = APPROACH_BAND_Y + 4;
+    const lh = APPROACH_BAND_H - 8;
+
+    // Suspentes : du bas du cartouche à chaque pictogramme.
+    g.strokeStyle = '#dde5f7';
+    g.lineWidth = 1.6;
+    for (const a of gr) {
       g.beginPath();
-      g.moveTo(bx + dir * 66, cy);
-      g.lineTo(bx, cy - 44);
-      g.lineTo(bx, cy - 18);
-      g.lineTo(bx - dir * 62, cy - 18);
-      g.lineTo(bx - dir * 62, cy + 18);
-      g.lineTo(bx, cy + 18);
-      g.lineTo(bx, cy + 44);
+      g.moveTo(a.x, ly + lh);
+      g.lineTo(a.x, glyphY - 18);
+      g.stroke();
+    }
+
+    g.fillStyle = '#f4e34a';
+    g.fillRect(lx, ly, tw, lh);
+    g.fillStyle = '#1a1a10';
+    g.textAlign = 'center';
+    fitText(g, label, tw - 10, 13, '');
+    g.fillText(label, lx + tw / 2, isGate ? ly + 15 : ly + 20);
+    if (isGate) {
+      g.font = `9px ${JP_FONT}`;
+      fitText(g, `${gate.romaji} Gate`, tw - 10, 9, '');
+      g.fillText(`${gate.romaji} Gate`, lx + tw / 2, ly + 26);
+    }
+    g.textAlign = 'left';
+  }
+
+  // --- La rame : onze cases, celle du voyageur en rouge, triangle du sens de
+  // marche en bout de file.
+  g.fillStyle = '#c3d4f4';
+  g.fillRect(0, APPROACH_CARS_Y, w, APPROACH_CARS_H);
+  const boxW = E235.pitch * scale;
+  for (let i = 0; i < CONSIST.length; i++) {
+    const bx = px(carZ(i)) - boxW / 2;
+    const isMine = i === PLAYER_CAR;
+    g.fillStyle = isMine ? '#c4232b' : '#f2f5fc';
+    g.strokeStyle = '#5a6a92';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.roundRect(bx + 1.5, APPROACH_CARS_Y + 4, boxW - 3, APPROACH_CARS_H - 8, 4);
+    g.fill();
+    g.stroke();
+    g.fillStyle = isMine ? '#ffffff' : '#14203f';
+    g.textAlign = 'center';
+    g.font = `italic bold 17px ${JP_FONT}`;
+    g.fillText(String(CONSIST[i].no), bx + boxW / 2, APPROACH_CARS_Y + 25);
+    // Pointeur rouge sur SA voiture : il désigne l'endroit du quai où elle
+    // s'arrête, juste au-dessus de la case.
+    if (isMine) {
+      g.fillStyle = '#c4232b';
+      g.beginPath();
+      g.moveTo(bx + boxW / 2 - 8, APPROACH_CARS_Y + 3);
+      g.lineTo(bx + boxW / 2, APPROACH_CARS_Y - 8);
+      g.lineTo(bx + boxW / 2 + 8, APPROACH_CARS_Y + 3);
       g.closePath();
       g.fill();
     }
   }
-
-  g.textAlign = 'center';
-  g.fillStyle = '#14181c';
-  g.font = `bold 34px ${JP_FONT}`;
-  g.fillText(mine ? 'こちら側のドアが開きます' : '反対側のドアが開きます', w / 2, h - 54);
-  g.fillStyle = '#5c646c';
-  g.font = `22px ${JP_FONT}`;
-  g.fillText(mine ? 'Doors on this side will open' : 'Doors on the other side will open', w / 2, h - 22);
   g.textAlign = 'left';
+  g.fillStyle = '#14203f';
+  const tipX = px(carZ(0)) + boxW / 2 + 6;
+  g.beginPath();
+  g.moveTo(tipX, APPROACH_CARS_Y + 7);
+  g.lineTo(tipX + 13, APPROACH_CARS_Y + APPROACH_CARS_H / 2);
+  g.lineTo(tipX, APPROACH_CARS_Y + APPROACH_CARS_H - 7);
+  g.closePath();
+  g.fill();
+
+  // --- Bandeau bas : avis d'ouverture (jp) ou correspondances (en).
+  if (lang === 'jp') {
+    const foot = g.createLinearGradient(0, APPROACH_FOOT_Y, 0, h);
+    foot.addColorStop(0, '#0d1f55');
+    foot.addColorStop(1, '#050d2a');
+    g.fillStyle = foot;
+    g.fillRect(0, APPROACH_FOOT_Y, w, h - APPROACH_FOOT_Y);
+
+    // Pictogramme : deux vantaux sur leur seuil jaune. Les flèches ne sortent
+    // que du côté qui s'ouvre - c'est tout ce qui distingue les deux parois,
+    // et c'est ce que le voyageur regarde.
+    const dcx = 128;
+    const dcy = APPROACH_FOOT_Y + 44;
+    for (const sgn of [-1, 1] as const) {
+      const lx = dcx + sgn * 8 - (sgn < 0 ? 34 : 0);
+      g.fillStyle = '#e8eefb';
+      g.fillRect(lx, dcy - 34, 34, 68);
+      g.fillStyle = '#2f6fbd';
+      g.fillRect(lx + 5, dcy - 28, 24, 40);
+    }
+    g.fillStyle = '#e0c22a';
+    g.fillRect(dcx - 60, dcy + 38, 120, 7);
+    if (mine) {
+      g.fillStyle = '#e8eefb';
+      for (const sgn of [-1, 1] as const) {
+        const ax = dcx + sgn * 62;
+        g.beginPath();
+        g.moveTo(ax + sgn * 16, dcy);
+        g.lineTo(ax, dcy - 11);
+        g.lineTo(ax, dcy + 11);
+        g.closePath();
+        g.fill();
+      }
+    }
+
+    g.textAlign = 'left';
+    g.fillStyle = '#ffffff';
+    const jp = mine ? 'こちら側のドアが開きます' : '反対側のドアが開きます';
+    fitText(g, jp, w - 250, 34, '');
+    g.fillText(jp, 226, APPROACH_FOOT_Y + 42);
+    g.fillStyle = '#b9c6e8';
+    const en = mine ? 'Doors on this side will open.' : 'Doors on the other side will open.';
+    fitText(g, en, w - 250, 21, '');
+    g.fillText(en, 228, APPROACH_FOOT_Y + 72);
+  } else {
+    g.fillStyle = '#c3d4f4';
+    g.fillRect(0, APPROACH_FOOT_Y, w, h - APPROACH_FOOT_Y);
+    const labels = (TRANSFERS[next.jy]?.jp ?? '').split('、').filter(Boolean).slice(0, 6);
+    if (labels.length === 0) {
+      g.fillStyle = '#2b3a63';
+      g.font = `20px ${JP_FONT}`;
+      g.textAlign = 'center';
+      g.fillText('のりかえの路線はありません', w / 2, APPROACH_FOOT_Y + 58);
+      g.textAlign = 'left';
+      return;
+    }
+    // Les lignes s'alignent en rangées, chacune sous son sigle.
+    let x = 24;
+    let y = APPROACH_FOOT_Y + 34;
+    g.font = `17px ${JP_FONT}`;
+    for (const label of labels) {
+      const tw = g.measureText(label).width;
+      if (x + 26 + tw > w - 16) {
+        x = 24;
+        y += 34;
+      }
+      if (y > h - 10) break;
+      const bw = drawLineBadge(g, label, x, y - 6, 19);
+      g.fillStyle = '#14203f';
+      g.font = `17px ${JP_FONT}`;
+      g.textAlign = 'left';
+      g.fillText(label, x + bw + 5, y);
+      x += bw + 5 + tw + 26;
+    }
+  }
+  g.textAlign = 'left';
+
+  // Le bandeau se dessine EN DERNIER : le quai file dessous.
+  drawHeader(g, w, index, clock, 'soon', lang, dir);
 }
 
 // --- État « correspondances à la prochaine gare » ---

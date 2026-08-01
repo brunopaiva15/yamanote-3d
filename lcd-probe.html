@@ -36,7 +36,7 @@
   <body>
     <div id="out"></div>
     <script type="module">
-      import { makeScreen, drawRoute, drawLoopMap, drawTransfers } from '/src/three/lineScreen.ts';
+      import { makeScreen, drawRoute, drawLoopMap, drawTransfers, drawApproach } from '/src/three/lineScreen.ts';
 
       const q = new URLSearchParams(location.search);
       const station = Number(q.get('station') ?? 0);
@@ -52,6 +52,9 @@
         ['loopJP', (s) => drawLoopMap(s, station, phase, countdown, clock, status, 'jp', dir)],
         ['loopEN', (s) => drawLoopMap(s, station, phase, countdown, clock, status, 'en', dir)],
         ['transfers', (s) => drawTransfers(s, station, clock, dir)],
+        ['approachJP', (s) => drawApproach(s, station, clock, 'jp', true, dir)],
+        ['approachJP-other', (s) => drawApproach(s, station, clock, 'jp', false, dir)],
+        ['approachEN', (s) => drawApproach(s, station, clock, 'en', true, dir)],
       ];
 
       const out = document.getElementById('out');
