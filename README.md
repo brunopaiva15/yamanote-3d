@@ -2272,6 +2272,18 @@ que la queue redevient une sinusoïde propre. C'est une composition originale, �
 l'image des mélodies de départ : ni notes ni enregistrement d'un carillon ATOS
 existant.
 
+Ce carillon-là est le seul du genre, et c'est voulu : **une rame de la Yamanote
+ne joue pas de jingle en arrivant**. Le carillon d'avant-annonce (車内チャイム -
+鉄道唱歌, ハイケンスのセレナーデ, ブラームスの子守歌) est une affaire de
+grandes lignes et de Shinkansen, né des longs silences entre deux arrêts ; sur
+un train de banlieue, l'annonce démarre sans introduction. Le seul motif de
+quatre notes qu'on entende dans une E235 est le ピンポンパンポン du système de
+radio numérique, qui signale l'arrivée d'une **information de trafic** sur les
+écrans - à un moment sans rapport avec la gare, et sans annonce derrière. Le
+jeu jouait pourtant quatre notes de cloche à chaque entrée en gare : elles ont
+été retirées. Restent, côté rame, les carillons de porte à deux tons, eux bien
+réels.
+
 Cet arrêt d'urgence (急停車) tombe **toutes les dix à vingt-quatre gares**, soit
 de vingt-cinq minutes à une heure de trajet - le premier plus tôt, pour qu'un
 trajet court puisse le vivre. Le train freine sec, reste immobilisé de 45 s à
@@ -2713,13 +2725,13 @@ il dépend du côté de la porte où se trouve la tête :
   les portes ouvertes : assez pour reconnaître qu'une annonce passe dehors et
   en attraper des morceaux, pas assez pour couvrir celle du wagon.
 
-Ce partage ne vaut que pour la **parole**. Les carillons de porte, le jingle
-d'arrivée, le carillon ATOS, les bips des portes palières et la mélodie de
-départ sont des signaux : ils traversent, dans les deux sens. Chaque
+Ce partage ne vaut que pour la **parole**. Les carillons de porte, le carillon
+ATOS, les bips des portes palières et la mélodie de départ sont des signaux :
+ils traversent, dans les deux sens. Chaque
 sonorisation a sa propre file d'annonces, si bien que la gare et la rame
 peuvent parler en même temps - ce qu'elles font vraiment quand on est assis
 porte ouverte et que le quai annonce la fermeture une seconde après le wagon.
 
 Optionnel : déposez d'autres enregistrements dans `public/audio/`
-(`door-open.mp3`, `door-close.mp3`, `arrival.mp3`, `melody-JY01.mp3`…) ; ils seront
+(`door-open.mp3`, `door-close.mp3`, `melody-JY01.mp3`…) ; ils seront
 utilisés à la place de la synthèse, et passent par le même bus spatialisé.

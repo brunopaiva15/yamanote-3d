@@ -412,7 +412,6 @@ function updateClear(index: number): void {
 
 function updateApproaching(dt: number): void {
   once('brake-apply', platformWait.t >= 0.4, () => audio.brakeApply());
-  once('jingle', platformWait.t >= 1.5, () => audio.arrivalJingle());
   integrateTrain(train, 0, dt);
   // Ce qu'il reste à parcourir se lit sur l'état de la rame, et non sur une
   // distance de freinage estimée d'avance : elle se pose ainsi exactement sur

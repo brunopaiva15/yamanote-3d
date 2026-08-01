@@ -4,7 +4,7 @@ en am_michael) - voir scripts/announcements-gen.py.
 Ne pas éditer à la main : régénérer via le script.
 
 Déposez ici vos propres enregistrements mp3 (optionnel) :
-door-open.mp3, door-close.mp3, arrival.mp3, melody-JY01.mp3 ... melody-JY30.mp3
+door-open.mp3, door-close.mp3, melody-JY01.mp3 ... melody-JY30.mp3
 Sans fichier, la synthèse Tone.js est utilisée.
 
 Mélodies de départ par quai (発車メロディ) :
