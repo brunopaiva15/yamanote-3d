@@ -197,25 +197,34 @@ export interface Good {
  * `face` vaut +1 ou -1 : le côté de l'étagère vers lequel les produits sont
  * poussés. Une gondole double-face appelle donc deux fois, une contre le mur
  * une seule.
+ *
+ * `along` dit dans quel sens court le linéaire. Le konbini du hall a ses
+ * gondoles en travers du hall (axe x), le kiosque du quai a ses comptoirs le
+ * long de la voie (axe z) : c'est la seule chose qui les distingue ici. On
+ * pose donc directement dans le bon axe plutôt que de garnir en x et de faire
+ * pivoter les matrices - un quart de tour composé à la main sur un échange
+ * d'axes retourne le sens de rotation des faces, et les boîtes se retrouvent
+ * à l'envers, visibles seulement de l'intérieur.
  */
-export function fillShelf(
-  r: () => number,
-  o: {
-    /** Bornes de la rangée le long de l'étagère. */
-    x0: number;
-    x1: number;
-    /** Dessus de l'étagère : les produits POSENT dessus. */
-    y: number;
-    /** Nu du rayon, où s'aligne le front des produits. */
-    z: number;
-    face: 1 | -1;
-    /** Entre-étages : hauteur libre au-dessus de l'étagère. */
-    clear: number;
-    /** Profondeur disponible derrière le nu. */
-    depth: number;
-  },
-): Good[] {
+export interface ShelfSpan {
+  /** Bornes de la rangée le long de l'étagère. */
+  x0: number;
+  x1: number;
+  /** Dessus de l'étagère : les produits POSENT dessus. */
+  y: number;
+  /** Nu du rayon, où s'aligne le front des produits. */
+  z: number;
+  face: 1 | -1;
+  /** Entre-étages : hauteur libre au-dessus de l'étagère. */
+  clear: number;
+  /** Profondeur disponible derrière le nu. */
+  depth: number;
+  along?: 'x' | 'z';
+}
+
+export function fillShelf(r: () => number, o: ShelfSpan): Good[] {
   const out: Good[] = [];
+  const alongZ = o.along === 'z';
   let x = o.x0 + 0.01;
   while (x < o.x1 - 0.05) {
     const tone = goodsTone(r);
@@ -224,8 +233,12 @@ export function fillShelf(
     const d = Math.min(o.depth, 0.05 + r() * 0.12);
     const facings = 1 + Math.floor(r() * 4);
     for (let f = 0; f < facings && x < o.x1 - w; f++) {
+      const run = x + w / 2;
+      const front = o.z - o.face * d * 0.5;
       out.push({
-        m: mat(x + w / 2, o.y + h / 2, o.z - o.face * d * 0.5, w * 0.92, h, d),
+        m: alongZ
+          ? mat(front, o.y + h / 2, run, d, h, w * 0.92)
+          : mat(run, o.y + h / 2, front, w * 0.92, h, d),
         color: new THREE.Color(tone),
       });
       x += w + 0.004;
@@ -246,33 +259,18 @@ export function fillShelf(
  */
 export function fillUnit(
   seed: number,
-  o: {
-    x0: number;
-    x1: number;
+  o: Omit<ShelfSpan, 'y' | 'clear'> & {
     /** Dessus du socle, et sommet du meuble. */
     y0: number;
     y1: number;
     decks: number;
-    z: number;
-    face: 1 | -1;
-    depth: number;
   },
 ): Good[] {
   const r = rng(3300 + seed * 7723);
   const pitch = (o.y1 - o.y0) / o.decks;
   const out: Good[] = [];
   for (let k = 0; k < o.decks; k++) {
-    out.push(
-      ...fillShelf(r, {
-        x0: o.x0,
-        x1: o.x1,
-        y: o.y0 + k * pitch,
-        z: o.z,
-        face: o.face,
-        clear: pitch,
-        depth: o.depth,
-      }),
-    );
+    out.push(...fillShelf(r, { ...o, y: o.y0 + k * pitch, clear: pitch }));
   }
   return out;
 }

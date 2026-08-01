@@ -320,14 +320,41 @@ export function Konbini({
 
       {/* --- La devanture ---------------------------------------------- */}
       <group name="konbini/devanture">
-        {/* Allège : le socle d'aluminium sur lequel la vitre pose. */}
-        <mesh position={[0, 0.06, zf - 0.05]} material={m.metal}>
-          <boxGeometry args={[w - 0.16, 0.12, 0.1]} />
+        {/* Allège : le socle d'aluminium sur lequel la vitre pose. Elle
+            s'interrompt à la baie comme la traverse haute - au droit d'une
+            porte, il n'y a pas d'allège, il y a un seuil au ras du sol, sur
+            lequel on ne trébuche pas. */}
+        {[
+          { a: -w / 2 + 0.08, b: doorX - doorW / 2 - 0.05 },
+          { a: doorX + doorW / 2 + 0.05, b: w / 2 - 0.08 },
+        ].map((seg, i) => (
+          <mesh
+            key={`allege${i}`}
+            position={[(seg.a + seg.b) / 2, 0.06, zf - 0.05]}
+            material={m.metal}
+          >
+            <boxGeometry args={[Math.max(0.02, seg.b - seg.a), 0.12, 0.1]} />
+          </mesh>
+        ))}
+        <mesh position={[doorX, 0.012, zf - 0.05]} material={m.metal}>
+          <boxGeometry args={[doorW + 0.1, 0.024, 0.12]} />
         </mesh>
-        {/* Traverse haute, sous le bandeau. */}
-        <mesh position={[0, glassH + 0.05, zf - 0.05]} material={m.metal}>
-          <boxGeometry args={[w - 0.16, 0.1, 0.1]} />
-        </mesh>
+        {/* Traverse haute, sous le bandeau - INTERROMPUE au droit de la baie :
+            au-dessus d'une porte coulissante, ce n'est pas la traverse de la
+            devanture qui court, c'est le caisson d'entraînement des vantaux.
+            D'un seul tenant, elle traversait ce caisson de dix centimètres. */}
+        {[
+          { a: -w / 2 + 0.08, b: doorX - doorW / 2 - 0.05 },
+          { a: doorX + doorW / 2 + 0.05, b: w / 2 - 0.08 },
+        ].map((seg, i) => (
+          <mesh
+            key={`traverse${i}`}
+            position={[(seg.a + seg.b) / 2, glassH + 0.05, zf - 0.05]}
+            material={m.metal}
+          >
+            <boxGeometry args={[Math.max(0.02, seg.b - seg.a), 0.1, 0.1]} />
+          </mesh>
+        ))}
         {/* Les panneaux fixes, et leurs meneaux. La vitre est PLEINE HAUTEUR :
             c'est elle qui fait la boutique, et un allège maçonné l'aurait
             transformée en guichet. */}
@@ -541,13 +568,16 @@ function SlidingDoors({
   const leaf = width / 2;
   return (
     <group name="konbini/porte" position={[x, 0, z]}>
-      {/* Rail d'entraînement et son capot, au linteau. */}
-      <mesh position={[0, height + 0.02, -0.06]} material={m.metal}>
-        <boxGeometry args={[width + 0.3, 0.16, 0.16]} />
+      {/* Rail d'entraînement et son capot. Il tient SOUS le nu haut de la
+          devanture, et non par-dessus : posé au linteau, il montait dans le
+          caisson d'enseigne et le traversait de dix centimètres. Les vantaux
+          disparaissent dans son capot, comme il se doit. */}
+      <mesh position={[0, height - 0.08, -0.06]} material={m.metal}>
+        <boxGeometry args={[width + 0.3, 0.14, 0.16]} />
       </mesh>
       {/* Le détecteur, en saillie sous le capot : le petit boîtier noir qu'on
           cherche des yeux quand la porte ne s'ouvre pas. */}
-      <mesh position={[0, height - 0.06, 0.02]} material={m.frame}>
+      <mesh position={[0, height - 0.2, 0.02]} material={m.frame}>
         <boxGeometry args={[0.16, 0.07, 0.06]} />
       </mesh>
       {/* Montants dormants de la baie. */}
