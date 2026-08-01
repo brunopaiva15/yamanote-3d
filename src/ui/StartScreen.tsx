@@ -22,6 +22,7 @@ import { presenceEnabled, subscribeOnlineCount } from '../systems/presence';
 import { loadGame } from '../gameLoader';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
+import { QualityNotice } from './QualityNotice';
 import { Logo } from './Logo';
 import { Footer } from './Footer';
 
@@ -303,6 +304,7 @@ export function StartScreen() {
             <span className="start-option-label">{t.quality.label}</span>
             <QualitySelect />
           </div>
+          <QualityNotice />
         </div>
         <p className="start-foot">
           {t.start.tokyoTime}

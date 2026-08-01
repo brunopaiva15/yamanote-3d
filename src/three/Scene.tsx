@@ -18,6 +18,8 @@ import { seasonNow } from '../systems/season';
 import { weather } from '../systems/weather';
 import { segEnv } from '../systems/segmentEnv';
 import { applyShadowFlags } from './shadowFlags';
+import { gpuKit, type RenderPipelineHandle } from './webgpu/kit';
+import { findTargetedPax } from '../systems/paxTargeting';
 
 /**
  * Intensité d'un luminaire de secours (à comparer aux 3,0 d'un néon ordinaire).
@@ -38,20 +40,50 @@ const LAMP_POSITIONS: [number, number, number][] = [
 // goulot sur les écrans haute densité). En dessous, densité native (cap 2,
 // comme le dpr initial du Canvas). Palier 5 (Très basse) : rendu sous la
 // résolution de l'écran.
-function AdaptiveDpr({ level }: { level: PerfLevel }): null {
+function AdaptiveDpr({ level, webgpu }: { level: PerfLevel; webgpu: boolean }): null {
   const setDpr = useThree((s) => s.setDpr);
   useEffect(() => {
     const native = Math.min(window.devicePixelRatio || 1, 2);
-    const cap = level >= 5 ? 0.75 : level >= 4 ? 1 : level >= 3 ? 1.25 : native;
+    // Mode Extraordinaire : plafond à 1,5 malgré le palier 0.
+    //
+    // Ce n'est pas un renoncement, c'est l'arbitrage juste. SSGI, SSR et bokeh
+    // sont tous des effets à la RÉSOLUTION : passer de 1,5 à 2 sur un écran
+    // dense multiplie leur coût par 1,8 pour un gain de netteté que le bokeh
+    // et le débruiteur mangent aussitôt. Le budget est mieux placé dans les
+    // rebonds de lumière que dans des pixels qu'on va flouter.
+    const cap = webgpu
+      ? 1.5
+      : level >= 5
+        ? 0.75
+        : level >= 4
+          ? 1
+          : level >= 3
+            ? 1.25
+            : native;
     setDpr(Math.min(native, cap));
-  }, [level, setDpr]);
+  }, [level, webgpu, setDpr]);
   return null;
 }
 
 // Réflexions douces sur le chrome et les panneaux laqués, sans requête réseau.
+//
+// `PMREMGenerator` existe dans les deux builds de three, mais ce ne sont pas la
+// même classe : celle importée ici filtre avec un WebGLRenderer. Le mode
+// Extraordinaire passe donc par la sienne (three/webgpu/impl/environment), avec
+// la même RoomEnvironment et le même flou.
 function EnvironmentMap(): null {
   const { gl, scene } = useThree();
   useEffect(() => {
+    const kit = gpuKit();
+    if (kit) {
+      const env = kit.makeEnvironment(gl);
+      scene.environment = env.texture;
+      scene.environmentIntensity = 0.38;
+      return () => {
+        scene.environment = null;
+        env.dispose();
+      };
+    }
     const pmrem = new THREE.PMREMGenerator(gl);
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = env;
@@ -63,6 +95,72 @@ function EnvironmentMap(): null {
       pmrem.dispose();
     };
   }, [gl, scene]);
+  return null;
+}
+
+/**
+ * Distance de mise au point par défaut, quand on ne regarde personne (m) :
+ * dans le wagon, la longueur de l'allée jusqu'au soufflet ; sur le quai, la
+ * profondeur où les choses commencent à compter.
+ */
+const FOCUS_IDLE_CAR = 5.2;
+const FOCUS_IDLE_PLATFORM = 11;
+/** Portée de la recherche du visage regardé : au-delà, on ne le fixe plus. */
+const FOCUS_RANGE = 7.5;
+/**
+ * Taille du bokeh. Assez pour qu'un visage se détache de la ville qui défile,
+ * pas assez pour que lire une affiche demande un effort - la profondeur de
+ * champ est là pour DIRIGER le regard, pas pour l'empêcher.
+ */
+const BOKEH = 1.8;
+/** Vitesse d'accommodation (1/s) : l'œil met un tiers de seconde, pas zéro. */
+const FOCUS_EASE = 4.5;
+
+/**
+ * Le pipeline WebGPU : il REMPLACE le rendu de react-three-fiber (une priorité
+ * de frame non nulle suffit à le lui dire) par la chaîne SSGI → SSR →
+ * profondeur de champ → bloom → étalonnage.
+ */
+function WebGPUEffects(): null {
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera);
+  const pipeline = useRef<RenderPipelineHandle | null>(null);
+  const focus = useRef(FOCUS_IDLE_CAR);
+
+  useEffect(() => {
+    const kit = gpuKit();
+    if (!kit) return;
+    const p = kit.makePipeline(gl, scene, camera, {
+      ssgi: true,
+      ssr: true,
+      dof: true,
+      bloom: CONFIG.bloom,
+    });
+    pipeline.current = p;
+    return () => {
+      pipeline.current = null;
+      p.dispose();
+    };
+  }, [gl, scene, camera]);
+
+  useFrame((_, dt) => {
+    const p = pipeline.current;
+    if (!p) return;
+    // L'œil accommode sur le VISAGE qu'on regarde - le jeu sait déjà lequel,
+    // c'est celui à qui l'on pourrait adresser la parole. À défaut, il se pose
+    // sur le plan où il y a quelque chose à voir.
+    const target = findTargetedPax(FOCUS_RANGE);
+    const want = target
+      ? target.dist
+      : runtime.playerFrame === 'platform'
+        ? FOCUS_IDLE_PLATFORM
+        : FOCUS_IDLE_CAR;
+    focus.current += (want - focus.current) * Math.min(1, Math.max(0, dt) * FOCUS_EASE);
+    p.setFocus(focus.current, BOKEH);
+    p.render();
+  }, 1);
+
   return null;
 }
 
@@ -378,7 +476,12 @@ function EmergencyLights({ positions }: { positions: [number, number, number][] 
 export function Scene() {
   // Palier issu de la qualité vidéo choisie par le joueur (voir systems/perf) :
   // ne change qu'à un réglage manuel, donc quelques re-renders par session.
-  const perfLevel = usePerf((s) => qualityLevel(s.quality));
+  const quality = usePerf((s) => s.quality);
+  const perfLevel = qualityLevel(quality);
+  // Le mode Extraordinaire partage le palier 0 d'Ultra : mêmes ombres, même
+  // densité, mêmes néons. Ce qui change est ENTIÈREMENT dans la chaîne de
+  // rendu, et le moteur n'est déjà plus le même à ce point du fichier.
+  const webgpu = quality === 'extraordinary' && gpuKit() !== null;
 
   // Palier 2 : néons du wagon espacés (un pointLight sur deux) ; palier 4 :
   // deux seulement - à chaque fois légèrement poussés pour garder une
@@ -394,7 +497,7 @@ export function Scene() {
     <>
       <color attach="background" args={['#bcdaee']} />
       <fog attach="fog" args={['#d6e8f2', 30, 220]} />
-      <AdaptiveDpr level={perfLevel} />
+      <AdaptiveDpr level={perfLevel} webgpu={webgpu} />
       <EnvironmentMap />
       <ShadowFlags />
       <DayNightLighting level={perfLevel} />
@@ -406,7 +509,9 @@ export function Scene() {
       {/* Lampes de secours : elles n'existent QUE dans le noir. */}
       <EmergencyLights positions={lampPositions} />
 
-      {perfLevel < 2 ? (
+      {webgpu ? (
+        <WebGPUEffects />
+      ) : perfLevel < 2 ? (
         <EffectComposer>
           {/* Occlusion ambiante. C'est ce qui sépare une image de synthèse d'une
               photo : le noircissement des angles, sous les banquettes, derrière

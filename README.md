@@ -1722,10 +1722,141 @@ décrivent tous le même site, et `tests/documentMeta.test.ts`, qui tient les
 titres et descriptions des trois langues dans les longueurs qu'un moteur
 n'ampute pas.
 
+## Le mode Extraordinaire (bêta WebGPU)
+
+Le sélecteur de qualité comptait six préréglages, du plus léger au plus riche,
+et ils décrivaient tous la même chose : combien de décor, combien d'ombres,
+combien de PNJ. Le septième - **« Extraordinaire ⚠︎ »** - n'est pas un cran de
+plus sur cette échelle. C'est **un autre moteur** : le rendu WebGPU de three.js
+et son système de nœuds (TSL), avec son propre pipeline de post-traitement.
+
+Il partage volontairement le palier interne d'Ultra - mêmes ombres, même
+densité de décor, mêmes néons - pour que la comparaison porte sur ce qui change
+vraiment, et sur rien d'autre.
+
+### Ce qu'il ajoute
+
+- **Éclairage indirect en espace écran (SSGI).** C'est le cœur du mode, et la
+  seule chose que le chemin WebGL ne pouvait pas approcher. En WebGL,
+  l'occlusion ambiante ne fait que SOUSTRAIRE de la lumière dans les angles ;
+  rien n'en apporte. Ici, chaque pixel parcourt son hémisphère et récolte la
+  lumière réellement présente à l'image. La lueur orange d'une fenêtre à
+  l'heure dorée se pose sur la cloison d'en face, les néons du plafond
+  remontent du sol vers le dessous des banquettes, et la ville de nuit passée à
+  travers les vitres teinte l'intérieur du wagon. Le même parcours donne
+  l'occlusion ambiante : une passe pour les deux, là où WebGL en dépensait une
+  entière rien que pour l'AO.
+- **Réflexions en espace écran (SSR).** Tracées à l'écran, pilotées par la
+  rugosité et la métallicité de chaque pixel - c'est pour ça que la passe de
+  scène écrit ces deux valeurs dans un attachement à part. Le sol vernis du
+  wagon, les vitres, les mains courantes en inox et la chaussée mouillée
+  renvoient la scène elle-même au lieu de la sonde d'environnement générique.
+- **Profondeur de champ à bokeh.** Le chemin WebGL n'en a aucune. Le plan net
+  suit **le visage qu'on regarde** : le jeu sait déjà lequel, c'est celui à qui
+  l'on pourrait adresser la parole (`systems/paxTargeting`). À défaut, l'œil se
+  pose à cinq mètres dans le wagon, à onze sur le quai, et l'accommodation met
+  un tiers de seconde comme la vraie.
+- **Pluie et neige calculées sur le GPU.** La position de chaque goutte vit
+  dans un tampon de stockage qu'un nuanceur de calcul avance à chaque image.
+  Chaque goutte a sa propre vitesse de chute (une averse n'est pas un peigne)
+  et son propre flottement ; le sommet, lui, ne fait plus que lire une
+  position. Le champ passe de 3 200 à 11 000 traces.
+- **Plus de monde, et une ville plus dense.** La rame et le quai se remplissent
+  d'un quart de plus, et les rangs du ruban urbain se resserrent jusqu'au
+  plafond de la cellule - la densité de Tokyo, pas son étendue : la brume
+  arrête le regard bien avant le bout de l'anneau.
+
+### L'ordre du pipeline, et pourquoi
+
+`scène (MRT : couleur, normales, matière)` → **SSGI** → **SSR** → **bokeh** →
+**bloom** → **étalonnage filmique** → **grain + vignetage**.
+
+SSGI avant SSR : une réflexion doit renvoyer une image DÉJÀ éclairée par
+l'indirect, sinon le sol renvoie une pièce plus sombre que celle où l'on se
+trouve. Bokeh avant bloom : un flou net qui déborderait ensuite en halo est la
+signature d'un pipeline monté à l'envers. Grain et vignetage tout à la fin, sur
+l'image étalonnée : ce sont des défauts d'OBJECTIF, ils n'ont rien à faire dans
+une image linéaire.
+
+Le filtrage temporel du SSGI est **coupé**, et c'est délibéré : la rame file à
+quatre-vingt-dix, le décor traverse l'écran en deux secondes, et une
+reprojection temporelle y laisse des traînées sur tout ce qui défile. On paie
+l'échantillonnage comptant et on débruite spatialement.
+
+### Ce que ça coûte
+
+C'est une **bêta**, et l'étiquette porte un ⚠︎ pour cette raison : le mode
+n'est pas encore optimisé. Il est nettement plus cher qu'Ultra. Deux
+arbitrages sont déjà pris : le SSR est calculé en demi-résolution (une
+réflexion est floue par nature dès que la rugosité dépasse quelques
+centièmes), et la densité de rendu est plafonnée à 1,5 au lieu du natif -
+SSGI, SSR et bokeh sont tous des effets à la résolution, et le budget est mieux
+placé dans les rebonds de lumière que dans des pixels qu'on va flouter.
+
+Limite connue : la passe unique en MRT fait aussi écrire les matériaux
+TRANSPARENTS dans les attachements de normale et de matière. Là où une trace de
+pluie passe devant le décor, la normale lue par le SSGI et le SSR est
+légèrement tirée vers celle du quad. C'est supportable parce que ces surfaces
+n'écrivent pas la profondeur - les positions reconstruites restent celles du
+décor opaque - mais c'est le premier chantier d'une passe transparente séparée.
+
+### Ce qu'il fallait réécrire pour y arriver
+
+Le rendu WebGPU **ne compile pas de GLSL**. Tout ce que le jeu écrivait à la
+main dans un nuanceur devait donc exister une seconde fois, en nœuds :
+
+| ce qui est en GLSL | son jumeau en nœuds |
+|---|---|
+| `three/city/SkyDome` - ciel, silhouette d'horizon | `three/webgpu/impl/sky.ts` |
+| `three/Weather` - pluie et neige | `three/webgpu/impl/precipitation.ts` |
+| `three/station/Barrier` - les trois limites de zone | `three/webgpu/impl/barrier.ts` |
+| `three/city/cityMaterial` + `cityProps` (greffes `onBeforeCompile`) | `three/webgpu/impl/city.ts` |
+
+Les deux versions exposent **exactement le même dictionnaire d'uniformes** : un
+nœud `uniform()` de TSL porte un `.value`, comme la case d'un `ShaderMaterial`.
+Tout le code d'animation par frame - le fondu jour/nuit du ciel, l'inclinaison
+des traces de pluie, le halo d'une limite de zone - est donc partagé mot pour
+mot entre les deux moteurs, et il n'existe qu'une fois.
+
+Les deux greffes `onBeforeCompile` de la ville n'ont pas d'équivalent côté
+nœuds ; elles sont refaites en dérivant `MeshLambertNodeMaterial` et en
+redéfinissant les deux crochets qui correspondent aux deux points d'injection
+du GLSL : `setupPosition` (← `begin_vertex`, avant l'instanciation, ce qui
+permet de dépouiller un arbre sans le rapetisser) et `setupDiffuseColor`
+(← `color_fragment` + `map_fragment`, ce qui garde la couleur d'instance au
+bon endroit : le bandeau d'enseigne REMPLACE la teinte de façade au lieu de la
+multiplier).
+
+Une seule concession de données : le nuanceur de façade relisait les dimensions
+du bâtiment dans `instanceMatrix`, à laquelle le système de nœuds ne donne pas
+accès. `three/city/CityRibbon` écrit désormais ces trois nombres dans un
+attribut d'instance `aScale` - il les a sous la main, c'est même lui qui les
+fabrique.
+
+### Disponibilité et repli
+
+Le mode demande WebGPU. L'option est **grisée** là où `navigator.gpu` n'existe
+pas. Là où il existe, l'adaptateur est interrogé AVANT de monter la toile : s'il
+refuse - pilote sur liste noire, machine virtuelle sans GPU - la qualité
+redescend sur Ultra et le HUD le dit, plutôt que d'ouvrir sur un écran noir.
+
+Le paquet WebGPU (build `three/webgpu`, TSL, nœuds de post-traitement, environ
+200 ko compressés) est **chargé à la demande**. Un joueur qui reste en Ultra ne
+le télécharge jamais : `vite.config.ts` l'isole dans son propre morceau, et
+c'est le seul intérêt de la règle `three-webgpu` qu'on y trouve.
+
+Changer de mode **remonte la toile** (`key` sur le `<Canvas>`) : un renderer ne
+se remplace pas à chaud, la toile, le contexte, les textures et tous les
+programmes en dépendent.
+
 ## Stack
 
 Vite + TypeScript strict, React, React Three Fiber, drei, @react-three/postprocessing,
 zustand, Tone.js, Web Speech API. Aucune autre dépendance runtime.
+
+Le mode Extraordinaire ajoute le rendu **WebGPU** de three.js (`three/webgpu`),
+son système de nœuds (`three/tsl`) et quelques nœuds de post-traitement des
+addons - le tout chargé à la demande, jamais dans le paquet de départ.
 
 ## Architecture
 
@@ -1747,6 +1878,11 @@ src/
                          de viaduc, mobilier de voie, caténaire
   three/Weather.tsx      pluie et neige : champ replié autour de l'œil, calculé
                          dans le nuanceur, incliné par la vitesse du train
+  three/webgpu/kit.ts    le contrat entre la scène et le moteur WebGPU - sans
+                         aucune dépendance lourde, donc sans poids pour WebGL
+  three/webgpu/impl/     le mode Extraordinaire : matériaux en nœuds (ciel,
+                         ville, limites de zone), pluie sur nuanceur de calcul,
+                         pipeline SSGI → SSR → bokeh → bloom → étalonnage
   three/city/            le paysage : ruban urbain instancié, matériau de façade,
                          ciel et ligne d'horizon en une passe
   three/exterior/        rame E235-0 vue de dehors : caisses, bogies, cabines,

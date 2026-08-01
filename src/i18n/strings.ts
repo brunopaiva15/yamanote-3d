@@ -151,7 +151,16 @@ export interface Strings {
       high: string;
       veryHigh: string;
       ultra: string;
+      extraordinary: string;
     };
+    /**
+     * Le mode Extraordinaire demande WebGPU, et n'est donc pas offert partout.
+     * Les deux messages servent l'un dans le sélecteur (option grisée), l'autre
+     * dans le bandeau qui s'affiche si le moteur refuse de démarrer.
+     */
+    extraordinaryBeta: string;
+    extraordinaryUnsupported: string;
+    extraordinaryFailed: string;
   };
 
   /**
@@ -280,7 +289,12 @@ const FR: Strings = {
       high: 'Haute',
       veryHigh: 'Très haute',
       ultra: 'Ultra',
+      extraordinary: 'Extraordinaire ⚠︎',
     },
+    extraordinaryBeta:
+      'Bêta : rendu WebGPU. Éclairage indirect, reflets en espace écran, profondeur de champ et pluie calculée sur le GPU. Exigeant, et pas encore optimisé.',
+    extraordinaryUnsupported: 'Ce navigateur n’expose pas WebGPU.',
+    extraordinaryFailed: 'WebGPU n’a pas démarré sur cette machine : retour à Ultra.',
   },
   incidents: {
     label: 'Provoquer un incident',
@@ -408,7 +422,12 @@ const EN: Strings = {
       high: 'High',
       veryHigh: 'Very High',
       ultra: 'Ultra',
+      extraordinary: 'Extraordinary ⚠︎',
     },
+    extraordinaryBeta:
+      'Beta: WebGPU renderer. Indirect lighting, screen-space reflections, depth of field and GPU-computed rain. Demanding, and not yet optimised.',
+    extraordinaryUnsupported: 'This browser does not expose WebGPU.',
+    extraordinaryFailed: 'WebGPU failed to start on this machine: falling back to Ultra.',
   },
   incidents: {
     label: 'Trigger an incident',
@@ -537,7 +556,12 @@ const JA: Strings = {
       high: '高',
       veryHigh: '最高',
       ultra: 'ウルトラ',
+      extraordinary: 'エクストラオーディナリー ⚠︎',
     },
+    extraordinaryBeta:
+      'ベータ版：WebGPU レンダリング。間接光、スクリーンスペース反射、被写界深度、GPU で計算する雨。負荷が高く、最適化はこれからです。',
+    extraordinaryUnsupported: 'このブラウザーは WebGPU に対応していません。',
+    extraordinaryFailed: 'この環境では WebGPU を起動できませんでした。ウルトラに戻します。',
   },
   incidents: {
     label: '異常時を発生させる',
