@@ -13,7 +13,7 @@ import { isMajorHub } from '../data/announcements';
 import { CONFIG } from '../data/config';
 import { SKELETON_TOP, makeAppearance, type Appearance } from './appearance';
 import { paxScale } from './perf';
-import { runtime } from './runtime';
+import { onPlatformDeck, runtime } from './runtime';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import { placementFor, stairTopZ, stairwellAt, type StationPlacement } from './stationPlacement';
@@ -836,7 +836,9 @@ function findCrowdPartner(p: CrowdPax, maxDist: number): CrowdPax | null {
 }
 
 function crowdPickCtx(p: CrowdPax): PickCtx {
-  const playerHere = runtime.playerFrame === 'platform';
+  // Sur la DALLE, pas seulement dans le repère du quai : descendu dans le hall,
+  // le joueur n'est plus quelqu'un qu'on regarde, c'est quelqu'un qui est parti.
+  const playerHere = onPlatformDeck();
   return {
     where: 'waiting',
     appearance: p.appearance,
@@ -869,10 +871,9 @@ function applyCrowdAction(p: CrowdPax, id: PaxAction, dur: number, partner: Crow
   } else {
     p.partner = -1;
   }
-  const dist =
-    runtime.playerFrame === 'platform'
-      ? Math.hypot(p.pos.x - runtime.playerPlatX, p.pos.z - runtime.playerPlatZ)
-      : 99;
+  const dist = onPlatformDeck()
+    ? Math.hypot(p.pos.x - runtime.playerPlatX, p.pos.z - runtime.playerPlatZ)
+    : 99;
   playPaxActionSfx(id, dist);
 }
 
@@ -1090,7 +1091,9 @@ export function updatePlatformCrowd(dt: number): void {
   const platZ = runtime.playerPlatZ;
   let pvx = 0;
   let pvz = 0;
-  if (prevPlatInit && runtime.playerFrame === 'platform') {
+  // La vitesse du joueur ne sert qu'à l'esquive : sous la dalle, il n'y a
+  // personne à esquiver.
+  if (prevPlatInit && onPlatformDeck()) {
     pvx = (platX - prevPlatX) / Math.max(dt, 1e-4);
     pvz = (platZ - prevPlatZ) / Math.max(dt, 1e-4);
   }

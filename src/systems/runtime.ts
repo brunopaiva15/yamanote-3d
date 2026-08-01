@@ -29,6 +29,20 @@ export type PlayerFrame = 'car' | 'platform';
 export type PlayerLevel = 'platform' | 'concourse';
 
 /**
+ * Le joueur est-il physiquement SUR LA DALLE DU QUAI ?
+ *
+ * `playerFrame === 'platform'` ne le dit pas : c'est un repère de coordonnées,
+ * et le hall de correspondance y vit aussi. Tout ce qui dépend d'une présence
+ * RÉELLE sur le quai - monter dans la rame, adresser la parole à quelqu'un qui
+ * attend, entendre la sonorisation de plein fouet, être vu de la foule - doit
+ * lire cette fonction-ci. Sans elle, on montait dans un train depuis trois
+ * mètres cinquante sous ses roues.
+ */
+export function onPlatformDeck(): boolean {
+  return runtime.playerFrame === 'platform' && runtime.playerLevel === 'platform';
+}
+
+/**
  * Nature d'un arrêt subi en pleine voie : coup de frein (急停車) ou coupure de
  * la caténaire (停電). Déclaré ici pour que runtime reste sans dépendance.
  */

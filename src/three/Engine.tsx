@@ -6,7 +6,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { V_MAX } from '../data/config';
 import { layoutFor, roomTone } from '../data/stationLayouts';
 import { useStore } from '../store';
-import { runtime } from '../systems/runtime';
+import { onPlatformDeck, runtime } from '../systems/runtime';
 import { updateCycle } from '../systems/stationCycle';
 import { updateDoorMotion } from '../systems/doorMotion';
 import { doorObstructionOpening, updateDoorObstruction } from '../systems/doorObstruction';
@@ -81,6 +81,17 @@ if (typeof document !== 'undefined') {
     if (!document.hidden) tabJustResumed = true;
   });
 }
+
+/**
+ * Ce qui reste de l'ambiance du quai quand on est descendu au niveau de
+ * correspondance.
+ *
+ * Une dalle de quarante-quatre centimètres de béton, et pour seul passage la
+ * trémie : le fond sonore de la gare y arrive, mais loin. Un cinquième, ce qui
+ * est aussi ce que laisse passer une rame portes closes - même situation, un
+ * volume fermé qui communique par un trou.
+ */
+const CONCOURSE_MUFFLE = 0.2;
 
 export function Engine(): null {
   const gl = useThree((s) => s.gl);
@@ -198,10 +209,14 @@ export function Engine(): null {
       // au départ, index désigne déjà la suivante alors que celle-ci défile
       // encore le long des vitres, et son ambiance s'éloigne avec elle.
       const stationIndex = useStore.getState().platformIndex;
+      // Le hall n'est pas le quai : il est SOUS lui, et l'ambiance du quai ne
+      // s'y entend que par la trémie. On lui applique donc l'atténuation des
+      // ouvertures, comme à l'intérieur d'une rame portes closes - c'est la même
+      // situation acoustique, un volume fermé qui communique par un trou.
+      const onDeck = onPlatformDeck();
       setStationAmbience(
         layoutFor(stationIndex).ambience,
-        runtime.platformFade *
-          (runtime.playerFrame === 'platform' ? 1 : 0.12 + 0.88 * openings),
+        runtime.platformFade * (onDeck ? 1 : CONCOURSE_MUFFLE),
         roomTone(stationIndex),
       );
       // La météo, à l'oreille : le pavillon d'un côté, le dehors de l'autre.
@@ -213,7 +228,7 @@ export function Engine(): null {
         weather.snowCover,
         weather.wet,
         openings,
-        runtime.playerFrame === 'platform',
+        onDeck,
       );
       // Le tonnerre part quand le modèle vient d'allumer un éclair : le son,
       // lui, met trois secondes par kilomètre, et c'est playThunder qui pose

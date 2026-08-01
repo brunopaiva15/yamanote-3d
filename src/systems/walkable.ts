@@ -362,6 +362,12 @@ export function snapInside(pos: THREE.Vector3): void {
  * Sert à l'invite contextuelle du HUD et au raccourci clavier.
  */
 export function nearestOpenPortal(x: number, z: number, maxDist = 3.2): PortalInfo | null {
+  // Depuis le hall, aucun seuil n'est à portée : on est trois mètres et demi
+  // sous les roues. La question ne se posait pas tant que le quai était le seul
+  // sol ; elle se pose depuis qu'on descend, et rien ne la posait - l'invite
+  // « monter à bord » s'affichait au fond d'un couloir souterrain, et le
+  // raccourci téléportait sur la dalle.
+  if (runtime.playerLevel !== 'platform') return null;
   const open = portalOpen();
   if (open < PORTAL_MIN_OPEN) return null;
   const side = walkFlip();
