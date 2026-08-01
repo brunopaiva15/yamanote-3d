@@ -50,6 +50,7 @@ import {
   PSD_GLASS_TOP,
   PSD_H,
   PSD_LEAF_JOINT_W,
+  PSD_LEAF_T,
   PSD_LEAF_TIP_INSET,
   PSD_LEAF_TRAVEL,
   PSD_LEAF_W,
@@ -463,6 +464,10 @@ export function Station() {
   // traverses, deux montants, du verre entre les quatre. C'est ce qui fait
   // qu'on voit arriver la rame derrière une baie fermée - et, une fois à bord,
   // qu'on voit le quai à travers les portes du côté qui ne s'ouvre pas.
+  //
+  // Il coulisse à mi-épaisseur du MURET (x = PSD_X), pas devant : rentré, il
+  // est enfermé dans sa poche au lieu d'en raser la face, et c'est ce qui rend
+  // cette face disponible d'un bout à l'autre du quai.
   const leafFrameGeo = useMemo(() => psdLeafFrameGeometry(), []);
   const leafGlassGeo = useMemo(() => psdLeafGlassGeometry(), []);
   useLayoutEffect(
@@ -495,34 +500,34 @@ export function Station() {
         // clignotait dès que le portique s'ouvrait.
         mm.compose(
           V.set(
-            PSD_X + 0.08,
+            PSD_X,
             PLATFORM_TOP + PSD_H / 2,
             gaps[g] + dir * (PSD_LEAF_W / 2 + open + PSD_LEAF_TIP_INSET),
           ),
           UP,
-          S.set(0.07, PSD_H - 0.06, PSD_LEAF_W),
+          S.set(PSD_LEAF_T, PSD_H - 0.06, PSD_LEAF_W),
         );
         im.setMatrixAt(k, mm);
         // La vitre est portée par le cadre : même matrice, à la géométrie près.
         if (gm) gm.setMatrixAt(k, mm);
         // Montant de rive, calé sur le BORD DE FERMETURE du vantail : il suit
-        // donc la porte. Fermé, les deux montants se touchent et tracent la
-        // ligne sombre qui partage le portique en deux ; ouvert, chacun garde
-        // son joint, comme sur les portes réelles.
+        // donc la porte.
         if (jm) {
           mm.compose(
             V.set(
-              PSD_X + 0.08,
+              PSD_X,
               PLATFORM_TOP + PSD_H / 2,
               gaps[g] + dir * (open + PSD_LEAF_JOINT_W / 2),
             ),
             UP,
-            // À peine plus épais et un rien plus haut que le vantail : le joint
-            // affleure de trois millimètres de chaque côté et de cinq en tête
-            // comme en pied. Il coiffe ainsi complètement la rive rentrée du
-            // vantail - plus une seule face confondue, donc plus de
-            // scintillement au bout du portique.
-            S.set(0.076, PSD_H - 0.05, PSD_LEAF_JOINT_W),
+            // Plus épais que le MURET, et non plus que le seul vantail : c'est
+            // la seule pièce du portique qui doit rester visible quand la porte
+            // est rentrée. Le vantail, lui, disparaît dans sa poche ; son joint
+            // de rive dépasse d'un centimètre et tient le jambage, comme le
+            // caoutchouc noir au bord d'une vraie ホームドア ouverte. Fermé, les
+            // deux joints se touchent et tracent la ligne sombre qui partage le
+            // portique en deux.
+            S.set(PSD_WALL_T + 0.02, PSD_H - 0.05, PSD_LEAF_JOINT_W),
           );
           jm.setMatrixAt(k, mm);
         }

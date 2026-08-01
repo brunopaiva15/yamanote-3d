@@ -10,7 +10,13 @@
 // session, seul leur agencement change d'une gare à l'autre.
 
 import { useMemo } from 'react';
-import { nameplateColumns, PLATFORM_TOP, PSD_X } from '../../data/stationGeometry';
+import {
+  nameplateColumns,
+  PLATFORM_TOP,
+  PSD_FACE_X,
+  PSD_POCKET_LEN,
+  PSD_X,
+} from '../../data/stationGeometry';
 import type { StationLayout } from '../../data/stationLayouts';
 import { gantryZs, type StationPlacement } from '../../systems/stationPlacement';
 import { adPool, stationAd } from './adPool';
@@ -102,22 +108,32 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
     return place.columns.flatMap((z, i) => (taken.has(z) ? [] : [{ z, i }]));
   }, [place.columns, detail]);
 
-  // --- Affiches collées sur les murets de portes palières ------------
-  // Un muret sur deux, et seulement les plus larges : les chutes de trame ne
-  // reçoivent rien.
+  // --- Affiches collées sur les poches de portes palières ------------
+  //
+  // Sur la POCHE, le caisson plein qui avale le vantail - pas au milieu du
+  // tronçon, qui est vitré : une affiche y aurait masqué la moitié de la vitre
+  // et rendu le panneau borgne. Chaque tronçon a deux poches ; celle de son
+  // bout +z est la seule libre, l'autre porte la plaque 「N号車 M番ドア」.
+  //
+  // Un tronçon sur deux, et seulement les plus larges : les chutes de trame ne
+  // reçoivent rien. Et jamais celui où l'arrêt d'urgence s'est déjà plaqué -
+  // il vise exactement la même poche.
   const psdAds = useMemo(() => {
     if (detail > 2) return [];
-    // Sans portes de quai, il n'y a pas d'allège où les coller : elles
+    // Sans portes de quai, il n'y a pas de caisson où les coller : elles
     // flotteraient au-dessus du vide, le long du bord.
     if (layout.psd === 'none') return [];
+    const stops = place.kit.emergencyStops;
     const out: { z: number; i: number }[] = [];
     segs.forEach((s, k) => {
       if (k % 2 !== 1) return;
       if (s.z1 - s.z0 < 1.7) return;
-      out.push({ z: (s.z0 + s.z1) / 2, i: out.length });
+      const z = s.z1 - PSD_POCKET_LEN / 2;
+      if (stops.some((sz) => Math.abs(sz - z) < 0.75)) return;
+      out.push({ z, i: out.length });
     });
     return out;
-  }, [segs, detail, layout.psd]);
+  }, [segs, detail, layout.psd, place.kit.emergencyStops]);
 
   // Totem d'îlot : centre du caisson à 2,02 m au-dessus du dallage. Les pieds
   // rejoignent le sol (plus deux centimètres d'encastrement, comme un montant
@@ -219,16 +235,17 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
         </group>
       ))}
 
-      {/* Portes palières : bandeau publicitaire sur l'allège, sous la partie
-          vitrée du muret - c'est la seule surface pleine disponible. */}
+      {/* Portes palières : affiche plaquée sur la poche du vantail - la seule
+          surface pleine de toute hauteur, maintenant que le reste du muret est
+          vitré. Elle tient dans la poche (1,05 m) au lieu de courir sur 1,60. */}
       {psdAds.map(({ z, i }) => (
         <mesh
           key={`pa${z}`}
-          position={[PSD_X + 0.056, PLATFORM_TOP + 0.37, z]}
+          position={[PSD_FACE_X + 0.006, PLATFORM_TOP + 0.64, z]}
           rotation={[0, Math.PI / 2, 0]}
           material={stationAd(station, i + 2)}
         >
-          <planeGeometry args={[1.6, 0.5]} />
+          <planeGeometry args={[0.94, 0.44]} />
         </mesh>
       ))}
     </group>

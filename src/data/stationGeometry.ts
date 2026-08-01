@@ -38,6 +38,22 @@ export const PSD_LEAF_W = 0.98;
 export const PSD_LEAF_TRAVEL = 0.92;
 
 /**
+ * Épaisseur d'un vantail - et le fait qu'il coulisse DANS le muret.
+ *
+ * Il glissait à `PSD_X + 0,08`, six centimètres en avant de la face du quai :
+ * une poche n'avalait donc pas son vantail, elle le laissait raser le mur, et
+ * tout ce qui se visse sur cette face - plaque de baie, affiche, arrêt
+ * d'urgence - devait fuir au milieu du tronçon pour ne pas être traversé deux
+ * fois par arrêt. Le vitrage, lui, n'avait plus que le haut du panneau, et le
+ * muret se retrouvait avec une lucarne au lieu d'une vitre.
+ *
+ * Le vantail est donc à mi-épaisseur du muret, un centimètre et demi de jeu de
+ * chaque côté : une fois rentré, il est enfermé dans sa poche, et la face du
+ * quai est libre sur toute sa longueur.
+ */
+export const PSD_LEAF_T = 0.07;
+
+/**
  * Montant de rive d'un vantail : le joint sombre de son bord de fermeture.
  * Sans lui, les deux vantaux fermés d'un même portique - même blanc, même
  * plan - se lisent comme un seul panneau de deux mètres.
@@ -80,10 +96,16 @@ export const PSD_LEAF_TIP_INSET = 0.004;
 export const PSD_POCKET_LEN = PSD_LEAF_W + PSD_LEAF_TRAVEL + PSD_LEAF_TIP_INSET - PSD_HALF_GAP + 0.05;
 
 /**
- * Hauteur d'allège : le plein sous le vitrage, celui qui porte les affiches
- * (three/station/PlatformAds les cale à 0,37 m, sur 0,50 de haut).
+ * Hauteur d'allège : la plinthe pleine sous le vitrage.
+ *
+ * Dix-huit centimètres, pas davantage. Sur une ホームドア, le verre descend
+ * presque au sol : il occupe les quatre cinquièmes du panneau, et c'est ce qui
+ * en fait une vitre plutôt qu'une fenêtre percée dans un mur. Ce qui se visse
+ * (affiche, arrêt d'urgence) va sur les POCHES, seule partie pleine de toute
+ * hauteur - et depuis que le vantail coulisse dans le muret, elles sont
+ * libres.
  */
-export const PSD_APRON_H = 0.64;
+export const PSD_APRON_H = 0.18;
 
 /** Sous-face du bandeau uguisu : le vitrage s'arrête là, il n'y a pas de jour. */
 export const PSD_GLASS_TOP = PSD_H - 0.12;
@@ -91,6 +113,19 @@ export const PSD_GLASS_TOP = PSD_H - 0.12;
 /** Épaisseur du muret, et celle - plus mince - d'un panneau vitré. */
 export const PSD_WALL_T = 0.1;
 export const PSD_GLASS_T = 0.03;
+
+/** Face du muret côté quai : c'est là que se visse tout ce qu'on lit dessus. */
+export const PSD_FACE_X = PSD_X + PSD_WALL_T / 2;
+
+/**
+ * Axe d'un coffret plaqué sur une poche, compté depuis l'axe de la baie.
+ *
+ * Deux poches par tronçon, et elles ne servent pas à la même chose : celle qui
+ * est à GAUCHE d'une baie (vers +z) porte sa plaque 「N号車 M番ドア」, celle
+ * qui est à sa droite est libre. Ce qui se plaque - arrêt d'urgence, affiche -
+ * va donc toujours chercher la poche de DROITE de la baie la plus proche.
+ */
+export const PSD_FITTING_DZ = PSD_HALF_GAP + PSD_POCKET_LEN / 2;
 
 /** Longueur du quai (m). */
 export const PLATFORM_LEN = 96;

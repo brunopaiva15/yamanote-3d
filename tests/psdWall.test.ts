@@ -21,11 +21,17 @@ const { gateLabel, psdLayout, psdWall } = await import('../src/three/station/psd
 const { CONSIST, E235, PLAYER_CAR } = await import('../src/data/e235.ts');
 const { CONFIG } = await import('../src/data/config.ts');
 const {
+  PSD_APRON_H,
+  PSD_FITTING_DZ,
+  PSD_GLASS_TOP,
+  PSD_H,
   PSD_HALF_GAP,
+  PSD_LEAF_T,
   PSD_LEAF_TIP_INSET,
   PSD_LEAF_TRAVEL,
   PSD_LEAF_W,
   PSD_POCKET_LEN,
+  PSD_WALL_T,
 } = await import('../src/data/stationGeometry.ts');
 
 const LENGTH = 224;
@@ -37,6 +43,28 @@ test('la poche avale le vantail grand ouvert', () => {
     PSD_POCKET_LEN >= tip - PSD_HALF_GAP,
     `poche ${PSD_POCKET_LEN} trop courte pour un vantail qui va jusqu'à ${tip - PSD_HALF_GAP}`,
   );
+});
+
+test('le vantail coulisse dans l\'épaisseur du muret', () => {
+  // C'est cet écart qui libère la face du quai : un vantail qui déborde du
+  // muret balaie tout ce qui s'y visse, et il a fallu, tant qu'il débordait,
+  // reculer les affiches au milieu du tronçon - donc n'y plus vitrer que le
+  // haut. Deux vitres de porte palière sur trois viennent de là.
+  assert.ok(PSD_LEAF_T + 0.02 <= PSD_WALL_T, `vantail ${PSD_LEAF_T} trop épais pour un muret de ${PSD_WALL_T}`);
+});
+
+test('le panneau fixe est une vitre, pas une lucarne', () => {
+  // Le verre occupe les trois quarts de la hauteur : en dessous, ce n'est plus
+  // une porte palière vitrée, c'est un mur percé d'une fenêtre.
+  assert.ok((PSD_GLASS_TOP - PSD_APRON_H) / PSD_H > 0.7);
+});
+
+test('ce qui se plaque sur un muret tombe sur une poche', () => {
+  // Un coffret d'arrêt d'urgence fait 31 cm de large : il doit tenir ENTIER
+  // dans la poche, sinon il déborde sur la vitre voisine.
+  const half = 0.31 / 2;
+  assert.ok(PSD_FITTING_DZ - half >= PSD_HALF_GAP);
+  assert.ok(PSD_FITTING_DZ + half <= PSD_HALF_GAP + PSD_POCKET_LEN);
 });
 
 test('chaque tronçon courant est vitré entre ses deux poches', () => {

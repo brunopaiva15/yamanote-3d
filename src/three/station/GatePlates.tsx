@@ -17,12 +17,7 @@
 
 import { useLayoutEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import {
-  PLATFORM_TOP,
-  PSD_HALF_GAP,
-  PSD_WALL_T,
-  PSD_X,
-} from '../../data/stationGeometry';
+import { PLATFORM_TOP, PSD_FACE_X, PSD_HALF_GAP } from '../../data/stationGeometry';
 import { gatePlateAtlas, gatePlateUv, gateWarningTexture } from '../../textures/psdPlate';
 import { gateLabel, type PsdSpan } from './psdLayout';
 
@@ -41,7 +36,7 @@ const PLATE_TOP = 1.05;
 const PLATE_NEAR = 0.18;
 
 /** Quatre millimètres devant la face du caisson : un adhésif, pas une gravure. */
-const PLATE_X = PSD_X + PSD_WALL_T / 2 + 0.004;
+const PLATE_X = PSD_FACE_X + 0.004;
 
 interface Quad {
   z0: number;
