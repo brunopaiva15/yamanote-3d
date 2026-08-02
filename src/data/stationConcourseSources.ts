@@ -17,20 +17,29 @@
 // tout le reste. Le seul canal qui réponde est la recherche indexée, qui rend
 // des titres et des adresses, jamais le contenu d'une page.
 //
-// Conséquence, et elle n'est pas cosmétique : AUCUN plan de gare n'a été lu.
-// Les trente références JR East ci-dessous sont `indexed` - leur existence,
-// leur adresse et leur titre sont confirmés par l'index, leur CONTENU ne l'est
-// pas. Aucun profil ne peut donc légitimement se déclarer `verified` tant que
-// ces plans n'auront pas été ouverts (`validateProfile` le refuse), et c'est
-// la raison pour laquelle `SourceRetrieval` existe : rendre l'écart visible
-// plutôt que confortable.
+// Les références JR East ci-dessous sont donc `indexed` par défaut : leur
+// existence, leur adresse et leur titre sont confirmés, leur CONTENU ne l'est
+// pas. Un profil ne peut se déclarer `verified` que sur une source de rang 1-3
+// réellement LUE, et `validateProfile` le refuse - c'est toute la raison d'être
+// de `SourceRetrieval` : rendre l'écart visible plutôt que confortable.
 //
-// Ce que cela change pour la suite : les profils de la phase 5 s'appuieront
-// sur ce que le dépôt sait déjà (`data/stations`, `data/stationLayouts`,
-// `data/platforms`, relevés antérieurs) et sur ce que la recherche indexée
-// confirme, avec la confiance qui correspond - `approximate` par défaut,
-// `mostlyVerified` là où plusieurs sources indépendantes concordent. Les
-// `openQuestions` de chaque profil diront ce qu'il reste à ouvrir.
+// LA SORTIE DE SECOURS, ET ELLE MARCHE : un plan FOURNI À LA MAIN. Le
+// propriétaire du dépôt dépose le document dans la conversation, où il se lit
+// comme n'importe quel fichier. La référence passe alors en `read` et la gare
+// cesse d'être une approximation. C'est ainsi que Shinjuku a été relevée -
+// trois niveaux, neuf groupes de portillons, sur un plan daté d'août 2026,
+// c'est-à-dire la date de référence exacte du chantier (voir `EXTRA_SOURCES`).
+//
+// Les documents eux-mêmes ne sont PAS versionnés : ils portent
+// « ©JR East Consultants Company ». On en cite l'adresse, la date et ce qu'on y
+// a lu ; on ne redistribue pas le fichier.
+//
+// Pour les gares encore fermées, les profils s'appuieront sur ce que le dépôt
+// sait déjà (`data/stations`, `data/stationLayouts`, `data/platforms`, relevés
+// antérieurs) et sur ce que la recherche indexée confirme, avec la confiance
+// qui correspond - `approximate` par défaut, `mostlyVerified` là où plusieurs
+// sources indépendantes concordent. Les `openQuestions` de chaque profil
+// diront ce qu'il reste à ouvrir.
 // ─────────────────────────────────────────────────────────────────────────
 
 import type { SourceReference } from './stationConcourseTypes.ts';
@@ -166,6 +175,39 @@ export const OPERATOR_ENTRY: Readonly<Record<string, SourceReference>> = {
   },
 };
 
+// --- Les plans RÉELLEMENT LUS --------------------------------------------
+//
+// Une gare quitte l'approximation le jour où l'on ouvre son plan. Ces
+// références-là portent `retrieval: 'read'`, et elles seules autorisent une
+// confiance `verified`.
+//
+// Le document n'est pas versionné - il est sous copyright - mais tout ce qu'on
+// en a tiré est écrit noir sur blanc dans `docs/STATION_CONCOURSE_EVIDENCE.md`,
+// gare par gare et rubrique par rubrique. C'est la trace qui compte : elle se
+// relit sans le fichier, et elle se conteste ligne à ligne.
+
+const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
+  // JY17 Shinjuku. Le jeu de plans « Guide Maps for Major Stations » couvre
+  // les trois niveaux qui font la gare : les quais (seize voies), le couloir
+  // central du B1F et l'épine sud du 2F. Il porte sa date en clair -
+  // « As of August, 2026 » - qui est exactement la date de référence du
+  // chantier, travaux compris.
+  16: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Shinjuku Station (quais, B1F, 2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e866.html',
+      documentDate: '2026-08',
+      consultedAt: '2026-08-02',
+      note: 'PDF fourni à la main (réseau bloqué) ; porte « As of August, 2026 » '
+        + 'et l’avertissement « There may be some changes due to construction work ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+};
+
 /**
  * Ce que l'index ANNONCE des niveaux d'une gare, sans que le plan soit lu.
  *
@@ -209,17 +251,19 @@ export interface StationSources {
 /**
  * Les trente jeux de sources.
  *
- * Chaque gare part avec sa page de plan JR East, et rien d'autre : les
- * opérateurs en correspondance et les galeries commerciales viendront gare par
- * gare en phase 4, quand on saura lesquels comptent réellement pour le
- * périmètre jouable. Une gare n'a pas besoin de la page du Keikyū tant qu'on
- * n'a pas décidé si son portail de correspondance est bâti ou seulement fléché.
+ * Chaque gare part avec sa page de plan JR East, et s'enrichit de ce qui a
+ * réellement été ouvert. Les opérateurs en correspondance et les galeries
+ * commerciales viendront gare par gare, quand on saura lesquels comptent pour
+ * le périmètre jouable : une gare n'a pas besoin de la page du Keikyū tant
+ * qu'on n'a pas décidé si son portail de correspondance est bâti ou fléché.
  */
 export const CONCOURSE_SOURCES: readonly StationSources[] = Array.from(
   { length: 30 },
   (_, i): StationSources => ({
     stationIndex: i,
-    sources: [jrEastPlan(i)],
+    // Les plans lus passent DEVANT la page indexée : c'est l'ordre de la
+    // preuve, pas celui de la découverte.
+    sources: [...(EXTRA_SOURCES[i] ?? []), jrEastPlan(i)],
     floorsHint: INDEXED_FLOORS_HINT[i],
   }),
 );

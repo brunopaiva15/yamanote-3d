@@ -33,18 +33,38 @@ test('les trente gares ont leur jeu de sources, dans l’ordre', () => {
   assert.equal(sourcesFor(-1), CONCOURSE_SOURCES[29]);
 });
 
-test('chaque gare part de son plan officiel JR East', () => {
+test('chaque gare porte son plan officiel JR East', () => {
   for (let i = 0; i < STATION_COUNT; i++) {
     const name = `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
-    const first = sourcesFor(i).sources[0];
-    assert.ok(first, `${name} : aucune source`);
-    assert.equal(first.tier, 1, `${name} : la première source n’est pas JR East`);
-    assert.equal(first.publisher, 'JR East', name);
+    const { sources } = sourcesFor(i);
+    assert.ok(sources.length > 0, `${name} : aucune source`);
+    // La première source est toujours de rang 1 : une gare ne s'appuie pas
+    // d'abord sur une photo.
+    assert.equal(sources[0].tier, 1, `${name} : la première source n’est pas officielle`);
+    // Et la page de plan de CETTE gare est là, quelque part.
+    const page = sources.find((s) => s.url === jrEastPlanUrl(i));
+    assert.ok(page, `${name} : page de plan absente`);
+    assert.equal(page.publisher, 'JR East', name);
     // Le titre porte le nom japonais de la gare : c'est cette concordance
     // titre ↔ adresse qui a servi de confirmation, faute de pouvoir lire la page.
-    assert.ok(first.title.includes(STATIONS[i].kanji), `${name} : titre sans le nom de la gare`);
-    assert.equal(first.url, jrEastPlanUrl(i), name);
-    assert.equal(first.consultedAt, REFERENCE_DATE, name);
+    assert.ok(page.title.includes(STATIONS[i].kanji), `${name} : titre sans le nom de la gare`);
+    assert.equal(page.consultedAt, REFERENCE_DATE, name);
+  }
+});
+
+test('un plan LU passe devant la page seulement indexée', () => {
+  // L'ordre des sources est celui de la preuve, pas celui de la découverte :
+  // ce qu'on a ouvert prime sur ce qu'on a seulement trouvé.
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const { sources } = sourcesFor(i);
+    const lastRead = sources.map((s) => s.retrieval).lastIndexOf('read');
+    const firstIndexed = sources.map((s) => s.retrieval).indexOf('indexed');
+    if (lastRead >= 0 && firstIndexed >= 0) {
+      assert.ok(
+        lastRead < firstIndexed,
+        `${STATIONS[i].romaji} : une source lue est rangée après une source non lue`,
+      );
+    }
   }
 });
 
@@ -76,18 +96,32 @@ test('le carnet de relevé dit la vérité sur ce qui a été lu', () => {
   // carnet fait tomber la suite, et c'est exactement ce qu'on veut - une
   // documentation qui ment sur sa méthode est pire que pas de documentation.
   const doc = readFileSync(new URL('../docs/STATION_CONCOURSE_EVIDENCE.md', import.meta.url), 'utf8');
-  const claimsNothingRead = doc.includes('**Aucun plan officiel n’a été ouvert.**')
-    || doc.includes("**Aucun plan officiel n'a été ouvert.**");
   const read = readSourceCount();
-  if (read === 0) {
+  assert.ok(
+    doc.includes(`**Plans officiels ouverts et lus : ${read} / 30.**`),
+    `le registre compte ${read} plan(s) lu(s) ; le carnet de relevé annonce autre chose `
+      + '— relancer `npm run docs:concourse`',
+  );
+});
+
+test('une gare dont le plan est lu porte un relevé, et pas « à relever »', () => {
+  // L'inverse serait le pire des deux mondes : une source ouverte, et une fiche
+  // qui continue de dire qu'on ne sait rien.
+  const doc = readFileSync(new URL('../docs/STATION_CONCOURSE_EVIDENCE.md', import.meta.url), 'utf8');
+  const sections = doc.split(/^## (?=JY)/m).slice(1);
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const { sources } = sourcesFor(i);
+    if (!sources.some((s) => s.retrieval === 'read')) continue;
+    const s = STATIONS[i];
+    const section = sections.find((sec) => sec.startsWith(`${s.jy} ${s.romaji}`));
+    assert.ok(section, `${s.jy} : fiche introuvable`);
     assert.ok(
-      claimsNothingRead,
-      'aucune source n’est lue, mais le carnet de relevé ne le dit pas',
+      !section.includes('à relever'),
+      `${s.jy} ${s.romaji} : plan lu, mais la fiche dit encore « à relever »`,
     );
-  } else {
     assert.ok(
-      !claimsNothingRead,
-      `${read} source(s) désormais lue(s) : l’avertissement du carnet de relevé est à retirer`,
+      !section.includes('**à établir**'),
+      `${s.jy} ${s.romaji} : plan lu, mais la confiance reste « à établir »`,
     );
   }
 });

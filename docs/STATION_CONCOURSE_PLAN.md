@@ -332,6 +332,31 @@ C'est une limite d'environnement, pas une limite de méthode : les adresses sont
 en place, et l'ouverture des trente plans est un travail mécanique dès que le
 réseau le permet.
 
+### 4.2 La voie qui marche : le plan fourni à la main
+
+Le propriétaire du dépôt dépose le document dans la conversation ; il s'y lit
+comme n'importe quel fichier. La référence passe en `read`, et la gare quitte
+l'approximation.
+
+**Shinjuku est passée par là**, et le résultat justifie le détour : le jeu
+« Guide Maps for Major Stations » couvre les trois niveaux (quais, B1F, 2F) et
+porte sa date en clair — *As of August, 2026*, la date de référence du chantier
+au mois près, avertissement de chantier compris. Il a livré les neuf groupes de
+portillons avec leur niveau, l'ordre dans lequel ils se succèdent le long du
+quai, l'affectation des voies 14 et 15, les trois branches de correspondance, la
+position d'EATo LUMINE **dans** la zone payante, et la zone « Under
+Construction ». Il a de plus **confirmé** un relevé antérieur du dépôt
+(`sharedIsland` / `Chūō–Sōbu`), ce qu'aucune recherche indexée n'aurait fait.
+
+Les documents ne sont **pas versionnés** : ils portent « ©JR East Consultants
+Company ». Ce qui est versionné, c'est ce qu'on y a lu — `STATION_CONCOURSE_EVIDENCE.md`,
+généré par `npm run docs:concourse`, rubrique par rubrique, contestable ligne à
+ligne, et lisible sans le plan.
+
+Les quatre autres gares demandées — Shibuya, Ueno, Harajuku, Takanawa Gateway —
+suivront le même chemin si les plans arrivent. Les vingt-cinq restantes ne
+bloquent rien : elles avancent en `approximate`.
+
 ### Ordre et raison
 
 - **1→5 ne touchent aucun consommateur.** Le jeu tourne à l'identique pendant
