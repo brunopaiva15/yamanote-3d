@@ -225,6 +225,55 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],
+  // JY13 Ikebukuro. Deux feuilles : 1F-2F (les quais) et B1 (le hall). Datée
+  // de février 2026.
+  12: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Ikebukuro Station (1F-2F, B1)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e108.html',
+      documentDate: '2026-02',
+      consultedAt: '2026-08-02',
+      note: 'PDF fournis à la main (réseau bloqué). Porte « As of February, 2026 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY19 Harajuku. Une seule feuille, onglet 1F-2F, mais elle couvre aussi le
+  // B1F du côté Takeshita. LA PLUS ANCIENNE DU LOT : septembre 2025.
+  18: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Harajuku Station (1F-2F, + B1F Takeshita)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e1256.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'PDF fourni à la main (réseau bloqué). Porte « As of September, 2025 » — '
+        + 'ONZE MOIS avant la date de référence, le plus grand écart du lot. '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY26 Takanawa Gateway. Onglet unique 1F-3F. Septembre 2025 : antérieur à
+  // une bonne partie de l'ouverture de Takanawa Gateway City, ce qui compte
+  // précisément pour cette gare-là.
+  25: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Takanawa Gateway Station (1F-3F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e1750.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'PDF fourni à la main (réseau bloqué). Porte « As of September, 2025 ». '
+        + 'Sur une gare dont le quartier s’ouvre par tranches, l’écart de onze mois '
+        + 'porte surtout sur les commerces et les liaisons de dalle. '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
   // JY20 Shibuya. ATTENTION À LA DATE : ce jeu-ci porte « As of June, 2026 »,
   // deux mois AVANT la date de référence du chantier. Sur une gare en
   // reconstruction permanente, deux mois ne sont pas rien - c'est la seule

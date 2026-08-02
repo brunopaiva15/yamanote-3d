@@ -140,6 +140,208 @@ const FINDINGS = {
       + 'simultanément lisibles sont le sujet ; la surface au sol ne l’est pas.',
   },
 
+  // ─── JY13 Ikebukuro ───────────────────────────────────────────────────
+  // Deux feuilles, 1F-2F et B1. Février 2026. C'est la gare qui donne les
+  // NOMS DE PASSAGES que le cahier des charges espérait sans les tenir.
+  12: {
+    confidence: '`mostlyVerified` — sur un plan de **février** 2026',
+    levels: [
+      '**1F-2F** — les huit voies, sur quatre îlots.',
+      '**B1** — le hall, et c’est là que la gare se joue : deux blocs payants '
+        + 'SÉPARÉS, un à l’ouest et un à l’est, chacun avec ses propres volées '
+        + 'vers les quatre îlots.',
+    ],
+    gates: [
+      '**JR : South Gate · Central Gate 1 · Central Gate 2 · North Gate**, tous '
+        + 'au B1. Central Gate 1 apparaît DEUX fois, aux deux bouts du bloc ouest.',
+      '**Autres exploitants, au même niveau et jointifs** : *Tōbu Tōjō Line Gate* '
+        + '(trois lignes de contrôle) et *Tokyo Metro Marunouchi Line Gate* (deux). '
+        + 'Chacun a ses propres *Tickets*, distincts de ceux de JR.',
+      'Ascenseurs **A à D** dans le bloc ouest.',
+    ],
+    order: 'Sur le plan de quais, trois brackets seulement : '
+      + '**South Gate & Central Gate 1** (la moitié sud), **Central Gate 2**, '
+      + '**North Gate**. Les quatre groupes JR desservent donc les mêmes quais '
+      + 'par des points différents — ce n’est pas une gare à deux bouts, c’est '
+      + 'une gare à quatre entrées le long d’un même faisceau.',
+    tracks: 'Quatre voies Yamanote sur **deux îlots 方向別** : **7 et 8** ensemble '
+      + '*for Nippori, Ueno & Tōkyō* (内回り), **5 et 6** ensemble *for Shinjuku, '
+      + 'Shibuya & Shinagawa* (外回り). Chaque îlot porte donc les DEUX voies d’un '
+      + 'même sens, ce qui **confirme** `config: terminusIsland`. Au-delà : Saikyō '
+      + '(1 et 4) et Shōnan-Shinjuku (2 et 3).',
+    transfers: [
+      '**Tōbu Tōjō** — trois lignes de contrôle propres au nord-ouest du B1, '
+        + 'contre le *Tobu Department Store*.',
+      '**Tokyo Metro Marunouchi** — deux lignes de contrôle, au centre et au sud '
+        + 'du B1. Le plan ne distingue pas les autres lignes Metro (Yūrakuchō, '
+        + 'Fukutoshin) : elles ne sont pas cartographiées ici.',
+      '**Seibu Ikebukuro** — *absent du plan*, alors que ses grands magasins y '
+        + 'sont. La correspondance existe, sa géométrie n’est pas dans ce document.',
+    ],
+    commerce: [
+      '**LES PASSAGES SONT NOMMÉS, et c’est le fait le plus exploitable du '
+        + 'relevé** : *Orange Road*, *Apple Road*, *Azeria Road*, *Cherry Road* '
+        + 'pour les axes est-ouest, *Southern Passage*, *Central Passage*, '
+        + '*Northern Passage* pour les traversées. Le cahier des charges espérait '
+        + 'pouvoir s’appuyer sur ces noms « lorsque cela est vérifié » : ce l’est.',
+      '**Statue of Ikefukuro (Owl)** — いけふくろう, le point de rendez-vous, '
+        + 'nommément sur le plan, à l’est près de PARCO.',
+      '**Tobu Department Store** (nord-ouest), **Seibu Department Store** (trois '
+        + 'blocs au sud et à l’est), **PARCO** (deux blocs à l’est, plus un renvoi '
+        + '« for B2F PARCO »). Tous en **gris** : emprise bâtie, hors concourse — '
+        + 'ils bordent le hall, ils n’en font pas partie.',
+      'Aucun aplat « large store inside the ticket gates » : **rien derrière les '
+        + 'portillons**. Les commerces d’Ikebukuro sont tous en zone libre ou hors '
+        + 'gare, et un **KIOSK** ou un **SHOP** ponctue le hall.',
+    ],
+    works: 'Aucune zone de chantier signalée sur les deux feuilles.',
+    uncertain: [
+      'Le plan est de **février 2026**, six mois avant la date de référence.',
+      'Ni le **Seibu Ikebukuro**, ni les lignes **Yūrakuchō / Fukutoshin** ne sont '
+        + 'cartographiés — le document est JR + Tōbu + Marunouchi.',
+      'Les **noms japonais** des groupes et des passages ne sont pas sur cette '
+        + 'édition anglaise : 中央改札1・2 / 南改札 / 北改札 et オレンジロード, '
+        + 'アップルロード… restent à confirmer.',
+      'Le plan ne montre pas les niveaux inférieurs (B2, B3) ni le *Metropolitan* '
+        + 'côté ouest.',
+    ],
+    tradeoff: 'Tranche jouable dans le **bloc payant ouest du B1**, autour du '
+      + '*Central Gate 1*, avec ses volées vers les quatre îlots. Représentés sans '
+      + 'être visitables : le *Central Gate 2* et le *North Gate* au bout du hall '
+      + '(perspective longue), le *South Gate* et la *Southern Passage* en '
+      + 'virage, les lignes de contrôle **Tōbu** et **Marunouchi** comme portails '
+      + 'de correspondance jointifs — c’est la signature d’Ikebukuro, trois '
+      + 'exploitants dont les 改札 se touchent —, et les grands magasins en '
+      + 'façades grises qui bordent le hall sans s’ouvrir. **Les noms de passages '
+      + 'vont à la signalétique** : c’est par eux qu’on s’oriente ici, pas par les '
+      + 'points cardinaux.',
+  },
+
+  // ─── JY19 Harajuku ────────────────────────────────────────────────────
+  // Le cahier des charges demandait de CORRIGER les données du dépôt à partir
+  // des plans officiels. C'est fait, et il y avait de quoi.
+  18: {
+    confidence: '`mostlyVerified` — sur un plan de **septembre 2025**, le plus ancien du lot',
+    levels: [
+      '**2F** — le bâtiment de 2020 : le *Omote-sandō Gate*, sa zone libre, et une '
+        + 'zone payante en **passerelle étroite** qui file vers l’est au-dessus '
+        + 'des voies.',
+      '**1F** — les deux quais.',
+      '**B1F** — un **souterrain minuscule** en T, côté Takeshita : trois volées '
+        + 'depuis les quais, un couloir, une petite ligne de portillons, et la '
+        + 'sortie. Rien d’autre.',
+    ],
+    gates: [
+      '**Omote-sandō Gate** (表参道改札) — au **2F**, dans le bâtiment moderne, '
+        + 'avec *Tickets*, *Fare Adjustment*, NewDays et consignes en zone libre.',
+      '**La ligne de portillons du Takeshita Exit** — au **B1F**, six baies '
+        + 'environ, avec ses propres *Tickets* et *Fare Adjustment*. Le plan ne lui '
+        + 'donne pas de nom propre : il nomme la SORTIE, pas le contrôle.',
+      '**Deux ensembles sans aucun lien hors quai.** On ne passe pas de l’un à '
+        + 'l’autre en zone libre : il faut reprendre le quai. C’est exactement le '
+        + 'contraste que le cahier des charges demandait de rendre.',
+    ],
+    order: 'Le long des quais, deux brackets seulement et à deux bouts opposés : '
+      + '**Omote-sandō Gate** au **sud**, **Takeshita Exit** au **nord**.',
+    tracks: 'Deux **quais latéraux séparés**, un par sens, chacun avec une seule '
+      + 'voie : *for Shinjuku, Ikebukuro & Ueno* (内回り) et *for Shibuya, '
+      + 'Shinagawa, Hamamatsuchō & Tōkyō* (外回り). Ce qui **confirme** le relevé '
+      + 'du dépôt : Harajuku est la seule gare de la boucle en `config: side`. Un '
+      + 'seul ascenseur, **A**, côté extérieur.',
+    transfers: [
+      '**Tokyo Metro** — fléché depuis la zone libre du 2F, au sud-ouest, sous le '
+        + 'Omote-sandō Gate. Le plan ne nomme pas la ligne (Chiyoda / Fukutoshin '
+        + 'à Meiji-jingūmae) et n’en montre pas le cheminement.',
+    ],
+    commerce: [
+      '**NewDays** en zone libre du 2F. Consignes de part et d’autre.',
+      '**Aucun aplat de grand commerce**, ni dedans ni dehors. Harajuku est une '
+        + 'gare de passage : les boutiques du quartier ne sont pas dans la gare, '
+        + 'et le plan le confirme.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      '⚠️ **CORRECTION AU DÉPÔT.** `data/stationInterior` donne à Harajuku '
+        + '`gateJp: 西口改札 / gate: West`, et `data/lines` lui attribue les sorties '
+        + 'génériques 中央口 / 北口. Le plan officiel dit autre chose : le contrôle '
+        + 'du bâtiment moderne s’appelle **Omote-sandō Gate**, et les sorties '
+        + 'relevées sont **West Exit**, **East Exit** (2F, au-delà de ce contrôle) '
+        + 'et **Takeshita Exit** (B1F). « West » est donc le nom d’une SORTIE, pas '
+        + 'du portillon. La correction est documentée ici ; elle sera appliquée '
+        + 'aux données en phase 3.',
+      'Le plan date de **septembre 2025** : onze mois avant la date de référence, '
+        + 'le plus grand écart de tout le relevé.',
+      'Les **noms japonais** ne sont pas sur cette édition : 表参道改札, 竹下口, '
+        + '西口, 東口 restent à confirmer.',
+      'La ligne Metro en correspondance n’est pas nommée sur le document.',
+    ],
+    tradeoff: 'Les **deux ensembles se construisent tous les deux**, et c’est '
+      + 'l’exception : ils sont si petits que l’un ne suffirait pas à faire une '
+      + 'gare. Tranche principale au **B1F Takeshita** — un souterrain en T, une '
+      + 'petite ligne, une sortie — parce que c’est celui qu’on trouve en '
+      + 'descendant au milieu du quai ; et le **2F Omote-sandō** en second '
+      + 'ensemble, atteint par l’autre bout du quai, avec sa passerelle claire et '
+      + 'son volume de bâtiment neuf. Le **contraste de matière** entre le béton '
+      + 'bas du souterrain et le bois clair de 2020 est le sujet ; la surface ne '
+      + 'l’est pas. Représentés seulement : le West Exit, le East Exit et le '
+      + 'renvoi Tokyo Metro, en fond de zone libre du 2F.',
+  },
+
+  // ─── JY26 Takanawa Gateway ────────────────────────────────────────────
+  25: {
+    confidence: '`mostlyVerified` — sur un plan de **septembre 2025**',
+    levels: [
+      '**2F** — le hall unique, transversal, au-dessus des voies : *South Gate* et '
+        + '*North Gate* aux deux bouts d’une même zone libre.',
+      '**1F** — les deux îlots.',
+      '**3F** — un **deck**, fléché « for 3F Deck » depuis la zone libre. C’est '
+        + 'la liaison vers Takanawa Gateway City.',
+    ],
+    gates: [
+      '**South Gate** et **North Gate** — deux groupes, tous deux au **2F**, aux '
+        + 'deux extrémités du même hall transversal, chacun avec ses *Tickets* et '
+        + 'son *Fare Adjustment*.',
+      'Ascenseurs **A à D**, un par volée de quai.',
+    ],
+    order: 'Le hall est **unique et transversal** : les deux groupes en occupent '
+      + 'les deux bouts, et les volées vers les voies 1&2 et 3&4 partent d’entre '
+      + 'les deux. C’est la topologie la plus simple des cinq gares lues, et elle '
+      + 'contraste avec tout le reste — une seule pièce, deux portes.',
+    tracks: 'Voie **1** = Yamanote *for Tōkyō, Ueno & Sugamo* (内回り) ; voie **2** '
+      + '= Yamanote *for Shibuya, Shinjuku & Ikebukuro* (外回り), **sur le même '
+      + 'îlot**. Voies **3** et **4** = Keihin-Tōhoku, sur un second îlot. Ce qui '
+      + '**confirme** `config: island` : chaque ligne a son îlot, les deux sens se '
+      + 'faisant face.',
+    transfers: [
+      '**Toei Asakusa & Keikyū** — fléché « for Toei Asakusa Line & Keikyū Line » '
+        + 'depuis la zone libre du 2F, côté nord. C’est la liaison piétonne vers '
+        + 'Sengakuji ; le plan en donne la direction, pas le cheminement.',
+    ],
+    commerce: [
+      'Le plan ne place **aucune enseigne nommée** ni aucun aplat de grand '
+        + 'commerce. À la date du document, la gare est un volume, pas une galerie.',
+    ],
+    works: 'Aucune zone de chantier signalée sur le document.',
+    uncertain: [
+      '⚠️ **La date est le vrai problème ici.** Septembre 2025, alors que '
+        + 'Takanawa Gateway City s’ouvre par tranches : les commerces de la gare '
+        + 'et les liaisons de dalle d’**août 2026** ne peuvent pas être lus sur ce '
+        + 'plan. Le cahier des charges demande « les commerces majeurs réellement '
+        + 'présents » — ce document ne permet pas de les établir.',
+      'Les **noms japonais** des deux groupes ne sont pas sur cette édition.',
+      'Le **3F Deck** est fléché mais pas cartographié.',
+    ],
+    tradeoff: 'Tranche jouable : **le hall transversal du 2F en entier**, ce qui '
+      + 'est possible parce qu’il est petit — c’est la seule des cinq gares lues '
+      + 'où le périmètre jouable peut coïncider avec la gare. Les deux groupes '
+      + 'sont franchissables. Représentés seulement : le **3F Deck** (volée qui '
+      + 'monte et disparaît), la direction **Toei / Keikyū** (couloir court et '
+      + 'panneau), et Takanawa Gateway City en fond extérieur. Le sujet reste ce '
+      + 'que le dépôt a déjà : **le volume, la lumière naturelle, le bois, le '
+      + 'verre et les vues sur les voies**. Les commerces, eux, sont laissés en '
+      + 'attente d’un plan plus récent.',
+  },
+
   // ─── JY17 Shinjuku ────────────────────────────────────────────────────
   // Relevé sur le jeu « Guide Maps for Major Stations », trois niveaux, daté
   // « As of August, 2026 » - la date de référence du chantier, au mois près.
