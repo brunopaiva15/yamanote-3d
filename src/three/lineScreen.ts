@@ -958,12 +958,12 @@ function loopPointAt(t: number): { x: number; y: number; angle: number } {
  * zigzag à trois segments il se lisait comme un éclair - un symbole qui, sur
  * un plan de ligne, veut dire tout autre chose.
  *
- * Les DEUX abouts ne pointent pas du même côté : ils sont symétriques par
- * rotation d'un demi-tour autour du centre de l'anneau, comme tout le reste du
- * plan. Sur le relevé qui sert de référence à ce plan, l'about gauche pointe
- * en bas et le droit en haut - les mettre tous les deux en haut cassait cette
- * symétrie, la seule chose qui fasse lire les deux marques comme la MÊME
- * coupure vue par ses deux bouts.
+ * Sa pointe SUIT LE SENS DE MARCHE. C'est ce qui explique que les captures se
+ * contredisent en apparence : en 内回り la rame descend l'about gauche et
+ * remonte le droit (gauche ∨, droite ∧), en 外回り c'est l'inverse - et les
+ * deux abouts restent symétriques par rotation d'un demi-tour, parce qu'aux
+ * deux bouts de l'anneau la rame va dans des sens opposés. Ce n'était donc ni
+ * une paire figée ni deux générations d'afficheur : une seule règle.
  */
 function drawLoopBreak(g: CanvasRenderingContext2D, x: number, y: number, up: boolean): void {
   const f = up ? 1 : -1;
@@ -999,6 +999,16 @@ export function drawLoopMap(
     slot.top ? LOOP_Y_TOP : LOOP_Y_BOT,
   ];
 
+  // Sens de marche le long de l'anneau, calculé une fois : il oriente le jeton
+  // « ici », le chevron, ET les deux marques de rupture des abouts.
+  const tNext = loopArc(loopSlot(index));
+  const tAfter = loopArc(loopSlot(stationAtHop(index, 1, dir)));
+  let delta = tAfter - tNext;
+  if (delta > LOOP_PERIM / 2) delta -= LOOP_PERIM;
+  if (delta < -LOOP_PERIM / 2) delta += LOOP_PERIM;
+  const way = delta >= 0 ? 1 : -1;
+  const rowAngle = (top: boolean) => (top ? 0 : Math.PI) + (way > 0 ? 0 : Math.PI);
+
   // Anneau vert : rectangle arrondi dont les longs côtés passent par les deux
   // rangées de stations. Les abouts débordent de 58 au-delà des colonnes
   // extrêmes, et portent chacun leur marque de rupture.
@@ -1015,24 +1025,16 @@ export function drawLoopMap(
   );
   g.stroke();
   const midY = LOOP_Y_TOP + LOOP_RING_R_CAP;
-  drawLoopBreak(g, LOOP_RING_L, midY, false);
-  drawLoopBreak(g, LOOP_RING_R, midY, true);
+  // Dans le sens des abscisses curvilignes croissantes, l'about DROIT descend
+  // et le GAUCHE remonte : chaque marque pointe donc du côté où la rame passe.
+  drawLoopBreak(g, LOOP_RING_L, midY, way > 0);
+  drawLoopBreak(g, LOOP_RING_R, midY, way < 0);
 
   // Rang de chaque station dans le sens de marche (0 = prochaine).
   const rank = new Array<number>(30);
   for (let k = 0; k < 30; k++) rank[stationAtHop(index, k, dir)] = k;
   const atStation = phase === 'dwell';
   const MINUTES_SHOWN = 14; // au-delà (~30 min), simple pastille grise
-
-  // Sens de marche le long de l'anneau, calculé une fois : il oriente le jeton
-  // « ici » comme le chevron, et tous deux restent d'aplomb sur leur rangée.
-  const tNext = loopArc(loopSlot(index));
-  const tAfter = loopArc(loopSlot(stationAtHop(index, 1, dir)));
-  let delta = tAfter - tNext;
-  if (delta > LOOP_PERIM / 2) delta -= LOOP_PERIM;
-  if (delta < -LOOP_PERIM / 2) delta += LOOP_PERIM;
-  const way = delta >= 0 ? 1 : -1;
-  const rowAngle = (top: boolean) => (top ? 0 : Math.PI) + (way > 0 ? 0 : Math.PI);
 
   for (let stIdx = 0; stIdx < 30; stIdx++) {
     const slot = loopSlot(stIdx);
