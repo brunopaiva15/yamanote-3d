@@ -953,20 +953,28 @@ function loopPointAt(t: number): { x: number; y: number; angle: number } {
  * Marque de rupture sur un about de la boucle - le trait qui dit « l'anneau
  * continue au-delà de l'écran ».
  *
- * C'est un CHEVRON à deux segments, pointe en haut, qui traverse le bras de
- * l'anneau de part en part : 30 de large, 6,6 de flèche, 3,2 d'épaisseur, à
- * mi-hauteur. En zigzag à trois segments il se lisait comme un éclair - un
- * symbole qui, sur un plan de ligne, veut dire tout autre chose.
+ * C'est un CHEVRON à deux segments, qui traverse le bras de l'anneau de part
+ * en part : 30 de large, 6,6 de flèche, 3,2 d'épaisseur, à mi-hauteur. En
+ * zigzag à trois segments il se lisait comme un éclair - un symbole qui, sur
+ * un plan de ligne, veut dire tout autre chose.
+ *
+ * Les DEUX abouts ne pointent pas du même côté : ils sont symétriques par
+ * rotation d'un demi-tour autour du centre de l'anneau, comme tout le reste du
+ * plan. Sur le relevé qui sert de référence à ce plan, l'about gauche pointe
+ * en bas et le droit en haut - les mettre tous les deux en haut cassait cette
+ * symétrie, la seule chose qui fasse lire les deux marques comme la MÊME
+ * coupure vue par ses deux bouts.
  */
-function drawLoopBreak(g: CanvasRenderingContext2D, x: number, y: number): void {
+function drawLoopBreak(g: CanvasRenderingContext2D, x: number, y: number, up: boolean): void {
+  const f = up ? 1 : -1;
   g.strokeStyle = SCREEN_BG;
   g.lineWidth = 3.2;
   g.lineCap = 'butt';
   g.lineJoin = 'miter';
   g.beginPath();
-  g.moveTo(x - 15, y + 3.3);
-  g.lineTo(x, y - 3.3);
-  g.lineTo(x + 15, y + 3.3);
+  g.moveTo(x - 15, y + f * 3.3);
+  g.lineTo(x, y - f * 3.3);
+  g.lineTo(x + 15, y + f * 3.3);
   g.stroke();
 }
 
@@ -1007,8 +1015,8 @@ export function drawLoopMap(
   );
   g.stroke();
   const midY = LOOP_Y_TOP + LOOP_RING_R_CAP;
-  drawLoopBreak(g, LOOP_RING_L, midY);
-  drawLoopBreak(g, LOOP_RING_R, midY);
+  drawLoopBreak(g, LOOP_RING_L, midY, false);
+  drawLoopBreak(g, LOOP_RING_R, midY, true);
 
   // Rang de chaque station dans le sens de marche (0 = prochaine).
   const rank = new Array<number>(30);
