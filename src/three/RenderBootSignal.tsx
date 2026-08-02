@@ -21,6 +21,7 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { endRenderBoot } from '../systems/renderBoot';
+import { markRenderAlive } from '../systems/renderHealth';
 
 /**
  * Intervalle au-delà duquel une image ne compte pas comme « le jeu tourne »
@@ -47,6 +48,10 @@ export function RenderBootSignal(): null {
   const since = useRef(performance.now());
 
   useFrame((_, dt) => {
+    // Une image, une seule, suffit à prouver que la toile n'est pas morte-née :
+    // c'est ce que guette le chien de garde (systems/renderHealth), et il n'a
+    // rien à voir avec le voile, qui attend lui que le jeu TOURNE.
+    markRenderAlive();
     if (done.current) return;
     calm.current = dt > 0 && dt < SMOOTH_DT ? calm.current + 1 : 0;
     if (calm.current < CALM_FRAMES) return;

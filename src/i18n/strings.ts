@@ -245,6 +245,20 @@ export interface Strings {
   };
 
   /**
+   * Quand la toile 3D n'a pas démarré du tout : le navigateur a refusé le
+   * contexte WebGL, on a remonté une toile neuve autant de fois qu'on se
+   * l'autorise, et il n'y a plus rien à tenter sans le joueur. Le message doit
+   * dire ce qui s'est passé SANS parler de contexte ni de WebGL - ce qui compte
+   * pour lui, c'est que ça se répare, et comment.
+   */
+  render: {
+    failedTitle: string;
+    failedBody: string;
+    retry: string;
+    reload: string;
+  };
+
+  /**
    * Le menu qui provoque un arrêt en pleine voie. Les deux événements
    * arrivent d'eux-mêmes, mais rarement - celui du courant peut demander
    * plusieurs heures de trajet. Ce menu ne les invente pas : il avance
@@ -429,6 +443,13 @@ const FR: Strings = {
     extraordinaryLoading: 'Préparation du mode Extraordinaire…',
     extraordinaryLoadingNote:
       'Le moteur se met en route et prépare ses effets. Quelques secondes la première fois.',
+  },
+  render: {
+    failedTitle: 'L’affichage n’a pas démarré',
+    failedBody:
+      'Votre navigateur n’a pas pu ouvrir la vue 3D, souvent faute de mémoire disponible. Fermer quelques onglets aide. Réessayez, ou rechargez la page.',
+    retry: 'Réessayer',
+    reload: 'Recharger la page',
   },
   incidents: {
     label: 'Provoquer un incident',
@@ -616,6 +637,13 @@ const EN: Strings = {
     extraordinaryLoadingNote:
       'The renderer is starting up and building its effects. A few seconds the first time.',
   },
+  render: {
+    failedTitle: 'The view could not start',
+    failedBody:
+      'Your browser could not open the 3D view, usually for lack of free memory. Closing a few tabs helps. Try again, or reload the page.',
+    retry: 'Try again',
+    reload: 'Reload the page',
+  },
   incidents: {
     label: 'Trigger an incident',
     title: 'Incidents',
@@ -801,6 +829,13 @@ const JA: Strings = {
     extraordinaryFailed: 'この環境では起動できませんでした。ウルトラに戻します。',
     extraordinaryLoading: 'エクストラオーディナリーを準備中…',
     extraordinaryLoadingNote: '描画エンジンを起動し、効果を準備しています。初回は数秒かかります。',
+  },
+  render: {
+    failedTitle: '映像を開始できませんでした',
+    failedBody:
+      'ブラウザーが3D表示を開けませんでした。多くの場合、空きメモリー不足が原因です。ほかのタブを閉じると改善します。もう一度お試しになるか、ページを再読み込みしてください。',
+    retry: 'もう一度',
+    reload: 'ページを再読み込み',
   },
   incidents: {
     label: '異常時を発生させる',
