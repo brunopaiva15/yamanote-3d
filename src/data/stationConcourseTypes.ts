@@ -230,9 +230,15 @@ export interface PlatformAccess {
   /** Lettre de balisage JR (A, B, C…), quand elle est relevée. */
   letter?: string;
   /**
-   * Rang de l'accès le long du quai, du plus au sud au plus au nord dans le
-   * repère quai (z croissant). `systems/stationPlacement` l'apparie avec les
-   * trémies qu'il a réellement posées : le profil ne pose pas de cote de quai.
+   * Rang de l'accès PARMI CEUX DE MÊME NATURE, en z croissant.
+   *
+   * Les trémies entre elles, les mécaniques entre elles, l'ascenseur seul.
+   * C'est la seule lecture qui tienne : une gare a deux trémies, un ou deux
+   * escaliers mécaniques et zéro ou un ascenseur, et un rang global changerait
+   * de sens dès qu'une gare perd son ascenseur.
+   *
+   * `systems/stationPlacement` l'apparie avec les accès qu'il a réellement
+   * posés : le profil ne pose pas de cote de quai.
    */
   order: number;
   /** Le nœud desservi. */

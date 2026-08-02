@@ -53,12 +53,17 @@ export interface AccessFloor {
 }
 
 /**
- * L'accès principal sous un point, ou null si le point n'y est pas.
+ * Un accès VIVANT sous un point, ou null si le point n'y est pas.
  *
  * C'est la seule fonction du jeu qui ait le droit de faire changer d'étage, et
  * c'est voulu : la volée est le seul endroit où les deux sols n'en font qu'un.
  * Le point de bascule est le même dans les deux sens - le linteau sous lequel
  * on passe en descendant, le palier de mi-étage qu'on franchit en montant.
+ *
+ * ELLE LES PARCOURT TOUS depuis la phase 12. Le nom garde « main » parce que
+ * vingt-huit gares sur trente n'en ont qu'un, et que c'est bien de l'accès
+ * PRINCIPAL qu'il s'agit chez elles ; ce qui a changé, c'est qu'il n'est plus
+ * seul par construction.
  *
  * Rend null tant que le niveau n'est pas construit : la trémie redevient alors
  * le couloir borgne qu'elle était, et c'est `stairwellAt` qui la décrit.
@@ -68,15 +73,21 @@ export function mainAccessFloor(
   x: number,
   z: number,
 ): AccessFloor | null {
-  if (!p.interior.built) return null;
-  const main = p.mainStair;
-  if (Math.abs(x - main.x) > STAIR_WALK_HALF_X) return null;
-  const t = z - stairTopZ(main);
-  const up = p.mainRise === 'up';
-  if (t < 0 || t > (up ? ASCENT_LEN : DESCENT_LEN)) return null;
-  const y = up ? ascentFloorY(t) : descentFloorY(t);
-  const crossed = up ? y > ASCENT_LANDING_Y : t > DESCENT_LOWER_T;
-  return { y, level: crossed ? 'concourse' : 'platform' };
+  if (!p.network.built) return null;
+  // TOUS LES ACCÈS VIVANTS, et non plus le seul principal. Vingt-huit gares
+  // n'en ont qu'un et rien ne change pour elles ; Harajuku en a deux, et ses
+  // deux ensembles ne se rejoignent QUE par le quai — c'est donc par les deux
+  // volées qu'on passe de l'un à l'autre.
+  for (const a of p.liveAccesses) {
+    if (Math.abs(x - a.stair.x) > STAIR_WALK_HALF_X) continue;
+    const t = z - stairTopZ(a.stair);
+    const up = a.rise === 'up';
+    if (t < 0 || t > (up ? ASCENT_LEN : DESCENT_LEN)) continue;
+    const y = up ? ascentFloorY(t) : descentFloorY(t);
+    const crossed = up ? y > ASCENT_LANDING_Y : t > DESCENT_LOWER_T;
+    return { y, level: crossed ? 'concourse' : 'platform' };
+  }
+  return null;
 }
 
 /**

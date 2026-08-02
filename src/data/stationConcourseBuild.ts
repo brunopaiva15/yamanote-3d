@@ -137,6 +137,33 @@ export interface ConcourseGateLine {
   hours?: string;
 }
 
+/**
+ * Un accès de quai QUI MÈNE QUELQUE PART.
+ *
+ * Le hall générique n'en avait qu'un - la trémie la plus proche du milieu du
+ * quai - et toutes les autres restaient des couloirs borgnes de cinq marches
+ * (constat G3). C'est juste pour vingt-huit gares ; cela ne l'est pas pour
+ * Harajuku, dont les deux ensembles sont si petits que l'un ne suffirait pas à
+ * faire une gare, ni pour Uguisudani, dont les deux halls sont à des bouts
+ * opposés ET de part et d'autre des voies.
+ *
+ * Le profil ne pose pas de cote de quai : `systems/stationPlacement` seul sait
+ * où les trémies tombent. L'accès porte donc un RANG, et c'est lui qui les
+ * apparie.
+ */
+export interface ConcourseAccess {
+  id: string;
+  kind: 'stairs' | 'escalator' | 'elevator';
+  /**
+   * Rang parmi les accès de MÊME NATURE, en z croissant. `null` désigne
+   * l'accès principal du hall générique, que le placement connaît déjà.
+   */
+  order: number | null;
+  /** La pièce où l'on débouche. */
+  toRoomId: string;
+  rise: 'down' | 'up';
+}
+
 /** La paroi d'une pièce où s'ouvre une bouche. */
 export type RoomSide = 'x0' | 'x1' | 'z0' | 'z1';
 
@@ -165,6 +192,8 @@ export interface ConcourseNetwork {
   joins: ConcourseJoin[];
   gates: ConcourseGateLine[];
   mouths: ConcourseMouth[];
+  /** Les accès de quai qui mènent quelque part. Jamais vide sur un hall bâti. */
+  accesses: ConcourseAccess[];
   /** Mobilier. Vide sur le chemin `profile` : c'est la phase 19 qui le pose. */
   fixtures: Fixture[];
   /** Tout ce qui barre : bornes, cloisons de chantier, mobilier. */
@@ -403,6 +432,18 @@ export function compileProfile(
   // qu'elles ont en vrai.
   for (const part of p.works?.partitions ?? []) obstacles.push(shifted(part.rect, dz));
 
+  // Seuls les accès PRATICABLES mènent quelque part : une tête d'escalier qu'on
+  // regarde reste le couloir borgne qu'elle était.
+  const accesses = p.platformAccesses
+    .filter((a) => isWalkable(a.depiction) && byId.get(a.toNodeId)?.walkable)
+    .map((a) => ({
+      id: a.id,
+      kind: a.kind,
+      order: a.order,
+      toRoomId: a.toNodeId,
+      rise: a.rise,
+    }));
+
   return {
     stationIndex: p.stationIndex,
     source: 'profile',
@@ -411,6 +452,7 @@ export function compileProfile(
     joins,
     gates,
     mouths,
+    accesses,
     // Le mobilier n'est pas du ressort du relevé : un plan officiel ne cote pas
     // une batterie de distributeurs. Il viendra du moteur, en phase 19.
     fixtures: [],
@@ -465,6 +507,17 @@ export function legacyNetwork(index: number, it: StationInterior): ConcourseNetw
       depiction: it.built ? 'walkable' : 'backdrop',
       staffed: true,
     }],
+    // Le hall générique n'a qu'un accès, et le placement sait déjà lequel :
+    // c'est la trémie la plus proche du milieu du quai. D'où le rang `null`.
+    accesses: it.built
+      ? [{
+        id: 'main',
+        kind: 'stairs' as const,
+        order: null,
+        toRoomId: 'paid',
+        rise: it.place === 'over' ? ('up' as const) : ('down' as const),
+      }]
+      : [],
     mouths: it.exits.map((e, k) => ({
       id: `exit-${k}`,
       roomId: 'free',

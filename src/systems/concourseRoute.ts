@@ -111,8 +111,25 @@ const alongOf = (along: 'x' | 'z', q: Pt) => (along === 'z' ? q.z : q.x);
 const acrossOf = (along: 'x' | 'z', q: Pt) => (along === 'z' ? q.x : q.z);
 
 /** Longueur de l'accès principal, dans le sens où il va. */
-function accessLen(p: StationPlacement): number {
-  return p.mainRise === 'up' ? ASCENT_LEN : DESCENT_LEN;
+/**
+ * Le pied de l'accès qui dessert cette pièce payante.
+ *
+ * L'itinéraire commençait toujours à la trémie principale, seule à mener
+ * quelque part (constat G3). Une gare peut en avoir deux — à Harajuku, les
+ * deux ensembles ne se rejoignent QUE par le quai — et le voyageur prend alors
+ * celle qui donne sur SA zone payante, pas celle du milieu du quai.
+ */
+function accessFoot(p: StationPlacement, roomId: string): RouteStop | null {
+  const a = p.liveAccesses.find((x) => x.toRoomId === roomId);
+  if (!a) return null;
+  const len = a.rise === 'up' ? ASCENT_LEN : DESCENT_LEN;
+  return { x: a.stair.x + stairLane() * 0.35, z: stairTopZ(a.stair) + len - 0.5 };
+}
+
+/** La zone payante que dessert une baie. */
+function paidRoomOf(net: ConcourseNetwork, bay: ConcourseBay): ConcourseRoom | null {
+  const g = net.gates.find((x) => x.id === bay.gateId);
+  return net.rooms.find((r) => r.id === g?.from && r.walkable) ?? null;
 }
 
 /** L'écart au nu de la paroi, `steps` girons plus haut dans la volée. */
@@ -313,19 +330,27 @@ function pickPassage(net: ConcourseNetwork, busy: readonly number[]): number {
   const n = bays.length;
   if (n === 0) return -1;
   const mine = playerLane(net);
+  // UNE BAIE QU'AUCUN ACCÈS NE DESSERT N'EST PAS À PRENDRE : on ne peut pas
+  // arriver devant. C'est le pendant de G3 côté itinéraire - tant qu'il n'y
+  // avait qu'un accès vivant, la question ne se posait pas.
+  const served = bays.map((b) => {
+    const room = paidRoomOf(net, b);
+    return !!room && net.accesses.some((a) => a.toRoomId === room.id);
+  });
+  if (!served.some(Boolean)) return -1;
   const weights = bays.map((b, i) => {
-    if (i === mine) return 0;
+    if (i === mine || !served[i]) return 0;
     // Une bretelle À SENS UNIQUE ne se prend qu'en sortant, et l'on ne sait pas
     // encore ici dans quel sens on va : elle pèse moins, sans s'exclure.
     return (b.wide ? 0.55 : 1) * (b.exitOnly ? 0.5 : 1) / (1 + 3 * (busy[i] ?? 0));
   });
   let total = weights.reduce((a, w) => a + w, 0);
   // Tout est pris - ou le joueur bouche la seule baie de la gare. On tire alors
-  // au hasard plein : mieux vaut faire la queue derrière quelqu'un que de ne
-  // plus jamais franchir de portillon.
+  // au hasard plein parmi celles qu'on peut atteindre : mieux vaut faire la
+  // queue derrière quelqu'un que de ne plus jamais franchir de portillon.
   if (total <= 1e-6) {
-    weights.fill(1);
-    total = n;
+    served.forEach((ok, i) => { weights[i] = ok ? 1 : 0; });
+    total = weights.reduce((a, w) => a + w, 0);
   }
   let r = Math.random() * total;
   for (let i = 0; i < n; i++) {
@@ -623,14 +648,15 @@ export function routeToStreet(p: StationPlacement, busy: readonly number[] = [])
   if (passage < 0) return null;
   const bay = concourseBays(p.network)[passage];
   const door = pickExit(p.network);
+  const room = paidRoomOf(p.network, bay);
+  const foot = room && accessFoot(p, room.id);
   const paid = paidLegs(p, bay, false);
   const free = freeLegs(p, door, false);
-  if (!paid || !free) return null;
-  const main = p.mainStair;
+  if (!paid || !free || !foot) return null;
   return [
     // Le bas de l'accès : l'étage bascule tout seul en chemin
     // (systems/stationLevels), personne n'a à le décider ici.
-    { x: main.x + stairLane() * 0.35, z: stairTopZ(main) + accessLen(p) - 0.5 },
+    foot,
     ...paid,
     ...free,
     { x: door.x, z: door.z },
@@ -653,16 +679,13 @@ export function routeFromStreet(
   if (passage < 0) return null;
   const bay = concourseBays(p.network)[passage];
   const door = pickExit(p.network);
+  const room = paidRoomOf(p.network, bay);
+  const foot = room && accessFoot(p, room.id);
   const free = freeLegs(p, door, true);
   const paid = paidLegs(p, bay, true);
-  if (!paid || !free) return null;
-  const main = p.mainStair;
+  if (!paid || !free || !foot) return null;
   return {
     from: door,
-    stops: [
-      ...free,
-      ...paid,
-      { x: main.x + stairLane() * 0.35, z: stairTopZ(main) + accessLen(p) - 0.5 },
-    ],
+    stops: [...free, ...paid, foot],
   };
 }

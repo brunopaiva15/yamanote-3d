@@ -11,7 +11,11 @@
 import { CONSIST, E235 } from '../data/e235';
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
 import { interiorFor, type StationInterior } from '../data/stationInterior';
-import { networkFor, type ConcourseNetwork } from '../data/stationConcourseBuild';
+import {
+  networkFor,
+  type ConcourseAccess,
+  type ConcourseNetwork,
+} from '../data/stationConcourseBuild';
 import {
   ELEVATOR_HALF_Z,
   ESCALATOR_HALF_Z,
@@ -157,6 +161,19 @@ export interface StationPlacement {
    * le relire à sa façon.
    */
   mainRise: 'down' | 'up';
+  /**
+   * Les accès QUI MÈNENT QUELQUE PART, appariés avec les trémies réellement
+   * posées.
+   *
+   * `mainStair` reste l'accès principal - celui qu'on trouve en descendant du
+   * train, celui que le rendu ouvre en grand - mais il n'est plus le seul à
+   * conduire au niveau de correspondance (constat G3). Une gare dont le relevé
+   * déclare deux ensembles en a deux, et la marche les descend tous les deux.
+   *
+   * Vide là où rien n'est bâti : toutes les trémies redeviennent alors les
+   * couloirs borgnes de cinq marches qu'elles étaient.
+   */
+  liveAccesses: LiveAccess[];
   interior: StationInterior;
   /**
    * Le RÉSEAU du niveau de correspondance : N pièces à N altitudes, et les
@@ -174,6 +191,35 @@ export interface StationPlacement {
    * générique : mêmes rectangles, mêmes bornes, mêmes baies.
    */
   network: ConcourseNetwork;
+}
+
+/** Un accès de relevé, apparié avec la trémie que le placement a posée. */
+export interface LiveAccess extends ConcourseAccess {
+  stair: Placed;
+}
+
+/**
+ * Apparie les accès du réseau avec les trémies posées.
+ *
+ * Le rang se compte PAR NATURE : les trémies entre elles, les mécaniques entre
+ * elles, l'ascenseur seul. C'est la seule lecture qui marche - une gare a deux
+ * trémies, un ou deux escaliers mécaniques et zéro ou un ascenseur, et un rang
+ * global changerait de sens dès qu'une gare perd son ascenseur.
+ *
+ * Un accès dont la trémie n'existe pas ici est simplement ignoré : le relevé
+ * décrit une gare réelle, le placement une gare de trente mètres de large.
+ */
+export function liveAccessesFor(
+  net: ConcourseNetwork,
+  main: Placed,
+  byKind: Record<ConcourseAccess['kind'], readonly Placed[]>,
+): LiveAccess[] {
+  const out: LiveAccess[] = [];
+  for (const a of net.accesses) {
+    const stair = a.order === null ? main : byKind[a.kind][a.order];
+    if (stair) out.push({ ...a, stair });
+  }
+  return out;
 }
 
 const CACHE = new Map<number, StationPlacement>();
@@ -740,6 +786,11 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     mainRise,
     interior,
     network,
+    liveAccesses: liveAccessesFor(network, mainStair, {
+      stairs,
+      escalator: escalators,
+      elevator: elevator ? [elevator] : [],
+    }),
   };
   CACHE.set(i, placement);
   return placement;

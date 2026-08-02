@@ -345,7 +345,11 @@ export function Stairwells({ place, m, station, detail }: Props) {
           // quand même - une trémie qui descendait sur le vide, panneau 中央口
           // à l'appui. Là où rien n'est bâti, la trémie reste borgne, comme
           // toutes les autres du quai.
-          open={s === place.mainStair && place.interior.built}
+          // TOUTE trémie qui mène quelque part s'ouvre en grand, et plus
+          // seulement la principale : une gare dont le relevé déclare deux
+          // ensembles en a deux, et l'on descendrait sinon dans un couloir
+          // borgne dessiné par-dessus un hall bien réel.
+          open={place.liveAccesses.some((a) => a.stair === s && a.rise === 'down')}
         />
       ))}
     </>

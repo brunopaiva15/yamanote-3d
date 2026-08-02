@@ -24,7 +24,7 @@ import { register } from 'node:module';
 
 register('./fixtures/ts-resolve.mjs', import.meta.url);
 
-const { placementFor } = await import('../src/systems/stationPlacement.ts');
+const { liveAccessesFor, placementFor } = await import('../src/systems/stationPlacement.ts');
 const { psdGates } = await import('../src/three/station/psdLayout.ts');
 const {
   CLEAR_DECK,
@@ -51,6 +51,27 @@ const { STATION_COUNT } = await import('../src/data/loop.ts');
 
 const NAME = (i: number) => `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
 const PLACE = (i: number) => placementFor(i, psdGates());
+
+/**
+ * Une gare BRANCHÉE sur son relevé — exactement ce que fera
+ * `data/stationConcourseWired` le jour venu : le réseau compilé, et les accès
+ * de quai appariés avec lui. Les deux vont ensemble ; un placement dont le
+ * réseau et les accès ne se répondent pas ne dessert plus rien, et c'est le
+ * bon comportement.
+ */
+function wired(i: number) {
+  const base = PLACE(i);
+  const network = compileProfile(CONCOURSE_PROFILES[i]);
+  return {
+    ...base,
+    network,
+    liveAccesses: liveAccessesFor(network, base.mainStair, {
+      stairs: base.stairs,
+      escalator: base.escalators,
+      elevator: base.elevator ? [base.elevator] : [],
+    }),
+  };
+}
 
 /** La volée principale appartient aux deux étages : elle n'est jamais barrée. */
 const mainAccessBypass = (
@@ -194,8 +215,7 @@ test('une volée intérieure se descend au lieu de faire un mur', () => {
   // Le placement réel d'Okachimachi porte encore son hall générique : on lui
   // greffe le réseau compilé de son relevé, ce qui est exactement ce que fera
   // `data/stationConcourseWired` le jour venu.
-  const base = PLACE(3);
-  const p = { ...base, network: compileProfile(CONCOURSE_PROFILES[3]) };
+  const p = wired(3);
   const j = p.network.joins.find((x) => x.id === 'c-mezz-north')!;
   const mid = {
     x: (j.rect.x0 + j.rect.x1) / 2,
@@ -222,7 +242,7 @@ test('une volée intérieure se descend au lieu de faire un mur', () => {
 test('un ouvrage ne franchit pas ce qui barre', () => {
   // Une borne de portillon plantée au pied d'une volée ne devient pas
   // franchissable parce qu'on descend.
-  const p = { ...PLACE(3), network: compileProfile(CONCOURSE_PROFILES[3]) };
+  const p = wired(3);
   const cab = p.network.obstacles[0];
   const at = { x: (cab.x0 + cab.x1) / 2, z: (cab.z0 + cab.z1) / 2 };
   assert.equal(joinFloorAt(p, at.x, at.z), null);
@@ -365,7 +385,7 @@ test('UN HALL TRANSVERSAL SE TRAVERSE EN TRAVERS', () => {
   // Gateway est l'inverse exact — un hall d'une pièce qu'on franchit en x, deux
   // contrôles à ses deux bouts, les bouches sur un flanc — et c'est là que la
   // généralisation se voit.
-  const p = { ...PLACE(25), network: compileProfile(CONCOURSE_PROFILES[25]) };
+  const p = wired(25);
   assert.equal(stationInteriorOpen(p), true, 'JY26 Takanawa Gateway : hall fermé');
 
   // Les deux contrôles se franchissent en x, les deux bouches percent un flanc.
@@ -401,7 +421,7 @@ test('on valide une fois, du côté d’où l’on vient', () => {
   // La règle ne dépend pas de l'axe : le lecteur est sur le dessus de la borne,
   // et la carte s'y pose AVANT de s'engager. En sortant on bipe côté payant, en
   // entrant côté libre — dans un hall transversal comme dans un couloir droit.
-  const p = { ...PLACE(25), network: compileProfile(CONCOURSE_PROFILES[25]) };
+  const p = wired(25);
   const bays = concourseBays(p.network);
   for (let k = 0; k < 60; k++) {
     const out = routeToStreet(p)!;
@@ -434,7 +454,7 @@ test('les deux groupes de Takanawa Gateway se remplissent tous les deux', () => 
   // Le choix de groupe est ce que la phase 11 rend possible : le rang plat
   // traverse les lignes, donc le tirage aussi. Une gare où l'on ne verrait
   // jamais personne au second contrôle serait fausse.
-  const p = { ...PLACE(25), network: compileProfile(CONCOURSE_PROFILES[25]) };
+  const p = wired(25);
   const bays = concourseBays(p.network);
   const seen = new Set<string>();
   for (let k = 0; k < 300; k++) {
@@ -442,4 +462,72 @@ test('les deux groupes de Takanawa Gateway se remplissent tous les deux', () => 
     seen.add(bays[tap.tap!].gateId);
   }
   assert.deepEqual([...seen].sort(), ['gate-north', 'gate-south']);
+});
+
+// --- Phase 12 : les accès secondaires ------------------------------------
+
+test('vingt-huit gares ont UN accès vivant, et c’est le principal', () => {
+  // Le repli ne change pas : la trémie la plus proche du milieu du quai mène
+  // au hall, les autres restent les couloirs borgnes qu'elles étaient.
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const p = PLACE(i);
+    if (!p.network.built) {
+      assert.equal(p.liveAccesses.length, 0, `${NAME(i)} : rien n’est bâti, rien ne mène nulle part`);
+      continue;
+    }
+    assert.equal(p.liveAccesses.length, 1, NAME(i));
+    assert.equal(p.liveAccesses[0].stair, p.mainStair, NAME(i));
+    assert.equal(p.liveAccesses[0].rise, p.mainRise, NAME(i));
+  }
+});
+
+test('HARAJUKU EN A DEUX, et ils ne se rejoignent que par le quai', () => {
+  // La gare qui a fait tomber G3. Ses deux ensembles — le souterrain de
+  // Takeshita sous la voie, le bâtiment de 2020 au-dessus — sont si petits que
+  // l'un ne suffirait pas à faire une gare, et AUCUN couloir ne les joint.
+  const p = wired(18);
+  assert.equal(p.liveAccesses.length, 2);
+  assert.equal(p.network.joins.length, 0, 'un couloir est apparu entre les deux');
+
+  const [a, b] = p.liveAccesses;
+  assert.notEqual(a.stair, b.stair, 'les deux accès partagent une trémie');
+  assert.notEqual(a.toRoomId, b.toRoomId, 'les deux accès mènent au même endroit');
+  // L'un descend sous la voie, l'autre monte au bâtiment : douze mètres entre
+  // les deux sols.
+  const y = (id: string) => p.network.rooms.find((r) => r.id === id)!.floorY;
+  assert.ok(Math.abs(y(a.toRoomId) - y(b.toRoomId)) > 11);
+  assert.deepEqual([a.rise, b.rise].sort(), ['down', 'up']);
+
+  // Et les DEUX volées se descendent : c'est exactement ce que `mainAccessFloor`
+  // refusait avant, et ce qui rendait le second ensemble inatteignable.
+  for (const acc of p.liveAccesses) {
+    const mid = { x: acc.stair.x, z: acc.stair.z - acc.stair.halfZ + 4 };
+    const floor = mainAccessFloor(p, mid.x, mid.z);
+    assert.ok(floor, `${acc.id} : la volée n’est pas du sol`);
+  }
+});
+
+test('on entre par la volée qui donne sur SA zone payante', () => {
+  // Un voyageur qui sort par le souterrain de Takeshita n'est pas descendu par
+  // la volée du bâtiment de 2020, à l'autre bout du quai : les deux ensembles
+  // ne communiquent pas.
+  const p = wired(18);
+  const bays = concourseBays(p.network);
+  const stairOf = new Map(p.liveAccesses.map((a) => [a.toRoomId, a.stair]));
+  let both = new Set<string>();
+  for (let k = 0; k < 200; k++) {
+    const route = routeToStreet(p)!;
+    const tap = route.find((q) => q.tap !== undefined)!;
+    const bay = bays[tap.tap!];
+    const paid = p.network.gates.find((g) => g.id === bay.gateId)!.from;
+    both.add(paid);
+    // Le premier point du trajet est au pied de LA volée de cette zone-là.
+    const stair = stairOf.get(paid)!;
+    assert.ok(
+      Math.abs(route[0].x - stair.x) < 1.2,
+      `entré par la mauvaise volée pour ${paid}`,
+    );
+  }
+  // Et les deux ensembles servent, sinon la moitié de la gare serait morte.
+  assert.deepEqual([...both].sort(), ['paid-omote', 'paid-takeshita']);
 });

@@ -275,7 +275,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **9** | **Réseau dans la marche** ✅ | `walkable` et `walkerBlocked` acceptent les ouvrages de liaison comme du sol | S1 |
 | **10** | **Portillons multiples** ✅ | `concourseBays` / `bayAt` : un rang plat qui traverse les groupes ; `fareGate` s'y branche | S2 |
 | **11** | **Itinéraires PNJ** ✅ | `concourseRoute` : axe lu sur la destination, choix de groupe, bouche sur n'importe quelle paroi | S3 |
-| 12 | Accès secondaires vivants | plusieurs trémies mènent quelque part | G3 |
+| **12** | **Accès secondaires vivants** ✅ | `placement.liveAccesses` ; la marche, le rendu et les itinéraires les lisent tous | G3 |
 | 13 | Rendu : `ConcourseNetwork` | remplace l'appel unique ; dessine nœud par nœud | R1 |
 | 14 | Archétypes 1 — halls | `LinearConcourse`, `CompactLocalHall`, `UnderViaductHall` | R1 |
 | 15 | Archétypes 2 — hauteur | `OverbridgeHall`, `CrossConcourse`, mezzanines | R1 |
@@ -662,6 +662,45 @@ Au passage, le routeur ne lit plus `interior` du tout : mobilier, obstacles et
 boutiques viennent du réseau. C'est ce qui rendra le branchement d'une gare
 inoffensif — sans cela, une gare branchée aurait cherché ses distributeurs aux
 cotes de son ancien hall.
+
+### 4.10 La phase 12 : plusieurs trémies mènent quelque part
+
+`mainStair` — la trémie la plus proche du milieu du quai — était la seule à
+conduire au niveau de correspondance ; toutes les autres restaient des couloirs
+borgnes de cinq marches (constat G3). C'est juste pour vingt-huit gares. Ce ne
+l'est pas pour **Harajuku**, dont les deux ensembles sont si petits que l'un ne
+suffirait pas à faire une gare, ni pour **Uguisudani**, dont les deux halls sont
+à des bouts opposés *et* de part et d'autre des voies.
+
+Le réseau porte donc ses **accès** (`ConcourseAccess`), et `StationPlacement`
+les apparie avec les trémies réellement posées : le profil ne pose pas de cote
+de quai, il pose un **rang**. Ce rang se compte **par nature** — les trémies
+entre elles, les mécaniques entre elles, l'ascenseur seul — parce qu'un rang
+global changerait de sens dès qu'une gare perd son ascenseur.
+
+Quatre lecteurs y passent, et il fallait qu'ils y passent ensemble :
+
+| Lecteur | Ce qui change |
+|---|---|
+| `stationLevels.mainAccessFloor` | parcourt **tous** les accès vivants, chacun avec son sens |
+| `three/station/Stairwell` | ouvre en grand **toute** trémie qui mène quelque part |
+| `concourseRoute` | entre et sort par la volée qui donne sur **sa** zone payante |
+| `pickPassage` | une baie qu'aucun accès ne dessert n'est pas à prendre |
+
+**Ce qui se voit à Harajuku** : deux accès, l'un qui descend sous la voie vers
+le souterrain de Takeshita, l'autre qui monte au bâtiment de 2020 — douze mètres
+entre les deux sols, et aucun couloir entre eux. Un test tire deux cents trajets
+et vérifie que chacun entre par la bonne volée, et que les deux ensembles
+servent : sans cela, la moitié de la gare serait morte.
+
+**Et les vingt-huit autres n'ont pas bougé** : un accès vivant, et c'est le
+principal.
+
+**Ce qui reste, et qui est du rendu** : une seconde volée MONTANTE n'a pas
+encore son ouvrage. La première l'a (`risingMain`, le tablier qui perce
+l'auvent) ; la seconde attend les archétypes de hauteur (phase 15). Rien n'est
+visible aujourd'hui — aucune gare n'est branchée — mais c'est la première chose
+à faire avant de brancher Harajuku.
 
 ### Ordre et raison
 
