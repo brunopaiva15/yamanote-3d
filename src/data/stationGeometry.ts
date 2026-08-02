@@ -38,6 +38,22 @@ export const PSD_LEAF_W = 0.98;
 export const PSD_LEAF_TRAVEL = 0.92;
 
 /**
+ * Épaisseur d'un vantail - et le fait qu'il coulisse DANS le muret.
+ *
+ * Il glissait à `PSD_X + 0,08`, six centimètres en avant de la face du quai :
+ * une poche n'avalait donc pas son vantail, elle le laissait raser le mur, et
+ * tout ce qui se visse sur cette face - plaque de baie, affiche, arrêt
+ * d'urgence - devait fuir au milieu du tronçon pour ne pas être traversé deux
+ * fois par arrêt. Le vitrage, lui, n'avait plus que le haut du panneau, et le
+ * muret se retrouvait avec une lucarne au lieu d'une vitre.
+ *
+ * Le vantail est donc à mi-épaisseur du muret, un centimètre et demi de jeu de
+ * chaque côté : une fois rentré, il est enfermé dans sa poche, et la face du
+ * quai est libre sur toute sa longueur.
+ */
+export const PSD_LEAF_T = 0.07;
+
+/**
  * Montant de rive d'un vantail : le joint sombre de son bord de fermeture.
  * Sans lui, les deux vantaux fermés d'un même portique - même blanc, même
  * plan - se lisent comme un seul panneau de deux mètres.
@@ -55,6 +71,49 @@ export const PSD_LEAF_JOINT_W = 0.04;
  * rive, comme le joint caoutchouc d'une vraie ホームドア.
  */
 export const PSD_LEAF_TIP_INSET = 0.004;
+
+// --- Le muret, et ce que le vantail fait dedans -----------------------
+//
+// Le muret entre deux baies est PLEIN, de la dalle au bandeau : c'est un
+// caisson blanc, pas une menuiserie. Ce qui est vitré, ce sont les VANTAUX -
+// et c'est par eux qu'on voit la rame, sa livrée verte et les gens debout
+// derrière une porte fermée.
+//
+// Le vantail, lui, coulisse dans l'épaisseur de ce caisson. Ce n'est pas un
+// détail de rendu : c'est ce qui rend la face du quai disponible sur toute sa
+// longueur, et donc ce qui permet d'y coller la plaque de baie sans qu'une
+// porte la traverse deux fois par arrêt.
+
+/**
+ * Longueur de muret qu'il faut pour avaler un vantail grand ouvert, mesurée
+ * depuis le chant de la baie : sa largeur, sa course, son retrait, moins la
+ * demi-baie déjà comptée - plus cinq centimètres de garde.
+ */
+export const PSD_POCKET_LEN = PSD_LEAF_W + PSD_LEAF_TRAVEL + PSD_LEAF_TIP_INSET - PSD_HALF_GAP + 0.05;
+
+/** Épaisseur du muret. Le vantail passe dedans, à mi-bois. */
+export const PSD_WALL_T = 0.1;
+
+/**
+ * Les trois épaisseurs du portique, et pourquoi elles sont ÉTAGÉES.
+ *
+ * Le joint de rive doit dépasser du muret pour se lire au jambage quand la
+ * porte est rentrée, et le bandeau doit coiffer les deux - c'est un profil de
+ * couronnement, il déborde de ce qu'il couronne. Mais il y a plus contraignant
+ * que le dessin : porte ouverte, le joint remonte SOUS le bandeau, et leurs
+ * deux nus se retrouvent au même endroit. À égalité d'épaisseur, ces deux
+ * faces se disputent le tampon de profondeur - une plaque noire et une plaque
+ * verte qui clignotent l'une dans l'autre, aux quarante baies du quai, à
+ * chaque arrêt. D'où cinq millimètres d'écart franc à chaque cran.
+ *
+ * Cinq millimètres tiennent jusqu'à une trentaine de mètres avec la profondeur
+ * de ce rendu (proche à 5 cm) ; au-delà, le joint ne fait plus un pixel.
+ */
+export const PSD_JOINT_T = PSD_WALL_T + 0.01;
+export const PSD_BAND_T = PSD_JOINT_T + 0.02;
+
+/** Face du muret côté quai : c'est là que se colle ce qu'on lit dessus. */
+export const PSD_FACE_X = PSD_X + PSD_WALL_T / 2;
 
 /** Longueur du quai (m). */
 export const PLATFORM_LEN = 96;

@@ -47,9 +47,13 @@ import {
   PLATFORM_TOP,
   PSD_H,
   PSD_LEAF_JOINT_W,
+  PSD_LEAF_T,
   PSD_LEAF_TIP_INSET,
   PSD_LEAF_TRAVEL,
+  PSD_BAND_T,
+  PSD_JOINT_T,
   PSD_LEAF_W,
+  PSD_WALL_T,
   PSD_X,
   SLAB_H,
   STAIR_HALF_X,
@@ -78,7 +82,10 @@ import { Stairwells } from './Stairwell';
 import { Overbridge } from './Overbridge';
 import { Concourse } from './Concourse';
 import { Kiosk } from './Kiosk';
+import { GatePlates } from './GatePlates';
+import { IdlePsd } from './IdlePsd';
 import { psdLayout } from './psdLayout';
+import { psdLeafFrameGeometry, psdLeafGlassGeometry } from './psdParts';
 
 const UP = new THREE.Quaternion();
 const V = new THREE.Vector3();
@@ -280,14 +287,7 @@ export function Station() {
 
   // --- Matrices des éléments répétés ---
   const psdSegs = useMemo(
-    () => segs.map((s) => mat(PSD_X, PLATFORM_TOP + PSD_H / 2, (s.z0 + s.z1) / 2, 0.1, PSD_H, s.z1 - s.z0)),
-    [segs],
-  );
-  const psdGlass = useMemo(
-    () =>
-      segs.map((s) =>
-        mat(PSD_X + 0.02, PLATFORM_TOP + PSD_H * 0.72, (s.z0 + s.z1) / 2, 0.02, PSD_H * 0.42, s.z1 - s.z0 - 0.16),
-      ),
+    () => segs.map((s) => mat(PSD_X, PLATFORM_TOP + PSD_H / 2, (s.z0 + s.z1) / 2, PSD_WALL_T, PSD_H, s.z1 - s.z0)),
     [segs],
   );
   // Bandeau vert du muret : six millimètres PLUS COURT que le muret qu'il
@@ -301,7 +301,7 @@ export function Station() {
           PSD_X - 0.005,
           PLATFORM_TOP + PSD_H - 0.07,
           (s.z0 + s.z1) / 2,
-          0.12,
+          PSD_BAND_T,
           0.1,
           s.z1 - s.z0 - 0.012,
         ),
@@ -391,7 +391,6 @@ export function Station() {
     [place.benches],
   );
   const psdRef = useRef<THREE.InstancedMesh>(null);
-  const glassRef = useRef<THREE.InstancedMesh>(null);
   const bandRef = useRef<THREE.InstancedMesh>(null);
   const columnRef = useRef<THREE.InstancedMesh>(null);
   const columnBandRef = useRef<THREE.InstancedMesh>(null);
@@ -404,10 +403,10 @@ export function Station() {
   const backRef = useRef<THREE.InstancedMesh>(null);
   const legRef = useRef<THREE.InstancedMesh>(null);
   const leafRef = useRef<THREE.InstancedMesh>(null);
+  const leafGlassRef = useRef<THREE.InstancedMesh>(null);
   const leafJointRef = useRef<THREE.InstancedMesh>(null);
 
   useInstances(psdRef, psdSegs);
-  useInstances(glassRef, psdGlass);
   useInstances(bandRef, psdBand);
   useInstances(columnRef, columns);
   useInstances(columnBandRef, columnBands);
@@ -421,6 +420,23 @@ export function Station() {
   useInstances(legRef, benchLegs);
 
   // --- Vantaux des portes palières, animés ---
+  //
+  // Un vantail est un CADRE et une VITRE, posés par la même matrice : deux
+  // traverses, deux montants, du verre entre les quatre. C'est ce qui fait
+  // qu'on voit arriver la rame derrière une baie fermée.
+  //
+  // Il coulisse à mi-épaisseur du MURET, pas devant : rentré, il est enfermé
+  // dans son muret au lieu d'en raser la face, et la plaque de baie peut se
+  // coller sur cette face sans être traversée deux fois par arrêt.
+  const leafFrameGeo = useMemo(() => psdLeafFrameGeometry(), []);
+  const leafGlassGeo = useMemo(() => psdLeafGlassGeometry(), []);
+  useLayoutEffect(
+    () => () => {
+      leafFrameGeo.dispose();
+      leafGlassGeo.dispose();
+    },
+    [leafFrameGeo, leafGlassGeo],
+  );
   const leafMat = useRef(new THREE.Matrix4());
   const leafCount = gaps.length * 2;
   useFrame(() => {
@@ -431,6 +447,7 @@ export function Station() {
     }
     const im = leafRef.current;
     if (!im || presence <= 0.02) return;
+    const gm = leafGlassRef.current;
     const jm = leafJointRef.current;
     const mm = leafMat.current;
     let k = 0;
@@ -443,32 +460,35 @@ export function Station() {
         // clignotait dès que le portique s'ouvrait.
         mm.compose(
           V.set(
-            PSD_X + 0.08,
+            PSD_X,
             PLATFORM_TOP + PSD_H / 2,
             gaps[g] + dir * (PSD_LEAF_W / 2 + open + PSD_LEAF_TIP_INSET),
           ),
           UP,
-          S.set(0.07, PSD_H - 0.06, PSD_LEAF_W),
+          S.set(PSD_LEAF_T, PSD_H - 0.06, PSD_LEAF_W),
         );
         im.setMatrixAt(k, mm);
+        // La vitre est portée par le cadre : même matrice, à la géométrie près.
+        if (gm) gm.setMatrixAt(k, mm);
         // Montant de rive, calé sur le BORD DE FERMETURE du vantail : il suit
-        // donc la porte. Fermé, les deux montants se touchent et tracent la
-        // ligne sombre qui partage le portique en deux ; ouvert, chacun garde
-        // son joint, comme sur les portes réelles.
+        // donc la porte.
         if (jm) {
           mm.compose(
             V.set(
-              PSD_X + 0.08,
+              PSD_X,
               PLATFORM_TOP + PSD_H / 2,
               gaps[g] + dir * (open + PSD_LEAF_JOINT_W / 2),
             ),
             UP,
-            // À peine plus épais et un rien plus haut que le vantail : le joint
-            // affleure de trois millimètres de chaque côté et de cinq en tête
-            // comme en pied. Il coiffe ainsi complètement la rive rentrée du
-            // vantail - plus une seule face confondue, donc plus de
-            // scintillement au bout du portique.
-            S.set(0.076, PSD_H - 0.05, PSD_LEAF_JOINT_W),
+            // Plus épais que le MURET, et non plus que le seul vantail : c'est
+            // la seule pièce du portique qui doit rester visible quand la porte
+            // est rentrée. Le vantail, lui, disparaît dans le muret ; son joint
+            // de rive dépasse de cinq millimètres et tient le jambage, comme le
+            // caoutchouc noir au bord d'une vraie ホームドア ouverte. Fermé, les
+            // deux joints se touchent et tracent la ligne sombre qui partage le
+            // portique en deux. Le bandeau, lui, le recoiffe de cinq
+            // millimètres de plus - voir PSD_JOINT_T.
+            S.set(PSD_JOINT_T, PSD_H - 0.05, PSD_LEAF_JOINT_W),
           );
           jm.setMatrixAt(k, mm);
         }
@@ -477,6 +497,10 @@ export function Station() {
     }
     im.count = leafCount;
     im.instanceMatrix.needsUpdate = true;
+    if (gm) {
+      gm.count = leafCount;
+      gm.instanceMatrix.needsUpdate = true;
+    }
     if (jm) {
       jm.count = leafCount;
       jm.instanceMatrix.needsUpdate = true;
@@ -529,18 +553,31 @@ export function Station() {
       {/* --- Portes palières, là où elles existent --- */}
       {hasPsd && (
         <>
+      {/* Le muret est PLEIN, de la dalle au bandeau. Il portait un panneau de
+          verre décoratif noyé dans son épaisseur, que le tampon de profondeur
+          rejetait de toute façon : rien ne s'en voyait, et une ホームドア n'a
+          pas de fenêtre entre deux baies - ce qui est vitré, ce sont ses
+          vantaux. */}
       <instancedMesh name="muret-psd" ref={psdRef} args={[undefined, undefined, Math.max(1, psdSegs.length)]} material={m.psd}>
-        <boxGeometry args={[1, 1, 1]} />
-      </instancedMesh>
-      <instancedMesh name="vitrage-psd" ref={glassRef} args={[undefined, undefined, Math.max(1, psdGlass.length)]} material={m.glass}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
       <instancedMesh name="bandeau-psd" ref={bandRef} args={[undefined, undefined, Math.max(1, psdBand.length)]} material={m.accent}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
-      <instancedMesh name="vantaux-psd" ref={leafRef} args={[undefined, undefined, Math.max(1, leafCount)]} material={m.psd}>
-        <boxGeometry args={[1, 1, 1]} />
-      </instancedMesh>
+      <instancedMesh
+        name="vantaux-psd"
+        ref={leafRef}
+        args={[undefined, undefined, Math.max(1, leafCount)]}
+        geometry={leafFrameGeo}
+        material={m.psd}
+      />
+      <instancedMesh
+        name="vitre-vantaux-psd"
+        ref={leafGlassRef}
+        args={[undefined, undefined, Math.max(1, leafCount)]}
+        geometry={leafGlassGeo}
+        material={m.psdGlass}
+      />
       <instancedMesh
         name="joint-vantaux-psd"
         ref={leafJointRef}
@@ -549,6 +586,10 @@ export function Station() {
       >
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
+      {/* La plaque 「N号車 M番ドア」 de chaque baie, sur le muret de gauche.
+          Elle saute au palier de qualité le plus bas, comme les affiches : à ce
+          niveau-là, on ne s'arrête plus devant une porte pour la lire. */}
+      {detail <= 2 && <GatePlates gates={gaps} segs={segs} />}
         </>
       )}
 
@@ -564,12 +605,22 @@ export function Station() {
           tactileW={tactileW}
           hasPsd={hasPsd}
           segs={segs}
+          gaps={gaps}
           m={m}
         />
       )}
 
       {/* --- Ce qu'on voit au-delà : voie, quai d'en face, clôture --- */}
-      <FarSide layout={layout} place={place} wallH={wallH} m={m} detail={detail} segs={segs} sigRoof={sigRoof} />
+      <FarSide
+        layout={layout}
+        place={place}
+        wallH={wallH}
+        m={m}
+        detail={detail}
+        segs={segs}
+        gaps={gaps}
+        sigRoof={sigRoof}
+      />
 
       {/* --- Auvent, poutres, piliers, néons ---
           La dalle tombe là où la charpente signature fait toit (Takanawa
@@ -713,6 +764,7 @@ function FarEdge({
   tactileW,
   hasPsd,
   segs,
+  gaps,
   m,
 }: {
   farX: number;
@@ -720,17 +772,9 @@ function FarEdge({
   tactileW: number;
   hasPsd: boolean;
   segs: { z0: number; z1: number }[];
+  gaps: number[];
   m: Mats;
 }) {
-  const band = useMemo(
-    () =>
-      segs.map((sg) =>
-        mat(farX - 0.045, PLATFORM_TOP + PSD_H - 0.07, (sg.z0 + sg.z1) / 2, 0.12, 0.1, sg.z1 - sg.z0),
-      ),
-    [segs, farX],
-  );
-  const bandRef = useRef<THREE.InstancedMesh>(null);
-  useInstances(bandRef, band);
   return (
     <group name="bord-opposé">
       <mesh position={[farX - 0.12, PLATFORM_TOP + 0.01, 0]} material={m.rubber}>
@@ -747,27 +791,7 @@ function FarEdge({
         <planeGeometry args={[tactileW, len]} />
       </mesh>
       {hasPsd && (
-        <>
-          <mesh position={[farX - 0.05, PLATFORM_TOP + PSD_H / 2, 0]} material={m.psd}>
-            <boxGeometry args={[0.1, PSD_H, len]} />
-          </mesh>
-          <mesh position={[farX - 0.11, PLATFORM_TOP + PSD_H * 0.72, 0]} material={m.glass}>
-            <boxGeometry args={[0.02, PSD_H * 0.42, len - 0.4]} />
-          </mesh>
-          {/* Le bandeau uguisu est INTERROMPU à chaque baie, comme au bord près.
-              Continu sur deux cent vingt mètres, il traçait une barre verte
-              franche à la hauteur exacte des vitres de porte de la rame - qui
-              ne sont opaques qu'à neuf pour cent : vues du wagon, elles
-              viraient au vert d'un bout à l'autre du quai. */}
-          <instancedMesh
-            name="bandeau-psd-opposé"
-            ref={bandRef}
-            args={[undefined, undefined, Math.max(1, band.length)]}
-            material={m.accent}
-          >
-            <boxGeometry args={[1, 1, 1]} />
-          </instancedMesh>
-        </>
+        <IdlePsd name="psd-bord-opposé" x={farX - 0.05} trackSide={1} segs={segs} gaps={gaps} m={m} />
       )}
     </group>
   );
@@ -794,6 +818,7 @@ function FarSide({
   m,
   detail,
   segs,
+  gaps,
   sigRoof,
 }: {
   layout: ReturnType<typeof layoutFor>;
@@ -802,32 +827,12 @@ function FarSide({
   m: Mats;
   detail: number;
   segs: { z0: number; z1: number }[];
+  gaps: number[];
   /** La charpente signature couvre tout le site : pas d'auvent d'en face. */
   sigRoof: boolean;
 }) {
   const len = layout.length;
   const far = place.farEdgeX;
-
-  // Les crochets se déclarent AVANT le retour anticipé d'Harajuku : après, ils
-  // ne seraient pas appelés à chaque rendu et React s'en plaindrait.
-  const oppBand = useMemo(
-    () =>
-      far === null
-        ? []
-        : segs.map((sg) =>
-            mat(
-              far + 2 * TRACK_HALF + 0.045,
-              PLATFORM_TOP + PSD_H - 0.07,
-              (sg.z0 + sg.z1) / 2,
-              0.12,
-              0.1,
-              sg.z1 - sg.z0,
-            ),
-          ),
-    [segs, far],
-  );
-  const oppBandRef = useRef<THREE.InstancedMesh>(null);
-  useInstances(oppBandRef, oppBand);
 
   // Harajuku : le seul quai latéral de la boucle. Un vrai mur, un vrai
   // soubassement carrelé, et rien à voir au-delà.
@@ -879,20 +884,15 @@ function FarSide({
         <boxGeometry args={[0.07, 0.66, len]} />
       </mesh>
       {oppPsd && (
-        <>
-          <mesh position={[oppEdge + 0.05, PLATFORM_TOP + PSD_H / 2, 0]} material={m.psd}>
-            <boxGeometry args={[0.1, PSD_H, len]} />
-          </mesh>
-          {/* Bandeau interrompu, pour la même raison qu'au bord d'en face. */}
-          <instancedMesh
-            name="bandeau-psd-opposé"
-            ref={oppBandRef}
-            args={[undefined, undefined, Math.max(1, oppBand.length)]}
-            material={m.accent}
-          >
-            <boxGeometry args={[1, 1, 1]} />
-          </instancedMesh>
-        </>
+        <IdlePsd
+          name="psd-quai-opposé"
+          x={oppEdge + 0.05}
+          trackSide={-1}
+          segs={segs}
+          gaps={gaps}
+          m={m}
+          doors={detail <= 2}
+        />
       )}
       {/* L'auvent d'en face : on le voit, on n'y marche pas. Il tombe au
           palier le plus léger, où la silhouette du quai suffit - et là où la

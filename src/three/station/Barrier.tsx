@@ -453,11 +453,10 @@ export function EdgeBarrier({ x, length, gates, height = EDGE_H }: EdgeBarrierPr
 // --- Baie de porte palière par laquelle on ne peut pas monter -------------
 
 /**
- * Plan de la limite, mesuré depuis le muret. Les vantaux coulissent à
- * `PSD_X + 0.08` : la limite se tient exactement dans leur plan, là où le
- * regard attend une porte.
+ * Plan de la limite. Les vantaux coulissent à mi-épaisseur du muret : la
+ * limite se tient exactement dans leur plan, là où le regard attend une porte.
  */
-const GATE_X = PSD_X + 0.08;
+const GATE_X = PSD_X;
 
 const VERT_GATE = /* glsl */ `
   attribute float aGate;  // axe de la baie à laquelle ce sommet appartient (m)
