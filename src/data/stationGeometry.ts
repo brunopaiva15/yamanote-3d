@@ -16,23 +16,6 @@ export const PSD_H = 1.32;
 /** Demi-largeur d'une baie de porte palière. */
 export const PSD_HALF_GAP = 0.9;
 
-/**
- * Où sonne l'avertisseur d'une baie palière : sur le linteau du portique, côté
- * quai.
- *
- * Le signal d'ouverture (data/psdOpenChime) ne sort PAS de la sono suspendue à
- * l'auvent - celle-là est à quatre mètres au-dessus de la tête et couvre le
- * quai entier. Il sort d'un petit haut-parleur vissé sur la baie elle-même, à
- * hauteur d'épaule et à un pas devant soi, et c'est ce qui fait qu'on sait
- * quelle porte s'ouvre : on l'entend DEVANT, pas au-dessus.
- *
- * Ces deux cotes sont ici, avec le reste de la géométrie du portique, parce
- * qu'elles décrivent un point du quai ; c'est systems/stationPa qui les donne
- * au moteur audio, comme il le fait déjà des diffuseurs de l'auvent.
- */
-export const PSD_BUZZER_X = PSD_X + 0.08;
-export const PSD_BUZZER_Y = PSD_H + 0.14;
-
 /** Largeur d'un vantail de porte palière et sa course d'ouverture. */
 export const PSD_LEAF_W = 0.98;
 export const PSD_LEAF_TRAVEL = 0.92;
@@ -114,6 +97,32 @@ export const PSD_BAND_T = PSD_JOINT_T + 0.02;
 
 /** Face du muret côté quai : c'est là que se colle ce qu'on lit dessus. */
 export const PSD_FACE_X = PSD_X + PSD_WALL_T / 2;
+
+/**
+ * Où sonnent les avertisseurs d'une baie palière : sur le BANDEAU du portique,
+ * à son arête haute, côté quai.
+ *
+ * Les deux signaux des baies - l'ouverture (data/psdOpenChime) et la fermeture
+ * (data/psdCloseWarning) - ne sortent PAS de la sono suspendue à l'auvent :
+ * celle-là est à quatre mètres au-dessus de la tête et couvre le quai entier.
+ * Ils sortent d'un haut-parleur gros comme la main, vissé sur la baie
+ * elle-même, et c'est ce qui fait qu'on sait quelle porte bouge : on l'entend
+ * DEVANT, pas au-dessus.
+ *
+ * Les deux cotes se déduisent du bandeau plutôt que d'être posées à la main :
+ * c'est le profil qui couronne le muret (three/station/Station.tsx le pose à
+ * `PSD_H - 0,07` sur dix centimètres de haut), donc la dernière pièce du
+ * portique avant l'air libre, et la seule sur laquelle on visse quelque chose
+ * qui doit s'entendre. Un avertisseur calé sur une cote à lui aurait fini par
+ * flotter au-dessus du muret le jour où celui-ci change d'épaisseur - ce qui
+ * venait précisément d'arriver quand le vantail est rentré dans sa poche.
+ *
+ * Elles sont ici, avec le reste de la géométrie du portique, parce qu'elles
+ * décrivent un point du quai ; c'est systems/stationPa qui les donne au moteur
+ * audio, comme il le fait déjà des diffuseurs de l'auvent.
+ */
+export const PSD_BUZZER_X = PSD_X + PSD_BAND_T / 2;
+export const PSD_BUZZER_Y = PLATFORM_TOP + PSD_H - 0.02;
 
 /** Longueur du quai (m). */
 export const PLATFORM_LEN = 96;
