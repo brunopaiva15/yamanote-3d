@@ -81,6 +81,7 @@ import { Overbridge } from './Overbridge';
 import { Concourse } from './Concourse';
 import { Kiosk } from './Kiosk';
 import { GatePlates } from './GatePlates';
+import { IdlePsd } from './IdlePsd';
 import { psdLayout } from './psdLayout';
 import { psdLeafFrameGeometry, psdLeafGlassGeometry } from './psdParts';
 
@@ -287,13 +288,6 @@ export function Station() {
     () => segs.map((s) => mat(PSD_X, PLATFORM_TOP + PSD_H / 2, (s.z0 + s.z1) / 2, PSD_WALL_T, PSD_H, s.z1 - s.z0)),
     [segs],
   );
-  const psdGlass = useMemo(
-    () =>
-      segs.map((s) =>
-        mat(PSD_X + 0.02, PLATFORM_TOP + PSD_H * 0.72, (s.z0 + s.z1) / 2, 0.02, PSD_H * 0.42, s.z1 - s.z0 - 0.16),
-      ),
-    [segs],
-  );
   // Bandeau vert du muret : six millimètres PLUS COURT que le muret qu'il
   // couronne. À égalité, ses deux bouts tombaient dans le plan des bouts du
   // muret - deux faces confondues, en pleine vue depuis la baie de porte, là
@@ -395,7 +389,6 @@ export function Station() {
     [place.benches],
   );
   const psdRef = useRef<THREE.InstancedMesh>(null);
-  const glassRef = useRef<THREE.InstancedMesh>(null);
   const bandRef = useRef<THREE.InstancedMesh>(null);
   const columnRef = useRef<THREE.InstancedMesh>(null);
   const columnBandRef = useRef<THREE.InstancedMesh>(null);
@@ -412,7 +405,6 @@ export function Station() {
   const leafJointRef = useRef<THREE.InstancedMesh>(null);
 
   useInstances(psdRef, psdSegs);
-  useInstances(glassRef, psdGlass);
   useInstances(bandRef, psdBand);
   useInstances(columnRef, columns);
   useInstances(columnBandRef, columnBands);
@@ -489,11 +481,11 @@ export function Station() {
             // Plus épais que le MURET, et non plus que le seul vantail : c'est
             // la seule pièce du portique qui doit rester visible quand la porte
             // est rentrée. Le vantail, lui, disparaît dans le muret ; son joint
-            // de rive dépasse d'un centimètre et tient le jambage, comme le
+            // de rive dépasse de cinq millimètres et tient le jambage, comme le
             // caoutchouc noir au bord d'une vraie ホームドア ouverte. Fermé, les
             // deux joints se touchent et tracent la ligne sombre qui partage le
             // portique en deux.
-            S.set(PSD_WALL_T + 0.02, PSD_H - 0.05, PSD_LEAF_JOINT_W),
+            S.set(PSD_WALL_T + 0.01, PSD_H - 0.05, PSD_LEAF_JOINT_W),
           );
           jm.setMatrixAt(k, mm);
         }
@@ -558,10 +550,12 @@ export function Station() {
       {/* --- Portes palières, là où elles existent --- */}
       {hasPsd && (
         <>
+      {/* Le muret est PLEIN, de la dalle au bandeau. Il portait un panneau de
+          verre décoratif noyé dans son épaisseur, que le tampon de profondeur
+          rejetait de toute façon : rien ne s'en voyait, et une ホームドア n'a
+          pas de fenêtre entre deux baies - ce qui est vitré, ce sont ses
+          vantaux. */}
       <instancedMesh name="muret-psd" ref={psdRef} args={[undefined, undefined, Math.max(1, psdSegs.length)]} material={m.psd}>
-        <boxGeometry args={[1, 1, 1]} />
-      </instancedMesh>
-      <instancedMesh name="vitrage-psd" ref={glassRef} args={[undefined, undefined, Math.max(1, psdGlass.length)]} material={m.glass}>
         <boxGeometry args={[1, 1, 1]} />
       </instancedMesh>
       <instancedMesh name="bandeau-psd" ref={bandRef} args={[undefined, undefined, Math.max(1, psdBand.length)]} material={m.accent}>
@@ -608,12 +602,22 @@ export function Station() {
           tactileW={tactileW}
           hasPsd={hasPsd}
           segs={segs}
+          gaps={gaps}
           m={m}
         />
       )}
 
       {/* --- Ce qu'on voit au-delà : voie, quai d'en face, clôture --- */}
-      <FarSide layout={layout} place={place} wallH={wallH} m={m} detail={detail} segs={segs} sigRoof={sigRoof} />
+      <FarSide
+        layout={layout}
+        place={place}
+        wallH={wallH}
+        m={m}
+        detail={detail}
+        segs={segs}
+        gaps={gaps}
+        sigRoof={sigRoof}
+      />
 
       {/* --- Auvent, poutres, piliers, néons ---
           La dalle tombe là où la charpente signature fait toit (Takanawa
@@ -757,6 +761,7 @@ function FarEdge({
   tactileW,
   hasPsd,
   segs,
+  gaps,
   m,
 }: {
   farX: number;
@@ -764,17 +769,9 @@ function FarEdge({
   tactileW: number;
   hasPsd: boolean;
   segs: { z0: number; z1: number }[];
+  gaps: number[];
   m: Mats;
 }) {
-  const band = useMemo(
-    () =>
-      segs.map((sg) =>
-        mat(farX - 0.045, PLATFORM_TOP + PSD_H - 0.07, (sg.z0 + sg.z1) / 2, 0.12, 0.1, sg.z1 - sg.z0),
-      ),
-    [segs, farX],
-  );
-  const bandRef = useRef<THREE.InstancedMesh>(null);
-  useInstances(bandRef, band);
   return (
     <group name="bord-opposé">
       <mesh position={[farX - 0.12, PLATFORM_TOP + 0.01, 0]} material={m.rubber}>
@@ -791,27 +788,7 @@ function FarEdge({
         <planeGeometry args={[tactileW, len]} />
       </mesh>
       {hasPsd && (
-        <>
-          <mesh position={[farX - 0.05, PLATFORM_TOP + PSD_H / 2, 0]} material={m.psd}>
-            <boxGeometry args={[0.1, PSD_H, len]} />
-          </mesh>
-          <mesh position={[farX - 0.11, PLATFORM_TOP + PSD_H * 0.72, 0]} material={m.glass}>
-            <boxGeometry args={[0.02, PSD_H * 0.42, len - 0.4]} />
-          </mesh>
-          {/* Le bandeau uguisu est INTERROMPU à chaque baie, comme au bord près.
-              Continu sur deux cent vingt mètres, il traçait une barre verte
-              franche à la hauteur exacte des vitres de porte de la rame - qui
-              ne sont opaques qu'à neuf pour cent : vues du wagon, elles
-              viraient au vert d'un bout à l'autre du quai. */}
-          <instancedMesh
-            name="bandeau-psd-opposé"
-            ref={bandRef}
-            args={[undefined, undefined, Math.max(1, band.length)]}
-            material={m.accent}
-          >
-            <boxGeometry args={[1, 1, 1]} />
-          </instancedMesh>
-        </>
+        <IdlePsd name="psd-bord-opposé" x={farX - 0.05} trackSide={1} segs={segs} gaps={gaps} m={m} />
       )}
     </group>
   );
@@ -838,6 +815,7 @@ function FarSide({
   m,
   detail,
   segs,
+  gaps,
   sigRoof,
 }: {
   layout: ReturnType<typeof layoutFor>;
@@ -846,32 +824,12 @@ function FarSide({
   m: Mats;
   detail: number;
   segs: { z0: number; z1: number }[];
+  gaps: number[];
   /** La charpente signature couvre tout le site : pas d'auvent d'en face. */
   sigRoof: boolean;
 }) {
   const len = layout.length;
   const far = place.farEdgeX;
-
-  // Les crochets se déclarent AVANT le retour anticipé d'Harajuku : après, ils
-  // ne seraient pas appelés à chaque rendu et React s'en plaindrait.
-  const oppBand = useMemo(
-    () =>
-      far === null
-        ? []
-        : segs.map((sg) =>
-            mat(
-              far + 2 * TRACK_HALF + 0.045,
-              PLATFORM_TOP + PSD_H - 0.07,
-              (sg.z0 + sg.z1) / 2,
-              0.12,
-              0.1,
-              sg.z1 - sg.z0,
-            ),
-          ),
-    [segs, far],
-  );
-  const oppBandRef = useRef<THREE.InstancedMesh>(null);
-  useInstances(oppBandRef, oppBand);
 
   // Harajuku : le seul quai latéral de la boucle. Un vrai mur, un vrai
   // soubassement carrelé, et rien à voir au-delà.
@@ -923,20 +881,15 @@ function FarSide({
         <boxGeometry args={[0.07, 0.66, len]} />
       </mesh>
       {oppPsd && (
-        <>
-          <mesh position={[oppEdge + 0.05, PLATFORM_TOP + PSD_H / 2, 0]} material={m.psd}>
-            <boxGeometry args={[0.1, PSD_H, len]} />
-          </mesh>
-          {/* Bandeau interrompu, pour la même raison qu'au bord d'en face. */}
-          <instancedMesh
-            name="bandeau-psd-opposé"
-            ref={oppBandRef}
-            args={[undefined, undefined, Math.max(1, oppBand.length)]}
-            material={m.accent}
-          >
-            <boxGeometry args={[1, 1, 1]} />
-          </instancedMesh>
-        </>
+        <IdlePsd
+          name="psd-quai-opposé"
+          x={oppEdge + 0.05}
+          trackSide={-1}
+          segs={segs}
+          gaps={gaps}
+          m={m}
+          doors={detail <= 2}
+        />
       )}
       {/* L'auvent d'en face : on le voit, on n'y marche pas. Il tombe au
           palier le plus léger, où la silhouette du quai suffit - et là où la
