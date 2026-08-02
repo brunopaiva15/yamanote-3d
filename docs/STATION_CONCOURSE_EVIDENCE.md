@@ -50,6 +50,41 @@ Ce qui tient tout cela en place, et c'est du code :
 3. un test lie ce carnet au registre : le compte de plans lus affiché ci-dessus
    est calculé, pas recopié.
 
+### Comment se lit un plan JR East — le code couleur
+
+Il est le même sur les trente gares, et il **se lit dans la légende**, pas dans
+l'intuition. Il est transcrit ici une fois pour que les fiches ci-dessous soient
+vérifiables sans le document :
+
+| Aplat | Ce que c'est |
+|---|---|
+| rose clair | **Concourse Area (Local line)** — zone **payante** des lignes classiques |
+| crème | **Concourse Area (outside the ticket gates)** — zone **libre** |
+| beige / tan | **Large store (inside the ticket gates)** — grand commerce **derrière** les portillons |
+| rose soutenu | Concourse Area (Shinkansen) |
+| bleu clair | Local line Track — le quai lui-même |
+| bleu vif | Shinkansen Track |
+| hachures magenta | **Gate** — la ligne de portillons elle-même |
+| gris | emprise bâtie hors concourse : ni zone payante, ni zone libre, ni commerce cartographié |
+
+Deux conséquences directes pour le chantier :
+
+1. **le beige distingue un commerce EN ZONE PAYANTE** d'un commerce en zone
+   libre. C'est un fait de plan, pas une interprétation — et c'est ce qui fait
+   qu'EATo LUMINE compte comme galerie derrière les portillons à Shinjuku ;
+2. **Kiosk, Shop et Newdays sont trois entrées distinctes de la légende.** Un
+   « KIOSK » sur le plan est un kiosque nommé, un « SHOP » est un commerce dont
+   la catégorie seule est établie. La distinction alimente directement
+   `CommerceStatus` (`namedVerified` / `categoryVerified`) au lieu d'être
+   devinée.
+
+> **Piège d'outillage.** Ces plans sont des impressions PDF du visualiseur JR
+> East : les libellés de la carte sont dans une image, mais la légende, les
+> onglets de niveau et les en-têtes sont du **texte vectoriel japonais**. Sans
+> `poppler-data` (tables CID Adobe-Japan1), poppler les rend **silencieusement
+> blancs** — la page s'affiche, il manque seulement ce qui l'explique. Installer
+> `poppler-utils` **et** `poppler-data` avant de lire un plan.
+
 ### Date de chaque plan lu
 
 Un plan de juin et un plan d'août ne décrivent pas la même gare quand la gare
@@ -888,9 +923,9 @@ seulement pour vérifier une orientation en surface.
 
 **Commerces structurants**
 
-- **EATo LUMINE** — *dans la zone payante* du B1F, entre les volées des voies 9&10 et 13&14. C’est le fait le plus remarquable du plan : une galerie de restauration côté 改札内, pas une devanture de couloir.
+- **EATo LUMINE** — *dans la zone payante* du B1F, entre les volées des voies 9&10 et 13&14, dessiné dans l’aplat « **Large store (inside the ticket gates)** ». Ce n’est donc pas une lecture de couleur au juger : le plan le classe lui-même derrière les portillons. C’est le fait le plus remarquable du document — une galerie de restauration côté 改札内, pas une devanture de couloir.
 - **LUMINE EST Shinjuku** — zone libre du B1F, au nord-est du Central East Gate, avec ses propres « for Exit ».
-- **NEWoMan** — 2F, de part et d’autre de l’épine sud, en zone libre comme en bordure de zone payante. **LUMINE 0** au nord-ouest du même niveau, **LUMINE 2** contre le Southeast Gate.
+- **NEWoMan** — 2F, de part et d’autre de l’épine sud. Le nom revient sur DEUX aplats différents, et la distinction compte : les blocs beiges qui flanquent l’épine sont des « large stores **inside the ticket gates** », les blocs gris ne sont qu’une emprise bâtie, hors concourse cartographié. **LUMINE 0** (nord-ouest) et **LUMINE 2** (contre le Southeast Gate) sont de ce second type.
 - **NewDays** — zone payante B1F, près des volées 15&16. **KIOSK** sur les quais 1&2 et 3&4. Un **SHOP** au B1F.
 - **Suica Penguin Park** et la **Statue of Suica Penguin** — zone libre 2F est, contre le terminal de bus.
 
@@ -1047,7 +1082,7 @@ Tranche jouable autour du **Central East Gate (B1F)**, qui est le groupe le plus
 
 **Commerces structurants**
 
-- **KIOSK** sur les quais, **NewDays** dans la légende — le plan ne place nommément aucune galerie.
+- **KIOSK** sur les quais. Aucun aplat « large store » nulle part : à la différence de Shinjuku, **le plan de Shibuya ne place aucune galerie commerciale de gare**, ni derrière ni devant les portillons. Le hall est nu, et c’est un fait de relevé, pas un oubli.
 - Ni Hikarie, ni Scramble Square, ni Stream, ni Sakura Stage n’apparaissent : ce sont des bâtiments voisins, pas des commerces de gare JR. Les représenter relèvera de la perspective extérieure, pas du relevé.
 
 **Travaux (août 2026)**
