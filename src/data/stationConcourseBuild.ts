@@ -549,6 +549,102 @@ export function networkIssues(
   return out;
 }
 
+// --- Les baies, toutes lignes confondues ---------------------------------
+
+/**
+ * Une baie de portillon, rangée dans la suite PLATE de toute la gare.
+ *
+ * Le hall générique n'avait qu'une ligne : un rang de baie suffisait à
+ * l'identifier, et `systems/fareGate` tenait un tableau d'états indexé dessus.
+ * Une gare en a jusqu'à quatre - c'est même ce qui la rend reconnaissable - et
+ * il faut donc un rang qui traverse les groupes. C'est celui-ci, et il ne
+ * change rien pour une gare à une seule ligne : les rangs y sont les mêmes
+ * qu'avant, dans le même ordre.
+ *
+ * Elle porte aussi ce qu'il faut pour répondre « où suis-je » sans avoir à
+ * relire la géométrie : le milieu de la baie en repère quai, l'axe qu'on
+ * franchit, et l'emprise de la ligne.
+ */
+export interface ConcourseBay {
+  /** Rang plat, tous groupes confondus. C'est l'index d'état. */
+  index: number;
+  gateId: string;
+  /** Milieu de la baie, repère quai. */
+  x: number;
+  z: number;
+  width: number;
+  wide: boolean;
+  /** L'axe le long duquel on FRANCHIT la ligne. */
+  cross: 'x' | 'z';
+  /** Emprise de la ligne à laquelle cette baie appartient. */
+  rect: InteriorRect;
+  icOnly?: true;
+  exitOnly?: true;
+}
+
+const BAYS = new WeakMap<ConcourseNetwork, readonly ConcourseBay[]>();
+
+/** Toutes les baies franchissables d'une gare, dans l'ordre des groupes. */
+export function concourseBays(net: ConcourseNetwork): readonly ConcourseBay[] {
+  const hit = BAYS.get(net);
+  if (hit) return hit;
+  const out: ConcourseBay[] = [];
+  if (net.built) {
+    for (const g of net.gates) {
+      if (!g.walkable) continue;
+      for (const b of g.passages) {
+        out.push({
+          index: out.length,
+          gateId: g.id,
+          x: b.along === 'x' ? b.at : (g.rect.x0 + g.rect.x1) / 2,
+          z: b.along === 'z' ? b.at : (g.rect.z0 + g.rect.z1) / 2,
+          width: b.width,
+          wide: b.wide,
+          cross: g.cross,
+          rect: g.rect,
+          icOnly: g.icOnly,
+          exitOnly: g.exitOnly,
+        });
+      }
+    }
+  }
+  BAYS.set(net, out);
+  return out;
+}
+
+/**
+ * La baie sous un point, et sa distance à la LIGNE.
+ *
+ * Quatre endroits posaient la même question de quatre façons - la marche du
+ * joueur, la foule, le son du mécanisme, la boucle des battants - et chacun
+ * relisait la géométrie de la ligne à sa manière. Elle est posée une fois ici.
+ *
+ * `gap` vaut zéro ENTRE LES BORNES, et c'est ce qui fait qu'on ne pince
+ * personne : un portillon réel attend d'être libre. `slack` élargit le fuseau
+ * latéral - on se présente à une baie en la visant, pas en s'y alignant au
+ * centimètre.
+ */
+export function bayAt(
+  net: ConcourseNetwork,
+  x: number,
+  z: number,
+  slack = 0,
+): { bay: ConcourseBay; gap: number } | null {
+  for (const bay of concourseBays(net)) {
+    const r = bay.rect;
+    // L'axe qu'on franchit porte l'écart à la ligne ; l'autre porte le fuseau.
+    const across = bay.cross === 'x' ? x : z;
+    const along = bay.cross === 'x' ? z : x;
+    const lo = bay.cross === 'x' ? r.x0 : r.z0;
+    const hi = bay.cross === 'x' ? r.x1 : r.z1;
+    const gap = across < lo ? lo - across : across > hi ? across - hi : 0;
+    const mid = bay.cross === 'x' ? bay.z : bay.x;
+    if (Math.abs(along - mid) > bay.width / 2 + slack) continue;
+    return { bay, gap };
+  }
+  return null;
+}
+
 // --- Interroger un réseau ------------------------------------------------
 
 /**

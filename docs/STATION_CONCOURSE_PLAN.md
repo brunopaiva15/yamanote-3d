@@ -273,7 +273,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **7** | **Compilateur de profil** ✅ | `stationConcourseBuild.ts` : profil → réseau de pièces ; repli fidèle vers `interiorFor` ; `networkIssues` | G2 R4 |
 | **8** | **Réseau dans les niveaux** ✅ | `stationLevels` lit le réseau : N pièces à N altitudes, `joinFloorAt` pour les liens | S1 |
 | **9** | **Réseau dans la marche** ✅ | `walkable` et `walkerBlocked` acceptent les ouvrages de liaison comme du sol | S1 |
-| 10 | Portillons multiples | `fareGate` : un état par groupe et par passage | S2 |
+| **10** | **Portillons multiples** ✅ | `concourseBays` / `bayAt` : un rang plat qui traverse les groupes ; `fareGate` s'y branche | S2 |
 | 11 | Itinéraires PNJ | `concourseRoute` : axe par nœud, choix de groupe, choix de sortie | S3 |
 | 12 | Accès secondaires vivants | plusieurs trémies mènent quelque part | G3 |
 | 13 | Rendu : `ConcourseNetwork` | remplace l'appel unique ; dessine nœud par nœud | R1 |
@@ -587,6 +587,41 @@ reconstruit à la main, sans le réseau, sur toute la surface des trente halls.
 Reste ouvert, et c'est la **phase 12** : on entre encore dans la gare par UNE
 seule trémie. Les ouvrages font changer d'altitude *à l'intérieur* du niveau de
 correspondance ; passer du quai au hall reste le privilège de l'accès principal.
+
+### 4.8 La phase 10 : un rang de baie qui traverse les groupes
+
+`systems/fareGate` tient un état par baie — battants, voyant, verdict, minuterie
+— dans un tableau indexé par un rang. Ce rang ne connaissait qu'une ligne
+(constat S2). Une gare en a jusqu'à quatre, et c'est même **ce qui la rend
+reconnaissable** : le 北口 et le 南口 d'Uguisudani ne sont pas deux moitiés d'une
+même ligne, ce sont deux gares en miniature.
+
+`concourseBays(net)` enfile donc toutes les baies franchissables de la gare,
+groupe après groupe, en un seul rang. Pour une gare à une seule ligne, ce sont
+**exactement** les mêmes rangs qu'avant, dans le même ordre — vérifié sur les
+trente.
+
+**Quatre endroits posaient la même question de quatre façons** — la marche du
+joueur, la foule, le son du mécanisme, la boucle des battants — et chacun
+relisait la géométrie de la ligne à sa manière, avec `it.gate.z0`, `p.x`,
+`width / 2`. Elle est posée une fois, dans `bayAt(net, x, z, slack)` :
+
+- l'axe qu'on **franchit** porte l'écart à la ligne (`gap`) ;
+- l'autre porte le **fuseau** latéral — on se présente à une baie en la visant,
+  pas en s'y alignant au centimètre ;
+- `gap` vaut zéro **entre les bornes**, et c'est ce qui fait qu'un portillon ne
+  pince personne : il attend d'être libre.
+
+**La généralisation qui compte** : une ligne qu'on franchit en `x` égrène ses
+baies en `z`. Le hall générique ne connaissait que l'inverse, et n'avait donc
+jamais eu à le dire. Takanawa Gateway — seule gare du relevé dont les **deux**
+contrôles sont franchissables — s'en sert déjà.
+
+Et deux faits du relevé arrivent maintenant jusqu'au portillon lui-même :
+`icOnly` et `exitOnly`. La bretelle à sens unique de Shin-Ōkubo est réservée à
+la carte sans contact ; le Marunouchi central de Tokyo aussi. `fareGate` ne les
+lit pas encore — c'est un fait de jeu, pas de géométrie, et il ira avec la
+signalétique (phase 18) — mais ils ne se perdent plus en chemin.
 
 ### Ordre et raison
 

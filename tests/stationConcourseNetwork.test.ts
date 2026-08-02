@@ -34,7 +34,11 @@ const {
   mainAccessFloor,
   walkerBlocked,
 } = await import('../src/systems/stationLevels.ts');
-const { compileProfile } = await import('../src/data/stationConcourseBuild.ts');
+const {
+  bayAt,
+  compileProfile,
+  concourseBays,
+} = await import('../src/data/stationConcourseBuild.ts');
 const { CONCOURSE_PROFILES } = await import('../src/data/stationConcourseProfiles.ts');
 const { wiredCount } = await import('../src/data/stationConcourseWired.ts');
 const { EXIT_MOUTH_END } = await import('../src/data/stationInterior.ts');
@@ -248,4 +252,103 @@ test('la marche des trente gares n’a pas changé', () => {
       }
     }
   }
+});
+
+// --- Phase 10 : les baies, toutes lignes confondues ---------------------
+
+test('les baies du hall générique sont EXACTEMENT celles d’avant', () => {
+  // `systems/fareGate` tient un état par baie, indexé par un rang plat. Ce rang
+  // traverse maintenant les groupes ; pour une gare à une seule ligne il doit
+  // rester le même, dans le même ordre, sans quoi les battants s'ouvriraient au
+  // mauvais endroit.
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const p = PLACE(i);
+    const bays = concourseBays(p.network);
+    const before = p.interior.built ? p.interior.gate.passages : [];
+    assert.equal(bays.length, before.length, NAME(i));
+    bays.forEach((b, k) => {
+      assert.equal(b.index, k, NAME(i));
+      assert.equal(b.x, before[k].x, `${NAME(i)} : baie ${k} déplacée`);
+      assert.equal(b.width, before[k].width, NAME(i));
+      assert.equal(b.wide, before[k].wide, NAME(i));
+      assert.equal(b.cross, 'z', NAME(i));
+    });
+  }
+});
+
+test('« dans quelle baie suis-je » répond comme avant', () => {
+  // Quatre endroits posaient cette question de quatre façons ; elle est posée
+  // une fois. On rejoue l'ancienne réponse sur toute la ligne de portillons.
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const p = PLACE(i);
+    const it = p.interior;
+    if (!it.built) continue;
+    const before = (x: number, z: number): number => {
+      if (z < it.gate.z0 || z > it.gate.z1) return -1;
+      for (let k = 0; k < it.gate.passages.length; k++) {
+        if (Math.abs(x - it.gate.passages[k].x) <= it.gate.passages[k].width / 2) return k;
+      }
+      return -1;
+    };
+    for (let x = it.paid.x0; x <= it.paid.x1; x += 0.07) {
+      for (let z = it.gate.z0 - 0.6; z <= it.gate.z1 + 0.6; z += 0.15) {
+        const hit = bayAt(p.network, x, z);
+        const now = hit && hit.gap === 0 ? hit.bay.index : -1;
+        assert.equal(now, before(x, z), `${NAME(i)} : baie changée en (${x.toFixed(2)}, ${z.toFixed(2)})`);
+      }
+    }
+  }
+});
+
+test('DEUX GROUPES, un seul rang de baies', () => {
+  // Takanawa Gateway est la seule gare du relevé dont les DEUX contrôles sont
+  // franchissables : c'est un hall d'une pièce, deux portes. Le rang plat les
+  // enfile, et chaque baie sait de quel groupe elle vient.
+  const net = compileProfile(CONCOURSE_PROFILES[25]);
+  const bays = concourseBays(net);
+  const groups = [...new Set(bays.map((b) => b.gateId))];
+  assert.deepEqual(groups, ['gate-north', 'gate-south']);
+  bays.forEach((b, k) => assert.equal(b.index, k));
+  assert.ok(bays.length >= 8, `seulement ${bays.length} baies`);
+
+  // Et l'on retrouve chacune là où elle est : ces lignes se franchissent en x,
+  // donc leurs baies s'égrènent en z — l'inverse du hall générique.
+  for (const b of bays) {
+    assert.equal(b.cross, 'x');
+    const hit = bayAt(net, (b.rect.x0 + b.rect.x1) / 2, b.z);
+    assert.equal(hit?.bay.index, b.index, `baie ${b.index} introuvable`);
+    assert.equal(hit?.gap, 0);
+  }
+  // Les deux groupes sont à des z différents : on ne les confond pas.
+  const north = bays.filter((b) => b.gateId === 'gate-north');
+  const south = bays.filter((b) => b.gateId === 'gate-south');
+  assert.ok(Math.min(...north.map((b) => b.z)) > Math.max(...south.map((b) => b.z)));
+});
+
+test('l’écart à la ligne se mesure sur l’axe qu’on franchit', () => {
+  // `gap` vaut zéro ENTRE LES BORNES — c'est ce qui fait qu'un portillon ne
+  // pince personne — et croît dès qu'on s'en éloigne, du bon côté.
+  const net = compileProfile(CONCOURSE_PROFILES[25]);
+  const b = concourseBays(net)[0];
+  const mid = (b.rect.x0 + b.rect.x1) / 2;
+  assert.equal(bayAt(net, mid, b.z)?.gap, 0);
+  assert.ok(Math.abs(bayAt(net, b.rect.x0 - 1.2, b.z)!.gap - 1.2) < 1e-9);
+  assert.ok(Math.abs(bayAt(net, b.rect.x1 + 0.4, b.z)!.gap - 0.4) < 1e-9);
+  // Hors du fuseau latéral, rien : on n'est dans aucune baie.
+  assert.equal(bayAt(net, mid, b.z + b.width), null);
+});
+
+test('« carte seule » et « sortie seule » survivent à la compilation', () => {
+  // Deux faits qu'aucune génération ne produit, et qui doivent arriver
+  // jusqu'au portillon lui-même : Shin-Ōkubo a une bretelle à sens unique
+  // réservée à la carte sans contact, Tokyo un contrôle central qui n'accepte
+  // qu'elle.
+  const okubo = concourseBays(compileProfile(CONCOURSE_PROFILES[15]));
+  const only = okubo.filter((b) => b.exitOnly);
+  assert.ok(only.length >= 1, 'JY16 Shin-Ōkubo : la bretelle a disparu');
+  assert.ok(only.every((b) => b.icOnly), 'la bretelle devrait être à carte seule');
+  assert.ok(okubo.some((b) => !b.exitOnly), 'il ne reste que la bretelle');
+
+  const tokyo = concourseBays(compileProfile(CONCOURSE_PROFILES[0]));
+  assert.ok(tokyo.every((b) => b.icOnly), 'JY01 Tokyo : le Marunouchi central accepte tout');
 });

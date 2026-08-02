@@ -33,6 +33,7 @@
 
 import { fareFor, FARES } from '../data/products';
 import { PASSAGE_SLACK } from '../data/stationInterior';
+import { bayAt, concourseBays } from '../data/stationConcourseBuild';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import { gateBeep, gateDeny, gateFlap } from './audioEngine';
@@ -96,6 +97,11 @@ interface PaxAtGate {
   hold: boolean;
 }
 
+/** Le réseau de la gare où l'on se tient. */
+function currentNetwork() {
+  return placementFor(useStore.getState().platformIndex, psdGates()).network;
+}
+
 let states: GateState[] = [];
 let paxAt: PaxAtGate[] = [];
 let builtFor = -1;
@@ -103,7 +109,7 @@ let builtFor = -1;
 function ensure(): GateState[] {
   const index = useStore.getState().platformIndex;
   const place = placementFor(index, psdGates());
-  const n = place.interior.built ? place.interior.gate.passages.length : 0;
+  const n = concourseBays(place.network).length;
   if (builtFor !== index || states.length !== n) {
     builtFor = index;
     states = Array.from({ length: n }, () => ({
@@ -273,20 +279,14 @@ export function paxTapGate(passage: number, dist: number): void {
 export function paxNearGate(x: number, z: number, granted: boolean): void {
   const list = ensure();
   if (!list.length) return;
-  const it = placementFor(useStore.getState().platformIndex, psdGates()).interior;
-  if (!it.built) return;
-  const dz = z < it.gate.z0 ? it.gate.z0 - z : z > it.gate.z1 ? z - it.gate.z1 : 0;
-  if (dz >= CLOSE_AT) return;
-  for (let i = 0; i < it.gate.passages.length; i++) {
-    const p = it.gate.passages[i];
-    if (Math.abs(x - p.x) > p.width / 2 + PASSAGE_SLACK) continue;
-    const a = paxAt[i];
-    // Entre les bornes, on ne pince personne : c'est la règle du joueur, et
-    // elle ne dépend pas de qui est là.
-    if (granted || dz === 0) a.hold = true;
-    else a.near = Math.min(a.near, dz);
-    return;
-  }
+  const hit = bayAt(currentNetwork(), x, z, PASSAGE_SLACK);
+  if (!hit || hit.gap >= CLOSE_AT) return;
+  const a = paxAt[hit.bay.index];
+  if (!a) return;
+  // Entre les bornes, on ne pince personne : c'est la règle du joueur, et
+  // elle ne dépend pas de qui est là.
+  if (granted || hit.gap === 0) a.hold = true;
+  else a.near = Math.min(a.near, hit.gap);
 }
 
 /**
@@ -326,15 +326,8 @@ export function gateBlocks(passage: number): boolean {
  * rectangle percé de plusieurs baies.
  */
 export function passageAt(localX: number, localZ: number): number {
-  const place = placementFor(useStore.getState().platformIndex, psdGates());
-  const it = place.interior;
-  if (!it.built) return -1;
-  if (localZ < it.gate.z0 || localZ > it.gate.z1) return -1;
-  for (let i = 0; i < it.gate.passages.length; i++) {
-    const p = it.gate.passages[i];
-    if (Math.abs(localX - p.x) <= p.width / 2) return i;
-  }
-  return -1;
+  const hit = bayAt(currentNetwork(), localX, localZ);
+  return hit && hit.gap === 0 ? hit.bay.index : -1;
 }
 
 // --- Boucle ---------------------------------------------------------------
@@ -347,14 +340,9 @@ export function passageAt(localX: number, localZ: number): number {
  */
 function flapGain(passage: number): number {
   if (runtime.playerLevel !== 'concourse') return 0;
-  const it = placementFor(useStore.getState().platformIndex, psdGates()).interior;
-  if (!it.built) return 0;
-  const p = it.gate.passages[passage];
-  if (!p) return 0;
-  const d = Math.hypot(
-    runtime.playerPlatX - p.x,
-    runtime.playerPlatZ - (it.gate.z0 + it.gate.z1) / 2,
-  );
+  const bay = concourseBays(currentNetwork())[passage];
+  if (!bay) return 0;
+  const d = Math.hypot(runtime.playerPlatX - bay.x, runtime.playerPlatZ - bay.z);
   return d >= FLAP_EARSHOT ? 0 : (1 - d / FLAP_EARSHOT) ** 1.4;
 }
 
@@ -375,14 +363,15 @@ function playerAtGate(passage: number): PlayerAtGate {
   if (!s) return 'away';
   if (s.grantT > 0) return 'holds';
   if (runtime.playerLevel !== 'concourse') return 'away';
-  const it = placementFor(useStore.getState().platformIndex, psdGates()).interior;
-  if (!it.built) return 'away';
-  const p = it.gate.passages[passage];
-  if (!p || Math.abs(runtime.playerPlatX - p.x) >= p.width / 2 + PASSAGE_SLACK) return 'away';
-  const pz = runtime.playerPlatZ;
-  const dz = pz < it.gate.z0 ? it.gate.z0 - pz : pz > it.gate.z1 ? pz - it.gate.z1 : 0;
-  if (dz === 0) return 'holds';
-  return dz < CLOSE_AT ? 'blocks' : 'away';
+  const hit = bayAt(
+    currentNetwork(),
+    runtime.playerPlatX,
+    runtime.playerPlatZ,
+    PASSAGE_SLACK,
+  );
+  if (!hit || hit.bay.index !== passage) return 'away';
+  if (hit.gap === 0) return 'holds';
+  return hit.gap < CLOSE_AT ? 'blocks' : 'away';
 }
 
 export function updateFareGates(dt: number): void {

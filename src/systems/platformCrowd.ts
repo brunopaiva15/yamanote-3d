@@ -35,6 +35,7 @@ import { CONFIG } from '../data/config';
 import { SKELETON_TOP, makeAppearance, type Appearance } from './appearance';
 import { paxScale } from './perf';
 import { onPlatformDeck, runtime } from './runtime';
+import { concourseBays } from '../data/stationConcourseBuild';
 import { useStore } from '../store';
 import { psdGates } from '../three/station/psdLayout';
 import {
@@ -813,7 +814,7 @@ function passageLoad(n: number): number[] {
 
 /** La charge de la ligne de portillons de la gare courante. */
 function gateLoad(pl: StationPlacement): number[] {
-  return passageLoad(pl.interior.built ? pl.interior.gate.passages.length : 0);
+  return passageLoad(concourseBays(pl.network).length);
 }
 
 /** Une trémie qui n'est PAS l'accès au hall : le couloir borgne d'à côté. */
