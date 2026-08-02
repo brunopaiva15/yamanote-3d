@@ -604,3 +604,65 @@ test('un volume est continu : les pièces qu’un portillon joint restent ensemb
     }
   }
 });
+
+// --- Phase 16 : les limites ----------------------------------------------
+
+test('le hall générique ne connaît ni correspondance ni chantier', () => {
+  // Constat D7 du plan, et il reste vrai : `data/lines` sait qu'il y a un Ginza
+  // à Kanda, le hall non. Rien ne s'affiche donc sur les trente gares.
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const p = PLACE(i);
+    assert.deepEqual(p.network.transfers, [], NAME(i));
+    assert.deepEqual(p.network.hoardings, [], NAME(i));
+  }
+});
+
+test('les correspondances arrivent jusqu’au rendu, avec leur direction', () => {
+  // Ce qui compte n'est pas qu'elles existent, c'est qu'on comprenne OÙ elles
+  // vont : le Ginza est en l'air, le Chiyoda tout en bas.
+  let gated = 0;
+  let signOnly = 0;
+  for (const p of CONCOURSE_PROFILES) {
+    const net = compileProfile(p);
+    assert.equal(net.transfers.length, p.transferPortals.length, NAME(p.stationIndex));
+    for (const t of net.transfers) {
+      assert.ok(['down', 'up', 'across'].includes(t.goes), t.id);
+      assert.ok(t.lines.length > 0, t.id);
+      assert.ok(net.rooms.some((r) => r.id === t.fromRoomId), `${t.id} part de nulle part`);
+      if (t.gated) gated++;
+      if (t.depiction === 'signOnly') signOnly++;
+    }
+  }
+  // Neuf gares ont une ligne de contrôle entre exploitants : elle porte ses
+  // bornes, et le validateur refuse qu'elle se réduise à une flèche.
+  assert.ok(gated >= 9, `${gated} correspondances gardées`);
+  assert.ok(signOnly > 0, 'aucune correspondance réduite à un panneau ?');
+});
+
+test('les huit gares en travaux portent leurs palissades', () => {
+  const withWorks: string[] = [];
+  for (const p of CONCOURSE_PROFILES) {
+    const net = compileProfile(p);
+    if (net.hoardings.length === 0) continue;
+    withWorks.push(NAME(p.stationIndex));
+    for (const h of net.hoardings) {
+      const room = net.rooms.find((r) => r.id === h.roomId);
+      assert.ok(room, `${h.id} : pièce inconnue`);
+      // Une palissade barre : c'est son seul rôle, et c'est celui qu'elle a
+      // en vrai.
+      assert.ok(
+        net.obstacles.some((o) => o.x0 === h.rect.x0 && o.z0 === h.rect.z0),
+        `${h.id} : la palissade ne barre pas`,
+      );
+    }
+  }
+  assert.deepEqual(withWorks, [
+    'JY05 Ueno',
+    'JY17 Shinjuku',
+    'JY20 Shibuya',
+    'JY25 Shinagawa',
+    'JY27 Tamachi',
+    'JY28 Hamamatsuchō',
+    'JY29 Shimbashi',
+  ]);
+});

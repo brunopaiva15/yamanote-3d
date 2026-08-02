@@ -56,6 +56,7 @@ export function ConcourseNetwork({
         <Concourse
           key={shell.id}
           shell={shell}
+          net={net}
           it={it}
           m={m}
           station={station}

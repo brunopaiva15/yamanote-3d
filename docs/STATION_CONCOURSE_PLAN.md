@@ -279,7 +279,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **13** | **Rendu : `ConcourseNetwork`** ✅ | `shellsOf` : volumes continus ; `Concourse` devient un archétype parmi d'autres | R1 |
 | **14** | **Archétypes 1 — halls** ✅ | `hallStyle` : `linear`, `underViaduct`, `compact` — ce qui les distingue est la COUVERTURE | R1 |
 | **15** | **Archétypes 2 — hauteur** ✅ | `overbridge`, `cross`, `mezzanine`, `hubSlice` : ce qu'ils LAISSENT VOIR | R1 |
-| 16 | Archétypes 3 — limites | `ExitBranch`, `TransferPortal`, `ConstructionPartition` | G4 D7 |
+| **16** | **Archétypes 3 — limites** ✅ | `interiors/Limits` : correspondances (gardées ou non) et palissades de chantier | G4 D7 |
 | 17 | Occlusion interne | portails de visibilité aux virages, escaliers, branches | R2 |
 | 18 | Signalétique unifiée | une seule source pour quai / hall / portillons / couloirs / bouches | D4 D5 |
 | 19 | Commerces | `CommercialFrontage`, quatre statuts de commerce, galeries `ecute`/`atre` | D8 |
@@ -797,6 +797,28 @@ nature : **ce qu'ils laissent voir**.
 
 Le soubassement de faïence disparaît là où il y a un appui : il est déjà à
 cette hauteur, et le doubler ferait un bourrelet.
+
+### 4.14 La phase 16 : ce qui ferme le monde jouable doit le DIRE
+
+Le périmètre visitable est étroit et assumé. Tout le reste de la gare continue,
+et le joueur doit le comprendre sans y aller. `Depiction` est le vocabulaire
+fermé de cette limite ; la phase 16 en dessine deux formes que rien ne montrait
+(constat D7) :
+
+- **la correspondance.** Ce qui compte est sa DIRECTION — qu'on comprenne, depuis
+  le hall, que le Ginza est en l'air et le Chiyoda tout en bas — et la couleur
+  de ses lignes, seule chose qu'un voyageur qui ne lit pas le japonais ait
+  besoin de voir. Neuf gares ont en plus une **ligne de contrôle entre
+  exploitants** : elle porte ses bornes, parce qu'on y franchit un 改札 sans
+  repasser en zone libre ;
+- **le chantier.** Sept gares en ont un que le plan délimite. Une gare en travaux
+  n'est pas une gare abîmée, c'est une gare AUTRE : la palissade est pleine
+  hauteur et opaque, avec sa bande jaune à hauteur d'œil. Ce qu'il y a derrière
+  n'est pas « pas encore fait », c'est fermé.
+
+Le réseau porte donc `transfers` et `hoardings`. **Rien ne s'affiche sur les
+trente gares** : le hall générique n'en connaît aucune, et son réseau les rend
+vides — c'est exactement ce que D7 constatait.
 
 ### Ordre et raison
 

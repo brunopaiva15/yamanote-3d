@@ -182,6 +182,27 @@ export interface ConcourseMouth {
   depiction: Depiction;
 }
 
+/** Une correspondance telle que le rendu la voit : une direction, et un seuil. */
+export interface ConcourseTransfer {
+  id: string;
+  lines: readonly string[];
+  fromRoomId: string;
+  goes: 'down' | 'up' | 'across';
+  gated: boolean;
+  depiction: Depiction;
+  rect: InteriorRect | null;
+  nameEn?: string;
+}
+
+/** Une cloison de chantier : ce qui ferme, et ce qui est écrit dessus. */
+export interface ConcourseHoarding {
+  id: string;
+  roomId: string;
+  rect: InteriorRect;
+  kind: 'hoarding' | 'detour' | 'scaffold';
+  noticeEn?: string;
+}
+
 export interface ConcourseNetwork {
   stationIndex: number;
   /** D'où vient ce réseau : du relevé, ou du hall générique. */
@@ -194,6 +215,10 @@ export interface ConcourseNetwork {
   mouths: ConcourseMouth[];
   /** Les accès de quai qui mènent quelque part. Jamais vide sur un hall bâti. */
   accesses: ConcourseAccess[];
+  /** Les correspondances : elles se VOIENT, elles ne se prennent pas. */
+  transfers: ConcourseTransfer[];
+  /** Les cloisons de chantier. L'état d'août 2026, là où le plan le délimite. */
+  hoardings: ConcourseHoarding[];
   /** Mobilier. Vide sur le chemin `profile` : c'est la phase 19 qui le pose. */
   fixtures: Fixture[];
   /** Tout ce qui barre : bornes, cloisons de chantier, mobilier. */
@@ -430,7 +455,27 @@ export function compileProfile(
 
   // Les cloisons de chantier barrent : c'est leur seul rôle, et c'est celui
   // qu'elles ont en vrai.
-  for (const part of p.works?.partitions ?? []) obstacles.push(shifted(part.rect, dz));
+  const hoardings = (p.works?.partitions ?? []).map((part) => ({
+    id: part.id,
+    roomId: part.nodeId,
+    rect: shifted(part.rect, dz),
+    kind: part.kind,
+    noticeEn: part.noticeEn,
+  }));
+  for (const h of hoardings) obstacles.push(h.rect);
+
+  const transfers: ConcourseTransfer[] = p.transferPortals
+    .filter((t) => byId.has(t.fromNodeId))
+    .map((t) => ({
+      id: t.id,
+      lines: t.lines,
+      fromRoomId: t.fromNodeId,
+      goes: t.goes,
+      gated: t.gated === true,
+      depiction: t.depiction,
+      rect: t.rect ? shifted(t.rect, dz) : null,
+      nameEn: t.nameEn,
+    }));
 
   // Seuls les accès PRATICABLES mènent quelque part : une tête d'escalier qu'on
   // regarde reste le couloir borgne qu'elle était.
@@ -453,6 +498,8 @@ export function compileProfile(
     gates,
     mouths,
     accesses,
+    transfers,
+    hoardings,
     // Le mobilier n'est pas du ressort du relevé : un plan officiel ne cote pas
     // une batterie de distributeurs. Il viendra du moteur, en phase 19.
     fixtures: [],
@@ -509,6 +556,10 @@ export function legacyNetwork(index: number, it: StationInterior): ConcourseNetw
     }],
     // Le hall générique n'a qu'un accès, et le placement sait déjà lequel :
     // c'est la trémie la plus proche du milieu du quai. D'où le rang `null`.
+    // Le hall générique ne connaît ni correspondance ni chantier : `data/lines`
+    // sait qu'il y a un Ginza à Kanda, le hall non (constat D7).
+    transfers: [],
+    hoardings: [],
     accesses: it.built
       ? [{
         id: 'main',

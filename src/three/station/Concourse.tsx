@@ -34,7 +34,8 @@ import {
   HALL_WALL_T,
   type StationInterior,
 } from '../../data/stationInterior';
-import type { ConcourseShell } from '../../data/stationConcourseBuild';
+import type { ConcourseNetwork, ConcourseShell } from '../../data/stationConcourseBuild';
+import { Limits } from './interiors/Limits';
 import { hallStyle } from './interiors/hallStyle';
 import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
@@ -68,6 +69,7 @@ const WALL_T = HALL_WALL_T;
  */
 export function Concourse({
   shell,
+  net,
   it,
   m,
   station,
@@ -75,6 +77,8 @@ export function Concourse({
 }: {
   /** Le volume à envelopper : une ou plusieurs pièces du réseau. */
   shell: ConcourseShell;
+  /** Le réseau entier : les LIMITES y vivent (correspondances, chantiers). */
+  net: ConcourseNetwork;
   /**
    * L'intérieur générique de la gare, pour son MOBILIER et rien d'autre.
    *
@@ -312,6 +316,11 @@ export function Concourse({
           puis des portillons aux sorties : elle traverse par un passage, jamais
           par une borne. */}
       {detail <= 1 && <Guideline shell={shell} m={m} />}
+
+      {/* CE QUI FERME LE MONDE JOUABLE : les correspondances qu'on voit sans
+          les prendre, et les palissades de chantier. Rien sur les trente gares
+          tant qu'aucune n'est branchée — le hall générique n'en connaît pas. */}
+      <Limits shell={shell} net={net} m={m} />
 
     </group>
   );
