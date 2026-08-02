@@ -24,13 +24,16 @@
 // absurde d'envelopper ensemble.
 // ─────────────────────────────────────────────────────────────────────────
 //
-// UN SEUL ARCHÉTYPE AUJOURD'HUI, et c'est voulu : `Concourse`, le hall
-// longitudinal, celui qui existe. Les phases 14 à 16 en ajouteront d'autres —
-// hall compact, dessous de viaduc, pont-concourse, hall transversal, mezzanine
-// — et c'est ici, et nulle part ailleurs, qu'on choisira lequel.
+// ET L'ON NE DESSINE QUE CE QU'ON PEUT VOIR (phase 17). Le hall était rendu
+// d'un bloc dès qu'il existait — constat R2 — parce qu'il n'y en avait qu'un.
+// Avec deux volumes, la question se pose immédiatement : depuis le souterrain
+// de Takeshita on ne voit pas le bâtiment de 2020 d'Harajuku, à quatre-vingt-dix
+// mètres et douze mètres plus haut. `visibleShells` tranche, et il n'y a rien à
+// trancher tant qu'une gare n'a qu'un volume : les trente y passent inchangées.
 
 import type { StationInterior } from '../../data/stationInterior';
-import { shellsOf } from '../../data/stationConcourseBuild';
+import { visibleShells } from '../../data/stationConcourseBuild';
+import { runtime } from '../../systems/runtime';
 import type { ConcourseNetwork as Network } from '../../data/stationConcourseBuild';
 import { Concourse } from './Concourse';
 import type { Mats } from './materials';
@@ -52,7 +55,12 @@ export function ConcourseNetwork({
 }) {
   return (
     <>
-      {shellsOf(net).map((shell) => (
+      {visibleShells(
+        net,
+        runtime.playerLevel === 'concourse',
+        runtime.playerPlatX,
+        runtime.playerPlatZ,
+      ).map((shell) => (
         <Concourse
           key={shell.id}
           shell={shell}

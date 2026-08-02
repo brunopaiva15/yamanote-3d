@@ -759,6 +759,71 @@ export function shellsOf(net: ConcourseNetwork): readonly ConcourseShell[] {
   return out;
 }
 
+/**
+ * Portée du regard à l'intérieur d'un niveau de correspondance (m).
+ *
+ * Un hall de gare n'est pas transparent : au-delà d'une quarantaine de mètres
+ * il n'y a plus de hall, il y a un virage, une palissade ou une autre gare. La
+ * cote est celle du plus long volume qu'on parcourt d'un regard - le passage
+ * libre de Shinagawa, le couloir central de Shinjuku - et pas un mètre de plus.
+ */
+const SIGHT = 40;
+
+/**
+ * Les volumes que le joueur peut VOIR d'où il est.
+ *
+ * Le hall était rendu d'un bloc dès qu'il existait (constat R2). Avec une gare
+ * par volume la question ne se posait pas ; avec deux — Harajuku, Okachimachi —
+ * elle se pose immédiatement : depuis le souterrain de Takeshita on ne voit pas
+ * le bâtiment de 2020, qui est à quatre-vingt-dix mètres et douze mètres plus
+ * haut, et le dessiner reviendrait à payer une gare qu'on ne regarde pas.
+ *
+ * DEUX SITUATIONS, et elles n'ont pas la même réponse :
+ *
+ *   · DEPUIS LE QUAI, on voit ce que la trémie laisse voir. Les volumes que
+ *     dessert un accès vivant sont donc dessinés — c'est la vue qu'on a en
+ *     descendant les marches, et la retirer creuserait un trou noir au fond de
+ *     la cage ;
+ *   · DANS LE HALL, on voit son volume, et ce qui est assez près sur le même
+ *     niveau pour être dans le même regard. Le reste est derrière un virage,
+ *     une palissade, ou tout simplement ailleurs.
+ */
+export function visibleShells(
+  net: ConcourseNetwork,
+  inConcourse: boolean,
+  x: number,
+  z: number,
+): readonly ConcourseShell[] {
+  const all = shellsOf(net);
+  if (all.length <= 1) return all;
+  if (!inConcourse) {
+    const served = new Set(net.accesses.map((a) => a.toRoomId));
+    return all.filter((s) => s.rooms.some((r) => served.has(r.id)));
+  }
+  const here = all.find((s) => x >= s.rect.x0 && x <= s.rect.x1
+    && z >= s.rect.z0 && z <= s.rect.z1);
+  /** Un ouvrage praticable joint-il ces deux volumes ? */
+  const joined = (a: ConcourseShell, b: ConcourseShell) => net.joins.some((j) => {
+    if (!j.walkable) return false;
+    const inA = (id: string) => a.rooms.some((r) => r.id === id);
+    const inB = (id: string) => b.rooms.some((r) => r.id === id);
+    return (inA(j.from) && inB(j.to)) || (inB(j.from) && inA(j.to));
+  });
+  return all.filter((s) => {
+    if (s === here) return true;
+    // CE QU'UNE VOLÉE JOINT SE VOIT, quel que soit le niveau. La mezzanine
+    // d'Okachimachi n'a pas de plafond : elle EST ce qu'on voit en levant les
+    // yeux depuis le hall, et la masquer retirerait la coupe à trois niveaux
+    // qui fait cette gare. La règle est topologique, pas géométrique - un
+    // demi-étage d'écart ne cache rien quand un escalier les relie.
+    if (here && joined(here, s)) return true;
+    if (here && s.levelId !== here.levelId) return false;
+    const dx = Math.max(s.rect.x0 - x, 0, x - s.rect.x1);
+    const dz = Math.max(s.rect.z0 - z, 0, z - s.rect.z1);
+    return Math.hypot(dx, dz) <= SIGHT;
+  });
+}
+
 // --- Les baies, toutes lignes confondues ---------------------------------
 
 /**

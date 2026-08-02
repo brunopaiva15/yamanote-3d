@@ -39,6 +39,7 @@ const {
   compileProfile,
   concourseBays,
   shellsOf,
+  visibleShells,
 } = await import('../src/data/stationConcourseBuild.ts');
 const {
   routeToStreet,
@@ -665,4 +666,71 @@ test('les huit gares en travaux portent leurs palissades', () => {
     'JY28 Hamamatsuchō',
     'JY29 Shimbashi',
   ]);
+});
+
+// --- Phase 17 : l'occlusion interne --------------------------------------
+
+test('une gare à un seul volume ne cache jamais rien', () => {
+  // Constat R2 : le hall était rendu d'un bloc dès qu'il existait. Avec un
+  // volume par gare, il n'y a rien à trancher — et les trente y passent
+  // inchangées, où que soit le joueur.
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const p = PLACE(i);
+    const all = shellsOf(p.network);
+    for (const inHall of [false, true]) {
+      assert.deepEqual(
+        visibleShells(p.network, inHall, 4, 20),
+        all,
+        `${NAME(i)} : un volume a disparu`,
+      );
+    }
+  }
+});
+
+test('DEPUIS TAKESHITA, ON NE VOIT PAS LE BÂTIMENT DE 2020', () => {
+  // Les deux gares de Harajuku sont à quatre-vingt-dix mètres l'une de l'autre
+  // et à douze mètres d'écart vertical. Les dessiner ensemble reviendrait à
+  // payer une gare qu'on ne regarde pas.
+  const p = wired(18);
+  const all = shellsOf(p.network);
+  assert.equal(all.length, 2);
+  const take = all.find((s) => s.rooms.some((r) => r.id === 'paid-takeshita'))!;
+  const omote = all.find((s) => s.rooms.some((r) => r.id === 'paid-omote'))!;
+
+  const mid = (s: typeof take) => ({
+    x: (s.rect.x0 + s.rect.x1) / 2,
+    z: (s.rect.z0 + s.rect.z1) / 2,
+  });
+  const at = mid(take);
+  const seen = visibleShells(p.network, true, at.x, at.z);
+  assert.deepEqual(seen.map((s) => s.id), [take.id], 'on voit les deux gares à la fois');
+
+  const there = mid(omote);
+  assert.deepEqual(
+    visibleShells(p.network, true, there.x, there.z).map((s) => s.id),
+    [omote.id],
+  );
+
+  // Mais DEPUIS LE QUAI, on voit ce que les trémies laissent voir : les deux,
+  // puisque les deux mènent quelque part. Retirer l'un creuserait un trou noir
+  // au fond de sa cage.
+  assert.equal(visibleShells(p.network, false, 0, 0).length, 2);
+});
+
+test('un demi-niveau ouvert reste visible depuis le hall', () => {
+  // La mezzanine d'Okachimachi n'a pas de plafond : elle EST ce qu'on voit en
+  // levant les yeux depuis le hall, et la masquer retirerait la coupe à trois
+  // niveaux qui fait cette gare.
+  const p = wired(3);
+  const all = shellsOf(p.network);
+  const hall = all.find((s) => s.rooms.some((r) => r.id === 'paid-north'))!;
+  const at = {
+    x: (hall.rect.x0 + hall.rect.x1) / 2,
+    z: (hall.rect.z0 + hall.rect.z1) / 2,
+  };
+  // Les deux volumes ne sont pas au même niveau — la mezzanine est un
+  // demi-étage plus haut — mais une VOLÉE les joint, et ce qu'une volée joint
+  // se voit. La règle est topologique, pas géométrique.
+  const seen = visibleShells(p.network, true, at.x, at.z);
+  assert.equal(seen.length, 2, 'la mezzanine a disparu du hall qu’elle surplombe');
 });

@@ -280,7 +280,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **14** | **Archétypes 1 — halls** ✅ | `hallStyle` : `linear`, `underViaduct`, `compact` — ce qui les distingue est la COUVERTURE | R1 |
 | **15** | **Archétypes 2 — hauteur** ✅ | `overbridge`, `cross`, `mezzanine`, `hubSlice` : ce qu'ils LAISSENT VOIR | R1 |
 | **16** | **Archétypes 3 — limites** ✅ | `interiors/Limits` : correspondances (gardées ou non) et palissades de chantier | G4 D7 |
-| 17 | Occlusion interne | portails de visibilité aux virages, escaliers, branches | R2 |
+| **17** | **Occlusion interne** ✅ | `visibleShells` : ce qu'on voit d'un volume depuis un autre — jonction, niveau, portée | R2 |
 | 18 | Signalétique unifiée | une seule source pour quai / hall / portillons / couloirs / bouches | D4 D5 |
 | 19 | Commerces | `CommercialFrontage`, quatre statuts de commerce, galeries `ecute`/`atre` | D8 |
 | 20 | Petites gares | JY06 JY08 JY10 JY11 JY14 JY16 JY18 JY02 branchées sur profil | — |
@@ -819,6 +819,34 @@ fermé de cette limite ; la phase 16 en dessine deux formes que rien ne montrait
 Le réseau porte donc `transfers` et `hoardings`. **Rien ne s'affiche sur les
 trente gares** : le hall générique n'en connaît aucune, et son réseau les rend
 vides — c'est exactement ce que D7 constatait.
+
+### 4.15 La phase 17 : on ne dessine pas ce qu'aucun mur ne laisse voir
+
+Tant qu'une gare tenait dans un seul volume, il n'y avait rien à cacher : le
+hall était la gare. Depuis la phase 13 une gare est un RÉSEAU de volumes — le
+relevé en donne jusqu'à cinq — et les dessiner tous en permanence est à la fois
+faux et coûteux. Faux, parce qu'un souterrain de Harajuku ne voit pas le hall du
+bâtiment de 2020 qui est à trente mètres et derrière un mur ; coûteux, parce que
+R2 constatait déjà que le hall se dessine même quand on est sur le quai.
+
+`visibleShells(net, inConcourse, x, z)` tranche, et sa règle tient en quatre
+lignes :
+
+- **une gare à un seul volume ne cache jamais rien.** C'est le cas des trente
+  gares aujourd'hui, et le test le tient : la phase 17 ne doit rien changer à
+  l'écran tant qu'aucun relevé n'est branché ;
+- **depuis le quai**, on montre les volumes qu'un accès vivant DESSERT. Sans
+  cela le bas d'une trémie serait un trou noir — on descend vers rien ;
+- **ce qu'une volée joint se voit.** Une mezzanine sans plafond est un
+  demi-niveau OUVERT sur le hall d'en dessous (Okachimachi) : la masquer parce
+  qu'elle est à une autre altitude détruirait la seule chose qui la rend
+  intéressante ;
+- **sinon, même niveau et 40 m.** Au-delà, un volume qui n'est ni joint ni
+  proche est derrière quelque chose.
+
+C'est de l'occlusion par la TOPOLOGIE, pas par un test de visibilité : le
+réseau sait déjà ce qui touche quoi, et un portail géométrique aurait demandé
+une donnée que le relevé ne contient pas.
 
 ### Ordre et raison
 
