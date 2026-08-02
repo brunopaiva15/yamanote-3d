@@ -163,6 +163,12 @@ export function joinFloorAt(
 ): number | null {
   const net = p.network;
   if (!net.built) return null;
+  // Ce qui barre dans une pièce barre aussi dans l'ouvrage qui y mène : une
+  // borne de portillon plantée au pied d'une volée ne devient pas franchissable
+  // parce qu'on descend.
+  for (const o of net.obstacles) {
+    if (x >= o.x0 && x <= o.x1 && z >= o.z0 && z <= o.z1) return null;
+  }
   for (const j of net.joins) {
     if (!j.walkable) continue;
     const r = j.rect;
@@ -265,8 +271,12 @@ export function walkerBlocked(
     // Une bouche de sortie n'est pas du sol de hall : c'est par là qu'on s'en
     // va, et elle monte.
     if (exitMouthFloorAt(p, x, z) !== null) return false;
+    // Un OUVRAGE DE LIAISON non plus : c'est du sol, il change seulement
+    // d'altitude en chemin. Sans ce test, une volée intérieure serait un mur
+    // pour la foule alors que le joueur la descend.
+    if (joinFloorAt(p, x, z) !== null) return false;
     if (concourseFloorAt(p, x, z) === null) return true;
-    for (const o of p.interior.obstacles) {
+    for (const o of p.network.obstacles) {
       if (x > o.x0 - CLEAR_HALL && x < o.x1 + CLEAR_HALL
         && z > o.z0 - CLEAR_HALL && z < o.z1 + CLEAR_HALL) return true;
     }

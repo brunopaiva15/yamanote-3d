@@ -27,9 +27,12 @@ register('./fixtures/ts-resolve.mjs', import.meta.url);
 const { placementFor } = await import('../src/systems/stationPlacement.ts');
 const { psdGates } = await import('../src/three/station/psdLayout.ts');
 const {
+  CLEAR_DECK,
   concourseFloorAt,
   exitMouthFloorAt,
   joinFloorAt,
+  mainAccessFloor,
+  walkerBlocked,
 } = await import('../src/systems/stationLevels.ts');
 const { compileProfile } = await import('../src/data/stationConcourseBuild.ts');
 const { CONCOURSE_PROFILES } = await import('../src/data/stationConcourseProfiles.ts');
@@ -40,6 +43,13 @@ const { STATION_COUNT } = await import('../src/data/loop.ts');
 
 const NAME = (i: number) => `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
 const PLACE = (i: number) => placementFor(i, psdGates());
+
+/** La volée principale appartient aux deux étages : elle n'est jamais barrée. */
+const mainAccessBypass = (
+  p: ReturnType<typeof PLACE>,
+  x: number,
+  z: number,
+): boolean => mainAccessFloor(p, x, z) !== null || mainAccessFloor(p, x, z + CLEAR_DECK) !== null;
 
 test('le placement porte le réseau de chaque gare', () => {
   for (let i = 0; i < STATION_COUNT; i++) {
@@ -163,4 +173,79 @@ test('les relevés compilés donnent N pièces à N altitudes', () => {
   const harajuku = compileProfile(CONCOURSE_PROFILES[18]);
   const ys = harajuku.rooms.filter((r) => r.walkable).map((r) => r.floorY);
   assert.ok(Math.max(...ys) - Math.min(...ys) > 11, 'les deux gares de Harajuku se sont rejointes');
+});
+
+// --- Phase 9 : la marche ------------------------------------------------
+
+test('une volée intérieure se descend au lieu de faire un mur', () => {
+  // LE GESTE QUE LA PHASE 9 REND POSSIBLE. Le demi-niveau d'Okachimachi est un
+  // sol à part entière : on y arrive du quai, on le traverse, on descend au
+  // hall. Sans lui, la mezzanine serait un plancher flottant qu'on ne peut pas
+  // quitter — et la foule, elle, buterait sur un mur invisible d'un mètre.
+  //
+  // Le placement réel d'Okachimachi porte encore son hall générique : on lui
+  // greffe le réseau compilé de son relevé, ce qui est exactement ce que fera
+  // `data/stationConcourseWired` le jour venu.
+  const base = PLACE(3);
+  const p = { ...base, network: compileProfile(CONCOURSE_PROFILES[3]) };
+  const j = p.network.joins.find((x) => x.id === 'c-mezz-north')!;
+  const mid = {
+    x: (j.rect.x0 + j.rect.x1) / 2,
+    z: (j.rect.z0 + j.rect.z1) / 2,
+  };
+
+  // Ce n'est pas une pièce…
+  assert.equal(concourseFloorAt(p, mid.x, mid.z), null);
+  // …c'est un ouvrage, et c'est du sol.
+  const y = joinFloorAt(p, mid.x, mid.z);
+  assert.ok(y !== null, 'la volée de mezzanine n’est pas du sol');
+  assert.ok(y! < j.fromY && y! > j.toY, 'la volée ne descend pas en chemin');
+  // Et la foule le sait aussi.
+  assert.equal(walkerBlocked(p, 'concourse', mid.x, mid.z), false);
+
+  // Les deux pièces qu'elle joint sont bien à deux altitudes différentes.
+  const mezz = p.network.rooms.find((r) => r.id === 'mezz-north')!;
+  const hall = p.network.rooms.find((r) => r.id === 'paid-north')!;
+  assert.ok(mezz.floorY - hall.floorY > 1.5, 'le demi-niveau s’est aplati');
+  assert.equal(concourseFloorAt(p, mid.x, mezz.rect.z1 - 0.1), mezz.floorY);
+  assert.equal(concourseFloorAt(p, mid.x, hall.rect.z0 + 0.1), hall.floorY);
+});
+
+test('un ouvrage ne franchit pas ce qui barre', () => {
+  // Une borne de portillon plantée au pied d'une volée ne devient pas
+  // franchissable parce qu'on descend.
+  const p = { ...PLACE(3), network: compileProfile(CONCOURSE_PROFILES[3]) };
+  const cab = p.network.obstacles[0];
+  const at = { x: (cab.x0 + cab.x1) / 2, z: (cab.z0 + cab.z1) / 2 };
+  assert.equal(joinFloorAt(p, at.x, at.z), null);
+  assert.equal(concourseFloorAt(p, at.x, at.z), null);
+  assert.equal(walkerBlocked(p, 'concourse', at.x, at.z), true);
+});
+
+test('la marche des trente gares n’a pas changé', () => {
+  // Aucun hall générique n'ayant de liaison, l'ajout des ouvrages ne peut rien
+  // déplacer. On le vérifie plutôt que de le supposer : `walkerBlocked` est ce
+  // qui tient la foule dans le hall, et une régression y serait invisible
+  // jusqu'à ce qu'un voyageur traverse un mur.
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const p = PLACE(i);
+    const it = p.interior;
+    for (let x = it.paid.x0 - 1; x <= it.paid.x1 + 1; x += 0.6) {
+      for (let z = it.paid.z0 - 1; z <= it.free.z1 + 1; z += 0.6) {
+        const blocked = walkerBlocked(p, 'concourse', x, z);
+        // Reconstruit à la main, sans le réseau : bouche, sol, obstacles.
+        const byHand = exitMouthFloorAt(p, x, z) !== null
+          ? false
+          : concourseFloorAt(p, x, z) === null
+            ? true
+            : it.obstacles.some((o) => x > o.x0 - 0.05 && x < o.x1 + 0.05
+              && z > o.z0 - 0.05 && z < o.z1 + 0.05);
+        assert.equal(
+          blocked,
+          mainAccessBypass(p, x, z) ? false : byHand,
+          `${NAME(i)} : la marche a changé en (${x.toFixed(1)}, ${z.toFixed(1)})`,
+        );
+      }
+    }
+  }
 });

@@ -24,7 +24,7 @@ import { psdGates } from '../three/station/psdLayout';
 import { gateBlocks, passageAt } from './fareGate';
 import { platformFlip } from './playerFrame';
 import { runtime, type PlayerFrame, type PlayerLevel } from './runtime';
-import { concourseFloorAt, mainAccessFloor } from './stationLevels';
+import { concourseFloorAt, joinFloorAt, mainAccessFloor } from './stationLevels';
 import { placementFor, stairwellAt, type StationPlacement } from './stationPlacement';
 
 /**
@@ -212,9 +212,20 @@ function stairFloorAt(p: StationPlacement, u: number, localZ: number): Region | 
 /**
  * Altitude du sol du niveau de correspondance sous (u, localZ), ou null.
  *
- * Le hall est un seul rectangle, du débouché du couloir au fond de la zone
- * libre : la ligne de portillons n'y fait pas de coupure, ce sont ses BORNES
- * qui barrent, et elles sont dans `obstacles`. Une baie franchissable est donc
+ * DEUX SOLS S'Y PRÉSENTENT MAINTENANT, et c'est le changement de la phase 9 :
+ * les PIÈCES du réseau, et les OUVRAGES qui les joignent. Une volée intérieure,
+ * une mécanique, une rampe sont du sol comme un autre - leur altitude
+ * s'interpole simplement entre leurs deux bouts (`joinFloorAt`). Le hall
+ * générique n'en a aucun, donc rien ne bouge tant qu'aucune gare n'est branchée
+ * sur son relevé ; mais le jour où le demi-niveau d'Okachimachi arrivera, on le
+ * descendra au lieu de buter dessus.
+ *
+ * Les pièces d'abord, les ouvrages ensuite : là où les deux se touchent, ils
+ * s'accordent au centimètre - un lien commence à l'altitude de la pièce qu'il
+ * quitte - et l'ordre ne fait donc pas de marche.
+ *
+ * La ligne de portillons, elle, ne fait pas de coupure : ce sont ses BORNES qui
+ * barrent, et elles sont dans `obstacles`. Une baie franchissable est
  * exactement le vide entre deux bornes - celui-là même que le rendu dessine.
  *
  * À une exception près, et c'est toute la différence entre un trou et un
@@ -224,7 +235,7 @@ function stairFloorAt(p: StationPlacement, u: number, localZ: number): Region | 
  * pied - ce qui aurait été pire que de ne pas les dessiner du tout.
  */
 function concourseFloorY(p: StationPlacement, u: number, localZ: number): number | null {
-  const floor = concourseFloorAt(p, u, localZ);
+  const floor = concourseFloorAt(p, u, localZ) ?? joinFloorAt(p, u, localZ);
   if (floor === null) return null;
   const passage = passageAt(u, localZ);
   if (passage >= 0 && gateBlocks(passage)) return null;

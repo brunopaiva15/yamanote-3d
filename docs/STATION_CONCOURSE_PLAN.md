@@ -272,7 +272,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **6** | **Emprise déclarée** ✅ | `stationConcourseReach.ts` + table générée ; `stationOcclusion` la lit ; `validateProfile` refuse ce que le ballast interdit | **G1** |
 | **7** | **Compilateur de profil** ✅ | `stationConcourseBuild.ts` : profil → réseau de pièces ; repli fidèle vers `interiorFor` ; `networkIssues` | G2 R4 |
 | **8** | **Réseau dans les niveaux** ✅ | `stationLevels` lit le réseau : N pièces à N altitudes, `joinFloorAt` pour les liens | S1 |
-| 9 | Réseau dans la marche | `walkable` lit le réseau ; le joueur change de niveau par n'importe quel lien | S1 |
+| **9** | **Réseau dans la marche** ✅ | `walkable` et `walkerBlocked` acceptent les ouvrages de liaison comme du sol | S1 |
 | 10 | Portillons multiples | `fareGate` : un état par groupe et par passage | S2 |
 | 11 | Itinéraires PNJ | `concourseRoute` : axe par nœud, choix de groupe, choix de sortie | S3 |
 | 12 | Accès secondaires vivants | plusieurs trémies mènent quelque part | G3 |
@@ -557,6 +557,36 @@ un fichier à part (`data/stationConcourseWired`) qui, tant qu'il est vide,
 n'importe pas le dossier — l'élagage fait le reste. Le jour où la première gare
 est branchée, les cent trente kio arrivent, et ils arrivent parce qu'ils
 SERVENT.
+
+### 4.7 La phase 9 : un ouvrage de liaison est du sol
+
+La phase 8 avait donné au réseau le droit de dire « telle pièce, telle
+altitude » ; la marche, elle, ne connaissait encore que les pièces. La phase 9
+lui apprend les **ouvrages** : une volée intérieure, une mécanique, une rampe
+sont du sol comme un autre, et leur altitude s'interpole entre leurs deux bouts.
+
+Trois lecteurs y passent, et c'est voulu qu'ils y passent ensemble : le joueur
+(`systems/walkable`, `concourseFloorY`), la foule (`walkerBlocked`) et le
+placement des voyageurs. Un ouvrage praticable pour l'un et bloquant pour
+l'autre aurait fait marcher la foule dans le vide à côté du joueur.
+
+**Le geste que cela rend possible**, et qu'aucun hall générique ne produirait :
+à Okachimachi, on arrive du quai sur le demi-niveau M2F, on le traverse, on
+descend au hall. Sans lui, la mezzanine serait un plancher qu'on ne peut pas
+quitter — et la foule buterait sur un mur invisible d'un mètre.
+
+**Ce qui barre continue de barrer.** Une borne de portillon plantée au pied
+d'une volée ne devient pas franchissable parce qu'on descend : les obstacles
+sont testés avant les ouvrages.
+
+**Et la marche des trente gares n'a pas changé** — vérifié, pas supposé.
+`walkerBlocked` est ce qui tient la foule dans le hall, et une régression y
+serait invisible jusqu'à ce qu'un voyageur traverse un mur : un test le
+reconstruit à la main, sans le réseau, sur toute la surface des trente halls.
+
+Reste ouvert, et c'est la **phase 12** : on entre encore dans la gare par UNE
+seule trémie. Les ouvrages font changer d'altitude *à l'intérieur* du niveau de
+correspondance ; passer du quai au hall reste le privilège de l'accès principal.
 
 ### Ordre et raison
 
