@@ -265,7 +265,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 |---|---|---|---|
 | **0** | **Audit et plan** ✅ | ce document | — |
 | **1** | **Format des profils** ✅ | `stationConcourseTypes.ts` + `validateProfile` + 14 tests | D1 D2 D3 |
-| 2 | Registre des sources | `stationConcourseSources.ts`, squelette de `STATION_CONCOURSE_EVIDENCE.md` | D6 |
+| **2** | **Registre des sources** ✅ | `stationConcourseSources.ts` : 30 plans JR East localisés ; `STATION_CONCOURSE_EVIDENCE.md` | D6 |
 | 3 | Sorties réelles | `data/lines` : les 30 gares relevées, `GENERIC_EXITS` réduit aux gares qui les portent vraiment | D4 |
 | 4 | Relevé documentaire | `STATION_CONCOURSE_EVIDENCE.md` rempli, 30 fiches | D5 D6 D7 D8 |
 | 5 | Profils, données seules | `stationConcourseProfiles.ts` : 30 profils, aucun consommateur | D1→D8 |
@@ -292,6 +292,45 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | 26 | Tests | les 18 exigences du cahier des charges | — |
 | 27 | Captures de contrôle | probe : 5 vues × 30 gares | — |
 | 28 | Perf et bilan | mesures avant/après, `STATION_CONCOURSE_SCOPE.md`, approximations restantes | — |
+
+### 4.1 Ce que la phase 2 a découvert, et qui change les phases 3 à 5
+
+**L'environnement de développement n'atteint pas les sites des opérateurs.** La
+passerelle réseau refuse la connexion (403 sur `CONNECT`) vers `jreast.co.jp`,
+`tokyometro.jp`, `kotsu.metro.tokyo.jp` — et vers à peu près tout le reste,
+Wikipédia compris. Seule la recherche indexée répond, et elle rend des titres et
+des adresses, jamais le contenu d'une page.
+
+Ce que la phase 2 a donc pu faire, et qui reste utile :
+
+- **localiser les trente plans officiels JR East.** Leur adresse dépend d'un
+  numéro interne sans rapport avec le code JY — Akihabara est 41, Tokyo 1039,
+  Takanawa Gateway 1750 — et ne se devine pas. Les trente ont été confirmés un
+  par un par concordance entre l'adresse indexée et le titre de la page ;
+- localiser les points d'entrée Tokyo Metro, Toei, ecute, atré ;
+- récolter treize indications de niveaux (`B1-1F`, `1F / 2F-M3 / 3F`) dans les
+  résumés d'indexation, gardées à part comme **indications** et non comme faits.
+
+Ce que cela impose au reste du chantier :
+
+1. `SourceRetrieval` (`read` / `indexed` / `catalogued`) rend l'écart visible.
+   Les trente références JR East sont `indexed` : leur adresse est sûre, leur
+   contenu n'a pas été lu ;
+2. `validateProfile` **refuse** qu'un profil se déclare `verified` sans qu'une
+   source de rang 1-3 ait été lue. Aucune gare ne pourra donc porter cette
+   mention tant que les plans resteront fermés — la règle est dans le code, pas
+   dans une bonne intention ;
+3. la phase 4 produira un relevé fondé sur ce que le dépôt sait déjà
+   (`data/stations`, `data/stationLayouts`, `data/platforms`,
+   `docs/PLATFORM_EVIDENCE.md`) et sur ce que l'index confirme, avec la
+   confiance qui correspond — `approximate` par défaut, `mostlyVerified` là où
+   plusieurs sources indépendantes concordent ;
+4. un test lie le carnet de relevé au code : le jour où une source passe en
+   `read`, l'avertissement du carnet devient faux et la suite tombe.
+
+C'est une limite d'environnement, pas une limite de méthode : les adresses sont
+en place, et l'ouverture des trente plans est un travail mécanique dès que le
+réseau le permet.
 
 ### Ordre et raison
 

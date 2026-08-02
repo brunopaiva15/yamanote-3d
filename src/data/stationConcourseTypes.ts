@@ -454,8 +454,32 @@ export interface ConstructionProfile {
  */
 export type SourceTier = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
+/**
+ * CE QU'ON A RÉELLEMENT FAIT DE LA SOURCE.
+ *
+ * Citer un plan officiel et l'avoir ouvert sont deux choses différentes, et
+ * l'écart entre les deux est exactement l'endroit où un relevé se met à
+ * inventer. Le champ existe donc pour rendre cet écart visible plutôt que
+ * confortable.
+ *
+ * Il a une raison concrète : l'environnement de développement de ce dépôt
+ * n'atteint PAS les sites des opérateurs. La passerelle réseau refuse la
+ * connexion (403 sur `CONNECT`) vers jreast.co.jp, tokyometro.jp et le reste ;
+ * seule la recherche indexée répond. Un profil qui prétendrait s'appuyer sur
+ * un plan lu mentirait sur la façon dont il a été fait.
+ */
+export type SourceRetrieval =
+  /** Document ouvert et lu. C'est la seule valeur qui autorise `verified`. */
+  | 'read'
+  /** Existence, adresse et titre confirmés par un index de recherche ; contenu non lu. */
+  | 'indexed'
+  /** Référence connue et à consulter : ni ouverte, ni confirmée par un index. */
+  | 'catalogued';
+
 export interface SourceReference {
   tier: SourceTier;
+  /** Ce qu'on a fait de la source. Défaut implicite : rien de plus que `catalogued`. */
+  retrieval: SourceRetrieval;
   /** Qui publie : JR East, Tokyo Metro, atré… */
   publisher: string;
   title: string;
@@ -594,6 +618,21 @@ export function validateProfile(p: StationConcourseProfile): ProfileIssue[] {
     if (!/^\d{4}-\d{2}(-\d{2})?$/.test(s.consultedAt)) {
       bad('sourceDate', s.title, `date de consultation illisible : ${s.consultedAt}`);
     }
+  }
+  // On ne se déclare pas `verified` sur un plan qu'on n'a pas ouvert. C'est la
+  // seule règle du validateur qui parle d'exactitude plutôt que de cohérence,
+  // et elle ne parle en réalité que de la MÉTHODE : elle n'affirme pas que le
+  // relevé est juste, elle refuse qu'il se prétende vérifié sans qu'un
+  // document officiel ait été lu.
+  if (
+    p.confidence === 'verified'
+    && !p.sources.some((s) => s.retrieval === 'read' && s.tier <= 3)
+  ) {
+    bad(
+      'overclaimed',
+      `#${p.stationIndex}`,
+      'déclaré « verified » sans qu’aucun plan officiel (rang 1-3) ait été lu',
+    );
   }
 
   // --- Unicité des identifiants ---

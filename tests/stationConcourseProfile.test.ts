@@ -103,6 +103,7 @@ function sane(): StationConcourseProfile {
     sources: [
       {
         tier: 1,
+        retrieval: 'indexed',
         publisher: 'JR East',
         title: 'plan de gare (exemple de test)',
         documentDate: '2026',
@@ -136,6 +137,31 @@ test('le relevé doit porter sa date et ses sources', () => {
       (p.sources as { consultedAt: string }[])[0].consultedAt = 'récemment';
     })).includes('sourceDate'),
   );
+});
+
+test('on ne se déclare pas « vérifié » sur un plan qu’on n’a pas ouvert', () => {
+  // La seule règle du validateur qui parle de MÉTHODE plutôt que de cohérence.
+  // Elle compte, ici et maintenant : l'environnement de développement de ce
+  // dépôt n'atteint pas les sites des opérateurs, donc aucun plan officiel n'a
+  // été lu, donc aucune gare ne peut légitimement se dire vérifiée.
+  const claimed = broken((p) => { (p as { confidence: string }).confidence = 'verified'; });
+  assert.ok(codes(claimed).includes('overclaimed'));
+
+  // La même déclaration passe dès qu'un plan officiel est réellement lu.
+  const honest = broken((p) => {
+    (p as { confidence: string }).confidence = 'verified';
+    (p.sources as { retrieval: string }[])[0].retrieval = 'read';
+  });
+  assert.deepEqual(validateProfile(honest), []);
+
+  // Une source lue mais de rang faible ne suffit pas : une photo n'est pas un
+  // plan, et « je l'ai vu sur Street View » n'est pas un relevé de portillon.
+  const weak = broken((p) => {
+    (p as { confidence: string }).confidence = 'verified';
+    (p.sources as { retrieval: string; tier: number }[])[0].retrieval = 'read';
+    (p.sources as { retrieval: string; tier: number }[])[0].tier = 8;
+  });
+  assert.ok(codes(weak).includes('overclaimed'));
 });
 
 test('deux objets ne partagent jamais un identifiant', () => {
