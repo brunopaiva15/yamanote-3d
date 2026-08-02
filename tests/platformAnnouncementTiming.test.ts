@@ -41,6 +41,7 @@ const {
   platformGreeting,
   platformPreAnnouncement,
 } = await import('../src/data/stationAnnouncements.ts');
+const { doorsClosingAnnouncement } = await import('../src/data/announcements.ts');
 const { platformNoticesForStation } = await import(
   '../src/data/stationAnnouncementRules.ts'
 );
@@ -98,6 +99,21 @@ const MELODY_START_MIN = 15 - 1;
 
 /** Creux le plus court entre deux rames (systems/platformWait, HEADWAY_GAP). */
 const HEADWAY_GAP = 60;
+
+/**
+ * Bornes de la fermeture, rappelées de systems/stationCycle : avance de
+ * l'annonce sur la fin du dwell, et retard de la voix de la gare sur celle de la
+ * rame. Le module n'est pas importable ici (il tire tout le moteur audio), donc
+ * les deux valeurs sont relues dans sa source juste en dessous.
+ */
+const CLOSE_ANNOUNCE_LEAD = 13.0;
+const PA_CLOSE_LAG = 1.2;
+
+test('les bornes de la fermeture rappelées ici sont celles du cycle', () => {
+  const cycle = readSystem('stationCycle.ts');
+  assert.match(cycle, /export const CLOSE_ANNOUNCE_LEAD = 13\.0;/);
+  assert.match(cycle, /export const PA_CLOSE_LAG = 1\.2;/);
+});
 
 test('l’annonce d’approche n’est pas facultative', () => {
   // Rien dans le plan ne peut l'empêcher : elle n'y a pas de drapeau, et le
@@ -417,6 +433,70 @@ test('les deux points d’écoute partagent l’instant du premier message d’a
   assert.equal(PLATFORM_SCHEDULE.agentExchangeAt, 5);
 });
 
+test('les deux annonces de fermeture se répondent, des deux côtés de la porte', () => {
+  // Une fermeture, deux voix : le chef de train d'abord, la gare PA_CLOSE_LAG
+  // plus tard - elle seule nomme la voie. L'échange ne dépend pas de l'endroit
+  // où l'on se tient, il dépend de la porte ouverte.
+  //
+  // La régression que ce test verrouille : l'attente sur le quai ne déclenchait
+  // QUE la voix de la gare. La rame se taisait dès qu'on posait le pied dehors,
+  // alors que la gare, elle, s'entend très bien depuis la voiture - la
+  // sonorisation n'était réciproque que dans un sens.
+  const cycle = readSystem('stationCycle.ts');
+  const wait = readSystem('platformWait.ts');
+
+  // Le déclencheur et son corps : la clé tient sur une ligne, l'appel qu'elle
+  // arme sur la ou les suivantes.
+  const trigger = (src, key) => {
+    const lines = src.split('\n');
+    const at = lines.findIndex((l) => l.includes(`once('${key}'`));
+    return at < 0 ? null : lines.slice(at, at + 3).join('\n');
+  };
+
+  for (const [name, src] of [
+    ['stationCycle.ts', cycle],
+    ['platformWait.ts', wait],
+  ]) {
+    const cabin = trigger(src, 'announce-close');
+    assert.ok(cabin, `${name} ne déclenche pas l'annonce de fermeture de la rame`);
+    assert.ok(
+      cabin.includes('doorsClosingAnnouncement()'),
+      `${name} n'arme pas la voix de la RAME sur 'announce-close' : ${cabin}`,
+    );
+    const station = trigger(src, 'pa-close');
+    assert.ok(station, `${name} ne déclenche pas celle de la gare`);
+    assert.ok(
+      station.includes('paDoorsClosing('),
+      `${name} n'arme pas la voix de la GARE sur 'pa-close' : ${station}`,
+    );
+    // Les deux lisent le même retard : un 1,2 écrit à la main dans l'un des
+    // deux modules ferait dériver l'échange d'un point d'écoute à l'autre.
+    assert.ok(
+      station.includes('PA_CLOSE_LAG'),
+      `retard écrit à la main dans ${name} : ${station.trim()}`,
+    );
+    // Et la reprise de spawn / de descente arme bien les deux clés, sans quoi
+    // l'une des deux annonces se rejouerait en entrant dans l'état.
+    assert.ok(
+      src.includes("fired.add('announce-close')") && src.includes("fired.add('pa-close')"),
+      `${name} ne rattrape pas les deux annonces déjà passées`,
+    );
+  }
+
+  // La voix de la rame passe AVANT celle de la gare, jamais l'inverse.
+  assert.ok(PA_CLOSE_LAG > 0);
+
+  // Et elle a fini avant la fin du dwell : depuis le quai, la file de la rame
+  // est coupée au départ (systems/platformWait, entrée en 'departing') - une
+  // annonce plus longue que son avance partirait avec le train.
+  const cabinClose = durationOf(doorsClosingAnnouncement());
+  assert.ok(cabinClose > 0, 'annonce de fermeture de bord sans clip');
+  assert.ok(
+    cabinClose <= CLOSE_ANNOUNCE_LEAD,
+    `annonce de bord : ${cabinClose.toFixed(1)} s pour ${CLOSE_ANNOUNCE_LEAD} s d'avance`,
+  );
+});
+
 test('un message d’agent tient dans l’échange, même sur l’arrêt le plus court', () => {
   // Premier créneau : de la 5e seconde du dwell à la mélodie la plus précoce.
   const cutoff = MELODY_START_MIN - PLATFORM_SCHEDULE.agentExchangeAt;
@@ -450,12 +530,12 @@ test('un second message qui déborderait sur la mélodie est abandonné', () => 
 test('aucune annonce de quai ne survit au départ de la rame', () => {
   // La dernière chose que la gare dit à cette rame est l'annonce de fermeture,
   // lancée 13 − 1,2 s avant la fin du dwell (systems/stationCycle,
-  // CLOSE_ANNOUNCE_LEAD, clé 'pa-close'). La rame s'ébranle DEPART_HOLD après.
+  // CLOSE_ANNOUNCE_LEAD − PA_CLOSE_LAG, clé 'pa-close'). La rame s'ébranle
+  // DEPART_HOLD après.
   // Rien ne doit courir au-delà : quand on est à bord, quitter le dwell coupe la
   // file du quai (cancelSpeech('platform')), et une annonce coupée est une
   // annonce perdue.
-  const CLOSE_ANNOUNCE_LEAD = 13;
-  const window = CLOSE_ANNOUNCE_LEAD - 1.2 + DEPART_HOLD;
+  const window = CLOSE_ANNOUNCE_LEAD - PA_CLOSE_LAG + DEPART_HOLD;
   for (const direction of DIRECTIONS) {
     for (let platform = 1; platform <= 6; platform++) {
       const d = durationOf(platformDoorsClosingAnnouncement(platform, direction));

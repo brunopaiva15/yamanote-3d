@@ -318,10 +318,11 @@ function beginReopen(st: Obstruction): void {
   say(doorReleaseAnnouncement(st.attempt > 1), 'cabin');
   // Sauf quand c'est le JOUEUR qui est dedans : l'agent parle dès le premier
   // essai, et il a de bonnes raisons. À cheval sur le seuil, on est déjà
-  // « dehors » pour le moteur audio - la sono de la rame est coupée net
-  // (audioEngine.setListenerOutside) et le conducteur parlerait tout seul dans
-  // une voiture qu'on vient de quitter. Celui qui bloque la porte doit
-  // s'entendre dire de s'écarter, d'où qu'il se tienne.
+  // « dehors » pour le moteur audio - la sono de la rame ne nous parvient plus
+  // que de loin, par la baie qu'on tient ouverte (audioEngine,
+  // CABIN_VOICE_OUTSIDE_OPEN), et le conducteur murmurerait dans une voiture
+  // qu'on vient de quitter. Celui qui bloque la porte doit s'entendre dire de
+  // s'écarter, franchement et d'où qu'il se tienne.
   if (st.byPlayer || st.attempt > 1) paDoorRelease(st.attempt - 1);
 }
 

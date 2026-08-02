@@ -13,6 +13,7 @@
 // Le décor défilant vers +z, un train qui part s'en va vers les z négatifs et
 // le suivant arrive depuis les z positifs.
 
+import { doorsClosingAnnouncement } from '../data/announcements';
 import { CONFIG, V_MAX } from '../data/config';
 import type { NextTrains } from '../data/departureBoard';
 import type { DisruptionCause, DisruptionSeverity } from '../data/platformDisruptions';
@@ -23,7 +24,7 @@ import { DEPART_HOLD, integrateTrain, stopDistance, type TrainState } from './tr
 import { randomizeDoorTimings, setPsdDoors, setTrainDoors, stationTimings } from './doorMotion';
 import * as audio from './audioEngine';
 import { PLATFORM_SCHEDULE } from './platformAnnouncementPlan';
-import { cancelSpeech, speechQueueRemaining } from './speech';
+import { cancelSpeech, say, speechQueueRemaining } from './speech';
 import {
   currentPlatformPlan,
   paAgentMessage,
@@ -59,6 +60,7 @@ import {
 import {
   CLOSE_ANNOUNCE_LEAD,
   DOORS_CLOSE_LEAD,
+  PA_CLOSE_LAG,
   dwellDuration,
   melodyCutAt,
   melodyStartAt,
@@ -175,9 +177,12 @@ export function beginPlatformWait(): void {
   runtime.accel = 0;
   runtime.sway = 0;
   audio.setListenerOutside(true);
-  // Le joueur n'est plus dans la rame : ce qu'elle avait encore à dire ne lui
-  // parvient plus. Inutile de laisser la file se vider dans le vide.
-  cancelSpeech('cabin');
+  // La file de la rame n'est PAS vidée : elle continue de se dire, et on
+  // l'entend depuis le quai comme on entendait la gare depuis la voiture - un
+  // lointain qui sort par les portes ouvertes (audioEngine,
+  // CABIN_VOICE_OUTSIDE_OPEN). Descendre au milieu d'une phrase du chef de
+  // train ne la coupe donc pas net : elle finit dehors, en retrait. C'est la
+  // rame qui PART qui l'emporte avec elle (voir le passage en 'departing').
 
   // La rame est déjà là, et elle a son plan d'annonces. On le REPREND, on ne le
   // retire pas : c'est le même arrêt, et c'est celui que la sono du wagon suivait
@@ -195,6 +200,7 @@ export function beginPlatformWait(): void {
   if (t >= melodyStartAt(index, dwell)) fired.add('melody');
   if (t >= melodyCutAt(index, dwell)) fired.add('melody-cut');
   if (t >= dwell - CLOSE_ANNOUNCE_LEAD) fired.add('announce-close');
+  if (t >= dwell - CLOSE_ANNOUNCE_LEAD + PA_CLOSE_LAG) fired.add('pa-close');
   if (t >= dwell - DOORS_CLOSE_LEAD) fired.add('doors-close');
   if (t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay) fired.add('psd-close');
 }
@@ -247,9 +253,18 @@ function updateBoardable(index: number, doorSide: 1 | -1): void {
   // De près, la coupure du chef de train s'entend pour ce qu'elle est : la
   // mélodie se referme en pleine phrase.
   once('melody-cut', t >= melodyCutAt(index, dwell), () => interruptDepartureMelody());
-  // Sur le quai, l'annonce de fermeture est celle de la GARE : elle nomme la
-  // voie. Celle de la rame, on ne l'entend pas d'ici.
-  once('announce-close', t >= dwell - CLOSE_ANNOUNCE_LEAD, () => paDoorsClosing(index));
+  // Les deux annonces de fermeture, dans le même ordre qu'à bord : la RAME
+  // d'abord - le chef de train parle à ses voyageurs, et de dehors on l'entend
+  // sortir par les portes ouvertes, très en retrait (audioEngine,
+  // CABIN_VOICE_OUTSIDE_OPEN) - puis la GARE, qui nomme la voie. C'est le même
+  // échange que celui qu'on entend assis à l'intérieur (stationCycle,
+  // 'announce-close' / 'pa-close'), pris de l'autre côté de la porte.
+  once('announce-close', t >= dwell - CLOSE_ANNOUNCE_LEAD, () =>
+    say(doorsClosingAnnouncement(), 'cabin'),
+  );
+  once('pa-close', t >= dwell - CLOSE_ANNOUNCE_LEAD + PA_CLOSE_LAG, () =>
+    paDoorsClosing(index),
+  );
   once('doors-close', t >= dwell - DOORS_CLOSE_LEAD, () => {
     setTrainDoors(0);
     audio.doorCloseChime();
@@ -268,6 +283,11 @@ function updateBoardable(index: number, doorSide: 1 | -1): void {
   if (t >= dwell) {
     cancelDepartureMelody();
     resetMelodyDepartureGuard();
+    // Ce que la rame avait encore à dire s'en va avec elle. Les diffuseurs de
+    // wagon sont pannés dans le repère du wagon (audioEngine, CABIN_SPEAKERS),
+    // qui ne suit pas la rame une fois qu'on est descendu : sans cette coupure,
+    // une phrase en retard continuerait de sortir d'un train déjà parti.
+    cancelSpeech('cabin');
     train.v = 0;
     train.a = 0;
     train.d = 0;

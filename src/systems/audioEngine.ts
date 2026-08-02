@@ -27,6 +27,10 @@
 //   • DANS la rame arrêtée en gare, la voix du quai n'est qu'un lointain qui
 //     entre par les portes (platVoiceGain très en retrait).
 //
+// Les deux sont pilotées par la MÊME ouverture (setPlatformDoors) : ce qui
+// laisse passer la parole d'un côté la laisse passer de l'autre, et une porte
+// qui se referme éteint les deux lointains en même temps.
+//
 // La MUSIQUE du quai, elle, ne suit pas cette règle : la 発車メロディ est faite
 // pour être entendue des voyageurs déjà montés, et elle passe donc en clair par
 // les portes ouvertes (bus « melody » → platIn, sans platVoiceGain). Ce bus lui
@@ -219,8 +223,16 @@ const PLAT_VOICE_INSIDE = 0.3;
  * provenir des diffuseurs spatialisés de la rame, mais rester bien plus
  * discrète que la voix du quai : juste ce qui traverse une porte ouverte et
  * permet d'entendre la fin d'une phrase après être descendu.
+ *
+ * Deux valeurs, exactement comme pour la voix du quai entendue de la rame
+ * (PLAT_BUS_CLOSED / PLAT_BUS_OPEN) : ce qui laisse passer la parole, c'est
+ * l'OUVERTURE, pas le lieu d'écoute. Portes closes, les diffuseurs sont
+ * derrière une baie vitrée et une caisse d'acier - il n'en reste qu'un
+ * murmure ; portes ouvertes, la voix sort par le vide de la baie. La ligne se
+ * pilote donc par setPlatformDoors, du même geste et sur la même ouverture.
  */
-const CABIN_VOICE_OUTSIDE = 0.08;
+const CABIN_VOICE_OUTSIDE_OPEN = 0.08;
+const CABIN_VOICE_OUTSIDE_CLOSED = 0.012;
 
 /**
  * Prises de la sonorisation du QUAI : le nombre de diffuseurs réellement pannés
@@ -1232,6 +1244,22 @@ export function setPsdBuzzers(points: readonly SpeakerPos[]): void {
  */
 let listenerOutside = false;
 
+/**
+ * Dernière ouverture reçue (0–1), gardée pour que le changement de lieu
+ * d'écoute retrouve tout de suite le bon niveau de voix de bord : descendre
+ * portes grandes ouvertes et descendre sur une porte qui se referme ne laissent
+ * pas passer la même chose.
+ */
+let doorOpening = 0;
+
+/** Voix de bord entendue du quai, au degré d'ouverture courant. */
+function cabinVoiceOutside(): number {
+  return (
+    CABIN_VOICE_OUTSIDE_CLOSED +
+    doorOpening * (CABIN_VOICE_OUTSIDE_OPEN - CABIN_VOICE_OUTSIDE_CLOSED)
+  );
+}
+
 export function setListenerOutside(outside: boolean): void {
   listenerOutside = outside;
   if (!nodes) return;
@@ -1242,7 +1270,7 @@ export function setListenerOutside(outside: boolean): void {
   // Debout sur le quai, la sono du wagon est derrière les vitres : les
   // diffuseurs sont à l'intérieur, mais un peu de voix traverse encore les
   // portes ouvertes. À l'inverse, celle du quai n'a plus rien à traverser.
-  nodes.paVoiceGain.gain.rampTo(outside ? CABIN_VOICE_OUTSIDE : 1, 0.3);
+  nodes.paVoiceGain.gain.rampTo(outside ? cabinVoiceOutside() : 1, 0.3);
   nodes.platVoiceGain.gain.rampTo(outside ? 1 : PLAT_VOICE_INSIDE, 0.3);
   // La mélodie, elle, est CALÉE PAR LIEU : sous le diffuseur elle doit se
   // tenir, depuis la rame elle doit s'entendre. Voir MELODY_INSIDE.
@@ -1265,10 +1293,16 @@ export function setRollingDistance(m: number): void {
 // et lointain ; 1 = portes ouvertes, la mélodie entre franchement).
 export function setPlatformDoors(open01: number): void {
   if (!nodes) return;
-  // Dehors, les portes de la rame ne filtrent plus rien : setListenerOutside
-  // a déjà ouvert le bus en grand.
-  if (listenerOutside) return;
   const o = Math.max(0, Math.min(1, open01));
+  doorOpening = o;
+  // Dehors, les portes de la rame ne filtrent plus la sono du QUAI -
+  // setListenerOutside a déjà ouvert ce bus-là en grand. Ce qu'elles filtrent
+  // alors, c'est la voix de BORD, dans l'autre sens : la même ouverture, la
+  // même porte, la parole qui la traverse en sens inverse.
+  if (listenerOutside) {
+    nodes.paVoiceGain.gain.rampTo(cabinVoiceOutside(), 0.12);
+    return;
+  }
   nodes.platLp.frequency.rampTo(750 + o * 3600, 0.12);
   nodes.platGain.gain.rampTo(PLAT_BUS_CLOSED + o * (PLAT_BUS_OPEN - PLAT_BUS_CLOSED), 0.12);
   nodes.psdChimeDoor.gain.rampTo(

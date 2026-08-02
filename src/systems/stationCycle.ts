@@ -522,6 +522,16 @@ function melodySounding(): number {
  * rame ne s'ébranle (fin du dwell + DEPART_HOLD) - ils le sont largement.
  */
 export const CLOSE_ANNOUNCE_LEAD = 13.0;
+/**
+ * Retard de l'annonce de fermeture de la GARE sur celle de la RAME.
+ *
+ * Les deux se répondent par-dessus les portes ouvertes : le chef de train
+ * annonce la fermeture pour ses voyageurs, la gare la reprend une seconde plus
+ * tard en nommant la voie. C'est le même échange des deux côtés de la porte -
+ * d'où une seule définition, lue par le cycle en cabine ET par l'attente sur le
+ * quai (systems/platformWait).
+ */
+export const PA_CLOSE_LAG = 1.2;
 /** Avance de la fermeture des portes sur la fin du dwell. */
 export const DOORS_CLOSE_LEAD = 4.0;
 /**
@@ -829,7 +839,7 @@ function seedFired(phase: Phase, t: number, stationIndex: number, dir: LoopDirec
     if (t >= melodyStartAt(stationIndex, dwell)) fired.add('melody');
     if (t >= melodyCutAt(stationIndex, dwell)) fired.add('melody-cut');
     if (t >= dwell - CLOSE_ANNOUNCE_LEAD) fired.add('announce-close');
-    if (t >= dwell - CLOSE_ANNOUNCE_LEAD + 1.2) fired.add('pa-close');
+    if (t >= dwell - CLOSE_ANNOUNCE_LEAD + PA_CLOSE_LAG) fired.add('pa-close');
     if (t >= dwell - DOORS_CLOSE_LEAD) fired.add('doors-close');
     if (t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay) fired.add('psd-close');
   } else if (phase === 'depart') {
@@ -1195,7 +1205,9 @@ export function updateCycle(dt: number): void {
       );
       // Le quai dit la même chose une seconde plus tard, mais lui nomme la
       // voie : les deux annonces se répondent par-dessus les portes ouvertes.
-      once('pa-close', t >= dwell - CLOSE_ANNOUNCE_LEAD + 1.2, () => paDoorsClosing(s.index));
+      once('pa-close', t >= dwell - CLOSE_ANNOUNCE_LEAD + PA_CLOSE_LAG, () =>
+        paDoorsClosing(s.index),
+      );
       once('doors-close', t >= dwell - DOORS_CLOSE_LEAD, () => {
         setTrainDoors(0);
         audio.doorCloseChime();
