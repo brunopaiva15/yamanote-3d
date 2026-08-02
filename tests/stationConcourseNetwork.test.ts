@@ -39,6 +39,10 @@ const {
   compileProfile,
   concourseBays,
 } = await import('../src/data/stationConcourseBuild.ts');
+const {
+  routeToStreet,
+  stationInteriorOpen,
+} = await import('../src/systems/concourseRoute.ts');
 const { CONCOURSE_PROFILES } = await import('../src/data/stationConcourseProfiles.ts');
 const { wiredCount } = await import('../src/data/stationConcourseWired.ts');
 const { EXIT_MOUTH_END } = await import('../src/data/stationInterior.ts');
@@ -351,4 +355,91 @@ test('« carte seule » et « sortie seule » survivent à la compilation', () =
 
   const tokyo = concourseBays(compileProfile(CONCOURSE_PROFILES[0]));
   assert.ok(tokyo.every((b) => b.icOnly), 'JY01 Tokyo : le Marunouchi central accepte tout');
+});
+
+// --- Phase 11 : les itinéraires ------------------------------------------
+
+test('UN HALL TRANSVERSAL SE TRAVERSE EN TRAVERS', () => {
+  // Le routeur supposait l'axe : il longeait toujours z, entre `paid.x0` et
+  // `paid.x1`, avec la ligne de portillons au milieu (constat S3). Takanawa
+  // Gateway est l'inverse exact — un hall d'une pièce qu'on franchit en x, deux
+  // contrôles à ses deux bouts, les bouches sur un flanc — et c'est là que la
+  // généralisation se voit.
+  const p = { ...PLACE(25), network: compileProfile(CONCOURSE_PROFILES[25]) };
+  assert.equal(stationInteriorOpen(p), true, 'JY26 Takanawa Gateway : hall fermé');
+
+  // Les deux contrôles se franchissent en x, les deux bouches percent un flanc.
+  assert.ok(p.network.gates.every((g) => g.cross === 'x'));
+  assert.ok(p.network.mouths.every((m) => m.side === 'x1'));
+
+  // Cent tirages : à chaque fois un itinéraire complet, et jamais un pas hors
+  // du sol. C'est le même contrôle que `stationInside` applique aux trente
+  // gares — celui qui compte, parce qu'un voyageur qui traverse un mur ne se
+  // rattrape pas.
+  for (let k = 0; k < 100; k++) {
+    const route = routeToStreet(p);
+    assert.ok(route, 'itinéraire refusé');
+    for (const stop of route!) {
+      const onFloor = concourseFloorAt(p, stop.x, stop.z) !== null
+        || exitMouthFloorAt(p, stop.x, stop.z) !== null
+        || joinFloorAt(p, stop.x, stop.z) !== null
+        // Le premier point est dans la volée d'accès, le dernier au-dessus de
+        // la bouche : ni l'un ni l'autre n'est du sol de hall.
+        || stop === route![0] || stop === route![route!.length - 1];
+      assert.ok(onFloor, `pas hors sol en (${stop.x.toFixed(2)}, ${stop.z.toFixed(2)})`);
+    }
+    // Et le trajet PROGRESSE EN X : c'est un hall qu'on traverse, pas qu'on
+    // longe. Le hall générique donnerait exactement l'inverse.
+    const body = route!.slice(1, -1);
+    const dx = Math.max(...body.map((q) => q.x)) - Math.min(...body.map((q) => q.x));
+    const dz = Math.max(...body.map((q) => q.z)) - Math.min(...body.map((q) => q.z));
+    assert.ok(dx > dz, `trajet longé en z (dx=${dx.toFixed(1)} dz=${dz.toFixed(1)})`);
+  }
+});
+
+test('on valide une fois, du côté d’où l’on vient', () => {
+  // La règle ne dépend pas de l'axe : le lecteur est sur le dessus de la borne,
+  // et la carte s'y pose AVANT de s'engager. En sortant on bipe côté payant, en
+  // entrant côté libre — dans un hall transversal comme dans un couloir droit.
+  const p = { ...PLACE(25), network: compileProfile(CONCOURSE_PROFILES[25]) };
+  const bays = concourseBays(p.network);
+  for (let k = 0; k < 60; k++) {
+    const out = routeToStreet(p)!;
+    const taps = out.filter((q) => q.tap !== undefined);
+    assert.equal(taps.length, 1, 'une validation, pas deux');
+    const bay = bays[taps[0].tap!];
+    assert.ok(bay, 'validation sur une baie qui n’existe pas');
+    // Le point de validation est du côté PAYANT de sa ligne…
+    const paid = p.network.rooms.find(
+      (r) => r.id === p.network.gates.find((g) => g.id === bay.gateId)!.from,
+    )!;
+    const gateMid = (bay.rect.x0 + bay.rect.x1) / 2;
+    const roomMid = (paid.rect.x0 + paid.rect.x1) / 2;
+    assert.equal(
+      taps[0].x < gateMid,
+      roomMid < gateMid,
+      'on a bipé du mauvais côté de la ligne',
+    );
+    // …et le point SUIVANT est de l'autre côté : on bipe, puis on franchit.
+    const after = out[out.indexOf(taps[0]) + 1];
+    assert.equal(
+      Math.sign(after.x - gateMid),
+      -Math.sign(taps[0].x - gateMid),
+      'la validation ne précède pas le franchissement',
+    );
+  }
+});
+
+test('les deux groupes de Takanawa Gateway se remplissent tous les deux', () => {
+  // Le choix de groupe est ce que la phase 11 rend possible : le rang plat
+  // traverse les lignes, donc le tirage aussi. Une gare où l'on ne verrait
+  // jamais personne au second contrôle serait fausse.
+  const p = { ...PLACE(25), network: compileProfile(CONCOURSE_PROFILES[25]) };
+  const bays = concourseBays(p.network);
+  const seen = new Set<string>();
+  for (let k = 0; k < 300; k++) {
+    const tap = routeToStreet(p)!.find((q) => q.tap !== undefined)!;
+    seen.add(bays[tap.tap!].gateId);
+  }
+  assert.deepEqual([...seen].sort(), ['gate-north', 'gate-south']);
 });

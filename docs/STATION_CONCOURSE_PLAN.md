@@ -274,7 +274,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **8** | **Réseau dans les niveaux** ✅ | `stationLevels` lit le réseau : N pièces à N altitudes, `joinFloorAt` pour les liens | S1 |
 | **9** | **Réseau dans la marche** ✅ | `walkable` et `walkerBlocked` acceptent les ouvrages de liaison comme du sol | S1 |
 | **10** | **Portillons multiples** ✅ | `concourseBays` / `bayAt` : un rang plat qui traverse les groupes ; `fareGate` s'y branche | S2 |
-| 11 | Itinéraires PNJ | `concourseRoute` : axe par nœud, choix de groupe, choix de sortie | S3 |
+| **11** | **Itinéraires PNJ** ✅ | `concourseRoute` : axe lu sur la destination, choix de groupe, bouche sur n'importe quelle paroi | S3 |
 | 12 | Accès secondaires vivants | plusieurs trémies mènent quelque part | G3 |
 | 13 | Rendu : `ConcourseNetwork` | remplace l'appel unique ; dessine nœud par nœud | R1 |
 | 14 | Archétypes 1 — halls | `LinearConcourse`, `CompactLocalHall`, `UnderViaductHall` | R1 |
@@ -622,6 +622,46 @@ Et deux faits du relevé arrivent maintenant jusqu'au portillon lui-même :
 la carte sans contact ; le Marunouchi central de Tokyo aussi. `fareGate` ne les
 lit pas encore — c'est un fait de jeu, pas de géométrie, et il ira avec la
 signalétique (phase 18) — mais ils ne se perdent plus en chemin.
+
+### 4.9 La phase 11 : l'axe ne se devine pas, il se lit sur la destination
+
+`systems/concourseRoute` supposait l'axe. `hallAxis` balayait en x entre
+`paid.x0` et `paid.x1` au droit d'un z ; `paidLegs` et `freeLegs` marchaient en
+z, d'un bout à l'autre d'un couloir droit avec la ligne au milieu (constat S3).
+Trois choses en sortent :
+
+- **l'axe.** Un trajet de zone payante va vers une ligne de portillons : il suit
+  donc l'axe qu'on la **franchit** (`GateGroup.cross`). Un trajet de zone libre
+  va vers une bouche : il suit l'axe de la **paroi** qu'elle perce
+  (`ConcourseMouth.side`). C'est la même leçon qu'à la phase 8, où la pente
+  d'une volée ne se déduisait pas de la forme de son rectangle — *la géométrie
+  ne dit pas où l'on va, la destination si* ;
+- **le choix de groupe.** `pickPassage` tire dans le rang plat des baies
+  (phase 10), qui traverse les lignes : choisir une baie, c'est du même coup
+  choisir un contrôle. Une bretelle à sens unique pèse moitié moins, sans
+  s'exclure ;
+- **le choix de sortie.** `pickExit` tire dans les bouches du réseau et pose son
+  point au-dessus de la volée, du bon côté de la paroi percée.
+
+`hallAxis` mesure désormais la bande libre **à l'intérieur d'une pièce**, en
+travers de l'axe qu'on longe — c'était `paid.x0 / paid.x1` tant qu'il n'y avait
+qu'un hall — et saute **toutes** les lignes de portillons, plus seulement la
+première.
+
+**Ce qui se voit** : à Takanawa Gateway — hall d'une pièce qu'on franchit en x,
+deux contrôles à ses deux bouts, bouches sur un flanc — les itinéraires
+traversent la gare **en travers**, et les deux groupes se remplissent tous les
+deux. Un test tire trois cents trajets pour le vérifier, et cent autres pour
+s'assurer qu'aucun pas ne sort du sol.
+
+**Et les trente gares n'ont pas bougé** : les neuf tests d'itinéraire de
+`stationInside` — dont « du quai à la rue, on ne traverse rien », qui vérifie
+chaque pas contre `walkerBlocked` — passent inchangés.
+
+Au passage, le routeur ne lit plus `interior` du tout : mobilier, obstacles et
+boutiques viennent du réseau. C'est ce qui rendra le branchement d'une gare
+inoffensif — sans cela, une gare branchée aurait cherché ses distributeurs aux
+cotes de son ancien hall.
 
 ### Ordre et raison
 

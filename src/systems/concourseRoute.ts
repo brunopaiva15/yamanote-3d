@@ -32,10 +32,16 @@ import {
   shopToHall,
   type Fixture,
   type InteriorRect,
-  type StationInterior,
 } from '../data/stationInterior';
 import { ASCENT_LEN, DESCENT_LEN } from '../data/stationGeometry';
 import { runtime } from './runtime';
+import {
+  bayAt,
+  concourseBays,
+  type ConcourseBay,
+  type ConcourseNetwork,
+  type ConcourseRoom,
+} from '../data/stationConcourseBuild';
 import { concourseFloorAt } from './stationLevels';
 import { stairTopZ, type StationPlacement } from './stationPlacement';
 
@@ -75,17 +81,43 @@ export interface StreetDoor {
  * rien dessous à leur montrer.
  */
 export function stationInteriorOpen(p: StationPlacement): boolean {
-  return p.interior.built && p.interior.exits.length > 0;
+  return p.network.built && p.network.mouths.length > 0;
 }
+
+// --- LE REPÈRE D'UNE PIÈCE ------------------------------------------------
+//
+// Un hall se parcourt d'un bout à l'autre, et « d'un bout à l'autre » n'a plus
+// de sens fixe : un hall longitudinal se longe en z, une passerelle
+// transversale se traverse en x. Le routeur ne peut donc plus supposer l'axe -
+// c'était le constat S3 du plan.
+//
+// ET L'AXE NE SE DEVINE PAS : il se LIT sur ce vers quoi l'on marche. Un trajet
+// de zone payante va vers une ligne de portillons, donc il suit l'axe qu'on la
+// franchit (`GateGroup.cross`) ; un trajet de zone libre va vers une bouche,
+// donc il suit l'axe de la paroi qu'elle perce (`ConcourseMouth.side`). C'est
+// la même leçon qu'à la phase 8, où la pente d'une volée ne se déduisait pas de
+// la forme de son rectangle : la géométrie ne dit pas où l'on va, la
+// destination si.
+
+/** Un point du repère quai, sans le reste d'une étape. */
+interface Pt { x: number; z: number }
+
+/** Compose un point depuis une coordonnée le long de l'axe et une en travers. */
+function pt(along: 'x' | 'z', at: number, across: number): Pt {
+  return along === 'z' ? { x: across, z: at } : { x: at, z: across };
+}
+
+const alongOf = (along: 'x' | 'z', q: Pt) => (along === 'z' ? q.z : q.x);
+const acrossOf = (along: 'x' | 'z', q: Pt) => (along === 'z' ? q.x : q.z);
 
 /** Longueur de l'accès principal, dans le sens où il va. */
 function accessLen(p: StationPlacement): number {
   return p.mainRise === 'up' ? ASCENT_LEN : DESCENT_LEN;
 }
 
-/** Un point de la volée d'une bouche : `t` en girons depuis le nu du fond. */
-function mouthZ(it: StationInterior, steps: number): number {
-  return it.free.z1 + EXIT_MOUTH_Z0 + EXIT_MOUTH_GOING * steps;
+/** L'écart au nu de la paroi, `steps` girons plus haut dans la volée. */
+function mouthZ(steps: number): number {
+  return EXIT_MOUTH_Z0 + EXIT_MOUTH_GOING * steps;
 }
 
 /**
@@ -95,8 +127,8 @@ function mouthZ(it: StationInterior, steps: number): number {
  * vaut ici : le voyageur monte jusqu'au dernier giron, où l'on ne voit plus de
  * lui que ce que le percement laisse voir, c'est-à-dire rien.
  */
-function mouthTop(it: StationInterior): number {
-  return mouthZ(it, EXIT_MOUTH_STEPS - 0.5);
+function mouthTop(): number {
+  return mouthZ(EXIT_MOUTH_STEPS - 0.5);
 }
 
 /** Le sol du hall existe-t-il sous ce point ? (même règle que la marche) */
@@ -135,17 +167,17 @@ const AXIS_STEP = 1.2;
  * mètres plus loin, et l'axe du hall partait faire les courses. On entre dans
  * une boutique parce qu'on y va, jamais parce qu'on passe devant.
  */
-const HALL_EDGES = new WeakMap<StationInterior, InteriorRect[]>();
+const HALL_EDGES = new WeakMap<ConcourseNetwork, InteriorRect[]>();
 
-function hallEdges(it: StationInterior): InteriorRect[] {
-  const hit = HALL_EDGES.get(it);
+function hallEdges(net: ConcourseNetwork): InteriorRect[] {
+  const hit = HALL_EDGES.get(net);
   if (hit) return hit;
-  const shops = it.fixtures.filter((f) => f.kind === 'konbini' || f.kind === 'gallery');
+  const shops = net.fixtures.filter((f) => f.kind === 'konbini' || f.kind === 'gallery');
   const inShop = (o: InteriorRect) =>
     shops.some((s) => o.x0 >= s.rect.x0 - 1e-6 && o.x1 <= s.rect.x1 + 1e-6
       && o.z0 >= s.rect.z0 - 1e-6 && o.z1 <= s.rect.z1 + 1e-6);
-  const out = [...it.obstacles.filter((o) => !inShop(o)), ...shops.map((s) => s.rect)];
-  HALL_EDGES.set(it, out);
+  const out = [...net.obstacles.filter((o) => !inShop(o)), ...shops.map((s) => s.rect)];
+  HALL_EDGES.set(net, out);
   return out;
 }
 
@@ -156,27 +188,50 @@ function hallEdges(it: StationInterior): InteriorRect[] {
  * ne la franchit pas par le milieu mais par un passage - c'est l'affaire de
  * `paidLegs`, qui pose le point de validation lui-même.
  */
-function hallAxis(p: StationPlacement, z: number, near = Infinity, half = AXIS_STEP): number {
-  const it = p.interior;
+function hallAxis(
+  p: StationPlacement,
+  room: ConcourseRoom,
+  along: 'x' | 'z',
+  at: number,
+  near = Infinity,
+  half = AXIS_STEP,
+): number {
+  const r = room.rect;
+  // Les bornes du couloir sont celles de la PIÈCE, en travers de l'axe qu'on
+  // longe. C'était `paid.x0 / paid.x1` tant qu'il n'y avait qu'un hall et
+  // qu'on le longeait en z.
+  const [lo, hi] = along === 'z' ? [r.x0, r.x1] : [r.z0, r.z1];
+  const span = (o: InteriorRect) => (along === 'z'
+    ? [o.z0, o.z1, o.x0, o.x1]
+    : [o.x0, o.x1, o.z0, o.z1]) as [number, number, number, number];
   // Ce que le mobilier laisse LIBRE à cette hauteur-là : une suite de
   // trouées, et non une bande unique. Le calcul en « une borne à gauche, une
   // borne à droite » se retournait contre lui-même dès que deux meubles
   // débordaient l'axe géométrique chacun de son côté : les deux bornes se
   // croisaient, et leur milieu tombait dans l'un des deux.
-  const taken = hallEdges(it)
-    .filter((o) => o.z1 > z - half && o.z0 < z + half
-      && !(o.z0 <= it.gate.z1 && o.z1 >= it.gate.z0))
-    .map((o) => [Math.max(o.x0, it.paid.x0), Math.min(o.x1, it.paid.x1)] as const)
+  const taken = hallEdges(p.network)
+    .filter((o) => {
+      const [a0, a1] = span(o);
+      // Les lignes de portillons sont SAUTÉES, toutes : elles barrent d'un mur
+      // à l'autre, et l'on ne les franchit pas par le milieu mais par une baie.
+      const onLine = p.network.gates.some((g) => o.x0 <= g.rect.x1 && o.x1 >= g.rect.x0
+        && o.z0 <= g.rect.z1 && o.z1 >= g.rect.z0);
+      return a1 > at - half && a0 < at + half && !onLine;
+    })
+    .map((o) => {
+      const [, , c0, c1] = span(o);
+      return [Math.max(c0, lo), Math.min(c1, hi)] as const;
+    })
     .filter(([a, b]) => b > a)
     .sort((a, b) => a[0] - b[0]);
   const gaps: [number, number][] = [];
-  let cur = it.paid.x0;
+  let cur = lo;
   for (const [a, b] of taken) {
     if (a > cur) gaps.push([cur, a]);
     cur = Math.max(cur, b);
   }
-  if (cur < it.paid.x1) gaps.push([cur, it.paid.x1]);
-  if (gaps.length === 0) return (it.paid.x0 + it.paid.x1) / 2;
+  if (cur < hi) gaps.push([cur, hi]);
+  if (gaps.length === 0) return (lo + hi) / 2;
   // La trouée où l'on est DÉJÀ l'emporte sur la plus large : le couloir ne
   // saute pas d'un côté du hall à l'autre entre deux pas, ce qui traverserait
   // ce qu'il y a entre les deux. À défaut, la plus large.
@@ -185,19 +240,31 @@ function hallAxis(p: StationPlacement, z: number, near = Infinity, half = AXIS_S
   return (best[0] + best[1]) / 2;
 }
 
-/** Un point posé sur l'axe, au droit de `z`. */
-function onAxis(p: StationPlacement, z: number, extra?: Partial<RouteStop>): RouteStop {
-  return { x: hallAxis(p, z), z, ...extra };
+/** Un point posé sur l'axe de `room`, au droit de `at`. */
+function onAxis(
+  p: StationPlacement,
+  room: ConcourseRoom,
+  along: 'x' | 'z',
+  at: number,
+  extra?: Partial<RouteStop>,
+): RouteStop {
+  return { ...pt(along, at, hallAxis(p, room, along, at)), ...extra };
 }
 
-/** Le chemin qui longe l'axe, de `z0` (exclu) à `z1` (inclus). */
-function axisPath(p: StationPlacement, z0: number, z1: number): RouteStop[] {
-  const n = Math.max(1, Math.ceil(Math.abs(z1 - z0) / AXIS_STEP));
-  let x = hallAxis(p, z0);
+/** Le chemin qui longe l'axe, de `a0` (exclu) à `a1` (inclus). */
+function axisPath(
+  p: StationPlacement,
+  room: ConcourseRoom,
+  along: 'x' | 'z',
+  a0: number,
+  a1: number,
+): RouteStop[] {
+  const n = Math.max(1, Math.ceil(Math.abs(a1 - a0) / AXIS_STEP));
+  let across = hallAxis(p, room, along, a0);
   return Array.from({ length: n }, (_, i) => {
-    const z = z0 + (z1 - z0) * ((i + 1) / n);
-    x = hallAxis(p, z, x);
-    return { x, z };
+    const at = a0 + (a1 - a0) * ((i + 1) / n);
+    across = hallAxis(p, room, along, at, across);
+    return pt(along, at, across);
   });
 }
 
@@ -217,16 +284,11 @@ const LANE_QUEUE = 6;
  * qui n'a pas validé, et le joueur qui hésite devant sa borne n'a pas à voir
  * quelqu'un traverser des vantaux rabattus : sa baie n'est pas à prendre.
  */
-function playerLane(it: StationInterior): number {
+function playerLane(net: ConcourseNetwork): number {
   if (runtime.playerLevel !== 'concourse') return -1;
-  const z = runtime.playerPlatZ;
-  const dz = z < it.gate.z0 ? it.gate.z0 - z : z > it.gate.z1 ? z - it.gate.z1 : 0;
-  if (dz > LANE_QUEUE) return -1;
-  for (let i = 0; i < it.gate.passages.length; i++) {
-    const p = it.gate.passages[i];
-    if (Math.abs(runtime.playerPlatX - p.x) <= p.width / 2 + PASSAGE_SLACK) return i;
-  }
-  return -1;
+  const hit = bayAt(net, runtime.playerPlatX, runtime.playerPlatZ, PASSAGE_SLACK);
+  if (!hit || hit.gap > LANE_QUEUE) return -1;
+  return hit.bay.index;
 }
 
 /**
@@ -246,13 +308,16 @@ function playerLane(it: StationInterior): number {
  * Le passage LARGE est celui qu'on laisse à qui pousse une valise : il se tire
  * moins souvent, sans jamais s'exclure.
  */
-function pickPassage(it: StationInterior, busy: readonly number[]): number {
-  const n = it.gate.passages.length;
+function pickPassage(net: ConcourseNetwork, busy: readonly number[]): number {
+  const bays = concourseBays(net);
+  const n = bays.length;
   if (n === 0) return -1;
-  const mine = playerLane(it);
-  const weights = it.gate.passages.map((p, i) => {
+  const mine = playerLane(net);
+  const weights = bays.map((b, i) => {
     if (i === mine) return 0;
-    return (p.wide ? 0.55 : 1) / (1 + 3 * (busy[i] ?? 0));
+    // Une bretelle À SENS UNIQUE ne se prend qu'en sortant, et l'on ne sait pas
+    // encore ici dans quel sens on va : elle pèse moins, sans s'exclure.
+    return (b.wide ? 0.55 : 1) * (b.exitOnly ? 0.5 : 1) / (1 + 3 * (busy[i] ?? 0));
   });
   let total = weights.reduce((a, w) => a + w, 0);
   // Tout est pris - ou le joueur bouche la seule baie de la gare. On tire alors
@@ -270,12 +335,25 @@ function pickPassage(it: StationInterior, busy: readonly number[]): number {
   return n - 1;
 }
 
-/** Bouche de sortie tirée au sort, avec un écart latéral dans sa largeur. */
-function pickExit(it: StationInterior): StreetDoor {
-  const k = Math.floor(Math.random() * it.exits.length);
-  const e = it.exits[k];
-  const lane = (Math.random() - 0.5) * Math.max(0, e.halfWidth * 2 - 0.9);
-  return { x: e.x + lane, z: mouthTop(it), exit: k };
+/**
+ * Bouche de sortie tirée au sort, avec un écart latéral dans sa largeur.
+ *
+ * Elle s'ouvre dans une PAROI, et plus forcément celle du fond : le sens vers
+ * lequel on monte se lit de `side`, et le décalage latéral court le long de la
+ * paroi. Dans un hall longitudinal cela redonne exactement l'ancien point.
+ */
+function pickExit(net: ConcourseNetwork): StreetDoor {
+  const k = Math.floor(Math.random() * net.mouths.length);
+  const m = net.mouths[k];
+  const room = net.rooms.find((r) => r.id === m.roomId)!;
+  const lane = m.at + (Math.random() - 0.5) * Math.max(0, m.halfWidth * 2 - 0.9);
+  const top = mouthTop();
+  const r = room.rect;
+  const q = m.side === 'z1' ? { x: lane, z: r.z1 + top }
+    : m.side === 'z0' ? { x: lane, z: r.z0 - top }
+      : m.side === 'x1' ? { x: r.x1 + top, z: lane }
+        : { x: r.x0 - top, z: lane };
+  return { ...q, exit: k };
 }
 
 // --- Les haltes du hall --------------------------------------------------
@@ -325,47 +403,57 @@ function browseStop(p: StationPlacement, f: Fixture): RouteStop | null {
  * l'axe, jamais en diagonale devant une rangée de meubles.
  */
 interface Detour {
-  z: number;
+  /** Où l'on quitte l'axe, en coordonnée LE LONG de l'axe du trajet. */
+  at: number;
   stops: RouteStop[];
 }
 
 /** Une halte tirée parmi les meubles d'une zone, ou rien. */
 function browseIn(
   p: StationPlacement,
-  z0: number,
-  z1: number,
+  along: 'x' | 'z',
+  a0: number,
+  a1: number,
   chance: number,
 ): Detour | null {
   if (Math.random() >= chance) return null;
-  const here = p.interior.fixtures.filter(
-    (f) => f.rect.z0 >= z0 - 0.01 && f.rect.z1 <= z1 + 0.01 && BROWSE.some((b) => b.kind === f.kind),
-  );
+  const lo = Math.min(a0, a1);
+  const hi = Math.max(a0, a1);
+  const bounds = (f: Fixture) => (along === 'z'
+    ? [f.rect.z0, f.rect.z1]
+    : [f.rect.x0, f.rect.x1]);
+  const here = p.network.fixtures.filter((f) => {
+    const [b0, b1] = bounds(f);
+    return b0 >= lo - 0.01 && b1 <= hi + 0.01 && BROWSE.some((b) => b.kind === f.kind);
+  });
   if (here.length === 0) return null;
   const stop = browseStop(p, here[Math.floor(Math.random() * here.length)]);
-  return stop ? { z: stop.z, stops: [stop] } : null;
+  return stop ? { at: alongOf(along, stop), stops: [stop] } : null;
 }
 
-/** Longe l'axe de `z0` à `z1`, avec un crochet éventuel en chemin. */
+/** Longe l'axe de `a0` à `a1`, avec un crochet éventuel en chemin. */
 function hallLeg(
   p: StationPlacement,
-  z0: number,
-  z1: number,
+  room: ConcourseRoom,
+  along: 'x' | 'z',
+  a0: number,
+  a1: number,
   detour: Detour | null,
 ): RouteStop[] {
-  if (!detour) return axisPath(p, z0, z1);
+  if (!detour) return axisPath(p, room, along, a0, a1);
   return [
-    ...axisPath(p, z0, detour.z),
+    ...axisPath(p, room, along, a0, detour.at),
     ...detour.stops,
-    onAxis(p, detour.z),
-    ...axisPath(p, detour.z, z1),
+    onAxis(p, room, along, detour.at),
+    ...axisPath(p, room, along, detour.at, a1),
   ];
 }
 
 // --- Le konbini ----------------------------------------------------------
 
 /** Le konbini du hall, s'il y en a un. */
-function shopOf(it: StationInterior): Fixture | null {
-  return it.fixtures.find((f) => f.kind === 'konbini') ?? null;
+function shopOf(net: ConcourseNetwork): Fixture | null {
+  return net.fixtures.find((f) => f.kind === 'konbini') ?? null;
 }
 
 /**
@@ -379,7 +467,7 @@ function shopOf(it: StationInterior): Fixture | null {
  *
  * Les points viennent de `data/konbiniPlan`, comme les meubles qu'ils évitent.
  */
-function shopVisit(f: Fixture): Detour {
+function shopVisit(f: Fixture, along: 'x' | 'z'): Detour {
   const s = shopPlan(f).stops;
   const at = (l: { x: number; z: number }, extra?: Partial<RouteStop>): RouteStop => {
     const q = shopToHall(f, l.x, l.z);
@@ -413,7 +501,7 @@ function shopVisit(f: Fixture): Detour {
   out.push(at(s.gap));
   out.push(at(s.entry));
   out.push(door);
-  return { z: door.z, stops: out };
+  return { at: alongOf(along, door), stops: out };
 }
 
 // --- Les deux itinéraires ------------------------------------------------
@@ -446,44 +534,75 @@ const ZONE_EDGE = 0.75;
  * la ligne : de quoi voir le geste, et de quoi laisser aux battants le temps
  * de s'écarter avant qu'on les atteigne.
  */
-function paidLegs(p: StationPlacement, passage: number, inbound: boolean): RouteStop[] {
-  const it = p.interior;
-  const gate = it.gate.passages[passage];
-  const paidSide = { x: gate.x, z: it.gate.z0 - ZONE_EDGE };
-  const freeSide = { x: gate.x, z: it.gate.z1 + ZONE_EDGE };
-  const foot = it.paid.z0 + ZONE_EDGE;
-  const tap = { tap: passage, hold: 0.55, action: 'ticketGlance' as PaxAction };
+function paidLegs(
+  p: StationPlacement,
+  bay: ConcourseBay,
+  inbound: boolean,
+): RouteStop[] | null {
+  const net = p.network;
+  const room = net.rooms.find((r) => r.id === net.gates.find((g) => g.id === bay.gateId)?.from);
+  if (!room?.walkable) return null;
+  // ON MARCHE VERS LA LIGNE, donc sur l'axe qu'on la franchit. Dans un hall
+  // longitudinal c'est z, comme avant ; dans une passerelle transversale c'est
+  // x, et rien d'autre ne change.
+  const axis = bay.cross;
+  const lane = acrossOf(axis, bay);
+  const r = room.rect;
+  const [g0, g1] = axis === 'z' ? [bay.rect.z0, bay.rect.z1] : [bay.rect.x0, bay.rect.x1];
+  const [r0, r1] = axis === 'z' ? [r.z0, r.z1] : [r.x0, r.x1];
+  // De quel côté de la ligne se tient la zone payante ? C'est elle qui décide
+  // où l'on bipe en sortant, et où l'on ressort en entrant.
+  const low = (r0 + r1) / 2 < (g0 + g1) / 2;
+  const paidAt = low ? g0 - ZONE_EDGE : g1 + ZONE_EDGE;
+  const freeAt = low ? g1 + ZONE_EDGE : g0 - ZONE_EDGE;
+  const paidSide = pt(axis, paidAt, lane);
+  const freeSide = pt(axis, freeAt, lane);
+  const foot = low ? r0 + ZONE_EDGE : r1 - ZONE_EDGE;
+  const zone: [number, number] = low ? [r0, g0] : [g1, r1];
+  const tap = { tap: bay.index, hold: 0.55, action: 'ticketGlance' as PaxAction };
   if (inbound) {
     // On arrive de la zone libre : on valide devant la ligne, on la franchit,
     // puis on remonte la zone payante vers l'accès.
     return [
       { ...freeSide, ...tap },
       paidSide,
-      onAxis(p, paidSide.z),
-      ...hallLeg(p, paidSide.z, foot, browseIn(p, it.paid.z0, it.gate.z0, 0.18)),
+      onAxis(p, room, axis, paidAt),
+      ...hallLeg(p, room, axis, paidAt, foot, browseIn(p, axis, zone[0], zone[1], 0.18)),
     ];
   }
   return [
-    onAxis(p, foot),
-    ...hallLeg(p, foot, paidSide.z, browseIn(p, it.paid.z0, it.gate.z0, 0.22)),
+    onAxis(p, room, axis, foot),
+    ...hallLeg(p, room, axis, foot, paidAt, browseIn(p, axis, zone[0], zone[1], 0.22)),
     { ...paidSide, ...tap },
     freeSide,
   ];
 }
 
 /** La zone libre, des portillons aux bouches de sortie. */
-function freeLegs(p: StationPlacement, door: StreetDoor, inbound: boolean): RouteStop[] {
-  const it = p.interior;
-  const shop = shopOf(it);
-  const z0 = it.free.z0 + ZONE_EDGE;
-  const z1 = it.free.z1 - ZONE_EDGE;
-  const mouth = { x: door.x, z: z1 };
+function freeLegs(
+  p: StationPlacement,
+  door: StreetDoor,
+  inbound: boolean,
+): RouteStop[] | null {
+  const net = p.network;
+  const m = net.mouths[door.exit];
+  const room = net.rooms.find((r) => r.id === m?.roomId);
+  if (!m || !room?.walkable) return null;
+  // ON MARCHE VERS LA BOUCHE, donc sur l'axe de la paroi qu'elle perce.
+  const axis: 'x' | 'z' = m.side === 'z0' || m.side === 'z1' ? 'z' : 'x';
+  const r = room.rect;
+  const [lo, hi] = axis === 'z' ? [r.z0, r.z1] : [r.x0, r.x1];
+  const toHigh = m.side === 'z1' || m.side === 'x1';
+  const a0 = toHigh ? lo + ZONE_EDGE : hi - ZONE_EDGE;
+  const a1 = toHigh ? hi - ZONE_EDGE : lo + ZONE_EDGE;
+  const mouth = pt(axis, a1, acrossOf(axis, door));
+  const shop = shopOf(net);
   const detour = shop && Math.random() < 0.34
-    ? shopVisit(shop)
-    : browseIn(p, it.free.z0, it.free.z1, 0.4);
+    ? shopVisit(shop, axis)
+    : browseIn(p, axis, lo, hi, 0.4);
   return inbound
-    ? [mouth, onAxis(p, z1), ...hallLeg(p, z1, z0, detour)]
-    : [onAxis(p, z0), ...hallLeg(p, z0, z1, detour), mouth];
+    ? [mouth, onAxis(p, room, axis, a1), ...hallLeg(p, room, axis, a1, a0, detour)]
+    : [onAxis(p, room, axis, a0), ...hallLeg(p, room, axis, a0, a1, detour), mouth];
 }
 
 /**
@@ -500,17 +619,20 @@ function freeLegs(p: StationPlacement, door: StreetDoor, inbound: boolean): Rout
  */
 export function routeToStreet(p: StationPlacement, busy: readonly number[] = []): RouteStop[] | null {
   if (!stationInteriorOpen(p)) return null;
-  const it = p.interior;
-  const passage = pickPassage(it, busy);
+  const passage = pickPassage(p.network, busy);
   if (passage < 0) return null;
+  const bay = concourseBays(p.network)[passage];
+  const door = pickExit(p.network);
+  const paid = paidLegs(p, bay, false);
+  const free = freeLegs(p, door, false);
+  if (!paid || !free) return null;
   const main = p.mainStair;
-  const door = pickExit(it);
   return [
     // Le bas de l'accès : l'étage bascule tout seul en chemin
     // (systems/stationLevels), personne n'a à le décider ici.
     { x: main.x + stairLane() * 0.35, z: stairTopZ(main) + accessLen(p) - 0.5 },
-    ...paidLegs(p, passage, false),
-    ...freeLegs(p, door, false),
+    ...paid,
+    ...free,
     { x: door.x, z: door.z },
   ];
 }
@@ -527,16 +649,19 @@ export function routeFromStreet(
   busy: readonly number[] = [],
 ): { from: StreetDoor; stops: RouteStop[] } | null {
   if (!stationInteriorOpen(p)) return null;
-  const it = p.interior;
-  const passage = pickPassage(it, busy);
+  const passage = pickPassage(p.network, busy);
   if (passage < 0) return null;
+  const bay = concourseBays(p.network)[passage];
+  const door = pickExit(p.network);
+  const free = freeLegs(p, door, true);
+  const paid = paidLegs(p, bay, true);
+  if (!paid || !free) return null;
   const main = p.mainStair;
-  const door = pickExit(it);
   return {
     from: door,
     stops: [
-      ...freeLegs(p, door, true),
-      ...paidLegs(p, passage, true),
+      ...free,
+      ...paid,
       { x: main.x + stairLane() * 0.35, z: stairTopZ(main) + accessLen(p) - 0.5 },
     ],
   };
