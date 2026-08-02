@@ -227,9 +227,32 @@ interface StationConcourseProfile {
 }
 ```
 
-Le point dur reste **G1** : tout profil doit tenir dans une emprise déclarée, et
-cette emprise doit être communiquée à l'occultation du décor de voie. C'est
-l'objet de la phase 7, et c'est elle qui décide si le chantier va au bout.
+Le point dur reste **G1** : tout profil doit tenir dans une emprise déclarée
+(`profile.footprint`), et cette emprise doit être communiquée à l'occultation du
+décor de voie. C'est l'objet de la phase 6, et c'est elle qui décide si le
+chantier va au bout.
+
+### 3.3 Trois décisions arrêtées en phase 1
+
+Elles sont écrites dans `stationConcourseTypes.ts` et ne se rejouent pas :
+
+1. **Le niveau appartient au hall**, pas à la gare. `place` reste au profil,
+   mais comme un résumé vérifié (`multiLevel` dès que les niveaux divergent),
+   jamais comme la source.
+2. **Un groupe de portillons est un LIEN**, `from` payant → `to` libre. C'est ce
+   qui rend le graphe vérifiable : tout accès mène à un contrôle, tout contrôle
+   débouche sur une zone libre, toute sortie part d'une zone libre. Le profil
+   dit *combien* de baies ; c'est le moteur (phase 7) qui pose les bornes.
+3. **`Depiction` est la liste fermée des façons de montrer sans laisser aller** :
+   `walkable`, `shortBranch`, `blindCorner`, `stairhead`, `doorway`, `vista`,
+   `backdrop`, `closed`, `signOnly`. « Mur invisible » n'en fait pas partie, et
+   un nœud non praticable ne compte pas comme orphelin dans le graphe — c'est
+   une perspective, pas une impasse.
+
+`validateProfile()` implémente déjà, une fois pour les trente gares, les
+contrôles obligatoires n° 3, 4, 5, 6, 7, 9 (partiel), 12 et 13 du cahier des
+charges. Il ne dit **rien** de l'exactitude du relevé : un profil parfaitement
+cohérent peut décrire une gare imaginaire. C'est le rôle des sources.
 
 ---
 
@@ -240,8 +263,8 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 
 | # | Phase | Livrable | Sort de |
 |---|---|---|---|
-| **0** | **Audit et plan** | ce document | — |
-| 1 | Format des profils | `stationConcourseTypes.ts` + test de forme | D1 D2 D3 |
+| **0** | **Audit et plan** ✅ | ce document | — |
+| **1** | **Format des profils** ✅ | `stationConcourseTypes.ts` + `validateProfile` + 14 tests | D1 D2 D3 |
 | 2 | Registre des sources | `stationConcourseSources.ts`, squelette de `STATION_CONCOURSE_EVIDENCE.md` | D6 |
 | 3 | Sorties réelles | `data/lines` : les 30 gares relevées, `GENERIC_EXITS` réduit aux gares qui les portent vraiment | D4 |
 | 4 | Relevé documentaire | `STATION_CONCOURSE_EVIDENCE.md` rempli, 30 fiches | D5 D6 D7 D8 |
