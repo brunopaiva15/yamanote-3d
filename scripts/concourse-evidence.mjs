@@ -586,66 +586,81 @@ const FINDINGS = {
   // Juillet 2026 - la deuxième date la plus proche - mais un cadrage panoramé
   // vers le sud qui laisse les voies Yamanote hors champ.
   24: {
-    confidence: '`approximate` — plan de **juillet 2026**, mais **cadré hors des voies Yamanote**',
+    confidence: '`mostlyVerified` — plan de **juillet 2026**, recadré sur demande',
     levels: [
-      '**1F** — les quais : voies 4 à 15 pour les lignes classiques, 21 à 24 pour '
-        + 'le Shinkansen. Les voies **1 à 3 sont hors du cadrage**.',
-      '**2F** — le **hall-passerelle**, et c’est bien une passerelle : une bande '
-        + 'libre (le passage public) court du nord au sud, et les zones payantes '
-        + 'la bordent **des deux côtés**. On traverse la gare sans jamais entrer.',
+      '**1F** — les quais : voies 1 à 15 pour les lignes classiques, 21 à 24 pour '
+        + 'le Shinkansen.',
+      '**2F** — le **hall-passerelle**. Une bande **libre** court d’ouest en est '
+        + 'et les zones payantes la bordent **des deux côtés** : on traverse '
+        + 'Shinagawa de part en part sans jamais entrer en gare. C’est l’inverse '
+        + 'd’un couloir payant, et cela change tout le dessin.',
     ],
     gates: [
-      '**North Gate** — relevé, au 2F, sur le flanc est du passage.',
-      '**Kōnan Exit (East Exit)** — le débouché est, au bout du passage libre.',
-      '**Contrôles Shinkansen** : *for Tōkaidō Shinkansen (South)*, '
-        + '*for Tōkaidō Shinkansen (North)* et *Tōkaidō Shinkansen Transfer '
-        + '(North)*. Comme à Tokyo, passer au Shinkansen demande de franchir un '
-        + 'second 改札.',
-      '⚠️ Le **Central Gate** — la tranche que le cahier des charges vise — '
-        + '**n’est pas dans le cadrage fourni**.',
+      '**Central Gate** — au 2F, avec le **Triangle Clock** (三角時計) juste à '
+        + 'côté : un repère nommé sur le plan, et le point de rendez-vous de la '
+        + 'gare.',
+      '**North Gate** — plus à l’est, avec ses propres *Tickets* et '
+        + '*Fare Adjustment*.',
+      '**Transfer to Keikyū Line** — une ligne de contrôle *entre deux '
+        + 'exploitants*, au nord-ouest, avec ses *Tickets (Keikyū)*.',
+      '**Contrôles Shinkansen, au nombre de quatre** : *Tōkaidō Shinkansen '
+        + 'Transfer (South)* et *(North)* côté payant, *for Tōkaidō Shinkansen '
+        + '(South)* et *(North)* côté libre. Comme à Tokyo, passer au Shinkansen '
+        + 'demande de franchir un second 改札.',
+      'Ascenseurs **A à K**.',
     ],
-    order: 'Le passage libre du 2F est l’ossature : orienté nord-sud, il porte le '
-      + '*Kōnan Exit* à un bout et se prolonge vers Takanawa à l’autre, avec les '
-      + 'zones payantes en bordure. La « immense longueur du hall » que le cahier '
-      + 'des charges décrit est bien là, et elle est **libre**, pas payante.',
-    tracks: 'Les voies **1 et 2** (Yamanote) sont **hors cadrage**. Le document '
-      + 'commence à la voie 4 : Keihin-Tōhoku vers Tōkyō (4) et vers Yokohama (5), '
-      + 'Ueno-Tōkyō (6, 7, 9, 10, 11), **8 = « Extra Platform »**, Tōkaidō (12), '
-      + 'Sōbu Rapid (13, 14), Yokosuka (15), Tōkaidō・Sanyō Shinkansen (21-24). '
-      + 'Ce document **n’établit donc pas** l’affectation des voies Yamanote.',
+    order: 'Le passage **libre** du 2F est l’ossature : il porte le '
+      + '**Takanawa Exit (West Exit)** à un bout et le **Kōnan Exit (East Exit)** '
+      + 'à l’autre, avec les zones payantes en bordure. Les deux directions que le '
+      + 'cahier des charges veut « opposées et immédiatement compréhensibles » le '
+      + 'sont : ce sont littéralement les deux extrémités d’un même couloir.',
+    tracks: 'Voie **1** = *Yamanote Line (**Inner Loop**) (for Tōkyō, Ueno & '
+      + 'Komagome)* ; voie **3** = *Yamanote Line (**Outer Loop**) (for Shibuya, '
+      + 'Shinjuku & Ikebukuro)*. Comme à Akihabara, le plan écrit les deux sens en '
+      + 'toutes lettres. Puis Keihin-Tōhoku (4, 5), Ueno-Tōkyō (6, 7, 9, 10, 11), '
+      + '**8 = « Extra Platform »**, Tōkaidō (12), Sōbu Rapid (13, 14), Yokosuka '
+      + '(15), Tōkaidō・Sanyō Shinkansen (21-24).',
     transfers: [
-      '**Shinkansen** — trois lignes de contrôle relevées.',
-      '**Keikyū** — *absent du cadrage fourni*. Le cahier des charges l’attend ; '
-        + 'ce document ne l’établit pas.',
+      '**Keikyū** — au 2F, au nord-ouest, par une ligne de contrôle dédiée et '
+        + 'ses guichets propres. Il débouche du côté **Takanawa**.',
+      '**Shinkansen** — quatre lignes de contrôle relevées, deux au nord, deux au '
+        + 'sud.',
     ],
     commerce: [
-      '**ecute Shinagawa**, avec deux renvois « for ecute (2F) » — la galerie est '
-        + 'dessinée dans l’aplat des grands commerces, sur le flanc ouest du '
-        + 'passage.',
-      '**Mizunone Plaza** (水の音広場) — une place nommée, dans la zone payante ouest.',
-      '**atre** — trois blocs, en emprise bâtie, au sud et à l’est.',
-      '**Safety monument** (安全の碑), au niveau des quais : un repère nommé.',
-      'KIOSK et SHOP répartis le long des deux zones payantes.',
+      '**ecute Shinagawa** — vaste, dans l’aplat des grands commerces, sur le '
+        + 'flanc **ouest** du passage, avec deux renvois « for ecute (2F) ».',
+      '**Mizunone Plaza** (水の音広場) — une place nommée, dans la même zone.',
+      '**atre** — deux blocs au sud, en emprise bâtie.',
+      '**Triangle Clock** au Central Gate et **Safety monument** (安全の碑) sur '
+        + 'les quais : deux repères nommés.',
+      'KIOSK et SHOP répartis le long des deux zones payantes ; **Waiting Room**.',
     ],
     works: 'Beaucoup de chantier : au moins **sept zones « Under Construction »** '
-      + 'sur la feuille des quais et une sur celle du hall. Plan daté '
-      + '« *As of July, 2026* ».',
+      + 'sur la feuille des quais et deux sur celle du hall, dont une contre le '
+      + 'Takanawa Exit. Plan daté « *As of July, 2026* ».',
     uncertain: [
-      '⚠️ **Le cadrage manque l’essentiel pour ce jeu.** Voies 1-2 (Yamanote), '
-        + '**Central Gate**, côté **Takanawa** : tout cela est hors champ sur les '
-        + 'deux feuilles. La confiance reste donc `approximate` malgré une date '
-        + 'excellente.',
-      'Le **Keikyū** n’apparaît pas.',
-      'Les **noms japonais** ne sont pas sur cette édition anglaise.',
+      '⚠️ **Il n’y a pas de voie 2.** Le plan numérote 1, puis 3, 4, 5… et les '
+        + 'volées sont fléchées « for Track No.**1** » (seule) mais « for Tracks '
+        + 'No.**3 & 4** » (ensemble). Autrement dit, la voie Yamanote *Inner Loop* '
+        + 'a une face de quai **pour elle seule**, tandis que l’*Outer Loop* '
+        + 'partage son îlot avec la Keihin-Tōhoku. Le dépôt décrit Shinagawa par '
+        + 'un unique `config: sharedIsland` : **cette asymétrie ne s’y exprime '
+        + 'pas**. Rien n’a été modifié — c’est la même famille de question que '
+        + 'l’`elevation` d’Ueno, et elle se tranche hors de ce chantier.',
+      'Le plan date de **juillet 2026**, un mois avant la référence.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise : 中央改札, '
+        + '北改札, 高輪口, 港南口 restent à confirmer.',
     ],
-    tradeoff: 'Ce qui est **acquis** et utilisable dès maintenant : la forme du '
-      + 'hall — un passage **libre** nord-sud bordé de zones payantes des deux '
-      + 'côtés, ce qui est l’inverse d’un couloir payant et change tout le '
-      + 'dessin ; l’opposition *Kōnan* (est) / *Takanawa* (ouest) portée par ce '
-      + 'passage ; **ecute Shinagawa** et **Mizunone Plaza** côté ouest ; les '
-      + 'trois contrôles Shinkansen ; le chantier omniprésent. Ce qui **attend un '
-      + 'nouveau cadrage** : le Central Gate, donc la tranche principale, et '
-      + 'l’affectation des voies Yamanote.',
+    tradeoff: 'Tranche jouable autour du **Central Gate**, comme le cahier des '
+      + 'charges le demande, avec le **Triangle Clock** comme repère immédiat et '
+      + '**ecute Shinagawa** pour l’échelle. Le passage **libre** ouest-est est '
+      + 'l’objet principal : long, traversant, bordé de contrôles — on doit '
+      + 'comprendre qu’on peut le suivre sans entrer. Représentés sans être '
+      + 'visitables : le **North Gate** en enfilade, le **Takanawa Exit** et le '
+      + '**Kōnan Exit** aux deux bouts (perspectives opposées, pas des trottoirs), '
+      + 'le **Transfer to Keikyū** côté Takanawa, les **quatre contrôles '
+      + 'Shinkansen**, et les palissades de chantier qui ferment naturellement le '
+      + 'périmètre.',
   },
 
   // ─── JY26 Takanawa Gateway ────────────────────────────────────────────

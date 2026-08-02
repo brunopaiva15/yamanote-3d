@@ -334,10 +334,10 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
       url: 'https://www.jreast.co.jp/fr/e/stations/e788.html',
       documentDate: '2026-07',
       consultedAt: '2026-08-02',
-      note: 'PDF fournis à la main (réseau bloqué). Porte « As of July, 2026 ». '
-        + 'Le CADRAGE des deux feuilles s’arrête à la voie 4 : les voies Yamanote '
-        + '(1 et 2), le Central Gate et le côté Takanawa sont hors champ. '
-        + 'Non versionné : ©JR East Consultants Company.',
+      note: 'PDF fournis à la main (réseau bloqué), puis RECADRÉS en captures PNG '
+        + 'sur demande : le premier envoi coupait les voies Yamanote, le Central '
+        + 'Gate et le côté Takanawa. Le second les couvre. '
+        + 'Porte « As of July, 2026 ». Non versionné : ©JR East Consultants Company.',
     },
   ],
   // JY26 Takanawa Gateway. Onglet unique 1F-3F. Septembre 2025 : antérieur à
