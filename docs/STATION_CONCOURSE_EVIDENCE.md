@@ -17,7 +17,7 @@ genre de document qui ment.
 
 ## ⚠ État de la vérification — à lire avant toute fiche
 
-**Plans officiels ouverts et lus : 9 / 30.**
+**Plans officiels ouverts et lus : 11 / 30.**
 
 L'environnement de développement de ce dépôt n'atteint pas les sites des
 opérateurs : la passerelle réseau refuse la connexion (403 sur `CONNECT`) vers
@@ -94,12 +94,14 @@ fondues dans le texte.
 | Gare | Date du plan | Écart |
 |---|---|---|
 | JY01 Tokyo | 2026-05 | ⚠️ **décalé** par rapport à la référence |
+| JY03 Akihabara | 2026-01 | ⚠️ **décalé** par rapport à la référence |
 | JY05 Ueno | 2026-06 | ⚠️ **décalé** par rapport à la référence |
 | JY07 Nippori | 2025-04 | ⚠️ **décalé** par rapport à la référence |
 | JY13 Ikebukuro | 2026-02 | ⚠️ **décalé** par rapport à la référence |
 | JY17 Shinjuku | 2026-08 | ✅ la date de référence |
 | JY19 Harajuku | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY20 Shibuya | 2026-06 | ⚠️ **décalé** par rapport à la référence |
+| JY22 Meguro | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY25 Shinagawa | 2026-07 | ⚠️ **décalé** par rapport à la référence |
 | JY26 Takanawa Gateway | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 
@@ -251,12 +253,13 @@ La tranche visée reste le **Marunouchi Central**, mais elle n’est pas encore 
 
 ## JY03 Akihabara — 秋葉原
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **janvier** 2026.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Akihabara Station (1F, 2F-M3, 3F) | [lien](https://www.jreast.co.jp/fr/e/stations/e41.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（秋葉原駅） | [ja](https://www.jreast.co.jp/estation/stations/41.html) · [en](https://www.jreast.co.jp/en/estation/stations/41.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -268,31 +271,48 @@ La tranche visée reste le **Marunouchi Central**, mais elle n’est pas encore 
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — les trois groupes de portillons, alignés du nord au sud le long d’une bande étroite. C’est le niveau de la rue, sous le viaduc.
+- **2F-M3** — les quais Yamanote et Keihin-Tōhoku, plus une mezzanine.
+- **3F** — les quais de la **Chūō-Sōbu**, perpendiculaires.
+- **La superposition est le sujet**, et le découpage même du document la donne : trois niveaux, trois orientations — la rue, le viaduc JR, et la Chūō-Sōbu en travers au-dessus.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Electric Town Gate** (電気街口) — au nord, avec *Tickets*, *Fare Adjustment*, un SHOP et un comptoir de service.
+- **Central Gate** (中央改札) — au milieu, avec ses *Tickets*, son *Fare Adjustment*, un **Event Space** attenant, et le renvoi « for Tsukuba Express ».
+- **Shōwa-dōri Gate** (昭和通り改札) — au sud, dans un **bloc entièrement séparé** : sa propre zone payante, ses propres guichets, trois SHOP, et le renvoi « for Hibiya Line ».
+- Ascenseurs **A à F** : A et B pour les quais JR, C à F pour la Chūō-Sōbu.
+
+**Ordre le long du quai** — Les trois groupes se suivent du **nord au sud** sur une bande très étroite : Electric Town → Central → Shōwa-dōri. Le troisième est détaché des deux autres. Ce n’est pas un hall unique à trois portes : c’est une enfilade, et le Shōwa-dōri en est presque une gare à part.
+
+**Voies Yamanote** — Voie **2** = *Yamanote Line (**Inner Loop**) (for Ueno & Ikebukuro)* ; voie **3** = *Yamanote Line (**Outer Loop**) (for Tōkyō & Shinagawa)*. **C’est le seul plan du relevé à écrire « Inner Loop » et « Outer Loop » en toutes lettres** — la terminologie exacte que le jeu emploie pour 内回り / 外回り. Voies **1** et **4** = Keihin-Tōhoku : chaque voie Yamanote partage son îlot avec une Keihin-Tōhoku, ce qui **confirme** `sharedIsland` / `sharedWith: Keihin-Tōhoku`. Voies **5** et **6** = Chūō-Sōbu Local, au 3F, en travers.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Tsukuba Express** — fléché depuis le *Central Gate*.
+- **Tokyo Metro Hibiya** — fléché depuis le *Shōwa-dōri Gate*, à l’autre bout de la gare. Les deux correspondances sortent donc par des portillons **différents**, ce qui est exactement ce qui rend Akihabara illisible pour qui ne connaît pas.
+- **Chūō-Sōbu** — correspondance interne JR, par les ascenseurs C à F et leurs volées, depuis les deux extrémités.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **ecute Akihabara** — *dans la zone payante* du 1F, entre les volées vers les voies 1&2 et 3&4, en aplat « large store inside the ticket gates ».
+- **atre Akihabara 1** au nord et **atre Akihabara 2** au sud, contre le Shōwa-dōri Gate — deux bâtiments distincts, en emprise bâtie.
+- **Event Space** — un espace nommé contre le Central Gate.
+- Le dépôt déclarait `atre` pour Akihabara : confirmé, et il y en a **deux**.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **janvier 2026**, sept mois avant la référence.
+- Les **noms japonais** ne sont pas sur cette édition anglaise : 電気街口, 中央改札, 昭和通り改札 restent à confirmer — ils sont toutefois déjà dans le dépôt pour le premier.
+- Les feuilles **2F-M3** et **3F** n’ont pas été dépouillées en détail : le 1F suffit à établir la topologie des contrôles.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable autour de l’**Electric Town Gate**, comme le cahier des charges le demande, avec **ecute Akihabara** derrière les portillons pour donner l’échelle. Représentés sans être visitables : le *Central Gate* et son Event Space en enfilade au sud, le *Shōwa-dōri Gate* plus loin encore (bloc séparé, panneau et perspective), les renvois **Tsukuba Express** et **Hibiya** par deux portillons différents, et surtout la **Chūō-Sōbu au 3F** — visible en levant les yeux, atteinte par des volées qui montent et se perdent. **La verticalité prime sur la surface** : c’est une gare qu’on lit en coupe.
 
 ---
 
@@ -1246,12 +1266,13 @@ Tranche jouable autour du **Hachikō Gate**, conformément au cahier des charges
 
 ## JY22 Meguro — 目黒
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **septembre 2025**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Meguro Station (B1-1F, B3-B2) | [lien](https://www.jreast.co.jp/fr/e/stations/e1552.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（目黒駅） | [ja](https://www.jreast.co.jp/estation/stations/1552.html) · [en](https://www.jreast.co.jp/en/estation/stations/1552.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -1263,31 +1284,42 @@ Tranche jouable autour du **Hachikō Gate**, conformément au cahier des charges
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **B1** — le quai Yamanote, **dans la tranchée** : un îlot unique.
+- **1F** — le hall, **au-dessus** du quai : le *Central Gate*, sa zone libre et l’*East Exit*, encadrés par les deux blocs d’**atre 1**.
+- **B3-B2** — Tōkyū Meguro, Namboku et Mita, sur une feuille distincte non dépouillée (hors périmètre JR). Leur existence à ce niveau **confirme** la coupe que le cahier des charges décrit : on monte du quai au hall, puis on **redescend** vers les trois autres lignes.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Central Gate** — au **1F**, avec *Tickets*, *Fare Adjustment* et l’ascenseur B qui plonge vers le quai.
+- Le cadrage ne montre qu’un seul groupe ; un éventuel contrôle ouest n’est pas dans le champ.
+
+**Ordre le long du quai** — Le quai est en tranchée, le hall est dessus, et **une seule volée** les relie dans le cadrage fourni. La gare est donc un **puits** : peu de surface, beaucoup de hauteur — ce que le cahier des charges annonçait.
+
+**Voies Yamanote** — Un **îlot unique** : *Yamanote Line (for Shibuya, Shinjuku & Ikebukuro)* d’un côté, *Yamanote Line (for Shinagawa, Tōkyō & Ueno)* de l’autre. Les deux sens se font face, ce qui **confirme** `config: island`. Aucune autre ligne ne partage ce quai.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Tōkyū Meguro, Tokyo Metro Namboku, Toei Mita** — au **B3-B2**, donc *sous* le quai JR. La correspondance descend.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **atre 1** — deux blocs encadrant la zone libre du 1F. Le dépôt déclarait `atre` pour Meguro : confirmé.
+- **NewDays** et un **SHOP** sur le quai lui-même.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **septembre 2025**.
+- Le cadrage ne montre **qu’un seul groupe de portillons** (Central Gate) et une seule sortie nommée (*East Exit*) ; un côté ouest éventuel n’est pas dans le champ.
+- La feuille **B3-B2** n’a pas été dépouillée.
+- Les **noms japonais** ne sont pas sur cette édition anglaise.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable **verticale** : du quai en tranchée (B1) on monte au *Central Gate* (1F), on ressort côté *East Exit*, et l’on voit repartir vers le bas les volées des trois autres lignes. **Le puits et l’enchaînement montée-puis-descente sont le sujet** ; la surface au sol ne l’est pas. Représentés sans être visitables : la descente vers Tōkyū / Namboku / Mita (volées qui plongent, signalétique à trois couleurs), les deux blocs d’**atre 1** en façades, et la tranchée elle-même vue depuis le hall.
 
 ---
 

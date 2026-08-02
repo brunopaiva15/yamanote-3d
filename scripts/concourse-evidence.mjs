@@ -138,6 +138,80 @@ const FINDINGS = {
       + 'et le côté Marunouchi en perspective au bout du Central Passage.',
   },
 
+  // ─── JY03 Akihabara ───────────────────────────────────────────────────
+  // Trois feuilles, janvier 2026. Le seul plan du relevé qui écrive
+  // « Inner Loop » / « Outer Loop » - c'est-à-dire la terminologie du jeu.
+  2: {
+    confidence: '`mostlyVerified` — sur un plan de **janvier** 2026',
+    levels: [
+      '**1F** — les trois groupes de portillons, alignés du nord au sud le long '
+        + 'd’une bande étroite. C’est le niveau de la rue, sous le viaduc.',
+      '**2F-M3** — les quais Yamanote et Keihin-Tōhoku, plus une mezzanine.',
+      '**3F** — les quais de la **Chūō-Sōbu**, perpendiculaires.',
+      '**La superposition est le sujet**, et le découpage même du document la '
+        + 'donne : trois niveaux, trois orientations — la rue, le viaduc JR, et la '
+        + 'Chūō-Sōbu en travers au-dessus.',
+    ],
+    gates: [
+      '**Electric Town Gate** (電気街口) — au nord, avec *Tickets*, '
+        + '*Fare Adjustment*, un SHOP et un comptoir de service.',
+      '**Central Gate** (中央改札) — au milieu, avec ses *Tickets*, son '
+        + '*Fare Adjustment*, un **Event Space** attenant, et le renvoi '
+        + '« for Tsukuba Express ».',
+      '**Shōwa-dōri Gate** (昭和通り改札) — au sud, dans un **bloc entièrement '
+        + 'séparé** : sa propre zone payante, ses propres guichets, trois SHOP, et '
+        + 'le renvoi « for Hibiya Line ».',
+      'Ascenseurs **A à F** : A et B pour les quais JR, C à F pour la Chūō-Sōbu.',
+    ],
+    order: 'Les trois groupes se suivent du **nord au sud** sur une bande très '
+      + 'étroite : Electric Town → Central → Shōwa-dōri. Le troisième est détaché '
+      + 'des deux autres. Ce n’est pas un hall unique à trois portes : c’est une '
+      + 'enfilade, et le Shōwa-dōri en est presque une gare à part.',
+    tracks: 'Voie **2** = *Yamanote Line (**Inner Loop**) (for Ueno & Ikebukuro)* ; '
+      + 'voie **3** = *Yamanote Line (**Outer Loop**) (for Tōkyō & Shinagawa)*. '
+      + '**C’est le seul plan du relevé à écrire « Inner Loop » et « Outer Loop » '
+      + 'en toutes lettres** — la terminologie exacte que le jeu emploie pour '
+      + '内回り / 外回り. Voies **1** et **4** = Keihin-Tōhoku : chaque voie '
+      + 'Yamanote partage son îlot avec une Keihin-Tōhoku, ce qui **confirme** '
+      + '`sharedIsland` / `sharedWith: Keihin-Tōhoku`. Voies **5** et **6** = '
+      + 'Chūō-Sōbu Local, au 3F, en travers.',
+    transfers: [
+      '**Tsukuba Express** — fléché depuis le *Central Gate*.',
+      '**Tokyo Metro Hibiya** — fléché depuis le *Shōwa-dōri Gate*, à l’autre '
+        + 'bout de la gare. Les deux correspondances sortent donc par des '
+        + 'portillons **différents**, ce qui est exactement ce qui rend Akihabara '
+        + 'illisible pour qui ne connaît pas.',
+      '**Chūō-Sōbu** — correspondance interne JR, par les ascenseurs C à F et '
+        + 'leurs volées, depuis les deux extrémités.',
+    ],
+    commerce: [
+      '**ecute Akihabara** — *dans la zone payante* du 1F, entre les volées vers '
+        + 'les voies 1&2 et 3&4, en aplat « large store inside the ticket gates ».',
+      '**atre Akihabara 1** au nord et **atre Akihabara 2** au sud, contre le '
+        + 'Shōwa-dōri Gate — deux bâtiments distincts, en emprise bâtie.',
+      '**Event Space** — un espace nommé contre le Central Gate.',
+      'Le dépôt déclarait `atre` pour Akihabara : confirmé, et il y en a **deux**.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **janvier 2026**, sept mois avant la référence.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise : 電気街口, '
+        + '中央改札, 昭和通り改札 restent à confirmer — ils sont toutefois déjà '
+        + 'dans le dépôt pour le premier.',
+      'Les feuilles **2F-M3** et **3F** n’ont pas été dépouillées en détail : le '
+        + '1F suffit à établir la topologie des contrôles.',
+    ],
+    tradeoff: 'Tranche jouable autour de l’**Electric Town Gate**, comme le '
+      + 'cahier des charges le demande, avec **ecute Akihabara** derrière les '
+      + 'portillons pour donner l’échelle. Représentés sans être visitables : le '
+      + '*Central Gate* et son Event Space en enfilade au sud, le *Shōwa-dōri '
+      + 'Gate* plus loin encore (bloc séparé, panneau et perspective), les renvois '
+      + '**Tsukuba Express** et **Hibiya** par deux portillons différents, et '
+      + 'surtout la **Chūō-Sōbu au 3F** — visible en levant les yeux, atteinte par '
+      + 'des volées qui montent et se perdent. **La verticalité prime sur la '
+      + 'surface** : c’est une gare qu’on lit en coupe.',
+  },
+
   // ─── JY05 Ueno ────────────────────────────────────────────────────────
   // Quatre feuilles, une par onglet : 1F-M2, 2F, 3F, B4-B1. Datées de juin
   // 2026. C'est la gare la plus verticale de la boucle, et le relevé le
@@ -453,6 +527,59 @@ const FINDINGS = {
       + 'bas du souterrain et le bois clair de 2020 est le sujet ; la surface ne '
       + 'l’est pas. Représentés seulement : le West Exit, le East Exit et le '
       + 'renvoi Tokyo Metro, en fond de zone libre du 2F.',
+  },
+
+  // ─── JY22 Meguro ──────────────────────────────────────────────────────
+  21: {
+    confidence: '`mostlyVerified` — sur un plan de **septembre 2025**',
+    levels: [
+      '**B1** — le quai Yamanote, **dans la tranchée** : un îlot unique.',
+      '**1F** — le hall, **au-dessus** du quai : le *Central Gate*, sa zone libre '
+        + 'et l’*East Exit*, encadrés par les deux blocs d’**atre 1**.',
+      '**B3-B2** — Tōkyū Meguro, Namboku et Mita, sur une feuille distincte non '
+        + 'dépouillée (hors périmètre JR). Leur existence à ce niveau **confirme** '
+        + 'la coupe que le cahier des charges décrit : on monte du quai au hall, '
+        + 'puis on **redescend** vers les trois autres lignes.',
+    ],
+    gates: [
+      '**Central Gate** — au **1F**, avec *Tickets*, *Fare Adjustment* et '
+        + 'l’ascenseur B qui plonge vers le quai.',
+      'Le cadrage ne montre qu’un seul groupe ; un éventuel contrôle ouest n’est '
+        + 'pas dans le champ.',
+    ],
+    order: 'Le quai est en tranchée, le hall est dessus, et **une seule volée** '
+      + 'les relie dans le cadrage fourni. La gare est donc un **puits** : peu de '
+      + 'surface, beaucoup de hauteur — ce que le cahier des charges annonçait.',
+    tracks: 'Un **îlot unique** : *Yamanote Line (for Shibuya, Shinjuku & '
+      + 'Ikebukuro)* d’un côté, *Yamanote Line (for Shinagawa, Tōkyō & Ueno)* de '
+      + 'l’autre. Les deux sens se font face, ce qui **confirme** `config: island`. '
+      + 'Aucune autre ligne ne partage ce quai.',
+    transfers: [
+      '**Tōkyū Meguro, Tokyo Metro Namboku, Toei Mita** — au **B3-B2**, donc '
+        + '*sous* le quai JR. La correspondance descend.',
+    ],
+    commerce: [
+      '**atre 1** — deux blocs encadrant la zone libre du 1F. Le dépôt déclarait '
+        + '`atre` pour Meguro : confirmé.',
+      '**NewDays** et un **SHOP** sur le quai lui-même.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **septembre 2025**.',
+      'Le cadrage ne montre **qu’un seul groupe de portillons** (Central Gate) et '
+        + 'une seule sortie nommée (*East Exit*) ; un côté ouest éventuel n’est '
+        + 'pas dans le champ.',
+      'La feuille **B3-B2** n’a pas été dépouillée.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise.',
+    ],
+    tradeoff: 'Tranche jouable **verticale** : du quai en tranchée (B1) on monte '
+      + 'au *Central Gate* (1F), on ressort côté *East Exit*, et l’on voit '
+      + 'repartir vers le bas les volées des trois autres lignes. **Le puits et '
+      + 'l’enchaînement montée-puis-descente sont le sujet** ; la surface au sol '
+      + 'ne l’est pas. Représentés sans être visitables : la descente vers '
+      + 'Tōkyū / Namboku / Mita (volées qui plongent, signalétique à trois '
+      + 'couleurs), les deux blocs d’**atre 1** en façades, et la tranchée '
+      + 'elle-même vue depuis le hall.',
   },
 
   // ─── JY25 Shinagawa ───────────────────────────────────────────────────

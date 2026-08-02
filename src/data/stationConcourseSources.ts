@@ -226,6 +226,21 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],
+  // JY03 Akihabara. Trois feuilles : 1F, 2F-M3, 3F. Janvier 2026.
+  2: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Akihabara Station (1F, 2F-M3, 3F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e41.html',
+      documentDate: '2026-01',
+      consultedAt: '2026-08-02',
+      note: 'PDF fournis à la main (réseau bloqué). Porte « As of January, 2026 ». '
+        + 'Seul plan du relevé à écrire « Inner Loop » / « Outer Loop » en toutes '
+        + 'lettres. Non versionné : ©JR East Consultants Company.',
+    },
+  ],
   // JY05 Ueno. Quatre feuilles, une par onglet de niveau : 1F-M2, 2F, 3F,
   // B4-B1. Même réserve de date que Shibuya : « As of June, 2026 ».
   4: [
@@ -288,6 +303,22 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
       note: 'PDF fourni à la main (réseau bloqué). Porte « As of September, 2025 » — '
         + 'ONZE MOIS avant la date de référence, le plus grand écart du lot. '
         + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY22 Meguro. Deux feuilles : B1-1F (JR) et B3-B2 (Tōkyū, Namboku, Mita).
+  // Septembre 2025.
+  21: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Meguro Station (B1-1F, B3-B2)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e1552.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'PDF fournis à la main (réseau bloqué). Porte « As of September, 2025 ». '
+        + 'La feuille B3-B2 (Tōkyū Meguro, Namboku, Mita) n’a pas été dépouillée : '
+        + 'hors périmètre JR. Non versionné : ©JR East Consultants Company.',
     },
   ],
   // JY25 Shinagawa. Deux feuilles, 1F (les quais) et 2F (le hall-passerelle).
