@@ -24,6 +24,7 @@ import {
   trackSignZs,
   type StationPlacement,
 } from '../../systems/stationPlacement';
+import { signageFor } from '../../data/stationSignage';
 import {
   makeAccessPlate,
   makeExitSign,
@@ -92,13 +93,19 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
   // aligne (systems/stationPlacement).
   const { x: trackX, w: trackW, hx: trackHx } = trackSignBox(place);
 
+  // La potence annonce CE QUE LA GARE PERCE, et rien d'autre. Elle lisait le
+  // relevé des sorties de son côté, sans savoir combien de bouches le hall
+  // ouvre ni comment elles s'appellent : une flèche qui mène à une sortie
+  // qu'on ne trouve pas coûte plus cher que pas de flèche du tout.
+  const sign = useMemo(() => signageFor(place.network, station), [place.network, station]);
+
   useEffect(() => {
-    for (const s of signs.exits) s.redraw(station);
-    signs.transfer.redraw(station);
+    signs.exits.forEach((s, k) => s.redraw(sign.gantry[k] ?? sign.gantry[0] ?? sign.exits[0]));
+    signs.transfer.redraw(sign.lines);
     // Le caisson 番線 se raccourcit sur les quais étroits : la texture se
     // recompose à sa proportion au lieu de s'y écraser.
     signs.track.redraw(station, loopDirection, trackW);
-  }, [signs, station, loopDirection, trackW]);
+  }, [signs, sign, loopDirection, trackW, station]);
 
   // Les panneaux ne s'allument pas tant que le quai n'est pas là : redessiner
   // un canvas est gratuit, mais une gare invisible n'a pas à coûter un rendu.

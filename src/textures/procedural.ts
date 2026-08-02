@@ -4,11 +4,11 @@
 
 import * as THREE from 'three';
 import { AD_PALETTES, AD_SUBS, AD_WORDS } from '../data/ads';
-import { STATIONS, TRANSFERS, boardDestinations, directionBoardStations } from '../data/stations';
+import { STATIONS, boardDestinations, directionBoardStations } from '../data/stations';
 import { LCD_BOARDS, type BoardEta, type BoardView } from '../data/departureBoard';
 import { nextStation, prevStation } from '../data/loop';
 import { PLATFORM_NUMBERS, type LoopDirection } from '../data/platforms';
-import { lineInfo, stationExits } from '../data/lines';
+import { lineInfo } from '../data/lines';
 import { GENERIC, type District, type Feat } from '../data/districts';
 import type { Appearance } from '../systems/appearance';
 
@@ -2598,27 +2598,34 @@ export function makeTotemSign(): {
 // est vissée sur les poteaux de charpente, qui sont ce que 柱型駅名標 désigne
 // littéralement. Le totem porte l'orientation - par où sortir, vers quelles
 // lignes on change - et c'est ce qui manquait au quai une fois la plaque
-// remise à sa place. Mêmes données que les panneaux suspendus (stationExits,
-// TRANSFERS), autre format : une colonne, lue de près et debout.
+// remise à sa place. MÊME SOURCE que les panneaux suspendus - la signalétique
+// de la gare (`data/stationSignage`) - autre format : une colonne, lue de près
+// et debout. Un totem qui annonçait une sortie que le hall ne perce pas
+// envoyait le voyageur chercher une porte qui n'existe nulle part.
 export function makeTotemGuide(): {
   texture: THREE.CanvasTexture;
-  redraw: (index: number, dir: LoopDirection) => void;
+  redraw: (
+    index: number,
+    dir: LoopDirection,
+    sign: { exits: readonly { jp: string; en: string }[]; lines: readonly string[] },
+  ) => void;
 } {
   const W = 480;
   const H = 1024;
   const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
 
-  const redraw = (index: number, dir: LoopDirection) => {
+  const redraw = (
+    index: number,
+    dir: LoopDirection,
+    sign: { exits: readonly { jp: string; en: string }[]; lines: readonly string[] },
+  ) => {
     const st = STATIONS[index];
-    const exits = stationExits(index);
-    const tr = TRANSFERS[st.jy];
+    const exits = sign.exits;
     // Une gare sans correspondance notable - 鶯谷, 目白 - ne porte pas une
     // section のりかえ vide : elle porte l'orientation par direction, qui est
     // l'autre moitié de ce qu'on cherche sur un totem.
-    const lines = tr
-      ? tr.jp.split('、').map((s) => s.trim()).filter(Boolean).slice(0, 4)
-      : [];
+    const lines = sign.lines;
     const ahead = lines.length ? [] : directionBoardStations(index, dir, 3);
 
     g.fillStyle = '#f6f5f2';
@@ -3076,26 +3083,46 @@ function drawSignArrow(
  */
 export function makeGateSign(): {
   texture: THREE.CanvasTexture;
-  redraw: (jp: string, romaji: string) => void;
+  redraw: (jp: string, romaji: string, notes?: readonly string[]) => void;
 } {
   const W = 1024;
   const H = 256;
   const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
-  const redraw = (jp: string, romaji: string) => {
+  const redraw = (jp: string, romaji: string, notes: readonly string[] = []) => {
     g.fillStyle = '#f7f6f3';
     g.fillRect(0, 0, W, H);
     g.strokeStyle = '#1c1c1a';
     g.lineWidth = 10;
     g.strokeRect(5, 5, W - 10, H - 10);
 
-    // Le nom, en noir, sur les deux tiers de gauche.
+    // Le nom, en noir, sur les deux tiers de gauche. Il remonte quand le
+    // contrôle a quelque chose à ajouter : ce qu'on ajoute est en dessous.
+    const tight = notes.length > 0;
     g.fillStyle = '#141414';
     g.textAlign = 'left';
     g.textBaseline = 'alphabetic';
-    fitFillText(g, jp, 44, H * 0.56, W * 0.58, 96, 'bold');
+    fitFillText(g, jp, 44, H * (tight ? 0.44 : 0.56), W * 0.58, tight ? 76 : 96, 'bold');
     g.fillStyle = '#4a4a46';
-    fitFillText(g, romaji, 46, H * 0.82, W * 0.58, 44);
+    fitFillText(g, romaji, 46, H * (tight ? 0.64 : 0.82), W * 0.58, tight ? 36 : 44);
+
+    // Ce qui CHANGE CE QU'ON PEUT Y FAIRE : carte sans contact seule, sortie
+    // seule, horaires. Un voyageur qui arrive avec un billet papier devant un
+    // contrôle IC doit le savoir AVANT d'y être, et JR East l'écrit en rouge.
+    let nx = 44;
+    for (const note of notes) {
+      const w = Math.min(230, 34 + note.length * 26);
+      g.fillStyle = '#c0392b';
+      g.beginPath();
+      g.roundRect(nx, H * 0.72, w, H * 0.2, 8);
+      g.fill();
+      g.fillStyle = '#ffffff';
+      g.textAlign = 'center';
+      fitFillText(g, note, nx + w / 2, H * 0.87, w - 16, 32, 'bold');
+      g.textAlign = 'left';
+      nx += w + 12;
+      if (nx > W * 0.6) break;
+    }
 
     // 改札口 / Gates, en réserve verte : le vert JR de la signalétique.
     g.fillStyle = '#0d8a3e';
@@ -3112,20 +3139,22 @@ export function makeGateSign(): {
 }
 
 /**
- * Panneau jaune de sortie. `slot` choisit laquelle des deux sorties de la gare
- * est affichée, et le sens de la flèche.
+ * Panneau jaune de sortie.
+ *
+ * `slot` ne choisit plus QUE la flèche. Le nom vient de l'appelant — c'est
+ * `data/stationSignage` qui le tient, pour tous les panneaux d'une gare à la
+ * fois : une potence qui annonçait 東口 et une bouche qui portait 中央口 se
+ * contredisaient parce que chacune relisait le relevé de son côté.
  */
 export function makeExitSign(slot: number): {
   texture: THREE.CanvasTexture;
-  redraw: (index: number) => void;
+  redraw: (exit: { jp: string; en: string }) => void;
 } {
   const W = 1024;
   const H = 320;
   const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
-  const redraw = (index: number) => {
-    const exits = stationExits(index);
-    const exit = exits[slot % exits.length];
+  const redraw = (exit: { jp: string; en: string }) => {
     g.fillStyle = EXIT_YELLOW;
     g.fillRect(0, 0, W, H);
     g.strokeStyle = '#141414';
@@ -3155,23 +3184,22 @@ export function makeExitSign(slot: number): {
 }
 
 /**
- * Panneau blanc de correspondance : pastille colorée + nom de ligne, tiré des
- * mêmes données que les annonces (TRANSFERS). Une gare sans correspondance
- * reçoit à la place le rappel de la ligne Yamanote.
+ * Panneau blanc de correspondance : pastille colorée + nom de ligne.
+ *
+ * Les noms viennent de `data/stationSignage`, qui les prend au RÉSEAU dès
+ * qu'un relevé est branché et retombe sinon sur les données d'annonce. Une
+ * gare sans correspondance y reçoit le rappel de la ligne Yamanote.
  */
 export function makeTransferSign(): {
   texture: THREE.CanvasTexture;
-  redraw: (index: number) => void;
+  redraw: (names: readonly string[]) => void;
 } {
   const W = 1024;
   const H = 320;
   const { c, g } = makeCanvas(W, H);
   const texture = toTexture(c);
-  const redraw = (index: number) => {
-    const tr = TRANSFERS[STATIONS[index].jy];
-    const names = tr
-      ? tr.jp.split('、').map((s) => s.trim()).filter(Boolean).slice(0, 4)
-      : ['山手線'];
+  const redraw = (lines: readonly string[]) => {
+    const names = lines.length > 0 ? lines.slice(0, 4) : ['山手線'];
 
     g.fillStyle = '#f6f5f2';
     g.fillRect(0, 0, W, H);

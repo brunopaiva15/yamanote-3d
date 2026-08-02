@@ -39,6 +39,12 @@ import { Limits } from './interiors/Limits';
 import { hallStyle } from './interiors/hallStyle';
 import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
+import {
+  guidePosts,
+  mouthExit,
+  signageFor,
+  type StationSignage,
+} from '../../data/stationSignage';
 import { makeConcourseGuideTexture, type GuideKind } from '../../textures/concourse';
 import { CEILING_MODULE, DADO_MODULE, HALL_MODULE } from '../../textures/stationWall';
 import { usePanelBox, useWallBox } from './wallBox';
@@ -109,18 +115,29 @@ export function Concourse({
 
   // Le bandeau 改札 au-dessus de la ligne : il porte le nom réel de la sortie,
   // et c'est la seule chose du niveau qui change d'une gare à l'autre.
-  const sign = useMemo(() => makeGateSign(), []);
+  // TOUT CE QUE CE VOLUME ÉCRIT vient d'ici, et de nulle part ailleurs : le
+  // bandeau du contrôle, le nom de chaque bouche, le fléchage suspendu. Cinq
+  // endroits allaient chercher leur donnée chacun de son côté, et se
+  // contredisaient dès qu'une gare avait plus de deux sorties (phase 18).
+  const sign = useMemo(() => signageFor(net, station), [net, station]);
+  const gateSign = useMemo(() => makeGateSign(), []);
   const signMat = useMemo(
-    () => new THREE.MeshBasicMaterial({ map: sign.texture, toneMapped: false }),
-    [sign],
+    () => new THREE.MeshBasicMaterial({ map: gateSign.texture, toneMapped: false }),
+    [gateSign],
   );
-  useEffect(() => sign.redraw(gate.nameJp, gate.nameEn), [sign, gate]);
+  useEffect(() => {
+    const g = sign.gates.find((x) => x.id === gate?.id);
+    // Le bandeau porte ce qui CHANGE CE QU'ON PEUT FAIRE au contrôle : carte
+    // sans contact seule, sortie seule, horaires. Le hall générique n'en a
+    // aucun, et le bandeau reste celui d'avant.
+    gateSign.redraw(g?.jp ?? gate.nameJp, g?.en ?? gate.nameEn, g?.notes ?? []);
+  }, [gateSign, sign, gate]);
   useEffect(
     () => () => {
       signMat.dispose();
-      sign.texture.dispose();
+      gateSign.texture.dispose();
     },
-    [signMat, sign],
+    [signMat, gateSign],
   );
 
   const lamps = useMemo(() => {
@@ -265,7 +282,7 @@ export function Concourse({
       {/* Fond du hall, percé des bouches de sortie. Elles ne se franchissent pas
           encore - la volée qui monte à la rue reste à dessiner - mais le jour
           qui en tombe dit d'où il vient, et le fléchage dit où elles mènent. */}
-      <ExitWall shell={shell} m={m} station={station} height={height} midY={midY} />
+      <ExitWall shell={shell} m={m} sign={sign} height={height} midY={midY} />
 
       {/* La ligne de portillons : bornes, battants, lecteurs et feux. Elle
           n'est plus une rangée de boîtes - elle s'ouvre, elle se ferme, et
@@ -338,28 +355,34 @@ export function Concourse({
 function ExitWall({
   shell,
   m,
-  station,
+  sign,
   height,
   midY,
 }: {
   shell: ConcourseShell;
   m: Mats;
-  station: number;
+  /** La signalétique de la gare : source unique des noms (phase 18). */
+  sign: StationSignage;
   height: number;
   midY: number;
 }) {
   const mouths = shell.mouths;
+  // Le mur se coupe DANS L'ORDRE DE LA PAROI, et les panneaux avec lui : les
+  // textures étaient construites dans l'ordre du réseau et posées dans l'ordre
+  // des percements, ce qui suffit à intervertir deux noms dès qu'une gare perce
+  // ses bouches dans un autre ordre que celui de son relevé.
+  const cuts = useMemo(() => [...mouths].sort((a, b) => a.at - b.at), [mouths]);
   // Le panneau jaune de chaque bouche : le MÊME que celui des potences du quai,
-  // tiré du même relevé de sorties. Une gare ne fléche pas 八重洲中央口 en haut
-  // des marches et autre chose en bas.
-  const signs = useMemo(() => mouths.map((e) => makeExitSign(e.slot)), [mouths]);
+  // parce qu'il vient de la MÊME SOURCE (`data/stationSignage`). Une gare ne
+  // fléche pas 八重洲中央口 en haut des marches et autre chose en bas.
+  const signs = useMemo(() => cuts.map((e) => makeExitSign(e.slot)), [cuts]);
   const signMats = useMemo(
     () => signs.map((s) => new THREE.MeshBasicMaterial({ map: s.texture, toneMapped: false })),
     [signs],
   );
   useEffect(() => {
-    for (const s of signs) s.redraw(station);
-  }, [signs, station]);
+    signs.forEach((s, k) => s.redraw(mouthExit(sign, cuts[k].id)));
+  }, [signs, cuts, sign]);
   useEffect(
     () => () => {
       for (const mm of signMats) mm.dispose();
@@ -374,7 +397,6 @@ function ExitWall({
   // `at` est l'abscisse de la bouche LE LONG DE SA PAROI. Tant que la paroi est
   // celle du fond - c'est le cas des trente gares tant qu'aucune n'est branchée
   // sur son relevé - c'est exactement l'ancien `x`.
-  const cuts = [...mouths].sort((a, b) => a.at - b.at);
   const panels: { x0: number; x1: number }[] = [];
   let x = shell.rect.x0;
   for (const exit of cuts) {
@@ -553,9 +575,26 @@ function Guideline({ shell, m }: { shell: ConcourseShell; m: Mats }) {
  * Un panneau de plus serait du bruit ; c'est déjà ce qu'on reproche aux gares
  * réelles.
  */
+/**
+ * La flèche de chaque annonce. Elle ne s'invente pas : les installations sont
+ * SUR LE CÔTÉ, tout le reste est droit devant, et une flèche qui ment coûte
+ * plus cher que pas de flèche du tout.
+ */
+const GUIDE_ARROW: Record<GuideKind, -1 | 0 | 1> = {
+  exit: 0,
+  platform: 0,
+  gates: 0,
+  facility: 1,
+};
+
 function Guides({ shell, it, m }: { shell: ConcourseShell; it: StationInterior; m: Mats }) {
-  const paid = shell.rooms.find((r) => r.fare === 'paid') ?? shell.rooms[0];
-  const free = shell.rooms.find((r) => r.fare === 'free') ?? shell.rooms[0];
+  // OÙ LES PANNEAUX SE POSENT N'EST PLUS ÉCRIT ICI. Quatre cotes en dur sur
+  // `paid.rect.z` et `free.rect.z` supposaient un hall qui se traverse selon z
+  // et qui a exactement deux pièces : un pont-concourse, qu'on traverse selon
+  // x, recevait son fléchage EN TRAVERS de sa propre circulation.
+  // `data/stationSignage` le tire du volume ; le hall générique y retrouve ses
+  // quatre panneaux aux mêmes cotes, et un test le tient sur les trente gares.
+  const posts = useMemo(() => guidePosts(shell), [shell]);
   // Bas du panneau à 2,10 m : on passe dessous sans se baisser, et il reste
   // sous la dalle de plafond, qui est basse dans un souterrain.
   const y = shell.floorY + 2.32;
@@ -568,36 +607,44 @@ function Guides({ shell, it, m }: { shell: ConcourseShell; it: StationInterior; 
    * fait 3,20 m de fond et monte jusqu'au plafond - centré bêtement, le panneau
    * lui rentrait dedans. On lit donc l'implantation, la même que la marche
    * contourne.
+   *
+   * Le mobilier ne se range que le long d'un hall qui va selon z (`facing` est
+   * une orientation en x) : un volume traversé selon x prend donc sa largeur
+   * pleine, ce qui est juste tant qu'aucun meuble ne s'y pose.
    */
-  const aisleAt = (z: number) => {
+  const aisleAt = (along: 'x' | 'z', at: number) => {
+    if (along === 'x') {
+      return { mid: (shell.rect.z0 + shell.rect.z1) / 2, width: shell.rect.z1 - shell.rect.z0 };
+    }
     let x0 = shell.rect.x0;
     let x1 = shell.rect.x1;
     for (const f of it.fixtures) {
-      if (f.rect.z1 < z - 0.7 || f.rect.z0 > z + 0.7) continue;
+      if (f.rect.z1 < at - 0.7 || f.rect.z0 > at + 0.7) continue;
       if (f.facing === 1) x0 = Math.max(x0, f.rect.x1);
       else x1 = Math.min(x1, f.rect.x0);
     }
     return { mid: (x0 + x1) / 2, width: x1 - x0 };
   };
 
-  const signs = useMemo(
-    () => {
-      const make = (kind: GuideKind, dir: -1 | 0 | 1) =>
+  // Un matériau par ANNONCE PRÉSENTE, et pas un de plus : une gare qui ne dit
+  // pas « installations » n'a pas à en cuire la texture.
+  const signs = useMemo(() => {
+    const out = new Map<GuideKind, THREE.MeshBasicMaterial>();
+    for (const p of posts) {
+      if (out.has(p.kind)) continue;
+      out.set(
+        p.kind,
         new THREE.MeshBasicMaterial({
-          map: makeConcourseGuideTexture(kind, dir),
+          map: makeConcourseGuideTexture(p.kind, GUIDE_ARROW[p.kind]),
           toneMapped: false,
-        });
-      return {
-        exit: make('exit', 0),
-        facility: make('facility', 1),
-        platform: make('platform', 0),
-      };
-    },
-    [],
-  );
+        }),
+      );
+    }
+    return out;
+  }, [posts]);
   useEffect(
     () => () => {
-      for (const mat of Object.values(signs)) {
+      for (const mat of signs.values()) {
         mat.map?.dispose();
         mat.dispose();
       }
@@ -605,25 +652,15 @@ function Guides({ shell, it, m }: { shell: ConcourseShell; it: StationInterior; 
     [signs],
   );
 
-  // z, matériau, et sens dans lequel le panneau est lisible.
-  //
-  // Le dernier est le seul qui se lise le nez sur les bouches, et sa flèche
-  // pointait à GAUCHE : les deux bouches sont droit devant, dans le fond du
-  // hall, et rien à gauche ne mène dehors. Une flèche qui ment coûte plus cher
-  // que pas de flèche du tout - c'est celle-là qu'on suit en marchant.
-  const posts: [number, THREE.Material, boolean][] = [
-    [paid.rect.z0 + 2.6, signs.exit, true],
-    [paid.rect.z1 - 4.2, signs.facility, true],
-    [free.rect.z0 + 2.2, signs.platform, false],
-    [free.rect.z1 - 4.5, signs.exit, true],
-  ];
-
   return (
     <group name="gare/hall/fléchage">
-      {posts.map(([z, face, forward], k) => {
-        const aisle = aisleAt(z);
+      {posts.map((post, k) => {
+        const face = signs.get(post.kind);
+        const aisle = aisleAt(post.along, post.at);
         const w = Math.min(aisle.width - 0.5, 2.9);
         const h = w / 4;
+        const along = post.along;
+        const forward = post.forward;
         // Les tiges vont du DESSUS DU CAISSON, cadre compris, à la sous-face de
         // la dalle - ni plus, ni moins. Calculées à mi-hauteur du panneau, elles
         // s'arrêtaient un quart de caisson trop haut et repartaient d'autant à
@@ -632,15 +669,34 @@ function Guides({ shell, it, m }: { shell: ConcourseShell; it: StationInterior; 
         const rodBottom = h / 2 + 0.04;
         const rodH = Math.max(0.06, shell.ceilY - 0.12 - y - rodBottom);
         return (
-        <group key={`guide${k}`} position={[aisle.mid, y, z]}>
+        <group
+          key={`guide${k}`}
+          position={
+            along === 'z' ? [aisle.mid, y, post.at] : [post.at, y, aisle.mid]
+          }
+        >
           {/* Caisson : deux faces possibles, mais une seule imprimée - on ne
               lit un panneau que du côté où l'on vient. */}
           <mesh material={m.frame}>
-            <boxGeometry args={[w + 0.08, h + 0.08, 0.09]} />
+            <boxGeometry
+              args={
+                along === 'z' ? [w + 0.08, h + 0.08, 0.09] : [0.09, h + 0.08, w + 0.08]
+              }
+            />
           </mesh>
           <mesh
-            position={[0, 0, forward ? -0.048 : 0.048]}
-            rotation={[0, forward ? Math.PI : 0, 0]}
+            position={
+              along === 'z'
+                ? [0, 0, forward ? -0.048 : 0.048]
+                : [forward ? -0.048 : 0.048, 0, 0]
+            }
+            rotation={[
+              0,
+              along === 'z'
+                ? (forward ? Math.PI : 0)
+                : (forward ? -Math.PI / 2 : Math.PI / 2),
+              0,
+            ]}
             material={face}
           >
             <planeGeometry args={[w, h]} />
@@ -649,7 +705,11 @@ function Guides({ shell, it, m }: { shell: ConcourseShell; it: StationInterior; 
           {[-1, 1].map((s) => (
             <mesh
               key={`rod${s}`}
-              position={[(s * w) / 2.6, rodBottom + rodH / 2, 0]}
+              position={
+                along === 'z'
+                  ? [(s * w) / 2.6, rodBottom + rodH / 2, 0]
+                  : [0, rodBottom + rodH / 2, (s * w) / 2.6]
+              }
               material={m.metal}
             >
               <boxGeometry args={[0.04, rodH, 0.04]} />

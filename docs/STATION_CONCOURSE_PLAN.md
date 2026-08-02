@@ -281,7 +281,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **15** | **Archétypes 2 — hauteur** ✅ | `overbridge`, `cross`, `mezzanine`, `hubSlice` : ce qu'ils LAISSENT VOIR | R1 |
 | **16** | **Archétypes 3 — limites** ✅ | `interiors/Limits` : correspondances (gardées ou non) et palissades de chantier | G4 D7 |
 | **17** | **Occlusion interne** ✅ | `visibleShells` : ce qu'on voit d'un volume depuis un autre — jonction, niveau, portée | R2 |
-| 18 | Signalétique unifiée | une seule source pour quai / hall / portillons / couloirs / bouches | D4 D5 |
+| **18** | **Signalétique unifiée** ✅ | `stationSignage` : une seule source pour quai / hall / portillons / couloirs / bouches | D4 D5 |
 | 19 | Commerces | `CommercialFrontage`, quatre statuts de commerce, galeries `ecute`/`atre` | D8 |
 | 20 | Petites gares | JY06 JY08 JY10 JY11 JY14 JY16 JY18 JY02 branchées sur profil | — |
 | 21 | Gares moyennes | JY04 JY09 JY12 JY15 JY19 JY21 JY22 JY23 JY24 JY27 JY28 JY29 JY30 JY03 | — |
@@ -847,6 +847,52 @@ lignes :
 C'est de l'occlusion par la TOPOLOGIE, pas par un test de visibilité : le
 réseau sait déjà ce qui touche quoi, et un portail géométrique aurait demandé
 une donnée que le relevé ne contient pas.
+
+### 4.16 La phase 18 : une gare ne doit dire qu'une seule chose
+
+Une potence de quai annonce 東口 ; on descend, on traverse le hall, et la bouche
+du fond porte 中央口. Ce n'est pas une laideur, c'est un MENSONGE — le panneau
+qu'on a suivi ne menait pas là — et il ne venait d'aucune négligence de dessin
+mais d'une négligence de SOURCE. Six endroits nommaient la même gare, chacun en
+allant chercher sa donnée tout seul : la potence et le fond de trémie relisaient
+`stationExits`, le bandeau de contrôle lisait `SPECS`, la bouche repassait par un
+`slot`, le totem de quai refaisait le même calcul une quatrième fois, et le
+fléchage suspendu ne lisait rien du tout — quatre panneaux à des cotes écrites
+en dur.
+
+Tant qu'une gare était un couloir droit avec deux bouches, les six tombaient
+d'accord par accident. Le réseau supprime l'accident : une gare peut avoir cinq
+bouches, trois lignes de portillons, deux volumes.
+
+`data/stationSignage` est la source unique. Elle lit le RÉSEAU — donc la gare
+telle qu'elle est construite, et non telle qu'un tableau la décrit — et rend les
+chaînes que les textures affichent ; le rendu ne va plus chercher un nom, on le
+lui donne. Deux règles tiennent tout :
+
+1. **on ne nomme que ce qu'on peut atteindre.** Une sortie du relevé que le hall
+   ne perce pas n'apparaît sur aucun panneau. C'est la seule façon qu'une flèche
+   ne mente pas ;
+2. **le nom vient de la bouche.** Le réseau le porte dès qu'un relevé est
+   branché ; sinon on retombe sur le rang de la sortie dans `data/lines`, ce que
+   faisait déjà le hall générique.
+
+Trois choses en sortent au passage :
+
+- **le bandeau de contrôle dit ce qui CHANGE CE QU'ON PEUT Y FAIRE** — carte sans
+  contact seule, sortie seule, horaires. C'est écrit en rouge sur les vraies
+  façades de JR East, et pour cette raison exactement : un voyageur avec un
+  billet papier doit le savoir avant d'être devant la borne. Le relevé porte ces
+  mentions depuis la phase 5 et rien ne les affichait ;
+- **le fléchage suspendu se pose sur l'axe qu'on TRAVERSE**, lu du volume et de
+  sa ligne de portillons. Un pont-concourse, qu'on franchit selon x, recevait
+  quatre panneaux plantés en travers de sa propre circulation ;
+- **les panneaux d'une même paroi ne s'intervertissent plus** : les textures
+  étaient construites dans l'ordre du réseau et posées dans l'ordre des
+  percements.
+
+**Les trente gares affichent exactement les mêmes mots qu'avant**, et retrouvent
+leurs quatre panneaux aux mêmes cotes : quatorze tests le tiennent, dont la
+comparaison mot pour mot avec `stationExits(index)`.
 
 ### Ordre et raison
 

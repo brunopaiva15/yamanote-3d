@@ -31,6 +31,7 @@ import {
   makeTotemGuide,
   makeTotemSign,
 } from '../../textures/procedural';
+import { signageFor } from '../../data/stationSignage';
 import {
   boardRows,
   sameBoardView,
@@ -317,7 +318,10 @@ export function PlatformSignage({
       lastSignIndex.current = signIndex;
       sign.redraw(signIndex, loopDirection);
       totem.redraw(signIndex);
-      guide.redraw(signIndex, loopDirection);
+      // Le totem annonce ce que la gare PERCE, comme les potences : même
+      // source, mêmes mots (`data/stationSignage`). Le réseau est celui du
+      // quai présent, et pendant le départ c'est bien la gare qu'on quitte.
+      guide.redraw(signIndex, loopDirection, signageFor(place.network, signIndex));
       band.redraw(signIndex, loopDirection);
       lastView.current = null;
     }

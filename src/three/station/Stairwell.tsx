@@ -48,6 +48,8 @@ import {
   stairPitchY,
 } from '../../data/stationGeometry';
 import type { Placed } from '../../systems/stationPlacement';
+import type { ConcourseNetwork } from '../../data/stationConcourseBuild';
+import { signageFor } from '../../data/stationSignage';
 import { makeExitSign } from '../../textures/procedural';
 import { DADO_MODULE, WALL_MODULE } from '../../textures/stationWall';
 import { stationAd } from './adPool';
@@ -304,6 +306,8 @@ interface Props {
      * avoir deux (Harajuku), et c'est la liste qui tranche, trémie par trémie.
      */
     liveAccesses: readonly { stair: Placed; rise: 'down' | 'up' }[];
+    /** Le réseau de la gare : la SIGNALÉTIQUE s'y lit (phase 18). */
+    network: ConcourseNetwork;
   };
   m: Mats;
   station: number;
@@ -319,11 +323,14 @@ interface Props {
  */
 export function Stairwells({ place, m, station, detail }: Props) {
   const sign = useMemo(() => makeExitSign(0), []);
+  // Le nom vient de la SIGNALÉTIQUE de la gare, pas du relevé : le panneau du
+  // fond de trémie et la potence qui l'annonce doivent dire le même mot.
+  const signage = useMemo(() => signageFor(place.network, station), [place.network, station]);
   const exitMat = useMemo(
     () => new THREE.MeshBasicMaterial({ map: sign.texture, toneMapped: false }),
     [sign],
   );
-  useEffect(() => sign.redraw(station), [sign, station]);
+  useEffect(() => sign.redraw(signage.gantry[0] ?? signage.exits[0]), [sign, signage]);
   useEffect(
     () => () => {
       exitMat.dispose();
