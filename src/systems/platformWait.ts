@@ -34,7 +34,6 @@ import {
   paLineDisruptionResume,
   paDoorsClosing,
   paPreAnnouncement,
-  paPsdBeeps,
   paTrainEntering,
   planPlatformAnnouncements,
 } from './stationPa';
@@ -256,10 +255,9 @@ function updateBoardable(index: number, doorSide: 1 | -1): void {
     audio.doorCloseChime();
     onDoorsClosing();
   });
-  once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () => {
-    setPsdDoors(0);
-    paPsdBeeps();
-  });
+  once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () =>
+    setPsdDoors(0),
+  );
   // Une porte coincée retient la rame, qu'on soit dedans ou sur le quai : d'ici
   // on voit les vantaux d'une caisse rester entrebâillés, et le train ne part
   // pas tant qu'ils ne sont pas rentrés.

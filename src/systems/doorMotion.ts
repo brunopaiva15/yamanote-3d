@@ -59,7 +59,7 @@ const TRAIN_OPEN: Profile = { duration: CONFIG.doorTime, accel: 0.22, decel: 0.3
 const TRAIN_CLOSE: Profile = { duration: 1.15, accel: 0.2, decel: 0.1, rebound: 0.035, reboundDur: 0.26 };
 // Portes palières : plus légères, course plus courte, chocs plus mats.
 const PSD_OPEN: Profile = { duration: 1.7, accel: 0.25, decel: 0.35, rebound: 0.012, reboundDur: 0.18 };
-const PSD_CLOSE: Profile = { duration: 0.9, accel: 0.25, decel: 0.12, rebound: 0.028, reboundDur: 0.2 };
+const PSD_CLOSE: Profile = { duration: CONFIG.psdCloseTime, accel: 0.25, decel: 0.12, rebound: 0.028, reboundDur: 0.2 };
 
 // Position 0..1 sur un profil trapézoïdal de vitesse : rampe quadratique au
 // départ, vitesse constante, rampe quadratique à l'arrivée.
@@ -357,12 +357,35 @@ export function setPsdDoors(target: 0 | 1): void {
   // ce qui n'existe pas.
   if (!runtime.psdPresent) return;
   audio.psdClunk(0.09);
-  // Et à l'OUVERTURE, les baies s'annoncent : le signal part avec le
-  // déverrouillage, pas à la fin de la course. C'est un avertissement - il ne
-  // sert qu'à ceux qui sont encore devant les vantaux. Il sonne à chaque
-  // ouverture, y compris une réouverture après porte bloquée : sur un vrai
-  // quai, une baie qui repart resonne (voir systems/doorObstruction).
-  if (target === 1) audio.psdOpenChime();
+  // Les baies s'annoncent DANS LES DEUX SENS, et le signal part avec le
+  // déverrouillage, pas à la fin de la course : c'est un avertissement, il ne
+  // sert qu'à ceux qui sont encore devant les vantaux. Chaque mouvement le
+  // relance, réouverture après porte bloquée comprise - sur un vrai quai, une
+  // baie qui repart resonne (voir systems/doorObstruction).
+  //
+  // L'ouverture est un morceau qui se joue en entier, et c'est ici qu'il part.
+  // La fermeture, elle, est une BOUCLE dont updateDoorMotion tient l'ouverture
+  // et l'arrêt d'après l'état des vantaux : on ne fait que la couper net quand
+  // les baies repartent dans l'autre sens, pour ne pas laisser une paire
+  // chevaucher la première note du signal d'ouverture.
+  if (target === 1) {
+    audio.psdCloseWarning(false);
+    audio.psdOpenChime();
+  }
+}
+
+/**
+ * Une baie est-elle retenue entrebâillée ?
+ *
+ * L'ensemble ne suffit pas à dire que le passage est refermé : pendant une
+ * procédure de porte bloquée, la baie en vis-à-vis suit le vantail retenu et
+ * reste ouverte alors que toutes les autres sont closes depuis longtemps -
+ * elle peut même repartir à l'ouverture toute seule (moveBlockedDoor). Tant
+ * que ce passage-là n'est pas dégagé, on ne sait pas quand il se fermera, et
+ * le quai continue d'avertir : c'est exactement ce que fait une vraie gare.
+ */
+function psdHeldOpen(): boolean {
+  return blocked !== null && blocked.psdPos > 0.001;
 }
 
 // À appeler chaque frame : avance les horloges, publie les positions de
@@ -398,6 +421,29 @@ export function updateDoorMotion(dt: number): void {
     if (runtime.psdPresent) audio.psdClunk(runtime.psdTarget === 1 ? 0.07 : 0.15);
   }
 
+  // L'avertisseur de fermeture suit l'ÉTAT du passage, et non le geste qui l'a
+  // lancé : il tourne tant que les baies vont vers la fermeture sans y être, et
+  // se tait quand tout est joint. C'est ce qui le rend juste dans les cas
+  // tordus - une baie seule qui se referme après une tentative ratée n'appelle
+  // aucun setPsdDoors, et un signal branché sur la commande resterait muet là
+  // où un vrai quai avertit.
+  //
+  // L'échéance est la BUTÉE, pas l'extinction du rebond : les vantaux sont
+  // joints à `PSD_CLOSE.duration`, le centimètre qui suit n'est qu'un ressaut.
+  // Sur une course normale - 0,9 s - la boucle donne ainsi exactement les trois
+  // paires Mi5–Do5 de data/psdCloseWarning et s'arrête sur le choc ; sur une
+  // baie retenue, elle n'a plus d'échéance et continue.
+  const closing = runtime.psdPresent && runtime.psdTarget === 0;
+  const closesIn = psdHeldOpen()
+    ? Number.POSITIVE_INFINITY
+    : PSD_CLOSE.duration - runtime.psdT;
+  if (closing && closesIn > 0) {
+    audio.psdCloseWarning(true);
+    audio.pumpPsdCloseWarning(closesIn);
+  } else {
+    audio.psdCloseWarning(false);
+  }
+
   if (dt > 0) {
     // Une porte seule glisse aussi, et c'est même tout ce qu'on entend pendant
     // une réouverture : sa vitesse compte au même titre que celle de l'ensemble.
@@ -414,6 +460,7 @@ export function updateDoorMotion(dt: number): void {
 }
 
 export function resetDoorMotion(): void {
+  audio.psdCloseWarning(false);
   trainImpactsFired = Infinity;
   psdImpactFired = true;
   prevTrain = 0;
@@ -430,6 +477,10 @@ export function seedDoorMotion(
   psdTarget: 0 | 1,
   psdT: number,
 ): void {
+  // Reprise au milieu d'un arrêt : on repose les portes où elles en sont, sans
+  // rien faire sonner - y compris l'avertisseur, qui ne doit pas repartir pour
+  // une fermeture déjà consommée.
+  audio.psdCloseWarning(false);
   runtime.doorTarget = trainTarget;
   runtime.doorT = trainT;
   runtime.psdTarget = psdTarget;

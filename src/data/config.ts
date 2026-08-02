@@ -29,6 +29,17 @@ export const CONFIG = {
   departTime: 17,
   doorTime: 2.6,
 
+  /**
+   * Course de fermeture d'une porte palière (s).
+   *
+   * Elle est ici, et non parmi les profils de systems/doorMotion, parce qu'un
+   * autre module en dépend : c'est cette durée qui décide combien de paires
+   * Mi5–Do5 l'avertisseur de fermeture a le temps de donner (voir
+   * data/psdCloseWarning et tests/psdCloseWarning.test.ts). Trois, en l'état -
+   * et raccourcir la course sans y penser en retirerait une.
+   */
+  psdCloseTime: 0.9,
+
   // Vitesses et hauteurs (mètres, m/s, km/h).
   maxSpeedKmh: 90,
   walkSpeed: 1.4,

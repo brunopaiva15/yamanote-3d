@@ -35,11 +35,13 @@
 // écraser le reste, et reste franchement audible d'une voiture à quai.
 //
 // Les PORTES PALIÈRES, elles, ont leur propre bouche, et c'est une troisième
-// ligne : l'avertisseur d'ouverture ne sort ni des diffuseurs du wagon ni de
+// ligne : leurs deux avertisseurs ne sortent ni des diffuseurs du wagon ni de
 // ceux de l'auvent, mais d'un petit haut-parleur vissé sur le linteau de
-// chaque baie. On l'entend donc DEVANT soi, à hauteur d'épaule et à un pas -
-// et c'est à cela qu'on sait quelle porte s'ouvre (voir data/psdOpenChime et
-// le bloc « L'avertisseur des PORTES PALIÈRES » plus bas).
+// chaque baie. On les entend donc DEVANT soi, à hauteur d'épaule et à un pas -
+// et c'est à cela qu'on sait quelle porte bouge. Ils disent le SENS et rien
+// d'autre : Fa5–La5–Do6 qui monte à l'ouverture (data/psdOpenChime), Mi5–Do5
+// qui descend à la fermeture (data/psdCloseWarning). Voir le bloc
+// « L'avertisseur des PORTES PALIÈRES » plus bas.
 //
 // Annonces vocales : elles passent TOUTES par un clip pré-généré (Kokoro, voir
 // systems/speech.ts), joué par audioManager sur le bus « PA » et donc panné
@@ -71,6 +73,11 @@ import {
   MELODY_REPEAT_GAP_S,
   SYNTH_MELODY_DURATION_S,
 } from '../data/melodies';
+import {
+  psdCloseWarningPair,
+  PSD_WARN_NOTE_HOLD,
+  PSD_WARN_PAIR_STEP,
+} from '../data/psdCloseWarning';
 import { PSD_CHIME_DURATION, PSD_CHIME_NOTE_HOLD, psdOpenChimeScore } from '../data/psdOpenChime';
 import { STATIONS } from '../data/stations';
 import {
@@ -122,9 +129,10 @@ interface Nodes {
   platGain: Tone.Gain;
   platLp: Tone.Filter;
   platTaps: PlatformTap[];
-  // Avertisseur des portes palières : sa propre voix, sa propre ligne de
-  // diffusion (voir « Le signal d'ouverture des portes palières » plus bas).
+  // Avertisseurs des portes palières : deux voix - l'ouverture et la
+  // fermeture - sur un seul haut-parleur, et sa propre ligne de diffusion.
   psdChime: Tone.PolySynth<Tone.Synth>;
+  psdWarn: Tone.PolySynth<Tone.Synth>;
   psdChimeClick: Tone.NoiseSynth;
   psdChimeDoor: Tone.Gain;
   psdTaps: PlatformTap[];
@@ -671,8 +679,22 @@ export async function startAudio(): Promise<void> {
     envelope: { attack: 0.0004, decay: 0.005, sustain: 0 },
     volume: -30,
   });
+  // Et la voix de la FERMETURE (data/psdCloseWarning). Même haut-parleur, même
+  // famille, un timbre à peine plus épais - quatorze pour cent de deuxième
+  // harmonique au lieu de treize - et une attaque un rien plus molle. On ne
+  // distingue pas les deux signaux à leur couleur : on les distingue à leur
+  // SENS, Mi5–Do5 qui descend contre Fa5–La5–Do6 qui monte. Le timbre, lui, ne
+  // doit surtout pas changer - c'est le même équipement qui parle.
+  const psdWarn = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'custom', partials: [0.8, 0.14, 0.055, 0, 0.018] },
+    envelope: { attack: 0.0028, decay: 0.01, sustain: 0.94, release: 0.013 },
+    // Même marge de trois décibels que le signal d'ouverture, mesurée de la
+    // même façon : sur la paire entière, recouvrement et réflexions compris.
+    volume: -8.95,
+  });
   const psdChimeIn = new Tone.Gain(PSD_CHIME_LEVEL);
   psdChime.connect(psdChimeIn);
+  psdWarn.connect(psdChimeIn);
   psdChimeClick.chain(psdChimeClickHp, psdChimeIn);
   // Le haut-parleur : petit, en plastique, sur un quai. Il ne monte pas.
   const psdChimeLp = new Tone.Filter({ type: 'lowpass', frequency: 6200, rolloff: -12, Q: 0.5 });
@@ -1028,6 +1050,7 @@ export async function startAudio(): Promise<void> {
     platLp,
     platTaps,
     psdChime,
+    psdWarn,
     psdChimeClick,
     psdChimeDoor,
     psdTaps,
@@ -1379,12 +1402,73 @@ export function psdOpenChime(): number {
   return PSD_CHIME_DURATION;
 }
 
-/** Bips des portes palières pendant leur fermeture. */
-export function psdDoorBeeps(): void {
-  if (!nodes) return;
+// --- L'avertisseur de FERMETURE ------------------------------------------
+//
+// Contrairement au signal d'ouverture, celui-ci n'est PAS un morceau qu'on
+// lance : c'est une boucle qu'on ouvre au premier millimètre de course et
+// qu'on ferme à la seconde où les vantaux sont en butée. Les trois paires
+// Mi5–Do5 d'une fermeture normale ne sont pas programmées - elles sont ce que
+// la boucle produit en 0,9 s, la durée du mouvement. Une baie retenue par un
+// obstacle continue donc d'avertir aussi longtemps qu'elle reste entrebâillée,
+// ce qu'un signal de longueur fixe ne saurait pas faire.
+//
+// La boucle n'anticipe que d'une fraction de seconde, et c'est délibéré : ce
+// qui est programmé ne s'annule pas proprement dans Tone (relâcher une voix
+// dont l'attaque est à venir ne fait rien). En ne prenant jamais plus d'avance
+// que PSD_WARN_LOOKAHEAD, l'arrêt ne laisse jamais partir de paire de trop.
+
+/** Avance maximale de la boucle sur l'horloge audio (s). */
+const PSD_WARN_LOOKAHEAD = 0.1;
+
+/** La boucle tourne-t-elle, et quand tombe la prochaine paire. */
+let psdWarnOn = false;
+let psdWarnNextAt = 0;
+
+/**
+ * Ouvre ou ferme l'avertisseur de fermeture des portes palières.
+ *
+ * `true` au démarrage du mouvement, `false` dès que TOUT est confirmé fermé -
+ * c'est systems/doorMotion qui tient cette condition, parce que lui seul sait
+ * où en est la baie bloquée. La fermeture coupe net : ce qui sonne encore est
+ * relâché sur place, en treize millisecondes.
+ */
+export function psdCloseWarning(on: boolean): void {
+  if (!nodes || on === psdWarnOn) return;
+  psdWarnOn = on;
+  if (!on) {
+    nodes.psdWarn.releaseAll(Tone.now());
+    return;
+  }
+  psdWarnNextAt = Tone.now();
+  pumpPsdCloseWarning();
+}
+
+/**
+ * Alimente la boucle : à appeler chaque image tant qu'elle tourne. Sans effet
+ * si elle est fermée.
+ *
+ * `closesIn` est le temps qui reste avant la butée, tel que systems/doorMotion
+ * le connaît - `Infinity` quand une baie est retenue et qu'on ne sait pas
+ * quand elle se fermera. Aucune paire ne DÉMARRE après cette échéance : sans
+ * cette borne, la boucle en lancerait une quatrième neuf millisecondes avant
+ * l'arrivée en butée, et l'avertisseur déborderait sur des vantaux déjà clos.
+ * C'est ce qui fait qu'une fermeture normale donne exactement trois paires.
+ */
+export function pumpPsdCloseWarning(closesIn = Number.POSITIVE_INFINITY): void {
+  if (!nodes || !psdWarnOn) return;
   const now = Tone.now();
-  for (let i = 0; i < 5; i++) {
-    nodes.platBeep.triggerAttackRelease('B5', 0.1, slot('platBeep', now + i * 0.36), 0.3);
+  const deadline = now + Math.max(0, closesIn);
+  while (psdWarnNextAt <= now + PSD_WARN_LOOKAHEAD) {
+    // Une image très longue peut avoir laissé passer l'heure de la paire : on
+    // la joue tout de suite plutôt que dans le passé, et la boucle se recale.
+    const at = Math.max(psdWarnNextAt, now);
+    if (at >= deadline) break;
+    for (const note of psdCloseWarningPair()) {
+      const t = at + note.at;
+      nodes.psdWarn.triggerAttackRelease(note.freq, PSD_WARN_NOTE_HOLD, t);
+      nodes.psdChimeClick.triggerAttackRelease(0.004, slot('psdChimeClick', t), 0.6);
+    }
+    psdWarnNextAt = at + PSD_WARN_PAIR_STEP;
   }
 }
 

@@ -5,7 +5,10 @@
 //
 //   • Sur le quai, on entend tout, dans l'ordre - pré-annonce, carillon ATOS,
 //     annonce d'approche, avertissement d'entrée, arrivée, l'agent pendant
-//     l'échange, la mélodie, la fermeture, les bips des portes palières.
+//     l'échange, la mélodie, la fermeture.
+//
+// Les portes palières, elles, ne parlent pas par cette sono : leurs deux
+// avertisseurs sortent des baies (voir plus bas, et systems/audioEngine).
 //   • Dans la rame arrêtée, on n'entend que ce qui passe par les portes
 //     ouvertes : l'arrivée, l'agent, la fermeture. Tout le reste est couvert
 //     par la sono du wagon, ou arrive avant qu'on soit là.
@@ -143,11 +146,12 @@ export function updatePlatformSpeakers(): void {
 
 // --- Où sonnent les baies palières ---------------------------------------
 //
-// L'avertisseur d'ouverture (data/psdOpenChime) ne sort pas de l'auvent : il
-// sort du linteau de chaque baie, à hauteur d'épaule et à un pas devant soi.
-// Sa ligne se pousse donc exactement comme celle des diffuseurs, mais elle est
-// bien plus serrée - une baie tous les cinq mètres - et le moteur n'en panne
-// que les quatre plus proches (audioEngine, PSD_TAPS).
+// Les deux avertisseurs des baies - celui de l'ouverture (data/psdOpenChime)
+// et celui de la fermeture (data/psdCloseWarning) - ne sortent pas de
+// l'auvent : ils sortent du linteau de chaque baie, à hauteur d'épaule et à un
+// pas devant soi. Leur ligne se pousse donc exactement comme celle des
+// diffuseurs, mais elle est bien plus serrée - une baie tous les cinq mètres -
+// et le moteur n'en panne que les quatre plus proches (audioEngine, PSD_TAPS).
 
 /** Axes des baies, par longueur de quai : la trame ne dépend que d'elle. */
 let psdGateCache: { length: number; gates: number[] } | null = null;
@@ -503,10 +507,6 @@ export function paAgentMessage(
 /** « Voie N, les portes se ferment », suivie des bips des portes palières. */
 export function paDoorsClosing(index: number): void {
   say(platformDoorsClosingAnnouncement(currentPlatformNumber(index), dir()), 'platform');
-}
-
-export function paPsdBeeps(): void {
-  audio.psdDoorBeeps();
 }
 
 /** « Éloignez-vous des portes » : l'agent, pendant qu'une porte reste bloquée. */
