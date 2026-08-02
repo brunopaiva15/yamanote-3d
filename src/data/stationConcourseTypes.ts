@@ -38,6 +38,7 @@
 // côté d'ouverture, sans une ligne de plus.
 
 import type { DataConfidence } from './evidence.ts';
+import { PSD_X, RAIL_Y } from './stationGeometry.ts';
 
 /**
  * Rectangle du repère quai, bornes comprises.
@@ -597,6 +598,37 @@ export const MIN_BRANCH_WIDTH = 1.4;
 /** Hauteur libre minimale d'un espace où l'on marche (m). */
 export const MIN_HEADROOM = 2.1;
 
+// --- Ce que la voie interdit ---------------------------------------------
+//
+// Deux nappes horizontales courent au ras du sol : le ballast (`three/Wayside`,
+// de l'axe à ±5 m) et la rue de la ville (`three/city/CityRibbon`, au-delà).
+// Le quai les masque, et `systems/stationOcclusion` les écarte au droit de la
+// gare pour qu'elles ne coupent pas les trémies.
+//
+// LA RUE SE DÉROBE, LE BALLAST NON. C'est toute la différence, et c'est la
+// forme réelle de la contrainte G1 : on peut reculer une nappe de rue autant
+// qu'on veut — il suffit que la gare couvre ce qu'on découvre — mais on ne
+// retire pas le ballast, parce qu'un train roule dessus. Un niveau de gare qui
+// vit à l'altitude de ces nappes ne peut donc pas franchir la rive rentrée du
+// ballast : il faut qu'il passe DESSOUS, c'est-à-dire plus bas que la voie.
+
+/** Bande d'altitude où courent les nappes de sol, en repère quai. */
+export const GROUND_SHEET_Y0 = RAIL_Y - 0.45;
+export const GROUND_SHEET_Y1 = RAIL_Y + 0.45;
+
+/**
+ * Rive du ballast une fois rentrée au maximum : le bord de quai, moins dix
+ * centimètres. C'est exactement la cote de `ballastTrim`
+ * (`systems/stationOcclusion`), et les deux ne peuvent pas diverger sans qu'un
+ * couloir se retrouve coupé par un plancher gris.
+ */
+export const BALLAST_KEEP_X = PSD_X - 0.1;
+
+/** Le niveau `l` vit-il à l'altitude des nappes de sol ? */
+export function atGroundSheet(l: Pick<ConcourseLevel, 'floorY' | 'headroom'>): boolean {
+  return l.floorY < GROUND_SHEET_Y1 && l.floorY + l.headroom > GROUND_SHEET_Y0;
+}
+
 // --- Vérification --------------------------------------------------------
 
 /**
@@ -727,6 +759,18 @@ export function validateProfile(p: StationConcourseProfile): ProfileIssue[] {
     const h = n.headroom ?? levels.get(n.levelId)?.headroom ?? 0;
     if (isWalkable(n.depiction) && h < MIN_HEADROOM) {
       bad('headroom', n.id, `hall praticable sous ${MIN_HEADROOM} m de hauteur libre`);
+    }
+    // G1, et sous sa forme exacte : un hall qui vit à l'altitude des nappes de
+    // sol ne franchit pas la rive du ballast. Le ballast porte un train, il ne
+    // se dérobe pas — un couloir qui traverse la voie passe DESSOUS, sur un
+    // niveau plus bas, ou il n'existe pas.
+    const nl = levels.get(n.levelId);
+    if (nl && atGroundSheet(nl) && n.rect.x0 < BALLAST_KEEP_X) {
+      bad(
+        'acrossBallast',
+        n.id,
+        `atteint x = ${n.rect.x0} à l’altitude du ballast : il faut passer sous la voie`,
+      );
     }
   }
 

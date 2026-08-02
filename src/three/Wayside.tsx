@@ -34,7 +34,7 @@ import { segEnv } from '../systems/segmentEnv';
 import { ballastTrim, hiddenByStation, sidePush, stationOcclusion } from '../systems/stationOcclusion';
 import { qualityLevel, usePerf } from '../systems/perf';
 import { TRACK_BED_TILE, TRACK_BED_WIDTH, makeGroundTexture } from '../textures/procedural';
-import { GAUGE_HALF } from '../data/stationGeometry';
+import { GAUGE_HALF, RAIL_Y } from '../data/stationGeometry';
 import { makeGroveGeometry, makeGroveMaterial } from './city/cityProps';
 import { seasonNow } from '../systems/season';
 import { weather } from '../systems/weather';
@@ -43,8 +43,9 @@ import { buildCatenary, LAMP_REACH, LAMP_Y, POLE_COUNT, POLE_SPACING, POLE_X } f
 
 /** Longueur des plans au sol : la vue en biais vers le fond du wagon porte loin. */
 const PLANE_LEN = 460;
-/** Niveau de la plate-forme. */
-const RAIL_Y = -1.15;
+// `RAIL_Y` (le niveau de la plate-forme) vit maintenant dans
+// `data/stationGeometry` : ce n'est plus une cote de rendu mais la cote qu'un
+// niveau de gare n'a pas le droit de traverser — un ballast porte un train.
 
 // Cotes et géométrie du portique caténaire : voir three/catenary. Wayside n'en
 // garde que ce qui sert au PLACEMENT (POLE_X, LAMP_*, CONTACT_Y…), la forme

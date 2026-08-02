@@ -15,7 +15,9 @@
 import { useStore } from '../store';
 import { DOOR_SIDE } from '../data/stations';
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
+import { reachFor, type ConcourseReach } from '../data/stationConcourseReach';
 import { OPP_DEPTH, PLATFORM_DEPTH, PSD_X, TRACK_HALF } from '../data/stationGeometry';
+import { BALLAST_KEEP_X } from '../data/stationConcourseTypes';
 import { runtime } from './runtime';
 
 /**
@@ -26,15 +28,31 @@ import { runtime } from './runtime';
  * une quinzaine de mètres de plus à Shibuya. Un mur de soutènement écarté de
  * l'ancienne valeur ressortait en plein milieu de cette travée.
  */
-function pushFor(layout: StationLayout): number {
+function pushFor(layout: StationLayout, reach: ConcourseReach): number {
   // Bord près → bord d'en face, puis la voie (2 × 1,78 m) et le quai d'en face.
   // La marge est large à dessein : au-delà de la travée, les charpentes
   // signature débordent encore - le faisceau de Nippori, l'International Forum
   // de Yūrakuchō, le bois du Meiji-jingū derrière Harajuku. Un mur de
   // soutènement écarté au plus juste ressortait en plein milieu.
   const island = layout.config !== 'side';
-  return layout.depth + (island ? 24 : 18) + (layout.openFarSide ? 22 : 0);
+  const generic = layout.depth + (island ? 24 : 18) + (layout.openFarSide ? 22 : 0);
+  // ET CE QUE LA GARE BÂTIT PASSE AVANT. Vingt-trois gares sur trente ont un
+  // ouvrage transversal - passerelle, pont-concourse, plateau - qui sort de la
+  // bande du quai (`data/stationConcourseReach`). La valeur générique en couvre
+  // déjà la plupart : ce n'est que sur les plus grandes qu'elle est trop juste,
+  // et le maximum ne fait que rattraper ces cas-là. Elle ne RÉTRÉCIT jamais.
+  return Math.max(generic, reach.built + PLANE_CLEAR - PLANE_BASE);
 }
+
+/**
+ * Abscisse au repos du plan long le plus PROCHE de la voie, et jeu à laisser
+ * entre lui et le fond de la gare.
+ *
+ * On se cale sur le plus proche - les mâts de caténaire - parce que tous les
+ * autres reçoivent le même écartement : ce qui dégage celui-ci dégage le reste.
+ */
+const PLANE_BASE = 5.2;
+const PLANE_CLEAR = 1.5;
 
 /** Valeur de repli, pour qui a besoin d'un ordre de grandeur hors frame. */
 export const OCCLUSION_PUSH = PLATFORM_DEPTH + 6;
@@ -80,10 +98,16 @@ export function updateStationOcclusion(): void {
   const platformIndex = useStore.getState().platformIndex;
   stationOcclusion.side = DOOR_SIDE[platformIndex];
   const layout = layoutFor(platformIndex);
-  stationOcclusion.push = pushFor(layout);
+  const reach = reachFor(platformIndex);
+  stationOcclusion.push = pushFor(layout, reach);
   stationOcclusion.bothSides = layout.config === 'side';
   stationOcclusion.outer = outerOf(layout);
-  stationOcclusion.slabOuter = PSD_X + layout.depth;
+  // La nappe de rue se range derrière ce que la gare occupe AU RAS DU SOL, et
+  // pas derrière son quai. Aujourd'hui les deux coïncident pour les trente -
+  // `validateProfile` refuse qu'un niveau à cette altitude franchisse le
+  // ballast, et les six gares dont un hall traverse le faisceau passent sous la
+  // voie - mais la cote vient désormais du relevé, pas d'un raccourci.
+  stationOcclusion.slabOuter = Math.max(PSD_X + layout.depth, reach.groundFar);
   const half = layout.length / 2 + SPAN_MARGIN;
   stationOcclusion.z0 = runtime.platformSlide - half;
   stationOcclusion.z1 = runtime.platformSlide + half;
@@ -142,19 +166,35 @@ export function groundPush(side: 1 | -1, baseX: number): number {
   return want > 0 ? stationOcclusion.active * want : 0;
 }
 
-/** Rentrée du BALLAST, dont la rive est posée en `edgeX` (positif). */
+/**
+ * Rentrée du BALLAST, dont la rive est posée en `edgeX` (positif).
+ *
+ * ELLE NE SUIT PAS L'EMPRISE DU PROFIL, et c'est la seule des trois qui ne la
+ * suit pas. La nappe de rue peut reculer autant qu'il faut, puisque la gare
+ * couvre ce qu'on découvre ; la plate-forme de la voie, elle, porte un train.
+ * Sa rive rentre jusqu'au bord de quai et s'arrête là, définitivement. C'est
+ * pourquoi `BALLAST_KEEP_X` est publié côté données
+ * (`data/stationConcourseTypes`) et vérifié par `validateProfile` : un couloir
+ * qui traverse la voie passe DESSOUS, ou il n'existe pas.
+ */
 export function ballastTrim(side: 1 | -1, edgeX: number): number {
   const applies = stationOcclusion.bothSides || side === stationOcclusion.side;
   if (!applies) return 0;
   // Le bord de quai, moins dix centimètres : sur un quai sans portes palières
   // on se penche au-dessus de la voie, et le ballast doit encore filer sous la
   // rive de la dalle plutôt que s'arrêter à découvert.
-  const want = edgeX - (PSD_X - 0.1);
+  const want = edgeX - BALLAST_KEEP_X;
   return want > 0 ? stationOcclusion.active * want : 0;
 }
 
 /**
  * Écartement d'un repère de quartier (tram, monorail, tours) posé en `baseX`.
+ *
+ * IL NE SUIT PAS L'EMPRISE NON PLUS, et pour une raison qui n'a rien à voir
+ * avec le ballast : un repère de quartier n'est pas occulté par la gare, il est
+ * REGARDÉ depuis elle. Le ranger derrière une passerelle de trente mètres
+ * mettrait le tram d'Ōtsuka et la poutre de monorail de Hamamatsuchō hors de
+ * portée du regard, ce qui est exactement le contraire de leur raison d'être.
  *
  * Ces repères vivaient à x = ±8 pour les proches, ±34 pour les silhouettes,
  * valeurs choisies quand la gare s'arrêtait au fond du quai. Elle se prolonge

@@ -11,6 +11,7 @@
     "seo:assets": "node scripts/seo-assets.mjs",
     "docs:platforms": "node scripts/platform-docs.mjs",
     "docs:concourse": "node scripts/concourse-evidence.mjs",
+    "data:reach": "node scripts/concourse-reach.mjs",
     "models:import": "node scripts/models-import.mjs",
     "animals:import": "node scripts/animals-import.mjs",
     "models:inspect": "node scripts/models-inspect.mjs",

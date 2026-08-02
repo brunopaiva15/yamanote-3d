@@ -269,7 +269,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **3** | **Sorties et portillons réels** ✅ | `data/lines` : relevé complet des 30 gares ; `stationInterior` : 4 corrections de nommage + 8 contrôles anonymes | D4 D5 |
 | **4** | **Relevé documentaire** ✅ | `STATION_CONCOURSE_EVIDENCE.md` : **30 plans officiels lus** | D5 D6 D7 D8 |
 | **5** | **Profils, données seules** ✅ | `stationConcourseProfiles.ts` : 30 profils validés, aucun consommateur ; 13 tests | D1→D8 |
-| 6 | Emprise déclarée | le profil publie son emprise ; `groundStrip` / `stationOcclusion` la lisent | **G1** |
+| **6** | **Emprise déclarée** ✅ | `stationConcourseReach.ts` + table générée ; `stationOcclusion` la lit ; `validateProfile` refuse ce que le ballast interdit | **G1** |
 | 7 | Compilateur de profil | `stationConcourseBuild.ts` : profil → réseau de rectangles ; fallback vers `interiorFor` | G2 R4 |
 | 8 | Réseau dans les niveaux | `stationLevels` : N nœuds, M liens verticaux | S1 |
 | 9 | Réseau dans la marche | `walkable` lit le réseau ; le joueur change de niveau par n'importe quel lien | S1 |
@@ -405,13 +405,67 @@ de confiance : aucun des trente ne dépasse `mostlyVerified`, quatre restent
 `approximate` parce que leur plan a deux à quatre ans, et **94 questions
 ouvertes** sont écrites nommément.
 
+### 4.4 Ce que la phase 6 a tranché : G1 se coupe en deux
+
+La question était : **une gare a-t-elle le droit d'être plus large que son
+quai ?** La réponse n'est pas oui ou non — elle dépend de la nappe qu'on
+regarde, et personne ne l'avait remarqué.
+
+**Côté fond de quai : oui, et c'était déjà presque vrai.** La nappe de rue se
+dérobe déjà au droit du quai (`groundPush`), et le décor long s'écarte déjà de
+`depth + 24 m` (`sidePush`). Il ne manquait qu'une vérification. Sur les trente
+gares, **vingt-six passent sans rien changer** ; quatre seulement demandaient
+plus, et de deux à six mètres :
+
+| Gare | Écartement générique | Ce que la gare bâtit | Nouveau |
+|---|---|---|---|
+| JY01 Tokyo | 34,5 m | 42,3 m | 38,6 m |
+| JY17 Shinjuku | 32,4 m | 43,3 m | 38,1 m |
+| JY26 Takanawa Gateway | 33,0 m | 40,4 m | 36,7 m |
+| JY27 Tamachi | 31,2 m | 36,6 m | 32,9 m |
+
+**Côté voie : non, et jamais.** Le ballast porte un train ; il ne se dérobe pas.
+`ballastTrim` rentre sa rive jusqu'au bord de quai et s'arrête là. Or le hall
+souterrain ordinaire plafonne à −0,48 m, soit **soixante-sept centimètres
+au-dessus du rail** (−1,15 m) : un couloir qui traverserait le faisceau à cette
+cote ressortirait au travers de la plate-forme. Les six gares dont un hall
+traverse réellement — Tokyo, Uguisudani, Ikebukuro, Shinjuku, Harajuku,
+Shibuya — passent donc **sous la voie**, sur un niveau à −6,4 m. Elles le disent
+chacune dans leurs questions ouvertes : la volée dessinée aujourd'hui
+(`DESCENT_LEN`) n'y descend pas, et c'est à la phase 7 de l'allonger.
+
+**Et la règle est désormais vérifiée, pas seulement écrite.**
+`validateProfile` refuse un hall qui vit à l'altitude des nappes et franchit la
+rive du ballast (`acrossBallast`). C'est G1 sous sa forme exacte, et la
+conséquence est ce que la phase 6 avait besoin d'établir : **à l'altitude des
+nappes de sol, les trente gares tiennent dans la bande du quai.** Le décor au
+ras du sol n'a donc rien de nouveau à faire ; ce qui déborde déborde plus haut
+ou plus bas, là où rien ne court.
+
+**Ce qui ne suit PAS l'emprise, et pourquoi.** Deux exceptions, écrites dans le
+code :
+
+- le **ballast**, pour la raison ci-dessus ;
+- les **repères de quartier** (`landmarkPush`). Un tram, une poutre de monorail,
+  une tour ne sont pas occultés par la gare : ils sont REGARDÉS depuis elle. Les
+  ranger derrière une passerelle de trente mètres mettrait le tram d'Ōtsuka et
+  le monorail de Hamamatsuchō hors de portée du regard, ce qui est le contraire
+  de leur raison d'être.
+
+**Le dossier ne part pas dans le paquet.** Brancher `stationOcclusion` sur les
+profils faisait entrer cent trente kio de relevé dans le bundle du jeu
+(+102 kio bruts sur le morceau `Game`) pour en tirer cent vingt nombres. La
+portée est donc **matérialisée en table générée** (`npm run data:reach`), avec
+un test qui la recalcule depuis les profils et tombe si elle a dérivé — la même
+discipline que le carnet de relevé. Coût réel : **+1,8 kio**.
+
 ### Ordre et raison
 
 - **1→5 ne touchent aucun consommateur.** Le jeu tourne à l'identique pendant
   cinq phases, ce qui laisse le relevé s'installer sans risque.
-- **6 est la phase critique.** Si l'emprise ne peut pas s'élargir proprement,
-  tous les halls transversaux tombent, et le chantier se replie sur des halls
-  longitudinaux mieux nommés. On le saura tôt.
+- **6 était la phase critique**, et elle est passée : l'emprise s'élargit
+  proprement côté fond de quai, jamais côté voie. Aucun hall transversal ne
+  tombe ; six d'entre eux descendent d'un niveau. Voir §4.4.
 - **7→12 branchent les systèmes** en gardant le fallback : une gare sans profil
   se comporte exactement comme aujourd'hui.
 - **13→19 sont le rendu**, et chacune se voit à l'écran.

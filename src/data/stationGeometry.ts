@@ -144,6 +144,17 @@ export const OPP_DEPTH = 4.2;
 /** Profondeur du quai : la dalle va de PSD_X à PSD_X + PLATFORM_DEPTH. */
 export const PLATFORM_DEPTH = 5.4;
 
+/**
+ * Altitude de la plate-forme de la voie — le ballast, et donc le RAIL.
+ *
+ * Publiée ici plutôt que gardée dans `three/Wayside`, parce qu'elle a cessé
+ * d'être une affaire de rendu : c'est la cote qui décide de ce qu'un niveau de
+ * gare a le droit de traverser. Une nappe de ballast porte un train ; elle ne
+ * se dérobe pas. Un couloir qui passe SOUS LA VOIE doit donc plafonner sous
+ * elle, et c'est `data/stationConcourseReach` qui le vérifie.
+ */
+export const RAIL_Y = -1.15;
+
 /** Abscisse du mur de fond (nu intérieur) et du milieu de quai. */
 export const PLATFORM_BACK_X = PSD_X + PLATFORM_DEPTH - 0.15;
 export const PLATFORM_MID_X = PSD_X + PLATFORM_DEPTH * 0.55;

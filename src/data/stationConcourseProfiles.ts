@@ -264,6 +264,34 @@ function over(id: string, label: string, extra?: Partial<ConcourseLevel>): Conco
   return { id, relative: 'abovePlatform', floorY: OVER_Y, headroom: OVER_H, label, ...extra };
 }
 
+/**
+ * Un niveau qui passe SOUS LA VOIE, et non sous le quai.
+ *
+ * Six gares du relevé en ont un, et ce sont les six dont un hall traverse
+ * réellement le faisceau : le couloir central de Tokyo, le B1 d'Ikebukuro, le
+ * 中央通路 de Shinjuku, le 1F de Shibuya sous son viaduc, le souterrain de
+ * Takeshita à Harajuku et le 地下通路 d'Uguisudani.
+ *
+ * Elles ne peuvent PAS tenir à la cote du hall ordinaire (`UNDER_Y`), et la
+ * raison n'est pas esthétique : ce plafond-là est à −0,48 m, soit soixante-sept
+ * centimètres AU-DESSUS du ballast (`RAIL_Y = −1,15`). Un hall posé là
+ * ressortirait au travers de la plate-forme de la voie — et le ballast, lui, ne
+ * se dérobe pas, parce qu'un train roule dessus. `validateProfile` refuse
+ * désormais cette géométrie (`acrossBallast`), et c'est la forme exacte de la
+ * contrainte G1.
+ *
+ * CE QUE CELA COÛTE, et il faut le dire : la volée dessinée aujourd'hui
+ * (`DESCENT_LEN`, qui atteint `UNDER_Y`) n'y descend pas. Ces six gares
+ * demandent une volée plus longue — c'est à la phase 7 de la construire, et
+ * chacune le porte dans ses questions ouvertes.
+ */
+export const SUBTRACK_Y = -6.4;
+const SUBTRACK_H = 3.2;
+
+function subTrack(id: string, label: string): ConcourseLevel {
+  return { id, relative: 'belowPlatform', floorY: SUBTRACK_Y, headroom: SUBTRACK_H, label };
+}
+
 /** Un niveau qu'on ne fait que regarder : sa cote est extrapolée. */
 function distant(
   id: string,
@@ -298,7 +326,7 @@ function tokyo(i: number): Draft {
     confidence: 'mostlyVerified',
     place: 'belowPlatform',
     primaryAccessId: 'a-central',
-    levels: [under('1f', '1F'), distant('b1f', 'B1F', UNDER_Y - STOREY)],
+    levels: [subTrack('1f', '1F'), distant('b1f', 'B1F', SUBTRACK_Y - STOREY)],
     platformAccesses: [
       { id: 'a-central', kind: 'stairs', order: 1, toNodeId: 'paid-central', rise: 'down', depiction: 'walkable' },
       { id: 'a-northern', kind: 'stairs', order: 0, toNodeId: 'paid-northern', rise: 'down', depiction: 'stairhead' },
@@ -514,6 +542,7 @@ function tokyo(i: number): Draft {
       confidence: 'estimated',
     },
     openQuestions: [
+      'Le hall passe SOUS LA VOIE, et non sous le quai : la volée dessinée aujourd’hui (`DESCENT_LEN`) n’y descend pas. Il lui faut une volée plus longue — phase 7.',
       'Le niveau des Marunouchi Exits n’est pas explicité : le plan porte aussi « for Marunouchi (Underground) », donc un débouché souterrain distinct, non cartographié.',
       'De quel côté du repère quai se tient Marunouchi ? Le plan a un ouest, le dépôt a un −x : l’appariement n’est pas établi. Convention retenue ici, et à corriger si elle se démontre fausse.',
       'Ni Tokyo Metro Marunouchi ni les correspondances hors JR ne sont cartographiés.',
@@ -1119,7 +1148,7 @@ function uguisudani(i: number): Draft {
     confidence: 'approximate',
     place: 'belowPlatform',
     primaryAccessId: 'a-south',
-    levels: [under('1f', '1F')],
+    levels: [under('1f', '1F'), subTrack('sub', '1F 地下通路')],
     platformAccesses: [
       { id: 'a-south', kind: 'stairs', order: 1, toNodeId: 'paid-south', rise: 'down', depiction: 'walkable' },
       { id: 'a-north', kind: 'stairs', order: 0, toNodeId: 'passage-north', rise: 'down', depiction: 'stairhead' },
@@ -1129,7 +1158,7 @@ function uguisudani(i: number): Draft {
       { id: 'free-south', levelId: '1f', kind: 'compact', fare: 'free', rect: f.band(south + 10.7, south + 22), depiction: 'walkable', confidence: 'high' },
       {
         id: 'passage-north',
-        levelId: '1f',
+        levelId: 'sub',
         kind: 'linear',
         fare: 'paid',
         // Le 地下通路 : il plonge sous les voies et ressort de l'autre côté. Le
@@ -1139,7 +1168,7 @@ function uguisudani(i: number): Draft {
         nameJp: '地下通路',
         confidence: 'high',
       },
-      { id: 'free-north', levelId: '1f', kind: 'compact', fare: 'free', rect: { x0: -18, x1: -6, z0: north - 1, z1: north + 12 }, depiction: 'backdrop', confidence: 'estimated' },
+      { id: 'free-north', levelId: 'sub', kind: 'compact', fare: 'free', rect: { x0: -18, x1: -6, z0: north - 1, z1: north + 12 }, depiction: 'backdrop', confidence: 'estimated' },
     ],
     corridors: [],
     gateGroups: [
@@ -1187,6 +1216,7 @@ function uguisudani(i: number): Draft {
       },
     ],
     openQuestions: [
+      'Le hall passe SOUS LA VOIE, et non sous le quai : la volée dessinée aujourd’hui (`DESCENT_LEN`) n’y descend pas. Il lui faut une volée plus longue — phase 7.',
       '⚠ Le plan date de juin 2022, quatre ans avant la date de référence — de très loin le plus ancien du relevé, et la seule raison de la confiance `approximate`.',
       'Uguisudani est la seule gare que la série « Guide Maps for Major Stations » ne couvre pas.',
       'La longueur réelle du 地下通路 n’est pas cotée : l’emprise ci-dessus est une mise en place.',
@@ -1875,7 +1905,7 @@ function ikebukuro(i: number): Draft {
     confidence: 'mostlyVerified',
     place: 'belowPlatform',
     primaryAccessId: 'a-west',
-    levels: [under('b1', 'B1')],
+    levels: [subTrack('b1', 'B1')],
     platformAccesses: [
       { id: 'a-west', kind: 'stairs', order: 1, toNodeId: 'paid-west', rise: 'down', depiction: 'walkable' },
       { id: 'a-east', kind: 'stairs', order: 0, toNodeId: 'paid-east', rise: 'down', depiction: 'stairhead' },
@@ -2068,6 +2098,7 @@ function ikebukuro(i: number): Draft {
       },
     ],
     openQuestions: [
+      'Le hall passe SOUS LA VOIE, et non sous le quai : la volée dessinée aujourd’hui (`DESCENT_LEN`) n’y descend pas. Il lui faut une volée plus longue — phase 7.',
       'Le plan est de février 2026, six mois avant la référence.',
       'Ni le Seibu Ikebukuro, ni les lignes Yūrakuchō / Fukutoshin ne sont cartographiés : le document est JR + Tōbu + Marunouchi.',
       'Aucun aplat « large store inside the ticket gates » : rien derrière les portillons, et c’est un fait de relevé.',
@@ -2366,7 +2397,7 @@ function shinjuku(i: number): Draft {
     confidence: 'mostlyVerified',
     place: 'multiLevel',
     primaryAccessId: 'a-central-east',
-    levels: [under('b1f', 'B1F'), over('2f', '2F')],
+    levels: [subTrack('b1f', 'B1F'), over('2f', '2F')],
     platformAccesses: [
       { id: 'a-central-east', kind: 'stairs', order: 1, toNodeId: 'paid-b1f', rise: 'down', depiction: 'walkable' },
       { id: 'a-south', kind: 'stairs', order: 0, toNodeId: 'paid-2f', rise: 'up', depiction: 'stairhead' },
@@ -2390,7 +2421,10 @@ function shinjuku(i: number): Draft {
         levelId: 'b1f',
         kind: 'hubSlice',
         fare: 'free',
-        rect: { x0: f.x1 + 26, x1: f.x1 + 48, z0: b1 - 4, z1: b1 + 20 },
+        // Seize mètres, et pas quarante-huit : la zone libre est de Shinjuku ;
+        // la TRANCHE JOUABLE ne l'est pas. Ce qu'on parcourt reste étroit et
+        // assumé, et le reste se voit sans se traverser.
+        rect: { x0: f.x1 + 16, x1: f.x1 + 32, z0: b1 - 4, z1: b1 + 20 },
         depiction: 'walkable',
         confidence: 'estimated',
       },
@@ -2428,7 +2462,7 @@ function shinjuku(i: number): Draft {
         levelId: 'b1f',
         kind: 'linear',
         fare: 'paid',
-        rect: { x0: f.x1 + 20, x1: f.x1 + 24, z0: b1 + 26, z1: b1 + 40 },
+        rect: { x0: f.x1 + 12, x1: f.x1 + 16, z0: b1 + 26, z1: b1 + 40 },
         depiction: 'blindCorner',
         confidence: 'high',
       },
@@ -2450,7 +2484,7 @@ function shinjuku(i: number): Draft {
         from: 'paid-b1f',
         to: 'paid-east-branch',
         rise: 0,
-        rect: { x0: f.x1 + 20, x1: f.x1 + 24, z0: b1 + 16, z1: b1 + 26 },
+        rect: { x0: f.x1 + 12, x1: f.x1 + 16, z0: b1 + 16, z1: b1 + 26 },
         width: 4,
         depiction: 'blindCorner',
         confidence: 'high',
@@ -2476,7 +2510,7 @@ function shinjuku(i: number): Draft {
         nameEn: 'Central East Gate',
         from: 'paid-b1f',
         to: 'free-central-east',
-        rect: { x0: f.x1 + 24.3, x1: f.x1 + 26, z0: b1, z1: b1 + 16 },
+        rect: { x0: f.x1 + 14.3, x1: f.x1 + 16, z0: b1, z1: b1 + 16 },
         cross: 'x',
         passages: 14,
         wideAt: 'end',
@@ -2596,7 +2630,7 @@ function shinjuku(i: number): Draft {
         status: 'namedVerified',
         category: 'gallery',
         brand: 'LUMINE EST Shinjuku',
-        rect: { x0: f.x1 + 36, x1: f.x1 + 48, z0: b1 + 6, z1: b1 + 20 },
+        rect: { x0: f.x1 + 22, x1: f.x1 + 32, z0: b1 + 6, z1: b1 + 20 },
         enterable: false,
         confidence: 'high',
       },
@@ -2642,6 +2676,7 @@ function shinjuku(i: number): Draft {
       confidence: 'high',
     },
     openQuestions: [
+      'Le hall passe SOUS LA VOIE, et non sous le quai : la volée dessinée aujourd’hui (`DESCENT_LEN`) n’y descend pas. Il lui faut une volée plus longue — phase 7.',
       'Le cadrage ne montre pas l’implantation exacte des East Gate et West Gate (B1F) : leurs noms et leur niveau sont établis par les brackets du plan de quais, leur géométrie non.',
       'Le plan est celui de JR seul : ni Tokyo Metro Marunouchi, ni Seibu Shinjuku, ni les numéros de sortie Metro n’y figurent.',
       'Les noms japonais des neuf groupes ne sont pas sur cette édition anglaise.',
@@ -2773,7 +2808,7 @@ function harajuku(i: number): Draft {
     confidence: 'mostlyVerified',
     place: 'multiLevel',
     primaryAccessId: 'a-takeshita',
-    levels: [under('b1f', 'B1F'), over('2f', '2F')],
+    levels: [subTrack('b1f', 'B1F'), over('2f', '2F')],
     platformAccesses: [
       { id: 'a-takeshita', kind: 'stairs', order: 1, toNodeId: 'paid-takeshita', rise: 'down', depiction: 'walkable' },
       { id: 'a-omote', kind: 'stairs', order: 0, toNodeId: 'paid-omote', rise: 'up', depiction: 'walkable' },
@@ -2893,6 +2928,7 @@ function harajuku(i: number): Draft {
       },
     ],
     openQuestions: [
+      'Le hall passe SOUS LA VOIE, et non sous le quai : la volée dessinée aujourd’hui (`DESCENT_LEN`) n’y descend pas. Il lui faut une volée plus longue — phase 7.',
       'Le plan date de septembre 2025 : onze mois avant la référence.',
       'La ligne Metro en correspondance n’est pas nommée sur le document ; les deux clés ci-dessus sont une lecture de voisinage, pas un relevé.',
       'Aucun aplat de grand commerce : les boutiques du quartier ne sont pas dans la gare, et le plan le confirme.',
@@ -2917,7 +2953,7 @@ function shibuya(i: number): Draft {
     confidence: 'mostlyVerified',
     place: 'belowPlatform',
     primaryAccessId: 'a-hachiko',
-    levels: [under('1f', '1F')],
+    levels: [subTrack('1f', '1F')],
     platformAccesses: [
       { id: 'a-hachiko', kind: 'stairs', order: 1, toNodeId: 'paid-hachiko', rise: 'down', depiction: 'walkable' },
       { id: 'a-south', kind: 'stairs', order: 0, toNodeId: 'paid-south', rise: 'down', depiction: 'stairhead' },
@@ -3065,6 +3101,7 @@ function shibuya(i: number): Draft {
       confidence: 'high',
     },
     openQuestions: [
+      'Le hall passe SOUS LA VOIE, et non sous le quai : la volée dessinée aujourd’hui (`DESCENT_LEN`) n’y descend pas. Il lui faut une volée plus longue — phase 7.',
       '⚠ Le plan est de juin 2026, la référence est août 2026. Sur une gare qui bouge tous les trimestres, deux mois déplacent une palissade ou rouvrent un passage.',
       'Le New South Gate est très loin au sud, séparé du reste : il n’est pas modélisé ici, faute de pouvoir le situer.',
       'Les niveaux Ginza (au-dessus) et Tōkyū / Metro (en dessous) sont absents du document : leur position relative reste à établir.',
