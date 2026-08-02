@@ -115,14 +115,21 @@ test('une gare dont le plan est lu porte un relevé, et pas « à relever »', (
     const s = STATIONS[i];
     const section = sections.find((sec) => sec.startsWith(`${s.jy} ${s.romaji}`));
     assert.ok(section, `${s.jy} : fiche introuvable`);
-    assert.ok(
-      !section.includes('à relever'),
-      `${s.jy} ${s.romaji} : plan lu, mais la fiche dit encore « à relever »`,
-    );
-    assert.ok(
-      !section.includes('**à établir**'),
-      `${s.jy} ${s.romaji} : plan lu, mais la confiance reste « à établir »`,
-    );
+    // On cherche le GABARIT, pas les mots. Une fiche relevée a parfaitement le
+    // droit d'écrire « le côté Marunouchi reste à relever » : c'est même
+    // exactement ce qu'on lui demande de dire. Ce qu'on interdit, c'est la
+    // mention automatique laissée en place alors que le plan est ouvert.
+    for (const placeholder of [
+      '*à relever — le plan officiel',
+      'tout ce qui précède : le plan officiel',
+      '**à établir**',
+      '*décidé en phase 5*',
+    ]) {
+      assert.ok(
+        !section.includes(placeholder),
+        `${s.jy} ${s.romaji} : plan lu, mais la fiche garde le gabarit « ${placeholder} »`,
+      );
+    }
   }
 });
 

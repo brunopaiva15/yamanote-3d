@@ -208,6 +208,24 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],
+  // JY01 Tokyo. Six onglets - 1F, M2F, 2F, B1F, Keiyo Line, Sobu Line - dont
+  // CINQ fournis : la feuille Sobu Line manque. Datée de mai 2026.
+  0: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Tokyo Station (1F, M2F, 2F, B1F, Keiyō)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e1039.html',
+      documentDate: '2026-05',
+      consultedAt: '2026-08-02',
+      note: 'PDF fournis à la main (réseau bloqué) : cinq onglets sur six, la '
+        + 'feuille « Sobu Line » manque. Porte « As of May, 2026 » et '
+        + 'l’avertissement de chantier. Le CADRAGE des feuilles fournies couvre le '
+        + 'côté Yaesu ; le côté Marunouchi est hors champ. '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
   // JY05 Ueno. Quatre feuilles, une par onglet de niveau : 1F-M2, 2F, 3F,
   // B4-B1. Même réserve de date que Shibuya : « As of June, 2026 ».
   4: [

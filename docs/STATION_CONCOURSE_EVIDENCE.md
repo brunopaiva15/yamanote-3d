@@ -17,7 +17,7 @@ genre de document qui ment.
 
 ## ⚠ État de la vérification — à lire avant toute fiche
 
-**Plans officiels ouverts et lus : 6 / 30.**
+**Plans officiels ouverts et lus : 7 / 30.**
 
 L'environnement de développement de ce dépôt n'atteint pas les sites des
 opérateurs : la passerelle réseau refuse la connexion (403 sur `CONNECT`) vers
@@ -93,6 +93,7 @@ fondues dans le texte.
 
 | Gare | Date du plan | Écart |
 |---|---|---|
+| JY01 Tokyo | 2026-05 | ⚠️ **décalé** par rapport à la référence |
 | JY05 Ueno | 2026-06 | ⚠️ **décalé** par rapport à la référence |
 | JY13 Ikebukuro | 2026-02 | ⚠️ **décalé** par rapport à la référence |
 | JY17 Shinjuku | 2026-08 | ✅ la date de référence |
@@ -131,12 +132,13 @@ seulement pour vérifier une orientation en surface.
 
 ## JY01 Tokyo — 東京
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **mai** 2026, et cadré côté Yaesu.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Tokyo Station (1F, M2F, 2F, B1F, Keiyō) | [lien](https://www.jreast.co.jp/fr/e/stations/e1039.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（東京駅） | [ja](https://www.jreast.co.jp/estation/stations/1039.html) · [en](https://www.jreast.co.jp/en/estation/stations/1039.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -148,31 +150,53 @@ seulement pour vérifier une orientation en surface.
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Six onglets : **1F · M2F · 2F · B1F · Keiyō Line · Sobu Line**. Aucune autre gare de la boucle n’en a autant, et deux d’entre eux sont des LIGNES et non des étages — c’est ce qui dit le mieux ce qu’est Tokyo.
+- **2F — les quais des lignes classiques et du Shinkansen**, tous ensemble : voies 1 à 10 puis 14 à 23.
+- **1F — le niveau des contrôles et des passages**, celui qu’on parcourt.
+- **B1F — Gransta**, et une seconde nappe de circulation : plusieurs volées de quai sont fléchées « for Tracks No.X (2F) **& Concourse Area (B1F)** », donc desservent les deux niveaux à la fois.
+- **Keiyō Line** et **Sobu Line** ont leurs propres feuilles : ce sont des gares dans la gare, à plusieurs centaines de mètres et cinq niveaux de là. La feuille Sobu n’a pas été fournie.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Côté Yaesu, relevé** : *Yaesu North Exit*, *Yaesu Central Exit*, *Yaesu South Exit*, et **Nihonbashi Exit** (deux contrôles distincts, l’un vers le Tōhoku Shinkansen, l’autre vers le Tōkaidō・Sanyō).
+- **Contrôles de Shinkansen, qui sont des lignes à part entière** : *Tōkaidō and Sanyō Shinkansen (Yaesu Central North Exit)*, *(Yaesu Central South Exit)*, *(Yaesu North Exit)*. À Tokyo, on ne « passe pas au Shinkansen » : on franchit un second 改札.
+- **Transferts internes nommés** : *Tōhoku…Shinkansen North / Central / South Transfer*, *Tōkaidō・Sanyō Shinkansen Central / South Transfer*. Ce sont des lignes de contrôle **entre deux zones payantes**.
+- ⚠️ **Le côté Marunouchi n’est pas dans le cadrage fourni.** Le Marunouchi Central Gate — celui que le cahier des charges désigne comme tranche principale — n’a donc pas été lu.
+- Ascenseurs **A à P** sur la seule feuille 1F.
+
+**Ordre le long du quai** — Trois passages transversaux nommés relient Marunouchi à Yaesu : **Northern Passage**, **Central Passage**, **Southern Passage**, plus un **Northern Free Passage** hors contrôle. C’est l’ossature de Tokyo : la gare se traverse d’ouest en est par trois couloirs, et les volées de quai y tombent perpendiculairement.
+
+**Voies Yamanote** — Voie **4** = Yamanote *for Ueno & Ikebukuro* (内回り) ; voie **5** = Yamanote *for Shinagawa & Shibuya* (外回り). Voie **3** = Keihin-Tōhoku vers Ueno, voie **6** = Keihin-Tōhoku vers Kamata. Chaque voie Yamanote partage donc son îlot avec une voie Keihin-Tōhoku — îlot (3,4) et îlot (5,6) — ce qui **confirme** au mot près le relevé du dépôt : `sharedIsland`, `sharedWith: Keihin-Tōhoku`, « voies 4 et 5 sur deux quais partagés ». Au-delà : Chūō (1,2), Jōban・Utsunomiya・Takasaki・Ueno-Tōkyō (7,8), Tōkaidō (9,10), Tōkaidō Shinkansen (14-19), Tōhoku・Yamagata・Akita・Hokkaidō・Jōetsu・Hokuriku Shinkansen (20-23).
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Shinkansen** — par contrôle dédié, côté Yaesu comme côté Nihonbashi. Six lignes de contrôle en tout entre classique et Shinkansen.
+- **Keiyō Line** et **Sōbu Line** — chacune son onglet, donc sa propre gare souterraine. Le long cheminement vers la Keiyō, que le cahier des charges cite, est ainsi confirmé par la structure même du document.
+- Le plan est **JR seul** : le Marunouchi de Tokyo Metro n’y figure pas.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **GRANSTA TOKYO** et **GRANSTA YAESU** — les deux galeries, nommément.
+- **TOKYO GIFT PALETTE**, **First Avenue Tōkyō Station**, **KITAMACHI SAKABA** (trois blocs) et **八重北食堂** côté Yaesu nord.
+- **Gran Tōkyō North Tower (1F) DAIMARU**, **Sapia Tower (1F)**, **Marunouchi central Building** — emprises bâties qui bordent la gare.
+- **JAPAN RAIL CAFE**, **VIEW GOLD LOUNGE**, **JR-East Lost & Found**, **Baggage Storage**, **Wheelchair Passenger Lounge**, deux **Waiting Room**, un **Police Box**, **JR Highway Bus**, **JR TOKAI TOURS Tōkyō Branch** et des **JR-Central Tickets** distincts des guichets JR East.
+- **Aji no Sanpomichi** (味の散歩道), au nord-est.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Le plan porte « *There may be some changes due to construction work. As of May, 2026* », sans délimiter de zone. Tokyo est donc déclarée mouvante sans que le document dise où.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- ⚠️ **Le côté Marunouchi manque.** Les feuilles fournies sont cadrées sur Yaesu : ni *Marunouchi Central Exit*, ni *Marunouchi North / South*, ni la halle de brique ne sont dans le champ. C’est précisément la tranche que le cahier des charges veut construire — elle reste à relever.
+- La feuille **Sobu Line** n’a pas été fournie (cinq onglets sur six).
+- Le plan date de **mai 2026**, trois mois avant la référence, et se déclare lui-même sujet à changement sans localiser le chantier.
+- Les **noms japonais** ne sont pas sur cette édition anglaise : 丸の内中央口, 八重洲中央口, 日本橋口 restent à confirmer.
+- Ni Tokyo Metro Marunouchi, ni les correspondances hors JR ne sont cartographiés.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+La tranche visée reste le **Marunouchi Central**, mais elle n’est pas encore relevée : en l’état, le seul contrôle documenté et proche des voies 4-5 est côté **Yaesu**. Ce qui EST acquis et structurant : les trois passages transversaux nommés (Northern, Central, Southern), qui donnent la coupe de la gare ; les volées qui desservent **2F et B1F à la fois**, donc la double nappe ; et les **six lignes de contrôle vers le Shinkansen**, qui sont la vraie singularité de Tokyo — une gare où l’on franchit un 改札 pour passer d’un train à un autre. Représentés sans être visitables : Gransta en contrebas, les portails Shinkansen, les directions Keiyō et Sōbu (couloirs longs, en descente, qui se perdent), et le côté Marunouchi en perspective au bout du Central Passage.
 
 ---
 
