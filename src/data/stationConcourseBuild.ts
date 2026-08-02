@@ -62,7 +62,7 @@ import {
   type FareSide,
   type StationConcourseProfile,
 } from './stationConcourseTypes.ts';
-import { profileFor } from './stationConcourseProfiles.ts';
+import { wiredProfile } from './stationConcourseWired.ts';
 import { layoutFor } from './stationLayouts.ts';
 
 // --- Ce qu'un réseau contient --------------------------------------------
@@ -486,21 +486,21 @@ export function legacyNetwork(index: number, it: StationInterior): ConcourseNetw
 // --- Le point d'entrée ---------------------------------------------------
 
 /**
- * Les gares déjà branchées sur leur relevé.
+ * Le réseau d'une gare : son relevé s'il est branché, son hall sinon.
  *
- * VIDE, et ce n'est pas un oubli : la phase 7 livre le moteur, pas la bascule.
- * Un profil compilé n'a encore ni mobilier, ni archétype de rendu, ni
- * signalétique - les basculer maintenant échangerait une gare meublée contre
- * une gare juste et nue, ce qui serait un recul. Les phases 20 à 24 les
- * ajouteront une par une, quand il y aura de quoi les habiller.
+ * La liste des gares branchées vit dans `data/stationConcourseWired`, et elle
+ * est vide. Ce n'est pas un oubli : un profil compilé n'a encore ni mobilier,
+ * ni archétype de rendu, ni signalétique - les basculer maintenant échangerait
+ * une gare meublée contre une gare juste et nue, ce qui serait un recul. Les
+ * phases 20 à 24 les ajouteront une par une, quand il y aura de quoi les
+ * habiller.
  */
-export const PROFILE_STATIONS: ReadonlySet<number> = new Set<number>();
-
-/** Le réseau d'une gare : son relevé s'il est branché, son hall sinon. */
 export function networkFor(index: number, accessZ: number): ConcourseNetwork {
   const i = ((index % 30) + 30) % 30;
-  if (PROFILE_STATIONS.has(i)) return compileProfile(profileFor(i), accessZ);
-  return legacyNetwork(i, interiorFor(i, accessZ));
+  const wired = wiredProfile(i);
+  return wired
+    ? compileProfile(wired, accessZ)
+    : legacyNetwork(i, interiorFor(i, accessZ));
 }
 
 // --- Ce que le compilateur a dû rogner -----------------------------------
@@ -561,12 +561,20 @@ export function networkIssues(
  */
 export function roomAt(net: ConcourseNetwork, x: number, z: number): ConcourseRoom | null {
   if (!net.built) return null;
-  for (const o of net.obstacles) {
-    if (x >= o.x0 && x <= o.x1 && z >= o.z0 && z <= o.z1) return null;
-  }
+  const inside = (r: InteriorRect) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
+  for (const o of net.obstacles) if (inside(o)) return null;
   for (const r of net.rooms) {
-    if (!r.walkable) continue;
-    if (x >= r.rect.x0 && x <= r.rect.x1 && z >= r.rect.z0 && z <= r.rect.z1) return r;
+    if (r.walkable && inside(r.rect)) return r;
+  }
+  // LA TRAVÉE DES PORTILLONS EST DU SOL, et ce n'est pas un détail : ce sont
+  // ses BORNES qui barrent, pas la ligne. Une baie franchissable est exactement
+  // le vide entre deux bornes - celui-là même que le rendu dessine. Le hall
+  // générique n'avait pas à le dire, sa zone payante et sa zone libre se
+  // touchant à travers elle ; deux pièces séparées, si.
+  for (const g of net.gates) {
+    if (!g.walkable || !inside(g.rect)) continue;
+    const host = net.rooms.find((r) => r.id === g.from) ?? null;
+    if (host?.walkable) return host;
   }
   return null;
 }

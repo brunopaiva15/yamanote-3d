@@ -271,7 +271,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **5** | **Profils, données seules** ✅ | `stationConcourseProfiles.ts` : 30 profils validés, aucun consommateur ; 13 tests | D1→D8 |
 | **6** | **Emprise déclarée** ✅ | `stationConcourseReach.ts` + table générée ; `stationOcclusion` la lit ; `validateProfile` refuse ce que le ballast interdit | **G1** |
 | **7** | **Compilateur de profil** ✅ | `stationConcourseBuild.ts` : profil → réseau de pièces ; repli fidèle vers `interiorFor` ; `networkIssues` | G2 R4 |
-| 8 | Réseau dans les niveaux | `stationLevels` : N nœuds, M liens verticaux | S1 |
+| **8** | **Réseau dans les niveaux** ✅ | `stationLevels` lit le réseau : N pièces à N altitudes, `joinFloorAt` pour les liens | S1 |
 | 9 | Réseau dans la marche | `walkable` lit le réseau ; le joueur change de niveau par n'importe quel lien | S1 |
 | 10 | Portillons multiples | `fareGate` : un état par groupe et par passage | S2 |
 | 11 | Itinéraires PNJ | `concourseRoute` : axe par nœud, choix de groupe, choix de sortie | S3 |
@@ -506,6 +506,57 @@ des dix-huit est fermée par un test.
 Onze gares sont concernées : Kanda (2), Akihabara (3), Okachimachi,
 Nishi-Nippori, Takadanobaba, Shin-Ōkubo (2), Yoyogi, Ebisu, Gotanda,
 Hamamatsuchō, Shimbashi (2), Yūrakuchō (2).
+
+### 4.6 La phase 8 : le relevé touche le jeu pour la première fois
+
+Quatre phases sans consommateur — format, sources, profils, portée — puis le
+compilateur. La phase 8 branche le premier lecteur : **`concourseFloorAt`
+interroge le réseau**, et c'est elle qui décide où le joueur pose le pied, où la
+foule marche, et où `systems/concourseRoute` accepte de tracer un itinéraire.
+
+`StationPlacement` porte donc `network` à côté d'`interior`, et le partage est
+net : ce qui lit le **sol** passe par le réseau, ce qui lit le **mobilier** et le
+**dessin** continue de lire `interior` jusqu'aux archétypes de rendu
+(phases 13 à 19).
+
+**Rien n'a changé, et c'est vérifié point par point.** Aucune gare n'étant
+branchée sur son relevé, le réseau est l'enveloppe du hall générique. Un test
+rejoue l'ancienne implémentation mot pour mot et compare les deux sur plus de
+trente mille points répartis sur les trente halls : même sol, même `null`, au
+centimètre.
+
+**Ce que le réseau sait faire en plus**, et qui ne se voit encore sur aucune
+gare :
+
+- **N pièces à N altitudes.** Deux relevés ont déjà deux sols praticables
+  différents — le demi-niveau M2F d'Okachimachi, et les deux ensembles de
+  Harajuku, séparés de près de douze mètres verticaux ;
+- **M liens verticaux** (`joinFloorAt`). Un ouvrage praticable est du sol comme
+  un autre, et son altitude s'interpole entre ses deux bouts. Le hall générique
+  n'en a aucun : c'est exactement le constat S1 ;
+- **des bouches sur n'importe quelle paroi**, et non plus au fond vers +z.
+
+Deux pièges trouvés en chemin, tous deux dans la même famille — *croire que la
+forme dit le sens* :
+
+1. **la travée des portillons est du SOL.** L'ancien hall allait d'un trait de
+   la zone payante à la zone libre, la ligne au milieu ; deux pièces séparées
+   laissaient un vide de 1,70 m au droit du contrôle, et l'on ne pouvait plus le
+   franchir. Ce sont les BORNES qui barrent, pas la ligne ;
+2. **la pente d'un lien suit l'axe qui SÉPARE les deux pièces**, pas la longueur
+   de son rectangle. La volée de la mezzanine d'Okachimachi fait 5,60 m de large
+   pour 1 m de long, et descend dans le sens du mètre.
+
+**L'étage reste binaire** (`'platform' | 'concourse'`), et ce n'est pas un
+oubli : ce couple ne compte pas les niveaux, il tranche la seule ambiguïté qu'il
+y ait — suis-je sur la dalle, ou dessous ? Une fois dessous, c'est la PIÈCE qui
+dit à quelle hauteur.
+
+**Le paquet n'a pas grossi** (676,8 kio). La liste des gares branchées vit dans
+un fichier à part (`data/stationConcourseWired`) qui, tant qu'il est vide,
+n'importe pas le dossier — l'élagage fait le reste. Le jour où la première gare
+est branchée, les cent trente kio arrivent, et ils arrivent parce qu'ils
+SERVENT.
 
 ### Ordre et raison
 

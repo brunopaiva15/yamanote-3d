@@ -11,6 +11,7 @@
 import { CONSIST, E235 } from '../data/e235';
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
 import { interiorFor, type StationInterior } from '../data/stationInterior';
+import { networkFor, type ConcourseNetwork } from '../data/stationConcourseBuild';
 import {
   ELEVATOR_HALF_Z,
   ESCALATOR_HALF_Z,
@@ -157,6 +158,22 @@ export interface StationPlacement {
    */
   mainRise: 'down' | 'up';
   interior: StationInterior;
+  /**
+   * Le RÉSEAU du niveau de correspondance : N pièces à N altitudes, et les
+   * ouvrages qui les joignent (`data/stationConcourseBuild`).
+   *
+   * Il double `interior` sans le remplacer, et c'est délibéré. Ce qui lit le
+   * SOL - `systems/stationLevels`, donc la marche du joueur et celle de la
+   * foule - passe désormais par lui : il sait dire « telle pièce, telle
+   * altitude » là où `interior` ne connaissait qu'une boîte. Ce qui lit le
+   * MOBILIER et le DESSIN continue de lire `interior`, jusqu'à ce que les
+   * archétypes de rendu existent (phases 13 à 19).
+   *
+   * Tant qu'aucune gare n'est branchée sur son relevé
+   * (`data/stationConcourseWired`), le réseau est l'enveloppe fidèle du hall
+   * générique : mêmes rectangles, mêmes bornes, mêmes baies.
+   */
+  network: ConcourseNetwork;
 }
 
 const CACHE = new Map<number, StationPlacement>();
@@ -475,6 +492,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   // L'accès qui mène dans la gare : la trémie la plus proche du milieu du quai.
   const mainStair = stairs.reduce((a, b) => (Math.abs(b.z) < Math.abs(a.z) ? b : a));
   const interior = interiorFor(i, mainStair.z);
+  const network = networkFor(i, mainStair.z);
   // Une volée montante n'a de sens que si elle mène quelque part : là où le
   // niveau est déclaré sans être construit, l'accès reste la trémie borgne
   // qu'il était.
@@ -721,6 +739,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
     mainStair,
     mainRise,
     interior,
+    network,
   };
   CACHE.set(i, placement);
   return placement;

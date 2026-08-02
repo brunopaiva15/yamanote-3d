@@ -25,7 +25,6 @@ import { register } from 'node:module';
 register('./fixtures/ts-resolve.mjs', import.meta.url);
 
 const {
-  PROFILE_STATIONS,
   compileProfile,
   legacyNetwork,
   networkFor,
@@ -33,6 +32,7 @@ const {
   roomAt,
 } = await import('../src/data/stationConcourseBuild.ts');
 const { CONCOURSE_PROFILES } = await import('../src/data/stationConcourseProfiles.ts');
+const { wiredCount } = await import('../src/data/stationConcourseWired.ts');
 const { interiorFor } = await import('../src/data/stationInterior.ts');
 const { layoutFor } = await import('../src/data/stationLayouts.ts');
 const { STATIONS } = await import('../src/data/stations.ts');
@@ -224,7 +224,7 @@ test('aucune gare n’est encore branchée sur son relevé', () => {
   // La phase 7 livre le moteur, pas la bascule : un profil compilé n'a encore
   // ni mobilier, ni archétype de rendu, ni signalétique. L'échanger contre le
   // hall meublé serait un recul.
-  assert.equal(PROFILE_STATIONS.size, 0);
+  assert.equal(wiredCount(), 0);
   for (let i = 0; i < STATION_COUNT; i++) {
     assert.equal(networkFor(i, MAIN(i)).source, 'legacy', NAME(i));
   }

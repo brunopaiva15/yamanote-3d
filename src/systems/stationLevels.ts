@@ -11,6 +11,18 @@
 // PRINCIPAL - la volée qui relie les deux - lève l'ambiguïté, parce qu'il n'y a
 // là qu'un seul sol : c'est donc là, et nulle part ailleurs, que l'étage change.
 //
+// SOUS LE QUAI, EN REVANCHE, IL N'Y A PLUS UN SEUL SOL. Le hall était une boîte
+// et rendait la même altitude partout ; il est maintenant un RÉSEAU DE PIÈCES
+// (`data/stationConcourseBuild`), chacune à la sienne, joint par des ouvrages
+// dont l'altitude s'interpole entre les deux bouts. C'est ce que demandait le
+// constat S1 du plan - « il faut N nœuds à N altitudes et M liens verticaux » -
+// et c'est ce que lisent maintenant `concourseFloorAt` et `joinFloorAt`.
+//
+// L'étage, lui, reste binaire : `'platform' | 'concourse'`. Ce n'est pas un
+// oubli. Ce couple ne compte pas les niveaux, il tranche la seule ambiguïté
+// qu'il y ait - suis-je sur la dalle, ou dessous ? Une fois qu'on est dessous,
+// c'est la PIÈCE qui dit à quelle hauteur, et elle le dit sans ambiguïté.
+//
 // Repère : celui du QUAI (x depuis l'axe de la voie vers le fond, z le long de
 // la voie), et les altitudes sont relatives au sol du quai - c'est déjà la
 // convention des cotes de trémie (data/stationGeometry).
@@ -27,6 +39,7 @@ import {
   STAIR_WALK_HALF_X,
 } from '../data/stationGeometry';
 import { EXIT_MOUTH_END, exitMouthFloorY } from '../data/stationInterior';
+import { roomAt } from '../data/stationConcourseBuild';
 import { stairTopZ, stairwellAt, type StationPlacement } from './stationPlacement';
 
 /** Étage où l'on pose les pieds, dans le repère de la gare. */
@@ -69,10 +82,18 @@ export function mainAccessFloor(
 /**
  * Le sol du niveau de correspondance sous un point, ou null.
  *
- * Le hall est un seul rectangle, du débouché du couloir au fond de la zone
- * libre : la ligne de portillons n'y fait pas de coupure, ce sont ses BORNES
- * qui barrent, et elles sont dans `obstacles`. Une baie franchissable est donc
- * exactement le vide entre deux bornes - celui-là même que le rendu dessine.
+ * ELLE INTERROGE LE RÉSEAU, et c'est le changement de la phase 8. Le hall
+ * n'était qu'un rectangle - du débouché du couloir au fond de la zone libre -
+ * et cette fonction rendait une altitude unique, la même partout. Elle rend
+ * maintenant celle de LA PIÈCE sous les pieds : N pièces, N altitudes. Tant
+ * qu'aucune gare n'est branchée sur son relevé, le réseau est l'enveloppe du
+ * hall générique et la réponse est identique au centimètre - c'est ce que
+ * vérifie `tests/stationConcourseNetwork`.
+ *
+ * Ce qui n'a pas changé : la ligne de portillons ne fait pas de coupure, ce
+ * sont ses BORNES qui barrent (elles sont dans `obstacles`), et une baie
+ * franchissable est exactement le vide entre deux bornes - celui-là même que
+ * le rendu dessine.
  *
  * Ce que cette fonction ne dit PAS : l'état des battants. Ils se lèvent et se
  * rabattent (systems/fareGate), et c'est à qui se présente devant de s'en
@@ -83,14 +104,7 @@ export function concourseFloorAt(
   x: number,
   z: number,
 ): number | null {
-  const it = p.interior;
-  if (!it.built) return null;
-  if (x < it.paid.x0 || x > it.paid.x1) return null;
-  if (z < it.paid.z0 || z > it.free.z1) return null;
-  for (const o of it.obstacles) {
-    if (x >= o.x0 && x <= o.x1 && z >= o.z0 && z <= o.z1) return null;
-  }
-  return it.floorY;
+  return roomAt(p.network, x, z)?.floorY ?? null;
 }
 
 /**
@@ -108,12 +122,72 @@ export function exitMouthFloorAt(
   x: number,
   z: number,
 ): number | null {
-  const it = p.interior;
-  if (!it.built) return null;
-  const t = z - it.free.z1;
-  if (t < 0 || t > EXIT_MOUTH_END) return null;
-  for (const e of it.exits) {
-    if (Math.abs(x - e.x) <= e.halfWidth) return it.floorY + exitMouthFloorY(t);
+  const net = p.network;
+  if (!net.built) return null;
+  for (const m of net.mouths) {
+    const host = net.rooms.find((r) => r.id === m.roomId);
+    if (!host?.walkable) continue;
+    // `t` compte depuis le NU de la paroi vers l'extérieur, `across` court le
+    // long d'elle. C'est la seule généralisation nécessaire : la bouche
+    // s'ouvre dans une paroi quelconque, et non plus au fond vers +z.
+    const r = host.rect;
+    const t = m.side === 'z1' ? z - r.z1
+      : m.side === 'z0' ? r.z0 - z
+        : m.side === 'x1' ? x - r.x1
+          : r.x0 - x;
+    if (t < 0 || t > EXIT_MOUTH_END) continue;
+    const across = m.side === 'z0' || m.side === 'z1' ? x : z;
+    if (Math.abs(across - m.at) <= m.halfWidth) return host.floorY + exitMouthFloorY(t);
+  }
+  return null;
+}
+
+/**
+ * Le sol dans un OUVRAGE DE LIAISON - volée, mécanique, rampe, couloir - ou
+ * null si le point n'y est pas.
+ *
+ * C'est le « M liens verticaux » du plan (constat S1), et c'est ce qui manquait
+ * pour qu'une gare ait plus de deux étages : jusqu'ici, un seul accès faisait
+ * changer d'altitude, et il n'y en avait qu'un par gare. Un lien praticable est
+ * maintenant du sol comme un autre, et son altitude s'interpole entre ses deux
+ * bouts - exactement comme une volée de trémie.
+ *
+ * Aucun réseau n'en porte encore : le hall générique n'a pas de liaison
+ * interne. Les trente relevés, eux, en ont quatorze, et c'est là que cette
+ * fonction se vérifie.
+ */
+export function joinFloorAt(
+  p: StationPlacement,
+  x: number,
+  z: number,
+): number | null {
+  const net = p.network;
+  if (!net.built) return null;
+  for (const j of net.joins) {
+    if (!j.walkable) continue;
+    const r = j.rect;
+    if (x < r.x0 || x > r.x1 || z < r.z0 || z > r.z1) continue;
+    const rooms = net.rooms;
+    const a = rooms.find((n) => n.id === j.from);
+    const b = rooms.find((n) => n.id === j.to);
+    if (!a || !b) continue;
+    // L'AXE DE LA PENTE VIENT DES DEUX PIÈCES, pas de la forme du rectangle.
+    // Le premier réflexe - « l'ouvrage est plus long qu'il n'est large, donc la
+    // pente suit sa longueur » - se trompe dès la première volée réelle : celle
+    // de la mezzanine d'Okachimachi fait cinq mètres soixante de large pour un
+    // mètre de long, et descend pourtant dans le sens du mètre. Ce qui décide,
+    // c'est l'axe qui SÉPARE les deux pièces ; la forme ne tranche que si elles
+    // sont l'une au-dessus de l'autre.
+    const midA = { x: (a.rect.x0 + a.rect.x1) / 2, z: (a.rect.z0 + a.rect.z1) / 2 };
+    const midB = { x: (b.rect.x0 + b.rect.x1) / 2, z: (b.rect.z0 + b.rect.z1) / 2 };
+    const gapX = Math.abs(midB.x - midA.x);
+    const gapZ = Math.abs(midB.z - midA.z);
+    const alongZ = Math.abs(gapZ - gapX) > 1e-6 ? gapZ > gapX : r.z1 - r.z0 >= r.x1 - r.x0;
+    const span = alongZ ? r.z1 - r.z0 : r.x1 - r.x0;
+    if (span <= 0) continue;
+    const raw = alongZ ? (z - r.z0) / span : (x - r.x0) / span;
+    const t = (alongZ ? midA.z <= midB.z : midA.x <= midB.x) ? raw : 1 - raw;
+    return j.fromY + (j.toY - j.fromY) * t;
   }
   return null;
 }
