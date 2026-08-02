@@ -296,8 +296,14 @@ interface Props {
   place: {
     stairs: Placed[];
     mainStair: Placed;
-    /** Le hall du bas est-il RÉELLEMENT construit ? Voir `open` plus bas. */
-    interior: { built: boolean };
+    /**
+     * Les accès QUI MÈNENT QUELQUE PART : voir `open` plus bas.
+     *
+     * Il n'y en avait qu'un, et le savoir tenait dans `interior.built` -
+     * la trémie principale s'ouvrait si le hall existait. Une gare peut en
+     * avoir deux (Harajuku), et c'est la liste qui tranche, trémie par trémie.
+     */
+    liveAccesses: readonly { stair: Placed; rise: 'down' | 'up' }[];
   };
   m: Mats;
   station: number;
