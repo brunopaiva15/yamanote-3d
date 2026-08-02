@@ -57,7 +57,6 @@ import {
   paAlightFirst,
   paArrival,
   paDoorsClosing,
-  paPsdBeeps,
   updatePlatformSpeakers,
 } from './stationPa';
 import { lineDelayed, notifyOnboardEmergency, notifyPowerOutage } from './lineDisruption';
@@ -1207,10 +1206,11 @@ export function updateCycle(dt: number): void {
       });
       // Puis le quai referme ses portes, nettement après la rame, avec un
       // décalage lui aussi variable selon la gare.
-      once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () => {
-        setPsdDoors(0);
-        paPsdBeeps();
-      });
+      // (L'avertisseur de fermeture part avec les vantaux, depuis les baies
+      // elles-mêmes : setPsdDoors s'en charge.)
+      once('psd-close', t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay, () =>
+        setPsdDoors(0),
+      );
       // Une porte tenue ouverte par un voyageur ou un objet : le circuit de
       // départ n'est pas établi et l'indication de départ n'apparaît pas en
       // cabine. On retient l'horloge au bord de la bascule - la chronologie de
