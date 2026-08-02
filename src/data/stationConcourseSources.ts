@@ -221,8 +221,9 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
       consultedAt: '2026-08-02',
       note: 'PDF fournis à la main (réseau bloqué) : cinq onglets sur six, la '
         + 'feuille « Sobu Line » manque. Porte « As of May, 2026 » et '
-        + 'l’avertissement de chantier. Le CADRAGE des feuilles fournies couvre le '
-        + 'côté Yaesu ; le côté Marunouchi est hors champ. '
+        + 'l’avertissement de chantier. Le cadrage des PDF couvre le côté Yaesu ; '
+        + 'des captures d’écran ultérieures couvrent Marunouchi mais à une '
+        + 'résolution où les libellés de portillon sont illisibles (~1 px/m). '
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],

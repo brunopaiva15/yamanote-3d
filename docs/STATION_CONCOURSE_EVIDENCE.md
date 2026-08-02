@@ -159,14 +159,16 @@ seulement pour vérifier une orientation en surface.
 - **2F — les quais des lignes classiques et du Shinkansen**, tous ensemble : voies 1 à 10 puis 14 à 23.
 - **1F — le niveau des contrôles et des passages**, celui qu’on parcourt.
 - **B1F — Gransta**, et une seconde nappe de circulation : plusieurs volées de quai sont fléchées « for Tracks No.X (2F) **& Concourse Area (B1F)** », donc desservent les deux niveaux à la fois.
-- **Keiyō Line** et **Sobu Line** ont leurs propres feuilles : ce sont des gares dans la gare, à plusieurs centaines de mètres et cinq niveaux de là. La feuille Sobu n’a pas été fournie.
+- **Keiyō Line** — feuille propre, et elle est éloquente : la ligne est au **B3F** (zone payante) et au **B4F** (quais), atteinte par un **couloir en L de plusieurs centaines de mètres** qui part du sud de la gare. Le « long accès Keiyō » du cahier des charges n’est pas une impression : c’est la forme même du plan.
+- **Sobu Line** — feuille non fournie. C’est de même une gare dans la gare, souterraine et distante.
 
 **Groupes de portillons**
 
 - **Côté Yaesu, relevé** : *Yaesu North Exit*, *Yaesu Central Exit*, *Yaesu South Exit*, et **Nihonbashi Exit** (deux contrôles distincts, l’un vers le Tōhoku Shinkansen, l’autre vers le Tōkaidō・Sanyō).
 - **Contrôles de Shinkansen, qui sont des lignes à part entière** : *Tōkaidō and Sanyō Shinkansen (Yaesu Central North Exit)*, *(Yaesu Central South Exit)*, *(Yaesu North Exit)*. À Tokyo, on ne « passe pas au Shinkansen » : on franchit un second 改札.
 - **Transferts internes nommés** : *Tōhoku…Shinkansen North / Central / South Transfer*, *Tōkaidō・Sanyō Shinkansen Central / South Transfer*. Ce sont des lignes de contrôle **entre deux zones payantes**.
-- ⚠️ **Le côté Marunouchi n’est pas dans le cadrage fourni.** Le Marunouchi Central Gate — celui que le cahier des charges désigne comme tranche principale — n’a donc pas été lu.
+- **Marunouchi South Exit** — seul contrôle du côté Marunouchi lisible à ce jour, sur une capture d’écran de la feuille 1F recadrée à l’ouest.
+- ⚠️ Le **Marunouchi Central Exit** et le **Marunouchi North Exit** ne sont toujours **pas lisibles** : la capture qui les contient est à une résolution d’environ un pixel par mètre, où un libellé de portillon fait trois pixels de haut. Ils sont dans le champ, mais pas dans l’image.
 - Ascenseurs **A à P** sur la seule feuille 1F.
 
 **Ordre le long du quai** — Trois passages transversaux nommés relient Marunouchi à Yaesu : **Northern Passage**, **Central Passage**, **Southern Passage**, plus un **Northern Free Passage** hors contrôle. C’est l’ossature de Tokyo : la gare se traverse d’ouest en est par trois couloirs, et les volées de quai y tombent perpendiculairement.
@@ -193,7 +195,7 @@ Le plan porte « *There may be some changes due to construction work. As of May,
 
 **Incertain**
 
-- ⚠️ **Le côté Marunouchi manque.** Les feuilles fournies sont cadrées sur Yaesu : ni *Marunouchi Central Exit*, ni *Marunouchi North / South*, ni la halle de brique ne sont dans le champ. C’est précisément la tranche que le cahier des charges veut construire — elle reste à relever.
+- ⚠️ **Le côté Marunouchi reste à demi lu.** Les PDF du premier envoi sont cadrés sur Yaesu ; les captures d’écran du second couvrent bien Marunouchi mais à une résolution où les libellés sont illisibles. Seul le *Marunouchi South Exit* a pu être identifié. Il faut une **impression PDF** de la feuille 1F recadrée à l’ouest : c’est le format du premier envoi, et il porte une image de carte à haute résolution qu’une capture d’écran ne conserve pas.
 - La feuille **Sobu Line** n’a pas été fournie (cinq onglets sur six).
 - Le plan date de **mai 2026**, trois mois avant la référence, et se déclare lui-même sujet à changement sans localiser le chantier.
 - Les **noms japonais** ne sont pas sur cette édition anglaise : 丸の内中央口, 八重洲中央口, 日本橋口 restent à confirmer.
