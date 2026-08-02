@@ -274,6 +274,28 @@ export interface GateGroup {
   wideAt?: 'start' | 'end';
   /** Guichet de contrôle habité (有人改札) accolé à la ligne. */
   staffed?: boolean;
+  /**
+   * 「ICカード専用」 — le groupe n'accepte QUE la carte sans contact.
+   *
+   * Les trois champs qui suivent ont été ajoutés après le relevé des trente
+   * plans, et pour une seule raison : ce sont des faits qu'AUCUNE GÉNÉRATION
+   * NE PRODUIT. Le contrôle central de la halle de brique de Tokyo est marqué
+   * « IC card only » sur le plan ; trois des cinq contrôles de Yūrakuchō le
+   * sont aussi ; Shin-Ōkubo a un « Exit Only (IC card only) » ; deux des neuf
+   * groupes de Shinjuku ferment la nuit et le plan donne leurs horaires. Le
+   * jeu tient déjà une carte (`store.pocket`) : ces règles sont directement
+   * jouables, et les taire reviendrait à niveler ce que le relevé a trouvé.
+   */
+  icOnly?: true;
+  /** Passage à sens unique : on sort par là, on n'entre pas. */
+  exitOnly?: true;
+  /**
+   * Horaires d'ouverture, RECOPIÉS du plan tels qu'il les écrit.
+   *
+   * Absent = ouvert au service, ce qui est le cas des vingt-huit autres
+   * groupes du relevé. Ce n'est pas une chaîne à parser : c'est une citation.
+   */
+  hours?: string;
   depiction: Depiction;
   confidence?: DataConfidence;
 }
@@ -323,6 +345,21 @@ export interface TransferPortal {
   fromNodeId: string;
   /** Où ça part : plus bas, plus haut, ou de plain-pied. */
   goes: 'down' | 'up' | 'across';
+  /**
+   * La correspondance passe par une LIGNE DE CONTRÔLE entre deux zones payantes.
+   *
+   * Sept gares du relevé en ont une, et c'est une topologie que `GateGroup` ne
+   * peut pas décrire : un groupe de portillons relie du payant à du LIBRE, par
+   * construction. Or à Tokyo on franchit un 改札 pour passer au Shinkansen, à
+   * Nippori pour passer au Keisei, à Shinagawa au Keikyū, à Hamamatsuchō au
+   * monorail de Haneda, à Takadanobaba au Seibu, à Gotanda au Tōkyū Ikegami,
+   * à Ueno au Shinkansen — sans jamais repasser en zone libre.
+   *
+   * Le portail porte donc le fait, plutôt que de le perdre : la correspondance
+   * est GARDÉE. Elle n'est toujours pas franchissable par le joueur, mais elle
+   * se dessine avec ses bornes et son panneau au lieu d'une simple flèche.
+   */
+  gated?: true;
   depiction: Depiction;
   nameJp?: string;
   nameEn?: string;
@@ -779,6 +816,12 @@ export function validateProfile(p: StationConcourseProfile): ProfileIssue[] {
   for (const t of p.transferPortals) {
     if (!nodes.has(t.fromNodeId)) bad('danglingNode', t.id, `hall inconnu : ${t.fromNodeId}`);
     if (t.lines.length === 0) bad('noLine', t.id, 'correspondance sans ligne');
+    // Une ligne de contrôle entre exploitants se VOIT : elle a des bornes, un
+    // guichet et un panneau. La réduire à une flèche perdrait précisément ce
+    // que `gated` sert à dire.
+    if (t.gated && t.depiction === 'signOnly') {
+      bad('gatedSign', t.id, 'correspondance gardée réduite à un panneau');
+    }
   }
   for (const z of p.commercialZones) {
     const node = nodes.get(z.nodeId);
@@ -814,9 +857,19 @@ export function validateProfile(p: StationConcourseProfile): ProfileIssue[] {
 
   // --- Le graphe praticable ---
   //
-  // Depuis l'accès principal, en ne franchissant que ce qui est praticable :
+  // Depuis les accès de quai, en ne franchissant que ce qui est praticable :
   // atteint-on un groupe de portillons, puis une zone libre, puis une sortie ?
   // C'est la question qui distingue une gare d'une collection de rectangles.
+  //
+  // LES ACCÈS SONT PLUSIEURS, et c'est Harajuku qui l'a montré. Le relevé y
+  // donne DEUX ensembles complets - le souterrain de Takeshita au B1F et le
+  // bâtiment de 2020 au 2F - si petits que l'un ne suffirait pas à faire une
+  // gare, et sans aucun passage de l'un à l'autre hors quai. Ils sont pourtant
+  // tous les deux praticables : on remonte sur le quai, on marche, on
+  // redescend par l'autre bout. Ne partir que de l'accès principal aurait
+  // déclaré le second « coupé du réseau » alors que c'est le QUAI qui les
+  // relie - et le quai n'est pas un nœud du profil, il est ce sur quoi le
+  // profil se greffe.
   const walkNodes = new Set(p.concourses.filter((n) => isWalkable(n.depiction)).map((n) => n.id));
   const adj = new Map<string, string[]>();
   const join = (a: string, b: string) => {
@@ -835,9 +888,10 @@ export function validateProfile(p: StationConcourseProfile): ProfileIssue[] {
   }
   const primary = accesses.get(p.primaryAccessId);
   if (primary && isWalkable(primary.depiction)) {
-    const start = primary.toNodeId;
     const reached = new Set<string>();
-    const queue = [start];
+    const queue = p.platformAccesses
+      .filter((a) => isWalkable(a.depiction))
+      .map((a) => a.toNodeId);
     while (queue.length) {
       const at = queue.pop()!;
       if (reached.has(at) || !walkNodes.has(at)) continue;

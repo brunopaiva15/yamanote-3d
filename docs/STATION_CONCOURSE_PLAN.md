@@ -268,7 +268,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **2** | **Registre des sources** ✅ | `stationConcourseSources.ts` : 30 plans JR East localisés ; `STATION_CONCOURSE_EVIDENCE.md` | D6 |
 | **3** | **Sorties et portillons réels** ✅ | `data/lines` : relevé complet des 30 gares ; `stationInterior` : 4 corrections de nommage + 8 contrôles anonymes | D4 D5 |
 | **4** | **Relevé documentaire** ✅ | `STATION_CONCOURSE_EVIDENCE.md` : **30 plans officiels lus** | D5 D6 D7 D8 |
-| 5 | Profils, données seules | `stationConcourseProfiles.ts` : 30 profils, aucun consommateur | D1→D8 |
+| **5** | **Profils, données seules** ✅ | `stationConcourseProfiles.ts` : 30 profils validés, aucun consommateur ; 13 tests | D1→D8 |
 | 6 | Emprise déclarée | le profil publie son emprise ; `groundStrip` / `stationOcclusion` la lisent | **G1** |
 | 7 | Compilateur de profil | `stationConcourseBuild.ts` : profil → réseau de rectangles ; fallback vers `interiorFor` | G2 R4 |
 | 8 | Réseau dans les niveaux | `stationLevels` : N nœuds, M liens verticaux | S1 |
@@ -356,6 +356,54 @@ ligne, et lisible sans le plan.
 Les quatre autres gares demandées — Shibuya, Ueno, Harajuku, Takanawa Gateway —
 suivront le même chemin si les plans arrivent. Les vingt-cinq restantes ne
 bloquent rien : elles avancent en `approximate`.
+
+### 4.3 Ce que la phase 5 a chiffré, et qui commande la phase 6
+
+Les trente profils sont écrits et validés. Trois résultats en sortent, et deux
+d'entre eux ont demandé de rouvrir le format de la phase 1 — ce qui est le
+signe qu'un relevé sert à quelque chose.
+
+**1. Vingt-trois gares sur trente sortent de la bande du quai.** Sept seulement
+tiennent entre `PSD_X` et le fond de quai : Kanda, Okachimachi, Ōtsuka,
+Takadanobaba, Yoyogi, Shimbashi, Yūrakuchō — les seules dont le hall suit
+vraiment l'axe des voies. Les vingt-trois autres ont un ouvrage TRANSVERSAL :
+passerelle (Tamachi, Ōsaki, Shinagawa, Takanawa Gateway), pont-concourse
+(Nippori, Tabata, Komagome, Sugamo, Mejiro), plateau (Ueno), couloir traversant
+en zone payante (Tokyo, Shinjuku), ou souterrain qui passe sous les voies
+(Uguisudani). Le chiffre est tenu par un test : **G1 n'est pas une hypothèse,
+c'est les trois quarts de la boucle**, et la phase 6 décide donc du sort de
+vingt-trois gares, pas de trois.
+
+**2. Quatre faits n'entraient pas dans le format.** Ils sont tous écrits sur un
+plan, et aucun moteur ne les aurait devinés :
+
+| Fait | Où | Champ ajouté |
+|---|---|---|
+| « IC card only » | Tokyo (Marunouchi Central), Yūrakuchō (3 contrôles sur 5), Shin-Ōkubo | `GateGroup.icOnly` |
+| « Exit Only » — passage à sens unique | Shin-Ōkubo, Shibuya (Hachikō) | `GateGroup.exitOnly` |
+| Contrôles qui **ferment la nuit**, horaires imprimés | Shinjuku (Central West, Southeast) | `GateGroup.hours` |
+| Ligne de contrôle **entre deux zones payantes** | Tokyo, Ueno, Nippori, Ikebukuro, Takadanobaba, Shinjuku, Gotanda, Shinagawa, Hamamatsuchō | `TransferPortal.gated` |
+
+Le dernier est structurel : `GateGroup` relie du payant à du LIBRE par
+construction, et ne peut donc pas décrire un 改札 franchi entre deux
+exploitants sans repasser en zone libre. Neuf gares sur trente en ont un.
+
+**3. `validateProfile` partait d'un seul accès, et Harajuku l'a corrigé.** Le
+relevé y donne deux ensembles complets — le souterrain de Takeshita au B1F, le
+bâtiment de 2020 au 2F — si petits que l'un ne suffirait pas à faire une gare,
+et sans aucun passage de l'un à l'autre hors quai. Ils sont pourtant tous les
+deux praticables : on remonte sur le quai, on marche, on redescend par l'autre
+bout. Le graphe se sème maintenant depuis **tous** les accès praticables, parce
+que c'est le quai qui les relie — et le quai n'est pas un nœud du profil, il est
+ce sur quoi le profil se greffe.
+
+**Ce que les profils ne prétendent pas être.** Les plans JR East n'ont ni
+échelle ni cotation : aucun rectangle n'est mesuré. Ce qui est relevé, c'est la
+topologie — niveaux, groupes, ordre, correspondances, enseignes nommées ; ce qui
+est composé, c'est la géométrie, et le fichier le dit en tête. D'où le plafond
+de confiance : aucun des trente ne dépasse `mostlyVerified`, quatre restent
+`approximate` parce que leur plan a deux à quatre ans, et **94 questions
+ouvertes** sont écrites nommément.
 
 ### Ordre et raison
 
