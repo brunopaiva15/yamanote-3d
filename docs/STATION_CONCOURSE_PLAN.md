@@ -276,7 +276,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **10** | **Portillons multiples** ✅ | `concourseBays` / `bayAt` : un rang plat qui traverse les groupes ; `fareGate` s'y branche | S2 |
 | **11** | **Itinéraires PNJ** ✅ | `concourseRoute` : axe lu sur la destination, choix de groupe, bouche sur n'importe quelle paroi | S3 |
 | **12** | **Accès secondaires vivants** ✅ | `placement.liveAccesses` ; la marche, le rendu et les itinéraires les lisent tous | G3 |
-| 13 | Rendu : `ConcourseNetwork` | remplace l'appel unique ; dessine nœud par nœud | R1 |
+| **13** | **Rendu : `ConcourseNetwork`** ✅ | `shellsOf` : volumes continus ; `Concourse` devient un archétype parmi d'autres | R1 |
 | 14 | Archétypes 1 — halls | `LinearConcourse`, `CompactLocalHall`, `UnderViaductHall` | R1 |
 | 15 | Archétypes 2 — hauteur | `OverbridgeHall`, `CrossConcourse`, mezzanines | R1 |
 | 16 | Archétypes 3 — limites | `ExitBranch`, `TransferPortal`, `ConstructionPartition` | G4 D7 |
@@ -701,6 +701,43 @@ encore son ouvrage. La première l'a (`risingMain`, le tablier qui perce
 l'auvent) ; la seconde attend les archétypes de hauteur (phase 15). Rien n'est
 visible aujourd'hui — aucune gare n'est branchée — mais c'est la première chose
 à faire avant de brancher Harajuku.
+
+### 4.11 La phase 13 : le rendu part du réseau
+
+`Station` appelait `Concourse` **une fois**, avec l'intérieur de la gare, et
+`Concourse` enveloppait une boîte : sol, plafond, deux parois, un fond percé,
+une ligne de portillons. C'était le constat R1 — un composant unique qui ne sait
+dessiner qu'un couloir droit.
+
+`ConcourseNetwork` prend sa place. Il ne dessine rien lui-même : il lit le
+réseau, en tire les **volumes continus**, et confie chacun à son archétype.
+
+**Pourquoi des volumes, et non des pièces.** Une pièce n'est pas une salle
+fermée : la zone payante et la zone libre partagent un sol, un plafond et deux
+parois. Les envelopper séparément poserait deux murs au droit du contrôle, là où
+il n'y a qu'un passage. `shellsOf` regroupe donc les pièces qui se touchent,
+directement ou par une ligne de portillons franchissable :
+
+| Gare | Volumes |
+|---|---|
+| les trente halls génériques | **1**, aux cotes d'avant au centimètre |
+| JY19 Harajuku | **2** — le souterrain de Takeshita, le bâtiment de 2020 |
+| JY04 Okachimachi | **2** — le hall, et sa mezzanine M2F |
+
+**Un seul archétype aujourd'hui**, et c'est voulu : `Concourse`, le hall
+longitudinal, celui qui existe. Il ne lit plus `interior` que pour son
+**mobilier** — le meuble viendra au réseau en phase 19 ; toute sa géométrie vient
+du volume. Les phases 14 à 16 ajouteront les autres, et c'est dans
+`ConcourseNetwork`, et nulle part ailleurs, qu'on choisira lequel.
+
+**Comment on sait que rien n'a bougé.** Un test compare l'enveloppe du volume
+aux cotes de l'ancien hall sur les trente gares — même rectangle, même sol, même
+plafond, mêmes bouches, dans le même ordre. Et surtout, la **sonde de volumes**
+du dépôt (`__stationProbe`, qui lit le graphe de scène tel qu'il est rendu et
+rapporte les paires qui s'interpénètrent) a été passée sur les trente gares
+**avant et après** : les deux sorties sont **identiques octet pour octet**,
+502 paires de part et d'autre, aucune erreur de page. Un refactor de rendu qu'on
+ne peut pas regarder méritait mieux qu'un test numérique.
 
 ### Ordre et raison
 

@@ -38,6 +38,7 @@ const {
   bayAt,
   compileProfile,
   concourseBays,
+  shellsOf,
 } = await import('../src/data/stationConcourseBuild.ts');
 const {
   routeToStreet,
@@ -530,4 +531,76 @@ test('on entre par la volée qui donne sur SA zone payante', () => {
   }
   // Et les deux ensembles servent, sinon la moitié de la gare serait morte.
   assert.deepEqual([...both].sort(), ['paid-omote', 'paid-takeshita']);
+});
+
+// --- Phase 13 : les volumes que le rendu enveloppe -----------------------
+
+test('LE HALL GÉNÉRIQUE DONNE UN VOLUME, AUX COTES D’AVANT', () => {
+  // `three/station/Concourse` enveloppait une boîte lue dans `interior` : sol,
+  // plafond, deux parois, un fond percé. Elle lit maintenant un VOLUME du
+  // réseau. Tant qu'aucune gare n'est branchée, les deux doivent coïncider au
+  // centimètre — c'est ce qui fait qu'un refactor de rendu ne se voit pas.
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const p = PLACE(i);
+    const shells = shellsOf(p.network);
+    if (!p.network.built) {
+      assert.equal(shells.length, 0, `${NAME(i)} : un volume sur une gare non bâtie`);
+      continue;
+    }
+    assert.equal(shells.length, 1, `${NAME(i)} : ${shells.length} volumes`);
+    const s = shells[0];
+    const it = p.interior;
+    // L'enveloppe : de la zone payante au fond de la zone libre, la ligne de
+    // portillons comprise — exactement ce que le composant dessinait.
+    assert.deepEqual(s.rect, { x0: it.paid.x0, x1: it.paid.x1, z0: it.paid.z0, z1: it.free.z1 }, NAME(i));
+    assert.equal(s.floorY, it.floorY, NAME(i));
+    assert.equal(s.ceilY, it.ceilY, NAME(i));
+    assert.equal(s.gates.length, 1, NAME(i));
+    assert.equal(s.gates[0].rect.z0, it.gate.z0, NAME(i));
+    assert.equal(s.gates[0].nameJp, it.gate.nameJp, NAME(i));
+    // Les bouches, dans le même ordre et aux mêmes abscisses.
+    assert.deepEqual(
+      s.mouths.map((mo) => [mo.at, mo.halfWidth, mo.slot]),
+      it.exits.map((e) => [e.x, e.halfWidth, e.slot]),
+      NAME(i),
+    );
+    // Et le volume contient bien les deux zones, une payante et une libre.
+    assert.deepEqual(s.rooms.map((r) => r.fare), ['paid', 'free'], NAME(i));
+  }
+});
+
+test('DEUX ENSEMBLES SÉPARÉS FONT DEUX VOLUMES', () => {
+  // Envelopper les deux gares de Harajuku ensemble tendrait une paroi de
+  // quarante mètres entre deux halls qui ne se touchent pas, et un plafond
+  // par-dessus la voie.
+  const h = shellsOf(compileProfile(CONCOURSE_PROFILES[18]));
+  assert.equal(h.length, 2);
+  assert.notEqual(h[0].levelId, h[1].levelId, 'les deux volumes sont au même niveau');
+  const gap = Math.min(
+    Math.abs(h[0].rect.x0 - h[1].rect.x1),
+    Math.abs(h[1].rect.x0 - h[0].rect.x1),
+  );
+  assert.ok(gap > 0 || h[0].floorY !== h[1].floorY, 'les deux volumes se touchent');
+
+  // Okachimachi aussi : sa mezzanine est un demi-niveau, pas un bout de hall.
+  const o = shellsOf(compileProfile(CONCOURSE_PROFILES[3]));
+  assert.equal(o.length, 2);
+  assert.deepEqual(o.map((s) => s.kind).sort(), ['mezzanine', 'underViaduct']);
+});
+
+test('un volume est continu : les pièces qu’un portillon joint restent ensemble', () => {
+  // La zone payante et la zone libre n'ont pas le même côté de la ligne, mais
+  // elles partagent un sol, un plafond et deux parois. Les séparer poserait
+  // deux murs au droit du contrôle, là où il n'y a qu'un passage.
+  for (const p of CONCOURSE_PROFILES) {
+    const net = compileProfile(p);
+    for (const g of net.gates) {
+      if (!g.walkable) continue;
+      const shells = shellsOf(net);
+      const from = shells.findIndex((s) => s.rooms.some((r) => r.id === g.from));
+      const to = shells.findIndex((s) => s.rooms.some((r) => r.id === g.to));
+      if (from < 0 || to < 0) continue;
+      assert.equal(from, to, `${NAME(p.stationIndex)} : ${g.id} coupe un volume en deux`);
+    }
+  }
 });

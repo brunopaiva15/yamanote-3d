@@ -34,6 +34,7 @@ import {
   HALL_WALL_T,
   type StationInterior,
 } from '../../data/stationInterior';
+import type { ConcourseShell } from '../../data/stationConcourseBuild';
 import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
 import { makeConcourseGuideTexture, type GuideKind } from '../../textures/concourse';
@@ -69,25 +70,36 @@ const LAMP_PITCH = 4.2;
  * du quai le déclare sans le construire, faute de volée montante pour y aller.
  */
 export function Concourse({
+  shell,
   it,
   m,
   station,
   detail,
 }: {
+  /** Le volume à envelopper : une ou plusieurs pièces du réseau. */
+  shell: ConcourseShell;
+  /**
+   * L'intérieur générique de la gare, pour son MOBILIER et rien d'autre.
+   *
+   * Le meuble n'est pas encore du réseau - il y viendra en phase 19 - et le
+   * fléchage suspendu doit savoir ce qu'il enjambe. Toute la GÉOMÉTRIE, elle,
+   * vient de `shell`.
+   */
   it: StationInterior;
   m: Mats;
   station: number;
   /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
   detail: number;
 }) {
-  const width = it.paid.x1 - it.paid.x0;
-  const z0 = it.paid.z0;
-  const z1 = it.free.z1;
+  const gate = shell.gates[0];
+  const width = shell.rect.x1 - shell.rect.x0;
+  const z0 = shell.rect.z0;
+  const z1 = shell.rect.z1;
   const length = z1 - z0;
-  const midX = (it.paid.x0 + it.paid.x1) / 2;
+  const midX = (shell.rect.x0 + shell.rect.x1) / 2;
   const midZ = (z0 + z1) / 2;
-  const height = it.ceilY - it.floorY;
-  const midY = (it.ceilY + it.floorY) / 2;
+  const height = shell.ceilY - shell.floorY;
+  const midY = (shell.ceilY + shell.floorY) / 2;
 
   // Le bandeau 改札 au-dessus de la ligne : il porte le nom réel de la sortie,
   // et c'est la seule chose du niveau qui change d'une gare à l'autre.
@@ -96,7 +108,7 @@ export function Concourse({
     () => new THREE.MeshBasicMaterial({ map: sign.texture, toneMapped: false }),
     [sign],
   );
-  useEffect(() => sign.redraw(it.gate.nameJp, it.gate.nameRomaji), [sign, it.gate]);
+  useEffect(() => sign.redraw(gate.nameJp, gate.nameEn), [sign, gate]);
   useEffect(
     () => () => {
       signMat.dispose();
@@ -129,11 +141,11 @@ export function Concourse({
     <group name="gare/hall">
       {/* Sol, plafond, et les deux parois longues. Le volume est clos : sans
           cela, on verrait le ballast par-dessous la dalle du quai. */}
-      <mesh position={[midX, it.floorY - 0.06, shellZ]} material={m.slab}>
+      <mesh position={[midX, shell.floorY - 0.06, shellZ]} material={m.slab}>
         <boxGeometry args={[width + 2 * WALL_T, 0.12, shellLen]} />
       </mesh>
       <mesh
-        position={[midX, it.ceilY - 0.06, shellZ]}
+        position={[midX, shell.ceilY - 0.06, shellZ]}
         geometry={ceilGeo}
         material={m.hallCeil}
       />
@@ -146,7 +158,7 @@ export function Concourse({
           />
           {/* Soubassement de faïence : à hauteur de main, c'est lui qu'on voit. */}
           <mesh
-            position={[midX + (d * (width - 0.04)) / 2, it.floorY + DADO_H / 2, shellZ]}
+            position={[midX + (d * (width - 0.04)) / 2, shell.floorY + DADO_H / 2, shellZ]}
             geometry={dadoGeo}
             material={m.tile}
           />
@@ -160,7 +172,7 @@ export function Concourse({
               d'épaule d'un hall appartient au mobilier (three/station/Fixtures)
               et à la signalétique, pas à la paroi. */}
           <mesh
-            position={[midX + (d * (width - 0.02)) / 2, it.floorY + 0.07, shellZ]}
+            position={[midX + (d * (width - 0.02)) / 2, shell.floorY + 0.07, shellZ]}
             material={m.wallDark}
           >
             <boxGeometry args={[0.04, 0.14, shellLen]} />
@@ -173,7 +185,7 @@ export function Concourse({
           décor extérieur par les bandes laissées de part et d'autre. */}
       {[-1, 1].map((d) => {
         const inner = midX + d * STAIR_LOWER_HALF_X;
-        const outer = d < 0 ? it.paid.x0 : it.paid.x1;
+        const outer = d < 0 ? shell.rect.x0 : shell.rect.x1;
         const panelWidth = Math.abs(outer - inner);
         return (
           <mesh
@@ -189,7 +201,7 @@ export function Concourse({
       {/* Fond du hall, percé des bouches de sortie. Elles ne se franchissent pas
           encore - la volée qui monte à la rue reste à dessiner - mais le jour
           qui en tombe dit d'où il vient, et le fléchage dit où elles mènent. */}
-      <ExitWall it={it} m={m} station={station} height={height} midY={midY} />
+      <ExitWall shell={shell} m={m} station={station} height={height} midY={midY} />
 
       {/* La ligne de portillons : bornes, battants, lecteurs et feux. Elle
           n'est plus une rangée de boîtes - elle s'ouvre, elle se ferme, et
@@ -197,11 +209,11 @@ export function Concourse({
       <FareGates it={it} m={m} height={height} midY={midY} />
 
       {/* Le bandeau 改札, suspendu au-dessus de la ligne, face à qui arrive. */}
-      <mesh position={[midX, GATE_SIGN_Y + it.floorY, it.gate.z0 - 0.12]} material={m.frame}>
+      <mesh position={[midX, GATE_SIGN_Y + shell.floorY, gate.rect.z0 - 0.12]} material={m.frame}>
         <boxGeometry args={[Math.min(width - 0.4, 3.6) + 0.08, GATE_SIGN_H + 0.08, 0.09]} />
       </mesh>
       <mesh
-        position={[midX, GATE_SIGN_Y + it.floorY, it.gate.z0 - 0.168]}
+        position={[midX, GATE_SIGN_Y + shell.floorY, gate.rect.z0 - 0.168]}
         rotation={[0, Math.PI, 0]}
         material={signMat}
       >
@@ -211,13 +223,13 @@ export function Concourse({
       {/* Réglettes de plafond : la lumière du lieu. Continues et très blanches,
           comme dans tout souterrain de gare - c'est ce qui fait briller le sol. */}
       {lamps.map((z, k) => (
-        <mesh key={`lamp${k}`} position={[midX, it.ceilY - 0.14, z]} material={m.lamp}>
+        <mesh key={`lamp${k}`} position={[midX, shell.ceilY - 0.14, z]} material={m.lamp}>
           <boxGeometry args={[Math.min(width - 1.2, 2.6), 0.08, 0.34]} />
         </mesh>
       ))}
 
       {/* Le fléchage suspendu : trois couleurs, et jamais autre chose. */}
-      <Guides it={it} m={m} />
+      <Guides shell={shell} it={it} m={m} />
 
       {/* Le mobilier : billetterie, konbini, consignes, distributeurs, tampon.
           L'implantation vient de data/stationInterior - la même liste que la
@@ -227,7 +239,7 @@ export function Concourse({
       {/* Ligne de guidage podotactile, dans l'axe, du couloir aux portillons
           puis des portillons aux sorties : elle traverse par un passage, jamais
           par une borne. */}
-      {detail <= 1 && <Guideline it={it} m={m} />}
+      {detail <= 1 && <Guideline shell={shell} m={m} />}
 
     </group>
   );
@@ -243,22 +255,23 @@ export function Concourse({
  * dans les baies de porte palière par lesquelles on ne peut pas monter.
  */
 function ExitWall({
-  it,
+  shell,
   m,
   station,
   height,
   midY,
 }: {
-  it: StationInterior;
+  shell: ConcourseShell;
   m: Mats;
   station: number;
   height: number;
   midY: number;
 }) {
+  const mouths = shell.mouths;
   // Le panneau jaune de chaque bouche : le MÊME que celui des potences du quai,
   // tiré du même relevé de sorties. Une gare ne fléche pas 八重洲中央口 en haut
   // des marches et autre chose en bas.
-  const signs = useMemo(() => it.exits.map((e) => makeExitSign(e.slot)), [it.exits]);
+  const signs = useMemo(() => mouths.map((e) => makeExitSign(e.slot)), [mouths]);
   const signMats = useMemo(
     () => signs.map((s) => new THREE.MeshBasicMaterial({ map: s.texture, toneMapped: false })),
     [signs],
@@ -273,17 +286,21 @@ function ExitWall({
     },
     [signMats, signs],
   );
-  const z = it.free.z1 + WALL_T / 2;
+  const z = shell.rect.z1 + WALL_T / 2;
   // Le mur se coupe en panneaux entre les bouches, plutôt que percé : deux
   // boîtes valent mieux qu'une géométrie extrudée pour trois trous.
-  const cuts = [...it.exits].sort((a, b) => a.x - b.x);
+  //
+  // `at` est l'abscisse de la bouche LE LONG DE SA PAROI. Tant que la paroi est
+  // celle du fond - c'est le cas des trente gares tant qu'aucune n'est branchée
+  // sur son relevé - c'est exactement l'ancien `x`.
+  const cuts = [...mouths].sort((a, b) => a.at - b.at);
   const panels: { x0: number; x1: number }[] = [];
-  let x = it.free.x0;
+  let x = shell.rect.x0;
   for (const exit of cuts) {
-    if (exit.x - exit.halfWidth > x) panels.push({ x0: x, x1: exit.x - exit.halfWidth });
-    x = exit.x + exit.halfWidth;
+    if (exit.at - exit.halfWidth > x) panels.push({ x0: x, x1: exit.at - exit.halfWidth });
+    x = exit.at + exit.halfWidth;
   }
-  if (x < it.free.x1) panels.push({ x0: x, x1: it.free.x1 });
+  if (x < shell.rect.x1) panels.push({ x0: x, x1: shell.rect.x1 });
 
   return (
     <group>
@@ -300,8 +317,8 @@ function ExitWall({
               faces se disputaient le tampon de profondeur. */}
           <mesh
             position={[
-              exit.x,
-              it.floorY + (EXIT_OPENING_H + height) / 2,
+              exit.at,
+              shell.floorY + (EXIT_OPENING_H + height) / 2,
               z,
             ]}
             material={m.hall}
@@ -321,8 +338,8 @@ function ExitWall({
               <mesh
                 key={`step${s}`}
                 position={[
-                  exit.x,
-                  it.floorY + top / 2,
+                  exit.at,
+                  shell.floorY + top / 2,
                   z - WALL_T / 2 + EXIT_MOUTH_Z0 + EXIT_MOUTH_GOING * (s + 0.5),
                 ]}
                 material={m.stair}
@@ -337,8 +354,8 @@ function ExitWall({
             <mesh
               key={`cheek${d}`}
               position={[
-                exit.x + d * (exit.halfWidth + 0.06),
-                it.floorY + 1.3,
+                exit.at + d * (exit.halfWidth + 0.06),
+                shell.floorY + 1.3,
                 z + WALL_T / 2 + 1.3,
               ]}
               material={m.hall}
@@ -347,13 +364,13 @@ function ExitWall({
             </mesh>
           ))}
           <mesh
-            position={[exit.x, it.floorY + 1.3, z + WALL_T / 2 + 2.55]}
+            position={[exit.at, shell.floorY + 1.3, z + WALL_T / 2 + 2.55]}
             material={m.hall}
           >
             <boxGeometry args={[exit.halfWidth * 2 + 0.24, 2.6, 0.12]} />
           </mesh>
           <mesh
-            position={[exit.x, it.floorY + 2.62, z + WALL_T / 2 + 1.3]}
+            position={[exit.at, shell.floorY + 2.62, z + WALL_T / 2 + 1.3]}
             material={m.hallCeil}
           >
             <boxGeometry args={[exit.halfWidth * 2 + 0.24, 0.12, 2.7]} />
@@ -361,20 +378,20 @@ function ExitWall({
           {/* Le jour qui tombe de la rue, une volée plus haut : il éclaire le
               haut des marches et rien d'autre. */}
           <mesh
-            position={[exit.x, it.floorY + 2.42, z + WALL_T / 2 + 2.44]}
+            position={[exit.at, shell.floorY + 2.42, z + WALL_T / 2 + 2.44]}
             material={m.lamp}
           >
             <boxGeometry args={[exit.halfWidth * 2 - 0.16, 0.5, 0.06]} />
           </mesh>
           {/* Panneau de sortie, au-dessus du percement. */}
           <mesh
-            position={[exit.x, it.floorY + 2.52, z - WALL_T / 2 - 0.03]}
+            position={[exit.at, shell.floorY + 2.52, z - WALL_T / 2 - 0.03]}
             material={m.frame}
           >
             <boxGeometry args={[exit.halfWidth * 2 + 0.06, 0.42, 0.07]} />
           </mesh>
           <mesh
-            position={[exit.x, it.floorY + 2.52, z - WALL_T / 2 - 0.071]}
+            position={[exit.at, shell.floorY + 2.52, z - WALL_T / 2 - 0.071]}
             rotation={[0, Math.PI, 0]}
             material={signMats[k]}
           >
@@ -388,8 +405,8 @@ function ExitWall({
               laquelle on ne peut pas monter : maille rouge, halo au point de
               contact, invisible tant qu'on n'y va pas. */}
           <Barrier
-            x={exit.x}
-            y={it.floorY + EXIT_OPENING_H / 2}
+            x={exit.at}
+            y={shell.floorY + EXIT_OPENING_H / 2}
             z={z - WALL_T / 2}
             width={exit.halfWidth * 2}
             height={EXIT_OPENING_H}
@@ -406,31 +423,35 @@ function ExitWall({
  * qui filerait droit dans une borne serait un contresens - c'est précisément la
  * ligne que suit qui ne voit pas.
  */
-function Guideline({ it, m }: { it: StationInterior; m: Mats }) {
+function Guideline({ shell, m }: { shell: ConcourseShell; m: Mats }) {
+  const gate = shell.gates[0];
+  const paid = shell.rooms.find((r) => r.fare === 'paid');
+  const free = shell.rooms.find((r) => r.fare === 'free');
+  if (!gate || !paid || !free) return null;
   // Le passage large : c'est celui vers lequel la bande mène, comme en vrai.
-  const target = it.gate.passages[it.gate.passages.length - 1];
-  const midX = (it.paid.x0 + it.paid.x1) / 2;
-  const y = it.floorY + 0.008;
+  const target = gate.passages[gate.passages.length - 1];
+  const midX = (shell.rect.x0 + shell.rect.x1) / 2;
+  const y = shell.floorY + 0.008;
   return (
     <group>
-      <mesh position={[midX, y, (it.paid.z0 + it.paid.z1) / 2 - 1.2]} material={m.tactile}>
-        <boxGeometry args={[0.3, 0.016, it.paid.z1 - it.paid.z0 - 2.4]} />
+      <mesh position={[midX, y, (paid.rect.z0 + paid.rect.z1) / 2 - 1.2]} material={m.tactile}>
+        <boxGeometry args={[0.3, 0.016, paid.rect.z1 - paid.rect.z0 - 2.4]} />
       </mesh>
       {/* Le raccord latéral vers l'axe du passage. */}
       <mesh
-        position={[(midX + target.x) / 2, y, it.paid.z1 - 0.9]}
+        position={[(midX + target.at) / 2, y, paid.rect.z1 - 0.9]}
         material={m.tactile}
       >
-        <boxGeometry args={[Math.abs(target.x - midX) + 0.3, 0.016, 0.3]} />
+        <boxGeometry args={[Math.abs(target.at - midX) + 0.3, 0.016, 0.3]} />
       </mesh>
-      <mesh position={[target.x, y, it.paid.z1 - 0.45]} material={m.tactile}>
+      <mesh position={[target.at, y, paid.rect.z1 - 0.45]} material={m.tactile}>
         <boxGeometry args={[0.3, 0.016, 0.9]} />
       </mesh>
       <mesh
-        position={[target.x, y, (it.free.z0 + it.free.z1) / 2]}
+        position={[target.at, y, (free.rect.z0 + free.rect.z1) / 2]}
         material={m.tactile}
       >
-        <boxGeometry args={[0.3, 0.016, it.free.z1 - it.free.z0]} />
+        <boxGeometry args={[0.3, 0.016, free.rect.z1 - free.rect.z0]} />
       </mesh>
     </group>
   );
@@ -451,10 +472,12 @@ function Guideline({ it, m }: { it: StationInterior; m: Mats }) {
  * Un panneau de plus serait du bruit ; c'est déjà ce qu'on reproche aux gares
  * réelles.
  */
-function Guides({ it, m }: { it: StationInterior; m: Mats }) {
+function Guides({ shell, it, m }: { shell: ConcourseShell; it: StationInterior; m: Mats }) {
+  const paid = shell.rooms.find((r) => r.fare === 'paid') ?? shell.rooms[0];
+  const free = shell.rooms.find((r) => r.fare === 'free') ?? shell.rooms[0];
   // Bas du panneau à 2,10 m : on passe dessous sans se baisser, et il reste
   // sous la dalle de plafond, qui est basse dans un souterrain.
-  const y = it.floorY + 2.32;
+  const y = shell.floorY + 2.32;
 
   /**
    * Le passage réellement libre à une abscisse donnée.
@@ -466,8 +489,8 @@ function Guides({ it, m }: { it: StationInterior; m: Mats }) {
    * contourne.
    */
   const aisleAt = (z: number) => {
-    let x0 = it.paid.x0;
-    let x1 = it.paid.x1;
+    let x0 = shell.rect.x0;
+    let x1 = shell.rect.x1;
     for (const f of it.fixtures) {
       if (f.rect.z1 < z - 0.7 || f.rect.z0 > z + 0.7) continue;
       if (f.facing === 1) x0 = Math.max(x0, f.rect.x1);
@@ -508,10 +531,10 @@ function Guides({ it, m }: { it: StationInterior; m: Mats }) {
   // hall, et rien à gauche ne mène dehors. Une flèche qui ment coûte plus cher
   // que pas de flèche du tout - c'est celle-là qu'on suit en marchant.
   const posts: [number, THREE.Material, boolean][] = [
-    [it.paid.z0 + 2.6, signs.exit, true],
-    [it.paid.z1 - 4.2, signs.facility, true],
-    [it.free.z0 + 2.2, signs.platform, false],
-    [it.free.z1 - 4.5, signs.exit, true],
+    [paid.rect.z0 + 2.6, signs.exit, true],
+    [paid.rect.z1 - 4.2, signs.facility, true],
+    [free.rect.z0 + 2.2, signs.platform, false],
+    [free.rect.z1 - 4.5, signs.exit, true],
   ];
 
   return (
@@ -526,7 +549,7 @@ function Guides({ it, m }: { it: StationInterior; m: Mats }) {
         // travers le plafond : le panneau semblait flotter sous deux poteaux
         // qui ne le touchaient pas.
         const rodBottom = h / 2 + 0.04;
-        const rodH = Math.max(0.06, it.ceilY - 0.12 - y - rodBottom);
+        const rodH = Math.max(0.06, shell.ceilY - 0.12 - y - rodBottom);
         return (
         <group key={`guide${k}`} position={[aisle.mid, y, z]}>
           {/* Caisson : deux faces possibles, mais une seule imprimée - on ne

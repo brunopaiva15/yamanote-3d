@@ -80,7 +80,7 @@ import { VendingMachines } from './VendingMachines';
 import { Signature } from './signatures';
 import { Stairwells } from './Stairwell';
 import { Overbridge } from './Overbridge';
-import { Concourse } from './Concourse';
+import { ConcourseNetwork } from './ConcourseNetwork';
 import { Kiosk } from './Kiosk';
 import { GatePlates } from './GatePlates';
 import { IdlePsd } from './IdlePsd';
@@ -678,13 +678,19 @@ export function Station() {
       <Stairwells place={descending} m={m} station={index} detail={detail} />
       {place.mainRise === 'up' && <Overbridge s={place.mainStair} m={m} />}
 
-      {/* Le niveau de correspondance, au bout du couloir de la trémie
-          principale. Il n'existe que là où l'on peut y aller : une gare dont le
-          hall est au-dessus du quai le déclare sans le construire, faute de
-          volée montante (data/stationInterior). Comme le reste du fond de
-          champ, il saute au palier de qualité le plus bas. */}
-      {place.interior.built && detail <= 2 && (
-        <Concourse it={place.interior} m={m} station={index} detail={detail} />
+      {/* Le niveau de correspondance, dessiné PIÈCE PAR PIÈCE depuis le réseau
+          (three/station/ConcourseNetwork). Il n'existe que là où l'on peut y
+          aller : une gare dont le hall est déclaré sans être construit n'en a
+          pas. Comme le reste du fond de champ, il saute au palier de qualité
+          le plus bas. */}
+      {place.network.built && detail <= 2 && (
+        <ConcourseNetwork
+          net={place.network}
+          it={place.interior}
+          m={m}
+          station={index}
+          detail={detail}
+        />
       )}
 
       {/* Affichage publicitaire : caissons du mur, colonnes habillées,

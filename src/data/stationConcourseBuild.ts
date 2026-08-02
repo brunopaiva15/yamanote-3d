@@ -602,6 +602,112 @@ export function networkIssues(
   return out;
 }
 
+// --- Les volumes continus ------------------------------------------------
+
+/**
+ * Un VOLUME CONTINU du réseau : ce que le rendu enveloppe d'un seul tenant.
+ *
+ * Une pièce n'est pas une salle fermée. La zone payante et la zone libre d'un
+ * hall sont deux pièces - elles n'ont pas le même côté de la ligne - mais elles
+ * partagent un sol, un plafond et deux parois : les dessiner séparément
+ * poserait deux murs au droit du contrôle, là où il n'y a qu'un passage.
+ *
+ * Un volume est donc un GROUPE DE PIÈCES qui se touchent, directement ou par
+ * une ligne de portillons franchissable. Le hall générique en donne exactement
+ * un, aux mêmes cotes qu'avant ; Harajuku en donne deux, qui ne se touchent
+ * pas et ne doivent surtout pas être enveloppés ensemble.
+ */
+export interface ConcourseShell {
+  id: string;
+  levelId: string;
+  /** L'archétype de rendu : celui de la plus grande pièce du volume. */
+  kind: ConcourseNodeKind;
+  floorY: number;
+  ceilY: number;
+  /** Enveloppe du volume, lignes de portillons comprises. */
+  rect: InteriorRect;
+  rooms: ConcourseRoom[];
+  gates: ConcourseGateLine[];
+  mouths: ConcourseMouth[];
+}
+
+/** Deux rectangles se touchent-ils, à un jeu près ? */
+function touches(a: InteriorRect, b: InteriorRect, eps = 0.02): boolean {
+  return a.x0 <= b.x1 + eps && a.x1 >= b.x0 - eps
+    && a.z0 <= b.z1 + eps && a.z1 >= b.z0 - eps;
+}
+
+function grow(a: InteriorRect, b: InteriorRect): InteriorRect {
+  return {
+    x0: Math.min(a.x0, b.x0),
+    x1: Math.max(a.x1, b.x1),
+    z0: Math.min(a.z0, b.z0),
+    z1: Math.max(a.z1, b.z1),
+  };
+}
+
+const SHELLS = new WeakMap<ConcourseNetwork, readonly ConcourseShell[]>();
+
+/** Les volumes continus d'une gare, dans l'ordre des pièces. */
+export function shellsOf(net: ConcourseNetwork): readonly ConcourseShell[] {
+  const hit = SHELLS.get(net);
+  if (hit) return hit;
+  const walk = net.rooms.filter((r) => r.walkable);
+  // Réunion par proche-en-proche : même niveau, et pièces qui se touchent ou
+  // que franchit un portillon.
+  const owner = new Map<string, number>();
+  const groups: ConcourseRoom[][] = [];
+  for (const r of walk) {
+    const near = groups.findIndex((g) => g.some((o) => o.levelId === r.levelId
+      && (touches(o.rect, r.rect)
+        || net.gates.some((x) => x.walkable
+          && ((x.from === o.id && x.to === r.id) || (x.from === r.id && x.to === o.id))))));
+    if (near >= 0) groups[near].push(r);
+    else groups.push([r]);
+  }
+  // Une seule passe ne suffit pas : A et C peuvent n'être joints que par B,
+  // rencontré après. On refond tant que deux groupes se rejoignent.
+  for (let merged = true; merged;) {
+    merged = false;
+    outer: for (let i = 0; i < groups.length; i++) {
+      for (let j = i + 1; j < groups.length; j++) {
+        const join = groups[i].some((a) => groups[j].some((b) => a.levelId === b.levelId
+          && (touches(a.rect, b.rect)
+            || net.gates.some((x) => x.walkable
+              && ((x.from === a.id && x.to === b.id) || (x.from === b.id && x.to === a.id))))));
+        if (!join) continue;
+        groups[i].push(...groups[j]);
+        groups.splice(j, 1);
+        merged = true;
+        break outer;
+      }
+    }
+  }
+  const out = groups.map((rooms): ConcourseShell => {
+    const ids = new Set(rooms.map((r) => r.id));
+    for (const r of rooms) owner.set(r.id, 0);
+    const gates = net.gates.filter((g) => ids.has(g.from) && ids.has(g.to));
+    let rect = rooms[0].rect;
+    for (const r of rooms) rect = grow(rect, r.rect);
+    for (const g of gates) rect = grow(rect, g.rect);
+    const area = (r: ConcourseRoom) => (r.rect.x1 - r.rect.x0) * (r.rect.z1 - r.rect.z0);
+    const biggest = rooms.reduce((m, r) => (area(r) > area(m) ? r : m));
+    return {
+      id: rooms[0].id,
+      levelId: rooms[0].levelId,
+      kind: biggest.kind,
+      floorY: rooms[0].floorY,
+      ceilY: rooms[0].ceilY,
+      rect,
+      rooms,
+      gates,
+      mouths: net.mouths.filter((m) => ids.has(m.roomId)),
+    };
+  });
+  SHELLS.set(net, out);
+  return out;
+}
+
 // --- Les baies, toutes lignes confondues ---------------------------------
 
 /**
