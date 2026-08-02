@@ -208,6 +208,23 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],
+  // JY05 Ueno. Quatre feuilles, une par onglet de niveau : 1F-M2, 2F, 3F,
+  // B4-B1. Même réserve de date que Shibuya : « As of June, 2026 ».
+  4: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Ueno Station (1F-M2, 2F, 3F, B4-B1)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e204.html',
+      documentDate: '2026-06',
+      consultedAt: '2026-08-02',
+      note: 'PDF fournis à la main (réseau bloqué), un par onglet de niveau. '
+        + 'Porte « As of June, 2026 ». La feuille B4-B1 (Shinkansen et Tokyo '
+        + 'Metro) n’a pas été dépouillée : hors périmètre Yamanote. '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
   // JY20 Shibuya. ATTENTION À LA DATE : ce jeu-ci porte « As of June, 2026 »,
   // deux mois AVANT la date de référence du chantier. Sur une gare en
   // reconstruction permanente, deux mois ne sont pas rien - c'est la seule

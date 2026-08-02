@@ -17,7 +17,7 @@ genre de document qui ment.
 
 ## ⚠ État de la vérification — à lire avant toute fiche
 
-**Plans officiels ouverts et lus : 2 / 30.**
+**Plans officiels ouverts et lus : 3 / 30.**
 
 L'environnement de développement de ce dépôt n'atteint pas les sites des
 opérateurs : la passerelle réseau refuse la connexion (403 sur `CONNECT`) vers
@@ -93,6 +93,7 @@ fondues dans le texte.
 
 | Gare | Date du plan | Écart |
 |---|---|---|
+| JY05 Ueno | 2026-06 | ⚠️ **décalé** par rapport à la référence |
 | JY17 Shinjuku | 2026-08 | ✅ la date de référence |
 | JY20 Shibuya | 2026-06 | ⚠️ **décalé** par rapport à la référence |
 
@@ -315,12 +316,13 @@ seulement pour vérifier une orientation en surface.
 
 ## JY05 Ueno — 上野
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **juin** 2026, pas d’août.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Ueno Station (1F-M2, 2F, 3F, B4-B1) | [lien](https://www.jreast.co.jp/fr/e/stations/e204.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（上野駅） | [ja](https://www.jreast.co.jp/estation/stations/204.html) · [en](https://www.jreast.co.jp/en/estation/stations/204.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -332,31 +334,50 @@ seulement pour vérifier une orientation en surface.
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **2F — les quais traversants.** Les douze voies 1 à 12 y sont, toutes. Six îlots, un ascenseur par îlot (**A à F**).
+- **3F — la grande zone payante.** Un vaste plateau d’où l’on redescend vers chaque quai : voies 1&2, 3&4, 5&6, 7&8, 9&10, puis 11&12 *(2F)* et 13-17 *(1F)*. Il porte **Park Gate** et **Iriya Gate**, et **ecute Ueno** derrière les portillons. Une mezzanine **M3F** s’y intercale.
+- **1F-M2 — la rue et les voies en cul-de-sac.** Voies terminales 13, 14&15, 16&17, la salle d’attente, et les débouchés : **Main Exit**, **Asakusa Exit**, **Iriya Exit**, **Higashi-Ueno Exit**, **Panda Bridge Exit (3F)**.
+- **B4-B1 — Shinkansen et Tokyo Metro.** Feuille non dépouillée : hors périmètre Yamanote. Le 1F la fléche par « for Shinkansen Concourse Area (B3F) » et « for Concourse Area (B1F) ».
+- **Quatre zones de concourse coexistent** — B1F, 2F, 3F et B3F (Shinkansen) — et le plan les nomme comme des destinations, pas comme des étages. C’est ce qui fait Ueno : on n’y va pas « en bas », on va « à la concourse 3F ».
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Park Gate** (公園口) et **Iriya Gate** (入谷口) — tous deux au **3F**, sur le grand plateau payant, avec Fare Adjustment et Tickets accolés.
+- **Transfer to Shinkansen** — une ligne de contrôle interne au 1F, entre la zone payante des lignes classiques et celle du Shinkansen.
+- Les captures fournies **ne montrent pas** le Central Gate ni le Shinobazu Gate : le cadrage s’arrête avant. Voir « Incertain ».
+
+**Ordre le long du quai** — Sur le plan de quais du 2F, un seul bracket couvre le nord de toutes les voies 1 à 12 : **Iriya Gate & Park Gate (3F)**. Autrement dit, depuis le quai Yamanote, l’accès documenté monte au 3F — la gare se quitte **par le haut**, ce qui est l’inverse de la plupart des gares de la boucle.
+
+**Voies Yamanote** — Voie **2** = Yamanote *for Tabata, Ikebukuro & Shinjuku* (内回り) ; voie **3** = Yamanote *for Akihabara, Tōkyō, Hamamatsuchō & Shinagawa* (外回り). Les voies **1** et **4** sont la Keihin-Tōhoku : le Yamanote partage donc chacun de ses deux îlots avec elle, ce qui **confirme** le relevé du dépôt (`config: sharedIsland`, `sharedWith: Keihin-Tōhoku`). Au-delà, voies 5 à 12 : Utsunomiya, Takasaki, Jōban, Ueno-Tōkyō.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Tokyo Metro Ginza & Hibiya** — fléché deux fois depuis le 1F, côté ouest, près de l’atre et du Main Exit, et depuis le Higashi-Ueno Exit.
+- **Shinkansen** — par une ligne de contrôle propre au 1F, puis descente vers la concourse B3F.
+- **Ueno-Tōkyō Line, Jōban, Utsunomiya, Takasaki, Narita** — voies 5 à 17, donc correspondances internes JR, en zone payante.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **ecute Ueno** — au **3F**, dans l’aplat « Large store (inside the ticket gates) ». Comme EATo LUMINE à Shinjuku, c’est une galerie **derrière** les portillons, et c’est elle qui donne son échelle au plateau.
+- **atre Ueno** — au **1F**, côté **libre**, en deux blocs de part et d’autre du Main Exit, avec un renvoi « for atre (2F) ». La gare a donc les deux enseignes du groupe JR East, à deux niveaux et de deux côtés des portillons — ce que le dépôt pressentait en déclarant `ecute` sans pouvoir le situer.
+- **NewDays** (au moins quatre), **KIOSK**, et six **SHOP** génériques répartis entre le 1F et le 3F.
+- **Statue of Sanso** *(orthographe du plan)* — le repère du hall 1F. Il s’agit de la statue de Saigō Takamori ; le plan l’écrit ainsi et c’est ce qui est relevé.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Une zone **« Under Construction »** au sud du plateau 3F, près des descentes vers le Shinkansen et les voies 13-17. Mention finale : « *As of June, 2026* ». Beaucoup moins de chantier qu’à Shibuya.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- **Le Central Gate et le Shinobazu Gate ne sont pas dans le cadrage.** Le dépôt les déclare déjà (中央改札 / 不忍口, `data/lines`) et ces plans ne les contredisent pas — ils ne les montrent simplement pas. Leur niveau et leur position restent à établir.
+- ⚠️ **Un désaccord possible avec le dépôt.** `data/stationLayouts` donne Ueno en `elevation: ground`. Or le plan place les voies 1 à 12 au **2F**, soit un niveau au-dessus de la rue — les quais traversants d’Ueno sont sur ouvrage, et ce sont les voies terminales 13-17 qui sont au sol. **Rien n’a été modifié** : `elevation` commande le rendu du quai, l’auvent et la profondeur, et cela déborde de ce chantier. À trancher séparément.
+- Les **noms japonais** des portillons ne sont pas sur cette édition anglaise : 公園口 / 入谷口 restent à confirmer.
+- La feuille **B4-B1** n’a pas été dépouillée (Shinkansen et Tokyo Metro, hors périmètre Yamanote).
+- Aucun numéro de sortie Metro sur le document.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable **verticale**, et c’est le contraire de Shinjuku : depuis le quai Yamanote (2F), on **monte** au grand plateau payant du 3F, où se tiennent ecute Ueno et les deux groupes de portillons documentés. Représentés sans être visitables : le Park Gate et l’Iriya Gate en perspective de part et d’autre du plateau (un seul est franchissable), les descentes vers les voies 5 à 12 puis 13-17 (volées qui plongent, linteaux qui coupent la vue), la trémie Shinkansen vers le B3F, et le 1F avec son atre et ses sorties — vu **par en dessous**, depuis les ouvertures du plateau. La grande hauteur et les quatre niveaux simultanément lisibles sont le sujet ; la surface au sol ne l’est pas.
 
 ---
 
