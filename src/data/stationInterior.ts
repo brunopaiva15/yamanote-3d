@@ -220,11 +220,19 @@ const GATE_DEPTH = 1.7;
 const FREE_LEN = 15;
 /** Retrait des parois latérales par rapport aux rives de la dalle. */
 const SIDE_INSET = 0.35;
-/** Demi-largeur d'une borne de portillon. */
-const CABINET_HALF_X = 0.18;
+/**
+ * Demi-largeur d'une borne de portillon.
+ *
+ * Les quatre cotes qui suivent sont PUBLIÉES parce que deux moteurs les posent
+ * maintenant : celui-ci, et le compilateur de profil
+ * (`data/stationConcourseBuild`). Une ligne de portillons dont les bornes ne
+ * font pas la même largeur selon le chemin qui l'a construite serait la
+ * meilleure façon de rendre le relevé invérifiable.
+ */
+export const CABINET_HALF_X = 0.18;
 /** Largeur libre d'un passage ordinaire, et d'un passage large. */
-const PASSAGE_W = 0.62;
-const PASSAGE_WIDE_W = 0.92;
+export const PASSAGE_W = 0.62;
+export const PASSAGE_WIDE_W = 0.92;
 /**
  * Marge latérale du fuseau d'un passage : jusqu'où l'on est « dans sa file ».
  *
@@ -237,9 +245,9 @@ const PASSAGE_WIDE_W = 0.92;
  */
 export const PASSAGE_SLACK = 0.35;
 /** Marge laissée entre le bout de la ligne de portillons et la paroi. */
-const GATE_MARGIN = 0.4;
+export const GATE_MARGIN = 0.4;
 /** Demi-largeur d'une bouche de sortie, quand le hall est assez large. */
-const EXIT_HALF_X = 1.15;
+export const EXIT_HALF_X = 1.15;
 /**
  * Trumeau minimal entre deux bouches, et retour minimal contre une paroi.
  *
@@ -254,8 +262,8 @@ const EXIT_HALF_X = 1.15;
  * est large, rien ne change - la bouche reste à sa cote nominale, au tiers et
  * aux deux tiers.
  */
-const EXIT_PIER = 0.7;
-const EXIT_JAMB = 0.5;
+export const EXIT_PIER = 0.7;
+export const EXIT_JAMB = 0.5;
 /**
  * Longueur au-delà de laquelle un meuble est une DEVANTURE et non un meuble :
  * il enjambe la trame porteuse au lieu de l'esquiver.

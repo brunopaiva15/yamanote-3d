@@ -1,0 +1,572 @@
+// Du relevé au réseau de rectangles : le compilateur de profil.
+//
+// `data/stationConcourseProfiles` dit ce qu'est une gare ; `data/stationInterior`
+// sait bâtir UN hall. Entre les deux il manque la machine qui transforme un
+// relevé en volumes praticables, et c'est ici.
+//
+// ─────────────────────────────────────────────────────────────────────────
+// CE QUI CHANGE PAR RAPPORT À `interiorFor`, ET POURQUOI CELA COMPTE
+//
+// `interiorFor` produit une chaîne : une zone payante, une ligne, une zone
+// libre, des bouches, le tout dans le prolongement de la trémie et vers +z. Ce
+// vocabulaire ne sait dire ni « deux halls sans rapport », ni « le hall est en
+// travers », ni « on sort par le côté ». C'est le constat G2 du plan.
+//
+// Le réseau, lui, est une LISTE DE PIÈCES et une liste de liens :
+//
+//   · une pièce a son rectangle, son sol, son plafond, son côté payant ou
+//     libre, et le fait qu'on y marche ou qu'on la regarde seulement ;
+//   · un lien joint deux pièces, avec l'altitude de ses deux bouts - c'est lui
+//     qui porte les escaliers, les mécaniques, les rampes, les couloirs ;
+//   · une ligne de portillons est un lien aussi, du payant vers le libre, et le
+//     compilateur en tire les BORNES et les BAIES : le relevé dit « huit
+//     passages », il ne dit pas « borne à x = 3,42 » ;
+//   · une bouche de sortie s'ouvre dans la PAROI d'une pièce, et pas forcément
+//     celle du fond. Le compilateur la pose face au contrôle qui alimente la
+//     zone libre - ce qui, dans une gare transversale, la met sur un côté.
+//
+// LE REPLI EST DE PREMIÈRE CLASSE. Une gare qui n'est pas encore branchée sur
+// son profil passe par `interiorFor` et son hall est enveloppé dans la même
+// structure (`source: 'legacy'`). Les consommateurs n'auront donc jamais deux
+// chemins à connaître : ils lisent un réseau, et c'est tout. C'est ce qui
+// permettra de basculer les trente gares UNE PAR UNE (phases 20 à 24) sans
+// jamais laisser le jeu à moitié converti.
+//
+// AUCUN CONSOMMATEUR AUJOURD'HUI, et c'est voulu : la phase 8 branchera les
+// niveaux, la 9 la marche, la 10 les portillons. Le compilateur se vérifie
+// entre-temps sur les trente profils, ce qui est le seul moyen de savoir qu'il
+// tient avant de lui confier le jeu.
+// ─────────────────────────────────────────────────────────────────────────
+//
+// REPÈRE. Celui du quai, comme tout le reste : x depuis l'axe de la voie vers
+// le fond, z le long de la voie, y relatif au sol du quai.
+
+import {
+  CABINET_HALF_X,
+  EXIT_HALF_X,
+  EXIT_JAMB,
+  EXIT_PIER,
+  GATE_MARGIN,
+  PASSAGE_W,
+  PASSAGE_WIDE_W,
+  interiorFor,
+  type Fixture,
+  type InteriorRect,
+  type StationInterior,
+} from './stationInterior.ts';
+import {
+  isWalkable,
+  type ConcourseLinkKind,
+  type ConcourseNodeKind,
+  type Depiction,
+  type FareSide,
+  type StationConcourseProfile,
+} from './stationConcourseTypes.ts';
+import { profileFor } from './stationConcourseProfiles.ts';
+import { layoutFor } from './stationLayouts.ts';
+
+// --- Ce qu'un réseau contient --------------------------------------------
+
+/** Une pièce : un volume où l'on se tient, ou qu'on regarde. */
+export interface ConcourseRoom {
+  id: string;
+  levelId: string;
+  kind: ConcourseNodeKind;
+  fare: FareSide;
+  depiction: Depiction;
+  rect: InteriorRect;
+  /** Sol et plafond, relatifs au sol du quai. */
+  floorY: number;
+  ceilY: number;
+  /** On y pose les pieds. Faux pour tout ce qui n'est que montré. */
+  walkable: boolean;
+  nameJp?: string;
+  nameEn?: string;
+}
+
+/** Un ouvrage qui joint deux pièces : volée, mécanique, rampe, couloir. */
+export interface ConcourseJoin {
+  id: string;
+  kind: ConcourseLinkKind;
+  from: string;
+  to: string;
+  rect: InteriorRect;
+  /** Altitudes des deux bouts : la marche interpole entre elles. */
+  fromY: number;
+  toY: number;
+  width: number;
+  walkable: boolean;
+  depiction: Depiction;
+}
+
+/**
+ * Une baie de portillon.
+ *
+ * `along` est l'axe le long duquel les baies se succèdent, et c'est l'INVERSE
+ * de l'axe qu'on franchit : une ligne qu'on traverse en z aligne ses baies en
+ * x, et réciproquement. `data/stationInterior` n'avait pas besoin de le dire -
+ * il ne connaissait qu'un sens.
+ */
+export interface ConcoursePassage {
+  along: 'x' | 'z';
+  /** Milieu de la baie sur cet axe. */
+  at: number;
+  width: number;
+  wide: boolean;
+}
+
+/** Une ligne de portillons posée : bornes, baies, et ce qui la régit. */
+export interface ConcourseGateLine {
+  id: string;
+  nameJp: string;
+  nameEn: string;
+  from: string;
+  to: string;
+  /** L'axe le long duquel on FRANCHIT la ligne. */
+  cross: 'x' | 'z';
+  rect: InteriorRect;
+  /** Ce qu'on contourne. */
+  cabinets: InteriorRect[];
+  /** Ce par quoi on passe. */
+  passages: ConcoursePassage[];
+  walkable: boolean;
+  depiction: Depiction;
+  staffed: boolean;
+  icOnly?: true;
+  exitOnly?: true;
+  hours?: string;
+}
+
+/** La paroi d'une pièce où s'ouvre une bouche. */
+export type RoomSide = 'x0' | 'x1' | 'z0' | 'z1';
+
+/** Une bouche de sortie, percée dans une paroi. */
+export interface ConcourseMouth {
+  id: string;
+  roomId: string;
+  side: RoomSide;
+  /** Milieu de la baie, sur l'axe de la paroi. */
+  at: number;
+  halfWidth: number;
+  /** Rang de la sortie dans le relevé (`data/lines`). */
+  slot: number;
+  nameJp: string;
+  nameEn: string;
+  depiction: Depiction;
+}
+
+export interface ConcourseNetwork {
+  stationIndex: number;
+  /** D'où vient ce réseau : du relevé, ou du hall générique. */
+  source: 'profile' | 'legacy';
+  /** Le niveau est-il réellement bâti ? Faux garde le sens qu'il avait. */
+  built: boolean;
+  rooms: ConcourseRoom[];
+  joins: ConcourseJoin[];
+  gates: ConcourseGateLine[];
+  mouths: ConcourseMouth[];
+  /** Mobilier. Vide sur le chemin `profile` : c'est la phase 19 qui le pose. */
+  fixtures: Fixture[];
+  /** Tout ce qui barre : bornes, cloisons de chantier, mobilier. */
+  obstacles: InteriorRect[];
+}
+
+// --- Poser une ligne de portillons ---------------------------------------
+
+/**
+ * Répartit `n` baies sur la longueur `len` d'une ligne, centrées.
+ *
+ * Même arithmétique que `data/stationInterior` - et les cotes viennent de là,
+ * publiées exprès : n baies, n+1 bornes, la large au bout. Ce qui change est
+ * qu'on ne sait plus d'avance sur quel AXE on travaille.
+ */
+function layBays(n: number, from: number, len: number, wideAtEnd: boolean): {
+  bays: { at: number; width: number; wide: boolean }[];
+  edges: [number, number][];
+} {
+  const cabinets = (n + 1) * 2 * CABINET_HALF_X;
+  // LE PASSAGE LARGE EST UN LUXE, et une ligne trop courte n'y a pas droit :
+  // le 幅広改札 de Shin-Ōkubo ne tient pas dans une bretelle de 1,60 m, où il
+  // débordait de quatre centimètres et faisait sortir la première borne hors
+  // de la ligne. Là où il ne rentre pas, toutes les baies sont ordinaires -
+  // ce qui est exactement ce qu'on voit sur un passage à sens unique.
+  const roomy = cabinets + PASSAGE_WIDE_W + (n - 1) * PASSAGE_W <= len;
+  const widths = Array.from({ length: n }, (_, i) =>
+    roomy && (wideAtEnd ? i === n - 1 : i === 0) ? PASSAGE_WIDE_W : PASSAGE_W);
+  const span = widths.reduce((a, w) => a + w, 0) + cabinets;
+  let at = from + Math.max(0, len - span) / 2;
+
+  const bays: { at: number; width: number; wide: boolean }[] = [];
+  const edges: [number, number][] = [];
+  // Joue de bout : ce qui reste entre la paroi et la première borne se ferme,
+  // sinon on contourne toute la ligne par le côté.
+  if (at > from) edges.push([from, at]);
+  for (let i = 0; i < n; i++) {
+    edges.push([at, at + 2 * CABINET_HALF_X]);
+    at += 2 * CABINET_HALF_X;
+    bays.push({ at: at + widths[i] / 2, width: widths[i], wide: widths[i] === PASSAGE_WIDE_W });
+    at += widths[i];
+  }
+  edges.push([at, at + 2 * CABINET_HALF_X]);
+  at += 2 * CABINET_HALF_X;
+  if (at < from + len) edges.push([at, from + len]);
+  return { bays, edges };
+}
+
+/** Combien de baies tiennent réellement dans `len` mètres de ligne. */
+function baysThatFit(wanted: number, len: number): number {
+  const fits = Math.floor(
+    (len - 2 * GATE_MARGIN - 2 * CABINET_HALF_X) / (PASSAGE_W + 2 * CABINET_HALF_X),
+  );
+  return Math.max(1, Math.min(wanted, fits));
+}
+
+// --- Où s'ouvre une bouche -----------------------------------------------
+
+/**
+ * La paroi d'une pièce OPPOSÉE au contrôle qui l'alimente.
+ *
+ * C'est la règle qui fait sortir la phase 7 de G2 : une bouche ne s'ouvre plus
+ * « au fond, vers +z », elle s'ouvre là où l'on va en continuant tout droit
+ * depuis les portillons. Dans un hall longitudinal cela redonne exactement le
+ * comportement d'avant ; dans une passerelle transversale cela met la bouche
+ * sur le côté, ce qui est le seul endroit où elle peut être.
+ */
+function facingSide(room: InteriorRect, gate: InteriorRect | undefined, cross: 'x' | 'z' | undefined): RoomSide {
+  if (!gate || !cross) return 'z1';
+  if (cross === 'x') {
+    const gateMid = (gate.x0 + gate.x1) / 2;
+    return gateMid < (room.x0 + room.x1) / 2 ? 'x1' : 'x0';
+  }
+  const gateMid = (gate.z0 + gate.z1) / 2;
+  return gateMid < (room.z0 + room.z1) / 2 ? 'z1' : 'z0';
+}
+
+/** Longueur de la paroi `side` d'une pièce, et son origine sur son axe. */
+function wallSpan(r: InteriorRect, side: RoomSide): [number, number] {
+  return side === 'x0' || side === 'x1' ? [r.z0, r.z1 - r.z0] : [r.x0, r.x1 - r.x0];
+}
+
+/**
+ * Répartit `n` bouches sur une paroi, au tiers et aux deux tiers quand la place
+ * le permet, resserrées et rétrécies quand elle manque.
+ *
+ * Reprise fidèle de `data/stationInterior` : une bouche RÉTRÉCIT plutôt que de
+ * mordre sur sa voisine ou sur la paroi, et l'entraxe s'ouvre pour garder le
+ * trumeau. Deux bouches qui se recouvrent ne sont plus deux sorties, c'est un
+ * trou.
+ */
+function layMouths(n: number, from: number, len: number): { at: number; halfWidth: number }[] {
+  const room = (len - 2 * EXIT_JAMB - (n - 1) * EXIT_PIER) / (2 * n);
+  const half = Math.max(0.35, Math.min(EXIT_HALF_X, room));
+  const pitch = Math.max(len / (n + 1), 2 * half + EXIT_PIER);
+  const mid = from + len / 2;
+  return Array.from({ length: n }, (_, k) => ({
+    at: mid + (k - (n - 1) / 2) * pitch,
+    halfWidth: half,
+  }));
+}
+
+// --- Le chemin du relevé -------------------------------------------------
+
+/**
+ * L'abscisse en z de la trémie PRINCIPALE, telle que `systems/stationPlacement`
+ * la choisit : la plus proche du milieu du quai.
+ *
+ * Elle est recalculée ici plutôt que reçue, pour une raison précise : les cotes
+ * des profils ont été écrites depuis cette même table (`data/stationLayouts`),
+ * et le compilateur DÉCALE le relevé de l'écart s'il y en a un. Le jour où le
+ * placement bougera ses trémies, les halls suivront au lieu de flotter.
+ */
+function assumedAccessZ(index: number): number {
+  const stairs = layoutFor(index).amenities.stairs;
+  return stairs.reduce((a, b) => (Math.abs(b) < Math.abs(a) ? b : a));
+}
+
+function shifted(r: { x0: number; x1: number; z0: number; z1: number }, dz: number): InteriorRect {
+  return { x0: r.x0, x1: r.x1, z0: r.z0 + dz, z1: r.z1 + dz };
+}
+
+/** Compile un relevé en réseau, calé sur la trémie réellement posée. */
+export function compileProfile(
+  p: StationConcourseProfile,
+  accessZ: number = assumedAccessZ(p.stationIndex),
+): ConcourseNetwork {
+  const dz = accessZ - assumedAccessZ(p.stationIndex);
+  const levels = new Map(p.levels.map((l) => [l.id, l]));
+
+  const rooms: ConcourseRoom[] = p.concourses.map((n) => {
+    const l = levels.get(n.levelId);
+    const floorY = l?.floorY ?? 0;
+    return {
+      id: n.id,
+      levelId: n.levelId,
+      kind: n.kind,
+      fare: n.fare,
+      depiction: n.depiction,
+      rect: shifted(n.rect, dz),
+      floorY,
+      ceilY: floorY + (n.headroom ?? l?.headroom ?? 0),
+      walkable: isWalkable(n.depiction),
+      nameJp: n.nameJp,
+      nameEn: n.nameEn,
+    };
+  });
+  const byId = new Map(rooms.map((r) => [r.id, r]));
+
+  const joins: ConcourseJoin[] = p.corridors.map((c) => ({
+    id: c.id,
+    kind: c.kind,
+    from: c.from,
+    to: c.to,
+    rect: shifted(c.rect, dz),
+    fromY: byId.get(c.from)?.floorY ?? 0,
+    toY: byId.get(c.to)?.floorY ?? 0,
+    width: c.width,
+    // Un lien n'est praticable que s'il l'est LUI et que les deux pièces le
+    // sont : une volée franchissable vers une perspective ne mène nulle part.
+    walkable: isWalkable(c.depiction)
+      && (byId.get(c.from)?.walkable ?? false)
+      && (byId.get(c.to)?.walkable ?? false),
+    depiction: c.depiction,
+  }));
+
+  const obstacles: InteriorRect[] = [];
+  const gates: ConcourseGateLine[] = p.gateGroups.map((g) => {
+    const rect = shifted(g.rect, dz);
+    // Les baies s'alignent sur l'axe PERPENDICULAIRE à celui qu'on franchit.
+    const along: 'x' | 'z' = g.cross === 'z' ? 'x' : 'z';
+    const from = along === 'x' ? rect.x0 : rect.z0;
+    const len = along === 'x' ? rect.x1 - rect.x0 : rect.z1 - rect.z0;
+    const { bays, edges } = layBays(
+      baysThatFit(g.passages, len),
+      from,
+      len,
+      g.wideAt !== 'start',
+    );
+    const cabinets = edges.map(([a, b]) =>
+      along === 'x'
+        ? { x0: a, x1: b, z0: rect.z0, z1: rect.z1 }
+        : { x0: rect.x0, x1: rect.x1, z0: a, z1: b });
+    obstacles.push(...cabinets);
+    return {
+      id: g.id,
+      nameJp: g.nameJp,
+      nameEn: g.nameEn,
+      from: g.from,
+      to: g.to,
+      cross: g.cross,
+      rect,
+      cabinets,
+      passages: bays.map((b) => ({ along, at: b.at, width: b.width, wide: b.wide })),
+      walkable: isWalkable(g.depiction),
+      depiction: g.depiction,
+      staffed: g.staffed ?? false,
+      icOnly: g.icOnly,
+      exitOnly: g.exitOnly,
+      hours: g.hours,
+    };
+  });
+
+  // Les bouches, groupées par zone libre : elles se partagent une paroi, donc
+  // elles ne peuvent pas être posées une par une.
+  const mouths: ConcourseMouth[] = [];
+  const byRoom = new Map<string, typeof p.exits[number][]>();
+  for (const e of p.exits) {
+    const list = byRoom.get(e.fromNodeId);
+    if (list) list.push(e);
+    else byRoom.set(e.fromNodeId, [e]);
+  }
+  for (const [roomId, list] of byRoom) {
+    const room = byId.get(roomId);
+    if (!room) continue;
+    const feeder = gates.find((g) => g.to === roomId);
+    const side = facingSide(room.rect, feeder?.rect, feeder?.cross);
+    const [from, len] = wallSpan(room.rect, side);
+    const laid = layMouths(list.length, from, len);
+    list.forEach((e, k) => {
+      mouths.push({
+        id: e.id,
+        roomId,
+        side,
+        at: laid[k].at,
+        halfWidth: laid[k].halfWidth,
+        slot: p.exits.indexOf(e),
+        nameJp: e.nameJp,
+        nameEn: e.nameEn,
+        depiction: e.depiction,
+      });
+    });
+  }
+
+  // Les cloisons de chantier barrent : c'est leur seul rôle, et c'est celui
+  // qu'elles ont en vrai.
+  for (const part of p.works?.partitions ?? []) obstacles.push(shifted(part.rect, dz));
+
+  return {
+    stationIndex: p.stationIndex,
+    source: 'profile',
+    built: true,
+    rooms,
+    joins,
+    gates,
+    mouths,
+    // Le mobilier n'est pas du ressort du relevé : un plan officiel ne cote pas
+    // une batterie de distributeurs. Il viendra du moteur, en phase 19.
+    fixtures: [],
+    obstacles,
+  };
+}
+
+// --- Le repli : le hall générique, enveloppé -----------------------------
+
+/**
+ * Enveloppe un hall de `data/stationInterior` dans la même structure.
+ *
+ * Rien n'est recalculé : les rectangles, les bornes, les baies et le mobilier
+ * sont ceux du moteur existant, et c'est tout l'intérêt. Une gare qui n'est pas
+ * encore branchée sur son profil se comporte AU RECTANGLE PRÈS comme avant, et
+ * les consommateurs n'ont qu'un seul format à connaître.
+ */
+export function legacyNetwork(index: number, it: StationInterior): ConcourseNetwork {
+  const room = (id: string, rect: InteriorRect, fare: FareSide): ConcourseRoom => ({
+    id,
+    levelId: it.place,
+    kind: 'linear',
+    fare,
+    depiction: it.built ? 'walkable' : 'backdrop',
+    rect,
+    floorY: it.floorY,
+    ceilY: it.ceilY,
+    walkable: it.built,
+  });
+  return {
+    stationIndex: index,
+    source: 'legacy',
+    built: it.built,
+    rooms: [room('paid', it.paid, 'paid'), room('free', it.free, 'free')],
+    joins: [],
+    gates: [{
+      id: 'gate',
+      nameJp: it.gate.nameJp,
+      nameEn: it.gate.nameRomaji,
+      from: 'paid',
+      to: 'free',
+      cross: 'z',
+      rect: { x0: it.paid.x0, x1: it.paid.x1, z0: it.gate.z0, z1: it.gate.z1 },
+      cabinets: it.gate.cabinets,
+      passages: it.gate.passages.map((g) => ({
+        along: 'x' as const,
+        at: g.x,
+        width: g.width,
+        wide: g.wide,
+      })),
+      walkable: it.built,
+      depiction: it.built ? 'walkable' : 'backdrop',
+      staffed: true,
+    }],
+    mouths: it.exits.map((e, k) => ({
+      id: `exit-${k}`,
+      roomId: 'free',
+      side: 'z1' as const,
+      at: e.x,
+      halfWidth: e.halfWidth,
+      slot: e.slot,
+      // Le hall générique ne nomme pas ses bouches : ce sont les potences du
+      // quai qui le font (`data/lines`), et le rendu tire son panneau de là.
+      nameJp: '',
+      nameEn: '',
+      depiction: it.built ? 'walkable' : 'backdrop',
+    })),
+    fixtures: it.fixtures,
+    obstacles: it.obstacles,
+  };
+}
+
+// --- Le point d'entrée ---------------------------------------------------
+
+/**
+ * Les gares déjà branchées sur leur relevé.
+ *
+ * VIDE, et ce n'est pas un oubli : la phase 7 livre le moteur, pas la bascule.
+ * Un profil compilé n'a encore ni mobilier, ni archétype de rendu, ni
+ * signalétique - les basculer maintenant échangerait une gare meublée contre
+ * une gare juste et nue, ce qui serait un recul. Les phases 20 à 24 les
+ * ajouteront une par une, quand il y aura de quoi les habiller.
+ */
+export const PROFILE_STATIONS: ReadonlySet<number> = new Set<number>();
+
+/** Le réseau d'une gare : son relevé s'il est branché, son hall sinon. */
+export function networkFor(index: number, accessZ: number): ConcourseNetwork {
+  const i = ((index % 30) + 30) % 30;
+  if (PROFILE_STATIONS.has(i)) return compileProfile(profileFor(i), accessZ);
+  return legacyNetwork(i, interiorFor(i, accessZ));
+}
+
+// --- Ce que le compilateur a dû rogner -----------------------------------
+
+export interface NetworkIssue {
+  code: string;
+  where: string;
+  message: string;
+}
+
+/**
+ * Ce que la géométrie a refusé au relevé.
+ *
+ * Un compilateur qui rogne en silence est un compilateur qui ment. Le relevé
+ * énonce une INTENTION - « huit baies » - et la place disponible tranche ; quand
+ * les deux ne s'accordent pas, cela se dit ici plutôt que de disparaître dans
+ * un `Math.min`.
+ */
+export function networkIssues(
+  p: StationConcourseProfile,
+  net: ConcourseNetwork,
+): NetworkIssue[] {
+  const out: NetworkIssue[] = [];
+  for (const g of p.gateGroups) {
+    const laid = net.gates.find((x) => x.id === g.id);
+    if (laid && laid.passages.length < g.passages) {
+      const along = g.cross === 'z' ? 'x' : 'z';
+      const len = along === 'x' ? g.rect.x1 - g.rect.x0 : g.rect.z1 - g.rect.z0;
+      out.push({
+        code: 'crampedGate',
+        where: g.id,
+        message: `${laid.passages.length} baies posées sur ${g.passages} demandées : `
+          + `la ligne fait ${len.toFixed(2)} m sur ${along}`,
+      });
+    }
+  }
+  for (const m of net.mouths) {
+    if (m.halfWidth < EXIT_HALF_X - 1e-6) {
+      out.push({
+        code: 'narrowMouth',
+        where: m.id,
+        message: `bouche rétrécie à ${(m.halfWidth * 2).toFixed(2)} m de large`,
+      });
+    }
+  }
+  return out;
+}
+
+// --- Interroger un réseau ------------------------------------------------
+
+/**
+ * La pièce praticable sous un point, ou null.
+ *
+ * C'est l'équivalent exact de `concourseFloorAt` (`systems/stationLevels`), à
+ * ceci près qu'il y a maintenant N pièces à N altitudes au lieu d'une boîte.
+ * La phase 8 en fera le sol du hall ; il vit ici pour que le compilateur se
+ * prouve interrogeable avant qu'on lui confie les pieds du joueur.
+ */
+export function roomAt(net: ConcourseNetwork, x: number, z: number): ConcourseRoom | null {
+  if (!net.built) return null;
+  for (const o of net.obstacles) {
+    if (x >= o.x0 && x <= o.x1 && z >= o.z0 && z <= o.z1) return null;
+  }
+  for (const r of net.rooms) {
+    if (!r.walkable) continue;
+    if (x >= r.rect.x0 && x <= r.rect.x1 && z >= r.rect.z0 && z <= r.rect.z1) return r;
+  }
+  return null;
+}

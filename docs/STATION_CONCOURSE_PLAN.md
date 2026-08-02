@@ -270,7 +270,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **4** | **Relevé documentaire** ✅ | `STATION_CONCOURSE_EVIDENCE.md` : **30 plans officiels lus** | D5 D6 D7 D8 |
 | **5** | **Profils, données seules** ✅ | `stationConcourseProfiles.ts` : 30 profils validés, aucun consommateur ; 13 tests | D1→D8 |
 | **6** | **Emprise déclarée** ✅ | `stationConcourseReach.ts` + table générée ; `stationOcclusion` la lit ; `validateProfile` refuse ce que le ballast interdit | **G1** |
-| 7 | Compilateur de profil | `stationConcourseBuild.ts` : profil → réseau de rectangles ; fallback vers `interiorFor` | G2 R4 |
+| **7** | **Compilateur de profil** ✅ | `stationConcourseBuild.ts` : profil → réseau de pièces ; repli fidèle vers `interiorFor` ; `networkIssues` | G2 R4 |
 | 8 | Réseau dans les niveaux | `stationLevels` : N nœuds, M liens verticaux | S1 |
 | 9 | Réseau dans la marche | `walkable` lit le réseau ; le joueur change de niveau par n'importe quel lien | S1 |
 | 10 | Portillons multiples | `fareGate` : un état par groupe et par passage | S2 |
@@ -458,6 +458,54 @@ profils faisait entrer cent trente kio de relevé dans le bundle du jeu
 portée est donc **matérialisée en table générée** (`npm run data:reach`), avec
 un test qui la recalcule depuis les profils et tombe si elle a dérivé — la même
 discipline que le carnet de relevé. Coût réel : **+1,8 kio**.
+
+### 4.5 Ce que la phase 7 a livré, et ce qu'elle a trouvé
+
+**Le compilateur existe, et les trente relevés passent dedans.** Un profil
+devient un RÉSEAU : des pièces (rectangle, sol, plafond, payant ou libre,
+foulée ou seulement regardée), des liens qui les joignent avec l'altitude de
+leurs deux bouts, des lignes de portillons dont il tire les bornes et les baies,
+et des bouches percées dans une paroi.
+
+**G2 est sorti.** Une bouche ne s'ouvre plus « au fond, vers +z » : elle s'ouvre
+face au contrôle qui alimente la zone libre. Dans un hall longitudinal cela
+redonne exactement l'ancien comportement — Kanda garde son fond ; dans une
+passerelle transversale cela la met sur un flanc, ce qui est le seul endroit où
+elle peut être. Tokyo ouvre sur ses deux flancs et jamais au fond.
+
+**R4 aussi.** Nippori n'est plus un cas spécial : `bespoke: true` disait « ne
+construis rien, la charpente EST le niveau ». Le relevé le dit en donnée
+ordinaire — quatre pièces `overbridge` au 2F — et neuf autres gares ont la même
+forme sans avoir jamais eu besoin d'un drapeau.
+
+**Le repli est de première classe.** Une gare non branchée passe par
+`interiorFor` et son hall est enveloppé dans la même structure : mêmes
+rectangles, mêmes bornes, mêmes baies, même mobilier, au rectangle près. Les
+consommateurs n'auront donc jamais deux chemins à connaître — c'est la condition
+pour basculer les trente gares une par une (phases 20 à 24).
+
+**`PROFILE_STATIONS` est VIDE, et ce n'est pas un oubli.** Un profil compilé n'a
+encore ni mobilier, ni archétype de rendu, ni signalétique : l'échanger contre
+le hall meublé serait un recul. La phase 7 livre le moteur, pas la bascule.
+
+**Ce que le compilateur a trouvé, et il ne le tait pas.** `networkIssues` dit ce
+que la géométrie a refusé au relevé, plutôt que de le noyer dans un `Math.min` :
+
+> **Dix-huit lignes de portillons ne tiennent pas ce qu'on leur demande, et
+> toutes pour la même raison.** Elles sont posées EN TRAVERS DE LA BANDE DU QUAI
+> (`cross: 'z'`), qui fait de 5,3 m à 6,7 m. Une baie coûte 0,98 m avec ses
+> bornes : un hall large comme un quai ne tient pas plus de quatre ou cinq
+> baies, et le relevé en demande jusqu'à neuf (Shimbashi 南改札).
+
+C'est **le dernier reste de G1**, et il ne se corrige pas au compilateur : les
+vrais halls de Kanda ou de Shimbashi sont larges comme le VIADUC, pas comme le
+quai. Les élargir vers le fond est le travail de la **phase 14** — la phase 6 a
+établi que le décor sait s'écarter. En attendant, l'écart est nommé, et la liste
+des dix-huit est fermée par un test.
+
+Onze gares sont concernées : Kanda (2), Akihabara (3), Okachimachi,
+Nishi-Nippori, Takadanobaba, Shin-Ōkubo (2), Yoyogi, Ebisu, Gotanda,
+Hamamatsuchō, Shimbashi (2), Yūrakuchō (2).
 
 ### Ordre et raison
 
