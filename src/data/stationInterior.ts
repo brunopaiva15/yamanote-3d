@@ -262,6 +262,19 @@ export const EXIT_HALF_X = 1.15;
  * est large, rien ne change - la bouche reste à sa cote nominale, au tiers et
  * aux deux tiers.
  */
+/**
+ * PROFONDEUR D'UNE DEVANTURE, publiée pour la même raison (phase 19).
+ *
+ * 3,40 m est la dernière cote qui laisse deux mètres de passage dans le hall le
+ * plus étroit de la boucle, et 3,60 m est celle d'une galerie. Le compilateur
+ * de profil s'y tient : le relevé cote l'EMPRISE d'un commerce, pas sa vitrine,
+ * et une galerie qui occupe tout un niveau — GRANSTA fait quarante-six mètres
+ * de long — se voit depuis le hall par sa devanture, pas par un bloc plein
+ * qu'on ne pourrait pas contourner.
+ */
+export const SHOP_DEPTH = 3.4;
+export const GALLERY_DEPTH = 3.6;
+
 export const EXIT_PIER = 0.7;
 export const EXIT_JAMB = 0.5;
 /**

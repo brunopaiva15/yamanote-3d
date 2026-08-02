@@ -806,3 +806,113 @@ export function makeGallerySignTexture(brand: 'ecute' | 'atre', index: number): 
   g.fillText('SHOPPING & DINING', W * 0.66, H * 0.62);
   return toTexture(c);
 }
+
+// --- Les devantures relevées (phase 19) ----------------------------------
+//
+// `makeGallerySignTexture` ne connaît que deux marques et va chercher le nom de
+// la gare tout seul : c'est le moteur de remplissage du hall générique, et il
+// ne sait dire que ce qu'on lui a permis de dire d'avance.
+//
+// Le relevé, lui, LIT une enseigne sur un plan — `atre vie Sugamo`,
+// `GRANSTA TOKYO`, `Dila Osaki` — et il lit aussi ce qu'il NE SAIT PAS. Un
+// bandeau doit donc pouvoir dire quatre choses différentes, et la quatrième est
+// la plus importante : ne rien dire. Un commerce dont personne n'a lu le nom
+// reste une devanture éclairée, ce qu'il est réellement pour qui passe devant.
+
+/** Ce qu'une catégorie s'appelle, quand c'est tout ce qu'on sait d'elle. */
+const CATEGORY_WORDS: Record<string, [string, string]> = {
+  konbini: ['コンビニ', 'Convenience'],
+  kiosk: ['キオスク', 'Kiosk'],
+  cafe: ['カフェ', 'Café'],
+  bakery: ['ベーカリー', 'Bakery'],
+  bento: ['弁当', 'Bento'],
+  restaurant: ['レストラン', 'Restaurant'],
+  drugstore: ['ドラッグストア', 'Drugstore'],
+  books: ['書店', 'Books'],
+  fashion: ['ファッション', 'Fashion'],
+  souvenir: ['みやげ', 'Souvenirs'],
+  services: ['サービス', 'Services'],
+  gallery: ['商業施設', 'Shops'],
+};
+
+/**
+ * La livrée d'une enseigne relevée.
+ *
+ * Elle se reconnaît sur le PREMIER MOT de la marque, parce que c'est lui qui
+ * est déposé : `atre vie Sugamo` est un atré, `Dila Osaki` un Dila. Ce qu'on ne
+ * reconnaît pas reçoit la livrée neutre — et garde son nom, qui est ce qui
+ * compte : on ne renonce pas à une enseigne lue faute de connaître sa charte.
+ */
+function brandSkin(brand: string): { bg: string; ink: string; sub: string } {
+  const first = brand.trim().split(/\s+/)[0].toLowerCase();
+  if (first === 'ecute') return { bg: '#f4f2ee', ink: '#b0343f', sub: '#8a8a86' };
+  if (first === 'atre') return { bg: '#2c2a2e', ink: '#e8c86a', sub: '#9a968e' };
+  if (first === 'gransta') return { bg: '#1d1f26', ink: '#d8b45c', sub: '#8f8b84' };
+  if (first === 'dila') return { bg: '#f2f1ec', ink: '#2f6f4f', sub: '#7d8a82' };
+  return { bg: '#f2f1ed', ink: '#25262a', sub: '#7c7e82' };
+}
+
+/**
+ * Le bandeau d'une devanture, tel que son STATUT permet de l'écrire.
+ *
+ * C'est le rendu de l'échelle de vérité de `CommerceStatus` : ce qui a été lu
+ * se lit, ce qui n'a pas été lu ne s'invente pas. Un bandeau vide n'est pas un
+ * bandeau raté — c'est la façon honnête de montrer un commerce anonyme.
+ */
+export function makeFrontageSign(
+  status: string,
+  category: string,
+  brand?: string,
+): THREE.CanvasTexture {
+  const W = 1024;
+  const H = 160;
+  const { c, g } = makeCanvas(W, H);
+  const named = (status === 'namedVerified' || status === 'gallery') && !!brand;
+
+  if (named && brand) {
+    const skin = brandSkin(brand);
+    g.fillStyle = skin.bg;
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = skin.ink;
+    g.fillRect(0, H - 8, W, 8);
+    g.textAlign = 'left';
+    g.textBaseline = 'alphabetic';
+    // Bas-de-casse et lettrage large : une galerie ne crie pas, elle s'étale.
+    fitFillText(g, brand, 46, H * 0.68, W * 0.72, Math.round(H * 0.52), '300');
+    g.fillStyle = skin.sub;
+    g.font = `500 26px ${JP_FONT}`;
+    g.textAlign = 'right';
+    g.fillText(status === 'gallery' ? 'SHOPPING & DINING' : 'SHOP', W - 46, H * 0.62);
+    g.textAlign = 'left';
+    return toTexture(c);
+  }
+
+  if (status === 'categoryVerified') {
+    // La CATÉGORIE est établie, l'enseigne non : c'est exactement ce que dit le
+    // bandeau, et pas un mot de plus.
+    const [jp, en] = CATEGORY_WORDS[category] ?? CATEGORY_WORDS.services;
+    g.fillStyle = '#f6f5f1';
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = '#c9c6bd';
+    g.fillRect(0, H - 6, W, 6);
+    g.fillStyle = '#2a2b2e';
+    g.textAlign = 'left';
+    g.textBaseline = 'alphabetic';
+    fitFillText(g, jp, 46, H * 0.66, W * 0.5, Math.round(H * 0.46), '600');
+    g.fillStyle = '#7c7e82';
+    fitFillText(g, en, 48, H * 0.92, W * 0.5, 30, '400');
+    return toTexture(c);
+  }
+
+  // `generic` et `facade` : une devanture ÉCLAIRÉE, et rien d'écrit. Le dépôt
+  // refuse d'inventer une enseigne, et un bandeau sans mot le dit mieux qu'un
+  // nom plausible.
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#eceae4');
+  grad.addColorStop(1, '#d6d3cb');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = '#b8b5ac';
+  g.fillRect(0, H - 5, W, 5);
+  return toTexture(c);
+}

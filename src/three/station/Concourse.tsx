@@ -35,6 +35,7 @@ import {
   type StationInterior,
 } from '../../data/stationInterior';
 import type { ConcourseNetwork, ConcourseShell } from '../../data/stationConcourseBuild';
+import { Frontages } from './interiors/Frontages';
 import { Limits } from './interiors/Limits';
 import { hallStyle } from './interiors/hallStyle';
 import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
@@ -338,6 +339,12 @@ export function Concourse({
           les prendre, et les palissades de chantier. Rien sur les trente gares
           tant qu'aucune n'est branchée — le hall générique n'en connaît pas. */}
       <Limits shell={shell} net={net} m={m} />
+
+      {/* Les devantures RELEVÉES : ce que le hall vend, et ce qu'on a le droit
+          d'en dire. Le mobilier générique porte ses commerces déduits ; celles-ci
+          portent ce qui a été lu sur un plan, et se taisent quand rien ne l'a
+          été (`interiors/Frontages`). */}
+      <Frontages shell={shell} net={net} m={m} />
 
     </group>
   );

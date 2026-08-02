@@ -49,13 +49,18 @@ import {
   GATE_MARGIN,
   PASSAGE_W,
   PASSAGE_WIDE_W,
+  GALLERY_DEPTH,
+  SHOP_DEPTH,
   interiorFor,
   type Fixture,
   type InteriorRect,
   type StationInterior,
 } from './stationInterior.ts';
 import {
+  MIN_MAIN_WIDTH,
   isWalkable,
+  type CommerceCategory,
+  type CommerceStatus,
   type ConcourseLinkKind,
   type ConcourseNodeKind,
   type Depiction,
@@ -203,6 +208,36 @@ export interface ConcourseHoarding {
   noticeEn?: string;
 }
 
+/**
+ * UNE DEVANTURE, et ce qu'on a le droit d'écrire dessus.
+ *
+ * Le hall générique déduit ses commerces de l'AFFLUENCE : un konbini dès que la
+ * gare dépasse 1,2, une galerie dès qu'une enseigne est déclarée (constat D8).
+ * C'est un moteur de remplissage, et il ne sait pas ce qu'il ne sait pas — sept
+ * gares déclarent `ecute`/`atre` dont trois n'ont pas la place, et rien ne
+ * distingue une enseigne LUE d'une enseigne PLAUSIBLE.
+ *
+ * Le relevé, lui, sait : `CommerceStatus` est une échelle de VÉRITÉ et non de
+ * taille, et c'est elle qui décide ce que la devanture porte. Un commerce dont
+ * personne n'a lu le nom ne le porte pas — il reste une devanture éclairée,
+ * ce qu'il est réellement pour qui passe devant sans lever les yeux.
+ */
+export interface ConcourseFrontage {
+  id: string;
+  roomId: string;
+  /** La paroi contre laquelle la devanture se range. */
+  side: RoomSide;
+  /** L'axe de sa VITRINE : celui le long duquel elle se développe. */
+  along: 'x' | 'z';
+  rect: InteriorRect;
+  status: CommerceStatus;
+  category: CommerceCategory;
+  /** L'enseigne — et seulement quand le relevé l'a lue. */
+  brand?: string;
+  /** On y entre, ou l'on passe devant. */
+  enterable: boolean;
+}
+
 export interface ConcourseNetwork {
   stationIndex: number;
   /** D'où vient ce réseau : du relevé, ou du hall générique. */
@@ -219,7 +254,9 @@ export interface ConcourseNetwork {
   transfers: ConcourseTransfer[];
   /** Les cloisons de chantier. L'état d'août 2026, là où le plan le délimite. */
   hoardings: ConcourseHoarding[];
-  /** Mobilier. Vide sur le chemin `profile` : c'est la phase 19 qui le pose. */
+  /** Les devantures relevées. Vides sur le chemin `legacy` : voir plus bas. */
+  frontages: ConcourseFrontage[];
+  /** Mobilier générique : billetterie, consignes, distributeurs. */
   fixtures: Fixture[];
   /** Tout ce qui barre : bornes, cloisons de chantier, mobilier. */
   obstacles: InteriorRect[];
@@ -294,6 +331,32 @@ function facingSide(room: InteriorRect, gate: InteriorRect | undefined, cross: '
   }
   const gateMid = (gate.z0 + gate.z1) / 2;
   return gateMid < (room.z0 + room.z1) / 2 ? 'z1' : 'z0';
+}
+
+/**
+ * La paroi contre laquelle une emprise s'adosse : la plus proche des quatre.
+ *
+ * Un commerce de gare borde toujours un côté du hall — jamais son milieu, qui
+ * est ce qu'on traverse. Quand le relevé cote une emprise, il ne dit pas contre
+ * quel mur elle s'appuie ; c'est la géométrie qui le sait, et une devanture
+ * orientée vers le mauvais côté tournerait le dos aux voyageurs.
+ */
+function nearestSide(room: InteriorRect, r: InteriorRect): RoomSide {
+  const d: [RoomSide, number][] = [
+    ['x0', r.x0 - room.x0],
+    ['x1', room.x1 - r.x1],
+    ['z0', r.z0 - room.z0],
+    ['z1', room.z1 - r.z1],
+  ];
+  return d.reduce((a, b) => (b[1] < a[1] ? b : a))[0];
+}
+
+/** Ne garde d'une emprise que sa devanture : `depth` mètres depuis sa paroi. */
+function trimToFront(r: InteriorRect, side: RoomSide, depth: number): InteriorRect {
+  if (side === 'x0') return { ...r, x1: Math.min(r.x1, r.x0 + depth) };
+  if (side === 'x1') return { ...r, x0: Math.max(r.x0, r.x1 - depth) };
+  if (side === 'z0') return { ...r, z1: Math.min(r.z1, r.z0 + depth) };
+  return { ...r, z0: Math.max(r.z0, r.z1 - depth) };
 }
 
 /** Longueur de la paroi `side` d'une pièce, et son origine sur son axe. */
@@ -464,6 +527,44 @@ export function compileProfile(
   }));
   for (const h of hoardings) obstacles.push(h.rect);
 
+  // LES DEVANTURES. Elles se rangent contre la paroi la plus proche : un
+  // commerce de gare n'est jamais au milieu d'un hall — il en borde un côté, et
+  // c'est ce qui laisse le passage libre. Le relevé cote son emprise, le
+  // compilateur en déduit contre QUOI elle s'adosse et dans quel sens sa
+  // vitrine se développe.
+  const frontages: ConcourseFrontage[] = [];
+  for (const zone of p.commercialZones) {
+    const room = byId.get(zone.nodeId);
+    if (!room) continue;
+    const declared = shifted(zone.rect, dz);
+    const side = nearestSide(room.rect, declared);
+    // Le relevé cote l'EMPRISE du commerce, pas sa vitrine. GRANSTA fait
+    // quarante-six mètres de long sur huit de fond : le poser tel quel
+    // remplirait le niveau d'un bloc plein qu'on ne pourrait pas contourner.
+    // Ce qu'on voit d'un hall, c'est la DEVANTURE — le reste est derrière, et
+    // le joueur n'y entre pas.
+    const rect = trimToFront(
+      declared,
+      side,
+      zone.category === 'gallery' ? GALLERY_DEPTH : SHOP_DEPTH,
+    );
+    frontages.push({
+      id: zone.id,
+      roomId: zone.nodeId,
+      side,
+      along: side === 'x0' || side === 'x1' ? 'z' : 'x',
+      rect,
+      status: zone.status,
+      category: zone.category,
+      brand: zone.brand,
+      enterable: zone.enterable,
+    });
+    // Une devanture est un OBSTACLE : on ne traverse pas une vitrine. Celles
+    // où l'on entre le sont aussi — la porte n'est pas encore un ouvrage, et
+    // ouvrir un trou dans la marche sans rien derrière serait pire.
+    obstacles.push(rect);
+  }
+
   const transfers: ConcourseTransfer[] = p.transferPortals
     .filter((t) => byId.has(t.fromNodeId))
     .map((t) => ({
@@ -500,8 +601,9 @@ export function compileProfile(
     accesses,
     transfers,
     hoardings,
+    frontages,
     // Le mobilier n'est pas du ressort du relevé : un plan officiel ne cote pas
-    // une batterie de distributeurs. Il viendra du moteur, en phase 19.
+    // une batterie de distributeurs, et il ne se déduit pas d'un plan.
     fixtures: [],
     obstacles,
   };
@@ -582,6 +684,11 @@ export function legacyNetwork(index: number, it: StationInterior): ConcourseNetw
       nameEn: '',
       depiction: it.built ? 'walkable' : 'backdrop',
     })),
+    // Le hall générique DÉDUIT ses commerces de l'affluence, et son mobilier
+    // les porte déjà (`data/stationInterior`). Les redéclarer ici en ferait des
+    // devantures relevées, ce qu'elles ne sont pas : le chemin `legacy` n'en a
+    // aucune, et c'est le constat D8 dit dans le code.
+    frontages: [],
     fixtures: it.fixtures,
     obstacles: it.obstacles,
   };
@@ -638,6 +745,24 @@ export function networkIssues(
         where: g.id,
         message: `${laid.passages.length} baies posées sur ${g.passages} demandées : `
           + `la ligne fait ${len.toFixed(2)} m sur ${along}`,
+      });
+    }
+  }
+  for (const f of net.frontages) {
+    const room = net.rooms.find((r) => r.id === f.roomId);
+    if (!room) continue;
+    // Ce qui reste à passer DEVANT la devanture, sur l'axe qu'elle mange.
+    const left =
+      f.along === 'z'
+        ? Math.max(f.rect.x0 - room.rect.x0, room.rect.x1 - f.rect.x1)
+        : Math.max(f.rect.z0 - room.rect.z0, room.rect.z1 - f.rect.z1);
+    if (left < MIN_MAIN_WIDTH - 1e-6) {
+      out.push({
+        code: 'shopEatsAisle',
+        where: f.id,
+        message: `devanture de ${(f.rect.x1 - f.rect.x0).toFixed(2)} × `
+          + `${(f.rect.z1 - f.rect.z0).toFixed(2)} m : il reste ${left.toFixed(2)} m `
+          + `de passage, minimum ${MIN_MAIN_WIDTH} m`,
       });
     }
   }

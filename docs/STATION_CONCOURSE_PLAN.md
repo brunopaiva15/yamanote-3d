@@ -282,7 +282,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **16** | **Archétypes 3 — limites** ✅ | `interiors/Limits` : correspondances (gardées ou non) et palissades de chantier | G4 D7 |
 | **17** | **Occlusion interne** ✅ | `visibleShells` : ce qu'on voit d'un volume depuis un autre — jonction, niveau, portée | R2 |
 | **18** | **Signalétique unifiée** ✅ | `stationSignage` : une seule source pour quai / hall / portillons / couloirs / bouches | D4 D5 |
-| 19 | Commerces | `CommercialFrontage`, quatre statuts de commerce, galeries `ecute`/`atre` | D8 |
+| **19** | **Commerces** ✅ | `ConcourseFrontage` : l'échelle de vérité de `CommerceStatus` dessinée ; `interiors/Frontages` | D8 |
 | 20 | Petites gares | JY06 JY08 JY10 JY11 JY14 JY16 JY18 JY02 branchées sur profil | — |
 | 21 | Gares moyennes | JY04 JY09 JY12 JY15 JY19 JY21 JY22 JY23 JY24 JY27 JY28 JY29 JY30 JY03 | — |
 | 22 | Signatures 1 | Takanawa Gateway, Nippori, Shinagawa | R3 |
@@ -893,6 +893,60 @@ Trois choses en sortent au passage :
 **Les trente gares affichent exactement les mêmes mots qu'avant**, et retrouvent
 leurs quatre panneaux aux mêmes cotes : quatorze tests le tiennent, dont la
 comparaison mot pour mot avec `stationExits(index)`.
+
+### 4.17 La phase 19 : ce que le hall vend, et ce qu'on a le droit d'en dire
+
+Le hall générique déduit ses commerces de l'AFFLUENCE : un konbini dès 1,2, une
+galerie dès qu'une enseigne est déclarée. Le défaut n'est pas qu'il se trompe —
+il place plutôt bien — c'est qu'il ne distingue pas ce qu'il SAIT de ce qu'il
+SUPPOSE (constat D8). Sept gares déclarent `ecute`/`atre`, dont trois n'ont pas
+la place, et rien dans le dessin ne dit laquelle est laquelle.
+
+`ConcourseFrontage` porte la lecture du relevé jusqu'au rendu, et c'est
+`CommerceStatus` — une échelle de VÉRITÉ, pas de taille — qui décide de ce que
+la devanture écrit :
+
+- `namedVerified` : l'enseigne est sur le plan officiel, on l'écrit ;
+- `gallery` : une galerie structurante — `atre vie Sugamo`, `GRANSTA TOKYO`,
+  `Dila Osaki`. Elle donne son échelle au hall, et son bandeau est long ;
+- `categoryVerified` : on sait que c'est un konbini, pas lequel. Le bandeau
+  porte la catégorie, et pas un mot de plus ;
+- `generic` et `facade` : bandeau **éclairé et muet**. Un nom plausible serait
+  un mensonge et un mur nu serait un oubli ; une devanture anonyme est ce qu'on
+  voit vraiment quand on passe devant sans lever les yeux.
+
+Un test tient la règle qui fait toute la valeur du dispositif : **une enseigne
+ne s'invente pas** — un statut qui ne dit pas qu'on l'a lue n'a pas le droit
+d'en porter une.
+
+Deux décisions de géométrie, et elles ont la même raison : un commerce de gare
+BORDE le hall, il ne le bouche pas.
+
+- **le relevé cote une emprise, on montre une devanture.** GRANSTA fait
+  quarante-six mètres de long sur huit de fond ; posée telle quelle, elle
+  remplissait le niveau d'un bloc plein qu'on ne pouvait pas contourner. La
+  devanture est rognée à 3,40 m (3,60 m pour une galerie), cotes publiées depuis
+  `data/stationInterior` pour que les deux moteurs ne divergent pas ;
+- **elle s'adosse à la paroi la plus proche** et sa vitrine se développe le long
+  de celle-ci. Le relevé ne dit pas contre quel mur ; c'est la géométrie qui le
+  sait, et une devanture retournée tournerait le dos aux voyageurs.
+
+`networkIssues` gagne `shopEatsAisle` : une devanture qui laisserait moins de
+deux mètres de passage se dit au lieu de disparaître dans un `Math.min`. Aucune
+des trente et une ne le déclenche.
+
+**Deux constats restent ouverts, et sont épinglés par des tests plutôt que
+corrigés en silence :**
+
+- **six devantures sur trente et une ne se dessineront pas encore.** Ce sont les
+  galeries que le relevé pose dans une pièce qu'on REGARDE sans y aller —
+  GRANSTA depuis le hall de Tokyo, le Seibu depuis Ikebukuro, NEWoMan depuis
+  Shinjuku. `Concourse` n'enveloppe que les volumes praticables ; dessiner une
+  *vue* est le sujet des phases 22 à 24 ;
+- **les trois enseignes non déclarées** (atre vie à Sugamo, deux atre à Gotanda,
+  Dila à Ōsaki) restent absentes de `SPECS`. Les y ajouter changerait le hall
+  GÉNÉRIQUE de trois gares — un travail que leur branchement (phases 20 à 24)
+  jette aussitôt, puisqu'il remplace ce hall. Le relevé les porte déjà.
 
 ### Ordre et raison
 
