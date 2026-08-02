@@ -243,6 +243,22 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],
+  // JY07 Nippori. Une feuille, onglet 1F-2F. AVRIL 2025 : le plan le plus
+  // ancien de tout le relevé, seize mois avant la date de référence.
+  6: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Nippori Station (1F-2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e1184.html',
+      documentDate: '2025-04',
+      consultedAt: '2026-08-02',
+      note: 'PDF fourni à la main (réseau bloqué). Porte « As of April, 2025 » — '
+        + 'SEIZE MOIS avant la date de référence, le plus grand écart du relevé. '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
   // JY13 Ikebukuro. Deux feuilles : 1F-2F (les quais) et B1 (le hall). Datée
   // de février 2026.
   12: [
@@ -271,6 +287,25 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
       consultedAt: '2026-08-02',
       note: 'PDF fourni à la main (réseau bloqué). Porte « As of September, 2025 » — '
         + 'ONZE MOIS avant la date de référence, le plus grand écart du lot. '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY25 Shinagawa. Deux feuilles, 1F (les quais) et 2F (le hall-passerelle).
+  // Juillet 2026, la deuxième date la plus proche de la référence. Mais le
+  // CADRAGE est panoramé vers le sud : les voies 1 à 3 et le Central Gate en
+  // sortent.
+  24: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Shinagawa Station (1F, 2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e788.html',
+      documentDate: '2026-07',
+      consultedAt: '2026-08-02',
+      note: 'PDF fournis à la main (réseau bloqué). Porte « As of July, 2026 ». '
+        + 'Le CADRAGE des deux feuilles s’arrête à la voie 4 : les voies Yamanote '
+        + '(1 et 2), le Central Gate et le côté Takanawa sont hors champ. '
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],

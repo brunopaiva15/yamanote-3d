@@ -239,6 +239,75 @@ const FINDINGS = {
       + 'simultanément lisibles sont le sujet ; la surface au sol ne l’est pas.',
   },
 
+  // ─── JY07 Nippori ─────────────────────────────────────────────────────
+  // Une feuille, avril 2025 : le plan le plus ancien du relevé. Il répond
+  // malgré tout à presque tout ce que le cahier des charges demandait.
+  6: {
+    confidence: '`mostlyVerified` — sur un plan d’**avril 2025**, le plus ancien du relevé',
+    levels: [
+      '**1F** — les quais, et la *East Exit Square*.',
+      '**2F** — le niveau des contrôles : celui de JR **et** celui du Keisei, '
+        + 'côte à côte, avec ecute Nippori entre les deux. C’est un pont au-dessus '
+        + 'du faisceau.',
+      '**3F** — le **Nippori-Toneri Liner**, fléché mais non cartographié.',
+      'Un **Free Passage (Over Tracks)** relie les deux côtés hors contrôle.',
+    ],
+    gates: [
+      '**South Gate** et **North Gate** — les deux groupes JR.',
+      '**Transfer to Keisei Line** — une ligne de contrôle *entre deux zones '
+        + 'payantes*, avec son propre *Fare Adjustment (JR Line Transfer)* et ses '
+        + '*Tickets (Keisei Line Transfer)*. Ce n’est pas une sortie : c’est un '
+        + 'passage d’un exploitant à l’autre.',
+      '**Keisei Line North Gate** — le contrôle propre du Keisei, plus loin, avec '
+        + 'ses *Tickets (Keisei Line)* et sa *Concourse Area (Keisei Line)*.',
+      'Ascenseurs **A à F**.',
+    ],
+    order: 'Deux brackets le long des quais : **South Gate** au sud, '
+      + '**North Gate & Transfer to Keisei Line** au nord — le second couvrant à '
+      + 'lui seul plus de la moitié de la longueur. La gare est donc franchement '
+      + 'polarisée au nord, là où JR, Keisei et le Toneri Liner se superposent.',
+    tracks: 'Voie **10** = Yamanote *for Ueno, Tōkyō, Shinagawa & Meguro* (外回り) ; '
+      + 'voie **11** = Yamanote *for Ikebukuro, Shinjuku & Shibuya* (内回り). Voie '
+      + '**9** = Keihin-Tōhoku vers Ueno, voie **12** = vers Tabata. Chaque voie '
+      + 'Yamanote partage donc son îlot avec une Keihin-Tōhoku — îlots (9,10) et '
+      + '(11,12) — ce qui **confirme** `sharedIsland` / `sharedWith: Keihin-Tōhoku`. '
+      + 'Plus au sud, un troisième îlot : voies **3** et **4**, Jōban Rapid, Narita '
+      + 'et Ueno-Tōkyō.',
+    transfers: [
+      '**Keisei** — deux lignes de contrôle en enfilade (Transfer, puis Keisei '
+        + 'North Gate) et une *Concourse Area (Keisei Line)* cartographiée en gris.',
+      '**Nippori-Toneri Liner** — au **3F**, fléché depuis le 2F et depuis la '
+        + '*East Exit Square (1F)*. Trois niveaux d’exploitants empilés.',
+    ],
+    commerce: [
+      '**ecute Nippori** — au 2F, entre le contrôle JR et le passage vers le '
+        + 'Keisei. Le dépôt déclarait `ecute` pour Nippori sans pouvoir le situer ; '
+        + 'c’est fait.',
+      'Le plan ne nomme aucun autre commerce.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      '⚠️ **Le plan date d’avril 2025**, seize mois avant la date de référence. '
+        + 'C’est le plus grand écart de tout le relevé.',
+      'Le **West Exit** que le cahier des charges attend n’apparaît pas sous ce '
+        + 'nom ; le document nomme *East Exit*, *East Exit Square* et le '
+        + '*Free Passage*. À confirmer.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise.',
+      'Le niveau **3F** (Toneri Liner) est fléché mais pas cartographié.',
+    ],
+    tradeoff: '**Le dépôt avait raison de traiter Nippori à part** : ses '
+      + 'ponts-concours SONT son niveau de correspondance, et le plan le confirme '
+      + '— le 2F porte à la fois le contrôle JR, le passage Keisei et ecute, '
+      + 'au-dessus du faisceau. Tranche jouable autour du **North Gate**, qui est '
+      + 'le groupe long et celui qui donne sur tout le reste. Représentés sans '
+      + 'être visitables : le *Transfer to Keisei* puis le *Keisei North Gate* en '
+      + 'enfilade (deux exploitants qui se suivent), le **Toneri Liner au 3F** '
+      + '(volée qui monte et se perd), le *Free Passage* hors contrôle, le '
+      + '*South Gate* en perspective, et la *East Exit Square* aperçue en '
+      + 'contrebas. **Aucun second pont-concours générique** ne doit être ajouté : '
+      + 'la charpente signature existante EST ce niveau.',
+  },
+
   // ─── JY13 Ikebukuro ───────────────────────────────────────────────────
   // Deux feuilles, 1F-2F et B1. Février 2026. C'est la gare qui donne les
   // NOMS DE PASSAGES que le cahier des charges espérait sans les tenir.
@@ -384,6 +453,72 @@ const FINDINGS = {
       + 'bas du souterrain et le bois clair de 2020 est le sujet ; la surface ne '
       + 'l’est pas. Représentés seulement : le West Exit, le East Exit et le '
       + 'renvoi Tokyo Metro, en fond de zone libre du 2F.',
+  },
+
+  // ─── JY25 Shinagawa ───────────────────────────────────────────────────
+  // Juillet 2026 - la deuxième date la plus proche - mais un cadrage panoramé
+  // vers le sud qui laisse les voies Yamanote hors champ.
+  24: {
+    confidence: '`approximate` — plan de **juillet 2026**, mais **cadré hors des voies Yamanote**',
+    levels: [
+      '**1F** — les quais : voies 4 à 15 pour les lignes classiques, 21 à 24 pour '
+        + 'le Shinkansen. Les voies **1 à 3 sont hors du cadrage**.',
+      '**2F** — le **hall-passerelle**, et c’est bien une passerelle : une bande '
+        + 'libre (le passage public) court du nord au sud, et les zones payantes '
+        + 'la bordent **des deux côtés**. On traverse la gare sans jamais entrer.',
+    ],
+    gates: [
+      '**North Gate** — relevé, au 2F, sur le flanc est du passage.',
+      '**Kōnan Exit (East Exit)** — le débouché est, au bout du passage libre.',
+      '**Contrôles Shinkansen** : *for Tōkaidō Shinkansen (South)*, '
+        + '*for Tōkaidō Shinkansen (North)* et *Tōkaidō Shinkansen Transfer '
+        + '(North)*. Comme à Tokyo, passer au Shinkansen demande de franchir un '
+        + 'second 改札.',
+      '⚠️ Le **Central Gate** — la tranche que le cahier des charges vise — '
+        + '**n’est pas dans le cadrage fourni**.',
+    ],
+    order: 'Le passage libre du 2F est l’ossature : orienté nord-sud, il porte le '
+      + '*Kōnan Exit* à un bout et se prolonge vers Takanawa à l’autre, avec les '
+      + 'zones payantes en bordure. La « immense longueur du hall » que le cahier '
+      + 'des charges décrit est bien là, et elle est **libre**, pas payante.',
+    tracks: 'Les voies **1 et 2** (Yamanote) sont **hors cadrage**. Le document '
+      + 'commence à la voie 4 : Keihin-Tōhoku vers Tōkyō (4) et vers Yokohama (5), '
+      + 'Ueno-Tōkyō (6, 7, 9, 10, 11), **8 = « Extra Platform »**, Tōkaidō (12), '
+      + 'Sōbu Rapid (13, 14), Yokosuka (15), Tōkaidō・Sanyō Shinkansen (21-24). '
+      + 'Ce document **n’établit donc pas** l’affectation des voies Yamanote.',
+    transfers: [
+      '**Shinkansen** — trois lignes de contrôle relevées.',
+      '**Keikyū** — *absent du cadrage fourni*. Le cahier des charges l’attend ; '
+        + 'ce document ne l’établit pas.',
+    ],
+    commerce: [
+      '**ecute Shinagawa**, avec deux renvois « for ecute (2F) » — la galerie est '
+        + 'dessinée dans l’aplat des grands commerces, sur le flanc ouest du '
+        + 'passage.',
+      '**Mizunone Plaza** (水の音広場) — une place nommée, dans la zone payante ouest.',
+      '**atre** — trois blocs, en emprise bâtie, au sud et à l’est.',
+      '**Safety monument** (安全の碑), au niveau des quais : un repère nommé.',
+      'KIOSK et SHOP répartis le long des deux zones payantes.',
+    ],
+    works: 'Beaucoup de chantier : au moins **sept zones « Under Construction »** '
+      + 'sur la feuille des quais et une sur celle du hall. Plan daté '
+      + '« *As of July, 2026* ».',
+    uncertain: [
+      '⚠️ **Le cadrage manque l’essentiel pour ce jeu.** Voies 1-2 (Yamanote), '
+        + '**Central Gate**, côté **Takanawa** : tout cela est hors champ sur les '
+        + 'deux feuilles. La confiance reste donc `approximate` malgré une date '
+        + 'excellente.',
+      'Le **Keikyū** n’apparaît pas.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise.',
+    ],
+    tradeoff: 'Ce qui est **acquis** et utilisable dès maintenant : la forme du '
+      + 'hall — un passage **libre** nord-sud bordé de zones payantes des deux '
+      + 'côtés, ce qui est l’inverse d’un couloir payant et change tout le '
+      + 'dessin ; l’opposition *Kōnan* (est) / *Takanawa* (ouest) portée par ce '
+      + 'passage ; **ecute Shinagawa** et **Mizunone Plaza** côté ouest ; les '
+      + 'trois contrôles Shinkansen ; le chantier omniprésent. Ce qui **attend un '
+      + 'nouveau cadrage** : le Central Gate, donc la tranche principale, et '
+      + 'l’affectation des voies Yamanote.',
   },
 
   // ─── JY26 Takanawa Gateway ────────────────────────────────────────────
