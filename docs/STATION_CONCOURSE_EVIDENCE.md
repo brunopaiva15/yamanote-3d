@@ -17,7 +17,7 @@ genre de document qui ment.
 
 ## ⚠ État de la vérification — à lire avant toute fiche
 
-**Plans officiels ouverts et lus : 1 / 30.**
+**Plans officiels ouverts et lus : 2 / 30.**
 
 L'environnement de développement de ce dépôt n'atteint pas les sites des
 opérateurs : la passerelle réseau refuse la connexion (403 sur `CONNECT`) vers
@@ -49,6 +49,17 @@ Ce qui tient tout cela en place, et c'est du code :
    source de rang 1-3 ait été lue ;
 3. un test lie ce carnet au registre : le compte de plans lus affiché ci-dessus
    est calculé, pas recopié.
+
+### Date de chaque plan lu
+
+Un plan de juin et un plan d'août ne décrivent pas la même gare quand la gare
+est un chantier. Les dates sont donc affichées avant les fiches, et jamais
+fondues dans le texte.
+
+| Gare | Date du plan | Écart |
+|---|---|---|
+| JY17 Shinjuku | 2026-08 | ✅ la date de référence |
+| JY20 Shibuya | 2026-06 | ⚠️ **décalé** par rapport à la référence |
 
 **Les documents ne sont pas versionnés.** Ils portent
 « ©JR East Consultants Company ». On en cite l'adresse, la date et ce qu'on y a
@@ -858,8 +869,9 @@ seulement pour vérifier une orientation en surface.
 
 **Groupes de portillons**
 
-- **B1F** : East Gate · West Gate · Central East Gate · **Central West Gate (6:00 – dernier train)**, le seul dont le plan donne les horaires, donc le seul qui ferme.
-- **2F** : Southeast Gate · South Gate · Kōshū-kaidō Gate · New South Gate · MIRAINA TOWER Gate.
+- **B1F** : East Gate · West Gate · Central East Gate · **Central West Gate (6:00 – dernier train)**.
+- **2F** : **Southeast Gate (7:00 – 24:00)** · South Gate · Kōshū-kaidō Gate · New South Gate · MIRAINA TOWER Gate.
+- **Deux groupes sur neuf FERMENT LA NUIT** — Central West (B1F) et Southeast (2F). Le plan donne leurs horaires et ceux-là seulement : les sept autres sont ouverts au service. Une gare dont certains contrôles s’éteignent n’est pas une gare dont tous les contrôles se valent, et c’est le genre de fait qu’aucune génération ne produit.
 - **B1F, branche sud** : JR Central West Gate (Keiō Exit), puis Keiō Line Gate — deux lignes de contrôle qui se suivent dans le même couloir.
 - Chaque groupe a ses *Tickets* et son *Fare Adjustment* accolés ; les ascenseurs sont balisés de **A à O**.
 
@@ -878,7 +890,7 @@ seulement pour vérifier une orientation en surface.
 
 - **EATo LUMINE** — *dans la zone payante* du B1F, entre les volées des voies 9&10 et 13&14. C’est le fait le plus remarquable du plan : une galerie de restauration côté 改札内, pas une devanture de couloir.
 - **LUMINE EST Shinjuku** — zone libre du B1F, au nord-est du Central East Gate, avec ses propres « for Exit ».
-- **NEWoMan** — 2F, de part et d’autre de l’épine sud, en zone libre comme en bordure de zone payante. **LUMINE 0** au nord-ouest du même niveau.
+- **NEWoMan** — 2F, de part et d’autre de l’épine sud, en zone libre comme en bordure de zone payante. **LUMINE 0** au nord-ouest du même niveau, **LUMINE 2** contre le Southeast Gate.
 - **NewDays** — zone payante B1F, près des volées 15&16. **KIOSK** sur les quais 1&2 et 3&4. Un **SHOP** au B1F.
 - **Suica Penguin Park** et la **Statue of Suica Penguin** — zone libre 2F est, contre le terminal de bus.
 
@@ -995,12 +1007,13 @@ Tranche jouable autour du **Central East Gate (B1F)**, qui est le groupe le plus
 
 ## JY20 Shibuya — 渋谷
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — mais sur un plan de **juin** 2026, pas d’août.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Shibuya Station (quais 2F, 1F) | [lien](https://www.jreast.co.jp/fr/e/stations/e808.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（渋谷駅） | [ja](https://www.jreast.co.jp/estation/stations/808.html) · [en](https://www.jreast.co.jp/en/estation/stations/808.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -1012,31 +1025,45 @@ Tranche jouable autour du **Central East Gate (B1F)**, qui est le groupe le plus
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **2F** — les quais. Deux îlots : **voies 1 et 2** (Yamanote) et **voies 3 et 4** (Saikyō / Shōnan-Shinjuku / Narita Express).
+- **1F** — le niveau des contrôles South et Hachikō, et des sorties de rue.
+- Le plan fourni ne couvre que ces deux niveaux : ni les quais Ginza en hauteur, ni les niveaux Tōkyū / Metro en profondeur n’y figurent — ils ne sont pas JR.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Central Gate** · **South Gate** · **Hachikō Gate** · **New South Gate** — quatre groupes, et c’est tout ce que JR exploite ici.
+- Le Hachikō Gate a son propre bloc au 1F, avec *Tickets*, *Fare Adjustment* et un passage marqué **« Exit Only »** — une bretelle à sens unique, pas un second contrôle.
+- Ascenseurs balisés **A à F**.
+
+**Ordre le long du quai** — Du **sud au nord** le long des quais, les brackets se suivent ainsi : New South Gate → Central Gate → South Gate → Central Gate + South Gate → Central Gate → **Hachikō Gate** (le plus long bracket, tout au nord). Le New South Gate est **loin** au sud, séparé du reste — ce n’est pas une variante du South Gate, c’est un autre bout de gare.
+
+**Voies Yamanote** — Voie **1** = Yamanote *for Shinjuku, Ikebukuro & Ueno* (内回り) ; voie **2** = Yamanote *for Shinagawa, Hamamatsuchō & Tōkyō* (外回り). Les deux sens **se font face sur le même îlot**, ce qui **confirme** le relevé du dépôt (`config: island`) — contrairement à Shinjuku, où ils sont sur deux quais partagés. Voies 3 et 4 : Saikyō (vers Ōmiya d’un côté, vers Ebisu・Ōsaki・Rinkai・Sōtetsu de l’autre), Shōnan-Shinjuku, Narita Express.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Keiō Inokashira** — fléché depuis le 1F, au nord-ouest, près du Hachikō Gate.
+- **Tokyo Metro Ginza · Hanzōmon · Fukutoshin** et **Tōkyū Tōyoko · Den-en-Toshi** — fléchés depuis les deux blocs du 1F, South comme Hachikō. Le plan donne la **direction**, jamais le cheminement : ces lignes ne sont pas JR et s’arrêtent au bord de la feuille.
+- Le Ginza est cité dans la liste des correspondances mais **son quai n’est pas dessiné** : il est au 3F, hors emprise du document.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **KIOSK** sur les quais, **NewDays** dans la légende — le plan ne place nommément aucune galerie.
+- Ni Hikarie, ni Scramble Square, ni Stream, ni Sakura Stage n’apparaissent : ce sont des bâtiments voisins, pas des commerces de gare JR. Les représenter relèvera de la perspective extérieure, pas du relevé.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+**La gare est un chantier, et le plan le dit partout.** Des zones « Under Construction » couvrent les deux quais (au moins quatre emprises distinctes) et trois blocs du 1F, dont l’essentiel du côté Hachikō. Mention finale : « *There may be some changes due to construction work. As of June, 2026* ». C’est plus de chantier que de gare finie, et c’est l’état à représenter.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- **La date.** Le plan est de **juin 2026**, la référence du chantier est août 2026. Sur une gare qui bouge tous les trimestres, deux mois peuvent déplacer une palissade ou rouvrir un passage. Aucun fait ci-dessus ne doit être présenté comme « l’état d’août ».
+- Les **noms japonais** des groupes ne sont pas sur cette édition anglaise : ハチ公改札 / 中央改札 / 南改札 / 新南改札 restent à confirmer.
+- Les sorties nommées relevées sont **East Exit**, **West Exit**, **Hachikō Exit** et **Miyamasuzaka Exit** ; le plan n’en donne pas la liste exhaustive et ne porte aucun numéro de sortie Metro.
+- Les niveaux Ginza (au-dessus) et Tōkyū / Metro (en dessous) sont **absents du document** : leur position relative reste à établir ailleurs.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable autour du **Hachikō Gate**, conformément au cahier des charges : c’est le groupe le plus reconnaissable et celui qui porte les sorties Hachikō et Miyamasuzaka. Représentés sans être visitables : le South Gate et son East Exit (branche sud, au même niveau), le Central Gate (perspective le long du quai), le New South Gate (très loin au sud — un panneau et une direction, rien de plus), le Keiō Inokashira et les lignes Metro / Tōkyū (portails de correspondance fléchés), le Ginza en hauteur (percée verticale). **Les palissades de chantier sont un élément de décor de premier plan, pas un détail** : elles ferment naturellement le périmètre là où le plan lui-même s’arrête.
 
 ---
 

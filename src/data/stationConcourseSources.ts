@@ -201,9 +201,30 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
       url: 'https://www.jreast.co.jp/fr/e/stations/e866.html',
       documentDate: '2026-08',
       consultedAt: '2026-08-02',
-      note: 'PDF fourni à la main (réseau bloqué) ; porte « As of August, 2026 » '
-        + 'et l’avertissement « There may be some changes due to construction work ». '
+      note: 'PDF fournis à la main (réseau bloqué), en deux envois : trois vues '
+        + 'de cadrage large, puis trois vues rapprochées qui donnent les horaires '
+        + 'du Southeast Gate. Porte « As of August, 2026 » et l’avertissement '
+        + '« There may be some changes due to construction work ». '
         + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY20 Shibuya. ATTENTION À LA DATE : ce jeu-ci porte « As of June, 2026 »,
+  // deux mois AVANT la date de référence du chantier. Sur une gare en
+  // reconstruction permanente, deux mois ne sont pas rien - c'est la seule
+  // gare de la boucle dont le relevé et la date de référence ne coïncident
+  // pas, et cela se dit à chaque fait qui en vient.
+  19: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Shibuya Station (quais 2F, 1F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e808.html',
+      documentDate: '2026-06',
+      consultedAt: '2026-08-02',
+      note: 'PDF fourni à la main (réseau bloqué). Porte « As of June, 2026 » — '
+        + 'DEUX MOIS avant la date de référence du chantier, sur une gare en '
+        + 'travaux. Non versionné : ©JR East Consultants Company.',
     },
   ],
 };
