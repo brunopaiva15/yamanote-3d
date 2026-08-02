@@ -11,7 +11,7 @@
 // Le paquet WebGPU (three/webgpu, TSL, nœuds de post-traitement) est chargé à
 // la demande. Un joueur qui reste en Ultra ne le télécharge jamais.
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, type GLProps } from '@react-three/fiber';
 import { CONFIG } from './data/config';
 import { Engine } from './three/Engine';
@@ -43,6 +43,7 @@ import { AgentSpeechBubble } from './three/AgentSpeechBubble';
 import { Player } from './three/Player';
 import { HeldItem } from './three/HeldItem';
 import { Hud } from './ui/Hud';
+import { RenderFailure } from './ui/RenderFailure';
 import { Controls } from './ui/Controls';
 import { BoardingPrompt } from './ui/BoardingPrompt';
 import { TalkPrompt } from './ui/TalkPrompt';
@@ -52,6 +53,15 @@ import { QualityNotice } from './ui/QualityNotice';
 import { extraordinaryAvailable, reportWebgpuFailure, usePerf } from './systems/perf';
 import { clearGpuKit, loadGpuKit } from './three/webgpu/kit';
 import { beginRenderBoot, endRenderBoot } from './systems/renderBoot';
+import { createWebglRenderer } from './three/glRenderer';
+import {
+  RENDER_WATCHDOG,
+  RETRY_DELAY,
+  type RenderStatus,
+  remountRenderer,
+  reportRenderFailure,
+  useRenderHealth,
+} from './systems/renderHealth';
 
 /**
  * Le moteur demandé est-il prêt ?
@@ -126,8 +136,66 @@ const webgpuRenderer = (async (props: { canvas: HTMLCanvasElement }) => {
   return createWebGPURenderer(props);
 }) as unknown as GLProps;
 
+/**
+ * Surveille que la toile a bien fini par dessiner, et remonte tant qu'il reste
+ * des tentatives.
+ *
+ * Le chien de garde ne guette pas un signal d'échec - il guette une IMAGE. Un
+ * contexte refusé se signale de lui-même (three/glRenderer) et la reprise est
+ * immédiate ; tout le reste - une toile mesurée à zéro, un pilote muet - ne se
+ * voit qu'à ce silence-là, et finissait en écran noir définitif.
+ */
+function useRenderWatchdog(active: boolean): { generation: number; status: RenderStatus } {
+  const status = useRenderHealth((s) => s.status);
+  const generation = useRenderHealth((s) => s.generation);
+  const alive = useRenderHealth((s) => s.alive);
+
+  useEffect(() => {
+    // Une image dessinée désarme la minuterie pour de bon : sans cette
+    // condition, elle sonnerait sur une toile qui tourne parfaitement.
+    if (!active || alive || status !== 'ok') return;
+    const id = window.setTimeout(() => reportRenderFailure(null), RENDER_WATCHDOG);
+    return () => window.clearTimeout(id);
+    // `generation` est dans les dépendances à dessein : chaque toile neuve a
+    // droit à son propre délai, sans quoi la deuxième tentative hériterait du
+    // chronomètre déjà bien entamé de la première.
+  }, [active, alive, status, generation]);
+
+  useEffect(() => {
+    if (status !== 'retrying') return;
+    // Laisser respirer le processus graphique avant de redemander : c'est de la
+    // place qui manquait, et la scène avortée n'est pas encore ramassée.
+    const id = window.setTimeout(remountRenderer, RETRY_DELAY);
+    return () => window.clearTimeout(id);
+  }, [status]);
+
+  // Une reprise reconstruit tout : il faut remettre le voile, sinon le joueur
+  // regarde son HUD figé sur du noir pendant qu'on retente en coulisses - la
+  // scène même dont on essaie de le sortir. Il se relèvera comme d'habitude,
+  // à la première image dessinée (three/RenderBootSignal).
+  useEffect(() => {
+    if (generation > 0) beginRenderBoot();
+  }, [generation]);
+
+  return { generation, status };
+}
+
 export default function Game() {
   const path = useRenderPath();
+  // La reprise ne concerne que la toile WebGL : en Extraordinaire, un moteur
+  // qui refuse de démarrer est déjà rattrapé par le repli sur Ultra.
+  const { generation, status } = useRenderWatchdog(path === 'webgl');
+  const attempts = useRenderHealth((s) => s.attempts);
+
+  // La fabrique doit changer d'identité à chaque tentative pour que la toile
+  // neuve demande bien un contexte plus modeste que celle qu'on vient de
+  // perdre (systems/renderHealth, contextAttemptOptions).
+  const webglRenderer = useMemo(
+    () =>
+      ((props: { canvas: HTMLCanvasElement }) =>
+        createWebglRenderer(props, attempts)) as unknown as GLProps,
+    [attempts],
+  );
 
   // Le voile d'attente est posé par App et se lève à la première image. Il
   // faut seulement le REPOSER quand on change de moteur en cours de trajet :
@@ -145,15 +213,17 @@ export default function Game() {
 
   return (
     <>
-      {path === 'pending' ? null : (
+      {/* La toile est DÉMONTÉE dès qu'on sait qu'elle n'a pas démarré, et pas
+          seulement au moment de la remplacer. D'abord parce que react-three-fiber
+          redemande un contexte à chaque rendu tant qu'il n'en a pas obtenu un,
+          et que ce pilonnage n'a jamais rien donné ; ensuite parce que la place
+          qui manquait ne se libérera pas tant que la scène avortée est encore
+          accrochée - or c'est précisément ce qu'on attend d'elle. */}
+      {path === 'pending' || (path === 'webgl' && status !== 'ok') ? null : (
       <Canvas
-        key={path}
+        key={`${path}-${generation}`}
         dpr={[1, 2]}
-        gl={
-          path === 'webgpu'
-            ? webgpuRenderer
-            : { powerPreference: 'high-performance', antialias: true }
-        }
+        gl={path === 'webgpu' ? webgpuRenderer : webglRenderer}
         camera={{ fov: 70, near: 0.05, far: 260, position: [0, CONFIG.eyeHeight, 4.2] }}
         shadows="percentage"
       >
@@ -196,6 +266,10 @@ export default function Game() {
       <StationDevelopmentNotice />
       <QualityNotice className="quality-note-hud" failureOnly />
       <Controls />
+      {/* En dernier, et par-dessus tout le reste : quand la toile n'a pas
+          démarré, le HUD affiche un état figé qui ressemble à s'y méprendre à
+          un jeu qui tourne. */}
+      <RenderFailure />
     </>
   );
 }
