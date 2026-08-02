@@ -332,6 +332,99 @@ const FINDINGS = {
       + 'simultanément lisibles sont le sujet ; la surface au sol ne l’est pas.',
   },
 
+  // ─── JY06 Uguisudani ──────────────────────────────────────────────────
+  // Seule gare du relevé dont la série « Guide Maps » ne s'occupe pas : c'est
+  // le 構内図 ordinaire, en japonais, et il date de JUIN 2022.
+  5: {
+    confidence: '`approximate` — plan de **juin 2022**, quatre ans avant la référence',
+    levels: ['**1F** — tout tient sur une feuille : les quais et les deux petits '
+      + 'halls.'],
+    gates: [
+      '**Deux groupes, tous deux nommés simplement 改札口** — « ticket gate », '
+        + 'sans qualificatif. Chacun avec sa **きっぷうりば** (billetterie).',
+      'Celui du **南口** (South Exit), à l’ouest, a en plus un **ATM** et un '
+        + '**精算機**.',
+      'Celui du **北口** (North Exit) a son **精算所**, et il est atteint depuis '
+        + 'le quai par un **地下通路** — un passage souterrain, dessiné en rose '
+        + 'sur le plan.',
+    ],
+    order: '**Les deux halls sont à des bouts opposés ET de part et d’autre des '
+      + 'voies** : le 南口 à l’ouest, de plain-pied ; le 北口 au sud-est, sous '
+      + 'les voies. Rien ne les relie hors quai. Le cahier des charges annonçait '
+      + '« deux petits halls réellement séparés » : c’est exact, et la séparation '
+      + 'est verticale autant qu’horizontale.',
+    tracks: 'Voie **2** = 山手線 *池袋・新宿・渋谷方面* (内回り) ; voie **3** = '
+      + '山手線 *東京・品川・目黒方面* (外回り). Voies **1** et **4** = 京浜東北線 : '
+      + '`sharedIsland` / `sharedWith: Keihin-Tōhoku` **confirmé**.',
+    transfers: ['**Aucune.** Le plan n’en fléche pas une seule.'],
+    commerce: [
+      'Aucune enseigne, aucune galerie, pas même un KIOSK cartographié. Le cahier '
+        + 'des charges annonçait « très peu de commerces » : le plan dit **aucun**.',
+    ],
+    works: 'Aucune zone de chantier signalée — mais le plan a **quatre ans**.',
+    uncertain: [
+      '⚠️ **Le plan date de juin 2022**, quatre ans avant la date de référence. '
+        + 'C’est de très loin le plus ancien du relevé, et il justifie seul la '
+        + 'confiance `approximate`.',
+      'C’est aussi la **seule gare** que la série « Guide Maps for Major '
+        + 'Stations » ne couvre pas — signe, en soi, de son rang.',
+      'Le dépôt tient 南口改札 pour le nom du contrôle. Le plan écrit **改札口** '
+        + 'tout court, et réserve **南口** à la sortie. Quatrième occurrence du '
+        + 'même piège, après Harajuku, Shimbashi et Kanda.',
+    ],
+    tradeoff: 'Tranche jouable au **南口**, le hall ouest, de plain-pied — c’est '
+      + 'la zone principale. Représenté sans être visitable : le **北口**, atteint '
+      + 'par un **地下通路** qui plonge sous les voies et ressort de l’autre côté '
+      + '— une volée descendante, un couloir qui tourne, et rien au bout qu’on '
+      + 'puisse voir. **Aucun commerce** : c’est la gare la plus nue de la boucle, '
+      + 'et il faut que cela se sente.',
+  },
+
+  // ─── JY18 Yoyogi ──────────────────────────────────────────────────────
+  17: {
+    confidence: '`mostlyVerified` — sur un plan de **janvier 2026**',
+    levels: [
+      '**1F** — les contrôles, en **deux blocs séparés**.',
+      '**2F** — les quais : quatre voies.',
+    ],
+    gates: [
+      '**North Exit** — un bloc à l’ouest, avec ses *Tickets*, son '
+        + '*Fare Adjustment* et un renvoi « for Ōedo Line ».',
+      '**West Exit** — le bloc principal à l’est, plus grand, avec **deux jeux** '
+        + 'de *Tickets* et de *Fare Adjustment*, la sortie **East Exit**, et son '
+        + 'propre renvoi « for Ōedo Line ».',
+      '**Les deux blocs ont chacun leur accès à l’Ōedo** : la correspondance se '
+        + 'prend des deux côtés, ce qui est rare.',
+    ],
+    order: 'Deux brackets : **North Exit** d’un côté, **West Exit & East Exit** de '
+      + 'l’autre. ⚠️ Le cahier des charges présentait North comme « accès '
+      + 'principal » et East/West comme secondaires ; **le plan montre l’inverse** '
+      + '— c’est le bloc West/East qui est le plus grand et qui porte deux sorties.',
+    tracks: 'Voie **1** = Yamanote *for Shinjuku, Ikebukuro & Ueno* (内回り) ; '
+      + 'voie **2** = Yamanote *for Harajuku, Shibuya & Shinagawa* (外回り). '
+      + 'Voies **3** et **4** = Chūō-Sōbu Local. **L’appariement des voies en '
+      + 'îlots n’est pas lisible** à la résolution fournie : le relevé du dépôt '
+      + '(`sharedIsland` avec la Chūō-Sōbu) n’est donc **ni confirmé ni '
+      + 'contredit** par ce document.',
+    transfers: ['**Toei Ōedo** — fléché depuis **les deux** blocs de contrôle.'],
+    commerce: ['Le plan ne nomme aucune enseigne ni galerie.'],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **janvier 2026**.',
+      '⚠️ **L’appariement voies ↔ îlots n’est pas résolu** par cette capture. '
+        + 'C’est la seule question de plan de voies que le relevé laisse ouverte, '
+        + 'et elle mériterait un cadrage plus serré du 2F.',
+      'Le dépôt tient 北口改札 pour le nom du contrôle ; le plan nomme les '
+        + 'SORTIES (*North*, *West*, *East*) et non les contrôles.',
+    ],
+    tradeoff: 'Tranche jouable au bloc **West / East**, qui est le plus grand et '
+      + 'porte deux sorties — **et non au North**, contrairement à ce que le '
+      + 'cahier des charges supposait. Représentés sans être visitables : le bloc '
+      + '**North** à l’autre bout (petit, séparé, atteint par le quai) et les '
+      + 'deux renvois **Ōedo**, un par bloc. L’échelle reste étroite et locale, '
+      + 'comme annoncé.',
+  },
+
   // ─── JY07 Nippori ─────────────────────────────────────────────────────
   // Une feuille, avril 2025 : le plan le plus ancien du relevé. Il répond
   // malgré tout à presque tout ce que le cahier des charges demandait.

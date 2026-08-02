@@ -48,7 +48,13 @@ test('chaque gare porte son plan officiel JR East', () => {
     // Le titre porte le nom japonais de la gare : c'est cette concordance
     // titre ↔ adresse qui a servi de confirmation, faute de pouvoir lire la page.
     assert.ok(page.title.includes(STATIONS[i].kanji), `${name} : titre sans le nom de la gare`);
-    assert.equal(page.consultedAt, REFERENCE_DATE, name);
+    // La page a été regardée pendant ce chantier, indexée ou lue. Une page
+    // seulement indexée porte le mois du registre ; une page réellement
+    // OUVERTE porte le jour où on l'a lue.
+    assert.ok(
+      page.consultedAt === REFERENCE_DATE || page.consultedAt.startsWith(`${REFERENCE_DATE}-`),
+      `${name} : date de consultation inattendue (${page.consultedAt})`,
+    );
   }
 });
 

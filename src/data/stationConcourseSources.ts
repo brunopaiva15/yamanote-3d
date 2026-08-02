@@ -118,16 +118,43 @@ export function jrEastPlanUrlEn(index: number): string {
   return `https://www.jreast.co.jp/en/estation/stations/${JR_EAST_ID[i]}.html`;
 }
 
+/**
+ * Gares dont la page estation ELLE-MÊME a été lue, avec la date du plan.
+ *
+ * Le cas ordinaire est autre : la série « Guide Maps for Major Stations » vit à
+ * une adresse distincte (`/fr/e/stations/eNNNN.html`), et c'est elle qui est
+ * fournie. Mais elle ne couvre pas toutes les gares - Uguisudani en est
+ * exclue - et il faut alors se rabattre sur le 構内図 ordinaire, qui est
+ * exactement cette page-ci. On ne duplique pas la référence : on la fait
+ * passer en `read`.
+ */
+const READ_ESTATION: Readonly<Record<number, { date: string; note: string }>> = {
+  // JY06 Uguisudani : seule gare de la boucle absente de la série « Guide
+  // Maps », et son 構内図 date de juin 2022 — quatre ans avant la référence.
+  5: {
+    date: '2022-06',
+    note: 'Capture fournie à la main (réseau bloqué). Porte « 2022年6月現在 » — '
+      + 'QUATRE ANS avant la date de référence, le plus grand écart du relevé. '
+      + 'Édition japonaise : les noms y sont en japonais (改札口, 南口, 北口). '
+      + 'Seule gare que la série « Guide Maps for Major Stations » ne couvre pas. '
+      + 'Non versionné : ©JR East Consultants Company.',
+  },
+};
+
 function jrEastPlan(index: number): SourceReference {
   const i = ((index % 30) + 30) % 30;
+  const read = READ_ESTATION[i];
   return {
     tier: 1,
-    retrieval: 'indexed',
+    retrieval: read ? 'read' : 'indexed',
     publisher: 'JR East',
     title: `駅構内図・バリアフリー情報（${JR_EAST_NAME[i]}駅）`,
     url: jrEastPlanUrl(i),
-    consultedAt: REGISTRY_CHECKED_AT,
-    note: 'adresse et titre confirmés par l’index ; contenu du plan non lu (réseau bloqué)',
+    documentDate: read?.date,
+    consultedAt: read ? '2026-08-02' : REGISTRY_CHECKED_AT,
+    note: read
+      ? read.note
+      : 'adresse et titre confirmés par l’index ; contenu du plan non lu (réseau bloqué)',
   };
 }
 
@@ -610,6 +637,20 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
       documentDate: '2025-09',
       consultedAt: '2026-08-02',
       note: 'Capture fournie à la main (réseau bloqué). Porte « As of September, 2025 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY18 Yoyogi. Onglet unique 1F-2F. Janvier 2026.
+  17: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Yoyogi Station (1F-2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e1654.html',
+      documentDate: '2026-01',
+      consultedAt: '2026-08-02',
+      note: 'Captures fournies à la main (réseau bloqué). Porte « As of January, 2026 ». '
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],

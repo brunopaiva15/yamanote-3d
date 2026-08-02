@@ -17,7 +17,7 @@ genre de document qui ment.
 
 ## ⚠ État de la vérification — à lire avant toute fiche
 
-**Plans officiels ouverts et lus : 28 / 30.**
+**Plans officiels ouverts et lus : 30 / 30.**
 
 L'environnement de développement de ce dépôt n'atteint pas les sites des
 opérateurs : la passerelle réseau refuse la connexion (403 sur `CONNECT`) vers
@@ -98,6 +98,7 @@ fondues dans le texte.
 | JY03 Akihabara | 2026-01 | ⚠️ **décalé** par rapport à la référence |
 | JY04 Okachimachi | 2024-01 | ⚠️ **décalé** par rapport à la référence |
 | JY05 Ueno | 2026-06 | ⚠️ **décalé** par rapport à la référence |
+| JY06 Uguisudani | 2022-06 | ⚠️ **décalé** par rapport à la référence |
 | JY07 Nippori | 2025-04 | ⚠️ **décalé** par rapport à la référence |
 | JY08 Nishi-Nippori | 2024-02 | ⚠️ **décalé** par rapport à la référence |
 | JY09 Tabata | 2024-02 | ⚠️ **décalé** par rapport à la référence |
@@ -109,6 +110,7 @@ fondues dans le texte.
 | JY15 Takadanobaba | 2026-06 | ⚠️ **décalé** par rapport à la référence |
 | JY16 Shin-Ōkubo | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY17 Shinjuku | 2026-08 | ✅ la date de référence |
+| JY18 Yoyogi | 2026-01 | ⚠️ **décalé** par rapport à la référence |
 | JY19 Harajuku | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY20 Shibuya | 2026-06 | ⚠️ **décalé** par rapport à la référence |
 | JY21 Ebisu | 2025-09 | ⚠️ **décalé** par rapport à la référence |
@@ -471,13 +473,13 @@ Tranche jouable **verticale**, et c’est le contraire de Shinjuku : depuis le q
 
 ## JY06 Uguisudani — 鶯谷
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `approximate` — plan de **juin 2022**, quatre ans avant la référence.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
-| 1 | 駅構内図・バリアフリー情報（鶯谷駅） | [ja](https://www.jreast.co.jp/estation/stations/209.html) · [en](https://www.jreast.co.jp/en/estation/stations/209.html) | `indexed` — non lu |
+| 1 | 駅構内図・バリアフリー情報（鶯谷駅） | [ja](https://www.jreast.co.jp/estation/stations/209.html) · [en](https://www.jreast.co.jp/en/estation/stations/209.html) | **`read`** — ouvert et lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
 
@@ -488,31 +490,39 @@ Tranche jouable **verticale**, et c’est le contraire de Shinjuku : depuis le q
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — tout tient sur une feuille : les quais et les deux petits halls.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Deux groupes, tous deux nommés simplement 改札口** — « ticket gate », sans qualificatif. Chacun avec sa **きっぷうりば** (billetterie).
+- Celui du **南口** (South Exit), à l’ouest, a en plus un **ATM** et un **精算機**.
+- Celui du **北口** (North Exit) a son **精算所**, et il est atteint depuis le quai par un **地下通路** — un passage souterrain, dessiné en rose sur le plan.
+
+**Ordre le long du quai** — **Les deux halls sont à des bouts opposés ET de part et d’autre des voies** : le 南口 à l’ouest, de plain-pied ; le 北口 au sud-est, sous les voies. Rien ne les relie hors quai. Le cahier des charges annonçait « deux petits halls réellement séparés » : c’est exact, et la séparation est verticale autant qu’horizontale.
+
+**Voies Yamanote** — Voie **2** = 山手線 *池袋・新宿・渋谷方面* (内回り) ; voie **3** = 山手線 *東京・品川・目黒方面* (外回り). Voies **1** et **4** = 京浜東北線 : `sharedIsland` / `sharedWith: Keihin-Tōhoku` **confirmé**.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Aucune.** Le plan n’en fléche pas une seule.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Aucune enseigne, aucune galerie, pas même un KIOSK cartographié. Le cahier des charges annonçait « très peu de commerces » : le plan dit **aucun**.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée — mais le plan a **quatre ans**.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- ⚠️ **Le plan date de juin 2022**, quatre ans avant la date de référence. C’est de très loin le plus ancien du relevé, et il justifie seul la confiance `approximate`.
+- C’est aussi la **seule gare** que la série « Guide Maps for Major Stations » ne couvre pas — signe, en soi, de son rang.
+- Le dépôt tient 南口改札 pour le nom du contrôle. Le plan écrit **改札口** tout court, et réserve **南口** à la sortie. Quatrième occurrence du même piège, après Harajuku, Shimbashi et Kanda.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable au **南口**, le hall ouest, de plain-pied — c’est la zone principale. Représenté sans être visitable : le **北口**, atteint par un **地下通路** qui plonge sous les voies et ressort de l’autre côté — une volée descendante, un couloir qui tourne, et rien au bout qu’on puisse voir. **Aucun commerce** : c’est la gare la plus nue de la boucle, et il faut que cela se sente.
 
 ---
 
@@ -1163,12 +1173,13 @@ Tranche jouable autour du **Central East Gate (B1F)**, qui est le groupe le plus
 
 ## JY18 Yoyogi — 代々木
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **janvier 2026**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Yoyogi Station (1F-2F) | [lien](https://www.jreast.co.jp/fr/e/stations/e1654.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（代々木駅） | [ja](https://www.jreast.co.jp/estation/stations/1654.html) · [en](https://www.jreast.co.jp/en/estation/stations/1654.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -1180,31 +1191,40 @@ Tranche jouable autour du **Central East Gate (B1F)**, qui est le groupe le plus
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — les contrôles, en **deux blocs séparés**.
+- **2F** — les quais : quatre voies.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **North Exit** — un bloc à l’ouest, avec ses *Tickets*, son *Fare Adjustment* et un renvoi « for Ōedo Line ».
+- **West Exit** — le bloc principal à l’est, plus grand, avec **deux jeux** de *Tickets* et de *Fare Adjustment*, la sortie **East Exit**, et son propre renvoi « for Ōedo Line ».
+- **Les deux blocs ont chacun leur accès à l’Ōedo** : la correspondance se prend des deux côtés, ce qui est rare.
+
+**Ordre le long du quai** — Deux brackets : **North Exit** d’un côté, **West Exit & East Exit** de l’autre. ⚠️ Le cahier des charges présentait North comme « accès principal » et East/West comme secondaires ; **le plan montre l’inverse** — c’est le bloc West/East qui est le plus grand et qui porte deux sorties.
+
+**Voies Yamanote** — Voie **1** = Yamanote *for Shinjuku, Ikebukuro & Ueno* (内回り) ; voie **2** = Yamanote *for Harajuku, Shibuya & Shinagawa* (外回り). Voies **3** et **4** = Chūō-Sōbu Local. **L’appariement des voies en îlots n’est pas lisible** à la résolution fournie : le relevé du dépôt (`sharedIsland` avec la Chūō-Sōbu) n’est donc **ni confirmé ni contredit** par ce document.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Toei Ōedo** — fléché depuis **les deux** blocs de contrôle.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Le plan ne nomme aucune enseigne ni galerie.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **janvier 2026**.
+- ⚠️ **L’appariement voies ↔ îlots n’est pas résolu** par cette capture. C’est la seule question de plan de voies que le relevé laisse ouverte, et elle mériterait un cadrage plus serré du 2F.
+- Le dépôt tient 北口改札 pour le nom du contrôle ; le plan nomme les SORTIES (*North*, *West*, *East*) et non les contrôles.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable au bloc **West / East**, qui est le plus grand et porte deux sorties — **et non au North**, contrairement à ce que le cahier des charges supposait. Représentés sans être visitables : le bloc **North** à l’autre bout (petit, séparé, atteint par le quai) et les deux renvois **Ōedo**, un par bloc. L’échelle reste étroite et locale, comme annoncé.
 
 ---
 
