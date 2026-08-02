@@ -359,20 +359,43 @@ function buildDoorGlass(): THREE.BufferGeometry {
   return g;
 }
 
-/** Soufflet d'intercirculation, posé dans l'intervalle entre deux caisses. */
+/**
+ * Soufflet d'intercirculation, posé dans l'intervalle entre deux caisses.
+ *
+ * C'est un MANCHON, pas un bouchon : quatre panneaux (deux joues, un ciel, un
+ * plancher) et les deux bouts grands ouverts. La distinction n'est pas
+ * décorative. Ce qu'il faut masquer déborde sur le FLANC - la paroi d'about et
+ * les parois latérales de la zone prioritaire sont modélisées jusqu'à z = ±10
+ * alors que la caisse extérieure s'arrête à ±9,8, si bien qu'un liseré rose
+ * traînait au droit de chaque about vu du quai. Ce sont les joues qui s'en
+ * chargent, et elles seules : posées de 1,42 à 1,46, elles noient le nu
+ * extérieur rose (1,44) tout en restant en retrait de la peau de caisse
+ * (1,475), donc sans jamais saillir.
+ *
+ * En volume plein, en revanche, le soufflet empiétait de 25 cm dans la voiture
+ * du joueur - la seule qui ait un vrai intérieur. Depuis le quai, la travée
+ * prioritaire se terminait donc sur un pan NOIR à la place de la paroi d'about,
+ * de ses affiches et de sa porte d'intercirculation ; de l'intérieur on ne
+ * voyait rien puisque la caisse extérieure y est éteinte. Les deux bouts
+ * ouverts rendent cette profondeur de champ sans rien découvrir sur le flanc.
+ */
 function buildBellows(): THREE.BufferGeometry {
   const gap = E235.pitch - HALF * 2;
-  // Assez haut et assez large pour masquer TOUT l'intérieur qui déborde dans
-  // l'intervalle : non seulement la paroi d'about (à z = ±10, alors que la
-  // caisse extérieure s'arrête à ±9,8), mais aussi les parois latérales de la
-  // zone prioritaire, dont le nu extérieur rose est à x = 1,44. À 2,72 de large
-  // (±1,36) le soufflet passait DERRIÈRE ce nu : depuis le quai on lisait un
-  // liseré rose au droit de chaque about. Élargi à ±1,46, il couvre la paroi
-  // (1,44) tout en restant en retrait de la peau de caisse (nu extérieur 1,475),
-  // donc sans jamais saillir sur le flanc.
-  const g = new THREE.BoxGeometry(2.92, 2.62, gap + 0.5);
-  g.translate(0, 1.24, 0);
-  return g;
+  // Emprise inchangée : les joues débordent de 25 cm dans chaque caisse pour
+  // qu'aucun jour ne s'ouvre à la jonction avec la peau.
+  const depth = gap + 0.5;
+  const w = 2.92;
+  const h = 2.62;
+  const t = 0.04; // épaisseur des panneaux
+  const yc = 1.24; // axe du manchon, comme l'emprise pleine d'avant
+  const parts: THREE.BufferGeometry[] = [];
+  for (const s of [1, -1] as const) {
+    parts.push(box(t, h, depth, (s * (w - t)) / 2, yc, 0));
+  }
+  for (const s of [1, -1] as const) {
+    parts.push(box(w - t * 2, t, depth, 0, yc + (s * (h - t)) / 2, 0));
+  }
+  return mergeGeometries(parts) as THREE.BufferGeometry;
 }
 
 export function buildCarGeometries(): CarGeometries {
