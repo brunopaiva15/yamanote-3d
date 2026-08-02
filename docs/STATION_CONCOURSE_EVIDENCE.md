@@ -17,7 +17,7 @@ genre de document qui ment.
 
 ## ⚠ État de la vérification — à lire avant toute fiche
 
-**Plans officiels ouverts et lus : 12 / 30.**
+**Plans officiels ouverts et lus : 16 / 30.**
 
 L'environnement de développement de ce dépôt n'atteint pas les sites des
 opérateurs : la passerelle réseau refuse la connexion (403 sur `CONNECT`) vers
@@ -101,10 +101,14 @@ fondues dans le texte.
 | JY17 Shinjuku | 2026-08 | ✅ la date de référence |
 | JY19 Harajuku | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY20 Shibuya | 2026-06 | ⚠️ **décalé** par rapport à la référence |
+| JY21 Ebisu | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY22 Meguro | 2025-09 | ⚠️ **décalé** par rapport à la référence |
+| JY24 Ōsaki | 2026-04 | ⚠️ **décalé** par rapport à la référence |
 | JY25 Shinagawa | 2026-07 | ⚠️ **décalé** par rapport à la référence |
 | JY26 Takanawa Gateway | 2025-09 | ⚠️ **décalé** par rapport à la référence |
+| JY28 Hamamatsuchō | 2026-06 | ⚠️ **décalé** par rapport à la référence |
 | JY29 Shimbashi | 2025-09 | ⚠️ **décalé** par rapport à la référence |
+| JY30 Yūrakuchō | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 
 **Les documents ne sont pas versionnés.** Ils portent
 « ©JR East Consultants Company ». On en cite l'adresse, la date et ce qu'on y a
@@ -160,7 +164,7 @@ seulement pour vérifier une orientation en surface.
 - **1F — le niveau des contrôles et des passages**, celui qu’on parcourt.
 - **B1F — Gransta**, et une seconde nappe de circulation : plusieurs volées de quai sont fléchées « for Tracks No.X (2F) **& Concourse Area (B1F)** », donc desservent les deux niveaux à la fois.
 - **Keiyō Line** — feuille propre, et elle est éloquente : la ligne est au **B3F** (zone payante) et au **B4F** (quais), atteinte par un **couloir en L de plusieurs centaines de mètres** qui part du sud de la gare. Le « long accès Keiyō » du cahier des charges n’est pas une impression : c’est la forme même du plan.
-- **Sobu Line** — feuille non fournie. C’est de même une gare dans la gare, souterraine et distante.
+- **Sobu Line** — feuille propre également : zone payante au **B4F**, quais au **B5F**, deux îlots, avec « for Narita Airport Terminal » à un bout et « for Yokohama, Ōfuna, Kamakura, Zushi, Yokosuka & Kurihama » à l’autre. Aussi profonde que la Keiyō, et aussi lointaine.
 
 **Groupes de portillons**
 
@@ -197,7 +201,6 @@ Le plan porte « *There may be some changes due to construction work. As of May,
 
 **Incertain**
 
-- La feuille **Sobu Line** n’a pas été fournie (cinq onglets sur six).
 - Le **niveau des Marunouchi Exits** n’est pas explicité : ils sont sur la feuille 1F, mais le plan porte aussi « for Marunouchi (Underground) » — il existe donc un débouché souterrain distinct, non cartographié ici.
 - Le plan date de **mai 2026**, trois mois avant la référence, et se déclare lui-même sujet à changement sans localiser le chantier.
 - Les **noms japonais** ne sont pas sur cette édition anglaise : 丸の内中央口, 八重洲中央口, 日本橋口 restent à confirmer.
@@ -1224,12 +1227,13 @@ Tranche jouable autour du **Hachikō Gate**, conformément au cahier des charges
 
 ## JY21 Ebisu — 恵比寿
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **septembre 2025**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Ebisu Station (1F-3F) | [lien](https://www.jreast.co.jp/fr/e/stations/e290.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（恵比寿駅） | [ja](https://www.jreast.co.jp/estation/stations/290.html) · [en](https://www.jreast.co.jp/en/estation/stations/290.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -1241,31 +1245,44 @@ Tranche jouable autour du **Hachikō Gate**, conformément au cahier des charges
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — le **West Exit** : un contrôle bas, au niveau de la place de l’entrée ouest, avec le renvoi vers le Hibiya.
+- **2F** — les quais : deux îlots.
+- **3F** — le **East Exit** : un contrôle **haut**, entouré d’atre, d’où partent « for Garden Place » et « for Ebisu Neonort ».
+- **Les deux contrôles sont à deux niveaux opposés du quai**, l’un dessous, l’autre dessus. Le cahier des charges l’annonçait — « West : hall bas et urbain ; East : niveau supérieur plus commercial » — et le plan le confirme au niveau près.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **West Exit** — 1F, avec *Tickets* et *Fare Adjustment*. Le plan note « Ticket gate floor ⇔ West entrance station square » : le contrôle est de plain-pied avec la place.
+- **East Exit** — 3F, avec son propre *Fare Adjustment*.
+
+**Ordre le long du quai** — Deux brackets sur les quais, **East Exit** et **West Exit**, aux deux bouts et à deux niveaux. Il n’y a pas de hall unique à Ebisu : il y a deux gares superposées à la même verticale.
+
+**Voies Yamanote** — Voie **1** = Yamanote *for Shibuya, Shinjuku & Ikebukuro* ; voie **2** = Yamanote *for Meguro, Shinagawa & Tōkyō*. Les deux sens se font face sur le même îlot (`config: island` **confirmé**). Voies **3** et **4** : Saikyō, Shōnan-Shinjuku et service direct Sōtetsu, sur un second îlot.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Tokyo Metro Hibiya** — fléché depuis le **1F**, côté West Exit.
+- **Yebisu Garden Place** — « for Garden Place » depuis le **3F**, côté East Exit. C’est le départ du Yebisu Skywalk.
+- **Ebisu Neonort** — autre renvoi du 3F.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **atre** — présent aux **trois niveaux**, et c’est ce qui fait Ebisu : la gare est enveloppée par la galerie plutôt que bordée. Le dépôt déclarait `atre` : confirmé, et à trois étages.
+- **East Exit Traffic square** — la place devant le contrôle est, nommée.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **septembre 2025**.
+- Les **noms japonais** ne sont pas sur cette édition anglaise : 東口, 西口 restent à confirmer.
+- Le Yebisu Skywalk est fléché, pas cartographié — sa longueur reste inconnue.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable au **West Exit (1F)**, bas et urbain, avec sa place de plain-pied. Représentés sans être visitables : le **East Exit au 3F** (volée montante, atmosphère commerciale, atre de part et d’autre), le départ du **Yebisu Skywalk** vers Garden Place — un couloir qui part et ne revient pas —, et le renvoi **Hibiya** au 1F. **Le contraste haut/bas est le sujet** ; ni l’un ni l’autre hall n’est grand.
 
 ---
 
@@ -1377,12 +1394,13 @@ Tranche jouable **verticale** : du quai en tranchée (B1) on monte au *Central G
 
 ## JY24 Ōsaki — 大崎
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan d’**avril 2026**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Ōsaki Station (1F-2F) | [lien](https://www.jreast.co.jp/fr/e/stations/e319.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（大崎駅） | [ja](https://www.jreast.co.jp/estation/stations/319.html) · [en](https://www.jreast.co.jp/en/estation/stations/319.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -1394,31 +1412,41 @@ Tranche jouable **verticale** : du quai en tranchée (B1) on monte au *Central G
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — les quais : quatre îlots, huit voies.
+- **2F** — les contrôles et, surtout, **une passerelle**. Le plan l’écrit en toutes lettres : « *Concourse outside the ticket gate = Pedestrian overpass* ». La zone libre d’Ōsaki **est** un pont piéton.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **South Gate** et **North Gate** — les deux groupes, tous deux au 2F, avec leurs *Tickets* et *Fare Adjustment*.
+
+**Ordre le long du quai** — Deux brackets seulement, **South Gate** et **North Gate**, aux deux bouts de la passerelle.
+
+**Voies Yamanote** — **Quatre voies Yamanote sur deux îlots 方向別** : **1** et **2** *for Shinagawa, Tōkyō & Ueno*, **3** et **4** *for Shibuya, Shinjuku & Ikebukuro*. Chaque îlot porte donc les deux voies d’un même sens — exactement comme Ikebukuro, et cela **confirme** `terminusIsland`. Au-delà : Saikyō et Rinkai (6, 7, 8), Shōnan-Shinjuku et service direct Sōtetsu (5).
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Rinkai** — voies 6 à 8, correspondance de quai à quai.
+- **Sōtetsu** — par service direct, voie 5.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Dila Osaki** — la galerie de la gare, en deux blocs au 2F. Le dépôt ne la déclarait pas.
+- **GATE CITY OHSAKI** et **Think Park** — fléchés depuis la passerelle, donc atteints **sans redescendre**. C’est ce que le cahier des charges demandait : les sorties mènent à des decks, pas à un trottoir.
+- **Ikoi-no Square** — une place nommée sur la passerelle.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date d’**avril 2026**.
+- Les quatre débouchés que le cahier des charges nomme — East, West, New East, New West — apparaissent bien (*New West Exit*, *West Exit*, *East Exit*, *New East Exit*) mais ce sont des **sorties**, pas des contrôles : les seuls contrôles sont South Gate et North Gate.
+- Les **noms japonais** ne sont pas sur cette édition anglaise.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable autour du **North Gate**, sur la **passerelle** — et c’est elle le sujet : une zone libre entièrement suspendue, d’où l’on atteint les tours sans jamais toucher le sol. Représentés sans être visitables : le **South Gate** à l’autre bout, les quatre débouchés (*New West*, *West*, *East*, *New East*) menant chacun à un **deck** et non à une rue, **GATE CITY OHSAKI** et **Think Park** en perspectives extérieures simplifiées, et **Dila Osaki** en façades.
 
 ---
 
@@ -1592,12 +1620,13 @@ Tranche jouable : **le hall transversal du 2F en entier**, ce qui est possible p
 
 ## JY28 Hamamatsuchō — 浜松町
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **juin 2026**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Hamamatsuchō Station (1F-3F) | [lien](https://www.jreast.co.jp/fr/e/stations/e1248.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（浜松町駅） | [ja](https://www.jreast.co.jp/estation/stations/1248.html) · [en](https://www.jreast.co.jp/en/estation/stations/1248.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -1609,31 +1638,45 @@ Tranche jouable : **le hall transversal du 2F en entier**, ce qui est possible p
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — le **North Exit** : contrôle bas, avec le renvoi vers le Toei Asakusa et l’Ōedo (Daimon).
+- **2F** — les quais : deux îlots.
+- **3F** — le **South Exit**, et avec lui le **Monorail Transfer**.
+- **Les deux contrôles sont à deux niveaux différents**, exactement comme le cahier des charges l’annonçait.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **North Exit** — 1F, *Tickets* et *Fare Adjustment*.
+- **South Exit** — 3F, *Tickets*, et un **Lost & Found**.
+- **Monorail Transfer** — une ligne de contrôle *entre exploitants*, au 3F, avec son propre *Fare Adjustment (Monorail)*. On ne « passe » pas au monorail de Haneda : on franchit un second 改札.
+
+**Ordre le long du quai** — Deux brackets : **South Exit & Transfer to Monorail** d’un côté, **North Exit** de l’autre. Le sud concentre donc le contrôle JR *et* le passage vers Haneda ; le nord est seul.
+
+**Voies Yamanote** — Voie **2** = Yamanote *for Tōkyō, Ueno & Ikebukuro* ; voie **3** = Yamanote *for Shinagawa, Shibuya & Shinjuku*. Voies **1** et **4** = Keihin-Tōhoku : chaque voie Yamanote partage son îlot avec une Keihin-Tōhoku, ce qui **confirme** `sharedIsland` / `sharedWith: Keihin-Tōhoku`.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Tokyo Monorail (Haneda)** — au 3F, par contrôle dédié.
+- **Toei Asakusa & Ōedo** (Daimon) — fléché depuis le **1F**, côté North.
+- **Hinode Pier** — fléché depuis le 3F, avec la mention « **Stairway Only** » : c’est la direction de Takeshiba, et elle n’est pas accessible.
+- **Kanasugi-bashi** — autre renvoi du 3F.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Le plan ne nomme aucune enseigne ni galerie.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+**Deux zones « Under Construction » au 3F**, de part et d’autre du South Exit — ce sont les travaux du débouché sud que le cahier des charges demande de représenter. Plan daté « *As of June, 2026* ».
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **juin 2026**, deux mois avant la référence, sur une gare en travaux au sud.
+- Les **noms japonais** ne sont pas sur cette édition anglaise.
+- Le **World Trade Center** que le cahier des charges cite n’apparaît pas nommément sur le plan.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable au **South Exit (3F)**, parce que c’est là que tout se joue : le contrôle JR, le **Monorail Transfer** vers Haneda, les palissades de chantier, et les renvois vers **Hinode Pier** (escalier seul) et **Kanasugi-bashi**. Représentés sans être visitables : le **North Exit au 1F** (volée descendante et perspective), le renvoi **Daimon / Toei**, et les passages surélevés vers Takeshiba — un couloir qui part en hauteur et se perd.
 
 ---
 
@@ -1704,12 +1747,13 @@ Tranche jouable **sous le viaduc**, au 1F, autour du **South Gate** et de sa sor
 
 ## JY30 Yūrakuchō — 有楽町
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **septembre 2025**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Yūrakuchō Station (1F-2F) | [lien](https://www.jreast.co.jp/fr/e/stations/e1617.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（有楽町駅） | [ja](https://www.jreast.co.jp/estation/stations/1617.html) · [en](https://www.jreast.co.jp/en/estation/stations/1617.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -1721,30 +1765,43 @@ Tranche jouable **sous le viaduc**, au 1F, autour du **South Gate** et de sa sor
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — tous les contrôles, sous le viaduc.
+- **2F** — les quais : deux îlots.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Hibiya Exit — « IC card only »**
+- **Central West Exit — « IC card only »**
+- **Central Exit** — le seul du groupe central à accepter autre chose.
+- **International Forum Exit — « IC card only »**
+- **Kyōbashi Exit**
+- **Trois contrôles sur cinq n’acceptent que la carte sans contact.** C’est le même fait qu’au Marunouchi Central de Tokyo, mais en série — et c’est ce qui distingue un petit contrôle automatique d’un vrai 改札.
+
+**Ordre le long du quai** — Trois brackets, et ils donnent les trois ensembles que le cahier des charges veut « perceptiblement distincts » : **Ginza Exit & Hibiya Exit** — **Central Exit & Central West Exit** — **International Forum Exit & Kyōbashi Exit**. Trois groupes le long d’un viaduc, et rien entre eux.
+
+**Voies Yamanote** — Voie **2** = Yamanote *for Tōkyō, Ueno & Ikebukuro* ; voie **3** = Yamanote *for Shinagawa, Meguro & Shibuya*. Voies **1** et **4** = Keihin-Tōhoku : `sharedIsland` / `sharedWith: Keihin-Tōhoku` **confirmé**.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Tokyo Metro Yūrakuchō** — fléché depuis le 1F, côté Kyōbashi.
+- Le **Ginza Exit** figure dans les brackets de quai mais pas sur le plan du 1F fourni : il est vers le sud-ouest, hors cadrage.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **LUMINE STREET** — nommé **deux fois** au 1F, de part et d’autre du Central Exit. C’est le commerce sous les arches que le cahier des charges attend, et il porte un nom.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **septembre 2025**.
+- Le **Ginza Exit** n’est pas dans le cadrage du 1F ; seul son bracket de quai l’atteste.
+- Les **noms japonais** ne sont pas sur cette édition anglaise : 中央口, 中央西口, 日比谷口, 京橋口, 国際フォーラム口 restent à confirmer.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable autour du **Central Exit** et du **Central West Exit**, comme le cahier des charges le demande — et la règle **« IC card only »** du second est un fait de jeu. Représentés sans être visitables : le groupe **Ginza / Hibiya** au sud-ouest et le groupe **International Forum / Kyōbashi** au nord-est, tous deux par des perspectives le long du viaduc — **les trois ensembles ne doivent jamais se toucher**. **LUMINE STREET** garnit les arches ; les plafonds bas et la structure de viaduc sont le sujet.
 
 ---

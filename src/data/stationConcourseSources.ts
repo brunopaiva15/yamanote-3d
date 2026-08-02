@@ -219,11 +219,10 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
       url: 'https://www.jreast.co.jp/fr/e/stations/e1039.html',
       documentDate: '2026-05',
       consultedAt: '2026-08-02',
-      note: 'PDF fournis à la main (réseau bloqué) : cinq onglets sur six, la '
-        + 'feuille « Sobu Line » manque. Porte « As of May, 2026 » et '
-        + 'l’avertissement de chantier. Le cadrage des PDF couvre le côté Yaesu ; '
-        + 'des captures d’écran ultérieures couvrent Marunouchi mais à une '
-        + 'résolution où les libellés de portillon sont illisibles (~1 px/m). '
+      note: 'PDF puis captures fournis à la main (réseau bloqué) : les SIX onglets, '
+        + 'et les deux côtés. Le premier envoi cadrait Yaesu, le second Marunouchi '
+        + 'à une résolution suffisante. Porte « As of May, 2026 » et '
+        + 'l’avertissement de chantier. '
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],
@@ -391,6 +390,62 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
       note: 'PDF fourni à la main (réseau bloqué). Porte « As of June, 2026 » — '
         + 'DEUX MOIS avant la date de référence du chantier, sur une gare en '
         + 'travaux. Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY21 Ebisu. Onglet unique 1F-3F. Septembre 2025.
+  20: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Ebisu Station (1F-3F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e290.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of September, 2025 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY24 Ōsaki. Onglet unique 1F-2F. Avril 2026.
+  23: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Ōsaki Station (1F-2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e319.html',
+      documentDate: '2026-04',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of April, 2026 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY28 Hamamatsuchō. Onglet unique 1F-3F. Juin 2026.
+  27: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Hamamatsuchō Station (1F-3F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e1248.html',
+      documentDate: '2026-06',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of June, 2026 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY30 Yūrakuchō. Onglet unique 1F-2F. Septembre 2025.
+  29: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Yūrakuchō Station (1F-2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e1617.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of September, 2025 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
     },
   ],
 };

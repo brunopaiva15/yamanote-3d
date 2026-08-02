@@ -59,8 +59,10 @@ const FINDINGS = {
         + 'en L de plusieurs centaines de mètres** qui part du sud de la gare. Le '
         + '« long accès Keiyō » du cahier des charges n’est pas une impression : '
         + 'c’est la forme même du plan.',
-      '**Sobu Line** — feuille non fournie. C’est de même une gare dans la gare, '
-        + 'souterraine et distante.',
+      '**Sobu Line** — feuille propre également : zone payante au **B4F**, quais '
+        + 'au **B5F**, deux îlots, avec « for Narita Airport Terminal » à un bout '
+        + 'et « for Yokohama, Ōfuna, Kamakura, Zushi, Yokosuka & Kurihama » à '
+        + 'l’autre. Aussi profonde que la Keiyō, et aussi lointaine.',
     ],
     gates: [
       '**Côté Marunouchi** : *Marunouchi North Exit*, '
@@ -131,7 +133,6 @@ const FINDINGS = {
       + 'As of May, 2026* », sans délimiter de zone. Tokyo est donc déclarée '
       + 'mouvante sans que le document dise où.',
     uncertain: [
-      'La feuille **Sobu Line** n’a pas été fournie (cinq onglets sur six).',
       'Le **niveau des Marunouchi Exits** n’est pas explicité : ils sont sur la '
         + 'feuille 1F, mais le plan porte aussi « for Marunouchi (Underground) » — '
         + 'il existe donc un débouché souterrain distinct, non cartographié ici.',
@@ -805,6 +806,220 @@ const FINDINGS = {
       + 'que le dépôt a déjà : **le volume, la lumière naturelle, le bois, le '
       + 'verre et les vues sur les voies**. Les commerces, eux, sont laissés en '
       + 'attente d’un plan plus récent.',
+  },
+
+  // ─── JY21 Ebisu ───────────────────────────────────────────────────────
+  20: {
+    confidence: '`mostlyVerified` — sur un plan de **septembre 2025**',
+    levels: [
+      '**1F** — le **West Exit** : un contrôle bas, au niveau de la place de '
+        + 'l’entrée ouest, avec le renvoi vers le Hibiya.',
+      '**2F** — les quais : deux îlots.',
+      '**3F** — le **East Exit** : un contrôle **haut**, entouré d’atre, d’où '
+        + 'partent « for Garden Place » et « for Ebisu Neonort ».',
+      '**Les deux contrôles sont à deux niveaux opposés du quai**, l’un dessous, '
+        + 'l’autre dessus. Le cahier des charges l’annonçait — « West : hall bas '
+        + 'et urbain ; East : niveau supérieur plus commercial » — et le plan le '
+        + 'confirme au niveau près.',
+    ],
+    gates: [
+      '**West Exit** — 1F, avec *Tickets* et *Fare Adjustment*. Le plan note '
+        + '« Ticket gate floor ⇔ West entrance station square » : le contrôle est '
+        + 'de plain-pied avec la place.',
+      '**East Exit** — 3F, avec son propre *Fare Adjustment*.',
+    ],
+    order: 'Deux brackets sur les quais, **East Exit** et **West Exit**, aux deux '
+      + 'bouts et à deux niveaux. Il n’y a pas de hall unique à Ebisu : il y a '
+      + 'deux gares superposées à la même verticale.',
+    tracks: 'Voie **1** = Yamanote *for Shibuya, Shinjuku & Ikebukuro* ; voie '
+      + '**2** = Yamanote *for Meguro, Shinagawa & Tōkyō*. Les deux sens se font '
+      + 'face sur le même îlot (`config: island` **confirmé**). Voies **3** et '
+      + '**4** : Saikyō, Shōnan-Shinjuku et service direct Sōtetsu, sur un second '
+      + 'îlot.',
+    transfers: [
+      '**Tokyo Metro Hibiya** — fléché depuis le **1F**, côté West Exit.',
+      '**Yebisu Garden Place** — « for Garden Place » depuis le **3F**, côté East '
+        + 'Exit. C’est le départ du Yebisu Skywalk.',
+      '**Ebisu Neonort** — autre renvoi du 3F.',
+    ],
+    commerce: [
+      '**atre** — présent aux **trois niveaux**, et c’est ce qui fait Ebisu : la '
+        + 'gare est enveloppée par la galerie plutôt que bordée. Le dépôt '
+        + 'déclarait `atre` : confirmé, et à trois étages.',
+      '**East Exit Traffic square** — la place devant le contrôle est, nommée.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **septembre 2025**.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise : 東口, 西口 '
+        + 'restent à confirmer.',
+      'Le Yebisu Skywalk est fléché, pas cartographié — sa longueur reste inconnue.',
+    ],
+    tradeoff: 'Tranche jouable au **West Exit (1F)**, bas et urbain, avec sa place '
+      + 'de plain-pied. Représentés sans être visitables : le **East Exit au 3F** '
+      + '(volée montante, atmosphère commerciale, atre de part et d’autre), le '
+      + 'départ du **Yebisu Skywalk** vers Garden Place — un couloir qui part et '
+      + 'ne revient pas —, et le renvoi **Hibiya** au 1F. **Le contraste haut/bas '
+      + 'est le sujet** ; ni l’un ni l’autre hall n’est grand.',
+  },
+
+  // ─── JY24 Ōsaki ───────────────────────────────────────────────────────
+  23: {
+    confidence: '`mostlyVerified` — sur un plan d’**avril 2026**',
+    levels: [
+      '**1F** — les quais : quatre îlots, huit voies.',
+      '**2F** — les contrôles et, surtout, **une passerelle**. Le plan l’écrit en '
+        + 'toutes lettres : « *Concourse outside the ticket gate = Pedestrian '
+        + 'overpass* ». La zone libre d’Ōsaki **est** un pont piéton.',
+    ],
+    gates: [
+      '**South Gate** et **North Gate** — les deux groupes, tous deux au 2F, avec '
+        + 'leurs *Tickets* et *Fare Adjustment*.',
+    ],
+    order: 'Deux brackets seulement, **South Gate** et **North Gate**, aux deux '
+      + 'bouts de la passerelle.',
+    tracks: '**Quatre voies Yamanote sur deux îlots 方向別** : **1** et **2** '
+      + '*for Shinagawa, Tōkyō & Ueno*, **3** et **4** *for Shibuya, Shinjuku & '
+      + 'Ikebukuro*. Chaque îlot porte donc les deux voies d’un même sens — '
+      + 'exactement comme Ikebukuro, et cela **confirme** `terminusIsland`. '
+      + 'Au-delà : Saikyō et Rinkai (6, 7, 8), Shōnan-Shinjuku et service direct '
+      + 'Sōtetsu (5).',
+    transfers: [
+      '**Rinkai** — voies 6 à 8, correspondance de quai à quai.',
+      '**Sōtetsu** — par service direct, voie 5.',
+    ],
+    commerce: [
+      '**Dila Osaki** — la galerie de la gare, en deux blocs au 2F. Le dépôt ne '
+        + 'la déclarait pas.',
+      '**GATE CITY OHSAKI** et **Think Park** — fléchés depuis la passerelle, '
+        + 'donc atteints **sans redescendre**. C’est ce que le cahier des charges '
+        + 'demandait : les sorties mènent à des decks, pas à un trottoir.',
+      '**Ikoi-no Square** — une place nommée sur la passerelle.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date d’**avril 2026**.',
+      'Les quatre débouchés que le cahier des charges nomme — East, West, New '
+        + 'East, New West — apparaissent bien (*New West Exit*, *West Exit*, '
+        + '*East Exit*, *New East Exit*) mais ce sont des **sorties**, pas des '
+        + 'contrôles : les seuls contrôles sont South Gate et North Gate.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise.',
+    ],
+    tradeoff: 'Tranche jouable autour du **North Gate**, sur la **passerelle** — '
+      + 'et c’est elle le sujet : une zone libre entièrement suspendue, d’où l’on '
+      + 'atteint les tours sans jamais toucher le sol. Représentés sans être '
+      + 'visitables : le **South Gate** à l’autre bout, les quatre débouchés '
+      + '(*New West*, *West*, *East*, *New East*) menant chacun à un **deck** et '
+      + 'non à une rue, **GATE CITY OHSAKI** et **Think Park** en perspectives '
+      + 'extérieures simplifiées, et **Dila Osaki** en façades.',
+  },
+
+  // ─── JY28 Hamamatsuchō ────────────────────────────────────────────────
+  27: {
+    confidence: '`mostlyVerified` — sur un plan de **juin 2026**',
+    levels: [
+      '**1F** — le **North Exit** : contrôle bas, avec le renvoi vers le Toei '
+        + 'Asakusa et l’Ōedo (Daimon).',
+      '**2F** — les quais : deux îlots.',
+      '**3F** — le **South Exit**, et avec lui le **Monorail Transfer**.',
+      '**Les deux contrôles sont à deux niveaux différents**, exactement comme le '
+        + 'cahier des charges l’annonçait.',
+    ],
+    gates: [
+      '**North Exit** — 1F, *Tickets* et *Fare Adjustment*.',
+      '**South Exit** — 3F, *Tickets*, et un **Lost & Found**.',
+      '**Monorail Transfer** — une ligne de contrôle *entre exploitants*, au 3F, '
+        + 'avec son propre *Fare Adjustment (Monorail)*. On ne « passe » pas au '
+        + 'monorail de Haneda : on franchit un second 改札.',
+    ],
+    order: 'Deux brackets : **South Exit & Transfer to Monorail** d’un côté, '
+      + '**North Exit** de l’autre. Le sud concentre donc le contrôle JR *et* le '
+      + 'passage vers Haneda ; le nord est seul.',
+    tracks: 'Voie **2** = Yamanote *for Tōkyō, Ueno & Ikebukuro* ; voie **3** = '
+      + 'Yamanote *for Shinagawa, Shibuya & Shinjuku*. Voies **1** et **4** = '
+      + 'Keihin-Tōhoku : chaque voie Yamanote partage son îlot avec une '
+      + 'Keihin-Tōhoku, ce qui **confirme** `sharedIsland` / '
+      + '`sharedWith: Keihin-Tōhoku`.',
+    transfers: [
+      '**Tokyo Monorail (Haneda)** — au 3F, par contrôle dédié.',
+      '**Toei Asakusa & Ōedo** (Daimon) — fléché depuis le **1F**, côté North.',
+      '**Hinode Pier** — fléché depuis le 3F, avec la mention « **Stairway '
+        + 'Only** » : c’est la direction de Takeshiba, et elle n’est pas accessible.',
+      '**Kanasugi-bashi** — autre renvoi du 3F.',
+    ],
+    commerce: [
+      'Le plan ne nomme aucune enseigne ni galerie.',
+    ],
+    works: '**Deux zones « Under Construction » au 3F**, de part et d’autre du '
+      + 'South Exit — ce sont les travaux du débouché sud que le cahier des '
+      + 'charges demande de représenter. Plan daté « *As of June, 2026* ».',
+    uncertain: [
+      'Le plan date de **juin 2026**, deux mois avant la référence, sur une gare '
+        + 'en travaux au sud.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise.',
+      'Le **World Trade Center** que le cahier des charges cite n’apparaît pas '
+        + 'nommément sur le plan.',
+    ],
+    tradeoff: 'Tranche jouable au **South Exit (3F)**, parce que c’est là que '
+      + 'tout se joue : le contrôle JR, le **Monorail Transfer** vers Haneda, les '
+      + 'palissades de chantier, et les renvois vers **Hinode Pier** (escalier '
+      + 'seul) et **Kanasugi-bashi**. Représentés sans être visitables : le '
+      + '**North Exit au 1F** (volée descendante et perspective), le renvoi '
+      + '**Daimon / Toei**, et les passages surélevés vers Takeshiba — un couloir '
+      + 'qui part en hauteur et se perd.',
+  },
+
+  // ─── JY30 Yūrakuchō ───────────────────────────────────────────────────
+  29: {
+    confidence: '`mostlyVerified` — sur un plan de **septembre 2025**',
+    levels: [
+      '**1F** — tous les contrôles, sous le viaduc.',
+      '**2F** — les quais : deux îlots.',
+    ],
+    gates: [
+      '**Hibiya Exit — « IC card only »**',
+      '**Central West Exit — « IC card only »**',
+      '**Central Exit** — le seul du groupe central à accepter autre chose.',
+      '**International Forum Exit — « IC card only »**',
+      '**Kyōbashi Exit**',
+      '**Trois contrôles sur cinq n’acceptent que la carte sans contact.** C’est '
+        + 'le même fait qu’au Marunouchi Central de Tokyo, mais en série — et '
+        + 'c’est ce qui distingue un petit contrôle automatique d’un vrai 改札.',
+    ],
+    order: 'Trois brackets, et ils donnent les trois ensembles que le cahier des '
+      + 'charges veut « perceptiblement distincts » : '
+      + '**Ginza Exit & Hibiya Exit** — **Central Exit & Central West Exit** — '
+      + '**International Forum Exit & Kyōbashi Exit**. Trois groupes le long d’un '
+      + 'viaduc, et rien entre eux.',
+    tracks: 'Voie **2** = Yamanote *for Tōkyō, Ueno & Ikebukuro* ; voie **3** = '
+      + 'Yamanote *for Shinagawa, Meguro & Shibuya*. Voies **1** et **4** = '
+      + 'Keihin-Tōhoku : `sharedIsland` / `sharedWith: Keihin-Tōhoku` **confirmé**.',
+    transfers: [
+      '**Tokyo Metro Yūrakuchō** — fléché depuis le 1F, côté Kyōbashi.',
+      'Le **Ginza Exit** figure dans les brackets de quai mais pas sur le plan du '
+        + '1F fourni : il est vers le sud-ouest, hors cadrage.',
+    ],
+    commerce: [
+      '**LUMINE STREET** — nommé **deux fois** au 1F, de part et d’autre du '
+        + 'Central Exit. C’est le commerce sous les arches que le cahier des '
+        + 'charges attend, et il porte un nom.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **septembre 2025**.',
+      'Le **Ginza Exit** n’est pas dans le cadrage du 1F ; seul son bracket de '
+        + 'quai l’atteste.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise : 中央口, '
+        + '中央西口, 日比谷口, 京橋口, 国際フォーラム口 restent à confirmer.',
+    ],
+    tradeoff: 'Tranche jouable autour du **Central Exit** et du **Central West '
+      + 'Exit**, comme le cahier des charges le demande — et la règle '
+      + '**« IC card only »** du second est un fait de jeu. Représentés sans être '
+      + 'visitables : le groupe **Ginza / Hibiya** au sud-ouest et le groupe '
+      + '**International Forum / Kyōbashi** au nord-est, tous deux par des '
+      + 'perspectives le long du viaduc — **les trois ensembles ne doivent jamais '
+      + 'se toucher**. **LUMINE STREET** garnit les arches ; les plafonds bas et '
+      + 'la structure de viaduc sont le sujet.',
   },
 
   // ─── JY17 Shinjuku ────────────────────────────────────────────────────
