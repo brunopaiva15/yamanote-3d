@@ -17,7 +17,7 @@ genre de document qui ment.
 
 ## ⚠ État de la vérification — à lire avant toute fiche
 
-**Plans officiels ouverts et lus : 11 / 30.**
+**Plans officiels ouverts et lus : 12 / 30.**
 
 L'environnement de développement de ce dépôt n'atteint pas les sites des
 opérateurs : la passerelle réseau refuse la connexion (403 sur `CONNECT`) vers
@@ -104,6 +104,7 @@ fondues dans le texte.
 | JY22 Meguro | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY25 Shinagawa | 2026-07 | ⚠️ **décalé** par rapport à la référence |
 | JY26 Takanawa Gateway | 2025-09 | ⚠️ **décalé** par rapport à la référence |
+| JY29 Shimbashi | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 
 **Les documents ne sont pas versionnés.** Ils portent
 « ©JR East Consultants Company ». On en cite l'adresse, la date et ce qu'on y a
@@ -1634,12 +1635,13 @@ Tranche jouable : **le hall transversal du 2F en entier**, ce qui est possible p
 
 ## JY29 Shimbashi — 新橋
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **septembre 2025**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Shimbashi Station (2F, B1-1F, B5-B4) | [lien](https://www.jreast.co.jp/fr/e/stations/e877.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（新橋駅） | [ja](https://www.jreast.co.jp/estation/stations/877.html) · [en](https://www.jreast.co.jp/en/estation/stations/877.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -1651,31 +1653,48 @@ Tranche jouable : **le hall transversal du 2F en entier**, ce qui est possible p
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **2F** — les quais des lignes classiques : voies 1 à 6, sur trois îlots.
+- **1F** — le niveau des contrôles et des débouchés, **sous le viaduc**.
+- **B1F** — un second niveau de contrôle et le carrefour des lignes souterraines : Ginza, Toei Asakusa, Yurikamome.
+- **B4F** — une zone payante longue et étroite, propre à la Yokosuka.
+- **B5F** — les quais Yokosuka / Sōbu Rapid, un îlot unique.
+- **Entre le B1 et le B4, le document ne montre RIEN.** Trois niveaux de vide séparent le hall de la Yokosuka. Le cahier des charges demandait que « la ligne Yokosuka ne semble pas immédiatement sous le hall » : c’est chiffré.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **South Gate** et **North Gate** — au **1F**, aux deux bouts du viaduc, chacun avec ses *Tickets* et son *Fare Adjustment*.
+- **Shiodome Underground Gate** — au **B1F**, un troisième groupe, avec ses propres guichets. C’est lui qui donne sur les lignes souterraines.
+- Ascenseurs **A à E** ; le **D** est celui qui plonge vers la Yokosuka.
+
+**Ordre le long du quai** — Un seul bracket au 1F pour deux groupes — **South Gate & Shiodome Underground Gate** — et un second pour le **North Gate**. Le South et le Shiodome sont donc desservis par les mêmes volées de quai, bien qu’ils soient à deux niveaux différents : on descend, et l’on choisit ensuite.
+
+**Voies Yamanote** — Voie **5** = Yamanote *for Tōkyō, Ueno & Ikebukuro* (内回り) ; voie **4** = Yamanote *for Shinagawa, Shibuya & Shinjuku* (外回り). Voies **6** et **3** = Keihin-Tōhoku : chaque voie Yamanote partage son îlot avec une Keihin-Tōhoku — îlots (6,5) et (4,3) — ce qui **confirme** `sharedIsland` / `sharedWith: Keihin-Tōhoku`. Voies **2** et **1** = Tōkaidō et Ueno-Tōkyō, sur un troisième îlot. Au B5F : voie **1** = Yokosuka vers Yokohama, voie **2** = Yokosuka・Sōbu Rapid vers Chiba.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Tokyo Metro Ginza** — fléché deux fois, depuis le 1F (côté est) et depuis le B1F.
+- **Toei Asakusa** — depuis le B1F.
+- **Yurikamome** — depuis le 1F, côté **Shiodome**.
+- **Yokosuka / Sōbu Rapid** — correspondance interne JR, mais **quatre niveaux plus bas**.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Une quinzaine de **SHOP** génériques au B1F, alignés le long des couloirs souterrains — c’est le seul niveau réellement commerçant du document.
+- Le plan ne nomme **aucune enseigne** et ne porte aucun aplat de grand commerce.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Deux zones **« Under Construction »** au 1F, côté ouest. Plan daté « *As of September, 2025* ».
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **septembre 2025**, onze mois avant la référence.
+- Les **noms japonais** ne sont pas sur cette édition anglaise : 烏森口, 日比谷口, 銀座口, 汐留口 restent à confirmer — le dépôt tient déjà 烏森口 pour le nom du contrôle principal, que ce plan nomme *South Gate* et *North Gate*. **Karasumori est ici une SORTIE, pas un portillon**, ce qui est le même piège qu’à Harajuku.
+- Le nombre exact de baies par groupe n’est pas lisible.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable **sous le viaduc**, au 1F, autour du **South Gate** et de sa sortie **Karasumori** — plafond bas, poutres, la rue juste dehors. Représentés sans être visitables : le **North Gate** et la sortie **Hibiya (SL Square)** à l’autre bout, la sortie **Ginza**, la sortie **Shiodome** et le renvoi **Yurikamome**, la descente vers le **Shiodome Underground Gate** au B1F (volée qui s’enfonce), et surtout la **Yokosuka** — une trémie qui doit se lire comme un puits, pas comme un escalier : quatre niveaux, dont trois vides.
 
 ---
 

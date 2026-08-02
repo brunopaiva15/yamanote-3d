@@ -340,6 +340,21 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
         + 'Porte « As of July, 2026 ». Non versionné : ©JR East Consultants Company.',
     },
   ],
+  // JY29 Shimbashi. Trois onglets : 2F, B1-1F, B5-B4. Septembre 2025.
+  28: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Shimbashi Station (2F, B1-1F, B5-B4)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e877.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'Captures fournies à la main (réseau bloqué), les trois onglets. '
+        + 'Porte « As of September, 2025 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
   // JY26 Takanawa Gateway. Onglet unique 1F-3F. Septembre 2025 : antérieur à
   // une bonne partie de l'ouverture de Takanawa Gateway City, ce qui compte
   // précisément pour cette gare-là.
