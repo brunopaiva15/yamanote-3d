@@ -26,7 +26,24 @@ const { useStore } = await import('../src/store.ts');
 /** Le joueur est sur le quai : rien de ce qui suit ne se cale sur lui. */
 runtime.playerLevel = 'platform';
 
-const PLACE = placementFor(useStore.getState().platformIndex, psdGates());
+/**
+ * LA GARE EST ÉPINGLÉE, et il faut qu'elle le soit.
+ *
+ * `CONFIG.startIndex` est un tirage - `Math.floor(Math.random() * 30)` - et
+ * `systems/fareGate` lit `store.platformIndex` à chaque appel. Ce fichier
+ * partait donc d'une gare différente à chaque exécution, et tombait sur
+ * Nippori une fois sur trente : c'est la seule de la boucle dont le niveau est
+ * déclaré sans être bâti (`interior.built === false`), donc la seule où la
+ * ligne de portillons n'existe pas. Les sept tests s'effondraient alors d'un
+ * coup, sur un message qui parlait de JY01.
+ *
+ * Ce message disait d'ailleurs l'intention : le test est écrit pour Tokyo. On
+ * la lui donne, au lieu de la lui souhaiter.
+ */
+const STATION = 0;
+useStore.setState({ index: STATION, platformIndex: STATION });
+
+const PLACE = placementFor(STATION, psdGates());
 const GATE = PLACE.interior.gate;
 const LANE = GATE.passages[0];
 

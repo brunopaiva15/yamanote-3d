@@ -43,7 +43,7 @@ const FINDINGS = {
   // Six onglets, cinq lus. Mai 2026. La gare est si grande que le document
   // lui-même est panoramé : ce qui est hors cadre est dit comme tel.
   0: {
-    confidence: '`mostlyVerified` — sur un plan de **mai** 2026, et cadré côté Yaesu',
+    confidence: '`mostlyVerified` — sur un plan de **mai** 2026, les deux côtés lus',
     levels: [
       'Six onglets : **1F · M2F · 2F · B1F · Keiyō Line · Sobu Line**. Aucune '
         + 'autre gare de la boucle n’en a autant, et deux d’entre eux sont des '
@@ -63,9 +63,18 @@ const FINDINGS = {
         + 'souterraine et distante.',
     ],
     gates: [
-      '**Côté Yaesu, relevé** : *Yaesu North Exit*, *Yaesu Central Exit*, '
-        + '*Yaesu South Exit*, et **Nihonbashi Exit** (deux contrôles distincts, '
-        + 'l’un vers le Tōhoku Shinkansen, l’autre vers le Tōkaidō・Sanyō).',
+      '**Côté Marunouchi** : *Marunouchi North Exit*, '
+        + '**_Marunouchi Central Exit_ — « IC card only »**, et '
+        + '*Marunouchi South Exit*. Le contrôle central de la halle de brique '
+        + '**n’accepte que la carte sans contact** : c’est écrit sur le plan, et '
+        + 'c’est le genre de fait qu’aucune génération ne produit. Le jeu tient '
+        + 'déjà une carte (`store.pocket`) — la règle est donc directement '
+        + 'jouable.',
+      '**Côté Yaesu** : *Yaesu North Exit*, *Yaesu Central Exit*, '
+        + '*Yaesu South Exit*.',
+      '**Côté Nihonbashi** : trois *Nihonbashi Exit* — un ordinaire, un vers le '
+        + 'Tōhoku・Yamagata・Akita・Hokkaidō・Jōetsu・Hokuriku Shinkansen, un vers '
+        + 'le Tōkaidō・Sanyō.',
       '**Contrôles de Shinkansen, qui sont des lignes à part entière** : '
         + '*Tōkaidō and Sanyō Shinkansen (Yaesu Central North Exit)*, '
         + '*(Yaesu Central South Exit)*, *(Yaesu North Exit)*. À Tokyo, on ne '
@@ -73,19 +82,18 @@ const FINDINGS = {
       '**Transferts internes nommés** : *Tōhoku…Shinkansen North / Central / '
         + 'South Transfer*, *Tōkaidō・Sanyō Shinkansen Central / South Transfer*. '
         + 'Ce sont des lignes de contrôle **entre deux zones payantes**.',
-      '**Marunouchi South Exit** — seul contrôle du côté Marunouchi lisible à ce '
-        + 'jour, sur une capture d’écran de la feuille 1F recadrée à l’ouest.',
-      '⚠️ Le **Marunouchi Central Exit** et le **Marunouchi North Exit** ne sont '
-        + 'toujours **pas lisibles** : la capture qui les contient est à une '
-        + 'résolution d’environ un pixel par mètre, où un libellé de portillon fait '
-        + 'trois pixels de haut. Ils sont dans le champ, mais pas dans l’image.',
-      'Ascenseurs **A à P** sur la seule feuille 1F.',
+      '**Main Entrance** — l’entrée centrale de la halle de brique, nommée sur le '
+        + 'plan, dans l’axe du Marunouchi Central Exit.',
+      'Ascenseurs **A à P** sur la seule feuille 1F ; deux '
+        + '*Wheelchair Passenger Lounge*, un *Prayer Room*, un *Police Box*.',
     ],
     order: 'Trois passages transversaux nommés relient Marunouchi à Yaesu : '
       + '**Northern Passage**, **Central Passage**, **Southern Passage**, plus un '
-      + '**Northern Free Passage** hors contrôle. C’est l’ossature de Tokyo : la '
-      + 'gare se traverse d’ouest en est par trois couloirs, et les volées de quai '
-      + 'y tombent perpendiculairement.',
+      + '**Northern Free Passage** hors contrôle et un **Central Passage '
+      + 'Stairway**. C’est l’ossature de Tokyo : la gare se traverse d’ouest en '
+      + 'est par trois couloirs **en zone payante**, et les volées de quai y '
+      + 'tombent perpendiculairement — chacune desservie **des deux côtés**, '
+      + 'Marunouchi et Yaesu, par deux escaliers distincts.',
     tracks: 'Voie **4** = Yamanote *for Ueno & Ikebukuro* (内回り) ; voie **5** = '
       + 'Yamanote *for Shinagawa & Shibuya* (外回り). Voie **3** = Keihin-Tōhoku '
       + 'vers Ueno, voie **6** = Keihin-Tōhoku vers Kamata. Chaque voie Yamanote '
@@ -104,7 +112,10 @@ const FINDINGS = {
       'Le plan est **JR seul** : le Marunouchi de Tokyo Metro n’y figure pas.',
     ],
     commerce: [
-      '**GRANSTA TOKYO** et **GRANSTA YAESU** — les deux galeries, nommément.',
+      '**GRANSTA TOKYO** et **GRANSTA YAESU** — les deux galeries, nommément. La '
+        + 'première apparaît **des deux côtés** du Central Passage.',
+      '**THE TOKYO STATION HOTEL (1F)** et son *Tōkyō Station Hotel B1F '
+        + 'Entrance*, côté Marunouchi — l’hôtel est dans la gare.',
       '**TOKYO GIFT PALETTE**, **First Avenue Tōkyō Station**, **KITAMACHI '
         + 'SAKABA** (trois blocs) et **八重北食堂** côté Yaesu nord.',
       '**Gran Tōkyō North Tower (1F) DAIMARU**, **Sapia Tower (1F)**, '
@@ -120,14 +131,10 @@ const FINDINGS = {
       + 'As of May, 2026* », sans délimiter de zone. Tokyo est donc déclarée '
       + 'mouvante sans que le document dise où.',
     uncertain: [
-      '⚠️ **Le côté Marunouchi reste à demi lu.** Les PDF du premier envoi sont '
-        + 'cadrés sur Yaesu ; les captures d’écran du second couvrent bien '
-        + 'Marunouchi mais à une résolution où les libellés sont illisibles. Seul '
-        + 'le *Marunouchi South Exit* a pu être identifié. Il faut une **impression '
-        + 'PDF** de la feuille 1F recadrée à l’ouest : c’est le format du premier '
-        + 'envoi, et il porte une image de carte à haute résolution qu’une capture '
-        + 'd’écran ne conserve pas.',
       'La feuille **Sobu Line** n’a pas été fournie (cinq onglets sur six).',
+      'Le **niveau des Marunouchi Exits** n’est pas explicité : ils sont sur la '
+        + 'feuille 1F, mais le plan porte aussi « for Marunouchi (Underground) » — '
+        + 'il existe donc un débouché souterrain distinct, non cartographié ici.',
       'Le plan date de **mai 2026**, trois mois avant la référence, et se déclare '
         + 'lui-même sujet à changement sans localiser le chantier.',
       'Les **noms japonais** ne sont pas sur cette édition anglaise : 丸の内中央口, '
@@ -135,17 +142,18 @@ const FINDINGS = {
       'Ni Tokyo Metro Marunouchi, ni les correspondances hors JR ne sont '
         + 'cartographiés.',
     ],
-    tradeoff: 'La tranche visée reste le **Marunouchi Central**, mais elle n’est '
-      + 'pas encore relevée : en l’état, le seul contrôle documenté et proche des '
-      + 'voies 4-5 est côté **Yaesu**. Ce qui EST acquis et structurant : les '
-      + 'trois passages transversaux nommés (Northern, Central, Southern), qui '
-      + 'donnent la coupe de la gare ; les volées qui desservent **2F et B1F à la '
-      + 'fois**, donc la double nappe ; et les **six lignes de contrôle vers le '
-      + 'Shinkansen**, qui sont la vraie singularité de Tokyo — une gare où l’on '
-      + 'franchit un 改札 pour passer d’un train à un autre. Représentés sans être '
-      + 'visitables : Gransta en contrebas, les portails Shinkansen, les '
-      + 'directions Keiyō et Sōbu (couloirs longs, en descente, qui se perdent), '
-      + 'et le côté Marunouchi en perspective au bout du Central Passage.',
+    tradeoff: 'Tranche jouable autour du **Marunouchi Central Exit**, comme le '
+      + 'cahier des charges le demande : c’est le contrôle de la halle de brique, '
+      + 'dans l’axe de la **Main Entrance**, et sa règle **« IC card only »** est '
+      + 'un fait de jeu autant que de plan. Le **Central Passage** est l’épine — '
+      + 'on le suit d’ouest en est, et chaque volée de quai y tombe des deux '
+      + 'côtés. Représentés sans être visitables : les **Marunouchi North et '
+      + 'South** aux deux bouts, le **Yaesu Central** au bout du passage '
+      + '(perspective très longue), **GRANSTA** en contrebas, les **six lignes de '
+      + 'contrôle Shinkansen** — la vraie singularité de Tokyo, où l’on franchit '
+      + 'un 改札 pour passer d’un train à un autre —, les trois **Nihonbashi '
+      + 'Exit** au nord, et les directions **Keiyō** et **Sōbu** : deux couloirs '
+      + 'qui s’enfoncent et se perdent, l’un en L sur des centaines de mètres.',
   },
 
   // ─── JY03 Akihabara ───────────────────────────────────────────────────
