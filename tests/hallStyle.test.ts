@@ -19,12 +19,14 @@ import { CONCOURSE_PROFILES } from '../src/data/stationConcourseProfiles.ts';
 import { shellsOf } from '../src/data/stationConcourseBuild.ts';
 
 test('LE HALL LINÉAIRE EST CELUI D’AVANT, AU CENTIMÈTRE', () => {
-  // Ces trois valeurs étaient des constantes de `three/station/Concourse`.
-  // Elles sont maintenant dans une table ; elles doivent être les mêmes.
+  // Ces valeurs étaient des constantes de `three/station/Concourse`. Elles sont
+  // maintenant dans une table ; elles doivent être les mêmes.
   const s = hallStyle('linear');
   assert.equal(s.lampPitch, 4.2, 'entraxe des réglettes');
   assert.equal(s.dadoH, 1.15, 'hauteur du soubassement');
   assert.equal(s.beamPitch, null, 'un souterrain n’a pas de poutres apparentes');
+  assert.equal(s.parapet, false, 'un souterrain a deux parois pleines');
+  assert.equal(s.ceiling, true, 'et un plafond');
 });
 
 test('le dessous de viaduc montre son tablier, le hall compact non', () => {
@@ -39,13 +41,41 @@ test('le dessous de viaduc montre son tablier, le hall compact non', () => {
   assert.ok(small.lampPitch > hallStyle('linear').lampPitch);
 });
 
-test('la liste des archétypes est fermée, et le reste retombe sur le linéaire', () => {
-  assert.deepEqual([...HALL_ARCHETYPES].sort(), ['compact', 'linear', 'underViaduct']);
-  // Les quatre autres formes du vocabulaire attendent la phase 15 : elles ne
-  // se distinguent pas par leur couverture mais par leur HAUTEUR, et cela ne
-  // tient pas dans une table. En attendant, elles ne cassent rien.
-  for (const kind of ['cross', 'overbridge', 'mezzanine', 'hubSlice'] as const) {
-    assert.deepEqual(hallStyle(kind), hallStyle('linear'), kind);
+test('la liste des archétypes est fermée : sept, et pas un de plus', () => {
+  assert.deepEqual([...HALL_ARCHETYPES].sort(), [
+    'compact', 'cross', 'hubSlice', 'linear', 'mezzanine', 'overbridge', 'underViaduct',
+  ]);
+});
+
+test('UN PONT-CONCOURSE LAISSE VOIR LES VOIES, une mezzanine le hall', () => {
+  // Ce n'est pas un parti de rendu, c'est un fait de relevé : « le
+  // pont-concourse enjambe tout le faisceau : on voit les voies dessous ».
+  // L'enfermer entre deux parois pleines lui retirerait ce pour quoi il existe.
+  const bridge = hallStyle('overbridge');
+  assert.equal(bridge.parapet, true);
+  assert.ok(bridge.parapetH > 1 && bridge.parapetH < 1.3, 'un appui se tient à hauteur de main');
+  assert.equal(bridge.ceiling, true, 'un pont-concourse est couvert');
+
+  // La mezzanine s'ouvre dans l'autre sens : pas de plafond, on voit le hall
+  // d'en dessous avant d'y descendre.
+  const mezz = hallStyle('mezzanine');
+  assert.equal(mezz.ceiling, false);
+  assert.equal(mezz.parapet, true);
+
+  // Et les trois halls de la phase 14 restent fermés des deux côtés.
+  for (const kind of ['linear', 'underViaduct', 'compact'] as const) {
+    assert.equal(hallStyle(kind).parapet, false, kind);
+    assert.equal(hallStyle(kind).ceiling, true, kind);
+  }
+});
+
+test('une grande gare a plus de hauteur entre ses lampes', () => {
+  // Un volume plus grand ne se garnit pas plus serré : le hall transversal et
+  // la tranche de grande gare espacent leur lumière, et montent leur
+  // soubassement — c'est une gare, pas un couloir.
+  for (const kind of ['cross', 'hubSlice'] as const) {
+    assert.ok(hallStyle(kind).lampPitch > hallStyle('linear').lampPitch, kind);
+    assert.ok(hallStyle(kind).dadoH > hallStyle('linear').dadoH, kind);
   }
 });
 

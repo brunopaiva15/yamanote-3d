@@ -165,24 +165,63 @@ export function Concourse({
       <mesh position={[midX, shell.floorY - 0.06, shellZ]} material={m.slab}>
         <boxGeometry args={[width + 2 * WALL_T, 0.12, shellLen]} />
       </mesh>
-      <mesh
-        position={[midX, shell.ceilY - 0.06, shellZ]}
-        geometry={ceilGeo}
-        material={m.hallCeil}
-      />
+      {/* Le plafond — sauf sur une MEZZANINE, qui est un demi-niveau ouvert sur
+          celui d'en dessous : c'est par là qu'on voit le hall avant d'y
+          descendre, et le couvrir reviendrait à en faire une pièce. */}
+      {style.ceiling && (
+        <mesh
+          position={[midX, shell.ceilY - 0.06, shellZ]}
+          geometry={ceilGeo}
+          material={m.hallCeil}
+        />
+      )}
       {[-1, 1].map((d) => (
         <group key={`side${d}`}>
-          <mesh
-            position={[midX + (d * (width + WALL_T)) / 2, midY, shellZ]}
-            geometry={sideGeo}
-            material={m.hall}
-          />
-          {/* Soubassement de faïence : à hauteur de main, c'est lui qu'on voit. */}
-          <mesh
-            position={[midX + (d * (width - 0.04)) / 2, shell.floorY + style.dadoH / 2, shellZ]}
-            geometry={dadoGeo}
-            material={m.tile}
-          />
+          {/* LA PAROI, OU L'APPUI. Un pont-concourse enjambe le faisceau et
+              c'est tout son sujet : « on voit les voies dessous ». L'enfermer
+              entre deux parois pleines lui retirerait exactement ce pour quoi
+              il existe. Une mezzanine, de même, s'ouvre sur le niveau du
+              dessous. Les deux s'arrêtent donc à hauteur d'appui. */}
+          {style.parapet ? (
+            <mesh
+              position={[
+                midX + (d * (width + WALL_T)) / 2,
+                shell.floorY + style.parapetH / 2,
+                shellZ,
+              ]}
+              material={m.hall}
+            >
+              <boxGeometry args={[WALL_T, style.parapetH, shellLen]} />
+            </mesh>
+          ) : (
+            <mesh
+              position={[midX + (d * (width + WALL_T)) / 2, midY, shellZ]}
+              geometry={sideGeo}
+              material={m.hall}
+            />
+          )}
+          {/* Main courante : ce qu'on a sous la main quand la paroi s'arrête. */}
+          {style.parapet && (
+            <mesh
+              position={[
+                midX + (d * (width + WALL_T)) / 2,
+                shell.floorY + style.parapetH + 0.03,
+                shellZ,
+              ]}
+              material={m.metal}
+            >
+              <boxGeometry args={[WALL_T + 0.06, 0.06, shellLen]} />
+            </mesh>
+          )}
+          {/* Soubassement de faïence : à hauteur de main, c'est lui qu'on voit.
+              Il n'a pas de sens sur un appui, qui EST déjà à cette hauteur. */}
+          {!style.parapet && (
+            <mesh
+              position={[midX + (d * (width - 0.04)) / 2, shell.floorY + style.dadoH / 2, shellZ]}
+              geometry={dadoGeo}
+              material={m.tile}
+            />
+          )}
           {/* Plinthe : la ligne d'ombre au pied de la paroi, et la seule chose
               qui distingue un couloir fini d'une boîte enduite jusqu'au sol.
               Elle court d'un seul tenant - un couloir n'a pas de plinthe par

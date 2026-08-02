@@ -43,30 +43,86 @@ export interface HallStyle {
   beamPitch: number | null;
   /** Hauteur des poutres, sous le nu du plafond (m). */
   beamDrop: number;
+  /**
+   * Les longues parois s'arrêtent à hauteur d'APPUI, et l'on voit par-dessus.
+   *
+   * C'est ce qui fait un pont-concourse, et c'est un fait de relevé avant
+   * d'être un parti de rendu : « le pont-concourse enjambe tout le faisceau :
+   * on voit les voies dessous ». Un hall qu'on enferme entre deux parois
+   * pleines à Nippori, à Ōsaki ou à Takanawa Gateway perd exactement ce pour
+   * quoi il existe.
+   */
+  parapet: boolean;
+  /** Hauteur de l'appui, quand il y en a un (m). */
+  parapetH: number;
+  /**
+   * Le volume a-t-il un plafond plein ?
+   *
+   * Une MEZZANINE n'en a pas : c'est un demi-niveau ouvert sur celui d'en
+   * dessous, et son intérêt tient tout entier dans ce qu'on voit du hall avant
+   * d'y arriver — « elle donne à cette petite gare une coupe à trois niveaux
+   * qu'aucun hall générique ne produirait » (Okachimachi).
+   */
+  ceiling: boolean;
 }
 
 /**
- * Les trois halls de la phase 14. Les quatre autres archétypes — pont-concourse,
- * hall transversal, mezzanine, tranche de grande gare — sont l'affaire de la
- * phase 15 : ils ne se distinguent pas par leur couverture mais par leur
- * HAUTEUR et par ce qu'on voit dessous, ce qui demande autre chose qu'une table.
+ * Les sept archétypes du vocabulaire.
+ *
+ * Les trois premiers se distinguent par leur COUVERTURE (phase 14), les quatre
+ * suivants par ce qu'ils LAISSENT VOIR (phase 15) — et c'est une différence de
+ * nature : un souterrain se décrit par son plafond, un pont-concourse par son
+ * absence de murs.
  */
-const STYLES: Partial<Record<ConcourseNodeKind, HallStyle>> = {
+const STYLES: Record<ConcourseNodeKind, HallStyle> = {
   // Le hall d'avant, au centimètre. Ne pas y toucher sans rouvrir le test.
-  linear: { lampPitch: 4.2, dadoH: 1.15, beamPitch: null, beamDrop: 0 },
+  linear: {
+    lampPitch: 4.2, dadoH: 1.15, beamPitch: null, beamDrop: 0,
+    parapet: false, parapetH: 0, ceiling: true,
+  },
   // Sous le tablier : les poutres sont serrées, elles descendent franchement,
   // et l'on ne carrelle pas jusqu'à hauteur d'épaule un local qui n'est qu'un
   // dessous d'ouvrage.
-  underViaduct: { lampPitch: 3.5, dadoH: 0.9, beamPitch: 3.4, beamDrop: 0.34 },
+  underViaduct: {
+    lampPitch: 3.5, dadoH: 0.9, beamPitch: 3.4, beamDrop: 0.34,
+    parapet: false, parapetH: 0, ceiling: true,
+  },
   // Ce qui caractérise un petit hall, c'est ce qu'il n'a pas : moins de
   // lumière, pas de trame, un soubassement de gare de quartier.
-  compact: { lampPitch: 5.4, dadoH: 1.0, beamPitch: null, beamDrop: 0 },
+  compact: {
+    lampPitch: 5.4, dadoH: 1.0, beamPitch: null, beamDrop: 0,
+    parapet: false, parapetH: 0, ceiling: true,
+  },
+  // LE PONT-CONCOURSE : on voit les voies dessous, et c'est tout son sujet.
+  // Appui à 1,10 m — la cote d'un garde-corps de quai — et rien au-dessus.
+  overbridge: {
+    lampPitch: 4.6, dadoH: 0.8, beamPitch: null, beamDrop: 0,
+    parapet: true, parapetH: 1.1, ceiling: true,
+  },
+  // LE HALL TRANSVERSAL : long, haut, et l'on en voit le bout. Sa lumière est
+  // plus espacée parce que le volume est plus grand, et son soubassement plus
+  // haut parce que c'est une grande gare.
+  cross: {
+    lampPitch: 6, dadoH: 1.3, beamPitch: null, beamDrop: 0,
+    parapet: false, parapetH: 0, ceiling: true,
+  },
+  // LA MEZZANINE : un demi-niveau OUVERT sur celui d'en dessous. Pas de
+  // plafond, un appui bas, et l'on voit le hall avant d'y descendre.
+  mezzanine: {
+    lampPitch: 4, dadoH: 0.8, beamPitch: null, beamDrop: 0,
+    parapet: true, parapetH: 1.05, ceiling: false,
+  },
+  // LA TRANCHE DE GRANDE GARE : elle continue hors champ, et sa hauteur le dit.
+  hubSlice: {
+    lampPitch: 5, dadoH: 1.3, beamPitch: null, beamDrop: 0,
+    parapet: false, parapetH: 0, ceiling: true,
+  },
 };
 
-/** Le style d'un volume. Tout ce qui n'est pas encore un archétype reste linéaire. */
+/** Le style d'un volume. */
 export function hallStyle(kind: ConcourseNodeKind): HallStyle {
-  return STYLES[kind] ?? STYLES.linear!;
+  return STYLES[kind];
 }
 
-/** Les archétypes réellement distincts aujourd'hui. Liste fermée. */
+/** Les sept archétypes. Liste fermée : une entrée de plus est une décision. */
 export const HALL_ARCHETYPES = Object.keys(STYLES) as ConcourseNodeKind[];

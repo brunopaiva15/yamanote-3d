@@ -278,7 +278,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **12** | **Accès secondaires vivants** ✅ | `placement.liveAccesses` ; la marche, le rendu et les itinéraires les lisent tous | G3 |
 | **13** | **Rendu : `ConcourseNetwork`** ✅ | `shellsOf` : volumes continus ; `Concourse` devient un archétype parmi d'autres | R1 |
 | **14** | **Archétypes 1 — halls** ✅ | `hallStyle` : `linear`, `underViaduct`, `compact` — ce qui les distingue est la COUVERTURE | R1 |
-| 15 | Archétypes 2 — hauteur | `OverbridgeHall`, `CrossConcourse`, mezzanines | R1 |
+| **15** | **Archétypes 2 — hauteur** ✅ | `overbridge`, `cross`, `mezzanine`, `hubSlice` : ce qu'ils LAISSENT VOIR | R1 |
 | 16 | Archétypes 3 — limites | `ExitBranch`, `TransferPortal`, `ConstructionPartition` | G4 D7 |
 | 17 | Occlusion interne | portails de visibilité aux virages, escaliers, branches | R2 |
 | 18 | Signalétique unifiée | une seule source pour quai / hall / portillons / couloirs / bouches | D4 D5 |
@@ -774,6 +774,29 @@ ce qui est bâti. Élargir un hall que personne ne construit ferait reculer la
 nappe de rue de onze gares au-dessus d'un vide. L'élargissement va donc **avec
 le branchement** (phases 20 à 24), gare par gare, quand il y aura un hall pour
 occuper la place.
+
+### 4.13 La phase 15 : ce que le volume laisse voir
+
+Les trois halls de la phase 14 se distinguaient par leur **couverture**. Les
+quatre qui restaient se distinguent par autre chose, et c'est une différence de
+nature : **ce qu'ils laissent voir**.
+
+- **`overbridge`** — les longues parois s'arrêtent à hauteur d'appui (1,10 m,
+  la cote d'un garde-corps de quai), avec sa main courante, et rien au-dessus.
+  Ce n'est pas un parti de rendu : c'est un fait de relevé, écrit dans les mêmes
+  mots à Nippori, Tabata, Komagome, Sugamo, Meguro, Ōsaki, Shinagawa, Tamachi et
+  Takanawa Gateway — « le pont-concourse enjambe tout le faisceau : on voit les
+  voies dessous ». L'enfermer entre deux parois pleines lui retirerait
+  exactement ce pour quoi il existe ;
+- **`mezzanine`** — un demi-niveau **sans plafond**, ouvert sur celui d'en
+  dessous. Tout son intérêt tient dans ce qu'on voit du hall avant d'y
+  descendre : « elle donne à cette petite gare une coupe à trois niveaux
+  qu'aucun hall générique ne produirait » (Okachimachi) ;
+- **`cross`** et **`hubSlice`** — un volume plus grand n'est pas un couloir
+  garni plus serré : la lumière s'espace, le soubassement monte.
+
+Le soubassement de faïence disparaît là où il y a un appui : il est déjà à
+cette hauteur, et le doubler ferait un bourrelet.
 
 ### Ordre et raison
 
