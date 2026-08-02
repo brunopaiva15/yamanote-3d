@@ -266,8 +266,8 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **0** | **Audit et plan** ✅ | ce document | — |
 | **1** | **Format des profils** ✅ | `stationConcourseTypes.ts` + `validateProfile` + 14 tests | D1 D2 D3 |
 | **2** | **Registre des sources** ✅ | `stationConcourseSources.ts` : 30 plans JR East localisés ; `STATION_CONCOURSE_EVIDENCE.md` | D6 |
-| 3 | Sorties réelles | `data/lines` : les 30 gares relevées, `GENERIC_EXITS` réduit aux gares qui les portent vraiment | D4 |
-| 4 | Relevé documentaire | `STATION_CONCOURSE_EVIDENCE.md` rempli, 30 fiches | D5 D6 D7 D8 |
+| **3** | **Sorties et portillons réels** ✅ | `data/lines` : relevé complet des 30 gares ; `stationInterior` : 4 corrections de nommage + 8 contrôles anonymes | D4 D5 |
+| **4** | **Relevé documentaire** ✅ | `STATION_CONCOURSE_EVIDENCE.md` : **30 plans officiels lus** | D5 D6 D7 D8 |
 | 5 | Profils, données seules | `stationConcourseProfiles.ts` : 30 profils, aucun consommateur | D1→D8 |
 | 6 | Emprise déclarée | le profil publie son emprise ; `groundStrip` / `stationOcclusion` la lisent | **G1** |
 | 7 | Compilateur de profil | `stationConcourseBuild.ts` : profil → réseau de rectangles ; fallback vers `interiorFor` | G2 R4 |

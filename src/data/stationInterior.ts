@@ -379,43 +379,51 @@ interface Spec {
  */
 const SPECS: readonly Spec[] = [
   { name: 'JY01 Tokyo', gateJp: '丸の内中央口', gate: 'Marunouchi Central' },
-  { name: 'JY02 Kanda', gateJp: '西口改札', gate: 'West' },
+  // Le plan ne NOMME pas les deux groupes : il les étiquette « Gate ». C'est
+  // 改札口 tout court, et « West » est le nom d'une SORTIE.
+  { name: 'JY02 Kanda', gateJp: '改札口', gate: 'Gate' },
   { name: 'JY03 Akihabara', brand: 'atre', gateJp: '電気街口', gate: 'Electric Town' },
-  { name: 'JY04 Okachimachi', gateJp: '北口改札', gate: 'North' },
+  { name: 'JY04 Okachimachi', gateJp: '北口', gate: 'North' },
   // Le plan de quai d'Ueno en montre quatre, sur deux niveaux : 不忍 et 中央 en
   // M2F et 1F au sud, 公園 et 入谷 en 3F au nord. Deux groupes d'accès, donc
   // deux halls - c'est une gare à part, et elle attend sa phase.
-  { name: 'JY05 Ueno', brand: 'ecute', gateJp: '中央改札', gate: 'Central' },
-  { name: 'JY06 Uguisudani', gateJp: '南口改札', gate: 'South' },
+  { name: 'JY05 Ueno', brand: 'ecute', gateJp: '公園口改札', gate: 'Park' },
+  // Plan japonais : 改札口, et 南口 est la sortie.
+  { name: 'JY06 Uguisudani', gateJp: '改札口', gate: 'Gate' },
   // Deux ponts-concours enjambent tout le faisceau : le hall est dessus.
   // Nippori a déjà son niveau de correspondance : ce sont ses DEUX
   // PONTS-CONCOURS, dessinés par sa charpente signature, dont la sous-face est
   // à 5,10 m - exactement la cote d'un hall d'en haut. Y poser en plus le hall
   // générique reviendrait à bâtir deux fois la même chose, l'une dans l'autre.
   // Elle attend son traitement propre (docs/STATION_INTERIOR, phase 6).
-  { name: 'JY07 Nippori', brand: 'ecute', place: 'over', bespoke: true, gateJp: '南改札', gate: 'South' },
-  { name: 'JY08 Nishi-Nippori', gateJp: '南改札', gate: 'South' },
-  { name: 'JY09 Tabata', brand: 'atre', place: 'over', gateJp: '北口改札', gate: 'North' },
-  { name: 'JY10 Komagome', place: 'over', gateJp: '北口改札', gate: 'North' },
-  { name: 'JY11 Sugamo', place: 'over', gateJp: '北口改札', gate: 'North' },
-  { name: 'JY12 Ōtsuka', gateJp: '北口改札', gate: 'North' },
-  { name: 'JY13 Ikebukuro', gateJp: '中央改札', gate: 'Central' },
-  { name: 'JY14 Mejiro', place: 'over', gateJp: '中央改札', gate: 'Central' },
+  { name: 'JY07 Nippori', brand: 'ecute', place: 'over', bespoke: true, gateJp: '北改札', gate: 'North' },
+  { name: 'JY08 Nishi-Nippori', gateJp: '改札口', gate: 'Gate' },
+  { name: 'JY09 Tabata', brand: 'atre', place: 'over', gateJp: '北口', gate: 'North' },
+  { name: 'JY10 Komagome', place: 'over', gateJp: '改札口', gate: 'Gate' },
+  { name: 'JY11 Sugamo', place: 'over', gateJp: '改札口', gate: 'Gate' },
+  { name: 'JY12 Ōtsuka', gateJp: '改札口', gate: 'Gate' },
+  { name: 'JY13 Ikebukuro', gateJp: '中央改札1', gate: 'Central 1' },
+  { name: 'JY14 Mejiro', place: 'over', gateJp: '改札口', gate: 'Gate' },
   { name: 'JY15 Takadanobaba', gateJp: '早稲田口', gate: 'Waseda' },
-  { name: 'JY16 Shin-Ōkubo', gateJp: '中央改札', gate: 'Central' },
-  { name: 'JY17 Shinjuku', gateJp: '東口改札', gate: 'East' },
-  { name: 'JY18 Yoyogi', gateJp: '北口改札', gate: 'North' },
-  { name: 'JY19 Harajuku', gateJp: '西口改札', gate: 'West' },
+  { name: 'JY16 Shin-Ōkubo', gateJp: '改札口', gate: 'Gate' },
+  { name: 'JY17 Shinjuku', gateJp: '中央東改札', gate: 'Central East' },
+  // Le plan montre le bloc West/East comme le principal, pas le North.
+  { name: 'JY18 Yoyogi', gateJp: '西口', gate: 'West' },
+  // CORRECTION : le contrôle du bâtiment de 2020 s'appelle 表参道改札 ; « West »
+  // est le nom d'une sortie, pas du portillon.
+  { name: 'JY19 Harajuku', gateJp: '表参道改札', gate: 'Omote-sandō' },
   { name: 'JY20 Shibuya', gateJp: 'ハチ公改札', gate: 'Hachikō' },
-  { name: 'JY21 Ebisu', brand: 'atre', gateJp: '西口改札', gate: 'West' },
+  { name: 'JY21 Ebisu', brand: 'atre', gateJp: '西口', gate: 'West' },
   { name: 'JY22 Meguro', brand: 'atre', place: 'over', gateJp: '中央改札', gate: 'Central' },
   { name: 'JY23 Gotanda', gateJp: '中央改札', gate: 'Central' },
-  { name: 'JY24 Ōsaki', gateJp: '南改札', gate: 'South' },
+  { name: 'JY24 Ōsaki', gateJp: '北改札', gate: 'North' },
   { name: 'JY25 Shinagawa', brand: 'ecute', gateJp: '中央改札', gate: 'Central' },
-  { name: 'JY26 Takanawa Gateway', gateJp: '改札口', gate: 'Gate' },
-  { name: 'JY27 Tamachi', gateJp: '北口改札', gate: 'North' },
-  { name: 'JY28 Hamamatsuchō', gateJp: '北口改札', gate: 'North' },
-  { name: 'JY29 Shimbashi', gateJp: '烏森口', gate: 'Karasumori' },
+  { name: 'JY26 Takanawa Gateway', gateJp: '北改札', gate: 'North' },
+  { name: 'JY27 Tamachi', gateJp: '北改札', gate: 'North' },
+  { name: 'JY28 Hamamatsuchō', gateJp: '北口', gate: 'North' },
+  // CORRECTION : 烏森口 est une SORTIE. Le plan nomme les contrôles South Gate
+  // et North Gate ; c'est le sud qui dessert Karasumori.
+  { name: 'JY29 Shimbashi', gateJp: '南改札', gate: 'South' },
   { name: 'JY30 Yūrakuchō', gateJp: '中央口', gate: 'Central' },
 ];
 
