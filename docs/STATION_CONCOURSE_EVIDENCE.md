@@ -17,7 +17,7 @@ genre de document qui ment.
 
 ## ⚠ État de la vérification — à lire avant toute fiche
 
-**Plans officiels ouverts et lus : 20 / 30.**
+**Plans officiels ouverts et lus : 23 / 30.**
 
 L'environnement de développement de ce dépôt n'atteint pas les sites des
 opérateurs : la passerelle réseau refuse la connexion (403 sur `CONNECT`) vers
@@ -99,6 +99,8 @@ fondues dans le texte.
 | JY04 Okachimachi | 2024-01 | ⚠️ **décalé** par rapport à la référence |
 | JY05 Ueno | 2026-06 | ⚠️ **décalé** par rapport à la référence |
 | JY07 Nippori | 2025-04 | ⚠️ **décalé** par rapport à la référence |
+| JY08 Nishi-Nippori | 2024-02 | ⚠️ **décalé** par rapport à la référence |
+| JY09 Tabata | 2024-02 | ⚠️ **décalé** par rapport à la référence |
 | JY13 Ikebukuro | 2026-02 | ⚠️ **décalé** par rapport à la référence |
 | JY15 Takadanobaba | 2026-06 | ⚠️ **décalé** par rapport à la référence |
 | JY17 Shinjuku | 2026-08 | ✅ la date de référence |
@@ -110,6 +112,7 @@ fondues dans le texte.
 | JY24 Ōsaki | 2026-04 | ⚠️ **décalé** par rapport à la référence |
 | JY25 Shinagawa | 2026-07 | ⚠️ **décalé** par rapport à la référence |
 | JY26 Takanawa Gateway | 2025-09 | ⚠️ **décalé** par rapport à la référence |
+| JY27 Tamachi | 2026-04 | ⚠️ **décalé** par rapport à la référence |
 | JY28 Hamamatsuchō | 2026-06 | ⚠️ **décalé** par rapport à la référence |
 | JY29 Shimbashi | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY30 Yūrakuchō | 2025-09 | ⚠️ **décalé** par rapport à la référence |
@@ -573,12 +576,13 @@ Aucune zone de chantier signalée.
 
 ## JY08 Nishi-Nippori — 西日暮里
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `approximate` — plan de **février 2024**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Nishi-Nippori Station (1F-2F) | [lien](https://www.jreast.co.jp/fr/e/stations/e1167.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（西日暮里駅） | [ja](https://www.jreast.co.jp/estation/stations/1167.html) · [en](https://www.jreast.co.jp/en/estation/stations/1167.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -590,42 +594,53 @@ Aucune zone de chantier signalée.
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — un **hall unique et compact**, sous le viaduc.
+- **2F** — les quais : deux îlots.
+- Le Chiyoda (sous) et le Nippori-Toneri Liner (au-dessus) ne sont **pas cartographiés** : l’onglet s’arrête à 1F-2F. Ils sont fléchés, pas dessinés.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Un seul groupe, et le plan ne lui donne aucun nom** : « **Gate** », comme à Kanda. Avec ses *Tickets* et son *Fare Adjustment*.
+- ⚠️ **Mais deux passages « for Tokyo Metro Chiyoda Line » partent de la ZONE PAYANTE**, en plus d’un troisième depuis la zone libre. Autrement dit, JR et le Chiyoda partagent ici une zone payante : on change de compagnie **sans franchir de contrôle**. C’est un fait de topologie majeur, et il est propre à cette gare dans tout le relevé.
+
+**Ordre le long du quai** — Le plan ne porte pas de bracket : la gare est trop petite pour en avoir besoin. Un hall, un contrôle, et les volées vers les deux îlots.
+
+**Voies Yamanote** — Voie **3** = Yamanote *for Ikebukuro, Shinjuku & Shibuya* ; voie **2** = Yamanote *for Ueno, Tōkyō & Shinagawa*. Voies **4** et **1** = Keihin-Tōhoku : `sharedIsland` / `sharedWith: Keihin-Tōhoku` **confirmé**.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Tokyo Metro Chiyoda** — trois renvois, dont **deux depuis la zone payante**. La correspondance est directe.
+- **Nippori-Toneri Liner** — un renvoi depuis la zone libre, vers le sud.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **NewDays**, un **KIOSK** et trois **SHOP** génériques. Aucune enseigne nommée au-delà.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée — mais le plan a plus de deux ans.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **février 2024**.
+- Les niveaux **Chiyoda** et **Toneri Liner** ne sont pas cartographiés : leur position relative au JR reste à établir ailleurs.
+- Les **noms japonais** ne sont pas sur cette édition anglaise ; le dépôt tient 南改札, que ce plan ne confirme pas.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable : **le hall entier**, il est minuscule. Le sujet est la **superposition** que le cahier des charges demande — Chiyoda dessous, JR, Toneri Liner dessus — et la façon dont elle se lit depuis un hall d’une seule pièce : deux passages qui plongent **depuis la zone payante** vers le Chiyoda (portail vertical crédible, sans contrôle), un troisième depuis la zone libre, et une volée qui monte vers le Toneri Liner. Rien d’autre à construire.
 
 ---
 
 ## JY09 Tabata — 田端
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `approximate` — plan de **février 2024**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Tabata Station (B1-1F) | [lien](https://www.jreast.co.jp/fr/e/stations/e972.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（田端駅） | [ja](https://www.jreast.co.jp/estation/stations/972.html) · [en](https://www.jreast.co.jp/en/estation/stations/972.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -637,31 +652,39 @@ Aucune zone de chantier signalée.
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **B1** — les quais, **dans la tranchée** : deux îlots.
+- **1F** — les contrôles, **au-dessus**, en **deux blocs séparés** de tailles inégales.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **North Exit** — le grand bloc, à l’est, avec *Fare Adjustment*, *Tickets* et **atre vie** attenant.
+- **South Exit** — un petit bloc à l’ouest, avec ses seuls *Tickets* et *Fare Adjustment*.
+
+**Ordre le long du quai** — Deux brackets, **South Exit** et **North Exit**, aux deux bouts des quais, et rien entre eux. Le rapport de taille est net sur le plan : le nord est la gare, le sud est un accès.
+
+**Voies Yamanote** — Voie **2** = Yamanote *for Ikebukuro, Shinjuku & Shibuya* ; voie **3** = Yamanote *for Ueno, Tōkyō & Shinagawa*. Voies **1** et **4** = Keihin-Tōhoku : `sharedIsland` / `sharedWith: Keihin-Tōhoku` **confirmé**. Le quai est **en contrebas** du hall, ce qui **confirme** `elevation: trench` et `place: over`.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Le plan ne fléche **aucune correspondance** : Tabata n’en a pas.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **atre vie** — accolé au North Exit. Le dépôt déclarait `atre` pour Tabata : confirmé, et c’est l’enseigne **atre vie**, pas atre.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **février 2024**.
+- Les **noms japonais** ne sont pas sur cette édition anglaise : 北口, 南口 restent à confirmer.
+- Le plan ne montre pas de galerie commerciale au-delà d’**atre vie** — le cahier des charges avait raison de prévenir qu’il ne fallait pas en forcer une.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable au **North Exit**, avec **atre vie** pour donner l’échelle, et la **montée depuis la tranchée** comme geste principal. Représenté sans être visitable : le **South Exit** à l’autre bout, petit et seul, atteint par le quai. Aucune galerie forcée : le plan n’en montre pas, on n’en met pas.
 
 ---
 
@@ -1620,12 +1643,13 @@ Tranche jouable : **le hall transversal du 2F en entier**, ce qui est possible p
 
 ## JY27 Tamachi — 田町
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan d’**avril 2026**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Tamachi Station (1F-2F) | [lien](https://www.jreast.co.jp/fr/e/stations/e976.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（田町駅） | [ja](https://www.jreast.co.jp/estation/stations/976.html) · [en](https://www.jreast.co.jp/en/estation/stations/976.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -1637,31 +1661,39 @@ Tranche jouable : **le hall transversal du 2F en entier**, ce qui est possible p
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — les quais : deux îlots.
+- **2F** — le **hall-passerelle**, au-dessus des voies, d’un seul tenant.
+- Un renvoi « **for 3F** » part de la zone libre : un niveau de plus existe, non cartographié.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **South Gate** et **North Gate** — les deux groupes, tous deux au 2F, accolés au centre de la passerelle et se partageant *Tickets* et *Fare Adjustment*.
+
+**Ordre le long du quai** — Deux brackets sur les quais, **South Gate** et **North Gate**. Mais au 2F les deux groupes sont **côte à côte au milieu** de la passerelle, pas à ses extrémités : ce sont les SORTIES qui partent aux quatre coins.
+
+**Voies Yamanote** — Voie **2** = Yamanote *for Tōkyō, Ueno & Sugamo* ; voie **3** = Yamanote *for Shibuya, Shinjuku & Ikebukuro*. Voies **1** et **4** = Keihin-Tōhoku : `sharedIsland` / `sharedWith: Keihin-Tōhoku` **confirmé**.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Toei Asakusa & Mita** (Mita station) — fléché depuis le **Mita Exit (West Exit)**, côté ouest.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Un **KIOSK** dans la zone payante. Le plan ne nomme aucune enseigne ni galerie.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+**Trois zones « Under Construction »** — deux au 2F, de part et d’autre du hall, une au niveau des quais côté sud. Plan daté « *As of April, 2026* ».
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date d’**avril 2026**, quatre mois avant la référence, sur une gare en travaux.
+- Le **3F** est fléché mais pas cartographié : c’est probablement le deck côté Shibaura que le cahier des charges évoque, sans confirmation.
+- Les **noms japonais** ne sont pas sur cette édition anglaise : 三田口, 芝浦口 restent à confirmer.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable sur la **passerelle du 2F**, autour des deux groupes accolés — et c’est la disposition qui compte : les contrôles sont au **milieu**, les sorties aux **quatre coins**. Les deux directions que le cahier des charges demande sont nommées sur le plan : **Mita Exit (West Exit)** avec son renvoi Toei, et **Shibaura Exit (East Exit)**. Représentés sans être visitables : ces quatre débouchés, le renvoi « for 3F » vers les decks de Shibaura (volée qui monte et se perd), et les palissades de chantier qui ferment le périmètre.
 
 ---
 

@@ -401,6 +401,151 @@ const FINDINGS = {
       + 'la charpente signature existante EST ce niveau.',
   },
 
+  // ─── JY08 Nishi-Nippori ───────────────────────────────────────────────
+  7: {
+    confidence: '`approximate` — plan de **février 2024**',
+    levels: [
+      '**1F** — un **hall unique et compact**, sous le viaduc.',
+      '**2F** — les quais : deux îlots.',
+      'Le Chiyoda (sous) et le Nippori-Toneri Liner (au-dessus) ne sont **pas '
+        + 'cartographiés** : l’onglet s’arrête à 1F-2F. Ils sont fléchés, pas '
+        + 'dessinés.',
+    ],
+    gates: [
+      '**Un seul groupe, et le plan ne lui donne aucun nom** : « **Gate** », comme '
+        + 'à Kanda. Avec ses *Tickets* et son *Fare Adjustment*.',
+      '⚠️ **Mais deux passages « for Tokyo Metro Chiyoda Line » partent de la '
+        + 'ZONE PAYANTE**, en plus d’un troisième depuis la zone libre. Autrement '
+        + 'dit, JR et le Chiyoda partagent ici une zone payante : on change de '
+        + 'compagnie **sans franchir de contrôle**. C’est un fait de topologie '
+        + 'majeur, et il est propre à cette gare dans tout le relevé.',
+    ],
+    order: 'Le plan ne porte pas de bracket : la gare est trop petite pour en '
+      + 'avoir besoin. Un hall, un contrôle, et les volées vers les deux îlots.',
+    tracks: 'Voie **3** = Yamanote *for Ikebukuro, Shinjuku & Shibuya* ; voie '
+      + '**2** = Yamanote *for Ueno, Tōkyō & Shinagawa*. Voies **4** et **1** = '
+      + 'Keihin-Tōhoku : `sharedIsland` / `sharedWith: Keihin-Tōhoku` **confirmé**.',
+    transfers: [
+      '**Tokyo Metro Chiyoda** — trois renvois, dont **deux depuis la zone '
+        + 'payante**. La correspondance est directe.',
+      '**Nippori-Toneri Liner** — un renvoi depuis la zone libre, vers le sud.',
+    ],
+    commerce: [
+      '**NewDays**, un **KIOSK** et trois **SHOP** génériques. Aucune enseigne '
+        + 'nommée au-delà.',
+    ],
+    works: 'Aucune zone de chantier signalée — mais le plan a plus de deux ans.',
+    uncertain: [
+      'Le plan date de **février 2024**.',
+      'Les niveaux **Chiyoda** et **Toneri Liner** ne sont pas cartographiés : '
+        + 'leur position relative au JR reste à établir ailleurs.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise ; le dépôt '
+        + 'tient 南改札, que ce plan ne confirme pas.',
+    ],
+    tradeoff: 'Tranche jouable : **le hall entier**, il est minuscule. Le sujet '
+      + 'est la **superposition** que le cahier des charges demande — Chiyoda '
+      + 'dessous, JR, Toneri Liner dessus — et la façon dont elle se lit depuis '
+      + 'un hall d’une seule pièce : deux passages qui plongent **depuis la zone '
+      + 'payante** vers le Chiyoda (portail vertical crédible, sans contrôle), un '
+      + 'troisième depuis la zone libre, et une volée qui monte vers le Toneri '
+      + 'Liner. Rien d’autre à construire.',
+  },
+
+  // ─── JY09 Tabata ──────────────────────────────────────────────────────
+  8: {
+    confidence: '`approximate` — plan de **février 2024**',
+    levels: [
+      '**B1** — les quais, **dans la tranchée** : deux îlots.',
+      '**1F** — les contrôles, **au-dessus**, en **deux blocs séparés** de tailles '
+        + 'inégales.',
+    ],
+    gates: [
+      '**North Exit** — le grand bloc, à l’est, avec *Fare Adjustment*, *Tickets* '
+        + 'et **atre vie** attenant.',
+      '**South Exit** — un petit bloc à l’ouest, avec ses seuls *Tickets* et '
+        + '*Fare Adjustment*.',
+    ],
+    order: 'Deux brackets, **South Exit** et **North Exit**, aux deux bouts des '
+      + 'quais, et rien entre eux. Le rapport de taille est net sur le plan : le '
+      + 'nord est la gare, le sud est un accès.',
+    tracks: 'Voie **2** = Yamanote *for Ikebukuro, Shinjuku & Shibuya* ; voie '
+      + '**3** = Yamanote *for Ueno, Tōkyō & Shinagawa*. Voies **1** et **4** = '
+      + 'Keihin-Tōhoku : `sharedIsland` / `sharedWith: Keihin-Tōhoku` **confirmé**. '
+      + 'Le quai est **en contrebas** du hall, ce qui **confirme** '
+      + '`elevation: trench` et `place: over`.',
+    transfers: [
+      'Le plan ne fléche **aucune correspondance** : Tabata n’en a pas.',
+    ],
+    commerce: [
+      '**atre vie** — accolé au North Exit. Le dépôt déclarait `atre` pour '
+        + 'Tabata : confirmé, et c’est l’enseigne **atre vie**, pas atre.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **février 2024**.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise : 北口, 南口 '
+        + 'restent à confirmer.',
+      'Le plan ne montre pas de galerie commerciale au-delà d’**atre vie** — le '
+        + 'cahier des charges avait raison de prévenir qu’il ne fallait pas en '
+        + 'forcer une.',
+    ],
+    tradeoff: 'Tranche jouable au **North Exit**, avec **atre vie** pour donner '
+      + 'l’échelle, et la **montée depuis la tranchée** comme geste principal. '
+      + 'Représenté sans être visitable : le **South Exit** à l’autre bout, petit '
+      + 'et seul, atteint par le quai. Aucune galerie forcée : le plan n’en montre '
+      + 'pas, on n’en met pas.',
+  },
+
+  // ─── JY27 Tamachi ─────────────────────────────────────────────────────
+  26: {
+    confidence: '`mostlyVerified` — sur un plan d’**avril 2026**',
+    levels: [
+      '**1F** — les quais : deux îlots.',
+      '**2F** — le **hall-passerelle**, au-dessus des voies, d’un seul tenant.',
+      'Un renvoi « **for 3F** » part de la zone libre : un niveau de plus existe, '
+        + 'non cartographié.',
+    ],
+    gates: [
+      '**South Gate** et **North Gate** — les deux groupes, tous deux au 2F, '
+        + 'accolés au centre de la passerelle et se partageant *Tickets* et '
+        + '*Fare Adjustment*.',
+    ],
+    order: 'Deux brackets sur les quais, **South Gate** et **North Gate**. Mais au '
+      + '2F les deux groupes sont **côte à côte au milieu** de la passerelle, pas '
+      + 'à ses extrémités : ce sont les SORTIES qui partent aux quatre coins.',
+    tracks: 'Voie **2** = Yamanote *for Tōkyō, Ueno & Sugamo* ; voie **3** = '
+      + 'Yamanote *for Shibuya, Shinjuku & Ikebukuro*. Voies **1** et **4** = '
+      + 'Keihin-Tōhoku : `sharedIsland` / `sharedWith: Keihin-Tōhoku` **confirmé**.',
+    transfers: [
+      '**Toei Asakusa & Mita** (Mita station) — fléché depuis le **Mita Exit '
+        + '(West Exit)**, côté ouest.',
+    ],
+    commerce: [
+      'Un **KIOSK** dans la zone payante. Le plan ne nomme aucune enseigne ni '
+        + 'galerie.',
+    ],
+    works: '**Trois zones « Under Construction »** — deux au 2F, de part et '
+      + 'd’autre du hall, une au niveau des quais côté sud. Plan daté '
+      + '« *As of April, 2026* ».',
+    uncertain: [
+      'Le plan date d’**avril 2026**, quatre mois avant la référence, sur une gare '
+        + 'en travaux.',
+      'Le **3F** est fléché mais pas cartographié : c’est probablement le deck '
+        + 'côté Shibaura que le cahier des charges évoque, sans confirmation.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise : 三田口, '
+        + '芝浦口 restent à confirmer.',
+    ],
+    tradeoff: 'Tranche jouable sur la **passerelle du 2F**, autour des deux '
+      + 'groupes accolés — et c’est la disposition qui compte : les contrôles sont '
+      + 'au **milieu**, les sorties aux **quatre coins**. Les deux directions que '
+      + 'le cahier des charges demande sont nommées sur le plan : '
+      + '**Mita Exit (West Exit)** avec son renvoi Toei, et '
+      + '**Shibaura Exit (East Exit)**. Représentés sans être visitables : ces '
+      + 'quatre débouchés, le renvoi « for 3F » vers les decks de Shibaura (volée '
+      + 'qui monte et se perd), et les palissades de chantier qui ferment le '
+      + 'périmètre.',
+  },
+
   // ─── JY13 Ikebukuro ───────────────────────────────────────────────────
   // Deux feuilles, 1F-2F et B1. Février 2026. C'est la gare qui donne les
   // NOMS DE PASSAGES que le cahier des charges espérait sans les tenir.

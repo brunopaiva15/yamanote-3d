@@ -506,6 +506,48 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],
+  // JY08 Nishi-Nippori. Onglet unique 1F-2F. Février 2024.
+  7: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Nishi-Nippori Station (1F-2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e1167.html',
+      documentDate: '2024-02',
+      consultedAt: '2026-08-02',
+      note: 'Captures fournies à la main (réseau bloqué). Porte « As of February, 2024 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY09 Tabata. Onglet unique B1-1F. Février 2024.
+  8: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Tabata Station (B1-1F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e972.html',
+      documentDate: '2024-02',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of February, 2024 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY27 Tamachi. Onglet unique 1F-2F. Avril 2026.
+  26: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Tamachi Station (1F-2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e976.html',
+      documentDate: '2026-04',
+      consultedAt: '2026-08-02',
+      note: 'Captures fournies à la main (réseau bloqué). Porte « As of April, 2026 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
 };
 
 /**
