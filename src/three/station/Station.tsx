@@ -50,6 +50,8 @@ import {
   PSD_LEAF_T,
   PSD_LEAF_TIP_INSET,
   PSD_LEAF_TRAVEL,
+  PSD_BAND_T,
+  PSD_JOINT_T,
   PSD_LEAF_W,
   PSD_WALL_T,
   PSD_X,
@@ -299,7 +301,7 @@ export function Station() {
           PSD_X - 0.005,
           PLATFORM_TOP + PSD_H - 0.07,
           (s.z0 + s.z1) / 2,
-          0.12,
+          PSD_BAND_T,
           0.1,
           s.z1 - s.z0 - 0.012,
         ),
@@ -484,8 +486,9 @@ export function Station() {
             // de rive dépasse de cinq millimètres et tient le jambage, comme le
             // caoutchouc noir au bord d'une vraie ホームドア ouverte. Fermé, les
             // deux joints se touchent et tracent la ligne sombre qui partage le
-            // portique en deux.
-            S.set(PSD_WALL_T + 0.01, PSD_H - 0.05, PSD_LEAF_JOINT_W),
+            // portique en deux. Le bandeau, lui, le recoiffe de cinq
+            // millimètres de plus - voir PSD_JOINT_T.
+            S.set(PSD_JOINT_T, PSD_H - 0.05, PSD_LEAF_JOINT_W),
           );
           jm.setMatrixAt(k, mm);
         }

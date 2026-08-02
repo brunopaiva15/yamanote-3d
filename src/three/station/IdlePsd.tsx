@@ -18,7 +18,9 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import {
   PLATFORM_TOP,
+  PSD_BAND_T,
   PSD_H,
+  PSD_JOINT_T,
   PSD_LEAF_JOINT_W,
   PSD_LEAF_T,
   PSD_LEAF_TIP_INSET,
@@ -69,7 +71,7 @@ export function IdlePsd({ x, trackSide, segs, gaps, m, name, doors = true }: Idl
           x + trackSide * 0.005,
           PLATFORM_TOP + PSD_H - 0.07,
           (s.z0 + s.z1) / 2,
-          0.12,
+          PSD_BAND_T,
           0.1,
           s.z1 - s.z0 - 0.012,
         ),
@@ -102,7 +104,7 @@ export function IdlePsd({ x, trackSide, segs, gaps, m, name, doors = true }: Idl
             x,
             PLATFORM_TOP + PSD_H / 2,
             gz + dir * (PSD_LEAF_JOINT_W / 2),
-            PSD_WALL_T + 0.01,
+            PSD_JOINT_T,
             PSD_H - 0.05,
             PSD_LEAF_JOINT_W,
           ),

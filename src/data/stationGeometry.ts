@@ -94,6 +94,24 @@ export const PSD_POCKET_LEN = PSD_LEAF_W + PSD_LEAF_TRAVEL + PSD_LEAF_TIP_INSET 
 /** Épaisseur du muret. Le vantail passe dedans, à mi-bois. */
 export const PSD_WALL_T = 0.1;
 
+/**
+ * Les trois épaisseurs du portique, et pourquoi elles sont ÉTAGÉES.
+ *
+ * Le joint de rive doit dépasser du muret pour se lire au jambage quand la
+ * porte est rentrée, et le bandeau doit coiffer les deux - c'est un profil de
+ * couronnement, il déborde de ce qu'il couronne. Mais il y a plus contraignant
+ * que le dessin : porte ouverte, le joint remonte SOUS le bandeau, et leurs
+ * deux nus se retrouvent au même endroit. À égalité d'épaisseur, ces deux
+ * faces se disputent le tampon de profondeur - une plaque noire et une plaque
+ * verte qui clignotent l'une dans l'autre, aux quarante baies du quai, à
+ * chaque arrêt. D'où cinq millimètres d'écart franc à chaque cran.
+ *
+ * Cinq millimètres tiennent jusqu'à une trentaine de mètres avec la profondeur
+ * de ce rendu (proche à 5 cm) ; au-delà, le joint ne fait plus un pixel.
+ */
+export const PSD_JOINT_T = PSD_WALL_T + 0.01;
+export const PSD_BAND_T = PSD_JOINT_T + 0.02;
+
 /** Face du muret côté quai : c'est là que se colle ce qu'on lit dessus. */
 export const PSD_FACE_X = PSD_X + PSD_WALL_T / 2;
 
