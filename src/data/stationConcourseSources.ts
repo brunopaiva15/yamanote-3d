@@ -548,6 +548,71 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],
+  9: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Komagome Station (B1-2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e712.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of September, 2025 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  10: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Sugamo Station (B1-1F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e896.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of September, 2025 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  11: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Ōtsuka Station (1F-2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e330.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of September, 2025 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  13: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Mejiro Station (B1-1F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e1553.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of September, 2025 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  15: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Shin-Ōkubo Station (1F-2F, 4F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e857.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of September, 2025 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
 };
 
 /**

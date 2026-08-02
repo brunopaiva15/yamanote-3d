@@ -1373,6 +1373,190 @@ const FINDINGS = {
       + 'une hauteur.',
   },
 
+  // ─── JY10 Komagome ────────────────────────────────────────────────────
+  9: {
+    confidence: '`mostlyVerified` — sur un plan de **septembre 2025**',
+    levels: [
+      '**2F** — le hall principal : un contrôle, les sorties *North* et *South*, '
+        + 'le renvoi Namboku, et l’**Hotel Mets Komagome**.',
+      '**1F** — le quai, un îlot unique.',
+      '**B1** — un **second contrôle**, petit, avec la sortie *East*.',
+      '⚠️ **Les deux groupes sont de part et d’autre du quai, l’un au-dessus, '
+        + 'l’autre en dessous.** Le cahier des charges prévenait qu’il ne fallait '
+        + 'pas en faire « un seul corridor reliant artificiellement les deux '
+        + 'extrémités » : la géométrie l’interdit d’elle-même.',
+    ],
+    gates: [
+      'Deux groupes, **aucun nommé** sur le plan : « Gate » au 2F et « Gate » au '
+        + 'B1. Chacun a ses *Tickets* et son *Fare Adjustment*.',
+    ],
+    order: 'Deux brackets : **North Exit & South Exit** (le groupe du 2F) et '
+      + '**East Exit** (celui du B1), à des points différents du quai.',
+    tracks: 'Voie **1** = Yamanote *for Tabata, Ueno & Tōkyō* ; voie **2** = '
+      + 'Yamanote *for Ikebukuro, Shinjuku & Shibuya*. Îlot unique : '
+      + '`config: island` **confirmé**.',
+    transfers: ['**Tokyo Metro Namboku** — fléché depuis le **2F**, donc bien '
+      + '« près du groupe principal » comme annoncé.'],
+    commerce: ['**Hotel Mets Komagome** au 2F. Un **KIOSK** au B1. Aucune galerie.'],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **septembre 2025**.',
+      'Aucun des deux contrôles n’est nommé ; le dépôt tient 北口改札, non confirmé.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise.',
+    ],
+    tradeoff: 'Tranche jouable au **2F**, le groupe principal, avec le renvoi '
+      + 'Namboku. Représenté sans être visitable : le **groupe du B1** et sa '
+      + 'sortie *East* — **sous** le quai, donc atteint par une volée descendante '
+      + 'depuis un autre point, jamais par le hall. C’est la gare qui interdit '
+      + 'd’elle-même le corridor unique.',
+  },
+
+  // ─── JY11 Sugamo ──────────────────────────────────────────────────────
+  10: {
+    confidence: '`mostlyVerified` — sur un plan de **septembre 2025**',
+    levels: [
+      '**1F** — le hall, **au-dessus de la tranchée** : un contrôle unique et '
+        + 'trois débouchés.',
+      '**B1F** — le quai, un îlot unique, en tranchée.',
+    ],
+    gates: ['Un seul groupe, **non nommé** sur le plan : « Gate », avec ses '
+      + '*Tickets* et son *Fare Adjustment*.'],
+    order: 'Pas de bracket : la gare est trop petite. Un hall, un contrôle, une '
+      + 'descente.',
+    tracks: 'Voie **1** = Yamanote *for Tabata, Ueno & Tōkyō* ; voie **2** = '
+      + 'Yamanote *for Ikebukuro, Shinjuku & Shibuya*. Îlot unique en tranchée : '
+      + '`config: island` et `place: over` **confirmés**.',
+    transfers: ['**Toei Mita** — fléché depuis le 1F, côté ouest.'],
+    commerce: [
+      '**atre vie** — deux blocs encadrant la zone libre. **Le dépôt ne déclare '
+        + 'PAS `atre` pour Sugamo** : c’est un manque à combler.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **septembre 2025**.',
+      '⚠️ Le cahier des charges parle des directions « **Front**, North et '
+        + 'South ». Le plan nomme **Main Exit**, *North Exit* et *South Exit* : '
+        + 'c’est « Main », pas « Front ».',
+      'Le contrôle n’est pas nommé ; le dépôt tient 北口改札, non confirmé.',
+    ],
+    tradeoff: 'Tranche jouable : **le hall entier du 1F**, il est petit. Le geste '
+      + 'principal est la **descente dans la tranchée**. Représentés sans être '
+      + 'visitables : les trois débouchés *Main*, *North* et *South*, le renvoi '
+      + '**Toei Mita**, et les deux blocs d’**atre vie** en façades.',
+  },
+
+  // ─── JY12 Ōtsuka ──────────────────────────────────────────────────────
+  11: {
+    confidence: '`mostlyVerified` — sur un plan de **septembre 2025**',
+    levels: [
+      '**1F** — le hall, **sous le viaduc** : un contrôle, deux débouchés.',
+      '**2F** — le quai, un îlot unique.',
+    ],
+    gates: ['Un seul groupe, **non nommé** : « Gate », avec *Tickets* et '
+      + '*Fare Adjustment*.'],
+    order: 'Pas de bracket. Un hall central sous le viaduc qui distribue les deux '
+      + 'sorties — exactement ce que le cahier des charges annonçait.',
+    tracks: 'Voie **2** = Yamanote *for Tabata, Ueno & Tōkyō* ; voie **1** = '
+      + 'Yamanote *for Ikebukuro, Shinjuku & Shibuya*. Îlot unique : '
+      + '`config: island` **confirmé**.',
+    transfers: [
+      '**Toden Arakawa** (tramway) — fléché depuis le **North Exit**. Le cahier '
+        + 'des charges demandait que sa proximité soit lisible « depuis la sortie '
+        + 'South ou la signalétique » : c’est en réalité **au nord**.',
+    ],
+    commerce: ['Quelques **SHOP** génériques. Le plan ne nomme aucune enseigne — '
+      + '**pas d’atre vie cartographié ici**, contrairement à ce que le cahier des '
+      + 'charges suggérait d’intégrer « avec modération ».'],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **septembre 2025**.',
+      'Le contrôle n’est pas nommé ; le dépôt tient 北口改札, non confirmé.',
+      'L’absence d’atre vie sur le plan n’est pas une preuve d’absence : la '
+        + 'galerie peut être hors emprise cartographiée.',
+    ],
+    tradeoff: 'Tranche jouable : **le hall entier**, sous viaduc, plafond bas. '
+      + 'Représentés sans être visitables : les sorties *North* et *South*, et le '
+      + 'renvoi **Toden Arakawa** au nord — un tramway qu’on doit sentir tout '
+      + 'près sans le construire.',
+  },
+
+  // ─── JY14 Mejiro ──────────────────────────────────────────────────────
+  13: {
+    confidence: '`mostlyVerified` — sur un plan de **septembre 2025**',
+    levels: [
+      '**1F** — le hall, **au-dessus de la tranchée**, intégré au pont routier. '
+        + 'Un contrôle, et rien d’autre.',
+      '**B1F** — le quai, un îlot unique.',
+    ],
+    gates: ['Un seul groupe, **non nommé** : « Gate ». *Tickets*, '
+      + '*Fare Adjustment*, et un renvoi « **for Shops (2F)** ».'],
+    order: 'Pas de bracket. C’est la plus simple des gares lues : un hall, un '
+      + 'contrôle, une descente.',
+    tracks: 'Voie **2** = Yamanote *for Ikebukuro, Ueno & Tōkyō* ; voie **1** = '
+      + 'Yamanote *for Shinjuku, Shibuya & Shinagawa*. Îlot unique en tranchée : '
+      + '`config: island` et `place: over` **confirmés**. Aucune autre ligne.',
+    transfers: ['**Aucune.** Le plan n’en fléche pas une seule — Mejiro est bien '
+      + 'l’une des deux gares de la boucle sans correspondance ferroviaire.'],
+    commerce: [
+      'Un seul renvoi « **for Shops (2F)** », sans nom. **Aucune galerie '
+        + 'nommée** : le cahier des charges avait raison d’interdire toute galerie '
+        + 'disproportionnée.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **septembre 2025**.',
+      'Le contrôle n’est pas nommé ; le dépôt tient 中央改札, non confirmé.',
+      'Aucune sortie nommée n’apparaît dans le cadrage.',
+    ],
+    tradeoff: 'Tranche jouable : **le hall entier**, et il tient en une pièce. Le '
+      + 'sujet est le **calme** et le petit volume au-dessus de la tranchée, pas '
+      + 'la surface. Représenté sans être visitable : le renvoi « for Shops (2F) », '
+      + 'un demi-niveau commercial qu’on aperçoit sans y monter.',
+  },
+
+  // ─── JY16 Shin-Ōkubo ──────────────────────────────────────────────────
+  15: {
+    confidence: '`mostlyVerified` — sur un plan de **septembre 2025**',
+    levels: [
+      '**1F** — le hall, compact : un contrôle, un « Exit Only », et c’est tout.',
+      '**2F** — le quai, un îlot unique.',
+      '**4F** — et voilà l’explication du « 4F » que l’index annonçait sans qu’on '
+        + 'sache quoi en faire : ce n’est **pas un niveau de gare**, c’est un '
+        + '**pont d’ascenseurs** — deux appareils, A et B, fléchés « for Concourse '
+        + 'Area (1F) » et « for Platform (2F) ». Un itinéraire accessible qui '
+        + 'enjambe la voie par le haut, et rien d’autre.',
+    ],
+    gates: [
+      'Un seul groupe, **non nommé** : « Gate », avec *Tickets* et '
+        + '*Fare Adjustment*.',
+      '**Exit Only (IC card only)** — un passage à sens unique, réservé à la '
+        + 'carte sans contact. Troisième occurrence de la règle IC dans le relevé, '
+        + 'après Tokyo et Yūrakuchō.',
+    ],
+    order: 'Pas de bracket. Un hall, un contrôle, un débouché — exactement ce que '
+      + 'le cahier des charges annonçait.',
+    tracks: 'Voie **1** = Yamanote *for Ikebukuro, Tabata & Ueno* ; voie **2** = '
+      + 'Yamanote *for Shinjuku, Shibuya & Shinagawa*. Îlot unique : '
+      + '`config: island` **confirmé**.',
+    transfers: ['**Aucune.** Le plan n’en fléche pas une seule.'],
+    commerce: [
+      'Un renvoi « **for Station Building (2F)** », sans nom. **Aucune enseigne '
+        + 'cartographiée** — et surtout, aucune boutique de quartier : le cahier '
+        + 'des charges avait raison de dire que les commerces K-pop du quartier ne '
+        + 'sont pas dans la gare.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **septembre 2025**.',
+      'Le contrôle n’est pas nommé ; le dépôt tient 中央改札, non confirmé.',
+    ],
+    tradeoff: 'Tranche jouable : **le hall entier**, minuscule. Deux choses le '
+      + 'distinguent et méritent d’être rendues : le **passage « Exit Only (IC '
+      + 'card only) »**, à sens unique, et le **pont d’ascenseurs du 4F** — une '
+      + 'passerelle qui monte au-dessus de la voie pour redescendre de l’autre '
+      + 'côté, visible depuis le quai et jamais empruntée par le joueur.',
+  },
+
   // ─── JY17 Shinjuku ────────────────────────────────────────────────────
   // Relevé sur le jeu « Guide Maps for Major Stations », trois niveaux, daté
   // « As of August, 2026 » - la date de référence du chantier, au mois près.

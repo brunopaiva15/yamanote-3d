@@ -17,7 +17,7 @@ genre de document qui ment.
 
 ## ⚠ État de la vérification — à lire avant toute fiche
 
-**Plans officiels ouverts et lus : 23 / 30.**
+**Plans officiels ouverts et lus : 28 / 30.**
 
 L'environnement de développement de ce dépôt n'atteint pas les sites des
 opérateurs : la passerelle réseau refuse la connexion (403 sur `CONNECT`) vers
@@ -101,8 +101,13 @@ fondues dans le texte.
 | JY07 Nippori | 2025-04 | ⚠️ **décalé** par rapport à la référence |
 | JY08 Nishi-Nippori | 2024-02 | ⚠️ **décalé** par rapport à la référence |
 | JY09 Tabata | 2024-02 | ⚠️ **décalé** par rapport à la référence |
+| JY10 Komagome | 2025-09 | ⚠️ **décalé** par rapport à la référence |
+| JY11 Sugamo | 2025-09 | ⚠️ **décalé** par rapport à la référence |
+| JY12 Ōtsuka | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY13 Ikebukuro | 2026-02 | ⚠️ **décalé** par rapport à la référence |
+| JY14 Mejiro | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY15 Takadanobaba | 2026-06 | ⚠️ **décalé** par rapport à la référence |
+| JY16 Shin-Ōkubo | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY17 Shinjuku | 2026-08 | ✅ la date de référence |
 | JY19 Harajuku | 2025-09 | ⚠️ **décalé** par rapport à la référence |
 | JY20 Shibuya | 2026-06 | ⚠️ **décalé** par rapport à la référence |
@@ -690,12 +695,13 @@ Tranche jouable au **North Exit**, avec **atre vie** pour donner l’échelle, e
 
 ## JY10 Komagome — 駒込
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **septembre 2025**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Komagome Station (B1-2F) | [lien](https://www.jreast.co.jp/fr/e/stations/e712.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（駒込駅） | [ja](https://www.jreast.co.jp/estation/stations/712.html) · [en](https://www.jreast.co.jp/en/estation/stations/712.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -707,42 +713,52 @@ Tranche jouable au **North Exit**, avec **atre vie** pour donner l’échelle, e
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **2F** — le hall principal : un contrôle, les sorties *North* et *South*, le renvoi Namboku, et l’**Hotel Mets Komagome**.
+- **1F** — le quai, un îlot unique.
+- **B1** — un **second contrôle**, petit, avec la sortie *East*.
+- ⚠️ **Les deux groupes sont de part et d’autre du quai, l’un au-dessus, l’autre en dessous.** Le cahier des charges prévenait qu’il ne fallait pas en faire « un seul corridor reliant artificiellement les deux extrémités » : la géométrie l’interdit d’elle-même.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Deux groupes, **aucun nommé** sur le plan : « Gate » au 2F et « Gate » au B1. Chacun a ses *Tickets* et son *Fare Adjustment*.
+
+**Ordre le long du quai** — Deux brackets : **North Exit & South Exit** (le groupe du 2F) et **East Exit** (celui du B1), à des points différents du quai.
+
+**Voies Yamanote** — Voie **1** = Yamanote *for Tabata, Ueno & Tōkyō* ; voie **2** = Yamanote *for Ikebukuro, Shinjuku & Shibuya*. Îlot unique : `config: island` **confirmé**.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Tokyo Metro Namboku** — fléché depuis le **2F**, donc bien « près du groupe principal » comme annoncé.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Hotel Mets Komagome** au 2F. Un **KIOSK** au B1. Aucune galerie.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **septembre 2025**.
+- Aucun des deux contrôles n’est nommé ; le dépôt tient 北口改札, non confirmé.
+- Les **noms japonais** ne sont pas sur cette édition anglaise.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable au **2F**, le groupe principal, avec le renvoi Namboku. Représenté sans être visitable : le **groupe du B1** et sa sortie *East* — **sous** le quai, donc atteint par une volée descendante depuis un autre point, jamais par le hall. C’est la gare qui interdit d’elle-même le corridor unique.
 
 ---
 
 ## JY11 Sugamo — 巣鴨
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **septembre 2025**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Sugamo Station (B1-1F) | [lien](https://www.jreast.co.jp/fr/e/stations/e896.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（巣鴨駅） | [ja](https://www.jreast.co.jp/estation/stations/896.html) · [en](https://www.jreast.co.jp/en/estation/stations/896.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -754,42 +770,50 @@ Tranche jouable au **North Exit**, avec **atre vie** pour donner l’échelle, e
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — le hall, **au-dessus de la tranchée** : un contrôle unique et trois débouchés.
+- **B1F** — le quai, un îlot unique, en tranchée.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Un seul groupe, **non nommé** sur le plan : « Gate », avec ses *Tickets* et son *Fare Adjustment*.
+
+**Ordre le long du quai** — Pas de bracket : la gare est trop petite. Un hall, un contrôle, une descente.
+
+**Voies Yamanote** — Voie **1** = Yamanote *for Tabata, Ueno & Tōkyō* ; voie **2** = Yamanote *for Ikebukuro, Shinjuku & Shibuya*. Îlot unique en tranchée : `config: island` et `place: over` **confirmés**.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Toei Mita** — fléché depuis le 1F, côté ouest.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **atre vie** — deux blocs encadrant la zone libre. **Le dépôt ne déclare PAS `atre` pour Sugamo** : c’est un manque à combler.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **septembre 2025**.
+- ⚠️ Le cahier des charges parle des directions « **Front**, North et South ». Le plan nomme **Main Exit**, *North Exit* et *South Exit* : c’est « Main », pas « Front ».
+- Le contrôle n’est pas nommé ; le dépôt tient 北口改札, non confirmé.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable : **le hall entier du 1F**, il est petit. Le geste principal est la **descente dans la tranchée**. Représentés sans être visitables : les trois débouchés *Main*, *North* et *South*, le renvoi **Toei Mita**, et les deux blocs d’**atre vie** en façades.
 
 ---
 
 ## JY12 Ōtsuka — 大塚
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **septembre 2025**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Ōtsuka Station (1F-2F) | [lien](https://www.jreast.co.jp/fr/e/stations/e330.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（大塚駅） | [ja](https://www.jreast.co.jp/estation/stations/330.html) · [en](https://www.jreast.co.jp/en/estation/stations/330.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -801,31 +825,38 @@ Tranche jouable au **North Exit**, avec **atre vie** pour donner l’échelle, e
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — le hall, **sous le viaduc** : un contrôle, deux débouchés.
+- **2F** — le quai, un îlot unique.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Un seul groupe, **non nommé** : « Gate », avec *Tickets* et *Fare Adjustment*.
+
+**Ordre le long du quai** — Pas de bracket. Un hall central sous le viaduc qui distribue les deux sorties — exactement ce que le cahier des charges annonçait.
+
+**Voies Yamanote** — Voie **2** = Yamanote *for Tabata, Ueno & Tōkyō* ; voie **1** = Yamanote *for Ikebukuro, Shinjuku & Shibuya*. Îlot unique : `config: island` **confirmé**.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Toden Arakawa** (tramway) — fléché depuis le **North Exit**. Le cahier des charges demandait que sa proximité soit lisible « depuis la sortie South ou la signalétique » : c’est en réalité **au nord**.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Quelques **SHOP** génériques. Le plan ne nomme aucune enseigne — **pas d’atre vie cartographié ici**, contrairement à ce que le cahier des charges suggérait d’intégrer « avec modération ».
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **septembre 2025**.
+- Le contrôle n’est pas nommé ; le dépôt tient 北口改札, non confirmé.
+- L’absence d’atre vie sur le plan n’est pas une preuve d’absence : la galerie peut être hors emprise cartographiée.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable : **le hall entier**, sous viaduc, plafond bas. Représentés sans être visitables : les sorties *North* et *South*, et le renvoi **Toden Arakawa** au nord — un tramway qu’on doit sentir tout près sans le construire.
 
 ---
 
@@ -894,12 +925,13 @@ Tranche jouable dans le **bloc payant ouest du B1**, autour du *Central Gate 1*,
 
 ## JY14 Mejiro — 目白
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **septembre 2025**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Mejiro Station (B1-1F) | [lien](https://www.jreast.co.jp/fr/e/stations/e1553.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（目白駅） | [ja](https://www.jreast.co.jp/estation/stations/1553.html) · [en](https://www.jreast.co.jp/en/estation/stations/1553.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -911,31 +943,38 @@ Tranche jouable dans le **bloc payant ouest du B1**, autour du *Central Gate 1*,
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — le hall, **au-dessus de la tranchée**, intégré au pont routier. Un contrôle, et rien d’autre.
+- **B1F** — le quai, un îlot unique.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Un seul groupe, **non nommé** : « Gate ». *Tickets*, *Fare Adjustment*, et un renvoi « **for Shops (2F)** ».
+
+**Ordre le long du quai** — Pas de bracket. C’est la plus simple des gares lues : un hall, un contrôle, une descente.
+
+**Voies Yamanote** — Voie **2** = Yamanote *for Ikebukuro, Ueno & Tōkyō* ; voie **1** = Yamanote *for Shinjuku, Shibuya & Shinagawa*. Îlot unique en tranchée : `config: island` et `place: over` **confirmés**. Aucune autre ligne.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Aucune.** Le plan n’en fléche pas une seule — Mejiro est bien l’une des deux gares de la boucle sans correspondance ferroviaire.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Un seul renvoi « **for Shops (2F)** », sans nom. **Aucune galerie nommée** : le cahier des charges avait raison d’interdire toute galerie disproportionnée.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **septembre 2025**.
+- Le contrôle n’est pas nommé ; le dépôt tient 中央改札, non confirmé.
+- Aucune sortie nommée n’apparaît dans le cadrage.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable : **le hall entier**, et il tient en une pièce. Le sujet est le **calme** et le petit volume au-dessus de la tranchée, pas la surface. Représenté sans être visitable : le renvoi « for Shops (2F) », un demi-niveau commercial qu’on aperçoit sans y monter.
 
 ---
 
@@ -999,12 +1038,13 @@ Tranche jouable au **Waseda Exit**, le grand bloc, d’où partent les deux corr
 
 ## JY16 Shin-Ōkubo — 新大久保
 
-*Date de référence : 2026-08. Confiance du relevé : **à établir**.*
+*Date de référence : 2026-08. Confiance du relevé : `mostlyVerified` — sur un plan de **septembre 2025**.*
 
 **Sources**
 
 | Rang | Document | Adresse | État |
 |---|---|---|---|
+| 1 | Guide Maps for Major Stations — Shin-Ōkubo Station (1F-2F, 4F) | [lien](https://www.jreast.co.jp/fr/e/stations/e857.html) | **`read`** — ouvert et lu |
 | 1 | 駅構内図・バリアフリー情報（新大久保駅） | [ja](https://www.jreast.co.jp/estation/stations/857.html) · [en](https://www.jreast.co.jp/en/estation/stations/857.html) | `indexed` — non lu |
 
 **Ce que le dépôt sait déjà** (relevés antérieurs, à ne pas re-relever)
@@ -1016,31 +1056,39 @@ Tranche jouable au **Waseda Exit**, le grand bloc, d’où partent les deux corr
 
 **Niveaux**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **1F** — le hall, compact : un contrôle, un « Exit Only », et c’est tout.
+- **2F** — le quai, un îlot unique.
+- **4F** — et voilà l’explication du « 4F » que l’index annonçait sans qu’on sache quoi en faire : ce n’est **pas un niveau de gare**, c’est un **pont d’ascenseurs** — deux appareils, A et B, fléchés « for Concourse Area (1F) » et « for Platform (2F) ». Un itinéraire accessible qui enjambe la voie par le haut, et rien d’autre.
 
 **Groupes de portillons**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Un seul groupe, **non nommé** : « Gate », avec *Tickets* et *Fare Adjustment*.
+- **Exit Only (IC card only)** — un passage à sens unique, réservé à la carte sans contact. Troisième occurrence de la règle IC dans le relevé, après Tokyo et Yūrakuchō.
+
+**Ordre le long du quai** — Pas de bracket. Un hall, un contrôle, un débouché — exactement ce que le cahier des charges annonçait.
+
+**Voies Yamanote** — Voie **1** = Yamanote *for Ikebukuro, Tabata & Ueno* ; voie **2** = Yamanote *for Shinjuku, Shibuya & Shinagawa*. Îlot unique : `config: island` **confirmé**.
 
 **Correspondances et leur direction**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- **Aucune.** Le plan n’en fléche pas une seule.
 
 **Commerces structurants**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+- Un renvoi « **for Station Building (2F)** », sans nom. **Aucune enseigne cartographiée** — et surtout, aucune boutique de quartier : le cahier des charges avait raison de dire que les commerces K-pop du quartier ne sont pas dans la gare.
 
 **Travaux (août 2026)**
 
-*à relever — le plan officiel n’a pas pu être ouvert depuis cet environnement*
+Aucune zone de chantier signalée.
 
 **Incertain**
 
-- tout ce qui précède : le plan officiel n’a pas pu être ouvert depuis cet environnement.
+- Le plan date de **septembre 2025**.
+- Le contrôle n’est pas nommé ; le dépôt tient 中央改札, non confirmé.
 
 **Compromis de jeu**
 
-*décidé en phase 5*
+Tranche jouable : **le hall entier**, minuscule. Deux choses le distinguent et méritent d’être rendues : le **passage « Exit Only (IC card only) »**, à sens unique, et le **pont d’ascenseurs du 4F** — une passerelle qui monte au-dessus de la voie pour redescendre de l’autre côté, visible depuis le quai et jamais empruntée par le joueur.
 
 ---
 
