@@ -448,6 +448,64 @@ const EXTRA_SOURCES: Readonly<Record<number, readonly SourceReference[]>> = {
         + 'Non versionné : ©JR East Consultants Company.',
     },
   ],
+  // JY02 Kanda. Onglet unique 1F-2F. Juillet 2025.
+  1: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Kanda Station (1F-2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e538.html',
+      documentDate: '2025-07',
+      consultedAt: '2026-08-02',
+      note: 'Captures fournies à la main (réseau bloqué). Porte « As of July, 2025 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY04 Okachimachi. Onglet unique 1F-2F. JANVIER 2024 : le plan le plus
+  // ancien de tout le relevé, plus de deux ans avant la date de référence.
+  3: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Okachimachi Station (1F-2F, M2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e355.html',
+      documentDate: '2024-01',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of January, 2024 » — '
+        + 'DEUX ANS ET DEMI avant la date de référence, le plus grand écart du relevé. '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY15 Takadanobaba. Onglet unique 1F-2F. Juin 2026.
+  14: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Takadanobaba Station (1F-2F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e938.html',
+      documentDate: '2026-06',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of June, 2026 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
+  // JY23 Gotanda. Onglet unique 1F-4F. Septembre 2025.
+  22: [
+    {
+      tier: 1,
+      retrieval: 'read',
+      publisher: 'JR East / JR East Consultants Company',
+      title: 'Guide Maps for Major Stations — Gotanda Station (1F-4F)',
+      url: 'https://www.jreast.co.jp/fr/e/stations/e695.html',
+      documentDate: '2025-09',
+      consultedAt: '2026-08-02',
+      note: 'Capture fournie à la main (réseau bloqué). Porte « As of September, 2025 ». '
+        + 'Non versionné : ©JR East Consultants Company.',
+    },
+  ],
 };
 
 /**

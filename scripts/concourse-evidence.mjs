@@ -1022,6 +1022,212 @@ const FINDINGS = {
       + 'la structure de viaduc sont le sujet.',
   },
 
+  // ─── JY02 Kanda ───────────────────────────────────────────────────────
+  1: {
+    confidence: '`mostlyVerified` — sur un plan de **juillet 2025**',
+    levels: [
+      '**1F** — les contrôles, **sous le viaduc**, en **deux blocs sans lien '
+        + 'entre eux** : un à l’ouest, un à l’est.',
+      '**2F** — les quais : trois îlots, six voies.',
+    ],
+    gates: [
+      '**Deux groupes, et le plan ne leur donne aucun nom** : il les étiquette '
+        + 'simplement « **Gate** ». Ce sont les SORTIES qui portent les noms — '
+        + '*West Exit*, *South Exit* d’un côté, *North Exit*, *East Exit* de '
+        + 'l’autre.',
+      'Chaque bloc a ses propres *Tickets* et *Fare Adjustment*.',
+    ],
+    order: 'Deux brackets sur les quais : **West Exit & South Exit** d’un côté, '
+      + '**East Exit & North Exit** de l’autre. Les deux blocs du 1F desservent '
+      + 'donc chacun deux sorties, et il n’existe **aucun passage entre eux** au '
+      + 'niveau du sol : pour aller de l’ouest à l’est, il faut reprendre le quai.',
+    tracks: 'Voie **3** = Yamanote *for Ueno, Tabata & Ikebukuro* ; voie **2** = '
+      + 'Yamanote *for Tōkyō, Shinagawa & Shibuya*. Voies **4** et **1** = '
+      + 'Keihin-Tōhoku, voies **5** et **6** = Chūō. Les deux voies Yamanote sont '
+      + 'donc la **paire centrale**, chacune adossée à une Keihin-Tōhoku sur son '
+      + 'îlot — ce qui **confirme mot pour mot** le commentaire du dépôt.',
+    transfers: [
+      '**Tokyo Metro Ginza** — fléché depuis le bloc **est** du 1F, et de là '
+        + 'seulement.',
+      '**Chūō** — voies 5 et 6, correspondance interne JR.',
+    ],
+    commerce: [
+      'Quelques **SHOP** génériques dans les deux blocs. Le plan ne nomme aucune '
+        + 'enseigne : le commerce de Kanda est **sous les arches, hors emprise '
+        + 'JR**, et n’a donc pas à figurer.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **juillet 2025**.',
+      '⚠️ **Le dépôt nomme le contrôle de Kanda 西口改札 / « West ».** Le plan '
+        + 'officiel n’attribue **aucun nom** aux deux groupes — juste « Gate » — '
+        + 'et réserve *West* à une SORTIE. C’est le troisième cas du même piège, '
+        + 'après Harajuku et Shimbashi : un nom de sortie pris pour un nom de '
+        + 'portillon. À corriger en phase 3.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise.',
+    ],
+    tradeoff: 'Tranche jouable dans le **bloc ouest**, sous le viaduc, avec ses '
+      + 'sorties *West* et *South* — plafond bas, poutres, la rue à toucher. '
+      + 'Représenté sans être visitable : le **bloc est** et ses sorties *North* '
+      + 'et *East*, **atteint uniquement par le quai** — c’est une branche courte '
+      + 'et fermée, pas un prolongement —, et le renvoi **Ginza** qui n’existe que '
+      + 'de ce côté-là. Les restaurants sous les arches restent hors emprise, en '
+      + 'façades.',
+  },
+
+  // ─── JY04 Okachimachi ─────────────────────────────────────────────────
+  3: {
+    confidence: '`approximate` — plan de **janvier 2024**, le plus ancien du relevé',
+    levels: [
+      '**1F** — les contrôles, en **deux blocs séparés** : *South Exit* et '
+        + '*North Exit*, chacun avec ses guichets.',
+      '**M2F** — une **mezzanine**, et c’est la trouvaille de cette gare : deux '
+        + 'petits paliers intermédiaires, fléchés « for Tracks No.1 & 2 », '
+        + '« for Tracks No.3 & 4 » et « for 1F ». On ne descend pas du quai au '
+        + 'hall d’un trait : on passe par un demi-niveau.',
+      '**2F** — les quais : deux îlots.',
+    ],
+    gates: [
+      '**South Exit** et **North Exit** — les deux groupes du 1F, chacun avec ses '
+        + '*Tickets* et son *Fare Adjustment*.',
+    ],
+    order: 'Deux brackets, **South Exit** et **North Exit**, aux deux bouts des '
+      + 'quais. Entre eux, la mezzanine M2F relaie — mais en **deux morceaux '
+      + 'distincts**, un par groupe.',
+    tracks: 'Voie **3** = Yamanote *for Ueno, Tabata & Ikebukuro* ; voie **2** = '
+      + 'Yamanote *for Akihabara, Tōkyō, Shinagawa & Meguro*. Voies **4** et **1** '
+      + '= Keihin-Tōhoku : `sharedIsland` / `sharedWith: Keihin-Tōhoku` '
+      + '**confirmé**.',
+    transfers: [
+      'Le plan ne fléche **aucune correspondance** : ni Ginza, ni Hibiya, ni '
+        + 'Ōedo. Elles existent au voisinage (Ueno-hirokōji, Naka-okachimachi) '
+        + 'mais ne sont pas des correspondances JR cartographiées.',
+    ],
+    commerce: [
+      'Le plan ne nomme aucune enseigne. **Ameyoko n’y figure pas** — c’est un '
+        + 'marché de rue sous et le long du viaduc, hors emprise JR, et le cahier '
+        + 'des charges avait raison de demander qu’on ne le mette pas dans le hall.',
+    ],
+    works: 'Aucune zone de chantier signalée — mais le plan a **deux ans et demi**.',
+    uncertain: [
+      '⚠️ **Le plan date de janvier 2024**, plus de deux ans avant la date de '
+        + 'référence. C’est le plus grand écart de tout le relevé, et il justifie '
+        + 'à lui seul la confiance `approximate`.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise : 北口, 南口 '
+        + 'restent à confirmer.',
+      'Le nombre de baies par groupe n’est pas lisible.',
+    ],
+    tradeoff: 'Tranche jouable au **North Exit**, comme le cahier des charges le '
+      + 'demande. **La mezzanine M2F est le sujet** : elle donne à cette petite '
+      + 'gare une coupe à trois niveaux qu’aucun hall générique ne produirait, et '
+      + 'elle se traverse en descendant. Représenté sans être visitable : le '
+      + '**South Exit** et sa propre moitié de mezzanine, atteints par le quai — '
+      + 'branche courte et indépendante. **Ameyoko reste dehors**, en fond de '
+      + 'perspective sous le viaduc.',
+  },
+
+  // ─── JY15 Takadanobaba ────────────────────────────────────────────────
+  14: {
+    confidence: '`mostlyVerified` — sur un plan de **juin 2026**',
+    levels: [
+      '**1F** — les contrôles, en **deux blocs de tailles très inégales**.',
+      '**2F** — le quai : un seul îlot.',
+    ],
+    gates: [
+      '**Waseda Exit** — le grand bloc, à l’est : *Fare Adjustment*, *Tickets*, et '
+        + 'c’est de lui que partent les deux correspondances.',
+      '**Toyama Exit** — un bloc **minuscule** à l’ouest, avec ses seuls *Tickets* '
+        + 'et *Fare Adjustment*. Rien d’autre.',
+      '**Transfer to Seibu-Shinjuku Line** — un troisième point de contrôle, entre '
+        + 'exploitants, avec son propre bracket de quai.',
+    ],
+    order: 'Trois brackets le long du quai : **Toyama Exit** à l’ouest, '
+      + '**Transfer to Seibu-Shinjuku Line** au milieu, **Waseda Exit** à l’est. '
+      + 'Le rapport de taille entre les deux sorties est frappant sur le plan — '
+      + 'c’est exactement ce que le cahier des charges annonçait : « Waseda '
+      + 'constitue le hall principal, Toyama un petit accès secondaire clairement '
+      + 'distinct ».',
+    tracks: 'Voie **1** = Yamanote *for Ikebukuro, Tabata & Ueno* ; voie **2** = '
+      + 'Yamanote *for Shinjuku, Shibuya & Shinagawa*. Les deux sens se font face '
+      + 'sur **un îlot unique** : `config: island` **confirmé**, et aucune autre '
+      + 'ligne ne partage ce quai.',
+    transfers: [
+      '**Seibu-Shinjuku** — par un contrôle dédié au milieu du quai, puis « for '
+        + 'Seibu-Shinjuku Line » depuis le Waseda Exit.',
+      '**Tokyo Metro Tōzai** — « for Tokyo Metro Tōzai Line », depuis le Waseda '
+        + 'Exit également.',
+      '**Les deux correspondances sortent du même côté**, à l’est. Le Toyama Exit '
+        + 'n’en dessert aucune.',
+    ],
+    commerce: [
+      'Le plan ne nomme aucune enseigne ni galerie.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **juin 2026**, deux mois avant la référence.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise : 早稲田口, '
+        + '戸山口 restent à confirmer — le dépôt tient déjà 早稲田口, et le plan le '
+        + 'corrobore comme nom de SORTIE.',
+    ],
+    tradeoff: 'Tranche jouable au **Waseda Exit**, le grand bloc, d’où partent les '
+      + 'deux correspondances. Représentés sans être visitables : le **Toyama '
+      + 'Exit** à l’autre bout du quai — un bloc si petit qu’il se lit d’un coup '
+      + 'd’œil, et c’est le contraste qui compte —, le **contrôle Seibu-Shinjuku** '
+      + 'au milieu du quai comme portail entre exploitants, et le renvoi '
+      + '**Tōzai**. Ni Seibu ni Tōzai ne sont construits : direction et panneau.',
+  },
+
+  // ─── JY23 Gotanda ─────────────────────────────────────────────────────
+  22: {
+    confidence: '`mostlyVerified` — sur un plan de **septembre 2025**',
+    levels: [
+      '**1F** — le **Central Gate**, ses sorties *West* et *East*, et deux blocs '
+        + 'd’**atre Gotanda**.',
+      '**2F** — le quai : un îlot unique.',
+      '**4F** — le contrôle vers le **Tōkyū Ikegami**, avec ses propres guichets '
+        + '« Tickets (JR & Tōkyū) ». **Deux niveaux au-dessus du quai JR.**',
+    ],
+    gates: [
+      '**Central Gate** — 1F, le contrôle JR, avec *Tickets* et *Fare Adjustment*.',
+      '**to Tōkyū Ikegami Line** — 4F, un contrôle **entre exploitants**, avec son '
+        + 'propre *Fare Adjustment*.',
+    ],
+    order: 'Deux brackets sur le quai : **Transfer to Tōkyū Ikegami Line** à '
+      + 'l’ouest et **Central Gate** au centre. La gare se lit donc en **coupe '
+      + 'verticale** : on descend au 1F pour sortir, on monte au 4F pour changer '
+      + 'de compagnie.',
+    tracks: 'Voie **1** = Yamanote *for Shinagawa, Tōkyō & Ueno* ; voie **2** = '
+      + 'Yamanote *for Shibuya, Shinjuku & Ikebukuro*. Îlot unique, les deux sens '
+      + 'face à face : `config: island` **confirmé**.',
+    transfers: [
+      '**Tōkyū Ikegami** — au **4F**, donc **au-dessus** des quais JR. Le cahier '
+        + 'des charges demandait « la correspondance verticale vers la ligne Tōkyū '
+        + 'Ikegami située plus haut » : confirmé, et l’écart est de deux niveaux.',
+      '**Toei Asakusa** — fléché depuis le **1F**, côté est. La gare a donc une '
+        + 'correspondance en haut et une en bas.',
+    ],
+    commerce: [
+      '**atre Gotanda 1** et **atre Gotanda 2** — deux blocs distincts au 1F, de '
+        + 'part et d’autre du Central Gate.',
+      '**JR-EAST Hotel Mets Gotanda** — l’hôtel du groupe, contre la gare.',
+      'Le dépôt ne déclarait pas `atre` pour Gotanda : à ajouter.',
+    ],
+    works: 'Aucune zone de chantier signalée.',
+    uncertain: [
+      'Le plan date de **septembre 2025**.',
+      'Les **noms japonais** ne sont pas sur cette édition anglaise.',
+      'Le **3F** n’apparaît pas : l’onglet couvre 1F-4F mais le plan ne montre que '
+        + '1F, 2F et 4F. Ce qui occupe le 3F reste inconnu.',
+    ],
+    tradeoff: 'Tranche jouable au **Central Gate (1F)**, entre les deux blocs '
+      + 'd’atre. **La verticalité est le sujet** : depuis le quai on doit voir '
+      + 'partir vers le haut la volée du **Tōkyū Ikegami** — deux niveaux, un '
+      + 'contrôle au bout — et vers le bas celle du **Toei Asakusa**. Représentés '
+      + 'sans être visitables : ces deux directions, les sorties *West* et *East*, '
+      + 'et les deux atre en façades. La gare n’a presque pas de surface : elle a '
+      + 'une hauteur.',
+  },
+
   // ─── JY17 Shinjuku ────────────────────────────────────────────────────
   // Relevé sur le jeu « Guide Maps for Major Stations », trois niveaux, daté
   // « As of August, 2026 » - la date de référence du chantier, au mois près.
