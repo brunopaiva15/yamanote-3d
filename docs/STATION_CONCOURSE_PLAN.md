@@ -277,7 +277,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **11** | **Itinéraires PNJ** ✅ | `concourseRoute` : axe lu sur la destination, choix de groupe, bouche sur n'importe quelle paroi | S3 |
 | **12** | **Accès secondaires vivants** ✅ | `placement.liveAccesses` ; la marche, le rendu et les itinéraires les lisent tous | G3 |
 | **13** | **Rendu : `ConcourseNetwork`** ✅ | `shellsOf` : volumes continus ; `Concourse` devient un archétype parmi d'autres | R1 |
-| 14 | Archétypes 1 — halls | `LinearConcourse`, `CompactLocalHall`, `UnderViaductHall` | R1 |
+| **14** | **Archétypes 1 — halls** ✅ | `hallStyle` : `linear`, `underViaduct`, `compact` — ce qui les distingue est la COUVERTURE | R1 |
 | 15 | Archétypes 2 — hauteur | `OverbridgeHall`, `CrossConcourse`, mezzanines | R1 |
 | 16 | Archétypes 3 — limites | `ExitBranch`, `TransferPortal`, `ConstructionPartition` | G4 D7 |
 | 17 | Occlusion interne | portails de visibilité aux virages, escaliers, branches | R2 |
@@ -738,6 +738,42 @@ rapporte les paires qui s'interpénètrent) a été passée sur les trente gares
 **avant et après** : les deux sorties sont **identiques octet pour octet**,
 502 paires de part et d'autre, aucune erreur de page. Un refactor de rendu qu'on
 ne peut pas regarder méritait mieux qu'un test numérique.
+
+### 4.12 La phase 14 : ce qui distingue trois halls, c'est la couverture
+
+Un hall de gare japonaise est presque toujours un parallélépipède : deux
+parois, un sol, un plafond, une ligne de portillons en travers. Ce n'est pas la
+FORME qui les distingue — c'est ce qu'il y a au-dessus de la tête.
+
+| Archétype | Couverture | Gares du relevé |
+|---|---|---|
+| `linear` | dalle lisse et basse : ce qui la porte est dans la terre | le hall d'avant, et les trente aujourd'hui |
+| `underViaduct` | **pas de plafond** : les poutres du tablier, serrées, avec leurs retombées | Kanda, Akihabara, Okachimachi, Ōtsuka, Takadanobaba, Ebisu, Gotanda, Shimbashi, Yūrakuchō |
+| `compact` | plus basse et surtout plus NUE : ce qui le caractérise est ce qu'il n'a pas | Uguisudani, Nishi-Nippori, Mejiro, Shin-Ōkubo, Yoyogi, Meguro, Harajuku |
+
+C'est délibérément une **table**, et non trois composants : trois composants qui
+recopieraient chacun un sol, deux parois et un fond auraient divergé à la
+première correction, et l'on aurait passé le reste du chantier à réparer le
+troisième.
+
+`linear` **reproduit exactement** le hall d'avant — les trois cotes qui étaient
+des constantes de `Concourse` sont dans la table, aux mêmes valeurs, et un test
+les tient. Une cote qui dériverait ferait bouger trente halls sans erreur, sans
+test rouge, sans que rien ne le dise.
+
+Les quatre autres formes du vocabulaire — pont-concourse, hall transversal,
+mezzanine, tranche de grande gare — retombent sur `linear` et attendent la
+**phase 15** : elles ne se distinguent pas par leur couverture mais par leur
+HAUTEUR et par ce qu'on voit dessous, ce qui ne tient pas dans une table.
+
+**Une note de la phase 7 est corrigée ici.** J'y écrivais que l'élargissement
+des halls longitudinaux — les dix-huit lignes de portillons trop serrées pour
+leurs baies — était le travail de la phase 14. C'est faux, et pour une raison
+que la phase 6 rend visible : `stationOcclusion` lit la portée du RELEVÉ, pas de
+ce qui est bâti. Élargir un hall que personne ne construit ferait reculer la
+nappe de rue de onze gares au-dessus d'un vide. L'élargissement va donc **avec
+le branchement** (phases 20 à 24), gare par gare, quand il y aura un hall pour
+occuper la place.
 
 ### Ordre et raison
 

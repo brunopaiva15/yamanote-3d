@@ -35,6 +35,7 @@ import {
   type StationInterior,
 } from '../../data/stationInterior';
 import type { ConcourseShell } from '../../data/stationConcourseBuild';
+import { hallStyle } from './interiors/hallStyle';
 import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
 import { makeConcourseGuideTexture, type GuideKind } from '../../textures/concourse';
@@ -50,8 +51,6 @@ const GATE_SIGN_Y = 2.32;
 const GATE_SIGN_H = 0.44;
 /** Hauteur libre d'une bouche de sortie : au-dessus, c'est le linteau. */
 const EXIT_OPENING_H = 2.15;
-/** Hauteur du soubassement de faïence. */
-const DADO_H = 1.15;
 /**
  * Épaisseur des parois du hall.
  *
@@ -60,8 +59,6 @@ const DADO_H = 1.15;
  * nez se mesure depuis le nu du fond (`data/stationInterior`).
  */
 const WALL_T = HALL_WALL_T;
-/** Entraxe des réglettes de plafond. */
-const LAMP_PITCH = 4.2;
 
 /**
  * Le hall d'une gare, du débouché du couloir aux bouches de sortie.
@@ -92,6 +89,11 @@ export function Concourse({
   detail: number;
 }) {
   const gate = shell.gates[0];
+  // CE QUI FAIT CE HALL-LÀ : sa couverture, et rien d'autre. Le style vient de
+  // l'archétype du volume (`three/station/interiors/hallStyle`) ; `linear`
+  // reproduit exactement le hall d'avant, et c'est par lui que passent les
+  // trente gares tant qu'aucune n'est branchée sur son relevé.
+  const style = hallStyle(shell.kind);
   const width = shell.rect.x1 - shell.rect.x0;
   const z0 = shell.rect.z0;
   const z1 = shell.rect.z1;
@@ -119,9 +121,28 @@ export function Concourse({
 
   const lamps = useMemo(() => {
     const out: number[] = [];
-    for (let z = z0 + LAMP_PITCH / 2; z < z1; z += LAMP_PITCH) out.push(z);
+    for (let z = z0 + style.lampPitch / 2; z < z1; z += style.lampPitch) out.push(z);
     return out;
-  }, [z0, z1]);
+  }, [z0, z1, style.lampPitch]);
+
+  /**
+   * Les poutres du tablier, quand le hall est sous un viaduc.
+   *
+   * Elles ne sont pas décoratives : ce sont elles qui disent qu'on n'a pas une
+   * dalle au-dessus de la tête mais l'ouvrage qui porte les trains. Elles
+   * SAUTENT la travée des portillons, dont les joues montent déjà au plafond
+   * d'une paroi à l'autre — une poutre qui y tomberait ressortirait au travers
+   * d'une borne, comme les pilastres du hall l'ont appris avant elle.
+   */
+  const beams = useMemo(() => {
+    if (style.beamPitch === null) return [];
+    const out: number[] = [];
+    for (let z = z0 + style.beamPitch / 2; z < z1; z += style.beamPitch) {
+      if (z > gate.rect.z0 - 0.6 && z < gate.rect.z1 + 0.6) continue;
+      out.push(z);
+    }
+    return out;
+  }, [z0, z1, style.beamPitch, gate]);
 
   // Sol, plafond et parois s'arrêtent au NU du couloir : le hall commence là où
   // la trémie finit, et rien ne doit repartir en arrière sous ses marches.
@@ -134,7 +155,7 @@ export function Concourse({
   // large de deux mètres, un seul carreau de faïence par paroi. Voir
   // three/station/wallBox pour pourquoi ce n'est pas `repeat` qui s'en charge.
   const sideGeo = useWallBox(WALL_T, height, shellLen, HALL_MODULE);
-  const dadoGeo = useWallBox(0.05, DADO_H, shellLen, DADO_MODULE);
+  const dadoGeo = useWallBox(0.05, style.dadoH, shellLen, DADO_MODULE);
   const ceilGeo = usePanelBox(width + 2 * WALL_T, 0.12, shellLen, CEILING_MODULE);
 
   return (
@@ -158,7 +179,7 @@ export function Concourse({
           />
           {/* Soubassement de faïence : à hauteur de main, c'est lui qu'on voit. */}
           <mesh
-            position={[midX + (d * (width - 0.04)) / 2, shell.floorY + DADO_H / 2, shellZ]}
+            position={[midX + (d * (width - 0.04)) / 2, shell.floorY + style.dadoH / 2, shellZ]}
             geometry={dadoGeo}
             material={m.tile}
           />
@@ -219,6 +240,18 @@ export function Concourse({
       >
         <planeGeometry args={[Math.min(width - 0.4, 3.6), GATE_SIGN_H]} />
       </mesh>
+
+      {/* Les poutres du tablier : un dessous de viaduc n'a pas de plafond, il a
+          l'ouvrage qui porte les trains. */}
+      {beams.map((z, k) => (
+        <mesh
+          key={`beam${k}`}
+          position={[midX, shell.ceilY - 0.12 - style.beamDrop / 2, z]}
+          material={m.wallDark}
+        >
+          <boxGeometry args={[width + 2 * WALL_T, style.beamDrop, 0.36]} />
+        </mesh>
+      ))}
 
       {/* Réglettes de plafond : la lumière du lieu. Continues et très blanches,
           comme dans tout souterrain de gare - c'est ce qui fait briller le sol. */}
