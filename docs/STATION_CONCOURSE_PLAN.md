@@ -1289,6 +1289,13 @@ x local sur le z du monde avec un signe qui dépend du sens de la rotation. Ce
 sont `z0` et `x1` qui se lisent à l'envers — pas les deux parois « basses »,
 comme on l'écrirait de mémoire.
 
+**Et une seconde chose, qui n'était pas un défaut de gare mais un défaut de
+sonde.** La capture d'Harajuku montrait la ville, sous le viaduc, à la place du
+hall : `__probeStand` posait le joueur sans publier sa position dans le REPÈRE
+DU QUAI, et l'occlusion interne (`visibleShells`) le croyait donc ailleurs —
+elle masquait le volume où il se tenait. Une sonde qui ment est pire qu'une
+sonde absente ; elle publie maintenant sa pose comme la marche le fait.
+
 Les images ne sont pas versionnées : cent cinquante PNG de cinq cents kio n'ont
 rien à faire dans un dépôt de code, et le script les refait en une commande. Ce
 qui est versionné, c'est **le contrôle qui en est sorti** : un test tient que

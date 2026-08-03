@@ -110,6 +110,11 @@ export function Player() {
       runtime.stanceX = x;
       runtime.stanceZ = z;
       pos.current.y = groundY(x, z) + CONFIG.eyeHeight;
+      // ET LE REPÈRE QUAI AVEC, sans quoi l'occlusion interne croit le joueur
+      // ailleurs : `visibleShells` ne montre que les volumes qu'on peut voir
+      // d'où l'on est, et une capture posée sans le dire se retrouvait dehors,
+      // sous le viaduc, à regarder la ville par-dessus un hall invisible.
+      publishPlayerPose(x, pos.current.y, z);
       return { x: +x.toFixed(2), z: +z.toFixed(2), y: +pos.current.y.toFixed(2), level };
     };
 
