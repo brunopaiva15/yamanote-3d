@@ -72,53 +72,70 @@
         { minute: 360, dayOffset: 1, kind: 'fair', tempC: 10 },
       ];
 
+      // Les vues portent le nom de l'ÉTAT qu'elles rendent, dans l'ordre où la
+      // machine à états le décrit : écran, puis mode, puis statut, puis langue.
+      // `station-layout-transfers-now-jp` se lit donc comme la frame
+      // { state:'stationLayout', mode:'transfers', status:'now', lang:'jp' } -
+      // celle de la figure 6 de la revue Hitachi.
       const views = [
         // --- Plans de ligne : les deux moments, puis les versions anglaises.
         // Le plan rapproché ne dit pas la même chose à quai (jeton « vous êtes
         // ici », ただいま) et en circulation (chevron, 次は) : les deux sont
         // rendus quelle que soit la phase demandée en query.
-        ['zoom-jp-dwell', (s) => drawRoute(s, station, 'dwell', 0, clock, 'now', 'jp', dir)],
-        ['zoom-jp-cruise', (s) => drawRoute(s, station, 'cruise', countdown, clock, 'next', 'jp', dir)],
-        ['zoom-en-cruise', (s) => drawRoute(s, station, 'cruise', countdown, clock, 'next', 'en', dir)],
-        ['loop-jp-dwell', (s) => drawLoopMap(s, station, 'dwell', 0, clock, 'now', 'jp', dir)],
-        ['loop-jp-cruise', (s) => drawLoopMap(s, station, 'cruise', countdown, clock, 'next', 'jp', dir)],
-        ['loop-en-cruise', (s) => drawLoopMap(s, station, 'cruise', countdown, clock, 'next', 'en', dir)],
+        ['zoom-now-jp', (s) => drawRoute(s, station, 'dwell', 0, clock, 'now', 'jp', dir)],
+        ['zoom-next-jp', (s) => drawRoute(s, station, 'cruise', countdown, clock, 'next', 'jp', dir)],
+        ['zoom-next-en', (s) => drawRoute(s, station, 'cruise', countdown, clock, 'next', 'en', dir)],
+        ['loop-now-jp', (s) => drawLoopMap(s, station, 'dwell', 0, clock, 'now', 'jp', dir)],
+        ['loop-next-jp', (s) => drawLoopMap(s, station, 'cruise', countdown, clock, 'next', 'jp', dir)],
+        ['loop-next-en', (s) => drawLoopMap(s, station, 'cruise', countdown, clock, 'next', 'en', dir)],
         // La phase passée en query, pour comparer une capture à un instant
         // précis sans changer de vue.
-        ['zoom-jp-query', (s) => drawRoute(s, station, phase, countdown, clock, status, 'jp', dir)],
-        ['loop-jp-query', (s) => drawLoopMap(s, station, phase, countdown, clock, status, 'jp', dir)],
+        ['zoom-query-jp', (s) => drawRoute(s, station, phase, countdown, clock, status, 'jp', dir)],
+        ['loop-query-jp', (s) => drawLoopMap(s, station, phase, countdown, clock, status, 'jp', dir)],
 
         // --- Écran de correspondances PLEIN CADRE. À ne pas confondre avec le
         // plan des sorties dont le bas porte les correspondances : ce sont deux
         // écrans distincts du cycle.
-        ['transfers-full', (s) => drawTransfers(s, station, clock, dir)],
+        ['transfers-full-next-jp', (s) => drawTransfers(s, station, clock, dir, 'next')],
 
-        // --- Plan des sorties, composition « correspondances » : celle de la
-        // circulation, sous 次は. Elle ne dépend pas de la paroi regardée.
-        ['exit-transfers', (s) => drawExitTransfers(s, station, clock, dir, 2, 'next')],
+        // --- Plan des sorties, mode « correspondances ». La langue ne porte que
+        // le BANDEAU : sous lui, portillons et lignes sont bilingues dans les
+        // deux passages, comme sur les deux images de la figure 6. Les quatre
+        // combinaisons de statut et de langue sont attestées pour ce mode.
+        ['station-layout-transfers-next-jp', (s) => drawExitTransfers(s, station, clock, 'jp', dir, 2, 'next')],
+        ['station-layout-transfers-next-en', (s) => drawExitTransfers(s, station, clock, 'en', dir, 2, 'next')],
+        ['station-layout-transfers-now-jp', (s) => drawExitTransfers(s, station, clock, 'jp', dir, 2, 'now')],
+        ['station-layout-transfers-now-en', (s) => drawExitTransfers(s, station, clock, 'en', dir, 2, 'now')],
 
-        // --- Plan des sorties, composition « portes », sous まもなく. Seul
-        // écran du cycle qui diffère d'une paroi à l'autre : la dalle du côté
-        // qui s'ouvre dit こちら側, celle d'en face 反対側.
-        ['exit-doors-this-side', (s) => drawExitDoors(s, station, clock, true, dir, 2, 'soon')],
-        ['exit-doors-other-side', (s) => drawExitDoors(s, station, clock, false, dir, 2, 'soon')],
+        // --- Plan des sorties, mode « portes », sous まもなく. Seul écran du
+        // cycle qui diffère d'une paroi à l'autre : la dalle du côté qui s'ouvre
+        // dit こちら側, celle d'en face 反対側. Aucune version anglaise : la
+        // ligne anglaise sous le japonais fait partie de la capture, ce n'est
+        // pas un passage du cycle.
+        ['station-layout-doors-this-side-soon-jp', (s) => drawExitDoors(s, station, clock, true, dir, 2, 'soon')],
+        ['station-layout-doors-other-side-soon-jp', (s) => drawExitDoors(s, station, clock, false, dir, 2, 'soon')],
         // Les quatre phases du pictogramme de porte (vantaux + triangle de la
         // voiture du joueur) : c'est une animation, elle ne se juge pas sur une
         // image.
-        ['exit-doors-anim0', (s) => drawExitDoors(s, station, clock, true, dir, 0, 'soon')],
-        ['exit-doors-anim1', (s) => drawExitDoors(s, station, clock, true, dir, 1, 'soon')],
-        ['exit-doors-anim2', (s) => drawExitDoors(s, station, clock, true, dir, 2, 'soon')],
-        ['exit-doors-anim3', (s) => drawExitDoors(s, station, clock, true, dir, 3, 'soon')],
+        ['station-layout-doors-anim0', (s) => drawExitDoors(s, station, clock, true, dir, 0, 'soon')],
+        ['station-layout-doors-anim1', (s) => drawExitDoors(s, station, clock, true, dir, 1, 'soon')],
+        ['station-layout-doors-anim2', (s) => drawExitDoors(s, station, clock, true, dir, 2, 'soon')],
+        ['station-layout-doors-anim3', (s) => drawExitDoors(s, station, clock, true, dir, 3, 'soon')],
 
-        // --- Avis de secteur (ne passent que sur certains intervalles).
-        ['security-jp', (s) => drawSecurityNotice(s, station, clock, 'jp', dir)],
-        ['security-en', (s) => drawSecurityNotice(s, station, clock, 'en', dir)],
-        ['priority-seats', (s) => drawPriorityNotice(s, station, clock, dir)],
-        ['manner-mode', (s) => drawPhoneManner(s, station, clock, dir)],
+        // --- Avis de secteur (ne passent que sur certains intervalles, et sur
+        // des intervalles APPROCHÉS : voir NOTICE_SEGMENTS).
+        ['security-next-jp', (s) => drawSecurityNotice(s, station, clock, 'jp', dir, 'next')],
+        ['security-next-en', (s) => drawSecurityNotice(s, station, clock, 'en', dir, 'next')],
+        ['priority-seats-next-jp', (s) => drawPriorityNotice(s, station, clock, dir, 'next')],
+        ['manner-mode-next-jp', (s) => drawPhoneManner(s, station, clock, dir, 'next')],
 
-        // --- Information trafic : deux pages qui se suivent.
-        ['traffic-jp', (s) => drawTrafficInfo(s, station, clock, 'jp', NOTICE, dir)],
-        ['traffic-en', (s) => drawTrafficInfo(s, station, clock, 'en', NOTICE, dir)],
+        // --- Information trafic : deux pages qui se suivent. Le bandeau prend
+        // le statut RÉEL du moment - il disait 「ただいま」 en dur, en pleine
+        // croisière. La vue `now` n'est là que pour vérifier ce point : cet avis
+        // ne s'insère pas dans la rotation à quai.
+        ['traffic-next-jp', (s) => drawTrafficInfo(s, station, clock, 'next', 'jp', NOTICE, dir)],
+        ['traffic-next-en', (s) => drawTrafficInfo(s, station, clock, 'next', 'en', NOTICE, dir)],
+        ['traffic-now-jp', (s) => drawTrafficInfo(s, station, clock, 'now', 'jp', NOTICE, dir)],
 
         // --- Écrans d'incident : ils remplacent toute la rotation.
         ['emergency-brake', (s) => drawEmergencyBrake(s)],
