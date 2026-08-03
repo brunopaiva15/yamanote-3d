@@ -7,7 +7,7 @@
 // rapprochée des 5 prochaines stations (arc vert, minutes, correspondances),
 // plan complet de la boucle (30 stations, minutes jusqu'à ~30 min), écran
 // « prochain arrêt » zh/ko, correspondances détaillées, écrans manières
-// (téléphone, sac à dos, fuite sonore des écouteurs), places prioritaires,
+// (téléphone, fuite sonore des écouteurs), places prioritaires,
 // sécurité, avertissement de FERMETURE DES PORTES en fin d'arrêt, côté
 // d'ouverture à l'approche, plan du quai, et - quand une autre ligne est
 // perturbée - information trafic, état des autres lignes et certificat de
@@ -1195,10 +1195,9 @@ export function drawLoopMap(
 }
 
 // --- Écrans manières (fond clair avec bandeau, comme les vrais) ---
-// La rame réelle fait tourner plusieurs visuels de courtoisie ; on en rend
-// trois : téléphone en mode silencieux, sac à dos porté devant, fuite sonore
-// des écouteurs. Ils partagent le gabarit pictogramme à gauche / texte à
-// droite des autres écrans de courtoisie.
+// La rame fait tourner deux visuels de courtoisie : téléphone en mode
+// silencieux, et fuite sonore des écouteurs. Ils partagent le gabarit
+// pictogramme à gauche / texte à droite.
 
 /**
  * Mode silencieux : là encore le sticker, pas un dessin - un téléphone à
@@ -1278,50 +1277,6 @@ export function drawPhoneManner(
   g.font = `17px ${JP_FONT}`;
   g.fillText('Please set your mobile phone to silent mode', 300, HEADER_H + 172);
   g.fillText('and refrain from talking on the phone.', 300, HEADER_H + 194);
-}
-
-export function drawBackpackManner(
-  s: ScreenSurface,
-  index: number,
-  clock: string,
-  dir: LoopDirection,
-): void {
-  const { g, w, h } = s;
-  g.fillStyle = '#f4f6f7';
-  g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp', dir);
-  // Silhouette portant son sac à dos sur le ventre.
-  const cx = w * 0.2;
-  const base = HEADER_H + (h - HEADER_H) * 0.82;
-  const green = '#2f8f4e';
-  g.fillStyle = green;
-  g.beginPath();
-  g.arc(cx, base - 156, 20, 0, Math.PI * 2);
-  g.fill();
-  g.beginPath();
-  g.roundRect(cx - 22, base - 128, 44, 100, 14);
-  g.fill();
-  // Le sac, tenu devant, sanglé aux épaules.
-  g.fillStyle = '#e8a020';
-  g.beginPath();
-  g.roundRect(cx + 14, base - 112, 44, 62, 10);
-  g.fill();
-  g.strokeStyle = '#b57708';
-  g.lineWidth = 4;
-  g.beginPath();
-  g.moveTo(cx + 4, base - 124);
-  g.lineTo(cx + 30, base - 108);
-  g.stroke();
-
-  g.textAlign = 'left';
-  g.fillStyle = '#26303a';
-  g.font = `bold 30px ${JP_FONT}`;
-  g.fillText('リュックサックは前に抱えるか、', w * 0.4, h * 0.42);
-  g.fillText('網棚をご利用ください。', w * 0.4, h * 0.58);
-  g.fillStyle = '#5c646c';
-  g.font = `18px ${JP_FONT}`;
-  g.fillText('Please hold your backpack in front of you', w * 0.4, h * 0.74);
-  g.fillText('or use the overhead racks.', w * 0.4, h * 0.85);
 }
 
 export function drawHeadphoneManner(

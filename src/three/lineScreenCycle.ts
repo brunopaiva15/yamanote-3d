@@ -18,7 +18,6 @@ import { runtime } from '../systems/runtime';
 import { CLOSE_ANNOUNCE_LEAD, dwellDuration } from '../systems/stationCycle';
 import {
   drawApproach,
-  drawBackpackManner,
   drawEmergencyBrake,
   drawEmergencyInfo,
   drawHeadphoneManner,
@@ -63,7 +62,7 @@ export interface LineScreenFrame {
   clock: string;
   /** Secondes avant l'arrivée, arrondies : les minutes affichées en viennent. */
   countdown: number;
-  /** Visuel de courtoisie du moment (téléphone, sac à dos, écouteurs). */
+  /** Visuel de courtoisie du moment (téléphone, fuite des écouteurs). */
   mannerVariant: number;
   /** Perturbation d'une AUTRE ligne, s'il y en a une à afficher. */
   notice: TrafficNotice | null;
@@ -160,7 +159,7 @@ export function lineScreenFrame(): LineScreenFrame {
     countdown: Math.round(
       secondsToArrival(phase, runtime.phaseT, index, useStore.getState().loopDirection),
     ),
-    mannerVariant: Math.floor(tick / 10) % 3,
+    mannerVariant: Math.floor(tick / 10) % 2,
     notice,
     emergencyReason: emergency.reason,
     animated:
@@ -218,7 +217,7 @@ export function paintLineScreen(
       drawPriorityNotice(s, index, clock, dir);
       break;
     case 'manner':
-      [drawPhoneManner, drawBackpackManner, drawHeadphoneManner][f.mannerVariant](
+      [drawPhoneManner, drawHeadphoneManner][f.mannerVariant](
         s, index, clock, dir,
       );
       break;
