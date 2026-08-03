@@ -115,6 +115,28 @@ test('les décors intérieurs LISENT le palier', () => {
     !/\{detail <= \d && <Fixtures/.test(concourse),
     'le mobilier redevient facultatif au palier bas',
   );
+  // ET LE HALL LUI-MÊME. Il sautait entièrement au palier « très basse » —
+  // `{place.network.built && detail <= 2 && <ConcourseNetwork …>}` — et le
+  // joueur qui descendait s'y retrouvait debout dans le vide, la ville tout
+  // autour : la marche ne connaît pas le palier, donc le sol était là et rien
+  // ne le dessinait. C'est l'exigence #17 prise à l'envers, et en pire : pas un
+  // obstacle invisible, un PLANCHER invisible.
+  const station = readFileSync(
+    new URL('../src/three/station/Station.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.ok(
+    !/detail <= \d && \(?\s*<ConcourseNetwork/.test(station),
+    'le hall redevient facultatif au palier bas',
+  );
+  // Ce qui reste au rendu est une décision de `ConcourseNetwork`, et elle tient
+  // compte de l'ENDROIT OÙ L'ON EST : depuis le quai, à ce palier-là, le hall
+  // est encore du fond de champ ; dès qu'on y descend, il existe.
+  const net = readFileSync(
+    new URL('../src/three/station/ConcourseNetwork.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.ok(net.includes('inConcourse'), 'le hall ne sait plus si le joueur y est');
 });
 
 test('CE QUI BARRE EST LE MÊME À TOUS LES PALIERS', () => {

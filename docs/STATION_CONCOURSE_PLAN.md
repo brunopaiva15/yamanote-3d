@@ -1505,7 +1505,7 @@ C'est la leçon de la distinction RELEVÉ / COMPOSÉ, prise par le mauvais bout
 pendant six phases : **quand une cote composée se dispute avec un ouvrage, ce
 n'est pas l'ouvrage qui a tort.**
 
-Cinq choses ont suivi, et aucune n'est nominative :
+Six choses ont suivi, et aucune n'est nominative :
 
 - **une volée de zéro marche est une réponse.** `lowerFlightTo` posait un
   `Math.max(1, …)` : un nez dessiné dans le vide quand la volée dessert le
@@ -1531,6 +1531,13 @@ Cinq choses ont suivi, et aucune n'est nominative :
   sol ni parois autour. Deux corrections : la vue depuis le quai suit désormais
   les ouvrages praticables, et une ligne comme un meuble n'appartiennent qu'à
   leur pièce ;
+- **et le hall entier sautait au palier le plus bas.** `Station` le montait sous
+  `detail <= 2`, écrit quand le hall était du FOND DE CHAMP qu'on regardait du
+  quai par la trémie. Depuis la phase 9 c'est du SOL : à « très basse », le
+  joueur descendait et se retrouvait debout dans le vide, la ville tout autour.
+  C'est l'exigence #17 prise à l'envers, et en pire — pas un obstacle
+  invisible, un PLANCHER invisible. Le hall existe désormais dès qu'on y est ;
+  l'économie ne vaut plus que depuis le quai ;
 - **le test qui a rendu tout cela possible s'est retiré.** « LE SOL N'A PAS BOUGÉ
   D'UN CENTIMÈTRE » comparait le réseau au hall générique sur les gares non
   branchées : il n'en reste aucune, son échantillon est vide, et un test qui ne

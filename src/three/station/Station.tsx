@@ -681,9 +681,14 @@ export function Station() {
       {/* Le niveau de correspondance, dessiné PIÈCE PAR PIÈCE depuis le réseau
           (three/station/ConcourseNetwork). Il n'existe que là où l'on peut y
           aller : une gare dont le hall est déclaré sans être construit n'en a
-          pas. Comme le reste du fond de champ, il saute au palier de qualité
-          le plus bas. */}
-      {place.network.built && detail <= 2 && (
+          pas.
+          LE PALIER DE QUALITÉ NE DÉCIDE PLUS S'IL EXISTE — voir
+          `ConcourseNetwork`. Il l'a décidé tant que le hall était du FOND DE
+          CHAMP, qu'on regardait du quai par la trémie ; depuis la phase 9 c'est
+          du SOL, et l'on y descend. Au palier le plus bas, le joueur se
+          retrouvait dans une gare vide, debout sur un plancher que rien ne
+          dessinait, avec la ville tout autour. */}
+      {place.network.built && (
         <ConcourseNetwork
           net={place.network}
           it={place.interior}

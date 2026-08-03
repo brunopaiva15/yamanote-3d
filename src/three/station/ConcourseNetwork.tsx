@@ -31,6 +31,7 @@
 // mètres et douze mètres plus haut. `visibleShells` tranche, et il n'y a rien à
 // trancher tant qu'une gare n'a qu'un volume : les trente y passent inchangées.
 
+import { useEffect, useState } from 'react';
 import type { StationInterior } from '../../data/stationInterior';
 import { visibleShells } from '../../data/stationConcourseBuild';
 import { runtime } from '../../systems/runtime';
@@ -38,6 +39,25 @@ import type { ConcourseNetwork as Network } from '../../data/stationConcourseBui
 import { Concourse } from './Concourse';
 import { Ouvrage } from './Ouvrage';
 import type { Mats } from './materials';
+
+/**
+ * Le joueur est-il DANS le hall ? Relu à l'image près, sans passer par le store.
+ *
+ * `runtime.playerLevel` change à chaque pas et n'est pas réactif : c'est le même
+ * guet que celui de `ui/StationDevelopmentNotice`, et pour la même raison — on
+ * ne veut pas d'un rendu React par image, seulement savoir quand on bascule.
+ */
+function useInConcourse(): boolean {
+  const [inside, setInside] = useState(() => runtime.playerLevel === 'concourse');
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const next = runtime.playerLevel === 'concourse';
+      setInside((cur) => (cur === next ? cur : next));
+    }, 100);
+    return () => window.clearInterval(id);
+  }, []);
+  return inside;
+}
 
 export function ConcourseNetwork({
   net,
@@ -54,6 +74,19 @@ export function ConcourseNetwork({
   /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
   detail: number;
 }) {
+  const inConcourse = useInConcourse();
+  // AU PALIER LE PLUS BAS, LE HALL RESTE — DÈS QU'ON Y EST.
+  //
+  // Il sautait entièrement à « très basse », et le joueur qui descendait s'y
+  // retrouvait debout dans le vide : la marche ne connaît pas le palier de
+  // qualité (c'est la règle de la phase 25), donc le sol était là et rien ne le
+  // dessinait. C'est l'exigence #17 prise à l'envers — non pas un obstacle
+  // invisible, mais un PLANCHER invisible, ce qui est pire.
+  //
+  // On garde l'économie là où elle a un sens : depuis le quai, à ce palier-là,
+  // le hall reste du fond de champ et ne se dessine pas. Dès qu'on y descend,
+  // il existe.
+  if (detail > 2 && !inConcourse) return null;
   const shells = visibleShells(
     net,
     runtime.playerLevel === 'concourse',
