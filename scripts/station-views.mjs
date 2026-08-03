@@ -23,8 +23,15 @@ import { chromium } from 'playwright';
 import { createServer } from 'vite';
 import { mkdirSync } from 'node:fs';
 
+// Le PALIER se donne comme les autres arguments : `ultra`, `medium`, `low`,
+// `veryLow`. Sans lui, la gare se montre telle que le sélecteur l'a laissée —
+// c'est-à-dire au palier le plus riche. Les défauts ne sont pas les mêmes d'un
+// palier à l'autre : à « moyenne », le mobilier du hall n'est plus qu'un
+// volume, et un volume mal posé se voit là où sa décoration le cachait.
 const args = process.argv.slice(2);
-const out = args.find((a) => !/^\d+$/.test(a)) ?? '/tmp/vues';
+const TIERS = ['ultra', 'veryHigh', 'high', 'medium', 'low', 'veryLow'];
+const tier = args.find((a) => TIERS.includes(a));
+const out = args.find((a) => !/^\d+$/.test(a) && a !== tier) ?? '/tmp/vues';
 const only = args.filter((a) => /^\d+$/.test(a)).map(Number);
 const stations = only.length ? only : [...Array(30).keys()];
 mkdirSync(out, { recursive: true });
@@ -44,9 +51,13 @@ await page.evaluate(() => {
   btns.sort((a, b) => b.offsetWidth * b.offsetHeight - a.offsetWidth * a.offsetHeight);
   btns[0]?.click();
 });
-await page.waitForFunction(() => typeof window.__probeInterior === 'function', { timeout: 30000 });
+await page.waitForFunction(() => typeof window.__probeQuality === 'function', { timeout: 30000 });
 await new Promise((r) => setTimeout(r, 1200));
 // L'interface par-dessus le rendu n'apprend rien sur la gare.
+if (tier) {
+  await page.evaluate((q) => window.__probeQuality(q), tier);
+  await new Promise((r) => setTimeout(r, 1500));
+}
 await page.addStyleTag({ content: '.app > :not(:first-child){display:none !important}' });
 
 let missed = 0;
@@ -79,7 +90,7 @@ for (const i of stations) {
       console.log(`      ⚠ ${leg} : aucun sol sous le point de vue`);
     }
     await new Promise((r) => setTimeout(r, 700));
-    await page.screenshot({ path: `${out}/${tag}-${leg}.png` });
+    await page.screenshot({ path: `${out}/${tag}-${leg}${tier ? `-${tier}` : ''}.png` });
   }
 }
 

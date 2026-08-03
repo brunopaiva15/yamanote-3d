@@ -104,28 +104,43 @@ export function Landmarks({
         const len = long === 'x' ? r.x1 - r.x0 : r.z1 - r.z0;
 
         if (l.kind === 'clock' && face) {
-          // Sous le plafond, à hauteur de ce qu'on cherche des yeux en entrant.
-          // La tige monte jusqu'à la sous-face, sans y entrer : le corps se
-          // place donc assez bas pour que la tige tienne dessous.
-          const y = Math.min(shell.ceilY - 1.55, shell.floorY + 3.4);
+          // ELLE PEND DU PLAFOND, ET SA TAILLE EST CELLE DE LA PIÈCE.
+          //
+          // Le 三角時計 de Shinagawa faisait un mètre quinze de diamètre — la
+          // cote d'un hall de gare terminus — sous un plafond à trois mètres
+          // dix. Posé « à 3,40 m du sol, ou 1,55 m sous le plafond », il
+          // pendait le bas du cadran à quatre-vingt-dix-huit centimètres du
+          // sol : une horloge à hauteur de hanche, qu'on rapporte comme « des
+          // horloges qui touchent presque par terre », et c'était exact.
+          //
+          // Une horloge suspendue se règle par le HAUT : la tige part de la
+          // sous-face du plafond, et le cadran s'arrête où il s'arrête. Les
+          // deux se réduisent avec la hauteur libre — un cadran d'un mètre
+          // quinze ne tient pas dans une pièce de trois mètres, et le
+          // rétrécir est la seule chose honnête à faire quand aucun plan ne
+          // cote une horloge (voir l'en-tête de ce fichier).
+          const clear = shell.ceilY - shell.floorY;
+          const d = Math.min(CLOCK_D, clear * 0.22);
+          const stem = Math.min(0.7, clear * 0.12);
+          const y = shell.ceilY - 0.12 - stem - d / 2;
           return (
             <group key={l.id} name="gare/hall/horloge" position={[cx, y, cz]}>
               {/* La tige : une horloge de hall pend, elle n'est pas posée. */}
-              <mesh position={[0, CLOCK_D / 2 + 0.35, 0]} material={m.metal}>
-                <boxGeometry args={[0.07, 0.7, 0.07]} />
+              <mesh position={[0, d / 2 + stem / 2, 0]} material={m.metal}>
+                <boxGeometry args={[0.07, stem, 0.07]} />
               </mesh>
               {/* Le corps, et les deux cadrans : on la lit des deux côtés. */}
               <mesh material={m.frame}>
-                <boxGeometry args={[CLOCK_D * 0.82, CLOCK_D, 0.22]} />
+                <boxGeometry args={[d * 0.82, d, 0.22]} />
               </mesh>
-              {[-1, 1].map((d) => (
+              {[-1, 1].map((k) => (
                 <mesh
-                  key={`face${d}`}
-                  position={[0, 0, d * 0.121]}
-                  rotation={[0, d > 0 ? 0 : Math.PI, 0]}
+                  key={`face${k}`}
+                  position={[0, 0, k * 0.121]}
+                  rotation={[0, k > 0 ? 0 : Math.PI, 0]}
                   material={face}
                 >
-                  <planeGeometry args={[CLOCK_D * 0.78, CLOCK_D * 0.78]} />
+                  <planeGeometry args={[d * 0.78, d * 0.78]} />
                 </mesh>
               ))}
             </group>
