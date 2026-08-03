@@ -13,11 +13,13 @@
 // simplement une balise `<canvas>` de la page.
 //
 // Le format est celui de la dalle réelle, 768 × 432 : un 16:9, pas un
-// panoramique. Il est tenu par le CSS (`aspect-ratio`), et le canevas garde sa
-// résolution native quelle que soit la taille à l'écran - une dalle de gare est
-// nette, et un afficheur flou serait le seul détail faux de tout l'écran.
+// panoramique. Il est tenu par le CSS (`aspect-ratio`), et c'est aussi le
+// repère dans lequel la peinture travaille - toutes ses cotes sont relevées au
+// pixel sur cette grille-là. La RÉSOLUTION, elle, n'y est pas liée : voir
+// `paintScale` plus bas, qui est ce qui permet de mettre la dalle en plein
+// écran sans qu'elle devienne une capture d'écran agrandie.
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { ANIM_PERIOD, ANIM_PHASES, LCD_CUTOFF, SCREEN_H, SCREEN_W } from '../../three/lineScreen';
 import { lineScreenFrame, lineScreenKey, paintLineScreen } from '../../three/lineScreenCycle';
 import { runtime } from '../../systems/runtime';
@@ -36,19 +38,97 @@ function watchedSide(): 1 | -1 {
   return useStore.getState().doorSide;
 }
 
+/**
+ * Combien de pixels réels pour un pixel de la grille de peinture.
+ *
+ * La dalle est dessinée dans un repère de 768 × 432, parce que c'est là qu'ont
+ * été relevées toutes ses cotes. Rien n'oblige pour autant le canevas à ne
+ * faire que 768 pixels de large : on agrandit la mémoire d'image et on pose une
+ * transformation d'échelle avant de peindre. Le texte, les traits et les
+ * pictogrammes sont alors tracés À LA RÉSOLUTION DEMANDÉE - c'est du vectoriel,
+ * pas une image qu'on étire -, et un afficheur en plein écran est net.
+ *
+ * L'échelle suit la taille RÉELLE à l'écran, densité de l'écran comprise. En
+ * plein écran sur une dalle de 1920, cela donne un canevas de 1920 × 1080 :
+ * chaque pixel dessiné est un pixel affiché.
+ *
+ * Le plafond n'est pas de la prudence excessive : la peinture coûte en surface,
+ * et cette version est justement celle qu'on choisit sur une machine modeste.
+ * Trois fois la grille - 2304 × 1296 - couvre le 1440p sans réserve, et
+ * au-delà l'œil ne distingue plus rien sur un caractère de gare.
+ */
+const MAX_PAINT_SCALE = 3;
+
+function paintScale(el: HTMLCanvasElement | null): number {
+  if (!el) return 1;
+  const shown = el.getBoundingClientRect().width;
+  if (shown <= 0) return 1;
+  const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
+  return Math.min(MAX_PAINT_SCALE, Math.max(1, (shown * dpr) / SCREEN_W));
+}
+
 export function LineScreen() {
   const canvas = useRef<HTMLCanvasElement>(null);
+
+  /**
+   * L'échelle demandée, lue par la boucle de peinture.
+   *
+   * Une référence et non un état : la boucle tourne hors de React, et un
+   * re-rendu par changement de taille de fenêtre ne lui apporterait rien.
+   */
+  const wanted = useRef(1);
+  const remeasure = useCallback(() => {
+    wanted.current = paintScale(canvas.current);
+  }, []);
+
+  // Le plein écran, le retour en page, un changement de fenêtre : dans les
+  // trois cas la dalle change de taille, donc de résolution utile. On suit
+  // l'ÉVÉNEMENT plutôt qu'un clic - on peut aussi en sortir par Échap, ou par
+  // le navigateur lui-même.
+  useEffect(() => {
+    const onChange = () => {
+      // La taille vient de changer du tout au tout ; la mesure qui décide de la
+      // résolution doit attendre que la mise en page ait suivi.
+      requestAnimationFrame(remeasure);
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    window.addEventListener('resize', remeasure);
+    remeasure();
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      window.removeEventListener('resize', remeasure);
+    };
+  }, [remeasure]);
 
   useEffect(() => {
     const el = canvas.current;
     if (!el) return;
     const g = el.getContext('2d');
     if (!g) return;
-    const surface = { g, w: SCREEN_W, h: SCREEN_H };
 
     let anim = 0;
     let lastKey = '';
     let dark = false;
+    let scale = 0;
+
+    /**
+     * Cale la mémoire d'image sur l'échelle voulue, si elle a bougé.
+     *
+     * Écrire `canvas.width` remet le contexte à zéro - transformation comprise -
+     * même quand on y réécrit la même valeur : on ne le fait donc que si
+     * l'échelle a réellement changé, et on repose la transformation dans la
+     * foulée. Le `lastKey` vidé force le redessin, sans quoi la dalle resterait
+     * vide jusqu'au prochain changement d'écran.
+     */
+    const resize = (): void => {
+      const next = wanted.current;
+      if (Math.abs(next - scale) < 0.01) return;
+      scale = next;
+      el.width = Math.round(SCREEN_W * scale);
+      el.height = Math.round(SCREEN_H * scale);
+      lastKey = '';
+      dark = false;
+    };
 
     // Le battement de l'afficheur est le sien : deux fois par seconde, comme
     // sur la rame (ANIM_PERIOD). Ce n'est pas la boucle du jeu - celle-ci
@@ -63,6 +143,10 @@ export function LineScreen() {
       // continue de jouer (systems/audioLoop garde le monde en marche derrière
       // un onglet caché). Au retour, la clé aura changé et l'image se refera.
       if (document.hidden) return;
+      resize();
+      // La peinture travaille toujours dans la grille de 768 × 432 ; c'est
+      // cette transformation qui la porte à la résolution du canevas.
+      g.setTransform(scale, 0, 0, scale, 0, 0);
       // Une dalle LCD n'a pas de demi-teinte : son rétroéclairage tient ou il
       // ne tient pas. Sous le seuil, le panneau est NOIR - pas gris, pas en
       // veille : éteint. C'est ce qu'on voit pendant une coupure de caténaire,
@@ -79,12 +163,12 @@ export function LineScreen() {
       }
       dark = false;
       anim = (anim + 1) % ANIM_PHASES;
-      const frame = lineScreenFrame();
+      const shown = lineScreenFrame();
       const side = watchedSide();
-      const key = lineScreenKey(frame, anim, side);
+      const key = lineScreenKey(shown, anim, side);
       if (key === lastKey) return;
       lastKey = key;
-      paintLineScreen(surface, frame, anim, side);
+      paintLineScreen({ g, w: SCREEN_W, h: SCREEN_H }, shown, anim, side);
     }, ANIM_PERIOD * 1000);
 
     return () => window.clearInterval(id);
@@ -95,6 +179,9 @@ export function LineScreen() {
       {/* Le canevas ne porte aucun texte accessible - c'est une image. Ce qui
           s'y dit est déjà lisible ailleurs sur l'écran : la gare visée dans le
           bandeau du HUD, les annonces dans les sous-titres et le journal. */}
+      {/* La taille de départ est celle de la grille de peinture : la boucle la
+          remplacera dès son premier battement, mais d'ici là le canevas doit
+          avoir le bon rapport et non le 300 × 150 par défaut. */}
       <canvas
         className="lcd-canvas"
         ref={canvas}
@@ -103,6 +190,6 @@ export function LineScreen() {
         role="img"
         aria-label="E235 LCD"
       />
-    </div>
+</div>
   );
 }
