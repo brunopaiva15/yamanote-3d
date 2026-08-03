@@ -133,6 +133,8 @@ function box(w: number, h: number, d: number, x: number, y: number, z: number): 
 
 export interface CarGeometries {
   body: THREE.BufferGeometry;
+  /** La même peau, abouts ouverts : réservée à la voiture du joueur. */
+  bodyOpen: THREE.BufferGeometry;
   band: THREE.BufferGeometry;
   roof: THREE.BufferGeometry;
   underframe: THREE.BufferGeometry;
@@ -144,8 +146,24 @@ export interface CarGeometries {
   bellows: THREE.BufferGeometry;
 }
 
-/** Peau inox : les deux flancs percés, plus les faces d'about. */
-function buildBody(): THREE.BufferGeometry {
+/**
+ * Peau inox : les deux flancs percés, plus - au choix - les faces d'about.
+ *
+ * Ces faces sont des plaques pleines en travers de la caisse, posées à z =
+ * ±9,77 pour qu'on ne voie pas au travers de la rame. Elles conviennent aux dix
+ * voitures qui n'ont qu'une doublure, et à elles seules : la voiture du joueur
+ * a un VRAI intérieur, modélisé jusqu'à z = ±10, et la plaque le tranche en
+ * pleine travée prioritaire. Depuis le quai, la travée s'achevait donc sur un
+ * pan d'inox gris à la place de la paroi d'about, de ses affiches et de sa
+ * porte d'intercirculation - de l'intérieur, rien, puisque la caisse extérieure
+ * y est éteinte. C'est la même faute que le pavillon qui descendait jadis sous
+ * le plafond (voir roofShape), et elle se corrige pareil : là où le décor
+ * intérieur existe, la coque lui laisse la place.
+ *
+ * L'about reste fermé pour autant : c'est la paroi de la voiture, à z = ±10,
+ * qui arrête le regard, et le soufflet couvre le flanc entre les deux.
+ */
+function buildBody(ends: boolean): THREE.BufferGeometry {
   const shape = sideShape();
   const parts: THREE.BufferGeometry[] = [];
   for (const s of [1, -1] as const) {
@@ -157,8 +175,10 @@ function buildBody(): THREE.BufferGeometry {
     parts.push(geo);
   }
   // Faces d'about, pour ne pas voir au travers de la rame.
-  for (const e of [1, -1] as const) {
-    parts.push(box(HW * 2 - SKIN, E235.roofY - E235.underframeY, 0.06, 0, (E235.roofY + E235.underframeY) / 2, e * (HALF - 0.03)));
+  if (ends) {
+    for (const e of [1, -1] as const) {
+      parts.push(box(HW * 2 - SKIN, E235.roofY - E235.underframeY, 0.06, 0, (E235.roofY + E235.underframeY) / 2, e * (HALF - 0.03)));
+    }
   }
   // Congé entre le haut de caisse et le pavillon.
   for (const s of [1, -1] as const) {
@@ -395,12 +415,13 @@ function buildBellows(): THREE.BufferGeometry {
   for (const s of [1, -1] as const) {
     parts.push(box(w - t * 2, t, depth, 0, yc + (s * (h - t)) / 2, 0));
   }
-  return mergeGeometries(parts) as THREE.BufferGeometry;
+  return merge(parts, 'soufflet');
 }
 
 export function buildCarGeometries(): CarGeometries {
   return {
-    body: buildBody(),
+    body: buildBody(true),
+    bodyOpen: buildBody(false),
     band: buildBand(),
     roof: buildRoof(),
     underframe: buildUnderframe(),

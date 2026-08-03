@@ -195,7 +195,10 @@ function build(): Built {
   }
   // L'habillage vert aux portes du E235 ne sert pas ici : la rame d'en face
   // n'en a pas. Sa géométrie est construite avec les autres, autant la rendre.
+  // Même chose pour la peau à abouts ouverts : elle n'a de sens que pour la
+  // voiture du joueur, et le joueur n'est jamais dans celle-ci.
   geos.band.dispose();
+  geos.bodyOpen.dispose();
 
   // --- Les deux traits bleus, quatre par voiture (deux flancs, deux traits) ---
   const stripeGeo = new THREE.BoxGeometry(1, 1, 1);
