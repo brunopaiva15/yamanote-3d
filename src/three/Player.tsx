@@ -88,6 +88,31 @@ export function Player() {
      *
      * Rend le nombre de pas réellement faits : s'il sature, c'est qu'on a buté.
      */
+    /**
+     * SE POSER à un point du monde, sans y marcher.
+     *
+     * C'est ce que `__probeGo` refuse de faire, et pour une bonne raison : une
+     * caméra posée ne prouve rien de ce qui arrête le pas. Mais une CAPTURE
+     * n'a rien à prouver de la marche — elle montre ce qu'on voit — et l'on ne
+     * va pas faire sortir le joueur du wagon, traverser le quai et descendre
+     * l'escalier pour chacune des cent cinquante vues de contrôle. Ce que la
+     * marche prouve est prouvé ailleurs, par des itinéraires réellement
+     * parcourus (`tests/stationInside`).
+     */
+    w.__probeStand = (x: number, z: number, level: 'platform' | 'concourse' = 'concourse') => {
+      // L'ÉTAGE SE DIT, il ne se devine pas : `groundY` répond selon l'étage où
+      // le joueur SE CROIT, et un point du hall interrogé depuis le quai rend
+      // la cote de la rue. C'est ainsi qu'une capture de zone payante se
+      // retrouvait au milieu de la ville, six mètres au-dessus.
+      runtime.playerLevel = level;
+      pos.current.x = x;
+      pos.current.z = z;
+      runtime.stanceX = x;
+      runtime.stanceZ = z;
+      pos.current.y = groundY(x, z) + CONFIG.eyeHeight;
+      return { x: +x.toFixed(2), z: +z.toFixed(2), y: +pos.current.y.toFixed(2), level };
+    };
+
     w.__probeGo = (x: number, z: number, maxSteps = 4000) => {
       const step = CONFIG.walkSpeed / 60;
       let n = 0;

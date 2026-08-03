@@ -290,7 +290,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | 24 | Signatures 3 | Shinjuku, Shibuya : conflits de géométrie propres à chacune | R3 D7 |
 | **25** | **Paliers de qualité** ✅ | les trois décors intérieurs lisent le palier ; ce qui BARRE ne dépend d'aucun | — |
 | 26 | Tests | les 18 exigences du cahier des charges | — |
-| 27 | Captures de contrôle | probe : 5 vues × 30 gares | — |
+| **27** | **Captures de contrôle** ✅ | `scripts/station-views` : 5 vues × 30 gares ; elles ont trouvé les bouches manquantes | — |
 | 28 | Perf et bilan | mesures avant/après ; `STATION_CONCOURSE_SCOPE.md` **écrit** et tenu par un test | — |
 
 ### 4.1 Ce que la phase 2 a découvert, et qui change les phases 3 à 5
@@ -1259,6 +1259,41 @@ au lieu de les recalculer.
 Trois tests tiennent l'ensemble, dont celui qui prouve la règle par la
 signature : `walkerBlocked` ne prend pas de palier de qualité, et il n'y a donc
 aucun chemin par lequel un palier pourrait changer ce qui arrête un marcheur.
+
+### 4.23 La phase 27 : les captures trouvent ce qu'aucun test ne regardait
+
+La sonde d'interpénétration dit si deux volumes se traversent. Elle ne dit pas
+si la gare RESSEMBLE à quelque chose, et c'est pourtant tout le sujet du
+chantier. `scripts/station-views` pose donc le joueur aux **cinq endroits qui
+font une gare** — le nez de la trémie, la zone payante, le portillon, la zone
+libre, les bouches — et déclenche : cent cinquante images.
+
+**Les points de vue ne sont pas écrits dans le script.** Ils viennent de
+`__probeInterior`, qui les lit sur le RÉSEAU : vingt-six gares passent par leur
+relevé, leur contrôle ne se franchit pas toujours selon z, et leur zone libre
+n'est pas « plus loin ». Un cadrage écrit à la main aurait photographié un hall
+qui n'est plus là — ce que faisait la version précédente, qui cadrait sur
+`interior`.
+
+**Et la première image de Tokyo a montré un mur nu là où sept sorties auraient
+dû s'ouvrir.** Le rendu ne perçait que le FOND du hall, le seul cas d'un hall
+longitudinal. **Trente-trois bouches sur quatre-vingt-deux donnent sur une
+paroi en x**, et Tokyo n'en a aucune au fond : les siennes donnent à l'ouest sur
+Marunouchi et à l'est sur Yaesu. La paroi percée s'écrit maintenant une fois,
+dans le repère de SA paroi — longueur en x local, épaisseur en z local, dehors
+vers +z — et le groupe tourne, comme la ligne de portillons et comme la gare
+entière.
+
+Le quart de tour a d'ailleurs son piège, et il valait la capture : il envoie le
+x local sur le z du monde avec un signe qui dépend du sens de la rotation. Ce
+sont `z0` et `x1` qui se lisent à l'envers — pas les deux parois « basses »,
+comme on l'écrirait de mémoire.
+
+Les images ne sont pas versionnées : cent cinquante PNG de cinq cents kio n'ont
+rien à faire dans un dépôt de code, et le script les refait en une commande. Ce
+qui est versionné, c'est **le contrôle qui en est sorti** : un test tient que
+les quatre parois servent, que chaque bouche tombe dans la sienne, et que Tokyo
+n'en a aucune au fond.
 
 ### Ordre et raison
 

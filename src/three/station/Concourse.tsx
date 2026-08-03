@@ -34,7 +34,11 @@ import {
   HALL_WALL_T,
   type StationInterior,
 } from '../../data/stationInterior';
-import type { ConcourseNetwork, ConcourseShell } from '../../data/stationConcourseBuild';
+import type {
+  ConcourseNetwork,
+  ConcourseShell,
+  RoomSide,
+} from '../../data/stationConcourseBuild';
 import { Frontages } from './interiors/Frontages';
 import { Landmarks } from './interiors/Landmarks';
 import { Limits } from './interiors/Limits';
@@ -366,6 +370,13 @@ export function Concourse({
  * Ce que la marche refuse, la limite de zone le DIT : la même maille rouge que
  * dans les baies de porte palière par lesquelles on ne peut pas monter.
  */
+/**
+ * Les parois percées d'un volume : une par côté où une bouche s'ouvre.
+ *
+ * Il n'y en avait qu'une, le fond, parce qu'un hall longitudinal n'a que celle
+ * -là. Tokyo n'a AUCUNE bouche au fond : les siennes donnent à l'ouest sur
+ * Marunouchi et à l'est sur Yaesu.
+ */
 function ExitWall({
   shell,
   m,
@@ -375,12 +386,48 @@ function ExitWall({
 }: {
   shell: ConcourseShell;
   m: Mats;
+  sign: StationSignage;
+  height: number;
+  midY: number;
+}) {
+  const sides = [...new Set(shell.mouths.map((x) => x.side))];
+  return (
+    <>
+      {sides.map((side) => (
+        <ExitFace
+          key={side}
+          side={side}
+          shell={shell}
+          m={m}
+          sign={sign}
+          height={height}
+          midY={midY}
+        />
+      ))}
+    </>
+  );
+}
+
+function ExitFace({
+  side,
+  shell,
+  m,
+  sign,
+  height,
+  midY,
+}: {
+  side: RoomSide;
+  shell: ConcourseShell;
+  m: Mats;
   /** La signalétique de la gare : source unique des noms (phase 18). */
   sign: StationSignage;
   height: number;
   midY: number;
 }) {
-  const mouths = shell.mouths;
+  const mouths = useMemo(
+    () => shell.mouths.filter((x) => x.side === side),
+    [shell, side],
+  );
   // Le mur se coupe DANS L'ORDRE DE LA PAROI, et les panneaux avec lui : les
   // textures étaient construites dans l'ordre du réseau et posées dans l'ordre
   // des percements, ce qui suffit à intervertir deux noms dès qu'une gare perce
@@ -404,25 +451,66 @@ function ExitWall({
     },
     [signMats, signs],
   );
-  const z = shell.rect.z1 + WALL_T / 2;
+  // LE MUR SE PERCE SUR LA PAROI DE LA BOUCHE, et pas seulement au fond.
+  //
+  // Trente-trois bouches sur quatre-vingt-deux s'ouvrent sur une paroi en x —
+  // Tokyo n'en a pas une seule au fond, les siennes donnent à l'ouest sur
+  // Marunouchi et à l'est sur Yaesu. Le fond était le seul cas tant que toutes
+  // les gares partageaient un hall longitudinal ; il ne l'est plus, et les
+  // captures de contrôle l'ont montré d'un coup d'œil : un mur nu là où sept
+  // sorties auraient dû s'ouvrir.
+  //
+  // Tout ce qui suit est écrit UNE FOIS, dans le repère de la paroi : longueur
+  // en x local, épaisseur en z local, dehors vers +z. Le groupe tourne, comme
+  // la ligne de portillons et comme la gare entière.
+  const z = WALL_T / 2;
   // Le mur se coupe en panneaux entre les bouches, plutôt que percé : deux
   // boîtes valent mieux qu'une géométrie extrudée pour trois trous.
   //
   // `at` est l'abscisse de la bouche LE LONG DE SA PAROI. Tant que la paroi est
   // celle du fond - c'est le cas des trente gares tant qu'aucune n'est branchée
   // sur son relevé - c'est exactement l'ancien `x`.
+  const [wallFrom, wallLen] = side === 'x0' || side === 'x1'
+    ? [shell.rect.z0, shell.rect.z1 - shell.rect.z0]
+    : [shell.rect.x0, shell.rect.x1 - shell.rect.x0];
   const panels: { x0: number; x1: number }[] = [];
-  let x = shell.rect.x0;
+  let x = wallFrom;
   for (const exit of cuts) {
     if (exit.at - exit.halfWidth > x) panels.push({ x0: x, x1: exit.at - exit.halfWidth });
     x = exit.at + exit.halfWidth;
   }
-  if (x < shell.rect.x1) panels.push({ x0: x, x1: shell.rect.x1 });
+  if (x < wallFrom + wallLen) panels.push({ x0: x, x1: wallFrom + wallLen });
+
+  // Le repère de la paroi : origine au milieu du volume, +z vers DEHORS.
+  //   · z1 → aucune rotation (le cas d'origine, et celui des halls longs) ;
+  //   · z0 → demi-tour ;
+  //   · x1 → un quart de tour, et l'axe long devient z ;
+  //   · x0 → l'autre quart.
+  const face: Record<RoomSide, { pos: [number, number, number]; yaw: number }> = {
+    z1: { pos: [0, 0, shell.rect.z1], yaw: 0 },
+    z0: { pos: [0, 0, shell.rect.z0], yaw: Math.PI },
+    x1: { pos: [shell.rect.x1, 0, 0], yaw: Math.PI / 2 },
+    x0: { pos: [shell.rect.x0, 0, 0], yaw: -Math.PI / 2 },
+  };
+  // Le repère tourné inverse le sens de l'axe long pour deux des quatre
+  // parois : les cotes s'y lisent alors à l'envers, et le mur se percerait en
+  // miroir. On remet donc l'origine du groupe au bon endroit et l'on compte les
+  // cotes depuis elle.
+  //
+  // La rotation d'un quart de tour envoie le x local sur le z du monde — mais
+  // avec un signe qui dépend du sens de la rotation : +z pour `x0`, −z pour
+  // `x1`. Ce sont donc `z0` et `x1` qui se lisent à l'envers, et pas les deux
+  // parois « basses » comme on l'écrirait de mémoire.
+  const flip = side === 'z0' || side === 'x1' ? -1 : 1;
 
   return (
-    <group>
+    <group position={face[side].pos} rotation={[0, face[side].yaw, 0]}>
       {panels.map((p, k) => (
-        <mesh key={`panel${k}`} position={[(p.x0 + p.x1) / 2, midY, z]} material={m.hall}>
+        <mesh
+          key={`panel${k}`}
+          position={[flip * ((p.x0 + p.x1) / 2), midY, z]}
+          material={m.hall}
+        >
           <boxGeometry args={[p.x1 - p.x0, height, WALL_T]} />
         </mesh>
       ))}
@@ -434,7 +522,7 @@ function ExitWall({
               faces se disputaient le tampon de profondeur. */}
           <mesh
             position={[
-              exit.at,
+              flip * exit.at,
               shell.floorY + (EXIT_OPENING_H + height) / 2,
               z,
             ]}
@@ -455,7 +543,7 @@ function ExitWall({
               <mesh
                 key={`step${s}`}
                 position={[
-                  exit.at,
+                  flip * exit.at,
                   shell.floorY + top / 2,
                   z - WALL_T / 2 + EXIT_MOUTH_Z0 + EXIT_MOUTH_GOING * (s + 0.5),
                 ]}
@@ -471,7 +559,7 @@ function ExitWall({
             <mesh
               key={`cheek${d}`}
               position={[
-                exit.at + d * (exit.halfWidth + 0.06),
+                flip * (exit.at + d * (exit.halfWidth + 0.06)),
                 shell.floorY + 1.3,
                 z + WALL_T / 2 + 1.3,
               ]}
@@ -481,13 +569,13 @@ function ExitWall({
             </mesh>
           ))}
           <mesh
-            position={[exit.at, shell.floorY + 1.3, z + WALL_T / 2 + 2.55]}
+            position={[flip * exit.at, shell.floorY + 1.3, z + WALL_T / 2 + 2.55]}
             material={m.hall}
           >
             <boxGeometry args={[exit.halfWidth * 2 + 0.24, 2.6, 0.12]} />
           </mesh>
           <mesh
-            position={[exit.at, shell.floorY + 2.62, z + WALL_T / 2 + 1.3]}
+            position={[flip * exit.at, shell.floorY + 2.62, z + WALL_T / 2 + 1.3]}
             material={m.hallCeil}
           >
             <boxGeometry args={[exit.halfWidth * 2 + 0.24, 0.12, 2.7]} />
@@ -495,20 +583,20 @@ function ExitWall({
           {/* Le jour qui tombe de la rue, une volée plus haut : il éclaire le
               haut des marches et rien d'autre. */}
           <mesh
-            position={[exit.at, shell.floorY + 2.42, z + WALL_T / 2 + 2.44]}
+            position={[flip * exit.at, shell.floorY + 2.42, z + WALL_T / 2 + 2.44]}
             material={m.lamp}
           >
             <boxGeometry args={[exit.halfWidth * 2 - 0.16, 0.5, 0.06]} />
           </mesh>
           {/* Panneau de sortie, au-dessus du percement. */}
           <mesh
-            position={[exit.at, shell.floorY + 2.52, z - WALL_T / 2 - 0.03]}
+            position={[flip * exit.at, shell.floorY + 2.52, z - WALL_T / 2 - 0.03]}
             material={m.frame}
           >
             <boxGeometry args={[exit.halfWidth * 2 + 0.06, 0.42, 0.07]} />
           </mesh>
           <mesh
-            position={[exit.at, shell.floorY + 2.52, z - WALL_T / 2 - 0.071]}
+            position={[flip * exit.at, shell.floorY + 2.52, z - WALL_T / 2 - 0.071]}
             rotation={[0, Math.PI, 0]}
             material={signMats[k]}
           >
@@ -522,7 +610,7 @@ function ExitWall({
               laquelle on ne peut pas monter : maille rouge, halo au point de
               contact, invisible tant qu'on n'y va pas. */}
           <Barrier
-            x={exit.at}
+            x={flip * exit.at}
             y={shell.floorY + EXIT_OPENING_H / 2}
             z={z - WALL_T / 2}
             width={exit.halfWidth * 2}

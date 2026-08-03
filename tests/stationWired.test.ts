@@ -293,3 +293,36 @@ test('les trois signatures de la phase 22 tiennent leur promesse', () => {
     ['ceiling', 'material'],
   );
 });
+
+// --- Phase 27 : ce que les captures ont trouvé ---------------------------
+
+test('UNE BOUCHE S’OUVRE SUR SA PAROI, quelle qu’elle soit', () => {
+  // Les captures de contrôle ont montré d'un coup d'œil ce qu'aucun test ne
+  // regardait : à Tokyo, un mur nu là où sept sorties auraient dû s'ouvrir. Le
+  // rendu ne perçait que le FOND du hall — le seul cas d'un hall longitudinal —
+  // et trente-trois bouches sur quatre-vingt-deux donnent sur une paroi en x.
+  const sides = new Map<string, number>();
+  for (const { i, place } of WIRED) {
+    const net = place.network;
+    for (const m of net.mouths) {
+      sides.set(m.side, (sides.get(m.side) ?? 0) + 1);
+      const room = net.rooms.find((r) => r.id === m.roomId);
+      assert.ok(room, `${NAME(i)} : bouche ${m.id} sans pièce`);
+      // La cote `at` se lit LE LONG de la paroi, et doit y tomber.
+      const [lo, hi] = m.side === 'x0' || m.side === 'x1'
+        ? [room.rect.z0, room.rect.z1]
+        : [room.rect.x0, room.rect.x1];
+      assert.ok(
+        m.at - m.halfWidth >= lo - 1e-6 && m.at + m.halfWidth <= hi + 1e-6,
+        `${NAME(i)} : ${m.id} déborde de sa paroi ${m.side}`,
+      );
+    }
+  }
+  // Les quatre parois servent : si une seule disparaissait de ce compte, c'est
+  // que le relevé aurait été aplati sur le cas longitudinal.
+  assert.deepEqual([...sides.keys()].sort(), ['x0', 'x1', 'z0', 'z1']);
+  // Et Tokyo n'a AUCUNE bouche au fond : c'est elle qui a fait tomber le
+  // masque, et c'est elle qui garde le test honnête.
+  const tokyo = WIRED.find((w) => w.i === 0)!.place.network;
+  assert.ok(tokyo.mouths.every((m) => m.side === 'x0' || m.side === 'x1'));
+});

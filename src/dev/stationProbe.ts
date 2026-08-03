@@ -22,6 +22,7 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { input } from '../systems/input';
 import { placementFor } from '../systems/stationPlacement';
+import { concourseBays } from '../data/stationConcourseBuild';
 import { psdGates } from '../three/station/psdLayout';
 import { freezeWeather, weather } from '../systems/weather';
 import { seasonNow } from '../systems/season';
@@ -289,22 +290,68 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     const index = useStore.getState().platformIndex;
     const flip = DOOR_SIDE[index];
     const p = placementFor(index, psdGates());
-    const it = p.interior;
-    const stair = p.mainStair;
-    const wide = it.gate.passages[it.gate.passages.length - 1];
-    const midX = (it.paid.x0 + it.paid.x1) / 2;
+    const net = p.network;
     const point = (x: number, z: number) => [flip * x, flip * z];
-    // Où l'on se met, et ce qu'on regarde : les deux, sinon on se retrouve le
-    // nez sur le meuble qu'on voulait cadrer.
-    const legs: [string, number, number, number, number][] = [
-      ['01-tremie', ...point(stair.x, stair.z - 3), ...point(stair.x, stair.z + 6)],
-      ['02-couloir', ...point(stair.x, stair.z + 8), ...point(midX, it.paid.z1)],
-      ['03-zone-payante', ...point(midX, it.paid.z0 + 3), ...point(it.paid.x1, it.paid.z1 - 2)],
-      ['04-portillon', ...point(wide.x, it.paid.z1 - 3), ...point(wide.x, it.free.z0 + 4)],
-      ['05-zone-libre', ...point(midX, it.free.z0 + 2.5), ...point(it.free.x1, it.free.z0 + 9)],
-      ['06-billetterie', ...point(midX, it.free.z0 + 8), ...point(it.free.x0, it.free.z0 + 5)],
-      ['07-sorties', ...point(midX, it.free.z1 - 7), ...point(midX, it.free.z1 + 4)],
-    ].map((r) => r as [string, number, number, number, number]);
+    // LES CINQ VUES SE LISENT SUR LE RÉSEAU, et non sur le hall générique :
+    // vingt-six gares passent par leur relevé, leur contrôle ne se franchit pas
+    // toujours selon z, et leur zone libre n'est pas « plus loin ». Cadrer sur
+    // `interior` revenait à photographier un hall qui n'est plus là.
+    const paid = net.rooms.find((r) => r.walkable && r.fare === 'paid');
+    const free = net.rooms.find((r) => r.walkable && r.fare === 'free');
+    const access = p.liveAccesses[0];
+    const bays = concourseBays(net);
+    const bay = bays[bays.length - 1];
+    const mouth = net.mouths.find((m) => m.roomId === free?.id) ?? net.mouths[0];
+    const mid = (r: { x0: number; x1: number; z0: number; z1: number }) =>
+      [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2] as [number, number];
+    const legs: [string, number, number, number, number][] = [];
+    /** Se poser en `from`, viser `to` — les deux, sinon on cadre un meuble. */
+    const shot = (
+      name: string,
+      from: [number, number] | null,
+      to: [number, number] | null,
+    ) => {
+      if (from && to) legs.push([name, ...point(...from), ...point(...to)] as never);
+    };
+
+    if (access) {
+      const s = access.stair;
+      shot('01-tremie', [s.x, s.z - 3], [s.x, s.z + 6]);
+    }
+    if (paid) {
+      const [px, pz] = mid(paid.rect);
+      shot('02-zone-payante', [px, pz], bay ? [bay.x, bay.z] : [paid.rect.x1, pz]);
+    }
+    if (bay && paid) {
+      // On se recule d'un mètre et demi du côté payant, sur l'axe qu'on franchit.
+      const [p0, p1] = bay.cross === 'z'
+        ? [paid.rect.z0, paid.rect.z1]
+        : [paid.rect.x0, paid.rect.x1];
+      const [g0, g1] = bay.cross === 'z'
+        ? [bay.rect.z0, bay.rect.z1]
+        : [bay.rect.x0, bay.rect.x1];
+      const low = (p0 + p1) / 2 < (g0 + g1) / 2;
+      const back = low ? g0 - 1.5 : g1 + 1.5;
+      const front = low ? g1 + 3 : g0 - 3;
+      shot(
+        '03-portillon',
+        bay.cross === 'z' ? [bay.x, back] : [back, bay.z],
+        bay.cross === 'z' ? [bay.x, front] : [front, bay.z],
+      );
+    }
+    if (free) shot('04-zone-libre', mid(free.rect), [free.rect.x1, free.rect.z1]);
+    if (free && mouth) {
+      const r = free.rect;
+      const to: [number, number] = mouth.side === 'z1' ? [mouth.at, r.z1 + 2]
+        : mouth.side === 'z0' ? [mouth.at, r.z0 - 2]
+          : mouth.side === 'x1' ? [r.x1 + 2, mouth.at]
+            : [r.x0 - 2, mouth.at];
+      const from: [number, number] = mouth.side === 'z1' ? [mouth.at, r.z1 - 7]
+        : mouth.side === 'z0' ? [mouth.at, r.z0 + 7]
+          : mouth.side === 'x1' ? [r.x1 - 7, mouth.at]
+            : [r.x0 + 7, mouth.at];
+      shot('05-bouches', from, to);
+    }
     return { flip, placement: legs };
   };
 
