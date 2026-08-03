@@ -335,15 +335,6 @@ export interface Strings {
     /** État des portes de la rame. */
     doorsLabel: string;
     doors: { open: string; closed: string; opening: string; closing: string };
-    /**
-     * Descendre / remonter. Dans l'expérience complète on marche à travers la
-     * porte ouverte et il n'y a rien à cliquer ; ici il faut un bouton, parce
-     * que c'est le geste qui change le plus ce qu'on entend.
-     */
-    alight: string;
-    boardAgain: string;
-    /** Pourquoi le bouton est grisé : il n'y a pas de porte ouverte à portée. */
-    doorsShut: string;
   };
 
   language: string;
@@ -571,9 +562,6 @@ const FR: Strings = {
       opening: "en cours d'ouverture",
       closing: 'en cours de fermeture',
     },
-    alight: 'Descendre sur le quai',
-    boardAgain: 'Remonter à bord',
-    doorsShut: 'Portes fermées',
   },
 
   language: 'Langue',
@@ -797,9 +785,6 @@ const EN: Strings = {
     logEmpty: 'Nothing yet. The first announcement is on its way.',
     doorsLabel: 'Doors',
     doors: { open: 'open', closed: 'closed', opening: 'opening', closing: 'closing' },
-    alight: 'Step onto the platform',
-    boardAgain: 'Board the train',
-    doorsShut: 'Doors closed',
   },
 
   language: 'Language',
@@ -1021,9 +1006,6 @@ const JA: Strings = {
     logEmpty: 'まだ何もありません。最初の放送をお待ちください。',
     doorsLabel: 'ドア',
     doors: { open: '開', closed: '閉', opening: '開扉中', closing: '閉扉中' },
-    alight: 'ホームに降りる',
-    boardAgain: '列車に乗る',
-    doorsShut: 'ドアが閉まっています',
   },
 
   language: '言語',

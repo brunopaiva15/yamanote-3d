@@ -22,7 +22,9 @@
 // c'est le même train, avec l'image en moins et le texte en plus.
 
 import { useEffect } from 'react';
-import { seatListener } from './systems/audioBoarding';
+import { CONFIG } from './data/config';
+import { applyThemeColor } from './i18n/documentMeta';
+import { setListenerPose } from './systems/audioEngine';
 import { startAudioLoop, stopAudioLoop } from './systems/audioLoop';
 import { Hud } from './ui/Hud';
 import { Subtitles } from './ui/Subtitles';
@@ -30,15 +32,41 @@ import { AnnouncementLog } from './ui/audio/AnnouncementLog';
 import { DoorState } from './ui/audio/DoorState';
 import { LineScreen } from './ui/audio/LineScreen';
 
-// La pose de l'auditeur - assis au milieu de la voiture, puis debout sur le
-// quai quand on descend - est tenue par systems/audioBoarding : c'est lui qui
-// déplace le corps, et l'oreille ne se sépare pas du corps.
+/**
+ * Où se tient l'auditeur, faute de caméra pour le dire.
+ *
+ * Une place assise au milieu de la voiture, et elle ne bouge jamais : la
+ * version sonore n'a pas de corps à déplacer. C'est la pose par défaut du
+ * moteur audio, celle sur laquelle tout le mixage a été calé - la distance aux
+ * diffuseurs de plafond, ce que les portes laissent passer, le niveau de la
+ * 発車メロディ entendue de l'intérieur. Elle est posée explicitement : sans
+ * elle, Tone laisserait l'auditeur à l'origine, tourné vers un axe qui n'est
+ * pas celui du wagon, et le panoramique de toute la sonorisation serait faux
+ * d'un demi-tour.
+ */
+/**
+ * Le haut de la paroi, tel que le dégradé de fond le pose (styles.css,
+ * `.app-audio`). Recopié plutôt que lu : une valeur de teinte de barre d'état
+ * doit être un littéral au moment où on la pose, et le dégradé n'a pas de
+ * couleur unique à interroger.
+ */
+const AUDIO_THEME_COLOR = '#f0efe9';
+
+function seatListener(): void {
+  setListenerPose(0, CONFIG.eyeHeight, 4.2, 0, 0, -1, 0, 1, 0);
+}
 
 export default function AudioGame() {
   useEffect(() => {
     seatListener();
     startAudioLoop();
-    return stopAudioLoop;
+    // La barre d'état du téléphone prend la couleur de la paroi : c'est le haut
+    // de la même surface, et un bandeau sombre l'y coupait en deux.
+    applyThemeColor(AUDIO_THEME_COLOR);
+    return () => {
+      stopAudioLoop();
+      applyThemeColor(null);
+    };
   }, []);
 
   return (

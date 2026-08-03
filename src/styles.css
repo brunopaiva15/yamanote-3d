@@ -29,6 +29,10 @@
   /* Idem pour la barre du HAUT, qui s'enroule elle aussi : c'est elle qui
      décide où peut commencer le tableau de bord de la version sonore. */
   --hud-top-h: 0px;
+  /* Et la hauteur du bandeau de sous-titres, mesurée de la même façon : elle
+     varie avec la langue, la largeur de l'écran et le nombre de lignes que
+     l'annonce en cours prend. */
+  --subtitles-h: 0px;
   font-family:
     'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
 }
@@ -1752,6 +1756,12 @@ body,
   background: #16191c;
   color: #cfd3d6;
   font-size: 13px;
+  /* Sur un téléphone étroit, la réglette se replie au lieu de pousser hors de
+     la baie : elle débordait du panneau blanc et sortait de l'écran. */
+  flex-wrap: wrap;
+  /* Et jamais plus large que la réserve qui la porte, quoi qu'elle contienne. */
+  max-width: 100%;
+  min-width: 0;
 }
 
 .lcd-doors-label {
@@ -1916,10 +1926,14 @@ body,
     align-content: start;
     align-items: start;
     overflow-y: auto;
-    /* Les sous-titres sont posés PAR-DESSUS, en bas : sur un téléphone ils
-       tiennent deux lignes par sonorisation, et le journal doit pouvoir défiler
-       jusqu'à sa dernière entrée sans rester dessous. */
-    padding-bottom: calc(var(--hud-safe-bottom) + var(--hud-bar-h) + 200px);
+    /* Les sous-titres sont posés PAR-DESSUS, en bas : le journal réserve donc
+       leur hauteur réelle pour pouvoir défiler jusqu'à sa dernière entrée sans
+       rester dessous. Mesurée et non devinée - deux cents pixels en dur
+       laissaient un trou quand ils se taisaient, et ne suffisaient pas quand
+       les deux sonorisations parlaient en japonais sur deux lignes. */
+    padding-bottom: calc(
+      var(--hud-safe-bottom) + var(--hud-bar-h) + var(--subtitles-h) + 40px
+    );
   }
 
   /* Sur un écran étroit, l'afficheur reste lisible mais ne doit pas manger
@@ -1962,33 +1976,3 @@ body,
 }
 
 
-/* Franchir le seuil, depuis la réglette de porte : le seul bouton de la version
-   sonore qui agisse sur le monde plutôt que sur un réglage. Il vit avec l'état
-   des portes parce que c'est exactement ce dont il dépend - et il s'éteint avec
-   elles, sans disparaître : un bouton qui s'en va ne dit pas pourquoi. */
-.lcd-doors-cross {
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: #2b3136;
-  color: #edefef;
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
-}
-
-.lcd-doors-cross:hover:not(:disabled) {
-  background: var(--lcd-green);
-  border-color: var(--lcd-green);
-  color: #0d1a04;
-}
-
-.lcd-doors-cross:disabled {
-  opacity: 0.38;
-  cursor: not-allowed;
-}
