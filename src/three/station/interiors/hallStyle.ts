@@ -119,9 +119,25 @@ const STYLES: Record<ConcourseNodeKind, HallStyle> = {
   },
 };
 
-/** Le style d'un volume. */
-export function hallStyle(kind: ConcourseNodeKind): HallStyle {
-  return STYLES[kind];
+/**
+ * Le style d'un volume.
+ *
+ * UNE MEZZANINE NE S'OUVRE QUE LÀ OÙ IL Y A QUELQUE CHOSE DESSOUS, et c'est le
+ * seul archétype dont le style dépende du voisinage. Un demi-niveau tient son
+ * sens de ce qu'il surplombe : sans plafond ni parois, il montre le hall qu'on
+ * va rejoindre. Le M2F d'Okachimachi, lui, est un palier sous la dalle du quai,
+ * entre deux voiles de viaduc, et il ne surplombe rien : ses appuis ouvraient
+ * sur le ballast et sur la ville, et son absence de plafond sur le dessous du
+ * dépôt. Un demi-niveau qui ne surplombe rien est un couloir, et un couloir est
+ * clos.
+ *
+ * `openBelow` n'est pas une exception nominative : c'est une question qu'on
+ * pose au réseau, et à laquelle vingt-neuf gares répondent « rien ».
+ */
+export function hallStyle(kind: ConcourseNodeKind, openBelow = true): HallStyle {
+  const s = STYLES[kind];
+  if (kind !== 'mezzanine' || openBelow) return s;
+  return { ...s, parapet: false, parapetH: 0, ceiling: true, dadoH: 1.3 };
 }
 
 /** Les sept archétypes. Liste fermée : une entrée de plus est une décision. */

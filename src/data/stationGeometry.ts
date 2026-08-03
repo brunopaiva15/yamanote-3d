@@ -527,11 +527,15 @@ export function lowerFlightTo(floorY: number): LowerFlight {
   const hit = FLIGHTS.get(floorY);
   if (hit) return hit;
   const drop = STAIR_LANDING_Y - floorY;
-  const steps = Math.max(1, Math.round(drop / STAIR_RISE));
+  // ZÉRO MARCHE EST UNE RÉPONSE. Une volée dessert parfois le palier lui-même :
+  // Okachimachi ouvre son demi-niveau SUR le palier de mi-étage, et il n'y a
+  // alors rien à descendre de plus. Une marche de zéro centimètre serait un nez
+  // dessiné dans le vide, et `Math.max(1, …)` en posait une.
+  const steps = drop < STAIR_RISE / 2 ? 0 : Math.round(drop / STAIR_RISE);
   const flight: LowerFlight = {
     steps,
-    rise: drop / steps,
-    end: STAIR_LOWER_Z0 + (steps + 1) * STAIR_GOING,
+    rise: steps === 0 ? 0 : drop / steps,
+    end: steps === 0 ? STAIR_LOWER_Z0 : STAIR_LOWER_Z0 + (steps + 1) * STAIR_GOING,
     floorY,
   };
   FLIGHTS.set(floorY, flight);

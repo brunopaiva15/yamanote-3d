@@ -74,6 +74,7 @@
 //      ✔ stationConcourseNetwork « DEUX ENSEMBLES SÉPARÉS FONT DEUX VOLUMES »
 //      ✔ stationConcourseNetwork « HARAJUKU EN A DEUX »
 //      + ICI « une gare qui déclare N ensembles en rend N »
+//      + ICI « CE QU'ON DESSINE EST CLOS, ou ne se dessine pas du tout »
 //
 // #13  Les halls supérieurs passent au-dessus du gabarit
 // #14  Les halls inférieurs passent sous les voies
@@ -134,6 +135,7 @@ const {
   networkFor,
   networkIssues,
   shellsOf,
+  visibleShells,
 } = await import('../src/data/stationConcourseBuild.ts');
 const { fixtureBlocks, interiorFor, interiorSolids } =
   await import('../src/data/stationInterior.ts');
@@ -736,6 +738,54 @@ test('une gare qui déclare N ensembles en rend N', () => {
     many.some((s) => s.startsWith('JY19 Harajuku')),
     `Harajuku n'a plus deux ensembles : ${many.join(', ')}`,
   );
+});
+
+test('CE QU’ON DESSINE EST CLOS, ou ne se dessine pas du tout', () => {
+  // LE DÉFAUT QUE LA PHASE 29 A FAIT SORTIR. `visibleShells` décide quels
+  // volumes on dessine ; les portillons et le mobilier, eux, se dessinaient
+  // pour TOUTE la gare dès qu'un volume l'était. Tant qu'une gare n'avait qu'un
+  // volume cela ne se voyait pas. Okachimachi en a deux, joints par une volée :
+  // depuis le quai, l'occultation ne gardait que le demi-niveau, et la ligne de
+  // contrôle du hall restait suspendue au-dessus de la rue, sans sol ni parois
+  // autour. Un objet dessiné hors de son volume est un objet dans le vide.
+  //
+  // Ce test tient la règle par la DONNÉE : l'ensemble des volumes visibles
+  // depuis le quai est CLOS par les ouvrages praticables. Une pièce qu'on
+  // atteint depuis une pièce visible est visible ; sans quoi on marcherait vers
+  // un volume qui n'existe pas à l'écran.
+  for (const { name, place } of ALL) {
+    const net = place.network;
+    if (!net.built) continue;
+    const seen = new Set(
+      shellsOf(net)
+        .filter((s) => s.rooms.some((r) => net.accesses.some((a) => a.toRoomId === r.id)))
+        .flatMap((s) => s.rooms.map((r) => r.id)),
+    );
+    // Les volumes que le rendu garde vraiment, vus du quai.
+    const drawn = new Set(
+      visibleShells(net, false, 0, 0).flatMap((s) => s.rooms.map((r) => r.id)),
+    );
+    for (const id of seen) assert.ok(drawn.has(id), `${name} : ${id} desservi et non dessiné`);
+    for (const j of net.joins) {
+      if (!j.walkable) continue;
+      if (!drawn.has(j.from) && !drawn.has(j.to)) continue;
+      assert.ok(
+        drawn.has(j.from) && drawn.has(j.to),
+        `${name} : ${j.id} mène à ${drawn.has(j.from) ? j.to : j.from}, qui ne se dessine pas`,
+      );
+    }
+    // Et une ligne franchissable a ses DEUX pièces dans le même volume : c'est
+    // ce qui permet à `Concourse` de ne dessiner que les siennes.
+    for (const g of net.gates) {
+      if (!g.walkable) continue;
+      const host = shellsOf(net).find((s) => s.rooms.some((r) => r.id === g.from));
+      assert.ok(host, `${name} : ${g.id} sans volume`);
+      assert.ok(
+        host.rooms.some((r) => r.id === g.to),
+        `${name} : ${g.id} joint deux volumes différents`,
+      );
+    }
+  }
 });
 
 // --- #13 et #14 : les niveaux ferroviaires -------------------------------

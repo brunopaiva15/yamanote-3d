@@ -40,13 +40,14 @@ const GATES = psdGates();
 const NAME = (i: number) => `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
 const WIRED = wiredIndices().map((i) => ({ i, name: NAME(i), place: placementFor(i, GATES) }));
 
-test('les vingt-neuf gares branchées passent par leur relevé', () => {
+test('les TRENTE gares passent par leur relevé', () => {
   assert.deepEqual(
     WIRED.map((w) => w.name),
     [
       'JY01 Tokyo',
       'JY02 Kanda',
       'JY03 Akihabara',
+      'JY04 Okachimachi',
       'JY05 Ueno',
       'JY06 Uguisudani',
       'JY07 Nippori',
@@ -170,6 +171,7 @@ test('CE QUE CHAQUE GARE GAGNE, et qui n’existait pas dans le hall générique
     { gare: 'JY01 Tokyo', lignes: 2, niveaux: 2, archétypes: 'cross+hubSlice+mezzanine', correspondances: 4, devantures: 2 },
     { gare: 'JY02 Kanda', lignes: 2, niveaux: 1, archétypes: 'underViaduct', correspondances: 2, devantures: 0 },
     { gare: 'JY03 Akihabara', lignes: 3, niveaux: 2, archétypes: 'compact+overbridge+underViaduct', correspondances: 3, devantures: 3 },
+    { gare: 'JY04 Okachimachi', lignes: 2, niveaux: 2, archétypes: 'mezzanine+underViaduct', correspondances: 0, devantures: 0 },
     { gare: 'JY05 Ueno', lignes: 2, niveaux: 2, archétypes: 'hubSlice', correspondances: 3, devantures: 2 },
     { gare: 'JY06 Uguisudani', lignes: 2, niveaux: 2, archétypes: 'compact+linear', correspondances: 0, devantures: 0 },
     { gare: 'JY07 Nippori', lignes: 2, niveaux: 2, archétypes: 'overbridge', correspondances: 3, devantures: 0 },

@@ -48,17 +48,22 @@ const SMALL = [1, 5, 7, 9, 10, 13, 15, 17];
 const MEDIUM = [2, 8, 11, 14, 20, 21, 22, 23, 26, 27, 28, 29];
 
 /**
- * UNE GARE ATTEND ENCORE, et pour une raison de géométrie, pas de relevé.
+ * UUCUNE GARE N'ATTEND PLUS.
  *
- * La SECONDE volée se règle désormais sur ce qu'elle dessert, et cela a suffi
- * aux cinq gares qui descendent sous les voies. Okachimachi demande autre
- * chose : sa mezzanine est à −1,84 m, c'est-à-dire AU-DESSUS du palier de
- * mi-étage (−2,625 m) où la PREMIÈRE volée aboutit. Il ne s'agit donc plus
- * d'allonger la seconde volée mais de raccourcir la première — quinze marches
- * calées sur le percement de la dalle, son linteau et sa hauteur libre. C'est
- * un autre ouvrage, et il ne se règle pas d'un paramètre.
+ * Okachimachi a été la dernière, et pour une raison qui valait d'être écrite :
+ * on cherchait à RACCOURCIR la première volée, alors qu'il fallait déplacer le
+ * demi-niveau. Sa mezzanine était posée « à mi-hauteur », soit −1,84 m —
+ * au-dessus du palier de mi-étage où la volée de quai s'arrête — et aucune
+ * trémie n'y menait. Or aucun plan de gare japonais ne cote une altitude : ce
+ * « à mi-hauteur » était une composition, pas un relevé.
+ *
+ * Le palier existe déjà, à −2,63 m : quinze contremarches sous le quai, six
+ * au-dessus du 1F, c'est-à-dire exactement la seconde volée ordinaire. Le M2F
+ * d'Okachimachi est ce palier-là élargi en plancher, et l'escalier qui en
+ * repart est celui que les trente gares ont déjà. Il n'y avait pas d'ouvrage à
+ * inventer — il y avait une cote composée à remettre là où l'ouvrage tombe.
  */
-const DEFERRED = [3];
+const DEFERRED: number[] = [];
 
 /**
  * LES TROIS PREMIÈRES SIGNATURES (phase 22).
@@ -82,8 +87,16 @@ const SIGNATURES = [6, 24, 25];
  */
 const BIG = [0, 4, 12, 16, 18, 19];
 
+/**
+ * LA DERNIÈRE (phase 29) : Okachimachi, et son demi-niveau.
+ *
+ * Elle a attendu cinq phases pour une cote composée qui tombait à côté de
+ * l'ouvrage — voir plus haut. Trente sur trente.
+ */
+const LAST = [3];
+
 const WIRED: ReadonlyMap<number, StationConcourseProfile> = new Map(
-  [...SMALL, ...MEDIUM, ...SIGNATURES, ...BIG]
+  [...SMALL, ...MEDIUM, ...SIGNATURES, ...BIG, ...LAST]
     .filter((i) => !DEFERRED.includes(i))
     .sort((a, b) => a - b)
     .map((i) => [i, profileFor(i)] as const),

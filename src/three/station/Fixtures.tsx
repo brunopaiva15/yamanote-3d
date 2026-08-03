@@ -35,7 +35,7 @@ import {
   makeTicketFaceTexture,
 } from '../../textures/concourse';
 import { FOOD_BRANDS, makeVendingHeaderTexture, vendingBrand } from '../../textures/vending';
-import type { ConcourseNetwork } from '../../data/stationConcourseBuild';
+import type { ConcourseNetwork, ConcourseRoom } from '../../data/stationConcourseBuild';
 import type { Mats } from './materials';
 import { stationAd } from './adPool';
 import { Konbini } from './Konbini';
@@ -210,6 +210,7 @@ function Shells({ net, m, floor }: {
 export function Fixtures({
   it,
   net,
+  rooms,
   m,
   station,
   detail,
@@ -226,6 +227,8 @@ export function Fixtures({
    * ressortir par le mur.
    */
   net: ConcourseNetwork;
+  /** Les pièces du VOLUME qu'on dessine : le mobilier des autres n'est pas ici. */
+  rooms: readonly ConcourseRoom[];
   m: Mats;
   station: number;
   /**
@@ -237,8 +240,24 @@ export function Fixtures({
   detail: number;
 }) {
   const kit = useFixtureKit(station);
+  // LE MOBILIER DE CE VOLUME-LÀ, et non de toute la gare. Il se posait partout
+  // dès qu'un volume se dessinait : à Okachimachi, vu du quai, l'occultation ne
+  // garde que le demi-niveau, et les distributeurs du hall restaient plantés
+  // au-dessus de la rue. Un meuble appartient à la pièce qui le porte.
+  const here = useMemo(
+    () => ({
+      ...net,
+      fixtures: net.fixtures.filter((f) => rooms.some(
+        (r) => (f.rect.x0 + f.rect.x1) / 2 >= r.rect.x0
+          && (f.rect.x0 + f.rect.x1) / 2 <= r.rect.x1
+          && (f.rect.z0 + f.rect.z1) / 2 >= r.rect.z0
+          && (f.rect.z0 + f.rect.z1) / 2 <= r.rect.z1,
+      )),
+    }),
+    [net, rooms],
+  );
   if (detail >= 2) {
-    return <Shells net={net} m={m} floor={(x, z) => floorOf(net, it, x, z)} />;
+    return <Shells net={here} m={m} floor={(x, z) => floorOf(net, it, x, z)} />;
   }
   // La trame porteuse appartient au hall générique : un relevé qui donne ses
   // propres volumes ne la reçoit pas, faute de savoir où sont ses poteaux.
@@ -300,7 +319,7 @@ export function Fixtures({
         );
       })}
 
-      {net.fixtures.map((f, i) => {
+      {here.fixtures.map((f, i) => {
         const cx = (f.rect.x0 + f.rect.x1) / 2;
         const cz = (f.rect.z0 + f.rect.z1) / 2;
         // La façade regarde vers le milieu du hall : +1 vers +x, -1 vers -x.

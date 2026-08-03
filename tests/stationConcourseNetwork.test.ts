@@ -114,45 +114,25 @@ test('le placement porte le réseau de chaque gare', () => {
   }
 });
 
-test('LE SOL N’A PAS BOUGÉ D’UN CENTIMÈTRE', () => {
-  // LE TEST QUI COMPTE. On rejoue à la main ce que faisait `concourseFloorAt`
-  // avant la phase 8 — une boîte, du débouché du couloir au fond de la zone
-  // libre, moins les obstacles — et l'on exige que le réseau réponde
-  // exactement la même chose. Sur toute la surface des trente halls, au
-  // demi-mètre.
-  let sampled = 0;
-  let floor = 0;
-  for (const i of LEGACY) {
-    const p = PLACE(i);
-    const it = p.interior;
-    /** L'ancienne implémentation, mot pour mot. */
-    const before = (x: number, z: number): number | null => {
-      if (!it.built) return null;
-      if (x < it.paid.x0 || x > it.paid.x1) return null;
-      if (z < it.paid.z0 || z > it.free.z1) return null;
-      for (const o of it.obstacles) {
-        if (x >= o.x0 && x <= o.x1 && z >= o.z0 && z <= o.z1) return null;
-      }
-      return it.floorY;
-    };
-    for (let x = it.paid.x0 - 1; x <= it.paid.x1 + 1; x += 0.5) {
-      for (let z = it.paid.z0 - 1; z <= it.free.z1 + 1; z += 0.5) {
-        sampled++;
-        const now = concourseFloorAt(p, x, z);
-        assert.equal(now, before(x, z), `${NAME(i)} : le sol a changé en (${x}, ${z})`);
-        if (now !== null) floor++;
-      }
-    }
-  }
-  // Et l'échantillon a bien touché du sol : un test qui ne compare que des
-  // `null` ne prouve rien.
-  // IL NE RESTE QU'UNE GARE. L'échantillon a rétréci à mesure que le relevé
-  // prenait la main — trente gares, puis sept, puis Okachimachi seule — et
-  // c'est le signe que le chantier a avancé, pas que le test s'est vidé. Le
-  // jour où sa trémie rejoindra sa mezzanine, il n'y aura plus rien à comparer
-  // et ce test se retirera en le disant.
-  assert.ok(sampled > 900, `échantillon trop maigre : ${sampled} points`);
-  assert.ok(floor > 300, `seulement ${floor} points de sol trouvés`);
+test('LE SOL N’A PAS BOUGÉ D’UN CENTIMÈTRE — et ce test se retire', () => {
+  // LE TEST QUI COMPTAIT, et il a fini son office.
+  //
+  // Il rejouait à la main ce que faisait `concourseFloorAt` avant la phase 8 —
+  // une boîte, du débouché du couloir au fond de la zone libre, moins les
+  // obstacles — et exigeait que le réseau réponde exactement la même chose, au
+  // demi-mètre, sur toute la surface des halls non branchés. C'est lui qui a
+  // permis de basculer les gares une par une sans qu'un plancher bouge en
+  // silence.
+  //
+  // Trente gares sur trente passent maintenant par leur relevé (phase 29) :
+  // l'échantillon est vide, et un test qui ne compare plus rien ne prouve plus
+  // rien. Il ne se supprime pas pour autant — il DIT que sa raison d'être a
+  // disparu, ce qui est la seule façon honnête de fermer un contrôle.
+  assert.deepEqual(LEGACY, [], `${LEGACY.length} gares encore au hall générique`);
+  // Et la comparaison reste écrite, prête à servir : c'est `LE REPLI DES
+  // TRENTE` (`tests/stationRequirements`) qui la tient désormais, en compilant
+  // le repli de chaque gare indépendamment de son branchement. Le jour où une
+  // gare redescendrait au hall générique, c'est là qu'on le verrait.
 });
 
 test('les bouches de sortie répondent comme avant', () => {
@@ -241,10 +221,9 @@ test('une volée intérieure se descend au lieu de faire un mur', () => {
   // hall. Sans lui, la mezzanine serait un plancher flottant qu'on ne peut pas
   // quitter — et la foule, elle, buterait sur un mur invisible d'un mètre.
   //
-  // Le placement réel d'Okachimachi porte encore son hall générique : on lui
-  // greffe le réseau compilé de son relevé, ce qui est exactement ce que fera
-  // `data/stationConcourseWired` le jour venu.
-  const p = wired(3);
+  // Okachimachi est branchée depuis la phase 29 : c'est son placement RÉEL
+  // qu'on interroge, et non plus une greffe.
+  const p = PLACE(3);
   const j = p.network.joins.find((x) => x.id === 'c-mezz-north')!;
   const mid = {
     x: (j.rect.x0 + j.rect.x1) / 2,
@@ -263,7 +242,14 @@ test('une volée intérieure se descend au lieu de faire un mur', () => {
   // Les deux pièces qu'elle joint sont bien à deux altitudes différentes.
   const mezz = p.network.rooms.find((r) => r.id === 'mezz-north')!;
   const hall = p.network.rooms.find((r) => r.id === 'paid-north')!;
-  assert.ok(mezz.floorY - hall.floorY > 1.5, 'le demi-niveau s’est aplati');
+  // UN MÈTRE CINQ, soit six contremarches de 17,5 cm : c'est exactement la
+  // seconde volée ordinaire, celle que les trente gares ont déjà. Le demi-niveau
+  // d'Okachimachi est le palier de mi-étage élargi en plancher, et non un
+  // ouvrage de plus — c'est ce qui a fini par la débloquer.
+  assert.ok(
+    Math.abs(mezz.floorY - hall.floorY - 1.05) < 1e-6,
+    `le demi-niveau est à ${(mezz.floorY - hall.floorY).toFixed(2)} m du hall`,
+  );
   assert.equal(concourseFloorAt(p, mid.x, mezz.rect.z1 - 0.1), mezz.floorY);
   assert.equal(concourseFloorAt(p, mid.x, hall.rect.z0 + 0.1), hall.floorY);
 });

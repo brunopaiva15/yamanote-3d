@@ -87,6 +87,8 @@ import {
   descentLenTo,
   PSD_X,
   STAIR_HALF_Z,
+  STAIR_HEADROOM,
+  STAIR_LANDING_Y,
   STAIR_LOWER_CEIL_Y,
   STAIR_LOWER_Y,
 } from './stationGeometry.ts';
@@ -846,6 +848,9 @@ function akihabara(i: number): Draft {
 function okachimachi(i: number): Draft {
   const f = frame(i);
   const z = accessZs(i);
+  // Le PIED DE LA TRÉMIE, et non le début du hall : à Okachimachi on débouche
+  // sur le demi-niveau, on le traverse, et l'on redescend au 1F. Tout ce qui
+  // suit se cote depuis là.
   const north = hallStart(z.main, 'down');
   const south = hallStart(z.far, 'down');
   return {
@@ -854,21 +859,32 @@ function okachimachi(i: number): Draft {
     primaryAccessId: 'a-north',
     levels: [
       under('1f', '1F'),
-      // Le demi-niveau, à mi-hauteur de la volée : c'est ce que le plan appelle
-      // M2F, et c'est par lui que passe toute la gare.
-      distant('m2f', 'M2F', UNDER_Y / 2, 2.4),
+      // LE DEMI-NIVEAU EST LE PALIER DE MI-ÉTAGE, ouvert en plancher.
+      //
+      // C'est ce que le plan appelle M2F, et c'est par lui que passe toute la
+      // gare. Le plan n'en cote pas l'altitude — aucun plan de gare japonais ne
+      // cote une altitude — et la placer « à mi-hauteur » était une composition
+      // de plus : elle tombait à −1,84 m, c'est-à-dire AU-DESSUS du palier où la
+      // volée de quai s'arrête, et aucune trémie n'y menait.
+      //
+      // Le palier existe déjà, à −2,63 m : quinze contremarches sous le quai,
+      // six au-dessus du 1F — exactement la seconde volée ordinaire. Le
+      // demi-niveau d'Okachimachi n'est donc pas un ouvrage de plus, c'est ce
+      // palier-là élargi en plancher, et l'escalier qui en repart est celui que
+      // les trente gares ont déjà.
+      distant('m2f', 'M2F', STAIR_LANDING_Y, STAIR_HEADROOM),
     ],
     platformAccesses: [
       { id: 'a-north', kind: 'stairs', order: 1, toNodeId: 'mezz-north', rise: 'down', depiction: 'walkable' },
       { id: 'a-south', kind: 'stairs', order: 0, toNodeId: 'mezz-south', rise: 'down', depiction: 'stairhead' },
     ],
     concourses: [
-      { id: 'mezz-north', levelId: 'm2f', kind: 'mezzanine', fare: 'paid', rect: f.band(north - 8, north - 1), depiction: 'walkable', nameEn: 'M2F landing', confidence: 'high' },
-      { id: 'paid-north', levelId: '1f', kind: 'underViaduct', fare: 'paid', rect: f.band(north, north + 11), depiction: 'walkable', confidence: 'high' },
-      { id: 'free-north', levelId: '1f', kind: 'underViaduct', fare: 'free', rect: f.band(north + 12.7, north + 27), depiction: 'walkable', confidence: 'high' },
-      { id: 'mezz-south', levelId: 'm2f', kind: 'mezzanine', fare: 'paid', rect: f.band(south - 8, south - 1), depiction: 'stairhead', confidence: 'high' },
-      { id: 'paid-south', levelId: '1f', kind: 'underViaduct', fare: 'paid', rect: f.band(south, south + 10), depiction: 'vista', confidence: 'high' },
-      { id: 'free-south', levelId: '1f', kind: 'underViaduct', fare: 'free', rect: f.band(south + 11.7, south + 23), depiction: 'backdrop', confidence: 'estimated' },
+      { id: 'mezz-north', levelId: 'm2f', kind: 'mezzanine', fare: 'paid', rect: f.band(north - 5, north + 3), depiction: 'walkable', nameEn: 'M2F landing', confidence: 'high' },
+      { id: 'paid-north', levelId: '1f', kind: 'underViaduct', fare: 'paid', rect: f.band(north + 6, north + 16), depiction: 'walkable', confidence: 'high' },
+      { id: 'free-north', levelId: '1f', kind: 'underViaduct', fare: 'free', rect: f.band(north + 17.7, north + 27), depiction: 'walkable', confidence: 'high' },
+      { id: 'mezz-south', levelId: 'm2f', kind: 'mezzanine', fare: 'paid', rect: f.band(south - 5, south + 3), depiction: 'stairhead', confidence: 'high' },
+      { id: 'paid-south', levelId: '1f', kind: 'underViaduct', fare: 'paid', rect: f.band(south + 6, south + 16), depiction: 'vista', confidence: 'high' },
+      { id: 'free-south', levelId: '1f', kind: 'underViaduct', fare: 'free', rect: f.band(south + 17.7, south + 28), depiction: 'backdrop', confidence: 'estimated' },
     ],
     corridors: [
       {
@@ -877,7 +893,7 @@ function okachimachi(i: number): Draft {
         from: 'mezz-north',
         to: 'paid-north',
         rise: -1,
-        rect: f.band(north - 1, north),
+        rect: f.band(north + 3, north + 6),
         width: 4.2,
         depiction: 'walkable',
         confidence: 'high',
@@ -888,7 +904,7 @@ function okachimachi(i: number): Draft {
         from: 'mezz-south',
         to: 'paid-south',
         rise: -1,
-        rect: f.band(south - 1, south),
+        rect: f.band(south + 3, south + 6),
         width: 3.6,
         depiction: 'stairhead',
         confidence: 'high',
@@ -901,7 +917,7 @@ function okachimachi(i: number): Draft {
         nameEn: 'North Exit Gate',
         from: 'paid-north',
         to: 'free-north',
-        rect: f.band(north + 11, north + 12.7),
+        rect: f.band(north + 16, north + 17.7),
         cross: 'z',
         passages: 5,
         wideAt: 'end',
@@ -915,7 +931,7 @@ function okachimachi(i: number): Draft {
         nameEn: 'South Exit Gate',
         from: 'paid-south',
         to: 'free-south',
-        rect: f.band(south + 10, south + 11.7),
+        rect: f.band(south + 16, south + 17.7),
         cross: 'z',
         passages: 4,
         staffed: true,

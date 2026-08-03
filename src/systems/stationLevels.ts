@@ -41,7 +41,7 @@ import {
   STAIR_WALK_HALF_X,
 } from '../data/stationGeometry';
 import { EXIT_MOUTH_END, exitMouthFloorY } from '../data/stationInterior';
-import { roomAt } from '../data/stationConcourseBuild';
+import { joinAxis, joinFloorProfile, roomAt } from '../data/stationConcourseBuild';
 import { stairTopZ, stairwellAt, type StationPlacement } from './stationPlacement';
 
 /** Étage où l'on pose les pieds, dans le repère de la gare. */
@@ -191,27 +191,15 @@ export function joinFloorAt(
     if (!j.walkable) continue;
     const r = j.rect;
     if (x < r.x0 || x > r.x1 || z < r.z0 || z > r.z1) continue;
-    const rooms = net.rooms;
-    const a = rooms.find((n) => n.id === j.from);
-    const b = rooms.find((n) => n.id === j.to);
-    if (!a || !b) continue;
-    // L'AXE DE LA PENTE VIENT DES DEUX PIÈCES, pas de la forme du rectangle.
-    // Le premier réflexe - « l'ouvrage est plus long qu'il n'est large, donc la
-    // pente suit sa longueur » - se trompe dès la première volée réelle : celle
-    // de la mezzanine d'Okachimachi fait cinq mètres soixante de large pour un
-    // mètre de long, et descend pourtant dans le sens du mètre. Ce qui décide,
-    // c'est l'axe qui SÉPARE les deux pièces ; la forme ne tranche que si elles
-    // sont l'une au-dessus de l'autre.
-    const midA = { x: (a.rect.x0 + a.rect.x1) / 2, z: (a.rect.z0 + a.rect.z1) / 2 };
-    const midB = { x: (b.rect.x0 + b.rect.x1) / 2, z: (b.rect.z0 + b.rect.z1) / 2 };
-    const gapX = Math.abs(midB.x - midA.x);
-    const gapZ = Math.abs(midB.z - midA.z);
-    const alongZ = Math.abs(gapZ - gapX) > 1e-6 ? gapZ > gapX : r.z1 - r.z0 >= r.x1 - r.x0;
-    const span = alongZ ? r.z1 - r.z0 : r.x1 - r.x0;
-    if (span <= 0) continue;
-    const raw = alongZ ? (z - r.z0) / span : (x - r.x0) / span;
-    const t = (alongZ ? midA.z <= midB.z : midA.x <= midB.x) ? raw : 1 - raw;
-    return j.fromY + (j.toY - j.fromY) * t;
+    // L'AXE ET LE PROFIL VIENNENT DE LA DONNÉE, pas d'ici : le rendu pose ses
+    // marches sur les mêmes (`data/stationConcourseBuild`), et une volée
+    // dessinée ailleurs que là où l'on marche est le défaut que ce chantier
+    // s'interdit depuis la phase 1.
+    const lay = joinAxis(net, j);
+    if (!lay) continue;
+    const raw = lay.alongZ ? (z - r.z0) / lay.span : (x - r.x0) / lay.span;
+    const t = lay.forward ? raw : 1 - raw;
+    return joinFloorProfile(j, t);
   }
   return null;
 }

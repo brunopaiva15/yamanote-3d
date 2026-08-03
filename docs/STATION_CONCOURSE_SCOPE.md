@@ -10,9 +10,9 @@ Date de référence architecturale et commerciale : **août 2026**.
 
 ## 1. Où en est chaque gare
 
-`branchée` = la gare passe par son RELEVÉ (`data/stationConcourseWired`). `non` =
-elle reçoit encore le hall générique, juste mais générique. `différée` = son
-relevé est prêt et le moteur ne sait pas encore le construire — voir §4.
+`branchée` = la gare passe par son RELEVÉ (`data/stationConcourseWired`). Elles
+le sont toutes depuis la phase 29 ; la colonne reste parce que la question se
+reposera le jour où l'on ajoutera une gare ou une ligne.
 
 `écarts` compte ce que `networkIssues` signale : lignes trop serrées, bouches
 rétrécies, devantures rognées. **Un écart n'est pas un défaut caché — c'est un
@@ -23,7 +23,7 @@ défaut DIT.**
 | JY01 | Tokyo | mostlyVerified | oui | 6 | 2 | 7 | 4 | 2 | 2 | oui | 0 |
 | JY02 | Kanda | mostlyVerified | oui | 4 | 2 | 4 | 2 | 0 | 1 | — | 6 |
 | JY03 | Akihabara | mostlyVerified | oui | 7 | 3 | 3 | 3 | 3 | 1 | — | 3 |
-| JY04 | Okachimachi | approximate | différée | 6 | 2 | 2 | 0 | 0 | 1 | — | 2 |
+| JY04 | Okachimachi | approximate | oui | 6 | 2 | 2 | 0 | 0 | 1 | — | 2 |
 | JY05 | Ueno | mostlyVerified | oui | 4 | 2 | 4 | 3 | 2 | 2 | oui | 0 |
 | JY06 | Uguisudani | approximate | oui | 4 | 2 | 2 | 0 | 0 | 1 | — | 0 |
 | JY07 | Nippori | mostlyVerified | oui | 6 | 2 | 3 | 3 | 1 | 1 | — | 1 |
@@ -51,7 +51,7 @@ défaut DIT.**
 | JY29 | Shimbashi | mostlyVerified | oui | 7 | 3 | 4 | 4 | 0 | 2 | oui | 2 |
 | JY30 | Yūrakuchō | mostlyVerified | oui | 6 | 4 | 5 | 1 | 2 | 2 | — | 7 |
 
-**Vingt-neuf gares sur trente passent par leur relevé.** La volée de quai se
+**Les trente gares passent par leur relevé.** La volée de quai se
 règle désormais sur ce qu'elle dessert (`data/stationGeometry.lowerFlightTo`) :
 la seconde volée compte le nombre entier de contremarches qui tombe juste sur le
 sol visé — vingt-deux pour descendre à −6,40 m sous les voies, six pour la
@@ -70,11 +70,14 @@ générale, pas une exception nominative :
 - **Shibuya** — les palissades du chantier de 2026 comptent parmi ce qui occupe
   une paroi, faute de quoi une bouche s'ouvrait dans les travaux.
 
-Il reste **Okachimachi**, qui attend un autre ouvrage : sa mezzanine est à
-−1,84 m, c'est-à-dire AU-DESSUS du palier de mi-étage où la PREMIÈRE volée
-aboutit. Il ne s'agit plus d'allonger la seconde volée mais de raccourcir la
-première — quinze marches calées sur le percement de la dalle, son linteau et sa
-hauteur libre.
+**Okachimachi a suivi** (phase 29), et pour une raison qui n'était pas celle
+qu'on croyait : son demi-niveau était posé « à mi-hauteur de la volée », soit
+−1,84 m, au-dessus du palier de mi-étage où la volée de quai s'arrête. Or aucun
+plan japonais ne cote une altitude — ce « à mi-hauteur » était une composition,
+pas un relevé. Le palier existe déjà à −2,63 m : quinze contremarches sous le
+quai, six au-dessus du 1F, exactement la seconde volée ordinaire. Le M2F est ce
+palier-là élargi en plancher. Il n'y avait pas d'ouvrage à inventer, il y avait
+une cote composée à remettre là où l'ouvrage tombe.
 
 ---
 
@@ -145,11 +148,9 @@ compilateur : **ce qui est relevé passe avant ce qui est composé.**
 
 ## 4. Ce qui reste à faire
 
-Les vingt-huit phases sont livrées. Il reste **Okachimachi**, hors phases : sa
-mezzanine demande une PREMIÈRE volée plus courte, ce qui est un ouvrage et non
-un réglage (voir §1), et cela touche la trémie que les trente gares partagent.
+**Le chantier est livré.** Trente gares sur trente passent par leur relevé.
 
-Deux limites connues, écrites plutôt que masquées :
+Deux limites connues restent, écrites plutôt que masquées :
 
 - **le mobilier ne tourne pas avec sa pièce.** Il se range contre la paroi qu'il
   regarde, repérée sur x — la profondeur du hall générique. Trois halls (Tokyo,

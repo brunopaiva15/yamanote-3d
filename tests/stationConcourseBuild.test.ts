@@ -273,12 +273,12 @@ test('les gares branchées sont EXACTEMENT celles qu’on a décidé de brancher
   // écrite ici, en clair, et le compilateur doit s'y tenir des deux côtés.
   assert.deepEqual(
     [...wiredIndices()],
-    [0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-      22, 23, 24, 25, 26, 27, 28, 29],
+    Array.from({ length: STATION_COUNT }, (_, k) => k),
   );
-  // Et UNE gare attend, pour une raison d'ouvrage et non de relevé : sa trémie
-  // ne rejoint pas le sol qu'elle dessert (voir `stationConcourseWired`).
-  assert.deepEqual([...deferredIndices()], [3]);
+  // ET PLUS AUCUNE N'ATTEND. Okachimachi a été la dernière : son demi-niveau
+  // était posé « à mi-hauteur », au-dessus du palier où la volée de quai
+  // s'arrête, et aucune trémie n'y menait (voir `stationConcourseWired`).
+  assert.deepEqual([...deferredIndices()], []);
   assert.equal(wiredCount(), wiredIndices().length);
   for (let i = 0; i < STATION_COUNT; i++) {
     assert.equal(

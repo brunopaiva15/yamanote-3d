@@ -36,6 +36,7 @@ import { visibleShells } from '../../data/stationConcourseBuild';
 import { runtime } from '../../systems/runtime';
 import type { ConcourseNetwork as Network } from '../../data/stationConcourseBuild';
 import { Concourse } from './Concourse';
+import { Ouvrage } from './Ouvrage';
 import type { Mats } from './materials';
 
 export function ConcourseNetwork({
@@ -53,14 +54,29 @@ export function ConcourseNetwork({
   /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
   detail: number;
 }) {
+  const shells = visibleShells(
+    net,
+    runtime.playerLevel === 'concourse',
+    runtime.playerPlatX,
+    runtime.playerPlatZ,
+  );
+  // ET LES OUVRAGES QUI LES JOIGNENT. Un volume est continu par définition —
+  // c'est ce que `shellsOf` regroupe — donc ce qui joint DEUX volumes n'est
+  // dans aucun des deux, et personne ne le dessinait. La marche, elle, en fait
+  // du sol depuis la phase 9 : on y descendait dans un trou de trois mètres par
+  // lequel on voyait le ballast. Un plancher qu'on foule et qu'on ne dessine
+  // pas est le symétrique du mur invisible.
+  const seen = new Set(shells.flatMap((s) => s.rooms.map((r) => r.id)));
+  // UN SEUL DES DEUX BOUTS SUFFIT. Exiger que les deux volumes soient visibles
+  // effaçait l'ouvrage au moment précis où l'on y est : depuis l'intérieur,
+  // l'occlusion ne garde que le volume vers lequel on va, et l'on se retrouvait
+  // à marcher sur un plancher qui n'existait plus.
+  const links = net.joins.filter(
+    (j) => j.walkable && (seen.has(j.from) || seen.has(j.to)),
+  );
   return (
     <>
-      {visibleShells(
-        net,
-        runtime.playerLevel === 'concourse',
-        runtime.playerPlatX,
-        runtime.playerPlatZ,
-      ).map((shell) => (
+      {shells.map((shell) => (
         <Concourse
           key={shell.id}
           shell={shell}
@@ -69,6 +85,19 @@ export function ConcourseNetwork({
           m={m}
           station={station}
           detail={detail}
+        />
+      ))}
+      {links.map((j) => (
+        <Ouvrage
+          key={j.id}
+          join={j}
+          net={net}
+          m={m}
+          ceilY={Math.max(
+            ...net.rooms
+              .filter((r) => r.id === j.from || r.id === j.to)
+              .map((r) => r.ceilY),
+          )}
         />
       ))}
     </>

@@ -292,6 +292,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **26** | **Tests** ✅ | matrice des 18 exigences ; `stationRequirements` : 16 contrôles, et six défauts trouvés | — |
 | **27** | **Captures de contrôle** ✅ | `scripts/station-views` : 5 vues × 30 gares ; elles ont trouvé les bouches manquantes | — |
 | **28** | **Perf et bilan** ✅ | `scripts/concourse-cost` : structure, compilation, marche, rendu — avant/après ; budget tenu par un test | — |
+| **29** | **Okachimachi** ✅ | le demi-niveau se pose sur le palier de mi-étage : **trente gares sur trente** | — |
 
 ### 4.1 Ce que la phase 2 a découvert, et qui change les phases 3 à 5
 
@@ -1355,10 +1356,10 @@ sont donc posées telles quelles, `networkIssues` les DIT, et leurs baies resten
 inapprochables : c'est le comportement juste, et `tests/stationInside` l'exempte
 en le nommant plutôt que de l'ignorer.
 
-Reste **Okachimachi**, différée pour une raison d'ouvrage : sa mezzanine est à
-−1,84 m, au-dessus du palier de mi-étage où la PREMIÈRE volée aboutit. Il ne
-s'agit plus d'allonger la seconde volée (phase 23) mais de raccourcir la
-première.
+Restait **Okachimachi**, différée pour ce qu'on croyait être une raison
+d'ouvrage : sa mezzanine à −1,84 m, au-dessus du palier de mi-étage où la
+PREMIÈRE volée aboutit. C'était une cote composée, et non un relevé — voir
+§4.27.
 
 ### 4.25 La phase 26 : dix-huit exigences, et ce qu'elles ont trouvé
 
@@ -1478,6 +1479,67 @@ qu'une carte graphique paie d'un coup quand on y entre). Les plafonds sont au
 double du pire relevé d'aujourd'hui : ils ne gênent pas une gare qui gagne une
 pièce, ils arrêtent net celle qui en gagnerait cinquante.
 
+### 4.27 La phase 29 : Okachimachi, ou la cote composée qu'on prenait pour un ouvrage
+
+Okachimachi a attendu six phases, et pour une raison qu'il vaut la peine
+d'écrire : **on cherchait à corriger l'ouvrage alors qu'il fallait corriger la
+cote.**
+
+Son demi-niveau — le M2F du plan, par lequel passe toute la gare — était posé
+« à mi-hauteur de la volée », soit −1,84 m. C'est **au-dessus** du palier de
+mi-étage où la volée de quai s'arrête (−2,63 m), et aucune trémie n'y menait :
+la seconde volée aurait dû REMONTER. D'où le constat de la phase 23, répété de
+document en document : « il ne s'agit plus d'allonger la seconde volée mais de
+raccourcir la première — quinze marches calées sur le percement de la dalle, son
+linteau et sa hauteur libre. C'est un autre ouvrage. »
+
+**C'en était un, et il n'avait pas lieu d'être.** Aucun plan de gare japonais ne
+cote une altitude : « à mi-hauteur » n'était pas un relevé, c'était une
+composition — la nôtre — et elle tombait à côté de l'ouvrage. Le palier existe
+déjà à −2,63 m : quinze contremarches sous le quai, **six au-dessus du 1F**,
+c'est-à-dire exactement la seconde volée ordinaire. Le M2F d'Okachimachi est ce
+palier-là élargi en plancher, et l'escalier qui en repart est celui que les
+trente gares ont déjà.
+
+C'est la leçon de la distinction RELEVÉ / COMPOSÉ, prise par le mauvais bout
+pendant six phases : **quand une cote composée se dispute avec un ouvrage, ce
+n'est pas l'ouvrage qui a tort.**
+
+Cinq choses ont suivi, et aucune n'est nominative :
+
+- **une volée de zéro marche est une réponse.** `lowerFlightTo` posait un
+  `Math.max(1, …)` : un nez dessiné dans le vide quand la volée dessert le
+  palier lui-même ;
+- **un volume n'a pas forcément de contrôle.** `Concourse` lisait `shell.gates[0]`
+  sans le vérifier et suspendait un bandeau 改札 au-dessus. Le demi-niveau est
+  le premier volume praticable sans ligne de portillons de tout le chantier, et
+  le rendu se plantait avant même de se poser la question ;
+- **un ouvrage de liaison n'était dessiné NULLE PART.** La phase 9 en a fait du
+  sol — `joinFloorAt` rend une altitude, la marche l'accepte, la foule le
+  descend — mais `shellsOf` regroupe les PIÈCES, et un ouvrage n'en est pas une.
+  Cela n'a rien coûté pendant vingt phases : sur les trente gares, treize liens
+  sont relevés et un seul est praticable. Le jour de son branchement, le défaut
+  s'est vu tout de suite — trois mètres de vide entre deux volumes clos, par
+  lesquels on voyait le ballast. Un plancher qu'on foule et qu'on ne dessine pas
+  est le symétrique exact du mur invisible ;
+- **et surtout : ce qu'on dessine n'était pas CLOS.** `visibleShells` décide
+  quels volumes on dessine ; les portillons et le mobilier, eux, se dessinaient
+  pour TOUTE la gare dès qu'un volume l'était. Tant qu'une gare n'avait qu'un
+  volume praticable, personne ne pouvait le voir. Depuis le quai d'Okachimachi,
+  l'occultation ne gardait que le demi-niveau — la trémie n'y dessert que lui —
+  et la ligne de contrôle du hall restait suspendue au-dessus de la rue, sans
+  sol ni parois autour. Deux corrections : la vue depuis le quai suit désormais
+  les ouvrages praticables, et une ligne comme un meuble n'appartiennent qu'à
+  leur pièce ;
+- **le test qui a rendu tout cela possible s'est retiré.** « LE SOL N'A PAS BOUGÉ
+  D'UN CENTIMÈTRE » comparait le réseau au hall générique sur les gares non
+  branchées : il n'en reste aucune, son échantillon est vide, et un test qui ne
+  compare plus rien ne prouve plus rien. Il le DIT au lieu de disparaître, et
+  renvoie à `LE REPLI DES TRENTE` qui tient désormais la comparaison en
+  compilant le repli de chaque gare indépendamment de son branchement.
+
+**Trente gares sur trente passent par leur relevé.**
+
 ### Ordre et raison
 
 - **1→5 ne touchent aucun consommateur.** Le jeu tourne à l'identique pendant
@@ -1492,11 +1554,10 @@ pièce, ils arrêtent net celle qui en gagnerait cinquante.
   système avec le moins à perdre.
 - **25→28 ferment** : coût, contrôle, documentation.
 
-**Les vingt-huit phases sont livrées.** Vingt-neuf gares sur trente passent par
-leur relevé ; Okachimachi attend un ouvrage et non un réglage, et deux
-approximations sont écrites plutôt que masquées (le mobilier qui ne tourne pas
-avec sa pièce, les deux lignes de Shin-Ōkubo qui se partagent du sol) — voir
-`STATION_CONCOURSE_SCOPE`, §4.
+**Le chantier est livré : trente gares sur trente passent par leur relevé.**
+Deux approximations restent, écrites plutôt que masquées — le mobilier qui ne
+tourne pas avec sa pièce, les deux lignes de Shin-Ōkubo qui se partagent du sol.
+Voir `STATION_CONCOURSE_SCOPE`, §4.
 
 ---
 

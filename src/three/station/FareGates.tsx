@@ -66,11 +66,23 @@ function centre(r: InteriorRect): [number, number] {
  */
 export function FareGates({
   net,
+  rooms,
   m,
   height,
   midY,
 }: {
   net: ConcourseNetwork;
+  /**
+   * Les pièces du VOLUME qu'on dessine.
+   *
+   * Sans elle, chaque volume dessinait TOUTES les lignes de la gare — ce qui ne
+   * se voyait pas tant qu'une gare n'avait qu'un volume, et qui s'est vu d'un
+   * coup à Okachimachi : depuis le quai, l'occultation ne garde que le
+   * demi-niveau, et la ligne de contrôle du hall restait suspendue au-dessus de
+   * la rue, sans sol ni parois autour. Une ligne appartient à ses deux pièces,
+   * pas à la gare.
+   */
+  rooms: ReadonlySet<string>;
   m: Mats;
   /** Hauteur libre du hall : les joues de rive montent jusqu'au plafond. */
   height: number;
@@ -79,7 +91,9 @@ export function FareGates({
   const bays = concourseBays(net);
   return (
     <group name="gare/hall/portillons">
-      {net.gates.filter((g) => g.walkable).map((g) => (
+      {net.gates
+        .filter((g) => g.walkable && (rooms.has(g.from) || rooms.has(g.to)))
+        .map((g) => (
         <GateLine
           key={g.id}
           g={g}

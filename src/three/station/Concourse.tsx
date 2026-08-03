@@ -109,7 +109,20 @@ export function Concourse({
   // l'archétype du volume (`three/station/interiors/hallStyle`) ; `linear`
   // reproduit exactement le hall d'avant, et c'est par lui que passent les
   // trente gares tant qu'aucune n'est branchée sur son relevé.
-  const style = hallStyle(shell.kind);
+  // CE QU'IL Y A SOUS CE VOLUME. Un demi-niveau s'ouvre sur celui d'en dessous
+  // — c'est sa définition — mais encore faut-il qu'il y en ait un : le M2F
+  // d'Okachimachi est un palier sous la dalle du quai, et ses appuis ouvraient
+  // sur le ballast. La question se pose au réseau, pas à l'archétype.
+  const openBelow = useMemo(
+    () => net.rooms.some(
+      (r) => r.floorY < shell.floorY - 0.5
+        && r.rect.x0 < shell.rect.x1 - 1e-6 && r.rect.x1 > shell.rect.x0 + 1e-6
+        && r.rect.z0 < shell.rect.z1 - 1e-6 && r.rect.z1 > shell.rect.z0 + 1e-6,
+    ),
+    [net, shell],
+  );
+  const roomIds = useMemo(() => new Set(shell.rooms.map((r) => r.id)), [shell]);
+  const style = hallStyle(shell.kind, openBelow);
   const width = shell.rect.x1 - shell.rect.x0;
   const z0 = shell.rect.z0;
   const z1 = shell.rect.z1;
@@ -132,7 +145,8 @@ export function Concourse({
     [gateSign],
   );
   useEffect(() => {
-    const g = sign.gates.find((x) => x.id === gate?.id);
+    if (!gate) return;
+    const g = sign.gates.find((x) => x.id === gate.id);
     // Le bandeau porte ce qui CHANGE CE QU'ON PEUT FAIRE au contrôle : carte
     // sans contact seule, sortie seule, horaires. Le hall générique n'en a
     // aucun, et le bandeau reste celui d'avant.
@@ -165,7 +179,7 @@ export function Concourse({
     if (style.beamPitch === null) return [];
     const out: number[] = [];
     for (let z = z0 + style.beamPitch / 2; z < z1; z += style.beamPitch) {
-      if (z > gate.rect.z0 - 0.6 && z < gate.rect.z1 + 0.6) continue;
+      if (gate && z > gate.rect.z0 - 0.6 && z < gate.rect.z1 + 0.6) continue;
       out.push(z);
     }
     return out;
@@ -293,19 +307,26 @@ export function Concourse({
       {/* La ligne de portillons : bornes, battants, lecteurs et feux. Elle
           n'est plus une rangée de boîtes - elle s'ouvre, elle se ferme, et
           `systems/fareGate` la pilote. */}
-      <FareGates net={net} m={m} height={height} midY={midY} />
+      <FareGates net={net} rooms={roomIds} m={m} height={height} midY={midY} />
 
-      {/* Le bandeau 改札, suspendu au-dessus de la ligne, face à qui arrive. */}
-      <mesh position={[midX, GATE_SIGN_Y + shell.floorY, gate.rect.z0 - 0.12]} material={m.frame}>
+      {/* Le bandeau 改札, suspendu au-dessus de la ligne, face à qui arrive.
+          UN VOLUME N'A PAS FORCÉMENT DE CONTRÔLE : le demi-niveau d'Okachimachi
+          est un plancher qu'on traverse pour redescendre, et il n'y en a pas.
+          Un bandeau 改札 posé là annoncerait un portillon qui n'existe pas — et
+          le rendu se plantait avant même de se poser la question. */}
+      {gate && <mesh
+        position={[midX, GATE_SIGN_Y + shell.floorY, gate.rect.z0 - 0.12]}
+        material={m.frame}
+      >
         <boxGeometry args={[Math.min(width - 0.4, 3.6) + 0.08, GATE_SIGN_H + 0.08, 0.09]} />
-      </mesh>
-      <mesh
+      </mesh>}
+      {gate && <mesh
         position={[midX, GATE_SIGN_Y + shell.floorY, gate.rect.z0 - 0.168]}
         rotation={[0, Math.PI, 0]}
         material={signMat}
       >
         <planeGeometry args={[Math.min(width - 0.4, 3.6), GATE_SIGN_H]} />
-      </mesh>
+      </mesh>}
 
       {/* Les poutres du tablier : un dessous de viaduc n'a pas de plafond, il a
           l'ouvrage qui porte les trains. */}
@@ -336,7 +357,7 @@ export function Concourse({
       {/* LE MOBILIER RESTE À TOUS LES PALIERS : il barre, et un obstacle qu'on
           efface sans effacer sa collision est un mur invisible. Au palier bas,
           `Fixtures` n'en garde que le volume (exigence #17). */}
-      <Fixtures it={it} net={net} m={m} station={station} detail={detail} />
+      <Fixtures it={it} net={net} rooms={shell.rooms} m={m} station={station} detail={detail} />
 
       {/* Ligne de guidage podotactile, dans l'axe, du couloir aux portillons
           puis des portillons aux sorties : elle traverse par un passage, jamais

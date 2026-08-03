@@ -71,7 +71,7 @@ import {
   type FareSide,
   type StationConcourseProfile,
 } from './stationConcourseTypes.ts';
-import { CLEAR_HALL } from './stationGeometry.ts';
+import { CLEAR_HALL, STAIR_RISE } from './stationGeometry.ts';
 import { wiredProfile } from './stationConcourseWired.ts';
 import { layoutFor } from './stationLayouts.ts';
 
@@ -518,6 +518,62 @@ const GATE_BRIDGE = 1;
  * baie étroite et ses deux joues de rive.
  */
 const GATE_MIN_RUN = PASSAGE_W + 4 * CABINET_HALF_X;
+
+/**
+ * L'AXE D'UN OUVRAGE DE LIAISON, et le sens dans lequel il descend.
+ *
+ * Il vient des DEUX PIÈCES et non de la forme du rectangle. Le premier réflexe
+ * — « l'ouvrage est plus long qu'il n'est large, donc la pente suit sa
+ * longueur » — se trompe dès la première volée réelle : celle de la mezzanine
+ * d'Okachimachi fait cinq mètres soixante de large pour trois de long. Ce qui
+ * décide, c'est l'axe qui SÉPARE les deux pièces ; la forme ne tranche que si
+ * elles sont l'une au-dessus de l'autre.
+ *
+ * Publié parce que DEUX lecteurs en dépendent : la marche, qui donne l'altitude
+ * sous les pieds (`systems/stationLevels`), et le rendu, qui pose les marches
+ * (`three/station/Ouvrage`). Une volée dessinée ailleurs que là où l'on marche
+ * est le défaut que ce chantier s'interdit depuis la phase 1.
+ */
+export interface JoinAxis {
+  /** La pente suit-elle z ? Sinon elle suit x. */
+  alongZ: boolean;
+  /** `from` est-il du côté des petites valeurs de l'axe ? */
+  forward: boolean;
+  /** Longueur de l'ouvrage sur son axe de pente. */
+  span: number;
+}
+
+export function joinAxis(net: ConcourseNetwork, j: ConcourseJoin): JoinAxis | null {
+  const a = net.rooms.find((n) => n.id === j.from);
+  const b = net.rooms.find((n) => n.id === j.to);
+  if (!a || !b) return null;
+  const r = j.rect;
+  const midA = { x: (a.rect.x0 + a.rect.x1) / 2, z: (a.rect.z0 + a.rect.z1) / 2 };
+  const midB = { x: (b.rect.x0 + b.rect.x1) / 2, z: (b.rect.z0 + b.rect.z1) / 2 };
+  const gapX = Math.abs(midB.x - midA.x);
+  const gapZ = Math.abs(midB.z - midA.z);
+  const alongZ = Math.abs(gapZ - gapX) > 1e-6 ? gapZ > gapX : r.z1 - r.z0 >= r.x1 - r.x0;
+  const span = alongZ ? r.z1 - r.z0 : r.x1 - r.x0;
+  if (span <= 0) return null;
+  return { alongZ, forward: alongZ ? midA.z <= midB.z : midA.x <= midB.x, span };
+}
+
+/**
+ * L'altitude d'un ouvrage à l'avancement `t`, compté de `from` vers `to`.
+ *
+ * Une volée descend PAR MARCHES, une rampe et un couloir descendent tout
+ * droit : c'est ce que le relevé déclare, et c'est ce que la marche doit
+ * rendre — sans quoi on flotte au-dessus des nez ou l'on s'enfonce dedans.
+ */
+export function joinFloorProfile(j: ConcourseJoin, t: number): number {
+  const drop = j.toY - j.fromY;
+  if (j.kind !== 'stairs') return j.fromY + drop * t;
+  const steps = Math.max(1, Math.round(Math.abs(drop) / STAIR_RISE));
+  // Le palier de départ compte pour une part : on marche à plat avant la
+  // première contremarche, comme sur toute volée publique.
+  const k = Math.min(steps, Math.floor(t * (steps + 1)));
+  return j.fromY + (drop * k) / steps;
+}
 
 /** Deux emprises se touchent-elles, à `slack` près ? */
 function touchesRect(a: InteriorRect, b: InteriorRect, slack: number): boolean {
@@ -1775,7 +1831,21 @@ export function visibleShells(
   const all = shellsOf(net);
   if (all.length <= 1) return all;
   if (!inConcourse) {
+    // DEPUIS LE QUAI, on voit ce qu'une trémie dessert — ET CE QUI SUIT. Une
+    // trémie ne débouche pas toujours dans le hall : à Okachimachi elle arrive
+    // sur le demi-niveau, d'où l'on redescend. S'arrêter à la pièce desservie
+    // masquait le hall lui-même, dont les portillons et le mobilier
+    // continuaient pourtant de se dessiner : une ligne de contrôle suspendue
+    // au-dessus de la rue, et rien autour.
     const served = new Set(net.accesses.map((a) => a.toRoomId));
+    for (let more = true; more;) {
+      more = false;
+      for (const j of net.joins) {
+        if (!j.walkable) continue;
+        if (served.has(j.from) && !served.has(j.to)) { served.add(j.to); more = true; }
+        if (served.has(j.to) && !served.has(j.from)) { served.add(j.from); more = true; }
+      }
+    }
     return all.filter((s) => s.rooms.some((r) => served.has(r.id)));
   }
   const here = all.find((s) => x >= s.rect.x0 && x <= s.rect.x1
