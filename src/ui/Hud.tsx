@@ -19,6 +19,7 @@ import { usePublishedHeight } from './usePublishedHeight';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
 import { IncidentMenu } from './IncidentMenu';
+import { RoomNotice } from './RoomNotice';
 
 function useClock(): string {
   const [clock, setClock] = useState('');
@@ -285,6 +286,10 @@ export function Hud() {
         {/* En bout de barre, après les réglages : ce n'en est pas un. */}
         <IncidentMenu />
       </div>
+      {/* Ce que le salon a à dire, et seulement quand il a quelque chose à
+          dire : la rame qui attend quelqu'un, ou celle qui est partie sans
+          nous. Le reste du temps, rien. */}
+      <RoomNotice />
     </>
   );
 }

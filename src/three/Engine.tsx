@@ -39,6 +39,7 @@ import {
 import { useRoom } from '../systems/net/room';
 import { sendPose, startPoseStream, stopPoseStream } from '../systems/net/pose';
 import { updatePeers } from '../systems/net/peers';
+import { updateHold } from '../systems/net/hold';
 
 // Les trois bornes de temps (dt du cycle, pas de physique, plafond par image)
 // sont dans systems/audioFrame : elles valent pour les deux versions du jeu, et
@@ -193,6 +194,9 @@ export function Engine(): null {
     // Et ce qu'on a à dire aux autres, une fois l'image faite : le battement de
     // l'hôte, les tirages de l'arrêt, et notre propre pose. Sans salon, retour
     // immédiat pour les trois.
+    // La rame attend-elle quelqu'un resté à quai ? Avant la publication : le
+    // battement doit porter le blocage de CETTE image, pas celui d'avant.
+    updateHold(cycleDt);
     netPumpOut(cycleDt);
     // Les fondus des avatars distants avancent au temps RÉEL et non au temps du
     // cycle : un pair qui décroche doit s'estomper à la même vitesse qu'on

@@ -393,6 +393,12 @@ export interface Strings {
     chatPlaceholder: string;
     /** Bouton d'envoi du tchat. */
     send: string;
+    /** La rame attend un membre resté à quai ; %s = secondes restantes. */
+    holding: string;
+    /** On a laissé la rame partir : notre monde n'est plus celui du salon. */
+    detached: string;
+    /** Bouton : se reposer là où le salon en est. */
+    rejoin: string;
   };
 
   language: string;
@@ -646,6 +652,9 @@ const FR: Strings = {
     hint: 'Partagez le lien avec qui vous voulez : vous monterez dans la même rame, à la même gare, à la même seconde.',
     chatPlaceholder: 'Entrée pour écrire, Échap pour fermer',
     send: 'Envoyer',
+    holding: 'La rame vous attend',
+    detached: 'La rame est partie sans vous',
+    rejoin: 'Rattraper la rame',
   },
 
   language: 'Langue',
@@ -895,6 +904,9 @@ const EN: Strings = {
     hint: 'Share the link with whoever you like: you will board the same train, at the same station, at the same second.',
     chatPlaceholder: 'Enter to write, Esc to close',
     send: 'Send',
+    holding: 'The train is holding for you',
+    detached: 'The train left without you',
+    rejoin: 'Catch up with the train',
   },
 
   language: 'Language',
@@ -1142,6 +1154,9 @@ const JA: Strings = {
     hint: 'コード（またはリンク）を渡せば、同じ編成・同じ駅・同じ瞬間に乗り合わせます。',
     chatPlaceholder: 'Enter で入力、Esc で閉じる',
     send: '送信',
+    holding: '発車を見合わせています',
+    detached: '編成は先に発車しました',
+    rejoin: '編成に追いつく',
   },
 
   language: '言語',

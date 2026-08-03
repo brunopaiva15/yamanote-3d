@@ -58,13 +58,19 @@ export function makePeer(
   mode: 'full' | 'audio',
   joinedAt: number,
   now: number,
+  attached = true,
 ): Peer {
   return {
     id,
     name,
     avatar,
     mode,
-    attached: true,
+    // Porté par l'appelant, et pas supposé vrai : quelqu'un peut parfaitement
+    // ARRIVER dans un salon alors qu'il a déjà laissé sa rame partir - il
+    // rejoint depuis un quai, ce qui est le cas normal quand on donne son code
+    // à un ami en cours de trajet. Le supposer à bord ferait attendre la rame
+    // pour quelqu'un qui n'y montera jamais.
+    attached,
     joinedAt,
     poses: [],
     lastSeen: now,
@@ -142,7 +148,7 @@ export function syncRoster(
       connu.joinedAt = p.joinedAt;
       continue;
     }
-    peers.set(p.id, makePeer(p.id, p.name, p.avatar, p.mode, p.joinedAt, now));
+    peers.set(p.id, makePeer(p.id, p.name, p.avatar, p.mode, p.joinedAt, now, p.attached));
   }
   for (const id of [...peers.keys()]) {
     if (!vus.has(id)) peers.delete(id);

@@ -1288,6 +1288,21 @@ body,
   animation: pax-bubble-in 180ms ease-out;
 }
 
+/* Un message de joueur : même bulle, liseré teinté. La forme ne change pas -
+   une parole reste une parole, et distinguer les deux par la géométrie ferait
+   de l'une un élément d'interface posé sur le monde. */
+.pax-bubble-remote {
+  border-color: rgba(158, 196, 111, 0.5);
+}
+
+.pax-bubble-who {
+  display: block;
+  margin-bottom: 2px;
+  color: #9ec46f;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
 /* Réplique non sollicitée (on l'a bousculé, il réagit) : plus discrète, en
    retrait - on ne lui a rien demandé. */
 .pax-bubble-aside {
@@ -1683,6 +1698,54 @@ body,
   text-align: center;
   z-index: 25;
   pointer-events: none;
+}
+
+/* --- Ce que le salon a à dire ---------------------------------------------
+ *
+ * En haut, au centre, et seulement quand il y a quelque chose à dire. Ce n'est
+ * pas un réglage ni un compteur : c'est une situation de ligne, au même titre
+ * qu'un retard annoncé, et elle se lit là où l'on regarde déjà.
+ */
+.room-notice {
+  position: fixed;
+  top: calc(var(--hud-safe-top) + 56px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(10, 14, 18, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text);
+  font-size: 13px;
+  z-index: 27;
+}
+
+.room-notice-count {
+  font-variant-numeric: tabular-nums;
+  color: #9ec46f;
+  font-weight: 700;
+}
+
+/* La rame est partie sans nous : c'est le seul message du salon qui appelle une
+   action, donc le seul qui ait le droit d'être cliquable. */
+.room-notice-detached {
+  border-color: rgba(200, 120, 60, 0.6);
+}
+
+.room-notice-action {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #9ec46f;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* --- Le tchat du salon ---------------------------------------------------
