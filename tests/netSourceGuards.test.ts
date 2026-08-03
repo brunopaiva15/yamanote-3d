@@ -287,6 +287,31 @@ test('les portes se tirent par une graine injectée, pas à l’import du module
   );
 });
 
+test('aucune règle de morceau ne nomme le client réseau', () => {
+  // Garde née d'une vraie régression, et d'une régression que j'avais
+  // introduite en croyant protéger le contraire.
+  //
+  // J'avais ajouté à `vite.config.ts` une règle `{ name: 'net', test:
+  // /@supabase/ }`, pour « garantir » que le client temps réel reste dans son
+  // propre morceau. Elle a produit l'inverse : un morceau NOMMÉ entre dans les
+  // `modulepreload` de `index.html`, et tout visiteur - salon ou pas - se
+  // mettait à télécharger deux cent quatre kilo-octets dès l'ouverture du menu.
+  // Le contrat « sans clés, supabase-js n'est jamais téléchargé » était rompu
+  // par la règle censée le tenir.
+  //
+  // L'import dynamique sépare le morceau tout seul, sans le nommer, et le
+  // laisse hors des préchargements. Il ne faut donc RIEN faire - ce qui est
+  // exactement le genre de conclusion qu'on réapprend tous les six mois.
+  const config = read('vite.config.ts');
+  const regles = [...config.matchAll(/name:\s*'([^']+)'[^}]*test:\s*([^\n]+)/g)];
+  for (const [, nom, test] of regles) {
+    assert.ok(
+      !/@supabase/.test(test),
+      `la règle « ${nom} » nomme @supabase : il repassera en modulepreload`,
+    );
+  }
+});
+
 test('le nettoyage du tchat s’appuie sur la borne du protocole', () => {
   // Deux constantes de longueur, l'une dans le nettoyage et l'autre dans le
   // protocole, finiraient par diverger - et l'émetteur enverrait des messages

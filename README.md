@@ -2013,6 +2013,106 @@ Pour l'activer :
    onglets - **Variables** (recommandé, la clé anon est publique) ou
    **Secrets** - et les injecte au moment du build.
 
+### Voyager à plusieurs (facultatif)
+
+On peut monter dans la **même rame** que quelqu'un d'autre : même gare, même
+arrêt, mêmes portes, même horloge, et l'on se voit marcher dans le wagon et sur
+le quai. Un salon se crée d'un clic, se rejoint par un code de six caractères ou
+par le lien qui va avec (`?room=ABC234`), et se referme quand tout le monde est
+parti. Huit voyageurs au plus.
+
+L'entrée tient en une ligne au pied du menu, au même poids typographique que le
+compteur de visiteurs juste au-dessus. C'est délibéré : ce jeu est une promenade
+contemplative, et pouvoir y emmener quelqu'un est un plaisir de plus, pas son
+argument.
+
+**Sans configuration, rien de tout cela n'existe** - pas grisé, pas accompagné
+d'un « bientôt disponible » : absent. Mêmes deux variables que le compteur, donc
+rien de neuf à définir si vous l'aviez déjà activé.
+
+#### Des décisions, pas des positions
+
+Le réflexe, pour partager un monde, serait de diffuser son état vingt fois par
+seconde et de le recopier chez les autres. C'est le mauvais choix ici, pour une
+raison propre à ce jeu : **la machine à états du train pilote le son**. Les
+annonces, les carillons, la 発車メロディ, la fermeture des portes sont toutes
+déclenchées par le franchissement d'un seuil de `runtime.phaseT`. Recopier ce
+compteur de force à chaque paquet rejouerait ou couperait des sons en
+permanence.
+
+On fait donc l'inverse. Chaque client déroule **sa propre simulation**, avec le
+même code et la même chronologie ; le réseau ne transporte que ce qui, en solo,
+sortirait de `Math.random()` - l'écart d'arrêt, la voie, l'instant de la
+mélodie, les retards de vantaux, les incidents. L'hôte tire, publie, et les
+autres lisent.
+
+Pourquoi publier plutôt que semer un générateur commun ? Parce qu'une graine
+partagée n'aligne les tirages que si tous les clients appellent le générateur
+dans le **même ordre**, et qu'ils divergent déjà : `rollPassThrough` ne tire pas
+du tout au-delà d'un certain palier de qualité vidéo. Un joueur en qualité basse
+aurait décalé toute la suite pour lui seul, silencieusement.
+
+#### Le rattrapage, et la règle qui le gouverne
+
+Un battement de l'hôte, deux fois par seconde, sert à corriger la dérive - pas à
+faire tourner le monde. Sous une seconde et demie d'écart, on module l'horloge
+locale de ±10 % jusqu'à recoller ; au-delà, on repose l'état d'un coup en
+réamorçant le jeu d'événements déjà joués (`seedFired`), ce qui est précisément
+ce qui rend une resynchronisation dure supportable.
+
+La règle qui gouverne tout : **on ne rembobine jamais sous un événement déjà
+tiré**. Quand on est en avance sur l'hôte, on ne recule pas - on ralentit, et on
+le laisse rattraper. Sans quoi le carillon d'ouverture se rejouerait, deux fois,
+dans une rame où l'on n'a rien d'autre à faire qu'écouter.
+
+#### Une seule rame par salon
+
+Le jeu a deux machines à états - le cycle de la boucle et l'attente de quai -
+qui ne s'accordent pas : dès que l'un descend et que l'autre reste à bord, leurs
+mondes divergent pour de bon. Plutôt que de répliquer la seconde, on empêche la
+divergence d'arriver : **tant qu'un membre a les pieds sur le quai, la rame
+attend**, portes ouvertes, comme un vrai お客様のご案内. Le blocage existait
+depuis longtemps dans le code sans producteur ; il en a un.
+
+Quatre-vingt-dix secondes au plus, sans quoi quelqu'un qui pose son casque
+immobilise tout le salon. Passé ce délai la rame part, et le retardataire se
+détache : il continue de jouer et de discuter, mais son monde n'est plus celui
+des autres. Un bouton du HUD le remet là où le salon en est.
+
+#### Ce que ça coûte, et pourquoi c'est bridé
+
+Les poses de chacun circulent à huit par seconde **avec une bande morte** : rien
+n'est émis si la position n'a pas bougé de deux centimètres, hors une trame de
+vie par seconde. Ce n'est pas une coquetterie mais le quota mensuel de Supabase
+- deux millions de messages, dont un salon de huit personnes pendant une
+demi-heure en consommerait cent quinze mille à plein régime. Un joueur assis qui
+regarde par la fenêtre coûte un message par seconde au lieu de huit.
+
+Le plafond de huit voyageurs est **consultatif**, et il faut le dire
+franchement : sans serveur, personne ne peut refuser une connexion. La règle est
+appliquée par chacun sur lui-même - si je ne suis pas dans les huit plus anciens,
+je m'en vais - ce qui converge parce que tout le monde voit le même roster.
+C'est le prix de « pas de backend », et pour un salon privé à code il est
+raisonnable.
+
+Il n'y a pour la même raison aucune protection contre un pair modifié : un salon
+se rejoint par un code qu'on donne à qui l'on veut, et c'est toute la
+protection. Les messages reçus sont malgré tout validés et nettoyés avant
+d'atteindre le rendu - non par méfiance, mais parce qu'un `NaN` qui passe la
+porte fait disparaître un avatar sans que rien n'apparaisse dans la console.
+
+#### Ce qui n'est pas partagé
+
+Les PNJ. Répliquer quarante personnes de quai et quatre-vingt-seize de wagon
+coûterait cent fois le budget réseau de tout le reste réuni, pour un bénéfice
+qui ne se voit qu'en se montrant un inconnu du doigt. Deux joueurs côte à côte
+voient le même train, la même gare et les mêmes annonces, mais pas les mêmes
+voisins.
+
+Le porte-monnaie non plus, ni la langue, ni la qualité vidéo, ni les
+sous-titres : un salon partage un train, pas une carte Suica.
+
+
 ## Référencement
 
 Le problème est celui de toutes les applications d'une seule page : ce que le

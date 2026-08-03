@@ -368,14 +368,32 @@ async function open(code: string, name: string): Promise<boolean> {
     void ch.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         clearTimeout(minuterie);
-        void ch.track(selfPresence(true));
+        // Republier la présence à CHAQUE abonnement, pas seulement au premier :
+        // supabase-js rétablit sa socket tout seul après une coupure, et
+        // rappelle ce gestionnaire - mais notre entrée de présence, elle, a été
+        // retirée pendant le silence. Sans ce `track`, on revient dans le salon
+        // en fantôme : on voit tout le monde, personne ne nous voit.
+        void ch.track(selfPresence(selfAttached));
+        const reprise = useRoom.getState().status === 'joined';
         useRoom.setState({ status: 'joined', error: null });
         applyRoomToUrl(code);
+        // Sur une REPRISE, on ne résout pas la promesse d'entrée (elle l'est
+        // depuis longtemps) : on prévient ceux qui écoutent, à charge pour eux
+        // de redemander l'état du monde.
+        if (reprise) for (const handler of handlers) handler('resubscribed', null);
         finir(true);
         return;
       }
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         clearTimeout(minuterie);
+        // Une erreur PENDANT la partie n'est pas une erreur d'entrée : le monde
+        // tourne déjà en local et continuera très bien sans le salon. On sort
+        // proprement plutôt que d'afficher un message d'échec à quelqu'un qui
+        // roule depuis vingt minutes.
+        if (regle) {
+          leaveRoom(null);
+          return;
+        }
         leaveRoom('network');
         finir(false);
       }

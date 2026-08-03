@@ -309,6 +309,15 @@ export function startWorldSync(): void {
   if (detacher) return;
   onIncident(publishIncident);
   detacher = onRoomMessage((event, payload) => {
+    // Retour après une coupure : notre horloge de phase a pris un retard
+    // quelconque pendant le silence, et le premier battement qui arrivera
+    // vaudra mieux que tout rattrapage en douceur. On redemande l'état et l'on
+    // force la resynchronisation dure.
+    if (event === 'resubscribed') {
+      seqEntrant = -1;
+      roomSend('event', { v: PROTOCOL_VERSION, from: useRoom.getState().selfId, k: 'hello' });
+      return;
+    }
     if (event === 'tick' && validTick(payload)) appliquerTick(payload as TickPayload);
     else if (event === 'stop' && validStop(payload)) appliquerStop(payload as StopPayload);
     else if (event === 'event' && validEvent(payload)) appliquerEvent(payload as EventPayload);
