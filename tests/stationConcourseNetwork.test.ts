@@ -27,7 +27,6 @@ register('./fixtures/ts-resolve.mjs', import.meta.url);
 const { liveAccessesFor, placementFor } = await import('../src/systems/stationPlacement.ts');
 const { psdGates } = await import('../src/three/station/psdLayout.ts');
 const {
-  CLEAR_DECK,
   concourseFloorAt,
   exitMouthFloorAt,
   joinFloorAt,
@@ -48,6 +47,9 @@ const {
 const { CONCOURSE_PROFILES } = await import('../src/data/stationConcourseProfiles.ts');
 const { wiredCount, wiredIndices } = await import('../src/data/stationConcourseWired.ts');
 const { EXIT_MOUTH_END } = await import('../src/data/stationInterior.ts');
+// La garde d'épaule vit avec la géométrie qui la mesure, et non avec la marche
+// qui l'applique : le compilateur de relevé s'en sert aussi.
+const { CLEAR_DECK } = await import('../src/data/stationGeometry.ts');
 const { STATIONS } = await import('../src/data/stations.ts');
 const { STATION_COUNT } = await import('../src/data/loop.ts');
 

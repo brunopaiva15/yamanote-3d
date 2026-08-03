@@ -225,7 +225,7 @@ test('ce que le compilateur a rogné est DIT, pas caché', () => {
   }
   assert.deepEqual(
     [...codes.keys()].sort(),
-    ['crampedGate', 'gateOffRoom', 'mouthOverShop', 'narrowMouth', 'shopDropped'],
+    ['crampedGate', 'gateOffRoom', 'gateOverlap', 'mouthOverShop', 'narrowMouth', 'shopDropped'],
   );
   // Aucune devanture ne mange le passage : c'est ce qui rendrait une gare
   // INJOUABLE, et le compilateur rogne les vitrines plutôt que de le permettre.
@@ -240,6 +240,14 @@ test('ce que le compilateur a rogné est DIT, pas caché', () => {
   // les parois sont entièrement commerciales. Une sortie passe avant un
   // magasin : elle est posée quand même, et le compilateur le dit.
   assert.equal(codes.get('mouthOverShop'), 3);
+  // ET UNE SUPERPOSITION DE LIGNES : Shin-Ōkubo cote un 改札口 de 4,20 m et un
+  // 出口専用 de 1,60 m dans un hall qui en fait 5,20. Les deux largeurs sont
+  // COMPOSÉES — un plan japonais n'a pas d'échelle, il dit de quel côté est
+  // chaque ligne et combien elle a de baies — et le compilateur range la
+  // seconde dans ce que la première laisse. Quand ce qui reste n'a plus la
+  // place d'une baie, il garde la cote du relevé et le dit ici plutôt que de
+  // rendre un contrôle qu'on ne franchit pas.
+  assert.equal(codes.get('gateOverlap'), 1);
 });
 
 // --- Phase 22 : les trois premières signatures ---------------------------

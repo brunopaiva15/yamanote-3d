@@ -318,6 +318,26 @@ export function nameplateColumns(columns: readonly number[]): number[] {
 // hauteur libre, un boyau. Quinze marches de 17,5 sur 31 tiennent dans la même
 // emprise et donnent 2,15 m - la cote réglementaire d'un passage de gare.
 
+/**
+ * Encombrement d'un VOYAGEUR, et il n'est pas le même aux deux étages.
+ *
+ * SUR LE QUAI, vingt-deux centimètres : c'est ce qu'il faut pour qu'une épaule
+ * ne traverse pas un poteau, et il y a deux cent vingt-quatre mètres de quai
+ * pour contourner de loin.
+ *
+ * DANS LE HALL, cinq. Les couloirs du konbini font trente centimètres au plus
+ * serré, et le joueur lui-même y passe en POINT, sans épaisseur
+ * (`systems/walkable`) : un voyageur plus large que le joueur ne pourrait plus
+ * entrer là où le joueur entre, et la boutique se refermerait sur elle-même.
+ *
+ * Ces deux cotes vivent ICI et non dans la marche qui les applique : le
+ * compilateur de relevé s'en sert pour ne pas poser un meuble qui laisserait
+ * un goulet, et `data` ne peut pas lire `systems` sans faire un cycle. Une
+ * cote de gabarit est de la géométrie, pas du comportement.
+ */
+export const CLEAR_DECK = 0.22;
+export const CLEAR_HALL = 0.05;
+
 /** Contremarche et giron : 29,4°, la pente d'une volée de quai JR. */
 export const STAIR_RISE = 0.175;
 export const STAIR_GOING = 0.31;

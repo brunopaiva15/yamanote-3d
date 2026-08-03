@@ -147,11 +147,26 @@ compilateur : **ce qui est relevé passe avant ce qui est composé.**
 
 | # | phase | ce qui manque |
 |---|---|---|
-| 26 | Tests | les dix-huit exigences du cahier des charges, une par une |
 | 28 | Bilan | mesures avant/après : coût du réseau, du rendu et de la marche |
 
 Et **Okachimachi**, hors phases : sa mezzanine demande une PREMIÈRE volée plus
 courte, ce qui est un ouvrage et non un réglage (voir §1).
+
+---
+
+## 4 bis. Ce que les trois commandes disent
+
+Exigence #18 du cahier des charges, relevée à la phase 26 :
+
+| commande | résultat |
+|---|---|
+| `npm test` | **538 tests, 0 échec** (trois exécutions consécutives) |
+| `npm run build` | `tsc -b && vite build` — aucune erreur |
+| `npm run lint` | `oxlint` — 0 erreur ; 21 avertissements, tous dans `.tmp/announcements/announcements-export.mjs`, un fichier généré antérieur au chantier |
+
+La matrice qui associe chacune des dix-huit exigences à ses tests vit en tête de
+`tests/stationRequirements.test.ts` — au plus près de ce qu'elle décrit, et non
+dans un document qui dériverait le jour où un test change de nom.
 
 ---
 

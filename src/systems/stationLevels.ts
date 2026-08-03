@@ -28,6 +28,8 @@
 // convention des cotes de trémie (data/stationGeometry).
 
 import {
+  CLEAR_DECK,
+  CLEAR_HALL,
   ASCENT_LANDING_Y,
   ASCENT_LEN,
   ascentFloorY,
@@ -214,20 +216,6 @@ export function joinFloorAt(
   return null;
 }
 
-/**
- * Encombrement d'un VOYAGEUR, et il n'est pas le même aux deux étages.
- *
- * SUR LE QUAI, vingt-deux centimètres : c'est ce qu'il faut pour qu'une épaule
- * ne traverse pas un poteau, et il y a deux cent vingt-quatre mètres de quai
- * pour contourner de loin.
- *
- * DANS LE HALL, cinq. Les couloirs du konbini font trente centimètres au plus
- * serré, et le joueur lui-même y passe en POINT, sans épaisseur
- * (`systems/walkable`) : un voyageur plus large que le joueur ne pourrait plus
- * entrer là où le joueur entre, et la boutique se refermerait sur elle-même.
- */
-export const CLEAR_DECK = 0.22;
-export const CLEAR_HALL = 0.05;
 
 /**
  * Le JOUR qu'on garde entre soi et une chose, quand on a la place.

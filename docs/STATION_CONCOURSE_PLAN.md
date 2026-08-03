@@ -289,7 +289,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **23** | **Signatures 2** ✅ | **volée réglable** ; Tokyo, Ueno et Harajuku branchées — Ikebukuro reste | R3 |
 | **24** | **Signatures 3** ✅ | Ikebukuro, Shinjuku, Shibuya : **vingt-neuf gares sur trente** | R3 D7 |
 | **25** | **Paliers de qualité** ✅ | les trois décors intérieurs lisent le palier ; ce qui BARRE ne dépend d'aucun | — |
-| 26 | Tests | les 18 exigences du cahier des charges | — |
+| **26** | **Tests** ✅ | matrice des 18 exigences ; `stationRequirements` : 16 contrôles, et six défauts trouvés | — |
 | **27** | **Captures de contrôle** ✅ | `scripts/station-views` : 5 vues × 30 gares ; elles ont trouvé les bouches manquantes | — |
 | 28 | Perf et bilan | mesures avant/après ; `STATION_CONCOURSE_SCOPE.md` **écrit** et tenu par un test | — |
 
@@ -1359,6 +1359,62 @@ Reste **Okachimachi**, différée pour une raison d'ouvrage : sa mezzanine est �
 −1,84 m, au-dessus du palier de mi-étage où la PREMIÈRE volée aboutit. Il ne
 s'agit plus d'allonger la seconde volée (phase 23) mais de raccourcir la
 première.
+
+### 4.25 La phase 26 : dix-huit exigences, et ce qu'elles ont trouvé
+
+Le cahier des charges liste dix-huit exigences. La plupart étaient déjà tenues —
+souvent mieux, et à l'endroit où elles ont un sens : `stationConcourseProfile`
+valide les trente profils, `stationConcourseReach` tient les nappes,
+`stationInside` parcourt les itinéraires au pas de huit centimètres. **Redoubler
+un contrôle robuste pour pouvoir annoncer un test de plus est du bruit, et le
+bruit finit toujours par cacher un vrai défaut.**
+
+La phase a donc commencé par une MATRICE — écrite en tête de
+`tests/stationRequirements` — qui dit pour chacune des dix-huit où elle est
+vérifiée. Seize contrôles ont été ajoutés, exactement ceux que la matrice a
+montrés manquants.
+
+**Et la matrice a trouvé six défauts.** C'est le vrai rendement de la phase :
+
+| # | ce qui n'allait pas |
+|---|---|
+| 17 | le mobilier disparaissait ENTIÈREMENT au palier 2 tout en continuant à barrer — l'interdit exact de l'exigence |
+| 15 | un panneau mural encastré barrait le hall d'une gare branchée et pas celui de sa voisine : `fixtureBlocks` répond maintenant aux deux chemins |
+| 8 | une devanture et une file de poteaux tombaient derrière une palissade de chantier |
+| 9 | un distributeur laissait 1,20 m entre lui et une galerie, dans un couloir de 5,70 |
+| 10 | les bornes d'un contrôle qu'on REGARDE, deux niveaux plus bas, barraient le hall d'au-dessus |
+| 8 | deux lignes de portillons se partageaient soixante centimètres de sol |
+
+Le dernier n'est pas corrigé, et c'est délibéré : les DEUX largeurs sont
+composées — un plan japonais n'a pas d'échelle, il dit de quel côté est chaque
+ligne et combien elle a de baies —, et celles de Shin-Ōkubo demandent 5,80 m
+dans un hall qui en fait 5,20. Le compilateur range la seconde ligne dans ce que
+la première laisse ; quand ce qui reste n'a plus la place d'une seule baie, il
+garde la cote du relevé et lève `gateOverlap`. **Une superposition dite vaut
+mieux qu'un contrôle qu'on ne franchit pas.**
+
+**Trois choix de méthode méritent d'être écrits, parce qu'ils ont chacun coûté
+une hésitation :**
+
+- **Les cotes ne se dupliquent pas dans un test.** `CLEAR_DECK` et `CLEAR_HALL`
+  vivaient dans la marche qui les applique ; le compilateur de relevé en a
+  besoin pour ne pas poser un meuble qui laisserait un goulet, et `data` ne peut
+  pas lire `systems` sans faire un cycle. Elles sont descendues dans
+  `data/stationGeometry` : une cote de gabarit est de la géométrie, pas du
+  comportement.
+- **Un « cheminement principal » a deux bornes.** La passerelle de Shinagawa
+  fait cent dix mètres et se termine trois mètres au-delà de sa dernière sortie ;
+  ce cul-de-sac porte une galerie et un guichet, et c'est très bien ainsi. Le
+  balayage de largeur ne court donc que du premier au dernier point que la pièce
+  DESSERT — pied de volée, passage, bouche, ouvrage de liaison.
+- **La pièce d'un solide vient de sa SOURCE, jamais de sa géométrie.** Shimbashi
+  empile trois niveaux à la même verticale : chercher « quelle pièce contient ce
+  rectangle » y attribuait les bornes du Shiodome au hall qui est deux niveaux
+  plus haut. Chaque solide sait d'où il vient ; on le lui demande.
+
+L'exigence #18 — `npm test`, `npm run build`, `npm run lint` — n'est pas un
+test : c'est la commande. Son résultat est reporté dans
+`docs/STATION_CONCOURSE_SCOPE.md`.
 
 ### Ordre et raison
 

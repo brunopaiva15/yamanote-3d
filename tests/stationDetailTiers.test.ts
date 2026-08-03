@@ -26,6 +26,7 @@ const { psdGates } = await import('../src/three/station/psdLayout.ts');
 const { walkerBlocked } = await import('../src/systems/stationLevels.ts');
 const { STATIONS } = await import('../src/data/stations.ts');
 const { STATION_COUNT } = await import('../src/data/loop.ts');
+const { fixtureBlocks, interiorSolids } = await import('../src/data/stationInterior.ts');
 
 const GATES = psdGates();
 const NAME = (i: number) => `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
@@ -78,10 +79,16 @@ test('UN POTEAU N’EST PAS DE LA FUMÉE', () => {
   assert.ok(posts > 0, 'aucun poteau relevé : le test ne prouve plus rien');
 });
 
-test('les trois décors intérieurs LISENT le palier', () => {
+test('les décors intérieurs LISENT le palier', () => {
   // Ils ne le lisaient pas : `Limits`, `Frontages` et `Landmarks` se
   // dessinaient en entier au palier le plus bas, ce qui était précisément le
   // manque que la phase 25 devait combler.
+  //
+  // Le contrôle est structurel et non comportemental, faute de pouvoir monter
+  // une scène three.js dans `node --test` : ce qu'il tient, c'est que chacun
+  // reçoive le palier et s'en serve. Ce que le palier a le DROIT de retirer,
+  // lui, se vérifie sur les données — c'est le test suivant, et c'est lui qui
+  // compte.
   const dir = new URL('../src/three/station/interiors/', import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith('.tsx'));
   assert.deepEqual(files.sort(), ['Frontages.tsx', 'Landmarks.tsx', 'Limits.tsx']);
@@ -89,5 +96,51 @@ test('les trois décors intérieurs LISENT le palier', () => {
     const src = readFileSync(new URL(f, dir), 'utf8');
     assert.ok(src.includes('detail: number;'), `${f} ne prend pas de palier`);
     assert.ok(src.includes('detail <='), `${f} ne s'en sert pas`);
+  }
+  // ET LE MOBILIER AUSSI, depuis la phase 26 : il disparaissait ENTIÈREMENT au
+  // palier 2 — `{detail <= 1 && <Fixtures …>}` — alors que ses emprises
+  // continuaient de barrer. Il garde maintenant son volume à tous les paliers
+  // et n'abandonne que ce qui se regarde.
+  const fixtures = readFileSync(
+    new URL('../src/three/station/Fixtures.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.ok(fixtures.includes('detail: number;'), 'Fixtures ne prend pas de palier');
+  assert.ok(fixtures.includes('interiorSolids'), 'Fixtures ne lit pas les emprises du réseau');
+  const concourse = readFileSync(
+    new URL('../src/three/station/Concourse.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.ok(
+    !/\{detail <= \d && <Fixtures/.test(concourse),
+    'le mobilier redevient facultatif au palier bas',
+  );
+});
+
+test('CE QUI BARRE EST LE MÊME À TOUS LES PALIERS', () => {
+  // La preuve qui compte, et elle est sur les DONNÉES : la géométrie qui barre
+  // est produite par des fonctions qui ne prennent aucun palier, et deux appels
+  // identiques rendent la même chose. Il n'existe donc aucun chemin par lequel
+  // un palier de qualité pourrait retirer un obstacle — ni en ajouter un.
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const a = placementFor(i, GATES).network;
+    const b = placementFor(i, psdGates()).network;
+    assert.equal(
+      JSON.stringify(a.obstacles),
+      JSON.stringify(b.obstacles),
+      `${NAME(i)} : les obstacles varient`,
+    );
+    // Et chaque emprise de mobilier est bien dans les obstacles : c'est elle
+    // que `Fixtures` dessine au palier bas, la même et pas une autre.
+    for (const f of a.fixtures) {
+      if (!fixtureBlocks(f)) continue;
+      for (const r of interiorSolids(f)) {
+        assert.ok(
+          a.obstacles.some((o) => Math.abs(o.x0 - r.x0) < 1e-6 && Math.abs(o.z0 - r.z0) < 1e-6
+            && Math.abs(o.x1 - r.x1) < 1e-6 && Math.abs(o.z1 - r.z1) < 1e-6),
+          `${NAME(i)} : une emprise de ${f.kind} ne barre rien`,
+        );
+      }
+    }
   }
 });

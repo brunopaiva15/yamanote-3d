@@ -49,6 +49,7 @@ import { layoutFor } from '../data/stationLayouts';
 import {
   ASCENT_LEN,
   ascentFloorY,
+  CLEAR_DECK,
   PSD_X,
   STAIR_FULL_LEN,
   STAIR_FULL_STEPS,
@@ -80,7 +81,6 @@ import {
   type RouteStop,
 } from './concourseRoute';
 import {
-  CLEAR_DECK,
   CLEAR_ROOM,
   concourseFloorAt,
   exitMouthFloorAt,

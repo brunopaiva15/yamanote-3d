@@ -52,12 +52,14 @@ import {
   GALLERY_DEPTH,
   SHOP_DEPTH,
   interiorFor,
+  fixtureBlocks,
   interiorSolids,
   type Fixture,
   type InteriorRect,
   type StationInterior,
 } from './stationInterior.ts';
 import {
+  MIN_BRANCH_WIDTH,
   MIN_MAIN_WIDTH,
   isWalkable,
   type CommerceCategory,
@@ -69,6 +71,7 @@ import {
   type FareSide,
   type StationConcourseProfile,
 } from './stationConcourseTypes.ts';
+import { CLEAR_HALL } from './stationGeometry.ts';
 import { wiredProfile } from './stationConcourseWired.ts';
 import { layoutFor } from './stationLayouts.ts';
 
@@ -510,6 +513,12 @@ function clearOf(r: InteriorRect, keep: InteriorRect, along: 'x' | 'z'): Interio
 /** Jeu maximal qu'une ligne de portillons comble jusqu'à sa pièce (m). */
 const GATE_BRIDGE = 1;
 
+/**
+ * Longueur au-dessous de laquelle une ligne n'a plus une seule baie : une
+ * baie étroite et ses deux joues de rive.
+ */
+const GATE_MIN_RUN = PASSAGE_W + 4 * CABINET_HALF_X;
+
 /** Deux emprises se touchent-elles, à `slack` près ? */
 function touchesRect(a: InteriorRect, b: InteriorRect, slack: number): boolean {
   return a.x0 <= b.x1 + slack && a.x1 >= b.x0 - slack
@@ -731,36 +740,6 @@ export function compileProfile(
   }));
 
   const obstacles: InteriorRect[] = [];
-  // LES REPÈRES DU LIEU, et les POTEAUX qui en sont.
-  //
-  // Une file de poteaux se dessinait dans le rendu, et elle ne barrait rien :
-  // le joueur traversait des fûts de soixante centimètres comme de la fumée.
-  // C'est la faute que ce chantier s'interdit depuis la phase 1 — une seule
-  // implantation, plusieurs lecteurs. Les poteaux sont donc POSÉS ICI, avec
-  // leur emprise, et le rendu les lit au lieu de les recalculer.
-  const landmarks: ConcourseLandmark[] = [];
-  for (const l of p.landmarks) {
-    const room = byId.get(l.nodeId);
-    if (!room) continue;
-    const rect = l.rect ? shifted(l.rect, dz) : null;
-    const posts: InteriorRect[] = [];
-    if (l.kind === 'column') {
-      const r = rect ?? room.rect;
-      const long: 'x' | 'z' = r.x1 - r.x0 >= r.z1 - r.z0 ? 'x' : 'z';
-      const len = long === 'x' ? r.x1 - r.x0 : r.z1 - r.z0;
-      const n = Math.max(1, Math.floor(len / COLUMN_PITCH));
-      const across = long === 'x' ? (r.z0 + r.z1) / 2 : (r.x0 + r.x1) / 2;
-      for (let k = 0; k < n; k++) {
-        const at = (long === 'x' ? r.x0 : r.z0) + ((k + 0.5) * len) / n;
-        posts.push(long === 'x'
-          ? { x0: at - COLUMN_HALF, x1: at + COLUMN_HALF, z0: across - COLUMN_HALF, z1: across + COLUMN_HALF }
-          : { x0: across - COLUMN_HALF, x1: across + COLUMN_HALF, z0: at - COLUMN_HALF, z1: at + COLUMN_HALF });
-      }
-      obstacles.push(...posts);
-    }
-    landmarks.push({ id: l.id, roomId: l.nodeId, kind: l.kind, rect, note: l.note, posts });
-  }
-
   // LE PIED DES VOLÉES : ce qu'on ne meuble pas, et ce qu'on ne vitre pas.
   const landings: InteriorRect[] = [];
   for (const a of p.platformAccesses) {
@@ -798,7 +777,46 @@ export function compileProfile(
     return [{ id: part.id, roomId: part.nodeId, rect: cut, kind: part.kind, noticeEn: part.noticeEn }];
   });
   for (const h of hoardings) obstacles.push(h.rect);
+  // LES REPÈRES DU LIEU, et les POTEAUX qui en sont.
+  //
+  // Une file de poteaux se dessinait dans le rendu, et elle ne barrait rien :
+  // le joueur traversait des fûts de soixante centimètres comme de la fumée.
+  // C'est la faute que ce chantier s'interdit depuis la phase 1 — une seule
+  // implantation, plusieurs lecteurs. Les poteaux sont donc POSÉS ICI, avec
+  // leur emprise, et le rendu les lit au lieu de les recalculer.
+  const landmarks: ConcourseLandmark[] = [];
+  for (const l of p.landmarks) {
+    const room = byId.get(l.nodeId);
+    if (!room) continue;
+    const rect = l.rect ? shifted(l.rect, dz) : null;
+    const posts: InteriorRect[] = [];
+    if (l.kind === 'column') {
+      const r = rect ?? room.rect;
+      const long: 'x' | 'z' = r.x1 - r.x0 >= r.z1 - r.z0 ? 'x' : 'z';
+      const len = long === 'x' ? r.x1 - r.x0 : r.z1 - r.z0;
+      const n = Math.max(1, Math.floor(len / COLUMN_PITCH));
+      const across = long === 'x' ? (r.z0 + r.z1) / 2 : (r.x0 + r.x1) / 2;
+      for (let k = 0; k < n; k++) {
+        const at = (long === 'x' ? r.x0 : r.z0) + ((k + 0.5) * len) / n;
+        const post = long === 'x'
+          ? { x0: at - COLUMN_HALF, x1: at + COLUMN_HALF, z0: across - COLUMN_HALF, z1: across + COLUMN_HALF }
+          : { x0: across - COLUMN_HALF, x1: across + COLUMN_HALF, z0: at - COLUMN_HALF, z1: at + COLUMN_HALF };
+        // UN FÛT DERRIÈRE UNE PALISSADE N'EST PAS UN REPÈRE DU HALL. La file
+        // traverse la pièce entière ; le chantier de Tamachi en ferme une part,
+        // et le poteau qui y tombe est de l'autre côté de la cloison — on ne le
+        // voit pas, on ne s'y cogne pas. Le relevé cote la palissade, l'entraxe
+        // des fûts est composé : c'est donc le fût qui cède.
+        if (hoardings.some((h) => h.roomId === l.nodeId && overlapsRect(h.rect, post))) continue;
+        posts.push(post);
+      }
+      obstacles.push(...posts);
+    }
+    landmarks.push({ id: l.id, roomId: l.nodeId, kind: l.kind, rect, note: l.note, posts });
+  }
 
+
+  /** Ce que les lignes déjà posées occupent : deux 改札 ne se superposent pas. */
+  const laid: InteriorRect[] = [];
   const gates: ConcourseGateLine[] = p.gateGroups.map((g) => {
     // LA LIGNE JOINT SES DEUX PIÈCES, sans un centimètre de vide. Le relevé
     // cote l'emprise du contrôle et les pièces de part et d'autre séparément :
@@ -806,9 +824,53 @@ export function compileProfile(
     // trente centimètres qui n'appartenaient à rien et sur lesquels la marche
     // butait comme sur un mur. Le franchissement, lui, est continu par
     // définition — on ne saute pas un fossé au milieu d'un 改札.
-    const rect = spanRooms(shifted(g.rect, dz), g.cross, byId.get(g.from), byId.get(g.to));
+    const spanned = spanRooms(shifted(g.rect, dz), g.cross, byId.get(g.from), byId.get(g.to));
     // Les baies s'alignent sur l'axe PERPENDICULAIRE à celui qu'on franchit.
     const along: 'x' | 'z' = g.cross === 'z' ? 'x' : 'z';
+    // ET DEUX LIGNES NE PARTAGENT PAS LE MÊME SOL. Un plan de gare japonais n'a
+    // pas d'échelle : ce que le relevé dit d'un 出口専用, c'est de quel côté il
+    // est et combien il a de baies — sa LARGEUR, elle, est composée. À
+    // Shin-Ōkubo et à Yūrakuchō, deux lignes voisines se recouvraient de
+    // soixante centimètres, et leurs armoires s'interpénétraient. La première
+    // posée garde sa cote ; celles qui suivent se rangent dans ce qui reste.
+    const taken = laid
+      .filter((o) => o.x0 < spanned.x1 - 1e-6 && o.x1 > spanned.x0 + 1e-6
+        && o.z0 < spanned.z1 - 1e-6 && o.z1 > spanned.z0 + 1e-6)
+      .map((o) => (along === 'x' ? [o.x0, o.x1] : [o.z0, o.z1]) as [number, number]);
+    // On garde la plus longue portion LIBRE, quelle qu'elle soit — et non « la
+    // ligne entière si tout est pris », qui est le repli d'une palissade
+    // (`longestFreeRun`). Une ligne qui n'a plus la place d'une seule baie
+    // rétrécit et le dit (`crampedGate`) ; deux lignes qui se superposent, elles,
+    // ne se voient pas et se traversent.
+    let runs: [number, number][] = [[
+      along === 'x' ? spanned.x0 : spanned.z0,
+      along === 'x' ? spanned.x1 : spanned.z1,
+    ]];
+    for (const [b0, b1] of taken) {
+      runs = runs.flatMap(([s0, s1]) => {
+        if (b1 <= s0 || b0 >= s1) return [[s0, s1] as [number, number]];
+        const keep: [number, number][] = [];
+        if (b0 > s0) keep.push([s0, Math.min(b0, s1)]);
+        if (b1 < s1) keep.push([Math.max(b1, s0), s1]);
+        return keep;
+      });
+    }
+    const whole: [number, number] = [
+      along === 'x' ? spanned.x0 : spanned.z0,
+      along === 'x' ? spanned.x1 : spanned.z1,
+    ];
+    const widest = runs.sort((a, b) => b[1] - b[0] - (a[1] - a[0]))[0] ?? whole;
+    // SAUF S'IL NE RESTE PAS DE QUOI FRANCHIR. Un contrôle rogné au point de
+    // n'avoir plus une seule baie ne serait plus un contrôle : on garde alors la
+    // cote du relevé telle quelle, et `networkIssues` DIT la superposition
+    // plutôt que de la maquiller. C'est le cas de Shin-Ōkubo, dont les deux
+    // lignes demandent 5,80 m dans un hall qui en fait 5,20.
+    const kept = widest[1] - widest[0] >= GATE_MIN_RUN ? widest : whole;
+    const [free0, freeLen] = [kept[0], kept[1] - kept[0]];
+    const rect: InteriorRect = along === 'x'
+      ? { ...spanned, x0: free0, x1: free0 + freeLen }
+      : { ...spanned, z0: free0, z1: free0 + freeLen };
+    laid.push(rect);
     const from = along === 'x' ? rect.x0 : rect.z0;
     const len = along === 'x' ? rect.x1 - rect.x0 : rect.z1 - rect.z0;
     // UNE PALISSADE FERME LES BAIES QU'ELLE MASQUE. Le chantier de Shinagawa
@@ -841,7 +903,15 @@ export function compileProfile(
       along === 'x'
         ? { x0: a, x1: b, z0: rect.z0, z1: rect.z1 }
         : { x0: rect.x0, x1: rect.x1, z0: a, z1: b });
-    obstacles.push(...cabinets);
+    // ON NE SE COGNE PAS À CE QUI EST DE L'AUTRE CÔTÉ D'UN SOL. Les bornes
+    // d'une ligne qu'on REGARDE sans la prendre — le contrôle du Shiodome, deux
+    // niveaux sous le hall de Shimbashi — barraient le hall d'au-dessus : la
+    // marche ne connaît qu'un étage de correspondance, et une emprise posée
+    // dans une pièce où l'on ne met pas les pieds y devenait un mur invisible.
+    // Une ligne dont les deux pièces sont seulement montrées ne barre donc
+    // rien ; celle qu'on longe sans la franchir, elle, en est bien un.
+    const seen = byId.get(g.from)?.walkable || byId.get(g.to)?.walkable;
+    if (seen) obstacles.push(...cabinets);
     return {
       id: g.id,
       nameJp: g.nameJp,
@@ -906,9 +976,21 @@ export function compileProfile(
       if (!cut) continue;
       clear = cut;
     }
+    // ET RIEN DERRIÈRE UNE PALISSADE. Le chantier d'août 2026 ferme le sud du
+    // B1F de Shinjuku, et une devanture du relevé y tombe : une vitrine qu'on
+    // ne peut ni voir ni longer n'est pas une vitrine, c'est un mur peint. La
+    // palissade est relevée, la profondeur de la devanture est composée — c'est
+    // donc la devanture qui se retire, et `shopDropped` le dit si rien ne reste.
+    for (const h of hoardings) {
+      if (h.roomId !== zone.nodeId || !overlapsRect(h.rect, clear)) continue;
+      const cut = clearOf(clear, h.rect, along);
+      if (!cut) { clear = { ...clear, x1: clear.x0, z1: clear.z0 }; break; }
+      clear = cut;
+    }
     const kept = across === 'x' ? clear.x1 - clear.x0 : clear.z1 - clear.z0;
+    const run = along === 'x' ? clear.x1 - clear.x0 : clear.z1 - clear.z0;
     // Moins d'un mètre vingt : ce n'est plus une devanture, c'est une plinthe.
-    if (kept < SHOP_MIN_DEPTH) continue;
+    if (kept < SHOP_MIN_DEPTH || run < SHOP_MIN_LEN) continue;
     frontages.push({
       id: zone.id,
       roomId: zone.nodeId,
@@ -1182,6 +1264,8 @@ export function legacyNetwork(index: number, it: StationInterior): ConcourseNetw
  * Le faire entrer de force le ferait ressortir par la paroi — ce que la sonde a
  * vu à Nishi-Nippori, une devanture dans une vitrine.
  */
+interface Busy { rect: InteriorRect | null; floorY: number }
+
 function fittedFixtures(net: ConcourseNetwork, it: StationInterior): Fixture[] {
   const rooms = net.rooms.filter((r) => r.walkable);
   // Devant un contrôle, on ne pose RIEN. La ligne a besoin de ses deux mètres
@@ -1204,11 +1288,47 @@ function fittedFixtures(net: ConcourseNetwork, it: StationInterior): Fixture[] {
         : m.side === 'z0' ? { x0: a0, x1: a1, z0: r.z0, z1: r.z0 + MOUTH_CLEAR }
           : { x0: a0, x1: a1, z0: r.z1 - MOUTH_CLEAR, z1: r.z1 };
   };
-  const busy: InteriorRect[] = [
-    ...net.obstacles,
-    ...net.gates.map(gateClear),
-    ...net.mouths.map(mouthClear).filter((r): r is InteriorRect => r !== null),
-    ...net.transfers.map((t) => t.rect).filter((r): r is InteriorRect => r !== null),
+  /**
+   * UNE COTE APPARTIENT À SON ÉTAGE. Le dégagement d'une ligne de portillons
+   * barre toute la largeur de SA pièce ; comparé à plat, il barrait aussi celle
+   * de la pièce posée quatre mètres plus bas. Shimbashi a trois niveaux qui se
+   * superposent, et la boutique du B1F disparaissait à cause du contrôle du
+   * Shiodome, qui est au B2F.
+   */
+  const floorOfRoom = (id: string): number =>
+    net.rooms.find((r) => r.id === id)?.floorY ?? NaN;
+  /**
+   * L'étage de chaque emprise de `net.obstacles`, retrouvé par sa SOURCE.
+   *
+   * La liste des obstacles est plate — c'est ce qui la rend lisible par la
+   * marche — mais chacun vient d'un objet qui sait à quelle pièce il
+   * appartient. On refait donc le chemin inverse, une fois, plutôt que de
+   * deviner par géométrie : les bornes d'une ligne de portillons ne sont dans
+   * AUCUNE de ses deux pièces (elles sont entre les deux), et une recherche par
+   * contenance les aurait laissées barrer tous les étages.
+   */
+  const key = (r: InteriorRect) => `${r.x0}|${r.x1}|${r.z0}|${r.z1}`;
+  const owner = new Map<string, number>();
+  for (const g of net.gates) {
+    for (const c of g.cabinets) owner.set(key(c), floorOfRoom(g.from));
+  }
+  for (const f of net.frontages) owner.set(key(f.rect), floorOfRoom(f.roomId));
+  for (const h of net.hoardings) owner.set(key(h.rect), floorOfRoom(h.roomId));
+  for (const l of net.landmarks) {
+    for (const q of l.posts) owner.set(key(q), floorOfRoom(l.roomId));
+  }
+  // Faute de source connue, l'emprise barre tous les étages : mieux vaut un
+  // meuble de moins qu'un meuble dans un mur.
+  const floorUnder = (r: InteriorRect): number => owner.get(key(r)) ?? NaN;
+  const busy: Busy[] = [
+    ...net.obstacles.map((rect) => ({ rect, floorY: floorUnder(rect) })),
+    ...net.gates.map((g) => ({ rect: gateClear(g), floorY: floorOfRoom(g.from) })),
+    ...net.mouths
+      .map((m) => ({ rect: mouthClear(m), floorY: floorOfRoom(m.roomId) }))
+      .filter((b): b is Busy => b.rect !== null),
+    ...net.transfers
+      .map((t) => ({ rect: t.rect, floorY: floorOfRoom(t.fromRoomId) }))
+      .filter((b): b is Busy => b.rect !== null),
   ];
   const overlaps = (a: InteriorRect, b: InteriorRect) =>
     a.x0 < b.x1 - 1e-6 && a.x1 > b.x0 + 1e-6 && a.z0 < b.z1 - 1e-6 && a.z1 > b.z0 + 1e-6;
@@ -1259,11 +1379,38 @@ function fittedFixtures(net: ConcourseNetwork, it: StationInterior): Fixture[] {
     let placed: InteriorRect | null = null;
     let facing: Fixture['facing'] = f.facing;
     for (const room of candidates) {
+      /** Cette emprise gêne-t-elle CE sol-là ? Une cote sans étage gêne partout. */
+      const here = (b: Busy): b is Busy & { rect: InteriorRect } =>
+        b.rect !== null && (Number.isNaN(b.floorY) || Math.abs(b.floorY - room.floorY) < 1e-6);
       const dz0 = Math.min(Math.max(f.rect.z0, room.rect.z0), room.rect.z1 - len) - f.rect.z0;
+      /**
+       * Ce qui reste À TRAVERS la pièce une fois ce meuble posé.
+       *
+       * Ne pas se chevaucher ne suffit pas : un distributeur de 78 cm posé
+       * contre la paroi d'en face d'une galerie de 3,60 m laisse 1,32 m dans un
+       * couloir de 5,70, soit 1,20 m une fois la garde de marche comptée. Ce
+       * n'est plus un couloir, c'est un goulet — et c'est le constat #9 du
+       * cahier des charges. On mesure donc la trouée qui reste, à l'endroit
+       * précis où le meuble se pose.
+       */
+      const aisle = (r: InteriorRect): number => {
+        const cuts = [...busy.filter(here).map((b) => b.rect), ...out.map((o) => o.rect), r]
+          .filter((b) => b.z0 < r.z1 - 1e-6 && b.z1 > r.z0 + 1e-6)
+          .map((b) => [b.x0, b.x1] as [number, number])
+          .sort((a, b) => a[0] - b[0]);
+        let best = 0;
+        let at = room.rect.x0;
+        for (const [b0, b1] of cuts) {
+          if (b0 > at) best = Math.max(best, b0 - at);
+          at = Math.max(at, b1);
+        }
+        return Math.max(best, room.rect.x1 - at);
+      };
       const fits = (r: InteriorRect) =>
         r.z0 >= room.rect.z0 - 1e-6 && r.z1 <= room.rect.z1 + 1e-6
-        && !busy.some((b) => overlaps(r, b))
-        && !out.some((o) => overlaps(r, o.rect));
+        && !busy.some((b) => here(b) && overlaps(r, b.rect))
+        && !out.some((o) => overlaps(r, o.rect))
+        && aisle(r) >= MIN_BRANCH_WIDTH + 2 * CLEAR_HALL - 1e-6;
       // UN MEUBLE DE GARE EST CONTRE UN MUR. Le hall générique range le sien
       // contre ses deux parois, à 2,13 m et 7,63 m de l'axe de la voie ; un
       // pont-concourse relevé fait vingt-huit mètres de large, et le même meuble
@@ -1323,7 +1470,14 @@ export function networkFor(index: number, accessZ: number, accessX?: number): Co
   if (!wired) return legacyNetwork(i, interiorFor(i, accessZ));
   const net = compileProfile(wired, accessZ, accessX);
   const fixtures = fittedFixtures(net, interiorFor(i, accessZ));
-  return { ...net, fixtures, obstacles: [...net.obstacles, ...fixtures.flatMap(interiorSolids)] };
+  // `fixtureBlocks` et non « tout le mobilier » : un panneau encastré dans la
+  // paroi ne se contourne pas, et le hall générique l'écarte déjà de ses
+  // obstacles. Les deux chemins répondent la même chose à la même question.
+  return {
+    ...net,
+    fixtures,
+    obstacles: [...net.obstacles, ...fixtures.filter(fixtureBlocks).flatMap(interiorSolids)],
+  };
 }
 
 // --- Ce que le compilateur a dû rogner -----------------------------------
@@ -1347,6 +1501,26 @@ export function networkIssues(
   net: ConcourseNetwork,
 ): NetworkIssue[] {
   const out: NetworkIssue[] = [];
+  // DEUX LIGNES QUI SE PARTAGENT DU SOL. Le compilateur range la seconde dans ce
+  // que la première laisse ; quand ce qui reste n'a plus la place d'une seule
+  // baie, il garde la cote du relevé plutôt que de rendre un contrôle qu'on ne
+  // franchit pas — et il le DIT ici. Le cas vient d'une largeur composée : un
+  // plan japonais n'a pas d'échelle, et les deux lignes de Shin-Ōkubo demandent
+  // 5,80 m dans un hall qui en fait 5,20.
+  for (let a = 0; a < net.gates.length; a++) {
+    for (let b = a + 1; b < net.gates.length; b++) {
+      const u = net.gates[a].rect;
+      const v = net.gates[b].rect;
+      if (!(u.x0 < v.x1 - 1e-6 && u.x1 > v.x0 + 1e-6
+        && u.z0 < v.z1 - 1e-6 && u.z1 > v.z0 + 1e-6)) continue;
+      out.push({
+        code: 'gateOverlap',
+        where: `${net.gates[a].id}+${net.gates[b].id}`,
+        message: 'deux lignes de portillons se partagent du sol : leurs largeurs '
+          + 'relevées ne tiennent pas dans la pièce',
+      });
+    }
+  }
   for (const g of p.gateGroups) {
     const laid = net.gates.find((x) => x.id === g.id);
     if (laid && laid.passages.length < g.passages) {

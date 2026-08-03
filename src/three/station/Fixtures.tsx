@@ -21,6 +21,7 @@ import * as THREE from 'three';
 
 import type { Fixture, FixtureKind, StationInterior } from '../../data/stationInterior';
 import type { GalleryBrand } from '../../data/stationInterior';
+import { interiorSolids } from '../../data/stationInterior';
 import {
   makeAreaMapTexture,
   makeGallerySignTexture,
@@ -141,11 +142,77 @@ function floorOf(net: ConcourseNetwork, it: StationInterior, x: number, z: numbe
   return room?.floorY ?? it.floorY;
 }
 
+/**
+ * SILHOUETTE D'UN MEUBLE, quand le palier n'a plus les moyens de le détailler.
+ *
+ * Un obstacle du réseau est une COLLISION, et la marche ne connaît pas le
+ * palier de qualité : un meuble qu'on efface sans effacer son emprise devient
+ * un mur invisible, et c'est le pire défaut qu'une gare puisse avoir (exigence
+ * #17 du cahier des charges). Le palier bas ne retire donc pas le mobilier — il
+ * en garde le VOLUME, et abandonne ce qui se regarde : les façades, les écrans,
+ * les vitrines, les enseignes.
+ *
+ * Les hauteurs ne sont pas inventées : chacune est celle du composant qui
+ * dessine ce meuble au palier plein, relue une par une.
+ */
+const SHELL_H: Record<FixtureKind, number> = {
+  ticket: 1.92,
+  fareAdjust: 1.92,
+  lockers: 1.85,
+  konbini: 0,
+  vending: 1.83,
+  vendingFood: 1.83,
+  stamp: 0.95,
+  office: 0,
+  bench: 0.44,
+  bin: 1.02,
+  map: 1.9,
+  gallery: 0,
+  extinguisher: 0.7,
+  aed: 0.7,
+  umbrella: 1.0,
+  plant: 0.9,
+  notice: 1.4,
+};
+
+/**
+ * Le mobilier réduit à ce qu'il OCCUPE.
+ *
+ * Les emprises viennent de `interiorSolids`, la même fonction qui alimente les
+ * obstacles du réseau : un meuble dessiné ici barre exactement là où il se
+ * dessine, palier ou pas.
+ */
+function Shells({ net, m, floor }: {
+  net: ConcourseNetwork;
+  m: Mats;
+  floor: (x: number, z: number) => number;
+}) {
+  return (
+    <group name="gare/hall/mobilier">
+      {net.fixtures.flatMap((f, i) =>
+        interiorSolids(f).map((r, k) => {
+          // Zéro veut dire « jusqu'au plafond » : un konbini, une galerie et un
+          // guichet montent à la sous-face, et c'est ce qui les distingue d'un
+          // meuble posé.
+          const h = SHELL_H[f.kind] || 2.6;
+          const cx = (r.x0 + r.x1) / 2;
+          const cz = (r.z0 + r.z1) / 2;
+          return (
+            <mesh key={`sh${i}.${k}`} position={[cx, floor(cx, cz) + h / 2, cz]} material={m.hall}>
+              <boxGeometry args={[r.x1 - r.x0, h, r.z1 - r.z0]} />
+            </mesh>
+          );
+        }))}
+    </group>
+  );
+}
+
 export function Fixtures({
   it,
   net,
   m,
   station,
+  detail,
 }: {
   it: StationInterior;
   /**
@@ -161,8 +228,18 @@ export function Fixtures({
   net: ConcourseNetwork;
   m: Mats;
   station: number;
+  /**
+   * Palier de qualité : 0 = tout, 3 = le strict nécessaire.
+   *
+   * LE VOLUME RESTE À TOUS LES PALIERS. Voir `Shells` : ce qui s'allège est ce
+   * qui se regarde, jamais ce qui barre.
+   */
+  detail: number;
 }) {
   const kit = useFixtureKit(station);
+  if (detail >= 2) {
+    return <Shells net={net} m={m} floor={(x, z) => floorOf(net, it, x, z)} />;
+  }
   // La trame porteuse appartient au hall générique : un relevé qui donne ses
   // propres volumes ne la reçoit pas, faute de savoir où sont ses poteaux.
   const pilasters = net.source === 'profile' ? [] : it.pilasters;

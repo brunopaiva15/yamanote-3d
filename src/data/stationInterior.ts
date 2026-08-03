@@ -455,7 +455,20 @@ const SPECS: readonly Spec[] = [
  * vingt-cinq centimètres de saillie, on passe devant sans le toucher, et en
  * faire un obstacle rétrécirait le hall pour rien.
  */
-const FLUSH = new Set<FixtureKind>(['map', 'extinguisher', 'aed', 'notice']);
+export const FLUSH = new Set<FixtureKind>(['map', 'extinguisher', 'aed', 'notice']);
+
+/**
+ * Ce meuble oppose-t-il quelque chose à la marche ?
+ *
+ * Publié parce que les DEUX chemins doivent répondre pareil. Le hall générique
+ * écartait ses panneaux encastrés de ses obstacles et le compilateur de relevé
+ * ne le faisait pas : un plan de quartier de seize centimètres de saillie
+ * barrait le hall d'une gare branchée et pas celui de sa voisine. Une même
+ * question, une seule réponse.
+ */
+export function fixtureBlocks(f: Fixture): boolean {
+  return !FLUSH.has(f.kind);
+}
 
 /**
  * Un point du repère de la BOUTIQUE, rabattu dans celui du quai.
@@ -968,7 +981,7 @@ export function interiorFor(index: number, accessZ: number): StationInterior {
     // ses meubles qui prennent le relais - voir `interiorSolids`.
     obstacles: [
       ...gate.cabinets,
-      ...fixtures.filter((f) => !FLUSH.has(f.kind)).flatMap(interiorSolids),
+      ...fixtures.filter(fixtureBlocks).flatMap(interiorSolids),
       ...pilasters,
     ],
   };

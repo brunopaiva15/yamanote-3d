@@ -33,7 +33,7 @@ import {
   type Fixture,
   type InteriorRect,
 } from '../data/stationInterior';
-import { ASCENT_LEN, descentLenTo } from '../data/stationGeometry';
+import { ASCENT_LEN, CLEAR_HALL, descentLenTo } from '../data/stationGeometry';
 import { runtime } from './runtime';
 import {
   bayAt,
@@ -379,9 +379,26 @@ function hallAxis(
       // celui de Shiodome à Shimbashi, qu'on regarde sans le prendre — est un
       // MUR : ses bornes comptent comme n'importe quel obstacle, sans quoi le
       // couloir se calait entre deux d'entre elles et s'y cognait.
-      const onLine = p.network.gates.some((g) => g.walkable
-        && o.x0 < g.rect.x1 - 1e-6 && o.x1 > g.rect.x0 + 1e-6
-        && o.z0 < g.rect.z1 - 1e-6 && o.z1 > g.rect.z0 + 1e-6);
+      // ET SEULEMENT TANT QU'ON N'Y EST PAS ENCORE. Sauter la ligne vaut pour
+      // qui l'APPROCHE : la fenêtre d'examen la voit trois mètres avant, et s'y
+      // caler tout de suite rétrécirait le couloir à la largeur d'une baie.
+      // Mais quand le point demandé tombe DANS l'emprise de la ligne — le
+      // relevé de Harajuku cote celle de Takeshita entièrement dans la pièce
+      // libre, et l'on y passe pour aller vers la bouche — on est entre les
+      // bornes, et les bornes redeviennent ce qu'elles sont : des bornes. Les
+      // trouées qui restent sont alors exactement les baies.
+      const onLine = p.network.gates.some((g) => {
+        if (!g.walkable) return false;
+        const inside = o.x0 < g.rect.x1 - 1e-6 && o.x1 > g.rect.x0 + 1e-6
+          && o.z0 < g.rect.z1 - 1e-6 && o.z1 > g.rect.z0 + 1e-6;
+        if (!inside) return false;
+        const [g0, g1] = along === 'z' ? [g.rect.z0, g.rect.z1] : [g.rect.x0, g.rect.x1];
+        // La garde de marche compte : un point posé cinq centimètres avant la
+        // première borne est DEHORS au sens des cotes et bloqué au sens des
+        // pieds. C'est la même cote que `walkerBlocked` applique, et pas une
+        // marge de confort choisie ici.
+        return at < g0 - CLEAR_HALL || at > g1 + CLEAR_HALL;
+      });
       return a1 > at - half && a0 < at + half && !onLine;
     })
     .map((o) => {
@@ -739,7 +756,18 @@ function browseIn(
   });
   if (here.length === 0) return null;
   const stop = browseStop(p, here[Math.floor(Math.random() * here.length)]);
-  return stop ? { at: alongOf(along, stop), stops: [stop] } : null;
+  if (!stop) return null;
+  // ET L'ON N'Y VA PAS EN FRANCHISSANT UN PORTILLON. Le crochet se fait en
+  // deux temps : on longe l'axe jusqu'au droit du meuble, puis on s'écarte.
+  // À Harajuku, le relevé cote la ligne de Takeshita ENTIÈREMENT dans la pièce
+  // libre, et un distributeur rangé contre la même paroi deux mètres au-delà
+  // de sa dernière borne se trouvait au droit de la ligne : on y allait en
+  // traversant les armoires. Un meuble qu'on ne peut pas aborder depuis sa
+  // file n'est pas un meuble qu'on regarde en passant.
+  const at = alongOf(along, stop);
+  const turn = lane === undefined ? stop : pt(along, at, lane);
+  if (walkerBlocked(p, 'concourse', turn.x, turn.z) || !walkable(p, turn, stop)) return null;
+  return { at, stops: [stop] };
 }
 
 /**

@@ -28,10 +28,11 @@ const {
   seedPlatformCrowd,
   updatePlatformCrowd,
 } = await import('../src/systems/platformCrowd.ts');
-const { CLEAR_DECK, CLEAR_ROOM, mainAccessFloor, walkerBlocked } =
+const { CLEAR_ROOM, mainAccessFloor, walkerBlocked } =
   await import('../src/systems/stationLevels.ts');
 const { placementFor, stairwellAt } = await import('../src/systems/stationPlacement.ts');
-const { STAIR_FULL_LEN, STAIR_FULL_STEPS } = await import('../src/data/stationGeometry.ts');
+const { CLEAR_DECK, STAIR_FULL_LEN, STAIR_FULL_STEPS } =
+  await import('../src/data/stationGeometry.ts');
 const { psdGates } = await import('../src/three/station/psdLayout.ts');
 const { runtime } = await import('../src/systems/runtime.ts');
 const { useStore } = await import('../src/store.ts');

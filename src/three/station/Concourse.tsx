@@ -333,7 +333,10 @@ export function Concourse({
       {/* Le mobilier : billetterie, konbini, consignes, distributeurs, tampon.
           L'implantation vient de data/stationInterior - la même liste que la
           marche contourne. */}
-      {detail <= 1 && <Fixtures it={it} net={net} m={m} station={station} />}
+      {/* LE MOBILIER RESTE À TOUS LES PALIERS : il barre, et un obstacle qu'on
+          efface sans effacer sa collision est un mur invisible. Au palier bas,
+          `Fixtures` n'en garde que le volume (exigence #17). */}
+      <Fixtures it={it} net={net} m={m} station={station} detail={detail} />
 
       {/* Ligne de guidage podotactile, dans l'axe, du couloir aux portillons
           puis des portillons aux sorties : elle traverse par un passage, jamais
