@@ -123,11 +123,12 @@ export function Station() {
   /**
    * La charpente signature couvre-t-elle VRAIMENT le quai en ce moment ?
    *
-   * `sigCanopy` dit qu'elle en a la charge (Takanawa Gateway), mais elle n'est
-   * dessinée qu'aux paliers de qualité les plus riches. Aux autres, la déclarer
-   * suffisante laissait le quai à ciel ouvert - pas de toiture pliée, et plus
-   * d'auvent non plus. La dalle générique reprend donc du service dès que la
-   * charpente n'est pas là.
+   * `sigCanopy` dit qu'elle en a la charge (Takanawa Gateway) ; encore
+   * faut-il qu'elle soit dessinée. Elle l'est désormais à tous les
+   * préréglages - la gare est hors de l'échelle de qualité, voir
+   * `platformDetail` -, mais le test reste : la déclarer suffisante sans
+   * qu'elle soit là laisserait le quai à ciel ouvert, sans toiture pliée ET
+   * sans auvent, et c'est la dalle générique qui reprend alors du service.
    */
   const hasSignature = layout.signature !== undefined && detail <= 1;
   const sigRoof = layout.sigCanopy && hasSignature;
@@ -720,9 +721,10 @@ export function Station() {
           l'une d'elles. */}
       {hasPsd && <GateBarrier length={layout.length} />}
 
-      {/* Charpente propre à la gare, quand elle en a une. Elle était réservée
-          aux deux paliers les plus riches ; elle porte maintenant l'essentiel
-          du caractère de quatorze gares, et descend donc d'un cran. */}
+      {/* Charpente propre à la gare, quand elle en a une. Elle porte
+          l'essentiel du caractère de quatorze gares : sans elle, Takanawa
+          Gateway, Ueno et Ebisu sont le même quai. Elle est donc dessinée à
+          tous les préréglages de qualité, comme le reste de la gare. */}
       {hasSignature && <Signature layout={layout} place={place} m={m} />}
 
       <PlatformSignage

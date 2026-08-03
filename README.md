@@ -593,18 +593,28 @@ tient désormais une porte à part du reste de l'ensemble. En développement,
 
 ### Paliers de qualité
 
-Tout ce que les gares ont gagné se règle par `platformDetail()` :
+**Les gares sont hors de l'échelle de qualité.** Très basse, basse, moyenne,
+haute, ultra : la gare est bâtie en entier, toujours. Charpentes signature,
+trousse réglementaire, plaques de baie, potences, distributeurs, kiosque,
+escaliers mécaniques, ascenseur, auvent d'en face, hall souterrain - tout est
+là, du plus léger des préréglages au plus riche.
 
-| palier | ce qui tombe |
-|---|---|
-| **ultra, très élevé** | rien |
-| **élevé** | caméras, miroirs de départ, repères de voiture peints |
-| **moyen** | charpentes signature, bandeaux publicitaires de pilier, bannières |
-| **bas** | trousse réglementaire, bande directionnelle, plaques de balisage, auvent et rails du quai d'en face |
+Il en allait autrement, et c'était une erreur. `platformDetail()` suivait le
+préréglage, et aux paliers bas et très bas la gare tombait au « quai nu » :
+quatorze gares perdaient exactement ce qui les distingue les unes des autres,
+et le hall souterrain cessait d'être dessiné **sans cesser d'être praticable**
+- le volume de marche (`systems/walkable`) ne consulte aucun palier de
+qualité, et on descendait sous la dalle dans un niveau dont pas un mur
+n'existait. Le remède coûtait plus cher que le mal : un quai de 224 m n'est à
+l'écran que par intervalles, et c'est le seul décor de ce jeu dans lequel on
+marche.
 
-Ce qui reste à tous les paliers est ce sans quoi la gare cesserait d'être
-lisible : dalle, bords d'embarquement, portes palières, piliers, auvent, voie
-d'en face et son ballast, bacs, gouttières, ligne de guidage.
+Le reste de l'échelle continue de faire son travail là où le gain est réel et
+la perte invisible - résolution de rendu, post-processing, ombres, néons du
+wagon, densité de foule, mobilier de voie, croisements de rames. Les paliers 1
+à 3 de `platformDetail()` restent le vocabulaire des modules de gare, qui
+savent tous se dégarnir ; ce qui a disparu, c'est le préréglage qui le leur
+demandait.
 
 Le module **range** ce mobilier au lieu de l'empiler. La structure fait autorité -
 piliers, trémies, escaliers mécaniques, ascenseur, kiosque - puis chaque famille
