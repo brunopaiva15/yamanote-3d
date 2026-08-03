@@ -38,6 +38,12 @@
 // (MELODY_OUTSIDE / MELODY_INSIDE), pour qu'elle sonne DEPUIS LA GARE sans
 // écraser le reste, et reste franchement audible d'une voiture à quai.
 //
+// Les portes de la RAME ont leur carillon à elles (data/doorChime) : le
+// « pin-pōn » de 824 et 616 Hz, trois fois, sur les haut-parleurs vissés
+// au-dessus des baies. Il est LE MÊME à l'ouverture et à la fermeture - une
+// rame ne joue pas deux carillons, elle en joue un seul, et c'est la mécanique
+// autour qui distingue les deux moments.
+//
 // Les PORTES PALIÈRES, elles, ont leur propre bouche, et c'est une troisième
 // ligne : leurs deux avertisseurs ne sortent ni des diffuseurs du wagon ni de
 // ceux de l'auvent, mais d'un petit haut-parleur vissé sur le linteau de
@@ -83,6 +89,16 @@ import {
   PSD_WARN_PAIR_STEP,
 } from '../data/psdCloseWarning';
 import { PSD_CHIME_DURATION, PSD_CHIME_NOTE_HOLD, psdOpenChimeScore } from '../data/psdOpenChime';
+import {
+  DOOR_CHIME_ATTACK,
+  DOOR_CHIME_CLICK_HZ,
+  DOOR_CHIME_CLICK_S,
+  DOOR_CHIME_DURATION,
+  DOOR_CHIME_SETTLE_RATIO,
+  DOOR_CHIME_SETTLE_S,
+  DOOR_CHIME_TONES,
+  doorChimeScore,
+} from '../data/doorChime';
 import { STATIONS } from '../data/stations';
 import {
   buildDepartureContext,
@@ -119,7 +135,8 @@ interface Nodes {
   slideTrainGain: Tone.Gain;
   slidePsdGain: Tone.Gain;
   thud: Tone.MembraneSynth;
-  chime: Tone.Synth;
+  doorChime: Tone.Synth[][];
+  doorChimeClick: Tone.Synth;
   melodyA: Tone.Synth;
   melodyB: Tone.Synth;
   // Sonorisation.
@@ -355,6 +372,31 @@ const PSD_CHIME_DOORS_OPEN = 1;
 const PSD_CHIME_REFLECTIONS: [delay: number, gain: number][] = [
   [0.009, 0.055],
   [0.018, 0.026],
+];
+
+/**
+ * Place du carillon des portes de la rame dans le mixage.
+ *
+ * Les six voix additionnées sortent à -2,99 dBFS, soit les trois décibels de
+ * marge voulus - mesurés par rendu hors ligne sur le SIGNAL ENTIER,
+ * recouvrements, amorces et réflexions compris, parce que ce n'est pas la
+ * crête d'un son qui compte mais leur somme. Ce robinet-ci ne fait que poser
+ * le carillon dans la voiture : assis à trois mètres de la baie, il doit
+ * s'entendre par-dessus la clim sans jamais couvrir l'annonce de bord.
+ */
+const DOOR_CHIME_LEVEL = 0.64;
+
+/**
+ * Les deux seules réflexions du carillon de porte.
+ *
+ * Treize et vingt-neuf millisecondes, très bas : la cloison d'en face et le
+ * bout du couloir. Ce n'est pas une réverbération - dans une voiture il n'y en
+ * a pas - mais ce qui empêche le signal de sonner comme s'il était joué en
+ * studio.
+ */
+const DOOR_CHIME_REFLECTIONS: [delay: number, gain: number][] = [
+  [0.013, 0.05],
+  [0.029, 0.022],
 ];
 
 // Pose de l'auditeur, tenue à jour par la caméra (voir setListenerPose).
@@ -744,11 +786,66 @@ export async function startAudio(): Promise<void> {
     return { gain, panner };
   });
 
-  // Carillons de porte : ils sortent des diffuseurs du wagon.
-  const chime = new Tone.Synth({
+  // --- Le carillon des PORTES DE LA RAME (ピンポーン) --------------------
+  //
+  // Il sort des petits haut-parleurs vissés au-dessus des baies, à l'intérieur
+  // de la voiture - pas de la sono du quai, pas des diffuseurs de plafond de
+  // la voix. La partition est dans data/doorChime ; ce qui suit n'est que la
+  // fabrique du timbre.
+  //
+  // Le haut-parleur lui-même : une bande étroite et deux réflexions de
+  // caisse, rien de plus. Treize et vingt-neuf millisecondes, ce sont les
+  // quatre et neuf mètres du couloir et de la cloison d'en face ; à ces
+  // niveaux-là on n'entend pas un écho, on entend qu'il y a une voiture autour
+  // du haut-parleur. Surtout pas de réverbération : un carillon de porte n'en
+  // a aucune, et une queue le transformerait en cloche.
+  const doorChimeIn = new Tone.Gain(DOOR_CHIME_LEVEL);
+  const doorChimeHp = new Tone.Filter({ type: 'highpass', frequency: 180, rolloff: -12, Q: 0.6 });
+  const doorChimeLp = new Tone.Filter({ type: 'lowpass', frequency: 6800, rolloff: -12, Q: 0.5 });
+  const doorChimeMix = new Tone.Gain(1);
+  doorChimeIn.chain(doorChimeHp, doorChimeLp, doorChimeMix);
+  for (const [time, level] of DOOR_CHIME_REFLECTIONS) {
+    const tap = new Tone.Delay(time);
+    const g = new Tone.Gain(level);
+    doorChimeLp.chain(tap, g, doorChimeMix);
+  }
+  // De là, le carillon rejoint la sonorisation de la rame comme avant : c'est
+  // un signal, pas de la parole, et il porte jusque sur le quai par les portes
+  // ouvertes.
+  doorChimeMix.connect(paIn);
+
+  // Chaque son est ADDITIF : une fondamentale et deux partiels légèrement
+  // désaccordés, chacun sur son propre oscillateur parce que les rapports
+  // visés (2,01 et 3,97 fois la fondamentale) ne sont pas des harmoniques -
+  // un oscillateur `custom` de Tone, qui ne sait empiler que des rangs
+  // entiers, sonnerait juste, donc faux. Six voix en tout : trois par son,
+  // deux sons. Elles sont monophoniques et c'est suffisant - à l'intérieur
+  // d'un carillon, une même voix ne repart que 820 ms plus tard.
+  const doorChime = DOOR_CHIME_TONES.map((tone) =>
+    tone.partials.map((p) =>
+      new Tone.Synth({
+        oscillator: { type: 'sine' },
+        // Enveloppe de machine : attaque arrondie, plateau, coupure. Les
+        // partiels retombent vers un plateau bas plus vite que la
+        // fondamentale - le mordant est dans l'attaque, la tenue est presque
+        // pure.
+        envelope: {
+          attack: DOOR_CHIME_ATTACK,
+          decay: p.decay,
+          sustain: p.sustain,
+          release: tone.release,
+        },
+      }).connect(doorChimeIn),
+    ),
+  );
+  // L'amorce du haut-parleur, au tout début de chaque son : une impulsion de
+  // cinq millisecondes vers 3150 Hz, vingt-six décibels sous le carillon. On
+  // ne l'entend pas ; on entend qu'il démarre.
+  const doorChimeClick = new Tone.Synth({
     oscillator: { type: 'sine' },
-    envelope: { attack: 0.005, decay: 0.25, sustain: 0.15, release: 0.35 },
-  }).connect(paIn);
+    envelope: { attack: 0.0005, decay: 0.004, sustain: 0, release: 0.002 },
+    volume: -26,
+  }).connect(doorChimeIn);
 
   // --- Bus de la 発車メロディ -------------------------------------------
   //
@@ -1048,7 +1145,8 @@ export async function startAudio(): Promise<void> {
     slideTrainGain,
     slidePsdGain,
     thud,
-    chime,
+    doorChime,
+    doorChimeClick,
     melodyA,
     melodyB,
     paIn,
@@ -2233,19 +2331,31 @@ export function passByHorn(): void {
 
 // --- Carillons de porte (synthèse, avec hook fichiers locaux) ---
 
-function synthDoorOpen(): void {
+/**
+ * Le carillon des portes, à l'ouverture comme à la fermeture.
+ *
+ * Une seule fonction pour les deux moments, et c'est le fond de l'affaire :
+ * une rame ne joue pas un carillon d'ouverture et un carillon de fermeture,
+ * elle joue LE carillon des portes. Ce qui change entre les deux, ce sont les
+ * vantaux, la purge d'air et l'avertisseur du quai - jamais les six sons.
+ */
+function synthDoorChime(): void {
   if (!nodes) return;
-  const now = Tone.now();
-  nodes.chime.triggerAttackRelease('E5', 0.16, slot('chime', now), 0.5);
-  nodes.chime.triggerAttackRelease('A5', 0.3, slot('chime', now + 0.18), 0.5);
-}
-
-function synthDoorClose(): void {
-  if (!nodes) return;
-  const now = Tone.now();
-  nodes.chime.triggerAttackRelease('A5', 0.16, slot('chime', now), 0.5);
-  nodes.chime.triggerAttackRelease('E5', 0.3, slot('chime', now + 0.18), 0.5);
-  nodes.air.triggerAttackRelease(0.5, slot('air', now + 0.5), 0.18);
+  const start = slot('doorChime', Tone.now() + 0.02, DOOR_CHIME_DURATION);
+  for (const ev of doorChimeScore()) {
+    const tone = DOOR_CHIME_TONES[ev.tone];
+    const at = start + ev.at;
+    tone.partials.forEach((p, k) => {
+      const voice = nodes!.doorChime[ev.tone][k];
+      const hz = tone.freq * p.ratio;
+      // La voix part 0,8 % trop haut et rejoint sa fréquence en 18 ms : le
+      // temps que le générateur se cale. La rampe est posée APRÈS l'attaque,
+      // qui écrit elle-même la fréquence de départ sur le signal.
+      voice.triggerAttackRelease(hz * (1 + DOOR_CHIME_SETTLE_RATIO), tone.hold, at, p.amp * tone.gain);
+      voice.frequency.exponentialRampToValueAtTime(hz, at + DOOR_CHIME_SETTLE_S);
+    });
+    nodes.doorChimeClick.triggerAttackRelease(DOOR_CHIME_CLICK_HZ, DOOR_CHIME_CLICK_S, at);
+  }
 }
 
 // --- Mélodies de départ (発車メロディ), compositions ORIGINALES ---
@@ -2561,10 +2671,14 @@ export const audioManager = {
 };
 
 export function doorOpenChime(): void {
-  void playClip('door-open', synthDoorOpen);
+  void playClip('door-open', synthDoorChime);
 }
 export function doorCloseChime(): void {
-  void playClip('door-close', synthDoorClose);
+  void playClip('door-close', synthDoorChime);
+  // La purge d'air des vantaux, elle, n'appartient pas au carillon : c'est de
+  // la mécanique, et elle ne sonne qu'à la fermeture. Elle reste donc dehors,
+  // et joue même si un door-close.mp3 remplace le carillon.
+  if (nodes) nodes.air.triggerAttackRelease(0.5, slot('air', Tone.now() + 0.5), 0.18);
 }
 
 /** Gare dont le repli est déjà lancé, pour ne pas l'empiler sur lui-même. */
