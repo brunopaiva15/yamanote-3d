@@ -171,7 +171,6 @@ interface Nodes {
   ambFilter: Tone.Filter;
   ambGain: Tone.Gain;
   ambIn: Tone.Gain;
-  ambChirp: Tone.Synth;
   ambBell: Tone.Synth;
   ambWhoosh: Tone.NoiseSynth;
   roomVerb: Tone.Reverb;
@@ -928,8 +927,8 @@ export async function startAudio(): Promise<void> {
   // Ce n'est ni la rame ni la sonorisation : c'est ce qu'on entend PAR-DESSUS,
   // et qui n'est pas le même à Uguisudani, dans sa vallée d'arbres, qu'à
   // Shinjuku sous sa dalle. Un lit de bruit filtré donne la couleur du lieu ;
-  // trois petits générateurs y posent des événements - un chant d'oiseau, un
-  // timbre de tram, le passage feutré d'un monorail.
+  // deux petits générateurs y posent des événements - un timbre de tram, le
+  // passage feutré d'un monorail.
   const ambIn = new Tone.Gain(1);
   const ambFilter = new Tone.Filter({ type: 'lowpass', frequency: 900, rolloff: -12, Q: 0.5 });
   const ambGain = new Tone.Gain(0);
@@ -939,11 +938,6 @@ export async function startAudio(): Promise<void> {
   ambBed.volume.value = -18;
   ambBed.start();
 
-  const ambChirp = new Tone.Synth({
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.006, decay: 0.09, sustain: 0, release: 0.06 },
-    volume: -16,
-  }).connect(ambIn);
   const ambBell = new Tone.Synth({
     oscillator: { type: 'triangle' },
     envelope: { attack: 0.002, decay: 0.7, sustain: 0, release: 0.5 },
@@ -1227,7 +1221,6 @@ export async function startAudio(): Promise<void> {
     ambFilter,
     ambGain,
     ambIn,
-    ambChirp,
     ambBell,
     ambWhoosh,
     roomVerb,
@@ -2840,8 +2833,7 @@ export function stopDepartureMelodyClips(): void {
 // --- Ambiance de gare ----------------------------------------------------
 //
 // Ce qu'on entend PAR-DESSUS la sonorisation, et qui n'est pas le même d'une
-// gare à l'autre : les oiseaux d'Uguisudani - dont le nom veut dire « vallée du
-// rossignol » -, le timbre du tram à Ōtsuka, le passage feutré du monorail à
+// gare à l'autre : le timbre du tram à Ōtsuka, le passage feutré du monorail à
 // Hamamatsuchō, la rumeur d'un quai de bureaux ou le silence d'une tranchée.
 //
 // Deux réglages seulement, mais qui suffisent : la COULEUR du lit sonore, et la
@@ -2855,17 +2847,21 @@ interface AmbienceSpec {
   /** Niveau du lit. */
   level: number;
   /** Événement posé par-dessus, et son intervalle moyen (s). 0 = aucun. */
-  event?: 'chirp' | 'bell' | 'whoosh';
+  event?: 'bell' | 'whoosh';
   every?: number;
 }
 
 const AMBIENCE: Record<string, AmbienceSpec> = {
-  // Les oiseaux de la vallée du rossignol : c'est l'identité du lieu.
-  birds: { cut: 1500, level: 0.1, event: 'chirp', every: 5 },
-  park: { cut: 1200, level: 0.13, event: 'chirp', every: 11 },
+  // La vallée du rossignol, le parc de Yoyogi, la rue des électroniciens : ces
+  // trois-là n'ont PAS d'événement. Leur identité tient au lit lui-même - clair
+  // et ténu sous les arbres, vif et dense sous les néons -, et rien n'y est
+  // posé par-dessus : un motif qui revient toutes les cinq secondes cesse très
+  // vite d'être un lieu et devient une boucle qu'on entend boucler.
+  birds: { cut: 1500, level: 0.1 },
+  park: { cut: 1200, level: 0.13 },
   tram: { cut: 760, level: 0.2, event: 'bell', every: 17 },
   monorail: { cut: 900, level: 0.22, event: 'whoosh', every: 21 },
-  electric: { cut: 1900, level: 0.24, event: 'chirp', every: 7 },
+  electric: { cut: 1900, level: 0.24 },
   market: { cut: 1050, level: 0.3 },
   students: { cut: 1250, level: 0.3 },
   street: { cut: 850, level: 0.22 },
@@ -3011,14 +3007,7 @@ export function updateAmbience(dt: number): void {
   ambTimer = 0;
   ambNext = (spec.every ?? 8) * (0.55 + Math.random() * 0.9);
   const now = Tone.now();
-  if (spec.event === 'chirp') {
-    // Deux ou trois notes brèves qui montent : un chant, pas un bip.
-    const base = 1900 + Math.random() * 900;
-    const n = 2 + Math.floor(Math.random() * 2);
-    for (let k = 0; k < n; k++) {
-      nodes.ambChirp.triggerAttackRelease(base * (1 + k * 0.13), 0.06, now + k * 0.11);
-    }
-  } else if (spec.event === 'bell') {
+  if (spec.event === 'bell') {
     // Le timbre du tram : deux coups, le second plus faible.
     nodes.ambBell.triggerAttackRelease(880, 0.5, now);
     nodes.ambBell.triggerAttackRelease(880, 0.4, now + 0.34);
