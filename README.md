@@ -2021,10 +2021,21 @@ le quai. Un salon se crée d'un clic, se rejoint par un code de six caractères 
 par le lien qui va avec (`?room=ABC234`), et se referme quand tout le monde est
 parti. Huit voyageurs au plus.
 
-L'entrée tient en une ligne au pied du menu, au même poids typographique que le
-compteur de visiteurs juste au-dessus. C'est délibéré : ce jeu est une promenade
-contemplative, et pouvoir y emmener quelqu'un est un plaisir de plus, pas son
-argument.
+Tout se fait **depuis la rame**, jamais depuis le menu : un point en bout de
+barre du HUD, effacé tant qu'on ne le survole pas, exactement comme le menu
+d'incidents voisin. Le menu d'accueil, lui, n'en dit pas un mot.
+
+C'est délibéré, et pour deux raisons. Le menu est ce qu'on voit AVANT de jouer,
+et tout ce qui s'y trouve se présente comme une option du voyage - la date, la
+gare, le sens, la version ; y ajouter les salons en ferait une décision à
+prendre avant de monter, alors que c'en est une qu'on prend en cours de route,
+quand on a envie d'appeler quelqu'un. Et techniquement, rejoindre en marche est
+le chemin le mieux rodé : c'est celui d'un retardataire, que la
+resynchronisation dure sait déjà traiter.
+
+Quand on est en salon, le point s'allume et porte le nombre de voyageurs. Un
+lien `?room=…` fait rejoindre tout seul une fois en jeu - le code est déjà dans
+l'adresse, le chercher serait absurde.
 
 **Sans configuration, rien de tout cela n'existe** - pas grisé, pas accompagné
 d'un « bientôt disponible » : absent. Mêmes deux variables que le compteur, donc

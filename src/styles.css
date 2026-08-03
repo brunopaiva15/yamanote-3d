@@ -575,118 +575,188 @@ body,
   background: #5b9f32;
 }
 
-/* --- Voyager ensemble ---------------------------------------------------
+/* --- Voyager ensemble : le panneau du HUD --------------------------------
  *
- * Calé sur `.start-online` juste au-dessus : même gris, même corps, même
- * discrétion. Le multijoueur est une option de ce jeu, pas son argument, et
- * son entrée dans le menu ne doit pas peser plus lourd que le compteur de
- * voyageurs qu'elle suit.
+ * Calé sur le menu d'incidents voisin, et pour la même raison : ce n'est pas un
+ * réglage, on ne doit pas tomber dessus en cherchant le volume. Un point
+ * effacé, qui s'allume quand on est en salon et porte alors le nombre de
+ * voyageurs - la seule information de tout ce bloc qui mérite d'être visible en
+ * permanence.
  */
-.start-room {
-  margin-top: 8px;
-  color: #7a848a;
-  font-size: 10.5px;
-  line-height: 1.5;
-  text-align: center;
+.room-menu {
+  position: relative;
 }
 
-.start-room-open,
-.start-room-joined {
+.room-toggle {
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 6px;
+  padding: 8px 11px;
+  opacity: 0.45;
+  transition:
+    opacity 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.1s ease,
+    background-color 0.1s ease;
 }
 
-.start-room-row {
+.room-toggle:hover,
+.room-toggle[aria-expanded='true'],
+.room-toggle.is-joined {
+  opacity: 1;
+}
+
+/* Le même point vert que le compteur de visiteurs du menu : c'est le vocabulaire
+   visuel de la présence dans ce projet, et il n'y a aucune raison d'en inventer
+   un second. Gris tant qu'on voyage seul. */
+.room-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.room-toggle.is-joined .room-dot {
+  background: #5b9f32;
+  opacity: 1;
+}
+
+.room-count {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.room-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  width: 264px;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px;
+  background: var(--sticker);
+  border: 2px solid var(--ink-line);
+  border-radius: 12px;
+  box-shadow: var(--sticker-shadow);
+  /* La couleur d'encre est posée EXPLICITEMENT : sans elle, le panneau hérite
+     du texte clair de la barre du HUD - pensé pour un fond sombre - et se
+     retrouve en gris pâle sur blanc. Le code du salon, qui est justement ce
+     qu'on vient lire et dicter, devenait le moins lisible de tout l'écran. */
+  color: var(--sticker-ink);
 }
 
-/* Un bouton qui ne ressemble pas à un bouton : c'est un lien de pied de page,
- * et le seul bouton de cet écran reste « Monter à bord ». */
-.start-room-link {
+.room-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sticker-dim);
+}
+
+.room-panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11.5px;
+  color: var(--sticker-dim);
+}
+
+.room-panel-field input {
+  padding: 5px 7px;
+  border: 1px solid var(--ink-line);
+  border-radius: 6px;
+  background: #fff;
+  color: #2a3236;
+  font: inherit;
+  font-size: 13px;
+}
+
+/* Le code se lit et se dicte : chasse fixe, lettres espacées. */
+.room-panel-code-input,
+.room-panel-code strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.room-panel-code {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+}
+
+.room-panel-code strong {
+  font-size: 15px;
+  color: var(--sticker-ink);
+}
+
+.room-panel-roster,
+.room-panel-hint,
+.room-panel-error {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--sticker-dim);
+}
+
+.room-panel-error {
+  color: #a8442f;
+}
+
+.room-panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.room-panel-tag {
+  margin-left: 6px;
+  font-size: 10.5px;
+  color: var(--sticker-dim);
+}
+
+.room-panel-tag::before {
+  content: '· ';
+}
+
+.room-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--sticker-dim);
+}
+
+.room-panel-link {
   appearance: none;
   border: 0;
   background: none;
   padding: 0;
   color: #4a7a2a;
   font: inherit;
+  font-size: 12px;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.start-room-link:hover:not(:disabled) {
+.room-panel-link:hover:not(:disabled) {
   color: #2f5d0f;
 }
 
-.start-room-link:disabled {
-  color: #9aa2a8;
+.room-panel-link:disabled {
+  color: var(--sticker-dim);
   cursor: default;
   text-decoration: none;
-}
-
-.start-room-field {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  text-align: left;
-}
-
-.start-room-field input {
-  width: 9.5em;
-  padding: 4px 6px;
-  border: 1px solid #c8ccce;
-  border-radius: 3px;
-  background: #fff;
-  color: #2a3236;
-  font: inherit;
-  font-size: 12px;
-}
-
-/* Le code se lit et se dicte : chasse fixe, lettres espacées. */
-.start-room-field input[placeholder='ABC234'] {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.start-room-code {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 8px;
-  margin: 0;
-}
-
-.start-room-code strong {
-  color: #2a3236;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 14px;
-  letter-spacing: 0.16em;
-}
-
-.start-room-roster {
-  margin: 0;
-}
-
-.start-room-names span + span::before {
-  content: ', ';
-}
-
-.start-room-error {
-  margin: 0;
-  color: #a8442f;
-}
-
-.start-room-hint {
-  margin: 0;
-  max-width: 420px;
-  color: #8a9299;
 }
 
 .site-footer a:hover {
