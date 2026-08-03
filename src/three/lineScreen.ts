@@ -2,16 +2,20 @@
 // LCD au-dessus des portes, hors de tout composant React - la boucle de rendu
 // vit dans `Screens.tsx`, la peinture vit ici.
 //
-// Comme sur la rame réelle, l'écran droit enchaîne un cycle QUADRILINGUE
-// (japonais, anglais, chinois simplifié, coréen) et de nombreux états : vue
-// rapprochée des 5 prochaines stations (arc vert, minutes, correspondances),
-// plan complet de la boucle (30 stations, minutes jusqu'à ~30 min), écran
-// « prochain arrêt » zh/ko, correspondances détaillées, écrans manières
-// (mode silencieux), places prioritaires,
-// sécurité, avertissement de FERMETURE DES PORTES en fin d'arrêt, côté
-// d'ouverture à l'approche, plan du quai, et - quand une autre ligne est
-// perturbée - information trafic, état des autres lignes et certificat de
-// retard. L'écran gauche, lui, ne montre que des publicités.
+// Comme sur la rame réelle, l'écran droit enchaîne un cycle bilingue (japonais
+// puis anglais) et de nombreux états : vue rapprochée des 5 prochaines stations
+// (arc vert, minutes, correspondances), plan complet de la boucle (30 stations,
+// minutes jusqu'à ~30 min), correspondances détaillées, écran manières (mode
+// silencieux), places prioritaires, avis de vigilance renforcée, PLAN DES
+// SORTIES de la gare visée - en deux compositions distinctes, correspondances
+// en bas pendant la circulation, côté d'ouverture des portes en bas à
+// l'approche immédiate - et, quand une autre ligne est perturbée, information
+// trafic sur deux pages. L'écran gauche, lui, ne montre que des publicités.
+//
+// LANGUE ET CONTENU SONT DEUX CHOSES : ce n'est pas le passage anglais du cycle
+// qui décide si le bas du plan des sorties porte les correspondances ou les
+// portes - c'est le MOMENT DU TRAJET. Voir `drawExitTransfers` /
+// `drawExitDoors`.
 
 import { CONFIG } from '../data/config';
 import { CONSIST, E235, PLAYER_CAR, carZ } from '../data/e235';
@@ -166,19 +170,24 @@ export type ScreenStatus = 'now' | 'next' | 'soon';
 // n'attend pas son tour.
 export type ScreenLang = 'jp' | 'en';
 
+// Le bandeau écrit 「次は」 en KANJI, pas 「つぎは」 en hiragana : c'est ce que
+// porte l'afficheur de l'E235, et c'est aussi ce que disent les annonces de
+// bord (data/announcements). Les trois libellés japonais du bandeau -
+// ただいま / 次は / まもなく - sont les trois moments du trajet, et rien d'autre
+// ne change avec eux.
 const STATUS_LABEL: Record<ScreenStatus, Record<ScreenLang, string>> = {
   now: { jp: 'ただいま', en: 'Now stopping at' },
-  next: { jp: 'つぎは', en: 'Next' },
+  next: { jp: '次は', en: 'Next' },
   soon: { jp: 'まもなく', en: 'Arriving at' },
 };
 
 // Nom de gare dans la langue du cycle d'affichage.
 //
-// En japonais, l'afficheur ne montre PAS toujours la même graphie : la gare
-// où l'on est (ただいま) est en kanji, celle où l'on va (つぎは / まもなく) est
-// en hiragana - c'est la lecture, celle que l'annonce vient de prononcer, et
-// c'est ce qui permet de la retrouver quand on ne sait pas lire 神田. Le corps
-// du plan, lui, reste en kanji dans les deux cas.
+// En japonais, c'est la graphie OFFICIELLE - les kanji - sous les trois
+// libellés d'état : 「次は」「神田」, pas 「かんだ」. La lecture hiragana reste
+// dans les données (`st.kana`), où elle sert à ce pour quoi elle est faite : la
+// synthèse vocale et la signalétique de quai (textures/procedural). Elle ne
+// remplace pas le nom de la gare sur la dalle.
 /**
  * L'afficheur écrit le romaji à la MACRONNE, là où la signalétique de quai
  * s'en passe : le panneau de Tokyo dit « Tokyo », l'écran de bord « Tōkyō ».
@@ -188,8 +197,8 @@ const STATUS_LABEL: Record<ScreenStatus, Record<ScreenLang, string>> = {
  */
 const LCD_ROMAJI: Record<string, string> = { JY01: 'Tōkyō' };
 
-function stationName(st: (typeof STATIONS)[number], lang: ScreenLang, status: ScreenStatus = 'now'): string {
-  if (lang === 'jp') return status === 'next' ? st.kana : st.kanji;
+function stationName(st: (typeof STATIONS)[number], lang: ScreenLang): string {
+  if (lang === 'jp') return st.kanji;
   return LCD_ROMAJI[st.jy] ?? st.romaji;
 }
 
@@ -303,7 +312,7 @@ function drawHeader(
   // sont aérés d'un cadratin - et les deux glyphes sont posés séparément
   // plutôt que séparés par un U+3000 : selon la fonte qui répond, l'espace
   // idéographique se retrouve parfois à chasse nulle, et 東京 se recollait.
-  const name = stationName(next, lang, status);
+  const name = stationName(next, lang);
   g.textAlign = 'center';
   g.fillStyle = HEADER_TEXT;
   const jpName = lang !== 'en';
@@ -1284,21 +1293,34 @@ export function drawPhoneManner(
 
 
 
-// --- Écran d'approche (まもなく / Arriving at) : plan du quai --------------
+// --- Plan des sorties de la gare visée : DEUX écrans, un seul plan ---------
 //
 // C'est l'écran le plus utile de tout le cycle, et c'était le plus faux. Il
 // n'y avait ici qu'un « côté d'ouverture » abstrait - deux vantaux gris et des
 // flèches - et, à part, un plan de quai à bandeau orange que l'afficheur réel
-// n'a jamais eu. Le vrai écran est UN SEUL : un plan de quai en plongée, sur
-// fond bleu nuit, où l'on lit d'un coup où sont les accès, où s'arrête SA
-// voiture par rapport à eux, et de quel côté les portes vont s'ouvrir.
+// n'a jamais eu. Le vrai écran est un plan de quai en plongée, sur fond bleu
+// nuit, où l'on lit d'un coup où sont les accès, où s'arrête SA voiture par
+// rapport à eux, et - le moment venu - de quel côté les portes vont s'ouvrir.
 //
 // De haut en bas : le bandeau habituel ; une bande claire portant les
 // cartouches jaunes qui NOMMENT les accès ; le quai lui-même, avec ses
 // pictogrammes reliés à leur cartouche par une suspente ; la rame en onze
 // cases numérotées, celle du voyageur en rouge, avec le triangle du sens de
-// marche en bout ; puis, en bandeau bas, l'avis d'ouverture des portes (passage
-// japonais) ou la liste des correspondances (passage anglais).
+// marche en bout ; puis un bandeau bas, et c'est LUI qui fait les deux écrans :
+//
+//   • `drawExitTransfers` - 次は : pendant la circulation, le bas porte les
+//     CORRESPONDANCES de la gare vers laquelle on roule. On y va, on prépare
+//     sa suite de trajet.
+//   • `drawExitDoors` - まもなく : à l'approche immédiate, le bas porte le CÔTÉ
+//     RÉEL D'OUVERTURE des portes, avec son pictogramme animé. On arrive, on
+//     se lève.
+//
+// Ce n'est PAS une affaire de langue. Le code faisait porter ce choix au
+// paramètre `lang` - passage japonais = portes, passage anglais =
+// correspondances -, si bien qu'un voyageur anglophone n'apprenait jamais par
+// quelle paroi descendre et qu'un japonophone voyait le côté d'ouverture
+// annoncé dix stations trop tôt. La langue dit dans quel alphabet on écrit ;
+// le moment du trajet dit ce qu'on écrit.
 //
 // Les accès ne sont plus tirés au sort : ce sont ceux de `stationLayouts`,
 // donc EXACTEMENT ceux que le joueur voit en descendant, et le nom du portillon
@@ -1486,16 +1508,16 @@ function drawDoorGlyph(g: CanvasRenderingContext2D, mine: boolean, anim: number)
   }
 }
 
-export function drawApproach(
-  s: ScreenSurface,
-  index: number,
-  clock: string,
-  lang: 'jp' | 'en',
-  mine: boolean,
-  dir: LoopDirection,
-  anim: number,
-  status: ScreenStatus = 'soon',
-): void {
+/**
+ * Le plan lui-même : quai, accès, cartouches, rame. Tout ce que les deux
+ * écrans du plan des sorties ont en commun, c'est-à-dire tout sauf le bandeau
+ * bas et le bandeau haut, qui sont posés par l'appelant.
+ *
+ * Il ne prend ni langue ni côté d'ouverture : ce plan-là est le même dans les
+ * deux cas, et c'est justement ce qui permet aux deux écrans de n'être qu'un
+ * seul relevé.
+ */
+function drawStationLayout(s: ScreenSurface, index: number, anim: number): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
   const layout = layoutFor(index);
@@ -1667,37 +1689,41 @@ export function drawApproach(
   g.closePath();
   g.fill();
 
-  // --- Bandeau bas : avis d'ouverture (jp) ou correspondances (en).
-  if (lang === 'jp') {
-    const foot = g.createLinearGradient(0, APPROACH_FOOT_Y, 0, h);
-    foot.addColorStop(0, '#0d1f55');
-    foot.addColorStop(1, '#050d2a');
-    g.fillStyle = foot;
-    g.fillRect(0, APPROACH_FOOT_Y, w, h - APPROACH_FOOT_Y);
+  g.textAlign = 'left';
+}
 
-    drawDoorGlyph(g, mine, anim);
+/**
+ * Plan des sorties, bas = CORRESPONDANCES (次は).
+ *
+ * L'écran de croisière : on roule vers la gare, le plan dit par où en sortir et
+ * le bandeau bas ce qu'on y trouve comme lignes. Il ne dit RIEN du côté
+ * d'ouverture - à cette distance l'information n'a pas encore de sens, et
+ * l'afficheur la garde pour l'approche.
+ *
+ * C'est aussi pour cela que cet écran est le même sur les deux parois de la
+ * rame : rien dedans ne dépend de la paroi devant laquelle on se tient.
+ */
+export function drawExitTransfers(
+  s: ScreenSurface,
+  index: number,
+  clock: string,
+  dir: LoopDirection,
+  anim = 0,
+  status: ScreenStatus = 'next',
+): void {
+  const { g, w, h } = s;
+  drawStationLayout(s, index, anim);
 
+  g.fillStyle = '#c3d4f4';
+  g.fillRect(0, APPROACH_FOOT_Y, w, h - APPROACH_FOOT_Y);
+  const labels = (TRANSFERS[STATIONS[index].jy]?.jp ?? '').split('、').filter(Boolean).slice(0, 6);
+  if (labels.length === 0) {
+    g.fillStyle = '#2b3a63';
+    g.font = `20px ${JP_FONT}`;
+    g.textAlign = 'center';
+    g.fillText('のりかえの路線はありません', w / 2, APPROACH_FOOT_Y + 58);
     g.textAlign = 'left';
-    g.fillStyle = '#ffffff';
-    const jp = mine ? 'こちら側のドアが開きます' : '反対側のドアが開きます';
-    fitText(g, jp, w - 316, 34, '');
-    g.fillText(jp, 300, APPROACH_FOOT_Y + 42);
-    g.fillStyle = '#b9c6e8';
-    const en = mine ? 'Doors on this side will open.' : 'Doors on the other side will open.';
-    fitText(g, en, w - 316, 21, '');
-    g.fillText(en, 302, APPROACH_FOOT_Y + 72);
   } else {
-    g.fillStyle = '#c3d4f4';
-    g.fillRect(0, APPROACH_FOOT_Y, w, h - APPROACH_FOOT_Y);
-    const labels = (TRANSFERS[next.jy]?.jp ?? '').split('、').filter(Boolean).slice(0, 6);
-    if (labels.length === 0) {
-      g.fillStyle = '#2b3a63';
-      g.font = `20px ${JP_FONT}`;
-      g.textAlign = 'center';
-      g.fillText('のりかえの路線はありません', w / 2, APPROACH_FOOT_Y + 58);
-      g.textAlign = 'left';
-      return;
-    }
     // Les lignes s'alignent en rangées, chacune sous son sigle.
     let x = 24;
     let y = APPROACH_FOOT_Y + 34;
@@ -1716,13 +1742,55 @@ export function drawApproach(
       g.fillText(label, x + bw + 5, y);
       x += bw + 5 + tw + 26;
     }
+    g.textAlign = 'left';
   }
+
+  // Le bandeau se dessine EN DERNIER : le quai file dessous. Et il se dessine
+  // TOUJOURS - une gare sans correspondance ne perd pas son bandeau, elle perd
+  // sa liste de lignes.
+  drawHeader(g, w, index, clock, status, 'jp', dir);
+}
+
+/**
+ * Plan des sorties, bas = CÔTÉ D'OUVERTURE DES PORTES (まもなく).
+ *
+ * L'écran d'approche immédiate, et le seul de tout le cycle qui diffère d'une
+ * paroi à l'autre : `mine` dit si la paroi devant laquelle on se tient est
+ * celle qui s'ouvre. La dalle du bon côté annonce 「こちら側」, celle d'en face
+ * 「反対側」 - c'est la même vérité, dite depuis deux endroits de la rame.
+ */
+export function drawExitDoors(
+  s: ScreenSurface,
+  index: number,
+  clock: string,
+  mine: boolean,
+  dir: LoopDirection,
+  anim = 0,
+  status: ScreenStatus = 'soon',
+): void {
+  const { g, w, h } = s;
+  drawStationLayout(s, index, anim);
+
+  const foot = g.createLinearGradient(0, APPROACH_FOOT_Y, 0, h);
+  foot.addColorStop(0, '#0d1f55');
+  foot.addColorStop(1, '#050d2a');
+  g.fillStyle = foot;
+  g.fillRect(0, APPROACH_FOOT_Y, w, h - APPROACH_FOOT_Y);
+
+  drawDoorGlyph(g, mine, anim);
+
+  g.textAlign = 'left';
+  g.fillStyle = '#ffffff';
+  const jp = mine ? 'こちら側のドアが開きます' : '反対側のドアが開きます';
+  fitText(g, jp, w - 316, 34, '');
+  g.fillText(jp, 300, APPROACH_FOOT_Y + 42);
+  g.fillStyle = '#b9c6e8';
+  const en = mine ? 'Doors on this side will open.' : 'Doors on the other side will open.';
+  fitText(g, en, w - 316, 21, '');
+  g.fillText(en, 302, APPROACH_FOOT_Y + 72);
   g.textAlign = 'left';
 
-  // Le bandeau se dessine EN DERNIER : le quai file dessous. Son libellé suit
-  // la phase du cycle : ce même plan de quai reste à l'antenne une fois la rame
-  // arrêtée, et il annonçait alors « まもなく » à quai.
-  drawHeader(g, w, index, clock, status, lang, dir);
+  drawHeader(g, w, index, clock, status, 'jp', dir);
 }
 
 // --- État « correspondances à la prochaine gare » ---
