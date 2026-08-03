@@ -31,6 +31,8 @@ import {
   STAIR_WALK_LEN,
   STAIR_WALK_STEPS,
   ASCENT_LEN,
+  ASCENT_FLOOR_Y,
+  STAIR_LOWER_Y,
   stairFloorY,
 } from '../data/stationGeometry';
 
@@ -196,6 +198,15 @@ export interface StationPlacement {
 /** Un accès de relevé, apparié avec la trémie que le placement a posée. */
 export interface LiveAccess extends ConcourseAccess {
   stair: Placed;
+  /**
+   * L'ALTITUDE OÙ CETTE VOLÉE ABOUTIT : celle de la pièce qu'elle dessert.
+   *
+   * Une volée de quai avait une hauteur unique, et rien n'avait à la dire.
+   * Cinq gares descendent SOUS LES VOIES, à −6,40 m : leur volée compte
+   * vingt-deux marches au lieu de six, et tout ce qui la parcourt — la marche
+   * du joueur, celle de la foule, son rendu — doit lire la même cote.
+   */
+  floorY: number;
 }
 
 /**
@@ -217,7 +228,12 @@ export function liveAccessesFor(
   const out: LiveAccess[] = [];
   for (const a of net.accesses) {
     const stair = a.order === null ? main : byKind[a.kind][a.order];
-    if (stair) out.push({ ...a, stair });
+    if (!stair) continue;
+    // La volée aboutit au sol de SA pièce, et c'est cette cote que la marche,
+    // la foule et le rendu liront tous les trois.
+    const room = net.rooms.find((r) => r.id === a.toRoomId);
+    const floorY = room?.floorY ?? (a.rise === 'up' ? ASCENT_FLOOR_Y : STAIR_LOWER_Y);
+    out.push({ ...a, stair, floorY });
   }
   return out;
 }
@@ -538,7 +554,7 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   // L'accès qui mène dans la gare : la trémie la plus proche du milieu du quai.
   const mainStair = stairs.reduce((a, b) => (Math.abs(b.z) < Math.abs(a.z) ? b : a));
   const interior = interiorFor(i, mainStair.z);
-  const network = networkFor(i, mainStair.z);
+  const network = networkFor(i, mainStair.z, mainStair.x);
   // Une volée montante n'a de sens que si elle mène quelque part : là où le
   // niveau est déclaré sans être construit, l'accès reste la trémie borgne
   // qu'il était.

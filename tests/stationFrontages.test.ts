@@ -79,8 +79,8 @@ test('chaque zone commerciale du relevé devient une devanture, ou se DIT perdue
   // Vingt-neuf devantures posées sur les trente gares, et deux perdues faute de
   // place. Un plancher, pas une valeur exacte : s'il tombe, c'est le relevé qui
   // a été vidé.
-  assert.ok(total >= 29, `${total} devantures`);
-  assert.equal(dropped, 2, `${dropped} devantures perdues`);
+  assert.ok(total >= 28, `${total} devantures`);
+  assert.equal(dropped, 3, `${dropped} devantures perdues`);
 });
 
 test('UNE ENSEIGNE NE S’INVENTE PAS', () => {

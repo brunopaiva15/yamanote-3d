@@ -33,7 +33,7 @@ import {
   type Fixture,
   type InteriorRect,
 } from '../data/stationInterior';
-import { ASCENT_LEN, DESCENT_LEN } from '../data/stationGeometry';
+import { ASCENT_LEN, descentLenTo } from '../data/stationGeometry';
 import { runtime } from './runtime';
 import {
   bayAt,
@@ -123,7 +123,9 @@ const acrossOf = (along: 'x' | 'z', q: Pt) => (along === 'z' ? q.x : q.z);
 function accessFoot(p: StationPlacement, roomId: string): RouteStop | null {
   const a = accessServing(p, roomId);
   if (!a) return null;
-  const len = a.rise === 'up' ? ASCENT_LEN : DESCENT_LEN;
+  // La volée aboutit au sol de SA pièce : cinq gares descendent deux mètres
+  // vingt-cinq plus loin que les autres (`data/stationGeometry`).
+  const len = a.rise === 'up' ? ASCENT_LEN : descentLenTo(a.floorY);
   return { x: a.stair.x + stairLane() * 0.35, z: stairTopZ(a.stair) + len - 0.5 };
 }
 

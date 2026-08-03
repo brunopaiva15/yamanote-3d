@@ -48,21 +48,17 @@ const SMALL = [1, 5, 7, 9, 10, 13, 15, 17];
 const MEDIUM = [2, 8, 11, 14, 20, 21, 22, 23, 26, 27, 28, 29];
 
 /**
- * DEUX GARES ATTENDENT, et pour une raison de géométrie, pas de relevé.
+ * UNE GARE ATTEND ENCORE, et pour une raison de géométrie, pas de relevé.
  *
- * Une volée de quai a une hauteur FIXE : 3,675 m vers le bas, 5,075 m vers le
- * haut (`data/stationGeometry`). Or le relevé d'Okachimachi fait déboucher sa
- * trémie sur une MEZZANINE à mi-hauteur (−1,84 m), et celui d'Harajuku sur le
- * souterrain de Takeshita, qui passe SOUS les voies (−6,40 m). Dans les deux
- * cas la volée ne rejoint pas le sol qu'elle dessert : il y aurait une marche
- * d'un mètre quatre-vingt au pied de l'escalier.
- *
- * Rendre la volée réglable touche l'ouvrage lui-même — sa géométrie, son rendu
- * et la marche — et c'est le sujet des phases de signature, où Shinjuku et
- * Shibuya le demanderont de toute façon. Les brancher avant serait poser une
- * gare juste sur un escalier faux.
+ * La SECONDE volée se règle désormais sur ce qu'elle dessert, et cela a suffi
+ * aux cinq gares qui descendent sous les voies. Okachimachi demande autre
+ * chose : sa mezzanine est à −1,84 m, c'est-à-dire AU-DESSUS du palier de
+ * mi-étage (−2,625 m) où la PREMIÈRE volée aboutit. Il ne s'agit donc plus
+ * d'allonger la seconde volée mais de raccourcir la première — quinze marches
+ * calées sur le percement de la dalle, son linteau et sa hauteur libre. C'est
+ * un autre ouvrage, et il ne se règle pas d'un paramètre.
  */
-const DEFERRED = [3, 18];
+const DEFERRED = [3];
 
 /**
  * LES TROIS PREMIÈRES SIGNATURES (phase 22).
@@ -73,8 +69,21 @@ const DEFERRED = [3, 18];
  */
 const SIGNATURES = [6, 24, 25];
 
+/**
+ * LES CINQ GRANDES (phases 23 et 24).
+ *
+ * Elles attendaient un OUVRAGE, pas un relevé : leur premier hall est sous les
+ * voies, à −6,40 m, et une volée de quai n'avait qu'une profondeur. Depuis que
+ * la seconde volée se règle sur ce qu'elle dessert
+ * (`data/stationGeometry.lowerFlightTo`), elles se branchent comme les autres.
+ *
+ * Ueno n'en avait pas besoin — son hall est au-dessus — et attendait ses deux
+ * voisines de phase pour qu'on les compare entre elles.
+ */
+const BIG = [0, 4, 18];
+
 const WIRED: ReadonlyMap<number, StationConcourseProfile> = new Map(
-  [...SMALL, ...MEDIUM, ...SIGNATURES]
+  [...SMALL, ...MEDIUM, ...SIGNATURES, ...BIG]
     .filter((i) => !DEFERRED.includes(i))
     .sort((a, b) => a - b)
     .map((i) => [i, profileFor(i)] as const),

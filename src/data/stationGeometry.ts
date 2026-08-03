@@ -472,12 +472,61 @@ export const DESCENT_LOWER_T = STAIR_LOWER_Z0 + STAIR_HALF_Z;
  * centimètres tous les trente et un.
  */
 export function descentFloorY(t: number): number {
+  return descentFloorYTo(t, STAIR_LOWER_Y);
+}
+
+/**
+ * LA SECONDE VOLÉE, RÉGLÉE SUR CE QU'ELLE DESSERT.
+ *
+ * Six marches menaient à −3,675 m, et c'était la seule profondeur qui existait.
+ * Six gares du relevé ont leur premier hall SOUS LES VOIES, à −6,40 m : la
+ * volée s'y arrêtait deux mètres soixante-douze trop haut, et il aurait fallu
+ * sauter au pied de l'escalier. C'est ce qui les tenait hors du branchement.
+ *
+ * On ne rallonge pas la volée n'importe comment : **on divise la hauteur par un
+ * nombre entier de contremarches**, ce qui est la façon dont un escalier se
+ * construit. La contremarche reste alors à un ou deux millimètres de 17,5 cm —
+ * 17,03 cm pour descendre à −6,40 — et la volée tient dans le couloir existant
+ * (dix-sept girons font 5,27 m pour 6,38 m disponibles). Le gabarit du quai ne
+ * bouge pas : c'est le vide sous la dalle qui se remplit.
+ */
+export interface LowerFlight {
+  /** Nombre de contremarches de la seconde volée. */
+  steps: number;
+  /** Hauteur d'une contremarche : ajustée pour tomber juste sur le sol visé. */
+  rise: number;
+  /** Cote du dernier nez, depuis le nez du percement. */
+  end: number;
+  /** Le sol atteint. */
+  floorY: number;
+}
+
+const FLIGHTS = new Map<number, LowerFlight>();
+
+export function lowerFlightTo(floorY: number): LowerFlight {
+  const hit = FLIGHTS.get(floorY);
+  if (hit) return hit;
+  const drop = STAIR_LANDING_Y - floorY;
+  const steps = Math.max(1, Math.round(drop / STAIR_RISE));
+  const flight: LowerFlight = {
+    steps,
+    rise: drop / steps,
+    end: STAIR_LOWER_Z0 + (steps + 1) * STAIR_GOING,
+    floorY,
+  };
+  FLIGHTS.set(floorY, flight);
+  return flight;
+}
+
+/** Le profil de la descente, jusqu'au sol `floorY`. */
+export function descentFloorYTo(t: number, floorY: number): number {
   if (t <= DESCENT_LOWER_T) return stairFloorY(t, STAIR_STEPS);
+  const f = lowerFlightTo(floorY);
   const steps = Math.min(
-    STAIR_LOWER_STEPS,
+    f.steps,
     Math.max(0, (t - DESCENT_LOWER_T) / STAIR_GOING - 0.5),
   );
-  return STAIR_LANDING_Y - steps * STAIR_RISE;
+  return STAIR_LANDING_Y - steps * f.rise;
 }
 
 /**
@@ -485,6 +534,23 @@ export function descentFloorY(t: number): number {
  * on n'est plus dans la trémie : on est dans la gare (data/stationInterior).
  */
 export const DESCENT_LEN = STAIR_LOWER_END + STAIR_HALF_Z;
+
+/** Ce qui reste de couloir APRÈS le dernier nez : de quoi arriver de plain-pied. */
+const LOWER_RUNOUT = 1.6;
+
+/**
+ * Longueur de la descente qui atteint `floorY`.
+ *
+ * Le couloir d'origine — 8,80 m depuis le nez du percement — était taillé pour
+ * six marches. Vingt-deux n'y tiennent pas : la descente s'allonge donc de ce
+ * qu'il faut, et pas d'un centimètre de plus. Les halls concernés partent
+ * d'autant plus loin du quai, ce qui est exactement ce que dit un plan de gare
+ * où l'on marche longtemps avant d'arriver au contrôle.
+ */
+export function descentLenTo(floorY: number): number {
+  const f = lowerFlightTo(floorY);
+  return STAIR_HALF_Z + Math.max(STAIR_LOWER_END, f.end + LOWER_RUNOUT);
+}
 
 // --- L'escalier mécanique -------------------------------------------------
 //

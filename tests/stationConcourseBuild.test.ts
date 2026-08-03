@@ -212,7 +212,13 @@ test('une ligne cotée hors de ses pièces se DIT, elle ne se déplace pas', () 
   assert.deepEqual(off, ['JY13 gate-south', 'JY20 gate-hachiko-exit-only']);
   // Et deux devantures ne tiennent pas dans leur hall sans le fermer d'un mur
   // à l'autre : elles disparaissent, et cela aussi se dit.
-  assert.deepEqual(dropped, ['JY23 shop-atre-2', 'JY30 shop-lumine-street-b']);
+  assert.deepEqual(dropped, [
+    // Nippori : la galerie ecute borde le pont-concourse, et le pied de la
+    // volée y débouche — un escalier ne s'ouvre pas dans une vitrine.
+    'JY07 shop-ecute',
+    'JY23 shop-atre-2',
+    'JY30 shop-lumine-street-b',
+  ]);
 });
 
 test('le relevé se cale sur la trémie réellement posée', () => {
@@ -267,11 +273,11 @@ test('les gares branchées sont EXACTEMENT celles qu’on a décidé de brancher
   // écrite ici, en clair, et le compilateur doit s'y tenir des deux côtés.
   assert.deepEqual(
     [...wiredIndices()],
-    [1, 2, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 17, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+    [0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
   );
   // Et DEUX gares attendent, pour une raison d'ouvrage et non de relevé : leur
   // trémie ne rejoint pas le sol qu'elle dessert (voir `stationConcourseWired`).
-  assert.deepEqual([...deferredIndices()], [3, 18]);
+  assert.deepEqual([...deferredIndices()], [3]);
   assert.equal(wiredCount(), wiredIndices().length);
   for (let i = 0; i < STATION_COUNT; i++) {
     assert.equal(

@@ -20,13 +20,13 @@ défaut DIT.**
 
 | code | gare | confiance | branchée | pièces | contrôles | sorties | corresp. | commerces | repères | travaux | écarts |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| JY01 | Tokyo | mostlyVerified | non | 6 | 2 | 7 | 4 | 2 | 2 | oui | 0 |
+| JY01 | Tokyo | mostlyVerified | oui | 6 | 2 | 7 | 4 | 2 | 2 | oui | 0 |
 | JY02 | Kanda | mostlyVerified | oui | 4 | 2 | 4 | 2 | 0 | 1 | — | 6 |
 | JY03 | Akihabara | mostlyVerified | oui | 7 | 3 | 3 | 3 | 3 | 1 | — | 3 |
 | JY04 | Okachimachi | approximate | différée | 6 | 2 | 2 | 0 | 0 | 1 | — | 2 |
-| JY05 | Ueno | mostlyVerified | non | 4 | 2 | 4 | 3 | 2 | 2 | oui | 0 |
+| JY05 | Ueno | mostlyVerified | oui | 4 | 2 | 4 | 3 | 2 | 2 | oui | 0 |
 | JY06 | Uguisudani | approximate | oui | 4 | 2 | 2 | 0 | 0 | 1 | — | 0 |
-| JY07 | Nippori | mostlyVerified | oui | 6 | 2 | 3 | 3 | 1 | 1 | — | 0 |
+| JY07 | Nippori | mostlyVerified | oui | 6 | 2 | 3 | 3 | 1 | 1 | — | 1 |
 | JY08 | Nishi-Nippori | approximate | oui | 3 | 1 | 2 | 4 | 1 | 1 | — | 3 |
 | JY09 | Tabata | approximate | oui | 4 | 2 | 2 | 0 | 1 | 1 | — | 0 |
 | JY10 | Komagome | mostlyVerified | oui | 4 | 2 | 3 | 1 | 1 | 1 | — | 2 |
@@ -38,7 +38,7 @@ défaut DIT.**
 | JY16 | Shin-Ōkubo | mostlyVerified | oui | 3 | 2 | 2 | 0 | 0 | 1 | — | 4 |
 | JY17 | Shinjuku | mostlyVerified | non | 7 | 4 | 9 | 4 | 3 | 2 | oui | 0 |
 | JY18 | Yoyogi | mostlyVerified | oui | 4 | 2 | 3 | 3 | 0 | 1 | — | 3 |
-| JY19 | Harajuku | mostlyVerified | différée | 4 | 2 | 3 | 1 | 1 | 1 | — | 2 |
+| JY19 | Harajuku | mostlyVerified | oui | 4 | 2 | 3 | 1 | 1 | 1 | — | 2 |
 | JY20 | Shibuya | mostlyVerified | non | 4 | 4 | 4 | 4 | 0 | 1 | oui | 0 |
 | JY21 | Ebisu | mostlyVerified | oui | 4 | 2 | 2 | 2 | 2 | 2 | — | 2 |
 | JY22 | Meguro | mostlyVerified | oui | 3 | 1 | 2 | 1 | 2 | 1 | — | 2 |
@@ -51,23 +51,25 @@ défaut DIT.**
 | JY29 | Shimbashi | mostlyVerified | oui | 7 | 3 | 4 | 4 | 0 | 2 | oui | 2 |
 | JY30 | Yūrakuchō | mostlyVerified | oui | 6 | 4 | 5 | 1 | 2 | 2 | — | 7 |
 
-**Vingt-trois gares sur trente passent par leur relevé.** Les sept autres se
-répartissent en deux groupes, et la différence est essentielle :
+**Vingt-six gares sur trente passent par leur relevé.** La volée de quai se
+règle désormais sur ce qu'elle dessert (`data/stationGeometry.lowerFlightTo`) :
+la seconde volée compte le nombre entier de contremarches qui tombe juste sur le
+sol visé — vingt-deux pour descendre à −6,40 m sous les voies, six pour la
+profondeur ordinaire — et la descente s'allonge de deux mètres vingt-cinq. Cela
+a débloqué Tokyo, Ueno et Harajuku.
 
-- **cinq attendent un OUVRAGE que le moteur ne sait pas faire** — Tokyo,
-  Ikebukuro, Shinjuku, Shibuya, et Harajuku pour son souterrain de Takeshita.
-  Leur premier hall est à −6,40 m, sous les voies, et une volée de quai a une
-  hauteur FIXE (3,675 m). Il y aurait un mètre quatre-vingt de marche au pied de
-  l'escalier ;
-- **une attend le même ouvrage à l'autre bout de l'échelle** : Okachimachi
-  débouche sur une mezzanine à mi-hauteur (−1,84 m) ;
-- **Ueno pourrait être branchée aujourd'hui** : son accès tombe pile sur le
-  niveau haut. Elle attend avec les deux autres grandes gares de sa phase, pour
-  qu'on les compare entre elles plutôt qu'une à la fois.
+Les quatre qui restent se répartissent ainsi :
 
-C'est **la dernière dépendance technique du chantier**, et elle est unique :
-rendre la volée de quai réglable en hauteur. Tant qu'elle n'existe pas,
-brancher ces gares poserait une gare juste sur un escalier faux.
+- **Ikebukuro, Shinjuku et Shibuya** — leur relevé se compile, leur volée
+  descend, et leurs itinéraires butent encore sur des conflits de géométrie qui
+  leur sont propres : une galerie devant une baie, une joue de rive contre une
+  file, un contrôle coté hors de ses pièces. Ce sont les trois plus grandes
+  gares de la boucle, et chacune est un cas ;
+- **Okachimachi** attend un autre ouvrage : sa mezzanine est à −1,84 m,
+  c'est-à-dire AU-DESSUS du palier de mi-étage où la PREMIÈRE volée aboutit. Il
+  ne s'agit plus d'allonger la seconde volée mais de raccourcir la première —
+  quinze marches calées sur le percement de la dalle, son linteau et sa hauteur
+  libre.
 
 ---
 
@@ -140,8 +142,7 @@ compilateur : **ce qui est relevé passe avant ce qui est composé.**
 
 | # | phase | ce qui manque |
 |---|---|---|
-| 23 | Signatures 2 | Tokyo, Ueno, Ikebukuro — dépend de la volée réglable |
-| 24 | Signatures 3 | Shinjuku, Shibuya — même dépendance |
+| 23-24 | Signatures 2 et 3 | Ikebukuro, Shinjuku, Shibuya : conflits de géométrie propres à chacune |
 | 25 | Paliers de qualité | haute / moyenne / basse, sans jamais retirer une collision |
 | 26 | Tests | les exigences du cahier des charges, une par une |
 | 27 | Captures | cinq vues × trente gares |

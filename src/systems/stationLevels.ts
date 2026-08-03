@@ -31,9 +31,9 @@ import {
   ASCENT_LANDING_Y,
   ASCENT_LEN,
   ascentFloorY,
-  DESCENT_LEN,
   DESCENT_LOWER_T,
-  descentFloorY,
+  descentFloorYTo,
+  descentLenTo,
   STAIR_FULL_LEN,
   STAIR_FULL_STEPS,
   STAIR_WALK_HALF_X,
@@ -82,8 +82,13 @@ export function mainAccessFloor(
     if (Math.abs(x - a.stair.x) > STAIR_WALK_HALF_X) continue;
     const t = z - stairTopZ(a.stair);
     const up = a.rise === 'up';
-    if (t < 0 || t > (up ? ASCENT_LEN : DESCENT_LEN)) continue;
-    const y = up ? ascentFloorY(t) : descentFloorY(t);
+    // LA VOLÉE VA OÙ VA SA PIÈCE. Cinq gares descendent sous les voies, à
+    // −6,40 m : leur volée est plus longue de deux mètres vingt-cinq et compte
+    // vingt-deux marches. Lire ici la profondeur ordinaire ferait tomber le
+    // marcheur dans le vide à l'endroit précis où l'escalier continue.
+    const len = up ? ASCENT_LEN : descentLenTo(a.floorY);
+    if (t < 0 || t > len) continue;
+    const y = up ? ascentFloorY(t) : descentFloorYTo(t, a.floorY);
     const crossed = up ? y > ASCENT_LANDING_Y : t > DESCENT_LOWER_T;
     return { y, level: crossed ? 'concourse' : 'platform' };
   }

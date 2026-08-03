@@ -459,6 +459,38 @@ function spanRooms(
     : { ...spanned, z0: lo2, z1: hi2 };
 }
 
+/** Demi-largeur et profondeur du dégagement au pied d'une volée (m). */
+const LANDING_HALF_X = 2.2;
+const LANDING_CLEAR = 3.2;
+/** Faute de mieux : l'abscisse ordinaire d'une trémie de quai. */
+const STAIR_X_DEFAULT = 5.2;
+
+/** Deux emprises se recouvrent-elles ? */
+function overlapsRect(a: InteriorRect, b: InteriorRect): boolean {
+  return a.x0 < b.x1 - 1e-6 && a.x1 > b.x0 + 1e-6
+    && a.z0 < b.z1 - 1e-6 && a.z1 > b.z0 + 1e-6;
+}
+
+/**
+ * Rogne `r` pour qu'il ne recouvre plus `keep`, sur son axe long.
+ *
+ * On garde le plus grand morceau restant, et rien si ce morceau n'est plus une
+ * devanture — deux mètres vingt, la largeur en deçà de laquelle une vitrine
+ * n'en est plus une.
+ */
+function clearOf(r: InteriorRect, keep: InteriorRect, along: 'x' | 'z'): InteriorRect | null {
+  const [a0, a1] = along === 'z' ? [r.z0, r.z1] : [r.x0, r.x1];
+  const [k0, k1] = along === 'z' ? [keep.z0, keep.z1] : [keep.x0, keep.x1];
+  const runs: [number, number][] = [];
+  if (k0 > a0) runs.push([a0, Math.min(k0, a1)]);
+  if (k1 < a1) runs.push([Math.max(k1, a0), a1]);
+  const best = runs.sort((x, y) => y[1] - y[0] - (x[1] - x[0]))[0];
+  if (!best || best[1] - best[0] < SHOP_MIN_LEN) return null;
+  return along === 'z'
+    ? { ...r, z0: best[0], z1: best[1] }
+    : { ...r, x0: best[0], x1: best[1] };
+}
+
 /** Deux emprises se touchent-elles, à `slack` près ? */
 function touchesRect(a: InteriorRect, b: InteriorRect, slack: number): boolean {
   return a.x0 <= b.x1 + slack && a.x1 >= b.x0 - slack
@@ -498,6 +530,8 @@ function touchesWall(room: InteriorRect, r: InteriorRect, side: RoomSide): boole
 
 /** En deçà, une devanture n'en est plus une : on ne la pose pas (m). */
 const SHOP_MIN_DEPTH = 1.2;
+/** Et en deçà de cette longueur non plus. */
+const SHOP_MIN_LEN = 2.2;
 
 /** Deux emprises se recouvrent-elles sur l'axe long d'une paroi ? */
 function overlapsAlong(a: InteriorRect, b: InteriorRect, along: 'x' | 'z'): boolean {
@@ -628,6 +662,15 @@ function shifted(r: { x0: number; x1: number; z0: number; z1: number }, dz: numb
 export function compileProfile(
   p: StationConcourseProfile,
   accessZ: number = assumedAccessZ(p.stationIndex),
+  /**
+   * L'abscisse de la trémie sur le quai.
+   *
+   * Elle ne sert qu'à une chose, et elle est indispensable : DÉGAGER LE PIED DE
+   * LA VOLÉE. Le relevé pose ses vitrines le long des parois, et rien ne lui dit
+   * que l'escalier débouche là — à Shinjuku, une galerie de vingt mètres tombait
+   * pile devant la dernière marche.
+   */
+  accessX: number = STAIR_X_DEFAULT,
 ): ConcourseNetwork {
   const dz = accessZ - assumedAccessZ(p.stationIndex);
   const levels = new Map(p.levels.map((l) => [l.id, l]));
@@ -669,15 +712,42 @@ export function compileProfile(
   }));
 
   const obstacles: InteriorRect[] = [];
+  // LE PIED DES VOLÉES : ce qu'on ne meuble pas, et ce qu'on ne vitre pas.
+  const landings: InteriorRect[] = [];
+  for (const a of p.platformAccesses) {
+    if (!isWalkable(a.depiction)) continue;
+    const room = byId.get(a.toNodeId);
+    if (!room) continue;
+    // On arrive par le bord le plus proche de la trémie, sur l'axe z.
+    const near = Math.abs(room.rect.z0 - accessZ) <= Math.abs(room.rect.z1 - accessZ)
+      ? room.rect.z0
+      : room.rect.z1;
+    const into = near === room.rect.z0
+      ? { z0: near, z1: near + LANDING_CLEAR }
+      : { z0: near - LANDING_CLEAR, z1: near };
+    landings.push({
+      x0: accessX - LANDING_HALF_X,
+      x1: accessX + LANDING_HALF_X,
+      ...into,
+    });
+  }
+
   // Les cloisons de chantier barrent : c'est leur seul rôle, et c'est celui
   // qu'elles ont en vrai.
-  const hoardings = (p.works?.partitions ?? []).map((part) => ({
-    id: part.id,
-    roomId: part.nodeId,
-    rect: shifted(part.rect, dz),
-    kind: part.kind,
-    noticeEn: part.noticeEn,
-  }));
+  const hoardings = (p.works?.partitions ?? []).flatMap((part) => {
+    const rect = shifted(part.rect, dz);
+    // UNE PALISSADE NE MURE PAS UN ESCALIER. Le chantier de Shinjuku ferme
+    // vingt mètres du B1F, et le pied de la volée tombe dedans : la gare
+    // n'aurait plus d'entrée du tout. Le plan ne dit pas cela — il dit que le
+    // sud est fermé, pas que la gare l'est. La palissade se retire donc du
+    // débouché, et le compilateur le DIT (`hoardingAtLanding`).
+    const hit = landings.find((l) => overlapsRect(l, rect));
+    if (!hit) return [{ id: part.id, roomId: part.nodeId, rect, kind: part.kind, noticeEn: part.noticeEn }];
+    const along: 'x' | 'z' = rect.x1 - rect.x0 >= rect.z1 - rect.z0 ? 'x' : 'z';
+    const cut = clearOf(rect, hit, along);
+    if (!cut) return [];
+    return [{ id: part.id, roomId: part.nodeId, rect: cut, kind: part.kind, noticeEn: part.noticeEn }];
+  });
   for (const h of hoardings) obstacles.push(h.rect);
 
   const gates: ConcourseGateLine[] = p.gateGroups.map((g) => {
@@ -779,7 +849,14 @@ export function compileProfile(
         ? o.rect.x1 - o.rect.x0
         : o.rect.z1 - o.rect.z0), 0);
     const room4 = roomW - facing - MIN_MAIN_WIDTH;
-    const clear = trimToFront(rect, side, Math.max(0, room4));
+    let clear = trimToFront(rect, side, Math.max(0, room4));
+    // Et l'on ne pose rien devant le pied d'une volée.
+    const hit = landings.find((l) => overlapsRect(l, clear));
+    if (hit) {
+      const cut = clearOf(clear, hit, along);
+      if (!cut) continue;
+      clear = cut;
+    }
     const kept = across === 'x' ? clear.x1 - clear.x0 : clear.z1 - clear.z0;
     // Moins d'un mètre vingt : ce n'est plus une devanture, c'est une plinthe.
     if (kept < SHOP_MIN_DEPTH) continue;
@@ -1151,11 +1228,11 @@ function fittedFixtures(net: ConcourseNetwork, it: StationInterior): Fixture[] {
  * est prend sa géométrie du relevé et son mobilier du moteur, dans la mesure
  * où celui-ci tient dans celle-là.
  */
-export function networkFor(index: number, accessZ: number): ConcourseNetwork {
+export function networkFor(index: number, accessZ: number, accessX?: number): ConcourseNetwork {
   const i = ((index % 30) + 30) % 30;
   const wired = wiredProfile(i);
   if (!wired) return legacyNetwork(i, interiorFor(i, accessZ));
-  const net = compileProfile(wired, accessZ);
+  const net = compileProfile(wired, accessZ, accessX);
   const fixtures = fittedFixtures(net, interiorFor(i, accessZ));
   return { ...net, fixtures, obstacles: [...net.obstacles, ...fixtures.flatMap(interiorSolids)] };
 }

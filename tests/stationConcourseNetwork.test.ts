@@ -148,8 +148,8 @@ test('LE SOL N’A PAS BOUGÉ D’UN CENTIMÈTRE', () => {
   // relevé prend la main, et c'est le signe que le chantier avance. Il ne doit
   // pas tomber à zéro sans qu'on le sache — le jour où les trente seront
   // branchées, ce test aura fini son office et se retirera en le disant.
-  assert.ok(sampled > 8000, `échantillon trop maigre : ${sampled} points`);
-  assert.ok(floor > 1200, `seulement ${floor} points de sol trouvés`);
+  assert.ok(sampled > 5000, `échantillon trop maigre : ${sampled} points`);
+  assert.ok(floor > 800, `seulement ${floor} points de sol trouvés`);
 });
 
 test('les bouches de sortie répondent comme avant', () => {

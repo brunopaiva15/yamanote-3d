@@ -19,6 +19,7 @@ register('./fixtures/ts-resolve.mjs', import.meta.url);
 const { gateStates, paxNearGate, paxTapGate, resetFareGates, updateFareGates } =
   await import('../src/systems/fareGate.ts');
 const { placementFor } = await import('../src/systems/stationPlacement.ts');
+const { concourseBays } = await import('../src/data/stationConcourseBuild.ts');
 const { psdGates } = await import('../src/three/station/psdLayout.ts');
 const { runtime } = await import('../src/systems/runtime.ts');
 const { useStore } = await import('../src/store.ts');
@@ -44,8 +45,28 @@ const STATION = 0;
 useStore.setState({ index: STATION, platformIndex: STATION });
 
 const PLACE = placementFor(STATION, psdGates());
-const GATE = PLACE.interior.gate;
-const LANE = GATE.passages[0];
+/**
+ * LA BAIE SE LIT SUR LE RÉSEAU, comme partout ailleurs depuis la phase 20.
+ * Tokyo passe par son relevé : son contrôle central n'est plus celui du hall
+ * générique, ni à la même place, et `interior.gate` ne décrit plus rien de ce
+ * qu'on éprouve ici.
+ */
+const BAY = concourseBays(PLACE.network)[0];
+const GATE_LINE = PLACE.network.gates.find((g) => g.id === BAY.gateId)!;
+const PAID = PLACE.network.rooms.find((r) => r.id === GATE_LINE.from)!;
+/** Les deux bords de la ligne, sur l'axe qu'on la franchit, et le côté payant. */
+const [G0, G1] = BAY.cross === 'z'
+  ? [BAY.rect.z0, BAY.rect.z1]
+  : [BAY.rect.x0, BAY.rect.x1];
+const [P0, P1] = BAY.cross === 'z'
+  ? [PAID.rect.z0, PAID.rect.z1]
+  : [PAID.rect.x0, PAID.rect.x1];
+/** +1 si la zone payante est du côté des cotes basses. */
+const SIDE = (P0 + P1) / 2 < (G0 + G1) / 2 ? 1 : -1;
+/** Un point à `d` mètres du bord payant de la ligne, dans la file de la baie. */
+const at = (d: number) => (BAY.cross === 'z'
+  ? { x: BAY.x, z: SIDE > 0 ? G0 - d : G1 + d }
+  : { x: SIDE > 0 ? G0 - d : G1 + d, z: BAY.z });
 
 /** Un pas de simulation, au pas de physique du jeu. */
 const STEP = 1 / 60;
@@ -60,14 +81,15 @@ function run(n: number, who?: () => void): void {
 
 /** Un voyageur planté à `dz` de la ligne, côté payant. */
 function standing(dz: number, granted = false) {
-  return () => paxNearGate(LANE.x, GATE.z0 - dz, granted);
+  const q = at(dz);
+  return () => paxNearGate(q.x, q.z, granted);
 }
 
 const flap = () => gateStates()[0].flap;
 
 test('la gare de départ a bien une ligne de portillons à éprouver', () => {
-  assert.ok(PLACE.interior.built, 'JY01 sans intérieur bâti');
-  assert.ok(GATE.passages.length > 0, 'ligne sans passage');
+  assert.ok(PLACE.network.built, 'JY01 sans intérieur bâti');
+  assert.ok(concourseBays(PLACE.network).length > 0, 'ligne sans passage');
 });
 
 test('au repos, la baie est ouverte', () => {
@@ -95,7 +117,8 @@ test('son coup de carte les rouvre, et il passe', () => {
   run(20, standing(0.75, true));
   assert.equal(flap(), 1, 'la baie ne s’est pas rouverte après le ピッ');
   // Puis il traverse : entre les bornes, on ne se fait jamais pincer.
-  run(20, () => paxNearGate(LANE.x, (GATE.z0 + GATE.z1) / 2, true));
+  const mid = at(-(G1 - G0) / 2);
+  run(20, () => paxNearGate(mid.x, mid.z, true));
   assert.equal(flap(), 1);
 });
 
@@ -126,8 +149,10 @@ test('on ne ferme pas sur quelqu’un qui est déjà entre les bornes', () => {
   // Un dans le passage, un autre qui arrive derrière sans avoir bipé : les
   // vantaux attendent d'être libres.
   run(25, () => {
-    paxNearGate(LANE.x, (GATE.z0 + GATE.z1) / 2, false);
-    paxNearGate(LANE.x, GATE.z0 - 1.4, false);
+    const inside = at(-(G1 - G0) / 2);
+    const behind = at(1.4);
+    paxNearGate(inside.x, inside.z, false);
+    paxNearGate(behind.x, behind.z, false);
   });
   assert.equal(flap(), 1, 'les battants se sont rabattus sur quelqu’un dans la baie');
 });

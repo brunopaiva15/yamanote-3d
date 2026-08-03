@@ -37,7 +37,7 @@ import {
   STAIR_LOWER_CEIL_Y,
   STAIR_LOWER_END,
   STAIR_LOWER_HALF_X,
-  STAIR_LOWER_STEPS,
+  lowerFlightTo,
   STAIR_LOWER_Y,
   STAIR_LOWER_Z0,
   STAIR_LOWER_Z1,
@@ -229,12 +229,81 @@ const EXIT_Z = STAIR_CLEAR_Z1 - 0.035;
  */
 const LOWER_WALL_T = 0.2;
 const LOWER_WALL_X = STAIR_LOWER_HALF_X + LOWER_WALL_T / 2;
-const LOWER_BOTTOM = STAIR_LOWER_Y - 0.3;
-const LOWER_H = STAIR_LOWER_CEIL_Y - LOWER_BOTTOM;
-const LOWER_Y = (STAIR_LOWER_CEIL_Y + LOWER_BOTTOM) / 2;
 const LOWER_Z0 = STAIR_HALF_Z;
-const LOWER_MID_Z = (LOWER_Z0 + STAIR_LOWER_END) / 2;
-const LOWER_LEN = STAIR_LOWER_END - LOWER_Z0;
+
+/**
+ * LE NIVEAU BAS, RÉGLÉ SUR CE QU'IL DESSERT.
+ *
+ * Ces cotes étaient des constantes de module : une trémie avait exactement les
+ * mêmes dans les trente gares. Cinq gares descendent SOUS LES VOIES, à −6,40 m
+ * au lieu de −3,675 — vingt-deux marches au lieu de six, un couloir plus long
+ * et des parois plus hautes. Le calcul est donc mémorisé PAR PROFONDEUR : il y
+ * en a deux dans toute la boucle, et refaire trois `BoxGeometry` par gare pour
+ * obtenir le même résultat n'aurait toujours rien acheté.
+ */
+interface LowerKit {
+  floorY: number;
+  bottom: number;
+  h: number;
+  y: number;
+  end: number;
+  midZ: number;
+  len: number;
+  wall: THREE.BufferGeometry;
+  dado: THREE.BufferGeometry;
+  treads: {
+    k: number; y: number; h: number; z: number; d: number; noseY: number; noseZ: number;
+  }[];
+  ads: { d: number; z: number; w: number; h: number }[];
+  adY: number;
+}
+
+const LOWER_KITS = new Map<number, LowerKit>();
+
+function lowerKit(floorY: number): LowerKit {
+  const hit = LOWER_KITS.get(floorY);
+  if (hit) return hit;
+  const flight = lowerFlightTo(floorY);
+  const bottom = floorY - 0.3;
+  // Le couloir va au moins jusqu'au fond d'origine, et plus loin si la volée
+  // l'exige : on ne coupe pas un escalier au milieu.
+  const end = Math.max(STAIR_LOWER_END, flight.end + 1.6);
+  const len = end - LOWER_Z0;
+  const treads = Array.from({ length: flight.steps }, (_, i) => {
+    const k = i + 1;
+    const top = STAIR_LANDING_Y - k * flight.rise;
+    const z0 = STAIR_LOWER_Z0 + k * STAIR_GOING - STAIR_LAP;
+    const z1 = k === flight.steps ? end : STAIR_LOWER_Z0 + (k + 1) * STAIR_GOING;
+    return {
+      k,
+      y: (top + bottom) / 2,
+      h: top - bottom,
+      z: (z0 + z1) / 2,
+      d: z1 - z0,
+      noseY: top + flight.rise,
+      noseZ: STAIR_LOWER_Z0 + k * STAIR_GOING - NOSING_D_HALF,
+    };
+  });
+  const kit: LowerKit = {
+    floorY,
+    bottom,
+    h: STAIR_LOWER_CEIL_Y - bottom,
+    y: (STAIR_LOWER_CEIL_Y + bottom) / 2,
+    end,
+    midZ: (LOWER_Z0 + end) / 2,
+    len,
+    wall: wallBoxGeometry(LOWER_WALL_T, STAIR_LOWER_CEIL_Y - bottom, len, WALL_MODULE),
+    dado: wallBoxGeometry(0.05, 1.1, len, DADO_MODULE),
+    treads,
+    ads: [
+      { d: 1, z: flight.end + 0.55, w: 1.3, h: 0.9 },
+      { d: -1, z: flight.end + 2.05, w: 1.3, h: 0.9 },
+    ],
+    adY: floorY + 1.02,
+  };
+  LOWER_KITS.set(floorY, kit);
+  return kit;
+}
 
 /**
  * Les trois surfaces de la trémie dont les UV sont mises à l'échelle réelle :
@@ -250,27 +319,6 @@ const LOWER_LEN = STAIR_LOWER_END - LOWER_Z0;
 // couloir sur celle du hall (1,80) aurait serré ses joints sans que la texture
 // posée dessus en sache rien.
 const CHEEK_GEO = wallBoxGeometry(CHEEK_T, CHEEK_H, STAIR_HALF_Z * 2, WALL_MODULE);
-const LOWER_WALL_GEO = wallBoxGeometry(LOWER_WALL_T, LOWER_H, LOWER_LEN, WALL_MODULE);
-const LOWER_DADO_GEO = wallBoxGeometry(0.05, 1.1, LOWER_LEN, DADO_MODULE);
-
-/** Seconde volée : mêmes blocs pleins, sous la dalle du quai. */
-const LOWER_TREADS = Array.from({ length: STAIR_LOWER_STEPS }, (_, i) => {
-  const k = i + 1;
-  const top = STAIR_LANDING_Y - k * STAIR_RISE;
-  const z0 = STAIR_LOWER_Z0 + k * STAIR_GOING - STAIR_LAP;
-  const z1 =
-    k === STAIR_LOWER_STEPS ? STAIR_LOWER_END : STAIR_LOWER_Z0 + (k + 1) * STAIR_GOING;
-  return {
-    k,
-    y: (top + LOWER_BOTTOM) / 2,
-    h: top - LOWER_BOTTOM,
-    z: (z0 + z1) / 2,
-    d: z1 - z0,
-    noseY: top + STAIR_RISE,
-    noseZ: STAIR_LOWER_Z0 + k * STAIR_GOING - NOSING_D_HALF,
-  };
-});
-
 
 /**
  * Caissons publicitaires du couloir : ce qui dit « gare » et pas « tunnel ».
@@ -286,12 +334,6 @@ const LOWER_TREADS = Array.from({ length: STAIR_LOWER_STEPS }, (_, i) => {
  * mètres. Les caissons se tiennent donc à hauteur d'affiche - un mètre du sol -
  * et pas plus loin que sept.
  */
-const AD_LOW = [
-  { d: 1, z: STAIR_LOWER_Z1 + 0.55, w: 1.3, h: 0.9 },
-  { d: -1, z: STAIR_LOWER_Z1 + 2.05, w: 1.3, h: 0.9 },
-];
-const AD_LOW_Y = STAIR_LOWER_Y + 1.02;
-
 // --- Rendu ---------------------------------------------------------------
 
 interface Props {
@@ -305,7 +347,7 @@ interface Props {
      * la trémie principale s'ouvrait si le hall existait. Une gare peut en
      * avoir deux (Harajuku), et c'est la liste qui tranche, trémie par trémie.
      */
-    liveAccesses: readonly { stair: Placed; rise: 'down' | 'up' }[];
+    liveAccesses: readonly { stair: Placed; rise: 'down' | 'up'; floorY: number }[];
     /** Le réseau de la gare : la SIGNALÉTIQUE s'y lit (phase 18). */
     network: ConcourseNetwork;
   };
@@ -363,6 +405,12 @@ export function Stairwells({ place, m, station, detail }: Props) {
           // ensembles en a deux, et l'on descendrait sinon dans un couloir
           // borgne dessiné par-dessus un hall bien réel.
           open={place.liveAccesses.some((a) => a.stair === s && a.rise === 'down')}
+          // La profondeur de CETTE volée : celle du sol qu'elle dessert. Une
+          // trémie borgne garde la profondeur ordinaire — elle ne dessert rien.
+          floorY={
+            place.liveAccesses.find((a) => a.stair === s && a.rise === 'down')?.floorY
+            ?? STAIR_LOWER_Y
+          }
         />
       ))}
     </>
@@ -376,6 +424,7 @@ function Stairwell({
   exitMat,
   detail,
   open,
+  floorY,
 }: {
   s: Placed;
   m: Mats;
@@ -384,6 +433,14 @@ function Stairwell({
   open: boolean;
   exitMat: THREE.Material;
   detail: number;
+  /**
+   * Le sol que cette volée dessert.
+   *
+   * Six marches menaient à −3,675 m et c'était la seule profondeur qui
+   * existait. Cinq gares descendent SOUS LES VOIES, à −6,40 m : vingt-deux
+   * marches, un couloir plus long, des parois plus hautes.
+   */
+  floorY: number;
 }) {
   return (
     <group name="trémie" position={[s.x, PLATFORM_TOP, s.z]}>
@@ -485,7 +542,7 @@ function Stairwell({
 
       {/* Le niveau inférieur est un fond de champ, pas une structure : c'est
           la première chose qui saute sur une machine à la peine. */}
-      {detail <= 1 && <LowerLevel m={m} station={station} open={open} />}
+      {detail <= 1 && <LowerLevel m={m} station={station} open={open} floorY={floorY} />}
 
       {/* Caisson publicitaire plaqué sur la joue côté voie : sur un vrai quai
           c'est la surface la plus rentable d'une trémie, et elle est en plein
@@ -516,11 +573,23 @@ function Stairwell({
  * sous-face du linteau et descend d'un demi-mètre par mètre. À sept mètres il
  * a rejoint le sol, et ce qui est au-dessus n'existe plus pour personne.
  */
-function LowerLevel({ m, station, open }: { m: Mats; station: number; open: boolean }) {
+function LowerLevel({
+  m,
+  station,
+  open,
+  floorY,
+}: {
+  m: Mats;
+  station: number;
+  open: boolean;
+  /** Le sol que cette volée dessert : elle s'y arrête, quel qu'il soit. */
+  floorY: number;
+}) {
+  const k = lowerKit(floorY);
   return (
     <group>
       {/* Seconde volée, et ses nez - c'est par eux qu'on la lit dans le noir. */}
-      {LOWER_TREADS.map((t) => (
+      {k.treads.map((t) => (
         <group key={`lt${t.k}`}>
           <mesh position={[0, t.y, t.z]} material={m.stair}>
             <boxGeometry args={[FLIGHT_HALF_X * 2, t.h, t.d]} />
@@ -536,8 +605,8 @@ function LowerLevel({ m, station, open }: { m: Mats; station: number; open: bool
       {[-1, 1].map((d) => (
         <mesh
           key={`lw${d}`}
-          position={[d * LOWER_WALL_X, LOWER_Y, LOWER_MID_Z]}
-          geometry={LOWER_WALL_GEO}
+          position={[d * LOWER_WALL_X, k.y, k.midZ]}
+          geometry={k.wall}
           material={m.wall}
         />
       ))}
@@ -545,37 +614,37 @@ function LowerLevel({ m, station, open }: { m: Mats; station: number; open: bool
       {[-1, 1].map((d) => (
         <mesh
           key={`ld${d}`}
-          position={[d * (STAIR_LOWER_HALF_X - 0.02), STAIR_LOWER_Y + 0.55, LOWER_MID_Z]}
-          geometry={LOWER_DADO_GEO}
+          position={[d * (STAIR_LOWER_HALF_X - 0.02), floorY + 0.55, k.midZ]}
+          geometry={k.dado}
           material={m.tile}
         />
       ))}
-      <mesh position={[0, STAIR_LOWER_CEIL_Y - 0.05, LOWER_MID_Z]} material={m.wallDark}>
-        <boxGeometry args={[LOWER_WALL_X * 2, 0.1, LOWER_LEN]} />
+      <mesh position={[0, STAIR_LOWER_CEIL_Y - 0.05, k.midZ]} material={m.wallDark}>
+        <boxGeometry args={[LOWER_WALL_X * 2, 0.1, k.len]} />
       </mesh>
       {/* Fond de couloir - sauf quand il n'y en a pas : la trémie principale
           continue dans le hall, et un mur planté là l'emmurerait. */}
       {!open && (
-        <mesh position={[0, LOWER_Y, STAIR_LOWER_END + 0.1]} material={m.wall}>
-          <boxGeometry args={[LOWER_WALL_X * 2, LOWER_H, 0.2]} />
+        <mesh position={[0, k.y, k.end + 0.1]} material={m.wall}>
+          <boxGeometry args={[LOWER_WALL_X * 2, k.h, 0.2]} />
         </mesh>
       )}
 
       {/* Caissons rétroéclairés sur les parois : la seule lumière du couloir
           qui tombe dans la bande visible - une réglette de plafond, à trois
           mètres du sol, est coupée par la dalle avant d'atteindre l'œil. */}
-      {AD_LOW.map((a, k) => (
-        <group key={`la${k}`}>
+      {k.ads.map((a, n) => (
+        <group key={`la${n}`}>
           <mesh
-            position={[a.d * (STAIR_LOWER_HALF_X - 0.03), AD_LOW_Y, a.z]}
+            position={[a.d * (STAIR_LOWER_HALF_X - 0.03), k.adY, a.z]}
             material={m.metal}
           >
             <boxGeometry args={[0.06, a.h + 0.1, a.w + 0.1]} />
           </mesh>
           <mesh
-            position={[a.d * (STAIR_LOWER_HALF_X - 0.065), AD_LOW_Y, a.z]}
+            position={[a.d * (STAIR_LOWER_HALF_X - 0.065), k.adY, a.z]}
             rotation={[0, a.d === 1 ? -Math.PI / 2 : Math.PI / 2, 0]}
-            material={stationAd(station, k + 7)}
+            material={stationAd(station, n + 7)}
           >
             <planeGeometry args={[a.w, a.h]} />
           </mesh>
@@ -584,10 +653,10 @@ function LowerLevel({ m, station, open }: { m: Mats; station: number; open: bool
 
       {/* Ligne de guidage peinte, dans l'axe du couloir. */}
       <mesh
-        position={[0, STAIR_LOWER_Y + 0.008, (STAIR_LOWER_Z1 + STAIR_LOWER_END) / 2]}
+        position={[0, floorY + 0.008, (STAIR_LOWER_Z1 + k.end) / 2]}
         material={m.accent}
       >
-        <boxGeometry args={[0.22, 0.016, STAIR_LOWER_END - STAIR_LOWER_Z1]} />
+        <boxGeometry args={[0.22, 0.016, k.end - STAIR_LOWER_Z1]} />
       </mesh>
 
     </group>

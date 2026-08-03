@@ -84,6 +84,7 @@ import {
   ASCENT_FLOOR_Y,
   ASCENT_LEN,
   DESCENT_LEN,
+  descentLenTo,
   PSD_X,
   STAIR_HALF_Z,
   STAIR_LOWER_CEIL_Y,
@@ -155,8 +156,15 @@ function frame(index: number) {
  * deux moteurs doivent tomber d'accord au centimètre, sans quoi le hall du
  * profil et celui du dépôt ne se superposeraient pas.
  */
-function hallStart(accessZ: number, rise: 'down' | 'up'): number {
-  return accessZ - STAIR_HALF_Z + (rise === 'down' ? DESCENT_LEN : ASCENT_LEN);
+function hallStart(accessZ: number, rise: 'down' | 'up', floorY?: number): number {
+  // `floorY` DIT JUSQU'OÙ LA VOLÉE DESCEND, et il n'est donné que là où elle ne
+  // s'arrête pas à la profondeur ordinaire : cinq gares ont leur premier hall
+  // SOUS LES VOIES, à −6,40 m. Vingt-deux marches n'entrent pas dans un couloir
+  // taillé pour six ; la descente s'allonge de deux mètres vingt-cinq, et le
+  // hall part d'autant plus loin du quai. C'est ce que dit un plan de gare où
+  // l'on marche longtemps avant d'arriver au contrôle.
+  const down = floorY === undefined ? DESCENT_LEN : descentLenTo(floorY);
+  return accessZ - STAIR_HALF_Z + (rise === 'down' ? down : ASCENT_LEN);
 }
 
 /** Les deux trémies de quai, telles que `data/stationLayouts` les pose. */
@@ -320,8 +328,8 @@ function distant(
 function tokyo(i: number): Draft {
   const f = frame(i);
   const z = accessZs(i);
-  const central = hallStart(z.main, 'down');
-  const northern = hallStart(z.far, 'down');
+  const central = hallStart(z.main, 'down', SUBTRACK_Y);
+  const northern = hallStart(z.far, 'down', SUBTRACK_Y);
   return {
     confidence: 'mostlyVerified',
     place: 'belowPlatform',
@@ -1899,8 +1907,8 @@ function otsuka(i: number): Draft {
 function ikebukuro(i: number): Draft {
   const f = frame(i);
   const z = accessZs(i);
-  const west = hallStart(z.main, 'down');
-  const east = hallStart(z.far, 'down');
+  const west = hallStart(z.main, 'down', SUBTRACK_Y);
+  const east = hallStart(z.far, 'down', SUBTRACK_Y);
   return {
     confidence: 'mostlyVerified',
     place: 'belowPlatform',
@@ -2391,7 +2399,7 @@ function shinOkubo(i: number): Draft {
 function shinjuku(i: number): Draft {
   const f = frame(i);
   const z = accessZs(i);
-  const b1 = hallStart(z.main, 'down');
+  const b1 = hallStart(z.main, 'down', SUBTRACK_Y);
   const spine = hallStart(z.far, 'up');
   return {
     confidence: 'mostlyVerified',
@@ -2802,7 +2810,7 @@ function yoyogi(i: number): Draft {
 function harajuku(i: number): Draft {
   const f = frame(i);
   const z = accessZs(i);
-  const take = hallStart(z.main, 'down');
+  const take = hallStart(z.main, 'down', SUBTRACK_Y);
   const omote = hallStart(z.far, 'up');
   return {
     confidence: 'mostlyVerified',
@@ -2947,8 +2955,8 @@ function harajuku(i: number): Draft {
 function shibuya(i: number): Draft {
   const f = frame(i);
   const z = accessZs(i);
-  const hachiko = hallStart(z.main, 'down');
-  const south = hallStart(z.far, 'down');
+  const hachiko = hallStart(z.main, 'down', SUBTRACK_Y);
+  const south = hallStart(z.far, 'down', SUBTRACK_Y);
   return {
     confidence: 'mostlyVerified',
     place: 'belowPlatform',

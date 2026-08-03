@@ -286,8 +286,8 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **20** | **Petites gares** ✅ | huit gares passent par leur relevé ; `FareGates`, `Fixtures` et les itinéraires suivent le réseau | — |
 | **21** | **Gares moyennes** ✅ | vingt gares branchées ; deux DIFFÉRÉES faute d'une volée réglable | — |
 | **22** | **Signatures 1** ✅ | Nippori, Shinagawa, Takanawa Gateway ; `interiors/Landmarks` : les repères du lieu | R3 R4 |
-| 23 | Signatures 2 | Tokyo, Ueno, Ikebukuro | R3 |
-| 24 | Signatures 3 | Shinjuku, Shibuya (+ travaux août 2026) | R3 D7 |
+| **23** | **Signatures 2** ◐ | **volée réglable** ; Tokyo, Ueno et Harajuku branchées — Ikebukuro reste | R3 |
+| 24 | Signatures 3 | Shinjuku, Shibuya : conflits de géométrie propres à chacune | R3 D7 |
 | 25 | Paliers de qualité | haute / moyenne / basse, sans jamais retirer une collision | — |
 | 26 | Tests | les 18 exigences du cahier des charges | — |
 | 27 | Captures de contrôle | probe : 5 vues × 30 gares | — |
@@ -1173,6 +1173,61 @@ fond de 0,12 m entre le hall et ses portillons est antérieur au chantier. Les
 deux repères nouvellement dessinés (poteaux, horloge) ont été rognés jusqu'à ne
 plus toucher leur dalle : un fût qui pénètre son plafond se lit comme un défaut,
 et la sonde le compte comme tel.
+
+### 4.21 La phase 23 : une volée qui va où va sa pièce
+
+Sept gares attendaient, et pas pour une raison de relevé : **une volée de quai
+n'avait qu'une profondeur**. Six marches menaient à −3,675 m, point. Or cinq
+gares ont leur premier hall SOUS LES VOIES, à −6,40 m : la volée s'y arrêtait
+deux mètres soixante-douze trop haut, et il aurait fallu sauter au pied de
+l'escalier.
+
+**La seconde volée se règle maintenant sur ce qu'elle dessert**, et la règle est
+celle d'un escalier réel : on divise la hauteur par un NOMBRE ENTIER de
+contremarches. Vingt-deux marches pour descendre à −6,40 m, avec une
+contremarche à 17,16 cm — un millimètre et demi sous la cote ordinaire, ce que
+personne ne remarque et ce qu'aucun escalier de gare ne respecte de toute façon
+au millimètre. La descente s'allonge de 2,25 m, et les halls concernés partent
+d'autant plus loin du quai : c'est ce que dit un plan de gare où l'on marche
+longtemps avant d'arriver au contrôle.
+
+Tout ce qui parcourt la volée lit la même cote — `LiveAccess.floorY` : la marche
+du joueur, celle de la foule, le pied d'itinéraire, et le rendu, dont le couloir
+bas se recalcule par profondeur (deux jeux de cotes dans toute la boucle).
+
+**Trois gares de plus sont branchées : Tokyo, Ueno, Harajuku.** Et brancher
+Tokyo a montré deux choses qu'aucune gare longitudinale ne pouvait montrer :
+
+- **le pied d'une volée doit rester dégagé.** Le relevé pose ses vitrines le
+  long des parois sans savoir où l'escalier débouche ; à Shinjuku une galerie de
+  vingt mètres tombait pile devant la dernière marche, et à Nippori la galerie
+  ecute faisait de même. Le compilateur connaît désormais l'abscisse de la
+  trémie et réserve son débouché — devantures, palissades et mobilier s'écartent ;
+- **une palissade de chantier ne mure pas un escalier.** Le chantier de Shinjuku
+  ferme vingt mètres du B1F, et le pied de la volée tombait dedans : la gare
+  n'aurait plus eu d'entrée. Le plan dit que le sud est fermé, pas que la gare
+  l'est.
+
+**Trois tests de marche ont dû changer de source**, et c'est la même leçon qu'à
+la phase 20 : ils lisaient `interior` — la ligne de portillons du hall
+générique, sa zone libre « plus loin en z ». Tokyo se traverse selon x et sa
+zone libre est à l'ouest. Le trajet du joueur se compose maintenant de trois
+visées — le pied de la volée, la baie, le point qui la suit — au lieu d'un
+« tout droit » suivi d'un recalage.
+
+**Ce qui reste.** Ikebukuro, Shinjuku et Shibuya compilent et descendent, mais
+leurs itinéraires butent encore sur des conflits qui leur sont propres : une
+joue de rive contre une file, un contrôle coté hors de ses pièces, une galerie
+en travers d'un débouché. Ce sont les trois plus grandes gares de la boucle, et
+chacune est un cas. Okachimachi, elle, attend un autre ouvrage : sa mezzanine
+est AU-DESSUS du palier de mi-étage, donc c'est la PREMIÈRE volée qu'il faudrait
+raccourcir — quinze marches calées sur le percement de la dalle, son linteau et
+sa hauteur libre.
+
+**Contrôle.** Sonde sur les trente gares, **aucune erreur de page**. Une paire
+nouvelle apparaît à Tokyo : `hall ✕ trémie`, 20 cm — c'est l'épaisseur de la
+paroi du couloir bas là où il débouche dans le hall, et c'est le JOINT entre
+deux ouvrages qui se touchent réellement. Tout le reste est inchangé.
 
 ### Ordre et raison
 

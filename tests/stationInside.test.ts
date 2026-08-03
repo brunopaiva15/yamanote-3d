@@ -233,8 +233,13 @@ test('la baie devant laquelle le joueur se tient n’est pas à prendre', () => 
   const bays = baysOf(place);
   const n = bays.length;
   runtime.playerLevel = 'concourse';
-  runtime.playerPlatX = bays[1].x;
-  runtime.playerPlatZ = bays[1].z - 1;
+  // UN MÈTRE DEVANT LA BAIE, du côté payant — et « devant » se dit sur l'axe
+  // qu'on FRANCHIT : Tokyo se traverse selon x, et un joueur posé un mètre plus
+  // bas en z se tenait simplement à côté de la ligne, sans rien bloquer.
+  const { axis, g0, g1, paidLow } = gateSpan(place, 1);
+  const at = paidLow ? g0 - 1 : g1 + 1;
+  runtime.playerPlatX = axis === 'x' ? at : bays[1].x;
+  runtime.playerPlatZ = axis === 'x' ? bays[1].z : at;
   try {
     const seen = new Set<number>();
     for (let k = 0; k < 120; k++) {
