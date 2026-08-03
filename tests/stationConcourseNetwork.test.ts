@@ -144,8 +144,10 @@ test('LE SOL N’A PAS BOUGÉ D’UN CENTIMÈTRE', () => {
   }
   // Et l'échantillon a bien touché du sol : un test qui ne compare que des
   // `null` ne prouve rien.
-  assert.ok(sampled > 20000, `échantillon trop maigre : ${sampled} points`);
-  assert.ok(floor > 4000, `seulement ${floor} points de sol trouvés`);
+  // Huit gares non branchées restent : l'échantillon rétrécit à mesure que le
+  // relevé prend la main, et c'est le signe que le chantier avance.
+  assert.ok(sampled > 9000, `échantillon trop maigre : ${sampled} points`);
+  assert.ok(floor > 1500, `seulement ${floor} points de sol trouvés`);
 });
 
 test('les bouches de sortie répondent comme avant', () => {
@@ -692,9 +694,11 @@ test('les huit gares en travaux portent leurs palissades', () => {
 
 test('une gare à un seul volume ne cache jamais rien', () => {
   // Constat R2 : le hall était rendu d'un bloc dès qu'il existait. Avec un
-  // volume par gare, il n'y a rien à trancher — et les trente y passent
-  // inchangées, où que soit le joueur.
-  for (let i = 0; i < STATION_COUNT; i++) {
+  // volume par gare, il n'y a rien à trancher — et les gares restées sur le
+  // hall générique y passent inchangées, où que soit le joueur. Une gare
+  // BRANCHÉE peut en avoir deux (Okachimachi et sa mezzanine) : c'est le cas
+  // que les trois tests suivants couvrent.
+  for (const i of LEGACY) {
     const p = PLACE(i);
     const all = shellsOf(p.network);
     for (const inHall of [false, true]) {

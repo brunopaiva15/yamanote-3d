@@ -437,6 +437,32 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
    * boîte englobante empiète sur le volume habitable d'une caisse - filiation
    * complète, pour pouvoir nommer l'intrus.
    */
+  // Ce qui traîne dans la scène sans nom ni parent nommé : la sonde de la
+  // phase 21 a trouvé un plan de 1 × 1 m à l'origine du monde, et il fallait
+  // pouvoir remonter à sa source sans deviner.
+  w.__probeStrays = () => {
+    const out: Record<string, unknown>[] = [];
+    scene.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || !mesh.geometry) return;
+      if (mesh.name || mesh.parent?.name) return;
+      const chain: string[] = [];
+      for (let c: THREE.Object3D | null = mesh; c; c = c.parent) chain.unshift(c.name || `<${c.type}>`);
+      const mat = mesh.material as THREE.Material & { color?: THREE.Color; map?: unknown };
+      out.push({
+        chain: chain.join('/'),
+        geo: mesh.geometry.type,
+        mat: mat?.type,
+        visible: mesh.visible,
+        pos: mesh.position.toArray(),
+        color: mat?.color?.getHexString?.() ?? null,
+        map: !!mat?.map,
+        siblings: mesh.parent?.children.length ?? 0,
+      });
+    });
+    return out;
+  };
+
   w.__probeIntruders = (halfLen = 10, aisle = false) => {
     const car = aisle
       ? new THREE.Box3(new THREE.Vector3(-0.7, 0.06, -halfLen), new THREE.Vector3(0.7, 1.7, halfLen))
@@ -451,6 +477,13 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
       // Les corps ne sont pas des ouvrages : leur boîte est celle de la pose de
       // repos, et la foule qui monte est DANS le wagon par construction.
       if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) return;
+      // NI LES NUÉES INSTANCIÉES. Une pluie, une neige, une volée de feuilles
+      // sont un seul maillage dont la géométrie de BASE est un carré d'un mètre
+      // à l'origine du monde : sa boîte englobante ne dit rien de l'endroit où
+      // les instances tombent, et elle tombe pile dans le wagon. La sonde de la
+      // phase 21 a signalé ce carré sur dix-neuf gares avant qu'on comprenne
+      // qu'il ne s'agissait pas d'un ouvrage égaré.
+      if ((mesh.geometry as THREE.InstancedBufferGeometry).isInstancedBufferGeometry) return;
       // La rame elle-même, ses gens et leurs affaires sont chez eux - sauf
       // quand c'est justement L'ALLÉE qu'on inspecte : là, tout est suspect.
       if (!aisle) {

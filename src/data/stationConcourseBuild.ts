@@ -390,6 +390,85 @@ function layMouthsClear(
     .sort((a, b) => a.at - b.at);
 }
 
+/**
+ * Étire une ligne de portillons jusqu'à toucher ses deux pièces.
+ *
+ * Uniquement dans le sens du franchissement, et uniquement vers l'extérieur :
+ * une ligne ne rétrécit jamais, sans quoi ses bornes changeraient de cote.
+ */
+function spanRooms(
+  rect: InteriorRect,
+  cross: 'x' | 'z',
+  from: ConcourseRoom | undefined,
+  to: ConcourseRoom | undefined,
+): InteriorRect {
+  const rooms = [from, to].filter((r): r is ConcourseRoom => !!r);
+  if (rooms.length < 2) return rect;
+  const mid = cross === 'z' ? (rect.z0 + rect.z1) / 2 : (rect.x0 + rect.x1) / 2;
+  let lo = cross === 'z' ? rect.z0 : rect.x0;
+  let hi = cross === 'z' ? rect.z1 : rect.x1;
+  for (const r of rooms) {
+    const [a0, a1] = cross === 'z' ? [r.rect.z0, r.rect.z1] : [r.rect.x0, r.rect.x1];
+    // Le bord de la pièce QUI REGARDE la ligne.
+    const edge = (a0 + a1) / 2 < mid ? a1 : a0;
+    lo = Math.min(lo, edge);
+    hi = Math.max(hi, edge);
+  }
+  const spanned = cross === 'z' ? { ...rect, z0: lo, z1: hi } : { ...rect, x0: lo, x1: hi };
+  // ET ELLE NE DÉBORDE PAS SES DEUX PIÈCES. Une ligne ne peut exister que là
+  // où les deux côtés existent : à Tamachi le contrôle sud était coté dix
+  // mètres de long pour une zone payante qui s'arrête six mètres plus tôt, et
+  // ses dernières baies s'ouvraient sur du vide.
+  const along: 'x' | 'z' = cross === 'z' ? 'x' : 'z';
+  const bounds = rooms.map((r) => (along === 'x'
+    ? [r.rect.x0, r.rect.x1]
+    : [r.rect.z0, r.rect.z1]));
+  const a0 = Math.max(...bounds.map((b) => b[0]));
+  const a1 = Math.min(...bounds.map((b) => b[1]));
+  const [s0, s1] = along === 'x' ? [spanned.x0, spanned.x1] : [spanned.z0, spanned.z1];
+  const lo2 = Math.max(s0, a0);
+  const hi2 = Math.min(s1, a1);
+  // Rien de commun : la ligne est cotée à CÔTÉ des pièces qu'elle sépare
+  // (Ikebukuro, contrôle sud). On ne la déplace pas — ce serait décider à la
+  // place du relevé — on la laisse telle quelle, et `networkIssues` le dit.
+  if (hi2 - lo2 < 1) return spanned;
+  return along === 'x'
+    ? { ...spanned, x0: lo2, x1: hi2 }
+    : { ...spanned, z0: lo2, z1: hi2 };
+}
+
+/** Une emprise touche-t-elle cette paroi de la pièce ? */
+function touchesWall(room: InteriorRect, r: InteriorRect, side: RoomSide): boolean {
+  const EPS = 0.1;
+  if (side === 'x0') return r.x0 <= room.x0 + EPS;
+  if (side === 'x1') return r.x1 >= room.x1 - EPS;
+  if (side === 'z0') return r.z0 <= room.z0 + EPS;
+  return r.z1 >= room.z1 - EPS;
+}
+
+/** En deçà, une devanture n'en est plus une : on ne la pose pas (m). */
+const SHOP_MIN_DEPTH = 1.2;
+
+/** Deux emprises se recouvrent-elles sur l'axe long d'une paroi ? */
+function overlapsAlong(a: InteriorRect, b: InteriorRect, along: 'x' | 'z'): boolean {
+  return along === 'z'
+    ? a.z0 < b.z1 - 1e-6 && a.z1 > b.z0 + 1e-6
+    : a.x0 < b.x1 - 1e-6 && a.x1 > b.x0 + 1e-6;
+}
+
+/** Dégagement laissé libre de part et d'autre d'une ligne de portillons (m). */
+const GATE_CLEAR = 1.2;
+/**
+ * Les décalages essayés pour recaser un meuble : sur place d'abord, puis de
+ * proche en proche des deux côtés, jusqu'à douze mètres.
+ */
+const SLIDES = [0, ...Array.from({ length: 24 }, (_, k) => (k + 1) * 0.5).flatMap(
+  (d) => [d, -d],
+)];
+
+/** Dégagement laissé libre devant une bouche de sortie (m). */
+const MOUTH_CLEAR = 2.5;
+
 /** Largeur d'un seuil de correspondance, et sa profondeur dans le mur. */
 const PORTAL_W = 2.6;
 const PORTAL_D = 0.5;
@@ -541,7 +620,13 @@ export function compileProfile(
 
   const obstacles: InteriorRect[] = [];
   const gates: ConcourseGateLine[] = p.gateGroups.map((g) => {
-    const rect = shifted(g.rect, dz);
+    // LA LIGNE JOINT SES DEUX PIÈCES, sans un centimètre de vide. Le relevé
+    // cote l'emprise du contrôle et les pièces de part et d'autre séparément :
+    // à Tamachi il restait trente centimètres entre la ligne et la zone libre,
+    // trente centimètres qui n'appartenaient à rien et sur lesquels la marche
+    // butait comme sur un mur. Le franchissement, lui, est continu par
+    // définition — on ne saute pas un fossé au milieu d'un 改札.
+    const rect = spanRooms(shifted(g.rect, dz), g.cross, byId.get(g.from), byId.get(g.to));
     // Les baies s'alignent sur l'axe PERPENDICULAIRE à celui qu'on franchit.
     const along: 'x' | 'z' = g.cross === 'z' ? 'x' : 'z';
     const from = along === 'x' ? rect.x0 : rect.z0;
@@ -598,7 +683,25 @@ export function compileProfile(
       zone.category === 'gallery' ? GALLERY_DEPTH : SHOP_DEPTH,
     );
     const along: 'x' | 'z' = side === 'x0' || side === 'x1' ? 'z' : 'x';
-    const clear = rect;
+    // DEUX VITRINES QUI SE FONT FACE NE SE PARTAGENT PAS UN HALL DE SIX MÈTRES.
+    // Gotanda en a deux de trois mètres de fond, une par paroi : posées telles
+    // quelles, elles fermaient la zone libre d'un mur à l'autre et l'on ne
+    // pouvait plus atteindre les sorties. Chaque devanture est donc rognée sur
+    // ce qui reste réellement, et l'on garde deux mètres de passage.
+    const across: 'x' | 'z' = along === 'z' ? 'x' : 'z';
+    const roomW = across === 'x'
+      ? room.rect.x1 - room.rect.x0
+      : room.rect.z1 - room.rect.z0;
+    const facing = frontages
+      .filter((o) => o.roomId === zone.nodeId && overlapsAlong(o.rect, rect, along))
+      .reduce((sum, o) => sum + (across === 'x'
+        ? o.rect.x1 - o.rect.x0
+        : o.rect.z1 - o.rect.z0), 0);
+    const room4 = roomW - facing - MIN_MAIN_WIDTH;
+    const clear = trimToFront(rect, side, Math.max(0, room4));
+    const kept = across === 'x' ? clear.x1 - clear.x0 : clear.z1 - clear.z0;
+    // Moins d'un mètre vingt : ce n'est plus une devanture, c'est une plinthe.
+    if (kept < SHOP_MIN_DEPTH) continue;
     frontages.push({
       id: zone.id,
       roomId: zone.nodeId,
@@ -636,10 +739,22 @@ export function compileProfile(
     // le relevé donne leur nom et leur paroi, pas leur abscisse. Quand les deux
     // se disputent une paroi (Komagome : le magasin tombait pile sur les deux
     // sorties), ce sont donc les bouches qui se rangent ailleurs.
-    const busy = frontages
-      .filter((f) => f.roomId === roomId && f.side === side)
-      .map((f) => wallSpan(f.rect, side))
-      .map(([a, l]) => [a, a + l] as [number, number]);
+    // Ce qui occupe cette paroi : toute devanture qui la TOUCHE, et pas
+    // seulement celle qui s'y adosse. Une vitrine rangée le long du mur d'à
+    // côté arrive souvent jusqu'à l'angle — à Gotanda, elle couvrait la sortie
+    // est sans être « du côté » de cette paroi-là.
+    const busy: [number, number][] = [
+      ...frontages
+        .filter((f) => f.roomId === roomId && touchesWall(room.rect, f.rect, side))
+        .map((f) => wallSpan(f.rect, side)),
+      // Et les LIGNES DE PORTILLONS qui aboutissent à cette paroi : à Ōsaki, le
+      // contrôle sud arrive sur le mur nord de la passerelle, et une bouche
+      // posée là s'ouvrait dans une rangée de bornes.
+      ...gates
+        .filter((g) => (g.from === roomId || g.to === roomId)
+          && touchesWall(room.rect, g.rect, side))
+        .map((g) => wallSpan(g.rect, side)),
+    ].map(([a, l]) => [a - 0.3, a + l + 0.3] as [number, number]);
     const laid = layMouthsClear(list.length, from, len, busy);
     list.forEach((e, k) => {
       mouths.push({
@@ -684,8 +799,13 @@ export function compileProfile(
     claim(m.roomId, m.side, [m.at - m.halfWidth - 0.4, m.at + m.halfWidth + 0.4]);
   }
   for (const f of frontages) {
-    const [a, l] = wallSpan(f.rect, f.side);
-    claim(f.roomId, f.side, [a - 0.3, a + l + 0.3]);
+    const room = byId.get(f.roomId);
+    if (!room) continue;
+    for (const side of ['x0', 'x1', 'z0', 'z1'] as RoomSide[]) {
+      if (!touchesWall(room.rect, f.rect, side)) continue;
+      const [a, l] = wallSpan(f.rect, side);
+      claim(f.roomId, side, [a - 0.3, a + l + 0.3]);
+    }
   }
   // Une ligne de portillons touche deux parois par ses joues de rive : y poser
   // un seuil de correspondance mettrait une porte dans une borne.
@@ -857,19 +977,88 @@ export function legacyNetwork(index: number, it: StationInterior): ConcourseNetw
  */
 function fittedFixtures(net: ConcourseNetwork, it: StationInterior): Fixture[] {
   const rooms = net.rooms.filter((r) => r.walkable);
+  // Devant un contrôle, on ne pose RIEN. La ligne a besoin de ses deux mètres
+  // d'abord et de son dégagement derrière : c'est là que la file se forme, et
+  // un extincteur logé dans les trente-cinq centimètres qui restent entre la
+  // ligne et la paroi barrait le passage de tout le monde.
+  const gateClear = (g: ConcourseGateLine): InteriorRect => (g.cross === 'z'
+    ? { ...g.rect, z0: g.rect.z0 - GATE_CLEAR, z1: g.rect.z1 + GATE_CLEAR }
+    : { ...g.rect, x0: g.rect.x0 - GATE_CLEAR, x1: g.rect.x1 + GATE_CLEAR });
+  // Et devant une BOUCHE non plus : c'est par là qu'on s'en va, et un banc
+  // planté en travers de la sortie est le meuble le plus mal posé qui soit.
+  const mouthClear = (m: ConcourseMouth): InteriorRect | null => {
+    const room = net.rooms.find((r) => r.id === m.roomId);
+    if (!room) return null;
+    const a0 = m.at - m.halfWidth - 0.3;
+    const a1 = m.at + m.halfWidth + 0.3;
+    const r = room.rect;
+    return m.side === 'x0' ? { x0: r.x0, x1: r.x0 + MOUTH_CLEAR, z0: a0, z1: a1 }
+      : m.side === 'x1' ? { x0: r.x1 - MOUTH_CLEAR, x1: r.x1, z0: a0, z1: a1 }
+        : m.side === 'z0' ? { x0: a0, x1: a1, z0: r.z0, z1: r.z0 + MOUTH_CLEAR }
+          : { x0: a0, x1: a1, z0: r.z1 - MOUTH_CLEAR, z1: r.z1 };
+  };
   const busy: InteriorRect[] = [
     ...net.obstacles,
-    ...net.gates.map((g) => g.rect),
+    ...net.gates.map(gateClear),
+    ...net.mouths.map(mouthClear).filter((r): r is InteriorRect => r !== null),
     ...net.transfers.map((t) => t.rect).filter((r): r is InteriorRect => r !== null),
   ];
   const overlaps = (a: InteriorRect, b: InteriorRect) =>
     a.x0 < b.x1 - 1e-6 && a.x1 > b.x0 + 1e-6 && a.z0 < b.z1 - 1e-6 && a.z1 > b.z0 + 1e-6;
-  return it.fixtures.filter((f) => {
-    const host = rooms.find((r) => f.rect.x0 >= r.rect.x0 - 1e-6 && f.rect.x1 <= r.rect.x1 + 1e-6
-      && f.rect.z0 >= r.rect.z0 - 1e-6 && f.rect.z1 <= r.rect.z1 + 1e-6);
-    if (!host) return false;
-    return !busy.some((b) => overlaps(f.rect, b));
-  });
+  const out: Fixture[] = [];
+  for (const f of it.fixtures) {
+    // La pièce du relevé qui reprend cette tranche de hall : celle qui la
+    // RECOUVRE LE PLUS. Exiger qu'elle la contienne entièrement vidait les
+    // gares dont les pièces sont plus courtes que le hall générique — à
+    // Harajuku, quatorze meubles sur seize disparaissaient parce que le
+    // souterrain de Takeshita fait sept mètres et le hall générique vingt-sept.
+    let host: ConcourseRoom | null = null;
+    let best = 0;
+    for (const r of rooms) {
+      const cover = Math.min(f.rect.z1, r.rect.z1) - Math.max(f.rect.z0, r.rect.z0);
+      if (cover > best) { best = cover; host = r; }
+    }
+    if (!host || best <= 0) continue;
+    // Et l'on ramène le meuble DANS cette pièce : il glissera ensuite le long
+    // de la paroi jusqu'à trouver sa place.
+    const len = f.rect.z1 - f.rect.z0;
+    if (host.rect.z1 - host.rect.z0 < len) continue;
+    const dz0 = Math.min(Math.max(f.rect.z0, host.rect.z0), host.rect.z1 - len) - f.rect.z0;
+    // UN MEUBLE DE GARE EST CONTRE UN MUR. Le hall générique range le sien
+    // contre ses deux parois, à 2,13 m et 7,63 m de l'axe de la voie ; un
+    // pont-concourse relevé fait vingt-huit mètres de large, et le même meuble
+    // laissé à sa cote se retrouvait planté au MILIEU du volume, coupant le
+    // passage en deux. On le ramène donc contre la paroi vers laquelle il
+    // regarde — c'est là qu'il est en vrai.
+    const dx = f.facing === 1 ? host.rect.x0 - f.rect.x0 : host.rect.x1 - f.rect.x1;
+    const moved: Fixture = {
+      ...f,
+      rect: {
+        x0: f.rect.x0 + dx,
+        x1: f.rect.x1 + dx,
+        z0: f.rect.z0 + dz0,
+        z1: f.rect.z1 + dz0,
+      },
+    };
+    if (moved.rect.x0 < host.rect.x0 - 1e-6 || moved.rect.x1 > host.rect.x1 + 1e-6) continue;
+    // ET IL GLISSE LE LONG DE SA PAROI plutôt que de disparaître. Le konbini du
+    // hall générique est au fond de la zone libre, c'est-à-dire précisément là
+    // où le relevé perce ses bouches : refusé sur place, il emportait avec lui
+    // la boutique de la moitié des gares. On l'essaie donc de proche en proche,
+    // de part et d'autre, avant d'y renoncer.
+    const fits = (r: InteriorRect) =>
+      r.z0 >= host.rect.z0 - 1e-6 && r.z1 <= host.rect.z1 + 1e-6
+      && !busy.some((b) => overlaps(r, b))
+      && !out.some((o) => overlaps(r, o.rect));
+    let placed: InteriorRect | null = null;
+    for (const dz of SLIDES) {
+      const tried = { ...moved.rect, z0: moved.rect.z0 + dz, z1: moved.rect.z1 + dz };
+      if (fits(tried)) { placed = tried; break; }
+    }
+    if (!placed) continue;
+    out.push({ ...moved, rect: placed });
+  }
+  return out;
 }
 
 /**
@@ -920,6 +1109,58 @@ export function networkIssues(
         where: g.id,
         message: `${laid.passages.length} baies posées sur ${g.passages} demandées : `
           + `la ligne fait ${len.toFixed(2)} m sur ${along}`,
+      });
+    }
+  }
+  for (const zone of p.commercialZones) {
+    if (!net.rooms.some((r) => r.id === zone.nodeId)) continue;
+    const f = net.frontages.find((x) => x.id === zone.id);
+    if (!f) {
+      out.push({
+        code: 'shopDropped',
+        where: zone.id,
+        message: 'devanture supprimée : le hall n’a pas la profondeur de la poser '
+          + 'sans fermer le passage',
+      });
+      continue;
+    }
+    const max = zone.category === 'gallery' ? GALLERY_DEPTH : SHOP_DEPTH;
+    const depth = f.along === 'z' ? f.rect.x1 - f.rect.x0 : f.rect.z1 - f.rect.z0;
+    const want = Math.min(
+      max,
+      f.along === 'z' ? zone.rect.x1 - zone.rect.x0 : zone.rect.z1 - zone.rect.z0,
+    );
+    if (depth < want - 1e-6) {
+      out.push({
+        code: 'shopShallow',
+        where: zone.id,
+        message: `devanture ramenée de ${want.toFixed(2)} à ${depth.toFixed(2)} m de fond `
+          + 'pour garder deux mètres de passage',
+      });
+    }
+  }
+  // Une ligne de portillons cotée à CÔTÉ de ses pièces : elle ne sépare alors
+  // rien du tout, et l'on ne peut pas la franchir. Le compilateur la laisse où
+  // le relevé la met plutôt que d'inventer, mais il refuse de se taire.
+  for (const g of net.gates) {
+    const from = net.rooms.find((r) => r.id === g.from);
+    const to = net.rooms.find((r) => r.id === g.to);
+    if (!from || !to) continue;
+    const along: 'x' | 'z' = g.cross === 'z' ? 'x' : 'z';
+    const seg = (r: InteriorRect) => (along === 'x' ? [r.x0, r.x1] : [r.z0, r.z1]);
+    const [g0, g1] = seg(g.rect);
+    const common = Math.min(...[from, to].map((r) => seg(r.rect)[1]))
+      - Math.max(...[from, to].map((r) => seg(r.rect)[0]));
+    const onBoth = [from, to].every((r) => {
+      const [r0, r1] = seg(r.rect);
+      return Math.min(g1, r1) - Math.max(g0, r0) > 0.5;
+    });
+    if (common <= 0 || !onBoth) {
+      out.push({
+        code: 'gateOffRoom',
+        where: g.id,
+        message: 'ligne cotée hors du recouvrement de ses deux pièces : '
+          + 'elle ne se franchit pas',
       });
     }
   }

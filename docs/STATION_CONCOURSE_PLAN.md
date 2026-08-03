@@ -284,7 +284,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **18** | **Signalétique unifiée** ✅ | `stationSignage` : une seule source pour quai / hall / portillons / couloirs / bouches | D4 D5 |
 | **19** | **Commerces** ✅ | `ConcourseFrontage` : l'échelle de vérité de `CommerceStatus` dessinée ; `interiors/Frontages` | D8 |
 | **20** | **Petites gares** ✅ | huit gares passent par leur relevé ; `FareGates`, `Fixtures` et les itinéraires suivent le réseau | — |
-| 21 | Gares moyennes | JY04 JY09 JY12 JY15 JY19 JY21 JY22 JY23 JY24 JY27 JY28 JY29 JY30 JY03 | — |
+| **21** | **Gares moyennes** ✅ | vingt gares branchées ; deux DIFFÉRÉES faute d'une volée réglable | — |
 | 22 | Signatures 1 | Takanawa Gateway, Nippori, Shinagawa | R3 |
 | 23 | Signatures 2 | Tokyo, Ueno, Ikebukuro | R3 |
 | 24 | Signatures 3 | Shinjuku, Shibuya (+ travaux août 2026) | R3 D7 |
@@ -1028,6 +1028,88 @@ ouvrages voisins.
 **Coût :** le dossier de relevé entre dans le paquet, comme prévu — c'est la
 première fois qu'il SERT. Le morceau `plateau` passe de 344,0 à 448,0 kio
 (115,5 → 136,2 kio compressés) ; le morceau `Game` ne bouge pas.
+
+### 4.19 La phase 21 : douze gares de plus, et ce qu'elles ont cassé
+
+Vingt gares sur trente passent maintenant par leur relevé. Les douze de cette
+phase ne demandaient aucun vocabulaire nouveau — c'est ce qui les distingue des
+six signatures — mais elles demandaient que TOUT ce qui précède tienne à la
+fois, et six choses n'y ont pas résisté.
+
+**Cinq défauts d'itinéraire**, tous de la même famille : le routeur savait
+marcher dans un couloir, pas dans une pièce.
+
+1. **la trémie ne débouche pas toujours dans la zone payante.** À Okachimachi
+   elle arrive sur une mezzanine, un demi-niveau au-dessus du hall. Chercher un
+   accès *attaché* à la zone payante n'en trouvait aucun, et la gare n'avait plus
+   d'itinéraire du tout. On suit désormais les volées intérieures — `joinLegs`
+   pose une étape par volée franchie, l'altitude s'interpolant toute seule ;
+2. **le couloir se tient au MILIEU de la trouée**, et dans une passerelle de
+   trente-six mètres ce milieu est à vingt mètres du pied de la volée. On entre
+   donc tout droit, puis on rejoint la file ;
+3. **le retour d'un détour se reposait sur la trouée la plus large**, à l'autre
+   bout du volume — en traversant tout ce qu'il y a entre les deux. On revient
+   dans la file qu'on a quittée ;
+4. **un crochet allait chercher un meuble à l'autre bout de la gare.** Sur la
+   passerelle d'Ōsaki, quatre-vingt-dix mètres de large, un voyageur traversait
+   tout le tablier pour regarder un guichet — et à Harajuku, il partait
+   consulter un plan dans l'autre hall, à cent mètres et douze mètres plus bas.
+   Un crochet est un CROCHET : sept mètres, dans la pièce où l'on est ;
+5. **la zone libre commençait « au bout de la pièce »**, ce qui supposait le
+   contrôle à l'autre bout. À Harajuku la pièce libre déborde sous la ligne :
+   partir du bout renvoyait le voyageur DANS les bornes. On part d'où l'on est.
+
+**Trois défauts de géométrie**, où le relevé et le moteur se contredisaient.
+
+- **la ligne ne touchait pas ses deux pièces.** À Tamachi il restait trente
+  centimètres entre le contrôle et la zone libre — trente centimètres qui
+  n'appartenaient à rien et sur lesquels la marche butait comme sur un mur. Une
+  ligne s'étire maintenant jusqu'à ses deux pièces : un franchissement est
+  continu par définition ;
+- **et elle ne doit pas les déborder.** Toujours à Tamachi, le contrôle sud est
+  coté dix mètres pour une zone payante qui s'arrête six mètres plus tôt : ses
+  dernières baies s'ouvraient sur du vide. Elle est ramenée à ce que les deux
+  pièces ont en commun. Là où il n'y a RIEN de commun — Ikebukuro sud, Shibuya
+  Hachikō — le compilateur ne la déplace pas (ce serait décider à la place du
+  relevé) et signale `gateOffRoom` ;
+- **deux vitrines qui se font face ne partagent pas un hall de six mètres.**
+  Gotanda a deux atre de trois mètres de fond, une par paroi : posées telles
+  quelles, elles fermaient la zone libre d'un mur à l'autre et les sorties
+  devenaient inatteignables. Chaque devanture est rognée sur ce qui reste, et
+  celle qui ne tient plus disparaît en le disant (`shopDropped` : Gotanda,
+  Yūrakuchō).
+
+**Le mobilier générique a dû apprendre à vivre chez les autres.** Il est rangé
+contre les parois du hall générique, à 2,13 m et 7,63 m de l'axe de la voie ; un
+pont-concourse relevé fait vingt-huit mètres de large, et le même meuble laissé
+à sa cote se retrouvait planté au milieu. Il est donc ramené contre la paroi
+qu'il regarde, glissé le long d'elle jusqu'à trouver sa place, et tenu à l'écart
+des lignes de portillons (1,20 m) et des bouches (2,50 m). Ce qui ne rentre pas
+disparaît : une gare branchée porte moins de meubles qu'un hall générique, et
+deux konbini sur les trente n'ont plus la place — le hall du relevé est plus
+court que celui du moteur.
+
+**DEUX GARES SONT DIFFÉRÉES, et c'est une décision.** Une volée de quai a une
+hauteur fixe : 3,675 m vers le bas, 5,075 m vers le haut. Or Okachimachi fait
+déboucher sa trémie sur une mezzanine à mi-hauteur (−1,84 m) et Harajuku sur le
+souterrain de Takeshita, qui passe sous les voies (−6,40 m). Dans les deux cas
+la volée ne rejoint pas le sol qu'elle dessert : il y aurait une marche d'un
+mètre quatre-vingt au pied de l'escalier. Rendre la volée réglable touche
+l'ouvrage lui-même — géométrie, rendu, marche — et c'est le sujet des phases de
+signature, où Shinjuku et Shibuya le demanderont de toute façon. **Brancher
+avant serait poser une gare juste sur un escalier faux.**
+
+**Contrôle.** Sonde sur les trente gares, **aucune erreur de page**. Les
+interpénétrations restantes sont des joints entre ouvrages voisins, de 8 à
+44 cm : hall contre volée montante ou travée opposée sur les ponts-concours
+(le percement de la paroi au droit de l'accès appartient aux phases 22 à 25),
+hall contre devanture, fléchage contre seuil. Le fond de 0,12 m entre le hall
+et ses portillons est antérieur au chantier.
+
+La sonde a aussi signalé, sur dix-neuf gares, un « carré d'un mètre dans le
+wagon » qui n'existait pas : c'est la géométrie de BASE d'une nuée instanciée —
+pluie, neige — dont la boîte englobante est à l'origine du monde et ne dit rien
+de l'endroit où les instances tombent. La sonde les ignore désormais, et le dit.
 
 ### Ordre et raison
 

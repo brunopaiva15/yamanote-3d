@@ -52,13 +52,23 @@ test('le hall générique ne porte aucune devanture relevée', () => {
   }
 });
 
-test('chaque zone commerciale du relevé devient une devanture, et une seule', () => {
+test('chaque zone commerciale du relevé devient une devanture, ou se DIT perdue', () => {
   let total = 0;
+  let dropped = 0;
   for (const { p, net } of NETS) {
     const zones = p.commercialZones.filter((z) =>
       p.concourses.some((n) => n.id === z.nodeId),
     );
-    assert.equal(net.frontages.length, zones.length, NAME(p.stationIndex));
+    // Une zone que le hall ne peut pas porter sans fermer le passage disparaît
+    // — Gotanda a deux atre de trois mètres de fond pour un hall de six — et
+    // `networkIssues` le dit alors en toutes lettres (`shopDropped`).
+    const lost = zones.length - net.frontages.length;
+    dropped += lost;
+    assert.equal(
+      networkIssues(p, net).filter((i) => i.code === 'shopDropped').length,
+      lost,
+      NAME(p.stationIndex),
+    );
     assert.equal(
       new Set(net.frontages.map((f) => f.id)).size,
       net.frontages.length,
@@ -66,9 +76,11 @@ test('chaque zone commerciale du relevé devient une devanture, et une seule', (
     );
     total += net.frontages.length;
   }
-  // Trente et une devantures sur les trente gares : un plancher, pas une
-  // valeur exacte. S'il tombe, c'est le relevé qui a été vidé.
-  assert.ok(total >= 31, `${total} devantures`);
+  // Vingt-neuf devantures posées sur les trente gares, et deux perdues faute de
+  // place. Un plancher, pas une valeur exacte : s'il tombe, c'est le relevé qui
+  // a été vidé.
+  assert.ok(total >= 29, `${total} devantures`);
+  assert.equal(dropped, 2, `${dropped} devantures perdues`);
 });
 
 test('UNE ENSEIGNE NE S’INVENTE PAS', () => {

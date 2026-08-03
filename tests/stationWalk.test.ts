@@ -190,15 +190,25 @@ test('toute gare dont le hall est construit s’atteint depuis sa trémie', () =
     onPlatform(index);
     const p = place(index);
     if (!p.interior.built) continue;
-    const top = stairTopZ(p.mainStair);
-    const name = `gare ${index} (${p.mainRise === 'up' ? 'montante' : 'descendante'})`;
-    // Le dernier centimètre de l'accès et le premier du hall.
-    const end = top + (p.mainRise === 'up' ? ASCENT_LEN : DESCENT_LEN) - 0.05;
-    assert.notEqual(floorAt(index, p.mainStair.x, end), null, `${name} accès`);
-    assert.notEqual(floorInHall(index, p.mainStair.x, p.interior.paid.z0 + 0.05), null, `${name} hall`);
+    // La trémie qui dessert, et le sens dans lequel elle va : `mainRise` est le
+    // sens du hall GÉNÉRIQUE, et une gare branchée peut monter là où il
+    // descendait (Ōsaki : passerelle au-dessus des voies).
+    const live = p.liveAccesses[0];
+    const stair = live?.stair ?? p.mainStair;
+    const rise = live?.rise ?? p.mainRise;
+    const top = stairTopZ(stair);
+    const name = `gare ${index} (${rise === 'up' ? 'montante' : 'descendante'})`;
+    // Le dernier centimètre de l'accès, et le premier de CE QUE LA TRÉMIE
+    // DESSERT. Ce n'était que `interior.paid` tant que toutes les gares
+    // partageaient un hall générique ; une gare branchée sur son relevé peut
+    // déboucher sur une mezzanine, et c'est le RÉSEAU qui sait où.
+    const end = top + (rise === 'up' ? ASCENT_LEN : DESCENT_LEN) - 0.05;
+    assert.notEqual(floorAt(index, stair.x, end), null, `${name} accès`);
+    const room = p.network.rooms.find((r) => r.id === live?.toRoomId) ?? null;
+    const z0 = room ? room.rect.z0 : p.interior.paid.z0;
+    assert.notEqual(floorInHall(index, stair.x, z0 + 0.05), null, `${name} hall`);
     assert.ok(
-      Math.abs(floorAt(index, p.mainStair.x, end)!
-        - floorInHall(index, p.mainStair.x, p.interior.paid.z0 + 0.05)!) < 0.02,
+      Math.abs(floorAt(index, stair.x, end)! - floorInHall(index, stair.x, z0 + 0.05)!) < 0.02,
       `${name} : décrochement au raccord`,
     );
   }

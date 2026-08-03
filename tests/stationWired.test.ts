@@ -24,11 +24,7 @@ register('./fixtures/ts-resolve.mjs', import.meta.url);
 
 const { placementFor } = await import('../src/systems/stationPlacement.ts');
 const { psdGates } = await import('../src/three/station/psdLayout.ts');
-const {
-  concourseBays,
-  networkIssues,
-  shellsOf,
-} = await import('../src/data/stationConcourseBuild.ts');
+const { concourseBays, networkIssues } = await import('../src/data/stationConcourseBuild.ts');
 const { profileFor } = await import('../src/data/stationConcourseProfiles.ts');
 const { wiredIndices } = await import('../src/data/stationConcourseWired.ts');
 const { signageFor } = await import('../src/data/stationSignage.ts');
@@ -44,18 +40,30 @@ const GATES = psdGates();
 const NAME = (i: number) => `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
 const WIRED = wiredIndices().map((i) => ({ i, name: NAME(i), place: placementFor(i, GATES) }));
 
-test('les huit gares de la phase 20 passent par leur relevé', () => {
+test('les vingt gares branchées passent par leur relevé', () => {
   assert.deepEqual(
     WIRED.map((w) => w.name),
     [
       'JY02 Kanda',
+      'JY03 Akihabara',
       'JY06 Uguisudani',
       'JY08 Nishi-Nippori',
+      'JY09 Tabata',
       'JY10 Komagome',
       'JY11 Sugamo',
+      'JY12 Ōtsuka',
       'JY14 Mejiro',
+      'JY15 Takadanobaba',
       'JY16 Shin-Ōkubo',
       'JY18 Yoyogi',
+      'JY21 Ebisu',
+      'JY22 Meguro',
+      'JY23 Gotanda',
+      'JY24 Ōsaki',
+      'JY27 Tamachi',
+      'JY28 Hamamatsuchō',
+      'JY29 Shimbashi',
+      'JY30 Yūrakuchō',
     ],
   );
   for (const { name, place } of WIRED) {
@@ -109,15 +117,28 @@ test('chaque baie est desservie, et chaque bouche atteignable', () => {
     const net = place.network;
     const bays = concourseBays(net);
     assert.ok(bays.length > 0, `${name} : aucune baie franchissable`);
-    // Le volume où débouchent les accès : c'est là qu'on arrive, et tout ce
-    // qu'on doit pouvoir atteindre en part.
-    const shells = shellsOf(net);
-    const served = shells.filter((s) =>
-      s.rooms.some((r) => net.accesses.some((a) => a.toRoomId === r.id)));
-    assert.equal(served.length, 1, `${name} : ${served.length} volumes desservis`);
-    const inside = new Set(served[0].rooms.map((r) => r.id));
-    const mouths = net.mouths.filter((m) => inside.has(m.roomId));
-    assert.ok(mouths.length > 0, `${name} : aucune bouche dans le volume desservi`);
+    // TOUT CE QU'ON PEUT ATTEINDRE depuis les trémies vivantes : de pièce en
+    // pièce, par une volée intérieure comme par un portillon. Un volume ne
+    // suffit pas — à Okachimachi on arrive sur une mezzanine, et le hall est un
+    // demi-niveau plus bas.
+    const seen = new Set(net.accesses.map((a) => a.toRoomId));
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const link of [...net.joins, ...net.gates]) {
+        if (!link.walkable) continue;
+        for (const [a, b] of [[link.from, link.to], [link.to, link.from]]) {
+          if (seen.has(a) && !seen.has(b)) { seen.add(b); grew = true; }
+        }
+      }
+    }
+    assert.ok(
+      net.mouths.some((m) => seen.has(m.roomId)),
+      `${name} : aucune bouche atteignable depuis la trémie`,
+    );
+    assert.ok(
+      bays.some((b) => seen.has(net.gates.find((g) => g.id === b.gateId)!.from)),
+      `${name} : aucune baie desservie`,
+    );
   }
 });
 
@@ -137,24 +158,26 @@ test('CE QUE CHAQUE GARE GAGNE, et qui n’existait pas dans le hall générique
     };
   });
   assert.deepEqual(got, [
-    // Le dessous du viaduc, deux contrôles, et le Ginza qu'on voit sans le
-    // prendre : c'est Kanda, et aucun couloir droit ne l'aurait donné.
     { gare: 'JY02 Kanda', lignes: 2, niveaux: 1, archétypes: 'underViaduct', correspondances: 2, devantures: 0 },
-    // DEUX HALLS, à cent mètres l'un de l'autre et sur deux niveaux : le nord
-    // passe sous les voies, et c'est pour cela qu'il descend à −6,40 m.
+    { gare: 'JY03 Akihabara', lignes: 3, niveaux: 2, archétypes: 'compact+overbridge+underViaduct', correspondances: 3, devantures: 3 },
     { gare: 'JY06 Uguisudani', lignes: 2, niveaux: 2, archétypes: 'compact+linear', correspondances: 0, devantures: 0 },
-    // Un pont-concourse au-dessus du faisceau, et quatre lignes en
-    // correspondance : Chiyoda, Nippori-Toneri, et le reste.
     { gare: 'JY08 Nishi-Nippori', lignes: 1, niveaux: 2, archétypes: 'compact+overbridge', correspondances: 4, devantures: 1 },
+    { gare: 'JY09 Tabata', lignes: 2, niveaux: 1, archétypes: 'compact+overbridge', correspondances: 0, devantures: 1 },
     { gare: 'JY10 Komagome', lignes: 2, niveaux: 2, archétypes: 'compact+overbridge', correspondances: 1, devantures: 1 },
-    // La tranchée : le hall enjambe les voies, et les deux blocs d'atre vie
-    // que le dépôt ne déclarait pas bordent la zone libre.
     { gare: 'JY11 Sugamo', lignes: 1, niveaux: 1, archétypes: 'overbridge', correspondances: 1, devantures: 2 },
-    // Une MEZZANINE : un demi-niveau ouvert, qui donne à cette petite gare une
-    // coupe à trois niveaux.
+    { gare: 'JY12 Ōtsuka', lignes: 1, niveaux: 1, archétypes: 'underViaduct', correspondances: 1, devantures: 0 },
     { gare: 'JY14 Mejiro', lignes: 1, niveaux: 2, archétypes: 'compact+mezzanine+overbridge', correspondances: 0, devantures: 0 },
+    { gare: 'JY15 Takadanobaba', lignes: 2, niveaux: 1, archétypes: 'compact+underViaduct', correspondances: 2, devantures: 0 },
     { gare: 'JY16 Shin-Ōkubo', lignes: 2, niveaux: 2, archétypes: 'compact+overbridge', correspondances: 0, devantures: 0 },
     { gare: 'JY18 Yoyogi', lignes: 2, niveaux: 1, archétypes: 'compact', correspondances: 3, devantures: 0 },
+    { gare: 'JY21 Ebisu', lignes: 2, niveaux: 2, archétypes: 'hubSlice+overbridge+underViaduct', correspondances: 2, devantures: 2 },
+    { gare: 'JY22 Meguro', lignes: 1, niveaux: 2, archétypes: 'compact+hubSlice+overbridge', correspondances: 1, devantures: 2 },
+    { gare: 'JY23 Gotanda', lignes: 1, niveaux: 2, archétypes: 'overbridge+underViaduct', correspondances: 2, devantures: 2 },
+    { gare: 'JY24 Ōsaki', lignes: 2, niveaux: 1, archétypes: 'cross+overbridge', correspondances: 2, devantures: 2 },
+    { gare: 'JY27 Tamachi', lignes: 2, niveaux: 2, archétypes: 'cross+overbridge', correspondances: 1, devantures: 0 },
+    { gare: 'JY28 Hamamatsuchō', lignes: 2, niveaux: 2, archétypes: 'hubSlice+overbridge+underViaduct', correspondances: 2, devantures: 0 },
+    { gare: 'JY29 Shimbashi', lignes: 3, niveaux: 3, archétypes: 'linear+underViaduct', correspondances: 4, devantures: 0 },
+    { gare: 'JY30 Yūrakuchō', lignes: 4, niveaux: 1, archétypes: 'underViaduct', correspondances: 1, devantures: 1 },
   ]);
 });
 
@@ -182,9 +205,18 @@ test('ce que le compilateur a rogné est DIT, pas caché', () => {
       codes.set(issue.code, (codes.get(issue.code) ?? 0) + 1);
     }
   }
-  assert.deepEqual([...codes.keys()].sort(), ['crampedGate', 'narrowMouth']);
-  // Aucune devanture ne mange le passage, et aucune bouche ne s'ouvre dans une
-  // vitrine : ce sont les deux qui rendraient une gare INJOUABLE.
+  assert.deepEqual(
+    [...codes.keys()].sort(),
+    ['crampedGate', 'mouthOverShop', 'narrowMouth', 'shopDropped'],
+  );
+  // Aucune devanture ne mange le passage : c'est ce qui rendrait une gare
+  // INJOUABLE, et le compilateur rogne les vitrines plutôt que de le permettre.
   assert.equal(codes.get('shopEatsAisle'), undefined);
-  assert.equal(codes.get('mouthOverShop'), undefined);
+  // Aucune ligne cotée hors de ses pièces parmi les gares branchées : les deux
+  // que le relevé porte (Ikebukuro, Shibuya) attendent leur phase.
+  assert.equal(codes.get('gateOffRoom'), undefined);
+  // Une bouche s'ouvre au droit d'une devanture — à Ebisu, dont la paroi est
+  // entièrement commerciale. Une sortie passe avant un magasin : elle est posée
+  // quand même, et le compilateur le dit.
+  assert.equal(codes.get('mouthOverShop'), 1);
 });

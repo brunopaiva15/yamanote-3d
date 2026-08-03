@@ -34,9 +34,47 @@ import type { StationConcourseProfile } from './stationConcourseTypes.ts';
  * générique ne produirait — deux halls indépendants à cent mètres l'un de
  * l'autre à Uguisudani, un dessous de viaduc à Kanda, une tranchée à Sugamo.
  */
+const SMALL = [1, 5, 7, 9, 10, 13, 15, 17];
+
+/**
+ * LES GARES MOYENNES (phase 21).
+ *
+ * Quatorze gares que le hall générique décrivait mal sans qu'on puisse dire
+ * qu'il les trahissait : deux ou trois contrôles, un demi-niveau, une galerie
+ * qui donne l'échelle, un chantier. Elles ne demandent pas de vocabulaire
+ * nouveau — c'est ce qui les distingue des six signatures — mais elles
+ * demandent que tout ce qui précède tienne à la fois.
+ */
+const MEDIUM = [2, 8, 11, 14, 20, 21, 22, 23, 26, 27, 28, 29];
+
+/**
+ * DEUX GARES ATTENDENT, et pour une raison de géométrie, pas de relevé.
+ *
+ * Une volée de quai a une hauteur FIXE : 3,675 m vers le bas, 5,075 m vers le
+ * haut (`data/stationGeometry`). Or le relevé d'Okachimachi fait déboucher sa
+ * trémie sur une MEZZANINE à mi-hauteur (−1,84 m), et celui d'Harajuku sur le
+ * souterrain de Takeshita, qui passe SOUS les voies (−6,40 m). Dans les deux
+ * cas la volée ne rejoint pas le sol qu'elle dessert : il y aurait une marche
+ * d'un mètre quatre-vingt au pied de l'escalier.
+ *
+ * Rendre la volée réglable touche l'ouvrage lui-même — sa géométrie, son rendu
+ * et la marche — et c'est le sujet des phases de signature, où Shinjuku et
+ * Shibuya le demanderont de toute façon. Les brancher avant serait poser une
+ * gare juste sur un escalier faux.
+ */
+const DEFERRED = [3, 18];
+
 const WIRED: ReadonlyMap<number, StationConcourseProfile> = new Map(
-  [1, 5, 7, 9, 10, 13, 15, 17].map((i) => [i, profileFor(i)] as const),
+  [...SMALL, ...MEDIUM]
+    .filter((i) => !DEFERRED.includes(i))
+    .sort((a, b) => a - b)
+    .map((i) => [i, profileFor(i)] as const),
 );
+
+/** Les gares dont le relevé attend un ouvrage que le moteur ne sait pas encore. */
+export function deferredIndices(): readonly number[] {
+  return DEFERRED;
+}
 
 /** Le relevé d'une gare, si elle est branchée dessus. */
 export function wiredProfile(index: number): StationConcourseProfile | null {

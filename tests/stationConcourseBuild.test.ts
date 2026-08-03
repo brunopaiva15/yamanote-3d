@@ -32,7 +32,8 @@ const {
   roomAt,
 } = await import('../src/data/stationConcourseBuild.ts');
 const { CONCOURSE_PROFILES } = await import('../src/data/stationConcourseProfiles.ts');
-const { wiredCount, wiredIndices } = await import('../src/data/stationConcourseWired.ts');
+const { deferredIndices, wiredCount, wiredIndices } =
+  await import('../src/data/stationConcourseWired.ts');
 const { interiorFor } = await import('../src/data/stationInterior.ts');
 const { layoutFor } = await import('../src/data/stationLayouts.ts');
 const { STATIONS } = await import('../src/data/stations.ts');
@@ -132,25 +133,30 @@ test('LE HALL S’OUVRE SUR LE CÔTÉ quand le contrôle vient du côté', () =>
 });
 
 test('le compilateur ne rogne jamais en silence', () => {
-  // DIX-HUIT LIGNES DE PORTILLONS ne tiennent pas ce que le relevé leur
-  // demande, et TOUTES pour la même raison : elles sont posées EN TRAVERS DE LA
-  // BANDE DU QUAI (`cross: 'z'`), qui fait de 5,3 m à 6,7 m. Une baie coûte
-  // 0,98 m avec ses bornes : un hall large comme un quai ne tient pas plus de
-  // quatre ou cinq baies, et le relevé en demande jusqu'à neuf.
+  // DIX-NEUF LIGNES DE PORTILLONS ne tiennent pas ce que le relevé leur demande,
+  // et dix-huit pour la même raison : elles sont posées EN TRAVERS DE LA BANDE
+  // DU QUAI (`cross: 'z'`), qui fait de 5,3 m à 6,7 m. Une baie coûte 0,98 m
+  // avec ses bornes : un hall large comme un quai ne tient pas plus de quatre ou
+  // cinq baies, et le relevé en demande jusqu'à neuf.
   //
   // C'EST LE DERNIER RESTE DE G1, et il ne se corrige pas ici : les vrais halls
   // de Kanda ou de Shimbashi sont larges comme le VIADUC, pas comme le quai.
-  // Les élargir vers le fond est le travail de la phase 14 — la phase 6 a
-  // établi que le décor sait s'écarter. En attendant, l'écart est nommé.
+  // Les élargir vers le fond appartient au branchement de chaque gare — la
+  // phase 6 a établi que le décor sait s'écarter. En attendant, l'écart est
+  // nommé.
+  //
+  // La vingtième est d'une autre nature, et la phase 21 l'a fait apparaître :
+  // à Ikebukuro le contrôle nord est coté PLUS LARGE que la zone payante qu'il
+  // ferme. Le compilateur le ramène à ce que les deux pièces ont en commun —
+  // une baie qui s'ouvre sur du vide n'est pas une baie — et il perd des
+  // passages en chemin. Le relevé et la géométrie se contredisent : c'est le
+  // relevé qu'il faudra relire, pas le compilateur qu'il faut assouplir.
   const cramped: string[] = [];
   for (const p of CONCOURSE_PROFILES) {
     const net = compileProfile(p);
     for (const issue of networkIssues(p, net)) {
       if (issue.code !== 'crampedGate') continue;
       cramped.push(`${STATIONS[p.stationIndex].jy} ${issue.where}`);
-      // Toutes, sans exception, sont des lignes traversées en z.
-      const g = p.gateGroups.find((x) => x.id === issue.where)!;
-      assert.equal(g.cross, 'z', `${NAME(p.stationIndex)} : ${issue.where} rogné hors du quai`);
     }
   }
   assert.deepEqual(cramped, [
@@ -161,18 +167,46 @@ test('le compilateur ne rogne jamais en silence', () => {
     'JY03 gate-showa',
     'JY04 gate-north',
     'JY08 gate-hall',
+    'JY13 gate-north',
     'JY15 gate-waseda',
     'JY16 gate-hall',
     'JY16 gate-exit-only',
     'JY18 gate-west',
     'JY21 gate-west',
     'JY23 gate-central',
+    'JY27 gate-south',
     'JY28 gate-north',
     'JY29 gate-south',
     'JY29 gate-north',
     'JY30 gate-central',
     'JY30 gate-central-west',
   ]);
+  // Toutes sauf une sont traversées en z, et c'est ce qui les explique.
+  const acrossX = cramped.filter((c) => {
+    const [jy, id] = c.split(' ');
+    const p = CONCOURSE_PROFILES.find((q) => STATIONS[q.stationIndex].jy === jy)!;
+    return p.gateGroups.find((g) => g.id === id)!.cross === 'x';
+  });
+  assert.deepEqual(acrossX, ['JY13 gate-north']);
+});
+
+test('une ligne cotée hors de ses pièces se DIT, elle ne se déplace pas', () => {
+  // Deux lignes du relevé ne recouvrent pas les deux pièces qu'elles séparent.
+  // Le compilateur ne les bouge pas — décider à la place du relevé serait le
+  // pire des services — mais il refuse de laisser croire qu'on les franchit.
+  const off: string[] = [];
+  const dropped: string[] = [];
+  for (const p of CONCOURSE_PROFILES) {
+    const net = compileProfile(p);
+    for (const issue of networkIssues(p, net)) {
+      if (issue.code === 'gateOffRoom') off.push(`${STATIONS[p.stationIndex].jy} ${issue.where}`);
+      if (issue.code === 'shopDropped') dropped.push(`${STATIONS[p.stationIndex].jy} ${issue.where}`);
+    }
+  }
+  assert.deepEqual(off, ['JY13 gate-south', 'JY20 gate-hachiko-exit-only']);
+  // Et deux devantures ne tiennent pas dans leur hall sans le fermer d'un mur
+  // à l'autre : elles disparaissent, et cela aussi se dit.
+  assert.deepEqual(dropped, ['JY23 shop-atre-2', 'JY30 shop-lumine-street-b']);
 });
 
 test('le relevé se cale sur la trémie réellement posée', () => {
@@ -225,7 +259,13 @@ test('les gares branchées sont EXACTEMENT celles qu’on a décidé de brancher
   // qui passerait au relevé sans que personne l'ait voulu emporterait avec elle
   // son sol, sa marche, ses itinéraires et ses panneaux. La liste est donc
   // écrite ici, en clair, et le compilateur doit s'y tenir des deux côtés.
-  assert.deepEqual([...wiredIndices()], [1, 5, 7, 9, 10, 13, 15, 17]);
+  assert.deepEqual(
+    [...wiredIndices()],
+    [1, 2, 5, 7, 8, 9, 10, 11, 13, 14, 15, 17, 20, 21, 22, 23, 26, 27, 28, 29],
+  );
+  // Et DEUX gares attendent, pour une raison d'ouvrage et non de relevé : leur
+  // trémie ne rejoint pas le sol qu'elle dessert (voir `stationConcourseWired`).
+  assert.deepEqual([...deferredIndices()], [3, 18]);
   assert.equal(wiredCount(), wiredIndices().length);
   for (let i = 0; i < STATION_COUNT; i++) {
     assert.equal(

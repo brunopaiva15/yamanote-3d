@@ -121,10 +121,79 @@ const acrossOf = (along: 'x' | 'z', q: Pt) => (along === 'z' ? q.x : q.z);
  * celle qui donne sur SA zone payante, pas celle du milieu du quai.
  */
 function accessFoot(p: StationPlacement, roomId: string): RouteStop | null {
-  const a = p.liveAccesses.find((x) => x.toRoomId === roomId);
+  const a = accessServing(p, roomId);
   if (!a) return null;
   const len = a.rise === 'up' ? ASCENT_LEN : DESCENT_LEN;
   return { x: a.stair.x + stairLane() * 0.35, z: stairTopZ(a.stair) + len - 0.5 };
+}
+
+/**
+ * L'accès qui dessert une pièce — DIRECTEMENT, OU PAR CE QUI LA JOINT.
+ *
+ * Une trémie ne débouche pas toujours dans la zone payante : à Okachimachi elle
+ * arrive sur une MEZZANINE, un demi-niveau ouvert d'où l'on redescend au hall.
+ * Chercher un accès attaché à la zone payante n'en trouvait aucun, et la gare
+ * n'avait plus ni itinéraire d'entrée ni itinéraire de sortie.
+ */
+function accessServing(p: StationPlacement, roomId: string) {
+  const direct = p.liveAccesses.find((x) => x.toRoomId === roomId);
+  if (direct) return direct;
+  return p.liveAccesses.find((x) => reachableRooms(p.network, x.toRoomId).has(roomId)) ?? null;
+}
+
+/** Les pièces qu'on atteint depuis celle-ci, de volée en volée. */
+function reachableRooms(net: ConcourseNetwork, from: string): Set<string> {
+  const seen = new Set([from]);
+  const queue = [from];
+  while (queue.length) {
+    const here = queue.shift()!;
+    for (const j of net.joins) {
+      if (!j.walkable) continue;
+      const next = j.from === here ? j.to : j.to === here ? j.from : null;
+      if (!next || seen.has(next)) continue;
+      seen.add(next);
+      queue.push(next);
+    }
+  }
+  return seen;
+}
+
+/**
+ * Le chemin d'ouvrages entre deux pièces : une étape par volée franchie.
+ *
+ * L'altitude s'interpole toute seule dans la volée (`systems/stationLevels`,
+ * `joinFloorAt`) : il suffit de poser un point au milieu de chacune, plus un
+ * juste avant et un juste après pour y entrer droit.
+ */
+function joinLegs(net: ConcourseNetwork, from: string, to: string): RouteStop[] | null {
+  if (from === to) return [];
+  const prev = new Map<string, { via: string; join: ConcourseNetwork['joins'][number] }>();
+  const queue = [from];
+  const seen = new Set([from]);
+  while (queue.length) {
+    const here = queue.shift()!;
+    if (here === to) break;
+    for (const j of net.joins) {
+      if (!j.walkable) continue;
+      const next = j.from === here ? j.to : j.to === here ? j.from : null;
+      if (!next || seen.has(next)) continue;
+      seen.add(next);
+      prev.set(next, { via: here, join: j });
+      queue.push(next);
+    }
+  }
+  if (!seen.has(to)) return null;
+  const chain: ConcourseNetwork['joins'] = [];
+  for (let at = to; at !== from;) {
+    const step = prev.get(at);
+    if (!step) return null;
+    chain.unshift(step.join);
+    at = step.via;
+  }
+  return chain.map((j) => ({
+    x: (j.rect.x0 + j.rect.x1) / 2,
+    z: (j.rect.z0 + j.rect.z1) / 2,
+  }));
 }
 
 /** La zone payante que dessert une baie. */
@@ -258,6 +327,12 @@ function hallAxis(
   return (best[0] + best[1]) / 2;
 }
 
+/** Une cote en travers, ramenée dans la pièce. */
+function clampAcross(room: ConcourseRoom, along: 'x' | 'z', v: number): number {
+  const [lo, hi] = along === 'z' ? [room.rect.x0, room.rect.x1] : [room.rect.z0, room.rect.z1];
+  return Math.min(Math.max(v, lo + ZONE_EDGE), hi - ZONE_EDGE);
+}
+
 /** Un point posé sur l'axe de `room`, au droit de `at`. */
 function onAxis(
   p: StationPlacement,
@@ -265,8 +340,10 @@ function onAxis(
   along: 'x' | 'z',
   at: number,
   extra?: Partial<RouteStop>,
+  /** La file où l'on est DÉJÀ : on n'en change pas sans raison. */
+  near?: number,
 ): RouteStop {
-  return { ...pt(along, at, hallAxis(p, room, along, at)), ...extra };
+  return { ...pt(along, at, hallAxis(p, room, along, at, near)), ...extra };
 }
 
 /** Le chemin qui longe l'axe, de `a0` (exclu) à `a1` (inclus). */
@@ -276,9 +353,10 @@ function axisPath(
   along: 'x' | 'z',
   a0: number,
   a1: number,
+  near?: number,
 ): RouteStop[] {
   const n = Math.max(1, Math.ceil(Math.abs(a1 - a0) / AXIS_STEP));
-  let across = hallAxis(p, room, along, a0);
+  let across = hallAxis(p, room, along, a0, near);
   return Array.from({ length: n }, (_, i) => {
     const at = a0 + (a1 - a0) * ((i + 1) / n);
     across = hallAxis(p, room, along, at, across);
@@ -336,7 +414,11 @@ function pickPassage(net: ConcourseNetwork, busy: readonly number[]): number {
   // avait qu'un accès vivant, la question ne se posait pas.
   const served = bays.map((b) => {
     const room = paidRoomOf(net, b);
-    return !!room && net.accesses.some((a) => a.toRoomId === room.id);
+    if (!room) return false;
+    // Desservie DIRECTEMENT ou PAR CE QUI LA JOINT : une trémie qui débouche
+    // sur une mezzanine dessert le hall d'en dessous.
+    return net.accesses.some((a) => a.toRoomId === room.id
+      || reachableRooms(net, a.toRoomId).has(room.id));
   });
   if (!served.some(Boolean)) return -1;
   const weights = bays.map((b, i) => {
@@ -414,6 +496,9 @@ function freeRoomOf(net: ConcourseNetwork, bay: ConcourseBay): string | null {
 
 // --- Les haltes du hall --------------------------------------------------
 
+/** Jusqu'où l'on s'écarte de sa file pour un crochet (m). */
+const BROWSE_REACH = 7;
+
 /** Ce qu'on regarde en passant, et combien de temps on s'y attarde. */
 const BROWSE: { kind: Fixture['kind']; action: PaxAction; dur: [number, number] }[] = [
   { kind: 'ticket', action: 'ticketGlance', dur: [6, 12] },
@@ -467,10 +552,23 @@ interface Detour {
 /** Une halte tirée parmi les meubles d'une zone, ou rien. */
 function browseIn(
   p: StationPlacement,
+  /**
+   * La pièce qu'on traverse. Sans elle, le crochet se choisissait dans TOUT le
+   * mobilier de la gare : à Harajuku, un voyageur du hall d'Omotesandō partait
+   * consulter un plan à cent mètres de là, dans le souterrain de Takeshita.
+   */
+  room: ConcourseRoom,
   along: 'x' | 'z',
   a0: number,
   a1: number,
   chance: number,
+  /**
+   * La file où l'on marche. Un crochet est un CROCHET : le meuble doit être au
+   * bord du chemin, pas à l'autre bout du volume. Sur la passerelle d'Ōsaki,
+   * large de quatre-vingt-dix mètres, un voyageur traversait tout le tablier
+   * pour aller regarder un guichet, en ligne droite et à travers une galerie.
+   */
+  lane?: number,
 ): Detour | null {
   if (Math.random() >= chance) return null;
   const lo = Math.min(a0, a1);
@@ -480,7 +578,12 @@ function browseIn(
     : [f.rect.x0, f.rect.x1]);
   const here = p.network.fixtures.filter((f) => {
     const [b0, b1] = bounds(f);
-    return b0 >= lo - 0.01 && b1 <= hi + 0.01 && BROWSE.some((b) => b.kind === f.kind);
+    const mid = along === 'z'
+      ? (f.rect.x0 + f.rect.x1) / 2
+      : (f.rect.z0 + f.rect.z1) / 2;
+    return inRoom(room, f.rect)
+      && (lane === undefined || Math.abs(mid - lane) <= BROWSE_REACH)
+      && b0 >= lo - 0.01 && b1 <= hi + 0.01 && BROWSE.some((b) => b.kind === f.kind);
   });
   if (here.length === 0) return null;
   const stop = browseStop(p, here[Math.floor(Math.random() * here.length)]);
@@ -495,21 +598,35 @@ function hallLeg(
   a0: number,
   a1: number,
   detour: Detour | null,
+  near?: number,
 ): RouteStop[] {
-  if (!detour) return axisPath(p, room, along, a0, a1);
+  if (!detour) return axisPath(p, room, along, a0, a1, near);
+  // ON REVIENT DANS LA FILE QU'ON A QUITTÉE, pas dans la plus large du hall.
+  // Sans cette cote, le retour d'un détour se reposait sur la trouée la plus
+  // large — à l'autre bout d'un hall de vingt-huit mètres, ce qui traversait
+  // tout ce qu'il y a entre les deux. Et ce n'est pas la position du MEUBLE
+  // qu'on vient de regarder : celle-là est dans son emprise, donc dans aucune
+  // trouée, ce qui renvoyait au même repli.
+  const back = hallAxis(p, room, along, detour.at, near);
   return [
-    ...axisPath(p, room, along, a0, detour.at),
+    ...axisPath(p, room, along, a0, detour.at, near),
     ...detour.stops,
-    onAxis(p, room, along, detour.at),
-    ...axisPath(p, room, along, detour.at, a1),
+    onAxis(p, room, along, detour.at, undefined, back),
+    ...axisPath(p, room, along, detour.at, a1, back),
   ];
 }
 
 // --- Le konbini ----------------------------------------------------------
 
-/** Le konbini du hall, s'il y en a un. */
-function shopOf(net: ConcourseNetwork): Fixture | null {
-  return net.fixtures.find((f) => f.kind === 'konbini') ?? null;
+/** Une emprise est-elle dans cette pièce ? */
+function inRoom(room: ConcourseRoom, r: InteriorRect): boolean {
+  return r.x0 >= room.rect.x0 - 0.01 && r.x1 <= room.rect.x1 + 0.01
+    && r.z0 >= room.rect.z0 - 0.01 && r.z1 <= room.rect.z1 + 0.01;
+}
+
+/** Le konbini de CETTE pièce, s'il y en a un. */
+function shopOf(net: ConcourseNetwork, room: ConcourseRoom): Fixture | null {
+  return net.fixtures.find((f) => f.kind === 'konbini' && inRoom(room, f.rect)) ?? null;
 }
 
 /**
@@ -604,6 +721,8 @@ function paidLegs(
    * mais seulement sur le tronçon qu'on lui donne.
    */
   entryAlong: number | null = null,
+  /** La file où l'on arrive : celle du pied de la volée. */
+  entryAcross: number | null = null,
 ): RouteStop[] | null {
   const net = p.network;
   const room = net.rooms.find((r) => r.id === net.gates.find((g) => g.id === bay.gateId)?.from);
@@ -636,12 +755,31 @@ function paidLegs(
       { ...freeSide, ...tap },
       paidSide,
       onAxis(p, room, axis, paidAt),
-      ...hallLeg(p, room, axis, paidAt, foot, browseIn(p, axis, zone[0], zone[1], 0.18)),
+      ...hallLeg(
+        p, room, axis, paidAt, foot,
+        browseIn(p, room, axis, zone[0], zone[1], 0.18, entryAcross ?? undefined),
+      ),
+      // On finit DANS la file du pied de la volée, sans quoi le dernier pas
+      // traverse ce qui sépare deux files.
+      onAxis(p, room, axis, foot, undefined, entryAcross ?? undefined),
+      ...(entryAcross === null ? [] : [pt(axis, foot, clampAcross(room, axis, entryAcross))]),
     ];
   }
+  // ON ENTRE TOUT DROIT. Le couloir se tient au MILIEU de la trouée, et dans un
+  // hall de trente-six mètres ce milieu est à vingt mètres du pied de la volée :
+  // y aller en biais depuis la volée passait par-dessus le bord de la pièce.
+  // On entre donc au droit de la volée, puis on rejoint la file.
+  const straightIn = entryAcross === null
+    ? []
+    : [pt(axis, foot, clampAcross(room, axis, entryAcross))];
   return [
-    onAxis(p, room, axis, foot),
-    ...hallLeg(p, room, axis, foot, paidAt, browseIn(p, axis, zone[0], zone[1], 0.22)),
+    ...straightIn,
+    onAxis(p, room, axis, foot, undefined, entryAcross ?? undefined),
+    ...hallLeg(
+      p, room, axis, foot, paidAt,
+      browseIn(p, room, axis, zone[0], zone[1], 0.22, entryAcross ?? undefined),
+      entryAcross ?? undefined,
+    ),
     { ...paidSide, ...tap },
     freeSide,
   ];
@@ -652,6 +790,15 @@ function freeLegs(
   p: StationPlacement,
   door: StreetDoor,
   inbound: boolean,
+  /**
+   * Le point où l'on DÉBOUCHE du contrôle, côté libre.
+   *
+   * La zone libre commençait « au bout de la pièce », ce qui supposait que le
+   * contrôle soit à l'autre bout. À Harajuku la pièce libre déborde sous la
+   * ligne : partir du bout renvoyait le voyageur DANS les bornes, qu'il
+   * traversait en diagonale. On part de là où l'on est.
+   */
+  entry: Pt | null = null,
 ): RouteStop[] | null {
   const net = p.network;
   const m = net.mouths[door.exit];
@@ -662,16 +809,24 @@ function freeLegs(
   const r = room.rect;
   const [lo, hi] = axis === 'z' ? [r.z0, r.z1] : [r.x0, r.x1];
   const toHigh = m.side === 'z1' || m.side === 'x1';
-  const a0 = toHigh ? lo + ZONE_EDGE : hi - ZONE_EDGE;
   const a1 = toHigh ? hi - ZONE_EDGE : lo + ZONE_EDGE;
+  const a0 = entry
+    ? Math.min(Math.max(alongOf(axis, entry), lo + ZONE_EDGE), hi - ZONE_EDGE)
+    : (toHigh ? lo + ZONE_EDGE : hi - ZONE_EDGE);
+  const lane = entry ? acrossOf(axis, entry) : undefined;
   const mouth = pt(axis, a1, acrossOf(axis, door));
-  const shop = shopOf(net);
+  const shop = shopOf(net, room);
   const detour = shop && Math.random() < 0.34
     ? shopVisit(shop, axis)
-    : browseIn(p, axis, lo, hi, 0.4);
+    : browseIn(p, room, axis, lo, hi, 0.4, lane);
   return inbound
-    ? [mouth, onAxis(p, room, axis, a1), ...hallLeg(p, room, axis, a1, a0, detour)]
-    : [onAxis(p, room, axis, a0), ...hallLeg(p, room, axis, a0, a1, detour), mouth];
+    ? [
+      mouth,
+      onAxis(p, room, axis, a1),
+      ...hallLeg(p, room, axis, a1, a0, detour),
+      onAxis(p, room, axis, a0, undefined, lane),
+    ]
+    : [onAxis(p, room, axis, a0, undefined, lane), ...hallLeg(p, room, axis, a0, a1, detour, lane), mouth];
 }
 
 /**
@@ -695,13 +850,23 @@ export function routeToStreet(p: StationPlacement, busy: readonly number[] = [])
   const room = paidRoomOf(p.network, bay);
   const foot = room && accessFoot(p, room.id);
   if (!door) return null;
-  const paid = paidLegs(p, bay, false, foot ? alongOf(bay.cross, foot) : null);
-  const free = freeLegs(p, door, false);
-  if (!paid || !free || !foot) return null;
+  const access = room && accessServing(p, room.id);
+  const cross = room && access ? joinLegs(p.network, access.toRoomId, room.id) : [];
+  const enter = cross && cross.length > 0 ? cross[cross.length - 1] : foot;
+  const paid = paidLegs(
+    p, bay, false,
+    enter ? alongOf(bay.cross, enter) : null,
+    enter ? acrossOf(bay.cross, enter) : null,
+  );
+  const free = freeLegs(p, door, false, paid ? paid[paid.length - 1] : null);
+  if (!paid || !free || !foot || !cross) return null;
   return [
     // Le bas de l'accès : l'étage bascule tout seul en chemin
     // (systems/stationLevels), personne n'a à le décider ici.
     foot,
+    // Les volées intérieures, s'il y en a : une trémie ne débouche pas
+    // toujours dans la zone payante (Okachimachi, et sa mezzanine).
+    ...cross,
     ...paid,
     ...free,
     { x: door.x, z: door.z },
@@ -727,11 +892,20 @@ export function routeFromStreet(
   const room = paidRoomOf(p.network, bay);
   const foot = room && accessFoot(p, room.id);
   if (!door) return null;
-  const free = freeLegs(p, door, true);
-  const paid = paidLegs(p, bay, true, foot ? alongOf(bay.cross, foot) : null);
-  if (!paid || !free || !foot) return null;
+  const access = room && accessServing(p, room.id);
+  const cross = room && access ? joinLegs(p.network, access.toRoomId, room.id) : [];
+  const enter = cross && cross.length > 0 ? cross[cross.length - 1] : foot;
+  const paid = paidLegs(
+    p, bay, true,
+    enter ? alongOf(bay.cross, enter) : null,
+    enter ? acrossOf(bay.cross, enter) : null,
+  );
+  // Le premier point du trajet payant est le côté LIBRE de la ligne : c'est là
+  // que la zone libre se termine, et donc là que son parcours doit aboutir.
+  const free = freeLegs(p, door, true, paid ? paid[0] : null);
+  if (!paid || !free || !foot || !cross) return null;
   return {
     from: door,
-    stops: [...free, ...paid, foot],
+    stops: [...free, ...paid, ...[...cross].reverse(), foot],
   };
 }
