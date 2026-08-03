@@ -197,15 +197,34 @@ export function paxScale(): number {
 
 /**
  * Niveau de détail de la gare : 0 = tout, 1 = sans la charpente de signature,
- * 2 = mobilier réduit, 3 = quai nu. Le quai n'est visible que par intervalles,
- * mais il est long de 224 m : c'est le plus gros poste quand on marche dessus.
+ * 2 = mobilier réduit, 3 = quai nu.
+ *
+ * La gare SORT de l'échelle de qualité : elle est bâtie en entier, du plus
+ * léger des préréglages au plus riche.
+ *
+ * Elle y était entrée pour une bonne raison - un quai fait 224 m et c'est le
+ * plus gros poste quand on marche dessus - mais le remède coûtait plus cher
+ * que le mal. Aux paliers bas et très bas, la gare tombait à `3` : plus de
+ * charpente signature (donc quatorze gares perdaient exactement ce qui les
+ * distingue les unes des autres), plus de trousse de quai, plus de plaques de
+ * baie, plus d'auvent d'en face - et surtout plus de HALL SOUTERRAIN, alors
+ * que rien n'empêche d'y descendre : le volume praticable
+ * (`systems/walkable`) ne consulte aucun palier de qualité, et le joueur
+ * s'enfonçait sous une dalle percée dans un niveau dont pas un mur n'était
+ * dessiné. À l'écran, une gare non modélisée.
+ *
+ * Le reste de l'échelle continue de faire son travail là où le gain est réel
+ * et la perte invisible : résolution de rendu, post-processing, ombres,
+ * densité de foule, mobilier de voie, croisements de rames. Le quai, lui,
+ * n'est à l'écran que par intervalles - et c'est le seul décor de ce jeu dans
+ * lequel on marche.
+ *
+ * Les paliers 1 à 3 restent le vocabulaire des modules de gare (chacun sait
+ * encore se dégarnir) : ce qui a disparu, c'est le préréglage qui les
+ * réclamait.
  */
 export function platformDetail(): 0 | 1 | 2 | 3 {
-  const l = perfLevel();
-  if (l <= 1) return 0;
-  if (l === 2) return 1;
-  if (l === 3) return 2;
-  return 3;
+  return 0;
 }
 
 /**
