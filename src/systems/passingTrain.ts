@@ -38,6 +38,7 @@ import { perfLevel } from './perf';
 import { runtime } from './runtime';
 import { speechBusy } from './speech';
 import { paPass, paPassWarning } from './stationPa';
+import { drawPassThrough } from './net/worldDecisions';
 
 /** Nombre de caisses d'une rame de la Keihin-Tōhoku (E233-1000). */
 export const PASS_CARS = 10;
@@ -138,10 +139,17 @@ export function rollPassThrough(index: number, opportunityS: number): boolean {
   if (stage !== 'idle') return false;
   // Une rame de plus, ses matériaux et ses géométries : les petites machines
   // ont déjà fort à faire avec le quai et la nôtre.
+  //
+  // Cette sortie précède le tirage, et c'est elle qui a condamné l'idée d'une
+  // graine partagée entre joueurs : un client en qualité basse ne consomme pas
+  // le même nombre d'aléas que les autres, et toute suite commune se serait
+  // décalée pour lui seul, silencieusement. L'oracle nomme ses tirages au lieu
+  // de les compter, ce qui rend cette sortie parfaitement inoffensive - le
+  // suiveur qui ne tire pas laisse simplement dormir la valeur reçue.
   if (perfLevel() >= 4) return false;
   const kind = passKindAt(index, runtime.clockMin, runtime.tokyoDate.weekday);
   if (!kind) return false;
-  return Math.random() < passChance(kind, runtime.clockMin) * Math.min(1, opportunityS / 120);
+  return drawPassThrough(passChance(kind, runtime.clockMin) * Math.min(1, opportunityS / 120));
 }
 
 /**

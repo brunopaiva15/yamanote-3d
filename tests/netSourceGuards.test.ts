@@ -63,6 +63,11 @@ const MODULES_PURS = [
   'src/systems/net/poseBuffer.ts',
   'src/systems/net/reconcile.ts',
   'src/systems/net/chatLimiter.ts',
+  // L'oracle a un état de module - le rôle, les tirages de l'arrêt courant -
+  // mais aucune dépendance vers le jeu, et c'est ce qui compte ici : il doit
+  // rester chargeable seul. Le jour où il importera `runtime` « juste pour lire
+  // stopSequence », il faudra le lui passer en paramètre.
+  'src/systems/net/worldDecisions.ts',
 ];
 
 /** Ce qu'un module pur n'a pas le droit d'atteindre, et pourquoi. */
@@ -158,6 +163,86 @@ test('tout message reçu passe par un validateur avant d’être cru', () => {
   ]) {
     assert.match(source, new RegExp(`export function ${nom}\\(`), `${nom} manque`);
   }
+});
+
+/**
+ * Les `Math.random()` qu'on tolère encore dans le cycle station, et pourquoi.
+ *
+ * Chaque entrée nomme une fonction et dit ce qu'elle tire. Ajouter un tirage au
+ * cycle sans le faire passer par l'oracle rendra ce test rouge, et c'est tout
+ * son objet : un seul `Math.random()` égaré dans `randomizeStopTimings` ferait
+ * s'arrêter les rames de deux joueurs à des endroits différents, sans qu'aucune
+ * erreur n'apparaisse nulle part. C'est le défaut le plus coûteux à trouver de
+ * tout le multijoueur, et le moins cher à empêcher.
+ */
+const RANDOM_TOLERES: { fonction: string; raison: string; combien: number }[] = [
+  {
+    fonction: 'scheduleNextRunSound',
+    raison: 'bruit de roulement : ni vu ni nommé, il n’appartient à personne',
+    combien: 1,
+  },
+  {
+    fonction: 'scheduleBatteryTick',
+    raison: 'tic du relais de secours : local, comme le bruit de roulement',
+    combien: 1,
+  },
+  {
+    fonction: 'randomizeEntry',
+    raison: 'point d’entrée sur la boucle : un suiveur ne l’appelle jamais, ' +
+      'il entre par l’instantané de l’hôte',
+    combien: 5,
+  },
+  {
+    fonction: 'updateCycle',
+    raison: 'crissement de boudin en courbe : local (voir scheduleNextRunSound)',
+    combien: 2,
+  },
+];
+
+/**
+ * Le source, débarrassé de ses commentaires.
+ *
+ * Indispensable ici : ce dépôt EXPLIQUE ses choix, et les commentaires qui
+ * justifient les tirages restants nomment forcément `Math.random()`. Les
+ * compter ferait échouer le test sur sa propre documentation - et la façon la
+ * plus rapide de le faire repasser au vert serait alors d'effacer l'explication,
+ * ce qui est exactement l'inverse du but recherché.
+ */
+function code(rel: string): string {
+  return read(rel)
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
+
+test('le cycle station ne tire plus rien hors de l’oracle', () => {
+  const source = code('src/systems/stationCycle.ts');
+  const total = (source.match(/Math\.random\(\)/g) ?? []).length;
+  const attendu = RANDOM_TOLERES.reduce((n, t) => n + t.combien, 0);
+  assert.equal(
+    total,
+    attendu,
+    `${total} appels à Math.random() dans stationCycle, ${attendu} attendus.\n` +
+      'Les seuls tolérés sont :\n' +
+      RANDOM_TOLERES.map((t) => `  · ${t.fonction} (×${t.combien}) — ${t.raison}`).join('\n') +
+      '\nTout nouveau tirage doit passer par systems/net/worldDecisions, sinon ' +
+      'deux joueurs du même salon ne vivront pas le même arrêt - et rien ne le dira.',
+  );
+});
+
+test('les portes se tirent par une graine injectée, pas à l’import du module', () => {
+  const source = read('src/systems/doorMotion.ts');
+  assert.match(
+    source,
+    /export function randomizeDoorTimings\(random: \(\) => number = Math\.random\)/,
+    'le générateur doit rester injectable, avec Math.random par défaut',
+  );
+  // Un appel de niveau module s'exécuterait au chargement de la page, donc
+  // avant qu'on sache si l'on mène la rame ou si l'on suit celle d'un autre.
+  assert.doesNotMatch(
+    source,
+    /\nrandomizeDoorTimings\(\);/,
+    'un tirage à l’import consomme du hasard avant qu’on connaisse son rôle',
+  );
 });
 
 test('le nettoyage du tchat s’appuie sur la borne du protocole', () => {

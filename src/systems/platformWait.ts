@@ -453,7 +453,12 @@ function updateClear(index: number): void {
     lastClackDist = 0;
     // Nouvelle rame, nouveau conducteur : son écart d'arrêt est tiré ici,
     // avant même qu'elle ne se montre au bout du quai.
-    randomizeBerthOffset();
+    //
+    // Tirage LOCAL (`false`), et c'est important dans un salon : cette rame-ci
+    // n'est pas celle que l'hôte mène, c'est la suivante, celle qu'on attend
+    // pour soi seul. Lui réclamer l'écart d'arrêt publié par l'hôte
+    // signalerait une valeur manquante, donc une désynchronisation imaginaire.
+    randomizeBerthOffset(false);
     runtime.trainZ = platformWait.approachDist - runtime.berthOffset;
     randomizeDoorTimings();
     consumeRecoveryTrain();

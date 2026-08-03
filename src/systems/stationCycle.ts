@@ -27,7 +27,20 @@ import {
   outageWaitAnnouncement,
 } from '../data/announcements';
 import { useStore, type Phase } from '../store';
+import type { TokyoDate } from '../data/occupancy';
 import { advanceClock, runtime } from './runtime';
+import {
+  beginStopDraws,
+  doorRandom,
+  localBerthOffset,
+  drawAlternativePlatform,
+  drawBerthOffset,
+  drawHold,
+  drawIncidentAt,
+  drawIncidentGap,
+  drawMelodyJitter,
+  drawReason,
+} from './net/worldDecisions';
 import {
   createCarPower,
   cutPower,
@@ -95,6 +108,11 @@ let lastJointDistance = 0;
 // Prochain petit événement sonore de course (temps de phase cruise), -1 = aucun.
 let nextRunSoundAt = -1;
 
+// `Math.random()` et non l'oracle des tirages (systems/net/worldDecisions), et
+// c'est un choix : le bruit de roulement n'est ni vu ni nommé, et le transmettre
+// coûterait un aller-retour réseau pour un grésillement. Deux voyageurs du même
+// salon n'entendront donc pas le rail craquer à la même seconde, ce qu'aucun
+// des deux ne peut remarquer.
 function scheduleNextRunSound(from: number): void {
   nextRunSoundAt = from + 14 + Math.random() * 22;
 }
@@ -139,15 +157,28 @@ const EMERGENCY_APPROACH_MARGIN = 2;
 const EMERGENCY_HOLD_MIN = 45; // s
 const EMERGENCY_HOLD_MAX = 150; // s
 
-/** Gares restant à parcourir avant le prochain arrêt d'urgence. */
-let stationsToEmergency = drawEmergencyGap(true);
+/**
+ * Gares restant à parcourir avant le prochain arrêt d'urgence.
+ *
+ * Volontairement HORS D'ATTEINTE au départ, et non tiré au sort ici : ce
+ * fichier s'importe au chargement de la page, donc avant que le joueur ait
+ * choisi quoi que ce soit et - depuis le multijoueur - avant qu'on sache si
+ * l'on mène la rame ou si l'on suit celle d'un autre. Un tirage à l'import
+ * consommait du hasard hors protocole pour une valeur que `randomizeEntry`
+ * remplaçait de toute façon trois lignes plus loin.
+ *
+ * La valeur réelle est posée par `randomizeEntry` (ou, dans un salon, par
+ * l'instantané reçu). D'ici là, aucune urgence ne peut se déclencher, ce qui
+ * est exactement ce qu'on veut d'une rame où personne n'est encore monté.
+ */
+let stationsToEmergency = Number.MAX_SAFE_INTEGER;
 // Instant de déclenchement dans la phase cruise courante, -1 = aucun.
 let emergencyAt = -1;
 
 function drawEmergencyGap(first = false): number {
   const min = first ? EMERGENCY_FIRST_MIN : EMERGENCY_GAP_MIN;
   const max = first ? EMERGENCY_FIRST_MAX : EMERGENCY_GAP_MAX;
-  return min + Math.floor(Math.random() * (max - min + 1));
+  return drawIncidentGap(min, max);
 }
 
 // --- Coupure de caténaire (停電) -----------------------------------------
@@ -200,8 +231,8 @@ const OUTAGE_RESTORE_TO_ANNOUNCE = 9;
 /** Annonce du conducteur après l'immobilisation (s) : le temps d'appeler le PC. */
 const OUTAGE_ANNOUNCE_AT = 14;
 
-/** Gares restant à parcourir avant la prochaine coupure. */
-let stationsToOutage = drawOutageGap(true);
+/** Gares avant la prochaine coupure. Hors d'atteinte au départ, comme ci-dessus. */
+let stationsToOutage = Number.MAX_SAFE_INTEGER;
 // Instant de déclenchement dans la phase cruise courante, -1 = aucun.
 let outageAt = -1;
 /** Durée de la marche sur l'élan tirée pour la coupure en cours (s). */
@@ -210,7 +241,7 @@ let outageCoastFor = 0;
 function drawOutageGap(first = false): number {
   const min = first ? OUTAGE_FIRST_MIN : OUTAGE_GAP_MIN;
   const max = first ? OUTAGE_FIRST_MAX : OUTAGE_GAP_MAX;
-  return min + Math.floor(Math.random() * (max - min + 1));
+  return drawIncidentGap(min, max);
 }
 
 // --- Alimentation de bord -------------------------------------------------
@@ -253,6 +284,8 @@ const BATTERY_TICK_MIN = 9; // s
 const BATTERY_TICK_MAX = 26; // s
 let nextBatteryTickAt = -1;
 
+// Local lui aussi, pour la même raison que `scheduleNextRunSound` : un tic de
+// relais dans le noir n'appartient à personne.
 function scheduleBatteryTick(from: number): void {
   nextBatteryTickAt = from + BATTERY_TICK_MIN + Math.random() * (BATTERY_TICK_MAX - BATTERY_TICK_MIN);
 }
@@ -283,9 +316,9 @@ export function beginPowerOutage(): void {
   em.kind = 'outage';
   em.stage = 'coasting';
   em.t = 0;
-  em.holdFor = OUTAGE_HOLD_MIN + Math.random() * (OUTAGE_HOLD_MAX - OUTAGE_HOLD_MIN);
+  em.holdFor = drawHold(OUTAGE_HOLD_MIN, OUTAGE_HOLD_MAX);
   em.reason = 0;
-  outageCoastFor = OUTAGE_COAST_MIN + Math.random() * (OUTAGE_COAST_MAX - OUTAGE_COAST_MIN);
+  outageCoastFor = drawHold(OUTAGE_COAST_MIN, OUTAGE_COAST_MAX);
   for (const key of OUTAGE_KEYS) fired.delete(key);
   // Ce qui s'entend d'une coupure, c'est le SILENCE : la climatisation qui
   // tombe, l'onduleur qui s'éteint. Sans image ni son à nommer, la ligne de
@@ -391,8 +424,8 @@ export function beginEmergencyStop(): void {
   em.kind = 'brake';
   em.stage = 'braking';
   em.t = 0;
-  em.holdFor = EMERGENCY_HOLD_MIN + Math.random() * (EMERGENCY_HOLD_MAX - EMERGENCY_HOLD_MIN);
-  em.reason = Math.floor(Math.random() * EMERGENCY_REASONS.length);
+  em.holdFor = drawHold(EMERGENCY_HOLD_MIN, EMERGENCY_HOLD_MAX);
+  em.reason = drawReason(EMERGENCY_REASONS.length);
   // Ré-arme les annonces de l'événement : un second arrêt dans la même phase
   // cruise (les clés `fired` y survivent) rejoue la séquence complète.
   fired.delete('em-stopped');
@@ -631,10 +664,22 @@ function stationBias(stationIndex: number): number {
 const BERTH_OFFSET_MIN = 0.03;
 const BERTH_OFFSET_MAX = 0.11;
 
-/** Tire l'écart d'arrêt de la rame qui se présente. */
-export function randomizeBerthOffset(): void {
-  const mag = BERTH_OFFSET_MIN + Math.random() * (BERTH_OFFSET_MAX - BERTH_OFFSET_MIN);
-  runtime.berthOffset = Math.random() < 0.5 ? -mag : mag;
+/**
+ * Tire l'écart d'arrêt de la rame qui se présente.
+ *
+ * `shared` dit s'il s'agit de LA rame du salon - celle dont l'hôte publie les
+ * tirages - ou d'une autre. La distinction n'existe qu'à un seul endroit :
+ * `systems/platformWait`, quand on a laissé partir la sienne et qu'on regarde
+ * arriver la suivante. Cette rame-là n'appartient à personne d'autre qu'à soi,
+ * et lui demander l'écart d'arrêt de l'hôte reviendrait à réclamer une valeur
+ * qui n'a jamais été publiée - donc à signaler une désynchronisation qui
+ * n'existe pas, donc à provoquer une resynchronisation dure au beau milieu d'une
+ * attente parfaitement paisible.
+ */
+export function randomizeBerthOffset(shared = true): void {
+  runtime.berthOffset = shared
+    ? drawBerthOffset(BERTH_OFFSET_MIN, BERTH_OFFSET_MAX)
+    : localBerthOffset(BERTH_OFFSET_MIN, BERTH_OFFSET_MAX);
 }
 
 /**
@@ -667,7 +712,7 @@ function randomizeStopPlatform(stationIndex: number): void {
   const info = platformFor(station.jy, useStore.getState().loopDirection);
   const chance =
     info?.alternativePlatform != null ? (ALTERNATIVE_PLATFORM_CHANCE[station.jy] ?? 0) : 0;
-  runtime.useAlternativePlatform = Math.random() < chance;
+  runtime.useAlternativePlatform = drawAlternativePlatform(chance);
 }
 
 /**
@@ -684,7 +729,7 @@ export function randomizeStopTimings(stationIndex: number): void {
   randomizeStopPlatform(stationIndex);
   // Ligne en retard : on rattrape sur les quais, la mélodie part plus tôt.
   const bias = stationBias(stationIndex) - (lineDelayed() ? MELODY_STATION_BIAS : 0);
-  const jitter = (Math.random() * 2 - 1) * MELODY_AFTER_STOP_JITTER;
+  const jitter = drawMelodyJitter() * MELODY_AFTER_STOP_JITTER;
   stopTimings.melodyAfterStop = Math.min(
     MELODY_AFTER_STOP_MAX,
     Math.max(MELODY_AFTER_STOP_MIN, MELODY_AFTER_STOP + bias + jitter),
@@ -784,7 +829,7 @@ function speedFor(phase: Phase, t: number, stationIndex: number): number {
 }
 
 function seedDoorsForDwell(t: number, stationIndex: number): void {
-  randomizeDoorTimings();
+  randomizeDoorTimings(doorRandom());
   const dwell = dwellDuration(stationIndex);
   const openAt = 0.4;
   const closeAt = dwell - DOORS_CLOSE_LEAD;
@@ -874,6 +919,107 @@ export function resumeDwellAt(t: number, stationIndex: number): void {
   seedFired('dwell', t, stationIndex, store.loopDirection);
 }
 
+
+/**
+ * Un état du monde, tel qu'on peut le poser d'un coup sur une rame qui roule.
+ *
+ * C'est ce qu'un joueur reçoit en entrant dans un salon déjà en marche, et ce
+ * qu'un suiveur trop dérivé se fait reposer d'autorité. Rien de plus que ce
+ * qu'il faut : la position sur la boucle, l'horloge, et l'état de la rame. Les
+ * TIRAGES de l'arrêt n'y sont pas - ils voyagent à part et sont déjà en place
+ * quand on arrive ici (systems/net/worldDecisions).
+ */
+export interface WorldSnapshot {
+  phase: Phase;
+  /** Temps écoulé dans la phase (s). */
+  phaseT: number;
+  index: number;
+  /** Le quai qu'on longe : distinct de `index` pendant tout le départ. */
+  platformIndex: number;
+  doorSide: 1 | -1;
+  loopDirection: LoopDirection;
+  clockMin: number;
+  tokyoDate: TokyoDate;
+  distance: number;
+  departStartDist: number;
+  stopSequence: number;
+}
+
+/**
+ * Pose un état du monde sur la rame, sans que rien ne se rejoue.
+ *
+ * Cette fonction n'est pas neuve : c'est le corps de `__jumpTo`, l'outil de mise
+ * au point qui saute à un instant d'une phase, sorti de son coin pour servir
+ * enfin à quelque chose. Il faisait déjà EXACTEMENT ce dont un salon a besoin, et
+ * il le faisait bien parce qu'il a été rodé à la main pendant des mois.
+ *
+ * Tout tient dans le dernier appel. `seedFired` marque comme DÉJÀ JOUÉS tous les
+ * événements dont l'instant est derrière nous : sans lui, poser `phaseT` à
+ * quatorze secondes d'un arrêt rejouerait le carillon d'ouverture, l'annonce de
+ * descente et la mélodie, tous ensemble, dans la seconde. C'est la seule raison
+ * pour laquelle une resynchronisation dure est supportable - et c'est aussi
+ * pourquoi il ne faut surtout pas réécrire cette séquence ailleurs : la
+ * prochaine version oublierait une ligne, et l'oubli ne s'entendrait qu'une fois
+ * sur vingt.
+ */
+export function applyWorldSnapshot(snap: WorldSnapshot): void {
+  const store = useStore.getState();
+
+  // Un arrêt subi ne survit pas à un saut : sans cette remise à zéro, le badge
+  // du HUD reste figé sur « arrêt d'urgence » et `beginPowerOutage()` refuse de
+  // partir, l'étape précédente étant encore déclarée en cours.
+  runtime.emergencyStop.stage = 'none';
+  runtime.emergencyStop.kind = 'brake';
+  runtime.emergencyStop.t = 0;
+  resetCarPower(carPower);
+  runtime.carPower = 1;
+  runtime.emergencyLight = 0;
+  nextBatteryTickAt = -1;
+  emergencyAt = -1;
+  outageAt = -1;
+
+  // Le sens AVANT le reste : il commande la durée de croisière du tronçon, donc
+  // toute la chronologie qui en découle.
+  store.setLoopDirection(snap.loopDirection);
+  store.setIndex(snap.index);
+  store.setPlatformIndex(snap.platformIndex);
+  store.setPhase(snap.phase);
+  store.setDoorSide(snap.doorSide);
+  updatePlatformSpeakers();
+
+  // L'horloge et la date avant tout ce qui en dépend : la météo est une
+  // fonction pure de ces deux valeurs (systems/weather), et se met donc
+  // d'accord toute seule, sans un octet de protocole.
+  runtime.clockMin = snap.clockMin;
+  runtime.tokyoDate = snap.tokyoDate;
+  runtime.stopSequence = snap.stopSequence;
+
+  // Chez un suiveur, ces deux appels ne tirent rien : ils LISENT les valeurs
+  // que l'hôte a publiées (systems/net/worldDecisions). Chez l'hôte et en solo,
+  // ils tirent comme d'habitude.
+  randomizeStopTimings(snap.index);
+  randomizeBerthOffset();
+
+  runtime.phaseT = snap.phaseT;
+  runtime.distance = snap.distance;
+  runtime.departStartDist = snap.departStartDist;
+  const sim = simulatePhaseState(snap.phase, snap.phaseT, snap.index);
+  runtime.speed = sim.v;
+  runtime.accel = sim.a;
+
+  if (snap.phase === 'dwell') seedDoorsForDwell(snap.phaseT, snap.index);
+  else seedDoorMotion(0, 999, 0, 999);
+  resetDoorObstruction();
+  resetPassengerAssistance();
+
+  seedPlatformPresence(snap.phase, snap.phaseT);
+  if (snap.phase === 'cruise') clearPlatformCrowd();
+  else seedPlatformCrowd(snap.platformIndex);
+
+  // Et le sceau : tout ce qui devait déjà avoir sonné est marqué comme sonné.
+  seedFired(snap.phase, snap.phaseT, snap.platformIndex, snap.loopDirection);
+}
+
 /**
  * Point d'entrée sur la boucle : phase, progression, vitesse, portes.
  * À appeler avant start(), une fois l'audio initialisé.
@@ -950,7 +1096,7 @@ export function randomizeEntry(stationIndex?: number, direction?: LoopDirection)
   if (phase === 'cruise') scheduleNextRunSound(phaseT + 4);
   lastJointDistance = runtime.distance;
 
-  if (phase === 'brake') randomizeDoorTimings();
+  if (phase === 'brake') randomizeDoorTimings(doorRandom());
   if (phase === 'dwell') seedDoorsForDwell(phaseT, index);
   else seedDoorMotion(0, 999, 0, 999);
   // On n'entre jamais en jeu au milieu d'un incident de porte : la fermeture
@@ -1056,7 +1202,7 @@ export function updateCycle(dt: number): void {
           cruiseSec - APPROACH_ANNOUNCE_LEAD - EMERGENCY_APPROACH_MARGIN,
         );
         if (latest <= EMERGENCY_AT_MIN) return;
-        outageAt = EMERGENCY_AT_MIN + Math.random() * (latest - EMERGENCY_AT_MIN);
+        outageAt = drawIncidentAt(EMERGENCY_AT_MIN, latest - EMERGENCY_AT_MIN);
         stationsToOutage = drawOutageGap();
       });
       // Arrêt d'urgence : la course qui le porte est décidée gares à l'avance,
@@ -1080,7 +1226,7 @@ export function updateCycle(dt: number): void {
         // 8 s de croisière) : l'événement n'est pas perdu, il attend la gare
         // suivante.
         if (latest <= EMERGENCY_AT_MIN) return;
-        emergencyAt = EMERGENCY_AT_MIN + Math.random() * (latest - EMERGENCY_AT_MIN);
+        emergencyAt = drawIncidentAt(EMERGENCY_AT_MIN, latest - EMERGENCY_AT_MIN);
         stationsToEmergency = drawEmergencyGap();
       });
       if (outageAt >= 0 && t >= outageAt) {
@@ -1102,6 +1248,7 @@ export function updateCycle(dt: number): void {
       // de boudin dans une courbe, purge d'air sous le plancher.
       if (nextRunSoundAt >= 0 && t >= nextRunSoundAt) {
         if (s01 > 0.5) {
+          // Local : voir `scheduleNextRunSound`.
           if (Math.random() < 0.6) audio.flangeSqueal(0.35 + Math.random() * 0.5);
           else audio.airCompressorPurge();
         }
@@ -1114,7 +1261,12 @@ export function updateCycle(dt: number): void {
       // Nouveau tirage des retards de portes et de la chronologie de l'arrêt
       // pour cette gare - avant le dwell, dont il fixe la durée.
       once('door-timings', true, () => {
-        randomizeDoorTimings();
+        // Un nouvel arrêt : on oublie les tirages du précédent avant d'en
+        // faire de neufs. Chez un suiveur, c'est ce qui fait APPARAÎTRE le
+        // manque si le paquet de l'hôte n'arrive pas, au lieu de le laisser
+        // rejouer sans bruit la chronologie de la gare d'avant.
+        beginStopDraws();
+        randomizeDoorTimings(doorRandom());
         randomizeStopTimings(s.index);
         // Et le tirage de l'incident : cet arrêt-ci verra-t-il une porte
         // bloquée ? La réponse dépend surtout du monde qui monte.
@@ -1278,44 +1430,34 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     em.t = Math.max(em.t, em.holdFor + Math.min(0, secondsLeft));
   };
   w.__runtime = runtime;
+  // Phase et gare courantes, pour les sondes pilotées au navigateur : elles
+  // vivent dans le store et non dans le runtime, et une sonde n'a pas à savoir
+  // laquelle des deux moitiés de l'état porte quoi.
+  w.__phase = () => useStore.getState().phase;
+  w.__index = () => useStore.getState().index;
   w.__setTrainZ = (z: number) => {
     runtime.trainZ = z;
   };
   w.__setDirection = (dir: LoopDirection) => useStore.getState().setLoopDirection(dir);
   // Saut direct à un instant d'une phase, sans attendre le cycle réel.
   w.__jumpTo = (phase: Phase, t = 0, station?: number) => {
+    // Le saut de mise au point passe désormais par le MÊME chemin que l'entrée
+    // dans un salon : ce qu'on éprouve à la console est exactement ce que vivra
+    // un joueur qui rejoint une rame en marche.
     const store = useStore.getState();
     const index = station ?? store.index;
-    // Un arrêt subi ne survit pas à un saut de phase : sans cette remise à
-    // zéro, le badge du HUD restait figé sur « arrêt d'urgence » et
-    // `beginPowerOutage()` refusait de partir, l'étape précédente étant encore
-    // déclarée en cours.
-    runtime.emergencyStop.stage = 'none';
-    runtime.emergencyStop.kind = 'brake';
-    runtime.emergencyStop.t = 0;
-    resetCarPower(carPower);
-    runtime.carPower = 1;
-    runtime.emergencyLight = 0;
-    nextBatteryTickAt = -1;
-    emergencyAt = -1;
-    outageAt = -1;
-    store.setIndex(index);
-    store.setPlatformIndex(index);
-    store.setPhase(phase);
-    store.setDoorSide(DOOR_SIDE[index]);
-    updatePlatformSpeakers();
-    randomizeStopTimings(index);
-    randomizeBerthOffset();
-    runtime.phaseT = t;
-    const sim = simulatePhaseState(phase, t, index);
-    runtime.speed = sim.v;
-    runtime.accel = sim.a;
-    if (phase === 'dwell') seedDoorsForDwell(t, index);
-    else seedDoorMotion(0, 999, 0, 999);
-    resetDoorObstruction();
-    seedPlatformPresence(phase, t);
-    if (phase === 'cruise') clearPlatformCrowd();
-    else seedPlatformCrowd(index);
-    seedFired(phase, t, index, store.loopDirection);
+    applyWorldSnapshot({
+      phase,
+      phaseT: t,
+      index,
+      platformIndex: index,
+      doorSide: DOOR_SIDE[index],
+      loopDirection: store.loopDirection,
+      clockMin: runtime.clockMin,
+      tokyoDate: runtime.tokyoDate,
+      distance: runtime.distance,
+      departStartDist: runtime.departStartDist,
+      stopSequence: runtime.stopSequence,
+    });
   };
 }
