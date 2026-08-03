@@ -26,7 +26,26 @@ const { useStore } = await import('../src/store.ts');
 /** Le joueur est sur le quai : rien de ce qui suit ne se cale sur lui. */
 runtime.playerLevel = 'platform';
 
-const PLACE = placementFor(useStore.getState().platformIndex, psdGates());
+/**
+ * La gare est CHOISIE, et non héritée de l'état par défaut.
+ *
+ * `CONFIG.startIndex` est tiré au sort au chargement du module
+ * (`Math.random()`) : la gare que le magasin porte au démarrage change à chaque
+ * exécution. Ce test s'en contentait, et il tombait donc une fois sur trente -
+ * exactement les fois où le tirage donnait Nippori, la seule gare dont le hall
+ * attend encore son traitement propre (`bespoke`, voir data/stationInterior) et
+ * dont l'intérieur n'est donc pas bâti. Un échec sur trente exécutions n'est pas
+ * un test qui trouve quelque chose : c'est un test qu'on finit par relancer sans
+ * lire, et c'est ainsi qu'on rate le vrai.
+ *
+ * Ce qui est éprouvé ici, ce sont les BATTANTS. La gare n'est qu'un décor, et
+ * elle est donc posée : Tokyo, qui a une ligne de portillons générique comme
+ * vingt-neuf gares sur trente.
+ */
+const STATION = 0;
+useStore.setState({ index: STATION, platformIndex: STATION });
+
+const PLACE = placementFor(STATION, psdGates());
 const GATE = PLACE.interior.gate;
 const LANE = GATE.passages[0];
 
@@ -48,7 +67,10 @@ function standing(dz: number, granted = false) {
 
 const flap = () => gateStates()[0].flap;
 
-test('la gare de départ a bien une ligne de portillons à éprouver', () => {
+test('la gare choisie a bien une ligne de portillons à éprouver', () => {
+  // Le garde-fou reste : si Tokyo passait un jour en hall sur mesure, ou perdait
+  // sa ligne de portillons, tout ce qui suit n'éprouverait plus rien - et le
+  // dirait ici plutôt qu'en sept assertions illisibles.
   assert.ok(PLACE.interior.built, 'JY01 sans intérieur bâti');
   assert.ok(GATE.passages.length > 0, 'ligne sans passage');
 });
