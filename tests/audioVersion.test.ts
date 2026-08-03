@@ -18,7 +18,12 @@
 //     sonore appelle bien ces machines-là, parce que la tentation d'en retirer
 //     une « qui ne se voit pas » est exactement l'erreur que ce test attrape.
 //
-//  3. le voyage se fait ASSIS. On ne descend pas d'un train sans marcher, et
+//  3. la ligne continue de tourner derrière un onglet caché. C'est le cas
+//     d'usage même de cette version - on la lance et on va travailler
+//     ailleurs -, et `requestAnimationFrame` ne le permet pas : le navigateur
+//     cesse de l'appeler dès que la page n'est plus regardée.
+//
+//  4. le voyage se fait ASSIS. On ne descend pas d'un train sans marcher, et
 //     la version sonore n'a pas de corps à faire marcher : elle ne doit donc
 //     offrir aucun raccourci vers le quai. C'est une promesse facile à rompre
 //     par commodité - « un bouton, ce n'est pas grand-chose » - et c'est
@@ -162,4 +167,24 @@ test('le voyage sonore se fait assis, sans descendre sur le quai', () => {
       assert.ok(!source.includes(forbidden), `${file} ne doit pas faire descendre (${forbidden})`);
     }
   }
+});
+
+test('la ligne tourne derrière un onglet caché', () => {
+  const loop = readFileSync(resolvePath(ROOT, 'src/systems/audioLoop.ts'), 'utf8');
+  // Un SECOND moteur d'horloge, et la bascule qui va avec : rAF seul se tait
+  // dès que la page n'est plus regardée, et la ligne se figerait sur un
+  // ronflement de roulement sans gare ni annonce.
+  assert.match(loop, /setInterval\(/, 'pas de moteur d’horloge pour l’onglet caché');
+  assert.match(loop, /visibilitychange/, 'la bascule de moteur n’est pas branchée');
+  assert.match(loop, /document\.hidden/, 'la visibilité de la page n’est pas consultée');
+  // Et jamais les deux ensemble : le train irait deux fois trop vite.
+  assert.match(loop, /function stopDrivers\(\)/, 'rien n’arrête le pilote sortant');
+});
+
+test('l’afficheur ne se repeint pas pour personne', () => {
+  const screen = readFileSync(resolvePath(ROOT, 'src/ui/audio/LineScreen.tsx'), 'utf8');
+  // Deux mille lignes de canevas prises sur le fil audio, pour une dalle que
+  // personne ne regarde : c'est exactement ce que la version sonore promet
+  // d'éviter sur une machine modeste.
+  assert.match(screen, /document\.hidden/, 'la dalle se repeint même page cachée');
 });

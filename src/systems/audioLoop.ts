@@ -65,19 +65,51 @@ import { updateSegmentEnv } from './segmentEnv';
 import { updateCycle } from './stationCycle';
 import { updateWeather } from './weather';
 
-// Onglet repris après masquage : rAF était en pause, la première frame porte
-// tout le temps caché. On saute l'avance du cycle sur cette frame-là (évite
-// de sauter des gares) - mais UNIQUEMENT elle : une frame lente sur un onglet
+// --- L'horloge, et pourquoi elle change de moteur ------------------------
+//
+// `requestAnimationFrame` ne bat que pour une page qu'on REGARDE : dès que
+// l'onglet passe derrière ou que la fenêtre est réduite, le navigateur cesse
+// de l'appeler. C'est le bon comportement pour l'expérience complète - on
+// n'anime pas une scène que personne ne voit - et c'est exactement le mauvais
+// ici : la version sonore est faite pour tourner dans un onglet qu'on laisse
+// de côté, et une ligne qui se fige dès qu'on regarde ailleurs n'est plus une
+// ligne. Le graphe audio, lui, continuerait de jouer le dernier état
+// programmé : un ronflement de roulement figé, sans gare, sans annonce et sans
+// fin.
+//
+// La mesure vient donc d'un SECOND moteur quand la page est cachée : un
+// `setInterval`. Les navigateurs le bornent à un réveil par seconde en
+// arrière-plan, ce qui suffit très largement - une seconde de monde par pas,
+// parcourue en sous-pas de physique comme n'importe quelle image lente, et le
+// son est programmé à l'échantillon près par Web Audio de toute façon.
+//
+// Chrome va plus loin après cinq minutes (un réveil par MINUTE), mais il en
+// dispense les pages qui JOUENT DU SON - ce qui est, ici, la définition même
+// de la page. Le cas d'usage tient donc debout : on lance la ligne, on va
+// travailler ailleurs, elle continue.
+const BACKGROUND_TICK_MS = 250;
+
+// Onglet repris après masquage : sur une reprise ordinaire il n'y a plus de
+// trou à rattraper - le moteur d'arrière-plan a tourné pendant ce temps -,
+// mais une machine mise en veille en laisse un vrai. On saute l'avance du
+// cycle sur cette frame-là, et UNIQUEMENT elle : une frame lente sur un onglet
 // visible doit compter en entier, sinon le cycle gèle sous charge et le
 // prochain arrêt n'arrive jamais.
 let tabJustResumed = false;
 let visibilityBound = false;
+
+/** La page est-elle regardée ? Vrai hors navigateur (tests). */
+function pageVisible(): boolean {
+  return typeof document === 'undefined' || !document.hidden;
+}
 
 function bindVisibility(): void {
   if (visibilityBound || typeof document === 'undefined') return;
   visibilityBound = true;
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) tabJustResumed = true;
+    // Changer de moteur d'horloge, sans jamais en laisser deux tourner.
+    if (frameId || timerId) startAudioLoop.restart();
   });
 }
 
@@ -147,7 +179,44 @@ export function stepAudioFrame(rawDt: number): void {
 }
 
 let frameId = 0;
+let timerId = 0;
 let lastTime = 0;
+
+/** Un pas, quel que soit le pilote : le temps écoulé depuis le précédent. */
+function advance(now: number): void {
+  // Première mesure : aucun temps à rattraper, seulement une origine à poser.
+  // Sans cela, `now` (l'horloge du document) passerait entier dans le premier
+  // pas et le train partirait déjà loin.
+  if (lastTime === 0) {
+    lastTime = now;
+    return;
+  }
+  const dt = (now - lastTime) / 1000;
+  lastTime = now;
+  stepAudioFrame(dt);
+}
+
+function stopDrivers(): void {
+  if (frameId) cancelAnimationFrame(frameId);
+  if (timerId) window.clearInterval(timerId);
+  frameId = 0;
+  timerId = 0;
+}
+
+function runDriver(): void {
+  stopDrivers();
+  if (pageVisible()) {
+    const frame = (now: number) => {
+      frameId = requestAnimationFrame(frame);
+      advance(now);
+    };
+    frameId = requestAnimationFrame(frame);
+    return;
+  }
+  // Page cachée : le navigateur bornera lui-même la cadence. On demande fin,
+  // il donnera ce qu'il veut bien donner, et le pas s'ajuste au temps écoulé.
+  timerId = window.setInterval(() => advance(performance.now()), BACKGROUND_TICK_MS);
+}
 
 /**
  * Démarre la boucle. Rendue idempotente à dessein : un montage / démontage de
@@ -155,27 +224,19 @@ let lastTime = 0;
  * ce qui doublerait la vitesse du train.
  */
 export function startAudioLoop(): void {
-  if (frameId) return;
+  if (frameId || timerId) return;
   bindVisibility();
   lastTime = 0;
-  const frame = (now: number) => {
-    frameId = requestAnimationFrame(frame);
-    // Première image : aucun temps écoulé à rattraper, seulement une origine
-    // à poser. Sans cela, `now` (l'horloge du document) passerait entier dans
-    // le premier pas et le train partirait déjà loin.
-    if (lastTime === 0) {
-      lastTime = now;
-      return;
-    }
-    const dt = (now - lastTime) / 1000;
-    lastTime = now;
-    stepAudioFrame(dt);
-  };
-  frameId = requestAnimationFrame(frame);
+  runDriver();
 }
 
+/**
+ * Rebascule sur le pilote qui convient à l'état courant de la page. Posée sur
+ * la fonction plutôt qu'exportée à part : c'est un détail de la boucle, et rien
+ * d'autre n'a de raison de l'appeler.
+ */
+startAudioLoop.restart = runDriver;
+
 export function stopAudioLoop(): void {
-  if (!frameId) return;
-  cancelAnimationFrame(frameId);
-  frameId = 0;
+  stopDrivers();
 }
