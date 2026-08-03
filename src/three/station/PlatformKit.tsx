@@ -83,7 +83,26 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   const kit = place.kit;
   const backX = place.backX;
   const depth = layout.depth;
-  const canopyY = layout.canopyY;
+  /**
+   * LE PLAFOND DU QUAI, EN Z — et non plus une cote unique.
+   *
+   * Tout ce fichier pend à l'auvent. Or trois gares posent le leur PLUS HAUT
+   * que le plancher d'un plateau praticable qui les traverse (`place.ceilAt`,
+   * `systems/stationDeck`) : diffuseurs, caméras, gouttières et chemins de
+   * câbles ressortaient alors du sol du hall, en longues barres grises.
+   * `ceil(z)` rend l'auvent partout ailleurs, au centimètre près.
+   */
+  const ceil = place.ceilAt;
+  /**
+   * Le plafond d'un TRONÇON continu — gouttière, chemin de câbles.
+   *
+   * Il court d'un bout à l'autre d'une travée sans se couper : il ne peut donc
+   * pas suivre deux plafonds, et suit le plus bas des deux. `kit.runSpans` les
+   * coupe déjà au droit des gaines d'escalier mécanique, si bien qu'un tronçon
+   * ne franchit jamais qu'un seul bord de plateau.
+   */
+  const runCeil = (sp: { z0: number; z1: number }) =>
+    Math.min(ceil(sp.z0), ceil(sp.z1), ceil((sp.z0 + sp.z1) / 2));
   /** Quai sans portes : Shinjuku, Shibuya. */
   const bare = layout.psd === 'none';
 
@@ -177,33 +196,33 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   // Diffuseurs : plaque affleurant la sous-face de l'auvent, grille tournée
   // vers le bas - c'est de là que sortent réellement les annonces.
   const speakerPlates = useMemo(
-    () => kit.speakers.map((z) => mat(speakerX, canopyY - 0.04, z, 0.4, 0.07, 0.4)),
-    [kit.speakers, speakerX, canopyY],
+    () => kit.speakers.map((z) => mat(speakerX, ceil(z, 0.2) - 0.04, z, 0.4, 0.07, 0.4)),
+    [kit.speakers, speakerX, ceil],
   );
   const speakerGrilles = useMemo(
     () =>
       kit.speakers.map((z) =>
-        matFacing(FACING_DOWN, speakerX, canopyY - SPEAKER_GRILLE_DROP, z, 0.34, 0.34),
+        matFacing(FACING_DOWN, speakerX, ceil(z, 0.2) - SPEAKER_GRILLE_DROP, z, 0.34, 0.34),
       ),
-    [kit.speakers, speakerX, canopyY],
+    [kit.speakers, speakerX, ceil],
   );
 
   // Caméras en dôme, au droit d'un pilier sur trois. Suspendues SOUS les
   // poutres transversales (leur sous-face est à canopyY - 0,18) : posées à
   // ras de l'auvent, elles s'enfonçaient dedans une fois sur trois.
   const cameraPlates = useMemo(
-    () => kit.cameras.map((z) => mat(backX - 1.0, canopyY - 0.27, z, 0.3, 0.06, 0.3)),
-    [kit.cameras, backX, canopyY],
+    () => kit.cameras.map((z) => mat(backX - 1.0, ceil(z, 0.15) - 0.27, z, 0.3, 0.06, 0.3)),
+    [kit.cameras, backX, ceil],
   );
   // Potence de caméra : la platine flottait vingt-sept centimètres sous
   // l'auvent, sans rien pour la tenir.
   const cameraStems = useMemo(
-    () => kit.cameras.map((z) => mat(backX - 1.0, canopyY - 0.12, z, 0.07, 0.3, 0.07)),
-    [kit.cameras, backX, canopyY],
+    () => kit.cameras.map((z) => mat(backX - 1.0, ceil(z, 0.15) - 0.12, z, 0.07, 0.3, 0.07)),
+    [kit.cameras, backX, ceil],
   );
   const cameraDomes = useMemo(
-    () => kit.cameras.map((z) => mat(backX - 1.0, canopyY - 0.34, z, 0.22, 0.16, 0.22)),
-    [kit.cameras, backX, canopyY],
+    () => kit.cameras.map((z) => mat(backX - 1.0, ceil(z, 0.15) - 0.34, z, 0.22, 0.16, 0.22)),
+    [kit.cameras, backX, ceil],
   );
 
   // Coffrets d'extincteur, vissés sur la face avant d'un pilier.
@@ -284,16 +303,16 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
   // Descentes d'eau pluviale, plaquées derrière les piliers.
   // La descente s'arrête SOUS la gouttière, qu'elle rejoint : montée jusqu'à
   // l'auvent, elle la traversait, et les poutres transversales avec.
-  const pipeTop = canopyY - 0.36;
   const pipes = useMemo(
     () =>
       // Elle ne descend plus jusqu'à la dalle : elle s'arrête SUR le socle du
       // pilier, comme toute descente d'eau s'arrête sur son ouvrage de pied.
       // Poussée jusqu'au sol, elle traversait le socle de part en part.
-      kit.downpipes.map((z) =>
-        mat(pipeX, PIPE_FOOT + (pipeTop - PIPE_FOOT) / 2, z, 1, pipeTop - PIPE_FOOT, 1),
-      ),
-    [kit.downpipes, pipeX, pipeTop],
+      kit.downpipes.map((z) => {
+        const top = ceil(z, 0.1) - 0.36;
+        return mat(pipeX, PIPE_FOOT + (top - PIPE_FOOT) / 2, z, 1, top - PIPE_FOOT, 1);
+      }),
+    [kit.downpipes, pipeX, ceil],
   );
 
   // Repères de voiture peints au sol : posés à plat, un peu au-dessus de la
@@ -359,7 +378,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
         <mesh
           name="gouttière"
           key={`gt${sp.z0}`}
-          position={[pipeX, canopyY - 0.28, (sp.z0 + sp.z1) / 2]}
+          position={[pipeX, runCeil(sp) - 0.28, (sp.z0 + sp.z1) / 2]}
           material={m.metal}
         >
           <boxGeometry args={[0.17, 0.13, sp.z1 - sp.z0]} />
@@ -373,14 +392,14 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
           et suspendu - il pendait dans le vide sur toute sa longueur. */}
       {kit.runSpans.map((sp) => (
         <group name="chemin-câbles" key={`ct${sp.z0}`}>
-          <mesh position={[trayX, canopyY - 0.5, (sp.z0 + sp.z1) / 2]} material={m.metal}>
+          <mesh position={[trayX, runCeil(sp) - 0.5, (sp.z0 + sp.z1) / 2]} material={m.metal}>
             <boxGeometry args={[0.42, 0.11, sp.z1 - sp.z0]} />
           </mesh>
-          <mesh position={[trayX, canopyY - 0.43, (sp.z0 + sp.z1) / 2]} material={m.frame}>
+          <mesh position={[trayX, runCeil(sp) - 0.43, (sp.z0 + sp.z1) / 2]} material={m.frame}>
             <boxGeometry args={[0.24, 0.06, sp.z1 - sp.z0 - 0.4]} />
           </mesh>
           {hangers(sp, place.columns).map((z, k) => (
-            <mesh key={k} position={[trayX, canopyY - 0.22, z]} material={m.metal}>
+            <mesh key={k} position={[trayX, ceil(z) - 0.22, z]} material={m.metal}>
               <boxGeometry args={[0.34, 0.44, 0.05]} />
             </mesh>
           ))}
@@ -535,7 +554,7 @@ export function PlatformKit({ place, layout, detail, materials: m }: Props) {
               conducteur voie toute la ligne des portes. Sur un mât planté au
               sol ils se seraient dressés en plein dans une file d'attente. */}
           {kit.mirrors.map((z, k) => (
-            <group name="miroir" key={`mir${k}`} position={[PSD_X + 0.42, canopyY, z]}>
+            <group name="miroir" key={`mir${k}`} position={[PSD_X + 0.42, ceil(z, 0.1), z]}>
               <mesh position={[0, -0.34, 0]} material={m.metal}>
                 <boxGeometry args={[0.07, 0.68, 0.07]} />
               </mesh>

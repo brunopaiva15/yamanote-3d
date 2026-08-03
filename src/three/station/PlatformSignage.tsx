@@ -64,7 +64,6 @@ interface Props {
   /** Abscisse de suspension des caissons (repère quai). */
   hangX: number;
   /** Hauteur de la sous-face de l'auvent. */
-  canopyY: number;
   /** Demi-longueur du quai. */
   halfZ: number;
   /** Abscisse des totems posés au sol. */
@@ -191,7 +190,6 @@ function boardView(t: number, index: number): BoardView {
 export function PlatformSignage({
   place,
   hangX,
-  canopyY,
   halfZ,
   totemX,
   postFaceX,
@@ -336,7 +334,11 @@ export function PlatformSignage({
     }
   });
 
-  const signY = canopyY - 0.77;
+  // La cote de suspension suit le plafond du quai, qui n'est plus le même
+  // partout : sous un plateau praticable il descend (`place.ceilAt`). Un
+  // caisson de nom fait 3,35 m de long, une bande directionnelle 8,20 : c'est
+  // leur demi-emprise qu'on donne, sinon ils ressortent par la tranche.
+  const ceil = place.ceilAt;
   // Hauteur libre entre le haut d'un caisson et la sous-face de l'auvent : les
   // suspentes se calculaient à longueur fixe et ressortaient sur le toit.
   const bandHang = Math.max(0.06, 0.5 - 0.31);
@@ -354,16 +356,17 @@ export function PlatformSignage({
    * hauteurs différentes centrés au même niveau ne font pas une rangée.
    */
   const boardBottom = PLATFORM_TOP + SIGN_BOTTOM - 0.03;
-  const boardHang = Math.max(0.06, canopyY - (boardBottom + boardCaseH));
+  const boardHangAt = (z: number) =>
+    Math.max(0.06, ceil(z, boardBox.w / 2) - (boardBottom + boardCaseH));
 
   return (
     <group name="signalétique">
       {/* Panneaux JR suspendus, lisibles depuis le wagon comme depuis le quai */}
       {signZ.map((z) => (
-        <group name="panneau-nom" key={`sign${z}`} position={[hangX, signY, z]}>
+        <group name="panneau-nom" key={`sign${z}`} position={[hangX, ceil(z, 1.7) - 0.77, z]}>
           {[-1.1, 1.1].map((dz) => {
             // Du haut du caisson à la sous-face de l'auvent, ni plus ni moins.
-            const h = Math.max(0.06, canopyY - (signY + 0.5));
+            const h = Math.max(0.06, 0.77 - 0.5);
             return (
               <mesh key={`hang${dz}`} position={[0.06, 0.5 + h / 2, dz]} material={frame}>
                 <boxGeometry args={[0.045, h, 0.07]} />
@@ -410,10 +413,10 @@ export function PlatformSignage({
           {[-1, 1].map((d) => (
             <mesh
               key={d}
-              position={[d * boardBox.hx, boardCaseH / 2 + boardHang / 2, 0]}
+              position={[d * boardBox.hx, boardCaseH / 2 + boardHangAt(z) / 2, 0]}
               material={metal}
             >
-              <boxGeometry args={[0.05, boardHang, 0.05]} />
+              <boxGeometry args={[0.05, boardHangAt(z), 0.05]} />
             </mesh>
           ))}
           <mesh material={frame}>
@@ -437,7 +440,7 @@ export function PlatformSignage({
           une flèche, les gares desservies, et rien d'autre. Recto-verso,
           puisqu'un îlot a un bord d'embarquement de chaque côté. */}
       {detail <= 2 && bandZ.map((z) => (
-        <group name="bande-directionnelle" key={`band${z}`} position={[bandX, canopyY - 0.5, z]}>
+        <group name="bande-directionnelle" key={`band${z}`} position={[bandX, ceil(z, 4.1) - 0.5, z]}>
           <mesh material={frame}>
             <boxGeometry args={[0.12, 0.62, 8.2]} />
           </mesh>

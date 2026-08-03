@@ -15,7 +15,6 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { PLATFORM_TOP, PSD_X, SIGN_BOTTOM } from '../../data/stationGeometry';
-import type { StationLayout } from '../../data/stationLayouts';
 import { useStore } from '../../store';
 import { runtime } from '../../systems/runtime';
 import {
@@ -37,13 +36,12 @@ const SIGN_H = 0.62;
 
 interface Props {
   place: StationPlacement;
-  layout: StationLayout;
   station: number;
   /** Palier de qualité : 0 = tout, 3 = le strict nécessaire. */
   detail: number;
 }
 
-export function OverheadSigns({ place, layout, station, detail }: Props) {
+export function OverheadSigns({ place, station, detail }: Props) {
   // Le caisson 番線 porte le numéro du quai DESSERVI : il change avec le sens.
   const loopDirection = useStore((s) => s.loopDirection);
   // Deux sorties + un tableau de correspondances, redessinés au changement de
@@ -165,7 +163,7 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
         <group name="panneau-番線" key={`tk${z}`} position={[trackX, PLATFORM_TOP + SIGN_BOTTOM + 0.34, z]}>
           {[-1, 1].map((d) => {
             // Du haut du caisson à la SOUS-FACE de l'auvent, ni plus ni moins.
-            const hangH = Math.max(0.06, layout.canopyY - PLATFORM_TOP - SIGN_BOTTOM - 0.71);
+            const hangH = Math.max(0.06, place.ceilAt(z, 0.1) - PLATFORM_TOP - SIGN_BOTTOM - 0.71);
             return (
               <mesh key={d} position={[d * trackHx, 0.37 + hangH / 2, 0]} material={mats.strut}>
                 <boxGeometry args={[0.05, hangH, 0.05]} />
@@ -192,7 +190,7 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
           posée là où l'on débouche. C'est par elle qu'on se donne rendez-vous
           sur un quai de deux cent vingt mètres. */}
       {detail <= 2 && place.accesses.map((a, k) => {
-        const hang = Math.max(0.06, layout.canopyY - PLATFORM_TOP - plateY(a.kind) - 0.31);
+        const hang = Math.max(0.06, place.ceilAt(a.z, 0.6) - PLATFORM_TOP - plateY(a.kind) - 0.31);
         // Devant une volée MONTANTE, la plaque se recule d'un mètre : posée au
         // droit du nez comme sur une trémie, elle se retrouvait à l'intérieur
         // des premières marches. On lit une plaque avant de s'engager, jamais
@@ -234,7 +232,7 @@ export function OverheadSigns({ place, layout, station, detail }: Props) {
             const hx = midX + d * span * 0.34;
             // La suspente s'arrête à la sous-face de l'auvent : calculée à
             // longueur libre, elle la traversait et ressortait sur le toit.
-            const hangH = Math.max(0.06, layout.canopyY - PLATFORM_TOP - top - 0.14);
+            const hangH = Math.max(0.06, place.ceilAt(z, 0.1) - PLATFORM_TOP - top - 0.14);
             return (
               <mesh key={d} position={[hx, top + 0.14 + hangH / 2, 0]} material={mats.strut}>
                 <boxGeometry args={[0.06, hangH, 0.06]} />

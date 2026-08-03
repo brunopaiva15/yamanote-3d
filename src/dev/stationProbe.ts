@@ -22,7 +22,8 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { input } from '../systems/input';
 import { placementFor } from '../systems/stationPlacement';
-import { concourseBays } from '../data/stationConcourseBuild';
+import { platformToWorld } from '../systems/playerFrame';
+import { concourseBays, shellsOf } from '../data/stationConcourseBuild';
 import { psdGates } from '../three/station/psdLayout';
 import { freezeWeather, weather } from '../systems/weather';
 import { seasonNow } from '../systems/season';
@@ -202,7 +203,11 @@ function probePerf(
 }
 
 /** Branche la sonde sur `window`, en développement uniquement. */
-export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRenderer): void {
+export function installStationProbe(
+  scene: THREE.Object3D,
+  gl: THREE.WebGLRenderer,
+  camera: THREE.Camera,
+): void {
   if (!import.meta.env.DEV) return;
   const w = window as unknown as Record<string, unknown>;
   w.__probePerf = () => probePerf(scene, gl);
@@ -252,6 +257,63 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
           chain: chain.join('/'),
           d: +h.distance.toFixed(2),
           at: [+h.point.x.toFixed(2), +h.point.y.toFixed(2), +h.point.z.toFixed(2)],
+        };
+      });
+  };
+
+  /**
+   * CE QU'IL Y A SUR CE PIXEL-LÀ.
+   *
+   * `__probeRay` demande de connaître déjà les deux bouts du rayon ; or quand
+   * une capture montre un bloc gris qu'on n'a pas commandé, on ne connaît que
+   * SA PLACE À L'ÉCRAN. Trois tours de masquages successifs ont été dépensés à
+   * éliminer des candidats un par un — l'auvent, la travée opposée, la dalle —
+   * là où une seule question suffisait : « comment s'appelle ce que je vois
+   * à cet endroit de l'image ? »
+   *
+   * Les coordonnées sont celles du repère normalisé de l'écran : x et z de -1
+   * (gauche, bas) à +1 (droite, haut), 0 au centre. La couleur est rendue avec
+   * le nom, parce qu'un bloc se reconnaît d'abord à sa teinte.
+   *
+   *   __probePick(0, 0.1)  → ce qui est juste au-dessus du centre de l'écran
+   */
+  w.__probePick = (ndcX = 0, ndcY = 0) => {
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+    // CE QUI EST ÉTEINT N'EST PAS SUR L'IMAGE. Le raycaster de three ignore
+    // `visible` : il a nommé une ferme de toiture escamotée comme si elle
+    // bouchait la vue, et l'on a cru le percement raté alors qu'il tenait.
+    const shown = (o: THREE.Object3D) => {
+      for (let c: THREE.Object3D | null = o; c; c = c.parent) if (!c.visible) return false;
+      return true;
+    };
+    return ray
+      .intersectObject(scene, true)
+      .filter((h) => shown(h.object))
+      .slice(0, 6)
+      .map((h) => {
+        const chain: string[] = [];
+        for (let c: THREE.Object3D | null = h.object; c; c = c.parent) {
+          chain.unshift(c.name || `<${c.type}>`);
+        }
+        const mat = (h.object as THREE.Mesh).material as THREE.Material & {
+          color?: THREE.Color;
+        };
+        // La BOÎTE en repère monde, parce qu'un volume anonyme se reconnaît à
+        // ses cotes : « 82 m de large, 3 m de haut, à +5,08 » désigne une
+        // pièce du réseau sans ambiguïté, là où « <Mesh> » ne désigne rien.
+        const bb = new THREE.Box3().setFromObject(h.object);
+        return {
+          n: labelOf(h.object),
+          chain: chain.join('/'),
+          d: +h.distance.toFixed(2),
+          at: [+h.point.x.toFixed(2), +h.point.y.toFixed(2), +h.point.z.toFixed(2)],
+          color: mat?.color?.getHexString?.() ?? null,
+          mat: mat?.type ?? null,
+          box: [
+            +bb.min.x.toFixed(1), +bb.min.y.toFixed(1), +bb.min.z.toFixed(1),
+            +bb.max.x.toFixed(1), +bb.max.y.toFixed(1), +bb.max.z.toFixed(1),
+          ],
         };
       });
   };
@@ -624,6 +686,111 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
       push(bbox.copy(bb).applyMatrix4(mesh.matrixWorld));
     });
     return out;
+  };
+
+  /**
+   * LES VOLUMES PRATICABLES DE LA GARE COURANTE, EN REPÈRE MONDE.
+   *
+   * Le relevé les donne dans le repère du quai ; les rendre utilisables demande
+   * la bascule d'un demi-tour et le coulissement, que `systems/playerFrame` est
+   * seul à connaître. Un script qui les referait aurait une chance sur deux de
+   * se tromper de signe — et la liste gelée des lecteurs de `DOOR_SIDE`
+   * (`tests/realismMigration`) est là pour que personne n'essaie.
+   */
+  w.__probeHalls = () => {
+    const net = placementFor(useStore.getState().platformIndex, psdGates()).network;
+    const at = { x: 0, z: 0 };
+    return shellsOf(net)
+      .filter((s) => s.rooms.some((r) => r.walkable))
+      .map((s) => {
+        platformToWorld(s.rect.x0, s.rect.z0, at);
+        const a = { x: at.x, z: at.z };
+        platformToWorld(s.rect.x1, s.rect.z1, at);
+        return {
+          x0: Math.min(a.x, at.x),
+          x1: Math.max(a.x, at.x),
+          z0: Math.min(a.z, at.z),
+          z1: Math.max(a.z, at.z),
+          floorY: s.floorY,
+          ceilY: s.ceilY,
+        };
+      });
+  };
+
+  /**
+   * CE QUI ENTRE DANS UN VOLUME QU'ON DONNE.
+   *
+   * `__probeIntruders` pose la même question, mais sa boîte est celle du wagon
+   * et rien d'autre. Depuis qu'on MARCHE dans les gares, la boîte qui compte
+   * est celle d'un hall : treize gares portent un plateau praticable au-dessus
+   * des voies, et le quai avait déjà des ouvrages à cette hauteur-là — auvent,
+   * diffuseurs, bannières, toiture de hub. Les chercher un par un en regardant
+   * des captures a coûté trois tours ; les DEMANDER coûte un appel.
+   *
+   *   __probeIn([-60, 5.08, 19.7], [51, 8.17, 52])
+   *
+   * Le hall lui-même est exclu de la réponse : ce qu'on cherche est ce qui
+   * n'a rien à y faire, et le sol, les parois et le mobilier du hall y sont
+   * chez eux. `keep` donne le segment de filiation qui les désigne.
+   */
+  w.__probeIn = (min: number[], max: number[], keep = 'gare/hall') => {
+    const box = new THREE.Box3(
+      new THREE.Vector3(min[0], min[1], min[2]),
+      new THREE.Vector3(max[0], max[1], max[2]),
+    );
+    const seen = new Map<string, Record<string, unknown>>();
+    const bbox = new THREE.Box3();
+    const m = new THREE.Matrix4();
+    scene.updateWorldMatrix(true, true);
+    scene.traverseVisible((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || !mesh.geometry) return;
+      if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) return;
+      if ((mesh.geometry as THREE.InstancedBufferGeometry).isInstancedBufferGeometry) return;
+      const chain: string[] = [];
+      for (let c: THREE.Object3D | null = mesh; c; c = c.parent) {
+        // Les groupes du hall portent un nom À CHEMIN — « gare/hall/mobilier »,
+        // « gare/hall/portillons » —, d'où le préfixe et non l'égalité.
+        if (c.name.startsWith(keep)) return;
+        chain.unshift(c.name || `<${c.type}>`);
+      }
+      if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+      const bb = mesh.geometry.boundingBox;
+      if (!bb) return;
+      // NI LES FONDS. Un dôme de ciel, une nappe de ville, un plan de tronçon
+      // englobent tout : leur boîte croise n'importe quel volume sans que rien
+      // n'entre nulle part.
+      const span = bb.max.clone().sub(bb.min);
+      if ([span.x, span.y, span.z].filter((v) => v > 150).length >= 2) return;
+      const key = chain.join('/');
+      const push = (b: THREE.Box3) => {
+        if (!b.intersectsBox(box)) return;
+        // On garde LA PIRE des instances, et une seule ligne par ouvrage : une
+        // rangée de trente diffuseurs est un seul défaut, pas trente.
+        const over = Math.min(b.max.y, box.max.y) - Math.max(b.min.y, box.min.y);
+        const cur = seen.get(key);
+        if (cur && (cur.over as number) >= over) return;
+        seen.set(key, {
+          chain: key,
+          over: +over.toFixed(3),
+          box: [
+            +b.min.x.toFixed(1), +b.min.y.toFixed(2), +b.min.z.toFixed(1),
+            +b.max.x.toFixed(1), +b.max.y.toFixed(2), +b.max.z.toFixed(1),
+          ],
+        });
+      };
+      const im = mesh as THREE.InstancedMesh;
+      if (im.isInstancedMesh) {
+        for (let i = 0; i < im.count; i++) {
+          im.getMatrixAt(i, m);
+          m.premultiply(im.matrixWorld);
+          push(bbox.copy(bb).applyMatrix4(m));
+        }
+        return;
+      }
+      push(bbox.copy(bb).applyMatrix4(mesh.matrixWorld));
+    });
+    return [...seen.values()].sort((a, b) => (b.over as number) - (a.over as number));
   };
 
   // Date civile à Tokyo : c'est elle qui donne la saison (systems/season) et,

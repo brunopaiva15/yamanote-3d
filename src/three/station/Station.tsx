@@ -30,6 +30,7 @@ import {
   type Placed,
 } from '../../systems/stationPlacement';
 import { platformDetail } from '../../systems/perf';
+import { CANOPY_T, deckHole } from '../../systems/stationDeck';
 import { BOARDABLE_GATES } from '../../systems/wrongDoor';
 import { layoutFor, type StationLayout } from '../../data/stationLayouts';
 import {
@@ -169,7 +170,21 @@ export function Station() {
 
 
   /**
-   * Auvent, percé au droit d'une volée montante.
+   * LE PLATEAU QUI PASSE AU-DESSUS DE L'AUVENT, s'il y en a un.
+   *
+   * Sept gares posent la sous-face de leur auvent entre 5,20 et 5,60 m ; le
+   * plancher d'un plateau praticable est à 5,08 (`ASCENT_FLOOR_Y`). Là où les
+   * deux se rencontrent, la dalle d'auvent flottait DIX CENTIMÈTRES au-dessus
+   * du sol du hall, sur neuf mètres de large et deux cent vingt de long : c'est
+   * le second des « gros blocs gris foncé » signalés à Shinagawa et à Ueno.
+   *
+   * Voir `systems/stationDeck` pour l'arbitrage. Ici, la conséquence : la dalle
+   * se perce, et ce qui pendait à elle — poutres et néons — se raccroche à la
+   * sous-face du plateau, qui est devenue le plafond du quai à cet endroit.
+   */
+  const deck = place.deck;
+  /**
+   * Auvent, percé au droit d'une volée montante et sous un plateau.
    *
    * Une boîte ne peut pas avoir de trou, et c'est le même problème que la dalle
    * du quai : on extrude un contour à trous. Sans percement, la volée traversait
@@ -199,16 +214,26 @@ export function Station() {
       hole.closePath();
       shape.holes.push(hole);
     }
-    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.14, bevelEnabled: false });
+    const cut = deckHole(deck, half);
+    if (cut) {
+      const hole = new THREE.Path();
+      hole.moveTo(x0, cut.z0);
+      hole.lineTo(x0, cut.z1);
+      hole.lineTo(x1, cut.z1);
+      hole.lineTo(x1, cut.z0);
+      hole.closePath();
+      shape.holes.push(hole);
+    }
+    const g = new THREE.ExtrudeGeometry(shape, { depth: CANOPY_T, bevelEnabled: false });
     // Le plan de tracé se couche, et l'extrusion descend depuis l'origine - la
     // même mécanique que la dalle du quai. La dalle d'auvent doit donc être
     // posée par son DESSUS, sinon elle tombe de son épaisseur et vient buter
     // dans tout ce qui pend à sa sous-face : poutres, néons, caméras, miroirs,
     // diffuseurs, potences.
     g.rotateX(Math.PI / 2);
-    g.translate(0, 0.14, 0);
+    g.translate(0, CANOPY_T, 0);
     return g;
-  }, [layout.length, depth, place.mainRise, place.mainStair]);
+  }, [layout.length, depth, place.mainRise, place.mainStair, deck]);
 
   // --- Dalle percée au droit des trémies -------------------------------
   // Une boîte ne peut pas avoir de trou : la dalle est extrudée depuis un
@@ -308,12 +333,16 @@ export function Station() {
       ),
     [segs],
   );
+  // Sous le plateau, le poteau s'arrête à sa sous-face : c'est elle qu'il porte
+  // désormais, et le laisser monter jusqu'à un auvent percé le ferait ressortir
+  // de vingt centimètres au milieu du hall.
   const columns = useMemo(
     () =>
-      place.columns.map((z) =>
-        mat(backX - 0.55, PLATFORM_TOP + (canopyY - PLATFORM_TOP) / 2, z, 0.3, canopyY - PLATFORM_TOP, 0.3),
-      ),
-    [place.columns, backX, canopyY],
+      place.columns.map((z) => {
+        const top = place.ceilAt(z, 0.15);
+        return mat(backX - 0.55, PLATFORM_TOP + (top - PLATFORM_TOP) / 2, z, 0.3, top - PLATFORM_TOP, 0.3);
+      }),
+    [place.columns, backX, place],
   );
   const columnBands = useMemo(
     () => place.columns.map((z) => mat(backX - 0.55, PLATFORM_TOP + 1.4, z, 0.33, 0.16, 0.33)),
@@ -349,25 +378,38 @@ export function Station() {
     );
   }, [place.columns, backX]);
   const beams = useMemo(
-    () => place.columns.map((z) => mat(PSD_X + depth / 2, canopyY - 0.09, z, depth - 0.2, 0.18, 0.24)),
-    [place.columns, depth, canopyY],
+    () =>
+      place.columns.map((z) =>
+        mat(
+          PSD_X + depth / 2,
+          place.ceilAt(z, 0.12) - 0.09,
+          z,
+          depth - 0.2,
+          0.18,
+          0.24,
+        ),
+      ),
+    [place.columns, depth, place],
   );
   // Néons : le tube AFFLEURE la sous-face de l'auvent (elle est à canopyY) au
   // lieu de flotter huit centimètres dessous, et se décale toujours des
   // poutres - au droit d'un pilier il disparaissait purement et simplement
   // dans la poutre transversale.
   const lamps = useMemo(() => {
-    const y = canopyY - 0.025;
     const off = layout.columnSpacing;
+    // Le tube suit le plafond qu'il éclaire : l'auvent d'ordinaire, la sous-face
+    // du plateau là où il passe. Sans quoi trente mètres de quai restent noirs
+    // la nuit, sous le seul ouvrage qui les couvre encore.
+    const yAt = (z: number) => place.ceilAt(z, 0.9) - 0.025;
     return place.columns.flatMap((z) =>
       detail >= 2
-        ? [mat(PSD_X + depth * 0.5, y, z + off * 0.5, 1.7, 0.05, 0.14)]
+        ? [mat(PSD_X + depth * 0.5, yAt(z + off * 0.5), z + off * 0.5, 1.7, 0.05, 0.14)]
         : [
-            mat(PSD_X + depth * 0.28, y, z + off * 0.3, 1.7, 0.05, 0.14),
-            mat(PSD_X + depth * 0.72, y, z + off * 0.7, 1.7, 0.05, 0.14),
+            mat(PSD_X + depth * 0.28, yAt(z + off * 0.3), z + off * 0.3, 1.7, 0.05, 0.14),
+            mat(PSD_X + depth * 0.72, yAt(z + off * 0.7), z + off * 0.7, 1.7, 0.05, 0.14),
           ],
     );
-  }, [place.columns, depth, canopyY, layout.columnSpacing, detail]);
+  }, [place, depth, layout.columnSpacing, detail]);
   const queue = useMemo(
     // Deux millimètres au-dessus de la bande podotactile : les deux se
     // recouvrent au ras du bord de quai, et à hauteur égale leurs faces
@@ -703,7 +745,7 @@ export function Station() {
       <PlatformAds place={place} layout={layout} segs={segs} station={index} detail={detail} />
 
       {/* Potences d'orientation : sorties en jaune, correspondances en blanc. */}
-      <OverheadSigns place={place} layout={layout} station={index} detail={detail} />
+      <OverheadSigns place={place} station={index} detail={detail} />
 
       {/* La trousse réglementaire : sonorisation, caméras, extincteurs, bornes
           d'urgence, armoires, bacs de tri, gouttières, marquages au sol. */}
@@ -739,7 +781,6 @@ export function Station() {
       <PlatformSignage
         place={place}
         hangX={midX + 0.7}
-        canopyY={canopyY}
         halfZ={halfZ}
         totemX={PSD_X + depth * 0.32}
         // Mêmes abscisses que la trousse du quai : les poteaux sont à
@@ -844,6 +885,25 @@ function FarSide({
 }) {
   const len = layout.length;
   const far = place.farEdgeX;
+  /**
+   * Les tronçons d'auvent d'en face : un seul, ou deux de part et d'autre du
+   * plateau qui enjambe la travée. La percée est celle du quai proche —
+   * `place.deck` —, parce que c'est le MÊME plateau qui traverse les deux.
+   */
+  const cut = deckHole(place.deck, len / 2);
+  const oppCanopyRuns: [number, number][] = cut
+    ? [[-len / 2, cut.z0], [cut.z1, len / 2]].filter(([a, b]) => b - a > 0.02) as [number, number][]
+    : [[-len / 2, len / 2]];
+  /**
+   * Les tronçons du mur de clôture, chacun avec SA hauteur : pleine hauteur de
+   * part et d'autre du plateau, arase abaissée dessous. Il ne se coupe pas —
+   * un mur troué laisserait voir la ville — il se baisse.
+   */
+  const closureRuns: [number, number, number][] = cut
+    ? ([[-len / 2, cut.z0, wallH], [cut.z0, cut.z1, place.ceilAt((cut.z0 + cut.z1) / 2) - 0.07 - PLATFORM_TOP],
+        [cut.z1, len / 2, wallH]] as [number, number, number][])
+      .filter(([a, b]) => b - a > 0.02)
+    : [[-len / 2, len / 2, wallH]];
 
   // Harajuku : le seul quai latéral de la boucle. Un vrai mur, un vrai
   // soubassement carrelé, et rien à voir au-delà.
@@ -909,11 +969,20 @@ function FarSide({
           palier le plus léger, où la silhouette du quai suffit - et là où la
           charpente signature couvre le site d'un seul tenant, il n'y en a
           jamais eu. */}
-      {detail <= 2 && !sigRoof && (
-        <mesh position={[(oppEdge + oppBack) / 2, layout.canopyY + 0.07, 0]} material={m.canopy}>
-          <boxGeometry args={[OPP_DEPTH + 0.4, 0.14, len]} />
-        </mesh>
-      )}
+      {detail <= 2 && !sigRoof
+        // Il s'interrompt sous un plateau praticable, exactement comme celui du
+        // quai proche (`systems/stationDeck`) : à Ueno et à Shinagawa le hall
+        // enjambe les deux quais, et cet auvent-ci passait dedans à dix
+        // centimètres du sol. Sans plateau, c'est une seule dalle comme avant.
+        && oppCanopyRuns.map(([z0, z1]) => (
+          <mesh
+            key={`oc${z0}`}
+            position={[(oppEdge + oppBack) / 2, layout.canopyY + 0.07, (z0 + z1) / 2]}
+            material={m.canopy}
+          >
+            <boxGeometry args={[OPP_DEPTH + 0.4, CANOPY_T, z1 - z0]} />
+          </mesh>
+        ))}
 
       {/* Faisceau : là où rien ne ferme la travée, des voies encore, jusqu'au
           bord du champ. C'est la perspective dégagée de Nippori et d'Ueno, et
@@ -946,6 +1015,7 @@ function FarSide({
         x={oppBack + (layout.openFarSide ? YARD_TRACKS * YARD_PITCH : 0)}
         elevation={layout.elevation}
         wallH={wallH}
+        runs={closureRuns}
         len={len}
         m={m}
         detail={detail}
@@ -1008,6 +1078,7 @@ function Closure({
   x,
   elevation,
   wallH,
+  runs,
   len,
   m,
   detail,
@@ -1016,6 +1087,7 @@ function Closure({
   x: number;
   elevation: StationLayout['elevation'];
   wallH: number;
+  runs: [number, number, number][];
   len: number;
   m: Mats;
   detail: number;
@@ -1031,6 +1103,7 @@ function Closure({
       thickness={elevation === 'trench' ? 0.24 : 0.2}
       crowned={elevation === 'trench'}
       wallH={wallH}
+      runs={runs}
       len={len}
       m={m}
       detail={detail}
@@ -1060,6 +1133,7 @@ function ClosureWall({
   thickness,
   crowned,
   wallH,
+  runs,
   len,
   m,
   detail,
@@ -1068,18 +1142,36 @@ function ClosureWall({
   x: number;
   thickness: number;
   crowned: boolean;
+  /** Arase courante : celle des ouvrages qui montent avec lui (couronnement). */
   wallH: number;
+  /** Tronçons du mur : `[z0, z1, hauteur]`, un seul quand rien ne le traverse. */
+  runs: [number, number, number][];
   len: number;
   m: Mats;
   detail: number;
   /** Mur nu : quelque chose d'autre occupe déjà ce nu. */
   bare: boolean;
 }) {
-  const geo = useWallBox(thickness, wallH, len, WALL_MODULE);
   const faceX = x - thickness / 2;
   return (
     <group>
-      <mesh position={[x, PLATFORM_TOP + wallH / 2, 0]} geometry={geo} material={m.wall} />
+      {/* LE MUR, EN UN OU TROIS MORCEAUX. Son arase suit la sous-face de
+          l'auvent ; là où un plateau praticable passe au-dessus du quai, cette
+          sous-face descend, et un mur laissé à sa hauteur ressort du sol du
+          hall — quatre centimètres à Ueno, quatre-vingt-trois à Takanawa
+          Gateway. Sans plateau, `runs` n'en rend qu'un, et c'est le mur
+          d'avant, à la géométrie près. */}
+      {runs.map(([z0, z1, h]) => (
+        <WallRun
+          key={`cw${z0}`}
+          x={x}
+          thickness={thickness}
+          h={h}
+          z0={z0}
+          z1={z1}
+          m={m}
+        />
+      ))}
       <Wainscot backX={faceX - 0.01} len={len} m={m} />
       {/* La quincaillerie est vue d'en face, par-dessus deux voies : ce sont
           ses ombres portées qui la font lire, pas son détail. Elle tombe donc
@@ -1106,6 +1198,32 @@ function ClosureWall({
         </mesh>
       )}
     </group>
+  );
+}
+
+/** Un tronçon de mur de clôture : sa propre géométrie, sa propre hauteur. */
+function WallRun({
+  x,
+  thickness,
+  h,
+  z0,
+  z1,
+  m,
+}: {
+  x: number;
+  thickness: number;
+  h: number;
+  z0: number;
+  z1: number;
+  m: Mats;
+}) {
+  const geo = useWallBox(thickness, h, z1 - z0, WALL_MODULE);
+  return (
+    <mesh
+      position={[x, PLATFORM_TOP + h / 2, (z0 + z1) / 2]}
+      geometry={geo}
+      material={m.wall}
+    />
   );
 }
 

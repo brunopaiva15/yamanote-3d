@@ -246,8 +246,8 @@ function seasonalSunPos(out: THREE.Vector3, noonAltitude: number): THREE.Vector3
  * jusqu'ici à l'aveugle, fichier par fichier.
  */
 function StationProbe() {
-  const { scene, gl } = useThree();
-  useEffect(() => installStationProbe(scene, gl), [scene, gl]);
+  const { scene, gl, camera } = useThree();
+  useEffect(() => installStationProbe(scene, gl, camera), [scene, gl, camera]);
   return null;
 }
 

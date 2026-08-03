@@ -200,7 +200,7 @@ export function PlatformAds({ place, layout, segs, station, detail }: Props) {
         <group
           name="bannière"
           key={`ha${z}`}
-          position={[onWall ? midX - 1.5 : backX + 1.25, layout.canopyY - 0.62, z]}
+          position={[onWall ? midX - 1.5 : backX + 1.25, place.ceilAt(z, 1.2) - 0.62, z]}
         >
           {[-1, 1].map((d) => (
             <mesh key={d} position={[d * 1.0, 0.42, 0]} material={p.frame}>

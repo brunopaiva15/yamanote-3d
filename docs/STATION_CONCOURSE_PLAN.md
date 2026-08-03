@@ -1547,6 +1547,63 @@ Six choses ont suivi, et aucune n'est nominative :
 
 **Trente gares sur trente passent par leur relevé.**
 
+### 4.28 Ce que le quai portait déjà à la hauteur du plateau
+
+Le joueur a rapporté, à Shinagawa puis à Ueno, « **de très gros blocs gris foncé
+de partout** ». Trois tours de masquages successifs — l'auvent, la travée
+opposée, la dalle de quai — ont été dépensés à éliminer des candidats un par un,
+là où une seule question suffisait : *comment s'appelle ce que je vois à cet
+endroit de l'image ?* La sonde sait maintenant y répondre (`__probePick`), et la
+réponse est venue en un appel.
+
+**Deux ouvrages, et le même conflit.** Treize gares portent un plateau
+praticable à `ASCENT_FLOOR_Y` = 5,08 m, au-dessus des voies. Le quai avait déjà
+des ouvrages à cette altitude, posés bien avant qu'on puisse marcher au-dessus
+de lui :
+
+- la **grande toiture d'acier des hubs** (`three/HubStationRoof`) : dalle à 6,30,
+  fermes à 5,95. Deux des six hubs ont un plateau haut — Ueno et Shinagawa —
+  et la dalle leur passait à hauteur de poitrine, en travers de tout le hall ;
+- la **dalle d'auvent**, dont sept gares placent la sous-face entre 5,20 et
+  6,00 m (`stationLayouts.canopyY`). Trois d'entre elles portent un plateau —
+  Ueno 5,20, Shinagawa 5,40, Takanawa Gateway 6,00 — et l'auvent flottait dix
+  centimètres au-dessus du sol du hall, sur neuf mètres de large et deux cent
+  vingt de long. Avec lui, tout ce qui lui pend : diffuseurs, caméras,
+  gouttières, chemins de câbles, bannières, afficheurs, panneaux 番線, bandes
+  directionnelles, et l'arase du mur qui ferme la travée.
+
+**L'arbitrage est celui de la phase 29.** `canopyY` et les 6,30 m de la halle
+sont COMPOSÉES ; `ASCENT_FLOOR_Y` vient de la contremarche, qui est un ouvrage.
+Quand une cote composée se dispute avec un ouvrage, ce n'est pas l'ouvrage qui a
+tort. Mais rien ne disparaît en bloc : l'auvent couvre deux cent vingt mètres et
+la toiture cent quatre-vingts, quand le plateau n'en occupe que trente. **Ils
+s'interrompent au droit du plateau**, comme une verrière s'interrompt sous le
+pont-concourse qui la traverse, et ce qui pendait à eux se raccroche à la
+sous-face du plateau — qui est devenue le plafond du quai à cet endroit. Le mur
+de clôture, lui, ne se coupe pas (on verrait la ville) : il se baisse.
+
+**La bande n'est écrite nulle part : elle est LUE sur le réseau**
+(`systems/stationDeck`). Une gare qui gagnerait un plateau demain percerait ses
+toitures sans qu'on ait rien à ajouter ; une gare qui perdrait le sien les
+refermerait.
+
+Deux conséquences de méthode, au-delà des trois gares :
+
+- **une cote que cinq fichiers de rendu lisaient chacun de son côté est
+  publiée** : `place.ceilAt(z, half)` remplace `layout.canopyY` dans
+  `PlatformKit`, `PlatformSignage`, `OverheadSigns`, `PlatformAds` et la
+  charpente de `Station`. C'est le même geste que `mainRise` en phase 23 — hors
+  percée, la fonction rend `canopyY` au centimètre près, donc les vingt-sept
+  autres gares ne bougent pas d'un millimètre ;
+- **on ne cherche plus les intrus à l'œil.** `scripts/station-inside.mjs`
+  demande à la scène montée ce qui entre dans un volume praticable sans lui
+  appartenir. Il en comptait 41 sur les trois gares ; il en reste 13, dont
+  douze sont légitimes (la volée qui monte DANS le hall, une pile de la
+  charpente de Takanawa Gateway) ou hors sujet (des bâtiments de ville dans
+  l'emprise du hall, qui relèvent de `stationOcclusion` et non du plateau).
+  Le treizième est un couvre-joint de douze centimètres à Shinagawa, signalé
+  plutôt que masqué.
+
 ### Ordre et raison
 
 - **1→5 ne touchent aucun consommateur.** Le jeu tourne à l'identique pendant

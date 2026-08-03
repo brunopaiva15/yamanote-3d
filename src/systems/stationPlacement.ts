@@ -10,6 +10,7 @@
 
 import { CONSIST, E235 } from '../data/e235';
 import { layoutFor, type StationLayout } from '../data/stationLayouts';
+import { CANOPY_T, deckOver, soffitAt, type Deck } from './stationDeck';
 import { interiorFor, type StationInterior } from '../data/stationInterior';
 import {
   networkFor,
@@ -193,6 +194,26 @@ export interface StationPlacement {
    * générique : mêmes rectangles, mêmes bornes, mêmes baies.
    */
   network: ConcourseNetwork;
+  /**
+   * LE PLAFOND DU QUAI, EN Z.
+   *
+   * C'est la sous-face de l'auvent — `layout.canopyY` — partout, sauf là où un
+   * plateau praticable passe au-dessus du quai : trois gares de la ligne posent
+   * leur auvent PLUS HAUT que le plancher d'un tel plateau (Ueno 5,20,
+   * Shinagawa 5,40, Takanawa Gateway 6,00 contre 5,08), et tout ce qui pend à
+   * l'auvent — diffuseurs, caméras, chemins de câbles, bannières, afficheurs,
+   * panneaux 番線 — ressortait alors du sol du hall.
+   *
+   * La cote est publiée ici pour la même raison que `mainRise` : quatre
+   * fichiers de rendu doivent en tomber d'accord au centimètre, et chacun
+   * allait la relire à sa façon. Voir `systems/stationDeck` pour l'arbitrage.
+   *
+   * `half` est la demi-emprise en z de ce qu'on accroche : un ouvrage à cheval
+   * sur le bord du plateau suit le plateau, sinon il en ressort par la tranche.
+   */
+  ceilAt: (z: number, half?: number) => number;
+  /** Le plateau qui traverse l'auvent, s'il y en a un : il PERCE sa dalle. */
+  deck: Deck | null;
 }
 
 /** Un accès de relevé, apparié avec la trémie que le placement a posée. */
@@ -555,6 +576,15 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   const mainStair = stairs.reduce((a, b) => (Math.abs(b.z) < Math.abs(a.z) ? b : a));
   const interior = interiorFor(i, mainStair.z);
   const network = networkFor(i, mainStair.z, mainStair.x);
+  // Le plateau qui passe AU-DESSUS du quai, s'il y en a un : c'est lui qui
+  // abaisse le plafond du quai là où il passe (voir `ceilAt`).
+  const deck = deckOver(
+    network,
+    layout.canopyY,
+    layout.canopyY + CANOPY_T,
+    PSD_X - 0.2,
+    PSD_X + layout.depth + 0.2,
+  );
   // LE SENS DE LA VOLÉE VIENT DU RELEVÉ, et non plus du hall générique.
   //
   // Il se lisait sur `interior.place` — le hall générique est-il sous les voies
@@ -824,6 +854,8 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
       escalator: escalators,
       elevator: elevator ? [elevator] : [],
     }),
+    deck,
+    ceilAt: (z, half = 0) => soffitAt(deck, layout.canopyY, z, half),
   };
   CACHE.set(i, placement);
   return placement;
