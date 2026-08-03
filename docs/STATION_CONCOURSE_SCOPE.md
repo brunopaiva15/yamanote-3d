@@ -145,12 +145,106 @@ compilateur : **ce qui est relevé passe avant ce qui est composé.**
 
 ## 4. Ce qui reste à faire
 
-| # | phase | ce qui manque |
-|---|---|---|
-| 28 | Bilan | mesures avant/après : coût du réseau, du rendu et de la marche |
+Les vingt-huit phases sont livrées. Il reste **Okachimachi**, hors phases : sa
+mezzanine demande une PREMIÈRE volée plus courte, ce qui est un ouvrage et non
+un réglage (voir §1), et cela touche la trémie que les trente gares partagent.
 
-Et **Okachimachi**, hors phases : sa mezzanine demande une PREMIÈRE volée plus
-courte, ce qui est un ouvrage et non un réglage (voir §1).
+Deux limites connues, écrites plutôt que masquées :
+
+- **le mobilier ne tourne pas avec sa pièce.** Il se range contre la paroi qu'il
+  regarde, repérée sur x — la profondeur du hall générique. Trois halls (Tokyo,
+  Ikebukuro, Shibuya) se développent en X : « contre la paroi x1 » y désigne le
+  pignon, et leur boutique se retrouve à trente-cinq mètres du trajet. Lui
+  donner un axe demanderait de reprendre le rendu, le plan de konbini et la
+  marche ;
+- **deux lignes de portillons se partagent du sol à Shin-Ōkubo.** Leurs largeurs
+  sont composées et demandent 5,80 m dans un hall qui en fait 5,20 ; le
+  compilateur garde la cote du relevé et lève `gateOverlap` plutôt que de rendre
+  un contrôle qu'on ne franchit pas.
+
+---
+
+## 4 ter. Ce que le relevé coûte
+
+Phase 28. Tout ce qui suit se refait en une commande —
+`node scripts/concourse-cost.mjs [--gpu]` — et les chiffres de STRUCTURE sont
+exacts et reproductibles ; les temps, non : ils dépendent de la machine, et
+c'est pourquoi `tests/stationConcourseCost` tient un budget sur les premiers et
+pas sur les seconds.
+
+### Ce que le relevé ajoute, sur les trente gares
+
+| poste | hall générique | relevé | écart |
+|---|---:|---:|---:|
+| pièces | 60 | 120 | +60 |
+| pièces praticables | 58 | 62 | +4 |
+| volumes | 29 | 31 | +2 |
+| ouvrages de liaison | 0 | 13 | +13 |
+| lignes de portillons | 30 | 63 | +33 |
+| baies | 126 | 206 | +80 |
+| bouches de sortie | 60 | 91 | +31 |
+| **obstacles** | **799** | **804** | **+5** |
+| meubles | 450 | 395 | −55 |
+| devantures relevées | 0 | 28 | +28 |
+| repères du lieu | 0 | 39 | +39 |
+
+**La ligne qui compte est celle des obstacles : +5 sur 799.** C'est le seul poste
+que la marche paie à chaque pas, et il n'a pas bougé — le relevé pose des
+devantures, des palissades et des poteaux que le hall générique n'avait pas,
+mais il pose aussi cinquante-cinq meubles de moins, faute de place. Les deux se
+compensent presque exactement, et c'est ce fait-là qu'un test garde.
+
+Le doublement des pièces (60 → 120) est ce que le chantier cherchait : les
+soixante nouvelles sont les zones payantes secondaires, les mezzanines, les
+ponts-concours et les volumes qu'on REGARDE sans y aller.
+
+### Les trois coûts, et ils ne se comparent pas
+
+| coût | quand on le paie | hall générique | relevé |
+|---|---|---:|---:|
+| compilation | une fois, au chargement | 0,6 ms pour trente gares | **11 ms** pour trente gares |
+| marche (`walkerBlocked` + `concourseFloorAt`) | à chaque image, par voyageur | 3,4 M appels/s | **3,1 M appels/s** |
+| itinéraire | une fois par voyageur | — | **146 µs**, 37 étapes |
+
+La compilation est vingt fois plus chère et **cela n'a aucune importance** :
+onze millisecondes une fois au chargement, contre quatre secondes de tour de
+boucle entre deux gares. L'essentiel du temps part dans `fittedFixtures`, qui
+essaie chaque meuble contre chaque pièce et le fait glisser de proche en proche.
+La plus longue est Ikebukuro, à 0,9 ms.
+
+La marche perd 8 %, ce qui est le prix de cinq obstacles de plus et de la
+recherche de pièce qui a remplacé une boîte unique. Sur les quelque huit mille
+appels par seconde que la foule d'une gare consomme réellement, cela représente
+trois millisecondes par heure.
+
+### Le rendu : ce n'est PAS la taille du hall qui coûte
+
+Appels de dessin et triangles, relevés au milieu de la zone payante, sous
+SwiftShader — ces deux chiffres-là ne dépendent pas de la carte graphique, le
+temps par image si, et il n'est donc pas relevé.
+
+| gare | appels | triangles | maillages visibles |
+|---|---:|---:|---:|
+| JY16 Shin-Ōkubo | 1 410 | 536 939 | 1 959 |
+| JY12 Ōtsuka | 690 | 266 419 | 1 987 |
+| JY09 Tabata | 474 | 262 634 | 2 604 |
+| JY07 Nippori | 322 | 181 407 | 2 829 |
+| JY19 Harajuku | 441 | 124 636 | 3 035 |
+| JY25 Shinagawa | 207 | 59 628 | 2 935 |
+| JY13 Ikebukuro | 162 | 55 850 | 3 206 |
+| JY01 Tokyo | 165 | 55 029 | 3 487 |
+
+**La liste est presque exactement l'inverse de celle des tailles.** La plus
+petite gare du relevé coûte huit fois plus que la plus grande, et ce n'est pas
+un défaut : c'est l'occlusion interne (`visibleShells`, phase 17) qui fonctionne.
+Un grand hall souterrain FERME la vue — on n'y voit que lui — tandis que le
+souterrain court de Shin-Ōkubo laisse voir sa passerelle, le faisceau, la rame
+et la ville derrière. Ce qu'une gare coûte à dessiner n'est pas ce qu'elle
+contient, c'est ce qu'elle LAISSE VOIR.
+
+Corollaire pratique : il n'y a rien à optimiser du côté des grandes gares. Le
+budget de rendu se joue sur les gares ouvertes, et il se jouait déjà là avant le
+chantier.
 
 ---
 

@@ -291,7 +291,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **25** | **Paliers de qualité** ✅ | les trois décors intérieurs lisent le palier ; ce qui BARRE ne dépend d'aucun | — |
 | **26** | **Tests** ✅ | matrice des 18 exigences ; `stationRequirements` : 16 contrôles, et six défauts trouvés | — |
 | **27** | **Captures de contrôle** ✅ | `scripts/station-views` : 5 vues × 30 gares ; elles ont trouvé les bouches manquantes | — |
-| 28 | Perf et bilan | mesures avant/après ; `STATION_CONCOURSE_SCOPE.md` **écrit** et tenu par un test | — |
+| **28** | **Perf et bilan** ✅ | `scripts/concourse-cost` : structure, compilation, marche, rendu — avant/après ; budget tenu par un test | — |
 
 ### 4.1 Ce que la phase 2 a découvert, et qui change les phases 3 à 5
 
@@ -1416,6 +1416,68 @@ L'exigence #18 — `npm test`, `npm run build`, `npm run lint` — n'est pas un
 test : c'est la commande. Son résultat est reporté dans
 `docs/STATION_CONCOURSE_SCOPE.md`.
 
+### 4.26 La phase 28 : ce que le relevé coûte, et où
+
+La question n'est pas « est-ce rapide ? » — un hall de gare n'est pas ce qui
+coûte dans cette scène — mais **de combien le relevé a-t-il alourdi ce qui
+existait ?**. On mesure donc les DEUX chemins sur les trente gares : le hall
+générique reste calculable même là où il n'est plus servi, et c'est lui l'avant.
+
+**La ligne qui compte tient en cinq unités.** Les obstacles passent de 799 à
+**804** sur les trente gares : c'est le seul poste que la marche paie à chaque
+pas, et il n'a pas bougé. Le relevé pose vingt-huit devantures, trente-neuf
+repères et des palissades que le hall générique n'avait pas — et il pose
+cinquante-cinq meubles de moins, faute de place. Les deux se compensent presque
+exactement. `tests/stationConcourseCost` garde ce fait, plafond à ×1,5.
+
+Le reste double, et c'est ce qu'on cherchait : soixante pièces de plus (les
+zones payantes secondaires, les mezzanines, les ponts-concours, les volumes
+qu'on regarde sans y aller), trente-trois lignes de portillons, quatre-vingts
+baies, trente et une bouches.
+
+| coût | quand | générique | relevé |
+|---|---|---:|---:|
+| compilation | une fois, au chargement | 0,6 ms / 30 gares | 11 ms / 30 gares |
+| marche | à chaque image, par voyageur | 3,4 M appels/s | 3,1 M appels/s |
+| itinéraire | une fois par voyageur | — | 146 µs, 37 étapes |
+
+La compilation est vingt fois plus chère et **cela n'a aucune importance** :
+onze millisecondes une fois, contre quatre secondes de tour de boucle entre deux
+gares. La marche perd 8 %, soit trois millisecondes par heure sur ce que la
+foule consomme réellement.
+
+**Et la mesure de rendu a dit quelque chose qu'on n'attendait pas.**
+
+| gare | appels | triangles |
+|---|---:|---:|
+| JY16 Shin-Ōkubo | 1 410 | 536 939 |
+| JY12 Ōtsuka | 690 | 266 419 |
+| JY09 Tabata | 474 | 262 634 |
+| JY07 Nippori | 322 | 181 407 |
+| JY19 Harajuku | 441 | 124 636 |
+| JY25 Shinagawa | 207 | 59 628 |
+| JY13 Ikebukuro | 162 | 55 850 |
+| JY01 Tokyo | 165 | 55 029 |
+
+**C'est presque exactement l'inverse de la liste des tailles.** La plus petite
+gare du relevé coûte huit fois plus que la plus grande. Ce n'est pas un défaut :
+c'est l'occlusion interne de la phase 17 qui fonctionne. Un grand hall
+souterrain FERME la vue — on n'y voit que lui — tandis que le souterrain court
+de Shin-Ōkubo laisse voir sa passerelle, le faisceau, la rame et la ville
+derrière. **Ce qu'une gare coûte à dessiner n'est pas ce qu'elle contient, c'est
+ce qu'elle laisse voir**, et il n'y a donc rien à optimiser du côté des grandes
+gares : le budget se joue sur les gares ouvertes, et il s'y jouait déjà avant le
+chantier.
+
+**Le budget est tenu par un test, mais pas sur les temps.** Un temps mesuré sur
+une machine partagée ne tient rien — il tombe un jour sur deux pour de mauvaises
+raisons. `tests/stationConcourseCost` tient donc la STRUCTURE, qui est exacte et
+que le temps SUIT : par gare (pièces, volumes, lignes, baies, bouches,
+obstacles, meubles), en cumul (les obstacles avant/après), et par volume (ce
+qu'une carte graphique paie d'un coup quand on y entre). Les plafonds sont au
+double du pire relevé d'aujourd'hui : ils ne gênent pas une gare qui gagne une
+pièce, ils arrêtent net celle qui en gagnerait cinquante.
+
 ### Ordre et raison
 
 - **1→5 ne touchent aucun consommateur.** Le jeu tourne à l'identique pendant
@@ -1429,6 +1491,12 @@ test : c'est la commande. Son résultat est reporté dans
 - **20→24 sont les trente gares**, petites d'abord — c'est là qu'on valide le
   système avec le moins à perdre.
 - **25→28 ferment** : coût, contrôle, documentation.
+
+**Les vingt-huit phases sont livrées.** Vingt-neuf gares sur trente passent par
+leur relevé ; Okachimachi attend un ouvrage et non un réglage, et deux
+approximations sont écrites plutôt que masquées (le mobilier qui ne tourne pas
+avec sa pièce, les deux lignes de Shin-Ōkubo qui se partagent du sol) — voir
+`STATION_CONCOURSE_SCOPE`, §4.
 
 ---
 
