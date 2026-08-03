@@ -1688,10 +1688,19 @@ une question de forme de quai ; la moitié des gares bâtit au-delà de la voie,
 dessous (halls souterrains) comme au-dessus (plateaux). Le seuil est désormais
 le plan de décor le plus proche (`PLANE_BASE`), et la mesure `builtNear` vient
 du relevé. **Fait pour Shinagawa** — son passage libre de cent onze mètres ne
-contient plus d'immeuble. **Reste** : Ueno, Ōsaki et Tamachi, où un plan de
-ville subsiste dans le hall. Ce ne sont pas les mêmes objets — trois niveaux de
-groupe et non quatre, donc un autre composant que le ruban de ville — et il faut
-les nommer avant de les pousser.
+contient plus d'immeuble. **Fait aussi** pour Tamachi et
+pour Ueno, à deux centimètres près. **Reste Ōsaki**, où un plan de ville tient
+encore trois mètres dans le hall.
+
+Et une leçon, apprise en cassant un test : les objets qui restent sont des
+REPÈRES DE QUARTIER (`landmarkPush`), et ceux-là ne se rangent pas derrière
+l'emprise — c'est écrit dans leur fonction et tenu par un test : on les REGARDE
+depuis la gare, et ranger le monorail de Hamamatsuchō derrière sa passerelle de
+trente-quatre mètres serait le contraire de leur raison d'être. Ce qui gêne à
+Ueno n'est donc pas la distance du repère mais son ALTITUDE : un immeuble de
+vingt mètres traverse un plancher à cinq. **La suite se prend par là** — un
+repère qui reste sous le plateau peut rester près ; celui qui le traverse doit
+reculer, ou ne pas être un immeuble.
 
 **Phase 32 — le z-fighting.** Une bande grise clignotait sur les parois : c'était
 une paroi de bord posée dans le plan d'une paroi d'enveloppe, corrigée. Il en

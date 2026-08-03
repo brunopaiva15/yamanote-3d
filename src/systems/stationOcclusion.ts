@@ -78,6 +78,19 @@ export const stationOcclusion = {
    */
   outer: PLATFORM_DEPTH,
   /**
+   * Bord extérieur de ce que la gare BÂTIT, hall compris.
+   *
+   * `outer` s'arrête au fond du quai d'en face ; un plateau praticable va
+   * quarante mètres plus loin à Ueno. Publié pour qui doit se ranger derrière
+   * le HALL et non derrière le quai — mais pas pour les repères de quartier :
+   * les y ranger mettrait le monorail de Hamamatsuchō hors de vue, et
+   * `tests/stationConcourseReach` le refuse à juste titre. Le repère qui gêne
+   * à Ueno est un immeuble de vingt mètres qui traverse le plancher : c'est
+   * son ALTITUDE qui le condamne, pas sa distance, et c'est par là qu'il
+   * faudra le prendre.
+   */
+  built: PLATFORM_DEPTH,
+  /**
    * L'écartement vaut-il des DEUX côtés ? Voir `bothSidesFor` : ce n'est plus
    * une question de forme de quai depuis que six halls passent sous la voie.
    */
@@ -100,6 +113,7 @@ export function updateStationOcclusion(): void {
   stationOcclusion.push = pushFor(layout, reach);
   stationOcclusion.bothSides = bothSidesFor(layout, reach);
   stationOcclusion.outer = outerOf(layout);
+  stationOcclusion.built = Math.max(stationOcclusion.outer, reach.built);
   // La nappe de rue se range derrière ce que la gare occupe AU RAS DU SOL, et
   // pas derrière son quai. Aujourd'hui les deux coïncident pour les trente -
   // `validateProfile` refuse qu'un niveau à cette altitude franchisse le
