@@ -1527,10 +1527,35 @@ body,
     width: 70px;
   }
 
-  /* La barre du bas se centre et passe à la ligne : le panneau, lui, est
-     ancré sur son bouton et déborderait. On le borne à la largeur utile. */
-  .incident-panel {
-    width: min(264px, calc(100vw - 40px));
+  /* Sur un téléphone, les panneaux s'ancrent au VIEWPORT et non à leur bouton.
+   *
+   * Le borner en largeur ne suffisait pas, et c'est ce qui m'a échappé : la
+   * barre du bas se centre et passe à la ligne ici, donc le bouton se retrouve
+   * au milieu de l'écran ; un panneau de 264 px calé sur son bord droit part
+   * alors à x = -61 sur un écran de 412 px, et la moitié de ses commandes -
+   * dont « Rejoindre » - se retrouve hors de l'écran. Le doigt tombait sur la
+   * toile, et le panneau se refermait à chaque tentative.
+   *
+   * Ancrés aux deux bords, ils occupent la largeur utile et rien n'en sort. */
+  .incident-panel,
+  .room-panel {
+    position: fixed;
+    left: max(8px, var(--hud-safe-left));
+    right: max(8px, var(--hud-safe-right));
+    bottom: calc(var(--hud-safe-bottom) + var(--hud-bar-h) + 10px);
+    width: auto;
+  }
+
+  /* Et AU-DESSUS des boutons du doigt.
+   *
+   * « S'asseoir » et « Parler » se posent juste au-dessus de la barre, à
+   * l'endroit exact où un panneau s'ouvre, et ils sont à z-index 25 quand la
+   * barre est à 20. Un panneau ouvert passait donc dessous : le doigt touchait
+   * « S'asseoir », l'événement ne venait pas du panneau, et le panneau se
+   * refermait. On ne remonte la barre QUE panneau ouvert - le reste du temps,
+   * les boutons du doigt doivent bien rester au-dessus d'elle. */
+  .hud-bottom:has(.room-panel, .incident-panel) {
+    z-index: 30;
   }
 
   /* La barre du bas occupe toute la largeur ici : on pose le joystick
