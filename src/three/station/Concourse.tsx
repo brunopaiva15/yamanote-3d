@@ -43,6 +43,7 @@ import { Frontages } from './interiors/Frontages';
 import { Landmarks } from './interiors/Landmarks';
 import { Limits } from './interiors/Limits';
 import { hallStyle } from './interiors/hallStyle';
+import { footprintOf, without } from '../../data/concourseBands';
 import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
 import { makeExitSign, makeGateSign } from '../../textures/procedural';
 import {
@@ -218,6 +219,58 @@ export function Concourse({
   // rendait ses défauts (textures/stationWall) illisibles - une seule coulure
   // large de deux mètres, un seul carreau de faïence par paroi. Voir
   // three/station/wallBox pour pourquoi ce n'est pas `repeat` qui s'en charge.
+  /**
+   * LES BORDS DU VOLUME, ET NON DE SA BOÎTE.
+   *
+   * Une bande a sa propre largeur : ses deux flancs se ferment sur toute sa
+   * longueur, et la MARCHE entre deux bandes voisines se ferme sur ce que
+   * l'une a de plus que l'autre. Ce qui coïncide déjà avec une paroi de
+   * l'enveloppe ne se redouble pas.
+   *
+   * ET L'ON NE FERME JAMAIS UNE FACE PERCÉE. Une bouche de sortie s'ouvre sur
+   * la paroi de l'ENVELOPPE ; si la bande qui la porte est plus étroite, une
+   * paroi de bord viendrait juste devant et murerait la sortie. Dans le doute,
+   * on laisse ouvert : un vide qu'on voit est moins grave qu'une sortie qu'on
+   * ne franchit plus.
+   */
+  const edges = useMemo(() => {
+    const { alongZ, bands } = footprintOf(shell);
+    const lo = alongZ ? shell.rect.x0 : shell.rect.z0;
+    const hi = alongZ ? shell.rect.x1 : shell.rect.z1;
+    const out: { x: number; z: number; w: number; d: number }[] = [];
+    const put = (a0: number, a1: number, c: number) => {
+      if (a1 - a0 < 0.05) return;
+      out.push(alongZ
+        ? { x: c, z: (a0 + a1) / 2, w: WALL_T, d: a1 - a0 }
+        : { x: (a0 + a1) / 2, z: c, w: a1 - a0, d: WALL_T });
+    };
+    // Les faces en travers qu'une bouche perce déjà : on n'y touche pas.
+    const crossPierced = new Set(
+      [...shell.mouths]
+        .filter((x) => (alongZ ? x.side === 'x0' || x.side === 'x1' : x.side === 'z0' || x.side === 'z1'))
+        .map((x) => x.side),
+    );
+    for (const b of bands) {
+      if (b.c0 > lo + 0.05 && !crossPierced.has(alongZ ? 'x0' : 'z0')) put(b.a0, b.a1, b.c0);
+      if (b.c1 < hi - 0.05 && !crossPierced.has(alongZ ? 'x1' : 'z1')) put(b.a0, b.a1, b.c1);
+    }
+    // La marche entre deux bandes : ce que l'une a de plus que l'autre.
+    for (let i = 1; i < bands.length; i++) {
+      const p = bands[i - 1];
+      const q = bands[i];
+      const at = (p.a1 + q.a0) / 2;
+      for (const [c0, c1] of [
+        ...without(p.c0, p.c1, q.c0, q.c1),
+        ...without(q.c0, q.c1, p.c0, p.c1),
+      ]) {
+        out.push(alongZ
+          ? { x: (c0 + c1) / 2, z: at, w: c1 - c0, d: WALL_T }
+          : { x: at, z: (c0 + c1) / 2, w: WALL_T, d: c1 - c0 });
+      }
+    }
+    return out;
+  }, [shell]);
+
   const sideGeo = useWallBox(WALL_T, height, shellLen, HALL_MODULE);
   const dadoGeo = useWallBox(0.05, style.dadoH, shellLen, DADO_MODULE);
   const ceilGeo = usePanelBox(width + 2 * WALL_T, 0.12, shellLen, CEILING_MODULE);
@@ -321,6 +374,29 @@ export function Concourse({
           </mesh>
         );
       })}
+
+      {/* CE QUI FERME LE VOLUME SUR SON VRAI CONTOUR.
+          Les parois ci-dessus courent sur l'ENVELOPPE du volume — un rectangle
+          — parce qu'un hall était un couloir, où l'enveloppe EST la pièce. Ce
+          n'est plus vrai : à Shinagawa la zone payante fait quarante-cinq
+          mètres de large et le passage libre cent onze, et il restait mille
+          deux cent trente-neuf mètres carrés de plancher dessiné, éclairé,
+          entouré de murs, et impossible à fouler. Six mille trois cent
+          quarante-cinq sur la ligne. On y voyait le vide, des murs qui ne
+          rejoignaient rien, et les immeubles de la ville que ce plancher
+          fantôme était venu recouvrir.
+          Ces parois-ci referment le volume LÀ OÙ IL S'ARRÊTE
+          (`data/concourseBands`). Elles n'enlèvent rien : elles ajoutent ce qui
+          manquait, et le fantôme passe derrière elles. */}
+      {edges.map((e, k) => (
+        <mesh
+          key={`bord${k}`}
+          position={[e.x, midY, e.z]}
+          material={m.hall}
+        >
+          <boxGeometry args={[e.w, height, e.d]} />
+        </mesh>
+      ))}
 
       {/* LES BOUTS QUE RIEN N'OUVRE. Le volume se fermait sur quatre faces
           FIXES : deux parois en x, l'entrée en z0, les bouches en z1. C'était
