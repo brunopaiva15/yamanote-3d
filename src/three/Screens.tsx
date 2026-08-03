@@ -26,7 +26,9 @@ import {
 } from './lineScreen';
 import { lineScreenFrame, lineScreenKey, paintLineScreen } from './lineScreenCycle';
 import { makeScreen } from './screenSurface';
-import { drawLeftAd } from './adScreen';
+import { WEATHER_EVERY, drawLeftAd, drawWeatherPanel, tomorrowDayOf } from './adScreen';
+import { forecastSlots } from '../systems/weather';
+import { tokyoForecastSlots } from '../systems/tokyoForecast';
 
 export function Screens() {
   const left = useMemo(() => makeScreen(512, 288), []);
@@ -122,11 +124,22 @@ export function Screens() {
     animPhase.current = (animPhase.current + 1) % ANIM_PHASES;
     const anim = animPhase.current;
 
-    // Écran gauche : une pub toutes les ~15 s, boucle de AD_LOOP_COUNT spots.
+    // Écran gauche : une pub toutes les ~15 s, boucle de AD_LOOP_COUNT spots -
+    // et, un passage sur WEATHER_EVERY, le bulletin de la chaîne de bord à la
+    // place du spot. C'est la seule chose que cet écran dise de vrai, et la
+    // seule qu'on puisse aller vérifier par la fenêtre.
     const adSeed = AD_LOOP_FIRST_SEED + (Math.floor(runtime.clockMin * 4) % AD_LOOP_COUNT);
     if (adSeed !== lastAd.current) {
       lastAd.current = adSeed;
-      drawLeftAd(left, adSeed);
+      if ((adSeed - AD_LOOP_FIRST_SEED) % WEATHER_EVERY === 0) {
+        // Réel si la journée jouée a eu lieu, plausible sinon : le modèle du
+        // jeu prend le relais pour les dates à venir.
+        const slots = tokyoForecastSlots(6) ?? forecastSlots(6);
+        const d = runtime.tokyoDate;
+        drawWeatherPanel(left, slots, d, tomorrowDayOf(d));
+      } else {
+        drawLeftAd(left, adSeed);
+      }
       left.texture.needsUpdate = true;
     }
 

@@ -31,7 +31,7 @@
 //     assez rare pour que le jour où l'on tombe dessus se remarque.
 
 import { runtime } from './runtime';
-import { seasonNow, type SeasonState } from './season';
+import { dayOfYear, seasonAt, seasonNow, type SeasonState } from './season';
 
 export type WeatherKind =
   | 'clear' // ciel bleu
@@ -239,6 +239,73 @@ function dayFor(se: SeasonState): WeatherDay {
     today = buildDay(d.year, d.month, d.day, se);
   }
   return today;
+}
+
+// --- Prévision ----------------------------------------------------------------
+//
+// L'afficheur publicitaire du wagon passe, entre deux réclames, le bulletin
+// « トレインチャンネル 3時間ごとの天気 ». Il ne peut pas tirer sa prévision au
+// hasard : ce serait annoncer de la pluie pour 18 h dans un jeu où il fera
+// beau à 18 h, et le voyageur qui attend jusque-là s'en apercevrait. Elle sort
+// donc du MÊME modèle que le ciel qu'on a au-dessus de la tête - les épisodes
+// sont engendrés pour la journée entière, il suffit de les lire en avant.
+
+export interface ForecastSlot {
+  /** Minute du jour du créneau (0…1439), toujours multiple de 180. */
+  minute: number;
+  /** 0 = aujourd'hui, 1 = demain. */
+  dayOffset: number;
+  kind: WeatherKind;
+  tempC: number;
+}
+
+const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/** Lendemain d'une date civile, sans passer par un objet Date. */
+function nextDay(y: number, m: number, d: number): [number, number, number] {
+  const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  const last = m === 2 && leap ? 29 : MONTH_DAYS[m - 1];
+  if (d < last) return [y, m, d + 1];
+  if (m < 12) return [y, m + 1, 1];
+  return [y + 1, 1, 1];
+}
+
+/**
+ * Prévision par tranches de trois heures, à partir du créneau rond en cours.
+ *
+ * Le premier créneau est celui qu'on est en train de vivre, arrondi vers le
+ * bas : à 16 h 40 le bulletin s'ouvre sur 15 h, exactement comme le vrai - un
+ * bulletin qui commencerait à 18 h laisserait le voyageur sans repère sur
+ * l'heure qu'il vit.
+ */
+export function forecastSlots(count = 6): ForecastSlot[] {
+  const base = Math.floor((((runtime.clockMin % 1440) + 1440) % 1440) / 180) * 180;
+  const d = runtime.tokyoDate;
+  const days: WeatherDay[] = [];
+  const doys: number[] = [];
+  let [y, m, dd] = [d.year, d.month, d.day];
+  for (let i = 0; i <= Math.floor((base + (count - 1) * 180) / 1440); i++) {
+    const se = seasonAt(m, dd);
+    days.push(buildDay(y, m, dd, se));
+    doys.push(dayOfYear(m, dd));
+    [y, m, dd] = nextDay(y, m, dd);
+  }
+
+  const out: ForecastSlot[] = [];
+  for (let i = 0; i < count; i++) {
+    const abs = base + i * 180;
+    const off = Math.floor(abs / 1440);
+    const minute = abs % 1440;
+    const { cur } = episodeAt(days[off], minute);
+    const t = TRAITS[cur.kind];
+    // Même formule que le ciel courant : moyenne du jour, marche diurne
+    // amortie par les nuages, et le rafraîchissement de la pluie.
+    const mean = dailyMeanTemp(doys[off]);
+    const swing = TEMP_DIURNAL * diurnal(minute / 60);
+    const tempC = mean + swing * (1 - 0.55 * t.cloud) - 2.6 * t.rain - 1.2 * t.cloud;
+    out.push({ minute, dayOffset: off, kind: cur.kind, tempC: Math.round(tempC) });
+  }
+  return out;
 }
 
 /** Épisode en cours à une minute donnée, et son successeur. */
