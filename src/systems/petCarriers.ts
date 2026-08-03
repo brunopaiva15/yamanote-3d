@@ -16,10 +16,10 @@
 // MONTE dans le train. Le porteur est un voyageur comme un autre, et rien dans
 // la foule du quai n'a besoin de le savoir.
 
-import * as THREE from 'three';
+import { Vec3 } from './vec3';
 import { PSD_X } from '../data/stationGeometry';
 import { useStore } from '../store';
-import { rng } from '../textures/procedural';
+import { rng } from '../data/rng';
 import { crowdList, type CrowdPax } from './platformCrowd';
 import { runtime } from './runtime';
 
@@ -41,7 +41,7 @@ export interface PetCarrier {
   /** Main qui tient la poignée : 1 droite, -1 gauche (cf. characters/pose). */
   handSide: 1 | -1;
   /** Position de cette main, publiée par le rendu de la foule (repère quai). */
-  handPos: THREE.Vector3;
+  handPos: Vec3;
   /** Faux tant que le rendu n'a pas publié la main : rien à afficher. */
   handSet: boolean;
   /** Teinte de la coque : celle du sac du porteur, pour que ça aille ensemble. */
@@ -58,7 +58,7 @@ function makeCarrierSlot(variant: number): PetCarrier {
     variant,
     owner: -1,
     handSide: 1,
-    handPos: new THREE.Vector3(),
+    handPos: new Vec3(),
     handSet: false,
     color: '#8a9a86',
   };

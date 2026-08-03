@@ -108,31 +108,38 @@ const WEATHER_GLYPH: Record<WeatherKind, string> = {
 };
 
 /**
- * La barre du bas s'enroule sur une ou deux rangées selon la langue et la
- * largeur de l'écran. On publie sa hauteur réelle en variable CSS pour que le
- * joystick et les boutons tactiles se posent dessus au lieu de la recouvrir -
- * c'est ce qui faisait se chevaucher deux « s'asseoir » sur un téléphone.
+ * Les deux barres du HUD s'enroulent sur une ou deux rangées selon la langue et
+ * la largeur de l'écran. On publie leur hauteur réelle en variable CSS pour que
+ * ce qui les entoure se pose CONTRE elles au lieu d'être recouvert - le
+ * joystick et les boutons tactiles sous la barre du bas, le tableau de bord de
+ * la version sonore sous celle du haut. Sans cela, deux « s'asseoir » se
+ * chevauchaient sur un téléphone, et l'afficheur de bord passait sous
+ * l'horloge.
+ *
+ * Mesurée, et non calculée : elle dépend de la longueur des libellés traduits,
+ * donc de la langue, et un nombre écrit en dur serait faux dans deux langues
+ * sur trois.
  */
-function useBarHeight(active: boolean) {
+function usePublishedHeight(cssVar: string, active: boolean) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const root = document.documentElement;
     const bar = ref.current;
     if (!active || !bar) {
-      root.style.removeProperty('--hud-bar-h');
+      root.style.removeProperty(cssVar);
       return;
     }
     const apply = () => {
-      root.style.setProperty('--hud-bar-h', `${Math.round(bar.getBoundingClientRect().height)}px`);
+      root.style.setProperty(cssVar, `${Math.round(bar.getBoundingClientRect().height)}px`);
     };
     apply();
     const observer = new ResizeObserver(apply);
     observer.observe(bar);
     return () => {
       observer.disconnect();
-      root.style.removeProperty('--hud-bar-h');
+      root.style.removeProperty(cssVar);
     };
-  }, [active]);
+  }, [cssVar, active]);
   return ref;
 }
 
@@ -157,6 +164,12 @@ function useOccupancy(): { percent: number; band: OccupancyBand } {
 
 export function Hud() {
   const started = useStore((s) => s.started);
+  // La version sonore partage ce HUD, et c'est voulu : l'horloge, la vitesse,
+  // le temps qu'il fait, le remplissage et la phase sont les mêmes valeurs,
+  // lues au même endroit. Seules disparaissent les commandes qui n'ont pas
+  // d'objet sans scène - la qualité vidéo n'a rien à régler, et il n'y a pas
+  // de corps à asseoir.
+  const audioMode = useStore((s) => s.mode) === 'audio';
   const index = useStore((s) => s.index);
   const phase = useStore((s) => s.phase);
   const loopDirection = useStore((s) => s.loopDirection);
@@ -167,6 +180,8 @@ export function Hud() {
   const toggleMute = useStore((s) => s.toggleMute);
   const setVolume = useStore((s) => s.setVolume);
   const lang = useStore((s) => s.lang);
+  const subtitles = useStore((s) => s.subtitles);
+  const setSubtitles = useStore((s) => s.setSubtitles);
   const t = useT();
   const clock = useClock();
   const speed = useSpeed();
@@ -175,7 +190,8 @@ export function Hud() {
   const em = useEmergency();
   const emergency = em.stage === 'coasting' || em.stage === 'braking' || em.stage === 'stopped';
   const outage = emergency && em.kind === 'outage';
-  const barRef = useBarHeight(started);
+  const barRef = usePublishedHeight('--hud-bar-h', started);
+  const topRef = usePublishedHeight('--hud-top-h', started);
   const [fullscreen] = useState(fullscreenAvailable);
 
   // Répercuter le mute et le volume sur l'audio et la voix.
@@ -200,7 +216,7 @@ export function Hud() {
 
   return (
     <>
-      <div className="hud-top">
+      <div className="hud-top" ref={topRef}>
         <div className="hud-clock">{clock}</div>
         <div className="hud-speed" title={t.hud.speedTitle} aria-label={`${t.hud.speedTitle}: ${speed} km/h`}>
           <span className="hud-speed-value">{speed}</span>
@@ -241,7 +257,7 @@ export function Hud() {
 
       <div className="hud-bottom" ref={barRef}>
         <LanguageSwitcher className="lang-switch-hud" />
-        <QualitySelect className="quality-select-hud" />
+        {!audioMode && <QualitySelect className="quality-select-hud" />}
         {/* Le son et son curseur voyagent ensemble quand la barre passe à la
             ligne : un curseur seul, loin de son bouton, ne se règle pas. */}
         <div className="hud-sound">
@@ -262,7 +278,18 @@ export function Hud() {
         </div>
         {/* Au doigt, « s'asseoir » est déjà le gros bouton du coin bas droit
             (ui/Controls) : le doubler ici ne ferait que se recouvrir. */}
-        {!touch && (
+        {/* Les sous-titres se règlent dans les deux versions : allumés
+            d'office dans la version sonore, où ils sont la seule façon de lire
+            ce qui se dit, proposés dans l'autre. */}
+        <button
+          className={`hud-button${subtitles ? ' is-on' : ''}`}
+          onClick={() => setSubtitles(!subtitles)}
+          title={t.subtitles.label}
+          aria-pressed={subtitles}
+        >
+          {t.subtitles.label}
+        </button>
+        {!audioMode && !touch && (
           <button
             className="hud-button"
             onClick={() => {

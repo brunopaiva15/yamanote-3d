@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { Vec3 } from './vec3';
 import { CONFIG } from '../data/config';
 import {
   passengerAssistanceInitialAnnouncement,
@@ -67,7 +67,7 @@ type Snapshot = Pick<Pax,
   | 'state' | 'action' | 'anchor' | 'anchorLeft' | 'interludeT'
   | 'bodyLean' | 'bodyRoll' | 'headPitch' | 'pos' | 'yaw' | 'targetYaw'
   | 'seatSlot' | 'standSlot' | 'afterWalk' | 'exitDoorZ' | 'wpi'
-> & { waypoints: THREE.Vector3[] };
+> & { waypoints: Vec3[] };
 let snapshot: Snapshot | null = null;
 
 function drawInt(min: number, max: number, random: () => number): number {
@@ -203,9 +203,9 @@ function defaultBeginAlight(id: number, doorZ: number): boolean {
   p.headPitch = 0;
   p.headRoll = 0;
   p.waypoints = [
-    new THREE.Vector3(side * 0.3, 0, p.pos.z),
-    new THREE.Vector3(side * 0.95, 0, doorZ),
-    new THREE.Vector3(side * DOOR_HANDOVER_X, 0, doorZ),
+    new Vec3(side * 0.3, 0, p.pos.z),
+    new Vec3(side * 0.95, 0, doorZ),
+    new Vec3(side * DOOR_HANDOVER_X, 0, doorZ),
   ];
   p.wpi = 0;
   return true;

@@ -83,6 +83,17 @@ export interface Strings {
     directionLabel: string;
     /** Option « laisser le hasard choisir le sens ». */
     directionRandom: string;
+    /** Libellé du sélecteur de version (expérience complète / version sonore). */
+    modeLabel: string;
+    /** Les deux versions, telles qu'on les choisit. */
+    modeFull: string;
+    modeAudio: string;
+    /**
+     * Ce que la version sonore change, en une phrase. Affiché sous le
+     * sélecteur, et seulement quand elle est choisie : personne n'a besoin
+     * qu'on lui explique le mode par défaut.
+     */
+    modeAudioNote: string;
   };
 
   hud: {
@@ -278,6 +289,63 @@ export interface Strings {
     assistance: { name: string; note: string; unavailable: string };
   };
 
+  /**
+   * Sous-titres : ce qui se dit, et ce qui sonne.
+   *
+   * Les TEXTES des annonces ne sont pas ici - ils sont dits en japonais et en
+   * anglais, comme dans une vraie rame, et c'est cela qu'on affiche (voir
+   * ui/Subtitles). Ce dictionnaire ne porte que ce qui est de l'INTERFACE :
+   * d'où vient la voix, et le nom des sons qu'on met entre crochets.
+   */
+  subtitles: {
+    /** Bouton du HUD. */
+    label: string;
+    /** Provenance affichée devant chaque ligne. */
+    cabin: string;
+    platform: string;
+    /**
+     * Le nom des sons, comme au sous-titrage pour sourds et malentendants :
+     * un groupe nominal court, jamais une phrase.
+     */
+    cues: {
+      doorChime: string;
+      psdOpen: string;
+      psdClose: string;
+      atosChime: string;
+      melody: string;
+      thunder: string;
+      passingTrain: string;
+      emergencyBrake: string;
+      powerOutage: string;
+    };
+  };
+
+  /**
+   * La version sonore : le tableau de bord qui remplace la scène.
+   *
+   * Il ne cherche pas à IMITER la 3D - il n'y a rien à imiter - mais à donner
+   * ce que l'oreille seule ne situe pas : où l'on est sur la boucle, ce qui va
+   * arriver, et ce qui vient d'être dit.
+   */
+  audio: {
+    /** En-tête du journal des annonces. */
+    logTitle: string;
+    /** Journal encore vide, au tout début du trajet. */
+    logEmpty: string;
+    /** État des portes de la rame. */
+    doorsLabel: string;
+    doors: { open: string; closed: string; opening: string; closing: string };
+    /**
+     * Descendre / remonter. Dans l'expérience complète on marche à travers la
+     * porte ouverte et il n'y a rien à cliquer ; ici il faut un bouton, parce
+     * que c'est le geste qui change le plus ce qu'on entend.
+     */
+    alight: string;
+    boardAgain: string;
+    /** Pourquoi le bouton est grisé : il n'y a pas de porte ouverte à portée. */
+    doorsShut: string;
+  };
+
   language: string;
 
   footer: {
@@ -328,6 +396,11 @@ const FR: Strings = {
     stationRandom: 'Aléatoire',
     directionLabel: 'Sens',
     directionRandom: 'Aléatoire',
+    modeLabel: 'Version',
+    modeFull: 'Complète (3D)',
+    modeAudio: 'Sonore (sans 3D)',
+    modeAudioNote:
+      "Le même trajet, les mêmes annonces, la même sonorisation - mais rien à l'écran qu'un tableau de bord et les sous-titres. Aucune carte graphique requise.",
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arrivée', dwell: 'À quai', depart: 'Départ' },
@@ -471,6 +544,38 @@ const FR: Strings = {
     },
   },
 
+  subtitles: {
+    label: 'Sous-titres',
+    cabin: 'Rame',
+    platform: 'Quai',
+    cues: {
+      doorChime: 'carillon de porte',
+      psdOpen: 'ouverture des portes palières',
+      psdClose: 'fermeture des portes palières',
+      atosChime: "carillon d'approche",
+      melody: 'mélodie de départ',
+      thunder: 'tonnerre',
+      passingTrain: 'train sur la voie opposée',
+      emergencyBrake: "freinage d'urgence",
+      powerOutage: 'coupure de courant',
+    },
+  },
+
+  audio: {
+    logTitle: 'Ce qui a été dit',
+    logEmpty: 'Rien encore. La première annonce ne va pas tarder.',
+    doorsLabel: 'Portes',
+    doors: {
+      open: 'ouvertes',
+      closed: 'fermées',
+      opening: "en cours d'ouverture",
+      closing: 'en cours de fermeture',
+    },
+    alight: 'Descendre sur le quai',
+    boardAgain: 'Remonter à bord',
+    doorsShut: 'Portes fermées',
+  },
+
   language: 'Langue',
   footer: {
     about: 'À propos du projet',
@@ -521,6 +626,11 @@ const EN: Strings = {
     stationRandom: 'Random',
     directionLabel: 'Direction',
     directionRandom: 'Random',
+    modeLabel: 'Version',
+    modeFull: 'Full (3D)',
+    modeAudio: 'Audio only (no 3D)',
+    modeAudioNote:
+      'The same ride, the same announcements, the same public address - but nothing on screen except a dashboard and the subtitles. No graphics card needed.',
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arriving', dwell: 'At the platform', depart: 'Departing' },
@@ -665,6 +775,33 @@ const EN: Strings = {
     },
   },
 
+  subtitles: {
+    label: 'Subtitles',
+    cabin: 'Train',
+    platform: 'Platform',
+    cues: {
+      doorChime: 'door chime',
+      psdOpen: 'platform doors opening',
+      psdClose: 'platform doors closing',
+      atosChime: 'approach chime',
+      melody: 'departure melody',
+      thunder: 'thunder',
+      passingTrain: 'train on the opposite track',
+      emergencyBrake: 'emergency braking',
+      powerOutage: 'power cut',
+    },
+  },
+
+  audio: {
+    logTitle: 'What was said',
+    logEmpty: 'Nothing yet. The first announcement is on its way.',
+    doorsLabel: 'Doors',
+    doors: { open: 'open', closed: 'closed', opening: 'opening', closing: 'closing' },
+    alight: 'Step onto the platform',
+    boardAgain: 'Board the train',
+    doorsShut: 'Doors closed',
+  },
+
   language: 'Language',
   footer: {
     about: 'About the project',
@@ -715,6 +852,11 @@ const JA: Strings = {
     stationRandom: 'ランダム',
     directionLabel: '方向',
     directionRandom: 'ランダム',
+    modeLabel: 'バージョン',
+    modeFull: '通常版（3D）',
+    modeAudio: '音声版（3Dなし）',
+    modeAudioNote:
+      '同じ走行、同じ放送、同じ車内・駅の音響。画面にあるのは走行情報と字幕だけです。グラフィックス性能は不要です。',
   },
   hud: {
     phase: { cruise: '走行中', brake: 'まもなく到着', dwell: '停車中', depart: '発車' },
@@ -855,6 +997,33 @@ const JA: Strings = {
       note: '次の駅で係員が対応します。',
       unavailable: '走行中またはドアが開いている停車中に限ります。',
     },
+  },
+
+  subtitles: {
+    label: '字幕',
+    cabin: '車内',
+    platform: 'ホーム',
+    cues: {
+      doorChime: 'ドアチャイム',
+      psdOpen: 'ホームドア開扉予告',
+      psdClose: 'ホームドア閉扉予告',
+      atosChime: '接近チャイム',
+      melody: '発車メロディ',
+      thunder: '雷鳴',
+      passingTrain: '対向列車通過',
+      emergencyBrake: '非常ブレーキ',
+      powerOutage: '停電',
+    },
+  },
+
+  audio: {
+    logTitle: 'これまでの放送',
+    logEmpty: 'まだ何もありません。最初の放送をお待ちください。',
+    doorsLabel: 'ドア',
+    doors: { open: '開', closed: '閉', opening: '開扉中', closing: '閉扉中' },
+    alight: 'ホームに降りる',
+    boardAgain: '列車に乗る',
+    doorsShut: 'ドアが閉まっています',
   },
 
   language: '言語',

@@ -26,6 +26,9 @@
      dépend de la langue et de la largeur de l'écran, et le joystick comme les
      boutons tactiles se posent dessus. */
   --hud-bar-h: 0px;
+  /* Idem pour la barre du HAUT, qui s'enroule elle aussi : c'est elle qui
+     décide où peut commencer le tableau de bord de la version sonore. */
+  --hud-top-h: 0px;
   font-family:
     'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
 }
@@ -1537,4 +1540,455 @@ body,
   padding: 13px 20px;
   box-shadow: 0 4px 0 rgba(16, 21, 26, 0.85);
   max-width: 46vw;
+}
+
+/* --- Sous-titres ---
+   Un bandeau bas, sur les deux versions du jeu. Fond sombre translucide plutôt
+   que le langage « sticker » du reste de l'interface : ce n'est pas une
+   commande, c'est du texte à lire par-dessus autre chose, et il doit se lire
+   aussi bien sur un ciel blanc que sur un tunnel noir.
+
+   Il se pose AU-DESSUS de la barre du HUD (--hud-bar-h, mesurée par ui/Hud) :
+   c'est la même règle que le joystick tactile, et sans elle les deux se
+   recouvraient sur un téléphone. */
+
+.subtitles {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--hud-safe-bottom) + var(--hud-bar-h) + 18px);
+  width: min(880px, calc(100vw - var(--hud-safe-left) - var(--hud-safe-right) - 16px));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  text-align: center;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.subtitle-line,
+.subtitle-cue {
+  background: rgba(10, 14, 18, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  padding: 7px 14px;
+  color: var(--text);
+  max-width: 100%;
+  /* Une annonce japonaise se coupe où elle veut ; une phrase anglaise, non. */
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.subtitle-text {
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+/* D'où vient la voix : deux sonorisations parlent, et elles peuvent parler en
+   même temps - sans cette étiquette, on ne sait pas laquelle annonce quoi. */
+.subtitle-source {
+  display: inline-block;
+  margin-right: 9px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-dim);
+}
+
+.subtitle-platform .subtitle-source {
+  background: rgba(128, 194, 65, 0.24);
+  color: #cfe9ad;
+}
+
+/* Le son nommé : plus petit et plus effacé que la parole. C'est une indication,
+   pas une réplique. */
+.subtitle-cue {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 4px 11px;
+}
+
+@media (max-width: 720px) {
+  .subtitle-text {
+    font-size: 15px;
+  }
+}
+
+/* Sur la paroi claire du wagon, le bandeau de sous-titres doit rester une
+   PLAQUE : à 82 % d'opacité il laissait transparaître le journal en dessous et
+   les deux textes se mêlaient. Sur la scène 3D, où il passe le plus souvent
+   devant du ciel ou du décor, la transparence d'origine convient. */
+.app-audio .subtitle-line,
+.app-audio .subtitle-cue {
+  background: rgba(12, 16, 20, 0.94);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* --- La version sonore ---
+   Pas de toile, mais pas un vide non plus : ce qu'on regarde, c'est la PAROI
+   AU-DESSUS D'UNE PORTE. Paroi blanc cassé, réserve claire où la dalle est
+   encastrée, lumière qui vient du plafond - ce sont les teintes de l'intérieur
+   E235 du jeu (three/Car). Un fond noir aurait fait un lecteur multimédia ;
+   celui-ci fait un wagon.
+
+   Le rose de l'imposte, lui, n'est PAS là. Il est bien à cet endroit sur la
+   rame - c'est la couleur du panneau au-dessus des portes -, mais une bande
+   rose sur toute la largeur d'une fenêtre de navigateur ne se lit plus comme un
+   panneau de wagon : elle se lit comme une barre d'application. Un détail juste
+   sur la rame peut être faux à l'écran, et c'est le cas de celui-là.
+
+   Les couleurs de la dalle elle-même viennent de three/lineScreen, relevées au
+   pixel sur l'afficheur réel. */
+
+:root {
+  /* La dalle. */
+  --lcd-bg: #e9e9e9;
+  --lcd-header: #191a17;
+  --lcd-green: #54af00;
+  --lcd-green-dark: #0b5800;
+  --lcd-clock: #6b67a0;
+  /* La baie où elle est encastrée : réserve blanche cassée, feuillure sombre. */
+  --lcd-surround: #eeece6;
+  --lcd-bezel: #1b1f24;
+  /* La paroi du wagon. */
+  --car-wall: #e4e3dc;
+  --car-wall-low: #cdccc4;
+  --car-ink: #2a2d31;
+  --car-ink-dim: #6e7278;
+  /* La réglette de porte, trois états. */
+  --led-off: #241a14;
+  --led-dim: #b85414;
+  --led-on: #ff8c1a;
+}
+
+.app-audio {
+  /* La lumière tombe des tubes du plafond : le haut de la paroi est clair,
+     elle s'assombrit vers le bas de caisse. Rien d'autre - une paroi de wagon
+     est une grande surface unie, et c'est ce qui laisse l'afficheur être la
+     seule chose qu'on regarde. */
+  background: linear-gradient(180deg, #f0efe9 0, var(--car-wall) 26%, var(--car-wall-low) 100%);
+  color: var(--car-ink);
+  overflow: hidden;
+}
+
+.audio-screen {
+  position: absolute;
+  inset: 0;
+  padding: calc(var(--hud-safe-top) + var(--hud-top-h) + 20px) var(--hud-safe-right)
+    calc(var(--hud-safe-bottom) + var(--hud-bar-h) + 74px) var(--hud-safe-left);
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(280px, 0.95fr);
+  /* Une seule rangée, qui prend toute la hauteur disponible : l'affichette de
+     droite court du haut en bas de la paroi, la baie se centre en face d'elle.
+     Les deux calées sur la hauteur de la baie laissaient un tiers d'écran vide
+     sous elles, ce qui se lit comme une page inachevée. */
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  justify-content: center;
+  gap: 22px;
+  overflow: hidden;
+}
+
+/* --- La baie : réserve blanche, feuillure, dalle ---
+   Les proportions sont celles du maillage de three/Screens : un panneau clair
+   qui déborde largement, une feuillure sombre étroite, l'écran au fond. */
+.lcd-mount {
+  background: var(--lcd-surround);
+  border-radius: 8px;
+  padding: 15px;
+  /* La réserve est en RELIEF sur la paroi, de sept centimètres : une ombre
+     portée courte et un filet clair en haut suffisent à le dire. */
+  box-shadow:
+    0 10px 26px rgba(40, 34, 30, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  min-width: 0;
+  /* Au-delà, la dalle deviendrait un panneau d'autoroute : sur la rame elle
+     fait cinquante-huit centimètres de large, on la regarde de trois mètres. */
+  max-width: 1040px;
+  width: 100%;
+  justify-self: end;
+  align-self: center;
+}
+
+.lcd-frame {
+  background: var(--lcd-bezel);
+  border-radius: 4px;
+  padding: 9px;
+  /* La dalle est EN RETRAIT dans sa feuillure : l'ombre portée est interne. */
+  box-shadow: inset 0 2px 7px rgba(0, 0, 0, 0.75);
+}
+
+.lcd-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* 16:9, comme les deux dalles de l'E235 : ce sont deux écrans de télévision
+     côte à côte, pas deux panoramiques. Le rapport est tenu ici pour qu'aucune
+     largeur de fenêtre ne puisse étirer l'afficheur. */
+  aspect-ratio: 768 / 432;
+  background: var(--lcd-bg);
+  border-radius: 2px;
+  /* Une dalle de gare est nette. Sur un écran à forte densité le canevas est
+     agrandi, et un lissage bilinéaire lui donnerait le flou d'une capture
+     d'écran redimensionnée - exactement ce qui trahirait l'imitation. */
+  image-rendering: crisp-edges;
+}
+
+/* --- La réglette de porte, sous la dalle ---
+   Elle est DANS la réserve claire, comme sur la rame : la bande de diodes court
+   au-dessus de la baie, pas sur l'écran. */
+.lcd-doors {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 13px;
+  padding: 9px 11px;
+  border-radius: 5px;
+  background: #16191c;
+  color: #cfd3d6;
+  font-size: 13px;
+}
+
+.lcd-doors-label {
+  font-size: 12px;
+  color: #949a9f;
+  white-space: nowrap;
+}
+
+.lcd-doors-side {
+  color: var(--led-dim);
+  font-size: 13px;
+}
+
+.lcd-doors.is-open .lcd-doors-side,
+.lcd-doors.is-moving .lcd-doors-side {
+  color: var(--led-on);
+}
+
+.lcd-doors-bar {
+  flex: 1 1 auto;
+  min-width: 60px;
+  height: 9px;
+  border-radius: 2px;
+  /* La réglette ÉTEINTE, pas une barre pleine : une diode au repos est une
+     lentille sombre, et un fond à pleine largeur en couleur se lisait comme
+     une jauge au maximum - exactement le contraire de ce qu'elle dit. */
+  background: var(--led-off);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.lcd-doors-fill {
+  display: block;
+  height: 100%;
+  background: var(--led-dim);
+  transition: width 0.12s linear;
+}
+
+.lcd-doors.is-open .lcd-doors-fill {
+  background: var(--led-on);
+}
+
+/* Les vantaux bougent : la réglette clignote, comme la vraie. */
+.lcd-doors.is-moving .lcd-doors-fill {
+  background: var(--led-on);
+  animation: lcd-led-blink 0.62s steps(1, end) infinite;
+}
+
+@keyframes lcd-led-blink {
+  50% {
+    background: var(--led-dim);
+  }
+}
+
+.lcd-doors-word {
+  font-weight: 700;
+  color: #edefef;
+  white-space: nowrap;
+}
+
+/* --- Le journal : l'affichette d'à côté ---
+   Une notice de wagon : carton clair, filet vert de la ligne en tête, texte à
+   l'encre. Elle est posée sur la même paroi que la dalle et lui répond, au lieu
+   de faire flotter un panneau sombre sur un intérieur clair. */
+.audio-log {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* La colonne fait la hauteur de la baie d'en face : le journal défile dedans
+     plutôt que d'étirer la page. */
+  max-height: 100%;
+  max-width: 520px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #faf9f5;
+  box-shadow:
+    0 10px 26px rgba(40, 34, 30, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.audio-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 14px 9px;
+  border-bottom: 3px solid var(--lcd-green);
+}
+
+.audio-panel-head h2 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--car-ink);
+}
+
+.audio-log-list {
+  list-style: none;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 3px 0;
+  scrollbar-width: thin;
+}
+
+.audio-log-empty {
+  font-size: 13px;
+  color: var(--car-ink-dim);
+  padding: 15px 14px;
+}
+
+.audio-log-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 9px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(42, 45, 49, 0.09);
+}
+
+/* Un son n'a pas de sonorisation d'origine : sa ligne n'a que deux colonnes. */
+.audio-log-row.is-cue {
+  grid-template-columns: auto minmax(0, 1fr);
+  color: var(--car-ink-dim);
+  font-style: italic;
+}
+
+/* L'horloge du journal est celle de la dalle : la même lavande, assombrie de
+   ce qu'il faut pour tenir sur du carton clair. */
+.audio-log-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--lcd-clock);
+}
+
+.audio-log-source {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 3px;
+  background: rgba(42, 45, 49, 0.1);
+  color: #4c5157;
+  white-space: nowrap;
+}
+
+/* La sono du QUAI porte le vert de la ligne, celle de la RAME reste neutre :
+   c'est ainsi qu'on les distingue d'un coup d'œil, et c'est la même convention
+   que les sous-titres. */
+.audio-log-source.is-platform {
+  background: #dcefc4;
+  color: var(--lcd-green-dark);
+}
+
+.audio-log-text {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 980px) {
+  .audio-screen {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: start;
+    align-items: start;
+    overflow-y: auto;
+    /* Les sous-titres sont posés PAR-DESSUS, en bas : sur un téléphone ils
+       tiennent deux lignes par sonorisation, et le journal doit pouvoir défiler
+       jusqu'à sa dernière entrée sans rester dessous. */
+    padding-bottom: calc(var(--hud-safe-bottom) + var(--hud-bar-h) + 200px);
+  }
+
+  /* Sur un écran étroit, l'afficheur reste lisible mais ne doit pas manger
+     toute la hauteur : le journal doit rester visible sans faire défiler. */
+  .lcd-mount {
+    max-width: 620px;
+    margin: 0 auto;
+    justify-self: center;
+  }
+
+  .audio-log {
+    max-height: none;
+    max-width: 620px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+/* Ce que la version sonore change, sous le sélecteur du menu. Le menu est un
+   panneau clair : ce texte-là ne suit pas la palette sombre du jeu. */
+.start-mode-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--sticker-dim);
+  text-align: left;
+}
+
+
+/* Un réglage allumé se voit : le bouton des sous-titres est le seul du HUD à
+   avoir deux états, et sans marque on ne sait pas si l'on vient de les
+   allumer ou de les éteindre. */
+.hud-button.is-on {
+  background: var(--green);
+  border-color: var(--ink-line);
+  color: var(--ink);
+}
+
+.hud-button.is-on:hover {
+  background: #8ed04c;
+}
+
+
+/* Franchir le seuil, depuis la réglette de porte : le seul bouton de la version
+   sonore qui agisse sur le monde plutôt que sur un réglage. Il vit avec l'état
+   des portes parce que c'est exactement ce dont il dépend - et il s'éteint avec
+   elles, sans disparaître : un bouton qui s'en va ne dit pas pourquoi. */
+.lcd-doors-cross {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #2b3136;
+  color: #edefef;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.lcd-doors-cross:hover:not(:disabled) {
+  background: var(--lcd-green);
+  border-color: var(--lcd-green);
+  color: #0d1a04;
+}
+
+.lcd-doors-cross:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
 }

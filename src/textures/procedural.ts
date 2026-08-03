@@ -11,20 +11,17 @@ import { PLATFORM_NUMBERS, type LoopDirection } from '../data/platforms';
 import { lineInfo, stationExits } from '../data/lines';
 import { GENERIC, type District, type Feat } from '../data/districts';
 import type { Appearance } from '../systems/appearance';
+import { rng } from '../data/rng';
+import { JP_FONT } from '../data/fonts';
 
-export const JP_FONT = "'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP',sans-serif";
+// La pile de fontes vit maintenant dans data/fonts : les écrans de ligne s'en
+// servent hors de la scène 3D. Réexportée d'ici pour les appelants d'origine.
+export { JP_FONT };
 
-// Petit générateur pseudo-aléatoire déterministe (mulberry32).
-export function rng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// Le générateur déterministe vit maintenant dans data/rng : la simulation s'en
+// sert autant que les textures, et elle n'a pas à charger three.js pour cela.
+// Il reste exporté d'ici pour les composants de rendu qui l'y prenaient.
+export { rng };
 
 function makeCanvas(w: number, h: number): { c: HTMLCanvasElement; g: CanvasRenderingContext2D } {
   const c = document.createElement('canvas');

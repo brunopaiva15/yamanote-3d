@@ -8,7 +8,7 @@
 // rame Yamanote : majorité est-asiatique chez les locaux, palette mondiale
 // chez les touristes (peaux claires à très foncées, cheveux noirs à blonds).
 
-import { rng } from '../textures/procedural';
+import { rng } from '../data/rng';
 
 export type Archetype = 'salaryman' | 'officeLady' | 'casual' | 'student' | 'senior' | 'tourist';
 export type TopType = 'suit' | 'coat' | 'jacket' | 'hoodie' | 'sweater' | 'tshirt' | 'blouse';

@@ -13,7 +13,6 @@
 // perturbée - information trafic, état des autres lignes et certificat de
 // retard. L'écran gauche, lui, ne montre que des publicités.
 
-import * as THREE from 'three';
 import { EMERGENCY_REASONS } from '../data/announcements';
 import { CONFIG } from '../data/config';
 import { CONSIST, E235, PLAYER_CAR, carZ } from '../data/e235';
@@ -24,7 +23,8 @@ import { gateNameFor } from '../data/stationInterior';
 import { layoutFor } from '../data/stationLayouts';
 import { STATIONS, TRANSFERS } from '../data/stations';
 import type { Phase } from '../store';
-import { JP_FONT, drawAdInto, rng } from '../textures/procedural';
+import { JP_FONT } from '../data/fonts';
+import { rng } from '../data/rng';
 // Toutes les cotes et toutes les couleurs de ce fichier sont relevées AU PIXEL
 // sur des captures de l'afficheur réel, ramenées à une dalle de 768 × 432. Le
 // format compte autant que le reste : les doubles écrans de l'E235 sont deux
@@ -78,21 +78,21 @@ const CAR_NO = CONSIST[PLAYER_CAR].no;
 // Grandes gares pour le « Bound for … & … ».
 const MAJOR_INDICES = [0, 4, 12, 16, 19, 24];
 
-export function makeScreen(w: number, h: number): {
+/**
+ * Ce dont la peinture a besoin, et rien de plus : un contexte 2D et les deux
+ * dimensions de la dalle.
+ *
+ * Elle attendait auparavant l'objet rendu par `makeScreen`, texture three
+ * comprise, alors qu'elle n'en lisait que `g`, `w` et `h`. Le type portait donc
+ * une dépendance au moteur de rendu que le code ne portait pas - et c'est cette
+ * signature-là, pas le dessin, qui empêchait d'afficher le vrai écran de bord
+ * ailleurs que dans la scène. La dalle texturée (three/screenSurface) reste un
+ * `ScreenSurface` valable : elle en a les trois champs.
+ */
+export interface ScreenSurface {
   g: CanvasRenderingContext2D;
-  texture: THREE.CanvasTexture;
   w: number;
   h: number;
-} {
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const g = canvas.getContext('2d');
-  if (!g) throw new Error('Canvas 2D indisponible');
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
-  return { g, texture, w, h };
 }
 
 // Heure au format de l'afficheur réel : pas de zéro devant l'heure (« 0:11 »).
@@ -153,11 +153,6 @@ export const AD_LOOP_COUNT = 120;
 export const END_AD_FIRST_SEED = 500;
 export const END_AD_COUNT = 60;
 
-export function drawLeftAd(s: ReturnType<typeof makeScreen>, seed: number): void {
-  const { g, w, h } = s;
-  drawAdInto(g, w, h, seed);
-  g.textAlign = 'left';
-}
 
 // --- Bandeau noir supérieur, commun aux deux vues de ligne : « Bound for »,
 // onglet Next, tuile de la prochaine gare, heure réelle et n° de voiture. ---
@@ -673,7 +668,7 @@ function drawWayChevron(g: CanvasRenderingContext2D, x: number, y: number, angle
 }
 
 export function drawRoute(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   phase: Phase,
   countdown: number,
@@ -979,7 +974,7 @@ function drawLoopBreak(g: CanvasRenderingContext2D, x: number, y: number, up: bo
 }
 
 export function drawLoopMap(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   phase: Phase,
   countdown: number,
@@ -1136,7 +1131,7 @@ export function drawLoopMap(
 // droite des autres écrans de courtoisie.
 
 export function drawPhoneManner(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   dir: LoopDirection,
@@ -1178,7 +1173,7 @@ export function drawPhoneManner(
 }
 
 export function drawBackpackManner(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   dir: LoopDirection,
@@ -1222,7 +1217,7 @@ export function drawBackpackManner(
 }
 
 export function drawHeadphoneManner(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   dir: LoopDirection,
@@ -1274,7 +1269,7 @@ export function drawHeadphoneManner(
 // de la gare en très grand avec la pastille JY. Le kanji et le romaji restent
 // en petit pour se raccorder à la signalétique du quai.
 export function drawNextStationLang(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   status: ScreenStatus,
@@ -1509,7 +1504,7 @@ function drawDoorGlyph(g: CanvasRenderingContext2D, mine: boolean, anim: number)
 }
 
 export function drawApproach(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   lang: 'jp' | 'en',
@@ -1750,7 +1745,7 @@ export function drawApproach(
 // --- État « correspondances à la prochaine gare » ---
 // Chaque ligne en correspondance porte son sigle officiel (cf. LINE_BADGES).
 export function drawTransfers(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   dir: LoopDirection,
@@ -1790,7 +1785,7 @@ export function drawTransfers(
 
 // --- Écrans de courtoisie : places prioritaires et embarquement ---
 export function drawPriorityNotice(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   dir: LoopDirection,
@@ -1838,7 +1833,7 @@ export function drawPriorityNotice(
 }
 
 export function drawSafetyNotice(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   dir: LoopDirection,
@@ -1883,7 +1878,7 @@ export function drawSafetyNotice(
 // touchée. C'est aussi ce qui permet de rendre cet état honnêtement : notre
 // rame roule à l'heure, l'avis concerne un réseau voisin et se conclut par la
 // mention « la Yamanote circule normalement », comme en vrai.
-interface TrafficNotice {
+export interface TrafficNotice {
   lineJp: string;
   lineEn: string;
   reasonJp: string;
@@ -1918,7 +1913,7 @@ export function trafficNotice(clockMin: number): TrafficNotice | null {
 }
 
 export function drawTrafficInfo(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   lang: ScreenLang,
@@ -1975,7 +1970,7 @@ export function drawTrafficInfo(
 // pastille d'alerte, motif de l'arrêt - c'est l'écran rouge du vrai afficheur
 // quand la rame elle-même est immobilisée.
 export function drawEmergencyInfo(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   lang: ScreenLang,
@@ -2030,7 +2025,7 @@ export function drawEmergencyInfo(
 // pendant que la rame se relance - c'est-à-dire au moment exact où l'écran
 // rallumé a quelque chose à rattraper.
 export function drawOutageInfo(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   lang: ScreenLang,
@@ -2078,7 +2073,7 @@ export function drawOutageInfo(
 // La liste ligne par ligne du vrai afficheur : pastille de couleur, nom, et
 // statut - la ligne perturbée en ambre, les autres « 平常運転 ».
 export function drawLineStatus(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   lang: ScreenLang,
@@ -2141,7 +2136,7 @@ export function drawLineStatus(
 // perturbée, sans nommer aucune compagnie : le certificat existe chez tous les
 // opérateurs de Tokyo, l'écran suit donc n'importe quelle perturbation.
 export function drawDelayCert(
-  s: ReturnType<typeof makeScreen>,
+  s: ScreenSurface,
   index: number,
   clock: string,
   lang: ScreenLang,

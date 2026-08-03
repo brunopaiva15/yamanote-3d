@@ -41,6 +41,21 @@ export default defineConfig({
       output: {
         codeSplitting: {
           groups: [
+            // React et son moteur de rendu DOM d'abord, avant toute autre
+            // règle. Sans cette ligne, ils étaient revendiqués par le morceau
+            // « three » - @react-three/fiber les importe - et l'entrée, qui a
+            // besoin de React pour afficher le menu, se retrouvait à dépendre
+            // statiquement d'un morceau de six cent soixante kilo-octets : le
+            // simple menu principal téléchargeait le rendu 3D qu'il est censé
+            // charger à la demande.
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler|react-reconciler|use-sync-external-store)[\\/]/ },
+            // zustand, pour la MÊME raison, et c'était la fuite la plus chère :
+            // @react-three/fiber s'en sert, le morceau « three » le revendiquait
+            // donc, et `store.ts` - que le menu importe pour savoir s'il a
+            // démarré - suffisait à faire précharger tout le rendu 3D dès la
+            // page d'accueil. Quatre cent soixante-dix kilo-octets pour un
+            // magasin d'état de deux.
+            { name: 'react', test: /node_modules[\\/]zustand[\\/]/ },
             // Le build WebGPU de three (et le système de nœuds qui va avec)
             // pèse à lui seul plus que tout le reste de three, et ne sert
             // qu'au mode « Extraordinaire ». Il est isolé AVANT la règle

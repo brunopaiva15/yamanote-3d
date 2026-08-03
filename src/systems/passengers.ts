@@ -9,7 +9,7 @@
 // détourne de loin en loin pour un geste bref, puis y revient. Ce module ne
 // fait qu'appliquer ces décisions au wagon.
 
-import * as THREE from 'three';
+import { Vec3, clamp } from './vec3';
 import { CONFIG } from '../data/config';
 import { targetPaxCounts, type PaxTargets } from '../data/occupancy';
 import { paxScale } from './perf';
@@ -72,10 +72,10 @@ export interface Pax {
    */
   identity: number;
   state: PaxState;
-  pos: THREE.Vector3;
+  pos: Vec3;
   yaw: number;
   targetYaw: number;
-  waypoints: THREE.Vector3[];
+  waypoints: Vec3[];
   wpi: number;
   seatSlot: number;
   standSlot: number;
@@ -163,7 +163,7 @@ function alignStrapStand(p: Pax): void {
   if (!p.holdStrap) return;
   const dir = Math.cos(p.targetYaw) >= 0 ? 1 : -1;
   const ringZ = STRAP_Z0 + Math.round((p.pos.z + dir * STRAP_AHEAD - STRAP_Z0) / STRAP_PITCH) * STRAP_PITCH;
-  p.pos.z = THREE.MathUtils.clamp(ringZ - dir * STRAP_AHEAD, -9.0, 9.0);
+  p.pos.z = clamp(ringZ - dir * STRAP_AHEAD, -9.0, 9.0);
 }
 
 function makePax(id: number): Pax {
@@ -173,7 +173,7 @@ function makePax(id: number): Pax {
     id,
     identity: id,
     state: 'hidden',
-    pos: new THREE.Vector3(0, 0, 0),
+    pos: new Vec3(0, 0, 0),
     yaw: 0,
     targetYaw: 0,
     waypoints: [],
@@ -400,15 +400,15 @@ function clearAnchor(p: Pax): void {
   p.interludeT = nextInterludeDelay(p.temper);
 }
 
-function startWalk(p: Pax, dest: THREE.Vector3, afterWalk: 'seated' | 'standing' | 'hidden'): void {
+function startWalk(p: Pax, dest: Vec3, afterWalk: 'seated' | 'standing' | 'hidden'): void {
   endPair(p);
   clearAnchor(p);
   p.state = 'boarding';
   p.afterWalk = afterWalk;
   const aisleX = Math.sign(dest.x) * 0.3 || 0.3;
   p.waypoints = [
-    new THREE.Vector3(Math.sign(p.pos.x) * 0.3 || 0.3, 0, p.pos.z),
-    new THREE.Vector3(aisleX, 0, dest.z),
+    new Vec3(Math.sign(p.pos.x) * 0.3 || 0.3, 0, p.pos.z),
+    new Vec3(aisleX, 0, dest.z),
     dest.clone(),
   ];
   p.wpi = 0;
@@ -461,9 +461,9 @@ function beginAlight(p: Pax, side: 1 | -1): void {
   p.afterWalk = 'hidden';
   p.exitDoorZ = doorZ;
   p.waypoints = [
-    new THREE.Vector3(side * 0.3, 0, p.pos.z),
-    new THREE.Vector3(side * 0.95, 0, doorZ),
-    new THREE.Vector3(side * DOOR_HANDOVER_X, 0, doorZ),
+    new Vec3(side * 0.3, 0, p.pos.z),
+    new Vec3(side * 0.95, 0, doorZ),
+    new Vec3(side * DOOR_HANDOVER_X, 0, doorZ),
   ];
   p.wpi = 0;
 }
@@ -477,7 +477,7 @@ interface PendingBoard {
   paxId: number;
   side: 1 | -1;
   doorZ: number;
-  dest: THREE.Vector3;
+  dest: Vec3;
   /** Secondes restantes avant démarrage forcé. */
   fuse: number;
 }
@@ -517,8 +517,8 @@ function startBoardWalk(b: PendingBoard, crowdId = -1): void {
   p.targetYaw = p.yaw;
   p.bob = 0;
   p.waypoints = [
-    new THREE.Vector3(b.side * 0.95, 0, b.doorZ),
-    new THREE.Vector3(Math.sign(b.dest.x) * 0.3 || 0.3, 0, b.dest.z),
+    new Vec3(b.side * 0.95, 0, b.doorZ),
+    new Vec3(Math.sign(b.dest.x) * 0.3 || 0.3, 0, b.dest.z),
     b.dest.clone(),
   ];
   p.wpi = 0;
@@ -526,7 +526,7 @@ function startBoardWalk(b: PendingBoard, crowdId = -1): void {
 
 function beginBoard(p: Pax, side: 1 | -1, afterWalk: 'seated' | 'standing'): boolean {
   const doorZ = CONFIG.doorCenters[Math.floor(Math.random() * CONFIG.doorCenters.length)];
-  let dest: THREE.Vector3;
+  let dest: Vec3;
   if (afterWalk === 'seated') {
     const seat = findFreeSeat();
     if (seat < 0) return false;
@@ -534,7 +534,7 @@ function beginBoard(p: Pax, side: 1 | -1, afterWalk: 'seated' | 'standing'): boo
     seatOccupant[seat] = p.id;
     p.afterWalk = 'seated';
     const s = SEAT_SLOTS[seat];
-    dest = new THREE.Vector3(s.x, 0, s.z);
+    dest = new Vec3(s.x, 0, s.z);
   } else {
     const stand = findFreeStand();
     if (stand < 0) return false;
@@ -542,7 +542,7 @@ function beginBoard(p: Pax, side: 1 | -1, afterWalk: 'seated' | 'standing'): boo
     standOccupant[stand] = p.id;
     p.afterWalk = 'standing';
     const s = STAND_SLOTS[stand];
-    dest = new THREE.Vector3(s.x, 0, s.z);
+    dest = new Vec3(s.x, 0, s.z);
   }
   // Le PNJ reste invisible tant qu'il n'est pas au seuil : sa place est
   // seulement réservée.
@@ -735,9 +735,9 @@ export function releasePaxFromDoorway(): void {
   const s = STAND_SLOTS[stand];
   p.state = 'boarding';
   p.waypoints = [
-    new THREE.Vector3(Math.sign(p.pos.x) * 0.95, 0, p.pos.z),
-    new THREE.Vector3(Math.sign(s.x) * 0.3 || 0.3, 0, s.z),
-    new THREE.Vector3(s.x, 0, s.z),
+    new Vec3(Math.sign(p.pos.x) * 0.95, 0, p.pos.z),
+    new Vec3(Math.sign(s.x) * 0.3 || 0.3, 0, s.z),
+    new Vec3(s.x, 0, s.z),
   ];
   p.wpi = 0;
 }
@@ -852,7 +852,7 @@ function reactToFall(fallen: Pax, hard: boolean): void {
     let d = world - other.yaw;
     while (d > Math.PI) d -= Math.PI * 2;
     while (d < -Math.PI) d += Math.PI * 2;
-    other.lookYawTarget = THREE.MathUtils.clamp(d, -1.15, 1.15);
+    other.lookYawTarget = clamp(d, -1.15, 1.15);
     // Le premier témoin peut commenter la scène s'il est près du joueur.
     if (n === 0) pushPaxEvent('car', other.id, 'fallNearby');
     if (++n >= 4) break;
@@ -1073,7 +1073,7 @@ function maybeRelocate(p: Pax): boolean {
         releaseSlots(p);
         p.seatSlot = seat;
         seatOccupant[seat] = p.id;
-        startWalk(p, new THREE.Vector3(s.x, 0, s.z), 'seated');
+        startWalk(p, new Vec3(s.x, 0, s.z), 'seated');
         return true;
       }
     }
@@ -1086,7 +1086,7 @@ function maybeRelocate(p: Pax): boolean {
         releaseSlots(p);
         p.standSlot = stand;
         standOccupant[stand] = p.id;
-        startWalk(p, new THREE.Vector3(s.x, 0, s.z), 'standing');
+        startWalk(p, new Vec3(s.x, 0, s.z), 'standing');
         return true;
       }
     }
@@ -1094,7 +1094,7 @@ function maybeRelocate(p: Pax): boolean {
   return false;
 }
 
-const tmp = new THREE.Vector3();
+const tmp = new Vec3();
 
 /** Seuil de poussée : au-delà, le voyageur debout bascule. */
 const PUSH_FALL = 0.9;
@@ -1158,8 +1158,8 @@ function resolvePlayerPush(dt: number): void {
       p.pos.z += nz * push;
       if (p.standSlot >= 0) {
         const s = STAND_SLOTS[p.standSlot];
-        p.pos.x = THREE.MathUtils.clamp(p.pos.x, s.x - 0.35, s.x + 0.35);
-        p.pos.z = THREE.MathUtils.clamp(p.pos.z, s.z - 0.45, s.z + 0.45);
+        p.pos.x = clamp(p.pos.x, s.x - 0.35, s.x + 0.35);
+        p.pos.z = clamp(p.pos.z, s.z - 0.45, s.z + 0.45);
         alignStrapStand(p);
       }
       // Accumulation : plus on insiste en marchant dedans, plus ça monte.
