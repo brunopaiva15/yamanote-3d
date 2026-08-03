@@ -24,7 +24,6 @@ import {
   drawHeadphoneManner,
   drawSecurityNotice,
   drawLoopMap,
-  drawNextStationLang,
   drawOutageInfo,
   drawPhoneManner,
   drawPriorityNotice,
@@ -52,7 +51,6 @@ export type LineScreenState =
   | 'zoomJP' | 'zoomEN'
   | 'loopJP' | 'loopEN'
   | 'approachJP' | 'approachEN'
-  | 'nextZH' | 'nextKO'
   | 'transfers' | 'priority' | 'manner' | 'safety'
   | 'trafficJP' | 'trafficEN'
   | 'securityJP' | 'securityEN'
@@ -127,8 +125,8 @@ export function lineScreenFrame(): LineScreenFrame {
     state =
       runtime.phaseT >= dwellDuration(index) - CLOSE_ANNOUNCE_LEAD
         ? 'approachEN'
-        : (['loopJP', 'loopEN', 'nextZH', 'nextKO', 'zoomJP', 'zoomEN', 'approachEN'][
-            tick % 7
+        : (['loopJP', 'loopEN', 'zoomJP', 'zoomEN', 'approachEN'][
+            tick % 5
           ] as LineScreenState);
   } else {
     status = 'next';
@@ -142,13 +140,13 @@ export function lineScreenFrame(): LineScreenFrame {
     // attendre un tour complet pour la moitié de l'avis.
     const rotation: LineScreenState[] = notice
       ? [
-          'loopJP', 'zoomJP', 'nextZH', 'nextKO', 'transfers',
+          'loopJP', 'zoomJP', 'transfers',
           'trafficJP', 'trafficEN',
           'loopEN', 'zoomEN', 'securityJP', 'securityEN',
           'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
         ]
       : [
-          'loopJP', 'zoomJP', 'nextZH', 'nextKO', 'transfers',
+          'loopJP', 'zoomJP', 'transfers',
           'loopEN', 'zoomEN', 'securityJP', 'securityEN',
           'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
         ];
@@ -227,12 +225,6 @@ export function paintLineScreen(
       [drawPhoneManner, drawBackpackManner, drawHeadphoneManner][f.mannerVariant](
         s, index, clock, dir,
       );
-      break;
-    case 'nextZH':
-      drawNextStationLang(s, index, clock, status, 'zh', dir);
-      break;
-    case 'nextKO':
-      drawNextStationLang(s, index, clock, status, 'ko', dir);
       break;
     // Les quatre vues « ligne perturbée » ne s'affichent que s'il y a
     // vraiment une perturbation ; sinon la rotation retombe sur le plan de la

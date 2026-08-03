@@ -159,15 +159,17 @@ export const END_AD_COUNT = 60;
 // --- Bandeau noir supérieur, commun aux deux vues de ligne : « Bound for »,
 // onglet Next, tuile de la prochaine gare, heure réelle et n° de voiture. ---
 export type ScreenStatus = 'now' | 'next' | 'soon';
-// Cycle quadrilingue du vrai afficheur : japonais → anglais → chinois
-// simplifié → coréen. Les plans de ligne n'existent qu'en jp/en (comme en
-// vrai) ; zh et ko ont leur écran « prochain arrêt » dédié.
-export type ScreenLang = 'jp' | 'en' | 'zh' | 'ko';
+// Le cycle du vrai afficheur alterne DEUX langues, japonais et anglais, et
+// c'est tout : chaque écran a sa version 英語版, il n'y a pas d'écran chinois
+// ni coréen. Les quatre langues ne se retrouvent ensemble que sur l'avis de
+// perturbation, qui les porte d'un seul tenant parce qu'un voyageur bloqué
+// n'attend pas son tour.
+export type ScreenLang = 'jp' | 'en';
 
 const STATUS_LABEL: Record<ScreenStatus, Record<ScreenLang, string>> = {
-  now: { jp: 'ただいま', en: 'Now stopping at', zh: '当前车站', ko: '이번 역' },
-  next: { jp: 'つぎは', en: 'Next', zh: '下一站', ko: '다음은' },
-  soon: { jp: 'まもなく', en: 'Arriving at', zh: '即将到达', ko: '잠시 후' },
+  now: { jp: 'ただいま', en: 'Now stopping at' },
+  next: { jp: 'つぎは', en: 'Next' },
+  soon: { jp: 'まもなく', en: 'Arriving at' },
 };
 
 // Nom de gare dans la langue du cycle d'affichage.
@@ -188,8 +190,7 @@ const LCD_ROMAJI: Record<string, string> = { JY01: 'Tōkyō' };
 
 function stationName(st: (typeof STATIONS)[number], lang: ScreenLang, status: ScreenStatus = 'now'): string {
   if (lang === 'jp') return status === 'next' ? st.kana : st.kanji;
-  if (lang === 'en') return LCD_ROMAJI[st.jy] ?? st.romaji;
-  return lang === 'zh' ? st.zh : st.ko;
+  return LCD_ROMAJI[st.jy] ?? st.romaji;
 }
 
 // Bandeau noir supérieur, commun à toutes les vues. De gauche à droite :
@@ -277,8 +278,7 @@ function drawHeader(
     g.fillText(l1, 6, 92);
     g.fillText(l2, 6, 121);
   } else {
-    // jp/zh/ko partagent la mise en page « noms + suffixe de direction ».
-    const suffix = lang === 'jp' ? '方面' : lang === 'zh' ? '方向' : '방면';
+    const suffix = '方面';
     g.textAlign = 'right';
     fitText(g, `${majors[0] ?? ''}・${majors[1] ?? ''}`, 163, 36);
     g.fillText(`${majors[0] ?? ''}・${majors[1] ?? ''}`, 171, 87);
@@ -323,11 +323,7 @@ function drawHeader(
   g.fillStyle = CLOCK_COLOR;
   g.font = `bold 32px ${JP_FONT}`;
   g.fillText(clock, 657, 29);
-  const carLabel =
-    lang === 'jp' ? '号車'
-    : lang === 'zh' ? '号车'
-    : lang === 'ko' ? '호차'
-    : 'Car No.';
+  const carLabel = lang === 'jp' ? '号車' : 'Car No.';
   g.fillStyle = CAR_NUM_COLOR;
   g.font = `italic bold 38px ${JP_FONT}`;
   const carNumW = g.measureText(String(CAR_NO)).width;
@@ -810,8 +806,13 @@ export function drawRoute(
       drawHerePentagon(g, X(ZOOM_SLOTS[0].cx + 3.5), ZOOM_SLOTS[0].cy + 2.5, 0, 1, mir);
     } else {
       // Sur la bande, juste EN ARRIÈRE de la gare visée, pointé vers elle.
+      //
+      // Le miroir n'ajoute pas un demi-tour, il NIE l'angle : retourner x
+      // change θ en −θ, pas en π−θ. Avec π−θ le chevron pointait pile à
+      // l'opposé du sens de marche - vers l'arrière de la rame, sur une bande
+      // qui, elle, partait bien du bon côté.
       const a = Math.atan2(ZOOM_SLOTS[0].cy - ZOOM_SLOTS[1].cy, ZOOM_SLOTS[0].cx - ZOOM_SLOTS[1].cx);
-      const ang = mir ? Math.PI - a : a + Math.PI;
+      const ang = mir ? -a : a + Math.PI;
       drawWayChevron(g, X(ZOOM_SLOTS[0].cx + 20), ZOOM_SLOTS[0].cy + 27, ang, 1.25);
     }
   }
@@ -1370,55 +1371,6 @@ export function drawHeadphoneManner(
   g.fillText('leak from your headphones.', w * 0.44, h * 0.85);
 }
 
-// --- Écran « prochain arrêt » chinois / coréen ---
-// Sur la vraie rame, les passages en chinois simplifié et en coréen du cycle
-// quadrilingue n'affichent pas le plan de ligne : un écran dédié montre le nom
-// de la gare en très grand avec la pastille JY. Le kanji et le romaji restent
-// en petit pour se raccorder à la signalétique du quai.
-export function drawNextStationLang(
-  s: ScreenSurface,
-  index: number,
-  clock: string,
-  status: ScreenStatus,
-  lang: 'zh' | 'ko',
-  dir: LoopDirection,
-): void {
-  const { g, w, h } = s;
-  const next = STATIONS[index];
-  g.fillStyle = '#eceae5';
-  g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, status, lang, dir);
-
-  // Pastille JY, à gauche du nom.
-  const bx = 128;
-  const by = HEADER_H + (h - HEADER_H) * 0.46;
-  g.beginPath();
-  g.arc(bx, by, 56, 0, Math.PI * 2);
-  g.fillStyle = YAMANOTE_GREEN;
-  g.fill();
-  g.lineWidth = 7;
-  g.strokeStyle = '#ffffff';
-  g.stroke();
-  g.fillStyle = '#ffffff';
-  g.textAlign = 'center';
-  g.font = `bold 24px ${JP_FONT}`;
-  g.fillText('JY', bx, by - 12);
-  g.font = `bold 40px ${JP_FONT}`;
-  g.fillText(next.jy.slice(2), bx, by + 28);
-
-  // Nom géant dans la langue du cycle.
-  const name = lang === 'zh' ? next.zh : next.ko;
-  g.fillStyle = '#111214';
-  const nx = (w + 190) / 2;
-  fitText(g, name, w - 260, 88);
-  g.fillText(name, nx, by + 28);
-
-  // Rappel kanji / romaji, en petit sous le nom.
-  g.fillStyle = '#5c646c';
-  g.font = `22px ${JP_FONT}`;
-  g.fillText(`${next.kanji}　${next.romaji}`, nx, h - 34);
-  g.textAlign = 'left';
-}
 
 
 // --- Écran d'approche (まもなく / Arriving at) : plan du quai --------------
