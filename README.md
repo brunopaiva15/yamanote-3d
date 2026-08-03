@@ -84,8 +84,12 @@ court que pour qui l'attend debout sur le quai - ce qui est déjà vrai de
 l'expérience complète tant qu'on reste à sa place.
 
 Un bouton discret, au bout de la réglette de porte - jamais sur la dalle, qui
-ne doit rien porter -, met **la baie seule en plein écran** : pas la page, la
-dalle et sa réglette, sur du noir, comme un écran de gare. Elle y est
+ne doit rien porter -, met **l'afficheur en plein écran** : pas la page, la dalle
+seule, bord à bord. La réglette s'efface - ce qu'on est venu voir est
+l'écran, et une bande d'état en travers du bas lui prendrait de la hauteur
+pour redire ce qu'il montre déjà. Sur une dalle 16:9 il ne reste alors pas un
+pixel de noir ; sur les autres formats, le liseré est le minimum qu'un 16:9 non
+déformé puisse laisser. Elle y est
 repeinte à la résolution réelle de l'écran plutôt qu'agrandie : la peinture
 travaille toujours dans sa grille de 768 × 432, où toutes ses cotes ont été
 relevées, mais le canevas porte autant de pixels que l'écran en affiche (voir
