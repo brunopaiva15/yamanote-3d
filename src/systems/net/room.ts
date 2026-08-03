@@ -15,7 +15,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { isDev, netClient, netEnabled } from './config';
-import { HOST_GRACE_MS, electHostWithLiveness, type Member } from './hostElection';
+import { electHostWithLiveness, gateHost, type HostGate, type Member } from './hostElection';
 import { clearPeers, lastSeenMap, rosterSnapshot, syncRoster } from './peers';
 import { PROTOCOL_VERSION, ROOM_CAPACITY, validPresence, type PresencePayload } from './protocol';
 import { makeRoomCode, normalizeRoomCode, roomChannel } from './roomCode';
@@ -181,7 +181,7 @@ function applyRoomToUrl(code: string | null): void {
 let channel: RealtimeChannel | null = null;
 let joinedAt = 0;
 /** Élection retenue, et depuis quand : voir HOST_GRACE_MS. */
-let pendingHost: { id: string | null; since: number } | null = null;
+let pendingHost: HostGate | null = null;
 
 /** Ce que les autres modules du salon branchent sur le canal (tchat, monde). */
 type Handler = (event: string, payload: unknown) => void;
@@ -292,19 +292,42 @@ function refreshRoster(now: number): void {
   // changerait de main deux fois par seconde, et chaque bascule coûte un
   // battement hors cadence.
   const actuel = useRoom.getState().hostId;
-  if (elu !== actuel) {
-    if (!pendingHost || pendingHost.id !== elu) {
-      pendingHost = { id: elu, since: now };
-    }
-    if (now - pendingHost.since < HOST_GRACE_MS) {
-      useRoom.setState({ roster: rosterSnapshot() });
-      return;
-    }
+  const porte = gateHost(elu, actuel, pendingHost, now);
+  pendingHost = porte.pending;
+  if (!porte.settled) {
+    // On DIFFÈRE, on n'abandonne pas : c'est la minuterie ci-dessous qui
+    // reprendra la décision. Sans elle, une élection différée ne serait jamais
+    // reprise dans un salon où plus personne n'arrive ni ne part - et c'est
+    // très exactement le bogue qui laissait deux joueurs rouler dans deux
+    // mondes séparés en se voyant l'un l'autre.
+    useRoom.setState({ roster: rosterSnapshot() });
+    return;
   }
-  pendingHost = null;
 
   setNetRole(elu !== null && elu === self ? 'host' : 'follower');
   useRoom.setState({ roster: rosterSnapshot(), hostId: elu });
+}
+
+/**
+ * Période de reprise de l'élection (ms).
+ *
+ * L'élection ne peut pas se contenter des événements de présence : ils ne se
+ * produisent qu'aux arrivées et aux départs, alors que deux des règles qui la
+ * gouvernent dépendent du TEMPS - le délai de grâce, et le silence au bout
+ * duquel on considère un hôte muet. Une seconde est bien assez fine pour les
+ * deux, et assez lâche pour ne rien coûter.
+ */
+const ELECTION_TICK_MS = 1_000;
+let electionTimer = 0;
+
+function startElectionTimer(): void {
+  if (electionTimer) return;
+  electionTimer = window.setInterval(() => refreshRoster(Date.now()), ELECTION_TICK_MS);
+}
+
+function stopElectionTimer(): void {
+  if (electionTimer) window.clearInterval(electionTimer);
+  electionTimer = 0;
 }
 
 // --- Entrer, sortir ---------------------------------------------------------
@@ -377,6 +400,7 @@ async function open(code: string, name: string): Promise<boolean> {
         const reprise = useRoom.getState().status === 'joined';
         useRoom.setState({ status: 'joined', error: null });
         applyRoomToUrl(code);
+        startElectionTimer();
         // Sur une REPRISE, on ne résout pas la promesse d'entrée (elle l'est
         // depuis longtemps) : on prévient ceux qui écoutent, à charge pour eux
         // de redemander l'état du monde.
@@ -437,6 +461,7 @@ export async function joinRoom(raw: string, name: string): Promise<string | null
 export function leaveRoom(error: RoomError | null = null): void {
   const ch = channel;
   channel = null;
+  stopElectionTimer();
   pendingHost = null;
   selfAttached = true;
   if (ch) {

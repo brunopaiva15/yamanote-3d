@@ -79,6 +79,45 @@ export const HOST_GRACE_MS = 1_200;
 export const HOST_SILENCE_MS = 6_000;
 
 /**
+ * L'élection retenue, et depuis quand : l'état du délai de grâce.
+ */
+export interface HostGate {
+  id: string | null;
+  since: number;
+}
+
+/**
+ * Faut-il ENTÉRINER cette élection, ou attendre encore ?
+ *
+ * Sorti en fonction pure après un bogue qui a coûté cher à diagnostiquer : le
+ * délai de grâce était appliqué directement dans le code du canal, avec un
+ * `return` anticipé quand il fallait attendre. Or ce code ne tournait QUE sur un
+ * événement de présence - une arrivée, un départ. À deux dans un salon, plus
+ * personne n'arrive ni ne part : la décision différée n'était jamais reprise, le
+ * rôle restait « solo » pour toujours, aucun hôte n'était élu, aucun battement
+ * n'était publié, et les deux joueurs roulaient dans deux mondes séparés en
+ * voyant l'avatar l'un de l'autre.
+ *
+ * Le même trou rendait la détection d'hôte muet (`HOST_SILENCE_MS`) purement
+ * décorative : elle ne pouvait se déclencher qu'à l'occasion d'un événement de
+ * présence, c'est-à-dire jamais quand elle sert.
+ *
+ * Écrit ici, le report devient une valeur qu'on peut éprouver - et l'appelant
+ * doit forcément se demander qui la reprendra.
+ */
+export function gateHost(
+  elu: string | null,
+  actuel: string | null,
+  pending: HostGate | null,
+  now: number,
+): { settled: boolean; pending: HostGate | null } {
+  if (elu === actuel) return { settled: true, pending: null };
+  const suite = pending && pending.id === elu ? pending : { id: elu, since: now };
+  if (now - suite.since < HOST_GRACE_MS) return { settled: false, pending: suite };
+  return { settled: true, pending: null };
+}
+
+/**
  * Écarte les pairs muets, puis élit.
  *
  * `lastSeen` porte l'instant du dernier message reçu de chaque pair ; un pair

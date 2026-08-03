@@ -18,9 +18,8 @@ import { register } from 'node:module';
 
 register('./fixtures/ts-resolve.mjs', import.meta.url);
 
-const { HOST_SILENCE_MS, electHost, electHostWithLiveness } = await import(
-  '../src/systems/net/hostElection.ts'
-);
+const { HOST_GRACE_MS, HOST_SILENCE_MS, electHost, electHostWithLiveness, gateHost } =
+  await import('../src/systems/net/hostElection.ts');
 
 type Member = Parameters<typeof electHost>[0][number];
 
@@ -124,4 +123,85 @@ test('si tout le monde se tait, on garde un hôte plutôt qu’aucun', () => {
     ['b', 0],
   ]);
   assert.equal(electHostWithLiveness(salon, vus, 999_999), 'a');
+});
+
+
+// --- Le délai de grâce, et le piège qu'il cachait --------------------------
+//
+// Ces tests-là sont nés d'un vrai bogue, rapporté depuis un vrai salon : deux
+// joueurs roulaient dans deux mondes séparés - l'un à Hamamatsuchō, l'autre à
+// Kanda - tout en voyant l'avatar l'un de l'autre. Aucun hôte n'avait jamais
+// été élu.
+//
+// La cause n'était pas dans la règle d'élection, qui était juste, mais dans le
+// REPORT : le délai de grâce différait la décision, et rien ne la reprenait.
+// Le code qui l'appliquait ne tournait que sur un événement de présence - une
+// arrivée, un départ -, et à deux dans un salon, plus personne n'arrive ni ne
+// part. Le rôle restait « solo » pour toujours.
+//
+// D'où la forme choisie : un report est désormais une VALEUR qu'on rend, et
+// qu'on peut donc éprouver. Un report qu'on ne peut pas voir est un report que
+// personne ne pense à reprendre.
+
+test('une élection inchangée est entérinée tout de suite', () => {
+  const g = gateHost('a', 'a', null, 1_000);
+  assert.equal(g.settled, true);
+  assert.equal(g.pending, null);
+});
+
+test('un changement d’hôte est d’abord DIFFÉRÉ, pas appliqué', () => {
+  const g = gateHost('b', 'a', null, 1_000);
+  assert.equal(g.settled, false);
+  assert.ok(g.pending, 'le report doit être rendu, sinon personne ne le reprendra');
+  assert.equal(g.pending?.id, 'b');
+});
+
+test('le même changement, repris plus tard, finit par passer', () => {
+  // C'EST le test qui manquait. Sans reprise, un report ne se résout jamais.
+  const premier = gateHost('b', 'a', null, 1_000);
+  assert.equal(premier.settled, false);
+  const apres = gateHost('b', 'a', premier.pending, 1_000 + HOST_GRACE_MS + 1);
+  assert.equal(apres.settled, true, 'le report ne se résout jamais : le salon reste sans hôte');
+  assert.equal(apres.pending, null);
+});
+
+test('le compte à rebours ne se remet pas à zéro à chaque reprise', () => {
+  // Sinon, reprendre l'élection toutes les secondes la différerait à l'infini :
+  // le remède serait devenu la maladie.
+  let porte = gateHost('b', 'a', null, 0);
+  for (let t = 200; t < HOST_GRACE_MS; t += 200) {
+    porte = gateHost('b', 'a', porte.pending, t);
+    assert.equal(porte.settled, false, `entériné trop tôt, à ${t} ms`);
+  }
+  porte = gateHost('b', 'a', porte.pending, HOST_GRACE_MS + 1);
+  assert.equal(porte.settled, true);
+});
+
+test('un candidat qui change relance le compte à rebours', () => {
+  // Là, en revanche, il DOIT repartir : l'autorité vient de changer d'avis, et
+  // c'est exactement ce que le délai est censé absorber.
+  const premier = gateHost('b', 'a', null, 0);
+  const autre = gateHost('c', 'a', premier.pending, 500);
+  assert.equal(autre.settled, false);
+  assert.equal(autre.pending?.id, 'c');
+  assert.equal(autre.pending?.since, 500, 'le compte à rebours devrait repartir de 500');
+});
+
+test('revenir au candidat courant annule le report', () => {
+  // L'hôte part, puis revient avant la fin du délai : il n'y a plus rien à
+  // trancher, et il ne faut surtout pas attendre pour rien.
+  const differe = gateHost('b', 'a', null, 0);
+  const retour = gateHost('a', 'a', differe.pending, 300);
+  assert.equal(retour.settled, true);
+  assert.equal(retour.pending, null);
+});
+
+test('passer d’aucun hôte à un hôte est différé comme le reste', () => {
+  // C'est le cas du tout premier salon, et celui par lequel le bogue arrivait :
+  // `actuel` vaut null, `elu` vaut quelqu'un, donc report - et sans reprise,
+  // personne ne menait jamais la rame.
+  const g = gateHost('a', null, null, 0);
+  assert.equal(g.settled, false);
+  const apres = gateHost('a', null, g.pending, HOST_GRACE_MS + 1);
+  assert.equal(apres.settled, true);
 });

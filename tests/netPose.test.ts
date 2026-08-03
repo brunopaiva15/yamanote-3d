@@ -179,6 +179,39 @@ test('sur un autre quai, on ne le dessine pas', () => {
   assert.equal(peerWorldPose('toi', LIRE_A), null);
 });
 
+test('un pair DÉTACHÉ dans un wagon n’est pas dans le nôtre', () => {
+  // Rapporté depuis un vrai salon : « je vois mon ami qui n'est même pas à la
+  // même station que moi ». La cause première était l'élection d'hôte, mais le
+  // même symptôme s'obtient sans le moindre défaut de synchronisation : celui
+  // qui a laissé la rame partir sans lui reprend la suivante, et sa pose
+  // redevient alors du repère wagon. Sans ce garde, il se rassoit dans notre
+  // rame alors qu'il roule vingt-cinq gares plus loin.
+  runtime.trainZ = 0;
+  voisin({ frame: 0, x: 0.4, z: -2 });
+  assert.ok(peerWorldPose('toi', LIRE_A), 'attaché, il est bien avec nous');
+  syncRoster(
+    [{ id: 'toi', name: 'Toi', avatar: 1, mode: 'full', attached: false, joinedAt: 1 }],
+    'moi',
+    200,
+  );
+  assert.equal(peerWorldPose('toi', LIRE_A), null);
+});
+
+test('le détachement ne fait pas disparaître qui est sur NOTRE quai', () => {
+  // Le garde ne porte que sur le repère wagon : quelqu'un de détaché mais
+  // planté sur le quai qu'on longe est bel et bien là, et doit se voir. C'est
+  // même le cas le plus courant du détachement - il vient de rater la rame.
+  runtime.trainZ = 0;
+  runtime.platformSlide = 0;
+  voisin({ frame: 1, x: 3, z: 5 }, 0);
+  syncRoster(
+    [{ id: 'toi', name: 'Toi', avatar: 1, mode: 'full', attached: false, joinedAt: 1 }],
+    'moi',
+    200,
+  );
+  assert.ok(peerWorldPose('toi', LIRE_A), 'sur notre quai, détaché ou non, il est là');
+});
+
 test('un pair inconnu ne se dessine pas', () => {
   clearPeers();
   assert.equal(peerWorldPose('fantome', LIRE_A), null);

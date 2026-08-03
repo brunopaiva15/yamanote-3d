@@ -1358,19 +1358,47 @@ body,
   animation: pax-bubble-in 180ms ease-out;
 }
 
-/* Un message de joueur : même bulle, liseré teinté. La forme ne change pas -
-   une parole reste une parole, et distinguer les deux par la géométrie ferait
-   de l'une un élément d'interface posé sur le monde. */
-.pax-bubble-remote {
-  border-color: rgba(158, 196, 111, 0.5);
+/* --- L'étiquette d'un camarade de salon ----------------------------------
+ *
+ * Le NOM d'abord, et en permanence : c'est ce qui manquait le plus. Sans lui,
+ * un salon de plusieurs personnes donne une rame pleine d'inconnus dont on ne
+ * sait pas lesquels sont ses amis - et le tchat devient illisible, puisqu'on ne
+ * peut relier une réplique à personne.
+ *
+ * La réplique vient dessous quand il y en a une, dans le même bloc : deux
+ * éléments flottants au-dessus d'une même tête se recouvriraient dès que la
+ * caméra bouge, et le nom finirait par cacher ce qui vient d'être dit.
+ */
+.peer-tag {
+  width: max-content;
+  max-width: min(280px, 52vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
 }
 
-.pax-bubble-who {
-  display: block;
-  margin-bottom: 2px;
+.peer-name {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(10, 14, 18, 0.72);
   color: #9ec46f;
   font-size: 11.5px;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.peer-said {
+  padding: 7px 12px;
+  border-radius: 12px;
+  background: rgba(16, 21, 26, 0.86);
+  border: 1px solid rgba(158, 196, 111, 0.5);
+  color: #f4f6f4;
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 /* Réplique non sollicitée (on l'a bousculé, il réagit) : plus discrète, en

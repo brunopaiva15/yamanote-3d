@@ -177,6 +177,27 @@ export function peerWorldPose(id: string, now: number): PeerWorldPose | null {
   const s = useStore.getState();
   if (p.frame === 1 && p.station !== s.platformIndex) return null;
 
+  // Détaché, mais dans un wagon : c'est le SIEN, pas le nôtre.
+  //
+  // Le salon ne partage qu'une rame ; celui qui l'a laissée partir sans lui
+  // continue de jouer dans un monde qui n'est plus le nôtre. Sur le quai, le
+  // filtre ci-dessus suffit - il est à une autre gare, donc pas rendu. Une fois
+  // qu'il remonte à bord, en revanche, sa pose redevient du repère wagon, et
+  // sans ce garde on le dessinerait assis dans NOTRE rame alors qu'il roule
+  // vingt-cinq gares plus loin.
+  //
+  // C'est très exactement ce qu'un joueur a rapporté : « je vois mon ami qui
+  // n'est même pas à la même station que moi ». La cause première était
+  // ailleurs - aucun hôte n'était élu, voir `gateHost` - mais le symptôme
+  // pouvait aussi bien venir d'un détachement légitime, et rien ne l'arrêtait.
+  //
+  // On ne compare surtout PAS les gares dans le repère wagon : les indices de
+  // station n'avancent pas à la même milliseconde chez deux clients pourtant
+  // parfaitement synchronisés, et un tel filtre ferait clignoter tout le monde
+  // à chaque arrivée en gare. `attached` vient de la présence et ne change
+  // qu'aux montées et aux descentes.
+  if (p.frame === 0 && !pair.attached) return null;
+
   let x: number;
   let z: number;
   if (p.frame === 0) {
