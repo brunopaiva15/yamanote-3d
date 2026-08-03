@@ -152,6 +152,36 @@ export interface WeatherSlotView {
   tempC: number;
 }
 
+/**
+ * Ombre douce à la japonaise : très courte, très diffuse, jamais noire.
+ * Sur ces habillages tout est posé à un ou deux pixels au-dessus du fond -
+ * assez pour décoller, jamais assez pour qu'on voie l'ombre elle-même.
+ */
+function wxShadow(g: CanvasRenderingContext2D, h: number, strength = 1): void {
+  g.shadowColor = `rgba(16,58,105,${0.26 * strength})`;
+  g.shadowBlur = h * 0.02 * strength;
+  g.shadowOffsetY = h * 0.008 * strength;
+}
+
+function wxNoShadow(g: CanvasRenderingContext2D): void {
+  g.shadowColor = 'transparent';
+  g.shadowBlur = 0;
+  g.shadowOffsetY = 0;
+}
+
+/**
+ * Titre cerné de blanc : c'est ce liseré, et non une ombre portée, qui détache
+ * le texte foncé d'un ciel clair sans l'alourdir. Le tracé passe AVANT le
+ * remplissage, sinon le liseré ronge la lettre de l'intérieur.
+ */
+function wxHaloText(g: CanvasRenderingContext2D, text: string, x: number, y: number, px: number): void {
+  g.strokeStyle = 'rgba(255,255,255,0.92)';
+  g.lineWidth = px * 0.16;
+  g.lineJoin = 'round';
+  g.strokeText(text, x, y);
+  g.fillText(text, x, y);
+}
+
 export function drawWeatherPanel(
   s: ScreenSurface,
   slots: WeatherSlotView[],
@@ -161,126 +191,197 @@ export function drawWeatherPanel(
   const { g, w, h } = s;
   const sky = g.createLinearGradient(0, 0, 0, h);
   sky.addColorStop(0, WX_SKY_TOP);
+  sky.addColorStop(0.62, '#c8e8fa');
   sky.addColorStop(1, WX_SKY_BOT);
   g.fillStyle = sky;
   g.fillRect(0, 0, w, h);
-  g.fillStyle = 'rgba(255,255,255,0.55)';
-  cloudPuff(g, w * 0.17, h * 0.12, h * 0.09);
-  cloudPuff(g, w * 0.86, h * 0.2, h * 0.07);
+  // Quelques nuages très pâles : ils donnent la profondeur du fond sans jamais
+  // venir concurrencer les pictogrammes, qui sont, eux, de l'information.
+  g.fillStyle = 'rgba(255,255,255,0.62)';
+  cloudPuff(g, w * 0.2, h * 0.1, h * 0.1);
+  cloudPuff(g, w * 0.9, h * 0.16, h * 0.075);
+  g.fillStyle = 'rgba(255,255,255,0.4)';
+  cloudPuff(g, w * 0.62, h * 0.06, h * 0.06);
+  cloudPuff(g, w * 0.06, h * 0.72, h * 0.07);
 
   // --- Titre : le gros « 3 » cerclé, la chaîne, puis 時間ごとの天気.
+  wxShadow(g, h, 0.8);
   g.strokeStyle = WX_INK;
-  g.lineWidth = h * 0.016;
+  g.lineWidth = h * 0.019;
   g.beginPath();
-  g.arc(w * 0.1, h * 0.135, h * 0.062, 0.5, Math.PI * 1.75);
+  g.arc(w * 0.105, h * 0.245, h * 0.082, 0.62, Math.PI * 1.72);
   g.stroke();
+  wxNoShadow(g);
   g.fillStyle = WX_INK;
   g.textAlign = 'center';
-  g.font = `bold ${Math.round(h * 0.115)}px ${WX_FONT}`;
-  g.fillText('3', w * 0.1, h * 0.175);
+  g.font = `bold ${Math.round(h * 0.145)}px ${WX_FONT}`;
+  wxHaloText(g, '3', w * 0.105, h * 0.295, h * 0.145);
+
   g.textAlign = 'left';
   g.fillStyle = '#e8622a';
-  g.font = `bold ${Math.round(h * 0.052)}px ${WX_FONT}`;
-  g.fillText('トレインチャンネル', w * 0.16, h * 0.1);
+  g.font = `bold ${Math.round(h * 0.055)}px ${WX_FONT}`;
+  wxHaloText(g, 'トレインチャンネル', w * 0.175, h * 0.16, h * 0.055);
   g.fillStyle = WX_INK;
-  g.font = `bold ${Math.round(h * 0.082)}px ${WX_FONT}`;
-  g.fillText('時間ごとの天気', w * 0.16, h * 0.19);
-  g.textAlign = 'right';
-  g.fillStyle = '#2b6ca8';
-  g.font = `${Math.round(h * 0.042)}px ${WX_FONT}`;
-  g.fillText('日本気象協会', w - h * 0.03, h * 0.09);
+  g.font = `bold ${Math.round(h * 0.092)}px ${WX_FONT}`;
+  wxHaloText(g, '時間ごとの天気', w * 0.175, h * 0.3, h * 0.092);
 
-  // --- Grille : bandeau des jours, ligne des heures, pictogrammes, températures.
+  g.textAlign = 'right';
+  g.fillStyle = '#3d78a8';
+  g.font = `${Math.round(h * 0.04)}px ${WX_FONT}`;
+  g.fillText('日本気象協会', w - h * 0.035, h * 0.095);
+
+  // --- Grille. Les cotes suivent la capture : bandeau des jours au tiers de la
+  // hauteur, pictogrammes sur le double de la hauteur d'une bande, et tout le
+  // bas laissé à la bulle.
   const x0 = w * 0.175;
-  const colW = (w - x0 - h * 0.03) / slots.length;
-  const dayY = h * 0.24;
-  const dayH = h * 0.075;
+  const x1 = w - h * 0.035;
+  const colW = (x1 - x0) / slots.length;
+  const dayY = h * 0.345;
+  const dayH = h * 0.068;
   const hourY = dayY + dayH;
-  const hourH = h * 0.075;
+  const hourH = h * 0.062;
   const iconY = hourY + hourH;
-  const iconH = h * 0.24;
+  const iconH = h * 0.165;
   const tempY = iconY + iconH;
-  const tempH = h * 0.11;
+  const tempH = h * 0.078;
 
   const split = slots.findIndex((k) => k.dayOffset > 0);
   const cut = split < 0 ? slots.length : split;
+  wxShadow(g, h);
   g.fillStyle = '#4aa35a';
   g.fillRect(x0, dayY, colW * cut, dayH);
   if (cut < slots.length) {
     g.fillStyle = '#2f7fd0';
     g.fillRect(x0 + colW * cut, dayY, colW * (slots.length - cut), dayH);
   }
+  wxNoShadow(g);
   g.fillStyle = '#ffffff';
   g.textAlign = 'center';
-  g.font = `bold ${Math.round(h * 0.055)}px ${WX_FONT}`;
-  g.fillText(`${today.day}日`, x0 + (colW * cut) / 2, dayY + dayH * 0.78);
+  g.font = `bold ${Math.round(h * 0.052)}px ${WX_FONT}`;
+  g.fillText(`${today.day}日`, x0 + (colW * cut) / 2, dayY + dayH * 0.76);
   if (cut < slots.length) {
-    g.fillText(`${tomorrowDay}日`, x0 + colW * cut + (colW * (slots.length - cut)) / 2, dayY + dayH * 0.78);
+    g.fillText(`${tomorrowDay}日`, x0 + colW * cut + (colW * (slots.length - cut)) / 2, dayY + dayH * 0.76);
   }
+
+  // Corps du tableau : colonnes alternées, posées sous une ombre unique. Une
+  // ombre par cellule empilerait six voiles au même endroit.
+  wxShadow(g, h, 0.8);
+  g.fillStyle = '#ffffff';
+  g.fillRect(x0, iconY, colW * slots.length, iconH + tempH);
+  wxNoShadow(g);
 
   slots.forEach((slot, i) => {
     const cx = x0 + colW * (i + 0.5);
     const hour = Math.floor(slot.minute / 60);
-    // La bande des heures suit le JOUR : claire à midi, sombre au cœur de la
-    // nuit. C'est ce dégradé qui fait lire le bulletin d'un coup d'œil, avant
-    // même les chiffres.
-    // 1 en milieu d'après-midi, 0 au cœur de la nuit.
+    // 1 en milieu d'après-midi, 0 au cœur de la nuit. La bande des heures suit
+    // ce compte : elle est le seul endroit de l'écran où l'on voit passer la
+    // nuit, et c'est ce qui fait lire le bulletin avant même les chiffres.
     const day = (Math.cos((2 * Math.PI * (hour - 14)) / 24) + 1) / 2;
-    g.fillStyle = `rgb(${Math.round(30 + 200 * day)}, ${Math.round(90 + 150 * day)}, ${Math.round(150 + 90 * day)})`;
+    const warm = Math.max(0, day - 0.5) * 2;
+    g.fillStyle = `rgb(${Math.round(26 + 214 * day + 12 * warm)}, ${Math.round(74 + 158 * day)}, ${Math.round(126 + 96 * day - 18 * warm)})`;
     g.fillRect(x0 + colW * i, hourY, colW, hourH);
-    g.fillStyle = day > 0.55 ? '#123a5c' : '#ffffff';
-    g.font = `bold ${Math.round(h * 0.05)}px ${WX_FONT}`;
-    g.fillText(`${hour}時`, cx, hourY + hourH * 0.75);
+    g.fillStyle = day > 0.58 ? '#123a5c' : '#ffffff';
+    g.font = `bold ${Math.round(h * 0.048)}px ${WX_FONT}`;
+    g.fillText(`${hour}時`, cx, hourY + hourH * 0.74);
 
-    g.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.32)';
-    g.fillRect(x0 + colW * i, iconY, colW, iconH + tempH);
-    wxGlyph(g, slot.kind, cx, iconY + iconH * 0.5, iconH * 0.78);
+    if (i % 2 === 1) {
+      g.fillStyle = '#e9f4fd';
+      g.fillRect(x0 + colW * i, iconY, colW, iconH + tempH);
+    }
+
+    wxShadow(g, h, 0.9);
+    wxGlyph(g, slot.kind, cx, iconY + iconH * 0.52, iconH * 0.82);
+    wxNoShadow(g);
 
     g.fillStyle = WX_INK;
-    g.font = `bold ${Math.round(h * 0.078)}px ${WX_FONT}`;
-    g.fillText(String(slot.tempC), cx, tempY + tempH * 0.8);
+    g.font = `bold ${Math.round(h * 0.072)}px ${WX_FONT}`;
+    g.fillText(String(slot.tempC), cx, tempY + tempH * 0.78);
   });
+
+  // Filets blancs entre colonnes : ils sont ce qui fait un TABLEAU, et non six
+  // vignettes côte à côte. Ils s'arrêtent SOUS le bandeau des jours - le
+  // traverser découpait « 27日 » en tronçons, et une journée n'est pas six
+  // journées.
+  g.strokeStyle = 'rgba(255,255,255,0.9)';
+  g.lineWidth = Math.max(1, h * 0.005);
+  for (let i = 1; i < slots.length; i++) {
+    g.beginPath();
+    g.moveTo(x0 + colW * i, i === cut ? dayY : hourY);
+    g.lineTo(x0 + colW * i, tempY + tempH);
+    g.stroke();
+  }
+  g.beginPath();
+  g.moveTo(x0, tempY);
+  g.lineTo(x1, tempY);
+  g.stroke();
 
   g.textAlign = 'right';
   g.fillStyle = WX_INK;
-  g.font = `bold ${Math.round(h * 0.062)}px ${WX_FONT}`;
-  g.fillText('東京', x0 - h * 0.03, iconY + iconH * 0.6);
-  g.font = `${Math.round(h * 0.042)}px ${WX_FONT}`;
-  g.fillText('気温(℃)', x0 - h * 0.03, tempY + tempH * 0.75);
+  g.font = `bold ${Math.round(h * 0.068)}px ${WX_FONT}`;
+  wxHaloText(g, '東京', x0 - h * 0.035, iconY + iconH * 0.64, h * 0.068);
+  g.font = `${Math.round(h * 0.04)}px ${WX_FONT}`;
+  wxHaloText(g, '気温(℃)', x0 - h * 0.035, tempY + tempH * 0.72, h * 0.04);
 
-  // --- Bulle de commentaire.
-  const bx = w * 0.06;
-  const by = tempY + tempH + h * 0.035;
-  const bw = w * 0.78;
-  const bh = h - by - h * 0.03;
+  // --- Bulle de commentaire, et le visage qui la prononce.
+  const fx = w - h * 0.12;
+  const fy = h * 0.855;
+  const bx = w * 0.055;
+  const by = h * 0.765;
+  const bw = w - bx - h * 0.26;
+  const bh = h * 0.185;
+  wxShadow(g, h);
   g.fillStyle = '#ffffff';
-  g.strokeStyle = '#7fb8dd';
-  g.lineWidth = Math.max(1, h * 0.006);
+  g.strokeStyle = '#8ec4e4';
+  g.lineWidth = Math.max(1, h * 0.007);
   g.beginPath();
-  g.roundRect(bx, by, bw, bh, bh * 0.42);
+  g.roundRect(bx, by, bw, bh, bh * 0.44);
   g.fill();
+  wxNoShadow(g);
   g.stroke();
+  // Le bec de la bulle, tourné vers le visage.
+  g.beginPath();
+  g.moveTo(bx + bw - h * 0.01, fy - h * 0.028);
+  g.lineTo(bx + bw + h * 0.05, fy);
+  g.lineTo(bx + bw - h * 0.01, fy + h * 0.028);
+  g.closePath();
+  g.fillStyle = '#ffffff';
+  g.fill();
+  g.strokeStyle = '#8ec4e4';
+  g.stroke();
+  g.beginPath();
+  g.moveTo(bx + bw - h * 0.016, fy - h * 0.026);
+  g.lineTo(bx + bw - h * 0.016, fy + h * 0.026);
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = Math.max(2, h * 0.014);
+  g.stroke();
+
   g.fillStyle = WX_INK;
   g.textAlign = 'center';
-  g.font = `${Math.round(h * 0.05)}px ${WX_FONT}`;
+  g.font = `${Math.round(h * 0.048)}px ${WX_FONT}`;
   const lines = wxComment(slots);
-  lines.forEach((line, i) => g.fillText(line, bx + bw / 2, by + bh * (lines.length === 1 ? 0.62 : 0.42 + i * 0.38)));
+  lines.forEach((line, i) =>
+    g.fillText(line, bx + bw / 2, by + bh * (lines.length === 1 ? 0.62 : 0.42 + i * 0.36)),
+  );
 
-  // Le petit personnage qui donne le commentaire, à droite de la bulle.
-  const fx = w - h * 0.11;
-  const fy = by + bh * 0.5;
+  wxShadow(g, h, 0.7);
   g.fillStyle = '#ffe0bd';
   g.beginPath();
-  g.arc(fx, fy, h * 0.06, 0, Math.PI * 2);
+  g.arc(fx, fy, h * 0.075, 0, Math.PI * 2);
   g.fill();
+  wxNoShadow(g);
   g.fillStyle = '#2f4a6b';
   g.beginPath();
-  g.arc(fx, fy - h * 0.014, h * 0.06, Math.PI, Math.PI * 2);
+  g.arc(fx, fy - h * 0.016, h * 0.075, Math.PI * 1.02, Math.PI * 1.98);
   g.fill();
   g.fillStyle = '#3a3a3a';
   g.beginPath();
-  g.arc(fx - h * 0.022, fy + h * 0.012, h * 0.008, 0, Math.PI * 2);
-  g.arc(fx + h * 0.022, fy + h * 0.012, h * 0.008, 0, Math.PI * 2);
+  g.arc(fx - h * 0.026, fy + h * 0.014, h * 0.009, 0, Math.PI * 2);
+  g.arc(fx + h * 0.026, fy + h * 0.014, h * 0.009, 0, Math.PI * 2);
   g.fill();
+  g.strokeStyle = '#c98b6a';
+  g.lineWidth = Math.max(1, h * 0.005);
+  g.beginPath();
+  g.arc(fx, fy + h * 0.03, h * 0.018, 0.25, Math.PI - 0.25);
+  g.stroke();
   g.textAlign = 'left';
 }
