@@ -555,10 +555,27 @@ export function placementFor(index: number, gates: readonly number[]): StationPl
   const mainStair = stairs.reduce((a, b) => (Math.abs(b.z) < Math.abs(a.z) ? b : a));
   const interior = interiorFor(i, mainStair.z);
   const network = networkFor(i, mainStair.z, mainStair.x);
+  // LE SENS DE LA VOLÉE VIENT DU RELEVÉ, et non plus du hall générique.
+  //
+  // Il se lisait sur `interior.place` — le hall générique est-il sous les voies
+  // ou dessus ? — et c'était juste tant que le relevé n'existait pas. Les trente
+  // gares en ont un désormais, et SEPT le contredisent : Ueno, Nippori, Ōsaki,
+  // Shinagawa, Takanawa Gateway, Tamachi et Hamamatsuchō montent vers un
+  // pont-concourse là où le hall générique descendait. On perçait donc la dalle
+  // et l'on dessinait une trémie qui plonge, pendant que la marche, elle, suit
+  // le relevé et fait MONTER : on descendait l'escalier et l'on se retrouvait
+  // dans le plafond.
+  //
   // Une volée montante n'a de sens que si elle mène quelque part : là où le
   // niveau est déclaré sans être construit, l'accès reste la trémie borgne
   // qu'il était.
-  const mainRise = interior.built && interior.place === 'over' ? ('up' as const) : ('down' as const);
+  const mainAccess = network.accesses.find((a) => a.order === null)
+    ?? network.accesses.find((a) => network.rooms.some(
+      (r) => r.id === a.toRoomId && r.walkable,
+    ));
+  const mainRise = network.built && mainAccess
+    ? mainAccess.rise
+    : (interior.built && interior.place === 'over' ? ('up' as const) : ('down' as const));
 
   // Une volée MONTANTE n'a pas l'emprise d'une trémie : elle court onze mètres
   // le long du quai et traverse l'auvent. Tout ce qui se pose en hauteur -

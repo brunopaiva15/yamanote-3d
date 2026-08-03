@@ -788,6 +788,66 @@ test('CE QU’ON DESSINE EST CLOS, ou ne se dessine pas du tout', () => {
   }
 });
 
+test('UNE VOLÉE VA LÀ OÙ LE RELEVÉ DIT QU’ELLE VA', () => {
+  // LE DÉFAUT LE PLUS DÉSORIENTANT DU CHANTIER. Le sens de la volée de quai se
+  // lisait sur le HALL GÉNÉRIQUE — `interior.place`, sous les voies ou dessus —
+  // et la marche, elle, suivait le relevé. Sept gares les contredisaient : on
+  // voyait un escalier plonger sous la dalle, on y posait le pied, et l'on
+  // montait dans le plafond. Le percement de la dalle, le rendu de l'accès et
+  // la marche doivent tomber d'accord au centimètre ; c'est écrit dans
+  // `StationPlacement`, et ça ne l'était pas.
+  let up = 0;
+  for (const { name, place } of ALL) {
+    const main = place.liveAccesses.find((a) => a.stair === place.mainStair);
+    if (!main) continue;
+    assert.equal(place.mainRise, main.rise, `${name} : la volée dessinée contredit le relevé`);
+    // Et l'altitude servie va dans le sens annoncé : une volée qui « monte »
+    // vers un sol plus bas que le quai serait le même défaut, écrit autrement.
+    if (main.rise === 'up') {
+      up++;
+      assert.ok(main.floorY > 0, `${name} : la volée monte vers ${main.floorY}`);
+    } else {
+      assert.ok(main.floorY < 0, `${name} : la volée descend vers ${main.floorY}`);
+    }
+  }
+  // Douze gares montent vers leur hall. Un plancher, pas une valeur exacte :
+  // s'il tombe à zéro, c'est que le sens s'est reperdu.
+  assert.ok(up >= 10, `seulement ${up} gares montent`);
+});
+
+test('UN VOLUME EST CLOS SUR SES QUATRE FACES', () => {
+  // Le pendant géométrique du précédent. `Concourse` fermait le volume sur
+  // quatre faces FIXES — deux parois en x, l'entrée en z0, les bouches en z1 —
+  // ce qui était juste tant qu'un hall se longeait en z. Le pont-concourse de
+  // Hamamatsuchō fait quarante-quatre mètres en x pour dix-neuf en z, et sa
+  // seule bouche perce le flanc x1 : cette paroi recevait deux surfaces l'une
+  // sur l'autre — d'où le clignotement — et le bout z1 n'en recevait aucune,
+  // d'où la ville au fond du hall.
+  //
+  // La règle tient sur la DONNÉE : chaque face d'un volume praticable est soit
+  // percée par une bouche, soit ouverte par la trémie, soit pleine — et le
+  // rendu n'a plus le droit de supposer laquelle.
+  let sides = 0;
+  for (const { name, place } of ALL) {
+    for (const shell of shellsOf(place.network)) {
+      if (!shell.rooms.some((r) => r.walkable)) continue;
+      for (const side of ['x0', 'x1', 'z0', 'z1'] as const) {
+        sides++;
+        const holes = shell.mouths.filter((m) => m.side === side);
+        for (const m of holes) {
+          const [lo, hi] = side === 'x0' || side === 'x1'
+            ? [shell.rect.z0, shell.rect.z1] : [shell.rect.x0, shell.rect.x1];
+          assert.ok(
+            m.at - m.halfWidth >= lo - 1e-6 && m.at + m.halfWidth <= hi + 1e-6,
+            `${name} : la bouche ${m.id} déborde la face ${side} de son volume`,
+          );
+        }
+      }
+    }
+  }
+  assert.ok(sides >= 4 * 30, `${sides} faces seulement`);
+});
+
 // --- #13 et #14 : les niveaux ferroviaires -------------------------------
 
 test('ON PASSE AU-DESSUS DE LA RAME, OU SOUS LE RAIL — JAMAIS ENTRE', () => {

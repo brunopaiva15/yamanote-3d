@@ -122,6 +122,29 @@ export function Concourse({
     [net, shell],
   );
   const roomIds = useMemo(() => new Set(shell.rooms.map((r) => r.id)), [shell]);
+  /** Les faces qu'une bouche perce déjà : elles ont leur propre paroi. */
+  const pierced = useMemo(
+    () => new Set(shell.mouths.map((x) => x.side)),
+    [shell],
+  );
+  /**
+   * PAR OÙ L'ON ENTRE, et où exactement.
+   *
+   * Le percement de la trémie était centré sur le MILIEU du volume, ce qui
+   * revenait à supposer que la gare descend au milieu de son hall. Elle y
+   * descend dans le hall générique ; le pont-concourse de Hamamatsuchō fait
+   * quarante-quatre mètres et son accès arrive à sept mètres du bord, si bien
+   * que le trou s'ouvrait dans le vide et que l'escalier butait sur un mur.
+   * L'abscisse vient donc de la trémie elle-même (`net.accessX`), et la face
+   * de la position du pied par rapport au volume.
+   */
+  const entryX = net.accessX ?? (shell.rect.x0 + shell.rect.x1) / 2;
+  const entrySide: RoomSide | null = useMemo(() => {
+    if (!shell.rooms.some((r) => net.accesses.some((a) => a.toRoomId === r.id))) return null;
+    return net.accessZ !== undefined && net.accessZ > (shell.rect.z0 + shell.rect.z1) / 2
+      ? 'z1'
+      : 'z0';
+  }, [shell, net]);
   const style = hallStyle(shell.kind, openBelow);
   const width = shell.rect.x1 - shell.rect.x0;
   const z0 = shell.rect.z0;
@@ -216,7 +239,7 @@ export function Concourse({
           material={m.hallCeil}
         />
       )}
-      {[-1, 1].map((d) => (
+      {([-1, 1] as const).filter((d) => !pierced.has(d < 0 ? 'x0' : 'x1')).map((d) => (
         <group key={`side${d}`}>
           {/* LA PAROI, OU L'APPUI. Un pont-concourse enjambe le faisceau et
               c'est tout son sujet : « on voit les voies dessous ». L'enfermer
@@ -284,8 +307,8 @@ export function Concourse({
       {/* Le hall est plus large que le couloir qui arrive de la trémie. Fermer
           les deux retours au droit de l'entrée empêche de voir les voies et le
           décor extérieur par les bandes laissées de part et d'autre. */}
-      {[-1, 1].map((d) => {
-        const inner = midX + d * STAIR_LOWER_HALF_X;
+      {entrySide === 'z0' && [-1, 1].map((d) => {
+        const inner = entryX + d * STAIR_LOWER_HALF_X;
         const outer = d < 0 ? shell.rect.x0 : shell.rect.x1;
         const panelWidth = Math.abs(outer - inner);
         return (
@@ -298,6 +321,26 @@ export function Concourse({
           </mesh>
         );
       })}
+
+      {/* LES BOUTS QUE RIEN N'OUVRE. Le volume se fermait sur quatre faces
+          FIXES : deux parois en x, l'entrée en z0, les bouches en z1. C'était
+          juste tant qu'un hall se longeait en z. Le pont-concourse de
+          Hamamatsuchō fait quarante-quatre mètres en x pour dix-neuf en z, et
+          sa seule bouche perce le flanc x1 : cette paroi-là recevait DEUX
+          surfaces l'une sur l'autre — d'où le clignotement — et le bout z1
+          n'en recevait AUCUNE, d'où la ville au fond du hall.
+          Ce qui n'est ni percé par une bouche ni ouvert par la trémie se ferme,
+          quelle que soit la face. */}
+      {(['z0', 'z1'] as const).filter((side) => !pierced.has(side) && side !== entrySide)
+        .map((side) => (
+          <mesh
+            key={`bout${side}`}
+            position={[midX, midY, side === 'z0' ? z0 + WALL_T / 2 : z1 - WALL_T / 2]}
+            material={m.hall}
+          >
+            <boxGeometry args={[width + 2 * WALL_T, height, WALL_T]} />
+          </mesh>
+        ))}
 
       {/* Fond du hall, percé des bouches de sortie. Elles ne se franchissent pas
           encore - la volée qui monte à la rue reste à dessiner - mais le jour

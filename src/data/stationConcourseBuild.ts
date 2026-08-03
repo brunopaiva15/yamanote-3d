@@ -294,6 +294,17 @@ export interface ConcourseNetwork {
   fixtures: Fixture[];
   /** Tout ce qui barre : bornes, cloisons de chantier, mobilier. */
   obstacles: InteriorRect[];
+  /**
+   * La trémie principale, telle que le placement l'a posée.
+   *
+   * Le compilateur s'en sert déjà pour caler le relevé ; le RENDU en a besoin
+   * aussi, et il n'y avait aucun moyen de la lui donner. Il centrait donc le
+   * percement d'entrée sur le milieu du volume — juste dans un hall générique
+   * où l'on descend au milieu, faux dans un pont-concourse de quarante-quatre
+   * mètres dont l'accès arrive à sept mètres du bord.
+   */
+  accessX?: number;
+  accessZ?: number;
 }
 
 // --- Poser une ligne de portillons ---------------------------------------
@@ -1523,7 +1534,7 @@ function fittedFixtures(net: ConcourseNetwork, it: StationInterior): Fixture[] {
 export function networkFor(index: number, accessZ: number, accessX?: number): ConcourseNetwork {
   const i = ((index % 30) + 30) % 30;
   const wired = wiredProfile(i);
-  if (!wired) return legacyNetwork(i, interiorFor(i, accessZ));
+  if (!wired) return { ...legacyNetwork(i, interiorFor(i, accessZ)), accessX, accessZ };
   const net = compileProfile(wired, accessZ, accessX);
   const fixtures = fittedFixtures(net, interiorFor(i, accessZ));
   // `fixtureBlocks` et non « tout le mobilier » : un panneau encastré dans la
@@ -1533,6 +1544,8 @@ export function networkFor(index: number, accessZ: number, accessX?: number): Co
     ...net,
     fixtures,
     obstacles: [...net.obstacles, ...fixtures.filter(fixtureBlocks).flatMap(interiorSolids)],
+    accessX,
+    accessZ,
   };
 }
 
