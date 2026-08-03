@@ -25,6 +25,7 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
 import { QualityNotice } from './QualityNotice';
 import { Logo } from './Logo';
+import { RoomJoin } from './RoomJoin';
 import { Footer } from './Footer';
 
 /** Minutes depuis minuit → chaîne HH:MM pour un <input type="time">. */
@@ -348,6 +349,10 @@ export function StartScreen() {
             </span>
           </p>
         )}
+        {/* Voyager à plusieurs, au même poids typographique que le compteur
+            ci-dessus : c'est un plaisir de plus, pas l'argument du jeu. Sans
+            configuration réseau, la ligne n'est pas rendue du tout. */}
+        <RoomJoin />
         <Footer />
       </div>
     </div>

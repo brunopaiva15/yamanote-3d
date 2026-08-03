@@ -13,12 +13,19 @@
 // exactement comme avant.
 
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { netClient, netEnabled } from './net/config';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-/** Le compteur n'existe que si les deux valeurs publiques sont fournies. */
-export const presenceEnabled = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+/**
+ * Le compteur n'existe que si les deux valeurs publiques sont fournies.
+ *
+ * Le drapeau vit désormais dans `systems/net/config`, avec le client lui-même,
+ * parce que le salon multijoueur s'active sur exactement les mêmes deux
+ * variables : deux constantes qui lisent le même `import.meta.env` auraient fini
+ * par diverger sur un détail - une chaîne vide acceptée d'un côté et pas de
+ * l'autre - et le compteur se serait affiché dans un jeu sans réseau, ou
+ * l'inverse. L'alias reste pour les appelants historiques.
+ */
+export const presenceEnabled = netEnabled;
 
 // Identité de cet onglet dans le canal. Un identifiant par onglet : deux onglets
 // du même visiteur comptent pour deux, comme deux voyageurs distincts.
@@ -38,19 +45,17 @@ function emit(): void {
   for (const listener of listeners) listener(count);
 }
 
-// Ouvre le canal une seule fois, à la demande. L'import de la bibliothèque est
-// dynamique : quand la présence est désactivée, supabase-js n'est jamais chargé
-// (ni téléchargé), et il part dans son propre morceau de bundle sinon.
+// Ouvre le canal une seule fois, à la demande. Le client vient de
+// `systems/net/config`, qui le partage avec le salon multijoueur : une seule
+// WebSocket vers le projet, quel que soit le nombre de canaux ouverts dessus.
+// L'import de la bibliothèque y reste dynamique - sans configuration,
+// supabase-js n'est jamais chargé, ni même téléchargé.
 async function start(): Promise<void> {
   if (starting || channel || !presenceEnabled) return;
   starting = true;
   try {
-    const { createClient } = await import('@supabase/supabase-js');
-    const client = createClient(SUPABASE_URL as string, SUPABASE_ANON_KEY as string, {
-      auth: { persistSession: false },
-      // Un rafraîchissement par seconde suffit largement pour un compteur.
-      realtime: { params: { eventsPerSecond: 1 } },
-    });
+    const client = await netClient();
+    if (!client) throw new Error('Client indisponible');
     const ch = client.channel('online-travelers', { config: { presence: { key: tabId() } } });
     channel = ch;
     ch.on('presence', { event: 'sync' }, () => {

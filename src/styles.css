@@ -575,6 +575,120 @@ body,
   background: #5b9f32;
 }
 
+/* --- Voyager ensemble ---------------------------------------------------
+ *
+ * Calé sur `.start-online` juste au-dessus : même gris, même corps, même
+ * discrétion. Le multijoueur est une option de ce jeu, pas son argument, et
+ * son entrée dans le menu ne doit pas peser plus lourd que le compteur de
+ * voyageurs qu'elle suit.
+ */
+.start-room {
+  margin-top: 8px;
+  color: #7a848a;
+  font-size: 10.5px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.start-room-open,
+.start-room-joined {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.start-room-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Un bouton qui ne ressemble pas à un bouton : c'est un lien de pied de page,
+ * et le seul bouton de cet écran reste « Monter à bord ». */
+.start-room-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #4a7a2a;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.start-room-link:hover:not(:disabled) {
+  color: #2f5d0f;
+}
+
+.start-room-link:disabled {
+  color: #9aa2a8;
+  cursor: default;
+  text-decoration: none;
+}
+
+.start-room-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+
+.start-room-field input {
+  width: 9.5em;
+  padding: 4px 6px;
+  border: 1px solid #c8ccce;
+  border-radius: 3px;
+  background: #fff;
+  color: #2a3236;
+  font: inherit;
+  font-size: 12px;
+}
+
+/* Le code se lit et se dicte : chasse fixe, lettres espacées. */
+.start-room-field input[placeholder='ABC234'] {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.start-room-code {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.start-room-code strong {
+  color: #2a3236;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  letter-spacing: 0.16em;
+}
+
+.start-room-roster {
+  margin: 0;
+}
+
+.start-room-names span + span::before {
+  content: ', ';
+}
+
+.start-room-error {
+  margin: 0;
+  color: #a8442f;
+}
+
+.start-room-hint {
+  margin: 0;
+  max-width: 420px;
+  color: #8a9299;
+}
+
 .site-footer a:hover {
   color: #2f5d0f;
 }

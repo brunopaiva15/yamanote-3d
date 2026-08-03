@@ -343,6 +343,54 @@ export interface Strings {
     lcdFullscreenExit: string;
   };
 
+  /**
+   * Voyager à plusieurs : le salon, et rien d'autre.
+   *
+   * Le vocabulaire reste celui du jeu - une « rame », des « voyageurs » - et non
+   * celui des jeux en réseau : ni « lobby », ni « partie », ni « joueurs ». On
+   * monte dans le même train, c'est tout ce que ça veut dire.
+   */
+  room: {
+    /** Le lien qui déplie le bloc, au pied du menu. Volontairement sobre. */
+    together: string;
+    /** Refermer le bloc. */
+    close: string;
+    /** Bouton : ouvrir une rame et obtenir un code. */
+    create: string;
+    /** Bouton : entrer dans la rame de quelqu'un d'autre. */
+    join: string;
+    /** Étiquette du champ de code. */
+    codeLabel: string;
+    /** Texte d'invite du champ de code. */
+    codePlaceholder: string;
+    /** Étiquette du champ de prénom. */
+    nameLabel: string;
+    /** Texte d'invite du champ de prénom. */
+    namePlaceholder: string;
+    /** Bouton : copier le lien pour l'envoyer à quelqu'un. */
+    copy: string;
+    /** Confirmation brève après copie. */
+    copied: string;
+    /** Quitter le salon et repartir seul. */
+    leave: string;
+    /** En cours de connexion. */
+    joining: string;
+    /** Suffixe du décompte du roster : « 3 à bord ». */
+    travellers: string;
+    /** Marque de celui qui mène la rame, dans le roster. */
+    host: string;
+    /** Marque de celui qui est descendu et a laissé la rame partir. */
+    ashore: string;
+    /** Le code saisi n'est pas un code. */
+    errorCode: string;
+    /** La rame est complète. */
+    errorFull: string;
+    /** Le service ne répond pas : on embarque seul. */
+    errorNetwork: string;
+    /** Explication d'une ligne, sous le bloc déplié. */
+    hint: string;
+  };
+
   language: string;
 
   footer: {
@@ -572,6 +620,28 @@ const FR: Strings = {
     lcdFullscreenExit: 'Quitter le plein écran',
   },
 
+  room: {
+    together: 'Voyager ensemble',
+    close: 'Fermer',
+    create: 'Ouvrir une rame',
+    join: 'Rejoindre',
+    codeLabel: 'Code de la rame',
+    codePlaceholder: 'ABC234',
+    nameLabel: 'Votre prénom',
+    namePlaceholder: 'Aya',
+    copy: 'Copier le lien',
+    copied: 'Copié',
+    leave: 'Quitter la rame',
+    joining: 'Connexion…',
+    travellers: 'à bord',
+    host: 'mène la rame',
+    ashore: 'à quai',
+    errorCode: 'Ce code ne ressemble à rien de valide.',
+    errorFull: 'Cette rame est complète.',
+    errorNetwork: 'Service indisponible : vous embarquez seul.',
+    hint: 'Partagez le lien avec qui vous voulez : vous monterez dans la même rame, à la même gare, à la même seconde.',
+  },
+
   language: 'Langue',
   footer: {
     about: 'À propos du projet',
@@ -797,6 +867,28 @@ const EN: Strings = {
     lcdFullscreenExit: 'Exit full screen',
   },
 
+  room: {
+    together: 'Travel together',
+    close: 'Close',
+    create: 'Open a train',
+    join: 'Join',
+    codeLabel: 'Train code',
+    codePlaceholder: 'ABC234',
+    nameLabel: 'Your name',
+    namePlaceholder: 'Aya',
+    copy: 'Copy link',
+    copied: 'Copied',
+    leave: 'Leave the train',
+    joining: 'Connecting…',
+    travellers: 'aboard',
+    host: 'leading',
+    ashore: 'on the platform',
+    errorCode: 'That code does not look valid.',
+    errorFull: 'This train is full.',
+    errorNetwork: 'Service unavailable: you are boarding alone.',
+    hint: 'Share the link with whoever you like: you will board the same train, at the same station, at the same second.',
+  },
+
   language: 'Language',
   footer: {
     about: 'About the project',
@@ -1018,6 +1110,28 @@ const JA: Strings = {
     doors: { open: '開', closed: '閉', opening: '開扉中', closing: '閉扉中' },
     lcdFullscreen: '案内表示器を全画面',
     lcdFullscreenExit: '全画面を終了',
+  },
+
+  room: {
+    together: '一緒に乗る',
+    close: '閉じる',
+    create: '編成を作る',
+    join: '参加',
+    codeLabel: '編成コード',
+    codePlaceholder: 'ABC234',
+    nameLabel: 'お名前',
+    namePlaceholder: 'あや',
+    copy: 'リンクをコピー',
+    copied: 'コピーしました',
+    leave: '編成から降りる',
+    joining: '接続中…',
+    travellers: '名乗車中',
+    host: '進行担当',
+    ashore: 'ホーム',
+    errorCode: 'このコードは正しくありません。',
+    errorFull: 'この編成は満員です。',
+    errorNetwork: 'サービスに接続できません。おひとりで乗車します。',
+    hint: 'コード（またはリンク）を渡せば、同じ編成・同じ駅・同じ瞬間に乗り合わせます。',
   },
 
   language: '言語',
