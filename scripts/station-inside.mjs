@@ -54,7 +54,13 @@ for (const i of stations) {
       ([a, b]) => window.__probeIn(a, b),
       [[s.x0 + 0.02, s.floorY + 0.02, s.z0 + 0.02], [s.x1 - 0.02, s.ceilY - 0.02, s.z1 - 0.02]],
     );
-    for (const h of hits) lines.push(h);
+    // Une même intrusion traverse souvent deux pièces voisines : on ne la
+    // compte qu'une fois, et l'on garde la pire.
+    for (const h of hits) {
+      const cur = lines.find((q) => q.chain === h.chain);
+      if (!cur) lines.push(h);
+      else if (h.over > cur.over) Object.assign(cur, h);
+    }
   }
   if (!lines.length) continue;
   total += lines.length;

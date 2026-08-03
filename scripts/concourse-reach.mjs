@@ -19,7 +19,8 @@ const rows = CONCOURSE_PROFILES.map((p) => {
   const r = deriveReach(p);
   const s = STATIONS[p.stationIndex];
   const n = (v) => Number(v.toFixed(3));
-  return `  // ${s.jy} ${s.romaji}\n  { built: ${n(r.built)}, shown: ${n(r.shown)}, `
+  return `  // ${s.jy} ${s.romaji}\n  { built: ${n(r.built)}, underNear: ${n(r.underNear)}, `
+    + `shown: ${n(r.shown)}, `
     + `groundNear: ${n(r.groundNear)}, groundFar: ${n(r.groundFar)} },`;
 }).join('\n');
 

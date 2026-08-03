@@ -162,14 +162,20 @@ Deux limites connues restent, écrites plutôt que masquées :
   sont composées et demandent 5,80 m dans un hall qui en fait 5,20 ; le
   compilateur garde la cote du relevé et lève `gateOverlap` plutôt que de rendre
   un contrôle qu'on ne franchit pas ;
-- **trois ouvrages entrent encore dans un hall**, relevés par
-  `node scripts/station-inside.mjs` et laissés tels quels : un couvre-joint de
-  douze centimètres à Shinagawa (le détail de mur n'a pas d'arase par tronçon,
-  contrairement au mur qu'il habille), une pile de la charpente de Takanawa
-  Gateway qui traverse le plateau de part en part — c'est ce que fait une pile —,
-  et des bâtiments de ville dans l'emprise des halls d'Ueno et de Shinagawa. Ce
-  dernier point relève de `stationOcclusion`, qui pousse le décor derrière la
-  gare : les plus grands plateaux dépassent maintenant ce qu'il dégage.
+- **la ville entre dans les halls HAUTS**, et pas dans les autres. Le décor de
+  tronçon ne s'écarte que du côté du quai ; depuis que des halls passent sous la
+  voie, il s'écarte aussi de l'autre côté (`underNear`, six gares), ce qui a
+  vidé Tokyo, Shinjuku et Shibuya. Restent les PLATEAUX — Ueno, Ōsaki,
+  Shinagawa, Tamachi —, qui enjambent la voie huit mètres plus haut et
+  s'avancent de quarante mètres au-dessus de la ville : là, des bâtiments se
+  tiennent dans la zone libre. Étendre l'écartement à ces gares-là toucherait le
+  décor de DIX-HUIT d'entre elles pour en réparer quatre, et cela ne se décide
+  pas sans regarder les dix-huit ;
+- **deux ouvrages mineurs entrent encore dans un hall**, relevés par
+  `node scripts/station-inside.mjs` : un couvre-joint de douze centimètres à
+  Shinagawa (le détail de mur n'a pas d'arase par tronçon, contrairement au mur
+  qu'il habille) et une pile de la charpente de Takanawa Gateway qui traverse le
+  plateau de part en part — c'est ce que fait une pile.
 
 ---
 
@@ -263,7 +269,7 @@ Exigence #18 du cahier des charges, relevée à la phase 26 :
 
 | commande | résultat |
 |---|---|
-| `npm test` | **552 tests, 0 échec** (538 à la phase 26 ; +3 au budget de la phase 28, +4 aux percées de plateau, voir §4.28 du plan) |
+| `npm test` | **553 tests, 0 échec** (538 à la phase 26 ; +3 au budget de la phase 28, +4 aux percées de plateau, voir §4.28 du plan) |
 | `npm run build` | `tsc -b && vite build` — aucune erreur |
 | `npm run lint` | `oxlint` — 0 erreur ; 21 avertissements, tous dans `.tmp/announcements/announcements-export.mjs`, un fichier généré antérieur au chantier |
 

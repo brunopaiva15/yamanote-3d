@@ -1645,6 +1645,38 @@ Meguro, un massif de 3,40 m qui culmine à 6,63 et traversait son plateau sur un
 mètre cinquante-trois. Contrairement au mur qu'il coiffe, on ne peut pas
 l'abaisser — abaissé, il ne couronne plus rien : il s'interrompt.
 
+### 4.30 Ce que le décor rangeait sous la rue
+
+Le balayage des trente gares (`scripts/station-inside.mjs`) a sorti, à Tokyo, un
+mur de béton mouché qui occupait le milieu de la zone payante. Ce n'était pas
+un ouvrage de gare : c'était le **mur de soutènement du tronçon**, enfoncé à
+93 % — sommet à −1,12 m, sous la nappe de rue —, donc invisible pour qui roule
+en train, et parfaitement visible pour qui marche sept mètres plus bas. Le seuil
+`trench01 > 0.02` le laissait monté ; il se coupe désormais à la seule cote qui
+compte, la rue.
+
+La **joue de tablier du viaduc** posait la même question autrement : elle est
+réelle, elle pend de sept mètres sous la chaussée, et `sidePush` ne l'écartait
+que du côté du quai. Or `bothSides` répondait depuis toujours à une question de
+FORME DE QUAI — « est-ce un quai latéral ? » — qui n'est plus la bonne : six
+halls passent SOUS la voie et ressortent au-delà, et de ce côté-là le décor
+restait en place. La portée gagne donc un cinquième nombre, `underNear`, qui dit
+jusqu'où la gare bâtit **sous la rue** — et non « bâtit » tout court : un
+plateau praticable enjambe lui aussi la voie, mais huit mètres plus haut, où
+rien ne pend. Confondre les deux aurait fait reculer le décor de dix-huit gares
+pour en réparer six.
+
+Et l'avertissement « **Gare en cours de développement** » a cessé de mentir. Il
+s'affichait dans toutes les gares et sans condition ; il était vrai le jour où
+le hall était une boîte générique, il ne l'est plus depuis que les trente
+passent par leur relevé. Ce qui reste vrai et utile à dire, c'est que **quatre
+gares sur trente ont été lues sur un document ancien** — Uguisudani (juin 2022),
+Okachimachi, Nishi-Nippori et Tabata (2024) : leur topologie tient, leur
+disposition a pu changer. L'avertissement dit cela, et ne s'affiche que là.
+
+La sonde de fuites de la phase 29, jamais étalonnée, est retirée : `__probePick`
+et `__probeIn` font son travail et le font juste.
+
 ### Ordre et raison
 
 - **1→5 ne touchent aucun consommateur.** Le jeu tourne à l'identique pendant

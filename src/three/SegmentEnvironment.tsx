@@ -15,7 +15,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
-import { segEnv, bridgeZ, BRIDGE_COUNT, VIADUCT_RISE, WALL_MAX } from '../systems/segmentEnv';
+import { segEnv, bridgeZ, BRIDGE_COUNT, GROUND_Y, VIADUCT_RISE, WALL_MAX } from '../systems/segmentEnv';
 import { sidePush } from '../systems/stationOcclusion';
 import { weather } from '../systems/weather';
 import { SEGMENTS } from '../data/segments';
@@ -221,9 +221,20 @@ export function SegmentEnvironment() {
     const ground01 = segEnv.w.ground;
 
     // --- Murs : glissement vertical opaque, défilement de la texture ---
-    const wallsVisible = trench01 > 0.02;
     const wallTop = -1.1 + segEnv.wallH;
     const sink = (1 - trench01) * (WALL_MAX + 0.6);
+    // UN MUR RANGÉ SOUS LA RUE NE SE DESSINE PAS.
+    //
+    // Hors tranchée, le mur s'enfonce de huit mètres : il ne montre plus rien
+    // à personne, et le seuil `trench01 > 0.02` le laissait pourtant monté.
+    // Cela n'a rien coûté pendant vingt phases — sous la rue, il n'y a rien à
+    // salir. Depuis qu'on MARCHE dans les halls souterrains, il y a quelqu'un
+    // dessous : à Tokyo, un mur de soutènement enfoncé à 93 % occupait le
+    // milieu de la zone payante, sept mètres sous la chaussée, avec sa texture
+    // de béton de tranchée. On le coupe donc à la seule cote qui compte — la
+    // nappe de rue —, ce qui ne change rien à ce que voit le voyageur du
+    // train, par construction.
+    const wallsVisible = trench01 > 0.02 && wallTop - sink > GROUND_Y;
     for (let i = 0; i < built.walls.length; i++) {
       const wall = built.walls[i];
       const mesh = wallRefs.current[i];

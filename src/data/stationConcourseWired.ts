@@ -23,7 +23,10 @@
 //   const WIRED = new Map([[25, profileFor(25)]]);   // JY26 Takanawa Gateway
 
 import { profileFor } from './stationConcourseProfiles.ts';
-import type { StationConcourseProfile } from './stationConcourseTypes.ts';
+import type {
+  ProfileConfidence,
+  StationConcourseProfile,
+} from './stationConcourseTypes.ts';
 
 /**
  * LES PETITES GARES D'ABORD (phase 20).
@@ -110,6 +113,22 @@ export function deferredIndices(): readonly number[] {
 /** Le relevé d'une gare, si elle est branchée dessus. */
 export function wiredProfile(index: number): StationConcourseProfile | null {
   return WIRED.get(index) ?? null;
+}
+
+/**
+ * CE QUE VAUT LE RELEVÉ D'UNE GARE, pour qui doit le dire au joueur.
+ *
+ * Vingt-six gares sont `mostlyVerified` : leur plan porte la date de référence,
+ * et ce qui reste composé, ce sont les cotes — qu'aucun plan japonais ne donne.
+ * Quatre sont `approximate`, et pour une raison unique : le document lu est
+ * ancien (Okachimachi janvier 2024, Uguisudani juin 2022, Nishi-Nippori et
+ * Tabata février 2024). Leur topologie tient ; leur disposition a pu changer.
+ *
+ * C'est la seule chose que l'interface ait à dire d'une gare, et elle ne doit
+ * la dire que de ces quatre-là.
+ */
+export function profileConfidence(index: number): ProfileConfidence | null {
+  return WIRED.get(((index % 30) + 30) % 30)?.confidence ?? null;
 }
 
 /** Combien de gares passent par leur relevé. */

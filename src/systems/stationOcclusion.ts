@@ -78,10 +78,8 @@ export const stationOcclusion = {
    */
   outer: PLATFORM_DEPTH,
   /**
-   * L'écartement vaut-il des DEUX côtés ? Sur un îlot, tout est du côté du
-   * quai et l'autre rive reste au décor de tronçon. À Harajuku - seul quai
-   * latéral de la boucle - il y a une gare de chaque côté de la voie : le quai
-   * d'en face et son auvent se plantaient dans la clôture du tronçon.
+   * L'écartement vaut-il des DEUX côtés ? Voir `bothSidesFor` : ce n'est plus
+   * une question de forme de quai depuis que six halls passent sous la voie.
    */
   bothSides: false,
   /** Bord extérieur de la DALLE du quai : voir groundPush. */
@@ -100,7 +98,7 @@ export function updateStationOcclusion(): void {
   const layout = layoutFor(platformIndex);
   const reach = reachFor(platformIndex);
   stationOcclusion.push = pushFor(layout, reach);
-  stationOcclusion.bothSides = layout.config === 'side';
+  stationOcclusion.bothSides = bothSidesFor(layout, reach);
   stationOcclusion.outer = outerOf(layout);
   // La nappe de rue se range derrière ce que la gare occupe AU RAS DU SOL, et
   // pas derrière son quai. Aujourd'hui les deux coïncident pour les trente -
@@ -132,6 +130,31 @@ function outerOf(layout: StationLayout): number {
   const opp = PSD_X + layout.depth + 2 * TRACK_HALF + OPP_DEPTH;
   return opp + (layout.openFarSide ? YARD_REACH : 0);
 }
+
+/**
+ * L'ÉCARTEMENT VAUT-IL DES DEUX CÔTÉS ?
+ *
+ * Sur un îlot, tout ce que la gare occupait était du côté du quai, et l'autre
+ * rive restait au décor de tronçon. À Harajuku — seul quai latéral de la boucle
+ * — il y a une gare de chaque côté de la voie : le quai d'en face et son auvent
+ * se plantaient dans la clôture du tronçon.
+ *
+ * CE N'EST PLUS LA SEULE RAISON. Des halls passent SOUS la voie et ressortent
+ * au-delà (`underNear` négatif) : de ce côté-là, le décor de tronçon ne
+ * s'écartait pas, et sa géométrie RANGÉE SOUS LA RUE — la joue de tablier du
+ * viaduc, qui pend de sept mètres — se retrouvait au milieu de la zone payante.
+ * Personne ne pouvait le voir tant qu'on ne marchait pas là-dessous.
+ *
+ * Le seuil est la joue elle-même : dès que la gare bâtit au-delà, elle est
+ * chez elle et le décor recule. En deçà, rien ne change — vingt-quatre gares
+ * sur trente gardent exactement le comportement d'avant.
+ */
+function bothSidesFor(layout: StationLayout, reach: ConcourseReach): boolean {
+  return layout.config === 'side' || reach.underNear < -DECK_CHEEK_X;
+}
+
+/** Abscisse de la joue de tablier du viaduc (`three/SegmentEnvironment`). */
+const DECK_CHEEK_X = 5.1;
 
 /** Portée du faisceau qui remplace le mur de fond, là où il y en a un. */
 const YARD_REACH = 4 * 4.6;

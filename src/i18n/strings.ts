@@ -140,7 +140,7 @@ export interface Strings {
     talkShort: string;
     fullscreen: string;
     fullscreenTitle: string;
-    /** Avertissement affiché dans les espaces souterrains encore inachevés. */
+    /** Avertissement affiché dans les quatre gares dont le plan lu est ancien. */
     stationDevelopment: {
       title: string;
       detail: string;
@@ -372,8 +372,8 @@ const FR: Strings = {
     fullscreen: 'Plein écran',
     fullscreenTitle: 'Plein écran (F)',
     stationDevelopment: {
-      title: 'Gare en cours de développement',
-      detail: 'Cet espace de la gare est encore en construction.',
+      title: 'Relevé approximatif',
+      detail: 'Le plan lu pour cette gare a plusieurs années : sa disposition a pu changer depuis.',
     },
   },
   devices: {
@@ -565,8 +565,8 @@ const EN: Strings = {
     fullscreen: 'Fullscreen',
     fullscreenTitle: 'Fullscreen (F)',
     stationDevelopment: {
-      title: 'Station under development',
-      detail: 'This part of the station is still being built.',
+      title: 'Approximate survey',
+      detail: 'The plan this station was read from is several years old; its layout may have changed since.',
     },
   },
   devices: {
@@ -759,8 +759,8 @@ const JA: Strings = {
     fullscreen: '全画面',
     fullscreenTitle: '全画面表示（F）',
     stationDevelopment: {
-      title: '駅構内は開発中です',
-      detail: 'この駅構内エリアは現在制作中です。',
+      title: '構内図は概略です',
+      detail: 'この駅の参照図は数年前のもので、現在の配置と異なる場合があります。',
     },
   },
   devices: {

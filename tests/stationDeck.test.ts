@@ -186,3 +186,39 @@ test('un hall souterrain ne perce rien', () => {
     }
   }
 });
+
+// --- L'AVERTISSEMENT QUE L'ON AFFICHE ------------------------------------
+//
+// Il n'a rien à voir avec les plateaux, et il est ici faute d'un meilleur
+// endroit : c'est le seul fichier qui tienne ce que le RENDU dit d'une gare.
+// Le jour où un troisième sujet s'y ajoute, il faudra le séparer.
+
+test('l’avertissement de relevé ne s’affiche que là où il est vrai', async () => {
+  const { profileConfidence } = await import('../src/data/stationConcourseWired.ts');
+  const { readFileSync } = await import('node:fs');
+  // Quatre gares, et quatre seulement : celles dont le document lu est ancien.
+  const flagged = ALL.filter((i) => profileConfidence(i) === 'approximate');
+  assert.deepEqual(flagged.map(NAME), [
+    'JY04 Okachimachi', 'JY06 Uguisudani', 'JY08 Nishi-Nippori', 'JY09 Tabata',
+  ]);
+  for (const i of ALL) {
+    assert.ok(profileConfidence(i), `${NAME(i)} : une gare branchée sans confiance`);
+  }
+  // ET L'INTERFACE LA LIT. Elle affichait « en construction » à toutes les
+  // gares et sans condition, ce qui est devenu faux le jour où les trente sont
+  // passées par leur relevé : un avertissement permanent n'avertit de rien.
+  const notice = readFileSync(
+    new URL('../src/ui/StationDevelopmentNotice.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.ok(notice.includes('profileConfidence'), 'l’avertissement ne lit pas le relevé');
+  assert.ok(
+    /profileConfidence\([^)]*\) !== 'approximate'\) return null/.test(notice),
+    'l’avertissement s’affiche ailleurs que sur les quatre gares',
+  );
+  const strings = readFileSync(new URL('../src/i18n/strings.ts', import.meta.url), 'utf8');
+  assert.ok(
+    !/en cours de développement|under development|開発中/.test(strings),
+    'le texte parle encore d’un chantier',
+  );
+});
