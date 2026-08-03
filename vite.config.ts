@@ -76,6 +76,21 @@ export default defineConfig({
             },
             { name: 'three', test: /node_modules[\\/](three|@react-three|postprocessing)[\\/]/ },
             { name: 'tone', test: /node_modules[\\/]tone[\\/]/ },
+            // PAS de règle pour `@supabase`, et c'est un choix appris à mes
+            // dépens.
+            //
+            // J'en avais ajouté une, pour « garantir » que le client réseau
+            // reste dans son propre morceau. Elle a produit exactement
+            // l'inverse : un morceau NOMMÉ entre dans les `modulepreload` de
+            // `index.html`, et tout visiteur - salon ou pas - se mettait à
+            // télécharger deux cent quatre kilo-octets de client temps réel dès
+            // l'ouverture du menu. Le contrat « sans clés, supabase-js n'est
+            // jamais téléchargé » était rompu par la règle censée le protéger.
+            //
+            // L'import dynamique de `systems/net/config` sépare le morceau tout
+            // seul, sans le nommer, et le laisse hors des préchargements. C'est
+            // ce que le build faisait déjà très bien, et c'est vérifié sur le
+            // build de production, pas sur une intention.
           ],
         },
       },

@@ -26,8 +26,11 @@ import { CONFIG } from './data/config';
 import { applyThemeColor } from './i18n/documentMeta';
 import { setListenerPose } from './systems/audioEngine';
 import { startAudioLoop, stopAudioLoop } from './systems/audioLoop';
+import { useRoom } from './systems/net/room';
+import { startWorldSync, stopWorldSync } from './systems/net/worldSync';
 import { Hud } from './ui/Hud';
 import { Subtitles } from './ui/Subtitles';
+import { Chat } from './ui/Chat';
 import { AnnouncementLog } from './ui/audio/AnnouncementLog';
 import { DoorState } from './ui/audio/DoorState';
 import { LineScreen } from './ui/audio/LineScreen';
@@ -62,6 +65,17 @@ export default function AudioGame() {
   // l'afficheur occupe tout l'écran.
   const mount = useRef<HTMLDivElement>(null);
 
+  // Le monde partagé, comme dans l'autre version : la version sonore peut
+  // parfaitement mener une rame - sa boucle tourne même onglet caché, grâce au
+  // relais par intervalle de systems/audioLoop, ce qui en fait le meilleur hôte
+  // du lot. Elle n'a pas d'avatar à montrer, mais elle a un monde à tenir.
+  const inRoom = useRoom((s) => s.status === 'joined');
+  useEffect(() => {
+    if (!inRoom) return;
+    startWorldSync();
+    return () => stopWorldSync();
+  }, [inRoom]);
+
   useEffect(() => {
     seatListener();
     startAudioLoop();
@@ -91,6 +105,10 @@ export default function AudioGame() {
           mêmes valeurs, lues au même endroit. */}
       <Hud />
       <Subtitles />
+      {/* La version sonore n'a pas d'avatar, mais elle a une voix écrite : on
+          peut parfaitement voyager dans le même salon sans rendre la 3D, et
+          c'est même le meilleur hôte du lot (sa boucle tourne onglet caché). */}
+      <Chat />
     </>
   );
 }

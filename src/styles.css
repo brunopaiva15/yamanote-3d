@@ -575,6 +575,190 @@ body,
   background: #5b9f32;
 }
 
+/* --- Voyager ensemble : le panneau du HUD --------------------------------
+ *
+ * Calé sur le menu d'incidents voisin, et pour la même raison : ce n'est pas un
+ * réglage, on ne doit pas tomber dessus en cherchant le volume. Un point
+ * effacé, qui s'allume quand on est en salon et porte alors le nombre de
+ * voyageurs - la seule information de tout ce bloc qui mérite d'être visible en
+ * permanence.
+ */
+.room-menu {
+  position: relative;
+}
+
+.room-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 11px;
+  opacity: 0.45;
+  transition:
+    opacity 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.1s ease,
+    background-color 0.1s ease;
+}
+
+.room-toggle:hover,
+.room-toggle[aria-expanded='true'],
+.room-toggle.is-joined {
+  opacity: 1;
+}
+
+/* Le même point vert que le compteur de visiteurs du menu : c'est le vocabulaire
+   visuel de la présence dans ce projet, et il n'y a aucune raison d'en inventer
+   un second. Gris tant qu'on voyage seul. */
+.room-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.room-toggle.is-joined .room-dot {
+  background: #5b9f32;
+  opacity: 1;
+}
+
+.room-count {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.room-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  width: 264px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px;
+  background: var(--sticker);
+  border: 2px solid var(--ink-line);
+  border-radius: 12px;
+  box-shadow: var(--sticker-shadow);
+  /* La couleur d'encre est posée EXPLICITEMENT : sans elle, le panneau hérite
+     du texte clair de la barre du HUD - pensé pour un fond sombre - et se
+     retrouve en gris pâle sur blanc. Le code du salon, qui est justement ce
+     qu'on vient lire et dicter, devenait le moins lisible de tout l'écran. */
+  color: var(--sticker-ink);
+}
+
+.room-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sticker-dim);
+}
+
+.room-panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11.5px;
+  color: var(--sticker-dim);
+}
+
+.room-panel-field input {
+  padding: 5px 7px;
+  border: 1px solid var(--ink-line);
+  border-radius: 6px;
+  background: #fff;
+  color: #2a3236;
+  font: inherit;
+  font-size: 13px;
+}
+
+/* Le code se lit et se dicte : chasse fixe, lettres espacées. */
+.room-panel-code-input,
+.room-panel-code strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.room-panel-code {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+}
+
+.room-panel-code strong {
+  font-size: 15px;
+  color: var(--sticker-ink);
+}
+
+.room-panel-roster,
+.room-panel-hint,
+.room-panel-error {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--sticker-dim);
+}
+
+.room-panel-error {
+  color: #a8442f;
+}
+
+.room-panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.room-panel-tag {
+  margin-left: 6px;
+  font-size: 10.5px;
+  color: var(--sticker-dim);
+}
+
+.room-panel-tag::before {
+  content: '· ';
+}
+
+.room-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--sticker-dim);
+}
+
+.room-panel-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #4a7a2a;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.room-panel-link:hover:not(:disabled) {
+  color: #2f5d0f;
+}
+
+.room-panel-link:disabled {
+  color: var(--sticker-dim);
+  cursor: default;
+  text-decoration: none;
+}
+
 .site-footer a:hover {
   color: #2f5d0f;
 }
@@ -1174,6 +1358,21 @@ body,
   animation: pax-bubble-in 180ms ease-out;
 }
 
+/* Un message de joueur : même bulle, liseré teinté. La forme ne change pas -
+   une parole reste une parole, et distinguer les deux par la géométrie ferait
+   de l'une un élément d'interface posé sur le monde. */
+.pax-bubble-remote {
+  border-color: rgba(158, 196, 111, 0.5);
+}
+
+.pax-bubble-who {
+  display: block;
+  margin-bottom: 2px;
+  color: #9ec46f;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
 /* Réplique non sollicitée (on l'a bousculé, il réagit) : plus discrète, en
    retrait - on ne lui a rien demandé. */
 .pax-bubble-aside {
@@ -1569,6 +1768,158 @@ body,
   text-align: center;
   z-index: 25;
   pointer-events: none;
+}
+
+/* --- Ce que le salon a à dire ---------------------------------------------
+ *
+ * En haut, au centre, et seulement quand il y a quelque chose à dire. Ce n'est
+ * pas un réglage ni un compteur : c'est une situation de ligne, au même titre
+ * qu'un retard annoncé, et elle se lit là où l'on regarde déjà.
+ */
+.room-notice {
+  position: fixed;
+  top: calc(var(--hud-safe-top) + 56px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(10, 14, 18, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text);
+  font-size: 13px;
+  z-index: 27;
+}
+
+.room-notice-count {
+  font-variant-numeric: tabular-nums;
+  color: #9ec46f;
+  font-weight: 700;
+}
+
+/* La rame est partie sans nous : c'est le seul message du salon qui appelle une
+   action, donc le seul qui ait le droit d'être cliquable. */
+.room-notice-detached {
+  border-color: rgba(200, 120, 60, 0.6);
+}
+
+.room-notice-action {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #9ec46f;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* --- Le tchat du salon ---------------------------------------------------
+ *
+ * AU-DESSUS du bandeau de sous-titres, jamais dessous. Les sous-titres sont la
+ * voix du monde - annonces, carillons, sono du quai -, et ce jeu est bâti
+ * autour d'elles : un tchat qui leur passerait devant contredirait tout le
+ * reste. D'où le `--subtitles-h` dans le calcul, qui porte la hauteur RÉELLE du
+ * bandeau à cet instant (ui/usePublishedHeight) - elle dépend de la langue et
+ * du nombre de lignes qu'une annonce japonaise prend, et un nombre écrit en dur
+ * serait faux dans deux langues sur trois.
+ *
+ * À gauche, et non centré comme les sous-titres : deux blocs centrés l'un
+ * au-dessus de l'autre se disputeraient le regard, et c'est l'annonce qui doit
+ * gagner.
+ */
+.chat {
+  position: fixed;
+  left: calc(var(--hud-safe-left) + 14px);
+  bottom: calc(var(--hud-safe-bottom) + var(--hud-bar-h) + var(--subtitles-h) + 26px);
+  width: min(420px, calc(100vw - var(--hud-safe-left) - var(--hud-safe-right) - 28px));
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 26;
+  /* Replié, le journal ne se clique pas : on regarde par la fenêtre à travers.
+     Le compositeur, lui, rétablit ses propres événements. */
+  pointer-events: none;
+}
+
+.chat-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.chat-line {
+  background: rgba(10, 14, 18, 0.72);
+  border-radius: 8px;
+  padding: 4px 9px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  transition: opacity 600ms ease;
+}
+
+/* Une ligne vieille de douze secondes s'efface sans disparaître : on peut
+   encore la lire si l'on y tient, elle ne réclame plus l'attention. */
+.chat-faded {
+  opacity: 0.35;
+}
+
+.chat-name {
+  margin-right: 7px;
+  color: #9ec46f;
+  font-weight: 700;
+}
+
+.chat-self .chat-name {
+  color: #d6d2c8;
+}
+
+.chat-composer {
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.chat-composer input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(10, 14, 18, 0.9);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.chat-composer input:focus {
+  outline: none;
+  border-color: rgba(158, 196, 111, 0.7);
+}
+
+.chat-send {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  padding: 6px 12px;
+  background: rgba(10, 14, 18, 0.9);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chat-send:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .subtitle-line,

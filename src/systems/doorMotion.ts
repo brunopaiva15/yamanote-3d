@@ -22,19 +22,46 @@ let psdGateLags: number[] = [];
 // Décalages du quai sur la rame (s) : début d'ouverture et de fermeture.
 export const stationTimings = { psdOpenDelay: 0.8, psdCloseDelay: 0.8 };
 
-export function randomizeDoorTimings(): void {
+/**
+ * Tire les retards de l'arrêt qui commence.
+ *
+ * Le générateur est INJECTÉ, avec `Math.random` par défaut : en solo rien ne
+ * change, mais dans un salon les deux côtés du fil déroulent la même suite à
+ * partir d'une seule graine de trente-deux bits (systems/net/worldDecisions,
+ * `doorRandom`). Trente-huit nombres pour quatre octets - au-delà de trois
+ * tirages liés, on transmet la graine et non les valeurs.
+ *
+ * L'ordre des appels ci-dessous est donc devenu SIGNIFICATIF : deux clients qui
+ * ne tireraient pas dans le même ordre obtiendraient des portes différentes à
+ * partir de la même graine. C'est le prix de la graine, et c'est pour ça qu'on
+ * ne la réserve qu'aux séries d'un seul tenant comme celle-ci.
+ */
+export function randomizeDoorTimings(random: () => number = Math.random): void {
   // Une porte part immédiatement, les autres traînent chacune un peu.
-  const raw = CONFIG.doorCenters.map(() => Math.random() * 0.3);
+  const raw = CONFIG.doorCenters.map(() => random() * 0.3);
   const min = Math.min(...raw);
   CONFIG.doorCenters.forEach((dz, i) => {
     trainLags[dz] = raw[i] - min;
   });
   sortedTrainLags = Object.values(trainLags).sort((a, b) => a - b);
-  psdGateLags = Array.from({ length: 32 }, () => Math.random() * 0.3);
-  stationTimings.psdOpenDelay = 0.55 + Math.random() * 0.6;
-  stationTimings.psdCloseDelay = 0.55 + Math.random() * 0.4;
+  psdGateLags = Array.from({ length: 32 }, () => random() * 0.3);
+  stationTimings.psdOpenDelay = 0.55 + random() * 0.6;
+  stationTimings.psdCloseDelay = 0.55 + random() * 0.4;
 }
-randomizeDoorTimings();
+
+// Un tirage à l'IMPORT du module vivait ici, et il fallait le retirer.
+//
+// Il s'exécutait au chargement, c'est-à-dire avant que le joueur ait choisi
+// quoi que ce soit et, désormais, avant qu'on sache si l'on mène la rame ou si
+// l'on suit celle d'un autre. Un suiveur consommait donc trente-huit nombres
+// hors protocole, sur des retards qui seraient de toute façon remplacés à
+// l'entrée en freinage.
+//
+// Les valeurs par défaut ci-dessus (0,8 s de décalage quai/rame, aucun retard
+// de vantail) suffisent parfaitement à tenir jusqu'au premier arrêt : elles
+// décrivent une rame dont toutes les portes partent ensemble, ce qu'aucun arrêt
+// réel ne fait mais qu'aucun œil ne voit avant que `randomizeStopTimings` n'ait
+// tiré les vraies.
 
 // Retard (s) d'une porte de la rame, par son centre z.
 export function trainDoorLag(dz: number): number {

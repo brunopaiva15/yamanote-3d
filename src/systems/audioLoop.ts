@@ -64,6 +64,7 @@ import { updatePlatformPresence } from './platformPresence';
 import { updateSegmentEnv } from './segmentEnv';
 import { updateCycle } from './stationCycle';
 import { updateWeather } from './weather';
+import { netCycleDt, netPumpIn, netPumpOut } from './net/worldSync';
 
 // --- L'horloge, et pourquoi elle change de moteur ------------------------
 //
@@ -135,8 +136,14 @@ export function stepAudioFrame(rawDt: number): void {
 
   if (!useStore.getState().started) return;
 
+  // Le réseau avant le cycle, exactement comme dans three/Engine : la version
+  // sonore peut parfaitement mener une rame - sa boucle tourne même onglet
+  // caché, grâce au relais par intervalle plus bas, ce qui en fait le meilleur
+  // hôte du lot.
+  netPumpIn();
+
   if (cycleDt > 0) {
-    updateCycle(cycleDt);
+    updateCycle(netCycleDt(cycleDt));
     // Le train qui traverse la voie d'en face appartient à la GARE, pas à
     // notre rame : le cycle ne fait que lui ouvrir un créneau.
     updatePassingTrain(cycleDt);
@@ -176,6 +183,9 @@ export function stepAudioFrame(rawDt: number): void {
     updatePetCarriers();
     publishAudioEnvironment(physSpan);
   }
+
+  // Ce qu'on a à dire aux autres, une fois le pas fait.
+  netPumpOut(cycleDt);
 }
 
 let frameId = 0;

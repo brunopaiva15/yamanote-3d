@@ -67,6 +67,7 @@ import {
   randomizeBerthOffset,
   randomizeStopTimings,
 } from './stationCycle';
+import { detachSelf } from './net/hold';
 
 /**
  * Creux entre deux rames, quai vide (s). L'intervalle complet d'un départ au
@@ -316,6 +317,12 @@ function updateDeparting(dt: number): void {
     audio.railClack(train.v / V_MAX);
   }
   if (train.d >= OUT_OF_SIGHT) {
+    // La rame qu'on a laissée partir est hors de vue : c'est l'instant précis
+    // où notre monde cesse d'être celui du salon. On avance vers une gare que
+    // les autres ont déjà quittée, avec une autre rame et un autre arrêt, et
+    // continuer à faire semblant coûterait plus cher que de le dire (voir
+    // systems/net/hold). Sans salon, sans effet.
+    detachSelf();
     runtime.speed = 0;
     runtime.accel = 0;
     audio.setRollingDistance(OUT_OF_SIGHT);
@@ -453,7 +460,12 @@ function updateClear(index: number): void {
     lastClackDist = 0;
     // Nouvelle rame, nouveau conducteur : son écart d'arrêt est tiré ici,
     // avant même qu'elle ne se montre au bout du quai.
-    randomizeBerthOffset();
+    //
+    // Tirage LOCAL (`false`), et c'est important dans un salon : cette rame-ci
+    // n'est pas celle que l'hôte mène, c'est la suivante, celle qu'on attend
+    // pour soi seul. Lui réclamer l'écart d'arrêt publié par l'hôte
+    // signalerait une valeur manquante, donc une désynchronisation imaginaire.
+    randomizeBerthOffset(false);
     runtime.trainZ = platformWait.approachDist - runtime.berthOffset;
     randomizeDoorTimings();
     consumeRecoveryTrain();

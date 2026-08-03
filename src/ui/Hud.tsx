@@ -19,6 +19,8 @@ import { usePublishedHeight } from './usePublishedHeight';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
 import { IncidentMenu } from './IncidentMenu';
+import { RoomMenu } from './RoomMenu';
+import { RoomNotice } from './RoomNotice';
 
 function useClock(): string {
   const [clock, setClock] = useState('');
@@ -282,9 +284,17 @@ export function Hud() {
             {t.hud.fullscreen}
           </button>
         )}
-        {/* En bout de barre, après les réglages : ce n'en est pas un. */}
+        {/* En bout de barre, après les réglages : ce n'en sont pas.
+            « Voyager ensemble » d'abord, parce qu'on y revient - regarder qui
+            est là, donner son code - alors qu'on ne provoque un incident
+            qu'une fois de temps en temps. */}
+        <RoomMenu />
         <IncidentMenu />
       </div>
+      {/* Ce que le salon a à dire, et seulement quand il a quelque chose à
+          dire : la rame qui attend quelqu'un, ou celle qui est partie sans
+          nous. Le reste du temps, rien. */}
+      <RoomNotice />
     </>
   );
 }

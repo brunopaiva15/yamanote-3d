@@ -10,6 +10,7 @@ import { CONFIG, V_MAX } from '../data/config';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { input, moveAxes, consumeLook } from '../systems/input';
+import { chatOpen } from '../systems/net/chat';
 import { isTypingTarget, toggleFullscreen } from '../systems/browser';
 import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
 import { publishPlayerLook, publishPlayerPose, publishPlayerStance } from '../systems/playerFrame';
@@ -61,6 +62,10 @@ export function Player() {
     if (!import.meta.env.DEV || typeof window === 'undefined') return;
     const w = window as unknown as Record<string, unknown>;
     w.__crossPortal = () => crossNearestPortal(pos.current);
+    // Le cap et le nombre de touches tenues : de quoi vérifier au navigateur
+    // que le tchat ne vole ni le regard ni la marche (voir ui/Chat).
+    w.__yaw = () => yaw.current;
+    w.__inputKeys = () => input.keys.size;
     // Tourner le regard vers un point du MONDE, pour pouvoir marcher dessus.
     // Vérifier qu'on descend vraiment dans une gare suppose d'y aller à pied
     // (voir __probeWalk), et l'on ne va nulle part sans savoir se diriger. Le
@@ -289,13 +294,25 @@ export function Player() {
     }
 
     // Regard.
+    //
+    // Le mouvement est CONSOMMÉ dans tous les cas, et jeté si le tchat est
+    // ouvert. Le simple fait de ne pas l'appliquer ne suffirait pas : la souris
+    // continue d'alimenter `input.lookDX` pendant qu'on écrit - le verrou de
+    // pointeur est relâché, mais un cliquer-glisser en secours, lui, ne l'est
+    // pas - et tout ce mouvement se déverserait d'un seul coup à la fermeture
+    // du champ, ce qui donne une embardée de plusieurs tours.
     const { dx, dy } = consumeLook();
-    if (started) {
+    if (started && !chatOpen()) {
       yaw.current -= dx * LOOK_SENS;
       pitch.current = THREE.MathUtils.clamp(pitch.current - dy * LOOK_SENS, -1.35, 1.35);
     }
 
-    // Demandes s'asseoir / se lever.
+    // Demandes s'asseoir / se lever. Le tchat ouvert, on ne s'assoit pas d'un
+    // clic destiné au champ de saisie.
+    if (chatOpen()) {
+      input.sitRequest = false;
+      input.standRequest = false;
+    }
     if (input.sitRequest) {
       input.sitRequest = false;
       if (started) {
@@ -323,7 +340,16 @@ export function Player() {
       }
     } else {
       // Marche : allée du wagon, alcôves de porte, seuils ouverts, quai.
-      const axes = moveAxes();
+      //
+      // Le tchat ouvert, les axes sont mis à zéro plutôt que simplement ignorés
+      // plus bas : `moveAxes()` additionne le clavier ET le joystick tactile, et
+      // les deux peuvent rester chargés. Purger `input.keys` à l'ouverture du
+      // champ (voir ui/Chat) ne suffit pas : c'est un coup unique, et le cas
+      // qu'il laisse passer est TACTILE - un doigt resté posé sur le joystick
+      // continue d'écrire dans `input.joy` à chaque `pointermove`, longtemps
+      // après la purge. Une garde continue, elle, tient tant que le champ est
+      // ouvert, quelle que soit la façon dont l'entrée revient.
+      const axes = chatOpen() ? { x: 0, y: 0 } : moveAxes();
       const mag = Math.hypot(axes.x, axes.y);
       // Le quai fait 224 m de long (onze voitures) : au pas de promenade on
       // n'en verrait jamais le bout. Maj. pour presser le pas, comme tout le monde.

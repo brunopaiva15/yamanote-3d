@@ -41,10 +41,13 @@ import { Passengers } from './three/Passengers';
 import { PaxSpeechBubble } from './three/PaxSpeechBubble';
 import { AgentSpeechBubble } from './three/AgentSpeechBubble';
 import { Player } from './three/Player';
+import { RemotePlayers } from './three/RemotePlayers';
+import { RemoteChatBubble } from './three/RemoteChatBubble';
 import { HeldItem } from './three/HeldItem';
 import { Hud } from './ui/Hud';
 import { RenderFailure } from './ui/RenderFailure';
 import { Controls } from './ui/Controls';
+import { Chat } from './ui/Chat';
 import { BoardingPrompt } from './ui/BoardingPrompt';
 import { TalkPrompt } from './ui/TalkPrompt';
 import { DevicePrompt } from './ui/DevicePrompt';
@@ -251,6 +254,12 @@ export default function Game() {
         <Station />
         <PassingTrain />
         <PlatformCrowd />
+        {/* Les autres voyageurs du salon. HORS de `TrainRig` : la conversion de
+            repère est faite dans systems/net/pose, pas par le graphe de scène -
+            un pair peut être dans le wagon quand on est sur le quai, et
+            l'inverse. Sans salon, le composant ne dessine rien. */}
+        <RemotePlayers />
+        <RemoteChatBubble />
         <PaxSpeechBubble />
         <AgentSpeechBubble />
         <Weather />
@@ -266,6 +275,8 @@ export default function Game() {
       <StationDevelopmentNotice />
       <QualityNotice className="quality-note-hud" failureOnly />
       <Controls />
+      {/* Le tchat du salon. Hors salon, il ne rend rien du tout. */}
+      <Chat />
       {/* En dernier, et par-dessus tout le reste : quand la toile n'a pas
           démarré, le HUD affiche un état figé qui ressemble à s'y méprendre à
           un jeu qui tourne. */}

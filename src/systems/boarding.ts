@@ -12,6 +12,7 @@ import { runtime } from './runtime';
 import { beginPlatformWait, boardableElapsed, endPlatformWait } from './platformWait';
 import { resumeDwellAt } from './stationCycle';
 import { nearestOpenPortal, STEP_OUT_U, worldXAt } from './walkable';
+import { setAttached } from './net/room';
 
 export function isOnPlatform(): boolean {
   return runtime.playerFrame === 'platform';
@@ -25,6 +26,10 @@ export function alight(): void {
   if (runtime.playerFrame === 'platform') return;
   runtime.playerFrame = 'platform';
   useStore.getState().setOnPlatform(true);
+  // Le salon apprend qu'on a mis un pied dehors : tant qu'on y est, la rame
+  // attend (systems/net/hold), et l'on ne peut plus en être l'hôte - notre
+  // monde est en train de devenir un autre. Sans salon, sans effet.
+  setAttached(false);
   beginPlatformWait();
 }
 
@@ -37,6 +42,7 @@ export function board(): void {
   const elapsed = boardableElapsed();
   runtime.playerFrame = 'car';
   useStore.getState().setOnPlatform(false);
+  setAttached(true);
   endPlatformWait();
   resumeDwellAt(elapsed, useStore.getState().index);
 }
