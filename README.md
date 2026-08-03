@@ -2281,8 +2281,29 @@ quatre notes qu'on entende dans une E235 est le ピンポンパンポン du syst
 radio numérique, qui signale l'arrivée d'une **information de trafic** sur les
 écrans - à un moment sans rapport avec la gare, et sans annonce derrière. Le
 jeu jouait pourtant quatre notes de cloche à chaque entrée en gare : elles ont
-été retirées. Restent, côté rame, les carillons de porte à deux tons, eux bien
-réels.
+été retirées. Reste, côté rame, le carillon des portes, lui bien réel.
+
+Celui-là est écrit dans `data/doorChime` : le **ピンポーン** des petits
+haut-parleurs vissés au-dessus des baies, à l'intérieur de la voiture. Un aigu
+puis un grave — 824 et 616 Hz —, la paire répétée trois fois, 2,2 s en tout.
+Les fréquences sont **volontairement à côté du tempérament** (une douzaine de
+cents sous Sol♯5 et Ré♯5) : un générateur embarqué ne s'accorde pas sur le
+la 440, il sort la fréquence de son quartz, et c'est ce demi-pour-cent de
+désaccord qui l'empêche de sonner comme un instrument. Le grave entre 170 ms
+après l'aigu, dans sa queue — c'est ce chevauchement qui fait entendre
+« pin-pōn » d'un seul tenant — et les paires sont espacées de 820 ms, soit
+260 ms de silence entre elles : enchaînées, elles sonneraient comme une alarme.
+Le timbre est additif et presque sinusoïdal, deux partiels légèrement
+désaccordés (2,01 et 3,97 fois la fondamentale) qui retombent plus vite
+qu'elle, une amorce de 3150 Hz sous le seuil de l'attention, et la hauteur qui
+se cale en 18 ms depuis 0,8 % trop haut.
+
+Surtout : **c'est le même carillon à l'ouverture et à la fermeture**. Une rame
+n'a pas un signal pour ouvrir et un autre pour fermer — elle en a un seul, joué
+au premier millimètre de course. Ce qui distingue les deux moments à l'oreille,
+c'est la mécanique autour : les vantaux, la purge d'air qui ne siffle qu'à la
+fermeture, et l'avertisseur des portes palières du quai, qui lui dit bien le
+sens.
 
 Cet arrêt d'urgence (急停車) tombe **toutes les dix à vingt-quatre gares**, soit
 de vingt-cinq minutes à une heure de trajet - le premier plus tôt, pour qu'un
