@@ -72,9 +72,11 @@ elle n'offre donc aucun raccourci vers le quai.
 Ce qu'on voit à la place de la scène est **le vrai afficheur de bord** : la
 dalle LCD au-dessus des portes, peinte par le même code (`three/lineScreen`) et
 cadencée par la même rotation (`three/lineScreenCycle`) que celles de la rame -
-plan rapproché des cinq prochaines gares, plan de la boucle, plan du quai et
-côté d'ouverture, écrans quadrilingues, écrans rouges d'incident. Sous elle, la
-réglette de porte ; à côté, le journal de ce qui a été dit.
+plan rapproché des cinq prochaines gares, plan de la boucle, plan des sorties de
+la gare visée - avec les correspondances en bas pendant la circulation, le côté
+d'ouverture des portes en bas à l'approche immédiate -, écrans quadrilingues,
+écrans rouges d'incident. Sous elle, la réglette de porte ; à côté, le journal
+de ce qui a été dit.
 
 Ce qui n'est PAS repris est ce qui demande un corps : marcher, viser, s'asseoir,
 descendre sur le quai, parler à quelqu'un, acheter au distributeur, passer un

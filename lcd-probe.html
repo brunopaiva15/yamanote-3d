@@ -5,7 +5,13 @@
      l'afficheur réel.
 
      /lcd-probe.html?station=0&phase=dwell     (東京, à quai)
-     /lcd-probe.html?station=1&phase=cruise    (つぎは 神田)
+     /lcd-probe.html?station=1&phase=cruise    (次は 神田)
+
+     Les vues portent le nom de ce qu'elles MONTRENT, pas celui de la langue du
+     passage : `exit-transfers` et `exit-doors-*` sont deux compositions
+     différentes du plan des sorties, et non deux traductions l'une de l'autre.
+     Les états qui dépendent du moment du trajet sont rendus aux DEUX moments
+     (`-dwell` / `-cruise`), sans quoi on ne voit jamais changer le bandeau.
 
      Chaque vue est empilée sous son titre ; scripts/lcd-shots.mjs les capture
      une à une. -->
@@ -37,7 +43,7 @@
     <div id="out"></div>
     <script type="module">
       import {
-        drawRoute, drawLoopMap, drawTransfers, drawApproach,
+        drawRoute, drawLoopMap, drawTransfers, drawExitTransfers, drawExitDoors,
         drawEmergencyInfo, drawEmergencyBrake, drawOutageInfo, drawTrafficInfo, drawSecurityNotice,
         drawPriorityNotice, drawPhoneManner,
       } from '/src/three/lineScreen.ts';
@@ -67,25 +73,59 @@
       ];
 
       const views = [
-        ['zoomJP', (s) => drawRoute(s, station, phase, countdown, clock, status, 'jp', dir)],
-        ['zoomEN', (s) => drawRoute(s, station, phase, countdown, clock, status, 'en', dir)],
-        ['loopJP', (s) => drawLoopMap(s, station, phase, countdown, clock, status, 'jp', dir)],
-        ['loopEN', (s) => drawLoopMap(s, station, phase, countdown, clock, status, 'en', dir)],
-        ['transfers', (s) => drawTransfers(s, station, clock, dir)],
-        ['approach0', (s) => drawApproach(s, station, clock, 'jp', true, dir, 0)],
-        ['approach1', (s) => drawApproach(s, station, clock, 'jp', true, dir, 1)],
-        ['approach2', (s) => drawApproach(s, station, clock, 'jp', true, dir, 2)],
-        ['approach-other', (s) => drawApproach(s, station, clock, 'jp', false, dir, 2)],
-        ['approachEN', (s) => drawApproach(s, station, clock, 'en', true, dir, 2, status)],
-        ['disruption', (s) => drawEmergencyInfo(s)],
-        ['brake', (s) => drawEmergencyBrake(s)],
-        ['priority', (s) => drawPriorityNotice(s, station, clock, dir)],
-        ['manner', (s) => drawPhoneManner(s, station, clock, dir)],
-        ['outage', (s) => drawOutageInfo(s)],
-        ['trafficJP', (s) => drawTrafficInfo(s, station, clock, 'jp', NOTICE, dir)],
-        ['trafficEN', (s) => drawTrafficInfo(s, station, clock, 'en', NOTICE, dir)],
-        ['securityJP', (s) => drawSecurityNotice(s, station, clock, 'jp', dir)],
-        ['securityEN', (s) => drawSecurityNotice(s, station, clock, 'en', dir)],
+        // --- Plans de ligne : les deux moments, puis les versions anglaises.
+        // Le plan rapproché ne dit pas la même chose à quai (jeton « vous êtes
+        // ici », ただいま) et en circulation (chevron, 次は) : les deux sont
+        // rendus quelle que soit la phase demandée en query.
+        ['zoom-jp-dwell', (s) => drawRoute(s, station, 'dwell', 0, clock, 'now', 'jp', dir)],
+        ['zoom-jp-cruise', (s) => drawRoute(s, station, 'cruise', countdown, clock, 'next', 'jp', dir)],
+        ['zoom-en-cruise', (s) => drawRoute(s, station, 'cruise', countdown, clock, 'next', 'en', dir)],
+        ['loop-jp-dwell', (s) => drawLoopMap(s, station, 'dwell', 0, clock, 'now', 'jp', dir)],
+        ['loop-jp-cruise', (s) => drawLoopMap(s, station, 'cruise', countdown, clock, 'next', 'jp', dir)],
+        ['loop-en-cruise', (s) => drawLoopMap(s, station, 'cruise', countdown, clock, 'next', 'en', dir)],
+        // La phase passée en query, pour comparer une capture à un instant
+        // précis sans changer de vue.
+        ['zoom-jp-query', (s) => drawRoute(s, station, phase, countdown, clock, status, 'jp', dir)],
+        ['loop-jp-query', (s) => drawLoopMap(s, station, phase, countdown, clock, status, 'jp', dir)],
+
+        // --- Écran de correspondances PLEIN CADRE. À ne pas confondre avec le
+        // plan des sorties dont le bas porte les correspondances : ce sont deux
+        // écrans distincts du cycle.
+        ['transfers-full', (s) => drawTransfers(s, station, clock, dir)],
+
+        // --- Plan des sorties, composition « correspondances » : celle de la
+        // circulation, sous 次は. Elle ne dépend pas de la paroi regardée.
+        ['exit-transfers', (s) => drawExitTransfers(s, station, clock, dir, 2, 'next')],
+
+        // --- Plan des sorties, composition « portes », sous まもなく. Seul
+        // écran du cycle qui diffère d'une paroi à l'autre : la dalle du côté
+        // qui s'ouvre dit こちら側, celle d'en face 反対側.
+        ['exit-doors-this-side', (s) => drawExitDoors(s, station, clock, true, dir, 2, 'soon')],
+        ['exit-doors-other-side', (s) => drawExitDoors(s, station, clock, false, dir, 2, 'soon')],
+        // Les quatre phases du pictogramme de porte (vantaux + triangle de la
+        // voiture du joueur) : c'est une animation, elle ne se juge pas sur une
+        // image.
+        ['exit-doors-anim0', (s) => drawExitDoors(s, station, clock, true, dir, 0, 'soon')],
+        ['exit-doors-anim1', (s) => drawExitDoors(s, station, clock, true, dir, 1, 'soon')],
+        ['exit-doors-anim2', (s) => drawExitDoors(s, station, clock, true, dir, 2, 'soon')],
+        ['exit-doors-anim3', (s) => drawExitDoors(s, station, clock, true, dir, 3, 'soon')],
+
+        // --- Avis de secteur (ne passent que sur certains intervalles).
+        ['security-jp', (s) => drawSecurityNotice(s, station, clock, 'jp', dir)],
+        ['security-en', (s) => drawSecurityNotice(s, station, clock, 'en', dir)],
+        ['priority-seats', (s) => drawPriorityNotice(s, station, clock, dir)],
+        ['manner-mode', (s) => drawPhoneManner(s, station, clock, dir)],
+
+        // --- Information trafic : deux pages qui se suivent.
+        ['traffic-jp', (s) => drawTrafficInfo(s, station, clock, 'jp', NOTICE, dir)],
+        ['traffic-en', (s) => drawTrafficInfo(s, station, clock, 'en', NOTICE, dir)],
+
+        // --- Écrans d'incident : ils remplacent toute la rotation.
+        ['emergency-brake', (s) => drawEmergencyBrake(s)],
+        ['emergency-suspended', (s) => drawEmergencyInfo(s)],
+        ['emergency-outage', (s) => drawOutageInfo(s)],
+
+        // --- Écran gauche, pour mémoire.
         ['weather', (s) => drawWeatherPanel(s, WX, { year: 2026, month: 4, day: 27 }, 28)],
       ];
 
