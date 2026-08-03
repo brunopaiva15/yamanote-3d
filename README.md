@@ -83,6 +83,13 @@ pèse sur les annonces qu'on entend par la porte ouverte, mais son chrono ne
 court que pour qui l'attend debout sur le quai - ce qui est déjà vrai de
 l'expérience complète tant qu'on reste à sa place.
 
+Elle continue de tourner **derrière un onglet caché** ou une fenêtre réduite,
+ce qui est son cas d'usage même : on lance la ligne et on va travailler
+ailleurs. `requestAnimationFrame` ne bat que pour une page qu'on regarde ; la
+boucle passe donc sur un `setInterval` dès que la page est cachée, et revient à
+rAF au retour (`systems/audioLoop`). L'afficheur, lui, cesse de se repeindre
+tant que personne ne le regarde.
+
 Le choix se mémorise et s'écrit dans l'URL : **`?mode=audio`** est partageable
 tel quel. Le morceau de code de cette version ne contient pas une ligne de
 three.js, et `tests/audioVersion.test.ts` parcourt le graphe d'imports pour que

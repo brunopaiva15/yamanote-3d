@@ -58,6 +58,11 @@ export function LineScreen() {
     // une machine qui a choisi la version sonore serait exactement la dépense
     // qu'on lui a promis d'éviter.
     const id = window.setInterval(() => {
+      // Page cachée : personne ne regarde la dalle, et la repeindre coûterait
+      // deux mille lignes de canevas prises sur le fil audio - qui, lui,
+      // continue de jouer (systems/audioLoop garde le monde en marche derrière
+      // un onglet caché). Au retour, la clé aura changé et l'image se refera.
+      if (document.hidden) return;
       // Une dalle LCD n'a pas de demi-teinte : son rétroéclairage tient ou il
       // ne tient pas. Sous le seuil, le panneau est NOIR - pas gris, pas en
       // veille : éteint. C'est ce qu'on voit pendant une coupure de caténaire,
