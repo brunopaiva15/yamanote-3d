@@ -188,3 +188,24 @@ test('l’afficheur ne se repeint pas pour personne', () => {
   // d'éviter sur une machine modeste.
   assert.match(screen, /document\.hidden/, 'la dalle se repeint même page cachée');
 });
+
+test('le bouton plein écran n’entrave pas la vue de l’afficheur', () => {
+  const screen = readFileSync(resolvePath(ROOT, 'src/ui/audio/LineScreen.tsx'), 'utf8');
+  // La dalle ne porte QUE la dalle. Un bouton posé dessus couvrirait sa note de
+  // bas d'écran au survol, et y resterait en permanence au doigt, faute de
+  // survol : il vit sur la réglette de porte, qui est du décor autour de
+  // l'écran et non l'écran.
+  assert.ok(!screen.includes('<button'), 'l’afficheur ne doit porter aucun bouton');
+  const doors = readFileSync(resolvePath(ROOT, 'src/ui/audio/DoorState.tsx'), 'utf8');
+  assert.match(doors, /toggleFullscreenOf\(/, 'la réglette ne porte pas le plein écran');
+});
+
+test('l’afficheur se peint à la résolution de l’écran', () => {
+  const screen = readFileSync(resolvePath(ROOT, 'src/ui/audio/LineScreen.tsx'), 'utf8');
+  // En plein écran, une dalle de 768 pixels agrandie serait une capture
+  // d'écran étirée. La peinture garde sa grille - toutes ses cotes y sont
+  // relevées - et c'est la mémoire d'image qui grandit, sous une
+  // transformation d'échelle : le texte est alors TRACÉ net, pas interpolé.
+  assert.match(screen, /devicePixelRatio/, 'la densité d’écran n’est pas prise en compte');
+  assert.match(screen, /setTransform\(/, 'la peinture n’est pas mise à l’échelle');
+});

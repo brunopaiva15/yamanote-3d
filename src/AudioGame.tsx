@@ -21,7 +21,7 @@
 // « simplifiée » n'est pas une version où l'on invente une autre interface -
 // c'est le même train, avec l'image en moins et le texte en plus.
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { CONFIG } from './data/config';
 import { applyThemeColor } from './i18n/documentMeta';
 import { setListenerPose } from './systems/audioEngine';
@@ -57,6 +57,11 @@ function seatListener(): void {
 }
 
 export default function AudioGame() {
+  // La baie entière - dalle et réglette - est ce qu'on met en grand : sur la
+  // rame elles ne se séparent pas, et l'état des portes reste utile quand
+  // l'afficheur occupe tout l'écran.
+  const mount = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     seatListener();
     startAudioLoop();
@@ -74,9 +79,9 @@ export default function AudioGame() {
       <div className="audio-screen">
         {/* La dalle et sa réserve blanche, comme au-dessus d'une porte : sur la
             rame, l'écran n'est pas posé sur la paroi, il y est ENCASTRÉ. */}
-        <div className="lcd-mount">
+        <div className="lcd-mount" ref={mount}>
           <LineScreen />
-          <DoorState />
+          <DoorState fullscreenTarget={mount} />
         </div>
         <AnnouncementLog />
       </div>

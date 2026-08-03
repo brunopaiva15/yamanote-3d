@@ -83,6 +83,14 @@ pèse sur les annonces qu'on entend par la porte ouverte, mais son chrono ne
 court que pour qui l'attend debout sur le quai - ce qui est déjà vrai de
 l'expérience complète tant qu'on reste à sa place.
 
+Un bouton discret, au bout de la réglette de porte - jamais sur la dalle, qui
+ne doit rien porter -, met **la baie seule en plein écran** : pas la page, la
+dalle et sa réglette, sur du noir, comme un écran de gare. Elle y est
+repeinte à la résolution réelle de l'écran plutôt qu'agrandie : la peinture
+travaille toujours dans sa grille de 768 × 432, où toutes ses cotes ont été
+relevées, mais le canevas porte autant de pixels que l'écran en affiche (voir
+`paintScale`). Le texte et les traits sont donc tracés nets, jusqu'à 2304 × 1296.
+
 Elle continue de tourner **derrière un onglet caché** ou une fenêtre réduite,
 ce qui est son cas d'usage même : on lance la ligne et on va travailler
 ailleurs. `requestAnimationFrame` ne bat que pour une page qu'on regarde ; la

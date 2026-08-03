@@ -49,10 +49,26 @@ export function fullscreenAvailable(): boolean {
  * remonter dans la console du joueur.
  */
 export async function toggleFullscreen(): Promise<void> {
+  await toggleFullscreenOf(document.documentElement);
+}
+
+/**
+ * Le même interrupteur, sur un élément choisi.
+ *
+ * La version sonore s'en sert pour ne mettre en grand QUE l'afficheur de bord :
+ * le plein écran du document montrerait la même page en plus large, alors que
+ * ce qu'on veut voir en grand est la dalle, seule, sur du noir - comme un
+ * écran de gare.
+ *
+ * Sortir se fait toujours par `document.exitFullscreen`, quel que soit
+ * l'élément entré : c'est le document qui est en plein écran, l'élément n'est
+ * que ce qu'on y montre.
+ */
+export async function toggleFullscreenOf(el: Element): Promise<void> {
   if (!fullscreenAvailable()) return;
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
-    else await document.documentElement.requestFullscreen();
+    else await el.requestFullscreen();
   } catch {
     /* refus silencieux (iframe, politique navigateur…) */
   }

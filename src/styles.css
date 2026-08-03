@@ -1720,12 +1720,87 @@ body,
 }
 
 .lcd-frame {
+  position: relative;
   background: var(--lcd-bezel);
   border-radius: 4px;
   padding: 9px;
   /* La dalle est EN RETRAIT dans sa feuillure : l'ombre portée est interne. */
   box-shadow: inset 0 2px 7px rgba(0, 0, 0, 0.75);
 }
+
+/* --- La baie seule, en grand ---
+   Le plein écran du HUD montre la même page en plus large ; celui-ci ne montre
+   que la baie - la dalle et sa réglette - sur du noir, comme un écran de gare.
+   La réserve claire disparaît : à cette taille elle ne serait plus une paroi de
+   wagon, seulement une marge. */
+.lcd-mount:fullscreen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  max-width: none;
+  padding: 0;
+  border-radius: 0;
+  background: #000;
+  box-shadow: none;
+}
+
+.lcd-mount:fullscreen .lcd-frame {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  /* La dalle prend ce qui reste une fois la réglette posée. */
+  min-height: 0;
+  display: flex;
+}
+
+.lcd-mount:fullscreen .lcd-canvas {
+  /* Le 16:9 est tenu par `aspect-ratio` ; ces deux bornes décident lequel des
+     deux côtés touche le bord de l'écran, selon que celui-ci est plus large ou
+     plus haut que la dalle. */
+  width: auto;
+  height: auto;
+  max-width: 100vw;
+  max-height: calc(100vh - 46px);
+  border-radius: 0;
+}
+
+.lcd-mount:fullscreen .lcd-doors {
+  margin: 0;
+  width: 100vw;
+  border-radius: 0;
+}
+
+/* Le bouton : au bout de la réglette, petit et effacé, comme le ⚠ du HUD. Il
+   n'est pas SUR l'afficheur, et c'est délibéré - posé dessus il couvrait la
+   note de bas d'écran, et serait resté dessus en permanence au doigt. */
+.lcd-doors-full {
+  flex: none;
+  width: 28px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  color: #9aa1a7;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 5px;
+  cursor: pointer;
+  transition:
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.lcd-doors-full:hover,
+.lcd-doors-full:focus-visible {
+  color: #edefef;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
 
 .lcd-canvas {
   display: block;

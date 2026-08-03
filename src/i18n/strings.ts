@@ -335,6 +335,12 @@ export interface Strings {
     /** État des portes de la rame. */
     doorsLabel: string;
     doors: { open: string; closed: string; opening: string; closing: string };
+    /**
+     * Mettre l'afficheur seul en grand. Un bouton discret sur la dalle : ce
+     * n'est pas le plein écran du HUD, qui montre la même page en plus large.
+     */
+    lcdFullscreen: string;
+    lcdFullscreenExit: string;
   };
 
   language: string;
@@ -562,6 +568,8 @@ const FR: Strings = {
       opening: "en cours d'ouverture",
       closing: 'en cours de fermeture',
     },
+    lcdFullscreen: 'Afficheur en plein écran',
+    lcdFullscreenExit: 'Quitter le plein écran',
   },
 
   language: 'Langue',
@@ -785,6 +793,8 @@ const EN: Strings = {
     logEmpty: 'Nothing yet. The first announcement is on its way.',
     doorsLabel: 'Doors',
     doors: { open: 'open', closed: 'closed', opening: 'opening', closing: 'closing' },
+    lcdFullscreen: 'Full-screen display',
+    lcdFullscreenExit: 'Exit full screen',
   },
 
   language: 'Language',
@@ -1006,6 +1016,8 @@ const JA: Strings = {
     logEmpty: 'まだ何もありません。最初の放送をお待ちください。',
     doorsLabel: 'ドア',
     doors: { open: '開', closed: '閉', opening: '開扉中', closing: '閉扉中' },
+    lcdFullscreen: '案内表示器を全画面',
+    lcdFullscreenExit: '全画面を終了',
   },
 
   language: '言語',
