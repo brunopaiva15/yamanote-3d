@@ -1,0 +1,79 @@
+<!doctype html>
+<!-- Page de probe DEV : rend les publicités procédurales à leurs formats RÉELS,
+     hors du monde 3D, pour juger la composition avant de la voir collée sur une
+     paroi à trois mètres.
+
+     Les quatre formats sont ceux des supports du jeu : la dalle de gauche
+     au-dessus des portes (512 × 288), l'affiche 窓上 au-dessus des fenêtres
+     (768 × 240), le nakazuri suspendu (1024 × 358) et le caisson de quai
+     portrait (512 × 720). Une composition qui tient sur les quatre tient
+     partout ; c'est là qu'on voit celles qui débordent. -->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ad-probe - publicités à l'échelle</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #14171c;
+        color: #cfd6df;
+        font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      figure { margin: 0 0 18px; }
+      figcaption { padding: 4px 0; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="out"></div>
+    <script type="module">
+      import { drawAdInto, makeNakazuriTexture } from '/src/textures/procedural.ts';
+
+      const q = new URLSearchParams(location.search);
+      const first = Number(q.get('seed') ?? 0);
+      const count = Number(q.get('count') ?? 6);
+      // Un seul format à la fois quand on le demande, sinon les quatre.
+      const only = q.get('format');
+
+      const FORMATS = [
+        ['lcd', 512, 288, false],
+        ['mado', 768, 240, false],
+        ['nakazuri', 1018, 332, false],
+        ['kaisho', 512, 720, true],
+      ];
+
+      const out = document.getElementById('out');
+      const shot = (name, w, h, paint) => {
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        paint(c.getContext('2d'));
+        const fig = document.createElement('figure');
+        const cap = document.createElement('figcaption');
+        cap.textContent = name;
+        c.dataset.view = name;
+        fig.append(cap, c);
+        out.append(fig);
+      };
+
+      for (const [fname, w, h, bold] of FORMATS) {
+        if (only && only !== fname) continue;
+        for (let i = 0; i < count; i++) {
+          const seed = first + i;
+          shot(`${fname}-${seed}`, w, h, (g) => drawAdInto(g, w, h, seed, bold));
+        }
+      }
+
+      // Le nakazuri complet : la planche avec sa réserve de suspension, son
+      // bandeau de pied et son grain de papier, pas seulement le visuel.
+      if (!only || only === 'planche') {
+        for (let i = 0; i < 2; i++) {
+          const t = makeNakazuriTexture(first + i);
+          const src = t.image;
+          shot(`planche-${first + i}`, src.width, src.height, (g) => g.drawImage(src, 0, 0));
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -3,7 +3,18 @@
 // PNJ, panneaux et autocollants.
 
 import * as THREE from 'three';
-import { AD_PALETTES, AD_SUBS, AD_WORDS } from '../data/ads';
+import {
+  AD_BODY,
+  AD_BRANDS,
+  AD_CTA,
+  AD_KICKERS,
+  AD_NOTES,
+  AD_PALETTES,
+  AD_SEARCH,
+  AD_SPECS,
+  AD_SUBS,
+  AD_WORDS,
+} from '../data/ads';
 import { STATIONS, TRANSFERS, boardDestinations, directionBoardStations } from '../data/stations';
 import { LCD_BOARDS, type BoardEta, type BoardView } from '../data/departureBoard';
 import { nextStation, prevStation } from '../data/loop';
@@ -1288,7 +1299,357 @@ export function makeTrackFenceTexture(hedge: boolean): THREE.CanvasTexture {
 }
 
 // --- Publicités japonaises procédurales (pools dans data/ads.ts) ---
-const AD_LAYOUT_COUNT = 8;
+// --- Les blocs d'une affiche japonaise ---------------------------------------
+//
+// Chaque fonction ci-dessous dessine UNE pièce du vocabulaire : l'accroche, le
+// titre cerné, le bloc de prix, le cadre de période, la case de recherche, le
+// QR, le bandeau de marque, les mentions. Les compositions plus bas ne font
+// que les empiler dans un ordre différent - c'est ainsi que sont faites les
+// vraies affiches, et c'est pour ça qu'elles se ressemblent toutes un peu sans
+// jamais être identiques.
+
+/** Trait fin sous une accroche, avec sa puce carrée à gauche. */
+function adKicker(g: CanvasRenderingContext2D, text: string, x: number, y: number, px: number, color: string): void {
+  g.fillStyle = color;
+  g.fillRect(x, y - px * 0.72, px * 0.16, px * 0.72);
+  g.font = `bold ${Math.round(px)}px ${JP_FONT}`;
+  g.fillText(text, x + px * 0.42, y);
+}
+
+/**
+ * Titre en 袋文字 : la lettre est cernée d'un trait épais de la couleur du
+ * fond, puis remplie. C'est ce cerne - et non une ombre - qui fait tenir un
+ * gros titre sur une photo, et c'est LE tic typographique de l'affiche
+ * japonaise.
+ */
+function adHeadline(
+  g: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  basePx: number,
+  fill: string,
+  edge: string,
+): number {
+  let px = basePx;
+  do {
+    g.font = `bold ${px}px ${JP_FONT}`;
+    if (g.measureText(text).width <= maxWidth) break;
+    px -= Math.max(1, Math.floor(px * 0.07));
+  } while (px > 10);
+  g.lineJoin = 'round';
+  g.strokeStyle = edge;
+  g.lineWidth = px * 0.18;
+  g.strokeText(text, x, y);
+  g.fillStyle = fill;
+  g.fillText(text, x, y);
+  return px;
+}
+
+/** Titre vertical cerné, colonne descendante. */
+function adHeadlineVert(
+  g: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  yTop: number,
+  glyph: number,
+  fill: string,
+  edge: string,
+): void {
+  g.font = `bold ${Math.round(glyph)}px ${JP_FONT}`;
+  g.textAlign = 'center';
+  g.lineJoin = 'round';
+  for (let i = 0; i < text.length; i++) {
+    const y = yTop + (i + 0.85) * glyph * 1.02;
+    g.strokeStyle = edge;
+    g.lineWidth = glyph * 0.18;
+    g.strokeText(text[i], x, y);
+    g.fillStyle = fill;
+    g.fillText(text[i], x, y);
+  }
+  g.textAlign = 'left';
+}
+
+/**
+ * Bloc de prix : le chiffre énorme, l'unité minuscule collée dessous-droite,
+ * et 税込 au-dessus. Les proportions comptent plus que la valeur - c'est la
+ * masse du chiffre qui se lit du bout du wagon.
+ */
+function adPrice(g: CanvasRenderingContext2D, value: string, unit: string, x: number, y: number, px: number, color: string): void {
+  g.fillStyle = color;
+  g.font = `${Math.round(px * 0.22)}px ${JP_FONT}`;
+  g.fillText('税込', x, y - px * 0.82);
+  g.font = `bold ${Math.round(px * 0.34)}px ${JP_FONT}`;
+  g.fillText('¥', x, y);
+  const yenW = g.measureText('¥').width;
+  g.font = `bold ${Math.round(px)}px ${JP_FONT}`;
+  g.fillText(value, x + yenW + px * 0.04, y);
+  const numW = g.measureText(value).width;
+  g.font = `bold ${Math.round(px * 0.26)}px ${JP_FONT}`;
+  g.fillText(unit, x + yenW + numW + px * 0.1, y);
+}
+
+/** Cadre de période de campagne, filet fin et libellé centré. */
+function adPeriod(g: CanvasRenderingContext2D, text: string, x: number, y: number, w: number, h: number, color: string): void {
+  g.strokeStyle = color;
+  g.lineWidth = Math.max(1, h * 0.07);
+  g.strokeRect(x, y, w, h);
+  g.fillStyle = color;
+  g.textAlign = 'center';
+  g.font = `bold ${Math.round(h * 0.52)}px ${JP_FONT}`;
+  g.fillText(text, x + w / 2, y + h * 0.68, w * 0.92);
+  g.textAlign = 'left';
+}
+
+/**
+ * La case de recherche : le mot-clé dans un cadre, une loupe, et le bouton
+ * 「検索」 avec sa flèche. Aucune affiche japonaise n'y coupe, et c'est ce
+ * détail-là qui manque le plus quand il n'y est pas.
+ */
+function adSearchBox(g: CanvasRenderingContext2D, word: string, x: number, y: number, w: number, h: number, color: string): void {
+  const btn = h * 2.1;
+  g.fillStyle = '#ffffff';
+  g.fillRect(x, y, w - btn, h);
+  g.strokeStyle = color;
+  g.lineWidth = Math.max(1, h * 0.08);
+  g.strokeRect(x, y, w - btn, h);
+  g.fillStyle = '#2c2c2c';
+  g.font = `${Math.round(h * 0.5)}px ${JP_FONT}`;
+  g.fillText(word, x + h * 0.55, y + h * 0.68, w - btn - h * 0.8);
+  // Loupe.
+  g.strokeStyle = '#7a7a7a';
+  g.lineWidth = Math.max(1, h * 0.07);
+  g.beginPath();
+  g.arc(x + h * 0.3, y + h * 0.42, h * 0.16, 0, Math.PI * 2);
+  g.moveTo(x + h * 0.4, y + h * 0.54);
+  g.lineTo(x + h * 0.5, y + h * 0.66);
+  g.stroke();
+  // Bouton 検索.
+  g.fillStyle = color;
+  g.fillRect(x + w - btn, y, btn, h);
+  g.fillStyle = '#ffffff';
+  g.font = `bold ${Math.round(h * 0.48)}px ${JP_FONT}`;
+  g.fillText('検索', x + w - btn + h * 0.28, y + h * 0.68);
+  g.beginPath();
+  g.moveTo(x + w - h * 0.5, y + h * 0.32);
+  g.lineTo(x + w - h * 0.22, y + h * 0.5);
+  g.lineTo(x + w - h * 0.5, y + h * 0.68);
+  g.closePath();
+  g.fill();
+}
+
+/** QR : une trame carrée avec ses trois repères d'angle. Illisible, et c'est bien. */
+function adQr(g: CanvasRenderingContext2D, x: number, y: number, s: number, seed: number): void {
+  const n = 11;
+  const cell = s / n;
+  const q = rng(seed * 977 + 13);
+  g.fillStyle = '#ffffff';
+  g.fillRect(x, y, s, s);
+  g.fillStyle = '#151515';
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const corner = (i < 3 && j < 3) || (i > n - 4 && j < 3) || (i < 3 && j > n - 4);
+      if (corner) continue;
+      if (q() > 0.52) g.fillRect(x + i * cell, y + j * cell, cell, cell);
+    }
+  }
+  for (const [ci, cj] of [[0, 0], [n - 3, 0], [0, n - 3]] as const) {
+    g.fillStyle = '#151515';
+    g.fillRect(x + ci * cell, y + cj * cell, cell * 3, cell * 3);
+    g.fillStyle = '#ffffff';
+    g.fillRect(x + (ci + 0.6) * cell, y + (cj + 0.6) * cell, cell * 1.8, cell * 1.8);
+    g.fillStyle = '#151515';
+    g.fillRect(x + (ci + 1) * cell, y + (cj + 1) * cell, cell, cell);
+  }
+}
+
+/** Pastille d'angle en étoile : 「無料」「新」 et autres cris de vitrine. */
+function adBurst(g: CanvasRenderingContext2D, text: string, cx: number, cy: number, r: number, fill: string, ink: string): void {
+  g.fillStyle = fill;
+  g.beginPath();
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2;
+    const rr = i % 2 === 0 ? r : r * 0.82;
+    g[i ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  g.closePath();
+  g.fill();
+  g.fillStyle = ink;
+  g.textAlign = 'center';
+  fitFillText(g, text, cx, cy + r * 0.22, r * 1.4, Math.round(r * 0.62));
+  g.textAlign = 'left';
+}
+
+/** Pavé de mentions : quelques lignes grises minuscules, toutes en ※. */
+function adNotes(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  px: number,
+  color: string,
+  seed: number,
+  count = 3,
+): void {
+  const r = rng(seed * 31 + 7);
+  g.fillStyle = color;
+  g.font = `${Math.round(px)}px ${JP_FONT}`;
+  const used = new Set<number>();
+  for (let i = 0; i < count; i++) {
+    let k = Math.floor(r() * AD_NOTES.length);
+    while (used.has(k)) k = (k + 1) % AD_NOTES.length;
+    used.add(k);
+    g.fillText(AD_NOTES[k], x, y + i * px * 1.35);
+  }
+}
+
+/** Corps de texte : lignes courtes sous l'accroche, interligne serré. */
+function adBody(
+  g: CanvasRenderingContext2D,
+  lines: string[],
+  x: number,
+  y: number,
+  px: number,
+  color: string,
+  maxWidth: number,
+): void {
+  g.fillStyle = color;
+  g.font = `${Math.round(px)}px ${JP_FONT}`;
+  lines.forEach((t, i) => g.fillText(t, x, y + i * px * 1.55, maxWidth));
+}
+
+/**
+ * Tableau réglé étiquette / valeur.
+ *
+ * C'est le pavé des conditions - salaire, horaires, tarif - et il est TOUJOURS
+ * réglé : étiquette en réserve sur pastille, valeur en gras, filet fin dessous.
+ * Une annonce japonaise sans ce tableau ne ressemble à rien.
+ */
+function adSpecTable(
+  g: CanvasRenderingContext2D,
+  rows: readonly (readonly [string, string])[],
+  x: number,
+  y: number,
+  w: number,
+  rowH: number,
+  ink: string,
+  accent: string,
+): void {
+  rows.forEach(([k, v], i) => {
+    const ry = y + i * rowH;
+    g.fillStyle = accent;
+    g.globalAlpha = 0.14;
+    g.fillRect(x, ry, w * 0.32, rowH * 0.84);
+    g.globalAlpha = 1;
+    g.fillStyle = accent;
+    g.font = `bold ${Math.round(rowH * 0.4)}px ${JP_FONT}`;
+    g.fillText(k, x + rowH * 0.18, ry + rowH * 0.58, w * 0.28);
+    g.fillStyle = ink;
+    g.font = `bold ${Math.round(rowH * 0.5)}px ${JP_FONT}`;
+    g.fillText(v, x + w * 0.37, ry + rowH * 0.6, w * 0.61);
+    g.strokeStyle = 'rgba(0,0,0,0.16)';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(x, Math.round(ry + rowH * 0.92) + 0.5);
+    g.lineTo(x + w, Math.round(ry + rowH * 0.92) + 0.5);
+    g.stroke();
+  });
+}
+
+/** Bulle de dialogue à queue : ce que dit la mascotte. */
+function adBubble(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tailX: number,
+  tailY: number,
+  edge: string,
+): void {
+  g.fillStyle = '#ffffff';
+  g.strokeStyle = edge;
+  g.lineWidth = Math.max(2, h * 0.045);
+  g.beginPath();
+  g.moveTo(x + h * 0.22, y);
+  g.arcTo(x + w, y, x + w, y + h, h * 0.22);
+  g.arcTo(x + w, y + h, x, y + h, h * 0.22);
+  g.arcTo(x, y + h, x, y, h * 0.22);
+  g.arcTo(x, y, x + w, y, h * 0.22);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  // La queue, dessinée par-dessus puis rebouchée : c'est ainsi qu'on obtient
+  // un contour continu sans avoir à composer le chemin entier.
+  g.beginPath();
+  g.moveTo(x, y + h * 0.42);
+  g.lineTo(tailX, tailY);
+  g.lineTo(x, y + h * 0.72);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#ffffff';
+  g.fillRect(x + g.lineWidth * 0.5, y + h * 0.42, g.lineWidth, h * 0.3);
+}
+
+/** Bandeau de pied : marque, appel à l'action, case de recherche et QR. */
+function adFooter(
+  g: CanvasRenderingContext2D,
+  W: number,
+  y: number,
+  h: number,
+  brand: string,
+  cta: string,
+  search: string,
+  color: string,
+  seed: number,
+): void {
+  g.fillStyle = color;
+  g.fillRect(0, y, W, h);
+  g.fillStyle = '#ffffff';
+  fitFillText(g, brand, W * 0.035, y + h * 0.44, W * 0.34, Math.round(h * 0.34));
+  g.font = `${Math.round(h * 0.2)}px ${JP_FONT}`;
+  g.fillText(cta, W * 0.035, y + h * 0.72);
+  const qr = h * 0.66;
+  adQr(g, W - qr - W * 0.03, y + h * 0.17, qr, seed);
+  adSearchBox(g, search, W * 0.4, y + h * 0.28, W * 0.42, h * 0.4, '#1b1b1b');
+}
+
+/** Aplat « photo » : dégradé, horizon et silhouettes. Une image sans image. */
+function adPhoto(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, accent: string, seed: number): void {
+  const r = rng(seed * 71 + 3);
+  const grad = g.createLinearGradient(x, y, x, y + h);
+  grad.addColorStop(0, accent);
+  grad.addColorStop(1, '#ffffff');
+  g.save();
+  g.beginPath();
+  g.rect(x, y, w, h);
+  g.clip();
+  g.fillStyle = grad;
+  g.fillRect(x, y, w, h);
+  // Trame de points : le fond imprimé, vu de près.
+  g.fillStyle = 'rgba(255,255,255,0.22)';
+  const step = Math.max(6, h * 0.09);
+  for (let i = 0; i < w / step; i++) {
+    for (let j = 0; j < h / step; j++) {
+      g.beginPath();
+      g.arc(x + i * step + step * 0.5, y + j * step + step * 0.5, step * 0.16, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  // Horizon et silhouettes : trois masses sombres de hauteurs inégales.
+  g.fillStyle = 'rgba(30,40,55,0.28)';
+  const base = y + h * (0.62 + r() * 0.18);
+  for (let i = 0; i < 5; i++) {
+    const bw = w * (0.1 + r() * 0.18);
+    const bh = h * (0.16 + r() * 0.3);
+    g.fillRect(x + w * (i / 5) + r() * w * 0.04, base - bh, bw, bh);
+  }
+  g.fillStyle = 'rgba(30,40,55,0.4)';
+  g.fillRect(x, base, w, y + h - base);
+  g.restore();
+}
+
 const AD_MASCOT_COUNT = 7;
 
 // Mascottes plates façon irasutoya : formes rondes, visages simples.
@@ -1453,46 +1814,6 @@ function drawMascot(g: CanvasRenderingContext2D, kind: number, cx: number, cy: n
   }
 }
 
-function drawMascotAd(
-  g: CanvasRenderingContext2D,
-  W: number,
-  H: number,
-  portrait: boolean,
-  kind: number,
-  word: string,
-  sub: string,
-  accent: string,
-  ink: string,
-): void {
-  if (portrait) {
-    g.fillStyle = accent;
-    g.globalAlpha = 0.16;
-    g.beginPath();
-    g.arc(W / 2, H * 0.38, W * 0.34, 0, Math.PI * 2);
-    g.fill();
-    g.globalAlpha = 1;
-    drawMascot(g, kind, W / 2, H * 0.38, W * 0.42);
-    g.fillStyle = ink;
-    g.textAlign = 'center';
-    fitFillText(g, word, W / 2, H * 0.78, W * 0.86, Math.floor(W * 0.14));
-    g.fillStyle = accent;
-    fitFillText(g, sub, W / 2, H * 0.88, W * 0.86, Math.floor(W * 0.06));
-    g.textAlign = 'left';
-  } else {
-    g.fillStyle = accent;
-    g.globalAlpha = 0.16;
-    g.beginPath();
-    g.arc(W * 0.2, H * 0.5, H * 0.42, 0, Math.PI * 2);
-    g.fill();
-    g.globalAlpha = 1;
-    drawMascot(g, kind, W * 0.2, H * 0.5, H * 0.62);
-    g.fillStyle = ink;
-    fitFillText(g, word, W * 0.4, H * 0.52, W * 0.56, Math.floor(H * 0.3));
-    g.fillStyle = accent;
-    fitFillText(g, sub, W * 0.4, H * 0.78, W * 0.56, Math.floor(H * 0.14));
-  }
-}
-
 /** Luminance approchée d'une couleur #rrggbb, pour trier les fonds. */
 function luma(hex: string): number {
   const n = parseInt(hex.slice(1), 16);
@@ -1507,7 +1828,37 @@ const AD_BOLD_PALETTES = AD_PALETTES.filter(([bg]) => luma(bg) < 0.7);
 
 // Dessine une publicité dans un contexte existant : les gabarits sont exprimés
 // en fractions de W et H, donc réutilisables à n'importe quelles proportions
-// (affiches nakazuri, écrans 窓上, écran gauche au-dessus des portes).
+// (affiches nakazuri, caissons de quai, écrans 窓上, écran gauche au-dessus des
+// portes, dalles d'about).
+//
+// Une affiche japonaise n'est pas une image avec du texte posé dessus : c'est
+// une PILE de blocs dans un ordre convenu - accroche, titre cerné, corps,
+// chiffre, période, mentions, bandeau de marque. On tire donc une FAMILLE de
+// composition, puis on empile toujours la même façon. C'est cet ordre, et non
+// les couleurs, qui les rend toutes reconnaissables au premier coup d'œil sans
+// qu'aucune ne soit la copie d'une autre.
+//
+// Le bas de l'affiche est réservé : les mentions ※ puis le bandeau de marque
+// avec sa case 検索 et son QR. Les familles n'ont donc jamais à s'en occuper,
+// elles composent dans ce qui reste au-dessus.
+
+/** Ce qu'on crie dans la pastille d'angle. Court, sinon ça ne tient pas. */
+const AD_BURSTS = ['新', '無料', '限定', '半額', '初回', '送料無料', '数量限定'];
+/** L'unité collée sous le chiffre : elle change le sens du prix affiché. */
+const AD_UNITS = ['〜', '/月', 'より', '(税込)'];
+
+/** Période de campagne plausible, tirée autour d'un mois quelconque. */
+function adPeriodText(r: () => number): string {
+  const m = 1 + Math.floor(r() * 12);
+  const d = 1 + Math.floor(r() * 20);
+  const span = 5 + Math.floor(r() * 20);
+  const em = d + span > 28 ? (m % 12) + 1 : m;
+  const ed = d + span > 28 ? ((d + span) % 28) + 1 : d + span;
+  return `${m}月${d}日〜${em}月${ed}日`;
+}
+
+const AD_LAYOUT_COUNT = 7;
+
 export function drawAdInto(
   g: CanvasRenderingContext2D,
   W: number,
@@ -1515,142 +1866,304 @@ export function drawAdInto(
   seed: number,
   bold = false,
 ): void {
-  const portrait = H > W;
   const r = rng(500 + seed * 13);
+  const pick = <T>(a: readonly T[]): T => a[Math.floor(r() * a.length)];
   const palettes = bold ? AD_BOLD_PALETTES : AD_PALETTES;
-  const [bg, accent, ink] = palettes[Math.floor(r() * palettes.length)];
+  const [bg, accent, ink] = pick(palettes);
+  // `ink` est l'encre SUR LE FOND de la palette : sur un fond sombre elle est
+  // claire. Elle ne vaut donc rien dès qu'on pose un aplat blanc (onglet de
+  // prix, bulle, bandeau de pied), et il faut une encre franchement sombre
+  // pour ces cas-là. C'est le piège de toute palette à deux tons.
+  const deep = luma(ink) < 0.45 ? ink : '#16181d';
+  const paper = '#f7f5f0';
+  const noteInk = luma(bg) < 0.55 ? 'rgba(238,236,230,0.66)' : 'rgba(40,40,44,0.62)';
+  // Même piège de l'autre côté : sur un aplat d'accent, le blanc n'est lisible
+  // que si l'accent est franc. Les palettes pastel ont des accents clairs, sur
+  // lesquels il faut au contraire poser l'encre sombre. L'encre se choisit
+  // d'après ce qu'elle recouvre, jamais d'après le rôle qu'on lui donne.
+  const onAccent = luma(accent) < 0.58 ? '#ffffff' : deep;
+  const onPaper = luma(accent) < 0.62 ? accent : deep;
+
+  // « Large » n'est pas le contraire de « portrait » : une dalle 16:9 tient
+  // encore un titre sur deux lignes, un nakazuri de 3,5:1 non. C'est cette
+  // proportion-là qui décide de la composition, pas l'orientation.
+  const wide = W / H > 1.55;
+  const u = Math.min(W, H);
+  const pad = u * 0.05;
+
+  // Réserve du bas : bandeau de marque, et mentions juste au-dessus.
+  const footH = Math.max(u * 0.16, H * (wide ? 0.2 : 0.12));
+  const footY = H - footH;
+  const noteN = H < 320 ? 1 : 3;
+  const notePx = Math.max(6, u * 0.028);
+  const noteTop = footY - u * 0.025 - noteN * notePx * 1.35;
+  /** Bas de la zone que la composition a le droit d'occuper. */
+  const CH = noteTop - u * 0.02;
+
+  const word = pick(AD_WORDS);
+  const sub = pick(AD_SUBS);
+  const brand = pick(AD_BRANDS);
+  const kicker = pick(AD_KICKERS);
+  const body = [pick(AD_BODY), pick(AD_BODY)].filter((t, i, a) => a.indexOf(t) === i);
+  const specs = [pick(AD_SPECS), pick(AD_SPECS), pick(AD_SPECS)].filter(
+    (t, i, a) => a.indexOf(t) === i,
+  );
+  const price = (198 + Math.floor(r() * 24) * 50).toLocaleString();
+  const period = adPeriodText(r);
+
   g.fillStyle = bg;
   g.fillRect(0, 0, W, H);
-  const layout = Math.floor(r() * AD_LAYOUT_COUNT);
-  const word = AD_WORDS[Math.floor(r() * AD_WORDS.length)];
-  const sub = AD_SUBS[Math.floor(r() * AD_SUBS.length)];
-  if (layout >= 6) {
-    // Affiche mascotte façon irasutoya : personnage plat + gros titre rond.
-    drawMascotAd(g, W, H, portrait, Math.floor(r() * AD_MASCOT_COUNT), word, sub, accent, ink);
-  } else if (layout === 0) {
-    g.fillStyle = accent;
-    g.fillRect(0, 0, W, H * 0.16);
-    g.fillStyle = bg;
-    fitFillText(g, sub, W * 0.05, H * 0.115, W * 0.9, Math.floor(H * 0.09));
-    g.fillStyle = ink;
-    fitFillText(g, word, W * 0.07, H * (portrait ? 0.42 : 0.68), W * 0.86, Math.floor(H * (portrait ? 0.11 : 0.34)));
-    g.fillStyle = accent;
-    fitFillText(
-      g,
-      `¥${(198 + Math.floor(r() * 24) * 50).toLocaleString()}`,
-      W * 0.07,
-      H * (portrait ? 0.6 : 0.92),
-      W * 0.6,
-      Math.floor(H * (portrait ? 0.08 : 0.22)),
-    );
-  } else if (layout === 1) {
-    const grad = g.createLinearGradient(0, 0, 0, H * 0.62);
-    grad.addColorStop(0, accent);
-    grad.addColorStop(1, bg);
-    g.fillStyle = grad;
-    g.fillRect(0, 0, W, H * 0.62);
-    g.fillStyle = 'rgba(30,30,35,0.5)';
-    g.beginPath();
-    g.arc(W * 0.5, H * 0.36, H * 0.13, 0, Math.PI * 2);
-    g.fill();
-    g.fillRect(W * 0.4, H * 0.44, W * 0.2, H * 0.18);
-    g.fillStyle = ink;
-    fitFillText(g, word, W * 0.08, H * 0.82, W * 0.84, Math.floor(H * 0.1));
-    fitFillText(g, sub, W * 0.08, H * 0.93, W * 0.84, Math.floor(H * 0.055), '');
-  } else if (layout === 2) {
-    // Titre vertical : taille calée sur la hauteur disponible.
-    g.fillStyle = ink;
-    const glyph = Math.min(Math.floor(W * 0.16), Math.floor((H * 0.78) / Math.max(1, word.length)));
-    g.font = `bold ${glyph}px ${JP_FONT}`;
-    for (let k = 0; k < word.length; k++) {
-      g.fillText(word[k], W * 0.36, H * 0.14 + (k + 0.8) * glyph * 1.08, glyph * 1.2);
-    }
-    g.fillStyle = accent;
-    g.fillRect(W * 0.08, H * 0.08, W * 0.06, H * 0.84);
-    g.fillStyle = ink;
-    fitFillText(g, sub, W * 0.56, H * 0.9, W * 0.4, Math.floor(W * 0.05));
-  } else if (layout === 3) {
-    // Bandes diagonales + gros pourcentage promo.
+
+  // Les deux familles verticales (titre en 縦書き) demandent de la hauteur :
+  // sur une bannière trois fois plus large que haute, elles ne tiennent pas.
+  const family = wide ? Math.floor(r() * 5) : Math.floor(r() * AD_LAYOUT_COUNT);
+
+  if (family === 0) {
+    // 商品 - le visuel produit et son prix. La composition la plus courante :
+    // une photo, une accroche, un titre cerné, deux lignes de corps, le chiffre.
+    const ph = wide
+      ? { x: W * 0.58, y: 0, w: W * 0.42, h: CH }
+      : { x: pad, y: pad, w: W - pad * 2, h: CH * 0.44 };
+    adPhoto(g, ph.x, ph.y, ph.w, ph.h, accent, seed);
+    const tx = pad;
+    const tw = wide ? W * 0.54 - pad : W - pad * 2;
+    // La colonne de texte s'empile sur un curseur plutôt que sur des fractions
+    // fixes : le titre décide de sa propre taille, donc de la place qu'il
+    // laisse au corps, et le chiffre prend ce qui reste. Avec des positions
+    // figées, un titre court laissait un trou et un titre long mordait sur
+    // le prix.
+    let cy = wide ? CH * 0.2 : ph.y + ph.h + u * 0.09;
+    adKicker(g, kicker, tx, cy, u * 0.05, accent);
+    cy += u * 0.16;
+    const hp = adHeadline(g, word, tx, cy, tw, Math.floor(u * 0.19), ink, bg);
+    cy += hp * 0.55;
+    const lines = wide ? body.slice(0, 1) : body;
+    adBody(g, lines, tx, cy, u * 0.045, ink, tw);
+    cy += lines.length * u * 0.045 * 1.55;
+    const py = CH - u * 0.03;
+    adPrice(g, price, pick(AD_UNITS), tx, py, Math.min(u * 0.17, (py - cy) / 1.15), accent);
+    adBurst(g, pick(AD_BURSTS), ph.x + ph.w - u * 0.14, ph.y + u * 0.15, u * 0.11, accent, onAccent);
+  } else if (family === 1) {
+    // セール - les rayures obliques, la pastille de pourcentage, le prix barré.
     g.save();
-    g.translate(W * 0.72, H * 0.15);
-    g.rotate(-0.4);
+    g.beginPath();
+    g.rect(0, 0, W, CH);
+    g.clip();
     g.fillStyle = accent;
-    g.globalAlpha = 0.22;
-    for (let i = -2; i < 6; i++) g.fillRect(i * W * 0.12, -H, W * 0.06, H * 2.4);
-    g.globalAlpha = 1;
+    g.globalAlpha = 0.14;
+    g.translate(W * 0.5, 0);
+    g.rotate(-0.42);
+    for (let i = -8; i < 12; i++) g.fillRect(i * u * 0.24, -H, u * 0.12, H * 3);
     g.restore();
+
+    // 帯 : la bande de titre en réserve, à cheval sur les rayures.
+    const obiY = wide ? CH * 0.12 : CH * 0.14;
+    const obiH = u * (wide ? 0.3 : 0.22);
     g.fillStyle = accent;
-    g.beginPath();
-    g.arc(W * (portrait ? 0.5 : 0.78), H * (portrait ? 0.28 : 0.42), H * (portrait ? 0.16 : 0.28), 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = bg;
-    g.textAlign = 'center';
-    fitFillText(
-      g,
-      `${10 + Math.floor(r() * 8) * 5}%`,
-      W * (portrait ? 0.5 : 0.78),
-      H * (portrait ? 0.3 : 0.46),
-      H * 0.5,
-      Math.floor(H * (portrait ? 0.1 : 0.18)),
-    );
-    g.textAlign = 'left';
-    g.fillStyle = ink;
-    fitFillText(g, word, W * 0.06, H * (portrait ? 0.62 : 0.55), W * (portrait ? 0.88 : 0.55), Math.floor(H * (portrait ? 0.1 : 0.22)));
-    g.fillStyle = accent;
-    fitFillText(g, sub, W * 0.06, H * (portrait ? 0.78 : 0.82), W * (portrait ? 0.88 : 0.55), Math.floor(H * (portrait ? 0.055 : 0.12)));
-  } else if (layout === 4) {
-    // Grille de pavés colorés façon magazine.
-    const cols = portrait ? 2 : 4;
-    const rows = portrait ? 3 : 2;
-    const pad = Math.min(W, H) * 0.04;
-    const cw = (W - pad * (cols + 1)) / cols;
-    const ch = H * (portrait ? 0.42 : 0.48) / rows;
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        const t = (row * cols + col) / Math.max(1, cols * rows - 1);
-        g.fillStyle = t < 0.5 ? accent : ink;
-        g.globalAlpha = 0.18 + t * 0.35;
-        g.beginPath();
-        g.roundRect(pad + col * (cw + pad), pad + row * (ch + pad * 0.6), cw, ch, Math.min(cw, ch) * 0.12);
-        g.fill();
-      }
-    }
-    g.globalAlpha = 1;
-    g.fillStyle = ink;
-    fitFillText(g, word, W * 0.06, H * (portrait ? 0.72 : 0.78), W * 0.88, Math.floor(H * (portrait ? 0.09 : 0.16)));
-    g.fillStyle = accent;
-    fitFillText(g, sub, W * 0.06, H * (portrait ? 0.86 : 0.94), W * 0.88, Math.floor(H * (portrait ? 0.05 : 0.09)));
-  } else {
-    // Badge circulaire + barre bas de page.
-    g.fillStyle = accent;
-    g.beginPath();
-    g.arc(W * (portrait ? 0.5 : 0.22), H * (portrait ? 0.32 : 0.45), H * (portrait ? 0.18 : 0.32), 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = bg;
-    g.textAlign = 'center';
-    fitFillText(
-      g,
-      word.slice(0, Math.min(2, word.length)),
-      W * (portrait ? 0.5 : 0.22),
-      H * (portrait ? 0.34 : 0.48),
-      H * 0.45,
-      Math.floor(H * (portrait ? 0.1 : 0.16)),
-    );
-    g.textAlign = 'left';
-    g.fillStyle = ink;
-    fitFillText(
+    g.fillRect(0, obiY, wide ? W * 0.62 : W, obiH);
+    adHeadline(
       g,
       word,
-      portrait ? W * 0.08 : W * 0.42,
-      portrait ? H * 0.62 : H * 0.42,
-      portrait ? W * 0.84 : W * 0.52,
-      Math.floor(H * (portrait ? 0.09 : 0.2)),
+      pad,
+      obiY + obiH * 0.74,
+      (wide ? W * 0.62 : W) - pad * 2,
+      Math.floor(obiH * 0.72),
+      onAccent,
+      accent,
     );
+    adBurst(
+      g,
+      `${10 + Math.floor(r() * 8) * 5}%OFF`,
+      wide ? W * 0.78 : W * 0.76,
+      wide ? CH * 0.42 : CH * 0.52,
+      u * (wide ? 0.19 : 0.17),
+      accent,
+      onAccent,
+    );
+    adPrice(g, price, pick(AD_UNITS), pad, CH - u * 0.11, u * 0.2, ink);
+    adPeriod(
+      g,
+      period,
+      pad,
+      CH - u * 0.07,
+      Math.min(W - pad * 2, u * (wide ? 1.5 : 1.9)),
+      u * 0.07,
+      ink,
+    );
+    // En bannière, le chiffre remonte jusque sous le 帯 : la sous-accroche
+    // n'a plus de place à gauche et part à droite de la pastille.
+    g.fillStyle = ink;
+    g.font = `${Math.round(u * 0.045)}px ${JP_FONT}`;
+    if (wide) g.fillText(sub, W * 0.62, CH - u * 0.06, W * 0.34);
+    else g.fillText(sub, pad, obiY + obiH + u * 0.09, W * 0.5);
+  } else if (family === 2) {
+    // 求人 - l'annonce d'emploi : un titre sobre et surtout le TABLEAU des
+    // conditions, qui est ce que le voyageur lit vraiment.
     g.fillStyle = accent;
-    g.fillRect(0, H * 0.82, W, H * 0.18);
-    g.fillStyle = bg;
-    fitFillText(g, sub, W * 0.05, H * 0.94, W * 0.9, Math.floor(H * 0.09));
+    g.fillRect(0, 0, wide ? u * 0.05 : W, wide ? CH : u * 0.055);
+    adKicker(g, kicker, pad + (wide ? u * 0.05 : 0), u * 0.14, u * 0.05, accent);
+    const hp = adHeadline(
+      g,
+      word,
+      pad + (wide ? u * 0.05 : 0),
+      u * 0.3,
+      (wide ? W * 0.44 : W) - pad * 2,
+      Math.floor(u * 0.17),
+      ink,
+      bg,
+    );
+    if (wide) adBody(g, body.slice(0, 2), pad + u * 0.05, u * 0.4, u * 0.05, ink, W * 0.42);
+    const tblX = wide ? W * 0.5 : pad;
+    const tblY = wide ? u * 0.1 : u * 0.3 + hp * 0.5;
+    const tblW = wide ? W * 0.46 : W - pad * 2;
+    const rowH = Math.min(u * 0.15, (CH - tblY - u * 0.12) / Math.max(1, specs.length));
+    adSpecTable(g, specs, tblX, tblY, tblW, rowH, ink, accent);
+    adPeriod(g, period, tblX, tblY + specs.length * rowH + u * 0.03, tblW * 0.66, u * 0.075, accent);
+    if (!wide) drawMascot(g, seed, W * 0.82, CH - u * 0.14, u * 0.2);
+  } else if (family === 3) {
+    // 教室 - la mascotte et sa bulle. C'est l'affiche « pédagogique » : cours
+    // du soir, mutuelle, mairie. Le personnage plat porte tout le message.
+    const mx = wide ? W * 0.16 : W * 0.24;
+    const my = wide ? CH * 0.52 : CH * 0.32;
+    const ms = u * (wide ? 0.5 : 0.38);
+    g.fillStyle = accent;
+    g.globalAlpha = 0.14;
+    g.beginPath();
+    g.arc(mx, my, ms * 0.72, 0, Math.PI * 2);
+    g.fill();
+    g.globalAlpha = 1;
+    drawMascot(g, seed + 2, mx, my, ms);
+    const bx = mx + ms * 0.58;
+    const bw = W - bx - pad;
+    const bh = u * (wide ? 0.42 : 0.3);
+    adBubble(g, bx, my - bh * 0.62, bw, bh, mx + ms * 0.34, my, accent);
+    // Le titre est calé sur la LARGEUR de la bulle, pas sur sa hauteur :
+    // sinon, sur une bannière, il flotte au milieu d'un grand vide blanc.
+    const hw = bw - bh * 0.32;
+    adHeadline(
+      g,
+      word,
+      bx + bh * 0.16,
+      my - bh * 0.62 + bh * 0.66,
+      hw,
+      Math.floor(Math.min(bh * 0.55, (hw / Math.max(1, word.length)) * 1.02)),
+      onPaper,
+      '#ffffff',
+    );
+    // Liste à puces sous la bulle : le corps d'une affiche pédagogique est
+    // toujours puçé, jamais en paragraphe.
+    const ly = my + bh * 0.66;
+    body.forEach((t, i) => {
+      const y = ly + i * u * 0.085;
+      g.fillStyle = accent;
+      g.beginPath();
+      g.arc(bx + u * 0.02, y - u * 0.015, u * 0.018, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = ink;
+      g.font = `${Math.round(u * 0.045)}px ${JP_FONT}`;
+      g.fillText(t, bx + u * 0.055, y, bw - u * 0.06);
+    });
+    // Le tableau prend ce qui RESTE sous les puces, jamais une hauteur fixe :
+    // avec deux lignes de corps au lieu d'une, une hauteur fixe le ferait
+    // remonter dans le texte.
+    if (!wide) {
+      const top = ly + body.length * u * 0.085 + u * 0.04;
+      const rowH = Math.min(u * 0.13, (CH - top - u * 0.13) / Math.max(1, specs.length));
+      if (rowH > u * 0.055) adSpecTable(g, specs, pad, top, W - pad * 2, rowH, ink, accent);
+      adPeriod(g, period, pad, CH - u * 0.09, W * 0.52, u * 0.075, accent);
+    }
+  } else if (family === 4) {
+    // 旅行 - la photo pleine page, le titre cerné de blanc par-dessus, la
+    // bande de vignettes et l'onglet de prix. C'est le gabarit des campagnes
+    // de destination, et c'est le seul où le texte MORD sur l'image.
+    adPhoto(g, 0, 0, W, CH, accent, seed + 5);
+    g.fillStyle = 'rgba(20,26,34,0.28)';
+    g.fillRect(0, 0, W, CH * 0.46);
+    // L'accroche est posée AU-DESSUS du titre : sa ligne de base doit donc
+    // tenir compte de la hauteur que le titre va prendre, sinon les deux se
+    // chevauchent dès que la bannière est basse.
+    const hBase = Math.floor(u * 0.22);
+    adKicker(g, kicker, pad, u * 0.12, u * 0.05, '#ffffff');
+    adHeadline(g, word, pad, u * 0.12 + hBase * 0.95, W * (wide ? 0.6 : 0.9), hBase, '#ffffff', 'rgba(20,26,34,0.7)');
+    // Trois vignettes alignées : le « et aussi » d'une affiche de voyage.
+    const tn = u * (wide ? 0.22 : 0.17);
+    for (let i = 0; i < 3; i++) {
+      const x = pad + i * (tn + u * 0.03);
+      adPhoto(g, x, CH - tn - u * 0.04, tn, tn * 0.72, accent, seed + i * 7 + 1);
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = Math.max(2, u * 0.008);
+      g.strokeRect(x, CH - tn - u * 0.04, tn, tn * 0.72);
+    }
+    // Onglet blanc du prix, dans l'angle opposé aux vignettes.
+    const tw = Math.min(W - pad * 2 - (tn + u * 0.03) * 3, u * 0.72);
+    const pricePx = Math.min(u * 0.15, tw * 0.3);
+    const th = pricePx * 1.62;
+    g.fillStyle = paper;
+    g.fillRect(W - tw - pad, CH - th - u * 0.04, tw, th);
+    g.fillStyle = accent;
+    g.fillRect(W - tw - pad, CH - th - u * 0.04, tw, u * 0.02);
+    adPrice(g, price, '〜', W - tw - pad + pricePx * 0.3, CH - u * 0.08, pricePx, deep);
+  } else if (family === 5) {
+    // 医薬 - blanc clinique, titre en 縦書き au centre, flacon, et beaucoup de
+    // petites lignes. Rien ne crie : la crédibilité passe par le vide.
+    g.fillStyle = paper;
+    g.fillRect(0, 0, W, CH);
+    for (const s of [-1, 1]) {
+      g.fillStyle = accent;
+      g.fillRect(W * 0.5 + s * W * 0.34, CH * 0.08, u * 0.012, CH * 0.84);
+    }
+    adHeadlineVert(g, word, W * 0.5, CH * 0.08, Math.min(u * 0.17, (CH * 0.6) / Math.max(1, word.length)), deep, paper);
+    // Le flacon : un cylindre à épaulement et son bouchon, au trait.
+    const fx = W * 0.24;
+    const fy = CH * 0.72;
+    const fw = u * 0.16;
+    g.fillStyle = accent;
+    g.fillRect(fx - fw * 0.28, fy - u * 0.3, fw * 0.56, u * 0.06);
+    g.fillStyle = '#e9e6de';
+    g.fillRect(fx - fw * 0.5, fy - u * 0.25, fw, u * 0.25);
+    g.fillStyle = accent;
+    g.fillRect(fx - fw * 0.5, fy - u * 0.16, fw, u * 0.07);
+    g.strokeStyle = 'rgba(0,0,0,0.2)';
+    g.lineWidth = 1;
+    g.strokeRect(fx - fw * 0.5, fy - u * 0.25, fw, u * 0.25);
+    adSpecTable(g, specs.slice(0, 2), W * 0.6, CH * 0.62, W * 0.34, u * 0.1, deep, accent);
+    g.fillStyle = deep;
+    g.font = `${Math.round(u * 0.04)}px ${JP_FONT}`;
+    g.fillText(sub, W * 0.06, CH * 0.14, W * 0.3);
+  } else {
+    // 縦書き 大見出し - l'aplat de couleur pleine et la colonne de titre. Le
+    // gabarit d'une affiche culturelle ou d'un grand magasin : une seule
+    // chose à lire, énorme, et tout le reste chuchoté en bas.
+    g.fillStyle = accent;
+    g.fillRect(0, 0, W, CH);
+    g.strokeStyle = onAccent === '#ffffff' ? 'rgba(255,255,255,0.28)' : 'rgba(20,22,26,0.2)';
+    g.lineWidth = Math.max(1, u * 0.004);
+    for (let i = 1; i < 5; i++) {
+      g.beginPath();
+      g.moveTo(W * (i / 5), CH * 0.05);
+      g.lineTo(W * (i / 5), CH * 0.95);
+      g.stroke();
+    }
+    adHeadlineVert(
+      g,
+      word,
+      W * 0.72,
+      CH * 0.07,
+      Math.min(u * 0.24, (CH * 0.8) / Math.max(1, word.length)),
+      onAccent,
+      accent,
+    );
+    g.fillStyle = onAccent;
+    g.fillRect(0, CH * 0.66, W * 0.44, u * 0.012);
+    adHeadlineVert(g, sub.slice(0, 6), W * 0.28, CH * 0.12, u * 0.06, onAccent, accent);
+    g.fillStyle = onAccent;
+    g.font = `bold ${Math.round(u * 0.05)}px ${JP_FONT}`;
+    g.fillText(brand, pad, CH * 0.74, W * 0.4);
+    adBurst(g, pick(AD_BURSTS), W * 0.16, CH * 0.88, u * 0.1, onAccent, accent);
   }
+
+  adNotes(g, pad, noteTop + notePx, notePx, noteInk, seed, noteN);
+  adFooter(g, W, footY, footH, brand, pick(AD_CTA), pick(AD_SEARCH), deep, seed);
 }
 
 // --- Nakazuri (中吊り) : l'affiche suspendue au milieu du wagon ---
@@ -1666,33 +2179,20 @@ export function makeNakazuriTexture(seed: number): THREE.CanvasTexture {
   const { c, g } = makeCanvas(W, H);
   const r = rng(900 + seed * 17);
   const top = 22; // réserve blanche de suspension
-  const foot = 42; // bandeau de pied
 
   g.fillStyle = '#f3f1ec';
   g.fillRect(0, 0, W, H);
 
-  // Visuel principal, en pleine largeur.
+  // Visuel principal, en pleine largeur. Il porte DÉJÀ son bandeau de marque
+  // avec la case 検索 et le QR : lui en ajouter un second ici donnerait deux
+  // pieds de page empilés, ce qu'aucune planche n'a jamais eu.
   g.save();
   g.beginPath();
-  g.rect(3, top, W - 6, H - top - foot);
+  g.rect(3, top, W - 6, H - top - 4);
   g.clip();
   g.translate(3, top);
-  drawAdInto(g, W - 6, H - top - foot, seed * 3 + 1);
+  drawAdInto(g, W - 6, H - top - 4, seed * 3 + 1);
   g.restore();
-
-  // Bandeau de pied : aplat sombre, titre en réserve et pavé de mentions.
-  g.fillStyle = '#15181c';
-  g.fillRect(3, H - foot, W - 6, foot - 4);
-  g.fillStyle = '#f4f2ee';
-  g.font = `bold ${Math.round(foot * 0.5)}px ${JP_FONT}`;
-  g.fillText(AD_WORDS[Math.floor(r() * AD_WORDS.length)], 22, H - foot * 0.32);
-  g.fillStyle = 'rgba(244,242,238,0.55)';
-  g.font = `${Math.round(foot * 0.3)}px ${JP_FONT}`;
-  g.fillText(AD_SUBS[Math.floor(r() * AD_SUBS.length)], W * 0.42, H - foot * 0.36);
-  for (let i = 0; i < 4; i++) {
-    g.fillStyle = 'rgba(244,242,238,0.35)';
-    g.fillRect(W - 190 + i * 44, H - foot * 0.72, 34, 16);
-  }
 
   // Réserve de tête : pli, perforations.
   g.fillStyle = '#efece6';

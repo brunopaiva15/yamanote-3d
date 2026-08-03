@@ -701,3 +701,105 @@ export const AD_PALETTES: AdPalette[] = [
   ['#f1f8e9', '#558b2f', '#1b5e20'],
   ['#fbe9e7', '#d84315', '#3e1410'],
 ];
+
+// --- Les autres blocs d'une affiche japonaise --------------------------------
+//
+// Une affiche de wagon n'est pas un slogan sur un aplat. C'est un EMPILEMENT
+// très codifié : une accroche fine au-dessus du titre, le titre en gros
+// caractères cernés, une sous-accroche, deux ou trois lignes de corps, un pavé
+// de conditions, la période de campagne dans son cadre, un bloc de prix avec
+// son 税込, la case de recherche 「◯◯ 検索」 avec sa flèche, un QR, le bandeau
+// de marque en pied, et sous tout ça les mentions en ※ que personne ne lit
+// mais que tout le monde reconnaît.
+//
+// Ce sont ces blocs-là qui font qu'on identifie une publicité japonaise d'un
+// coup d'œil, sans lire un mot - bien plus que la couleur ou la mise en page.
+// Les pools ci-dessous les alimentent.
+
+/** Accroche fine posée AU-DESSUS du titre, souvent avec un ◆ ou un ▶. */
+export const AD_KICKERS: string[] = [
+  'いま、はじめる',
+  'この春、あたらしく',
+  'おかげさまで30周年',
+  '創刊記念号',
+  'ご存じですか？',
+  'はじめての方へ',
+  '通勤のとなりに',
+  '東京23区で展開中',
+  'おかげさまで累計100万人',
+  '毎日をちょっと軽く',
+  'あなたの街の',
+  '今月のおすすめ',
+  '創業昭和32年',
+  'ご相談は無料です',
+  '駅チカ・好アクセス',
+  '週末はここへ',
+];
+
+/** Corps de texte : deux ou trois lignes sous la sous-accroche. */
+export const AD_BODY: string[] = [
+  '忙しい毎日にも、無理なく続けられる。',
+  '専門スタッフが最後まで丁寧にご案内します。',
+  '初回のご相談・お見積りはすべて無料です。',
+  '定期券エリア内なら、通うのもかんたん。',
+  'ご家族そろってご利用いただけます。',
+  '今日から、はじめてみませんか。',
+  '少人数制だから、はじめての方も安心。',
+  '駅から徒歩3分、雨の日も濡れずに。',
+  'お手続きはスマートフォンで完結します。',
+  '全国どこでも、同じ品質でお届けします。',
+  '返品・交換は30日以内なら無料です。',
+  '深夜・早朝の受付も承っております。',
+];
+
+/** Le pavé de conditions : couples étiquette / valeur, façon tableau. */
+export const AD_SPECS: [string, string][] = [
+  ['時給', '1,250円〜'],
+  ['勤務地', '山手線沿線各駅'],
+  ['勤務時間', '週2日・1日3h〜'],
+  ['待遇', '交通費全額支給'],
+  ['受講料', '月々4,980円'],
+  ['開講日', '毎週土曜 10:00'],
+  ['定員', '各回20名まで'],
+  ['所要時間', '約90分'],
+  ['対象', '中学生から大人まで'],
+  ['入会金', '無料'],
+  ['営業時間', '10:00〜21:00'],
+  ['定休日', '年中無休'],
+];
+
+/** Mentions légales : elles commencent toutes par ※, et c'est le signe. */
+export const AD_NOTES: string[] = [
+  '※表示価格はすべて税込です。',
+  '※数量限定のため、なくなり次第終了いたします。',
+  '※写真はイメージです。実際とは異なる場合があります。',
+  '※一部対象外の商品・店舗がございます。',
+  '※お申し込みには所定の審査がございます。',
+  '※詳しい条件は店頭またはウェブサイトをご覧ください。',
+  '※キャンペーン内容は予告なく変更する場合があります。',
+  '※他の割引との併用はできません。',
+];
+
+/** Marques plausibles, déposées nulle part. */
+export const AD_BRANDS: string[] = [
+  'ハルカゼ堂', 'みどり製薬', 'コトブキ不動産', 'あおば学院', 'サクラ工房',
+  'ツバメ商会', 'ひかり食品', 'まるやま整骨院', 'ニチヨウ保険', 'コトリ美容室',
+  'やまびこ旅行', 'つばき歯科', 'しおり書店', 'あさひ電機', 'こもれび珈琲',
+  'カワセミ銀行', 'ゆずり葉ホーム', 'とまり木クリニック',
+];
+
+/** Ce qu'on tape dans la case de recherche, à côté de la loupe. */
+export const AD_SEARCH: string[] = [
+  'ハルカゼ 通販', 'みどり 健康', 'コトブキ 賃貸', 'あおば 体験', 'サクラ 工房',
+  'ツバメ 求人', 'ひかり ギフト', 'まるやま 予約', 'ニチヨウ 見積', 'やまびこ ツアー',
+];
+
+/** Appels à l'action du bandeau de pied. */
+export const AD_CTA: string[] = [
+  '詳しくはWEBで',
+  'まずはお電話ください',
+  'ご予約はオンラインで',
+  '公式サイトはこちら',
+  'お近くの店舗へどうぞ',
+  '無料体験受付中',
+];
