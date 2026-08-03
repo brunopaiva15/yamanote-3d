@@ -66,7 +66,7 @@ function scratchFor(dst: ScreenSurface): ScreenSurface {
  *
  * `blend` est la part de l'image nouvelle à verser à ce battement, telle que la
  * donne `stepScreenAnim` : 1 remplace, et c'est le cas courant - on ne passe
- * par le tampon que pendant le dixième de seconde du fondu.
+ * par le tampon que pendant le sixième de seconde du fondu.
  */
 export function paintBlended(
   dst: ScreenSurface,

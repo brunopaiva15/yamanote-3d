@@ -28,27 +28,47 @@ import type { LineScreenState } from './lineScreenStates.ts';
  * Court, et il doit l'être : ce n'est pas une transition de diaporama, c'est le
  * temps que met un contrôleur d'affichage à substituer une image à une autre.
  * Plus long, l'écran se met à « respirer » et on lit deux pages à la fois.
+ *
+ * RELEVÉ SUR LA CAPTURE : 0,12 s (deux images mêlées à 20 im/s). La valeur
+ * rendue est un peu plus longue, et c'est délibéré - voir la note de
+ * BAND_FILL_TIME, qui vaut pour les deux.
  */
-export const PAGE_FADE = 0.12;
+export const PAGE_FADE = 0.16;
 
 /**
  * Pas de temps des deux animations, quand il y en a une en cours.
  *
  * Le battement ordinaire de l'afficheur reste celui de la rame - une demi-
  * seconde, `ANIM_PERIOD` -, et c'est lui qui rythme le clignotant et les
- * vantaux. Il est beaucoup trop lâche pour un fondu d'un dixième de seconde :
+ * vantaux. Il est beaucoup trop lâche pour un fondu d'un sixième de seconde :
  * on n'en verrait qu'une image sur deux, c'est-à-dire une coupure. Les
  * battements fins ne servent QUE pendant le fondu et le remplissage, soit
- * environ une seconde et demie par page - le reste du temps, l'écran dort
- * toujours entre deux demi-secondes.
+ * environ deux secondes par page - le reste du temps, l'écran dort toujours
+ * entre deux demi-secondes.
  */
 export const MOTION_STEP = 1 / 30;
 
 /** Temps mort entre l'apparition de la vue rapprochée et le départ du vert. */
 export const BAND_FILL_DELAY = 0.3;
 
-/** Durée du parcours, du repère de position au bout lointain de la bande. */
-export const BAND_FILL_TIME = 1.15;
+/**
+ * Durée du parcours, du repère de position au bout lointain de la bande.
+ *
+ * RELEVÉ SUR LA CAPTURE : le vert atteint le neuvième dixième de l'arc 22
+ * images après son départ, soit 1,1 s, et le bout à 1,2 s environ.
+ *
+ * CE QUI EST RENDU : 1,6 s, et l'écart s'assume. Deux raisons, et aucune n'est
+ * un arrondi de mesure. La première tient à la mesure elle-même : la capture est
+ * une caméra à 20 im/s devant une dalle, chaque image y traîne la précédente, et
+ * une arête qui remonte l'arc s'y lit plus loin qu'elle n'est - le relevé est un
+ * minorant. La seconde tient au REGARD : sur la capture l'écran occupe le cadre
+ * entier, alors qu'ici c'est une dalle de soixante centimètres à trois mètres
+ * au-dessus d'une porte, qu'on prend de biais et en passant. À cette taille-là,
+ * une seconde de remontée ne se voit pas commencer - elle est déjà finie quand
+ * l'œil y arrive. Ce qu'on cherche n'est pas le chronomètre de la dalle, c'est
+ * ce que le voyageur voit d'elle.
+ */
+export const BAND_FILL_TIME = 1.6;
 
 /**
  * Les écrans dont la bande se remplit en arrivant.
