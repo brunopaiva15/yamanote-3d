@@ -291,7 +291,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | 25 | Paliers de qualité | haute / moyenne / basse, sans jamais retirer une collision | — |
 | 26 | Tests | les 18 exigences du cahier des charges | — |
 | 27 | Captures de contrôle | probe : 5 vues × 30 gares | — |
-| 28 | Perf et bilan | mesures avant/après, `STATION_CONCOURSE_SCOPE.md`, approximations restantes | — |
+| 28 | Perf et bilan | mesures avant/après ; `STATION_CONCOURSE_SCOPE.md` **écrit** et tenu par un test | — |
 
 ### 4.1 Ce que la phase 2 a découvert, et qui change les phases 3 à 5
 
