@@ -1221,11 +1221,12 @@ export function drawPhoneManner(
   index: number,
   clock: string,
   dir: LoopDirection,
+  status: ScreenStatus = 'next',
 ): void {
   const { g, w, h } = s;
   g.fillStyle = '#ffffff';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp', dir);
+  drawHeader(g, w, index, clock, status, 'jp', dir);
 
   const cx = 172;
   const cy = HEADER_H + (h - HEADER_H) * 0.52;
@@ -1308,9 +1309,9 @@ export function drawPhoneManner(
 // cases numérotées, celle du voyageur en rouge, avec le triangle du sens de
 // marche en bout ; puis un bandeau bas, et c'est LUI qui fait les deux écrans :
 //
-//   • `drawExitTransfers` - 次は : pendant la circulation, le bas porte les
-//     CORRESPONDANCES de la gare vers laquelle on roule. On y va, on prépare
-//     sa suite de trajet.
+//   • `drawExitTransfers` - 次は / ただいま : pendant la circulation et à quai,
+//     le bas porte les CORRESPONDANCES de la gare. On prépare sa suite de
+//     trajet.
 //   • `drawExitDoors` - まもなく : à l'approche immédiate, le bas porte le CÔTÉ
 //     RÉEL D'OUVERTURE des portes, avec son pictogramme animé. On arrive, on
 //     se lève.
@@ -1321,6 +1322,16 @@ export function drawPhoneManner(
 // quelle paroi descendre et qu'un japonophone voyait le côté d'ouverture
 // annoncé dix stations trop tôt. La langue dit dans quel alphabet on écrit ;
 // le moment du trajet dit ce qu'on écrit.
+//
+// LA LANGUE EXISTE POURTANT, et elle ne porte QUE LE BANDEAU. La revue Hitachi
+// (E235系山手線 駅設備案内画面, figure 6, août 2017) donne les deux passages du
+// plan des correspondances : 「ただいま 秋葉原」「上野・池袋 方面」「5号車」 d'un
+// côté, « Now stopping at Akihabara » « Bound for Ueno& Ikebukuro » « Car No. 5 »
+// de l'autre. Sous ce bandeau, les deux images sont IDENTIQUES : les cartouches
+// de portillons portent déjà leur ligne anglaise (電気街口 / Akihabara Electric
+// Town Gate) et les correspondances la leur (総武線各駅停車 / Sōbu Line (Local)).
+// Le corps de cet écran est bilingue d'un seul tenant - il ne se traduit pas,
+// il est déjà écrit deux fois.
 //
 // Les accès ne sont plus tirés au sort : ce sont ceux de `stationLayouts`,
 // donc EXACTEMENT ceux que le joueur voit en descendant, et le nom du portillon
@@ -1693,20 +1704,24 @@ function drawStationLayout(s: ScreenSurface, index: number, anim: number): void 
 }
 
 /**
- * Plan des sorties, bas = CORRESPONDANCES (次は).
+ * Plan des sorties, bas = CORRESPONDANCES (次は en marche, ただいま à quai).
  *
- * L'écran de croisière : on roule vers la gare, le plan dit par où en sortir et
- * le bandeau bas ce qu'on y trouve comme lignes. Il ne dit RIEN du côté
- * d'ouverture - à cette distance l'information n'a pas encore de sens, et
- * l'afficheur la garde pour l'approche.
+ * Le plan dit par où sortir de la gare et le bandeau bas ce qu'on y trouve
+ * comme lignes. Il ne dit RIEN du côté d'ouverture - à cette distance
+ * l'information n'a pas encore de sens, et l'afficheur la garde pour
+ * l'approche. C'est aussi pour cela que cet écran est le même sur les deux
+ * parois : rien dedans ne dépend de celle devant laquelle on se tient.
  *
- * C'est aussi pour cela que cet écran est le même sur les deux parois de la
- * rame : rien dedans ne dépend de la paroi devant laquelle on se tient.
+ * `lang` ne change QUE le bandeau du haut. Les correspondances, elles, portent
+ * leur nom japonais et leur nom anglais dans les deux passages - c'est ce que
+ * montre la figure 6, où le pavé du bas est au pixel le même sous 「ただいま」 et
+ * sous « Now stopping at ».
  */
 export function drawExitTransfers(
   s: ScreenSurface,
   index: number,
   clock: string,
+  lang: ScreenLang,
   dir: LoopDirection,
   anim = 0,
   status: ScreenStatus = 'next',
@@ -1718,29 +1733,43 @@ export function drawExitTransfers(
   g.fillRect(0, APPROACH_FOOT_Y, w, h - APPROACH_FOOT_Y);
   const labels = (TRANSFERS[STATIONS[index].jy]?.jp ?? '').split('、').filter(Boolean).slice(0, 6);
   if (labels.length === 0) {
+    // Les deux lignes du pavé vide, comme les deux lignes de chaque ligne en
+    // correspondance : cet écran ne laisse pas un passage sans sa traduction.
+    g.textAlign = 'center';
     g.fillStyle = '#2b3a63';
     g.font = `20px ${JP_FONT}`;
-    g.textAlign = 'center';
-    g.fillText('のりかえの路線はありません', w / 2, APPROACH_FOOT_Y + 58);
+    g.fillText('のりかえの路線はありません', w / 2, APPROACH_FOOT_Y + 50);
+    g.fillStyle = '#4a5a80';
+    g.font = `13px ${JP_FONT}`;
+    g.fillText('No connecting lines at this station', w / 2, APPROACH_FOOT_Y + 70);
     g.textAlign = 'left';
   } else {
-    // Les lignes s'alignent en rangées, chacune sous son sigle.
+    // Chaque ligne : son sigle, son nom japonais, et son nom anglais dessous en
+    // petit corps - 総武線各駅停車 / Sōbu Line (Local). L'anglais vient de la
+    // table des sigles, qui le porte déjà pour le pavé de la vue rapprochée.
     let x = 24;
-    let y = APPROACH_FOOT_Y + 34;
-    g.font = `17px ${JP_FONT}`;
+    let y = APPROACH_FOOT_Y + 32;
     for (const label of labels) {
-      const tw = g.measureText(label).width;
-      if (x + 26 + tw > w - 16) {
+      const en = lineNameEn(label);
+      g.font = `17px ${JP_FONT}`;
+      const jpW = g.measureText(label).width;
+      g.font = `11px ${JP_FONT}`;
+      const enW = g.measureText(en).width;
+      const textW = Math.max(jpW, enW);
+      if (x + 26 + textW > w - 16) {
         x = 24;
-        y += 34;
+        y += 40;
       }
-      if (y > h - 10) break;
+      if (y > h - 22) break;
       const bw = drawLineBadge(g, label, x, y - 6, 19);
+      g.textAlign = 'left';
       g.fillStyle = '#14203f';
       g.font = `17px ${JP_FONT}`;
-      g.textAlign = 'left';
       g.fillText(label, x + bw + 5, y);
-      x += bw + 5 + tw + 26;
+      g.fillStyle = '#3d4c70';
+      g.font = `11px ${JP_FONT}`;
+      g.fillText(en, x + bw + 5, y + 15);
+      x += bw + 5 + textW + 26;
     }
     g.textAlign = 'left';
   }
@@ -1748,7 +1777,7 @@ export function drawExitTransfers(
   // Le bandeau se dessine EN DERNIER : le quai file dessous. Et il se dessine
   // TOUJOURS - une gare sans correspondance ne perd pas son bandeau, elle perd
   // sa liste de lignes.
-  drawHeader(g, w, index, clock, status, 'jp', dir);
+  drawHeader(g, w, index, clock, status, lang, dir);
 }
 
 /**
@@ -1800,12 +1829,13 @@ export function drawTransfers(
   index: number,
   clock: string,
   dir: LoopDirection,
+  status: ScreenStatus = 'next',
 ): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
   g.fillStyle = '#eceae5';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp', dir);
+  drawHeader(g, w, index, clock, status, 'jp', dir);
 
   g.fillStyle = '#dfe6ea';
   g.fillRect(0, HEADER_H, w, 40);
@@ -1847,11 +1877,12 @@ export function drawPriorityNotice(
   index: number,
   clock: string,
   dir: LoopDirection,
+  status: ScreenStatus = 'next',
 ): void {
   const { g, w, h } = s;
   g.fillStyle = '#ffffff';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp', dir);
+  drawHeader(g, w, index, clock, status, 'jp', dir);
 
   // Bandeau vert du sticker, avec ses trois traductions serrées à droite.
   const bx = 96;
@@ -2042,11 +2073,18 @@ function drawPageBox(g: CanvasRenderingContext2D, w: number, h: number, page: st
  * ne se traduit pas bien en vitesse, alors qu'un tableau se lit d'un coup
  * d'œil même quand on ne parle pas la langue. Le cartouche « 1/2 » et « 2/2 »
  * en bas à droite est ce qui dit au voyageur d'attendre la suite.
+ *
+ * Le bandeau du haut disait 「ただいま」 EN DUR, alors que cet avis ne passe que
+ * dans la rotation de croisière : l'écran annonçait donc « nous sommes en gare
+ * de Kanda » pendant qu'on roulait vers Kanda. La perturbation d'une autre ligne
+ * ne change rien au moment du trajet - le bandeau reçoit le statut réel, comme
+ * tous les autres écrans du cycle.
  */
 export function drawTrafficInfo(
   s: ScreenSurface,
   index: number,
   clock: string,
+  status: ScreenStatus,
   lang: ScreenLang,
   notice: TrafficNotice,
   dir: LoopDirection,
@@ -2055,7 +2093,7 @@ export function drawTrafficInfo(
   const top = (() => {
     g.fillStyle = '#dcdcdc';
     g.fillRect(0, 0, w, h);
-    drawHeader(g, w, index, clock, 'now', lang, dir);
+    drawHeader(g, w, index, clock, status, lang, dir);
     return drawInfoBand(g, w);
   })();
 
@@ -2150,11 +2188,12 @@ export function drawSecurityNotice(
   clock: string,
   lang: ScreenLang,
   dir: LoopDirection,
+  status: ScreenStatus = 'next',
 ): void {
   const { g, w, h } = s;
   g.fillStyle = '#ffffff';
   g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', lang, dir);
+  drawHeader(g, w, index, clock, status, lang, dir);
 
   const top = HEADER_H + 4;
   g.strokeStyle = '#e00b18';
