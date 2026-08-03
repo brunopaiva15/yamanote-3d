@@ -75,10 +75,20 @@ export function Frontages({
   shell,
   net,
   m,
+  detail,
 }: {
   shell: ConcourseShell;
   net: ConcourseNetwork;
   m: Mats;
+  /**
+   * Palier de qualité : 0 = tout, 3 = le strict nécessaire.
+   *
+   * LE CORPS RESTE À TOUS LES PALIERS : une devanture est un obstacle du
+   * réseau, et une vitrine qu'on traverse parce que la machine est lente
+   * serait pire qu'une vitrine sans bandeau. Ce qui s'allège est ce qui se
+   * regarde — le verre, le meneau, l'enseigne.
+   */
+  detail: number;
 }) {
   const ids = useMemo(() => new Set(shell.rooms.map((r) => r.id)), [shell]);
   const list = useMemo(
@@ -88,15 +98,17 @@ export function Frontages({
 
   // Un bandeau par devanture : ils ne se partagent pas, puisqu'ils ne disent
   // pas la même chose. Il y en a au plus quatre par volume dans tout le relevé.
+  // Au palier le plus bas, on n'en cuit aucun.
+  const named = detail <= 2;
   const bands = useMemo(
     () =>
-      list.map((f) =>
+      (named ? list : []).map((f) =>
         new THREE.MeshBasicMaterial({
           map: makeFrontageSign(f.status, f.category, f.brand),
           toneMapped: false,
         }),
       ),
-    [list],
+    [list, named],
   );
   useEffect(
     () => () => {
@@ -148,7 +160,7 @@ export function Frontages({
 
             {/* LA VITRINE : un ou deux vantaux, selon qu'on entre ou qu'on
                 longe. Le verre est du décor — la marche s'arrête au corps. */}
-            {panes(len, f.enterable).map((p, i) => (
+            {detail <= 1 && panes(len, f.enterable).map((p, i) => (
               <mesh
                 key={`pane${i}`}
                 position={add(along(p.at), deep(half - 0.02), GLASS_H / 2)}
@@ -159,17 +171,17 @@ export function Frontages({
             ))}
 
             {/* Le meneau du bas : le socle de la vitrine, qu'on voit toujours. */}
-            <mesh
+            {detail <= 1 && <mesh
               position={add(along(0), deep(half), 0.12)}
               material={m.metal}
             >
               <boxGeometry args={box(len, 0.24, MULLION)} />
-            </mesh>
+            </mesh>}
 
             {/* LE BANDEAU. C'est lui le sujet : il porte l'enseigne LUE, la
                 catégorie établie, ou rien du tout — et « rien du tout » est une
                 information, pas un manque. */}
-            <mesh
+            {bands[k] && <mesh
               position={add(along(0), deep(half + 0.01), GLASS_H + BAND_H / 2)}
               rotation={
                 f.along === 'z'
@@ -179,7 +191,7 @@ export function Frontages({
               material={bands[k]}
             >
               <planeGeometry args={[len, BAND_H]} />
-            </mesh>
+            </mesh>}
           </group>
         );
       })}

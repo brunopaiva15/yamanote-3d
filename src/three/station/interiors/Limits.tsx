@@ -51,10 +51,21 @@ export function Limits({
   shell,
   net,
   m,
+  detail,
 }: {
   shell: ConcourseShell;
   net: ConcourseNetwork;
   m: Mats;
+  /**
+   * Palier de qualité : 0 = tout, 3 = le strict nécessaire.
+   *
+   * LA RÈGLE EST LA MÊME PARTOUT : un palier retire ce qui se REGARDE, jamais
+   * ce qui BARRE. Une palissade de chantier est un obstacle du réseau — la
+   * marche s'y arrête — donc elle reste à tous les paliers, et c'est sa bande
+   * jaune qui s'en va. Un seuil de correspondance, lui, ne barre rien : il
+   * disparaît au palier le plus bas comme n'importe quel décor.
+   */
+  detail: number;
 }) {
   const ids = useMemo(() => new Set(shell.rooms.map((r) => r.id)), [shell]);
   const transfers = net.transfers.filter((t) => ids.has(t.fromRoomId));
@@ -76,7 +87,7 @@ export function Limits({
 
   return (
     <group name="gare/hall/limites">
-      {transfers.map((t) => {
+      {detail <= 2 && transfers.map((t) => {
         // Sans emprise déclarée, le portail se range contre le fond de la pièce
         // qu'il quitte : le relevé dit la DIRECTION, pas la cote.
         const room = shell.rooms.find((r) => r.id === t.fromRoomId);
@@ -152,13 +163,13 @@ export function Limits({
               <boxGeometry args={[w, HOARD_H, d]} />
             </mesh>
             {/* La bande d'avertissement, à hauteur d'œil : jaune sur toutes les
-                palissades de chantier de JR East. */}
-            <mesh position={[0, 1.55, d / 2 + 0.01]} material={m.accent}>
-              <boxGeometry args={[w - 0.1, HOARD_BAND, 0.02]} />
-            </mesh>
-            <mesh position={[0, 1.55, -d / 2 - 0.01]} material={m.accent}>
-              <boxGeometry args={[w - 0.1, HOARD_BAND, 0.02]} />
-            </mesh>
+                palissades de chantier de JR East. Elle se REGARDE — c'est donc
+                elle qui s'en va au palier bas, et non la palissade. */}
+            {detail <= 1 && [-1, 1].map((s) => (
+              <mesh key={`band${s}`} position={[0, 1.55, s * (d / 2 + 0.01)]} material={m.accent}>
+                <boxGeometry args={[w - 0.1, HOARD_BAND, 0.02]} />
+              </mesh>
+            ))}
           </group>
         );
       })}

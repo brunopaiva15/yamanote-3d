@@ -257,6 +257,14 @@ export interface ConcourseLandmark {
   kind: LandmarkKind;
   rect: InteriorRect | null;
   note?: string;
+  /**
+   * Les fûts, pour un repère `column` — et vides pour tous les autres.
+   *
+   * Ils sont posés ici et NON dans le rendu : un poteau barre le passage, donc
+   * la marche doit le connaître. Un fût qu'on traverse est exactement le
+   * défaut que « une implantation, plusieurs lecteurs » existe pour empêcher.
+   */
+  posts: InteriorRect[];
 }
 
 export interface ConcourseNetwork {
@@ -458,6 +466,10 @@ function spanRooms(
     ? { ...spanned, x0: lo2, x1: hi2 }
     : { ...spanned, z0: lo2, z1: hi2 };
 }
+
+/** Entraxe d'une file de poteaux et demi-section d'un fût (m). */
+const COLUMN_PITCH = 7.2;
+const COLUMN_HALF = 0.31;
 
 /** Demi-largeur et profondeur du dégagement au pied d'une volée (m). */
 const LANDING_HALF_X = 2.2;
@@ -712,6 +724,36 @@ export function compileProfile(
   }));
 
   const obstacles: InteriorRect[] = [];
+  // LES REPÈRES DU LIEU, et les POTEAUX qui en sont.
+  //
+  // Une file de poteaux se dessinait dans le rendu, et elle ne barrait rien :
+  // le joueur traversait des fûts de soixante centimètres comme de la fumée.
+  // C'est la faute que ce chantier s'interdit depuis la phase 1 — une seule
+  // implantation, plusieurs lecteurs. Les poteaux sont donc POSÉS ICI, avec
+  // leur emprise, et le rendu les lit au lieu de les recalculer.
+  const landmarks: ConcourseLandmark[] = [];
+  for (const l of p.landmarks) {
+    const room = byId.get(l.nodeId);
+    if (!room) continue;
+    const rect = l.rect ? shifted(l.rect, dz) : null;
+    const posts: InteriorRect[] = [];
+    if (l.kind === 'column') {
+      const r = rect ?? room.rect;
+      const long: 'x' | 'z' = r.x1 - r.x0 >= r.z1 - r.z0 ? 'x' : 'z';
+      const len = long === 'x' ? r.x1 - r.x0 : r.z1 - r.z0;
+      const n = Math.max(1, Math.floor(len / COLUMN_PITCH));
+      const across = long === 'x' ? (r.z0 + r.z1) / 2 : (r.x0 + r.x1) / 2;
+      for (let k = 0; k < n; k++) {
+        const at = (long === 'x' ? r.x0 : r.z0) + ((k + 0.5) * len) / n;
+        posts.push(long === 'x'
+          ? { x0: at - COLUMN_HALF, x1: at + COLUMN_HALF, z0: across - COLUMN_HALF, z1: across + COLUMN_HALF }
+          : { x0: across - COLUMN_HALF, x1: across + COLUMN_HALF, z0: at - COLUMN_HALF, z1: at + COLUMN_HALF });
+      }
+      obstacles.push(...posts);
+    }
+    landmarks.push({ id: l.id, roomId: l.nodeId, kind: l.kind, rect, note: l.note, posts });
+  }
+
   // LE PIED DES VOLÉES : ce qu'on ne meuble pas, et ce qu'on ne vitre pas.
   const landings: InteriorRect[] = [];
   for (const a of p.platformAccesses) {
@@ -1015,15 +1057,7 @@ export function compileProfile(
     transfers,
     hoardings,
     frontages,
-    landmarks: p.landmarks
-      .filter((l) => byId.has(l.nodeId))
-      .map((l) => ({
-        id: l.id,
-        roomId: l.nodeId,
-        kind: l.kind,
-        rect: l.rect ? shifted(l.rect, dz) : null,
-        note: l.note,
-      })),
+    landmarks,
     // Le mobilier n'est pas du ressort du relevé : un plan officiel ne cote pas
     // une batterie de distributeurs, et il ne se déduit pas d'un plan.
     fixtures: [],

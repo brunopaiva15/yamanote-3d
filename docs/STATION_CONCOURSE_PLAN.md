@@ -288,7 +288,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **22** | **Signatures 1** ✅ | Nippori, Shinagawa, Takanawa Gateway ; `interiors/Landmarks` : les repères du lieu | R3 R4 |
 | **23** | **Signatures 2** ◐ | **volée réglable** ; Tokyo, Ueno et Harajuku branchées — Ikebukuro reste | R3 |
 | 24 | Signatures 3 | Shinjuku, Shibuya : conflits de géométrie propres à chacune | R3 D7 |
-| 25 | Paliers de qualité | haute / moyenne / basse, sans jamais retirer une collision | — |
+| **25** | **Paliers de qualité** ✅ | les trois décors intérieurs lisent le palier ; ce qui BARRE ne dépend d'aucun | — |
 | 26 | Tests | les 18 exigences du cahier des charges | — |
 | 27 | Captures de contrôle | probe : 5 vues × 30 gares | — |
 | 28 | Perf et bilan | mesures avant/après ; `STATION_CONCOURSE_SCOPE.md` **écrit** et tenu par un test | — |
@@ -1228,6 +1228,37 @@ sa hauteur libre.
 nouvelle apparaît à Tokyo : `hall ✕ trémie`, 20 cm — c'est l'épaisseur de la
 paroi du couloir bas là où il débouche dans le hall, et c'est le JOINT entre
 deux ouvrages qui se touchent réellement. Tout le reste est inchangé.
+
+### 4.22 La phase 25 : un palier retire ce qui se regarde, jamais ce qui barre
+
+Les trois décors intérieurs ajoutés par ce chantier — `Limits`, `Frontages`,
+`Landmarks` — ne lisaient pas le palier de qualité : ils se dessinaient en
+entier sur la machine la plus lente comme sur la plus rapide.
+
+La règle qui les gouverne maintenant n'est pas esthétique. **Un obstacle du
+réseau est une collision, et la marche ne connaît pas le palier de qualité.**
+Retirer le dessin d'une vitrine sans retirer sa collision donne un mur
+invisible ; retirer les deux donne une gare qui change de plan quand la machine
+chauffe. Les deux sont pires que le bandeau qu'on aurait économisé. Donc :
+
+| ce qui reste à tous les paliers | ce qui s'allège |
+|---|---|
+| le corps d'une devanture (obstacle) | son vitrage, son meneau, son enseigne |
+| la palissade de chantier (obstacle) | sa bande jaune d'avertissement |
+| les fûts d'une file de poteaux (obstacle) | — |
+| — | le seuil de correspondance, qui ne barre rien |
+| — | l'horloge et son cadran, le panneau d'art |
+
+**Et la phase a trouvé un défaut en se préparant : un poteau n'était pas de la
+fumée, il en avait tout l'air.** Les fûts se dessinaient dans le rendu et
+n'entraient dans aucun obstacle : le joueur les traversait. C'est exactement la
+faute que « une implantation, plusieurs lecteurs » existe pour empêcher. Ils
+sont désormais posés par le COMPILATEUR, avec leur emprise, et le rendu les lit
+au lieu de les recalculer.
+
+Trois tests tiennent l'ensemble, dont celui qui prouve la règle par la
+signature : `walkerBlocked` ne prend pas de palier de qualité, et il n'y a donc
+aucun chemin par lequel un palier pourrait changer ce qui arrête un marcheur.
 
 ### Ordre et raison
 

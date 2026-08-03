@@ -49,9 +49,6 @@ const CLOCK_D = 1.15;
 /** Hauteur du panneau d'art, et son retrait de la paroi. */
 const ART_H = 2.2;
 const ART_OUT = 0.06;
-/** Entraxe d'une file de poteaux (m), et leur section. */
-const COLUMN_PITCH = 7.2;
-const COLUMN_W = 0.62;
 /** Jeu laissé au pied et en tête du fût (m). */
 const COLUMN_CLEAR = 0.06;
 
@@ -59,10 +56,20 @@ export function Landmarks({
   shell,
   net,
   m,
+  detail,
 }: {
   shell: ConcourseShell;
   net: ConcourseNetwork;
   m: Mats;
+  /**
+   * Palier de qualité : 0 = tout, 3 = le strict nécessaire.
+   *
+   * LES FÛTS RESTENT À TOUS LES PALIERS : ils sont dans les obstacles du
+   * réseau, et un poteau qu'on traverse est le pire de tous les défauts —
+   * celui qui fait douter du sol lui-même. L'horloge et le panneau d'art, eux,
+   * ne barrent rien.
+   */
+  detail: number;
 }) {
   const ids = useMemo(() => new Set(shell.rooms.map((r) => r.id)), [shell]);
   const here = useMemo(
@@ -72,10 +79,10 @@ export function Landmarks({
   const clocks = here.filter((l) => l.kind === 'clock');
 
   const face = useMemo(
-    () => (clocks.length > 0
+    () => (clocks.length > 0 && detail <= 2
       ? new THREE.MeshBasicMaterial({ map: makeClockFace(), toneMapped: false })
       : null),
-    [clocks.length],
+    [clocks.length, detail],
   );
   useEffect(
     () => () => {
@@ -126,6 +133,7 @@ export function Landmarks({
         }
 
         if (l.kind === 'artwork') {
+          if (detail > 2) return null;
           // Contre la paroi la plus longue, au milieu : c'est là qu'on l'a mise
           // pour qu'on la voie en traversant.
           const w = Math.min(len * 0.45, 6);
@@ -148,27 +156,29 @@ export function Landmarks({
         }
 
         if (l.kind === 'column') {
-          const n = Math.max(1, Math.floor(len / COLUMN_PITCH));
+          // LES FÛTS VIENNENT DU RÉSEAU, avec leur emprise : ils barrent le
+          // passage, donc la marche les connaît, donc le rendu les LIT au lieu
+          // de les recalculer (`data/stationConcourseBuild`).
+          //
           // Le poteau s'arrête sous la dalle et sur le sol fini : un fût qui
           // pénètre son plafond de douze centimètres se lit comme un défaut, et
           // la sonde le compte comme tel.
           const h = shell.ceilY - shell.floorY - 2 * COLUMN_CLEAR;
           return (
             <group key={l.id} name="gare/hall/poteaux">
-              {Array.from({ length: n }, (_, k) => {
-                const at = (long === 'x' ? r.x0 : r.z0) + ((k + 0.5) * len) / n;
-                return (
-                  <mesh
-                    key={`col${k}`}
-                    position={long === 'x'
-                      ? [at, shell.floorY + COLUMN_CLEAR + h / 2, cz]
-                      : [cx, shell.floorY + COLUMN_CLEAR + h / 2, at]}
-                    material={m.column}
-                  >
-                    <boxGeometry args={[COLUMN_W, h, COLUMN_W]} />
-                  </mesh>
-                );
-              })}
+              {l.posts.map((post, k) => (
+                <mesh
+                  key={`col${k}`}
+                  position={[
+                    (post.x0 + post.x1) / 2,
+                    shell.floorY + COLUMN_CLEAR + h / 2,
+                    (post.z0 + post.z1) / 2,
+                  ]}
+                  material={m.column}
+                >
+                  <boxGeometry args={[post.x1 - post.x0, h, post.z1 - post.z0]} />
+                </mesh>
+              ))}
             </group>
           );
         }

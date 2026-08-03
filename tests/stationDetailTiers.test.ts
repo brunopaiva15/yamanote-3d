@@ -1,0 +1,93 @@
+// LES PALIERS DE QUALITÉ, ET LA RÈGLE QUI LES GOUVERNE (phase 25).
+//
+// Un palier bas allège le rendu. Il a le droit de retirer ce qui se REGARDE —
+// une bande jaune, une enseigne, un vitrage, un cadran. Il n'a jamais le droit
+// de retirer ce qui BARRE.
+//
+// La raison n'est pas esthétique : un obstacle du réseau est une COLLISION,
+// et la marche ne connaît pas le palier de qualité. Retirer le dessin d'une
+// vitrine sans retirer sa collision donne un mur invisible ; retirer les deux
+// donne une gare qui change de plan quand la machine chauffe. Les deux sont
+// pires que le bandeau qu'on aurait économisé.
+//
+// Ce fichier tient donc l'inventaire de ce qui BARRE, et vérifie qu'il ne
+// dépend d'aucun palier — parce que la géométrie qui barre vit dans le RÉSEAU,
+// qui est calculé une fois pour toutes, et non dans le rendu.
+
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
+import { register } from 'node:module';
+
+register('./fixtures/ts-resolve.mjs', import.meta.url);
+
+const { placementFor } = await import('../src/systems/stationPlacement.ts');
+const { psdGates } = await import('../src/three/station/psdLayout.ts');
+const { walkerBlocked } = await import('../src/systems/stationLevels.ts');
+const { STATIONS } = await import('../src/data/stations.ts');
+const { STATION_COUNT } = await import('../src/data/loop.ts');
+
+const GATES = psdGates();
+const NAME = (i: number) => `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
+
+test('tout ce qui barre vit dans le réseau, pas dans le rendu', () => {
+  // `walkerBlocked` ne prend pas de palier de qualité, et c'est la preuve la
+  // plus simple : il n'y a aucun chemin par lequel un palier pourrait changer
+  // ce qui arrête un marcheur.
+  // Quatre paramètres — placement, étage, x, z — et le cinquième (`berth`) a
+  // une valeur par défaut. Aucun n'est un palier de qualité, et c'est tout ce
+  // que ce contrôle demande.
+  assert.equal(walkerBlocked.length, 4, 'walkerBlocked a changé de signature');
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const net = placementFor(i, GATES).network;
+    for (const o of net.obstacles) {
+      assert.ok(
+        o.x1 > o.x0 && o.z1 > o.z0,
+        `${NAME(i)} : obstacle dégénéré ${JSON.stringify(o)}`,
+      );
+    }
+  }
+});
+
+test('UN POTEAU N’EST PAS DE LA FUMÉE', () => {
+  // Les fûts d'une file de poteaux se dessinaient dans le rendu et ne barraient
+  // rien : le joueur les traversait. Ils sont posés par le compilateur, avec
+  // leur emprise, et le rendu les LIT — une implantation, plusieurs lecteurs.
+  let posts = 0;
+  for (let i = 0; i < STATION_COUNT; i++) {
+    const p = placementFor(i, GATES);
+    for (const l of p.network.landmarks) {
+      if (l.kind !== 'column') {
+        assert.deepEqual(l.posts, [], `${NAME(i)} : ${l.id} porte des fûts sans être une file`);
+        continue;
+      }
+      assert.ok(l.posts.length > 0, `${NAME(i)} : ${l.id} est une file sans fût`);
+      for (const post of l.posts) {
+        posts++;
+        // Chaque fût est un obstacle du réseau, donc la marche s'y arrête.
+        assert.ok(
+          p.network.obstacles.some((o) => o.x0 === post.x0 && o.z0 === post.z0),
+          `${NAME(i)} : un fût de ${l.id} ne barre rien`,
+        );
+        const x = (post.x0 + post.x1) / 2;
+        const z = (post.z0 + post.z1) / 2;
+        assert.ok(walkerBlocked(p, 'concourse', x, z), `${NAME(i)} : fût traversable`);
+      }
+    }
+  }
+  assert.ok(posts > 0, 'aucun poteau relevé : le test ne prouve plus rien');
+});
+
+test('les trois décors intérieurs LISENT le palier', () => {
+  // Ils ne le lisaient pas : `Limits`, `Frontages` et `Landmarks` se
+  // dessinaient en entier au palier le plus bas, ce qui était précisément le
+  // manque que la phase 25 devait combler.
+  const dir = new URL('../src/three/station/interiors/', import.meta.url);
+  const files = readdirSync(dir).filter((f) => f.endsWith('.tsx'));
+  assert.deepEqual(files.sort(), ['Frontages.tsx', 'Landmarks.tsx', 'Limits.tsx']);
+  for (const f of files) {
+    const src = readFileSync(new URL(f, dir), 'utf8');
+    assert.ok(src.includes('detail: number;'), `${f} ne prend pas de palier`);
+    assert.ok(src.includes('detail <='), `${f} ne s'en sert pas`);
+  }
+});

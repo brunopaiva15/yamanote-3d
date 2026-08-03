@@ -339,19 +339,19 @@ export function Concourse({
       {/* CE QUI FERME LE MONDE JOUABLE : les correspondances qu'on voit sans
           les prendre, et les palissades de chantier. Rien sur les trente gares
           tant qu'aucune n'est branchée — le hall générique n'en connaît pas. */}
-      <Limits shell={shell} net={net} m={m} />
+      <Limits shell={shell} net={net} m={m} detail={detail} />
 
       {/* Les devantures RELEVÉES : ce que le hall vend, et ce qu'on a le droit
           d'en dire. Le mobilier générique porte ses commerces déduits ; celles-ci
           portent ce qui a été lu sur un plan, et se taisent quand rien ne l'a
           été (`interiors/Frontages`). */}
-      <Frontages shell={shell} net={net} m={m} />
+      <Frontages shell={shell} net={net} m={m} detail={detail} />
 
       {/* Les REPÈRES du lieu : ce dont on se souvient d'une gare, et qui n'est
           ni un mur ni un meuble (constat R3). Trois des sept catégories du
           relevé se posent sans inventer de cote ; les quatre autres sont des
           qualités du volume, et `interiors/Landmarks` dit pourquoi. */}
-      <Landmarks shell={shell} net={net} m={m} />
+      <Landmarks shell={shell} net={net} m={m} detail={detail} />
 
     </group>
   );
