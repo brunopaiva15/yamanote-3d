@@ -41,6 +41,7 @@ import { Passengers } from './three/Passengers';
 import { PaxSpeechBubble } from './three/PaxSpeechBubble';
 import { AgentSpeechBubble } from './three/AgentSpeechBubble';
 import { Player } from './three/Player';
+import { RemotePlayers } from './three/RemotePlayers';
 import { HeldItem } from './three/HeldItem';
 import { Hud } from './ui/Hud';
 import { RenderFailure } from './ui/RenderFailure';
@@ -252,6 +253,11 @@ export default function Game() {
         <Station />
         <PassingTrain />
         <PlatformCrowd />
+        {/* Les autres voyageurs du salon. HORS de `TrainRig` : la conversion de
+            repère est faite dans systems/net/pose, pas par le graphe de scène -
+            un pair peut être dans le wagon quand on est sur le quai, et
+            l'inverse. Sans salon, le composant ne dessine rien. */}
+        <RemotePlayers />
         <PaxSpeechBubble />
         <AgentSpeechBubble />
         <Weather />

@@ -37,6 +37,8 @@ import {
   stopWorldSync,
 } from '../systems/net/worldSync';
 import { useRoom } from '../systems/net/room';
+import { sendPose, startPoseStream, stopPoseStream } from '../systems/net/pose';
+import { updatePeers } from '../systems/net/peers';
 
 // Les trois bornes de temps (dt du cycle, pas de physique, plafond par image)
 // sont dans systems/audioFrame : elles valent pour les deux versions du jeu, et
@@ -89,7 +91,11 @@ export function Engine(): null {
   useEffect(() => {
     if (!inRoom) return;
     startWorldSync();
-    return () => stopWorldSync();
+    startPoseStream();
+    return () => {
+      stopWorldSync();
+      stopPoseStream();
+    };
   }, [inRoom]);
 
   useFrame((_, rawDt) => {
@@ -185,8 +191,14 @@ export function Engine(): null {
     }
 
     // Et ce qu'on a à dire aux autres, une fois l'image faite : le battement de
-    // l'hôte et les tirages de l'arrêt. Sans salon, retour immédiat.
+    // l'hôte, les tirages de l'arrêt, et notre propre pose. Sans salon, retour
+    // immédiat pour les trois.
     netPumpOut(cycleDt);
+    // Les fondus des avatars distants avancent au temps RÉEL et non au temps du
+    // cycle : un pair qui décroche doit s'estomper à la même vitesse qu'on
+    // roule vite ou qu'on soit à l'arrêt.
+    updatePeers(raw, Date.now());
+    sendPose(raw, Date.now());
   });
   return null;
 }
