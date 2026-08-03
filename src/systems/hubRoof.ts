@@ -30,7 +30,7 @@
 // traverse. La percée n'est pas écrite ici : elle est LUE sur le réseau de la
 // gare, et elle vaut ce que le hall vaut.
 
-import { PLATFORM_TOP } from '../data/stationGeometry.ts';
+import { ASCENT_LEN, PLATFORM_TOP } from '../data/stationGeometry.ts';
 import { psdGates } from '../three/station/psdLayout.ts';
 import { placementFor } from './stationPlacement.ts';
 import { platformToWorld } from './playerFrame.ts';
@@ -83,16 +83,35 @@ export function roofGap(index: number): Deck | null {
   const i = ((index % 30) + 30) % 30;
   const hit = GAPS.get(i);
   if (hit !== undefined) return hit;
-  const out = deckOver(
-    placementFor(i, psdGates()).network,
-    ROOF_UNDER,
-    ROOF_OVER,
-    -ROOF_W / 2,
-    ROOF_W / 2,
-  );
+  const place = placementFor(i, psdGates());
+  let out = deckOver(place.network, ROOF_UNDER, ROOF_OVER, -ROOF_W / 2, ROOF_W / 2);
+  // ET LA VOLÉE QUI Y MÈNE. La percée s'arrêtait au bord du plateau — c'est ce
+  // que le relevé donne — mais on n'arrive pas sur un plateau par téléportation :
+  // la volée montante démarre AVANT lui, et le voyageur qui la gravit a l'œil à
+  // 6,58 m dès la cote du plancher. La dalle de toiture, elle, tient de 6,00 à
+  // 6,50. On la traversait donc de la tête sur les dernières marches, ce que le
+  // joueur a rapporté comme « au-dessus de la cage d'escalier, un plafond gris
+  // foncé qu'on traverse ».
+  if (out && place.mainRise === 'up') {
+    const s = place.mainStair;
+    out = {
+      ...out,
+      z0: Math.min(out.z0, s.z - s.halfZ - ASCENT_MARGIN),
+      z1: Math.max(out.z1, s.z + s.halfZ + ASCENT_MARGIN),
+    };
+  }
   GAPS.set(i, out);
   return out;
 }
+
+/**
+ * Ce que la volée réclame au-delà de son emprise au sol.
+ *
+ * Une volée montante occupe la longueur de sa cage PLUS celle de la rampe qui
+ * en sort (`ASCENT_LEN`), et l'on veut de l'air au-dessus de la tête sur toute
+ * cette course, pas seulement au droit du percement.
+ */
+const ASCENT_MARGIN = ASCENT_LEN + 1;
 
 /**
  * La même percée, remise en repère MONDE.

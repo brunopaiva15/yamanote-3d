@@ -259,6 +259,12 @@ export function Concourse({
       const p = bands[i - 1];
       const q = bands[i];
       const at = (p.a1 + q.a0) / 2;
+      // PAS AU RAS D'UN BOUT DU VOLUME. L'enveloppe y pose déjà sa propre
+      // paroi — le bout, l'entrée ou la face percée — et deux surfaces dans le
+      // même plan clignotent l'une contre l'autre. C'est la « bande grise en
+      // z-fighting » qu'on voyait sur les murs.
+      const end = alongZ ? [shell.rect.z0, shell.rect.z1] : [shell.rect.x0, shell.rect.x1];
+      if (at < end[0] + 0.6 || at > end[1] - 0.6) continue;
       for (const [c0, c1] of [
         ...without(p.c0, p.c1, q.c0, q.c1),
         ...without(q.c0, q.c1, p.c0, p.c1),

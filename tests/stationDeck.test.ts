@@ -156,15 +156,27 @@ test('la grande toiture des hubs s’interrompt sous un plateau, et seulement l�
   }
 });
 
-test('la percée de l’auvent et celle de la toiture décrivent le même plateau', () => {
-  // Les deux se lisent sur le même réseau, à deux altitudes différentes. Là où
-  // les deux existent, elles ne peuvent pas désigner deux endroits.
+test('la percée de la toiture couvre celle de l’auvent, et la volée en plus', () => {
+  // Les deux se lisent sur le même réseau, à deux altitudes différentes : elles
+  // ne peuvent pas désigner deux endroits. Mais la toiture est HAUTE — sa dalle
+  // tient de 6,00 à 6,50 quand le plancher du plateau est à 5,08 — si bien que
+  // la tête du voyageur la traverse déjà sur les dernières marches, avant
+  // d'atteindre le plateau. Sa percée déborde donc sur la volée ; celle de
+  // l'auvent n'en a pas besoin, elle a son propre trou de trémie.
   for (const i of ALL) {
     const place = placementFor(i, GATES);
     const gap = roofGap(i);
     if (!place.deck || !gap) continue;
-    assert.equal(place.deck.z0, gap.z0, `${NAME(i)} : deux percées, deux départs`);
-    assert.equal(place.deck.z1, gap.z1, `${NAME(i)} : deux percées, deux fins`);
+    assert.ok(gap.z0 <= place.deck.z0, `${NAME(i)} : la toiture démarre après le plateau`);
+    assert.ok(gap.z1 >= place.deck.z1, `${NAME(i)} : la toiture finit avant le plateau`);
+    // Et elle déborde du côté de la volée, pas des deux : une percée qui
+    // s'étendrait sans raison rendrait le quai au ciel.
+    const s = place.mainStair;
+    const reach = Math.max(place.deck.z0 - gap.z0, gap.z1 - place.deck.z1);
+    assert.ok(
+      reach <= Math.abs(s.z) + s.halfZ + 30,
+      `${NAME(i)} : la percée de toiture déborde de ${reach.toFixed(1)} m`,
+    );
   }
 });
 
