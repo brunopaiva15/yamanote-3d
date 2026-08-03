@@ -42,6 +42,23 @@ const ROUTE_FOOTNOTE_EN = 'Transfer and waiting times are not included. Times ma
 const YAMANOTE_GREEN = '#54af00';
 /** Liseré sombre du côté CONCAVE de l'arc de la vue rapprochée. */
 const YAMANOTE_GREEN_DARK = '#0b5800';
+/**
+ * La bande de la vue rapprochée AVANT que le vert ne l'ait parcourue.
+ *
+ * Quand cet écran arrive, l'afficheur ne le pose pas fini : la bande est
+ * d'abord une ardoise froide, et le vert la remonte du repère de position
+ * jusqu'au bout lointain. Ces deux teintes-là sont donc la MÊME bande, éteinte
+ * - même liseré sombre du côté concave, même dégradé de largeur.
+ *
+ * Relevées sur la capture au ton près : la caméra qui filme une dalle LCD la
+ * décale en bleu (le fond gris clair y sort lavande, le vert JR y sort presque
+ * noir), et prendre ses valeurs telles quelles aurait donné une bande beaucoup
+ * trop saturée. Ce qui est repris, c'est le RAPPORT à ce qui l'entoure : une
+ * ardoise à peine plus claire que le vert qu'elle attend, franchement plus
+ * sombre que le fond.
+ */
+const BAND_DIM = '#8b93a6';
+const BAND_DIM_DARK = '#3a3f4d';
 /** Fond des vues de ligne (gris très clair, pas blanc). */
 const SCREEN_BG = '#e9e9e9';
 const HEADER_BG = '#191a17';
@@ -540,6 +557,102 @@ function spineSamples(pts: [number, number, number][], steps = 12): [number, num
   return out;
 }
 
+/** Un bord de la bande : la suite de ses points, dans l'ordre de l'axe. */
+type BandEdge = [number, number][];
+
+/**
+ * Les deux bords de la bande, et l'abscisse curviligne de chacun de ses points.
+ *
+ * L'abscisse est NORMALISÉE ET RETOURNÉE : 0 est le bout de la bande qui passe
+ * sous les pieds du voyageur (en bas de l'écran, derrière le repère de
+ * position), 1 le bout lointain qui file sous le bandeau. C'est le sens dans
+ * lequel le vert progresse quand l'écran arrive, et le mesurer en LONGUEUR
+ * plutôt qu'en numéro d'échantillon n'est pas un détail : l'axe est
+ * échantillonné à pas constant en paramètre, pas en distance, et un
+ * remplissage indexé sur les échantillons ralentirait dans les segments courts
+ * - une progression qui accélère et freine sans raison se voit tout de suite.
+ */
+function bandEdges(X: (x: number) => number): { outer: BandEdge; inner: BandEdge; u: number[] } {
+  const spine = spineSamples(ZOOM_SPINE);
+  const outer: BandEdge = [];
+  const inner: BandEdge = [];
+  const along: number[] = [];
+  let len = 0;
+  for (let i = 0; i < spine.length; i++) {
+    const [x, y, hw] = spine[i];
+    const p = spine[Math.max(0, i - 1)];
+    const n = spine[Math.min(spine.length - 1, i + 1)];
+    const tx = n[0] - p[0];
+    const ty = n[1] - p[1];
+    const d = Math.hypot(tx, ty) || 1;
+    // Normale « gauche » = côté concave (bas-gauche) de l'arc.
+    inner.push([X(x - (ty / d) * hw), y + (tx / d) * hw]);
+    outer.push([X(x + (ty / d) * hw), y - (tx / d) * hw]);
+    if (i > 0) len += Math.hypot(x - spine[i - 1][0], y - spine[i - 1][1]);
+    along.push(len);
+  }
+  return { outer, inner, u: along.map((a) => 1 - a / (len || 1)) };
+}
+
+/** Le point d'un bord à l'abscisse `at`, interpolé entre deux échantillons. */
+function edgeAt(edge: BandEdge, u: number[], at: number): [number, number] {
+  // `u` DÉCROÎT (1 au premier échantillon, 0 au dernier) : on cherche le
+  // premier intervalle qui contient l'abscisse.
+  for (let i = 0; i < u.length - 1; i++) {
+    if (at <= u[i] && at >= u[i + 1]) {
+      const span = u[i] - u[i + 1] || 1;
+      const t = (u[i] - at) / span;
+      return [
+        edge[i][0] + (edge[i + 1][0] - edge[i][0]) * t,
+        edge[i][1] + (edge[i + 1][1] - edge[i][1]) * t,
+      ];
+    }
+  }
+  return at > u[0] ? edge[0] : edge[edge.length - 1];
+}
+
+/**
+ * Peint la bande entre deux abscisses, liseré compris.
+ *
+ * La coupe est FRANCHE et perpendiculaire à l'axe : les deux bords sont
+ * tranchés à la même abscisse, et le segment qui les joint est la corde
+ * normale à la bande. C'est ce que montre la capture - pas un dégradé, pas une
+ * pointe : une arête nette qui remonte l'arc.
+ */
+function paintBand(
+  g: CanvasRenderingContext2D,
+  e: { outer: BandEdge; inner: BandEdge; u: number[] },
+  from: number,
+  to: number,
+  body: string,
+  edge: string,
+): void {
+  if (to <= from) return;
+  const cut = (b: BandEdge): BandEdge => {
+    const out: BandEdge = [edgeAt(b, e.u, to)];
+    for (let i = 0; i < e.u.length; i++) if (e.u[i] < to && e.u[i] > from) out.push(b[i]);
+    out.push(edgeAt(b, e.u, from));
+    return out;
+  };
+  const outer = cut(e.outer);
+  const inner = cut(e.inner);
+  g.strokeStyle = edge;
+  g.lineWidth = 13;
+  g.lineJoin = 'round';
+  // Bouts CARRÉS : un bout rond déborderait de la coupe de six pixels et
+  // laisserait une virgule verte devant l'arête.
+  g.lineCap = 'butt';
+  g.beginPath();
+  inner.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+  g.stroke();
+  g.fillStyle = body;
+  g.beginPath();
+  outer.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+  for (let i = inner.length - 1; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
+  g.closePath();
+  g.fill();
+}
+
 /** Pastille JY d'une gare de la vue rapprochée : cartouche blanc cerné de vert. */
 function drawJyBadge(g: CanvasRenderingContext2D, jy: string, x: number, cy: number, s: number): void {
   const top = cy - s / 2;
@@ -708,6 +821,7 @@ export function drawRoute(
   lang: ScreenLang,
   dir: LoopDirection,
   anim = 0,
+  fill = 1,
 ): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
@@ -726,33 +840,16 @@ export function drawRoute(
   g.fillRect(0, 0, w, h);
 
   // ----- La bande, en deux passes : liseré sombre du côté concave, puis le
-  // ruban vert par-dessus. Le liseré ne dépasse donc que vers l'extérieur.
-  const spine = spineSamples(ZOOM_SPINE);
-  const outer: [number, number][] = [];
-  const inner: [number, number][] = [];
-  for (let i = 0; i < spine.length; i++) {
-    const [x, y, hw] = spine[i];
-    const p = spine[Math.max(0, i - 1)];
-    const n = spine[Math.min(spine.length - 1, i + 1)];
-    const tx = n[0] - p[0];
-    const ty = n[1] - p[1];
-    const len = Math.hypot(tx, ty) || 1;
-    // Normale « gauche » = côté concave (bas-gauche) de l'arc.
-    inner.push([X(x - (ty / len) * hw), y + (tx / len) * hw]);
-    outer.push([X(x + (ty / len) * hw), y - (tx / len) * hw]);
-  }
-  g.strokeStyle = YAMANOTE_GREEN_DARK;
-  g.lineWidth = 13;
-  g.lineJoin = 'round';
-  g.beginPath();
-  inner.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
-  g.stroke();
-  g.fillStyle = YAMANOTE_GREEN;
-  g.beginPath();
-  outer.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
-  for (let i = inner.length - 1; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
-  g.closePath();
-  g.fill();
+  // ruban par-dessus. Le liseré ne dépasse donc que vers l'extérieur.
+  //
+  // Et, quand l'écran vient d'arriver, en deux BANDES : l'ardoise sur toute la
+  // longueur, le vert par-dessus jusqu'à l'abscisse atteinte. Le vert monte
+  // depuis le repère de position - la voie qu'on a devant soi s'allume à partir
+  // d'où l'on est, elle ne se pose pas d'un coup. Une fois pleine (`fill` = 1),
+  // la passe d'ardoise saute : elle serait entièrement recouverte.
+  const edges = bandEdges(X);
+  if (fill < 1) paintBand(g, edges, 0, 1, BAND_DIM, BAND_DIM_DARK);
+  paintBand(g, edges, 0, fill, YAMANOTE_GREEN, YAMANOTE_GREEN_DARK);
 
   // ----- Les cinq gares : cercle des minutes sur la bande, pastille JY et nom
   // du côté libre. À quai, la gare k = 0 est celle où l'on est : son cercle

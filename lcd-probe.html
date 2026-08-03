@@ -85,6 +85,21 @@
         ['zoom-now-jp', (s) => drawRoute(s, station, 'dwell', 0, clock, 'now', 'jp', dir)],
         ['zoom-next-jp', (s) => drawRoute(s, station, 'cruise', countdown, clock, 'next', 'jp', dir)],
         ['zoom-next-en', (s) => drawRoute(s, station, 'cruise', countdown, clock, 'next', 'en', dir)],
+        // Le remplissage du ruban, à l'arrivée de l'écran : la bande est
+        // d'abord éteinte sur toute sa longueur et le vert la remonte depuis le
+        // repère de position. C'est une animation, elle ne se juge pas sur une
+        // image - mais la COUPE, elle, se juge image par image : elle doit être
+        // franche et normale à la bande, liseré compris.
+        ['zoom-fill-00', (s) => drawRoute(s, station, 'dwell', 0, clock, 'now', 'jp', dir, 0, 0)],
+        ['zoom-fill-25', (s) => drawRoute(s, station, 'dwell', 0, clock, 'now', 'jp', dir, 0, 0.25)],
+        ['zoom-fill-55', (s) => drawRoute(s, station, 'dwell', 0, clock, 'now', 'jp', dir, 0, 0.55)],
+        ['zoom-fill-85', (s) => drawRoute(s, station, 'dwell', 0, clock, 'now', 'jp', dir, 0, 0.85)],
+        // Et dans l'autre sens de marche, où la bande est en miroir : la coupe
+        // doit toujours partir du repère de position, pas du bord de l'écran.
+        [
+          'zoom-fill-55-outer',
+          (s) => drawRoute(s, station, 'dwell', 0, clock, 'now', 'jp', 'outer', 0, 0.55),
+        ],
         ['loop-now-jp', (s) => drawLoopMap(s, station, 'dwell', 0, clock, 'now', 'jp', dir)],
         ['loop-next-jp', (s) => drawLoopMap(s, station, 'cruise', countdown, clock, 'next', 'jp', dir)],
         ['loop-next-en', (s) => drawLoopMap(s, station, 'cruise', countdown, clock, 'next', 'en', dir)],

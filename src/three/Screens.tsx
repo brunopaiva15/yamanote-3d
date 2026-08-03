@@ -24,7 +24,18 @@ import {
   SCREEN_H,
   SCREEN_W,
 } from './lineScreen';
-import { lineScreenFrame, lineScreenKey, paintLineScreen } from './lineScreenCycle';
+import {
+  MOTION_STEP,
+  bandFills,
+  lineScreenFrame,
+  lineScreenKey,
+  lineScreenPageKey,
+  newScreenAnim,
+  paintLineScreen,
+  resetScreenAnim,
+  stepScreenAnim,
+} from './lineScreenCycle';
+import { paintBlended } from './screenFade';
 import { makeScreen } from './screenSurface';
 import { WEATHER_EVERY, drawLeftAd, drawWeatherPanel, tomorrowDayOf } from './adScreen';
 import { forecastSlots } from '../systems/weather';
@@ -46,6 +57,12 @@ export function Screens() {
   const acc = useRef(0);
   /** Phase courante de l'animation des écrans (vantaux, repères clignotants). */
   const animPhase = useRef(0);
+  /** Fondu enchaîné et remplissage du ruban : voir `three/lineScreenAnim`. */
+  const motion = useRef(newScreenAnim());
+  /** Temps accumulé depuis le dernier pas de l'écran droit. */
+  const stepAcc = useRef(0);
+  /** Quelque chose bougeait au pas précédent : il faut une dernière image. */
+  const wasMoving = useRef(false);
   /** Vrai tant que les dalles sont éteintes : sert à forcer le redessin au retour. */
   const wasDark = useRef(false);
   /** Vrai quand les canevas ont déjà été peints en noir pour le redémarrage. */
@@ -82,6 +99,9 @@ export function Screens() {
     endMat.color.setScalar(lit);
     if (power <= LCD_CUTOFF) {
       wasDark.current = true;
+      // La dalle éteinte n'est pas une page : au retour, l'image doit revenir
+      // d'un coup et non monter en fondu depuis le noir.
+      resetScreenAnim(motion.current);
       return;
     }
 
@@ -114,63 +134,91 @@ export function Screens() {
       return;
     }
 
+    // Le BATTEMENT de la rame : une demi-seconde. Il rythme les vantaux du plan
+    // de quai, le clignotement des repères de position et la boucle
+    // publicitaire - tout ce qui, sur la rame, avance par crans.
     acc.current += dt;
-    if (acc.current < ANIM_PERIOD) return;
-    acc.current = 0;
-    // Horloge d'animation : elle avance d'une phase à chaque réveil, et c'est
-    // ELLE qui rythme les vantaux du plan de quai et le clignotement des
-    // repères de position. Elle entre dans la clé de redessin, sinon rien ne
-    // bougerait tant que la minute affichée reste la même.
-    animPhase.current = (animPhase.current + 1) % ANIM_PHASES;
+    const beat = acc.current >= ANIM_PERIOD;
+    if (beat) {
+      acc.current = 0;
+      // Horloge d'animation : elle avance d'une phase à chaque réveil. Elle
+      // entre dans la clé de redessin, sinon rien ne bougerait tant que la
+      // minute affichée reste la même.
+      animPhase.current = (animPhase.current + 1) % ANIM_PHASES;
+    }
     const anim = animPhase.current;
 
-    // Écran gauche : une pub toutes les ~15 s, boucle de AD_LOOP_COUNT spots -
-    // et, un passage sur WEATHER_EVERY, le bulletin de la chaîne de bord à la
-    // place du spot. C'est la seule chose que cet écran dise de vrai, et la
-    // seule qu'on puisse aller vérifier par la fenêtre.
-    const adSeed = AD_LOOP_FIRST_SEED + (Math.floor(runtime.clockMin * 4) % AD_LOOP_COUNT);
-    if (adSeed !== lastAd.current) {
-      lastAd.current = adSeed;
-      if ((adSeed - AD_LOOP_FIRST_SEED) % WEATHER_EVERY === 0) {
-        // Réel si la journée jouée a eu lieu, plausible sinon : le modèle du
-        // jeu prend le relais pour les dates à venir.
-        const slots = tokyoForecastSlots(6) ?? forecastSlots(6);
-        const d = runtime.tokyoDate;
-        drawWeatherPanel(left, slots, d, tomorrowDayOf(d));
-      } else {
-        drawLeftAd(left, adSeed);
+    if (beat) {
+      // Écran gauche : une pub toutes les ~15 s, boucle de AD_LOOP_COUNT spots -
+      // et, un passage sur WEATHER_EVERY, le bulletin de la chaîne de bord à la
+      // place du spot. C'est la seule chose que cet écran dise de vrai, et la
+      // seule qu'on puisse aller vérifier par la fenêtre.
+      const adSeed = AD_LOOP_FIRST_SEED + (Math.floor(runtime.clockMin * 4) % AD_LOOP_COUNT);
+      if (adSeed !== lastAd.current) {
+        lastAd.current = adSeed;
+        if ((adSeed - AD_LOOP_FIRST_SEED) % WEATHER_EVERY === 0) {
+          // Réel si la journée jouée a eu lieu, plausible sinon : le modèle du
+          // jeu prend le relais pour les dates à venir.
+          const slots = tokyoForecastSlots(6) ?? forecastSlots(6);
+          const d = runtime.tokyoDate;
+          drawWeatherPanel(left, slots, d, tomorrowDayOf(d));
+        } else {
+          drawLeftAd(left, adSeed);
+        }
+        left.texture.needsUpdate = true;
       }
-      left.texture.needsUpdate = true;
+
+      // Dalles des abouts : même boucle publicitaire, mais décalée d'un tiers de
+      // spot pour qu'elles ne basculent pas en même temps que celles des portes.
+      const endSeed = END_AD_FIRST_SEED + (Math.floor(runtime.clockMin * 4 + 2) % END_AD_COUNT);
+      if (endSeed !== lastEndAd.current) {
+        lastEndAd.current = endSeed;
+        drawLeftAd(end, endSeed);
+        end.texture.needsUpdate = true;
+      }
     }
 
-    // Dalles des abouts : même boucle publicitaire, mais décalée d'un tiers de
-    // spot pour qu'elles ne basculent pas en même temps que celles des portes.
-    const endSeed = END_AD_FIRST_SEED + (Math.floor(runtime.clockMin * 4 + 2) % END_AD_COUNT);
-    if (endSeed !== lastEndAd.current) {
-      lastEndAd.current = endSeed;
-      drawLeftAd(end, endSeed);
-      end.texture.needsUpdate = true;
-    }
+    // Écran droit : il a son PROPRE pas, plus fin que le battement.
+    //
+    // Le fondu d'une page à la suivante dure un dixième de seconde et le vert
+    // met une seconde à remonter la bande : à un réveil toutes les demi-
+    // secondes, le premier serait une coupure et le second un escalier de deux
+    // marches. On repeint donc jusqu'à MOTION_STEP tant que quelque chose bouge
+    // - et pas une image de plus : hors de ces deux animations, la dalle
+    // retrouve exactement le battement d'avant.
+    stepAcc.current += dt;
+    if (!beat && (!wasMoving.current || stepAcc.current < MOTION_STEP)) return;
+    const stepDt = stepAcc.current;
+    stepAcc.current = 0;
 
-    // Écran droit : ce qui est à l'antenne vient de la rotation partagée
+    // Ce qui est à l'antenne vient de la rotation partagée
     // (three/lineScreenCycle), que la version sonore du jeu lit aussi. Les
     // deux afficheurs montrent donc le même écran au même moment - c'est le
     // même équipement de bord, regardé de deux endroits.
     const frame = lineScreenFrame();
+    const page = `${lineScreenPageKey(frame, 1)}||${lineScreenPageKey(frame, -1)}`;
+    const step = stepScreenAnim(motion.current, page, bandFills(frame.state), stepDt);
+    // Une image de plus APRÈS la fin d'une animation : celle qui pose le ruban
+    // plein. Sans elle, la dernière image peinte serait celle d'avant le
+    // dernier pas, et la bande s'arrêterait à un cheveu de son bout.
+    const moving = step.busy || wasMoving.current;
+    wasMoving.current = step.busy;
 
     // Les états animés (plan du quai, plans de ligne) entrent dans la clé avec
     // leur phase : eux seuls se redessinent à chaque battement, les écrans
     // fixes gardent leur texture tant que rien d'autre ne change. La clé porte
     // le côté, parce que le plan du quai n'est pas le même des deux parois.
     const key = `${lineScreenKey(frame, anim, 1)}||${lineScreenKey(frame, anim, -1)}`;
-    if (key === lastKey.current) return;
+    if (key === lastKey.current && !moving) return;
     lastKey.current = key;
 
     for (const [side, screen] of [
       [1, rightA],
       [-1, rightB],
     ] as const) {
-      paintLineScreen(screen, frame, anim, side);
+      paintBlended(screen, step.blend, (surface) =>
+        paintLineScreen(surface, frame, anim, side, step.fill),
+      );
       screen.texture.needsUpdate = true;
     }
   });
