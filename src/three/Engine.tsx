@@ -29,6 +29,14 @@ import { updateHeldItem, updateInteraction } from '../systems/interaction';
 import { updateFareGates } from '../systems/fareGate';
 import { setPickCamera } from '../systems/pick';
 import { perfLevel } from '../systems/perf';
+import {
+  netCycleDt,
+  netPumpIn,
+  netPumpOut,
+  startWorldSync,
+  stopWorldSync,
+} from '../systems/net/worldSync';
+import { useRoom } from '../systems/net/room';
 
 // Les trois bornes de temps (dt du cycle, pas de physique, plafond par image)
 // sont dans systems/audioFrame : elles valent pour les deux versions du jeu, et
@@ -50,6 +58,7 @@ if (typeof document !== 'undefined') {
 
 export function Engine(): null {
   const gl = useThree((s) => s.gl);
+  const inRoom = useRoom((s) => s.status === 'joined');
   const camera = useThree((s) => s.camera);
 
   // Outil dev : __renderInfo() donne le coût de la frame précédente. Sert à
@@ -72,6 +81,17 @@ export function Engine(): null {
     return () => setPickCamera(null);
   }, [camera]);
 
+  // Le monde partagé s'écoute tant qu'on est dans un salon. Branché ICI et non
+  // dans `net/room` : `worldSync` a besoin de `net/room` pour émettre, et si
+  // `net/room` avait besoin de `worldSync` pour brancher l'écoute, les deux
+  // modules s'importeraient l'un l'autre. La boucle, elle, connaît
+  // légitimement les deux - c'est elle qui les fait tourner.
+  useEffect(() => {
+    if (!inRoom) return;
+    startWorldSync();
+    return () => stopWorldSync();
+  }, [inRoom]);
+
   useFrame((_, rawDt) => {
     const raw = Math.max(0, rawDt);
     const skipCycle = tabJustResumed;
@@ -87,6 +107,11 @@ export function Engine(): null {
 
     if (!useStore.getState().started) return;
 
+    // Le réseau AVANT le cycle : une correction appliquée après porterait sur
+    // une image déjà écoulée, et le suiveur courrait perpétuellement une image
+    // derrière l'hôte. Sans salon, c'est un retour immédiat.
+    netPumpIn();
+
     // Qualité vidéo abaissée en cours de trajet : allège immédiatement le
     // pool de PNJ. En sens inverse (qualité remontée), la densité se remplit
     // naturellement à l'échange de passagers du prochain arrêt.
@@ -100,8 +125,13 @@ export function Engine(): null {
       // Descendu sur le quai, le joueur n'est plus dans le référentiel du
       // train : la gare devient fixe, la rame glisse, et c'est une autre
       // machine à états qui mène la danse.
-      if (runtime.playerFrame === 'platform') updatePlatformWait(cycleDt);
-      else updateCycle(cycleDt);
+      // Le pas de temps du cycle, modulé de la dérive quand on suit quelqu'un.
+      // On ne corrige QUE le cycle : la physique des portes et la foule
+      // avancent au temps réel, sinon un rattrapage de 10 % ferait battre les
+      // vantaux 10 % trop vite, ce qui s'entend.
+      const worldDt = netCycleDt(cycleDt);
+      if (runtime.playerFrame === 'platform') updatePlatformWait(worldDt);
+      else updateCycle(worldDt);
       // Le train qui traverse la voie d'en face appartient à la GARE, pas à
       // notre rame : il avance de la même façon qu'on soit assis dedans ou
       // debout sur le quai, et les deux machines à états ci-dessus ne font que
@@ -153,6 +183,10 @@ export function Engine(): null {
       // identique et vingt fois le travail.
       publishAudioEnvironment(physSpan);
     }
+
+    // Et ce qu'on a à dire aux autres, une fois l'image faite : le battement de
+    // l'hôte et les tirages de l'arrêt. Sans salon, retour immédiat.
+    netPumpOut(cycleDt);
   });
   return null;
 }

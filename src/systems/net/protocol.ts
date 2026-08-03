@@ -243,12 +243,20 @@ export const BLOCKER_BITS = {
  * permet de se passer d'accusé de réception : un paquet perdu a le temps d'être
  * redemandé (`hello`) avant que son absence ne s'entende.
  *
+ * Ce paquet porte les TIRAGES, jamais leurs conséquences. C'est la cohérence de
+ * tout l'édifice : le suiveur déroule la même chronologie que l'hôte à partir
+ * du même code, il n'a donc besoin que de ce que ce code aurait tiré au sort.
+ * Lui envoyer une durée de dwell déjà calculée reviendrait à dire deux fois la
+ * même chose, et à ouvrir la porte au jour où les deux ne diraient plus pareil.
+ *
  * `seed` porte les trente-huit retards de vantaux à lui tout seul : au-delà de
- * trois tirages liés, on transmet la graine et non les valeurs. Les quatre
- * suivants sont transmis EN CLAIR malgré tout, et c'est une ceinture doublée
- * d'une bretelle assumée : leur dérivation traverse quatre modules jusqu'au
- * manifeste des mélodies, et c'est la fenêtre sonore qui décide de la durée de
- * l'arrêt. Un écart silencieux là-dessus décalerait tout le reste.
+ * trois tirages liés, on transmet la graine et non les valeurs.
+ *
+ * Une réserve connue, et assumée pour l'instant : `randomizeStopTimings` lit
+ * aussi `lineDelayed()`, qui n'est pas encore répliqué. Une perturbation de
+ * ligne qui frapperait un seul client décalerait sa mélodie de deux secondes.
+ * C'est rare, ça se rattrape au battement suivant, et le corriger demande de
+ * répliquer tout `systems/lineDisruption` - un chantier à lui seul.
  */
 export interface StopPayload {
   v: number;
@@ -258,14 +266,10 @@ export interface StopPayload {
   ix: number;
   /** Graine des retards de vantaux (rame et portes palières). */
   seed: number;
-  /** `stopTimings`, en millisecondes entières. */
-  mAfter: number;
-  mSound: number;
-  /** `stationTimings`, en millisecondes entières. */
-  psdOpen: number;
-  psdClose: number;
   /** Écart d'arrêt, en millimètres signés. */
   berth: number;
+  /** Décalage de l'instant de la mélodie, en millionièmes (donc [-1e6, 1e6]). */
+  jitter: number;
   /** La rame se range-t-elle sur la voie secondaire ? */
   alt: 0 | 1;
   /** Un rapide traversera-t-il pendant cet arrêt ? */
@@ -386,12 +390,17 @@ export function validStop(m: unknown): m is StopPayload {
   if (!isFiniteInt(r.ix) || (r.ix as number) < 0 || (r.ix as number) > 29) return false;
   if (r.alt !== 0 && r.alt !== 1) return false;
   if (r.pass !== 0 && r.pass !== 1) return false;
-  for (const k of ['ss', 'seed', 'mAfter', 'mSound', 'psdOpen', 'psdClose', 'berth'] as const) {
+  for (const k of ['ss', 'seed', 'berth', 'jitter'] as const) {
     if (!isFiniteInt(r[k])) return false;
   }
-  // Une chronologie négative ou nulle n'a pas de sens et ferait dérailler le
-  // dwell : mieux vaut ignorer le paquet et rester sur les valeurs par défaut.
-  if ((r.mAfter as number) <= 0 || (r.mSound as number) <= 0) return false;
+  // Le décalage de mélodie est un tirage dans [-1, 1] : hors de ces bornes, il
+  // décalerait l'instant de la 発車メロディ de plusieurs secondes, ce qui
+  // allongerait ou raccourcirait l'arrêt d'autant. Mieux vaut ignorer le paquet
+  // et rester sur la valeur nominale.
+  if (Math.abs(r.jitter as number) > 1_000_000) return false;
+  // Onze centimètres est le maximum physique (voir stationCycle) ; on laisse
+  // une marge de dix avant de crier au loup.
+  if (Math.abs(r.berth as number) > 1_000) return false;
   return true;
 }
 

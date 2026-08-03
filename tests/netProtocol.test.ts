@@ -197,11 +197,8 @@ function stop(over: Record<string, unknown> = {}) {
     ss: 5,
     ix: 12,
     seed: 987_654,
-    mAfter: 20_400,
-    mSound: 13_600,
-    psdOpen: 800,
-    psdClose: 800,
     berth: -74,
+    jitter: 420_000,
     alt: 0,
     pass: 1,
     ...over,
@@ -212,17 +209,26 @@ test('un paquet de tirages bien formé est accepté', () => {
   assert.equal(validStop(stop()), true);
 });
 
-test('une chronologie nulle ou négative est rejetée', () => {
-  // Ces deux durées commandent la longueur de l'arrêt : une valeur absurde
-  // ferait partir la rame avant d'avoir ouvert.
-  assert.equal(validStop(stop({ mAfter: 0 })), false);
-  assert.equal(validStop(stop({ mAfter: -1 })), false);
-  assert.equal(validStop(stop({ mSound: 0 })), false);
+test('un décalage de mélodie hors de [-1, 1] est rejeté', () => {
+  // C'est un TIRAGE, pas une durée : hors de ses bornes, il décalerait
+  // l'instant de la 発車メロディ de plusieurs secondes, donc allongerait ou
+  // raccourcirait l'arrêt d'autant, donc désaccorderait les portes.
+  assert.equal(validStop(stop({ jitter: 1_000_001 })), false);
+  assert.equal(validStop(stop({ jitter: -1_000_001 })), false);
+  assert.equal(validStop(stop({ jitter: 1_000_000 })), true);
+  assert.equal(validStop(stop({ jitter: 0 })), true);
 });
 
 test('un écart d’arrêt négatif reste valide : la rame déborde des deux côtés', () => {
   assert.equal(validStop(stop({ berth: -110 })), true);
   assert.equal(validStop(stop({ berth: 110 })), true);
+});
+
+test('un écart d’arrêt délirant est rejeté', () => {
+  // Onze centimètres est le maximum physique ; un mètre n'est plus un écart
+  // d'arrêt, c'est une rame garée ailleurs.
+  assert.equal(validStop(stop({ berth: 1_001 })), false);
+  assert.equal(validStop(stop({ berth: -1_001 })), false);
 });
 
 // --- Événements -----------------------------------------------------------

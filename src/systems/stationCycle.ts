@@ -41,6 +41,7 @@ import {
   drawMelodyJitter,
   drawReason,
 } from './net/worldDecisions';
+import { notifyIncident } from './net/incidents';
 import {
   createCarPower,
   cutPower,
@@ -765,9 +766,30 @@ const PHASE_ORDER = (stationIndex: number, dir: LoopDirection) => [
   { phase: 'depart' as const, dur: CONFIG.departTime },
 ];
 
+/**
+ * Le plus grand `phaseT` auquel un événement a déjà été tiré dans cette phase.
+ *
+ * C'est le PLANCHER du multijoueur, et il ne sert qu'à ça. Quand un suiveur se
+ * découvre en avance sur l'hôte, il faut le ralentir - mais jamais le faire
+ * redescendre sous un seuil déjà franchi, sinon le carillon d'ouverture, la
+ * mélodie ou l'annonce de fermeture se rejouent. Dans une rame où l'on n'a rien
+ * d'autre à faire qu'écouter, c'est la chose la plus visible qu'on puisse
+ * casser (voir systems/net/reconcile).
+ *
+ * Mesuré ici et nulle part ailleurs : `once` est le seul endroit du fichier qui
+ * sache qu'un seuil vient d'être franchi.
+ */
+let maxFiredT = 0;
+
+/** Le plancher sous lequel une correction réseau ne doit jamais redescendre. */
+export function lastFiredAt(): number {
+  return maxFiredT;
+}
+
 function once(key: string, condition: boolean, fn: () => void): void {
   if (condition && !fired.has(key)) {
     fired.add(key);
+    if (runtime.phaseT > maxFiredT) maxFiredT = runtime.phaseT;
     fn();
   }
 }
@@ -776,6 +798,11 @@ function enterPhase(phase: Phase): void {
   useStore.getState().setPhase(phase);
   runtime.phaseT = 0;
   fired.clear();
+  // Le plancher se remet à zéro AVEC le jeu d'événements : les deux décrivent
+  // la même chose - ce qui a déjà sonné dans la phase courante - et les
+  // laisser diverger d'une seule ligne rendrait le plancher faux pour toute la
+  // phase suivante.
+  maxFiredT = 0;
   if (phase === 'dwell') {
     runtime.stopSequence += 1;
     clearDepartureBlockers();
@@ -864,6 +891,12 @@ function seedDoorsForDwell(t: number, stationIndex: number): void {
 // pas les redéclencher la première frame après un spawn au milieu d'une phase.
 function seedFired(phase: Phase, t: number, stationIndex: number, dir: LoopDirection): void {
   fired.clear();
+  // Après un saut, tout ce qui est marqué « déjà joué » l'a été à un instant
+  // antérieur à `t` par construction : le plancher vaut donc `t`. Le laisser à
+  // zéro autoriserait la correction suivante à rembobiner jusqu'au début de la
+  // phase, et à rejouer d'un coup tout ce que ce `seedFired` vient justement
+  // d'éteindre.
+  maxFiredT = t;
   if (phase === 'cruise') {
     fired.add('doorside');
     fired.add('crowd-clear');
@@ -1232,11 +1265,18 @@ export function updateCycle(dt: number): void {
       if (outageAt >= 0 && t >= outageAt) {
         outageAt = -1;
         beginPowerOutage();
+        // Un suiveur ne planifie aucun incident (voir net/worldDecisions) : il
+        // ne les subit que sur ordre. On le donne ICI, au moment exact où la
+        // caténaire lâche, et non au battement suivant - une demi-seconde de
+        // décalage sur une coupure de courant, c'est une rame qui s'éteint
+        // chez l'un et roule encore chez l'autre.
+        notifyIncident('outage');
         break;
       }
       if (emergencyAt >= 0 && t >= emergencyAt) {
         emergencyAt = -1;
         beginEmergencyStop();
+        notifyIncident('emergency');
         break;
       }
       // Séquence JR approche : まもなく(+portes) → 乗換?, lancée avant le

@@ -70,6 +70,48 @@ const MODULES_PURS = [
   'src/systems/net/worldDecisions.ts',
 ];
 
+/**
+ * Les modules qui doivent rester CHARGEABLES sous `node --test`, sans être purs
+ * pour autant.
+ *
+ * `worldSample` lit le runtime et le store : il n'a rien d'un module pur. Mais
+ * il porte toutes les conversions d'unités du protocole - secondes en
+ * millisecondes, mètres en centimètres -, et une erreur là-dedans donnerait une
+ * resynchronisation dure à chaque paquet, donc un carillon toutes les demi-
+ * secondes. C'est exactement le genre d'erreur qu'on ne voit qu'à deux, tard,
+ * et qu'on attribue d'abord au réseau. Il doit donc se tester, et pour ça il ne
+ * doit surtout pas se mettre à importer `stationCycle` - qui tire derrière lui
+ * le moteur audio et, en bout de chaîne, `import.meta.env`.
+ */
+const MODULES_CHARGEABLES = ['src/systems/net/worldSample.ts'];
+
+/** Ce qu'un module chargeable-sans-navigateur ne doit pas atteindre. */
+const LOURDS: { motif: RegExp; raison: string }[] = [
+  { motif: /(^|\/)stationCycle$/, raison: 'le cycle station, et le moteur audio avec lui' },
+  { motif: /(^|\/)audioEngine$/, raison: 'le moteur audio' },
+  { motif: /(^|\/)platformWait$/, raison: 'la machine à états du quai' },
+  { motif: /^three(\/|$)/, raison: 'le moteur de rendu' },
+];
+
+test('l’échantillonnage du monde reste testable sans navigateur', () => {
+  const fautes: string[] = [];
+  for (const file of MODULES_CHARGEABLES) {
+    assert.ok(existsSync(resolvePath(ROOT, file)), `${file} a disparu`);
+    for (const spec of runtimeImports(file)) {
+      for (const { motif, raison } of LOURDS) {
+        if (motif.test(spec)) fautes.push(`${file} importe ${spec} (${raison})`);
+      }
+    }
+  }
+  assert.deepEqual(
+    fautes,
+    [],
+    'Ces modules portent les conversions d’unités du protocole et doivent ' +
+      'pouvoir se charger sous `node --test`. Un seul de ces imports les rend ' +
+      `intestables.\n${fautes.join('\n')}`,
+  );
+});
+
 /** Ce qu'un module pur n'a pas le droit d'atteindre, et pourquoi. */
 const INTERDITS: { motif: RegExp; raison: string }[] = [
   { motif: /^three(\/|$)/, raison: 'le moteur de rendu' },
