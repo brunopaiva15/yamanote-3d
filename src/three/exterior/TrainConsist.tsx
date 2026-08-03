@@ -205,7 +205,6 @@ function build(): Built {
   };
 
   for (const [geo, mat] of [
-    [geos.body, mats.body],
     [geos.band, mats.band],
     [geos.roof, mats.roof],
     [geos.underframe, mats.underframe],
@@ -217,15 +216,25 @@ function build(): Built {
     im.instanceMatrix.needsUpdate = true;
   }
 
-  // Doublures : toutes les voitures sauf celle du joueur, qui a un vrai
-  // intérieur.
+  // Peau inox et doublures : la voiture du joueur est à part dans les deux cas.
+  // Elle a un vrai intérieur, modélisé jusqu'à z = ±10 - donc pas de doublure,
+  // et pas non plus les plaques d'about de la coque (à ±9,77), qui viendraient
+  // se poser en travers de sa travée prioritaire.
+  const bodyOpen = instanced(geos.bodyOpen, mats.body, 1);
+  bodyOpen.setMatrixAt(0, m.makeTranslation(0, 0, carZ(PLAYER_CAR)));
+  bodyOpen.instanceMatrix.needsUpdate = true;
+
+  const body = instanced(geos.body, mats.body, CARS - 1);
   const liner = instanced(geos.liner, mats.liner, CARS - 1);
   {
     let k = 0;
     for (let i = 0; i < CARS; i++) {
       if (i === PLAYER_CAR) continue;
-      liner.setMatrixAt(k++, m.makeTranslation(0, 0, carZ(i)));
+      body.setMatrixAt(k, m.makeTranslation(0, 0, carZ(i)));
+      liner.setMatrixAt(k, m.makeTranslation(0, 0, carZ(i)));
+      k++;
     }
+    body.instanceMatrix.needsUpdate = true;
     liner.instanceMatrix.needsUpdate = true;
   }
 
