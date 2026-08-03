@@ -40,13 +40,14 @@ const GATES = psdGates();
 const NAME = (i: number) => `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
 const WIRED = wiredIndices().map((i) => ({ i, name: NAME(i), place: placementFor(i, GATES) }));
 
-test('les vingt gares branchées passent par leur relevé', () => {
+test('les vingt-trois gares branchées passent par leur relevé', () => {
   assert.deepEqual(
     WIRED.map((w) => w.name),
     [
       'JY02 Kanda',
       'JY03 Akihabara',
       'JY06 Uguisudani',
+      'JY07 Nippori',
       'JY08 Nishi-Nippori',
       'JY09 Tabata',
       'JY10 Komagome',
@@ -60,6 +61,8 @@ test('les vingt gares branchées passent par leur relevé', () => {
       'JY22 Meguro',
       'JY23 Gotanda',
       'JY24 Ōsaki',
+      'JY25 Shinagawa',
+      'JY26 Takanawa Gateway',
       'JY27 Tamachi',
       'JY28 Hamamatsuchō',
       'JY29 Shimbashi',
@@ -161,6 +164,7 @@ test('CE QUE CHAQUE GARE GAGNE, et qui n’existait pas dans le hall générique
     { gare: 'JY02 Kanda', lignes: 2, niveaux: 1, archétypes: 'underViaduct', correspondances: 2, devantures: 0 },
     { gare: 'JY03 Akihabara', lignes: 3, niveaux: 2, archétypes: 'compact+overbridge+underViaduct', correspondances: 3, devantures: 3 },
     { gare: 'JY06 Uguisudani', lignes: 2, niveaux: 2, archétypes: 'compact+linear', correspondances: 0, devantures: 0 },
+    { gare: 'JY07 Nippori', lignes: 2, niveaux: 2, archétypes: 'overbridge', correspondances: 3, devantures: 1 },
     { gare: 'JY08 Nishi-Nippori', lignes: 1, niveaux: 2, archétypes: 'compact+overbridge', correspondances: 4, devantures: 1 },
     { gare: 'JY09 Tabata', lignes: 2, niveaux: 1, archétypes: 'compact+overbridge', correspondances: 0, devantures: 1 },
     { gare: 'JY10 Komagome', lignes: 2, niveaux: 2, archétypes: 'compact+overbridge', correspondances: 1, devantures: 1 },
@@ -174,6 +178,8 @@ test('CE QUE CHAQUE GARE GAGNE, et qui n’existait pas dans le hall générique
     { gare: 'JY22 Meguro', lignes: 1, niveaux: 2, archétypes: 'compact+hubSlice+overbridge', correspondances: 1, devantures: 2 },
     { gare: 'JY23 Gotanda', lignes: 1, niveaux: 2, archétypes: 'overbridge+underViaduct', correspondances: 2, devantures: 2 },
     { gare: 'JY24 Ōsaki', lignes: 2, niveaux: 1, archétypes: 'cross+overbridge', correspondances: 2, devantures: 2 },
+    { gare: 'JY25 Shinagawa', lignes: 2, niveaux: 1, archétypes: 'cross+overbridge', correspondances: 3, devantures: 1 },
+    { gare: 'JY26 Takanawa Gateway', lignes: 2, niveaux: 2, archétypes: 'cross+overbridge', correspondances: 1, devantures: 0 },
     { gare: 'JY27 Tamachi', lignes: 2, niveaux: 2, archétypes: 'cross+overbridge', correspondances: 1, devantures: 0 },
     { gare: 'JY28 Hamamatsuchō', lignes: 2, niveaux: 2, archétypes: 'hubSlice+overbridge+underViaduct', correspondances: 2, devantures: 0 },
     { gare: 'JY29 Shimbashi', lignes: 3, niveaux: 3, archétypes: 'linear+underViaduct', correspondances: 4, devantures: 0 },
@@ -219,4 +225,65 @@ test('ce que le compilateur a rogné est DIT, pas caché', () => {
   // entièrement commerciale. Une sortie passe avant un magasin : elle est posée
   // quand même, et le compilateur le dit.
   assert.equal(codes.get('mouthOverShop'), 1);
+});
+
+// --- Phase 22 : les trois premières signatures ---------------------------
+
+test('LES REPÈRES DU LIEU arrivent jusqu’au rendu', () => {
+  // Constat R3 : les signatures existantes dessinent ce qu'on voit DEPUIS LE
+  // QUAI, et rien pour l'intérieur. Le relevé note quarante repères ; ils ne
+  // servaient à personne.
+  const seen = new Map<string, number>();
+  for (const { i, place } of WIRED) {
+    for (const l of place.network.landmarks) {
+      seen.set(l.kind, (seen.get(l.kind) ?? 0) + 1);
+      assert.ok(
+        place.network.rooms.some((r) => r.id === l.roomId),
+        `${NAME(i)} : repère ${l.id} dans une pièce inconnue`,
+      );
+      // Aucun n'a d'emprise : un plan officiel ne cote pas une horloge. C'est
+      // ce fait-là qui interdit de les poser au centimètre.
+      assert.equal(l.rect, null, `${NAME(i)} : ${l.id} a une emprise cotée`);
+    }
+  }
+  assert.ok(seen.size >= 4, `seulement ${seen.size} catégories de repères`);
+  // Le 三角時計 de Shinagawa : la seule horloge nommée du relevé, et le point
+  // de rendez-vous de la gare.
+  assert.equal(seen.get('clock'), 1);
+});
+
+test('les trois signatures de la phase 22 tiennent leur promesse', () => {
+  const by = (i: number) => WIRED.find((w) => w.i === i)!.place.network;
+
+  // NIPPORI cesse d'être un cas spécial : son niveau EXISTE, et c'est un pont
+  // qui enjambe le faisceau — deux pièces `overbridge`, pas un hall générique
+  // empilé dans le premier (constat R4).
+  const nippori = by(6);
+  assert.equal(nippori.built, true);
+  assert.ok(nippori.rooms.some((r) => r.kind === 'overbridge' && r.walkable));
+  assert.ok(nippori.landmarks.some((l) => l.kind === 'trackView'));
+
+  // SHINAGAWA : le passage traversant, son horloge, et le CHANTIER de 2026 qui
+  // ferme trente et un mètres de la zone payante — les baies se replient sur ce
+  // qui reste atteignable.
+  const shinagawa = by(24);
+  assert.ok(shinagawa.landmarks.some((l) => l.kind === 'clock'));
+  assert.ok(shinagawa.hoardings.length > 0);
+  const central = concourseBays(shinagawa).filter((b) => b.gateId === 'gate-central');
+  const hoard = shinagawa.hoardings.find((h) => h.roomId === 'paid-central')!;
+  for (const b of central) {
+    assert.ok(
+      b.x > hoard.rect.x1 || b.x < hoard.rect.x0,
+      `Shinagawa : une baie reste derrière la palissade (x=${b.x.toFixed(2)})`,
+    );
+  }
+
+  // TAKANAWA GATEWAY : la toiture pliée et le bois, deux repères qui sont des
+  // QUALITÉS du volume — ils arrivent jusqu'au rendu, qui a le droit de n'en
+  // rien dessiner et le dit.
+  const takanawa = by(25);
+  assert.deepEqual(
+    takanawa.landmarks.map((l) => l.kind).sort(),
+    ['ceiling', 'material'],
+  );
 });

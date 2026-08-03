@@ -64,8 +64,17 @@ const MEDIUM = [2, 8, 11, 14, 20, 21, 22, 23, 26, 27, 28, 29];
  */
 const DEFERRED = [3, 18];
 
+/**
+ * LES TROIS PREMIÈRES SIGNATURES (phase 22).
+ *
+ * Trois gares dont le hall EST le sujet : le pont-concourse de Nippori qui
+ * enjambe trois exploitants, le passage traversant de Shinagawa avec son
+ * 三角時計, et la grande toiture pliée de Takanawa Gateway.
+ */
+const SIGNATURES = [6, 24, 25];
+
 const WIRED: ReadonlyMap<number, StationConcourseProfile> = new Map(
-  [...SMALL, ...MEDIUM]
+  [...SMALL, ...MEDIUM, ...SIGNATURES]
     .filter((i) => !DEFERRED.includes(i))
     .sort((a, b) => a - b)
     .map((i) => [i, profileFor(i)] as const),

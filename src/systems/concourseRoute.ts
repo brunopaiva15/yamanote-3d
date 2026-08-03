@@ -43,7 +43,7 @@ import {
   type ConcourseNetwork,
   type ConcourseRoom,
 } from '../data/stationConcourseBuild';
-import { concourseFloorAt } from './stationLevels';
+import { concourseFloorAt, walkerBlocked } from './stationLevels';
 import { stairTopZ, type StationPlacement } from './stationPlacement';
 
 /**
@@ -223,6 +223,74 @@ function clear(p: StationPlacement, x: number, z: number): boolean {
   return concourseFloorAt(p, x, z) !== null;
 }
 
+/**
+ * LE DERNIER MOT SUR UN ITINÉRAIRE : qu'il ne traverse rien.
+ *
+ * Tout ce qui précède choisit des files, anticipe les obstacles et se décale
+ * avant eux. Cela suffit dans un couloir ; cela ne suffit pas toujours dans une
+ * gare branchée, où une palissade de chantier déplace un couloir de dix mètres
+ * d'un coup et où deux vitrines se répondent à travers un hall.
+ *
+ * Cette passe relit le tracé comme la marche le parcourra : segment par
+ * segment, au pas de trente centimètres. Là où un segment traverse, elle
+ * essaie les deux CHEMINS EN ÉQUERRE — d'abord en travers puis tout droit, ou
+ * l'inverse — et garde le premier qui passe. C'est ce que fait un piéton devant
+ * un obstacle qu'il n'avait pas vu : il contourne à angle droit.
+ *
+ * Elle ne remplace pas le choix de file : une file bien choisie ne produit
+ * aucune équerre, et c'est le cas de la quasi-totalité des trajets.
+ */
+function walkable(p: StationPlacement, a: Pt, b: Pt): boolean {
+  const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.3));
+  for (let i = 1; i <= n; i++) {
+    const x = a.x + (b.x - a.x) * (i / n);
+    const z = a.z + (b.z - a.z) * (i / n);
+    // LA MÊME RÈGLE QUE LA MARCHE, et pas une approximation : `clear` ne
+    // regarde que le sol, or ce qui arrête un voyageur est le mobilier, les
+    // bornes et les palissades — avec leur garde.
+    if (walkerBlocked(p, 'concourse', x, z)) return false;
+  }
+  return true;
+}
+
+function weave(p: StationPlacement, stops: RouteStop[]): RouteStop[] {
+  const out: RouteStop[] = [stops[0]];
+  for (let k = 1; k < stops.length; k++) {
+    const a = out[out.length - 1];
+    const b = stops[k];
+    // Les deux bouts d'un trajet sont hors du hall — le pied d'une volée, le
+    // haut d'une bouche — et n'ont pas de sol de hall sous eux par définition.
+    const inside = k > 1 && k < stops.length - 1;
+    if (!inside || walkable(p, a, b)) {
+      out.push(b);
+      continue;
+    }
+    const corners: Pt[] = [{ x: a.x, z: b.z }, { x: b.x, z: a.z }];
+    const via = corners.find(
+      (c) => (c.x !== a.x || c.z !== a.z) && (c.x !== b.x || c.z !== b.z)
+        && walkable(p, a, c) && walkable(p, c, b),
+    );
+    if (via) {
+      out.push({ x: via.x, z: via.z });
+      out.push(b);
+      continue;
+    }
+    // Un segment DROIT qui ne passe pas n'a pas d'équerre : les deux coins se
+    // confondent avec ses bouts. Il faut alors un vrai crochet — s'écarter,
+    // longer, revenir — et c'est encore ce qu'un piéton fait devant une
+    // vitrine qui déborde sur son chemin.
+    const side = Math.abs(b.x - a.x) < 1e-6 ? 'x' : 'z';
+    const around = DETOUR_OFFSETS.flatMap((d) => [d, -d]).map((d) => (side === 'x'
+      ? [{ x: a.x + d, z: a.z }, { x: a.x + d, z: b.z }]
+      : [{ x: a.x, z: a.z + d }, { x: b.x, z: a.z + d }]));
+    const hook = around.find(([c0, c1]) =>
+      walkable(p, a, c0) && walkable(p, c0, c1) && walkable(p, c1, b));
+    if (hook) out.push(...hook);
+    out.push(b);
+  }
+  return out;
+}
+
 // --- L'AXE DU HALL -------------------------------------------------------
 //
 // Un hall de gare se traverse par le MILIEU, et ce milieu n'est pas celui des
@@ -301,8 +369,17 @@ function hallAxis(
       const [a0, a1] = span(o);
       // Les lignes de portillons sont SAUTÉES, toutes : elles barrent d'un mur
       // à l'autre, et l'on ne les franchit pas par le milieu mais par une baie.
-      const onLine = p.network.gates.some((g) => o.x0 <= g.rect.x1 && o.x1 >= g.rect.x0
-        && o.z0 <= g.rect.z1 && o.z1 >= g.rect.z0);
+      // Se RECOUVRIR, et pas seulement se toucher : la palissade de chantier de
+      // Shinagawa est plaquée contre le contrôle central, bord à bord. Prise
+      // pour une borne, elle disparaissait du calcul de file — et le couloir la
+      // traversait sur trente et un mètres.
+      // ET UNE LIGNE QU'ON FRANCHIT. Un contrôle qui n'est pas praticable —
+      // celui de Shiodome à Shimbashi, qu'on regarde sans le prendre — est un
+      // MUR : ses bornes comptent comme n'importe quel obstacle, sans quoi le
+      // couloir se calait entre deux d'entre elles et s'y cognait.
+      const onLine = p.network.gates.some((g) => g.walkable
+        && o.x0 < g.rect.x1 - 1e-6 && o.x1 > g.rect.x0 + 1e-6
+        && o.z0 < g.rect.z1 - 1e-6 && o.z1 > g.rect.z0 + 1e-6);
       return a1 > at - half && a0 < at + half && !onLine;
     })
     .map((o) => {
@@ -327,11 +404,23 @@ function hallAxis(
   return (best[0] + best[1]) / 2;
 }
 
+/** Un point sur l'axe, en couple `[x, z]` : pour les appels qui prennent deux cotes. */
+function pointOf(along: 'x' | 'z', at: number, across: number): [number, number] {
+  const q = pt(along, at, across);
+  return [q.x, q.z];
+}
+
 /** Une cote en travers, ramenée dans la pièce. */
 function clampAcross(room: ConcourseRoom, along: 'x' | 'z', v: number): number {
   const [lo, hi] = along === 'z' ? [room.rect.x0, room.rect.x1] : [room.rect.z0, room.rect.z1];
   return Math.min(Math.max(v, lo + ZONE_EDGE), hi - ZONE_EDGE);
 }
+
+/** Les écarts essayés pour contourner un segment droit qui ne passe pas (m). */
+const DETOUR_OFFSETS = [1, 1.6, 2.4, 3.2, 4.4, 6, 8, 11];
+
+/** Au-delà, un changement de file se fait par un pas de côté explicite (m). */
+const SIDESTEP = 0.75;
 
 /** Un point posé sur l'axe de `room`, au droit de `at`. */
 function onAxis(
@@ -356,12 +445,28 @@ function axisPath(
   near?: number,
 ): RouteStop[] {
   const n = Math.max(1, Math.ceil(Math.abs(a1 - a0) / AXIS_STEP));
-  let across = hallAxis(p, room, along, a0, near);
-  return Array.from({ length: n }, (_, i) => {
+  // LA FILE S'ANTICIPE. La fenêtre d'examen vaut deux pas et demi et non un
+  // seul : le couloir se décale ainsi trois mètres AVANT ce qui l'oblige à se
+  // décaler, et le pas de côté se fait dans du vide plutôt que contre l'angle
+  // de la vitrine qui l'a provoqué.
+  const look = AXIS_STEP * 2.5;
+  let across = hallAxis(p, room, along, a0, near, look);
+  let last = a0;
+  const out: RouteStop[] = [];
+  for (let i = 0; i < n; i++) {
     const at = a0 + (a1 - a0) * ((i + 1) / n);
-    across = hallAxis(p, room, along, at, across);
-    return pt(along, at, across);
-  });
+    const next = hallAxis(p, room, along, at, across, look);
+    // ON SE DÉCALE D'ABORD, ON AVANCE ENSUITE. La file change quand un obstacle
+    // entre dans la fenêtre — une palissade de chantier peut la déplacer de dix
+    // mètres d'un coup — et rejoindre la nouvelle en diagonale coupait le coin
+    // de ce qui l'avait fait changer. C'est aussi ce qu'on fait en marchant :
+    // on s'écarte avant l'obstacle, pas dedans.
+    if (Math.abs(next - across) > SIDESTEP) out.push(pt(along, last, next));
+    across = next;
+    last = at;
+    out.push(pt(along, at, across));
+  }
+  return out;
 }
 
 /**
@@ -404,7 +509,8 @@ function playerLane(net: ConcourseNetwork): number {
  * Le passage LARGE est celui qu'on laisse à qui pousse une valise : il se tire
  * moins souvent, sans jamais s'exclure.
  */
-function pickPassage(net: ConcourseNetwork, busy: readonly number[]): number {
+function pickPassage(p: StationPlacement, busy: readonly number[]): number {
+  const net = p.network;
   const bays = concourseBays(net);
   const n = bays.length;
   if (n === 0) return -1;
@@ -415,6 +521,20 @@ function pickPassage(net: ConcourseNetwork, busy: readonly number[]): number {
   const served = bays.map((b) => {
     const room = paidRoomOf(net, b);
     if (!room) return false;
+    // ET L'ON PEUT S'EN APPROCHER. Une palissade de chantier plantée devant la
+    // ligne ferme les baies qu'elle masque : à Shinagawa, le chantier de 2026
+    // barre trente et un mètres de la zone payante, et un tiers du contrôle
+    // central est derrière. Une baie qu'on ne peut pas atteindre n'est pas une
+    // baie ouverte — c'est ce que dit le plan, et c'est ce qu'on montre.
+    const [a0, a1] = b.cross === 'z'
+      ? [b.rect.z0, b.rect.z1]
+      : [b.rect.x0, b.rect.x1];
+    const [p0, p1] = b.cross === 'z'
+      ? [room.rect.z0, room.rect.z1]
+      : [room.rect.x0, room.rect.x1];
+    const at = (p0 + p1) / 2 < (a0 + a1) / 2 ? a0 - ZONE_EDGE : a1 + ZONE_EDGE;
+    const front = b.cross === 'z' ? { x: b.x, z: at } : { x: at, z: b.z };
+    if (!clear(p, front.x, front.z)) return false;
     // Desservie DIRECTEMENT ou PAR CE QUI LA JOINT : une trémie qui débouche
     // sur une mezzanine dessert le hall d'en dessous.
     return net.accesses.some((a) => a.toRoomId === room.id
@@ -746,6 +866,32 @@ function paidLegs(
   const foot = entryAlong === null
     ? wall
     : Math.min(Math.max(entryAlong, r0 + ZONE_EDGE), r1 - ZONE_EDGE);
+  // La file d'arrivée, RAMENÉE DANS LA PIÈCE. Le pied d'une volée est un demi-
+  // mètre avant le nu du hall : laissée dehors, cette cote ne tombe dans aucune
+  // trouée, et le choix de file se rabattait sur la plus large — à l'autre bout
+  // d'un hall de vingt mètres, en traversant la galerie du milieu.
+  // DEUX COTES POUR ENTRER, et il en faut deux.
+  //
+  //   · le DROIT-FIL de la trémie, rabattu dans la pièce : on entre par là, et
+  //     l'on n'entre que par là — venir en biais depuis le pied de la volée
+  //     passerait par-dessus le bord du hall (Ōsaki) ;
+  //   · la FILE, qui est la trouée libre la plus proche : le droit-fil tombe
+  //     parfois dans une vitrine (Nippori, dont la galerie borde le débouché),
+  //     et l'on s'y décale une fois dedans.
+  //
+  // Quand le droit-fil lui-même est occupé, il n'y a pas d'entrée droite à
+  // poser : on va directement à la file, et la passe de relecture (`weave`)
+  // rattrape le trajet si le biais ne passe pas.
+  const straight = entryAcross === null ? null : clampAcross(room, axis, entryAcross);
+  const entryLane = straight === null ? undefined : hallAxis(p, room, axis, foot, straight);
+  const enterStops = straight === null || entryLane === undefined
+    ? []
+    : [
+      ...(!walkerBlocked(p, 'concourse', ...pointOf(axis, foot, straight))
+        ? [pt(axis, foot, straight)]
+        : []),
+      ...(Math.abs(entryLane - straight) > SIDESTEP ? [pt(axis, foot, entryLane)] : []),
+    ];
   const zone: [number, number] = low ? [r0, g0] : [g1, r1];
   const tap = { tap: bay.index, hold: 0.55, action: 'ticketGlance' as PaxAction };
   if (inbound) {
@@ -757,28 +903,26 @@ function paidLegs(
       onAxis(p, room, axis, paidAt),
       ...hallLeg(
         p, room, axis, paidAt, foot,
-        browseIn(p, room, axis, zone[0], zone[1], 0.18, entryAcross ?? undefined),
+        browseIn(p, room, axis, zone[0], zone[1], 0.18, entryLane),
       ),
       // On finit DANS la file du pied de la volée, sans quoi le dernier pas
       // traverse ce qui sépare deux files.
-      onAxis(p, room, axis, foot, undefined, entryAcross ?? undefined),
-      ...(entryAcross === null ? [] : [pt(axis, foot, clampAcross(room, axis, entryAcross))]),
+      onAxis(p, room, axis, foot, undefined, entryLane),
+      ...[...enterStops].reverse(),
     ];
   }
   // ON ENTRE TOUT DROIT. Le couloir se tient au MILIEU de la trouée, et dans un
   // hall de trente-six mètres ce milieu est à vingt mètres du pied de la volée :
   // y aller en biais depuis la volée passait par-dessus le bord de la pièce.
   // On entre donc au droit de la volée, puis on rejoint la file.
-  const straightIn = entryAcross === null
-    ? []
-    : [pt(axis, foot, clampAcross(room, axis, entryAcross))];
+  const straightIn = enterStops;
   return [
     ...straightIn,
-    onAxis(p, room, axis, foot, undefined, entryAcross ?? undefined),
+    onAxis(p, room, axis, foot, undefined, entryLane),
     ...hallLeg(
       p, room, axis, foot, paidAt,
-      browseIn(p, room, axis, zone[0], zone[1], 0.22, entryAcross ?? undefined),
-      entryAcross ?? undefined,
+      browseIn(p, room, axis, zone[0], zone[1], 0.22, entryLane),
+      entryLane,
     ),
     { ...paidSide, ...tap },
     freeSide,
@@ -843,7 +987,7 @@ function freeLegs(
  */
 export function routeToStreet(p: StationPlacement, busy: readonly number[] = []): RouteStop[] | null {
   if (!stationInteriorOpen(p)) return null;
-  const passage = pickPassage(p.network, busy);
+  const passage = pickPassage(p, busy);
   if (passage < 0) return null;
   const bay = concourseBays(p.network)[passage];
   const door = pickExit(p.network, freeRoomOf(p.network, bay));
@@ -860,7 +1004,7 @@ export function routeToStreet(p: StationPlacement, busy: readonly number[] = [])
   );
   const free = freeLegs(p, door, false, paid ? paid[paid.length - 1] : null);
   if (!paid || !free || !foot || !cross) return null;
-  return [
+  return weave(p, [
     // Le bas de l'accès : l'étage bascule tout seul en chemin
     // (systems/stationLevels), personne n'a à le décider ici.
     foot,
@@ -870,7 +1014,7 @@ export function routeToStreet(p: StationPlacement, busy: readonly number[] = [])
     ...paid,
     ...free,
     { x: door.x, z: door.z },
-  ];
+  ]);
 }
 
 /**
@@ -885,7 +1029,7 @@ export function routeFromStreet(
   busy: readonly number[] = [],
 ): { from: StreetDoor; stops: RouteStop[] } | null {
   if (!stationInteriorOpen(p)) return null;
-  const passage = pickPassage(p.network, busy);
+  const passage = pickPassage(p, busy);
   if (passage < 0) return null;
   const bay = concourseBays(p.network)[passage];
   const door = pickExit(p.network, freeRoomOf(p.network, bay));
@@ -906,6 +1050,6 @@ export function routeFromStreet(
   if (!paid || !free || !foot || !cross) return null;
   return {
     from: door,
-    stops: [...free, ...paid, ...[...cross].reverse(), foot],
+    stops: weave(p, [...free, ...paid, ...[...cross].reverse(), foot]),
   };
 }

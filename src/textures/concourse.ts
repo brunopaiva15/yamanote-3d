@@ -916,3 +916,47 @@ export function makeFrontageSign(
   g.fillRect(0, H - 5, W, 5);
   return toTexture(c);
 }
+
+/**
+ * Le cadran d'une horloge de hall.
+ *
+ * Sans aiguilles : elles appartiennent au rendu, qui les fait tourner à l'heure
+ * du jeu si un jour il le décide. Ce qu'on dessine ici est ce qui ne bouge
+ * pas — le fond, le cercle, les douze traits et les quatre chiffres — et c'est
+ * déjà ce qui rend une horloge lisible de vingt mètres.
+ */
+export function makeClockFace(): THREE.CanvasTexture {
+  const W = 256;
+  const { c, g } = makeCanvas(W, W);
+  const R = W / 2;
+
+  g.fillStyle = '#f4f3ef';
+  g.beginPath();
+  g.arc(R, R, R - 4, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = '#1c1c1a';
+  g.lineWidth = 7;
+  g.stroke();
+
+  // Les douze traits : les quatre cardinaux plus épais, comme sur toutes les
+  // horloges de gare japonaises.
+  g.strokeStyle = '#1c1c1a';
+  for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2;
+    const big = k % 3 === 0;
+    g.lineWidth = big ? 9 : 4;
+    const r0 = R - (big ? 34 : 24);
+    const r1 = R - 14;
+    g.beginPath();
+    g.moveTo(R + Math.sin(a) * r0, R - Math.cos(a) * r0);
+    g.lineTo(R + Math.sin(a) * r1, R - Math.cos(a) * r1);
+    g.stroke();
+  }
+
+  // Le point central : c'est lui qui fait qu'un disque se lit comme un cadran.
+  g.fillStyle = '#1c1c1a';
+  g.beginPath();
+  g.arc(R, R, 7, 0, Math.PI * 2);
+  g.fill();
+  return toTexture(c);
+}

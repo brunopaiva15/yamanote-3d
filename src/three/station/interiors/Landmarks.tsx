@@ -1,0 +1,182 @@
+// CE DONT ON SE SOUVIENT D'UNE GARE.
+//
+// Les quatorze modules de `three/station/signatures/` dessinent ce qu'on voit
+// DEPUIS LE QUAI : la toiture pliée de Takanawa Gateway, le viaduc qui enjambe
+// Akihabara, la halle rivetée d'Ueno. Il n'y avait rien pour l'INTÉRIEUR —
+// c'était le constat R3 du plan — et un hall reconnaissable ne se fait pas
+// qu'avec des cotes justes.
+//
+// Le relevé note quarante repères sur les trente gares, en sept catégories. Ils
+// ont une particularité qui commande tout ce fichier : **aucun n'a d'emprise
+// cotée**. Un plan officiel ne cote pas une horloge — il l'écrit. On ne peut
+// donc pas les poser au centimètre, et prétendre le contraire serait inventer.
+//
+// Ce qui suit dessine les trois qu'on sait poser SANS INVENTER DE COTE :
+//
+//   · `clock` — l'horloge suspendue. Une seule gare en a une au relevé, et ce
+//     n'est pas un hasard : le 三角時計 de Shinagawa est nommé sur le plan
+//     officiel, juste à côté du Central Gate, parce que c'est LE point de
+//     rendez-vous de la gare. Elle se pose au milieu de la pièce, sous le
+//     plafond, à deux faces — on la lit des deux côtés du hall ;
+//   · `artwork` — le panneau d'art public, contre la paroi la plus longue ;
+//   · `column` — la file de poteaux qui fait le lieu, le long de la pièce.
+//
+// ET IL SE TAIT SUR LES QUATRE AUTRES, exprès :
+//
+//   · `ceiling` et `material` ne sont pas des OBJETS : ce sont des qualités du
+//     volume — « la grande toiture pliée, douze mètres plus haut », « acier
+//     blanc, cèdre clair, verre ». Elles appartiennent à la hauteur libre du
+//     relevé et à la palette de la gare, pas à un maillage de plus ;
+//   · `trackView` est déjà dessiné : c'est l'archétype `overbridge` et son
+//     appui à 1,10 m (`interiors/hallStyle`), et le redoubler ne montrerait
+//     rien de neuf ;
+//   · `void` demande une trémie dans le plancher, donc une emprise — et c'est
+//     précisément ce que le relevé ne donne pas.
+//
+// Un repère qu'on ne sait pas dessiner ne se dessine pas approximativement.
+
+import * as THREE from 'three';
+import { useEffect, useMemo } from 'react';
+import type {
+  ConcourseNetwork,
+  ConcourseShell,
+} from '../../../data/stationConcourseBuild';
+import { makeClockFace } from '../../../textures/concourse';
+import type { Mats } from '../materials';
+
+/** Diamètre du cadran d'une horloge de hall (m). */
+const CLOCK_D = 1.15;
+/** Hauteur du panneau d'art, et son retrait de la paroi. */
+const ART_H = 2.2;
+const ART_OUT = 0.06;
+/** Entraxe d'une file de poteaux (m), et leur section. */
+const COLUMN_PITCH = 7.2;
+const COLUMN_W = 0.62;
+/** Jeu laissé au pied et en tête du fût (m). */
+const COLUMN_CLEAR = 0.06;
+
+export function Landmarks({
+  shell,
+  net,
+  m,
+}: {
+  shell: ConcourseShell;
+  net: ConcourseNetwork;
+  m: Mats;
+}) {
+  const ids = useMemo(() => new Set(shell.rooms.map((r) => r.id)), [shell]);
+  const here = useMemo(
+    () => net.landmarks.filter((l) => ids.has(l.roomId)),
+    [net, ids],
+  );
+  const clocks = here.filter((l) => l.kind === 'clock');
+
+  const face = useMemo(
+    () => (clocks.length > 0
+      ? new THREE.MeshBasicMaterial({ map: makeClockFace(), toneMapped: false })
+      : null),
+    [clocks.length],
+  );
+  useEffect(
+    () => () => {
+      face?.map?.dispose();
+      face?.dispose();
+    },
+    [face],
+  );
+
+  return (
+    <group name="gare/hall/repères">
+      {here.map((l) => {
+        const room = shell.rooms.find((r) => r.id === l.roomId);
+        if (!room) return null;
+        const r = l.rect ?? room.rect;
+        const cx = (r.x0 + r.x1) / 2;
+        const cz = (r.z0 + r.z1) / 2;
+        const long: 'x' | 'z' = r.x1 - r.x0 >= r.z1 - r.z0 ? 'x' : 'z';
+        const len = long === 'x' ? r.x1 - r.x0 : r.z1 - r.z0;
+
+        if (l.kind === 'clock' && face) {
+          // Sous le plafond, à hauteur de ce qu'on cherche des yeux en entrant.
+          // La tige monte jusqu'à la sous-face, sans y entrer : le corps se
+          // place donc assez bas pour que la tige tienne dessous.
+          const y = Math.min(shell.ceilY - 1.55, shell.floorY + 3.4);
+          return (
+            <group key={l.id} name="gare/hall/horloge" position={[cx, y, cz]}>
+              {/* La tige : une horloge de hall pend, elle n'est pas posée. */}
+              <mesh position={[0, CLOCK_D / 2 + 0.35, 0]} material={m.metal}>
+                <boxGeometry args={[0.07, 0.7, 0.07]} />
+              </mesh>
+              {/* Le corps, et les deux cadrans : on la lit des deux côtés. */}
+              <mesh material={m.frame}>
+                <boxGeometry args={[CLOCK_D * 0.82, CLOCK_D, 0.22]} />
+              </mesh>
+              {[-1, 1].map((d) => (
+                <mesh
+                  key={`face${d}`}
+                  position={[0, 0, d * 0.121]}
+                  rotation={[0, d > 0 ? 0 : Math.PI, 0]}
+                  material={face}
+                >
+                  <planeGeometry args={[CLOCK_D * 0.78, CLOCK_D * 0.78]} />
+                </mesh>
+              ))}
+            </group>
+          );
+        }
+
+        if (l.kind === 'artwork') {
+          // Contre la paroi la plus longue, au milieu : c'est là qu'on l'a mise
+          // pour qu'on la voie en traversant.
+          const w = Math.min(len * 0.45, 6);
+          const at = long === 'x' ? room.rect.z0 + ART_OUT : room.rect.x0 + ART_OUT;
+          return (
+            <group
+              key={l.id}
+              name="gare/hall/œuvre"
+              position={long === 'x' ? [cx, shell.floorY + 1.55, at] : [at, shell.floorY + 1.55, cz]}
+              rotation={[0, long === 'x' ? 0 : Math.PI / 2, 0]}
+            >
+              <mesh material={m.wallDark}>
+                <boxGeometry args={[w, ART_H, 0.09]} />
+              </mesh>
+              <mesh position={[0, 0, 0.05]} material={m.accent}>
+                <boxGeometry args={[w - 0.22, ART_H - 0.22, 0.02]} />
+              </mesh>
+            </group>
+          );
+        }
+
+        if (l.kind === 'column') {
+          const n = Math.max(1, Math.floor(len / COLUMN_PITCH));
+          // Le poteau s'arrête sous la dalle et sur le sol fini : un fût qui
+          // pénètre son plafond de douze centimètres se lit comme un défaut, et
+          // la sonde le compte comme tel.
+          const h = shell.ceilY - shell.floorY - 2 * COLUMN_CLEAR;
+          return (
+            <group key={l.id} name="gare/hall/poteaux">
+              {Array.from({ length: n }, (_, k) => {
+                const at = (long === 'x' ? r.x0 : r.z0) + ((k + 0.5) * len) / n;
+                return (
+                  <mesh
+                    key={`col${k}`}
+                    position={long === 'x'
+                      ? [at, shell.floorY + COLUMN_CLEAR + h / 2, cz]
+                      : [cx, shell.floorY + COLUMN_CLEAR + h / 2, at]}
+                    material={m.column}
+                  >
+                    <boxGeometry args={[COLUMN_W, h, COLUMN_W]} />
+                  </mesh>
+                );
+              })}
+            </group>
+          );
+        }
+
+        // `ceiling`, `material`, `trackView`, `void` : voir l'en-tête. Ce qu'on
+        // ne sait pas dessiner sans inventer une cote reste à l'écrit.
+        return null;
+      })}
+    </group>
+  );
+}

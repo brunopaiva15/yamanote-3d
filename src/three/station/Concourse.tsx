@@ -36,6 +36,7 @@ import {
 } from '../../data/stationInterior';
 import type { ConcourseNetwork, ConcourseShell } from '../../data/stationConcourseBuild';
 import { Frontages } from './interiors/Frontages';
+import { Landmarks } from './interiors/Landmarks';
 import { Limits } from './interiors/Limits';
 import { hallStyle } from './interiors/hallStyle';
 import { STAIR_LOWER_HALF_X } from '../../data/stationGeometry';
@@ -345,6 +346,12 @@ export function Concourse({
           portent ce qui a été lu sur un plan, et se taisent quand rien ne l'a
           été (`interiors/Frontages`). */}
       <Frontages shell={shell} net={net} m={m} />
+
+      {/* Les REPÈRES du lieu : ce dont on se souvient d'une gare, et qui n'est
+          ni un mur ni un meuble (constat R3). Trois des sept catégories du
+          relevé se posent sans inventer de cote ; les quatre autres sont des
+          qualités du volume, et `interiors/Landmarks` dit pourquoi. */}
+      <Landmarks shell={shell} net={net} m={m} />
 
     </group>
   );

@@ -111,12 +111,14 @@ function gateSpan(place: Place, tap: number): { axis: 'x' | 'z'; g0: number; g1:
 const INSIDE = ALL.filter(({ place }) => stationInteriorOpen(place));
 
 test('toutes les gares bâties ont un intérieur où descendre', () => {
-  // Vingt-neuf sur trente : Nippori déclare son niveau sans le construire
-  // (docs/STATION_INTERIOR, phase 6), et ses voyageurs continuent donc de
-  // s'effacer dans la trémie. C'est le seul cas, et il est nommé.
-  assert.equal(INSIDE.length, STATION_COUNT - 1);
+  // TRENTE SUR TRENTE, depuis la phase 22. Nippori était le seul cas manquant :
+  // le hall générique refusait de se bâtir chez elle (`bespoke: true`) pour ne
+  // pas empiler un second pont-concourse dans le premier — la bonne décision,
+  // prise faute de pouvoir dire mieux. Son relevé le dit en donnée ordinaire :
+  // deux ponts-concours au 2F, et le niveau EXISTE. C'était le constat R4.
+  assert.equal(INSIDE.length, STATION_COUNT);
   const missing = ALL.filter(({ place }) => !stationInteriorOpen(place)).map((s) => s.name);
-  assert.deepEqual(missing, ['JY07 Nippori']);
+  assert.deepEqual(missing, []);
 });
 
 test('du quai à la rue, on ne traverse rien', () => {

@@ -285,7 +285,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **19** | **Commerces** ✅ | `ConcourseFrontage` : l'échelle de vérité de `CommerceStatus` dessinée ; `interiors/Frontages` | D8 |
 | **20** | **Petites gares** ✅ | huit gares passent par leur relevé ; `FareGates`, `Fixtures` et les itinéraires suivent le réseau | — |
 | **21** | **Gares moyennes** ✅ | vingt gares branchées ; deux DIFFÉRÉES faute d'une volée réglable | — |
-| 22 | Signatures 1 | Takanawa Gateway, Nippori, Shinagawa | R3 |
+| **22** | **Signatures 1** ✅ | Nippori, Shinagawa, Takanawa Gateway ; `interiors/Landmarks` : les repères du lieu | R3 R4 |
 | 23 | Signatures 2 | Tokyo, Ueno, Ikebukuro | R3 |
 | 24 | Signatures 3 | Shinjuku, Shibuya (+ travaux août 2026) | R3 D7 |
 | 25 | Paliers de qualité | haute / moyenne / basse, sans jamais retirer une collision | — |
@@ -1110,6 +1110,69 @@ La sonde a aussi signalé, sur dix-neuf gares, un « carré d'un mètre dans le
 wagon » qui n'existait pas : c'est la géométrie de BASE d'une nuée instanciée —
 pluie, neige — dont la boîte englobante est à l'origine du monde et ne dit rien
 de l'endroit où les instances tombent. La sonde les ignore désormais, et le dit.
+
+### 4.20 La phase 22 : trois gares dont le hall EST le sujet
+
+Vingt-trois gares sur trente passent par leur relevé, et **Nippori cesse d'être
+un cas spécial**. Le hall générique refusait de se bâtir chez elle
+(`bespoke: true`) pour ne pas empiler un second pont-concourse dans le premier :
+la bonne décision, prise faute de pouvoir dire mieux. Son relevé le dit en
+donnée ordinaire — deux ponts au 2F, et le niveau EXISTE. C'était le constat R4,
+et **les trente gares ont maintenant un intérieur où descendre**.
+
+**`interiors/Landmarks` répond à R3.** Les quatorze signatures existantes
+dessinent ce qu'on voit DEPUIS LE QUAI ; il n'y avait rien pour l'intérieur. Le
+relevé note quarante repères en sept catégories, et ils ont une particularité
+qui commande tout : **aucun n'a d'emprise cotée**. Un plan officiel ne cote pas
+une horloge — il l'écrit. Trois catégories se posent donc sans rien inventer :
+
+- **`clock`** — le 三角時計 de Shinagawa, seule horloge nommée du relevé, à côté
+  du Central Gate parce que c'est LE point de rendez-vous de la gare. Suspendue,
+  deux cadrans, lisible des deux côtés du hall ;
+- **`artwork`** — le panneau, contre la paroi la plus longue ;
+- **`column`** — la file de poteaux qui fait le lieu.
+
+Et **quatre se taisent, exprès** : `ceiling` et `material` ne sont pas des
+objets mais des qualités du volume — « la grande toiture pliée, douze mètres
+plus haut », « acier blanc, cèdre clair, verre » — qui appartiennent à la
+hauteur libre du relevé et à la palette ; `trackView` est déjà dessiné par
+l'archétype `overbridge` et son appui à 1,10 m ; `void` demande une trémie dans
+le plancher, donc une emprise, et c'est précisément ce que le relevé ne donne
+pas. **Un repère qu'on ne sait pas dessiner ne se dessine pas
+approximativement.**
+
+**Ce que Shinagawa a appris au compilateur.** Le chantier d'août 2026 barre
+trente et un mètres de sa zone payante, juste devant le contrôle central : les
+baies, centrées sur la ligne, se retrouvaient toutes derrière la palissade et la
+gare n'avait plus un seul passage atteignable. Trois règles en sont sorties, et
+elles valent pour les sept gares restantes :
+
+1. **une palissade ferme les baies qu'elle masque.** Le relevé cote la
+   palissade, la position des baies est composée : c'est elle qui se déplace, et
+   ce qui reste de la ligne devient une joue pleine ;
+2. **une baie qu'on ne peut pas atteindre n'est pas une baie ouverte.** Les
+   itinéraires vérifient le dégagement devant chaque passage avant de le
+   choisir ;
+3. **une ligne qu'on ne franchit pas est un MUR.** Le contrôle de Shiodome à
+   Shimbashi, qu'on regarde sans le prendre, était traité comme n'importe quel
+   contrôle par le choix de file : le couloir se calait entre deux de ses bornes
+   et s'y cognait.
+
+**Et une passe de relecture, `weave`.** Tout ce qui précède choisit des files et
+anticipe les obstacles ; cela suffit dans un couloir, pas toujours dans une gare
+branchée. La passe relit le tracé comme la marche le parcourra — segment par
+segment, au pas de trente centimètres — et là où un segment traverse, elle
+essaie les deux chemins en équerre, puis un vrai crochet : s'écarter, longer,
+revenir. C'est ce que fait un piéton devant un obstacle qu'il n'avait pas vu.
+Elle ne remplace pas le choix de file : une file bien choisie ne produit aucune
+équerre, et c'est le cas de la quasi-totalité des trajets.
+
+**Contrôle.** Sonde sur les trente gares, **aucune erreur de page**. Ce qui
+reste est de l'ordre du joint entre ouvrages voisins — de 6 à 24 cm — et le
+fond de 0,12 m entre le hall et ses portillons est antérieur au chantier. Les
+deux repères nouvellement dessinés (poteaux, horloge) ont été rognés jusqu'à ne
+plus toucher leur dalle : un fût qui pénètre son plafond se lit comme un défaut,
+et la sonde le compte comme tel.
 
 ### Ordre et raison
 

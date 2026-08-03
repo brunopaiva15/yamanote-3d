@@ -65,6 +65,7 @@ import {
   type ConcourseLinkKind,
   type ConcourseNodeKind,
   type Depiction,
+  type LandmarkKind,
   type FareSide,
   type StationConcourseProfile,
 } from './stationConcourseTypes.ts';
@@ -239,6 +240,25 @@ export interface ConcourseFrontage {
   enterable: boolean;
 }
 
+/**
+ * CE DONT ON SE SOUVIENT D'UNE GARE, et qui n'est ni un mur ni un meuble.
+ *
+ * Le 三角時計 de Shinagawa, la charpente rivetée d'Ueno, la trémie ouverte
+ * d'Okachimachi. Le relevé les note depuis la phase 1 et rien ne les lisait :
+ * ce sont des repères QUALITATIFS — aucun n'a d'emprise cotée, parce qu'un
+ * plan officiel ne cote pas une horloge. Le compilateur les transmet tels
+ * quels, avec la pièce où ils se tiennent ; c'est au rendu de savoir ce qu'un
+ * `clock` ou un `artwork` veut dire, et de se taire sur ce qu'il ne sait pas
+ * dessiner.
+ */
+export interface ConcourseLandmark {
+  id: string;
+  roomId: string;
+  kind: LandmarkKind;
+  rect: InteriorRect | null;
+  note?: string;
+}
+
 export interface ConcourseNetwork {
   stationIndex: number;
   /** D'où vient ce réseau : du relevé, ou du hall générique. */
@@ -257,6 +277,8 @@ export interface ConcourseNetwork {
   hoardings: ConcourseHoarding[];
   /** Les devantures relevées. Vides sur le chemin `legacy` : voir plus bas. */
   frontages: ConcourseFrontage[];
+  /** Les repères du lieu : ce dont on se souvient d'une gare. */
+  landmarks: ConcourseLandmark[];
   /** Mobilier générique : billetterie, consignes, distributeurs. */
   fixtures: Fixture[];
   /** Tout ce qui barre : bornes, cloisons de chantier, mobilier. */
@@ -435,6 +457,34 @@ function spanRooms(
   return along === 'x'
     ? { ...spanned, x0: lo2, x1: hi2 }
     : { ...spanned, z0: lo2, z1: hi2 };
+}
+
+/** Deux emprises se touchent-elles, à `slack` près ? */
+function touchesRect(a: InteriorRect, b: InteriorRect, slack: number): boolean {
+  return a.x0 <= b.x1 + slack && a.x1 >= b.x0 - slack
+    && a.z0 <= b.z1 + slack && a.z1 >= b.z0 - slack;
+}
+
+/** La plus longue portion de `[from, from+len]` qu'aucun `busy` ne couvre. */
+function longestFreeRun(
+  from: number,
+  len: number,
+  busy: readonly [number, number][],
+): [number, number] {
+  let runs: [number, number][] = [[from, from + len]];
+  for (const [b0, b1] of busy) {
+    runs = runs.flatMap(([s0, s1]) => {
+      if (b1 <= s0 || b0 >= s1) return [[s0, s1] as [number, number]];
+      const out: [number, number][] = [];
+      if (b0 > s0) out.push([s0, Math.min(b0, s1)]);
+      if (b1 < s1) out.push([Math.max(b1, s0), s1]);
+      return out;
+    });
+  }
+  const best = runs.sort((x, y) => y[1] - y[0] - (x[1] - x[0]))[0];
+  // Tout est fermé : on rend la ligne entière plutôt qu'une gare sans contrôle.
+  if (!best || best[1] - best[0] < 1.2) return [from, len];
+  return [best[0], best[1] - best[0]];
 }
 
 /** Une emprise touche-t-elle cette paroi de la pièce ? */
@@ -619,6 +669,17 @@ export function compileProfile(
   }));
 
   const obstacles: InteriorRect[] = [];
+  // Les cloisons de chantier barrent : c'est leur seul rôle, et c'est celui
+  // qu'elles ont en vrai.
+  const hoardings = (p.works?.partitions ?? []).map((part) => ({
+    id: part.id,
+    roomId: part.nodeId,
+    rect: shifted(part.rect, dz),
+    kind: part.kind,
+    noticeEn: part.noticeEn,
+  }));
+  for (const h of hoardings) obstacles.push(h.rect);
+
   const gates: ConcourseGateLine[] = p.gateGroups.map((g) => {
     // LA LIGNE JOINT SES DEUX PIÈCES, sans un centimètre de vide. Le relevé
     // cote l'emprise du contrôle et les pièces de part et d'autre séparément :
@@ -631,12 +692,32 @@ export function compileProfile(
     const along: 'x' | 'z' = g.cross === 'z' ? 'x' : 'z';
     const from = along === 'x' ? rect.x0 : rect.z0;
     const len = along === 'x' ? rect.x1 - rect.x0 : rect.z1 - rect.z0;
+    // UNE PALISSADE FERME LES BAIES QU'ELLE MASQUE. Le chantier de Shinagawa
+    // barre trente et un mètres de la zone payante, juste devant le contrôle
+    // central : les baies, centrées sur la ligne, se retrouvaient toutes
+    // derrière, et la gare n'avait plus un seul passage atteignable. Le relevé
+    // cote la palissade ; la position des baies, elle, est composée — c'est donc
+    // elle qui se déplace, et ce qui reste de la ligne devient une joue pleine.
+    const shut = hoardings
+      .filter((h) => (h.roomId === g.from || h.roomId === g.to)
+        && touchesRect(h.rect, rect, 0.5))
+      .map((h) => (along === 'x'
+        ? [h.rect.x0 - 0.3, h.rect.x1 + 0.3]
+        : [h.rect.z0 - 0.3, h.rect.z1 + 0.3]) as [number, number]);
+    const [runFrom, runLen] = longestFreeRun(from, len, shut);
     const { bays, edges } = layBays(
-      baysThatFit(g.passages, len),
-      from,
-      len,
+      baysThatFit(g.passages, runLen),
+      runFrom,
+      runLen,
       g.wideAt !== 'start',
     );
+    // Les joues de rive vont jusqu'aux bouts de la LIGNE, pas jusqu'aux bouts de
+    // la trouée : ce qui est fermé doit être plein.
+    if (edges.length > 0) {
+      edges[0] = [Math.min(edges[0][0], from), edges[0][1]];
+      const last = edges.length - 1;
+      edges[last] = [edges[last][0], Math.max(edges[last][1], from + len)];
+    }
     const cabinets = edges.map(([a, b]) =>
       along === 'x'
         ? { x0: a, x1: b, z0: rect.z0, z1: rect.z1 }
@@ -771,16 +852,6 @@ export function compileProfile(
     });
   }
 
-  // Les cloisons de chantier barrent : c'est leur seul rôle, et c'est celui
-  // qu'elles ont en vrai.
-  const hoardings = (p.works?.partitions ?? []).map((part) => ({
-    id: part.id,
-    roomId: part.nodeId,
-    rect: shifted(part.rect, dz),
-    kind: part.kind,
-    noticeEn: part.noticeEn,
-  }));
-  for (const h of hoardings) obstacles.push(h.rect);
 
   // LES CORRESPONDANCES SE RANGENT CONTRE UN MUR LIBRE. Le relevé donne la
   // DIRECTION d'une correspondance — le Ginza est en l'air, le Chiyoda tout en
@@ -867,6 +938,15 @@ export function compileProfile(
     transfers,
     hoardings,
     frontages,
+    landmarks: p.landmarks
+      .filter((l) => byId.has(l.nodeId))
+      .map((l) => ({
+        id: l.id,
+        roomId: l.nodeId,
+        kind: l.kind,
+        rect: l.rect ? shifted(l.rect, dz) : null,
+        note: l.note,
+      })),
     // Le mobilier n'est pas du ressort du relevé : un plan officiel ne cote pas
     // une batterie de distributeurs, et il ne se déduit pas d'un plan.
     fixtures: [],
@@ -954,6 +1034,8 @@ export function legacyNetwork(index: number, it: StationInterior): ConcourseNetw
     // devantures relevées, ce qu'elles ne sont pas : le chemin `legacy` n'en a
     // aucune, et c'est le constat D8 dit dans le code.
     frontages: [],
+    // Le hall générique n'a pas de repère : il n'est celui d'aucune gare.
+    landmarks: [],
     fixtures: it.fixtures,
     obstacles: it.obstacles,
   };

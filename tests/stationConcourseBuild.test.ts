@@ -133,8 +133,8 @@ test('LE HALL S’OUVRE SUR LE CÔTÉ quand le contrôle vient du côté', () =>
 });
 
 test('le compilateur ne rogne jamais en silence', () => {
-  // DIX-NEUF LIGNES DE PORTILLONS ne tiennent pas ce que le relevé leur demande,
-  // et dix-huit pour la même raison : elles sont posées EN TRAVERS DE LA BANDE
+  // VINGT ET UNE LIGNES DE PORTILLONS ne tiennent pas ce que le relevé leur
+  // demande, et dix-neuf pour la même raison : elles sont posées EN TRAVERS DE LA BANDE
   // DU QUAI (`cross: 'z'`), qui fait de 5,3 m à 6,7 m. Une baie coûte 0,98 m
   // avec ses bornes : un hall large comme un quai ne tient pas plus de quatre ou
   // cinq baies, et le relevé en demande jusqu'à neuf.
@@ -145,7 +145,12 @@ test('le compilateur ne rogne jamais en silence', () => {
   // phase 6 a établi que le décor sait s'écarter. En attendant, l'écart est
   // nommé.
   //
-  // La vingtième est d'une autre nature, et la phase 21 l'a fait apparaître :
+  // La ligne de Shinagawa s'y ajoute depuis la phase 22, et pour une troisième
+  // raison encore : le chantier de 2026 masque trente et un mètres de sa zone
+  // payante, et les baies se replient sur ce qui reste atteignable.
+  //
+  // Celle d'Ikebukuro est d'une autre nature, et la phase 21 l'a fait
+  // apparaître :
   // à Ikebukuro le contrôle nord est coté PLUS LARGE que la zone payante qu'il
   // ferme. Le compilateur le ramène à ce que les deux pièces ont en commun —
   // une baie qui s'ouvre sur du vide n'est pas une baie — et il perd des
@@ -174,6 +179,7 @@ test('le compilateur ne rogne jamais en silence', () => {
     'JY18 gate-west',
     'JY21 gate-west',
     'JY23 gate-central',
+    'JY25 gate-central',
     'JY27 gate-south',
     'JY28 gate-north',
     'JY29 gate-south',
@@ -261,7 +267,7 @@ test('les gares branchées sont EXACTEMENT celles qu’on a décidé de brancher
   // écrite ici, en clair, et le compilateur doit s'y tenir des deux côtés.
   assert.deepEqual(
     [...wiredIndices()],
-    [1, 2, 5, 7, 8, 9, 10, 11, 13, 14, 15, 17, 20, 21, 22, 23, 26, 27, 28, 29],
+    [1, 2, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 17, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
   );
   // Et DEUX gares attendent, pour une raison d'ouvrage et non de relevé : leur
   // trémie ne rejoint pas le sol qu'elle dessert (voir `stationConcourseWired`).
