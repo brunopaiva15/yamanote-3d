@@ -49,7 +49,6 @@
 
 import {
   atGroundSheet,
-  GROUND_SHEET_Y0,
   type ConcourseRect,
   type Depiction,
   type StationConcourseProfile,
@@ -77,7 +76,7 @@ export interface ConcourseReach {
   /** Abscisse la plus lointaine atteinte par ce que la gare BÂTIT. */
   built: number;
   /**
-   * Abscisse la plus PROCHE atteinte par ce que la gare bâtit SOUS LA RUE.
+   * Abscisse la plus PROCHE atteinte par ce que la gare BÂTIT.
    *
    * Le décor de tronçon ne s'écarte que du côté du quai (`bothSides`) : sur un
    * îlot, tout ce que la gare occupait était de ce côté-là. Ce n'est plus vrai
@@ -87,14 +86,16 @@ export interface ConcourseReach {
    * personne n'est dessous ; elle occupait le milieu de la zone payante de
    * Tokyo dès qu'on y descendait.
    *
-   * SOUS LA RUE, et non « bâti » tout court : un plateau praticable au-dessus
-   * des voies passe lui aussi de l'autre côté, mais huit mètres plus haut, où
-   * rien ne pend. Confondre les deux ferait reculer le décor de dix-huit gares
-   * pour en réparer six.
+   * ET À TOUTE ALTITUDE. On avait d'abord restreint la mesure à ce qui passe
+   * SOUS la rue, pour ne pas faire reculer le décor de dix-huit gares afin d'en
+   * réparer six. C'était compter sans les PLATEAUX : le passage libre de
+   * Shinagawa fait cent onze mètres de large, huit mètres au-dessus des voies,
+   * et il contient un pâté d'immeubles. Un décor qui ne s'écarte pas parce que
+   * la gare le survole n'est pas moins faux qu'un décor qui la traverse.
    *
    * Elle ne dépasse jamais `PSD_X` : le quai lui-même borne le près.
    */
-  underNear: number;
+  builtNear: number;
   /** Abscisse la plus lointaine de tout ce que le profil déclare. */
   shown: number;
   /**
@@ -118,40 +119,27 @@ export function deriveReach(p: StationConcourseProfile): ConcourseReach {
   const built: ConcourseRect[] = [];
   const all: ConcourseRect[] = [];
   const ground: ConcourseRect[] = [];
-  const under: ConcourseRect[] = [];
-  /** Sous la rue : tout le volume passe sous la nappe de sol la plus basse. */
-  const belowLevel = (id: string | undefined) => {
-    const l = id === undefined ? undefined : levels.get(id);
-    return !!l && l.floorY + l.headroom < GROUND_SHEET_Y0;
-  };
-  // Un couloir et une ligne de contrôle ne déclarent pas de niveau : ils
-  // citent les NŒUDS qu'ils joignent, et c'est le nœud qui porte le niveau.
-  const nodeLevel = new Map(p.concourses.map((n) => [n.id, n.levelId]));
-  const below = (nodeId: string) => belowLevel(nodeLevel.get(nodeId));
 
   for (const n of p.concourses) {
     all.push(n.rect);
     if (BUILT.has(n.depiction)) built.push(n.rect);
     const l = levels.get(n.levelId);
     if (l && atGroundSheet(l)) ground.push(n.rect);
-    if (BUILT.has(n.depiction) && belowLevel(n.levelId)) under.push(n.rect);
   }
   for (const c of p.corridors) {
     all.push(c.rect);
     if (BUILT.has(c.depiction)) built.push(c.rect);
-    if (BUILT.has(c.depiction) && below(c.from) && below(c.to)) under.push(c.rect);
   }
   for (const g of p.gateGroups) {
     all.push(g.rect);
     if (BUILT.has(g.depiction)) built.push(g.rect);
-    if (BUILT.has(g.depiction) && below(g.from) && below(g.to)) under.push(g.rect);
   }
 
   return {
     // Le quai lui-même est un plancher : la portée ne descend jamais sous ce
     // que le décor dégage déjà, sans quoi une petite gare le ferait rentrer.
     built: Math.max(back, ...built.map((r) => r.x1)),
-    underNear: Math.min(PSD_X, ...under.map((r) => r.x0)),
+    builtNear: Math.min(PSD_X, ...built.map((r) => r.x0)),
     shown: Math.max(back, ...all.map((r) => r.x1)),
     groundNear: Math.min(PSD_X, ...ground.map((r) => r.x0)),
     groundFar: Math.max(back, ...ground.map((r) => r.x1)),

@@ -1677,6 +1677,43 @@ disposition a pu changer. L'avertissement dit cela, et ne s'affiche que là.
 La sonde de fuites de la phase 29, jamais étalonnée, est retirée : `__probePick`
 et `__probeIn` font son travail et le font juste.
 
+### 4.31 → 4.35 : ce qui reste, en phases
+
+Le chantier des trente gares est livré ; ce qui suit est le RATTRAPAGE des
+défauts que seule la marche réelle a fait apparaître. Ils se rangent en cinq
+phases, dans cet ordre — chacune se juge seule, et aucune n'attend la suivante.
+
+**Phase 31 — le décor cède partout où la gare bâtit.** `bothSides` répondait à
+une question de forme de quai ; la moitié des gares bâtit au-delà de la voie, en
+dessous (halls souterrains) comme au-dessus (plateaux). Le seuil est désormais
+le plan de décor le plus proche (`PLANE_BASE`), et la mesure `builtNear` vient
+du relevé. **Fait pour Shinagawa** — son passage libre de cent onze mètres ne
+contient plus d'immeuble. **Reste** : Ueno, Ōsaki et Tamachi, où un plan de
+ville subsiste dans le hall. Ce ne sont pas les mêmes objets — trois niveaux de
+groupe et non quatre, donc un autre composant que le ruban de ville — et il faut
+les nommer avant de les pousser.
+
+**Phase 32 — le z-fighting.** Une bande grise clignotait sur les parois : c'était
+une paroi de bord posée dans le plan d'une paroi d'enveloppe, corrigée. Il en
+reste, non localisé. Il faut une capture qui l'isole avant d'y toucher : le
+z-fighting ne se cherche pas au jugé, il se voit ou il ne se voit pas.
+
+**Phase 33 — la signalétique intermédiaire.** Le hall a le bandeau de son
+contrôle et le nom de ses bouches ; entre les deux, rien. Un voyageur japonais
+lit un fléchage tous les vingt mètres. C'est du RELEVÉ pour les noms — ils sont
+déjà au dossier — et du COMPOSÉ pour les positions, comme le mobilier.
+
+**Phase 34 — meubler, et la vie.** Le hall a ses volumes ; il lui manque des
+commerces, du monde, et ce qui fait qu'on ne traverse pas une gare sans rien
+voir. C'est la seule phase où la question « jusqu'où » se pose vraiment, et la
+seule où un relevé simplifié aurait du sens : le dossier ne cote pas une
+devanture, et rien n'oblige à en inventer trente.
+
+**Phase 35 — le balayage des trente, à l'œil.** Cent cinquante captures sont
+prises ; sept gares ont été regardées. Les vingt-trois autres n'ont eu aucun
+regard depuis le début du rattrapage, et c'est là que se trouvent les défauts
+qu'aucun instrument ne cherche.
+
 ### Ordre et raison
 
 - **1→5 ne touchent aucun consommateur.** Le jeu tourne à l'identique pendant

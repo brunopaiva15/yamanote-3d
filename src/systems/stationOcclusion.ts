@@ -139,22 +139,19 @@ function outerOf(layout: StationLayout): number {
  * — il y a une gare de chaque côté de la voie : le quai d'en face et son auvent
  * se plantaient dans la clôture du tronçon.
  *
- * CE N'EST PLUS LA SEULE RAISON. Des halls passent SOUS la voie et ressortent
- * au-delà (`underNear` négatif) : de ce côté-là, le décor de tronçon ne
- * s'écartait pas, et sa géométrie RANGÉE SOUS LA RUE — la joue de tablier du
- * viaduc, qui pend de sept mètres — se retrouvait au milieu de la zone payante.
- * Personne ne pouvait le voir tant qu'on ne marchait pas là-dessous.
+ * CE N'EST PLUS LA SEULE RAISON. La moitié des gares bâtit AU-DELÀ de la voie
+ * (`builtNear` négatif) : des halls qui passent dessous et ressortent, des
+ * plateaux qui l'enjambent. De ce côté-là, le décor ne s'écartait pas — et
+ * l'on trouvait sa joue de tablier au milieu de la zone payante de Tokyo, sept
+ * mètres sous la chaussée, et un pâté d'immeubles au milieu du passage libre
+ * de Shinagawa, huit mètres au-dessus des voies.
  *
- * Le seuil est la joue elle-même : dès que la gare bâtit au-delà, elle est
- * chez elle et le décor recule. En deçà, rien ne change — vingt-quatre gares
- * sur trente gardent exactement le comportement d'avant.
+ * Le seuil est le plan de décor le plus PROCHE de la voie (`PLANE_BASE`) : dès
+ * que la gare bâtit au-delà, elle est chez elle et le décor recule.
  */
 function bothSidesFor(layout: StationLayout, reach: ConcourseReach): boolean {
-  return layout.config === 'side' || reach.underNear < -DECK_CHEEK_X;
+  return layout.config === 'side' || reach.builtNear < -PLANE_BASE;
 }
-
-/** Abscisse de la joue de tablier du viaduc (`three/SegmentEnvironment`). */
-const DECK_CHEEK_X = 5.1;
 
 /** Portée du faisceau qui remplace le mur de fond, là où il y en a un. */
 const YARD_REACH = 4 * 4.6;
