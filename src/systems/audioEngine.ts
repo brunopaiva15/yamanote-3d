@@ -229,6 +229,45 @@ interface Nodes {
 let nodes: Nodes | null = null;
 let volume = 0.8;
 let prevSpeed01 = 0;
+/** Dernier état publié des niveaux de la rame (voir updateAudio). */
+let publishedTrainKey = '';
+
+/**
+ * Ce que la boucle a DÉJÀ publié.
+ *
+ * Les quatre fonctions ci-dessous sont appelées à chaque image - certaines à
+ * chaque sous-pas - et elles republient presque toujours la même chose : les
+ * portes sont closes pendant deux minutes, la pluie ne change pas d'un
+ * soixantième de seconde, les vantaux ne glissent que trois secondes par arrêt.
+ * Or « publier » n'est pas gratuit dans Tone : chaque `rampTo` annule la
+ * programmation en cours et insère deux points dans une ligne de temps triée.
+ * Réécrire la même valeur soixante fois par seconde coûte donc exactement ce
+ * que coûterait un vrai changement, pour rien - et sur une machine modeste, ce
+ * « pour rien » se prend sur le fil audio, où il s'entend.
+ *
+ * On garde donc ce qui a été écrit, et on se tait quand rien n'a bougé.
+ *
+ * L'invariant qui rend cela sûr : ces paramètres n'ont pas d'autre écrivain que
+ * leur fonction, à UNE exception près - `setListenerOutside`, qui repose le bus
+ * du quai et la voix de bord quand on descend sur le quai. Elle invalide donc
+ * la mémoire explicitement, faute de quoi la publication suivante, identique à
+ * l'avant-dernière, serait sautée et laisserait le mixage du dehors en place.
+ */
+const published = {
+  doors: Number.NaN,
+  slideTrain: Number.NaN,
+  slidePsd: Number.NaN,
+  ambience: '',
+  weather: '',
+};
+
+/** Deux niveaux séparés de moins de ça sont le même niveau. */
+const PUBLISH_EPS = 1e-3;
+
+function unchanged(a: number, b: number): boolean {
+  return Math.abs(a - b) < PUBLISH_EPS;
+}
+
 
 /**
  * Niveau de la voix du QUAI entendue depuis la rame. Assez pour reconnaître
@@ -407,6 +446,17 @@ const listenerPos: { x: number; y: number; z: number } = { x: 0, y: CONFIG.eyeHe
 export async function startAudio(): Promise<void> {
   if (nodes) return;
   await Tone.start();
+
+  // Graphe neuf, mémoire vide : les publications par image se taisent tant que
+  // rien ne bouge (voir `published` et `publishedTrainKey`), et un souvenir
+  // laissé par une session précédente ferait sauter la toute première - celle
+  // qui pose le mixage de départ.
+  publishedTrainKey = '';
+  published.doors = Number.NaN;
+  published.slideTrain = Number.NaN;
+  published.slidePsd = Number.NaN;
+  published.ambience = '';
+  published.weather = '';
 
   const master = new Tone.Gain(volume * 0.9).toDestination();
 
@@ -1361,6 +1411,10 @@ function cabinVoiceOutside(): number {
 }
 
 export function setListenerOutside(outside: boolean): void {
+  // Ce qui suit repose des paramètres que les publications par image mémorisent
+  // (voir `published`) : leur mémoire est périmée, on la vide.
+  published.doors = Number.NaN;
+  published.weather = '';
   listenerOutside = outside;
   if (!nodes) return;
   if (outside) {
@@ -1393,6 +1447,8 @@ export function setRollingDistance(m: number): void {
 // et lointain ; 1 = portes ouvertes, la mélodie entre franchement).
 export function setPlatformDoors(open01: number): void {
   if (!nodes) return;
+  if (unchanged(open01, published.doors)) return;
+  published.doors = open01;
   const o = Math.max(0, Math.min(1, open01));
   doorOpening = o;
   // Dehors, les portes de la rame ne filtrent plus la sono du QUAI -
@@ -1807,6 +1863,20 @@ export function updateAudio(dt: number, speed01: number, braking: boolean, power
   const spinRate = power > hvacSpin ? dt / HVAC_SPIN_UP : dt / HVAC_SPIN_DOWN;
   hvacSpin += Math.max(-spinRate, Math.min(spinRate, power - hvacSpin));
 
+  // Les huit niveaux qui suivent n'ont pas d'autre écrivain que cette
+  // fonction, et ils ne dépendent que de ce qui est dans cette clé. Or le
+  // train passe l'essentiel de son temps à vitesse CONSTANTE - trente secondes
+  // à quai, une minute et demie en palier - où pas une de ces valeurs ne bouge.
+  // Les reprogrammer soixante fois par seconde revient à annuler et réinsérer
+  // douze lignes de temps triées pour y réécrire ce qui s'y trouve déjà.
+  //
+  // L'inertie des turbines est DANS la clé, et c'est ce qui rend le silence
+  // sûr : tant que `hvacSpin` court vers sa cible, la clé change à chaque
+  // image et la rampe suit ; quand il l'a rejointe, il n'y a plus rien à dire.
+  const key = `${speed01.toFixed(4)}|${accel01.toFixed(3)}|${braking}|${power.toFixed(3)}|${hvacSpin.toFixed(5)}|${rollingDistance.toFixed(2)}|${listenerOutside}|${railWet.toFixed(3)}`;
+  if (key === publishedTrainKey) return;
+  publishedTrainKey = key;
+
   // Atténuation en 1/(1+d) sur TOUT le bus de la rame : roulement, onduleur,
   // freins, joints de rail, chocs de porte. Un train qui quitte la gare
   // s'éloigne vraiment, au lieu de garder son chant VVVF plein pot jusqu'à
@@ -1863,6 +1933,9 @@ export function updateAudio(dt: number, speed01: number, braking: boolean, power
 // normalisée des vantaux (0 = arrêtés, 1 = pleine vitesse).
 export function setDoorSlide(train01: number, psd01: number): void {
   if (!nodes) return;
+  if (unchanged(train01, published.slideTrain) && unchanged(psd01, published.slidePsd)) return;
+  published.slideTrain = train01;
+  published.slidePsd = psd01;
   nodes.slideTrainGain.gain.rampTo(train01 * 0.05, 0.05);
   nodes.slidePsdGain.gain.rampTo(psd01 * 0.018, 0.05);
 }
@@ -2843,6 +2916,12 @@ export function setStationAmbience(kind: string, presence: number, room: number)
     ambNext = (spec.every ?? 8) * (0.5 + Math.random());
     ambTimer = 0;
   }
+  // La bascule de lieu ci-dessus doit passer quoi qu'il arrive ; les trois
+  // niveaux qui suivent, eux, sont les mêmes d'une image à l'autre pendant tout
+  // un trajet entre deux gares.
+  const ambienceKey = `${kind}|${p.toFixed(3)}|${room.toFixed(3)}`;
+  if (ambienceKey === published.ambience) return;
+  published.ambience = ambienceKey;
   nodes.ambGain.gain.rampTo(spec.level * p, 0.4);
   // La réverbération du lieu ne s'entend que si l'on est dans le lieu.
   nodes.roomSend.gain.rampTo(0.06 + room * 0.34, 0.5);
@@ -2873,6 +2952,18 @@ export function setWeatherSound(
   if (!nodes) return;
   railWet = Math.max(0, Math.min(1, wet));
   const r = Math.max(0, Math.min(1, rain));
+  // La neige n'ajoute rien ; elle retire - et cela se décide avant tout retour
+  // anticipé, parce que le lit d'ambiance n'est pas de la pluie.
+  const muffle = Math.max(0, Math.min(1, snowCover * 0.7 + snow * 0.4));
+  if (Math.abs(muffle - snowMuffle) > 0.04) {
+    snowMuffle = muffle;
+    applyAmbienceCut(2);
+  }
+  // Le ciel ne change pas d'un soixantième de seconde : les quatre niveaux qui
+  // suivent sont identiques pendant des minutes entières.
+  const weatherKey = `${r.toFixed(3)}|${snowCover.toFixed(3)}|${openings.toFixed(3)}|${outside}`;
+  if (weatherKey === published.weather) return;
+  published.weather = weatherKey;
   // Sur le pavillon : rien tant qu'on est dehors, sur le quai - le toit sous
   // lequel on se tient alors est celui de la gare, pas celui de la rame.
   const roof = outside ? 0 : r;
@@ -2887,13 +2978,6 @@ export function setWeatherSound(
   // Portes fermées, il ne reste du dehors que le grave : le vitrage coupe tout
   // au-dessus de deux ou trois kilohertz.
   nodes.rainOutFilter.frequency.rampTo(outside ? 900 : 1500 - 600 * openings, 0.4);
-  // La neige n'ajoute rien ; elle retire. Le lit d'ambiance du lieu perd ses
-  // aigus, et c'est tout ce qu'il faut pour l'entendre tomber.
-  const muffle = Math.max(0, Math.min(1, snowCover * 0.7 + snow * 0.4));
-  if (Math.abs(muffle - snowMuffle) > 0.04) {
-    snowMuffle = muffle;
-    applyAmbienceCut(2);
-  }
 }
 
 /**
