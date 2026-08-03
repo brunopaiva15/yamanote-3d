@@ -1685,6 +1685,110 @@ body,
   pointer-events: none;
 }
 
+/* --- Le tchat du salon ---------------------------------------------------
+ *
+ * AU-DESSUS du bandeau de sous-titres, jamais dessous. Les sous-titres sont la
+ * voix du monde - annonces, carillons, sono du quai -, et ce jeu est bâti
+ * autour d'elles : un tchat qui leur passerait devant contredirait tout le
+ * reste. D'où le `--subtitles-h` dans le calcul, qui porte la hauteur RÉELLE du
+ * bandeau à cet instant (ui/usePublishedHeight) - elle dépend de la langue et
+ * du nombre de lignes qu'une annonce japonaise prend, et un nombre écrit en dur
+ * serait faux dans deux langues sur trois.
+ *
+ * À gauche, et non centré comme les sous-titres : deux blocs centrés l'un
+ * au-dessus de l'autre se disputeraient le regard, et c'est l'annonce qui doit
+ * gagner.
+ */
+.chat {
+  position: fixed;
+  left: calc(var(--hud-safe-left) + 14px);
+  bottom: calc(var(--hud-safe-bottom) + var(--hud-bar-h) + var(--subtitles-h) + 26px);
+  width: min(420px, calc(100vw - var(--hud-safe-left) - var(--hud-safe-right) - 28px));
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 26;
+  /* Replié, le journal ne se clique pas : on regarde par la fenêtre à travers.
+     Le compositeur, lui, rétablit ses propres événements. */
+  pointer-events: none;
+}
+
+.chat-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.chat-line {
+  background: rgba(10, 14, 18, 0.72);
+  border-radius: 8px;
+  padding: 4px 9px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  transition: opacity 600ms ease;
+}
+
+/* Une ligne vieille de douze secondes s'efface sans disparaître : on peut
+   encore la lire si l'on y tient, elle ne réclame plus l'attention. */
+.chat-faded {
+  opacity: 0.35;
+}
+
+.chat-name {
+  margin-right: 7px;
+  color: #9ec46f;
+  font-weight: 700;
+}
+
+.chat-self .chat-name {
+  color: #d6d2c8;
+}
+
+.chat-composer {
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.chat-composer input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(10, 14, 18, 0.9);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.chat-composer input:focus {
+  outline: none;
+  border-color: rgba(158, 196, 111, 0.7);
+}
+
+.chat-send {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  padding: 6px 12px;
+  background: rgba(10, 14, 18, 0.9);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chat-send:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .subtitle-line,
 .subtitle-cue {
   background: rgba(10, 14, 18, 0.82);

@@ -28,6 +28,7 @@ import { setListenerPose } from './systems/audioEngine';
 import { startAudioLoop, stopAudioLoop } from './systems/audioLoop';
 import { Hud } from './ui/Hud';
 import { Subtitles } from './ui/Subtitles';
+import { Chat } from './ui/Chat';
 import { AnnouncementLog } from './ui/audio/AnnouncementLog';
 import { DoorState } from './ui/audio/DoorState';
 import { LineScreen } from './ui/audio/LineScreen';
@@ -91,6 +92,10 @@ export default function AudioGame() {
           mêmes valeurs, lues au même endroit. */}
       <Hud />
       <Subtitles />
+      {/* La version sonore n'a pas d'avatar, mais elle a une voix écrite : on
+          peut parfaitement voyager dans le même salon sans rendre la 3D, et
+          c'est même le meilleur hôte du lot (sa boucle tourne onglet caché). */}
+      <Chat />
     </>
   );
 }

@@ -14,7 +14,7 @@
 
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { create } from 'zustand';
-import { netClient, netEnabled } from './config';
+import { isDev, netClient, netEnabled } from './config';
 import { HOST_GRACE_MS, electHostWithLiveness, type Member } from './hostElection';
 import { clearPeers, lastSeenMap, rosterSnapshot, syncRoster } from './peers';
 import { PROTOCOL_VERSION, ROOM_CAPACITY, validPresence, type PresencePayload } from './protocol';
@@ -195,6 +195,20 @@ export function onRoomMessage(handler: Handler): () => void {
 }
 
 /**
+ * Distribue un message à tous les abonnés.
+ *
+ * Sorti du rappel du canal pour deux raisons. La première est que ce rappel n'a
+ * plus qu'une ligne, ce qui se relit mieux. La seconde est qu'un test peut
+ * alors éprouver le TRAITEMENT des messages - déduplication, nettoyage, débit -
+ * sans avoir besoin d'un serveur Supabase, en empruntant exactement le chemin
+ * qu'ils prennent en vrai. Une réception éprouvée par un chemin parallèle
+ * n'éprouve que le chemin parallèle.
+ */
+export function deliverRoomMessage(event: string, payload: unknown): void {
+  for (const handler of handlers) handler(event, payload);
+}
+
+/**
  * Diffuse un message dans le salon. Sans effet hors salon.
  *
  * Ne rend rien et n'attend rien : `ack: false` côté client, et le protocole est
@@ -331,9 +345,8 @@ async function open(code: string, name: string): Promise<boolean> {
 
   ch.on('presence', { event: 'sync' }, () => refreshRoster(Date.now()));
   ch.on('broadcast', { event: '*' }, (message) => {
-    const event = (message as { event?: string }).event ?? '';
-    const payload = (message as { payload?: unknown }).payload;
-    for (const handler of handlers) handler(event, payload);
+    const m = message as { event?: string; payload?: unknown };
+    deliverRoomMessage(m.event ?? '', m.payload);
   });
 
   return await new Promise<boolean>((resolve) => {
@@ -422,6 +435,28 @@ export function leaveRoom(error: RoomError | null = null): void {
     roster: [],
     hostId: null,
   });
+}
+
+// Outils de mise au point, dans la lignée des `__jumpTo` et `__crowd` du reste
+// du jeu. `__joinFake` pose l'état d'un salon SANS ouvrir de canal : c'est ce
+// qui permet d'éprouver l'interface du tchat et des avatars dans un vrai
+// navigateur sans avoir de serveur Supabase sous la main - et c'est très
+// exactement la moitié du multijoueur qu'on peut ainsi vérifier pour de bon.
+if (isDev() && typeof window !== 'undefined') {
+  const w = window as unknown as Record<string, unknown>;
+  w.__joinFake = (code = 'DEV123', name = 'Moi') => {
+    useRoom.setState({
+      status: 'joined',
+      error: null,
+      code,
+      selfId: 'dev-self',
+      selfName: name,
+      selfAvatar: seedFromId('dev-self'),
+      roster: [],
+      hostId: 'dev-self',
+    });
+  };
+  w.__room = () => useRoom.getState();
 }
 
 // Onglet fermé : on se retire proprement plutôt que d'attendre que Supabase

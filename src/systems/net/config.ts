@@ -21,8 +21,35 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+/**
+ * Les variables d'environnement, ou rien.
+ *
+ * `import.meta.env` est posé par Vite et n'existe pas sous `node --test` : sans
+ * cette précaution, importer ce module hors du navigateur lève une exception,
+ * et avec lui tout ce qui en dépend - donc `net/room`, donc `net/chat`, donc
+ * la moitié du multijoueur devient intestable.
+ *
+ * Vite remplace `import.meta.env` en entier à la compilation : la lecture des
+ * deux clés juste en dessous reste donc bien statique côté navigateur, et le
+ * contrat « sans configuration, supabase-js n'est jamais téléchargé » tient
+ * exactement comme avant.
+ */
+const ENV: Record<string, string | undefined> =
+  typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
+
+/**
+ * Sommes-nous dans un serveur de développement ?
+ *
+ * Passe par `ENV` et non par `import.meta.env.DEV` directement, pour la même
+ * raison qu'au-dessus : les outils de mise au point du salon vivent dans des
+ * modules que `node --test` doit pouvoir charger.
+ */
+export function isDev(): boolean {
+  return Boolean(ENV.DEV);
+}
+
+const SUPABASE_URL = ENV.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = ENV.VITE_SUPABASE_ANON_KEY;
 
 /**
  * Le réseau est-il configuré ?

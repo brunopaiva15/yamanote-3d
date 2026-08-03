@@ -45,6 +45,7 @@ import { HeldItem } from './three/HeldItem';
 import { Hud } from './ui/Hud';
 import { RenderFailure } from './ui/RenderFailure';
 import { Controls } from './ui/Controls';
+import { Chat } from './ui/Chat';
 import { BoardingPrompt } from './ui/BoardingPrompt';
 import { TalkPrompt } from './ui/TalkPrompt';
 import { DevicePrompt } from './ui/DevicePrompt';
@@ -266,6 +267,8 @@ export default function Game() {
       <StationDevelopmentNotice />
       <QualityNotice className="quality-note-hud" failureOnly />
       <Controls />
+      {/* Le tchat du salon. Hors salon, il ne rend rien du tout. */}
+      <Chat />
       {/* En dernier, et par-dessus tout le reste : quand la toile n'a pas
           démarré, le HUD affiche un état figé qui ressemble à s'y méprendre à
           un jeu qui tourne. */}

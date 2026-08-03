@@ -389,6 +389,10 @@ export interface Strings {
     errorNetwork: string;
     /** Explication d'une ligne, sous le bloc déplié. */
     hint: string;
+    /** Texte d'invite du champ de tchat. */
+    chatPlaceholder: string;
+    /** Bouton d'envoi du tchat. */
+    send: string;
   };
 
   language: string;
@@ -640,6 +644,8 @@ const FR: Strings = {
     errorFull: 'Cette rame est complète.',
     errorNetwork: 'Service indisponible : vous embarquez seul.',
     hint: 'Partagez le lien avec qui vous voulez : vous monterez dans la même rame, à la même gare, à la même seconde.',
+    chatPlaceholder: 'Entrée pour écrire, Échap pour fermer',
+    send: 'Envoyer',
   },
 
   language: 'Langue',
@@ -887,6 +893,8 @@ const EN: Strings = {
     errorFull: 'This train is full.',
     errorNetwork: 'Service unavailable: you are boarding alone.',
     hint: 'Share the link with whoever you like: you will board the same train, at the same station, at the same second.',
+    chatPlaceholder: 'Enter to write, Esc to close',
+    send: 'Send',
   },
 
   language: 'Language',
@@ -1132,6 +1140,8 @@ const JA: Strings = {
     errorFull: 'この編成は満員です。',
     errorNetwork: 'サービスに接続できません。おひとりで乗車します。',
     hint: 'コード（またはリンク）を渡せば、同じ編成・同じ駅・同じ瞬間に乗り合わせます。',
+    chatPlaceholder: 'Enter で入力、Esc で閉じる',
+    send: '送信',
   },
 
   language: '言語',
