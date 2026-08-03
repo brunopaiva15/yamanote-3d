@@ -105,6 +105,8 @@ import {
   isDepartureBlocked,
   playDepartureMelodyForContext,
 } from './departureSequence';
+import { melodyDefinitionForPath } from '../data/melodyDefinitions';
+import { soundCue } from './subtitles';
 
 interface Nodes {
   master: Tone.Gain;
@@ -1459,6 +1461,7 @@ export function paVoiceClose(bus: VoiceBus = 'cabinVoice'): void {
  */
 export function platformChime(): number {
   if (!nodes) return 0;
+  soundCue('atosChime');
   const lead = 0.05;
   // UNE seule réservation, pour la phrase entière. En réservant note à note, un
   // carillon déclenché pendant qu'un autre résonne verrait ses premières
@@ -1525,6 +1528,7 @@ export function psdOpenChime(): number {
   // que la précédente sonne encore doublerait les vingt-sept notes.
   const now = Tone.now() + 0.02;
   if (now < psdChimeUntil) return 0;
+  soundCue('psdOpen');
   for (const note of psdOpenChimeScore()) {
     const at = now + note.at;
     nodes.psdChime.triggerAttackRelease(note.freq, PSD_CHIME_NOTE_HOLD, at);
@@ -1571,6 +1575,7 @@ export function psdCloseWarning(on: boolean): void {
     nodes.psdWarn.releaseAll(Tone.now());
     return;
   }
+  soundCue('psdClose');
   psdWarnNextAt = Tone.now();
   pumpPsdCloseWarning();
 }
@@ -2277,6 +2282,7 @@ let passActive = false;
 
 export function passByStart(): void {
   passActive = true;
+  soundCue('passingTrain');
 }
 
 /**
@@ -2635,12 +2641,35 @@ async function playOnce(path: string, bus: Bus = 'platform'): Promise<boolean> {
   }
 
   const handle = startClip(buf, bus);
+  if (bus === 'melody') cueMelody(path);
   activeByPath.set(path, handle);
   void handle.ended.then(() => {
     if (activeByPath.get(path) === handle) activeByPath.delete(path);
   });
   await handle.ended;
   return true;
+}
+
+/**
+ * Dernière 発車メロディ nommée à l'écran, et quand.
+ *
+ * La mélodie fait DEUX passages entiers (MELODY_REPEATS), donc deux appels à
+ * playOnce pour un seul départ : sans ce garde-fou, le journal des sous-titres
+ * porterait deux fois la même ligne à chaque arrêt. Trente secondes suffisent à
+ * les réunir sans jamais réunir deux gares - il s'écoule au moins une minute
+ * entre deux mélodies.
+ */
+let lastMelodyCue = { path: '', at: -1e9 };
+const MELODY_CUE_DEBOUNCE_S = 30;
+
+function cueMelody(path: string): void {
+  const now = Tone.now();
+  if (path === lastMelodyCue.path && now - lastMelodyCue.at < MELODY_CUE_DEBOUNCE_S) return;
+  lastMelodyCue = { path, at: now };
+  // Le nom de la composition quand elle en a un ; les mélodies principales
+  // Inner/Outer n'en portent pas, et le sous-titre dira simplement qu'une
+  // mélodie de départ sonne.
+  soundCue('melody', melodyDefinitionForPath(path)?.displayName);
 }
 
 /** Arrête un clip lancé via playOnce (annulation de départ, urgence…). */
@@ -2671,9 +2700,11 @@ export const audioManager = {
 };
 
 export function doorOpenChime(): void {
+  soundCue('doorChime');
   void playClip('door-open', synthDoorChime);
 }
 export function doorCloseChime(): void {
+  soundCue('doorChime');
   void playClip('door-close', synthDoorChime);
   // La purge d'air des vantaux, elle, n'appartient pas au carillon : c'est de
   // la mécanique, et elle ne sonne qu'à la fermeture. Elle reste donc dehors,
@@ -2873,6 +2904,7 @@ export function setWeatherSound(
  */
 export function playThunder(far: number): void {
   if (!nodes) return;
+  soundCue('thunder');
   const f = Math.max(0, Math.min(1, far));
   const now = Tone.now();
   const delay = 0.15 + f * 7;

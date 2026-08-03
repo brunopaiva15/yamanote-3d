@@ -29,7 +29,7 @@
 // `obstacles`) - c'est celles que la marche du joueur respecte - il ne
 // manquait qu'un pas qui les lise.
 
-import * as THREE from 'three';
+import { Vec3, clamp, lerp } from './vec3';
 import { isMajorHub } from '../data/announcements';
 import { CONFIG } from '../data/config';
 import { SKELETON_TOP, makeAppearance, type Appearance } from './appearance';
@@ -121,7 +121,7 @@ export interface CrowdPax {
   state: CrowdState;
   role: 'waiter' | 'walker'; // walker = se balade en boucle
   // Position locale du quai (côté +x, avant rotation doorSide).
-  pos: THREE.Vector3;
+  pos: Vec3;
   /** Altitude relative au sol du quai : négative dans une trémie. */
   y: number;
   /**
@@ -140,7 +140,7 @@ export interface CrowdPax {
   inStation: boolean;
   /** Secondes passées à buter sur un obstacle : au-delà, on renonce. */
   stuck: number;
-  home: THREE.Vector3;
+  home: Vec3;
   yaw: number;
   targetYaw: number;
   appearance: Appearance;
@@ -333,12 +333,12 @@ function makeCrowd(id: number): CrowdPax {
     identity,
     state: 'hidden',
     role: 'waiter',
-    pos: new THREE.Vector3(),
+    pos: new Vec3(),
     y: 0,
     level: 'platform',
     inStation: false,
     stuck: 0,
-    home: new THREE.Vector3(),
+    home: new Vec3(),
     yaw: 0,
     targetYaw: 0,
     appearance,
@@ -486,8 +486,8 @@ function clampPos(x: number, z: number): Spot {
   const p = placementFor(useStore.getState().platformIndex, psdGates());
   return freeSpot(
     p,
-    THREE.MathUtils.clamp(x, b.x0, b.x1),
-    THREE.MathUtils.clamp(z, b.z0, b.z1),
+    clamp(x, b.x0, b.x1),
+    clamp(z, b.z0, b.z1),
   );
 }
 
@@ -503,7 +503,7 @@ function waitSlot(i: number, n: number, bias: number): Spot {
   const doorZ = doors[i % doors.length];
   const b = bounds();
   const spread = (i / Math.max(1, n - 1) - 0.5) * 12;
-  const z = THREE.MathUtils.clamp(
+  const z = clamp(
     doorZ + ((i * 13) % 11 - 5) * 0.45 + bias + spread * 0.25,
     b.z0,
     b.z1,
@@ -581,13 +581,13 @@ export function seedPlatformCrowd(stationIndex: number): void {
     // abscisse écrite d'avance : à 3,00 m du bord, un promeneur longeait les
     // bancs par l'intérieur et traversait un poteau sur deux. Ce n'est qu'une
     // PRÉFÉRENCE - le trajet la rabat au droit de ce qui encombre.
-    p.laneX = THREE.MathUtils.lerp(wb.x0, wb.x1, isWalker ? 0.1 + (i % 3) * 0.22 : 0.05 + (i % 3) * 0.18);
+    p.laneX = lerp(wb.x0, wb.x1, isWalker ? 0.1 + (i % 3) * 0.22 : 0.05 + (i % 3) * 0.18);
     p.bobPhase = Math.random() * Math.PI * 2;
     p.route = [];
     p.routeI = 0;
 
     if (isWalker) {
-      const z0 = THREE.MathUtils.lerp(wb.z0 + 4, wb.z1 - 4, (i + 0.5) / walkers);
+      const z0 = lerp(wb.z0 + 4, wb.z1 - 4, (i + 0.5) / walkers);
       const at = clampPos(p.laneX, z0);
       p.pos.set(at.x, 0, at.z);
       p.home.copy(p.pos);
@@ -2008,7 +2008,7 @@ export function updatePlatformCrowd(dt: number): void {
       advanceWalk(p, dt, currentPlacement, () => {
         // Bout du quai : demi-tour et nouveau trajet.
         p.walkDir = p.walkDir > 0 ? -1 : 1;
-        p.laneX = THREE.MathUtils.clamp(p.laneX + (Math.random() - 0.5) * 0.35, bounds().x0 + 0.15, bounds().x1 - 0.15);
+        p.laneX = clamp(p.laneX + (Math.random() - 0.5) * 0.35, bounds().x0 + 0.15, bounds().x1 - 0.15);
         // Petite pause occasionnelle avant de repartir.
         if (Math.random() < 0.22) {
           p.state = 'waiting';

@@ -19,7 +19,8 @@ import { useStore } from '../store';
 import { useT } from '../i18n';
 import { runtime, tokyoNow } from '../systems/runtime';
 import { presenceEnabled, subscribeOnlineCount } from '../systems/presence';
-import { loadGame } from '../gameLoader';
+import { loadGameFor } from '../gameLoader';
+import type { GameMode } from '../systems/gameMode';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
 import { QualityNotice } from './QualityNotice';
@@ -98,6 +99,10 @@ function useOnlineCount(): number | null {
 
 export function StartScreen() {
   const start = useStore((s) => s.start);
+  // La version est choisie ICI et nulle part ailleurs : c'est elle qui décide
+  // quel morceau de code part au téléchargement au clic sur « Monter à bord ».
+  const mode = useStore((s) => s.mode);
+  const setMode = useStore((s) => s.setMode);
   const t = useT();
   const coarsePointer = useCoarsePointer();
   const online = useOnlineCount();
@@ -139,7 +144,7 @@ export function StartScreen() {
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     // C'est seulement cette action utilisateur qui ouvre le chunk du jeu.
     // Le téléchargement se fait en parallèle de la préparation de la partie.
-    const gamePromise = loadGame();
+    const gamePromise = loadGameFor(mode);
     const {
       prepareGame,
     } = await import('../systems/startGame');
@@ -301,10 +306,33 @@ export function StartScreen() {
             </select>
           </div>
           <div className="start-option">
-            <span className="start-option-label">{t.quality.label}</span>
-            <QualitySelect />
+            <label className="start-option-label" htmlFor="start-mode">
+              {t.start.modeLabel}
+            </label>
+            <select
+              id="start-mode"
+              className="quality-select start-station-select"
+              value={mode}
+              onChange={(e) => setMode(e.target.value as GameMode)}
+              aria-label={t.start.modeLabel}
+            >
+              <option value="full">{t.start.modeFull}</option>
+              <option value="audio">{t.start.modeAudio}</option>
+            </select>
           </div>
-          <QualityNotice />
+          {/* La qualité vidéo n'a rien à régler quand il n'y a pas d'image :
+              elle laisse la place à ce que la version sonore change vraiment. */}
+          {mode === 'audio' ? (
+            <p className="start-mode-note">{t.start.modeAudioNote}</p>
+          ) : (
+            <>
+              <div className="start-option">
+                <span className="start-option-label">{t.quality.label}</span>
+                <QualitySelect />
+              </div>
+              <QualityNotice />
+            </>
+          )}
         </div>
         <p className="start-foot">
           {t.start.tokyoTime}

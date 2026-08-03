@@ -11,9 +11,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
-import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
-import { CLOSE_ANNOUNCE_LEAD, dwellDuration } from '../systems/stationCycle';
 import {
   ANIM_PERIOD,
   ANIM_PHASES,
@@ -25,28 +23,10 @@ import {
   LCD_READY,
   SCREEN_H,
   SCREEN_W,
-  drawBackpackManner,
-  drawDelayCert,
-  drawApproach,
-  drawEmergencyInfo,
-  drawHeadphoneManner,
-  drawLeftAd,
-  drawLineStatus,
-  drawLoopMap,
-  drawNextStationLang,
-  drawOutageInfo,
-  drawPhoneManner,
-  drawPriorityNotice,
-  drawRoute,
-  drawSafetyNotice,
-  drawTrafficInfo,
-  drawTransfers,
-  fmtClock,
-  makeScreen,
-  secondsToArrival,
-  trafficNotice,
-  type ScreenStatus,
 } from './lineScreen';
+import { lineScreenFrame, lineScreenKey, paintLineScreen } from './lineScreenCycle';
+import { makeScreen } from './screenSurface';
+import { drawLeftAd } from './adScreen';
 
 export function Screens() {
   const left = useMemo(() => makeScreen(512, 288), []);
@@ -141,7 +121,6 @@ export function Screens() {
     // bougerait tant que la minute affichée reste la même.
     animPhase.current = (animPhase.current + 1) % ANIM_PHASES;
     const anim = animPhase.current;
-    const { index, phase, doorSide, loopDirection } = useStore.getState();
 
     // Écran gauche : une pub toutes les ~15 s, boucle de AD_LOOP_COUNT spots.
     const adSeed = AD_LOOP_FIRST_SEED + (Math.floor(runtime.clockMin * 4) % AD_LOOP_COUNT);
@@ -160,83 +139,17 @@ export function Screens() {
       end.texture.needsUpdate = true;
     }
 
-    // Écran droit : machine à états calée sur la phase du cycle.
-    //
-    //  à quai      → ただいま, plans jp/en, écrans zh/ko et plan du quai,
-    //                puis avertissement de FERMETURE DES PORTES en toute fin
-    //                d'arrêt ;
-    //  en route    → つぎは, cycle quadrilingue complet, correspondances,
-    //                écrans de courtoisie et manières ; si une AUTRE ligne
-    //                est perturbée : info trafic, état des lignes et
-    //                certificat de retard ;
-    //  à l'approche→ まもなく, côté d'ouverture, alterné avec le plan du quai.
-    //
-    // L'arrêt d'urgence (急停車) est un événement RÉEL de la simulation
-    // (stationCycle) : quand il est actif, l'écran rouge remplace toute la
-    // rotation, en alternance JP/EN. La coupure de caténaire a son propre
-    // écran rouge, qu'on ne voit qu'au retour de la tension - pendant la
-    // coupure, la dalle est simplement éteinte et rien n'est dessiné.
-    //
-    // Les autres états dégradés de la propre ligne (retard persistant,
-    // interruption planifiée) restent non rendus : la simulation n'a pas ces
-    // incidents, les afficher serait annoncer au voyageur quelque chose qui
-    // n'arrive pas.
-    const tick = Math.floor(runtime.clockMin * 4);
-    const clock = fmtClock(runtime.clockMin);
-    const countdown = Math.round(secondsToArrival(phase, runtime.phaseT, index, loopDirection));
-
-    const notice = trafficNotice(runtime.clockMin);
-    // Visuel manières du moment : change d'un passage du cycle à l'autre.
-    const mannerVariant = Math.floor(tick / 10) % 3;
-    const emergency = runtime.emergencyStop;
-    let state: string;
-    let status: ScreenStatus;
-    if (emergency.stage !== 'none') {
-      status = 'next';
-      // Une coupure et un coup de frein ne s'affichent pas de la même façon -
-      // et surtout, la coupure ne s'affiche qu'une fois le courant revenu,
-      // puisque avant cela on n'est même pas arrivé jusqu'ici.
-      const kind = emergency.kind === 'outage' ? 'outage' : 'emergency';
-      state = tick % 2 === 0 ? `${kind}JP` : `${kind}EN`;
-    } else if (phase === 'brake') {
-      status = 'soon';
-      // À l'approche, l'écran ne montre QUE le plan du quai, et il alterne
-      // ses deux moitiés basses : avis d'ouverture des portes en japonais,
-      // correspondances en anglais - c'est le cycle du vrai afficheur.
-      state = tick % 2 === 0 ? 'approachJP' : 'approachEN';
-    } else if (phase === 'dwell') {
-      status = 'now';
-      // Le pictogramme « portes qui ferment » a disparu des rames : l'écran ne
-      // le diffuse plus. Pendant l'annonce de fermeture, c'est le PLAN DU QUAI
-      // qui reste à l'antenne - celui qui porte les correspondances de la gare
-      // où l'on est, exactement ce qu'on cherche à la seconde où l'on décide de
-      // descendre ou pas.
-      state =
-        runtime.phaseT >= dwellDuration(index) - CLOSE_ANNOUNCE_LEAD
-          ? 'approachEN'
-          : ['loopJP', 'loopEN', 'nextZH', 'nextKO', 'zoomJP', 'zoomEN', 'approachEN'][tick % 7];
-    } else {
-      status = 'next';
-      const rotation = notice
-        ? [
-            'loopJP', 'zoomJP', 'nextZH', 'nextKO', 'transfers',
-            'trafficJP', 'statusJP', 'certJP',
-            'loopEN', 'zoomEN',
-            'trafficEN', 'statusEN', 'certEN',
-            'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
-          ]
-        : [
-            'loopJP', 'zoomJP', 'nextZH', 'nextKO', 'transfers',
-            'loopEN', 'zoomEN', 'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
-          ];
-      state = rotation[tick % rotation.length];
-    }
+    // Écran droit : ce qui est à l'antenne vient de la rotation partagée
+    // (three/lineScreenCycle), que la version sonore du jeu lit aussi. Les
+    // deux afficheurs montrent donc le même écran au même moment - c'est le
+    // même équipement de bord, regardé de deux endroits.
+    const frame = lineScreenFrame();
 
     // Les états animés (plan du quai, plans de ligne) entrent dans la clé avec
     // leur phase : eux seuls se redessinent à chaque battement, les écrans
-    // fixes gardent leur texture tant que rien d'autre ne change.
-    const animated = state.startsWith('approach') || state.startsWith('loop') || state.startsWith('zoom');
-    const key = `${index}|${phase}|${state}|${mannerVariant}|${clock}|${doorSide}|${animated ? anim : 0}|${state.startsWith('loop') || state.startsWith('zoom') ? countdown : 0}`;
+    // fixes gardent leur texture tant que rien d'autre ne change. La clé porte
+    // le côté, parce que le plan du quai n'est pas le même des deux parois.
+    const key = `${lineScreenKey(frame, anim, 1)}||${lineScreenKey(frame, anim, -1)}`;
     if (key === lastKey.current) return;
     lastKey.current = key;
 
@@ -244,79 +157,8 @@ export function Screens() {
       [1, rightA],
       [-1, rightB],
     ] as const) {
-      const g = screen;
-      switch (state) {
-        case 'approachJP':
-          drawApproach(g, index, clock, 'jp', doorSide === side, loopDirection, anim, status);
-          break;
-        case 'approachEN':
-          drawApproach(g, index, clock, 'en', doorSide === side, loopDirection, anim, status);
-          break;
-        case 'transfers':
-          drawTransfers(g, index, clock, loopDirection);
-          break;
-        case 'priority':
-          drawPriorityNotice(g, index, clock, loopDirection);
-          break;
-        case 'safety':
-          drawSafetyNotice(g, index, clock, loopDirection);
-          break;
-        case 'manner':
-          [drawPhoneManner, drawBackpackManner, drawHeadphoneManner][mannerVariant](g, index, clock, loopDirection);
-          break;
-        case 'nextZH':
-          drawNextStationLang(g, index, clock, status, 'zh', loopDirection);
-          break;
-        case 'nextKO':
-          drawNextStationLang(g, index, clock, status, 'ko', loopDirection);
-          break;
-        case 'trafficJP':
-          if (notice) drawTrafficInfo(g, index, clock, 'jp', notice, loopDirection);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection, anim);
-          break;
-        case 'trafficEN':
-          if (notice) drawTrafficInfo(g, index, clock, 'en', notice, loopDirection);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection, anim);
-          break;
-        case 'statusJP':
-          if (notice) drawLineStatus(g, index, clock, 'jp', notice, loopDirection);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection, anim);
-          break;
-        case 'statusEN':
-          if (notice) drawLineStatus(g, index, clock, 'en', notice, loopDirection);
-          else drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection, anim);
-          break;
-        case 'certJP':
-          drawDelayCert(g, index, clock, 'jp', loopDirection);
-          break;
-        case 'certEN':
-          drawDelayCert(g, index, clock, 'en', loopDirection);
-          break;
-        case 'emergencyJP':
-          drawEmergencyInfo(g, index, clock, 'jp', emergency.reason, loopDirection);
-          break;
-        case 'emergencyEN':
-          drawEmergencyInfo(g, index, clock, 'en', emergency.reason, loopDirection);
-          break;
-        case 'outageJP':
-          drawOutageInfo(g, index, clock, 'jp', loopDirection);
-          break;
-        case 'outageEN':
-          drawOutageInfo(g, index, clock, 'en', loopDirection);
-          break;
-        case 'loopJP':
-          drawLoopMap(g, index, phase, countdown, clock, status, 'jp', loopDirection, anim);
-          break;
-        case 'loopEN':
-          drawLoopMap(g, index, phase, countdown, clock, status, 'en', loopDirection, anim);
-          break;
-        case 'zoomEN':
-          drawRoute(g, index, phase, countdown, clock, status, 'en', loopDirection, anim);
-          break;
-        default:
-          drawRoute(g, index, phase, countdown, clock, status, 'jp', loopDirection, anim);
-      }
-      g.texture.needsUpdate = true;
+      paintLineScreen(screen, frame, anim, side);
+      screen.texture.needsUpdate = true;
     }
   });
 

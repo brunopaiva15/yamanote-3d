@@ -16,7 +16,7 @@
 // même prédicat que celui qui laisse entrer le son du quai. Train absent, tous
 // les portillons se ferment : on ne peut pas tomber sur la voie.
 
-import * as THREE from 'three';
+import { Vec3, clamp, lerp } from './vec3';
 import { CONFIG } from '../data/config';
 import { PLATFORM_TOP, PSD_X } from '../data/stationGeometry';
 import { useStore } from '../store';
@@ -287,7 +287,7 @@ export function groundY(x: number, z: number): number {
   if (runtime.playerLevel === 'platform' && u > ALCOVE_U && u < PLATFORM_U0) {
     // Dans le seuil : la marche de 6 cm se descend progressivement.
     const t = (u - ALCOVE_U) / (PLATFORM_U0 - ALCOVE_U);
-    return THREE.MathUtils.lerp(0, PLATFORM_TOP, t);
+    return lerp(0, PLATFORM_TOP, t);
   }
   return regionAt(u, z)?.y ?? 0;
 }
@@ -296,7 +296,7 @@ export function groundY(x: number, z: number): number {
  * Déplace `pos` (repère MONDE) de (dx, dz) en restant dans le volume
  * praticable, avec glissement le long des obstacles. Mutation en place.
  */
-export function resolveMove(pos: THREE.Vector3, dx: number, dz: number): void {
+export function resolveMove(pos: Vec3, dx: number, dz: number): void {
   const side = walkFlip();
   const u = side * pos.x;
   const w = pos.z;
@@ -332,7 +332,7 @@ export function resolveMove(pos: THREE.Vector3, dx: number, dz: number): void {
  * Ramène une position monde dans le volume praticable - utile après un
  * changement de côté d'ouverture ou de géométrie de gare.
  */
-export function snapInside(pos: THREE.Vector3): void {
+export function snapInside(pos: Vec3): void {
   const side = walkFlip();
   const u = side * pos.x;
   if (regionAt(u, pos.z)) return;
@@ -340,8 +340,8 @@ export function snapInside(pos: THREE.Vector3): void {
   // il est à l'étage du quai. Le rattrapage ramène donc aussi l'étage, sans
   // quoi on se retrouverait à bord en cherchant le sol du hall.
   runtime.playerLevel = 'platform';
-  pos.x = side * THREE.MathUtils.clamp(u, -AISLE_U, AISLE_U);
-  pos.z = THREE.MathUtils.clamp(pos.z - runtime.trainZ, -CAR_HALF_Z, CAR_HALF_Z) + runtime.trainZ;
+  pos.x = side * clamp(u, -AISLE_U, AISLE_U);
+  pos.z = clamp(pos.z - runtime.trainZ, -CAR_HALF_Z, CAR_HALF_Z) + runtime.trainZ;
 }
 
 /**

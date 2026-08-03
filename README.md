@@ -46,6 +46,60 @@ civil : c'est elle qui donne la saison - couleur des frondaisons, hauteur du
 soleil, heure de la tombée de nuit - et le temps qu'il fera ce jour-là. Le HUD
 affiche le temps qu'il fait et la température.
 
+## Les deux versions
+
+Le menu propose la même ligne de deux façons.
+
+**Complète (3D)** : celle de tout ce README - on est dans la rame, on marche, on
+regarde la ville défiler.
+
+**Sonore (sans 3D)** : le même trajet, sans une seule image de trois dimensions.
+Ce n'est pas un mode dégradé pour petite machine - la qualité vidéo s'en charge
+déjà - c'est une autre façon d'écouter la ligne, et la seule qui marche sans
+WebGL. Le jeu qui tourne derrière est **le même** : `systems/stationCycle` mène
+l'arrêt entier, les voyageurs et la foule du quai vivent avec leurs bruitages,
+la porte peut être bloquée, l'agent de quai intervient, et les incidents rares
+arrivent comme ailleurs - arrêt d'urgence (急停車), coupure de caténaire (停電),
+assistance à un voyageur, avec toutes leurs annonces. Le bouton ⚠ du HUD les
+provoque là aussi. On peut **descendre sur le quai** depuis la réglette de
+porte, ce qui bascule tout le mixage et lance l'attente du prochain train, avec
+ses annonces de retard et sa reprise de trafic.
+
+Ce qu'on voit à la place de la scène est **le vrai afficheur de bord** : la
+dalle LCD au-dessus des portes, peinte par le même code (`three/lineScreen`) et
+cadencée par la même rotation (`three/lineScreenCycle`) que celles de la rame -
+plan rapproché des cinq prochaines gares, plan de la boucle, plan du quai et
+côté d'ouverture, écrans quadrilingues, écrans rouges d'incident. Sous elle, la
+réglette de porte ; à côté, le journal de ce qui a été dit.
+
+Ce qui n'est PAS repris est ce qui demande un corps : marcher, viser, parler à
+quelqu'un, acheter au distributeur, passer un portique.
+
+Le choix se mémorise et s'écrit dans l'URL : **`?mode=audio`** est partageable
+tel quel. Le morceau de code de cette version ne contient pas une ligne de
+three.js, et `tests/audioVersion.test.ts` parcourt le graphe d'imports pour que
+ça le reste.
+
+## Les sous-titres
+
+Tout ce qui se dit peut s'afficher, dans les deux versions (bouton
+« Sous-titres » du HUD, allumé d'office en version sonore). Deux registres,
+comme au cinéma : la **parole** - les annonces de bord et de quai, mot pour mot,
+dans la langue où elles sont dites, avec leur provenance - et le **son**, nommé
+entre crochets comme un sous-titrage pour sourds et malentendants :
+[carillon de porte], [発車メロディ], [ouverture des portes palières], [tonnerre],
+[train sur la voie opposée].
+
+Les textes ne sont pas traduits dans la langue de l'interface, et ce n'est pas
+un oubli : une annonce ferroviaire japonaise se dit en japonais puis en anglais,
+la séquence porte déjà sa propre traduction, et sous-titrer 「次は。渋谷。」 par
+« Prochain arrêt : Shibuya » ferait lire au joueur autre chose que ce qu'il
+entend.
+
+Le crochet est unique et il est dans `systems/speech` : le sous-titre naît quand
+le clip part et meurt quand il finit, ce qui le rend incapable d'afficher autre
+chose que ce qui est joué.
+
 ## Les deux sens
 
 La Yamanote n'a pas de terminus : elle a deux sens, et c'est tout ce qui les
@@ -2119,6 +2173,17 @@ addons - le tout chargé à la demande, jamais dans le paquet de départ.
 ```
 src/
   store.ts               zustand : état discret (phase, station, portes, réglages)
+  App.tsx                le menu, puis l'une des deux racines de jeu
+  Game.tsx               la version complète : la toile 3D et tout ce qu'elle porte
+  AudioGame.tsx          la version sonore : le vrai afficheur de bord, sans three.js
+  systems/gameMode.ts    laquelle des deux, mémorisée et écrite dans l'URL (?mode=)
+  systems/audioLoop.ts   la boucle d'images de la version sonore (rAF), qui fait
+                         tourner tout ce qui s'entend - three/Engine fait le reste
+  systems/audioFrame.ts  le mixage publié une fois par image, PARTAGÉ par les deux
+                         boucles : deux versions ne peuvent pas diverger dessus
+  systems/subtitles.ts   ce qui se dit et ce qui sonne, en texte, avec son journal
+  systems/vec3.ts        le vecteur de la simulation : c'est lui qui permet aux PNJ,
+                         à la foule et à la marche de vivre sans moteur de rendu
   data/                  stations réelles JY01→JY30, correspondances, annonces, config
   data/loop.ts           l'arithmétique de la boucle, orientée : gare suivante /
                          précédente, k-ième saut, libellés 内回り／外回り
@@ -2130,6 +2195,10 @@ src/
                          d'un coup, semée par la date
   three/                 rendu R3F : wagon, sièges, portes, poignées, pubs, écrans LCD,
                          PNJ, caméra
+  three/lineScreen.ts    la peinture de l'afficheur de bord - du canevas 2D et rien
+                         d'autre, donc utilisable hors de la scène (version sonore)
+  three/lineScreenCycle.ts  ce qui est à l'antenne, et quand : la rotation lue par
+                         les dalles de la rame comme par la version sonore
   three/Wayside.tsx      l'emprise ferroviaire : plate-forme, rails, garde-corps
                          de viaduc, mobilier de voie, caténaire
   three/Weather.tsx      pluie et neige : champ replié autour de l'œil, calculé

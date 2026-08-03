@@ -6,7 +6,7 @@
 // conséquences : état discret pour le HUD, retenue du train, siège libéré,
 // téléportation au seuil pour le raccourci clavier et le bouton tactile.
 
-import * as THREE from 'three';
+import { Vec3 } from './vec3';
 import { useStore } from '../store';
 import { runtime } from './runtime';
 import { beginPlatformWait, boardableElapsed, endPlatformWait } from './platformWait';
@@ -45,7 +45,7 @@ export function board(): void {
  * Raccourci « descendre / monter » : place le joueur de l'autre côté du seuil
  * ouvert le plus proche. Renvoie false s'il n'y en a pas à portée.
  */
-export function crossNearestPortal(pos: THREE.Vector3): boolean {
+export function crossNearestPortal(pos: Vec3): boolean {
   const portal = nearestOpenPortal(pos.x, pos.z);
   if (!portal) return false;
   const goingOut = runtime.playerFrame === 'car';

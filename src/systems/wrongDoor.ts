@@ -16,7 +16,7 @@
 // Tout s'y lit en repère QUAI (celui de Platform.tsx, côté +x avant la rotation
 // de π), comme runtime.playerPlat*.
 
-import * as THREE from 'three';
+import { clamp } from './vec3';
 import { CONFIG } from '../data/config';
 import { PSD_HALF_GAP, PSD_X } from '../data/stationGeometry';
 import { layoutFor } from '../data/stationLayouts';
@@ -109,7 +109,7 @@ export function wrongDoor(): WrongDoor | null {
   // Regard tourné vers la voie : `u` décroît vers la rame, donc un regard qui
   // va vers elle a une composante locale négative.
   const facing = -platformFlip() * runtime.lookX;
-  const f = THREE.MathUtils.clamp(
+  const f = clamp(
     (facing - FACING_MIN) / (FACING_FULL - FACING_MIN),
     0,
     1,
@@ -132,7 +132,7 @@ export function wrongDoor(): WrongDoor | null {
   if (dz >= REACH_Z) return null;
 
   const dist = Math.hypot(Math.max(0, du - EDGE_GAP), dz);
-  const s = THREE.MathUtils.clamp((FADE_FAR - dist) / (FADE_FAR - FADE_NEAR), 0, 1);
+  const s = clamp((FADE_FAR - dist) / (FADE_FAR - FADE_NEAR), 0, 1);
   if (s <= 0) return null;
   return { z: gate, strength: s * s * f };
 }

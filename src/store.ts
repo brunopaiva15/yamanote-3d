@@ -8,6 +8,7 @@ import type { LoopDirection } from './data/platforms';
 import { DOOR_SIDE } from './data/stations';
 import { applyDocumentLang } from './i18n/documentMeta';
 import { initialLang, storeLang, type Lang } from './i18n/strings';
+import { applyModeToUrl, initialMode, storeMode, type GameMode } from './systems/gameMode';
 
 export type Phase = 'cruise' | 'brake' | 'dwell' | 'depart';
 
@@ -81,6 +82,29 @@ interface AppState {
   touch: boolean; // interface tactile active
   /** Langue de l'interface : détectée au premier lancement, puis mémorisée. */
   lang: Lang;
+  /**
+   * Version du jeu : l'expérience complète, ou la version sonore sans 3D.
+   *
+   * Posé AVANT d'embarquer et constant ensuite : ce n'est pas un réglage
+   * d'affichage qu'on pousse en cours de trajet comme la qualité vidéo, c'est
+   * le choix de ce qu'on lance - deux racines de rendu différentes, deux
+   * boucles d'images différentes. Changer d'avis se fait en revenant au menu.
+   */
+  mode: GameMode;
+  /**
+   * Sous-titres à l'écran. Vrais par défaut dans la version sonore, où ils
+   * sont la seule façon de lire ce qui se dit ; disponibles aussi dans
+   * l'expérience complète, où ils doublent les annonces.
+   */
+  subtitles: boolean;
+  /**
+   * Le joueur a-t-il touché lui-même au réglage des sous-titres ?
+   *
+   * Tant que non, ils suivent la version choisie (allumés en sonore, éteints
+   * en complet). Dès qu'il en décide, son choix tient : changer de version ne
+   * doit pas rallumer un bandeau qu'il vient d'éteindre.
+   */
+  subtitlesPinned: boolean;
 
   /** Espèces en poche, en yens : ce qu'on glisse dans un monnayeur. */
   cash: number;
@@ -90,6 +114,8 @@ interface AppState {
 
   start: () => void;
   setLang: (l: Lang) => void;
+  setMode: (m: GameMode) => void;
+  setSubtitles: (b: boolean) => void;
   toggleMute: () => void;
   setVolume: (v: number) => void;
   setPhase: (p: Phase) => void;
@@ -119,6 +145,11 @@ const START_IC = 1480;
 const START_LANG = initialLang();
 applyDocumentLang(START_LANG);
 
+// La version demandée est connue avant tout montage : c'est elle qui décide
+// quel morceau de code sera téléchargé au clic sur « Monter à bord », et le
+// menu doit donc pouvoir l'afficher dès la première image.
+const START_MODE = initialMode();
+
 export const useStore = create<AppState>((set) => ({
   started: false,
   muted: false,
@@ -133,6 +164,12 @@ export const useStore = create<AppState>((set) => ({
   onPlatform: false,
   touch: false,
   lang: START_LANG,
+  mode: START_MODE,
+  // Dans la version sonore, ils sont l'image : allumés d'office. Dans
+  // l'expérience complète, la scène dit déjà où l'on est, et un bandeau de
+  // texte permanent lui passerait devant - éteints, à rallumer au HUD.
+  subtitles: START_MODE === 'audio',
+  subtitlesPinned: false,
   cash: START_CASH,
   // On monte déjà passé les portiques : c'est bien le cas de quelqu'un assis
   // dans la rame, et sortir en gare demandera donc de valider à la sortie.
@@ -156,6 +193,16 @@ export const useStore = create<AppState>((set) => ({
     applyDocumentLang(lang, true);
     set({ lang });
   },
+  setMode: (mode) => {
+    storeMode(mode);
+    // Comme la langue : le choix explicite devient partageable tel quel.
+    applyModeToUrl(mode);
+    // Les sous-titres suivent la version tant que le joueur ne les a pas
+    // réglés lui-même : passer en version sonore sans eux ouvrirait sur un
+    // écran qui ne dit rien de ce qu'on entend.
+    set((s) => ({ mode, subtitles: s.subtitlesPinned ? s.subtitles : mode === 'audio' }));
+  },
+  setSubtitles: (subtitles) => set({ subtitles, subtitlesPinned: true }),
   toggleMute: () => set((s) => ({ muted: !s.muted })),
   setVolume: (volume) => set({ volume }),
   setPhase: (phase) => set({ phase }),

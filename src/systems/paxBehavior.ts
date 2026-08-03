@@ -24,7 +24,7 @@
 // poids : silence du matin, rire du vendredi soir, bras au corps quand c'est
 // bondé, regards vers les portes à quai.
 
-import { rng } from '../textures/procedural';
+import { rng } from '../data/rng';
 import {
   PAX_ACTIONS,
   type ActionWhere,

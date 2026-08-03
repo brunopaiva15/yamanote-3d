@@ -28,6 +28,7 @@ import type { Utterance } from '../data/announcements';
 import { announcementClipDuration, announcementClipPath } from '../data/announcementClips';
 import { useStore } from '../store';
 import { audioManager, paVoiceClose, paVoiceOpen, type VoiceBus } from './audioEngine';
+import { clearSpeech, showSpeech } from './subtitles';
 
 /** Qui parle : la sono de la rame, ou celle de la gare. */
 export type SpeechChannel = 'cabin' | 'platform';
@@ -47,7 +48,15 @@ const BUS: Record<SpeechChannel, VoiceBus> = {
 };
 
 type QueueItem =
-  | { kind: 'clip'; path: string; text: string; tries: number; dur: number }
+  | {
+      kind: 'clip';
+      path: string;
+      text: string;
+      /** Langue du clip : c'est elle qui donne la fonte et la césure du sous-titre. */
+      lang: Utterance['lang'];
+      tries: number;
+      dur: number;
+    }
   | { kind: 'pause'; ms: number };
 
 /**
@@ -151,11 +160,15 @@ function playClipItem(channel: SpeechChannel, item: QueueItem & { kind: 'clip' }
   ch.currentClipPath = item.path;
   ch.currentDur = item.dur;
   ch.currentStart = nowS();
+  // Le sous-titre naît et meurt avec le clip, ici et nulle part ailleurs : c'est
+  // ce qui garantit qu'il ne peut pas dire autre chose que ce qui est joué.
+  showSpeech(channel, item.text, item.lang);
   const g = ch.generation;
   void audioManager.playOnce(item.path, BUS[channel]).then((played) => {
     if (g !== ch.generation) return;
     ch.currentClipPath = null;
     ch.speaking = false;
+    clearSpeech(channel);
     if (!played && item.tries < CLIP_RETRIES) {
       ch.retryId = window.setTimeout(() => {
         ch.retryId = 0;
@@ -201,6 +214,7 @@ export function say(
       kind: 'clip',
       path: clip,
       text: item.text,
+      lang: item.lang,
       tries: 0,
       dur: announcementClipDuration(item.lang, item.text, item.voice) ?? 0,
     });
@@ -266,6 +280,9 @@ export function cancelSpeech(channel?: SpeechChannel): void {
     }
     ch.currentDur = 0;
     ch.speaking = false;
+    // Une annonce coupée n'a plus rien à dire : le sous-titre part avec elle,
+    // sinon il resterait à l'écran pour une voix qui ne reviendra pas.
+    clearSpeech(c);
     closeLine(c);
   }
 }

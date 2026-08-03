@@ -2,7 +2,7 @@
 // Les systèmes de rame et de quai appellent resolveMotion() chaque frame ;
 // aucun dialogue : uniquement des gestes silencieux crédibles.
 
-import * as THREE from 'three';
+import { clamp } from './vec3';
 import type { PaxAction } from '../data/paxActions';
 import { ACTION_BY_ID } from '../data/paxActions';
 import { CONFIG } from '../data/config';
@@ -56,7 +56,7 @@ export interface MotionContext {
 function clampYaw(d: number): number {
   while (d > Math.PI) d -= Math.PI * 2;
   while (d < -Math.PI) d += Math.PI * 2;
-  return THREE.MathUtils.clamp(d, -1.15, 1.15);
+  return clamp(d, -1.15, 1.15);
 }
 
 export function headYawToward(ctx: MotionContext, x: number, z: number): number {
@@ -125,7 +125,7 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
     case 'stare':
       return set(
         headYawToward(ctx, ctx.playerX, ctx.playerZ),
-        THREE.MathUtils.clamp((1.35 - ctx.playerY) * 0.3, -0.3, 0.25),
+        clamp((1.35 - ctx.playerY) * 0.3, -0.3, 0.25),
       );
     case 'chat':
     case 'sideChat':
@@ -487,7 +487,7 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       if (t < 0.9) {
         return set(
           headYawToward(ctx, ctx.playerX, ctx.playerZ),
-          THREE.MathUtils.clamp((1.35 - ctx.playerY) * 0.25, -0.2, 0.2),
+          clamp((1.35 - ctx.playerY) * 0.25, -0.2, 0.2),
         );
       }
       return set(ctx.lookYawTarget || 0.4, 0.05);
@@ -507,7 +507,7 @@ export function resolveMotion(ctx: MotionContext): MotionTargets {
       // hochements et le léger buste en avant de quelqu'un qui parle. Le
       // rythme est celui d'une phrase, pas d'un tic - deux temps par seconde.
       const yaw = headYawToward(ctx, ctx.playerX, ctx.playerZ);
-      const pitch = THREE.MathUtils.clamp((1.35 - ctx.playerY) * 0.32, -0.28, 0.3);
+      const pitch = clamp((1.35 - ctx.playerY) * 0.32, -0.28, 0.3);
       const beat = Math.sin(t * 5.2);
       return set(
         yaw + Math.sin(t * 1.7) * 0.05,

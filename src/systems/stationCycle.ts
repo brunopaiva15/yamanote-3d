@@ -52,6 +52,7 @@ import {
 } from './doorMotion';
 import * as audio from './audioEngine';
 import { cancelSpeech, say } from './speech';
+import { soundCue } from './subtitles';
 import {
   paAgentMessage,
   paAlightFirst,
@@ -286,6 +287,10 @@ export function beginPowerOutage(): void {
   em.reason = 0;
   outageCoastFor = OUTAGE_COAST_MIN + Math.random() * (OUTAGE_COAST_MAX - OUTAGE_COAST_MIN);
   for (const key of OUTAGE_KEYS) fired.delete(key);
+  // Ce qui s'entend d'une coupure, c'est le SILENCE : la climatisation qui
+  // tombe, l'onduleur qui s'éteint. Sans image ni son à nommer, la ligne de
+  // sous-titre est la seule chose qui le dise.
+  soundCue('powerOutage');
   cutPower(carPower);
   // Une annonce en cours ne se termine pas : l'amplificateur s'éteint au
   // milieu du mot. Seulement celle de la rame - la gare, elle, a son propre
@@ -397,6 +402,9 @@ export function beginEmergencyStop(): void {
   // L'urgence coupe l'annonce en cours, comme en vrai. Seulement celle de la
   // rame : la sono d'une gare qu'on n'a pas atteinte ne s'interrompt pas.
   cancelSpeech('cabin');
+  // Le coup de frein s'entend avant qu'on l'annonce : c'est un son, il a droit
+  // à sa ligne comme le tonnerre ou la mélodie.
+  soundCue('emergencyBrake');
   say(emergencyBrakeAnnouncement());
   // La ligne prend du retard, et les quais le diront à la prochaine attente.
   notifyOnboardEmergency(em.reason, useStore.getState().loopDirection, useStore.getState().index, runtime.clockMin, runtime.stopSequence);
