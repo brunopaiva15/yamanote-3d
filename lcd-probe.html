@@ -36,7 +36,11 @@
   <body>
     <div id="out"></div>
     <script type="module">
-      import { makeScreen, drawRoute, drawLoopMap, drawTransfers, drawApproach } from '/src/three/lineScreen.ts';
+      import {
+        drawRoute, drawLoopMap, drawTransfers, drawApproach,
+        drawEmergencyInfo, drawOutageInfo, drawTrafficInfo, drawSecurityNotice,
+      } from '/src/three/lineScreen.ts';
+      import { makeScreen } from '/src/three/screenSurface.ts';
 
       const q = new URLSearchParams(location.search);
       const station = Number(q.get('station') ?? 0);
@@ -45,6 +49,11 @@
       const dir = q.get('dir') === 'outer' ? 'outer' : 'inner';
       const countdown = Number(q.get('countdown') ?? 0);
       const status = phase === 'dwell' ? 'now' : phase === 'brake' ? 'soon' : 'next';
+
+      const NOTICE = {
+        lineJp: '高崎線', lineEn: 'Takasaki Line',
+        reasonJp: '踏切安全確認', reasonEn: 'a crossing safety check',
+      };
 
       const views = [
         ['zoomJP', (s) => drawRoute(s, station, phase, countdown, clock, status, 'jp', dir)],
@@ -57,6 +66,12 @@
         ['approach2', (s) => drawApproach(s, station, clock, 'jp', true, dir, 2)],
         ['approach-other', (s) => drawApproach(s, station, clock, 'jp', false, dir, 2)],
         ['approachEN', (s) => drawApproach(s, station, clock, 'en', true, dir, 2, status)],
+        ['disruption', (s) => drawEmergencyInfo(s)],
+        ['outage', (s) => drawOutageInfo(s)],
+        ['trafficJP', (s) => drawTrafficInfo(s, station, clock, 'jp', NOTICE, dir)],
+        ['trafficEN', (s) => drawTrafficInfo(s, station, clock, 'en', NOTICE, dir)],
+        ['securityJP', (s) => drawSecurityNotice(s, station, clock, 'jp', dir)],
+        ['securityEN', (s) => drawSecurityNotice(s, station, clock, 'en', dir)],
       ];
 
       const out = document.getElementById('out');

@@ -19,10 +19,9 @@ import { CLOSE_ANNOUNCE_LEAD, dwellDuration } from '../systems/stationCycle';
 import {
   drawApproach,
   drawBackpackManner,
-  drawDelayCert,
   drawEmergencyInfo,
   drawHeadphoneManner,
-  drawLineStatus,
+  drawSecurityNotice,
   drawLoopMap,
   drawNextStationLang,
   drawOutageInfo,
@@ -55,10 +54,8 @@ export type LineScreenState =
   | 'nextZH' | 'nextKO'
   | 'transfers' | 'priority' | 'manner' | 'safety'
   | 'trafficJP' | 'trafficEN'
-  | 'statusJP' | 'statusEN'
-  | 'certJP' | 'certEN'
-  | 'emergencyJP' | 'emergencyEN'
-  | 'outageJP' | 'outageEN';
+  | 'securityJP' | 'securityEN'
+  | 'emergency' | 'outage';
 
 export interface LineScreenFrame {
   state: LineScreenState;
@@ -105,8 +102,9 @@ export function lineScreenFrame(): LineScreenFrame {
   // dalle est simplement éteinte et rien n'est dessiné.
   if (emergency.stage !== 'none') {
     status = 'next';
-    const kind = emergency.kind === 'outage' ? 'outage' : 'emergency';
-    state = (tick % 2 === 0 ? `${kind}JP` : `${kind}EN`) as LineScreenState;
+    // Plus d'alternance de langues : l'écran de perturbation les porte toutes
+    // les quatre à la fois, il n'a donc qu'un seul état.
+    state = emergency.kind === 'outage' ? 'outage' : 'emergency';
   } else if (phase === 'brake') {
     status = 'soon';
     // À l'approche, l'écran ne montre QUE le plan du quai, et il alterne ses
@@ -132,17 +130,21 @@ export function lineScreenFrame(): LineScreenFrame {
     // interruption planifiée) restent non rendus : la simulation n'a pas ces
     // incidents, les afficher serait annoncer au voyageur quelque chose qui
     // n'arrive pas.
+    //
+    // L'information trafic tient sur DEUX pages qui se suivent : la japonaise
+    // puis sa traduction en tableau. Les séparer dans la rotation ferait
+    // attendre un tour complet pour la moitié de l'avis.
     const rotation: LineScreenState[] = notice
       ? [
           'loopJP', 'zoomJP', 'nextZH', 'nextKO', 'transfers',
-          'trafficJP', 'statusJP', 'certJP',
-          'loopEN', 'zoomEN',
-          'trafficEN', 'statusEN', 'certEN',
+          'trafficJP', 'trafficEN',
+          'loopEN', 'zoomEN', 'securityJP', 'securityEN',
           'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
         ]
       : [
           'loopJP', 'zoomJP', 'nextZH', 'nextKO', 'transfers',
-          'loopEN', 'zoomEN', 'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
+          'loopEN', 'zoomEN', 'securityJP', 'securityEN',
+          'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
         ];
     state = rotation[tick % rotation.length];
   }
@@ -237,31 +239,17 @@ export function paintLineScreen(
       if (notice) drawTrafficInfo(s, index, clock, 'en', notice, dir);
       else drawLoopMap(s, index, phase, countdown, clock, status, 'en', dir, anim);
       break;
-    case 'statusJP':
-      if (notice) drawLineStatus(s, index, clock, 'jp', notice, dir);
-      else drawLoopMap(s, index, phase, countdown, clock, status, 'jp', dir, anim);
+    case 'securityJP':
+      drawSecurityNotice(s, index, clock, 'jp', dir);
       break;
-    case 'statusEN':
-      if (notice) drawLineStatus(s, index, clock, 'en', notice, dir);
-      else drawLoopMap(s, index, phase, countdown, clock, status, 'en', dir, anim);
+    case 'securityEN':
+      drawSecurityNotice(s, index, clock, 'en', dir);
       break;
-    case 'certJP':
-      drawDelayCert(s, index, clock, 'jp', dir);
+    case 'emergency':
+      drawEmergencyInfo(s);
       break;
-    case 'certEN':
-      drawDelayCert(s, index, clock, 'en', dir);
-      break;
-    case 'emergencyJP':
-      drawEmergencyInfo(s, index, clock, 'jp', f.emergencyReason, dir);
-      break;
-    case 'emergencyEN':
-      drawEmergencyInfo(s, index, clock, 'en', f.emergencyReason, dir);
-      break;
-    case 'outageJP':
-      drawOutageInfo(s, index, clock, 'jp', dir);
-      break;
-    case 'outageEN':
-      drawOutageInfo(s, index, clock, 'en', dir);
+    case 'outage':
+      drawOutageInfo(s);
       break;
     case 'loopJP':
       drawLoopMap(s, index, phase, countdown, clock, status, 'jp', dir, anim);

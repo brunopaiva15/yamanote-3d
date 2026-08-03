@@ -13,7 +13,6 @@
 // perturbée - information trafic, état des autres lignes et certificat de
 // retard. L'écran gauche, lui, ne montre que des publicités.
 
-import { EMERGENCY_REASONS } from '../data/announcements';
 import { CONFIG } from '../data/config';
 import { CONSIST, E235, PLAYER_CAR, carZ } from '../data/e235';
 import { stationAtHop } from '../data/loop';
@@ -1436,7 +1435,10 @@ const doorPhase = (anim: number): number => anim % DOOR_PHASES.length;
 
 /** Le pictogramme de portes du bandeau bas, à la phase `anim`. */
 function drawDoorGlyph(g: CanvasRenderingContext2D, mine: boolean, anim: number): void {
-  const phase = doorPhase(anim);
+  // De l'autre côté, les vantaux ne bougent pas : ils NE S'OUVRIRONT PAS, et
+  // les animer serait dire le contraire du texte. Ils restent fermés, barrés
+  // d'un disque rouge - le seul signe qui se lit sans lire.
+  const phase = mine ? doorPhase(anim) : 0;
   const off = DOOR_PHASES[phase];
   const cx = 150;
   const top = 333;
@@ -1480,6 +1482,16 @@ function drawDoorGlyph(g: CanvasRenderingContext2D, mine: boolean, anim: number)
     g.fillRect(lx + 6, top + 5, leafW - 12, 47);
     g.fillStyle = '#e8d022';
     g.fillRect(sgn < 0 ? inner - 4 : inner, top, 4, bot - top);
+  }
+
+  if (!mine) {
+    const my = (top + bot) / 2;
+    g.fillStyle = '#d0202a';
+    g.beginPath();
+    g.arc(cx, my, 27, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#ffffff';
+    g.fillRect(cx - 18, my - 5, 36, 10);
   }
 
   // Flèches : elles suivent les vantaux, et ne sortent que du côté qui ouvre.
@@ -1912,6 +1924,52 @@ export function trafficNotice(clockMin: number): TrafficNotice | null {
   return { lineJp: line.jp, lineEn: line.en, reasonJp, reasonEn };
 }
 
+/**
+ * Bande de titre commune aux deux pages d'information trafic : « 運行情報 »
+ * suivi de sa traduction, centré sur fond blanc, filet sous le tout.
+ */
+function drawInfoBand(g: CanvasRenderingContext2D, w: number): number {
+  const bh = 30;
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, HEADER_H, w, bh);
+  g.fillStyle = '#1a1a1a';
+  g.textAlign = 'center';
+  g.font = `17px ${JP_FONT}`;
+  g.fillText('運行情報　Train Information', w / 2, HEADER_H + 21);
+  g.textAlign = 'left';
+  g.strokeStyle = '#9a9a9a';
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(0, HEADER_H + bh - 0.5);
+  g.lineTo(w, HEADER_H + bh - 0.5);
+  g.stroke();
+  return HEADER_H + bh;
+}
+
+/** Cartouche de pagination, en bas à droite : l'avis tient sur deux écrans. */
+function drawPageBox(g: CanvasRenderingContext2D, w: number, h: number, page: string): void {
+  g.fillStyle = '#ffffff';
+  g.strokeStyle = '#3a3a3a';
+  g.lineWidth = 1.4;
+  g.beginPath();
+  g.rect(w - 74, h - 34, 60, 24);
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#1a1a1a';
+  g.textAlign = 'center';
+  g.font = `16px ${JP_FONT}`;
+  g.fillText(page, w - 44, h - 16);
+  g.textAlign = 'left';
+}
+
+/**
+ * Information trafic : DEUX pages, et c'est ce qui la distingue de tout le
+ * reste du cycle. La première dit l'avis en japonais courant, la seconde le
+ * REND EN TABLEAU anglais - ligne, sens, état, cause - parce qu'un avis rédigé
+ * ne se traduit pas bien en vitesse, alors qu'un tableau se lit d'un coup
+ * d'œil même quand on ne parle pas la langue. Le cartouche « 1/2 » et « 2/2 »
+ * en bas à droite est ce qui dit au voyageur d'attendre la suite.
+ */
 export function drawTrafficInfo(
   s: ScreenSurface,
   index: number,
@@ -1921,221 +1979,99 @@ export function drawTrafficInfo(
   dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
-  g.fillStyle = '#f4f6f7';
-  g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', lang, dir);
+  const top = (() => {
+    g.fillStyle = '#dcdcdc';
+    g.fillRect(0, 0, w, h);
+    drawHeader(g, w, index, clock, 'now', lang, dir);
+    return drawInfoBand(g, w);
+  })();
 
-  // Triangle d'avertissement jaune.
-  const tx = 96;
-  const ty = h * 0.52;
-  g.fillStyle = '#f2c521';
-  g.strokeStyle = '#3a3418';
-  g.lineWidth = 4;
-  g.beginPath();
-  g.moveTo(tx, ty - 52);
-  g.lineTo(tx + 56, ty + 44);
-  g.lineTo(tx - 56, ty + 44);
-  g.closePath();
-  g.fill();
-  g.stroke();
-  g.fillStyle = '#221f10';
-  g.textAlign = 'center';
-  g.font = `bold 56px ${JP_FONT}`;
-  g.fillText('!', tx, ty + 30);
-
-  g.textAlign = 'left';
-  g.fillStyle = '#14181c';
-  g.font = `bold 40px ${JP_FONT}`;
-  g.fillText(lang === 'jp' ? '運行情報' : 'Traffic Information', 190, ty - 26);
-  g.font = `22px ${JP_FONT}`;
-  g.fillStyle = '#26303a';
   if (lang === 'jp') {
-    g.fillText(`${notice.lineJp}は、${notice.reasonJp}のため、`, 190, ty + 14);
-    g.fillText('遅れが出ています。', 190, ty + 46);
-    g.fillStyle = '#2f8f4e';
-    g.font = `20px ${JP_FONT}`;
-    g.fillText('山手線は平常どおり運転しています。', 190, ty + 84);
-  } else {
-    fitText(g, `The ${notice.lineEn} is delayed`, w - 210, 22, '');
-    g.fillText(`The ${notice.lineEn} is delayed`, 190, ty + 14);
-    g.fillText(`due to ${notice.reasonEn}.`, 190, ty + 46);
-    g.fillStyle = '#2f8f4e';
-    g.font = `20px ${JP_FONT}`;
-    g.fillText('The Yamanote Line is operating on schedule.', 190, ty + 84);
-  }
-}
-
-// --- Arrêt d'urgence (急停車) ---
-// Affiché en boucle JP/EN tant que l'arrêt d'urgence est actif : cadre rouge,
-// pastille d'alerte, motif de l'arrêt - c'est l'écran rouge du vrai afficheur
-// quand la rame elle-même est immobilisée.
-export function drawEmergencyInfo(
-  s: ScreenSurface,
-  index: number,
-  clock: string,
-  lang: ScreenLang,
-  reason: number,
-  dir: LoopDirection,
-): void {
-  const { g, w, h } = s;
-  const r = EMERGENCY_REASONS[((reason % EMERGENCY_REASONS.length) + EMERGENCY_REASONS.length) % EMERGENCY_REASONS.length];
-  g.fillStyle = '#f4f6f7';
-  g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', lang, dir);
-
-  // Cadre rouge plein écran sous le bandeau.
-  g.strokeStyle = '#c8362c';
-  g.lineWidth = 5;
-  g.beginPath();
-  g.roundRect(18, HEADER_H + 16, w - 36, h - HEADER_H - 32, 10);
-  g.stroke();
-
-  // Pastille d'alerte + titre rouge.
-  const ty = HEADER_H + 62;
-  g.fillStyle = '#c8362c';
-  g.beginPath();
-  g.arc(66, ty - 10, 21, 0, Math.PI * 2);
-  g.fill();
-  g.fillStyle = '#ffffff';
-  g.textAlign = 'center';
-  g.font = `bold 30px ${JP_FONT}`;
-  g.fillText('!', 66, ty);
-  g.textAlign = 'left';
-  g.fillStyle = '#c8362c';
-  g.font = `bold 34px ${JP_FONT}`;
-  g.fillText(lang === 'jp' ? '運転を見合わせています' : 'Service Suspended', 104, ty);
-
-  // Motif et consignes.
-  g.fillStyle = '#26303a';
-  g.font = `23px ${JP_FONT}`;
-  if (lang === 'jp') {
-    g.fillText(`ただいま、${r.jp}のため、急停車いたしました。`, 48, ty + 56);
-    g.fillText('安全の確認を行っています。運転再開まで、', 48, ty + 92);
-    g.fillText('いましばらくお待ちください。', 48, ty + 128);
-  } else {
-    g.fillText(`This train has made an emergency stop`, 48, ty + 56);
-    g.fillText(`due to ${r.en}. Safety checks are under way.`, 48, ty + 92);
-    g.fillText('We apologize for the inconvenience.', 48, ty + 128);
-  }
-}
-
-// --- Coupure de caténaire (停電) ---
-// Le pendant du précédent, et il ne s'affiche JAMAIS pendant la coupure : une
-// dalle sans courant ne montre rien. Il n'apparaît qu'au retour de la tension,
-// pendant que la rame se relance - c'est-à-dire au moment exact où l'écran
-// rallumé a quelque chose à rattraper.
-export function drawOutageInfo(
-  s: ScreenSurface,
-  index: number,
-  clock: string,
-  lang: ScreenLang,
-  dir: LoopDirection,
-): void {
-  const { g, w, h } = s;
-  g.fillStyle = '#f4f6f7';
-  g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', lang, dir);
-
-  g.strokeStyle = '#c8362c';
-  g.lineWidth = 5;
-  g.beginPath();
-  g.roundRect(18, HEADER_H + 16, w - 36, h - HEADER_H - 32, 10);
-  g.stroke();
-
-  const ty = HEADER_H + 62;
-  g.fillStyle = '#c8362c';
-  g.beginPath();
-  g.arc(66, ty - 10, 21, 0, Math.PI * 2);
-  g.fill();
-  g.fillStyle = '#ffffff';
-  g.textAlign = 'center';
-  g.font = `bold 30px ${JP_FONT}`;
-  g.fillText('!', 66, ty);
-  g.textAlign = 'left';
-  g.fillStyle = '#c8362c';
-  g.font = `bold 34px ${JP_FONT}`;
-  g.fillText(lang === 'jp' ? '停電による停車' : 'Stopped: Power Failure', 104, ty);
-
-  g.fillStyle = '#26303a';
-  g.font = `23px ${JP_FONT}`;
-  if (lang === 'jp') {
-    g.fillText('架線の停電のため、停車しておりました。', 48, ty + 56);
-    g.fillText('電力が復旧いたしましたので、', 48, ty + 92);
-    g.fillText('まもなく運転を再開いたします。', 48, ty + 128);
-  } else {
-    g.fillText('This train was stopped by a power failure', 48, ty + 56);
-    g.fillText('on the overhead line. Power has been restored', 48, ty + 92);
-    g.fillText('and service will resume shortly.', 48, ty + 128);
-  }
-}
-
-// --- État des autres lignes (他線区の運行情報) ---
-// La liste ligne par ligne du vrai afficheur : pastille de couleur, nom, et
-// statut - la ligne perturbée en ambre, les autres « 平常運転 ».
-export function drawLineStatus(
-  s: ScreenSurface,
-  index: number,
-  clock: string,
-  lang: ScreenLang,
-  notice: TrafficNotice,
-  dir: LoopDirection,
-): void {
-  const { g, w, h } = s;
-  g.fillStyle = '#f4f6f7';
-  g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', lang, dir);
-
-  g.fillStyle = '#26303a';
-  g.fillRect(0, HEADER_H, w, 40);
-  g.fillStyle = '#ffffff';
-  g.font = `bold 22px ${JP_FONT}`;
-  g.textAlign = 'left';
-  g.fillText(lang === 'jp' ? '他線区の運行情報' : 'Service Status - Other Lines', 16, HEADER_H + 29);
-
-  // La Yamanote d'abord, puis la ligne perturbée, puis les autres.
-  const rows: { jp: string; en: string; color: string; delayed: boolean }[] = [
-    { jp: '山手線', en: 'Yamanote Line', color: YAMANOTE_GREEN, delayed: false },
-    ...OTHER_LINES
-      .slice()
-      .sort((a, b) => Number(b.jp === notice.lineJp) - Number(a.jp === notice.lineJp))
-      .slice(0, 5)
-      .map((l) => ({ ...l, delayed: l.jp === notice.lineJp })),
-  ];
-
-  let y = HEADER_H + 70;
-  for (const row of rows) {
-    g.fillStyle = row.color;
-    g.beginPath();
-    g.roundRect(20, y - 20, 26, 26, 5);
-    g.fill();
-    g.fillStyle = '#26303a';
-    g.font = `22px ${JP_FONT}`;
-    fitText(g, lang === 'jp' ? row.jp : row.en, w - 300, 22, '');
-    g.fillText(lang === 'jp' ? row.jp : row.en, 60, y);
-    g.textAlign = 'right';
-    if (row.delayed) {
-      g.fillStyle = '#e8a020';
-      g.beginPath();
-      g.roundRect(w - 170, y - 24, 150, 32, 6);
-      g.fill();
-      g.fillStyle = '#241c08';
-      g.font = `bold 20px ${JP_FONT}`;
-      g.fillText(lang === 'jp' ? '遅延' : 'Delayed', w - 36, y);
-    } else {
-      g.fillStyle = '#2f8f4e';
-      g.font = `20px ${JP_FONT}`;
-      g.fillText(lang === 'jp' ? '平常運転' : 'On schedule', w - 24, y);
-    }
+    g.fillStyle = '#141414';
+    g.font = `bold 21px ${JP_FONT}`;
     g.textAlign = 'left';
-    y += 37;
+    g.fillText(`【${notice.lineJp}　遅延】`, 22, top + 38);
+    g.font = `20px ${JP_FONT}`;
+    const body = `${notice.lineJp}は、${notice.reasonJp}の影響で、上下線の一部列車に遅れがでています。`;
+    // Repli à la largeur de l'écran : le texte est composé au fil de l'eau,
+    // pas coupé à un nombre de caractères fixe.
+    let rest = body;
+    let y = top + 70;
+    while (rest && y < h - 46) {
+      let cut = rest.length;
+      while (cut > 1 && g.measureText(rest.slice(0, cut)).width > w - 44) cut--;
+      g.fillText(rest.slice(0, cut), 22, y);
+      rest = rest.slice(cut);
+      y += 30;
+    }
+    drawPageBox(g, w, h, '1/2');
+    return;
+  }
+
+  // Page anglaise : le tableau. Colonne d'étiquettes bleutée, colonne de
+  // valeurs claire, filets fins - la grille EST la traduction.
+  const rows: [string, string][] = [
+    ['Line', notice.lineEn],
+    ['Direction', 'Inbound and outbound lines'],
+    ['Status', 'Delay'],
+    ['Cause', notice.reasonEn.replace(/^an? /, '')],
+  ];
+  const rh = 30;
+  const labelW = 128;
+  rows.forEach(([label, value], i) => {
+    const y = top + 16 + i * rh;
+    g.fillStyle = '#92a9d6';
+    g.fillRect(14, y, labelW, rh);
+    g.fillStyle = '#e9e9e9';
+    g.fillRect(14 + labelW, y, w - 28 - labelW, rh);
+    g.strokeStyle = '#5a5a5a';
+    g.lineWidth = 1;
+    g.strokeRect(14.5, y + 0.5, labelW, rh);
+    g.strokeRect(14.5 + labelW, y + 0.5, w - 28 - labelW, rh);
+    g.fillStyle = '#141414';
+    g.font = `18px ${JP_FONT}`;
+    g.textAlign = 'left';
+    g.fillText(label, 24, y + 21);
+    fitText(g, value, w - 52 - labelW, 18, '');
+    g.fillText(value, 24 + labelW, y + 21);
+  });
+  drawPageBox(g, w, h, '2/2');
+}
+
+// --- Avis de vigilance renforcée (特別警戒) ------------------------------
+// Affiché entre certaines gares seulement. Panneau blanc cerné de ROUGE, titre
+// rouge souligné, et dans le corps quelques membres de phrase passés au rouge :
+// ce sont eux qu'on lit quand on ne lit pas tout, et c'est exactement pour ça
+// qu'ils sont détachés.
+type Run = [string, boolean];
+
+function drawRuns(g: CanvasRenderingContext2D, runs: Run[], x: number, y: number): void {
+  let cx = x;
+  for (const [text, hot] of runs) {
+    g.fillStyle = hot ? '#d0202a' : '#141414';
+    g.fillText(text, cx, y);
+    cx += g.measureText(text).width;
   }
 }
 
-// --- Certificat de retard (遅延証明書) ---
-// L'écran renvoie le voyageur vers le site de l'exploitant de la ligne
-// perturbée, sans nommer aucune compagnie : le certificat existe chez tous les
-// opérateurs de Tokyo, l'écran suit donc n'importe quelle perturbation.
-export function drawDelayCert(
+const SECURITY_JP: Run[][] = [
+  [['ただいま、JR東日本グループでは、警察と連携し、', false], ['特別警戒', true], ['を実施して', false]],
+  [['おります。防犯カメラを駅構内に設置しているほか、社員および警備員による', false]],
+  [['駅構内・列車内の巡回を強化して、お客さまに安心してご利用いただけるよう', false]],
+  [['に努めております。', false]],
+  [['駅構内で', false], ['不審物や気がかりなこと', true], ['がございましたら、お近くの駅係員、車掌', false]],
+  [['または警備員までお知らせください。お客様のご協力をお願いいたします。', false]],
+];
+
+const SECURITY_EN: Run[][] = [
+  [['JR East Group and the Police Department together are', false]],
+  [['now on ', false], ['a high alert.', true]],
+  [['If you find ', false], ['something suspicious', true], [' at a station or on a train,', false]],
+  [['please inform station staff, conductors or security guards', false]],
+  [['as soon as possible.', false]],
+];
+
+export function drawSecurityNotice(
   s: ScreenSurface,
   index: number,
   clock: string,
@@ -2143,50 +2079,195 @@ export function drawDelayCert(
   dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
-  g.fillStyle = '#f4f6f7';
+  g.fillStyle = '#ffffff';
   g.fillRect(0, 0, w, h);
   drawHeader(g, w, index, clock, 'next', lang, dir);
 
-  // Pictogramme : feuille à coin plié, marquée 証.
-  const px = 110;
-  const py = HEADER_H + (h - HEADER_H) * 0.5;
-  g.fillStyle = '#ffffff';
-  g.strokeStyle = '#5b6a76';
-  g.lineWidth = 4;
-  g.beginPath();
-  g.moveTo(px - 44, py - 62);
-  g.lineTo(px + 20, py - 62);
-  g.lineTo(px + 44, py - 38);
-  g.lineTo(px + 44, py + 62);
-  g.lineTo(px - 44, py + 62);
-  g.closePath();
-  g.fill();
-  g.stroke();
-  g.beginPath();
-  g.moveTo(px + 20, py - 62);
-  g.lineTo(px + 20, py - 38);
-  g.lineTo(px + 44, py - 38);
-  g.stroke();
-  g.fillStyle = '#1f5fa8';
+  const top = HEADER_H + 4;
+  g.strokeStyle = '#e00b18';
+  g.lineWidth = 7;
+  g.strokeRect(6.5, top + 3.5, w - 13, h - top - 10);
+
+  const jp = lang === 'jp';
   g.textAlign = 'center';
-  g.font = `bold 44px ${JP_FONT}`;
-  g.fillText('証', px, py + 26);
+  g.fillStyle = '#d0202a';
+  g.font = `bold ${jp ? 24 : 30}px ${JP_FONT}`;
+  const title = jp ? '特別警戒実施のお知らせ' : 'Security Notice';
+  g.fillText(title, w / 2, top + 40);
+  // Soulignement du titre, un peu plus large que lui.
+  const tw = g.measureText(title).width;
+  g.strokeStyle = '#d0202a';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(w / 2 - tw / 2 - 10, top + 48);
+  g.lineTo(w / 2 + tw / 2 + 10, top + 48);
+  g.stroke();
 
   g.textAlign = 'left';
-  g.fillStyle = '#14181c';
-  g.font = `bold 36px ${JP_FONT}`;
-  g.fillText(lang === 'jp' ? '遅延証明書のご案内' : 'Delay Certificates', 200, py - 30);
-  g.fillStyle = '#26303a';
-  g.font = `22px ${JP_FONT}`;
-  if (lang === 'jp') {
-    g.fillText('遅延証明書は、各鉄道会社のホームページで', 200, py + 12);
-    g.fillText('発行しています。', 200, py + 44);
-  } else {
-    g.fillText('Delay certificates are issued on the', 200, py + 12);
-    g.fillText("operating company's website.", 200, py + 44);
-  }
-  g.fillStyle = '#5c646c';
-  g.font = `18px ${JP_FONT}`;
-  g.fillText(lang === 'jp' ? '詳しくは駅係員まで' : 'Ask station staff for details', 200, py + 82);
+  g.font = `${jp ? 19 : 22}px ${JP_FONT}`;
+  const runs = jp ? SECURITY_JP : SECURITY_EN;
+  runs.forEach((line, i) => drawRuns(g, line, 26, top + 82 + i * (jp ? 27 : 32)));
 }
 
+// --- Notification de perturbation (運転見合わせ) -------------------------
+//
+// Le seul écran du cycle qui n'a PAS de bandeau : quand la rame est
+// immobilisée, l'afficheur abandonne tout - direction, heure, numéro de
+// voiture, plan de ligne - et prend la dalle entière. Rien de ce qu'il montrait
+// une seconde plus tôt n'a encore de sens : il n'y a plus de prochaine gare, il
+// n'y a plus de minutes.
+//
+// Et il ne fait plus tourner les langues : les QUATRE tiennent à l'écran en
+// même temps. Un voyageur bloqué ne va pas attendre son tour de langue pour
+// savoir pourquoi le train ne repart pas - c'est exactement l'information qu'il
+// faut donner à tout le monde d'un coup.
+//
+// Mise en page : bandeau haut plus clair pour le japonais, avec le triangle
+// d'avertissement à gauche ; bandeau bas plus sombre pour l'anglais, le chinois
+// et le coréen, en petit corps sur deux lignes chacun.
+// Vert foncé en haut, noir en bas : la capture qui a servi de modèle était
+// désaturée, et un gris sur gris se lisait comme un écran en panne plutôt que
+// comme un avis. C'est le seul écran du cycle qui abandonne le fond clair.
+const NOTICE_TOP_BG = '#0d6a3d';
+const NOTICE_BOT_BG = '#0a0a0a';
+const NOTICE_SPLIT = 212;
+
+interface DisruptionNotice {
+  jp: string[];
+  en: string[];
+  zh: string[];
+  ko: string[];
+}
+
+/**
+ * Triangle d'avertissement : jaune cerné de noir, angles arrondis, point
+ * d'exclamation dessiné à la main plutôt que composé - la barre est un trapèze
+ * qui s'affine vers le bas, comme sur le pictogramme normalisé, et aucune fonte
+ * ne rend ça avec un « ! ».
+ *
+ * Le contour arrondi se trace en `arcTo` depuis le MILIEU du dernier côté :
+ * partir d'un sommet, ou viser le mauvais point de contrôle, ne donne pas un
+ * triangle aux angles cassés - ça donne une figure qui n'est plus un triangle
+ * du tout.
+ */
+function drawWarningTriangle(g: CanvasRenderingContext2D, cx: number, cy: number, half: number): void {
+  const hh = half * 1.214;
+  const r = half * 0.25;
+  const p: [number, number][] = [
+    [cx, cy - hh],
+    [cx + half, cy + hh * 0.776],
+    [cx - half, cy + hh * 0.776],
+  ];
+  g.beginPath();
+  g.moveTo((p[2][0] + p[0][0]) / 2, (p[2][1] + p[0][1]) / 2);
+  for (let i = 0; i < 3; i++) g.arcTo(p[i][0], p[i][1], p[(i + 1) % 3][0], p[(i + 1) % 3][1], r);
+  g.closePath();
+  g.fillStyle = '#f7d117';
+  g.fill();
+  g.strokeStyle = '#141414';
+  g.lineWidth = half * 0.157;
+  g.lineJoin = 'round';
+  g.stroke();
+
+  // Le « ! » : barre trapézoïdale puis pastille, toutes deux noires.
+  const top = cy - hh * 0.553;
+  const bot = cy + hh * 0.2;
+  g.fillStyle = '#141414';
+  g.beginPath();
+  g.moveTo(cx - half * 0.13, top);
+  g.lineTo(cx + half * 0.13, top);
+  g.lineTo(cx + half * 0.1, bot);
+  g.lineTo(cx - half * 0.1, bot);
+  g.closePath();
+  g.fill();
+  g.beginPath();
+  g.arc(cx, cy + hh * 0.447, half * 0.128, 0, Math.PI * 2);
+  g.fill();
+}
+
+/** Écran plein cadre de perturbation, en quatre langues d'un seul tenant. */
+function drawDisruptionNotice(s: ScreenSurface, n: DisruptionNotice): void {
+  const { g, w, h } = s;
+  g.fillStyle = NOTICE_TOP_BG;
+  g.fillRect(0, 0, w, NOTICE_SPLIT);
+  g.fillStyle = NOTICE_BOT_BG;
+  g.fillRect(0, NOTICE_SPLIT, w, h - NOTICE_SPLIT);
+
+  drawWarningTriangle(g, 103, 116, 70);
+
+  g.textAlign = 'left';
+  g.fillStyle = '#ffffff';
+  n.jp.forEach((line, i) => {
+    fitText(g, line, w - 226, 27, '');
+    g.fillText(line, 212, 86 + i * 36);
+  });
+
+  // Les trois autres langues se suivent sans titre : deux lignes chacune, et un
+  // blanc plus large entre les blocs qu'entre les lignes d'un même bloc - c'est
+  // tout ce qui les sépare, et ça suffit.
+  g.fillStyle = '#f2f2f2';
+  const blocks: [string[], number][] = [
+    [n.en, 252],
+    [n.zh, 321],
+    [n.ko, 380],
+  ];
+  for (const [lines, y0] of blocks) {
+    lines.forEach((line, i) => {
+      fitText(g, line, w - 44, 21, '');
+      g.fillText(line, 24, y0 + i * 27);
+    });
+  }
+}
+
+// Arrêt indéfini : le texte est celui de l'afficheur, mot pour mot. Il ne
+// nomme PAS le motif - la cause passe par l'annonce sonore, jamais par
+// l'écran, et l'écran ne promet pas d'heure de reprise qu'il ne tiendra pas.
+const NOTICE_SUSPENDED: DisruptionNotice = {
+  jp: [
+    'この電車はただいま運転を見合わせております。',
+    '現在のところ、運転再開の目処はたっておりません。',
+    'ご迷惑をおかけいたします。申し訳ございません。',
+  ],
+  en: [
+    'We are sorry to inform you that operation of this train has been stopped.',
+    'At present, it is unclear when operations will resume. Please excuse the delay.',
+  ],
+  zh: ['本次列车现在暂停运行。目前尚无法预测何时恢复运行。', '由此给您带来的不便，我们深表歉意。'],
+  ko: [
+    '이 열차는 현재 운행을 중단하고 있습니다. 운행 재개는 아직',
+    '예정되어 있지 않습니다. 불편을 끼쳐드려 대단히 죄송합니다.',
+  ],
+};
+
+// Retour de tension : même gabarit, mais celui-là annonce une reprise.
+const NOTICE_OUTAGE: DisruptionNotice = {
+  jp: [
+    'この電車は架線の停電のため停車しておりました。',
+    '電力が復旧いたしましたので、まもなく運転を再開いたします。',
+    'ご迷惑をおかけいたします。申し訳ございません。',
+  ],
+  en: [
+    'This train was stopped by a power failure on the overhead line.',
+    'Power has been restored and service will resume shortly.',
+  ],
+  zh: ['本次列车因接触网停电而停车。', '供电已恢复，列车即将恢复运行。'],
+  ko: ['이 열차는 전차선 정전으로 정차하였습니다.', '전력이 복구되어 곧 운행을 재개합니다.'],
+};
+
+/**
+ * Arrêt d'urgence (急停車) : la rame est immobilisée et ne sait pas quand elle
+ * repartira.
+ */
+export function drawEmergencyInfo(s: ScreenSurface): void {
+  drawDisruptionNotice(s, NOTICE_SUSPENDED);
+}
+
+/**
+ * Coupure de caténaire (停電). Il ne s'affiche JAMAIS pendant la coupure : une
+ * dalle sans courant ne montre rien. Il n'apparaît qu'au retour de la tension,
+ * pendant que la rame se relance - c'est-à-dire au moment exact où l'écran
+ * rallumé a quelque chose à rattraper.
+ */
+export function drawOutageInfo(s: ScreenSurface): void {
+  drawDisruptionNotice(s, NOTICE_OUTAGE);
+}
