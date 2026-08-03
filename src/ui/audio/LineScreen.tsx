@@ -157,8 +157,8 @@ export function LineScreen() {
     //
     // Le minuteur, lui, bat plus vite (MOTION_STEP) - mais il ne PEINT pas plus
     // souvent. Il ne sert qu'à donner leurs images au fondu enchaîné d'une page
-    // à l'autre et à la remontée du vert sur la bande, qui durent ensemble une
-    // seconde et demie par page ; le reste du temps il compare deux clés de
+    // à l'autre et à la remontée du vert sur la bande, qui durent ensemble
+    // environ deux secondes par page ; le reste du temps il compare deux clés de
     // caractères et s'arrête là. C'est ce qu'il fallait pour que ces deux
     // animations ne coûtent pas un rafraîchissement permanent.
     const id = window.setInterval(() => {

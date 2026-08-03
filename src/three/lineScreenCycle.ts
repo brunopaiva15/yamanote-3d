@@ -133,7 +133,7 @@ export function lineScreenPageKey(f: LineScreenFrame, side: 1 | -1): string {
  *
  * `fill` est l'avancement du vert sur la bande de la vue rapprochée, tel que le
  * donne `lineScreenAnim` : 1 pour l'image finie, ce qui est le cas de tous les
- * autres écrans et de celui-ci une seconde et demie après son arrivée.
+ * autres écrans et de celui-ci deux secondes après son arrivée.
  */
 export function paintLineScreen(
   s: ScreenSurface,
