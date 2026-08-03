@@ -18,9 +18,11 @@
 //     sonore appelle bien ces machines-là, parce que la tentation d'en retirer
 //     une « qui ne se voit pas » est exactement l'erreur que ce test attrape.
 //
-//  3. descendre sur le quai reste possible. C'est le geste qui change le plus
-//     ce qu'on entend, et il conditionne tout un pan du jeu (l'attente du
-//     prochain train et les perturbations de la ligne).
+//  3. le voyage se fait ASSIS. On ne descend pas d'un train sans marcher, et
+//     la version sonore n'a pas de corps à faire marcher : elle ne doit donc
+//     offrir aucun raccourci vers le quai. C'est une promesse facile à rompre
+//     par commodité - « un bouton, ce n'est pas grand-chose » - et c'est
+//     exactement pour cela qu'elle est écrite ici.
 //
 // Le graphe est lu dans les SOURCES plutôt que dans le build : un test qui
 // dépend de `npm run build` ne tourne pas en développement, et celui-ci doit
@@ -122,8 +124,6 @@ test('la boucle sonore fait tourner tout ce qui s’entend', () => {
     // coupures de caténaire et l'assistance à un voyageur - c'est stationCycle
     // qui les tire au sort et les mène.
     'updateCycle(',
-    // Attendre le prochain train debout sur le quai, avec les perturbations.
-    'updatePlatformWait(',
     'updateDoorMotion(',
     // La porte qu'on bloque, et l'agent qui vient s'en occuper.
     'updateDoorObstruction(',
@@ -146,17 +146,19 @@ test('la boucle sonore fait tourner tout ce qui s’entend', () => {
   }
 });
 
-test('on peut descendre sur le quai et remonter', () => {
-  const boarding = readFileSync(resolvePath(ROOT, 'src/systems/audioBoarding.ts'), 'utf8');
-  // Le franchissement passe par les MÊMES fonctions que le pas de la version
-  // complète : c'est ce qui garantit que le train repart sans nous, que le
-  // siège se libère et que le dwell reprend là où l'attente en était.
-  assert.match(boarding, /from '\.\/boarding'/);
-  assert.match(boarding, /\balight\(\)/);
-  assert.match(boarding, /\bboard\(\)/);
-  // Et la même condition de franchissement que la marche : pas de porte
-  // ouverte à portée, pas de passage.
-  assert.match(boarding, /nearestOpenPortal\(/);
-  // L'oreille suit le corps, sinon la sono du quai reste pannée sur un siège.
-  assert.match(boarding, /setListenerPose\(/);
+test('le voyage sonore se fait assis, sans descendre sur le quai', () => {
+  const loop = readFileSync(resolvePath(ROOT, 'src/systems/audioLoop.ts'), 'utf8');
+  // La machine à états du quai n'a rien à faire ici : sans corps, on ne
+  // franchit pas de seuil, et `runtime.playerFrame` ne quitte jamais la rame.
+  assert.ok(
+    !loop.includes('updatePlatformWait('),
+    'la boucle sonore ne doit pas faire tourner l’attente sur le quai',
+  );
+  // Et aucun raccourci ne doit rouvrir la porte par la bande.
+  for (const file of ['src/AudioGame.tsx', 'src/ui/audio/DoorState.tsx']) {
+    const source = readFileSync(resolvePath(ROOT, file), 'utf8');
+    for (const forbidden of ['/boarding', 'alight(', 'crossDoorway(', 'crossNearestPortal(']) {
+      assert.ok(!source.includes(forbidden), `${file} ne doit pas faire descendre (${forbidden})`);
+    }
+  }
 });

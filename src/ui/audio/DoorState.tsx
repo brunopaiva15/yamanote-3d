@@ -14,7 +14,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../../store';
 import { useT } from '../../i18n';
-import { canCrossDoorway, crossDoorway } from '../../systems/audioBoarding';
 import { runtime } from '../../systems/runtime';
 
 /** Période de sondage (ms) : assez fin pour voir coulisser, assez rare pour l'écran. */
@@ -23,25 +22,20 @@ const SAMPLE_MS = 120;
 interface DoorSample {
   open: number;
   target: number;
-  /** Un seuil est-il franchissable en ce moment ? (porte assez ouverte, à portée) */
-  crossable: boolean;
 }
 
 function useDoors(): DoorSample {
-  const [s, setS] = useState<DoorSample>({ open: 0, target: 0, crossable: false });
+  const [s, setS] = useState<DoorSample>({ open: 0, target: 0 });
   useEffect(() => {
     const tick = () =>
-      setS((prev) => {
-        const crossable = canCrossDoorway();
-        // Ne re-rendre que si quelque chose a bougé d'un demi pour cent :
-        // portes closes, la barre est immobile pendant deux minutes et n'a
-        // aucune raison de faire travailler React quatre cents fois.
-        return Math.abs(prev.open - runtime.doorOpen) < 0.005 &&
-          prev.target === runtime.doorTarget &&
-          prev.crossable === crossable
+      setS((prev) =>
+        // Ne re-rendre que si la valeur a bougé d'un demi pour cent : portes
+        // closes, la barre est immobile pendant deux minutes et n'a aucune
+        // raison de faire travailler React quatre cents fois.
+        Math.abs(prev.open - runtime.doorOpen) < 0.005 && prev.target === runtime.doorTarget
           ? prev
-          : { open: runtime.doorOpen, target: runtime.doorTarget, crossable };
-      });
+          : { open: runtime.doorOpen, target: runtime.doorTarget },
+      );
     tick();
     const id = window.setInterval(tick, SAMPLE_MS);
     return () => window.clearInterval(id);
@@ -51,9 +45,8 @@ function useDoors(): DoorSample {
 
 export function DoorState() {
   const t = useT();
-  const { open, target, crossable } = useDoors();
+  const { open, target } = useDoors();
   const doorSide = useStore((s) => s.doorSide);
-  const onPlatform = useStore((s) => s.onPlatform);
 
   const moving = open > 0.01 && open < 0.99;
   const word = !moving
@@ -83,20 +76,6 @@ export function DoorState() {
         <span className="lcd-doors-fill" style={{ width: `${Math.round(open * 100)}%` }} />
       </span>
       <span className="lcd-doors-word">{word}</span>
-      {/* Le geste que la version complète fait avec un pas : franchir le seuil.
-          Il n'est offert que quand un vrai seuil est franchissable - la même
-          condition que pour la marche, pas une permission de circonstance. */}
-      <button
-        type="button"
-        className="lcd-doors-cross"
-        disabled={!crossable}
-        title={crossable ? undefined : t.audio.doorsShut}
-        onClick={() => {
-          crossDoorway();
-        }}
-      >
-        {onPlatform ? t.audio.boardAgain : t.audio.alight}
-      </button>
     </div>
   );
 }

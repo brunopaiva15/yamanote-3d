@@ -31,17 +31,20 @@
 //   • la marche, la visée, la conversation, ce qu'on tient dans la main, les
 //     portillons et les appareils de gare : tous attendent un joueur qui
 //     avance, vise ou appuie ;
-//   • l'occultation du décor par le quai : du rendu, rien que du rendu.
+//   • DESCENDRE SUR LE QUAI, et avec cela `platformWait` - l'attente du
+//     prochain train, le tableau des départs, l'avancement des perturbations
+//     de la ligne. On ne descend pas d'un train sans marcher : dans
+//     l'expérience complète il n'y a d'ailleurs ni bouton ni commande pour
+//     cela, on franchit la porte ouverte à pied et c'est le pas qui fait
+//     basculer le repère. Le voyage sonore se fait donc ASSIS, du début à la
+//     fin, et `runtime.playerFrame` ne quitte jamais la rame.
 //
-// DESCENDRE SUR LE QUAI, en revanche, n'est pas écarté : c'est le geste qui
-// change le plus ce qu'on entend, et il a son bouton (systems/audioBoarding).
-// L'attente du prochain train tourne alors ici comme dans l'autre version -
-// tableau des départs, annonces d'approche, et l'avancement des perturbations
-// de la ligne avec ses annonces de retard, ses estimations révisées et sa
-// reprise du trafic. Un retard déclaré à bord (arrêt d'urgence, coupure de
-// caténaire) est posé dans les deux versions ; son chrono, lui, ne court que
-// sur le quai - c'est déjà le cas de l'expérience complète tant qu'on reste
-// assis.
+//     Un retard déclaré à bord (arrêt d'urgence, coupure de caténaire) est
+//     bien posé - et il pèse sur les annonces de quai qu'on entend par la
+//     porte ouverte - mais son chrono ne court que pour qui l'attend debout
+//     sur le quai. C'est déjà le cas de l'expérience complète tant qu'on reste
+//     à sa place ;
+//   • l'occultation du décor par le quai : du rendu, rien que du rendu.
 
 import { V_MAX } from '../data/config';
 import { useStore } from '../store';
@@ -61,7 +64,6 @@ import { updatePetCarriers } from './petCarriers';
 import { updatePlatformAgentSpeech } from './platformAgent';
 import { updatePlatformCrowd } from './platformCrowd';
 import { updatePlatformPresence } from './platformPresence';
-import { updatePlatformWait } from './platformWait';
 import { updateSegmentEnv } from './segmentEnv';
 import { updateCycle } from './stationCycle';
 import { updateWeather } from './weather';
@@ -106,12 +108,7 @@ export function stepAudioFrame(rawDt: number): void {
   if (!started) return;
 
   if (cycleDt > 0) {
-    // Descendu sur le quai, le joueur n'est plus dans le référentiel du train :
-    // la gare devient fixe, la rame glisse, et c'est une autre machine à états
-    // qui mène la danse - celle qui attend le prochain train, annonce les
-    // retards et guette la reprise du trafic.
-    if (runtime.playerFrame === 'platform') updatePlatformWait(cycleDt);
-    else updateCycle(cycleDt);
+    updateCycle(cycleDt);
     // Le train qui traverse la voie d'en face appartient à la GARE, pas à
     // notre rame : le cycle ne fait que lui ouvrir un créneau.
     updatePassingTrain(cycleDt);

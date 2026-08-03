@@ -100,3 +100,33 @@ export function applyDocumentLang(lang: Lang, pinToUrl = false): void {
     setMeta('meta[property="og:url"]', canonical);
   }
 }
+
+/**
+ * La couleur dont le navigateur teinte ce qui n'est pas la page : la barre
+ * d'état d'un téléphone, le liseré autour de l'onglet.
+ *
+ * `index.html` la déclare sombre, parce que c'est la couleur du menu et celle
+ * de la scène 3D. La version sonore, elle, est une paroi de wagon en blanc
+ * cassé : la même valeur y posait un bandeau sombre en haut de l'écran, qui ne
+ * ressemblait plus à rien - ni à la page, ni au système. Elle suit donc l'écran
+ * affiché, et revient à sa valeur d'origine quand on quitte.
+ *
+ * `null` restaure la valeur déclarée dans le document.
+ */
+const DECLARED_THEME =
+  typeof document === 'undefined'
+    ? ''
+    : (document.querySelector('meta[name="theme-color"]')?.getAttribute('content') ?? '');
+
+export function applyThemeColor(color: string | null): void {
+  if (typeof document === 'undefined') return;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  meta.setAttribute('content', color ?? DECLARED_THEME);
+  // `color-scheme` va avec : sur une paroi claire, c'est un document CLAIR, et
+  // c'est lui qui décide de la couleur des ascenseurs de défilement et du
+  // texte que le système dessine par-dessus (l'heure, la batterie). Déclaré
+  // sombre sur fond blanc cassé, l'un et l'autre devenaient illisibles.
+  const scheme = document.querySelector('meta[name="color-scheme"]');
+  if (scheme) scheme.setAttribute('content', color === null ? 'dark' : 'light');
+}

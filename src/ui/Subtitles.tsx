@@ -21,6 +21,7 @@
 // que ce qu'il entend.
 
 import { useStore } from '../store';
+import { usePublishedHeight } from './usePublishedHeight';
 import { useT } from '../i18n';
 import { useSubtitles, type SoundCue } from '../systems/subtitles';
 
@@ -35,16 +36,20 @@ export function Subtitles({ className = '' }: { className?: string }) {
   const cabin = useSubtitles((s) => s.cabin);
   const platform = useSubtitles((s) => s.platform);
   const cue = useSubtitles((s) => s.cue);
+  const shown = on && Boolean(cabin || platform || cue);
+  // La hauteur du bandeau est publiée tant qu'il est là : c'est ce qui permet
+  // au journal de la version sonore de réserver la place exacte sous lui, au
+  // lieu de disparaître dessous dès qu'une annonce japonaise prend deux lignes.
+  const ref = usePublishedHeight<HTMLDivElement>('--subtitles-h', shown);
 
-  if (!on) return null;
-  if (!cabin && !platform && !cue) return null;
+  if (!shown) return null;
 
   return (
     // `aria-live` : un lecteur d'écran doit annoncer la ligne quand elle
     // arrive, sans que rien n'ait le focus. `polite` et non `assertive` - une
     // annonce de gare ne coupe pas la parole à ce que l'utilisateur est en
     // train de faire.
-    <div className={`subtitles ${className}`} aria-live="polite" aria-atomic="false">
+    <div className={`subtitles ${className}`} ref={ref} aria-live="polite" aria-atomic="false">
       {cue && (
         <p className="subtitle-cue" key={cue.id}>
           [{cueLabel(t, cue.cue)}

@@ -2,7 +2,7 @@
 // s'asseoir, plein écran, sélecteur de langue. Réticule central discret.
 // Tous les libellés viennent du dictionnaire de la langue courante.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { LOOP_LABEL_JP } from '../data/loop';
 import { STATIONS } from '../data/stations';
@@ -15,6 +15,7 @@ import { setVolume as setAudioVolume, setMuted } from '../systems/audioEngine';
 import { applySpeechVolume, cancelSpeech } from '../systems/speech';
 import { input } from '../systems/input';
 import { fullscreenAvailable, toggleFullscreen } from '../systems/browser';
+import { usePublishedHeight } from './usePublishedHeight';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { QualitySelect } from './QualitySelect';
 import { IncidentMenu } from './IncidentMenu';
@@ -107,41 +108,11 @@ const WEATHER_GLYPH: Record<WeatherKind, string> = {
   snow: '❄',
 };
 
-/**
- * Les deux barres du HUD s'enroulent sur une ou deux rangées selon la langue et
- * la largeur de l'écran. On publie leur hauteur réelle en variable CSS pour que
- * ce qui les entoure se pose CONTRE elles au lieu d'être recouvert - le
- * joystick et les boutons tactiles sous la barre du bas, le tableau de bord de
- * la version sonore sous celle du haut. Sans cela, deux « s'asseoir » se
- * chevauchaient sur un téléphone, et l'afficheur de bord passait sous
- * l'horloge.
- *
- * Mesurée, et non calculée : elle dépend de la longueur des libellés traduits,
- * donc de la langue, et un nombre écrit en dur serait faux dans deux langues
- * sur trois.
- */
-function usePublishedHeight(cssVar: string, active: boolean) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const root = document.documentElement;
-    const bar = ref.current;
-    if (!active || !bar) {
-      root.style.removeProperty(cssVar);
-      return;
-    }
-    const apply = () => {
-      root.style.setProperty(cssVar, `${Math.round(bar.getBoundingClientRect().height)}px`);
-    };
-    apply();
-    const observer = new ResizeObserver(apply);
-    observer.observe(bar);
-    return () => {
-      observer.disconnect();
-      root.style.removeProperty(cssVar);
-    };
-  }, [cssVar, active]);
-  return ref;
-}
+// Les deux barres du HUD s'enroulent sur une ou deux rangées selon la langue et
+// la largeur de l'écran, et ce qui les entoure doit se poser CONTRE elles au
+// lieu d'être recouvert : le joystick et les boutons tactiles sous la barre du
+// bas, le tableau de bord de la version sonore sous celle du haut. Leur hauteur
+// est donc mesurée et publiée (ui/usePublishedHeight).
 
 function useOccupancy(): { percent: number; band: OccupancyBand } {
   const [occ, setOcc] = useState<{ percent: number; band: OccupancyBand }>({
@@ -190,8 +161,8 @@ export function Hud() {
   const em = useEmergency();
   const emergency = em.stage === 'coasting' || em.stage === 'braking' || em.stage === 'stopped';
   const outage = emergency && em.kind === 'outage';
-  const barRef = usePublishedHeight('--hud-bar-h', started);
-  const topRef = usePublishedHeight('--hud-top-h', started);
+  const barRef = usePublishedHeight<HTMLDivElement>('--hud-bar-h', started);
+  const topRef = usePublishedHeight<HTMLDivElement>('--hud-top-h', started);
   const [fullscreen] = useState(fullscreenAvailable);
 
   // Répercuter le mute et le volume sur l'audio et la voix.
