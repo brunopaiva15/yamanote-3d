@@ -1592,7 +1592,26 @@ function adBubble(
   g.fillRect(x + g.lineWidth * 0.5, y + h * 0.42, g.lineWidth, h * 0.3);
 }
 
-/** Bandeau de pied : marque, appel à l'action, case de recherche et QR. */
+/**
+ * Le pied de l'affiche : qui parle, et où le retrouver.
+ *
+ * Il existe sur toutes les affiches, mais PAS sous la même forme, et c'est
+ * important : posé partout en aplat pleine largeur, il transforme une série
+ * d'affiches en série de gabarits - on ne voit plus que la barre. Trois
+ * traitements, donc, tirés au sort avec le reste :
+ *
+ *  - `band`  : le bandeau plein, celui des campagnes nationales et des
+ *              nakazuri, qui assume d'être un pied de page ;
+ *  - `rule`  : un simple filet, et la signature posée à même le fond - le
+ *              traitement des affiches sobres, où rien ne doit couper l'image ;
+ *  - `corner`: la marque dans un angle et le QR dans l'autre, sans rien entre
+ *              les deux, comme sur les affiches qui vivent de leur visuel.
+ *
+ * La zone reste réservée dans les trois cas : les compositions n'ont pas à
+ * savoir laquelle a été tirée.
+ */
+type AdFootKind = 'band' | 'rule' | 'corner';
+
 function adFooter(
   g: CanvasRenderingContext2D,
   W: number,
@@ -1603,16 +1622,38 @@ function adFooter(
   search: string,
   color: string,
   seed: number,
+  kind: AdFootKind,
+  onBg: string,
 ): void {
-  g.fillStyle = color;
-  g.fillRect(0, y, W, h);
-  g.fillStyle = '#ffffff';
+  // Sur le bandeau plein l'encre est le blanc ; sans bandeau, c'est l'encre du
+  // fond de l'affiche qui continue.
+  const fg = kind === 'band' ? '#ffffff' : onBg;
+  if (kind === 'band') {
+    g.fillStyle = color;
+    g.fillRect(0, y, W, h);
+  } else {
+    g.strokeStyle = color;
+    g.globalAlpha = kind === 'rule' ? 0.55 : 0.25;
+    g.lineWidth = Math.max(1, h * (kind === 'rule' ? 0.05 : 0.02));
+    g.beginPath();
+    g.moveTo(W * 0.035, Math.round(y) + 0.5);
+    g.lineTo(W * (kind === 'rule' ? 0.965 : 0.35), Math.round(y) + 0.5);
+    g.stroke();
+    g.globalAlpha = 1;
+  }
+
+  g.fillStyle = fg;
   fitFillText(g, brand, W * 0.035, y + h * 0.44, W * 0.34, Math.round(h * 0.34));
   g.font = `${Math.round(h * 0.2)}px ${JP_FONT}`;
-  g.fillText(cta, W * 0.035, y + h * 0.72);
+  g.fillText(cta, W * 0.035, y + h * 0.72, W * 0.34);
+
   const qr = h * 0.66;
   adQr(g, W - qr - W * 0.03, y + h * 0.17, qr, seed);
-  adSearchBox(g, search, W * 0.4, y + h * 0.28, W * 0.42, h * 0.4, '#1b1b1b');
+  // La case de recherche est l'élément le plus « formulaire » du pied : c'est
+  // elle qu'on retire quand on veut que le visuel respire.
+  if (kind !== 'corner') {
+    adSearchBox(g, search, W * 0.4, y + h * 0.28, W * 0.42, h * 0.4, kind === 'band' ? '#1b1b1b' : color);
+  }
 }
 
 /** Aplat « photo » : dégradé, horizon et silhouettes. Une image sans image. */
@@ -1910,6 +1951,9 @@ export function drawAdInto(
   );
   const price = (198 + Math.floor(r() * 24) * 50).toLocaleString();
   const period = adPeriodText(r);
+  // Le bandeau plein reste le cas le plus fréquent - c'est celui des affiches
+  // de campagne - mais il n'est plus le seul.
+  const foot: AdFootKind = r() < 0.45 ? 'band' : r() < 0.5 ? 'rule' : 'corner';
 
   g.fillStyle = bg;
   g.fillRect(0, 0, W, H);
@@ -1921,27 +1965,33 @@ export function drawAdInto(
   if (family === 0) {
     // 商品 - le visuel produit et son prix. La composition la plus courante :
     // une photo, une accroche, un titre cerné, deux lignes de corps, le chiffre.
+    //
+    // C'est la colonne de TEXTE qui est budgétée d'abord, et la photo qui
+    // prend ce qui reste. L'inverse - une photo à 44 % de la hauteur - laissait
+    // par moments douze pixels au prix : le chiffre, qui est la seule chose
+    // qu'on lise vraiment de loin, devenait illisible.
+    const hBase = Math.floor(u * (wide ? 0.19 : 0.17));
+    const bodyPx = u * 0.045;
+    const lines = wide ? body.slice(0, 1) : body;
+    const pricePx = u * 0.15;
+    const textH =
+      hBase * 1.15 + u * 0.07 + lines.length * bodyPx * 1.55 + pricePx * 1.2 + u * 0.06;
     const ph = wide
       ? { x: W * 0.58, y: 0, w: W * 0.42, h: CH }
-      : { x: pad, y: pad, w: W - pad * 2, h: CH * 0.44 };
+      : { x: pad, y: pad, w: W - pad * 2, h: Math.max(CH * 0.24, CH - textH - pad * 2) };
     adPhoto(g, ph.x, ph.y, ph.w, ph.h, accent, seed);
+
     const tx = pad;
     const tw = wide ? W * 0.54 - pad : W - pad * 2;
-    // La colonne de texte s'empile sur un curseur plutôt que sur des fractions
-    // fixes : le titre décide de sa propre taille, donc de la place qu'il
-    // laisse au corps, et le chiffre prend ce qui reste. Avec des positions
-    // figées, un titre court laissait un trou et un titre long mordait sur
-    // le prix.
-    let cy = wide ? CH * 0.2 : ph.y + ph.h + u * 0.09;
+    let cy = wide ? Math.max(CH * 0.16, (CH - textH) / 2) : ph.y + ph.h + u * 0.07;
     adKicker(g, kicker, tx, cy, u * 0.05, accent);
-    cy += u * 0.16;
-    const hp = adHeadline(g, word, tx, cy, tw, Math.floor(u * 0.19), ink, bg);
-    cy += hp * 0.55;
-    const lines = wide ? body.slice(0, 1) : body;
-    adBody(g, lines, tx, cy, u * 0.045, ink, tw);
-    cy += lines.length * u * 0.045 * 1.55;
-    const py = CH - u * 0.03;
-    adPrice(g, price, pick(AD_UNITS), tx, py, Math.min(u * 0.17, (py - cy) / 1.15), accent);
+    cy += hBase * 0.95 + u * 0.02;
+    const hp = adHeadline(g, word, tx, cy, tw, hBase, ink, bg);
+    cy += hp * 0.5 + u * 0.02;
+    adBody(g, lines, tx, cy, bodyPx, ink, tw);
+    cy += lines.length * bodyPx * 1.55;
+    const py = CH - u * 0.02;
+    adPrice(g, price, pick(AD_UNITS), tx, py, Math.min(pricePx, (py - cy) / 1.15), accent);
     adBurst(g, pick(AD_BURSTS), ph.x + ph.w - u * 0.14, ph.y + u * 0.15, u * 0.11, accent, onAccent);
   } else if (family === 1) {
     // セール - les rayures obliques, la pastille de pourcentage, le prix barré.
@@ -2163,7 +2213,7 @@ export function drawAdInto(
   }
 
   adNotes(g, pad, noteTop + notePx, notePx, noteInk, seed, noteN);
-  adFooter(g, W, footY, footH, brand, pick(AD_CTA), pick(AD_SEARCH), deep, seed);
+  adFooter(g, W, footY, footH, brand, pick(AD_CTA), pick(AD_SEARCH), deep, seed, foot, ink);
 }
 
 // --- Nakazuri (中吊り) : l'affiche suspendue au milieu du wagon ---
