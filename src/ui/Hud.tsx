@@ -224,7 +224,10 @@ export function Hud() {
         </div>
       </div>
 
-      <div className="hud-reticle" aria-hidden="true" />
+      {/* Le réticule dit ce que la VISÉE touche : sans caméra à pointer, il ne
+          désigne rien - il se contente de poser un point blanc au milieu de
+          l'écran, et il tombait en plein sur la réglette de porte. */}
+      {!audioMode && <div className="hud-reticle" aria-hidden="true" />}
 
       <div className="hud-bottom" ref={barRef}>
         <LanguageSwitcher className="lang-switch-hud" />
