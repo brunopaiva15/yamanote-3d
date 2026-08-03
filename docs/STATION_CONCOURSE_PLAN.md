@@ -286,8 +286,8 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **20** | **Petites gares** ✅ | huit gares passent par leur relevé ; `FareGates`, `Fixtures` et les itinéraires suivent le réseau | — |
 | **21** | **Gares moyennes** ✅ | vingt gares branchées ; deux DIFFÉRÉES faute d'une volée réglable | — |
 | **22** | **Signatures 1** ✅ | Nippori, Shinagawa, Takanawa Gateway ; `interiors/Landmarks` : les repères du lieu | R3 R4 |
-| **23** | **Signatures 2** ◐ | **volée réglable** ; Tokyo, Ueno et Harajuku branchées — Ikebukuro reste | R3 |
-| 24 | Signatures 3 | Shinjuku, Shibuya : conflits de géométrie propres à chacune | R3 D7 |
+| **23** | **Signatures 2** ✅ | **volée réglable** ; Tokyo, Ueno et Harajuku branchées — Ikebukuro reste | R3 |
+| **24** | **Signatures 3** ✅ | Ikebukuro, Shinjuku, Shibuya : **vingt-neuf gares sur trente** | R3 D7 |
 | **25** | **Paliers de qualité** ✅ | les trois décors intérieurs lisent le palier ; ce qui BARRE ne dépend d'aucun | — |
 | 26 | Tests | les 18 exigences du cahier des charges | — |
 | **27** | **Captures de contrôle** ✅ | `scripts/station-views` : 5 vues × 30 gares ; elles ont trouvé les bouches manquantes | — |
@@ -1269,8 +1269,8 @@ font une gare** — le nez de la trémie, la zone payante, le portillon, la zone
 libre, les bouches — et déclenche : cent cinquante images.
 
 **Les points de vue ne sont pas écrits dans le script.** Ils viennent de
-`__probeInterior`, qui les lit sur le RÉSEAU : vingt-six gares passent par leur
-relevé, leur contrôle ne se franchit pas toujours selon z, et leur zone libre
+`__probeInterior`, qui les lit sur le RÉSEAU : les gares branchées passent par
+leur relevé, leur contrôle ne se franchit pas toujours selon z, et leur zone libre
 n'est pas « plus loin ». Un cadrage écrit à la main aurait photographié un hall
 qui n'est plus là — ce que faisait la version précédente, qui cadrait sur
 `interior`.
@@ -1301,6 +1301,64 @@ rien à faire dans un dépôt de code, et le script les refait en une commande. 
 qui est versionné, c'est **le contrôle qui en est sorti** : un test tient que
 les quatre parois servent, que chaque bouche tombe dans la sienne, et que Tokyo
 n'en a aucune au fond.
+
+### 4.24 La phase 24 : les trois plus grandes, et six règles générales
+
+Ikebukuro, Shinjuku et Shibuya sont les trois plus grandes gares de la boucle —
+un million de voyageurs par jour à Shinjuku — et elles étaient restées seules
+au hall générique. Leur relevé se compilait depuis la phase 5 ; ce qui bloquait
+n'était pas la donnée, c'était l'itinéraire : la géométrie de ces halls-là
+mettait en défaut des règles que vingt-six gares plus petites n'avaient jamais
+sollicitées.
+
+**Aucune des six corrections n'est nominative.** C'est le critère qui décidait
+si la phase pouvait se faire : une règle écrite pour Shinjuku serait un
+`if (station === 17)` déguisé, et le chantier entier existe pour ne pas en
+avoir. Ce sont donc six règles générales, que ces trois gares ont seulement été
+les premières à mettre à l'épreuve :
+
+| ce que la gare a montré | la règle qui en sort |
+|---|---|
+| Shinjuku : une zone payante de 66 m contenant sa ligne | une ligne **comble un jeu**, elle ne traverse pas une pièce (`GATE_BRIDGE`) |
+| Ikebukuro : la galerie Tōbu entre deux files | on rejoint la trouée la **plus proche**, pas la plus large |
+| Tokyo : une fente de cinq centimètres comptée comme passage | une trouée où l'on ne tient pas n'est pas une trouée (`LANE_MIN`) |
+| Shibuya : une bouche ouverte dans le chantier de 2026 | une palissade **occupe une paroi** comme le fait un commerce |
+| Harajuku : la ligne de Takeshita entièrement dans la pièce libre | la zone libre commence **après la ligne**, pas au bord de la pièce |
+| Harajuku : une halte à deux centimètres du nu d'une galerie | une halte se vérifie **avec la règle de la marche**, pas avec celle du sol |
+
+**Et le mobilier a dû apprendre deux choses de plus.** Le hall générique sait
+de son mobilier une chose qu'aucune cote ne dit : **de quel côté des portillons
+il est**. Un konbini rangé au fond de la zone libre qui se retrouve en zone
+payante parce que la pièce payante le recouvre mieux n'est plus le même
+commerce. Le côté du contrôle passe donc avant le recouvrement. Et l'on pose
+**le gros d'abord** : une corbeille de cinquante centimètres a cent places dans
+un hall relevé, une boutique de 7,80 m en a deux — servir la liste dans son
+ordre d'écriture faisait perdre le commerce d'une gare pour une poubelle. Les
+six konbini de la boucle sont revenus.
+
+**Une approximation reste, et elle se dit.** Le mobilier générique se range
+contre la paroi qu'il REGARDE, et cette paroi se repère sur x — c'est la
+profondeur du hall générique, qui se développe en z. Les halls de Tokyo,
+d'Ikebukuro et de Shibuya se développent en X, sur quarante à soixante-seize
+mètres : « contre la paroi x1 » y désigne le PIGNON, à l'autre bout de la
+pièce. La boutique s'y pose sans rien barrer, mais elle est à trente-cinq
+mètres du trajet, et un crochet de trente-cinq mètres n'est plus un crochet.
+Faire tourner le meuble avec sa pièce demanderait de donner un axe au mobilier,
+donc de reprendre le rendu, le plan de konbini et la marche : ce n'est pas une
+correction, c'est une phase. Les trois gares sont nommées dans
+`tests/stationInside`, et la liste doit rester courte.
+
+**Deux lignes de portillons restent cotées hors de leurs pièces** — le sud
+d'Ikebukuro et le 八チ公改札 de Shibuya, où le chantier de 2026 a déplacé la
+pièce et pas la ligne. Les rapprocher demanderait d'inventer une cote. Elles
+sont donc posées telles quelles, `networkIssues` les DIT, et leurs baies restent
+inapprochables : c'est le comportement juste, et `tests/stationInside` l'exempte
+en le nommant plutôt que de l'ignorer.
+
+Reste **Okachimachi**, différée pour une raison d'ouvrage : sa mezzanine est à
+−1,84 m, au-dessus du palier de mi-étage où la PREMIÈRE volée aboutit. Il ne
+s'agit plus d'allonger la seconde volée (phase 23) mais de raccourcir la
+première.
 
 ### Ordre et raison
 

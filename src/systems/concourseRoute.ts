@@ -390,19 +390,35 @@ function hallAxis(
     })
     .filter(([a, b]) => b > a)
     .sort((a, b) => a[0] - b[0]);
-  const gaps: [number, number][] = [];
+  let gaps: [number, number][] = [];
   let cur = lo;
   for (const [a, b] of taken) {
     if (a > cur) gaps.push([cur, a]);
     cur = Math.max(cur, b);
   }
   if (cur < hi) gaps.push([cur, hi]);
+  // UNE TROUÉE OÙ L'ON NE TIENT PAS N'EST PAS UNE TROUÉE. Cinq centimètres
+  // entre un extincteur et une vitrine font un intervalle dans l'arithmétique
+  // et un mur pour un corps : le couloir s'y rangeait, et la marche s'y
+  // arrêtait. On garde ce qui laisse passer quelqu'un.
+  const wide = gaps.filter((g) => g[1] - g[0] >= LANE_MIN);
+  if (wide.length > 0) gaps = wide;
   if (gaps.length === 0) return (lo + hi) / 2;
   // La trouée où l'on est DÉJÀ l'emporte sur la plus large : le couloir ne
   // saute pas d'un côté du hall à l'autre entre deux pas, ce qui traverserait
   // ce qu'il y a entre les deux. À défaut, la plus large.
   const here = gaps.find((g) => near >= g[0] && near <= g[1]);
-  const best = here ?? gaps.reduce((m, g) => (g[1] - g[0] > m[1] - m[0] ? g : m));
+  if (here) return (here[0] + here[1]) / 2;
+  // ON N'EST DANS AUCUNE TROUÉE : c'est qu'on sort d'un meuble, ou qu'on arrive
+  // d'un portillon dont la file tombe derrière une vitrine. On prend alors la
+  // trouée la PLUS PROCHE, et non la plus large — à Ikebukuro, la plus large
+  // était de l'autre côté de la galerie Tōbu, et le couloir la traversait sur
+  // dix mètres pour aller s'y ranger. Sortir d'un obstacle se fait par le côté
+  // le plus court, comme on contourne un pilier.
+  const dist = (g: [number, number]) => (near < g[0] ? g[0] - near : near - g[1]);
+  const best = Number.isFinite(near)
+    ? gaps.reduce((m, g) => (dist(g) < dist(m) ? g : m))
+    : gaps.reduce((m, g) => (g[1] - g[0] > m[1] - m[0] ? g : m));
   return (best[0] + best[1]) / 2;
 }
 
@@ -618,6 +634,15 @@ function freeRoomOf(net: ConcourseNetwork, bay: ConcourseBay): string | null {
 
 // --- Les haltes du hall --------------------------------------------------
 
+/**
+ * Largeur minimale d'une file : deux gardes de marche et de quoi tenir debout.
+ *
+ * `CLEAR_HALL` est l'encombrement que la marche impose de chaque côté ; sous
+ * cette cote, une « trouée » est un intervalle arithmétique et un mur pour un
+ * corps.
+ */
+const LANE_MIN = 0.8;
+
 /** Jusqu'où l'on s'écarte de sa file pour un crochet (m). */
 const BROWSE_REACH = 7;
 
@@ -647,7 +672,12 @@ function browseStop(p: StationPlacement, f: Fixture): RouteStop | null {
   if (!spec) return null;
   const x = f.facing === 1 ? f.rect.x1 + 0.52 : f.rect.x0 - 0.52;
   const z = (f.rect.z0 + f.rect.z1) / 2 + (Math.random() - 0.5) * Math.min(1.2, f.rect.z1 - f.rect.z0);
-  if (!clear(p, x, z)) return null;
+  // LA MÊME RÈGLE QUE LA MARCHE. `clear` ne regarde que le sol : un point posé
+  // à deux centimètres du nu d'une galerie a du sol sous lui et reste
+  // inatteignable, puisqu'on ne s'y tient pas. À Harajuku, la halte devant les
+  // casiers tombait dans ce jeu-là, et le crochet traversait la galerie pour y
+  // aller. Une halte qu'on ne peut pas OCCUPER n'est pas une halte.
+  if (walkerBlocked(p, 'concourse', x, z)) return null;
   return {
     x,
     z,
@@ -710,6 +740,46 @@ function browseIn(
   if (here.length === 0) return null;
   const stop = browseStop(p, here[Math.floor(Math.random() * here.length)]);
   return stop ? { at: alongOf(along, stop), stops: [stop] } : null;
+}
+
+/**
+ * Le crochet d'une traversée : la boutique, ou une halte devant un meuble.
+ *
+ * LE KONBINI N'EST PAS TOUJOURS DEHORS. Il l'était dans le hall générique, qui
+ * le rangeait au fond de la zone libre, et la visite ne se tirait donc que là.
+ * Les relevés disent autre chose : à Tokyo comme à Ikebukuro, la seule paroi
+ * qui porte une boutique de 7,80 m est DANS la zone payante — l'autre est
+ * mangée par les bouches et par la galerie — et c'est d'ailleurs ce qu'on voit
+ * en vrai, un NewDays derrière les portillons. Refuser d'y entrer laissait la
+ * moitié des boutiques de la ligne sans un seul client.
+ *
+ * UN CROCHET RESTE UN CROCHET. La boutique doit border le trajet : on lui
+ * accorde la même tolérance qu'à une halte devant un distributeur
+ * (`BROWSE_REACH`), et pas un mètre de plus. Le hall de Tokyo fait
+ * soixante-seize mètres de long, et une boutique posée à son autre bout ferait
+ * du voyageur qui va la voir un promeneur, pas un voyageur : il y remonterait
+ * trente-cinq mètres, en redescendrait autant, et le hall se remplirait de gens
+ * qui n'en sortent plus.
+ */
+function detourIn(
+  p: StationPlacement,
+  room: ConcourseRoom,
+  along: 'x' | 'z',
+  /** Le tronçon réellement parcouru : c'est lui que le crochet doit border. */
+  leg: [number, number],
+  /** La zone où l'on a le droit de flâner : d'un bout à la ligne, pas au-delà. */
+  span: [number, number],
+  chance: number,
+  lane?: number,
+): Detour | null {
+  const shop = shopOf(p.network, room);
+  if (shop && Math.random() < 0.34) {
+    const visit = shopVisit(shop, along);
+    const lo = Math.min(leg[0], leg[1]) - BROWSE_REACH;
+    const hi = Math.max(leg[0], leg[1]) + BROWSE_REACH;
+    if (visit.at >= lo && visit.at <= hi) return visit;
+  }
+  return browseIn(p, room, along, span[0], span[1], chance, lane);
 }
 
 /** Longe l'axe de `a0` à `a1`, avec un crochet éventuel en chemin. */
@@ -905,7 +975,7 @@ function paidLegs(
       onAxis(p, room, axis, paidAt),
       ...hallLeg(
         p, room, axis, paidAt, foot,
-        browseIn(p, room, axis, zone[0], zone[1], 0.18, entryLane),
+        detourIn(p, room, axis, [paidAt, foot], zone, 0.18, entryLane),
       ),
       // On finit DANS la file du pied de la volée, sans quoi le dernier pas
       // traverse ce qui sépare deux files.
@@ -923,7 +993,7 @@ function paidLegs(
     onAxis(p, room, axis, foot, undefined, entryLane),
     ...hallLeg(
       p, room, axis, foot, paidAt,
-      browseIn(p, room, axis, zone[0], zone[1], 0.22, entryLane),
+      detourIn(p, room, axis, [foot, paidAt], zone, 0.22, entryLane),
       entryLane,
     ),
     { ...paidSide, ...tap },
@@ -956,20 +1026,46 @@ function freeLegs(
   const [lo, hi] = axis === 'z' ? [r.z0, r.z1] : [r.x0, r.x1];
   const toHigh = m.side === 'z1' || m.side === 'x1';
   const a1 = toHigh ? hi - ZONE_EDGE : lo + ZONE_EDGE;
-  const a0 = entry
+  // LA ZONE LIBRE COMMENCE APRÈS LA LIGNE, et pas au bord de la pièce.
+  //
+  // Une ligne de portillon n'est pas toujours à cheval sur la limite des deux
+  // pièces : le relevé de Harajuku cote celle de Takeshita ENTIÈREMENT dans la
+  // pièce libre, contre la paroi de la zone payante. Un point de départ posé au
+  // bord de la pièce tombait donc DANS la ligne — et `hallAxis`, qui ignore
+  // exprès ce qui est dans une ligne franchissable pour savoir trouver ses
+  // passages, y voyait du sol libre et rangeait le voyageur dans une armoire.
+  //
+  // On repousse donc le départ de l'autre côté de toute ligne qui le contient,
+  // du côté de la bouche : c'est là qu'on est vraiment quand on vient de biper.
+  const past = (v: number): number => {
+    let out = v;
+    for (const g of net.gates) {
+      // Une ligne QU'ON FRANCHIT SUR CET AXE-LÀ. Celle qu'on franchit en
+      // travers barre toute la largeur de la pièce sur cet axe, et la
+      // « dépasser » n'aurait aucun sens.
+      if ((g.from !== room.id && g.to !== room.id) || g.cross !== axis) continue;
+      const [q0, q1] = axis === 'z' ? [g.rect.z0, g.rect.z1] : [g.rect.x0, g.rect.x1];
+      if (out < q0 - ZONE_EDGE || out > q1 + ZONE_EDGE) continue;
+      out = toHigh ? q1 + ZONE_EDGE : q0 - ZONE_EDGE;
+    }
+    return Math.min(Math.max(out, lo + ZONE_EDGE), hi - ZONE_EDGE);
+  };
+  const a0 = past(entry
     ? Math.min(Math.max(alongOf(axis, entry), lo + ZONE_EDGE), hi - ZONE_EDGE)
-    : (toHigh ? lo + ZONE_EDGE : hi - ZONE_EDGE);
+    : (toHigh ? lo + ZONE_EDGE : hi - ZONE_EDGE));
   const lane = entry ? acrossOf(axis, entry) : undefined;
   const mouth = pt(axis, a1, acrossOf(axis, door));
-  const shop = shopOf(net, room);
-  const detour = shop && Math.random() < 0.34
-    ? shopVisit(shop, axis)
-    : browseIn(p, room, axis, lo, hi, 0.4, lane);
+  const detour = detourIn(p, room, axis, [a0, a1], [lo, hi], 0.4, lane);
+  // La file d'ARRIVÉE, pour qui entre : celle de la bouche. Sans elle, le
+  // premier point du parcours libre se rangeait dans la trouée la plus large
+  // du volume — à Ikebukuro, de l'autre côté de la galerie Tōbu, que le
+  // voyageur traversait ensuite sur dix mètres.
+  const atMouth = acrossOf(axis, mouth);
   return inbound
     ? [
       mouth,
-      onAxis(p, room, axis, a1),
-      ...hallLeg(p, room, axis, a1, a0, detour),
+      onAxis(p, room, axis, a1, undefined, atMouth),
+      ...hallLeg(p, room, axis, a1, a0, detour, atMouth),
       onAxis(p, room, axis, a0, undefined, lane),
     ]
     : [onAxis(p, room, axis, a0, undefined, lane), ...hallLeg(p, room, axis, a0, a1, detour, lane), mouth];

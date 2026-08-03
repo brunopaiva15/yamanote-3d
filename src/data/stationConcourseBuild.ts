@@ -434,15 +434,19 @@ function spanRooms(
 ): InteriorRect {
   const rooms = [from, to].filter((r): r is ConcourseRoom => !!r);
   if (rooms.length < 2) return rect;
-  const mid = cross === 'z' ? (rect.z0 + rect.z1) / 2 : (rect.x0 + rect.x1) / 2;
   let lo = cross === 'z' ? rect.z0 : rect.x0;
   let hi = cross === 'z' ? rect.z1 : rect.x1;
   for (const r of rooms) {
     const [a0, a1] = cross === 'z' ? [r.rect.z0, r.rect.z1] : [r.rect.x0, r.rect.x1];
-    // Le bord de la pièce QUI REGARDE la ligne.
-    const edge = (a0 + a1) / 2 < mid ? a1 : a0;
-    lo = Math.min(lo, edge);
-    hi = Math.max(hi, edge);
+    // ON COMBLE UN JEU, ON NE TRAVERSE PAS UNE PIÈCE. Le cas à traiter est
+    // celui de Tamachi : trente centimètres de vide entre la ligne et la zone
+    // libre, sur lesquels la marche butait. Une pièce qui recouvre DÉJÀ la
+    // ligne — à Shinjuku la zone payante fait soixante-six mètres et la ligne
+    // est dedans — n'a aucun jeu à combler, et étirer la ligne jusqu'à son
+    // bord opposé la remplirait de bornes sur dix mètres.
+    if (a1 > lo + 1e-6 && a0 < hi - 1e-6) continue;
+    if (a1 <= lo && lo - a1 <= GATE_BRIDGE) lo = a1;
+    else if (a0 >= hi && a0 - hi <= GATE_BRIDGE) hi = a0;
   }
   const spanned = cross === 'z' ? { ...rect, z0: lo, z1: hi } : { ...rect, x0: lo, x1: hi };
   // ET ELLE NE DÉBORDE PAS SES DEUX PIÈCES. Une ligne ne peut exister que là
@@ -502,6 +506,9 @@ function clearOf(r: InteriorRect, keep: InteriorRect, along: 'x' | 'z'): Interio
     ? { ...r, z0: best[0], z1: best[1] }
     : { ...r, x0: best[0], x1: best[1] };
 }
+
+/** Jeu maximal qu'une ligne de portillons comble jusqu'à sa pièce (m). */
+const GATE_BRIDGE = 1;
 
 /** Deux emprises se touchent-elles, à `slack` près ? */
 function touchesRect(a: InteriorRect, b: InteriorRect, slack: number): boolean {
@@ -954,6 +961,13 @@ export function compileProfile(
         .filter((g) => (g.from === roomId || g.to === roomId)
           && touchesWall(room.rect, g.rect, side))
         .map((g) => wallSpan(g.rect, side)),
+      // Et les PALISSADES DE CHANTIER : à Shibuya, les travaux d'août 2026
+      // couvrent huit mètres de la paroi ouest, et la sortie du même nom s'y
+      // ouvrait. Une sortie qui donne dans un chantier n'est pas une sortie —
+      // et c'est le relevé qui cote la palissade, pas la bouche.
+      ...hoardings
+        .filter((h) => h.roomId === roomId && touchesWall(room.rect, h.rect, side))
+        .map((h) => wallSpan(h.rect, side)),
     ].map(([a, l]) => [a - 0.3, a + l + 0.3] as [number, number]);
     const laid = layMouthsClear(list.length, from, len, busy);
     list.forEach((e, k) => {
@@ -1199,59 +1213,100 @@ function fittedFixtures(net: ConcourseNetwork, it: StationInterior): Fixture[] {
   const overlaps = (a: InteriorRect, b: InteriorRect) =>
     a.x0 < b.x1 - 1e-6 && a.x1 > b.x0 + 1e-6 && a.z0 < b.z1 - 1e-6 && a.z1 > b.z0 + 1e-6;
   const out: Fixture[] = [];
-  for (const f of it.fixtures) {
+  // LE GROS D'ABORD, LE PETIT DANS CE QUI RESTE. Un konbini de 7,80 m sur
+  // 3,40 m n'a qu'une poignée de places dans un hall relevé ; une poubelle en a
+  // cent. Servir la liste dans son ordre d'écriture laissait une corbeille de
+  // cinquante centimètres occuper la seule tranche de paroi où la boutique
+  // tenait, et la gare perdait son commerce pour une poubelle. L'ordre de
+  // SORTIE, lui, reste celui du relevé : c'est celui que le rendu attend.
+  const order = it.fixtures
+    .map((f, k) => ({ f, k }))
+    .sort((a, b) =>
+      (b.f.rect.x1 - b.f.rect.x0) * (b.f.rect.z1 - b.f.rect.z0)
+      - (a.f.rect.x1 - a.f.rect.x0) * (a.f.rect.z1 - a.f.rect.z0)
+      || a.k - b.k);
+  /** Le rang d'écriture de chaque meuble posé, dans l'ordre où on l'a posé. */
+  const ranks: number[] = [];
+  for (const { f, k: rank } of order) {
     // La pièce du relevé qui reprend cette tranche de hall : celle qui la
     // RECOUVRE LE PLUS. Exiger qu'elle la contienne entièrement vidait les
     // gares dont les pièces sont plus courtes que le hall générique — à
     // Harajuku, quatorze meubles sur seize disparaissaient parce que le
     // souterrain de Takeshita fait sept mètres et le hall générique vingt-sept.
-    let host: ConcourseRoom | null = null;
-    let best = 0;
-    for (const r of rooms) {
-      const cover = Math.min(f.rect.z1, r.rect.z1) - Math.max(f.rect.z0, r.rect.z0);
-      if (cover > best) { best = cover; host = r; }
-    }
-    if (!host || best <= 0) continue;
-    // Et l'on ramène le meuble DANS cette pièce : il glissera ensuite le long
-    // de la paroi jusqu'à trouver sa place.
+    // Les pièces candidates, de la mieux recouvrante à la moins : on essaie la
+    // tranche de hall qui correspond, PUIS les autres. Un konbini de 7,80 m sur
+    // 3,40 m ne rentre pas partout, et le refuser dès la première pièce vidait
+    // les gares dont le relevé découpe le hall autrement — il n'en restait plus
+    // qu'un sur les trente.
+    // ET LE CÔTÉ DU CONTRÔLE PASSE AVANT LE RECOUVREMENT. Le hall générique
+    // sait une chose de son mobilier qu'aucune cote ne dit : de quel côté des
+    // portillons il est. Un konbini rangé au fond de la zone libre qui se
+    // retrouverait dans la zone payante d'un relevé parce que la pièce payante
+    // le recouvre mieux ne serait plus le même commerce — et personne n'irait :
+    // la visite ne se tire qu'en zone libre (`systems/concourseRoute`).
+    const side: FareSide = f.rect.z0 >= (it.paid.z1 + it.free.z0) / 2 ? 'free' : 'paid';
     const len = f.rect.z1 - f.rect.z0;
-    if (host.rect.z1 - host.rect.z0 < len) continue;
-    const dz0 = Math.min(Math.max(f.rect.z0, host.rect.z0), host.rect.z1 - len) - f.rect.z0;
-    // UN MEUBLE DE GARE EST CONTRE UN MUR. Le hall générique range le sien
-    // contre ses deux parois, à 2,13 m et 7,63 m de l'axe de la voie ; un
-    // pont-concourse relevé fait vingt-huit mètres de large, et le même meuble
-    // laissé à sa cote se retrouvait planté au MILIEU du volume, coupant le
-    // passage en deux. On le ramène donc contre la paroi vers laquelle il
-    // regarde — c'est là qu'il est en vrai.
-    const dx = f.facing === 1 ? host.rect.x0 - f.rect.x0 : host.rect.x1 - f.rect.x1;
-    const moved: Fixture = {
-      ...f,
-      rect: {
-        x0: f.rect.x0 + dx,
-        x1: f.rect.x1 + dx,
-        z0: f.rect.z0 + dz0,
-        z1: f.rect.z1 + dz0,
-      },
-    };
-    if (moved.rect.x0 < host.rect.x0 - 1e-6 || moved.rect.x1 > host.rect.x1 + 1e-6) continue;
-    // ET IL GLISSE LE LONG DE SA PAROI plutôt que de disparaître. Le konbini du
-    // hall générique est au fond de la zone libre, c'est-à-dire précisément là
-    // où le relevé perce ses bouches : refusé sur place, il emportait avec lui
-    // la boutique de la moitié des gares. On l'essaie donc de proche en proche,
-    // de part et d'autre, avant d'y renoncer.
-    const fits = (r: InteriorRect) =>
-      r.z0 >= host.rect.z0 - 1e-6 && r.z1 <= host.rect.z1 + 1e-6
-      && !busy.some((b) => overlaps(r, b))
-      && !out.some((o) => overlaps(r, o.rect));
+    const candidates = rooms
+      .map((r) => ({
+        r,
+        cover: Math.min(f.rect.z1, r.rect.z1) - Math.max(f.rect.z0, r.rect.z0),
+      }))
+      .filter((c) => c.r.rect.z1 - c.r.rect.z0 >= len)
+      .sort((a, b) => (a.r.fare === side ? 0 : 1) - (b.r.fare === side ? 0 : 1)
+        || b.cover - a.cover)
+      .map((c) => c.r);
+    if (candidates.length === 0) continue;
     let placed: InteriorRect | null = null;
-    for (const dz of SLIDES) {
-      const tried = { ...moved.rect, z0: moved.rect.z0 + dz, z1: moved.rect.z1 + dz };
-      if (fits(tried)) { placed = tried; break; }
+    let facing: Fixture['facing'] = f.facing;
+    for (const room of candidates) {
+      const dz0 = Math.min(Math.max(f.rect.z0, room.rect.z0), room.rect.z1 - len) - f.rect.z0;
+      const fits = (r: InteriorRect) =>
+        r.z0 >= room.rect.z0 - 1e-6 && r.z1 <= room.rect.z1 + 1e-6
+        && !busy.some((b) => overlaps(r, b))
+        && !out.some((o) => overlaps(r, o.rect));
+      // UN MEUBLE DE GARE EST CONTRE UN MUR. Le hall générique range le sien
+      // contre ses deux parois, à 2,13 m et 7,63 m de l'axe de la voie ; un
+      // pont-concourse relevé fait vingt-huit mètres de large, et le même meuble
+      // laissé à sa cote se retrouvait planté au MILIEU du volume, coupant le
+      // passage en deux. On le ramène donc contre la paroi vers laquelle il
+      // regarde — c'est là qu'il est en vrai.
+      //
+      // ET SI CETTE PAROI-LÀ EST PRISE, ON ESSAIE L'AUTRE. Contre QUELLE des
+      // deux parois un meuble s'adosse est une décision du moteur et non une
+      // cote du relevé : à Ikebukuro, la paroi que le konbini regarde est celle
+      // des portillons, et s'y tenir le renvoyait dans la zone payante — où
+      // personne ne fait ses courses, la visite ne se tirant qu'en zone libre.
+      const ways: Fixture['facing'][] = f.facing === 1 ? [1, -1] : [-1, 1];
+      for (const way of ways) {
+        const dx = way === 1 ? room.rect.x0 - f.rect.x0 : room.rect.x1 - f.rect.x1;
+        const tried0: InteriorRect = {
+          x0: f.rect.x0 + dx,
+          x1: f.rect.x1 + dx,
+          z0: f.rect.z0 + dz0,
+          z1: f.rect.z1 + dz0,
+        };
+        if (tried0.x0 < room.rect.x0 - 1e-6 || tried0.x1 > room.rect.x1 + 1e-6) continue;
+        // ET IL GLISSE LE LONG DE SA PAROI plutôt que de disparaître. Le konbini
+        // du hall générique est au fond de la zone libre, c'est-à-dire là où le
+        // relevé perce ses bouches : refusé sur place, il emportait avec lui la
+        // boutique de la moitié des gares. On l'essaie de proche en proche, de
+        // part et d'autre, avant de passer à la pièce suivante.
+        for (const dz of SLIDES) {
+          const tried = { ...tried0, z0: tried0.z0 + dz, z1: tried0.z1 + dz };
+          if (fits(tried)) { placed = tried; facing = way; break; }
+        }
+        if (placed) break;
+      }
+      if (placed) break;
     }
     if (!placed) continue;
-    out.push({ ...moved, rect: placed });
+    ranks.push(rank);
+    out.push({ ...f, facing, rect: placed });
   }
-  return out;
+  return out
+    .map((f, k) => ({ f, rank: ranks[k] }))
+    .sort((a, b) => a.rank - b.rank)
+    .map((e) => e.f);
 }
 
 /**

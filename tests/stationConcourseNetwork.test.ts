@@ -144,12 +144,13 @@ test('LE SOL N’A PAS BOUGÉ D’UN CENTIMÈTRE', () => {
   }
   // Et l'échantillon a bien touché du sol : un test qui ne compare que des
   // `null` ne prouve rien.
-  // Sept gares non branchées restent : l'échantillon rétrécit à mesure que le
-  // relevé prend la main, et c'est le signe que le chantier avance. Il ne doit
-  // pas tomber à zéro sans qu'on le sache — le jour où les trente seront
-  // branchées, ce test aura fini son office et se retirera en le disant.
-  assert.ok(sampled > 5000, `échantillon trop maigre : ${sampled} points`);
-  assert.ok(floor > 800, `seulement ${floor} points de sol trouvés`);
+  // IL NE RESTE QU'UNE GARE. L'échantillon a rétréci à mesure que le relevé
+  // prenait la main — trente gares, puis sept, puis Okachimachi seule — et
+  // c'est le signe que le chantier a avancé, pas que le test s'est vidé. Le
+  // jour où sa trémie rejoindra sa mezzanine, il n'y aura plus rien à comparer
+  // et ce test se retirera en le disant.
+  assert.ok(sampled > 900, `échantillon trop maigre : ${sampled} points`);
+  assert.ok(floor > 300, `seulement ${floor} points de sol trouvés`);
 });
 
 test('les bouches de sortie répondent comme avant', () => {

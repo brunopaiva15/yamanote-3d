@@ -80,7 +80,7 @@ const SIGNATURES = [6, 24, 25];
  * Ueno n'en avait pas besoin — son hall est au-dessus — et attendait ses deux
  * voisines de phase pour qu'on les compare entre elles.
  */
-const BIG = [0, 4, 18];
+const BIG = [0, 4, 12, 16, 18, 19];
 
 const WIRED: ReadonlyMap<number, StationConcourseProfile> = new Map(
   [...SMALL, ...MEDIUM, ...SIGNATURES, ...BIG]

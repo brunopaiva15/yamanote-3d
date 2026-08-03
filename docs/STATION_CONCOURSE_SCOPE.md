@@ -32,14 +32,14 @@ défaut DIT.**
 | JY10 | Komagome | mostlyVerified | oui | 4 | 2 | 3 | 1 | 1 | 1 | — | 2 |
 | JY11 | Sugamo | mostlyVerified | oui | 2 | 1 | 3 | 1 | 2 | 1 | — | 3 |
 | JY12 | Ōtsuka | mostlyVerified | oui | 2 | 1 | 2 | 1 | 0 | 1 | — | 0 |
-| JY13 | Ikebukuro | mostlyVerified | non | 4 | 4 | 2 | 4 | 2 | 2 | — | 0 |
+| JY13 | Ikebukuro | mostlyVerified | oui | 4 | 4 | 2 | 4 | 2 | 2 | — | 0 |
 | JY14 | Mejiro | mostlyVerified | oui | 3 | 1 | 2 | 0 | 0 | 1 | — | 0 |
 | JY15 | Takadanobaba | mostlyVerified | oui | 4 | 2 | 2 | 2 | 0 | 1 | — | 1 |
 | JY16 | Shin-Ōkubo | mostlyVerified | oui | 3 | 2 | 2 | 0 | 0 | 1 | — | 4 |
-| JY17 | Shinjuku | mostlyVerified | non | 7 | 4 | 9 | 4 | 3 | 2 | oui | 0 |
+| JY17 | Shinjuku | mostlyVerified | oui | 7 | 4 | 9 | 4 | 3 | 2 | oui | 0 |
 | JY18 | Yoyogi | mostlyVerified | oui | 4 | 2 | 3 | 3 | 0 | 1 | — | 3 |
 | JY19 | Harajuku | mostlyVerified | oui | 4 | 2 | 3 | 1 | 1 | 1 | — | 2 |
-| JY20 | Shibuya | mostlyVerified | non | 4 | 4 | 4 | 4 | 0 | 1 | oui | 0 |
+| JY20 | Shibuya | mostlyVerified | oui | 4 | 4 | 4 | 4 | 0 | 1 | oui | 0 |
 | JY21 | Ebisu | mostlyVerified | oui | 4 | 2 | 2 | 2 | 2 | 2 | — | 2 |
 | JY22 | Meguro | mostlyVerified | oui | 3 | 1 | 2 | 1 | 2 | 1 | — | 2 |
 | JY23 | Gotanda | mostlyVerified | oui | 3 | 1 | 2 | 2 | 3 | 1 | — | 4 |
@@ -51,25 +51,30 @@ défaut DIT.**
 | JY29 | Shimbashi | mostlyVerified | oui | 7 | 3 | 4 | 4 | 0 | 2 | oui | 2 |
 | JY30 | Yūrakuchō | mostlyVerified | oui | 6 | 4 | 5 | 1 | 2 | 2 | — | 7 |
 
-**Vingt-six gares sur trente passent par leur relevé.** La volée de quai se
+**Vingt-neuf gares sur trente passent par leur relevé.** La volée de quai se
 règle désormais sur ce qu'elle dessert (`data/stationGeometry.lowerFlightTo`) :
 la seconde volée compte le nombre entier de contremarches qui tombe juste sur le
 sol visé — vingt-deux pour descendre à −6,40 m sous les voies, six pour la
 profondeur ordinaire — et la descente s'allonge de deux mètres vingt-cinq. Cela
 a débloqué Tokyo, Ueno et Harajuku.
 
-Les quatre qui restent se répartissent ainsi :
+Les trois plus grandes gares de la boucle ont suivi (phase 24). Chacune était un
+cas, et chacune a coûté une règle de plus au compilateur — mais une règle
+générale, pas une exception nominative :
 
-- **Ikebukuro, Shinjuku et Shibuya** — leur relevé se compile, leur volée
-  descend, et leurs itinéraires butent encore sur des conflits de géométrie qui
-  leur sont propres : une galerie devant une baie, une joue de rive contre une
-  file, un contrôle coté hors de ses pièces. Ce sont les trois plus grandes
-  gares de la boucle, et chacune est un cas ;
-- **Okachimachi** attend un autre ouvrage : sa mezzanine est à −1,84 m,
-  c'est-à-dire AU-DESSUS du palier de mi-étage où la PREMIÈRE volée aboutit. Il
-  ne s'agit plus d'allonger la seconde volée mais de raccourcir la première —
-  quinze marches calées sur le percement de la dalle, son linteau et sa hauteur
-  libre.
+- **Ikebukuro** — la trouée la plus PROCHE plutôt que la plus large, sans quoi
+  la file traversait la galerie Tōbu pour rejoindre l'axe d'en face ;
+- **Shinjuku** — une ligne de portillons comble un jeu entre deux pièces, elle
+  ne s'étire pas dans l'une d'elles : sa zone payante fait soixante-six mètres,
+  et l'ancienne règle y enfonçait la ligne de dix ;
+- **Shibuya** — les palissades du chantier de 2026 comptent parmi ce qui occupe
+  une paroi, faute de quoi une bouche s'ouvrait dans les travaux.
+
+Il reste **Okachimachi**, qui attend un autre ouvrage : sa mezzanine est à
+−1,84 m, c'est-à-dire AU-DESSUS du palier de mi-étage où la PREMIÈRE volée
+aboutit. Il ne s'agit plus d'allonger la seconde volée mais de raccourcir la
+première — quinze marches calées sur le percement de la dalle, son linteau et sa
+hauteur libre.
 
 ---
 

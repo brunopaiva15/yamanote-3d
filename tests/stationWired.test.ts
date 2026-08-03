@@ -40,7 +40,7 @@ const GATES = psdGates();
 const NAME = (i: number) => `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
 const WIRED = wiredIndices().map((i) => ({ i, name: NAME(i), place: placementFor(i, GATES) }));
 
-test('les vingt-six gares branchées passent par leur relevé', () => {
+test('les vingt-neuf gares branchées passent par leur relevé', () => {
   assert.deepEqual(
     WIRED.map((w) => w.name),
     [
@@ -55,11 +55,14 @@ test('les vingt-six gares branchées passent par leur relevé', () => {
       'JY10 Komagome',
       'JY11 Sugamo',
       'JY12 Ōtsuka',
+      'JY13 Ikebukuro',
       'JY14 Mejiro',
       'JY15 Takadanobaba',
       'JY16 Shin-Ōkubo',
+      'JY17 Shinjuku',
       'JY18 Yoyogi',
       'JY19 Harajuku',
+      'JY20 Shibuya',
       'JY21 Ebisu',
       'JY22 Meguro',
       'JY23 Gotanda',
@@ -175,11 +178,14 @@ test('CE QUE CHAQUE GARE GAGNE, et qui n’existait pas dans le hall générique
     { gare: 'JY10 Komagome', lignes: 2, niveaux: 2, archétypes: 'compact+overbridge', correspondances: 1, devantures: 1 },
     { gare: 'JY11 Sugamo', lignes: 1, niveaux: 1, archétypes: 'overbridge', correspondances: 1, devantures: 2 },
     { gare: 'JY12 Ōtsuka', lignes: 1, niveaux: 1, archétypes: 'underViaduct', correspondances: 1, devantures: 0 },
+    { gare: 'JY13 Ikebukuro', lignes: 4, niveaux: 1, archétypes: 'hubSlice', correspondances: 4, devantures: 2 },
     { gare: 'JY14 Mejiro', lignes: 1, niveaux: 2, archétypes: 'compact+mezzanine+overbridge', correspondances: 0, devantures: 0 },
     { gare: 'JY15 Takadanobaba', lignes: 2, niveaux: 1, archétypes: 'compact+underViaduct', correspondances: 2, devantures: 0 },
     { gare: 'JY16 Shin-Ōkubo', lignes: 2, niveaux: 2, archétypes: 'compact+overbridge', correspondances: 0, devantures: 0 },
+    { gare: 'JY17 Shinjuku', lignes: 4, niveaux: 2, archétypes: 'cross+hubSlice+linear', correspondances: 4, devantures: 3 },
     { gare: 'JY18 Yoyogi', lignes: 2, niveaux: 1, archétypes: 'compact', correspondances: 3, devantures: 0 },
     { gare: 'JY19 Harajuku', lignes: 2, niveaux: 2, archétypes: 'compact+overbridge', correspondances: 1, devantures: 1 },
+    { gare: 'JY20 Shibuya', lignes: 4, niveaux: 1, archétypes: 'hubSlice', correspondances: 4, devantures: 0 },
     { gare: 'JY21 Ebisu', lignes: 2, niveaux: 2, archétypes: 'hubSlice+overbridge+underViaduct', correspondances: 2, devantures: 2 },
     { gare: 'JY22 Meguro', lignes: 1, niveaux: 2, archétypes: 'compact+hubSlice+overbridge', correspondances: 1, devantures: 2 },
     { gare: 'JY23 Gotanda', lignes: 1, niveaux: 2, archétypes: 'overbridge+underViaduct', correspondances: 2, devantures: 2 },
@@ -219,14 +225,17 @@ test('ce que le compilateur a rogné est DIT, pas caché', () => {
   }
   assert.deepEqual(
     [...codes.keys()].sort(),
-    ['crampedGate', 'mouthOverShop', 'narrowMouth', 'shopDropped'],
+    ['crampedGate', 'gateOffRoom', 'mouthOverShop', 'narrowMouth', 'shopDropped'],
   );
   // Aucune devanture ne mange le passage : c'est ce qui rendrait une gare
   // INJOUABLE, et le compilateur rogne les vitrines plutôt que de le permettre.
   assert.equal(codes.get('shopEatsAisle'), undefined);
-  // Aucune ligne cotée hors de ses pièces parmi les gares branchées : les deux
-  // que le relevé porte (Ikebukuro, Shibuya) attendent leur phase.
-  assert.equal(codes.get('gateOffRoom'), undefined);
+  // DEUX LIGNES COTÉES HORS DE LEURS PIÈCES, et ce sont les deux que le relevé
+  // porte : le sud d'Ikebukuro et le 八チ公改札 de Shibuya. Le chantier de 2026 a
+  // déplacé la pièce, pas la ligne, et rapprocher l'une de l'autre demanderait
+  // d'inventer une cote. Elles sont donc posées telles quelles, DITES, et leurs
+  // baies restent inapprochables — ce que `stationInside` sait et n'exige pas.
+  assert.equal(codes.get('gateOffRoom'), 2);
   // Trois bouches s'ouvrent au droit d'une devanture — Harajuku et Ebisu, dont
   // les parois sont entièrement commerciales. Une sortie passe avant un
   // magasin : elle est posée quand même, et le compilateur le dit.

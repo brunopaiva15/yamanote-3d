@@ -42,9 +42,9 @@ test('il dit la vérité sur ce qui est branché', () => {
   });
   // Et le compte écrit en toutes lettres dans le texte, qui est ce qu'on lit
   // vraiment quand on ouvre le document.
-  assert.equal(wired.size, 26);
+  assert.equal(wired.size, 29);
   assert.ok(
-    DOC.includes('Vingt-six gares sur trente passent par leur relevé'),
+    DOC.includes('Vingt-neuf gares sur trente passent par leur relevé'),
     'le compte écrit ne correspond plus',
   );
 });
