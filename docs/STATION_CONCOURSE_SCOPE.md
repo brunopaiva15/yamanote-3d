@@ -147,11 +147,11 @@ compilateur : **ce qui est relevé passe avant ce qui est composé.**
 
 | # | phase | ce qui manque |
 |---|---|---|
-| 23-24 | Signatures 2 et 3 | Ikebukuro, Shinjuku, Shibuya : conflits de géométrie propres à chacune |
-| 25 | Paliers de qualité | haute / moyenne / basse, sans jamais retirer une collision |
-| 26 | Tests | les exigences du cahier des charges, une par une |
-| 27 | Captures | cinq vues × trente gares |
-| 28 | Bilan | mesures avant/après |
+| 26 | Tests | les dix-huit exigences du cahier des charges, une par une |
+| 28 | Bilan | mesures avant/après : coût du réseau, du rendu et de la marche |
+
+Et **Okachimachi**, hors phases : sa mezzanine demande une PREMIÈRE volée plus
+courte, ce qui est un ouvrage et non un réglage (voir §1).
 
 ---
 
