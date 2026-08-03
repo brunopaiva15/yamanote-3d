@@ -52,6 +52,7 @@ import {
   GALLERY_DEPTH,
   SHOP_DEPTH,
   interiorFor,
+  interiorSolids,
   type Fixture,
   type InteriorRect,
   type StationInterior,
@@ -351,6 +352,96 @@ function nearestSide(room: InteriorRect, r: InteriorRect): RoomSide {
   return d.reduce((a, b) => (b[1] < a[1] ? b : a))[0];
 }
 
+/**
+ * Répartit `n` bouches sur une paroi DÉJÀ OCCUPÉE par endroits.
+ *
+ * Les `busy` sont les devantures relevées. On découpe la paroi en tronçons
+ * libres, on les sert du plus long au plus court — une bouche par tronçon tant
+ * qu'il en reste, puis on double — et chaque tronçon pose ses bouches comme si
+ * c'était toute la paroi. Quand rien n'est occupé, cela redonne exactement
+ * `layMouths` sur la paroi entière : les gares non branchées ne bougent pas.
+ */
+function layMouthsClear(
+  n: number,
+  from: number,
+  len: number,
+  busy: readonly [number, number][],
+): { at: number; halfWidth: number }[] {
+  if (busy.length === 0) return layMouths(n, from, len);
+  let runs: [number, number][] = [[from, from + len]];
+  for (const [b0, b1] of busy) {
+    runs = runs.flatMap(([s0, s1]) => {
+      if (b1 <= s0 || b0 >= s1) return [[s0, s1] as [number, number]];
+      const out: [number, number][] = [];
+      if (b0 > s0) out.push([s0, Math.min(b0, s1)]);
+      if (b1 < s1) out.push([Math.max(b1, s0), s1]);
+      return out;
+    });
+  }
+  runs = runs.filter(([a, b]) => b - a >= 2 * EXIT_JAMB + 0.7);
+  // Plus rien de libre : la paroi est entièrement commerciale, et une sortie
+  // passe avant un magasin. On reprend la paroi entière.
+  if (runs.length === 0) return layMouths(n, from, len);
+  runs.sort((a, b) => b[1] - b[0] - (a[1] - a[0]));
+  const share = new Array<number>(runs.length).fill(0);
+  for (let k = 0; k < n; k++) share[k % runs.length]++;
+  return runs
+    .flatMap((r, k) => (share[k] > 0 ? layMouths(share[k], r[0], r[1] - r[0]) : []))
+    .sort((a, b) => a.at - b.at);
+}
+
+/** Largeur d'un seuil de correspondance, et sa profondeur dans le mur. */
+const PORTAL_W = 2.6;
+const PORTAL_D = 0.5;
+/** Retrait depuis le nu de la paroi : celle-ci mord sur la pièce. */
+const PORTAL_INSET = 0.2;
+
+/**
+ * Cherche à un seuil la plus longue portion de mur encore libre.
+ *
+ * Les quatre parois sont examinées, moins ce qui les occupe déjà — bouches,
+ * devantures, seuils précédents. Rien d'assez long : le seuil reste sans
+ * emprise, et le rendu se rabat sur son ancien placement plutôt que d'aller
+ * poser une porte dans une vitrine.
+ */
+function parkOnWall(
+  room: InteriorRect,
+  taken: ReadonlyMap<string, [number, number][]>,
+  roomId: string,
+): { side: RoomSide; span: [number, number]; rect: InteriorRect } | null {
+  let best: { side: RoomSide; at: number; len: number } | null = null;
+  for (const side of ['x0', 'x1', 'z0', 'z1'] as RoomSide[]) {
+    const [from, len] = wallSpan(room, side);
+    let runs: [number, number][] = [[from, from + len]];
+    for (const [b0, b1] of taken.get(`${roomId}/${side}`) ?? []) {
+      runs = runs.flatMap(([s0, s1]) => {
+        if (b1 <= s0 || b0 >= s1) return [[s0, s1] as [number, number]];
+        const out: [number, number][] = [];
+        if (b0 > s0) out.push([s0, Math.min(b0, s1)]);
+        if (b1 < s1) out.push([Math.max(b1, s0), s1]);
+        return out;
+      });
+    }
+    for (const [a0, a1] of runs) {
+      if (!best || a1 - a0 > best.len) best = { side, at: (a0 + a1) / 2, len: a1 - a0 };
+    }
+  }
+  if (!best || best.len < PORTAL_W + 0.4) return null;
+  const half = PORTAL_W / 2;
+  const span: [number, number] = [best.at - half, best.at + half];
+  // Le seuil se pose DEVANT la paroi, pas dedans : celle-ci mord de dix-sept
+  // centimètres sur la pièce (`three/station/Concourse`, WALL_T), et un portail
+  // à fleur du nu se retrouvait à moitié dans le mur.
+  const rect: InteriorRect = best.side === 'x0'
+    ? { x0: room.x0 + PORTAL_INSET, x1: room.x0 + PORTAL_INSET + PORTAL_D, z0: span[0], z1: span[1] }
+    : best.side === 'x1'
+      ? { x0: room.x1 - PORTAL_INSET - PORTAL_D, x1: room.x1 - PORTAL_INSET, z0: span[0], z1: span[1] }
+      : best.side === 'z0'
+        ? { x0: span[0], x1: span[1], z0: room.z0 + PORTAL_INSET, z1: room.z0 + PORTAL_INSET + PORTAL_D }
+        : { x0: span[0], x1: span[1], z0: room.z1 - PORTAL_INSET - PORTAL_D, z1: room.z1 - PORTAL_INSET };
+  return { side: best.side, span, rect };
+}
+
 /** Ne garde d'une emprise que sa devanture : `depth` mètres depuis sa paroi. */
 function trimToFront(r: InteriorRect, side: RoomSide, depth: number): InteriorRect {
   if (side === 'x0') return { ...r, x1: Math.min(r.x1, r.x0 + depth) };
@@ -485,6 +576,46 @@ export function compileProfile(
     };
   });
 
+  // LES DEVANTURES. Elles se rangent contre la paroi la plus proche : un
+  // commerce de gare n'est jamais au milieu d'un hall — il en borde un côté, et
+  // c'est ce qui laisse le passage libre. Le relevé cote son emprise, le
+  // compilateur en déduit contre QUOI elle s'adosse et dans quel sens sa
+  // vitrine se développe.
+  const frontages: ConcourseFrontage[] = [];
+  for (const zone of p.commercialZones) {
+    const room = byId.get(zone.nodeId);
+    if (!room) continue;
+    const declared = shifted(zone.rect, dz);
+    const side = nearestSide(room.rect, declared);
+    // Le relevé cote l'EMPRISE du commerce, pas sa vitrine. GRANSTA fait
+    // quarante-six mètres de long sur huit de fond : le poser tel quel
+    // remplirait le niveau d'un bloc plein qu'on ne pourrait pas contourner.
+    // Ce qu'on voit d'un hall, c'est la DEVANTURE — le reste est derrière, et
+    // le joueur n'y entre pas.
+    const rect = trimToFront(
+      declared,
+      side,
+      zone.category === 'gallery' ? GALLERY_DEPTH : SHOP_DEPTH,
+    );
+    const along: 'x' | 'z' = side === 'x0' || side === 'x1' ? 'z' : 'x';
+    const clear = rect;
+    frontages.push({
+      id: zone.id,
+      roomId: zone.nodeId,
+      side,
+      along,
+      rect: clear,
+      status: zone.status,
+      category: zone.category,
+      brand: zone.brand,
+      enterable: zone.enterable,
+    });
+    // Une devanture est un OBSTACLE : on ne traverse pas une vitrine. Celles
+    // où l'on entre le sont aussi — la porte n'est pas encore un ouvrage, et
+    // ouvrir un trou dans la marche sans rien derrière serait pire.
+    obstacles.push(clear);
+  }
+
   // Les bouches, groupées par zone libre : elles se partagent une paroi, donc
   // elles ne peuvent pas être posées une par une.
   const mouths: ConcourseMouth[] = [];
@@ -500,7 +631,16 @@ export function compileProfile(
     const feeder = gates.find((g) => g.to === roomId);
     const side = facingSide(room.rect, feeder?.rect, feeder?.cross);
     const [from, len] = wallSpan(room.rect, side);
-    const laid = layMouths(list.length, from, len);
+    // CE QUI EST RELEVÉ PASSE AVANT CE QUI EST COMPOSÉ. Les devantures ont des
+    // cotes lues sur un plan ; la position des bouches, elle, est composée —
+    // le relevé donne leur nom et leur paroi, pas leur abscisse. Quand les deux
+    // se disputent une paroi (Komagome : le magasin tombait pile sur les deux
+    // sorties), ce sont donc les bouches qui se rangent ailleurs.
+    const busy = frontages
+      .filter((f) => f.roomId === roomId && f.side === side)
+      .map((f) => wallSpan(f.rect, side))
+      .map(([a, l]) => [a, a + l] as [number, number]);
+    const laid = layMouthsClear(list.length, from, len, busy);
     list.forEach((e, k) => {
       mouths.push({
         id: e.id,
@@ -527,56 +667,61 @@ export function compileProfile(
   }));
   for (const h of hoardings) obstacles.push(h.rect);
 
-  // LES DEVANTURES. Elles se rangent contre la paroi la plus proche : un
-  // commerce de gare n'est jamais au milieu d'un hall — il en borde un côté, et
-  // c'est ce qui laisse le passage libre. Le relevé cote son emprise, le
-  // compilateur en déduit contre QUOI elle s'adosse et dans quel sens sa
-  // vitrine se développe.
-  const frontages: ConcourseFrontage[] = [];
-  for (const zone of p.commercialZones) {
-    const room = byId.get(zone.nodeId);
-    if (!room) continue;
-    const declared = shifted(zone.rect, dz);
-    const side = nearestSide(room.rect, declared);
-    // Le relevé cote l'EMPRISE du commerce, pas sa vitrine. GRANSTA fait
-    // quarante-six mètres de long sur huit de fond : le poser tel quel
-    // remplirait le niveau d'un bloc plein qu'on ne pourrait pas contourner.
-    // Ce qu'on voit d'un hall, c'est la DEVANTURE — le reste est derrière, et
-    // le joueur n'y entre pas.
-    const rect = trimToFront(
-      declared,
-      side,
-      zone.category === 'gallery' ? GALLERY_DEPTH : SHOP_DEPTH,
-    );
-    frontages.push({
-      id: zone.id,
-      roomId: zone.nodeId,
-      side,
-      along: side === 'x0' || side === 'x1' ? 'z' : 'x',
-      rect,
-      status: zone.status,
-      category: zone.category,
-      brand: zone.brand,
-      enterable: zone.enterable,
-    });
-    // Une devanture est un OBSTACLE : on ne traverse pas une vitrine. Celles
-    // où l'on entre le sont aussi — la porte n'est pas encore un ouvrage, et
-    // ouvrir un trou dans la marche sans rien derrière serait pire.
-    obstacles.push(rect);
+  // LES CORRESPONDANCES SE RANGENT CONTRE UN MUR LIBRE. Le relevé donne la
+  // DIRECTION d'une correspondance — le Ginza est en l'air, le Chiyoda tout en
+  // bas — et rarement son emprise : ce sont des seuils qu'on voit depuis le
+  // hall, pas des salles cotées. Faute de cote, le rendu les rangeait au fond
+  // de la pièce, toutes au même endroit, par-dessus le mobilier et les
+  // vitrines. On leur cherche donc une place, comme on le fait des bouches.
+  const taken = new Map<string, [number, number][]>();
+  const claim = (roomId: string, side: RoomSide, span: [number, number]) => {
+    const key = `${roomId}/${side}`;
+    const list = taken.get(key);
+    if (list) list.push(span);
+    else taken.set(key, [span]);
+  };
+  for (const m of mouths) {
+    claim(m.roomId, m.side, [m.at - m.halfWidth - 0.4, m.at + m.halfWidth + 0.4]);
   }
-
+  for (const f of frontages) {
+    const [a, l] = wallSpan(f.rect, f.side);
+    claim(f.roomId, f.side, [a - 0.3, a + l + 0.3]);
+  }
+  // Une ligne de portillons touche deux parois par ses joues de rive : y poser
+  // un seuil de correspondance mettrait une porte dans une borne.
+  for (const g of gates) {
+    for (const roomId of [g.from, g.to]) {
+      const room = byId.get(roomId);
+      if (!room) continue;
+      for (const side of ['x0', 'x1', 'z0', 'z1'] as RoomSide[]) {
+        const [a, l] = wallSpan(g.rect, side);
+        claim(roomId, side, [a - 0.3, a + l + 0.3]);
+      }
+    }
+  }
   const transfers: ConcourseTransfer[] = p.transferPortals
     .filter((t) => byId.has(t.fromNodeId))
-    .map((t) => ({
-      id: t.id,
-      lines: t.lines,
-      fromRoomId: t.fromNodeId,
-      goes: t.goes,
-      gated: t.gated === true,
-      depiction: t.depiction,
-      rect: t.rect ? shifted(t.rect, dz) : null,
-      nameEn: t.nameEn,
-    }));
+    .map((t) => {
+      const room = byId.get(t.fromNodeId)!;
+      let rect = t.rect ? shifted(t.rect, dz) : null;
+      if (!rect) {
+        const parked = parkOnWall(room.rect, taken, t.fromNodeId);
+        if (parked) {
+          rect = parked.rect;
+          claim(t.fromNodeId, parked.side, parked.span);
+        }
+      }
+      return {
+        id: t.id,
+        lines: t.lines,
+        fromRoomId: t.fromNodeId,
+        goes: t.goes,
+        gated: t.gated === true,
+        depiction: t.depiction,
+        rect,
+        nameEn: t.nameEn,
+      };
+    });
 
   // Seuls les accès PRATICABLES mènent quelque part : une tête d'escalier qu'on
   // regarde reste le couloir borgne qu'elle était.
@@ -697,21 +842,51 @@ export function legacyNetwork(index: number, it: StationInterior): ConcourseNetw
 // --- Le point d'entrée ---------------------------------------------------
 
 /**
+ * LE MOBILIER D'UNE GARE BRANCHÉE : celui du moteur, mais SEULEMENT CE QUI TIENT.
+ *
+ * Un plan officiel ne cote pas une batterie de distributeurs : le relevé n'a
+ * donc pas de mobilier, et un hall vide serait un recul par rapport au hall
+ * générique qui, lui, en range le long de ses deux parois. On reprend donc le
+ * mobilier générique — et l'on ne garde que les meubles qui tiennent RÉELLEMENT
+ * dans les pièces du relevé, à l'écart de ce qui est déjà posé.
+ *
+ * Un konbini de 3,40 m de fond calé sur un hall de 5,30 m ne rentre pas dans un
+ * pont-concourse qui en fait 4,20 : il disparaît, et c'est le bon comportement.
+ * Le faire entrer de force le ferait ressortir par la paroi — ce que la sonde a
+ * vu à Nishi-Nippori, une devanture dans une vitrine.
+ */
+function fittedFixtures(net: ConcourseNetwork, it: StationInterior): Fixture[] {
+  const rooms = net.rooms.filter((r) => r.walkable);
+  const busy: InteriorRect[] = [
+    ...net.obstacles,
+    ...net.gates.map((g) => g.rect),
+    ...net.transfers.map((t) => t.rect).filter((r): r is InteriorRect => r !== null),
+  ];
+  const overlaps = (a: InteriorRect, b: InteriorRect) =>
+    a.x0 < b.x1 - 1e-6 && a.x1 > b.x0 + 1e-6 && a.z0 < b.z1 - 1e-6 && a.z1 > b.z0 + 1e-6;
+  return it.fixtures.filter((f) => {
+    const host = rooms.find((r) => f.rect.x0 >= r.rect.x0 - 1e-6 && f.rect.x1 <= r.rect.x1 + 1e-6
+      && f.rect.z0 >= r.rect.z0 - 1e-6 && f.rect.z1 <= r.rect.z1 + 1e-6);
+    if (!host) return false;
+    return !busy.some((b) => overlaps(f.rect, b));
+  });
+}
+
+/**
  * Le réseau d'une gare : son relevé s'il est branché, son hall sinon.
  *
- * La liste des gares branchées vit dans `data/stationConcourseWired`, et elle
- * est vide. Ce n'est pas un oubli : un profil compilé n'a encore ni mobilier,
- * ni archétype de rendu, ni signalétique - les basculer maintenant échangerait
- * une gare meublée contre une gare juste et nue, ce qui serait un recul. Les
- * phases 20 à 24 les ajouteront une par une, quand il y aura de quoi les
- * habiller.
+ * La liste des gares branchées vit dans `data/stationConcourseWired`. Une gare
+ * qui n'y est pas se comporte AU RECTANGLE PRÈS comme avant ; une gare qui y
+ * est prend sa géométrie du relevé et son mobilier du moteur, dans la mesure
+ * où celui-ci tient dans celle-là.
  */
 export function networkFor(index: number, accessZ: number): ConcourseNetwork {
   const i = ((index % 30) + 30) % 30;
   const wired = wiredProfile(i);
-  return wired
-    ? compileProfile(wired, accessZ)
-    : legacyNetwork(i, interiorFor(i, accessZ));
+  if (!wired) return legacyNetwork(i, interiorFor(i, accessZ));
+  const net = compileProfile(wired, accessZ);
+  const fixtures = fittedFixtures(net, interiorFor(i, accessZ));
+  return { ...net, fixtures, obstacles: [...net.obstacles, ...fixtures.flatMap(interiorSolids)] };
 }
 
 // --- Ce que le compilateur a dû rogner -----------------------------------
@@ -745,6 +920,21 @@ export function networkIssues(
         where: g.id,
         message: `${laid.passages.length} baies posées sur ${g.passages} demandées : `
           + `la ligne fait ${len.toFixed(2)} m sur ${along}`,
+      });
+    }
+  }
+  // Une bouche posée SUR une devanture : cela n'arrive que si la paroi est
+  // entièrement commerciale, où une sortie passe avant un magasin. Le cas se
+  // dit, plutôt que de laisser croire qu'on entre dans la rue par la vitrine.
+  for (const m of net.mouths) {
+    for (const f of net.frontages) {
+      if (f.roomId !== m.roomId || f.side !== m.side) continue;
+      const [a, l] = wallSpan(f.rect, f.side);
+      if (m.at + m.halfWidth <= a || m.at - m.halfWidth >= a + l) continue;
+      out.push({
+        code: 'mouthOverShop',
+        where: m.id,
+        message: `bouche posée sur la devanture ${f.id} : la paroi n'a plus de vide`,
       });
     }
   }

@@ -22,16 +22,33 @@
 //   import { profileFor } from './stationConcourseProfiles.ts';
 //   const WIRED = new Map([[25, profileFor(25)]]);   // JY26 Takanawa Gateway
 
+import { profileFor } from './stationConcourseProfiles.ts';
 import type { StationConcourseProfile } from './stationConcourseTypes.ts';
 
-const WIRED: ReadonlyMap<number, StationConcourseProfile> = new Map();
+/**
+ * LES PETITES GARES D'ABORD (phase 20).
+ *
+ * Huit gares dont le relevé tient en un ou deux halls, et dont le hall
+ * générique était déjà proche : c'est là qu'on valide le système avec le moins
+ * à perdre. Elles apportent pourtant chacune quelque chose qu'aucun hall
+ * générique ne produirait — deux halls indépendants à cent mètres l'un de
+ * l'autre à Uguisudani, un dessous de viaduc à Kanda, une tranchée à Sugamo.
+ */
+const WIRED: ReadonlyMap<number, StationConcourseProfile> = new Map(
+  [1, 5, 7, 9, 10, 13, 15, 17].map((i) => [i, profileFor(i)] as const),
+);
 
 /** Le relevé d'une gare, si elle est branchée dessus. */
 export function wiredProfile(index: number): StationConcourseProfile | null {
   return WIRED.get(index) ?? null;
 }
 
-/** Combien de gares passent par leur relevé. Zéro aujourd'hui. */
+/** Combien de gares passent par leur relevé. */
 export function wiredCount(): number {
   return WIRED.size;
+}
+
+/** Lesquelles, dans l'ordre de la boucle. Les tests s'en servent pour trier. */
+export function wiredIndices(): readonly number[] {
+  return [...WIRED.keys()].sort((a, b) => a - b);
 }

@@ -38,6 +38,7 @@ import { runtime } from './runtime';
 import {
   bayAt,
   concourseBays,
+  shellsOf,
   type ConcourseBay,
   type ConcourseNetwork,
   type ConcourseRoom,
@@ -367,9 +368,34 @@ function pickPassage(net: ConcourseNetwork, busy: readonly number[]): number {
  * lequel on monte se lit de `side`, et le décalage latéral court le long de la
  * paroi. Dans un hall longitudinal cela redonne exactement l'ancien point.
  */
-function pickExit(net: ConcourseNetwork): StreetDoor {
-  const k = Math.floor(Math.random() * net.mouths.length);
-  const m = net.mouths[k];
+/**
+ * La bouche par laquelle on sort, une fois le portillon choisi.
+ *
+ * ELLE DOIT ÊTRE ATTEIGNABLE DEPUIS CE PORTILLON-LÀ, et c'est tout le sujet.
+ * Tant qu'une gare n'avait qu'un hall, toutes ses bouches donnaient sur la
+ * même zone libre et n'importe laquelle faisait l'affaire. Uguisudani en a
+ * deux, à cent mètres l'une de l'autre et sur deux niveaux : tirer au sort
+ * dans le tas envoyait un voyageur du hall sud vers une bouche du hall nord,
+ * qu'aucun chemin ne relie — l'itinéraire échouait, et personne ne sortait.
+ *
+ * On ne retient donc que les bouches du VOLUME où le portillon débouche.
+ */
+function pickExit(net: ConcourseNetwork, freeRoomId: string | null): StreetDoor | null {
+  const reach = freeRoomId
+    ? new Set(
+      (shellsOf(net).find((s) => s.rooms.some((r) => r.id === freeRoomId))?.rooms ?? [])
+        .map((r) => r.id),
+    )
+    : null;
+  const usable = net.mouths
+    .map((m, i) => ({ m, i }))
+    .filter(({ m }) => {
+      const room = net.rooms.find((r) => r.id === m.roomId);
+      if (!room?.walkable) return false;
+      return !reach || reach.has(m.roomId);
+    });
+  if (usable.length === 0) return null;
+  const { m, i: k } = usable[Math.floor(Math.random() * usable.length)];
   const room = net.rooms.find((r) => r.id === m.roomId)!;
   const lane = m.at + (Math.random() - 0.5) * Math.max(0, m.halfWidth * 2 - 0.9);
   const top = mouthTop();
@@ -379,6 +405,11 @@ function pickExit(net: ConcourseNetwork): StreetDoor {
       : m.side === 'x1' ? { x: r.x1 + top, z: lane }
         : { x: r.x0 - top, z: lane };
   return { ...q, exit: k };
+}
+
+/** La zone libre où débouche un portillon : celle dont on cherchera la bouche. */
+function freeRoomOf(net: ConcourseNetwork, bay: ConcourseBay): string | null {
+  return net.gates.find((x) => x.id === bay.gateId)?.to ?? null;
 }
 
 // --- Les haltes du hall --------------------------------------------------
@@ -563,6 +594,16 @@ function paidLegs(
   p: StationPlacement,
   bay: ConcourseBay,
   inbound: boolean,
+  /**
+   * Où l'on ENTRE dans la zone payante, sur l'axe qu'on va remonter.
+   *
+   * Le bas de la volée n'est plus au bout du hall : un pont-concourse se
+   * traverse selon x et sa trémie débouche par le côté. Sans cette cote, la
+   * première étape partait du bout de la pièce et le trajet y allait tout
+   * droit, à travers le mobilier — que `hallLeg` sait pourtant contourner,
+   * mais seulement sur le tronçon qu'on lui donne.
+   */
+  entryAlong: number | null = null,
 ): RouteStop[] | null {
   const net = p.network;
   const room = net.rooms.find((r) => r.id === net.gates.find((g) => g.id === bay.gateId)?.from);
@@ -582,7 +623,10 @@ function paidLegs(
   const freeAt = low ? g1 + ZONE_EDGE : g0 - ZONE_EDGE;
   const paidSide = pt(axis, paidAt, lane);
   const freeSide = pt(axis, freeAt, lane);
-  const foot = low ? r0 + ZONE_EDGE : r1 - ZONE_EDGE;
+  const wall = low ? r0 + ZONE_EDGE : r1 - ZONE_EDGE;
+  const foot = entryAlong === null
+    ? wall
+    : Math.min(Math.max(entryAlong, r0 + ZONE_EDGE), r1 - ZONE_EDGE);
   const zone: [number, number] = low ? [r0, g0] : [g1, r1];
   const tap = { tap: bay.index, hold: 0.55, action: 'ticketGlance' as PaxAction };
   if (inbound) {
@@ -647,10 +691,11 @@ export function routeToStreet(p: StationPlacement, busy: readonly number[] = [])
   const passage = pickPassage(p.network, busy);
   if (passage < 0) return null;
   const bay = concourseBays(p.network)[passage];
-  const door = pickExit(p.network);
+  const door = pickExit(p.network, freeRoomOf(p.network, bay));
   const room = paidRoomOf(p.network, bay);
   const foot = room && accessFoot(p, room.id);
-  const paid = paidLegs(p, bay, false);
+  if (!door) return null;
+  const paid = paidLegs(p, bay, false, foot ? alongOf(bay.cross, foot) : null);
   const free = freeLegs(p, door, false);
   if (!paid || !free || !foot) return null;
   return [
@@ -678,11 +723,12 @@ export function routeFromStreet(
   const passage = pickPassage(p.network, busy);
   if (passage < 0) return null;
   const bay = concourseBays(p.network)[passage];
-  const door = pickExit(p.network);
+  const door = pickExit(p.network, freeRoomOf(p.network, bay));
   const room = paidRoomOf(p.network, bay);
   const foot = room && accessFoot(p, room.id);
+  if (!door) return null;
   const free = freeLegs(p, door, true);
-  const paid = paidLegs(p, bay, true);
+  const paid = paidLegs(p, bay, true, foot ? alongOf(bay.cross, foot) : null);
   if (!paid || !free || !foot) return null;
   return {
     from: door,

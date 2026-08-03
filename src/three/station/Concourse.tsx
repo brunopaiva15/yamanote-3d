@@ -288,7 +288,7 @@ export function Concourse({
       {/* La ligne de portillons : bornes, battants, lecteurs et feux. Elle
           n'est plus une rangée de boîtes - elle s'ouvre, elle se ferme, et
           `systems/fareGate` la pilote. */}
-      <FareGates it={it} m={m} height={height} midY={midY} />
+      <FareGates net={net} m={m} height={height} midY={midY} />
 
       {/* Le bandeau 改札, suspendu au-dessus de la ligne, face à qui arrive. */}
       <mesh position={[midX, GATE_SIGN_Y + shell.floorY, gate.rect.z0 - 0.12]} material={m.frame}>
@@ -323,12 +323,12 @@ export function Concourse({
       ))}
 
       {/* Le fléchage suspendu : trois couleurs, et jamais autre chose. */}
-      <Guides shell={shell} it={it} m={m} />
+      <Guides shell={shell} net={net} m={m} />
 
       {/* Le mobilier : billetterie, konbini, consignes, distributeurs, tampon.
           L'implantation vient de data/stationInterior - la même liste que la
           marche contourne. */}
-      {detail <= 1 && <Fixtures it={it} m={m} station={station} />}
+      {detail <= 1 && <Fixtures it={it} net={net} m={m} station={station} />}
 
       {/* Ligne de guidage podotactile, dans l'axe, du couloir aux portillons
           puis des portillons aux sorties : elle traverse par un passage, jamais
@@ -594,7 +594,7 @@ const GUIDE_ARROW: Record<GuideKind, -1 | 0 | 1> = {
   facility: 1,
 };
 
-function Guides({ shell, it, m }: { shell: ConcourseShell; it: StationInterior; m: Mats }) {
+function Guides({ shell, net, m }: { shell: ConcourseShell; net: ConcourseNetwork; m: Mats }) {
   // OÙ LES PANNEAUX SE POSENT N'EST PLUS ÉCRIT ICI. Quatre cotes en dur sur
   // `paid.rect.z` et `free.rect.z` supposaient un hall qui se traverse selon z
   // et qui a exactement deux pièces : un pont-concourse, qu'on traverse selon
@@ -625,7 +625,7 @@ function Guides({ shell, it, m }: { shell: ConcourseShell; it: StationInterior; 
     }
     let x0 = shell.rect.x0;
     let x1 = shell.rect.x1;
-    for (const f of it.fixtures) {
+    for (const f of net.fixtures) {
       if (f.rect.z1 < at - 0.7 || f.rect.z0 > at + 0.7) continue;
       if (f.facing === 1) x0 = Math.max(x0, f.rect.x1);
       else x1 = Math.min(x1, f.rect.x0);

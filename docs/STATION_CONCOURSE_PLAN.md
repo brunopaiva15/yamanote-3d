@@ -283,7 +283,7 @@ Chaque phase est livrable seule, laisse `npm test`, `npm run build` et
 | **17** | **Occlusion interne** ✅ | `visibleShells` : ce qu'on voit d'un volume depuis un autre — jonction, niveau, portée | R2 |
 | **18** | **Signalétique unifiée** ✅ | `stationSignage` : une seule source pour quai / hall / portillons / couloirs / bouches | D4 D5 |
 | **19** | **Commerces** ✅ | `ConcourseFrontage` : l'échelle de vérité de `CommerceStatus` dessinée ; `interiors/Frontages` | D8 |
-| 20 | Petites gares | JY06 JY08 JY10 JY11 JY14 JY16 JY18 JY02 branchées sur profil | — |
+| **20** | **Petites gares** ✅ | huit gares passent par leur relevé ; `FareGates`, `Fixtures` et les itinéraires suivent le réseau | — |
 | 21 | Gares moyennes | JY04 JY09 JY12 JY15 JY19 JY21 JY22 JY23 JY24 JY27 JY28 JY29 JY30 JY03 | — |
 | 22 | Signatures 1 | Takanawa Gateway, Nippori, Shinagawa | R3 |
 | 23 | Signatures 2 | Tokyo, Ueno, Ikebukuro | R3 |
@@ -947,6 +947,87 @@ corrigés en silence :**
   Dila à Ōsaki) restent absentes de `SPECS`. Les y ajouter changerait le hall
   GÉNÉRIQUE de trois gares — un travail que leur branchement (phases 20 à 24)
   jette aussitôt, puisqu'il remplace ce hall. Le relevé les porte déjà.
+
+### 4.18 La phase 20 : huit gares cessent d'être génériques
+
+Dix-neuf phases sans que rien ne change à l'écran — chacune se branchait sur un
+hall générique qui restait le même. Huit gares passent maintenant par leur
+PROFIL, et c'est la première fois que le relevé décide de ce qu'on voit.
+
+| gare | ce qu'elle gagne |
+|---|---|
+| JY02 Kanda | le dessous du viaduc, deux contrôles, le Ginza qu'on voit sans le prendre |
+| JY06 Uguisudani | **deux halls** à cent mètres l'un de l'autre, dont un sous les voies à −6,40 m |
+| JY08 Nishi-Nippori | un pont-concourse, quatre lignes en correspondance, une devanture |
+| JY10 Komagome | pont-concourse et hall bas, deux contrôles |
+| JY11 Sugamo | la tranchée enjambée, et les **deux blocs d'atre vie** que le dépôt ne déclarait pas |
+| JY14 Mejiro | une **mezzanine** : un demi-niveau ouvert, une coupe à trois niveaux |
+| JY16 Shin-Ōkubo | pont-concourse et hall bas, deux contrôles |
+| JY18 Yoyogi | deux contrôles, trois correspondances |
+
+**Brancher a montré ce qu'aucun test ne voyait**, et c'était le but de commencer
+par les petites. Cinq défauts, tous du même genre : du code qui savait
+« le » hall et pas « un » hall.
+
+1. **la bouche tirée au sort pouvait être inatteignable.** `pickExit` piochait
+   dans toutes les bouches de la gare ; à Uguisudani, un voyageur du hall sud
+   partait vers une bouche du hall nord, qu'aucun chemin ne relie. Plus personne
+   ne sortait. On ne retient plus que les bouches du VOLUME où le portillon
+   débouche ;
+2. **le premier pas coupait le coin de la pièce.** L'itinéraire partait du bout
+   du hall, en supposant que la trémie y débouche. Un hall qu'on traverse selon
+   x a sa trémie sur le côté : la diagonale passait par du vide. La première
+   étape part maintenant de l'accès lui-même, et `hallLeg` contourne le mobilier
+   sur tout le trajet au lieu d'un tronçon ;
+3. **`FareGates` ne dessinait qu'une ligne**, celle du hall générique, à sa
+   place à elle. Chaque ligne du réseau est maintenant dessinée dans SON repère
+   — longueur en x local, profondeur en z local — et le groupe tourne d'un quart
+   de tour quand on la franchit selon x. Même discipline que le repère du quai :
+   on écrit une fois, on retourne le bloc. Le lecteur se présente du côté payant,
+   quel que soit ce côté ;
+4. **le mobilier générique flottait dans un volume qui n'est pas le sien.** Une
+   gare branchée reprend le mobilier du moteur — un plan officiel ne cote pas une
+   batterie de distributeurs — mais `networkFor` ne garde que ce qui TIENT dans
+   ses pièces, à l'écart de ses lignes, de ses vitrines et de ses seuils. Un
+   konbini de 3,40 m de fond ne rentre pas dans un pont-concourse : il disparaît
+   au lieu de ressortir par la paroi ;
+5. **les correspondances sans emprise se rangeaient toutes au même endroit.** Le
+   relevé donne leur DIRECTION, rarement leur cote. Elles cherchent maintenant
+   la plus longue portion de mur encore libre — bouches, devantures et joues de
+   portillon déduites — et le rendu les oriente sur leur mur au lieu d'en
+   travers.
+
+**Un arbitrage a été tranché dans le compilateur, et il vaut pour les vingt-deux
+gares suivantes : CE QUI EST RELEVÉ PASSE AVANT CE QUI EST COMPOSÉ.** Les
+devantures ont des cotes lues sur un plan ; la position des bouches, elle, est
+composée — le relevé donne leur nom et leur paroi, pas leur abscisse. Quand les
+deux se disputaient une paroi (à Komagome le magasin tombait pile sur les deux
+sorties, et le hall n'avait plus d'issue), la première version rognait le
+magasin. C'était le mauvais sens : ce sont les bouches qui se rangent ailleurs.
+
+**Ce qui reste, et qui est mesuré.** Sonde sur les trente gares, **aucune erreur
+de page**, et le relevé complet des interpénétrations :
+
+| écart | ×  | gares | entre |
+|---|---|---|---|
+| 0,24 m | 36 | 3 | hall ✕ volée montante |
+| 0,24 m | 9 | 3 | hall ✕ travée de quai opposée |
+| 0,24 m | 2 | 1 | hall ✕ devanture (Sugamo) |
+| 0,12 m | 48 | 22 | hall ✕ portillons — **le fond de référence**, présent avant la phase |
+| 0,09 m | 1 | 1 | fléchage ✕ seuil de correspondance (Nishi-Nippori) |
+
+Les deux premières lignes sont les trois ponts-concours branchés — Komagome,
+Sugamo, Mejiro. C'est le JOINT entre deux ouvrages qui se touchent réellement,
+et non un hall posé dans le vide : le hall enjambe le faisceau, donc il passe
+au-dessus de la travée d'en face, et sa paroi rencontre la volée qui y monte. Le
+traiter proprement demande de PERCER la paroi du hall au droit de l'accès — ce
+qui appartient aux phases de signature (22 à 24) et aux paliers de qualité (25).
+Les trois autres lignes sont des frôlements de moins d'un quart de mètre entre
+ouvrages voisins.
+
+**Coût :** le dossier de relevé entre dans le paquet, comme prévu — c'est la
+première fois qu'il SERT. Le morceau `plateau` passe de 344,0 à 448,0 kio
+(115,5 → 136,2 kio compressés) ; le morceau `Game` ne bouge pas.
 
 ### Ordre et raison
 

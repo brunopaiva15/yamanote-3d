@@ -23,7 +23,13 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-import type { InteriorRect, StationInterior } from '../../data/stationInterior';
+import type { InteriorRect } from '../../data/stationInterior';
+import {
+  concourseBays,
+  type ConcourseBay,
+  type ConcourseGateLine,
+  type ConcourseNetwork,
+} from '../../data/stationConcourseBuild';
 import { gateStates, type GateVerdict } from '../../systems/fareGate';
 import { STRINGS } from '../../i18n/strings';
 import { useStore } from '../../store';
@@ -45,66 +51,144 @@ function centre(r: InteriorRect): [number, number] {
   return [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2];
 }
 
+/**
+ * TOUTES LES LIGNES DE LA GARE, et plus seulement la seule qu'il y avait.
+ *
+ * Le composant lisait `interior.gate` : une ligne, franchie selon z, avec ses
+ * bornes en x. Une gare branchée sur son relevé en a deux ou trois, dont
+ * certaines se franchissent selon x — un pont-concourse se traverse en travers
+ * du faisceau, et son contrôle avec lui.
+ *
+ * Rien de la géométrie n'a changé pour autant. Chaque ligne est dessinée dans
+ * SON repère — la longueur en x local, la profondeur en z local — et le groupe
+ * tourne d'un quart de tour quand la ligne se franchit selon x. C'est la même
+ * discipline que le repère du quai : on écrit une fois, on retourne le bloc.
+ */
 export function FareGates({
-  it,
+  net,
   m,
   height,
   midY,
 }: {
-  it: StationInterior;
+  net: ConcourseNetwork;
   m: Mats;
   /** Hauteur libre du hall : les joues de rive montent jusqu'au plafond. */
   height: number;
   midY: number;
 }) {
+  const bays = concourseBays(net);
   return (
     <group name="gare/hall/portillons">
-      {it.gate.cabinets.map((c, k) => {
-        const [cx, cz] = centre(c);
-        const w = c.x1 - c.x0;
-        const d = c.z1 - c.z0;
+      {net.gates.filter((g) => g.walkable).map((g) => (
+        <GateLine
+          key={g.id}
+          g={g}
+          net={net}
+          bays={bays.filter((b) => b.gateId === g.id)}
+          m={m}
+          height={height}
+          midY={midY}
+        />
+      ))}
+    </group>
+  );
+}
+
+function GateLine({
+  g,
+  net,
+  bays,
+  m,
+  height,
+  midY,
+}: {
+  g: ConcourseGateLine;
+  net: ConcourseNetwork;
+  bays: readonly ConcourseBay[];
+  m: Mats;
+  height: number;
+  midY: number;
+}) {
+  const [cx, cz] = centre(g.rect);
+  // L'axe LONG de la ligne, celui sur lequel les bornes se rangent.
+  const along: 'x' | 'z' = g.cross === 'z' ? 'x' : 'z';
+  const floorY = net.rooms.find((r) => r.id === g.from)?.floorY ?? 0;
+  // Un quart de tour quand on franchit selon x : le repère local retrouve
+  // alors exactement celui d'un hall longitudinal.
+  const yaw = g.cross === 'z' ? 0 : Math.PI / 2;
+  const mid = along === 'x' ? cx : cz;
+  /** Une cote du monde ramenée à l'axe long local. */
+  const loc = (v: number) => (g.cross === 'z' ? v - mid : -(v - mid));
+  const depth = g.cross === 'z' ? g.rect.z1 - g.rect.z0 : g.rect.x1 - g.rect.x0;
+  // De quel côté se tient la zone payante : c'est elle qui décide où le lecteur
+  // se présente, et un lecteur du mauvais côté ferait payer en entrant.
+  const paid = net.rooms.find((r) => r.id === g.from);
+  const gateMid = g.cross === 'z' ? cz : cx;
+  const paidMid = paid
+    ? (g.cross === 'z'
+      ? (paid.rect.z0 + paid.rect.z1) / 2
+      : (paid.rect.x0 + paid.rect.x1) / 2)
+    : gateMid - 1;
+  const paidLow = paidMid < gateMid;
+
+  return (
+    <group position={[cx, 0, cz]} rotation={[0, yaw, 0]}>
+      {g.cabinets.map((c, k) => {
+        const [ccx, ccz] = centre(c);
+        const w = along === 'x' ? c.x1 - c.x0 : c.z1 - c.z0;
+        const at = loc(along === 'x' ? ccx : ccz);
         // Une joue de rive - ce qui reste entre la dernière borne et la paroi -
         // monte jusqu'au plafond : ce n'est pas un portillon, c'est un mur.
         const jamb = w > 0.5;
         if (jamb) {
           return (
-            <mesh key={`cab${k}`} position={[cx, midY, cz]} material={m.hall}>
-              <boxGeometry args={[w, height, d]} />
+            <mesh key={`cab${k}`} position={[at, midY, 0]} material={m.hall}>
+              <boxGeometry args={[w, height, depth]} />
             </mesh>
           );
         }
         return (
-          <group key={`cab${k}`} position={[cx, it.floorY, cz]}>
+          <group key={`cab${k}`} position={[at, floorY, 0]}>
             {/* Le fût de la borne : tôle claire, arêtes vives. */}
             <mesh position={[0, CABINET_H / 2, 0]} material={m.psd}>
-              <boxGeometry args={[w, CABINET_H, d]} />
+              <boxGeometry args={[w, CABINET_H, depth]} />
             </mesh>
             {/* Socle sombre : il décolle la borne du sol, comme tout mobilier
                 de gare - et il cache le point de fuite du carrelage. */}
             <mesh position={[0, 0.045, 0]} material={m.frame}>
-              <boxGeometry args={[w + 0.02, 0.09, d + 0.02]} />
+              <boxGeometry args={[w + 0.02, 0.09, depth + 0.02]} />
             </mesh>
             {/* Le chapeau noir mat : c'est le plan sur lequel on pose la main. */}
             <mesh position={[0, CABINET_H + 0.012, 0]} material={m.frame}>
-              <boxGeometry args={[w + 0.02, 0.024, d]} />
+              <boxGeometry args={[w + 0.02, 0.024, depth]} />
             </mesh>
             {/* Bandeau jaune au ras du sol sur les deux flancs : le repère de
                 file, qu'on suit du pied sans le regarder. */}
-            {[-1, 1].map((s) => (
+            {[-1, 1].map((sgn) => (
               <mesh
-                key={`stripe${s}`}
-                position={[(s * (w + 0.004)) / 2, 0.14, 0]}
+                key={`stripe${sgn}`}
+                position={[(sgn * (w + 0.004)) / 2, 0.14, 0]}
                 material={m.stairNose}
               >
-                <boxGeometry args={[0.004, 0.05, d - 0.1]} />
+                <boxGeometry args={[0.004, 0.05, depth - 0.1]} />
               </mesh>
             ))}
           </group>
         );
       })}
 
-      {it.gate.passages.map((p, i) => (
-        <Passage key={`pg${i}`} it={it} m={m} index={i} x={p.x} width={p.width} wide={p.wide} />
+      {bays.map((b) => (
+        <Passage
+          key={`pg${b.index}`}
+          m={m}
+          index={b.index}
+          floorY={floorY}
+          depth={depth}
+          x={loc(along === 'x' ? b.x : b.z)}
+          width={b.width}
+          wide={b.wide}
+          paidLow={paidLow}
+        />
       ))}
     </group>
   );
@@ -118,25 +202,33 @@ export function FareGates({
  * est à main droite dans chaque sens - donc jamais sur la même borne.
  */
 function Passage({
-  it,
   m,
   index,
+  floorY,
+  depth,
   x,
   width,
   wide,
+  paidLow,
 }: {
-  it: StationInterior;
   m: Mats;
   index: number;
+  floorY: number;
+  /** Profondeur de la ligne, dans le repère local. */
+  depth: number;
   x: number;
   width: number;
   wide: boolean;
+  /** La zone payante est-elle du côté −z local ? */
+  paidLow: boolean;
 }) {
   const leaves = useRef<(THREE.Group | null)[]>([]);
   const lights = useRef<(THREE.Group | null)[]>([]);
   const half = width / 2;
-  const z0 = it.gate.z0 + FLAP_INSET;
-  const z1 = it.gate.z1 - FLAP_INSET;
+  const g0 = -depth / 2;
+  const g1 = depth / 2;
+  const z0 = g0 + FLAP_INSET;
+  const z1 = g1 - FLAP_INSET;
 
   useFrame(() => {
     const s = gateStates()[index];
@@ -174,7 +266,7 @@ function Passage({
           ref={(g) => {
             leaves.current[f.k] = g;
           }}
-          position={[f.hx, it.floorY + 0.3, f.z]}
+          position={[f.hx, floorY + 0.3, f.z]}
         >
           <mesh position={[leafLen / 2, 0, 0]}>
             <boxGeometry args={[leafLen, FLAP_H, FLAP_T]} />
@@ -202,33 +294,33 @@ function Passage({
       <Reader
         m={m}
         id={`gt${index}`}
-        dir={1}
+        dir={paidLow ? 1 : -1}
         x={x - half - CABINET_HALF_X}
-        y={it.floorY}
-        z={it.gate.z0 + 0.28}
+        y={floorY}
+        z={g0 + 0.28}
         yaw={0}
       />
       <Reader
         m={m}
         id={`gt${index}`}
-        dir={-1}
+        dir={paidLow ? -1 : 1}
         x={x + half + CABINET_HALF_X}
-        y={it.floorY}
-        z={it.gate.z1 - 0.28}
+        y={floorY}
+        z={g1 - 0.28}
         yaw={Math.PI}
       />
 
       {/* Les feux, au nez de chaque about, face à qui arrive. */}
       {[
-        { z: it.gate.z0 - 0.02, yaw: Math.PI, k: 0 },
-        { z: it.gate.z1 + 0.02, yaw: 0, k: 1 },
+        { z: g0 - 0.02, yaw: Math.PI, k: 0 },
+        { z: g1 + 0.02, yaw: 0, k: 1 },
       ].map((f) => (
         <group
           key={`sig${f.k}`}
           ref={(g) => {
             lights.current[f.k] = g;
           }}
-          position={[x, it.floorY + CABINET_H + 0.16, f.z]}
+          position={[x, floorY + CABINET_H + 0.16, f.z]}
           rotation={[0, f.yaw, 0]}
         >
           <Chevron />
@@ -241,7 +333,7 @@ function Passage({
           avant de compter les bornes. */}
       {wide && (
         <mesh
-          position={[x, it.floorY + 0.009, (it.gate.z0 + it.gate.z1) / 2]}
+          position={[x, floorY + 0.009, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
         >
           <planeGeometry args={[width * 0.7, 0.7]} />

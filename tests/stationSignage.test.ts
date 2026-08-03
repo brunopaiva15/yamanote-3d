@@ -28,6 +28,18 @@ const { guidePosts, mouthExit, signageFor } = await import('../src/data/stationS
 const { stationExitPlan, stationExits } = await import('../src/data/lines.ts');
 const { STATIONS, TRANSFERS } = await import('../src/data/stations.ts');
 const { STATION_COUNT } = await import('../src/data/loop.ts');
+const { wiredIndices } = await import('../src/data/stationConcourseWired.ts');
+
+/**
+ * Les gares restées sur le hall générique.
+ *
+ * Ce qui suit compare l'affichage d'aujourd'hui à celui d'avant la source
+ * unique. Une gare BRANCHÉE sur son relevé (phase 20) annonce ses vraies
+ * sorties, pas les deux premières d'un tableau : l'y contraindre reviendrait à
+ * exiger qu'elle ne soit pas branchée.
+ */
+const LEGACY = Array.from({ length: STATION_COUNT }, (_, i) => i)
+  .filter((i) => !wiredIndices().includes(i));
 
 const NAME = (i: number) => `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
 const PLACE = (i: number) => placementFor(i, psdGates());
@@ -36,7 +48,7 @@ const NET = (i: number) => PLACE(i).network;
 // --- Ce qui ne doit pas bouger -------------------------------------------
 
 test('les trente potences annoncent exactement ce qu’elles annonçaient', () => {
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const sign = signageFor(NET(i), i);
     const before = stationExits(i);
     assert.equal(sign.gantry.length, before.length, NAME(i));
@@ -48,13 +60,13 @@ test('les trente potences annoncent exactement ce qu’elles annonçaient', () =
 });
 
 test('une potence ne porte jamais plus de deux caissons', () => {
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     assert.ok(signageFor(NET(i), i).gantry.length <= 2, NAME(i));
   }
 });
 
 test('chaque bouche du réseau est nommée, et par la même source', () => {
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const net = NET(i);
     const sign = signageFor(net, i);
     assert.ok(net.mouths.length > 0, NAME(i));
@@ -70,7 +82,7 @@ test('chaque bouche du réseau est nommée, et par la même source', () => {
 });
 
 test('on n’annonce que ce qu’on perce, et jamais deux fois le même nom', () => {
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const net = NET(i);
     const sign = signageFor(net, i);
     const fromMouths = new Set(net.mouths.map((m) => mouthExit(sign, m.id).jp));
@@ -82,7 +94,7 @@ test('on n’annonce que ce qu’on perce, et jamais deux fois le même nom', ()
 });
 
 test('les correspondances du quai restent celles des annonces', () => {
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const tr = TRANSFERS[STATIONS[i].jy];
     const lines = signageFor(NET(i), i).lines;
     if (!tr) {
@@ -162,7 +174,7 @@ test('un contrôle dit ce qui change ce qu’on peut y faire', () => {
 });
 
 test('le hall générique ne porte aucune mention de contrôle', () => {
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     for (const g of signageFor(NET(i), i).gates) {
       assert.deepEqual([...g.notes], [], `${NAME(i)} ${g.id}`);
     }
@@ -172,7 +184,7 @@ test('le hall générique ne porte aucune mention de contrôle', () => {
 // --- Le fléchage suspendu -------------------------------------------------
 
 test('les trente gares retrouvent leurs quatre panneaux, aux mêmes cotes', () => {
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const place = PLACE(i);
     const shells = shellsOf(place.network);
     if (shells.length === 0) continue;

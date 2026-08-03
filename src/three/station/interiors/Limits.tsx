@@ -89,14 +89,23 @@ export function Limits({
         };
         const cx = (r.x0 + r.x1) / 2;
         const cz = (r.z0 + r.z1) / 2;
-        const w = Math.min(PORTAL_W, Math.max(1.6, r.x1 - r.x0));
+        // LE SEUIL SUIT SON MUR. Le compilateur range désormais les portails
+        // sans emprise sur la portion de paroi encore libre (phase 20), et
+        // cette paroi n'est pas toujours celle du fond : un seuil dessiné en
+        // travers de son propre mur ressortait d'un mètre dans le hall.
+        const along: 'x' | 'z' = r.x1 - r.x0 >= r.z1 - r.z0 ? 'x' : 'z';
+        const w = Math.min(
+          PORTAL_W,
+          Math.max(1.6, along === 'x' ? r.x1 - r.x0 : r.z1 - r.z0),
+        );
+        const yaw = along === 'x' ? 0 : Math.PI / 2;
         // Un panneau seul ne perce rien : il nomme, et c'est tout.
         const opens = t.depiction !== 'signOnly';
         return (
-          <group key={t.id} position={[cx, shell.floorY, cz]}>
+          <group key={t.id} position={[cx, shell.floorY, cz]} rotation={[0, yaw, 0]}>
             {opens && (
               <mesh position={[0, PORTAL_H / 2, 0]} material={m.wallDark}>
-                <boxGeometry args={[w, PORTAL_H, 0.5]} />
+                <boxGeometry args={[w, PORTAL_H, 0.45]} />
               </mesh>
             )}
             {/* Les bornes d'une correspondance GARDÉE : sept gares du relevé en

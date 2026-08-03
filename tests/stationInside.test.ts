@@ -30,6 +30,7 @@ const { mainAccessFloor, walkerBlocked } = await import('../src/systems/stationL
 const { placementFor } = await import('../src/systems/stationPlacement.ts');
 const { psdGates } = await import('../src/three/station/psdLayout.ts');
 const { EXIT_MOUTH_END, EXIT_MOUTH_Z0 } = await import('../src/data/stationInterior.ts');
+const { concourseBays } = await import('../src/data/stationConcourseBuild.ts');
 const { STATION_COUNT } = await import('../src/data/loop.ts');
 const { STATIONS } = await import('../src/data/stations.ts');
 const { runtime } = await import('../src/systems/runtime.ts');
@@ -85,6 +86,28 @@ function walk(place: Place, stops: Stop[], level: Level): string | null {
   return null;
 }
 
+/**
+ * LA RÉFÉRENCE EST LE RÉSEAU, plus le hall générique.
+ *
+ * Ces contrôles lisaient `place.interior` — une ligne de portillons, un fond de
+ * hall, deux bouches — parce qu'il n'y avait rien d'autre à lire. Une gare
+ * branchée sur son relevé (phase 20) a trois lignes et cinq bouches, et son
+ * `interior` générique ne décrit plus rien de ce qu'on parcourt. On interroge
+ * donc la même source que la marche : `place.network`.
+ */
+const baysOf = (place: Place) => concourseBays(place.network);
+
+/** L'axe qu'on franchit à une baie, et les deux bords de sa ligne. */
+function gateSpan(place: Place, tap: number): { axis: 'x' | 'z'; g0: number; g1: number; paidLow: boolean } {
+  const bay = baysOf(place)[tap];
+  const axis = bay.cross;
+  const [g0, g1] = axis === 'z' ? [bay.rect.z0, bay.rect.z1] : [bay.rect.x0, bay.rect.x1];
+  const gate = place.network.gates.find((g) => g.id === bay.gateId)!;
+  const paid = place.network.rooms.find((r) => r.id === gate.from)!;
+  const [p0, p1] = axis === 'z' ? [paid.rect.z0, paid.rect.z1] : [paid.rect.x0, paid.rect.x1];
+  return { axis, g0, g1, paidLow: (p0 + p1) / 2 < (g0 + g1) / 2 };
+}
+
 const INSIDE = ALL.filter(({ place }) => stationInteriorOpen(place));
 
 test('toutes les gares bâties ont un intérieur où descendre', () => {
@@ -121,8 +144,7 @@ test('de la rue au quai, on ne traverse rien non plus', () => {
 
 test('on passe le portillon, une fois, et par un vrai passage', () => {
   for (const { name, place } of INSIDE) {
-    const gate = place.interior.gate;
-    const n = gate.passages.length;
+    const n = baysOf(place).length;
     for (let k = 0; k < 20; k++) {
       // Sortir se valide côté PAYANT, entrer côté LIBRE : dans les deux cas,
       // du côté d'où l'on vient. On bipe avant de s'engager, jamais après -
@@ -140,20 +162,26 @@ test('on passe le portillon, une fois, et par un vrai passage', () => {
         const tap = taps[0].tap as number;
         assert.ok(tap >= 0 && tap < n, `${name} : passage ${tap} inexistant`);
         // On valide DEVANT la borne, pas dedans : le geste se voit, et le
-        // portillon a le temps de s'ouvrir avant qu'on l'atteigne.
-        const z = taps[0].z;
-        const edge = side < 0 ? gate.z0 : gate.z1;
+        // portillon a le temps de s'ouvrir avant qu'on l'atteigne. Le côté
+        // PAYANT n'est plus « le z le plus petit » : une ligne peut se franchir
+        // selon x, et la zone payante être au-delà.
+        const { axis, g0, g1, paidLow } = gateSpan(place, tap);
+        const at = (st: Stop) => (axis === 'z' ? st.z : st.x);
+        // `side < 0` : on vient du quai, donc du côté payant.
+        const fromLow = side < 0 ? paidLow : !paidLow;
+        const a = at(taps[0]);
+        const edge = fromLow ? g0 : g1;
         assert.ok(
-          side < 0 ? z < edge && z > edge - 2 : z > edge && z < edge + 2,
-          `${name} : en venant de ${from}, validation à ${z.toFixed(2)} -`
+          fromLow ? a < edge && a > edge - 2 : a > edge && a < edge + 2,
+          `${name} : en venant de ${from}, validation à ${a.toFixed(2)} -`
             + ` hors d'atteinte du lecteur, ou de l'autre côté de la ligne`,
         );
         // Et AVANT de la franchir : le point de validation précède tout point
         // posé au-delà de la ligne.
-        const crossed = stops.findIndex((s) => (side < 0 ? s.z > gate.z1 : s.z < gate.z0));
-        const at = stops.findIndex((s) => s.tap !== undefined);
+        const crossed = stops.findIndex((s) => (fromLow ? at(s) > g1 : at(s) < g0));
+        const tapAt = stops.findIndex((s) => s.tap !== undefined);
         assert.ok(
-          crossed < 0 || at < crossed,
+          crossed < 0 || tapAt < crossed,
           `${name} : en venant de ${from}, on franchit la ligne avant de biper`,
         );
         assert.ok((taps[0].hold ?? 0) > 0, `${name} : on ne s'arrête pas pour valider`);
@@ -167,7 +195,7 @@ test('on ne s’engouffre pas tous dans le même vantail', () => {
   // fixe - « la plus loin du joueur » - envoyait la gare entière dans le même
   // passage, l'un derrière l'autre, les autres déserts.
   for (const { name, place } of INSIDE) {
-    const n = place.interior.gate.passages.length;
+    const n = baysOf(place).length;
     const seen = new Set<number>();
     for (let k = 0; k < 100; k++) {
       const stops = routeToStreet(place);
@@ -180,7 +208,7 @@ test('on ne s’engouffre pas tous dans le même vantail', () => {
 
 test('une baie déjà prise se cède à la voisine', () => {
   for (const { name, place } of INSIDE) {
-    const n = place.interior.gate.passages.length;
+    const n = baysOf(place).length;
     // Trois voyageurs déjà en route vers la baie 0 : on va ailleurs. Pas
     // JAMAIS - deux files se forment très bien dans un hall chargé - mais
     // presque, et c'est cet écart-là qui se vérifie.
@@ -200,11 +228,11 @@ test('une baie déjà prise se cède à la voisine', () => {
 
 test('la baie devant laquelle le joueur se tient n’est pas à prendre', () => {
   const { name, place } = INSIDE[0];
-  const gate = place.interior.gate;
-  const n = gate.passages.length;
+  const bays = baysOf(place);
+  const n = bays.length;
   runtime.playerLevel = 'concourse';
-  runtime.playerPlatX = gate.passages[1].x;
-  runtime.playerPlatZ = gate.z0 - 1;
+  runtime.playerPlatX = bays[1].x;
+  runtime.playerPlatZ = bays[1].z - 1;
   try {
     const seen = new Set<number>();
     for (let k = 0; k < 120; k++) {
@@ -223,20 +251,38 @@ test('la baie devant laquelle le joueur se tient n’est pas à prendre', () => 
 
 test('on s’efface en haut de la volée d’une bouche, jamais en plein hall', () => {
   for (const { name, place } of INSIDE) {
-    const it = place.interior;
     for (let k = 0; k < 20; k++) {
       const stops = routeToStreet(place);
       assert.ok(stops);
       const last = stops[stops.length - 1];
-      const t = last.z - it.free.z1;
+      // La bouche où l'on s'efface : celle dont la volée contient le dernier
+      // point. Une bouche perce N'IMPORTE QUELLE paroi depuis la phase 7 — le
+      // fond du hall n'est plus forcément le +z de la zone libre.
+      const found = place.network.mouths
+        .map((m) => {
+          const room = place.network.rooms.find((r) => r.id === m.roomId);
+          if (!room?.walkable) return null;
+          const r = room.rect;
+          // Enfoncement dans la volée, et écart au milieu de la baie.
+          const t = m.side === 'z1' ? last.z - r.z1
+            : m.side === 'z0' ? r.z0 - last.z
+              : m.side === 'x1' ? last.x - r.x1
+                : r.x0 - last.x;
+          const off = m.side === 'z0' || m.side === 'z1'
+            ? Math.abs(last.x - m.at)
+            : Math.abs(last.z - m.at);
+          return { t, off, m };
+        })
+        .filter((c): c is { t: number; off: number; m: typeof place.network.mouths[number] } =>
+          c !== null && c.off <= c.m.halfWidth + 1e-6)
+        .sort((a, b) => Math.abs(a.t) - Math.abs(b.t))[0];
+      assert.ok(found, `${name} : effacement hors de toute bouche`);
       // Au moins cinq girons dans la bouche : au-dessous, le linteau ne cache
       // pas encore, et l'effacement se verrait depuis le hall.
       assert.ok(
-        t >= EXIT_MOUTH_Z0 + 5 * 0.31 - 1e-6 && t <= EXIT_MOUTH_END + 1e-6,
-        `${name} : effacement à ${t.toFixed(2)} m du fond du hall`,
+        found.t >= EXIT_MOUTH_Z0 + 5 * 0.31 - 1e-6 && found.t <= EXIT_MOUTH_END + 1e-6,
+        `${name} : effacement à ${found.t.toFixed(2)} m du nu de la paroi`,
       );
-      const exit = it.exits.find((e) => Math.abs(last.x - e.x) <= e.halfWidth);
-      assert.ok(exit, `${name} : effacement hors de toute bouche`);
     }
   }
 });

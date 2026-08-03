@@ -29,12 +29,24 @@ const { GALLERY_DEPTH, SHOP_DEPTH } = await import('../src/data/stationInterior.
 const { MIN_MAIN_WIDTH } = await import('../src/data/stationConcourseTypes.ts');
 const { STATIONS } = await import('../src/data/stations.ts');
 const { STATION_COUNT } = await import('../src/data/loop.ts');
+const { wiredIndices } = await import('../src/data/stationConcourseWired.ts');
+
+/**
+ * Les gares restées sur le hall générique.
+ *
+ * Ce qui suit compare l'affichage d'aujourd'hui à celui d'avant la source
+ * unique. Une gare BRANCHÉE sur son relevé (phase 20) annonce ses vraies
+ * sorties, pas les deux premières d'un tableau : l'y contraindre reviendrait à
+ * exiger qu'elle ne soit pas branchée.
+ */
+const LEGACY = Array.from({ length: STATION_COUNT }, (_, i) => i)
+  .filter((i) => !wiredIndices().includes(i));
 
 const NAME = (i: number) => `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
 const NETS = CONCOURSE_PROFILES.map((p) => ({ p, net: compileProfile(p) }));
 
 test('le hall générique ne porte aucune devanture relevée', () => {
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const net = placementFor(i, psdGates()).network;
     assert.deepEqual(net.frontages, [], NAME(i));
   }

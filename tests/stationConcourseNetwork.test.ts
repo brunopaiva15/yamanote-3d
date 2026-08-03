@@ -46,12 +46,26 @@ const {
   stationInteriorOpen,
 } = await import('../src/systems/concourseRoute.ts');
 const { CONCOURSE_PROFILES } = await import('../src/data/stationConcourseProfiles.ts');
-const { wiredCount } = await import('../src/data/stationConcourseWired.ts');
+const { wiredCount, wiredIndices } = await import('../src/data/stationConcourseWired.ts');
 const { EXIT_MOUTH_END } = await import('../src/data/stationInterior.ts');
 const { STATIONS } = await import('../src/data/stations.ts');
 const { STATION_COUNT } = await import('../src/data/loop.ts');
 
 const NAME = (i: number) => `${STATIONS[i].jy} ${STATIONS[i].romaji}`;
+
+/**
+ * LES GARES QUI DOIVENT ÊTRE RESTÉES IDENTIQUES.
+ *
+ * La moitié de ce fichier compare le réseau au hall générique, point par point,
+ * pour prouver qu'un branchement ne déplace rien en silence. Depuis la phase 20,
+ * huit gares sont branchées EXPRÈS : les comparer au hall générique reviendrait
+ * à exiger qu'elles ne soient pas branchées.
+ *
+ * On les écarte donc de ces contrôles-là, et une liste explicite
+ * (`stationConcourseBuild.test`) tient qui est branché.
+ */
+const LEGACY = Array.from({ length: STATION_COUNT }, (_, i) => i)
+  .filter((i) => !wiredIndices().includes(i));
 const PLACE = (i: number) => placementFor(i, psdGates());
 
 /**
@@ -83,13 +97,19 @@ const mainAccessBypass = (
 ): boolean => mainAccessFloor(p, x, z) !== null || mainAccessFloor(p, x, z + CLEAR_DECK) !== null;
 
 test('le placement porte le réseau de chaque gare', () => {
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const p = PLACE(i);
     assert.equal(p.network.stationIndex, i, NAME(i));
     assert.equal(p.network.source, 'legacy', NAME(i));
     assert.equal(p.network.built, p.interior.built, NAME(i));
   }
-  assert.equal(wiredCount(), 0, 'une gare a été branchée sans que le test le sache');
+  // La liste des gares branchées vit dans `stationConcourseWired` et se
+  // vérifie dans `stationConcourseBuild.test` ; ici, on s'assure seulement que
+  // les DEUX chemins coexistent — sans quoi ce fichier ne prouverait plus rien.
+  assert.equal(wiredCount() + LEGACY.length, STATION_COUNT);
+  for (const i of wiredIndices()) {
+    assert.equal(PLACE(i).network.source, 'profile', NAME(i));
+  }
 });
 
 test('LE SOL N’A PAS BOUGÉ D’UN CENTIMÈTRE', () => {
@@ -100,7 +120,7 @@ test('LE SOL N’A PAS BOUGÉ D’UN CENTIMÈTRE', () => {
   // demi-mètre.
   let sampled = 0;
   let floor = 0;
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const p = PLACE(i);
     const it = p.interior;
     /** L'ancienne implémentation, mot pour mot. */
@@ -124,12 +144,12 @@ test('LE SOL N’A PAS BOUGÉ D’UN CENTIMÈTRE', () => {
   }
   // Et l'échantillon a bien touché du sol : un test qui ne compare que des
   // `null` ne prouve rien.
-  assert.ok(sampled > 30000, `échantillon trop maigre : ${sampled} points`);
-  assert.ok(floor > 5000, `seulement ${floor} points de sol trouvés`);
+  assert.ok(sampled > 20000, `échantillon trop maigre : ${sampled} points`);
+  assert.ok(floor > 4000, `seulement ${floor} points de sol trouvés`);
 });
 
 test('les bouches de sortie répondent comme avant', () => {
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const p = PLACE(i);
     const it = p.interior;
     for (const e of it.exits) {
@@ -156,7 +176,7 @@ test('aucun hall générique n’a de liaison interne — c’est le sujet de la
   // `joinFloorAt` ne rend jamais rien aujourd'hui : le hall générique est
   // d'un seul tenant. C'est exactement le constat S1 du plan, et c'est
   // pourquoi la fonction se vérifie sur les relevés, pas sur les gares.
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const p = PLACE(i);
     assert.equal(p.network.joins.length, 0, NAME(i));
     assert.equal(joinFloorAt(p, 4, 20), null, NAME(i));
@@ -257,7 +277,7 @@ test('la marche des trente gares n’a pas changé', () => {
   // déplacer. On le vérifie plutôt que de le supposer : `walkerBlocked` est ce
   // qui tient la foule dans le hall, et une régression y serait invisible
   // jusqu'à ce qu'un voyageur traverse un mur.
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const p = PLACE(i);
     const it = p.interior;
     for (let x = it.paid.x0 - 1; x <= it.paid.x1 + 1; x += 0.6) {
@@ -287,7 +307,7 @@ test('les baies du hall générique sont EXACTEMENT celles d’avant', () => {
   // traverse maintenant les groupes ; pour une gare à une seule ligne il doit
   // rester le même, dans le même ordre, sans quoi les battants s'ouvriraient au
   // mauvais endroit.
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const p = PLACE(i);
     const bays = concourseBays(p.network);
     const before = p.interior.built ? p.interior.gate.passages : [];
@@ -305,7 +325,7 @@ test('les baies du hall générique sont EXACTEMENT celles d’avant', () => {
 test('« dans quelle baie suis-je » répond comme avant', () => {
   // Quatre endroits posaient cette question de quatre façons ; elle est posée
   // une fois. On rejoue l'ancienne réponse sur toute la ligne de portillons.
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const p = PLACE(i);
     const it = p.interior;
     if (!it.built) continue;
@@ -471,7 +491,7 @@ test('les deux groupes de Takanawa Gateway se remplissent tous les deux', () => 
 test('vingt-huit gares ont UN accès vivant, et c’est le principal', () => {
   // Le repli ne change pas : la trémie la plus proche du milieu du quai mène
   // au hall, les autres restent les couloirs borgnes qu'elles étaient.
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const p = PLACE(i);
     if (!p.network.built) {
       assert.equal(p.liveAccesses.length, 0, `${NAME(i)} : rien n’est bâti, rien ne mène nulle part`);
@@ -541,7 +561,7 @@ test('LE HALL GÉNÉRIQUE DONNE UN VOLUME, AUX COTES D’AVANT', () => {
   // plafond, deux parois, un fond percé. Elle lit maintenant un VOLUME du
   // réseau. Tant qu'aucune gare n'est branchée, les deux doivent coïncider au
   // centimètre — c'est ce qui fait qu'un refactor de rendu ne se voit pas.
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const p = PLACE(i);
     const shells = shellsOf(p.network);
     if (!p.network.built) {
@@ -611,7 +631,7 @@ test('un volume est continu : les pièces qu’un portillon joint restent ensemb
 test('le hall générique ne connaît ni correspondance ni chantier', () => {
   // Constat D7 du plan, et il reste vrai : `data/lines` sait qu'il y a un Ginza
   // à Kanda, le hall non. Rien ne s'affiche donc sur les trente gares.
-  for (let i = 0; i < STATION_COUNT; i++) {
+  for (const i of LEGACY) {
     const p = PLACE(i);
     assert.deepEqual(p.network.transfers, [], NAME(i));
     assert.deepEqual(p.network.hoardings, [], NAME(i));

@@ -32,7 +32,7 @@ const {
   roomAt,
 } = await import('../src/data/stationConcourseBuild.ts');
 const { CONCOURSE_PROFILES } = await import('../src/data/stationConcourseProfiles.ts');
-const { wiredCount } = await import('../src/data/stationConcourseWired.ts');
+const { wiredCount, wiredIndices } = await import('../src/data/stationConcourseWired.ts');
 const { interiorFor } = await import('../src/data/stationInterior.ts');
 const { layoutFor } = await import('../src/data/stationLayouts.ts');
 const { STATIONS } = await import('../src/data/stations.ts');
@@ -220,13 +220,19 @@ test('le repli est fidèle au rectangle près', () => {
   }
 });
 
-test('aucune gare n’est encore branchée sur son relevé', () => {
-  // La phase 7 livre le moteur, pas la bascule : un profil compilé n'a encore
-  // ni mobilier, ni archétype de rendu, ni signalétique. L'échanger contre le
-  // hall meublé serait un recul.
-  assert.equal(wiredCount(), 0);
+test('les gares branchées sont EXACTEMENT celles qu’on a décidé de brancher', () => {
+  // Une bascule silencieuse est le pire des accidents de ce chantier : une gare
+  // qui passerait au relevé sans que personne l'ait voulu emporterait avec elle
+  // son sol, sa marche, ses itinéraires et ses panneaux. La liste est donc
+  // écrite ici, en clair, et le compilateur doit s'y tenir des deux côtés.
+  assert.deepEqual([...wiredIndices()], [1, 5, 7, 9, 10, 13, 15, 17]);
+  assert.equal(wiredCount(), wiredIndices().length);
   for (let i = 0; i < STATION_COUNT; i++) {
-    assert.equal(networkFor(i, MAIN(i)).source, 'legacy', NAME(i));
+    assert.equal(
+      networkFor(i, MAIN(i)).source,
+      wiredIndices().includes(i) ? 'profile' : 'legacy',
+      NAME(i),
+    );
   }
 });
 

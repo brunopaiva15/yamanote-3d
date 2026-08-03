@@ -34,6 +34,7 @@ import {
   makeTicketFaceTexture,
 } from '../../textures/concourse';
 import { FOOD_BRANDS, makeVendingHeaderTexture, vendingBrand } from '../../textures/vending';
+import type { ConcourseNetwork } from '../../data/stationConcourseBuild';
 import type { Mats } from './materials';
 import { stationAd } from './adPool';
 import { Konbini } from './Konbini';
@@ -133,22 +134,44 @@ function useFixtureKit(station: number) {
 
 type Kit = ReturnType<typeof useFixtureKit>;
 
+/** L'altitude du sol sous un meuble : celle de sa pièce, ou celle du hall. */
+function floorOf(net: ConcourseNetwork, it: StationInterior, x: number, z: number): number {
+  const room = net.rooms.find((r) => r.walkable
+    && x >= r.rect.x0 && x <= r.rect.x1 && z >= r.rect.z0 && z <= r.rect.z1);
+  return room?.floorY ?? it.floorY;
+}
+
 export function Fixtures({
   it,
+  net,
   m,
   station,
 }: {
   it: StationInterior;
+  /**
+   * Le réseau : c'est LUI qui dit quel mobilier tient debout ici.
+   *
+   * Le hall générique meuble ses deux parois et l'affaire est entendue. Une
+   * gare branchée sur son relevé n'a pas les mêmes parois : `networkFor` ne
+   * garde du mobilier générique que ce qui rentre dans ses pièces, à l'écart
+   * de ses lignes, de ses vitrines et de ses seuils. Un konbini de 3,40 m de
+   * fond ne tient pas dans un pont-concourse, et il disparaît au lieu de
+   * ressortir par le mur.
+   */
+  net: ConcourseNetwork;
   m: Mats;
   station: number;
 }) {
   const kit = useFixtureKit(station);
+  // La trame porteuse appartient au hall générique : un relevé qui donne ses
+  // propres volumes ne la reçoit pas, faute de savoir où sont ses poteaux.
+  const pilasters = net.source === 'profile' ? [] : it.pilasters;
   return (
     <group name="gare/hall/mobilier">
       {/* Pilastres : la trame porteuse, engagée dans les deux parois. Elle
           passe avant le mobilier - une devanture l'enjambe, un distributeur
           l'esquive. */}
-      {it.pilasters.map((p, i) => {
+      {pilasters.map((p, i) => {
         const px = (p.x0 + p.x1) / 2;
         const pz = (p.z0 + p.z1) / 2;
         const h = it.ceilY - it.floorY - 0.12;
@@ -200,7 +223,7 @@ export function Fixtures({
         );
       })}
 
-      {it.fixtures.map((f, i) => {
+      {net.fixtures.map((f, i) => {
         const cx = (f.rect.x0 + f.rect.x1) / 2;
         const cz = (f.rect.z0 + f.rect.z1) / 2;
         // La façade regarde vers le milieu du hall : +1 vers +x, -1 vers -x.
@@ -208,7 +231,7 @@ export function Fixtures({
         // toujours face à soi, largeur en x local.
         const yaw = f.facing === 1 ? Math.PI / 2 : -Math.PI / 2;
         return (
-          <group key={`fx${i}`} position={[cx, it.floorY, cz]} rotation={[0, yaw, 0]}>
+          <group key={`fx${i}`} position={[cx, floorOf(net, it, cx, cz), cz]} rotation={[0, yaw, 0]}>
             {/* `deviceId` est ce par quoi le meuble a un ÉTAT : c'est lui qui
                 garde le crédit inséré et qui fait battre le volet de cette
                 machine-là quand on y ramasse sa boisson. */}

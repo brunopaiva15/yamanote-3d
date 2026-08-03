@@ -493,7 +493,7 @@ export function shopPlan(f: Fixture): KonbiniPlan {
  * ses meubles, décrits une seule fois dans `data/konbiniPlan` et lus aussi bien
  * ici que par le rendu.
  */
-function interiorSolids(f: Fixture): InteriorRect[] {
+export function interiorSolids(f: Fixture): InteriorRect[] {
   if (f.kind !== 'konbini') return [f.rect];
   return shopPlan(f).solids.map((s) => {
     const a = shopToHall(f, s.x0, s.z0);
