@@ -1978,46 +1978,6 @@ export function drawPriorityNotice(
   g.textAlign = 'left';
 }
 
-export function drawSafetyNotice(
-  s: ScreenSurface,
-  index: number,
-  clock: string,
-  dir: LoopDirection,
-): void {
-  const { g, w, h } = s;
-  g.fillStyle = '#f4f6f7';
-  g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp', dir);
-  // Bande podotactile jaune et file de voyageurs qui attendent derrière.
-  const base = h - 46;
-  g.fillStyle = '#f2c521';
-  for (let i = 0; i < 7; i++) {
-    g.beginPath();
-    g.roundRect(w * 0.06 + i * 34, base - 8 + i * 2, 26, 12, 3);
-    g.fill();
-  }
-  const green = '#2f8f4e';
-  for (let i = 0; i < 4; i++) {
-    const cx = w * 0.1 + i * 46;
-    g.fillStyle = green;
-    g.beginPath();
-    g.arc(cx, base - 96, 14, 0, Math.PI * 2);
-    g.fill();
-    g.beginPath();
-    g.roundRect(cx - 15, base - 78, 30, 54, 9);
-    g.fill();
-  }
-  g.fillStyle = '#26303a';
-  g.textAlign = 'left';
-  g.font = `bold 30px ${JP_FONT}`;
-  g.fillText('かけこみ乗車は', w * 0.44, h * 0.46);
-  g.fillText('おやめください。', w * 0.44, h * 0.62);
-  g.fillStyle = '#5c646c';
-  g.font = `18px ${JP_FONT}`;
-  g.fillText('Please do not rush onto the train.', w * 0.44, h * 0.78);
-}
-
-
 // --- Information trafic (運行情報) ---
 // L'afficheur réel relaie les perturbations de TOUTE la région de Tokyo, pas
 // seulement de la Yamanote - c'est presque toujours une autre ligne qui est

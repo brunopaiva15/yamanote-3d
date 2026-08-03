@@ -28,7 +28,6 @@ import {
   drawPhoneManner,
   drawPriorityNotice,
   drawRoute,
-  drawSafetyNotice,
   drawTrafficInfo,
   drawTransfers,
   fmtClock,
@@ -51,7 +50,7 @@ export type LineScreenState =
   | 'zoomJP' | 'zoomEN'
   | 'loopJP' | 'loopEN'
   | 'approachJP' | 'approachEN'
-  | 'transfers' | 'priority' | 'manner' | 'safety'
+  | 'transfers' | 'priority' | 'manner'
   | 'trafficJP' | 'trafficEN'
   | 'securityJP' | 'securityEN'
   | 'brake' | 'emergency' | 'outage';
@@ -143,12 +142,12 @@ export function lineScreenFrame(): LineScreenFrame {
           'loopJP', 'zoomJP', 'transfers',
           'trafficJP', 'trafficEN',
           'loopEN', 'zoomEN', 'securityJP', 'securityEN',
-          'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
+          'priority', 'zoomJP', 'manner', 'loopJP',
         ]
       : [
           'loopJP', 'zoomJP', 'transfers',
           'loopEN', 'zoomEN', 'securityJP', 'securityEN',
-          'priority', 'zoomJP', 'manner', 'loopJP', 'safety',
+          'priority', 'zoomJP', 'manner', 'loopJP',
         ];
     state = rotation[tick % rotation.length];
   }
@@ -217,9 +216,6 @@ export function paintLineScreen(
       break;
     case 'priority':
       drawPriorityNotice(s, index, clock, dir);
-      break;
-    case 'safety':
-      drawSafetyNotice(s, index, clock, dir);
       break;
     case 'manner':
       [drawPhoneManner, drawBackpackManner, drawHeadphoneManner][f.mannerVariant](
