@@ -20,7 +20,6 @@ import {
   drawApproach,
   drawEmergencyBrake,
   drawEmergencyInfo,
-  drawHeadphoneManner,
   drawSecurityNotice,
   drawLoopMap,
   drawOutageInfo,
@@ -62,8 +61,6 @@ export interface LineScreenFrame {
   clock: string;
   /** Secondes avant l'arrivée, arrondies : les minutes affichées en viennent. */
   countdown: number;
-  /** Visuel de courtoisie du moment (téléphone, fuite des écouteurs). */
-  mannerVariant: number;
   /** Perturbation d'une AUTRE ligne, s'il y en a une à afficher. */
   notice: TrafficNotice | null;
   /** Motif de l'arrêt d'urgence en cours (index dans EMERGENCY_REASONS). */
@@ -159,7 +156,6 @@ export function lineScreenFrame(): LineScreenFrame {
     countdown: Math.round(
       secondsToArrival(phase, runtime.phaseT, index, useStore.getState().loopDirection),
     ),
-    mannerVariant: Math.floor(tick / 10) % 2,
     notice,
     emergencyReason: emergency.reason,
     animated:
@@ -179,7 +175,7 @@ export function lineScreenKey(f: LineScreenFrame, anim: number, side: 1 | -1): s
   const phase = useStore.getState().phase;
   const doorSide = useStore.getState().doorSide;
   return [
-    f.index, phase, f.state, f.mannerVariant, f.clock, doorSide, side,
+    f.index, phase, f.state, f.clock, doorSide, side,
     f.animated ? anim : 0,
     f.state.startsWith('loop') || f.state.startsWith('zoom') ? f.countdown : 0,
   ].join('|');
@@ -217,9 +213,7 @@ export function paintLineScreen(
       drawPriorityNotice(s, index, clock, dir);
       break;
     case 'manner':
-      [drawPhoneManner, drawHeadphoneManner][f.mannerVariant](
-        s, index, clock, dir,
-      );
+      drawPhoneManner(s, index, clock, dir);
       break;
     // Les quatre vues « ligne perturbée » ne s'affichent que s'il y a
     // vraiment une perturbation ; sinon la rotation retombe sur le plan de la

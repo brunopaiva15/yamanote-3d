@@ -7,7 +7,7 @@
 // rapprochée des 5 prochaines stations (arc vert, minutes, correspondances),
 // plan complet de la boucle (30 stations, minutes jusqu'à ~30 min), écran
 // « prochain arrêt » zh/ko, correspondances détaillées, écrans manières
-// (téléphone, fuite sonore des écouteurs), places prioritaires,
+// (mode silencieux), places prioritaires,
 // sécurité, avertissement de FERMETURE DES PORTES en fin d'arrêt, côté
 // d'ouverture à l'approche, plan du quai, et - quand une autre ligne est
 // perturbée - information trafic, état des autres lignes et certificat de
@@ -1194,10 +1194,12 @@ export function drawLoopMap(
   g.fillText(en ? ROUTE_FOOTNOTE_EN : ROUTE_FOOTNOTE_JP, 8, h - 12);
 }
 
-// --- Écrans manières (fond clair avec bandeau, comme les vrais) ---
-// La rame fait tourner deux visuels de courtoisie : téléphone en mode
-// silencieux, et fuite sonore des écouteurs. Ils partagent le gabarit
-// pictogramme à gauche / texte à droite.
+// --- Écran manières (fond clair avec bandeau, comme les vrais) ---
+// Il n'en reste qu'UN, et c'est le seul dont on ait une capture : le mode
+// silencieux. Les autres visuels de courtoisie que j'avais dessinés - sac à
+// dos porté devant, fuite sonore des écouteurs - n'étaient attestés nulle
+// part, et un écran plausible qui n'existe pas devient un souvenir faux de la
+// ligne.
 
 /**
  * Mode silencieux : là encore le sticker, pas un dessin - un téléphone à
@@ -1279,52 +1281,6 @@ export function drawPhoneManner(
   g.fillText('and refrain from talking on the phone.', 300, HEADER_H + 194);
 }
 
-export function drawHeadphoneManner(
-  s: ScreenSurface,
-  index: number,
-  clock: string,
-  dir: LoopDirection,
-): void {
-  const { g, w, h } = s;
-  g.fillStyle = '#f4f6f7';
-  g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'next', 'jp', dir);
-  // Tête de profil casquée, ondes rouges qui s'échappent.
-  const cx = w * 0.2;
-  const cy = HEADER_H + (h - HEADER_H) * 0.5;
-  g.fillStyle = '#3a424a';
-  g.beginPath();
-  g.arc(cx, cy, 52, 0, Math.PI * 2);
-  g.fill();
-  g.strokeStyle = '#26303a';
-  g.lineWidth = 14;
-  g.beginPath();
-  g.arc(cx, cy - 6, 62, Math.PI * 1.05, Math.PI * 1.95);
-  g.stroke();
-  for (const dir of [-1, 1] as const) {
-    g.fillStyle = '#26303a';
-    g.beginPath();
-    g.roundRect(cx + dir * 58 - 12, cy - 26, 24, 52, 8);
-    g.fill();
-  }
-  g.strokeStyle = '#d0342c';
-  g.lineWidth = 5;
-  for (let i = 1; i <= 3; i++) {
-    g.beginPath();
-    g.arc(cx + 76, cy, 18 + i * 16, -Math.PI * 0.32, Math.PI * 0.32);
-    g.stroke();
-  }
-
-  g.textAlign = 'left';
-  g.fillStyle = '#26303a';
-  g.font = `bold 30px ${JP_FONT}`;
-  g.fillText('ヘッドホンからの音もれに', w * 0.44, h * 0.42);
-  g.fillText('ご注意ください。', w * 0.44, h * 0.58);
-  g.fillStyle = '#5c646c';
-  g.font = `18px ${JP_FONT}`;
-  g.fillText('Please make sure that sound does not', w * 0.44, h * 0.74);
-  g.fillText('leak from your headphones.', w * 0.44, h * 0.85);
-}
 
 
 
