@@ -180,10 +180,11 @@ export function Screens() {
 
     // Écran droit : il a son PROPRE pas, plus fin que le battement.
     //
-    // Le fondu d'une page à la suivante dure un sixième de seconde et le vert
-    // met une seconde et demie à remonter la bande : à un réveil toutes les
-    // demi-secondes, le premier serait une coupure et le second un escalier de
-    // trois marches. On repeint donc jusqu'à MOTION_STEP tant que ça bouge
+    // Le fondu d'une page à la suivante dure une fraction de seconde et le vert
+    // à peine plus d'une seconde à remonter la bande (`three/lineScreenAnim`,
+    // seul endroit où ces durées sont écrites) : à un réveil toutes les demi-
+    // secondes, le premier serait une coupure et le second un escalier de deux
+    // ou trois marches. On repeint donc jusqu'à MOTION_STEP tant que ça bouge
     // - et pas une image de plus : hors de ces deux animations, la dalle
     // retrouve exactement le battement d'avant.
     stepAcc.current += dt;
