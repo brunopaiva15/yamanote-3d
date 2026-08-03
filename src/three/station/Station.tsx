@@ -30,7 +30,7 @@ import {
   type Placed,
 } from '../../systems/stationPlacement';
 import { platformDetail } from '../../systems/perf';
-import { CANOPY_T, deckHole } from '../../systems/stationDeck';
+import { CANOPY_T, deckHole, deckOver } from '../../systems/stationDeck';
 import { BOARDABLE_GATES } from '../../systems/wrongDoor';
 import { layoutFor, type StationLayout } from '../../data/stationLayouts';
 import {
@@ -270,20 +270,19 @@ export function Station() {
       shape.holes.push(hole);
     }
     // Les escaliers mécaniques percent la dalle comme les trémies : ils
-    // descendent au même couloir. Le percement suit donc le même palier de
-    // qualité que la volée qui le remplit (voir Amenities) - sans elle, le
-    // quai n'aurait plus qu'un trou.
-    if (detail <= 2) {
-      for (const e of place.escalators) {
-        const ix = ESCALATOR_OPENING_HALF_X;
-        const hole = new THREE.Path();
-        hole.moveTo(e.x - ix, e.z + ESCALATOR_OPENING_Z0);
-        hole.lineTo(e.x - ix, e.z + ESCALATOR_OPENING_Z1);
-        hole.lineTo(e.x + ix, e.z + ESCALATOR_OPENING_Z1);
-        hole.lineTo(e.x + ix, e.z + ESCALATOR_OPENING_Z0);
-        hole.closePath();
-        shape.holes.push(hole);
-      }
+    // descendent au même couloir. Le percement ne dépend d'aucun palier de
+    // qualité, parce que la volée qui le remplit n'en dépend plus non plus :
+    // un escalier mécanique est un OUVRAGE — il barre, il dessert, on le
+    // contourne — et le palier ne retire que ce qui se regarde.
+    for (const e of place.escalators) {
+      const ix = ESCALATOR_OPENING_HALF_X;
+      const hole = new THREE.Path();
+      hole.moveTo(e.x - ix, e.z + ESCALATOR_OPENING_Z0);
+      hole.lineTo(e.x - ix, e.z + ESCALATOR_OPENING_Z1);
+      hole.lineTo(e.x + ix, e.z + ESCALATOR_OPENING_Z1);
+      hole.lineTo(e.x + ix, e.z + ESCALATOR_OPENING_Z0);
+      hole.closePath();
+      shape.holes.push(hole);
     }
     const g = new THREE.ExtrudeGeometry(shape, { depth: SLAB_H, bevelEnabled: false });
     // Le plan de tracé (x, z) se couche à l'horizontale, l'extrusion descend.
@@ -751,7 +750,13 @@ export function Station() {
           d'urgence, armoires, bacs de tri, gouttières, marquages au sol. */}
       <PlatformKit place={place} layout={layout} detail={detail} materials={m} />
 
-      {detail <= 2 && <Amenities place={place} canopyY={canopyY} m={m} station={index} />}
+      {/* CE QUI NE SE RÉPÈTE PAS, À TOUS LES PALIERS. Escalier mécanique,
+          ascenseur et kiosque sont des ouvrages : ils occupent le sol
+          (`place.obstacles`), ils desservent un niveau, et la marche ne connaît
+          pas le palier de qualité. Les retirer à « basse » et à « très basse »
+          en faisait trois obstacles invisibles — la faute exacte que la phase
+          25 interdit, prise du côté du quai, là où son test ne regardait pas. */}
+      <Amenities place={place} canopyY={canopyY} m={m} station={index} detail={detail} />
 
       {/* Bords de quai NUS - Shinjuku et Shibuya, les deux seules gares sans
           portes palières. Partout ailleurs, le muret arrête l'œil en même temps
@@ -904,6 +909,29 @@ function FarSide({
         [cut.z1, len / 2, wallH]] as [number, number, number][])
       .filter(([a, b]) => b - a > 0.02)
     : [[-len / 2, len / 2, wallH]];
+  /**
+   * LE COURONNEMENT DE TRANCHÉE, LUI, S'ARRÊTE — il ne se baisse pas.
+   *
+   * C'est un massif de trois mètres quarante qui monte BIEN AU-DELÀ de
+   * l'auvent : à Meguro il culmine à 6,63 m, et le plateau praticable qui
+   * enjambe la voie tient entre 5,08 et 8,18. Il traversait donc son hall sur
+   * un mètre cinquante-trois, sur toute la longueur du quai. Contrairement au
+   * mur, on ne peut pas l'abaisser — abaissé, il ne couronne plus rien — et
+   * contrairement à l'auvent, rien ne se voit au travers : sous le plateau,
+   * c'est le plateau qui tient lieu de couronnement.
+   *
+   * Sa tranche n'est pas celle de l'auvent : il demande donc SA propre percée,
+   * à SA hauteur (`systems/stationDeck`).
+   */
+  const crownY0 = PLATFORM_TOP + wallH;
+  const crownCut = deckHole(
+    deckOver(place.network, crownY0, crownY0 + CROWN_H, -Infinity, Infinity),
+    len / 2,
+  );
+  const crownRuns: [number, number][] = crownCut
+    ? ([[-len / 2, crownCut.z0], [crownCut.z1, len / 2]] as [number, number][])
+      .filter(([a, b]) => b - a > 0.02)
+    : [[-len / 2, len / 2]];
 
   // Harajuku : le seul quai latéral de la boucle. Un vrai mur, un vrai
   // soubassement carrelé, et rien à voir au-delà.
@@ -969,7 +997,7 @@ function FarSide({
           palier le plus léger, où la silhouette du quai suffit - et là où la
           charpente signature couvre le site d'un seul tenant, il n'y en a
           jamais eu. */}
-      {detail <= 2 && !sigRoof
+      {!sigRoof
         // Il s'interrompt sous un plateau praticable, exactement comme celui du
         // quai proche (`systems/stationDeck`) : à Ueno et à Shinagawa le hall
         // enjambe les deux quais, et cet auvent-ci passait dedans à dix
@@ -1016,6 +1044,7 @@ function FarSide({
         elevation={layout.elevation}
         wallH={wallH}
         runs={closureRuns}
+        crownRuns={crownRuns}
         len={len}
         m={m}
         detail={detail}
@@ -1079,6 +1108,7 @@ function Closure({
   elevation,
   wallH,
   runs,
+  crownRuns,
   len,
   m,
   detail,
@@ -1088,6 +1118,8 @@ function Closure({
   elevation: StationLayout['elevation'];
   wallH: number;
   runs: [number, number, number][];
+  /** Tronçons du couronnement : il s'interrompt sous un plateau, sans baisser. */
+  crownRuns: [number, number][];
   len: number;
   m: Mats;
   detail: number;
@@ -1104,6 +1136,7 @@ function Closure({
       crowned={elevation === 'trench'}
       wallH={wallH}
       runs={runs}
+      crownRuns={crownRuns}
       len={len}
       m={m}
       detail={detail}
@@ -1134,6 +1167,7 @@ function ClosureWall({
   crowned,
   wallH,
   runs,
+  crownRuns,
   len,
   m,
   detail,
@@ -1146,6 +1180,7 @@ function ClosureWall({
   wallH: number;
   /** Tronçons du mur : `[z0, z1, hauteur]`, un seul quand rien ne le traverse. */
   runs: [number, number, number][];
+  crownRuns: [number, number][];
   len: number;
   m: Mats;
   detail: number;
@@ -1192,14 +1227,21 @@ function ClosureWall({
           detail={detail}
         />
       )}
-      {crowned && (
-        <mesh position={[x + 0.12, PLATFORM_TOP + wallH + 1.7, 0]} material={m.wallDark}>
-          <boxGeometry args={[0.42, 3.4, len]} />
+      {crowned && crownRuns.map(([z0, z1]) => (
+        <mesh
+          key={`cr${z0}`}
+          position={[x + 0.12, PLATFORM_TOP + wallH + CROWN_H / 2, (z0 + z1) / 2]}
+          material={m.wallDark}
+        >
+          <boxGeometry args={[0.42, CROWN_H, z1 - z0]} />
         </mesh>
-      )}
+      ))}
     </group>
   );
 }
+
+/** Hauteur du couronnement de tranchée, au-dessus de l'arase du mur. */
+const CROWN_H = 3.4;
 
 /** Un tronçon de mur de clôture : sa propre géométrie, sa propre hauteur. */
 function WallRun({
@@ -1258,11 +1300,13 @@ function Amenities({
   canopyY,
   m,
   station,
+  detail,
 }: {
   place: ReturnType<typeof placementFor>;
   canopyY: number;
   m: Mats;
   station: number;
+  detail: number;
 }) {
   return (
     <group>
@@ -1293,7 +1337,9 @@ function Amenities({
 
       {/* Horloge de quai, suspendue à l'auvent - par une vraie potence : le
           boîtier flottait à trente-cinq centimètres du plafond, sans rien. */}
-      {place.layout.amenities.clock && (
+      {/* L'horloge, elle, SE REGARDE : c'est le seul de ces quatre ouvrages
+          qu'un palier bas a le droit de retirer, et le seul qu'il retire. */}
+      {detail <= 2 && place.layout.amenities.clock && (
         <group name="horloge" position={[place.backX - 1.6, canopyY - 0.62, 0]}>
           <mesh position={[0, 0.45, 0]} material={m.metal}>
             <boxGeometry args={[0.05, 0.36, 0.05]} />

@@ -1604,6 +1604,47 @@ Deux conséquences de méthode, au-delà des trois gares :
   Le treizième est un couvre-joint de douze centimètres à Shinagawa, signalé
   plutôt que masqué.
 
+### 4.29 Un palier retire ce qui se regarde — y compris sur le quai
+
+La phase 25 avait posé la règle : **un palier de qualité retire ce qui se
+REGARDE, jamais ce qui BARRE.** Son test la tenait sur le réseau du hall, où
+elle est vraie. Elle ne l'était pas sur le QUAI, où personne ne regardait.
+
+À « basse » et à « très basse » (paliers 4 et 5, détail de gare 3), le quai
+perdait son **escalier mécanique**, son **ascenseur** et son **kiosque** — trois
+ouvrages qui occupent le sol dans `place.obstacles`, que la marche continue de
+refuser de traverser, et que plus rien ne dessinait. Trois obstacles invisibles,
+exactement la faute que la règle interdit. Le percement de la dalle sous
+l'escalier mécanique suivait le même palier, si bien que le trou et ce qui le
+remplit disparaissaient ensemble : cohérent, mais faux.
+
+**Et le hall entier disparaissait dès qu'on le regardait depuis le quai.** On
+avait gardé cette économie-là en se disant qu'un hall vu par une trémie restait
+du fond de champ. Il ne l'est pas : treize gares portent le leur AU-DESSUS des
+voies, la volée montante y débouche en plein ciel, et l'on voyait la ville par
+le plafond du hall qu'on s'apprête à parcourir. Ce n'est pas du fond de champ,
+c'est le bâtiment.
+
+**Ce que cela coûte, mesuré** (`node scripts/station-tiers.mjs`, vue depuis le
+quai, appels de rendu par image) :
+
+| gare | ultra | moyenne | basse | très basse |
+|---|---|---|---|---|
+| Ueno | 1787 | 431 | 171 (avant : 127) | 119 (avant : 103) |
+| Shinagawa | 252 | 122 | 87 | 72 |
+
+Seize appels de plus au palier le plus bas pour que le bâtiment existe : le
+palier garde tout son sens, et l'économie reste entière — elle se fait sur ce
+qu'il y a DEDANS (`Fixtures` rend les volumes sans leur décoration dès le palier
+2), pas sur le fait qu'il soit là. Seule l'horloge de quai reste retirée aux
+paliers bas : c'est le seul des quatre ouvrages qui se regarde vraiment.
+
+Le balayage des trente gares (`scripts/station-inside.mjs`) a sorti au passage
+un dernier ouvrage de la même famille : le **couronnement de tranchée** de
+Meguro, un massif de 3,40 m qui culmine à 6,63 et traversait son plateau sur un
+mètre cinquante-trois. Contrairement au mur qu'il coiffe, on ne peut pas
+l'abaisser — abaissé, il ne couronne plus rien : il s'interrompt.
+
 ### Ordre et raison
 
 - **1→5 ne touchent aucun consommateur.** Le jeu tourne à l'identique pendant

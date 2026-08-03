@@ -25,6 +25,7 @@ import { placementFor } from '../systems/stationPlacement';
 import { platformToWorld } from '../systems/playerFrame';
 import { concourseBays, shellsOf } from '../data/stationConcourseBuild';
 import { psdGates } from '../three/station/psdLayout';
+import { setQuality, usePerf } from '../systems/perf';
 import { freezeWeather, weather } from '../systems/weather';
 import { seasonNow } from '../systems/season';
 
@@ -316,6 +317,22 @@ export function installStationProbe(
           ],
         };
       });
+  };
+
+  /**
+   * SE METTRE AU PALIER DU JOUEUR.
+   *
+   * La gare ne se dessine pas pareil à « ultra » et à « très basse », et c'est
+   * voulu — mais ce qui saute doit être ce qu'on REGARDE, jamais ce qu'on
+   * parcourt. Juger cela demande de pouvoir changer de palier sans quitter la
+   * scène montée : `setQuality` le fait déjà pour l'interface, on l'expose ici
+   * pour les scripts de contrôle.
+   *
+   *   __probeQuality('veryLow')
+   */
+  w.__probeQuality = (q: string) => {
+    setQuality(q as Parameters<typeof setQuality>[0]);
+    return usePerf.getState().quality;
   };
 
   w.__probeName = () => STATIONS[useStore.getState().index].romaji;
@@ -768,6 +785,10 @@ export function installStationProbe(
         // On garde LA PIRE des instances, et une seule ligne par ouvrage : une
         // rangée de trente diffuseurs est un seul défaut, pas trente.
         const over = Math.min(b.max.y, box.max.y) - Math.max(b.min.y, box.min.y);
+        // UN CONTACT N'EST PAS UNE INTRUSION. La sous-face de la dalle de quai
+        // EST le plafond du hall souterrain, et la nappe de ballast affleure le
+        // sol de onze gares : les deux se touchent par une face, comme prévu.
+        if (over <= 0.01) return;
         const cur = seen.get(key);
         if (cur && (cur.over as number) >= over) return;
         seen.set(key, {

@@ -129,14 +129,36 @@ test('les décors intérieurs LISENT le palier', () => {
     !/detail <= \d && \(?\s*<ConcourseNetwork/.test(station),
     'le hall redevient facultatif au palier bas',
   );
-  // Ce qui reste au rendu est une décision de `ConcourseNetwork`, et elle tient
-  // compte de l'ENDROIT OÙ L'ON EST : depuis le quai, à ce palier-là, le hall
-  // est encore du fond de champ ; dès qu'on y descend, il existe.
+  // ON A D'ABORD GARDÉ L'ÉCONOMIE DEPUIS LE QUAI, en se disant qu'un hall vu
+  // par une trémie restait du fond de champ. Il ne l'est pas : treize gares
+  // portent le leur AU-DESSUS des voies, la volée montante y débouche en plein
+  // ciel, et à « basse » comme à « très basse » on voyait la ville par le
+  // plafond du hall qu'on s'apprête à parcourir. Le hall ne dépend donc plus
+  // d'aucun palier ni d'aucun endroit — l'économie se fait sur ce qu'il y a
+  // DEDANS, et elle reste entière.
   const net = readFileSync(
     new URL('../src/three/station/ConcourseNetwork.tsx', import.meta.url),
     'utf8',
   );
-  assert.ok(net.includes('inConcourse'), 'le hall ne sait plus si le joueur y est');
+  assert.ok(
+    !/if \(detail[^)]*\) return null/.test(net),
+    'le hall redevient facultatif à un palier',
+  );
+  assert.ok(net.includes('detail={detail}'), 'le hall ne transmet plus le palier');
+  // ET LES OUVRAGES DU QUAI. Un escalier mécanique, un ascenseur et un kiosque
+  // occupent le sol (`place.obstacles`) : les retirer au palier bas en faisait
+  // trois obstacles invisibles. C'est la même faute que ci-dessus, du côté du
+  // quai, là où le test de la phase 25 ne regardait pas.
+  assert.ok(
+    !/detail <= \d && <Amenities/.test(station),
+    'les ouvrages du quai redeviennent facultatifs au palier bas',
+  );
+  // Le percement de la dalle sous un escalier mécanique suit la volée qui le
+  // remplit : conditionner l'un sans l'autre laisse un trou ou un bouchon.
+  assert.ok(
+    !/if \(detail <= \d\) \{\s*for \(const e of place\.escalators\)/.test(station),
+    'le percement de la dalle dépend encore du palier',
+  );
 });
 
 test('CE QUI BARRE EST LE MÊME À TOUS LES PALIERS', () => {
