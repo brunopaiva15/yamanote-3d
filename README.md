@@ -109,6 +109,52 @@ tel quel. Le morceau de code de cette version ne contient pas une ligne de
 three.js, et `tests/audioVersion.test.ts` parcourt le graphe d'imports pour que
 ça le reste.
 
+## L'afficheur ne coupe pas
+
+Deux choses se voient sur une capture de la vraie dalle - Yamanote, 日暮里 vers
+神田, le plan de la boucle en anglais qui cède la place à la vue rapprochée en
+japonais - que l'afficheur du jeu ne faisait pas. Il CHANGEAIT DE PAGE : une
+image, puis l'autre, au battement suivant. La rame, elle, ne coupe pas.
+
+**Les deux pages se fondent l'une dans l'autre**, bandeau compris. C'est court -
+la capture, filmée à 20 images par seconde, en compte deux mêlées, soit un peu
+plus d'un dixième de seconde - et ça doit l'être : ce n'est pas une transition
+de diaporama, c'est le temps que met un contrôleur d'affichage à substituer une
+image à une autre. Plus long, l'écran se met à respirer et on lit deux pages à
+la fois.
+
+**La vue rapprochée arrive la bande éteinte.** Elle n'apparaît pas finie : le
+ruban est d'abord une ardoise froide sur toute sa longueur, et le vert la remonte
+depuis le repère de position jusqu'au bout lointain, en un peu plus d'une
+seconde, après trois dixièmes de seconde d'attente. La voie qu'on a devant soi
+s'allume à partir d'où l'on est. La coupe est franche et normale à la bande,
+liseré sombre compris - pas un dégradé, pas une pointe : une arête nette qui
+remonte l'arc.
+
+Le plan de la boucle, lui, ne se remplit pas, et ce n'est pas un oubli : son
+anneau vert est la ligne ENTIÈRE, géographique, pas la voie devant soi - la
+capture le montre plein d'un bout à l'autre de son passage. Lui faire monter un
+vert serait inventer une animation pour l'assortir à l'autre.
+
+Le calendrier des deux vit dans `three/lineScreenAnim`, qui ne connaît ni
+canevas, ni horloge, ni magasin : on lui donne la page à l'antenne et le temps
+écoulé, il rend l'avancement du fondu et celui du ruban. Les deux lecteurs de
+l'afficheur - les dalles de la rame et l'écran de la version sonore - s'en
+servent tels quels, et `tests/lineScreenAnim.test.ts` l'exécute sous
+`node --test`. Ce qui déclenche un fondu est une clé de PAGE
+(`lineScreenPageKey`), plus grossière que la clé de redessin : ni le
+clignotement des repères, ni l'horloge, ni les minutes n'en font partie - un
+afficheur qui refondrait à chaque battement du clignotant ne serait pas animé,
+il serait flou.
+
+Rien de tout cela ne coûte un rafraîchissement permanent. Le battement ordinaire
+reste celui de la rame, une demi-seconde ; les battements fins (1/30 s) ne
+servent QUE pendant le fondu et la remontée du vert, soit environ une seconde et
+demie par page - le reste du temps, la dalle dort exactement comme avant. Et le
+fondu ne garde aucune copie de l'image d'avant : la dalle porte déjà le mélange
+des battements précédents, on ne fait qu'y verser la part suivante
+(`three/screenFade`).
+
 ## Les sous-titres
 
 Tout ce qui se dit peut s'afficher, dans les deux versions (bouton
@@ -2228,6 +2274,8 @@ src/
                          d'autre, donc utilisable hors de la scène (version sonore)
   three/lineScreenCycle.ts  ce qui est à l'antenne, et quand : la rotation lue par
                          les dalles de la rame comme par la version sonore
+  three/lineScreenAnim.ts  ce qui bouge ENTRE deux écrans : le fondu enchaîné
+                         d'une page à la suivante, la remontée du vert sur la bande
   three/Wayside.tsx      l'emprise ferroviaire : plate-forme, rails, garde-corps
                          de viaduc, mobilier de voie, caténaire
   three/Weather.tsx      pluie et neige : champ replié autour de l'œil, calculé

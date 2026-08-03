@@ -52,6 +52,15 @@ export {
   segmentKey,
   segmentNotices,
 } from './lineScreenStates';
+export type { ScreenAnim, ScreenAnimStep } from './lineScreenAnim';
+export {
+  MOTION_STEP,
+  bandFill,
+  bandFills,
+  newScreenAnim,
+  resetScreenAnim,
+  stepScreenAnim,
+} from './lineScreenAnim';
 
 /**
  * Ce qui est à l'antenne à cet instant, pour le train tel qu'il roule.
@@ -83,18 +92,33 @@ export function lineScreenFrame(): LineScreenFrame {
  * machine modeste, et c'est justement celle qui choisit la version sonore.
  */
 export function lineScreenKey(f: LineScreenFrame, anim: number, side: 1 | -1): string {
-  const phase = useStore.getState().phase;
-  const doorSide = useStore.getState().doorSide;
+  return [
+    lineScreenPageKey(f, side),
+    f.clock,
+    f.animated ? anim : 0,
+    COUNTDOWN_STATES.has(f.state) ? f.countdown : 0,
+  ].join('|');
+}
+
+/**
+ * Identité de la PAGE à l'antenne - ce qui change quand l'afficheur TOURNE.
+ *
+ * Volontairement plus grossière que `lineScreenKey` : ni le clignotement des
+ * repères, ni l'horloge, ni les minutes n'en font partie. C'est cette clé-ci
+ * qui déclenche le fondu enchaîné et relance le remplissage du ruban, et le
+ * partage compte dans les deux sens - y mettre le battement du clignotant
+ * ferait refondre l'écran deux fois par seconde (un afficheur en train de
+ * fondre en permanence, c'est-à-dire flou), et y mettre l'horloge le ferait
+ * refondre à chaque minute affichée, alors que rien n'a changé de page.
+ */
+export function lineScreenPageKey(f: LineScreenFrame, side: 1 | -1): string {
+  const { phase, doorSide } = useStore.getState();
   const layout = f.state === 'stationLayout' ? `${f.mode}/${f.lang}` : '-';
   // Un seul écran de tout le cycle change d'une paroi à l'autre : le plan des
   // sorties qui porte le côté d'ouverture. Faire entrer la paroi dans la clé
   // des autres états ferait repeindre les deux dalles pour une image identique.
   const wall = f.state === 'stationLayout' && f.mode === 'doors' ? `${doorSide}/${side}` : '-';
-  return [
-    f.index, phase, f.state, layout, f.status, f.clock, wall,
-    f.animated ? anim : 0,
-    COUNTDOWN_STATES.has(f.state) ? f.countdown : 0,
-  ].join('|');
+  return [f.index, phase, f.state, layout, f.status, wall].join('|');
 }
 
 /**
@@ -106,12 +130,17 @@ export function lineScreenKey(f: LineScreenFrame, anim: number, side: 1 | -1): s
  * les deux dalles d'une même rame - et, dans la version sonore, elle vaut le
  * côté d'ouverture, puisqu'on regarde par-dessus l'épaule du voyageur qui va
  * descendre.
+ *
+ * `fill` est l'avancement du vert sur la bande de la vue rapprochée, tel que le
+ * donne `lineScreenAnim` : 1 pour l'image finie, ce qui est le cas de tous les
+ * autres écrans et de celui-ci une seconde et demie après son arrivée.
  */
 export function paintLineScreen(
   s: ScreenSurface,
   f: LineScreenFrame,
   anim: number,
   side: 1 | -1,
+  fill = 1,
 ): void {
   const { index, clock, status, countdown, notice } = f;
   const { phase, doorSide, loopDirection: dir } = useStore.getState();
@@ -168,9 +197,9 @@ export function paintLineScreen(
       drawLoopMap(s, index, phase, countdown, clock, status, 'en', dir, anim);
       break;
     case 'zoomEN':
-      drawRoute(s, index, phase, countdown, clock, status, 'en', dir, anim);
+      drawRoute(s, index, phase, countdown, clock, status, 'en', dir, anim, fill);
       break;
     default:
-      drawRoute(s, index, phase, countdown, clock, status, 'jp', dir, anim);
+      drawRoute(s, index, phase, countdown, clock, status, 'jp', dir, anim, fill);
   }
 }

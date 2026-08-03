@@ -21,7 +21,18 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { ANIM_PERIOD, ANIM_PHASES, LCD_CUTOFF, SCREEN_H, SCREEN_W } from '../../three/lineScreen';
-import { lineScreenFrame, lineScreenKey, paintLineScreen } from '../../three/lineScreenCycle';
+import {
+  MOTION_STEP,
+  bandFills,
+  lineScreenFrame,
+  lineScreenKey,
+  lineScreenPageKey,
+  newScreenAnim,
+  paintLineScreen,
+  resetScreenAnim,
+  stepScreenAnim,
+} from '../../three/lineScreenCycle';
+import { paintBlended } from '../../three/screenFade';
 import { runtime } from '../../systems/runtime';
 import { useStore } from '../../store';
 
@@ -110,6 +121,12 @@ export function LineScreen() {
     let lastKey = '';
     let dark = false;
     let scale = 0;
+    /** Fondu enchaîné et remplissage du ruban : voir `three/lineScreenAnim`. */
+    const motion = newScreenAnim();
+    /** Temps accumulé depuis le dernier pas, et ce qui bougeait alors. */
+    let stepAcc = 0;
+    let wasMoving = false;
+    let sinceBeat = 0;
 
     /**
      * Cale la mémoire d'image sur l'échelle voulue, si elle a bougé.
@@ -137,6 +154,13 @@ export function LineScreen() {
     // et repeindre deux mille lignes de canevas soixante fois par seconde sur
     // une machine qui a choisi la version sonore serait exactement la dépense
     // qu'on lui a promis d'éviter.
+    //
+    // Le minuteur, lui, bat plus vite (MOTION_STEP) - mais il ne PEINT pas plus
+    // souvent. Il ne sert qu'à donner leurs images au fondu enchaîné d'une page
+    // à l'autre et à la remontée du vert sur la bande, qui durent ensemble une
+    // seconde et demie par page ; le reste du temps il compare deux clés de
+    // caractères et s'arrête là. C'est ce qu'il fallait pour que ces deux
+    // animations ne coûtent pas un rafraîchissement permanent.
     const id = window.setInterval(() => {
       // Page cachée : personne ne regarde la dalle, et la repeindre coûterait
       // deux mille lignes de canevas prises sur le fil audio - qui, lui,
@@ -159,17 +183,41 @@ export function LineScreen() {
           g.fillStyle = '#05070a';
           g.fillRect(0, 0, SCREEN_W, SCREEN_H);
         }
+        // La dalle éteinte n'est pas une page : au retour, l'image revient d'un
+        // coup et non en fondu depuis le noir.
+        resetScreenAnim(motion);
         return;
       }
       dark = false;
-      anim = (anim + 1) % ANIM_PHASES;
+
+      // Le battement de la rame, reconstitué sur un minuteur plus fin : c'est
+      // lui, et lui seul, qui fait avancer le clignotant et les vantaux.
+      sinceBeat += MOTION_STEP;
+      const beat = sinceBeat >= ANIM_PERIOD;
+      if (beat) {
+        sinceBeat = 0;
+        anim = (anim + 1) % ANIM_PHASES;
+      }
+      stepAcc += MOTION_STEP;
+      if (!beat && !wasMoving) return;
+      const stepDt = stepAcc;
+      stepAcc = 0;
+
       const shown = lineScreenFrame();
       const side = watchedSide();
+      const page = lineScreenPageKey(shown, side);
+      const step = stepScreenAnim(motion, page, bandFills(shown.state), stepDt);
+      // Une image de plus APRÈS la fin d'une animation : celle qui pose le
+      // ruban plein.
+      const moving = step.busy || wasMoving;
+      wasMoving = step.busy;
+
       const key = lineScreenKey(shown, anim, side);
-      if (key === lastKey) return;
+      if (key === lastKey && !moving) return;
       lastKey = key;
-      paintLineScreen({ g, w: SCREEN_W, h: SCREEN_H }, shown, anim, side);
-    }, ANIM_PERIOD * 1000);
+      const surface = { g, w: SCREEN_W, h: SCREEN_H };
+      paintBlended(surface, step.blend, (s) => paintLineScreen(s, shown, anim, side, step.fill));
+    }, MOTION_STEP * 1000);
 
     return () => window.clearInterval(id);
   }, []);
