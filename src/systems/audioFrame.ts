@@ -16,7 +16,15 @@ import { layoutFor, roomTone } from '../data/stationLayouts';
 import { useStore } from '../store';
 import { onPlatformDeck, runtime } from './runtime';
 import { doorObstructionOpening } from './doorObstruction';
-import { playThunder, setPlatformDoors, setStationAmbience, setWeatherSound } from './audioEngine';
+import {
+  playThunder,
+  setPlatformDoors,
+  setStationAmbience,
+  setWeatherSound,
+  updateAmbience,
+  updateAudio,
+} from './audioEngine';
+import { V_MAX } from '../data/config';
 import { updatePlatformSpeakers } from './stationPa';
 import { setSubtitleClock } from './subtitles';
 import { weather } from './weather';
@@ -88,15 +96,40 @@ export function doorOpenings(): number {
 
 /**
  * Pousse au moteur audio tout ce qui dépend de l'état du monde à cet instant :
- * ce que les portes laissent passer, où sont les diffuseurs du quai, quelle
- * ambiance de gare, ce qui entre du dehors, et le tonnerre s'il vient de
- * partir.
+ * les niveaux de la rame (roulement, onduleur, climatisation, freins), les
+ * événements d'ambiance, ce que les portes laissent passer, où sont les
+ * diffuseurs du quai, quelle ambiance de gare, ce qui entre du dehors, et le
+ * tonnerre s'il vient de partir.
  *
- * À appeler UNE FOIS par image, après les machines à états. Deux fois ne
- * voudrait rien dire : ce sont des niveaux, pas des événements - le tonnerre
- * excepté, dont le front est retenu ici.
+ * À appeler UNE FOIS par image, après les machines à états, avec le temps que
+ * la physique vient de parcourir (`physSpan`).
+ *
+ * UNE FOIS, et c'est tout le sujet. `updateAudio` était appelé depuis la
+ * boucle de sous-pas, donc jusqu'à vingt fois par image : douze paramètres de
+ * Tone reprogrammés à chaque passage, soit deux cent quarante insertions dans
+ * autant de lignes de temps triées, là où douze suffisent. Sur une machine
+ * modeste, cela représentait quarante pour cent du temps processeur - dans un
+ * mode qui ne dessine rien, et pour un résultat rigoureusement identique :
+ * l'oreille n'entend pas les valeurs intermédiaires d'une image, elle entend
+ * la dernière. Le fil audio, lui, entendait très bien qu'on lui prenait son
+ * processeur : c'était le grésillement.
+ *
+ * Rien de ce qui est ici n'INTÈGRE de temps hors de ses propres compteurs
+ * (l'inertie des turbines et le chrono d'ambiance sont linéaires en `dt`) :
+ * les parcourir d'un seul pas donne le même résultat qu'en vingt.
  */
-export function publishAudioEnvironment(): void {
+export function publishAudioEnvironment(physSpan: number): void {
+  // Les niveaux de la rame. Sur le quai, la phase du store reste 'dwell' : le
+  // freinage réel se lit sur l'accélération (rame qui arrive), sinon le
+  // crissement ne part jamais.
+  const phase = useStore.getState().phase;
+  updateAudio(
+    physSpan,
+    runtime.speed / V_MAX,
+    phase === 'brake' || runtime.accel < -0.05,
+    runtime.carPower,
+  );
+  updateAmbience(physSpan);
   // L'heure du monde, pour le journal des sous-titres. Poussée d'ici plutôt que
   // lue là-bas : systems/subtitles est appelé par le moteur audio et par la
   // file de parole, et un import de runtime dans ce sens refermerait le graphe.

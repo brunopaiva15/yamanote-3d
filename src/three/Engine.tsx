@@ -3,7 +3,6 @@
 
 import { useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { V_MAX } from '../data/config';
 import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { updateCycle } from '../systems/stationCycle';
@@ -18,7 +17,6 @@ import { updatePlatformWait } from '../systems/platformWait';
 import { updatePassingTrain } from '../systems/passingTrain';
 import { updatePetCarriers } from '../systems/petCarriers';
 import { updatePlatformCrowd } from '../systems/platformCrowd';
-import { updateAmbience, updateAudio } from '../systems/audioEngine';
 import {
   CYCLE_DT_CAP,
   PHYS_SPAN_CAP,
@@ -87,8 +85,7 @@ export function Engine(): null {
     const physSpan = skipCycle ? PHYS_STEP : Math.min(raw, PHYS_SPAN_CAP);
     if (cycleDt <= 0 && physSpan <= 0) return;
 
-    const { phase, started } = useStore.getState();
-    if (!started) return;
+    if (!useStore.getState().started) return;
 
     // Qualité vidéo abaissée en cours de trajet : allège immédiatement le
     // pool de PNJ. En sens inverse (qualité remontée), la densité se remplit
@@ -132,15 +129,6 @@ export function Engine(): null {
         updateDoorObstruction(step);
         // La bulle de l'agent suit sa tête, et lui survit le temps d'être lue.
         updatePlatformAgentSpeech(step);
-        // Sur le quai la phase du store reste 'dwell' : le freinage réel se lit
-        // sur l'accélération (rame qui arrive), sinon le crissement ne part jamais.
-        updateAudio(
-          step,
-          runtime.speed / V_MAX,
-          phase === 'brake' || runtime.accel < -0.05,
-          runtime.carPower,
-        );
-        updateAmbience(step);
         updatePassengers(step);
         updatePlatformCrowd(step);
         // Les battants des portillons, puis ce qu'on a devant soi. L'ordre
@@ -157,11 +145,13 @@ export function Engine(): null {
       // Après la foule : c'est elle qui dit qui est encore là pour porter
       // une caisse, et qui vient de disparaître dans l'escalier ou en rame.
       updatePetCarriers();
-      // Et tout ce que la boucle doit dire au moteur audio : ouvertures,
-      // diffuseurs du quai, ambiance du lieu, dehors, tonnerre. Le bloc est
-      // partagé avec la version sonore (systems/audioFrame) - c'est le même
-      // mixage, dans les deux versions du jeu.
-      publishAudioEnvironment();
+      // Et tout ce que la boucle doit dire au moteur audio : niveaux de la
+      // rame, ambiance, ouvertures, diffuseurs du quai, dehors, tonnerre. Le
+      // bloc est partagé avec la version sonore (systems/audioFrame) - c'est le
+      // même mixage, dans les deux versions du jeu. UNE fois par image : les
+      // niveaux étaient reprogrammés à chaque sous-pas, pour un résultat
+      // identique et vingt fois le travail.
+      publishAudioEnvironment(physSpan);
     }
   });
   return null;

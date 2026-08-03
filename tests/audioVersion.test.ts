@@ -137,10 +137,11 @@ test('la boucle sonore fait tourner tout ce qui s’entend', () => {
     'updateWeather(',
     'updateSegmentEnv(',
     'updatePlatformPresence(',
-    // Le moteur audio lui-même, et la publication du mixage.
-    'updateAudio(',
-    'updateAmbience(',
-    'publishAudioEnvironment(',
+    // Le mixage, publié une fois par image : les niveaux de la rame et
+    // l'ambiance sont DEDANS (systems/audioFrame), et non plus appelés depuis
+    // la boucle de sous-pas - vingt reprogrammations de Tone par image pour un
+    // résultat identique, c'était le grésillement sur machine modeste.
+    'publishAudioEnvironment(physSpan)',
   ]) {
     assert.ok(loop.includes(call), `la boucle sonore n’appelle plus ${call})`);
   }

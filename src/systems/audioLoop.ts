@@ -46,10 +46,7 @@
 //     à sa place ;
 //   • l'occultation du décor par le quai : du rendu, rien que du rendu.
 
-import { V_MAX } from '../data/config';
 import { useStore } from '../store';
-import { runtime } from './runtime';
-import { updateAmbience, updateAudio } from './audioEngine';
 import {
   CYCLE_DT_CAP,
   PHYS_SPAN_CAP,
@@ -104,8 +101,7 @@ export function stepAudioFrame(rawDt: number): void {
   const physSpan = skipCycle ? PHYS_STEP : Math.min(raw, PHYS_SPAN_CAP);
   if (cycleDt <= 0 && physSpan <= 0) return;
 
-  const { phase, started } = useStore.getState();
-  if (!started) return;
+  if (!useStore.getState().started) return;
 
   if (cycleDt > 0) {
     updateCycle(cycleDt);
@@ -136,13 +132,6 @@ export function stepAudioFrame(rawDt: number): void {
       updateDoorObstruction(step);
       // L'agent de quai parle, et sa consigne dure le temps d'être entendue.
       updatePlatformAgentSpeech(step);
-      updateAudio(
-        step,
-        runtime.speed / V_MAX,
-        phase === 'brake' || runtime.accel < -0.05,
-        runtime.carPower,
-      );
-      updateAmbience(step);
       // Les voyageurs et la foule du quai : ce sont eux qui éternuent, qui
       // toussent, qui froissent un sac, qui se cognent à l'embarquement - et
       // c'est ce qu'on entend le plus, après les annonces, quand on ferme les
@@ -153,7 +142,7 @@ export function stepAudioFrame(rawDt: number): void {
     // Après la foule : c'est elle qui dit qui est encore là pour porter une
     // caisse, et qui vient de disparaître dans l'escalier ou en rame.
     updatePetCarriers();
-    publishAudioEnvironment();
+    publishAudioEnvironment(physSpan);
   }
 }
 
