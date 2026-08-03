@@ -56,7 +56,7 @@
         ['approach1', (s) => drawApproach(s, station, clock, 'jp', true, dir, 1)],
         ['approach2', (s) => drawApproach(s, station, clock, 'jp', true, dir, 2)],
         ['approach-other', (s) => drawApproach(s, station, clock, 'jp', false, dir, 2)],
-        ['approachEN', (s) => drawApproach(s, station, clock, 'en', true, dir, 2)],
+        ['approachEN', (s) => drawApproach(s, station, clock, 'en', true, dir, 2, status)],
       ];
 
       const out = document.getElementById('out');

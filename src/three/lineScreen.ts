@@ -1318,58 +1318,6 @@ export function drawNextStationLang(
   g.textAlign = 'left';
 }
 
-// --- Avertissement de fermeture des portes (fin d'arrêt) ---
-// Diffusé sur les deux parois dans les dernières secondes à quai, juste avant
-// le départ : vantaux qui se referment, flèches convergentes ambre.
-export function drawDoorClosing(
-  s: ReturnType<typeof makeScreen>,
-  index: number,
-  clock: string,
-  dir: LoopDirection,
-): void {
-  const { g, w, h } = s;
-  g.fillStyle = '#eceae5';
-  g.fillRect(0, 0, w, h);
-  drawHeader(g, w, index, clock, 'now', 'jp', dir);
-
-  const cy = h * 0.56;
-  const dw = 62;
-  const gap = 34; // entrouverts : en train de se refermer
-  for (const dir of [-1, 1]) {
-    g.fillStyle = '#9aa3ab';
-    g.strokeStyle = '#5d666e';
-    g.lineWidth = 3;
-    g.beginPath();
-    g.roundRect(w / 2 + dir * (gap / 2) - (dir < 0 ? dw : 0), cy - 58, dw, 116, 6);
-    g.fill();
-    g.stroke();
-  }
-
-  // Flèches ambre convergentes, pointées vers la fermeture.
-  g.fillStyle = '#e8a020';
-  for (const dir of [-1, 1]) {
-    const bx = w / 2 + dir * 150;
-    g.beginPath();
-    g.moveTo(bx - dir * 66, cy);
-    g.lineTo(bx, cy - 44);
-    g.lineTo(bx, cy - 18);
-    g.lineTo(bx + dir * 62, cy - 18);
-    g.lineTo(bx + dir * 62, cy + 18);
-    g.lineTo(bx, cy + 18);
-    g.lineTo(bx, cy + 44);
-    g.closePath();
-    g.fill();
-  }
-
-  g.textAlign = 'center';
-  g.fillStyle = '#14181c';
-  g.font = `bold 34px ${JP_FONT}`;
-  g.fillText('ドアが閉まります。ご注意ください。', w / 2, h - 54);
-  g.fillStyle = '#5c646c';
-  g.font = `22px ${JP_FONT}`;
-  g.fillText('The doors are closing. Please stand clear.', w / 2, h - 22);
-  g.textAlign = 'left';
-}
 
 // --- Écran d'approche (まもなく / Arriving at) : plan du quai --------------
 //
@@ -1568,6 +1516,7 @@ export function drawApproach(
   mine: boolean,
   dir: LoopDirection,
   anim: number,
+  status: ScreenStatus = 'soon',
 ): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
@@ -1792,8 +1741,10 @@ export function drawApproach(
   }
   g.textAlign = 'left';
 
-  // Le bandeau se dessine EN DERNIER : le quai file dessous.
-  drawHeader(g, w, index, clock, 'soon', lang, dir);
+  // Le bandeau se dessine EN DERNIER : le quai file dessous. Son libellé suit
+  // la phase du cycle : ce même plan de quai reste à l'antenne une fois la rame
+  // arrêtée, et il annonçait alors « まもなく » à quai.
+  drawHeader(g, w, index, clock, status, lang, dir);
 }
 
 // --- État « correspondances à la prochaine gare » ---

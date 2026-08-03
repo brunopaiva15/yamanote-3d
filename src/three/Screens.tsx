@@ -27,7 +27,6 @@ import {
   SCREEN_W,
   drawBackpackManner,
   drawDelayCert,
-  drawDoorClosing,
   drawApproach,
   drawEmergencyInfo,
   drawHeadphoneManner,
@@ -207,10 +206,14 @@ export function Screens() {
       state = tick % 2 === 0 ? 'approachJP' : 'approachEN';
     } else if (phase === 'dwell') {
       status = 'now';
-      // L'écran passe au pictogramme « portes qui ferment » avec l'annonce.
+      // Le pictogramme « portes qui ferment » a disparu des rames : l'écran ne
+      // le diffuse plus. Pendant l'annonce de fermeture, c'est le PLAN DU QUAI
+      // qui reste à l'antenne - celui qui porte les correspondances de la gare
+      // où l'on est, exactement ce qu'on cherche à la seconde où l'on décide de
+      // descendre ou pas.
       state =
         runtime.phaseT >= dwellDuration(index) - CLOSE_ANNOUNCE_LEAD
-          ? 'doorClosing'
+          ? 'approachEN'
           : ['loopJP', 'loopEN', 'nextZH', 'nextKO', 'zoomJP', 'zoomEN', 'approachEN'][tick % 7];
     } else {
       status = 'next';
@@ -244,13 +247,10 @@ export function Screens() {
       const g = screen;
       switch (state) {
         case 'approachJP':
-          drawApproach(g, index, clock, 'jp', doorSide === side, loopDirection, anim);
+          drawApproach(g, index, clock, 'jp', doorSide === side, loopDirection, anim, status);
           break;
         case 'approachEN':
-          drawApproach(g, index, clock, 'en', doorSide === side, loopDirection, anim);
-          break;
-        case 'doorClosing':
-          drawDoorClosing(g, index, clock, loopDirection);
+          drawApproach(g, index, clock, 'en', doorSide === side, loopDirection, anim, status);
           break;
         case 'transfers':
           drawTransfers(g, index, clock, loopDirection);
