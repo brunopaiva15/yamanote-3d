@@ -38,7 +38,8 @@
     <script type="module">
       import {
         drawRoute, drawLoopMap, drawTransfers, drawApproach,
-        drawEmergencyInfo, drawOutageInfo, drawTrafficInfo, drawSecurityNotice,
+        drawEmergencyInfo, drawEmergencyBrake, drawOutageInfo, drawTrafficInfo, drawSecurityNotice,
+        drawPriorityNotice, drawPhoneManner,
       } from '/src/three/lineScreen.ts';
       import { makeScreen } from '/src/three/screenSurface.ts';
 
@@ -67,6 +68,9 @@
         ['approach-other', (s) => drawApproach(s, station, clock, 'jp', false, dir, 2)],
         ['approachEN', (s) => drawApproach(s, station, clock, 'en', true, dir, 2, status)],
         ['disruption', (s) => drawEmergencyInfo(s)],
+        ['brake', (s) => drawEmergencyBrake(s)],
+        ['priority', (s) => drawPriorityNotice(s, station, clock, dir)],
+        ['manner', (s) => drawPhoneManner(s, station, clock, dir)],
         ['outage', (s) => drawOutageInfo(s)],
         ['trafficJP', (s) => drawTrafficInfo(s, station, clock, 'jp', NOTICE, dir)],
         ['trafficEN', (s) => drawTrafficInfo(s, station, clock, 'en', NOTICE, dir)],

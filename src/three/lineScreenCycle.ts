@@ -19,6 +19,7 @@ import { CLOSE_ANNOUNCE_LEAD, dwellDuration } from '../systems/stationCycle';
 import {
   drawApproach,
   drawBackpackManner,
+  drawEmergencyBrake,
   drawEmergencyInfo,
   drawHeadphoneManner,
   drawSecurityNotice,
@@ -55,7 +56,7 @@ export type LineScreenState =
   | 'transfers' | 'priority' | 'manner' | 'safety'
   | 'trafficJP' | 'trafficEN'
   | 'securityJP' | 'securityEN'
-  | 'emergency' | 'outage';
+  | 'brake' | 'emergency' | 'outage';
 
 export interface LineScreenFrame {
   state: LineScreenState;
@@ -102,9 +103,14 @@ export function lineScreenFrame(): LineScreenFrame {
   // dalle est simplement éteinte et rien n'est dessiné.
   if (emergency.stage !== 'none') {
     status = 'next';
-    // Plus d'alternance de langues : l'écran de perturbation les porte toutes
-    // les quatre à la fois, il n'a donc qu'un seul état.
-    state = emergency.kind === 'outage' ? 'outage' : 'emergency';
+    // Deux écrans, deux moments. PENDANT le freinage, l'ordre : « accrochez-
+    // vous ». UNE FOIS ARRÊTÉ, l'avis : « nous ne savons pas quand ça repart ».
+    // Les confondre, c'est soit crier après coup, soit expliquer pendant que le
+    // voyageur cherche une barre.
+    state =
+      emergency.kind === 'outage' ? 'outage'
+      : emergency.stage === 'braking' ? 'brake'
+      : 'emergency';
   } else if (phase === 'brake') {
     status = 'soon';
     // À l'approche, l'écran ne montre QUE le plan du quai, et il alterne ses
@@ -244,6 +250,9 @@ export function paintLineScreen(
       break;
     case 'securityEN':
       drawSecurityNotice(s, index, clock, 'en', dir);
+      break;
+    case 'brake':
+      drawEmergencyBrake(s);
       break;
     case 'emergency':
       drawEmergencyInfo(s);

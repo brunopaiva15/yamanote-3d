@@ -32,6 +32,9 @@ import { rng } from '../data/rng';
 export const SCREEN_W = 768;
 export const SCREEN_H = 432;
 
+const ROUTE_FOOTNOTE_JP = 'のりかえ、待ち合わせ時間は含まれません。電車により多少時間が異なります。';
+const ROUTE_FOOTNOTE_EN = 'Transfer and waiting times are not included. Times may differ by train.';
+
 const YAMANOTE_GREEN = '#54af00';
 /** Liseré sombre du côté CONCAVE de l'arc de la vue rapprochée. */
 const YAMANOTE_GREEN_DARK = '#0b5800';
@@ -349,50 +352,74 @@ function drawHeader(
 // shinkansen un pictogramme de nez de rame. C'est ce qui rend le pavé lisible
 // sans lire le japonais - et c'est ce que la version précédente perdait en
 // posant des carrés pleins muets.
-const LINE_BADGES: { match: RegExp; code: string; color: string; round?: boolean; shink?: boolean }[] = [
+const LINE_BADGES: {
+  match: RegExp;
+  code: string;
+  color: string;
+  /** Nom anglais officiel, pour le passage anglais du cycle. */
+  en: string;
+  round?: boolean;
+  shink?: boolean;
+}[] = [
   // Les shinkansen de JR East (vert) et de JR Central (bleu) : le pictogramme
   // ne s'applique QU'AUX libellés qui portent 新幹線 - « 京浜東北線 » contient
   // 東北 et se retrouverait sinon frappé d'un nez de rame.
-  { match: /(東北|山形|秋田|北海道|上越|北陸).*新幹線/, code: '', color: '#00a650', shink: true },
-  { match: /新幹線/, code: '', color: '#1f6fb5', shink: true },
-  { match: /京浜東北/, code: 'JK', color: '#00a7db' },
-  { match: /総武線快速/, code: 'JO', color: '#0067c0' },
-  { match: /中央・総武/, code: 'JB', color: '#ffd400' },
-  { match: /中央線/, code: 'JC', color: '#f15a24' },
-  { match: /上野東京/, code: 'JT|JU', color: '#f68b1e' },
-  { match: /常磐/, code: 'JJ', color: '#00b48d' },
-  { match: /宇都宮|高崎/, code: 'JU', color: '#f68b1e' },
-  { match: /東海道線/, code: 'JT', color: '#f68b1e' },
-  { match: /横須賀/, code: 'JO', color: '#0067c0' },
-  { match: /京葉/, code: 'JE', color: '#c9252b' },
-  { match: /埼京|川越/, code: 'JA', color: '#00ac9a' },
-  { match: /湘南新宿/, code: 'JS', color: '#e21f26' },
-  { match: /丸ノ内/, code: 'M', color: '#e60012', round: true },
-  { match: /銀座/, code: 'G', color: '#f39700', round: true },
-  { match: /日比谷/, code: 'H', color: '#9caeb7', round: true },
-  { match: /千代田/, code: 'C', color: '#00a95f', round: true },
-  { match: /有楽町/, code: 'Y', color: '#c1a470', round: true },
-  { match: /副都心/, code: 'F', color: '#9c5e31', round: true },
-  { match: /半蔵門/, code: 'Z', color: '#8f76d6', round: true },
-  { match: /南北/, code: 'N', color: '#00ac9b', round: true },
-  { match: /東西/, code: 'T', color: '#009bbf', round: true },
-  { match: /浅草/, code: 'A', color: '#e85298', round: true },
-  { match: /都営新宿/, code: 'S', color: '#6cbb5a', round: true },
-  { match: /大江戸/, code: 'E', color: '#b6007a', round: true },
-  { match: /三田/, code: 'I', color: '#0079c2', round: true },
-  { match: /京急|京浜急行/, code: 'KK', color: '#00bfff' },
-  { match: /京成/, code: 'KS', color: '#005aaa' },
-  { match: /東急/, code: 'TY', color: '#e5171f' },
-  { match: /東武/, code: 'TS', color: '#0f6cb6' },
-  { match: /西武/, code: 'SI', color: '#f5a200' },
-  { match: /小田急/, code: 'OH', color: '#0079c2' },
-  { match: /京王/, code: 'KO', color: '#d31e79' },
-  { match: /りんかい/, code: 'R', color: '#0079c1' },
-  { match: /モノレール/, code: 'MO', color: '#0a6eb4' },
-  { match: /つくば/, code: 'TX', color: '#00a7db' },
-  { match: /舎人ライナー/, code: 'NT', color: '#c7176b' },
-  { match: /ライナー|荒川線/, code: '', color: '#6d7a83' },
+  { match: /(東北|山形|秋田|北海道|上越|北陸).*新幹線/, code: '', color: '#00a650', shink: true , en: 'Tōhoku・Yamagata・Akita・Jōetsu・Hokuriku Shinkansen' },
+  { match: /新幹線/, code: '', color: '#1f6fb5', shink: true , en: 'Tōkaidō・Sanyō Shinkansen' },
+  { match: /京浜東北/, code: 'JK', color: '#00a7db' , en: 'Keihin-Tōhoku Line' },
+  { match: /総武線快速/, code: 'JO', color: '#0067c0' , en: 'Sōbu Line (Rapid)' },
+  { match: /中央・総武/, code: 'JB', color: '#ffd400' , en: 'Chūō-Sōbu Line' },
+  { match: /中央線/, code: 'JC', color: '#f15a24' , en: 'Chūō Line' },
+  { match: /上野東京/, code: 'JT|JU', color: '#f68b1e' , en: 'Ueno-Tōkyō Line' },
+  { match: /常磐/, code: 'JJ', color: '#00b48d' , en: 'Jōban Line' },
+  { match: /宇都宮|高崎/, code: 'JU', color: '#f68b1e' , en: 'Utsunomiya・Takasaki Line' },
+  { match: /東海道線/, code: 'JT', color: '#f68b1e' , en: 'Tōkaidō Line' },
+  { match: /横須賀/, code: 'JO', color: '#0067c0' , en: 'Yokosuka Line' },
+  { match: /京葉/, code: 'JE', color: '#c9252b' , en: 'Keiyō Line' },
+  { match: /埼京|川越/, code: 'JA', color: '#00ac9a' , en: 'Saikyō Line' },
+  { match: /湘南新宿/, code: 'JS', color: '#e21f26' , en: 'Shōnan-Shinjuku Line' },
+  { match: /丸ノ内/, code: 'M', color: '#e60012', round: true , en: 'Marunouchi Line' },
+  { match: /銀座/, code: 'G', color: '#f39700', round: true , en: 'Ginza Line' },
+  { match: /日比谷/, code: 'H', color: '#9caeb7', round: true , en: 'Hibiya Line' },
+  { match: /千代田/, code: 'C', color: '#00a95f', round: true , en: 'Chiyoda Line' },
+  { match: /有楽町/, code: 'Y', color: '#c1a470', round: true , en: 'Yūrakuchō Line' },
+  { match: /副都心/, code: 'F', color: '#9c5e31', round: true , en: 'Fukutoshin Line' },
+  { match: /半蔵門/, code: 'Z', color: '#8f76d6', round: true , en: 'Hanzōmon Line' },
+  { match: /南北/, code: 'N', color: '#00ac9b', round: true , en: 'Namboku Line' },
+  { match: /東西/, code: 'T', color: '#009bbf', round: true , en: 'Tōzai Line' },
+  { match: /浅草/, code: 'A', color: '#e85298', round: true , en: 'Asakusa Line' },
+  { match: /都営新宿/, code: 'S', color: '#6cbb5a', round: true , en: 'Toei Shinjuku Line' },
+  { match: /大江戸/, code: 'E', color: '#b6007a', round: true , en: 'Toei Ōedo Line' },
+  { match: /三田/, code: 'I', color: '#0079c2', round: true , en: 'Toei Mita Line' },
+  { match: /京急|京浜急行/, code: 'KK', color: '#00bfff' , en: 'Keikyū Line' },
+  { match: /京成/, code: 'KS', color: '#005aaa' , en: 'Keisei Line' },
+  { match: /東急/, code: 'TY', color: '#e5171f' , en: 'Tōkyū Line' },
+  { match: /東武/, code: 'TS', color: '#0f6cb6' , en: 'Tōbu Line' },
+  { match: /西武/, code: 'SI', color: '#f5a200' , en: 'Seibu Line' },
+  { match: /小田急/, code: 'OH', color: '#0079c2' , en: 'Odakyū Line' },
+  { match: /京王/, code: 'KO', color: '#d31e79' , en: 'Keiō Line' },
+  { match: /りんかい/, code: 'R', color: '#0079c1' , en: 'Rinkai Line' },
+  { match: /モノレール/, code: 'MO', color: '#0a6eb4' , en: 'Tōkyō Monorail' },
+  { match: /つくば/, code: 'TX', color: '#00a7db' , en: 'Tsukuba Express' },
+  { match: /舎人ライナー/, code: 'NT', color: '#c7176b' , en: 'Nippori-Toneri Liner' },
+  { match: /ライナー|荒川線/, code: '', color: '#6d7a83' , en: 'Local Line' },
 ];
+
+/** Largeur occupée par la ou les pastilles d'une ligne, sans les dessiner. */
+function lineBadgeWidth(label: string, size: number): number {
+  const b = LINE_BADGES.find((e) => e.match.test(label));
+  const n = b?.code ? b.code.split('|').length : 1;
+  return n * size + (n - 1) * size * 0.13;
+}
+
+/**
+ * Nom anglais d'une ligne en correspondance. La table des sigles le porte déjà
+ * : c'est la même ligne, décrite une fois, et le pavé anglais n'a pas besoin
+ * d'une seconde liste qui dériverait de la première.
+ */
+function lineNameEn(label: string): string {
+  return LINE_BADGES.find((e) => e.match.test(label))?.en ?? label;
+}
 
 /** Pictogramme de nez de shinkansen, blanc sur la pastille. */
 function drawShinkansenGlyph(g: CanvasRenderingContext2D, x: number, y: number, s: number): void {
@@ -546,11 +573,11 @@ function drawJyBadge(g: CanvasRenderingContext2D, jy: string, x: number, cy: num
  * Réduire le pentagramme pour le poser sur l'anneau donnait un jeton de
  * travers sur une bande droite : la bonne forme, au mauvais endroit.
  */
-function drawHerePentagon(g: CanvasRenderingContext2D, x: number, y: number, angle: number, s = 1): void {
+function drawHerePentagon(g: CanvasRenderingContext2D, x: number, y: number, angle: number, s = 1, mir = false): void {
   g.save();
   g.translate(x, y);
   g.rotate(angle);
-  g.scale(s, s);
+  g.scale(mir ? -s : s, s);
   const path = () => {
     g.beginPath();
     g.moveTo(-19.2, -29.8);
@@ -679,6 +706,17 @@ export function drawRoute(
 ): void {
   const { g, w, h } = s;
   const next = STATIONS[index];
+  const en = lang === 'en';
+  // L'arc SUIT LE SENS DE MARCHE : il descend de gauche à droite en 内回り, et
+  // se retourne en 外回り. Ce n'est pas une coquetterie - la bande figure la
+  // voie devant soi, et la voir partir du mauvais côté après un demi-tour est
+  // le genre de détail qui fait sentir un plan faux sans qu'on sache dire
+  // pourquoi. Tout ce qui suit passe donc par `X()`, et les textes changent
+  // d'ancrage avec lui.
+  const mir = dir === 'outer';
+  const X = (x: number) => (mir ? w - x : x);
+  const AL: CanvasTextAlign = mir ? 'right' : 'left';
+
   g.fillStyle = SCREEN_BG;
   g.fillRect(0, 0, w, h);
 
@@ -695,8 +733,8 @@ export function drawRoute(
     const ty = n[1] - p[1];
     const len = Math.hypot(tx, ty) || 1;
     // Normale « gauche » = côté concave (bas-gauche) de l'arc.
-    inner.push([x - (ty / len) * hw, y + (tx / len) * hw]);
-    outer.push([x + (ty / len) * hw, y - (tx / len) * hw]);
+    inner.push([X(x - (ty / len) * hw), y + (tx / len) * hw]);
+    outer.push([X(x + (ty / len) * hw), y - (tx / len) * hw]);
   }
   g.strokeStyle = YAMANOTE_GREEN_DARK;
   g.lineWidth = 13;
@@ -712,8 +750,8 @@ export function drawRoute(
   g.fill();
 
   // ----- Les cinq gares : cercle des minutes sur la bande, pastille JY et nom
-  // à sa droite. À quai, la gare k = 0 est celle où l'on est : son cercle cède
-  // la place au repère de position.
+  // du côté libre. À quai, la gare k = 0 est celle où l'on est : son cercle
+  // cède la place au repère de position.
   const atStation = phase === 'dwell';
   for (let k = 4; k >= 0; k--) {
     const st = STATIONS[stationAtHop(index, k, dir)];
@@ -721,41 +759,47 @@ export function drawRoute(
     if (k > 0 || !atStation) {
       const minutes = etaMinutes(index, k, atStation, countdown, dir);
       g.beginPath();
-      g.arc(slot.cx, slot.cy, slot.r, 0, Math.PI * 2);
+      g.arc(X(slot.cx), slot.cy, slot.r, 0, Math.PI * 2);
       // Ambre pour la gare où l'on VA - jamais à quai, où l'on n'y va plus.
       g.fillStyle = !atStation && k === 0 ? '#efa61c' : '#f4f4f2';
       g.fill();
       g.fillStyle = '#141414';
       g.font = `bold ${Math.round(slot.r * 1.55)}px ${JP_FONT}`;
       g.textAlign = 'center';
-      g.fillText(String(minutes), slot.cx, slot.cy + slot.r * 0.55);
-      g.textAlign = 'left';
+      g.fillText(String(minutes), X(slot.cx), slot.cy + slot.r * 0.55);
     }
     // « (分) » contre le cercle le plus lointain, du côté des plus proches.
     if (k === 4) {
       g.fillStyle = '#141414';
       g.font = `12px ${JP_FONT}`;
-      g.fillText('(分)', slot.cx + slot.r + 3, slot.cy + 6);
+      g.textAlign = AL;
+      g.fillText(en ? '(min)' : '(分)', X(slot.cx + slot.r + 3), slot.cy + 6);
     }
 
-    drawJyBadge(g, st.jy, slot.bx, slot.by, slot.bs);
+    drawJyBadge(g, st.jy, mir ? X(slot.bx) - slot.bs : slot.bx, slot.by, slot.bs);
 
-    // Le CORPS du plan reste japonais dans toutes les langues du cycle : sur
-    // l'afficheur réel, seul le bandeau change de langue - la liste des gares,
-    // le pavé des correspondances et la mention basse sont en kanji même sur
-    // le passage anglais. Le voyageur compare ce qu'il lit sur l'écran à ce
-    // qui est écrit sur le quai, et le quai est en japonais.
+    // Le corps du plan CHANGE de langue avec le bandeau : sur le passage
+    // anglais, l'afficheur écrit les gares en romaji et traduit le pavé des
+    // correspondances. Il ne laisse pas le voyageur anglophone devant un plan
+    // qu'il ne peut pas lire pendant un quart du cycle.
     g.fillStyle = '#141414';
-    g.textAlign = 'left';
-    const kanji = st.kanji;
-    if (kanji.length === 2) {
-      // Les noms de deux caractères sont aérés d'un cadratin (東 京).
+    g.textAlign = AL;
+    const name = en ? st.romaji : st.kanji;
+    if (!en && name.length === 2) {
+      // Les noms de deux caractères sont aérés d'un cadratin (東 京). En
+      // miroir, les deux glyphes échangent leur place - sans quoi le nom se
+      // lit à l'envers, ce qu'aucun miroir de mise en page ne doit faire au
+      // texte qu'il déplace.
       g.font = `${slot.fs}px ${JP_FONT}`;
-      g.fillText(kanji[0], slot.nx, slot.ny);
-      g.fillText(kanji[1], slot.nx + slot.fs * 2, slot.ny);
+      g.textAlign = 'center';
+      const near = X(slot.nx + slot.fs * 0.5);
+      const far = X(slot.nx + slot.fs * 2.5);
+      g.fillText(name[0], mir ? far : near, slot.ny);
+      g.fillText(name[1], mir ? near : far, slot.ny);
+      g.textAlign = AL;
     } else {
-      fitText(g, kanji, w - slot.nx - 4, slot.fs, '');
-      g.fillText(kanji, slot.nx, slot.ny);
+      fitText(g, name, w - slot.nx - 6, en ? Math.round(slot.fs * 0.82) : slot.fs, en ? 'bold' : '');
+      g.fillText(name, X(slot.nx), slot.ny);
     }
   }
 
@@ -763,24 +807,26 @@ export function drawRoute(
   // bande quand on roule.
   if (markerLit(anim)) {
     if (atStation) {
-      drawHerePentagon(g, ZOOM_SLOTS[0].cx + 3.5, ZOOM_SLOTS[0].cy + 2.5, 0);
+      drawHerePentagon(g, X(ZOOM_SLOTS[0].cx + 3.5), ZOOM_SLOTS[0].cy + 2.5, 0, 1, mir);
     } else {
       // Sur la bande, juste EN ARRIÈRE de la gare visée, pointé vers elle.
       const a = Math.atan2(ZOOM_SLOTS[0].cy - ZOOM_SLOTS[1].cy, ZOOM_SLOTS[0].cx - ZOOM_SLOTS[1].cx);
-      drawWayChevron(g, ZOOM_SLOTS[0].cx + 20, ZOOM_SLOTS[0].cy + 27, a + Math.PI, 1.25);
+      const ang = mir ? Math.PI - a : a + Math.PI;
+      drawWayChevron(g, X(ZOOM_SLOTS[0].cx + 20), ZOOM_SLOTS[0].cy + 27, ang, 1.25);
     }
   }
 
-  // ----- Pavé des correspondances de la prochaine gare, à gauche -----
+  // ----- Pavé des correspondances de la prochaine gare, du côté du vide -----
   const tr = TRANSFERS[next.jy];
   if (tr) {
-    g.textAlign = 'left';
+    g.textAlign = AL;
     g.fillStyle = '#141414';
     g.font = `bold 17px ${JP_FONT}`;
-    g.fillText(`${next.kanji}駅`, 8, 217);
+    g.textAlign = mir ? 'right' : 'left';
+    g.fillText(en ? 'Transfer at' : `${next.kanji}駅`, X(8), 217);
     g.font = `17px ${JP_FONT}`;
     g.fillStyle = '#4c4f52';
-    g.fillText('乗換えのご案内', 8, 238);
+    g.fillText(en ? `${next.romaji} Station` : '乗換えのご案内', X(8), 238);
 
     const labels = tr.jp.split('、').filter(Boolean);
     const COL = [10, 177];
@@ -790,29 +836,40 @@ export function drawRoute(
     g.font = `17px ${JP_FONT}`;
     for (const label of labels) {
       if (y > 400) break;
-      const badgeW = label.includes('上野東京') ? 42 : 19;
-      const wide = g.measureText(label).width + badgeW + 4 > COL_W;
+      const text = en ? lineNameEn(label) : label;
+      const bw = lineBadgeWidth(label, 18.7);
+      const wide = g.measureText(text).width + bw + 4 > COL_W;
       if (wide && col === 1) {
         col = 0;
         y += 22.3;
         if (y > 400) break;
       }
+      // Le pavé se DÉPLACE avec le miroir, mais son contenu ne se retourne
+      // pas : une ligne se lit toujours pastille puis nom. C'est le bloc entier
+      // qui se cale à droite, pas chacun de ses morceaux qui bascule.
       const x = COL[col];
-      const bw = drawLineBadge(g, label, x, y - 6, 18.7);
-      g.fillStyle = '#141414';
-      g.font = `17px ${JP_FONT}`;
-      // Les libellés larges (shinkansen) prennent les deux colonnes et
-      // reviennent à la ligne, comme sur l'afficheur.
       const avail = (wide ? COL_W * 2 + 17 : COL_W) - bw - 4;
-      let rest = label;
-      let ly = y;
-      while (rest && ly <= 400) {
+      const lines: string[] = [];
+      let rest = text;
+      while (rest && lines.length < 3) {
         let cut = rest.length;
         while (cut > 1 && g.measureText(rest.slice(0, cut)).width > avail) cut--;
-        g.fillText(rest.slice(0, cut), x + bw + 4, ly);
-        rest = rest.slice(cut);
-        if (rest) ly += 21;
+        lines.push(rest.slice(0, cut));
+        rest = rest.slice(cut).replace(/^ /, '');
       }
+      const textW = Math.max(...lines.map((l) => g.measureText(l).width));
+      const bx = mir ? X(x) - bw - 4 - textW : x;
+      drawLineBadge(g, label, bx, y - 6, 18.7);
+      g.fillStyle = '#141414';
+      g.font = `17px ${JP_FONT}`;
+      g.textAlign = 'left';
+      let ly = y;
+      for (const line of lines) {
+        if (ly > 400) break;
+        g.fillText(line, bx + bw + 4, ly);
+        ly += 21;
+      }
+      ly -= 21;
       if (wide) {
         y = ly + 22.3;
         col = 0;
@@ -825,11 +882,12 @@ export function drawRoute(
     }
   }
 
-  // Mention basse, cadrée à GAUCHE comme sur l'afficheur.
-  g.textAlign = 'left';
+  // Mention basse, du même côté que le pavé.
+  g.textAlign = AL;
   g.fillStyle = '#6f7270';
   g.font = `11px ${JP_FONT}`;
-  g.fillText('のりかえ、待ち合わせ時間は含まれません。電車により多少時間が異なります。', 8, h - 12);
+  g.fillText(en ? ROUTE_FOOTNOTE_EN : ROUTE_FOOTNOTE_JP, X(8), h - 12);
+  g.textAlign = 'left';
 
   // Le bandeau se dessine PAR-DESSUS : la courbe glisse dessous.
   drawHeader(g, w, index, clock, status, lang, dir);
@@ -988,6 +1046,7 @@ export function drawLoopMap(
   g.fillRect(0, 0, w, h);
   drawHeader(g, w, index, clock, status, lang, dir);
 
+  const en = lang === 'en';
   const at = (slot: { col: number; top: boolean }): [number, number] => [
     LOOP_X0 + slot.col * LOOP_DX,
     slot.top ? LOOP_Y_TOP : LOOP_Y_BOT,
@@ -1065,7 +1124,7 @@ export function drawLoopMap(
       if (endsRun) {
         g.font = `10px ${JP_FONT}`;
         g.textAlign = 'left';
-        g.fillText('(分)', x + 12, y + 12);
+        g.fillText(en ? '(min)' : '(分)', x + 12, y + 12);
       }
     } else {
       g.beginPath();
@@ -1075,13 +1134,24 @@ export function drawLoopMap(
     }
     g.textAlign = 'left';
 
-    // Nom de gare : vertical, en kanji dans TOUTES les langues du cycle - sur
-    // l'afficheur réel, le passage anglais ne change que le bandeau, le plan
-    // reste identique au passage japonais. Il est calé sur l'anneau (rangée
-    // haute : le nom finit contre la bande ; rangée basse : il commence
-    // contre elle) et les gares repères sont en gras.
+    // Nom de gare. En japonais il est VERTICAL, calé sur l'anneau (rangée
+    // haute : le nom finit contre la bande ; rangée basse : il commence contre
+    // elle). En anglais l'afficheur ne peut pas empiler du romaji : il
+    // l'INCLINE, au-dessus de la rangée haute et sous la rangée basse. Les
+    // gares repères sont en gras dans les deux cas.
     g.fillStyle = '#141414';
     const bold = MAJOR_INDICES.includes(stIdx);
+    if (en) {
+      g.save();
+      g.translate(x + (slot.top ? -2 : 2), slot.top ? LOOP_Y_TOP - 22 : LOOP_Y_BOT + 26);
+      g.rotate(-0.72);
+      g.textAlign = slot.top ? 'left' : 'right';
+      g.font = `${bold ? 'bold ' : ''}12px ${JP_FONT}`;
+      g.fillText(STATIONS[stIdx].romaji, 0, 4);
+      g.restore();
+      g.textAlign = 'left';
+      continue;
+    }
     const name = STATIONS[stIdx].kanji;
     const split = splitVertical(name);
     if (slot.top) {
@@ -1120,7 +1190,7 @@ export function drawLoopMap(
   // Mention basse.
   g.fillStyle = '#6f7270';
   g.font = `11px ${JP_FONT}`;
-  g.fillText('のりかえ、待ち合わせ時間は含まれません。電車により多少時間が異なります。', 8, h - 12);
+  g.fillText(en ? ROUTE_FOOTNOTE_EN : ROUTE_FOOTNOTE_JP, 8, h - 12);
 }
 
 // --- Écrans manières (fond clair avec bandeau, comme les vrais) ---
@@ -1129,6 +1199,12 @@ export function drawLoopMap(
 // des écouteurs. Ils partagent le gabarit pictogramme à gauche / texte à
 // droite des autres écrans de courtoisie.
 
+/**
+ * Mode silencieux : là encore le sticker, pas un dessin - un téléphone à
+ * clapet gris posé de biais, étiqueté « マナー », avec 「通話」 barré, et le
+ * texte à droite. Le combiné est un modèle d'un autre âge, et il l'est aussi
+ * sur la rame : l'afficheur diffuse toujours le visuel d'origine.
+ */
 export function drawPhoneManner(
   s: ScreenSurface,
   index: number,
@@ -1136,39 +1212,71 @@ export function drawPhoneManner(
   dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
-  g.fillStyle = '#f4f6f7';
+  g.fillStyle = '#ffffff';
   g.fillRect(0, 0, w, h);
   drawHeader(g, w, index, clock, 'next', 'jp', dir);
-  // Téléphone barré d'un cercle d'interdiction rouge.
-  const cx = w * 0.2;
+
+  const cx = 172;
   const cy = HEADER_H + (h - HEADER_H) * 0.52;
-  g.fillStyle = '#3a424a';
+  g.save();
+  g.translate(cx, cy);
+  g.rotate(-0.32);
+  // Corps du combiné, écran, et la charnière du clapet.
+  g.fillStyle = '#9a9a9a';
   g.beginPath();
-  g.roundRect(cx - 34, cy - 62, 68, 124, 12);
+  g.roundRect(-52, -96, 104, 192, 14);
   g.fill();
-  g.fillStyle = '#cfe0ec';
+  g.fillStyle = '#b4b4b4';
   g.beginPath();
-  g.roundRect(cx - 26, cy - 50, 52, 92, 4);
+  g.roundRect(-42, -84, 84, 74, 6);
   g.fill();
-  g.strokeStyle = '#d0342c';
-  g.lineWidth = 11;
+  g.fillStyle = '#8a8a8a';
+  g.fillRect(-52, -6, 104, 7);
+  // Antenne.
+  g.strokeStyle = '#9a9a9a';
+  g.lineWidth = 6;
   g.beginPath();
-  g.arc(cx, cy, 84, 0, Math.PI * 2);
+  g.moveTo(36, -96);
+  g.lineTo(46, -136);
   g.stroke();
+  // Ondes barrées, de part et d'autre.
+  g.strokeStyle = '#8a8a8a';
+  g.lineWidth = 4;
+  for (const sgn of [-1, 1] as const) {
+    for (let i = 1; i <= 2; i++) {
+      g.beginPath();
+      g.arc(sgn * 60, -70, 10 + i * 12, sgn > 0 ? -0.8 : Math.PI - 0.8, sgn > 0 ? 0.8 : Math.PI + 0.8);
+      g.stroke();
+    }
+  }
+  // Étiquette « マナー » barrée de rouge, puis 「通話」 en bas.
+  g.fillStyle = '#3a3a3a';
+  g.font = `bold 23px ${JP_FONT}`;
+  g.textAlign = 'center';
+  g.save();
+  g.rotate(-0.12);
+  g.fillText('マナー', 0, 34);
+  g.restore();
+  g.strokeStyle = '#d0202a';
+  g.lineWidth = 6;
   g.beginPath();
-  g.moveTo(cx - 58, cy - 58);
-  g.lineTo(cx + 58, cy + 58);
+  g.moveTo(-48, 40);
+  g.lineTo(48, 12);
   g.stroke();
+  g.fillStyle = '#3a3a3a';
+  g.font = `bold 26px ${JP_FONT}`;
+  g.fillText('通話', 0, 82);
+  g.restore();
 
   g.textAlign = 'left';
-  g.fillStyle = '#26303a';
-  g.font = `bold 30px ${JP_FONT}`;
-  g.fillText('マナーモードに設定のうえ、', w * 0.42, h * 0.42);
-  g.fillText('通話はご遠慮ください。', w * 0.42, h * 0.58);
-  g.fillStyle = '#5c646c';
-  g.font = `18px ${JP_FONT}`;
-  g.fillText('Please set your mobile phone to silent mode', w * 0.42, h * 0.74);
-  g.fillText('and refrain from making calls.', w * 0.42, h * 0.85);
+  g.fillStyle = '#141414';
+  g.font = `bold 32px ${JP_FONT}`;
+  g.fillText('マナーモードに設定の上、', 300, HEADER_H + 92);
+  g.fillText('通話はご遠慮ください。', 300, HEADER_H + 134);
+  g.fillStyle = '#4a4a4a';
+  g.font = `17px ${JP_FONT}`;
+  g.fillText('Please set your mobile phone to silent mode', 300, HEADER_H + 172);
+  g.fillText('and refrain from talking on the phone.', 300, HEADER_H + 194);
 }
 
 export function drawBackpackManner(
@@ -1796,6 +1904,13 @@ export function drawTransfers(
 }
 
 // --- Écrans de courtoisie : places prioritaires et embarquement ---
+/**
+ * Places prioritaires : ce n'est PAS un dessin de l'afficheur, c'est le
+ * STICKER du wagon repris tel quel - bandeau vert, cinq silhouettes assises,
+ * légende sous chacune. L'afficheur réutilise le fichier de la vignette collée
+ * au-dessus des sièges, et c'est pour ça que le voyageur reconnaît d'un coup
+ * d'œil ce qu'il vient de voir en s'asseyant.
+ */
 export function drawPriorityNotice(
   s: ScreenSurface,
   index: number,
@@ -1803,45 +1918,112 @@ export function drawPriorityNotice(
   dir: LoopDirection,
 ): void {
   const { g, w, h } = s;
-  g.fillStyle = '#f4f6f7';
+  g.fillStyle = '#ffffff';
   g.fillRect(0, 0, w, h);
   drawHeader(g, w, index, clock, 'next', 'jp', dir);
-  // Rangée de silhouettes : canne, femme enceinte, bébé, blessé.
-  const base = h * 0.56;
-  const blue = '#1f5fa8';
-  for (let i = 0; i < 4; i++) {
-    const cx = w * (0.16 + i * 0.14);
-    g.fillStyle = blue;
+
+  // Bandeau vert du sticker, avec ses trois traductions serrées à droite.
+  const bx = 96;
+  const bw = w - 2 * bx;
+  g.fillStyle = '#4a9e5c';
+  g.beginPath();
+  g.roundRect(bx, HEADER_H + 18, bw, 74, 8);
+  g.fill();
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'left';
+  g.font = `bold 52px ${JP_FONT}`;
+  g.fillText('優先席', bx + 26, HEADER_H + 74);
+  g.font = `bold 15px ${JP_FONT}`;
+  g.fillText('Priority', bx + bw - 96, HEADER_H + 40);
+  g.fillText('Seat', bx + bw - 96, HEADER_H + 57);
+  g.font = `13px ${JP_FONT}`;
+  g.fillText('优先座位', bx + bw - 96, HEADER_H + 74);
+  g.fillText('노약자석', bx + bw - 96, HEADER_H + 89);
+
+  // Les cinq silhouettes assises : canne, béquille, prothèse interne, enfant,
+  // grossesse. Toutes sur le même siège, toutes du même bleu.
+  const seatY = HEADER_H + 176;
+  for (let i = 0; i < 5; i++) {
+    const cx = w * (0.17 + i * 0.165);
+    g.fillStyle = '#2f5fa8';
+    // Siège : assise et dossier.
     g.beginPath();
-    g.arc(cx, base - 76, 15, 0, Math.PI * 2);
+    g.roundRect(cx - 4, seatY - 26, 26, 10, 3);
     g.fill();
     g.beginPath();
-    g.roundRect(cx - 16, base - 56, 32, 56, 10);
+    g.roundRect(cx + 16, seatY - 62, 10, 46, 3);
     g.fill();
-    if (i === 1) {
-      g.beginPath();
-      g.arc(cx + 14, base - 26, 13, 0, Math.PI * 2);
-      g.fill();
-    }
+    // Silhouette assise, de profil.
+    g.beginPath();
+    g.arc(cx + 2, seatY - 66, 11, 0, Math.PI * 2);
+    g.fill();
+    g.beginPath();
+    g.roundRect(cx - 6, seatY - 52, 18, 30, 7);
+    g.fill();
+    g.beginPath();
+    g.roundRect(cx - 26, seatY - 28, 32, 11, 5);
+    g.fill();
+    g.beginPath();
+    g.roundRect(cx - 26, seatY - 24, 11, 26, 5);
+    g.fill();
     if (i === 0) {
-      g.lineWidth = 5;
-      g.strokeStyle = blue;
+      // Canne.
+      g.lineWidth = 4;
+      g.strokeStyle = '#2f5fa8';
       g.beginPath();
-      g.moveTo(cx + 24, base - 60);
-      g.lineTo(cx + 24, base + 6);
+      g.moveTo(cx - 34, seatY - 44);
+      g.lineTo(cx - 34, seatY + 2);
       g.stroke();
     }
+    if (i === 1) {
+      // Béquille.
+      g.lineWidth = 4;
+      g.strokeStyle = '#2f5fa8';
+      g.beginPath();
+      g.moveTo(cx - 36, seatY - 50);
+      g.lineTo(cx - 30, seatY + 2);
+      g.moveTo(cx - 42, seatY - 50);
+      g.lineTo(cx - 30, seatY - 50);
+      g.stroke();
+    }
+    if (i === 2) {
+      // Croix : appareillage interne.
+      g.fillStyle = '#ffffff';
+      g.fillRect(cx - 3, seatY - 48, 12, 4);
+      g.fillRect(cx + 1, seatY - 52, 4, 12);
+    }
+    if (i === 3) {
+      // Enfant sur les genoux.
+      g.fillStyle = '#2f5fa8';
+      g.beginPath();
+      g.arc(cx - 16, seatY - 40, 7, 0, Math.PI * 2);
+      g.fill();
+      g.beginPath();
+      g.roundRect(cx - 22, seatY - 32, 13, 14, 5);
+      g.fill();
+    }
+    if (i === 4) {
+      // Ventre arrondi.
+      g.fillStyle = '#e08fb0';
+      g.beginPath();
+      g.arc(cx - 8, seatY - 36, 10, 0, Math.PI * 2);
+      g.fill();
+    }
   }
-  g.fillStyle = '#1f5fa8';
-  g.font = `bold 44px ${JP_FONT}`;
+
+  const caps = ['お年寄りの方', 'からだの不自由な方', '内部障がいのある方', '乳幼児をお連れの方', '妊娠している方'];
+  g.fillStyle = '#1a1a1a';
+  g.font = `11px ${JP_FONT}`;
+  g.textAlign = 'center';
+  caps.forEach((c, i) => g.fillText(c, w * (0.17 + i * 0.165), seatY + 30));
+
+  g.fillStyle = '#141414';
+  g.font = `bold 17px ${JP_FONT}`;
+  g.fillText('優先席を必要とされるお客さまがいらっしゃいましたら、席をお譲りください。', w / 2, h - 30);
+  g.fillStyle = '#4a4a4a';
+  g.font = `13px ${JP_FONT}`;
+  g.fillText('Please offer your seat to those who may need it.', w / 2, h - 12);
   g.textAlign = 'left';
-  g.fillText('優先席', w * 0.66, base - 30);
-  g.fillStyle = '#26303a';
-  g.font = `22px ${JP_FONT}`;
-  g.fillText('おゆずりください。', w * 0.66, base + 4);
-  g.font = `18px ${JP_FONT}`;
-  g.fillStyle = '#5c646c';
-  g.fillText('Priority Seat', w * 0.66, base + 34);
 }
 
 export function drawSafetyNotice(
@@ -2253,6 +2435,59 @@ const NOTICE_OUTAGE: DisruptionNotice = {
   zh: ['本次列车因接触网停电而停车。', '供电已恢复，列车即将恢复运行。'],
   ko: ['이 열차는 전차선 정전으로 정차하였습니다.', '전력이 복구되어 곧 운행을 재개합니다.'],
 };
+
+/**
+ * Freinage d'urgence (急停車します！) : le seul écran qui parle À L'INSTANT où
+ * la rame freine, et le seul qui donne un ORDRE plutôt qu'une information.
+ *
+ * Panneau jaune bord à bord, titre rouge, consigne en gros noir, et derrière
+ * tout ça un « ! » géant en filigrane. On ne le lit pas, on le voit : à ce
+ * moment-là le voyageur est en train de perdre l'équilibre, et le seul mot qui
+ * compte est « accrochez-vous ».
+ */
+export function drawEmergencyBrake(s: ScreenSurface): void {
+  const { g, w, h } = s;
+  const bg = g.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#c9a218');
+  bg.addColorStop(0.5, '#f2d84a');
+  bg.addColorStop(1, '#c9a218');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, w, h);
+  g.fillStyle = '#f7e88a';
+  g.beginPath();
+  g.roundRect(16, 12, w - 32, h - 24, 18);
+  g.fill();
+
+  // Le « ! » en filigrane : la même forme que le triangle d'avertissement,
+  // agrandie jusqu'à déborder, dans un ton à peine plus soutenu que le fond.
+  g.save();
+  g.globalAlpha = 0.35;
+  g.fillStyle = '#d9a94a';
+  g.beginPath();
+  g.moveTo(w / 2 - 26, 30);
+  g.lineTo(w / 2 + 26, 30);
+  g.lineTo(w / 2 + 16, 250);
+  g.lineTo(w / 2 - 16, 250);
+  g.closePath();
+  g.fill();
+  g.beginPath();
+  g.arc(w / 2, 320, 30, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+
+  g.textAlign = 'center';
+  g.fillStyle = '#d0202a';
+  g.font = `bold 66px ${JP_FONT}`;
+  g.fillText('急停車します！', w / 2, 108);
+  g.fillStyle = '#141414';
+  g.font = `bold 38px ${JP_FONT}`;
+  g.fillText('お近くの手すりや吊り革に', w / 2, 190);
+  g.fillText('おつかまりください。', w / 2, 236);
+  g.font = `bold 19px ${JP_FONT}`;
+  g.fillText('走行中安全確保のためやむを得ず急停車', w / 2, 330);
+  g.fillText('することがありますのでご注意下さい。', w / 2, 356);
+  g.textAlign = 'left';
+}
 
 /**
  * Arrêt d'urgence (急停車) : la rame est immobilisée et ne sait pas quand elle
