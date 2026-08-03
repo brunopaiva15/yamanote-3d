@@ -33,18 +33,24 @@ import type { LineScreenState } from './lineScreenStates.ts';
  * rendue est un peu plus longue, et c'est délibéré - voir la note de
  * BAND_FILL_TIME, qui vaut pour les deux.
  */
-export const PAGE_FADE = 0.16;
+export const PAGE_FADE = 0.14;
 
 /**
  * Pas de temps des deux animations, quand il y en a une en cours.
  *
  * Le battement ordinaire de l'afficheur reste celui de la rame - une demi-
  * seconde, `ANIM_PERIOD` -, et c'est lui qui rythme le clignotant et les
- * vantaux. Il est beaucoup trop lâche pour un fondu d'un sixième de seconde :
- * on n'en verrait qu'une image sur deux, c'est-à-dire une coupure. Les
- * battements fins ne servent QUE pendant le fondu et le remplissage, soit
- * environ deux secondes par page - le reste du temps, l'écran dort toujours
- * entre deux demi-secondes.
+ * vantaux. Il est beaucoup trop lâche pour un fondu qui dure `PAGE_FADE` : on
+ * n'en verrait qu'une image sur deux, c'est-à-dire une coupure. Les battements
+ * fins ne servent QUE pendant le fondu et le remplissage, soit
+ * `BAND_FILL_DELAY + BAND_FILL_TIME` par page - le reste du temps, l'écran dort
+ * toujours entre deux demi-secondes.
+ *
+ * Les seules durées de ce dépôt sont celles écrites ICI, dans les trois
+ * constantes voisines. Les modules qui s'en servent en parlent en mots et non
+ * en chiffres : deux réglages de suite ont déjà laissé des « un dixième de
+ * seconde » périmés dans quatre fichiers, et un commentaire faux coûte plus
+ * cher qu'un commentaire vague.
  */
 export const MOTION_STEP = 1 / 30;
 
@@ -57,7 +63,7 @@ export const BAND_FILL_DELAY = 0.3;
  * RELEVÉ SUR LA CAPTURE : le vert atteint le neuvième dixième de l'arc 22
  * images après son départ, soit 1,1 s, et le bout à 1,2 s environ.
  *
- * CE QUI EST RENDU : 1,6 s, et l'écart s'assume. Deux raisons, et aucune n'est
+ * CE QUI EST RENDU : 1,35 s, et l'écart s'assume. Deux raisons, et aucune n'est
  * un arrondi de mesure. La première tient à la mesure elle-même : la capture est
  * une caméra à 20 im/s devant une dalle, chaque image y traîne la précédente, et
  * une arête qui remonte l'arc s'y lit plus loin qu'elle n'est - le relevé est un
@@ -67,8 +73,13 @@ export const BAND_FILL_DELAY = 0.3;
  * une seconde de remontée ne se voit pas commencer - elle est déjà finie quand
  * l'œil y arrive. Ce qu'on cherche n'est pas le chronomètre de la dalle, c'est
  * ce que le voyageur voit d'elle.
+ *
+ * L'écart ne se creuse pas pour autant à volonté : à 1,6 s la remontée se
+ * regardait avancer, ce qui n'est plus un afficheur qui s'allume mais une barre
+ * de progression. La valeur tenue est celle qui se laisse voir sans se laisser
+ * attendre.
  */
-export const BAND_FILL_TIME = 1.6;
+export const BAND_FILL_TIME = 1.35;
 
 /**
  * Les écrans dont la bande se remplit en arrivant.

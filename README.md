@@ -117,15 +117,14 @@ japonais - que l'afficheur du jeu ne faisait pas. Il CHANGEAIT DE PAGE : une
 image, puis l'autre, au battement suivant. La rame, elle, ne coupe pas.
 
 **Les deux pages se fondent l'une dans l'autre**, bandeau compris. C'est court -
-un sixième de seconde - et ça doit l'être : ce n'est pas une transition de
-diaporama, c'est le temps que met un contrôleur d'affichage à substituer une
-image à une autre. Plus long, l'écran se met à respirer et on lit deux pages à
+0,14 s - et ça doit l'être : ce n'est pas une transition de diaporama, c'est le
+temps que met un contrôleur d'affichage à substituer une image à une autre. Plus long, l'écran se met à respirer et on lit deux pages à
 la fois.
 
 **La vue rapprochée arrive la bande éteinte.** Elle n'apparaît pas finie : le
 ruban est d'abord une ardoise froide sur toute sa longueur, et le vert la remonte
-depuis le repère de position jusqu'au bout lointain, en une seconde et demie,
-après trois dixièmes de seconde d'attente. La voie qu'on a devant soi s'allume à
+depuis le repère de position jusqu'au bout lointain, en 1,35 s, après trois
+dixièmes de seconde d'attente. La voie qu'on a devant soi s'allume à
 partir d'où l'on est. La coupe est franche et normale à la bande, liseré sombre
 compris - pas un dégradé, pas une pointe : une arête nette qui remonte l'arc.
 
@@ -136,14 +135,20 @@ vert serait inventer une animation pour l'assortir à l'autre.
 
 **Ces deux durées sont plus longues que le relevé**, et l'écart s'assume. La
 capture donne 0,12 s pour le fondu et 1,2 s pour la remontée ; le jeu en met
-0,16 et 1,6. La mesure d'abord est un minorant : une caméra à 20 images par
+0,14 et 1,35. La mesure d'abord est un minorant : une caméra à 20 images par
 seconde devant une dalle traîne chaque image sur la suivante, et une arête qui
 remonte l'arc s'y lit plus loin qu'elle n'est. Le regard ensuite n'est pas le
 même : sur la capture, l'écran occupe le cadre entier ; ici c'est une dalle de
 soixante centimètres, à trois mètres, au-dessus d'une porte, qu'on prend de
 biais et en passant. À cette taille-là une remontée d'une seconde ne se voit pas
 commencer - elle est finie quand l'œil y arrive. Ce qu'on cherche n'est pas le
-chronomètre de la dalle, c'est ce que le voyageur voit d'elle.
+chronomètre de la dalle, c'est ce que le voyageur voit d'elle. L'écart ne se
+creuse pas pour autant à volonté : essayées à 1,6 s, ces deux animations se
+regardaient avancer, ce qui n'est plus un afficheur qui s'allume mais une barre
+de progression. Les valeurs tenues sont celles qui se laissent voir sans se
+laisser attendre - et elles ne sont écrites qu'à un endroit,
+`three/lineScreenAnim` : le reste du dépôt en parle en mots, pour qu'un
+prochain réglage ne laisse pas quatre commentaires faux derrière lui.
 
 Le calendrier des deux vit dans `three/lineScreenAnim`, qui ne connaît ni
 canevas, ni horloge, ni magasin : on lui donne la page à l'antenne et le temps
@@ -158,8 +163,9 @@ il serait flou.
 
 Rien de tout cela ne coûte un rafraîchissement permanent. Le battement ordinaire
 reste celui de la rame, une demi-seconde ; les battements fins (1/30 s) ne
-servent QUE pendant le fondu et la remontée du vert, soit environ deux secondes
-par page - le reste du temps, la dalle dort exactement comme avant. Et le
+servent QUE pendant le fondu et la remontée du vert, soit un peu plus d'une
+seconde et demie par page - le reste du temps, la dalle dort exactement comme
+avant. Et le
 fondu ne garde aucune copie de l'image d'avant : la dalle porte déjà le mélange
 des battements précédents, on ne fait qu'y verser la part suivante
 (`three/screenFade`).
