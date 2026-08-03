@@ -487,6 +487,63 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   // Ce qui traîne dans la scène sans nom ni parent nommé : la sonde de la
   // phase 21 a trouvé un plan de 1 × 1 m à l'origine du monde, et il fallait
   // pouvoir remonter à sa source sans deviner.
+  /**
+   * LES FUITES D'UN VOLUME : par où voit-on dehors ?
+   *
+   * Trois défauts de suite ont eu la même signature — un bout de hall qui ne
+   * recevait aucune paroi, un ouvrage qu'on foulait sans le dessiner, un
+   * demi-niveau ouvert sur la rue — et trois fois il a fallu une capture pour
+   * les trouver. Une capture ne se lit pas trente fois de suite.
+   *
+   * On tire donc des rayons depuis l'œil, dans toutes les directions de la
+   * moitié basse (celle où il devrait toujours y avoir un sol ou une paroi), et
+   * l'on compte ceux qui ne rencontrent RIEN. Zéro dans un volume clos ; le
+   * reste est un trou, et la direction dit lequel.
+   *
+   * `sky` compte séparément les rayons qui sortent en ne touchant que le ciel
+   * ou la ville : ceux-là traversent bel et bien une paroi manquante.
+   */
+  w.__probeLeaks = (x: number, y: number, z: number, rays = 720) => {
+    const eye = new THREE.Vector3(x, y, z);
+    const ray = new THREE.Raycaster();
+    ray.far = 600;
+    const targets: THREE.Object3D[] = [];
+    scene.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && mesh.visible) targets.push(mesh);
+    });
+    /** La chaîne de noms d'un objet, du haut vers le bas. */
+    const chainOf = (o: THREE.Object3D): string => {
+      const parts: string[] = [];
+      for (let c: THREE.Object3D | null = o; c; c = c.parent) {
+        parts.unshift(c.name || `<${c.type}>`);
+      }
+      return parts.join('/');
+    };
+    let open = 0;
+    const seen = new Map<string, number>();
+    for (let k = 0; k < rays; k++) {
+      // Répartition uniforme sur la demi-sphère basse, en spirale de Fibonacci.
+      const t = (k + 0.5) / rays;
+      const yy = -t;
+      const r = Math.sqrt(Math.max(0, 1 - yy * yy));
+      const a = k * Math.PI * (3 - Math.sqrt(5));
+      const d = new THREE.Vector3(Math.cos(a) * r, yy, Math.sin(a) * r);
+      ray.set(eye, d);
+      const hit = ray.intersectObjects(targets, true)[0];
+      // CE QU'ON VOIT, ET NON PAS S'IL Y A QUELQUE CHOSE. Un rayon qui part vers
+      // le bas depuis l'intérieur d'un hall doit rencontrer LA GARE. S'il
+      // rencontre la ville, le ballast, un quai d'en face ou rien du tout,
+      // c'est qu'il est sorti par un trou.
+      const what = hit ? chainOf(hit.object) : '<vide>';
+      if (hit && /(^|\/)gare(\/|$)/.test(what)) continue;
+      open++;
+      seen.set(what, (seen.get(what) ?? 0) + 1);
+    }
+    const by = [...seen].sort((p, q) => q[1] - p[1]).slice(0, 6);
+    return { rays, open, part: open / rays, eye: [eye.x, eye.y, eye.z], through: by };
+  };
+
   w.__probeStrays = () => {
     const out: Record<string, unknown>[] = [];
     scene.traverse((o) => {
