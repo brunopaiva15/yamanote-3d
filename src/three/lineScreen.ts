@@ -2263,7 +2263,7 @@ function drawRuns(g: CanvasRenderingContext2D, runs: Run[], x: number, y: number
 }
 
 const SECURITY_JP: Run[][] = [
-  [['ただいま、JR東日本グループでは、警察と連携し、', false], ['特別警戒', true], ['を実施して', false]],
+  [['ただいま、当社グループでは、警察と連携し、', false], ['特別警戒', true], ['を実施して', false]],
   [['おります。防犯カメラを駅構内に設置しているほか、社員および警備員による', false]],
   [['駅構内・列車内の巡回を強化して、お客さまに安心してご利用いただけるよう', false]],
   [['に努めております。', false]],
@@ -2272,7 +2272,7 @@ const SECURITY_JP: Run[][] = [
 ];
 
 const SECURITY_EN: Run[][] = [
-  [['JR East Group and the Police Department together are', false]],
+  [['Together with the Police Department, we are', false]],
   [['now on ', false], ['a high alert.', true]],
   [['If you find ', false], ['something suspicious', true], [' at a station or on a train,', false]],
   [['please inform station staff, conductors or security guards', false]],
