@@ -28,6 +28,41 @@ export function moveAxes(): { x: number; y: number } {
   return { x: Math.max(-1, Math.min(1, x)), y: Math.max(-1, Math.min(1, y)) };
 }
 
+/** Course du manche tactile, en pixels : au-delà, l'axe est à fond. */
+export const JOY_RADIUS = 52;
+/** Zone morte, en pixels : un pouce posé n'est jamais tout à fait immobile. */
+export const JOY_DEAD = 5;
+
+/**
+ * Axes du joystick tactile, à partir de l'écart AU POINT D'APPUI du geste -
+ * jamais au centre du disque.
+ *
+ * La distinction n'est pas cosmétique, c'est le défaut qu'on corrige : mesuré
+ * depuis le centre, un pouce posé sur le bord droit du cercle valait déjà
+ * « à droite, presque à fond » sans que rien n'ait bougé, et glisser vers la
+ * gauche ne faisait que revenir vers le centre. Sur une tablette tenue à
+ * l'horizontale, le disque est ancré loin dans le coin bas gauche et le pouce
+ * qui tient l'appareil n'atteint que son bord intérieur - toujours le même,
+ * toujours à droite : le joueur partait à droite à chaque fois.
+ *
+ * En repère relatif, l'appui vaut zéro où qu'il tombe, et une même amplitude
+ * vaut autant d'un côté que de l'autre.
+ *
+ * `dx` / `dy` sont l'écart RAMENÉ à la course - de quoi placer le manche.
+ */
+export function joyAxes(
+  ex: number,
+  ey: number,
+): { x: number; y: number; dx: number; dy: number } {
+  const len = Math.hypot(ex, ey);
+  const k = len > JOY_RADIUS ? JOY_RADIUS / len : 1;
+  const dx = ex * k;
+  const dy = ey * k;
+  // L'écran a son y vers le bas, la marche a son avant vers le haut.
+  if (len < JOY_DEAD) return { x: 0, y: 0, dx, dy };
+  return { x: dx / JOY_RADIUS, y: -dy / JOY_RADIUS, dx, dy };
+}
+
 export function consumeLook(): { dx: number; dy: number } {
   const dx = input.lookDX;
   const dy = input.lookDY;
