@@ -1,6 +1,6 @@
 // Données réelles de la ligne Yamanote : 30 stations (JY01 → JY30),
 // côté d'ouverture des portes et correspondances pour les annonces.
-// `code` = trigramme, mais SEULES LES TREIZE GARES DE `CODED_JY` en portent un
+// `code` = trigramme, mais SEULES LES QUATORZE GARES DE `CODED_JY` en portent un
 // officiellement - passer par `stationCode()` pour l'afficher ; `kana` = lecture hiragana ;
 // `zh` / `ko` = graphies officielles JR East (chinois simplifié / hangul) du
 // cycle quadrilingue des afficheurs E235.
@@ -55,10 +55,10 @@ export const STATIONS: Station[] = [
 // Le trigramme N'EST PAS UNE PROPRIÉTÉ DE TOUTE GARE. JR East ne l'a attribué
 // qu'aux gares majeures - celles qui servent de repère à un voyageur qui ne lit
 // ni kanji ni kana : les grandes correspondances et les têtes de réseau. Les
-// dix-sept autres n'ont que leur numéro de ligne, et leur signalétique porte le
+// seize autres n'ont que leur numéro de ligne, et leur signalétique porte le
 // carré JY seul, sans lettres au-dessus.
 //
-// Ces treize-là sont donc les seules que l'afficheur doit coiffer d'un
+// Ces quatorze-là sont donc les seules que l'afficheur doit coiffer d'un
 // trigramme. Le reste des `code` de la table ci-dessus n'est pas officiel : il
 // sert de repère interne (fichiers audio, plaques de quai héritées), et il ne
 // doit pas remonter sur une dalle.
@@ -74,6 +74,7 @@ const CODED_JY = new Set([
   'JY21', // 恵比寿 EBS
   'JY24', // 大崎 OSK
   'JY25', // 品川 SGW
+  'JY26', // 高輪ゲートウェイ TGW - attribué à l'ouverture, en 2020
   'JY28', // 浜松町 HMC
   'JY29', // 新橋 SMB
 ]);

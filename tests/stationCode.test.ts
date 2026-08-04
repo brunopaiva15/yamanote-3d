@@ -1,8 +1,8 @@
 // Le trigramme de gare : QUI en a un, et OÙ il a le droit de s'afficher.
 //
-// JR East n'a pas attribué de trigramme à toute la boucle. Treize gares en
-// portent un - les grandes correspondances et les têtes de réseau ; les
-// dix-sept autres n'ont que leur numéro JY. La table `STATIONS` porte pourtant
+// JR East n'a pas attribué de trigramme à toute la boucle. Quatorze gares en
+// portent un - les grandes correspondances et les têtes de réseau ; les seize
+// autres n'ont que leur numéro JY. La table `STATIONS` porte pourtant
 // un `code` pour les trente, hérité d'un usage interne (repères audio, plaques
 // de quai). Confondre les deux, c'est coiffer 鶯谷 d'un « UGD » qui n'existe
 // nulle part dans la vraie gare.
@@ -38,12 +38,13 @@ const OFFICIAL: Record<string, string> = {
   JY21: 'EBS',
   JY24: 'OSK',
   JY25: 'SGW',
+  JY26: 'TGW',
   JY28: 'HMC',
   JY29: 'SMB',
 };
 
-test('treize gares portent un trigramme, les autres aucun', () => {
-  assert.equal(Object.keys(OFFICIAL).length, 13);
+test('quatorze gares portent un trigramme, les autres aucun', () => {
+  assert.equal(Object.keys(OFFICIAL).length, 14);
   for (const st of STATIONS) {
     assert.equal(
       stationCode(st),
