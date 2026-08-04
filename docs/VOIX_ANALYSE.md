@@ -313,3 +313,39 @@ retenu et devra figurer dans `about.html` — à décider en même temps que la 
 Autre voie, si le crédit obligatoire gêne : les voix japonaises neuronales
 d'Azure ou de Google, pilotées en SSML (`<break time="340ms"/>`, `<prosody>`),
 qui offrent le même genre de contrôle contre quelques euros pour les 200 clips.
+
+
+## Tableau des essais
+
+Cinq tours d'écoute notée à l'aveugle, tous sur la même phrase que la prise
+étiquetée, tous sur une échelle de 1 à 5.
+
+| Approche | Variantes | Meilleure note |
+| --- | --- | --- |
+| Kokoro, réglages (registre, sourire, cadence, débit) | 24 | 3 — une seule, et c'est une voix BRUTE |
+| Kokoro, anglais | 15 | 2 — le réglage déjà en place |
+| Kokoro, les 19 voix féminines nues | 21 | 2 |
+| VOICEVOX, 12 voix calées sur la prise | 12 | 3 |
+| **Kokoro + greffe de mélodie** | 12 | **4** |
+
+La greffe est, de loin, ce qui marche. Et le tour qui l'a établie isole la
+cause proprement : à voix et vocodeur constants, `brut` 1, `vocodeur` 1,
+`rythme seul` 1, `greffe complète` **4**. Le vocodeur ne coûte donc rien, le
+rythme seul n'apporte rien — **c'est la mélodie qui porte tout**.
+
+Un second enseignement du même tour : jf_tebukuro greffé monte à 4 quand
+jf_alpha greffé reste à 1. La différence est le registre de départ — 224 Hz
+contre 296, pour une cible à 230. Quand la voix part loin, WORLD doit déplacer
+la fondamentale de plusieurs demi-tons sans bouger les formants, et ça s'entend.
+D'où l'intérêt de poser la greffe sur des voix déjà calées : c'est exactement
+ce que VOICEVOX permet, puisque son registre se règle avant synthèse et sans
+rééchantillonnage.
+
+### Ce que VOICEVOX apporte quand même
+
+Il plafonne plus bas que la greffe (3 contre 4), mais il règle le problème
+d'échelle que la greffe ne règle pas : **la greffe demande une prise du texte
+visé**, VOICEVOX non. Les phrases porteuses des annonces de bord sont fixes et
+donc greffables une fois pour toutes ; les trente noms de gare, eux, ne le sont
+pas. Poser la greffe SUR une voix VOICEVOX combine les deux — un registre calé
+avant synthèse, et la mélodie de la prise par-dessus.
