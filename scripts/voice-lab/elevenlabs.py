@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Grave les annonces avec ElevenLabs. Remplace announcements-gen.py.
+"""Grave les annonces avec ElevenLabs, une phrase ENTIÈRE par clip.
+
+⚠ CE N'EST PLUS LE CHEMIN PRINCIPAL : voir graver.py, qui grave par fragments
+réemployés comme le fait le vrai système, et qui écrit le même manifeste. Ce
+script-ci reste pour un point de comparaison - il produit des phrases dites
+d'un seul souffle, donc une mélodie continue là où graver.py assemble des
+blocs. NE PAS LANCER LES DEUX sur le même manifeste : le second effacerait les
+clips du premier.
+
 
 ⚠ CE SCRIPT N'A PAS PU ÊTRE EXÉCUTÉ dans la session qui l'a écrit : l'hôte
 d'ElevenLabs est refusé par la politique de sortie réseau (403 au niveau
