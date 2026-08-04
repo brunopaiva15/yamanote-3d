@@ -238,48 +238,14 @@ def encode_mp3(buf: np.ndarray, path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 MELODIES = [
-    # Inner Loop principal - inspirée du rôle de JRE-IKST-010-01 : cloche
-    # douce, arpège ascendant « la boucle tourne ». Sol majeur, 6/8 feutré.
-    dict(
-        file="01_jre-ikst-010-01_inner-main.mp3",
-        title="Meguri no Asa (めぐりの朝)",
-        bpm=132,
-        inst="synthbell",
-        notes=[
-            (0, 0.5, "D5"), (0.5, 0.5, "G5"), (1, 0.5, "B5"), (1.5, 0.5, "A5"),
-            (2, 0.5, "G5"), (2.5, 0.5, "A5"), (3, 1.5, "B5"), (4.5, 1.5, "D6"),
-            (6, 0.5, "C6"), (6.5, 0.5, "B5"), (7, 0.5, "A5"), (7.5, 0.5, "G5"),
-            (8, 0.5, "E5"), (8.5, 0.5, "F#5"), (9, 2, "G5"),
-            (11, 0.5, "B5"), (11.5, 0.5, "A5"), (12, 0.5, "G5"), (12.5, 0.5, "D5"),
-            (13, 2.5, "G5"),
-        ],
-        pads=[
-            (0, 4, ("G3", "D4", "B4")), (4, 2, ("C4", "G4", "E5")),
-            (6, 3, ("A3", "E4", "C5")), (9, 2, ("G3", "D4", "B4")),
-            (11, 2, ("D4", "A4", "F#5")), (13, 2.5, ("G3", "D4", "B4")),
-        ],
-    ),
-    # Outer Loop principal - pendant descendant de la précédente, ré majeur.
-    dict(
-        file="02_jre-ikst-010-02_outer-main.mp3",
-        title="Sotomawari no Kaze (外回りの風)",
-        bpm=128,
-        inst="synthbell",
-        notes=[
-            (0, 0.5, "A5"), (0.5, 0.5, "F#5"), (1, 0.5, "D5"), (1.5, 0.5, "E5"),
-            (2, 0.5, "F#5"), (2.5, 0.5, "G5"), (3, 1.5, "A5"), (4.5, 0.5, "B5"),
-            (5, 0.5, "A5"), (5.5, 0.5, "G5"), (6, 1, "F#5"),
-            (7, 0.5, "E5"), (7.5, 0.5, "F#5"), (8, 0.5, "G5"), (8.5, 0.5, "E5"),
-            (9, 2.5, "D5"),
-            (12, 0.5, "A5"), (12.5, 0.5, "D6"), (13, 0.5, "A5"), (13.5, 0.5, "F#5"),
-            (14, 2, "D5"),
-        ],
-        pads=[
-            (0, 4, ("D4", "A4", "F#5")), (4, 3, ("G3", "D4", "B4")),
-            (7, 2, ("A3", "E4", "C#5")), (9, 3, ("D4", "A4", "F#5")),
-            (12, 4, ("D4", "A4", "F#5")),
-        ],
-    ),
+    # Les deux branchements PRINCIPAUX (01 inner-main, 02 outer-main) ne sont
+    # plus gravés ici : ce sont désormais deux interprétations d'une même
+    # partition pour piano acoustique brillant, produites par
+    # scripts/piano-melody-gen.py. Elles demandaient des cordes inharmoniques,
+    # une pédale et deux mains d'équilibre distinct - hors du modèle de cloche
+    # additive de ce script. Leurs entrées ont donc été retirées de cette liste
+    # pour qu'un seul générateur possède chaque fichier de sortie : un
+    # `--only 01_… --force` lancé ici ne peut plus écraser le piano par erreur.
     # Ōsaki Inner voie 2 - variante mineure recueillie du motif intérieur.
     dict(
         file="03_jre-ikst-010-03_inner-secondary-osaki.mp3",

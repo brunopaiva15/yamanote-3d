@@ -9,12 +9,34 @@ export interface OriginalMelodyDefinition {
 }
 
 const NAMES = [
-  'Inner Loop Lantern', 'Outer Loop Breeze', 'Osaki Morning Link', 'Osaki Evening Link',
+  'Inner Loop Ring of Light', 'Outer Loop Ring of Wind', 'Osaki Morning Link', 'Osaki Evening Link',
   'Spring Haze', 'Petal Current', 'Morning Birdsong', 'Quiet Stream', 'Future March A',
   'Future March B', 'Ebisu Evening Promenade F', 'Gateway Light A', 'Gateway Light B',
   'Kanda City Pulse A', 'Kanda City Pulse B', 'Ikebukuro Electric Crossing A',
   'Ikebukuro Electric Crossing B', 'Inner Loop Lantern B', 'Outer Loop Breeze B',
 ] as const;
+
+/**
+ * Les deux branchements principaux ne sont plus des cloches de synthèse : ils
+ * ont été regravés au piano acoustique brillant par scripts/piano-melody-gen.py,
+ * deux interprétations d'une SEULE partition (mêmes hauteurs, mêmes durées,
+ * mêmes positions rythmiques ; seuls le toucher, la pédale et la couleur
+ * changent). Ces deux-là ont donc la traçabilité complète que les dix-sept
+ * autres n'ont pas - graine, tempo, mesure, centre tonal - et ne sont plus
+ * marqués `legacyGeneratedAsset`.
+ */
+const REGRAVED: Record<string, Partial<OriginalMelodyDefinition>> = {
+  '/audio/melodies/01_jre-ikst-010-01_inner-main.mp3': {
+    seed: 1001,
+    instrumentation: ['bright acoustic piano'],
+    mood: ['platform', 'original', 'luminous', 'reassuring'],
+  },
+  '/audio/melodies/02_jre-ikst-010-02_outer-main.mp3': {
+    seed: 2002,
+    instrumentation: ['bright acoustic piano'],
+    mood: ['platform', 'original', 'airy', 'contemplative'],
+  },
+};
 
 /** Métadonnées non destructives des 19 actifs; les chemins restent les identifiants runtime. */
 export const ORIGINAL_MELODY_DEFINITIONS: readonly OriginalMelodyDefinition[] = Object.entries(
@@ -28,6 +50,12 @@ export const ORIGINAL_MELODY_DEFINITIONS: readonly OriginalMelodyDefinition[] = 
   copyrightPolicy: 'original-no-motif-copy',
   instrumentation: ['additive synthesis'], mood: ['platform', 'original'], targetDuration,
   legacyGeneratedAsset: true,
+  // Le piano est daté, mesuré et reproductible : la partition et les nuances
+  // vivent dans le script, pas dans un fichier qu'on ne saurait plus refaire.
+  ...(REGRAVED[audioPath]
+    ? { tempo: 110, meter: [4, 4] as [number, number], tonalCenter: 'C', mode: 'major',
+        legacyGeneratedAsset: false, ...REGRAVED[audioPath] }
+    : {}),
 }));
 
 export function melodyDefinitionForPath(path: string): OriginalMelodyDefinition | undefined {
