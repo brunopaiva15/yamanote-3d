@@ -187,7 +187,16 @@ export const SESERAGI_MELODY = {
   audioSource: 'platform_speakers' as const,
 };
 
-/** Quais Outer qui diffusent Seseragi. */
+/**
+ * Quais Outer qui diffusent Seseragi.
+ *
+ * LE NUMÉRO DE VOIE EST LA CLÉ. `shouldPlaySeseragi` compare `ctx.platform` à
+ * celui d'ici : une voie fausse ne joue pas une autre mélodie, elle n'en joue
+ * AUCUNE - le quai retombe sur la synthèse, sans erreur ni trace. C'est ce qui
+ * était arrivé à Sugamo, inscrite voie 2 alors que la 2 y est le quai 内回り et
+ * que le 外回り part de la 1 (data/platforms). La gare était muette dans les
+ * deux sens. Toute reprise ici se relit en face de `YAMANOTE_PLATFORMS`.
+ */
 export const SESERAGI_PLATFORMS: Record<
   string,
   {
@@ -221,7 +230,7 @@ export const SESERAGI_PLATFORMS: Record<
   },
   JY11: {
     station: 'Sugamo',
-    platform: 2,
+    platform: 1,
     direction: 'outer',
     nextStationCode: 'JY10',
     nextStation: 'Komagome',

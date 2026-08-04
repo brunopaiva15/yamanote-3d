@@ -25,6 +25,7 @@ import { dirname, join } from 'node:path';
 import {
   EXCLUSIVE_MELODY_ORDER,
   MELODY_DURATIONS,
+  SESERAGI_PLATFORMS,
   MELODY_PATHS,
   MELODY_REPEATS,
   MELODY_REPEAT_GAP_S,
@@ -115,17 +116,36 @@ test('deux mélodies ne se disputent jamais le même quai', () => {
   }
 });
 
+test('Seseragi est câblée sur des voies qui existent, et dans le bon sens', () => {
+  // Le prédicat compare le numéro de voie ; une voie fausse ne se voit nulle
+  // part ailleurs, puisqu'elle rend le quai muet au lieu de le faire râler.
+  for (const [jy, config] of Object.entries(SESERAGI_PLATFORMS)) {
+    const info = platformFor(jy, config.direction);
+    assert.ok(info, `${jy} : sens ${config.direction} inconnu de data/platforms`);
+    assert.equal(
+      config.platform,
+      info.platform,
+      `${jy} ${config.direction} : Seseragi voie ${config.platform}, quai réel voie ${info.platform}`,
+    );
+    assert.equal(config.nextStation, info.nextStation, `${jy} : gare suivante`);
+  }
+});
+
 test('les quais sans clip sont ceux qu’on sait, et leur fenêtre reste pleine', () => {
-  // Sept quais n'ont aucun clip câblé et retombent sur la synthèse Tone.js :
-  // Ebisu Outer (ver.E jamais fournie), Ikebukuro Outer, et cinq quais du nord
-  // que ni les tables principales ni Seseragi ne listent à ce numéro de voie.
-  // La liste est figée ici pour qu'un branchement ajouté - ou perdu - se voie.
+  // Six quais n'ont aucun clip câblé et retombent sur la synthèse Tone.js :
+  // Ebisu Outer (ver.E jamais fournie), Ikebukuro Outer, et trois quais 内回り
+  // du nord dont la mélodie réelle est 「春」, qui n'est pas gravée (seule la
+  // version trémolo de Uguisudani l'est).
+  //
+  // JY11 outer N'Y EST PLUS : c'est Seseragi, et la table la donnait voie 2 -
+  // le quai 内回り de Sugamo. Le prédicat ne trouvait donc jamais son quai et la
+  // gare était muette dans les deux sens. La liste est figée ici pour qu'un
+  // branchement ajouté - ou perdu - se voie.
   const silent = platforms().filter(
     ({ jy, direction, platform }) => plannedDepartureMelodyPath(jy, direction, platform) === null,
   );
   assert.deepEqual(silent.map((p) => `${p.jy} ${p.direction} voie ${p.platform}`), [
     'JY11 inner voie 2',
-    'JY11 outer voie 1',
     'JY12 inner voie 1',
     'JY13 outer voie 7',
     'JY13 outer voie 8',
