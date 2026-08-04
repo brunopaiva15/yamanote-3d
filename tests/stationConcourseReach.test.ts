@@ -171,24 +171,38 @@ function atStation(i: number): void {
   occl.updateStationOcclusion();
 }
 
-test('le décor long s’écarte de ce que la gare BÂTIT', () => {
+test('le décor long s’écarte de ce que la gare BÂTIT, des DEUX côtés', () => {
   for (let i = 0; i < STATION_COUNT; i++) {
     atStation(i);
     const r = reachFor(i);
     // Le plan long le plus proche est à 5,2 m au repos : une fois écarté, il
     // doit se trouver au-delà du fond de la gare.
     const plane = 5.2 + occl.sidePush(occl.stationOcclusion.side);
+    // ET LA PORTÉE À DÉGAGER EST LA PLUS GRANDE DES DEUX. `sidePush` rend un
+    // nombre unique que chaque côté applique au sien : le mesurer sur la seule
+    // portée lointaine laissait le décor du côté court en travers du côté
+    // long. C'est ce que `scripts/station-inside.mjs` trouvait à Tokyo — le
+    // mur de soutènement du tronçon et un pâté d'immeubles au milieu de la
+    // zone payante, quand la gare bâtit jusqu'à cinquante-six mètres de ce
+    // côté-là et que le décor s'arrêtait à quarante-quatre.
+    const built = Math.max(r.built, -r.builtNear);
     assert.ok(
-      plane > r.built,
-      `${NAME(i)} : plan de décor à ${plane.toFixed(1)} m, la gare bâtit jusqu’à ${r.built.toFixed(1)} m`,
+      plane > built,
+      `${NAME(i)} : plan de décor à ${plane.toFixed(1)} m, la gare bâtit jusqu’à ${built.toFixed(1)} m`,
     );
   }
 });
 
-test('QUATRE gares seulement écartent le décor plus loin qu’avant', () => {
+test('SIX gares seulement écartent le décor plus loin qu’avant', () => {
   // La valeur générique (profondeur + 24 m, + 22 sur faisceau ouvert) couvrait
   // déjà vingt-six gares sur trente. Personne ne l'avait vérifié ; c'est fait,
-  // et le correctif ne touche que les quatre où elle était trop juste.
+  // et le correctif ne touche que celles où elle était trop juste.
+  //
+  // Elles étaient quatre tant qu'on ne mesurait que la portée LOINTAINE.
+  // Ikebukuro et Shinagawa s'y ajoutent depuis qu'on prend la plus grande des
+  // deux : leurs halls s'avancent respectivement de quarante-quatre et de
+  // soixante mètres du côté OPPOSÉ au quai, bien au-delà de ce qu'ils
+  // atteignent du côté lointain (25,6 et 50,8).
   const wider: string[] = [];
   for (let i = 0; i < STATION_COUNT; i++) {
     const l = layoutFor(i);
@@ -198,7 +212,9 @@ test('QUATRE gares seulement écartent le décor plus loin qu’avant', () => {
   }
   assert.deepEqual(wider, [
     'JY01 Tokyo',
+    'JY13 Ikebukuro',
     'JY17 Shinjuku',
+    'JY25 Shinagawa',
     'JY26 Takanawa Gateway',
     'JY27 Tamachi',
   ]);
@@ -240,4 +256,49 @@ test('un repère de quartier ne suit pas l’emprise : on le REGARDE depuis la g
   const beam = 8 + occl.landmarkPush(occl.stationOcclusion.side, 8);
   assert.ok(beam < r.built, 'le monorail a été rangé derrière la passerelle');
   assert.ok(beam > PSD_X + layoutFor(27).depth, 'le monorail est planté dans le quai');
+});
+
+test('un repère PROCHE reste près, même quand sa hauteur croise le plateau', () => {
+  // ET C'EST LE PIÈGE DE LA PHASE 31. La poutre de monorail de Hamamatsuchō
+  // monte à six mètres ; le plateau praticable de la gare a son plancher à
+  // 5,08. Une règle qui ne regarderait QUE l'altitude rangerait donc le
+  // monorail derrière le pont-concourse — exactement ce que le test au-dessus
+  // interdit, et il ne s'en apercevrait pas, puisqu'il appelle la forme courte.
+  //
+  // D'où la seconde condition : la hauteur ne tranche que pour les SILHOUETTES
+  // de quartier, posées à trente-quatre mètres. Un ouvrage au ras de la voie
+  // est à la place où la voie le met.
+  atStation(27);
+  const monorail = { y0: -1.1, y1: 6, inset: 0.7 };
+  const near = 8 + occl.landmarkPush(occl.stationOcclusion.side, 8);
+  const asFar = 8 + occl.landmarkPush(occl.stationOcclusion.side, 8, monorail);
+  assert.ok(near < reachFor(27).built, 'le monorail proche a été rangé derrière la passerelle');
+  assert.ok(asFar > near, 'la même hauteur, déclarée comme silhouette, doit reculer');
+});
+
+test('une silhouette qui traverse un plateau recule derrière lui', () => {
+  // Le défaut que la phase 31 devait finir : un immeuble de onze mètres se
+  // tenait dans le passage libre d'Ueno, huit mètres au-dessus des voies. Il
+  // ne gênait pas par sa DISTANCE — un repère se regarde de près — mais parce
+  // qu'il traversait un plancher praticable.
+  atStation(4); // JY05 Ueno : plateau praticable à 5,08 m.
+  const band = occl.stationOcclusion.builtBand;
+  assert.ok(band !== null, 'Ueno bâtit au-delà du quai : la tranche doit exister');
+  const inset = 3; // demi-épaisseur de l'immeuble, comme mesuré sur la scène.
+  const tower = { y0: -1.1, y1: 10.9, inset };
+  const under = { y0: -1.1, y1: (band as { y0: number }).y0 - 0.5, inset };
+  const pushedTower = 34 + occl.landmarkPush(occl.stationOcclusion.side, 34, tower);
+  const pushedUnder = 34 + occl.landmarkPush(occl.stationOcclusion.side, 34, under);
+  // Son NEZ, et non son milieu : un immeuble rangé par son centre en garde la
+  // moitié dans la pièce.
+  assert.ok(
+    pushedTower - inset > (band as { x1: number }).x1,
+    `l’immeuble reste dans le hall : nez à ${(pushedTower - inset).toFixed(1)} m`,
+  );
+  // Et celui qui reste SOUS le plateau ne bouge pas de sa place habituelle.
+  assert.ok(pushedUnder < pushedTower, 'un repère qui passe dessous a reculé pour rien');
+  assert.ok(
+    Math.abs(pushedUnder - (occl.stationOcclusion.outer + 3)) < EPS,
+    'un repère qui passe dessous doit rester derrière le seul quai',
+  );
 });

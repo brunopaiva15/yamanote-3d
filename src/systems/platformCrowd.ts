@@ -210,6 +210,25 @@ export interface CrowdPax {
 export const CROWD_POOL = 40;
 export const crowdList: CrowdPax[] = [];
 
+/**
+ * LE NOM DES GROUPES DE FOULE, dans la scène.
+ *
+ * Il n'a rien de décoratif : les sondes de construction cherchent ce qui entre
+ * dans un volume sans y appartenir, et **les gens ne sont pas des ouvrages**.
+ * `__probeStrays` savait déjà les écarter, mais par leur maillage — un corps
+ * est un `SkinnedMesh` —, et cette marque-là s'arrête au corps. Les
+ * ACCESSOIRES, eux, sont des maillages ordinaires pendus à des groupes
+ * suiveurs (`three/characters/props`) : sac à dos, bandoulière, masque,
+ * caisse de transport. Depuis que la foule descend dans le hall
+ * (`CrowdPax.level`), c'est un sac à dos de vingt-trois centimètres qui se
+ * signalait sur douze gares comme un intrus du décor de ville — quand il
+ * n'était rien d'autre que le sac d'un voyageur en train de traverser sa gare.
+ *
+ * Un nom coûte moins qu'un tour perdu à chercher un objet qu'on ne sait pas
+ * nommer : ces groupes en ont un, et les sondes le lisent.
+ */
+export const CROWD_GROUP = 'foule';
+
 // --- Ce qui barre le passage --------------------------------------------
 //
 // Le quai est MEUBLÉ, et la foule le traversait de part en part : bancs,

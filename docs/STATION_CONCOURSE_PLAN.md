@@ -1677,30 +1677,92 @@ disposition a pu changer. L'avertissement dit cela, et ne s'affiche que là.
 La sonde de fuites de la phase 29, jamais étalonnée, est retirée : `__probePick`
 et `__probeIn` font son travail et le font juste.
 
-### 4.31 → 4.35 : ce qui reste, en phases
+### 4.31 Ce qui traversait n'était pas trop près, mais trop haut
+
+**La phase 31 est finie, et les deux défauts de l'inventaire sont tombés.** Le
+balayage des trente gares en comptait quarante-trois ; il en reste dix-sept, et
+plus un seul n'est du décor de ville. Ce que la phase a coûté tient en deux
+corrections et un nom.
+
+**Un repère de quartier recule sur son ALTITUDE, jamais sur sa distance.** La
+règle était écrite mais pas tenue : `landmarkPush` rangeait tout le monde
+derrière le quai (`outer`), ce qui laissait un immeuble de onze mètres à Ueno,
+un de dix-neuf à Shinagawa et des façades de vingt-quatre à Meguro dans des
+halls dont le plancher est à 5,08. Le repère qui reste SOUS le plateau garde sa
+place ; celui qui le traverse se range derrière le hall. Et la hauteur ne se
+déclare pas, elle se MESURE : les silhouettes sont procédurales — `towers` fait
+varier la sienne de 0,6 à 1,35 fois sa base — et l'on relève la boîte du groupe
+au moment où on le bâtit.
+
+**Deux conditions, et il faut les deux — c'est là qu'un tour se serait perdu.**
+Prise sur la seule altitude, la règle range aussi la poutre de monorail de
+Hamamatsuchō : elle monte à six mètres, le plateau est à 5,08, elle croise. Or
+`tests/stationConcourseReach` protège ce monorail, et il aurait laissé passer la
+faute — il appelle la forme courte de la fonction, celle qui ne parle pas
+d'altitude. Un test peut être vert pour la mauvaise raison. La seconde condition
+est donc la FAMILLE : la hauteur ne tranche que pour les silhouettes de
+quartier, posées à trente-quatre mètres. Un ouvrage au ras de la voie est à la
+place où la voie le met, et deux tests neufs le disent maintenant à voix haute.
+
+**Et l'on se range derrière ce qu'on mesure, par le NEZ et des DEUX côtés.**
+Deux erreurs de la même famille tenaient encore :
+
+- l'enveloppe d'un volume praticable va plus loin que les rectangles du relevé
+  dont elle est faite — un mètre soixante à Ueno —, assez pour qu'un repère
+  rangé « juste derrière `reach.built` » ressorte dans la pièce. La cote vient
+  désormais des mêmes coques que la sonde interroge (`builtBandBeyond`) ;
+- **un écartement est un nombre unique que chaque côté applique au sien.**
+  `pushFor` ne mesurait que la portée LOINTAINE : à Tokyo, la gare bâtit
+  jusqu'à quarante-deux mètres d'un côté et cinquante-six de l'autre, et l'on
+  poussait des deux côtés de quarante-deux. C'est ce qui laissait le mur de
+  soutènement du tronçon et un pâté d'immeubles au milieu de la zone payante,
+  sept mètres sous la chaussée. `bothSides` était bien passé à vrai en phase 31,
+  mais il pousse du mauvais nombre. Deux gares de plus dépassent la valeur
+  générique — Ikebukuro et Shinagawa —, six au total, et le test qui les
+  recensait le dit.
+
+### 4.31 bis Les neuf menus intrus étaient neuf voyageurs
+
+L'inventaire annonçait « un seul objet répété, à nommer avant de le pousser » :
+neuf ouvrages de treize à trente-trois centimètres, même signature de filiation,
+même altitude, sur neuf gares. **Il ne fallait pas le pousser. Il fallait le
+nommer, et le nom règle tout.**
+
+La sonde ne rendait qu'une filiation anonyme — `<Scene>/<Group>/<Group>/<Mesh>`
+—, qui ne désigne rien. On lui a donc fait rendre ce qui distingue un ouvrage
+quand son groupe n'a pas de nom : le type de sa géométrie, ses cotes et sa
+teinte. La réponse est venue en un appel, et elle était la même neuf fois :
+
+| ce que la sonde rend | ce que c'est |
+|---|---|
+| `RoundedBoxGeometry [0.23, 0.30, 0.13]` | `bpBodyGeo` — le corps d'un **sac à dos** |
+| `CylinderGeometry [0.24, 0.24, 0.07]` | `sbStrapBackGeo` — la **bandoulière** d'une besace |
+| `SphereGeometry [0.13, 0.11, 0.04]`, `#eef2f0` | `maskShellGeo` — un **masque chirurgical** |
+| `BoxGeometry [0.30, 0.30, 0.46]`, `#272b26` | la cavité d'une **caisse de transport** d'animal |
+
+Les teintes le confirmaient sans qu'on ait à chercher : `#7a2f2f` et `#4a3a4a`
+sont deux valeurs de `BAG_COLORS`. **Ce n'était pas du décor de ville. C'étaient
+des voyageurs en train de traverser leur gare** — la foule descend dans le hall
+depuis que `CrowdPax.level` existe, et c'est précisément ce que la phase 34
+cherche à obtenir.
+
+Pourquoi la sonde les voyait : elle écarte les GENS par leur maillage — un corps
+est un `SkinnedMesh` —, et cette marque s'arrête au corps. Les accessoires sont
+des maillages ordinaires pendus à des groupes suiveurs. Les groupes de foule
+portent donc un nom (`CROWD_GROUP`), et `__probeIn` le lit, comme `collect` le
+faisait déjà à sa façon. Les groupes de repères en ont un aussi — une sonde qui
+rapporte `<Scene>/<Group>/<Group>/<Mesh>` ne nomme rien, et c'est ce qui a fait
+prendre neuf sacs à dos pour un objet de décor.
+
+**Ce que cela dit de la méthode, et qui vaut au-delà de ces neuf-là :** un
+inventaire qui compte sans nommer se trompe de moitié. Trente-six intrus
+paraissaient être deux défauts ; c'était un défaut, et neuf passants.
+
+### 4.32 → 4.35 : ce qui reste, en phases
 
 Le chantier des trente gares est livré ; ce qui suit est le RATTRAPAGE des
-défauts que seule la marche réelle a fait apparaître. Ils se rangent en cinq
-phases, dans cet ordre — chacune se juge seule, et aucune n'attend la suivante.
-
-**Phase 31 — le décor cède partout où la gare bâtit.** `bothSides` répondait à
-une question de forme de quai ; la moitié des gares bâtit au-delà de la voie, en
-dessous (halls souterrains) comme au-dessus (plateaux). Le seuil est désormais
-le plan de décor le plus proche (`PLANE_BASE`), et la mesure `builtNear` vient
-du relevé. **Fait pour Shinagawa** — son passage libre de cent onze mètres ne
-contient plus d'immeuble. **Fait aussi** pour Tamachi et
-pour Ueno, à deux centimètres près. **Reste Ōsaki**, où un plan de ville tient
-encore trois mètres dans le hall.
-
-Et une leçon, apprise en cassant un test : les objets qui restent sont des
-REPÈRES DE QUARTIER (`landmarkPush`), et ceux-là ne se rangent pas derrière
-l'emprise — c'est écrit dans leur fonction et tenu par un test : on les REGARDE
-depuis la gare, et ranger le monorail de Hamamatsuchō derrière sa passerelle de
-trente-quatre mètres serait le contraire de leur raison d'être. Ce qui gêne à
-Ueno n'est donc pas la distance du repère mais son ALTITUDE : un immeuble de
-vingt mètres traverse un plancher à cinq. **La suite se prend par là** — un
-repère qui reste sous le plateau peut rester près ; celui qui le traverse doit
-reculer, ou ne pas être un immeuble.
+défauts que seule la marche réelle a fait apparaître. Chacune se juge seule, et
+aucune n'attend la suivante.
 
 **Phase 32 — le z-fighting.** Une bande grise clignotait sur les parois : c'était
 une paroi de bord posée dans le plan d'une paroi d'enveloppe, corrigée. Il en

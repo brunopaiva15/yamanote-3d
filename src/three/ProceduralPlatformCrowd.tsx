@@ -5,7 +5,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { crowdList, initPlatformCrowd } from '../systems/platformCrowd';
+import { CROWD_GROUP, crowdList, initPlatformCrowd } from '../systems/platformCrowd';
 import type { Appearance } from '../systems/appearance';
 import { makeFaceTexture } from '../textures/procedural';
 import { runtime } from '../systems/runtime';
@@ -308,7 +308,7 @@ export function ProceduralPlatformCrowd() {
   });
 
   return (
-    <group ref={wrap} visible={false}>
+    <group ref={wrap} name={CROWD_GROUP} visible={false}>
       {holders.map((g, i) => (
         <primitive key={crowdList[i].id} object={g} />
       ))}

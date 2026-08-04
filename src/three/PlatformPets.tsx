@@ -16,7 +16,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { DOOR_SIDE } from '../data/stations';
-import { crowdList } from '../systems/platformCrowd';
+import { CROWD_GROUP, crowdList } from '../systems/platformCrowd';
 import { petCarriers, setPetBreedCount } from '../systems/petCarriers';
 import { runtime } from '../systems/runtime';
 import { useStore } from '../store';
@@ -105,7 +105,7 @@ export function PlatformPets({ manifest }: { manifest: AnimalManifest }) {
   });
 
   return (
-    <group ref={wrap} visible={false}>
+    <group ref={wrap} name={CROWD_GROUP} visible={false}>
       {slots.map((s, i) => (
         <primitive key={i} object={s.carrier.group} />
       ))}

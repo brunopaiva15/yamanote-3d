@@ -162,40 +162,58 @@ Deux limites connues restent, écrites plutôt que masquées :
   sont composées et demandent 5,80 m dans un hall qui en fait 5,20 ; le
   compilateur garde la cote du relevé et lève `gateOverlap` plutôt que de rendre
   un contrôle qu'on ne franchit pas ;
-- **la ville entre dans les halls HAUTS**, et pas dans les autres. Le décor de
-  tronçon ne s'écarte que du côté du quai ; depuis que des halls passent sous la
-  voie, il s'écarte aussi de l'autre côté (`underNear`, six gares), ce qui a
-  vidé Tokyo, Shinjuku et Shibuya. Restent les PLATEAUX — Ueno, Ōsaki,
-  Shinagawa, Tamachi —, qui enjambent la voie huit mètres plus haut et
-  s'avancent de quarante mètres au-dessus de la ville : là, des bâtiments se
-  tiennent dans la zone libre. Étendre l'écartement à ces gares-là toucherait le
-  décor de DIX-HUIT d'entre elles pour en réparer quatre, et cela ne se décide
-  pas sans regarder les dix-huit ;
-- **deux ouvrages mineurs entrent encore dans un hall**, relevés par
-  `node scripts/station-inside.mjs` : un couvre-joint de douze centimètres à
-  Shinagawa (le détail de mur n'a pas d'arase par tronçon, contrairement au mur
-  qu'il habille) et une pile de la charpente de Takanawa Gateway qui traverse le
-  plateau de part en part — c'est ce que fait une pile.
+- **la ville n'entre plus dans les halls, hauts compris** — c'est ce que les
+  phases 31 et 31 bis ont réglé, et `node scripts/station-inside.mjs` ne
+  rapporte plus un seul objet de décor sur les trente gares. Ce qu'on craignait
+  — « étendre l'écartement toucherait le décor de DIX-HUIT gares pour en
+  réparer quatre » — ne s'est pas produit, parce qu'on ne l'a pas étendu : une
+  silhouette ne recule que si sa HAUTEUR rencontre un plancher praticable. Les
+  repères qui passent sous le plateau n'ont pas bougé d'un centimètre, et le
+  monorail de Hamamatsuchō non plus. Deux gares seulement s'ajoutent aux quatre
+  qui dépassaient déjà l'écartement générique (Ikebukuro, Shinagawa), et pour
+  une raison mesurée : leur hall s'avance plus loin du côté OPPOSÉ au quai que
+  du côté lointain, et l'on poussait des deux côtés du plus petit des deux
+  nombres ;
+- **quatre ouvrages mineurs entrent encore dans un hall**, relevés par
+  `node scripts/station-inside.mjs`, et tous les quatre sont écrits plutôt que
+  masqués : un couvre-joint de douze centimètres à Shinagawa (le détail de mur
+  n'a pas d'arase par tronçon, contrairement au mur qu'il habille), des piles de
+  charpente signature qui traversent leur plateau de part en part — c'est ce que
+  fait une pile —, et deux auvents de quatorze centimètres que la boîte
+  englobante dénonce à tort, leur dalle étant percée au droit du plateau.
 
 ---
 
 ## 4 quater. L'inventaire des intrus, gare par gare
 
-`node scripts/station-inside.mjs` sur les trente gares, après la phase 31.
-**Trente-six ouvrages entrent dans un hall, sur dix-huit gares.** Ils tiennent en
-quatre familles, et une seule est grosse :
+`node scripts/station-inside.mjs` sur les trente gares, **après les phases 31 et
+31 bis**. Il en comptait quarante-trois avant ; **il en reste dix-sept, et plus
+un seul n'est du décor de ville.** Ce qui subsiste est soit voulu, soit un
+artefact de la mesure :
 
-| famille | combien | où | quoi faire |
+| famille | combien | où | ce que c'est |
 |---|---|---|---|
-| **Décor de ville, gros** | 9 | Tokyo, Ueno, Nippori, Meguro, Ōsaki, Shinagawa, Takanawa Gateway, Tamachi | c'est la phase 31, prise par l'ALTITUDE et non par la distance : un immeuble de vingt mètres traverse un plancher à cinq, un monorail au ras de la voie ne gêne personne |
-| **Décor de ville, menu** | 9 | Tabata, Komagome, Sugamo, Ikebukuro, Mejiro, Shinjuku, Harajuku, Shibuya, Meguro | tous de 13 à 33 cm, tous la MÊME signature de filiation, tous à la même altitude : c'est un seul objet répété, à nommer avant de le pousser |
-| **Ouvrages de la gare, légitimes** | 12 | partout | joues de trémie et volées montantes : elles DOIVENT entrer dans le hall, c'est par là qu'on y arrive |
-| **À juger de visu** | 6 | Harajuku, Nippori, Hamamatsuchō, Takanawa Gateway, Shinagawa | quatre piles de charpente signature qui traversent leur hall — c'est ce que fait une pile —, deux auvents que la boîte englobante dénonce à tort (leur dalle EST percée), un couvre-joint de douze centimètres |
+| **Ouvrages de la gare, légitimes** | 11 | Tokyo, Okachimachi, Ueno, Ikebukuro, Shinjuku, Harajuku, Shibuya | joues de trémie, volées montantes, limons : elles DOIVENT entrer dans le hall, c'est par là qu'on y arrive |
+| **Piles et charpentes signature** | 4 | Nippori, Harajuku, Takanawa Gateway, Hamamatsuchō | elles traversent leur hall de part en part, et c'est ce que fait une pile |
+| **Auvents dénoncés à tort** | 2 | Ueno, Shinagawa | 14 cm chacun : la boîte englobante ignore que leur dalle EST percée au droit du plateau (voir §4.28 du plan) |
+| **Couvre-joint** | 1 | Shinagawa | 12 cm : le détail de mur n'a pas d'arase par tronçon, contrairement au mur qu'il habille |
 
-Ce que cet inventaire dit, et qui compte plus que les chiffres : **il n'y a pas
-trente-six défauts, il y en a deux** — le décor de ville qui ne cède pas assez
-haut, et un petit objet répété qu'on n'a pas encore nommé. Le reste est soit
-voulu, soit un artefact de la mesure.
+**Les deux familles de décor ont disparu, et pour deux raisons opposées.**
+
+- Les **neuf gros** — Tokyo, Ueno, Nippori, Meguro, Ōsaki, Shinagawa, Takanawa
+  Gateway, Tamachi — reculent désormais sur leur ALTITUDE : une silhouette qui
+  traverse un plancher praticable se range derrière le hall, celle qui passe
+  dessous garde sa place près de la voie. Voir §4.31 du plan.
+- Les **neuf menus** n'étaient pas du décor. La sonde ne rendait qu'une
+  filiation anonyme ; on lui a fait rendre géométrie, cotes et teinte, et les
+  neuf se sont nommés d'un coup : un sac à dos, une bandoulière, un masque
+  chirurgical, une caisse de transport d'animal. **C'étaient neuf voyageurs en
+  train de traverser leur gare.** Les groupes de foule et de repères portent
+  maintenant un nom, et les sondes le lisent. Voir §4.31 bis.
+
+Ce que cet inventaire dit, et qui compte plus que les chiffres : **un inventaire
+qui compte sans nommer se trompe de moitié.** Trente-six intrus paraissaient
+être deux défauts ; c'était un défaut, et neuf passants.
 
 ---
 

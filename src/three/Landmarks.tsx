@@ -25,8 +25,11 @@ import { journeyProgress } from '../data/segments';
 import { DISTRICTS, type Land, type LandmarkSpec } from '../data/districts';
 import { rng } from '../textures/procedural';
 import { box, glow, plane, sil, vehicle, type Ctx } from './landmarkKit';
-import { landmarkPush } from '../systems/stationOcclusion';
+import { landmarkPush, type LandmarkSpan } from '../systems/stationOcclusion';
 import { plateauRuntime } from '../systems/plateau';
+
+/** Le nom des deux groupes ping-pong, dans la scène. */
+export const LANDMARK_GROUP = 'repères';
 
 const BASE_Y = -1.1; // niveau du sol extérieur.
 const FAR_X = 34; // distance latérale des silhouettes (devant la couche lointaine).
@@ -275,6 +278,15 @@ interface SlotItem {
   side: 1 | -1;
   /** Abscisse au repos, avant l'écartement dû à une gare. */
   baseX: number;
+  /**
+   * Ce qu'il faut savoir de la SILHOUETTE pour décider si elle traverse un
+   * hall : sa hauteur en repère monde, et son avancée vers la voie.
+   *
+   * `null` pour un repère PROCHE — tram, monorail : ceux-là sont des ouvrages
+   * au ras de la voie, et la question ne se pose pas pour eux. Voir
+   * `landmarkPush`.
+   */
+  span: LandmarkSpan | null;
 }
 interface Slot {
   root: THREE.Group;
@@ -317,6 +329,22 @@ function populate(slot: Slot, districtIndex: number): void {
       };
       builder.build(ctx);
       itemGroup.scale.setScalar(scale);
+      // LA HAUTEUR SE MESURE, elle ne se déclare pas : les silhouettes sont
+      // procédurales et leur cote dépend du tirage (`towers` fait varier `h` de
+      // 0,6 à 1,35 fois sa base). On la prend ici, groupe encore détaché : sa
+      // matrice monde ne vaut que son échelle, et l'altitude locale devient
+      // l'altitude monde par le seul BASE_Y — la pose qui suit ne fait que
+      // translater en x/z et tourner autour de Y.
+      //
+      // L'AVANCÉE VERS LA VOIE se lit sur l'axe que la rotation y amène. Une
+      // silhouette est tournée d'un quart de tour pour présenter sa face au
+      // train (+z local vers la voie) : ce qui borne son nez est donc son
+      // étendue en z local, quel que soit le côté — la rotation est opposée
+      // d'un côté à l'autre, et les deux se compensent.
+      const bb = new THREE.Box3().setFromObject(itemGroup);
+      const span: LandmarkSpan | null = builder.near || bb.isEmpty()
+        ? null
+        : { y0: BASE_Y + bb.min.y, y1: BASE_Y + bb.max.y, inset: bb.max.z };
       const baseX = builder.near ? NEAR_X : FAR_X;
       if (builder.near) {
         itemGroup.position.set(side * NEAR_X, BASE_Y, 0);
@@ -326,7 +354,9 @@ function populate(slot: Slot, districtIndex: number): void {
         itemGroup.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
       }
       slot.root.add(itemGroup);
-      slot.items.push({ group: itemGroup, near: builder.near, phase: i * 23 + zi * 41, side, baseX });
+      slot.items.push({
+        group: itemGroup, near: builder.near, phase: i * 23 + zi * 41, side, baseX, span,
+      });
     });
   });
 }
@@ -401,8 +431,12 @@ export function Landmarks() {
       for (const item of slot.items) {
         // À l'approche d'une gare, le repère se range derrière elle : la gare
         // s'étend désormais jusqu'au quai d'en face, et le tram d'Ōtsuka comme
-        // la poutre de monorail de Hamamatsuchō tombaient dedans.
-        item.group.position.x = item.side * (item.baseX + landmarkPush(item.side, item.baseX));
+        // la poutre de monorail de Hamamatsuchō tombaient dedans. Et derrière
+        // le HALL, non plus derrière le seul quai, quand sa hauteur le fait
+        // traverser un plancher praticable — c'est là toute la différence
+        // entre un repère qu'on regarde et un mur au milieu de la pièce.
+        item.group.position.x = item.side
+          * (item.baseX + landmarkPush(item.side, item.baseX, item.span ?? undefined));
         // Défilement des repères proches (tram, viaduc, monorail…).
         if (!item.near) continue;
         item.group.position.z = ((runtime.distance + item.phase) % NEAR_SPAN) - NEAR_SPAN / 2;
@@ -412,8 +446,11 @@ export function Landmarks() {
 
   return (
     <>
-      <group ref={rootA} />
-      <group ref={rootB} />
+      {/* Nommés, et pas par coquetterie : c'est sous ces deux groupes que
+          vivent les silhouettes de quartier, et une sonde qui rapporte
+          « <Scene>/<Group>/<Group>/<Mesh> » ne nomme rien du tout. */}
+      <group ref={rootA} name={LANDMARK_GROUP} />
+      <group ref={rootB} name={LANDMARK_GROUP} />
     </>
   );
 }

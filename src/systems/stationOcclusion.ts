@@ -18,6 +18,9 @@ import { layoutFor, type StationLayout } from '../data/stationLayouts';
 import { reachFor, type ConcourseReach } from '../data/stationConcourseReach';
 import { OPP_DEPTH, PLATFORM_DEPTH, PSD_X, TRACK_HALF } from '../data/stationGeometry';
 import { BALLAST_KEEP_X } from '../data/stationConcourseTypes';
+import { psdGates } from '../three/station/psdLayout';
+import { placementFor } from './stationPlacement';
+import { builtBandBeyond } from './stationDeck';
 import { runtime } from './runtime';
 
 /**
@@ -41,7 +44,17 @@ function pushFor(layout: StationLayout, reach: ConcourseReach): number {
   // bande du quai (`data/stationConcourseReach`). La valeur générique en couvre
   // déjà la plupart : ce n'est que sur les plus grandes qu'elle est trop juste,
   // et le maximum ne fait que rattraper ces cas-là. Elle ne RÉTRÉCIT jamais.
-  return Math.max(generic, reach.built + PLANE_CLEAR - PLANE_BASE);
+  //
+  // ET IL FAUT LES DEUX PORTÉES, non la seule lointaine. Un écartement est un
+  // nombre unique que chaque côté applique au sien : la gare qui s'avance de
+  // quarante-deux mètres d'un côté et de cinquante-six de l'autre - c'est
+  // Tokyo - doit dégager sur cinquante-six, sinon le côté long garde le décor
+  // du côté court. C'est ce qui laissait le mur de soutènement du tronçon et
+  // un pâté d'immeubles au milieu de la zone payante de Tokyo, sept mètres
+  // sous la chaussée : `bothSides` était bien passé à vrai (phase 31), mais on
+  // poussait des deux côtés de la SEULE mesure lointaine.
+  const built = Math.max(reach.built, -reach.builtNear);
+  return Math.max(generic, built + PLANE_CLEAR - PLANE_BASE);
 }
 
 /**
@@ -91,6 +104,18 @@ export const stationOcclusion = {
    */
   built: PLATFORM_DEPTH,
   /**
+   * LA TRANCHE D'ALTITUDE de ce que la gare bâtit au-delà du quai, ou `null`
+   * quand elle ne bâtit rien là-bas.
+   *
+   * C'est le pendant de `built` pour qui ne peut pas se ranger derrière lui.
+   * Un repère de quartier se REGARDE depuis la gare : le reculer jusqu'au
+   * fond du hall le met hors de vue, et `tests/stationConcourseReach` le
+   * refuse. Mais un immeuble de vingt mètres traverse un plancher à cinq, et
+   * celui-là n'a plus rien d'un repère qu'on regarde — c'est un mur au milieu
+   * de la pièce. La bande dit à quelle hauteur la question se pose.
+   */
+  builtBand: null as { y0: number; y1: number; x1: number } | null,
+  /**
    * L'écartement vaut-il des DEUX côtés ? Voir `bothSidesFor` : ce n'est plus
    * une question de forme de quai depuis que six halls passent sous la voie.
    */
@@ -114,6 +139,7 @@ export function updateStationOcclusion(): void {
   stationOcclusion.bothSides = bothSidesFor(layout, reach);
   stationOcclusion.outer = outerOf(layout);
   stationOcclusion.built = Math.max(stationOcclusion.outer, reach.built);
+  stationOcclusion.builtBand = bandFor(platformIndex, stationOcclusion.outer);
   // La nappe de rue se range derrière ce que la gare occupe AU RAS DU SOL, et
   // pas derrière son quai. Aujourd'hui les deux coïncident pour les trente -
   // `validateProfile` refuse qu'un niveau à cette altitude franchisse le
@@ -169,6 +195,23 @@ function bothSidesFor(layout: StationLayout, reach: ConcourseReach): boolean {
 
 /** Portée du faisceau qui remplace le mur de fond, là où il y en a un. */
 const YARD_REACH = 4 * 4.6;
+
+/**
+ * La tranche d'altitude bâtie au-delà du quai, par gare.
+ *
+ * Mémoïsée comme la percée de toiture (`systems/hubRoof`) : elle ne dépend que
+ * de l'index, et le réseau est déjà monté par `placementFor`.
+ */
+const BANDS = new Map<number, { y0: number; y1: number; x1: number } | null>();
+
+function bandFor(index: number, outer: number): { y0: number; y1: number; x1: number } | null {
+  const i = ((index % 30) + 30) % 30;
+  const hit = BANDS.get(i);
+  if (hit !== undefined) return hit;
+  const out = builtBandBeyond(placementFor(i, psdGates()).network, outer);
+  BANDS.set(i, out);
+  return out;
+}
 
 /** Écartement à appliquer à un plan long posé du côté `side`. */
 export function sidePush(side: 1 | -1): number {
@@ -238,10 +281,51 @@ export function ballastTrim(side: 1 | -1, edgeX: number): number {
  *
  * On les range donc juste DERRIÈRE l'emprise bâtie - pas à l'horizon : un tram
  * qui longe la gare doit rester lisible depuis le quai.
+ *
+ * SAUF LA SILHOUETTE QUI TRAVERSE UN PLANCHER, et c'est tout l'objet de la
+ * phase 31. Treize gares portent un plateau praticable qui s'avance de
+ * quarante mètres au-dessus de la ville ; s'y tenaient un immeuble de onze
+ * mètres à Ueno, un de dix-neuf à Shinagawa, des façades de vingt-quatre à
+ * Meguro. Un repère n'est plus REGARDÉ quand on l'a dans la pièce : il en est
+ * le mur du fond, et il doit reculer derrière ce que la gare bâtit.
+ *
+ * DEUX CONDITIONS, ET IL LES FAUT TOUTES LES DEUX.
+ *
+ *   · `span` n'est donné que pour les SILHOUETTES de quartier — les tours, les
+ *     façades, les pylônes posés à trente-quatre mètres. Les repères PROCHES
+ *     (le tram d'Ōtsuka, la poutre de monorail de Hamamatsuchō) sont des
+ *     ouvrages au ras de la voie, à la place où la voie les met : c'est
+ *     exactement ce que `tests/stationConcourseReach` protège, et les ranger
+ *     derrière un pont-concourse de trente-quatre mètres serait le contraire
+ *     de leur raison d'être. La poutre du monorail monte à six mètres et
+ *     frôlerait la cote d'un plateau : c'est bien pourquoi la hauteur seule ne
+ *     peut pas trancher ;
+ *   · et il faut que la hauteur RENCONTRE la tranche bâtie. Un immeuble qui
+ *     reste sous le plateau reste près, si haut que soit le plateau.
+ *
+ * `span.inset` dit de combien le repère s'avance vers la voie depuis son
+ * origine : on range son NEZ derrière la gare, et non son milieu — sans quoi
+ * un immeuble de six mètres de fond en garde trois dans la pièce.
  */
-export function landmarkPush(side: 1 | -1, baseX: number): number {
+export interface LandmarkSpan {
+  /** Hauteur du repère, en repère monde. */
+  y0: number;
+  y1: number;
+  /** Avancée vers la voie depuis l'origine du repère. */
+  inset: number;
+}
+
+/** Jeu laissé entre la gare et le repère rangé derrière elle. */
+const LANDMARK_CLEAR = 3;
+
+export function landmarkPush(side: 1 | -1, baseX: number, span?: LandmarkSpan): number {
   const applies = stationOcclusion.bothSides || side === stationOcclusion.side;
   if (!applies) return 0;
-  const want = stationOcclusion.outer + 3 - baseX;
+  const band = stationOcclusion.builtBand;
+  const crosses = band !== null && span !== undefined
+    && span.y1 > band.y0 && span.y0 < band.y1;
+  const want = crosses
+    ? (band as { x1: number }).x1 + LANDMARK_CLEAR + (span as LandmarkSpan).inset - baseX
+    : stationOcclusion.outer + LANDMARK_CLEAR - baseX;
   return want > 0 ? stationOcclusion.active * want : 0;
 }

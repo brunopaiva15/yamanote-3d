@@ -83,6 +83,55 @@ export function underDeck(deck: Deck | null, z: number, half = 0): boolean {
 }
 
 /**
+ * LA TRANCHE D'ALTITUDE que la gare occupe AU-DELÀ de `xFrom`.
+ *
+ * `deckOver` demande « un plateau traverse-t-il CETTE tranche ? » ; celle-ci
+ * pose la question à l'envers — « quelle tranche dois-je éviter, là-bas ? » —
+ * et c'est la seule que le DÉCOR sache poser. Un repère de quartier ne connaît
+ * ni le relevé ni les niveaux : il connaît sa propre hauteur, et il lui faut
+ * savoir si elle rencontre un plancher.
+ *
+ * C'est la leçon de la phase 31, et elle tient en une phrase : ce qui gêne
+ * n'est pas la DISTANCE du repère mais son ALTITUDE. Un immeuble de vingt
+ * mètres traverse un plancher à cinq ; une poutre de monorail au ras de la voie
+ * passe dessous sans rien toucher, et doit rester là où on la regarde.
+ *
+ * `xFrom` borne la question à ce qui sort de l'emprise du quai : un hall
+ * entièrement contenu dans la bande du quai ne rencontre aucun repère, puisque
+ * aucun repère n'y est posé.
+ */
+export function builtBandBeyond(
+  net: ConcourseNetwork,
+  xFrom: number,
+): { y0: number; y1: number; x1: number } | null {
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  let x1 = -Infinity;
+  for (const s of shellsOf(net)) {
+    if (!s.rooms.some((r) => r.walkable)) continue;
+    if (s.rect.x1 <= xFrom) continue;
+    // Le plancher compte par son DESSOUS : un repère qui affleure la sous-face
+    // de la dalle la soulève tout autant qu'un repère qui perce le sol.
+    y0 = Math.min(y0, s.floorY - DECK_SLAB);
+    y1 = Math.max(y1, s.ceilY);
+    // ET L'ABSCISSE VIENT DES MÊMES VOLUMES. `ConcourseReach.built` la donne
+    // aussi, mais elle est dérivée des rectangles du relevé, quand l'enveloppe
+    // d'un volume les réunit tous et va parfois plus loin — un mètre soixante
+    // à Ueno, assez pour que le repère rangé « juste derrière » ressorte
+    // encore dans la pièce. On se range derrière ce qu'on MESURE.
+    //
+    // DES DEUX CÔTÉS, et c'est une DISTANCE À L'AXE, non une abscisse. Un
+    // écartement est un nombre unique que chaque côté applique au sien
+    // (`sidePush`, `landmarkPush`) : un plateau qui s'avance de cinquante et un
+    // mètres d'un côté et de soixante de l'autre — c'est Shinagawa — se
+    // dégage sur soixante, sans quoi le repère rangé derrière la moitié la
+    // plus courte ressort dans la plus longue.
+    x1 = Math.max(x1, s.rect.x1, -s.rect.x0);
+  }
+  return y0 < y1 ? { y0, y1, x1 } : null;
+}
+
+/**
  * LA COTE OÙ S'ARRÊTE UN OUVRAGE DE QUAI, en z.
  *
  * C'est l'auvent partout, et la sous-face du plateau là où il passe. Poteaux,

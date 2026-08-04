@@ -25,6 +25,7 @@ import { placementFor } from '../systems/stationPlacement';
 import { platformToWorld } from '../systems/playerFrame';
 import { concourseBays, shellsOf } from '../data/stationConcourseBuild';
 import { psdGates } from '../three/station/psdLayout';
+import { CROWD_GROUP } from '../systems/platformCrowd';
 import { setQuality, usePerf } from '../systems/perf';
 import { freezeWeather, weather } from '../systems/weather';
 import { seasonNow } from '../systems/season';
@@ -719,6 +720,15 @@ export function installStationProbe(
         // Les groupes du hall portent un nom À CHEMIN — « gare/hall/mobilier »,
         // « gare/hall/portillons » —, d'où le préfixe et non l'égalité.
         if (c.name.startsWith(keep)) return;
+        // ET LES GENS NE SONT PAS DES OUVRAGES, ici comme dans `collect`. Le
+        // filtre `isSkinnedMesh` plus haut écarte les CORPS ; il n'écarte pas
+        // ce qu'ils portent, qui est fait de maillages ordinaires accrochés à
+        // des groupes suiveurs. Depuis que la foule descend dans le hall, ces
+        // accessoires-là formaient à eux seuls la moitié du rapport : un sac à
+        // dos de vingt-trois centimètres, la même bandoulière et le même
+        // masque, sur douze gares — pris pour « un objet de décor de ville
+        // répété » alors que c'étaient douze voyageurs en train de marcher.
+        if (c.name === CROWD_GROUP) return;
         chain.unshift(c.name || `<${c.type}>`);
       }
       if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
@@ -730,6 +740,18 @@ export function installStationProbe(
       const span = bb.max.clone().sub(bb.min);
       if ([span.x, span.y, span.z].filter((v) => v > 150).length >= 2) return;
       const key = chain.join('/');
+      // UNE FILIATION ANONYME NE NOMME RIEN. « <Scene>/<Group>/<Group>/<Mesh> »
+      // se répète sur douze gares sans qu'on sache de quoi il s'agit, et l'on
+      // ne pousse pas ce qu'on n'a pas nommé. Ce qui distingue un ouvrage,
+      // quand son groupe n'a pas de nom, c'est sa GÉOMÉTRIE et sa TEINTE : deux
+      // meshes qui partagent type, cotes et couleur sont le même objet répété.
+      const mat = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as
+        THREE.Material & { color?: THREE.Color };
+      const trait = {
+        geo: mesh.geometry.type,
+        color: mat?.color?.getHexString?.() ?? null,
+        size: [+span.x.toFixed(2), +span.y.toFixed(2), +span.z.toFixed(2)],
+      };
       const push = (b: THREE.Box3) => {
         if (!b.intersectsBox(box)) return;
         // On garde LA PIRE des instances, et une seule ligne par ouvrage : une
@@ -748,6 +770,7 @@ export function installStationProbe(
             +b.min.x.toFixed(1), +b.min.y.toFixed(2), +b.min.z.toFixed(1),
             +b.max.x.toFixed(1), +b.max.y.toFixed(2), +b.max.z.toFixed(1),
           ],
+          ...trait,
         });
       };
       const im = mesh as THREE.InstancedMesh;

@@ -4,7 +4,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { crowdList, initPlatformCrowd, type CrowdPax } from '../systems/platformCrowd';
+import { CROWD_GROUP, crowdList, initPlatformCrowd, type CrowdPax } from '../systems/platformCrowd';
 import { carrierOfPax } from '../systems/petCarriers';
 import { runtime } from '../systems/runtime';
 import { useStore } from '../store';
@@ -234,7 +234,7 @@ export function LibraryPlatformCrowd({ manifest }: { manifest: CharacterManifest
   });
 
   return (
-    <group ref={wrap} visible={false}>
+    <group ref={wrap} name={CROWD_GROUP} visible={false}>
       {slots.map((s, i) => (
         <primitive key={crowdList[i].id} object={s.holder} />
       ))}

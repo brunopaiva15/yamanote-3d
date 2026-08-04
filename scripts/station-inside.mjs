@@ -67,6 +67,9 @@ for (const i of stations) {
   console.log(`\n${String(i).padStart(2)} ${name}`);
   for (const h of lines.slice(0, 12)) {
     console.log(`   ${String(h.over.toFixed(2)).padStart(6)} m  ${h.chain}  ${JSON.stringify(h.box)}`);
+    // La filiation d'un objet de décor est anonyme : c'est la géométrie et la
+    // teinte qui le nomment, et qui disent qu'on retrouve LE MÊME ailleurs.
+    console.log(`            ${h.geo} ${JSON.stringify(h.size)} #${h.color}`);
   }
   if (lines.length > 12) console.log(`   … et ${lines.length - 12} autres`);
 }
