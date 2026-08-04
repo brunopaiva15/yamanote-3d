@@ -10,7 +10,7 @@
 // `dir` des fonctions ci-dessous.
 
 import { CONFIG } from './config.ts';
-import { nextStation, stationAtHop, wrapStation } from './loop.ts';
+import { nextStation, STATION_COUNT, stationAtHop, wrapStation } from './loop.ts';
 import { LOOP_HUB_INDICES } from './stations.ts';
 import type { LoopDirection } from './platforms.ts';
 import type { Phase } from '../store';
@@ -84,42 +84,98 @@ export const segmentAt = (stationIndex: number, dir: LoopDirection): number =>
   dir === 'outer' ? wrapStation(stationIndex) : wrapStation(stationIndex - 1);
 
 /**
- * Intervalle arrivée→arrivée (min) par tronçon 内回り, dérivé d'un horaire
- * matinal type (Osaki 07:42 → … → Tokyo 08:33). Akihabara corrigé à 08:28.
- * Boucle ≈ 67 min (8×3 + 1×1 + 21×2).
+ * Distance réelle (km) de chaque tronçon, au barème kilométrique de JR East.
+ *
+ * C'EST LA DONNÉE, et l'horaire s'en déduit - pas l'inverse. Le jeu réglait
+ * jusqu'ici des minutes ENTIÈRES relevées sur un horaire matinal type ; elles ne
+ * suivaient pas la géographie, et l'écart se voyait à l'œil nu : Mejiro→
+ * Takadanobaba (0,9 km) recevait UNE minute quand le vrai plus court tronçon de
+ * la boucle - Nippori→Nishi-Nippori, 0,5 km - en recevait deux. Cette minute
+ * unique ne laissait que 8 s de croisière, le plancher de `cruiseDuration`, et
+ * c'est elle qui obligeait `approachAnnounceAt` à se protéger d'une annonce
+ * d'approche partant avant celle de départ.
+ *
+ * Somme : 34,5 km, la longueur de la boucle. Moyenne : 1,15 km entre deux
+ * gares. Les deux valeurs se vérifient dans le test.
  */
-export const SEGMENT_HEADWAY_MIN: readonly number[] = [
-  /* 00 Tokyo→Kanda             */ 3,
-  /* 01 Kanda→Akihabara         */ 2,
-  /* 02 Akihabara→Okachimachi   */ 2,
-  /* 03 Okachimachi→Ueno        */ 2,
-  /* 04 Ueno→Uguisudani         */ 2,
-  /* 05 Uguisudani→Nippori      */ 2,
-  /* 06 Nippori→Nishi-Nippori   */ 2,
-  /* 07 Nishi-Nippori→Tabata    */ 2,
-  /* 08 Tabata→Komagome         */ 2,
-  /* 09 Komagome→Sugamo         */ 2,
-  /* 10 Sugamo→Otsuka           */ 2,
-  /* 11 Otsuka→Ikebukuro        */ 3,
-  /* 12 Ikebukuro→Mejiro        */ 3,
-  /* 13 Mejiro→Takadanobaba     */ 1,
-  /* 14 Takadanobaba→Shin-Okubo */ 3,
-  /* 15 Shin-Okubo→Shinjuku     */ 2,
-  /* 16 Shinjuku→Yoyogi         */ 2,
-  /* 17 Yoyogi→Harajuku         */ 3,
-  /* 18 Harajuku→Shibuya        */ 2,
-  /* 19 Shibuya→Ebisu           */ 3,
-  /* 20 Ebisu→Meguro            */ 2,
-  /* 21 Meguro→Gotanda          */ 2,
-  /* 22 Gotanda→Osaki           */ 2,
-  /* 23 Osaki→Shinagawa         */ 3,
-  /* 24 Shinagawa→Takanawa GW   */ 2,
-  /* 25 Takanawa Gateway→Tamachi*/ 2,
-  /* 26 Tamachi→Hamamatsucho    */ 3,
-  /* 27 Hamamatsucho→Shimbashi  */ 2,
-  /* 28 Shimbashi→Yurakucho     */ 2,
-  /* 29 Yurakucho→Tokyo         */ 2,
+export const SEGMENT_KM: readonly number[] = [
+  /* 00 Tokyo→Kanda             */ 1.3,
+  /* 01 Kanda→Akihabara         */ 0.7,
+  /* 02 Akihabara→Okachimachi   */ 1.0,
+  /* 03 Okachimachi→Ueno        */ 0.6,
+  /* 04 Ueno→Uguisudani         */ 1.1,
+  /* 05 Uguisudani→Nippori      */ 1.1,
+  /* 06 Nippori→Nishi-Nippori   */ 0.5,
+  /* 07 Nishi-Nippori→Tabata    */ 0.8,
+  /* 08 Tabata→Komagome         */ 1.6,
+  /* 09 Komagome→Sugamo         */ 0.7,
+  /* 10 Sugamo→Otsuka           */ 1.1,
+  /* 11 Otsuka→Ikebukuro        */ 1.8,
+  /* 12 Ikebukuro→Mejiro        */ 1.2,
+  /* 13 Mejiro→Takadanobaba     */ 0.9,
+  /* 14 Takadanobaba→Shin-Okubo */ 1.4,
+  /* 15 Shin-Okubo→Shinjuku     */ 1.3,
+  /* 16 Shinjuku→Yoyogi         */ 0.7,
+  /* 17 Yoyogi→Harajuku         */ 1.5,
+  /* 18 Harajuku→Shibuya        */ 1.2,
+  /* 19 Shibuya→Ebisu           */ 1.6,
+  /* 20 Ebisu→Meguro            */ 1.5,
+  /* 21 Meguro→Gotanda          */ 1.2,
+  /* 22 Gotanda→Osaki           */ 0.9,
+  /* 23 Osaki→Shinagawa         */ 2.0,
+  /* 24 Shinagawa→Takanawa GW   */ 0.9,
+  /* 25 Takanawa Gateway→Tamachi*/ 1.3,
+  /* 26 Tamachi→Hamamatsucho    */ 1.5,
+  /* 27 Hamamatsucho→Shimbashi  */ 1.2,
+  /* 28 Shimbashi→Yurakucho     */ 1.1,
+  /* 29 Yurakucho→Tokyo         */ 0.8,
 ];
+
+/** Longueur de la boucle (km). */
+export const LOOP_KM = 34.5;
+
+/**
+ * Durée d'un tour standard (min) : 64 en journée, dans les DEUX sens. C'est le
+ * chiffre de JR East, hors stationnement aux gares de départ et de terminus.
+ * Aux pointes du matin et du soir la boucle approche les 70 min ; le jeu tient
+ * l'horaire de journée, celui qui vaut le plus longtemps.
+ */
+export const LOOP_MINUTES = 64;
+
+/**
+ * Forfait d'arrêt : ce qu'un arrêt coûte à l'horaire hors croisière.
+ * Départ + freinage + le forfait de stationnement de CONFIG - qui n'est pas la
+ * durée d'arrêt réelle, plus longue, mais la part qu'on en retire de
+ * l'intervalle (voir la note de config.ts).
+ */
+const STOP_FIXED_S = CONFIG.departTime + CONFIG.brakeTime + CONFIG.dwellTime;
+
+/**
+ * Temps de croisière disponible sur un tour entier (s), une fois les trente
+ * arrêts payés. C'est lui qu'on répartit AU PRORATA DES DISTANCES.
+ */
+const LOOP_CRUISE_S = LOOP_MINUTES * 60 - STATION_COUNT * STOP_FIXED_S;
+
+/**
+ * Intervalle arrivée→arrivée (s) par tronçon 内回り.
+ *
+ * Une seule règle, et elle tient en une ligne : le forfait d'arrêt, plus la
+ * part de croisière que vaut la longueur du tronçon. Un tour fait donc 64 min
+ * par construction, et le tronçon le plus court de la boucle est celui qui est
+ * réellement le plus court.
+ */
+export const SEGMENT_HEADWAY_SEC: readonly number[] = SEGMENT_KM.map(
+  (km) => STOP_FIXED_S + (LOOP_CRUISE_S * km) / LOOP_KM,
+);
+
+/**
+ * Le même intervalle en minutes entières, pour ce qui s'AFFICHE en minutes :
+ * les cercles de l'écran de ligne, l'heure de départ d'Ōsaki d'un numéro de
+ * course. Arrondi à l'affichage seulement - l'horaire, lui, reste en secondes.
+ */
+export const SEGMENT_HEADWAY_MIN: readonly number[] = SEGMENT_HEADWAY_SEC.map((s) =>
+  Math.round(s / 60),
+);
 
 /** Index du tronçon parcouru pour arriver à `stationIndex` dans le sens `dir`. */
 export function segmentForArrival(stationIndex: number, dir: LoopDirection): number {
@@ -131,25 +187,48 @@ export function segmentForHop(fromIndex: number, dir: LoopDirection): number {
   return segmentForArrival(nextStation(fromIndex, dir), dir);
 }
 
-/** Somme des intervalles (min) sur `hops` tronçons consécutifs. */
-export function headwayMinutesTo(fromIndex: number, hops: number, dir: LoopDirection): number {
+/** Somme des intervalles (s) sur `hops` tronçons consécutifs. */
+export function headwaySecondsTo(fromIndex: number, hops: number, dir: LoopDirection): number {
   let total = 0;
   let idx = fromIndex;
   for (let k = 0; k < hops; k++) {
-    total += SEGMENT_HEADWAY_MIN[segmentForHop(idx, dir)];
+    total += SEGMENT_HEADWAY_SEC[segmentForHop(idx, dir)];
     idx = stationAtHop(idx, 1, dir);
   }
   return total;
 }
 
 /**
- * Durée de croisière (s) : l'intervalle du tronçon moins depart/brake et le
- * forfait d'arrêt CONFIG.dwellTime. L'arrêt réel étant plus long que ce
- * forfait (voir config.ts), le cycle complet dépasse un peu l'intervalle -
- * c'est voulu : la croisière garde de quoi dérouler les deux annonces.
+ * La même somme en minutes entières.
+ *
+ * On somme les SECONDES puis on arrondit une fois, plutôt que d'additionner
+ * trente arrondis : sur un tour complet, cumuler les arrondis dériverait de
+ * plusieurs minutes et l'écran de ligne annoncerait une gare lointaine à la
+ * mauvaise minute.
+ */
+export function headwayMinutesTo(fromIndex: number, hops: number, dir: LoopDirection): number {
+  return Math.round(headwaySecondsTo(fromIndex, hops, dir) / 60);
+}
+
+/**
+ * Durée de croisière (s) : l'intervalle du tronçon moins le forfait d'arrêt.
+ *
+ * Depuis que l'intervalle se DÉDUIT de la distance, cette soustraction retombe
+ * exactement sur la part de croisière du tronçon - la longueur, et rien
+ * d'autre. Elle va de 29 s (Nippori→Nishi-Nippori, 0,5 km) à 117 s
+ * (Ōsaki→Shinagawa, 2,0 km).
+ *
+ * Le plancher de 8 s reste, mais il ne sert plus : il protégeait une minute
+ * d'intervalle inscrite à la main sur un tronçon de 0,9 km, et c'est ce plancher
+ * qui obligeait `approachAnnounceAt` à borner l'annonce d'approche. On le garde
+ * comme garde-fou de toute distance qu'on raccourcirait par erreur.
+ *
+ * L'arrêt réel étant plus long que le forfait (voir config.ts), le cycle complet
+ * dépasse un peu l'intervalle - c'est voulu : la croisière garde de quoi
+ * dérouler les deux annonces.
  */
 export function cruiseDuration(stationIndex: number, dir: LoopDirection): number {
-  const headwaySec = SEGMENT_HEADWAY_MIN[segmentForArrival(stationIndex, dir)] * 60;
+  const headwaySec = SEGMENT_HEADWAY_SEC[segmentForArrival(stationIndex, dir)];
   const fixed = CONFIG.departTime + CONFIG.brakeTime + CONFIG.dwellTime;
   return Math.max(8, headwaySec - fixed);
 }
@@ -177,14 +256,19 @@ export const DEPART_ANNOUNCE_AT = 0.6;
  * station : c'est de l'arithmétique d'horaire, et elle se teste comme telle
  * (tests/announceOrder.test.ts).
  *
- * Le tronçon Mejiro ↔ Takadanobaba ne compte qu'une minute d'intervalle : une
- * fois le forfait d'arrêt retiré il ne reste que 8 s de croisière - le plancher
- * de `cruiseDuration` -, contre 59 ou 119 s partout ailleurs. `cruiseSec − 20`
- * y valait −12 : la condition était donc déjà vraie à la PREMIÈRE image de la
- * croisière, et la file de la rame recevait 「まもなく高田馬場」 avant
- * 「次は、高田馬場」 pour les jouer dans cet ordre - l'approche annoncée avant le
- * départ, dans les deux sens. La borne remet la séquence d'aplomb sans toucher à
- * l'horaire, et protège d'avance tout tronçon qu'on raccourcirait.
+ * ELLE NE MORD PLUS SUR AUCUN TRONÇON, et c'est le but. Tant que les
+ * intervalles étaient des minutes entières posées à la main, Mejiro ↔
+ * Takadanobaba n'en comptait qu'une : forfait d'arrêt retiré, il ne restait que
+ * 8 s de croisière - le plancher de `cruiseDuration` - contre 59 ou 119 s
+ * partout ailleurs. `cruiseSec − 20` y valait −12, donc la condition était vraie
+ * dès la PREMIÈRE image de la croisière : la file de la rame recevait
+ * 「まもなく高田馬場」 avant 「次は、高田馬場」 pour les jouer dans cet ordre -
+ * l'approche annoncée avant le départ, dans les deux sens.
+ *
+ * Depuis que l'horaire se déduit des distances, la croisière la plus courte de
+ * la boucle vaut 29 s et l'avance de 20 s tient partout. La borne reste : c'est
+ * elle qui rattraperait un tronçon qu'on raccourcirait, ou une avance qu'on
+ * allongerait.
  */
 export function approachAnnounceAt(cruiseSec: number): number {
   return Math.max(DEPART_ANNOUNCE_AT + 0.2, cruiseSec - APPROACH_ANNOUNCE_LEAD);

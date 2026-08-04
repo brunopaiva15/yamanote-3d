@@ -7,7 +7,7 @@ export const CONFIG = {
   // poser la rame, voir le lâcher final du freinage).
   //
   // La durée de croisière n'est PAS ici : elle se déduit de l'intervalle réel
-  // du tronçon (data/segments, SEGMENT_HEADWAY_MIN → cruiseDuration), et varie
+  // du tronçon (data/segments, SEGMENT_HEADWAY_SEC → cruiseDuration), et varie
   // donc d'un tronçon à l'autre et d'un sens à l'autre. Un `cruiseTime: 59`
   // traînait à cette place, que plus personne ne lisait depuis le passage aux
   // intervalles réels : le supprimer évite qu'on le règle en croyant agir.
