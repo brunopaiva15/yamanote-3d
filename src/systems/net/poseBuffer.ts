@@ -33,8 +33,24 @@ export const EXTRAPOLATE_MAX_MS = 200;
 /**
  * Silence au-delà duquel un pair est considéré perdu (ms). Son avatar s'efface
  * en fondu plutôt que de rester planté là comme un mannequin.
+ *
+ * DEUX FOIS la trame de vie, et pas une de moins. Ce seuil valait une seconde,
+ * c'est-à-dire exactement `POSE_KEEPALIVE_MS` : un voyageur ASSIS - le cas
+ * normal dans une rame, tout de même - n'émet que sa trame de vie, à une par
+ * seconde, plus la quantification d'envoi (125 ms) et le temps de transit. Son
+ * dernier échantillon devenait donc « vieux » quelques dixièmes de seconde avant
+ * que le suivant n'arrive, à chaque seconde : son avatar plongeait dans le fondu
+ * puis réapparaissait, indéfiniment. Sur une liaison lente, il disparaissait
+ * complètement une fois par seconde.
+ *
+ * Un seuil de disparition ne doit jamais frôler la cadence d'émission qu'il
+ * surveille : il faut qu'un pair ait manqué DEUX rendez-vous pour qu'on le
+ * déclare parti. Deux secondes et demie laissent la marge sans faire traîner à
+ * l'écran quelqu'un qui a vraiment fermé son onglet - et le départ propre, lui,
+ * passe par la présence, qui est immédiate. L'invariant est éprouvé dans
+ * tests/netPoseBuffer.
  */
-export const POSE_STALE_MS = 1_000;
+export const POSE_STALE_MS = 2_500;
 
 /** Taille de l'anneau : une seconde de poses à 8 Hz, et la marge du désordre. */
 export const POSE_BUFFER_SIZE = 12;

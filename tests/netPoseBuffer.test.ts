@@ -205,6 +205,38 @@ test('un tampon vide est périmé d’office', () => {
   assert.equal(isStale([], 0), true);
 });
 
+test('la péremption laisse passer DEUX trames de vie', () => {
+  // L'invariant qui manquait, et le défaut qu'il empêche : les deux constantes
+  // valaient toutes les deux une seconde. Un voyageur assis - qui n'émet que sa
+  // trame de vie - voyait donc son dernier échantillon périmer juste avant que
+  // le suivant n'arrive, une fois par seconde, indéfiniment. Son avatar
+  // clignotait chez les autres, et sur une liaison lente il disparaissait pour
+  // de bon à chaque cycle.
+  //
+  // Un seuil de disparition doit toujours laisser manquer deux rendez-vous.
+  assert.ok(
+    POSE_STALE_MS >= 2 * POSE_KEEPALIVE_MS,
+    `péremption (${POSE_STALE_MS} ms) trop proche de la trame de vie (${POSE_KEEPALIVE_MS} ms)`,
+  );
+});
+
+test('un voyageur assis ne clignote pas, même sur une liaison lente', () => {
+  // Le scénario complet, tel qu'il se joue : émission à la trame de vie, plus
+  // la quantification d'envoi (125 ms), plus un transit de 400 ms. Aucun de ces
+  // instants ne doit être déclaré périmé.
+  const buf: Sample[] = [];
+  const PERIODE = POSE_KEEPALIVE_MS + 125;
+  const TRANSIT = 400;
+  for (let envoi = 0; envoi < 10; envoi++) {
+    const t = envoi * PERIODE;
+    pushSample(buf, s(t));
+    // De l'arrivée de cette pose à celle de la suivante, il ne se passe rien.
+    for (let now = t + TRANSIT; now < t + PERIODE + TRANSIT; now += 50) {
+      assert.equal(isStale(buf, now), false, `périmé à ${now} ms après le dernier envoi`);
+    }
+  }
+});
+
 // --- La bande morte à l'émission ------------------------------------------
 
 test('la première pose part toujours', () => {

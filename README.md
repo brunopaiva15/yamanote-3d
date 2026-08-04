@@ -2112,6 +2112,42 @@ protection. Les messages reçus sont malgré tout validés et nettoyés avant
 d'atteindre le rendu - non par méfiance, mais parce qu'un `NaN` qui passe la
 porte fait disparaître un avatar sans que rien n'apparaisse dans la console.
 
+#### Deux horloges qui ne sont pas d'accord
+
+Une pose part avec l'horodatage de la machine qui l'émet. Tout ce qui la relit
+ensuite raisonne pourtant avec **notre** horloge : on affiche l'instant
+`maintenant - 130 ms`, et l'on efface un pair dont le dernier échantillon a
+vieilli. Or rien n'oblige un téléphone et un portable à être d'accord à la
+milliseconde - quelques centaines de millisecondes d'écart sont parfaitement
+ordinaires, et une machine qui n'a pas vu de serveur de temps depuis une semaine
+dérive de bien plus.
+
+Le résultat était le pire des symptômes possibles : quand l'horloge d'en face
+retardait, ses poses paraissaient périmées **dès leur arrivée**. Son avatar
+n'était jamais dessiné. Le salon affichait pourtant « 2 voyageurs », son prénom
+figurait au roster, son tchat s'affichait, le monde était synchronisé - on
+voyait le nom de son ami, on ne voyait pas son ami. Et le défaut était à sens
+unique : celui dont l'horloge avançait voyait l'autre très bien.
+
+À la réception, chaque pose est donc **ramenée sur notre horloge**
+(`systems/net/peers`). Le décalage s'estime par le **minimum** de
+`maintenant - horodatage` observé : la gigue du réseau ne fait qu'ajouter du
+retard, jamais en retirer, si bien que le plus petit écart jamais vu est le
+moins pollué, et qu'il s'affine tout seul dès qu'un paquet passe plus vite. Une
+moyenne suivrait la congestion au lieu de l'horloge. Les écarts entre
+échantillons, eux, restent ceux de l'émetteur - c'est d'eux que l'interpolation
+tire sa régularité.
+
+Le seuil de péremption a la même histoire, en plus bête : il valait une seconde,
+c'est-à-dire exactement la trame de vie. Un voyageur **assis** - le cas normal
+dans une rame - n'émet que cette trame ; son dernier échantillon périmait donc
+quelques dixièmes de seconde avant que le suivant n'arrive, une fois par
+seconde, indéfiniment. Comme le fondu est appliqué à l'échelle, son avatar
+rapetissait puis regrossissait sans fin, et sur une liaison lente il disparaissait
+franchement à chaque cycle. Un seuil de disparition ne doit jamais frôler la
+cadence qu'il surveille : il faut deux rendez-vous manqués, et c'est un test qui
+le tient.
+
 #### Ce qui n'est pas partagé
 
 Les PNJ. Répliquer quarante personnes de quai et quatre-vingt-seize de wagon
