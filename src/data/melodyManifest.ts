@@ -8,8 +8,8 @@
 // `melodyRoundsDuration`, et systems/stationCycle).
 
 export const MELODY_DURATIONS: Record<string, number> = {
-  '/audio/melodies/01_jre-ikst-010-01_inner-main.mp3': 10.48,
-  '/audio/melodies/02_jre-ikst-010-02_outer-main.mp3': 10.48,
+  '/audio/melodies/01_jre-ikst-010-01_inner-main.mp3': 7.99,
+  '/audio/melodies/02_jre-ikst-010-02_outer-main.mp3': 7.99,
   '/audio/melodies/03_jre-ikst-010-03_inner-secondary-osaki.mp3': 8.88,
   '/audio/melodies/04_jre-ikst-010-05_outer-secondary-osaki.mp3': 8.31,
   '/audio/melodies/05_sakura-sakura-a.mp3': 13.61,

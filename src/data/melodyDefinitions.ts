@@ -17,23 +17,25 @@ const NAMES = [
 ] as const;
 
 /**
- * Les deux branchements principaux ne sont plus des cloches de synthèse : ils
- * ont été regravés au piano acoustique brillant par scripts/piano-melody-gen.py,
- * deux interprétations d'une SEULE partition (mêmes hauteurs, mêmes durées,
- * mêmes positions rythmiques ; seuls le toucher, la pédale et la couleur
- * changent). Ces deux-là ont donc la traçabilité complète que les dix-sept
- * autres n'ont pas - graine, tempo, mesure, centre tonal - et ne sont plus
- * marqués `legacyGeneratedAsset`.
+ * Les deux branchements principaux ont été regravés par
+ * scripts/piano-melody-gen.py. Ce sont les seuls clips du jeu qui ne sont pas
+ * de la synthèse : la partition part en MIDI et un piano ÉCHANTILLONNÉ la joue
+ * (FluidR3_GM, licence MIT). Aucune synthèse ne fait un piano - voir l'en-tête
+ * du script. Deux interprétations d'une SEULE partition (mêmes hauteurs, mêmes
+ * durées, mêmes positions rythmiques ; seuls les vélocités, l'équilibre des
+ * mains, la pédale et la couleur changent). Ces deux-là ont donc la traçabilité
+ * complète que les dix-sept autres n'ont pas - graine, tempo, mesure, centre
+ * tonal - et ne sont plus marqués `legacyGeneratedAsset`.
  */
 const REGRAVED: Record<string, Partial<OriginalMelodyDefinition>> = {
   '/audio/melodies/01_jre-ikst-010-01_inner-main.mp3': {
     seed: 1001,
-    instrumentation: ['bright acoustic piano'],
+    instrumentation: ['sampled bright acoustic piano'],
     mood: ['platform', 'original', 'luminous', 'reassuring'],
   },
   '/audio/melodies/02_jre-ikst-010-02_outer-main.mp3': {
     seed: 2002,
-    instrumentation: ['bright acoustic piano'],
+    instrumentation: ['sampled bright acoustic piano'],
     mood: ['platform', 'original', 'airy', 'contemplative'],
   },
 };

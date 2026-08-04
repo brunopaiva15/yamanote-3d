@@ -16,9 +16,13 @@ n'est embarqué. Activées via ENABLE_DEPARTURE_MELODY_CLIPS = true
 synthèse Tone.js seule.
 Deux générateurs, un propriétaire par fichier :
   scripts/melodies-gen.py       cloches, boîte à musique, koto, marimba…
-  scripts/piano-melody-gen.py   01_…_inner-main et 02_…_outer-main, piano
-                                acoustique brillant ; masters WAV 48 kHz /
-                                24 bits dans assets/melodies/
+  scripts/piano-melody-gen.py   01_…_inner-main et 02_…_outer-main. Seuls
+                                clips NON synthétisés : la partition part en
+                                MIDI et un piano échantillonné la joue
+                                (FluidR3_GM, licence MIT). Demande
+                                `apt-get install fluidsynth fluid-soundfont-gm`.
+                                Masters WAV 48 kHz / 24 bits dans
+                                assets/melodies/
 Ne pas éditer les MP3 à la main : régénérer via le script, puis
 `node scripts/melody-manifest-gen.mjs` (le manifeste des durées taille la
 fenêtre sonore de l'arrêt).
