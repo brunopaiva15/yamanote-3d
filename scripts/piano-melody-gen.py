@@ -17,8 +17,15 @@ La partition part donc en MIDI et c'est un échantillonneur qui la joue :
 
 Tout le travail musical est conservé - il s'exprime en MIDI sans rien perdre :
 vélocités, accents, crescendo de la mesure 3, équilibre des mains (vélocité, qui
-sur un piano échantillonné change aussi le TIMBRE : plus fort, plus brillant),
-pédale forte (CC64) renouvelée au début de chaque mesure, panoramique (CC10).
+sur un piano échantillonné change aussi le TIMBRE : plus fort, plus brillant ;
+c'est pourquoi « adoucir » se fait en baissant les vélocités, pas en baissant un
+volume), pédale forte (CC64) renouvelée au début de chaque mesure, panoramique
+(CC10).
+
+Une seconde couche, minuscule : un célesta double la main droite à l'octave,
+une trentaine de décibels sous le piano (`sparkle_db`). Elle ne s'entend pas
+comme un instrument - elle empêche seulement le piano de sonner tout à fait nu.
+`sparkle_db = None` la retire.
 
 Pourquoi ce script vit à côté de scripts/melodies-gen.py : celui-là synthétise
 des cloches, du koto, du marimba, sans dépendance externe. Celui-ci a besoin
@@ -99,6 +106,14 @@ SOFT_KNEE = 0.55
 # GM programme 1 : Bright Acoustic Piano. C'est le timbre demandé - clair,
 # légèrement métallique, adapté à une diffusion sur un quai.
 GM_BRIGHT_ACOUSTIC_PIANO = 1
+# GM programme 8 : Celesta. Elle double la main droite à l'octave, une trentaine
+# de décibels sous le piano - assez pour que l'instrument ne sonne pas tout à
+# fait nu, trop bas pour s'entendre comme une seconde voix. Une version
+# antérieure a doublé la ligne à -18 dB : on entendait deux calques. La leçon
+# tient dans `sparkle_db` : cette couche n'existe que tant qu'on ne l'identifie
+# pas. Mettre `sparkle_db` à None pour un piano strictement seul.
+GM_CELESTA = 8
+SPARKLE_OCTAVE = 12
 TPQ = 960              # divisions MIDI par noire ; tous les temps écrits (au
                        # quart de temps près) y tombent sur un tick entier
 
@@ -271,30 +286,32 @@ VOICINGS = {
         # la vélocité ne change pas que le volume : elle change la couche
         # d'échantillons, donc le timbre. Une main droite plus forte est aussi
         # une main droite plus brillante - c'est exactement ce qu'on veut ici.
-        right_vel=96,
-        left_vel=62,        # main gauche stable, nettement sous la droite
+        right_vel=87,       # toucher adouci : sur un piano échantillonné une
+        left_vel=57,        # vélocité plus basse est aussi un timbre plus rond
         pan=0.30,           # ouverture du clavier, graves à gauche
         peak=1.00,          # référence de niveau de la paire
-        reverb_mix=0.070,   # quai couvert, pas une salle
-        reverb_decay=0.60,
-        reverb_damp_hz=4600.0,
+        sparkle_db=-27.0,   # célesta à l'octave, sous le seuil d'identification
+        reverb_mix=0.105,   # quai couvert, pas une salle
+        reverb_decay=0.78,
+        reverb_damp_hz=4400.0,
         # Égalisation : plateau d'aigu (éclat), bosse de présence (le « bright »
         # du piano), léger creux de bas médium (clarté). Rien au-delà de 2 dB.
-        tilt=(("shelf", 3400.0, 1.70), ("bell", 2000.0, 1.10, 0.80), ("bell", 330.0, -0.80, 0.75)),
+        tilt=(("shelf", 3400.0, 1.10), ("bell", 2000.0, 0.70, 0.80), ("bell", 330.0, -0.70, 0.75)),
         seed=1001,
     ),
     "outer": dict(
         stem="02_jre-ikst-010-02_outer-main",
         title="Kaze no Wa (風の環) - Outer Loop",
-        right_vel=86,       # toucher plus souple : moins fort, donc plus rond
-        left_vel=66,        # écart des mains resserré, la gauche porte plus
+        right_vel=78,       # toucher plus souple encore que la version Inner
+        left_vel=61,        # écart des mains resserré, la gauche porte plus
         pan=0.40,           # un peu plus d'air
         peak=0.98,
-        reverb_mix=0.105,   # résonance plus ample
-        reverb_decay=0.80,
-        reverb_damp_hz=3400.0,
+        sparkle_db=-30.0,   # étincelle plus lointaine : le son recule
+        reverb_mix=0.140,   # résonance plus ample
+        reverb_decay=0.95,
+        reverb_damp_hz=3300.0,
         # Moins d'aigu, moins de présence, un peu plus de corps : le son recule.
-        tilt=(("shelf", 3600.0, -0.70), ("bell", 1800.0, 0.40, 0.80), ("bell", 190.0, 1.00, 0.75)),
+        tilt=(("shelf", 3600.0, -1.00), ("bell", 1800.0, 0.30, 0.80), ("bell", 190.0, 1.10, 0.75)),
         seed=2002,
     ),
 }
@@ -396,7 +413,43 @@ def build_midi(voicing: dict) -> bytes:
     # une note répétée doit s'éteindre avant d'être refrappée, et la pédale se
     # reprendre après l'attaque qu'elle doit tenir.
     events.sort(key=lambda e: (e[0], e[1]))
+    return _smf(events)
 
+
+def build_sparkle_midi(voicing: dict) -> bytes:
+    """La main droite seule, une octave plus haut, au célesta.
+
+    AUCUNE note ajoutée : les temps, les durées et les nuances sont ceux de
+    `SCORE_RIGHT`, transposés de douze demi-tons exactement. Rendue à part pour
+    que son niveau se règle en décibels mesurés plutôt qu'en vélocité MIDI, dont
+    le rapport au volume dépend de la banque.
+    """
+    rng = np.random.default_rng(voicing["seed"] + 17)
+    events = [
+        (0, 0, bytes([0xC0, GM_CELESTA])),
+        (0, 0, bytes([0xB0, 10, 64])),
+        (0, 0, bytes([0xB0, 7, 100])),
+    ]
+    for beat, dur_b, name in SCORE_RIGHT:
+        human = 1.0 + rng.uniform(-0.025, 0.025)
+        vel = int(np.clip(round(84 * right_velocity(beat, name) * human), 1, 127))
+        note = midi_of(name) + SPARKLE_OCTAVE
+        events.append((_ticks(beat), 2, bytes([0x90, note, vel])))
+        events.append((_ticks(beat + dur_b), 1, bytes([0x80, note, 0])))
+
+    lift = int(round(PEDAL_LIFT_S / BEAT * TPQ))
+    press = int(round(PEDAL_PRESS_S / BEAT * TPQ))
+    for beat in PEDAL:
+        events.append((max(0, _ticks(beat) - lift), 0, bytes([0xB0, 64, 0])))
+        events.append((_ticks(beat) + press, 3, bytes([0xB0, 64, 127])))
+    events.append((_ticks(SCORE_BEATS + TAIL_S / BEAT + 0.25), 4, bytes([0xB0, 64, 127])))
+
+    events.sort(key=lambda e: (e[0], e[1]))
+    return _smf(events)
+
+
+def _smf(events: list[tuple[int, int, bytes]]) -> bytes:
+    """Événements triés -> fichier MIDI format 0, une piste, tempo en tête."""
     track, last = b"", 0
     for tick, _, msg in events:
         track += _vlq(tick - last) + msg
@@ -557,6 +610,24 @@ def shape(buf: np.ndarray, tilt: tuple) -> np.ndarray:
     return np.fft.irfft(np.fft.rfft(buf, axis=0) * g[:, None], n=n, axis=0)
 
 
+def add_sparkle(buf: np.ndarray, voicing: dict, soundfont: Path, keep_dir) -> np.ndarray:
+    """Mélange le célesta au niveau demandé, en décibels sous la crête du piano.
+
+    Le niveau se règle ICI et pas en vélocité MIDI : la correspondance entre
+    vélocité et volume dépend de la banque d'échantillons, alors qu'un rapport
+    de crêtes est mesurable et reste vrai si la banque change.
+    """
+    level = voicing.get("sparkle_db")
+    if level is None:
+        return buf
+    keep = (keep_dir / f"{voicing['stem']}-sparkle.mid") if keep_dir else None
+    sparkle = play(build_sparkle_midi(voicing), soundfont, keep)
+    ref, got = float(np.abs(buf).max()), float(np.abs(sparkle).max())
+    if got <= 0:
+        return buf
+    return buf + sparkle * (ref * 10.0 ** (level / 20.0) / got)
+
+
 def master(buf: np.ndarray, voicing: dict) -> np.ndarray:
     wet = convolve(
         buf, reverb_ir(voicing["reverb_decay"], voicing["reverb_damp_hz"], voicing["seed"])
@@ -650,7 +721,9 @@ def main() -> None:
         voicing = VOICINGS[name]
         midi = build_midi(voicing)
         keep = (args.keep_midi / f"{voicing['stem']}.mid") if args.keep_midi else None
-        buf = master(play(midi, soundfont, keep), voicing)
+        buf = play(midi, soundfont, keep)
+        buf = add_sparkle(buf, voicing, soundfont, args.keep_midi)
+        buf = master(buf, voicing)
         wav = args.wav_dir / f"{voicing['stem']}.wav"
         mp3 = args.mp3_dir / f"{voicing['stem']}.mp3"
         write_wav24(buf, wav)
