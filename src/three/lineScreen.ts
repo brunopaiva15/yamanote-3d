@@ -352,7 +352,24 @@ function drawHeader(
     // trois caractères la gardait telle quelle et débordait en hauteur, 高田馬場
     // venant buter dans l'horloge. Le bandeau fait 133 px : à 110 le nom ne
     // tient pas, quelle que soit sa largeur.
-    drawSqueezed(g, name, 517, jpName ? 118 : 116, squeezeToFit(g, name, jpName ? 95 : 92, 340));
+    //
+    // Et la largeur offerte est celle du RELEVÉ : de la pastille au bord droit
+    // de la dalle, 436 px, et non les 340 qui traînaient là. 高輪ゲートウェイ y
+    // court de 299 à 735 sur l'afficheur, exactement comme les noms courts,
+    // parce que ce bandeau n'a rien d'autre à mettre à droite.
+    //
+    // Le plancher de chasse diffère avec l'écriture, et c'est la fonte qui le
+    // veut : les kanji ne descendent pas sous ~85 % sans se refermer, le romaji
+    // supporte 75 %. C'est ce que montrent les deux captures du même écran -
+    // 高輪ゲートウェイ y est à 85 % et Takanawa Gateway à 75 %, pour la même
+    // largeur occupée.
+    drawSqueezed(
+      g,
+      name,
+      517,
+      jpName ? 118 : 116,
+      squeezeToFit(g, name, jpName ? 95 : 92, 436, jpName ? 0.85 : 0.75),
+    );
   }
 
   // Heure et numéro de voiture, en haut à droite. Le NUMÉRO est grand et
@@ -638,13 +655,19 @@ const NAME_MIN_SQUEEZE = 0.55;
  * appliquer : 1 s'il tenait déjà, sinon le facteur d'écrasement (le corps
  * n'étant réduit qu'une fois le plancher atteint).
  */
-function squeezeToFit(g: CanvasRenderingContext2D, text: string, px: number, avail: number): number {
+function squeezeToFit(
+  g: CanvasRenderingContext2D,
+  text: string,
+  px: number,
+  avail: number,
+  floor = NAME_MIN_SQUEEZE,
+): number {
   g.font = `bold ${px}px ${JP_FONT}`;
   let tw = g.measureText(text).width;
   if (tw <= avail) return 1;
   let sx = avail / tw;
-  if (sx < NAME_MIN_SQUEEZE) {
-    g.font = `bold ${Math.max(10, Math.round((px * sx) / NAME_MIN_SQUEEZE))}px ${JP_FONT}`;
+  if (sx < floor) {
+    g.font = `bold ${Math.max(10, Math.round((px * sx) / floor))}px ${JP_FONT}`;
     tw = g.measureText(text).width;
     sx = Math.min(1, avail / tw);
   }
