@@ -333,17 +333,47 @@ function drawHeader(
   // sont aérés d'un cadratin - et les deux glyphes sont posés séparément
   // plutôt que séparés par un U+3000 : selon la fonte qui répond, l'espace
   // idéographique se retrouve parfois à chasse nulle, et 東京 se recollait.
+  // Et il est en GRAS, comme tout ce qui nomme une gare sur cet afficheur :
+  // c'est le seul mot de la dalle qu'on lit à l'autre bout du wagon.
   const name = stationName(next, lang);
   g.textAlign = 'center';
   g.fillStyle = HEADER_TEXT;
   const jpName = lang !== 'en';
   if (jpName && name.length === 2) {
-    g.font = `95px ${JP_FONT}`;
+    g.font = `bold 95px ${JP_FONT}`;
     g.fillText(name[0], 517 - 95.5, 118);
     g.fillText(name[1], 517 + 95.5, 118);
   } else {
-    fitText(g, name, 340, jpName ? 110 : 92, '');
-    g.fillText(name, 517, jpName ? 118 : 116);
+    // Un nom trop long est ÉCRASÉ, pas rapetissé - même règle que sur les
+    // plans. 高輪ゲートウェイ sortait ici à quarante-quatre pixels là où 品川 en
+    // prend quatre-vingt-quinze : le nom de la gare où l'on descend, le seul
+    // mot que le bandeau existe pour porter, se retrouvait plus discret que
+    // l'heure. À hauteur pleine et à chasse serrée, il reprend son rang.
+    //
+    // Le corps japonais de départ est celui des noms de deux caractères - 95,
+    // pas 110. Le 110 n'avait jamais été VU : c'était la borne haute d'une
+    // recherche qui rabotait jusqu'à tenir en largeur, si bien qu'un nom de
+    // trois caractères la gardait telle quelle et débordait en hauteur, 高田馬場
+    // venant buter dans l'horloge. Le bandeau fait 133 px : à 110 le nom ne
+    // tient pas, quelle que soit sa largeur.
+    //
+    // Et la largeur offerte est celle du RELEVÉ : de la pastille au bord droit
+    // de la dalle, 436 px, et non les 340 qui traînaient là. 高輪ゲートウェイ y
+    // court de 299 à 735 sur l'afficheur, exactement comme les noms courts,
+    // parce que ce bandeau n'a rien d'autre à mettre à droite.
+    //
+    // Le plancher de chasse diffère avec l'écriture, et c'est la fonte qui le
+    // veut : les kanji ne descendent pas sous ~85 % sans se refermer, le romaji
+    // supporte 75 %. C'est ce que montrent les deux captures du même écran -
+    // 高輪ゲートウェイ y est à 85 % et Takanawa Gateway à 75 %, pour la même
+    // largeur occupée.
+    drawSqueezed(
+      g,
+      name,
+      517,
+      jpName ? 118 : 116,
+      squeezeToFit(g, name, jpName ? 95 : 92, 436, jpName ? 0.85 : 0.75),
+    );
   }
 
   // Heure et numéro de voiture, en haut à droite. Le NUMÉRO est grand et
@@ -447,17 +477,64 @@ function lineNameEn(label: string): string {
   return LINE_BADGES.find((e) => e.match.test(label))?.en ?? label;
 }
 
-/** Pictogramme de nez de shinkansen, blanc sur la pastille. */
-function drawShinkansenGlyph(g: CanvasRenderingContext2D, x: number, y: number, s: number): void {
+/**
+ * Pictogramme de shinkansen, blanc sur la pastille de ligne.
+ *
+ * C'est le nez VU DE FACE du pictogramme normalisé, et il tient en quatre
+ * traits qu'il faut tous avoir : un museau étroit qui s'évase vers le bas en
+ * flancs bombés, un PARE-BRISE en bandeau qui barre le haut, deux phares posés
+ * sous lui, et le tablier de la caisse détaché par un blanc. La version
+ * précédente n'avait que la silhouette et le tablier - une coupole muette, sans
+ * cabine ni regard, qui se lisait aussi bien comme un tunnel ou une cloche que
+ * comme une rame.
+ *
+ * Le pare-brise et les phares sont PERCÉS dans la couleur de la pastille
+ * plutôt que peints en sombre : c'est ainsi que le pictogramme tient à toutes
+ * les tailles, du cartouche de 19 px du pavé des correspondances aux 43 px du
+ * bandeau, et sur les deux fonds (le vert de JR East, le bleu de JR Central).
+ */
+function drawShinkansenGlyph(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  s: number,
+  bg: string,
+): void {
+  const u = (a: number) => x + s * a;
+  const v = (b: number) => y + s * b;
+
+  // Silhouette : sommet arrondi étroit, flancs qui s'évasent en s'incurvant,
+  // bas coupé net à hauteur des bogies.
   g.fillStyle = '#ffffff';
   g.beginPath();
-  g.moveTo(x + s * 0.5, y + s * 0.17);
-  g.quadraticCurveTo(x + s * 0.78, y + s * 0.3, x + s * 0.78, y + s * 0.66);
-  g.lineTo(x + s * 0.22, y + s * 0.66);
-  g.quadraticCurveTo(x + s * 0.22, y + s * 0.3, x + s * 0.5, y + s * 0.17);
+  g.moveTo(u(0.5), v(0.09));
+  g.bezierCurveTo(u(0.68), v(0.1), u(0.83), v(0.3), u(0.86), v(0.68));
+  g.lineTo(u(0.14), v(0.68));
+  g.bezierCurveTo(u(0.17), v(0.3), u(0.32), v(0.1), u(0.5), v(0.09));
   g.closePath();
   g.fill();
-  g.fillRect(x + s * 0.24, y + s * 0.72, s * 0.52, s * 0.1);
+
+  // Pare-brise : bandeau trapézoïdal, plus large en haut qu'en bas - c'est lui
+  // qui fait lire un nez de rame plutôt qu'une coupole.
+  g.fillStyle = bg;
+  g.beginPath();
+  g.moveTo(u(0.29), v(0.28));
+  g.lineTo(u(0.71), v(0.28));
+  g.lineTo(u(0.66), v(0.44));
+  g.lineTo(u(0.34), v(0.44));
+  g.closePath();
+  g.fill();
+
+  // Les deux phares, sous le pare-brise et bien écartés.
+  for (const sgn of [-1, 1] as const) {
+    g.beginPath();
+    g.ellipse(u(0.5 + sgn * 0.22), v(0.58), s * 0.062, s * 0.045, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // Tablier de caisse, détaché de la silhouette par un blanc de fond.
+  g.fillStyle = '#ffffff';
+  g.fillRect(u(0.2), v(0.75), s * 0.6, s * 0.11);
 }
 
 /**
@@ -476,7 +553,7 @@ function drawLineBadge(g: CanvasRenderingContext2D, label: string, x: number, cy
       g.beginPath();
       g.roundRect(bx, top, s, s, 2);
       g.fill();
-      drawShinkansenGlyph(g, bx, top, s);
+      drawShinkansenGlyph(g, bx, top, s, color);
     } else if (b?.round) {
       g.fillStyle = color;
       g.beginPath();
@@ -533,14 +610,124 @@ const ZOOM_SPINE: [number, number, number][] = [
 
 // Emplacements des cinq gares, du plus proche (k = 0, en bas) au plus
 // lointain. `cx/cy/r` = cercle des minutes sur la bande, `bx/by/bs` = pastille
-// JY, `nx/ny/fs` = nom.
+// JY, `fs` = corps du nom.
+//
+// `bx` est un MINIMUM, pas une position : la pastille se pose au plus loin de
+// ce relevé et du bord de la bande écarté de `ZOOM_ARC_GAP`, et le nom suit à
+// `ZOOM_NAME_GAP` de la pastille. Les abscisses de nom relevées à la main
+// dérivaient - deux des cinq passaient DERRIÈRE leur propre pastille (−1,9 et
+// −0,6 px) pendant que les autres respiraient de cinq -, et la bande, qui
+// s'évase en descendant, venait lécher les pastilles basses. Trois blancs
+// tenus par deux constantes valent mieux que dix nombres qui se contredisent.
+//
+// Il n'y a plus non plus de ligne de base relevée : le nom se CENTRE sur `by`,
+// c'est-à-dire sur le milieu de sa propre pastille. Les cinq lignes de base
+// écrites à la main tombaient toutes trois à sept pixels trop bas, chacune de
+// son propre montant - une gare avait donc son nom aligné sur sa pastille et
+// sa voisine non, sans que rien dans la table ne dise laquelle.
 const ZOOM_SLOTS = [
-  { cx: 476.5, cy: 374.2, r: 24.5, bx: 546.3, by: 363.4, bs: 43, nx: 594.6, ny: 387.2, fs: 48 },
-  { cx: 422.1, cy: 301.9, r: 22.4, bx: 497.9, by: 296.1, bs: 43, nx: 546.3, ny: 319.2, fs: 48 },
-  { cx: 360.8, cy: 247.8, r: 19.5, bx: 431.6, by: 236.0, bs: 36, nx: 465.7, ny: 254.7, fs: 41 },
-  { cx: 293.1, cy: 203.1, r: 17.0, bx: 352.9, by: 184.3, bs: 31, nx: 383.3, ny: 199.2, fs: 31 },
-  { cx: 226.5, cy: 172.6, r: 14.5, bx: 270.5, by: 148.6, bs: 29, nx: 302.7, ny: 160.8, fs: 26 },
+  { cx: 476.5, cy: 374.2, r: 24.5, bx: 546.3, by: 363.4, bs: 43, fs: 48 },
+  { cx: 422.1, cy: 301.9, r: 22.4, bx: 497.9, by: 296.1, bs: 43, fs: 48 },
+  { cx: 360.8, cy: 247.8, r: 19.5, bx: 431.6, by: 236.0, bs: 36, fs: 41 },
+  { cx: 293.1, cy: 203.1, r: 17.0, bx: 352.9, by: 184.3, bs: 31, fs: 31 },
+  { cx: 226.5, cy: 172.6, r: 14.5, bx: 270.5, by: 148.6, bs: 29, fs: 26 },
 ];
+
+/** Blanc entre le bord convexe de la bande et la pastille JY. */
+const ZOOM_ARC_GAP = 11;
+/** Blanc entre la pastille JY et le nom de la gare. */
+const ZOOM_NAME_GAP = 10;
+
+/**
+ * Chasse minimale d'un nom écrasé, en fraction de sa chasse normale.
+ *
+ * Un nom trop long pour son emplacement n'est pas RAPETISSÉ, il est CONDENSÉ :
+ * l'afficheur garde la hauteur des caractères et resserre leur largeur, et
+ * 高輪ゲートウェイ y tient à hauteur pleine, serré à environ 85 % de sa chasse,
+ * à côté d'une pastille qui ne bouge pas. Le rendu au corps dégressif, lui,
+ * posait un nom de dix-neuf pixels à côté d'un 田町 de quarante-huit : sur un
+ * plan où le corps dit la DISTANCE, la gare la plus longue se lisait comme la
+ * plus lointaine.
+ *
+ * En deçà de ce plancher, on rend un peu de hauteur : à un tiers de chasse les
+ * kanji ne sont plus des kanji.
+ */
+const NAME_MIN_SQUEEZE = 0.55;
+
+/**
+ * Règle la fonte pour que `text` tienne dans `avail`, et renvoie la chasse à
+ * appliquer : 1 s'il tenait déjà, sinon le facteur d'écrasement (le corps
+ * n'étant réduit qu'une fois le plancher atteint).
+ */
+function squeezeToFit(
+  g: CanvasRenderingContext2D,
+  text: string,
+  px: number,
+  avail: number,
+  floor = NAME_MIN_SQUEEZE,
+): number {
+  g.font = `bold ${px}px ${JP_FONT}`;
+  let tw = g.measureText(text).width;
+  if (tw <= avail) return 1;
+  let sx = avail / tw;
+  if (sx < floor) {
+    g.font = `bold ${Math.max(10, Math.round((px * sx) / floor))}px ${JP_FONT}`;
+    tw = g.measureText(text).width;
+    sx = Math.min(1, avail / tw);
+  }
+  return sx;
+}
+
+/** Pose un texte déjà mesuré par `squeezeToFit`, écrasé autour de son ancre. */
+function drawSqueezed(
+  g: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  sx: number,
+): void {
+  if (sx === 1) {
+    g.fillText(text, x, y);
+    return;
+  }
+  g.save();
+  g.translate(x, y);
+  g.scale(sx, 1);
+  g.fillText(text, 0, 0);
+  g.restore();
+}
+
+/**
+ * Ligne de base d'un nom dont on veut CENTRER la hauteur d'œil sur `cy`.
+ *
+ * Mesurée sur un glyphe de référence - 田 en japonais, H en romaji - et non sur
+ * le nom lui-même : la boîte d'encre d'une chaîne dépend de ce qu'elle
+ * contient, et centrer dessus ferait descendre 「Shinagawa」 de cinq pixels
+ * sous 「Tamachi」 pour la seule raison qu'un g y descend sous la ligne.
+ */
+function nameBaseline(g: CanvasRenderingContext2D, cy: number, latin: boolean): number {
+  return cy + g.measureText(latin ? 'H' : '田').actualBoundingBoxAscent / 2;
+}
+
+/**
+ * Nom de gare posé à la largeur disponible et centré en hauteur sur `cy` :
+ * corps plein tant qu'il tient, condensé ensuite, et le corps ne cède qu'une
+ * fois le plancher de chasse atteint. `textAlign` reste à l'appelant -
+ * l'écrasement se fait AUTOUR de l'ancre, donc il suit l'alignement, miroir
+ * compris.
+ */
+function drawFittedName(
+  g: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  cy: number,
+  px: number,
+  avail: number,
+  latin: boolean,
+): void {
+  const sx = squeezeToFit(g, text, px, avail);
+  drawSqueezed(g, text, x, nameBaseline(g, cy, latin), sx);
+}
 
 /** Échantillonne l'axe de l'arc (Catmull-Rom) avec la demi-largeur locale. */
 function spineSamples(pts: [number, number, number][], steps = 12): [number, number, number][] {
@@ -596,6 +783,43 @@ function bandEdges(X: (x: number) => number): { outer: BandEdge; inner: BandEdge
     along.push(len);
   }
   return { outer, inner, u: along.map((a) => 1 - a / (len || 1)) };
+}
+
+/**
+ * Le bord CONVEXE de la bande, non miroité : il ne dépend que de la géométrie,
+ * donc il se calcule une fois pour toutes plutôt qu'à chaque image.
+ */
+const ZOOM_OUTER: BandEdge = bandEdges((x) => x).outer;
+
+/**
+ * L'abscisse la plus à droite qu'atteint la bande dans la tranche `[y0, y1]`.
+ *
+ * C'est ce qui donne au blanc entre l'arc et la pastille JY une valeur RÉELLE :
+ * la bande s'évase en descendant, et mesurer l'écart à la demi-largeur de son
+ * axe - la tentation, puisqu'elle est tabulée - le sous-estime d'autant plus
+ * que la pente est forte. On mesure donc le bord lui-même, en tenant compte des
+ * segments qui traversent la tranche sans y avoir de sommet.
+ */
+function bandRight(y0: number, y1: number): number {
+  let m = -Infinity;
+  for (let i = 0; i < ZOOM_OUTER.length - 1; i++) {
+    const a = ZOOM_OUTER[i];
+    const b = ZOOM_OUTER[i + 1];
+    if (a[1] >= y0 && a[1] <= y1) m = Math.max(m, a[0]);
+    if (b[1] >= y0 && b[1] <= y1) m = Math.max(m, b[0]);
+    for (const yc of [y0, y1]) {
+      if ((a[1] - yc) * (b[1] - yc) < 0) {
+        m = Math.max(m, a[0] + ((b[0] - a[0]) * (yc - a[1])) / (b[1] - a[1]));
+      }
+    }
+  }
+  return m;
+}
+
+/** Abscisses de la pastille JY et du nom d'une gare de la vue rapprochée. */
+function zoomSlotX(slot: (typeof ZOOM_SLOTS)[number]): { bx: number; nx: number } {
+  const bx = Math.max(slot.bx, bandRight(slot.by - slot.bs / 2, slot.by + slot.bs / 2) + ZOOM_ARC_GAP);
+  return { bx, nx: bx + slot.bs + ZOOM_NAME_GAP };
 }
 
 /** Le point d'un bord à l'abscisse `at`, interpolé entre deux échantillons. */
@@ -876,7 +1100,8 @@ export function drawRoute(
       g.fillText(en ? '(min)' : '(分)', X(slot.cx + slot.r + 3), slot.cy + 6);
     }
 
-    drawJyBadge(g, st.jy, mir ? X(slot.bx) - slot.bs : slot.bx, slot.by, slot.bs);
+    const { bx, nx } = zoomSlotX(slot);
+    drawJyBadge(g, st.jy, mir ? X(bx) - slot.bs : bx, slot.by, slot.bs);
 
     // Le corps du plan CHANGE de langue avec le bandeau : sur le passage
     // anglais, l'afficheur écrit les gares en romaji et traduit le pavé des
@@ -884,22 +1109,46 @@ export function drawRoute(
     // qu'il ne peut pas lire pendant un quart du cycle.
     g.fillStyle = '#141414';
     g.textAlign = AL;
-    const name = en ? st.romaji : st.kanji;
+    // Et il est en GRAS dans les deux langues. Le japonais était composé en
+    // maigre pendant que le romaji sortait en gras : deux poids pour une même
+    // information, sur un plan où le nom de gare est justement ce qu'on vient
+    // y chercher.
+    const name = stationName(st, lang);
+    const avail = w - nx - 6;
+    const px = en ? Math.round(slot.fs * 0.82) : slot.fs;
+    const words = name.split(' ');
     if (!en && name.length === 2) {
       // Les noms de deux caractères sont aérés d'un cadratin (東 京). En
       // miroir, les deux glyphes échangent leur place - sans quoi le nom se
       // lit à l'envers, ce qu'aucun miroir de mise en page ne doit faire au
       // texte qu'il déplace.
-      g.font = `${slot.fs}px ${JP_FONT}`;
+      g.font = `bold ${slot.fs}px ${JP_FONT}`;
       g.textAlign = 'center';
-      const near = X(slot.nx + slot.fs * 0.5);
-      const far = X(slot.nx + slot.fs * 2.5);
-      g.fillText(name[0], mir ? far : near, slot.ny);
-      g.fillText(name[1], mir ? near : far, slot.ny);
+      const near = X(nx + slot.fs * 0.5);
+      const far = X(nx + slot.fs * 2.5);
+      const y = nameBaseline(g, slot.by, false);
+      g.fillText(name[0], mir ? far : near, y);
+      g.fillText(name[1], mir ? near : far, y);
       g.textAlign = AL;
+    } else if (en && words.length === 2) {
+      // Un romaji en deux mots se pose sur DEUX LIGNES - Takanawa au-dessus de
+      // Gateway -, la seconde décalée d'un demi-cadratin vers l'intérieur du
+      // nom. Les deux enjambent le milieu de la pastille, si bien que le bloc
+      // reste centré en face d'elle. D'un seul tenant, seize caractères ne
+      // tenaient qu'au prix d'un corps de moitié.
+      //
+      // Et les deux lignes prennent les trois quarts du corps de
+      // l'emplacement : un bloc de deux lignes occupe deux fois la hauteur d'un
+      // nom simple, et à corps plein il écrasait ses voisines - sur
+      // l'afficheur, 高輪ゲートウェイ se lit un peu PLUS PETIT que le 田町 qui le
+      // suit, alors même qu'il est plus proche.
+      const linePx = Math.round(px * 0.75);
+      const lead = Math.round(linePx * 0.95);
+      const indent = linePx * 0.55;
+      drawFittedName(g, words[0], X(nx), slot.by - lead / 2, linePx, avail, true);
+      drawFittedName(g, words[1], X(nx + indent), slot.by + lead / 2, linePx, avail - indent, true);
     } else {
-      fitText(g, name, w - slot.nx - 6, en ? Math.round(slot.fs * 0.82) : slot.fs, en ? 'bold' : '');
-      g.fillText(name, X(slot.nx), slot.ny);
+      drawFittedName(g, name, X(nx), slot.by, px, avail, en);
     }
   }
 
@@ -924,14 +1173,20 @@ export function drawRoute(
   // ----- Pavé des correspondances de la prochaine gare, du côté du vide -----
   const tr = TRANSFERS[next.jy];
   if (tr) {
-    g.textAlign = AL;
-    g.fillStyle = '#141414';
-    g.font = `bold 17px ${JP_FONT}`;
+    // Le titre du pavé tient sur deux lignes, et c'est celle qui NOMME LA GARE
+    // qui est en gras - la première en japonais (品川駅 / 乗換えのご案内), la
+    // seconde en anglais (Transfer at / Shinagawa Station). Le gras suivait
+    // jusqu'ici la ligne du haut quelle que soit la langue : le passage anglais
+    // appuyait donc « Transfer at » et laissait le nom de la gare en maigre.
     g.textAlign = mir ? 'right' : 'left';
-    g.fillText(en ? 'Transfer at' : `${next.kanji}駅`, X(8), 217);
-    g.font = `17px ${JP_FONT}`;
-    g.fillStyle = '#4c4f52';
-    g.fillText(en ? `${next.romaji} Station` : '乗換えのご案内', X(8), 238);
+    const head: [string, boolean][] = en
+      ? [['Transfer at', false], [`${next.romaji} Station`, true]]
+      : [[`${next.kanji}駅`, true], ['乗換えのご案内', false]];
+    head.forEach(([text, isName], i) => {
+      g.font = `${isName ? 'bold ' : ''}17px ${JP_FONT}`;
+      g.fillStyle = isName ? '#141414' : '#4c4f52';
+      g.fillText(text, X(8), 217 + i * 21);
+    });
 
     const labels = tr.jp.split('、').filter(Boolean);
     const COL = [10, 177];
@@ -1022,9 +1277,8 @@ function drawVerticalName(
   x: number,
   yStart: number,
   glyph: number,
-  bold: boolean,
 ): void {
-  g.font = `${bold ? 'bold ' : ''}${glyph}px ${JP_FONT}`;
+  g.font = `bold ${glyph}px ${JP_FONT}`;
   g.textAlign = 'center';
   for (let i = 0; i < name.length; i++) {
     const ch = name[i];
@@ -1062,6 +1316,17 @@ const LOOP_DX = 43.15;
 const LOOP_Y_TOP = 247.6;
 const LOOP_Y_BOT = 320.3;
 const LOOP_RING_W = 26;
+
+/**
+ * Inclinaison des noms ANGLAIS du plan de boucle - et d'eux seuls : le
+ * tategaki japonais reste d'aplomb.
+ *
+ * Relevée sur l'afficheur : les noms montent à ~54° de l'horizontale, soit
+ * trois pixels de hauteur pour deux de large. Ils étaient posés à 41° (−0,72
+ * rad), une pente si molle que les noms longs de la rangée haute couraient
+ * presque à plat vers la colonne voisine au lieu de s'en écarter.
+ */
+const LOOP_EN_TILT = -0.94;
 
 const LOOP_RING_L = LOOP_X0 - 58;
 const LOOP_RING_R = LOOP_X0 + (LOOP_COLS - 1) * LOOP_DX + 57;
@@ -1241,18 +1506,29 @@ export function drawLoopMap(
 
     // Nom de gare. En japonais il est VERTICAL, calé sur l'anneau (rangée
     // haute : le nom finit contre la bande ; rangée basse : il commence contre
-    // elle). En anglais l'afficheur ne peut pas empiler du romaji : il
-    // l'INCLINE, au-dessus de la rangée haute et sous la rangée basse. Les
-    // gares repères sont en gras dans les deux cas.
+    // elle) et D'APLOMB - le tategaki ne s'incline pas. En anglais l'afficheur
+    // ne peut pas empiler du romaji : il l'INCLINE, au-dessus de la rangée
+    // haute et sous la rangée basse.
+    //
+    // Et les trente noms sont en GRAS, pas seulement les gares repères. Le
+    // partage gras/maigre était la seule chose qui distinguait un repère de son
+    // voisin sur ce plan ; il disparaît ici, et c'est assumé - un plan où la
+    // moitié des noms est composée en maigre se lit mal sur une dalle vue de
+    // trois mètres, et c'est ce plan-là qu'on consulte debout dans le couloir.
     g.fillStyle = '#141414';
-    const bold = MAJOR_INDICES.includes(stIdx);
     if (en) {
       g.save();
       g.translate(x + (slot.top ? -2 : 2), slot.top ? LOOP_Y_TOP - 22 : LOOP_Y_BOT + 26);
-      g.rotate(-0.72);
+      g.rotate(LOOP_EN_TILT);
       g.textAlign = slot.top ? 'left' : 'right';
-      g.font = `${bold ? 'bold ' : ''}12px ${JP_FONT}`;
-      g.fillText(STATIONS[stIdx].romaji, 0, 4);
+      g.font = `bold 12px ${JP_FONT}`;
+      // Un nom en deux mots se pose sur DEUX lignes parallèles - Takanawa
+      // par-dessus Gateway -, alignées sur le même bout que le nom d'à côté.
+      // D'un seul tenant, seize caractères filent si loin le long de la
+      // diagonale qu'ils sortent du plan par le bas.
+      stationName(STATIONS[stIdx], 'en')
+        .split(' ')
+        .forEach((word, i) => g.fillText(word, 0, 4 + i * 14));
       g.restore();
       g.textAlign = 'left';
       continue;
@@ -1261,18 +1537,18 @@ export function drawLoopMap(
     const split = splitVertical(name);
     if (slot.top) {
       const glyph = Math.min(20, 73 / name.length);
-      drawVerticalName(g, name, x, 222.5 - (name.length - 1) * glyph, glyph, bold);
+      drawVerticalName(g, name, x, 222.5 - (name.length - 1) * glyph, glyph);
     } else if (split) {
       // Nom long : deux colonnes, la suite À GAUCHE de la première. Chaque
       // colonne prend le corps qui lui permet de tenir dans la hauteur, donc
       // 高輪 reste lisible pendant que ゲートウェイ se serre.
       const g0 = Math.min(19, 76 / split[0].length);
       const g1 = Math.min(19, 76 / split[1].length);
-      drawVerticalName(g, split[0], x + g0 * 0.55, 342.5 + g0 * 0.8, g0, bold);
-      drawVerticalName(g, split[1], x - g0 * 0.55, 342.5 + g1 * 0.8, g1, bold);
+      drawVerticalName(g, split[0], x + g0 * 0.55, 342.5 + g0 * 0.8, g0);
+      drawVerticalName(g, split[1], x - g0 * 0.55, 342.5 + g1 * 0.8, g1);
     } else {
       const glyph = Math.min(19, 76 / name.length);
-      drawVerticalName(g, name, x, 342.5 + glyph * 0.8, glyph, bold);
+      drawVerticalName(g, name, x, 342.5 + glyph * 0.8, glyph);
     }
   }
 
