@@ -47,6 +47,7 @@ function s(t: number, over: Partial<Sample> = {}): Sample {
     station: 0,
     seated: false,
     moving: false,
+    held: '',
     ...over,
   };
 }
@@ -271,6 +272,10 @@ test('un changement discret part aussitôt, si petit soit le mouvement', () => {
   assert.equal(shouldSendPose(pose, s(0, { level: 1 }), 10), true);
   assert.equal(shouldSendPose(pose, s(0, { station: 1 }), 10), true);
   assert.equal(shouldSendPose(pose, s(0, { moving: true }), 10), true);
+  // Acheter une bouteille, ou la finir : on ne bouge pas d'un millimètre, et
+  // pourtant il y a maintenant quelque chose - ou plus rien - dans la main.
+  assert.equal(shouldSendPose(pose, s(0, { held: 'ocha' }), 10), true);
+  assert.equal(shouldSendPose(s(0, { held: 'ocha' }), s(0), 10), true);
 });
 
 test('une marche lente finit par être émise, malgré la bande morte', () => {

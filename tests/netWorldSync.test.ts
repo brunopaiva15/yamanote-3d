@@ -145,10 +145,15 @@ test('un battement échantillonné en pleine course reste valide', () => {
 
 // --- Les tirages de l'arrêt -------------------------------------------------
 
+// Le paquet décrit l'arrêt À VENIR : `runtime.stopSequence` vaut 5 dans
+// `monde()`, le dwell suivant portera donc le numéro 6, et c'est celui-là qui
+// est tiré et publié - une gare à l'avance.
+const ARRET = 6;
+
 function tirages(): void {
   resetDecisions();
   setNetRole('host');
-  beginStopDraws();
+  beginStopDraws(ARRET);
   drawBerthOffset(0.03, 0.11);
   drawMelodyJitter();
   drawAlternativePlatform(0.5);
@@ -162,8 +167,19 @@ test('un paquet de tirages complet est valide', () => {
   const m = sampleStop('hote');
   assert.ok(m, 'aucun paquet produit');
   assert.equal(validStop(m), true);
-  assert.equal(m.ss, 5);
+  assert.equal(m.ss, ARRET);
   assert.equal(m.ix, 12);
+});
+
+test('le paquet est estampillé de l’arrêt qu’il DÉCRIT, pas de celui qu’on vit', () => {
+  // Le paquet part au départ de la gare précédente : au moment où il est
+  // publié, `runtime.stopSequence` en est encore à l'arrêt qu'on quitte.
+  // L'estampiller de celui-là faisait arriver chez les autres, sous le bon
+  // numéro, les tirages de la gare d'avant.
+  monde();
+  tirages();
+  assert.notEqual(sampleStop('hote')?.ss, runtime.stopSequence);
+  assert.equal(sampleStop('hote')?.ss, runtime.stopSequence + 1);
 });
 
 test('un arrêt qui n’a pas fini de tirer ne publie RIEN', () => {
@@ -173,7 +189,7 @@ test('un arrêt qui n’a pas fini de tirer ne publie RIEN', () => {
   monde();
   resetDecisions();
   setNetRole('host');
-  beginStopDraws();
+  beginStopDraws(ARRET);
   drawBerthOffset(0.03, 0.11);
   assert.equal(sampleStop('hote'), null);
 });
@@ -189,7 +205,7 @@ test('les tirages font l’aller-retour sans perte sensible', () => {
     doorSeed: 0x1234abcd,
     passThrough: true,
   };
-  applyStopDraws(source);
+  applyStopDraws(source, ARRET);
   // Pas de bascule de rôle ici : `setNetRole` remet les tirages à plat, et à
   // raison - un ancien hôte devenu suiveur n'a plus rien à publier. On
   // échantillonne donc en suiveur, ce qui est de toute façon la seule situation
@@ -219,7 +235,7 @@ test('la graine des portes traverse sans être abîmée', () => {
       melodyJitter: 0,
       doorSeed: seed,
       passThrough: false,
-    });
+    }, ARRET);
     const m = sampleStop('hote');
     assert.ok(m);
     assert.equal(m.seed, seed, `graine ${seed}`);
@@ -237,7 +253,7 @@ test('un écart d’arrêt extrême reste dans ce que le validateur accepte', ()
     melodyJitter: -1,
     doorSeed: 1,
     passThrough: false,
-  });
+  }, ARRET);
   const m = sampleStop('hote');
   assert.ok(m);
   assert.equal(validStop(m), true);

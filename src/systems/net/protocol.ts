@@ -33,8 +33,15 @@ import type { Phase } from '../../store';
  * d'unité - jamais « au cas où ». Un incrément coupe la parole entre un onglet
  * ancien et un onglet neuf, ce qui est exactement le but, mais ce n'est pas
  * gratuit : le joueur voit ses camarades disparaître sans comprendre.
+ *
+ * Version 2 : `yw` a changé de SENS. Il portait un cap de caméra - donc nié -
+ * là où le rendu attend un cap de corps, si bien que chaque avatar distant
+ * était dessiné d'un demi-tour de travers : on marchait droit et les autres
+ * vous voyaient reculer. Un onglet resté sur la version 1 et un onglet neuf se
+ * verraient mutuellement à l'envers, ce qui est exactement le cas que la
+ * version est là pour trancher. `hd` arrive dans la même vague.
  */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 /** Nombre de voyageurs qu'un salon accepte (voir room.ts : plafond consultatif). */
 export const ROOM_CAPACITY = 8;
@@ -126,6 +133,17 @@ export interface PosePayload {
   s: 0 | 1;
   /** En marche : de quoi balancer les jambes sans transmettre une vitesse. */
   mv: 0 | 1;
+  /**
+   * L'objet tenu en main : l'identifiant du produit acheté, ou la chaîne vide.
+   *
+   * L'identifiant plutôt qu'une forme et une couleur, parce que le catalogue
+   * (data/products) est le même des deux côtés du fil : un mot de six lettres
+   * suffit à retrouver la silhouette ET l'étiquette, et le jour où le rayon
+   * s'enrichit il n'y a rien à renuméroter. Il voyage dans la pose et non dans
+   * la présence parce qu'il se REGARDE : il doit apparaître et disparaître avec
+   * le corps qui le tient, sur le même canal et avec le même retard.
+   */
+  hd: string;
 }
 
 /** La même pose, en unités du jeu : ce que le rendu consomme. */
@@ -141,10 +159,22 @@ export interface Pose {
   pitch: number;
   seated: boolean;
   moving: boolean;
+  /** Identifiant du produit tenu en main, ou chaîne vide. */
+  held: string;
 }
 
 const CM = 100;
 const CRAD = 100;
+
+/**
+ * Longueur maximale d'un identifiant de produit accepté.
+ *
+ * Les identifiants du catalogue tiennent en une dizaine de caractères ; on
+ * borne largement au-dessus, et l'on REJETTE au-delà plutôt que de tronquer -
+ * un identifiant tronqué ne désigne rien, et le chercher au catalogue coûterait
+ * une comparaison de chaîne par image pour un objet qui n'existe pas.
+ */
+const HELD_ID_MAX = 24;
 
 /** Pose du jeu → pose du fil. */
 export function encodePose(from: string, p: Pose): PosePayload {
@@ -162,6 +192,7 @@ export function encodePose(from: string, p: Pose): PosePayload {
     pt: Math.round(p.pitch * CRAD),
     s: p.seated ? 1 : 0,
     mv: p.moving ? 1 : 0,
+    hd: p.held,
   };
 }
 
@@ -179,6 +210,7 @@ export function decodePose(m: PosePayload): Pose {
     pitch: m.pt / CRAD,
     seated: m.s === 1,
     moving: m.mv === 1,
+    held: m.hd,
   };
 }
 
@@ -350,6 +382,7 @@ export function validPose(m: unknown): m is PosePayload {
   if (r.lv !== 0 && r.lv !== 1) return false;
   if (r.s !== 0 && r.s !== 1) return false;
   if (r.mv !== 0 && r.mv !== 1) return false;
+  if (typeof r.hd !== 'string' || r.hd.length > HELD_ID_MAX) return false;
   if (!isFiniteInt(r.st) || (r.st as number) < 0 || (r.st as number) > 29) return false;
   for (const k of ['x', 'y', 'z'] as const) {
     const v = r[k];

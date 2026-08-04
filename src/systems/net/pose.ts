@@ -70,14 +70,43 @@ function poseLocale(now: number): Pose {
     // lacet monde tel quel ferait regarder le joueur exactement à l'opposé -
     // dans une gare sur deux, et seulement dans une gare sur deux, ce qui est
     // la meilleure façon de ne jamais comprendre d'où vient le défaut.
-    yaw: toFrameYaw(Math.atan2(-runtime.lookX, -runtime.lookZ), surQuai),
+    //
+    // ET LE SIGNE EST L'AUTRE PIÈGE. `atan2(dx, dz)` est le cap d'un CORPS qui
+    // marche vers (dx, dz) - c'est la convention de tout le jeu, celle que la
+    // foule du quai et les voyageurs de la rame posent dans leur `rotation.y`
+    // (systems/platformCrowd, systems/passengers). Un vecteur de caméra, lui,
+    // se nie avant d'être converti, parce qu'une caméra regarde vers son -Z
+    // (three/plateau/routeMath). Ici, c'est bien un corps qu'on décrit et non
+    // une caméra : nier `lookX/lookZ` retournait l'avatar d'un demi-tour chez
+    // tout le monde. On le voyait marcher en avant en regardant en arrière -
+    // du moonwalk - et son visage n'était jamais tourné vers qui lui parlait.
+    yaw: toFrameYaw(bodyYaw(runtime.lookX, runtime.lookZ), surQuai),
     pitch: Math.asin(Math.max(-1, Math.min(1, runtime.lookY))),
     seated: s.seated,
     // « En marche » se déduit du déplacement de l'appui entre deux envois, et
     // non d'une touche : au doigt comme au clavier, ce qui compte est que les
     // jambes bougent.
     moving: bouge(),
+    // Ce qu'on a acheté au distributeur. Le nombre de gorgées, lui, ne voyage
+    // pas : à deux mètres, dans la main de quelqu'un d'autre, un fond de
+    // bouteille ne se distingue pas d'une bouteille pleine - et le geste de
+    // boire, s'il finit par se transmettre, sera une ANIMATION et non un niveau.
+    held: s.held?.productId ?? '',
   };
+}
+
+/**
+ * Le cap d'un CORPS qui fait face à la direction (x, z), en monde.
+ *
+ * Une ligne, mais c'est celle qui décide de quel côté chacun regarde, et elle
+ * est exportée pour qu'un test puisse la comparer à la convention du reste du
+ * jeu (`Math.atan2(dx, dz)` : systems/platformCrowd, systems/passengers) plutôt
+ * qu'à elle-même. Le piège est qu'un vecteur de CAMÉRA se nie avant d'être
+ * converti - une caméra regarde vers son -Z - et que la nier ici retournait
+ * tous les avatars d'un demi-tour.
+ */
+export function bodyYaw(x: number, z: number): number {
+  return Math.atan2(x, z);
 }
 
 /**
@@ -153,6 +182,8 @@ export interface PeerWorldPose {
   pitch: number;
   seated: boolean;
   moving: boolean;
+  /** Identifiant du produit qu'il tient en main, ou chaîne vide. */
+  held: string;
   /** 0..1 : un pair qui se tait s'efface au lieu de rester planté là. */
   fade: number;
 }
@@ -221,6 +252,7 @@ export function peerWorldPose(id: string, now: number): PeerWorldPose | null {
     pitch: p.pitch,
     seated: p.seated,
     moving: p.moving,
+    held: p.held,
     fade: pair.fade,
   };
 }
@@ -266,6 +298,7 @@ if (typeof window !== 'undefined') {
         pitch: 0,
         seated: false,
         moving: false,
+        held: '',
         ...over,
       },
       now,

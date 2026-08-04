@@ -40,6 +40,8 @@ import {
   drawIncidentGap,
   drawMelodyJitter,
   drawReason,
+  drawDoorSeed,
+  netRole,
 } from './net/worldDecisions';
 import { notifyIncident } from './net/incidents';
 import {
@@ -75,7 +77,7 @@ import {
   updatePlatformSpeakers,
 } from './stationPa';
 import { lineDelayed, notifyOnboardEmergency, notifyPowerOutage } from './lineDisruption';
-import { rollPassThrough, startPassThrough } from './passingTrain';
+import { prerollPassThrough, rollPassThrough, startPassThrough } from './passingTrain';
 import { exchangePassengers, startlePassengers } from './passengers';
 import { pushSceneEvent } from './paxEvents';
 import { seedPlatformPresence } from './platformPresence';
@@ -704,16 +706,71 @@ const ALTERNATIVE_PLATFORM_CHANCE: Record<string, number> = {
 };
 
 /**
+ * Part des rames qui se rangent sur la voie secondaire, à CETTE gare.
+ *
+ * Sortie du tirage parce qu'elle sert deux fois : ici, où la valeur est
+ * APPLIQUÉE, et une gare plus tôt, où elle est tirée d'avance avec le reste de
+ * l'arrêt (`prepareStopDraws`).
+ */
+function alternativePlatformChance(stationIndex: number): number {
+  const station = STATIONS[stationIndex];
+  const info = platformFor(station.jy, useStore.getState().loopDirection);
+  return info?.alternativePlatform != null ? (ALTERNATIVE_PLATFORM_CHANCE[station.jy] ?? 0) : 0;
+}
+
+/**
  * Où la rame va se ranger : voie principale, ou secondaire quand la gare en a
- * une. Tiré AVANT la chronologie de l'arrêt, parce que c'est le quai qui décide
+ * une. Lu AVANT la chronologie de l'arrêt, parce que c'est le quai qui décide
  * quelle mélodie sonnera, donc quelle fenêtre il faut lui laisser.
  */
 function randomizeStopPlatform(stationIndex: number): void {
-  const station = STATIONS[stationIndex];
-  const info = platformFor(station.jy, useStore.getState().loopDirection);
-  const chance =
-    info?.alternativePlatform != null ? (ALTERNATIVE_PLATFORM_CHANCE[station.jy] ?? 0) : 0;
-  runtime.useAlternativePlatform = drawAlternativePlatform(chance);
+  runtime.useAlternativePlatform = drawAlternativePlatform(
+    alternativePlatformChance(stationIndex),
+  );
+}
+
+/**
+ * Tire TOUT ce qu'un arrêt tire au sort, d'un seul tenant et une gare à
+ * l'avance.
+ *
+ * C'est la clé de voûte du monde partagé, et elle ne tenait pas. Les cinq
+ * tirages d'un arrêt se faisaient jusqu'ici à trois instants différents -
+ * l'écart d'arrêt en croisière, les retards de vantaux et la mélodie au
+ * freinage, le rapide en pleine station - si bien que le paquet de l'hôte
+ * n'était JAMAIS complet avant que le premier suiveur n'ait besoin de son
+ * premier nombre. `sampleStop` rendait `null`, rien ne partait, et le suiveur
+ * déroulait tout l'arrêt sur les valeurs de repli : une autre durée de dwell,
+ * donc une autre chronologie, donc une resynchronisation dure à chaque gare.
+ *
+ * Ici, tout est tiré à l'entrée en `depart` - une vingtaine de secondes avant
+ * que la première de ces valeurs ne serve. C'est la marge que le protocole
+ * revendique depuis le début (voir systems/net/protocol) et qu'il n'avait
+ * jamais eue. Les VALEURS ne sont pas appliquées pour autant : chaque site du
+ * cycle les redemande à son heure habituelle et retrouve la même, parce qu'un
+ * tirage nommé ne se tire qu'une fois par arrêt.
+ *
+ * Un suiveur, lui, ne tire rien du tout : il note qu'un arrêt commence et
+ * attend le paquet. S'il n'arrive pas, le manque se déclarera au premier
+ * besoin, comme avant - c'est précisément le signal qu'on veut garder.
+ */
+function prepareStopDraws(stationIndex: number, fresh = false): void {
+  // Une entrée sur la boucle repart de zéro quoi qu'il arrive : le numéro
+  // d'arrêt, lui, ne se remet pas à zéro, et sans ce coup de balai un
+  // rembarquement retomberait sur les tirages de la partie précédente.
+  if (fresh) beginStopDraws(-1);
+  // Le dwell À VENIR : `stopSequence` ne s'incrémente qu'à son entrée.
+  beginStopDraws(runtime.stopSequence + 1);
+  if (netRole() === 'follower') return;
+  drawBerthOffset(BERTH_OFFSET_MIN, BERTH_OFFSET_MAX);
+  drawDoorSeed();
+  drawAlternativePlatform(alternativePlatformChance(stationIndex));
+  drawMelodyJitter();
+  // Le créneau du rapide est la durée du dwell, qui n'est calculée qu'au
+  // freinage : on passe donc celle de l'arrêt précédent. Elle ne pèse que sur
+  // une PROBABILITÉ (`min(1, créneau / 120)`), jamais sur la chronologie, et
+  // deux arrêts consécutifs de la boucle durent à quelques secondes près la
+  // même chose.
+  prerollPassThrough(stationIndex, dwellDuration(stationIndex));
 }
 
 /**
@@ -811,6 +868,13 @@ function enterPhase(phase: Phase): void {
     resetMelodyDepartureGuard();
     // Le quai glisse désormais avec la distance réellement parcourue.
     runtime.departStartDist = runtime.distance;
+    // Et l'arrêt SUIVANT est tiré maintenant, alors qu'on n'a même pas quitté
+    // celui-ci : c'est la seule façon de laisser au paquet de l'hôte le temps
+    // de traverser avant que qui que ce soit n'en ait besoin. `index` n'a pas
+    // encore avancé - c'est `once('advance')` qui le fera à la première image
+    // de la phase - d'où le `nextStation` explicite.
+    const s = useStore.getState();
+    prepareStopDraws(nextStation(s.index, s.loopDirection));
   }
   if (phase === 'cruise') {
     scheduleNextRunSound(6);
@@ -1074,6 +1138,12 @@ export function randomizeEntry(stationIndex?: number, direction?: LoopDirection)
   // Pré-positionne l'index pour que dwellDuration() voie la bonne gare, et
   // tire sa chronologie : PHASE_ORDER a besoin de la durée du dwell.
   useStore.getState().setIndex(station);
+  // L'arrêt qu'on va vivre est nommé et tiré d'un coup, comme les suivants : ce
+  // qui suit ne fait plus que relire. (En entrant pile en `depart`, ces valeurs
+  // seront celles de la gare qu'on vient de quitter plutôt que de la suivante -
+  // seules deux d'entre elles dépendent de la gare, ce sont des probabilités, et
+  // un joueur qui rejoint un salon se fait de toute façon reposer le monde.)
+  prepareStopDraws(station, true);
   randomizeStopTimings(station);
   randomizeBerthOffset();
 
@@ -1301,11 +1371,12 @@ export function updateCycle(dt: number): void {
       // Nouveau tirage des retards de portes et de la chronologie de l'arrêt
       // pour cette gare - avant le dwell, dont il fixe la durée.
       once('door-timings', true, () => {
-        // Un nouvel arrêt : on oublie les tirages du précédent avant d'en
-        // faire de neufs. Chez un suiveur, c'est ce qui fait APPARAÎTRE le
-        // manque si le paquet de l'hôte n'arrive pas, au lieu de le laisser
-        // rejouer sans bruit la chronologie de la gare d'avant.
-        beginStopDraws();
+        // Les tirages de cet arrêt sont posés depuis le départ de la gare
+        // précédente (`prepareStopDraws`) : on ne fait ici que les RELIRE, à
+        // l'endroit où le cycle en a toujours eu besoin. Remettre la table à
+        // zéro ici - ce qu'on faisait - effaçait chez un suiveur le paquet
+        // qu'il venait justement de recevoir, et lui coûtait une
+        // resynchronisation dure à chaque gare.
         randomizeDoorTimings(doorRandom());
         randomizeStopTimings(s.index);
         // Et le tirage de l'incident : cet arrêt-ci verra-t-il une porte

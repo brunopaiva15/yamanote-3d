@@ -46,6 +46,7 @@ function pose(over: Partial<Pose> = {}): Pose {
     pitch: -0.4,
     seated: false,
     moving: true,
+    held: '',
     ...over,
   };
 }
@@ -67,6 +68,22 @@ test('une pose fait l’aller-retour au demi-centimètre près', () => {
   assert.equal(after.frame, before.frame);
   assert.equal(after.level, before.level);
   assert.equal(after.station, before.station);
+});
+
+test('l’objet tenu en main fait l’aller-retour', () => {
+  // Un identifiant de produit, et non une forme : le catalogue est le même des
+  // deux côtés du fil, et c'est lui qui porte la silhouette et l'étiquette.
+  const plein = decodePose(encodePose('moi', pose({ held: 'ocha' })));
+  assert.equal(plein.held, 'ocha');
+  const mains_vides = decodePose(encodePose('moi', pose()));
+  assert.equal(mains_vides.held, '');
+});
+
+test('un objet tenu invraisemblable est rejeté', () => {
+  const m = encodePose('moi', pose());
+  assert.equal(validPose({ ...m, hd: 'x'.repeat(200) }), false, 'identifiant à rallonge');
+  assert.equal(validPose({ ...m, hd: 7 }), false, 'identifiant qui n’est pas une chaîne');
+  assert.equal(validPose({ ...m, hd: undefined }), false, 'champ absent');
 });
 
 test('les booléens survivent dans les deux sens', () => {

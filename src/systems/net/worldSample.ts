@@ -27,7 +27,7 @@ import {
   type StopPayload,
   type TickPayload,
 } from './protocol';
-import { currentStopDraws, type StopDraws } from './worldDecisions';
+import { currentStopDraws, currentStopSeq, type StopDraws } from './worldDecisions';
 
 export function blockerBits(): number {
   const b = runtime.departureBlockers;
@@ -90,7 +90,8 @@ export function sampleStop(from: string): StopPayload | null {
     d.berthOffset === undefined ||
     d.melodyJitter === undefined ||
     d.doorSeed === undefined ||
-    d.alternativePlatform === undefined
+    d.alternativePlatform === undefined ||
+    d.passThrough === undefined
   ) {
     // L'arrêt n'a pas fini de tirer : on ne publie pas un paquet à trous, qui
     // ferait croire au suiveur qu'il a tout reçu alors qu'il lui manque de quoi
@@ -100,7 +101,11 @@ export function sampleStop(from: string): StopPayload | null {
   return {
     v: PROTOCOL_VERSION,
     from,
-    ss: runtime.stopSequence,
+    // Le numéro de l'arrêt DÉCRIT, et non celui qu'on vit : le paquet part une
+    // gare à l'avance, alors que `runtime.stopSequence` en est encore à
+    // l'arrêt précédent. L'estampiller du numéro courant faisait arriver chez
+    // les autres les tirages de la gare d'avant.
+    ss: currentStopSeq(),
     ix: useStore.getState().index,
     seed: d.doorSeed,
     berth: Math.round(d.berthOffset * 1000),
