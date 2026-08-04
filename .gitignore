@@ -42,3 +42,6 @@ work/
 # Échantillon CityGML synthétique : régénéré à la demande par
 # scripts/plateau/make-sample.mjs (graine fixe, sortie identique).
 data/plateau-sample/
+
+# Caches Python des générateurs audio (melodies-gen, piano-melody-gen, …).
+scripts/__pycache__/
