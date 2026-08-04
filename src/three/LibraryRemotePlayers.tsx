@@ -21,6 +21,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
+import { productById } from '../data/products';
 import { makeAppearance, type Appearance } from '../systems/appearance';
 import { bubbleFor } from '../systems/net/chat';
 import { peers } from '../systems/net/peers';
@@ -35,6 +36,7 @@ import {
   type CharacterClone,
   type CharacterTemplate,
 } from './characters/library';
+import { attachProps, tintHandBottle, updatePropRig, type PropRig } from './characters/props';
 
 /** Fondu entre deux clips (s). Même valeur que la foule du quai. */
 const FADE = 0.22;
@@ -43,20 +45,33 @@ interface Slot {
   /** Support stable dans la scène : le clone y est greffé, et remplacé. */
   holder: THREE.Group;
   clone: CharacterClone;
+  /**
+   * Lunettes, masque, sac - et surtout l'objet tenu en main. Le même gréement
+   * que les voyageurs de la rame et la foule du quai : un joueur distant n'a
+   * aucune raison d'être le seul à ne rien pouvoir tenir.
+   */
+  props: PropRig;
   /** Le pair que ce corps représente, et sa graine d'apparence. */
   id: string;
   seed: number;
   appearance: Appearance;
   currentKey: LogicalClip | '';
+  /** Le produit tenu à l'image précédente : un changement retitre la bouteille. */
+  heldId: string;
 }
 
 function buildBody(templates: CharacterTemplate[], seed: number): {
   clone: CharacterClone;
   appearance: Appearance;
+  props: PropRig;
 } {
   const appearance = makeAppearance(seed);
   const template = pickTemplate(templates, appearance, seed);
-  return { clone: cloneVariant(template, appearance), appearance };
+  const clone = cloneVariant(template, appearance);
+  // `bagProp === false` : ce modèle-là porte déjà son sac, on ne lui en met pas
+  // un second. Même règle que `LibraryPassengers`.
+  const props = attachProps(clone.wrap, appearance, template.variant.bagProp !== false);
+  return { clone, appearance, props };
 }
 
 export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest }) {
@@ -77,10 +92,12 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
         return {
           holder,
           clone: null as unknown as CharacterClone,
+          props: null as unknown as PropRig,
           id: '',
           seed: -1,
           appearance: makeAppearance(0),
           currentKey: '' as LogicalClip | '',
+          heldId: '',
         };
       }),
     [],
@@ -98,9 +115,11 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
         s.holder.remove(s.clone.wrap);
         disposeClone(s.clone);
         s.clone = null as unknown as CharacterClone;
+        s.props = null as unknown as PropRig;
         s.id = '';
         s.seed = -1;
         s.currentKey = '';
+        s.heldId = '';
       }
     };
   }, [templates, slots]);
@@ -145,9 +164,11 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
         const body = buildBody(templates, pair.avatar);
         s.clone = body.clone;
         s.appearance = body.appearance;
+        s.props = body.props;
         s.id = pair.id;
         s.seed = pair.avatar;
         s.currentKey = '';
+        s.heldId = '';
         s.holder.add(body.clone.wrap);
         if (!racine.children.includes(s.holder)) racine.add(s.holder);
       }
@@ -212,6 +233,26 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
       if (key === 'walk') mixer.timeScale = CONFIG.walkSpeed / walkClipSpeed;
       else mixer.timeScale = 1;
       mixer.update(dt);
+
+      // Ce qu'il a acheté au distributeur, dans sa main.
+      //
+      // L'objet suit l'OS de la main, comme chez les voyageurs de la rame : il
+      // pend le long du corps au repos et balance avec le clip de marche, sans
+      // qu'aucune pose de bras n'ait à être transmise. La bouteille est teintée
+      // de l'étiquette du produit - c'est ce qui la fait reconnaître de loin -
+      // et sert de silhouette à tout le rayon : à deux mètres, dans la main de
+      // quelqu'un d'autre, une canette et une bouteille se distinguent bien
+      // moins que le vert d'un thé et le rouge d'un cidre.
+      const product = pose.held ? productById(pose.held) : null;
+      if (pose.held !== s.heldId) {
+        s.heldId = pose.held;
+        if (product) tintHandBottle(s.props, product.tone);
+      }
+      // Le dernier argument dit que le bras n'est PAS posé : on ne transmet
+      // aucune pose de bras, le camarade joue un clip et rien d'autre. Sans
+      // lui, la bouteille suivait le poignet - qui pointe vers le sol quand le
+      // bras pend - et se présentait bouchon en bas.
+      updatePropRig(s.props, s.clone.bones, body, !pose.seated, product ? 'bottle' : null, 1, true);
 
       // Des pieds, à partir d'un œil : c'est la seule conversion que le rendu
       // fait sur une pose reçue.

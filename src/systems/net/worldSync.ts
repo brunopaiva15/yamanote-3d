@@ -111,8 +111,13 @@ function appliquerStop(m: StopPayload): void {
   // tirages de la gare précédente donnerait une rame qui s'arrête au bon
   // endroit pour la mauvaise gare, ce qui ne se remarque qu'aux portes
   // palières et ne se diagnostique jamais.
+  //
+  // Le cas NORMAL est `stopSequence + 1` : le paquet part au départ de la gare
+  // précédente, une vingtaine de secondes avant que son premier nombre ne
+  // serve. L'arrêt courant reste accepté, parce qu'un `hello` d'arrivant se
+  // répond avec le paquet en cours, dwell compris.
   if (m.ss !== runtime.stopSequence && m.ss !== runtime.stopSequence + 1) return;
-  applyStopDraws(stopToDraws(m));
+  applyStopDraws(stopToDraws(m), m.ss);
 }
 
 function appliquerEvent(m: EventPayload): void {
@@ -176,10 +181,14 @@ function publierTick(force = false): void {
 }
 
 function publierStop(force = false): void {
-  if (!force && stopPublie === runtime.stopSequence) return;
   const paquet = sampleStop(useRoom.getState().selfId);
   if (!paquet) return;
-  stopPublie = runtime.stopSequence;
+  // On se garde sur le numéro DU PAQUET, et non sur `runtime.stopSequence` : le
+  // paquet décrit l'arrêt à venir, pas celui qu'on vit. Comparé à l'arrêt
+  // courant, ce garde-fou laissait passer un envoi par arrêt - mais jamais le
+  // bon, et jamais au bon moment.
+  if (!force && stopPublie === paquet.ss) return;
+  stopPublie = paquet.ss;
   roomSend('stop', paquet as unknown as Record<string, unknown>);
 }
 

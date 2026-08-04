@@ -19,6 +19,7 @@ register('./fixtures/ts-resolve.mjs', import.meta.url);
 
 const {
   applyStopDraws,
+  currentStopSeq,
   beginStopDraws,
   clearDecisionDesync,
   currentStopDraws,
@@ -36,9 +37,24 @@ const {
   setNetRole,
 } = await import('../src/systems/net/worldDecisions.ts');
 
+/**
+ * Un compteur d'arrêts qui avance à chaque appel.
+ *
+ * Les tirages sont désormais NOMMÉS PAR ARRÊT : `beginStopDraws` ne remet la
+ * table à zéro que si le numéro change. C'est ce qui permet à un suiveur de
+ * recevoir le paquet vingt secondes à l'avance sans l'effacer lui-même à
+ * l'entrée de la phase où il va s'en servir - le défaut qui lui coûtait une
+ * resynchronisation dure à chaque gare.
+ */
+let arret = 0;
+function prochainArret(): number {
+  arret += 1;
+  return arret;
+}
+
 function neuf(): void {
   resetDecisions();
-  beginStopDraws();
+  beginStopDraws(prochainArret());
 }
 
 // --- Le mode par défaut : rien ne change ----------------------------------
@@ -48,7 +64,7 @@ test('sans salon, on est en solo et l’on tire comme avant', () => {
   assert.equal(netRole(), 'solo');
   const vus = new Set<number>();
   for (let i = 0; i < 200; i++) {
-    beginStopDraws();
+    beginStopDraws(prochainArret());
     vus.add(drawBerthOffset(0.03, 0.11));
   }
   // Deux cents arrêts consécutifs doivent donner deux cents écarts différents :
@@ -61,7 +77,7 @@ test('l’écart d’arrêt reste dans ses bornes, des deux côtés du repère',
   neuf();
   let negatifs = 0;
   for (let i = 0; i < 500; i++) {
-    beginStopDraws();
+    beginStopDraws(prochainArret());
     const v = drawBerthOffset(0.03, 0.11);
     assert.ok(Math.abs(v) >= 0.03 - 1e-9 && Math.abs(v) <= 0.11 + 1e-9, `${v}`);
     if (v < 0) negatifs++;
@@ -72,7 +88,7 @@ test('l’écart d’arrêt reste dans ses bornes, des deux côtés du repère',
 test('le décalage de mélodie reste dans [-1, 1]', () => {
   neuf();
   for (let i = 0; i < 300; i++) {
-    beginStopDraws();
+    beginStopDraws(prochainArret());
     const v = drawMelodyJitter();
     assert.ok(v >= -1 && v <= 1, `${v}`);
   }
@@ -83,7 +99,7 @@ test('le décalage de mélodie reste dans [-1, 1]', () => {
 test('l’hôte retient ce qu’il tire, pour pouvoir le publier', () => {
   neuf();
   setNetRole('host');
-  beginStopDraws();
+  beginStopDraws(prochainArret());
   const ecart = drawBerthOffset(0.03, 0.11);
   const gigue = drawMelodyJitter();
   const voie = drawAlternativePlatform(0.5);
@@ -96,11 +112,40 @@ test('l’hôte retient ce qu’il tire, pour pouvoir le publier', () => {
 test('un nouvel arrêt oublie les tirages du précédent', () => {
   neuf();
   setNetRole('host');
-  beginStopDraws();
+  beginStopDraws(prochainArret());
   drawBerthOffset(0.03, 0.11);
   assert.notEqual(currentStopDraws().berthOffset, undefined);
-  beginStopDraws();
+  beginStopDraws(prochainArret());
   assert.equal(currentStopDraws().berthOffset, undefined);
+});
+
+test('un tirage nommé ne se refait pas deux fois dans le même arrêt', () => {
+  // Ce qui autorise à tirer TOUT l'arrêt une gare à l'avance et à laisser
+  // malgré tout chaque valeur être redemandée à son heure, là où le cycle en a
+  // besoin. En solo, c'est aussi ce qui empêche `dwellDuration()` - relue à
+  // chaque image - de changer d'avis en cours d'arrêt.
+  neuf();
+  setNetRole('host');
+  beginStopDraws(prochainArret());
+  const ecart = drawBerthOffset(0.03, 0.11);
+  for (let i = 0; i < 50; i++) assert.equal(drawBerthOffset(0.03, 0.11), ecart);
+});
+
+test('reposer le même rôle ne touche à rien', () => {
+  // Le canal réélit l'hôte toutes les secondes et repose le rôle à chaque
+  // passage, même inchangé. Vider la table à cette occasion, c'était la vider
+  // une fois par seconde : l'hôte n'avait plus rien à publier, et le suiveur
+  // perdait le paquet qu'il venait de recevoir.
+  neuf();
+  setNetRole('host');
+  const seq = prochainArret();
+  beginStopDraws(seq);
+  const ecart = drawBerthOffset(0.03, 0.11);
+  assert.equal(currentStopSeq(), seq);
+  setNetRole('host');
+  setNetRole('host');
+  assert.equal(currentStopDraws().berthOffset, ecart);
+  assert.equal(currentStopSeq(), seq);
 });
 
 // --- Ce que le suiveur lit -------------------------------------------------
@@ -113,10 +158,29 @@ const PAQUET = {
   passThrough: true,
 };
 
+test('le MÊME arrêt, annoncé deux fois, n’oublie rien', () => {
+  // C'est LE défaut du multijoueur, et il ne se voyait qu'à deux. Le cycle
+  // annonce le début d'un arrêt à plusieurs endroits ; sans numéro, chaque
+  // annonce remettait la table à zéro - y compris chez un suiveur qui venait
+  // de recevoir le paquet de l'hôte, vingt secondes à l'avance, exactement
+  // comme le protocole le prévoit. Il tombait alors sur les replis neutres et
+  // se faisait resynchroniser durement à chaque gare : parole coupée, foule
+  // resemée, rapide annulé.
+  neuf();
+  setNetRole('follower');
+  const seq = prochainArret();
+  beginStopDraws(seq);
+  applyStopDraws(PAQUET, seq);
+  beginStopDraws(seq); // le cycle repasse par là, plus tard, pour le même arrêt
+  assert.equal(currentStopDraws().berthOffset, PAQUET.berthOffset);
+  assert.equal(drawBerthOffset(0.03, 0.11), PAQUET.berthOffset);
+  assert.equal(decisionsDesynced(), false, 'le paquet reçu a été effacé');
+});
+
 test('un suiveur rend exactement ce qu’on lui a envoyé', () => {
   neuf();
   setNetRole('follower');
-  applyStopDraws(PAQUET);
+  applyStopDraws(PAQUET, arret);
   assert.equal(drawBerthOffset(0.03, 0.11), PAQUET.berthOffset);
   assert.equal(drawMelodyJitter(), PAQUET.melodyJitter);
   assert.equal(drawAlternativePlatform(0.5), PAQUET.alternativePlatform);
@@ -130,7 +194,7 @@ test('un suiveur rend la MÊME valeur à chaque relecture', () => {
   // ferait s'ouvrir les portes deux fois.
   neuf();
   setNetRole('follower');
-  applyStopDraws(PAQUET);
+  applyStopDraws(PAQUET, arret);
   for (let i = 0; i < 50; i++) {
     assert.equal(drawBerthOffset(0.03, 0.11), PAQUET.berthOffset);
   }
@@ -139,7 +203,7 @@ test('un suiveur rend la MÊME valeur à chaque relecture', () => {
 test('un suiveur ignore la probabilité qu’on lui passe : seul l’hôte décide', () => {
   neuf();
   setNetRole('follower');
-  applyStopDraws({ ...PAQUET, alternativePlatform: true });
+  applyStopDraws({ ...PAQUET, alternativePlatform: true }, arret);
   // Chance nulle, et pourtant : la décision vient de l'hôte, pas du calcul local.
   assert.equal(drawAlternativePlatform(0), true);
 });
@@ -149,7 +213,7 @@ test('un suiveur ignore la probabilité qu’on lui passe : seul l’hôte déci
 test('un suiveur privé de valeur rend le repli NEUTRE et lève le drapeau', () => {
   neuf();
   setNetRole('follower');
-  beginStopDraws(); // nouvel arrêt, et rien n'est arrivé
+  beginStopDraws(prochainArret()); // nouvel arrêt, et rien n'est arrivé
 
   assert.equal(decisionsDesynced(), false);
   assert.equal(drawBerthOffset(0.03, 0.11), 0, 'une rame pile sur son repère');
@@ -176,7 +240,7 @@ test('le repli d’un suiveur n’est jamais aléatoire', () => {
   setNetRole('follower');
   const vus = new Set<number>();
   for (let i = 0; i < 100; i++) {
-    beginStopDraws();
+    beginStopDraws(prochainArret());
     vus.add(drawBerthOffset(0.03, 0.11));
   }
   assert.equal(vus.size, 1, 'le repli varie : deux suiveurs ne se ressembleraient pas');
@@ -185,10 +249,10 @@ test('le repli d’un suiveur n’est jamais aléatoire', () => {
 test('recevoir un paquet efface le drapeau', () => {
   neuf();
   setNetRole('follower');
-  beginStopDraws();
+  beginStopDraws(prochainArret());
   drawBerthOffset(0.03, 0.11);
   assert.equal(decisionsDesynced(), true);
-  applyStopDraws(PAQUET);
+  applyStopDraws(PAQUET, arret);
   assert.equal(decisionsDesynced(), false);
 });
 
@@ -198,7 +262,7 @@ test('changer de rôle repart d’une page blanche', () => {
   // d'accord avec un hôte à qui il n'a rien demandé.
   neuf();
   setNetRole('host');
-  beginStopDraws();
+  beginStopDraws(prochainArret());
   drawBerthOffset(0.03, 0.11);
   setNetRole('follower');
   assert.equal(currentStopDraws().berthOffset, undefined);
@@ -236,9 +300,9 @@ test('en solo et chez l’hôte, les incidents gardent leurs bornes', () => {
 test('une même graine donne exactement la même suite de retards', () => {
   neuf();
   setNetRole('follower');
-  applyStopDraws(PAQUET);
+  applyStopDraws(PAQUET, arret);
   const a = Array.from({ length: 38 }, () => doorRandom()());
-  applyStopDraws(PAQUET);
+  applyStopDraws(PAQUET, arret);
   const b = Array.from({ length: 38 }, () => doorRandom()());
   assert.deepEqual(a, b);
 });
@@ -246,10 +310,10 @@ test('une même graine donne exactement la même suite de retards', () => {
 test('deux graines différentes donnent deux suites différentes', () => {
   neuf();
   setNetRole('follower');
-  applyStopDraws(PAQUET);
+  applyStopDraws(PAQUET, arret);
   const a = doorRandom();
   const suiteA = Array.from({ length: 10 }, () => a());
-  applyStopDraws({ ...PAQUET, doorSeed: 0xdeadbeef });
+  applyStopDraws({ ...PAQUET, doorSeed: 0xdeadbeef }, arret);
   const b = doorRandom();
   const suiteB = Array.from({ length: 10 }, () => b());
   assert.notDeepEqual(suiteA, suiteB);
@@ -258,7 +322,7 @@ test('deux graines différentes donnent deux suites différentes', () => {
 test('un générateur semé déroule bien trente-huit nombres distincts', () => {
   neuf();
   setNetRole('follower');
-  applyStopDraws(PAQUET);
+  applyStopDraws(PAQUET, arret);
   const r = doorRandom();
   const tirages = Array.from({ length: 38 }, () => r());
   assert.equal(new Set(tirages).size, 38);
@@ -274,7 +338,7 @@ test('la rame qu’on attend sur un quai ne passe pas par le fil', () => {
   // strictement rien.
   neuf();
   setNetRole('follower');
-  beginStopDraws();
+  beginStopDraws(prochainArret());
   const vus = new Set<number>();
   for (let i = 0; i < 100; i++) vus.add(localBerthOffset(0.03, 0.11));
   assert.ok(vus.size > 90, 'le tirage local devrait varier');

@@ -43,7 +43,7 @@ import {
   disruptionExtraSeconds, disruptionHasKnownEta, lineDisruption, nextTrainBlocked,
   resolveLineDisruption, updateLineDisruption,
 } from './lineDisruption';
-import { rollPassThrough, startPassThrough } from './passingTrain';
+import { rollLocalPassThrough, startPassThrough } from './passingTrain';
 import { exchangePassengers, seedPassengers } from './passengers';
 import { crowdArrive, crowdDisperse, crowdPresentCount, crowdTarget } from './platformCrowd';
 import {
@@ -358,7 +358,7 @@ function beginClear(index: number): void {
   const date = runtime.tokyoDate;
   const seed = `${runtime.stopSequence}:${index}:${direction}:${date.year}-${date.month}-${date.day}`;
   beginPlatformDisruption({ direction, stationIndex: index, seed, clockMin: runtime.clockMin, stopSequence: runtime.stopSequence });
-  passPending = lineDisruption.phase === 'inactive' && rollPassThrough(index, HEADWAY_GAP + PASS_HEADWAY_EXTRA);
+  passPending = lineDisruption.phase === 'inactive' && rollLocalPassThrough(index, HEADWAY_GAP + PASS_HEADWAY_EXTRA);
   baseHeadway = HEADWAY_GAP + (passPending ? PASS_HEADWAY_EXTRA : 0);
   effectiveReleaseAt = baseHeadway + disruptionExtraSeconds(direction);
   delayAnnounced = false;
