@@ -1836,11 +1836,22 @@ qu'elles ont donné, et qui vaut d'être écrit avant la suite :
   Exit, on l'a cuite à part pour en avoir le cœur net.
 
   **La leçon est pour le balayage lui-même :** une capture n'est une preuve que
-  si le point de vue en est une. `station-views` pose l'œil sur le RÉSEAU
-  (`__probeInterior`) sans vérifier qu'il a du champ devant lui — il dit déjà
-  quand une vue n'a « aucun sol sous le point de vue », il ne dit pas encore
-  quand elle a un mur à bout portant. À corriger avant de juger les douze gares
-  qui restent, sous peine de rapporter des défauts qui n'existent pas ;
+  si le point de vue en est une. `station-views` disait déjà quand une vue n'a
+  « aucun sol sous le point de vue » ; il dit maintenant quand elle a un mur à
+  bout portant, ce qui est la même question posée à l'horizontale. Le contrôle
+  passe APRÈS la capture — le lancer de rayon traverse la scène entière, et posé
+  avant il retardait assez l'image pour faire expirer celle de Tokyo. Un
+  contrôle ne doit jamais coûter la mesure qu'il contrôle.
+
+  **Le recensement sur les trente : quatre vues sans valeur sur cent
+  cinquante.** Deux tenaient à la VISÉE — la vue de zone libre cadrait un COIN
+  du rectangle, donc un mur en diagonale ; elle suit désormais la plus grande
+  dimension de la pièce, et Yūrakuchō comme Ebisu sont dégagées. Les deux
+  autres tiennent à la POSE, et c'est un vrai constat : à Shinjuku (zone libre,
+  0,20 m) et à Yūrakuchō (zone payante, 0,44 m), **quelque chose se tient au
+  milieu de la pièce**. C'est la limite déjà écrite au `SCOPE` §4 — le mobilier
+  se range contre la paroi qu'il repère sur x, et les halls qui se développent
+  en X reçoivent leur devanture en travers. La phase 34 en hérite ;
 - **les devantures sont des aplats.** Tabata, Sugamo, Yūrakuchō : un panneau
   gris-bleu, un bandeau jaune, le mot SHOP. Ce n'est pas un défaut — c'est très
   exactement le sujet de la phase 34, et le balayage confirme qu'elle est bien

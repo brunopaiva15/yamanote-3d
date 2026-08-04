@@ -430,7 +430,20 @@ export function installStationProbe(
         bay.cross === 'z' ? [bay.x, front] : [front, bay.z],
       );
     }
-    if (free) shot('04-zone-libre', mid(free.rect), [free.rect.x1, free.rect.z1]);
+    if (free) {
+      // ON VISE LE LONG DE LA PIÈCE, ET NON SON COIN.
+      //
+      // Cette vue-ci cadrait `[x1, z1]` — un angle du rectangle —, ce qui
+      // revient à regarder un mur en diagonale : la moitié de l'image est un
+      // aplat de paroi, et ce qu'on aperçoit de biais derrière se lit de
+      // travers. On a cru à une bannière de sortie vide à Yūrakuchō pour cette
+      // seule raison. Le long de la plus grande dimension, on a toute la pièce
+      // devant soi, ce qui est ce qu'une vue de zone libre doit montrer.
+      const r = free.rect;
+      const [cx, cz] = mid(r);
+      const alongX = r.x1 - r.x0 >= r.z1 - r.z0;
+      shot('04-zone-libre', [cx, cz], alongX ? [r.x1, cz] : [cx, r.z1]);
+    }
     if (free && mouth) {
       const r = free.rect;
       const to: [number, number] = mouth.side === 'z1' ? [mouth.at, r.z1 + 2]
