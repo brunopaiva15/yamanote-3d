@@ -349,3 +349,53 @@ visé**, VOICEVOX non. Les phrases porteuses des annonces de bord sont fixes et
 donc greffables une fois pour toutes ; les trente noms de gare, eux, ne le sont
 pas. Poser la greffe SUR une voix VOICEVOX combine les deux — un registre calé
 avant synthèse, et la mélodie de la prise par-dessus.
+
+
+## Conclusion des six tours
+
+104 extraits notés à l'aveugle. Le dernier tour portait deux paires de
+DOUBLONS — le même fichier proposé deux fois — pour mesurer la stabilité de
+l'échelle :
+
+| Paire | Notes |
+| --- | --- |
+| X01 / X06 (fichiers identiques) | 1 et 2 |
+| X03 / X07 (fichiers identiques) | 2 et 2 |
+
+Un doublon sur deux dérive d'un point, et **tout le signal tient sur un point**
+— l'ensemble des variantes est noté 1 ou 2. L'échelle ne départage donc plus
+rien, non par faute du jugement mais parce que les variantes sont réellement au
+même endroit : loin de la prise.
+
+| Famille | Variantes | Plage |
+| --- | --- | --- |
+| Kokoro, réglages | 24 | 1–3 |
+| Kokoro, anglais | 15 | 1–2 |
+| Kokoro, 19 voix nues | 21 | 1–2 |
+| VOICEVOX calé | 12 | 1–3 |
+| Kokoro + greffe de prosodie | 12 | 1–4, non reproduit |
+| VOICEVOX + greffe | 13 | 1 |
+| Greffe corrigée + doublons | 7 | 1–2 |
+
+Le 4/5 de la greffe n'a pas tenu : le même fichier, reproposé au tour suivant,
+a été noté 1 (md5 identique, corrélation 1,00000). Il faut le lire comme du
+bruit, pas comme un résultat.
+
+**Ce qui manque n'est ni un réglage ni un moteur : c'est une voix enregistrée.**
+Toutes les synthèses atteignables — libres, locales, avec ou sans greffe de
+prosodie — occupent la même plage basse. `scripts/voice-lab/cahier.py` produit
+donc `docs/CAHIER_VOIX.md` : les 476 lignes du jeu groupées par rôle vocal,
+avec les consignes de diction tirées des mesures. Le même document sert de
+brief à une comédienne de doublage ou d'entrée à un service de synthèse
+commercial dont les voix japonaises acceptent ces consignes en SSML.
+
+Ce que l'analyse laisse d'utilisable quel que soit le chemin retenu :
+
+- les cibles chiffrées, mesurées et non choisies (236 Hz, durées 0,51 / 0,67 /
+  1,57 s, silences 0,32-0,43 s, nom de gare plus brillant et plus bas que sa
+  phrase porteuse) ;
+- `rapport.py`, qui vérifie en une commande à quelle distance tombe n'importe
+  quelle prise, synthétique ou humaine ;
+- `notes.py` et `depouille.py`, qui savent monter un test d'écoute à l'aveugle
+  avec doublons de contrôle — à réutiliser tel quel pour départager des prises
+  réelles, où l'écart à juger sera enfin plus large que le bruit de l'échelle.
