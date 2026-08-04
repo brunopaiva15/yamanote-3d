@@ -87,3 +87,49 @@ test('`.hud-swap` masque par visibility, et surtout pas par display', () => {
   const pile = css.slice(css.indexOf('.hud-swap > *'));
   assert.ok(pile.slice(0, pile.indexOf('}')).includes('grid-area: 1 / 1'));
 });
+
+// --- Et la remise en page qui ne venait pas des libellés --------------------
+//
+// Les gardes ci-dessus règlent le cas d'un bouton qui change de largeur. Il en
+// restait un autre, bien plus grossier, et c'est celui que deux captures d'un
+// vrai téléphone ont montré : la barre ne se recentrait pas, elle changeait
+// carrément de CONTENU.
+//
+// `touch` démarrait à `false` et ne passait à `true` qu'au premier
+// `touchstart`. Or « S'asseoir » n'est dans la barre QU'AU CLAVIER - au doigt,
+// c'est le gros bouton du pouce, avec le joystick. Le tout premier appui du
+// joueur, y compris sur un bouton du HUD, retirait donc une commande de la
+// barre et en faisait apparaître deux ailleurs : les rangées se recomposaient,
+// et le bouton qu'on visait n'était plus là où on l'avait vu.
+//
+// La question se pose maintenant AVANT le premier contact.
+
+test('le mode tactile est décidé avant le premier contact, pas à son occasion', () => {
+  const store = read('src/store.ts');
+  assert.ok(
+    /touch:\s*coarsePointer\(\)/.test(store),
+    'un `touch: false` en dur ramène la remise en page au premier appui',
+  );
+});
+
+test('la détection paresseuse reste, mais seulement en rattrapage', () => {
+  // Elle a encore un rôle : le portable à écran tactile, dont le pointeur
+  // principal est le trackpad, démarre à juste titre au clavier et ne doit
+  // basculer que s'il touche vraiment l'écran. La retirer le priverait des
+  // contrôles tactiles pour toujours.
+  const controls = read('src/ui/Controls.tsx');
+  assert.ok(controls.includes("addEventListener('touchstart'"));
+});
+
+test('la détection interroge le pointeur PRINCIPAL, pas la présence d’un écran tactile', () => {
+  // `navigator.maxTouchPoints` vaut aussi pour le portable à écran tactile :
+  // s'en servir l'enverrait au joystick sans qu'il ait rien demandé.
+  const browser = read('src/systems/browser.ts');
+  const bloc = browser.slice(browser.indexOf('export function coarsePointer'));
+  const corps = bloc.slice(0, bloc.indexOf('\n}'));
+  assert.ok(corps.includes('(pointer: coarse)'));
+  assert.ok(!corps.includes('maxTouchPoints'));
+  // Et hors navigateur - les tests tournent sous node - elle doit répondre
+  // sans lever : le store l'appelle à son ouverture, donc à l'import.
+  assert.ok(corps.includes("typeof window === 'undefined'"));
+});

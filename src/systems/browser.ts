@@ -26,6 +26,37 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /**
+ * Le pointeur principal de cet appareil est-il un DOIGT ?
+ *
+ * Posée AVANT le premier contact, et c'est tout l'intérêt.
+ *
+ * L'interface tactile ne se détectait jusqu'ici qu'au premier `touchstart`
+ * (`ui/Controls`). Sur un téléphone, la conséquence était voyante et a été
+ * rapportée telle quelle : « le HUD, quand je clique dessus, il change
+ * d'emplacement ». Le premier appui - sur n'importe quoi, y compris sur un
+ * bouton du HUD - faisait apparaître le joystick et le gros bouton
+ * « s'asseoir » du pouce, et disparaître le « s'asseoir » de la barre, qui ne
+ * s'affiche qu'au clavier. La barre du bas se remettait donc entièrement en
+ * page sous le doigt : les commandes changeaient de rangée, et celle qu'on
+ * visait n'était plus là où on l'avait vue.
+ *
+ * `(pointer: coarse)` interroge le pointeur PRINCIPAL, et c'est exactement la
+ * bonne question. Un portable à écran tactile a un trackpad pour pointeur
+ * principal : il reste au clavier, comme aujourd'hui, et bascule seulement si
+ * son propriétaire touche vraiment l'écran - la détection paresseuse de
+ * `ui/Controls` reste en place pour lui. Un téléphone, lui, est reconnu dès la
+ * première image, et plus rien ne bouge ensuite.
+ *
+ * `navigator.maxTouchPoints` ne conviendrait pas : il vaut aussi pour le
+ * portable à écran tactile, qu'on enverrait alors au joystick sans qu'il ait
+ * rien demandé.
+ */
+export function coarsePointer(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(pointer: coarse)').matches;
+}
+
+/**
  * Le plein écran existe-t-il ici ?
  *
  * Il n'existe pas partout : iPhone ne l'expose pas du tout, et une page en

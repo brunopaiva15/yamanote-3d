@@ -9,6 +9,7 @@ import { DOOR_SIDE } from './data/stations';
 import { applyDocumentLang } from './i18n/documentMeta';
 import { initialLang, storeLang, type Lang } from './i18n/strings';
 import { applyModeToUrl, initialMode, storeMode, type GameMode } from './systems/gameMode';
+import { coarsePointer } from './systems/browser';
 
 export type Phase = 'cruise' | 'brake' | 'dwell' | 'depart';
 
@@ -162,7 +163,9 @@ export const useStore = create<AppState>((set) => ({
   loopDirection: 'inner',
   seated: false,
   onPlatform: false,
-  touch: false,
+  // Décidé AVANT le premier contact : sinon la barre du HUD se remet en page
+  // sous le doigt au premier appui (voir `coarsePointer`).
+  touch: coarsePointer(),
   lang: START_LANG,
   mode: START_MODE,
   // Dans la version sonore, ils sont l'image : allumés d'office. Dans

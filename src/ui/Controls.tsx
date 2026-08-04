@@ -23,6 +23,14 @@ export function Controls() {
   const knobRef = useRef<HTMLDivElement>(null);
   const pointerId = useRef<number | null>(null);
 
+  // Le RATTRAPAGE, et plus la détection principale.
+  //
+  // Un téléphone est reconnu dès la première image par `coarsePointer()`, qui
+  // pose `touch` à l'ouverture du store : c'est ce qui empêche la barre du HUD
+  // de se remettre en page sous le doigt au premier appui. Il reste le cas du
+  // portable à écran tactile, dont le pointeur principal est le trackpad : il
+  // démarre au clavier, à juste titre, et ne bascule que s'il touche vraiment
+  // l'écran. C'est pour lui, et pour lui seul, que cet écouteur existe encore.
   useEffect(() => {
     const detect = () => setTouch(true);
     window.addEventListener('touchstart', detect, { once: true, passive: true });
