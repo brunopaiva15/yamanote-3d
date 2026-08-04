@@ -131,27 +131,36 @@ Even, clear timbre with a medium-low pitch, delivering slowly and deliberately
 with flat controlled intonation and very clear enunciation.
 ```
 
-## Vérifier le résultat
+## Corriger : exporter, mesurer, retoucher UN mot
 
-Une fois la voix retenue, générer le texte de prévisualisation et le passer au
-banc de mesure :
+« Ça ne ressemble pas » ne se corrige pas — il faut savoir sur quel axe ça
+s'écarte. D'où la boucle : exporter l'aperçu de la voix candidate en MP3, puis
 
 ```bash
-python scripts/voice-lab/rapport.py <extrait.mp3> /tmp/textes.json /tmp/essai
+python scripts/voice-lab/verdict.py essai.mp3
 ```
 
-Les cibles, et le correctif si l'on s'en écarte :
+qui compare aux relevés de la voix réelle et sort la liste des retouches,
+la plus grosse dérive d'abord. **Une seule à la fois** : deux mots changés
+ensemble, et on ne sait plus lequel a agi.
 
-| Si | Corriger la description |
-| --- | --- |
-| F0 loin sous 237 Hz | remplacer *medium-high pitch* par *high pitch*, ou baisser l'âge |
-| F0 loin au-dessus | *medium pitch*, ou monter la tranche d'âge |
-| centroïde bien sous 900 Hz | insister : *very bright, forward, crisp*, retirer tout *warm* |
-| étendue sous 8 demi-tons | ajouter *with clear melodic movement across the phrase* |
-| étendue au-dessus de 14 | ajouter *restrained, understated intonation* |
-| débit loin de 6,9 pics/s | jouer sur *steady* / *unhurried* / *brisk* |
+Le script mesure le candidat par le même chemin que la référence — même
+découpage en segments, même détecteur de hauteur, même définition du débit.
+Comparer à des chiffres relevés ailleurs, avec d'autres outils, ne dirait rien.
 
-Le réglage de débit fin ne se fait pas dans la description : ElevenLabs n'expose
-ni hauteur ni vitesse. Les silences, eux, sont posés par le générateur
-(`scripts/voice-lab/elevenlabs.py`) sous forme de balises `<break>` aux durées
-mesurées, et ne dépendent donc pas de la voix choisie.
+## La limite de l'exercice
+
+Voice Design **fabrique une voix, il n'en retrouve pas une**. Un candidat
+conforme sur les cinq axes peut rester reconnaissablement quelqu'un d'autre :
+la ressemblance perçue tient surtout à l'enveloppe spectrale fine, que cinq
+nombres ne résument pas. `verdict.py` le dit lui-même quand tout est dans la
+tolérance, plutôt que de laisser chercher un meilleur adjectif qui n'existe pas.
+
+À ce stade il ne reste que deux issues honnêtes : retenir la voix obtenue pour
+ce qu'elle est, ou passer par une voix clonée depuis sa propre prise — avec la
+réserve déjà posée, l'identité vocale de la comédienne ne nous appartenant pas.
+
+Deux réglages échappent de toute façon à la description : ElevenLabs n'expose
+ni la hauteur ni la vitesse. Les silences, eux, ne dépendent pas de la voix
+choisie — `scripts/voice-lab/elevenlabs.py` les pose en balises `<break>` aux
+durées mesurées.
