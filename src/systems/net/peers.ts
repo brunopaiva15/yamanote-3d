@@ -32,6 +32,14 @@ export interface Peer {
   joinedAt: number;
   /** Les dernières poses reçues, triées : le tampon d'interpolation. */
   poses: PoseSample[];
+  /**
+   * Ce qu'il faut ajouter à SON horloge pour obtenir la NÔTRE (ms).
+   *
+   * `null` tant qu'on ne l'a jamais entendu. Voir `receivePose` : c'est la
+   * pièce sans laquelle deux navigateurs dont les horloges ne sont pas d'accord
+   * ne se voient tout simplement pas.
+   */
+  clockOffset: number | null;
   /** Dernier message reçu de lui, quelle qu'en soit la nature (ms). */
   lastSeen: number;
   /**
@@ -73,17 +81,74 @@ export function makePeer(
     attached,
     joinedAt,
     poses: [],
+    clockOffset: null,
     lastSeen: now,
     fade: 0,
   };
 }
 
-/** Range une pose reçue dans le tampon de son émetteur. */
+/**
+ * Écart d'horloge au-delà duquel on se réaligne vers le HAUT (ms).
+ *
+ * Le recalage vers le bas est permanent (voir `receivePose`) : c'est ainsi
+ * qu'on converge vers le vrai décalage. Vers le haut, en revanche, il faut se
+ * méfier - un unique paquet en retard n'est pas une horloge qui a bougé. Trente
+ * secondes ne s'expliquent plus par le réseau : c'est une machine qui sort de
+ * veille, une correction NTP, un fuseau qu'on vient de changer. Là, on repart
+ * de zéro plutôt que de traîner un décalage devenu faux.
+ */
+const CLOCK_REANCHOR_MS = 30_000;
+
+/**
+ * Range une pose reçue dans le tampon de son émetteur, RAMENÉE À NOTRE HORLOGE.
+ *
+ * C'est la subtilité de tout ce module, et son absence a coûté cher : une pose
+ * porte l'horodatage de l'ÉMETTEUR (`Date.now()` de sa machine), alors que tout
+ * ce qui la relit ensuite raisonne avec la nôtre - `peerWorldPose` échantillonne
+ * à `now - INTERP_DELAY_MS`, `isStale` compare à `now`. Deux navigateurs dont
+ * les horloges diffèrent d'une seconde - ce qui est parfaitement ordinaire, rien
+ * ne garantit qu'un téléphone et un portable soient d'accord à la milliseconde -
+ * et le tampon paraissait vieux d'une seconde en permanence : le pair était
+ * déclaré muet dès son premier message, son fondu ne décollait jamais, et son
+ * avatar n'était JAMAIS dessiné. Le salon disait pourtant « 2 voyageurs », le
+ * tchat marchait, le monde était synchronisé. On voyait le nom de son ami, on ne
+ * voyait pas son ami - et le défaut était à sens unique : celui dont l'horloge
+ * était en avance voyait l'autre très bien.
+ *
+ * Le décalage s'estime par le MINIMUM de `now - pose.t` observé. La gigue du
+ * réseau ne fait qu'ajouter du retard, jamais en retirer : le plus petit écart
+ * jamais vu est donc le moins pollué, et il s'affine tout seul à mesure qu'un
+ * paquet passe plus vite que ses prédécesseurs. On ne calcule surtout pas une
+ * moyenne, qui suivrait la congestion au lieu de l'horloge.
+ *
+ * Les échantillons DÉJÀ rangés sont décalés d'autant quand l'estimation change :
+ * un tampon dont les entrées seraient converties avec deux décalages différents
+ * ferait des bonds à la lecture.
+ */
 export function receivePose(id: string, pose: Pose, now: number): void {
   const peer = peers.get(id);
   if (!peer) return;
   peer.lastSeen = now;
-  pushSample(peer.poses, { ...pose });
+
+  const brut = now - pose.t;
+  const connu = peer.clockOffset;
+  let decalage = connu ?? brut;
+  if (connu !== null && brut < connu) {
+    // On vient de mieux mesurer le MÊME décalage : les échantillons déjà rangés
+    // portaient donc tous la même erreur, et on la leur retire aussi.
+    for (const sample of peer.poses) sample.t += brut - connu;
+    decalage = brut;
+  } else if (connu !== null && brut > connu + CLOCK_REANCHOR_MS) {
+    // Son horloge a bougé, la nôtre aussi peut-être. Les échantillons déjà
+    // rangés, eux, ne bougent PAS : ils sont sur notre horloge depuis leur
+    // arrivée, et cette conversion-là était juste. Les décaler du saut les
+    // enverrait une minute dans l'avenir - ils masqueraient la pose qui arrive
+    // et le pair se figerait sur une position périmée.
+    decalage = brut;
+  }
+  peer.clockOffset = decalage;
+
+  pushSample(peer.poses, { ...pose, t: pose.t + decalage });
 }
 
 /**

@@ -128,6 +128,92 @@ test('le fondu ne sort jamais de [0, 1]', () => {
   }
 });
 
+// --- Les horloges, qui ne sont pas d'accord ---------------------------------
+//
+// Le défaut le plus coûteux de tout le multijoueur, et le plus silencieux : une
+// pose porte l'horodatage de la machine qui l'émet, et tout ce qui la relit
+// raisonne avec la nôtre. Rien n'oblige deux navigateurs à être d'accord à la
+// milliseconde. Quand celui d'en face retardait, ses poses semblaient périmées
+// dès leur arrivée : son avatar n'était jamais dessiné, alors que son nom
+// figurait au salon et que son tchat s'affichait.
+
+test('un ami dont l’horloge retarde est quand même visible', () => {
+  clearPeers();
+  syncRoster([annonce('a', 1)], 'moi', 0);
+  // Son horloge a cinq secondes de retard sur la nôtre. Il émet à 8 Hz.
+  const RETARD = -5_000;
+  for (let i = 0; i < 8; i++) {
+    const now = i * 125;
+    receivePose('a', pose(now + RETARD, i), now);
+  }
+  // Il vient de parler : rien ne doit être périmé.
+  const pair = peers.get('a')!;
+  updatePeers(1 / 60, 900);
+  assert.ok(pair.fade > 0, 'l’avatar reste invisible : le décalage d’horloge n’est pas rattrapé');
+  for (let i = 0; i < 60; i++) updatePeers(1 / 60, 900);
+  assert.equal(pair.fade, 1);
+});
+
+test('un ami dont l’horloge avance est visible lui aussi', () => {
+  clearPeers();
+  syncRoster([annonce('a', 1)], 'moi', 0);
+  const AVANCE = 5_000;
+  for (let i = 0; i < 8; i++) {
+    const now = i * 125;
+    receivePose('a', pose(now + AVANCE, i), now);
+  }
+  for (let i = 0; i < 60; i++) updatePeers(1 / 60, 900);
+  assert.equal(peers.get('a')?.fade, 1);
+});
+
+test('le décalage ramène les poses sur NOTRE horloge, sans toucher aux écarts', () => {
+  // Ce que le tampon garde doit se lire avec nos propres instants, et les
+  // intervalles de l'émetteur doivent survivre intacts : c'est d'eux que
+  // l'interpolation tire sa régularité.
+  clearPeers();
+  syncRoster([annonce('a', 1)], 'moi', 0);
+  receivePose('a', pose(1_000_000, 0), 100);
+  receivePose('a', pose(1_000_125, 1), 225);
+  receivePose('a', pose(1_000_250, 2), 350);
+  const instants = peers.get('a')!.poses.map((p) => p.t);
+  assert.deepEqual(instants, [100, 225, 350]);
+});
+
+test('le décalage s’affine sur le paquet le plus rapide, tampon compris', () => {
+  // La gigue ne fait qu'AJOUTER du retard : le plus petit écart observé est le
+  // moins pollué. Quand l'estimation s'améliore, les échantillons déjà rangés
+  // doivent suivre - un tampon converti avec deux décalages différents ferait
+  // sauter l'avatar.
+  clearPeers();
+  syncRoster([annonce('a', 1)], 'moi', 0);
+  // Première pose : 300 ms de transit, dont on ne sait rien encore.
+  receivePose('a', pose(0, 0), 300);
+  // La suivante passe en 50 ms : voilà la meilleure estimation.
+  receivePose('a', pose(125, 1), 175);
+  const instants = peers.get('a')!.poses.map((p) => p.t);
+  assert.deepEqual(instants, [50, 175], 'le tampon n’a pas suivi le nouveau décalage');
+  const buf = peers.get('a')!.poses;
+  for (let i = 1; i < buf.length; i++) {
+    assert.ok(buf[i].t > buf[i - 1].t, 'le tampon n’est plus trié');
+  }
+});
+
+test('une horloge qui saute franchement fait repartir l’estimation', () => {
+  // Machine qui sort de veille, correction NTP, fuseau changé : au-delà d'une
+  // demi-minute, ce n'est plus du réseau. On se réaligne plutôt que de traîner
+  // un décalage devenu faux - sans quoi le pair resterait invisible pour de bon.
+  clearPeers();
+  syncRoster([annonce('a', 1)], 'moi', 0);
+  receivePose('a', pose(0, 0), 0);
+  // Son horloge recule d'une minute : sans réalignement, ses poses paraîtraient
+  // vieilles d'une minute et il s'effacerait.
+  receivePose('a', pose(1_000 - 60_000, 1), 1_000);
+  const pair = peers.get('a')!;
+  assert.equal(pair.poses[pair.poses.length - 1].t, 1_000);
+  for (let i = 0; i < 60; i++) updatePeers(1 / 60, 1_100);
+  assert.equal(pair.fade, 1);
+});
+
 test('la table des dernières nouvelles alimente l’élection', () => {
   clearPeers();
   syncRoster([annonce('a', 1), annonce('b', 2)], 'moi', 100);
