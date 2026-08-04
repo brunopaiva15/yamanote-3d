@@ -1,60 +1,54 @@
 #!/usr/bin/env python3
-"""Grave la 発車メロディ des deux branchements principaux (Inner / Outer).
+"""Grave la 発車メロディ PIANO des deux branchements principaux (Inner / Outer).
 
-Pourquoi un second générateur à côté de scripts/melodies-gen.py : celui-là ne
-sait faire qu'une voix à la fois, sans étouffoirs ni pédale. Un piano en demande
-d'autres - cordes à l'unisson, inharmonicité, étouffoirs, pédale, résonance
-sympathique, deux mains d'équilibre différent. Les deux scripts restent donc
-séparés ; seul le format de sortie est commun (MP3 stéréo 44,1 kHz, 160 kb/s)
-pour que les vingt clips sonnent au même niveau sur le quai.
+Le son vient d'un VRAI piano enregistré, pas d'une synthèse. Ça n'a pas été le
+premier choix, et l'histoire vaut d'être écrite ici parce qu'elle se rejouera :
+ce script a d'abord synthétisé le piano par addition de partiels, avec cordes à
+l'unisson, inharmonicité, étouffoirs, pédale, résonance sympathique et table
+d'harmonie. Le modèle était juste et le résultat ne sonnait toujours pas comme
+un piano. C'est le plafond de la méthode, pas un défaut de réglage : le timbre
+d'un piano tient à la mécanique du marteau sur la corde, au couplage par le
+chevalet et au rayonnement de la caisse - rien de tout cela ne se reconstruit en
+additionnant des sinusoïdes. On échantillonne, ou on n'a pas de piano.
 
-UNE partition, DEUX interprétations. `SCORE_RIGHT`, `SCORE_LEFT` et `PEDAL`
-sont uniques et partagés : hauteurs, octaves, durées, silences et positions
+La partition part donc en MIDI et c'est un échantillonneur qui la joue :
+
+    partition (ci-dessous) -> MIDI -> fluidsynth + FluidR3_GM -> finition numpy
+
+Tout le travail musical est conservé - il s'exprime en MIDI sans rien perdre :
+vélocités, accents, crescendo de la mesure 3, équilibre des mains (vélocité, qui
+sur un piano échantillonné change aussi le TIMBRE : plus fort, plus brillant),
+pédale forte (CC64) renouvelée au début de chaque mesure, panoramique (CC10).
+
+Pourquoi ce script vit à côté de scripts/melodies-gen.py : celui-là synthétise
+des cloches, du koto, du marimba, sans dépendance externe. Celui-ci a besoin
+d'un échantillonneur et d'une banque d'échantillons. Seul le format de sortie
+est commun (MP3 stéréo 44,1 kHz, 160 kb/s) pour que les vingt clips sonnent au
+même niveau sur le quai.
+
+UNE partition, DEUX interprétations. `SCORE_RIGHT`, `SCORE_LEFT` et `PEDAL` sont
+uniques et partagés : hauteurs, octaves, durées, silences et positions
 rythmiques sont donc identiques par construction dans les deux fichiers. Ce qui
-change d'une version à l'autre vit dans `VOICINGS` : vélocités, équilibre des
-mains, attaque, brillance, largeur stéréo, pédale et réverbération.
+change vit dans `VOICINGS` : vélocités, équilibre des mains, pédale,
+panoramique, couleur et réverbération.
 
   Inner Loop  - un peu plus lumineuse, main droite plus présente, attaque
                 claire et petite brillance cristalline.
   Outer Loop  - un peu plus douce et aérienne, main gauche plus ronde, son
                 moins frontal, résonance plus ample.
 
-Le PIANO joue les deux mains, et il est seul à jouer la mélodie. Ce qui l'aide
-à chanter tient à trois choses, dans l'instrument et non autour de lui :
+Dépendances :
+  pip install numpy lameenc
+  apt-get install fluidsynth fluid-soundfont-gm
 
-  - les cordes à l'unisson (`unison`), deux ou trois par touche, désaccordées
-    d'un cheveu. C'est le battement d'une tenue et la double décroissance d'un
-    vrai piano - une modulation d'amplitude ne les imite pas ;
-  - une pédale franche (`pedal_tau_*`) : c'est elle qui lie une note à la
-    suivante. Un piano sec ne fait pas une mélodie, il fait une suite de points ;
-  - la résonance sympathique des cordes libres (`sympathetic_ir`), discrète.
+FluidR3_GM est publié par Frank Wen sous licence MIT : le rendu peut être
+redistribué librement. Seul l'audio rendu est versionné - pas la banque, qui
+pèse cent quarante-huit mégaoctets. Voir docs/AUDIO_ORIGINALITY.md.
 
-`render_bell` ne pose qu'un ÉCLAT de verre sur l'attaque de la main droite,
-vingt-cinq décibels sous elle. Il a valu une version où la cloche chantait à la
-place du piano, et une autre où on entendait deux calques : dès qu'elle est
-assez forte pour s'entendre comme une voix, elle en devient une. À ce niveau-là
-elle ne fait que du scintillement, et rien n'est ajouté à la partition - elle
-lit `SCORE_RIGHT` tel quel.
-
-Et trois choses ont été RETIRÉES, parce qu'elles fabriquaient un effet de
-tunnel : l'écho croisé (deux traces de la même ligne), une convolution de table
-d'harmonie (deux cent cinquante millisecondes de modes serrés à 55 %, soit très
-exactement le son d'un tuyau), et un pré-délai de salle à dix millisecondes qui
-peignait le spectre tous les cent hertz contre le son direct. Ce qui reste de
-lieu tient en une réverbération courte à moins de dix pour cent.
-
-Sorties :
-  assets/melodies/<nom>.wav          master WAV stéréo 48 kHz / 24 bits
-  public/audio/melodies/<nom>.mp3    clip joué par le jeu (44,1 kHz, 160 kb/s)
-
-Les WAV vivent hors de public/ à dessein : Vite recopie public/ tel quel dans
-le build, et six mégaoctets de master n'ont rien à faire dans le site.
-
-Dépendances : pip install numpy lameenc
 Usage :
   python scripts/piano-melody-gen.py               # grave les deux versions
   python scripts/piano-melody-gen.py --only inner
-  python scripts/piano-melody-gen.py --wav-dir /tmp/x --mp3-dir /tmp/x
+  python scripts/piano-melody-gen.py --keep-midi /tmp/x   # pour ouvrir dans un séquenceur
 
 Après regravure : `node scripts/melody-manifest-gen.mjs` (le manifeste des
 durées taille la fenêtre sonore de l'arrêt) puis `npm test`.
@@ -62,6 +56,11 @@ durées taille la fenêtre sonore de l'arrêt) puis `npm test`.
 
 import argparse
 import re
+import shutil
+import struct
+import subprocess
+import sys
+import tempfile
 import wave
 from pathlib import Path
 
@@ -70,7 +69,7 @@ import numpy as np
 
 # --- Format ----------------------------------------------------------------
 
-SR = 48_000            # rendu et master WAV
+SR = 48_000            # rendu de l'échantillonneur et master WAV
 MP3_SR = 44_100        # comme les dix-sept autres clips de la bibliothèque
 MP3_BITRATE_KBPS = 160
 WAV_BITS = 24
@@ -79,25 +78,36 @@ BPM = 110.0
 BEAT = 60.0 / BPM      # 0,545454... s
 SCORE_BEATS = 16       # 4/4, quatre mesures -> 8,727 s de musique
 TAIL_S = 1.72          # résonance libre après la dernière mesure
-FADE_OUT_S = 0.55      # extinction douce, sous -25 dB : ne coupe pas la queue
+FADE_OUT_S = 0.55      # extinction douce, sous -30 dB : ne coupe pas la queue
 
-# Crête visée sur le master (-0,54 dBFS). Un peu plus haut que la bibliothèque
+# Crête visée sur le master (-0,72 dBFS). Un peu plus haut que la bibliothèque
 # (ses MP3 redonnent 0,82 à 0,86 une fois décodés) et c'est VOULU : un piano a
 # un facteur de crête bien plus grand qu'une cloche doublée d'une nappe. À crête
 # égale, ces deux clips s'entendraient nettement plus bas que les dix-sept
-# autres. On ferme l'écart par la crête plutôt que par un compresseur ; il reste
-# environ un décibel de marge après encodage, et aucun échantillon n'écrête.
+# autres. On ferme l'écart par la crête plutôt que par un compresseur.
 PEAK_TARGET = 0.92
 
-# Arrondi de crête. Un piano a un facteur de crête bien plus élevé qu'une
-# cloche : normalisées à la même crête, ces mélodies s'entendaient 3 dB plus
-# bas que les dix-sept autres clips du quai. Ceci n'est PAS un compresseur -
-# aucun détecteur de niveau, aucune constante de temps, aucun effet sur la
-# dynamique musicale : c'est une courbe fixe qui n'arrondit que les échantillons
-# au-delà de SOFT_KNEE (0,3 % du fichier, tous dans les premières millisecondes
-# d'une attaque), d'un peu moins d'un décibel. Le reste du signal est rendu
-# intact, et la dynamique entre les nuances est conservée.
+# Arrondi de crête : PAS un compresseur - aucun détecteur de niveau, aucune
+# constante de temps, aucun effet sur la dynamique musicale. Une courbe fixe qui
+# n'arrondit que les échantillons au-delà du seuil (quelques dixièmes de pour
+# cent du fichier, tous dans les premières millisecondes d'une attaque), d'un
+# peu moins d'un décibel.
 SOFT_KNEE = 0.55
+
+# --- Échantillonneur -------------------------------------------------------
+
+# GM programme 1 : Bright Acoustic Piano. C'est le timbre demandé - clair,
+# légèrement métallique, adapté à une diffusion sur un quai.
+GM_BRIGHT_ACOUSTIC_PIANO = 1
+TPQ = 960              # divisions MIDI par noire ; tous les temps écrits (au
+                       # quart de temps près) y tombent sur un tick entier
+
+SOUNDFONTS = (
+    "/usr/share/sounds/sf2/FluidR3_GM.sf2",
+    "/usr/share/sounds/sf2/default-GM.sf2",
+    "/usr/share/soundfonts/FluidR3_GM.sf2",
+    "/opt/homebrew/share/fluid-soundfont-gm/FluidR3_GM.sf2",
+)
 
 # ---------------------------------------------------------------------------
 # Notes
@@ -120,10 +130,6 @@ def midi_of(name: str) -> int:
     letter, acc, octv = m.groups()
     semis = NOTE_OFFSETS[letter] + (1 if acc == "#" else -1 if acc == "b" else 0)
     return (int(octv) + 1) * 12 + semis
-
-
-def freq_of(name: str) -> float:
-    return 440.0 * 2.0 ** ((midi_of(name) - 69) / 12.0)
 
 
 # Garde-fous d'orthographe : la partition écrit la MÊME hauteur de deux façons
@@ -220,10 +226,20 @@ SCORE_LEFT = [
     (12.00, 1.00, "B3"),
 ]
 
-# Pédale : (début, fin) en temps. Renouvelée au premier temps de chaque mesure,
-# plus un demi-renouvellement au temps 10, juste avant Fa5 La♭4 Do♯5 Fa5 La♭5.
-# `None` en fin = pédale gardée jusqu'au bout : l'accord final résonne libre.
-PEDAL = [(0.0, 4.0), (4.0, 8.0), (8.0, 10.0), (10.0, 12.0), (12.0, None)]
+# Pédale forte : instants (en temps) où elle est RENOUVELÉE. Levée sur le temps,
+# reprise juste après - le geste d'un pianiste, qui nettoie l'harmonie
+# précédente sans couper la note qu'on vient de jouer.
+#
+# Début de chaque mesure, plus deux reprises en cours de mesure : au temps 10,
+# juste avant Fa5 La♭4 Do♯5 Fa5 La♭5 comme l'indique la partition, et à l'entrée
+# des guirlandes de doubles croches (temps 2,25 et 6,25). Ces deux dernières ne
+# sont pas dans le texte mais dans son intention : « la pédale ne doit jamais
+# rendre les doubles croches floues », et deux secondes de pédale tenue sur un
+# vrai piano les empâtent. La dernière n'est jamais relevée : l'accord final
+# résonne librement jusqu'à la fin du clip.
+PEDAL = [0.0, 2.25, 4.0, 6.25, 8.0, 10.0, 12.0]
+PEDAL_LIFT_S = 0.012    # levée juste avant le temps
+PEDAL_PRESS_S = 0.045   # reprise juste après l'attaque
 
 # ---------------------------------------------------------------------------
 # Nuances - la seule chose que l'interprétation touche
@@ -251,355 +267,235 @@ VOICINGS = {
     "inner": dict(
         stem="01_jre-ikst-010-01_inner-main",
         title="Hikari no Wa (光の環) - Inner Loop",
-        right_gain=0.86,     # le piano tient la ligne : c'est lui, l'instrument
-        left_gain=0.55,      # main gauche stable, nettement sous la droite
-        bell_gain=0.055,     # -25 dB : un éclat sur l'attaque, pas une voix
-        bell_ring=0.55,
-        peak=1.00,           # référence de niveau de la paire
-        brightness=1.00,     # pente des partiels : plus haut = plus cristallin
-        attack_ms=2.8,       # attaque claire, sans claquer
-        hammer=0.036,        # bruit de marteau : la brillance de l'attaque
-        width=0.48,          # panoramique par registre, assez tenu
-        sympathetic_mix=0.16,   # halo des cordes libres, discret
-        sympathetic_decay=0.95,
-        reverb_mix=0.065,
-        reverb_decay=0.55,
-        reverb_damp_hz=4200.0,
-        pedal_tau_right=2.40,   # pédale franche : c'est elle qui lie la ligne
-        pedal_tau_left=1.15,    # graves écourtés : pas d'accumulation
+        # Vélocités MIDI de référence, avant nuances. Sur un piano échantillonné
+        # la vélocité ne change pas que le volume : elle change la couche
+        # d'échantillons, donc le timbre. Une main droite plus forte est aussi
+        # une main droite plus brillante - c'est exactement ce qu'on veut ici.
+        right_vel=96,
+        left_vel=62,        # main gauche stable, nettement sous la droite
+        pan=0.30,           # ouverture du clavier, graves à gauche
+        peak=1.00,          # référence de niveau de la paire
+        reverb_mix=0.070,   # quai couvert, pas une salle
+        reverb_decay=0.60,
+        reverb_damp_hz=4600.0,
         # Égalisation : plateau d'aigu (éclat), bosse de présence (le « bright »
-        # d'un piano brillant), léger creux de bas médium (clarté).
-        tilt=(("shelf", 3200.0, 2.00), ("bell", 1900.0, 1.40, 0.80), ("bell", 330.0, -0.90, 0.75)),
+        # du piano), léger creux de bas médium (clarté). Rien au-delà de 2 dB.
+        tilt=(("shelf", 3400.0, 1.70), ("bell", 2000.0, 1.10, 0.80), ("bell", 330.0, -0.80, 0.75)),
         seed=1001,
     ),
     "outer": dict(
         stem="02_jre-ikst-010-02_outer-main",
         title="Kaze no Wa (風の環) - Outer Loop",
-        right_gain=0.80,
-        left_gain=0.59,      # main gauche un rien plus ronde et plus proche
-        bell_gain=0.040,     # éclat plus discret encore : le son recule
-        bell_ring=0.70,
-        peak=0.98,           # crête un cheveu plus basse : la version Outer reste
-                             # légèrement en dessous, comme son caractère le veut
-        brightness=0.90,     # moins frontal
-        attack_ms=4.2,       # toucher plus souple
-        hammer=0.028,
-        width=0.60,          # un peu plus d'air
-        sympathetic_mix=0.17,   # halo un rien plus large
-        sympathetic_decay=1.15,
-        reverb_mix=0.095,
-        reverb_decay=0.72,   # résonance plus ample
-        reverb_damp_hz=3200.0,
-        pedal_tau_right=2.80,
-        pedal_tau_left=1.40,
+        right_vel=86,       # toucher plus souple : moins fort, donc plus rond
+        left_vel=66,        # écart des mains resserré, la gauche porte plus
+        pan=0.40,           # un peu plus d'air
+        peak=0.98,
+        reverb_mix=0.105,   # résonance plus ample
+        reverb_decay=0.80,
+        reverb_damp_hz=3400.0,
         # Moins d'aigu, moins de présence, un peu plus de corps : le son recule.
-        tilt=(("shelf", 3600.0, -0.60), ("bell", 1800.0, 0.60, 0.80), ("bell", 190.0, 1.15, 0.75)),
+        tilt=(("shelf", 3600.0, -0.70), ("bell", 1800.0, 0.40, 0.80), ("bell", 190.0, 1.00, 0.75)),
         seed=2002,
     ),
 }
 
+
+def right_velocity(beat: float, name: str) -> float:
+    """Nuance écrite de la main droite : accents, groupes, crescendo de mesure 3."""
+    v = RIGHT_ACCENTS.get(round(beat, 2), 1.0)
+    # Les groupes de doubles croches respirent en s'allégeant vers leur fin :
+    # c'est ce qui les empêche de sonner comme une machine.
+    if beat >= 2.25:
+        v *= 1.0 - 0.05 * (beat % 1.0)
+    if 8.0 <= beat < 12.0:
+        # Crescendo très discret sur toute la mesure 3, sans accélérer.
+        v *= 1.0 + 0.07 * (beat - 8.0) / 4.0
+    if beat >= 12.0:
+        # « Lumineux, propre, apaisé et résolu » : l'accord final n'a aucune
+        # raison d'être le point fort du morceau.
+        v *= 0.82 * CHORD_VOICING.get(name, 1.0)
+    return v
+
+
+def left_velocity(beat: float, name: str) -> float:
+    """Main gauche : régulière, la note grave du temps porte, la contrechant s'efface."""
+    on_beat = abs(beat - round(beat)) < 1e-6
+    v = 1.0 if on_beat else 0.86
+    if abs(beat % 4.0) < 1e-6:
+        v *= 1.05                       # premier temps de mesure
+    if 8.0 <= beat < 12.0:
+        v *= 1.0 + 0.06 * (beat - 8.0) / 4.0
+    if beat >= 12.0:
+        v *= 0.78 * CHORD_VOICING.get(name, 1.0)
+    return v
+
+
 # ---------------------------------------------------------------------------
-# Une corde de piano
+# La partition en MIDI
 # ---------------------------------------------------------------------------
 
-# Corps de l'instrument : (fréquence, dB, largeur). Communes aux deux versions -
-# c'est le même piano qu'on entend deux fois, pas deux instruments.
-BODY = ((122.0, 0.55, 0.34), (460.0, 0.45, 0.38))
 
-DAMPER_TAU = 0.075          # chute de l'étouffoir, aigus
-DAMPER_TAU_BASS = 0.115     # les grosses cordes s'arrêtent moins net
-SLOW_LEVEL = 0.26           # part de la décroissance lente (« aftersound »)
-HAMMER_POS = 0.125          # marteau au huitième de la corde -> creux du peigne
-ATTACK_BLOOM = 0.055        # durée du transitoire brillant de l'attaque (s)
-
-
-def string_params(f0: float) -> tuple[float, float, int]:
-    """Décroissance, inharmonicité et nombre de partiels d'une corde."""
-    # Les cordes graves tiennent plus longtemps, sans exagérer : le clip ne
-    # dure que dix secondes et la queue doit s'éteindre d'elle-même.
-    tau = float(np.clip(3.6 * (261.63 / f0) ** 0.45, 1.10, 4.60))
-    # Raideur : sensible dès le médium et franche dans l'aigu. C'est elle qui
-    # étire les partiels vers le haut et donne au piano brillant son petit éclat
-    # de verre - la même physique que les cloches du reste de la bibliothèque.
-    stiff = float(np.clip(1.4e-4 * (f0 / 261.63) ** 1.3, 4.0e-5, 2.2e-3))
-    partials = int(np.clip(0.44 * SR / f0, 4, 26))
-    return tau, stiff, partials
+def _vlq(n: int) -> bytes:
+    """Entier en quantité de longueur variable, comme le veut le format MIDI."""
+    out = [n & 0x7F]
+    n >>= 7
+    while n:
+        out.append((n & 0x7F) | 0x80)
+        n >>= 7
+    return bytes(reversed(out))
 
 
-def unison(midi: int, rng: np.random.Generator) -> tuple[tuple[float, float, float], ...]:
-    """Les cordes à l'unisson d'une note : (désaccord en cents, gain, facteur de durée).
+def _ticks(beat: float) -> int:
+    return int(round(beat * TPQ))
 
-    Une touche de piano frappe deux ou trois cordes accordées « ensemble » à un
-    cheveu près. Ce presque-unisson est TOUT : c'est lui qui fait le battement
-    lent d'une tenue, et c'est lui qui produit la double décroissance
-    caractéristique - les cordes s'échangent leur énergie par le chevalet, la
-    chute est d'abord rapide puis s'installe en longue traîne. La version
-    précédente imitait ça par une modulation d'amplitude ; ça s'entendait, et
-    c'est très exactement ce qui sonnait « synthétique ».
+
+def build_midi(voicing: dict) -> bytes:
+    """La partition et ses nuances, en un fichier MIDI d'une seule piste.
+
+    Main droite sur le canal 0, main gauche sur le canal 1 : deux panoramiques,
+    deux plages de vélocité, un seul instrument. La pédale (CC64) part sur les
+    deux canaux - sur un vrai piano il n'y en a qu'une.
     """
-    if midi < 44:
-        return ((0.0, 1.0, 1.0),)
-    if midi < 52:
-        return ((0.0, 1.0, 1.0), (rng.uniform(0.6, 1.3), 0.95, 0.93))
+    rng = np.random.default_rng(voicing["seed"])
+    events: list[tuple[int, int, bytes]] = []   # (tick, priorité, message)
+
+    for ch in (0, 1):
+        events.append((0, 0, bytes([0xC0 | ch, GM_BRIGHT_ACOUSTIC_PIANO])))
+        side = voicing["pan"] * (1.0 if ch == 0 else -1.0)
+        events.append((0, 0, bytes([0xB0 | ch, 10, int(round(64 + 63 * side))])))
+        events.append((0, 0, bytes([0xB0 | ch, 7, 100])))
+
+    for ch, score, base, shaper in (
+        (0, SCORE_RIGHT, voicing["right_vel"], right_velocity),
+        (1, SCORE_LEFT, voicing["left_vel"], left_velocity),
+    ):
+        for beat, dur_b, name in score:
+            # ± 2,5 % de vélocité, jamais de décalage rythmique : le toucher
+            # respire, la mesure ne bouge pas d'un millième de temps.
+            human = 1.0 + rng.uniform(-0.025, 0.025)
+            vel = int(np.clip(round(base * shaper(beat, name) * human), 1, 127))
+            note = midi_of(name)
+            events.append((_ticks(beat), 2, bytes([0x90 | ch, note, vel])))
+            events.append((_ticks(beat + dur_b), 1, bytes([0x80 | ch, note, 0])))
+
+    lift = int(round(PEDAL_LIFT_S / BEAT * TPQ))
+    press = int(round(PEDAL_PRESS_S / BEAT * TPQ))
+    for beat in PEDAL:
+        for ch in (0, 1):
+            events.append((max(0, _ticks(beat) - lift), 0, bytes([0xB0 | ch, 64, 0])))
+            events.append((_ticks(beat) + press, 3, bytes([0xB0 | ch, 64, 127])))
+
+    # fluidsynth arrête d'écrire peu après le DERNIER ÉVÉNEMENT du fichier, pas
+    # quand la dernière corde s'est tue : sans cette borne, la résonance de
+    # l'accord final était tronquée net et le clip finissait sur du silence
+    # numérique. Une reprise de pédale inaudible, posée après la fin voulue,
+    # tient le rendu ouvert jusqu'au bout.
+    events.append((_ticks(SCORE_BEATS + TAIL_S / BEAT + 0.25), 4, bytes([0xB0, 64, 127])))
+
+    # À tick égal : contrôleurs, puis note-off, puis note-on, puis la pédale -
+    # une note répétée doit s'éteindre avant d'être refrappée, et la pédale se
+    # reprendre après l'attaque qu'elle doit tenir.
+    events.sort(key=lambda e: (e[0], e[1]))
+
+    track, last = b"", 0
+    for tick, _, msg in events:
+        track += _vlq(tick - last) + msg
+        last = tick
+    track += _vlq(0) + bytes([0xFF, 0x2F, 0x00])
+
+    tempo = _vlq(0) + bytes([0xFF, 0x51, 0x03]) + int(60_000_000 / BPM).to_bytes(3, "big")
+    body = tempo + track
     return (
-        (0.0, 1.0, 1.0),
-        (rng.uniform(0.5, 1.1), 0.95, 0.92),
-        (-rng.uniform(0.5, 1.1), 0.93, 1.07),
+        b"MThd" + struct.pack(">IHHH", 6, 0, 1, TPQ)
+        + b"MTrk" + struct.pack(">I", len(body)) + body
     )
 
 
-def render_note(
-    name: str,
-    dur_s: float,
-    vel: float,
-    off_s: float,
-    lift_s: float | None,
-    pedal_tau: float | None,
-    voicing: dict,
-    seed: int,
-    max_s: float,
-) -> np.ndarray:
-    """Une note de piano, de l'attaque à l'extinction de l'étouffoir.
+def find_soundfont(explicit: Path | None) -> Path:
+    for candidate in ([explicit] if explicit else []) + [Path(p) for p in SOUNDFONTS]:
+        if candidate and candidate.is_file():
+            return candidate
+    sys.exit(
+        "banque d'échantillons introuvable.\n"
+        "  apt-get install fluidsynth fluid-soundfont-gm\n"
+        "  (ou --soundfont /chemin/vers/une.sf2)"
+    )
 
-    `off_s` : instant où la touche est relâchée (fin écrite de la note).
-    `lift_s` : instant où la pédale est relâchée (`None` = gardée jusqu'au bout).
-    `pedal_tau` : décroissance ajoutée entre les deux - c'est le « demi-pédale »
-    qui laisse chanter la phrase sans noyer les doubles croches.
+
+def read_float_wav(path: Path) -> np.ndarray:
+    """Lit un WAV en virgule flottante (n canaux) rendu par fluidsynth.
+
+    Le module `wave` de la bibliothèque standard ne connaît que le PCM entier et
+    refuse le format 3 (IEEE float). Parcourir les blocs RIFF à la main coûte
+    quinze lignes et évite de rendre en entier, donc d'écrêter avant même la
+    normalisation.
     """
-    midi = midi_of(name)
-    f0 = freq_of(name)
-    tau, stiff, n_partials = string_params(f0)
-
-    # Longueur à rendre : la note plus ce qu'il reste à entendre après
-    # l'étouffoir. Inutile de calculer une queue que l'étouffoir a mangée.
-    damp_at = max(off_s, lift_s if lift_s is not None else off_s)
-    natural = dur_s + 6.5 * tau
-    length = min(natural, damp_at + 0.55) if lift_s is not None else natural
-    n = int(min(length, max_s) * SR)   # rien à calculer au-delà de la fin du clip
-    if n <= 0:
-        return np.zeros(0)
-    t = np.arange(n) / SR
-
-    rng = np.random.default_rng(seed)
-    y = np.zeros(n)
-
-    # Peigne du marteau : le point de frappe annule les partiels multiples de 8.
-    # Plus on frappe fort, plus les partiels hauts sortent (la corde s'ouvre).
-    tilt = (1.30 - 0.42 * vel) / voicing["brightness"]
-    amps, freqs, taus = [], [], []
-    for k in range(1, n_partials + 1):
-        f = f0 * k * np.sqrt(1.0 + stiff * k * k)
-        if f > 0.46 * SR:
-            break
-        a = abs(np.sin(np.pi * k * HAMMER_POS)) / k**tilt
-        amps.append(a)
-        freqs.append(f)
-        # Les partiels hauts s'éteignent les premiers : c'est ça, le « son qui
-        # s'assombrit » d'un piano, et ce qui empêche la queue de siffler.
-        taus.append(max(0.12, tau / (1.0 + 0.22 * (k - 1) ** 1.15)))
-
-    norm = sum(amps) or 1.0
-
-    # Phases de Schroeder. La phase de départ d'un partiel n'a rien d'absolu -
-    # elle dépend du marteau, du point de frappe, de l'instant. Leur RÉPARTITION,
-    # elle, décide du facteur de crête de la somme : en phase, vingt partiels
-    # empilent une pointe qui ne s'entend pas mais mange toute la marge de
-    # normalisation. Une répartition quadratique étale la même énergie sur la
-    # période. Spectre inchangé (donc timbre inchangé), plusieurs décibels de
-    # crête en moins - c'est ce qui permet à ce piano de s'entendre au même
-    # niveau que les cloches de la bibliothèque sans rien écraser.
-    power = np.array(amps) ** 2
-    power /= power.sum() or 1.0
-    phases = np.concatenate([[0.0], -2.0 * np.pi * np.cumsum(np.cumsum(power))[:-1]])
-
-    strings = unison(midi, rng)
-    norm *= sum(g for _, g, _ in strings)
-    for a, f, tk, phase in zip(amps, freqs, taus, phases):
-        # Transitoire d'attaque : les premières dizaines de millisecondes d'un
-        # piano sont bien plus brillantes que sa tenue. Sans ce petit surcroît,
-        # l'attaque est molle et le son « démarre » comme une nappe.
-        bloom = 1.0 + 2.2 * min(1.0, (f / f0) / 4.0) * np.exp(-t / ATTACK_BLOOM)
-        for cents, gain, tscale in strings:
-            fs = f * 2.0 ** (cents / 1200.0)
-            ts = tk * tscale
-            # Décroissance : chute rapide puis traîne. Les trois cordes ayant des
-            # durées légèrement différentes, leur somme produit d'elle-même le
-            # profil en deux temps d'un vrai piano - on n'en garde ici qu'un
-            # reste, pour la part qui vient de la table d'harmonie.
-            env = (1.0 - SLOW_LEVEL) * np.exp(-t / (0.46 * ts)) + SLOW_LEVEL * np.exp(-t / ts)
-            y += (a * gain / norm) * env * bloom * np.sin(2.0 * np.pi * fs * t + phase)
-
-    # Attaque : quelques millisecondes en cosinus surélevé, jamais un front raide
-    # (qui claquerait) ni une rampe longue (qui ferait cloche).
-    atk = max(2, int(voicing["attack_ms"] * 1e-3 * SR))
-    y[:atk] *= 0.5 - 0.5 * np.cos(np.linspace(0.0, np.pi, atk))
-
-    # Bruit de marteau : le choc du feutre sur la corde. Un bruit blanc brut
-    # sonnait « chuintement de synthé » ; ce qu'on entend d'un vrai marteau est
-    # une bande étroite, autour de six à huit fois la fondamentale, qui meurt en
-    # une dizaine de millisecondes.
-    hammer = voicing["hammer"] * vel
-    if hammer > 0:
-        nh = int(0.014 * SR)
-        th = np.arange(nh) / SR
-        knock = np.zeros(nh)
-        for mult in (5.5, 7.0, 9.5, 12.0):
-            fk = min(f0 * mult, 0.42 * SR)
-            knock += rng.uniform(0.7, 1.0) * np.sin(
-                2.0 * np.pi * fk * th + rng.uniform(0.0, 6.28)
-            ) * np.exp(-th / 0.0035)
-        knock += 0.35 * rng.standard_normal(nh) * np.exp(-th / 0.0015)
-        y[:nh] += hammer * knock / (np.abs(knock).max() or 1.0)
-
-    # Étouffoir et pédale.
-    damper_tau = DAMPER_TAU_BASS if midi < 55 else DAMPER_TAU
-    g = np.ones(n)
-    i_off = min(n, max(0, int(off_s * SR)))
-    i_lift = n if lift_s is None else min(n, max(0, int(lift_s * SR)))
-    i_lift = max(i_lift, i_off)
-    if pedal_tau is not None and i_lift > i_off:
-        g[i_off:i_lift] = np.exp(-(t[i_off:i_lift] - t[i_off]) / pedal_tau)
-    if i_lift < n:
-        g[i_lift:] = g[i_lift - 1] * np.exp(-(t[i_lift:] - t[i_lift]) / damper_tau)
-    y *= g
-
-    # Compensation de registre : à amplitude égale une basse s'entend moins.
-    reg = float(np.clip((261.63 / f0) ** 0.18, 0.82, 1.30))
-    return y * vel * reg
+    data = path.read_bytes()
+    if data[:4] != b"RIFF" or data[8:12] != b"WAVE":
+        raise ValueError(f"{path} n'est pas un WAV")
+    pos, channels, fmt, bits, pcm = 12, 2, 3, 32, b""
+    while pos + 8 <= len(data):
+        name = data[pos:pos + 4]
+        size = struct.unpack("<I", data[pos + 4:pos + 8])[0]
+        chunk = data[pos + 8:pos + 8 + size]
+        if name == b"fmt ":
+            fmt, channels = struct.unpack("<HH", chunk[:4])
+            bits = struct.unpack("<H", chunk[14:16])[0]
+        elif name == b"data":
+            pcm = chunk
+        pos += 8 + size + (size & 1)
+    if fmt != 3 or bits != 32:
+        raise ValueError(f"{path} : attendu du flottant 32 bits, reçu format {fmt}/{bits} bits")
+    return np.frombuffer(pcm, dtype="<f4").astype(np.float64).reshape(-1, channels)
 
 
-# ---------------------------------------------------------------------------
-# La voix qui chante : cloche de verre
-# ---------------------------------------------------------------------------
-#
-# Le piano seul ne chantait pas. Une 発車メロディ tient à la voix qui porte la
-# ligne, et dans tout le reste de la bibliothèque c'est une cloche de verre :
-# quatre partiels inharmoniques, une longue extinction, et la mélodie qui se lie
-# d'elle-même d'une note à l'autre. Ce sont EXACTEMENT les rapports de partiels
-# de `synthbell` dans scripts/melodies-gen.py - c'est ce qui met ces deux clips
-# dans la même famille sonore que les dix-sept autres.
-#
-# La cloche prend la main droite, aux hauteurs ÉCRITES. Le piano reste dessous :
-# il donne l'attaque, la main gauche et le corps. Un second voile de cloche
-# double la main droite à l'octave supérieure, nettement plus bas - `score_bell`
-# et `score_double` sont tous deux calculés depuis `SCORE_RIGHT`, mêmes temps,
-# mêmes durées : aucune note n'est ajoutée, aucune n'est transposée.
+def play(midi: bytes, soundfont: Path, keep_midi: Path | None) -> np.ndarray:
+    """Fait jouer la partition par l'échantillonneur, et rend le stéréo brut.
 
-# Rapports de partiels de `synthbell` (melodies-gen.py), plus UN partiel à
-# l'octave. C'est là qu'est passée la doublure cristalline : une couche séparée,
-# fût-elle vingt décibels dessous, s'entend comme un second instrument qui joue
-# la même chose - deux calques au lieu d'un timbre. Rentré dans la voix, l'octave
-# donne exactement le même scintillement et ne peut plus s'en détacher.
-BELL_PARTIALS = ((1.0, 1.0), (2.0, 0.22), (2.756, 0.40), (5.404, 0.20), (8.933, 0.07))
-
-
-def render_bell(
-    midi: int, dur_s: float, vel: float, ring: float, seed: int, max_s: float
-) -> np.ndarray:
-    """Cloche de verre : attaque nette, extinction longue, la ligne se lie seule.
-
-    `ring` fixe la longueur du chant. C'est le réglage qui décide si la mélodie
-    est « chantante » ou hachée : trop court, les doubles croches redeviennent
-    une machine à écrire ; trop long, elles se brouillent.
+    Réverbération et chorus de fluidsynth coupés : l'espace est ajouté plus bas,
+    où il est réglé par version et mesurable. Sortie en flottant - le rendu ne
+    peut donc pas écrêter avant la normalisation.
     """
-    f0 = 440.0 * 2.0 ** ((midi - 69) / 12.0)
-    # Les notes écrites longues sonnent plus longtemps que les doubles croches,
-    # comme sous les doigts : la durée écrite étire la traîne sans la couper.
-    tau = max(ring, min(dur_s * 1.6, ring * 2.2)) * float(np.clip((523.25 / f0) ** 0.22, 0.7, 1.4))
-    n = int(min(tau * 4.5, max_s) * SR)
-    if n <= 0:
-        return np.zeros(0)
-    t = np.arange(n) / SR
-    rng = np.random.default_rng(seed)
+    if not shutil.which("fluidsynth"):
+        sys.exit("fluidsynth introuvable : apt-get install fluidsynth fluid-soundfont-gm")
 
-    y = np.zeros(n)
-    for i, (mult, amp) in enumerate(BELL_PARTIALS):
-        f = f0 * mult
-        if f > 0.44 * SR:
-            break
-        # Chaque partiel s'éteint à son rythme, le plus aigu le premier : c'est
-        # ce qui fait qu'une cloche s'adoucit en mourant au lieu de tinter.
-        y += amp * np.exp(-t / (tau / (1.0 + 0.75 * i))) * np.sin(
-            2.0 * np.pi * f * t + rng.uniform(0.0, 6.28)
+    with tempfile.TemporaryDirectory() as tmp:
+        mid = Path(tmp) / "score.mid"
+        raw = Path(tmp) / "render.wav"
+        mid.write_bytes(midi)
+        if keep_midi:
+            keep_midi.parent.mkdir(parents=True, exist_ok=True)
+            keep_midi.write_bytes(midi)
+        subprocess.run(
+            ["fluidsynth", "-ni", "-R", "0", "-C", "0", "-g", "0.8",
+             "-r", str(SR), "-O", "float", "-F", str(raw), str(soundfont), str(mid)],
+            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
-    atk = max(2, int(0.004 * SR))
-    y[:atk] *= 0.5 - 0.5 * np.cos(np.linspace(0.0, np.pi, atk))
-    tail = max(1, int(0.02 * SR))
-    y[-tail:] *= np.linspace(1.0, 0.0, tail)
-    return y * vel / sum(a for _, a in BELL_PARTIALS)
+        buf = read_float_wav(raw)
 
+    if buf.shape[1] == 1:
+        buf = np.repeat(buf, 2, axis=1)
 
-
-
-# ---------------------------------------------------------------------------
-# Résonance sympathique
-# ---------------------------------------------------------------------------
-
-
-def sympathetic_ir(decay_s: float, seed: int) -> np.ndarray:
-    """Le halo des cordes libres : ce qui manquait le plus au son précédent.
-
-    Pédale baissée, TOUTES les cordes du piano sont libres : chacune reprend en
-    sourdine ce qui, dans le son joué, tombe sur l'une de ses fréquences. C'est
-    de là que vient l'impression d'espace d'un piano pédale enfoncée - et un
-    piano de synthèse sans ça sonne à plat, quelle que soit la réverbération
-    qu'on lui ajoute.
-
-    Le banc est accordé sur les hauteurs de la partition (ce sont celles que
-    l'harmonie fait vibrer le plus) : le halo est donc consonant par
-    construction, jamais un bourdonnement.
-    """
-    n = int(decay_s * SR)
-    t = np.arange(n) / SR
-    rng = np.random.default_rng(seed)
-    ir = np.zeros((n, 2))
-
-    pitches = sorted({midi_of(nm) for _, _, nm in SCORE_RIGHT + SCORE_LEFT})
-    for midi in pitches:
-        f0 = 440.0 * 2.0 ** ((midi - 69) / 12.0)
-        tau, stiff, count = string_params(f0)
-        pan = float(np.clip((midi - 60) / 30.0, -1.0, 1.0)) * 0.5
-        theta = (pan + 1.0) * np.pi / 4.0
-        # Quatre partiels, pondérés doux : le halo doit faire un LIT harmonique
-        # sous la mélodie, pas un second carillon au-dessus d'elle.
-        for k in range(1, min(4, count) + 1):
-            f = f0 * k * np.sqrt(1.0 + stiff * k * k)
-            if f > 0.42 * SR:
-                break
-            ring = min(decay_s / 2.6, tau / (1.0 + 0.35 * (k - 1)))
-            wave = (np.exp(-t / ring) / k**2.1) * np.sin(
-                2.0 * np.pi * f * t + rng.uniform(0.0, 6.28)
-            )
-            ir[:, 0] += wave * np.cos(theta)
-            ir[:, 1] += wave * np.sin(theta)
-
-    ir *= (1.0 - np.exp(-t / 0.006))[:, None]   # pas de clic au premier échantillon
-    return ir / (np.sqrt((ir**2).sum(axis=0)).max() or 1.0)
+    # Longueur exacte : la musique, puis la résonance libre. fluidsynth s'arrête
+    # quand la dernière voix s'est tue, ce qui ne tombe pas au bon endroit.
+    want = int((SCORE_BEATS * BEAT + TAIL_S) * SR)
+    if buf.shape[0] < want:
+        buf = np.vstack([buf, np.zeros((want - buf.shape[0], 2))])
+    return buf[:want]
 
 
 # ---------------------------------------------------------------------------
-# Mixage, espace, égalisation
+# Finition
 # ---------------------------------------------------------------------------
-
-
-def place(buf: np.ndarray, mono: np.ndarray, start_s: float, pan: float) -> None:
-    """Ajoute un rendu mono dans le buffer stéréo (panoramique à puissance constante)."""
-    i0 = int(start_s * SR)
-    i1 = min(buf.shape[0], i0 + mono.shape[0])
-    if i1 <= i0:
-        return
-    seg = mono[: i1 - i0]
-    theta = (np.clip(pan, -1.0, 1.0) + 1.0) * np.pi / 4.0
-    buf[i0:i1, 0] += seg * np.cos(theta)
-    buf[i0:i1, 1] += seg * np.sin(theta)
 
 
 def reverb_ir(decay_s: float, damp_hz: float, seed: int) -> np.ndarray:
     """Petite salle : bruit dense qui décroît, sans aucune réflexion isolée.
 
     Pas de peigne, pas de tap discret : on cherche l'air d'un quai couvert
-    autour du piano, pas un écho. Le pré-délai reste sous 12 ms pour que la
-    réverbération se colle au son de l'instrument.
+    autour du piano, pas un écho. Le pré-délai reste très court - à dix
+    millisecondes, mélangée au son direct, une salle peigne le spectre tous les
+    cent hertz, et cette suite régulière de creux s'entend comme un tunnel.
     """
     n = int(decay_s * SR)
     t = np.arange(n) / SR
@@ -607,19 +503,14 @@ def reverb_ir(decay_s: float, damp_hz: float, seed: int) -> np.ndarray:
     ir = rng.standard_normal((n, 2))
     ir *= (np.exp(-t / (decay_s / 5.2)) * (1.0 - np.exp(-t / 0.018)))[:, None]
 
-    # Amortissement de l'aigu (les murs mangent les hautes fréquences).
     spec = np.fft.rfft(ir, axis=0)
     f = np.fft.rfftfreq(n, 1.0 / SR)[:, None]
-    spec *= 1.0 / (1.0 + (f / damp_hz) ** 2)
+    spec *= 1.0 / (1.0 + (f / damp_hz) ** 2)     # les murs mangent l'aigu
     ir = np.fft.irfft(spec, n=n, axis=0)
 
-    # Pré-délai très court : à dix millisecondes, mélangée au son direct,
-    # la salle peignait le spectre tous les cent hertz - c'est cette suite
-    # de creux réguliers qu'on entend comme un « tunnel ».
     pre = int(0.0035 * SR)
     ir = np.vstack([np.zeros((pre, 2)), ir])
     return ir / (np.sqrt((ir**2).sum(axis=0)).max() or 1.0)
-
 
 
 def convolve(x: np.ndarray, h: np.ndarray) -> np.ndarray:
@@ -644,25 +535,17 @@ def soften(buf: np.ndarray) -> np.ndarray:
 def shape(buf: np.ndarray, tilt: tuple) -> np.ndarray:
     """Égalisation douce, à phase nulle : couleur du piano, pas un effet.
 
-    Aucun réglage ne dépasse ±2 dB, et rien n'est dynamique : on choisit la
-    couleur de l'instrument (plus cristalline, ou plus en retrait), pas un
-    traitement. S'y ajoutent deux garde-fous qui valent pour les deux versions :
-    un coupe-bas sous 32 Hz - la pédale entasse là des infra-graves inaudibles
-    mais coûteux en crête - et une pente au-delà de 17 kHz, qui évite de payer
-    en débit MP3 un aigu que personne n'entendra sur un haut-parleur de quai.
-
-    S'y ajoute le CORPS : quelques bosses étroites que la caisse et la table
-    d'harmonie impriment à toutes les notes, quelle que soit la hauteur jouée.
-    Un son parfaitement lisse n'a pas de bois dedans, et c'est une des choses
-    qui trahissaient la synthèse.
+    Aucun réglage ne dépasse ±2 dB, et rien n'est dynamique. S'y ajoutent deux
+    garde-fous communs aux deux versions : un coupe-bas sous 32 Hz - la pédale
+    entasse là des infra-graves inaudibles mais coûteux en crête - et une pente
+    au-delà de 17 kHz, qui évite de payer en débit MP3 un aigu que personne
+    n'entendra sur un haut-parleur de quai.
     """
     n = buf.shape[0]
     f = np.maximum(np.fft.rfftfreq(n, 1.0 / SR), 1.0)
 
     g = f**2 / (f**2 + 32.0**2)
     g *= 1.0 / (1.0 + (f / 17_000.0) ** 4)
-    for hz, db, width in BODY:
-        g *= 10.0 ** ((db / 20.0) * np.exp(-((np.log(f / hz) / width) ** 2)))
     for band in tilt:
         if band[0] == "shelf":
             _, hz, db = band
@@ -674,113 +557,10 @@ def shape(buf: np.ndarray, tilt: tuple) -> np.ndarray:
     return np.fft.irfft(np.fft.rfft(buf, axis=0) * g[:, None], n=n, axis=0)
 
 
-# ---------------------------------------------------------------------------
-# Séquenceur
-# ---------------------------------------------------------------------------
-
-
-def pedal_for(beat: float) -> tuple[float | None, bool]:
-    """Fin (en temps) du segment de pédale qui couvre ce temps, et s'il est ouvert."""
-    for start, end in PEDAL:
-        if end is None:
-            if beat >= start:
-                return None, True
-        elif start <= beat < end:
-            return end, False
-    return None, True
-
-
-def right_velocity(beat: float, name: str, index: int) -> float:
-    """Nuance écrite de la main droite : accents, groupes, crescendo de mesure 3."""
-    v = RIGHT_ACCENTS.get(round(beat, 2), 1.0)
-    # Les groupes de doubles croches respirent en s'allégeant vers leur fin :
-    # c'est ce qui les empêche de sonner comme une machine.
-    if beat >= 2.25:
-        pos = (beat % 1.0) / 1.0
-        v *= 1.0 - 0.05 * pos
-    if 8.0 <= beat < 12.0:
-        # Crescendo très discret sur toute la mesure 3, sans accélérer.
-        v *= 1.0 + 0.07 * (beat - 8.0) / 4.0
-    if beat >= 12.0:
-        v *= 0.80 * CHORD_VOICING.get(name, 1.0)
-    return v
-
-
-def left_velocity(beat: float, name: str, index: int) -> float:
-    """Main gauche : régulière, la note grave du temps porte, la contrechant s'efface."""
-    on_beat = abs(beat - round(beat)) < 1e-6
-    v = 1.0 if on_beat else 0.86
-    if abs(beat % 4.0) < 1e-6:
-        v *= 1.05                       # premier temps de mesure
-    if 8.0 <= beat < 12.0:
-        v *= 1.0 + 0.06 * (beat - 8.0) / 4.0
-    if beat >= 12.0:
-        v *= 0.74 * CHORD_VOICING.get(name, 1.0)
-    return v
-
-
-def render(voicing: dict) -> np.ndarray:
-    total_s = SCORE_BEATS * BEAT + TAIL_S
-    buf = np.zeros((int(total_s * SR), 2))
-    bells = np.zeros_like(buf)
-    rng = np.random.default_rng(voicing["seed"])
-
-    parts = (
-        ("right", SCORE_RIGHT, voicing["right_gain"], right_velocity, voicing["pedal_tau_right"]),
-        ("left", SCORE_LEFT, voicing["left_gain"], left_velocity, voicing["pedal_tau_left"]),
+def master(buf: np.ndarray, voicing: dict) -> np.ndarray:
+    wet = convolve(
+        buf, reverb_ir(voicing["reverb_decay"], voicing["reverb_damp_hz"], voicing["seed"])
     )
-
-    for hand, score, gain, shaper, ped_tau in parts:
-        for index, (beat, dur_b, name) in enumerate(score):
-            lift_b, open_pedal = pedal_for(beat)
-            # ± 2,5 % de vélocité, jamais de décalage rythmique : le toucher
-            # respire, la mesure ne bouge pas d'un millième de temps.
-            human = 1.0 + rng.uniform(-0.025, 0.025)
-            vel = float(np.clip(gain * shaper(beat, name, index) * human, 0.05, 1.0))
-            mono = render_note(
-                name,
-                dur_b * BEAT,
-                vel,
-                off_s=dur_b * BEAT,
-                lift_s=None if open_pedal else (lift_b - beat) * BEAT,
-                pedal_tau=None if open_pedal else ped_tau,
-                voicing=voicing,
-                seed=int(voicing["seed"] + 97 * index + (0 if hand == "right" else 7919)),
-                max_s=total_s - beat * BEAT,
-            )
-            # Le clavier s'étale sous les doigts : graves à gauche, aigus à
-            # droite, comme un piano vu du tabouret.
-            pan = float(np.clip((midi_of(name) - 60) / 30.0, -1.0, 1.0)) * voicing["width"]
-            place(buf, mono, beat * BEAT, pan)
-
-    # Halo des cordes libres, pris sur le piano seul et avant la salle : c'est
-    # l'instrument qui résonne, pas le lieu.
-    halo = voicing["sympathetic_mix"]
-    if halo > 0:
-        buf += halo * convolve(
-            buf, sympathetic_ir(voicing["sympathetic_decay"], voicing["seed"] + 31)
-        )
-
-
-    # Éclat de verre sur l'attaque de la main droite. À force d'être montée, la
-    # cloche s'était mise à chanter la ligne À LA PLACE du piano - ce n'était
-    # plus un piano. Elle est ici vingt-cinq décibels sous lui : trop bas pour
-    # s'entendre comme une voix, assez pour que l'attaque scintille.
-    for index, (beat, dur_b, name) in enumerate(SCORE_RIGHT):
-        human = 1.0 + rng.uniform(-0.02, 0.02)
-        vel = float(np.clip(
-            voicing["bell_gain"] * right_velocity(beat, name, index) * human, 0.005, 1.0))
-        mono = render_bell(
-            midi_of(name), dur_b * BEAT, vel, voicing["bell_ring"],
-            seed=int(voicing["seed"] + 613 * index + 907),
-            max_s=total_s - beat * BEAT,
-        )
-        pan = float(np.clip((midi_of(name) - 60) / 30.0, -1.0, 1.0)) * voicing["width"]
-        place(bells, mono, beat * BEAT, pan)
-
-    buf += bells
-
-    wet = convolve(buf, reverb_ir(voicing["reverb_decay"], voicing["reverb_damp_hz"], voicing["seed"]))
     mix = voicing["reverb_mix"]
     buf = (1.0 - mix) * buf + mix * wet
     buf = shape(buf, voicing["tilt"])
@@ -836,8 +616,8 @@ def resample(x: np.ndarray, sr_in: int, sr_out: int) -> np.ndarray:
 
 def write_mp3(buf: np.ndarray, path: Path) -> None:
     pcm = resample(buf, SR, MP3_SR)
-    peak = float(np.abs(pcm).max())
     ceiling = float(np.abs(buf).max())
+    peak = float(np.abs(pcm).max())
     if peak > ceiling:               # le rééchantillonnage peut dépasser d'un cheveu
         pcm *= ceiling / peak
     pcm16 = (np.clip(pcm, -1.0, 1.0) * 32767.0).astype("<i2")
@@ -857,14 +637,20 @@ def main() -> None:
     parser.add_argument("--only", choices=sorted(VOICINGS), help="une seule des deux versions")
     parser.add_argument("--wav-dir", type=Path, default=Path("assets/melodies"))
     parser.add_argument("--mp3-dir", type=Path, default=Path("public/audio/melodies"))
+    parser.add_argument("--soundfont", type=Path, help="banque .sf2 à utiliser")
+    parser.add_argument("--keep-midi", type=Path, help="dossier où déposer aussi les .mid")
     args = parser.parse_args()
 
+    soundfont = find_soundfont(args.soundfont)
     names = [args.only] if args.only else list(VOICINGS)
     print(f"発車メロディ piano - ♩={BPM:.0f}, 4/4, {SCORE_BEATS} temps "
           f"({SCORE_BEATS * BEAT:.3f} s) + {TAIL_S:.2f} s de résonance")
+    print(f"  échantillons : {soundfont}")
     for name in names:
         voicing = VOICINGS[name]
-        buf = render(voicing)
+        midi = build_midi(voicing)
+        keep = (args.keep_midi / f"{voicing['stem']}.mid") if args.keep_midi else None
+        buf = master(play(midi, soundfont, keep), voicing)
         wav = args.wav_dir / f"{voicing['stem']}.wav"
         mp3 = args.mp3_dir / f"{voicing['stem']}.mp3"
         write_wav24(buf, wav)
@@ -874,7 +660,6 @@ def main() -> None:
             f"  {name:5s} {buf.shape[0] / SR:6.3f} s  crête {np.abs(buf).max():.3f}  "
             f"RMS {20 * np.log10(rms):6.2f} dB  - {voicing['title']}"
         )
-        print(f"        {wav}\n        {mp3}")
 
     print("\nEnsuite : node scripts/melody-manifest-gen.mjs && npm test")
 
