@@ -23,7 +23,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import {
+  EBISU_THIRD_MAN_F,
   EXCLUSIVE_MELODY_ORDER,
+  IKEBUKURO_BIC_CAMERA_A,
+  IKEBUKURO_BIC_CAMERA_B,
   MELODY_DURATIONS,
   SESERAGI_PLATFORMS,
   MELODY_PATHS,
@@ -131,26 +134,46 @@ test('Seseragi est câblée sur des voies qui existent, et dans le bon sens', ()
   }
 });
 
+test('les mélodies à deux quais visent des voies qui existent dans ce sens', () => {
+  // Même piège que Seseragi, en double : Ebisu et Ikebukuro déclarent une voie
+  // PAR SENS, et une seule des deux peut être fausse sans que rien ne le dise.
+  // Les voies alternatives d'Ikebukuro (5 et 8) comptent autant que les
+  // principales - la table de JR East dit 全番線.
+  for (const config of [EBISU_THIRD_MAN_F, IKEBUKURO_BIC_CAMERA_A, IKEBUKURO_BIC_CAMERA_B]) {
+    for (const direction of DIRECTIONS) {
+      const slot = config.byDirection[direction];
+      const info = platformFor(config.stationCode, direction);
+      assert.ok(info, `${config.stationCode} ${direction}`);
+      const known = [info.platform, ...(info.alternativePlatform ? [info.alternativePlatform] : [])];
+      assert.ok(
+        known.includes(slot.platform),
+        `${config.stationCode} ${direction} : voie ${slot.platform}, quais réels ${known.join(' et ')}`,
+      );
+      assert.equal(slot.nextStationName, info.nextStation, `${config.stationCode} ${direction}`);
+    }
+  }
+});
+
 test('les quais sans clip sont ceux qu’on sait, et leur fenêtre reste pleine', () => {
-  // Six quais n'ont aucun clip câblé et retombent sur la synthèse Tone.js :
-  // Ebisu Outer (ver.E jamais fournie), Ikebukuro Outer, et trois quais 内回り
-  // du nord dont la mélodie réelle est 「春」, qui n'est pas gravée (seule la
-  // version trémolo de Uguisudani l'est).
+  // Il ne reste que trois quais sans clip, et c'est le même trou : 巣鴨, 大塚 et
+  // 目白 en 内回り diffusent 「春」, qui n'est pas gravé - seule la version trémolo
+  // de 鶯谷 l'est. Tous les autres quais de la boucle ont leur mélodie.
   //
-  // JY11 outer N'Y EST PLUS : c'est Seseragi, et la table la donnait voie 2 -
-  // le quai 内回り de Sugamo. Le prédicat ne trouvait donc jamais son quai et la
-  // gare était muette dans les deux sens. La liste est figée ici pour qu'un
-  // branchement ajouté - ou perdu - se voie.
+  // Ce qui a quitté la liste, et pourquoi :
+  //   • JY11 outer - c'est Seseragi, mais la table la donnait voie 2, le quai
+  //     内回り de Sugamo ; le prédicat ne trouvait jamais son quai ;
+  //   • JY13 outer 7 et 8 - 「ビックカメラテーマソング（全番線バージョン違い）」 : les
+  //     quatre voies la diffusent, pas seulement les deux du 内回り ;
+  //   • JY21 outer - 第三の男 sonne des deux côtés du quai d'Ebisu.
+  //
+  // La liste est figée ici pour qu'un branchement ajouté - ou perdu - se voie.
   const silent = platforms().filter(
     ({ jy, direction, platform }) => plannedDepartureMelodyPath(jy, direction, platform) === null,
   );
   assert.deepEqual(silent.map((p) => `${p.jy} ${p.direction} voie ${p.platform}`), [
     'JY11 inner voie 2',
     'JY12 inner voie 1',
-    'JY13 outer voie 7',
-    'JY13 outer voie 8',
     'JY14 inner voie 1',
-    'JY21 outer voie 1',
   ]);
 
   // Clip ou synthèse, la fenêtre réservée vaut toujours deux passages entiers :

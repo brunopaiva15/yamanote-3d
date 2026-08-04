@@ -291,24 +291,61 @@ export const TAKADANOBABA_INNER_ATOM_B = {
   nextStationName: 'Shin-Okubo',
 };
 
-/** Chemin : The Third Man ver.F - Ebisu Inner voie 2. */
-export const EBISU_INNER_THIRD_MAN_F_PATH = '/audio/melodies/13_the-third-man-f.mp3';
+/**
+ * Un branchement qui tient les DEUX quais d'une gare.
+ *
+ * La plupart des mélodies exclusives ne sonnent que d'un côté, et se décrivent
+ * très bien par une voie unique. Certaines gares, elles, diffusent le même
+ * morceau dans les deux sens - c'est ce que dit la table 発車メロディ de JR East
+ * pour Ebisu (第三の男) comme pour Ikebukuro (ビックカメラ, 全番線). Une config par
+ * sens, plutôt que deux consts jumelles, garde l'appariement voie ↔ gare
+ * suivante sous les yeux : c'est lui qui rend un quai muet quand il se trompe.
+ */
+export interface DirectionalMelodySlot {
+  platform: number;
+  nextStationCode: string;
+  nextStationName: string;
+}
 
-/** Config exclusive : Ebisu Inner Loop plateforme 2 → Meguro. */
-export const EBISU_INNER_THIRD_MAN_F = {
+export interface DirectionalMelodyConfig {
+  stationCode: string;
+  stationName: string;
+  byDirection: Record<LoopDirection, DirectionalMelodySlot>;
+}
+
+/** Chemin : The Third Man ver.F - les deux quais d'Ebisu. */
+export const EBISU_THIRD_MAN_F_PATH = '/audio/melodies/13_the-third-man-f.mp3';
+
+/**
+ * Config exclusive : Ebisu (JY21), voie 2 → Meguro et voie 1 → Shibuya.
+ *
+ * 第三の男 sonne des deux côtés du quai - la table de JR East ne distingue même
+ * pas les deux colonnes. Le jeu n'a qu'une gravure (ver.F) là où la gare tourne
+ * plusieurs versions ; les deux voies la partagent donc, ce qui reste plus
+ * juste que le 外回り muet d'avant.
+ */
+export const EBISU_THIRD_MAN_F: DirectionalMelodyConfig & {
+  id: string;
+  name: string;
+  japaneseName: string;
+  file: string;
+  type: 'departure_melody';
+  audioSource: 'platform_speakers';
+  line: string;
+} = {
   id: 'the-third-man-ver-f',
   name: 'Yugure Waltz',
   japaneseName: '夕暮れワルツ',
-  file: EBISU_INNER_THIRD_MAN_F_PATH,
-  type: 'departure_melody' as const,
-  audioSource: 'platform_speakers' as const,
+  file: EBISU_THIRD_MAN_F_PATH,
+  type: 'departure_melody',
+  audioSource: 'platform_speakers',
   line: 'yamanote',
   stationCode: 'JY21',
   stationName: 'Ebisu',
-  direction: 'inner' as const,
-  platform: 2,
-  nextStationCode: 'JY22',
-  nextStationName: 'Meguro',
+  byDirection: {
+    inner: { platform: 2, nextStationCode: 'JY22', nextStationName: 'Meguro' },
+    outer: { platform: 1, nextStationCode: 'JY20', nextStationName: 'Shibuya' },
+  },
 };
 
 /** Chemin : Glorious Gateway A - Takanawa Gateway Inner voie 1. */
@@ -393,46 +430,68 @@ export const KANDA_INNER_MONDAMIN_B = {
   nextStationName: 'Akihabara',
 };
 
-/** Chemin : Bic Camera Theme Song ver.A - Ikebukuro Inner voie 5 (secondaire). */
-export const IKEBUKURO_INNER_BIC_CAMERA_A_PATH =
-  '/audio/melodies/18_bic-camera-theme-a.mp3';
+/**
+ * Chemin : Bic Camera Theme Song ver.A - Ikebukuro voies 5 (Inner) et 7 (Outer).
+ *
+ * 「ビックカメラテーマソング（全番線バージョン違い）」 : les QUATRE voies de la gare
+ * la diffusent, chacune dans une version différente. Le jeu en a gravé deux ;
+ * elles sont réparties de façon qu'aucune voie ne sonne comme sa voisine -
+ * ver.A sur la 5 et la 7, ver.B sur la 6 et la 8. C'est moins que la réalité,
+ * et infiniment plus que le silence dans lequel partait tout le 外回り.
+ */
+export const IKEBUKURO_BIC_CAMERA_A_PATH = '/audio/melodies/18_bic-camera-theme-a.mp3';
 
-/** Config exclusive : Ikebukuro Inner Loop plateforme 5 → Mejiro. */
-export const IKEBUKURO_INNER_BIC_CAMERA_A = {
+/** Config exclusive : Ikebukuro voie 5 → Mejiro et voie 7 → Ōtsuka. */
+export const IKEBUKURO_BIC_CAMERA_A: DirectionalMelodyConfig & {
+  id: string;
+  name: string;
+  japaneseName: string;
+  file: string;
+  type: 'departure_melody';
+  audioSource: 'platform_speakers';
+  line: string;
+} = {
   id: 'bic-camera-theme-ver-a',
   name: 'Denki Pop ver.A',
   japaneseName: '電気ポップ ver.A',
-  file: IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
-  type: 'departure_melody' as const,
-  audioSource: 'platform_speakers' as const,
+  file: IKEBUKURO_BIC_CAMERA_A_PATH,
+  type: 'departure_melody',
+  audioSource: 'platform_speakers',
   line: 'yamanote',
   stationCode: 'JY13',
   stationName: 'Ikebukuro',
-  direction: 'inner' as const,
-  platform: 5,
-  nextStationCode: 'JY14',
-  nextStationName: 'Mejiro',
+  byDirection: {
+    inner: { platform: 5, nextStationCode: 'JY14', nextStationName: 'Mejiro' },
+    outer: { platform: 7, nextStationCode: 'JY12', nextStationName: 'Otsuka' },
+  },
 };
 
-/** Chemin : Bic Camera Theme Song ver.B - Ikebukuro Inner voie 6 (principale). */
-export const IKEBUKURO_INNER_BIC_CAMERA_B_PATH =
-  '/audio/melodies/19_bic-camera-theme-b.mp3';
+/** Chemin : Bic Camera Theme Song ver.B - Ikebukuro voies 6 (Inner) et 8 (Outer). */
+export const IKEBUKURO_BIC_CAMERA_B_PATH = '/audio/melodies/19_bic-camera-theme-b.mp3';
 
-/** Config exclusive : Ikebukuro Inner Loop plateforme 6 → Mejiro. */
-export const IKEBUKURO_INNER_BIC_CAMERA_B = {
+/** Config exclusive : Ikebukuro voie 6 → Mejiro et voie 8 → Ōtsuka. */
+export const IKEBUKURO_BIC_CAMERA_B: DirectionalMelodyConfig & {
+  id: string;
+  name: string;
+  japaneseName: string;
+  file: string;
+  type: 'departure_melody';
+  audioSource: 'platform_speakers';
+  line: string;
+} = {
   id: 'bic-camera-theme-ver-b',
   name: 'Denki Pop ver.B',
   japaneseName: '電気ポップ ver.B',
-  file: IKEBUKURO_INNER_BIC_CAMERA_B_PATH,
-  type: 'departure_melody' as const,
-  audioSource: 'platform_speakers' as const,
+  file: IKEBUKURO_BIC_CAMERA_B_PATH,
+  type: 'departure_melody',
+  audioSource: 'platform_speakers',
   line: 'yamanote',
   stationCode: 'JY13',
   stationName: 'Ikebukuro',
-  direction: 'inner' as const,
-  platform: 6,
-  nextStationCode: 'JY14',
-  nextStationName: 'Mejiro',
+  byDirection: {
+    inner: { platform: 6, nextStationCode: 'JY14', nextStationName: 'Mejiro' },
+    outer: { platform: 8, nextStationCode: 'JY12', nextStationName: 'Otsuka' },
+  },
 };
 
 /**
@@ -453,13 +512,13 @@ export const MELODY_PATHS: readonly string[] = [
   SESERAGI_MELODY_PATH,
   TAKADANOBABA_OUTER_ATOM_A_PATH,
   TAKADANOBABA_INNER_ATOM_B_PATH,
-  EBISU_INNER_THIRD_MAN_F_PATH,
+  EBISU_THIRD_MAN_F_PATH,
   TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH,
   TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH,
   KANDA_OUTER_MONDAMIN_A_PATH,
   KANDA_INNER_MONDAMIN_B_PATH,
-  IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
-  IKEBUKURO_INNER_BIC_CAMERA_B_PATH,
+  IKEBUKURO_BIC_CAMERA_A_PATH,
+  IKEBUKURO_BIC_CAMERA_B_PATH,
 ];
 
 /**
@@ -836,18 +895,23 @@ export function shouldPlayTakadanobabaInnerAtomB(ctx: MelodyPlayContext): boolea
 }
 
 /**
- * The Third Man ver.F : exclusivement Ebisu (JY21) Inner Loop plateforme 2 → Meguro.
- * La voie 1 Outer (ver.E) n’est pas encore fournie.
+ * Le quai visé est-il celui que ce branchement dessert, dans ce sens ?
+ *
+ * Mêmes garde-fous que les prédicats à voie unique, à ceci près que la voie et
+ * la gare suivante sont lues DANS LE SENS : c'est le sens qui choisit la voie,
+ * et non le prédicat qui refuse un sens.
  */
-export function shouldPlayEbisuInnerThirdManF(ctx: MelodyPlayContext): boolean {
+function matchesDirectionalMelody(
+  ctx: MelodyPlayContext,
+  config: DirectionalMelodyConfig,
+): boolean {
   if (ctx.line !== 'yamanote') return false;
-  if (ctx.stationCode !== EBISU_INNER_THIRD_MAN_F.stationCode) return false;
-  if (ctx.direction !== 'inner') return false;
-  if (Number(ctx.platform) !== EBISU_INNER_THIRD_MAN_F.platform) return false;
+  if (ctx.stationCode !== config.stationCode) return false;
 
-  if (ctx.nextStationCode && ctx.nextStationCode !== EBISU_INNER_THIRD_MAN_F.nextStationCode) {
-    return false;
-  }
+  const slot = config.byDirection[ctx.direction];
+  if (!slot) return false;
+  if (Number(ctx.platform) !== slot.platform) return false;
+  if (ctx.nextStationCode && ctx.nextStationCode !== slot.nextStationCode) return false;
 
   if (ctx.trainState !== 'stopped_doors_open') return false;
   if (!ctx.departureSequenceStarted) return false;
@@ -858,6 +922,18 @@ export function shouldPlayEbisuInnerThirdManF(ctx: MelodyPlayContext): boolean {
   if (service === 'out_of_service' || service === 'terminal') return false;
 
   return true;
+}
+
+/**
+ * The Third Man ver.F : Ebisu (JY21), voie 2 → Meguro et voie 1 → Shibuya.
+ *
+ * Le 外回り y était muet, sur la foi d'un commentaire qui attendait une ver.E
+ * jamais fournie. La table de JR East ne connaît pas ce partage : elle donne
+ * 第三の男 aux deux colonnes de la gare. Une gravure pour deux quais vaut mieux
+ * qu'un quai sans mélodie.
+ */
+export function shouldPlayEbisuThirdManF(ctx: MelodyPlayContext): boolean {
+  return matchesDirectionalMelody(ctx, EBISU_THIRD_MAN_F);
 }
 
 /**
@@ -975,59 +1051,19 @@ export function shouldPlayKandaInnerMondaminB(ctx: MelodyPlayContext): boolean {
 }
 
 /**
- * Bic Camera Theme Song ver.A : exclusivement Ikebukuro (JY13) Inner Loop plateforme 5 → Mejiro.
- * La voie 6 (principale) utilise ver.B. Ne pas exiger departureAuthorized.
+ * Bic Camera ver.A : Ikebukuro (JY13), voie 5 → Mejiro et voie 7 → Ōtsuka.
+ * Ne pas exiger departureAuthorized.
  */
-export function shouldPlayIkebukuroInnerBicCameraA(ctx: MelodyPlayContext): boolean {
-  if (ctx.line !== 'yamanote') return false;
-  if (ctx.stationCode !== IKEBUKURO_INNER_BIC_CAMERA_A.stationCode) return false;
-  if (ctx.direction !== 'inner') return false;
-  if (Number(ctx.platform) !== IKEBUKURO_INNER_BIC_CAMERA_A.platform) return false;
-
-  if (
-    ctx.nextStationCode &&
-    ctx.nextStationCode !== IKEBUKURO_INNER_BIC_CAMERA_A.nextStationCode
-  ) {
-    return false;
-  }
-
-  if (ctx.trainState !== 'stopped_doors_open') return false;
-  if (!ctx.departureSequenceStarted) return false;
-  if (ctx.emergencyActive) return false;
-
-  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
-  const service = resolveServiceType(ctx);
-  if (service === 'out_of_service' || service === 'terminal') return false;
-
-  return true;
+export function shouldPlayIkebukuroBicCameraA(ctx: MelodyPlayContext): boolean {
+  return matchesDirectionalMelody(ctx, IKEBUKURO_BIC_CAMERA_A);
 }
 
 /**
- * Bic Camera Theme Song ver.B : exclusivement Ikebukuro (JY13) Inner Loop plateforme 6 → Mejiro.
- * Voie principale Inner. Ne pas exiger departureAuthorized.
+ * Bic Camera ver.B : Ikebukuro (JY13), voie 6 → Mejiro et voie 8 → Ōtsuka.
+ * Ne pas exiger departureAuthorized.
  */
-export function shouldPlayIkebukuroInnerBicCameraB(ctx: MelodyPlayContext): boolean {
-  if (ctx.line !== 'yamanote') return false;
-  if (ctx.stationCode !== IKEBUKURO_INNER_BIC_CAMERA_B.stationCode) return false;
-  if (ctx.direction !== 'inner') return false;
-  if (Number(ctx.platform) !== IKEBUKURO_INNER_BIC_CAMERA_B.platform) return false;
-
-  if (
-    ctx.nextStationCode &&
-    ctx.nextStationCode !== IKEBUKURO_INNER_BIC_CAMERA_B.nextStationCode
-  ) {
-    return false;
-  }
-
-  if (ctx.trainState !== 'stopped_doors_open') return false;
-  if (!ctx.departureSequenceStarted) return false;
-  if (ctx.emergencyActive) return false;
-
-  if (ctx.serviceState === 'out_of_service' || ctx.serviceState === 'terminated') return false;
-  const service = resolveServiceType(ctx);
-  if (service === 'out_of_service' || service === 'terminal') return false;
-
-  return true;
+export function shouldPlayIkebukuroBicCameraB(ctx: MelodyPlayContext): boolean {
+  return matchesDirectionalMelody(ctx, IKEBUKURO_BIC_CAMERA_B);
 }
 
 // --- Quelle mélodie sonnera, et pendant combien de temps -------------------
@@ -1046,8 +1082,8 @@ export function shouldPlayIkebukuroInnerBicCameraB(ctx: MelodyPlayContext): bool
 
 /** Mélodies exclusives, dans l'ordre où la procédure de départ les essaie. */
 const EXCLUSIVE_MELODIES: readonly { path: string; test: (ctx: MelodyPlayContext) => boolean }[] = [
-  { path: IKEBUKURO_INNER_BIC_CAMERA_A_PATH, test: shouldPlayIkebukuroInnerBicCameraA },
-  { path: IKEBUKURO_INNER_BIC_CAMERA_B_PATH, test: shouldPlayIkebukuroInnerBicCameraB },
+  { path: IKEBUKURO_BIC_CAMERA_A_PATH, test: shouldPlayIkebukuroBicCameraA },
+  { path: IKEBUKURO_BIC_CAMERA_B_PATH, test: shouldPlayIkebukuroBicCameraB },
   { path: OSAKI_INNER_SECONDARY_MELODY_PATH, test: shouldPlayOsakiInnerSecondaryMelody },
   { path: OSAKI_OUTER_SECONDARY_MELODY_PATH, test: shouldPlayOsakiOuterSecondaryMelody },
   { path: KOMAGOME_OUTER_SAKURA_A_PATH, test: shouldPlayKomagomeOuterSakuraA },
@@ -1056,7 +1092,7 @@ const EXCLUSIVE_MELODIES: readonly { path: string; test: (ctx: MelodyPlayContext
   { path: SESERAGI_MELODY_PATH, test: shouldPlaySeseragi },
   { path: TAKADANOBABA_OUTER_ATOM_A_PATH, test: shouldPlayTakadanobabaOuterAtomA },
   { path: TAKADANOBABA_INNER_ATOM_B_PATH, test: shouldPlayTakadanobabaInnerAtomB },
-  { path: EBISU_INNER_THIRD_MAN_F_PATH, test: shouldPlayEbisuInnerThirdManF },
+  { path: EBISU_THIRD_MAN_F_PATH, test: shouldPlayEbisuThirdManF },
   { path: TAKANAWA_GATEWAY_INNER_GLORIOUS_A_PATH, test: shouldPlayTakanawaGatewayInnerGloriousA },
   { path: TAKANAWA_GATEWAY_OUTER_GLORIOUS_B_PATH, test: shouldPlayTakanawaGatewayOuterGloriousB },
   { path: KANDA_OUTER_MONDAMIN_A_PATH, test: shouldPlayKandaOuterMondaminA },

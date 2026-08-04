@@ -8,10 +8,10 @@
 // n'est pas bloqué.
 
 import {
-  EBISU_INNER_THIRD_MAN_F_PATH,
+  EBISU_THIRD_MAN_F_PATH,
   ENABLE_DEPARTURE_MELODY_CLIPS,
-  IKEBUKURO_INNER_BIC_CAMERA_A_PATH,
-  IKEBUKURO_INNER_BIC_CAMERA_B_PATH,
+  IKEBUKURO_BIC_CAMERA_A_PATH,
+  IKEBUKURO_BIC_CAMERA_B_PATH,
   KANDA_INNER_MONDAMIN_B_PATH,
   KANDA_OUTER_MONDAMIN_A_PATH,
   KOMAGOME_INNER_SAKURA_V2_PATH,
@@ -31,9 +31,9 @@ import {
   makeDepartureId,
   outerMainMelodyPathFor,
   plannedMelodySounding,
-  shouldPlayEbisuInnerThirdManF,
-  shouldPlayIkebukuroInnerBicCameraA,
-  shouldPlayIkebukuroInnerBicCameraB,
+  shouldPlayEbisuThirdManF,
+  shouldPlayIkebukuroBicCameraA,
+  shouldPlayIkebukuroBicCameraB,
   shouldPlayInnerMainMelody,
   shouldPlayKandaInnerMondaminB,
   shouldPlayKandaOuterMondaminA,
@@ -490,8 +490,8 @@ export async function playTakadanobabaInnerAtomB(context: MelodyPlayContext): Pr
 /**
  * The Third Man ver.F : Ebisu Inner voie 2 → Meguro, une fois par départ.
  */
-export async function playEbisuInnerThirdManF(context: MelodyPlayContext): Promise<boolean> {
-  if (!shouldPlayEbisuInnerThirdManF(context)) return false;
+export async function playEbisuThirdManF(context: MelodyPlayContext): Promise<boolean> {
+  if (!shouldPlayEbisuThirdManF(context)) return false;
   if (isDepartureBlocked()) return false;
   if (ebisuThirdManFPlaying) return false;
   if (!claimDepartureId(context)) return false;
@@ -499,7 +499,7 @@ export async function playEbisuInnerThirdManF(context: MelodyPlayContext): Promi
   markDepartureId(context);
   ebisuThirdManFPlaying = true;
   try {
-    const ok = await playMelodyRounds(EBISU_INNER_THIRD_MAN_F_PATH);
+    const ok = await playMelodyRounds(EBISU_THIRD_MAN_F_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -609,10 +609,10 @@ export async function playKandaInnerMondaminB(
  * Bic Camera Theme Song ver.A : Ikebukuro Inner voie 5 → Mejiro, une fois par départ.
  * Ne nécessite pas departureAuthorized (préparation du départ).
  */
-export async function playIkebukuroInnerBicCameraA(
+export async function playIkebukuroBicCameraA(
   context: MelodyPlayContext,
 ): Promise<boolean> {
-  if (!shouldPlayIkebukuroInnerBicCameraA(context)) return false;
+  if (!shouldPlayIkebukuroBicCameraA(context)) return false;
   if (context.emergencyActive) return false;
   if (runtime.departureBlockers.heldAtStation) return false;
   if (bicCameraAPlaying) return false;
@@ -621,7 +621,7 @@ export async function playIkebukuroInnerBicCameraA(
   markDepartureId(context);
   bicCameraAPlaying = true;
   try {
-    const ok = await playMelodyRounds(IKEBUKURO_INNER_BIC_CAMERA_A_PATH);
+    const ok = await playMelodyRounds(IKEBUKURO_BIC_CAMERA_A_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -635,10 +635,10 @@ export async function playIkebukuroInnerBicCameraA(
  * Bic Camera Theme Song ver.B : Ikebukuro Inner voie 6 → Mejiro, une fois par départ.
  * Ne nécessite pas departureAuthorized (préparation du départ).
  */
-export async function playIkebukuroInnerBicCameraB(
+export async function playIkebukuroBicCameraB(
   context: MelodyPlayContext,
 ): Promise<boolean> {
-  if (!shouldPlayIkebukuroInnerBicCameraB(context)) return false;
+  if (!shouldPlayIkebukuroBicCameraB(context)) return false;
   if (context.emergencyActive) return false;
   if (runtime.departureBlockers.heldAtStation) return false;
   if (bicCameraBPlaying) return false;
@@ -647,7 +647,7 @@ export async function playIkebukuroInnerBicCameraB(
   markDepartureId(context);
   bicCameraBPlaying = true;
   try {
-    const ok = await playMelodyRounds(IKEBUKURO_INNER_BIC_CAMERA_B_PATH);
+    const ok = await playMelodyRounds(IKEBUKURO_BIC_CAMERA_B_PATH);
     if (!ok && context.departureId && runtime.lastMelodyDepartureId === context.departureId) {
       runtime.lastMelodyDepartureId = null;
     }
@@ -668,8 +668,8 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (context.emergencyActive) return false;
 
   // Bic Camera A/B (voies 5/6) : peuvent démarrer sans departureAuthorized.
-  if (await playIkebukuroInnerBicCameraA(context)) return true;
-  if (await playIkebukuroInnerBicCameraB(context)) return true;
+  if (await playIkebukuroBicCameraA(context)) return true;
+  if (await playIkebukuroBicCameraB(context)) return true;
 
   if (context.departureAuthorized === false) return false;
   if (isDepartureBlocked()) return false;
@@ -682,7 +682,7 @@ export async function playDepartureMelodyForContext(context: MelodyPlayContext):
   if (await playSeseragi(context)) return true;
   if (await playTakadanobabaOuterAtomA(context)) return true;
   if (await playTakadanobabaInnerAtomB(context)) return true;
-  if (await playEbisuInnerThirdManF(context)) return true;
+  if (await playEbisuThirdManF(context)) return true;
   if (await playTakanawaGatewayInnerGloriousA(context)) return true;
   if (await playTakanawaGatewayOuterGloriousB(context)) return true;
   if (await playKandaOuterMondaminA(context)) return true;
