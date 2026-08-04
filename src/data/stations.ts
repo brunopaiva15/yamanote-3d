@@ -1,6 +1,7 @@
 // Données réelles de la ligne Yamanote : 30 stations (JY01 → JY30),
 // côté d'ouverture des portes et correspondances pour les annonces.
-// `code` = trigramme affiché sur les panneaux de quai ; `kana` = lecture hiragana ;
+// `code` = trigramme, mais SEULES LES QUATORZE GARES DE `CODED_JY` en portent un
+// officiellement - passer par `stationCode()` pour l'afficher ; `kana` = lecture hiragana ;
 // `zh` / `ko` = graphies officielles JR East (chinois simplifié / hangul) du
 // cycle quadrilingue des afficheurs E235.
 // Numéros de quai (内回り / 外回り) : voir `platforms.ts`.
@@ -50,6 +51,43 @@ export const STATIONS: Station[] = [
   { jy: 'JY29', kanji: '新橋', kana: 'しんばし', romaji: 'Shimbashi', code: 'SMB', zh: '新桥', ko: '신바시' },
   { jy: 'JY30', kanji: '有楽町', kana: 'ゆうらくちょう', romaji: 'Yūrakuchō', code: 'YUR', zh: '有乐町', ko: '유라쿠초' },
 ];
+
+// Le trigramme N'EST PAS UNE PROPRIÉTÉ DE TOUTE GARE. JR East ne l'a attribué
+// qu'aux gares majeures - celles qui servent de repère à un voyageur qui ne lit
+// ni kanji ni kana : les grandes correspondances et les têtes de réseau. Les
+// seize autres n'ont que leur numéro de ligne, et leur signalétique porte le
+// carré JY seul, sans lettres au-dessus.
+//
+// Ces quatorze-là sont donc les seules que l'afficheur doit coiffer d'un
+// trigramme. Le reste des `code` de la table ci-dessus n'est pas officiel : il
+// sert de repère interne (fichiers audio, plaques de quai héritées), et il ne
+// doit pas remonter sur une dalle.
+const CODED_JY = new Set([
+  'JY01', // 東京 TYO
+  'JY02', // 神田 KND
+  'JY03', // 秋葉原 AKB
+  'JY05', // 上野 UEN
+  'JY07', // 日暮里 NPR
+  'JY13', // 池袋 IKB
+  'JY17', // 新宿 SJK
+  'JY20', // 渋谷 SBY
+  'JY21', // 恵比寿 EBS
+  'JY24', // 大崎 OSK
+  'JY25', // 品川 SGW
+  'JY26', // 高輪ゲートウェイ TGW - attribué à l'ouverture, en 2020
+  'JY28', // 浜松町 HMC
+  'JY29', // 新橋 SMB
+]);
+
+/**
+ * Trigramme officiel de la gare, ou chaîne vide si elle n'en porte pas.
+ *
+ * À utiliser partout où le trigramme est AFFICHÉ ; `station.code` reste la
+ * valeur brute de la table, y compris pour les gares sans trigramme officiel.
+ */
+export function stationCode(st: Station): string {
+  return CODED_JY.has(st.jy) ? st.code : '';
+}
 
 // Côté d'ouverture des portes par index de station (1 = droite, -1 = gauche),
 // au relevé JR East de janvier 2026.

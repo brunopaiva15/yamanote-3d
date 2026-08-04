@@ -24,7 +24,7 @@ import type { LoopDirection } from '../data/platforms';
 import { cruiseDuration, headwayMinutesTo } from '../data/segments';
 import { gateNameFor } from '../data/stationInterior';
 import { layoutFor } from '../data/stationLayouts';
-import { STATIONS, TRANSFERS } from '../data/stations';
+import { STATIONS, TRANSFERS, stationCode } from '../data/stations';
 import type { Phase } from '../store';
 import { JP_FONT } from '../data/fonts';
 import { rng } from '../data/rng';
@@ -238,35 +238,45 @@ const HEADER_H = 133;
  * C'est la pièce qui manquait entièrement au bandeau, et ce n'est pas un
  * détail décoratif : c'est elle qui raccorde l'écran à la signalétique du
  * quai. Un voyageur qui ne lit pas les kanji cherche « JY 01 », pas 東京.
+ *
+ * `code` VIDE est le cas ORDINAIRE, pas une panne : dix-sept gares de la
+ * boucle n'ont pas de trigramme officiel (cf. `stationCode`). La pastille se
+ * réduit alors au carré JY - la boîte noire remonte sur la seule tuile plutôt
+ * que de garder au-dessus une bande vide qui se lirait comme un texte manquant.
  */
 function drawStationTile(g: CanvasRenderingContext2D, code: string, jy: string): void {
   // Boîte noire (le fond du bandeau est gris très sombre, pas noir : la boîte
-  // se détache).
+  // se détache). Le BAS reste calé à 131 dans les deux cas : c'est lui qui
+  // aligne la pastille sur le reste du bandeau.
+  const boxY = code ? 35 : 53;
   g.fillStyle = '#000000';
   g.beginPath();
-  g.roundRect(220, 35, 78, 96, 6);
+  g.roundRect(220, boxY, 78, 131 - boxY, 6);
   g.fill();
 
   g.textAlign = 'center';
-  g.fillStyle = '#ffffff';
-  fitText(g, code, 66, 24);
-  g.fillText(code, 259, 54);
+  if (code) {
+    g.fillStyle = '#ffffff';
+    fitText(g, code, 66, 24);
+    g.fillText(code, 259, 54);
+  }
 
   // Tuile verte à cœur blanc.
+  const tileY = boxY + 22.5 * (code ? 1 : 0.25);
   g.fillStyle = YAMANOTE_GREEN;
   g.beginPath();
-  g.roundRect(225.5, 57.5, 67, 67, 9);
+  g.roundRect(225.5, tileY, 67, 67, 9);
   g.fill();
   g.fillStyle = '#ecebe9';
   g.beginPath();
-  g.roundRect(233.5, 65, 52, 52, 3);
+  g.roundRect(233.5, tileY + 7.5, 52, 52, 3);
   g.fill();
 
   g.fillStyle = '#141414';
   g.font = `bold 20px ${JP_FONT}`;
-  g.fillText('JY', 259, 83);
+  g.fillText('JY', 259, tileY + 25.5);
   g.font = `bold 32px ${JP_FONT}`;
-  g.fillText(jy.slice(2), 259, 111);
+  g.fillText(jy.slice(2), 259, tileY + 53.5);
   g.textAlign = 'left';
 }
 
@@ -326,7 +336,7 @@ function drawHeader(
   fitText(g, STATUS_LABEL[status][lang], 260, 27, '');
   g.fillText(STATUS_LABEL[status][lang], 226, 27);
 
-  drawStationTile(g, next.code, next.jy);
+  drawStationTile(g, stationCode(next), next.jy);
 
   // Nom de la gare, énorme : il occupe toute la moitié droite et passe SOUS
   // l'horloge, exactement comme sur l'afficheur. Les noms de DEUX caractères
