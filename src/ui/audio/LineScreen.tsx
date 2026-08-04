@@ -20,8 +20,10 @@
 // écran sans qu'elle devienne une capture d'écran agrandie.
 
 import { useCallback, useEffect, useRef } from 'react';
-import { ANIM_PERIOD, ANIM_PHASES, LCD_CUTOFF, SCREEN_H, SCREEN_W } from '../../three/lineScreen';
+import { LCD_CUTOFF, SCREEN_H, SCREEN_W } from '../../three/lineScreen';
 import {
+  ANIM_PERIOD,
+  ANIM_PHASES,
   MOTION_STEP,
   bandFills,
   lineScreenFrame,
@@ -30,6 +32,7 @@ import {
   newScreenAnim,
   paintLineScreen,
   resetScreenAnim,
+  screenLoops,
   stepScreenAnim,
 } from '../../three/lineScreenCycle';
 import { paintBlended } from '../../three/screenFade';
@@ -117,7 +120,7 @@ export function LineScreen() {
     const g = el.getContext('2d');
     if (!g) return;
 
-    let anim = 0;
+    let phase = 0;
     let lastKey = '';
     let dark = false;
     let scale = 0;
@@ -156,11 +159,13 @@ export function LineScreen() {
     // qu'on lui a promis d'éviter.
     //
     // Le minuteur, lui, bat plus vite (MOTION_STEP) - mais il ne PEINT pas plus
-    // souvent. Il ne sert qu'à donner leurs images au fondu enchaîné d'une page
-    // à l'autre et à la remontée du vert sur la bande, qui n'occupent ensemble
-    // qu'un instant par page ; le reste du temps il compare deux clés de
-    // caractères et s'arrête là. C'est ce qu'il fallait pour que ces deux
-    // animations ne coûtent pas un rafraîchissement permanent.
+    // souvent. Il ne sert qu'à donner leurs images aux trois choses qui
+    // coulissent : le fondu enchaîné d'une page à l'autre, la remontée du vert
+    // sur la bande, et les vantaux du pictogramme de portes. Les deux premières
+    // n'occupent qu'un instant par page, la troisième que le freinage
+    // d'approche ; le reste du temps il compare deux clés de caractères et
+    // s'arrête là. C'est ce qu'il fallait pour que ces animations ne coûtent
+    // pas un rafraîchissement permanent.
     const id = window.setInterval(() => {
       // Page cachée : personne ne regarde la dalle, et la repeindre coûterait
       // deux mille lignes de canevas prises sur le fil audio - qui, lui,
@@ -196,8 +201,12 @@ export function LineScreen() {
       const beat = sinceBeat >= ANIM_PERIOD;
       if (beat) {
         sinceBeat = 0;
-        anim = (anim + 1) % ANIM_PHASES;
+        phase = (phase + 1) % ANIM_PHASES;
       }
+      // Horloge continue : la phase entière, plus la fraction de battement déjà
+      // écoulée. Le clignotant n'en lit que l'entier, les vantaux du
+      // pictogramme s'en servent tel quel et coulissent entre deux battements.
+      const anim = phase + sinceBeat / ANIM_PERIOD;
       stepAcc += MOTION_STEP;
       if (!beat && !wasMoving) return;
       const stepDt = stepAcc;
@@ -207,10 +216,13 @@ export function LineScreen() {
       const side = watchedSide();
       const page = lineScreenPageKey(shown, side);
       const step = stepScreenAnim(motion, page, bandFills(shown.state), stepDt);
+      // Le plan des sorties de l'approche ne se pose jamais : son pictogramme
+      // de portes tourne en boucle tant qu'il est à l'antenne.
+      const loops = screenLoops(shown);
       // Une image de plus APRÈS la fin d'une animation : celle qui pose le
       // ruban plein.
-      const moving = step.busy || wasMoving;
-      wasMoving = step.busy;
+      const moving = step.busy || loops || wasMoving;
+      wasMoving = step.busy || loops;
 
       const key = lineScreenKey(shown, anim, side);
       if (key === lastKey && !moving) return;

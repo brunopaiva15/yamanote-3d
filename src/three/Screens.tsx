@@ -13,8 +13,6 @@ import * as THREE from 'three';
 import { CONFIG } from '../data/config';
 import { runtime } from '../systems/runtime';
 import {
-  ANIM_PERIOD,
-  ANIM_PHASES,
   AD_LOOP_COUNT,
   AD_LOOP_FIRST_SEED,
   END_AD_COUNT,
@@ -25,6 +23,8 @@ import {
   SCREEN_W,
 } from './lineScreen';
 import {
+  ANIM_PERIOD,
+  ANIM_PHASES,
   MOTION_STEP,
   bandFills,
   lineScreenFrame,
@@ -33,6 +33,7 @@ import {
   newScreenAnim,
   paintLineScreen,
   resetScreenAnim,
+  screenLoops,
   stepScreenAnim,
 } from './lineScreenCycle';
 import { paintBlended } from './screenFade';
@@ -146,7 +147,12 @@ export function Screens() {
       // minute affichée reste la même.
       animPhase.current = (animPhase.current + 1) % ANIM_PHASES;
     }
-    const anim = animPhase.current;
+    // L'horloge donnée aux peintures est CONTINUE : la phase entière, plus la
+    // fraction de battement déjà écoulée. Au réveil du battement la fraction
+    // est nulle et l'on retrouve exactement le compte d'avant - c'est ce qui
+    // laisse le clignotant claquer à son rythme pendant que les vantaux du
+    // pictogramme, eux, coulissent entre deux battements.
+    const anim = animPhase.current + acc.current / ANIM_PERIOD;
 
     if (beat) {
       // Écran gauche : une pub toutes les ~15 s, boucle de AD_LOOP_COUNT spots -
@@ -184,9 +190,11 @@ export function Screens() {
     // à peine plus d'une seconde à remonter la bande (`three/lineScreenAnim`,
     // seul endroit où ces durées sont écrites) : à un réveil toutes les demi-
     // secondes, le premier serait une coupure et le second un escalier de deux
-    // ou trois marches. On repeint donc jusqu'à MOTION_STEP tant que ça bouge
-    // - et pas une image de plus : hors de ces deux animations, la dalle
-    // retrouve exactement le battement d'avant.
+    // ou trois marches ; les vantaux du pictogramme de portes, eux, coulissent
+    // sans s'arrêter tant que le plan d'approche est à l'antenne. On repeint
+    // donc jusqu'à MOTION_STEP tant que ça bouge - et pas une image de plus :
+    // hors de ces animations, la dalle retrouve exactement le battement
+    // d'avant.
     stepAcc.current += dt;
     if (!beat && (!wasMoving.current || stepAcc.current < MOTION_STEP)) return;
     const stepDt = stepAcc.current;
@@ -199,11 +207,15 @@ export function Screens() {
     const frame = lineScreenFrame();
     const page = `${lineScreenPageKey(frame, 1)}||${lineScreenPageKey(frame, -1)}`;
     const step = stepScreenAnim(motion.current, page, bandFills(frame.state), stepDt);
+    // Le plan des sorties de l'approche ne se pose jamais : son pictogramme de
+    // portes tourne en boucle tant qu'il est à l'antenne, et il lui faut donc
+    // des images fines de bout en bout.
+    const loops = screenLoops(frame);
     // Une image de plus APRÈS la fin d'une animation : celle qui pose le ruban
     // plein. Sans elle, la dernière image peinte serait celle d'avant le
     // dernier pas, et la bande s'arrêterait à un cheveu de son bout.
-    const moving = step.busy || wasMoving.current;
-    wasMoving.current = step.busy;
+    const moving = step.busy || loops || wasMoving.current;
+    wasMoving.current = step.busy || loops;
 
     // Les états animés (plan du quai, plans de ligne) entrent dans la clé avec
     // leur phase : eux seuls se redessinent à chaque battement, les écrans

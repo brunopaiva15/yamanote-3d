@@ -28,6 +28,10 @@ import { STATIONS, TRANSFERS } from '../data/stations';
 import type { Phase } from '../store';
 import { JP_FONT } from '../data/fonts';
 import { rng } from '../data/rng';
+// Le calendrier des animations vit à part, et il est PUR : ce fichier-ci ne
+// tient que les pixels. La dépendance ne va que dans ce sens - `lineScreenAnim`
+// ne connaît pas le canevas, ce qui est ce qui le rend testable sous `node`.
+import { ANIM_PHASES, doorAperture, doorMarker } from './lineScreenAnim';
 // Toutes les cotes et toutes les couleurs de ce fichier sont relevées AU PIXEL
 // sur des captures de l'afficheur réel, ramenées à une dalle de 768 × 432. Le
 // format compte autant que le reste : les doubles écrans de l'E235 sont deux
@@ -765,18 +769,12 @@ function drawHereBlock(g: CanvasRenderingContext2D, x: number, y: number, angle:
 }
 
 /**
- * Cadence d'animation des écrans : quatre phases d'une demi-seconde.
+ * Les repères de position sont allumés une phase sur deux (1 s / 1 s).
  *
- * Une seule horloge pour tout ce qui bouge - les vantaux du plan de quai, le
- * triangle qui désigne la voiture, et le clignotement des repères de position
- * des deux plans de ligne. Sur la rame ces trois choses battent ensemble ;
- * leur donner chacune sa cadence les ferait dériver, et l'écran se mettrait à
- * scintiller au lieu de respirer.
+ * L'horloge d'animation est continue (`lineScreenAnim`) ; ce clignotant-là ne
+ * l'est pas, et ne doit pas l'être : une dalle n'allume pas ses repères en
+ * fondu. La comparaison sur le nombre entier de phases le laisse claquer.
  */
-export const ANIM_PHASES = 4;
-export const ANIM_PERIOD = 0.5;
-
-/** Les repères de position sont allumés une phase sur deux (1 s / 1 s). */
 const markerLit = (anim: number): boolean => anim % ANIM_PHASES < 2;
 
 /**
@@ -1527,44 +1525,52 @@ interface Access {
  * apparaît, au même instant, au-dessus de la case rouge de la rame. Un
  * pictogramme figé n'annonce pas une ouverture, il décrit une porte.
  *
- * Quatre phases relevées sur trois images de la séquence : le débattement des
- * vantaux (2 → 12 → 31 px depuis l'axe) n'est pas linéaire - l'ouverture
- * s'accélère, comme une vraie porte pneumatique.
+ * Le GESTE, lui, est ailleurs : `lineScreenAnim` rend l'écartement des vantaux
+ * et la sortie du triangle en continu, et il n'y a plus ici que les deux cotes
+ * relevées entre lesquelles l'écartement se promène. C'est la seule chose que
+ * la peinture ait à en savoir.
  */
-const DOOR_PHASES = [2, 12, 31, 12];
-const doorPhase = (anim: number): number => anim % DOOR_PHASES.length;
+const DOOR_SHUT = 2;
+const DOOR_WIDE = 31;
 
-/** Le pictogramme de portes du bandeau bas, à la phase `anim`. */
+/** Le pictogramme de portes du bandeau bas, à l'instant `anim`. */
 function drawDoorGlyph(g: CanvasRenderingContext2D, mine: boolean, anim: number): void {
   // De l'autre côté, les vantaux ne bougent pas : ils NE S'OUVRIRONT PAS, et
   // les animer serait dire le contraire du texte. Ils restent fermés, barrés
   // d'un disque rouge - le seul signe qui se lit sans lire.
-  const phase = mine ? doorPhase(anim) : 0;
-  const off = DOOR_PHASES[phase];
+  const open = mine ? doorAperture(anim) : 0;
+  const mark = mine ? doorMarker(anim) : 0;
+  const off = DOOR_SHUT + (DOOR_WIDE - DOOR_SHUT) * open;
   const cx = 150;
   const top = 333;
   const bot = 418;
   const leafW = 46;
-  const open = off > 4;
 
   // Seuil jaune, fixe : c'est le quai, il ne bouge pas avec les portes.
   g.fillStyle = '#e8c81e';
   g.fillRect(cx - 58, bot, 116, 10);
 
-  // Baie visible entre les vantaux dès qu'ils s'écartent, et le triangle rouge
-  // qui en sort une fois grande ouverte.
-  if (open) {
+  // La baie entre les vantaux : elle s'ouvre AVEC eux, au pixel près et sans
+  // seuil - c'est ce qui manquait le plus, l'ancienne ne s'allumait qu'une fois
+  // les vantaux écartés d'un cran. Portes JOINTES, elle ne se peint pas du
+  // tout : ce qui se voit alors entre les deux bords d'attaque n'est pas une
+  // baie, c'est le joint, et c'est aussi l'image que garde la dalle d'en face,
+  // dont les portes ne s'ouvriront pas.
+  if (open > 0) {
     g.fillStyle = '#1c4a86';
     g.fillRect(cx - off, bot - 23, off * 2, 23);
-    if (phase === 2) {
-      g.fillStyle = '#c4232b';
-      g.beginPath();
-      g.moveTo(cx - 22, bot - 1);
-      g.lineTo(cx, bot - 18);
-      g.lineTo(cx + 22, bot - 1);
-      g.closePath();
-      g.fill();
-    }
+  }
+
+  // Le triangle rouge sort du seuil : il POUSSE hors de la baie, pointe la
+  // première, au lieu d'apparaître tout formé le temps d'un battement.
+  if (mark > 0) {
+    g.fillStyle = '#c4232b';
+    g.beginPath();
+    g.moveTo(cx - 22 * mark, bot - 1);
+    g.lineTo(cx, bot - 1 - 17 * mark);
+    g.lineTo(cx + 22 * mark, bot - 1);
+    g.closePath();
+    g.fill();
   }
 
   for (const sgn of [-1, 1] as const) {
@@ -1777,12 +1783,18 @@ function drawStationLayout(s: ScreenSurface, index: number, anim: number): void 
     g.textAlign = 'center';
     g.font = `italic bold 17px ${JP_FONT}`;
     g.fillText(String(CONSIST[i].no), bx + boxW / 2, APPROACH_CARS_Y + 25);
-    if (isMine && doorPhase(anim) === 2) {
+    // Le triangle sort de la case comme celui du pictogramme sort du seuil, et
+    // du même mouvement : c'est la même information, dite deux fois au même
+    // moment. Sur le plan des correspondances - qui ne se repeint qu'au
+    // battement - il ne s'en voit que les deux états extrêmes, et le
+    // clignotement est celui d'avant.
+    const mark = doorMarker(anim);
+    if (isMine && mark > 0) {
       g.fillStyle = '#c4232b';
       g.beginPath();
-      g.moveTo(bx + boxW / 2 - 12, boxY);
-      g.lineTo(bx + boxW / 2, boxY - 14);
-      g.lineTo(bx + boxW / 2 + 12, boxY);
+      g.moveTo(bx + boxW / 2 - 12 * mark, boxY);
+      g.lineTo(bx + boxW / 2, boxY - 14 * mark);
+      g.lineTo(bx + boxW / 2 + 12 * mark, boxY);
       g.closePath();
       g.fill();
     }
