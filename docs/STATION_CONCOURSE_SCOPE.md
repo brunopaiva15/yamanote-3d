@@ -179,6 +179,26 @@ Deux limites connues restent, écrites plutôt que masquées :
 
 ---
 
+## 4 quater. L'inventaire des intrus, gare par gare
+
+`node scripts/station-inside.mjs` sur les trente gares, après la phase 31.
+**Trente-six ouvrages entrent dans un hall, sur dix-huit gares.** Ils tiennent en
+quatre familles, et une seule est grosse :
+
+| famille | combien | où | quoi faire |
+|---|---|---|---|
+| **Décor de ville, gros** | 9 | Tokyo, Ueno, Nippori, Meguro, Ōsaki, Shinagawa, Takanawa Gateway, Tamachi | c'est la phase 31, prise par l'ALTITUDE et non par la distance : un immeuble de vingt mètres traverse un plancher à cinq, un monorail au ras de la voie ne gêne personne |
+| **Décor de ville, menu** | 9 | Tabata, Komagome, Sugamo, Ikebukuro, Mejiro, Shinjuku, Harajuku, Shibuya, Meguro | tous de 13 à 33 cm, tous la MÊME signature de filiation, tous à la même altitude : c'est un seul objet répété, à nommer avant de le pousser |
+| **Ouvrages de la gare, légitimes** | 12 | partout | joues de trémie et volées montantes : elles DOIVENT entrer dans le hall, c'est par là qu'on y arrive |
+| **À juger de visu** | 6 | Harajuku, Nippori, Hamamatsuchō, Takanawa Gateway, Shinagawa | quatre piles de charpente signature qui traversent leur hall — c'est ce que fait une pile —, deux auvents que la boîte englobante dénonce à tort (leur dalle EST percée), un couvre-joint de douze centimètres |
+
+Ce que cet inventaire dit, et qui compte plus que les chiffres : **il n'y a pas
+trente-six défauts, il y en a deux** — le décor de ville qui ne cède pas assez
+haut, et un petit objet répété qu'on n'a pas encore nommé. Le reste est soit
+voulu, soit un artefact de la mesure.
+
+---
+
 ## 4 ter. Ce que le relevé coûte
 
 Phase 28. Tout ce qui suit se refait en une commande —
