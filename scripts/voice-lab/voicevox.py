@@ -1,50 +1,55 @@
 #!/usr/bin/env python3
-"""Pont vers VOICEVOX : le moteur qui donne enfin prise sur la prosodie.
+"""VOICEVOX : le moteur qui accepte enfin des consignes de prosodie.
 
-⚠ CE SCRIPT N'A PAS PU ÊTRE EXÉCUTÉ dans la session qui l'a écrit : VOICEVOX
-n'y était pas atteignable (huggingface.co bloqué par la politique de sortie,
-accès GitHub limité au seul dépôt du jeu). Il est écrit d'après l'API publique
-du moteur et il est à vérifier au premier lancement.
+POURQUOI. Kokoro rend un fichier audio à partir de phonèmes et rien d'autre :
+la mélodie qu'il produit est celle qu'il veut, et deux tours d'écoute notée ont
+montré qu'aucune retouche postérieure ne rattrape ça (plafond à 2/5). Greffer
+la mélodie d'une prise réelle marche - 4/5 - mais demande une prise du texte
+visé, donc ne passe pas à l'échelle des 476 clips du jeu.
 
-POURQUOI CHANGER DE MOTEUR. Deux tours d'écoute notée, soixante variantes,
-plafond à 2-3 sur 5 - et la meilleure note va systématiquement à une voix
-BRUTE : chaque traitement appliqué après coup (transposition, sourire,
-brillance du nom) fait redescendre. Kokoro n'a que quatre voix japonaises,
-aucune n'approche la brillance de l'annonce réelle (centroïde 570-660 Hz
-contre 981), et surtout il n'accepte AUCUNE consigne de prosodie : on ne peut
-agir qu'après la synthèse, c'est-à-dire trop tard.
+VOICEVOX, lui, expose une `AudioQuery` : la phrase décrite MORE PAR MORE, avec
+pour chacune sa durée de consonne, sa durée de voyelle et sa hauteur, toutes
+modifiables AVANT synthèse. On y pose donc directement ce que la prise
+étiquetée a montré, sur n'importe quel texte :
 
-CE QUE VOICEVOX APPORTE. Sa requête `audio_query` est un objet modifiable
-AVANT synthèse, décrivant la phrase mora par mora : chacune porte sa durée de
-consonne, sa durée de voyelle et sa hauteur. On peut donc poser exactement ce
-que la prise étiquetée a montré :
+- la hauteur médiane relevée (236 Hz), par addition sur les hauteurs de mores.
+  C'est un décalage dans le domaine logarithmique, pas un rééchantillonnage :
+  les formants ne bougent pas, et l'effet « dessin animé » ne peut pas
+  apparaître ;
+- les durées relevées (次は 0,51 s · 渋谷 0,67 s · お出口は右側です 1,57 s), via
+  une vitesse calée voix par voix ;
+- les silences relevés (0,34 / 0,43 / 0,31 s), posés par nous entre des
+  segments synthétisés sans rembourrage.
 
-- les silences relevés (0,34 / 0,43 / 0,31 s) au centième, au lieu du 0,62 s
-  uniforme que le générateur actuel pose partout ;
-- le registre (médiane 236 Hz) en décalant les hauteurs, sans rééchantillonner
-  quoi que ce soit ni déplacer les formants ;
-- la couleur du NOM DE GARE - la prise le dit plus brillant que la phrase qui
-  l'introduit, et `intonationScale` sur ce seul segment agit là où le
-  traitement d'après-coup abîmait tout.
+INSTALLATION. Le téléchargeur officiel de VOICEVOX interroge l'API GitHub et
+échoue derrière un accès restreint ; les assets de RELEASE, eux, se récupèrent
+directement. Il faut trois choses, et le dictionnaire arrive avec pyopenjtalk :
 
-Licence : VOICEVOX est gratuit, y compris pour un usage commercial, mais
-CHAQUE personnage vocal impose de le créditer. Le crédit exact dépend du
-personnage retenu ; il devra figurer dans about.html et docs/.
+    V=0.16.0
+    curl -L -O https://github.com/VOICEVOX/voicevox_core/releases/download/$V/voicevox_core-$V-cp310-abi3-manylinux_2_34_x86_64.whl
+    curl -L -o ort.tgz https://github.com/VOICEVOX/onnxruntime-builder/releases/download/voicevox_onnxruntime-1.17.3/voicevox_onnxruntime-linux-x64-1.17.3.tgz
+    mkdir -p ort models && tar xzf ort.tgz -C ort
+    for i in $(seq 0 7); do curl -L -o models/$i.vvm \
+        https://github.com/VOICEVOX/voicevox_vvm/releases/download/$V/$i.vvm; done
+    pip install ./voicevox_core-$V-cp310-abi3-manylinux_2_34_x86_64.whl pyopenjtalk
 
-Prérequis - le moteur tourne en local et expose son API sur le port 50021 :
-
-    docker run --rm -p 50021:50021 voicevox/voicevox_engine:cpu-latest
+LICENCE. VOICEVOX est gratuit, usage commercial compris, mais CHAQUE
+personnage vocal impose son crédit - « VOICEVOX:<nom du personnage> ». Le
+crédit devra figurer dans about.html, et il dépend de la voix retenue.
 
 Usage :
-    python scripts/voice-lab/voicevox.py --list
-    python scripts/voice-lab/voicevox.py --bench /tmp/vv --speakers 2,3,8,14
+    python scripts/voice-lab/voicevox.py RACINE --list
+    python scripts/voice-lab/voicevox.py RACINE --bench /tmp/vv --styles 30,8,10,14
 """
 
 import argparse
+import base64
+import glob
+import io
 import json
+import os
 import sys
-import urllib.parse
-import urllib.request
+import wave
 from pathlib import Path
 
 import numpy as np
@@ -53,158 +58,167 @@ sys.path.insert(0, str(Path(__file__).parent))
 from atelier import encode_mp3  # noqa: E402
 from mesures import describe  # noqa: E402
 
-BASE = "http://127.0.0.1:50021"
-
+SR = 24000
 # Relevés sur la prise étiquetée 「次は。渋谷。渋谷。お出口は右側です。」
 TARGET_F0 = 236.0
-SEGMENTS = [("次は。", 0.34, False), ("渋谷。", 0.43, True),
-            ("渋谷。", 0.31, True), ("お出口は右側です。", 0.0, False)]
 TARGET_DUR = {"次は。": 0.51, "渋谷。": 0.67, "お出口は右側です。": 1.57}
-# Le nom de gare, plus marqué que la phrase qui l'introduit.
-NAME_INTONATION = 1.15
+SEGMENTS = [("次は。", 0.34), ("渋谷。", 0.43), ("渋谷。", 0.31), ("お出口は右側です。", 0.0)]
 
 
-def api(path, query=None, body=None, raw=False):
-    url = BASE + path + ("?" + urllib.parse.urlencode(query) if query else "")
-    data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(
-        url, data=data, method="POST" if data is not None or body == {} else "GET",
-        headers={"Content-Type": "application/json"} if data is not None else {},
-    )
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read() if raw else json.loads(r.read())
+def engine(root):
+    """Charge le moteur et tous les modèles trouvés sous `root`."""
+    from voicevox_core.blocking import Onnxruntime, OpenJtalk, Synthesizer, VoiceModelFile
 
+    root = Path(root)
+    libs = sorted(glob.glob(str(root / "ort" / "*" / "lib" / "libvoicevox_onnxruntime.so.*")))
+    if not libs:
+        raise SystemExit(f"ONNX Runtime introuvable sous {root}/ort - voir l'en-tête.")
+    ort = Onnxruntime.load_once(filename=os.path.abspath(libs[0]))
 
-def speakers():
-    out = []
-    for sp in api("/speakers"):
-        for st in sp["styles"]:
-            out.append((st["id"], f"{sp['name']} / {st['name']}"))
-    return out
+    import pyopenjtalk
+
+    dic = Path(pyopenjtalk.OPEN_JTALK_DICT_DIR.decode()
+               if isinstance(pyopenjtalk.OPEN_JTALK_DICT_DIR, bytes)
+               else pyopenjtalk.OPEN_JTALK_DICT_DIR)
+    syn = Synthesizer(ort, OpenJtalk(str(dic)))
+    names = {}
+    for p in sorted(glob.glob(str(root / "models" / "*.vvm"))):
+        with VoiceModelFile.open(p) as m:
+            syn.load_voice_model(m)
+            for sp in m.metas:
+                for st in sp.styles:
+                    names[st.id] = f"{sp.name} / {st.name}"
+    if not names:
+        raise SystemExit(f"Aucun modèle .vvm sous {root}/models - voir l'en-tête.")
+    return syn, names
 
 
 def wav_to_float(data):
-    """WAV PCM 16 bits mono → tableau flottant, sans dépendance supplémentaire."""
-    import io
-    import wave
-
     with wave.open(io.BytesIO(data)) as w:
-        n, sr = w.getnframes(), w.getframerate()
-        pcm = np.frombuffer(w.readframes(n), dtype="<i2").astype(np.float32) / 32768
+        pcm = np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(np.float32) / 32768
         if w.getnchannels() == 2:
             pcm = pcm.reshape(-1, 2).mean(axis=1)
-    return pcm, sr
+        return pcm, w.getframerate()
 
 
-def query(text, speaker):
-    return api("/audio_query", query={"text": text, "speaker": speaker}, body=None)
+def moras(q):
+    return [m for ap in q.accent_phrases for m in ap.moras]
 
 
-def shift_pitch(q, semitones):
-    """Décale toutes les mores voisées. `pitch` est un log népérien de hertz,
-    donc un demi-ton vaut ln(2)/12 - une addition, pas un rééchantillonnage,
-    et les formants ne bougent pas."""
-    d = semitones * np.log(2) / 12
-    for ap in q["accent_phrases"]:
-        for m in ap["moras"]:
-            if m.get("pitch"):
-                m["pitch"] += d
-    return q
-
-
-def median_f0(q):
-    p = [m["pitch"] for ap in q["accent_phrases"] for m in ap["moras"] if m.get("pitch")]
-    return float(np.exp(np.median(p))) if p else 0.0
-
-
-def synth(text, speaker, speed=1.0, semitones=0.0, intonation=1.0):
-    q = query(text, speaker)
-    q["speedScale"] = speed
-    q["intonationScale"] = intonation
-    # Aucun rembourrage : les silences sont posés par NOUS, à la durée relevée.
-    q["prePhonemeLength"] = 0.0
-    q["postPhonemeLength"] = 0.0
-    q["outputSamplingRate"] = 24000
-    q["outputStereo"] = False
+def say(syn, text, style, speed=1.0, semitones=0.0, intonation=1.0):
+    """Un segment, sans rembourrage : les silences sont posés par l'appelant."""
+    q = syn.create_audio_query(text, style)
+    q.speed_scale = speed
+    q.intonation_scale = intonation
+    q.pre_phoneme_length = 0.0
+    q.post_phoneme_length = 0.0
+    q.output_sampling_rate = SR
+    q.output_stereo = False
     if semitones:
-        shift_pitch(q, semitones)
-    return wav_to_float(api("/synthesis", query={"speaker": speaker}, body=q, raw=True))
+        # `pitch` est un logarithme népérien de hertz : un demi-ton s'y ajoute,
+        # il ne s'y multiplie pas. Aucun rééchantillonnage, donc aucun formant
+        # déplacé - c'est ce qui manquait à Kokoro.
+        d = semitones * np.log(2) / 12
+        for m in moras(q):
+            if m.pitch:
+                m.pitch += d
+    return wav_to_float(syn.synthesis(q, style))
 
 
-def calibrate(speaker):
-    """(vitesse, transposition) qui rendent les durées et le registre relevés."""
+def calibrate(syn, style, rounds=2):
+    """(vitesse, transposition) qui rendent les durées et le registre relevés.
+
+    Le registre se cale sur la SORTIE MESURÉE, pas sur les hauteurs de la
+    requête : celles-ci ne prédisent pas exactement ce que le vocodeur rend, et
+    un calage en boucle ouverte laissait 10 à 25 Hz d'écart. Deux tours de
+    correction suffisent à tomber au hertz près.
+    """
     ratios = []
     for text, want in TARGET_DUR.items():
-        x, sr = synth(text, speaker)
+        x, sr = say(syn, text, style)
         ratios.append(len(x) / sr / want)
     speed = round(float(np.median(ratios)), 2)
-    f0 = median_f0(query(SEGMENTS[0][0], speaker))
-    st = round(12 * np.log2(TARGET_F0 / f0), 1) if f0 else 0.0
+
+    st = 0.0
+    for _ in range(rounds):
+        y = phrase(syn, style, speed, st)
+        got = describe(y, SR).get("f0_med", 0)
+        if not got:
+            break
+        st = round(st + float(12 * np.log2(TARGET_F0 / got)), 1)
     return speed, st
 
 
-def build(out_dir, ids):
+def phrase(syn, style, speed, semitones, name_intonation=1.0):
+    parts = []
+    for i, (text, gap) in enumerate(SEGMENTS):
+        x, sr = say(syn, text, style, speed=speed, semitones=semitones,
+                    intonation=name_intonation if i in (1, 2) else 1.0)
+        parts.append(x)
+        if gap:
+            parts.append(np.zeros(int(sr * gap), np.float32))
+    return np.concatenate(parts)
+
+
+def build(syn, names, out_dir, styles, intonations=(1.0,)):
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    names = dict(speakers())
-    items = []
-    for n, sid in enumerate(ids, 1):
-        speed, st = calibrate(sid)
-        parts = []
-        for text, gap, is_name in SEGMENTS:
-            x, sr = synth(text, sid, speed=speed, semitones=st,
-                          intonation=NAME_INTONATION if is_name else 1.0)
-            parts.append(x)
-            if gap:
-                parts.append(np.zeros(int(sr * gap), np.float32))
-        y = np.concatenate(parts)
-        rid = f"V{n:02d}"
-        (out / f"{rid}-sec.mp3").write_bytes(encode_mp3(y))
-        (out / f"{rid}.mp3").write_bytes(encode_mp3(y))
-        d = describe(y, 24000)
-        items.append(dict(
-            id=rid, lang="ja-JP", axis="voix", voice=names.get(sid, str(sid)),
-            speed=speed, st=st, smile=1.0, lift=0.0, gaps=[0.32, 0.43],
-            f0=round(d["f0_med"]), rng=round(d["f0_range_st"], 1),
-            dur=round(d["dur"], 2),
-            setting=f"{names.get(sid, sid)} · {speed:.2f} · {st:+g} st"))
-        print(f"  {rid} {items[-1]['setting']}  F0 {d['f0_med']:.0f}")
+    items, n = [], 0
+    for style in styles:
+        speed, st = calibrate(syn, style)
+        for into in intonations:
+            n += 1
+            y = phrase(syn, style, speed, st, name_intonation=into)
+            rid = f"V{n:02d}"
+            (out / f"{rid}.mp3").write_bytes(encode_mp3(y))
+            (out / f"{rid}-sec.mp3").write_bytes(encode_mp3(y))
+            d = describe(y, SR)
+            label = (f"{names.get(style, style)} · {speed:.2f} · {st:+g} st"
+                     + (f" · nom ×{into:g}" if into != 1.0 else ""))
+            items.append(dict(id=rid, lang="ja-JP", axis="voix", voice=names.get(style, str(style)),
+                              speed=speed, st=st, smile=1.0, lift=0.0, gaps=[0.32, 0.43],
+                              f0=round(d["f0_med"]), rng=round(d["f0_range_st"], 1),
+                              dur=round(d["dur"], 2), setting=label))
+            print(f"  {rid} {label:52} F0 {d['f0_med']:3.0f}  étendue {d['f0_range_st']:4.1f} st  "
+                  f"durée {d['dur']:.2f} s")
+    return out, items
 
-    import base64
 
+def write_page(out, items, extra_refs=()):
+    for rid, path in extra_refs:
+        from mesures import load
+
+        x, sr = load(path, sr=SR)
+        (out / f"{rid}.mp3").write_bytes(encode_mp3(x, sr, kbps=80))
     clips = {p.stem: "data:audio/mpeg;base64," + base64.b64encode(p.read_bytes()).decode()
              for p in sorted(out.glob("*.mp3"))}
     tmpl = (Path(__file__).parent / "notes.tmpl.html").read_text(encoding="utf-8")
     page = out / "notes.html"
-    page.write_text(
-        tmpl.replace("/*__DATA__*/",
-                     json.dumps(dict(refs=[], items=items, clips=clips), ensure_ascii=False)),
-        encoding="utf-8")
-    print(f"\n→ {page}")
+    page.write_text(tmpl.replace("/*__DATA__*/", json.dumps(dict(
+        refs=[dict(id=rid, label="la prise réelle") for rid, _ in extra_refs],
+        items=items, clips=clips), ensure_ascii=False)), encoding="utf-8")
+    print(f"\n→ {page}  ({page.stat().st_size / 1e6:.1f} Mo)")
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--list", action="store_true", help="liste les voix du moteur")
-    ap.add_argument("--bench", metavar="DOSSIER", help="fabrique la page d'écoute notée")
-    ap.add_argument("--speakers", default="", help="identifiants séparés par des virgules")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("root", help="dossier contenant ort/ et models/")
+    ap.add_argument("--list", action="store_true")
+    ap.add_argument("--bench", metavar="DOSSIER")
+    ap.add_argument("--styles", default="")
+    ap.add_argument("--ref", default="", help="prise réelle à joindre comme étalon")
     a = ap.parse_args()
-    try:
-        if a.list:
-            for sid, name in speakers():
-                print(f"{sid:5}  {name}")
-            return
-        if a.bench:
-            ids = [int(s) for s in a.speakers.split(",") if s.strip()]
-            if not ids:
-                ids = [sid for sid, _ in speakers()[:12]]
-            build(a.bench, ids)
-            return
-    except OSError as exc:
-        print(f"Moteur injoignable sur {BASE} : {exc}\n"
-              "Lancez-le avec :\n"
-              "  docker run --rm -p 50021:50021 voicevox/voicevox_engine:cpu-latest")
-        raise SystemExit(1)
+
+    syn, names = engine(a.root)
+    if a.list:
+        for sid, name in sorted(names.items()):
+            print(f"{sid:5}  {name}")
+        return
+    if a.bench:
+        ids = [int(s) for s in a.styles.split(",") if s.strip()] or sorted(names)[:10]
+        out, items = build(syn, names, a.bench, ids)
+        write_page(out, items, [("ref", a.ref)] if a.ref else [])
+        return
     ap.print_help()
 
 
