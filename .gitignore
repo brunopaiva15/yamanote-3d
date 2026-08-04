@@ -43,5 +43,7 @@ work/
 # scripts/plateau/make-sample.mjs (graine fixe, sortie identique).
 data/plateau-sample/
 
-# Caches Python des générateurs audio (melodies-gen, piano-melody-gen, …).
+# Caches Python des générateurs audio (melodies-gen, piano-melody-gen, …) et
+# de l'atelier de voix, dont les modules s'importent entre eux.
 scripts/__pycache__/
+scripts/voice-lab/__pycache__/
