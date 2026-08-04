@@ -19,8 +19,18 @@ nombres ne résument pas. Un candidat conforme sur tous les axes peut rester
 reconnaissablement quelqu'un d'autre - c'est la limite de Voice Design, pas
 celle de la mesure.
 
+LE CANDIDAT PASSE PAR LA SONORISATION AVANT D'ÊTRE MESURÉ, et c'est
+indispensable. La référence a été captée dans la rame : elle a traversé un
+haut-parleur de plafond qui coupe sous 300 Hz. Comparer une prise de studio
+sèche à ce signal-là fait apparaître un écart de timbre énorme qui n'est que la
+différence des deux chemins - mesuré une fois : 327 Hz de centroïde contre 904,
+ramenés à 739 contre 904 une fois la sonorisation appliquée. Les deux tiers de
+l'écart n'existaient pas. C'est aussi la comparaison honnête pour le jeu,
+puisque `audioEngine` applique ce même traitement à la lecture.
+
 Usage :
   python scripts/voice-lab/verdict.py essai.mp3
+  python scripts/voice-lab/verdict.py essai.mp3 --brut   # sans la sonorisation
   python scripts/voice-lab/verdict.py essai.mp3 --ref japonais-jetons.mp3
 """
 
@@ -31,6 +41,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
 from mesures import describe, frame_rms, load, segments, syllable_rate  # noqa: E402
+from timbre import cabin_pa  # noqa: E402
 
 # Relevé sur la voix japonaise isolée par jetons.py. Médianes SEGMENT PAR
 # SEGMENT : la médiane des p10 de chaque phrase n'est pas le p10 de toutes les
@@ -72,9 +83,11 @@ FIXES = {
 }
 
 
-def profile(path):
+def profile(path, pa=False):
     """Découpe en segments de parole et renvoie la médiane de chaque mesure."""
     x, sr = load(path)
+    if pa:
+        x = cabin_pa(x, sr)
     rms, h, _ = frame_rms(x, sr)
     thr = max(np.percentile(rms, 20) * 4, np.percentile(rms, 60) * 0.25)
     ds = [describe(x[int(a * sr):int(b * sr)], sr) for a, b in segments(rms, h / sr, thr)]
@@ -93,12 +106,18 @@ def profile(path):
 def main():
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
-    cand = profile(sys.argv[1])
+    pa = "--brut" not in sys.argv
+    cand = profile(sys.argv[1], pa=pa)
     ref = dict(REF)
     if "--ref" in sys.argv:
+        # La référence est déjà passée par la vraie sonorisation : on ne la lui
+        # applique pas une seconde fois.
         ref = profile(sys.argv[sys.argv.index("--ref") + 1])
 
-    print(f"{sys.argv[1]}  ({cand['n']} segments de parole)\n")
+    print(f"{sys.argv[1]}  ({cand['n']} segments de parole)")
+    print("sonorisation de cabine appliquée au candidat" if pa else
+          "candidat mesuré BRUT — écart de timbre à lire avec prudence")
+    print()
     print(f"{'':16}{'candidat':>10}{'réel':>10}{'écart':>10}")
     units = {"f0_med": "Hz", "f0_range_st": "st", "centroid": "Hz",
              "tilt": "dB/déc", "rate": "pics/s"}
