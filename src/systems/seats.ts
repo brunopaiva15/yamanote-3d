@@ -63,6 +63,27 @@ function buildSeatSlots(): SeatSlot[] {
   return slots;
 }
 
+/**
+ * Haut utile du coussin (repère du wagon).
+ *
+ * Vit ici plutôt que dans un composant de rendu parce que trois rendus le
+ * lisent - les voyageurs du pack, ceux du repli procédural, et désormais les
+ * joueurs distants - et qu'une cote d'assise écrite trois fois finit par
+ * différer d'un centimètre à l'un des trois.
+ */
+export const SEAT_TOP_Y = 0.45;
+
+/**
+ * Recul de l'ŒIL d'un assis vers l'allée, depuis le centre de sa place (m).
+ *
+ * On ne s'assoit pas le dos plaqué à la cloison : la tête est en avant du
+ * dossier. C'est ce décalage que `three/Player` applique en posant la caméra,
+ * et que les joueurs distants doivent DÉFAIRE - la pose transmise est celle de
+ * l'œil, alors qu'un corps se centre sur son bassin. Sans lui, un camarade
+ * assis est posé seize centimètres trop en avant, perché sur le nez du coussin.
+ */
+export const SEAT_EYE_INSET = 0.16;
+
 export const SEAT_SLOTS: SeatSlot[] = buildSeatSlots();
 export const seatOccupant: Occupant[] = SEAT_SLOTS.map(() => null);
 

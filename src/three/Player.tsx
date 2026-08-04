@@ -12,7 +12,7 @@ import { runtime } from '../systems/runtime';
 import { input, moveAxes, consumeLook } from '../systems/input';
 import { chatOpen } from '../systems/net/chat';
 import { isTypingTarget, toggleFullscreen } from '../systems/browser';
-import { SEAT_SLOTS, seatOccupant } from '../systems/seats';
+import { SEAT_EYE_INSET, SEAT_SLOTS, seatOccupant } from '../systems/seats';
 import { publishPlayerLook, publishPlayerPose, publishPlayerStance } from '../systems/playerFrame';
 import { AISLE_U, frameAt, groundY, resolveMove, snapInside } from '../systems/walkable';
 import { alight, board, crossNearestPortal } from '../systems/boarding';
@@ -259,7 +259,7 @@ export function Player() {
     const s = SEAT_SLOTS[best];
     seatOccupant[best] = 'player';
     playerSeat.current = best;
-    seatAnchor.current.set(s.x - s.side * 0.16, CONFIG.sitHeight, s.z);
+    seatAnchor.current.set(s.x - s.side * SEAT_EYE_INSET, CONFIG.sitHeight, s.z);
     seatYaw.current = s.side === 1 ? Math.PI / 2 : -Math.PI / 2; // dos à la paroi, face à l'allée
     transition.current = 0;
     useStore.getState().setSeated(true);

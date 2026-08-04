@@ -184,8 +184,10 @@ export interface PeerWorldPose {
   moving: boolean;
   /** Identifiant du produit qu'il tient en main, ou chaîne vide. */
   held: string;
-  /** 0..1 : un pair qui se tait s'efface au lieu de rester planté là. */
+  /** 0..1 : présence à l'écran. Tombe à zéro quand il quitte le salon. */
   fade: number;
+  /** 0..1 : il ne dit plus où il est - onglet en arrière-plan, réseau coupé. */
+  away: number;
 }
 
 /**
@@ -254,6 +256,7 @@ export function peerWorldPose(id: string, now: number): PeerWorldPose | null {
     moving: p.moving,
     held: p.held,
     fade: pair.fade,
+    away: pair.away,
   };
 }
 
