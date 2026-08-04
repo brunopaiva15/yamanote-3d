@@ -36,6 +36,7 @@ import {
   roomFromUrl,
   useRoom,
 } from '../systems/net/room';
+import { ROOM_CAPACITY } from '../systems/net/protocol';
 import { ROOM_CODE_LENGTH } from '../systems/net/roomCode';
 
 /** Le prénom se retient d'une session à l'autre : on ne le retape pas. */
@@ -158,7 +159,18 @@ export function RoomMenu({ className = '' }: { className?: string }) {
         aria-haspopup="menu"
       >
         <span className="room-dot" aria-hidden="true" />
-        {dedans && <span className="room-count">{total}</span>}
+        {/* La place du compteur est RÉSERVÉE en permanence, même seul.
+            Sinon le bouton s'élargissait à l'entrée dans une rame, la rangée
+            du HUD se recentrait, et le menu d'incidents voisin sautait de
+            quelques pixels au moment où l'on venait de rejoindre - un
+            mouvement qu'on ne s'explique pas, puisqu'on regardait ailleurs.
+            Le chiffre le plus large possible sert de gabarit. */}
+        <span className="hud-swap">
+          {dedans && <span className="room-count">{total}</span>}
+          <span className="hud-swap-ghost" aria-hidden="true">
+            <span className="room-count">{ROOM_CAPACITY}</span>
+          </span>
+        </span>
       </button>
 
       {open && (

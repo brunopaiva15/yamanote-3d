@@ -1090,6 +1090,42 @@ body,
   gap: 8px;
 }
 
+/* --- Un libellé qui bascule ne doit pas changer la largeur de son bouton ---
+ *
+ * Rapporté depuis un téléphone : « le HUD, quand je clique dessus, il change
+ * d'emplacement ». C'était exact, et mesurable - toucher « Son » déplaçait
+ * trois commandes voisines d'un coup.
+ *
+ * La barre du bas passe à la ligne et se CENTRE sur un écran étroit (trois
+ * rangées sur un 412 px). Il suffit donc qu'un bouton change de largeur pour
+ * que toute sa rangée se recentre : « Son activé » fait dix caractères,
+ * « Son coupé » neuf, et le curseur de volume juste à côté glisse sous le
+ * doigt au moment précis où l'on allait le saisir. Le compteur du salon, qui
+ * apparaît dans son bouton à l'entrée dans une rame, faisait la même chose.
+ *
+ * On empile donc les deux libellés dans une seule cellule de grille et l'on
+ * masque celui qui ne sert pas : le bouton fait toujours la largeur du plus
+ * long des deux. `visibility: hidden` et non `display: none` - c'est toute
+ * l'astuce, l'élément masqué occupe encore sa place.
+ *
+ * Fait en CSS et non par une largeur en dur parce que les libellés changent
+ * avec la langue : « Plein écran », « Fullscreen » et « 全画面 » n'ont aucune
+ * chance de tenir dans le même nombre de pixels, et un nombre écrit ici serait
+ * faux dans deux langues sur trois. */
+.hud-swap {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+}
+
+.hud-swap > * {
+  grid-area: 1 / 1;
+}
+
+.hud-swap-ghost {
+  visibility: hidden;
+}
+
 .hud-button {
   font: inherit;
   font-size: 13px;

@@ -237,8 +237,18 @@ export function Hud() {
         {/* Le son et son curseur voyagent ensemble quand la barre passe à la
             ligne : un curseur seul, loin de son bouton, ne se règle pas. */}
         <div className="hud-sound">
+          {/* Les deux libellés sont TOUS LES DEUX dans le bouton, l'inactif
+              masqué mais toujours encombrant : sans ça, basculer le son
+              changeait la largeur du bouton, la rangée se recentrait, et le
+              curseur de volume juste à côté partait sous le doigt. Voir
+              `.hud-swap`. */}
           <button className="hud-button" onClick={toggleMute} title={t.hud.soundTitle}>
-            {muted ? t.hud.soundOff : t.hud.soundOn}
+            <span className="hud-swap">
+              <span>{muted ? t.hud.soundOff : t.hud.soundOn}</span>
+              <span className="hud-swap-ghost" aria-hidden="true">
+                {muted ? t.hud.soundOn : t.hud.soundOff}
+              </span>
+            </span>
           </button>
           <input
             className="hud-volume"
@@ -272,7 +282,12 @@ export function Hud() {
               input.sitRequest = true;
             }}
           >
-            {seated ? t.hud.stand : t.hud.sit}
+            <span className="hud-swap">
+              <span>{seated ? t.hud.stand : t.hud.sit}</span>
+              <span className="hud-swap-ghost" aria-hidden="true">
+                {seated ? t.hud.sit : t.hud.stand}
+              </span>
+            </span>
           </button>
         )}
         {fullscreen && (
