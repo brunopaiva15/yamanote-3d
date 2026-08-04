@@ -340,8 +340,19 @@ function drawHeader(
     g.fillText(name[0], 517 - 95.5, 118);
     g.fillText(name[1], 517 + 95.5, 118);
   } else {
-    fitText(g, name, 340, jpName ? 110 : 92);
-    g.fillText(name, 517, jpName ? 118 : 116);
+    // Un nom trop long est ÉCRASÉ, pas rapetissé - même règle que sur les
+    // plans. 高輪ゲートウェイ sortait ici à quarante-quatre pixels là où 品川 en
+    // prend quatre-vingt-quinze : le nom de la gare où l'on descend, le seul
+    // mot que le bandeau existe pour porter, se retrouvait plus discret que
+    // l'heure. À hauteur pleine et à chasse serrée, il reprend son rang.
+    //
+    // Le corps japonais de départ est celui des noms de deux caractères - 95,
+    // pas 110. Le 110 n'avait jamais été VU : c'était la borne haute d'une
+    // recherche qui rabotait jusqu'à tenir en largeur, si bien qu'un nom de
+    // trois caractères la gardait telle quelle et débordait en hauteur, 高田馬場
+    // venant buter dans l'horloge. Le bandeau fait 133 px : à 110 le nom ne
+    // tient pas, quelle que soit sa largeur.
+    drawSqueezed(g, name, 517, jpName ? 118 : 116, squeezeToFit(g, name, jpName ? 95 : 92, 340));
   }
 
   // Heure et numéro de voiture, en haut à droite. Le NUMÉRO est grand et
@@ -620,7 +631,44 @@ const ZOOM_NAME_GAP = 10;
  * En deçà de ce plancher, on rend un peu de hauteur : à un tiers de chasse les
  * kanji ne sont plus des kanji.
  */
-const ZOOM_MIN_SQUEEZE = 0.55;
+const NAME_MIN_SQUEEZE = 0.55;
+
+/**
+ * Règle la fonte pour que `text` tienne dans `avail`, et renvoie la chasse à
+ * appliquer : 1 s'il tenait déjà, sinon le facteur d'écrasement (le corps
+ * n'étant réduit qu'une fois le plancher atteint).
+ */
+function squeezeToFit(g: CanvasRenderingContext2D, text: string, px: number, avail: number): number {
+  g.font = `bold ${px}px ${JP_FONT}`;
+  let tw = g.measureText(text).width;
+  if (tw <= avail) return 1;
+  let sx = avail / tw;
+  if (sx < NAME_MIN_SQUEEZE) {
+    g.font = `bold ${Math.max(10, Math.round((px * sx) / NAME_MIN_SQUEEZE))}px ${JP_FONT}`;
+    tw = g.measureText(text).width;
+    sx = Math.min(1, avail / tw);
+  }
+  return sx;
+}
+
+/** Pose un texte déjà mesuré par `squeezeToFit`, écrasé autour de son ancre. */
+function drawSqueezed(
+  g: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  sx: number,
+): void {
+  if (sx === 1) {
+    g.fillText(text, x, y);
+    return;
+  }
+  g.save();
+  g.translate(x, y);
+  g.scale(sx, 1);
+  g.fillText(text, 0, 0);
+  g.restore();
+}
 
 /**
  * Ligne de base d'un nom dont on veut CENTRER la hauteur d'œil sur `cy`.
@@ -650,27 +698,8 @@ function drawFittedName(
   avail: number,
   latin: boolean,
 ): void {
-  g.font = `bold ${px}px ${JP_FONT}`;
-  let tw = g.measureText(text).width;
-  let sx = 1;
-  if (tw > avail) {
-    sx = avail / tw;
-    if (sx < ZOOM_MIN_SQUEEZE) {
-      g.font = `bold ${Math.max(10, Math.round((px * sx) / ZOOM_MIN_SQUEEZE))}px ${JP_FONT}`;
-      tw = g.measureText(text).width;
-      sx = Math.min(1, avail / tw);
-    }
-  }
-  const y = nameBaseline(g, cy, latin);
-  if (sx === 1) {
-    g.fillText(text, x, y);
-    return;
-  }
-  g.save();
-  g.translate(x, y);
-  g.scale(sx, 1);
-  g.fillText(text, 0, 0);
-  g.restore();
+  const sx = squeezeToFit(g, text, px, avail);
+  drawSqueezed(g, text, x, nameBaseline(g, cy, latin), sx);
 }
 
 /** Échantillonne l'axe de l'arc (Catmull-Rom) avec la demi-largeur locale. */
@@ -1086,10 +1115,17 @@ export function drawRoute(
       // nom. Les deux enjambent le milieu de la pastille, si bien que le bloc
       // reste centré en face d'elle. D'un seul tenant, seize caractères ne
       // tenaient qu'au prix d'un corps de moitié.
-      const lead = Math.round(px * 0.85);
-      const indent = px * 0.55;
-      drawFittedName(g, words[0], X(nx), slot.by - lead / 2, px, avail, true);
-      drawFittedName(g, words[1], X(nx + indent), slot.by + lead / 2, px, avail - indent, true);
+      //
+      // Et les deux lignes prennent les trois quarts du corps de
+      // l'emplacement : un bloc de deux lignes occupe deux fois la hauteur d'un
+      // nom simple, et à corps plein il écrasait ses voisines - sur
+      // l'afficheur, 高輪ゲートウェイ se lit un peu PLUS PETIT que le 田町 qui le
+      // suit, alors même qu'il est plus proche.
+      const linePx = Math.round(px * 0.75);
+      const lead = Math.round(linePx * 0.95);
+      const indent = linePx * 0.55;
+      drawFittedName(g, words[0], X(nx), slot.by - lead / 2, linePx, avail, true);
+      drawFittedName(g, words[1], X(nx + indent), slot.by + lead / 2, linePx, avail - indent, true);
     } else {
       drawFittedName(g, name, X(nx), slot.by, px, avail, en);
     }
