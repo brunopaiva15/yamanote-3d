@@ -18,8 +18,8 @@ const NAMES = [
 
 /**
  * Les deux branchements principaux ont été regravés par
- * scripts/piano-melody-gen.py : une cloche de verre chante la main droite, un
- * piano acoustique brillant tient la main gauche sous elle. Deux interprétations
+ * scripts/piano-melody-gen.py : un piano acoustique brillant aux deux mains,
+ * avec un éclat de verre posé sur l'attaque de la droite. Deux interprétations
  * d'une SEULE partition (mêmes hauteurs, mêmes durées,
  * mêmes positions rythmiques ; seuls le toucher, la pédale et la couleur
  * changent). Ces deux-là ont donc la traçabilité complète que les dix-sept
@@ -29,12 +29,12 @@ const NAMES = [
 const REGRAVED: Record<string, Partial<OriginalMelodyDefinition>> = {
   '/audio/melodies/01_jre-ikst-010-01_inner-main.mp3': {
     seed: 1001,
-    instrumentation: ['glass bell lead', 'bright acoustic piano'],
+    instrumentation: ['bright acoustic piano', 'glass attack sparkle'],
     mood: ['platform', 'original', 'luminous', 'reassuring'],
   },
   '/audio/melodies/02_jre-ikst-010-02_outer-main.mp3': {
     seed: 2002,
-    instrumentation: ['glass bell lead', 'bright acoustic piano'],
+    instrumentation: ['bright acoustic piano', 'glass attack sparkle'],
     mood: ['platform', 'original', 'airy', 'contemplative'],
   },
 };
