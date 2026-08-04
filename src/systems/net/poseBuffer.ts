@@ -161,6 +161,9 @@ export function sampleAt(buf: readonly PoseSample[], t: number): PoseSample | nu
       station: a.station,
       seated: a.seated,
       moving: a.moving,
+      // Une bouteille à moitié tenue n'existe pas davantage qu'un demi-assis :
+      // l'objet apparaît quand on ATTEINT l'échantillon qui le porte.
+      held: a.held,
     };
   }
   return last;
@@ -207,6 +210,10 @@ export function shouldSendPose(last: Pose | null, next: Pose, now: number): bool
   if (last.frame !== next.frame) return true;
   if (last.level !== next.level) return true;
   if (last.station !== next.station) return true;
+  // On vient d'acheter, ou de finir : ça se voit, donc ça part tout de suite.
+  // Sans cette ligne, quelqu'un d'assis et immobile - le cas normal dans une
+  // rame - aurait attendu sa trame de vie pour montrer sa bouteille.
+  if (last.held !== next.held) return true;
   const dx = next.x - last.x;
   const dy = next.y - last.y;
   const dz = next.z - last.z;

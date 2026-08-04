@@ -286,6 +286,27 @@ const bottleBodyGeo = new THREE.CylinderGeometry(0.016, 0.018, 0.09, 8);
 const bottleNeckGeo = new THREE.CylinderGeometry(0.009, 0.012, 0.028, 6);
 const bottleCapGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.01, 6);
 
+/** Prise dans une main POSÉE : le bras est levé, l'os pointe vers l'avant. */
+const BOTTLE_GRIP_POS = new THREE.Vector3(0, 0.08, -0.02);
+const BOTTLE_GRIP_ROT = new THREE.Euler(0.35, 0, 0.2);
+
+/**
+ * Prise dans une main qui PEND, le long du corps.
+ *
+ * Deux prises et non une, parce que le repère de l'os de main tourne avec le
+ * bras : son +Y va du poignet aux doigts, donc VERS LE BAS quand le bras pend.
+ * La prise ci-dessus, réglée pour un bras levé, retournait alors la bouteille
+ * bouchon vers le sol - ce qui ne se voyait pas tant que seuls des PNJ en pose
+ * « objet tenu » la portaient, et qui a sauté aux yeux le jour où un joueur
+ * distant, dont on ne transmet aucune pose de bras, en a acheté une.
+ *
+ * Ici, c'est le porteur qui est redressé (voir `uprightHand`) : l'objet reste
+ * vertical dans le repère du CORPS, et il ne reste qu'à le loger au creux de la
+ * main plutôt qu'au poignet.
+ */
+const BOTTLE_HANG_POS = new THREE.Vector3(0, -0.055, 0.02);
+const BOTTLE_HANG_ROT = new THREE.Euler(0.1, 0, 0.07);
+
 function makeBottle(): THREE.Group {
   const g = new THREE.Group();
   const body = new THREE.Mesh(bottleBodyGeo, bottleMat);
@@ -297,9 +318,43 @@ function makeBottle(): THREE.Group {
   const cap = new THREE.Mesh(bottleCapGeo, bottleCapMat);
   cap.position.y = 0.095;
   g.add(cap);
-  g.position.set(0, 0.08, -0.02);
-  g.quaternion.setFromEuler(new THREE.Euler(0.35, 0, 0.2));
+  g.position.copy(BOTTLE_GRIP_POS);
+  g.quaternion.setFromEuler(BOTTLE_GRIP_ROT);
   return g;
+}
+
+/**
+ * Teinte la boisson tenue en main, à l'étiquette de ce qu'on a acheté.
+ *
+ * Les PNJ portent tous la même bouteille d'eau et se partagent son matériau :
+ * le teindre les teindrait tous. Un joueur, lui, a CHOISI la sienne devant un
+ * distributeur, et c'est la couleur qui la fait reconnaître de loin - le thé
+ * vert, le cidre rouge, l'eau claire. D'où un matériau propre, créé à la
+ * première demande seulement (les PNJ n'appellent jamais cette fonction, et ne
+ * paient donc rien) et marqué pour être libéré avec le corps.
+ */
+export function tintHandBottle(rig: PropRig, color: string): void {
+  const g = rig.bottle;
+  if (!g) return;
+  let mine = g.userData.tint as THREE.MeshStandardMaterial | undefined;
+  if (!mine) {
+    mine = markOwned(
+      new THREE.MeshStandardMaterial({
+        roughness: 0.35,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.85,
+      }),
+    );
+    g.userData.tint = mine;
+    // Le corps et le col ; le bouchon garde sa teinte sombre, comme sur une
+    // vraie bouteille dont le bouchon n'est pas de la couleur du contenu.
+    for (const child of g.children) {
+      const m = child as THREE.Mesh;
+      if (m.material === bottleMat) m.material = mine;
+    }
+  }
+  mine.color.set(color);
 }
 
 const mapMat = new THREE.MeshStandardMaterial({ color: '#e8dcc0', roughness: 0.9, side: THREE.DoubleSide });
@@ -405,8 +460,20 @@ const vPos = new THREE.Vector3();
 const qRot = new THREE.Quaternion();
 const vScl = new THREE.Vector3();
 const ONE = new THREE.Vector3(1, 1, 1);
+const DROIT = new THREE.Quaternion();
 
-function followBone(follow: THREE.Group | null, bone: THREE.Bone | undefined, wrap: THREE.Group): void {
+/**
+ * @param upright ne reprendre de l'os que sa POSITION, pas son orientation.
+ *   L'accessoire reste alors aligné sur le corps - donc debout - au lieu de
+ *   tourner avec le poignet. C'est ce qu'il faut quand personne n'a posé le
+ *   bras : un bras qui pend renverse l'objet qu'il tient.
+ */
+function followBone(
+  follow: THREE.Group | null,
+  bone: THREE.Bone | undefined,
+  wrap: THREE.Group,
+  upright = false,
+): void {
   if (!follow || !bone) return;
   bone.updateWorldMatrix(true, false);
   mInv.copy(wrap.matrixWorld).invert();
@@ -414,7 +481,7 @@ function followBone(follow: THREE.Group | null, bone: THREE.Bone | undefined, wr
   // L'échelle de normalisation du modèle est neutralisée : les accessoires
   // sont dessinés en unités normalisées, quelle que soit la taille brute du GLB.
   mRel.decompose(vPos, qRot, vScl);
-  follow.matrix.compose(vPos, qRot, ONE);
+  follow.matrix.compose(vPos, upright ? DROIT : qRot, ONE);
   follow.matrixWorldNeedsUpdate = true;
 }
 
@@ -431,6 +498,14 @@ export function updatePropRig(
   bagVisible: boolean,
   handProp: 'phone' | 'book' | 'bottle' | 'map' | 'ticket' | null = null,
   phoneSide: 1 | -1 = 1,
+  /**
+   * Le bras n'est pas posé : la main pend et son repère est retourné.
+   *
+   * Vrai pour les joueurs distants, dont on ne transmet aucune pose de bras -
+   * ils jouent un clip et rien d'autre. L'objet reste alors debout dans le
+   * repère du corps, au creux de la main.
+   */
+  uprightHand = false,
 ): void {
   followBone(rig.headFollow, bones.head, wrap);
   if (rig.spineFollow) {
@@ -451,10 +526,16 @@ export function updatePropRig(
         // Livre / plan / ticket / bouteille : une seule prise (droite par défaut).
         rig.book.visible = handProp === 'book';
       }
-      if (rig.bottle) rig.bottle.visible = handProp === 'bottle';
+      if (rig.bottle) {
+        rig.bottle.visible = handProp === 'bottle';
+        if (rig.bottle.visible) {
+          rig.bottle.position.copy(uprightHand ? BOTTLE_HANG_POS : BOTTLE_GRIP_POS);
+          rig.bottle.quaternion.setFromEuler(uprightHand ? BOTTLE_HANG_ROT : BOTTLE_GRIP_ROT);
+        }
+      }
       if (rig.map) rig.map.visible = handProp === 'map';
       if (rig.ticket) rig.ticket.visible = handProp === 'ticket';
-      followBone(rig.handFollow, handBone, wrap);
+      followBone(rig.handFollow, handBone, wrap, uprightHand);
     }
   }
 }

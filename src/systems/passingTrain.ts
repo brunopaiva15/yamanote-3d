@@ -38,7 +38,7 @@ import { perfLevel } from './perf';
 import { runtime } from './runtime';
 import { speechBusy } from './speech';
 import { paPass, paPassWarning } from './stationPa';
-import { drawPassThrough } from './net/worldDecisions';
+import { drawPassThrough, localPassThrough } from './net/worldDecisions';
 
 /** Nombre de caisses d'une rame de la Keihin-Tōhoku (E233-1000). */
 export const PASS_CARS = 10;
@@ -150,6 +150,41 @@ export function rollPassThrough(index: number, opportunityS: number): boolean {
   const kind = passKindAt(index, runtime.clockMin, runtime.tokyoDate.weekday);
   if (!kind) return false;
   return drawPassThrough(passChance(kind, runtime.clockMin) * Math.min(1, opportunityS / 120));
+}
+
+/**
+ * Décide du rapide de l'arrêt qui vient, LONGTEMPS avant le créneau.
+ *
+ * Le tirage lui-même reste celui de `rollPassThrough` - même nom, donc même
+ * valeur relue plus tard (voir net/worldDecisions, sur l'idempotence). Ce qui
+ * change est l'INSTANT : la décision entre dans le paquet de l'arrêt, publié
+ * une vingtaine de secondes avant que le créneau ne s'ouvre. Décidée à l'heure
+ * du créneau, elle n'arrivait jamais à temps chez les autres - l'hôte voyait
+ * passer un rapide que personne d'autre ne voyait.
+ *
+ * Ni `perfLevel` ni l'état de la machine n'entrent ici, et c'est voulu : ce
+ * sont des conditions LOCALES de rendu, qui n'ont pas à décider de ce que le
+ * salon vivra. Un hôte sur une petite machine ne doit pas priver les autres de
+ * leurs trains - `rollPassThrough` garde ces gardes pour son propre compte.
+ */
+export function prerollPassThrough(index: number, opportunityS: number): void {
+  const kind = passKindAt(index, runtime.clockMin, runtime.tokyoDate.weekday);
+  // Toujours un tirage, même nul : une valeur ABSENTE du paquet ferait croire à
+  // un suiveur qu'il a manqué quelque chose, et lui coûterait une resynchro.
+  const chance = kind ? passChance(kind, runtime.clockMin) * Math.min(1, opportunityS / 120) : 0;
+  drawPassThrough(chance);
+}
+
+/**
+ * Le même tirage, mais pour une rame qui n'appartient à personne : celle qu'on
+ * regarde arriver depuis un quai (`systems/platformWait`). Voir `localPassThrough`.
+ */
+export function rollLocalPassThrough(index: number, opportunityS: number): boolean {
+  if (stage !== 'idle') return false;
+  if (perfLevel() >= 4) return false;
+  const kind = passKindAt(index, runtime.clockMin, runtime.tokyoDate.weekday);
+  if (!kind) return false;
+  return localPassThrough(passChance(kind, runtime.clockMin) * Math.min(1, opportunityS / 120));
 }
 
 /**

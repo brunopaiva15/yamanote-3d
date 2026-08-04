@@ -37,13 +37,14 @@ import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
+import { productById } from '../data/products';
 import { makeAppearance } from '../systems/appearance';
 import { bubbleFor } from '../systems/net/chat';
 import { peers } from '../systems/net/peers';
 import { peerWorldPose } from '../systems/net/pose';
 import { ROOM_CAPACITY } from '../systems/net/protocol';
 import { buildPerson } from './characters/proceduralBody';
-import { disposeOwned } from './characters/library';
+import { disposeOwned, markOwned } from './characters/library';
 
 /**
  * Hauteur de l'œil au-dessus des pieds, dans le squelette local.
@@ -57,6 +58,40 @@ const EYE_IN_SKELETON = CONFIG.eyeHeight;
 
 /** Assis, l'œil descend à la hauteur d'assise. */
 const SEATED_EYE = CONFIG.sitHeight;
+
+/**
+ * La boisson achetée, au bout du bras droit.
+ *
+ * Trois cylindres, pas davantage : ce rendu est le REPLI, celui qu'on voit
+ * quand aucun pack de modèles n'est installé, et il n'a ni os ni main - le
+ * téléphone du corps procédural est posé de la même façon, au jugé, sous le
+ * groupe du bras (`characters/proceduralBody`). Ce qui compte à cette distance
+ * est qu'il y ait quelque chose, et que ce quelque chose ait la couleur de
+ * l'étiquette.
+ */
+const DRINK_BODY = new THREE.CylinderGeometry(0.032, 0.034, 0.1, 8);
+const DRINK_NECK = new THREE.CylinderGeometry(0.016, 0.028, 0.03, 6);
+const DRINK_CAP = new THREE.CylinderGeometry(0.017, 0.017, 0.016, 6);
+const DRINK_CAP_MAT = new THREE.MeshStandardMaterial({ color: '#1a1c20', roughness: 0.5 });
+
+function buildDrink(tone: string): THREE.Group {
+  const g = new THREE.Group();
+  const mat = markOwned(new THREE.MeshStandardMaterial({ color: tone, roughness: 0.4 }));
+  const body = new THREE.Mesh(DRINK_BODY, mat);
+  body.position.y = 0.05;
+  g.add(body);
+  const neck = new THREE.Mesh(DRINK_NECK, mat);
+  neck.position.y = 0.115;
+  g.add(neck);
+  const cap = new THREE.Mesh(DRINK_CAP, DRINK_CAP_MAT);
+  cap.position.y = 0.138;
+  g.add(cap);
+  // Au creux de la main, le long de la cuisse : le bras procédural est un
+  // cylindre de 50 cm dont l'origine est l'épaule.
+  g.position.set(0.01, -0.29, 0.05);
+  g.rotation.set(0.2, 0, 0.15);
+  return g;
+}
 
 interface Vue {
   id: string;
@@ -74,6 +109,9 @@ interface Slot {
   body: THREE.Group | null;
   /** Phase du balancement de marche, propre à chacun. */
   bob: number;
+  /** La boisson tenue, et le produit qu'elle représente. */
+  drink: THREE.Group | null;
+  heldId: string;
 }
 
 export function ProceduralRemotePlayers() {
@@ -87,6 +125,8 @@ export function ProceduralRemotePlayers() {
         seed: -1,
         body: null,
         bob: 0,
+        drink: null,
+        heldId: '',
       })),
     [],
   );
@@ -130,6 +170,10 @@ export function ProceduralRemotePlayers() {
         place.id = pair.id;
         place.seed = pair.avatar;
         place.bob = (pair.avatar % 628) / 100;
+        // La boisson appartient au corps : elle est libérée avec lui par le
+        // `disposeOwned` ci-dessus, il n'y a rien de plus à ranger ici.
+        place.drink = null;
+        place.heldId = '';
         if (!racine.children.includes(place.group)) racine.add(place.group);
       }
 
@@ -164,6 +208,23 @@ export function ProceduralRemotePlayers() {
       if (brasG) {
         brasG.rotation.x = 0;
         brasG.rotation.z = -0.12;
+      }
+
+      // Ce qu'il a acheté au distributeur, au bout du bras droit. Le corps est
+      // reconstruit à chaque changement d'occupant, donc la boisson aussi : on
+      // ne la bâtit qu'au premier produit vu, et on la retaille quand il change.
+      if (pose.held !== place.heldId) {
+        place.heldId = pose.held;
+        if (place.drink) {
+          place.drink.removeFromParent();
+          disposeOwned(place.drink);
+          place.drink = null;
+        }
+        const produit = pose.held ? productById(pose.held) : null;
+        if (produit && brasD) {
+          place.drink = buildDrink(produit.tone);
+          brasD.add(place.drink);
+        }
       }
 
       // Le balancement de marche : le seul mouvement qu'on invente, et il est

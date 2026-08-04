@@ -81,6 +81,23 @@ let role: NetRole = 'solo';
 let current: Partial<StopDraws> = {};
 
 /**
+ * L'ARRÊT auquel `current` se rapporte : le numéro du dwell à venir.
+ *
+ * C'est la pièce qui manquait, et son absence rendait le multijoueur
+ * inutilisable. `beginStopDraws()` remettait la table à zéro sans se demander
+ * pour quel arrêt : un suiveur qui avait reçu le paquet de l'hôte À L'AVANCE -
+ * ce que tout le protocole s'emploie justement à obtenir - l'effaçait de ses
+ * propres mains en entrant dans la phase où il allait s'en servir. Il tombait
+ * alors sur les replis neutres, levait le drapeau de dérive, et se faisait
+ * resynchroniser DUREMENT à chaque gare : parole coupée, foule resemée, rapide
+ * annulé. « Je vois le train arriver en gare, pas mon pote. »
+ *
+ * Avec un numéro, la question a une réponse : on n'oublie que les tirages d'un
+ * AUTRE arrêt.
+ */
+let currentSeq = -1;
+
+/**
  * Un suiveur a-t-il dû se passer d'une valeur qu'il aurait dû recevoir ?
  *
  * Ce n'est pas une erreur à afficher : c'est un signal pour `worldSync`, qui
@@ -94,10 +111,21 @@ export function netRole(): NetRole {
 }
 
 export function setNetRole(next: NetRole): void {
+  // RIEN si le rôle ne change pas, et c'est tout sauf une optimisation.
+  //
+  // Le canal réélit l'hôte toutes les secondes (systems/net/room, ELECTION_TICK_MS)
+  // et repose le rôle à chaque passage, même quand il n'a pas bougé. Vider la
+  // table à cette occasion, c'était la vider une fois par seconde : l'hôte
+  // n'avait plus rien à publier une seconde sur deux, et le suiveur perdait le
+  // paquet qu'il venait de recevoir. Une remise à plat doit être un ÉVÉNEMENT,
+  // pas un battement.
+  if (next === role) return;
   role = next;
-  // Changer de rôle remet les compteurs à plat : un ancien hôte qui devient
-  // suiveur n'a plus rien à publier, et ses propres tirages ne valent plus rien.
+  // Changer de rôle, en revanche, remet bien les compteurs à plat : un ancien
+  // hôte qui devient suiveur n'a plus rien à publier, et ses propres tirages ne
+  // valent plus rien.
   current = {};
+  currentSeq = -1;
   desync = false;
 }
 
@@ -106,9 +134,20 @@ export function currentStopDraws(): Partial<StopDraws> {
   return current;
 }
 
-/** Les tirages reçus de l'hôte, chez un suiveur. */
-export function applyStopDraws(draws: StopDraws): void {
+/** L'arrêt auquel les tirages courants se rapportent. `-1` s'il n'y en a pas. */
+export function currentStopSeq(): number {
+  return currentSeq;
+}
+
+/**
+ * Les tirages reçus de l'hôte, chez un suiveur.
+ *
+ * `seq` est le numéro d'arrêt porté par le paquet : c'est lui qui empêchera
+ * `beginStopDraws` de l'effacer avant qu'on ait eu l'occasion de s'en servir.
+ */
+export function applyStopDraws(draws: StopDraws, seq: number): void {
   current = { ...draws };
+  currentSeq = seq;
   desync = false;
 }
 
@@ -127,14 +166,22 @@ export function clearDecisionDesync(): void {
  * Chez l'hôte, c'est ce qui garantit qu'on republie bien des valeurs fraîches ;
  * chez un suiveur, c'est ce qui fait apparaître le manque si le paquet du
  * nouvel arrêt n'arrive pas.
+ *
+ * `seq` NOMME l'arrêt qui commence - le numéro du dwell à venir. Appelée deux
+ * fois pour le même arrêt, cette fonction ne fait rien la seconde fois : c'est
+ * ce qui permet à un suiveur de recevoir le paquet vingt secondes à l'avance et
+ * de le garder jusqu'à ce qu'il en ait besoin.
  */
-export function beginStopDraws(): void {
+export function beginStopDraws(seq: number): void {
+  if (currentSeq === seq) return;
+  currentSeq = seq;
   current = {};
 }
 
 export function resetDecisions(): void {
   role = 'solo';
   current = {};
+  currentSeq = -1;
   desync = false;
 }
 
@@ -146,15 +193,21 @@ export function resetDecisions(): void {
  * repli n'est jamais « une autre valeur au hasard » : ce serait exactement le
  * moyen de fabriquer deux mondes sans que rien ne le dise. C'est une valeur
  * NEUTRE, choisie pour que l'arrêt reste jouable en attendant la resynchro.
+ *
+ * UN NOM, UNE VALEUR, UN ARRÊT : relire un tirage déjà fait ne le refait pas.
+ * C'est ce qui permet de tirer TOUT l'arrêt d'avance - assez tôt pour que le
+ * paquet ait le temps de traverser - et de laisser malgré tout chaque valeur
+ * être demandée à son heure habituelle, là où le cycle en a besoin. En solo,
+ * c'est aussi une garantie de bon sens : `dwellDuration()` est relue à chaque
+ * image, et un tirage qui changerait d'avis en cours d'arrêt ferait s'ouvrir
+ * les portes deux fois.
  */
 function draw<K extends keyof StopDraws>(key: K, roll: () => StopDraws[K], neutral: StopDraws[K]): StopDraws[K] {
+  const known = current[key];
+  if (known !== undefined) return known as StopDraws[K];
   if (role === 'follower') {
-    const known = current[key];
-    if (known === undefined) {
-      desync = true;
-      return neutral;
-    }
-    return known as StopDraws[K];
+    desync = true;
+    return neutral;
   }
   const value = roll();
   current[key] = value;
@@ -216,6 +269,20 @@ export function drawDoorSeed(): number {
 /** Un rapide traverse-t-il ? Le repli est « non » : un train en moins ne gêne personne. */
 export function drawPassThrough(chance: number): boolean {
   return draw('passThrough', () => Math.random() < chance, false);
+}
+
+/**
+ * Le même tirage, mais POUR SOI et sans passer par le fil.
+ *
+ * Même porte de sortie que `localBerthOffset`, et pour le même cas : le creux
+ * qu'on regarde s'écouler depuis un quai après avoir laissé partir sa rame
+ * (`systems/platformWait`) n'appartient à aucun salon. Y réclamer le tirage de
+ * l'arrêt en cours reviendrait à le consommer pour un autre train que celui
+ * qu'il décrit - et, chez un suiveur, à réclamer une valeur que personne n'a
+ * publiée pour cette voie-là.
+ */
+export function localPassThrough(chance: number): boolean {
+  return Math.random() < chance;
 }
 
 /**

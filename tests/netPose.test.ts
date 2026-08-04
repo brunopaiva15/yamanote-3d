@@ -22,7 +22,7 @@ import { register } from 'node:module';
 
 register('./fixtures/ts-resolve.mjs', import.meta.url);
 
-const { peerWorldPose } = await import('../src/systems/net/pose.ts');
+const { bodyYaw, peerWorldPose } = await import('../src/systems/net/pose.ts');
 const { clearPeers, receivePose, syncRoster, updatePeers } = await import(
   '../src/systems/net/peers.ts'
 );
@@ -45,6 +45,7 @@ function pose(over: Partial<Pose> = {}): Pose {
     pitch: 0,
     seated: false,
     moving: false,
+    held: '',
     ...over,
   };
 }
@@ -246,4 +247,44 @@ test('le hall de correspondance est un ÉTAGE, pas un repère', () => {
   const p = peerWorldPose('toi', LIRE_A);
   assert.ok(p);
   assert.ok(p.y < 0, `le hall devrait être sous la dalle (y = ${p.y})`);
+});
+
+test('l’objet tenu en main traverse lui aussi', () => {
+  // Sans quoi une bouteille achetée sur un quai resterait invisible pour tous
+  // les autres : c'est le seul objet du jeu qu'on porte sur soi.
+  runtime.trainZ = 0;
+  voisin({ frame: 0, x: 0, z: 0, held: 'ocha' });
+  assert.equal(peerWorldPose('toi', LIRE_A)?.held, 'ocha');
+  voisin({ frame: 0, x: 0, z: 0 });
+  assert.equal(peerWorldPose('toi', LIRE_A)?.held, '');
+});
+
+// --- Le sens du regard ------------------------------------------------------
+
+test('le lacet transmis est un cap de CORPS, pas un cap de caméra', () => {
+  // Le défaut le plus visible qu'on ait eu sur les avatars, et le plus simple :
+  // le lacet partait nié, comme on nie un vecteur de caméra (une caméra regarde
+  // vers son -Z). Le rendu, lui, le pose tel quel dans `rotation.y`, où la
+  // convention de tout le jeu est celle d'un corps qui marche vers (dx, dz) -
+  // `Math.atan2(dx, dz)`, systems/platformCrowd et systems/passengers. Chaque
+  // camarade était donc dessiné d'un demi-tour de travers : on marchait droit,
+  // les autres vous voyaient reculer.
+  //
+  // On compare à la convention plutôt qu'à des valeurs écrites à la main : le
+  // jour où la foule du quai change de repère, ce test doit tomber avec elle.
+  for (const [x, z] of [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+    [0.6, -0.8],
+  ] as const) {
+    assert.ok(
+      Math.abs(bodyYaw(x, z) - Math.atan2(x, z)) < 1e-12,
+      `regard (${x}, ${z}) : ${bodyYaw(x, z)} contre ${Math.atan2(x, z)}`,
+    );
+  }
+  // Et la propriété qu'on veut vraiment : regarder vers +Z, c'est faire face à
+  // +Z. Un demi-tour d'erreur donnerait ±π.
+  assert.ok(Math.abs(bodyYaw(0, 1)) < 1e-12, 'face à +Z, le cap doit être nul');
 });
