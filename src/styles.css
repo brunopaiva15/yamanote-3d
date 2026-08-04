@@ -1284,6 +1284,19 @@ body,
   touch-action: none;
 }
 
+/* Une couronne de rattrapage, invisible et sans effet sur la mise en page : le
+   disque est ancré dans le coin, et sur une tablette tenue à l'horizontale le
+   pouce ne l'atteint que de justesse - il se posait sur le bord, quand il ne
+   manquait pas le cercle. Le geste part de là où le doigt tombe (ui/Controls),
+   donc cette marge ne fait qu'élargir la prise : elle ne biaise aucune
+   direction. Ronde, elle ne mange pas le coin de la scène. */
+.joystick::before {
+  content: '';
+  position: absolute;
+  inset: -26px;
+  border-radius: 50%;
+}
+
 .joystick-knob {
   position: absolute;
   left: 50%;
