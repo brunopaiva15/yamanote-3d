@@ -96,16 +96,16 @@
   <header>
     <h1>Écoute notée</h1>
     <p class="sub">
-      La première référence dit exactement la même phrase que les extraits
-      japonais. Écoute-la, puis chaque extrait, et note de 1 à 5.
-      Les réglages sont cachés — juge à l'oreille. À la fin, copie les notes.
+      La première référence dit exactement la même phrase que les extraits.
+      Écoute-la, puis chaque extrait, et note de 1 à 5. Les réglages sont
+      cachés — juge à l'oreille. À la fin, copie les notes.
     </p>
   </header>
 
   <div class="bar">
     <span id="refs" style="display:flex;gap:6px;flex-wrap:wrap"></span>
     <span class="grow"></span>
-    <button class="tog" id="pa" type="button" aria-pressed="true">dans la rame</button>
+    <button class="tog" id="pa" type="button" aria-pressed="false">voix seule</button>
     <button class="tog" id="reveal" type="button" aria-pressed="false">réglages</button>
     <span class="count" id="count"></span>
   </div>
@@ -128,9 +128,9 @@
   const $ = s => document.querySelector(s);
   const el = (t, c, h) => { const n = document.createElement(t); if (c) n.className = c;
                             if (h !== undefined) n.innerHTML = h; return n; };
-  const KEY = 'yamanote-notes-v1';
+  const KEY = 'yamanote-notes-v2';
   const marks = JSON.parse(localStorage.getItem(KEY) || '{}');
-  let usePA = true, reveal = false;
+  let usePA = false, reveal = false;
 
   const audio = new Audio();
   let cur = null;
@@ -191,6 +191,11 @@
   }
   build('#ja', 'ja-JP');
   build('#en', 'en-US');
+  // Un plan peut ne porter qu'une langue : on n'affiche pas un titre sans liste.
+  document.querySelectorAll('h2').forEach(h => {
+    const list = h.nextElementSibling;
+    if (list && !list.children.length) { h.remove(); list.remove(); }
+  });
   dump();
 
   $('#pa').onclick = e => {

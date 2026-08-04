@@ -94,7 +94,7 @@ def compress(x, sr=SR, thresh_db=-22.0, ratio=3.2, attack=0.004, release=0.14, b
     return (x * gain).astype(np.float32)
 
 
-def cabin_pa(x, sr=SR, verb=0.16):
+def cabin_pa(x, sr=SR, verb=0.13):
     """La chaîne d'audioEngine : diffuseur de plafond + réverbération de cabine."""
     y = x.astype(np.float32)
     sos_hp = signal.butter(4, 300 / (sr / 2), btype="high", output="sos")
@@ -114,5 +114,9 @@ def cabin_pa(x, sr=SR, verb=0.16):
     wet = signal.fftconvolve(y, ir)[: len(y)]
     pre = int(sr * 0.012)
     wet = np.concatenate([np.zeros(pre, np.float32), wet[:-pre]]) if pre else wet
-    out = y + verb * 3.0 * wet
+    # Le facteur 3 qui traînait ici mouillait la voix trois fois trop : le
+    # facteur de crête tombait de 7,2 à 5,6 et TOUTES les variantes du test
+    # d'écoute sortaient empâtées. audioEngine envoie la réverbération à 0,16
+    # à côté d'un bus direct à pleine échelle - c'est ce rapport-là qu'il faut.
+    out = y + verb * wet
     return (out / (np.max(np.abs(out)) or 1.0) * 0.89).astype(np.float32)

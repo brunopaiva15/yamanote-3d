@@ -4,6 +4,7 @@
 Usage :
   python scripts/voice-lab/notes.py enregistrement.mp3 \
       kokoro-v1.0.onnx voices-v1.0.bin /tmp/notes [--ref "étiquette=fichier.mp3"]
+      [--plan brut]
 
 `--ref` ajoute un extrait de référence déjà découpé - typiquement la prise
 étiquetée dont on connaît le texte, qui est le meilleur étalon possible
@@ -33,7 +34,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-from atelier import Recipe, encode_mp3, load_engine, load_g2p, synth  # noqa: E402
+from atelier import Recipe, encode_mp3, load_engine, load_g2p, synth, trim  # noqa: E402
 from mesures import describe, load  # noqa: E402
 from timbre import cabin_pa  # noqa: E402
 
@@ -103,6 +104,28 @@ JA = [
     ("af_sarah", 1.01, -4, 1.30, 1.20, (0.32, 0.43), "ensemble"),
 ]
 
+# --- Deuxième tour : QUE des voix nues ------------------------------------
+# Le premier tour a une conclusion sans ambiguïté : la seule variante à sortir
+# du lot (3/5) est une voix BRUTE, et chaque traitement ajouté par-dessus la
+# fait redescendre - sourire, transposition, brillance du nom, tout. Le second
+# tour abandonne donc les traitements et balaie ce qui reste vraiment à
+# explorer : les voix elles-mêmes. Kokoro en a dix-neuf de timbre féminin, on
+# n'en avait entendu que huit.
+#
+# La vitesse est CALÉE VOIX PAR VOIX sur les durées de la prise étiquetée (voir
+# calibrate_speed) : deux voix au même réglage de vitesse ne parlent pas au même
+# débit, et les comparer ainsi ne comparerait pas ce qu'on croit.
+RAW_VOICES = [
+    "af_sarah", "af_heart", "af_bella", "af_nicole", "af_alloy", "af_aoede",
+    "af_jessica", "af_kore", "af_nova", "af_river", "af_sky",
+    "bf_alice", "bf_emma", "bf_isabella", "bf_lily",
+    "jf_alpha", "jf_gongitsune", "jf_nezumi", "jf_tebukuro",
+]
+# Et, autour de la seule voix qui a plu, le débit - « plus posée » est la
+# première chose que l'oreille a demandée.
+RAW_SPEEDS = [("af_sarah", 0.85), ("af_sarah", 0.92), ("af_sarah", 1.10)]
+
+
 EN = [
     ("af_heart", 0.93, 0, 1.00, 1.00, (0.32, 0.43), "voix"),
     ("af_bella", 0.90, 0, 1.00, 1.00, (0.32, 0.43), "voix"),
@@ -120,6 +143,39 @@ EN = [
     ("af_heart", 0.78, 0, 1.20, 1.00, (0.32, 0.43), "débit"),
     ("af_heart", 0.85, 0, 1.20, 1.20, (0.28, 0.36), "ensemble"),
 ]
+
+
+# Durées relevées sur la prise étiquetée, morceau par morceau.
+CALIB = {"次は。": 0.51, "渋谷。": 0.67, "お出口は右側です。": 1.57}
+
+
+def calibrate_speed(kokoro, g2p, voice):
+    """Vitesse Kokoro qui rend les durées de la prise étiquetée pour CETTE voix.
+
+    Elle va de 1,01 (jf_alpha) à 1,33 (jf_gongitsune) : régler toutes les voix
+    sur la même valeur, c'est les comparer à des débits différents.
+    """
+    ratios = []
+    for text, want in CALIB.items():
+        ph, _ = g2p(text)
+        a, _ = kokoro.create(ph, voice=voice, speed=1.0, is_phonemes=True)
+        ratios.append(len(trim(np.asarray(a, np.float32))) / 24000 / want)
+    return round(float(np.median(ratios)), 2)
+
+
+def raw_recipes(kokoro, g2p):
+    """Le plan « brut » : une voix, sa vitesse calée, et rien d'autre."""
+    out = []
+    n = 0
+    for v in RAW_VOICES:
+        n += 1
+        out.append((Recipe(f"R{n:02d}", v, calibrate_speed(kokoro, g2p, v),
+                           short_gap=0.32, long_gap=0.43), "voix"))
+    for v, mult in RAW_SPEEDS:
+        n += 1
+        sp = round(calibrate_speed(kokoro, g2p, v) * mult, 2)
+        out.append((Recipe(f"R{n:02d}", v, sp, short_gap=0.32, long_gap=0.43), "débit"))
+    return out
 
 
 def recipes(plan, prefix):
@@ -159,9 +215,16 @@ def main():
     kokoro = load_engine(model, voices)
     jg, eg = load_g2p()
 
+    brut = "brut" in sys.argv
+    if brut:
+        print("Calage des vitesses…")
+        plans = [(raw_recipes(kokoro, jg), "ja-JP", JA_SEGS)]
+    else:
+        plans = [(recipes(JA, "J"), "ja-JP", JA_SEGS), (recipes(EN, "E"), "en-US", EN_SEGS)]
+
     items = []
-    for plan, prefix, lang, segs in ((JA, "J", "ja-JP", JA_SEGS), (EN, "E", "en-US", EN_SEGS)):
-        for r, axis in recipes(plan, prefix):
+    for built, lang, segs in plans:
+        for r, axis in built:
             y = synth(kokoro, jg, eg, r, "", lang, segments=segs)
             (out / f"{r.name}-sec.mp3").write_bytes(encode_mp3(y))
             (out / f"{r.name}.mp3").write_bytes(encode_mp3(cabin_pa(y)))
