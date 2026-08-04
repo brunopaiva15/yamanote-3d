@@ -1758,16 +1758,53 @@ prendre neuf sacs à dos pour un objet de décor.
 inventaire qui compte sans nommer se trompe de moitié. Trente-six intrus
 paraissaient être deux défauts ; c'était un défaut, et neuf passants.
 
-### 4.32 → 4.35 : ce qui reste, en phases
+### 4.32 Le z-fighting ne se regarde pas, il se calcule
+
+La consigne était : « il faut une capture qui l'isole avant d'y toucher ; le
+z-fighting ne se cherche pas au jugé, il se voit ou il ne se voit pas. » **La
+capture était le mauvais instrument**, et pour une raison qui tient à ce
+qu'est le défaut : le scintillement dépend de l'angle, de la distance et de la
+précision du tampon de profondeur. Une image peut très bien ne rien montrer là
+où deux faces sont pourtant à la même cote — et l'on aurait conclu que c'était
+réparé.
+
+Mais ça se CALCULE. `probeStation` cherche depuis toujours les volumes qui
+s'entrechoquent, et impose pour cela une pénétration d'au moins quatre
+centimètres ; le z-fighting est son exact contraire — une pénétration NULLE, sur
+une grande surface. `__probeFlat` (et `scripts/station-flat.mjs`) ne regarde donc
+que l'intervalle où l'autre ne regarde rien : deux surfaces plates, à la même
+cote, qui se recouvrent d'au moins un quart de mètre carré.
+
+**Et elle a dû apprendre à lire les MATÉRIAUX avant de servir.** Son premier
+passage rendait trente-huit paires, dont huit rigoureusement coplanaires : la
+flaque de lumière du kiosque contre la bande de bord de quai, sur quatre gares.
+C'étaient huit faux positifs — cette flaque n'écrit pas la profondeur et porte
+déjà un décalage de polygone, ce que son matériau dit en toutes lettres. Une
+surface dont l'auteur a réglé la question ne peut pas se disputer un pixel ; la
+sonde le sait maintenant, sans quoi elle aurait rendu les mêmes huit lignes à
+chaque passage et fait perdre le tour qu'elle existe pour épargner.
+
+**Reste un défaut, un seul, et sur six gares :** le paillasson d'entrée du
+konbini posait à DEUX MILLIMÈTRES du vinyle de sa boutique (0,012 contre 0,014),
+sur un mètre vingt-cinq de recouvrement. Deux millimètres suffisent à un
+bandeau qu'on regarde de face — c'est ce que le fichier avait déjà réglé quinze
+lignes plus bas, en notant qu'« posée sur son nu exact, elle partageait son
+tampon de profondeur et clignotait ». Ils ne suffisent pas à un plan de SOL,
+qu'on regarde en enfilade, à l'angle rasant où l'erreur de profondeur est la
+plus grande. Il est à huit millimètres, qui sont aussi l'épaisseur d'un vrai
+paillasson.
+
+Le balayage rend maintenant **zéro paire** sur les trente gares. Ce que cela ne
+dit pas : la sonde ne juge que les surfaces PLATES de la gare — un objet mince
+porte ses deux faces à la même profondeur, et c'est lui qui se bat avec la paroi
+où on l'a posé. Un z-fighting entre deux pleins épais, ou hors de la gare, lui
+échapperait encore.
+
+### 4.33 → 4.35 : ce qui reste, en phases
 
 Le chantier des trente gares est livré ; ce qui suit est le RATTRAPAGE des
 défauts que seule la marche réelle a fait apparaître. Chacune se juge seule, et
 aucune n'attend la suivante.
-
-**Phase 32 — le z-fighting.** Une bande grise clignotait sur les parois : c'était
-une paroi de bord posée dans le plan d'une paroi d'enveloppe, corrigée. Il en
-reste, non localisé. Il faut une capture qui l'isole avant d'y toucher : le
-z-fighting ne se cherche pas au jugé, il se voit ou il ne se voit pas.
 
 **Phase 33 — la signalétique intermédiaire.** Le hall a le bandeau de son
 contrôle et le nom de ses bouches ; entre les deux, rien. Un voyageur japonais

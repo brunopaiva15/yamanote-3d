@@ -33,6 +33,15 @@ import { seasonNow } from '../systems/season';
 interface Volume {
   label: string;
   box: THREE.Box3;
+  /**
+   * Cette surface peut-elle SE DISPUTER un pixel ?
+   *
+   * Non si elle n'écrit pas la profondeur, non si elle porte déjà un décalage
+   * de polygone : dans les deux cas l'auteur a réglé la question, et une sonde
+   * qui l'ignore rapporte éternellement les mêmes faux positifs. Voir
+   * `__probeFlat` — c'est la seule qui s'en serve.
+   */
+  fights: boolean;
 }
 
 interface Hit {
@@ -78,6 +87,8 @@ function collect(root: THREE.Object3D): Volume[] {
     const bb = mesh.geometry.boundingBox;
     if (!bb) return;
     const label = labelOf(mesh);
+    const mat = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.Material;
+    const fights = !!mat && mat.depthWrite !== false && mat.polygonOffset !== true;
 
     const im = mesh as THREE.InstancedMesh;
     if (im.isInstancedMesh) {
@@ -85,12 +96,12 @@ function collect(root: THREE.Object3D): Volume[] {
         im.getMatrixAt(i, m);
         m.premultiply(im.matrixWorld);
         geoBox.copy(bb).applyMatrix4(m);
-        out.push({ label, box: geoBox.clone() });
+        out.push({ label, box: geoBox.clone(), fights });
       }
       return;
     }
     geoBox.copy(bb).applyMatrix4(mesh.matrixWorld);
-    out.push({ label, box: geoBox.clone() });
+    out.push({ label, box: geoBox.clone(), fights });
   });
   return out;
 }
@@ -588,6 +599,84 @@ export function installStationProbe(
       });
     });
     return out;
+  };
+
+  /**
+   * DEUX SURFACES DANS LE MÊME PLAN — le z-fighting, cherché et non deviné.
+   *
+   * Une bande grise qui clignote sur une paroi n'est pas un défaut de matière :
+   * ce sont deux faces à la MÊME profondeur, que le tampon de profondeur
+   * départage au hasard, d'une image à l'autre et d'un pixel à l'autre. Ça ne
+   * se cherche pas à l'œil — le scintillement dépend de l'angle, de la
+   * distance et de la précision du tampon, si bien qu'une capture peut très
+   * bien ne rien montrer là où le défaut existe.
+   *
+   * Mais ça se CALCULE. `probeStation` cherche les volumes qui s'entrechoquent
+   * et impose pour cela une pénétration d'au moins quatre centimètres ; le
+   * z-fighting est l'exact contraire — une pénétration nulle, sur une grande
+   * surface. Les deux sondes se partagent donc l'axe : celle-ci ne regarde que
+   * l'intervalle où l'autre ne regarde rien.
+   *
+   * On ne retient que les surfaces PLATES : un objet mince porte ses deux
+   * faces à la même profondeur, et c'est lui qui se bat avec la paroi où on
+   * l'a posé. Deux pleins qui se touchent par une face, eux, ne montrent
+   * chacun que la leur.
+   */
+  w.__probeFlat = (minArea = 0.25, eps = 0.004, thin = 0.06) => {
+    const station = scene.getObjectByName('gare');
+    if (!station) return [];
+    const flats: Volume[] = [];
+    for (const v of collect(station)) {
+      // Une surface qui n'écrit pas la profondeur, ou qui porte déjà un
+      // décalage de polygone, ne se dispute rien : la flaque de lumière du
+      // kiosque est posée à trois millimètres du sol et le dit dans son
+      // matériau. La rapporter serait rendre huit faux positifs à chaque
+      // passage, et faire perdre à quelqu'un le tour que cette sonde existe
+      // pour épargner.
+      if (!v.fights) continue;
+      const s = v.box.getSize(new THREE.Vector3());
+      if (Math.min(s.x, s.y, s.z) > thin) continue;
+      flats.push(v);
+    }
+    const out = new Map<string, Record<string, unknown>>();
+    const sa = new THREE.Vector3();
+    const sb = new THREE.Vector3();
+    const ca = new THREE.Vector3();
+    const cb = new THREE.Vector3();
+    for (let i = 0; i < flats.length; i++) {
+      for (let j = i + 1; j < flats.length; j++) {
+        const a = flats[i];
+        const b = flats[j];
+        if (a.label === b.label) continue;
+        a.box.getSize(sa);
+        b.box.getSize(sb);
+        a.box.getCenter(ca);
+        b.box.getCenter(cb);
+        const axes: ['x', 'y', 'z'][number][] = ['x', 'y', 'z'];
+        for (const k of axes) {
+          // Plates toutes deux sur cet axe, et à la même cote : même plan.
+          if (sa[k] > thin || sb[k] > thin) continue;
+          if (Math.abs(ca[k] - cb[k]) > eps) continue;
+          const others = axes.filter((o) => o !== k);
+          const laps = others.map((o) =>
+            Math.min(a.box.max[o], b.box.max[o]) - Math.max(a.box.min[o], b.box.min[o]));
+          if (laps.some((l) => l <= 0)) continue;
+          const area = laps[0] * laps[1];
+          if (area < minArea) continue;
+          const key = [a.label, b.label].sort().join(' ✕ ');
+          const cur = out.get(key);
+          if (cur && (cur.area as number) >= area) continue;
+          out.set(key, {
+            pair: key,
+            axis: k,
+            at: +ca[k].toFixed(3),
+            gap: +Math.abs(ca[k] - cb[k]).toFixed(4),
+            area: +area.toFixed(2),
+          });
+        }
+      }
+    }
+    return [...out.values()].sort((x, y) => (y.area as number) - (x.area as number));
   };
 
   w.__probeIntruders = (halfLen = 10, aisle = false) => {

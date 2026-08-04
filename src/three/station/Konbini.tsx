@@ -590,8 +590,15 @@ export function Konbini({
           </mesh>
         </group>
 
-        {/* Paillasson d'entrée, en dedans du seuil. */}
-        <mesh position={[doorX, 0.014, zf - 0.42]} rotation={[-Math.PI / 2, 0, 0]} material={m.rubber}>
+        {/* Paillasson d'entrée, en dedans du seuil.
+
+            Il posait à DEUX MILLIMÈTRES du vinyle (0,012), et deux millimètres
+            ne suffisent pas à un plan de sol : on le regarde en enfilade, à
+            l'angle rasant où l'erreur de profondeur est la plus grande, et
+            c'est là que le tampon rend une image puis l'autre. Le bandeau
+            d'enseigne juste dessous porte déjà la même leçon. Huit
+            millimètres : c'est aussi l'épaisseur d'un vrai paillasson. */}
+        <mesh position={[doorX, 0.02, zf - 0.42]} rotation={[-Math.PI / 2, 0, 0]} material={m.rubber}>
           <planeGeometry args={[doorW + 0.2, 0.66]} />
         </mesh>
 
