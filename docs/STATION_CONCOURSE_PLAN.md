@@ -1828,14 +1828,19 @@ qu'elles ont donné, et qui vaut d'être écrit avant la suite :
   du jeu, et la même vue prise à midi rend un sol parfaitement neutre. Reste une
   question qu'on ne tranche pas ici : un hall couvert, plafond et réglettes
   compris, devrait-il prendre à ce point la lumière rasante du soir ?
-- **la grande bannière de sortie de Yūrakuchō est VIDE** en zone libre : un
-  caisson jaune sans légende ni flèche, quand celle de Kanda et celle de Sugamo
-  portent 出口 / Exit. Le petit panneau juste dessous, lui, dit bien 中央口 /
-  Central Exit. Le groupe est nommé (`gare/hall/fléchage`) ; la cause ne l'est
-  pas encore, et l'on n'y touche pas avant de l'avoir nommée. Deux pistes, sans
-  arbitrer : le caisson n'est imprimé que d'UNE face — « on ne lit un panneau
-  que du côté où l'on vient » — et l'on pourrait le regarder du mauvais côté ;
-  ou bien sa texture se fabrique sans légende pour cette gare-là ;
+- **la vue « zone libre » de Yūrakuchō est posée CONTRE UN MUR**, et c'est un
+  défaut de l'instrument, pas de la gare. `__probePick` mesure huit centimètres
+  entre l'œil et une devanture : la moitié gauche de l'image est un aplat de
+  paroi, et la bannière de sortie, prise de biais et à demi masquée, se lit
+  comme un caisson jaune vide. Elle ne l'est pas — la texture rend bien 出口 /
+  Exit, on l'a cuite à part pour en avoir le cœur net.
+
+  **La leçon est pour le balayage lui-même :** une capture n'est une preuve que
+  si le point de vue en est une. `station-views` pose l'œil sur le RÉSEAU
+  (`__probeInterior`) sans vérifier qu'il a du champ devant lui — il dit déjà
+  quand une vue n'a « aucun sol sous le point de vue », il ne dit pas encore
+  quand elle a un mur à bout portant. À corriger avant de juger les douze gares
+  qui restent, sous peine de rapporter des défauts qui n'existent pas ;
 - **les devantures sont des aplats.** Tabata, Sugamo, Yūrakuchō : un panneau
   gris-bleu, un bandeau jaune, le mot SHOP. Ce n'est pas un défaut — c'est très
   exactement le sujet de la phase 34, et le balayage confirme qu'elle est bien

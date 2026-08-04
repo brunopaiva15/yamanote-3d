@@ -91,9 +91,25 @@ for (const i of stations) {
     }
     await new Promise((r) => setTimeout(r, 700));
     await page.screenshot({ path: `${out}/${tag}-${leg}${tier ? `-${tier}` : ''}.png` });
+    // ET DU CHAMP DEVANT. Une vue posée à bout portant d'une paroi ne prouve
+    // rien : la moitié de l'image est un aplat, et ce qu'on aperçoit de biais
+    // derrière se lit de travers. On a cru à une bannière de sortie vide à
+    // Yūrakuchō ; l'œil était à huit centimètres d'une devanture. Une capture
+    // n'est une preuve que si le point de vue en est une, et cela se DIT ici
+    // plutôt que de se découvrir en regardant les cent cinquante images.
+    //
+    // APRÈS la capture, et non avant : le lancer de rayon traverse la scène
+    // entière, ce qui se paie sur les plus grandes — posé avant, il retardait
+    // assez l'image pour que la capture de Tokyo expire. Un contrôle ne doit
+    // jamais coûter la mesure qu'il contrôle.
+    const near = await page.evaluate(() => window.__probePick(0, 0)[0]?.d ?? Infinity);
+    if (near < 0.8) {
+      missed++;
+      console.log(`      ⚠ ${leg} : un mur à ${near.toFixed(2)} m — vue sans valeur`);
+    }
   }
 }
 
-console.log(`\n══ ${stations.length} gares, ${missed} vues inatteignables ══`);
+console.log(`\n══ ${stations.length} gares, ${missed} vues sans valeur ══`);
 await browser.close();
 await server.close();
