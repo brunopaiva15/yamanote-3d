@@ -120,12 +120,26 @@ def world(x, sr=SR):
     return f0, sp, ap
 
 
-def graft(synth_x, ref_x, keep_pitch=False, sr=SR):
+def graft(synth_x, ref_x, keep_pitch=False, sr=SR, strength=1.0, pre_shift=0.0):
     """Synthèse rejouée sur la durée et la hauteur de la référence.
 
     `keep_pitch` ne greffe QUE le rythme : utile pour savoir laquelle des deux
     moitiés - la mélodie ou la cadence - fait la différence à l'oreille.
+
+    `strength` interpole entre la hauteur de la synthèse (0) et celle de la
+    référence (1), EN DEMI-TONS. À 0,6 on garde un tiers du relief d'origine :
+    utile quand la voix est loin de la cible et que la greffe entière la tord.
+
+    `pre_shift` transpose la synthèse AVANT la greffe. La note de 4/5 est allée
+    à jf_tebukuro, dont le registre naturel (224 Hz) est déjà celui de la prise
+    (230) ; jf_alpha, à 296 Hz, est resté à 1 - WORLD devait lui déplacer la
+    fondamentale de cinq demi-tons sans bouger ses formants, et ça s'entend.
+    Rapprocher la voix d'abord laisse à la greffe le seul travail du contour.
     """
+    if pre_shift:
+        from atelier import pitch_shift
+
+        synth_x = pitch_shift(synth_x, pre_shift, sr)
     f0_s, sp_s, ap_s = world(synth_x, sr)
     f0_r, _, _ = world(ref_x, sr)
     idx = dtw_path(mfcc(synth_x, sr), mfcc(ref_x, sr))
@@ -146,6 +160,10 @@ def graft(synth_x, ref_x, keep_pitch=False, sr=SR):
         miss = (f0 <= 0) & (f0_s[idx] > 0)
         if miss.any() and (f0 > 0).any():
             f0[miss] = np.interp(np.flatnonzero(miss), np.flatnonzero(f0 > 0), f0[f0 > 0])
+        if strength < 1.0:
+            both = (f0 > 0) & (f0_s[idx] > 0)
+            f0[both] = np.exp(np.log(f0_s[idx][both]) * (1 - strength)
+                              + np.log(f0[both]) * strength)
     y = pyworld.synthesize(np.ascontiguousarray(f0, dtype=np.float64), sp, ap, sr, FRAME_MS)
     return np.asarray(y, dtype=np.float32)
 
