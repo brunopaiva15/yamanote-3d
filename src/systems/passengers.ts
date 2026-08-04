@@ -231,7 +231,11 @@ function applyPaxIdentity(p: Pax, identity: number): void {
   p.pockets = p.appearance.bottom.type === 'trousers' && Math.random() < 0.4;
 }
 
-if (import.meta.env.DEV && typeof window !== 'undefined') {
+// `import.meta.env` n'existe que sous Vite. L'interrogation est là pour le
+// TEST, qui charge ce fichier avec Node pour éprouver la population partagée
+// (`tests/netPopulation`) - même précaution, et pour la même raison, que
+// `systems/platformCrowd`.
+if (import.meta.env?.DEV && typeof window !== 'undefined') {
   // Outil dev : __pax donne l'état de chaque voyageur de la rame (posture,
   // occupation en cours, partenaire d'échange) - pendant de __crowd.
   (window as unknown as Record<string, unknown>).__pax = paxList;
@@ -332,6 +336,96 @@ function seedChats(): void {
     // peuplé à la même seconde, et personne ne bouge de la première minute
     // avant que tout le monde ne bouge en même temps.
     p.interludeT *= Math.random();
+  }
+}
+
+// --- La population, telle qu'elle se partage entre joueurs -----------------
+//
+// « Il faut aussi partager les personnages pour avoir les mêmes personnages. »
+// C'était fondé : tout ce fichier tire au sort, et deux joueurs de la même rame
+// voyageaient jusqu'ici avec deux populations sans le moindre rapport.
+//
+// Ce qui se partage est l'ÉTAT et non les tirages, contrairement au reste du
+// monde (systems/net/worldDecisions). La raison est simple : cette machine-ci
+// est une simulation à état, pas une chronologie. Deux clients partis de deux
+// populations différentes ne convergeraient jamais, quand bien même ils
+// tireraient les mêmes nombres - il faut donc bien, une fois par arrêt, se
+// mettre d'accord sur QUI est à bord. Et l'effectif lui-même dépend de la
+// qualité vidéo choisie (`paxScale`), ce qu'aucune graine commune ne rattrape.
+//
+// Ce qui NE se partage pas : ce que chacun FAIT. Le téléphone, le regard, les
+// discussions, le pas de celui qui monte restent tirés localement - personne ne
+// remarquera jamais que son camarade a vu le même voyageur se gratter le nez
+// une seconde plus tard, et répliquer ça coûterait le double du reste.
+
+/** Place encodée : -1 nulle part, 0..MAX_SEATED-1 assise, au-delà debout. */
+function encodePlace(p: Pax): number {
+  if (p.state === 'seated' && p.seatSlot >= 0) return p.seatSlot;
+  if (p.state === 'standing' && p.standSlot >= 0) return MAX_SEATED + p.standSlot;
+  return -1;
+}
+
+/**
+ * Qui est à bord, et où : deux entiers par place du pool.
+ *
+ * Les états de PASSAGE (celui qui marche vers son siège, celui qui se dirige
+ * vers la porte) sont rendus comme « nulle part » : on échantillonne à un
+ * moment où il n'y en a plus - la rame vient de fermer ses portes - et un
+ * voyageur figé au milieu de l'allée serait plus faux que pas de voyageur.
+ */
+export function samplePaxPopulation(): number[] {
+  const out: number[] = [];
+  for (const p of paxList) {
+    out.push(p.identity, encodePlace(p));
+  }
+  return out;
+}
+
+/**
+ * Pose la population de l'hôte sur la rame.
+ *
+ * On ne repart PAS d'une page blanche : chaque place du pool garde son
+ * occupant quand il est déjà le bon. C'est ce qui rend la correction discrète -
+ * à un arrêt ordinaire, deux ou trois voyageurs changent, et deux ou trois
+ * voyageurs seulement bougent à l'écran. Tout reconstruire ferait clignoter la
+ * rame entière une fois par gare.
+ */
+export function applyPaxPopulation(flat: readonly number[]): void {
+  initPassengers();
+  // Les montées en cours n'ont plus lieu d'être : leur place est réservée pour
+  // un arrangement qu'on vient de remplacer, et les laisser aboutir poserait
+  // quelqu'un sur un siège que la nouvelle population vient d'attribuer à un
+  // autre. C'est le même ménage que fait `seedPassengers`.
+  releasePending();
+  const n = Math.min(paxList.length, Math.floor(flat.length / 2));
+
+  // Premier passage : on libère tout ce qui doit bouger. Les places ne peuvent
+  // pas être redistribuées tant que d'anciens occupants les réservent encore.
+  for (let i = 0; i < n; i++) {
+    const p = paxList[i];
+    if (p.identity === flat[i * 2] && encodePlace(p) === flat[i * 2 + 1]) continue;
+    endPair(p);
+    releaseSlots(p);
+    clearAnchor(p);
+    p.waypoints = [];
+    p.wpi = 0;
+    p.state = 'hidden';
+  }
+
+  // Second passage : chacun à sa place. Deux temps et non un seul, sans quoi le
+  // premier réassigné écraserait la réservation d'un voisin pas encore libéré.
+  for (let i = 0; i < n; i++) {
+    const p = paxList[i];
+    const identity = flat[i * 2];
+    const place = flat[i * 2 + 1];
+    if (p.state !== 'hidden' && p.identity === identity && encodePlace(p) === place) continue;
+    if (p.identity !== identity) applyPaxIdentity(p, identity);
+    if (place < 0) {
+      p.state = 'hidden';
+      continue;
+    }
+    if (place < MAX_SEATED) sitPax(p, place);
+    else standPax(p, place - MAX_SEATED);
   }
 }
 

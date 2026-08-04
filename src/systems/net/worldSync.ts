@@ -34,19 +34,29 @@ import {
   beginPowerOutage,
   lastFiredAt,
 } from '../stationCycle';
-import { onIncident, type IncidentKind } from './incidents';
+import { onIncident, onPopulation, type IncidentKind, type PopulationKind } from './incidents';
 import { reconcile, warpDt, type Correction } from './reconcile';
 import { deliverRoomMessage, isHost, onRoomMessage, roomSend, useRoom } from './room';
 import {
   BLOCKER_BITS,
   PROTOCOL_VERSION,
   validEvent,
+  validPop,
   validStop,
   validTick,
   type EventPayload,
+  type PopPayload,
   type StopPayload,
   type TickPayload,
 } from './protocol';
+import {
+  applyPaxPopulation,
+  samplePaxPopulation,
+} from '../passengers';
+import {
+  applyCrowdPopulation,
+  sampleCrowdPopulation,
+} from '../platformCrowd';
 // L'échantillonnage vit à part : lui reste chargeable sans navigateur, donc
 // testable, alors que ce fichier-ci tire tout `stationCycle` derrière lui.
 import { blockerBits, sampleStop, sampleTick, stopToDraws, tickToSnapshot } from './worldSample';
@@ -120,6 +130,22 @@ function appliquerStop(m: StopPayload): void {
   applyStopDraws(stopToDraws(m), m.ss);
 }
 
+/**
+ * La population de l'hôte, posée sur notre rame et sur notre quai.
+ *
+ * On refuse la foule d'une AUTRE gare : le message part au peuplement du quai,
+ * et un suiveur qui aurait pris une gare d'avance la poserait sur le mauvais
+ * béton. La rame, elle, n'a pas de gare - elle s'applique toujours.
+ */
+function appliquerPop(m: PopPayload): void {
+  if (m.px.length > 0) applyPaxPopulation(m.px);
+  // Une liste vide veut dire « je ne parle pas d'eux », et non « le quai est
+  // désert » : c'est ainsi que la fin d'arrêt ne corrige que la rame.
+  if (m.cr.length > 0 && m.st === useStore.getState().platformIndex) {
+    applyCrowdPopulation(m.st, m.cr);
+  }
+}
+
 function appliquerEvent(m: EventPayload): void {
   switch (m.k) {
     case 'emergency': {
@@ -156,6 +182,9 @@ function appliquerEvent(m: EventPayload): void {
       dernierHello = now;
       publierTick(true);
       publierStop(true);
+      // Et les gens : un arrivant n'a aucun moyen de les deviner, eux ne
+      // découlent d'aucune chronologie.
+      publierPopulation('both');
       break;
     }
     default:
@@ -209,6 +238,25 @@ function publishIncident(kind: IncidentKind): void {
     hold: Math.round(em.holdFor * 1000),
     reason: em.reason,
     coast: 0,
+  });
+}
+
+/**
+ * L'hôte publie qui est à bord et qui attend sur le quai.
+ *
+ * Appelée aux deux instants où la population vient de se fixer - le quai à
+ * l'entrée en freinage, la rame une fois l'échange aux portes terminé - et à
+ * l'arrivée d'un nouveau venu. Jamais plus : c'est un état, il ne se diffuse
+ * pas en continu.
+ */
+function publierPopulation(kind: PopulationKind): void {
+  if (!isHost()) return;
+  roomSend('pop', {
+    v: PROTOCOL_VERSION,
+    from: useRoom.getState().selfId,
+    st: useStore.getState().platformIndex,
+    px: kind === 'crowd' ? [] : samplePaxPopulation(),
+    cr: kind === 'pax' ? [] : sampleCrowdPopulation(),
   });
 }
 
@@ -317,6 +365,7 @@ export function rejoinRoomWorld(): void {
 export function startWorldSync(): void {
   if (detacher) return;
   onIncident(publishIncident);
+  onPopulation(publierPopulation);
   detacher = onRoomMessage((event, payload) => {
     // Retour après une coupure : notre horloge de phase a pris un retard
     // quelconque pendant le silence, et le premier battement qui arrivera
@@ -325,6 +374,11 @@ export function startWorldSync(): void {
     if (event === 'resubscribed') {
       seqEntrant = -1;
       roomSend('event', { v: PROTOCOL_VERSION, from: useRoom.getState().selfId, k: 'hello' });
+      return;
+    }
+    if (event === 'pop' && validPop(payload)) {
+      // Les gens ne s'appliquent QUE chez un suiveur : l'hôte est la source.
+      if (netRole() === 'follower') appliquerPop(payload as PopPayload);
       return;
     }
     if (event === 'tick' && validTick(payload)) appliquerTick(payload as TickPayload);
@@ -337,6 +391,7 @@ export function startWorldSync(): void {
 
 export function stopWorldSync(): void {
   onIncident(null);
+  onPopulation(null);
   detacher?.();
   detacher = null;
   resetWorldSync();
@@ -374,6 +429,28 @@ if (typeof window !== 'undefined') {
     deliverRoomMessage('tick', charge);
   };
   w.__netCorrection = () => correction;
+  /**
+   * Injecte une population « de l'hôte » à la main.
+   *
+   * Sans argument, elle reprend la nôtre en INVERSANT l'ordre des places : tout
+   * le monde doit alors bouger d'un coup, ce qui est le cas le plus dur pour la
+   * redistribution des sièges et le seul qui révèle deux voyageurs posés sur le
+   * même coussin. C'est le pendant de `__netTick` pour les gens, et c'est ce
+   * qui permet d'éprouver la réception dans un vrai navigateur, sans second
+   * onglet ni serveur.
+   */
+  w.__netPop = (px?: number[], cr?: number[]) => {
+    const mien = samplePaxPopulation();
+    const inverse: number[] = [];
+    for (let i = mien.length / 2 - 1; i >= 0; i--) inverse.push(mien[i * 2], mien[i * 2 + 1]);
+    deliverRoomMessage('pop', {
+      v: PROTOCOL_VERSION,
+      from: 'dev-host',
+      st: useStore.getState().platformIndex,
+      px: px ?? inverse,
+      cr: cr ?? [],
+    });
+  };
   // Forcer le rôle sans passer par une élection : de quoi éprouver le
   // comportement d'un suiveur avec un seul onglet ouvert.
   w.__setRole = (role: 'solo' | 'host' | 'follower') => setNetRole(role);

@@ -43,7 +43,7 @@ import {
   drawDoorSeed,
   netRole,
 } from './net/worldDecisions';
-import { notifyIncident } from './net/incidents';
+import { notifyIncident, notifyPopulation } from './net/incidents';
 import {
   createCarPower,
   cutPower,
@@ -991,6 +991,7 @@ function seedFired(phase: Phase, t: number, stationIndex: number, dir: LoopDirec
     if (t >= dwell - CLOSE_ANNOUNCE_LEAD) fired.add('announce-close');
     if (t >= dwell - CLOSE_ANNOUNCE_LEAD + PA_CLOSE_LAG) fired.add('pa-close');
     if (t >= dwell - DOORS_CLOSE_LEAD) fired.add('doors-close');
+    if (t >= dwell - DOORS_CLOSE_LEAD) fired.add('pop-publish');
     if (t >= dwell - DOORS_CLOSE_LEAD + stationTimings.psdCloseDelay) fired.add('psd-close');
   } else if (phase === 'depart') {
     fired.add('advance');
@@ -1387,7 +1388,13 @@ export function updateCycle(dt: number): void {
       once('brake-apply', true, () => audio.brakeApply());
       // Foule déjà en place dès le début du freinage : on la voit arriver
       // avec le quai, opaque, le long des vitres.
-      once('crowd-seed', true, () => seedPlatformCrowd(s.index));
+      // Le quai se peuple ici, et l'hôte le dit aussitôt : le placement est
+      // déterministe (systems/platformCrowd), mais ni l'effectif - il dépend de
+      // la qualité vidéo - ni les visages ne le sont.
+      once('crowd-seed', true, () => {
+        seedPlatformCrowd(s.index);
+        notifyPopulation('both');
+      });
       // (L'annonce d'approche part en fin de cruise, voir APPROACH_ANNOUNCE_LEAD.)
       // Immobilisation : léger tassement de caisse + serrage à l'arrêt.
       once('stop-settle', t > 1 && runtime.speed <= 0.01, () => audio.stopSettle());
@@ -1425,6 +1432,11 @@ export function updateCycle(dt: number): void {
         paAlightFirst(s.index, PLATFORM_PLAN_HEADWAY, melodyStartAt(s.index, dwell) - t),
       );
       once('exchange', t > 1.6, () => exchangePassengers(s.doorSide));
+      // L'échange est fini de se jouer : montants assis, descendants partis.
+      // C'est le moment où la rame est la même pour tout le monde, et donc
+      // celui où l'hôte peut le dire sans que personne ne se téléporte en
+      // pleine allée (voir systems/passengers, sur la population partagée).
+      once('pop-publish', t >= dwell - DOORS_CLOSE_LEAD, () => notifyPopulation('pax'));
       once('pa-agent', t > AGENT_EXCHANGE_AT, () =>
         paAgentMessage(s.index, PLATFORM_PLAN_HEADWAY, 0, melodyStartAt(s.index, dwell) - t),
       );
