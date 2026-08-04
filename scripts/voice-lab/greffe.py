@@ -120,6 +120,34 @@ def world(x, sr=SR):
     return f0, sp, ap
 
 
+def time_map(n_src, n_dst):
+    """Correspondance LINÉAIRE entre deux longueurs de trames.
+
+    L'alignement dynamique était une fausse bonne idée ici. Les deux
+    enregistrements disent le même texte à des débits déjà proches (112 trames
+    contre 103), mais rien ne bornait la pente du chemin : sur
+    「お出口は右側です」 il figeait une trame de synthèse pendant vingt-cinq
+    trames, soit 125 ms de spectre immobile, et laissait 86 trames sur 321
+    inutilisées. C'est exactement ce qui s'entendait comme une voix pas claire.
+    Une carte linéaire ne peut pas dégénérer.
+    """
+    return np.clip(np.round(np.linspace(0, n_src - 1, n_dst)).astype(int), 0, n_src - 1)
+
+
+def continuous_f0(f0):
+    """Contour de hauteur sans trous : les trames non voisées sont comblées.
+
+    On n'emprunte à la référence que la VALEUR de la hauteur, jamais ses
+    décisions de voisement - sans quoi une trame que la référence tait mais que
+    la synthèse prononce ressortait en bruit pur. C'était l'autre moitié du
+    « pas clair ».
+    """
+    v = f0 > 0
+    if not v.any():
+        return np.zeros_like(f0)
+    return np.interp(np.arange(len(f0)), np.flatnonzero(v), f0[v])
+
+
 def graft(synth_x, ref_x, keep_pitch=False, sr=SR, strength=1.0, pre_shift=0.0):
     """Synthèse rejouée sur la durée et la hauteur de la référence.
 
@@ -127,14 +155,11 @@ def graft(synth_x, ref_x, keep_pitch=False, sr=SR, strength=1.0, pre_shift=0.0):
     moitiés - la mélodie ou la cadence - fait la différence à l'oreille.
 
     `strength` interpole entre la hauteur de la synthèse (0) et celle de la
-    référence (1), EN DEMI-TONS. À 0,6 on garde un tiers du relief d'origine :
-    utile quand la voix est loin de la cible et que la greffe entière la tord.
+    référence (1), EN DEMI-TONS.
 
-    `pre_shift` transpose la synthèse AVANT la greffe. La note de 4/5 est allée
-    à jf_tebukuro, dont le registre naturel (224 Hz) est déjà celui de la prise
-    (230) ; jf_alpha, à 296 Hz, est resté à 1 - WORLD devait lui déplacer la
-    fondamentale de cinq demi-tons sans bouger ses formants, et ça s'entend.
-    Rapprocher la voix d'abord laisse à la greffe le seul travail du contour.
+    `pre_shift` transpose la synthèse AVANT la greffe, pour les voix dont le
+    registre naturel est loin de la cible : WORLD n'a plus alors qu'à poser le
+    contour.
     """
     if pre_shift:
         from atelier import pitch_shift
@@ -142,28 +167,25 @@ def graft(synth_x, ref_x, keep_pitch=False, sr=SR, strength=1.0, pre_shift=0.0):
         synth_x = pitch_shift(synth_x, pre_shift, sr)
     f0_s, sp_s, ap_s = world(synth_x, sr)
     f0_r, _, _ = world(ref_x, sr)
-    idx = dtw_path(mfcc(synth_x, sr), mfcc(ref_x, sr))
-    idx = np.clip(idx, 0, len(f0_s) - 1)
-    n = min(len(idx), len(f0_r))
-    idx, f0_r = idx[:n], f0_r[:n]
 
+    idx = time_map(len(f0_s), len(f0_r))
     sp = np.ascontiguousarray(sp_s[idx], dtype=np.float64)
     ap = np.ascontiguousarray(ap_s[idx], dtype=np.float64)
+    voiced = f0_s[idx] > 0
+
     if keep_pitch:
         f0 = f0_s[idx].copy()
     else:
-        f0 = f0_r.copy()
-        # Une trame que la référence dit voisée et la synthèse non (ou
-        # l'inverse) produirait un souffle ou un clic : on garde le voisement
-        # de la synthèse, et on n'emprunte que la VALEUR de la hauteur.
-        f0[f0_s[idx] <= 0] = 0.0
-        miss = (f0 <= 0) & (f0_s[idx] > 0)
-        if miss.any() and (f0 > 0).any():
-            f0[miss] = np.interp(np.flatnonzero(miss), np.flatnonzero(f0 > 0), f0[f0 > 0])
-        if strength < 1.0:
-            both = (f0 > 0) & (f0_s[idx] > 0)
-            f0[both] = np.exp(np.log(f0_s[idx][both]) * (1 - strength)
-                              + np.log(f0[both]) * strength)
+        # Contour de la référence, rééchantillonné sur la durée voulue, appliqué
+        # aux SEULES trames que la synthèse prononce.
+        cont = continuous_f0(f0_r)
+        target = cont[time_map(len(cont), len(idx))]
+        f0 = np.zeros(len(idx))
+        if strength >= 1.0:
+            f0[voiced] = target[voiced]
+        else:
+            f0[voiced] = np.exp(np.log(np.maximum(f0_s[idx][voiced], 1e-6)) * (1 - strength)
+                                + np.log(np.maximum(target[voiced], 1e-6)) * strength)
     y = pyworld.synthesize(np.ascontiguousarray(f0, dtype=np.float64), sp, ap, sr, FRAME_MS)
     return np.asarray(y, dtype=np.float32)
 
