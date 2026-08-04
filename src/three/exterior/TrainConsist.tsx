@@ -30,8 +30,8 @@ import {
   type SideSignView,
   makeStainlessRoughness,
   makeStainlessTexture,
-  serviceNumberFor,
 } from '../../textures/trainExterior';
+import { serviceNumberFor } from '../../data/serviceNumber';
 import { applyShadowFlags } from '../shadowFlags';
 import { buildCarGeometries, buildPantograph, buildRoofCables } from './carShellGeometry';
 import { buildCab } from './cabGeometry';
