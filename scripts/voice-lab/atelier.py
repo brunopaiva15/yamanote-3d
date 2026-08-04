@@ -51,6 +51,15 @@ class Recipe:
     `voice` : nom de voix Kokoro, ou mélange « a:0.6+b:0.4 ».
     `speed` : vitesse Kokoro. La transposition ne passe PAS par elle.
     `semitones` : transposition appliquée APRÈS synthèse, durée conservée.
+    `smile` : dilatation des formants SEULE (1.0 = rien). Voir timbre.py -
+        c'est la couleur « souriante », qui n'existe pas dans la hauteur.
+    `name_lift` : demi-tons ajoutés SUR LE SEUL NOM DE GARE, formants
+        conservés.
+    `name_smile` : sourire appliqué au SEUL nom de gare. C'est le vrai écart
+        relevé sur une prise étiquetée : dans 「次は。渋谷。渋谷。」 le nom
+        n'est pas plus HAUT que la phrase qui l'introduit (236 Hz contre 256),
+        il est plus BRILLANT - centroïde 1200 contre 839. Ce que l'oreille
+        prend pour de l'aigu est un déplacement de formants.
     `short_gap` / `long_gap` : les deux silences de la cadence, en secondes.
     """
 
@@ -58,6 +67,9 @@ class Recipe:
     voice: str
     speed: float
     semitones: float = 0.0
+    smile: float = 1.0
+    name_lift: float = 0.0
+    name_smile: float = 1.0
     short_gap: float = 0.32
     long_gap: float = 1.06
     label: str = ""
@@ -139,11 +151,30 @@ def wsola(x, rate, sr=SR):
 
 
 def pitch_shift(x, st, sr=SR):
-    """Transposition à DURÉE CONSTANTE : rééchantillonnage puis recalage."""
+    """Transposition à DURÉE CONSTANTE : rééchantillonnage puis recalage.
+
+    Les formants suivent la fondamentale. Vers le BAS c'est recherché (voix
+    plus pleine) ; vers le HAUT c'est l'effet « chipmunk », et il faut alors
+    passer par pitch_shift_fc.
+    """
     if abs(st) < 1e-6:
         return x
     y = resample_semitones(x, st)
     return wsola(y, len(y) / max(len(x), 1), sr)
+
+
+def pitch_shift_fc(x, st, sr=SR):
+    """Transposition à FORMANTS CONSERVÉS : la hauteur monte, pas la voix.
+
+    C'est ce qu'il faut pour lever le seul nom de gare : un locuteur qui monte
+    d'un ton ne rétrécit pas son conduit vocal. Sans cette correction, le nom
+    de gare ressortait en dessin animé.
+    """
+    if abs(st) < 1e-6:
+        return x
+    from timbre import formant_shift
+
+    return formant_shift(pitch_shift(x, st, sr), 2 ** (-st / 12), sr)
 
 
 def split_ja(text):
@@ -159,29 +190,41 @@ def split_ja(text):
 
 
 def synth(kokoro, ja_g2p, en_g2p, recipe, text, lang, segments=None):
-    """Synthétise `text` selon `recipe`.
+    """Synthétise `text` selon `recipe`, morceau par morceau.
 
-    `segments` force un découpage (liste de couples (morceau, silence long ?)) ;
-    sans lui, celui de split_ja s'applique. L'anglais reste synthétisé d'un
-    bloc : Kokoro y respecte déjà la ponctuation.
+    `segments` est une liste de (morceau, silence long ?, est-ce le nom de
+    gare ?) ; sans lui, split_ja donne le découpage du générateur actuel. Le
+    dernier drapeau sert au `name_lift` : seul le nom de gare monte.
+
+    L'anglais passe par le même chemin - la ponctuation y suffisait tant qu'on
+    ne cherchait ni pause mesurée ni nom de gare détaché, mais c'est justement
+    ce qu'on cherche maintenant.
     """
-    voice = blend(kokoro, recipe.voice)
-    if lang != "ja-JP":
-        ph, _ = en_g2p(text)
-        a, _ = kokoro.create(ph, voice=voice, speed=recipe.speed, is_phonemes=True)
-        return pitch_shift(trim(np.asarray(a, dtype=np.float32)), recipe.semitones)
+    from timbre import formant_shift
 
-    segs = split_ja(text) if segments is None else segments
+    voice = blend(kokoro, recipe.voice)
+    g2p = ja_g2p if lang == "ja-JP" else en_g2p
+    segs = [(p, long, False) for p, long in split_ja(text)] if segments is None else segments
+    segs = [(s + (False,))[:3] if len(s) < 3 else s for s in segs]
+
     parts = []
-    for i, (piece, is_long) in enumerate(segs):
-        ph, _ = ja_g2p(piece)
+    for i, (piece, is_long, is_name) in enumerate(segs):
+        ph, _ = g2p(piece)
         if not ph:
             continue
         a, _ = kokoro.create(ph, voice=voice, speed=recipe.speed, is_phonemes=True)
-        # La transposition s'applique morceau par morceau : les silences, eux,
-        # gardent EXACTEMENT la durée demandée par la recette.
-        parts.append(pitch_shift(trim(np.asarray(a, dtype=np.float32)), recipe.semitones))
+        y = trim(np.asarray(a, dtype=np.float32))
+        # Registre global : vers le bas, les formants suivent - c'est voulu.
+        y = pitch_shift(y, recipe.semitones)
+        # Le nom de gare monte SANS emmener les formants avec lui.
+        if is_name and recipe.name_lift:
+            y = pitch_shift_fc(y, recipe.name_lift)
+        smile = recipe.smile * (recipe.name_smile if is_name else 1.0)
+        if abs(smile - 1.0) > 1e-3:
+            y = formant_shift(y, smile)
+        parts.append(y)
         if i < len(segs) - 1:
+            # Les silences gardent EXACTEMENT la durée demandée par la recette.
             gap = recipe.long_gap if is_long else recipe.short_gap
             parts.append(np.zeros(int(SR * gap), np.float32))
     return np.concatenate(parts) if parts else np.zeros(1, np.float32)

@@ -55,9 +55,8 @@ En gras : hors de la plage relevée dans l'enregistrement.
    dans l'enregistrement : l'annonce est hachée près de deux fois trop souvent.
    C'est une conséquence directe du texte, qui n'écrit plus que des 。 — le
    générateur coupe donc à chaque groupe et insère un silence partout.
-4. **Cadence.** Le générateur pose un silence unique de 0,62 s, c'est-à-dire
-   pile dans le creux entre les deux modes réels. Ni la respiration courte ni
-   la vraie pause de phrase.
+4. **Cadence.** Le générateur pose un silence unique de 0,62 s. Voir la
+   correction ci-dessous : ce 0,62 s est simplement **trop long partout**.
 
 Et une chose qui va déjà : **le débit intra-phrase du japonais** (6,02 contre
 6,16). Il ne faut pas toucher à `speed` de ce côté — l'impression de lenteur
@@ -161,3 +160,82 @@ python scripts/voice-lab/banc.py enregistrement.mp3 /tmp/mesures.json \
 | `scripts/voice-lab/rapport.py` | le tableau enregistrement / clips |
 | `scripts/voice-lab/banc.py` | génère les variantes et la page A/B |
 | `scripts/voice-lab/banc.tmpl.html` | gabarit de la page |
+
+
+## Correction : ce qu'une prise étiquetée a changé
+
+Les relevés ci-dessus portent sur 17 minutes où l'on ne savait pas qui parlait.
+Une seconde prise, courte et **dont le texte est connu** —
+「次は。渋谷。渋谷。お出口は右側です。」, voix japonaise de bord — a corrigé deux
+conclusions. Une prise étiquetée de six secondes vaut mieux qu'un quart d'heure
+anonyme.
+
+| | 次は | 渋谷 | 渋谷 | お出口は右側です |
+| --- | --- | --- | --- | --- |
+| durée | 0,51 s | 0,67 s | 0,67 s | **1,57 s** |
+| silence avant | — | 0,34 s | 0,43 s | 0,31 s |
+| F0 | 256 Hz | 236 Hz | 236 Hz | 209 Hz |
+| centroïde | 839 Hz | **1200 Hz** | 1189 Hz | 848 Hz |
+
+**Les silences internes ne sont pas bimodaux — ils sont tous courts.** 0,34 /
+0,43 / 0,31 s. Le mode à 1,06 s relevé sur les 17 minutes sépare des
+*annonces*, pas les morceaux d'une même annonce. Le 0,62 s du générateur n'est
+donc pas « dans le creux » : il est **trop long, partout**. La bonne valeur est
+de l'ordre de 0,32 s, avec 0,43 s entre les deux répétitions du nom de gare.
+
+**Le nom de gare n'est pas plus AIGU, il est plus BRILLANT.** 渋谷 sort 20 Hz
+*en dessous* de 次は (236 contre 256) mais avec un centroïde spectral de 1200 Hz
+contre 839. Ce que l'oreille prend pour de l'aigu — « elle a le sourire quand
+elle dit le nom de la gare » — est un déplacement de FORMANTS à hauteur
+constante. Le monter en hauteur donne un dessin animé ; c'est exactement ce
+qu'ont produit les variantes transposées vers le haut du premier banc d'écoute.
+D'où `smile` et `name_smile` dans `atelier.Recipe`, qui dilatent l'enveloppe
+spectrale sans toucher aux harmoniques (`timbre.formant_shift`).
+
+**Et la voix réelle est BEAUCOUP plus claire que toutes les voix japonaises de
+Kokoro.** Centroïde 981 Hz sur la prise, contre 570 à 660 Hz pour jf_nezumi,
+jf_tebukuro ou jf_alpha une fois les deux passés par la même sono. C'est
+probablement là que se joue le « plus radio, plus agréable » : pas dans la
+hauteur, dans la couleur.
+
+**Comparer sec à enregistré ne veut rien dire.** Un clip du jeu n'est jamais
+entendu tel quel : `audioEngine` lui fait passer un coupe-bas à 300 Hz, une
+bosse de présence à 1900 Hz, un coupe-haut à 5000 Hz, une compression serrée et
+une réverbération de cabine. `timbre.cabin_pa` reproduit cette chaîne, et tout
+calage passe désormais par elle.
+
+### Calage automatique sur la prise étiquetée
+
+`scripts/voice-lab/notes.py` fabrique un test d'écoute **noté et à l'aveugle** :
+39 variantes de deux à quatre secondes, réglages masqués, une note de 1 à 5. Le
+plan fait varier chaque levier à plusieurs valeurs sur plusieurs voix, de sorte
+que les notes permettent de remonter à ce qui plaît — la voix, le registre, le
+sourire, la brillance du nom, la cadence, le débit — et pas seulement à quelle
+prise a gagné.
+
+Deux calages nourrissent ce plan :
+
+- **la vitesse**, choisie voix par voix pour reproduire les durées relevées
+  (0,51 / 0,67 / 1,57 s). Elle varie du simple au tiers d'une voix à l'autre :
+  jf_alpha 1,01 · jf_nezumi 1,11 · jf_tebukuro 1,19 · jf_gongitsune 1,33.
+  Comparer deux voix « à vitesse égale » ne comparait donc rien ;
+- **le spectre**, en cherchant la transposition et le sourire qui rapprochent le
+  plus le spectre moyen à long terme de celui de la prise, sono comprise :
+
+| Voix | Transposition | Sourire | Écart spectral |
+| --- | --- | --- | --- |
+| af_heart | −2 st | ×1,30 | **4,36 dB** |
+| af_sarah | −4 st | ×1,30 | 5,02 dB |
+| jf_alpha | −4 st | ×1,10 | 5,20 dB |
+| af_jessica | 0 | ×1,00 | 5,24 dB |
+| bf_isabella | 0 | ×1,30 | 5,24 dB |
+| jf_tebukuro | 0 | ×1,00 | 6,25 dB |
+
+Les meilleurs calages sont des voix **anglaises** fortement souriées, employées
+sur des phonèmes japonais. Kokoro accepte les phonèmes indépendamment du style
+de voix, et rien n'interdit ce croisement — sauf que la prononciation peut y
+laisser des plumes. C'est un pari à trancher à l'oreille, pas au tableau : d'où
+leur présence dans le test noté.
+
+`jf_tebukuro`, que le premier banc désignait, tombe au bas du classement une
+fois la brillance prise en compte : son registre est bon, son timbre est sourd.

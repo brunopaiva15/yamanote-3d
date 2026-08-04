@@ -1,0 +1,212 @@
+<title>Voix Yamanote — écoute notée</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --paper: #f3f5ec; --raised: #fff; --ink: #14180f; --muted: #676e5b;
+    --faint: #939a86; --line: #d8ddc9; --accent: #6f9210; --accent-soft: #e5eecb;
+    --cool: #3a6a80; --cool-soft: #dbe8ed;
+    --f-body: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --f-data: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #12150e; --raised: #1b1f16; --ink: #eef1e6; --muted: #9ba38c;
+            --faint: #6d7562; --line: #2d3325; --accent: #a5cc35; --accent-soft: #2b3a12;
+            --cool: #7fb4cb; --cool-soft: #17303b; }
+  }
+  :root[data-theme="dark"] { --paper: #12150e; --raised: #1b1f16; --ink: #eef1e6;
+    --muted: #9ba38c; --faint: #6d7562; --line: #2d3325; --accent: #a5cc35;
+    --accent-soft: #2b3a12; --cool: #7fb4cb; --cool-soft: #17303b; }
+  :root[data-theme="light"] { --paper: #f3f5ec; --raised: #fff; --ink: #14180f;
+    --muted: #676e5b; --faint: #939a86; --line: #d8ddc9; --accent: #6f9210;
+    --accent-soft: #e5eecb; --cool: #3a6a80; --cool-soft: #dbe8ed; }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 0 20px 120px; }
+
+  header { padding: 44px 0 18px; }
+  h1 { font-size: clamp(26px, 5vw, 38px); font-weight: 800; letter-spacing: -.03em;
+       margin: 0 0 10px; line-height: 1.05; }
+  .sub { color: var(--muted); margin: 0; max-width: 54ch; }
+  h2 { font-size: 13px; font-family: var(--f-data); letter-spacing: .16em;
+       text-transform: uppercase; color: var(--accent); font-weight: 600;
+       margin: 40px 0 12px; }
+
+  .bar { position: sticky; top: 0; z-index: 30; background: var(--paper);
+         border-bottom: 1px solid var(--line); padding: 10px 0;
+         display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .bar .grow { flex: 1 1 auto; }
+
+  button { font: inherit; cursor: pointer; }
+  .ref { font-family: var(--f-data); font-size: 12px; border: 1px solid var(--line);
+         background: var(--raised); color: var(--ink); border-radius: 999px;
+         padding: 7px 13px; }
+  .ref:hover, .ref[data-on="1"] { background: var(--cool-soft); border-color: var(--cool); }
+  .tog { font-family: var(--f-data); font-size: 12px; border: 1px solid var(--line);
+         background: var(--raised); color: var(--muted); border-radius: 3px;
+         padding: 7px 11px; }
+  .tog[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent);
+                              color: var(--ink); }
+  .count { font-family: var(--f-data); font-size: 12px; color: var(--faint);
+           white-space: nowrap; }
+
+  .row { display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+         background: var(--raised); border: 1px solid var(--line); border-radius: 3px;
+         margin-bottom: 7px; }
+  .row.done { border-color: var(--accent-soft); }
+  .id { font-family: var(--f-data); font-size: 13px; color: var(--faint);
+         flex: 0 0 34px; }
+  .go { border: 1px solid var(--line); background: transparent; color: var(--ink);
+        border-radius: 3px; padding: 8px 0; flex: 0 0 66px; white-space: nowrap;
+        font-family: var(--f-data); font-size: 13px; }
+  .go:hover { border-color: var(--accent); color: var(--accent); }
+  .go[data-on="1"] { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .set { font-family: var(--f-data); font-size: 11.5px; color: var(--faint);
+         flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+         white-space: nowrap; }
+  .set.hide { visibility: hidden; }
+  .scale { display: flex; gap: 4px; margin-left: auto; flex: 0 0 auto; }
+  .sc { width: 34px; height: 34px; border: 1px solid var(--line); background: transparent;
+        color: var(--muted); border-radius: 3px; font-family: var(--f-data); font-size: 13px; }
+  .sc:hover { border-color: var(--accent); }
+  .sc[aria-pressed="true"] { background: var(--accent); border-color: var(--accent);
+                             color: var(--paper); font-weight: 600; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .out { margin-top: 40px; border: 1px solid var(--line); border-radius: 3px;
+         background: var(--raised); padding: 16px 18px; }
+  .out p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+  textarea { width: 100%; min-height: 88px; font-family: var(--f-data); font-size: 12px;
+             border: 1px solid var(--line); border-radius: 3px; background: var(--paper);
+             color: var(--ink); padding: 10px; resize: vertical; }
+  .big { border: 1px solid var(--accent); background: var(--accent); color: var(--paper);
+         border-radius: 3px; padding: 10px 18px; font-weight: 600; margin-top: 10px; }
+
+  @media (max-width: 560px) {
+    .row { flex-wrap: wrap; }
+    .set { order: 5; flex-basis: 100%; }
+    .scale { margin-left: 0; }
+    .sc { width: 30px; height: 30px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Écoute notée</h1>
+    <p class="sub">
+      La première référence dit exactement la même phrase que les extraits
+      japonais. Écoute-la, puis chaque extrait, et note de 1 à 5.
+      Les réglages sont cachés — juge à l'oreille. À la fin, copie les notes.
+    </p>
+  </header>
+
+  <div class="bar">
+    <span id="refs" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+    <span class="grow"></span>
+    <button class="tog" id="pa" type="button" aria-pressed="true">dans la rame</button>
+    <button class="tog" id="reveal" type="button" aria-pressed="false">réglages</button>
+    <span class="count" id="count"></span>
+  </div>
+
+  <h2>Japonais — 次は。渋谷。渋谷。お出口は右側です。</h2>
+  <div id="ja"></div>
+
+  <h2>Anglais — The next station is. Shibuya.</h2>
+  <div id="en"></div>
+
+  <div class="out">
+    <p>Colle ça dans la conversation quand tu as fini (les notes partielles marchent aussi).</p>
+    <textarea id="dump" readonly></textarea>
+    <button class="big" id="copy" type="button">Copier les notes</button>
+  </div>
+</div>
+
+<script>
+  const DATA = /*__DATA__*/;
+  const $ = s => document.querySelector(s);
+  const el = (t, c, h) => { const n = document.createElement(t); if (c) n.className = c;
+                            if (h !== undefined) n.innerHTML = h; return n; };
+  const KEY = 'yamanote-notes-v1';
+  const marks = JSON.parse(localStorage.getItem(KEY) || '{}');
+  let usePA = true, reveal = false;
+
+  const audio = new Audio();
+  let cur = null;
+  function stop() {
+    audio.pause();
+    document.querySelectorAll('[data-on="1"]').forEach(b => b.dataset.on = '0');
+    cur = null;
+  }
+  function play(src, btn) {
+    if (cur === btn) { stop(); return; }
+    stop();
+    audio.src = src; audio.play(); cur = btn; btn.dataset.on = '1';
+  }
+  audio.addEventListener('ended', stop);
+
+  DATA.refs.forEach(r => {
+    const b = el('button', 'ref', r.label);
+    b.type = 'button';
+    b.onclick = () => play(DATA.clips[r.id], b);
+    $('#refs').append(b);
+  });
+
+  function dump() {
+    const parts = DATA.items.filter(i => marks[i.id]).map(i => `${i.id}:${marks[i.id]}`);
+    $('#dump').value = parts.length ? parts.join(' ') : '(aucune note pour l’instant)';
+    $('#count').textContent = `${parts.length}/${DATA.items.length}`;
+  }
+
+  function build(target, lang) {
+    const box = $(target);
+    DATA.items.filter(i => i.lang === lang).forEach(i => {
+      const row = el('div', 'row' + (marks[i.id] ? ' done' : ''));
+      row.append(el('span', 'id', i.id));
+      const go = el('button', 'go', '▶ jouer');
+      go.type = 'button';
+      go.onclick = () => play(DATA.clips[usePA ? i.id : i.id + '-sec'], go);
+      row.append(go);
+      row.append(el('span', 'set' + (reveal ? '' : ' hide'), i.setting));
+      const scale = el('div', 'scale');
+      for (let n = 1; n <= 5; n++) {
+        const b = el('button', 'sc', String(n));
+        b.type = 'button';
+        b.setAttribute('aria-pressed', String(marks[i.id] === n));
+        b.onclick = () => {
+          marks[i.id] = marks[i.id] === n ? undefined : n;
+          if (!marks[i.id]) delete marks[i.id];
+          localStorage.setItem(KEY, JSON.stringify(marks));
+          [...scale.children].forEach((c, k) =>
+            c.setAttribute('aria-pressed', String(marks[i.id] === k + 1)));
+          row.classList.toggle('done', !!marks[i.id]);
+          dump();
+        };
+        scale.append(b);
+      }
+      row.append(scale);
+      box.append(row);
+    });
+  }
+  build('#ja', 'ja-JP');
+  build('#en', 'en-US');
+  dump();
+
+  $('#pa').onclick = e => {
+    usePA = !usePA;
+    e.currentTarget.setAttribute('aria-pressed', String(usePA));
+    e.currentTarget.textContent = usePA ? 'dans la rame' : 'voix seule';
+    stop();
+  };
+  $('#reveal').onclick = e => {
+    reveal = !reveal;
+    e.currentTarget.setAttribute('aria-pressed', String(reveal));
+    document.querySelectorAll('.set').forEach(s => s.classList.toggle('hide', !reveal));
+  };
+  $('#copy').onclick = async () => {
+    try { await navigator.clipboard.writeText($('#dump').value); $('#copy').textContent = 'Copié'; }
+    catch { $('#dump').select(); document.execCommand('copy'); $('#copy').textContent = 'Copié'; }
+    setTimeout(() => { $('#copy').textContent = 'Copier les notes'; }, 1600);
+  };
+</script>
