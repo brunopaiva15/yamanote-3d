@@ -19,6 +19,12 @@ misaki : s'il lit un nom autrement que sa transcription kana (stations.ts), le
 katakana remplace le kanji dans le texte synthétisé - c'est ce qui rattrape
 御徒町, que l'analyseur lit « gotochō » en tête de phrase.
 
+En ANGLAIS, la même question se pose à l'envers : le G2P anglais lit les noms
+japonais comme des mots anglais (« Ikebukuro » → « ick-uh-BYOO-kuh-roh »,
+「山手」 → « YAM-uh-note »). Le texte de synthèse arrive donc annoté par
+scripts/en-readings.ts - « [Ueno](/ˌuˈɛnO/) » - et misaki prend ces phonèmes tels
+quels au lieu de deviner. Rien à faire ici : la syntaxe est celle de misaki.
+
 Cadence japonaise : Kokoro ignore presque la ponctuation quand on lui passe la
 phrase en un bloc (「まもなく、渋谷、渋谷。」sort d'une traite). Le japonais est
 donc synthétisé segment par segment (découpe aux 、 et 。) et les segments sont
@@ -32,7 +38,7 @@ Modèle : kokoro-v1.0.onnx + voices-v1.0.bin
 Usage :
   python scripts/announcements-gen.py textes.json kokoro-v1.0.onnx \
       voices-v1.0.bin public/audio/announcements src/data/pa-manifest.ts \
-      [--reuse] [--force-role atos-inner]
+      [--reuse] [--force-role atos-inner] [--force-lang en-US]
 
 --reuse : ne synthétise que les clips ABSENTS et reprend la durée des autres
 dans le manifeste existant. Un texte inchangé garde alors exactement le fichier
@@ -43,6 +49,11 @@ regravé.
 --force-role RÔLE : avec --reuse, regrave tout de même les clips de ce rôle
 vocal (par exemple ``atos-inner`` après un changement de voix) et conserve les
 autres. L'option est répétable.
+
+--force-lang LANGUE : même chose pour une langue entière (``en-US`` après une
+correction de prononciation). Le rôle ne suffisait pas : les annonces de bord
+n'en portent aucun, et une correction qui touche tout l'anglais en laisserait
+donc les deux tiers dans l'ancienne diction. L'option est répétable.
 
 Le dossier de sortie appartient au script : un MP3 dont plus aucun texte ne
 réclame la clé est supprimé. Corriger un mot d'annonce change son hachage, donc
@@ -199,14 +210,20 @@ def read_manifest(path: Path) -> dict[str, float]:
     return {k: float(v) for k, v in re.findall(r'"([0-9a-f]{8})":\s*([\d.]+)', text)}
 
 
+def flag_values(argv: list[str], flag: str) -> set[str]:
+    """Valeurs d'une option répétable (``--force-role a --force-role b``)."""
+    return {
+        argv[i + 1]
+        for i, arg in enumerate(argv[6:], start=6)
+        if arg == flag and i + 1 < len(argv)
+    }
+
+
 def main() -> None:
     texts_path, model_path, voices_path, out_dir, manifest_path = sys.argv[1:6]
     reuse = "--reuse" in sys.argv[6:]
-    force_roles = {
-        sys.argv[i + 1]
-        for i, arg in enumerate(sys.argv[6:], start=6)
-        if arg == "--force-role" and i + 1 < len(sys.argv)
-    }
+    force_roles = flag_values(sys.argv, "--force-role")
+    force_langs = flag_values(sys.argv, "--force-lang")
     data = json.loads(Path(texts_path).read_text(encoding="utf-8"))
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -216,6 +233,7 @@ def main() -> None:
         item
         for item in data["items"]
         if item.get("role") in force_roles
+        or item["lang"] in force_langs
         or not (item["key"] in known and (out / f"{item['key']}.mp3").exists())
     ]
     if reuse:

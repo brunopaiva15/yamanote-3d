@@ -247,6 +247,21 @@ python ".\scripts\announcements-gen.py" ".\.tmp\announcements\announcements-text
 Cette commande remplace les MP3 `atos-inner`, recalcule leurs durées dans le
 manifeste et laisse tous les autres clips intacts.
 
+### Regraver une langue entière
+
+Une correction de prononciation (par exemple les noms de gares japonais dits par
+la voix anglaise, `scripts/en-readings.ts`) ne change pas non plus les clés, et
+elle touche des annonces qui n'ont pas toutes un rôle de quai : celles de la
+rame n'en portent aucun, `--force-role` ne les atteindrait donc pas. C'est ce
+que fait `--force-lang` :
+
+```powershell
+python ".\scripts\announcements-gen.py" ".\.tmp\announcements\announcements-texts.json" "C:\Temp\kokoro-v1.0\kokoro-v1.0.onnx" "C:\Temp\kokoro-v1.0\voices-v1.0.bin" ".\public\audio\announcements" ".\src\data\pa-manifest.ts" --reuse --force-lang en-US
+```
+
+Toutes les annonces anglaises sont regravées (rame et quai), le japonais reste
+en place.
+
 ## 10. Vérifier et écouter les fichiers
 
 La variable `$assistance` contient les six clés. Vérifier les fichiers :

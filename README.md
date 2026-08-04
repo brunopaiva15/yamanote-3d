@@ -2581,7 +2581,28 @@ gardant son orthographe ; les noms de GARES, eux, sont vérifiés tout seuls
 contre leur transcription kana (`stations.ts`) - avec le même misaki que la
 synthèse, sans quoi le contrôle valide une lecture que personne n'entendra.
 Une correction de lecture ne change pas la clé du clip, qui hache le texte du
-jeu : il faut supprimer les MP3 concernés pour que `--reuse` les regrave.
+jeu : il faut supprimer les MP3 concernés pour que `--reuse` les regrave (ou
+passer `--force-role` / `--force-lang`, qui regravent un rôle vocal ou une
+langue entière sans toucher au reste).
+
+**Et l'anglais lit du japonais.** Le même piège existe dans l'autre sens, en
+pire, parce qu'il ne concerne pas un mot ou deux mais le nom de chaque gare. Le
+G2P anglais ne connaît pas ces mots : il les lit donc comme des mots anglais,
+avec l'accent anglais et surtout les voyelles anglaises - *ick-uh-BYOO-kuh-roh*
+pour 池袋, *you-uh-NO* pour 上野, *YAM-uh-note* pour 山手. Ce n'est pas un
+détail d'accent : les voyelles inaccentuées se réduisent en schwa et le nom
+n'est plus reconnaissable. La voix anglaise de JR East, elle, parle anglais mais
+dit les noms japonais avec leurs voyelles - *ee-keh-BOO-koo-roh*,
+*oo-EH-no*. C'est ce qu'on rétablit : chaque nom propre est décrit more par more
+dans `scripts/en-readings.ts`, converti dans le jeu de phonèmes américain de
+Kokoro (le ら japonais devient le battement ɾ du *water* américain, le o la
+diphtongue de *go*) et injecté dans le texte de synthèse - `[Ueno](/ˌuˈɛnO/)` -
+que misaki reprend tel quel. Une seule more porte l'accent, celle de l'annonce
+réelle. Le texte AFFICHÉ ne bouge pas : l'annotation ne vit que dans la piste de
+synthèse, donc les clés de clips et les sous-titres sont inchangés. Un nom
+ajouté sans lecture ne fait pas échouer la gravure - il produit un MP3 valide et
+mal dit -, c'est donc `tests/enReadings.test.ts` qui refuse tout mot capitalisé
+inconnu dans un texte anglais gravé.
 
 ### La gare parle aussi
 
