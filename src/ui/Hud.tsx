@@ -302,9 +302,19 @@ export function Hud() {
         {/* En bout de barre, après les réglages : ce n'en sont pas.
             « Voyager ensemble » d'abord, parce qu'on y revient - regarder qui
             est là, donner son code - alors qu'on ne provoque un incident
-            qu'une fois de temps en temps. */}
-        <RoomMenu />
-        <IncidentMenu />
+            qu'une fois de temps en temps.
+
+            Et les deux voyagent ENSEMBLE quand la barre passe à la ligne, comme
+            le bouton du son et son curseur. Sans ça, sur un téléphone, la
+            pastille du salon se glissait au bout de la rangée précédente - à
+            l'extrême droite, sous la main du voisin - et celle des incidents
+            se retrouvait seule au milieu d'une rangée pour elle toute seule.
+            Deux pastilles de trente-huit pixels qui coûtent une rangée
+            entière, c'est de la place prise sur la scène pour rien. */}
+        <div className="hud-discreet">
+          <RoomMenu />
+          <IncidentMenu />
+        </div>
       </div>
       {/* Ce que le salon a à dire, et seulement quand il a quelque chose à
           dire : la rame qui attend quelqu'un, ou celle qui est partie sans

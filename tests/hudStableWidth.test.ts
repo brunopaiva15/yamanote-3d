@@ -133,3 +133,26 @@ test('la détection interroge le pointeur PRINCIPAL, pas la présence d’un éc
   // sans lever : le store l'appelle à son ouverture, donc à l'import.
   assert.ok(corps.includes("typeof window === 'undefined'"));
 });
+
+test('les deux pastilles discrètes ne se quittent pas quand la barre passe à la ligne', () => {
+  // Séparées, elles se plaçaient au pire endroit : celle du salon glissée à
+  // l'extrême droite de la rangée précédente - sous la main du voisin de siège -
+  // et celle des incidents seule au milieu d'une rangée pour elle toute seule.
+  // Groupées, elles partagent la dernière rangée. Mesuré à 360, 390 et 412 px :
+  // même rangée, six pixels d'écart, rien qui déborde.
+  const hud = read('src/ui/Hud.tsx');
+  const groupe = hud.slice(hud.indexOf('hud-discreet'));
+  const fin = groupe.indexOf('</div>');
+  assert.ok(fin > 0, 'le groupe doit être un vrai conteneur, pas une classe posée à côté');
+  const corps = groupe.slice(0, fin);
+  assert.ok(corps.includes('<RoomMenu />') && corps.includes('<IncidentMenu />'));
+});
+
+test('le groupe garde l’espacement de la barre, il n’en invente pas un autre', () => {
+  // `gap: inherit` suit la barre y compris là où elle se resserre sur un écran
+  // étroit : rien ne trahit qu'il y a un groupe. Une valeur en dur ferait
+  // respirer ces deux boutons-là différemment de tous les autres.
+  const css = read('src/styles.css');
+  const regle = css.slice(css.indexOf('.hud-discreet {'));
+  assert.ok(regle.slice(0, regle.indexOf('}')).includes('gap: inherit'));
+});

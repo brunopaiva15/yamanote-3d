@@ -1090,6 +1090,22 @@ body,
   gap: 8px;
 }
 
+/* Les deux pastilles discrètes - le salon, les incidents - ne se quittent pas
+   davantage. Elles sont en bout de barre, ce sont les deux plus petites, et
+   séparées elles se plaçaient au pire endroit possible : celle du salon glissée
+   à l'extrême droite de la rangée précédente, sous la main du voisin de siège,
+   et celle des incidents seule au milieu d'une rangée pour elle toute seule -
+   quarante pixels de scène en moins pour un bouton de trente-huit.
+
+   `gap: inherit` plutôt qu'une valeur : le groupe garde exactement l'espacement
+   de la barre qui le contient, y compris là où elle le resserre sur un écran
+   étroit. Rien ne trahit qu'il y a un groupe. */
+.hud-discreet {
+  display: flex;
+  align-items: center;
+  gap: inherit;
+}
+
 /* --- Un libellé qui bascule ne doit pas changer la largeur de son bouton ---
  *
  * Rapporté depuis un téléphone : « le HUD, quand je clique dessus, il change
