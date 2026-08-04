@@ -54,11 +54,14 @@ export {
 } from './lineScreenStates';
 export type { ScreenAnim, ScreenAnimStep } from './lineScreenAnim';
 export {
+  ANIM_PERIOD,
+  ANIM_PHASES,
   MOTION_STEP,
   bandFill,
   bandFills,
   newScreenAnim,
   resetScreenAnim,
+  screenLoops,
   stepScreenAnim,
 } from './lineScreenAnim';
 
@@ -90,12 +93,19 @@ export function lineScreenFrame(): LineScreenFrame {
  * Ce n'est pas une optimisation de confort - repeindre deux mille lignes de
  * canevas quatre fois par seconde pour un pixel inchangé se voit sur une
  * machine modeste, et c'est justement celle qui choisit la version sonore.
+ *
+ * L'horloge d'animation n'y entre que par son NOMBRE ENTIER DE PHASES. C'est
+ * une clé de battement : elle dit si le clignotant a changé d'état, pas où en
+ * sont les vantaux. Ce qui coulisse entre deux battements ne se garde pas
+ * éveillé par cette clé-ci mais par `screenLoops`, sans quoi tous les écrans
+ * animés se repeindraient trente fois par seconde pour un clignotant qui bat
+ * deux fois.
  */
 export function lineScreenKey(f: LineScreenFrame, anim: number, side: 1 | -1): string {
   return [
     lineScreenPageKey(f, side),
     f.clock,
-    f.animated ? anim : 0,
+    f.animated ? Math.floor(anim) : 0,
     COUNTDOWN_STATES.has(f.state) ? f.countdown : 0,
   ].join('|');
 }

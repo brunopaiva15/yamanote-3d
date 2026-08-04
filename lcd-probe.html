@@ -129,13 +129,17 @@
         // pas un passage du cycle.
         ['station-layout-doors-this-side-soon-jp', (s) => drawExitDoors(s, station, clock, true, dir, 2, 'soon')],
         ['station-layout-doors-other-side-soon-jp', (s) => drawExitDoors(s, station, clock, false, dir, 2, 'soon')],
-        // Les quatre phases du pictogramme de porte (vantaux + triangle de la
-        // voiture du joueur) : c'est une animation, elle ne se juge pas sur une
-        // image.
-        ['station-layout-doors-anim0', (s) => drawExitDoors(s, station, clock, true, dir, 0, 'soon')],
-        ['station-layout-doors-anim1', (s) => drawExitDoors(s, station, clock, true, dir, 1, 'soon')],
-        ['station-layout-doors-anim2', (s) => drawExitDoors(s, station, clock, true, dir, 2, 'soon')],
-        ['station-layout-doors-anim3', (s) => drawExitDoors(s, station, clock, true, dir, 3, 'soon')],
+        // Le pictogramme de porte (vantaux + triangle de la voiture du joueur)
+        // au fil de son cycle. Ce n'est plus une suite de quatre images posées
+        // au battement mais un GESTE CONTINU de deux secondes : on l'échantillonne
+        // donc au quart de phase, ce qui en donne seize instantanés - assez
+        // rapprochés pour qu'un ressaut de l'écartement se voie d'une vignette à
+        // la suivante. L'animation, elle, ne se juge toujours pas sur une image ;
+        // c'est sa RÉGULARITÉ qui se juge ici.
+        ...Array.from({ length: 16 }, (_, i) => [
+          `station-layout-doors-anim${String(i).padStart(2, '0')}`,
+          (s) => drawExitDoors(s, station, clock, true, dir, i / 4, 'soon'),
+        ]),
 
         // --- Avis de secteur (ne passent que sur certains intervalles, et sur
         // des intervalles APPROCHÉS : voir NOTICE_SEGMENTS).

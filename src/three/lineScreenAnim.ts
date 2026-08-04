@@ -1,5 +1,6 @@
-// CE QUI SE PASSE ENTRE DEUX ÉCRANS : le fondu d'une page à la suivante, et le
-// remplissage du ruban de la vue rapprochée.
+// LE CALENDRIER DE TOUT CE QUI BOUGE SUR L'AFFICHEUR : le battement de la rame,
+// le fondu d'une page à la suivante, le remplissage du ruban de la vue
+// rapprochée, et le va-et-vient des vantaux du pictogramme de portes.
 //
 // Jusqu'ici l'afficheur du jeu CHANGEAIT DE PAGE : une image, puis l'autre, au
 // battement suivant. La rame, elle, ne coupe pas. Sur une capture de la vraie
@@ -14,13 +15,37 @@
 //     bout lointain. Il part environ trois dixièmes de seconde après la page et
 //     met un peu plus d'une seconde à la parcourir.
 //
+// S'y est ajouté depuis le geste du pictogramme de portes, plus bas : même
+// affaire, une animation que le code épelait image par image au lieu de la
+// jouer.
+//
 // Ce module ne connaît ni canevas, ni horloge, ni magasin : on lui donne la
-// page à l'antenne et le temps écoulé, il rend deux nombres. Les DEUX lecteurs
-// de l'afficheur - les dalles de la rame (`three/Screens`) et l'écran de la
-// version sonore (`ui/audio/LineScreen`) - s'en servent tels quels, et il se
-// teste sous `node --test` comme `lineScreenStates`.
+// page à l'antenne et le temps écoulé, il rend des nombres entre 0 et 1. Les
+// DEUX lecteurs de l'afficheur - les dalles de la rame (`three/Screens`) et
+// l'écran de la version sonore (`ui/audio/LineScreen`) - s'en servent tels
+// quels, et il se teste sous `node --test` comme `lineScreenStates`.
 
-import type { LineScreenState } from './lineScreenStates.ts';
+import type { LineScreenFrame, LineScreenState } from './lineScreenStates.ts';
+
+/**
+ * Cadence d'animation des écrans : quatre phases d'une demi-seconde.
+ *
+ * Une seule horloge pour tout ce qui bouge - les vantaux du plan de quai, le
+ * triangle qui désigne la voiture, et le clignotement des repères de position
+ * des deux plans de ligne. Sur la rame ces trois choses battent ensemble ;
+ * leur donner chacune sa cadence les ferait dériver, et l'écran se mettrait à
+ * scintiller au lieu de respirer.
+ *
+ * Le nombre de phases qu'on passe aux peintures - `anim` partout ailleurs - est
+ * un nombre CONTINU depuis que les vantaux coulissent : 2,5 est le milieu de la
+ * troisième phase. Ce qui claque n'en est pas dérangé pour autant, et c'est
+ * voulu : l'horloge passe d'un entier au suivant à l'instant EXACT du
+ * battement, si bien que le clignotant bascule où il basculait et que la clé de
+ * redessin, qui n'en garde que la partie entière, ne change pas plus souvent
+ * qu'avant. Seul ce qui coulisse regarde la fraction.
+ */
+export const ANIM_PHASES = 4;
+export const ANIM_PERIOD = 0.5;
 
 /**
  * Durée du fondu enchaîné d'une page à la suivante.
@@ -97,6 +122,132 @@ export function bandFills(state: LineScreenState): boolean {
 export function bandFill(t: number): number {
   const x = (t - BAND_FILL_DELAY) / BAND_FILL_TIME;
   return x <= 0 ? 0 : x >= 1 ? 1 : x;
+}
+
+// --- LE PICTOGRAMME DE PORTES : UN GESTE, PAS QUATRE PHOTOGRAPHIES ----------
+//
+// Il n'y avait ici que quatre images - vantaux à 2, 12, 31 puis 12 pixels de
+// l'axe - posées l'une après l'autre au battement de la rame. Quatre images en
+// deux secondes, l'œil y voit les sauts avant d'y voir le geste : ça ne s'ouvre
+// pas, ça se déplace d'un cran. Les trois positions relevées sur la séquence
+// restent vraies, mais elles ne sont pas l'animation - elles en sont trois
+// instantanés, et il fallait les relier au lieu de les épeler.
+//
+// Ce que la boucle rend maintenant, c'est le CYCLE ENTIER : les vantaux
+// s'écartent, tiennent ouverts le temps que le triangle rouge sorte du seuil,
+// se referment, et la dalle marque un temps avant de recommencer. Deux
+// secondes, celles du battement de la rame : le pictogramme ne dérive donc
+// jamais du clignotant qui l'entoure. Les deux images extrêmes du relevé - les
+// vantaux joints, la porte grande ouverte avec son triangle sorti - restent
+// peintes au pixel comme avant ; ce qui a changé, c'est tout ce qui les sépare,
+// qui n'existait pas.
+//
+// Deux nombres en sortent, et rien d'autre : l'écartement des vantaux et la
+// sortie du triangle. Les pixels, eux, sont affaire de peinture (`lineScreen`).
+
+/** Durée d'un cycle complet du pictogramme : le battement de la rame. */
+export const DOOR_CYCLE = ANIM_PHASES * ANIM_PERIOD;
+
+/**
+ * Fin de l'écartement, de la tenue ouverte, puis de la refermeture.
+ *
+ * La tenue est LONGUE - plus longue que chacun des deux gestes -, et ce n'est
+ * pas de la générosité : c'est elle qui donne au triangle le temps de sortir et
+ * de rentrer sans se presser. Un triangle qui jaillit et disparaît en cinq
+ * images redevient le clignotement qu'on remplace, animation continue ou pas.
+ */
+const DOOR_OPEN_END = 0.55;
+const DOOR_HOLD_END = 1.42;
+const DOOR_SHUT_END = 1.85;
+
+/**
+ * La sortie du triangle rouge, aux quatre instants qui la bornent.
+ *
+ * Elle tient TOUT ENTIÈRE dans la tenue ouverte : le triangle ne commence à
+ * sortir qu'une fois les vantaux arrêtés, et il est rentré quand ils repartent.
+ * Un triangle qui sortirait pendant l'écartement dirait « descendez » d'une
+ * porte encore en train de s'ouvrir, et un triangle pincé par les vantaux qui
+ * se referment dirait le contraire de ce que l'écran annonce.
+ *
+ * Les bornes tombent de part et d'autre du battement du milieu (1,0 s), et ce
+ * n'est pas un hasard : le plan des correspondances porte le même triangle
+ * au-dessus de la case du voyageur, et lui ne se repeint qu'au battement. Il le
+ * trouve donc sorti à un battement sur quatre - exactement le clignotement
+ * d'avant, à ceci près qu'il coulisse là où on le repeint assez souvent.
+ */
+const MARKER_OUT = 0.6;
+const MARKER_UP = 0.98;
+const MARKER_DOWN = 1.05;
+const MARKER_IN = 1.42;
+
+/**
+ * Rampe adoucie de 0 à 1, plate aux deux bouts.
+ *
+ * C'est ce « plate aux deux bouts » qui fait tout : une rampe droite part et
+ * s'arrête d'un coup, et une porte qui s'arrête d'un coup se voit claquer même
+ * quand elle met une demi-seconde à traverser l'écran.
+ */
+const smooth = (x: number): number => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+
+/** La même rampe, entre deux instants du cycle. */
+const ramp = (t: number, from: number, to: number): number => smooth((t - from) / (to - from));
+
+/**
+ * Où en est le cycle, en secondes, pour une horloge d'animation de `anim`
+ * phases. Les phases négatives se replient : l'horloge tourne, elle ne se
+ * remet pas à zéro à chaque tour chez tous ses lecteurs.
+ */
+const cycleTime = (anim: number): number =>
+  (((anim % ANIM_PHASES) + ANIM_PHASES) % ANIM_PHASES) * ANIM_PERIOD;
+
+/**
+ * Écartement des vantaux : 0 joints, 1 grande ouverte.
+ *
+ * L'ouverture ACCÉLÈRE - c'est ce que disent les trois positions relevées (2 →
+ * 12 → 31 : le second intervalle vaut le double du premier), et c'est ce que
+ * fait une porte pneumatique, qui pousse avant d'être lancée. D'où la rampe
+ * élevée à une puissance : elle garde ses deux bouts plats - donc ni départ ni
+ * arrêt brutal - mais passe son milieu plus bas, ce qui est exactement ce
+ * qu'on entend par « ça part doucement puis ça file ».
+ *
+ * La refermeture, elle, est symétrique et un peu plus courte. Le relevé ne dit
+ * rien de son allure - il n'en a qu'une image, à mi-chemin -, mais une porte
+ * qu'on referme ne se surveille pas comme une porte qui s'ouvre, et rendre les
+ * deux gestes rigoureusement identiques donnait un va-et-vient de métronome.
+ */
+export function doorAperture(anim: number): number {
+  const t = cycleTime(anim);
+  if (t < DOOR_OPEN_END) return ramp(t, 0, DOOR_OPEN_END) ** 1.35;
+  if (t < DOOR_HOLD_END) return 1;
+  if (t < DOOR_SHUT_END) return 1 - ramp(t, DOOR_HOLD_END, DOOR_SHUT_END);
+  return 0;
+}
+
+/** Sortie du triangle rouge hors du seuil : 0 rentré, 1 sorti. */
+export function doorMarker(anim: number): number {
+  const t = cycleTime(anim);
+  if (t <= MARKER_OUT || t >= MARKER_IN) return 0;
+  if (t < MARKER_UP) return ramp(t, MARKER_OUT, MARKER_UP);
+  if (t <= MARKER_DOWN) return 1;
+  return 1 - ramp(t, MARKER_DOWN, MARKER_IN);
+}
+
+/**
+ * Les écrans dont l'image ne s'arrête JAMAIS de bouger.
+ *
+ * Le plan des sorties à l'approche, et lui seul : son pictogramme de portes
+ * coulisse en boucle tant que l'écran est à l'antenne. Tous les autres finissent
+ * par se poser - le fondu s'achève, le vert atteint le bout de sa bande - et la
+ * dalle retrouve son battement d'une demi-seconde ; celui-ci demande des images
+ * fines de bout en bout, faute de quoi ses vantaux sauteraient de nouveau de
+ * cran en cran.
+ *
+ * Ça coûte, et le coût est borné : cet écran n'existe que pendant le freinage
+ * d'approche, une poignée de secondes par gare, et c'est précisément le moment
+ * où le voyageur le regarde.
+ */
+export function screenLoops(f: LineScreenFrame): boolean {
+  return f.state === 'stationLayout' && f.mode === 'doors';
 }
 
 /** Ce que l'afficheur retient d'un battement à l'autre. */
