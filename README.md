@@ -2112,6 +2112,28 @@ protection. Les messages reçus sont malgré tout validés et nettoyés avant
 d'atteindre le rendu - non par méfiance, mais parce qu'un `NaN` qui passe la
 porte fait disparaître un avatar sans que rien n'apparaisse dans la console.
 
+#### Un corps cloné arrive éteint
+
+`cloneVariant` rend son personnage `visible = false`, et c'est délibéré : il le
+mesure hors scène avant toute animation, et un corps en pose de repos - torse
+vrillé, bras écartés - ne doit pas paraître une seule image. **Allumer le corps
+revient donc à celui qui l'affiche**, par image, sur son chemin d'affichage.
+Les passagers, la foule du quai et le personnel de boutique le font tous les
+trois.
+
+Les joueurs distants ne le faisaient pas : ils allumaient le *support*, qui n'a
+jamais contenu que le corps éteint. Un camarade de salon n'était donc jamais
+dessiné - dans toute installation ayant un pack de modèles, c'est-à-dire celle
+de tout le monde, le pack étant versionné.
+
+Le symptôme envoyait chercher exactement au mauvais endroit : l'étiquette de nom
+est du HTML accroché au support, pas au corps. Elle, on la voyait. « Je ne vois
+pas mon ami, je vois son prénom au-dessus de lui » - alors que le réseau, le
+salon, la présence et les poses fonctionnaient tous parfaitement. Un test lit
+désormais le source de tout composant qui clone un personnage et exige la ligne
+(`tests/characterClones`) : ni TypeScript ni oxlint ne voient un `visible`
+oublié, c'est du code parfaitement valide.
+
 #### Deux horloges qui ne sont pas d'accord
 
 Une pose part avec l'horodatage de la machine qui l'émet. Tout ce qui la relit

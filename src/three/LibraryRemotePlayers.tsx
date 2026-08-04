@@ -170,6 +170,21 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
       s.holder.visible = true;
 
       const { wrap: body, mixer, actions } = s.clone;
+      // Le corps, VISIBLE. Et ce n'est pas une redondance avec la ligne
+      // au-dessus : `cloneVariant` rend un wrap `visible = false`, parce qu'il
+      // le mesure hors scène avant toute animation et qu'un corps en pose de
+      // repos ne doit pas paraître une image. C'est donc à l'appelant de
+      // l'allumer - `LibraryPassengers` et `LibraryPlatformCrowd` le font tous
+      // les deux, chacun sur son chemin d'affichage.
+      //
+      // Ici, on ne le faisait pas. On allumait le SUPPORT, qui n'a jamais
+      // contenu que le corps éteint : le camarade n'était jamais dessiné, dans
+      // toute installation ayant un pack de modèles - c'est-à-dire celle de
+      // tout le monde, le pack étant versionné. Et le défaut se présentait sous
+      // son plus mauvais jour : l'étiquette de nom, elle, est du HTML accroché
+      // au support, donc parfaitement visible. « Je ne vois pas mon ami, je
+      // vois son prénom au-dessus de lui. »
+      body.visible = true;
       const echelle = s.appearance.build.scale;
 
       // Le clip : assis, en marche, ou debout. Un pack qui n'aurait pas de
