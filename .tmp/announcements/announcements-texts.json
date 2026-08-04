@@ -1,18 +1,18 @@
 {
  "items": [
   {
-   "key": "a7c993f2",
+   "key": "bb8add75",
    "lang": "ja-JP",
-   "text": "次は。東京。東京。お出口は。右側です。",
-   "tts": "次は。東京。東京。お出口は。右側です。",
+   "text": "次は。東京。東京。お出口は。左側です。",
+   "tts": "次は。東京。東京。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "d24e7332",
+   "key": "b5725883",
    "lang": "en-US",
-   "text": "The next station is. Tokyo. JY. 01. The doors on the right side will open.",
-   "tts": "The next station is. Tokyo. J Y. 1. The doors on the right side will open.",
+   "text": "The next station is. Tokyo. JY. 01. The doors on the left side will open.",
+   "tts": "The next station is. [Tokyo](/tˈOkjO/). J Y. 1. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -28,23 +28,23 @@
    "key": "4894bb12",
    "lang": "en-US",
    "text": "Please change here for the Chuo. Keihin-Tohoku. Tokaido. Yokosuka. Sobu. Keiyo and Ueno-Tokyo Lines. The Tokaido Shinkansen. And the Tokyo Metro Marunouchi Line.",
-   "tts": "Please change here for the Chuo. Keihin-Tohoku. Tokaido. Yokosuka. Sobu. Keiyo and Ueno-Tokyo Lines. The Tokaido Shinkansen. And the Tokyo Metro Marunouchi Line.",
+   "tts": "Please change here for the [Chuo](/ʧˈuO/). [Keihin-Tohoku](/kˈAhin tOhˈOku/). [Tokaido](/tOkˈIdO/). [Yokosuka](/jOkOsˈukɑ/). [Sobu](/sˈObu/). [Keiyo](/kˈAjO/) and [Ueno-Tokyo](/ˌuˈɛnO tˈOkjO/) Lines. The [Tokaido](/tOkˈIdO/) [Shinkansen](/ʃinkˈɑnsɛn/). And the [Tokyo](/tˈOkjO/) Metro [Marunouchi](/mɑɾunOˈuʧi/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "80f9104f",
+   "key": "49ef8fcc",
    "lang": "ja-JP",
-   "text": "まもなく。東京。東京。お出口は。右側です。",
-   "tts": "まもなく。東京。東京。お出口は。右側です。",
+   "text": "まもなく。東京。東京。お出口は。左側です。",
+   "tts": "まもなく。東京。東京。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "d2edd8a8",
+   "key": "716dacb1",
    "lang": "en-US",
-   "text": "The next station is. Tokyo. The doors on the right side will open.",
-   "tts": "The next station is. Tokyo. The doors on the right side will open.",
+   "text": "The next station is. Tokyo. The doors on the left side will open.",
+   "tts": "The next station is. [Tokyo](/tˈOkjO/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -60,7 +60,7 @@
    "key": "58a12fc8",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Ueno and Ikebukuro.",
-   "tts": "This is a Yamanote Line train bound for Ueno and Ikebukuro.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ueno](/ˌuˈɛnO/) and [Ikebukuro](/ˌikɛbˈukuɾO/).",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -76,7 +76,7 @@
    "key": "9e8f9b45",
    "lang": "en-US",
    "text": "The next station is. Kanda. JY. 02. The doors on the left side will open.",
-   "tts": "The next station is. Kanda. J Y. 2. The doors on the left side will open.",
+   "tts": "The next station is. [Kanda](/kˈɑndɑ/). J Y. 2. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -92,7 +92,7 @@
    "key": "7f949a7b",
    "lang": "en-US",
    "text": "Please change here for the Keihin-Tohoku and Chuo Lines. And the Tokyo Metro Ginza Line.",
-   "tts": "Please change here for the Keihin-Tohoku and Chuo Lines. And the Tokyo Metro Ginza Line.",
+   "tts": "Please change here for the [Keihin-Tohoku](/kˈAhin tOhˈOku/) and [Chuo](/ʧˈuO/) Lines. And the [Tokyo](/tˈOkjO/) Metro [Ginza](/ɡˈinzɑ/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -108,23 +108,23 @@
    "key": "ba22ad1c",
    "lang": "en-US",
    "text": "The next station is. Kanda. The doors on the left side will open.",
-   "tts": "The next station is. Kanda. The doors on the left side will open.",
+   "tts": "The next station is. [Kanda](/kˈɑndɑ/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "9f5bd23c",
+   "key": "df80c35f",
    "lang": "ja-JP",
-   "text": "次は。秋葉原。秋葉原。お出口は。右側です。",
-   "tts": "次は。秋葉原。秋葉原。お出口は。右側です。",
+   "text": "次は。秋葉原。秋葉原。お出口は。左側です。",
+   "tts": "次は。秋葉原。秋葉原。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "3b8c2b5e",
+   "key": "0fdb92e7",
    "lang": "en-US",
-   "text": "The next station is. Akihabara. JY. 03. The doors on the right side will open.",
-   "tts": "The next station is. Akihabara. J Y. 3. The doors on the right side will open.",
+   "text": "The next station is. Akihabara. JY. 03. The doors on the left side will open.",
+   "tts": "The next station is. [Akihabara](/ˌɑkihɑbˈɑɾɑ/). J Y. 3. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -140,39 +140,39 @@
    "key": "1668688e",
    "lang": "en-US",
    "text": "Please change here for the Keihin-Tohoku and Chuo-Sobu Lines. The Tokyo Metro Hibiya Line. And the Tsukuba Express.",
-   "tts": "Please change here for the Keihin-Tohoku and Chuo-Sobu Lines. The Tokyo Metro Hibiya Line. And the Tsukuba Express.",
+   "tts": "Please change here for the [Keihin-Tohoku](/kˈAhin tOhˈOku/) and [Chuo-Sobu](/ʧˈuO sˈObu/) Lines. The [Tokyo](/tˈOkjO/) Metro [Hibiya](/hibˈijɑ/) Line. And the [Tsukuba](/tsukˈubɑ/) Express.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "ad3e1d39",
+   "key": "b6b96f6e",
    "lang": "ja-JP",
-   "text": "まもなく。秋葉原。秋葉原。お出口は。右側です。",
-   "tts": "まもなく。秋葉原。秋葉原。お出口は。右側です。",
+   "text": "まもなく。秋葉原。秋葉原。お出口は。左側です。",
+   "tts": "まもなく。秋葉原。秋葉原。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "aeae0f7a",
+   "key": "855f0acb",
    "lang": "en-US",
-   "text": "The next station is. Akihabara. The doors on the right side will open.",
-   "tts": "The next station is. Akihabara. The doors on the right side will open.",
+   "text": "The next station is. Akihabara. The doors on the left side will open.",
+   "tts": "The next station is. [Akihabara](/ˌɑkihɑbˈɑɾɑ/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "c40e5fac",
+   "key": "75916b2f",
    "lang": "ja-JP",
-   "text": "次は。御徒町。御徒町。お出口は。右側です。",
-   "tts": "次は。御徒町。御徒町。お出口は。右側です。",
+   "text": "次は。御徒町。御徒町。お出口は。左側です。",
+   "tts": "次は。御徒町。御徒町。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "8fa8973c",
+   "key": "5b6e603d",
    "lang": "en-US",
-   "text": "The next station is. Okachimachi. JY. 04. The doors on the right side will open.",
-   "tts": "The next station is. Okachimachi. J Y. 4. The doors on the right side will open.",
+   "text": "The next station is. Okachimachi. JY. 04. The doors on the left side will open.",
+   "tts": "The next station is. [Okachimachi](/ˌOkɑʧimˈɑʧi/). J Y. 4. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -188,23 +188,23 @@
    "key": "c185eced",
    "lang": "en-US",
    "text": "Please change here for the Keihin-Tohoku Line. The Tokyo Metro Ginza and Hibiya Lines. And the Toei Oedo Line.",
-   "tts": "Please change here for the Keihin-Tohoku Line. The Tokyo Metro Ginza and Hibiya Lines. And the Toei Oedo Line.",
+   "tts": "Please change here for the [Keihin-Tohoku](/kˈAhin tOhˈOku/) Line. The [Tokyo](/tˈOkjO/) Metro [Ginza](/ɡˈinzɑ/) and [Hibiya](/hibˈijɑ/) Lines. And the [Toei](/tˈOA/) [Oedo](/ˌOˈɛdO/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "6061b3d9",
+   "key": "813ca50e",
    "lang": "ja-JP",
-   "text": "まもなく。御徒町。御徒町。お出口は。右側です。",
-   "tts": "まもなく。御徒町。御徒町。お出口は。右側です。",
+   "text": "まもなく。御徒町。御徒町。お出口は。左側です。",
+   "tts": "まもなく。御徒町。御徒町。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "16a36cb9",
+   "key": "729448de",
    "lang": "en-US",
-   "text": "The next station is. Okachimachi. The doors on the right side will open.",
-   "tts": "The next station is. Okachimachi. The doors on the right side will open.",
+   "text": "The next station is. Okachimachi. The doors on the left side will open.",
+   "tts": "The next station is. [Okachimachi](/ˌOkɑʧimˈɑʧi/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -220,7 +220,7 @@
    "key": "c4639d64",
    "lang": "en-US",
    "text": "The next station is. Ueno. JY. 05. The doors on the left side will open.",
-   "tts": "The next station is. Ueno. J Y. 5. The doors on the left side will open.",
+   "tts": "The next station is. [Ueno](/ˌuˈɛnO/). J Y. 5. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -236,7 +236,7 @@
    "key": "bfe036c2",
    "lang": "en-US",
    "text": "Please change here for the Keihin-Tohoku. Utsunomiya. Takasaki. Joban and Ueno-Tokyo Lines. The Tohoku and Joetsu Shinkansen. The Tokyo Metro Ginza and Hibiya Lines. And the Keisei Line.",
-   "tts": "Please change here for the Keihin-Tohoku. Utsunomiya. Takasaki. Joban and Ueno-Tokyo Lines. The Tohoku and Joetsu Shinkansen. The Tokyo Metro Ginza and Hibiya Lines. And the Keisei Line.",
+   "tts": "Please change here for the [Keihin-Tohoku](/kˈAhin tOhˈOku/). [Utsunomiya](/ˌutsunOmˈijɑ/). [Takasaki](/tɑkɑsˈɑki/). [Joban](/ʤˈObɑn/) and [Ueno-Tokyo](/ˌuˈɛnO tˈOkjO/) Lines. The [Tohoku](/tOhˈOku/) and [Joetsu](/ʤˈOɛtsu/) [Shinkansen](/ʃinkˈɑnsɛn/). The [Tokyo](/tˈOkjO/) Metro [Ginza](/ɡˈinzɑ/) and [Hibiya](/hibˈijɑ/) Lines. And the [Keisei](/kAsˈA/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -252,7 +252,7 @@
    "key": "7c5b5066",
    "lang": "en-US",
    "text": "The next station is. Ueno. The doors on the left side will open.",
-   "tts": "The next station is. Ueno. The doors on the left side will open.",
+   "tts": "The next station is. [Ueno](/ˌuˈɛnO/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -268,23 +268,23 @@
    "key": "bbd52a2c",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Ikebukuro and Shinjuku.",
-   "tts": "This is a Yamanote Line train bound for Ikebukuro and Shinjuku.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ikebukuro](/ˌikɛbˈukuɾO/) and [Shinjuku](/ʃinʤˈuku/).",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "4571f4a8",
+   "key": "80f63803",
    "lang": "ja-JP",
-   "text": "次は。鶯谷。鶯谷。お出口は。右側です。",
-   "tts": "次は。鶯谷。鶯谷。お出口は。右側です。",
+   "text": "次は。鶯谷。鶯谷。お出口は。左側です。",
+   "tts": "次は。鶯谷。鶯谷。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "610e29bf",
+   "key": "485f979c",
    "lang": "en-US",
-   "text": "The next station is. Uguisudani. JY. 06. The doors on the right side will open.",
-   "tts": "The next station is. Uguisudani. J Y. 6. The doors on the right side will open.",
+   "text": "The next station is. Uguisudani. JY. 06. The doors on the left side will open.",
+   "tts": "The next station is. [Uguisudani](/ˌuɡuisudˈɑni/). J Y. 6. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -305,18 +305,18 @@
    "speed": 0.93
   },
   {
-   "key": "316a9331",
+   "key": "7db50de6",
    "lang": "ja-JP",
-   "text": "まもなく。鶯谷。鶯谷。お出口は。右側です。",
-   "tts": "まもなく。鶯谷。鶯谷。お出口は。右側です。",
+   "text": "まもなく。鶯谷。鶯谷。お出口は。左側です。",
+   "tts": "まもなく。鶯谷。鶯谷。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "5a8e5dcc",
+   "key": "c936498d",
    "lang": "en-US",
-   "text": "The next station is. Uguisudani. The doors on the right side will open.",
-   "tts": "The next station is. Uguisudani. The doors on the right side will open.",
+   "text": "The next station is. Uguisudani. The doors on the left side will open.",
+   "tts": "The next station is. [Uguisudani](/ˌuɡuisudˈɑni/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -332,7 +332,7 @@
    "key": "6e2ddc8a",
    "lang": "en-US",
    "text": "The next station is. Nippori. JY. 07. The doors on the left side will open.",
-   "tts": "The next station is. Nippori. J Y. 7. The doors on the left side will open.",
+   "tts": "The next station is. [Nippori](/nippˈOɾi/). J Y. 7. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -348,7 +348,7 @@
    "key": "df142d58",
    "lang": "en-US",
    "text": "Please change here for the Keihin-Tohoku and Joban Lines. The Keisei Line. And the Nippori-Toneri Liner.",
-   "tts": "Please change here for the Keihin-Tohoku and Joban Lines. The Keisei Line. And the Nippori-Toneri Liner.",
+   "tts": "Please change here for the [Keihin-Tohoku](/kˈAhin tOhˈOku/) and [Joban](/ʤˈObɑn/) Lines. The [Keisei](/kAsˈA/) Line. And the [Nippori-Toneri](/nippˈOɾi tOnˈɛɾi/) Liner.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -364,23 +364,23 @@
    "key": "087f92d6",
    "lang": "en-US",
    "text": "The next station is. Nippori. The doors on the left side will open.",
-   "tts": "The next station is. Nippori. The doors on the left side will open.",
+   "tts": "The next station is. [Nippori](/nippˈOɾi/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "249691c8",
+   "key": "9f877023",
    "lang": "ja-JP",
-   "text": "次は。西日暮里。西日暮里。お出口は。右側です。",
-   "tts": "次は。西日暮里。西日暮里。お出口は。右側です。",
+   "text": "次は。西日暮里。西日暮里。お出口は。左側です。",
+   "tts": "次は。西日暮里。西日暮里。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "76fbad84",
+   "key": "9247aea5",
    "lang": "en-US",
-   "text": "The next station is. Nishi-Nippori. JY. 08. The doors on the right side will open.",
-   "tts": "The next station is. Nishi-Nippori. J Y. 8. The doors on the right side will open.",
+   "text": "The next station is. Nishi-Nippori. JY. 08. The doors on the left side will open.",
+   "tts": "The next station is. [Nishi-Nippori](/niʃi nippˈOɾi/). J Y. 8. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -396,39 +396,39 @@
    "key": "46009f92",
    "lang": "en-US",
    "text": "Please change here for the Keihin-Tohoku Line. The Tokyo Metro Chiyoda Line. And the Nippori-Toneri Liner.",
-   "tts": "Please change here for the Keihin-Tohoku Line. The Tokyo Metro Chiyoda Line. And the Nippori-Toneri Liner.",
+   "tts": "Please change here for the [Keihin-Tohoku](/kˈAhin tOhˈOku/) Line. The [Tokyo](/tˈOkjO/) Metro [Chiyoda](/ʧijˈOdɑ/) Line. And the [Nippori-Toneri](/nippˈOɾi tOnˈɛɾi/) Liner.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "2c867041",
+   "key": "47d3f496",
    "lang": "ja-JP",
-   "text": "まもなく。西日暮里。西日暮里。お出口は。右側です。",
-   "tts": "まもなく。西日暮里。西日暮里。お出口は。右側です。",
+   "text": "まもなく。西日暮里。西日暮里。お出口は。左側です。",
+   "tts": "まもなく。西日暮里。西日暮里。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "f4f5a125",
+   "key": "a3dad0f2",
    "lang": "en-US",
-   "text": "The next station is. Nishi-Nippori. The doors on the right side will open.",
-   "tts": "The next station is. Nishi-Nippori. The doors on the right side will open.",
+   "text": "The next station is. Nishi-Nippori. The doors on the left side will open.",
+   "tts": "The next station is. [Nishi-Nippori](/niʃi nippˈOɾi/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "a10f7456",
+   "key": "8e4b9b01",
    "lang": "ja-JP",
-   "text": "次は。田端。田端。お出口は。右側です。",
-   "tts": "次は。田端。田端。お出口は。右側です。",
+   "text": "次は。田端。田端。お出口は。左側です。",
+   "tts": "次は。田端。田端。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "d891bbd3",
+   "key": "6f390758",
    "lang": "en-US",
-   "text": "The next station is. Tabata. JY. 09. The doors on the right side will open.",
-   "tts": "The next station is. Tabata. J Y. 9. The doors on the right side will open.",
+   "text": "The next station is. Tabata. JY. 09. The doors on the left side will open.",
+   "tts": "The next station is. [Tabata](/tɑbˈɑtɑ/). J Y. 9. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -444,39 +444,39 @@
    "key": "4313d4ea",
    "lang": "en-US",
    "text": "Please change here for the Keihin-Tohoku Line.",
-   "tts": "Please change here for the Keihin-Tohoku Line.",
+   "tts": "Please change here for the [Keihin-Tohoku](/kˈAhin tOhˈOku/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "92371e3f",
+   "key": "66d9659c",
    "lang": "ja-JP",
-   "text": "まもなく。田端。田端。お出口は。右側です。",
-   "tts": "まもなく。田端。田端。お出口は。右側です。",
+   "text": "まもなく。田端。田端。お出口は。左側です。",
+   "tts": "まもなく。田端。田端。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "2c136091",
+   "key": "072e9916",
    "lang": "en-US",
-   "text": "The next station is. Tabata. The doors on the right side will open.",
-   "tts": "The next station is. Tabata. The doors on the right side will open.",
+   "text": "The next station is. Tabata. The doors on the left side will open.",
+   "tts": "The next station is. [Tabata](/tɑbˈɑtɑ/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "b4af5087",
+   "key": "91a32ac4",
    "lang": "ja-JP",
-   "text": "次は。駒込。駒込。お出口は。左側です。",
-   "tts": "次は。駒込。駒込。お出口は。左側です。",
+   "text": "次は。駒込。駒込。お出口は。右側です。",
+   "tts": "次は。駒込。駒込。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "0ba44535",
+   "key": "7144b4d4",
    "lang": "en-US",
-   "text": "The next station is. Komagome. JY. 10. The doors on the left side will open.",
-   "tts": "The next station is. Komagome. J Y. 10. The doors on the left side will open.",
+   "text": "The next station is. Komagome. JY. 10. The doors on the right side will open.",
+   "tts": "The next station is. [Komagome](/kOmɑɡˈOmɛ/). J Y. 10. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -492,23 +492,23 @@
    "key": "0786e393",
    "lang": "en-US",
    "text": "Please change here for the Tokyo Metro Namboku Line.",
-   "tts": "Please change here for the Tokyo Metro Namboku Line.",
+   "tts": "Please change here for the [Tokyo](/tˈOkjO/) Metro [Namboku](/nɑmbˈOku/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "02d5e1c6",
+   "key": "9be65b11",
    "lang": "ja-JP",
-   "text": "まもなく。駒込。駒込。お出口は。左側です。",
-   "tts": "まもなく。駒込。駒込。お出口は。左側です。",
+   "text": "まもなく。駒込。駒込。お出口は。右側です。",
+   "tts": "まもなく。駒込。駒込。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "7606897d",
+   "key": "f714a97c",
    "lang": "en-US",
-   "text": "The next station is. Komagome. The doors on the left side will open.",
-   "tts": "The next station is. Komagome. The doors on the left side will open.",
+   "text": "The next station is. Komagome. The doors on the right side will open.",
+   "tts": "The next station is. [Komagome](/kOmɑɡˈOmɛ/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -524,7 +524,7 @@
    "key": "5645b4d3",
    "lang": "en-US",
    "text": "The next station is. Sugamo. JY. 11. The doors on the right side will open.",
-   "tts": "The next station is. Sugamo. J Y. 11. The doors on the right side will open.",
+   "tts": "The next station is. [Sugamo](/suɡˈɑmO/). J Y. 11. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -540,7 +540,7 @@
    "key": "bb48333f",
    "lang": "en-US",
    "text": "Please change here for the Toei Mita Line.",
-   "tts": "Please change here for the Toei Mita Line.",
+   "tts": "Please change here for the [Toei](/tˈOA/) [Mita](/mˈitɑ/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -556,7 +556,7 @@
    "key": "877fbb58",
    "lang": "en-US",
    "text": "The next station is. Sugamo. The doors on the right side will open.",
-   "tts": "The next station is. Sugamo. The doors on the right side will open.",
+   "tts": "The next station is. [Sugamo](/suɡˈɑmO/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -572,7 +572,7 @@
    "key": "63663c1e",
    "lang": "en-US",
    "text": "The next station is. Ōtsuka. JY. 12. The doors on the right side will open.",
-   "tts": "The next station is. Otsuka. J Y. 12. The doors on the right side will open.",
+   "tts": "The next station is. [Otsuka](/ˌOtsˈukɑ/). J Y. 12. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -588,7 +588,7 @@
    "key": "0139925d",
    "lang": "en-US",
    "text": "Please change here for the Toden Arakawa Line.",
-   "tts": "Please change here for the Toden Arakawa Line.",
+   "tts": "Please change here for the [Toden](/tˈOdɛn/) [Arakawa](/ˌɑɾɑkˈɑwɑ/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -604,23 +604,23 @@
    "key": "b10467d0",
    "lang": "en-US",
    "text": "The next station is. Ōtsuka. The doors on the right side will open.",
-   "tts": "The next station is. Otsuka. The doors on the right side will open.",
+   "tts": "The next station is. [Otsuka](/ˌOtsˈukɑ/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "166055c6",
+   "key": "999be711",
    "lang": "ja-JP",
-   "text": "次は。池袋。池袋。お出口は。右側です。",
-   "tts": "次は。池袋。池袋。お出口は。右側です。",
+   "text": "次は。池袋。池袋。お出口は。左側です。",
+   "tts": "次は。池袋。池袋。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "dda0b3ea",
+   "key": "2f71d63b",
    "lang": "en-US",
-   "text": "The next station is. Ikebukuro. JY. 13. The doors on the right side will open.",
-   "tts": "The next station is. Ikebukuro. J Y. 13. The doors on the right side will open.",
+   "text": "The next station is. Ikebukuro. JY. 13. The doors on the left side will open.",
+   "tts": "The next station is. [Ikebukuro](/ˌikɛbˈukuɾO/). J Y. 13. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -636,23 +636,23 @@
    "key": "5f5d1718",
    "lang": "en-US",
    "text": "Please change here for the Saikyo and Shonan-Shinjuku Lines. The Tokyo Metro Marunouchi. Yurakucho and Fukutoshin Lines. The Tobu Tojo Line. And the Seibu Ikebukuro Line.",
-   "tts": "Please change here for the Saikyo and Shonan-Shinjuku Lines. The Tokyo Metro Marunouchi. Yurakucho and Fukutoshin Lines. The Tobu Tojo Line. And the Seibu Ikebukuro Line.",
+   "tts": "Please change here for the [Saikyo](/sˈIkjO/) and [Shonan-Shinjuku](/ʃˈOnɑn ʃinʤˈuku/) Lines. The [Tokyo](/tˈOkjO/) Metro [Marunouchi](/mɑɾunOˈuʧi/). [Yurakucho](/juɾɑkˈuʧO/) and [Fukutoshin](/fukutˈOʃin/) Lines. The [Tobu](/tˈObu/) [Tojo](/tˈOʤO/) Line. And the [Seibu](/sˈAbu/) [Ikebukuro](/ˌikɛbˈukuɾO/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "f8558fd7",
+   "key": "b7040bb4",
    "lang": "ja-JP",
-   "text": "まもなく。池袋。池袋。お出口は。右側です。",
-   "tts": "まもなく。池袋。池袋。お出口は。右側です。",
+   "text": "まもなく。池袋。池袋。お出口は。左側です。",
+   "tts": "まもなく。池袋。池袋。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "cd7bc64f",
+   "key": "2e158eec",
    "lang": "en-US",
-   "text": "The next station is. Ikebukuro. The doors on the right side will open.",
-   "tts": "The next station is. Ikebukuro. The doors on the right side will open.",
+   "text": "The next station is. Ikebukuro. The doors on the left side will open.",
+   "tts": "The next station is. [Ikebukuro](/ˌikɛbˈukuɾO/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -668,39 +668,39 @@
    "key": "b3c57af8",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Shinjuku and Shibuya.",
-   "tts": "This is a Yamanote Line train bound for Shinjuku and Shibuya.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinjuku](/ʃinʤˈuku/) and [Shibuya](/ʃibˈujɑ/).",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "cb2779e5",
+   "key": "9ff66802",
    "lang": "ja-JP",
-   "text": "次は。目白。目白。お出口は。左側です。",
-   "tts": "次は。目白。目白。お出口は。左側です。",
+   "text": "次は。目白。目白。お出口は。右側です。",
+   "tts": "次は。目白。目白。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "57f904cd",
+   "key": "e52deb0c",
    "lang": "en-US",
-   "text": "The next station is. Mejiro. JY. 14. The doors on the left side will open.",
-   "tts": "The next station is. Mejiro. J Y. 14. The doors on the left side will open.",
+   "text": "The next station is. Mejiro. JY. 14. The doors on the right side will open.",
+   "tts": "The next station is. [Mejiro](/mɛʤˈiɾO/). J Y. 14. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "24990a00",
+   "key": "1d30337b",
    "lang": "ja-JP",
-   "text": "まもなく。目白。目白。お出口は。左側です。",
-   "tts": "まもなく。目白。目白。お出口は。左側です。",
+   "text": "まもなく。目白。目白。お出口は。右側です。",
+   "tts": "まもなく。目白。目白。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "73456201",
+   "key": "13df54b8",
    "lang": "en-US",
-   "text": "The next station is. Mejiro. The doors on the left side will open.",
-   "tts": "The next station is. Mejiro. The doors on the left side will open.",
+   "text": "The next station is. Mejiro. The doors on the right side will open.",
+   "tts": "The next station is. [Mejiro](/mɛʤˈiɾO/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -716,7 +716,7 @@
    "key": "f7b288c4",
    "lang": "en-US",
    "text": "The next station is. Takadanobaba. JY. 15. The doors on the right side will open.",
-   "tts": "The next station is. Takadanobaba. J Y. 15. The doors on the right side will open.",
+   "tts": "The next station is. [Takadanobaba](/tɑkɑdɑnObˈɑbɑ/). J Y. 15. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -732,7 +732,7 @@
    "key": "cec5127a",
    "lang": "en-US",
    "text": "Please change here for the Seibu Shinjuku Line and the Tokyo Metro Tozai Line.",
-   "tts": "Please change here for the Seibu Shinjuku Line and the Tokyo Metro Tozai Line.",
+   "tts": "Please change here for the [Seibu](/sˈAbu/) [Shinjuku](/ʃinʤˈuku/) Line and the [Tokyo](/tˈOkjO/) Metro [Tozai](/tOzˈI/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -748,23 +748,23 @@
    "key": "b4096443",
    "lang": "en-US",
    "text": "The next station is. Takadanobaba. The doors on the right side will open.",
-   "tts": "The next station is. Takadanobaba. The doors on the right side will open.",
+   "tts": "The next station is. [Takadanobaba](/tɑkɑdɑnObˈɑbɑ/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "40361d75",
+   "key": "2c74d3f2",
    "lang": "ja-JP",
-   "text": "次は。新大久保。新大久保。お出口は。左側です。",
-   "tts": "次は。新大久保。新大久保。お出口は。左側です。",
+   "text": "次は。新大久保。新大久保。お出口は。右側です。",
+   "tts": "次は。新大久保。新大久保。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "baf352fd",
+   "key": "f7d5ddfc",
    "lang": "en-US",
-   "text": "The next station is. Shin-Ōkubo. JY. 16. The doors on the left side will open.",
-   "tts": "The next station is. Shin-Okubo. J Y. 16. The doors on the left side will open.",
+   "text": "The next station is. Shin-Ōkubo. JY. 16. The doors on the right side will open.",
+   "tts": "The next station is. [Shin-Okubo](/ʃin ˈOkubO/). J Y. 16. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -785,34 +785,34 @@
    "speed": 0.93
   },
   {
-   "key": "d10cd310",
+   "key": "94ab906b",
    "lang": "ja-JP",
-   "text": "まもなく。新大久保。新大久保。お出口は。左側です。",
-   "tts": "まもなく。新大久保。新大久保。お出口は。左側です。",
+   "text": "まもなく。新大久保。新大久保。お出口は。右側です。",
+   "tts": "まもなく。新大久保。新大久保。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "41a2a933",
+   "key": "8fbf1a62",
    "lang": "en-US",
-   "text": "The next station is. Shin-Ōkubo. The doors on the left side will open.",
-   "tts": "The next station is. Shin-Okubo. The doors on the left side will open.",
+   "text": "The next station is. Shin-Ōkubo. The doors on the right side will open.",
+   "tts": "The next station is. [Shin-Okubo](/ʃin ˈOkubO/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "2904f416",
+   "key": "2a66b3c1",
    "lang": "ja-JP",
-   "text": "次は。新宿。新宿。お出口は。右側です。",
-   "tts": "次は。新宿。新宿。お出口は。右側です。",
+   "text": "次は。新宿。新宿。お出口は。左側です。",
+   "tts": "次は。新宿。新宿。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "36dd7244",
+   "key": "414cb965",
    "lang": "en-US",
-   "text": "The next station is. Shinjuku. JY. 17. The doors on the right side will open.",
-   "tts": "The next station is. Shinjuku. J Y. 17. The doors on the right side will open.",
+   "text": "The next station is. Shinjuku. JY. 17. The doors on the left side will open.",
+   "tts": "The next station is. [Shinjuku](/ʃinʤˈuku/). J Y. 17. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -828,23 +828,23 @@
    "key": "69af94d9",
    "lang": "en-US",
    "text": "Please change here for the Chuo. Chuo-Sobu. Saikyo and Shonan-Shinjuku Lines. The Odakyu Line. The Keio Line. The Tokyo Metro Marunouchi Line. And the Toei Shinjuku and Oedo Lines.",
-   "tts": "Please change here for the Chuo. Chuo-Sobu. Saikyo and Shonan-Shinjuku Lines. The Odakyu Line. The Keio Line. The Tokyo Metro Marunouchi Line. And the Toei Shinjuku and Oedo Lines.",
+   "tts": "Please change here for the [Chuo](/ʧˈuO/). [Chuo-Sobu](/ʧˈuO sˈObu/). [Saikyo](/sˈIkjO/) and [Shonan-Shinjuku](/ʃˈOnɑn ʃinʤˈuku/) Lines. The [Odakyu](/ˌOdˈɑkju/) Line. The [Keio](/kˈAO/) Line. The [Tokyo](/tˈOkjO/) Metro [Marunouchi](/mɑɾunOˈuʧi/) Line. And the [Toei](/tˈOA/) [Shinjuku](/ʃinʤˈuku/) and [Oedo](/ˌOˈɛdO/) Lines.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "c99f5fff",
+   "key": "061c135c",
    "lang": "ja-JP",
-   "text": "まもなく。新宿。新宿。お出口は。右側です。",
-   "tts": "まもなく。新宿。新宿。お出口は。右側です。",
+   "text": "まもなく。新宿。新宿。お出口は。左側です。",
+   "tts": "まもなく。新宿。新宿。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "a53ee4b5",
+   "key": "6384f302",
    "lang": "en-US",
-   "text": "The next station is. Shinjuku. The doors on the right side will open.",
-   "tts": "The next station is. Shinjuku. The doors on the right side will open.",
+   "text": "The next station is. Shinjuku. The doors on the left side will open.",
+   "tts": "The next station is. [Shinjuku](/ʃinʤˈuku/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -860,7 +860,7 @@
    "key": "18870eb8",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Shibuya and Shinagawa.",
-   "tts": "This is a Yamanote Line train bound for Shibuya and Shinagawa.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shibuya](/ʃibˈujɑ/) and [Shinagawa](/ʃinɑɡˈɑwɑ/).",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -876,7 +876,7 @@
    "key": "bb5831c9",
    "lang": "en-US",
    "text": "The next station is. Yoyogi. JY. 18. The doors on the left side will open.",
-   "tts": "The next station is. Yoyogi. J Y. 18. The doors on the left side will open.",
+   "tts": "The next station is. [Yoyogi](/jOjˈOɡi/). J Y. 18. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -892,7 +892,7 @@
    "key": "fd68ffae",
    "lang": "en-US",
    "text": "Please change here for the Chuo-Sobu Line and the Toei Oedo Line.",
-   "tts": "Please change here for the Chuo-Sobu Line and the Toei Oedo Line.",
+   "tts": "Please change here for the [Chuo-Sobu](/ʧˈuO sˈObu/) Line and the [Toei](/tˈOA/) [Oedo](/ˌOˈɛdO/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -908,7 +908,7 @@
    "key": "5df4fec9",
    "lang": "en-US",
    "text": "The next station is. Yoyogi. The doors on the left side will open.",
-   "tts": "The next station is. Yoyogi. The doors on the left side will open.",
+   "tts": "The next station is. [Yoyogi](/jOjˈOɡi/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -924,7 +924,7 @@
    "key": "83f5dc38",
    "lang": "en-US",
    "text": "The next station is. Harajuku. JY. 19. The doors on the right side will open.",
-   "tts": "The next station is. Harajuku. J Y. 19. The doors on the right side will open.",
+   "tts": "The next station is. [Harajuku](/hɑɾɑʤˈuku/). J Y. 19. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -940,7 +940,7 @@
    "key": "71be6c27",
    "lang": "en-US",
    "text": "Please change here for the Tokyo Metro Chiyoda and Fukutoshin Lines.",
-   "tts": "Please change here for the Tokyo Metro Chiyoda and Fukutoshin Lines.",
+   "tts": "Please change here for the [Tokyo](/tˈOkjO/) Metro [Chiyoda](/ʧijˈOdɑ/) and [Fukutoshin](/fukutˈOʃin/) Lines.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -956,7 +956,7 @@
    "key": "b9161edb",
    "lang": "en-US",
    "text": "The next station is. Harajuku. The doors on the right side will open.",
-   "tts": "The next station is. Harajuku. The doors on the right side will open.",
+   "tts": "The next station is. [Harajuku](/hɑɾɑʤˈuku/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -972,7 +972,7 @@
    "key": "fa0b3edc",
    "lang": "en-US",
    "text": "The next station is. Shibuya. JY. 20. The doors on the right side will open.",
-   "tts": "The next station is. Shibuya. J Y. 20. The doors on the right side will open.",
+   "tts": "The next station is. [Shibuya](/ʃibˈujɑ/). J Y. 20. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -988,7 +988,7 @@
    "key": "2ff7b159",
    "lang": "en-US",
    "text": "Please change here for the Saikyo and Shonan-Shinjuku Lines. The Tokyo Metro Ginza. Hanzomon and Fukutoshin Lines. The Tokyu Toyoko and Den-en-toshi Lines. And the Keio Inokashira Line.",
-   "tts": "Please change here for the Saikyo and Shonan-Shinjuku Lines. The Tokyo Metro Ginza. Hanzomon and Fukutoshin Lines. The Tokyu Toyoko and Den-en-toshi Lines. And the Keio Inokashira Line.",
+   "tts": "Please change here for the [Saikyo](/sˈIkjO/) and [Shonan-Shinjuku](/ʃˈOnɑn ʃinʤˈuku/) Lines. The [Tokyo](/tˈOkjO/) Metro [Ginza](/ɡˈinzɑ/). [Hanzomon](/hɑnzˈOmOn/) and [Fukutoshin](/fukutˈOʃin/) Lines. The [Tokyu](/tˈOkju/) [Toyoko](/tOjˈOkO/) and [Den-en-toshi](/dɛnɛntˈOʃi/) Lines. And the [Keio](/kˈAO/) [Inokashira](/ˌinOkɑʃˈiɾɑ/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1004,7 +1004,7 @@
    "key": "3cd06d7f",
    "lang": "en-US",
    "text": "The next station is. Shibuya. The doors on the right side will open.",
-   "tts": "The next station is. Shibuya. The doors on the right side will open.",
+   "tts": "The next station is. [Shibuya](/ʃibˈujɑ/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1036,23 +1036,23 @@
    "key": "84e10f49",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Shinagawa and Tokyo.",
-   "tts": "This is a Yamanote Line train bound for Shinagawa and Tokyo.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinagawa](/ʃinɑɡˈɑwɑ/) and [Tokyo](/tˈOkjO/).",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "d77f6387",
+   "key": "96d3ddc4",
    "lang": "ja-JP",
-   "text": "次は。恵比寿。恵比寿。お出口は。左側です。",
-   "tts": "次は。恵比寿。恵比寿。お出口は。左側です。",
+   "text": "次は。恵比寿。恵比寿。お出口は。右側です。",
+   "tts": "次は。恵比寿。恵比寿。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "b61d7ef1",
+   "key": "40f753e8",
    "lang": "en-US",
-   "text": "The next station is. Ebisu. JY. 21. The doors on the left side will open.",
-   "tts": "The next station is. Ebisu. J Y. 21. The doors on the left side will open.",
+   "text": "The next station is. Ebisu. JY. 21. The doors on the right side will open.",
+   "tts": "The next station is. [Ebisu](/ˌɛbˈisu/). J Y. 21. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1068,23 +1068,23 @@
    "key": "a8fad6f7",
    "lang": "en-US",
    "text": "Please change here for the Saikyo and Shonan-Shinjuku Lines. And the Tokyo Metro Hibiya Line.",
-   "tts": "Please change here for the Saikyo and Shonan-Shinjuku Lines. And the Tokyo Metro Hibiya Line.",
+   "tts": "Please change here for the [Saikyo](/sˈIkjO/) and [Shonan-Shinjuku](/ʃˈOnɑn ʃinʤˈuku/) Lines. And the [Tokyo](/tˈOkjO/) Metro [Hibiya](/hibˈijɑ/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "4ddfd106",
+   "key": "ece74a51",
    "lang": "ja-JP",
-   "text": "まもなく。恵比寿。恵比寿。お出口は。左側です。",
-   "tts": "まもなく。恵比寿。恵比寿。お出口は。左側です。",
+   "text": "まもなく。恵比寿。恵比寿。お出口は。右側です。",
+   "tts": "まもなく。恵比寿。恵比寿。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "7b539491",
+   "key": "b6e74c08",
    "lang": "en-US",
-   "text": "The next station is. Ebisu. The doors on the left side will open.",
-   "tts": "The next station is. Ebisu. The doors on the left side will open.",
+   "text": "The next station is. Ebisu. The doors on the right side will open.",
+   "tts": "The next station is. [Ebisu](/ˌɛbˈisu/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1100,7 +1100,7 @@
    "key": "c489ddb8",
    "lang": "en-US",
    "text": "The next station is. Meguro. JY. 22. The doors on the right side will open.",
-   "tts": "The next station is. Meguro. J Y. 22. The doors on the right side will open.",
+   "tts": "The next station is. [Meguro](/mɛɡˈuɾO/). J Y. 22. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1116,7 +1116,7 @@
    "key": "1adb141f",
    "lang": "en-US",
    "text": "Please change here for the Tokyo Metro Namboku Line. The Toei Mita Line. And the Tokyu Meguro Line.",
-   "tts": "Please change here for the Tokyo Metro Namboku Line. The Toei Mita Line. And the Tokyu Meguro Line.",
+   "tts": "Please change here for the [Tokyo](/tˈOkjO/) Metro [Namboku](/nɑmbˈOku/) Line. The [Toei](/tˈOA/) [Mita](/mˈitɑ/) Line. And the [Tokyu](/tˈOkju/) [Meguro](/mɛɡˈuɾO/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1132,23 +1132,23 @@
    "key": "31fe2e99",
    "lang": "en-US",
    "text": "The next station is. Meguro. The doors on the right side will open.",
-   "tts": "The next station is. Meguro. The doors on the right side will open.",
+   "tts": "The next station is. [Meguro](/mɛɡˈuɾO/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "d2a9ec4f",
+   "key": "1d8053cc",
    "lang": "ja-JP",
-   "text": "次は。五反田。五反田。お出口は。左側です。",
-   "tts": "次は。五反田。五反田。お出口は。左側です。",
+   "text": "次は。五反田。五反田。お出口は。右側です。",
+   "tts": "次は。五反田。五反田。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "6f025133",
+   "key": "fd549262",
    "lang": "en-US",
-   "text": "The next station is. Gotanda. JY. 23. The doors on the left side will open.",
-   "tts": "The next station is. Gotanda. J Y. 23. The doors on the left side will open.",
+   "text": "The next station is. Gotanda. JY. 23. The doors on the right side will open.",
+   "tts": "The next station is. [Gotanda](/ɡOtˈɑndɑ/). J Y. 23. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1164,23 +1164,23 @@
    "key": "e4f1cd2e",
    "lang": "en-US",
    "text": "Please change here for the Toei Asakusa Line and the Tokyu Ikegami Line.",
-   "tts": "Please change here for the Toei Asakusa Line and the Tokyu Ikegami Line.",
+   "tts": "Please change here for the [Toei](/tˈOA/) [Asakusa](/ˌɑsˈɑkusɑ/) Line and the [Tokyu](/tˈOkju/) [Ikegami](/ˌikɛɡˈɑmi/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "684a38fe",
+   "key": "efaf9229",
    "lang": "ja-JP",
-   "text": "まもなく。五反田。五反田。お出口は。左側です。",
-   "tts": "まもなく。五反田。五反田。お出口は。左側です。",
+   "text": "まもなく。五反田。五反田。お出口は。右側です。",
+   "tts": "まもなく。五反田。五反田。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "053fcecd",
+   "key": "ab9de90c",
    "lang": "en-US",
-   "text": "The next station is. Gotanda. The doors on the left side will open.",
-   "tts": "The next station is. Gotanda. The doors on the left side will open.",
+   "text": "The next station is. Gotanda. The doors on the right side will open.",
+   "tts": "The next station is. [Gotanda](/ɡOtˈɑndɑ/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1196,7 +1196,7 @@
    "key": "40af399d",
    "lang": "en-US",
    "text": "The next station is. Ōsaki. JY. 24. The doors on the right side will open.",
-   "tts": "The next station is. Osaki. J Y. 24. The doors on the right side will open.",
+   "tts": "The next station is. [Osaki](/ˌOsˈɑki/). J Y. 24. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1212,7 +1212,7 @@
    "key": "046feb02",
    "lang": "en-US",
    "text": "Please change here for the Saikyo and Shonan-Shinjuku Lines. And the Rinkai Line.",
-   "tts": "Please change here for the Saikyo and Shonan-Shinjuku Lines. And the Rinkai Line.",
+   "tts": "Please change here for the [Saikyo](/sˈIkjO/) and [Shonan-Shinjuku](/ʃˈOnɑn ʃinʤˈuku/) Lines. And the [Rinkai](/ɾinkˈI/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1228,7 +1228,7 @@
    "key": "c4c83dd6",
    "lang": "en-US",
    "text": "The next station is. Ōsaki. The doors on the right side will open.",
-   "tts": "The next station is. Osaki. The doors on the right side will open.",
+   "tts": "The next station is. [Osaki](/ˌOsˈɑki/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1244,7 +1244,7 @@
    "key": "3fa0056d",
    "lang": "en-US",
    "text": "The next station is. Shinagawa. JY. 25. The doors on the right side will open.",
-   "tts": "The next station is. Shinagawa. J Y. 25. The doors on the right side will open.",
+   "tts": "The next station is. [Shinagawa](/ʃinɑɡˈɑwɑ/). J Y. 25. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1260,7 +1260,7 @@
    "key": "de5a5713",
    "lang": "en-US",
    "text": "Please change here for the Tokaido. Yokosuka. Keihin-Tohoku and Ueno-Tokyo Lines. The Tokaido Shinkansen. And the Keikyu Line.",
-   "tts": "Please change here for the Tokaido. Yokosuka. Keihin-Tohoku and Ueno-Tokyo Lines. The Tokaido Shinkansen. And the Keikyu Line.",
+   "tts": "Please change here for the [Tokaido](/tOkˈIdO/). [Yokosuka](/jOkOsˈukɑ/). [Keihin-Tohoku](/kˈAhin tOhˈOku/) and [Ueno-Tokyo](/ˌuˈɛnO tˈOkjO/) Lines. The [Tokaido](/tOkˈIdO/) [Shinkansen](/ʃinkˈɑnsɛn/). And the [Keikyu](/kAkjˈu/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1276,7 +1276,7 @@
    "key": "1b960ed9",
    "lang": "en-US",
    "text": "The next station is. Shinagawa. The doors on the right side will open.",
-   "tts": "The next station is. Shinagawa. The doors on the right side will open.",
+   "tts": "The next station is. [Shinagawa](/ʃinɑɡˈɑwɑ/). The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1292,23 +1292,23 @@
    "key": "1602818f",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Tokyo and Ueno.",
-   "tts": "This is a Yamanote Line train bound for Tokyo and Ueno.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Tokyo](/tˈOkjO/) and [Ueno](/ˌuˈɛnO/).",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "6450aa8d",
+   "key": "6e7b796a",
    "lang": "ja-JP",
-   "text": "次は。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。左側です。",
-   "tts": "次は。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。左側です。",
+   "text": "次は。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。右側です。",
+   "tts": "次は。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "d4b2553a",
+   "key": "1511858d",
    "lang": "en-US",
-   "text": "The next station is. Takanawa Gateway. JY. 26. The doors on the left side will open.",
-   "tts": "The next station is. Takanawa Gateway. J Y. 26. The doors on the left side will open.",
+   "text": "The next station is. Takanawa Gateway. JY. 26. The doors on the right side will open.",
+   "tts": "The next station is. [Takanawa](/tɑkɑnˈɑwɑ/) Gateway. J Y. 26. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1329,50 +1329,50 @@
    "speed": 0.93
   },
   {
-   "key": "1a475104",
+   "key": "21b842c7",
    "lang": "ja-JP",
-   "text": "まもなく。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。左側です。",
-   "tts": "まもなく。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。左側です。",
+   "text": "まもなく。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。右側です。",
+   "tts": "まもなく。高輪ゲートウェイ。高輪ゲートウェイ。お出口は。右側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "6d1112e1",
+   "key": "539d6918",
    "lang": "en-US",
-   "text": "The next station is. Takanawa Gateway. The doors on the left side will open.",
-   "tts": "The next station is. Takanawa Gateway. The doors on the left side will open.",
+   "text": "The next station is. Takanawa Gateway. The doors on the right side will open.",
+   "tts": "The next station is. [Takanawa](/tɑkɑnˈɑwɑ/) Gateway. The doors on the right side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "b1186d3c",
+   "key": "28f3c25f",
    "lang": "ja-JP",
-   "text": "次は。田町。田町。お出口は。右側です。",
-   "tts": "次は。田町。田町。お出口は。右側です。",
+   "text": "次は。田町。田町。お出口は。左側です。",
+   "tts": "次は。田町。田町。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "215e255d",
+   "key": "1079910a",
    "lang": "en-US",
-   "text": "The next station is. Tamachi. JY. 27. The doors on the right side will open.",
-   "tts": "The next station is. Tamachi. J Y. 27. The doors on the right side will open.",
+   "text": "The next station is. Tamachi. JY. 27. The doors on the left side will open.",
+   "tts": "The next station is. [Tamachi](/tɑmˈɑʧi/). J Y. 27. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "3304a451",
+   "key": "d50a9706",
    "lang": "ja-JP",
-   "text": "まもなく。田町。田町。お出口は。右側です。",
-   "tts": "まもなく。田町。田町。お出口は。右側です。",
+   "text": "まもなく。田町。田町。お出口は。左側です。",
+   "tts": "まもなく。田町。田町。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "270ce82b",
+   "key": "87064410",
    "lang": "en-US",
-   "text": "The next station is. Tamachi. The doors on the right side will open.",
-   "tts": "The next station is. Tamachi. The doors on the right side will open.",
+   "text": "The next station is. Tamachi. The doors on the left side will open.",
+   "tts": "The next station is. [Tamachi](/tɑmˈɑʧi/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1388,7 +1388,7 @@
    "key": "a2a7833b",
    "lang": "en-US",
    "text": "The next station is. Hamamatsuchō. JY. 28. The doors on the left side will open.",
-   "tts": "The next station is. Hamamatsucho. J Y. 28. The doors on the left side will open.",
+   "tts": "The next station is. [Hamamatsucho](/hɑmɑmɑtsˈuʧO/). J Y. 28. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1404,7 +1404,7 @@
    "key": "e56d570b",
    "lang": "en-US",
    "text": "Please change here for the Keihin-Tohoku Line. The Tokyo Monorail. And the Toei Asakusa and Oedo Lines.",
-   "tts": "Please change here for the Keihin-Tohoku Line. The Tokyo Monorail. And the Toei Asakusa and Oedo Lines.",
+   "tts": "Please change here for the [Keihin-Tohoku](/kˈAhin tOhˈOku/) Line. The [Tokyo](/tˈOkjO/) Monorail. And the [Toei](/tˈOA/) [Asakusa](/ˌɑsˈɑkusɑ/) and [Oedo](/ˌOˈɛdO/) Lines.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1420,23 +1420,23 @@
    "key": "e178554a",
    "lang": "en-US",
    "text": "The next station is. Hamamatsuchō. The doors on the left side will open.",
-   "tts": "The next station is. Hamamatsucho. The doors on the left side will open.",
+   "tts": "The next station is. [Hamamatsucho](/hɑmɑmɑtsˈuʧO/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "2e516b06",
+   "key": "cd1b7051",
    "lang": "ja-JP",
-   "text": "次は。新橋。新橋。お出口は。右側です。",
-   "tts": "次は。新橋。新橋。お出口は。右側です。",
+   "text": "次は。新橋。新橋。お出口は。左側です。",
+   "tts": "次は。新橋。新橋。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "28bd285c",
+   "key": "6ca5d8dd",
    "lang": "en-US",
-   "text": "The next station is. Shimbashi. JY. 29. The doors on the right side will open.",
-   "tts": "The next station is. Shimbashi. J Y. 29. The doors on the right side will open.",
+   "text": "The next station is. Shimbashi. JY. 29. The doors on the left side will open.",
+   "tts": "The next station is. [Shimbashi](/ʃimbˈɑʃi/). J Y. 29. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1452,23 +1452,23 @@
    "key": "7f1d1edc",
    "lang": "en-US",
    "text": "Please change here for the Tokaido. Yokosuka. Keihin-Tohoku and Ueno-Tokyo Lines. The Tokyo Metro Ginza Line. The Toei Asakusa Line. And the Yurikamome.",
-   "tts": "Please change here for the Tokaido. Yokosuka. Keihin-Tohoku and Ueno-Tokyo Lines. The Tokyo Metro Ginza Line. The Toei Asakusa Line. And the Yurikamome.",
+   "tts": "Please change here for the [Tokaido](/tOkˈIdO/). [Yokosuka](/jOkOsˈukɑ/). [Keihin-Tohoku](/kˈAhin tOhˈOku/) and [Ueno-Tokyo](/ˌuˈɛnO tˈOkjO/) Lines. The [Tokyo](/tˈOkjO/) Metro [Ginza](/ɡˈinzɑ/) Line. The [Toei](/tˈOA/) [Asakusa](/ˌɑsˈɑkusɑ/) Line. And the [Yurikamome](/juɾikɑmˈOmɛ/).",
    "voice": "af_heart",
    "speed": 0.93
   },
   {
-   "key": "8a431397",
+   "key": "8438ae74",
    "lang": "ja-JP",
-   "text": "まもなく。新橋。新橋。お出口は。右側です。",
-   "tts": "まもなく。新橋。新橋。お出口は。右側です。",
+   "text": "まもなく。新橋。新橋。お出口は。左側です。",
+   "tts": "まもなく。新橋。新橋。お出口は。左側です。",
    "voice": "jf_alpha",
    "speed": 1.15
   },
   {
-   "key": "2cbecf14",
+   "key": "a354e675",
    "lang": "en-US",
-   "text": "The next station is. Shimbashi. The doors on the right side will open.",
-   "tts": "The next station is. Shimbashi. The doors on the right side will open.",
+   "text": "The next station is. Shimbashi. The doors on the left side will open.",
+   "tts": "The next station is. [Shimbashi](/ʃimbˈɑʃi/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1484,7 +1484,7 @@
    "key": "d3deb272",
    "lang": "en-US",
    "text": "The next station is. Yūrakuchō. JY. 30. The doors on the left side will open.",
-   "tts": "The next station is. Yurakucho. J Y. 30. The doors on the left side will open.",
+   "tts": "The next station is. [Yurakucho](/juɾɑkˈuʧO/). J Y. 30. The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1500,7 +1500,7 @@
    "key": "92efe89c",
    "lang": "en-US",
    "text": "Please change here for the Keihin-Tohoku Line and the Tokyo Metro Yurakucho Line.",
-   "tts": "Please change here for the Keihin-Tohoku Line and the Tokyo Metro Yurakucho Line.",
+   "tts": "Please change here for the [Keihin-Tohoku](/kˈAhin tOhˈOku/) Line and the [Tokyo](/tˈOkjO/) Metro [Yurakucho](/juɾɑkˈuʧO/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1516,7 +1516,7 @@
    "key": "2830ff88",
    "lang": "en-US",
    "text": "The next station is. Yūrakuchō. The doors on the left side will open.",
-   "tts": "The next station is. Yurakucho. The doors on the left side will open.",
+   "tts": "The next station is. [Yurakucho](/juɾɑkˈuʧO/). The doors on the left side will open.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1532,7 +1532,7 @@
    "key": "fc643681",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Tokyo and Shinagawa.",
-   "tts": "This is a Yamanote Line train bound for Tokyo and Shinagawa.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Tokyo](/tˈOkjO/) and [Shinagawa](/ʃinɑɡˈɑwɑ/).",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1548,7 +1548,7 @@
    "key": "1a1a0471",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Ueno and Tokyo.",
-   "tts": "This is a Yamanote Line train bound for Ueno and Tokyo.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ueno](/ˌuˈɛnO/) and [Tokyo](/tˈOkjO/).",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1564,7 +1564,7 @@
    "key": "a4ef9f98",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Ikebukuro and Ueno.",
-   "tts": "This is a Yamanote Line train bound for Ikebukuro and Ueno.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ikebukuro](/ˌikɛbˈukuɾO/) and [Ueno](/ˌuˈɛnO/).",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1580,7 +1580,7 @@
    "key": "3eb1fd5c",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Shinjuku and Ikebukuro.",
-   "tts": "This is a Yamanote Line train bound for Shinjuku and Ikebukuro.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinjuku](/ʃinʤˈuku/) and [Ikebukuro](/ˌikɛbˈukuɾO/).",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1596,7 +1596,7 @@
    "key": "6d496ab4",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Shibuya and Shinjuku.",
-   "tts": "This is a Yamanote Line train bound for Shibuya and Shinjuku.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shibuya](/ʃibˈujɑ/) and [Shinjuku](/ʃinʤˈuku/).",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1612,7 +1612,7 @@
    "key": "bdb646a4",
    "lang": "en-US",
    "text": "This is a Yamanote Line train bound for Shinagawa and Shibuya.",
-   "tts": "This is a Yamanote Line train bound for Shinagawa and Shibuya.",
+   "tts": "This is a [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinagawa](/ʃinɑɡˈɑwɑ/) and [Shibuya](/ʃibˈujɑ/).",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1676,7 +1676,7 @@
    "key": "14347dfa",
    "lang": "en-US",
    "text": "Thank you for using the Yamanote Line.",
-   "tts": "Thank you for using the Yamanote Line.",
+   "tts": "Thank you for using the [Yamanote](/jɑmɑnˈOtɛ/) Line.",
    "voice": "af_heart",
    "speed": 0.93
   },
@@ -1894,7 +1894,7 @@
    "key": "72587c66",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ueno](/ˌuˈɛnO/) and [Ikebukuro](/ˌikɛbˈukuɾO/) will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -1939,7 +1939,7 @@
    "key": "e8aee3bd",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ueno](/ˌuˈɛnO/) and [Ikebukuro](/ˌikɛbˈukuɾO/) will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -1984,7 +1984,7 @@
    "key": "a98d6c8c",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Ikebukuro will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ueno](/ˌuˈɛnO/) and [Ikebukuro](/ˌikɛbˈukuɾO/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2038,7 +2038,7 @@
    "key": "ea2fb840",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ikebukuro](/ˌikɛbˈukuɾO/) and [Shinjuku](/ʃinʤˈuku/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2083,7 +2083,7 @@
    "key": "94810232",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 11. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 11. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ikebukuro](/ˌikɛbˈukuɾO/) and [Shinjuku](/ʃinʤˈuku/) will soon arrive at track number 11. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2128,7 +2128,7 @@
    "key": "1e441381",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ikebukuro](/ˌikɛbˈukuɾO/) and [Shinjuku](/ʃinʤˈuku/) will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2191,7 +2191,7 @@
    "key": "f90de2c7",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Shinjuku will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ikebukuro](/ˌikɛbˈukuɾO/) and [Shinjuku](/ʃinʤˈuku/) will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2236,7 +2236,7 @@
    "key": "79584c64",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 6. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 6. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinjuku](/ʃinʤˈuku/) and [Shibuya](/ʃibˈujɑ/) will soon arrive at track number 6. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2272,7 +2272,7 @@
    "key": "5f1df7fb",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinjuku](/ʃinʤˈuku/) and [Shibuya](/ʃibˈujɑ/) will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2317,7 +2317,7 @@
    "key": "a44c7117",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinjuku](/ʃinʤˈuku/) and [Shibuya](/ʃibˈujɑ/) will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2353,7 +2353,7 @@
    "key": "3978ac90",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Shibuya will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinjuku](/ʃinʤˈuku/) and [Shibuya](/ʃibˈujɑ/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2398,7 +2398,7 @@
    "key": "e72b69c3",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 14. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 14. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shibuya](/ʃibˈujɑ/) and [Shinagawa](/ʃinɑɡˈɑwɑ/) will soon arrive at track number 14. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2443,7 +2443,7 @@
    "key": "c894026c",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shibuya](/ʃibˈujɑ/) and [Shinagawa](/ʃinɑɡˈɑwɑ/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2479,7 +2479,7 @@
    "key": "fb400183",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinagawa will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shibuya](/ʃibˈujɑ/) and [Shinagawa](/ʃinɑɡˈɑwɑ/) will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2515,7 +2515,7 @@
    "key": "e3fa29cf",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Tokyo will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Tokyo will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinagawa](/ʃinɑɡˈɑwɑ/) and [Tokyo](/tˈOkjO/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2578,7 +2578,7 @@
    "key": "a88fe9a8",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Tokyo will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Tokyo will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinagawa](/ʃinɑɡˈɑwɑ/) and [Tokyo](/tˈOkjO/) will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2632,7 +2632,7 @@
    "key": "69a02886",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Tokyo](/tˈOkjO/) and [Ueno](/ˌuˈɛnO/) will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2677,7 +2677,7 @@
    "key": "793eebb9",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Tokyo](/tˈOkjO/) and [Ueno](/ˌuˈɛnO/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2722,7 +2722,7 @@
    "key": "3447810a",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Tokyo and Ueno will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Tokyo](/tˈOkjO/) and [Ueno](/ˌuˈɛnO/) will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2767,7 +2767,7 @@
    "key": "f434ae9b",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinagawa](/ʃinɑɡˈɑwɑ/) and [Shibuya](/ʃibˈujɑ/) will soon arrive at track number 5. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2812,7 +2812,7 @@
    "key": "ed84d5c7",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Tokyo and Shinagawa will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Tokyo and Shinagawa will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Tokyo](/tˈOkjO/) and [Shinagawa](/ʃinɑɡˈɑwɑ/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2857,7 +2857,7 @@
    "key": "a4e7ac2e",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Tokyo and Shinagawa will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Tokyo and Shinagawa will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Tokyo](/tˈOkjO/) and [Shinagawa](/ʃinɑɡˈɑwɑ/) will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2920,7 +2920,7 @@
    "key": "551a243a",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ueno](/ˌuˈɛnO/) and [Tokyo](/tˈOkjO/) will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -2956,7 +2956,7 @@
    "key": "62a3998a",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 10. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 10. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ueno](/ˌuˈɛnO/) and [Tokyo](/tˈOkjO/) will soon arrive at track number 10. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3001,7 +3001,7 @@
    "key": "2e36f5f3",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ueno](/ˌuˈɛnO/) and [Tokyo](/tˈOkjO/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3046,7 +3046,7 @@
    "key": "d583c09c",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ueno](/ˌuˈɛnO/) and [Tokyo](/tˈOkjO/) will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3109,7 +3109,7 @@
    "key": "bcdfce36",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 7. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 7. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ueno](/ˌuˈɛnO/) and [Tokyo](/tˈOkjO/) will soon arrive at track number 7. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3145,7 +3145,7 @@
    "key": "a82d5685",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 8. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ueno and Tokyo will soon arrive at track number 8. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ueno](/ˌuˈɛnO/) and [Tokyo](/tˈOkjO/) will soon arrive at track number 8. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3190,7 +3190,7 @@
    "key": "675ccd7c",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ikebukuro](/ˌikɛbˈukuɾO/) and [Ueno](/ˌuˈɛnO/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3226,7 +3226,7 @@
    "key": "cb04b953",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ikebukuro](/ˌikɛbˈukuɾO/) and [Ueno](/ˌuˈɛnO/) will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3271,7 +3271,7 @@
    "key": "834f499a",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 15. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Ikebukuro and Ueno will soon arrive at track number 15. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Ikebukuro](/ˌikɛbˈukuɾO/) and [Ueno](/ˌuˈɛnO/) will soon arrive at track number 15. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3316,7 +3316,7 @@
    "key": "ad596777",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Ikebukuro will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Ikebukuro will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinjuku](/ʃinʤˈuku/) and [Ikebukuro](/ˌikɛbˈukuɾO/) will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3352,7 +3352,7 @@
    "key": "24ce2970",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinjuku and Ikebukuro will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinjuku and Ikebukuro will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinjuku](/ʃinʤˈuku/) and [Ikebukuro](/ˌikɛbˈukuɾO/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3406,7 +3406,7 @@
    "key": "6e02aadb",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shibuya](/ʃibˈujɑ/) and [Shinjuku](/ʃinʤˈuku/) will soon arrive at track number 1. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3442,7 +3442,7 @@
    "key": "730c5f44",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shibuya](/ʃibˈujɑ/) and [Shinjuku](/ʃinʤˈuku/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3487,7 +3487,7 @@
    "key": "fdd21115",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shibuya](/ʃibˈujɑ/) and [Shinjuku](/ʃinʤˈuku/) will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3514,7 +3514,7 @@
    "key": "21bc181e",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shibuya and Shinjuku will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shibuya](/ʃibˈujɑ/) and [Shinjuku](/ʃinʤˈuku/) will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3568,7 +3568,7 @@
    "key": "f8762230",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinagawa](/ʃinɑɡˈɑwɑ/) and [Shibuya](/ʃibˈujɑ/) will soon arrive at track number 2. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3604,7 +3604,7 @@
    "key": "4da88931",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinagawa](/ʃinɑɡˈɑwɑ/) and [Shibuya](/ʃibˈujɑ/) will soon arrive at track number 3. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"
@@ -3649,7 +3649,7 @@
    "key": "a62a82e2",
    "lang": "en-US",
    "text": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
-   "tts": "Your attention, please. The Yamanote Line train bound for Shinagawa and Shibuya will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
+   "tts": "Your attention, please. The [Yamanote](/jɑmɑnˈOtɛ/) Line train bound for [Shinagawa](/ʃinɑɡˈɑwɑ/) and [Shibuya](/ʃibˈujɑ/) will soon arrive at track number 4. For your safety, please stand behind the yellow line.",
    "voice": "am_michael",
    "speed": 0.88,
    "role": "atos-en"

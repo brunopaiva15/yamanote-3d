@@ -14,8 +14,9 @@
 //           sans lui, un seul des deux MP3 survivrait à la gravure et un quai
 //           sur deux parlerait avec la voix de l'autre sens ;
 // - text  : texte affiché / haché, identique au runtime ;
-// - tts   : texte adapté à la synthèse (macrons ASCII et « JY-xx » épelé en
-//           anglais ; en japonais, les quelques mots que l'analyseur du
+// - tts   : texte adapté à la synthèse (macrons ASCII, « JY-xx » épelé et noms
+//           propres japonais annotés de leur prononciation en anglais - voir
+//           en-readings.ts ; en japonais, les quelques mots que l'analyseur du
 //           générateur lit de travers, réécrits en kana - voir JA_READINGS) ;
 // - voice : voix Kokoro. CINQ rôles parlent dans ce jeu : la sono de la RAME
 //           (jf_alpha), les deux automates du QUAI - jf_alpha également sur le
@@ -80,6 +81,7 @@ import { facingTrackNumber, passThroughStations } from '../src/data/passingTrain
 import { platformFor, type LoopDirection } from '../src/data/platforms.ts';
 import { DOOR_SIDE, STATIONS } from '../src/data/stations.ts';
 import { clipKey } from '../src/data/clipKey.ts';
+import { markJapanesePronunciation } from './en-readings.ts';
 
 /** Réglage de synthèse d'un canal : voix Kokoro et débit. */
 interface VoiceSetting {
@@ -191,7 +193,12 @@ const JA_READINGS: [RegExp, string][] = [
 ];
 
 function ttsText(u: Utterance): string {
-  if (u.lang === 'en-US') return spellStationCode(stripDiacritics(u.text));
+  // Anglais : les noms propres japonais reçoivent leur prononciation en clair
+  // (« [Ueno](/ˌuˈɛnO/) »), sans quoi le G2P anglais en fait des mots anglais -
+  // « you-ENN-oh ». Voir scripts/en-readings.ts.
+  if (u.lang === 'en-US') {
+    return markJapanesePronunciation(spellStationCode(stripDiacritics(u.text)));
+  }
   let out = u.text;
   for (const [pattern, reading] of JA_READINGS) out = out.replace(pattern, reading);
   return out;
