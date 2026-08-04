@@ -1817,10 +1817,33 @@ voir. C'est la seule phase où la question « jusqu'où » se pose vraiment, et 
 seule où un relevé simplifié aurait du sens : le dossier ne cote pas une
 devanture, et rien n'oblige à en inventer trente.
 
-**Phase 35 — le balayage des trente, à l'œil.** Cent cinquante captures sont
-prises ; sept gares ont été regardées. Les vingt-trois autres n'ont eu aucun
-regard depuis le début du rattrapage, et c'est là que se trouvent les défauts
-qu'aucun instrument ne cherche.
+**Phase 35 — le balayage des trente, à l'œil. COMMENCÉ : dix-huit gares
+regardées sur trente.** Onze de plus l'ont été — Kanda, Uguisudani, Tabata,
+Komagome, Sugamo, Nishi-Nippori, Mejiro, Yoyogi, Ebisu, Gotanda, Yūrakuchō. Ce
+qu'elles ont donné, et qui vaut d'être écrit avant la suite :
+
+- **le sol de Komagome vire au brun** sur la vue « portillon ». Ce n'est pas la
+  matière : `__probePick` rend `#b9bab5`, et `stationLayouts` ne donne que des
+  gris aux trente dalles. C'est l'HEURE — les captures tournent avec l'horloge
+  du jeu, et la même vue prise à midi rend un sol parfaitement neutre. Reste une
+  question qu'on ne tranche pas ici : un hall couvert, plafond et réglettes
+  compris, devrait-il prendre à ce point la lumière rasante du soir ?
+- **la grande bannière de sortie de Yūrakuchō est VIDE** en zone libre : un
+  caisson jaune sans légende ni flèche, quand celle de Kanda et celle de Sugamo
+  portent 出口 / Exit. Le petit panneau juste dessous, lui, dit bien 中央口 /
+  Central Exit. Le groupe est nommé (`gare/hall/fléchage`) ; la cause ne l'est
+  pas encore, et l'on n'y touche pas avant de l'avoir nommée. Deux pistes, sans
+  arbitrer : le caisson n'est imprimé que d'UNE face — « on ne lit un panneau
+  que du côté où l'on vient » — et l'on pourrait le regarder du mauvais côté ;
+  ou bien sa texture se fabrique sans légende pour cette gare-là ;
+- **les devantures sont des aplats.** Tabata, Sugamo, Yūrakuchō : un panneau
+  gris-bleu, un bandeau jaune, le mot SHOP. Ce n'est pas un défaut — c'est très
+  exactement le sujet de la phase 34, et le balayage confirme qu'elle est bien
+  la prochaine à traiter.
+
+Rien d'autre de cassé sur ces onze gares : fléchage, portillons, bouches, bandes
+podotactiles, corbeilles et distributeurs sont en place et lisibles. **Douze
+gares n'ont toujours reçu aucun regard.**
 
 ### Ordre et raison
 
