@@ -28,12 +28,12 @@ const NAMES = [
 const REGRAVED: Record<string, Partial<OriginalMelodyDefinition>> = {
   '/audio/melodies/01_jre-ikst-010-01_inner-main.mp3': {
     seed: 1001,
-    instrumentation: ['bright acoustic piano'],
+    instrumentation: ['bright acoustic piano', 'celesta octave doubling'],
     mood: ['platform', 'original', 'luminous', 'reassuring'],
   },
   '/audio/melodies/02_jre-ikst-010-02_outer-main.mp3': {
     seed: 2002,
-    instrumentation: ['bright acoustic piano'],
+    instrumentation: ['bright acoustic piano', 'celesta octave doubling'],
     mood: ['platform', 'original', 'airy', 'contemplative'],
   },
 };

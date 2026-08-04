@@ -3,12 +3,12 @@
 
 Pourquoi un second générateur à côté de scripts/melodies-gen.py : celui-là
 synthétise des cloches additives (partiels fixes, écho ping-pong, une seule
-voix). Un piano acoustique demande autre chose - cordes inharmoniques, double
-décroissance, étouffoirs, pédale, deux mains d'équilibre différent - et ces
-notions n'ont pas de sens pour les autres timbres de la bibliothèque. Les deux
-scripts restent donc séparés ; seul le format de sortie est commun (MP3 stéréo
-44,1 kHz, 160 kb/s, crête ~0,84) pour que les vingt clips sonnent au même
-niveau sur le quai.
+voix). Un piano acoustique demande autre chose - cordes à l'unisson,
+inharmonicité, étouffoirs, pédale, résonance sympathique, deux mains
+d'équilibre différent - et ces notions n'ont pas de sens pour les autres
+timbres de la bibliothèque. Les deux scripts restent donc séparés ; seul le
+format de sortie est commun (MP3 stéréo 44,1 kHz, 160 kb/s) pour que les vingt
+clips sonnent au même niveau sur le quai.
 
 UNE partition, DEUX interprétations. `SCORE_RIGHT`, `SCORE_LEFT` et `PEDAL`
 sont uniques et partagés : hauteurs, octaves, durées, silences et positions
@@ -20,6 +20,20 @@ mains, attaque, brillance, largeur stéréo, pédale et réverbération.
                 claire et petite brillance cristalline.
   Outer Loop  - un peu plus douce et aérienne, main gauche plus ronde, son
                 moins frontal, résonance plus ample.
+
+Trois choses portent le caractère « féérique » attendu d'une 発車メロディ, et
+aucune n'ajoute une seule note à la partition :
+
+  - les cordes à l'unisson (`unison`), deux ou trois par touche, désaccordées
+    d'un cheveu. C'est ce qui remplace l'ancienne modulation d'amplitude et ce
+    qui faisait sonner la version précédente comme un piano de synthèse ;
+  - la résonance sympathique (`sympathetic_ir`) : pédale baissée, les cordes
+    libres reprennent en sourdine ce qui tombe sur leurs fréquences. C'est le
+    halo d'un vrai piano, et ce que nulle réverbération ne sait imiter ;
+  - une doublure cristalline (`score_double`) : la main droite reprise à
+    l'octave par une voix de type célesta, vingt décibels dessous. Mêmes notes,
+    mêmes temps, calculées depuis `SCORE_RIGHT` - c'est le scintillement, pas
+    un second instrument.
 
 Sorties :
   assets/melodies/<nom>.wav          master WAV stéréo 48 kHz / 24 bits
@@ -231,11 +245,15 @@ VOICINGS = {
         title="Hikari no Wa (光の環) - Inner Loop",
         right_gain=0.86,     # main droite nettement en avant
         left_gain=0.57,
-        peak=1.00,           # référence de niveau de la paire
+        peak=0.97,           # référence de niveau de la paire
         brightness=1.00,     # pente des partiels : plus haut = plus cristallin
         attack_ms=2.0,       # attaque claire
         hammer=0.045,        # bruit de marteau : la brillance de l'attaque
         width=0.48,          # panoramique par registre, assez tenu
+        double_gain=0.125,   # -18 dB sous la main droite : un scintillement
+        double_width=0.66,   # la doublure s'ouvre un peu plus que le piano
+        sympathetic_mix=0.28,
+        sympathetic_decay=1.30,
         reverb_mix=0.10,
         reverb_decay=0.70,
         reverb_damp_hz=4200.0,
@@ -251,11 +269,16 @@ VOICINGS = {
         title="Kaze no Wa (風の環) - Outer Loop",
         right_gain=0.79,     # écart des mains resserré : la gauche porte plus
         left_gain=0.62,
-        peak=0.96,           # -0,35 dB : la version Outer est un rien plus douce
+        peak=1.00,           # crête plus haute, mais timbre plus doux : au bout du
+                             # compte la version Outer reste ~0,9 dB sous l'Inner
         brightness=0.90,     # moins frontal
         attack_ms=4.2,       # toucher plus souple
         hammer=0.028,
         width=0.60,          # un peu plus d'air
+        double_gain=0.105,   # doublure plus lointaine que sur la version Inner
+        double_width=0.78,
+        sympathetic_mix=0.34,  # halo plus large : c'est la version contemplative
+        sympathetic_decay=1.70,
         reverb_mix=0.155,
         reverb_decay=0.95,   # résonance plus ample
         reverb_damp_hz=3200.0,
@@ -271,10 +294,15 @@ VOICINGS = {
 # Une corde de piano
 # ---------------------------------------------------------------------------
 
+# Corps de l'instrument : (fréquence, dB, largeur). Communes aux deux versions -
+# c'est le même piano qu'on entend deux fois, pas deux instruments.
+BODY = ((118.0, 1.2, 0.28), (232.0, -1.0, 0.26), (455.0, 1.0, 0.30), (1250.0, 0.8, 0.35))
+
 DAMPER_TAU = 0.075          # chute de l'étouffoir, aigus
 DAMPER_TAU_BASS = 0.115     # les grosses cordes s'arrêtent moins net
-SLOW_LEVEL = 0.23           # part de la décroissance lente (« aftersound »)
+SLOW_LEVEL = 0.16           # part de la décroissance lente (« aftersound »)
 HAMMER_POS = 0.125          # marteau au huitième de la corde -> creux du peigne
+ATTACK_BLOOM = 0.055        # durée du transitoire brillant de l'attaque (s)
 
 
 def string_params(f0: float) -> tuple[float, float, int]:
@@ -282,11 +310,34 @@ def string_params(f0: float) -> tuple[float, float, int]:
     # Les cordes graves tiennent plus longtemps, sans exagérer : le clip ne
     # dure que dix secondes et la queue doit s'éteindre d'elle-même.
     tau = float(np.clip(3.6 * (261.63 / f0) ** 0.45, 1.10, 4.60))
-    # Raideur : quasi nulle dans le médium grave, sensible dans l'aigu - c'est
-    # elle qui donne le petit éclat métallique d'un piano brillant.
-    stiff = float(np.clip(8.0e-5 * (f0 / 261.63) ** 1.2, 3.0e-5, 1.2e-3))
+    # Raideur : sensible dès le médium et franche dans l'aigu. C'est elle qui
+    # étire les partiels vers le haut et donne au piano brillant son petit éclat
+    # de verre - la même physique que les cloches du reste de la bibliothèque.
+    stiff = float(np.clip(1.4e-4 * (f0 / 261.63) ** 1.3, 4.0e-5, 2.2e-3))
     partials = int(np.clip(0.44 * SR / f0, 4, 26))
     return tau, stiff, partials
+
+
+def unison(midi: int, rng: np.random.Generator) -> tuple[tuple[float, float, float], ...]:
+    """Les cordes à l'unisson d'une note : (désaccord en cents, gain, facteur de durée).
+
+    Une touche de piano frappe deux ou trois cordes accordées « ensemble » à un
+    cheveu près. Ce presque-unisson est TOUT : c'est lui qui fait le battement
+    lent d'une tenue, et c'est lui qui produit la double décroissance
+    caractéristique - les cordes s'échangent leur énergie par le chevalet, la
+    chute est d'abord rapide puis s'installe en longue traîne. La version
+    précédente imitait ça par une modulation d'amplitude ; ça s'entendait, et
+    c'est très exactement ce qui sonnait « synthétique ».
+    """
+    if midi < 44:
+        return ((0.0, 1.0, 1.0),)
+    if midi < 52:
+        return ((0.0, 1.0, 1.0), (rng.uniform(0.6, 1.3), 0.95, 0.93))
+    return (
+        (0.0, 1.0, 1.0),
+        (rng.uniform(0.5, 1.1), 0.95, 0.92),
+        (-rng.uniform(0.5, 1.1), 0.93, 1.07),
+    )
 
 
 def render_note(
@@ -353,30 +404,44 @@ def render_note(
     power /= power.sum() or 1.0
     phases = np.concatenate([[0.0], -2.0 * np.pi * np.cumsum(np.cumsum(power))[:-1]])
 
+    strings = unison(midi, rng)
+    norm *= sum(g for _, g, _ in strings)
     for a, f, tk, phase in zip(amps, freqs, taus, phases):
-        # Double décroissance : chute rapide, puis longue traîne. Sans elle un
-        # piano de synthèse sonne comme une cloche.
-        env = (1.0 - SLOW_LEVEL) * np.exp(-t / (0.28 * tk)) + SLOW_LEVEL * np.exp(-t / tk)
-        # Battement des cordes à l'unisson (deux ou trois par note) : très lent,
-        # mais c'est lui qui fait « vivre » la tenue.
-        beat_hz = min(6.5, 0.55 + 0.9 * (f / f0) * rng.uniform(0.8, 1.2))
-        env *= 1.0 - 0.06 + 0.06 * np.cos(2.0 * np.pi * beat_hz * t + rng.uniform(0.0, 6.28))
-        y += (a / norm) * env * np.sin(2.0 * np.pi * f * t + phase)
+        # Transitoire d'attaque : les premières dizaines de millisecondes d'un
+        # piano sont bien plus brillantes que sa tenue. Sans ce petit surcroît,
+        # l'attaque est molle et le son « démarre » comme une nappe.
+        bloom = 1.0 + 2.2 * min(1.0, (f / f0) / 4.0) * np.exp(-t / ATTACK_BLOOM)
+        for cents, gain, tscale in strings:
+            fs = f * 2.0 ** (cents / 1200.0)
+            ts = tk * tscale
+            # Décroissance : chute rapide puis traîne. Les trois cordes ayant des
+            # durées légèrement différentes, leur somme produit d'elle-même le
+            # profil en deux temps d'un vrai piano - on n'en garde ici qu'un
+            # reste, pour la part qui vient de la table d'harmonie.
+            env = (1.0 - SLOW_LEVEL) * np.exp(-t / (0.30 * ts)) + SLOW_LEVEL * np.exp(-t / ts)
+            y += (a * gain / norm) * env * bloom * np.sin(2.0 * np.pi * fs * t + phase)
 
     # Attaque : quelques millisecondes en cosinus surélevé, jamais un front raide
     # (qui claquerait) ni une rampe longue (qui ferait cloche).
     atk = max(2, int(voicing["attack_ms"] * 1e-3 * SR))
     y[:atk] *= 0.5 - 0.5 * np.cos(np.linspace(0.0, np.pi, atk))
 
-    # Bruit de marteau : le grain de bois-feutre de l'attaque. Passe-haut grossier
-    # (différence première) pour qu'il reste dans l'aigu et ne salisse pas les graves.
+    # Bruit de marteau : le choc du feutre sur la corde. Un bruit blanc brut
+    # sonnait « chuintement de synthé » ; ce qu'on entend d'un vrai marteau est
+    # une bande étroite, autour de six à huit fois la fondamentale, qui meurt en
+    # une dizaine de millisecondes.
     hammer = voicing["hammer"] * vel
     if hammer > 0:
-        nh = int(0.012 * SR)
-        burst = rng.standard_normal(nh)
-        burst = np.diff(burst, prepend=0.0)
-        burst *= np.exp(-np.linspace(0.0, 7.0, nh)) * (f0 / 440.0) ** 0.25
-        y[:nh] += hammer * burst / (np.abs(burst).max() or 1.0)
+        nh = int(0.014 * SR)
+        th = np.arange(nh) / SR
+        knock = np.zeros(nh)
+        for mult in (5.5, 7.0, 9.5, 12.0):
+            fk = min(f0 * mult, 0.42 * SR)
+            knock += rng.uniform(0.7, 1.0) * np.sin(
+                2.0 * np.pi * fk * th + rng.uniform(0.0, 6.28)
+            ) * np.exp(-th / 0.0035)
+        knock += 0.35 * rng.standard_normal(nh) * np.exp(-th / 0.0015)
+        y[:nh] += hammer * knock / (np.abs(knock).max() or 1.0)
 
     # Étouffoir et pédale.
     damper_tau = DAMPER_TAU_BASS if midi < 55 else DAMPER_TAU
@@ -393,6 +458,95 @@ def render_note(
     # Compensation de registre : à amplitude égale une basse s'entend moins.
     reg = float(np.clip((261.63 / f0) ** 0.18, 0.82, 1.30))
     return y * vel * reg
+
+
+# ---------------------------------------------------------------------------
+# Doublure cristalline
+# ---------------------------------------------------------------------------
+#
+# La main droite est doublée à l'octave supérieure par une voix de type célesta.
+# AUCUNE note n'est ajoutée : `SCORE_DOUBLE` est calculé depuis `SCORE_RIGHT`,
+# mêmes temps, mêmes durées, +12 demi-tons exactement. La doublure vit vingt
+# décibels sous la main droite - on ne l'entend pas comme un second instrument,
+# elle donne du scintillement à l'attaque du piano, comme la lumière sur les
+# barres d'un célesta. C'est ce qui rend à la mélodie le grain un peu féérique
+# des autres 発車メロディ du jeu.
+
+DOUBLE_OCTAVE = 12
+DOUBLE_PARTIALS = ((1.0, 1.0), (4.02, 0.40), (8.20, 0.15), (13.4, 0.045))
+
+
+def score_double() -> list[tuple[float, float, int]]:
+    """La main droite, note pour note, une octave plus haut (en numéros MIDI)."""
+    return [(beat, dur, midi_of(name) + DOUBLE_OCTAVE) for beat, dur, name in SCORE_RIGHT]
+
+
+def render_double(midi: int, vel: float, seed: int, max_s: float) -> np.ndarray:
+    """Une barre de célesta : peu de partiels, très inharmoniques, chute nette."""
+    f0 = 440.0 * 2.0 ** ((midi - 69) / 12.0)
+    tau = float(np.clip(1.35 * (523.25 / f0) ** 0.30, 0.55, 1.60))
+    n = int(min(dur := tau * 5.0, max_s) * SR)
+    if n <= 0:
+        return np.zeros(0)
+    del dur
+    t = np.arange(n) / SR
+    rng = np.random.default_rng(seed)
+
+    y = np.zeros(n)
+    for i, (mult, amp) in enumerate(DOUBLE_PARTIALS):
+        f = f0 * mult
+        if f > 0.44 * SR:
+            break
+        y += amp * np.exp(-t / (tau / (1.0 + 0.9 * i))) * np.sin(
+            2.0 * np.pi * f * t + rng.uniform(0.0, 6.28)
+        )
+    atk = max(2, int(0.0025 * SR))
+    y[:atk] *= 0.5 - 0.5 * np.cos(np.linspace(0.0, np.pi, atk))
+    return y * vel / sum(a for _, a in DOUBLE_PARTIALS)
+
+
+# ---------------------------------------------------------------------------
+# Résonance sympathique
+# ---------------------------------------------------------------------------
+
+
+def sympathetic_ir(decay_s: float, seed: int) -> np.ndarray:
+    """Le halo des cordes libres : ce qui manquait le plus au son précédent.
+
+    Pédale baissée, TOUTES les cordes du piano sont libres : chacune reprend en
+    sourdine ce qui, dans le son joué, tombe sur l'une de ses fréquences. C'est
+    de là que vient l'impression d'espace d'un piano pédale enfoncée - et un
+    piano de synthèse sans ça sonne à plat, quelle que soit la réverbération
+    qu'on lui ajoute.
+
+    Le banc est accordé sur les hauteurs de la partition (ce sont celles que
+    l'harmonie fait vibrer le plus) : le halo est donc consonant par
+    construction, jamais un bourdonnement.
+    """
+    n = int(decay_s * SR)
+    t = np.arange(n) / SR
+    rng = np.random.default_rng(seed)
+    ir = np.zeros((n, 2))
+
+    pitches = sorted({midi_of(nm) for _, _, nm in SCORE_RIGHT + SCORE_LEFT})
+    for midi in pitches:
+        f0 = 440.0 * 2.0 ** ((midi - 69) / 12.0)
+        tau, stiff, count = string_params(f0)
+        pan = float(np.clip((midi - 60) / 30.0, -1.0, 1.0)) * 0.5
+        theta = (pan + 1.0) * np.pi / 4.0
+        for k in range(1, min(7, count) + 1):
+            f = f0 * k * np.sqrt(1.0 + stiff * k * k)
+            if f > 0.42 * SR:
+                break
+            ring = min(decay_s / 3.2, tau / (1.0 + 0.35 * (k - 1)))
+            wave = (np.exp(-t / ring) / k**1.5) * np.sin(
+                2.0 * np.pi * f * t + rng.uniform(0.0, 6.28)
+            )
+            ir[:, 0] += wave * np.cos(theta)
+            ir[:, 1] += wave * np.sin(theta)
+
+    ir *= (1.0 - np.exp(-t / 0.006))[:, None]   # pas de clic au premier échantillon
+    return ir / (np.sqrt((ir**2).sum(axis=0)).max() or 1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -464,12 +618,19 @@ def shape(buf: np.ndarray, tilt: tuple) -> np.ndarray:
     un coupe-bas sous 32 Hz - la pédale entasse là des infra-graves inaudibles
     mais coûteux en crête - et une pente au-delà de 17 kHz, qui évite de payer
     en débit MP3 un aigu que personne n'entendra sur un haut-parleur de quai.
+
+    S'y ajoute le CORPS : quelques bosses étroites que la caisse et la table
+    d'harmonie impriment à toutes les notes, quelle que soit la hauteur jouée.
+    Un son parfaitement lisse n'a pas de bois dedans, et c'est une des choses
+    qui trahissaient la synthèse.
     """
     n = buf.shape[0]
     f = np.maximum(np.fft.rfftfreq(n, 1.0 / SR), 1.0)
 
     g = f**2 / (f**2 + 32.0**2)
     g *= 1.0 / (1.0 + (f / 17_000.0) ** 4)
+    for hz, db, width in BODY:
+        g *= 10.0 ** ((db / 20.0) * np.exp(-((np.log(f / hz) / width) ** 2)))
     for band in tilt:
         if band[0] == "shelf":
             _, hz, db = band
@@ -558,6 +719,28 @@ def render(voicing: dict) -> np.ndarray:
             # droite, comme un piano vu du tabouret.
             pan = float(np.clip((midi_of(name) - 60) / 30.0, -1.0, 1.0)) * voicing["width"]
             place(buf, mono, beat * BEAT, pan)
+
+    # Halo des cordes libres, pris sur le piano seul et avant la salle : c'est
+    # l'instrument qui résonne, pas le lieu.
+    halo = voicing["sympathetic_mix"]
+    if halo > 0:
+        buf += halo * convolve(
+            buf, sympathetic_ir(voicing["sympathetic_decay"], voicing["seed"] + 31)
+        )
+
+    # Doublure cristalline de la main droite, à l'octave (voir score_double).
+    for index, (beat, dur_b, midi) in enumerate(score_double()):
+        name = SCORE_RIGHT[index][2]
+        human = 1.0 + rng.uniform(-0.02, 0.02)
+        vel = float(np.clip(
+            voicing["right_gain"] * voicing["double_gain"]
+            * right_velocity(beat, name, index) * human, 0.005, 1.0))
+        mono = render_double(
+            midi, vel, seed=int(voicing["seed"] + 613 * index + 4441),
+            max_s=total_s - beat * BEAT,
+        )
+        pan = float(np.clip((midi - 60) / 30.0, -1.0, 1.0)) * voicing["double_width"]
+        place(buf, mono, beat * BEAT, pan)
 
     wet = convolve(buf, reverb_ir(voicing["reverb_decay"], voicing["reverb_damp_hz"], voicing["seed"]))
     mix = voicing["reverb_mix"]
