@@ -84,6 +84,12 @@ import { Concourse } from './Concourse';
 import { Kiosk } from './Kiosk';
 import { GatePlates } from './GatePlates';
 import { IdlePsd } from './IdlePsd';
+import {
+  oppositePsdBandStyle,
+  psdBandRows,
+  psdBandStyleFor,
+  type PsdBandStyle,
+} from './psdBand';
 import { psdLayout } from './psdLayout';
 import { psdLeafFrameGeometry, psdLeafGlassGeometry } from './psdParts';
 
@@ -110,6 +116,10 @@ export function Station() {
   const index = useStore((s) => s.platformIndex);
   const doorSide = DOOR_SIDE[index];
   const root = useRef<THREE.Group>(null);
+
+  // Le dessin du liseré uguisu des portes palières : il dit le sens, et c'est
+  // le nôtre sur le bord qu'on longe (voir psdBand).
+  const bandStyle = psdBandStyleFor(useStore((s) => s.loopDirection));
 
   const layout = layoutFor(index);
   const { segs, gaps } = useMemo(() => psdLayout(layout.length), [layout.length]);
@@ -291,23 +301,29 @@ export function Station() {
     () => segs.map((s) => mat(PSD_X, PLATFORM_TOP + PSD_H / 2, (s.z0 + s.z1) / 2, PSD_WALL_T, PSD_H, s.z1 - s.z0)),
     [segs],
   );
-  // Bandeau vert du muret : six millimètres PLUS COURT que le muret qu'il
+  // Bandeau uguisu du muret : six millimètres PLUS COURT que le muret qu'il
   // couronne. À égalité, ses deux bouts tombaient dans le plan des bouts du
   // muret - deux faces confondues, en pleine vue depuis la baie de porte, là
   // où le regard se pose en montant.
+  //
+  // Son DESSIN dit le sens : trait simple en 内回り, trait double en 外回り
+  // (voir psdBand). Le bord qu'on longe est celui que dessert notre rame, donc
+  // celui de notre sens de marche.
   const psdBand = useMemo(
     () =>
-      segs.map((s) =>
-        mat(
-          PSD_X - 0.005,
-          PLATFORM_TOP + PSD_H - 0.07,
-          (s.z0 + s.z1) / 2,
-          PSD_BAND_T,
-          0.1,
-          s.z1 - s.z0 - 0.012,
+      segs.flatMap((s) =>
+        psdBandRows(bandStyle).map((row) =>
+          mat(
+            PSD_X - 0.005,
+            PLATFORM_TOP + PSD_H + row.dy,
+            (s.z0 + s.z1) / 2,
+            PSD_BAND_T,
+            row.h,
+            s.z1 - s.z0 - 0.012,
+          ),
         ),
       ),
-    [segs],
+    [segs, bandStyle],
   );
   const columns = useMemo(
     () =>
@@ -608,6 +624,11 @@ export function Station() {
           segs={segs}
           gaps={gaps}
           m={m}
+          /* Sur un îlot Yamanote pur, le bord d'en face est celui de l'AUTRE
+             sens : c'est là - et seulement là - que les deux dessins du liseré
+             se voient ensemble. Sur un îlot partagé, la voie d'en face n'est pas
+             la nôtre et son liseré ne dit rien de nos sens ; il garde le sien. */
+          band={layout.config === 'island' ? oppositePsdBandStyle(bandStyle) : bandStyle}
         />
       )}
 
@@ -768,6 +789,7 @@ function FarEdge({
   segs,
   gaps,
   m,
+  band,
 }: {
   farX: number;
   len: number;
@@ -776,6 +798,7 @@ function FarEdge({
   segs: { z0: number; z1: number }[];
   gaps: number[];
   m: Mats;
+  band: PsdBandStyle;
 }) {
   return (
     <group name="bord-opposé">
@@ -793,7 +816,15 @@ function FarEdge({
         <planeGeometry args={[tactileW, len]} />
       </mesh>
       {hasPsd && (
-        <IdlePsd name="psd-bord-opposé" x={farX - 0.05} trackSide={1} segs={segs} gaps={gaps} m={m} />
+        <IdlePsd
+          name="psd-bord-opposé"
+          x={farX - 0.05}
+          trackSide={1}
+          segs={segs}
+          gaps={gaps}
+          m={m}
+          band={band}
+        />
       )}
     </group>
   );
