@@ -239,3 +239,77 @@ leur présence dans le test noté.
 
 `jf_tebukuro`, que le premier banc désignait, tombe au bas du classement une
 fois la brillance prise en compte : son registre est bon, son timbre est sourd.
+
+
+## Verdict des tests d'écoute : le plafond est le moteur
+
+Deux tours notés à l'aveugle, **60 variantes**, sur la phrase de la prise
+étiquetée.
+
+| Tour | Contenu | Moyenne | Max |
+| --- | --- | --- | --- |
+| 1 — réglages | 24 variantes japonaises (voix, registre, sourire, brillance du nom, cadence, débit) | 1,33 / 5 | 3 |
+| 1 — anglais | 15 variantes | 1,07 / 5 | 2 *(le réglage actuel)* |
+| 2 — voix nues | les 19 voix féminines de Kokoro, débit calé voix par voix | 1,29 / 5 | 2 |
+
+Le dépouillement par levier (`depouille.py`) donne des écarts réels mais
+minuscules : −4 demi-tons vaut +0,30 sur 0, le sourire +0,50, la voix +1,00 —
+le tout entre 1,2 et 2,0 sur une échelle de 5. Et la meilleure note va
+systématiquement à une voix **brute** : chaque traitement appliqué après la
+synthèse fait redescendre.
+
+La conclusion tient en une ligne : **on ne règle pas ce qui se joue avant la
+synthèse.** Kokoro produit un fichier audio à partir de phonèmes, sans aucune
+consigne de prosodie ; tout ce qu'on peut faire ensuite — transposer, dilater
+les formants, déplacer les silences — travaille sur un résultat déjà figé, et
+s'entend comme une retouche. Ajoutons que ses quatre voix japonaises sont
+toutes bien plus sourdes que l'annonce réelle (centroïde 570-660 Hz contre
+981), et qu'aucune quantité de correction ne fabrique une brillance qui n'a pas
+été chantée.
+
+*(Une part des notes du premier tour est à mettre au débit de `cabin_pa`, dont
+l'envoi de réverbération était trois fois trop fort — corrigé depuis. Le second
+tour, jugé sur la voix seule, n'a pas remonté pour autant.)*
+
+## Le cahier des charges, pour n'importe quel moteur
+
+Ce qui reste vrai quel que soit le synthétiseur, et que `rapport.py` sait
+vérifier en une commande :
+
+| Cible | Valeur relevée |
+| --- | --- |
+| F0 médiane, japonais de bord | **236 Hz** (plancher 173, sommet 284) |
+| Étendue d'intonation | 10,6 demi-tons sur la phrase entière |
+| Durées | 次は **0,51 s** · 渋谷 **0,67 s** · お出口は右側です **1,57 s** |
+| Silences internes | **0,34 / 0,43 / 0,31 s** — courts, jamais 0,62 |
+| Centroïde spectral | **981 Hz** (sono comprise) |
+| Nom de gare | 20 Hz **sous** la phrase porteuse, centroïde **+43 %** |
+
+## La suite : VOICEVOX
+
+`scripts/voice-lab/voicevox.py` est le pont vers le moteur qui donne prise sur
+ces cibles *avant* synthèse. Sa requête `audio_query` décrit la phrase mora par
+mora — durée de consonne, durée de voyelle, hauteur — et se modifie avant de
+demander l'audio. On y pose donc les silences au centième, le registre par
+addition sur les hauteurs (sans rééchantillonner, donc sans toucher aux
+formants), et un `intonationScale` sur le seul segment du nom de gare.
+
+```bash
+docker run --rm -p 50021:50021 voicevox/voicevox_engine:cpu-latest
+python scripts/voice-lab/voicevox.py --list
+python scripts/voice-lab/voicevox.py --bench /tmp/vv --speakers 2,3,8,14
+```
+
+**Ce script n'a pas pu être exécuté** dans la session qui l'a écrit : ni
+VOICEVOX ni aucun autre moteur n'y était téléchargeable (huggingface.co bloqué
+par la politique de sortie réseau, accès GitHub restreint au dépôt du jeu). Il
+est écrit d'après l'API publique du moteur et demande une vérification au
+premier lancement.
+
+**Licence.** VOICEVOX est gratuit, usage commercial compris, mais chaque
+personnage vocal impose son crédit. Le crédit exact dépend du personnage
+retenu et devra figurer dans `about.html` — à décider en même temps que la voix.
+
+Autre voie, si le crédit obligatoire gêne : les voix japonaises neuronales
+d'Azure ou de Google, pilotées en SSML (`<break time="340ms"/>`, `<prosody>`),
+qui offrent le même genre de contrôle contre quelques euros pour les 200 clips.
