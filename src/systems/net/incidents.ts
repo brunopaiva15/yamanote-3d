@@ -36,3 +36,32 @@ export function onIncident(handler: ((kind: IncidentKind) => void) | null): void
 export function notifyIncident(kind: IncidentKind): void {
   ecoute?.(kind);
 }
+
+// --- La population, par la même couture -------------------------------------
+//
+// Même raison, même procédé : le cycle sait QUAND la population du wagon et
+// celle du quai viennent de se stabiliser - juste après l'échange aux portes,
+// juste après le peuplement du quai - et lui seul le sait. Le réseau, lui, ne
+// peut que l'apprendre.
+
+/**
+ * De QUI l'on parle.
+ *
+ * La distinction n'est pas cosmétique : reposer la foule du quai la REPEUPLE
+ * (systems/platformCrowd), ce qui renvoie chaque promeneur à son point de
+ * départ. C'est ce qu'on veut à l'entrée en freinage, quand le quai vient
+ * d'apparaître ; c'est la dernière chose qu'on veut en fin d'arrêt, où l'on ne
+ * corrige plus que la rame.
+ */
+export type PopulationKind = 'pax' | 'crowd' | 'both';
+
+let ecoutePop: ((kind: PopulationKind) => void) | null = null;
+
+export function onPopulation(handler: ((kind: PopulationKind) => void) | null): void {
+  ecoutePop = handler;
+}
+
+/** La population vient de se fixer : l'hôte a quelque chose à dire. */
+export function notifyPopulation(kind: PopulationKind): void {
+  ecoutePop?.(kind);
+}

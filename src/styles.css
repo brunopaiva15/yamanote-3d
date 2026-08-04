@@ -1444,6 +1444,16 @@ body,
   pointer-events: none;
 }
 
+/*
+ * Plus de nouvelles de lui : onglet passé en arrière-plan, réseau qui hoquette.
+ * Il reste à sa place - le faire disparaître annoncerait un départ qui n'a pas
+ * eu lieu - mais son étiquette dit qu'il ne répond plus.
+ */
+.peer-tag.peer-away {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
 .peer-name {
   padding: 2px 9px;
   border-radius: 999px;

@@ -56,7 +56,17 @@ import { disposeOwned, markOwned } from './characters/library';
  */
 const EYE_IN_SKELETON = CONFIG.eyeHeight;
 
-/** Assis, l'œil descend à la hauteur d'assise. */
+/**
+ * Assis, l'œil descend à la hauteur d'assise.
+ *
+ * RÉSERVE ASSUMÉE de ce repli : le corps de `buildPerson` n'a pas de jambes
+ * repliables - c'est la silhouette de la foule du QUAI, où personne ne s'assoit
+ * - et un camarade assis y reste donc debout, à l'aplomb du coussin. Le rendu
+ * normal (LibraryRemotePlayers) le plie correctement ; celui-ci ne sert que si
+ * aucun pack de modèles n'est installé, ce qui n'arrive pas avec le pack
+ * versionné. Corriger demanderait le constructeur de `ProceduralPassengers`, et
+ * ce n'est pas le prix que vaut ce chemin.
+ */
 const SEATED_EYE = CONFIG.sitHeight;
 
 /**
@@ -97,6 +107,8 @@ interface Vue {
   id: string;
   name: string;
   text: string | null;
+  /** Il ne dit plus où il est : l'étiquette le dit à sa place. */
+  away: boolean;
 }
 
 interface Slot {
@@ -143,7 +155,7 @@ export function ProceduralRemotePlayers() {
     const liste = [...peers.values()].sort((a, b) =>
       a.joinedAt - b.joinedAt || (a.id < b.id ? -1 : 1),
     );
-    const prochaines: Vue[] = places.map(() => ({ id: '', name: '', text: null }));
+    const prochaines: Vue[] = places.map(() => ({ id: '', name: '', text: null, away: false }));
 
     for (let i = 0; i < places.length; i++) {
       const place = places[i];
@@ -231,7 +243,9 @@ export function ProceduralRemotePlayers() {
       // inventé plutôt que transmis parce qu'un booléen coûte un bit là où une
       // phase coûterait un octet à huit hertz, pour un résultat que personne ne
       // saurait distinguer.
-      if (pose.moving && !pose.seated) {
+      // Un absent ne marche pas : sa dernière pose disait peut-être le
+      // contraire, mais elle a des secondes et il n'a pas bougé depuis.
+      if (pose.moving && !pose.seated && pose.away < 0.5) {
         place.bob += dt * 7.5;
         place.group.position.y += Math.sin(place.bob * 2) * 0.016;
       }
@@ -252,7 +266,7 @@ export function ProceduralRemotePlayers() {
         continue;
       }
 
-      prochaines[i] = { id: pair.id, name: pair.name, text: bubbleFor(pair.id, now) };
+      prochaines[i] = { id: pair.id, name: pair.name, text: bubbleFor(pair.id, now), away: pose.away > 0.5 };
     }
 
     setVues((avant) => {
@@ -260,7 +274,8 @@ export function ProceduralRemotePlayers() {
         if (
           avant[i]?.id !== prochaines[i].id ||
           avant[i]?.name !== prochaines[i].name ||
-          avant[i]?.text !== prochaines[i].text
+          avant[i]?.text !== prochaines[i].text ||
+          avant[i]?.away !== prochaines[i].away
         ) {
           return prochaines;
         }
@@ -280,7 +295,7 @@ export function ProceduralRemotePlayers() {
               zIndexRange={[14, 10]}
               style={{ pointerEvents: 'none' }}
             >
-              <div className="peer-tag">
+              <div className={vues[i].away ? 'peer-tag peer-away' : 'peer-tag'}>
                 <span className="peer-name">{vues[i].name || '—'}</span>
                 {vues[i].text && <span className="peer-said">{vues[i].text}</span>}
               </div>

@@ -326,6 +326,46 @@ export type EventPayload =
   | { v: number; from: string; k: 'detach' }
   | { v: number; from: string; k: 'attach' };
 
+// --- La population : qui est à bord, et qui attend sur le quai --------------
+
+/**
+ * Les gens, par opposition au monde.
+ *
+ * C'est le seul message du protocole qui porte un ÉTAT plutôt que des tirages,
+ * et la raison mérite d'être dite ici : les voyageurs sont une simulation à
+ * état, pas une chronologie. Deux clients partis de deux rames différemment
+ * peuplées ne convergeraient jamais, quand bien même ils tireraient les mêmes
+ * nombres. Il faut donc bien, une fois par arrêt, se mettre d'accord sur qui
+ * est là - et l'effectif lui-même dépend de la qualité vidéo choisie, ce
+ * qu'aucune graine commune ne rattrape.
+ *
+ * Il ne porte QUE l'identité et la place. Ce que chacun fait - téléphone,
+ * regard, discussion - reste tiré localement : personne ne remarquera jamais
+ * que son camarade a vu le même voyageur bâiller une seconde plus tard, et le
+ * répliquer coûterait plus que tout le reste du protocole réuni.
+ */
+export interface PopPayload {
+  v: number;
+  from: string;
+  /** Gare dont le quai porte cette foule : on n'applique pas celle d'à côté. */
+  st: number;
+  /** Rame : identité et place, deux entiers par voyageur du pool. */
+  px: number[];
+  /** Quai : effectif, promeneurs, puis une identité par place du pool. */
+  cr: number[];
+}
+
+/**
+ * Bornes de taille des deux listes.
+ *
+ * Le pool de la rame fait quatre-vingt-seize places et celui du quai quarante ;
+ * on double avant de crier au loup, et l'on REJETTE au-delà plutôt que de
+ * tronquer - une liste tronquée décrirait une rame à moitié vide, ce qui est
+ * pire que pas de liste du tout.
+ */
+const POP_PAX_MAX = 400;
+const POP_CROWD_MAX = 200;
+
 // --- Tchat ------------------------------------------------------------------
 
 export interface ChatPayload {
@@ -470,6 +510,24 @@ export function validChat(m: unknown): m is ChatPayload {
   if (!fromKnownPeer(m)) return false;
   const r = m as Record<string, unknown>;
   return isFiniteInt(r.id) && typeof r.text === 'string' && isFiniteInt(r.t);
+}
+
+/** Une population reçue est-elle exploitable ? */
+export function validPop(m: unknown): m is PopPayload {
+  if (!fromKnownPeer(m)) return false;
+  const r = m as Record<string, unknown>;
+  if (!isFiniteInt(r.st) || (r.st as number) < 0 || (r.st as number) > 29) return false;
+  for (const [k, max] of [
+    ['px', POP_PAX_MAX],
+    ['cr', POP_CROWD_MAX],
+  ] as const) {
+    const v = r[k];
+    if (!Array.isArray(v) || v.length > max) return false;
+    // Un seul NaN dans la liste et c'est un voyageur posé nulle part, ou une
+    // apparence que `makeAppearance` ne saura pas dériver.
+    if (!v.every(isFiniteInt)) return false;
+  }
+  return true;
 }
 
 /** Une présence reçue est-elle exploitable ? */

@@ -55,7 +55,26 @@ test('les arrivants entrent, les partants sortent', () => {
   syncRoster([annonce('a', 1), annonce('b', 2)], 'moi', 100);
   assert.equal(peers.size, 2);
   syncRoster([annonce('b', 2), annonce('c', 3)], 'moi', 200);
+  // Le partant n'est plus DU SALON tout de suite - il sort du roster, donc de
+  // l'effectif affiché - mais son avatar s'en va en fondu plutôt que de
+  // disparaître d'une image à l'autre.
+  assert.deepEqual(rosterSnapshot().map((r) => r.id).sort(), ['b', 'c']);
+  assert.equal(peers.get('a')?.gone, true);
+  for (let i = 0; i < 60; i++) updatePeers(1 / 60, 200);
   assert.deepEqual([...peers.keys()].sort(), ['b', 'c']);
+});
+
+test('un partant qui revient avant la fin du fondu est rattrapé en vol', () => {
+  clearPeers();
+  syncRoster([annonce('a', 1)], 'moi', 0);
+  for (let i = 0; i < 60; i++) updatePeers(1 / 60, 0);
+  syncRoster([], 'moi', 100);
+  updatePeers(0.1, 100);
+  assert.equal(peers.get('a')?.gone, true);
+  syncRoster([annonce('a', 1)], 'moi', 200);
+  assert.equal(peers.get('a')?.gone, false, 'le retour n’a pas annulé le départ');
+  for (let i = 0; i < 60; i++) updatePeers(1 / 60, 200);
+  assert.equal(peers.get('a')?.fade, 1);
 });
 
 test('une republication de présence ne jette PAS le tampon de poses', () => {
@@ -102,19 +121,38 @@ test('une pose reçue d’un inconnu est ignorée sans exploser', () => {
   assert.equal(peers.size, 0);
 });
 
-test('un pair muet s’efface, un pair bavard revient', () => {
+test('un pair muet GRISE, il ne s’efface pas', () => {
+  // Le défaut rapporté : « quand je laisse la tab en arrière-plan, ça fait
+  // disparaître le perso ». Un onglet caché voit son requestAnimationFrame
+  // suspendu, donc ses poses cessent - mais sa présence, elle, tient très bien
+  // sur la socket. Il est toujours là ; il ne dit simplement plus où il est.
   clearPeers();
   syncRoster([annonce('a', 1)], 'moi', 0);
   receivePose('a', pose(0), 0);
-  // Il parle : le fondu monte jusqu'à un.
   for (let i = 0; i < 60; i++) updatePeers(1 / 60, 100);
   assert.equal(peers.get('a')?.fade, 1);
-  // Il se tait plus d'une seconde : le fondu redescend, mais pas d'un coup.
-  updatePeers(1 / 60, 5_000);
-  const apresUneImage = peers.get('a')!.fade;
-  assert.ok(apresUneImage < 1 && apresUneImage > 0.9, `fondu ${apresUneImage}`);
-  for (let i = 0; i < 60; i++) updatePeers(1 / 60, 5_000);
-  assert.equal(peers.get('a')?.fade, 0);
+  assert.equal(peers.get('a')?.away, 0);
+
+  // Il se tait longtemps : il grise, et il RESTE.
+  for (let i = 0; i < 120; i++) updatePeers(1 / 60, 5_000);
+  assert.equal(peers.get('a')?.away, 1, 'il aurait dû griser');
+  assert.equal(peers.get('a')?.fade, 1, 'le silence n’est pas un départ');
+
+  // Il revient : la couleur revient avec lui, sans qu'il ait clignoté.
+  receivePose('a', pose(5_000), 5_000);
+  for (let i = 0; i < 120; i++) updatePeers(1 / 60, 5_000);
+  assert.equal(peers.get('a')?.away, 0);
+});
+
+test('le gris ne sort jamais de [0, 1]', () => {
+  clearPeers();
+  syncRoster([annonce('a', 1)], 'moi', 0);
+  receivePose('a', pose(0), 0);
+  for (let i = 0; i < 200; i++) {
+    updatePeers(0.5, i % 2 === 0 ? 0 : 999_999);
+    const a = peers.get('a')!.away;
+    assert.ok(a >= 0 && a <= 1, `gris hors bornes : ${a}`);
+  }
 });
 
 test('le fondu ne sort jamais de [0, 1]', () => {

@@ -12,6 +12,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { paxList, initPassengers, type Pax } from '../systems/passengers';
+import { SEAT_TOP_Y } from '../systems/seats';
 import { isPairAction } from '../data/paxActions';
 import { runtime } from '../systems/runtime';
 import { CONFIG } from '../data/config';
@@ -29,8 +30,6 @@ import { fallClipFor, fallCue, fallYawOffset } from './characters/fall';
 import { attachProps, updatePropRig, handPropFor, type PropRig } from './characters/props';
 import type { LogicalClip } from './characters/manifest';
 
-// Haut utile du coussin (monde) - même repère que Seats.tsx / rendu procédural.
-const SEAT_TOP_Y = 0.45;
 const FADE = 0.25; // durée de crossfade entre clips (s)
 
 interface Slot {

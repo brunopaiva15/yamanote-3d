@@ -451,6 +451,65 @@ export function swapCrowdIdentity(crowdId: number, identity: number): number {
   return previous;
 }
 
+/** Combien de monde sur le quai, et combien qui le parcourent. */
+export interface Effectif {
+  total: number;
+  walkers: number;
+}
+
+// --- La foule, telle qu'elle se partage entre joueurs ----------------------
+//
+// Bonne nouvelle, et elle a décidé de la forme de ce partage : le PLACEMENT de
+// la foule est déjà déterministe. Les files d'attente, les voies de promenade,
+// les caps : tout se déduit du rang dans le pool et de la gare
+// (`waitSlot(i - walkers, …)`, `i % 2`, `i % 3`). Deux clients qui peuplent le
+// même quai avec le même effectif obtiennent la même disposition, sans qu'un
+// seul nombre n'ait à traverser le réseau.
+//
+// Il ne manquait donc que deux choses, et ce sont exactement celles qui
+// voyagent ici : l'EFFECTIF - qui dépend de la qualité vidéo choisie
+// (`paxScale`), et qu'aucune graine commune ne rattraperait - et les IDENTITÉS,
+// qui dérivent d'un client à l'autre à force d'échanges au seuil des portes
+// (`swapCrowdIdentity`).
+//
+// Le reste - qui regarde son téléphone, qui bavarde avec son voisin - demeure
+// local, comme en rame.
+
+/** `[total, walkers, identité par place du pool…]`. */
+export function sampleCrowdPopulation(): number[] {
+  const { total, walkers } = crowdCount(useStore.getState().platformIndex);
+  const out = [total, walkers];
+  for (const p of crowdList) out.push(p.identity);
+  return out;
+}
+
+/**
+ * Pose la foule de l'hôte sur le quai.
+ *
+ * L'effectif est plafonné par le NÔTRE quand il est plus bas : une petite
+ * machine dans un salon mené depuis un ordinateur de bureau voit les mêmes
+ * gens, aux mêmes places, simplement moins loin dans la file - plutôt qu'une
+ * foule qu'elle ne saurait pas dessiner. C'est le seul endroit où l'on s'écarte
+ * sciemment du « tout le monde voit la même chose », et c'est pour que tout le
+ * monde puisse jouer.
+ */
+export function applyCrowdPopulation(stationIndex: number, flat: readonly number[]): void {
+  if (flat.length < 2) return;
+  initPlatformCrowd();
+  const mien = crowdCount(stationIndex);
+  const total = Math.min(flat[0], mien.total);
+  const walkers = Math.min(flat[1], total);
+  // Les identités D'ABORD : le peuplement lit `temper` et `height`, qui en
+  // découlent, pour choisir qui bavarde et à quelle hauteur il se tient.
+  for (let i = 0; i < crowdList.length && i + 2 < flat.length; i++) {
+    const p = crowdList[i];
+    // L'agent de quai n'est pas un voyageur : son uniforme ne se troque pas.
+    if (p.staff || p.identity === flat[i + 2]) continue;
+    applyCrowdIdentity(p, flat[i + 2]);
+  }
+  seedPlatformCrowd(stationIndex, { total, walkers });
+}
+
 function crowdCountBase(stationIndex: number): { total: number; walkers: number } {
   // Les hubs partent avec plus d'attenteurs près des portes : c'est ce qui
   // donne l'impression de quai bondé (Shinjuku, Shibuya…), les promeneurs
@@ -550,11 +609,14 @@ function patrolWaypoints(laneX: number, fromZ: number, dir: 1 | -1): RouteStop[]
 
 let seededFor = -1;
 
-export function seedPlatformCrowd(stationIndex: number): void {
+export function seedPlatformCrowd(stationIndex: number, forced?: Effectif): void {
   initPlatformCrowd();
-  if (seededFor === stationIndex) return;
+  // `forced` vient de l'hôte : on repeuple même si l'on croyait cette gare déjà
+  // faite, puisque c'est justement pour changer d'effectif qu'on nous le
+  // demande.
+  if (seededFor === stationIndex && !forced) return;
   seededFor = stationIndex;
-  const { total, walkers } = crowdCount(stationIndex);
+  const { total, walkers } = forced ?? crowdCount(stationIndex);
 
   // L'agent garde sa place : la foule se peuple autour de lui.
   const civils = crowdList.filter((p) => !p.staff);

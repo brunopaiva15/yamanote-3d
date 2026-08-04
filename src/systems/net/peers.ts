@@ -45,12 +45,33 @@ export interface Peer {
   /**
    * Présence à l'écran, 0..1.
    *
-   * Un pair qui se tait ne disparaît pas d'un coup : son avatar s'estompe. Un
+   * Piloté par la PRÉSENCE - qui est dans le salon - et par elle seule. Un
    * personnage qui s'évapore en une image se remarque bien davantage qu'un
-   * personnage qui s'efface en une demi-seconde, et le réseau hoquette assez
-   * souvent pour que la différence compte.
+   * personnage qui s'efface en une demi-seconde, d'où le fondu plutôt qu'une
+   * disparition sèche.
    */
   fade: number;
+  /**
+   * Ce pair a-t-il quitté le salon ? Son avatar s'efface, puis on l'oublie.
+   *
+   * Un drapeau plutôt qu'un `delete` immédiat : sans lui, quelqu'un qui ferme
+   * son onglet disparaît d'une image à l'autre, ce qui est très exactement ce
+   * que le fondu existe pour éviter.
+   */
+  gone: boolean;
+  /**
+   * 0..1 : depuis combien de temps n'a-t-on plus de ses nouvelles.
+   *
+   * PAS la même chose que `fade`, et les confondre était un défaut visible :
+   * un onglet laissé en arrière-plan voit son `requestAnimationFrame` suspendu
+   * par le navigateur, donc ses poses cessent - alors que sa présence, elle,
+   * tient très bien sur la socket. Le joueur est toujours là ; il ne dit
+   * simplement plus où il est. Le faire DISPARAÎTRE revenait à annoncer un
+   * départ qui n'avait pas eu lieu.
+   *
+   * On le laisse donc à l'écran, figé sur sa dernière pose, et on le GRISE.
+   */
+  away: number;
 }
 
 /** Le roster, indexé par identifiant d'onglet. Muté, jamais remplacé. */
@@ -58,6 +79,16 @@ export const peers = new Map<string, Peer>();
 
 /** Durée du fondu d'apparition et de disparition (s). */
 const FADE_S = 0.4;
+
+/**
+ * Durée du passage au gris, et du retour (s).
+ *
+ * Plus lent que le fondu de présence, et volontairement : le gris dit « je ne
+ * sais plus », pas « il est parti ». Une bascule trop vive le ferait clignoter
+ * au moindre hoquet du réseau, alors qu'une seconde de dégradé se lit comme
+ * quelqu'un qui s'absente.
+ */
+const AWAY_S = 1;
 
 export function makePeer(
   id: string,
@@ -84,6 +115,8 @@ export function makePeer(
     clockOffset: null,
     lastSeen: now,
     fade: 0,
+    gone: false,
+    away: 0,
   };
 }
 
@@ -170,10 +203,19 @@ export function peerPoseAt(peer: Peer, at: number): PoseSample | null {
  */
 export function updatePeers(dt: number, now: number): void {
   for (const peer of peers.values()) {
-    const perdu = isStale(peer.poses, now);
-    const cible = perdu ? 0 : 1;
+    // La présence commande l'existence à l'écran ; le silence ne commande que
+    // la couleur. C'est toute la correction : le silence n'est PAS un départ.
+    const cible = peer.gone ? 0 : 1;
     const pas = dt / FADE_S;
     peer.fade = cible > peer.fade ? Math.min(cible, peer.fade + pas) : Math.max(cible, peer.fade - pas);
+
+    const muet = isStale(peer.poses, now) ? 1 : 0;
+    const pasGris = dt / AWAY_S;
+    peer.away =
+      muet > peer.away ? Math.min(muet, peer.away + pasGris) : Math.max(muet, peer.away - pasGris);
+
+    // Effacé pour de bon : sa place est libre pour quelqu'un d'autre.
+    if (peer.gone && peer.fade <= 0) peers.delete(peer.id);
   }
 }
 
@@ -211,12 +253,17 @@ export function syncRoster(
       connu.mode = p.mode;
       connu.attached = p.attached;
       connu.joinedAt = p.joinedAt;
+      // Il était en train de s'effacer et le voilà de retour : on le rattrape
+      // en vol plutôt que de le laisser disparaître pour le reconstruire.
+      connu.gone = false;
       continue;
     }
     peers.set(p.id, makePeer(p.id, p.name, p.avatar, p.mode, p.joinedAt, now, p.attached));
   }
-  for (const id of [...peers.keys()]) {
-    if (!vus.has(id)) peers.delete(id);
+  // Sortis du salon : on les marque, `updatePeers` les efface en fondu puis les
+  // oublie. Un `delete` ici les ferait disparaître d'une image à l'autre.
+  for (const peer of peers.values()) {
+    if (!vus.has(peer.id)) peer.gone = true;
   }
 }
 
@@ -229,6 +276,10 @@ export function rosterSnapshot(): {
   joinedAt: number;
 }[] {
   return [...peers.values()]
+    // Ceux qui s'effacent ne sont plus du salon : ils ne comptent plus dans la
+    // liste ni dans l'effectif, même si leur avatar met encore une demi-seconde
+    // à s'en aller.
+    .filter((p) => !p.gone)
     .map((p) => ({
       id: p.id,
       name: p.name,

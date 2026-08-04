@@ -328,6 +328,52 @@ function tintMaterial(mat: THREE.Material, app: Appearance, tintMap?: Record<str
 }
 
 /**
+ * Les matériaux qu'un corps possède EN PROPRE, et leur couleur d'origine.
+ *
+ * Sert à teindre un personnage entier sans toucher à ses voisins : les
+ * matériaux non marqués viennent du template et sont partagés par toute la
+ * rame - les modifier griserait tout le monde. Les quelques pièces laissées au
+ * template (yeux, cravate : le `tintMap` les déclare `none`) gardent donc leur
+ * couleur, ce qui ne se voit pas à l'échelle d'un avatar de deux mètres.
+ */
+export interface OwnedTint {
+  mat: THREE.MeshStandardMaterial;
+  base: THREE.Color;
+}
+
+export function collectOwnedTints(root: THREE.Object3D): OwnedTint[] {
+  const out: OwnedTint[] = [];
+  const vus = new Set<THREE.Material>();
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.material) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const m of mats) {
+      if (!m.userData?.paxOwned || vus.has(m)) continue;
+      const std = m as THREE.MeshStandardMaterial;
+      if (!std.color) continue;
+      vus.add(m);
+      out.push({ mat: std, base: std.color.clone() });
+    }
+  });
+  return out;
+}
+
+/** Teinte du gris vers lequel on efface quelqu'un dont on n'a plus de nouvelles. */
+const AWAY_GREY = new THREE.Color('#8d9298');
+
+/**
+ * Grise un corps, de zéro (couleurs d'origine) à un (gris uni).
+ *
+ * `THREE.Color.lerpColors` et non une multiplication : multiplier assombrit
+ * sans désaturer, et un personnage simplement plus sombre se lit comme un
+ * personnage dans l'ombre, pas comme un personnage absent.
+ */
+export function tintAway(tints: readonly OwnedTint[], w: number): void {
+  for (const t of tints) t.mat.color.lerpColors(t.base, AWAY_GREY, w);
+}
+
+/**
  * Ressource (matériau, géométrie, texture) appartenant à UN personnage et à
  * lui seul : elle sera libérée avec lui quand son slot changera d'identité.
  *

@@ -218,11 +218,25 @@ test('un pair inconnu ne se dessine pas', () => {
   assert.equal(peerWorldPose('fantome', LIRE_A), null);
 });
 
-test('un pair effacé ne se dessine plus', () => {
+test('un pair qui se tait reste là, mais grisé', () => {
+  // Un onglet laissé en arrière-plan cesse d'émettre - le navigateur suspend
+  // son requestAnimationFrame - alors que sa présence tient sur la socket. Le
+  // faire disparaître annonçait un départ qui n'avait pas eu lieu.
   voisin({ frame: 0, x: 1, z: 1 });
   assert.ok(peerWorldPose('toi', LIRE_A));
-  // Deux secondes de silence : périmé, puis fondu à zéro.
-  for (let i = 0; i < 5; i++) updatePeers(0.2, 5_000);
+  for (let i = 0; i < 10; i++) updatePeers(0.2, 5_000);
+  const p = peerWorldPose('toi', LIRE_A);
+  assert.ok(p, 'il a disparu au lieu de griser');
+  assert.equal(p.away, 1);
+  // Et il est figé sur sa dernière pose connue, pas parti à la dérive.
+  assert.ok(Math.abs(p.x - 1) < 1e-6, `x = ${p.x}`);
+});
+
+test('un pair qui QUITTE le salon, lui, s’efface bel et bien', () => {
+  voisin({ frame: 0, x: 1, z: 1 });
+  assert.ok(peerWorldPose('toi', LIRE_A));
+  syncRoster([], 'moi', 200);
+  for (let i = 0; i < 5; i++) updatePeers(0.2, 200);
   assert.equal(peerWorldPose('toi', LIRE_A), null);
 });
 

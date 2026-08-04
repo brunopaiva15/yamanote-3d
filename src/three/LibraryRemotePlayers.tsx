@@ -22,6 +22,7 @@ import { useGLTF, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { CONFIG } from '../data/config';
 import { productById } from '../data/products';
+import { SEAT_EYE_INSET, SEAT_TOP_Y } from '../systems/seats';
 import { makeAppearance, type Appearance } from '../systems/appearance';
 import { bubbleFor } from '../systems/net/chat';
 import { peers } from '../systems/net/peers';
@@ -31,15 +32,31 @@ import { MODELS_BASE, type CharacterManifest, type LogicalClip } from './charact
 import {
   buildTemplates,
   cloneVariant,
+  collectOwnedTints,
   disposeClone,
   pickTemplate,
+  tintAway,
   type CharacterClone,
   type CharacterTemplate,
+  type OwnedTint,
 } from './characters/library';
+import { applySitPose, makePoseState, type PoseState } from './characters/pose';
 import { attachProps, tintHandBottle, updatePropRig, type PropRig } from './characters/props';
 
 /** Fondu entre deux clips (s). Même valeur que la foule du quai. */
 const FADE = 0.22;
+
+/** Débattement maximal du cou, en lacet comme en tangage (rad). */
+const LOOK_MAX = 1.05;
+
+function clamp(v: number, lo: number, hi: number): number {
+  return v < lo ? lo : v > hi ? hi : v;
+}
+
+/** Écart d'angles par le chemin le plus court, dans (-π, π]. */
+function angleCourt(from: number, to: number): number {
+  return Math.atan2(Math.sin(to - from), Math.cos(to - from));
+}
 
 interface Slot {
   /** Support stable dans la scène : le clone y est greffé, et remplacé. */
@@ -51,6 +68,14 @@ interface Slot {
    * aucune raison d'être le seul à ne rien pouvoir tenir.
    */
   props: PropRig;
+  /** Poids lissés de l'assise manuelle : ce qui plie les jambes sans clip. */
+  pose: PoseState;
+  /** Matériaux propres à ce corps, pour pouvoir le griser sans griser la rame. */
+  tints: OwnedTint[];
+  /** Descente du bassin vers le coussin, lissée : une assise ne se pose pas d'un coup. */
+  seatFix: number;
+  /** Dernier gris appliqué : on ne repeint que quand il bouge. */
+  awayShown: number;
   /** Le pair que ce corps représente, et sa graine d'apparence. */
   id: string;
   seed: number;
@@ -64,6 +89,7 @@ function buildBody(templates: CharacterTemplate[], seed: number): {
   clone: CharacterClone;
   appearance: Appearance;
   props: PropRig;
+  tints: OwnedTint[];
 } {
   const appearance = makeAppearance(seed);
   const template = pickTemplate(templates, appearance, seed);
@@ -71,7 +97,7 @@ function buildBody(templates: CharacterTemplate[], seed: number): {
   // `bagProp === false` : ce modèle-là porte déjà son sac, on ne lui en met pas
   // un second. Même règle que `LibraryPassengers`.
   const props = attachProps(clone.wrap, appearance, template.variant.bagProp !== false);
-  return { clone, appearance, props };
+  return { clone, appearance, props, tints: collectOwnedTints(clone.wrap) };
 }
 
 export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest }) {
@@ -93,6 +119,10 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
           holder,
           clone: null as unknown as CharacterClone,
           props: null as unknown as PropRig,
+          pose: makePoseState(),
+          tints: [],
+          seatFix: 0,
+          awayShown: 0,
           id: '',
           seed: -1,
           appearance: makeAppearance(0),
@@ -116,6 +146,7 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
         disposeClone(s.clone);
         s.clone = null as unknown as CharacterClone;
         s.props = null as unknown as PropRig;
+        s.tints = [];
         s.id = '';
         s.seed = -1;
         s.currentKey = '';
@@ -126,12 +157,15 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
 
   // Les étiquettes ne changent qu'à l'arrivée de quelqu'un ou à une réplique :
   // React n'est réveillé que là, jamais à soixante hertz.
-  const [vues, setVues] = useState<{ id: string; name: string; text: string | null }[]>([]);
+  const [vues, setVues] = useState<{ id: string; name: string; text: string | null; away: boolean }[]>([]);
 
   useFrame((_, rawDt) => {
     const racine = wrap.current;
     if (!racine) return;
     const dt = Math.min(rawDt, 0.05);
+    // Coefficient de lissage des poses et des descentes d'assise : même
+    // constante de temps que les voyageurs de la rame.
+    const k = Math.min(1, dt * 8);
     const now = Date.now();
 
     // Ordre stable : sans lui, deux pairs échangeraient leurs corps à chaque
@@ -141,7 +175,7 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
       (a, b) => a.joinedAt - b.joinedAt || (a.id < b.id ? -1 : 1),
     );
 
-    const prochaines: { id: string; name: string; text: string | null }[] = [];
+    const prochaines: { id: string; name: string; text: string | null; away: boolean }[] = [];
 
     for (let i = 0; i < slots.length; i++) {
       const s = slots[i];
@@ -149,7 +183,7 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
 
       if (!pair) {
         s.holder.visible = false;
-        prochaines.push({ id: '', name: '', text: null });
+        prochaines.push({ id: '', name: '', text: null, away: false });
         continue;
       }
 
@@ -165,6 +199,10 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
         s.clone = body.clone;
         s.appearance = body.appearance;
         s.props = body.props;
+        s.tints = body.tints;
+        s.pose = makePoseState();
+        s.seatFix = 0;
+        s.awayShown = 0;
         s.id = pair.id;
         s.seed = pair.avatar;
         s.currentKey = '';
@@ -185,7 +223,7 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
       const pose = peerWorldPose(pair.id, now);
       if (!pose) {
         s.holder.visible = false;
-        prochaines.push({ id: '', name: '', text: null });
+        prochaines.push({ id: '', name: '', text: null, away: false });
         continue;
       }
       s.holder.visible = true;
@@ -209,10 +247,16 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
       const echelle = s.appearance.build.scale;
 
       // Le clip : assis, en marche, ou debout. Un pack qui n'aurait pas de
-      // clip assis retombe sur le debout plutôt que de ne rien jouer.
+      // clip assis retombe sur le debout - et c'est alors l'assise MANUELLE qui
+      // le plie en position, plus bas.
+      //
+      // Un absent ne marche pas : sa dernière pose disait peut-être qu'il
+      // marchait, mais elle a des secondes et il n'a pas avancé d'un pas depuis.
+      // Le laisser piétiner sur place était le plus sûr moyen de ne pas
+      // comprendre qu'il était absent.
       let key: LogicalClip | '' = '';
       if (pose.seated) key = actions.sitIdle ? 'sitIdle' : actions.standIdle ? 'standIdle' : '';
-      else if (pose.moving) key = actions.walk ? 'walk' : actions.standIdle ? 'standIdle' : '';
+      else if (pose.moving && pose.away < 0.5) key = actions.walk ? 'walk' : actions.standIdle ? 'standIdle' : '';
       else key = actions.standIdle ? 'standIdle' : '';
 
       if (key !== s.currentKey) {
@@ -232,7 +276,50 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
       // personnage animé.
       if (key === 'walk') mixer.timeScale = CONFIG.walkSpeed / walkClipSpeed;
       else mixer.timeScale = 1;
+      // Les os à rotations ADDITIVES repartent de leur pose de repos avant que
+      // le mixer ne passe : si le clip actif ne les anime pas, rien ne
+      // s'accumule d'une image à l'autre. Même précaution que LibraryPassengers.
+      if (s.clone.restHead && s.clone.bones.head) s.clone.bones.head.quaternion.copy(s.clone.restHead);
+      if (s.clone.restSpine && s.clone.bones.spine) s.clone.bones.spine.quaternion.copy(s.clone.restSpine);
       mixer.update(dt);
+
+      // --- Le cap du CORPS, qui n'est pas celui du regard -------------------
+      //
+      // Debout, les deux se confondent : on marche là où l'on regarde. Assis,
+      // non - on tourne la tête vers la vitre sans pivoter sur la banquette.
+      // Faire porter le regard au corps aurait mis l'assise en travers du
+      // coussin, jambes dans le hublot.
+      //
+      // Le cap d'un assis se déduit de sa place : les banquettes bordent
+      // l'allée, on y est tourné vers elle. C'est très exactement la convention
+      // des PNJ (systems/passengers : `-side * π/2`), et on la lit sur le signe
+      // de x plutôt que sur un numéro de siège qui n'est pas transmis.
+      const banquette: 1 | -1 = pose.x >= 0 ? 1 : -1;
+      const capCorps = pose.seated ? -banquette * (Math.PI / 2) : pose.yaw;
+      // Ce qui reste va dans la tête, borné : personne ne se dévisse le cou.
+      if (s.clone.bones.head) {
+        s.clone.bones.head.rotation.y += clamp(angleCourt(capCorps, pose.yaw), -LOOK_MAX, LOOK_MAX);
+        s.clone.bones.head.rotation.x += clamp(-pose.pitch, -LOOK_MAX, LOOK_MAX);
+      }
+
+      // --- L'assise ---------------------------------------------------------
+      //
+      // Le pack versionné n'a qu'un `Idle_Neutral` : aucun clip assis, aucun
+      // clip de marche. Un camarade « assis » restait donc DEBOUT, planté dans
+      // la banquette - « on voit que les autres connectés sont juste debout sur
+      // les sièges ». Les PNJ de la rame, eux, passent depuis toujours par
+      // l'assise manuelle ; il n'y avait qu'à les y rejoindre.
+      const manualSit = pose.seated && !actions.sitIdle;
+      applySitPose(s.clone, s.pose, k, manualSit, capCorps, echelle);
+
+      // Et le corps descend d'autant que ses hanches doivent se poser sur le
+      // coussin : l'assise manuelle plie les jambes mais laisse le bassin à sa
+      // hauteur DEBOUT, faute de clip pour l'abaisser.
+      const template = s.clone.template;
+      const cibleFix = pose.seated
+        ? SEAT_TOP_Y + 0.01 - (manualSit ? template.standHipY : (template.sitHipY ?? template.standHipY)) * echelle
+        : 0;
+      s.seatFix += (cibleFix - s.seatFix) * k;
 
       // Ce qu'il a acheté au distributeur, dans sa main.
       //
@@ -257,20 +344,33 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
       // Des pieds, à partir d'un œil : c'est la seule conversion que le rendu
       // fait sur une pose reçue.
       const oeil = pose.seated ? CONFIG.sitHeight : CONFIG.eyeHeight;
+      // Et, assis, le bassin recule sous le dossier : la pose transmise est
+      // celle de l'ŒIL, qui se tient en avant du dossier (voir SEAT_EYE_INSET).
+      // Sans ce retour en arrière, le camarade est perché sur le nez du coussin.
+      const assiseX = pose.seated ? pose.x + banquette * SEAT_EYE_INSET : pose.x;
       body.position.set(0, 0, 0);
-      s.holder.position.set(pose.x, pose.y - oeil, pose.z);
-      s.holder.rotation.y = pose.yaw;
+      s.holder.position.set(assiseX, pose.y - oeil + s.seatFix, pose.z);
+      s.holder.rotation.y = capCorps;
       s.holder.scale.setScalar(echelle * (pose.fade < 1 ? Math.max(0.001, pose.fade) : 1));
+
+      // Plus de nouvelles : on le grise sur place plutôt que de l'effacer. Un
+      // onglet en arrière-plan n'émet plus - le navigateur suspend son
+      // `requestAnimationFrame` - alors que la personne est toujours dans le
+      // salon. La faire disparaître annonçait un départ qui n'avait pas eu lieu.
+      if (pose.away !== s.awayShown) {
+        s.awayShown = pose.away;
+        tintAway(s.tints, pose.away);
+      }
       // Fondu presque éteint : le corps a disparu, l'étiquette suit. Même
       // raison que ci-dessus, et c'est le cas le plus courant des deux - c'est
       // par là que passe tout départ.
       if (pose.fade <= 0.02) {
         s.holder.visible = false;
-        prochaines.push({ id: '', name: '', text: null });
+        prochaines.push({ id: '', name: '', text: null, away: false });
         continue;
       }
 
-      prochaines.push({ id: pair.id, name: pair.name, text: bubbleFor(pair.id, now) });
+      prochaines.push({ id: pair.id, name: pair.name, text: bubbleFor(pair.id, now), away: pose.away > 0.5 });
     }
 
     setVues((avant) => {
@@ -279,7 +379,8 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
         if (
           avant[i].id !== prochaines[i].id ||
           avant[i].name !== prochaines[i].name ||
-          avant[i].text !== prochaines[i].text
+          avant[i].text !== prochaines[i].text ||
+          avant[i].away !== prochaines[i].away
         ) {
           return prochaines;
         }
@@ -299,7 +400,7 @@ export function LibraryRemotePlayers({ manifest }: { manifest: CharacterManifest
               zIndexRange={[14, 10]}
               style={{ pointerEvents: 'none' }}
             >
-              <div className="peer-tag">
+              <div className={vues[i].away ? 'peer-tag peer-away' : 'peer-tag'}>
                 <span className="peer-name">{vues[i].name || '—'}</span>
                 {vues[i].text && <span className="peer-said">{vues[i].text}</span>}
               </div>
