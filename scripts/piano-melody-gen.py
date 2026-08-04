@@ -84,7 +84,18 @@ WAV_BITS = 24
 BPM = 110.0
 BEAT = 60.0 / BPM      # 0,545454... s
 SCORE_BEATS = 16       # 4/4, quatre mesures -> 8,727 s de musique
-TAIL_S = 1.72          # résonance libre après la dernière mesure
+
+# Le jeu joue la mélodie DEUX FOIS avant que les portes se ferment, et cette
+# fenêtre fixe la durée de l'arrêt (data/melodies, `melodyRoundsDuration`) : à
+# 10,5 s le clip imposait 21,7 s de dwell. Le clip est donc coupé sous huit
+# secondes - deux passages plus la respiration tiennent alors en 16,7 s.
+#
+# La coupe ne touche AUCUNE note. La dernière attaque tombe au temps 12
+# (6,545 s) et la dernière touche est relâchée au temps 13 (7,091 s) : ce qui
+# est raccourci, ce sont les trois temps de silence ÉCRIT de la mesure 4 et la
+# résonance libre qui les remplit. Il en reste près de neuf dixièmes de seconde,
+# et l'extinction commence à -30 dB sous la crête : on ne l'entend pas couper.
+CLIP_S = 7.96          # master ; le MP3 rend ~7,99 s (bourrage de trame)
 FADE_OUT_S = 0.55      # extinction douce, sous -30 dB : ne coupe pas la queue
 
 # Crête visée sur le master (-0,72 dBFS). Un peu plus haut que la bibliothèque
@@ -407,7 +418,7 @@ def build_midi(voicing: dict) -> bytes:
     # l'accord final était tronquée net et le clip finissait sur du silence
     # numérique. Une reprise de pédale inaudible, posée après la fin voulue,
     # tient le rendu ouvert jusqu'au bout.
-    events.append((_ticks(SCORE_BEATS + TAIL_S / BEAT + 0.25), 4, bytes([0xB0, 64, 127])))
+    events.append((_ticks(CLIP_S / BEAT + 1.0), 4, bytes([0xB0, 64, 127])))
 
     # À tick égal : contrôleurs, puis note-off, puis note-on, puis la pédale -
     # une note répétée doit s'éteindre avant d'être refrappée, et la pédale se
@@ -442,7 +453,7 @@ def build_sparkle_midi(voicing: dict) -> bytes:
     for beat in PEDAL:
         events.append((max(0, _ticks(beat) - lift), 0, bytes([0xB0, 64, 0])))
         events.append((_ticks(beat) + press, 3, bytes([0xB0, 64, 127])))
-    events.append((_ticks(SCORE_BEATS + TAIL_S / BEAT + 0.25), 4, bytes([0xB0, 64, 127])))
+    events.append((_ticks(CLIP_S / BEAT + 1.0), 4, bytes([0xB0, 64, 127])))
 
     events.sort(key=lambda e: (e[0], e[1]))
     return _smf(events)
@@ -529,9 +540,9 @@ def play(midi: bytes, soundfont: Path, keep_midi: Path | None) -> np.ndarray:
     if buf.shape[1] == 1:
         buf = np.repeat(buf, 2, axis=1)
 
-    # Longueur exacte : la musique, puis la résonance libre. fluidsynth s'arrête
-    # quand la dernière voix s'est tue, ce qui ne tombe pas au bon endroit.
-    want = int((SCORE_BEATS * BEAT + TAIL_S) * SR)
+    # Longueur exacte du clip (voir CLIP_S). fluidsynth s'arrête quand la
+    # dernière voix s'est tue, ce qui ne tombe pas au bon endroit.
+    want = int(CLIP_S * SR)
     if buf.shape[0] < want:
         buf = np.vstack([buf, np.zeros((want - buf.shape[0], 2))])
     return buf[:want]
@@ -714,8 +725,8 @@ def main() -> None:
 
     soundfont = find_soundfont(args.soundfont)
     names = [args.only] if args.only else list(VOICINGS)
-    print(f"発車メロディ piano - ♩={BPM:.0f}, 4/4, {SCORE_BEATS} temps "
-          f"({SCORE_BEATS * BEAT:.3f} s) + {TAIL_S:.2f} s de résonance")
+    print(f"発車メロディ piano - ♩={BPM:.0f}, 4/4, {SCORE_BEATS} temps écrits ; "
+          f"clip coupé à {CLIP_S:.2f} s (dernière touche relâchée à {13 * BEAT:.2f} s)")
     print(f"  échantillons : {soundfont}")
     for name in names:
         voicing = VOICINGS[name]
