@@ -3,6 +3,26 @@
 // voyageurs) mais alterne viaducs urbains, larges corridors ferroviaires,
 // tranchées ouvertes et sections au niveau du sol.
 //
+// LE 山手貨物線 LONGE TOUT L'ARC OUEST. De Komagome à Shinagawa via Shinjuku, la
+// Yamanote roule en quadruple voie : à côté d'elle courent les deux voies du
+// 山手貨物線, où passent le 埼京線 et le 湘南新宿ライン - « la plupart des trains
+// de la journée », dit JR East - plus le 成田エクスプレス, les 踊り子 et les
+// directs Tōbu. Le jeu ne montrait de circulation parallèle qu'à quatre
+// tronçons, tous à l'est ou au sud : entre Ikebukuro et Ōsaki, rien ne doublait
+// jamais la rame, sur la moitié de la boucle où c'est le plus fréquent.
+//
+// Deux réserves, et elles sont dans la source :
+//   • Tabata ↔ Komagome fait exception - 「駒込駅 - 田端駅間は電車線と貨物線とで
+//     経路が異なる」 : le 貨物線 y file par le tunnel de Nakazato, ailleurs, et
+//     rien ne longe la voie ;
+//   • `passing` est une consigne de RENDU, pas un fait : elle ne s'affiche que
+//     là où il y a du ciel à côté de la voie (corridor ou plein sol). Les
+//     tronçons en tranchée et sur viaduc de l'arc ouest - Ikebukuro↔Mejiro,
+//     Shibuya↔Ebisu↔Meguro↔Gotanda↔Ōsaki - sont bien longés eux aussi, mais
+//     leurs murs et leurs joues de tablier occupent la place où la rame
+//     croisée devrait passer. On ne les marque donc pas : une consigne qui ne
+//     s'affiche pas est pire qu'une absence, elle se lit comme un fait acquis.
+//
 // Segment i = trajet STATIONS[i] ↔ STATIONS[(i+1)%30]. Il est NOMMÉ dans le
 // sens 内回り (ordre JY croissant), mais il n'appartient à aucun des deux sens :
 // c'est le même viaduc, la même tranchée, le même dépôt - parcourus à l'endroit
@@ -51,14 +71,14 @@ export const SEGMENTS: Segment[] = [
   /* 08 Tabata→Komagome         */ { kind: 'ground', greenery: true },
   /* 09 Komagome→Sugamo         */ { kind: 'trench', bridges: 2, wallHeight: 7 },
   /* 10 Sugamo→Otsuka           */ { kind: 'trench', bridges: 1, opensAtEnd: true },
-  /* 11 Otsuka→Ikebukuro        */ { kind: 'ground' },
+  /* 11 Otsuka→Ikebukuro        */ { kind: 'ground', passing: 'commuter' },
   /* 12 Ikebukuro→Mejiro        */ { kind: 'trench', bridges: 1, wallHeight: 4 },
-  /* 13 Mejiro→Takadanobaba     */ { kind: 'ground', greenery: true },
-  /* 14 Takadanobaba→Shin-Okubo */ { kind: 'ground' },
+  /* 13 Mejiro→Takadanobaba     */ { kind: 'ground', greenery: true, passing: 'commuter' },
+  /* 14 Takadanobaba→Shin-Okubo */ { kind: 'ground', passing: 'commuter' },
   /* 15 Shin-Okubo→Shinjuku     */ { kind: 'corridor', tracks: 3, passing: 'commuter' },
-  /* 16 Shinjuku→Yoyogi         */ { kind: 'corridor', covered: true },
-  /* 17 Yoyogi→Harajuku         */ { kind: 'ground', greenery: true },
-  /* 18 Harajuku→Shibuya        */ { kind: 'ground', greenery: true },
+  /* 16 Shinjuku→Yoyogi         */ { kind: 'corridor', covered: true, passing: 'commuter' },
+  /* 17 Yoyogi→Harajuku         */ { kind: 'ground', greenery: true, passing: 'commuter' },
+  /* 18 Harajuku→Shibuya        */ { kind: 'ground', greenery: true, passing: 'commuter' },
   /* 19 Shibuya→Ebisu           */ { kind: 'viaduct' },
   /* 20 Ebisu→Meguro            */ { kind: 'trench', bridges: 1 },
   /* 21 Meguro→Gotanda          */ { kind: 'trench', bridges: 1, opensAtEnd: true },

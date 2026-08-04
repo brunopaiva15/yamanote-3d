@@ -115,6 +115,31 @@ test('segmentForHop enchaîne les tronçons dans l’ordre de marche', () => {
   }
 });
 
+test('un croisement n’est marqué que là où il peut s’afficher', () => {
+  // `passing` est une consigne de rendu : three/SegmentEnvironment place la
+  // rame croisée à 6 m de l'axe, ce qui tient en corridor et en plein sol
+  // (clôture à 6,2 m) mais pas en tranchée (murs à 6,6 m) ni sur viaduc (joues
+  // à 5,1 m). Un croisement marqué ailleurs ne s'afficherait jamais, et la
+  // table se lirait comme un fait acquis.
+  const misplaced = SEGMENTS.map((s, i) => ({ s, i })).filter(
+    ({ s }) => s.passing && s.kind !== 'corridor' && s.kind !== 'ground',
+  );
+  assert.deepEqual(misplaced.map(({ i }) => i), []);
+});
+
+test('le 山手貨物線 double la rame partout où on peut le voir', () => {
+  // Il longe la Yamanote de Komagome à Shinagawa via Shinjuku. Tabata ↔
+  // Komagome fait exception : le 貨物線 y passe par le tunnel de Nakazato, donc
+  // par un autre chemin. Partout ailleurs sur cet arc, un tronçon à ciel ouvert
+  // doit montrer une circulation parallèle.
+  const bare: number[] = [];
+  for (let i = 9; i <= 23; i++) {
+    const s = SEGMENTS[i];
+    if ((s.kind === 'corridor' || s.kind === 'ground') && !s.passing) bare.push(i);
+  }
+  assert.deepEqual(bare, []);
+});
+
 test('le barème kilométrique est celui de la ligne', () => {
   // 34,5 km pour trente tronçons, soit 1,15 km de moyenne entre deux gares :
   // les deux chiffres que publie JR East. Si l'un des trente bouge, la somme le
