@@ -1,39 +1,39 @@
 #!/usr/bin/env python3
-"""Grave la 発車メロディ PIANO des deux branchements principaux (Inner / Outer).
+"""Grave la 発車メロディ des deux branchements principaux (Inner / Outer).
 
-Pourquoi un second générateur à côté de scripts/melodies-gen.py : celui-là
-synthétise des cloches additives (partiels fixes, écho ping-pong, une seule
-voix). Un piano acoustique demande autre chose - cordes à l'unisson,
-inharmonicité, étouffoirs, pédale, résonance sympathique, deux mains
-d'équilibre différent - et ces notions n'ont pas de sens pour les autres
-timbres de la bibliothèque. Les deux scripts restent donc séparés ; seul le
-format de sortie est commun (MP3 stéréo 44,1 kHz, 160 kb/s) pour que les vingt
-clips sonnent au même niveau sur le quai.
+Pourquoi un second générateur à côté de scripts/melodies-gen.py : celui-là ne
+sait faire qu'une voix à la fois. Ces deux clips en superposent trois - une
+cloche de verre qui chante la ligne, un piano qui la soutient, un voile à
+l'octave - avec étouffoirs, pédale et résonance sympathique. Les deux scripts
+restent donc séparés ; seul le format de sortie est commun (MP3 stéréo
+44,1 kHz, 160 kb/s) pour que les vingt clips sonnent au même niveau sur le quai.
 
 UNE partition, DEUX interprétations. `SCORE_RIGHT`, `SCORE_LEFT` et `PEDAL`
 sont uniques et partagés : hauteurs, octaves, durées, silences et positions
 rythmiques sont donc identiques par construction dans les deux fichiers. Ce qui
 change d'une version à l'autre vit dans `VOICINGS` : vélocités, équilibre des
-mains, attaque, brillance, largeur stéréo, pédale et réverbération.
+voix, attaque, brillance, largeur stéréo, pédale, écho et réverbération.
 
-  Inner Loop  - un peu plus lumineuse, main droite plus présente, attaque
-                claire et petite brillance cristalline.
+  Inner Loop  - un peu plus lumineuse, ligne plus présente, attaque claire.
   Outer Loop  - un peu plus douce et aérienne, main gauche plus ronde, son
                 moins frontal, résonance plus ample.
 
-Trois choses portent le caractère « féérique » attendu d'une 発車メロディ, et
-aucune n'ajoute une seule note à la partition :
+Trois couches, aucune note ajoutée - `score_bell` et `score_double` sont
+calculés depuis `SCORE_RIGHT`, la seconde transposée de douze demi-tons pile :
 
-  - les cordes à l'unisson (`unison`), deux ou trois par touche, désaccordées
-    d'un cheveu. C'est ce qui remplace l'ancienne modulation d'amplitude et ce
-    qui faisait sonner la version précédente comme un piano de synthèse ;
-  - la résonance sympathique (`sympathetic_ir`) : pédale baissée, les cordes
-    libres reprennent en sourdine ce qui tombe sur leurs fréquences. C'est le
-    halo d'un vrai piano, et ce que nulle réverbération ne sait imiter ;
-  - une doublure cristalline (`score_double`) : la main droite reprise à
-    l'octave par une voix de type célesta, vingt décibels dessous. Mêmes notes,
-    mêmes temps, calculées depuis `SCORE_RIGHT` - c'est le scintillement, pas
-    un second instrument.
+  - la CLOCHE (`render_bell`) porte la main droite aux hauteurs écrites. Mêmes
+    rapports de partiels que `synthbell` dans melodies-gen.py : c'est ce qui met
+    ces deux clips dans la famille sonore des dix-sept autres, et c'est sa
+    longue extinction qui lie la mélodie d'une note à l'autre. Un piano seul,
+    aussi juste soit sa physique, ne chantait pas ;
+  - le PIANO (`render_note`) reste dessous : l'attaque, la main gauche, le
+    corps. Cordes à l'unisson réellement dédoublées, résonance sympathique des
+    cordes libres sous la pédale (`sympathetic_ir`), passage par la table
+    d'harmonie (`soundboard_ir`) ;
+  - un VOILE à l'octave supérieure, bien en retrait, pour le scintillement.
+
+S'y ajoute l'écho croisé de la bibliothèque (`ping_pong`), calé sur la croche :
+il retombe sur la subdivision suivante, donc il épaissit sans brouiller.
 
 Sorties :
   assets/melodies/<nom>.wav          master WAV stéréo 48 kHz / 24 bits
@@ -243,15 +243,19 @@ VOICINGS = {
     "inner": dict(
         stem="01_jre-ikst-010-01_inner-main",
         title="Hikari no Wa (光の環) - Inner Loop",
-        right_gain=0.86,     # main droite nettement en avant
-        left_gain=0.57,
+        right_gain=0.60,     # le piano soutient, il ne mène plus
+        left_gain=0.52,
+        bell_gain=0.80,      # la cloche porte la ligne, aux hauteurs écrites
+        bell_ring=0.95,      # extinction : c'est elle qui fait chanter la phrase
+        echo_mix=0.11,       # écho à la croche, comme le reste de la bibliothèque
+        soundboard_mix=0.55,
         peak=0.97,           # référence de niveau de la paire
         brightness=1.00,     # pente des partiels : plus haut = plus cristallin
         attack_ms=2.0,       # attaque claire
         hammer=0.045,        # bruit de marteau : la brillance de l'attaque
         width=0.48,          # panoramique par registre, assez tenu
-        double_gain=0.125,   # -18 dB sous la main droite : un scintillement
-        double_width=0.66,   # la doublure s'ouvre un peu plus que le piano
+        double_gain=0.26,    # voile à l'octave, bien sous la ligne
+        double_width=0.66,
         sympathetic_mix=0.28,
         sympathetic_decay=1.30,
         reverb_mix=0.10,
@@ -267,18 +271,22 @@ VOICINGS = {
     "outer": dict(
         stem="02_jre-ikst-010-02_outer-main",
         title="Kaze no Wa (風の環) - Outer Loop",
-        right_gain=0.79,     # écart des mains resserré : la gauche porte plus
-        left_gain=0.62,
-        peak=1.00,           # crête plus haute, mais timbre plus doux : au bout du
+        right_gain=0.55,     # écart des mains resserré : la gauche porte plus
+        left_gain=0.56,
+        bell_gain=0.74,
+        bell_ring=1.05,      # la version contemplative laisse sonner un peu plus
+        echo_mix=0.12,
+        soundboard_mix=0.50,
+        peak=0.94,           # crête plus haute, mais timbre plus doux : au bout du
                              # compte la version Outer reste ~0,9 dB sous l'Inner
         brightness=0.90,     # moins frontal
         attack_ms=4.2,       # toucher plus souple
         hammer=0.028,
         width=0.60,          # un peu plus d'air
-        double_gain=0.105,   # doublure plus lointaine que sur la version Inner
+        double_gain=0.23,    # voile plus lointain que sur la version Inner
         double_width=0.78,
         sympathetic_mix=0.34,  # halo plus large : c'est la version contemplative
-        sympathetic_decay=1.70,
+        sympathetic_decay=1.35,
         reverb_mix=0.155,
         reverb_decay=0.95,   # résonance plus ample
         reverb_damp_hz=3200.0,
@@ -461,19 +469,24 @@ def render_note(
 
 
 # ---------------------------------------------------------------------------
-# Doublure cristalline
+# La voix qui chante : cloche de verre
 # ---------------------------------------------------------------------------
 #
-# La main droite est doublée à l'octave supérieure par une voix de type célesta.
-# AUCUNE note n'est ajoutée : `SCORE_DOUBLE` est calculé depuis `SCORE_RIGHT`,
-# mêmes temps, mêmes durées, +12 demi-tons exactement. La doublure vit vingt
-# décibels sous la main droite - on ne l'entend pas comme un second instrument,
-# elle donne du scintillement à l'attaque du piano, comme la lumière sur les
-# barres d'un célesta. C'est ce qui rend à la mélodie le grain un peu féérique
-# des autres 発車メロディ du jeu.
+# Le piano seul ne chantait pas. Une 発車メロディ tient à la voix qui porte la
+# ligne, et dans tout le reste de la bibliothèque c'est une cloche de verre :
+# quatre partiels inharmoniques, une longue extinction, et la mélodie qui se lie
+# d'elle-même d'une note à l'autre. Ce sont EXACTEMENT les rapports de partiels
+# de `synthbell` dans scripts/melodies-gen.py - c'est ce qui met ces deux clips
+# dans la même famille sonore que les dix-sept autres.
+#
+# La cloche prend la main droite, aux hauteurs ÉCRITES. Le piano reste dessous :
+# il donne l'attaque, la main gauche et le corps. Un second voile de cloche
+# double la main droite à l'octave supérieure, nettement plus bas - `score_bell`
+# et `score_double` sont tous deux calculés depuis `SCORE_RIGHT`, mêmes temps,
+# mêmes durées : aucune note n'est ajoutée, aucune n'est transposée.
 
+BELL_PARTIALS = ((1.0, 1.0), (2.756, 0.40), (5.404, 0.20), (8.933, 0.07))
 DOUBLE_OCTAVE = 12
-DOUBLE_PARTIALS = ((1.0, 1.0), (4.02, 0.40), (8.20, 0.15), (13.4, 0.045))
 
 
 def score_double() -> list[tuple[float, float, int]]:
@@ -481,28 +494,83 @@ def score_double() -> list[tuple[float, float, int]]:
     return [(beat, dur, midi_of(name) + DOUBLE_OCTAVE) for beat, dur, name in SCORE_RIGHT]
 
 
-def render_double(midi: int, vel: float, seed: int, max_s: float) -> np.ndarray:
-    """Une barre de célesta : peu de partiels, très inharmoniques, chute nette."""
+def render_bell(
+    midi: int, dur_s: float, vel: float, ring: float, seed: int, max_s: float
+) -> np.ndarray:
+    """Cloche de verre : attaque nette, extinction longue, la ligne se lie seule.
+
+    `ring` fixe la longueur du chant. C'est le réglage qui décide si la mélodie
+    est « chantante » ou hachée : trop court, les doubles croches redeviennent
+    une machine à écrire ; trop long, elles se brouillent.
+    """
     f0 = 440.0 * 2.0 ** ((midi - 69) / 12.0)
-    tau = float(np.clip(1.35 * (523.25 / f0) ** 0.30, 0.55, 1.60))
-    n = int(min(dur := tau * 5.0, max_s) * SR)
+    # Les notes écrites longues sonnent plus longtemps que les doubles croches,
+    # comme sous les doigts : la durée écrite étire la traîne sans la couper.
+    tau = max(ring, min(dur_s * 1.6, ring * 2.2)) * float(np.clip((523.25 / f0) ** 0.22, 0.7, 1.4))
+    n = int(min(tau * 4.5, max_s) * SR)
     if n <= 0:
         return np.zeros(0)
-    del dur
     t = np.arange(n) / SR
     rng = np.random.default_rng(seed)
 
     y = np.zeros(n)
-    for i, (mult, amp) in enumerate(DOUBLE_PARTIALS):
+    for i, (mult, amp) in enumerate(BELL_PARTIALS):
         f = f0 * mult
         if f > 0.44 * SR:
             break
-        y += amp * np.exp(-t / (tau / (1.0 + 0.9 * i))) * np.sin(
+        # Chaque partiel s'éteint à son rythme, le plus aigu le premier : c'est
+        # ce qui fait qu'une cloche s'adoucit en mourant au lieu de tinter.
+        y += amp * np.exp(-t / (tau / (1.0 + 0.75 * i))) * np.sin(
             2.0 * np.pi * f * t + rng.uniform(0.0, 6.28)
         )
-    atk = max(2, int(0.0025 * SR))
+    atk = max(2, int(0.004 * SR))
     y[:atk] *= 0.5 - 0.5 * np.cos(np.linspace(0.0, np.pi, atk))
-    return y * vel / sum(a for _, a in DOUBLE_PARTIALS)
+    tail = max(1, int(0.02 * SR))
+    y[-tail:] *= np.linspace(1.0, 0.0, tail)
+    return y * vel / sum(a for _, a in BELL_PARTIALS)
+
+
+# ---------------------------------------------------------------------------
+# Table d'harmonie
+# ---------------------------------------------------------------------------
+
+
+def soundboard_ir(seed: int) -> np.ndarray:
+    """Le bois autour des cordes : deux cent cinquante millisecondes de modes.
+
+    Une corde ne s'entend jamais nue - on entend ce que la table d'harmonie et
+    la caisse en rayonnent, et elles y mettent des centaines de modes serrés qui
+    étalent l'attaque et lui donnent son grain. C'est ce qui manquait le plus au
+    piano : sans ce passage par un objet en bois, une somme de sinus reste une
+    somme de sinus, si juste soit sa physique de corde.
+
+    La réponse est ensuite APLATIE en moyenne par bandes : on garde la texture
+    et l'étalement, on jette la couleur - sinon la table imposerait sa propre
+    égalisation à tout le morceau.
+    """
+    n = int(0.25 * SR)
+    t = np.arange(n) / SR
+    rng = np.random.default_rng(seed)
+
+    ir = rng.standard_normal((n, 2)) * np.exp(-t / 0.035)[:, None]
+    for _ in range(90):
+        f = float(np.exp(rng.uniform(np.log(70.0), np.log(6500.0))))
+        ring = float(rng.uniform(0.03, 0.19))
+        pan = rng.uniform(-0.6, 0.6)
+        theta = (pan + 1.0) * np.pi / 4.0
+        wave = rng.uniform(0.4, 1.0) * np.exp(-t / ring) * np.sin(
+            2.0 * np.pi * f * t + rng.uniform(0.0, 6.28)
+        )
+        ir[:, 0] += wave * np.cos(theta)
+        ir[:, 1] += wave * np.sin(theta)
+    ir *= (1.0 - np.exp(-t / 0.0008))[:, None]
+
+    spec = np.fft.rfft(ir, axis=0)
+    mag = np.abs(spec).mean(axis=1)
+    smooth = np.convolve(mag, np.ones(1200) / 1200, mode="same") + 1e-9
+    spec /= (smooth / smooth.mean())[:, None] ** 0.85   # aplatit la couleur, garde le grain
+    ir = np.fft.irfft(spec, n=n, axis=0)
+    return ir / (np.sqrt((ir**2).sum(axis=0)).max() or 1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -534,12 +602,14 @@ def sympathetic_ir(decay_s: float, seed: int) -> np.ndarray:
         tau, stiff, count = string_params(f0)
         pan = float(np.clip((midi - 60) / 30.0, -1.0, 1.0)) * 0.5
         theta = (pan + 1.0) * np.pi / 4.0
-        for k in range(1, min(7, count) + 1):
+        # Quatre partiels, pondérés doux : le halo doit faire un LIT harmonique
+        # sous la mélodie, pas un second carillon au-dessus d'elle.
+        for k in range(1, min(4, count) + 1):
             f = f0 * k * np.sqrt(1.0 + stiff * k * k)
             if f > 0.42 * SR:
                 break
-            ring = min(decay_s / 3.2, tau / (1.0 + 0.35 * (k - 1)))
-            wave = (np.exp(-t / ring) / k**1.5) * np.sin(
+            ring = min(decay_s / 2.6, tau / (1.0 + 0.35 * (k - 1)))
+            wave = (np.exp(-t / ring) / k**2.1) * np.sin(
                 2.0 * np.pi * f * t + rng.uniform(0.0, 6.28)
             )
             ir[:, 0] += wave * np.cos(theta)
@@ -588,6 +658,29 @@ def reverb_ir(decay_s: float, damp_hz: float, seed: int) -> np.ndarray:
     pre = int(0.010 * SR)
     ir = np.vstack([np.zeros((pre, 2)), ir])
     return ir / (np.sqrt((ir**2).sum(axis=0)).max() or 1.0)
+
+
+def ping_pong(buf: np.ndarray, time_s: float, mix: float, fb: float = 0.24) -> np.ndarray:
+    """Écho croisé, calé sur la croche - le même que le reste de la bibliothèque.
+
+    Calé sur la CROCHE (0,545 s / 2 à ♩=110), il retombe exactement sur la
+    subdivision suivante : il épaissit la ligne au lieu de la brouiller, et
+    aucune répétition ne s'entend comme une répétition. C'est ce petit halo
+    rythmique qui donne aux 発車メロディ du jeu leur air de comptine.
+    """
+    if mix <= 0:
+        return buf
+    out = buf.copy()
+    d = int(time_s * SR)
+    echo, gain = buf, mix
+    for k in range(4):
+        echo = echo[:, ::-1]
+        shifted = np.zeros_like(buf)
+        if d * (k + 1) < buf.shape[0]:
+            shifted[d * (k + 1):] = echo[: buf.shape[0] - d * (k + 1)]
+        out += gain * shifted
+        gain *= fb
+    return out
 
 
 def convolve(x: np.ndarray, h: np.ndarray) -> np.ndarray:
@@ -690,6 +783,7 @@ def left_velocity(beat: float, name: str, index: int) -> float:
 def render(voicing: dict) -> np.ndarray:
     total_s = SCORE_BEATS * BEAT + TAIL_S
     buf = np.zeros((int(total_s * SR), 2))
+    bells = np.zeros_like(buf)
     rng = np.random.default_rng(voicing["seed"])
 
     parts = (
@@ -728,19 +822,34 @@ def render(voicing: dict) -> np.ndarray:
             buf, sympathetic_ir(voicing["sympathetic_decay"], voicing["seed"] + 31)
         )
 
-    # Doublure cristalline de la main droite, à l'octave (voir score_double).
-    for index, (beat, dur_b, midi) in enumerate(score_double()):
-        name = SCORE_RIGHT[index][2]
-        human = 1.0 + rng.uniform(-0.02, 0.02)
-        vel = float(np.clip(
-            voicing["right_gain"] * voicing["double_gain"]
-            * right_velocity(beat, name, index) * human, 0.005, 1.0))
-        mono = render_double(
-            midi, vel, seed=int(voicing["seed"] + 613 * index + 4441),
-            max_s=total_s - beat * BEAT,
-        )
-        pan = float(np.clip((midi - 60) / 30.0, -1.0, 1.0)) * voicing["double_width"]
-        place(buf, mono, beat * BEAT, pan)
+    # Table d'harmonie : le piano passe par le bois, la cloche non - elle n'en a
+    # pas. C'est ce qui les distingue à l'oreille tout en les faisant tenir
+    # ensemble.
+    board = voicing["soundboard_mix"]
+    if board > 0:
+        buf = (1.0 - board) * buf + board * convolve(buf, soundboard_ir(voicing["seed"] + 77))
+
+    # La cloche prend la ligne, aux hauteurs écrites, puis un voile à l'octave.
+    for label, score, gain, ring, width in (
+        ("lead", [(b, d, midi_of(nm)) for b, d, nm in SCORE_RIGHT],
+         voicing["bell_gain"], voicing["bell_ring"], voicing["width"]),
+        ("halo", score_double(), voicing["double_gain"],
+         voicing["bell_ring"] * 0.72, voicing["double_width"]),
+    ):
+        for index, (beat, dur_b, midi) in enumerate(score):
+            name = SCORE_RIGHT[index][2]
+            human = 1.0 + rng.uniform(-0.02, 0.02)
+            vel = float(np.clip(gain * right_velocity(beat, name, index) * human, 0.005, 1.0))
+            mono = render_bell(
+                midi, dur_b * BEAT, vel, ring,
+                seed=int(voicing["seed"] + 613 * index + (4441 if label == "halo" else 907)),
+                max_s=total_s - beat * BEAT,
+            )
+            pan = float(np.clip((midi - 60) / 30.0, -1.0, 1.0)) * width
+            place(bells, mono, beat * BEAT, pan)
+
+    buf += bells
+    buf = ping_pong(buf, BEAT / 2.0, voicing["echo_mix"])
 
     wet = convolve(buf, reverb_ir(voicing["reverb_decay"], voicing["reverb_damp_hz"], voicing["seed"]))
     mix = voicing["reverb_mix"]

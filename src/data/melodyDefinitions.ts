@@ -17,9 +17,10 @@ const NAMES = [
 ] as const;
 
 /**
- * Les deux branchements principaux ne sont plus des cloches de synthèse : ils
- * ont été regravés au piano acoustique brillant par scripts/piano-melody-gen.py,
- * deux interprétations d'une SEULE partition (mêmes hauteurs, mêmes durées,
+ * Les deux branchements principaux ont été regravés par
+ * scripts/piano-melody-gen.py : une cloche de verre qui chante la ligne, un
+ * piano acoustique brillant dessous, un voile à l'octave. Deux interprétations
+ * d'une SEULE partition (mêmes hauteurs, mêmes durées,
  * mêmes positions rythmiques ; seuls le toucher, la pédale et la couleur
  * changent). Ces deux-là ont donc la traçabilité complète que les dix-sept
  * autres n'ont pas - graine, tempo, mesure, centre tonal - et ne sont plus
@@ -28,12 +29,12 @@ const NAMES = [
 const REGRAVED: Record<string, Partial<OriginalMelodyDefinition>> = {
   '/audio/melodies/01_jre-ikst-010-01_inner-main.mp3': {
     seed: 1001,
-    instrumentation: ['bright acoustic piano', 'celesta octave doubling'],
+    instrumentation: ['glass bell lead', 'bright acoustic piano', 'octave shimmer'],
     mood: ['platform', 'original', 'luminous', 'reassuring'],
   },
   '/audio/melodies/02_jre-ikst-010-02_outer-main.mp3': {
     seed: 2002,
-    instrumentation: ['bright acoustic piano', 'celesta octave doubling'],
+    instrumentation: ['glass bell lead', 'bright acoustic piano', 'octave shimmer'],
     mood: ['platform', 'original', 'airy', 'contemplative'],
   },
 };
