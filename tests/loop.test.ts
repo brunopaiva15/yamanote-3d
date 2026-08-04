@@ -19,8 +19,11 @@ import {
   wrapStation,
 } from '../src/data/loop.ts';
 import {
+  LOOP_KM,
+  LOOP_MINUTES,
   SEGMENTS,
-  SEGMENT_HEADWAY_MIN,
+  SEGMENT_HEADWAY_SEC,
+  SEGMENT_KM,
   segmentAt,
   segmentForHop,
 } from '../src/data/segments.ts';
@@ -112,21 +115,66 @@ test('segmentForHop enchaîne les tronçons dans l’ordre de marche', () => {
   }
 });
 
-test('la boucle dure le même temps dans les deux sens', () => {
+test('un croisement n’est marqué que là où il peut s’afficher', () => {
+  // `passing` est une consigne de rendu : three/SegmentEnvironment place la
+  // rame croisée à 6 m de l'axe, ce qui tient en corridor et en plein sol
+  // (clôture à 6,2 m) mais pas en tranchée (murs à 6,6 m) ni sur viaduc (joues
+  // à 5,1 m). Un croisement marqué ailleurs ne s'afficherait jamais, et la
+  // table se lirait comme un fait acquis.
+  const misplaced = SEGMENTS.map((s, i) => ({ s, i })).filter(
+    ({ s }) => s.passing && s.kind !== 'corridor' && s.kind !== 'ground',
+  );
+  assert.deepEqual(misplaced.map(({ i }) => i), []);
+});
+
+test('le 山手貨物線 double la rame partout où on peut le voir', () => {
+  // Il longe la Yamanote de Komagome à Shinagawa via Shinjuku. Tabata ↔
+  // Komagome fait exception : le 貨物線 y passe par le tunnel de Nakazato, donc
+  // par un autre chemin. Partout ailleurs sur cet arc, un tronçon à ciel ouvert
+  // doit montrer une circulation parallèle.
+  const bare: number[] = [];
+  for (let i = 9; i <= 23; i++) {
+    const s = SEGMENTS[i];
+    if ((s.kind === 'corridor' || s.kind === 'ground') && !s.passing) bare.push(i);
+  }
+  assert.deepEqual(bare, []);
+});
+
+test('le barème kilométrique est celui de la ligne', () => {
+  // 34,5 km pour trente tronçons, soit 1,15 km de moyenne entre deux gares :
+  // les deux chiffres que publie JR East. Si l'un des trente bouge, la somme le
+  // dit tout de suite - c'est le seul garde-fou possible sur une table relevée.
+  const total = SEGMENT_KM.reduce((a, b) => a + b, 0);
+  assert.equal(SEGMENT_KM.length, STATION_COUNT);
+  assert.ok(Math.abs(total - LOOP_KM) < 1e-9, `${total} km`);
+  assert.ok(Math.abs(total / STATION_COUNT - 1.15) < 1e-9, 'distance moyenne');
+
+  // Le plus court tronçon de la boucle est Nippori→Nishi-Nippori, et le plus
+  // long Ōsaki→Shinagawa. C'était l'inverse du relevé précédent, qui donnait sa
+  // minute unique - la plus courte de la table - à Mejiro→Takadanobaba.
+  const shortest = SEGMENT_KM.indexOf(Math.min(...SEGMENT_KM));
+  const longest = SEGMENT_KM.indexOf(Math.max(...SEGMENT_KM));
+  assert.equal(shortest, 6, 'Nippori→Nishi-Nippori');
+  assert.equal(longest, 23, 'Ōsaki→Shinagawa');
+});
+
+test('la boucle dure le même temps dans les deux sens, et c’est 64 min', () => {
   // Les intervalles sont donnés par tronçon, pas par sens : trente tronçons
-  // parcourus une fois font la même heure et sept minutes à l'endroit qu'à
-  // l'envers. C'est ce qui garantit qu'aucun sens ne « saute » un tronçon.
+  // parcourus une fois font le même tour à l'endroit qu'à l'envers. C'est ce
+  // qui garantit qu'aucun sens ne « saute » un tronçon.
   const total = (dir: LoopDirection) => {
     let sum = 0;
     let i = 0;
     for (let k = 0; k < STATION_COUNT; k++) {
-      sum += SEGMENT_HEADWAY_MIN[segmentForHop(i, dir)];
+      sum += SEGMENT_HEADWAY_SEC[segmentForHop(i, dir)];
       i = nextStation(i, dir);
     }
     return sum;
   };
-  assert.equal(total('inner'), total('outer'));
-  assert.equal(total('inner'), SEGMENT_HEADWAY_MIN.reduce((a, b) => a + b, 0));
+  assert.ok(Math.abs(total('inner') - total('outer')) < 1e-9);
+  // Le tour standard de JR East, dans les deux sens. Il valait 67 min tant que
+  // les intervalles étaient des minutes entières relevées à la main.
+  assert.ok(Math.abs(total('inner') / 60 - LOOP_MINUTES) < 1e-9, `${total('inner') / 60} min`);
 });
 
 test('le nom parlé de la ligne porte le sens', () => {

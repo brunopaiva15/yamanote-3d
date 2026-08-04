@@ -44,15 +44,33 @@ test('sur les tronçons ordinaires, l’avance reste celle qui est réglée', ()
   assert.equal(approachAnnounceAt(cruise), cruise - APPROACH_ANNOUNCE_LEAD);
 });
 
-test('le tronçon le plus court de la boucle est bien celui qui posait problème', () => {
-  // Mejiro ↔ Takadanobaba : 8 s de croisière, le plancher de cruiseDuration.
-  // Sans la borne, l'approche partait à −12 s, donc immédiatement.
-  const mejiro = STATIONS.findIndex((s) => s.romaji === 'Mejiro');
-  const baba = STATIONS.findIndex((s) => s.romaji === 'Takadanobaba');
-  const shortest = Math.min(cruiseDuration(mejiro, 'outer'), cruiseDuration(baba, 'inner'));
-  assert.equal(shortest, 8);
-  assert.ok(shortest - APPROACH_ANNOUNCE_LEAD < 0, 'l’avance dépasse la croisière');
-  assert.ok(approachAnnounceAt(shortest) > DEPART_ANNOUNCE_AT);
+test('plus aucun tronçon n’a besoin de la borne', () => {
+  // Le tronçon qui posait problème était Mejiro ↔ Takadanobaba : une minute
+  // d'intervalle posée à la main sur 0,9 km, donc 8 s de croisière - le plancher
+  // de cruiseDuration - et une approche qui partait à −12 s, c'est-à-dire tout
+  // de suite. Depuis que l'horaire se déduit des distances réelles, la croisière
+  // la plus courte de la boucle est celle du plus court tronçon, Nippori ↔
+  // Nishi-Nippori (0,5 km), et elle laisse largement les 20 s d'avance.
+  let shortest = Infinity;
+  for (let i = 0; i < STATIONS.length; i++) {
+    for (const dir of DIRECTIONS) shortest = Math.min(shortest, cruiseDuration(i, dir));
+  }
+  assert.ok(shortest > APPROACH_ANNOUNCE_LEAD + 1, `croisière la plus courte : ${shortest} s`);
+
+  // La borne reste vraie sur une croisière trop courte - elle n'est plus
+  // atteinte, elle n'a pas disparu.
+  assert.ok(approachAnnounceAt(8) > DEPART_ANNOUNCE_AT);
+});
+
+test('la croisière la plus courte est celle du plus court tronçon', () => {
+  const nippori = STATIONS.findIndex((s) => s.romaji === 'Nippori');
+  const nishi = STATIONS.findIndex((s) => s.romaji === 'Nishi-Nippori');
+  const here = Math.min(cruiseDuration(nishi, 'inner'), cruiseDuration(nippori, 'outer'));
+  for (let i = 0; i < STATIONS.length; i++) {
+    for (const dir of DIRECTIONS) {
+      assert.ok(cruiseDuration(i, dir) >= here - 1e-9, `${STATIONS[i].romaji} ${dir}`);
+    }
+  }
 });
 
 test('la borne est monotone : un tronçon plus long n’annonce jamais plus tôt', () => {

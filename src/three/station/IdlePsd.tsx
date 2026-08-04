@@ -28,6 +28,7 @@ import {
   PSD_WALL_T,
 } from '../../data/stationGeometry';
 import { mat, useInstances } from './instancing';
+import { psdBandRows, type PsdBandStyle } from './psdBand';
 import type { Mats } from './materials';
 import type { PsdSpan } from './psdLayout';
 import { psdLeafFrameGeometry, psdLeafGlassGeometry } from './psdParts';
@@ -52,9 +53,25 @@ export interface IdlePsdProps {
    * à deux mètres.
    */
   doors?: boolean;
+  /**
+   * Dessin du liseré uguisu : trait simple côté 内回り, trait double côté
+   * 外回り. Sur un îlot Yamanote, ce bord-ci dessert l'AUTRE sens que le nôtre,
+   * et porte donc l'autre dessin - c'est là qu'on voit les deux à la fois.
+   * Ailleurs (îlot partagé, quai d'en face), l'appelant laisse le défaut.
+   */
+  band?: PsdBandStyle;
 }
 
-export function IdlePsd({ x, trackSide, segs, gaps, m, name, doors = true }: IdlePsdProps) {
+export function IdlePsd({
+  x,
+  trackSide,
+  segs,
+  gaps,
+  m,
+  name,
+  doors = true,
+  band = 'single',
+}: IdlePsdProps) {
   const walls = useMemo(
     () =>
       segs.map((s) =>
@@ -63,20 +80,23 @@ export function IdlePsd({ x, trackSide, segs, gaps, m, name, doors = true }: Idl
     [segs, x],
   );
   // Bandeau uguisu, INTERROMPU à chaque baie et six millimètres plus court que
-  // le muret qu'il couronne - les deux raisons sont celles du bord près.
+  // le muret qu'il couronne - les deux raisons sont celles du bord près. Son
+  // dessin, simple ou double, dit le sens que ce bord dessert.
   const bands = useMemo(
     () =>
-      segs.map((s) =>
-        mat(
-          x + trackSide * 0.005,
-          PLATFORM_TOP + PSD_H - 0.07,
-          (s.z0 + s.z1) / 2,
-          PSD_BAND_T,
-          0.1,
-          s.z1 - s.z0 - 0.012,
+      segs.flatMap((s) =>
+        psdBandRows(band).map((row) =>
+          mat(
+            x + trackSide * 0.005,
+            PLATFORM_TOP + PSD_H + row.dy,
+            (s.z0 + s.z1) / 2,
+            PSD_BAND_T,
+            row.h,
+            s.z1 - s.z0 - 0.012,
+          ),
         ),
       ),
-    [segs, x, trackSide],
+    [segs, x, trackSide, band],
   );
   // Vantaux FERMÉS : leur chant de fermeture se touche au milieu de la baie,
   // au retrait de montant près.

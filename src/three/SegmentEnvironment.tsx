@@ -317,8 +317,19 @@ export function SegmentEnvironment() {
     }
 
     // --- Trains : croisement à gauche (défilement accéléré), dépôt à droite ---
+    //
+    // La rame croisée passe à 6 m de l'axe, DANS l'emprise : elle tient dans un
+    // corridor, et tout aussi bien en plein sol, où la clôture court à 6,2 m et
+    // se retrouve donc derrière elle. Elle ne tient PAS en tranchée (murs à
+    // 6,6 m) ni sur viaduc (joues de tablier à 5,1 m) : là, il n'y a pas de
+    // place à côté de la voie et data/segments ne marque aucun croisement.
+    //
+    // C'est ce qui ouvre l'arc ouest au 山手貨物線 : jusqu'ici seul le corridor
+    // comptait, et les tronçons en plein sol de Ōtsuka à Shibuya - la moitié du
+    // parcours du 埼京線 et du 湘南新宿ライン - restaient déserts.
+    const parallel01 = Math.max(corridor01, ground01);
     const passKind = spec.passing;
-    const passActive = corridor01 > 0.02 && !!passKind;
+    const passActive = parallel01 > 0.02 && !!passKind;
     built.passShinkansen.visible = passActive && passKind === 'shinkansen';
     built.passCommuter.visible = passActive && passKind === 'commuter';
     if (passActive) {
@@ -326,17 +337,19 @@ export function SegmentEnvironment() {
       built.passShinkansen.position.z = z;
       built.passCommuter.position.z = z;
     }
+    // Les dépôts, eux, restent au corridor : ce sont les faisceaux de garage de
+    // Tabata et d'Ōsaki, et ils n'existent qu'à ces deux endroits-là.
     const depotActive = corridor01 > 0.02 && !!spec.depot;
     for (const d of built.depotTrains) {
       d.group.visible = depotActive;
       if (depotActive) d.group.position.z = ((runtime.distance + d.off) % 260) - 130;
     }
     for (const m of built.passSil) {
-      m.opacity = corridor01;
+      m.opacity = parallel01;
       const base = m.userData.base as THREE.Color | undefined;
       if (base) m.color.copy(base).multiplyScalar(silDay);
     }
-    for (const m of built.passGlow) m.opacity = corridor01 * glowLvl;
+    for (const m of built.passGlow) m.opacity = parallel01 * glowLvl;
     for (const m of built.depotSil) {
       m.opacity = corridor01;
       const base = m.userData.base as THREE.Color | undefined;
