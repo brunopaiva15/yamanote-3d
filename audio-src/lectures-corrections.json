@@ -1,4 +1,12 @@
 {
  "_": "Corrections de lecture faites à l'oreille, appliquées PAR-DESSUS la table générée par lectures.py, qui elle est réécrite en entier à chaque régénération. Format : \"texte source\": [katakana, hiragana].",
- "_exemple": ["カタカナ", "ひらがな"]
+ "_exemple": [
+  "カタカナ",
+  "ひらがな"
+ ],
+ "お乗換です": [
+  "お乗り換えです",
+  "お乗り換えです"
+ ],
+ "_お乗換です": "Rendu en katakana (オノリカエデス) le modèle l'étirait sans qu'aucun resserrage ne le sauve. On repasse à l'écriture mixte : les okurigana り et え ancrent le mot comme japonais, donc le risque de lecture chinoise qui justifiait les kana ne se pose pas ici, contrairement à un 渋谷 tout nu."
 }
