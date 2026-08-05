@@ -44,7 +44,8 @@ Usage :
   python scripts/voice-lab/graver.py --list
   node --experimental-strip-types scripts/announcements-export.ts /tmp/textes.json
   python scripts/voice-lab/graver.py /tmp/textes.json \\
-      public/audio/announcements src/data/pa-manifest.ts [--essai N] [--plan]
+      public/audio/announcements src/data/pa-manifest.ts \\
+      [--essai N] [--plan] [--hiragana]
 """
 
 import hashlib
@@ -90,7 +91,12 @@ VOICES = {
 # `stability` haut = diction régulière, ce que fait un automate. L'agent au
 # micro est une PERSONNE : on lui laisse de la variation.
 SETTINGS = {
-    "cabin": {"stability": 0.75, "similarity_boost": 0.75, "style": 0.0},
+    # `stability` monté de 0,75 à 0,85 : la diction sortait trop enjouée sur
+    # les annonces de gare. C'est le seul levier d'expressivité qu'ElevenLabs
+    # expose une fois `style` à zéro, et il se paie - il rabote aussi l'étendue
+    # d'intonation, mesurée à 10,1 demi-tons sur la voix réelle. Passer un clip
+    # à verdict.py après gravure dira si elle est retombée trop bas.
+    "cabin": {"stability": 0.85, "similarity_boost": 0.75, "style": 0.0},
     "atos-inner": {"stability": 0.80, "similarity_boost": 0.75, "style": 0.0},
     "atos-outer": {"stability": 0.80, "similarity_boost": 0.75, "style": 0.0},
     "agent": {"stability": 0.45, "similarity_boost": 0.75, "style": 0.15},
@@ -106,6 +112,104 @@ GAP_REPEAT = 0.43  # entre les deux occurrences du nom de gare : le seul plus lo
 # de consonnes sourdes se font manger ; au-delà de ~30 ms on réintroduit le
 # silence que le montage est censé contrôler.
 TRIM_PAD = 0.02
+
+
+# --- Lecture en kana ------------------------------------------------------
+# Un modèle multilingue qui reçoit 渋谷 doit DEVINER la langue avant de lire, et
+# il se trompe : on entend du chinois. Les kana ne laissent pas ce choix - une
+# more, un son. On envoie donc la PRONONCIATION plutôt que l'orthographe.
+#
+# open_jtalk fournit ces lectures, et le corpus permet de le contrôler : les
+# trente gares y sont déclarées avec leur kana, ce qui donne une vérité de
+# référence. Le contrôle tourne à chaque gravure - une lecture qui dérive
+# arrête la gravure au lieu de se retrouver gravée.
+
+VOWEL = {}
+for _v, _row in {"ア": "アカサタナハマヤラワガザダバパャヮ", "イ": "イキシチニヒミリギジヂビピ",
+                 "ウ": "ウクスツヌフムユルグズヅブプュ", "エ": "エケセテネヘメレゲゼデベペ",
+                 "オ": "オコソトノホモヨロヲゴゾドボポョ"}.items():
+    for _c in _row:
+        VOWEL[_c] = _v
+
+
+def to_katakana(s):
+    return "".join(chr(ord(c) + 0x60) if "ぁ" <= c <= "ゖ" else c for c in s)
+
+
+def same_reading(a, b):
+    """Deux écritures d'une même prononciation.
+
+    「ー」 note la voyelle précédente, et les voyelles longues s'écrivent おう /
+    えい là où elles se disent おお / ええ : オオツカ et オーツカ sont le même mot,
+    トウキョウ et トーキョー aussi. Comparer les chaînes telles quelles
+    signalerait trente fautes qui n'en sont pas.
+    """
+    def norm(s):
+        s, out = to_katakana(s), []
+        for c in s:
+            v = VOWEL.get(out[-1]) if out else None
+            if v:
+                if c == "ー":
+                    c = v
+                elif c == "ウ" and v == "オ":
+                    c = "オ"
+                elif c == "イ" and v == "エ":
+                    c = "エ"
+            out.append(c)
+        return "".join(out).replace("ヲ", "オ")
+    return norm(a) == norm(b)
+
+
+# open_jtalk rend ses lectures en katakana. C'est l'usage des moteurs japonais,
+# mais le katakana signale aussi les mots étrangers, et rien ne dit qu'un modèle
+# multilingue ne prendra pas tout un texte en katakana pour du vocabulaire
+# emprunté - à dire avec l'accent qui va avec. Je n'ai pas pu l'essayer d'ici.
+# D'où le repli en hiragana, un seul drapeau à basculer : si l'essai sonne
+# « mot étranger », relancer avec --hiragana. Les 172 fragments se regravent
+# pour 2000 caractères, l'aller-retour ne coûte rien.
+HIRAGANA = False
+
+
+def to_hiragana(s):
+    """Katakana → hiragana, en dépliant les 「ー」.
+
+    Le hiragana n'utilise pas la marque d'allongement : トーキョー s'y écrit
+    とおきょお, pas とーきょー, qu'aucun texte japonais ne présente ainsi.
+    """
+    plain = []
+    for c in s:
+        v = VOWEL.get(plain[-1]) if plain else None
+        plain.append(v if c == "ー" and v else c)
+    return "".join(chr(ord(c) - 0x60) if "ァ" <= c <= "ヶ" else c for c in plain)
+
+
+def kana(text):
+    import pyopenjtalk
+    if not HIRAGANA:
+        return pyopenjtalk.g2p(text, kana=True)
+    # Les mots RÉELLEMENT étrangers - ドア, コック, ゲートウェイ - s'écrivent en
+    # katakana et doivent y rester : les passer en hiragana (どあ, こっく) est
+    # une graphie qu'aucun japonais n'écrit, et on ferait buter le modèle sur
+    # ce qu'on cherchait justement à lui rendre facile. On ne convertit donc
+    # que ce qui n'était pas déjà du katakana, morceau par morceau.
+    out = []
+    for chunk in re.findall(r"[ァ-ヶー・]+|[^ァ-ヶー・]+", text):
+        if re.fullmatch(r"[ァ-ヶー・]+", chunk):
+            out.append(chunk)
+        else:
+            out.append(to_hiragana(pyopenjtalk.g2p(chunk, kana=True)))
+    return "".join(out)
+
+
+def check_readings(stations):
+    """Arrête la gravure si open_jtalk ne lit pas une gare comme le corpus."""
+    bad = [(s["kanji"], kana(s["kanji"]), s["kana"]) for s in stations
+           if not same_reading(kana(s["kanji"]), s["kana"])]
+    if bad:
+        for k, got, want in bad:
+            print(f"  {k} lu «{got}», attendu «{want}»")
+        raise SystemExit(f"{len(bad)} gares mal lues - corriger avant de graver.")
+    print(f"lectures vérifiées : {len(stations)}/{len(stations)} gares")
 
 
 def split_fragments(text, lang):
@@ -126,7 +230,11 @@ def split_fragments(text, lang):
         body = p.rstrip("。、., ")
         if not body:
             continue
-        out.append((body, sep, "end" if i == len(parts) - 1 else "mid"))
+        # La conversion se fait ICI, avant que le fragment ne prenne son
+        # identité : le cache doit être indexé sur ce qui est RÉELLEMENT envoyé
+        # au modèle, sinon changer de lecture resservirait l'ancien son.
+        out.append((kana(body) if lang == "ja-JP" else body, sep,
+                    "end" if i == len(parts) - 1 else "mid"))
     return out
 
 
@@ -254,7 +362,8 @@ def main():
         print("\nReporter les identifiants voulus dans VOICES, en tête du script.")
         return
 
-    global FRAG_DIR
+    global FRAG_DIR, HIRAGANA
+    HIRAGANA = "--hiragana" in sys.argv
     texts_path, out_dir, manifest_path = sys.argv[1:4]
     argv = sys.argv[4:]
     essai = int(argv[argv.index("--essai") + 1]) if "--essai" in argv else None
@@ -262,7 +371,9 @@ def main():
     if "--frags" in argv:
         FRAG_DIR = Path(argv[argv.index("--frags") + 1])
 
-    items = json.loads(Path(texts_path).read_text(encoding="utf-8"))["items"]
+    corpus = json.loads(Path(texts_path).read_text(encoding="utf-8"))
+    items = corpus["items"]
+    check_readings(corpus["stations"])
     plan, inventory, deferred = build_plan(items)
     if not plan:
         raise SystemExit("Aucun rôle n'a de voix - lancer d'abord --list.")
@@ -284,6 +395,14 @@ def main():
     print(f"{len(plan)}/{len(items)} annonces · {len(inventory)} fragments "
           f"({len(inventory) - len(todo)} en cache, {len(todo)} à graver, "
           f"{chars} caractères)")
+    # Un kanji restant serait un mot qu'open_jtalk n'a pas su lire, et c'est
+    # exactement là que le modèle repart en chinois. On le signale plutôt que
+    # de le laisser passer.
+    restants = [v for v in inventory.values() if v["lang"] == "ja-JP"
+                and any("一" <= c <= "鿿" for c in v["text"])]
+    for v in restants:
+        print(f"  ⚠ kanji non converti : {v['text'][:50]}")
+
     for (lang, role), n in sorted(deferred.items()):
         print(f"  en attente d'une voix : {lang} {role:12} {n:4} annonces "
               f"- clips actuels conservés")
