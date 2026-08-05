@@ -18,5 +18,22 @@
   "オデグチワ、ヒダリガワデス",
   "おでぐちわ、ひだりがわです"
  ],
- "_お出口は": "Virgule ajoutée après 「お出口は」 : la prise réelle y marque un creux de 80 ms à 0,75 s du début du segment, soit pile à cette frontière. Le segment reste UN fragment - le couper en deux coûtait 19 % de longueur, chaque moitié payant son attaque - donc la pause est demandée au modèle, à l'intérieur."
+ "_お出口は": "Virgule ajoutée après 「お出口は」 : la prise réelle y marque un creux de 80 ms à 0,75 s du début du segment, soit pile à cette frontière. Le segment reste UN fragment - le couper en deux coûtait 19 % de longueur, chaque moitié payant son attaque - donc la pause est demandée au modèle, à l'intérieur.",
+ "上野": [
+  "、ウエノ",
+  "、うえの"
+ ],
+ "上野・池袋方面ゆきです": [
+  "、ウエノ、イケブクロホウメンユキデス",
+  "、うえの、いけぶくろほうめんゆきです"
+ ],
+ "上野・東京方面ゆきです": [
+  "、ウエノ、トウキョウホウメンユキデス",
+  "、うえの、とうきょうほうめんゆきです"
+ ],
+ "運転再開まで": [
+  "、ウンテンサイカイマデ",
+  "、うんてんさいかいまで"
+ ],
+ "_ウ_initial": "Virgule EN TÊTE sur les fragments commençant par ウ. Mesuré : les quatre seuls fragments dont la première trame dépasse -12 dB sous la crête commencent tous par ウ, quand la médiane du corpus est à -67 dB. Le modèle escamote cette attaque - ウ est la voyelle la plus faible du japonais. La virgule initiale lui donne un appui ; le silence qu'elle produit est ôté au rognage, donc elle ne coûte rien."
 }
