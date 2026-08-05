@@ -89,6 +89,7 @@ def main():
     # juste - une graphie se dit parfois mieux qu'une autre, et cela ne se
     # découvre qu'à l'oreille.
     corr_path = Path(dest).with_name("lectures-corrections.json")
+    applied = {}
     if corr_path.exists():
         corr = json.loads(corr_path.read_text(encoding="utf-8"))
         applied = {k: v for k, v in corr.items() if not k.startswith("_")}
@@ -105,7 +106,11 @@ def main():
     if bad:
         raise SystemExit(f"{len(bad)} gares mal lues - table NON écrite.")
 
-    restants = [b for b in table if any("一" <= c <= "鿿" for c in table[b][0])]
+    # Une correction manuelle qui réintroduit des kanji est DÉLIBÉRÉE - c'est
+    # même sa raison d'être quand une graphie mixte se dit mieux que les kana.
+    corriges = set(applied) if corr_path.exists() else set()
+    restants = [b for b in table
+                if b not in corriges and any("一" <= c <= "鿿" for c in table[b][0])]
     for b in restants:
         print(f"  ⚠ kanji non converti : {b[:50]} → {table[b][0][:50]}")
 

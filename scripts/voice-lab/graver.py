@@ -148,11 +148,23 @@ FONDU = 0.015
 # La clé est le TEXTE SOURCE, pas la lecture : elle reste lisible et survit à
 # un changement de graphie. Une valeur inférieure à 1 raccourcit.
 DEBIT = {
-    # Toujours traîné à 0,85 : on resserre d'un quart. Au-delà de ~0,7 le
-    # vocodeur commence à s'entendre - si ça ne suffit toujours pas, la cause
-    # n'est pas la durée, et il faut passer par --variantes.
-    "お乗換です": 0.75,
+    # 「お乗換です」 est sorti d'ici : à 0,85 puis 0,75 il traînait toujours,
+    # donc la durée n'était pas la cause. C'est la GRAPHIE qui a été changée
+    # (voir lectures-corrections.json). Si la nouvelle traîne à son tour, c'est
+    # ici qu'on la resserrera - mais une cause à la fois.
 }
+
+# Ponctuation posée à la fin d'un fragment, selon sa place dans l'annonce.
+# C'est le SEUL levier de mélodie qu'on ait : le modèle ne prend pas de
+# consigne d'intonation, il déduit tout de la ponctuation.
+#
+# 「。」 en fin d'annonce faisait tomber le です beaucoup trop bas - une chute
+# de phrase déclarative, là où une annonce de gare se termine à plat ou
+# remonte légèrement. Sans ponctuation du tout, la chute reste, mais discrète.
+# Si elle gêne encore, mettre 「、」 ici : le fragment se dira alors en suspens,
+# au prix de devenir identique à sa variante médiane.
+PONCTUATION_MID = "、"
+PONCTUATION_FIN = ""
 
 # Marge laissée autour de la parole en rognant un fragment. À zéro les attaques
 # de consonnes sourdes se font manger ; au-delà de ~30 ms on réintroduit le
@@ -302,15 +314,18 @@ def frag_id(role, lang, body, pos, source=None):
     return h.hexdigest()[:12]
 
 
-def spoken(body, sep, pos):
+def spoken(body, sep, pos, lang="ja-JP"):
     """Le texte envoyé au modèle, ponctué selon la position.
 
     Un fragment isolé serait dit comme une phrase complète, avec sa chute
     finale - 「次は」 sonnerait conclusif. La virgule le laisse en suspens.
+
+    L'anglais garde son point final : la plainte portait sur le です japonais,
+    et rien ne dit qu'une annonce anglaise souffre du même excès de chute.
     """
-    if pos == "end":
-        return body + ("." if sep in ".," or not sep else "。")
-    return body + ("," if sep in ".," else "、")
+    if lang != "ja-JP":
+        return body + ("." if pos == "end" else ",")
+    return body + (PONCTUATION_FIN if pos == "end" else PONCTUATION_MID)
 
 
 def gap_after(cur, nxt, sep):
@@ -444,7 +459,7 @@ def variantes(key, source, role="cabin", lang="ja-JP", pos="mid"):
         reg = {**SETTINGS[role], "stability": stab}
         mp3 = call(f"/text-to-speech/{VOICES[(lang, role)]}", key, raw=True,
                    query=f"?output_format={OUTPUT_FORMAT}",
-                   body={"text": spoken(lecture, "。" if lang == "ja-JP" else ".", pos),
+                   body={"text": spoken(lecture, "", pos, lang),
                          "model_id": MODEL, "voice_settings": reg})
         brut = ESSAI_DIR / f"var-stab{int(stab * 100):03d}-debit100.mp3"
         brut.write_bytes(mp3)
@@ -538,7 +553,7 @@ def main():
         v = inventory[fid]
         if not key:
             raise SystemExit("Renseigner ELEVENLABS_API_KEY.")
-        body = spoken(v["text"], "。" if v["lang"] == "ja-JP" else ".", v["pos"])
+        body = spoken(v["text"], "", v["pos"], v["lang"])
         mp3 = call(f"/text-to-speech/{VOICES[(v['lang'], v['role'])]}", key, raw=True,
                    query=f"?output_format={OUTPUT_FORMAT}",
                    body={"text": body, "model_id": MODEL,
