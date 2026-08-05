@@ -118,6 +118,10 @@ def main():
         json.dumps({
             "_": "GÉNÉRÉ par scripts/voice-lab/lectures.py. Corrections à la main "
                  "possibles : [katakana, hiragana] par fragment.",
+            # Les entrées corrigées à la main sont DÉCLARÉES : elles réintroduisent
+            # souvent des kanji, délibérément, et graver.py doit pouvoir le savoir
+            # pour ne pas les signaler comme des conversions ratées.
+            "corrections": sorted(applied),
             "lectures": dict(sorted(table.items())),
         }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"{len(table)} lectures → {dest}")

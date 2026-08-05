@@ -187,6 +187,7 @@ TRIM_PAD = 0.02
 
 LECTURES = Path("audio-src/lectures.json")
 _readings = None
+_corriges = set()
 
 VOWEL = {}
 for _v, _row in {"ア": "アカサタナハマヤラワガザダバパャヮ", "イ": "イキシチニヒミリギジヂビピ",
@@ -233,11 +234,13 @@ HIRAGANA = False
 
 def kana(text):
     """Lecture d'un fragment, lue dans la table."""
-    global _readings
+    global _readings, _corriges
     if _readings is None:
         if not LECTURES.exists():
             raise SystemExit(f"{LECTURES} absent - le régénérer avec lectures.py.")
-        _readings = json.loads(LECTURES.read_text(encoding="utf-8"))["lectures"]
+        table = json.loads(LECTURES.read_text(encoding="utf-8"))
+        _readings = table["lectures"]
+        _corriges = set(table.get("corrections", []))
     r = _readings.get(text)
     if r is None:
         raise SystemExit(
@@ -533,7 +536,10 @@ def main():
     # Un kanji restant serait un mot qu'open_jtalk n'a pas su lire, et c'est
     # exactement là que le modèle repart en chinois. On le signale plutôt que
     # de le laisser passer.
+    # Une correction manuelle qui réintroduit des kanji est DÉLIBÉRÉE - c'est
+    # même sa raison d'être quand une graphie mixte se dit mieux que les kana.
     restants = [v for v in inventory.values() if v["lang"] == "ja-JP"
+                and v["source"] not in _corriges
                 and any("一" <= c <= "鿿" for c in v["text"])]
     for v in restants:
         print(f"  ⚠ kanji non converti : {v['text'][:50]}")
