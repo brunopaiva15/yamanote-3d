@@ -239,6 +239,14 @@
   "source": "マナーモードに設定のうえ",
   "text": "マナーモードニセッテイノウエ"
  },
+ "31f77b69c451": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "運転再開まで",
+  "text": "、ウンテンサイカイマデ"
+ },
  "33c0b7b8cff7": {
   "debit": 1.0,
   "lang": "ja-JP",
@@ -423,14 +431,6 @@
   "source": "浜松町",
   "text": "ハママツチョウ"
  },
- "4b6158635829": {
-  "debit": 1.0,
-  "lang": "ja-JP",
-  "pos": "end",
-  "role": "cabin",
-  "source": "上野・池袋方面ゆきです",
-  "text": "ウエノ、イケブクロホウメンユキデス"
- },
  "4dfc4b629af6": {
   "debit": 1.0,
   "lang": "ja-JP",
@@ -446,6 +446,14 @@
   "role": "cabin",
   "source": "京王線",
   "text": "ケイオウセン"
+ },
+ "50c5a35e3378": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "お出口は右側です",
+  "text": "オデグチワ、ミギガワデス"
  },
  "5438c98837af": {
   "debit": 1.0,
@@ -727,14 +735,6 @@
   "source": "新宿",
   "text": "シンジュク"
  },
- "7f914ac227b1": {
-  "debit": 1.0,
-  "lang": "ja-JP",
-  "pos": "end",
-  "role": "cabin",
-  "source": "お出口は左側です",
-  "text": "オデグチワヒダリガワデス"
- },
  "801cf653704b": {
   "debit": 1.0,
   "lang": "ja-JP",
@@ -815,14 +815,6 @@
   "source": "ゆりかもめは",
   "text": "ユリカモメワ"
  },
- "8f1718484bdc": {
-  "debit": 1.0,
-  "lang": "ja-JP",
-  "pos": "end",
-  "role": "cabin",
-  "source": "お出口は右側です",
-  "text": "オデグチワミギガワデス"
- },
  "91987bf573f4": {
   "debit": 1.0,
   "lang": "ja-JP",
@@ -838,14 +830,6 @@
   "role": "cabin",
   "source": "東京メトロ銀座線",
   "text": "トウキョウメトロギンザセン"
- },
- "9a7d90a84781": {
-  "debit": 1.0,
-  "lang": "ja-JP",
-  "pos": "mid",
-  "role": "cabin",
-  "source": "上野",
-  "text": "ウエノ"
  },
  "9ad9026065b9": {
   "debit": 1.0,
@@ -1063,14 +1047,6 @@
   "source": "東京メトロ千代田線",
   "text": "トウキョウメトロチヨダセン"
  },
- "cd19fb4ec027": {
-  "debit": 1.0,
-  "lang": "ja-JP",
-  "pos": "end",
-  "role": "cabin",
-  "source": "上野・東京方面ゆきです",
-  "text": "ウエノ、トウキョウホウメンユキデス"
- },
  "ce45e5863dcb": {
   "debit": 1.0,
   "lang": "ja-JP",
@@ -1103,14 +1079,6 @@
   "source": "湘南新宿ライン",
   "text": "ショウナンシンジュクライン"
  },
- "d01c75a95467": {
-  "debit": 1.0,
-  "lang": "ja-JP",
-  "pos": "mid",
-  "role": "cabin",
-  "source": "運転再開まで",
-  "text": "ウンテンサイカイマデ"
- },
  "d231226adff6": {
   "debit": 1.0,
   "lang": "ja-JP",
@@ -1118,6 +1086,14 @@
   "role": "cabin",
   "source": "電気が復旧いたしました",
   "text": "デンキガフッキュウイタシマシタ"
+ },
+ "d2e04d8139e4": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "上野・池袋方面ゆきです",
+  "text": "、ウエノ、イケブクロホウメンユキデス"
  },
  "d3c9c4f46ee4": {
   "debit": 1.0,
@@ -1158,6 +1134,14 @@
   "role": "cabin",
   "source": "引き続き",
   "text": "ヒキツヅキ"
+ },
+ "db308df19479": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "お出口は左側です",
+  "text": "オデグチワ、ヒダリガワデス"
  },
  "db3c5f06eba1": {
   "debit": 1.0,
@@ -1263,6 +1247,14 @@
   "source": "東海道線",
   "text": "トウカイドウセン"
  },
+ "f3aaa9c883ea": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "上野",
+  "text": "、ウエノ"
+ },
  "f4400c7fbd0a": {
   "debit": 1.0,
   "lang": "ja-JP",
@@ -1334,6 +1326,14 @@
   "role": "cabin",
   "source": "ドアの非常用コックには",
   "text": "ドアノヒジョウヨウコックニワ"
+ },
+ "f94127f0a21d": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "上野・東京方面ゆきです",
+  "text": "、ウエノ、トウキョウホウメンユキデス"
  },
  "fc3c779c52b2": {
   "debit": 1.0,
