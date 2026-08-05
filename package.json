@@ -14,6 +14,7 @@
     "animals:import": "node scripts/animals-import.mjs",
     "models:inspect": "node scripts/models-inspect.mjs",
     "voix:textes": "node --experimental-strip-types scripts/announcements-export.ts audio-src/annonces.json",
+    "voix:lectures": "npm run voix:textes && python scripts/voice-lab/lectures.py audio-src/annonces.json audio-src/lectures.json",
     "voix:plan": "npm run voix:textes && python scripts/voice-lab/graver.py audio-src/annonces.json public/audio/announcements src/data/pa-manifest.ts --plan",
     "voix:essai": "npm run voix:textes && python scripts/voice-lab/graver.py audio-src/annonces.json public/audio/announcements src/data/pa-manifest.ts --essai 12",
     "voix:graver": "npm run voix:textes && python scripts/voice-lab/graver.py audio-src/annonces.json public/audio/announcements src/data/pa-manifest.ts",

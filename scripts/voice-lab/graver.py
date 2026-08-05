@@ -119,10 +119,16 @@ TRIM_PAD = 0.02
 # il se trompe : on entend du chinois. Les kana ne laissent pas ce choix - une
 # more, un son. On envoie donc la PRONONCIATION plutôt que l'orthographe.
 #
-# open_jtalk fournit ces lectures, et le corpus permet de le contrôler : les
-# trente gares y sont déclarées avec leur kana, ce qui donne une vérité de
-# référence. Le contrôle tourne à chaque gravure - une lecture qui dérive
-# arrête la gravure au lieu de se retrouver gravée.
+# LES LECTURES SONT PRÉCALCULÉES ET VERSIONNÉES (audio-src/lectures.json), pas
+# produites à la gravure. Elles venaient d'open_jtalk, dont le paquet Python se
+# compile depuis les sources sous Windows - un chantier, et surtout une
+# dépendance qui aurait fait dépendre la prononciation de la machine qui grave.
+# Une table figée donne la même lecture partout, se relit, et se corrige à la
+# main quand le modèle bute sur un mot. Elle se régénère avec lectures.py,
+# depuis une machine où open_jtalk tourne.
+
+LECTURES = Path("audio-src/lectures.json")
+_readings = None
 
 VOWEL = {}
 for _v, _row in {"ア": "アカサタナハマヤラワガザダバパャヮ", "イ": "イキシチニヒミリギジヂビピ",
@@ -160,55 +166,41 @@ def same_reading(a, b):
     return norm(a) == norm(b)
 
 
-# open_jtalk rend ses lectures en katakana. C'est l'usage des moteurs japonais,
-# mais le katakana signale aussi les mots étrangers, et rien ne dit qu'un modèle
-# multilingue ne prendra pas tout un texte en katakana pour du vocabulaire
-# emprunté - à dire avec l'accent qui va avec. Je n'ai pas pu l'essayer d'ici.
-# D'où le repli en hiragana, un seul drapeau à basculer : si l'essai sonne
-# « mot étranger », relancer avec --hiragana. Les 172 fragments se regravent
-# pour 2000 caractères, l'aller-retour ne coûte rien.
+# Le katakana est l'usage des moteurs japonais, mais il signale aussi les mots
+# étrangers, et rien ne dit qu'un modèle multilingue ne prendra pas tout un
+# texte en katakana pour du vocabulaire emprunté - à dire avec l'accent qui va
+# avec. La table porte donc les DEUX graphies, et --hiragana bascule.
 HIRAGANA = False
 
 
-def to_hiragana(s):
-    """Katakana → hiragana, en dépliant les 「ー」.
-
-    Le hiragana n'utilise pas la marque d'allongement : トーキョー s'y écrit
-    とおきょお, pas とーきょー, qu'aucun texte japonais ne présente ainsi.
-    """
-    plain = []
-    for c in s:
-        v = VOWEL.get(plain[-1]) if plain else None
-        plain.append(v if c == "ー" and v else c)
-    return "".join(chr(ord(c) - 0x60) if "ァ" <= c <= "ヶ" else c for c in plain)
-
-
 def kana(text):
-    import pyopenjtalk
-    if not HIRAGANA:
-        return pyopenjtalk.g2p(text, kana=True)
-    # Les mots RÉELLEMENT étrangers - ドア, コック, ゲートウェイ - s'écrivent en
-    # katakana et doivent y rester : les passer en hiragana (どあ, こっく) est
-    # une graphie qu'aucun japonais n'écrit, et on ferait buter le modèle sur
-    # ce qu'on cherchait justement à lui rendre facile. On ne convertit donc
-    # que ce qui n'était pas déjà du katakana, morceau par morceau.
-    out = []
-    for chunk in re.findall(r"[ァ-ヶー・]+|[^ァ-ヶー・]+", text):
-        if re.fullmatch(r"[ァ-ヶー・]+", chunk):
-            out.append(chunk)
-        else:
-            out.append(to_hiragana(pyopenjtalk.g2p(chunk, kana=True)))
-    return "".join(out)
+    """Lecture d'un fragment, lue dans la table."""
+    global _readings
+    if _readings is None:
+        if not LECTURES.exists():
+            raise SystemExit(f"{LECTURES} absent - le régénérer avec lectures.py.")
+        _readings = json.loads(LECTURES.read_text(encoding="utf-8"))["lectures"]
+    r = _readings.get(text)
+    if r is None:
+        raise SystemExit(
+            f"Aucune lecture pour « {text} ».\n"
+            "Un texte d'annonce a changé depuis la dernière table : relancer\n"
+            "scripts/voice-lab/lectures.py depuis une machine avec open_jtalk.")
+    return r[1] if HIRAGANA else r[0]
 
 
 def check_readings(stations):
-    """Arrête la gravure si open_jtalk ne lit pas une gare comme le corpus."""
+    """Arrête la gravure si la table ne lit pas une gare comme le corpus.
+
+    Le corpus déclare le kana des trente gares : c'est une vérité de référence
+    indépendante de la table, donc un vrai contrôle et pas une tautologie.
+    """
     bad = [(s["kanji"], kana(s["kanji"]), s["kana"]) for s in stations
            if not same_reading(kana(s["kanji"]), s["kana"])]
     if bad:
         for k, got, want in bad:
             print(f"  {k} lu «{got}», attendu «{want}»")
-        raise SystemExit(f"{len(bad)} gares mal lues - corriger avant de graver.")
+        raise SystemExit(f"{len(bad)} gares mal lues - corriger {LECTURES}.")
     print(f"lectures vérifiées : {len(stations)}/{len(stations)} gares")
 
 
@@ -230,11 +222,7 @@ def split_fragments(text, lang):
         body = p.rstrip("。、., ")
         if not body:
             continue
-        # La conversion se fait ICI, avant que le fragment ne prenne son
-        # identité : le cache doit être indexé sur ce qui est RÉELLEMENT envoyé
-        # au modèle, sinon changer de lecture resservirait l'ancien son.
-        out.append((kana(body) if lang == "ja-JP" else body, sep,
-                    "end" if i == len(parts) - 1 else "mid"))
+        out.append((body, sep, "end" if i == len(parts) - 1 else "mid"))
     return out
 
 
@@ -338,6 +326,11 @@ def build_plan(items):
         # Anglais : `tts` porte des phonèmes propres à Kokoro, incompris ici.
         src = it["tts"] if it["lang"] == "ja-JP" else it["text"]
         frs = split_fragments(src, it["lang"])
+        # La conversion en kana a lieu ICI, avant que le fragment ne prenne son
+        # identité : le cache doit être indexé sur ce qui est RÉELLEMENT envoyé
+        # au modèle, sinon corriger une lecture resservirait l'ancien son.
+        if it["lang"] == "ja-JP":
+            frs = [(kana(b), sep, pos) for b, sep, pos in frs]
         bodies = [b for b, _, _ in frs]
         seq = []
         for i, (body, sep, pos) in enumerate(frs):
