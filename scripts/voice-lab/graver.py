@@ -45,9 +45,9 @@ Usage :
   node --experimental-strip-types scripts/announcements-export.ts /tmp/textes.json
   python scripts/voice-lab/graver.py /tmp/textes.json \\
       public/audio/announcements src/data/pa-manifest.ts \\
-      [--essai N] [--plan] [--hiragana]
+      [--essai N] [--plan] [--hiragana] [--sans en-US]
   python scripts/voice-lab/graver.py --verifier   # débusque les prises muettes
-  python scripts/voice-lab/graver.py --variantes 次は [--fin] [--stab] [--debit]
+  python scripts/voice-lab/graver.py --variantes 12 [--stab] [--debit]
 """
 
 import hashlib
@@ -86,7 +86,7 @@ VOICES = {
     ("ja-JP", "atos-inner"): "",
     ("ja-JP", "atos-outer"): "",
     ("ja-JP", "agent"): "",
-    ("en-US", "cabin"): "",
+    ("en-US", "cabin"): "Nhs7eitvQWFTQBsf0yiT",
     ("en-US", "atos-en"): "",
 }
 
@@ -154,6 +154,18 @@ FONDU = 0.015
 # premières valeurs posées ici l'ont été sans cette inversion, donc à l'envers :
 # 「お乗換です」 était rallongé à chaque tour, ce qui explique qu'il ait traîné
 # davantage après chaque « resserrage ». Le montage convertit désormais.
+# Débit propre à un RÔLE, quand la voix entière est à reprendre. Le japonais
+# n'en a pas besoin : sa cadence est calée fragment par fragment sur la prise
+# réelle. L'anglais n'a aucune référence mesurée - la recherche de motif répété
+# n'a rien donné sur l'enregistrement - donc son débit se règle à l'oreille, et
+# c'est le seul endroit où un facteur global soit légitime.
+#
+# Comme DEBIT, c'est un facteur de DURÉE, appliqué au montage : le changer ne
+# regrave rien.
+DEBIT_ROLE = {
+    ("en-US", "cabin"): 0.94,  # « à peine plus vite » sur la grille de variantes
+}
+
 DEBIT = {
     # 8 % plus court : « à peine trop lent » une fois le point posé. Premier
     # réglage de débit qui agisse dans le bon sens, l'inversion étant corrigée.
@@ -271,21 +283,21 @@ def resserrer_silences(y, cible=PAUSE_INTERNE):
 # La constante n'est pas du remplissage : c'est l'attaque et la chute, qui ne
 # dépendent pas de la longueur. Sans elle, un fragment de trois mores serait
 # ramené à 0,36 s au lieu de 0,61.
-CADENCE = (0.255, 0.1196)
-# Une virgule à l'intérieur d'un fragment y met une PAUSE, que le modèle de
-# durée doit payer sinon il croit le fragment traînant. C'est le silence relevé
-# après une virgule sur la prise réelle, le même que pose le montage.
-CADENCE_VIRGULE = GAP_COMMA
-# Bornes du resserrage automatique. Au-delà le vocodeur s'entend - et surtout,
-# un écart de plus de 20 % ne vient plus du débit : c'est une prise abîmée.
-# 「ウエノ」 est sorti à 0,36 s pour trois mores, soit 8,3 mores/s quand la vraie
-# annonce ne dépasse jamais 7,0 : l'étirer donnerait un mot ralenti au lieu d'un
-# mot correct. Ces prises-là sont SIGNALÉES pour regravure, pas rattrapées.
-# Facteur appliqué PAR-DESSUS la cadence mesurée, si l'on veut s'écarter
-# volontairement de la vraie annonce. 1 = la vitesse relevée sur la prise
-# réelle. Le baisser accélère tout le rôle d'un coup - à n'utiliser qu'une fois
-# les écarts structurels réglés, sinon on masque une cause au lieu de la
-# corriger, comme la coupure de 「お出口は｜右側です」 qui valait 19 % à elle seule.
+# Débit visé, en mores par seconde. UN SEUL chiffre, et c'est un choix : la
+# voix doit parler partout à la vitesse de ses meilleurs fragments.
+#
+# Le modèle précédent était affine - durée = 0,255 + 0,1196 × mores - ajusté sur
+# la prise réelle. Il la reproduisait fidèlement, y compris son défaut vu d'ici :
+# sa constante d'attaque écrasait les fragments courts. 「次は」 tombait à 4,9
+# mores/s et les noms de gares avec lui, quand 「お出口は右側です」 tenait 7,0 et
+# 「この電車は」 6,2. Les noms de lignes, entre les deux, sortaient à 5,9-6,2 -
+# c'est là que la lenteur s'entendait le plus.
+#
+# 7,0 est le débit de 「お出口は◯側です」, celui que l'oreille a retenu comme
+# référence. On assume ce qu'il coûte : les fragments courts deviennent PLUS
+# RAPIDES que la vraie annonce, qui met 0,51 s pour les trois mores de 「次は」
+# là où ce débit en demande 0,43. C'est un écart voulu, pas une dérive.
+CADENCE_RATE = 7.0
 CADENCE_GLOBAL = 1.0
 CADENCE_MIN, CADENCE_MAX = 0.80, 1.20
 SUSPECT_MIN, SUSPECT_MAX = 0.75, 1.30
@@ -321,11 +333,10 @@ def cadence_brute(text, duree, source=None, silence=0.0):
     n = mores(text, source)
     if n < 2 or duree < 0.15:
         return 1.0
-    a, b = CADENCE
     # Le silence interne est MESURÉ sur la prise et passé en argument : un terme
     # forfaitaire par virgule ferait double emploi, et se tromperait de valeur
     # dès que la pause diffère de celle prévue.
-    return float((a + b * n + silence) / duree)
+    return float((n / CADENCE_RATE + silence) / duree)
 
 
 def cadence(text, duree, source=None, silence=0.0):
@@ -357,6 +368,7 @@ LECTURES = Path("audio-src/lectures.json")
 _readings = None
 _corriges = set()
 _kana_brut = {}
+_en = {}
 
 VOWEL = {}
 for _v, _row in {"ア": "アカサタナハマヤラワガザダバパャヮ", "イ": "イキシチニヒミリギジヂビピ",
@@ -413,7 +425,7 @@ def _lecture(text):
 
 def kana(text):
     """Lecture d'un fragment, lue dans la table."""
-    global _readings, _corriges, _kana_brut
+    global _readings, _corriges, _kana_brut, _en
     if _readings is None:
         if not LECTURES.exists():
             raise SystemExit(f"{LECTURES} absent - le régénérer avec lectures.py.")
@@ -421,6 +433,9 @@ def kana(text):
         _readings = table["lectures"]
         _corriges = set(table.get("corrections", []))
         _kana_brut = table.get("kana", {})
+        _en = table.get("en", {})
+    if text == "":
+        return ""
     r = _readings.get(text)
     if r is None:
         raise SystemExit(
@@ -428,6 +443,30 @@ def kana(text):
             "Un texte d'annonce a changé depuis la dernière table : relancer\n"
             "scripts/voice-lab/lectures.py depuis une machine avec open_jtalk.")
     return r[1] if HIRAGANA else r[0]
+
+
+def lecture_en(text):
+    """Texte anglais, noms japonais réécrits comme une voix anglaise doit les dire.
+
+    Le G2P anglais lit 「Ueno」 et 「Ikebukuro」 comme des mots anglais : accent
+    là où l'anglais l'attend, voyelles inaccentuées réduites en schwa, 「u」
+    initial en /juː/. On obtient « you-ENN-oh », « ick-uh-BYOO-kuh-roh » - des
+    mots anglais qui ressemblent à des noms de gares.
+
+    La voix de JR East, elle, parle anglais mais garde les voyelles japonaises.
+    C'est ce que scripts/en-readings.ts décrit depuis toujours, more par more et
+    avec l'accent placé à la main ; seuls ses phonèmes visaient Kokoro. On
+    réutilise donc son jugement et on n'en change que la graphie.
+
+    La substitution est faite MOT À MOT parce que la table l'est : 「Keihin-
+    Tohoku」 n'y figure pas, ses deux moitiés si.
+    """
+    kana("")  # amorce le chargement de la table
+    if not _en:
+        return text
+    return re.sub(r"[A-Za-z]+(?:-[A-Za-z]+)*",
+                  lambda m: "-".join(_en.get(w, w) for w in m.group(0).split("-")),
+                  text)
 
 
 def check_readings(stations):
@@ -658,8 +697,8 @@ def build_plan(items):
         # La conversion en kana a lieu ICI, avant que le fragment ne prenne son
         # identité : le cache doit être indexé sur ce qui est RÉELLEMENT envoyé
         # au modèle, sinon corriger une lecture resservirait l'ancien son.
-        if it["lang"] == "ja-JP":
-            frs = [(kana(b), sep, pos, forced) for b, sep, pos, forced in frs]
+        frs = [((kana(b) if it["lang"] == "ja-JP" else lecture_en(b)), sep, pos, forced)
+               for b, sep, pos, forced in frs]
         bodies = [b for b, _, _, _ in frs]
         seq = []
         for i, (body, sep, pos, forced) in enumerate(frs):
@@ -669,7 +708,8 @@ def build_plan(items):
             nxt = bodies[i + 1] if i + 1 < len(bodies) else None
             gap = 0.0 if i == len(frs) - 1 else gap_after(body, nxt, sep)
             seq.append((fid, forced if forced is not None else gap))
-        plan.append({"key": it["key"], "text": it["text"], "seq": seq})
+        plan.append({"key": it["key"], "text": it["text"], "seq": seq,
+                     "lang": it["lang"], "role": role})
     return plan, inventory, deferred
 
 
@@ -680,14 +720,30 @@ def build_plan(items):
 # vient en troisième dimension, à la demande, parce qu'elle agit sur toute la
 # prise et non sur son contour.
 GRAPHIES = ("katakana", "hiragana", "source")
-PONCTUATIONS = (("sans", ""), ("virgule", "、"), ("point", "。"))
+PONCTUATIONS = (("sans", ""), ("virgule", ","), ("point", "."))
+PONCTUATIONS_JA = (("sans", ""), ("virgule", "、"), ("point", "。"))
 GRILLE_STAB = (0.55, 0.85, 1.00)
 # Resserrages proposés. Au-delà de -30 % le vocodeur commence à s'entendre sur
 # des voyelles tenues, et c'est pour ça que la grille s'arrête à 0,70.
 GRILLE_DEBIT = (1.00, 0.92, 0.85, 0.78, 0.70)
 
 
-def variantes_debit(key, source, role="cabin", lang="ja-JP", pos="mid"):
+def catalogue(texts_path):
+    """Tous les fragments gravables, avec leur langue, leur rôle et leur place.
+
+    Bâti sur le CORPUS et non sur la table des lectures : celle-ci est
+    japonaise, et l'anglais n'y figure pas. Le corpus, lui, sait aussi d'où
+    vient chaque fragment - donc `--fin` n'a plus à être deviné.
+    """
+    corpus = json.loads(Path(texts_path).read_text(encoding="utf-8"))
+    _, inv, _ = build_plan(corpus["items"])
+    par_source = {}
+    for v in inv.values():
+        par_source.setdefault((v["lang"], v["source"]), v)
+    return [par_source[k] for k in sorted(par_source, key=lambda k: (k[0], k[1]))]
+
+
+def variantes_debit(key, v):
     """Une seule prise, déclinée à plusieurs vitesses.
 
     Un fragment trop lent ne se compare pas à d'autres graphies : il se compare
@@ -697,19 +753,17 @@ def variantes_debit(key, source, role="cabin", lang="ja-JP", pos="mid"):
     d'autre n'a changé.
     """
     ESSAI_DIR.mkdir(parents=True, exist_ok=True)
-    lecture = kana(source) if lang == "ja-JP" else source
-    envoye = spoken(lecture, "", pos, lang, source)
-    mp3 = call(f"/text-to-speech/{VOICES[(lang, role)]}", key, raw=True,
+    envoye = spoken(v["text"], "", v["pos"], v["lang"], v["source"])
+    mp3 = call(f"/text-to-speech/{VOICES[(v['lang'], v['role'])]}", key, raw=True,
                query=f"?output_format={OUTPUT_FORMAT}",
                body={"text": envoye, "model_id": MODEL,
-                     "voice_settings": reglages(role, source)})
+                     "voice_settings": reglages(v["role"], v["source"])})
     brut = ESSAI_DIR / "debit-prise.mp3"
     brut.write_bytes(mp3)
-    vide, _ = muet(brut)
-    if vide:
+    if muet(brut)[0]:
         raise SystemExit("Prise muette - relancer.")
     base = trimmed(brut)
-    print(f"« {source} » → envoyé « {envoye} »   [{role} {pos}]\n")
+    print(f"« {v['source']} » → envoyé « {envoye} »   [{v['role']} {v['pos']}]\n")
     for deb in GRILLE_DEBIT:
         y = base if deb == 1.0 else wsola(base, 1.0 / deb, SR).astype(np.float32)
         out = ESSAI_DIR / f"debit-{int(deb * 100):03d}.mp3"
@@ -719,47 +773,51 @@ def variantes_debit(key, source, role="cabin", lang="ja-JP", pos="mid"):
     brut.unlink()
     print(f"\n→ {ESSAI_DIR}\n"
           "Toutes viennent de LA MÊME prise : seule la vitesse change.\n"
-          f'Reporter la retenue dans graver.py :  DEBIT["{source}"] = 0.xx\n'
+          f'Reporter la retenue dans graver.py :  DEBIT["{v["source"]}"] = 0.xx\n'
           "Le resserrage s'applique au montage, donc rien n'est regravé.")
 
 
-def variantes(key, source, role="cabin", lang="ja-JP", pos="mid", stab=False):
-    """Grave un même fragment sous toutes les graphies et ponctuations.
+def variantes(key, v, stab=False):
+    """Grave un même fragment sous plusieurs graphies et ponctuations.
 
-    Décrire ce qu'on veut ne marche pas : le modèle ne prend aucune consigne
-    d'intonation, il déduit tout de ce qu'on écrit. Et je ne peux rien
-    entendre. Tourner autour du pot revient donc à deviner - autant graver la
-    grille d'un coup et laisser l'oreille désigner la case.
+    Les axes ne sont pas les mêmes selon la langue, et c'est le corpus qui le
+    dit : le japonais a une GRAPHIE à choisir - kana ou écriture d'origine, ce
+    qui a débloqué 「お乗り換えです」 - là où l'anglais n'en a qu'une. Pour lui, le
+    second axe utile est la TENUE de voix, donc la grille bascule d'elle-même.
     """
     ESSAI_DIR.mkdir(parents=True, exist_ok=True)
-    kata, hira = (_lecture(source) if lang == "ja-JP" else (source, source))
-    formes = {"katakana": kata, "hiragana": hira, "source": source}
-    stabs = GRILLE_STAB if stab else (SETTINGS[role]["stability"],)
+    ja = v["lang"] == "ja-JP"
+    kata, hira = (_lecture(v["source"]) if ja else (v["text"], v["text"]))
+    formes = ({"katakana": kata, "hiragana": hira, "source": v["source"]} if ja
+              else {"prononce": v["text"], "brut": v["source"]}
+              if v["text"] != v["source"] else {"telquel": v["text"]})
+    poncts = PONCTUATIONS_JA if ja else PONCTUATIONS
+    stabs = GRILLE_STAB if (stab or not ja) else (SETTINGS[v["role"]]["stability"],)
 
-    print(f"« {source} »   [{role} {pos}]")
-    for g in GRAPHIES:
-        print(f"  {g:9} {formes[g]}")
+    print(f"« {v['source']} »   [{v['lang']} {v['role']} {v['pos']}]")
+    for nom, f in formes.items():
+        print(f"  {nom:9} {f}")
     print()
     n = 0
-    for g in GRAPHIES:
-        for nom, ponct in PONCTUATIONS:
+    for gnom, forme in formes.items():
+        for pnom, ponct in poncts:
             for st in stabs:
                 n += 1
-                reg = {**SETTINGS[role], "stability": st}
-                mp3 = call(f"/text-to-speech/{VOICES[(lang, role)]}", key, raw=True,
-                           query=f"?output_format={OUTPUT_FORMAT}",
-                           body={"text": formes[g] + ponct, "model_id": MODEL,
+                reg = {**reglages(v["role"], v["source"]), "stability": st}
+                mp3 = call(f"/text-to-speech/{VOICES[(v['lang'], v['role'])]}", key,
+                           raw=True, query=f"?output_format={OUTPUT_FORMAT}",
+                           body={"text": forme + ponct, "model_id": MODEL,
                                  "voice_settings": reg})
-                suffixe = f"-stab{int(st * 100):03d}" if stab else ""
-                out = ESSAI_DIR / f"var-{n:02d}-{g}-{nom}{suffixe}.mp3"
+                suff = f"-stab{int(st * 100):03d}" if len(stabs) > 1 else ""
+                out = ESSAI_DIR / f"var-{n:02d}-{gnom.replace(' ', '')}-{pnom}{suff}.mp3"
                 out.write_bytes(mp3)
-                print(f"  {out.name:38} « {formes[g] + ponct} »")
+                print(f"  {out.name:40} « {forme + ponct} »")
 
     print(f"\n{n} prises → {ESSAI_DIR}\n"
           "Retenir la meilleure et me donner son nom, ou reporter soi-même dans\n"
           "graver.py :\n"
-          f'  PONCTUATION["{source}"] = "…"        pour le contour\n'
-          f'  REGLAGES["{source}"] = {{"stability": …}}   pour la tenue\n'
+          f'  PONCTUATION["{v["source"]}"] = "…"        pour le contour\n'
+          f'  REGLAGES["{v["source"]}"] = {{"stability": …}}   pour la tenue\n'
           "et, pour une autre graphie, une ligne dans lectures-corrections.json.\n"
           "Seul ce fragment sera regravé.")
 
@@ -806,35 +864,61 @@ def main():
         # acquis : selon la page de codes, l'argument arrive tronqué ou
         # remplacé par des points d'interrogation, et l'erreur ressemble alors
         # à un fragment inconnu plutôt qu'à un problème de terminal.
-        reste = sys.argv[sys.argv.index("--variantes") + 1:]
-        choix = next((a for a in reste if not a.startswith("--")), None)
-        catalogue = sorted(json.loads(LECTURES.read_text(encoding="utf-8"))["lectures"])
+        reste = [a for a in sys.argv[sys.argv.index("--variantes") + 1:]
+                 if not a.startswith("--")]
+        corpus = next((a for a in reste if a.endswith(".json")), "audio-src/annonces.json")
+        choix = next((a for a in reste if not a.endswith(".json")), None)
+        cat = catalogue(corpus)
         if choix is None:
             print("Indiquer le fragment, par son texte ou son numéro :\n")
-            for i, b in enumerate(catalogue, 1):
-                print(f"  {i:3}  {b}")
+            for i, v in enumerate(cat, 1):
+                print(f"  {i:3}  [{v['lang']} {v['role']:11} {v['pos']:4}] {v['source']}")
             print("\n  npm run voix:variantes -- 12")
             return
-        src = catalogue[int(choix) - 1] if choix.isdigit() else choix
+        if choix.isdigit():
+            i = int(choix)
+            if not 1 <= i <= len(cat):
+                raise SystemExit(f"Numéro hors liste : 1 à {len(cat)}.")
+            v = cat[i - 1]
+        else:
+            v = next((w for w in cat if w["source"] == choix), None)
+            if v is None:
+                raise SystemExit(
+                    f"« {choix} » n'est pas un fragment connu.\n"
+                    "Lancer `npm run voix:variantes` sans rien pour voir la liste "
+                    "numérotée, puis rappeler avec le numéro.")
         if not key:
             raise SystemExit("Renseigner ELEVENLABS_API_KEY.")
-        if src not in catalogue:
-            raise SystemExit(
-                f"« {src} » n'est pas un fragment connu.\n"
-                "Lancer `npm run voix:variantes` sans rien pour voir la liste "
-                "numérotée, puis rappeler avec le numéro.")
-        pos = "end" if "--fin" in sys.argv else "mid"
+        if not VOICES.get((v["lang"], v["role"])):
+            raise SystemExit(f"Aucune voix pour {v['lang']} {v['role']}.")
         if "--debit" in sys.argv:
-            variantes_debit(key, src, pos=pos)
+            variantes_debit(key, v)
         else:
-            variantes(key, src, pos=pos, stab="--stab" in sys.argv)
+            variantes(key, v, stab="--stab" in sys.argv)
         return
     texts_path, out_dir, manifest_path = sys.argv[1:4]
     argv = sys.argv[4:]
-    essai = int(argv[argv.index("--essai") + 1]) if "--essai" in argv else None
+    # Le nombre est FACULTATIF après --essai : ça permet à npm de le passer en
+    # bout de ligne (`npm run voix:essai -- 14`) sans que le script ait à le
+    # figer, tout en gardant une valeur par défaut utile.
+    essai = None
+    if "--essai" in argv:
+        suite = argv[argv.index("--essai") + 1:]
+        essai = (int(suite[0]) if suite and suite[0].isdigit() else 12)
     dry = "--plan" in argv
     if "--frags" in argv:
         FRAG_DIR = Path(argv[argv.index("--frags") + 1])
+
+    # `--sans ja-JP` ou `--sans en-US:cabin` met un rôle de côté le temps d'une
+    # gravure, sans toucher au fichier. C'est le mécanisme des rôles en attente
+    # de voix qui sert : leurs annonces gardent clips et entrées de manifeste,
+    # donc on peut remonter une langue sans dépenser le quota de l'autre.
+    for i, a in enumerate(argv):
+        if a == "--sans" and i + 1 < len(argv):
+            motif = argv[i + 1]
+            for cle in list(VOICES):
+                if motif in (cle[0], f"{cle[0]}:{cle[1]}"):
+                    VOICES[cle] = ""
 
     corpus = json.loads(Path(texts_path).read_text(encoding="utf-8"))
     items = corpus["items"]
@@ -849,8 +933,23 @@ def main():
         # fragment isolé n'en dit rien. On les prend étalées sur le corpus
         # plutôt qu'en tête, sinon les douze premières sont douze 「次は」 de
         # gares voisines et l'essai ne montre qu'une seule tournure.
-        step = max(1, len(plan) // essai)
-        plan = plan[::step][:essai]
+        #
+        # Étalées PAR RÔLE, et c'est nécessaire : le corpus alterne japonais et
+        # anglais gare par gare, si bien qu'un pas pair sur la liste entière ne
+        # ramenait qu'une seule langue - vérifié, --essai 14 ne sortait que du
+        # japonais. On répartit donc la quantité demandée entre les rôles ayant
+        # une voix, au prorata.
+        groupes = {}
+        for q in plan:
+            groupes.setdefault((q["lang"], q["role"]), []).append(q)
+        choix, reste = [], essai
+        for i, (cle, lot) in enumerate(sorted(groupes.items())):
+            part = round(essai * len(lot) / len(plan)) if i < len(groupes) - 1 else reste
+            part = max(1, min(part, reste, len(lot)))
+            pas = max(1, len(lot) // part)
+            choix.extend(lot[::pas][:part])
+            reste -= part
+        plan = choix
         inventory = {f: v for f, v in inventory.items()
                      if any(f == g for p in plan for g, _ in p["seq"])}
 
@@ -964,8 +1063,10 @@ def main():
             # La cadence mesurée pose le débit ; DEBIT reste un ajustement
             # RELATIF par-dessus, pour ce que l'oreille corrige encore.
             v = inventory[fid]
-            debit = v["debit"] * (cadence(v["text"], len(bloc) / SR, v["source"], garde)
-                                  if v_lang_ja else 1.0)
+            debit = (v["debit"]
+                     * DEBIT_ROLE.get((v["lang"], v["role"]), 1.0)
+                     * (cadence(v["text"], len(bloc) / SR, v["source"], garde)
+                        if v_lang_ja else 1.0))
             if abs(debit - 1.0) > 0.01:
                 # 1/debit : wsola raisonne en vitesse de lecture, DEBIT en durée.
                 bloc = wsola(bloc, 1.0 / debit, SR).astype(np.float32)
