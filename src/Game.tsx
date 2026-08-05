@@ -30,6 +30,7 @@ import { DoorCloseLed } from './three/DoorCloseLed';
 import { Wayside } from './three/Wayside';
 import { Weather } from './three/Weather';
 import { SkyDome } from './three/city/SkyDome';
+import { FarSkyline } from './three/city/FarSkyline';
 import { CityRibbon } from './three/city/CityRibbon';
 import { Utilities } from './three/city/Utilities';
 import { Traffic } from './three/city/Traffic';
@@ -259,6 +260,9 @@ export default function Game() {
           <TrainConsist />
         </TrainRig>
         <SkyDome />
+        {/* Entre le ciel et la ville, au sens propre : les repères de Tokyo à
+            leur relèvement géographique. */}
+        <FarSkyline />
         <CityRibbon />
         <Utilities />
         <Traffic />
