@@ -71,14 +71,6 @@
   "source": "つくばエクスプレスは",
   "text": "ツクバエクスプレスワ"
  },
- "0a8b434e8bda": {
-  "debit": 1.0,
-  "lang": "ja-JP",
-  "pos": "mid",
-  "role": "cabin",
-  "source": "京浜東北線",
-  "text": "京浜東北線"
- },
  "0b14986376f5": {
   "debit": 1.0,
   "lang": "ja-JP",
@@ -126,6 +118,14 @@
   "role": "cabin",
   "source": "まもなく運転を再開いたします",
   "text": "マモナクウンテンオサイカイイタシマス"
+ },
+ "152c326af740": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "京浜東北線は",
+  "text": "ケイヒントウホクセンワ"
  },
  "15989be5b194": {
   "debit": 1.0,
@@ -1007,14 +1007,6 @@
   "source": "西武池袋線は",
   "text": "セイブイケブクロセンワ"
  },
- "c045754a9b97": {
-  "debit": 1.0,
-  "lang": "ja-JP",
-  "pos": "mid",
-  "role": "cabin",
-  "source": "京浜東北線は",
-  "text": "京浜東北線は"
- },
  "c05e25eb3b3e": {
   "debit": 1.0,
   "lang": "ja-JP",
@@ -1278,6 +1270,14 @@
   "role": "cabin",
   "source": "東海道線",
   "text": "トウカイドウセン"
+ },
+ "f4400c7fbd0a": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "京浜東北線",
+  "text": "ケイヒントウホクセン"
  },
  "f57372bcc913": {
   "debit": 1.0,
