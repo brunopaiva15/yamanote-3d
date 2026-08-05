@@ -1,0 +1,13 @@
+{
+ "_": "Corrections de lecture faites à l'oreille, appliquées PAR-DESSUS la table générée par lectures.py, qui elle est réécrite en entier à chaque régénération. Format : \"texte source\": [katakana, hiragana].",
+ "_exemple": [
+  "カタカナ",
+  "ひらがな"
+ ],
+ "お乗換です": [
+  "お乗り換えです",
+  "お乗り換えです"
+ ],
+ "_お乗換です": "Rendu en katakana (オノリカエデス) le modèle l'étirait sans qu'aucun resserrage ne le sauve. On repasse à l'écriture mixte : les okurigana り et え ancrent le mot comme japonais, donc le risque de lecture chinoise qui justifiait les kana ne se pose pas ici, contrairement à un 渋谷 tout nu.",
+ "_京浜東北線_essai": "Essayé en kanji, RETIRÉ : le modèle l'a dit en chinois. Le risque était annoncé - cinq kanji d'affilée sans un seul okurigana pour ancrer la langue, c'est le cas même qui avait motivé le passage aux kana. La graphie mixte marche pour お乗り換えです parce que ses り et え tranchent ; un nom propre tout en kanji, non."
+}

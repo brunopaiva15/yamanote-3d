@@ -1,0 +1,1378 @@
+{
+ "00c6203acdcf": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京メトロ日比谷線",
+  "text": "トウキョウメトロヒビヤセン"
+ },
+ "0170f1b9d66e": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "右側です",
+  "text": "ミギガワデス"
+ },
+ "01f122d12d28": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "急停車します",
+  "text": "キュウテイシャシマス"
+ },
+ "027df477a4af": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "りんかい線は",
+  "text": "リンカイセンワ"
+ },
+ "0513fd9b09fc": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "いましばらくお待ちください",
+  "text": "イマシバラクオマチクダサイ"
+ },
+ "0805abd5578e": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "ご利用くださいまして",
+  "text": "ゴリヨウクダサイマシテ"
+ },
+ "0863df1637c9": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "この電車は",
+  "text": "コノデンシャワ"
+ },
+ "086be4d90c99": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "車両の点検のため",
+  "text": "シャリョウノテンケンノタメ"
+ },
+ "0880c1684e86": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "つくばエクスプレスは",
+  "text": "ツクバエクスプレスワ"
+ },
+ "0a8b434e8bda": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "京浜東北線",
+  "text": "京浜東北線"
+ },
+ "0b14986376f5": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "携帯電話の電源をお切りください",
+  "text": "ケイタイデンワノデンゲンオオキリクダサイ"
+ },
+ "0c1e0a890950": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "急停車いたしました",
+  "text": "キュウテイシャイタシマシタ"
+ },
+ "0ea854dee40d": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "日暮里・舎人ライナーは",
+  "text": "ニッポリ、トネリライナーワ"
+ },
+ "1283d9444e24": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "渋谷・品川方面ゆきです",
+  "text": "シブヤ、シナガワホウメンユキデス"
+ },
+ "13448e6759b3": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東海道新幹線",
+  "text": "トウカイドウシンカンセン"
+ },
+ "13e5ed7a656a": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "まもなく運転を再開いたします",
+  "text": "マモナクウンテンオサイカイイタシマス"
+ },
+ "15989be5b194": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京メトロ丸ノ内線は",
+  "text": "トウキョウメトロマルノウチセンワ"
+ },
+ "175016bc6f08": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "大崎",
+  "text": "オオサキ"
+ },
+ "19aa623dcc13": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "やむを得ず急停車することがありますので",
+  "text": "ヤムオエズキュウテイシャスルコトガアリマスノデ"
+ },
+ "1d1011cb9c7b": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "ありがとうございます",
+  "text": "アリガトウゴザイマス"
+ },
+ "1e38e29012d2": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東北・上越新幹線",
+  "text": "トウホク、ジョウエツシンカンセン"
+ },
+ "20c542ca0fed": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "優先席があります",
+  "text": "ユウセンセキガアリマス"
+ },
+ "21ce53ed5e60": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "お客様をお待たせしております",
+  "text": "オキャクサマオオマタセシテオリマス"
+ },
+ "22cd935cd474": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "ご案内いたしますので",
+  "text": "ゴアンナイイタシマスノデ"
+ },
+ "2531f7c0661a": {
+  "debit": 0.95,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "お乗換です",
+  "text": "お乗り換えです"
+ },
+ "262a659b3455": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "池袋・上野方面ゆきです",
+  "text": "イケブクロ、ウエノホウメンユキデス"
+ },
+ "2666a38ea86b": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "お客様にお待たせしております",
+  "text": "オキャクサマニオマタセシテオリマス"
+ },
+ "2988c5972873": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "神田",
+  "text": "カンダ"
+ },
+ "2c1b725a0edf": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "田町",
+  "text": "タマチ"
+ },
+ "2e9772c5dad8": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "都営新宿線",
+  "text": "トエイシンジュクセン"
+ },
+ "30b5d26a8fc7": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "マナーモードに設定のうえ",
+  "text": "マナーモードニセッテイノウエ"
+ },
+ "33c0b7b8cff7": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "都営浅草線",
+  "text": "トエイアサクサセン"
+ },
+ "344026c98874": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "優先席付近では",
+  "text": "ユウセンセキフキンデワ"
+ },
+ "3539afcaccfb": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京メトロ日比谷線は",
+  "text": "トウキョウメトロヒビヤセンワ"
+ },
+ "355a01048461": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "代々木",
+  "text": "ヨヨギ"
+ },
+ "3587b58dcb3e": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京メトロ銀座線は",
+  "text": "トウキョウメトロギンザセンワ"
+ },
+ "36dea4847a0a": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "都営三田線は",
+  "text": "トエイミタセンワ"
+ },
+ "3827bcfb9af2": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "京王井の頭線は",
+  "text": "ケイオウイノカシラセンワ"
+ },
+ "3a10564eca4d": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "いましばらくお待ちください",
+  "text": "イマシバラクオマチクダサイ"
+ },
+ "3abe6feb58fb": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "新橋",
+  "text": "シンバシ"
+ },
+ "3af8a822aa14": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "半蔵門線",
+  "text": "ハンゾウモンセン"
+ },
+ "3c610c5727f9": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "田園都市線",
+  "text": "デンエントシセン"
+ },
+ "3ec347e5acb7": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "日比谷線",
+  "text": "ヒビヤセン"
+ },
+ "3ec63cae9b8d": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "ご協力をお願いいたします",
+  "text": "ゴキョウリョクオオネガイイタシマス"
+ },
+ "4155a6a6c199": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "電力の復旧作業を行っております",
+  "text": "デンリョクノフッキュウサギョウオイッテオリマス"
+ },
+ "43a53612332b": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "お客様のご協力をお願いいたします",
+  "text": "オキャクサマノゴキョウリョクオオネガイイタシマス"
+ },
+ "45faf062a726": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "手を触れないでください",
+  "text": "テオフレナイデクダサイ"
+ },
+ "46840c2422af": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "恵比寿",
+  "text": "エビス"
+ },
+ "46ff03493e7b": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "京急線は",
+  "text": "ケイキュウセンワ"
+ },
+ "471dd9b0ff79": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "席をお譲りください",
+  "text": "セキオオユズリクダサイ"
+ },
+ "480580dc627c": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "優先席を必要とされるお客様がいらっしゃいましたら",
+  "text": "ユウセンセキオヒツヨウトサレルオキャクサマガイラッシャイマシタラ"
+ },
+ "4961cffa4e32": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "高田馬場",
+  "text": "タカダノババ"
+ },
+ "4a2bf8702c78": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "池袋",
+  "text": "イケブクロ"
+ },
+ "4ac15cc6bf90": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "浜松町",
+  "text": "ハママツチョウ"
+ },
+ "4b6158635829": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "上野・池袋方面ゆきです",
+  "text": "ウエノ、イケブクロホウメンユキデス"
+ },
+ "4dfc4b629af6": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "電車は事故防止のため",
+  "text": "デンシャワジコボウシノタメ"
+ },
+ "4e1b496ab852": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "京王線",
+  "text": "ケイオウセン"
+ },
+ "5438c98837af": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "車内の照明は非常灯に切り替わっております",
+  "text": "シャナイノショウメイワヒジョウトウニキリカワッテオリマス"
+ },
+ "548a36105234": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "有楽町線",
+  "text": "ユウラクチョウセン"
+ },
+ "548eac841b16": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "都営三田線",
+  "text": "トエイミタセン"
+ },
+ "558ea942e55d": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "中央・総武線",
+  "text": "チュウオウ、ソウブセン"
+ },
+ "59b656d9fbc3": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "池袋・新宿方面ゆきです",
+  "text": "イケブクロ、シンジュクホウメンユキデス"
+ },
+ "5acff44e5f6f": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "秋葉原",
+  "text": "アキハバラ"
+ },
+ "5c225a5ff3fe": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "ヤマノテ線を",
+  "text": "ヤマノテセンオ"
+ },
+ "5f23b3f2dbfc": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "駒込",
+  "text": "コマゴメ"
+ },
+ "5f50f03a24f6": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "新宿・渋谷方面ゆきです",
+  "text": "シンジュク、シブヤホウメンユキデス"
+ },
+ "5fb3be5c2ded": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "田端",
+  "text": "タバタ"
+ },
+ "6067d5239fc7": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "この電車は停車しております",
+  "text": "コノデンシャワテイシャシテオリマス"
+ },
+ "61d34bd9ff4c": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "都電荒川線は",
+  "text": "トデンアラカワセンワ"
+ },
+ "634d785c04cc": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "ドアが閉まりません",
+  "text": "ドアガシマリマセン"
+ },
+ "668530e20f3b": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "大塚",
+  "text": "オオツカ"
+ },
+ "671eec7a617a": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "通話はお控えください",
+  "text": "ツウワワオヒカエクダサイ"
+ },
+ "6737807d26d4": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "京成線",
+  "text": "ケイセイセン"
+ },
+ "68708a5a5177": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "ご注意ください",
+  "text": "ゴチュウイクダサイ"
+ },
+ "6964b3c22ffc": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "有楽町",
+  "text": "ユウラクチョウ"
+ },
+ "6aecda9cfeff": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "日暮里",
+  "text": "ニッポリ"
+ },
+ "6c01ec05b92f": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "安全の確認がとれましたので",
+  "text": "アンゼンノカクニンガトレマシタノデ"
+ },
+ "6c81c023cec1": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "副都心線は",
+  "text": "フクトシンセンワ"
+ },
+ "6cfdac9b6522": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京メトロ南北線は",
+  "text": "トウキョウメトロナンボクセンワ"
+ },
+ "7017fd1f4dc3": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "お客様にご案内いたします",
+  "text": "オキャクサマニゴアンナイイタシマス"
+ },
+ "711859f40200": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "電車とホームの間が空いているところがありますので",
+  "text": "デンシャトホームノアイダガアイテイルトコロガアリマスノデ"
+ },
+ "71d0c48eb2a7": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "副都心線",
+  "text": "フクトシンセン"
+ },
+ "7486e4c92493": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "新宿・池袋方面ゆきです",
+  "text": "シンジュク、イケブクロホウメンユキデス"
+ },
+ "74b6cb4c1730": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "品川",
+  "text": "シナガワ"
+ },
+ "7569d789808b": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "宇都宮線",
+  "text": "ウツノミヤセン"
+ },
+ "78fd5c97fbaa": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "都営おおえど線は",
+  "text": "トエイオオエドセンワ"
+ },
+ "79e34e7421db": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "総武線快速",
+  "text": "ソウブセンカイソク"
+ },
+ "7b523969cb83": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "渋谷",
+  "text": "シブヤ"
+ },
+ "7c33769f6fed": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "高輪ゲートウェイ",
+  "text": "タカナワゲートウェイ"
+ },
+ "7c6ab7d1e48b": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "埼京線",
+  "text": "サイキョウセン"
+ },
+ "7ced2afdfdfd": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "左側です",
+  "text": "ヒダリガワデス"
+ },
+ "7d7dc26d00b2": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "お出口は",
+  "text": "オデグチワ"
+ },
+ "7df483cc666e": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "新大久保",
+  "text": "シンオオクボ"
+ },
+ "7e907c07221b": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "新宿",
+  "text": "シンジュク"
+ },
+ "801cf653704b": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "恐れ入りますが",
+  "text": "オソレイリマスガ"
+ },
+ "80c0a070d98b": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "それ以外の場所では",
+  "text": "ソレイガイノバショデワ"
+ },
+ "83866e1840df": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "ヤマノテ線ウチマワリ",
+  "text": "ヤマノテセンウチマワリ"
+ },
+ "8481dbf67e7d": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "復旧の見通しが立ち次第",
+  "text": "フッキュウノミトオシガタチシダイ"
+ },
+ "84944f83267c": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "小田急線",
+  "text": "オダキュウセン"
+ },
+ "861f52529927": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "ご迷惑をおかけいたします",
+  "text": "ゴメイワクオオカケイタシマス"
+ },
+ "872c46e48761": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "ヤマノテ線ソトマワリ",
+  "text": "ヤマノテセンソトマワリ"
+ },
+ "895311920d33": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "中央線",
+  "text": "チュウオウセン"
+ },
+ "8c06a78f7196": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "ドアが閉まります",
+  "text": "ドアガシマリマス"
+ },
+ "8e884a0029ca": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "ゆりかもめは",
+  "text": "ユリカモメワ"
+ },
+ "91987bf573f4": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "お立ちのお客様は",
+  "text": "オタチノオキャクサマワ"
+ },
+ "9460059cf64b": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京メトロ銀座線",
+  "text": "トウキョウメトロギンザセン"
+ },
+ "9a7d90a84781": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "上野",
+  "text": "ウエノ"
+ },
+ "9ad9026065b9": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "車内の機器を確認のうえ",
+  "text": "シャナイノキキオカクニンノウエ"
+ },
+ "9cb6714b017e": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東急池上線は",
+  "text": "トウキュウイケガミセンワ"
+ },
+ "9ea38d898143": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "信号確認のため",
+  "text": "シンゴウカクニンノタメ"
+ },
+ "9eab628fe6bb": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "車内でお待ちください",
+  "text": "シャナイデオマチクダサイ"
+ },
+ "a0540331a667": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "お客様にお願いいたします",
+  "text": "オキャクサマニオネガイイタシマス"
+ },
+ "a292c5291ef3": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "足元にご注意ください",
+  "text": "アシモトニゴチュウイクダサイ"
+ },
+ "a34b097827d2": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "ただいま",
+  "text": "タダイマ"
+ },
+ "ae09d5599d4e": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "巣鴨",
+  "text": "スガモ"
+ },
+ "aec64a8855fa": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "お客様の救護を行っております",
+  "text": "オキャクサマノキュウゴオイッテオリマス"
+ },
+ "b1d477f3b060": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "まもなく運転を再開いたします",
+  "text": "マモナクウンテンオサイカイイタシマス"
+ },
+ "b3ac91d07d7a": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "ご迷惑をおかけいたしました",
+  "text": "ゴメイワクオオカケイタシマシタ"
+ },
+ "b63caf14f4ec": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "東京・品川方面ゆきです",
+  "text": "トウキョウ、シナガワホウメンユキデス"
+ },
+ "b6dbe5a296f9": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "上野東京ライン",
+  "text": "ウエノトウキョウライン"
+ },
+ "bb841a7b1764": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "五反田",
+  "text": "ゴタンダ"
+ },
+ "bbf0066df75d": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "京成線は",
+  "text": "ケイセイセンワ"
+ },
+ "bd3220660af3": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東急目黒線は",
+  "text": "トウキュウメグロセンワ"
+ },
+ "bd75d772323e": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "ドアから離れてください",
+  "text": "ドアカラハナレテクダサイ"
+ },
+ "bef47e37c5a1": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "次は",
+  "text": "ツギワ"
+ },
+ "bffad15569db": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "西武池袋線は",
+  "text": "セイブイケブクロセンワ"
+ },
+ "c045754a9b97": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "京浜東北線は",
+  "text": "京浜東北線は"
+ },
+ "c05e25eb3b3e": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "西日暮里",
+  "text": "ニシニッポリ"
+ },
+ "c0b68d82f7bb": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "まもなく発車いたします",
+  "text": "マモナクハッシャイタシマス"
+ },
+ "c237477e7c10": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "お客様の救護が終了しましたので",
+  "text": "オキャクサマノキュウゴガシュウリョウシマシタノデ"
+ },
+ "c2aaa10a8c68": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "品川・渋谷方面ゆきです",
+  "text": "シナガワ、シブヤホウメンユキデス"
+ },
+ "c675455d62b2": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "危険ですので",
+  "text": "キケンデスノデ"
+ },
+ "c713de4e14f6": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東武東上線",
+  "text": "トウブトウジョウセン"
+ },
+ "c9c57ddca1b2": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "目白",
+  "text": "メジロ"
+ },
+ "cc168beb3595": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京メトロ千代田線",
+  "text": "トウキョウメトロチヨダセン"
+ },
+ "cd19fb4ec027": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "上野・東京方面ゆきです",
+  "text": "ウエノ、トウキョウホウメンユキデス"
+ },
+ "ce45e5863dcb": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京モノレール",
+  "text": "トウキョウモノレール"
+ },
+ "ce8ee5fec230": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "架線の停電のため",
+  "text": "カセンノテイデンノタメ"
+ },
+ "ceb1eaee5c0e": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "安全の確認を行っております",
+  "text": "アンゼンノカクニンオイッテオリマス"
+ },
+ "cfcb539f4e00": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "湘南新宿ライン",
+  "text": "ショウナンシンジュクライン"
+ },
+ "d01c75a95467": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "運転再開まで",
+  "text": "ウンテンサイカイマデ"
+ },
+ "d231226adff6": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "電気が復旧いたしました",
+  "text": "デンキガフッキュウイタシマシタ"
+ },
+ "d3c9c4f46ee4": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "つり革や手すりにおつかまりください",
+  "text": "ツリカワヤテスリニオツカマリクダサイ"
+ },
+ "d4d27e51e318": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "線路内の安全確認のため",
+  "text": "センロナイノアンゼンカクニンノタメ"
+ },
+ "d5d3117d0bad": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "目黒",
+  "text": "メグロ"
+ },
+ "da39747918ec": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "横須賀線",
+  "text": "ヨコスカセン"
+ },
+ "da3997d99fba": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "引き続き",
+  "text": "ヒキツヅキ"
+ },
+ "db3c5f06eba1": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "安全の確認を行っておりますので",
+  "text": "アンゼンノカクニンオイッテオリマスノデ"
+ },
+ "dd66e9c6735f": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "まもなく",
+  "text": "マモナク"
+ },
+ "ddab3457a80d": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京メトロ南北線",
+  "text": "トウキョウメトロナンボクセン"
+ },
+ "e2053a04cd4e": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "高崎線",
+  "text": "タカサキセン"
+ },
+ "e2761b34e488": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "京葉線",
+  "text": "ケイヨウセン"
+ },
+ "e88fd77dd9ed": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "発車まで",
+  "text": "ハッシャマデ"
+ },
+ "edb261531ad3": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東急東横線",
+  "text": "トウキュウヒガシヨコセン"
+ },
+ "ee76d59dad35": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "西武新宿線",
+  "text": "セイブシンジュクセン"
+ },
+ "ef5f61cbc294": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "おおえど線は",
+  "text": "オオエドセンワ"
+ },
+ "f001a1795beb": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "原宿",
+  "text": "ハラジュク"
+ },
+ "f01c42fbb6e6": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "品川・東京方面ゆきです",
+  "text": "シナガワ、トウキョウホウメンユキデス"
+ },
+ "f02625a1ee38": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "御徒町",
+  "text": "オカチマチ"
+ },
+ "f17dcb5e587f": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東海道線",
+  "text": "トウカイドウセン"
+ },
+ "f57372bcc913": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京メトロ丸ノ内線",
+  "text": "トウキョウメトロマルノウチセン"
+ },
+ "f5a5e577c0d0": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京",
+  "text": "トウキョウ"
+ },
+ "f5ebf66ca2b0": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "東京・上野方面ゆきです",
+  "text": "トウキョウ、ウエノホウメンユキデス"
+ },
+ "f5ef619d35f8": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "この電車には",
+  "text": "コノデンシャニワ"
+ },
+ "f61bf47da2e8": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "本日も",
+  "text": "ホンジツモ"
+ },
+ "f634cedc3191": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京メトロ東西線は",
+  "text": "トウキョウメトロトウザイセンワ"
+ },
+ "f7a101767d9e": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "お待たせいたしました",
+  "text": "オマタセイタシマシタ"
+ },
+ "f7a91be2b1e6": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "ドアの非常用コックには",
+  "text": "ドアノヒジョウヨウコックニワ"
+ },
+ "fc3c779c52b2": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "鶯谷",
+  "text": "ウグイスダニ"
+ },
+ "fc6b22739c16": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "常磐線",
+  "text": "ジョウバンセン"
+ },
+ "fd2eb76eec78": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "mid",
+  "role": "cabin",
+  "source": "東京メトロ有楽町線は",
+  "text": "トウキョウメトロユウラクチョウセンワ"
+ },
+ "fffcb56403cb": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "渋谷・新宿方面ゆきです",
+  "text": "シブヤ、シンジュクホウメンユキデス"
+ }
+}
