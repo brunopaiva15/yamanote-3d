@@ -46,6 +46,7 @@ Usage :
   python scripts/voice-lab/graver.py /tmp/textes.json \\
       public/audio/announcements src/data/pa-manifest.ts \\
       [--essai N] [--plan] [--hiragana]
+  python scripts/voice-lab/graver.py --variantes 次は
 """
 
 import hashlib
@@ -103,18 +104,37 @@ SETTINGS = {
     "atos-en": {"stability": 0.80, "similarity_boost": 0.75, "style": 0.0},
 }
 
+# Réglages propres à UN fragment, par-dessus ceux de son rôle. Un fragment
+# synthétisé seul perd la mélodie de la phrase qui le portait, et tous ne le
+# perdent pas de la même façon : les plus courts s'étirent et se chargent
+# d'intention. `--variantes` sert à trouver la valeur à l'oreille.
+#
+# La clé est le TEXTE SOURCE, pas la lecture : elle reste lisible et survit à
+# un changement de graphie. Ces réglages entrent dans l'identité du fragment,
+# donc en changer un ne regrave que celui-là.
+REGLAGES = {}
+
 # Silences relevés sur la prise étiquetée 「次は。渋谷。渋谷。お出口は右側です。」
 GAP_SENTENCE = 0.35
 GAP_COMMA = 0.25
 GAP_REPEAT = 0.43  # entre les deux occurrences du nom de gare : le seul plus long
 GAP_JOINT = 0.0  # à l'intérieur d'un mot : les deux morceaux se recollent
 
-# Sous-découpe : ce qui doit devenir un fragment À PART sans être séparé par un
-# silence. 「線」 le vaut parce qu'il revient dans une quinzaine de noms de
-# lignes - 銀座線, 中央線, 京浜東北線 - et qu'un fragment unique le rend
-# rigoureusement identique partout, comme 「次は」. Le raccord se fait en
-# fondu, sans quoi on entendrait la couture au milieu du mot.
-SOUS_DECOUPE = [re.compile(r"^(.+?)(線[はを]?)$")]
+# Sous-découpe : ce qui devient un fragment À PART sans silence de séparation.
+#
+# VIDE, ET C'EST UN RÉSULTAT. 「線」 avait été détaché pour qu'il sonne pareil
+# dans les quinze noms de lignes, comme 「次は」. À l'écoute, la couture se
+# tenait mais le morceau détaché - 「センワ」, 線 plus la particule - se disait
+# comme un mot à lui seul : « Keihin-Tôhoku SENWA ». Un fragment n'a de sens
+# que s'il forme un groupe qui se dit seul, et 線 n'en est pas un : il se
+# suffit d'autant moins qu'il porte l'accent du nom qui le précède.
+#
+# Le mécanisme reste parce qu'il est juste ; c'est le candidat qui ne l'était
+# pas. La régularité du 線 se joue ailleurs : chaque nom de ligne est un
+# fragment gravé UNE FOIS, donc 「ケイヒントウホクセン」 est identique partout où
+# cette ligne s'annonce. Ce qui varie encore, c'est d'une ligne à l'autre - et
+# ça varie aussi chez une locutrice humaine.
+SOUS_DECOUPE = []
 
 # Durée du fondu à un raccord interne. Assez court pour ne pas manger de more,
 # assez long pour qu'aucun clic ne passe.
@@ -128,7 +148,10 @@ FONDU = 0.015
 # La clé est le TEXTE SOURCE, pas la lecture : elle reste lisible et survit à
 # un changement de graphie. Une valeur inférieure à 1 raccourcit.
 DEBIT = {
-    "お乗換です": 0.85,  # sortait étiré, « onorikaaaaai desu »
+    # Toujours traîné à 0,85 : on resserre d'un quart. Au-delà de ~0,7 le
+    # vocodeur commence à s'entendre - si ça ne suffit toujours pas, la cause
+    # n'est pas la durée, et il faut passer par --variantes.
+    "お乗換です": 0.75,
 }
 
 # Marge laissée autour de la parole en rognant un fragment. À zéro les attaques
@@ -260,7 +283,11 @@ def split_fragments(text, lang):
     return out
 
 
-def frag_id(role, lang, body, pos):
+def reglages(role, source):
+    return {**SETTINGS[role], **REGLAGES.get(source, {})}
+
+
+def frag_id(role, lang, body, pos, source=None):
     """Identifiant stable d'un fragment.
 
     Le modèle et les réglages entrent dedans : changer `stability` change le
@@ -268,7 +295,8 @@ def frag_id(role, lang, body, pos):
     dire. La voix aussi, évidemment.
     """
     h = hashlib.sha1(
-        "\x1f".join([VOICES[(lang, role)], MODEL, json.dumps(SETTINGS[role], sort_keys=True),
+        "\x1f".join([VOICES[(lang, role)], MODEL,
+                     json.dumps(reglages(role, source or body), sort_keys=True),
                      role, lang, pos, body]).encode("utf-8")
     )
     return h.hexdigest()[:12]
@@ -384,14 +412,55 @@ def build_plan(items):
         bodies = [b for b, _, _, _ in frs]
         seq = []
         for i, (body, sep, pos, forced) in enumerate(frs):
-            fid = frag_id(role, it["lang"], body, pos)
+            fid = frag_id(role, it["lang"], body, pos, sources[i])
             inventory[fid] = {"role": role, "lang": it["lang"], "pos": pos, "text": body,
-                              "debit": DEBIT.get(sources[i], 1.0)}
+                              "source": sources[i], "debit": DEBIT.get(sources[i], 1.0)}
             nxt = bodies[i + 1] if i + 1 < len(bodies) else None
             gap = 0.0 if i == len(frs) - 1 else gap_after(body, nxt, sep)
             seq.append((fid, forced if forced is not None else gap))
         plan.append({"key": it["key"], "text": it["text"], "seq": seq})
     return plan, inventory, deferred
+
+
+# Grille d'essai d'un fragment : ce qu'ElevenLabs expose côté modèle, croisé
+# avec le resserrage qu'on applique au montage. Petite exprès - huit prises se
+# comparent, seize ne se comparent plus.
+GRILLE_STAB = (0.55, 0.75, 0.90, 1.00)
+GRILLE_DEBIT = (1.00, 0.85)
+
+
+def variantes(key, source, role="cabin", lang="ja-JP", pos="mid"):
+    """Grave un même fragment sous plusieurs réglages, pour trancher à l'oreille.
+
+    Un fragment qui déplaît - trop traîné, trop chargé d'intention - se corrige
+    par deux nombres, et je ne peux ni les entendre ni les deviner : mes quatre
+    prédictions précédentes sur ce que donnerait tel réglage se sont toutes
+    révélées fausses. Autant graver la grille et laisser l'oreille trancher.
+    """
+    ESSAI_DIR.mkdir(parents=True, exist_ok=True)
+    lecture = kana(source) if lang == "ja-JP" else source
+    print(f"« {source} » → {lecture}   [{role} {pos}]\n")
+    for stab in GRILLE_STAB:
+        reg = {**SETTINGS[role], "stability": stab}
+        mp3 = call(f"/text-to-speech/{VOICES[(lang, role)]}", key, raw=True,
+                   query=f"?output_format={OUTPUT_FORMAT}",
+                   body={"text": spoken(lecture, "。" if lang == "ja-JP" else ".", pos),
+                         "model_id": MODEL, "voice_settings": reg})
+        brut = ESSAI_DIR / f"var-stab{int(stab * 100):03d}-debit100.mp3"
+        brut.write_bytes(mp3)
+        base = trimmed(brut)
+        print(f"  {brut.name}  {len(base) / SR:.2f}s")
+        for deb in GRILLE_DEBIT:
+            if deb == 1.0:
+                continue
+            y = wsola(base, deb, SR).astype(np.float32)
+            q = ESSAI_DIR / f"var-stab{int(stab * 100):03d}-debit{int(deb * 100):03d}.mp3"
+            q.write_bytes(encode_mp3(y, SR, kbps=96))
+            print(f"  {q.name}  {len(y) / SR:.2f}s")
+    print(f"\n→ {ESSAI_DIR}\n"
+          "Retenir la meilleure, puis reporter dans graver.py :\n"
+          f'  REGLAGES["{source}"] = {{"stability": …}}   et/ou   DEBIT["{source}"] = …\n'
+          "Seul ce fragment sera regravé.")
 
 
 def main():
@@ -409,6 +478,12 @@ def main():
 
     global FRAG_DIR, HIRAGANA
     HIRAGANA = "--hiragana" in sys.argv
+    if "--variantes" in sys.argv:
+        if not key:
+            raise SystemExit("Renseigner ELEVENLABS_API_KEY.")
+        src = sys.argv[sys.argv.index("--variantes") + 1]
+        variantes(key, src, pos="end" if "--fin" in sys.argv else "mid")
+        return
     texts_path, out_dir, manifest_path = sys.argv[1:4]
     argv = sys.argv[4:]
     essai = int(argv[argv.index("--essai") + 1]) if "--essai" in argv else None
@@ -467,7 +542,7 @@ def main():
         mp3 = call(f"/text-to-speech/{VOICES[(v['lang'], v['role'])]}", key, raw=True,
                    query=f"?output_format={OUTPUT_FORMAT}",
                    body={"text": body, "model_id": MODEL,
-                         "voice_settings": SETTINGS[v["role"]]})
+                         "voice_settings": reglages(v["role"], v["source"])})
         # Les octets de l'API sont stockés TELS QUELS : le fragment n'est
         # réencodé qu'une fois, au montage de l'annonce.
         (FRAG_DIR / f"{fid}.mp3").write_bytes(mp3)
