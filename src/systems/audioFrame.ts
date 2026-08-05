@@ -18,12 +18,14 @@ import { onPlatformDeck, runtime } from './runtime';
 import { doorObstructionOpening } from './doorObstruction';
 import {
   playThunder,
+  pumpAudioGates,
   setPlatformDoors,
   setStationAmbience,
   setWeatherSound,
   updateAmbience,
   updateAudio,
 } from './audioEngine';
+import { noteFrame } from './audioLoad';
 import { V_MAX } from '../data/config';
 import { updatePlatformSpeakers } from './stationPa';
 import { setSubtitleClock } from './subtitles';
@@ -167,6 +169,14 @@ export function publishAudioEnvironment(physSpan: number): void {
   // retard-là.
   if (weather.thunderT < lastThunderT) playThunder(weather.thunderFar);
   lastThunderT = weather.thunderT;
+  // Ce que la machine a mis à sortir cette image : c'est de là que le moteur
+  // audio tire son anticipation de programmation, et c'est aussi le seul indice
+  // de charge disponible là où le navigateur ne mesure pas son fil audio.
+  noteFrame(physSpan);
+  // Et, en dernier, on referme ce que plus personne n'écoute. En DERNIER parce
+  // que tout ce qui précède a pu réveiller une ligne : une ligne réveillée à
+  // l'image N ne doit pas être refermée par la même image.
+  pumpAudioGates();
 }
 
 /**

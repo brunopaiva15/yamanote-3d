@@ -1,0 +1,259 @@
+<!doctype html>
+<!-- Page de probe DEV : le banc d'essai des ROBINETS DE RENDU du moteur audio.
+
+     Le moteur débranche du graphe tout ce que personne n'écoute (voir
+     systems/audioGate) : c'est ce qui l'empêche de grésiller sur une petite
+     machine. Le gain est réel, et le risque aussi - un robinet fermé au mauvais
+     moment ne fait pas un craquement, il fait une ANNONCE MUETTE. Aucune
+     relecture de code ne prouve l'absence de ce défaut : il faut un vrai
+     navigateur, un vrai contexte audio, et une mesure de ce qui SORT.
+
+     C'est ce que fait cette page. Pour chaque ligne du graphe :
+
+       1. on laisse le moteur au repos jusqu'à ce que le robinet se ferme ;
+       2. on vérifie qu'il s'est bien fermé (sinon le débranchement ne sert à
+          rien) ;
+       3. on déclenche ce que cette ligne est censée porter ;
+       4. on MESURE le niveau en sortie de mixage - il doit remonter.
+
+     Un « ✓ » veut donc dire : cette ligne s'éteint quand elle dort, et elle
+     sonne quand on l'appelle. C'est exactement le contrat.
+
+     scripts/audio-probe.mjs la fait tourner sans écran.
+-->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>audio-probe - robinets de rendu</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #14171c;
+        color: #cfd6df;
+        font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      button {
+        font: inherit;
+        padding: 6px 14px;
+        margin-bottom: 12px;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        padding: 2px 14px 2px 0;
+        text-align: left;
+        vertical-align: top;
+      }
+      .ok {
+        color: #7ddc8c;
+      }
+      .ko {
+        color: #ff8080;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="go">Lancer le banc d'essai</button>
+    <div id="out"></div>
+    <script type="module">
+      import * as Tone from 'tone';
+      import * as audio from '/src/systems/audioEngine.ts';
+
+      /** Un clip réellement présent dans public/audio (voir data/melodies). */
+      const MELODY = '/audio/melodies/01_jre-ikst-010-01_inner-main';
+
+      const out = document.getElementById('out');
+      const results = [];
+
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      /**
+       * Une image de jeu, en boucle : c'est elle qui referme les robinets (le
+       * moteur ne le fait qu'une fois par image, jamais de lui-même).
+       */
+      let pumping = false;
+      // ?nogates=1 : les robinets ne se referment jamais. Sert à distinguer
+      // « la ligne ne se rebranche pas » de « cette source ne sonne pas ».
+      const NO_GATES = new URLSearchParams(location.search).get('nogates') === '1';
+      function pump() {
+        if (!pumping) return;
+        if (!NO_GATES) audio.pumpAudioGates();
+        requestAnimationFrame(pump);
+      }
+
+      /** Niveau de crête en sortie de mixage, mesuré pendant `ms`. */
+      let analyser = null;
+      let buf = null;
+      async function peak(ms) {
+        let top = 0;
+        const until = performance.now() + ms;
+        while (performance.now() < until) {
+          analyser.getFloatTimeDomainData(buf);
+          for (let i = 0; i < buf.length; i++) {
+            const v = Math.abs(buf[i]);
+            if (v > top) top = v;
+          }
+          await sleep(16);
+        }
+        return top;
+      }
+
+      /** Le niveau audible : bien au-dessus du bruit de fond d'un mixage muet. */
+      const AUDIBLE = 1e-4;
+
+      /**
+       * Un cas : on part robinet FERMÉ, on déclenche, on doit entendre.
+       *
+       * `gate` est le nom du robinet attendu fermé au départ (audioGateStates).
+       * `fire` déclenche ce que la ligne porte, `reset` remet l'état du monde à
+       * sa place pour que le robinet puisse se refermer avant le cas suivant.
+       */
+      async function probe(name, gate, fire, reset = () => {}, listen = 1600) {
+        const before = audio.audioGateStates();
+        const closed = NO_GATES || gate === null || before[gate] === false;
+        fire();
+        const level = await peak(listen);
+        const after = audio.audioGateStates();
+        reset();
+        results.push({
+          name, gate, closed, level, heard: level > AUDIBLE,
+          note: gate && !after[gate] ? 'robinet refermé pendant la mesure' : '',
+        });
+        render();
+        // Le temps que tout retombe et que les robinets se referment : la
+        // réverbération du lieu a 4,5 s de queue, et c'est la plus longue.
+        await sleep(6000);
+      }
+
+      function render() {
+        const rows = results
+          .map((r) => {
+            const ok = r.closed && r.heard;
+            return `<tr class="${ok ? 'ok' : 'ko'}"><td>${ok ? '✓' : '✗'}</td><td>${r.name}</td><td>${r.gate ?? '-'}</td><td>${r.closed ? 'fermé au repos' : 'RESTÉ OUVERT'}</td><td>${r.heard ? 'entendu' : 'MUET'} ${r.note ?? ''}</td><td>${r.level.toExponential(2)}</td></tr>`;
+          })
+          .join('');
+        out.innerHTML = `<table><tbody>${rows}</tbody></table>`;
+        document.body.dataset.results = JSON.stringify(results);
+      }
+
+      /** La tournée complète : chaque ligne, du repos au son. */
+      async function run(prefix) {
+          // La sono du wagon : le carillon des portes.
+          await probe(prefix + 'carillon de porte (sono wagon)', 'pa', () => audio.doorOpenChime());
+          // La sono du quai : le carillon ATOS.
+          await probe(prefix + 'carillon ATOS (sono quai)', 'plat', () => audio.platformChime());
+          // Et la réverbération du lieu, qui suit la gare.
+          await probe(
+            prefix + 'ambiance de gare + réverbération',
+            'amb',
+            () => audio.setStationAmbience('hall', 1, 1),
+            () => audio.setStationAmbience('hall', 0, 0),
+          );
+          // Les avertisseurs des baies palières.
+          await probe(prefix + 'avertisseur de baie palière', 'psd', () => audio.psdOpenChime());
+          // Le train qui traverse.
+          await probe(
+            prefix + 'train qui traverse',
+            'pass',
+            () => {
+              audio.passByStart();
+              audio.setPassBy(4, 1.5, 0, 1);
+            },
+            () => audio.passByEnd(),
+          );
+          // La pluie.
+          await probe(
+            prefix + 'pluie',
+            'rain',
+            () => audio.setWeatherSound(1, 0, 0, 1, 1, false),
+            () => audio.setWeatherSound(0, 0, 0, 0, 0, false),
+          );
+          // Un appareil de gare.
+          await probe(prefix + 'portillon (appareils de gare)', 'dev', () => audio.gateBeep());
+          // Un VRAI clip d'annonce, sur la ligne du quai : c'est le seul chemin
+          // qui tient sa ligne par un jeton pris au démarrage de la lecture et
+          // rendu à la fin. Le plus important des cas, et le plus coûteux à
+          // rater : une annonce muette.
+          await probe(
+            prefix + 'annonce (clip, sono quai)',
+            'plat',
+            () => {
+              audio.paVoiceOpen('platformVoice');
+              void audio.audioManager
+                .playOnce(MELODY, 'platformVoice')
+                .then(() => audio.paVoiceClose('platformVoice'));
+            },
+            () => audio.audioManager.stop(MELODY),
+            2500,
+          );
+          // Le frottement des glissières.
+          await probe(
+            prefix + 'glissières de porte',
+            'slide',
+            () => audio.setDoorSlide(1, 1),
+            () => audio.setDoorSlide(0, 0),
+          );
+          // L'onduleur, qui doit repartir quand la rame roule.
+          await probe(
+            prefix + 'chant de l’onduleur (rame lancée)',
+            'vvvf',
+            () => {
+              audio.updateAudio(0.05, 0.5, false, 1);
+              audio.updateAudio(0.05, 0.55, false, 1);
+            },
+            () => audio.updateAudio(0.05, 0, false, 1),
+          );
+          // Le sifflement du convertisseur, à la coupure de tension.
+          await probe(prefix + 'convertisseur (coupure)', 'siv', () => audio.powerSound('whineDown'));
+      }
+
+      document.getElementById('go').addEventListener('click', async () => {
+        document.getElementById('go').remove();
+        await audio.startAudio();
+        audio.setVolume(0.8);
+
+        const raw = Tone.getContext().rawContext;
+        analyser = raw.createAnalyser();
+        analyser.fftSize = 2048;
+        buf = new Float32Array(analyser.fftSize);
+        Tone.getDestination().connect(analyser);
+
+        pumping = true;
+        pump();
+
+        // On laisse d'abord tout se refermer : c'est l'état de repos, celui
+        // dans lequel la ligne roule entre deux gares.
+        await sleep(7000);
+        const idle = audio.audioGateStates();
+        const stillOpen = Object.entries(idle)
+          .filter(([, open]) => open)
+          .map(([name]) => name);
+        results.push({
+          name: 'repos : tout est débranché',
+          gate: null,
+          closed: NO_GATES || stillOpen.length === 0,
+          level: 1,
+          heard: true,
+          note: stillOpen.join(', '),
+        });
+        render();
+
+        await run('');
+
+        // Deuxième tournée, au palier le plus sûr : le panoramique change de
+        // modèle et les deux réverbérations sont retirées, sur un graphe VIVANT.
+        // Rien de tout cela ne doit faire taire quoi que ce soit - et une ligne
+        // qui ne sonnerait qu'à sa première réouverture serait en sursis, pas
+        // réparée.
+        audio.applyAudioTier('minimal');
+        await sleep(6000);
+        await run('minimal — ');
+
+        document.body.dataset.done = '1';
+      });
+    </script>
+  </body>
+</html>

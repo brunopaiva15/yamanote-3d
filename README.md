@@ -2450,6 +2450,10 @@ src/
                          tourner tout ce qui s'entend - three/Engine fait le reste
   systems/audioFrame.ts  le mixage publié une fois par image, PARTAGÉ par les deux
                          boucles : deux versions ne peuvent pas diverger dessus
+  systems/audioGate.ts   les robinets de rendu : une ligne qui ne sonne pas est
+                         débranchée du graphe, et rebranchée avant de sonner
+  systems/audioLoad.ts   la charge du fil audio, mesurée, et les trois paliers
+                         qu'on lui retire quand il n'y arrive plus
   systems/subtitles.ts   ce qui se dit et ce qui sonne, en texte, avec son journal
   systems/vec3.ts        le vecteur de la simulation : c'est lui qui permet aux PNJ,
                          à la foule et à la marche de vivre sans moteur de rendu
@@ -2500,7 +2504,8 @@ src/
                          seo:assets (favicons, icônes PWA, carte de partage),
                          sondes navigateur : station-probe, pax-probe,
                          scenery-shots, scenery-cost, pass-shots, season-shots,
-                         weather-shots
+                         weather-shots, audio-probe (les robinets de rendu du
+                         moteur audio, mesurés sur le son qui sort)
   scripts/plateau/       pipeline CityGML PLATEAU → GLB (docs/PLATEAU_PIPELINE.md)
   three/PlateauWorld.tsx monde géoréférencé du prototype (un tronçon à la fois)
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
@@ -2603,6 +2608,60 @@ synthèse, donc les clés de clips et les sous-titres sont inchangés. Un nom
 ajouté sans lecture ne fait pas échouer la gravure - il produit un MP3 valide et
 mal dit -, c'est donc `tests/enReadings.test.ts` qui refuse tout mot capitalisé
 inconnu dans un texte anglais gravé.
+
+### Le son ne craque jamais
+
+Un graphe de cette taille - une trentaine de générateurs, dix-neuf sources
+spatialisées, deux réverbérations à convolution - vit dans un fil temps réel qui
+doit remplir son tampon toutes les deux ou trois millisecondes. Sur une machine
+modeste, il n'y arrivait pas toujours, et un tampon manqué ne s'entend pas comme
+« un peu moins de qualité » : c'est un craquement, un hoquet, un grésillement -
+le seul bruit de ce jeu qui ne vienne pas du monde représenté.
+
+Trois remèdes, et ils ne se remplacent pas l'un l'autre.
+
+**On ne calcule que ce qui s'entend.** Web Audio ne rend pas un nœud qui n'a
+plus de chemin vers la sortie : les lignes qui ne servent que par intermittence
+- les six diffuseurs du quai entre deux gares, les quatre avertisseurs de baie
+entre deux arrêts, la réverbération du lieu quand il n'y a plus de lieu, la
+pluie quand il ne pleut pas, l'onduleur à l'arrêt - sont donc **débranchées**,
+et rebranchées par le déclencheur qui va sonner (`systems/audioGate`). Rien de
+tout cela ne change ce qu'on entend ; entre deux gares, il ne reste que trois
+générateurs sur quinze et pas un seul panoramique.
+
+**On ne réécrit pas ce qui n'a pas changé.** Poser la tête de l'auditeur fait
+recalculer son champ à chacune des dix-neuf sources spatialisées - y compris
+quand on est assis, immobile, ce qui est l'essentiel du temps de ce jeu.
+
+**On programme assez à l'avance, et on demande un tampon à la taille de la
+machine.** C'est l'autre moitié du défaut, et elle n'a rien à voir avec la
+première : sur une image longue, l'instant demandé est déjà passé quand le
+navigateur le reçoit, et l'attaque tombe où elle peut.
+
+Trois paliers (`systems/audioLoad`), et c'est la MESURE qui descend d'un cran,
+pas une intuition : Chrome dit combien de fois son fil audio a raté son tampon
+(`renderCapacity`), donc on lit le grésillement au lieu de le deviner. Ce qui
+change d'un palier à l'autre : le panoramique passe de HRTF à puissance
+constante (la direction reste, la coloration d'oreille part), puis les deux
+réverbérations tombent. Ce qui ne change à aucun palier : la partition, les
+niveaux, les durées, ce qui est dit et quand. Le palier atteint est mémorisé -
+une machine qui a grésillé une fois ouvrira son prochain contexte avec le grand
+tampon sans avoir à regrésiller pour le mériter - et l'écran de démarrage
+permet de trancher soi-même (« Qualité sonore »), auquel cas la mesure ne
+contredit plus rien.
+
+Les robinets ne se vérifient pas en lisant le code : une ligne débranchée qui ne
+se rebranche pas ne fait pas de bruit, elle fait un SILENCE. D'où
+`node scripts/audio-probe.mjs`, qui fait tourner `/audio-probe.html` dans un
+vrai navigateur : pour chaque ligne, il laisse le robinet se fermer, vérifie
+qu'il s'est bien fermé, déclenche ce que la ligne porte et **mesure ce qui sort
+du mixage** - deux fois, la seconde au palier le plus sûr. C'est ce banc d'essai
+qui a trouvé les deux pièges du procédé, tous deux invisibles autrement : un
+générateur de bruit que le navigateur clôt pour de bon dès qu'il ne le rend
+plus, et une convolution qu'on croit éteinte parce qu'on lui a coupé l'entrée
+alors qu'un nœud reste rendu tant qu'il lui reste un chemin vers la sortie.
+
+Le détail est dans [`docs/AUDIO_PERF.md`](docs/AUDIO_PERF.md).
 
 ### La gare parle aussi
 

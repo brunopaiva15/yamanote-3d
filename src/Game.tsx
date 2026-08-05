@@ -51,6 +51,7 @@ import { BoardingPrompt } from './ui/BoardingPrompt';
 import { TalkPrompt } from './ui/TalkPrompt';
 import { DevicePrompt } from './ui/DevicePrompt';
 import { StationDevelopmentNotice } from './ui/StationDevelopmentNotice';
+import { AudioQualityNotice } from './ui/AudioQualitySelect';
 import { QualityNotice } from './ui/QualityNotice';
 import { extraordinaryAvailable, reportWebgpuFailure, usePerf } from './systems/perf';
 import { clearGpuKit, loadGpuKit } from './three/webgpu/kit';
@@ -272,6 +273,9 @@ export default function Game() {
       <DevicePrompt />
       <StationDevelopmentNotice />
       <QualityNotice className="quality-note-hud" failureOnly />
+      {/* Et, sur la même ligne, ce que le moteur audio a décidé tout seul :
+          descendre d'un palier s'entend, et cela mérite un mot. */}
+      <AudioQualityNotice className="quality-note-hud" transient />
       <Controls />
       {/* Le tchat du salon. Hors salon, il ne rend rien du tout. */}
       <Chat />

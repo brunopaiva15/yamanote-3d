@@ -22,6 +22,7 @@ import { presenceEnabled, subscribeOnlineCount } from '../systems/presence';
 import { loadGameFor } from '../gameLoader';
 import type { GameMode } from '../systems/gameMode';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { AudioQualityNotice, AudioQualitySelect } from './AudioQualitySelect';
 import { QualitySelect } from './QualitySelect';
 import { QualityNotice } from './QualityNotice';
 import { Logo } from './Logo';
@@ -333,6 +334,16 @@ export function StartScreen() {
               <QualityNotice />
             </>
           )}
+          {/* La qualité SONORE, elle, vaut pour les deux versions - et pour la
+              version sonore plus encore que pour l'autre, puisqu'il n'y a que
+              cela à entendre. Ici et pas dans le HUD : ce réglage ouvre le
+              contexte audio, il ne se reprend pas en cours de trajet. */}
+          <div className="start-option">
+            <span className="start-option-label">{t.audioQuality.label}</span>
+            <AudioQualitySelect />
+          </div>
+          <p className="start-mode-note">{t.audioQuality.note}</p>
+          <AudioQualityNotice />
         </div>
         <p className="start-foot">
           {t.start.tokyoTime}
