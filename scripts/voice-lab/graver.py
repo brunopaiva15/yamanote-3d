@@ -47,7 +47,7 @@ Usage :
       public/audio/announcements src/data/pa-manifest.ts \\
       [--essai N] [--plan] [--hiragana]
   python scripts/voice-lab/graver.py --verifier   # débusque les prises muettes
-  python scripts/voice-lab/graver.py --variantes 次は [--fin] [--stab] [--debit]
+  python scripts/voice-lab/graver.py --variantes 12 [--stab] [--debit]
 """
 
 import hashlib
@@ -680,14 +680,30 @@ def build_plan(items):
 # vient en troisième dimension, à la demande, parce qu'elle agit sur toute la
 # prise et non sur son contour.
 GRAPHIES = ("katakana", "hiragana", "source")
-PONCTUATIONS = (("sans", ""), ("virgule", "、"), ("point", "。"))
+PONCTUATIONS = (("sans", ""), ("virgule", ","), ("point", "."))
+PONCTUATIONS_JA = (("sans", ""), ("virgule", "、"), ("point", "。"))
 GRILLE_STAB = (0.55, 0.85, 1.00)
 # Resserrages proposés. Au-delà de -30 % le vocodeur commence à s'entendre sur
 # des voyelles tenues, et c'est pour ça que la grille s'arrête à 0,70.
 GRILLE_DEBIT = (1.00, 0.92, 0.85, 0.78, 0.70)
 
 
-def variantes_debit(key, source, role="cabin", lang="ja-JP", pos="mid"):
+def catalogue(texts_path):
+    """Tous les fragments gravables, avec leur langue, leur rôle et leur place.
+
+    Bâti sur le CORPUS et non sur la table des lectures : celle-ci est
+    japonaise, et l'anglais n'y figure pas. Le corpus, lui, sait aussi d'où
+    vient chaque fragment - donc `--fin` n'a plus à être deviné.
+    """
+    corpus = json.loads(Path(texts_path).read_text(encoding="utf-8"))
+    _, inv, _ = build_plan(corpus["items"])
+    par_source = {}
+    for v in inv.values():
+        par_source.setdefault((v["lang"], v["source"]), v)
+    return [par_source[k] for k in sorted(par_source, key=lambda k: (k[0], k[1]))]
+
+
+def variantes_debit(key, v):
     """Une seule prise, déclinée à plusieurs vitesses.
 
     Un fragment trop lent ne se compare pas à d'autres graphies : il se compare
@@ -697,19 +713,17 @@ def variantes_debit(key, source, role="cabin", lang="ja-JP", pos="mid"):
     d'autre n'a changé.
     """
     ESSAI_DIR.mkdir(parents=True, exist_ok=True)
-    lecture = kana(source) if lang == "ja-JP" else source
-    envoye = spoken(lecture, "", pos, lang, source)
-    mp3 = call(f"/text-to-speech/{VOICES[(lang, role)]}", key, raw=True,
+    envoye = spoken(v["text"], "", v["pos"], v["lang"], v["source"])
+    mp3 = call(f"/text-to-speech/{VOICES[(v['lang'], v['role'])]}", key, raw=True,
                query=f"?output_format={OUTPUT_FORMAT}",
                body={"text": envoye, "model_id": MODEL,
-                     "voice_settings": reglages(role, source)})
+                     "voice_settings": reglages(v["role"], v["source"])})
     brut = ESSAI_DIR / "debit-prise.mp3"
     brut.write_bytes(mp3)
-    vide, _ = muet(brut)
-    if vide:
+    if muet(brut)[0]:
         raise SystemExit("Prise muette - relancer.")
     base = trimmed(brut)
-    print(f"« {source} » → envoyé « {envoye} »   [{role} {pos}]\n")
+    print(f"« {v['source']} » → envoyé « {envoye} »   [{v['role']} {v['pos']}]\n")
     for deb in GRILLE_DEBIT:
         y = base if deb == 1.0 else wsola(base, 1.0 / deb, SR).astype(np.float32)
         out = ESSAI_DIR / f"debit-{int(deb * 100):03d}.mp3"
@@ -719,47 +733,50 @@ def variantes_debit(key, source, role="cabin", lang="ja-JP", pos="mid"):
     brut.unlink()
     print(f"\n→ {ESSAI_DIR}\n"
           "Toutes viennent de LA MÊME prise : seule la vitesse change.\n"
-          f'Reporter la retenue dans graver.py :  DEBIT["{source}"] = 0.xx\n'
+          f'Reporter la retenue dans graver.py :  DEBIT["{v["source"]}"] = 0.xx\n'
           "Le resserrage s'applique au montage, donc rien n'est regravé.")
 
 
-def variantes(key, source, role="cabin", lang="ja-JP", pos="mid", stab=False):
-    """Grave un même fragment sous toutes les graphies et ponctuations.
+def variantes(key, v, stab=False):
+    """Grave un même fragment sous plusieurs graphies et ponctuations.
 
-    Décrire ce qu'on veut ne marche pas : le modèle ne prend aucune consigne
-    d'intonation, il déduit tout de ce qu'on écrit. Et je ne peux rien
-    entendre. Tourner autour du pot revient donc à deviner - autant graver la
-    grille d'un coup et laisser l'oreille désigner la case.
+    Les axes ne sont pas les mêmes selon la langue, et c'est le corpus qui le
+    dit : le japonais a une GRAPHIE à choisir - kana ou écriture d'origine, ce
+    qui a débloqué 「お乗り換えです」 - là où l'anglais n'en a qu'une. Pour lui, le
+    second axe utile est la TENUE de voix, donc la grille bascule d'elle-même.
     """
     ESSAI_DIR.mkdir(parents=True, exist_ok=True)
-    kata, hira = (_lecture(source) if lang == "ja-JP" else (source, source))
-    formes = {"katakana": kata, "hiragana": hira, "source": source}
-    stabs = GRILLE_STAB if stab else (SETTINGS[role]["stability"],)
+    ja = v["lang"] == "ja-JP"
+    kata, hira = (_lecture(v["source"]) if ja else (v["text"], v["text"]))
+    formes = ({"katakana": kata, "hiragana": hira, "source": v["source"]} if ja
+              else {"tel quel": v["text"]})
+    poncts = PONCTUATIONS_JA if ja else PONCTUATIONS
+    stabs = GRILLE_STAB if (stab or not ja) else (SETTINGS[v["role"]]["stability"],)
 
-    print(f"« {source} »   [{role} {pos}]")
-    for g in GRAPHIES:
-        print(f"  {g:9} {formes[g]}")
+    print(f"« {v['source']} »   [{v['lang']} {v['role']} {v['pos']}]")
+    for nom, f in formes.items():
+        print(f"  {nom:9} {f}")
     print()
     n = 0
-    for g in GRAPHIES:
-        for nom, ponct in PONCTUATIONS:
+    for gnom, forme in formes.items():
+        for pnom, ponct in poncts:
             for st in stabs:
                 n += 1
-                reg = {**SETTINGS[role], "stability": st}
-                mp3 = call(f"/text-to-speech/{VOICES[(lang, role)]}", key, raw=True,
-                           query=f"?output_format={OUTPUT_FORMAT}",
-                           body={"text": formes[g] + ponct, "model_id": MODEL,
+                reg = {**reglages(v["role"], v["source"]), "stability": st}
+                mp3 = call(f"/text-to-speech/{VOICES[(v['lang'], v['role'])]}", key,
+                           raw=True, query=f"?output_format={OUTPUT_FORMAT}",
+                           body={"text": forme + ponct, "model_id": MODEL,
                                  "voice_settings": reg})
-                suffixe = f"-stab{int(st * 100):03d}" if stab else ""
-                out = ESSAI_DIR / f"var-{n:02d}-{g}-{nom}{suffixe}.mp3"
+                suff = f"-stab{int(st * 100):03d}" if len(stabs) > 1 else ""
+                out = ESSAI_DIR / f"var-{n:02d}-{gnom.replace(' ', '')}-{pnom}{suff}.mp3"
                 out.write_bytes(mp3)
-                print(f"  {out.name:38} « {formes[g] + ponct} »")
+                print(f"  {out.name:40} « {forme + ponct} »")
 
     print(f"\n{n} prises → {ESSAI_DIR}\n"
           "Retenir la meilleure et me donner son nom, ou reporter soi-même dans\n"
           "graver.py :\n"
-          f'  PONCTUATION["{source}"] = "…"        pour le contour\n'
-          f'  REGLAGES["{source}"] = {{"stability": …}}   pour la tenue\n'
+          f'  PONCTUATION["{v["source"]}"] = "…"        pour le contour\n'
+          f'  REGLAGES["{v["source"]}"] = {{"stability": …}}   pour la tenue\n'
           "et, pour une autre graphie, une ligne dans lectures-corrections.json.\n"
           "Seul ce fragment sera regravé.")
 
@@ -806,28 +823,37 @@ def main():
         # acquis : selon la page de codes, l'argument arrive tronqué ou
         # remplacé par des points d'interrogation, et l'erreur ressemble alors
         # à un fragment inconnu plutôt qu'à un problème de terminal.
-        reste = sys.argv[sys.argv.index("--variantes") + 1:]
-        choix = next((a for a in reste if not a.startswith("--")), None)
-        catalogue = sorted(json.loads(LECTURES.read_text(encoding="utf-8"))["lectures"])
+        reste = [a for a in sys.argv[sys.argv.index("--variantes") + 1:]
+                 if not a.startswith("--")]
+        corpus = next((a for a in reste if a.endswith(".json")), "audio-src/annonces.json")
+        choix = next((a for a in reste if not a.endswith(".json")), None)
+        cat = catalogue(corpus)
         if choix is None:
             print("Indiquer le fragment, par son texte ou son numéro :\n")
-            for i, b in enumerate(catalogue, 1):
-                print(f"  {i:3}  {b}")
+            for i, v in enumerate(cat, 1):
+                print(f"  {i:3}  [{v['lang']} {v['role']:11} {v['pos']:4}] {v['source']}")
             print("\n  npm run voix:variantes -- 12")
             return
-        src = catalogue[int(choix) - 1] if choix.isdigit() else choix
+        if choix.isdigit():
+            i = int(choix)
+            if not 1 <= i <= len(cat):
+                raise SystemExit(f"Numéro hors liste : 1 à {len(cat)}.")
+            v = cat[i - 1]
+        else:
+            v = next((w for w in cat if w["source"] == choix), None)
+            if v is None:
+                raise SystemExit(
+                    f"« {choix} » n'est pas un fragment connu.\n"
+                    "Lancer `npm run voix:variantes` sans rien pour voir la liste "
+                    "numérotée, puis rappeler avec le numéro.")
         if not key:
             raise SystemExit("Renseigner ELEVENLABS_API_KEY.")
-        if src not in catalogue:
-            raise SystemExit(
-                f"« {src} » n'est pas un fragment connu.\n"
-                "Lancer `npm run voix:variantes` sans rien pour voir la liste "
-                "numérotée, puis rappeler avec le numéro.")
-        pos = "end" if "--fin" in sys.argv else "mid"
+        if not VOICES.get((v["lang"], v["role"])):
+            raise SystemExit(f"Aucune voix pour {v['lang']} {v['role']}.")
         if "--debit" in sys.argv:
-            variantes_debit(key, src, pos=pos)
+            variantes_debit(key, v)
         else:
-            variantes(key, src, pos=pos, stab="--stab" in sys.argv)
+            variantes(key, v, stab="--stab" in sys.argv)
         return
     texts_path, out_dir, manifest_path = sys.argv[1:4]
     argv = sys.argv[4:]
