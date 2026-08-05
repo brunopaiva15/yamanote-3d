@@ -7,14 +7,6 @@
   "source": "東京メトロ日比谷線",
   "text": "トウキョウメトロヒビヤセン"
  },
- "0170f1b9d66e": {
-  "debit": 1.0,
-  "lang": "ja-JP",
-  "pos": "end",
-  "role": "cabin",
-  "source": "右側です",
-  "text": "ミギガワデス"
- },
  "01f122d12d28": {
   "debit": 1.0,
   "lang": "ja-JP",
@@ -94,6 +86,14 @@
   "role": "cabin",
   "source": "日暮里・舎人ライナーは",
   "text": "ニッポリ、トネリライナーワ"
+ },
+ "10284030bc90": {
+  "debit": 0.92,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "お乗換です",
+  "text": "お乗り換えです"
  },
  "1283d9444e24": {
   "debit": 1.0,
@@ -190,14 +190,6 @@
   "role": "cabin",
   "source": "ご案内いたしますので",
   "text": "ゴアンナイイタシマスノデ"
- },
- "2531f7c0661a": {
-  "debit": 0.95,
-  "lang": "ja-JP",
-  "pos": "end",
-  "role": "cabin",
-  "source": "お乗換です",
-  "text": "お乗り換えです"
  },
  "262a659b3455": {
   "debit": 1.0,
@@ -719,22 +711,6 @@
   "source": "埼京線",
   "text": "サイキョウセン"
  },
- "7ced2afdfdfd": {
-  "debit": 1.0,
-  "lang": "ja-JP",
-  "pos": "end",
-  "role": "cabin",
-  "source": "左側です",
-  "text": "ヒダリガワデス"
- },
- "7d7dc26d00b2": {
-  "debit": 1.0,
-  "lang": "ja-JP",
-  "pos": "mid",
-  "role": "cabin",
-  "source": "お出口は",
-  "text": "オデグチワ"
- },
  "7df483cc666e": {
   "debit": 1.0,
   "lang": "ja-JP",
@@ -750,6 +726,14 @@
   "role": "cabin",
   "source": "新宿",
   "text": "シンジュク"
+ },
+ "7f914ac227b1": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "お出口は左側です",
+  "text": "オデグチワヒダリガワデス"
  },
  "801cf653704b": {
   "debit": 1.0,
@@ -830,6 +814,14 @@
   "role": "cabin",
   "source": "ゆりかもめは",
   "text": "ユリカモメワ"
+ },
+ "8f1718484bdc": {
+  "debit": 1.0,
+  "lang": "ja-JP",
+  "pos": "end",
+  "role": "cabin",
+  "source": "お出口は右側です",
+  "text": "オデグチワミギガワデス"
  },
  "91987bf573f4": {
   "debit": 1.0,
