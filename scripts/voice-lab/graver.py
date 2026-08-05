@@ -46,6 +46,7 @@ Usage :
   python scripts/voice-lab/graver.py /tmp/textes.json \\
       public/audio/announcements src/data/pa-manifest.ts \\
       [--essai N] [--plan] [--hiragana]
+  python scripts/voice-lab/graver.py --verifier   # débusque les prises muettes
   python scripts/voice-lab/graver.py --variantes 次は [--fin] [--stab]
 """
 
@@ -434,6 +435,35 @@ def fondu(a, b):
     return np.concatenate([a[:len(a) - n], milieu, b[n:]])
 
 
+# Un fragment est jugé muet en deçà de ceci. Les seuils sont larges à dessein :
+# le plus court fragment du corpus - 「次は」, deux mores - dure déjà trois
+# dixièmes de seconde, et une prise correcte crête bien au-dessus de 0,05.
+MIN_PAROLE = 0.10
+MIN_CRETE = 0.05
+
+
+def muet(path):
+    """(vrai si le fragment ne contient pas de parole, durée utile).
+
+    Le modèle rend parfois une prise vide. Assemblée, elle ne casse rien : le
+    montage se déroule, le manifeste se remplit, la durée est plausible - et
+    l'annonce saute un mot sans que rien ne le signale. C'est le seul défaut de
+    la chaîne qui ne s'attrape qu'à l'écoute, donc le seul qui mérite un
+    contrôle automatique.
+    """
+    try:
+        y = trimmed(path)
+    except Exception:
+        return True, 0.0
+    # `trimmed` rend le signal entier quand il n'y trouve aucune parole : la
+    # durée annoncée serait alors celle du silence, ce qui se lit à l'envers
+    # dans le rapport. Une prise sans crête n'a pas de parole, donc 0 s.
+    if float(np.abs(y).max()) < MIN_CRETE:
+        return True, 0.0
+    d = len(y) / SR
+    return d < MIN_PAROLE, d
+
+
 def read_manifest(path):
     if not Path(path).exists():
         return {}
@@ -546,6 +576,27 @@ def main():
 
     global FRAG_DIR, HIRAGANA
     HIRAGANA = "--hiragana" in sys.argv
+    if "--verifier" in sys.argv:
+        # Les prises muettes déjà en cache ne se voient pas autrement : elles
+        # ont une taille de fichier normale et s'assemblent sans broncher.
+        argv0 = sys.argv[sys.argv.index("--verifier") + 1:]
+        if argv0 and not argv0[0].startswith("--"):
+            FRAG_DIR = Path(argv0[0])
+        mauvais = []
+        for q in sorted(FRAG_DIR.glob("*.mp3")):
+            vide, duree = muet(q)
+            if vide:
+                mauvais.append((q, duree))
+        print(f"{len(list(FRAG_DIR.glob('*.mp3')))} fragments vérifiés, "
+              f"{len(mauvais)} muets")
+        for q, duree in mauvais:
+            print(f"  {q.name}  {duree:.2f}s de parole - supprimé")
+            q.unlink()
+        if mauvais:
+            print("\nRelancer la gravure : les fragments supprimés seront regravés,\n"
+                  "les autres sortiront du cache inchangés.")
+        return
+
     if "--variantes" in sys.argv:
         # Le fragment se désigne par son TEXTE ou par son NUMÉRO. Le numéro
         # existe parce que taper du japonais dans une invite Windows n'est pas
@@ -636,8 +687,27 @@ def main():
                          "voice_settings": reglages(v["role"], v["source"])})
         # Les octets de l'API sont stockés TELS QUELS : le fragment n'est
         # réencodé qu'une fois, au montage de l'annonce.
-        (FRAG_DIR / f"{fid}.mp3").write_bytes(mp3)
-        print(f"[{n}/{len(todo)}] {fid} [{v['role']} {v['pos']}] {v['text'][:44]}")
+        chemin = FRAG_DIR / f"{fid}.mp3"
+        chemin.write_bytes(mp3)
+        vide, duree = muet(chemin)
+        essai = 1
+        while vide and essai <= 3:
+            print(f"      prise muette ({duree:.2f}s), on regrave ({essai}/3)")
+            mp3 = call(f"/text-to-speech/{VOICES[(v['lang'], v['role'])]}", key, raw=True,
+                       query=f"?output_format={OUTPUT_FORMAT}",
+                       body={"text": body, "model_id": MODEL,
+                             "voice_settings": reglages(v["role"], v["source"])})
+            chemin.write_bytes(mp3)
+            vide, duree = muet(chemin)
+            essai += 1
+        if vide:
+            chemin.unlink(missing_ok=True)
+            raise SystemExit(
+                f"« {v['source']} » revient muet après quatre tentatives.\n"
+                "Le texte envoyé est peut-être en cause : essayer une autre "
+                "graphie dans lectures-corrections.json.")
+        print(f"[{n}/{len(todo)}] {fid} [{v['role']} {v['pos']}] "
+              f"{v['text'][:40]} {duree:.2f}s")
 
     if not essai:
         # L'index décrit le cache COMPLET : un essai n'en voit qu'une poignée

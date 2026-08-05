@@ -9,13 +9,5 @@
   "お乗り換えです"
  ],
  "_お乗換です": "Rendu en katakana (オノリカエデス) le modèle l'étirait sans qu'aucun resserrage ne le sauve. On repasse à l'écriture mixte : les okurigana り et え ancrent le mot comme japonais, donc le risque de lecture chinoise qui justifiait les kana ne se pose pas ici, contrairement à un 渋谷 tout nu.",
- "京浜東北線": [
-  "京浜東北線",
-  "京浜東北線"
- ],
- "京浜東北線は": [
-  "京浜東北線は",
-  "京浜東北線は"
- ],
- "_京浜東北線": "Rendu en kanji sur demande : ケイヒントウホクセン ne passait pas. Noter le risque assumé - contrairement à お乗り換えです, ces kanji n'ont aucun okurigana pour ancrer la langue, et c'est exactement le cas qui faisait partir le modèle en chinois. À écouter de près ; si ça dérape, revenir aux kana."
+ "_京浜東北線_essai": "Essayé en kanji, RETIRÉ : le modèle l'a dit en chinois. Le risque était annoncé - cinq kanji d'affilée sans un seul okurigana pour ancrer la langue, c'est le cas même qui avait motivé le passage aux kana. La graphie mixte marche pour お乗り換えです parce que ses り et え tranchent ; un nom propre tout en kanji, non."
 }
