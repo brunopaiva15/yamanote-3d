@@ -123,13 +123,19 @@ export function directionAnnouncement(index: number, dir: LoopDirection): Uttera
 }
 
 // « 次は… » après le départ : station à venir + code JY + côté de sortie.
+//
+// PAS DE POINT AVANT LE CÔTÉ DE SORTIE, et c'est mesuré : sur la prise réelle,
+// 「お出口は右側です」 est UN segment de 1,57 s, sans pause interne. Le couper en
+// deux coûtait double - le silence de 0,31 s qu'on y posait, et l'attaque que
+// chaque moitié paie séparément. L'annonce entière sortait 19 % plus longue que
+// la vraie ; c'est de là que venait l'essentiel de l'écart.
 export function nextStationAnnouncement(index: number, side: 1 | -1): Utterance[] {
   const st = STATIONS[index];
   const sideJp = doorSideJp(side);
   const sideEn = doorSideEn(side);
   return [
     {
-      text: `次は。${st.kanji}。${st.kanji}。お出口は。${sideJp}側です。`,
+      text: `次は。${st.kanji}。${st.kanji}。お出口は${sideJp}側です。`,
       lang: 'ja-JP',
     },
     {
@@ -148,7 +154,7 @@ export function approachAnnouncement(index: number, side: 1 | -1): Utterance[] {
   const sideEn = doorSideEn(side);
   return [
     {
-      text: `まもなく。${st.kanji}。${st.kanji}。お出口は。${sideJp}側です。`,
+      text: `まもなく。${st.kanji}。${st.kanji}。お出口は${sideJp}側です。`,
       lang: 'ja-JP',
     },
     {

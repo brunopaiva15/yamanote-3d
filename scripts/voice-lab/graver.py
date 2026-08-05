@@ -231,6 +231,12 @@ CADENCE_VIRGULE = GAP_COMMA
 # 「ウエノ」 est sorti à 0,36 s pour trois mores, soit 8,3 mores/s quand la vraie
 # annonce ne dépasse jamais 7,0 : l'étirer donnerait un mot ralenti au lieu d'un
 # mot correct. Ces prises-là sont SIGNALÉES pour regravure, pas rattrapées.
+# Facteur appliqué PAR-DESSUS la cadence mesurée, si l'on veut s'écarter
+# volontairement de la vraie annonce. 1 = la vitesse relevée sur la prise
+# réelle. Le baisser accélère tout le rôle d'un coup - à n'utiliser qu'une fois
+# les écarts structurels réglés, sinon on masque une cause au lieu de la
+# corriger, comme la coupure de 「お出口は｜右側です」 qui valait 19 % à elle seule.
+CADENCE_GLOBAL = 1.0
 CADENCE_MIN, CADENCE_MAX = 0.80, 1.20
 SUSPECT_MIN, SUSPECT_MAX = 0.75, 1.30
 
@@ -267,7 +273,7 @@ def cadence_brute(text, duree, source=None):
 def cadence(text, duree, source=None):
     """Facteur de durée qui ramène un fragment au débit de la vraie annonce."""
     k = cadence_brute(text, duree, source)
-    return float(min(CADENCE_MAX, max(CADENCE_MIN, k)))
+    return float(min(CADENCE_MAX, max(CADENCE_MIN, k))) * CADENCE_GLOBAL
 
 
 # Marge laissée autour de la parole en rognant un fragment. À zéro les attaques
