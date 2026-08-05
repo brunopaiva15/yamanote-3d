@@ -86,7 +86,7 @@ VOICES = {
     ("ja-JP", "atos-inner"): "",
     ("ja-JP", "atos-outer"): "",
     ("ja-JP", "agent"): "",
-    ("en-US", "cabin"): "",
+    ("en-US", "cabin"): "Nhs7eitvQWFTQBsf0yiT",
     ("en-US", "atos-en"): "",
 }
 
