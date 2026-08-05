@@ -812,16 +812,20 @@ def main():
         chemin = FRAG_DIR / f"{fid}.mp3"
         chemin.write_bytes(mp3)
         vide, duree = muet(chemin)
-        essai = 1
-        while vide and essai <= 3:
-            print(f"      prise muette ({duree:.2f}s), on regrave ({essai}/3)")
+        # Surtout PAS `essai` : ce nom porte déjà le drapeau --essai, et le
+        # compteur l'écrasait. La gravure complète repartait alors dans la
+        # branche d'essai - clips dans audio-src/essai, ni public/ ni manifeste
+        # touchés - en annonçant tranquillement « annonces d'essai ».
+        tentative = 1
+        while vide and tentative <= 3:
+            print(f"      prise muette ({duree:.2f}s), on regrave ({tentative}/3)")
             mp3 = call(f"/text-to-speech/{VOICES[(v['lang'], v['role'])]}", key, raw=True,
                        query=f"?output_format={OUTPUT_FORMAT}",
                        body={"text": body, "model_id": MODEL,
                              "voice_settings": reglages(v["role"], v["source"])})
             chemin.write_bytes(mp3)
             vide, duree = muet(chemin)
-            essai += 1
+            tentative += 1
         if vide:
             chemin.unlink(missing_ok=True)
             raise SystemExit(
