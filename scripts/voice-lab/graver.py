@@ -203,6 +203,56 @@ PONCTUATION = {
     "右側です": "、",  # même construction : si l'une tombe, l'autre tombe
 }
 
+# Pause gardée à l'intérieur d'un fragment. Deux valeurs, parce que ce ne sont
+# pas les mêmes pauses : 80 ms pour le creux relevé après 「お出口は」, qui n'est
+# qu'une respiration de groupe, et les 250 ms de la vraie virgule pour un
+# séparateur de liste - 「上野・池袋」 - où la locutrice marque réellement.
+#
+# Le modèle, lui, rend près d'une SECONDE sur une virgule, quelle qu'elle soit.
+# Le montage ramène donc à la valeur mesurée plutôt que de la subir.
+PAUSE_INTERNE = 0.08
+# En deçà, ce n'est pas une pause mais une occlusive : le creux d'un /k/ ou
+# d'un /t/ dure quatre à six centièmes et fait partie du mot.
+PAUSE_MIN = 0.09
+
+
+def resserrer_silences(y, cible=PAUSE_INTERNE):
+    """(signal aux pauses internes ramenées à `cible`, total gardé).
+
+    Sans cela, la pause du modèle entrait dans la durée que la cadence essaie
+    de tenir : elle compressait la PAROLE pour compenser un SILENCE. Mesuré sur
+    「オデグチワ、ミギガワデス」 - 990 ms de silence dans une prise de 2,25 s, une
+    correction ramenée au plancher de 0,80, et la parole poussée à 10,9 mores/s
+    quand la vraie annonce plafonne à 7,0.
+    """
+    rms, h, _ = frame_rms(y, SR)
+    if len(rms) < 4:
+        return y, 0.0
+    creux = rms < rms.max() * 0.02
+    out, garde, i = [], 0.0, 0
+    n = len(rms)
+    while i < n:
+        if creux[i]:
+            j = i
+            while j < n and creux[j]:
+                j += 1
+            duree = (j - i) * h / SR
+            a, b = i * h, min(len(y), j * h)
+            if duree >= PAUSE_MIN and i > 0 and j < n:
+                out.append(np.zeros(int(SR * cible), np.float32))
+                garde += cible
+            else:
+                out.append(y[a:b])
+            i = j
+        else:
+            j = i
+            while j < n and not creux[j]:
+                j += 1
+            out.append(y[i * h:min(len(y), j * h)])
+            i = j
+    return np.concatenate(out).astype(np.float32) if out else y, garde
+
+
 # --- Cadence -------------------------------------------------------------
 # Un fragment synthétisé seul ne tient pas le débit : les courts s'étirent, les
 # longs s'emballent. Mesuré sur les 172 fragments gravés contre la prise réelle
@@ -261,25 +311,26 @@ def mores(text, source=None):
     return sum(1 for c in kana_txt if c not in PETITS_KANA and c not in "、。・,. ")
 
 
-def cadence_brute(text, duree, source=None):
-    """Rapport durée réelle attendue / durée obtenue, sans borne."""
+def cadence_brute(text, duree, source=None, silence=0.0):
+    """Rapport durée réelle attendue / durée obtenue, sans borne.
+
+    `silence` est le temps de pause INTERNE gardé dans le fragment : il
+    s'ajoute à la cible au lieu d'être compressé, le modèle de durée ne
+    décrivant que de la parole.
+    """
     n = mores(text, source)
     if n < 2 or duree < 0.15:
         return 1.0
     a, b = CADENCE
-    # Virgules comptées sur le TEXTE SOURCE, pas sur ce qui est envoyé : une
-    # virgule d'origine - 「上野・池袋」 - est une vraie pause de liste, à payer.
-    # Une virgule ajoutée par correction ne fait que rendre explicite un creux
-    # que la vraie locutrice marque déjà, et que le modèle de durée, ajusté sur
-    # elle, comptabilise donc déjà.
-    src = source or text
-    virgules = src.count("、") + src.count("・")
-    return float((a + b * n + CADENCE_VIRGULE * virgules) / duree)
+    # Le silence interne est MESURÉ sur la prise et passé en argument : un terme
+    # forfaitaire par virgule ferait double emploi, et se tromperait de valeur
+    # dès que la pause diffère de celle prévue.
+    return float((a + b * n + silence) / duree)
 
 
-def cadence(text, duree, source=None):
+def cadence(text, duree, source=None, silence=0.0):
     """Facteur de durée qui ramène un fragment au débit de la vraie annonce."""
-    k = cadence_brute(text, duree, source)
+    k = cadence_brute(text, duree, source, silence)
     return float(min(CADENCE_MAX, max(CADENCE_MIN, k))) * CADENCE_GLOBAL
 
 
@@ -902,11 +953,19 @@ def main():
         y = np.zeros(0, np.float32)
         for k, (fid, gap) in enumerate(p["seq"]):
             bloc = trimmed(FRAG_DIR / f"{fid}.mp3")
+            # Les pauses internes d'abord, la cadence ensuite : l'ordre compte,
+            # une pause laissée entière fausserait le facteur de débit.
+            garde = 0.0
+            v_lang_ja = inventory[fid]["lang"] == "ja-JP"
+            if v_lang_ja:
+                src = inventory[fid]["source"]
+                cible = GAP_COMMA if ("、" in src or "・" in src) else PAUSE_INTERNE
+                bloc, garde = resserrer_silences(bloc, cible)
             # La cadence mesurée pose le débit ; DEBIT reste un ajustement
             # RELATIF par-dessus, pour ce que l'oreille corrige encore.
             v = inventory[fid]
-            debit = v["debit"] * (cadence(v["text"], len(bloc) / SR, v["source"])
-                                  if v["lang"] == "ja-JP" else 1.0)
+            debit = v["debit"] * (cadence(v["text"], len(bloc) / SR, v["source"], garde)
+                                  if v_lang_ja else 1.0)
             if abs(debit - 1.0) > 0.01:
                 # 1/debit : wsola raisonne en vitesse de lecture, DEBIT en durée.
                 bloc = wsola(bloc, 1.0 / debit, SR).astype(np.float32)
