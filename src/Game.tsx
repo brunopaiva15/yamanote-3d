@@ -31,6 +31,8 @@ import { Wayside } from './three/Wayside';
 import { Weather } from './three/Weather';
 import { SkyDome } from './three/city/SkyDome';
 import { CityRibbon } from './three/city/CityRibbon';
+import { Utilities } from './three/city/Utilities';
+import { Traffic } from './three/city/Traffic';
 import { Landmarks } from './three/Landmarks';
 import { SegmentEnvironment } from './three/SegmentEnvironment';
 import { PlateauWorld } from './three/PlateauWorld';
@@ -258,6 +260,8 @@ export default function Game() {
         </TrainRig>
         <SkyDome />
         <CityRibbon />
+        <Utilities />
+        <Traffic />
         <PlateauWorld />
         <Wayside />
         <Landmarks />

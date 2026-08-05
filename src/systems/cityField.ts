@@ -39,10 +39,13 @@
 // c'est le défaut que `gridAngleAt` corrige, pour un coût nul (la matrice
 // d'instance porte déjà une rotation qu'on laissait à l'identité).
 
-import { DISTRICTS, GENERIC, type District, type Feat } from '../data/districts';
-import { directionStep, prevStation, wrapStation } from '../data/loop';
+// Les imports portent leur extension : ce module est chargé tel quel par node
+// pour les tests (tests/trafficLane.test.ts), qui n'a pas la résolution d'un
+// empaqueteur.
+import { DISTRICTS, GENERIC, type District, type Feat } from '../data/districts.ts';
+import { directionStep, prevStation, wrapStation } from '../data/loop.ts';
 import type { LoopDirection } from '../data/platforms';
-import { runtime } from './runtime';
+import { runtime } from './runtime.ts';
 
 /** Longueur d'une cellule du ruban, le long de la voie (m). */
 export const CELL_LEN = 40;
@@ -167,7 +170,12 @@ export const FAR_CELL_CAPACITY = FAR_RANKS.reduce((a, r) => a + r.n, 0);
 
 // --- Aléa déterministe -------------------------------------------------------
 
-function hashInt(a: number): number {
+/**
+ * Haché entier stable. Exporté pour que la circulation (three/city/Traffic)
+ * tire ses véhicules du MÊME haché que la ville : deux passages sur la même
+ * rue y trouvent la même camionnette garée au même endroit.
+ */
+export function hashInt(a: number): number {
   let h = a | 0;
   h = Math.imul(h ^ (h >>> 16), 2246822507);
   h = Math.imul(h ^ (h >>> 13), 3266489909);
@@ -412,8 +420,14 @@ export function tissueOf(district: District): Tissue {
 
 const FALLBACK_FACADE = ['#e6dcc9', '#e4cfc5', '#dde4d2', '#e0d7e4', '#e8e1cf', '#d6dfe3', '#e7d6c2'];
 
-/** Rue perpendiculaire d'une cellule : [début, fin] en abscisse monde, ou null. */
-function streetOf(cell: number): [number, number] | null {
+/**
+ * Rue perpendiculaire d'une cellule : [début, fin] en abscisse monde, ou null.
+ *
+ * Exportée parce que la circulation (three/city/Traffic) doit tomber d'accord
+ * au centimètre avec la chaussée que `buildCellProps` pose : une voiture qui
+ * roule à côté de sa rue est pire que pas de voiture du tout.
+ */
+export function streetOf(cell: number): [number, number] | null {
   const a = hashInt(cell * 2654435761);
   if (a > 0.52) return null;
   const b = hashInt(cell * 40503 + 7919);
@@ -421,6 +435,49 @@ function streetOf(cell: number): [number, number] | null {
   const at = cell * CELL_LEN + 5 + hashInt(cell * 97 + 13) * (CELL_LEN - width - 10);
   return [at, at + width];
 }
+
+/** Rives de la chaussée d'une rue perpendiculaire (m à l'axe de la voie). */
+export const STREET_INNER = RANKS[0].x0 - 1.5;
+export const STREET_OUTER = RANKS[RANKS.length - 1].x1;
+
+/** La chaussée d'une rue perpendiculaire, telle qu'elle est POSÉE. */
+export interface Roadway {
+  /** Abscisse monde du centre, le long de la voie (m). */
+  s: number;
+  /** Distance du centre à l'axe de la voie (m) : à mi-profondeur du bâti. */
+  x: number;
+  /** Largeur, le long de la voie (m). */
+  w: number;
+  /** Longueur, à travers les rangs (m). */
+  d: number;
+  /** Trame du quartier (rad) : la rotation appliquée autour de son centre. */
+  yaw: number;
+}
+
+/**
+ * Cotes de la chaussée de la cellule, ou `false` s'il n'y a pas de rue.
+ *
+ * Un seul endroit décide où passe une rue et comment elle est tournée : la
+ * dalle de `buildCellProps` et la circulation de three/city/Traffic la lisent
+ * ici toutes les deux. La rotation se fait autour du CENTRE de la dalle, à
+ * mi-profondeur du bâti - prise depuis l'axe des rails, elle décalerait la rue
+ * d'une vingtaine de mètres le long de la voie.
+ */
+export function roadwayOf(cell: number, out: Roadway): boolean {
+  const street = streetOf(cell);
+  if (!street) return false;
+  out.s = (street[0] + street[1]) / 2;
+  out.w = street[1] - street[0] - 1.2;
+  out.x = (STREET_INNER + STREET_OUTER) / 2;
+  out.yaw = gridAngleAt(out.s);
+  // La dalle s'allonge de ce que la rotation lui fait perdre en profondeur,
+  // sinon la trouée n'atteint plus le dernier rang.
+  out.d = (STREET_OUTER - STREET_INNER) / Math.max(0.6, Math.cos(out.yaw));
+  return true;
+}
+
+/** Cotes de travail : le générateur ne doit rien allouer par cellule. */
+const ROADWAY: Roadway = { s: 0, x: 0, w: 0, d: 0, yaw: 0 };
 
 /**
  * Remplit `out` avec les bâtiments de la cellule `cell` du côté `side`.
@@ -968,28 +1025,20 @@ export function buildCellProps(
     }
   }
 
-  // Chaussée : la trouée devient une perspective au lieu d'un trou.
-  const street = streetOf(cell);
-  if (street) {
-    const inner = RANKS[0].x0 - 1.5;
-    const outer = RANKS[RANKS.length - 1].x1;
+  // Chaussée : la trouée devient une perspective au lieu d'un trou. Elle prend
+  // la trame du quartier, comme le bâti qui la borde - une rue droite au milieu
+  // d'un tissu de biais se verrait tout de suite.
+  if (roadwayOf(cell, ROADWAY)) {
     const p = push('box');
     if (p) {
-      p.s = (street[0] + street[1]) / 2;
-      p.w = street[1] - street[0] - 1.2;
-      p.x = (inner + outer) / 2;
-      p.d = outer - inner;
+      p.s = ROADWAY.s;
+      p.w = ROADWAY.w;
+      p.x = ROADWAY.x;
+      p.d = ROADWAY.d;
       p.h = 0.14;
       p.y = 0;
       p.tone = ROAD_TONE;
-      // La chaussée prend la trame du quartier, comme le bâti qui la borde :
-      // une rue droite au milieu d'un tissu de biais se verrait tout de suite.
-      // Elle est mesurée au milieu de sa propre emprise, pas au bord de la
-      // cellule, pour que les deux côtés de la voie tombent d'accord.
-      p.yaw = gridAngleAt(p.s);
-      // Elle s'allonge de ce que la rotation lui fait perdre en profondeur,
-      // sinon la trouée n'atteint plus le dernier rang.
-      p.d /= Math.max(0.6, Math.cos(p.yaw));
+      p.yaw = ROADWAY.yaw;
     }
   }
   return count;
