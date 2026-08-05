@@ -357,6 +357,7 @@ LECTURES = Path("audio-src/lectures.json")
 _readings = None
 _corriges = set()
 _kana_brut = {}
+_en = {}
 
 VOWEL = {}
 for _v, _row in {"ア": "アカサタナハマヤラワガザダバパャヮ", "イ": "イキシチニヒミリギジヂビピ",
@@ -413,7 +414,7 @@ def _lecture(text):
 
 def kana(text):
     """Lecture d'un fragment, lue dans la table."""
-    global _readings, _corriges, _kana_brut
+    global _readings, _corriges, _kana_brut, _en
     if _readings is None:
         if not LECTURES.exists():
             raise SystemExit(f"{LECTURES} absent - le régénérer avec lectures.py.")
@@ -421,6 +422,9 @@ def kana(text):
         _readings = table["lectures"]
         _corriges = set(table.get("corrections", []))
         _kana_brut = table.get("kana", {})
+        _en = table.get("en", {})
+    if text == "":
+        return ""
     r = _readings.get(text)
     if r is None:
         raise SystemExit(
@@ -428,6 +432,30 @@ def kana(text):
             "Un texte d'annonce a changé depuis la dernière table : relancer\n"
             "scripts/voice-lab/lectures.py depuis une machine avec open_jtalk.")
     return r[1] if HIRAGANA else r[0]
+
+
+def lecture_en(text):
+    """Texte anglais, noms japonais réécrits comme une voix anglaise doit les dire.
+
+    Le G2P anglais lit 「Ueno」 et 「Ikebukuro」 comme des mots anglais : accent
+    là où l'anglais l'attend, voyelles inaccentuées réduites en schwa, 「u」
+    initial en /juː/. On obtient « you-ENN-oh », « ick-uh-BYOO-kuh-roh » - des
+    mots anglais qui ressemblent à des noms de gares.
+
+    La voix de JR East, elle, parle anglais mais garde les voyelles japonaises.
+    C'est ce que scripts/en-readings.ts décrit depuis toujours, more par more et
+    avec l'accent placé à la main ; seuls ses phonèmes visaient Kokoro. On
+    réutilise donc son jugement et on n'en change que la graphie.
+
+    La substitution est faite MOT À MOT parce que la table l'est : 「Keihin-
+    Tohoku」 n'y figure pas, ses deux moitiés si.
+    """
+    kana("")  # amorce le chargement de la table
+    if not _en:
+        return text
+    return re.sub(r"[A-Za-z]+(?:-[A-Za-z]+)*",
+                  lambda m: "-".join(_en.get(w, w) for w in m.group(0).split("-")),
+                  text)
 
 
 def check_readings(stations):
@@ -658,8 +686,8 @@ def build_plan(items):
         # La conversion en kana a lieu ICI, avant que le fragment ne prenne son
         # identité : le cache doit être indexé sur ce qui est RÉELLEMENT envoyé
         # au modèle, sinon corriger une lecture resservirait l'ancien son.
-        if it["lang"] == "ja-JP":
-            frs = [(kana(b), sep, pos, forced) for b, sep, pos, forced in frs]
+        frs = [((kana(b) if it["lang"] == "ja-JP" else lecture_en(b)), sep, pos, forced)
+               for b, sep, pos, forced in frs]
         bodies = [b for b, _, _, _ in frs]
         seq = []
         for i, (body, sep, pos, forced) in enumerate(frs):
@@ -750,7 +778,8 @@ def variantes(key, v, stab=False):
     ja = v["lang"] == "ja-JP"
     kata, hira = (_lecture(v["source"]) if ja else (v["text"], v["text"]))
     formes = ({"katakana": kata, "hiragana": hira, "source": v["source"]} if ja
-              else {"tel quel": v["text"]})
+              else {"prononce": v["text"], "brut": v["source"]}
+              if v["text"] != v["source"] else {"telquel": v["text"]})
     poncts = PONCTUATIONS_JA if ja else PONCTUATIONS
     stabs = GRILLE_STAB if (stab or not ja) else (SETTINGS[v["role"]]["stability"],)
 

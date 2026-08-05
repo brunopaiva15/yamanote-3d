@@ -27,6 +27,7 @@ Usage :
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -62,6 +63,72 @@ def reading(text):
         hira.append(r if etranger else
                     "".join(chr(ord(c) - 0x60) if "ァ" <= c <= "ヶ" else c for c in r))
     return "".join(kata), "".join(hira)
+
+
+# --- Noms japonais dans les annonces ANGLAISES ---------------------------
+# Le travail est DÉJÀ FAIT dans scripts/en-readings.ts : chaque nom propre y a
+# sa lecture more par more, avec l'accent tonique placé à la main et justifié -
+# 「u-E-no」, 「u-gu-i-su-DA-ni」, 「nip-PO-ri」. Ce qui ne s'exporte pas, ce sont
+# ses PHONÈMES : ils visent Kokoro, et un modèle multilingue n'accepte pas
+# d'alphabet phonétique en ligne.
+#
+# On garde donc le jugement - le découpage et l'accent - et on ne refait que la
+# graphie : chaque more devient une orthographe anglaise qui la dit juste. Le
+# principe est le même qu'en japonais : envoyer la prononciation, pas
+# l'orthographe.
+#
+# Le piège est l'anglais lui-même. 「gi」 écrit « gee » se lit /dʒiː/, 「chi」
+# écrit « chi » se lit /tʃaɪ/ : la table est donc écrite more par more plutôt
+# que par une règle sur les voyelles.
+MORE_EN = {
+    "a": "ah", "i": "ee", "u": "oo", "e": "eh", "o": "oh",
+    "ba": "bah", "bi": "bee", "bo": "boh", "bu": "boo", "ban": "bahn",
+    "chi": "chee", "cho": "choh", "chu": "choo",
+    "da": "dah", "de": "deh", "den": "dehn", "do": "doh",
+    "ei": "ay", "en": "ehn",
+    "fu": "foo",
+    "ga": "gah", "gi": "ghee", "gin": "gheen", "go": "goh", "gu": "goo",
+    "ha": "hah", "han": "hahn", "hi": "hee", "hin": "heen", "ho": "hoh",
+    "ji": "jee", "jo": "joh", "ju": "joo",
+    "ka": "kah", "kai": "kigh", "kan": "kahn", "ke": "keh", "kei": "kay",
+    "ki": "kee", "ko": "koh", "ku": "koo", "kyo": "kyoh", "kyu": "kyoo",
+    "ma": "mah", "me": "meh", "mi": "mee", "mo": "moh", "mon": "mohn",
+    "na": "nah", "nam": "nahm", "nan": "nahn", "ne": "neh", "ni": "nee",
+    "nip": "neep", "no": "noh",
+    "po": "poh",
+    "ra": "rah", "ri": "ree", "rin": "reen", "ro": "roh", "ru": "roo",
+    "sa": "sah", "sai": "sigh", "se": "seh", "sei": "say", "sen": "sehn",
+    "shi": "shee", "shim": "sheem", "shin": "sheen", "sho": "shoh",
+    "so": "soh", "su": "soo",
+    "ta": "tah", "tan": "tahn", "te": "teh", "to": "toh",
+    "tsu": "tsoo",
+    "wa": "wah",
+    "ya": "yah", "yo": "yoh", "yu": "yoo",
+    "za": "zah", "zai": "zigh", "zo": "zoh", "zu": "zoo",
+}
+
+
+def readings_en(path="scripts/en-readings.ts"):
+    """Nom propre → orthographe anglaise qui le dit à la japonaise."""
+    s = Path(path).read_text(encoding="utf-8")
+    bloc = s[s.index("const READINGS"):]
+    bloc = bloc[:bloc.index("\n};")]
+    out, inconnues = {}, set()
+    for nom, lecture in re.findall(r"^\s*'?([A-Za-z\- ]+)'?:\s*'([^']+)'", bloc, re.M):
+        mores = lecture.split("-")
+        respell = []
+        for m in mores:
+            r = MORE_EN.get(m.lower())
+            if r is None:
+                inconnues.add(m)
+                r = m.lower()
+            # La more en majuscules porte l'accent : on le garde tel quel, c'est
+            # la seule information que l'orthographe puisse encore transmettre.
+            respell.append(r.upper() if m.isupper() else r)
+        out[nom] = "-".join(respell)
+    for m in sorted(inconnues):
+        print(f"  ⚠ more sans orthographe anglaise : {m}")
+    return out
 
 
 def main():
@@ -128,6 +195,8 @@ def main():
             "corrections": sorted(applied),
             "kana": {k: kana_brut[k] for k in sorted(applied) if k in kana_brut},
             "lectures": dict(sorted(table.items())),
+            # Les noms japonais tels qu'une voix ANGLAISE doit les lire.
+            "en": dict(sorted(readings_en().items())),
         }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"{len(table)} lectures → {dest}")
     print(f"contrôle : {len(corpus['stations'])}/{len(corpus['stations'])} gares "
