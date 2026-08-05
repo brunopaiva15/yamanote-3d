@@ -148,7 +148,10 @@ FONDU = 0.015
 # La clé est le TEXTE SOURCE, pas la lecture : elle reste lisible et survit à
 # un changement de graphie. Une valeur inférieure à 1 raccourcit.
 DEBIT = {
-    # 「お乗換です」 est sorti d'ici : à 0,85 puis 0,75 il traînait toujours,
+    # À peine resserré : la graphie mixte a réglé l'essentiel, il ne reste
+    # qu'un cheveu. 5 % est sous le seuil où le vocodeur laisse une trace.
+    "お乗換です": 0.95,
+    # Note : 「お乗換です」 était sorti d'ici : à 0,85 puis 0,75 il traînait toujours,
     # donc la durée n'était pas la cause. C'est la GRAPHIE qui a été changée
     # (voir lectures-corrections.json). Si la nouvelle traîne à son tour, c'est
     # ici qu'on la resserrera - mais une cause à la fois.
@@ -165,6 +168,21 @@ DEBIT = {
 # au prix de devenir identique à sa variante médiane.
 PONCTUATION_MID = "、"
 PONCTUATION_FIN = ""
+
+# Ponctuation imposée à UN fragment, par-dessus la règle de position. Tous les
+# fragments finaux ne veulent pas la même cadence : 「お乗り換えです」 clôt bien
+# une annonce sans ponctuation, 「左側です」 y tombait encore. La virgule le
+# laisse en suspens, ce qui est la cadence des annonces de gare - elles se
+# terminent à plat ou remontent, jamais sur une chute de phrase déclarative.
+#
+# Ce réglage entre dans l'identité du fragment, mais SEULEMENT pour les
+# fragments qui y figurent : les autres gardent l'identité qu'ils avaient,
+# donc leur son exact. Le modèle n'étant pas déterministe, regraver un
+# fragment qui convient, c'est relancer les dés pour rien.
+PONCTUATION = {
+    "左側です": "、",
+    "右側です": "、",  # même construction : si l'une tombe, l'autre tombe
+}
 
 # Marge laissée autour de la parole en rognant un fragment. À zéro les attaques
 # de consonnes sourdes se font manger ; au-delà de ~30 ms on réintroduit le
@@ -187,6 +205,7 @@ TRIM_PAD = 0.02
 
 LECTURES = Path("audio-src/lectures.json")
 _readings = None
+_corriges = set()
 
 VOWEL = {}
 for _v, _row in {"ア": "アカサタナハマヤラワガザダバパャヮ", "イ": "イキシチニヒミリギジヂビピ",
@@ -233,11 +252,13 @@ HIRAGANA = False
 
 def kana(text):
     """Lecture d'un fragment, lue dans la table."""
-    global _readings
+    global _readings, _corriges
     if _readings is None:
         if not LECTURES.exists():
             raise SystemExit(f"{LECTURES} absent - le régénérer avec lectures.py.")
-        _readings = json.loads(LECTURES.read_text(encoding="utf-8"))["lectures"]
+        table = json.loads(LECTURES.read_text(encoding="utf-8"))
+        _readings = table["lectures"]
+        _corriges = set(table.get("corrections", []))
     r = _readings.get(text)
     if r is None:
         raise SystemExit(
@@ -306,15 +327,19 @@ def frag_id(role, lang, body, pos, source=None):
     son, et un cache qui l'ignorerait resservirait l'ancien rendu sans rien
     dire. La voix aussi, évidemment.
     """
-    h = hashlib.sha1(
-        "\x1f".join([VOICES[(lang, role)], MODEL,
-                     json.dumps(reglages(role, source or body), sort_keys=True),
-                     role, lang, pos, body]).encode("utf-8")
-    )
-    return h.hexdigest()[:12]
+    parts = [VOICES[(lang, role)], MODEL,
+             json.dumps(reglages(role, source or body), sort_keys=True),
+             role, lang, pos, body]
+    # Ajouté SEULEMENT s'il existe : sans quoi tous les fragments changeraient
+    # d'identité et seraient regravés, alors que le modèle n'est pas
+    # déterministe et qu'on perdrait des prises qui conviennent.
+    force = PONCTUATION.get(source or body)
+    if force is not None:
+        parts.append(f"ponct={force}")
+    return hashlib.sha1("\x1f".join(parts).encode("utf-8")).hexdigest()[:12]
 
 
-def spoken(body, sep, pos, lang="ja-JP"):
+def spoken(body, sep, pos, lang="ja-JP", source=None):
     """Le texte envoyé au modèle, ponctué selon la position.
 
     Un fragment isolé serait dit comme une phrase complète, avec sa chute
@@ -323,6 +348,9 @@ def spoken(body, sep, pos, lang="ja-JP"):
     L'anglais garde son point final : la plainte portait sur le です japonais,
     et rien ne dit qu'une annonce anglaise souffre du même excès de chute.
     """
+    force = PONCTUATION.get(source)
+    if force is not None:
+        return body + force
     if lang != "ja-JP":
         return body + ("." if pos == "end" else ",")
     return body + (PONCTUATION_FIN if pos == "end" else PONCTUATION_MID)
@@ -533,7 +561,10 @@ def main():
     # Un kanji restant serait un mot qu'open_jtalk n'a pas su lire, et c'est
     # exactement là que le modèle repart en chinois. On le signale plutôt que
     # de le laisser passer.
+    # Une correction manuelle qui réintroduit des kanji est DÉLIBÉRÉE - c'est
+    # même sa raison d'être quand une graphie mixte se dit mieux que les kana.
     restants = [v for v in inventory.values() if v["lang"] == "ja-JP"
+                and v["source"] not in _corriges
                 and any("一" <= c <= "鿿" for c in v["text"])]
     for v in restants:
         print(f"  ⚠ kanji non converti : {v['text'][:50]}")
@@ -553,7 +584,7 @@ def main():
         v = inventory[fid]
         if not key:
             raise SystemExit("Renseigner ELEVENLABS_API_KEY.")
-        body = spoken(v["text"], "", v["pos"], v["lang"])
+        body = spoken(v["text"], "", v["pos"], v["lang"], v["source"])
         mp3 = call(f"/text-to-speech/{VOICES[(v['lang'], v['role'])]}", key, raw=True,
                    query=f"?output_format={OUTPUT_FORMAT}",
                    body={"text": body, "model_id": MODEL,
