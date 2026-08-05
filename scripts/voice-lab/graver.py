@@ -267,7 +267,14 @@ def cadence_brute(text, duree, source=None):
     if n < 2 or duree < 0.15:
         return 1.0
     a, b = CADENCE
-    return float((a + b * n + CADENCE_VIRGULE * text.count("、")) / duree)
+    # Virgules comptées sur le TEXTE SOURCE, pas sur ce qui est envoyé : une
+    # virgule d'origine - 「上野・池袋」 - est une vraie pause de liste, à payer.
+    # Une virgule ajoutée par correction ne fait que rendre explicite un creux
+    # que la vraie locutrice marque déjà, et que le modèle de durée, ajusté sur
+    # elle, comptabilise donc déjà.
+    src = source or text
+    virgules = src.count("、") + src.count("・")
+    return float((a + b * n + CADENCE_VIRGULE * virgules) / duree)
 
 
 def cadence(text, duree, source=None):
@@ -321,7 +328,10 @@ def same_reading(a, b):
     signalerait trente fautes qui n'en sont pas.
     """
     def norm(s):
-        s, out = to_katakana(s), []
+        # La ponctuation n'est pas une lecture : une virgule d'appui posée en
+        # tête ne doit pas faire échouer le contrôle des trente gares.
+        s = "".join(c for c in to_katakana(s) if c not in "、。・,. ")
+        out = []
         for c in s:
             v = VOWEL.get(out[-1]) if out else None
             if v:
@@ -548,6 +558,23 @@ def muet(path):
         return True, 0.0
     d = len(y) / SR
     return d < MIN_PAROLE, d
+
+
+# Une attaque intacte part du silence. Au-dessus de ce niveau dès la première
+# trame, le début du mot manque - mesuré sur le corpus : médiane à -67 dB, et
+# les seuls fragments au-dessus de -12 dB commençaient tous par ウ, la voyelle
+# la plus faible du japonais, que le modèle escamotait.
+ATTAQUE_DB = -12.0
+
+
+def attaque_coupee(path):
+    """(vrai si le fragment commence déjà en pleine voix, niveau de la 1re trame)."""
+    x, sr = load(path, sr=SR)
+    rms, _, _ = frame_rms(x, sr)
+    if len(rms) < 2 or rms.max() <= 0:
+        return False, -99.0
+    d = float(20 * np.log10(rms[0] / rms.max() + 1e-9))
+    return d > ATTAQUE_DB, d
 
 
 def read_manifest(path):
@@ -916,6 +943,22 @@ def main():
         k = cadence_brute(v["text"], len(trimmed(q)) / SR, v["source"])
         if k < SUSPECT_MIN or k > SUSPECT_MAX:
             suspects.append((k, v["text"], fid))
+    coupees = []
+    for fid, v in inventory.items():
+        q = FRAG_DIR / f"{fid}.mp3"
+        if not q.exists():
+            continue
+        mauvais, db = attaque_coupee(q)
+        if mauvais:
+            coupees.append((db, v["text"], fid))
+    if coupees:
+        print(f"\n{len(coupees)} prises à l'attaque escamotée - le début du mot "
+              "manque :")
+        for db, t, fid in sorted(coupees, reverse=True):
+            print(f"  {db:+.0f} dB dès la 1re trame  {fid}  {t[:36]}")
+        print("Leur donner un appui : une virgule EN TÊTE dans "
+              "lectures-corrections.json.\n")
+
     if suspects:
         print(f"\n{len(suspects)} prises hors cadence de plus de "
               f"{100 * (SUSPECT_MAX - 1):.0f} % - à regraver plutôt qu'à étirer :")
