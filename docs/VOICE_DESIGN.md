@@ -198,17 +198,45 @@ fournir les lectures. Si l'accent reste, la voix n'est pas native : changer.
 
 ### Anglais
 
+Même principe : chaque ligne casse un défaut connu. On l'envoie tel quel, avec
+les points — c'est la ponctuation que le générateur enverra vraiment, et elle
+porte les pauses de l'annonce.
+
 ```
-This is the Yamanote Line train bound for Shibuya and Shinagawa.
-The next station is Harajuku, Harajuku. The doors on the right side will open.
-We will soon make a brief stop at Okachimachi. Please change here for the
-Keihin-Tohoku Line.
+This is a Yamanote Line train bound for Ueno and Ikebukuro.
+The next station is. Tokyo. JY. 01. The doors on the left side will open.
+The next station is. Harajuku. The doors on the right side will open.
+The next station is. Uguisudani. The doors on the left side will open.
+Please change here for the Keihin-Tohoku and Chuo-Sobu Lines. The Tokyo Metro
+Hibiya Line. And the Tsukuba Express.
+Please change here for the Chuo. Keihin-Tohoku. Tokaido. Yokosuka. Sobu. Keiyo
+and Ueno-Tokyo Lines.
+There are priority seats in most cars. Please offer your seat to those who may
+need it.
 Please stand clear of the closing doors.
 ```
 
-Le piège est inverse : les noms de gare doivent garder leurs voyelles
-japonaises. « Harajuku » avec un a anglais, ou « Shinagawa » accentué à
-l'anglaise, est le défaut à guetter.
+#### Ce que chaque piège révèle
+
+Le défaut à guetter est l'INVERSE du japonais : ici c'est l'anglais qui est
+natif, et ce sont les noms japonais qui doivent le rester.
+
+| Écouter | Faute typique |
+| --- | --- |
+| Harajuku | « ha-ra-JU-ku » avec accent d'intensité, au lieu de quatre mores égales |
+| Uguisudani | le piège le plus dur : cinq mores, aucune accentuée |
+| Ikebukuro · Yokosuka | voyelles anglaises — « ee-keh-boo-KOO-roh » |
+| Tokaido · Chuo · Sobu | les voyelles longues avalées : Tô-kai-dô, Chû-ô, Sô-bu |
+| Keihin-Tohoku | le trait d'union lu comme une coupure, ou le mot dit en un seul bloc |
+| JY. 01. | doit sonner « jay-wye, zero-one » et non « J Y one » |
+| Yamanote | « ya-ma-NO-teh », pas « yamanoat » |
+
+#### Le registre
+
+Ce qui fait l'annonce JR anglaise, et qui ne s'entend qu'à l'ensemble : un
+débit LENT, des groupes très détachés, et un ton neutre-accueillant qui ne
+sourit pas autant que le japonais. Si la voix enchaîne les lignes de
+correspondance d'un trait, elle est trop vive — la vraie les égrène.
 
 ## Corriger : exporter, mesurer, retoucher UN mot
 
