@@ -74,7 +74,11 @@ FRAG_DIR = Path("audio-src/fragments")
 # îlot central les deux quais annoncent le même script à quelques secondes
 # d'écart, et la voix est la seule chose qui dise lequel vient de parler.
 VOICES = {
-    ("ja-JP", "cabin"): "",
+    # Retenue après mesure sur trois candidates : étendue d'intonation 10,1
+    # demi-tons contre 10,1 relevés, centroïde 875 contre 904. C'est la seule
+    # des trois à avoir la brillance de la voix réelle - les deux autres
+    # plafonnaient à 711 et 731 Hz, et c'est ce qui leur ôtait le « sourire ».
+    ("ja-JP", "cabin"): "mN6r4VCXacoTliYLh0A2",  # Wine Lover
     ("ja-JP", "atos-inner"): "",
     ("ja-JP", "atos-outer"): "",
     ("ja-JP", "agent"): "",
@@ -208,10 +212,19 @@ def read_manifest(path):
 
 
 def build_plan(items):
-    """(plan par annonce, inventaire des fragments à graver)."""
-    plan, inventory = [], {}
+    """(plan par annonce, inventaire des fragments, rôles laissés de côté).
+
+    Les rôles dont la voix n'est pas encore choisie sont ÉCARTÉS plutôt que de
+    faire échouer la gravure : les six voix ne se retiennent pas le même jour,
+    et rien ne justifie d'attendre la dernière pour graver la première. Les
+    annonces écartées gardent leurs clips et leurs entrées de manifeste.
+    """
+    plan, inventory, deferred = [], {}, {}
     for it in items:
         role = it.get("role", "cabin")
+        if not VOICES.get((it["lang"], role)):
+            deferred[(it["lang"], role)] = deferred.get((it["lang"], role), 0) + 1
+            continue
         # Japonais : `tts` porte les réécritures en katakana (山手線 → ヤマノテ線).
         # Anglais : `tts` porte des phonèmes propres à Kokoro, incompris ici.
         src = it["tts"] if it["lang"] == "ja-JP" else it["text"]
@@ -224,7 +237,7 @@ def build_plan(items):
             nxt = bodies[i + 1] if i + 1 < len(bodies) else None
             seq.append((fid, 0.0 if i == len(frs) - 1 else gap_after(body, nxt, sep)))
         plan.append({"key": it["key"], "text": it["text"], "seq": seq})
-    return plan, inventory
+    return plan, inventory, deferred
 
 
 def main():
@@ -249,14 +262,19 @@ def main():
         FRAG_DIR = Path(argv[argv.index("--frags") + 1])
 
     items = json.loads(Path(texts_path).read_text(encoding="utf-8"))["items"]
-    plan, inventory = build_plan(items)
+    plan, inventory, deferred = build_plan(items)
+    if not plan:
+        raise SystemExit("Aucun rôle n'a de voix - lancer d'abord --list.")
 
     FRAG_DIR.mkdir(parents=True, exist_ok=True)
     todo = [f for f in inventory if not (FRAG_DIR / f"{f}.mp3").exists()]
     chars = sum(len(inventory[f]["text"]) + 1 for f in todo)
-    print(f"{len(items)} annonces · {len(inventory)} fragments "
+    print(f"{len(plan)}/{len(items)} annonces · {len(inventory)} fragments "
           f"({len(inventory) - len(todo)} en cache, {len(todo)} à graver, "
           f"{chars} caractères)")
+    for (lang, role), n in sorted(deferred.items()):
+        print(f"  en attente d'une voix : {lang} {role:12} {n:4} annonces "
+              f"- clips actuels conservés")
     if dry:
         for f in todo[:40]:
             v = inventory[f]
@@ -264,11 +282,6 @@ def main():
         if len(todo) > 40:
             print(f"  … et {len(todo) - 40} autres")
         return
-
-    missing_voice = {inventory[f]["lang"] for f in todo
-                     if not VOICES.get((inventory[f]["lang"], inventory[f]["role"]))}
-    if todo and missing_voice:
-        raise SystemExit("VOICES incomplet - lancer d'abord --list.")
 
     if only:
         todo = todo[:only]
@@ -296,7 +309,11 @@ def main():
 
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    manifest = {}
+    # Une gravure partielle - le cas normal tant que les six voix ne sont pas
+    # toutes retenues - PART DU MANIFESTE EXISTANT. Le reconstruire de zéro
+    # effacerait les entrées des rôles pas encore regravés, et leurs annonces
+    # deviendraient muettes alors que leurs clips sont toujours là.
+    manifest = read_manifest(manifest_path) if deferred else {}
     for p in plan:
         # À ce stade tout fragment manquant vient d'être gravé ou était en
         # cache. S'il en manque encore, c'est une gravure interrompue : mieux
@@ -319,7 +336,9 @@ def main():
         (out / f"{p['key']}.mp3").write_bytes(encode_mp3(y, SR, kbps=64))
         manifest[p["key"]] = round(len(y) / SR, 2)
 
-    orphans = [q for q in out.glob("*.mp3") if q.stem not in manifest]
+    # Le ménage n'a lieu qu'une fois le corpus complet : tant qu'un rôle attend
+    # sa voix, un clip absent du manifeste peut être un clip encore valide.
+    orphans = [] if deferred else [q for q in out.glob("*.mp3") if q.stem not in manifest]
     for q in orphans:
         q.unlink()
     entries = "\n".join(f"  {json.dumps(k)}: {v}," for k, v in sorted(manifest.items()))
@@ -329,7 +348,9 @@ def main():
         "export const PA_CLIPS: Record<string, number> = {\n"
         f"{entries}\n"
         "};\n", encoding="utf-8")
-    print(f"{len(manifest)} annonces assemblées → {out}"
+    print(f"{len(plan)} annonces assemblées → {out}"
+          + (f" ({len(manifest) - len(plan)} conservées des rôles en attente)"
+             if deferred else "")
           + (f", {len(orphans)} clips orphelins supprimés" if orphans else ""))
     print(f"Manifeste → {manifest_path}")
 
