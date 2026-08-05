@@ -178,9 +178,11 @@ export function Utilities() {
     // dessous, et de profil quand la rame l'a dépassé.
     const lampGeo = new THREE.BoxGeometry(0.3, 0.06, 0.18);
     const sides = ([1, -1] as const).map((side) => {
-      const mk = (geo: THREE.BufferGeometry, mat: THREE.Material) => {
+      const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, family: string) => {
         const mesh = new THREE.InstancedMesh(geo, mat, Math.max(1, count));
         mesh.frustumCulled = false;
+        // Sonde : voir `__probeCity()`.
+        mesh.userData.cityFamily = `${family} ${side === 1 ? '+x' : '-x'}`;
         // Un fil ne porte pas d'ombre lisible, et un poteau de dix mètres en
         // porterait une qui balaie toute la ville : les deux s'en passent.
         mesh.userData.noShadow = true;
@@ -189,9 +191,9 @@ export function Utilities() {
       };
       return {
         side,
-        pole: mk(poleGeo, poleMat),
-        wire: mk(wireGeo, wireMat),
-        lamp: mk(lampGeo, lampMat),
+        pole: mk(poleGeo, poleMat, 'poteau'),
+        wire: mk(wireGeo, wireMat, 'fils'),
+        lamp: mk(lampGeo, lampMat, 'foyer'),
       };
     });
     return { poleGeo, wireGeo, lampGeo, poleMat, wireMat, lampMat, sides };

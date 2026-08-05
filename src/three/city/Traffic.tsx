@@ -47,9 +47,11 @@ const ROAD_TOP = 0.14;
 const BEHIND = 45;
 
 /** Capacité des maillages. Au-delà, les rues les plus lointaines se taisent. */
-const CAR_CAP = 14;
-const VAN_CAP = 8;
-const LIGHT_CAP = 14;
+const CAR_CAP = 18;
+const VAN_CAP = 10;
+// Les feux comptent moins loin que les caisses : à cent cinquante mètres, une
+// paire de phares est un pixel, et c'est le premier poste qu'on rogne.
+const LIGHT_CAP = 16;
 
 /** Teintes de caisse : la palette d'un parking japonais, dans ses proportions. */
 const PAINT = [
@@ -183,10 +185,13 @@ export function Traffic() {
       toneMapped: false,
       fog: true,
     });
-    const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, n: number) => {
+    const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, n: number, family: string) => {
       const mesh = new THREE.InstancedMesh(geo, mat, n);
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       mesh.frustumCulled = false;
+      // Sonde : `__probeCity()` sait alors dire combien de véhicules la scène
+      // pose vraiment - une rue vide se discute mal sur une capture.
+      mesh.userData.cityFamily = family;
       // Une voiture de trois mètres au fond d'une rue ne porte pas d'ombre
       // qu'on distingue de celle de la rue elle-même.
       mesh.userData.noShadow = true;
@@ -201,10 +206,10 @@ export function Traffic() {
       paintMat,
       headMat,
       tailMat,
-      car: mk(carGeo, paintMat, CAR_CAP),
-      van: mk(vanGeo, paintMat, VAN_CAP),
-      head: mk(headGeo, headMat, LIGHT_CAP),
-      tail: mk(tailGeo, tailMat, LIGHT_CAP),
+      car: mk(carGeo, paintMat, CAR_CAP, 'voiture'),
+      van: mk(vanGeo, paintMat, VAN_CAP, 'utilitaire'),
+      head: mk(headGeo, headMat, LIGHT_CAP, 'phares'),
+      tail: mk(tailGeo, tailMat, LIGHT_CAP, 'feux arrière'),
     };
   }, []);
 
