@@ -113,6 +113,14 @@ def wsola(x, rate, sr=SR):
     couture tombe sur une période du signal, donc pas de bourdonnement de
     vocodeur de phase. Employé ici pour de petits facteurs (±20 %), là où le
     procédé s'entend à peine.
+
+    LA QUEUE EST RECOLLÉE TELLE QUELLE. La boucle s'arrête dès qu'il ne reste
+    plus de quoi lire une fenêtre entière avec sa marge de recalage : jusqu'à
+    win+seek, soit 48 ms, n'étaient jamais lus, et l'ancien dernier échantillon
+    restait à pleine amplitude. Sur une voix, ces 48 ms sont la décroissance de
+    la voyelle finale - la jeter, c'est couper le mot net. On rend donc ce
+    reste sans l'étirer : il est court, c'est une queue, et la continuité y
+    vaut mieux qu'une durée exacte au millième.
     """
     if abs(rate - 1.0) < 1e-6:
         return x
@@ -125,7 +133,8 @@ def wsola(x, rate, sr=SR):
     out = np.zeros(n_out, np.float32)
     norm = np.zeros(n_out, np.float32)
     prev_tail = None
-    pos_in = pos_out = 0
+    pos_in = pos_out = best = 0
+    ecrit = False
     while pos_in + win + seek < len(x) and pos_out + win < n_out:
         if prev_tail is None:
             best = pos_in
@@ -141,13 +150,25 @@ def wsola(x, rate, sr=SR):
             best = lo + int(np.argmax(num / den))
         out[pos_out : pos_out + win] += x[best : best + win] * w
         norm[pos_out : pos_out + win] += w
+        ecrit = True
         prev_tail = x[best + hop_out : best + hop_out + win]
         if len(prev_tail) < win:
             break
         pos_out += hop_out
         pos_in += hop_in
-    out, norm = out[: pos_out + win], norm[: pos_out + win]
-    return (out / np.maximum(norm, 1e-4)).astype(np.float32)
+    if not ecrit:
+        # Trop court pour une seule fenêtre : sans ce garde-fou on renvoyait
+        # `win` échantillons de silence, la division ne trouvant aucun poids.
+        return x
+    # On coupe le recouvrement-addition à pos_out+hop_out, où DEUX fenêtres se
+    # superposent encore et où `norm` vaut 1 : au-delà il ne reste que le flanc
+    # descendant de la dernière, et la division par un poids qui tend vers zéro
+    # y est mal conditionnée. L'échantillon de sortie pos_out+k venant de
+    # l'entrée best+k, la queue reprend exactement à best+hop_out.
+    m = min(hop_out, len(x) - best)
+    out, norm = out[: pos_out + m], norm[: pos_out + m]
+    y = (out / np.maximum(norm, 1e-4)).astype(np.float32)
+    return np.concatenate([y, x[best + m :]]).astype(np.float32)
 
 
 def pitch_shift(x, st, sr=SR):

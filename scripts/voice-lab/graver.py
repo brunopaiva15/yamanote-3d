@@ -236,6 +236,12 @@ def resserrer_silences(y, cible=PAUSE_INTERNE):
     「オデグチワ、ミギガワデス」 - 990 ms de silence dans une prise de 2,25 s, une
     correction ramenée au plancher de 0,80, et la parole poussée à 10,9 mores/s
     quand la vraie annonce plafonne à 7,0.
+
+    ⚠ La reconstruction se fait par TRANCHES DE TRAMES, et une trame ne décrit
+    pas tout le signal : `frame_rms` en rend n = 1 + (len-win)//hop, qui ne
+    couvrent que n·hop échantillons. La dernière fenêtre déborde de win-hop
+    au-delà, et ce débord n'appartient à aucune tranche. Il faut donc mener la
+    DERNIÈRE tranche jusqu'à len(y) explicitement - voir `_fin`.
     """
     rms, h, _ = frame_rms(y, SR)
     if len(rms) < 4:
@@ -249,7 +255,7 @@ def resserrer_silences(y, cible=PAUSE_INTERNE):
             while j < n and creux[j]:
                 j += 1
             duree = (j - i) * h / SR
-            a, b = i * h, min(len(y), j * h)
+            a, b = i * h, _fin(j, n, y, h)
             if duree >= PAUSE_MIN and i > 0 and j < n:
                 out.append(np.zeros(int(SR * cible), np.float32))
                 garde += cible
@@ -260,9 +266,21 @@ def resserrer_silences(y, cible=PAUSE_INTERNE):
             j = i
             while j < n and not creux[j]:
                 j += 1
-            out.append(y[i * h:min(len(y), j * h)])
+            out.append(y[i * h:_fin(j, n, y, h)])
             i = j
     return np.concatenate(out).astype(np.float32) if out else y, garde
+
+
+def _fin(j, n, y, h):
+    """Fin en échantillons de la tranche qui s'arrête à la trame `j`.
+
+    La dernière va jusqu'au bout du signal. S'arrêter à n·h jetait vingt
+    millisecondes de queue sur CHACUN des 171 fragments japonais - et avec
+    elles le fondu de 8 ms que `trimmed` venait d'y poser. Le bloc retombait
+    donc d'un coup de -41 dB au silence numérique : exactement la marche que ce
+    fondu devait supprimer, réintroduite une fonction plus loin.
+    """
+    return len(y) if j >= n else min(len(y), j * h)
 
 
 # --- Cadence -------------------------------------------------------------
