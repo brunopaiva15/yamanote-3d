@@ -308,6 +308,18 @@ CADENCE_RATE = 7.0
 # que les fragments les plus courts : à partir de quatre mores, le débit
 # constant redevient plus long qu'elle et reprend la main.
 CADENCE_PLANCHER = 0.50
+# En deçà de ce nombre de mores, on ne resserre PAS du tout.
+#
+# Un fragment de n mores n'a que n-1 frontières où prendre du temps, et la
+# dernière more porte la fin du mot. À trois mores il n'y a pas de marge : tout
+# resserrage se prend sur la voyelle finale, et 「次は」 a perdu son 「wa」 deux
+# fois de suite pour cette raison - d'abord à ×0,80, puis encore à ×0,88.
+#
+# Ces fragments-là sont de toute façon déjà à la bonne durée : 0,56 s pour le
+# 「次は」 gravé contre 0,51 relevé sur la vraie annonce. Il n'y avait rien à
+# gagner, et une voyelle à perdre. La lenteur signalée portait sur les noms de
+# lignes, cinq à neuf mores, qui gardent leur resserrage.
+CADENCE_MORES_MIN = 5
 CADENCE_GLOBAL = 1.0
 CADENCE_MIN, CADENCE_MAX = 0.80, 1.20
 SUSPECT_MIN, SUSPECT_MAX = 0.75, 1.30
@@ -341,7 +353,7 @@ def cadence_brute(text, duree, source=None, silence=0.0):
     décrivant que de la parole.
     """
     n = mores(text, source)
-    if n < 2 or duree < 0.15:
+    if n < CADENCE_MORES_MIN or duree < 0.15:
         return 1.0
     # Le silence interne est MESURÉ sur la prise et passé en argument : un terme
     # forfaitaire par virgule ferait double emploi, et se tromperait de valeur
@@ -359,6 +371,23 @@ def cadence(text, duree, source=None, silence=0.0):
 # de consonnes sourdes se font manger ; au-delà de ~30 ms on réintroduit le
 # silence que le montage est censé contrôler.
 TRIM_PAD = 0.02
+
+# Seuils de rognage, DIFFÉRENTS aux deux bouts, et c'est le fond du problème.
+#
+# Une voyelle finale ne s'arrête pas : elle décroît sur cinquante à cent
+# millisecondes, en passant sous le seuil qui sert à trouver le DÉBUT de la
+# parole. Rogner aux deux bouts au même seuil coupait donc cette décroissance
+# et posait du silence NUMÉRIQUE à la place - de -9 dB à -110 dB en quarante
+# millisecondes sur 「次は」. L'oreille entend une coupure, pas une fin de mot.
+#
+# La prise réelle ne fait pas ça, non qu'elle décroisse mieux, mais parce
+# qu'elle est suivie du bruit de roulement de la rame : la voyelle s'éteint
+# DANS quelque chose. Ici il n'y a rien, donc il faut garder la décroissance
+# entière.
+SEUIL_ATTAQUE = 0.02
+SEUIL_QUEUE = 0.002
+# Fondu final, pour qu'il ne reste aucune marche vers le silence numérique.
+FONDU_FIN = 0.008
 
 
 # --- Lecture en kana ------------------------------------------------------
@@ -606,14 +635,19 @@ def trimmed(path):
     """
     x, sr = load(path, sr=SR)
     rms, h, _ = frame_rms(x, sr)
-    thr = max(rms.max() * 0.02, np.percentile(rms, 10) * 3)
-    on = np.flatnonzero(rms > thr)
-    if on.size == 0:
+    crete = rms.max()
+    debut = np.flatnonzero(rms > max(crete * SEUIL_ATTAQUE, np.percentile(rms, 10) * 3))
+    if debut.size == 0:
         return x
+    queue = np.flatnonzero(rms > crete * SEUIL_QUEUE)
     pad = int(TRIM_PAD * sr)
-    a = max(0, int(on[0] * h) - pad)
-    b = min(len(x), int(on[-1] * h) + pad)
-    return x[a:b]
+    a = max(0, int(debut[0] * h) - pad)
+    b = min(len(x), int(queue[-1] * h) + pad)
+    y = x[a:b].copy()
+    n = min(int(FONDU_FIN * sr), len(y))
+    if n > 4:
+        y[len(y) - n:] *= np.linspace(1.0, 0.0, n, dtype=np.float32)
+    return y
 
 
 def fondu(a, b):
@@ -675,6 +709,24 @@ def attaque_coupee(path):
         return False, -99.0
     d = float(20 * np.log10(rms[0] / rms.max() + 1e-9))
     return d > ATTAQUE_DB, d
+
+
+def duree_parole(y):
+    """Durée de la PAROLE seule, décroissance finale exclue.
+
+    Le rognage garde désormais la décroissance de la voyelle finale - jusqu'à
+    soixante-dix millisecondes sous le seuil d'attaque - pour qu'elle ne bute
+    pas sur du silence numérique. Mais la cadence, elle, mesure un débit de
+    parole : lui donner cette queue lui ferait croire le fragment plus long
+    qu'il n'est, et elle le comprimerait pour rien.
+    """
+    rms, h, _ = frame_rms(y, SR)
+    if rms.max() <= 0:
+        return len(y) / SR
+    on = np.flatnonzero(rms > rms.max() * SEUIL_ATTAQUE)
+    if on.size == 0:
+        return len(y) / SR
+    return float((on[-1] - on[0] + 1) * h / SR + 2 * TRIM_PAD)
 
 
 def read_manifest(path):
@@ -1075,7 +1127,7 @@ def main():
             v = inventory[fid]
             debit = (v["debit"]
                      * DEBIT_ROLE.get((v["lang"], v["role"]), 1.0)
-                     * (cadence(v["text"], len(bloc) / SR, v["source"], garde)
+                     * (cadence(v["text"], duree_parole(bloc), v["source"], garde)
                         if v_lang_ja else 1.0))
             if abs(debit - 1.0) > 0.01:
                 # 1/debit : wsola raisonne en vitesse de lecture, DEBIT en durée.
@@ -1084,10 +1136,14 @@ def main():
                 y = fondu(y, bloc)  # raccord interne : on recolle le mot
             else:
                 y = np.concatenate([y, bloc])
-            # Chaque fragment rogné garde TRIM_PAD de quasi-silence de chaque
-            # côté : sans cette soustraction, le silence entendu vaudrait
-            # gap + 2·TRIM_PAD et plus les durées relevées sur la prise réelle.
-            sil = gap - 2 * TRIM_PAD
+            # Le silence relevé se mesure d'une FIN DE PAROLE au début de la
+            # suivante. Or le bloc porte maintenant, après sa parole, la
+            # décroissance de sa voyelle finale et les marges de rognage : tout
+            # cela occupe déjà une part du silence, et l'ajouter en entier
+            # rallongeait l'annonce de la somme des queues - 0,35 s sur une
+            # annonce de gare, ce qui la faisait de nouveau traîner.
+            queue = max(0.0, len(bloc) / SR - duree_parole(bloc)) + 2 * TRIM_PAD
+            sil = gap - queue
             if sil > 0:
                 y = np.concatenate([y, np.zeros(int(SR * sil), np.float32)])
         y = y.astype(np.float32)
