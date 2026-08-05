@@ -669,7 +669,8 @@ def build_plan(items):
             nxt = bodies[i + 1] if i + 1 < len(bodies) else None
             gap = 0.0 if i == len(frs) - 1 else gap_after(body, nxt, sep)
             seq.append((fid, forced if forced is not None else gap))
-        plan.append({"key": it["key"], "text": it["text"], "seq": seq})
+        plan.append({"key": it["key"], "text": it["text"], "seq": seq,
+                     "lang": it["lang"], "role": role})
     return plan, inventory, deferred
 
 
@@ -857,7 +858,13 @@ def main():
         return
     texts_path, out_dir, manifest_path = sys.argv[1:4]
     argv = sys.argv[4:]
-    essai = int(argv[argv.index("--essai") + 1]) if "--essai" in argv else None
+    # Le nombre est FACULTATIF après --essai : ça permet à npm de le passer en
+    # bout de ligne (`npm run voix:essai -- 14`) sans que le script ait à le
+    # figer, tout en gardant une valeur par défaut utile.
+    essai = None
+    if "--essai" in argv:
+        suite = argv[argv.index("--essai") + 1:]
+        essai = (int(suite[0]) if suite and suite[0].isdigit() else 12)
     dry = "--plan" in argv
     if "--frags" in argv:
         FRAG_DIR = Path(argv[argv.index("--frags") + 1])
@@ -875,8 +882,23 @@ def main():
         # fragment isolé n'en dit rien. On les prend étalées sur le corpus
         # plutôt qu'en tête, sinon les douze premières sont douze 「次は」 de
         # gares voisines et l'essai ne montre qu'une seule tournure.
-        step = max(1, len(plan) // essai)
-        plan = plan[::step][:essai]
+        #
+        # Étalées PAR RÔLE, et c'est nécessaire : le corpus alterne japonais et
+        # anglais gare par gare, si bien qu'un pas pair sur la liste entière ne
+        # ramenait qu'une seule langue - vérifié, --essai 14 ne sortait que du
+        # japonais. On répartit donc la quantité demandée entre les rôles ayant
+        # une voix, au prorata.
+        groupes = {}
+        for q in plan:
+            groupes.setdefault((q["lang"], q["role"]), []).append(q)
+        choix, reste = [], essai
+        for i, (cle, lot) in enumerate(sorted(groupes.items())):
+            part = round(essai * len(lot) / len(plan)) if i < len(groupes) - 1 else reste
+            part = max(1, min(part, reste, len(lot)))
+            pas = max(1, len(lot) // part)
+            choix.extend(lot[::pas][:part])
+            reste -= part
+        plan = choix
         inventory = {f: v for f, v in inventory.items()
                      if any(f == g for p in plan for g, _ in p["seq"])}
 
