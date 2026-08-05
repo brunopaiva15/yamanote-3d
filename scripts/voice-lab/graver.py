@@ -61,7 +61,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-from atelier import encode_mp3  # noqa: E402
+from atelier import encode_mp3, wsola  # noqa: E402
 from mesures import frame_rms, load  # noqa: E402
 
 BASE = "https://api.elevenlabs.io/v1"
@@ -107,6 +107,29 @@ SETTINGS = {
 GAP_SENTENCE = 0.35
 GAP_COMMA = 0.25
 GAP_REPEAT = 0.43  # entre les deux occurrences du nom de gare : le seul plus long
+GAP_JOINT = 0.0  # à l'intérieur d'un mot : les deux morceaux se recollent
+
+# Sous-découpe : ce qui doit devenir un fragment À PART sans être séparé par un
+# silence. 「線」 le vaut parce qu'il revient dans une quinzaine de noms de
+# lignes - 銀座線, 中央線, 京浜東北線 - et qu'un fragment unique le rend
+# rigoureusement identique partout, comme 「次は」. Le raccord se fait en
+# fondu, sans quoi on entendrait la couture au milieu du mot.
+SOUS_DECOUPE = [re.compile(r"^(.+?)(線[はを]?)$")]
+
+# Durée du fondu à un raccord interne. Assez court pour ne pas manger de more,
+# assez long pour qu'aucun clic ne passe.
+FONDU = 0.015
+
+# Débit d'un fragment, quand le modèle le traîne. Le montage le resserre au
+# vocodeur - hauteur inchangée, seule la durée bouge - plutôt que d'espérer un
+# réglage d'ElevenLabs : le procédé s'entend à peine sous ±20 %, et surtout il
+# se règle ici, à l'oreille, sans regraver.
+#
+# La clé est le TEXTE SOURCE, pas la lecture : elle reste lisible et survit à
+# un changement de graphie. Une valeur inférieure à 1 raccourcit.
+DEBIT = {
+    "お乗換です": 0.85,  # sortait étiré, « onorikaaaaai desu »
+}
 
 # Marge laissée autour de la parole en rognant un fragment. À zéro les attaques
 # de consonnes sourdes se font manger ; au-delà de ~30 ms on réintroduit le
@@ -222,7 +245,18 @@ def split_fragments(text, lang):
         body = p.rstrip("。、., ")
         if not body:
             continue
-        out.append((body, sep, "end" if i == len(parts) - 1 else "mid"))
+        morceaux = [body]
+        if lang == "ja-JP":
+            for rx in SOUS_DECOUPE:
+                m = rx.match(body)
+                if m:
+                    morceaux = list(m.groups())
+                    break
+        for j, mo in enumerate(morceaux):
+            dernier = j == len(morceaux) - 1
+            out.append((mo, sep if dernier else "",
+                        "end" if dernier and i == len(parts) - 1 else "mid",
+                        None if dernier else GAP_JOINT))
     return out
 
 
@@ -300,6 +334,21 @@ def trimmed(path):
     return x[a:b]
 
 
+def fondu(a, b):
+    """Recolle deux morceaux d'un même mot par un fondu croisé.
+
+    Bout à bout, la couture s'entend : chaque morceau a été rogné sur un seuil
+    d'énergie, donc leurs bords ne sont ni au même niveau ni en phase. Le fondu
+    est court - il doit lisser la jointure, pas manger une more.
+    """
+    n = min(int(SR * FONDU), len(a), len(b))
+    if n < 8:
+        return np.concatenate([a, b])
+    r = np.linspace(0.0, 1.0, n, dtype=np.float32)
+    milieu = a[len(a) - n:] * (1 - r) + b[:n] * r
+    return np.concatenate([a[:len(a) - n], milieu, b[n:]])
+
+
 def read_manifest(path):
     if not Path(path).exists():
         return {}
@@ -326,18 +375,21 @@ def build_plan(items):
         # Anglais : `tts` porte des phonèmes propres à Kokoro, incompris ici.
         src = it["tts"] if it["lang"] == "ja-JP" else it["text"]
         frs = split_fragments(src, it["lang"])
+        sources = [b for b, _, _, _ in frs]  # avant conversion : clé de DEBIT
         # La conversion en kana a lieu ICI, avant que le fragment ne prenne son
         # identité : le cache doit être indexé sur ce qui est RÉELLEMENT envoyé
         # au modèle, sinon corriger une lecture resservirait l'ancien son.
         if it["lang"] == "ja-JP":
-            frs = [(kana(b), sep, pos) for b, sep, pos in frs]
-        bodies = [b for b, _, _ in frs]
+            frs = [(kana(b), sep, pos, forced) for b, sep, pos, forced in frs]
+        bodies = [b for b, _, _, _ in frs]
         seq = []
-        for i, (body, sep, pos) in enumerate(frs):
+        for i, (body, sep, pos, forced) in enumerate(frs):
             fid = frag_id(role, it["lang"], body, pos)
-            inventory[fid] = {"role": role, "lang": it["lang"], "pos": pos, "text": body}
+            inventory[fid] = {"role": role, "lang": it["lang"], "pos": pos, "text": body,
+                              "debit": DEBIT.get(sources[i], 1.0)}
             nxt = bodies[i + 1] if i + 1 < len(bodies) else None
-            seq.append((fid, 0.0 if i == len(frs) - 1 else gap_after(body, nxt, sep)))
+            gap = 0.0 if i == len(frs) - 1 else gap_after(body, nxt, sep)
+            seq.append((fid, forced if forced is not None else gap))
         plan.append({"key": it["key"], "text": it["text"], "seq": seq})
     return plan, inventory, deferred
 
@@ -447,16 +499,23 @@ def main():
         if absent:
             raise SystemExit(f"Fragment {absent[0]} manquant pour « {p['text'][:40]} » "
                              "- relancer la gravure.")
-        parts = []
-        for fid, gap in p["seq"]:
-            parts.append(trimmed(FRAG_DIR / f"{fid}.mp3"))
+        y = np.zeros(0, np.float32)
+        for k, (fid, gap) in enumerate(p["seq"]):
+            bloc = trimmed(FRAG_DIR / f"{fid}.mp3")
+            debit = inventory[fid]["debit"]
+            if debit != 1.0:
+                bloc = wsola(bloc, debit, SR).astype(np.float32)
+            if k and p["seq"][k - 1][1] == GAP_JOINT:
+                y = fondu(y, bloc)  # raccord interne : on recolle le mot
+            else:
+                y = np.concatenate([y, bloc])
             # Chaque fragment rogné garde TRIM_PAD de quasi-silence de chaque
             # côté : sans cette soustraction, le silence entendu vaudrait
             # gap + 2·TRIM_PAD et plus les durées relevées sur la prise réelle.
             sil = gap - 2 * TRIM_PAD
             if sil > 0:
-                parts.append(np.zeros(int(SR * sil), np.float32))
-        y = np.concatenate(parts).astype(np.float32)
+                y = np.concatenate([y, np.zeros(int(SR * sil), np.float32)])
+        y = y.astype(np.float32)
         (out / f"{p['key']}.mp3").write_bytes(encode_mp3(y, SR, kbps=64))
         manifest[p["key"]] = round(len(y) / SR, 2)
 

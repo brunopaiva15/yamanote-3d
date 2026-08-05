@@ -1,0 +1,4 @@
+{
+ "_": "Corrections de lecture faites à l'oreille, appliquées PAR-DESSUS la table générée par lectures.py, qui elle est réécrite en entier à chaque régénération. Format : \"texte source\": [katakana, hiragana].",
+ "_exemple": ["カタカナ", "ひらがな"]
+}

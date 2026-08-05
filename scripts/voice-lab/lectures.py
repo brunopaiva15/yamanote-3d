@@ -27,41 +27,41 @@ Usage :
 """
 
 import json
-import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from graver import VOWEL, same_reading, split_fragments, to_katakana  # noqa: E402
+from graver import same_reading, split_fragments  # noqa: E402
 
 
-def to_hiragana(s):
-    """Katakana → hiragana, en dépliant les 「ー」.
+def reading(text):
+    """(katakana, hiragana) d'un fragment, jeton par jeton.
 
-    Le hiragana n'utilise pas la marque d'allongement : トーキョー s'y écrit
-    とおきょお, pas とーきょー, qu'aucun texte japonais ne présente ainsi.
+    open_jtalk expose DEUX lectures et le choix compte : `pron` est phonétique
+    et note les voyelles longues par 「ー」 - トーキョー - tandis que `read`
+    donne l'orthographe : トウキョウ. Envoyer 「ー」 à un modèle multilingue
+    revenait à lui demander de tenir une voyelle sans lui dire laquelle, et il
+    la rendait à l'européenne : « Tokio ». On prend donc `read`.
+
+    Une exception, les PARTICULES : は s'écrit ハ et se dit ワ, を s'écrit ヲ et
+    se dit オ. `read` les rendrait littéralement. Elles passent par `pron`.
     """
-    plain = []
-    for c in s:
-        v = VOWEL.get(plain[-1]) if plain else None
-        plain.append(v if c == "ー" and v else c)
-    return "".join(chr(ord(c) - 0x60) if "ァ" <= c <= "ヶ" else c for c in plain)
-
-
-def readings(text):
-    """(katakana, hiragana) d'un fragment."""
     import pyopenjtalk
 
-    kata = pyopenjtalk.g2p(text, kana=True)
-    # Les mots RÉELLEMENT étrangers - ドア, コック, ゲートウェイ - s'écrivent en
-    # katakana et doivent y rester même en mode hiragana : どあ et こっく sont
-    # une graphie que personne n'écrit, et on ferait buter le modèle sur ce
-    # qu'on cherchait à lui rendre facile. On ne convertit que le reste.
-    hira = []
-    for chunk in re.findall(r"[ァ-ヶー・]+|[^ァ-ヶー・]+", text):
-        hira.append(chunk if re.fullmatch(r"[ァ-ヶー・]+", chunk)
-                    else to_hiragana(pyopenjtalk.g2p(chunk, kana=True)))
-    return kata, "".join(hira)
+    kata, hira = [], []
+    for x in pyopenjtalk.run_frontend(text):
+        r = x["pron"].replace("’", "") if x["pos"] == "助詞" else x["read"]
+        r = r.replace("ヲ", "オ")
+        kata.append(r)
+        # Un mot RÉELLEMENT étranger - ドア, ゲートウェイ, メトロ - s'écrit en
+        # katakana et doit y rester même en mode hiragana : どあ et げえとうぇい
+        # sont la graphie de personne, et on ferait buter le modèle sur ce qu'on
+        # cherchait à lui rendre facile.
+        etranger = bool(x["string"]) and all("ァ" <= c <= "ヶ" or c == "ー"
+                                             for c in x["string"])
+        hira.append(r if etranger else
+                    "".join(chr(ord(c) - 0x60) if "ァ" <= c <= "ヶ" else c for c in r))
+    return "".join(kata), "".join(hira)
 
 
 def main():
@@ -74,14 +74,29 @@ def main():
     for it in corpus["items"]:
         if it["lang"] != "ja-JP":
             continue
-        for body, _, _ in split_fragments(it["tts"], it["lang"]):
+        for body, *_ in split_fragments(it["tts"], it["lang"]):
             bodies.setdefault(body, None)
     # Les noms de gare comptent aussi seuls : c'est sur eux que porte le
     # contrôle, et ils ne sont pas tous un fragment à eux seuls.
     for s in corpus["stations"]:
         bodies.setdefault(s["kanji"], None)
 
-    table = {b: list(readings(b)) for b in bodies}
+    table = {b: list(reading(b)) for b in bodies}
+
+    # Corrections à la main, dans un fichier SÉPARÉ : les écrire dans la table
+    # serait les perdre à la prochaine régénération, qui la réécrit en entier.
+    # Elles servent quand le modèle bute sur un mot qu'open_jtalk lit pourtant
+    # juste - une graphie se dit parfois mieux qu'une autre, et cela ne se
+    # découvre qu'à l'oreille.
+    corr_path = Path(dest).with_name("lectures-corrections.json")
+    if corr_path.exists():
+        corr = json.loads(corr_path.read_text(encoding="utf-8"))
+        applied = {k: v for k, v in corr.items() if not k.startswith("_")}
+        inconnues = [k for k in applied if k not in table]
+        for k in inconnues:
+            print(f"  ⚠ correction pour « {k} », absente du corpus - texte changé ?")
+        table.update({k: v for k, v in applied.items() if k in table})
+        print(f"{len(applied) - len(inconnues)} corrections manuelles appliquées")
 
     bad = [(s["kanji"], table[s["kanji"]][0], s["kana"]) for s in corpus["stations"]
            if not same_reading(table[s["kanji"]][0], s["kana"])]
