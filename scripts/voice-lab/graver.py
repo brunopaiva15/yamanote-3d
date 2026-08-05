@@ -46,7 +46,7 @@ Usage :
   python scripts/voice-lab/graver.py /tmp/textes.json \\
       public/audio/announcements src/data/pa-manifest.ts \\
       [--essai N] [--plan] [--hiragana]
-  python scripts/voice-lab/graver.py --variantes 次は
+  python scripts/voice-lab/graver.py --variantes 次は [--fin] [--stab]
 """
 
 import hashlib
@@ -253,6 +253,13 @@ def same_reading(a, b):
 # texte en katakana pour du vocabulaire emprunté - à dire avec l'accent qui va
 # avec. La table porte donc les DEUX graphies, et --hiragana bascule.
 HIRAGANA = False
+
+
+def _lecture(text):
+    """Les deux graphies d'un fragment, telles que la table les porte."""
+    kana(text)  # amorce le chargement
+    r = _readings.get(text)
+    return (r[0], r[1]) if r else (text, text)
 
 
 def kana(text):
@@ -470,44 +477,55 @@ def build_plan(items):
     return plan, inventory, deferred
 
 
-# Grille d'essai d'un fragment : ce qu'ElevenLabs expose côté modèle, croisé
-# avec le resserrage qu'on applique au montage. Petite exprès - huit prises se
-# comparent, seize ne se comparent plus.
-GRILLE_STAB = (0.55, 0.75, 0.90, 1.00)
-GRILLE_DEBIT = (1.00, 0.85)
+# Grille d'essai d'un fragment. Les deux dimensions sont celles qui ont
+# RÉELLEMENT changé quelque chose jusqu'ici : la graphie - passer 「お乗換です」
+# en écriture mixte l'a débloqué là où trois resserrages successifs avaient
+# échoué - et la ponctuation, seul levier de mélodie du modèle. `stability`
+# vient en troisième dimension, à la demande, parce qu'elle agit sur toute la
+# prise et non sur son contour.
+GRAPHIES = ("katakana", "hiragana", "source")
+PONCTUATIONS = (("sans", ""), ("virgule", "、"), ("point", "。"))
+GRILLE_STAB = (0.55, 0.85, 1.00)
 
 
-def variantes(key, source, role="cabin", lang="ja-JP", pos="mid"):
-    """Grave un même fragment sous plusieurs réglages, pour trancher à l'oreille.
+def variantes(key, source, role="cabin", lang="ja-JP", pos="mid", stab=False):
+    """Grave un même fragment sous toutes les graphies et ponctuations.
 
-    Un fragment qui déplaît - trop traîné, trop chargé d'intention - se corrige
-    par deux nombres, et je ne peux ni les entendre ni les deviner : mes quatre
-    prédictions précédentes sur ce que donnerait tel réglage se sont toutes
-    révélées fausses. Autant graver la grille et laisser l'oreille trancher.
+    Décrire ce qu'on veut ne marche pas : le modèle ne prend aucune consigne
+    d'intonation, il déduit tout de ce qu'on écrit. Et je ne peux rien
+    entendre. Tourner autour du pot revient donc à deviner - autant graver la
+    grille d'un coup et laisser l'oreille désigner la case.
     """
     ESSAI_DIR.mkdir(parents=True, exist_ok=True)
-    lecture = kana(source) if lang == "ja-JP" else source
-    print(f"« {source} » → {lecture}   [{role} {pos}]\n")
-    for stab in GRILLE_STAB:
-        reg = {**SETTINGS[role], "stability": stab}
-        mp3 = call(f"/text-to-speech/{VOICES[(lang, role)]}", key, raw=True,
-                   query=f"?output_format={OUTPUT_FORMAT}",
-                   body={"text": spoken(lecture, "", pos, lang),
-                         "model_id": MODEL, "voice_settings": reg})
-        brut = ESSAI_DIR / f"var-stab{int(stab * 100):03d}-debit100.mp3"
-        brut.write_bytes(mp3)
-        base = trimmed(brut)
-        print(f"  {brut.name}  {len(base) / SR:.2f}s")
-        for deb in GRILLE_DEBIT:
-            if deb == 1.0:
-                continue
-            y = wsola(base, deb, SR).astype(np.float32)
-            q = ESSAI_DIR / f"var-stab{int(stab * 100):03d}-debit{int(deb * 100):03d}.mp3"
-            q.write_bytes(encode_mp3(y, SR, kbps=96))
-            print(f"  {q.name}  {len(y) / SR:.2f}s")
-    print(f"\n→ {ESSAI_DIR}\n"
-          "Retenir la meilleure, puis reporter dans graver.py :\n"
-          f'  REGLAGES["{source}"] = {{"stability": …}}   et/ou   DEBIT["{source}"] = …\n'
+    kata, hira = (_lecture(source) if lang == "ja-JP" else (source, source))
+    formes = {"katakana": kata, "hiragana": hira, "source": source}
+    stabs = GRILLE_STAB if stab else (SETTINGS[role]["stability"],)
+
+    print(f"« {source} »   [{role} {pos}]")
+    for g in GRAPHIES:
+        print(f"  {g:9} {formes[g]}")
+    print()
+    n = 0
+    for g in GRAPHIES:
+        for nom, ponct in PONCTUATIONS:
+            for st in stabs:
+                n += 1
+                reg = {**SETTINGS[role], "stability": st}
+                mp3 = call(f"/text-to-speech/{VOICES[(lang, role)]}", key, raw=True,
+                           query=f"?output_format={OUTPUT_FORMAT}",
+                           body={"text": formes[g] + ponct, "model_id": MODEL,
+                                 "voice_settings": reg})
+                suffixe = f"-stab{int(st * 100):03d}" if stab else ""
+                out = ESSAI_DIR / f"var-{n:02d}-{g}-{nom}{suffixe}.mp3"
+                out.write_bytes(mp3)
+                print(f"  {out.name:38} « {formes[g] + ponct} »")
+
+    print(f"\n{n} prises → {ESSAI_DIR}\n"
+          "Retenir la meilleure et me donner son nom, ou reporter soi-même dans\n"
+          "graver.py :\n"
+          f'  PONCTUATION["{source}"] = "…"        pour le contour\n'
+          f'  REGLAGES["{source}"] = {{"stability": …}}   pour la tenue\n'
+          "et, pour une autre graphie, une ligne dans lectures-corrections.json.\n"
           "Seul ce fragment sera regravé.")
 
 
@@ -530,7 +548,8 @@ def main():
         if not key:
             raise SystemExit("Renseigner ELEVENLABS_API_KEY.")
         src = sys.argv[sys.argv.index("--variantes") + 1]
-        variantes(key, src, pos="end" if "--fin" in sys.argv else "mid")
+        variantes(key, src, pos="end" if "--fin" in sys.argv else "mid",
+                  stab="--stab" in sys.argv)
         return
     texts_path, out_dir, manifest_path = sys.argv[1:4]
     argv = sys.argv[4:]
