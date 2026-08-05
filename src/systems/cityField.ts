@@ -600,16 +600,29 @@ export function buildFarCell(
 // --- Superstructures, toitures, bosquets et enseignes -----------------------
 
 /**
- * Ce qu'un bâtiment porte, ou ce qui le remplace. Quatre familles, chacune
- * rendue par son propre InstancedMesh :
+ * Ce qu'un bâtiment porte, ou ce qui le remplace. Une famille par
+ * InstancedMesh :
  *
  *   · `box`  - acrotère, édicule de toiture, chaussée : volumes nus, matériau
  *              de la ville avec le drapeau « nu » ;
  *   · `hip`  - toiture en croupe des bas quartiers et du résidentiel ;
+ *   · `tank` - réservoir d'eau sur pieds (高置水槽) ;
+ *   · `ac`   - batterie de condenseurs de climatisation ;
+ *   · `mast` - mât d'antenne, et `beacon` son feu rouge d'obstacle ;
+ *   · `rail` - garde-corps de toiture ;
  *   · `tree` - masse d'arbres à la place d'un bâtiment ;
  *   · `sign` - panneau lumineux plaqué sur la face qui regarde la voie.
  */
-export type PropKind = 'box' | 'hip' | 'tree' | 'sign';
+export type PropKind =
+  | 'box'
+  | 'hip'
+  | 'tank'
+  | 'ac'
+  | 'mast'
+  | 'beacon'
+  | 'rail'
+  | 'tree'
+  | 'sign';
 
 export interface CityProp {
   kind: PropKind;
@@ -666,13 +679,28 @@ function place(p: CityProp, b: CityBuilding, side: 1 | -1, u: number, v: number)
 export const PROP_CAPS: Record<PropKind, number> = {
   box: 18,
   hip: 5,
+  // Les accessoires de toiture sont serrés à trois ou quatre par cellule. La
+  // leçon des emplacements réservés qui se paient reste la règle : quatre
+  // réservoirs par cellule couvrent le cas courant, et personne ne compte les
+  // châteaux d'eau d'un quartier depuis un train.
+  tank: 4,
+  ac: 4,
+  mast: 3,
+  beacon: 2,
+  rail: 3,
   tree: 5,
   sign: 6,
 };
-const PROP_TOTAL = PROP_CAPS.box + PROP_CAPS.hip + PROP_CAPS.tree + PROP_CAPS.sign;
+const PROP_TOTAL = Object.values(PROP_CAPS).reduce((a, b) => a + b, 0);
 
 const PARAPET_TONE = '#c6c3ba';
 const ROOFTOP_TONE = '#b4b1a8';
+/** Le galvanisé d'un réservoir et d'un mât : plus clair que le béton du toit. */
+const METAL_TONE = '#a9aeb2';
+/** Tôle laquée d'un condenseur, toujours plus claire que ce qui l'entoure. */
+const PLANT_TONE = '#c3c6c4';
+/** Feu d'obstacle : le rouge réglementaire, qui ne se négocie pas. */
+const BEACON_TONE = '#ff2f1c';
 const ROAD_TONE = '#5f5e5a';
 /** Tuile sombre : c'est elle qui signe un bas quartier, vue d'un viaduc. */
 const TILE_TONES = ['#4a5058', '#434a52', '#525a62', '#3e444c'];
@@ -797,6 +825,106 @@ export function buildCellProps(
           place(g, b, side, (b.w / 2 - 0.8) * (r() < 0.5 ? 1 : -1), v);
           g.y = Math.max(2.9, b.h - g.h - 0.5);
         }
+      }
+    }
+
+    // --- Ce qu'il y a sur un toit ---
+    //
+    // La Yamanote court sur viaduc la moitié de la boucle : sept mètres
+    // au-dessus de la rue, la surface qu'on voit le plus n'est ni une façade ni
+    // une chaussée, c'est une TOITURE. Elle n'avait qu'un acrotère et, de loin
+    // en loin, un édicule en boîte - et une boîte sur une boîte ne se lit pas
+    // comme un toit habité.
+    //
+    // Tirages consommés d'abord, décisions ensuite, comme pour l'édicule : la
+    // cellule avance du même nombre de pas quelle que soit la branche.
+    const wTank = r();
+    const wAc = r();
+    const wMast = r();
+    const wRail = r();
+    const kitSize = r();
+    const tankU = (r() - 0.5) * 0.68;
+    const tankV = (r() - 0.5) * 0.68;
+    const acU = (r() - 0.5) * 0.66;
+    const acFace = r() < 0.5 ? 1 : -1;
+    const mastU = (r() - 0.5) * 0.72;
+    const mastRise = r();
+
+    const flat = b.crown === 'flat';
+    const small = Math.min(b.w, b.d);
+
+    // Réservoir sur pieds : la silhouette la plus reconnaissable d'un immeuble
+    // japonais. On le trouve sur le bâti moyen - une tour a ses réserves à
+    // l'intérieur, une échoppe n'en a pas besoin.
+    if (flat && b.h >= 6 && b.h <= 46 && small >= 5.5 && wTank < 0.46) {
+      const t = push('tank');
+      if (t) {
+        const tw = Math.min(3.3, Math.max(1.9, small * 0.32));
+        t.w = tw;
+        t.d = tw * 0.94;
+        t.h = 2.3 + kitSize * 1.1;
+        place(t, b, side, tankU * (b.w - tw), tankV * (b.d - tw));
+        t.y = b.h;
+        t.tone = METAL_TONE;
+      }
+    }
+
+    // Batterie de condenseurs, alignée le long d'un BORD de toiture : c'est là
+    // qu'elle est, pour la reprise d'air, jamais au milieu.
+    if (flat && b.h >= 8 && small >= 6 && wAc < 0.52) {
+      const p = push('ac');
+      if (p) {
+        const aw = Math.min(5, Math.max(2.4, small * 0.44));
+        p.w = aw;
+        p.d = aw * 0.66;
+        p.h = 1.35 + kitSize * 0.4;
+        place(p, b, side, acU * (b.w - aw), acFace * Math.max(0, b.d / 2 - p.d / 2 - 0.45));
+        p.y = b.h;
+        p.tone = PLANT_TONE;
+      }
+    }
+
+    // Mât d'antenne, et son feu rouge d'obstacle. La réglementation impose le
+    // feu au-dessus de soixante mètres et l'usage bien plus bas ; on le pose
+    // dès quarante, sur la pointe, parce que c'est ce qu'on voit d'un train la
+    // nuit - le seul point rouge fixe d'un ciel de Tokyo.
+    if (flat && b.h >= 11 && wMast < 0.34) {
+      const mh = 3.4 + mastRise * 5.6;
+      const m = push('mast');
+      if (m) {
+        m.w = 1.1;
+        m.d = 1.1;
+        m.h = mh;
+        place(m, b, side, mastU * (b.w - 1.6), 0);
+        m.y = b.h;
+        m.tone = METAL_TONE;
+        if (b.h + mh >= 40) {
+          const f = push('beacon');
+          if (f) {
+            f.w = 0.42;
+            f.d = 0.42;
+            f.h = 0.42;
+            f.s = m.s;
+            f.x = m.x;
+            f.yaw = m.yaw;
+            f.y = b.h + mh + 0.2;
+            f.tone = BEACON_TONE;
+          }
+        }
+      }
+    }
+
+    // Garde-corps : il se pose SUR l'acrotère. Vu d'un viaduc, c'est lui qui
+    // dit qu'un toit est accessible, donc habité.
+    if (flat && b.h >= 8 && b.h <= 50 && small >= 5 && wRail < 0.4) {
+      const p = push('rail');
+      if (p) {
+        place(p, b, side, 0, 0);
+        p.w = b.w - 0.3;
+        p.d = b.d - 0.3;
+        p.h = 1.05;
+        p.y = b.h + 0.55;
+        p.tone = METAL_TONE;
       }
     }
   }

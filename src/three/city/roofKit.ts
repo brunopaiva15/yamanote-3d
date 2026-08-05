@@ -119,20 +119,15 @@ export function makeObstacleLightGeometry(): THREE.BufferGeometry {
  */
 export function makeRoofRailGeometry(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  const t = 0.035;
+  const t = 0.04;
+  // Deux lisses sur les longs côtés, une seule sur les pignons, trois montants
+  // par côté : de loin c'est le RYTHME qui se lit, pas le compte, et douze
+  // volumes valent mieux que dix-huit sur un objet qu'on multiplie par cent.
   for (const sx of [-0.5, 0.5]) {
     part(parts, 1, t, t, sx, 1, 0);
     part(parts, 1, t, t, sx, 0.58, 0);
+    for (let i = -1; i <= 1; i++) part(parts, t, 1, t, sx, 0.5, i * 0.34);
   }
-  for (const sz of [-0.5, 0.5]) {
-    part(parts, t, t, 1, 0, 1, sz);
-    part(parts, t, t, 1, 0, 0.58, sz);
-  }
-  // Montants, un sur cinq : de loin, c'est le rythme qui compte, pas le compte.
-  for (let i = 0; i < 5; i++) {
-    const z = (i - 2) * 0.25;
-    part(parts, t, 1, t, -0.5, 0.5, z);
-    part(parts, t, 1, t, 0.5, 0.5, z);
-  }
+  for (const sz of [-0.5, 0.5]) part(parts, t, t, 1, 0, 1, sz);
   return mergeGeometries(parts, false) as THREE.BufferGeometry;
 }

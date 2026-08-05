@@ -56,6 +56,13 @@ import {
 import { GROUND_TILE, makeCityGroundTexture, makeSignageTexture } from '../../textures/city';
 import { makeCityMaterial } from './cityMaterial';
 import { makeGroveGeometry, makeGroveMaterial, makeHipRoofGeometry } from './cityProps';
+import {
+  makeAcBankGeometry,
+  makeMastGeometry,
+  makeObstacleLightGeometry,
+  makeRoofRailGeometry,
+  makeWaterTankGeometry,
+} from './roofKit';
 import { seasonNow } from '../../systems/season';
 import { weather } from '../../systems/weather';
 
@@ -67,7 +74,14 @@ const SNOW_GROUND = new THREE.Color('#dfe4ea');
 /** Axe de rotation des enseignes, qui regardent toutes la voie. */
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 /** Familles de volumes secondaires, dans l'ordre d'escamotage. */
-const PROP_KINDS: PropKind[] = ['box', 'hip', 'tree', 'sign'];
+/**
+ * Familles rendues avec le MATÉRIAU DE VILLE, drapeau « volume nu » : elles
+ * partagent le chemin d'écriture, seule la géométrie change.
+ */
+const SOLID_KINDS = ['box', 'hip', 'tank', 'ac', 'mast', 'rail'] as const;
+type SolidKind = (typeof SOLID_KINDS)[number];
+
+const PROP_KINDS: PropKind[] = [...SOLID_KINDS, 'tree', 'sign', 'beacon'];
 
 /** Emprise laissée libre de part et d'autre de l'axe : ballast et voie. */
 const GROUND_INNER = 5;
@@ -187,7 +201,21 @@ export function CityRibbon() {
     });
     const signGeo = new THREE.PlaneGeometry(1, 1);
     const groveGeo = makeGroveGeometry();
-    const hipGeo = makeHipRoofGeometry();
+    // Une géométrie par famille solide. La boîte unité sert de défaut : c'est
+    // l'acrotère, l'édicule et la chaussée.
+    const solidGeo: Record<SolidKind, THREE.BufferGeometry | undefined> = {
+      box: undefined,
+      hip: makeHipRoofGeometry(),
+      tank: makeWaterTankGeometry(),
+      ac: makeAcBankGeometry(),
+      mast: makeMastGeometry(),
+      rail: makeRoofRailGeometry(),
+    };
+    // Feu d'obstacle : ni éclairé, ni teinté par la scène, et INVISIBLE LE
+    // JOUR - un maillage caché ne coûte pas d'appel de rendu, ce qui rend le
+    // feu gratuit sur les deux tiers du cycle horaire.
+    const beaconMat = new THREE.MeshBasicMaterial({ toneMapped: false, fog: true });
+    const beaconGeo = makeObstacleLightGeometry();
 
     const mkPlain = (count: number, geo: THREE.BufferGeometry, mat: THREE.Material) => {
       const mesh = new THREE.InstancedMesh(geo, mat, count);
@@ -205,19 +233,39 @@ export function CityRibbon() {
       // côté. Il n'a ni acrotère, ni enseigne, ni bosquet - à deux cents mètres
       // on ne lit qu'une masse et, la nuit, des fenêtres.
       far: mkMesh(farCells * FAR_CELL_CAPACITY),
-      // Les acrotères, édicules et chaussées passent par le matériau de ville
-      // (drapeau « nu ») ; les toitures en croupe aussi, avec leur pyramide.
-      box: props ? mkMesh(cells * PROP_CAPS.box) : null,
-      hip: props ? mkMesh(cells * PROP_CAPS.hip, hipGeo.clone()) : null,
+      // Acrotères, édicules, chaussées, croupes, réservoirs, condenseurs, mâts
+      // et garde-corps : tous par le matériau de ville, drapeau « nu ».
+      solid: props
+        ? (Object.fromEntries(
+            SOLID_KINDS.map((k) => [
+              k,
+              mkMesh(cells * PROP_CAPS[k], solidGeo[k]?.clone()),
+            ]),
+          ) as Record<SolidKind, ReturnType<typeof mkMesh>>)
+        : null,
       tree: props ? mkPlain(cells * PROP_CAPS.tree, groveGeo, groveMat) : null,
       sign: signs ? mkPlain(cells * PROP_CAPS.sign, signGeo, signMat) : null,
+      beacon: props ? mkPlain(cells * PROP_CAPS.beacon, beaconGeo, beaconMat) : null,
     }));
 
     const groundTex = makeCityGroundTexture();
     groundTex.repeat.set(GROUND_SPAN / GROUND_TILE, GROUND_LEN / GROUND_TILE);
     const groundMat = new THREE.MeshLambertMaterial({ map: groundTex, fog: true });
 
-    return { city, sides, groundTex, groundMat, grove, groveGeo, signMat, signTex, signGeo, hipGeo };
+    return {
+      city,
+      sides,
+      groundTex,
+      groundMat,
+      grove,
+      groveGeo,
+      signMat,
+      signTex,
+      signGeo,
+      solidGeo,
+      beaconGeo,
+      beaconMat,
+    };
   }, [cells, farCells, props, signs]);
 
   useEffect(
@@ -227,19 +275,24 @@ export function CityRibbon() {
         s.body.geo.dispose();
         s.far.mesh.dispose();
         s.far.geo.dispose();
-        s.box?.mesh.dispose();
-        s.box?.geo.dispose();
-        s.hip?.mesh.dispose();
-        s.hip?.geo.dispose();
+        if (s.solid) {
+          for (const k of SOLID_KINDS) {
+            s.solid[k].mesh.dispose();
+            s.solid[k].geo.dispose();
+          }
+        }
         s.tree?.dispose();
         s.sign?.dispose();
+        s.beacon?.dispose();
       }
       built.groveGeo.dispose();
       built.grove.dispose();
       built.signGeo.dispose();
       built.signTex.dispose();
       built.signMat.dispose();
-      built.hipGeo.dispose();
+      for (const k of SOLID_KINDS) built.solidGeo[k]?.dispose();
+      built.beaconGeo.dispose();
+      built.beaconMat.dispose();
       built.groundMat.dispose();
       built.groundTex.dispose();
       built.city.dispose();
@@ -337,11 +390,11 @@ export function CityRibbon() {
         const n = buildCell(cell, s.side, sc.buf, rankScale);
         writeBodies(s.body, s.side, sc.buf, slot * CELL_CAPACITY, CELL_CAPACITY, n);
 
-        // --- Acrotères, croupes, bosquets, enseignes ---
+        // --- Acrotères, croupes, toitures, bosquets, enseignes ---
         if (!s.sign) continue;
         const np = buildCellProps(cell, s.side, sc.buf, n, sc.propBuf);
         // Un curseur par famille : le générateur les entremêle dans un seul
-        // tampon, le rendu les répartit dans quatre maillages.
+        // tampon, le rendu les répartit dans autant de maillages.
         const used = sc.used;
         for (const kind of PROP_KINDS) used[kind] = 0;
         for (let i = 0; i < np; i++) {
@@ -351,7 +404,7 @@ export function CityRibbon() {
           used[p.kind] = k + 1;
           const idx = slot * PROP_CAPS[p.kind] + k;
 
-          if (p.kind !== 'sign' && (!s.box || !s.hip || !s.tree)) continue;
+          if (p.kind !== 'sign' && (!s.solid || !s.tree || !s.beacon)) continue;
 
           if (p.kind === 'sign') {
             // Panneau plaqué sur la face qui regarde la voie, donc tourné vers
@@ -370,11 +423,21 @@ export function CityRibbon() {
             continue;
           }
 
-          // Bosquets et croupes sont écrits dans un cube unité POSÉ PAR LA
-          // BASE ; les volumes en boîte, eux, sont centrés.
+          // Bosquets, croupes et accessoires de toiture sont écrits dans un
+          // cube unité POSÉ PAR LA BASE ; les volumes en boîte, eux, sont
+          // centrés, et le feu d'obstacle est une bille centrée sur sa cote.
           const baseY = p.kind === 'box' ? p.y + p.h / 2 : p.y;
           sc.pos.set(s.side * p.x, baseY, st.origin - p.s);
           sc.rot.setFromAxisAngle(Y_AXIS, -p.yaw);
+
+          if (p.kind === 'beacon' && s.beacon) {
+            sc.scl.set(p.d, p.h, p.w);
+            sc.mtx.compose(sc.pos, sc.rot, sc.scl);
+            s.beacon.setMatrixAt(idx, sc.mtx);
+            sc.color.set(p.tone);
+            s.beacon.setColorAt(idx, sc.color);
+            continue;
+          }
 
           if (p.kind === 'tree' && s.tree) {
             const spread = Math.min(p.h * 1.15, Math.max(p.d, p.w));
@@ -391,7 +454,7 @@ export function CityRibbon() {
 
           sc.scl.set(p.d, p.h, p.w);
           sc.mtx.compose(sc.pos, sc.rot, sc.scl);
-          const target = p.kind === 'hip' ? s.hip : s.box;
+          const target = s.solid?.[p.kind as SolidKind];
           if (!target) continue;
           target.mesh.setMatrixAt(idx, sc.mtx);
           sc.color.set(p.tone);
@@ -408,20 +471,22 @@ export function CityRibbon() {
             const idx = slot * cap + k;
             if (kind === 'sign') s.sign.setMatrixAt(idx, sc.hidden);
             else if (kind === 'tree') s.tree?.setMatrixAt(idx, sc.hidden);
-            else if (kind === 'hip') s.hip?.mesh.setMatrixAt(idx, sc.hidden);
-            else s.box?.mesh.setMatrixAt(idx, sc.hidden);
+            else if (kind === 'beacon') s.beacon?.setMatrixAt(idx, sc.hidden);
+            else s.solid?.[kind as SolidKind].mesh.setMatrixAt(idx, sc.hidden);
           }
         }
-        for (const m of [s.box, s.hip]) {
-          if (!m) continue;
-          m.mesh.instanceMatrix.needsUpdate = true;
-          if (m.mesh.instanceColor) m.mesh.instanceColor.needsUpdate = true;
-          m.accent.needsUpdate = true;
-          m.jitter.needsUpdate = true;
-          m.trim.needsUpdate = true;
-          m.scale.needsUpdate = true;
+        if (s.solid) {
+          for (const kind of SOLID_KINDS) {
+            const m = s.solid[kind];
+            m.mesh.instanceMatrix.needsUpdate = true;
+            if (m.mesh.instanceColor) m.mesh.instanceColor.needsUpdate = true;
+            m.accent.needsUpdate = true;
+            m.jitter.needsUpdate = true;
+            m.trim.needsUpdate = true;
+            m.scale.needsUpdate = true;
+          }
         }
-        for (const m of [s.tree, s.sign]) {
+        for (const m of [s.tree, s.sign, s.beacon]) {
           if (!m) continue;
           m.instanceMatrix.needsUpdate = true;
           if (m.instanceColor) m.instanceColor.needsUpdate = true;
@@ -514,6 +579,10 @@ export function CityRibbon() {
     // Un écran géant existe le jour - il est simplement terne. La nuit, il
     // devient la source lumineuse la plus forte du quartier.
     built.signMat.color.setScalar(0.42 + 1.35 * night);
+    // Les feux d'obstacle ne s'allument pas : ils APPARAISSENT. Un maillage
+    // caché ne coûte pas d'appel de rendu, et une bille rouge posée sur un mât
+    // en pleine lumière ne se verrait de toute façon pas.
+    for (const s of built.sides) if (s.beacon) s.beacon.visible = night > 0.18;
     // Le sol de la rue se relève lui aussi : il reçoit l'éclairage public et
     // les vitrines, et un asphalte parfaitement noir n'existe pas en ville.
     // Mouillé, il renvoie franchement plus : c'est là que se lisent les néons.
@@ -539,10 +608,11 @@ export function CityRibbon() {
           >
             <primitive object={s.body.mesh} />
             <primitive object={s.far.mesh} />
-            {s.box && <primitive object={s.box.mesh} />}
-            {s.hip && <primitive object={s.hip.mesh} />}
+            {s.solid &&
+              SOLID_KINDS.map((k) => <primitive key={k} object={s.solid![k].mesh} />)}
             {s.tree && <primitive object={s.tree} />}
             {s.sign && <primitive object={s.sign} />}
+            {s.beacon && <primitive object={s.beacon} />}
           </group>
         ))}
       </group>
