@@ -22,6 +22,7 @@ import {
   FACADE_TILE,
   ROOF_TILE,
   SOCLE_TILE,
+  makeBalconyTexture,
   makeFacadeTexture,
   makeRoofTexture,
   makeSocleTexture,
@@ -41,6 +42,7 @@ export interface CityMaterial {
 
 export function makeCityMaterial(): CityMaterial {
   const facade = makeFacadeTexture();
+  const balcony = makeBalconyTexture();
   const roof = makeRoofTexture();
   const socle = makeSocleTexture();
 
@@ -50,6 +52,7 @@ export function makeCityMaterial(): CityMaterial {
   if (kit) {
     const made = kit.makeCityMaterial({
       facade,
+      balcony,
       roof,
       socle,
       facadeTile: FACADE_TILE,
@@ -64,6 +67,7 @@ export function makeCityMaterial(): CityMaterial {
       dispose() {
         made.material.dispose();
         facade.dispose();
+        balcony.dispose();
         roof.dispose();
         socle.dispose();
       },
@@ -80,6 +84,7 @@ export function makeCityMaterial(): CityMaterial {
     // du ciel qui l'éclaire et la suie qui s'y pose.
     uSnowColor: { value: new THREE.Color('#dfe4ea') },
     uFacade: { value: facade },
+    uBalcony: { value: balcony },
     uRoof: { value: roof },
     uSocle: { value: socle },
     uFacTile: { value: FACADE_TILE },
@@ -111,6 +116,10 @@ export function makeCityMaterial(): CityMaterial {
         // sur toutes ses faces, ni fenêtres ni vitrine,
         // w = température des fenêtres (0 = néon de bureau, 1 = lampe).
         attribute vec4 aTrim;
+        // 1 = ce sujet porte la façade de logement collectif, à coursive
+        // extérieure. Un seul nombre, et non un sac de bits : c'est une
+        // FAMILLE de façade, et il y en aura peut-être une troisième.
+        attribute float aFacade;
         uniform float uFacTile;
         uniform vec2 uSocTile;
         varying vec2 vCityFac;
@@ -118,7 +127,8 @@ export function makeCityMaterial(): CityMaterial {
         varying float vCityUp;
         varying float vCityRoof;
         varying vec3 vCityAccent;
-        varying vec4 vCityTrim;`,
+        varying vec4 vCityTrim;
+        varying float vCityFacade;`,
       )
       .replace(
         '#include <uv_vertex>',
@@ -142,7 +152,8 @@ export function makeCityMaterial(): CityMaterial {
         vCityFac = (cityUv + aJitter) / uFacTile;
         vCitySoc = vec2((cityUv.x + aJitter.x) / uSocTile.x, vCityUp / uSocTile.y);
         vCityAccent = aAccent;
-        vCityTrim = aTrim;`,
+        vCityTrim = aTrim;
+        vCityFacade = aFacade;`,
       );
 
     shader.fragmentShader = shader.fragmentShader
@@ -150,6 +161,7 @@ export function makeCityMaterial(): CityMaterial {
         '#include <common>',
         `#include <common>
         uniform sampler2D uFacade;
+        uniform sampler2D uBalcony;
         uniform sampler2D uRoof;
         uniform sampler2D uSocle;
         uniform float uRoofScale;
@@ -167,11 +179,19 @@ export function makeCityMaterial(): CityMaterial {
         varying float vCityUp;
         varying float vCityRoof;
         varying vec3 vCityAccent;
-        varying vec4 vCityTrim;`,
+        varying vec4 vCityTrim;
+        varying float vCityFacade;`,
       )
       .replace(
         '#include <map_fragment>',
-        `vec4 cityFac = texture2D(uFacade, vCityFac);
+        `// Deux familles de façade, mélangées et non branchées : un
+        // échantillonnage sous condition non uniforme laisse les dérivées
+        // indéfinies, donc le niveau de mip au hasard, et c'est le genre de
+        // faute qui ne se voit que sur une autre carte graphique.
+        vec4 cityFac = mix(
+          texture2D(uFacade, vCityFac),
+          texture2D(uBalcony, vCityFac),
+          vCityFacade);
         vec4 cityRof = texture2D(uRoof, vCityFac * uRoofScale);
         vec4 citySoc = texture2D(uSocle, vCitySoc);
         // Un volume nu se traite partout comme une couverture.

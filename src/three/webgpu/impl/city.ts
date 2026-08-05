@@ -107,6 +107,8 @@ export function makeCityMaterial(tex: CityTextures): {
   const jitter = attribute<'vec2'>('aJitter', 'vec2');
   const accent: V3 = attribute<'vec3'>('aAccent', 'vec3');
   const trim = attribute<'vec4'>('aTrim', 'vec4');
+  // 1 = façade de logement collectif, à coursive extérieure.
+  const facadeKind = attribute<'float'>('aFacade', 'float');
 
   // Le nuanceur choisit l'UV selon la face : le long de la voie sur les
   // pignons, en profondeur sur les faces qui regardent les rails, à plat sur
@@ -124,7 +126,14 @@ export function makeCityMaterial(tex: CityTextures): {
   const facUv = cityUv.add(jitter).div(tex.facadeTile);
   const socUv = vec2(cityUv.x.add(jitter.x).div(tex.socleTile[0]), up.div(tex.socleTile[1]));
 
-  const fac = texture(tex.facade).sample(facUv);
+  // Deux familles de façade, MÉLANGÉES et non branchées : en WGSL, un
+  // `textureSample` sous condition non uniforme est interdit - les dérivées, et
+  // donc le niveau de mip, n'y sont plus définies.
+  const fac = mix(
+    texture(tex.facade).sample(facUv),
+    texture(tex.balcony).sample(facUv),
+    facadeKind,
+  );
   const rof = texture(tex.roof).sample(facUv.mul(tex.roofScale));
   const soc = texture(tex.socle).sample(socUv);
 

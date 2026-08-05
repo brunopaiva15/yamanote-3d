@@ -154,7 +154,11 @@ export function CityRibbon() {
     const city = makeCityMaterial();
     const bodyPer = cells * CELL_CAPACITY;
 
-    const mkMesh = (count: number, geometry?: THREE.BufferGeometry) => {
+    // `family` n'est là que pour la sonde : elle permet de demander à la scène
+    // ce qu'elle rend vraiment - combien d'instances, combien d'escamotées,
+    // quelle part de coursives - au lieu de le déduire du générateur, qui est
+    // justement ce dont on doute quand une ville ne montre pas ce qu'on croit.
+    const mkMesh = (count: number, family: string, geometry?: THREE.BufferGeometry) => {
       // Une géométrie par maillage : les attributs d'instance vivent dessus,
       // deux InstancedMesh ne peuvent donc pas la partager.
       const geo = geometry ?? new THREE.BoxGeometry(1, 1, 1);
@@ -167,22 +171,29 @@ export function CityRibbon() {
       // instance : à côté des seize de la matrice, ce n'est rien, et ça évite
       // deux chemins de code dans la boucle de remplissage.
       const scale = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
+      // Famille de façade : 0 = façade courante à meneaux, 1 = coursive de
+      // logement collectif. Un seul nombre plutôt qu'un sac de bits, parce que
+      // c'est bien un choix de FAMILLE, et qu'il y en aura peut-être une autre.
+      const facade = new THREE.InstancedBufferAttribute(new Float32Array(count), 1);
       accent.setUsage(THREE.DynamicDrawUsage);
       jitter.setUsage(THREE.DynamicDrawUsage);
       trim.setUsage(THREE.DynamicDrawUsage);
       scale.setUsage(THREE.DynamicDrawUsage);
+      facade.setUsage(THREE.DynamicDrawUsage);
       geo.setAttribute('aAccent', accent);
       geo.setAttribute('aJitter', jitter);
       geo.setAttribute('aTrim', trim);
       geo.setAttribute('aScale', scale);
+      geo.setAttribute('aFacade', facade);
       const mesh = new THREE.InstancedMesh(geo, city.material, count);
+      mesh.userData.cityFamily = family;
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       // L'anneau couvre ± 220 m de part et d'autre : la sphère englobante de la
       // boîte unité ne veut rien dire ici, on désactive le tri par frustum.
       mesh.frustumCulled = false;
       mesh.castShadow = false;
       mesh.receiveShadow = false;
-      return { geo, mesh, accent, jitter, trim, scale };
+      return { geo, mesh, accent, jitter, trim, scale, facade };
     };
 
     // Bosquets : matériau propre, qui garde le tronc brun quand la frondaison
@@ -228,19 +239,16 @@ export function CityRibbon() {
 
     const sides = ([1, -1] as const).map((side) => ({
       side,
-      body: mkMesh(bodyPer),
+      body: mkMesh(bodyPer, 'corps'),
       // L'arrière-pays : même matériau, même programme, un maillage de plus par
       // côté. Il n'a ni acrotère, ni enseigne, ni bosquet - à deux cents mètres
       // on ne lit qu'une masse et, la nuit, des fenêtres.
-      far: mkMesh(farCells * FAR_CELL_CAPACITY),
+      far: mkMesh(farCells * FAR_CELL_CAPACITY, 'arrière-pays'),
       // Acrotères, édicules, chaussées, croupes, réservoirs, condenseurs, mâts
       // et garde-corps : tous par le matériau de ville, drapeau « nu ».
       solid: props
         ? (Object.fromEntries(
-            SOLID_KINDS.map((k) => [
-              k,
-              mkMesh(cells * PROP_CAPS[k], solidGeo[k]?.clone()),
-            ]),
+            SOLID_KINDS.map((k) => [k, mkMesh(cells * PROP_CAPS[k], k, solidGeo[k]?.clone())]),
           ) as Record<SolidKind, ReturnType<typeof mkMesh>>)
         : null,
       tree: props ? mkPlain(cells * PROP_CAPS.tree, groveGeo, groveMat) : null,
@@ -367,6 +375,7 @@ export function CityRibbon() {
         t.accent.setXYZ(idx, sc.accent.r, sc.accent.g, sc.accent.b);
         t.jitter.setXY(idx, b.jx, b.jy);
         t.trim.setXYZW(idx, b.glow, b.socle, 0, b.warm);
+        t.facade.setX(idx, b.balcony ? 1 : 0);
       }
       t.mesh.instanceMatrix.needsUpdate = true;
       if (t.mesh.instanceColor) t.mesh.instanceColor.needsUpdate = true;
@@ -374,6 +383,7 @@ export function CityRibbon() {
       t.jitter.needsUpdate = true;
       t.trim.needsUpdate = true;
       t.scale.needsUpdate = true;
+      t.facade.needsUpdate = true;
     };
 
     const writeFarCell = (cell: number) => {
@@ -463,6 +473,7 @@ export function CityRibbon() {
           target.jitter.setXY(idx, 0, 0);
           target.trim.setXYZW(idx, 0, 0, 1, 1);
           target.scale.setXYZ(idx, sc.scl.x, sc.scl.y, sc.scl.z);
+          target.facade.setX(idx, 0);
         }
         // Escamoter les emplacements non pourvus de la cellule.
         for (const kind of PROP_KINDS) {
@@ -484,6 +495,7 @@ export function CityRibbon() {
             m.jitter.needsUpdate = true;
             m.trim.needsUpdate = true;
             m.scale.needsUpdate = true;
+            m.facade.needsUpdate = true;
           }
         }
         for (const m of [s.tree, s.sign, s.beacon]) {

@@ -80,6 +80,13 @@ export interface CityBuilding {
   jx: number;
   jy: number;
   /**
+   * Le sujet porte-t-il la façade de logement collectif, à coursive extérieure ?
+   *
+   * C'est le trait le plus visible d'une rue d'habitation japonaise, et il vaut
+   * pour le bâti moyen : ni une échoppe de deux niveaux, ni une tour.
+   */
+  balcony: boolean;
+  /**
    * Écart d'orientation entre le bâtiment et la voie (rad), mesuré dans le plan
    * (s, x). Il vaut l'angle de trame du quartier, plus un petit jeu propre au
    * sujet. Le rendu en tire une rotation autour de Y de `-yaw`, la même des
@@ -318,6 +325,18 @@ export interface Tissue {
    * douceur, à la même heure.
    */
   cool: number;
+  /**
+   * Part de bâtiments portant la façade de logement collectif - la マンション,
+   * avec sa COURSIVE extérieure.
+   *
+   * C'est le trait le plus visible d'une rue d'habitation japonaise, et il
+   * manquait : tout le ruban portait la même façade de bureau à meneaux, du
+   * bâti de rapport de Nishi-Nippori aux tours de Shinjuku. Forte sur le
+   * résidentiel et les bas quartiers, nulle sur les quartiers de tours - une
+   * tour de bureaux n'a pas de balcons, et une tour d'habitation les a
+   * intérieurs.
+   */
+  balcony: number;
 }
 
 const TISSUE_CACHE = new Map<string, Tissue>();
@@ -334,14 +353,21 @@ export function tissueOf(district: District): Tissue {
     trade: 0.18 + district.density * 0.42,
     lowCap: 1,
     cool: 0.2,
+    // Le fond de la ville est du logement de rapport : c'est le cas COURANT le
+    // long de la Yamanote, pas l'exception.
+    balcony: 0.3,
   };
   if (has('parkGreen')) t.green += 0.3;
   if (has('torii')) t.green += 0.14;
   if (has('templeLowtown')) {
     t.hip += 0.5;
     t.green += 0.06;
+    t.balcony += 0.22;
   }
-  if (has('upscaleResidential')) t.hip += 0.26;
+  if (has('upscaleResidential')) {
+    t.hip += 0.26;
+    t.balcony += 0.3;
+  }
   if (has('giantScreen')) t.screen += 0.3;
   if (has('animeBillboard')) t.screen += 0.22;
   if (has('departmentStore')) t.screen += 0.12;
@@ -366,12 +392,18 @@ export function tissueOf(district: District): Tissue {
   if (has('glassTowers') || has('officeTowers') || has('skyscraperCluster') || has('modernWhite')) {
     t.trade -= 0.16;
     t.cool += 0.5;
+    // Une tour de bureaux n'a pas de balcons, et une tour d'habitation les a
+    // intérieurs : la coursive extérieure est une affaire de bâti moyen.
+    t.balcony -= 0.28;
   }
+  // Un quartier de commerce est en devantures et en enseignes, pas en logements.
+  if (has('shotengai') || has('lowriseMarket') || has('electricNeon')) t.balcony -= 0.14;
   if (has('upscaleResidential') || has('templeLowtown')) t.cool -= 0.12;
   t.cool = Math.max(0.05, Math.min(0.85, t.cool));
   t.trade = Math.max(0.04, Math.min(0.86, t.trade));
   t.green = Math.min(0.45, t.green);
   t.hip = Math.min(0.62, t.hip);
+  t.balcony = Math.max(0, Math.min(0.72, t.balcony));
   TISSUE_CACHE.set(district.name, t);
   return t;
 }
@@ -493,6 +525,9 @@ export function buildCell(
       b.jx = r() * 12;
       b.jy = r() * 3;
       b.yaw = yaw;
+      // Coursive : le bâti moyen, celui du logement de rapport. Une échoppe de
+      // deux niveaux n'en a pas, une tour non plus.
+      b.balcony = b.h >= 6 && b.h <= 46 && r() < tissue.balcony;
 
       count++;
       placed++;
@@ -585,6 +620,10 @@ export function buildFarCell(
       b.jx = r() * 12;
       b.jy = r() * 3;
       b.yaw = yaw;
+      // À cette distance, la coursive ne se lit plus comme un balcon mais comme
+      // un rythme horizontal - et c'est précisément ce qui distingue un
+      // arrière-pays de logements d'un arrière-pays de bureaux.
+      b.balcony = b.h <= 46 && r() < tissue.balcony;
 
       count++;
       placed++;
@@ -992,6 +1031,7 @@ export function makeCellBuffer(length = CELL_CAPACITY): CityBuilding[] {
     warm: 1,
     jx: 0,
     jy: 0,
+    balcony: false,
     yaw: 0,
   }));
 }

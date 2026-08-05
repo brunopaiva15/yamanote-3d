@@ -361,6 +361,40 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     runtime.platformSlide = 0;
   };
 
+  /**
+   * Ce que le ruban urbain rend VRAIMENT, famille par famille.
+   *
+   * Une ville qui ne montre pas ce qu'on croit y avoir mis peut l'être pour
+   * trois raisons : le générateur n'en produit pas, le rendu ne les écrit pas,
+   * ou le nuanceur ne les distingue pas. Sans mesure, on corrige la mauvaise.
+   * D'où ce relevé, pris sur le graphe tel qu'il est rendu : par famille, le
+   * nombre d'emplacements, ceux qui sont réellement pourvus (une instance
+   * escamotée a une matrice mise à zéro), et la part portant la façade à
+   * coursive.
+   *
+   *   __probeCity()  → [{ famille, emplacements, posées, coursives }, …]
+   */
+  w.__probeCity = () => {
+    const out: Record<string, unknown>[] = [];
+    const m = new THREE.Matrix4();
+    scene.traverse((o) => {
+      const family = o.userData?.cityFamily;
+      if (!family) return;
+      const im = o as THREE.InstancedMesh;
+      let placed = 0;
+      for (let i = 0; i < im.count; i++) {
+        im.getMatrixAt(i, m);
+        // Une instance escamotée a une échelle nulle : sa première colonne l'est.
+        if (m.elements[0] !== 0 || m.elements[1] !== 0 || m.elements[2] !== 0) placed++;
+      }
+      const fac = (im.geometry.attributes.aFacade as THREE.BufferAttribute | undefined)?.array;
+      let balcony = 0;
+      if (fac) for (let i = 0; i < im.count; i++) if (fac[i] > 0.5) balcony++;
+      out.push({ famille: family, emplacements: im.count, posées: placed, coursives: balcony });
+    });
+    return out;
+  };
+
   // Effacer la rame pour ne juger que le paysage.
   //
   // De l'intérieur, la ville se regarde par une baie : le montant, la banquette
