@@ -154,6 +154,18 @@ FONDU = 0.015
 # premières valeurs posées ici l'ont été sans cette inversion, donc à l'envers :
 # 「お乗換です」 était rallongé à chaque tour, ce qui explique qu'il ait traîné
 # davantage après chaque « resserrage ». Le montage convertit désormais.
+# Débit propre à un RÔLE, quand la voix entière est à reprendre. Le japonais
+# n'en a pas besoin : sa cadence est calée fragment par fragment sur la prise
+# réelle. L'anglais n'a aucune référence mesurée - la recherche de motif répété
+# n'a rien donné sur l'enregistrement - donc son débit se règle à l'oreille, et
+# c'est le seul endroit où un facteur global soit légitime.
+#
+# Comme DEBIT, c'est un facteur de DURÉE, appliqué au montage : le changer ne
+# regrave rien.
+DEBIT_ROLE = {
+    ("en-US", "cabin"): 0.94,  # « à peine plus vite » sur la grille de variantes
+}
+
 DEBIT = {
     # 8 % plus court : « à peine trop lent » une fois le point posé. Premier
     # réglage de débit qui agisse dans le bon sens, l'inversion étant corrigée.
@@ -1041,8 +1053,10 @@ def main():
             # La cadence mesurée pose le débit ; DEBIT reste un ajustement
             # RELATIF par-dessus, pour ce que l'oreille corrige encore.
             v = inventory[fid]
-            debit = v["debit"] * (cadence(v["text"], len(bloc) / SR, v["source"], garde)
-                                  if v_lang_ja else 1.0)
+            debit = (v["debit"]
+                     * DEBIT_ROLE.get((v["lang"], v["role"]), 1.0)
+                     * (cadence(v["text"], len(bloc) / SR, v["source"], garde)
+                        if v_lang_ja else 1.0))
             if abs(debit - 1.0) > 0.01:
                 # 1/debit : wsola raisonne en vitesse de lecture, DEBIT en durée.
                 bloc = wsola(bloc, 1.0 / debit, SR).astype(np.float32)
