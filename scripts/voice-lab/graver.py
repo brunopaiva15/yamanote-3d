@@ -267,7 +267,14 @@ def cadence_brute(text, duree, source=None):
     if n < 2 or duree < 0.15:
         return 1.0
     a, b = CADENCE
-    return float((a + b * n + CADENCE_VIRGULE * text.count("、")) / duree)
+    # Virgules comptées sur le TEXTE SOURCE, pas sur ce qui est envoyé : une
+    # virgule d'origine - 「上野・池袋」 - est une vraie pause de liste, à payer.
+    # Une virgule ajoutée par correction ne fait que rendre explicite un creux
+    # que la vraie locutrice marque déjà, et que le modèle de durée, ajusté sur
+    # elle, comptabilise donc déjà.
+    src = source or text
+    virgules = src.count("、") + src.count("・")
+    return float((a + b * n + CADENCE_VIRGULE * virgules) / duree)
 
 
 def cadence(text, duree, source=None):
