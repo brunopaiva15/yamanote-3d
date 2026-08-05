@@ -298,6 +298,16 @@ def resserrer_silences(y, cible=PAUSE_INTERNE):
 # RAPIDES que la vraie annonce, qui met 0,51 s pour les trois mores de 「次は」
 # là où ce débit en demande 0,43. C'est un écart voulu, pas une dérive.
 CADENCE_RATE = 7.0
+# Durée plancher d'un fragment, quelle que soit sa longueur. Le débit constant
+# demandait 0,43 s pour les trois mores de 「次は」 ; la vraie annonce en met
+# 0,51, et le resserrage de 20 % qui en découlait mangeait la voyelle finale -
+# c'est ce qui s'est entendu. Un fragment de deux ou trois mores n'a pas de
+# marge : sa dernière more EST la fin du mot.
+#
+# 0,50 s est donc la durée relevée sur le 「次は」 réel, arrondie. Elle ne borne
+# que les fragments les plus courts : à partir de quatre mores, le débit
+# constant redevient plus long qu'elle et reprend la main.
+CADENCE_PLANCHER = 0.50
 CADENCE_GLOBAL = 1.0
 CADENCE_MIN, CADENCE_MAX = 0.80, 1.20
 SUSPECT_MIN, SUSPECT_MAX = 0.75, 1.30
@@ -336,7 +346,7 @@ def cadence_brute(text, duree, source=None, silence=0.0):
     # Le silence interne est MESURÉ sur la prise et passé en argument : un terme
     # forfaitaire par virgule ferait double emploi, et se tromperait de valeur
     # dès que la pause diffère de celle prévue.
-    return float((n / CADENCE_RATE + silence) / duree)
+    return float((max(n / CADENCE_RATE, CADENCE_PLANCHER) + silence) / duree)
 
 
 def cadence(text, duree, source=None, silence=0.0):
