@@ -45,7 +45,7 @@ Usage :
   node --experimental-strip-types scripts/announcements-export.ts /tmp/textes.json
   python scripts/voice-lab/graver.py /tmp/textes.json \\
       public/audio/announcements src/data/pa-manifest.ts \\
-      [--essai N] [--plan] [--hiragana]
+      [--essai N] [--plan] [--hiragana] [--sans en-US]
   python scripts/voice-lab/graver.py --verifier   # débusque les prises muettes
   python scripts/voice-lab/graver.py --variantes 12 [--stab] [--debit]
 """
@@ -908,6 +908,17 @@ def main():
     dry = "--plan" in argv
     if "--frags" in argv:
         FRAG_DIR = Path(argv[argv.index("--frags") + 1])
+
+    # `--sans ja-JP` ou `--sans en-US:cabin` met un rôle de côté le temps d'une
+    # gravure, sans toucher au fichier. C'est le mécanisme des rôles en attente
+    # de voix qui sert : leurs annonces gardent clips et entrées de manifeste,
+    # donc on peut remonter une langue sans dépenser le quota de l'autre.
+    for i, a in enumerate(argv):
+        if a == "--sans" and i + 1 < len(argv):
+            motif = argv[i + 1]
+            for cle in list(VOICES):
+                if motif in (cle[0], f"{cle[0]}:{cle[1]}"):
+                    VOICES[cle] = ""
 
     corpus = json.loads(Path(texts_path).read_text(encoding="utf-8"))
     items = corpus["items"]
