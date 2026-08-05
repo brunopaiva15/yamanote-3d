@@ -545,9 +545,28 @@ def main():
     global FRAG_DIR, HIRAGANA
     HIRAGANA = "--hiragana" in sys.argv
     if "--variantes" in sys.argv:
+        # Le fragment se désigne par son TEXTE ou par son NUMÉRO. Le numéro
+        # existe parce que taper du japonais dans une invite Windows n'est pas
+        # acquis : selon la page de codes, l'argument arrive tronqué ou
+        # remplacé par des points d'interrogation, et l'erreur ressemble alors
+        # à un fragment inconnu plutôt qu'à un problème de terminal.
+        reste = sys.argv[sys.argv.index("--variantes") + 1:]
+        choix = next((a for a in reste if not a.startswith("--")), None)
+        catalogue = sorted(json.loads(LECTURES.read_text(encoding="utf-8"))["lectures"])
+        if choix is None:
+            print("Indiquer le fragment, par son texte ou son numéro :\n")
+            for i, b in enumerate(catalogue, 1):
+                print(f"  {i:3}  {b}")
+            print("\n  npm run voix:variantes -- 12")
+            return
+        src = catalogue[int(choix) - 1] if choix.isdigit() else choix
         if not key:
             raise SystemExit("Renseigner ELEVENLABS_API_KEY.")
-        src = sys.argv[sys.argv.index("--variantes") + 1]
+        if src not in catalogue:
+            raise SystemExit(
+                f"« {src} » n'est pas un fragment connu.\n"
+                "Lancer `npm run voix:variantes` sans rien pour voir la liste "
+                "numérotée, puis rappeler avec le numéro.")
         variantes(key, src, pos="end" if "--fin" in sys.argv else "mid",
                   stab="--stab" in sys.argv)
         return
