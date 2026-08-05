@@ -180,6 +180,11 @@ PONCTUATION_FIN = ""
 # donc leur son exact. Le modèle n'étant pas déterministe, regraver un
 # fragment qui convient, c'est relancer les dés pour rien.
 PONCTUATION = {
+    # La virgule fait MONTER, et 「次は」 ne monte pas : en japonais il annonce
+    # ce qui suit sans le questionner. Sans ponctuation, le fragment garde une
+    # cadence plate. C'est l'exact inverse du besoin de 「左側です」 - preuve
+    # qu'aucune règle de position ne pouvait convenir aux deux.
+    "次は": "",
     "左側です": "、",
     "右側です": "、",  # même construction : si l'une tombe, l'autre tombe
 }
