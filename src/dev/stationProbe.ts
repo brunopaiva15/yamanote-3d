@@ -361,6 +361,20 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     runtime.platformSlide = 0;
   };
 
+  // Effacer la rame pour ne juger que le paysage.
+  //
+  // De l'intérieur, la ville se regarde par une baie : le montant, la banquette
+  // et les poignées mangent les trois quarts de l'image, et c'est la condition
+  // RÉELLE - on ne juge pas un décor sur une vue qu'aucun voyageur n'a jamais.
+  // Mais on n'y voit pas assez pour arbitrer une trame, une couche lointaine ou
+  // une ligne de toits. D'où cette bascule, qui n'existe qu'en développement :
+  // la caisse disparaît, le regard porte, et le paysage se juge en plein cadre.
+  w.__probeBare = (on = true) => {
+    const rame = scene.getObjectByName('rame');
+    if (rame) rame.visible = !on;
+    return !!rame;
+  };
+
   // État courant : de quoi diagnostiquer une capture qui ne montre pas ce
   // qu'on croyait avoir demandé.
   w.__probeState = () => ({

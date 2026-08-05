@@ -23,6 +23,15 @@
 // perce les TROIS rangs au même endroit. C'est le seul moment où le regard
 // s'enfonce dans la ville, et c'est le meilleur révélateur de vitesse qui soit
 // en train.
+//
+// --- La trame ---
+// Rien n'oblige un plan de ville à s'aligner sur une voie ferrée, et à Tokyo
+// il ne s'y aligne à peu près jamais : la Yamanote a été tracée dans les
+// creux, entre des quartiers dont les trames sont antérieures et
+// indépendantes. Tant que tous les bâtiments avaient leurs faces parallèles
+// aux rails, une rangée se relisait comme une pile de boîtes à chaussures -
+// c'est le défaut que `gridAngleAt` corrige, pour un coût nul (la matrice
+// d'instance porte déjà une rotation qu'on laissait à l'identité).
 
 import { DISTRICTS, GENERIC, type District, type Feat } from '../data/districts';
 import { directionStep, prevStation, wrapStation } from '../data/loop';
@@ -64,6 +73,14 @@ export interface CityBuilding {
   /** Décalage de la trame de façade (m), pour que deux voisins ne s'alignent pas. */
   jx: number;
   jy: number;
+  /**
+   * Écart d'orientation entre le bâtiment et la voie (rad), mesuré dans le plan
+   * (s, x). Il vaut l'angle de trame du quartier, plus un petit jeu propre au
+   * sujet. Le rendu en tire une rotation autour de Y de `-yaw`, la même des
+   * deux côtés de la voie : une rue qui franchit le remblai continue du même
+   * angle de l'autre côté, elle ne s'y réfléchit pas.
+   */
+  yaw: number;
 }
 
 interface Rank {
@@ -195,6 +212,38 @@ export function districtAt(s: number, mix: number): District {
   if (edge < BLEND && mix > edge / BLEND) kk = k + (frac > 0 ? 1 : -1);
   const i = wrapStation(cityAnchor.index + kk * cityAnchor.step);
   return DISTRICTS[i] ?? GENERIC;
+}
+
+// --- Trame des rues ------------------------------------------------------
+
+/** Écart maximal entre la trame d'un quartier et la voie (rad, ~26°). */
+const GRID_MAX = 0.46;
+/** Jeu propre à chaque sujet dans sa trame (rad, ~4°). */
+const GRID_JITTER = 0.07;
+
+/** Angle de trame d'une gare : haché de son index, donc stable pour toujours. */
+function districtGrid(index: number): number {
+  return (hashInt(Math.imul(wrapStation(index), 2654435761) + 917) * 2 - 1) * GRID_MAX;
+}
+
+/**
+ * Angle de la trame de rues à une abscisse monde (rad).
+ *
+ * Un quartier a UNE trame - c'est ce qui en fait un quartier - mais elle ne
+ * peut pas pivoter de cinquante degrés sur une ligne : entre deux territoires,
+ * l'angle glisse vers celui du voisin et les deux se rejoignent exactement à
+ * mi-chemin, vu de l'un comme de l'autre. La fonction est donc continue tout le
+ * long de la boucle, et la ville tourne lentement autour du train au lieu de
+ * sauter d'une cellule à l'autre.
+ */
+export function gridAngleAt(s: number): number {
+  const t = (s - cityAnchor.s) / cityAnchor.span;
+  const k = Math.max(-3, Math.min(3, Math.round(t)));
+  const frac = t - k;
+  const a0 = districtGrid(cityAnchor.index + k * cityAnchor.step);
+  const a1 = districtGrid(cityAnchor.index + (k + (frac >= 0 ? 1 : -1)) * cityAnchor.step);
+  const w = Math.min(1, Math.abs(frac) * 2);
+  return a0 + (a1 - a0) * 0.5 * w * w * (3 - 2 * w);
 }
 
 // --- Tissu de quartier ------------------------------------------------------
@@ -339,18 +388,25 @@ export function buildCell(
 
       let w = R.wMin + r() * (R.wMax - R.wMin);
       if (w > end + 3 - cursor) w = Math.max(R.wMin * 0.6, end + 3 - cursor);
+      const d = R.dMin + r() * (R.dMax - R.dMin);
+      // La trame du quartier, plus le jeu du sujet dans sa propre parcelle : à
+      // Tokyo deux voisins se touchent sans être tout à fait parallèles.
+      const yaw = gridAngleAt(cursor) + (r() * 2 - 1) * GRID_JITTER;
+      // Tourné dans sa trame, un sujet occupe le long de la voie plus que sa
+      // seule longueur : c'est cette emprise-là qu'il faut réserver, sinon les
+      // voisins s'enfoncent l'un dans l'autre à mesure que la trame s'incline.
+      const spanS = w * Math.abs(Math.cos(yaw)) + d * Math.abs(Math.sin(yaw));
 
       // Rue perpendiculaire : elle perce les trois rangs au même endroit.
-      if (street && cursor + w > street[0] && cursor < street[1]) {
+      if (street && cursor + spanS > street[0] && cursor < street[1]) {
         cursor = street[1] + r() * 2;
         continue;
       }
       if (r() < gapChance) {
-        cursor += w * (0.35 + r() * 0.5);
+        cursor += spanS * (0.35 + r() * 0.5);
         continue;
       }
 
-      const d = R.dMin + r() * (R.dMax - R.dMin);
       // Une masse d'arbres prend la place d'un bâtiment. C'est ce qui fait la
       // lisière du parc d'Ueno ou le bois du Meiji-jingū : non pas des arbres
       // AJOUTÉS au tissu, mais du tissu qui manque.
@@ -400,10 +456,13 @@ export function buildCell(
       b.warm = r() < coolChance ? 0.05 + r() * 0.2 : 0.75 + r() * 0.25;
       b.jx = r() * 12;
       b.jy = r() * 3;
+      b.yaw = yaw;
 
       count++;
       placed++;
-      cursor += w + 0.4 + r() * 2.6;
+      // L'entraxe se resserre de ce que la rotation a pris : une trame inclinée
+      // ne doit pas dépeupler le rang qu'elle traverse.
+      cursor += spanS + 0.3 + r() * 1.9;
     }
   }
   return count;
@@ -444,6 +503,24 @@ export interface CityProp {
   variant: number;
   /** Tirage stable 0..1 : décide si le sujet est en fleurs à la saison des sakura. */
   roll: number;
+  /** Orientation dans le plan (s, x), héritée du bâtiment porteur. */
+  yaw: number;
+}
+
+/**
+ * Pose un accessoire dans le repère LOCAL de son bâtiment.
+ *
+ * `u` court le long de la façade, `v` s'en écarte perpendiculairement - négatif
+ * vers la voie, positif vers l'arrière. Sans ce passage par le repère local, un
+ * bandeau d'enseigne calculé en `x - d/2` se décollait de sa façade dès que le
+ * bâtiment tournait dans sa trame, et flottait à côté de lui.
+ */
+function place(p: CityProp, b: CityBuilding, side: 1 | -1, u: number, v: number): void {
+  const c = Math.cos(b.yaw);
+  const sn = Math.sin(b.yaw);
+  p.s = b.s + u * c - v * side * sn;
+  p.x = b.x + u * side * sn + v * c;
+  p.yaw = b.yaw;
 }
 
 /**
@@ -502,8 +579,7 @@ export function buildCellProps(
       // La masse d'arbres remplace le bâtiment : ni acrotère, ni édicule.
       const t = push('tree');
       if (t) {
-        t.s = b.s;
-        t.x = b.x;
+        place(t, b, side, 0, 0);
         t.w = b.w;
         t.d = b.d;
         t.h = 6 + r() * 6;
@@ -529,8 +605,7 @@ export function buildCellProps(
     if (b.crown === 'hip') {
       const t = push('hip');
       if (t) {
-        t.s = b.s;
-        t.x = b.x;
+        place(t, b, side, 0, 0);
         t.w = b.w + 1.1; // débord de toiture, franc dans une rue basse
         t.d = b.d + 1.1;
         t.h = Math.min(3.4, 0.36 * Math.min(b.w, b.d) + 0.6);
@@ -540,8 +615,7 @@ export function buildCellProps(
     } else {
       const p = push('box');
       if (p) {
-        p.s = b.s;
-        p.x = b.x;
+        place(p, b, side, 0, 0);
         p.w = b.w + 0.45;
         p.d = b.d + 0.45;
         p.h = 0.55;
@@ -566,8 +640,7 @@ export function buildCellProps(
         q.w = ew;
         q.d = ed;
         q.h = eh;
-        q.s = b.s + es * (b.w - ew);
-        q.x = b.x + ex * (b.d - ed);
+        place(q, b, side, es * (b.w - ew), ex * (b.d - ed));
         q.y = b.h;
         q.tone = ROOFTOP_TONE;
       }
@@ -578,13 +651,13 @@ export function buildCellProps(
     if (b.sign !== 'none') {
       const g = push('sign');
       if (g) {
-        g.x = b.x - b.d / 2 - 0.09;
+        const v = -b.d / 2 - 0.09;
         g.tone = b.accent;
         g.d = 0;
         if (b.sign === 'screen') {
           g.w = Math.min(b.w * 0.84, 11);
           g.h = Math.min(b.h * 0.46, 7);
-          g.s = b.s;
+          place(g, b, side, 0, v);
           // Assez bas pour tomber dans le cône que la baie laisse passer : un
           // écran perché au sommet d'un immeuble proche ne se voit jamais.
           g.y = Math.max(2.6, Math.min(b.h * 0.38, b.h - g.h - 0.4));
@@ -592,7 +665,7 @@ export function buildCellProps(
           g.w = 1.15;
           g.h = Math.min(b.h * 0.62, 8.5);
           // Contre un angle : c'est là qu'elles se posent, pour se lire de biais.
-          g.s = b.s + (b.w / 2 - 0.8) * (r() < 0.5 ? 1 : -1);
+          place(g, b, side, (b.w / 2 - 0.8) * (r() < 0.5 ? 1 : -1), v);
           g.y = Math.max(2.9, b.h - g.h - 0.5);
         }
       }
@@ -613,6 +686,14 @@ export function buildCellProps(
       p.h = 0.14;
       p.y = 0;
       p.tone = ROAD_TONE;
+      // La chaussée prend la trame du quartier, comme le bâti qui la borde :
+      // une rue droite au milieu d'un tissu de biais se verrait tout de suite.
+      // Elle est mesurée au milieu de sa propre emprise, pas au bord de la
+      // cellule, pour que les deux côtés de la voie tombent d'accord.
+      p.yaw = gridAngleAt(p.s);
+      // Elle s'allonge de ce que la rotation lui fait perdre en profondeur,
+      // sinon la trouée n'atteint plus le dernier rang.
+      p.d /= Math.max(0.6, Math.cos(p.yaw));
     }
   }
   return count;
@@ -631,6 +712,7 @@ export function makePropBuffer(): CityProp[] {
     tone: '#ffffff',
     variant: 0,
     roll: 0,
+    yaw: 0,
   }));
 }
 
@@ -653,5 +735,6 @@ export function makeCellBuffer(): CityBuilding[] {
     warm: 1,
     jx: 0,
     jy: 0,
+    yaw: 0,
   }));
 }

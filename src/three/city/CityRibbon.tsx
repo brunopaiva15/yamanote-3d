@@ -260,6 +260,10 @@ export function CityRibbon() {
           }
           sc.pos.set(s.side * b.x, b.h / 2, st.origin - b.s);
           sc.scl.set(b.d, b.h, b.w);
+          // La trame du quartier : une rotation autour de Y de -yaw, la MÊME
+          // des deux côtés de la voie. Le côté -x n'est pas un miroir du côté
+          // +x - une rue qui franchit le remblai continue du même angle.
+          sc.rot.setFromAxisAngle(Y_AXIS, -b.yaw);
           sc.mtx.compose(sc.pos, sc.rot, sc.scl);
           s.body.mesh.setMatrixAt(idx, sc.mtx);
           s.body.scale.setXYZ(idx, sc.scl.x, sc.scl.y, sc.scl.z);
@@ -295,15 +299,18 @@ export function CityRibbon() {
 
           if (p.kind === 'sign') {
             // Panneau plaqué sur la face qui regarde la voie, donc tourné vers
-            // l'axe : un quart de tour, dans le sens du côté.
+            // l'axe : un quart de tour, dans le sens du côté - plus la trame du
+            // bâtiment qui le porte, sans quoi il se décollerait de sa façade.
             sc.pos.set(s.side * p.x, p.y + p.h / 2, st.origin - p.s);
-            sc.rot.setFromAxisAngle(Y_AXIS, s.side === 1 ? -Math.PI / 2 : Math.PI / 2);
+            sc.rot.setFromAxisAngle(
+              Y_AXIS,
+              (s.side === 1 ? -Math.PI / 2 : Math.PI / 2) - p.yaw,
+            );
             sc.scl.set(p.w, p.h, 1);
             sc.mtx.compose(sc.pos, sc.rot, sc.scl);
             s.sign.setMatrixAt(idx, sc.mtx);
             sc.color.set(p.tone);
             s.sign.setColorAt(idx, sc.color);
-            sc.rot.identity();
             continue;
           }
 
@@ -311,6 +318,7 @@ export function CityRibbon() {
           // BASE ; les volumes en boîte, eux, sont centrés.
           const baseY = p.kind === 'box' ? p.y + p.h / 2 : p.y;
           sc.pos.set(s.side * p.x, baseY, st.origin - p.s);
+          sc.rot.setFromAxisAngle(Y_AXIS, -p.yaw);
 
           if (p.kind === 'tree' && s.tree) {
             const spread = Math.min(p.h * 1.15, Math.max(p.d, p.w));
