@@ -129,6 +129,18 @@ function useRenderPath(): 'webgl' | 'webgpu' | 'pending' {
 }
 
 /**
+ * Portée du plan lointain de la caméra (m).
+ *
+ * Elle valait 260, du temps où la ville s'arrêtait à soixante-six mètres.
+ * L'arrière-pays du ruban va jusqu'à deux cent soixante de côté - donc bien
+ * au-delà dans l'axe de la voie - et les repères géographiques de l'horizon se
+ * posent plus loin encore. La reculer ne coûte pas de précision de profondeur :
+ * la résolution du tampon à une distance donnée est commandée par `near`, que
+ * le terme en 1/near écrase, et `near` ne bouge pas.
+ */
+const CAMERA_FAR = 1400;
+
+/**
  * Fabrique de renderer passée à react-three-fiber, qui l'attend et s'en sert
  * telle quelle. Le transtypage tient à un détail de typage : `DefaultGLProps`
  * décrit sa toile avec la déclaration d'`OffscreenCanvas` de three, distincte
@@ -227,7 +239,7 @@ export default function Game() {
         key={`${path}-${generation}`}
         dpr={[1, 2]}
         gl={path === 'webgpu' ? webgpuRenderer : webglRenderer}
-        camera={{ fov: 70, near: 0.05, far: 260, position: [0, CONFIG.eyeHeight, 4.2] }}
+        camera={{ fov: 70, near: 0.05, far: CAMERA_FAR, position: [0, CONFIG.eyeHeight, 4.2] }}
         shadows="percentage"
       >
         <Scene />

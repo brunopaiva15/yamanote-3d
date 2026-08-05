@@ -40,9 +40,21 @@ import {
 } from '../../textures/procedural';
 import { gpuKit, type SkyTextures, type SkyUniforms } from '../webgpu/kit';
 
-// Cylindre de ciel : mêmes angles apparents qu'avant (bord bas à −14°, faîte à
-// +29,7° depuis la hauteur d'œil), simplement porté plus loin.
+// --- Une voûte, lue comme un cylindre ---
+//
+// Le ciel était un cylindre OUVERT en haut : au-delà de son bord, on voyait le
+// fond de scène, et ce bord dessinait un arc net en travers de l'image. Il
+// passait inaperçu tant qu'on regardait la ville par une baie ; il ne passe
+// plus rien dès qu'on lève les yeux, et le tangage va jusqu'à 77°.
+//
+// C'est donc une SPHÈRE, mais dont le dégradé se lit exactement comme avant :
+// pour chaque direction, on calcule la hauteur qu'elle aurait sur un cylindre
+// de rayon R, et c'est cette hauteur-là qui choisit le pixel de ciel. Le
+// dégradé est au pixel près celui d'hier à toutes les élévations, et le zénith
+// se ferme - le rapport tend vers l'infini, la coordonnée sature sur la
+// dernière ligne de la texture, qui est justement le bleu de zénith.
 const R = 100;
+/** Hauteur du cylindre de RÉFÉRENCE : c'est elle qui cale le dégradé. */
 const HEIGHT = 82;
 const CY = 17.5;
 
@@ -99,10 +111,27 @@ function makeSilhouetteBank(): { ctx: CanvasRenderingContext2D; tex: THREE.Canva
 }
 
 const VERT = /* glsl */ `
-varying vec2 vSkyUv;
+varying vec3 vSkyDir;
 void main() {
-  vSkyUv = uv;
+  vSkyDir = position;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+
+/**
+ * Direction → coordonnées du ciel de référence.
+ *
+ * `u` reprend au degré près l'enroulement d'un CylinderGeometry (θ = atan2(x, z),
+ * divisé par un tour), pour que le défilement de la silhouette garde son sens.
+ * `v` est la hauteur sur le cylindre de référence, saturée : au-dessus du faîte
+ * c'est le zénith, en dessous du pied c'est le bas de l'image.
+ */
+const SKY_UV = /* glsl */ `
+vec2 skyUv(vec3 dir) {
+  float horiz = max(0.001, length(dir.xz));
+  float yEq = dir.y * (${R.toFixed(1)} / horiz);
+  return vec2(
+    atan(dir.x, dir.z) * 0.15915494,
+    clamp((yEq + ${(HEIGHT / 2).toFixed(1)}) / ${HEIGHT.toFixed(1)}, 0.0, 1.0));
 }`;
 
 const FRAG = /* glsl */ `
@@ -125,9 +154,11 @@ uniform vec3 uSeasonTint;
 uniform float uSeasonAmt;
 uniform vec3 uCloud;
 uniform float uCloudAmt;
-varying vec2 vSkyUv;
+varying vec3 vSkyDir;
+${SKY_UV}
 
 void main() {
+  vec2 vSkyUv = skyUv(vSkyDir);
   vec3 col =
       texture2D(uDay, vSkyUv).rgb * uWeights.x
     + texture2D(uGolden, vSkyUv).rgb * uWeights.y
@@ -289,7 +320,16 @@ export function SkyDome() {
     u.uSilDark.value = 1 - 0.62 * cityNight;
     // La brume de l'horizon est celle de la scène : une seule source de vérité.
     if (scene.fog instanceof THREE.Fog) (u.uHaze.value as THREE.Color).copy(scene.fog.color);
-    u.uHazeAmt.value = 0.3 + 0.16 * w.day;
+    // La silhouette peinte se lit à ~890 m, très au-delà de la portée de la
+    // brume : elle doit s'y noyer d'autant. Elle tenait jusqu'ici le rôle du
+    // lointain à elle seule, et se montrait donc plus qu'elle n'aurait dû ;
+    // depuis que l'arrière-pays occupe la tranche des cent à deux cent soixante
+    // mètres, elle redevient ce qu'elle est - la dernière couche, la plus
+    // faible. Ce qui la fait ressortir n'est pas l'heure mais L'AIR : la clarté
+    // de la saison et le temps qu'il fait, c'est-à-dire exactement ce qui
+    // commande la portée de la brume.
+    const air = Math.min(1.4, seasonNow().clarity * weather.visibility);
+    u.uHazeAmt.value = Math.max(0, Math.min(1, 0.92 - 0.42 * air + 0.08 * w.night));
     // Lueur de fond, resserrée sur l'horizon puis modulée par l'activité de la
     // ville : forte le soir, presque éteinte au cœur de la nuit.
     u.uGlowAmt.value = (0.22 * w.night + 0.1 * w.golden) * civicGlow(hourNow);
@@ -318,7 +358,7 @@ export function SkyDome() {
 
   return (
     <mesh position={[0, CY, 0]} material={built.material} renderOrder={-1000} frustumCulled={false}>
-      <cylinderGeometry args={[R, R, HEIGHT, 64, 1, true]} />
+      <sphereGeometry args={[R, 48, 24]} />
     </mesh>
   );
 }

@@ -211,8 +211,20 @@ export function makeCityMaterial(): CityMaterial {
         // Fenêtres : chaque vitrage porte un tirage stable dans l'alpha de la
         // texture ; le seuil descend avec la nuit, les étages s'allument donc
         // par paquets au fil de la soirée plutôt que tous d'un coup.
+        //
+        // Le seuil est FRANC mais pas net, et c'est la distance qui l'exige. À
+        // deux cents mètres, la trame de douze mètres passe sous le pixel :
+        // l'alpha filtré converge vers sa moyenne, et deux comparaisons
+        // strictes rendaient alors un mur entièrement allumé ou entièrement
+        // éteint - d'où les masses plates de l'arrière-pays. Un fondu de part
+        // et d'autre du seuil ne change rien de près (l'alpha d'un vitrage est
+        // constant sur toute sa surface, à quelques rideaux près) et rend au
+        // loin la LUMINANCE MOYENNE d'une façade allumée, qui est exactement ce
+        // qu'on voit d'une ville à cette distance.
         float cityWin = cityFac.a * (1.0 - cityRoofish) * (1.0 - citySocle);
-        float cityWinOn = step(0.03, cityWin) * step(1.0 - 0.8 * uNight, cityWin);
+        float cityWinLvl = 1.0 - 0.8 * uNight;
+        float cityWinOn = smoothstep(0.02, 0.05, cityWin)
+          * smoothstep(cityWinLvl - 0.12, cityWinLvl + 0.12, cityWin);
         float cityGlass = citySocle
           * smoothstep(0.62, 0.70, citySoc.a)
           * (1.0 - smoothstep(0.84, 0.93, citySoc.a));

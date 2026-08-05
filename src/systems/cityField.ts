@@ -13,10 +13,16 @@
 // même cellule donnent le même quartier. Le rendu n'en garde qu'un anneau
 // glissant (voir three/city/CityRibbon), rebâti une cellule à la fois.
 //
-// --- Trois rangs ---
+// --- Cinq rangs, en deux mailles ---
 // Un bord de voie bas et serré, un rang d'îlot, un fond haut. C'est cette
 // stratification qui produit l'occultation mutuelle et donc la profondeur ; un
 // plan unique, aussi bien dessiné soit-il, reste du carton.
+//
+// Ces trois-là tiennent dans les soixante-six premiers mètres, à la maille de
+// CELL_LEN. Au-delà commence l'ARRIÈRE-PAYS (FAR_RANKS), deux rangs de plus
+// jusqu'à deux cent soixante mètres, à sa propre maille de FAR_CELL_LEN : à
+// cette distance on ne lit plus un îlot mais une masse et une ligne de faîte,
+// et une maille grossière la tient pour quelques dizaines d'instances.
 //
 // --- Les rues ---
 // Une cellule sur deux environ est traversée par une rue perpendiculaire, qui
@@ -116,11 +122,41 @@ const RANKS: Rank[] = [
 /** Trouées supplémentaires du premier rang : le ciel et le fond doivent passer. */
 const NEAR_EXTRA_GAP = 0.14;
 
-/** Plafond de hauteur : au-delà, les tours percent la voûte de ciel. */
+/** Plafond de hauteur du bâti proche (m). */
 const H_MAX = 52;
 
 /** Nombre maximal de bâtiments qu'une cellule peut rendre, tous rangs confondus. */
 export const CELL_CAPACITY = RANKS.reduce((a, r) => a + r.n, 0);
+
+// --- L'arrière-pays -------------------------------------------------------
+//
+// Les trois rangs s'arrêtaient à soixante-six mètres, et la brume à deux cent
+// vingt. Entre les deux, rien : la ville tombait d'un coup dans un aplat, puis
+// la silhouette peinte reprenait neuf cents mètres plus loin. C'est le défaut
+// qu'on voit le mieux d'un viaduc, là où le regard passe par-dessus les toits
+// bas et devrait rencontrer des couches de bâti sur des centaines de mètres.
+//
+// L'arrière-pays est donc un SECOND anneau, à sa propre maille : une cellule de
+// cent vingt mètres pour trois cent vingt mètres de profondeur. Compter les
+// bâtiments d'un îlot à deux cents mètres n'a aucun sens - ce qu'on lit là,
+// c'est une masse et une ligne de faîte -, et une maille grossière tient
+// l'arrière-pays entier pour le prix de quelques dizaines d'instances.
+export const FAR_CELL_LEN = 120;
+
+const FAR_RANKS: Rank[] = [
+  { x0: 70, x1: 132, n: 6, wMin: 24, wMax: 52, dMin: 20, dMax: 44, hMin: 7, hSpan: 52 },
+  { x0: 140, x1: 268, n: 5, wMin: 32, wMax: 76, dMin: 28, dMax: 68, hMin: 10, hSpan: 130 },
+  // Le dernier rang n'est presque plus un objet : à trois cents mètres, avec
+  // une brume qui porte à cinq cents, il ne reste qu'un dégradé de masses. Mais
+  // c'est LUI qui donne la profondeur - un fond qui s'arrête net à deux cent
+  // soixante-dix mètres se lit comme une toile de fond, aussi loin soit-elle.
+  { x0: 278, x1: 440, n: 4, wMin: 44, wMax: 110, dMin: 40, dMax: 96, hMin: 12, hSpan: 170 },
+];
+
+/** Plafond de hauteur de l'arrière-pays (m) : la plus haute tour de Shinjuku. */
+const FAR_H_MAX = 190;
+
+export const FAR_CELL_CAPACITY = FAR_RANKS.reduce((a, r) => a + r.n, 0);
 
 // --- Aléa déterministe -------------------------------------------------------
 
@@ -468,6 +504,99 @@ export function buildCell(
   return count;
 }
 
+/**
+ * Loi de hauteur de l'arrière-pays.
+ *
+ * Une ville n'a pas des hauteurs tirées à plat : elle en a beaucoup de basses,
+ * quelques moyennes, et de loin en loin une tour. C'est cette queue-là qui fait
+ * une LIGNE DE FAÎTE plutôt qu'une haie - et c'est justement ce qu'un tirage
+ * uniforme ne peut pas donner : à trois cents mètres, il aligne tout à
+ * mi-hauteur et l'arrière-pays redevient un mur, en plus loin.
+ */
+function farHeight(roll: number): number {
+  return 0.18 + 0.82 * Math.pow(roll, 2.2);
+}
+
+/**
+ * Remplit `out` avec les masses de l'arrière-pays de la cellule lointaine
+ * `cell`. Même contrat que `buildCell` : objets réutilisés, aucune allocation.
+ *
+ * Ce qui distingue une masse d'un bâtiment : elle n'a ni devanture, ni
+ * enseigne, ni toiture particulière. À cette distance on ne lit qu'un volume,
+ * une teinte et - la nuit - des fenêtres allumées. Tout le reste serait payé
+ * pour rien.
+ */
+export function buildFarCell(
+  cell: number,
+  side: 1 | -1,
+  out: CityBuilding[],
+  rankScale = 1,
+): number {
+  const start = cell * FAR_CELL_LEN;
+  const end = start + FAR_CELL_LEN;
+  let count = 0;
+
+  for (let rank = 0; rank < FAR_RANKS.length; rank++) {
+    const R = FAR_RANKS[rank];
+    const n = Math.max(1, Math.round(R.n * rankScale));
+    const r = stream(cell * 15485863 + (side === 1 ? 0 : 7919) + rank * 6151);
+    let placed = 0;
+    let cursor = start + r() * 12;
+
+    while (cursor < end && placed < n && count < out.length) {
+      const district = districtAt(cursor, r());
+      const tissue = tissueOf(district);
+      // Un parc ne se remplit pas. Là où le tissu proche s'ouvre en bosquets,
+      // l'arrière-pays s'éclaircit d'autant : c'est ce qui creuse le bois du
+      // Meiji-jingū ou le parc d'Ueno au-delà du premier plan, sans y planter
+      // un seul arbre de plus - à deux cents mètres, une masse verte et un
+      // vide se lisent pareil dans la brume.
+      const gapChance = 0.18 - district.density * 0.14 + tissue.green * 0.9;
+
+      let w = R.wMin + r() * (R.wMax - R.wMin);
+      if (w > end + 10 - cursor) w = Math.max(R.wMin * 0.6, end + 10 - cursor);
+      const d = R.dMin + r() * (R.dMax - R.dMin);
+      const yaw = gridAngleAt(cursor) + (r() * 2 - 1) * GRID_JITTER;
+      const spanS = w * Math.abs(Math.cos(yaw)) + d * Math.abs(Math.sin(yaw));
+
+      if (r() < gapChance) {
+        cursor += spanS * (0.4 + r() * 0.7);
+        continue;
+      }
+
+      const facades = district.facades ?? FALLBACK_FACADE;
+      const b = out[count];
+      b.s = cursor + w / 2;
+      b.x = R.x0 + d / 2 + r() * Math.max(0, R.x1 - R.x0 - d);
+      b.w = w;
+      b.d = d;
+      b.h = Math.min(FAR_H_MAX, R.hMin + district.maxHeight * R.hSpan * farHeight(r()));
+      b.facade = facades[Math.floor(r() * facades.length) % facades.length];
+      b.shade = 0.9 + r() * 0.22;
+      b.accent = district.accent;
+      b.glow = 0;
+      b.socle = 0;
+      b.grove = false;
+      b.crown = 'flat';
+      b.sign = 'none';
+      // L'arrière-pays est plus tertiaire que le bord de voie : c'est là que
+      // sont les tours, et une tour s'éclaire au néon.
+      b.warm = r() < tissue.cool * 1.3 ? 0.05 + r() * 0.2 : 0.75 + r() * 0.25;
+      b.jx = r() * 12;
+      b.jy = r() * 3;
+      b.yaw = yaw;
+
+      count++;
+      placed++;
+      // Serré : au-delà de soixante-dix mètres, Tokyo est une masse continue.
+      // Un arrière-pays clairsemé découvre la nappe de rue, et deux cents
+      // mètres de bitume gris valent moins que pas d'arrière-pays du tout.
+      cursor += spanS * 0.82 + r() * 4;
+    }
+  }
+  return count;
+}
+
 // --- Superstructures, toitures, bosquets et enseignes -----------------------
 
 /**
@@ -717,8 +846,8 @@ export function makePropBuffer(): CityProp[] {
 }
 
 /** Tableau de travail réutilisable, à la capacité d'une cellule. */
-export function makeCellBuffer(): CityBuilding[] {
-  return Array.from({ length: CELL_CAPACITY }, () => ({
+export function makeCellBuffer(length = CELL_CAPACITY): CityBuilding[] {
+  return Array.from({ length }, () => ({
     s: 0,
     x: 0,
     w: 0,

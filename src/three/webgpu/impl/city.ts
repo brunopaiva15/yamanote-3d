@@ -166,8 +166,16 @@ export function makeCityMaterial(tex: CityTextures): {
   // Fenêtres : chaque vitrage porte un tirage stable dans l'alpha de la
   // texture ; le seuil descend avec la nuit, les étages s'allument donc par
   // paquets au fil de la soirée plutôt que tous d'un coup.
+  //
+  // Le seuil est franc mais pas net, et c'est la DISTANCE qui l'exige : passé
+  // deux cents mètres la trame de douze mètres tombe sous le pixel, l'alpha
+  // filtré converge vers sa moyenne, et deux comparaisons strictes rendaient
+  // alors un mur entièrement allumé ou entièrement éteint.
   const win = fac.a.mul(roofish.oneMinus()).mul(socle.oneMinus());
-  const winOn = step(0.03, win).mul(step(float(1).sub(night.mul(0.8)), win));
+  const winLvl = float(1).sub(night.mul(0.8));
+  const winOn = smoothstep(0.02, 0.05, win).mul(
+    smoothstep(winLvl.sub(0.12), winLvl.add(0.12), win),
+  );
   const glass = socle
     .mul(smoothstep(0.62, 0.7, soc.a))
     .mul(smoothstep(0.84, 0.93, soc.a).oneMinus());
