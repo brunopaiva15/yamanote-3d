@@ -155,9 +155,9 @@ FONDU = 0.015
 # 「お乗換です」 était rallongé à chaque tour, ce qui explique qu'il ait traîné
 # davantage après chaque « resserrage ». Le montage convertit désormais.
 DEBIT = {
-    # Laissé à 1 en attendant la grille : les valeurs précédentes agissaient à
-    # l'envers, donc aucune ne dit quoi que ce soit du bon réglage.
-    "お乗換です": 1.0,
+    # 8 % plus court : « à peine trop lent » une fois le point posé. Premier
+    # réglage de débit qui agisse dans le bon sens, l'inversion étant corrigée.
+    "お乗換です": 0.92,
     # Note : 「お乗換です」 était sorti d'ici : à 0,85 puis 0,75 il traînait toujours,
     # donc la durée n'était pas la cause. C'est la GRAPHIE qui a été changée
     # (voir lectures-corrections.json). Si la nouvelle traîne à son tour, c'est
@@ -194,6 +194,11 @@ PONCTUATION = {
     # fragment MÉDIAN. C'est le contre-exemple qui achève de disqualifier la
     # règle de position : la mélodie voulue ne se déduit pas de la place.
     "次は": "。",
+    # Retenu sur la grille : var-06, le point. Il est FINAL, donc il partait
+    # sans ponctuation depuis qu'on avait retenu la chute du です - et c'est
+    # justement ce vide qui le laissait flotter. Troisième fragment, troisième
+    # ponctuation : la règle de position n'en prédit décidément aucune.
+    "お乗換です": "。",
     "左側です": "、",
     "右側です": "、",  # même construction : si l'une tombe, l'autre tombe
 }
