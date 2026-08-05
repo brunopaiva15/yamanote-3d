@@ -4,7 +4,7 @@
 ⚠ NON EXÉCUTÉ CONTRE ELEVENLABS dans la session qui l'a écrit : leur hôte est
 refusé par la politique de sortie réseau (403 au CONNECT). Tout ce qui ne
 dépend pas du réseau - découpage, cache, assemblage, manifeste - a été vérifié
-sur des fragments factices. Commencer par `--only 3`, écouter, puis le lot.
+sur des fragments factices. Commencer par `--essai 12`, écouter, puis le lot.
 
 POURQUOI DES FRAGMENTS ET PAS DES PHRASES ENTIÈRES. Le système d'annonces de la
 Yamanote est concaténatif : il ne dit pas 「次は渋谷」, il rejoue un 「次は」
@@ -44,7 +44,7 @@ Usage :
   python scripts/voice-lab/graver.py --list
   node --experimental-strip-types scripts/announcements-export.ts /tmp/textes.json
   python scripts/voice-lab/graver.py /tmp/textes.json \\
-      public/audio/announcements src/data/pa-manifest.ts [--only N] [--plan]
+      public/audio/announcements src/data/pa-manifest.ts [--essai N] [--plan]
 """
 
 import hashlib
@@ -69,6 +69,7 @@ OUTPUT_FORMAT = "mp3_44100_128"
 SR = 24000  # fréquence de travail au montage, celle du reste du banc
 
 FRAG_DIR = Path("audio-src/fragments")
+ESSAI_DIR = Path("audio-src/essai")
 
 # Une voix par rôle. Le quai garde deux automates de sexe différent : sur un
 # îlot central les deux quais annoncent le même script à quelques secondes
@@ -256,7 +257,7 @@ def main():
     global FRAG_DIR
     texts_path, out_dir, manifest_path = sys.argv[1:4]
     argv = sys.argv[4:]
-    only = int(argv[argv.index("--only") + 1]) if "--only" in argv else None
+    essai = int(argv[argv.index("--essai") + 1]) if "--essai" in argv else None
     dry = "--plan" in argv
     if "--frags" in argv:
         FRAG_DIR = Path(argv[argv.index("--frags") + 1])
@@ -265,6 +266,17 @@ def main():
     plan, inventory, deferred = build_plan(items)
     if not plan:
         raise SystemExit("Aucun rôle n'a de voix - lancer d'abord --list.")
+
+    if essai:
+        # Un essai se juge sur des annonces ENTIÈRES : c'est le montage - les
+        # silences, l'enchaînement des blocs - qu'on veut entendre, et un
+        # fragment isolé n'en dit rien. On les prend étalées sur le corpus
+        # plutôt qu'en tête, sinon les douze premières sont douze 「次は」 de
+        # gares voisines et l'essai ne montre qu'une seule tournure.
+        step = max(1, len(plan) // essai)
+        plan = plan[::step][:essai]
+        inventory = {f: v for f, v in inventory.items()
+                     if any(f == g for p in plan for g, _ in p["seq"])}
 
     FRAG_DIR.mkdir(parents=True, exist_ok=True)
     todo = [f for f in inventory if not (FRAG_DIR / f"{f}.mp3").exists()]
@@ -283,8 +295,6 @@ def main():
             print(f"  … et {len(todo) - 40} autres")
         return
 
-    if only:
-        todo = todo[:only]
     for n, fid in enumerate(todo, 1):
         v = inventory[fid]
         if not key:
@@ -299,21 +309,23 @@ def main():
         (FRAG_DIR / f"{fid}.mp3").write_bytes(mp3)
         print(f"[{n}/{len(todo)}] {fid} [{v['role']} {v['pos']}] {v['text'][:44]}")
 
-    (FRAG_DIR / "index.json").write_text(
-        json.dumps(inventory, ensure_ascii=False, indent=1, sort_keys=True) + "\n",
-        encoding="utf-8")
+    if not essai:
+        # L'index décrit le cache COMPLET : un essai n'en voit qu'une poignée
+        # et l'écraserait avec une vue partielle.
+        (FRAG_DIR / "index.json").write_text(
+            json.dumps(inventory, ensure_ascii=False, indent=1, sort_keys=True) + "\n",
+            encoding="utf-8")
 
-    if only:
-        print("Lot partiel : ni assemblage ni manifeste. Écouter, puis relancer sans --only.")
-        return
-
-    out = Path(out_dir)
+    # Un essai s'assemble à l'écart : ni dans public/, ni dans le manifeste.
+    # Rien de ce qu'il produit n'atteint le jeu, donc rien à défaire s'il ne
+    # convainc pas - et les fragments gravés, eux, restent acquis au cache.
+    out = ESSAI_DIR if essai else Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     # Une gravure partielle - le cas normal tant que les six voix ne sont pas
     # toutes retenues - PART DU MANIFESTE EXISTANT. Le reconstruire de zéro
     # effacerait les entrées des rôles pas encore regravés, et leurs annonces
     # deviendraient muettes alors que leurs clips sont toujours là.
-    manifest = read_manifest(manifest_path) if deferred else {}
+    manifest = read_manifest(manifest_path) if deferred and not essai else {}
     for p in plan:
         # À ce stade tout fragment manquant vient d'être gravé ou était en
         # cache. S'il en manque encore, c'est une gravure interrompue : mieux
@@ -335,6 +347,15 @@ def main():
         y = np.concatenate(parts).astype(np.float32)
         (out / f"{p['key']}.mp3").write_bytes(encode_mp3(y, SR, kbps=64))
         manifest[p["key"]] = round(len(y) / SR, 2)
+
+    if essai:
+        for p in plan:
+            print(f"  {out / (p['key'] + '.mp3')}  {manifest[p['key']]:4.1f}s  {p['text'][:52]}")
+        print(f"\n{len(plan)} annonces d'essai → {out}\n"
+              "Ni le jeu ni le manifeste n'ont bougé. Écouter, puis relancer "
+              "sans --essai pour graver le lot ; les fragments déjà gravés\n"
+              "sont acquis et ne repasseront pas par le modèle.")
+        return
 
     # Le ménage n'a lieu qu'une fois le corpus complet : tant qu'un rôle attend
     # sa voix, un clip absent du manifeste peut être un clip encore valide.
