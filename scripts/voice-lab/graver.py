@@ -203,6 +203,73 @@ PONCTUATION = {
     "右側です": "、",  # même construction : si l'une tombe, l'autre tombe
 }
 
+# --- Cadence -------------------------------------------------------------
+# Un fragment synthétisé seul ne tient pas le débit : les courts s'étirent, les
+# longs s'emballent. Mesuré sur les 172 fragments gravés contre la prise réelle
+# (scripts/voice-lab/debit.py) : 「次は」 sort à 3,8 mores/s quand la vraie
+# annonce en fait 5,9, et 「マナーモードニセッテイノウエ」 à 10,3 quand la vraie
+# n'atteint 7,0 que sur sa phrase la plus rapide. La moyenne, elle, ne dit rien
+# - elle est à 1,06 du réel : les deux écarts se compensent et le corpus paraît
+# juste alors qu'aucun fragment ne l'est.
+#
+# La correction est donc PAR FRAGMENT, sur la durée que la vraie locutrice
+# aurait mise pour le même nombre de mores. Le modèle est ajusté sur la prise
+# étiquetée, dont on connaît texte et bornes au centième :
+#
+#     durée = 0,255 + 0,1196 × mores      (4 segments, de 3 à 11 mores)
+#
+# La constante n'est pas du remplissage : c'est l'attaque et la chute, qui ne
+# dépendent pas de la longueur. Sans elle, un fragment de trois mores serait
+# ramené à 0,36 s au lieu de 0,61.
+CADENCE = (0.255, 0.1196)
+# Une virgule à l'intérieur d'un fragment y met une PAUSE, que le modèle de
+# durée doit payer sinon il croit le fragment traînant. C'est le silence relevé
+# après une virgule sur la prise réelle, le même que pose le montage.
+CADENCE_VIRGULE = GAP_COMMA
+# Bornes du resserrage automatique. Au-delà le vocodeur s'entend - et surtout,
+# un écart de plus de 20 % ne vient plus du débit : c'est une prise abîmée.
+# 「ウエノ」 est sorti à 0,36 s pour trois mores, soit 8,3 mores/s quand la vraie
+# annonce ne dépasse jamais 7,0 : l'étirer donnerait un mot ralenti au lieu d'un
+# mot correct. Ces prises-là sont SIGNALÉES pour regravure, pas rattrapées.
+CADENCE_MIN, CADENCE_MAX = 0.80, 1.20
+SUSPECT_MIN, SUSPECT_MAX = 0.75, 1.30
+
+# Petits kana : ils ne comptent pas pour une more, ils modifient la précédente.
+# 「っ」 et 「ー」 en revanche en sont une pleine - toute la différence entre
+# 「にっぽり」, quatre mores, et 「にぽり」, trois.
+PETITS_KANA = set("ゃゅょぁぃぅぇぉャュョァィゥェォ")
+
+
+def mores(text, source=None):
+    """Mores d'un fragment, comptées sur sa LECTURE.
+
+    Le texte envoyé au modèle n'est pas toujours du kana : une correction
+    manuelle y remet parfois des kanji, et 「京浜東北線」 ferait alors cinq
+    mores au lieu de neuf. La table garde pour ces entrées leur lecture
+    d'origine, et c'est elle qu'on compte.
+    """
+    kana_txt = text
+    if source is not None and any("一" <= c <= "鿿" for c in text):
+        kana(text if False else source)  # amorce le chargement de la table
+        kana_txt = _kana_brut.get(source, text)
+    return sum(1 for c in kana_txt if c not in PETITS_KANA and c not in "、。・,. ")
+
+
+def cadence_brute(text, duree, source=None):
+    """Rapport durée réelle attendue / durée obtenue, sans borne."""
+    n = mores(text, source)
+    if n < 2 or duree < 0.15:
+        return 1.0
+    a, b = CADENCE
+    return float((a + b * n + CADENCE_VIRGULE * text.count("、")) / duree)
+
+
+def cadence(text, duree, source=None):
+    """Facteur de durée qui ramène un fragment au débit de la vraie annonce."""
+    k = cadence_brute(text, duree, source)
+    return float(min(CADENCE_MAX, max(CADENCE_MIN, k)))
+
+
 # Marge laissée autour de la parole en rognant un fragment. À zéro les attaques
 # de consonnes sourdes se font manger ; au-delà de ~30 ms on réintroduit le
 # silence que le montage est censé contrôler.
@@ -225,6 +292,7 @@ TRIM_PAD = 0.02
 LECTURES = Path("audio-src/lectures.json")
 _readings = None
 _corriges = set()
+_kana_brut = {}
 
 VOWEL = {}
 for _v, _row in {"ア": "アカサタナハマヤラワガザダバパャヮ", "イ": "イキシチニヒミリギジヂビピ",
@@ -278,13 +346,14 @@ def _lecture(text):
 
 def kana(text):
     """Lecture d'un fragment, lue dans la table."""
-    global _readings, _corriges
+    global _readings, _corriges, _kana_brut
     if _readings is None:
         if not LECTURES.exists():
             raise SystemExit(f"{LECTURES} absent - le régénérer avec lectures.py.")
         table = json.loads(LECTURES.read_text(encoding="utf-8"))
         _readings = table["lectures"]
         _corriges = set(table.get("corrections", []))
+        _kana_brut = table.get("kana", {})
     r = _readings.get(text)
     if r is None:
         raise SystemExit(
@@ -791,8 +860,12 @@ def main():
         y = np.zeros(0, np.float32)
         for k, (fid, gap) in enumerate(p["seq"]):
             bloc = trimmed(FRAG_DIR / f"{fid}.mp3")
-            debit = inventory[fid]["debit"]
-            if debit != 1.0:
+            # La cadence mesurée pose le débit ; DEBIT reste un ajustement
+            # RELATIF par-dessus, pour ce que l'oreille corrige encore.
+            v = inventory[fid]
+            debit = v["debit"] * (cadence(v["text"], len(bloc) / SR, v["source"])
+                                  if v["lang"] == "ja-JP" else 1.0)
+            if abs(debit - 1.0) > 0.01:
                 # 1/debit : wsola raisonne en vitesse de lecture, DEBIT en durée.
                 bloc = wsola(bloc, 1.0 / debit, SR).astype(np.float32)
             if k and p["seq"][k - 1][1] == GAP_JOINT:
@@ -820,6 +893,21 @@ def main():
 
     # Le ménage n'a lieu qu'une fois le corpus complet : tant qu'un rôle attend
     # sa voix, un clip absent du manifeste peut être un clip encore valide.
+    suspects = []
+    for fid, v in inventory.items():
+        q = FRAG_DIR / f"{fid}.mp3"
+        if v["lang"] != "ja-JP" or not q.exists():
+            continue
+        k = cadence_brute(v["text"], len(trimmed(q)) / SR, v["source"])
+        if k < SUSPECT_MIN or k > SUSPECT_MAX:
+            suspects.append((k, v["text"], fid))
+    if suspects:
+        print(f"\n{len(suspects)} prises hors cadence de plus de "
+              f"{100 * (SUSPECT_MAX - 1):.0f} % - à regraver plutôt qu'à étirer :")
+        for k, t, fid in sorted(suspects):
+            print(f"  ×{k:.2f}  {fid}  {t[:40]}")
+        print("Supprimer leur fichier dans audio-src/fragments et relancer.\n")
+
     orphans = [] if deferred else [q for q in out.glob("*.mp3") if q.stem not in manifest]
     for q in orphans:
         q.unlink()

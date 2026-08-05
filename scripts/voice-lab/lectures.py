@@ -82,6 +82,10 @@ def main():
         bodies.setdefault(s["kanji"], None)
 
     table = {b: list(reading(b)) for b in bodies}
+    # La lecture en kana d'AVANT correction, gardée pour les entrées corrigées :
+    # une correction remet souvent des kanji, et on ne compte pas les mores d'un
+    # kanji - 「京浜東北線」 fait cinq caractères pour neuf mores.
+    kana_brut = {b: v[0] for b, v in table.items()}
 
     # Corrections à la main, dans un fichier SÉPARÉ : les écrire dans la table
     # serait les perdre à la prochaine régénération, qui la réécrit en entier.
@@ -122,6 +126,7 @@ def main():
             # souvent des kanji, délibérément, et graver.py doit pouvoir le savoir
             # pour ne pas les signaler comme des conversions ratées.
             "corrections": sorted(applied),
+            "kana": {k: kana_brut[k] for k in sorted(applied) if k in kana_brut},
             "lectures": dict(sorted(table.items())),
         }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"{len(table)} lectures → {dest}")
