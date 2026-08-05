@@ -283,21 +283,21 @@ def resserrer_silences(y, cible=PAUSE_INTERNE):
 # La constante n'est pas du remplissage : c'est l'attaque et la chute, qui ne
 # dépendent pas de la longueur. Sans elle, un fragment de trois mores serait
 # ramené à 0,36 s au lieu de 0,61.
-CADENCE = (0.255, 0.1196)
-# Une virgule à l'intérieur d'un fragment y met une PAUSE, que le modèle de
-# durée doit payer sinon il croit le fragment traînant. C'est le silence relevé
-# après une virgule sur la prise réelle, le même que pose le montage.
-CADENCE_VIRGULE = GAP_COMMA
-# Bornes du resserrage automatique. Au-delà le vocodeur s'entend - et surtout,
-# un écart de plus de 20 % ne vient plus du débit : c'est une prise abîmée.
-# 「ウエノ」 est sorti à 0,36 s pour trois mores, soit 8,3 mores/s quand la vraie
-# annonce ne dépasse jamais 7,0 : l'étirer donnerait un mot ralenti au lieu d'un
-# mot correct. Ces prises-là sont SIGNALÉES pour regravure, pas rattrapées.
-# Facteur appliqué PAR-DESSUS la cadence mesurée, si l'on veut s'écarter
-# volontairement de la vraie annonce. 1 = la vitesse relevée sur la prise
-# réelle. Le baisser accélère tout le rôle d'un coup - à n'utiliser qu'une fois
-# les écarts structurels réglés, sinon on masque une cause au lieu de la
-# corriger, comme la coupure de 「お出口は｜右側です」 qui valait 19 % à elle seule.
+# Débit visé, en mores par seconde. UN SEUL chiffre, et c'est un choix : la
+# voix doit parler partout à la vitesse de ses meilleurs fragments.
+#
+# Le modèle précédent était affine - durée = 0,255 + 0,1196 × mores - ajusté sur
+# la prise réelle. Il la reproduisait fidèlement, y compris son défaut vu d'ici :
+# sa constante d'attaque écrasait les fragments courts. 「次は」 tombait à 4,9
+# mores/s et les noms de gares avec lui, quand 「お出口は右側です」 tenait 7,0 et
+# 「この電車は」 6,2. Les noms de lignes, entre les deux, sortaient à 5,9-6,2 -
+# c'est là que la lenteur s'entendait le plus.
+#
+# 7,0 est le débit de 「お出口は◯側です」, celui que l'oreille a retenu comme
+# référence. On assume ce qu'il coûte : les fragments courts deviennent PLUS
+# RAPIDES que la vraie annonce, qui met 0,51 s pour les trois mores de 「次は」
+# là où ce débit en demande 0,43. C'est un écart voulu, pas une dérive.
+CADENCE_RATE = 7.0
 CADENCE_GLOBAL = 1.0
 CADENCE_MIN, CADENCE_MAX = 0.80, 1.20
 SUSPECT_MIN, SUSPECT_MAX = 0.75, 1.30
@@ -333,11 +333,10 @@ def cadence_brute(text, duree, source=None, silence=0.0):
     n = mores(text, source)
     if n < 2 or duree < 0.15:
         return 1.0
-    a, b = CADENCE
     # Le silence interne est MESURÉ sur la prise et passé en argument : un terme
     # forfaitaire par virgule ferait double emploi, et se tromperait de valeur
     # dès que la pause diffère de celle prévue.
-    return float((a + b * n + silence) / duree)
+    return float((n / CADENCE_RATE + silence) / duree)
 
 
 def cadence(text, duree, source=None, silence=0.0):
