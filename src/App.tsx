@@ -13,6 +13,7 @@ import { useStore } from './store';
 import { loadAudioGame, loadGame } from './gameLoader';
 import { StartScreen } from './ui/StartScreen';
 import { RenderLoading } from './ui/RenderLoading';
+import { useScreenAwake } from './ui/useScreenAwake';
 
 const Game = lazy(loadGame);
 const AudioGame = lazy(loadAudioGame);
@@ -20,6 +21,13 @@ const AudioGame = lazy(loadAudioGame);
 export default function App() {
   const started = useStore((s) => s.started);
   const mode = useStore((s) => s.mode);
+
+  // L'écran ne s'éteint pas pendant le trajet. Posé ici, au-dessus des deux
+  // versions : le téléphone qui verrouille au bout de trente secondes coupe
+  // l'image de l'une et le SON de l'autre (iOS suspend le contexte audio à
+  // l'extinction). Le menu, lui, n'a rien à retenir - on y lit, on y clique,
+  // et la minuterie du système y est à sa place.
+  useScreenAwake(started);
 
   if (!started) {
     return (
