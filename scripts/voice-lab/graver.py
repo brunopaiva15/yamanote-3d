@@ -47,7 +47,7 @@ Usage :
       public/audio/announcements src/data/pa-manifest.ts \\
       [--essai N] [--plan] [--hiragana]
   python scripts/voice-lab/graver.py --verifier   # débusque les prises muettes
-  python scripts/voice-lab/graver.py --variantes 次は [--fin] [--stab]
+  python scripts/voice-lab/graver.py --variantes 次は [--fin] [--stab] [--debit]
 """
 
 import hashlib
@@ -147,11 +147,17 @@ FONDU = 0.015
 # se règle ici, à l'oreille, sans regraver.
 #
 # La clé est le TEXTE SOURCE, pas la lecture : elle reste lisible et survit à
-# un changement de graphie. Une valeur inférieure à 1 raccourcit.
+# un changement de graphie. La valeur est un FACTEUR DE DURÉE : 0,85 rend le
+# fragment 15 % plus court.
+#
+# ⚠ `wsola` prend l'inverse - un rate de 0,85 y ALLONGE de 18 %. Les trois
+# premières valeurs posées ici l'ont été sans cette inversion, donc à l'envers :
+# 「お乗換です」 était rallongé à chaque tour, ce qui explique qu'il ait traîné
+# davantage après chaque « resserrage ». Le montage convertit désormais.
 DEBIT = {
-    # À peine resserré : la graphie mixte a réglé l'essentiel, il ne reste
-    # qu'un cheveu. 5 % est sous le seuil où le vocodeur laisse une trace.
-    "お乗換です": 0.95,
+    # Laissé à 1 en attendant la grille : les valeurs précédentes agissaient à
+    # l'envers, donc aucune ne dit quoi que ce soit du bon réglage.
+    "お乗換です": 1.0,
     # Note : 「お乗換です」 était sorti d'ici : à 0,85 puis 0,75 il traînait toujours,
     # donc la durée n'était pas la cause. C'est la GRAPHIE qui a été changée
     # (voir lectures-corrections.json). Si la nouvelle traîne à son tour, c'est
@@ -518,6 +524,45 @@ def build_plan(items):
 GRAPHIES = ("katakana", "hiragana", "source")
 PONCTUATIONS = (("sans", ""), ("virgule", "、"), ("point", "。"))
 GRILLE_STAB = (0.55, 0.85, 1.00)
+# Resserrages proposés. Au-delà de -30 % le vocodeur commence à s'entendre sur
+# des voyelles tenues, et c'est pour ça que la grille s'arrête à 0,70.
+GRILLE_DEBIT = (1.00, 0.92, 0.85, 0.78, 0.70)
+
+
+def variantes_debit(key, source, role="cabin", lang="ja-JP", pos="mid"):
+    """Une seule prise, déclinée à plusieurs vitesses.
+
+    Un fragment trop lent ne se compare pas à d'autres graphies : il se compare
+    à LUI-MÊME plus court. Une seule gravure, donc, puis des resserrages au
+    vocodeur - la hauteur ne bouge pas, seule la durée. Ça coûte un appel au
+    lieu de cinq, et surtout ça isole le débit : d'une piste à l'autre, rien
+    d'autre n'a changé.
+    """
+    ESSAI_DIR.mkdir(parents=True, exist_ok=True)
+    lecture = kana(source) if lang == "ja-JP" else source
+    envoye = spoken(lecture, "", pos, lang, source)
+    mp3 = call(f"/text-to-speech/{VOICES[(lang, role)]}", key, raw=True,
+               query=f"?output_format={OUTPUT_FORMAT}",
+               body={"text": envoye, "model_id": MODEL,
+                     "voice_settings": reglages(role, source)})
+    brut = ESSAI_DIR / "debit-prise.mp3"
+    brut.write_bytes(mp3)
+    vide, _ = muet(brut)
+    if vide:
+        raise SystemExit("Prise muette - relancer.")
+    base = trimmed(brut)
+    print(f"« {source} » → envoyé « {envoye} »   [{role} {pos}]\n")
+    for deb in GRILLE_DEBIT:
+        y = base if deb == 1.0 else wsola(base, 1.0 / deb, SR).astype(np.float32)
+        out = ESSAI_DIR / f"debit-{int(deb * 100):03d}.mp3"
+        out.write_bytes(encode_mp3(y.astype(np.float32), SR, kbps=96))
+        print(f"  {out.name}  {len(y) / SR:.2f}s"
+              + ("   (tel quel)" if deb == 1.0 else f"   -{100 - deb * 100:.0f} %"))
+    brut.unlink()
+    print(f"\n→ {ESSAI_DIR}\n"
+          "Toutes viennent de LA MÊME prise : seule la vitesse change.\n"
+          f'Reporter la retenue dans graver.py :  DEBIT["{source}"] = 0.xx\n'
+          "Le resserrage s'applique au montage, donc rien n'est regravé.")
 
 
 def variantes(key, source, role="cabin", lang="ja-JP", pos="mid", stab=False):
@@ -620,8 +665,11 @@ def main():
                 f"« {src} » n'est pas un fragment connu.\n"
                 "Lancer `npm run voix:variantes` sans rien pour voir la liste "
                 "numérotée, puis rappeler avec le numéro.")
-        variantes(key, src, pos="end" if "--fin" in sys.argv else "mid",
-                  stab="--stab" in sys.argv)
+        pos = "end" if "--fin" in sys.argv else "mid"
+        if "--debit" in sys.argv:
+            variantes_debit(key, src, pos=pos)
+        else:
+            variantes(key, src, pos=pos, stab="--stab" in sys.argv)
         return
     texts_path, out_dir, manifest_path = sys.argv[1:4]
     argv = sys.argv[4:]
@@ -740,7 +788,8 @@ def main():
             bloc = trimmed(FRAG_DIR / f"{fid}.mp3")
             debit = inventory[fid]["debit"]
             if debit != 1.0:
-                bloc = wsola(bloc, debit, SR).astype(np.float32)
+                # 1/debit : wsola raisonne en vitesse de lecture, DEBIT en durée.
+                bloc = wsola(bloc, 1.0 / debit, SR).astype(np.float32)
             if k and p["seq"][k - 1][1] == GAP_JOINT:
                 y = fondu(y, bloc)  # raccord interne : on recolle le mot
             else:
