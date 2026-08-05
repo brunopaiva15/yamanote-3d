@@ -70,13 +70,14 @@ const EARTH_R = 6371000;
  * En dessous, un repère n'est plus lointain.
  *
  * Le Scramble Square passe à cent mètres de la voie à Shibuya, la tour de Tokyo
- * à un kilomètre et demi de Hamamatsuchō. À cette distance, une découpe à plat
- * posée sur la sphère de l'horizon serait à la fois énorme et fausse - et c'est
- * de toute façon le domaine de three/Landmarks, qui pose des volumes le long de
- * la voie. La couche géographique s'efface donc en approchant.
+ * à un kilomètre trois de Hamamatsuchō. À cette distance, une découpe à plat
+ * occupe quinze degrés de ciel, et son défaut se voit : elle n'a ni fenêtres, ni
+ * étages, ni épaisseur. C'est de toute façon le domaine de three/Landmarks, qui
+ * pose des volumes le long de la voie ; la couche géographique commence là où le
+ * contour suffit, c'est-à-dire au-delà de deux kilomètres.
  */
-const NEAR_HIDE = 1000;
-const NEAR_FULL = 2200;
+const NEAR_HIDE = 2000;
+const NEAR_FULL = 3500;
 
 /**
  * Portée de référence de l'air (m), pour une clarté de 1.
@@ -88,12 +89,13 @@ const NEAR_FULL = 2200;
  * temps clair à Tokyo. Les deux ne décrivent pas la même chose : l'une est un
  * mur de fin de décor, l'autre l'épaisseur réelle de l'atmosphère.
  *
- * Calage : par un janvier sec (clarté ≈ 1,3), la portée dépasse cinquante
+ * Calage : par un janvier sec (clarté ≈ 1,3), la portée approche quatre-vingts
  * kilomètres - la tour de Tokyo est franche, Yokohama se devine, le Fuji est un
- * fantôme. Par un août moite (clarté ≈ 0,7), elle tombe sous quinze : la tour
- * de Tokyo se voile, tout le reste a disparu.
+ * fantôme bleu. Par un août moite (clarté ≈ 0,7), elle tombe à vingt : le Fuji
+ * a disparu, la tour de Tokyo se voile. Sous l'averse, il ne reste rien
+ * au-delà du kilomètre.
  */
-const AIR_RANGE = 30000;
+const AIR_RANGE = 46000;
 
 /** Au-delà, il ne reste rien à peindre qui se distingue du ciel. */
 const VEIL_MAX = 0.94;
@@ -103,11 +105,22 @@ const SHAPE_TONE: Record<GeoLandmark['shape'], string> = {
   tower: '#7f8da0',
   twin: '#818f9f',
   needle: '#8a8f98',
-  mountain: '#8496ae',
+  mountain: '#75879f',
   bridge: '#9aa3ac',
 };
 /** Neige de sommet : la seule couleur franche de tout l'horizon. */
 const SNOW = new THREE.Color('#eef4fa');
+
+/**
+ * Le fond dans lequel un repère se noie la nuit.
+ *
+ * La brume de la scène est claire même après le coucher du soleil - c'est la
+ * pollution lumineuse, et c'est juste pour le premier plan. Mais tirer une masse
+ * lointaine vers ce gris-là la rendrait PLUS CLAIRE que le ciel qui est derrière
+ * elle : la tour disparue reviendrait en fantôme blanc. Ce qu'un repère rejoint
+ * en s'effaçant la nuit est la lueur brune de l'horizon, jamais un gris de jour.
+ */
+const NIGHT_HAZE = new THREE.Color('#4d3b34');
 
 const ID_TONE: Record<string, string> = {
   // La tour de Tokyo est peinte en orange international, obligation de
@@ -245,8 +258,9 @@ export function FarSkyline() {
     // retire. C'est le même produit qui commande la portée de la brume de scène
     // et le voile du ciel - trois couches, un seul air.
     const air = Math.max(0.15, se.clarity * weather.visibility * (1 - 0.75 * weather.cloud));
-    const range = AIR_RANGE * Math.pow(air, 1.8);
+    const range = AIR_RANGE * air * air;
     if (scene.fog instanceof THREE.Fog) sc.haze.copy(scene.fog.color);
+    sc.haze.lerp(NIGHT_HAZE, 0.85 * night);
 
     for (const it of built.items) {
       sightTo(sc.pose, it.lm.x, it.lm.z, sc.sight);

@@ -395,6 +395,37 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     return out;
   };
 
+  /**
+   * L'horizon géographique, tel qu'il est POSÉ.
+   *
+   * Un relèvement se juge en degrés, pas à l'œil : une capture ne dit pas si le
+   * Skytree est à quarante-deux degrés sur la droite ou à cinquante-huit, et
+   * c'est pourtant la seule chose que cette couche promet. La sonde relit donc
+   * la position des découpes dans la scène - et non le calcul qui les a posées -
+   * pour en redéduire l'écart au sens de marche, la distance qu'implique leur
+   * taille angulaire, et leur hauteur apparente en degrés.
+   *
+   *   __probeHorizon()  → [{ repère, relèvement, hauteur, visible }, …]
+   */
+  w.__probeHorizon = () => {
+    const out: Record<string, unknown>[] = [];
+    scene.traverse((o) => {
+      if (!o.name.startsWith('horizon ')) return;
+      const mesh = o as THREE.Mesh;
+      const az = (Math.atan2(mesh.position.x, -mesh.position.z) * 180) / Math.PI;
+      const r = Math.hypot(mesh.position.x, mesh.position.z);
+      out.push({
+        repère: o.name.slice(8),
+        // Positif = à droite du sens de marche, comme dans systems/tokyoBearing.
+        relèvement: +az.toFixed(1),
+        hauteur: +((Math.atan(mesh.scale.y / r) * 180) / Math.PI).toFixed(2),
+        visible: mesh.visible,
+        teinte: `#${(mesh.material as THREE.MeshBasicMaterial).color.getHexString()}`,
+      });
+    });
+    return out.sort((a, b) => (a.relèvement as number) - (b.relèvement as number));
+  };
+
   // Effacer la rame pour ne juger que le paysage.
   //
   // De l'intérieur, la ville se regarde par une baie : le montant, la banquette
@@ -407,6 +438,32 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     const rame = scene.getObjectByName('rame');
     if (rame) rame.visible = !on;
     return !!rame;
+  };
+
+  /**
+   * Effacer la ville procédurale, comme `__probeBare` efface la rame.
+   *
+   * Le ruban urbain est opaque et il masque - à juste titre - le pied et
+   * souvent le tronc des repères lointains : depuis une baie, on ne voit le
+   * Skytree que dans une trouée, et c'est bien ce qui se passe dans le vrai
+   * train. Reste qu'un relèvement ne se juge pas sur ce qui n'est pas peint.
+   * Cette bascule retire les familles du ruban le temps d'une capture, et ne
+   * laisse que le ciel et l'horizon géographique.
+   *
+   * Elle passe par les CALQUES et non par `visible` : plusieurs familles
+   * rétablissent leur visibilité à chaque image - les feux d'obstacle selon
+   * l'heure, les poteaux selon la couverture PLATEAU - et reviendraient donc
+   * avant la capture. Personne ne touche aux calques ailleurs dans le jeu.
+   */
+  w.__probeNoCity = (on = true) => {
+    let n = 0;
+    scene.traverse((o) => {
+      if (!o.userData?.cityFamily) return;
+      if (on) o.layers.disableAll();
+      else o.layers.enable(0);
+      n++;
+    });
+    return n;
   };
 
   // État courant : de quoi diagnostiquer une capture qui ne montre pas ce
