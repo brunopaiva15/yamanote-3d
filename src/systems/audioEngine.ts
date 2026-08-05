@@ -107,6 +107,19 @@ import {
 } from './departureSequence';
 import { melodyDefinitionForPath } from '../data/melodyDefinitions';
 import { soundCue } from './subtitles';
+import { Gate } from './audioGate';
+import {
+  clipCacheBytes,
+  contextSettings,
+  openingTier,
+  panningModelFor,
+  recentFrameSeconds,
+  reverbEnabled,
+  sfxPerSecond,
+  useAudioLoad,
+  watchAudioLoad,
+  type AudioTier,
+} from './audioLoad';
 
 interface Nodes {
   master: Tone.Gain;
@@ -134,7 +147,9 @@ interface Nodes {
   airFilter: Tone.Filter;
   vent: Tone.NoiseSynth;
   squeal: Tone.Synth;
+  slideTrainNoise: Tone.Noise;
   slideTrainGain: Tone.Gain;
+  slidePsdNoise: Tone.Noise;
   slidePsdGain: Tone.Gain;
   thud: Tone.MembraneSynth;
   doorChime: Tone.Synth[][];
@@ -145,11 +160,16 @@ interface Nodes {
   paIn: Tone.Gain; // entrée du bus wagon (avant timbre haut-parleur)
   paVoiceIn: Tone.Gain; // voix de bord seule, coupée depuis le quai
   paVoiceGain: Tone.Gain;
+  paBus: Tone.Gain; // sortie du timbre haut-parleur, avant la ligne de diffusion
+  paLine: Tone.Gain; // la ligne elle-même : huit diffuseurs et la petite queue
+  paVerb: Tone.Reverb;
+  paVerbGain: Tone.Gain;
   platIn: Tone.Gain; // entrée du bus quai
   platVoiceIn: Tone.Gain; // voix du quai seule, lointaine depuis la rame
   platVoiceGain: Tone.Gain;
   melodyIn: Tone.Gain; // 発車メロディ seule, calée à part du reste du quai
   platGain: Tone.Gain;
+  platLine: Tone.Gain; // la ligne des diffuseurs d'auvent, et l'envoi de la gare
   platLp: Tone.Filter;
   platTaps: PlatformTap[];
   // Avertisseurs des portes palières : deux voix - l'ouverture et la
@@ -158,9 +178,12 @@ interface Nodes {
   psdWarn: Tone.PolySynth<Tone.Synth>;
   psdChimeClick: Tone.NoiseSynth;
   psdChimeDoor: Tone.Gain;
+  psdLine: Tone.Gain; // la ligne des baies, débranchée entre deux signaux
   psdTaps: PlatformTap[];
+  hiss: Tone.Noise;
   hissGain: Tone.Gain;
   paClick: Tone.NoiseSynth;
+  platHiss: Tone.Noise;
   platHissGain: Tone.Gain;
   platClick: Tone.NoiseSynth;
   platChime: Tone.PolySynth<Tone.FMSynth>;
@@ -170,6 +193,7 @@ interface Nodes {
   ambBed: Tone.Noise;
   ambFilter: Tone.Filter;
   ambGain: Tone.Gain;
+  ambOut: Tone.Gain; // sortie du lit d'ambiance : la salle et la sortie
   ambIn: Tone.Gain;
   ambBell: Tone.Synth;
   ambWhoosh: Tone.NoiseSynth;
@@ -223,6 +247,14 @@ interface Nodes {
   thunderNoise: Tone.NoiseSynth;
   thunderFilter: Tone.Filter;
   thunderCrack: Tone.Synth;
+  /**
+   * Toutes les sources spatialisées du graphe, dans un seul panier.
+   *
+   * Le palier audio peut changer EN COURS DE PARTIE (systems/audioLoad) et le
+   * modèle de panoramique se règle nœud par nœud : sans cette liste, il
+   * faudrait aller les rechercher un à un dans quatre familles différentes.
+   */
+  panners: Tone.Panner3D[];
 }
 
 let nodes: Nodes | null = null;
@@ -444,7 +476,39 @@ const listenerPos: { x: number; y: number; z: number } = { x: 0, y: CONFIG.eyeHe
 
 export async function startAudio(): Promise<void> {
   if (nodes) return;
+
+  // Le palier audio se décide AVANT le contexte, parce que le contexte porte
+  // le réglage qui ne se reprend jamais : la taille du tampon de sortie. Tout
+  // le reste (panoramique, réverbérations, plafond de bruitages) se change à
+  // chaud ; celui-là est coulé dans le contexte à sa création, et c'est
+  // pourtant lui qui décide si la machine grésille ou non.
+  const tier = openingTier();
+  const settings = contextSettings(tier);
+  // Tone tient un contexte par défaut, ouvert au premier accès - la coupure
+  // posée par le HUD avant l'embarquement suffit à le faire naître. Il n'a
+  // aucun nœud, mais un contexte audio ouvert continue de rendre du silence en
+  // temps réel : on le referme derrière soi plutôt que d'en laisser deux
+  // tourner.
+  const previous = Tone.getContext();
+  Tone.setContext(
+    new Tone.Context({
+      latencyHint: settings.latencyHint,
+      lookAhead: settings.lookAhead,
+      updateInterval: settings.updateInterval,
+    }),
+  );
+  if (previous !== Tone.getContext()) {
+    try {
+      previous.dispose();
+    } catch {
+      /* déjà fermé, ou refusé : ce n'est qu'un contexte vide de plus */
+    }
+  }
   await Tone.start();
+  // Le contexte est neuf : la coupure et le volume que le joueur avait posés
+  // sur le précédent doivent le suivre.
+  Tone.getDestination().mute = muted;
+  applyClipCacheBudget(tier);
 
   // Graphe neuf, mémoire vide : les publications par image se taisent tant que
   // rien ne bouge (voir `published` et `publishedTrainKey`), et un souvenir
@@ -458,6 +522,11 @@ export async function startAudio(): Promise<void> {
   published.weather = '';
 
   const master = new Tone.Gain(volume * 0.9).toDestination();
+
+  // Le panoramique de toutes les sources spatialisées, décidé une fois ici et
+  // repris sur place si le palier descend en cours de route.
+  const panning = panningModelFor(tier);
+  const panners: Tone.Panner3D[] = [];
 
   // Bus de la rame : tout ce qui est PORTÉ PAR LE TRAIN y passe, et lui seul
   // s'atténue avec la distance (voir updateAudio). À bord, son gain vaut 1 et
@@ -588,6 +657,16 @@ export async function startAudio(): Promise<void> {
   const paBus = new Tone.Gain(0.5);
   paIn.chain(paHp, paPresence, paLp, paComp, paBus);
 
+  // La LIGNE de diffusion du wagon, en un seul nœud.
+  //
+  // Elle ne change rien à ce qu'on entend - c'est un gain de 1 - et elle change
+  // tout à ce qu'on calcule : huit panoramiques et une réverbération pendent
+  // derrière elle, et la sono du wagon ne parle que deux fois par arrêt. Une
+  // arête à débrancher, et les neuf s'éteignent ensemble (voir systems/
+  // audioGate, et `gates.pa` plus bas).
+  const paLine = new Tone.Gain(1);
+  paBus.connect(paLine);
+
   // Un Panner3D par diffuseur : c'est CE fan-out qui donne l'impression que le
   // son sort des grilles du plafond. Cône dirigé vers le bas (les diffuseurs
   // arrosent l'allée), atténuation inverse avec la distance.
@@ -599,7 +678,7 @@ export async function startAudio(): Promise<void> {
       orientationX: 0,
       orientationY: -1,
       orientationZ: 0,
-      panningModel: 'HRTF',
+      panningModel: panning,
       distanceModel: 'inverse',
       refDistance: 1.15,
       rolloffFactor: 1.25,
@@ -608,15 +687,16 @@ export async function startAudio(): Promise<void> {
       coneOuterAngle: 250,
       coneOuterGain: 0.45,
     });
-    paBus.connect(p);
+    paLine.connect(p);
     p.connect(master);
+    panners.push(p);
   }
 
   // Petite réverbération de cabine, NON spatialisée : elle recolle les
   // diffuseurs entre eux sans brouiller les indices de direction.
   const paVerb = new Tone.Reverb({ decay: 0.85, preDelay: 0.012, wet: 1 });
   const paVerbGain = new Tone.Gain(0.16);
-  paBus.chain(paVerb, paVerbGain, master);
+  paLine.chain(paVerb, paVerbGain, master);
 
   // Voix de bord : tout ce que DIT la rame passe par ce robinet, et lui seul
   // tombe à un niveau lointain quand le joueur descend sur le quai. Les
@@ -648,6 +728,12 @@ export async function startAudio(): Promise<void> {
   const platLp = new Tone.Filter({ type: 'lowpass', frequency: 900, rolloff: -24, Q: 0.4 });
   const platGain = new Tone.Gain(PLAT_BUS_CLOSED);
   platIn.chain(platHp, platLp, platGain);
+  // Même office que `paLine` : les six diffuseurs de l'auvent et l'envoi de la
+  // gare dans sa réverbération pendent derrière cette seule arête. Entre deux
+  // gares, la sono du quai n'a rigoureusement rien à dire - et c'est la plus
+  // grande partie du trajet.
+  const platLine = new Tone.Gain(1);
+  platGain.connect(platLine);
   // Voix du quai (annonces ATOS, agent de quai) : même sono que la mélodie,
   // mais elle passe par un robinet à part. La musique est faite pour porter
   // jusque dans la rame ; la parole du quai, non - depuis une voiture arrêtée
@@ -736,15 +822,16 @@ export async function startAudio(): Promise<void> {
       positionX: 3.3,
       positionY: 3.4,
       positionZ: (i - (PLATFORM_TAPS - 1) / 2) * 19,
-      panningModel: 'HRTF',
+      panningModel: panning,
       distanceModel: 'inverse',
       refDistance: 7,
       rolloffFactor: 0.9,
       maxDistance: 120,
     });
-    platGain.connect(gain);
+    platLine.connect(gain);
     gain.connect(panner);
     panner.connect(master);
+    panners.push(panner);
     return { gain, panner };
   });
 
@@ -812,6 +899,10 @@ export async function startAudio(): Promise<void> {
   }
   const psdChimeDoor = new Tone.Gain(PSD_CHIME_DOORS_CLOSED);
   psdChimeMix.connect(psdChimeDoor);
+  // La ligne des baies : quatre panoramiques pour un signal qui sonne huit
+  // secondes par arrêt. Elle ne reste branchée que le temps de sonner.
+  const psdLine = new Tone.Gain(1);
+  psdChimeDoor.connect(psdLine);
 
   // Les prises de la ligne des baies, sur le même principe que celles de
   // l'auvent - stationPa leur pousse les baies les plus proches de l'oreille.
@@ -825,15 +916,16 @@ export async function startAudio(): Promise<void> {
       positionX: 1.86,
       positionY: 1.46,
       positionZ: (i - (PSD_TAPS - 1) / 2) * 4.9,
-      panningModel: 'HRTF',
+      panningModel: panning,
       distanceModel: 'inverse',
       refDistance: 4,
       rolloffFactor: 1.1,
       maxDistance: 90,
     });
-    psdChimeDoor.connect(gain);
+    psdLine.connect(gain);
     gain.connect(panner);
     panner.connect(master);
+    panners.push(panner);
     return { gain, panner };
   });
 
@@ -932,8 +1024,11 @@ export async function startAudio(): Promise<void> {
   const ambIn = new Tone.Gain(1);
   const ambFilter = new Tone.Filter({ type: 'lowpass', frequency: 900, rolloff: -12, Q: 0.5 });
   const ambGain = new Tone.Gain(0);
-  ambIn.chain(ambFilter, ambGain);
-  ambGain.connect(master);
+  // Le lit d'ambiance sort par un seul point (la salle et la sortie), pour
+  // qu'une seule arête suffise à l'éteindre entre deux gares.
+  const ambOut = new Tone.Gain(1);
+  ambIn.chain(ambFilter, ambGain, ambOut);
+  ambOut.connect(master);
   const ambBed = new Tone.Noise('pink').connect(ambIn);
   ambBed.volume.value = -18;
   ambBed.start();
@@ -954,13 +1049,19 @@ export async function startAudio(): Promise<void> {
   // halle longue et claire, un viaduc n'en a pour ainsi dire pas. Recréer une
   // réponse impulsionnelle à chaque gare coûterait un rendu asynchrone pour un
   // effet que l'oreille attribue surtout à la quantité de réverbération.
+  //
+  // C'est le nœud le plus cher du graphe : une convolution de deux secondes et
+  // demie, qui tourne exactement de la même façon qu'on lui envoie une gare
+  // entière ou du silence. Entre deux gares on ne lui envoie que du silence -
+  // et c'est là que `gates.room` la débranche, queue comprise.
   const roomVerb = new Tone.Reverb({ decay: 2.6, preDelay: 0.02, wet: 1 });
   const roomLp = new Tone.Filter({ type: 'lowpass', frequency: 2200, rolloff: -12, Q: 0.4 });
   const roomSend = new Tone.Gain(0);
-  roomSend.chain(roomLp, roomVerb);
+  roomSend.connect(roomLp);
+  roomLp.connect(roomVerb);
   roomVerb.connect(master);
-  ambGain.connect(roomSend);
-  platGain.connect(roomSend);
+  ambOut.connect(roomSend);
+  platLine.connect(roomSend);
 
   // --- Train qui traverse ----------------------------------------------
   //
@@ -974,12 +1075,13 @@ export async function startAudio(): Promise<void> {
   // aigu - l'air déplacé, le crissement des boudins - qui n'existe qu'au
   // moment où la caisse est là.
   const passPanner = new Tone.Panner3D({
-    panningModel: 'HRTF',
+    panningModel: panning,
     distanceModel: 'inverse',
     refDistance: 8,
     rolloffFactor: 0.8,
     maxDistance: 400,
   }).connect(master);
+  panners.push(passPanner);
   const passRoar = new Tone.Noise('brown');
   const passRoarFilter = new Tone.Filter({ type: 'lowpass', frequency: 300, Q: 0.9 });
   const passRoarGain = new Tone.Gain(0);
@@ -1188,7 +1290,9 @@ export async function startAudio(): Promise<void> {
     airFilter,
     vent,
     squeal,
+    slideTrainNoise,
     slideTrainGain,
+    slidePsdNoise,
     slidePsdGain,
     thud,
     doorChime,
@@ -1198,20 +1302,28 @@ export async function startAudio(): Promise<void> {
     paIn,
     paVoiceIn,
     paVoiceGain,
+    paBus,
+    paLine,
+    paVerb,
+    paVerbGain,
     platIn,
     platVoiceIn,
     platVoiceGain,
     melodyIn,
     platGain,
+    platLine,
     platLp,
     platTaps,
     psdChime,
     psdWarn,
     psdChimeClick,
     psdChimeDoor,
+    psdLine,
     psdTaps,
+    hiss,
     hissGain,
     paClick,
+    platHiss,
     platHissGain,
     platClick,
     platChime,
@@ -1220,6 +1332,7 @@ export async function startAudio(): Promise<void> {
     ambBed,
     ambFilter,
     ambGain,
+    ambOut,
     ambIn,
     ambBell,
     ambWhoosh,
@@ -1263,9 +1376,256 @@ export async function startAudio(): Promise<void> {
     thunderNoise,
     thunderFilter,
     thunderCrack,
+    panners,
   };
 
+  buildGates(nodes);
+  applyAudioTier(tier);
+  // La surveillance ne tourne qu'une fois le graphe monté : c'est le graphe
+  // qu'elle mesure. Elle n'a rien à dire tant qu'il n'y a pas de son.
+  watchAudioLoad(rawAudioContext(), applyAudioTier);
+
   watchContextState();
+}
+
+/** Le contexte natif, celui qui porte `renderCapacity`. */
+function rawAudioContext(): BaseAudioContext | null {
+  try {
+    const ctx = Tone.getContext();
+    const raw = (ctx as unknown as { rawContext?: BaseAudioContext }).rawContext;
+    return raw ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// --- Les robinets de rendu ------------------------------------------------
+//
+// Ce que le moteur DÉBRANCHE quand personne n'écoute. Le pourquoi est dans
+// systems/audioGate ; ici, la carte : quelle ligne, quelle queue, et qui la
+// réveille.
+//
+// La règle de sûreté est toujours la même et elle ne souffre aucune exception :
+// une ligne est réveillée par le code qui PROGRAMME le son, au moment où il le
+// programme - jamais par une observation faite après coup. Un clip, lui, tient
+// sa ligne par un jeton pris au démarrage et rendu à la fin (`acquire` /
+// `release`) : personne n'a à deviner combien de temps dure une annonce.
+
+interface Gates {
+  /** La sono du wagon : huit diffuseurs et la compression. */
+  pa: Gate;
+  /** Sa petite queue de cabine, à part : le palier peut la retirer seule. */
+  cabinVerb: Gate;
+  /** Celle du quai : six diffuseurs et l'envoi dans la salle. */
+  plat: Gate;
+  /** Les avertisseurs des baies palières : quatre points de diffusion. */
+  psd: Gate;
+  /** La réverbération du lieu : le nœud le plus cher du graphe. */
+  room: Gate;
+  /** Le lit d'ambiance de la gare. */
+  amb: Gate;
+  /** La pluie, sur le pavillon et dehors. */
+  rain: Gate;
+  /** Le train qui traverse : deux souffles et un point mobile. */
+  pass: Gate;
+  /** Les appareils de gare : le moteur qui tourne, et leur envoi dans la salle. */
+  dev: Gate;
+  /** Le frottement des glissières, trois secondes par arrêt. */
+  slide: Gate;
+  /** Le crissement de frein. */
+  brake: Gate;
+  /** Le sifflement du convertisseur : uniquement aux transitions de tension. */
+  siv: Gate;
+  /** Le chant de l'onduleur : rien à l'arrêt. */
+  vvvf: Gate;
+}
+
+let gates: Gates | null = null;
+
+/**
+ * Les générateurs qui tournent en continu : bruits et oscillateurs démarrés au
+ * montage du graphe et jamais arrêtés.
+ */
+type Continuous = Tone.Noise | Tone.Oscillator;
+
+/**
+ * Éteindre et rallumer les générateurs d'une ligne qu'on débranche.
+ *
+ * Débrancher une arête suffit à sortir tout ce qui est derrière du graphe de
+ * rendu - c'est le principe même du robinet -, mais cela ne suffit PAS à
+ * garder les sources en vie : un navigateur qui ne rend plus un générateur de
+ * bruit finit par le clore, et le rebrancher ne le ressuscite pas. C'est un
+ * silence définitif, et il ne se voit pas : le nœud est là, son gain est bon,
+ * son arête est branchée, et il ne sort rien. Vérifié à l'oreille sur Chromium
+ * (voir /audio-probe.html) - la pluie, l'ambiance de gare et le train qui
+ * traverse s'étaient éteints pour de bon après un premier passage.
+ *
+ * Les générateurs sont donc ARRÊTÉS avec leur ligne et RELANCÉS avec elle. Un
+ * bruit relancé repart où il veut, ce qui est exactement ce qu'on attend d'un
+ * bruit ; un oscillateur repart de zéro, ce qui ne s'entend pas davantage sur
+ * les deux concernés (le chant de l'onduleur et le sifflement du convertisseur
+ * repartent tous les deux d'un gain nul).
+ */
+function revive(sources: readonly Continuous[]): void {
+  for (const src of sources) {
+    if (src.state !== 'started') src.start(Tone.now());
+  }
+}
+
+function silence(sources: readonly Continuous[]): void {
+  for (const src of sources) {
+    if (src.state === 'started') src.stop(Tone.now());
+  }
+}
+
+/** Une ligne : les arêtes à défaire, et les générateurs qui pendent derrière. */
+function line(
+  tail: number,
+  sources: readonly Continuous[],
+  edges: readonly [from: Tone.ToneAudioNode, to: Tone.InputNode][],
+): Gate {
+  return new Gate(tail, {
+    open: () => {
+      revive(sources);
+      for (const [from, to] of edges) from.connect(to);
+    },
+    close: () => {
+      for (const [from, to] of edges) from.disconnect(to);
+      silence(sources);
+    },
+  });
+}
+
+/** Les deux réverbérations sont-elles permises au palier courant ? */
+let verbAllowed = true;
+
+function buildGates(n: Nodes): void {
+  gates = {
+    // Queue : le temps que la petite réverbération de cabine finisse (0,85 s)
+    // et qu'une rampe de souffle de ligne retombe (0,3 s). Derrière l'arête :
+    // les huit diffuseurs, la compression, et le souffle de la ligne ouverte.
+    pa: line(1.4, [n.hiss], [[n.paBus, n.paLine]]),
+    // La réverbération se coupe par sa SORTIE, jamais par son entrée : un nœud
+    // est rendu tant qu'il lui reste un chemin vers la sortie du graphe, et une
+    // convolution privée d'entrée continue de convoluer du silence, au même
+    // prix. Couper devant elle ne l'éteint pas ; couper derrière, si.
+    cabinVerb: line(1.4, [], [[n.paVerb, n.paVerbGain]]),
+    // La 発車メロディ se referme en fondu d'une demi-seconde ; les annonces se
+    // terminent net. Une seconde et demie couvre les deux largement.
+    plat: line(1.5, [n.platHiss], [[n.platGain, n.platLine]]),
+    // L'avertisseur coupe en douze millisecondes : il n'a pas de queue du tout,
+    // seulement ses deux réflexions de dix-huit millisecondes.
+    psd: line(0.8, [], [[n.psdChimeDoor, n.psdLine]]),
+    // Celle-ci DOIT survivre à sa propre queue : couper une convolution de
+    // 2,6 s en pleine décroissance ferait exactement le clic qu'on est venu
+    // supprimer. C'est aussi elle que le palier le plus sûr interdit tout à
+    // fait (`Gate.disable`), et de la même façon : après la queue.
+    room: line(4.5, [], [
+      [n.roomSend, n.roomLp],
+      // Et, pour la même raison que ci-dessus, l'arête de SORTIE.
+      [n.roomVerb, n.master],
+    ]),
+    amb: line(1.2, [n.ambBed], [[n.ambGain, n.ambOut]]),
+    rain: line(1.2, [n.rainRoof, n.rainOut], [
+      [n.rainRoofGain, n.trainBus],
+      [n.rainOutGain, n.master],
+    ]),
+    pass: line(1.2, [n.passRoar, n.passWind], [
+      [n.passPanner, n.master],
+      [n.passRoarGain, n.roomSend],
+    ]),
+    dev: line(1.5, [n.devMotor], [
+      [n.devBus, n.master],
+      [n.devBus, n.roomSend],
+    ]),
+    slide: line(0.6, [n.slideTrainNoise, n.slidePsdNoise], [
+      [n.slideTrainGain, n.trainBus],
+      [n.slidePsdGain, n.trainBus],
+    ]),
+    brake: line(0.6, [n.brakeNoise], [[n.brakeGain, n.trainBus]]),
+    siv: line(1.5, [n.sivOsc], [[n.sivGain, n.trainBus]]),
+    vvvf: line(0.6, [n.vvvfOsc], [[n.vvvfGain, n.trainBus]]),
+  };
+}
+
+/**
+ * Ferme ce qui n'a plus lieu d'être branché. Appelé UNE FOIS par image, après
+ * les machines à états - donc après tous les réveils de l'image en cours (voir
+ * systems/audioFrame).
+ */
+export function pumpAudioGates(): void {
+  if (!nodes || !gates) return;
+  const now = Tone.now();
+  // La salle entend tout ce qui lui est envoyé : tant qu'une de ses quatre
+  // sources est branchée, elle le reste. Sa propre queue court après.
+  if (gates.plat.open || gates.amb.open || gates.dev.open || gates.pass.open) {
+    gates.room.keepOpen(now);
+  }
+  // Et la queue de cabine suit la sono du wagon, pour la même raison.
+  if (gates.pa.open) gates.cabinVerb.keepOpen(now);
+  for (const gate of Object.values(gates)) gate.settle(now);
+}
+
+/**
+ * Quelles lignes sont branchées à cet instant.
+ *
+ * Pour la page de contrôle /audio-probe.html, et pour elle seule : c'est le
+ * seul moyen de vérifier, sur un vrai navigateur, qu'une ligne se ferme quand
+ * elle doit ET qu'elle se rouvre quand on la sollicite. Un robinet ne se
+ * vérifie pas en lisant le code - il se vérifie en écoutant ce qui sort.
+ */
+export function audioGateStates(): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  if (!gates) return out;
+  for (const [name, gate] of Object.entries(gates)) out[name] = gate.open;
+  return out;
+}
+
+/**
+ * Applique un palier au graphe vivant.
+ *
+ * Tout ce qui est ici se change à chaud, sans reconstruire quoi que ce soit et
+ * sans couper un son en cours : c'est ce qui permet à la surveillance de
+ * descendre d'un cran au milieu d'une annonce sans que l'annonce s'en aperçoive.
+ * Le seul réglage qui n'y figure pas est la taille du tampon de sortie, qui
+ * appartient au contexte et ne se reprend qu'au prochain embarquement.
+ */
+export function applyAudioTier(tier: AudioTier): void {
+  useAudioLoad.setState({ tier });
+  applyClipCacheBudget(tier);
+  sfxTokensPerSecond = sfxPerSecond(tier);
+  const settings = contextSettings(tier);
+  try {
+    const ctx = Tone.getContext() as unknown as {
+      lookAhead: number;
+      updateInterval: number;
+    };
+    ctx.lookAhead = settings.lookAhead;
+    ctx.updateInterval = settings.updateInterval;
+  } catch {
+    /* contexte pas encore là : le prochain démarrage le posera */
+  }
+  if (!nodes) return;
+
+  const model = panningModelFor(tier);
+  for (const panner of nodes.panners) {
+    if (panner.panningModel !== model) panner.panningModel = model;
+  }
+
+  // Les deux réverbérations. Couper une convolution, c'est retirer la PIÈCE :
+  // la gare sonne plus sèche, plus proche, un peu comme un quai de plein air.
+  // C'est la dernière chose qu'on retire, et c'est encore une gare.
+  const verb = reverbEnabled(tier);
+  if (verb === verbAllowed || !gates) return;
+  verbAllowed = verb;
+  const now = Tone.now();
+  if (verb) {
+    gates.room.enable();
+    gates.cabinVerb.enable();
+  } else {
+    gates.room.disable(now);
+    gates.cabinVerb.disable(now);
+  }
 }
 
 // Sur téléphone, le contexte est suspendu par le système à la moindre
@@ -1295,11 +1655,38 @@ export function setVolume(v: number): void {
   if (nodes) nodes.master.gain.rampTo(v * 0.9, 0.1);
 }
 
+/**
+ * Coupure mémorisée.
+ *
+ * Le contexte audio est créé au démarrage du moteur (voir `startAudio`), donc
+ * APRÈS que le HUD a pu poser sa coupure sur celui que Tone tenait par défaut.
+ * Sans cette mémoire, monter à bord le son coupé le rallumerait.
+ */
+let muted = false;
+
 export function setMuted(m: boolean): void {
+  muted = m;
   Tone.getDestination().mute = m;
 }
 
 // --- Spatialisation -----------------------------------------------------
+
+/**
+ * Dernière pose écrite sur l'auditeur.
+ *
+ * Écrire la position de l'auditeur n'est pas un simple affectation : chacune
+ * des dix-neuf sources spatialisées doit recalculer son azimut, son élévation,
+ * son atténuation - et, en HRTF, la paire de réponses d'oreille à convoluer.
+ * Neuf écritures par image, ce sont dix-neuf recalculs par image, y compris
+ * quand le joueur est ASSIS ET IMMOBILE, ce qui est l'essentiel du temps de ce
+ * jeu-ci : on s'assoit et on regarde la ville défiler.
+ *
+ * On garde donc la dernière pose, et on se tait quand la tête n'a pas bougé.
+ */
+const lastPose = [NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN];
+
+/** Un millimètre, et un demi-degré : en deçà, c'est la même pose. */
+const POSE_EPS = 0.001;
 
 // Pose de l'auditeur, appelée chaque frame depuis la caméra. Les diffuseurs
 // sont fixes dans le repère du wagon, seule la tête bouge.
@@ -1318,6 +1705,16 @@ export function setListenerPose(
   listenerPos.y = py;
   listenerPos.z = pz;
   if (!nodes) return;
+  const pose = [px, py, pz, fx, fy, fz, ux, uy, uz];
+  let moved = false;
+  for (let i = 0; i < pose.length; i++) {
+    if (Math.abs(pose[i] - lastPose[i]) >= POSE_EPS) {
+      moved = true;
+      break;
+    }
+  }
+  if (!moved) return;
+  for (let i = 0; i < pose.length; i++) lastPose[i] = pose[i];
   const l = Tone.getListener();
   l.positionX.value = px;
   l.positionY.value = py;
@@ -1341,19 +1738,36 @@ export const platformSpeakerTaps = PLATFORM_TAPS;
  */
 export function setPlatformSpeakers(points: readonly SpeakerPos[]): void {
   if (!nodes) return;
-  for (let i = 0; i < nodes.platTaps.length; i++) {
-    const { gain, panner } = nodes.platTaps[i];
+  placeTaps(nodes.platTaps, points);
+}
+
+/**
+ * Pose une ligne de prises, en n'écrivant que ce qui a bougé.
+ *
+ * Même raison que pour l'auditeur : chaque écriture de position fait recalculer
+ * son champ au panoramique, et les diffuseurs d'un quai ne bougent PAS d'une
+ * image à l'autre - c'est le quai qui glisse, et il ne glisse qu'à l'approche
+ * et au départ. Le reste du temps (tout l'arrêt, et tout le trajet entre deux
+ * gares) ces dix positions sont rigoureusement les mêmes.
+ */
+function placeTaps(taps: readonly PlatformTap[], points: readonly SpeakerPos[]): void {
+  for (let i = 0; i < taps.length; i++) {
+    const { gain, panner } = taps[i];
     const p = points[i];
     if (!p) {
-      gain.gain.value = 0;
+      if (gain.gain.value !== 0) gain.gain.value = 0;
       continue;
     }
-    gain.gain.value = 1;
-    panner.positionX.value = p[0];
-    panner.positionY.value = p[1];
-    panner.positionZ.value = p[2];
+    if (gain.gain.value !== 1) gain.gain.value = 1;
+    // Un centimètre : bien en dessous de ce qu'une oreille distingue à sept
+    // mètres, bien au-dessus du bruit numérique du glissement de quai.
+    if (Math.abs(panner.positionX.value - p[0]) >= TAP_EPS) panner.positionX.value = p[0];
+    if (Math.abs(panner.positionY.value - p[1]) >= TAP_EPS) panner.positionY.value = p[1];
+    if (Math.abs(panner.positionZ.value - p[2]) >= TAP_EPS) panner.positionZ.value = p[2];
   }
 }
+
+const TAP_EPS = 0.01;
 
 /** Combien de baies palières l'avertisseur peut panner à la fois. */
 export const psdChimeTaps = PSD_TAPS;
@@ -1366,18 +1780,7 @@ export const psdChimeTaps = PSD_TAPS;
  */
 export function setPsdBuzzers(points: readonly SpeakerPos[]): void {
   if (!nodes) return;
-  for (let i = 0; i < nodes.psdTaps.length; i++) {
-    const { gain, panner } = nodes.psdTaps[i];
-    const p = points[i];
-    if (!p) {
-      gain.gain.value = 0;
-      continue;
-    }
-    gain.gain.value = 1;
-    panner.positionX.value = p[0];
-    panner.positionY.value = p[1];
-    panner.positionZ.value = p[2];
-  }
+  placeTaps(nodes.psdTaps, points);
 }
 
 /**
@@ -1474,11 +1877,80 @@ function slot(instrument: string, when: number, gap = 0.005): number {
   return t;
 }
 
+// --- Le plafond de bruitages de foule -------------------------------------
+//
+// Un wagon plein et un quai bondé peuvent lâcher, dans la même seconde, dix
+// éternuements, sacs et semelles - chacun programmant trois ou quatre
+// enveloppes qui se recouvrent. L'oreille n'en distingue pas la moitié ; le fil
+// audio, lui, les calcule toutes, et c'est précisément à l'embarquement - le
+// moment le plus chargé du jeu, où trente personnes bougent à la fois - qu'il
+// n'a plus de marge.
+//
+// Un seau à jetons, donc : on en remet `sfxTokensPerSecond` par seconde, et ce
+// qui se présente le seau vide est simplement écarté. Personne n'entend le
+// froissement de sac qui n'a pas eu lieu ; tout le monde entend le craquement.
+//
+// Au palier plein le seau est infini : une machine qui tient n'a rien à
+// économiser.
+
+/** Jetons rendus par seconde, selon le palier (systems/audioLoad). */
+let sfxTokensPerSecond = Number.POSITIVE_INFINITY;
+/** De quoi laisser passer une bousculade entière avant de rationner. */
+const SFX_BURST = 6;
+let sfxTokens = SFX_BURST;
+let sfxLastAt = 0;
+
+/**
+ * Ce bruitage de foule a-t-il le droit de sonner ?
+ *
+ * À n'appeler que pour du DÉCOR sonore - la foule, ses sacs, ses semelles.
+ * Jamais pour ce qui porte du sens : une annonce, un carillon, une porte, la
+ * voix de quelqu'un à qui l'on parle. Ceux-là passent toujours.
+ */
+function allowSfx(): boolean {
+  if (sfxTokensPerSecond === Number.POSITIVE_INFINITY) return true;
+  const now = Tone.now();
+  const dt = Math.max(0, now - sfxLastAt);
+  sfxLastAt = now;
+  sfxTokens = Math.min(SFX_BURST, sfxTokens + dt * sfxTokensPerSecond);
+  if (sfxTokens < 1) return false;
+  sfxTokens -= 1;
+  return true;
+}
+
+// --- Réveils de lignes ----------------------------------------------------
+//
+// Un raccourci par ligne, pour que les déclencheurs se lisent d'un coup d'œil
+// et qu'aucun n'oublie le sien. `hold` est la durée du son que l'appelant vient
+// de programmer ; la queue de la ligne s'ajoute par-dessus.
+
+function wakePa(hold = 0): void {
+  gates?.pa.wake(Tone.now(), hold);
+}
+
+function wakePlat(hold = 0): void {
+  gates?.plat.wake(Tone.now(), hold);
+}
+
+function wakePsd(hold = 0): void {
+  gates?.psd.wake(Tone.now(), hold);
+}
+
+function wakeDev(hold = 0): void {
+  gates?.dev.wake(Tone.now(), hold);
+}
+
 // Ouverture / fermeture d'une ligne de sonorisation autour d'une annonce.
 // Deux lignes indépendantes : celle de la rame et celle de la gare.
 export function paVoiceOpen(bus: VoiceBus = 'cabinVoice'): void {
   if (!nodes) return;
   const plat = bus === 'platformVoice';
+  // La ligne s'ouvre POUR LA DURÉE DE L'ANNONCE, et personne ici ne la connaît :
+  // le souffle est ouvert maintenant et refermé plus tard, par paVoiceClose. On
+  // la tient donc par un jeton, comme un clip - c'est la seule façon de ne pas
+  // parier sur une durée.
+  if (plat) gates?.plat.acquire(Tone.now());
+  else gates?.pa.acquire(Tone.now());
   const click = plat ? nodes.platClick : nodes.paClick;
   const hiss = plat ? nodes.platHissGain : nodes.hissGain;
   click.triggerAttackRelease(0.02, slot(plat ? 'platClick' : 'paClick', Tone.now()), 0.5);
@@ -1492,6 +1964,10 @@ export function paVoiceClose(bus: VoiceBus = 'cabinVoice'): void {
   const hiss = plat ? nodes.platHissGain : nodes.hissGain;
   hiss.gain.rampTo(0, 0.3);
   click.triggerAttackRelease(0.015, slot(plat ? 'platClick' : 'paClick', Tone.now() + 0.18), 0.3);
+  // Le déclic de fermeture tombe 180 ms plus tard, et le souffle met 300 ms à
+  // retomber : le jeton n'est rendu qu'après, la queue de la ligne fait le reste.
+  if (plat) gates?.plat.release(Tone.now() + 0.5);
+  else gates?.pa.release(Tone.now() + 0.5);
 }
 
 // --- Signaux de la sono du quai -----------------------------------------
@@ -1512,6 +1988,7 @@ export function platformChime(): number {
   if (!nodes) return 0;
   soundCue('atosChime');
   const lead = 0.05;
+  wakePlat(lead + APPROACH_CHIME_TOTAL_S);
   // UNE seule réservation, pour la phrase entière. En réservant note à note, un
   // carillon déclenché pendant qu'un autre résonne verrait ses premières
   // attaques repoussées les unes contre les autres : les 200 ms régulières se
@@ -1545,6 +2022,7 @@ export const PLATFORM_WARNING_SIGNAL_S = WARNING_BEEP_GAP + WARNING_BEEP_TAIL;
  */
 export function platformWarningSignal(): number {
   if (!nodes) return 0;
+  wakePlat(PLATFORM_WARNING_SIGNAL_S);
   const now = Tone.now();
   nodes.platBeep.triggerAttackRelease('E6', 0.14, slot('platBeep', now), 0.4);
   nodes.platBeep.triggerAttackRelease(
@@ -1578,6 +2056,7 @@ export function psdOpenChime(): number {
   const now = Tone.now() + 0.02;
   if (now < psdChimeUntil) return 0;
   soundCue('psdOpen');
+  wakePsd(PSD_CHIME_DURATION);
   for (const note of psdOpenChimeScore()) {
     const at = now + note.at;
     nodes.psdChime.triggerAttackRelease(note.freq, PSD_CHIME_NOTE_HOLD, at);
@@ -1644,11 +2123,18 @@ export function pumpPsdCloseWarning(closesIn = Number.POSITIVE_INFINITY): void {
   if (!nodes || !psdWarnOn) return;
   const now = Tone.now();
   const deadline = now + Math.max(0, closesIn);
-  while (psdWarnNextAt <= now + PSD_WARN_LOOKAHEAD) {
+  // L'avance de la boucle doit couvrir UNE IMAGE, sans quoi elle programme
+  // toujours dans le passé sur une machine lente : la paire suivante arrive
+  // après l'heure, Web Audio la ramène à « maintenant », et l'avertisseur boite
+  // au lieu de battre la mesure. Sur une machine rapide, `recentFrameSeconds`
+  // vaut quelques millisecondes et l'avance reste celle d'avant.
+  const lookAhead = Math.max(PSD_WARN_LOOKAHEAD, recentFrameSeconds());
+  while (psdWarnNextAt <= now + lookAhead) {
     // Une image très longue peut avoir laissé passer l'heure de la paire : on
     // la joue tout de suite plutôt que dans le passé, et la boucle se recale.
     const at = Math.max(psdWarnNextAt, now);
     if (at >= deadline) break;
+    wakePsd(at - now + PSD_WARN_PAIR_STEP);
     for (const note of psdCloseWarningPair()) {
       const t = at + note.at;
       nodes.psdWarn.triggerAttackRelease(note.freq, PSD_WARN_NOTE_HOLD, t);
@@ -1669,6 +2155,7 @@ export function pumpPsdCloseWarning(closesIn = Number.POSITIVE_INFINITY): void {
 /** Une pièce qui tombe dans le monnayeur, et rebondit au fond. */
 export function deviceCoin(value = 100): void {
   if (!nodes) return;
+  wakeDev(0.2);
   const now = Tone.now();
   // Une pièce de 500 sonne plus grave qu'une de 10 : c'est la masse.
   const f = value >= 500 ? 3200 : value >= 100 ? 4200 : 5400;
@@ -1680,6 +2167,7 @@ export function deviceCoin(value = 100): void {
 /** Un billet avalé : le rouleau qui l'entraîne, puis le déclic du lecteur. */
 export function deviceBillFeed(): void {
   if (!nodes) return;
+  wakeDev(0.75);
   const now = Tone.now();
   nodes.devMotorFilter.frequency.value = 780;
   nodes.devMotorGain.gain.cancelScheduledValues(now);
@@ -1693,6 +2181,7 @@ export function deviceBillFeed(): void {
 /** Une touche du clavier tarifaire, ou un bouton de sélection. */
 export function deviceButton(): void {
   if (!nodes) return;
+  wakeDev(0.1);
   const now = Tone.now();
   nodes.devClick.triggerAttackRelease(0.015, slot('devClick', now), 0.45);
   nodes.devBeep.triggerAttackRelease('A6', 0.045, slot('devBeep', now + 0.005), 0.3);
@@ -1711,6 +2200,7 @@ export function deviceButton(): void {
  */
 export function gateBeep(gain = 1): void {
   if (!nodes) return;
+  wakeDev(0.1);
   nodes.devBeep.triggerAttackRelease('D7', 0.075, slot('devBeep', Tone.now()), 0.5 * gain);
 }
 
@@ -1722,6 +2212,7 @@ export function gateBeep(gain = 1): void {
  */
 export function gateDeny(): void {
   if (!nodes) return;
+  wakeDev(0.5);
   const now = Tone.now();
   nodes.devBeep.triggerAttackRelease('A4', 0.16, slot('devBeep', now), 0.42);
   nodes.devBeep.triggerAttackRelease('E4', 0.26, slot('devBeep', now + 0.19), 0.42);
@@ -1736,6 +2227,7 @@ export function gateDeny(): void {
  */
 export function gateFlap(closing: boolean, gain = 1): void {
   if (!nodes) return;
+  wakeDev(0.25);
   const now = Tone.now();
   nodes.devHissFilter.frequency.value = 900;
   nodes.devHiss.envelope.decay = 0.12;
@@ -1751,6 +2243,7 @@ export function gateFlap(closing: boolean, gain = 1): void {
  */
 export function vendingDispense(heavy: boolean): void {
   if (!nodes) return;
+  wakeDev(1.1);
   const now = Tone.now();
   // Le mécanisme : un moteur lent, une seconde à peine.
   nodes.devMotorFilter.frequency.value = 320;
@@ -1769,6 +2262,7 @@ export function vendingDispense(heavy: boolean): void {
 /** Le volet du 取出口 qu'on pousse, et qui retombe tout seul derrière la main. */
 export function vendingFlap(): void {
   if (!nodes) return;
+  wakeDev(0.35);
   const now = Tone.now();
   nodes.devHissFilter.frequency.value = 1800;
   nodes.devHiss.envelope.decay = 0.09;
@@ -1780,6 +2274,7 @@ export function vendingFlap(): void {
 /** La monnaie rendue : trois pièces qui dégringolent dans la sébile. */
 export function vendingChange(coins: number): void {
   if (!nodes) return;
+  wakeDev(0.6);
   const now = Tone.now();
   const n = Math.max(1, Math.min(6, coins));
   for (let i = 0; i < n; i++) {
@@ -1798,6 +2293,7 @@ export function vendingChange(coins: number): void {
  */
 export function ticketPrint(): void {
   if (!nodes) return;
+  wakeDev(1.2);
   const now = Tone.now();
   nodes.devBeep.triggerAttackRelease('E6', 0.07, slot('devBeep', now), 0.34);
   nodes.devBeep.triggerAttackRelease('A6', 0.11, slot('devBeep', now + 0.1), 0.34);
@@ -1813,6 +2309,7 @@ export function ticketPrint(): void {
 /** Décapsulation : le déclic de l'anneau, puis le gaz qui s'échappe. */
 export function canOpen(): void {
   if (!nodes) return;
+  wakeDev(0.45);
   const now = Tone.now();
   nodes.devClick.triggerAttackRelease(0.015, slot('devClick', now), 0.5);
   nodes.devHissFilter.frequency.value = 3200;
@@ -1823,6 +2320,7 @@ export function canOpen(): void {
 /** Une canette vide jetée dans le bac : le fond de plastique, puis le roulé. */
 export function binToss(): void {
   if (!nodes) return;
+  wakeDev(0.45);
   const now = Tone.now();
   nodes.devThud.triggerAttackRelease('D2', 0.09, slot('devThud', now + 0.18), 0.45);
   nodes.devCoin.triggerAttackRelease(3000, 0.04, slot('devCoin', now + 0.2), 0.28);
@@ -1906,10 +2404,11 @@ export function updateAudio(dt: number, speed01: number, braking: boolean, power
   // Sans tension à la caténaire, l'onduleur se tait dans l'instant : pas de
   // descente de chant, pas de récupération au freinage. C'est ce silence-là
   // qu'on entend en premier, avant même de voir l'éclairage baisser.
-  nodes.vvvfGain.gain.rampTo(
-    speed01 > 0.005 ? (0.012 + boost * 0.05 * (0.35 + speed01)) * exterior * power : 0,
-    power > 0.5 ? 0.1 : 0.05,
-  );
+  const vvvf = speed01 > 0.005 ? (0.012 + boost * 0.05 * (0.35 + speed01)) * exterior * power : 0;
+  nodes.vvvfGain.gain.rampTo(vvvf, power > 0.5 ? 0.1 : 0.05);
+  // À quai, l'onduleur est muet : trente secondes par arrêt, et toute la
+  // coupure de caténaire, où c'est justement son silence qu'on entend.
+  gates?.vvvf.hold(Tone.now(), vvvf > 0);
 
   // Souffle de climatisation : plein à bord, presque rien depuis le quai - de
   // dehors, ce qu'on entend d'un groupe de toiture n'est pas ce qui souffle
@@ -1920,12 +2419,17 @@ export function updateAudio(dt: number, speed01: number, braking: boolean, power
   const squeal =
     braking && speed01 < 0.4 && speed01 > 0.015 ? (0.4 - speed01) * 0.5 * 0.28 * exterior : 0;
   nodes.brakeGain.gain.rampTo(squeal, 0.12);
+  // Le crissement n'existe qu'en fin de freinage : quelques secondes par arrêt.
+  gates?.brake.hold(Tone.now(), squeal > 0);
 }
 
 // Gain du frottement de glissière, piloté chaque frame par la vitesse
 // normalisée des vantaux (0 = arrêtés, 1 = pleine vitesse).
 export function setDoorSlide(train01: number, psd01: number): void {
   if (!nodes) return;
+  // Trois secondes de coulissement par arrêt, sur deux minutes de trajet : le
+  // reste du temps, les deux bruits de glissière n'ont aucune raison de tourner.
+  gates?.slide.hold(Tone.now(), train01 > 0.001 || psd01 > 0.001);
   if (unchanged(train01, published.slideTrain) && unchanged(psd01, published.slidePsd)) return;
   published.slideTrain = train01;
   published.slidePsd = psd01;
@@ -2034,7 +2538,10 @@ export function powerSound(kind: PowerSoundKind): void {
       crackle(now, 4, 0.13, 0.2);
       break;
     case 'whineDown':
-      // Le sifflement du convertisseur s'effondre en une demi-seconde.
+      // Le sifflement du convertisseur s'effondre en une demi-seconde. Il ne
+      // sert QU'AUX TRANSITIONS de tension et retombe à zéro ensuite : sa ligne
+      // ne reste branchée que le temps de la rampe.
+      gates?.siv.wake(now, 0.6);
       nodes.sivGain.gain.cancelScheduledValues(now);
       nodes.sivGain.gain.setValueAtTime(0.02, now);
       nodes.sivOsc.frequency.cancelScheduledValues(now);
@@ -2046,6 +2553,7 @@ export function powerSound(kind: PowerSoundKind): void {
     case 'whineUp':
       // …et remonte, une fois le contacteur accroché. Plus vite qu'il n'est
       // tombé : ce qui se réamorce se réamorce d'un coup.
+      gates?.siv.wake(now, 1.2);
       nodes.sivGain.gain.cancelScheduledValues(now);
       nodes.sivGain.gain.setValueAtTime(0, now);
       nodes.sivOsc.frequency.cancelScheduledValues(now);
@@ -2121,7 +2629,7 @@ function paxVel(dist: number, base: number): number {
 export function paxSneeze(dist: number): void {
   if (!nodes) return;
   const v = paxVel(dist, 0.09);
-  if (v <= 0) return;
+  if (v <= 0 || !allowSfx()) return;
   const now = Tone.now();
   nodes.paxBreathFilter.frequency.value = 1200;
   nodes.paxBreath.envelope.decay = 0.12;
@@ -2136,7 +2644,7 @@ export function paxSneeze(dist: number): void {
 export function paxCough(dist: number): void {
   if (!nodes) return;
   const v = paxVel(dist, 0.07);
-  if (v <= 0) return;
+  if (v <= 0 || !allowSfx()) return;
   const now = Tone.now();
   nodes.paxBreathFilter.frequency.value = 2400;
   nodes.paxBreath.envelope.decay = 0.1;
@@ -2148,7 +2656,7 @@ export function paxCough(dist: number): void {
 export function paxSniffle(dist: number): void {
   if (!nodes) return;
   const v = paxVel(dist, 0.045);
-  if (v <= 0) return;
+  if (v <= 0 || !allowSfx()) return;
   nodes.paxBreathFilter.frequency.value = 2800;
   nodes.paxBreath.envelope.decay = 0.08;
   nodes.paxBreath.triggerAttackRelease(0.06, slot('paxBreath', Tone.now()), v);
@@ -2158,7 +2666,7 @@ export function paxSniffle(dist: number): void {
 export function paxYawn(dist: number): void {
   if (!nodes) return;
   const v = paxVel(dist, 0.035);
-  if (v <= 0) return;
+  if (v <= 0 || !allowSfx()) return;
   const now = Tone.now();
   nodes.paxBreathFilter.frequency.value = 700;
   nodes.paxBreath.envelope.decay = 0.55;
@@ -2170,7 +2678,7 @@ export function paxYawn(dist: number): void {
 export function paxFabricRustle(dist: number, pulses = 3): void {
   if (!nodes) return;
   const v = paxVel(dist, 0.055);
-  if (v <= 0) return;
+  if (v <= 0 || !allowSfx()) return;
   const now = Tone.now();
   for (let i = 0; i < pulses; i++) {
     nodes.paxFabric.triggerAttackRelease(
@@ -2185,7 +2693,7 @@ export function paxFabricRustle(dist: number, pulses = 3): void {
 export function paxDrink(dist: number): void {
   if (!nodes) return;
   const v = paxVel(dist, 0.04);
-  if (v <= 0) return;
+  if (v <= 0 || !allowSfx()) return;
   const now = Tone.now();
   nodes.paxBreathFilter.frequency.value = 900;
   nodes.paxBreath.envelope.decay = 0.15;
@@ -2244,7 +2752,7 @@ export function paxVoice(opts: {
 export function paxClick(dist: number): void {
   if (!nodes) return;
   const v = paxVel(dist, 0.05);
-  if (v <= 0) return;
+  if (v <= 0 || !allowSfx()) return;
   nodes.paxClick.triggerAttackRelease(0.025, slot('paxClick', Tone.now()), v);
 }
 
@@ -2252,7 +2760,7 @@ export function paxClick(dist: number): void {
 export function paxStumble(dist: number): void {
   if (!nodes) return;
   const v = paxVel(dist, 0.08);
-  if (v <= 0) return;
+  if (v <= 0 || !allowSfx()) return;
   const now = Tone.now();
   nodes.paxFabric.triggerAttackRelease(0.12, slot('paxFabric', now), v);
   nodes.clack.triggerAttackRelease(0.04, slot('clack', now + 0.08), v * 0.35);
@@ -2285,7 +2793,7 @@ export function paxFall(dist: number): void {
 export function paxSlip(dist: number): void {
   if (!nodes) return;
   const v = paxVel(dist, 0.07);
-  if (v <= 0) return;
+  if (v <= 0 || !allowSfx()) return;
   const now = Tone.now();
   nodes.paxFabric.triggerAttackRelease(0.14, slot('paxFabric', now), v);
   nodes.clack.triggerAttackRelease(0.035, slot('clack', now + 0.12), v * 0.3);
@@ -2297,7 +2805,7 @@ export function paxSlip(dist: number): void {
 export function paxBump(dist: number, hard = false): void {
   if (!nodes) return;
   const v = paxVel(dist, hard ? 0.1 : 0.06);
-  if (v <= 0) return;
+  if (v <= 0 || !allowSfx()) return;
   const now = Tone.now();
   nodes.paxFabric.triggerAttackRelease(0.08, slot('paxFabric', now), v);
   nodes.clack.triggerAttackRelease(0.025, slot('clack', now + 0.02), v * (hard ? 0.45 : 0.25));
@@ -2308,7 +2816,7 @@ export function paxBump(dist: number, hard = false): void {
 export function paxScuffle(dist: number): void {
   if (!nodes) return;
   const v = paxVel(dist, 0.08);
-  if (v <= 0) return;
+  if (v <= 0 || !allowSfx()) return;
   const now = Tone.now();
   for (let i = 0; i < 3; i++) {
     nodes.paxFabric.triggerAttackRelease(0.06, slot('paxFabric', now + i * 0.18), v * (0.6 + Math.random() * 0.4));
@@ -2348,6 +2856,9 @@ let passActive = false;
 
 export function passByStart(): void {
   passActive = true;
+  // Le passage dure ce qu'il dure - une entrée en gare peut s'étirer sur une
+  // minute. La ligne est donc TENUE, et relâchée à la fin (passByEnd).
+  gates?.pass.hold(Tone.now(), true);
   soundCue('passingTrain');
 }
 
@@ -2382,11 +2893,14 @@ export function passByEnd(): void {
   if (!nodes) return;
   nodes.passRoarGain.gain.rampTo(0, 0.4);
   nodes.passWindGain.gain.rampTo(0, 0.3);
+  // La queue de la ligne (1,2 s) couvre les 400 ms de descente du grondement.
+  gates?.pass.hold(Tone.now(), false);
 }
 
 /** Un joint de rail sous la rame d'en face. `level` suit la distance. */
 export function passByClack(level: number): void {
   if (!nodes || level <= 0.002) return;
+  gates?.pass.wake(Tone.now(), 0.15);
   const now = Tone.now();
   nodes.passClack.triggerAttackRelease(0.04, slot('passClack', now), level);
   nodes.passClack.triggerAttackRelease(0.04, slot('passClack', now + 0.07), level * 0.8);
@@ -2395,6 +2909,7 @@ export function passByClack(level: number): void {
 /** Avertisseur à l'entrée en gare : deux tons tenus, brefs. */
 export function passByHorn(): void {
   if (!nodes) return;
+  gates?.pass.wake(Tone.now(), 1.1);
   const now = Tone.now();
   const loud = listenerOutside ? 0.5 : 0.28;
   nodes.passHornA.triggerAttackRelease('A4', 0.75, slot('passHornA', now), loud);
@@ -2413,6 +2928,7 @@ export function passByHorn(): void {
  */
 function synthDoorChime(): void {
   if (!nodes) return;
+  wakePa(DOOR_CHIME_DURATION + 0.05);
   const start = slot('doorChime', Tone.now() + 0.02, DOOR_CHIME_DURATION);
   for (const ev of doorChimeScore()) {
     const tone = DOOR_CHIME_TONES[ev.tone];
@@ -2490,6 +3006,9 @@ function synthMelody(index: number): void {
     }
     t += MELODY_REPEAT_GAP_S;
   }
+  // Tout est posé d'un coup sur l'horloge audio : la ligne du quai doit rester
+  // branchée jusqu'à la dernière note, et `t` la donne exactement.
+  wakePlat(t - Tone.now());
 }
 
 // --- Hook fichiers locaux : public/audio/<name>.mp3 si présent ---
@@ -2544,18 +3063,41 @@ function busInput(bus: Bus): Tone.Gain | null {
   return nodes.paIn;
 }
 
+/**
+ * La ligne de diffusion d'un bus : celle qu'il faut avoir rebranchée avant de
+ * lancer un clip dessus, et qu'on ne relâche qu'à la fin de la lecture.
+ *
+ * C'est le point où le robinet devient sûr sans qu'on ait rien à estimer : un
+ * clip de trois secondes et une annonce de vingt-cinq tiennent leur ligne
+ * exactement le temps qu'ils durent, parce que c'est la lecture elle-même qui
+ * la tient.
+ */
+function busGate(bus: Bus): Gate | null {
+  if (!gates) return null;
+  return bus === 'cabin' || bus === 'cabinVoice' ? gates.pa : gates.plat;
+}
+
 // --- Téléchargement et décodage des clips -------------------------------
 
 /**
  * Budget de PCM décodé conservé en mémoire (octets). Les 204 annonces pèsent
  * 7,7 Mo compressées mais bien davantage une fois décodées : on garde les plus
  * récentes, les autres se retéléchargent depuis le cache HTTP du navigateur.
+ *
+ * Le budget suit le palier audio (systems/audioLoad) : sur une petite machine,
+ * la mémoire qu'on ne prend pas est un ramassage de miettes qu'on n'aura pas -
+ * et un ramassage qui fige le fil principal finit toujours par s'entendre.
  */
-const CLIP_CACHE_BYTES = 24 * 1024 * 1024;
+let clipCacheLimit = 24 * 1024 * 1024;
+
+function applyClipCacheBudget(tier: AudioTier): void {
+  clipCacheLimit = clipCacheBytes(tier);
+  evictClips();
+}
 
 /** Insertion la plus ancienne en tête : c'est l'ordre d'éviction. */
 const clipCache = new Map<string, Tone.ToneAudioBuffer>();
-let clipCacheBytes = 0;
+let clipCacheHeld = 0;
 const clipLoads = new Map<string, Promise<Tone.ToneAudioBuffer | null>>();
 /** URLs qui ont répondu 404 : inutile de les redemander à chaque annonce. */
 const missingClips = new Set<string>();
@@ -2566,11 +3108,17 @@ function clipBytes(buf: Tone.ToneAudioBuffer): number {
 
 function cacheClip(url: string, buf: Tone.ToneAudioBuffer): void {
   clipCache.set(url, buf);
-  clipCacheBytes += clipBytes(buf);
+  clipCacheHeld += clipBytes(buf);
+  evictClips(url);
+}
+
+/** Vide les plus anciens jusqu'à retomber sous le budget. `keep` reste. */
+function evictClips(keep = ''): void {
   for (const [key, old] of clipCache) {
-    if (clipCacheBytes <= CLIP_CACHE_BYTES || key === url) break;
+    if (clipCacheHeld <= clipCacheLimit) break;
+    if (key === keep) continue;
     clipCache.delete(key);
-    clipCacheBytes -= clipBytes(old);
+    clipCacheHeld -= clipBytes(old);
   }
 }
 
@@ -2612,6 +3160,10 @@ interface ClipHandle {
 /** Lance un buffer décodé sur un bus. Le player se démonte tout seul. */
 function startClip(buf: Tone.ToneAudioBuffer, bus: Bus): ClipHandle {
   const dest = busInput(bus);
+  // La ligne AVANT le lecteur : elle doit être branchée quand la première
+  // trame sort, pas une image plus tard.
+  const gate = busGate(bus);
+  gate?.acquire(Tone.now());
   const player = new Tone.Player({ url: buf });
   if (dest) player.connect(dest);
   else player.toDestination();
@@ -2624,6 +3176,7 @@ function startClip(buf: Tone.ToneAudioBuffer, bus: Bus): ClipHandle {
   const finish = (): void => {
     if (finished) return;
     finished = true;
+    gate?.release(Tone.now());
     window.clearTimeout(guard);
     // Le démontage attend la sortie du callback : Tone n'aime pas qu'on
     // dispose un nœud depuis son propre onstop.
@@ -2906,6 +3459,11 @@ export function setStationAmbience(kind: string, presence: number, room: number)
   if (!nodes) return;
   const spec = AMBIENCE[kind] ?? AMBIENCE.street;
   const p = Math.max(0, Math.min(1, presence));
+  // Le lit d'ambiance ne vit qu'aussi longtemps que la gare est là : entre deux
+  // gares, sa présence tombe à zéro et il n'y a plus rien à calculer. Posé
+  // AVANT le retour anticipé plus bas - un état tenu se pose à chaque image,
+  // même quand rien ne change.
+  gates?.amb.hold(Tone.now(), p > 0.002);
   if (kind !== ambKind) {
     ambKind = kind;
     applyAmbienceCut(0.6);
@@ -2948,6 +3506,9 @@ export function setWeatherSound(
   if (!nodes) return;
   railWet = Math.max(0, Math.min(1, wet));
   const r = Math.max(0, Math.min(1, rain));
+  // Il ne pleut pas tous les jours, et quand il ne pleut pas les deux
+  // générateurs de pluie n'ont rien à produire.
+  gates?.rain.hold(Tone.now(), r > 0.002);
   // La neige n'ajoute rien ; elle retire - et cela se décide avant tout retour
   // anticipé, parce que le lit d'ambiance n'est pas de la pluie.
   const muffle = Math.max(0, Math.min(1, snowCover * 0.7 + snow * 0.4));
