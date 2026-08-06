@@ -80,3 +80,20 @@ jobs:
       - name: Déploiement sur GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # Le défaut est de dix minutes, et c'est trop juste.
+          #
+          # Ce n'est PAS une question de poids : l'artefact fait trente
+          # méga-octets compressés et n'a grossi que d'un demi pour cent depuis
+          # qu'on lui a ajouté la géographie importée. Le build et l'envoi
+          # tiennent en soixante-trois secondes.
+          #
+          # C'est la mise en ligne côté GitHub qui varie, et franchement : trois
+          # minutes le 6 août à 10 h, six puis neuf et demie l'après-midi, et à
+          # 14 h 26 elle a dépassé les dix - l'étape a abandonné, ANNULÉ un
+          # déploiement qui était peut-être en train d'aboutir, et laissé le site
+          # sur la version précédente. Attendre plus longtemps ne coûte rien
+          # (l'exécution est facturée à la minute, et une minute d'attente vaut
+          # mieux qu'un déploiement à refaire) ; abandonner trop tôt coûte une
+          # mise en ligne.
+          timeout: 1800000
