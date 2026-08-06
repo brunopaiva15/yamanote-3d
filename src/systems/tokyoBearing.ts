@@ -25,19 +25,25 @@ import type { LoopDirection } from '../data/platforms';
 /**
  * Demi-base de la tangente lissée (m).
  *
- * Quatre cent vingt mètres, et non cent : c'est la pointe sud-ouest de la boucle
- * qui commande. À Ōsaki la ligne arrive du nord-ouest et repart au nord-est -
- * près de cent quarante degrés, l'endroit le plus tordu de la Yamanote, que la
- * polyligne réduit à deux sommets. Une base courte y ferait pivoter l'horizon
- * d'un demi-degré par mètre parcouru ; celle-ci étale le virage sur huit cents
- * mètres, soit un rayon de l'ordre de trois cents mètres - ce que la voie fait
- * vraiment là-bas, et pourquoi les rames y ralentissent.
+ * Cent vingt mètres, et non quatre cent vingt. La valeur d'avant compensait une
+ * polyligne qui n'existait plus qu'en trente-cinq sommets : à Ōsaki, le virage
+ * le plus serré de la ligne s'y réduisait à deux cordes, et une base courte y
+ * aurait fait pivoter l'horizon d'un demi-degré par mètre. Il fallait donc
+ * étaler le virage à la main, au prix d'un rayon trop large partout ailleurs.
  *
- * Il reste que l'horizon tourne franchement en passant Ōsaki, et c'est juste :
- * dans le vrai train, le paysage y balaie la vitre. Ce qui manque n'est pas dans
- * ce module - c'est que la voie du jeu, elle, reste droite.
+ * La polyligne est maintenant l'axe relevé - trois cent vingt-sept sommets,
+ * serrés dans les courbes -, et le virage est DANS LA DONNÉE. Cent vingt mètres
+ * suffisent à lisser le caractère polygonal de la table sans rien aplatir : le
+ * cap tourne au pire de 0,21° par mètre, soit un rayon de deux cent
+ * soixante-quinze mètres, ce que la voie fait vraiment à Ōsaki - et pourquoi
+ * les rames y ralentissent. Avec l'ancienne base, le même virage se lisait à
+ * trois cent soixante-quinze mètres de rayon : trop mou d'un tiers.
+ *
+ * L'horizon tourne donc franchement en passant Ōsaki, et c'est juste : dans le
+ * vrai train, le paysage y balaie la vitre. Ce qui manque n'est pas dans ce
+ * module - c'est que la voie du jeu, elle, reste droite.
  */
-const TANGENT_ARM = 420;
+const TANGENT_ARM = 120;
 
 // --- Abscisse curviligne de la polyligne ----------------------------------
 
@@ -52,20 +58,27 @@ for (let i = 0; i < N; i++) {
 /** Périmètre de la polyligne (m). */
 export const LOOP_PERIMETER = CUM[N];
 
-/** Abscisse curviligne du milieu du quai de chaque gare (m). */
-const STATION_S = GEO_STATIONS.map((st) => {
+/**
+ * Abscisse curviligne du point d'arrêt de chaque gare (m).
+ *
+ * Exporté : la bible géographique compte ses kilomètres depuis Shinagawa, et
+ * les secteurs nommés se placent par rapport aux gares - systems/kmPost lit
+ * cette table plutôt que d'en refaire une.
+ */
+export const STATION_S: readonly number[] = GEO_STATIONS.map((st) => {
   const i = GEO_LOOP.findIndex((p) => p.station === st.index);
   return CUM[i];
 });
 
-function wrapS(s: number): number {
+export function wrapS(s: number): number {
   return ((s % LOOP_PERIMETER) + LOOP_PERIMETER) % LOOP_PERIMETER;
 }
 
 /** Position sur la polyligne à l'abscisse `s` (m), écrite dans `out`. */
-function at(s: number, out: { x: number; z: number }): void {
+export function at(s: number, out: { x: number; z: number }): void {
   const t = wrapS(s);
-  // Recherche dichotomique : trente-cinq sommets, appelée trois fois par image.
+  // Recherche dichotomique : trois cent vingt-sept sommets, huit tours de
+  // boucle, appelée trois fois par image.
   let lo = 0;
   let hi = N;
   while (lo + 1 < hi) {

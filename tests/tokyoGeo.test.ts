@@ -1,9 +1,11 @@
 // La géographie tient-elle debout ?
 //
-// Les coordonnées de src/data/tokyoGeo.ts sont saisies à la main depuis des
-// données publiées : c'est exactement le genre de table où une latitude prise
-// pour une longitude, un chiffre transposé ou une gare hors d'ordre passe
-// inaperçu à la lecture et se voit à l'écran sous la forme d'un Skytree au sud.
+// src/data/tokyoGeo.ts est engendré depuis data/geo/yamanote-loop.geojson, que
+// scripts/geo/fetch-loop.mjs va chercher chez OpenStreetMap. Un import n'est pas
+// une saisie, mais il a ses propres façons de se tromper : recoudre la mauvaise
+// voie, la parcourir à l'envers, prendre l'embranchement à une jonction,
+// attribuer à une gare le point d'arrêt de sa voisine. Toutes se voient à
+// l'écran sous la forme d'un Skytree au sud.
 //
 // Ce que ce fichier verrouille, dans l'ordre de ce qui compte :
 //
@@ -12,17 +14,20 @@
 //     partir ailleurs, et c'est la propriété la plus difficile à obtenir par
 //     accident ;
 //   · sa LONGUEUR, contre le kilométrage JR de src/data/segments.ts ;
+//   · l'ACCORD DES DEUX SOURCES sur chaque gare : le point d'arrêt relevé et le
+//     milieu de quai publié doivent désigner le même endroit ;
 //   · quelques RELÈVEMENTS que n'importe qui peut vérifier sur une carte : le
 //     Skytree à l'est d'Ueno, le Fuji au sud-ouest de Shinjuku, le 都庁 à l'ouest
 //     de la gare de Shinjuku ;
 //   · la CONTINUITÉ du cap, sans quoi l'horizon lointain sauterait d'un bloc.
 //
-// La comparaison au kilométrage est volontairement large. Le barème JR est
-// arrondi à cent mètres - un inter-gare de cinq cents mètres porte donc déjà
-// ±10 % de quantification -, les milieux de quai sont donnés à une dizaine de
-// mètres, et une polyligne de trente-cinq sommets coupe les courbes. Ce test ne
-// mesure pas la voie : il vérifie que deux sources indépendantes racontent la
-// même ligne.
+// La comparaison au kilométrage reste volontairement large PAR TRONÇON. Le
+// barème JR est arrondi à cent mètres - un inter-gare de cinq cents mètres porte
+// donc déjà ±10 % de quantification - et il se mesure entre des points de
+// référence de gare qui ne sont pas les points d'arrêt : à Ueno, seize voies
+// séparent les deux. Sur la BOUCLE ENTIÈRE, en revanche, ces écarts se
+// compensent et l'accord doit être serré : c'est le meilleur contrôle qu'on ait
+// de l'import.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -80,10 +85,29 @@ test('la longueur de la boucle retombe sur le kilométrage JR', () => {
   const total = GEO_LEG_M.reduce((s, m) => s + m, 0);
   const km = LOOP_KM * 1000;
   const off = total / km - 1;
-  // La polyligne coupe les courbes : elle est plus courte, de quelques pour
-  // cent. Au-delà de huit, c'est une coordonnée qui est fausse.
-  assert.ok(Math.abs(off) < 0.08, `boucle ${total} m contre ${km} m (${(off * 100).toFixed(1)} %)`);
+  // L'axe relevé et le barème JR mesurent la même voie : l'accord est au
+  // quart de pour cent, soit moins que l'arrondi du barème lui-même. Le seuil
+  // est serré à dessein - c'est lui qui a attrapé la couture qui partait sur
+  // l'embranchement d'Ikebukuro, et sautait quatre cent soixante-dix mètres en
+  // travers de la gare : la boucle mesurait alors 1,3 % de trop.
+  assert.ok(Math.abs(off) < 0.01, `boucle ${total} m contre ${km} m (${(off * 100).toFixed(1)} %)`);
   assert.ok(Math.abs(LOOP_PERIMETER - total) < 60, `périmètre échantillonné ${LOOP_PERIMETER}`);
+});
+
+test('les deux sources s’accordent sur chaque point d’arrêt', () => {
+  for (const st of GEO_STATIONS) {
+    // Le point d'arrêt vient de la voie relevée, le milieu de quai d'une donnée
+    // publiée : deux chaînes indépendantes. Une centaine de mètres est normale
+    // dans une gare qui compte seize voies - Tabata, Shinjuku, Ueno sont les
+    // trois plus larges écarts. Au-delà, c'est un point d'arrêt attribué à la
+    // mauvaise gare.
+    assert.ok(
+      st.offset < 150,
+      `${st.name} : ${st.offset} m entre le point d’arrêt et le milieu de quai`,
+    );
+  }
+  const mean = GEO_STATIONS.reduce((s, st) => s + st.offset, 0) / GEO_STATIONS.length;
+  assert.ok(mean < 60, `écart moyen ${mean.toFixed(0)} m`);
 });
 
 test('chaque inter-gare retombe sur le kilométrage de son tronçon', () => {
@@ -194,8 +218,9 @@ test('un repère passe d’un bord de la vitre à l’autre, sans saut', () => {
   const pose = makePose();
   const sight = { azimuth: 0, distance: 0 };
   const tower = GEO_LANDMARKS.find((l) => l.id === 'tokyo-tower')!;
-  let sideChanges = 0;
   let prevSide = 0;
+  let prevAz = 0;
+  const crossings: number[] = [];
   for (let k = 0; k <= 3000; k++) {
     const t = k / 100;
     const arrival = (Math.floor(t) + 1) % 30;
@@ -203,21 +228,31 @@ test('un repère passe d’un bord de la vitre à l’autre, sans saut', () => {
     sightTo(pose, tower.x, tower.z, sight);
     assert.ok(sight.azimuth > -Math.PI - 1e-9 && sight.azimuth <= Math.PI + 1e-9);
     const side = Math.sign(sight.azimuth);
-    if (prevSide && side && side !== prevSide) sideChanges++;
+    if (prevSide && side && side !== prevSide) crossings.push(Math.abs(prevAz) * DEG);
     prevSide = side;
+    prevAz = sight.azimuth;
   }
   // La tour de Tokyo est à l'intérieur de la boucle : en faisant le tour, elle
-  // reste du même côté du train pendant tout le trajet, sauf aux deux passages
-  // où l'on va droit sur elle ou droit à l'opposé. Ce qui compte est qu'elle ne
-  // clignote pas d'un bord à l'autre.
-  assert.ok(sideChanges <= 4, `${sideChanges} changements de côté`);
+  // reste du même côté du train, sauf quand on va DROIT SUR ELLE ou droit à
+  // l'opposé - et là elle traverse la vitre par le milieu ou par l'arrière.
+  //
+  // Ce qui serait faux, c'est un changement de côté alors qu'elle est par le
+  // travers : ce serait un cap qui tremble. On ne compte donc pas les passages,
+  // on vérifie OÙ ils ont lieu. La voie relevée en produit six et non quatre -
+  // la boucle a des courbes qui ramènent brièvement le nez vers la tour - mais
+  // tous se font droit devant ou droit derrière.
+  assert.ok(crossings.length > 0, 'la tour ne traverse jamais l’axe');
+  for (const at of crossings) {
+    assert.ok(at < 25 || at > 155, `changement de côté à ${at.toFixed(0)}° du sens de marche`);
+  }
 });
 
-test('la polyligne porte les points de forme des virages', () => {
+test('la polyligne est l’axe relevé, pas une suite de cordes', () => {
   const extra = GEO_LOOP.filter((p) => p.station < 0).length;
   assert.equal(GEO_LOOP.length, GEO_STATIONS.length + extra);
-  // Sans points de forme, le cap se tromperait de vingt degrés dans les courbes.
-  assert.ok(extra >= 5, `${extra} points de forme`);
+  // La table saisie à la main en portait six. L'axe relevé en porte des
+  // centaines, et c'est la différence entre couper les virages et les suivre.
+  assert.ok(extra > 200, `${extra} sommets hors gares`);
   // Les sommets sont dans l'ordre : chaque gare apparaît une fois, croissante.
   let last = -1;
   for (const p of GEO_LOOP) {
@@ -226,4 +261,19 @@ test('la polyligne porte les points de forme des virages', () => {
     last = p.station;
   }
   assert.equal(last, 29);
+
+  // Aucun segment de longueur nulle : il ferait diverger la tangente. Les plus
+  // longs, eux, sont de vrais alignements droits que la simplification a
+  // réduits à une corde - la tranchée de Komagome vers Sugamo et la ligne
+  // droite de Harajuku vers Shibuya font toutes deux près de huit cents mètres
+  // sans dévier d'un mètre.
+  let longest = 0;
+  for (let i = 0; i < GEO_LOOP.length; i++) {
+    const a = GEO_LOOP[i];
+    const b = GEO_LOOP[(i + 1) % GEO_LOOP.length];
+    const d = Math.hypot(b.x - a.x, b.z - a.z);
+    assert.ok(d > 0.01, `segment nul au sommet ${i}`);
+    longest = Math.max(longest, d);
+  }
+  assert.ok(longest < 1000, `plus long segment ${Math.round(longest)} m`);
 });
