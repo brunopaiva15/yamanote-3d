@@ -166,16 +166,28 @@ async function main() {
 
   mkdirSync(new URL('../../data/geo/', import.meta.url), { recursive: true });
 
-  // Plafond budgétaire 2–3 Mo : toutes les hauteurs OSM + échantillon estimé.
+  // Plafond budgétaire 2–3 Mo : toutes les hauteurs OSM, puis LES PLUS PROCHES.
+  //
+  // Le tri par distance a remplacé un échantillonnage uniforme, et la
+  // différence n'est pas cosmétique. L'étiquette `height` d'OpenStreetMap est
+  // portée par les grands immeubles ; une échoppe de bord de voie n'en a pas.
+  // Garder « toutes les hauteurs relevées + un bâtiment estimé sur quatorze,
+  // pris au hasard » revenait donc à vider précisément la bande où la bible est
+  // la plus exigeante - le premier kilomètre, et surtout les premières
+  // centaines de mètres, celles que le ruban urbain dessine. Le relevé versionné
+  // n'avait plus que 759 bâtiments à moins de 66 m de l'axe, sur les 153 924
+  // relevés du corridor.
+  //
+  // On remplit donc ce qui reste du budget par distance croissante à la voie.
+  // Aucune hypothèse sur la densité : on prend les plus proches jusqu'à ce que
+  // le budget soit plein, et ce qui n'entre pas est ce qu'on voit le moins.
   const measuredList = picked.filter((b) => b.measured);
-  const estimatedList = picked.filter((b) => !b.measured);
+  const estimatedList = picked
+    .filter((b) => !b.measured)
+    .sort((a, b) => a.distance - b.distance);
   const BUDGET = 25000;
   const keepEst = Math.max(0, BUDGET - measuredList.length);
-  const estStep = Math.max(1, Math.ceil(estimatedList.length / Math.max(1, keepEst)));
-  const versioned = [
-    ...measuredList,
-    ...estimatedList.filter((_, i) => i % estStep === 0).slice(0, keepEst),
-  ];
+  const versioned = [...measuredList, ...estimatedList.slice(0, keepEst)];
 
   const pack = {
     layer: 'DATA_STATIC',
@@ -232,24 +244,10 @@ async function main() {
 }
 
 function writeFootprintsTs({ picked, survey, prov, datasetDate, measuredH, estimatedH }) {
-  const TARGET = 4000;
-  const STEP = Math.max(1, Math.ceil(picked.length / TARGET));
-  const sample = picked.filter((_, i) => i % STEP === 0).map((b) => ({
-    id: b.id,
-    x: b.x,
-    z: b.z,
-    height: b.height,
-    measured: b.measured,
-    plate: b.plate,
-    footprintMeasured: true,
-    distance: b.distance,
-    station: b.station,
-  }));
-  writeFileSync(
-    new URL('../../src/data/footprints-sample.json', import.meta.url),
-    JSON.stringify(sample),
-    'utf8',
-  );
+  // Pas d'échantillon runtime ici : c'est `scripts/geo/build-corridor.mjs` qui
+  // porte au jeu les bâtiments à dessiner, projetés sur la boucle. Ce module-ci
+  // ne garde que les COMPTEURS du relevé - ce qui a été vu, ce qui a été
+  // versionné - pour que la sonde puisse dire l'écart entre les deux.
   const src = `// Empreintes du corridor 0–1 km : contours OSM, hauteurs déclarées.
 //
 // GÉNÉRÉ par \`node scripts/geo/fetch-footprints.mjs\` - ne pas éditer à la main.
@@ -259,34 +257,27 @@ function writeFootprintsTs({ picked, survey, prov, datasetDate, measuredH, estim
 //
 // ${picked.length} bâtiments versionnés (sur ${survey} relevés) à moins de ${REACH} m
 // de la voie. Emprise tirée du polygone OSM (\`footprintMeasured: true\`).
-// Détail compact : data/geo/footprints.json ; échantillon runtime ci-dessous.
-
-import sample from './footprints-sample.json' with { type: 'json' };
-
-export interface Footprint {
-  id: string;
-  x: number;
-  z: number;
-  height: number;
-  /** true = étiquette OSM \`height\` ; false = levels ou modèle. */
-  measured: boolean;
-  /** Côté de l'emprise (m), déduit du contour OSM. */
-  plate: number;
-  footprintMeasured: true;
-  distance: number;
-  station: number;
-}
+// Hauteur relevée pour ${measuredH} d'entre eux, estimée pour ${estimatedH}.
+//
+// CE MODULE NE PORTE QUE DES COMPTEURS, et c'est volontaire. Le détail vit dans
+// data/geo/footprints.json, qui n'est pas empaqueté ; ce que le jeu DESSINE
+// vient de src/data/corridor.ts, où \`scripts/geo/build-corridor.mjs\` a projeté
+// ces mêmes empreintes sur la boucle. Les chiffres ci-dessous servent à dire
+// l'écart entre ce qui a été relevé, ce qui a été versionné et ce qui est posé -
+// c'est la sonde \`__probeBible()\` qui les rapproche.
 
 /** Portée du corridor (m). */
 export const FOOTPRINT_REACH = ${REACH};
-
-export const FOOTPRINTS: readonly Footprint[] = sample as Footprint[];
 
 /** Nombre total versionné dans footprints.json. */
 export const FOOTPRINT_TOTAL = ${picked.length};
 
 /** Taille du relevé complet avant plafonnage budgétaire. */
 export const FOOTPRINT_SURVEY = ${survey};
+
+/** Hauteurs venues d'une étiquette OSM, et hauteurs estimées. */
+export const FOOTPRINT_MEASURED = ${measuredH};
+export const FOOTPRINT_ESTIMATED = ${estimatedH};
 `;
   writeFileSync(new URL('../../src/data/footprints.ts', import.meta.url), src, 'utf8');
 }

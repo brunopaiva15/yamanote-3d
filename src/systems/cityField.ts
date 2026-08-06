@@ -45,6 +45,13 @@
 import { DISTRICTS, GENERIC, type District, type Feat } from '../data/districts.ts';
 import { directionStep, prevStation, wrapStation } from '../data/loop.ts';
 import type { LoopDirection } from '../data/platforms';
+import {
+  corridorDropped,
+  corridorSlice,
+  makeCorridorBuffer,
+  type CorridorBand,
+  type CorridorHit,
+} from './corridor.ts';
 import { runtime } from './runtime.ts';
 import { cityGround } from './terrain.ts';
 import { WET, waterOn } from './water.ts';
@@ -115,6 +122,19 @@ export interface CityBuilding {
    * angle de l'autre côté, elle ne s'y réfléchit pas.
    */
   yaw: number;
+  /**
+   * Le sujet est-il un bâtiment RELEVÉ, ou du tissu engendré ?
+   *
+   * `true` : sa position, sa hauteur, son emprise et son orientation viennent
+   * d'OpenStreetMap (src/data/corridor) ; seule son apparence - teinte,
+   * enseignes, fenêtres - est celle du quartier, faute de source qui la porte.
+   * `false` : tout est engendré, et rien ne prétend le contraire.
+   *
+   * La règle 11 de la bible interdit de faire passer l'inventé pour du relevé.
+   * Ce drapeau est ce qui permet de tenir la promesse : la sonde compte les
+   * deux, et personne n'a besoin de croire sur parole.
+   */
+  real: boolean;
 }
 
 interface Rank {
@@ -197,7 +217,23 @@ const FAR_H_MAX = 190;
 /** Milieu de chaque rang lointain (m à l'axe), pour le sondage d'eau. */
 const FAR_RANK_MID = FAR_RANKS.map((r) => (r.x0 + r.x1) / 2);
 
-export const FAR_CELL_CAPACITY = FAR_RANKS.reduce((a, r) => a + r.n, 0);
+/**
+ * Emplacements réservés AU RELEVÉ, en plus de ceux du tissu.
+ *
+ * L'arrière-pays relevé est dense - jusqu'à deux cent trente-six bâtiments pour
+ * une cellule de cent vingt mètres - et les quinze places des rangs de tissu en
+ * laissaient deux mille cinq cents de côté sur un tour de boucle. Neuf places
+ * de plus en récupèrent huit cents pour sept mille triangles, mesurés par
+ * `node scripts/scenery-cost.mjs` : le budget d'ultra en pleine voie passe de
+ * 333 à 340 k triangles, pour une cible de 360 k. Les appels de rendu, eux, ne
+ * bougent pas - tout l'arrière-pays tient dans un seul maillage instancié.
+ *
+ * Elles ne servent qu'au relevé : les rangs de tissu gardent leurs propres
+ * compteurs, si bien qu'une cellule sans données ne se densifie pas.
+ */
+const FAR_REAL_EXTRA = 9;
+
+export const FAR_CELL_CAPACITY = FAR_RANKS.reduce((a, r) => a + r.n, 0) + FAR_REAL_EXTRA;
 
 // --- Aléa déterministe -------------------------------------------------------
 
@@ -558,6 +594,174 @@ function inClearing(s0: number, s1: number): boolean {
   return clearing.half > 0 && s1 > clearing.s - clearing.half && s0 < clearing.s + clearing.half;
 }
 
+// --- Ce qui est vraiment là -------------------------------------------------
+//
+// Le ruban engendrait tout. Il pose maintenant D'ABORD les bâtiments relevés
+// d'OpenStreetMap (src/data/corridor, via systems/corridor), et n'engendre que
+// dans ce qu'ils laissent.
+//
+// L'ORDRE N'EST PAS UN DÉTAIL. Le relevé passe en premier parce qu'il ne se
+// négocie pas : un bâtiment est là où il est, et c'est au tissu de s'écarter.
+// L'inverse - engendrer puis caser le réel dans les trous - donnerait une ville
+// inventée avec quelques vrais immeubles coincés dedans, ce qui est exactement
+// ce que la bible refuse.
+//
+// CE QUE LE RELEVÉ DONNE, ET CE QU'IL NE DONNE PAS. Il donne la position, la
+// hauteur, le côté de l'emprise et l'orientation. Il ne donne ni teinte, ni
+// enseigne, ni température de fenêtre : rien dans OpenStreetMap ne les porte.
+// Ces trois-là restent donc au tissu du quartier, et `CityBuilding.real` dit
+// lesquels des deux on regarde - on ne fait pas passer une palette pour un
+// relevé.
+//
+// LA DENSITÉ N'EST PAS LA MÊME AUX DEUX DISTANCES, et il faut le savoir pour
+// lire ce qu'on voit. Le corridor versionné porte 759 bâtiments dans la bande
+// du bord de voie et 8 516 dans l'arrière-pays : l'arrière-pays est donc
+// presque entièrement RELEVÉ, tandis que le bord de voie reste
+// majoritairement du tissu, avec des ancres réelles dedans. Ce n'est pas un
+// choix de rendu, c'est ce que la source contient - le plafond budgétaire de
+// `scripts/geo/fetch-footprints.mjs` a longtemps gardé les bâtiments qui
+// DÉCLARENT leur hauteur, et une échoppe de bord de voie n'en déclare pas.
+
+/** Marge de recherche autour d'une cellule (m) : l'emprise d'un voisin déborde. */
+const REAL_MARGIN = 40;
+
+/** Tampons de travail : le générateur n'alloue rien par cellule. */
+const NEAR_HITS = makeCorridorBuffer(24);
+const FAR_HITS = makeCorridorBuffer(48);
+
+/** Emprise VUE d'un sujet relevé, le long de la voie et en travers (m). */
+function realSpan(hit: CorridorHit): number {
+  return hit.plate * (Math.abs(Math.cos(hit.yaw)) + Math.abs(Math.sin(hit.yaw)));
+}
+
+/**
+ * Le rectangle [s0, s1] × [x0, x1] recouvre-t-il un bâtiment relevé ?
+ *
+ * Le test se fait sur la BANDE du rang et non sur l'emplacement latéral exact :
+ * celui-ci se tire après, et le déplacer changerait la suite pseudo-aléatoire
+ * de toute la ville. Un rang est profond de neuf à vingt-six mètres, un sujet
+ * relevé d'une douzaine : la différence est un peu de tissu en moins autour du
+ * réel, ce qui est le bon sens du compromis.
+ *
+ * La bande doit être celle que le sujet peut ATTEINDRE, et non celle où son
+ * centre peut tomber : tourné dans sa trame, un bâtiment déborde de son rang de
+ * la moitié de ce que la rotation lui ajoute en travers. C'est par là que le
+ * tissu passait au travers du relevé, et ça se voyait - deux volumes qui se
+ * traversent à quarante mètres de la vitre.
+ */
+function blockedByReal(
+  hits: CorridorHit[],
+  n: number,
+  s0: number,
+  s1: number,
+  x0: number,
+  x1: number,
+): boolean {
+  for (let i = 0; i < n; i++) {
+    const h = hits[i];
+    const half = realSpan(h) / 2;
+    if (h.s + half <= s0 || h.s - half >= s1) continue;
+    if (h.x + half <= x0 || h.x - half >= x1) continue;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Habille un bâtiment relevé : la géométrie vient de la source, le reste du
+ * quartier.
+ *
+ * `r` est la suite pseudo-aléatoire de la cellule - le même robinet que le
+ * tissu, pour que deux voisins d'une même rue se ressemblent, et pour qu'un
+ * sujet relevé reste identique d'un passage à l'autre.
+ */
+function dressReal(
+  b: CityBuilding,
+  hit: CorridorHit,
+  side: 1 | -1,
+  far: boolean,
+  r: () => number,
+): void {
+  const district = districtAt(hit.s, r());
+  const tissue = tissueOf(district);
+  const facades = district.facades ?? FALLBACK_FACADE;
+
+  b.s = hit.s;
+  b.x = hit.x;
+  b.y = cityGround(b.s, b.x, side);
+  // Le prisme est carré : `plate` est le côté de la boîte englobante du
+  // contour, et la source n'en dit pas plus. Inventer un rapport de forme
+  // serait inventer un bâtiment.
+  b.w = hit.plate;
+  b.d = hit.plate;
+  b.h = hit.h;
+  b.yaw = hit.yaw;
+  b.real = true;
+
+  b.facade = facades[Math.floor(r() * facades.length) % facades.length];
+  b.shade = 0.86 + r() * 0.3;
+  const neon = district.neon;
+  b.accent = neon ? neon[Math.floor(r() * neon.length) % neon.length] : district.accent;
+  // Un sujet relevé se juge sur SA distance, et non sur un rang : c'est tout
+  // l'intérêt d'avoir sa position. En deçà de quarante mètres il borde la rue
+  // et porte donc devantures et enseignes ; au-delà, on ne lit plus un
+  // rez-de-chaussée.
+  const kerb = !far && hit.x < 40;
+  b.glow = kerb ? 0.5 + r() * 0.4 : far ? 0 : 0.12;
+  b.socle = kerb && r() < tissue.trade ? 1 : 0;
+  b.grove = false;
+  b.crown = !far && b.h < 11 && r() < tissue.hip ? 'hip' : 'flat';
+  const sr = r();
+  b.sign =
+    kerb && sr < tissue.screen
+      ? 'screen'
+      : kerb && sr < tissue.screen + tissue.sign
+        ? 'vertical'
+        : 'none';
+  b.warm = r() < tissue.cool ? 0.05 + r() * 0.2 : 0.75 + r() * 0.25;
+  b.jx = r() * 12;
+  b.jy = r() * 3;
+  b.balcony = b.h >= 6 && b.h <= 46 && r() < tissue.balcony;
+}
+
+/**
+ * Pose les bâtiments relevés d'une cellule, et renvoie combien de sujets sont
+ * connus - ceux de la cellule ET ceux de la marge, qui ne se dessinent pas ici
+ * mais dont le tissu doit s'écarter.
+ *
+ * Les sujets écrits dans `out` sont ceux de la cellule ; `hits[0..known)` sert
+ * ensuite à `blockedByReal`.
+ */
+function placeReal(
+  start: number,
+  end: number,
+  side: 1 | -1,
+  xMin: number,
+  xMax: number,
+  hits: CorridorHit[],
+  out: CityBuilding[],
+  seed: number,
+  band: CorridorBand,
+): { count: number; known: number } {
+  const known = corridorSlice(start, end, side, xMin, xMax, hits, REAL_MARGIN, band);
+  const far = band === 'far';
+  const r = stream(seed);
+  let count = 0;
+  for (let i = 0; i < known; i++) {
+    if (!hits[i].inCell) continue;
+    // Plus de place dans la cellule : on le dit, on ne l'efface pas. C'est la
+    // même règle que pour les secteurs non résolus - un plafond budgétaire ne
+    // doit jamais se lire comme une absence de données.
+    if (count >= out.length) {
+      corridorDropped[band]++;
+      continue;
+    }
+    dressReal(out[count], hits[i], side, far, r);
+    count++;
+  }
+  return { count, known };
+}
+
 /**
  * Remplit `out` avec les bâtiments de la cellule `cell` du côté `side`.
  * Renvoie le nombre écrit (≤ out.length). Les objets de `out` sont réutilisés :
@@ -574,7 +778,20 @@ export function buildCell(
   const start = cell * CELL_LEN;
   const end = start + CELL_LEN;
   const street = streetOf(cell);
-  let count = 0;
+
+  // D'abord ce qui est vraiment là.
+  const real = placeReal(
+    start,
+    end,
+    side,
+    RANKS[0].x0,
+    RANKS[RANKS.length - 1].x1,
+    NEAR_HITS,
+    out,
+    cell * 8191 + (side === 1 ? 0 : 4099) + 7717,
+    'near',
+  );
+  let count = real.count;
 
   for (let rank = 0; rank < RANKS.length; rank++) {
     const R = RANKS[rank];
@@ -625,6 +842,15 @@ export function buildCell(
       // l'eau - la maille du relevé fait quarante mètres, elle ne distingue pas
       // les deux.
       if (waterOn(mid, RANK_MID[rank], side) > WET) {
+        cursor += spanS;
+        continue;
+      }
+      // Ni sur un bâtiment qui EXISTE. Le tissu est ce qu'on met là où l'on ne
+      // sait pas ; là où l'on sait, il s'écarte.
+      const spanX = d * Math.abs(Math.cos(yaw)) + w * Math.abs(Math.sin(yaw));
+      const reachIn = R.x0 + d / 2 - spanX / 2;
+      const reachOut = R.x1 - d / 2 + spanX / 2;
+      if (blockedByReal(NEAR_HITS, real.known, mid - spanS / 2, mid + spanS / 2, reachIn, reachOut)) {
         cursor += spanS;
         continue;
       }
@@ -687,6 +913,7 @@ export function buildCell(
       // Coursive : le bâti moyen, celui du logement de rapport. Une échoppe de
       // deux niveaux n'en a pas, une tour non plus.
       b.balcony = b.h >= 6 && b.h <= 46 && r() < tissue.balcony;
+      b.real = false;
 
       count++;
       placed++;
@@ -728,7 +955,22 @@ export function buildFarCell(
 ): number {
   const start = cell * FAR_CELL_LEN;
   const end = start + FAR_CELL_LEN;
-  let count = 0;
+
+  // L'arrière-pays est la bande la mieux servie par le relevé : huit mille cinq
+  // cents bâtiments contre sept cent cinquante-neuf au bord de voie. C'est donc
+  // lui qui devient VRAIMENT Tokyo, et le tissu n'y comble plus que les vides.
+  const real = placeReal(
+    start,
+    end,
+    side,
+    FAR_RANKS[0].x0,
+    FAR_RANKS[FAR_RANKS.length - 1].x1,
+    FAR_HITS,
+    out,
+    cell * 15485863 + (side === 1 ? 0 : 7919) + 3557,
+    'far',
+  );
+  let count = real.count;
 
   for (let rank = 0; rank < FAR_RANKS.length; rank++) {
     const R = FAR_RANKS[rank];
@@ -757,6 +999,14 @@ export function buildFarCell(
       // à cent et deux cents mètres que tombent les canaux de remblai de Kōnan
       // et de Shibaura, et la baie elle-même quatre cents mètres plus loin.
       if (waterOn(cursor + w / 2, FAR_RANK_MID[rank], side) > WET) {
+        cursor += spanS;
+        continue;
+      }
+      const mid = cursor + w / 2;
+      const spanX = d * Math.abs(Math.cos(yaw)) + w * Math.abs(Math.sin(yaw));
+      const reachIn = R.x0 + d / 2 - spanX / 2;
+      const reachOut = R.x1 - d / 2 + spanX / 2;
+      if (blockedByReal(FAR_HITS, real.known, mid - spanS / 2, mid + spanS / 2, reachIn, reachOut)) {
         cursor += spanS;
         continue;
       }
@@ -791,6 +1041,7 @@ export function buildFarCell(
       // un rythme horizontal - et c'est précisément ce qui distingue un
       // arrière-pays de logements d'un arrière-pays de bureaux.
       b.balcony = b.h <= 46 && r() < tissue.balcony;
+      b.real = false;
 
       count++;
       placed++;
@@ -1210,5 +1461,6 @@ export function makeCellBuffer(length = CELL_CAPACITY): CityBuilding[] {
     jy: 0,
     balcony: false,
     yaw: 0,
+    real: false,
   }));
 }

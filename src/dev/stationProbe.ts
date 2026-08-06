@@ -26,7 +26,16 @@ import { holdTrain } from '../systems/stationCycle';
 import { psdGates } from '../three/station/psdLayout';
 import { freezeWeather, weather } from '../systems/weather';
 import { seasonNow } from '../systems/season';
-import { clearing } from '../systems/cityField';
+import {
+  CELL_CAPACITY,
+  CELL_LEN,
+  FAR_CELL_CAPACITY,
+  FAR_CELL_LEN,
+  buildCell,
+  buildFarCell,
+  clearing,
+  makeCellBuffer,
+} from '../systems/cityField';
 import { expressway, singularity } from '../systems/singularity';
 import { groundAt, trackAt, trackElevation, loopHere, cityRelief } from '../systems/terrain';
 import {
@@ -41,6 +50,13 @@ import { SECTORS } from '../data/sectors';
 import { WATER_CROSSINGS } from '../data/water';
 import { GEO_LANDMARKS } from '../data/tokyoGeo';
 import { FOOTPRINT_TOTAL, FOOTPRINT_REACH } from '../data/footprints';
+import {
+  CORRIDOR_FAR,
+  CORRIDOR_MEASURED,
+  CORRIDOR_NEAR,
+  CORRIDOR_TOTAL,
+} from '../data/corridor';
+import { corridorDropped } from '../systems/corridor';
 import { GEO_REGISTRY, factVisible, DATED_FACTS } from '../data/geo/provenance';
 import { LOOP_PERIMETER } from '../systems/tokyoBearing';
 
@@ -717,6 +733,50 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
    *   __probeBible()     → KM bible, gare la plus proche, bandes peuplées
    *   __probeBible(12.5) → se poser au KM 12,5 (Shinagawa = 0)
    */
+  /**
+   * Ce que le ruban pose ICI : combien de bâtiments viennent d'OpenStreetMap et
+   * combien sont du tissu engendré.
+   *
+   * C'est la seule réponse honnête à « est-ce que c'est Tokyo ? ». On rebâtit
+   * les cellules du voisinage - deux cents mètres devant et derrière - sans
+   * toucher au rendu, et on compte. `abandonnés` dit combien de bâtiments
+   * RELEVÉS n'ont pas trouvé de place : un plafond budgétaire ne doit jamais se
+   * lire comme une absence de données.
+   */
+  const corridorCensus = () => {
+    const near = makeCellBuffer(CELL_CAPACITY);
+    const far = makeCellBuffer(FAR_CELL_CAPACITY);
+    const tally = { relevés: 0, tissu: 0 };
+    const count = (buf: ReturnType<typeof makeCellBuffer>, n: number) => {
+      for (let i = 0; i < n; i++) {
+        if (buf[i].real) tally.relevés++;
+        else tally.tissu++;
+      }
+    };
+    const home = runtime.distance;
+    for (let k = -5; k <= 5; k++) {
+      const cell = Math.floor(home / CELL_LEN) + k;
+      for (const side of [1, -1] as const) count(near, buildCell(cell, side, near));
+    }
+    for (let k = -2; k <= 2; k++) {
+      const cell = Math.floor(home / FAR_CELL_LEN) + k;
+      for (const side of [1, -1] as const) count(far, buildFarCell(cell, side, far));
+    }
+    return {
+      ici: {
+        ...tally,
+        part: +((100 * tally.relevés) / Math.max(1, tally.relevés + tally.tissu)).toFixed(1),
+      },
+      table: {
+        total: CORRIDOR_TOTAL,
+        bordDeVoie: CORRIDOR_NEAR,
+        arrièrePays: CORRIDOR_FAR,
+        hauteurRelevée: CORRIDOR_MEASURED,
+      },
+      abandonnés: { ...corridorDropped },
+    };
+  };
+
   w.__probeBible = (km?: number) => {
     if (km !== undefined) {
       const p = { x: 0, z: 0 };
@@ -751,6 +811,7 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
       near: GEO_LANDMARKS.filter((lm) => lm.band === 'near').length,
       empreintes: FOOTPRINT_TOTAL,
       empreinteReach: FOOTPRINT_REACH,
+      corridor: corridorCensus(),
       provenance: GEO_REGISTRY.length,
       faitsDatés: DATED_FACTS.map((f) => ({
         id: f.id,

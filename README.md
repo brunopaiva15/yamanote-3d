@@ -1657,6 +1657,69 @@ Sondes : `__probeTerrain()`, `__probeBible()` / `__probeBible(12.5)`. Captures
 par KM : `node scripts/km-shots.mjs /tmp/km`. Budget : `node scripts/scenery-cost.mjs`
 (cible inchangée : ultra ≤ 850 appels et ≤ 360 k triangles).
 
+### Les empreintes entrent dans le ruban
+
+Il manquait à la quatrième passe le raccordement qui la rendait vraie. Les
+vingt-quatre mille empreintes étaient importées, datées, licenciées - et
+personne ne les dessinait : `src/data/footprints.ts` n'était lu que par une
+sonde de développement, et le ruban urbain continuait d'inventer sa ville à
+douze mètres de la vitre. `data/geo/km-bible.json` le disait sans détour, bande
+0 : `coveredBy: "ruban urbain (systems/cityField)"`. Au rayon où la bible exige
+l'empreinte exacte, on montrait du tissu engendré.
+
+**La projection.** `scripts/geo/build-corridor.mjs` ne va rien chercher dehors :
+il DÉRIVE `src/data/corridor.ts` de deux fichiers déjà versionnés - les
+empreintes et l'axe relevé des voies. Chaque bâtiment est projeté sur la
+polyligne et rangé dans le repère du relief et de l'eau : abscisse de boucle,
+décalage latéral compté à gauche des index JY croissants. Neuf mille deux cent
+soixante-quinze tombent dans la bande que le ruban dessine (12 à 440 m) ;
+dix-neuf autres sont dans l'emprise ferroviaire et resteront dehors - ils
+traverseraient le train.
+
+**L'ordre.** `buildCell` et `buildFarCell` posent D'ABORD ce qui existe, et
+n'engendrent que dans ce qui reste. L'inverse - engendrer puis caser le réel
+dans les trous - donnerait une ville inventée avec quelques vrais immeubles
+coincés dedans. Le tissu s'écarte de l'emprise relevée au lieu de bâtir dessus,
+et un test le vérifie sur un tour de boucle entier.
+
+**Ce que ça donne, mesuré sur les 861 cellules du tour :**
+
+| bande | posés | dont relevés |
+| --- | --- | --- |
+| bord de voie (12–66 m) | 7 504 | **736 · 9,8 %** |
+| arrière-pays (66–440 m) | 6 612 | **5 556 · 84,0 %** |
+
+L'arrière-pays - la couche qu'on lit vraiment d'un train, celle qui porte la
+ligne de faîte - est maintenant du bâti relevé à quatre-vingt-quatre pour cent.
+Le bord de voie reste majoritairement du tissu, et **ce n'est pas un choix de
+rendu** : le relevé versionné n'y contient que 759 bâtiments. Le plafond
+budgétaire de `fetch-footprints` gardait les bâtiments qui DÉCLARENT leur
+hauteur dans OSM, et une échoppe de bord de voie n'en déclare pas. Ce plafond
+remplit désormais ce qui lui reste **par distance croissante à la voie** plutôt
+qu'au hasard : le jour où l'import se rejoue avec un accès au réseau, le bord de
+voie se densifie tout seul, sans une ligne de code de plus.
+
+**L'orientation vient de la voie.** La boîte est celle du contour, alignée sur
+les axes de la projection : son angle dans le repère du ruban est donc celui de
+la voie, replié au quart de tour - et c'est ce repli qui la rend valable dans
+les deux sens de marche, où la base du ruban se retourne. La trame n'est plus
+hachée, elle est relevée.
+
+**Ce qui n'est PAS relevé, et qu'on ne prétend pas.** L'emprise est la boîte
+englobante du contour : `data/geo/footprints.json` n'a gardé que son plus grand
+côté, on pose donc un prisme carré. C'est du LOD1 - le bâtiment est là, haut
+comme il est haut, mais son plan est une boîte, et la règle 4 demande mieux. La
+teinte, les enseignes et les fenêtres restent celles du quartier : aucune source
+ne les porte. `CityBuilding.real` distingue les deux à chaque instance, et
+`__probeBible().corridor` compte les deux familles autour du train - avec le
+nombre de bâtiments relevés qu'un plafond de cellule a laissés de côté
+(2 900 dans l'arrière-pays sur un tour), parce qu'un budget ne doit jamais se
+lire comme une absence de données.
+
+Coût mesuré (`node scripts/scenery-cost.mjs`, ultra en pleine voie) : 340 k
+triangles contre 333 k avant, pour une cible de 360 k. Les appels de rendu ne
+bougent pas - tout l'arrière-pays tient dans un seul maillage instancié.
+
 ## Les saisons
 
 Le décor n'avait qu'une horloge, celle des heures. Un 21 décembre s'y déroulait

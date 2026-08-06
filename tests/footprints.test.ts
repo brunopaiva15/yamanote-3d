@@ -8,7 +8,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
-  FOOTPRINTS,
+  FOOTPRINT_ESTIMATED,
+  FOOTPRINT_MEASURED,
   FOOTPRINT_REACH,
   FOOTPRINT_TOTAL,
   FOOTPRINT_SURVEY,
@@ -23,7 +24,9 @@ test('le corridor fait un kilomètre, et le relevé le remplit', () => {
   assert.equal(pack.count, FOOTPRINT_TOTAL);
   assert.equal(pack.survey, FOOTPRINT_SURVEY);
   assert.equal(pack.footprintMeasured, true);
-  assert.ok(FOOTPRINTS.length > 1000 && FOOTPRINTS.length <= FOOTPRINT_TOTAL);
+  assert.equal(FOOTPRINT_MEASURED + FOOTPRINT_ESTIMATED, FOOTPRINT_TOTAL);
+  assert.equal(pack.measuredHeights, FOOTPRINT_MEASURED);
+  assert.equal(pack.estimatedHeights, FOOTPRINT_ESTIMATED);
   // Budget versionnable : le pack compact doit tenir sous ~3 Mo.
   const bytes = Buffer.byteLength(JSON.stringify(pack));
   assert.ok(bytes < 3_200_000, `pack trop gros (${bytes} octets)`);
@@ -31,16 +34,14 @@ test('le corridor fait un kilomètre, et le relevé le remplit', () => {
 
 test('les emprises viennent du polygone OSM, pas d’un carré inventé', () => {
   assert.equal(pack.footprintMeasured, true);
-  for (const f of FOOTPRINTS) {
-    assert.equal(f.footprintMeasured, true, f.id);
-    assert.ok(f.distance <= FOOTPRINT_REACH, `${f.id} hors corridor`);
-    assert.ok(f.height > 1 && f.height < 800, `${f.id} hauteur absurde`);
-    assert.ok(f.plate >= 1 && f.plate < 500, `${f.id} emprise absurde (${f.plate})`);
-    assert.equal(typeof f.measured, 'boolean');
-  }
+  const col = Object.fromEntries(pack.columns.map((c, i) => [c, i]));
   for (const row of pack.rows) {
     assert.equal(row.length, pack.columns.length);
-    assert.ok(row[4] >= 10, "plate10 trop petit pour un vrai contour"); // > 2 m
+    assert.ok(row[col.plate10] >= 10, 'plate10 trop petit pour un vrai contour'); // > 2 m
+    assert.ok(row[col.distance] <= FOOTPRINT_REACH, 'hors corridor');
+    assert.ok(row[col.h10] > 10 && row[col.h10] < 8000, 'hauteur absurde');
+    assert.ok(row[col.measured] === 0 || row[col.measured] === 1);
+    assert.ok(Number.isInteger(row[col.osmWay]) && row[col.osmWay] > 0);
   }
 });
 
