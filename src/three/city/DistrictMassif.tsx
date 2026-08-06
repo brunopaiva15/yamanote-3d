@@ -13,17 +13,42 @@
 // à vingt. Aucune n'est un repère isolé qu'on puisse nommer d'une silhouette -
 // ce sont des MASSES, et c'est comme masses qu'elles se lisent.
 //
+// --- DEUX COUCHES, ET IL FAUT LES DISTINGUER ---
+//
+// LES AMAS (src/data/sectors) sont les groupes de bâtiments de plus de
+// cinquante-cinq mètres : Nishi-Shinjuku, Azabudai, Minato Mirai. Cinquante et
+// un sur toute la boucle.
+//
+// LA NAPPE (src/data/crust) est ce qu'il y a ENTRE eux : trois cent treize
+// secteurs nommés d'OpenStreetMap, résolus mais sans aucune tour, avec leur
+// faîte mesuré - huit mètres de médiane au-delà de dix kilomètres. C'est la
+// « nappe de volumes simplifiés » que la règle 7 de la bible demande, et elle
+// manquait : la bande 10-20 km n'avait que QUATRE amas pour six cent neuf
+// secteurs, si bien que l'horizon y était un trait.
+//
+// Un secteur de nappe est bas, et c'est justement ce qui le rend utile : ce
+// n'est pas lui qu'on voit, c'est le SOL qu'il porte. Le plateau de Musashino
+// monte à soixante-dix mètres quand la plaine alluviale est à zéro ; c'est
+// cette différence-là qui donne un profil à l'horizon.
+//
 // --- CE QU'ON DESSINE, ET POURQUOI SI PEU ---
 //
-// Une découpe rectangulaire par amas, et rien de plus. Ce n'est pas de la
-// paresse : c'est exactement ce que la donnée porte. src/data/sectors donne
-// pour chaque amas un barycentre, une dispersion et un percentile de hauteur,
-// tous mesurés sur les bâtiments d'OpenStreetMap qui déclarent leur hauteur.
-// Il ne donne ni le dessin des toits, ni la largeur de chaque tour. Dessiner
-// une ligne de faîte dentelée demanderait d'inventer ces dentelures, et la
-// règle 11 de la bible l'interdit. Une masse rectangulaire noyée de brume à
-// deux kilomètres est ce que la source permet d'affirmer, ni plus ni moins -
-// et c'est déjà beaucoup plus juste qu'un ciel vide.
+// Une découpe rectangulaire par secteur, et rien de plus. Ce n'est pas de la
+// paresse : c'est exactement ce que la donnée porte. Un barycentre, une
+// dispersion et un percentile de hauteur, tous mesurés sur les bâtiments
+// d'OpenStreetMap qui déclarent la leur. Ni le dessin des toits, ni la largeur
+// de chaque tour. Dessiner une ligne de faîte dentelée demanderait d'inventer
+// ces dentelures, et la règle 11 de la bible l'interdit. Une masse
+// rectangulaire noyée de brume à deux kilomètres est ce que la source permet
+// d'affirmer, ni plus ni moins - et c'est déjà beaucoup plus juste qu'un ciel
+// vide.
+//
+// Le RAYON de la nappe, lui, est déduit et non relevé : aucun secteur
+// d'OpenStreetMap ne porte son emprise, et `measuredRadius` vaut faux pour
+// tous. C'est la seule grandeur de cette couche qui ne soit pas mesurée.
+//
+// Les 851 secteurs NON RÉSOLUS - ceux dont aucun bâtiment ne déclare sa
+// hauteur - restent vides. Ils ne reçoivent pas une hauteur plausible.
 //
 // Les tours nommées, elles, restent à FarSkyline : la tour de Tokyo sort du
 // massif de Shiba comme elle en sort dans la vraie vie.
@@ -54,6 +79,7 @@ import { useStore } from '../../store';
 import { CONFIG } from '../../data/config';
 import { journeyProgress } from '../../data/segments';
 import { SECTORS } from '../../data/sectors';
+import { CRUST } from '../../data/crust';
 import { loopPose, makePose, sightTo, type Sight } from '../../systems/tokyoBearing';
 import { segEnv } from '../../systems/segmentEnv';
 import { trackElevation } from '../../systems/terrain';
@@ -128,25 +154,44 @@ function smoothstep(a: number, b: number, x: number): number {
  */
 const BY_PRESENCE = [...SECTORS].sort((a, b) => b.height / b.distance - a.height / a.distance);
 
-/** Combien de masses par palier de qualité. */
-function tuning(quality: Quality): number {
+/**
+ * La nappe, rangée par présence elle aussi.
+ *
+ * Elle se coupe SÉPARÉMENT des amas, et avant eux : une tour de deux cents
+ * mètres à huit kilomètres se voit, un secteur de huit mètres à quinze n'est
+ * qu'un liseré. Les mélanger dans un seul classement ferait tomber Minato
+ * Mirai avant un quartier bas de banlieue.
+ */
+const CRUST_BY_PRESENCE = [...CRUST].sort(
+  (a, b) => b.height / b.distance - a.height / a.distance,
+);
+
+/** Combien d'amas, et combien de secteurs de nappe, par palier de qualité. */
+function tuning(quality: Quality): { masses: number; crust: number } {
   const level = qualityLevel(quality);
-  if (quality === 'extraordinary' || level <= 1) return SECTORS.length;
-  if (level === 2) return 32;
-  if (level === 3) return 18;
+  if (quality === 'extraordinary' || level <= 1) {
+    return { masses: SECTORS.length, crust: CRUST.length };
+  }
+  if (level === 2) return { masses: 32, crust: 160 };
+  if (level === 3) return { masses: 18, crust: 60 };
   // Aux deux derniers paliers, rien de neuf : c'est la règle des passes.
-  return 0;
+  return { masses: 0, crust: 0 };
 }
 
 export function DistrictMassif() {
   const scene = useThree((s) => s.scene);
   const quality = usePerf((s) => s.quality);
-  const count = tuning(quality);
+  const { masses, crust } = tuning(quality);
 
   const built = useMemo(() => {
-    if (!count) return null;
-    // De la plus lointaine à la plus proche : c'est l'ordre de peinture.
-    const items = BY_PRESENCE.slice(0, count).sort((a, b) => b.distance - a.distance);
+    if (!masses && !crust) return null;
+    // De la plus lointaine à la plus proche : c'est l'ordre de peinture, et il
+    // vaut pour les DEUX couches à la fois - un secteur de nappe proche doit
+    // recouvrir un amas lointain, et l'inverse n'arrive jamais.
+    const items = [
+      ...BY_PRESENCE.slice(0, masses),
+      ...CRUST_BY_PRESENCE.slice(0, crust),
+    ].sort((a, b) => b.distance - a.distance);
 
     // Un carré unité, ancré sur son ARÊTE BASSE : la mise à l'échelle en y
     // pousse alors le faîte vers le haut sans décoller le pied du sol.
@@ -171,7 +216,7 @@ export function DistrictMassif() {
     mesh.renderOrder = RENDER_ORDER;
     mesh.frustumCulled = false;
     return { items, geo, mat, mesh };
-  }, [count]);
+  }, [masses, crust]);
 
   useEffect(() => {
     if (!built) return;

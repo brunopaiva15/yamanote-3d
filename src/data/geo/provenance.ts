@@ -31,14 +31,29 @@ export interface GeoRecord {
   license: string;
   /** Date du JEU DE DONNÉES, jamais celle du build. */
   datasetDate: string;
-  lon: number;
-  lat: number;
+  /** Coordonnées géographiques, quand l'objet les porte. */
+  lon?: number;
+  lat?: number;
   lod: 0 | 1 | 2 | 3;
   minDistance: number;
   maxDistance: number;
   verifiedAt: string;
   /** false = grandeur estimée, jamais présentée comme relevée. */
   measured: boolean;
+  /**
+   * Coordonnées de scène (m), dans le repère déclaré par `crs`.
+   *
+   * Les tables du jeu comptent en mètres depuis le point d'arrêt de Tokyo -
+   * c'est ce dont le rendu a besoin, et embarquer en plus une longitude et une
+   * latitude par objet coûterait cent kilo-octets pour le seul corridor. La
+   * règle 10 demande des COORDONNÉES ; celles-ci en sont, à condition de dire
+   * dans quel repère, ce que fait `crs`.
+   */
+  x?: number;
+  z?: number;
+  crs?: string;
+  /** Où aller vérifier CET objet-là, quand la source expose une page. */
+  sourceUrl?: string | null;
   /**
    * Fenêtre de validité pour DATA_SEMISTATIC.
    * Dates civiles inclusives, format AAAA-MM-JJ. `null` = pas de borne.
@@ -64,8 +79,12 @@ export function geoRecordIssue(r: Partial<GeoRecord> | null | undefined): string
   if (!r.license || typeof r.license !== 'string') return `${r.id} : licence manquante`;
   if (!r.datasetDate || !ISO.test(r.datasetDate)) return `${r.id} : datasetDate invalide`;
   if (!r.verifiedAt || !ISO.test(r.verifiedAt)) return `${r.id} : verifiedAt invalide`;
-  if (typeof r.lon !== 'number' || !Number.isFinite(r.lon)) return `${r.id} : lon manquant`;
-  if (typeof r.lat !== 'number' || !Number.isFinite(r.lat)) return `${r.id} : lat manquant`;
+  // Des coordonnées, et il en faut : soit géographiques, soit de scène AVEC le
+  // repère qui les rend lisibles. Une abscisse sans repère n'est pas une
+  // coordonnée, c'est un nombre.
+  const geographic = Number.isFinite(r.lon) && Number.isFinite(r.lat);
+  const projected = Number.isFinite(r.x) && Number.isFinite(r.z) && !!r.crs;
+  if (!geographic && !projected) return `${r.id} : coordonnées manquantes`;
   if (r.lod !== 0 && r.lod !== 1 && r.lod !== 2 && r.lod !== 3) return `${r.id} : lod invalide`;
   if (typeof r.minDistance !== 'number' || r.minDistance < 0) return `${r.id} : minDistance`;
   if (typeof r.maxDistance !== 'number' || r.maxDistance < r.minDistance) {
@@ -347,3 +366,200 @@ export const STATIC_LAYERS: readonly GeoRecord[] = [
 
 /** Tout ce que le registre de provenance doit pouvoir citer. */
 export const GEO_REGISTRY: readonly GeoRecord[] = [...STATIC_LAYERS, ...DATED_FACTS];
+
+// --- Le registre par JEU DE DONNÉES, et l'enregistrement par OBJET ----------
+//
+// La règle 10 demande que CHAQUE OBJET enregistre sa source, sa licence, la
+// date de son jeu de données, ses coordonnées, son niveau de détail, ses
+// distances d'affichage et sa date de vérification. Sept champs, dont SIX sont
+// les mêmes pour tous les objets d'un même import.
+//
+// Les écrire objet par objet coûterait, pour le seul corridor, neuf mille
+// répétitions de « OpenStreetMap · ODbL 1.0 · 2026-08-06 » - un demi-méga-octet
+// pour ne rien apprendre à personne. On les écrit donc UNE FOIS par jeu de
+// données, et `geoRecordOf` rend l'enregistrement complet d'un objet à la
+// demande. Ce qui compte, et qu'un test vérifie, c'est que TOUT objet posé dans
+// la scène puisse en produire un - pas qu'il le traîne en mémoire.
+//
+// Ce qui reste propre à l'objet : son identifiant, ses coordonnées, et le
+// drapeau `measured` qui dit si sa grandeur est relevée ou estimée.
+
+/** Ce qu'un import entier partage : les six champs constants de la règle 10. */
+export interface GeoDataset {
+  id: string;
+  layer: DataLayer;
+  source: string;
+  license: string;
+  datasetDate: string;
+  verifiedAt: string;
+  lod: 0 | 1 | 2 | 3;
+  /** Distances d'affichage (m) : celles que le rendu applique vraiment. */
+  minDistance: number;
+  maxDistance: number;
+  /** Repère des coordonnées de scène des objets de ce jeu. */
+  crs: string;
+  /** Où aller vérifier un objet, à partir de son identifiant. */
+  objectUrl?: (id: string) => string | null;
+}
+
+/** Une page OpenStreetMap depuis un identifiant `osm-<type>-<numéro>`. */
+function osmUrl(id: string): string | null {
+  const m = /^osm-(node|way|relation)-(\d+)$/.exec(id);
+  return m ? `https://www.openstreetmap.org/${m[1]}/${m[2]}` : null;
+}
+
+/** Repère de scène commun : mètres depuis le point d'arrêt de Tokyo. */
+const SCENE_CRS = 'EPSG:6677 (JGD2011 / CS IX), mètres depuis le point d’arrêt de Tokyo (JY01)';
+
+const OSM = { source: 'OpenStreetMap', license: 'ODbL 1.0', crs: SCENE_CRS } as const;
+
+/**
+ * Tous les jeux de données géographiques que la scène pose.
+ *
+ * Un test refuse qu'une table du jeu n'ait pas son entrée ici : c'est la seule
+ * façon de garantir que rien n'arrive à l'écran sans provenance.
+ */
+export const GEO_DATASETS: Readonly<Record<string, GeoDataset>> = {
+  'yamanote-loop': {
+    ...OSM,
+    id: 'yamanote-loop',
+    layer: 'DATA_STATIC',
+    source: 'OpenStreetMap (relation 5376382)',
+    datasetDate: '2026-06-09',
+    verifiedAt: '2026-08-06',
+    lod: 0,
+    minDistance: 0,
+    maxDistance: 50000,
+  },
+  'gsi-dem': {
+    id: 'gsi-dem',
+    layer: 'DATA_STATIC',
+    source: '国土地理院 数値標高モデル',
+    license: '国土地理院コンテンツ利用規約',
+    datasetDate: '2024-04-01',
+    verifiedAt: '2026-08-06',
+    lod: 1,
+    minDistance: 0,
+    maxDistance: 50000,
+    crs: SCENE_CRS,
+  },
+  'osm-water': {
+    ...OSM,
+    id: 'osm-water',
+    layer: 'DATA_STATIC',
+    datasetDate: '2026-08-02',
+    verifiedAt: '2026-08-06',
+    lod: 1,
+    minDistance: 0,
+    maxDistance: 3000,
+    objectUrl: osmUrl,
+  },
+  'osm-corridor': {
+    ...OSM,
+    id: 'osm-corridor',
+    layer: 'DATA_STATIC',
+    datasetDate: '2026-08-06',
+    verifiedAt: '2026-08-06',
+    // Un prisme carré tiré de la boîte englobante du contour : du LOD1, et la
+    // règle 4 demande mieux. Le déclarer pour 2 serait se mentir.
+    lod: 1,
+    minDistance: 12,
+    maxDistance: 440,
+    objectUrl: osmUrl,
+  },
+  'osm-sectors': {
+    ...OSM,
+    id: 'osm-sectors',
+    layer: 'DATA_STATIC',
+    datasetDate: '2026-08-06',
+    verifiedAt: '2026-08-06',
+    lod: 2,
+    minDistance: 500,
+    maxDistance: 20000,
+  },
+  'osm-crust': {
+    ...OSM,
+    id: 'osm-crust',
+    layer: 'DATA_STATIC',
+    datasetDate: '2026-08-06',
+    verifiedAt: '2026-08-06',
+    lod: 2,
+    minDistance: 500,
+    maxDistance: 20000,
+    objectUrl: osmUrl,
+  },
+  'osm-near-landmarks': {
+    ...OSM,
+    id: 'osm-near-landmarks',
+    layer: 'DATA_STATIC',
+    datasetDate: '2026-08-05',
+    verifiedAt: '2026-08-06',
+    lod: 1,
+    minDistance: 0,
+    maxDistance: 2000,
+    objectUrl: osmUrl,
+  },
+  'osm-horizon-landmarks': {
+    ...OSM,
+    id: 'osm-horizon-landmarks',
+    layer: 'DATA_STATIC',
+    datasetDate: '2026-08-06',
+    verifiedAt: '2026-08-06',
+    lod: 1,
+    minDistance: 2000,
+    maxDistance: 100000,
+  },
+  'plateau-buildings': {
+    id: 'plateau-buildings',
+    layer: 'DATA_STATIC',
+    source: 'Project PLATEAU (国土交通省)',
+    license: 'CC BY 4.0',
+    datasetDate: '2023-03-31',
+    verifiedAt: '2026-08-06',
+    lod: 2,
+    minDistance: 0,
+    maxDistance: 300,
+    crs: SCENE_CRS,
+  },
+};
+
+/** Ce qu'un objet doit porter LUI-MÊME pour qu'on sache le situer. */
+export interface GeoObject {
+  id: string;
+  lon?: number;
+  lat?: number;
+  x?: number;
+  z?: number;
+  /** Défaut : true. false = grandeur estimée, jamais présentée comme relevée. */
+  measured?: boolean;
+}
+
+/**
+ * L'enregistrement complet d'un objet, au sens de la règle 10.
+ *
+ * Six champs viennent de son jeu de données, trois de lui. Rien n'est inventé
+ * en chemin : si le jeu n'est pas déclaré, on renvoie `null` plutôt qu'un
+ * enregistrement plausible.
+ */
+export function geoRecordOf(datasetId: string, obj: GeoObject): GeoRecord | null {
+  const d = GEO_DATASETS[datasetId];
+  if (!d) return null;
+  return {
+    id: obj.id,
+    layer: d.layer,
+    source: d.source,
+    license: d.license,
+    datasetDate: d.datasetDate,
+    verifiedAt: d.verifiedAt,
+    lod: d.lod,
+    minDistance: d.minDistance,
+    maxDistance: d.maxDistance,
+    measured: obj.measured ?? true,
+    lon: obj.lon,
+    lat: obj.lat,
+    x: obj.x,
+    z: obj.z,
+    crs: obj.lon === undefined ? d.crs : undefined,
+    sourceUrl: d.objectUrl?.(obj.id) ?? null,
+  };
+}

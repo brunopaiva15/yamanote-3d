@@ -1778,7 +1778,83 @@ Au passage, chaque silhouette est maintenant **fondue par matériau** : un
 bosquet, c'était vingt-deux maillages pour trois teintes, donc vingt-deux appels
 de rendu. Sans cette fusion, citer quatre objets par gare faisait passer la
 scène à quai de sept cents à neuf cent quatre-vingt-sept appels ; avec, elle
-retombe à 707–731, sous les 850 de la cible.
+retombe à **707–779** sur cinq mesures, sous les 850 de la cible.
+
+Un mot sur la mesure à quai, parce qu'elle trompe : elle saute par moments à
+~910 appels pour 280 k triangles au lieu de 180 k. Ce n'est pas un palier, c'est
+une **rame croisée** attrapée par l'échantillon - le décalage de triangles le
+dénonce. En pleine voie, où rien de tel ne passe, la mesure est stable à ±30
+appels.
+
+### La nappe urbaine : la bande 10–20 km n'était pas vide, elle était jetée
+
+La règle 7 demande, entre dix et vingt kilomètres, « une nappe de volumes
+simplifiés ». `DistrictMassif` ne dessinait que les **amas** - les groupes de
+bâtiments de plus de cinquante-cinq mètres : **quatre découpes pour les six cent
+neuf secteurs** de cette bande. L'horizon y était un trait.
+
+Le relevé portait pourtant bien plus. Sur les 1 226 secteurs nommés
+d'OpenStreetMap à moins de vingt kilomètres, **375 sont résolus** - assez de
+bâtiments y déclarent leur hauteur pour qu'on en tire un faîte, le percentile
+0,75 des hauteurs relevées dans l'emprise. Seuls 26 portent un amas de tours.
+Les 349 autres étaient calculés, versionnés, et jetés.
+
+`scripts/geo/build-crust.mjs` (hors ligne, dérivé de `data/geo/sectors.json`)
+en fait `src/data/crust.ts` : **313 secteurs**, dont **117 dans la bande
+10–20 km** et 71 entre 5 et 10. Ils rejoignent les amas dans le même maillage
+instancié - zéro appel de rendu de plus, +313 instances, +626 triangles.
+
+Un secteur de nappe est **bas** - huit mètres de faîte médian au-delà de dix
+kilomètres - et c'est ce qui le rend utile : ce n'est pas lui qu'on voit, c'est
+le **sol qu'il porte**. Le plateau de Musashino monte à soixante-dix mètres
+quand la plaine alluviale est à zéro, et c'est cette différence-là qui donne un
+profil à l'horizon au lieu d'un trait.
+
+**Ce qui est mesuré** : le faîte, l'altitude (MNT du 国土地理院), la position
+(le nœud nommé d'OSM). **Ce qui est déduit** : le rayon, tiré de la distance au
+voisin de même rang - aucun secteur d'OpenStreetMap ne porte son emprise, et
+`measuredRadius` vaut faux pour tous. **Ce qui reste vide** : les 851 secteurs
+non résolus. Ils ne reçoivent pas une hauteur plausible ; c'est la règle 11, et
+un test vérifie qu'aucun d'eux n'est dessiné.
+
+Reste hors de portée dans cette bande : les grands fleuves. Le relevé d'eau
+s'arrête à trois kilomètres de la voie (`SHORE_REACH`), et l'élargir demande un
+import avec accès au réseau.
+
+### La provenance, objet par objet
+
+La règle 10 veut que **chaque objet** enregistre sa source, sa licence, la date
+de son jeu de données, ses coordonnées, son niveau de détail, ses distances
+d'affichage et sa date de vérification. `geoRecordIssue` ne couvrait que le
+registre et les faits datés : les 24 791 empreintes, les 51 amas et les 313
+secteurs de nappe portaient leur provenance en en-tête de fichier, par couche.
+
+Sept champs, dont **six sont les mêmes pour tous les objets d'un même import**.
+Les écrire objet par objet coûterait, pour le seul corridor, neuf mille
+répétitions de « OpenStreetMap · ODbL 1.0 · 2026-08-06 » - un demi-méga-octet
+pour ne rien apprendre à personne. Ils sont donc écrits **une fois par jeu de
+données** (`GEO_DATASETS`), et `geoRecordOf(dataset, objet)` rend
+l'enregistrement complet à la demande. Ce qui reste propre à l'objet : son
+identifiant, ses coordonnées, et le drapeau `measured`.
+
+Deux ajouts au format, parce que la règle le demandait vraiment :
+
+- **les coordonnées de scène comptent**, à condition de dire dans quel repère.
+  Les tables du jeu comptent en mètres depuis le point d'arrêt de Tokyo ;
+  `crs` les qualifie, et un enregistrement sans coordonnées d'aucune sorte est
+  refusé ;
+- **`sourceUrl` par objet** : pour tout ce qui vient d'OpenStreetMap,
+  l'identifiant devient une adresse - `openstreetmap.org/way/39169159`. « On
+  peut ouvrir la carte et regarder » cesse d'être une figure de style. Un jeu
+  qui n'expose pas de page par objet rend `null` plutôt que d'en inventer une.
+
+`tests/geoProvenance.test.ts` parcourt **les tables que la scène pose vraiment**
+- corridor, nappe, amas, eau, repères de bord de voie, repères d'horizon,
+polyligne - et exige de chacune un jeu déclaré et un enregistrement valide pour
+chaque objet. Ajouter une couche sans la déclarer fait échouer le test : c'est
+le seul moyen que la règle survive à la prochaine passe. Un test vérifie aussi
+que les distances d'affichage déclarées sont bien celles que le rendu applique -
+le champ le plus facile à laisser dériver.
 
 ## Les saisons
 
