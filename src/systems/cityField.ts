@@ -46,7 +46,7 @@ import { DISTRICTS, GENERIC, type District, type Feat } from '../data/districts.
 import { directionStep, prevStation, wrapStation } from '../data/loop.ts';
 import type { LoopDirection } from '../data/platforms';
 import { runtime } from './runtime.ts';
-import { cityRelief } from './terrain.ts';
+import { cityGround } from './terrain.ts';
 import { WET, waterOn } from './water.ts';
 
 /** Longueur d'une cellule du ruban, le long de la voie (m). */
@@ -58,13 +58,19 @@ export interface CityBuilding {
   /** Distance latérale du centre à l'axe de la voie (m), toujours positive. */
   x: number;
   /**
-   * Cote du pied du bâtiment par rapport au sol au droit du train (m).
+   * ALTITUDE orthométrique du pied du bâtiment (m) : le relief du 国土地理院,
+   * lu à l'emplacement exact du sujet.
    *
-   * Le relief du 国土地理院, lu à l'emplacement exact du sujet. Zéro sous le
-   * train par construction : c'est une DIFFÉRENCE, la seule chose que l'œil
-   * puisse lire depuis un siège. C'est ce qui fait monter la ville en quittant
-   * Gotanda, se creuser la cuvette de Shibuya, et se dresser la falaise du
-   * plateau de Yanaka au-dessus de Nishi-Nippori.
+   * C'est ce qui fait monter la ville en quittant Gotanda, se creuser la
+   * cuvette de Shibuya, et se dresser la falaise du plateau de Yanaka au-dessus
+   * de Nishi-Nippori.
+   *
+   * Une altitude, et non une cote par rapport à la voie : une cellule s'écrit
+   * une fois et reste posée quatre cent quatre-vingts mètres, pendant lesquels
+   * le train change d'altitude - de vingt mètres entre Gotanda et Meguro. Une
+   * différence prise à l'écriture ferait décoller toute la cellule du sol au
+   * fur et à mesure de la montée. Le rendu retranche l'altitude de la voie une
+   * fois par image, sur le groupe qui porte le ruban.
    */
   y: number;
   /** Longueur le long de la voie (m). */
@@ -642,7 +648,7 @@ export function buildCell(
       const b = out[count];
       b.s = cursor + w / 2;
       b.x = R.x0 + d / 2 + r() * Math.max(0, R.x1 - R.x0 - d);
-      b.y = cityRelief(b.s, b.x, side);
+      b.y = cityGround(b.s, b.x, side);
       b.w = w;
       b.d = d;
       b.h = h;
@@ -763,7 +769,7 @@ export function buildFarCell(
       const b = out[count];
       b.s = cursor + w / 2;
       b.x = R.x0 + d / 2 + r() * Math.max(0, R.x1 - R.x0 - d);
-      b.y = cityRelief(b.s, b.x, side);
+      b.y = cityGround(b.s, b.x, side);
       b.w = w;
       b.d = d;
       b.h = Math.min(FAR_H_MAX, R.hMin + district.maxHeight * R.hSpan * farHeight(r()));
@@ -833,7 +839,7 @@ export interface CityProp {
   h: number;
   /** Altitude de la BASE, relative au pied de son bâtiment (m). */
   y: number;
-  /** Cote du pied du bâtiment porteur (m) : le relief, comme `CityBuilding.y`. */
+  /** Altitude du pied du bâtiment porteur (m) : le relief, comme `CityBuilding.y`. */
   base: number;
   tone: string;
   /**
@@ -1113,6 +1119,11 @@ export function buildCellProps(
             f.s = m.s;
             f.x = m.x;
             f.yaw = m.yaw;
+            // Le feu est porté par SON mât, donc par le même sol : sans cette
+            // reprise, il héritait du `base` laissé dans l'emplacement par la
+            // cellule précédente - un autre point de la ligne, à une autre
+            // altitude.
+            f.base = m.base;
             f.y = b.h + mh + 0.2;
             f.tone = BEACON_TONE;
           }
@@ -1147,6 +1158,11 @@ export function buildCellProps(
       p.d = ROADWAY.d;
       p.h = 0.14;
       p.y = 0;
+      // La chaussée est le seul accessoire qui n'appartienne à aucun bâtiment :
+      // elle lit donc son sol elle-même, là où elle est posée. À défaut elle
+      // gardait le `base` d'un sujet d'une autre cellule, et la dalle flottait
+      // dans sa propre trouée.
+      p.base = cityGround(ROADWAY.s, ROADWAY.x, side);
       p.tone = ROAD_TONE;
       p.yaw = ROADWAY.yaw;
     }

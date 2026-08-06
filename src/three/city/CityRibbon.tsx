@@ -55,7 +55,7 @@ import {
   cityAnchor,
   updateCityAnchor,
 } from '../../systems/cityField';
-import { cityRelief, updateTerrain } from '../../systems/terrain';
+import { cityGround, trackElevation, updateTerrain } from '../../systems/terrain';
 import { singularity } from '../../systems/singularity';
 import { GROUND_TILE, makeCityGroundTexture, makeSignageTexture } from '../../textures/city';
 import { makeCityMaterial } from './cityMaterial';
@@ -585,7 +585,15 @@ export function CityRibbon() {
     }
 
     // --- Élévation du tronçon, recul du monde, écartements latéraux ---
-    if (yRoot.current) yRoot.current.position.y = segEnv.cityY;
+    //
+    // Le ruban est écrit en ALTITUDE : chaque bâtiment porte la cote du sol du
+    // 国土地理院 à son emplacement, une valeur qui ne bouge plus une fois la
+    // cellule posée. Ce groupe fait la conversion vers le repère de la scène,
+    // où le zéro est le rail : il retranche l'altitude de la voie SOUS LE TRAIN,
+    // relue à chaque image. C'est ce qui fait que la ville reste au sol pendant
+    // que la voie monte - vingt mètres entre Gotanda et Meguro, soit plus que la
+    // hauteur des immeubles du bord de voie.
+    if (yRoot.current) yRoot.current.position.y = segEnv.cityY - trackElevation();
     if (zRoot.current) {
       zRoot.current.position.z = runtime.distance - st.origin;
       // Le prototype PLATEAU pose une ville RÉELLE sur son tronçon : le ruban
@@ -623,8 +631,11 @@ export function CityRibbon() {
       // la distance à la voie est donc cette pose plus l'abscisse locale. En
       // `z`, la nappe ne défile pas - c'est sa texture qui coule - si bien que
       // son z local EST le z de scène, et l'abscisse monde s'en déduit.
+      // La nappe vit sous le même groupe que les bâtiments : elle se relève
+      // donc dans le même repère qu'eux, en altitude, et c'est le groupe qui
+      // ramène l'ensemble au niveau du rail.
       const centre = GROUND_INNER + GROUND_SPAN / 2;
-      grounds[i].lift((z, x) => cityRelief(runtime.distance - z, centre + side * x, side));
+      grounds[i].lift((z, x) => cityGround(runtime.distance - z, centre + side * x, side));
     }
     built.groundTex.offset.y = runtime.distance / GROUND_TILE;
 

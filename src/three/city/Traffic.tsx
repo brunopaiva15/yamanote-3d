@@ -40,6 +40,7 @@ import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
 import { CELL_LEN } from '../../systems/cityField';
 import { laneSlot, makeLane } from '../../systems/trafficLane';
 import { inSingularity } from '../../systems/singularity';
+import { cityRelief } from '../../systems/terrain';
 
 /** Cote de la chaussée : le dessus de la dalle de rue de `buildCellProps`. */
 const ROAD_TOP = 0.14;
@@ -293,7 +294,15 @@ export function Traffic() {
           else cars = k + 1;
 
           const g = lane.grow;
-          sc.pos.set(side * (lane.x + push), segEnv.cityY + ROAD_TOP, z);
+          // La voiture roule sur la rue, et la rue épouse le relief : la flotte
+          // court jusqu'à cent soixante-dix mètres devant, où le sol n'est plus
+          // celui du train. Une voiture posée à cote fixe montait dans le vide
+          // en approche de Meguro.
+          sc.pos.set(
+            side * (lane.x + push),
+            segEnv.cityY + ROAD_TOP + cityRelief(lane.s, lane.x + push, side),
+            z,
+          );
           sc.rot.setFromAxisAngle(sc.axis, -lane.yaw + (lane.flip ? Math.PI : 0));
           sc.scl.set(
             (lane.van ? 4.9 : 4.3) * g,

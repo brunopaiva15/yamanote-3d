@@ -34,6 +34,7 @@ import { segEnv } from '../systems/segmentEnv';
 import { ballastTrim, hiddenByStation, sidePush, stationOcclusion } from '../systems/stationOcclusion';
 import { qualityLevel, usePerf } from '../systems/perf';
 import { inSingularity } from '../systems/singularity';
+import { cityRelief } from '../systems/terrain';
 import { TRACK_BED_TILE, TRACK_BED_WIDTH, makeGroundTexture } from '../textures/procedural';
 import { GAUGE_HALF } from '../data/stationGeometry';
 import { makeGroveGeometry, makeGroveMaterial } from './city/cityProps';
@@ -462,7 +463,17 @@ export function Wayside() {
         const h = spec.height * treeScale;
         // Les arbres poussent dans la RUE, pas sur le tablier : ils suivent le
         // sol de la ville et se retrouvent sept mètres plus bas sous un viaduc.
-        sc.pos.set(spec.x + side * sidePush(side), segEnv.cityY, z);
+        // Et la rue n'est plus plate : ces douze sujets couvrent deux cent
+        // cinquante mètres de voie, sur lesquels le relief du 国土地理院 monte
+        // ou descend de plusieurs mètres. Sans le relever, le bosquet planait
+        // au-dessus de sa propre chaussée dans les montées, et s'y enfonçait
+        // dans les descentes.
+        const tx = Math.abs(spec.x) + sidePush(side);
+        sc.pos.set(
+          spec.x + side * sidePush(side),
+          segEnv.cityY + cityRelief(runtime.distance - z, tx, side),
+          z,
+        );
         sc.rot.identity();
         sc.scl.set(h * 0.9, h, h * 0.9);
         sc.mtx.compose(sc.pos, sc.rot, sc.scl);
