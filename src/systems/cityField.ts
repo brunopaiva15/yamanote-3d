@@ -46,6 +46,8 @@ import { DISTRICTS, GENERIC, type District, type Feat } from '../data/districts.
 import { directionStep, prevStation, wrapStation } from '../data/loop.ts';
 import type { LoopDirection } from '../data/platforms';
 import { runtime } from './runtime.ts';
+import { cityRelief } from './terrain.ts';
+import { WET, waterOn } from './water.ts';
 
 /** Longueur d'une cellule du ruban, le long de la voie (m). */
 export const CELL_LEN = 40;
@@ -55,6 +57,16 @@ export interface CityBuilding {
   s: number;
   /** Distance latérale du centre à l'axe de la voie (m), toujours positive. */
   x: number;
+  /**
+   * Cote du pied du bâtiment par rapport au sol au droit du train (m).
+   *
+   * Le relief du 国土地理院, lu à l'emplacement exact du sujet. Zéro sous le
+   * train par construction : c'est une DIFFÉRENCE, la seule chose que l'œil
+   * puisse lire depuis un siège. C'est ce qui fait monter la ville en quittant
+   * Gotanda, se creuser la cuvette de Shibuya, et se dresser la falaise du
+   * plateau de Yanaka au-dessus de Nishi-Nippori.
+   */
+  y: number;
   /** Longueur le long de la voie (m). */
   w: number;
   /** Profondeur latérale (m). */
@@ -129,6 +141,16 @@ const RANKS: Rank[] = [
   { x0: 40, x1: 66, n: 3, wMin: 16, wMax: 34, dMin: 15, dMax: 26, hMin: 9, hSpan: 52 },
 ];
 
+/**
+ * Milieu de chaque rang (m à l'axe) : le point où l'on demande s'il y a de
+ * l'eau.
+ *
+ * Le champ du relevé a une maille de quarante mètres, plus grosse que la bande
+ * d'un rang proche : le sonder au milieu ou à l'emplacement exact du sujet
+ * revient au même, et le milieu ne consomme pas de tirage.
+ */
+const RANK_MID = RANKS.map((r) => (r.x0 + r.x1) / 2);
+
 /** Trouées supplémentaires du premier rang : le ciel et le fond doivent passer. */
 const NEAR_EXTRA_GAP = 0.14;
 
@@ -165,6 +187,9 @@ const FAR_RANKS: Rank[] = [
 
 /** Plafond de hauteur de l'arrière-pays (m) : la plus haute tour de Shinjuku. */
 const FAR_H_MAX = 190;
+
+/** Milieu de chaque rang lointain (m à l'axe), pour le sondage d'eau. */
+const FAR_RANK_MID = FAR_RANKS.map((r) => (r.x0 + r.x1) / 2);
 
 export const FAR_CELL_CAPACITY = FAR_RANKS.reduce((a, r) => a + r.n, 0);
 
@@ -586,6 +611,17 @@ export function buildCell(
         cursor = Math.max(cursor + 1, clearing.s + clearing.half + CLEAR_MARGIN + r() * 3);
         continue;
       }
+      // Et rien ne se bâtit sur l'eau. Le champ d'OpenStreetMap porte ce que la
+      // trouée de rivière ne dit pas : les canaux de remblai de Kōnan et de
+      // Shibaura, que la voie longe au lieu de les couper, les douves du palais
+      // à Yūrakuchō, les bassins de la Sumida. Le rang est sondé en son MILIEU
+      // et non à l'emplacement tiré, pour que le tirage reste le même qu'avant
+      // l'eau - la maille du relevé fait quarante mètres, elle ne distingue pas
+      // les deux.
+      if (waterOn(mid, RANK_MID[rank], side) > WET) {
+        cursor += spanS;
+        continue;
+      }
       if (r() < gapChance) {
         cursor += spanS * (0.35 + r() * 0.5);
         continue;
@@ -606,6 +642,7 @@ export function buildCell(
       const b = out[count];
       b.s = cursor + w / 2;
       b.x = R.x0 + d / 2 + r() * Math.max(0, R.x1 - R.x0 - d);
+      b.y = cityRelief(b.s, b.x, side);
       b.w = w;
       b.d = d;
       b.h = h;
@@ -710,6 +747,13 @@ export function buildFarCell(
       const yaw = gridAngleAt(cursor) + (r() * 2 - 1) * GRID_JITTER;
       const spanS = w * Math.abs(Math.cos(yaw)) + d * Math.abs(Math.sin(yaw));
 
+      // L'arrière-pays a plus besoin de cette règle que le bord de voie : c'est
+      // à cent et deux cents mètres que tombent les canaux de remblai de Kōnan
+      // et de Shibaura, et la baie elle-même quatre cents mètres plus loin.
+      if (waterOn(cursor + w / 2, FAR_RANK_MID[rank], side) > WET) {
+        cursor += spanS;
+        continue;
+      }
       if (r() < gapChance) {
         cursor += spanS * (0.4 + r() * 0.7);
         continue;
@@ -719,6 +763,7 @@ export function buildFarCell(
       const b = out[count];
       b.s = cursor + w / 2;
       b.x = R.x0 + d / 2 + r() * Math.max(0, R.x1 - R.x0 - d);
+      b.y = cityRelief(b.s, b.x, side);
       b.w = w;
       b.d = d;
       b.h = Math.min(FAR_H_MAX, R.hMin + district.maxHeight * R.hSpan * farHeight(r()));
@@ -786,8 +831,10 @@ export interface CityProp {
   w: number;
   d: number;
   h: number;
-  /** Altitude de la BASE, relative au sol de la ville (m). */
+  /** Altitude de la BASE, relative au pied de son bâtiment (m). */
   y: number;
+  /** Cote du pied du bâtiment porteur (m) : le relief, comme `CityBuilding.y`. */
+  base: number;
   tone: string;
   /**
    * Variante de feuillage (0..3), pour les bosquets seulement.
@@ -818,6 +865,10 @@ function place(p: CityProp, b: CityBuilding, side: 1 | -1, u: number, v: number)
   p.s = b.s + u * c - v * side * sn;
   p.x = b.x + u * side * sn + v * c;
   p.yaw = b.yaw;
+  // Tout accessoire est porté par un bâtiment : il monte et descend avec lui
+  // sur le relief. Le poser ici plutôt qu'aux dix endroits qui écrivent `y`
+  // garantit qu'aucun ne reste en l'air.
+  p.base = b.y;
 }
 
 /**
@@ -1113,6 +1164,7 @@ export function makePropBuffer(): CityProp[] {
     d: 0,
     h: 0,
     y: 0,
+    base: 0,
     tone: '#ffffff',
     variant: 0,
     roll: 0,
@@ -1125,6 +1177,7 @@ export function makeCellBuffer(length = CELL_CAPACITY): CityBuilding[] {
   return Array.from({ length }, () => ({
     s: 0,
     x: 0,
+    y: 0,
     w: 0,
     d: 0,
     h: 0,

@@ -1,6 +1,33 @@
-// Repères 3D emblématiques par gare : silhouettes procédurales (tours,
-// écrans géants, tram, monorail…) qui APPARAISSENT en fondu à l'approche
-// de leur station et disparaissent après.
+// Silhouettes 3D du bord de voie par gare (tours, écrans géants, tram,
+// monorail…) qui APPARAISSENT en fondu à l'approche de leur station et
+// disparaissent après.
+//
+// --- DEUX FAMILLES, ET IL FAUT LES DISTINGUER ---
+//
+// Ce composant en portait une seule, appelée « repères », et c'était un abus de
+// langage : le tram d'Ōtsuka existe, l'écran géant d'Akihabara est un décor
+// plausible, et la tour treillis de Nippori n'existait nulle part. La bible
+// géographique demande (règle 12) qu'un repère soit un objet retrouvable sur
+// une carte, et (règle 11) qu'on n'en invente aucun.
+//
+// Chaque silhouette déclare donc ce qu'elle est (`truth`, data/districts) :
+//
+//   · 'geo'     un objet RÉEL, résolu par gare et par famille dans
+//               src/data/nearLandmarks (import OpenStreetMap). Son côté n'est
+//               plus écrit à la main mais LU SUR LE TERRAIN à chaque image :
+//               le Musée national est au nord d'Ueno, il passe donc à gauche en
+//               内回り et à droite en 外回り, et le jeu n'a rien à en savoir.
+//               Si le relevé ne résout rien pour cette gare, rien n'est posé.
+//   · 'station' un fait de la gare elle-même - sa marquise, la ligne qui la
+//               longe, la locomotive de son parvis.
+//   · 'fabric'  du tissu urbain, jamais présenté comme un repère.
+//
+// La distance, elle, reste stylisée à trente-quatre mètres pour tout le monde,
+// et c'est un choix assumé : un objet réel posé à ses trois cents mètres serait
+// derrière le ruban urbain, invisible. La couche qui pose les distances vraies
+// est ailleurs - c'est three/city/DistrictMassif pour les masses et
+// three/city/FarSkyline pour les repères d'horizon. Ici, une silhouette est une
+// CITATION : ce qu'elle promet, c'est le bon objet du bon côté.
 //
 // Deux « slots » ping-pong (arrivant / partant) comme les banques de ville :
 // au changement de gare, le slot devenu arrivant est reconstruit depuis
@@ -22,7 +49,10 @@ import { useStore } from '../store';
 import { CONFIG } from '../data/config';
 import { prevStation } from '../data/loop';
 import { journeyProgress } from '../data/segments';
-import { DISTRICTS, type Land, type LandmarkSpec } from '../data/districts';
+import { DISTRICTS, LAND_FAMILY, type Land, type LandmarkSpec } from '../data/districts';
+import { GEO_LANDMARKS, type GeoLandmark } from '../data/tokyoGeo';
+import { NEAR_DATED, STATION_DATED, factVisible } from '../data/geo/provenance';
+import { loopPose, makePose, sightTo, type Sight } from '../systems/tokyoBearing';
 import { rng } from '../textures/procedural';
 import { box, glow, plane, sil, vehicle, type Ctx } from './landmarkKit';
 import { landmarkPush } from '../systems/stationOcclusion';
@@ -67,50 +97,6 @@ function towers(ctx: Ctx, n: number, body: string, win: string, wBase: number, h
     box(ctx, mat, w, h, w * 0.85, px, h / 2, pz);
     plane(ctx, winMat, w * 0.72, h * 0.9, px, h * 0.52, pz + w * 0.44);
   }
-}
-
-// Tour treillis effilée à 4 pieds (flèches). +z = vers la voie.
-function lattice(ctx: Ctx, h: number, spread: number, body: string, plat: string): void {
-  const mat = sil(ctx, body);
-  const platMat = sil(ctx, plat);
-  const legW = 0.32;
-  const bar = 0.28;
-  const steps = 6;
-  const taper = (t: number) => spread * (1 - t * 0.82);
-  const legs: [number, number][] = [
-    [-1, -1],
-    [1, -1],
-    [-1, 1],
-    [1, 1],
-  ];
-  for (const [sx, sz] of legs) {
-    for (let s = 0; s < steps; s++) {
-      const t0 = s / steps;
-      const t1 = (s + 1) / steps;
-      const y = (h * (t0 + t1)) / 2;
-      const r0 = taper(t0);
-      const seg = (h / steps) * 1.04;
-      box(ctx, mat, legW, seg, legW, sx * r0, y, sz * r0);
-    }
-  }
-  for (let s = 1; s < steps; s++) {
-    const t = s / steps;
-    const r = taper(t);
-    const y = h * t;
-    const span = r * 2;
-    box(ctx, mat, span, bar, bar, 0, y, r);
-    box(ctx, mat, span, bar, bar, 0, y, -r);
-    box(ctx, mat, bar, bar, span, r, y, 0);
-    box(ctx, mat, bar, bar, span, -r, y, 0);
-  }
-  const deck = (t: number, wScale: number, thick: number) => {
-    const r = taper(t);
-    const w = r * 2 * wScale;
-    box(ctx, platMat, w, thick, w, 0, h * t, 0);
-  };
-  deck(0.42, 1.15, 0.45);
-  deck(0.66, 0.85, 0.38);
-  box(ctx, mat, 0.22, h * 0.28, 0.22, 0, h * 1.12, 0);
 }
 
 // Masse d'arbres (parc, forêt de sanctuaire).
@@ -248,7 +234,6 @@ interface Builder {
 }
 
 const BUILDERS: Record<Land, Builder> = {
-  latticeTower: { near: false, build: (c) => lattice(c, 26, 1.8, '#9aa0a6', '#c8ccd0') },
   glassTowerCluster: { near: false, build: (c) => towers(c, 4, '#8ea6c4', '#bcd8ff', 9, 26) },
   boxyTower: { near: false, build: (c) => towers(c, 3, '#9a8f7a', '#ffe6b0', 11, 30) },
   twinTowers: { near: false, build: (c) => towers(c, 2, '#8a94a4', '#cfe0f2', 10, 32) },
@@ -275,6 +260,34 @@ interface SlotItem {
   side: 1 | -1;
   /** Abscisse au repos, avant l'écartement dû à une gare. */
   baseX: number;
+  /**
+   * L'objet réel que la silhouette cite, ou `null` pour un fait de gare et pour
+   * le tissu. Quand il y en a un, c'est LUI qui décide du côté. On le lit dans
+   * GEO_LANDMARKS (bande near) : le même jeu que FarSkyline pour l'horizon.
+   */
+  geo: GeoLandmark | null;
+}
+
+/**
+ * L'objet réel qui porte une silhouette, ou `null`.
+ *
+ * Le quartier dit « ici il y a un parc » ; le relevé dit lequel, et où. Une
+ * silhouette réelle dont la gare ne résout rien n'est pas dessinée : c'est le
+ * cas d'Ōsaki, qui n'a pas de temple relevé, et c'est très bien ainsi.
+ *
+ * La table est GEO_LANDMARKS, bande near : le relais proche / lointain n'a qu'un
+ * jeu de données. nearLandmarks.ts reste le relevé détaillé (Wikidata, OSM) ;
+ * tokyoGeo en porte la projection pour le rendu.
+ */
+function geoOf(spec: LandmarkSpec, station: number): GeoLandmark | null {
+  if (spec.truth !== 'geo') return null;
+  const family = LAND_FAMILY[spec.kind];
+  if (!family) return null;
+  return (
+    GEO_LANDMARKS.find(
+      (lm) => lm.band === 'near' && lm.station === station && lm.family === family,
+    ) ?? null
+  );
 }
 interface Slot {
   root: THREE.Group;
@@ -303,6 +316,14 @@ function populate(slot: Slot, districtIndex: number): void {
   specs.forEach((spec: LandmarkSpec, i: number) => {
     const builder = BUILDERS[spec.kind];
     if (!builder) return;
+    // Une silhouette réelle sans objet résolu ne se pose pas. C'est la règle 11
+    // appliquée à la lettre : plutôt un quartier nu qu'un temple imaginaire.
+    const geo = geoOf(spec, districtIndex);
+    if (spec.truth === 'geo' && !geo) return;
+    // Faits datés : Takanawa Gateway avant 2020, Miyashita Park reconstruit…
+    if (spec.truth === 'geo' && geo && !factVisible(NEAR_DATED[geo.id], runtime.tokyoDate)) return;
+    const datedKey = `${districtIndex}:${spec.kind}`;
+    if (!factVisible(STATION_DATED[datedKey], runtime.tokyoDate)) return;
     const side = spec.side ?? 1;
     const scale = spec.scale ?? 1;
     const zs = builder.near ? [0] : [...FAR_ZS];
@@ -326,10 +347,23 @@ function populate(slot: Slot, districtIndex: number): void {
         itemGroup.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
       }
       slot.root.add(itemGroup);
-      slot.items.push({ group: itemGroup, near: builder.near, phase: i * 23 + zi * 41, side, baseX });
+      slot.items.push({
+        group: itemGroup,
+        near: builder.near,
+        phase: i * 23 + zi * 41,
+        side,
+        baseX,
+        geo,
+      });
     });
   });
 }
+
+/** Objets de travail du relèvement : aucune allocation par image. */
+const geoScratch = {
+  pose: makePose(),
+  sight: { azimuth: 0, distance: 0 } as Sight,
+};
 
 export function Landmarks() {
   const rootA = useRef<THREE.Group>(null);
@@ -364,6 +398,10 @@ export function Landmarks() {
     }
 
     const p = journeyProgress(phase, runtime.phaseT, index, loopDirection);
+    // La pose géographique du train, pour les silhouettes qui citent un objet
+    // réel : c'est elle qui dit de quel côté il passe.
+    const { pose, sight } = geoScratch;
+    loopPose(index, p, loopDirection, pose);
     const closeArr = smoothstep(0.55, 1.0, p);
     const closeDep = smoothstep(0.55, 1.0, 1 - p);
 
@@ -399,6 +437,22 @@ export function Landmarks() {
         m.depthWrite = writeDepth;
       }
       for (const item of slot.items) {
+        // Un objet réel passe du côté où il est. Le relèvement le dit à chaque
+        // image : `sin` positif, il est à droite du sens de marche. La bascule
+        // ne se fait qu'au-delà d'un quart, ce qui évite qu'un objet presque
+        // dans l'axe hésite d'une image à l'autre - et un objet dans l'axe est
+        // devant ou derrière, pas d'un côté.
+        if (item.geo) {
+          sightTo(pose, item.geo.x, item.geo.z, sight);
+          const lateral = Math.sin(sight.azimuth);
+          if (Math.abs(lateral) > 0.25) {
+            const side: 1 | -1 = lateral >= 0 ? 1 : -1;
+            if (side !== item.side) {
+              item.side = side;
+              if (!item.near) item.group.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
+            }
+          }
+        }
         // À l'approche d'une gare, le repère se range derrière elle : la gare
         // s'étend désormais jusqu'au quai d'en face, et le tram d'Ōtsuka comme
         // la poutre de monorail de Hamamatsuchō tombaient dedans.

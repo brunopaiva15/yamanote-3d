@@ -42,13 +42,14 @@ import * as THREE from 'three';
 import { runtime } from '../../systems/runtime';
 import { dayNightWeights } from '../../systems/daynight';
 import { seasonNow } from '../../systems/season';
-import { weather } from '../../systems/weather';
 import { useStore } from '../../store';
 import { CONFIG } from '../../data/config';
 import { journeyProgress } from '../../data/segments';
 import { GEO_LANDMARKS, GEO_STATIONS, type GeoLandmark } from '../../data/tokyoGeo';
+import { HORIZON_DATED, factVisible } from '../../data/geo/provenance';
 import { loopPose, makePose, sightTo, type Sight } from '../../systems/tokyoBearing';
 import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
+import { airRange, veilAt, VEIL_MAX } from './airDepth';
 import { makeSilhouette, type TrimKind } from './skylineKit';
 
 /**
@@ -79,29 +80,8 @@ const EARTH_R = 6371000;
 const NEAR_HIDE = 2000;
 const NEAR_FULL = 3500;
 
-/**
- * Portée de référence de l'air (m), pour une clarté de 1.
- *
- * L'extinction suit une exponentielle en distance - la loi de Beer, celle de la
- * brume de systems/Scene -, et cette échelle-ci est bien plus longue que la
- * portée de la brume de scène : la brume de scène ferme le décor à cinq cents
- * mètres, alors qu'un repère de cinq kilomètres reste parfaitement lisible par
- * temps clair à Tokyo. Les deux ne décrivent pas la même chose : l'une est un
- * mur de fin de décor, l'autre l'épaisseur réelle de l'atmosphère.
- *
- * Calage : par un janvier sec (clarté ≈ 1,3), la portée approche quatre-vingts
- * kilomètres - la tour de Tokyo est franche, Yokohama se devine, le Fuji est un
- * fantôme bleu. Par un août moite (clarté ≈ 0,7), elle tombe à vingt : le Fuji
- * a disparu, la tour de Tokyo se voile. Sous l'averse, il ne reste rien
- * au-delà du kilomètre.
- */
-const AIR_RANGE = 46000;
-
-/** Au-delà, il ne reste rien à peindre qui se distingue du ciel. */
-const VEIL_MAX = 0.94;
-
-/** Ton de chaque famille, et les repères qui ont le leur. */
-const SHAPE_TONE: Record<GeoLandmark['shape'], string> = {
+/** Ton de chaque famille d'horizon. Les formes near n'entrent pas ici. */
+const SHAPE_TONE: Record<'tower' | 'twin' | 'needle' | 'mountain' | 'bridge', string> = {
   tower: '#7f8da0',
   twin: '#818f9f',
   needle: '#8a8f98',
@@ -136,10 +116,10 @@ function smoothstep(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
-/** Combien de repères, du plus haut au plus modeste, selon le palier. */
+/** Combien de repères d'horizon, du plus haut au plus modeste, selon le palier. */
 function tuning(quality: Quality): number {
   const level = qualityLevel(quality);
-  if (quality === 'extraordinary' || level <= 1) return GEO_LANDMARKS.length;
+  if (quality === 'extraordinary' || level <= 1) return HORIZON_LANDMARKS.length;
   if (level === 2) return 11;
   if (level === 3) return 7;
   // Aux deux derniers paliers, rien de neuf : c'est la règle de la passe.
@@ -158,6 +138,15 @@ interface Item {
 }
 
 /**
+ * Les repères d'HORIZON seulement.
+ *
+ * GEO_LANDMARKS porte aussi le bord de voie (bande near) : le relais
+ * proche / lointain lit une seule table. Ici, un parc à trois cents mètres
+ * n'a rien à peindre sur la sphère - three/Landmarks s'en charge.
+ */
+const HORIZON_LANDMARKS = GEO_LANDMARKS.filter((lm) => lm.band === 'horizon');
+
+/**
  * Les repères par PRÉSENCE décroissante, et non par hauteur.
  *
  * C'est l'ordre dans lequel on coupe aux paliers modestes, et la hauteur seule
@@ -169,7 +158,7 @@ interface Item {
  * amorti par une puissance, parce qu'un repère lointain garde de l'importance
  * quand il est colossal : le Fuji reste dans les sept premiers.
  */
-const BY_PRESENCE = [...GEO_LANDMARKS].sort((a, b) => presence(b) - presence(a));
+const BY_PRESENCE = [...HORIZON_LANDMARKS].sort((a, b) => presence(b) - presence(a));
 
 function presence(lm: GeoLandmark): number {
   let near = Infinity;
@@ -201,9 +190,12 @@ export function FarSkyline() {
     const geos: THREE.BufferGeometry[] = [];
     const items: Item[] = [];
     for (const lm of BY_PRESENCE.slice(0, count)) {
-      const s = makeSilhouette(lm.shape);
+      // HORIZON_LANDMARKS ne porte que tower/twin/needle/mountain/bridge.
+      const s = makeSilhouette(lm.shape as 'tower' | 'twin' | 'needle' | 'mountain' | 'bridge');
       geos.push(s.body);
-      const tone = new THREE.Color(ID_TONE[lm.id] ?? SHAPE_TONE[lm.shape]);
+      const tone = new THREE.Color(
+        ID_TONE[lm.id] ?? SHAPE_TONE[lm.shape as keyof typeof SHAPE_TONE],
+      );
       const bodyMat = makeMat(tone);
       const body = new THREE.Mesh(s.body, bodyMat);
       body.name = `horizon ${lm.id}`;
@@ -254,11 +246,9 @@ export function FarSkyline() {
     const w = dayNightWeights(runtime.clockMin / 60);
     const night = Math.min(1, w.night + w.golden * 0.4);
     const se = seasonNow();
-    // L'épaisseur de l'air : la clarté de la saison, moins ce que le temps lui
-    // retire. C'est le même produit qui commande la portée de la brume de scène
-    // et le voile du ciel - trois couches, un seul air.
-    const air = Math.max(0.15, se.clarity * weather.visibility * (1 - 0.75 * weather.cloud));
-    const range = AIR_RANGE * air * air;
+    // L'épaisseur de l'air est celle de three/city/airDepth : la même pour le
+    // relief lointain et pour la silhouette du ciel. Trois couches, un seul air.
+    const range = airRange();
     if (scene.fog instanceof THREE.Fog) sc.haze.copy(scene.fog.color);
     sc.haze.lerp(NIGHT_HAZE, 0.85 * night);
 
@@ -271,11 +261,10 @@ export function FarSkyline() {
       // enterre sept cent quatre-vingts mètres de Fuji à cent kilomètres, et
       // c'est elle qui fait qu'on n'en voit jamais le pied.
       const drop = (d * d) / (2 * EARTH_R);
-      const veil = Math.max(
-        1 - Math.exp(-d / range),
-        1 - smoothstep(NEAR_HIDE, NEAR_FULL, d),
-      );
-      const show = veil < VEIL_MAX;
+      const veil = Math.max(veilAt(d, range), 1 - smoothstep(NEAR_HIDE, NEAR_FULL, d));
+      // Faits datés (Scramble Square 2019…) : hors fenêtre, le repère n'existe pas.
+      const datedOk = factVisible(HORIZON_DATED[it.lm.id], runtime.tokyoDate);
+      const show = veil < VEIL_MAX && datedOk;
       it.body.visible = show;
       if (it.trim) it.trim.visible = false;
       if (!show) continue;

@@ -1,0 +1,94 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-shimbashi-yurakucho",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "line": "JR山手線 / Yamanote Line",
+        "from": "Shimbashi (JY29)",
+        "to": "Yurakucho (JY30)",
+        "segment": 28,
+        "direction": "inner (内回り)",
+        "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
+        "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
+        "license": "ODbL 1.0",
+        "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
+        "approximate": false,
+        "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
+        "lengthMeters": 1117.3,
+        "generatedBy": "scripts/plateau/fetch-route.mjs"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.758087,
+            35.666164,
+            47.6
+          ],
+          [
+            139.757988,
+            35.666942,
+            47.58
+          ],
+          [
+            139.757969,
+            35.667234,
+            47.57
+          ],
+          [
+            139.757989,
+            35.667798,
+            47.55
+          ],
+          [
+            139.758036,
+            35.668112,
+            47.53
+          ],
+          [
+            139.758124,
+            35.668479,
+            47.52
+          ],
+          [
+            139.758235,
+            35.668788,
+            47.5
+          ],
+          [
+            139.758396,
+            35.669124,
+            47.48
+          ],
+          [
+            139.760251,
+            35.672391,
+            47.47
+          ],
+          [
+            139.760694,
+            35.672998,
+            47.45
+          ],
+          [
+            139.761109,
+            35.673442,
+            47.43
+          ],
+          [
+            139.761371,
+            35.67368,
+            47.42
+          ],
+          [
+            139.763032,
+            35.674973,
+            47.4
+          ]
+        ]
+      }
+    }
+  ]
+}

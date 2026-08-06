@@ -9,6 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { SEGMENTS, SEGMENT_KM, cruiseDuration, segmentAt } from '../src/data/segments.ts';
+import { WATER_CROSSINGS } from '../src/data/water.ts';
 import { journeyDistance } from '../src/systems/trainPhysics.ts';
 import { CELL_LEN, buildCell, clearing, makeCellBuffer } from '../src/systems/cityField.ts';
 import { expressway, singularity, singularityOffset, updateSingularity } from '../src/systems/singularity.ts';
@@ -16,33 +17,31 @@ import { expressway, singularity, singularityOffset, updateSingularity } from '.
 /** Gare d'arrivée qui fait parcourir le tronçon `seg` en 内回り. */
 const arrivalFor = (seg: number) => (seg + 1) % 30;
 
-test('un seul passage à niveau, trois rivières, trois tronçons longés', () => {
+/** Le tronçon 22, Gotanda→Ōsaki : le 目黒川, trente mètres de large. */
+const RIVER_SEG = 22;
+
+test('un seul passage à niveau, six traversées, trois tronçons longés', () => {
   const crossings = SEGMENTS.filter((s) => s.crossing !== undefined);
-  const rivers = SEGMENTS.filter((s) => s.river !== undefined);
   const roads = SEGMENTS.filter((s) => s.expressway);
   // Le 第二中里踏切 est le seul de toute la boucle, et c'est ce fait-là qui le
   // rend intéressant : une ligne à cent-vingt secondes d'intervalle ne peut pas
   // s'offrir des barrières.
   assert.equal(crossings.length, 1);
   assert.equal(SEGMENTS.indexOf(crossings[0]), 8, 'Tabata→Komagome');
-  assert.equal(rivers.length, 3);
+  assert.equal(WATER_CROSSINGS.length, 6);
   assert.equal(roads.length, 3);
   // Une singularité ponctuelle à la fois : le rendu n'en pose qu'une, et deux
-  // drapeaux sur le même tronçon feraient disparaître le second sans un mot.
-  for (const s of SEGMENTS) {
-    assert.ok(
-      !(s.crossing !== undefined && s.river !== undefined),
-      'aucun tronçon ne porte deux singularités ponctuelles',
-    );
+  // ouvrages sur le même tronçon feraient disparaître le second sans un mot.
+  const seen = new Set<number>();
+  for (const c of WATER_CROSSINGS) {
+    assert.ok(!seen.has(c.segment), `un seul ouvrage sur le tronçon ${c.segment}`);
+    seen.add(c.segment);
+    assert.equal(SEGMENTS[c.segment].crossing, undefined, 'ni rivière ni barrières');
   }
   // Les fractions restent dans le tronçon, et à distance de ses deux gares :
   // une rivière posée sur un quai serait invisible.
-  for (const s of SEGMENTS) {
-    for (const f of [s.crossing, s.river]) {
-      if (f === undefined) continue;
-      assert.ok(f > 0.1 && f < 0.9, `fraction plausible : ${f}`);
-    }
-  }
+  const fractions = [...WATER_CROSSINGS.map((c) => c.fraction), ...crossings.map((s) => s.crossing!)];
+  for (const f of fractions) assert.ok(f > 0.1 && f < 0.9, `fraction plausible : ${f}`);
 });
 
 test('la longueur simulée d’un tronçon suit son barème kilométrique', () => {
@@ -76,22 +75,36 @@ test('la fraction se retourne avec le sens de marche', () => {
 });
 
 test('un tronçon sans singularité n’en invente pas', () => {
-  // Tokyo→Kanda ne porte rien : ni rivière, ni barrières, ni tablier.
-  assert.equal(singularityOffset(arrivalFor(0), 'inner'), null);
-  updateSingularity(arrivalFor(0), 'inner');
+  // Akihabara→Okachimachi ne porte rien : ni rivière, ni barrières, ni tablier.
+  assert.equal(singularityOffset(arrivalFor(2), 'inner'), null);
+  updateSingularity(arrivalFor(2), 'inner');
   assert.equal(singularity.kind, null);
   assert.equal(clearing.half, 0);
   assert.equal(expressway.on, false);
 });
 
+test('la traversée prend la largeur qu’on lui a mesurée', () => {
+  // Deux rivières, deux largeurs : la trouée n'est pas une constante du décor
+  // mais un relevé, et c'est le relevé qui arrive jusqu'au rendu.
+  for (const c of WATER_CROSSINGS) {
+    const found = singularityOffset(arrivalFor(c.segment), 'inner');
+    assert.ok(found, `tronçon ${c.segment}`);
+    assert.equal(found.kind, 'river');
+    assert.equal(found.width, c.width);
+  }
+  const narrow = WATER_CROSSINGS.find((c) => c.segment === 13)!;
+  const wide = WATER_CROSSINGS.find((c) => c.segment === 0)!;
+  assert.ok(wide.width > narrow.width * 2, 'le 日本橋川 est plus large que la 神田川 amont');
+});
+
 test('aucun bâtiment ne se construit sur la rivière', () => {
-  // La Shibuya, au sud de Shibuya (tronçon 19).
-  updateSingularity(arrivalFor(19), 'inner');
+  // Le 目黒川, entre Gotanda et Ōsaki (tronçon 22).
+  updateSingularity(arrivalFor(RIVER_SEG), 'inner');
   assert.equal(singularity.kind, 'river');
   assert.ok(clearing.half >= 12, 'la trouée laisse passer la nappe entière');
   // L'ouvrage est bien allé se poser sur une rue, pas au milieu d'un îlot :
   // l'écart à l'abscisse théorique reste sous une cellule et demie.
-  const wanted = singularityOffset(arrivalFor(19), 'inner');
+  const wanted = singularityOffset(arrivalFor(RIVER_SEG), 'inner');
   assert.ok(wanted);
   assert.ok(Math.abs(singularity.s - wanted.at) < CELL_LEN * 1.5);
 

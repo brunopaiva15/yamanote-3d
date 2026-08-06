@@ -1,0 +1,94 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-tamachi-hamamatsucho",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "line": "JR山手線 / Yamanote Line",
+        "from": "Tamachi (JY27)",
+        "to": "Hamamatsucho (JY28)",
+        "segment": 26,
+        "direction": "inner (内回り)",
+        "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
+        "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
+        "license": "ODbL 1.0",
+        "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
+        "approximate": false,
+        "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
+        "lengthMeters": 1420.8,
+        "generatedBy": "scripts/plateau/fetch-route.mjs"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.747672,
+            35.645754,
+            40.7
+          ],
+          [
+            139.75285,
+            35.648263,
+            40.68
+          ],
+          [
+            139.753224,
+            35.648482,
+            40.67
+          ],
+          [
+            139.753632,
+            35.64876,
+            40.65
+          ],
+          [
+            139.753993,
+            35.649042,
+            40.63
+          ],
+          [
+            139.754575,
+            35.649543,
+            40.62
+          ],
+          [
+            139.755087,
+            35.650126,
+            40.6
+          ],
+          [
+            139.755297,
+            35.650429,
+            40.58
+          ],
+          [
+            139.755738,
+            35.651151,
+            40.57
+          ],
+          [
+            139.756123,
+            35.651949,
+            40.55
+          ],
+          [
+            139.756279,
+            35.652347,
+            40.53
+          ],
+          [
+            139.756386,
+            35.652684,
+            40.52
+          ],
+          [
+            139.757036,
+            35.655114,
+            40.5
+          ]
+        ]
+      }
+    }
+  ]
+}

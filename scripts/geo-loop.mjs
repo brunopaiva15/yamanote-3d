@@ -1,8 +1,10 @@
 // La boucle Yamanote et les repères de Tokyo, projetés en mètres.
 //
-//   node scripts/geo-loop.mjs
+//   node scripts/geo/fetch-loop.mjs   # va chercher le tracé chez OSM
+//   node scripts/geo-loop.mjs         # en fait src/data/tokyoGeo.ts
 //
-// Émet src/data/tokyoGeo.ts. À relancer après toute correction de coordonnées.
+// Émet src/data/tokyoGeo.ts. À relancer après tout réimport du tracé ou toute
+// correction de la table des repères.
 //
 // POURQUOI. Jusqu'ici, rien dans le jeu ne savait où était le nord. Les repères
 // de src/three/Landmarks.tsx sont des banques par gare : la tour de Tokyo
@@ -11,89 +13,28 @@
 // au nord-ouest quand on est à Kinshichō - ni, surtout, qu'il est TOUJOURS AU
 // MÊME ENDROIT, ce qui est la seule chose qu'un repère ait à faire.
 //
-// La géodésie est déjà écrite et testée pour le prototype PLATEAU
-// (scripts/plateau/lib/geo.mjs, projection EPSG:6677 = zone IX, méridien
-// central 139°30'). On la réemploie telle quelle, et on étend à la boucle
-// entière la convention d'ancrage de scripts/plateau/config.mjs : le milieu du
-// quai Yamanote, en JGD2011, arrondi à la dizaine de mètres.
+// CE QUI A CHANGÉ À LA QUATRIÈME PASSE. La géométrie de la boucle n'est plus
+// saisie à la main. Elle était faite des trente milieux de quai publiés et de
+// six « points de forme » posés à l'œil dans les virages qu'on voyait couper :
+// 33,0 km contre 34,5 km de kilométrage JR, et l'écart se concentrait dans les
+// courbes - exactement là où le cap compte, puisque c'est le cap qui place tout
+// l'horizon lointain. La règle 1 de la bible géographique demande « une
+// polyligne géoréférencée réelle » : c'est maintenant l'axe relevé
+// d'OpenStreetMap, importé par scripts/geo/fetch-loop.mjs, qui mesure 34,46 km
+// - deux dixièmes de pour cent du barème JR.
 //
-// CE QUE CES CHIFFRES SONT, ET NE SONT PAS. Ce sont des coordonnées publiées de
-// milieux de quai et de sommets, à ~10 m près pour les gares et ~50 m pour les
-// repères. Ce n'est pas un relevé : la CORDE entre deux gares est plus courte
-// que le kilométrage JR, qui suit les courbes. La longueur de la boucle reste
-// donc celle de src/data/segments.ts (34,5 km) ; ces données-ci ne servent qu'à
-// la GÉOMÉTRIE - où est le nord, dans quelle direction on roule, sous quel
-// relèvement se tient un repère. Le test tests/tokyoGeo.test.ts vérifie que les
-// deux sources se tiennent l'une l'autre.
+// Les gares, elles, ne sont plus des milieux de quai projetés mais les POINTS
+// D'ARRÊT d'OSM, qui sont des nœuds de la voie : la position du train à quai est
+// exacte, et non plus approchée. Le milieu de quai publié n'a servi qu'à choisir
+// lequel des deux points d'arrêt d'une gare - un par voie - appartient à la voie
+// retenue ; l'écart entre les deux sources est conservé dans le GeoJSON.
+//
+// La géodésie vient du pipeline PLATEAU (scripts/plateau/lib/geo.mjs, projection
+// EPSG:6677 = zone IX, méridien central 139°30').
 
-import { writeFileSync } from 'node:fs';
-import { makeProjector, geodesicDistance, pickJapanZone } from './plateau/lib/geo.mjs';
-
-/**
- * Les trente milieux de quai, dans l'ordre JY croissant (sens 内回り).
- * Shibuya, Ebisu, Sugamo et Ōtsuka reprennent au mètre près les ancrages du
- * prototype PLATEAU : les deux tables ne doivent pas dériver l'une de l'autre.
- */
-const STATIONS = [
-  ['JY01', 'Tokyo', 35.68123, 139.76679],
-  ['JY02', 'Kanda', 35.69169, 139.77088],
-  ['JY03', 'Akihabara', 35.6984, 139.77313],
-  ['JY04', 'Okachimachi', 35.70745, 139.77475],
-  ['JY05', 'Ueno', 35.7138, 139.7772],
-  ['JY06', 'Uguisudani', 35.72125, 139.7784],
-  ['JY07', 'Nippori', 35.728, 139.7707],
-  ['JY08', 'Nishi-Nippori', 35.73215, 139.7667],
-  ['JY09', 'Tabata', 35.738, 139.7608],
-  ['JY10', 'Komagome', 35.7366, 139.7481],
-  ['JY11', 'Sugamo', 35.73352, 139.7393],
-  ['JY12', 'Otsuka', 35.73147, 139.72855],
-  ['JY13', 'Ikebukuro', 35.7295, 139.7104],
-  ['JY14', 'Mejiro', 35.7211, 139.7062],
-  ['JY15', 'Takadanobaba', 35.7127, 139.7038],
-  ['JY16', 'Shin-Okubo', 35.70135, 139.7],
-  ['JY17', 'Shinjuku', 35.6899, 139.70055],
-  ['JY18', 'Yoyogi', 35.6832, 139.702],
-  ['JY19', 'Harajuku', 35.6702, 139.70275],
-  ['JY20', 'Shibuya', 35.65845, 139.70165],
-  ['JY21', 'Ebisu', 35.6467, 139.71005],
-  ['JY22', 'Meguro', 35.63395, 139.7157],
-  ['JY23', 'Gotanda', 35.6259, 139.7235],
-  ['JY24', 'Osaki', 35.6197, 139.7286],
-  ['JY25', 'Shinagawa', 35.62855, 139.7387],
-  ['JY26', 'Takanawa Gateway', 35.6357, 139.7407],
-  ['JY27', 'Tamachi', 35.64565, 139.7476],
-  ['JY28', 'Hamamatsucho', 35.6553, 139.757],
-  ['JY29', 'Shimbashi', 35.6661, 139.75855],
-  ['JY30', 'Yurakucho', 35.6749, 139.7631],
-];
-
-/**
- * Points de forme intermédiaires, là où la voie ne va PAS droit d'une gare à la
- * suivante. Sans eux, la boucle interpolée coupe les virages, et le cap - donc
- * le relèvement de tous les repères - se trompe de vingt degrés au milieu des
- * courbes. Clé : l'index du tronçon (celui de src/data/segments.ts, tronçon i =
- * gare i → gare i+1).
- */
-const SHAPE = {
-  // Tabata → Komagome : la voie s'enfonce vers le nord-ouest en décrivant le
-  // sommet de la boucle, légèrement bombé vers le nord.
-  8: [
-    [35.739, 139.756],
-    [35.7378, 139.7513],
-  ],
-  // Ōsaki → Shinagawa : le seul tronçon en ÉQUERRE de toute la ligne. La voie
-  // monte plein nord depuis Ōsaki, longe le faisceau de Shinagawa, puis bascule
-  // plein est pour s'y accoler - deux kilomètres pour un kilomètre et demi à vol
-  // d'oiseau, et un cap qui tourne de quatre-vingt-dix degrés en route.
-  23: [
-    [35.6255, 139.7291],
-    [35.6278, 139.7303],
-    [35.6285, 139.733],
-  ],
-  // Yoyogi → Harajuku : le long arc qui contourne le bois du sanctuaire Meiji,
-  // bombé vers l'ouest.
-  17: [[35.6768, 139.7009]],
-};
+import { readFileSync, writeFileSync } from 'node:fs';
+import { makeProjector, pickJapanZone } from './plateau/lib/geo.mjs';
+import { PLATFORMS } from './geo/lib/platforms.mjs';
 
 /**
  * Les repères qu'on voit de la boucle, avec leur hauteur de STRUCTURE (m).
@@ -124,13 +65,30 @@ const LANDMARKS = [
   ['fuji', '富士山 Mont Fuji', 35.3606, 138.7274, 3776, 'mountain'],
 ];
 
-const epsg = pickJapanZone(STATIONS[0][3], STATIONS[0][2]);
+const LOOP_FILE = new URL('../data/geo/yamanote-loop.geojson', import.meta.url);
+let doc;
+try {
+  doc = JSON.parse(readFileSync(LOOP_FILE, 'utf8'));
+} catch {
+  process.stderr.write(
+    'data/geo/yamanote-loop.geojson introuvable.\n' +
+      'Lancez d’abord « node scripts/geo/fetch-loop.mjs » : le tracé vient d’OpenStreetMap.\n',
+  );
+  process.exit(1);
+}
+const feature = doc.features[0];
+const props = feature.properties;
+
+const epsg = pickJapanZone(PLATFORMS[0].lon, PLATFORMS[0].lat);
 const projector = makeProjector(epsg);
 
-// Origine du repère local : le milieu du quai de Tokyo, gare JY01. Tout est
-// donc exprimé en mètres autour d'elle, ce qui garde des nombres lisibles et
-// une origine qui a un sens dans le jeu.
-const origin = projector.forward(STATIONS[0][3], STATIONS[0][2]);
+// Origine du repère local : le point d'arrêt de Tokyo, gare JY01 - c'est-à-dire
+// l'endroit exact où s'arrête le milieu de la rame. Tout est donc exprimé en
+// mètres autour de lui, ce qui garde des nombres lisibles et une origine qui a
+// un sens dans le jeu. C'était auparavant le milieu de quai publié, à une
+// vingtaine de mètres de là.
+const tokyoStop = doc.stations.find((s) => s.index === 0);
+const origin = projector.forward(tokyoStop.stopLon, tokyoStop.stopLat);
 
 /** (lon, lat) → repère de scène : +x est, −z nord, en mètres. */
 function local(lon, lat) {
@@ -138,14 +96,51 @@ function local(lon, lat) {
   return { x: p.east - origin.east, z: -(p.north - origin.north) };
 }
 
-const stations = STATIONS.map(([jy, name, lat, lon], index) => ({
-  index,
-  jy,
-  name,
-  lon,
-  lat,
-  ...local(lon, lat),
-}));
+// --- La polyligne --------------------------------------------------------
+//
+// Le GeoJSON répète le premier point en fin de ligne pour fermer l'anneau ; la
+// table du jeu, elle, est implicitement fermée et ne le répète pas.
+const ring = feature.geometry.coordinates.slice(0, -1);
+const stationAt = new Map();
+for (const s of doc.stations) stationAt.set(`${s.index}`, s);
+
+// Chaque sommet porte l'index de gare quand il en est une : le GeoJSON dit le
+// rang du sommet, l'import l'ayant retenu au moment où il l'a posé.
+const shapes = ring.map(([lon, lat]) => ({ station: -1, ...local(lon, lat) }));
+for (const s of doc.stations) {
+  const at = shapes[s.vertex];
+  if (!at) throw new Error(`Gare ${s.name} : sommet ${s.vertex} hors de la polyligne.`);
+  shapes[s.vertex].station = s.index;
+}
+
+// Faire commencer la table à Tokyo, et vérifier que les gares se suivent.
+const start = shapes.findIndex((p) => p.station === 0);
+const loop = shapes.slice(start).concat(shapes.slice(0, start));
+let expect = 0;
+for (const p of loop) {
+  if (p.station < 0) continue;
+  if (p.station !== expect) {
+    throw new Error(`Gares dans le désordre : attendu ${expect}, trouvé ${p.station}.`);
+  }
+  expect++;
+}
+if (expect !== 30) throw new Error(`${expect} gares sur la polyligne, attendu 30.`);
+
+const stations = PLATFORMS.map((st, index) => {
+  const at = loop.find((p) => p.station === index);
+  const g = projector.inverse(at.x + origin.east, -at.z + origin.north);
+  const meta = stationAt.get(`${index}`);
+  return {
+    index,
+    jy: st.jy,
+    name: st.name,
+    lon: Number(g.lon.toFixed(6)),
+    lat: Number(g.lat.toFixed(6)),
+    x: at.x,
+    z: at.z,
+    offset: meta?.stopFromPlatformMeters ?? 0,
+  };
+});
 
 const landmarks = LANDMARKS.map(([id, name, lat, lon, height, shape]) => ({
   id,
@@ -154,58 +149,99 @@ const landmarks = LANDMARKS.map(([id, name, lat, lon, height, shape]) => ({
   lat,
   height,
   shape,
+  band: 'horizon',
+  family: null,
+  station: null,
   ...local(lon, lat),
 }));
 
-/** Polyligne complète : gares et points de forme, dans l'ordre de la boucle. */
-const shapes = [];
-for (let i = 0; i < stations.length; i++) {
-  shapes.push({ station: i, ...local(stations[i].lon, stations[i].lat) });
-  for (const [lat, lon] of SHAPE[i] ?? []) shapes.push({ station: -1, ...local(lon, lat) });
+// Les objets réels à moins de 2 km (scripts/geo/fetch-near.mjs) entrent dans le
+// MÊME jeu que l'horizon : le relais proche / lointain ne lit qu'une table. Ce
+// qui change, c'est la bande - 'near' contre 'horizon' - et la famille, qui dit
+// quelle silhouette three/Landmarks leur doit. FarSkyline, lui, ne pose que
+// l'horizon : un parc à trois cents mètres n'a rien à faire sur une sphère de
+// quatre-vingt-seize mètres.
+const NEAR_FILE = new URL('../data/geo/near-landmarks.geojson', import.meta.url);
+const NEAR_HEIGHT = { museum: 18, worship: 14, park: 22, historic: 12 };
+try {
+  const nearDoc = JSON.parse(readFileSync(NEAR_FILE, 'utf8'));
+  for (const f of nearDoc.features) {
+    const p = f.properties;
+    if (!p.picked) continue;
+    landmarks.push({
+      id: p.id,
+      name: p.nameEn ? `${p.name} ${p.nameEn}` : p.name,
+      lon: p.lon,
+      lat: p.lat,
+      height: NEAR_HEIGHT[p.family] ?? 12,
+      shape: p.family,
+      band: 'near',
+      family: p.family,
+      station: p.station,
+      x: p.x,
+      z: p.z,
+    });
+  }
+} catch {
+  process.stderr.write(
+    'data/geo/near-landmarks.geojson introuvable : GEO_LANDMARKS ne portera que l’horizon.\n' +
+      'Lancez « node scripts/geo/fetch-near.mjs » pour y ajouter les objets de moins de 2 km.\n',
+  );
 }
 
-// --- Ce que ça donne, comparé au kilométrage JR --------------------------
-//
-// La corde entre deux gares est plus courte que le kilométrage : la voie
-// tourne. On mesure l'écart pour que le test puisse le verrouiller, et pour
-// qu'une coordonnée fautive (deux chiffres échangés, une latitude prise pour
-// une longitude) se voie ici plutôt qu'à l'écran.
+// --- Mesures --------------------------------------------------------------
+const legIndex = [];
+loop.forEach((p, i) => {
+  if (p.station >= 0) legIndex[p.station] = i;
+});
 const legs = [];
-for (let i = 0; i < stations.length; i++) {
-  const a = stations[i];
-  const b = stations[(i + 1) % stations.length];
-  let length = 0;
-  const pts = [a, ...(SHAPE[i] ?? []).map(([lat, lon]) => ({ lon, lat })), b];
-  for (let k = 0; k + 1 < pts.length; k++) {
-    length += geodesicDistance(pts[k].lon, pts[k].lat, pts[k + 1].lon, pts[k + 1].lat);
+for (let s = 0; s < 30; s++) {
+  let d = 0;
+  let i = legIndex[s];
+  const end = legIndex[(s + 1) % 30];
+  while (i !== end) {
+    const j = (i + 1) % loop.length;
+    d += Math.hypot(loop[j].x - loop[i].x, loop[j].z - loop[i].z);
+    i = j;
   }
-  legs.push({ from: a.jy, to: b.jy, meters: Math.round(length) });
+  legs.push({ from: stations[s].jy, to: stations[(s + 1) % 30].jy, meters: Math.round(d) });
 }
 const total = legs.reduce((s, l) => s + l.meters, 0);
+const worstOffset = stations.reduce((a, b) => (a.offset > b.offset ? a : b));
 
 const num = (v, d = 1) => Number(v.toFixed(d));
 
 const out = `// La boucle Yamanote et les repères de Tokyo, en mètres.
 //
-// GÉNÉRÉ par \`node scripts/geo-loop.mjs\` - ne pas éditer à la main. Les
-// coordonnées sources, leur provenance et ce qu'elles valent sont dans le
-// script ; l'essentiel est rappelé ici.
+// GÉNÉRÉ par \`node scripts/geo-loop.mjs\` - ne pas éditer à la main. La
+// polyligne vient de data/geo/yamanote-loop.geojson, que
+// scripts/geo/fetch-loop.mjs va chercher chez OpenStreetMap.
 //
 // Repère : +x vers l'EST, −z vers le NORD, en mètres, origine au milieu du quai
 // de Tokyo (JY01). C'est la convention de scène du jeu (le train regarde −z),
 // si bien qu'une position et un cap se lisent directement.
 //
 // Projection EPSG:${epsg} (zone ${projector.zone}, méridien central 139°30'), depuis
-// JGD2011. Les coordonnées de gare sont des milieux de quai publiés, à ~10 m ;
-// celles des repères, des sommets, à ~50 m.
+// JGD2011.
 //
-// ⚠️ Ces données ne portent PAS la longueur de la boucle. La corde entre deux
-// gares est plus courte que le kilométrage JR - la voie tourne - et c'est
-// src/data/segments.ts qui reste la source de \`SEGMENT_KM\`. Ce fichier-ci ne
-// sert qu'à la géométrie : où est le nord, dans quelle direction on roule, sous
-// quel relèvement se tient un repère. Somme des cordes de cette table :
-// ${(total / 1000).toFixed(2)} km, contre 34,5 km de kilométrage - l'écart est le prix des
-// virages, et tests/tokyoGeo.test.ts le borne.
+// PROVENANCE (règle 10 de la bible géographique) :
+//   · source      ${props.source}
+//   · relation    ${props.relation}, version ${props.relationVersion}
+//   · licence     ${props.license}
+//   · jeu daté du ${props.datasetDate}, vérifié le ${props.verifiedAt}
+//   · famille     ${props.layer}
+//
+// LA POLYLIGNE EST L'AXE RELEVÉ DES VOIES, et non plus une suite de cordes
+// entre gares. Elle mesure ${(total / 1000).toFixed(2)} km contre 34,5 km de
+// kilométrage JR : deux dixièmes de pour cent, là où la table saisie à la main
+// qu'elle remplace était quatre pour cent trop courte. src/data/segments.ts
+// reste malgré tout la source de \`SEGMENT_KM\` - le barème JR est ce que le jeu
+// AFFICHE et ce sur quoi il règle ses horaires - et tests/tokyoGeo.test.ts
+// vérifie que les deux sources racontent la même ligne.
+//
+// Les gares sont les POINTS D'ARRÊT d'OSM, qui sont des nœuds de la voie : le
+// train à quai est exactement dessus. Écart au milieu de quai publié :
+// ${Math.round(worstOffset.offset)} m au pire (${worstOffset.name}).
 
 export interface GeoStation {
   /** Index dans src/data/stations.ts (0 = Tokyo). */
@@ -218,6 +254,14 @@ export interface GeoStation {
   x: number;
   /** Nord NÉGATIF, en mètres depuis Tokyo (convention de scène). */
   z: number;
+  /**
+   * Écart entre ce point d'arrêt et le milieu de quai publié (m).
+   *
+   * Deux sources indépendantes pour le même lieu : leur écart est le contrôle
+   * croisé le moins cher qui soit, et une centaine de mètres est normale dans
+   * une gare qui compte seize voies. Au-delà, c'est une coordonnée fausse.
+   */
+  offset: number;
 }
 
 export interface GeoLandmark {
@@ -229,8 +273,21 @@ export interface GeoLandmark {
   z: number;
   /** Hauteur de structure (m). */
   height: number;
-  /** Famille de silhouette (voir three/city/FarSkyline). */
-  shape: 'tower' | 'twin' | 'needle' | 'mountain' | 'bridge';
+  /**
+   * Famille de silhouette.
+   *
+   * L'horizon (FarSkyline) lit tower / twin / needle / mountain / bridge. Le
+   * bord de voie (Landmarks) lit museum / worship / park / historic - les
+   * objets réels de moins de deux kilomètres, posés dans la même table pour
+   * que le relais proche / lointain n'ait qu'un jeu à lire.
+   */
+  shape: 'tower' | 'twin' | 'needle' | 'mountain' | 'bridge' | 'museum' | 'worship' | 'park' | 'historic';
+  /** 'horizon' au-delà de 2 km ; 'near' pour le bord de voie. */
+  band: 'horizon' | 'near';
+  /** Renseigné pour la bande near : quelle silhouette Landmarks lui doit. */
+  family: 'museum' | 'worship' | 'park' | 'historic' | null;
+  /** Gare de rattachement (bande near), sinon null. */
+  station: number | null;
 }
 
 /** Un sommet de la polyligne de la boucle. \`station\` vaut −1 hors des gares. */
@@ -244,31 +301,39 @@ export const GEO_STATIONS: readonly GeoStation[] = [
 ${stations
   .map(
     (s) =>
-      `  { index: ${s.index}, jy: '${s.jy}', name: '${s.name}', lon: ${s.lon}, lat: ${s.lat}, x: ${num(s.x)}, z: ${num(s.z)} },`,
+      `  { index: ${s.index}, jy: '${s.jy}', name: '${s.name}', lon: ${s.lon}, lat: ${s.lat}, x: ${num(s.x)}, z: ${num(s.z)}, offset: ${num(s.offset)} },`,
   )
   .join('\n')}
 ];
 
 export const GEO_LANDMARKS: readonly GeoLandmark[] = [
 ${landmarks
-  .map(
-    (l) =>
-      `  { id: '${l.id}', name: '${l.name}', lon: ${l.lon}, lat: ${l.lat}, x: ${num(l.x)}, z: ${num(l.z)}, height: ${l.height}, shape: '${l.shape}' },`,
-  )
+  .map((l) => {
+    const name = String(l.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return (
+      `  { id: '${l.id}', name: '${name}', lon: ${l.lon}, lat: ${l.lat}, ` +
+      `x: ${num(l.x)}, z: ${num(l.z)}, height: ${l.height}, shape: '${l.shape}', ` +
+      `band: '${l.band}', family: ${l.family ? `'${l.family}'` : 'null'}, ` +
+      `station: ${l.station === null || l.station === undefined ? 'null' : l.station} },`
+    );
+  })
   .join('\n')}
 ];
 
 /**
- * La boucle comme polyligne fermée : les trente gares, plus les points de forme
- * des tronçons qui ne vont pas droit. Sans ces derniers, une interpolation entre
- * gares coupe les virages et le cap se trompe de vingt degrés au milieu des
- * courbes - donc le relèvement de tous les repères avec lui.
+ * La boucle comme polyligne fermée : l'axe relevé des voies, simplifié à
+ * ${props.simplifyMeters} m près, avec les trente points d'arrêt étiquetés.
+ *
+ * ${loop.length} sommets, soit un tous les ${Math.round(total / loop.length)} m en moyenne - et bien plus
+ * serrés dans les courbes, où Douglas-Peucker garde tout ce qui tourne. C'est
+ * ce qui permet au cap de tourner comme la voie tourne, au lieu de sauter d'une
+ * corde à l'autre.
  */
 export const GEO_LOOP: readonly GeoShapePoint[] = [
-${shapes.map((p) => `  { station: ${p.station}, x: ${num(p.x)}, z: ${num(p.z)} },`).join('\n')}
+${loop.map((p) => `  { station: ${p.station}, x: ${num(p.x)}, z: ${num(p.z)} },`).join('\n')}
 ];
 
-/** Longueur de la polyligne ci-dessus (m). Voir l'avertissement en tête. */
+/** Longueur de la polyligne ci-dessus (m). */
 export const GEO_LOOP_M = ${total};
 
 /** Longueur de chaque inter-gare telle que la polyligne la donne (m). */
@@ -279,5 +344,8 @@ ${legs.map((l) => `  /* ${l.from}→${l.to} */ ${l.meters},`).join('\n')}
 
 writeFileSync(new URL('../src/data/tokyoGeo.ts', import.meta.url), out, 'utf8');
 
-console.log(`src/data/tokyoGeo.ts écrit : ${stations.length} gares, ${landmarks.length} repères.`);
-console.log(`Polyligne : ${(total / 1000).toFixed(2)} km (kilométrage JR : 34,50 km).`);
+process.stdout.write(
+  `src/data/tokyoGeo.ts écrit : ${stations.length} gares, ${landmarks.length} repères, ` +
+    `${loop.length} sommets.\n`,
+);
+process.stdout.write(`Polyligne : ${(total / 1000).toFixed(2)} km (kilométrage JR : 34,50 km).\n`);

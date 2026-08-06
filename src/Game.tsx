@@ -31,7 +31,10 @@ import { Wayside } from './three/Wayside';
 import { Weather } from './three/Weather';
 import { SkyDome } from './three/city/SkyDome';
 import { FarSkyline } from './three/city/FarSkyline';
+import { FarRelief } from './three/city/FarRelief';
+import { DistrictMassif } from './three/city/DistrictMassif';
 import { CityRibbon } from './three/city/CityRibbon';
+import { Waterways } from './three/city/Waterways';
 import { Utilities } from './three/city/Utilities';
 import { Traffic } from './three/city/Traffic';
 import { Landmarks } from './three/Landmarks';
@@ -261,10 +264,20 @@ export default function Game() {
           <TrainConsist />
         </TrainRig>
         <SkyDome />
-        {/* Entre le ciel et la ville, au sens propre : les repères de Tokyo à
-            leur relèvement géographique. */}
+        {/* Entre le ciel et la ville, au sens propre. D'abord ce qui est le
+            plus loin - la ligne de crête du Tanzawa et de l'Okutama, relevée
+            sur le MNT -, puis les repères de Tokyo à leur relèvement. */}
+        <FarRelief />
+        {/* Puis les masses urbaines des bandes 1 à 20 km de la bible, relevées
+            sur les hauteurs déclarées d'OpenStreetMap : ce qui manquait entre
+            le dernier immeuble du ruban et le premier repère de l'horizon. */}
+        <DistrictMassif />
         <FarSkyline />
         <CityRibbon />
+        {/* Les canaux du corridor et la baie, relevés sur OpenStreetMap. Après
+            le ruban : c'est une nappe transparente, elle doit se composer sur
+            une ville déjà écrite dans le tampon de profondeur. */}
+        <Waterways />
         <Utilities />
         <Traffic />
         <PlateauWorld />

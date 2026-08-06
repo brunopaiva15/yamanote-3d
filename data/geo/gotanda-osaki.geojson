@@ -1,0 +1,64 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-gotanda-osaki",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "line": "JR山手線 / Yamanote Line",
+        "from": "Gotanda (JY23)",
+        "to": "Osaki (JY24)",
+        "segment": 22,
+        "direction": "inner (内回り)",
+        "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
+        "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
+        "license": "ODbL 1.0",
+        "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
+        "approximate": false,
+        "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
+        "lengthMeters": 880.8,
+        "generatedBy": "scripts/plateau/fetch-route.mjs"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.723693,
+            35.62629,
+            52.8
+          ],
+          [
+            139.724275,
+            35.625482,
+            52.47
+          ],
+          [
+            139.724612,
+            35.624966,
+            52.13
+          ],
+          [
+            139.725191,
+            35.624144,
+            51.8
+          ],
+          [
+            139.727415,
+            35.621211,
+            51.47
+          ],
+          [
+            139.728402,
+            35.620068,
+            51.13
+          ],
+          [
+            139.72879,
+            35.619535,
+            50.8
+          ]
+        ]
+      }
+    }
+  ]
+}

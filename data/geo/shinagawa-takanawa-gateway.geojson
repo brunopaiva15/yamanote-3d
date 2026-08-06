@@ -1,0 +1,79 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-shinagawa-takanawa-gateway",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "line": "JR山手線 / Yamanote Line",
+        "from": "Shinagawa (JY25)",
+        "to": "Takanawa Gateway (JY26)",
+        "segment": 24,
+        "direction": "inner (内回り)",
+        "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
+        "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
+        "license": "ODbL 1.0",
+        "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
+        "approximate": false,
+        "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
+        "lengthMeters": 784.3,
+        "generatedBy": "scripts/plateau/fetch-route.mjs"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.738352,
+            35.62865,
+            41.7
+          ],
+          [
+            139.738345,
+            35.629277,
+            41.66
+          ],
+          [
+            139.738377,
+            35.629786,
+            41.61
+          ],
+          [
+            139.738432,
+            35.630078,
+            41.57
+          ],
+          [
+            139.738528,
+            35.630428,
+            41.52
+          ],
+          [
+            139.738736,
+            35.630958,
+            41.48
+          ],
+          [
+            139.739475,
+            35.632571,
+            41.43
+          ],
+          [
+            139.739647,
+            35.633002,
+            41.39
+          ],
+          [
+            139.740096,
+            35.634427,
+            41.34
+          ],
+          [
+            139.740528,
+            35.635442,
+            41.3
+          ]
+        ]
+      }
+    }
+  ]
+}

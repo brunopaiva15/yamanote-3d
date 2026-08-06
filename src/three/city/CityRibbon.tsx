@@ -52,8 +52,10 @@ import {
   clearing,
   makeCellBuffer,
   makePropBuffer,
+  cityAnchor,
   updateCityAnchor,
 } from '../../systems/cityField';
+import { cityRelief, updateTerrain } from '../../systems/terrain';
 import { singularity } from '../../systems/singularity';
 import { GROUND_TILE, makeCityGroundTexture, makeSignageTexture } from '../../textures/city';
 import { makeCityMaterial } from './cityMaterial';
@@ -96,6 +98,25 @@ const GROUND_INNER = 5;
 const GROUND_SPAN = 560;
 /** Longueur des nappes (m) : la vue en biais vers le fond du wagon porte loin. */
 const GROUND_LEN = 1200;
+/**
+ * Découpe en travers des nappes de rue.
+ *
+ * Une nappe plate n'avait besoin que de ses deux rives. Depuis que la rue suit
+ * le relief du 国土地理院, il lui faut des sommets pour le suivre : huit
+ * tronçons, soit soixante-dix mètres chacun, ce qui suffit à une falaise qui
+ * s'étale sur cent. Au-delà on paierait un parcours de sommets par image pour
+ * une pente déjà lisse.
+ */
+const GROUND_WIDTH_SEGMENTS = 8;
+/**
+ * De combien un bâtiment s'enfonce dans son terrain (m).
+ *
+ * La nappe de rue est une grille de quelques dizaines de sommets, le relief est
+ * lu à l'emplacement exact du bâtiment : les deux ne tombent pas d'accord au
+ * décimètre. Un pied enterré ne se voit jamais depuis un train ; un pied en
+ * l'air, si.
+ */
+const SKIRT = 1.5;
 
 /**
  * Longueur des deux anneaux et allègement des rangs par palier de qualité.
@@ -147,7 +168,7 @@ export function CityRibbon() {
   // Les deux nappes de rue se dérobent sous le quai : elles sont donc
   // découpées en tronçons plutôt que d'un seul tenant (voir three/groundStrip).
   const grounds = useMemo(
-    () => [1, -1].map(() => makeGroundStrip(GROUND_SPAN, GROUND_LEN)),
+    () => [1, -1].map(() => makeGroundStrip(GROUND_SPAN, GROUND_LEN, GROUND_WIDTH_SEGMENTS)),
     [],
   );
   useEffect(() => () => grounds.forEach((g) => g.dispose()), [grounds]);
@@ -336,6 +357,10 @@ export function CityRibbon() {
   useFrame(() => {
     const { index, loopDirection } = useStore.getState();
     updateCityAnchor(index, segEnv.p, loopDirection);
+    // Le relief se recale sur l'ancre des quartiers, puis sur la position du
+    // train : tout le ruban lira la même référence pendant cette image, y
+    // compris les cellules réécrites en cours de route.
+    updateTerrain(runtime.distance, cityAnchor);
 
     const st = ring.current;
     const sc = scratch;
@@ -362,8 +387,14 @@ export function CityRibbon() {
           t.mesh.setMatrixAt(idx, sc.hidden);
           continue;
         }
-        sc.pos.set(side * b.x, b.h / 2, st.origin - b.s);
-        sc.scl.set(b.d, b.h, b.w);
+        // Le pied du sujet suit le relief du 国土地理院, et s'enfonce d'un
+        // mètre et demi dedans. Ce n'est pas de la coquetterie : la nappe de
+        // rue est une grille de quelques dizaines de sommets, le relief est lu
+        // au centimètre à l'emplacement exact du bâtiment, et les deux ne
+        // tombent pas d'accord au décimètre près. Un pied enterré ne se voit
+        // jamais depuis un train ; un pied en l'air, si.
+        sc.pos.set(side * b.x, b.y - SKIRT + (b.h + SKIRT) / 2, st.origin - b.s);
+        sc.scl.set(b.d, b.h + SKIRT, b.w);
         // La trame du quartier : une rotation autour de Y de -yaw, la MÊME
         // des deux côtés de la voie. Le côté -x n'est pas un miroir du côté
         // +x - une rue qui franchit le remblai continue du même angle.
@@ -422,7 +453,7 @@ export function CityRibbon() {
             // Panneau plaqué sur la face qui regarde la voie, donc tourné vers
             // l'axe : un quart de tour, dans le sens du côté - plus la trame du
             // bâtiment qui le porte, sans quoi il se décollerait de sa façade.
-            sc.pos.set(s.side * p.x, p.y + p.h / 2, st.origin - p.s);
+            sc.pos.set(s.side * p.x, p.base + p.y + p.h / 2, st.origin - p.s);
             sc.rot.setFromAxisAngle(
               Y_AXIS,
               (s.side === 1 ? -Math.PI / 2 : Math.PI / 2) - p.yaw,
@@ -438,7 +469,7 @@ export function CityRibbon() {
           // Bosquets, croupes et accessoires de toiture sont écrits dans un
           // cube unité POSÉ PAR LA BASE ; les volumes en boîte, eux, sont
           // centrés, et le feu d'obstacle est une bille centrée sur sa cote.
-          const baseY = p.kind === 'box' ? p.y + p.h / 2 : p.y;
+          const baseY = p.base + (p.kind === 'box' ? p.y + p.h / 2 : p.y);
           sc.pos.set(s.side * p.x, baseY, st.origin - p.s);
           sc.rot.setFromAxisAngle(Y_AXIS, -p.yaw);
 
@@ -587,6 +618,13 @@ export function CityRibbon() {
           ? x
           : x + side * push * underStation(z, stationOcclusion.z0, stationOcclusion.z1),
       );
+      // La rue épouse le relief. Sa coordonnée locale `x` se compte depuis le
+      // milieu de la nappe, posée à `GROUND_INNER + GROUND_SPAN / 2` de l'axe :
+      // la distance à la voie est donc cette pose plus l'abscisse locale. En
+      // `z`, la nappe ne défile pas - c'est sa texture qui coule - si bien que
+      // son z local EST le z de scène, et l'abscisse monde s'en déduit.
+      const centre = GROUND_INNER + GROUND_SPAN / 2;
+      grounds[i].lift((z, x) => cityRelief(runtime.distance - z, centre + side * x, side));
     }
     built.groundTex.offset.y = runtime.distance / GROUND_TILE;
 

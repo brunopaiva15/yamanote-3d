@@ -1,0 +1,99 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-yoyogi-harajuku",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "line": "JR山手線 / Yamanote Line",
+        "from": "Yoyogi (JY18)",
+        "to": "Harajuku (JY19)",
+        "segment": 17,
+        "direction": "inner (内回り)",
+        "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
+        "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
+        "license": "ODbL 1.0",
+        "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
+        "approximate": false,
+        "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
+        "lengthMeters": 1562.3,
+        "generatedBy": "scripts/plateau/fetch-route.mjs"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.702035,
+            35.683944,
+            72.7
+          ],
+          [
+            139.702224,
+            35.683258,
+            72.25
+          ],
+          [
+            139.70273,
+            35.682179,
+            71.79
+          ],
+          [
+            139.702884,
+            35.681797,
+            71.34
+          ],
+          [
+            139.703708,
+            35.678813,
+            70.88
+          ],
+          [
+            139.703855,
+            35.678062,
+            70.43
+          ],
+          [
+            139.703908,
+            35.677657,
+            69.98
+          ],
+          [
+            139.704011,
+            35.676082,
+            69.52
+          ],
+          [
+            139.703997,
+            35.675541,
+            69.07
+          ],
+          [
+            139.703911,
+            35.675043,
+            68.62
+          ],
+          [
+            139.703557,
+            35.673921,
+            68.16
+          ],
+          [
+            139.702906,
+            35.672102,
+            67.71
+          ],
+          [
+            139.702809,
+            35.671757,
+            67.25
+          ],
+          [
+            139.70247,
+            35.670217,
+            66.8
+          ]
+        ]
+      }
+    }
+  ]
+}

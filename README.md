@@ -1518,10 +1518,10 @@ remise à zéro automatique et cumule sur un nombre d'images connu.
 
 | palier | où | appels | triangles | instances |
 |---|---|---|---|---|
-| ultra | voie | 805 | 327 k | 2 406 |
-| ultra | quai | 756 | 190 k | 4 387 |
-| medium | voie | 290 | 178 k | 2 026 |
-| veryLow | voie | 247 | 104 k | 943 |
+| ultra | voie | 788 | 333 k | 2 589 |
+| ultra | quai | 796 | 210 k | 4 570 |
+| medium | voie | 303 | 185 k | 2 158 |
+| veryLow | voie | 233 | 105 k | 959 |
 
 Deux enseignements. D'abord, **le paysage n'est pas le poste dominant** : il pèse
 une cinquantaine de maillages sur sept cent vingt visibles, et le wagon et ses
@@ -1530,12 +1530,10 @@ soleil**, coupée à partir de `medium` : c'est elle qui fait passer de 730 à 2
 appels, en supprimant une seconde passe sur tout ce qui projette.
 
 Le budget fixé avant la troisième passe était de **850 appels et 360 k
-triangles** en ultra, pleine voie, contre 759 et 273 k avant elle. Il tient :
-805 appels et 327 k triangles pour un arrière-pays jusqu'à 440 m, les
-accessoires de toiture, les fils, la circulation, l'horizon géoréférencé et les
-trois singularités. Les deux paliers les plus bas ne reçoivent rien de neuf
-**sauf l'orientation de trame**, qui est gratuite : ni toits, ni balcons, ni
-fils, ni circulation, ni ouvrages, et un arrière-pays allégé.
+triangles** en ultra, pleine voie. Il tient après la quatrième : **788 appels
+et 333 k triangles** pour le tracé réel, le relief GSI, l'eau OSM, les masses
+1–20 km, l'horizon géoréférencé et les empreintes du corridor — les couches
+lointaines sont des découpes opaques sur sphère, quasi gratuites.
 
 Trois corrections sont sorties de cette première mesure - la première fois que
 le paysage était mesuré plutôt que supposé :
@@ -1616,6 +1614,48 @@ un monde que le jeu chercherait ailleurs sur la boucle.
 sur un échantillon CityGML *synthétique* au format PLATEAU. Tout est expliqué -
 outils, licences, limites, extension aux 30 tronçons - dans
 [`docs/PLATEAU_PIPELINE.md`](docs/PLATEAU_PIPELINE.md).
+
+### Quatrième passe — la géographie importée
+
+Les trois premières passes ont bâti un paysage crédible. Celle-ci cesse
+d'inventer : elle **importe**. La bible géographique sert de checklist, jamais
+de cadastre (règle 11). Chaque couche vient d'une source datée, avec licence et
+provenance (`src/data/geo/provenance.ts`, `public/world/LICENSE.md`).
+
+**Le tracé.** La polyligne n'est plus une suite de cordes entre gares : c'est
+l'axe OSM de la relation 山手線 (`5376382`), ~34,4 km, ~327 sommets. Le
+kilométrage de la bible (KM 0 = Shinagawa, sens des index décroissants) est posé
+sur cette longueur (`systems/kmPost`).
+
+**Le relief.** Le MNT du 国土地理院 pose enfin le plateau de Musashino et la
+plaine alluviale. `groundAt` / `cityRelief` asseyent la ville sur le terrain ;
+`FarRelief` dessine Tanzawa et Okutama à 20–50 km. Le Fuji reste hors rayon, à
+94 km, classé `beyond50km`.
+
+**L'eau.** Six traversées à ciel ouvert, les canaux du remblai et la baie de
+Tokyo : géométrie OSM, largeurs mesurées quand c'est possible. La fausse 渋谷川
+du tronçon 19 a disparu.
+
+**Les secteurs 1–20 km.** `DistrictMassif` pose des masses urbaines relevées
+(tours ≥ 55 m, amas OSM) entre le ruban et l'horizon. Un secteur non résolu
+reste vide et le dit.
+
+**L'honnêteté des repères.** Plus de tour treillis à Nippori ni à Yoyogi.
+Chaque silhouette déclare `geo` / `station` / `fabric`. Les objets réels de
+moins de 2 km entrent dans `GEO_LANDMARKS` à côté de l'horizon ; leur côté se
+lit sur le terrain.
+
+**La date.** Choisir 2018 dans le menu et Takanawa Gateway disparaît ; Scramble
+Square n'existe pas avant 2019. Ce sont des faits semi-statiques branchés sur
+`runtime.tokyoDate`.
+
+**Le corridor 0–1 km.** Empreintes OSM versionnées (`npm run geo:footprints`) ;
+hauteurs relevées ou `measured: false`. Les trente tronçons sont descriptibles
+par le pipeline PLATEAU ; `PlateauWorld` couvre aussi le 外回り.
+
+Sondes : `__probeTerrain()`, `__probeBible()` / `__probeBible(12.5)`. Captures
+par KM : `node scripts/km-shots.mjs /tmp/km`. Budget : `node scripts/scenery-cost.mjs`
+(cible inchangée : ultra ≤ 850 appels et ≤ 360 k triangles).
 
 ## Les saisons
 

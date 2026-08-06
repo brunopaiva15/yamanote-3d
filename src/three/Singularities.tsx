@@ -9,11 +9,14 @@
 //     barrières : celles-ci restent baissées la plupart du temps, et c'est
 //     pour ça qu'on les voit fermées quand la rame arrive. Elles le sont donc
 //     ici, feux battants, comme sur place.
-//   · LES TRAVERSÉES DE RIVIÈRE. La Kanda au nord de Kanda, la Shibuya au sud
-//     de Shibuya, la Meguro entre Gotanda et Ōsaki. Ce sont les trouées les plus
-//     larges du parcours : rien ne se construit sur une rivière, et le tissu
-//     s'ouvre des deux côtés en même temps. Un chenal de béton entre deux murs,
-//     comme toutes les rivières de Tokyo depuis les années soixante.
+//   · LES TRAVERSÉES DE RIVIÈRE. Six à ciel ouvert, relevées sur OpenStreetMap
+//     (data/water) : le 日本橋川 avant Kanda, la 神田川 deux fois - à Akihabara
+//     et à Takadanobaba -, le 目黒川 deux fois, le 古川 avant Hamamatsuchō. Ce
+//     sont les trouées les plus larges du parcours : rien ne se construit sur
+//     une rivière, et le tissu s'ouvre des deux côtés en même temps. Un chenal
+//     de béton entre deux murs, comme toutes les rivières de Tokyo depuis les
+//     années soixante - et chacune à SA largeur, de onze mètres et demi à
+//     trente-neuf, mesurée dans l'axe de la voie.
 //   · L'AUTOROUTE URBAINE. Le 首都高 ne traverse pas la ville au hasard : il
 //     suit les avenues et les rivières, et sur trois tronçons il suit la voie -
 //     un tablier de quinze mètres sur ses piles, au-dessus du premier rang bâti,
@@ -72,8 +75,6 @@ const GAUGE_X = 0.7175;
 const ROAD_T = 0.16;
 /** Demi-longueur du chenal (m) : jusqu'au dernier rang proche, pas au-delà. */
 const RIVER_HALF = 66;
-/** Largeur de la nappe d'eau (m). */
-const WATER_W = 24;
 /**
  * Cote de la nappe (m au-dessus du sol de la ville).
  *
@@ -399,7 +400,13 @@ export function Singularities() {
     const flashB = mkInstanced(bulbB, lampB, 2, 'feu battant B');
 
     // --- Rivière ---
-    const waterGeo = new THREE.PlaneGeometry(RIVER_HALF * 2, WATER_W);
+    // La nappe est construite à UN MÈTRE de large, et c'est la mise à l'échelle
+    // qui lui donne la sienne à chaque traversée : le 神田川 fait onze mètres et
+    // demi à Takadanobaba, le 日本橋川 trente-neuf avant Kanda, et le relevé
+    // (data/water) le dit crossing par crossing. Le dégradé de fond de la
+    // texture court en travers du chenal quelle que soit son échelle - c'est
+    // exactement ce qu'on veut d'un creux : il suit la rive, pas le mètre.
+    const waterGeo = new THREE.PlaneGeometry(RIVER_HALF * 2, 1);
     waterGeo.rotateX(-Math.PI / 2);
     waterGeo.translate(0, WATER_Y, 0);
     const waterMesh = new THREE.Mesh(waterGeo, water);
@@ -575,8 +582,9 @@ export function Singularities() {
         // posée sur le sol urbain, ce sont les murs qui creusent.
         riverRoot.current.position.set(0, segEnv.cityY, z);
         riverRoot.current.rotation.y = -singularity.yaw;
+        built.waterMesh.scale.z = singularity.w;
         for (let i = 0; i < 2; i++) {
-          sc.pos.set(0, 0, (i === 0 ? 1 : -1) * (WATER_W / 2 + 0.4));
+          sc.pos.set(0, 0, (i === 0 ? 1 : -1) * (singularity.w / 2 + 0.4));
           sc.rot.setFromAxisAngle(sc.axis, i === 0 ? 0 : Math.PI);
           sc.scl.set(1, 1, 1);
           sc.mtx.compose(sc.pos, sc.rot, sc.scl);

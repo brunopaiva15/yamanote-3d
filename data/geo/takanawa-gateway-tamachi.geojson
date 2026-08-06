@@ -1,0 +1,109 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-takanawa-gateway-tamachi",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "line": "JR山手線 / Yamanote Line",
+        "from": "Takanawa Gateway (JY26)",
+        "to": "Tamachi (JY27)",
+        "segment": 25,
+        "direction": "inner (内回り)",
+        "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
+        "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
+        "license": "ODbL 1.0",
+        "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
+        "approximate": false,
+        "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
+        "lengthMeters": 1371.9,
+        "generatedBy": "scripts/plateau/fetch-route.mjs"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.740528,
+            35.635442,
+            41.3
+          ],
+          [
+            139.740945,
+            35.636418,
+            41.26
+          ],
+          [
+            139.741519,
+            35.63754,
+            41.22
+          ],
+          [
+            139.74206,
+            35.638938,
+            41.18
+          ],
+          [
+            139.742636,
+            35.640269,
+            41.14
+          ],
+          [
+            139.742737,
+            35.640597,
+            41.1
+          ],
+          [
+            139.742996,
+            35.64167,
+            41.06
+          ],
+          [
+            139.743188,
+            35.642254,
+            41.02
+          ],
+          [
+            139.743365,
+            35.642628,
+            40.98
+          ],
+          [
+            139.743658,
+            35.643104,
+            40.94
+          ],
+          [
+            139.743814,
+            35.643315,
+            40.9
+          ],
+          [
+            139.744112,
+            35.643656,
+            40.86
+          ],
+          [
+            139.74452,
+            35.644028,
+            40.82
+          ],
+          [
+            139.745008,
+            35.644361,
+            40.78
+          ],
+          [
+            139.746212,
+            35.645043,
+            40.74
+          ],
+          [
+            139.747672,
+            35.645754,
+            40.7
+          ]
+        ]
+      }
+    }
+  ]
+}

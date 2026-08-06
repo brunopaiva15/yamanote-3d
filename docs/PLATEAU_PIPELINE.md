@@ -1,12 +1,31 @@
-# Pipeline PLATEAU → GLB (prototype Shibuya → Ebisu)
+# Pipeline PLATEAU → GLB (corridor Yamanote)
 
 Chaîne automatisée qui va des données ouvertes japonaises [Project PLATEAU]
 (CityGML 3D des villes du Japon, 国土交通省) à des GLB optimisés affichés dans
-Yamanote 3D, sur **un seul tronçon** à la fois - par défaut Shibuya → Ebisu,
-`SEGMENTS[19]`, en viaduc.
+Yamanote 3D. **Les trente tronçons** de la boucle sont descriptibles : la clé
+`PLATEAU_PROTOTYPE` (défaut `shibuya-ebisu`) choisit lequel construire. Voir
+`scripts/plateau/segments-all.mjs`.
 
 Le tronçon est un **paramètre**, pas du code : voir
 [§ Changer de tronçon](#changer-de-tronçon).
+
+Les **deux sens** sont couverts à l'affichage : le tracé exporté reste orienté
+内回り ; en 外回り, `PlateauWorld` le parcourt à l'envers (`1 − t`).
+
+## Empreintes du corridor 0–1 km
+
+`npm run geo:footprints` → `data/geo/footprints.json` (compact, ~1,5 Mo) +
+`src/data/footprints.ts`. Contours OSM (`out geom`), emprise réelle
+(`footprintMeasured: true`). Hauteur `measured: true` si étiquette `height`,
+sinon levels ou modèle statistique. Le relevé complet dépasse 150 000 objets ;
+on versionne ~25 000 (toutes les hauteurs OSM + échantillon) pour tenir le
+budget. Les GLB PLATEAU restent hors dépôt (build local).
+
+## Tracé des tronçons
+
+`node scripts/plateau/fetch-route.mjs` découpe par défaut
+`data/geo/yamanote-loop.geojson` (chantier 1). `--approx` force l'ancien arc ;
+`--overpass` interroge Overpass.
 
 ```
 CityGML PLATEAU ─► conversion ─► sélection corridor ─► classement par distance

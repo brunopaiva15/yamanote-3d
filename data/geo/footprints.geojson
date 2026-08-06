@@ -1,0 +1,33 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-footprints",
+  "properties": {
+    "layer": "DATA_STATIC",
+    "source": "OpenStreetMap",
+    "license": "ODbL 1.0",
+    "datasetDate": "2026-08-06",
+    "reach": 1000,
+    "footprintMeasured": true,
+    "columns": [
+      "osmWay",
+      "x10",
+      "z10",
+      "h10",
+      "plate10",
+      "measured",
+      "distance",
+      "station",
+      "lonE6",
+      "latE6"
+    ],
+    "count": 24791,
+    "survey": 153924,
+    "measuredHeights": 14029,
+    "estimatedHeights": 10762,
+    "note": "Contours OSM (out geom). Emprise réelle. Hauteur OSM ou modèle. Format compact pour 2–3 Mo.",
+    "packedAs": "data/geo/footprints.json",
+    "generatedBy": "scripts/geo/fetch-footprints.mjs",
+    "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright"
+  },
+  "features": []
+}

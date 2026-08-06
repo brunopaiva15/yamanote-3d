@@ -1,0 +1,64 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-tokyo-kanda",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "line": "JR山手線 / Yamanote Line",
+        "from": "Tokyo (JY01)",
+        "to": "Kanda (JY02)",
+        "segment": 0,
+        "direction": "inner (内回り)",
+        "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
+        "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
+        "license": "ODbL 1.0",
+        "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
+        "approximate": false,
+        "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
+        "lengthMeters": 1234.3,
+        "generatedBy": "scripts/plateau/fetch-route.mjs"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.766562,
+            35.681256,
+            47.8
+          ],
+          [
+            139.766829,
+            35.681988,
+            47.97
+          ],
+          [
+            139.76762,
+            35.68363,
+            48.13
+          ],
+          [
+            139.768151,
+            35.684971,
+            48.3
+          ],
+          [
+            139.768476,
+            35.685655,
+            48.47
+          ],
+          [
+            139.769397,
+            35.687996,
+            48.63
+          ],
+          [
+            139.770965,
+            35.691781,
+            48.8
+          ]
+        ]
+      }
+    }
+  ]
+}
