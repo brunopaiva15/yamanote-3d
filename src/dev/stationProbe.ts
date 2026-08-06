@@ -25,6 +25,8 @@ import { placementFor } from '../systems/stationPlacement';
 import { psdGates } from '../three/station/psdLayout';
 import { freezeWeather, weather } from '../systems/weather';
 import { seasonNow } from '../systems/season';
+import { clearing } from '../systems/cityField';
+import { expressway, singularity } from '../systems/singularity';
 
 interface Volume {
   label: string;
@@ -424,6 +426,37 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
       });
     });
     return out.sort((a, b) => (a.relèvement as number) - (b.relèvement as number));
+  };
+
+  /**
+   * Les singularités de la ligne, et le moyen de s'arrêter devant.
+   *
+   * Elles n'arrivent chacune qu'une fois par tour, au milieu d'un inter-gare
+   * précis : les attendre à l'œil demanderait de rouler une heure. Appelée avec
+   * une distance, la sonde POSE la rame à tant de mètres en amont de l'ouvrage -
+   * l'ancrage, lui, ne bouge pas (il est calé sur la gare quittée, voir
+   * systems/singularity), si bien que la trouée reste où elle est et que la
+   * ville n'est pas rebâtie.
+   *
+   *   __probeSingularity()      → ce qui est posé, et à quelle distance
+   *   __probeSingularity(120)   → s'arrêter cent vingt mètres avant
+   */
+  w.__probeSingularity = (ahead?: number) => {
+    if (ahead !== undefined && singularity.kind) runtime.distance = singularity.s - ahead;
+    return {
+      nature: singularity.kind,
+      devant: +(singularity.s - runtime.distance).toFixed(1),
+      trame: +((singularity.yaw * 180) / Math.PI).toFixed(1),
+      largeur: singularity.w,
+      trouée: +clearing.half.toFixed(1),
+      autoroute: expressway.on
+        ? {
+            côté: expressway.side,
+            début: +(expressway.s0 - runtime.distance).toFixed(1),
+            fin: +(expressway.s1 - runtime.distance).toFixed(1),
+          }
+        : null,
+    };
   };
 
   // Effacer la rame pour ne juger que le paysage.

@@ -49,10 +49,12 @@ import {
   buildCell,
   buildCellProps,
   buildFarCell,
+  clearing,
   makeCellBuffer,
   makePropBuffer,
   updateCityAnchor,
 } from '../../systems/cityField';
+import { singularity } from '../../systems/singularity';
 import { GROUND_TILE, makeCityGroundTexture, makeSignageTexture } from '../../textures/city';
 import { makeCityMaterial } from './cityMaterial';
 import { makeGroveGeometry, makeGroveMaterial, makeHipRoofGeometry } from './cityProps';
@@ -329,7 +331,7 @@ export function CityRibbon() {
     [],
   );
 
-  const ring = useRef({ first: 0, origin: 0, ready: false, farFirst: 0 });
+  const ring = useRef({ first: 0, origin: 0, ready: false, farFirst: 0, epoch: -1 });
 
   useFrame(() => {
     const { index, loopDirection } = useStore.getState();
@@ -531,6 +533,23 @@ export function CityRibbon() {
       while (st.farFirst < farWant) {
         writeFarCell(st.farFirst + farCells);
         st.farFirst++;
+      }
+    }
+
+    // --- Une trouée vient d'être ancrée : on rebâtit ce qu'elle recouvre ---
+    //
+    // L'anneau porte deux cent vingt mètres d'avance, et la Kanda tombe à cent
+    // soixante-dix mètres de la gare de Kanda : les cellules de la rivière ont
+    // donc été engendrées AVANT qu'on sache qu'une rivière allait passer là.
+    // Elles sont réécrites sur place, une poignée de fois par tour.
+    if (st.epoch !== singularity.epoch) {
+      st.epoch = singularity.epoch;
+      if (clearing.half > 0) {
+        const c0 = Math.floor((clearing.s - clearing.half) / CELL_LEN);
+        const c1 = Math.floor((clearing.s + clearing.half) / CELL_LEN);
+        for (let c = c0; c <= c1; c++) {
+          if (c >= st.first && c < st.first + cells) writeCell(c);
+        }
       }
     }
 

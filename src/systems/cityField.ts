@@ -480,6 +480,54 @@ export function roadwayOf(cell: number, out: Roadway): boolean {
 const ROADWAY: Roadway = { s: 0, x: 0, w: 0, d: 0, yaw: 0 };
 
 /**
+ * La rue la plus proche d'une abscisse monde, ou `null`.
+ *
+ * C'est par là que passent les singularités de la ligne (systems/segmentEnv) :
+ * une rivière, un passage à niveau et une autoroute urbaine ont tous besoin
+ * d'une TROUÉE dans le tissu, et il y en a déjà une - la rue perpendiculaire,
+ * qui perce les trois rangs au même endroit et dont la chaussée est déjà posée.
+ * Les accrocher à une rue existante au lieu d'en creuser une nouvelle évite
+ * qu'une pile de viaduc ne se plante dans un immeuble, et ne coûte rien.
+ *
+ * Une cellule sur deux porte une rue : chercher à deux cellules près suffit
+ * toujours, et l'écart au point demandé reste sous quatre-vingts mètres.
+ */
+export function streetNear(s: number, reach = 3): Roadway | null {
+  const home = Math.floor(s / CELL_LEN);
+  for (let k = 0; k <= reach; k++) {
+    // On s'écarte alternativement d'un côté puis de l'autre : la rue retenue
+    // est bien la plus proche, et non la première trouvée vers l'avant.
+    for (const cell of k === 0 ? [home] : [home - k, home + k]) {
+      if (roadwayOf(cell, ROADWAY)) return ROADWAY;
+    }
+  }
+  return null;
+}
+
+/**
+ * Trouée imposée au tissu, en abscisse monde : une rivière ne se contourne pas.
+ *
+ * Le générateur sait déjà laisser passer une rue ; il ne savait pas laisser
+ * passer VINGT-CINQ MÈTRES. C'est le seul cas où le décor commande à la ville
+ * plutôt que l'inverse, et il est bordé : `half` vaut zéro partout ailleurs, et
+ * le rendu la pose sur une rue existante, si bien que la moitié de la trouée est
+ * déjà vide.
+ *
+ * L'arrière-pays (`buildFarCell`) n'en tient pas compte à dessein : la nappe
+ * d'eau s'arrête au dernier rang proche, et ce qui est derrière est l'autre
+ * rive, bâtie.
+ */
+export const clearing = { s: 0, half: 0 };
+
+/** Retrait du premier sujet reconstruit après la trouée (m). */
+const CLEAR_MARGIN = 7;
+
+/** Le segment [s0, s1] tombe-t-il dans la trouée ? */
+function inClearing(s0: number, s1: number): boolean {
+  return clearing.half > 0 && s1 > clearing.s - clearing.half && s0 < clearing.s + clearing.half;
+}
+
+/**
  * Remplit `out` avec les bâtiments de la cellule `cell` du côté `side`.
  * Renvoie le nombre écrit (≤ out.length). Les objets de `out` sont réutilisés :
  * aucune allocation par recyclage de cellule.
@@ -525,6 +573,17 @@ export function buildCell(
       // Rue perpendiculaire : elle perce les trois rangs au même endroit.
       if (street && cursor + spanS > street[0] && cursor < street[1]) {
         cursor = street[1] + r() * 2;
+        continue;
+      }
+      // Trouée imposée : la rivière. Elle se traite comme une rue, en plus
+      // large - et sans tirage, parce qu'elle ne se négocie pas. On la teste sur
+      // l'emprise VUE, celle qui est centrée sur le sujet, et non sur la
+      // réservation du curseur : c'est la première qui se retrouverait dans
+      // l'eau. Le saut garde une marge, et il avance toujours - une trouée qui
+      // ferait reculer le curseur bouclerait sans fin.
+      const mid = cursor + w / 2;
+      if (inClearing(mid - spanS / 2, mid + spanS / 2)) {
+        cursor = Math.max(cursor + 1, clearing.s + clearing.half + CLEAR_MARGIN + r() * 3);
         continue;
       }
       if (r() < gapChance) {

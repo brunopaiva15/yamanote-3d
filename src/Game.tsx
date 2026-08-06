@@ -36,6 +36,7 @@ import { Utilities } from './three/city/Utilities';
 import { Traffic } from './three/city/Traffic';
 import { Landmarks } from './three/Landmarks';
 import { SegmentEnvironment } from './three/SegmentEnvironment';
+import { Singularities } from './three/Singularities';
 import { PlateauWorld } from './three/PlateauWorld';
 import { HubStationRoof } from './three/HubStationRoof';
 import { Station } from './three/station/Station';
@@ -270,6 +271,9 @@ export default function Game() {
         <Wayside />
         <Landmarks />
         <SegmentEnvironment />
+        {/* Ce qui n'arrive qu'une fois sur la boucle : le passage à niveau, les
+            rivières, l'autoroute urbaine. */}
+        <Singularities />
         <HubStationRoof />
         <Station />
         <PassingTrain />
