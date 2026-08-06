@@ -348,20 +348,6 @@ export const STATIC_LAYERS: readonly GeoRecord[] = [
     verifiedAt: '2026-08-06',
     measured: true,
   },
-  {
-    id: 'plateau-buildings',
-    layer: 'DATA_STATIC',
-    source: 'Project PLATEAU (国土交通省)',
-    license: 'CC BY 4.0',
-    datasetDate: '2024-01-01',
-    lon: 139.70165,
-    lat: 35.65845,
-    lod: 1,
-    minDistance: 0,
-    maxDistance: 1000,
-    verifiedAt: '2026-08-06',
-    measured: true,
-  },
 ];
 
 /** Tout ce que le registre de provenance doit pouvoir citer. */
@@ -508,18 +494,6 @@ export const GEO_DATASETS: Readonly<Record<string, GeoDataset>> = {
     lod: 1,
     minDistance: 2000,
     maxDistance: 100000,
-  },
-  'plateau-buildings': {
-    id: 'plateau-buildings',
-    layer: 'DATA_STATIC',
-    source: 'Project PLATEAU (国土交通省)',
-    license: 'CC BY 4.0',
-    datasetDate: '2023-03-31',
-    verifiedAt: '2026-08-06',
-    lod: 2,
-    minDistance: 0,
-    maxDistance: 300,
-    crs: SCENE_CRS,
   },
 };
 

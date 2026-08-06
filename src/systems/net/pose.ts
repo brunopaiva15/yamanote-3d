@@ -75,9 +75,9 @@ function poseLocale(now: number): Pose {
     // marche vers (dx, dz) - c'est la convention de tout le jeu, celle que la
     // foule du quai et les voyageurs de la rame posent dans leur `rotation.y`
     // (systems/platformCrowd, systems/passengers). Un vecteur de caméra, lui,
-    // se nie avant d'être converti, parce qu'une caméra regarde vers son -Z
-    // (three/plateau/routeMath). Ici, c'est bien un corps qu'on décrit et non
-    // une caméra : nier `lookX/lookZ` retournait l'avatar d'un demi-tour chez
+    // se nie avant d'être converti, parce qu'une caméra regarde vers son -Z.
+    // Ici, c'est bien un corps qu'on décrit et non une caméra : nier
+    // `lookX/lookZ` retournait l'avatar d'un demi-tour chez
     // tout le monde. On le voyait marcher en avant en regardant en arrière -
     // du moonwalk - et son visage n'était jamais tourné vers qui lui parlait.
     yaw: toFrameYaw(bodyYaw(runtime.lookX, runtime.lookZ), surQuai),

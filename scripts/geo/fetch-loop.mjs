@@ -28,8 +28,8 @@
 // src/systems/tokyoBearing.ts.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { parseArgs } from '../plateau/lib/args.mjs';
-import { makeProjector, pickJapanZone } from '../plateau/lib/geo.mjs';
+import { parseArgs } from './lib/args.mjs';
+import { makeProjector, pickJapanZone } from './lib/geo.mjs';
 import { overpass } from './lib/net.mjs';
 import { pathLength, signedArea, simplify, snapToPolyline, stitch } from './lib/polyline.mjs';
 import { provenance } from './lib/source.mjs';

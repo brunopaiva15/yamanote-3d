@@ -29,11 +29,11 @@
 // lequel des deux points d'arrêt d'une gare - un par voie - appartient à la voie
 // retenue ; l'écart entre les deux sources est conservé dans le GeoJSON.
 //
-// La géodésie vient du pipeline PLATEAU (scripts/plateau/lib/geo.mjs, projection
-// EPSG:6677 = zone IX, méridien central 139°30').
+// La géodésie vient de scripts/geo/lib/geo.mjs (projection EPSG:6677 = zone IX,
+// méridien central 139°30').
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { makeProjector, pickJapanZone } from './plateau/lib/geo.mjs';
+import { makeProjector, pickJapanZone } from './geo/lib/geo.mjs';
 import { PLATFORMS } from './geo/lib/platforms.mjs';
 
 /**

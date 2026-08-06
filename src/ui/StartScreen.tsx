@@ -169,11 +169,6 @@ export function StartScreen() {
     // Le sens : 内回り, 外回り, ou pile ou face si on n'a rien demandé.
     const direction =
       directionChoice === DIRECTION_RANDOM ? undefined : (directionChoice as LoopDirection);
-    // `?plateau=1` : embarquer directement sur le tronçon du prototype PLATEAU,
-    // plutôt que d'attendre le tour de boucle qu'un tirage aléatoire
-    // imposerait. Sans le paramètre, plateauEntryStation() renvoie undefined et
-    // le boarding normal - gare tirée au sort, ou choisie dans le menu -
-    // reprend la main sans détour.
     await Promise.all([
       gamePromise,
       prepareGame(Number.isFinite(stationIndex) ? stationIndex : undefined, direction),

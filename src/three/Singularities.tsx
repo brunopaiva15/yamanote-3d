@@ -35,7 +35,6 @@ import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { segEnv } from '../systems/segmentEnv';
 import { expressway, singularity } from '../systems/singularity';
-import { plateauRuntime } from '../systems/plateau';
 import { hiddenByStation, sidePush } from '../systems/stationOcclusion';
 import { qualityLevel, usePerf, type Quality } from '../systems/perf';
 import { weather } from '../systems/weather';
@@ -535,11 +534,7 @@ export function Singularities() {
     built.water.emissive.setRGB(0.07, 0.055, 0.04).multiplyScalar(night);
 
     // --- Passage à niveau et rivière : ponctuels, posés sur une rue ---
-    //
-    // Rien de tout cela sur le prototype PLATEAU, pour la même raison que le
-    // tablier plus bas : la ville y est relevée sur le terrain, et une rivière
-    // procédurale couperait une rue réelle.
-    const kind = plateauRuntime.coverage < 0.5 ? singularity.kind : null;
+    const kind = singularity.kind;
     const z = runtime.distance - singularity.s;
     const near = kind !== null && Math.abs(z) < 340;
 
@@ -602,9 +597,7 @@ export function Singularities() {
 
     // --- Autoroute urbaine : les travées, recyclées sur l'abscisse monde ---
     if (roadRoot.current) {
-      // Le prototype PLATEAU pose une ville relevée sur le terrain : un tablier
-      // procédural s'y planterait dans un immeuble réel.
-      const on = expressway.on && plateauRuntime.coverage < 0.5;
+      const on = expressway.on;
       roadRoot.current.visible = on;
       if (on) {
         const side = expressway.side;

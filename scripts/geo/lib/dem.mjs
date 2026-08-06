@@ -22,9 +22,9 @@
 //   z9   ~248 m/px   le relief régional, jusqu'à Tanzawa et Chichibu
 //
 // ⚠️ CES ALTITUDES SONT ORTHOMÉTRIQUES (au-dessus du géoïde japonais), là où
-// PLATEAU publie des hauteurs ELLIPSOÏDALES. L'écart vaut ~36-37 m à Tokyo. Il
-// est constant à l'échelle de la ville, donc invisible tant qu'on ne mêle pas
-// les deux ; scripts/plateau/lib/geo.mjs le note déjà de son côté.
+// d'autres sources publient des hauteurs ELLIPSOÏDALES. L'écart vaut ~36-37 m à
+// Tokyo. Il est constant à l'échelle de la ville, donc invisible tant qu'on ne
+// mêle pas les deux ; scripts/geo/lib/geo.mjs le note déjà de son côté.
 
 import { gsiTile } from './net.mjs';
 

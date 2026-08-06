@@ -1,5 +1,5 @@
-// Analyse d'arguments commune aux scripts du pipeline. Volontairement
-// minimale : les drapeaux booléens et les options `--clé valeur`.
+// Analyse d'arguments commune aux scripts du pipeline géographique.
+// Volontairement minimale : les drapeaux booléens et les options `--clé valeur`.
 
 import { pathToFileURL } from 'node:url';
 
@@ -41,8 +41,8 @@ export const COMMON_FLAGS = ['dryRun', 'force', 'yes'];
 
 /**
  * Le module est-il le point d'entrée du processus ? Chaque étape est à la fois
- * un script (`node scripts/plateau/convert.mjs`) et une fonction importée par
- * l'orchestrateur : seul le premier cas doit lire process.argv.
+ * un script (`node scripts/geo/fetch-dem.mjs`) et une fonction importable :
+ * seul le premier cas doit lire process.argv.
  */
 export function isEntryPoint(moduleUrl) {
   const entry = process.argv[1];

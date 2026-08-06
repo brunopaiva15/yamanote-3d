@@ -25,16 +25,7 @@ Toute œuvre dérivée de ces données reste sous ODbL 1.0.
 - tuiles `dem10b` / `dem5a` → profil de voie et champ de hauteurs
 - licence : 国土地理院コンテンツ利用規約 (réutilisation libre avec mention)
 
-## 3. Project PLATEAU (国土交通省) — CC BY 4.0
-
-© 国土交通省 Project PLATEAU — https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku
-
-- CityGML des 23 arrondissements, corridor ±300 m autour de la voie
-- les GLB du prototype sous `public/world/plateau/` portent leur propre
-  `LICENSE.md` (échantillon synthétique tant que le build n’a pas tourné sur
-  les vraies archives)
-
-## 4. Faits semi-statiques datés
+## 3. Faits semi-statiques datés
 
 Certains objets n’existent que dans une fenêtre civile (Takanawa Gateway
 ouverte le 14 mars 2020, Scramble Square en 2019, Miyashita Park reconstruit

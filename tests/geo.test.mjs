@@ -9,7 +9,7 @@ import {
   pickJapanZone,
   pointSegmentDistance,
   projectOnPolyline,
-} from '../scripts/plateau/lib/geo.mjs';
+} from '../scripts/geo/lib/geo.mjs';
 
 const SUGAMO = { lon: 139.7393, lat: 35.73352 };
 const OTSUKA = { lon: 139.72855, lat: 35.73147 };

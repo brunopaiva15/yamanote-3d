@@ -40,7 +40,6 @@ import { Traffic } from './three/city/Traffic';
 import { Landmarks } from './three/Landmarks';
 import { SegmentEnvironment } from './three/SegmentEnvironment';
 import { Singularities } from './three/Singularities';
-import { PlateauWorld } from './three/PlateauWorld';
 import { HubStationRoof } from './three/HubStationRoof';
 import { Station } from './three/station/Station';
 import { PlatformCrowd } from './three/PlatformCrowd';
@@ -280,7 +279,6 @@ export default function Game() {
         <Waterways />
         <Utilities />
         <Traffic />
-        <PlateauWorld />
         <Wayside />
         <Landmarks />
         <SegmentEnvironment />

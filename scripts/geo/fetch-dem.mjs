@@ -26,8 +26,8 @@
 // jeu le pose lui-même par-dessus, depuis src/data/segments.ts.
 
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
-import { parseArgs } from '../plateau/lib/args.mjs';
-import { makeProjector, pickJapanZone } from '../plateau/lib/geo.mjs';
+import { parseArgs } from './lib/args.mjs';
+import { makeProjector, pickJapanZone } from './lib/geo.mjs';
 import { Dem, pixelMeters } from './lib/dem.mjs';
 import { overpass } from './lib/net.mjs';
 import { provenance } from './lib/source.mjs';

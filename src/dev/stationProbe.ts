@@ -536,9 +536,9 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
    * laisse que le ciel et l'horizon géographique.
    *
    * Elle passe par les CALQUES et non par `visible` : plusieurs familles
-   * rétablissent leur visibilité à chaque image - les feux d'obstacle selon
-   * l'heure, les poteaux selon la couverture PLATEAU - et reviendraient donc
-   * avant la capture. Personne ne touche aux calques ailleurs dans le jeu.
+   * rétablissent leur visibilité à chaque image - les feux d'obstacle et les
+   * foyers d'éclairage public selon l'heure - et reviendraient donc avant la
+   * capture. Personne ne touche aux calques ailleurs dans le jeu.
    */
   w.__probeNoCity = (on = true) => {
     let n = 0;
