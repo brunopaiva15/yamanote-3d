@@ -42,13 +42,13 @@ import * as THREE from 'three';
 import { runtime } from '../../systems/runtime';
 import { dayNightWeights } from '../../systems/daynight';
 import { seasonNow } from '../../systems/season';
-import { weather } from '../../systems/weather';
 import { useStore } from '../../store';
 import { CONFIG } from '../../data/config';
 import { journeyProgress } from '../../data/segments';
 import { GEO_LANDMARKS, GEO_STATIONS, type GeoLandmark } from '../../data/tokyoGeo';
 import { loopPose, makePose, sightTo, type Sight } from '../../systems/tokyoBearing';
 import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
+import { airRange, veilAt, VEIL_MAX } from './airDepth';
 import { makeSilhouette, type TrimKind } from './skylineKit';
 
 /**
@@ -78,27 +78,6 @@ const EARTH_R = 6371000;
  */
 const NEAR_HIDE = 2000;
 const NEAR_FULL = 3500;
-
-/**
- * Portée de référence de l'air (m), pour une clarté de 1.
- *
- * L'extinction suit une exponentielle en distance - la loi de Beer, celle de la
- * brume de systems/Scene -, et cette échelle-ci est bien plus longue que la
- * portée de la brume de scène : la brume de scène ferme le décor à cinq cents
- * mètres, alors qu'un repère de cinq kilomètres reste parfaitement lisible par
- * temps clair à Tokyo. Les deux ne décrivent pas la même chose : l'une est un
- * mur de fin de décor, l'autre l'épaisseur réelle de l'atmosphère.
- *
- * Calage : par un janvier sec (clarté ≈ 1,3), la portée approche quatre-vingts
- * kilomètres - la tour de Tokyo est franche, Yokohama se devine, le Fuji est un
- * fantôme bleu. Par un août moite (clarté ≈ 0,7), elle tombe à vingt : le Fuji
- * a disparu, la tour de Tokyo se voile. Sous l'averse, il ne reste rien
- * au-delà du kilomètre.
- */
-const AIR_RANGE = 46000;
-
-/** Au-delà, il ne reste rien à peindre qui se distingue du ciel. */
-const VEIL_MAX = 0.94;
 
 /** Ton de chaque famille, et les repères qui ont le leur. */
 const SHAPE_TONE: Record<GeoLandmark['shape'], string> = {
@@ -254,11 +233,9 @@ export function FarSkyline() {
     const w = dayNightWeights(runtime.clockMin / 60);
     const night = Math.min(1, w.night + w.golden * 0.4);
     const se = seasonNow();
-    // L'épaisseur de l'air : la clarté de la saison, moins ce que le temps lui
-    // retire. C'est le même produit qui commande la portée de la brume de scène
-    // et le voile du ciel - trois couches, un seul air.
-    const air = Math.max(0.15, se.clarity * weather.visibility * (1 - 0.75 * weather.cloud));
-    const range = AIR_RANGE * air * air;
+    // L'épaisseur de l'air est celle de three/city/airDepth : la même pour le
+    // relief lointain et pour la silhouette du ciel. Trois couches, un seul air.
+    const range = airRange();
     if (scene.fog instanceof THREE.Fog) sc.haze.copy(scene.fog.color);
     sc.haze.lerp(NIGHT_HAZE, 0.85 * night);
 
@@ -271,10 +248,7 @@ export function FarSkyline() {
       // enterre sept cent quatre-vingts mètres de Fuji à cent kilomètres, et
       // c'est elle qui fait qu'on n'en voit jamais le pied.
       const drop = (d * d) / (2 * EARTH_R);
-      const veil = Math.max(
-        1 - Math.exp(-d / range),
-        1 - smoothstep(NEAR_HIDE, NEAR_FULL, d),
-      );
+      const veil = Math.max(veilAt(d, range), 1 - smoothstep(NEAR_HIDE, NEAR_FULL, d));
       const show = veil < VEIL_MAX;
       it.body.visible = show;
       if (it.trim) it.trim.visible = false;

@@ -31,6 +31,7 @@ import { Wayside } from './three/Wayside';
 import { Weather } from './three/Weather';
 import { SkyDome } from './three/city/SkyDome';
 import { FarSkyline } from './three/city/FarSkyline';
+import { FarRelief } from './three/city/FarRelief';
 import { CityRibbon } from './three/city/CityRibbon';
 import { Utilities } from './three/city/Utilities';
 import { Traffic } from './three/city/Traffic';
@@ -261,8 +262,10 @@ export default function Game() {
           <TrainConsist />
         </TrainRig>
         <SkyDome />
-        {/* Entre le ciel et la ville, au sens propre : les repères de Tokyo à
-            leur relèvement géographique. */}
+        {/* Entre le ciel et la ville, au sens propre. D'abord ce qui est le
+            plus loin - la ligne de crête du Tanzawa et de l'Okutama, relevée
+            sur le MNT -, puis les repères de Tokyo à leur relèvement. */}
+        <FarRelief />
         <FarSkyline />
         <CityRibbon />
         <Utilities />
