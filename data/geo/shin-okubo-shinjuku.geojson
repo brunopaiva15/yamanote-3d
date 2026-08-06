@@ -1,14 +1,14 @@
 {
   "type": "FeatureCollection",
-  "name": "yamanote-shibuya-ebisu",
+  "name": "yamanote-shin-okubo-shinjuku",
   "features": [
     {
       "type": "Feature",
       "properties": {
         "line": "JR山手線 / Yamanote Line",
-        "from": "Shibuya (JY20)",
-        "to": "Ebisu (JY21)",
-        "segment": 19,
+        "from": "Shin-Okubo (JY16)",
+        "to": "Shinjuku (JY17)",
+        "segment": 15,
         "direction": "inner (内回り)",
         "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
         "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
@@ -16,81 +16,81 @@
         "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
         "approximate": false,
         "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
-        "lengthMeters": 1509.4,
+        "lengthMeters": 1383,
         "generatedBy": "scripts/plateau/fetch-route.mjs"
       },
       "geometry": {
         "type": "LineString",
         "coordinates": [
           [
-            139.701751,
-            35.658075,
-            66.4
+            139.700296,
+            35.701298,
+            67.4
           ],
           [
-            139.702338,
-            35.657077,
-            67.09
+            139.700026,
+            35.698578,
+            67.99
           ],
           [
-            139.702683,
-            35.656593,
-            67.78
+            139.699911,
+            35.69792,
+            68.58
           ],
           [
-            139.704625,
-            35.654365,
-            68.48
+            139.699437,
+            35.696338,
+            69.18
           ],
           [
-            139.70538,
-            35.653669,
-            69.17
+            139.699365,
+            35.695903,
+            69.77
           ],
           [
-            139.705751,
-            35.653281,
-            69.86
+            139.699355,
+            35.695656,
+            70.36
           ],
           [
-            139.70719,
-            35.651628,
-            70.55
+            139.699364,
+            35.695384,
+            70.95
           ],
           [
-            139.707629,
-            35.651087,
-            71.25
+            139.699429,
+            35.694944,
+            71.55
           ],
           [
-            139.707849,
-            35.650773,
-            71.94
+            139.699993,
+            35.69266,
+            72.14
           ],
           [
-            139.708199,
-            35.650194,
-            72.63
+            139.700035,
+            35.692192,
+            72.73
           ],
           [
-            139.709211,
-            35.648348,
+            139.70002,
+            35.691111,
             73.32
           ],
           [
-            139.709399,
-            35.647984,
-            74.02
+            139.700051,
+            35.690472,
+            73.92
           ],
           [
-            139.709749,
-            35.647216,
-            74.71
+            139.700165,
+            35.689638,
+            74.51
           ],
           [
-            139.71019,
-            35.646435,
-            75.4
+            139.700331,
+            35.688969,
+            75.1
           ]
         ]
       }

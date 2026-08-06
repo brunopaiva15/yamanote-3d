@@ -107,11 +107,15 @@ export const PLATEAU_ENTRY_STATION = (PLATEAU_SEGMENT + 1) % 30; // Ebisu (20)
  * une heure de trajet pour atteindre le tronçon couvert. Le paramètre fait
  * donc les deux choses à la fois - allumer le prototype ET s'y rendre.
  *
+ * En 内回り on arrive à Ebisu (PLATEAU_ENTRY_STATION) ; en 外回り on arrive à
+ * Shibuya (PLATEAU_SEGMENT), pour que `segmentAt` tombe sur le même tronçon.
+ *
  * Renvoie `undefined` dès que le paramètre est absent : le boarding normal
  * (gare tirée au sort, ou choisie dans le menu) n'est jamais touché.
  */
-export function plateauEntryStation(): number | undefined {
-  return queryFlag() === true ? PLATEAU_ENTRY_STATION : undefined;
+export function plateauEntryStation(dir: LoopDirection = 'inner'): number | undefined {
+  if (queryFlag() !== true) return undefined;
+  return dir === 'outer' ? PLATEAU_SEGMENT : PLATEAU_ENTRY_STATION;
 }
 
 function queryFlag(): boolean | null {

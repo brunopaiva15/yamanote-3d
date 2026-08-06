@@ -230,6 +230,10 @@ export const NEAR_DATED: Readonly<Record<string, string>> = {
 export const STATION_DATED: Readonly<Record<string, string>> = {
   '25:whiteLatticeRoof': 'takanawa-gateway-station',
   '25:glassTowerCluster': 'takanawa-gateway-city',
+  // Gare de bois de Harajuku : visible jusqu'à sa démolition (avril 2020).
+  '18:officeBlock': 'harajuku-wooden-station',
+  // Shibuya Sakura Stage : ouvert fin 2023.
+  '19:glassTowerCluster': 'sakura-stage',
 };
 
 const BY_ID = new Map(DATED_FACTS.map((f) => [f.id, f]));

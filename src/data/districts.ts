@@ -403,7 +403,7 @@ export const DISTRICTS: District[] = [
     accent: '#e070a8',
     words: ['原宿', 'クレープ', '古着', 'カフェ', '雑貨', '美容'],
     feats: ['fashionBoutique', 'torii', 'parkGreen'],
-    landmarks: [{ kind: 'forestMass', truth: 'geo', scale: 1.1 }],
+    landmarks: [{ kind: 'forestMass', truth: 'geo', scale: 1.1 }, { kind: 'officeBlock', truth: 'station', side: 1 }],
   },
   // 19 · JY20 Shibuya - écrans géants, mode, néon.
   {
@@ -418,6 +418,9 @@ export const DISTRICTS: District[] = [
       { kind: 'giantScreenWall', truth: 'fabric', side: 1 },
       { kind: 'giantScreenWall', truth: 'fabric', side: -1, scale: 0.9 },
       { kind: 'cylinderFashion', truth: 'fabric', side: 1 },
+      // Miyashita Park (reconstruit 2020) et Sakura Stage (2023) : faits datés.
+      { kind: 'forestMass', truth: 'geo', scale: 0.85 },
+      { kind: 'glassTowerCluster', truth: 'fabric', side: -1, scale: 0.9 },
     ],
   },
   // 20 · JY21 Ebisu - bureaux, brique, chic (Garden Place).

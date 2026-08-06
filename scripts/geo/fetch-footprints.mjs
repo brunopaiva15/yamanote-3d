@@ -3,59 +3,65 @@
 //   node scripts/geo/fetch-footprints.mjs [--force]
 //
 // Émet :
-//   · data/geo/footprints.geojson   centroïdes + emprise + hauteur + provenance
-//   · src/data/footprints.ts        ce que le jeu / le pipeline en lit
+//   · data/geo/footprints.geojson   centroïde + emprise RÉELLE + hauteur
+//   · src/data/footprints.ts        échantillon runtime
 //
-// POURQUOI. La bande 0–1 km de la bible est celle du ruban urbain et de
-// PLATEAU. Les GLB complets ne se versionnent pas ; les empreintes, si
-// (2–3 Mo). Hauteur PLATEAU quand le build a tourné ; sinon hauteur OSM
-// (`height` / `building:levels`) ou modèle statistique, TOUJOURS déclarée
-// `measured: false` dès qu'elle n'est pas un relevé d'étiquette.
-//
-// On part du relevé déjà en cache (bâtiments porteurs d'une hauteur, import
-// secteurs) et on ne garde que ceux à moins d'un kilomètre de la voie. Une
-// emprise polygonale complète demanderait `out geom` sur cinquante mille
-// objets : trop lourd pour Overpass en une passe. On stocke donc le
-// centroïde et une emprise carrée déduite de la hauteur (mesurée : false pour
-// le plan, true pour la hauteur quand l'étiquette OSM la porte). Le jour où
-// un `out geom` tuilé aura tourné, le même fichier portera les vrais contours.
+// Ce ne sont PAS des carrés inventés : chaque emprise vient du contour OSM
+// (`out geom`). `footprintMeasured: true` dès qu'on a le polygone.
+// Hauteur : étiquette `height` → measured:true ; sinon `building:levels` ou
+// modèle statistique par distance à la voie → measured:false.
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { parseArgs } from '../plateau/lib/args.mjs';
 import { makeProjector, pickJapanZone } from '../plateau/lib/geo.mjs';
 import { overpass } from './lib/net.mjs';
 import { provenance } from './lib/source.mjs';
 import { PLATFORMS } from './lib/platforms.mjs';
 
-/** Corridor de la bande 0–1 km (m). */
 const REACH = 1000;
-
-/**
- * Boîte Overpass : volontairement celle de fetch-sectors (DRAW_MAX + 2000 =
- * 22 km), pour retomber sur le même cache disque et ne pas retaper Overpass.
- * On filtre ensuite à REACH.
- */
-const BOX_MARGIN = 22000;
-
-/** Hauteur de plancher pour convertir `building:levels` (m). */
+/** Demi-portée des tuiles Overpass (m) : un peu plus que REACH pour couvrir. */
+const TILE = 1100;
+/** Pas le long de la boucle entre deux tuiles (m). */
+const TILE_STEP = 1500;
 const STOREY = 3.2;
 
-/** Emprise latérale typique déduite de la hauteur (m) - jamais présentée comme relevée. */
-function plateFromHeight(h) {
-  return Math.max(8, Math.min(42, 6 + h * 0.22));
-}
-
-function parseHeight(tags) {
-  if (!tags) return { h: null, measured: false };
-  if (tags.height) {
+function parseHeight(tags, distance) {
+  if (tags?.height) {
     const n = parseFloat(String(tags.height).replace(/,/g, '.'));
     if (Number.isFinite(n) && n > 1 && n < 800) return { h: n, measured: true };
   }
-  if (tags['building:levels']) {
+  if (tags?.['building:levels']) {
     const n = parseFloat(String(tags['building:levels']).replace(/,/g, '.'));
     if (Number.isFinite(n) && n > 0 && n < 200) return { h: n * STOREY, measured: false };
   }
-  return { h: null, measured: false };
+  // Modèle statistique : plus bas près de la voie, un peu plus haut au loin.
+  const base = distance < 80 ? 9 : distance < 250 ? 14 : 22;
+  return { h: base, measured: false };
+}
+
+/** Emprise au sol (m) depuis le polygone OSM projeté : max(larg., prof.). */
+function plateOf(geom, local) {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (const g of geom) {
+    const p = local(g.lon, g.lat);
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.z < minZ) minZ = p.z;
+    if (p.z > maxZ) maxZ = p.z;
+  }
+  const w = maxX - minX;
+  const d = maxZ - minZ;
+  if (!(w > 0) || !(d > 0)) return null;
+  return {
+    plate: Math.round(Math.max(w, d) * 10) / 10,
+    x: Math.round(((minX + maxX) / 2) * 10) / 10,
+    z: Math.round(((minZ + maxZ) / 2) * 10) / 10,
+    lon: (geom.reduce((s, g) => s + g.lon, 0) / geom.length),
+    lat: (geom.reduce((s, g) => s + g.lat, 0) / geom.length),
+  };
 }
 
 async function main() {
@@ -76,47 +82,71 @@ async function main() {
   };
 
   const poly = ring.map(([lon, lat]) => local(lon, lat));
-  const box = boxOf(ring, BOX_MARGIN);
+  const cum = [0];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    cum.push(cum[i] + Math.hypot(b.x - a.x, b.z - a.z));
+  }
+  const perimeter = cum[poly.length];
 
-  process.stdout.write('Les empreintes du corridor 0–1 km\n');
-  // Même famille de requête que fetch-sectors (hauteurs déclarées) : le cache
-  // disque tombe juste, et Overpass n'est pas retapagé pour rien.
-  const res = await overpass(
-    `[out:json][timeout:900];` +
-      `way["building"]["height"](${bbox(box)});` +
-      `out center meta;`,
-    { label: 'bâtiments à hauteur', force: args.force },
-  );
+  // Tuiles le long de la voie : un point tous les TILE_STEP mètres.
+  const tiles = [];
+  for (let s = 0; s < perimeter; s += TILE_STEP) {
+    let lo = 0;
+    let hi = poly.length;
+    while (lo + 1 < hi) {
+      const m = (lo + hi) >> 1;
+      if (cum[m] <= s) lo = m;
+      else hi = m;
+    }
+    const [lon, lat] = ring[lo];
+    tiles.push({ lon, lat, s });
+  }
 
+  process.stdout.write(`Les empreintes du corridor 0–1 km (${tiles.length} tuiles)\n`);
+  const byId = new Map();
   let datasetDate = '';
+  for (let t = 0; t < tiles.length; t++) {
+    const tile = tiles[t];
+    const res = await overpass(
+      `[out:json][timeout:180];` +
+        `way["building"](around:${TILE},${tile.lat.toFixed(5)},${tile.lon.toFixed(5)});` +
+        `out geom;`,
+      { label: `tuile ${t + 1}/${tiles.length}`, force: args.force },
+    );
+    for (const e of res.elements ?? []) {
+      if (e.timestamp && e.timestamp > datasetDate) datasetDate = e.timestamp;
+      if (e.type !== 'way' || !e.geometry || e.geometry.length < 3) continue;
+      if (byId.has(e.id)) continue;
+      byId.set(e.id, e);
+    }
+  }
+
+  const stations = loopDoc.stations.map((st) => ({ ...st, ...local(st.stopLon, st.stopLat) }));
   const picked = [];
   let measuredH = 0;
   let estimatedH = 0;
-  for (const e of res.elements ?? []) {
-    if (e.timestamp && e.timestamp > datasetDate) datasetDate = e.timestamp;
-    const c = e.center ?? (e.lat !== undefined ? { lat: e.lat, lon: e.lon } : null);
-    if (!c) continue;
-    const p = local(c.lon, c.lat);
-    const distance = distanceToLoop(p.x, p.z, poly);
+  for (const e of byId.values()) {
+    const plate = plateOf(e.geometry, local);
+    if (!plate) continue;
+    const distance = distanceToLoop(plate.x, plate.z, poly);
     if (distance > REACH) continue;
-    const { h, measured } = parseHeight(e.tags);
-    if (h === null) continue;
+    const { h, measured } = parseHeight(e.tags, distance);
     if (measured) measuredH++;
     else estimatedH++;
-    const plate = plateFromHeight(h);
-    const station = nearestStation(p.x, p.z, loopDoc.stations.map((st) => ({ ...st, ...local(st.stopLon, st.stopLat) })));
+    const station = nearestStation(plate.x, plate.z, stations);
     picked.push({
       id: `osm-way-${e.id}`,
       osmWay: e.id,
-      x: Math.round(p.x * 10) / 10,
-      z: Math.round(p.z * 10) / 10,
-      lon: c.lon,
-      lat: c.lat,
+      x: plate.x,
+      z: plate.z,
+      lon: +plate.lon.toFixed(6),
+      lat: +plate.lat.toFixed(6),
       height: Math.round(h * 10) / 10,
       measured,
-      // L'emprise planimétrique est déduite, jamais un contour OSM.
-      plate: Math.round(plate * 10) / 10,
-      footprintMeasured: false,
+      plate: plate.plate,
+      footprintMeasured: true,
       distance: Math.round(distance),
       station: station.index,
     });
@@ -129,69 +159,109 @@ async function main() {
     layer: 'DATA_STATIC',
     measured: false,
     note:
-      'Centroïdes OSM des bâtiments porteurs d’une hauteur, à moins de 1000 m de la voie. ' +
-      'La hauteur est measured:true quand l’étiquette height est présente ; l’emprise planimétrique ' +
-      'est toujours déduite (footprintMeasured:false) tant qu’un out geom tuilé n’a pas tourné.',
+      'Contours OSM (out geom) des bâtiments à moins de 1000 m de la voie. ' +
+      'footprintMeasured:true = emprise tirée du polygone. ' +
+      'Hauteur measured:true seulement si étiquette height ; sinon levels ou modèle statistique.',
   });
 
   mkdirSync(new URL('../../data/geo/', import.meta.url), { recursive: true });
+
+  // Plafond budgétaire 2–3 Mo : toutes les hauteurs OSM + échantillon estimé.
+  const measuredList = picked.filter((b) => b.measured);
+  const estimatedList = picked.filter((b) => !b.measured);
+  const BUDGET = 25000;
+  const keepEst = Math.max(0, BUDGET - measuredList.length);
+  const estStep = Math.max(1, Math.ceil(estimatedList.length / Math.max(1, keepEst)));
+  const versioned = [
+    ...measuredList,
+    ...estimatedList.filter((_, i) => i % estStep === 0).slice(0, keepEst),
+  ];
+
+  const pack = {
+    layer: 'DATA_STATIC',
+    source: 'OpenStreetMap',
+    license: 'ODbL 1.0',
+    attribution: prov.attribution,
+    datasetDate,
+    reach: REACH,
+    footprintMeasured: true,
+    columns: ['osmWay', 'x10', 'z10', 'h10', 'plate10', 'measured', 'distance', 'station', 'lonE6', 'latE6'],
+    count: versioned.length,
+    survey: picked.length,
+    measuredHeights: measuredList.length,
+    estimatedHeights: versioned.length - measuredList.length,
+    note: prov.note,
+    generatedBy: 'scripts/geo/fetch-footprints.mjs',
+    rows: versioned.map((b) => [
+      b.osmWay,
+      Math.round(b.x * 10),
+      Math.round(b.z * 10),
+      Math.round(b.height * 10),
+      Math.round(b.plate * 10),
+      b.measured ? 1 : 0,
+      b.distance,
+      b.station,
+      Math.round(b.lon * 1e6),
+      Math.round(b.lat * 1e6),
+    ]),
+  };
+  writeFileSync(new URL('../../data/geo/footprints.json', import.meta.url), JSON.stringify(pack), 'utf8');
   writeFileSync(
     new URL('../../data/geo/footprints.geojson', import.meta.url),
     JSON.stringify({
       type: 'FeatureCollection',
       name: 'yamanote-footprints',
-      properties: {
-        ...prov,
-        reach: REACH,
-        count: picked.length,
-        measuredHeights: measuredH,
-        estimatedHeights: estimatedH,
-        generatedBy: 'scripts/geo/fetch-footprints.mjs',
-      },
-      features: picked.map((b) => ({
-        type: 'Feature',
-        properties: {
-          id: b.id,
-          osmWay: b.osmWay,
-          x: b.x,
-          z: b.z,
-          height: b.height,
-          measured: b.measured,
-          plate: b.plate,
-          footprintMeasured: false,
-          distance: b.distance,
-          station: b.station,
-        },
-        geometry: { type: 'Point', coordinates: [b.lon, b.lat] },
-      })),
+      properties: { ...pack, rows: undefined, packedAs: 'data/geo/footprints.json' },
+      features: [],
     }),
     'utf8',
   );
 
-  writeFootprintsTs({ picked, prov, datasetDate, measuredH, estimatedH });
+  writeFootprintsTs({
+    picked: versioned,
+    survey: picked.length,
+    prov,
+    datasetDate,
+    measuredH: measuredList.length,
+    estimatedH: versioned.length - measuredList.length,
+  });
   process.stdout.write(
-    `${picked.length} empreintes (≤ ${REACH} m) · hauteur relevée ${measuredH}, estimée ${estimatedH}\n`,
+    `${picked.length} relevés → ${versioned.length} versionnés (≤ ${REACH} m) · polygones OSM · ` +
+      `hauteur relevée ${measuredList.length}, estimée ${versioned.length - measuredList.length}\n`,
   );
 }
 
-function writeFootprintsTs({ picked, prov, datasetDate, measuredH, estimatedH }) {
-  // On ne versionne pas les 14k+ points dans le TS du jeu : un échantillon
-  // dense suffit aux tests et au runtime ; le GeoJSON porte le relevé complet.
+function writeFootprintsTs({ picked, survey, prov, datasetDate, measuredH, estimatedH }) {
   const TARGET = 4000;
   const STEP = Math.max(1, Math.ceil(picked.length / TARGET));
-  const sample = picked.filter((_, i) => i % STEP === 0);
-  const src = `// Empreintes du corridor 0–1 km : centroïdes OSM, hauteurs déclarées.
+  const sample = picked.filter((_, i) => i % STEP === 0).map((b) => ({
+    id: b.id,
+    x: b.x,
+    z: b.z,
+    height: b.height,
+    measured: b.measured,
+    plate: b.plate,
+    footprintMeasured: true,
+    distance: b.distance,
+    station: b.station,
+  }));
+  writeFileSync(
+    new URL('../../src/data/footprints-sample.json', import.meta.url),
+    JSON.stringify(sample),
+    'utf8',
+  );
+  const src = `// Empreintes du corridor 0–1 km : contours OSM, hauteurs déclarées.
 //
 // GÉNÉRÉ par \`node scripts/geo/fetch-footprints.mjs\` - ne pas éditer à la main.
 //
 // ${prov.attribution} · ${prov.source}
 // Licence ${prov.license} · jeu daté du ${datasetDate} · ${prov.layer}
 //
-// ${picked.length} bâtiments à moins de ${REACH} m de la voie
-// (${measuredH} hauteurs relevées, ${estimatedH} estimées). L'emprise
-// planimétrique est TOUJOURS \`footprintMeasured: false\` tant que le contour
-// OSM n'a pas été importé. Le GeoJSON \`data/geo/footprints.geojson\` porte le
-// relevé complet ; ce fichier n'en garde qu'un échantillon pour le runtime.
+// ${picked.length} bâtiments versionnés (sur ${survey} relevés) à moins de ${REACH} m
+// de la voie. Emprise tirée du polygone OSM (\`footprintMeasured: true\`).
+// Détail compact : data/geo/footprints.json ; échantillon runtime ci-dessous.
+
+import sample from './footprints-sample.json' with { type: 'json' };
 
 export interface Footprint {
   id: string;
@@ -200,9 +270,9 @@ export interface Footprint {
   height: number;
   /** true = étiquette OSM \`height\` ; false = levels ou modèle. */
   measured: boolean;
-  /** Côté approximatif de l'empreinte (m) - jamais un contour relevé. */
+  /** Côté de l'emprise (m), déduit du contour OSM. */
   plate: number;
-  footprintMeasured: false;
+  footprintMeasured: true;
   distance: number;
   station: number;
 }
@@ -210,18 +280,13 @@ export interface Footprint {
 /** Portée du corridor (m). */
 export const FOOTPRINT_REACH = ${REACH};
 
-export const FOOTPRINTS: readonly Footprint[] = [
-${sample
-  .map(
-    (b) =>
-      `  { id: '${b.id}', x: ${b.x}, z: ${b.z}, height: ${b.height}, measured: ${b.measured}, ` +
-      `plate: ${b.plate}, footprintMeasured: false, distance: ${b.distance}, station: ${b.station} },`,
-  )
-  .join('\n')}
-];
+export const FOOTPRINTS: readonly Footprint[] = sample as Footprint[];
 
-/** Nombre total dans le GeoJSON (pas seulement l'échantillon runtime). */
+/** Nombre total versionné dans footprints.json. */
 export const FOOTPRINT_TOTAL = ${picked.length};
+
+/** Taille du relevé complet avant plafonnage budgétaire. */
+export const FOOTPRINT_SURVEY = ${survey};
 `;
   writeFileSync(new URL('../../src/data/footprints.ts', import.meta.url), src, 'utf8');
 }
@@ -238,29 +303,6 @@ function nearestStation(x, z, stations) {
   }
   return best;
 }
-
-function boxOf(coords, margin) {
-  const b = coords.reduce(
-    (acc, [lon, lat]) => ({
-      minLon: Math.min(acc.minLon, lon),
-      maxLon: Math.max(acc.maxLon, lon),
-      minLat: Math.min(acc.minLat, lat),
-      maxLat: Math.max(acc.maxLat, lat),
-    }),
-    { minLon: 180, maxLon: -180, minLat: 90, maxLat: -90 },
-  );
-  const dLat = margin / 111320;
-  const dLon = margin / (111320 * Math.cos((((b.minLat + b.maxLat) / 2) * Math.PI) / 180));
-  return {
-    minLon: b.minLon - dLon,
-    maxLon: b.maxLon + dLon,
-    minLat: b.minLat - dLat,
-    maxLat: b.maxLat + dLat,
-  };
-}
-
-const bbox = (b) =>
-  `${b.minLat.toFixed(5)},${b.minLon.toFixed(5)},${b.maxLat.toFixed(5)},${b.maxLon.toFixed(5)}`;
 
 function distanceToLoop(px, pz, poly) {
   let best = Infinity;

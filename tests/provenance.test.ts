@@ -12,10 +12,10 @@ import {
   DATED_FACTS,
   GEO_REGISTRY,
   HORIZON_DATED,
+  NEAR_DATED,
   STATION_DATED,
   factVisible,
   geoRecordIssue,
-  visibleAt,
   type GeoRecord,
 } from '../src/data/geo/provenance.ts';
 
@@ -77,10 +77,22 @@ test('Scramble Square n’existe pas avant novembre 2019', () => {
   assert.equal(factVisible(HORIZON_DATED.scramble, { year: 2020, month: 1, day: 1 }), true);
 });
 
-test('la gare de bois de Harajuku disparaît après sa démolition', () => {
-  const fact = DATED_FACTS.find((f) => f.id === 'harajuku-wooden-station')!;
-  assert.equal(visibleAt(fact, { year: 2019, month: 1, day: 1 }), true);
-  assert.equal(visibleAt(fact, { year: 2021, month: 1, day: 1 }), false);
+test('Miyashita Park, Sakura Stage et Harajuku bois sont branchés sur le rendu', () => {
+  assert.equal(NEAR_DATED['osm-way-116806278'], 'miyashita-park');
+  assert.equal(STATION_DATED['19:glassTowerCluster'], 'sakura-stage');
+  assert.equal(STATION_DATED['18:officeBlock'], 'harajuku-wooden-station');
+  // 2018 : Takanawa et Scramble absents ; Harajuku bois encore là ; Miyashita ancien.
+  const y2018 = { year: 2018, month: 6, day: 1 };
+  assert.equal(factVisible('takanawa-gateway-station', y2018), false);
+  assert.equal(factVisible('scramble-square', y2018), false);
+  assert.equal(factVisible('sakura-stage', y2018), false);
+  assert.equal(factVisible('miyashita-park', y2018), false);
+  assert.equal(factVisible('harajuku-wooden-station', y2018), true);
+  // 2024 : bois parti, Sakura Stage présent, Miyashita reconstruit présent.
+  const y2024 = { year: 2024, month: 6, day: 1 };
+  assert.equal(factVisible('harajuku-wooden-station', y2024), false);
+  assert.equal(factVisible('sakura-stage', y2024), true);
+  assert.equal(factVisible('miyashita-park', y2024), true);
 });
 
 test('public/world/LICENSE.md cite les trois sources', () => {

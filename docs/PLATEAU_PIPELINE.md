@@ -14,11 +14,18 @@ Les **deux sens** sont couverts à l'affichage : le tracé exporté reste orient
 
 ## Empreintes du corridor 0–1 km
 
-`npm run geo:footprints` → `data/geo/footprints.geojson` + `src/data/footprints.ts`.
-Centroïdes OSM des bâtiments à hauteur dans le kilomètre de la voie. Hauteur
-`measured: true` quand l'étiquette `height` est présente ; emprise planimétrique
-toujours `footprintMeasured: false` tant qu'un `out geom` tuilé n'a pas tourné.
-Les GLB PLATEAU restent hors dépôt (build local) ; les empreintes se versionnent.
+`npm run geo:footprints` → `data/geo/footprints.json` (compact, ~1,5 Mo) +
+`src/data/footprints.ts`. Contours OSM (`out geom`), emprise réelle
+(`footprintMeasured: true`). Hauteur `measured: true` si étiquette `height`,
+sinon levels ou modèle statistique. Le relevé complet dépasse 150 000 objets ;
+on versionne ~25 000 (toutes les hauteurs OSM + échantillon) pour tenir le
+budget. Les GLB PLATEAU restent hors dépôt (build local).
+
+## Tracé des tronçons
+
+`node scripts/plateau/fetch-route.mjs` découpe par défaut
+`data/geo/yamanote-loop.geojson` (chantier 1). `--approx` force l'ancien arc ;
+`--overpass` interroge Overpass.
 
 ```
 CityGML PLATEAU ─► conversion ─► sélection corridor ─► classement par distance

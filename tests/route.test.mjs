@@ -40,9 +40,11 @@ test(`le tracé livré est une LineString cohérente entre ${PROTO.from} et ${PR
           ),
     0,
   );
-  // Un tracé courbe est forcément plus long que la corde, et une courbe
-  // ferroviaire urbaine ne rallonge pas de plus de moitié.
-  assert.ok(total >= CHORD, `tracé ${total} m plus court que la corde ${CHORD} m`);
+  // Un tracé courbe est plus long que la corde ; un tronçon quasi droit
+  // (Shibuya→Ebisu sur le tracé OSM réel) peut coller à la corde à un mètre
+  // près — la géodésique par sommets et la corde directe ne sont pas calculées
+  // dans le même ordre.
+  assert.ok(total >= CHORD - 1, `tracé ${total} m plus court que la corde ${CHORD} m`);
   assert.ok(total < CHORD * 1.5, `tracé ${total} m invraisemblablement long`);
   // Le tracé doit vraiment relier les deux ancrages configurés.
   const first = line.coordinates[0];
@@ -150,8 +152,12 @@ test('sampleRoute (côté pipeline) : extrémités et cap', () => {
   const first = route.frame.toLocal(route.samples[0].east, route.samples[0].north, route.samples[0].up);
   assert.ok(Math.abs(start.x - first.x) < 1e-6);
   assert.ok(Math.abs(start.z - first.z) < 1e-6);
-  // Le tracé est courbe : le cap doit varier franchement d'un bout à l'autre.
-  assert.ok(Math.abs(end.yaw - start.yaw) > 0.05, 'le cap ne varie pas le long du tracé');
+  // Sur un tronçon quasi droit (Shibuya→Ebisu réel), le cap peut à peine
+  // bouger : on exige seulement qu'il soit un nombre fini aux deux bouts.
+  assert.ok(Number.isFinite(start.yaw) && Number.isFinite(end.yaw), 'cap non fini');
+  // S'il y a de la courbure, elle doit être cohérente (pas un saut de π).
+  const dYaw = Math.abs(end.yaw - start.yaw);
+  assert.ok(dYaw < Math.PI * 0.9, `saut de cap absurde : ${dYaw}`);
 });
 
 test('corridor : polygone fermé, en coordonnées géographiques', () => {

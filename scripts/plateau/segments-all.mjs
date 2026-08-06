@@ -108,23 +108,17 @@ export function buildAllSegments() {
       },
     };
   }
-  // Les deux réglages historiques priment sur le généré (cotes de rue affinées).
+  // Les deux réglages historiques priment pour la cote de voie ; les ancrages
+  // suivent les points d'arrêt OSM (tokyoGeo / yamanote-loop), pas d'anciennes
+  // cotes de milieu de quai à 40 m près.
   out['shibuya-ebisu'] = {
     ...out['shibuya-ebisu'],
-    anchors: {
-      from: { lon: 139.70165, lat: 35.65845, name: '渋谷 Shibuya (JY20)' },
-      to: { lon: 139.71005, lat: 35.6467, name: '恵比寿 Ebisu (JY21)' },
-    },
     railAboveGround: 7.4,
     groundElevation: { start: 59, end: 68 },
     sagittaMeters: -55,
   };
   out['sugamo-otsuka'] = {
     ...out['sugamo-otsuka'],
-    anchors: {
-      from: { lon: 139.7393, lat: 35.73352, name: '巣鴨 Sugamo (JY11)' },
-      to: { lon: 139.72855, lat: 35.73147, name: '大塚 Ōtsuka (JY12)' },
-    },
     railAboveGround: -6,
     groundElevation: { start: 67, end: 67 },
     sagittaMeters: 60,

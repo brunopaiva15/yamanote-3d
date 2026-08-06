@@ -310,7 +310,11 @@ export function PlateauWorld() {
     // Position et cap du train sur le tracé, puis transformation inverse.
     sampleRoute(route.points, s, scratch.sample);
     scratch.position.set(scratch.sample.x, scratch.sample.y, scratch.sample.z);
-    scratch.quaternion.setFromAxisAngle(scratch.up, scratch.sample.yaw);
+    // La polyligne est orientée 内回り : en 外回り on la parcourt à l'envers,
+    // donc le cap doit pivoter d'un demi-tour, sinon le décor avancerait
+    // derrière la rame.
+    const yaw = loopDirection === 'outer' ? scratch.sample.yaw + Math.PI : scratch.sample.yaw;
+    scratch.quaternion.setFromAxisAngle(scratch.up, yaw);
     scratch.trainMatrix.compose(scratch.position, scratch.quaternion, scratch.scale);
     scratch.worldMatrix.copy(scratch.trainMatrix).invert();
     group.matrix.copy(scratch.worldMatrix);

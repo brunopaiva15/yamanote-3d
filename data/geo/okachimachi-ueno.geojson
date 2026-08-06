@@ -1,14 +1,14 @@
 {
   "type": "FeatureCollection",
-  "name": "yamanote-sugamo-otsuka",
+  "name": "yamanote-okachimachi-ueno",
   "features": [
     {
       "type": "Feature",
       "properties": {
         "line": "JR山手線 / Yamanote Line",
-        "from": "Sugamo (JY11)",
-        "to": "Otsuka (JY12)",
-        "segment": 10,
+        "from": "Okachimachi (JY04)",
+        "to": "Ueno (JY05)",
+        "segment": 3,
         "direction": "inner (内回り)",
         "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
         "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
@@ -16,76 +16,71 @@
         "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
         "approximate": false,
         "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
-        "lengthMeters": 1056.7,
+        "lengthMeters": 770.2,
         "generatedBy": "scripts/plateau/fetch-route.mjs"
       },
       "geometry": {
         "type": "LineString",
         "coordinates": [
           [
-            139.739457,
-            35.733358,
-            61
+            139.77461,
+            35.706955,
+            49
           ],
           [
-            139.738849,
-            35.733119,
-            61
+            139.774864,
+            35.708439,
+            49.45
           ],
           [
-            139.736927,
-            35.73228,
-            61
+            139.774882,
+            35.708686,
+            49.89
           ],
           [
-            139.734926,
-            35.731445,
-            61
+            139.774866,
+            35.709217,
+            50.34
           ],
           [
-            139.734314,
-            35.731215,
-            61
+            139.774696,
+            35.710095,
+            50.78
           ],
           [
-            139.734032,
-            35.731129,
-            61
+            139.774655,
+            35.710405,
+            51.23
           ],
           [
-            139.7335,
-            35.731004,
-            61
+            139.774642,
+            35.710701,
+            51.67
           ],
           [
-            139.732918,
-            35.730927,
-            61
+            139.774672,
+            35.711096,
+            52.12
           ],
           [
-            139.732333,
-            35.730896,
-            61
+            139.774752,
+            35.71143,
+            52.56
           ],
           [
-            139.73202,
-            35.730898,
-            61
+            139.774852,
+            35.711686,
+            53.01
           ],
           [
-            139.731435,
-            35.73095,
-            61
+            139.774981,
+            35.711934,
+            53.45
           ],
           [
-            139.730781,
-            35.731085,
-            61
-          ],
-          [
-            139.728585,
-            35.731635,
-            61
+            139.776084,
+            35.7136,
+            53.9
           ]
         ]
       }

@@ -80,7 +80,10 @@ test('?plateau=1 fait aussi embarquer sur le tronçon', () => {
   // Sans cela le paramètre serait une promesse creuse : le tirage d'entrée
   // pose le joueur n'importe où, et il faudrait jusqu'à une heure de trajet
   // pour atteindre le tronçon couvert.
-  withSearch('?plateau=1', () => assert.equal(plateauEntryStation(), PLATEAU_ENTRY_STATION));
+  withSearch('?plateau=1', () => {
+    assert.equal(plateauEntryStation('inner'), PLATEAU_ENTRY_STATION);
+    assert.equal(plateauEntryStation('outer'), PLATEAU_SEGMENT);
+  });
   // Absent ou explicitement éteint : le boarding normal n'est pas touché.
   withSearch('', () => assert.equal(plateauEntryStation(), undefined));
   withSearch('?plateau=0', () => assert.equal(plateauEntryStation(), undefined));
