@@ -4,6 +4,7 @@
 // fourni, l'appelant garde donc la main sur le cycle de vie et les fondus.
 
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export interface Ctx {
   group: THREE.Group;
@@ -11,6 +12,52 @@ export interface Ctx {
   glow: THREE.MeshBasicMaterial[]; // écrans/néons émissifs (s'illuminent la nuit).
   geos: THREE.BufferGeometry[];
   r: () => number;
+}
+
+/**
+ * Fond les maillages d'une silhouette, matériau par matériau.
+ *
+ * Les primitives ci-dessus posent UN maillage par boîte : c'est ce qui les rend
+ * lisibles à écrire, et c'est ruineux à dessiner. Un bosquet, c'est jusqu'à
+ * vingt-deux maillages - donc vingt-deux appels de rendu - pour trois teintes.
+ * Tant qu'un quartier ne citait qu'une ou deux silhouettes, personne ne l'a vu ;
+ * le jour où chaque gare a cité les quatre familles que le relevé lui résout,
+ * la scène à quai est passée de sept cents à neuf cent quatre-vingt-sept appels,
+ * au-dessus du budget.
+ *
+ * On fond donc chaque groupe une fois construit. Les matériaux ne changent pas -
+ * `sil` et `glow` en rendent un par teinte, et le fondu d'approche continue de
+ * les piloter -, seule la découpe en maillages disparaît. Les géométries
+ * d'origine sont libérées ici même : elles ne servent plus à personne.
+ */
+export function mergeByMaterial(group: THREE.Group, geos: THREE.BufferGeometry[]): void {
+  const byMaterial = new Map<THREE.Material, THREE.Mesh[]>();
+  for (const child of group.children) {
+    if (!(child instanceof THREE.Mesh)) continue;
+    const mat = child.material as THREE.Material;
+    const at = byMaterial.get(mat);
+    if (at) at.push(child);
+    else byMaterial.set(mat, [child]);
+  }
+  for (const [mat, meshes] of byMaterial) {
+    if (meshes.length < 2) continue;
+    const parts: THREE.BufferGeometry[] = [];
+    for (const m of meshes) {
+      m.updateMatrix();
+      parts.push(m.geometry.clone().applyMatrix4(m.matrix));
+    }
+    const merged = mergeGeometries(parts, false) as THREE.BufferGeometry | null;
+    for (const p of parts) p.dispose();
+    if (!merged) continue;
+    for (const m of meshes) {
+      group.remove(m);
+      const i = geos.indexOf(m.geometry);
+      if (i >= 0) geos.splice(i, 1);
+      m.geometry.dispose();
+    }
+    geos.push(merged);
+    group.add(new THREE.Mesh(merged, mat));
+  }
 }
 
 export function sil(ctx: Ctx, color: string): THREE.MeshBasicMaterial {

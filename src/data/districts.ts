@@ -53,6 +53,7 @@ export type Land =
   | 'forestMass'
   | 'museumFacade'
   | 'templeRoof'
+  | 'stoneMarker'
   | 'tramCar'
   | 'monorailBeam'
   | 'shinkansenSet'
@@ -104,6 +105,12 @@ export const LAND_FAMILY: Partial<Record<Land, 'museum' | 'worship' | 'park' | '
   museumFacade: 'museum',
   templeRoof: 'worship',
   forestMass: 'park',
+  // La famille `historic` n'avait aucune silhouette, si bien que trente objets
+  // relevés - le Rikugien, le site de la pagode de Yanaka, le lieu de
+  // l'entrevue de Saigō et Katsu - étaient versionnés sans jamais pouvoir
+  // arriver à l'écran. `fetch-near` les rangeait pourtant sous `museumFacade`,
+  // dont la famille est `museum` : ils ne se résolvaient donc jamais.
+  stoneMarker: 'historic',
 };
 
 export interface District {

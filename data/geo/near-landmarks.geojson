@@ -13,7 +13,10 @@
   "measured": true,
   "note": "Objets réels à moins de 2000 m de l’axe relevé des voies, choisis par CATÉGORIE (musée, lieu de culte, parc, site historique) et non par nom. La notoriété est lue dans l’étiquette wikidata. src/data/nearLandmarks.ts n’en garde qu’un par gare et par famille ; celui-ci les porte tous.",
   "generatedBy": "scripts/geo/fetch-near.mjs",
-  "reach": 2000
+  "reach": 2000,
+  "pickedBy": "scripts/geo/pick-near.mjs",
+  "perStationPerFamily": 2,
+  "picked": 209
  },
  "features": [
   {
@@ -35,7 +38,8 @@
     "station": 0,
     "stationName": "Tokyo",
     "fromStation": 576,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -64,7 +68,8 @@
     "station": 20,
     "stationName": "Ebisu",
     "fromStation": 616,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -93,7 +98,8 @@
     "station": 28,
     "stationName": "Shimbashi",
     "fromStation": 135,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -122,7 +128,8 @@
     "station": 20,
     "stationName": "Ebisu",
     "fromStation": 235,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -209,7 +216,8 @@
     "station": 4,
     "stationName": "Ueno",
     "fromStation": 145,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -325,7 +333,8 @@
     "station": 19,
     "stationName": "Shibuya",
     "fromStation": 818,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -557,7 +566,8 @@
     "station": 28,
     "stationName": "Shimbashi",
     "fromStation": 321,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -586,7 +596,8 @@
     "station": 23,
     "stationName": "Osaki",
     "fromStation": 322,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -760,7 +771,8 @@
     "station": 28,
     "stationName": "Shimbashi",
     "fromStation": 307,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -1369,7 +1381,8 @@
     "station": 1,
     "stationName": "Kanda",
     "fromStation": 581,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -1427,7 +1440,8 @@
     "station": 21,
     "stationName": "Meguro",
     "fromStation": 108,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -1456,7 +1470,8 @@
     "station": 17,
     "stationName": "Yoyogi",
     "fromStation": 1198,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -1543,7 +1558,8 @@
     "station": 13,
     "stationName": "Mejiro",
     "fromStation": 330,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -1572,7 +1588,8 @@
     "station": 11,
     "stationName": "Otsuka",
     "fromStation": 761,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -1630,7 +1647,8 @@
     "station": 5,
     "stationName": "Uguisudani",
     "fromStation": 360,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -1688,7 +1706,8 @@
     "station": 19,
     "stationName": "Shibuya",
     "fromStation": 880,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -1746,7 +1765,8 @@
     "station": 6,
     "stationName": "Nippori",
     "fromStation": 834,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -1862,7 +1882,8 @@
     "station": 16,
     "stationName": "Shinjuku",
     "fromStation": 752,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -2123,7 +2144,8 @@
     "station": 2,
     "stationName": "Akihabara",
     "fromStation": 983,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -2210,7 +2232,8 @@
     "station": 15,
     "stationName": "Shin-Okubo",
     "fromStation": 1866,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -2326,7 +2349,8 @@
     "station": 2,
     "stationName": "Akihabara",
     "fromStation": 1259,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -2384,7 +2408,8 @@
     "station": 28,
     "stationName": "Shimbashi",
     "fromStation": 346,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -2558,7 +2583,8 @@
     "station": 24,
     "stationName": "Shinagawa",
     "fromStation": 549,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -2616,7 +2642,8 @@
     "station": 8,
     "stationName": "Tabata",
     "fromStation": 252,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -2645,7 +2672,8 @@
     "station": 22,
     "stationName": "Gotanda",
     "fromStation": 723,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -2790,7 +2818,8 @@
     "station": 12,
     "stationName": "Ikebukuro",
     "fromStation": 480,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -2935,7 +2964,8 @@
     "station": 23,
     "stationName": "Osaki",
     "fromStation": 141,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -3051,7 +3081,8 @@
     "station": 4,
     "stationName": "Ueno",
     "fromStation": 308,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -3109,7 +3140,8 @@
     "station": 26,
     "stationName": "Tamachi",
     "fromStation": 192,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -3254,7 +3286,8 @@
     "station": 26,
     "stationName": "Tamachi",
     "fromStation": 251,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -4008,7 +4041,8 @@
     "station": 17,
     "stationName": "Yoyogi",
     "fromStation": 946,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -4675,7 +4709,8 @@
     "station": 29,
     "stationName": "Yurakucho",
     "fromStation": 249,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -4907,7 +4942,8 @@
     "station": 20,
     "stationName": "Ebisu",
     "fromStation": 810,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -5110,7 +5146,8 @@
     "station": 3,
     "stationName": "Okachimachi",
     "fromStation": 235,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -5168,7 +5205,8 @@
     "station": 0,
     "stationName": "Tokyo",
     "fromStation": 130,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -5313,7 +5351,8 @@
     "station": 20,
     "stationName": "Ebisu",
     "fromStation": 353,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -5429,7 +5468,8 @@
     "station": 21,
     "stationName": "Meguro",
     "fromStation": 182,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -5545,7 +5585,8 @@
     "station": 29,
     "stationName": "Yurakucho",
     "fromStation": 549,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -5574,7 +5615,8 @@
     "station": 0,
     "stationName": "Tokyo",
     "fromStation": 1154,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -5632,7 +5674,8 @@
     "station": 0,
     "stationName": "Tokyo",
     "fromStation": 1258,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -5661,7 +5704,8 @@
     "station": 29,
     "stationName": "Yurakucho",
     "fromStation": 307,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -5719,7 +5763,8 @@
     "station": 17,
     "stationName": "Yoyogi",
     "fromStation": 1658,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -5777,7 +5822,8 @@
     "station": 2,
     "stationName": "Akihabara",
     "fromStation": 369,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -5980,7 +6026,8 @@
     "station": 6,
     "stationName": "Nippori",
     "fromStation": 302,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -6009,7 +6056,8 @@
     "station": 29,
     "stationName": "Yurakucho",
     "fromStation": 526,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -6473,7 +6521,8 @@
     "station": 24,
     "stationName": "Shinagawa",
     "fromStation": 1021,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -6502,7 +6551,8 @@
     "station": 15,
     "stationName": "Shin-Okubo",
     "fromStation": 315,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -6531,7 +6581,8 @@
     "station": 15,
     "stationName": "Shin-Okubo",
     "fromStation": 82,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -6705,7 +6756,8 @@
     "station": 22,
     "stationName": "Gotanda",
     "fromStation": 266,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -6821,7 +6873,8 @@
     "station": 28,
     "stationName": "Shimbashi",
     "fromStation": 60,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -7024,7 +7077,8 @@
     "station": 11,
     "stationName": "Otsuka",
     "fromStation": 146,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -10156,7 +10210,8 @@
     "station": 3,
     "stationName": "Okachimachi",
     "fromStation": 1364,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -11490,7 +11545,8 @@
     "station": 5,
     "stationName": "Uguisudani",
     "fromStation": 266,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -12708,7 +12764,8 @@
     "station": 0,
     "stationName": "Tokyo",
     "fromStation": 1217,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -12824,7 +12881,8 @@
     "station": 13,
     "stationName": "Mejiro",
     "fromStation": 927,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -13288,7 +13346,8 @@
     "station": 7,
     "stationName": "Nishi-Nippori",
     "fromStation": 1745,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -13317,7 +13376,8 @@
     "station": 4,
     "stationName": "Ueno",
     "fromStation": 195,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -13636,7 +13696,8 @@
     "station": 12,
     "stationName": "Ikebukuro",
     "fromStation": 437,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -13665,7 +13726,8 @@
     "station": 12,
     "stationName": "Ikebukuro",
     "fromStation": 454,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -13723,7 +13785,8 @@
     "station": 7,
     "stationName": "Nishi-Nippori",
     "fromStation": 748,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -13781,7 +13844,8 @@
     "station": 12,
     "stationName": "Ikebukuro",
     "fromStation": 442,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -13810,7 +13874,8 @@
     "station": 1,
     "stationName": "Kanda",
     "fromStation": 563,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -13839,7 +13904,8 @@
     "station": 3,
     "stationName": "Okachimachi",
     "fromStation": 781,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -14158,7 +14224,8 @@
     "station": 8,
     "stationName": "Tabata",
     "fromStation": 94,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -14564,7 +14631,8 @@
     "station": 15,
     "stationName": "Shin-Okubo",
     "fromStation": 706,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -14767,7 +14835,8 @@
     "station": 18,
     "stationName": "Harajuku",
     "fromStation": 1269,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -14796,7 +14865,8 @@
     "station": 26,
     "stationName": "Tamachi",
     "fromStation": 1970,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -16971,7 +17041,8 @@
     "station": 27,
     "stationName": "Hamamatsucho",
     "fromStation": 1791,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -17058,7 +17129,8 @@
     "station": 19,
     "stationName": "Shibuya",
     "fromStation": 383,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -17754,7 +17826,8 @@
     "station": 26,
     "stationName": "Tamachi",
     "fromStation": 1153,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -18102,7 +18175,8 @@
     "station": 10,
     "stationName": "Sugamo",
     "fromStation": 1428,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -18363,7 +18437,8 @@
     "station": 27,
     "stationName": "Hamamatsucho",
     "fromStation": 150,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -18421,7 +18496,8 @@
     "station": 27,
     "stationName": "Hamamatsucho",
     "fromStation": 395,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -18508,7 +18584,8 @@
     "station": 27,
     "stationName": "Hamamatsucho",
     "fromStation": 354,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -18653,7 +18730,8 @@
     "station": 11,
     "stationName": "Otsuka",
     "fromStation": 310,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -18798,7 +18876,8 @@
     "station": 0,
     "stationName": "Tokyo",
     "fromStation": 229,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -18827,7 +18906,8 @@
     "station": 14,
     "stationName": "Takadanobaba",
     "fromStation": 1254,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -18885,7 +18965,8 @@
     "station": 12,
     "stationName": "Ikebukuro",
     "fromStation": 680,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -18914,7 +18995,8 @@
     "station": 11,
     "stationName": "Otsuka",
     "fromStation": 786,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -19146,7 +19228,8 @@
     "station": 27,
     "stationName": "Hamamatsucho",
     "fromStation": 139,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -19204,7 +19287,8 @@
     "station": 17,
     "stationName": "Yoyogi",
     "fromStation": 723,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -19407,7 +19491,8 @@
     "station": 5,
     "stationName": "Uguisudani",
     "fromStation": 348,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -19465,7 +19550,8 @@
     "station": 9,
     "stationName": "Komagome",
     "fromStation": 1735,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -19581,7 +19667,8 @@
     "station": 1,
     "stationName": "Kanda",
     "fromStation": 1669,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -19610,7 +19697,8 @@
     "station": 6,
     "stationName": "Nippori",
     "fromStation": 405,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -19639,7 +19727,8 @@
     "station": 2,
     "stationName": "Akihabara",
     "fromStation": 185,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -19842,7 +19931,8 @@
     "station": 27,
     "stationName": "Hamamatsucho",
     "fromStation": 675,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -19871,7 +19961,8 @@
     "station": 26,
     "stationName": "Tamachi",
     "fromStation": 195,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -20190,7 +20281,8 @@
     "station": 14,
     "stationName": "Takadanobaba",
     "fromStation": 1466,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -20219,7 +20311,8 @@
     "station": 14,
     "stationName": "Takadanobaba",
     "fromStation": 1671,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -20248,7 +20341,8 @@
     "station": 14,
     "stationName": "Takadanobaba",
     "fromStation": 721,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -20364,7 +20458,8 @@
     "station": 14,
     "stationName": "Takadanobaba",
     "fromStation": 542,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -20422,7 +20517,8 @@
     "station": 17,
     "stationName": "Yoyogi",
     "fromStation": 2186,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -20712,7 +20808,8 @@
     "station": 15,
     "stationName": "Shin-Okubo",
     "fromStation": 442,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -20741,7 +20838,8 @@
     "station": 26,
     "stationName": "Tamachi",
     "fromStation": 254,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -20857,7 +20955,8 @@
     "station": 19,
     "stationName": "Shibuya",
     "fromStation": 429,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -20915,7 +21014,8 @@
     "station": 24,
     "stationName": "Shinagawa",
     "fromStation": 899,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -21089,7 +21189,8 @@
     "station": 23,
     "stationName": "Osaki",
     "fromStation": 1107,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -21176,7 +21277,8 @@
     "station": 16,
     "stationName": "Shinjuku",
     "fromStation": 239,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -21234,7 +21336,8 @@
     "station": 4,
     "stationName": "Ueno",
     "fromStation": 250,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -21263,7 +21366,8 @@
     "station": 17,
     "stationName": "Yoyogi",
     "fromStation": 570,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -21292,7 +21396,8 @@
     "station": 18,
     "stationName": "Harajuku",
     "fromStation": 456,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -21350,7 +21455,8 @@
     "station": 18,
     "stationName": "Harajuku",
     "fromStation": 238,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -21582,7 +21688,8 @@
     "station": 19,
     "stationName": "Shibuya",
     "fromStation": 410,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -21640,7 +21747,8 @@
     "station": 19,
     "stationName": "Shibuya",
     "fromStation": 995,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -21756,7 +21864,8 @@
     "station": 3,
     "stationName": "Okachimachi",
     "fromStation": 401,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -21843,7 +21952,8 @@
     "station": 29,
     "stationName": "Yurakucho",
     "fromStation": 636,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -21959,7 +22069,8 @@
     "station": 22,
     "stationName": "Gotanda",
     "fromStation": 663,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -22162,7 +22273,8 @@
     "station": 2,
     "stationName": "Akihabara",
     "fromStation": 400,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -22220,7 +22332,8 @@
     "station": 14,
     "stationName": "Takadanobaba",
     "fromStation": 945,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -22249,7 +22362,8 @@
     "station": 28,
     "stationName": "Shimbashi",
     "fromStation": 490,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -22423,7 +22537,8 @@
     "station": 16,
     "stationName": "Shinjuku",
     "fromStation": 351,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -22481,7 +22596,8 @@
     "station": 12,
     "stationName": "Ikebukuro",
     "fromStation": 427,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -22539,7 +22655,8 @@
     "station": 1,
     "stationName": "Kanda",
     "fromStation": 1670,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -23351,7 +23468,8 @@
     "station": 25,
     "stationName": "Takanawa Gateway",
     "fromStation": 775,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -23525,7 +23643,8 @@
     "station": 7,
     "stationName": "Nishi-Nippori",
     "fromStation": 77,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -23583,7 +23702,8 @@
     "station": 7,
     "stationName": "Nishi-Nippori",
     "fromStation": 126,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -23612,7 +23732,8 @@
     "station": 6,
     "stationName": "Nippori",
     "fromStation": 155,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -23641,7 +23762,8 @@
     "station": 6,
     "stationName": "Nippori",
     "fromStation": 93,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -23699,7 +23821,8 @@
     "station": 9,
     "stationName": "Komagome",
     "fromStation": 51,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -23815,7 +23938,8 @@
     "station": 23,
     "stationName": "Osaki",
     "fromStation": 1197,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -23844,7 +23968,8 @@
     "station": 11,
     "stationName": "Otsuka",
     "fromStation": 894,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -23873,7 +23998,8 @@
     "station": 21,
     "stationName": "Meguro",
     "fromStation": 1493,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -23902,7 +24028,8 @@
     "station": 2,
     "stationName": "Akihabara",
     "fromStation": 309,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -23960,7 +24087,8 @@
     "station": 24,
     "stationName": "Shinagawa",
     "fromStation": 533,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -24250,7 +24378,8 @@
     "station": 1,
     "stationName": "Kanda",
     "fromStation": 1977,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -24279,7 +24408,8 @@
     "station": 10,
     "stationName": "Sugamo",
     "fromStation": 278,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -24424,7 +24554,8 @@
     "station": 8,
     "stationName": "Tabata",
     "fromStation": 352,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -24482,7 +24613,8 @@
     "station": 10,
     "stationName": "Sugamo",
     "fromStation": 446,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -24540,7 +24672,8 @@
     "station": 18,
     "stationName": "Harajuku",
     "fromStation": 371,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -24656,7 +24789,8 @@
     "station": 11,
     "stationName": "Otsuka",
     "fromStation": 292,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -24743,7 +24877,8 @@
     "station": 2,
     "stationName": "Akihabara",
     "fromStation": 1131,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -24830,7 +24965,8 @@
     "station": 25,
     "stationName": "Takanawa Gateway",
     "fromStation": 705,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -25178,7 +25314,8 @@
     "station": 4,
     "stationName": "Ueno",
     "fromStation": 202,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -25207,7 +25344,8 @@
     "station": 13,
     "stationName": "Mejiro",
     "fromStation": 321,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -25265,7 +25403,8 @@
     "station": 6,
     "stationName": "Nippori",
     "fromStation": 389,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -25294,7 +25433,8 @@
     "station": 6,
     "stationName": "Nippori",
     "fromStation": 214,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -25410,7 +25550,8 @@
     "station": 17,
     "stationName": "Yoyogi",
     "fromStation": 865,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -25439,7 +25580,8 @@
     "station": 18,
     "stationName": "Harajuku",
     "fromStation": 1060,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -25555,7 +25697,8 @@
     "station": 23,
     "stationName": "Osaki",
     "fromStation": 599,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -25584,7 +25727,8 @@
     "station": 25,
     "stationName": "Takanawa Gateway",
     "fromStation": 400,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -25671,7 +25815,8 @@
     "station": 22,
     "stationName": "Gotanda",
     "fromStation": 666,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -25990,7 +26135,8 @@
     "station": 4,
     "stationName": "Ueno",
     "fromStation": 353,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -26367,7 +26513,8 @@
     "station": 17,
     "stationName": "Yoyogi",
     "fromStation": 955,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -26425,7 +26572,8 @@
     "station": 9,
     "stationName": "Komagome",
     "fromStation": 1314,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -26512,7 +26660,8 @@
     "station": 3,
     "stationName": "Okachimachi",
     "fromStation": 1352,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -26599,7 +26748,8 @@
     "station": 6,
     "stationName": "Nippori",
     "fromStation": 737,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -26628,7 +26778,8 @@
     "station": 21,
     "stationName": "Meguro",
     "fromStation": 570,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -26715,7 +26866,8 @@
     "station": 5,
     "stationName": "Uguisudani",
     "fromStation": 85,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -26744,7 +26896,8 @@
     "station": 8,
     "stationName": "Tabata",
     "fromStation": 298,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -26889,7 +27042,8 @@
     "station": 13,
     "stationName": "Mejiro",
     "fromStation": 695,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -26976,7 +27130,8 @@
     "station": 9,
     "stationName": "Komagome",
     "fromStation": 376,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -27179,7 +27334,8 @@
     "station": 20,
     "stationName": "Ebisu",
     "fromStation": 354,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -27208,7 +27364,8 @@
     "station": 11,
     "stationName": "Otsuka",
     "fromStation": 650,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -27324,7 +27481,8 @@
     "station": 24,
     "stationName": "Shinagawa",
     "fromStation": 960,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -27469,7 +27627,8 @@
     "station": 29,
     "stationName": "Yurakucho",
     "fromStation": 388,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -27672,7 +27831,8 @@
     "station": 2,
     "stationName": "Akihabara",
     "fromStation": 558,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -27730,7 +27890,8 @@
     "station": 9,
     "stationName": "Komagome",
     "fromStation": 1625,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -27759,7 +27920,8 @@
     "station": 9,
     "stationName": "Komagome",
     "fromStation": 1575,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -28078,7 +28240,8 @@
     "station": 20,
     "stationName": "Ebisu",
     "fromStation": 235,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -28658,7 +28821,8 @@
     "station": 27,
     "stationName": "Hamamatsucho",
     "fromStation": 515,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -28716,7 +28880,8 @@
     "station": 24,
     "stationName": "Shinagawa",
     "fromStation": 828,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -28832,7 +28997,8 @@
     "station": 10,
     "stationName": "Sugamo",
     "fromStation": 1335,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -28977,7 +29143,8 @@
     "station": 14,
     "stationName": "Takadanobaba",
     "fromStation": 612,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -29035,7 +29202,8 @@
     "station": 10,
     "stationName": "Sugamo",
     "fromStation": 1001,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -29064,7 +29232,8 @@
     "station": 25,
     "stationName": "Takanawa Gateway",
     "fromStation": 963,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -29122,7 +29291,8 @@
     "station": 1,
     "stationName": "Kanda",
     "fromStation": 156,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -29151,7 +29321,8 @@
     "station": 3,
     "stationName": "Okachimachi",
     "fromStation": 267,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -29267,7 +29438,8 @@
     "station": 19,
     "stationName": "Shibuya",
     "fromStation": 430,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -29354,7 +29526,8 @@
     "station": 1,
     "stationName": "Kanda",
     "fromStation": 303,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -29615,7 +29788,8 @@
     "station": 3,
     "stationName": "Okachimachi",
     "fromStation": 184,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -29789,7 +29963,8 @@
     "station": 1,
     "stationName": "Kanda",
     "fromStation": 332,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -29847,7 +30022,8 @@
     "station": 5,
     "stationName": "Uguisudani",
     "fromStation": 1615,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -29905,7 +30081,8 @@
     "station": 7,
     "stationName": "Nishi-Nippori",
     "fromStation": 305,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -29934,7 +30111,8 @@
     "station": 0,
     "stationName": "Tokyo",
     "fromStation": 490,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -30108,7 +30286,8 @@
     "station": 8,
     "stationName": "Tabata",
     "fromStation": 776,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -30137,7 +30316,8 @@
     "station": 8,
     "stationName": "Tabata",
     "fromStation": 782,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -30398,7 +30578,8 @@
     "station": 5,
     "stationName": "Uguisudani",
     "fromStation": 150,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -30630,7 +30811,8 @@
     "station": 22,
     "stationName": "Gotanda",
     "fromStation": 459,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -30659,7 +30841,8 @@
     "station": 16,
     "stationName": "Shinjuku",
     "fromStation": 528,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -30978,7 +31161,8 @@
     "station": 5,
     "stationName": "Uguisudani",
     "fromStation": 1546,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -31007,7 +31191,8 @@
     "station": 23,
     "stationName": "Osaki",
     "fromStation": 503,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -31094,7 +31279,8 @@
     "station": 24,
     "stationName": "Shinagawa",
     "fromStation": 1517,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -31152,7 +31338,8 @@
     "station": 12,
     "stationName": "Ikebukuro",
     "fromStation": 186,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -31210,7 +31397,8 @@
     "station": 26,
     "stationName": "Tamachi",
     "fromStation": 468,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -31442,7 +31630,8 @@
     "station": 13,
     "stationName": "Mejiro",
     "fromStation": 729,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -31819,7 +32008,8 @@
     "station": 25,
     "stationName": "Takanawa Gateway",
     "fromStation": 232,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -32138,7 +32328,8 @@
     "station": 28,
     "stationName": "Shimbashi",
     "fromStation": 1559,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -32457,7 +32648,8 @@
     "station": 21,
     "stationName": "Meguro",
     "fromStation": 234,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -32515,7 +32707,8 @@
     "station": 7,
     "stationName": "Nishi-Nippori",
     "fromStation": 186,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -32718,7 +32911,8 @@
     "station": 19,
     "stationName": "Shibuya",
     "fromStation": 438,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -33008,7 +33202,8 @@
     "station": 11,
     "stationName": "Otsuka",
     "fromStation": 730,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -34052,7 +34247,8 @@
     "station": 10,
     "stationName": "Sugamo",
     "fromStation": 1630,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -34313,7 +34509,8 @@
     "station": 18,
     "stationName": "Harajuku",
     "fromStation": 235,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -34545,7 +34742,8 @@
     "station": 22,
     "stationName": "Gotanda",
     "fromStation": 390,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -34632,7 +34830,8 @@
     "station": 24,
     "stationName": "Shinagawa",
     "fromStation": 498,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -34690,7 +34889,8 @@
     "station": 9,
     "stationName": "Komagome",
     "fromStation": 83,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -35067,7 +35267,8 @@
     "station": 9,
     "stationName": "Komagome",
     "fromStation": 148,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -35183,7 +35384,8 @@
     "station": 25,
     "stationName": "Takanawa Gateway",
     "fromStation": 1051,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -35299,7 +35501,8 @@
     "station": 5,
     "stationName": "Uguisudani",
     "fromStation": 125,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -35531,7 +35734,8 @@
     "station": 29,
     "stationName": "Yurakucho",
     "fromStation": 720,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -35589,7 +35793,8 @@
     "station": 13,
     "stationName": "Mejiro",
     "fromStation": 529,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -35618,7 +35823,8 @@
     "station": 4,
     "stationName": "Ueno",
     "fromStation": 318,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -35647,7 +35853,8 @@
     "station": 0,
     "stationName": "Tokyo",
     "fromStation": 1027,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -35734,7 +35941,8 @@
     "station": 28,
     "stationName": "Shimbashi",
     "fromStation": 307,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -35937,7 +36145,8 @@
     "station": 29,
     "stationName": "Yurakucho",
     "fromStation": 463,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -35995,7 +36204,8 @@
     "station": 16,
     "stationName": "Shinjuku",
     "fromStation": 991,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",
@@ -36024,7 +36234,8 @@
     "station": 26,
     "stationName": "Tamachi",
     "fromStation": 686,
-    "picked": false
+    "picked": true,
+    "rank": 1
    },
    "geometry": {
     "type": "Point",
@@ -36111,7 +36322,8 @@
     "station": 18,
     "stationName": "Harajuku",
     "fromStation": 558,
-    "picked": true
+    "picked": true,
+    "rank": 0
    },
    "geometry": {
     "type": "Point",

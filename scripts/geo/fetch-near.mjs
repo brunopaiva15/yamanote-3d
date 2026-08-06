@@ -128,30 +128,12 @@ async function main() {
     `  ${found.length} objets réels à moins de ${REACH} m de la voie · jeu daté du ${datasetDate}\n`,
   );
 
-  // --- La sélection ----------------------------------------------------------
+  // --- La sélection n'est plus ici -------------------------------------------
   //
-  // Un par famille et par gare, et c'est déjà beaucoup : le jeu n'a de la place
-  // que pour deux silhouettes par quartier. Le meilleur est celui qui porte une
-  // fiche Wikidata et qui est le plus près de SA gare - pas de la voie : un
-  // musée à quinze cents mètres de Nippori mais à trois cents d'Ueno appartient
-  // à Ueno, et c'est là qu'on le verra.
-  const best = new Map();
-  for (const f of found) {
-    const key = `${f.station}/${f.family}`;
-    const at = best.get(key);
-    if (!at || score(f) > score(at)) best.set(key, f);
-  }
-  const picked = [...best.values()].sort(
-    (a, b) => a.station - b.station || a.family.localeCompare(b.family),
-  );
-  process.stdout.write(`  ${picked.length} retenus, au plus un par gare et par famille\n`);
-  for (const p of picked) {
-    process.stdout.write(
-      `    ${String(p.station).padStart(2)} ${p.stationName.padEnd(17)} ` +
-        `${FAMILIES[p.family].label.padEnd(16)} ${p.name.padEnd(14)} ` +
-        `${String(p.fromStation).padStart(5)} m  ${p.wikidata ?? '(sans fiche)'}\n`,
-    );
-  }
+  // Elle vit dans `scripts/geo/pick-near.mjs`, qui se rejoue hors ligne sur ce
+  // GeoJSON. Ce script-ci RELÈVE ; l'autre CHOISIT. La séparation n'est pas de
+  // la coquetterie : le relevé demande un service public, la sélection non, et
+  // on doit pouvoir revenir sur un choix sans redemander la donnée.
 
   // --- Écriture --------------------------------------------------------------
   const prov = provenance({ source: 'osm', datasetDate, layer: 'DATA_STATIC' });
@@ -170,14 +152,15 @@ async function main() {
             REACH +
             ' m de l’axe relevé des voies, choisis par CATÉGORIE (musée, lieu de ' +
             'culte, parc, site historique) et non par nom. La notoriété est lue dans ' +
-            'l’étiquette wikidata. src/data/nearLandmarks.ts n’en garde qu’un par gare ' +
-            'et par famille ; celui-ci les porte tous.',
+            'l’étiquette wikidata. Celui-ci les porte TOUS ; la sélection - qui pose ' +
+            'les drapeaux picked et rank - est faite par scripts/geo/pick-near.mjs, ' +
+            'qui se rejoue hors ligne.',
           generatedBy: 'scripts/geo/fetch-near.mjs',
           reach: REACH,
         },
         features: found.map((f) => ({
           type: 'Feature',
-          properties: { ...f, picked: picked.includes(f) },
+          properties: { ...f, picked: false },
           geometry: { type: 'Point', coordinates: [f.lon, f.lat] },
         })),
       },
@@ -187,9 +170,10 @@ async function main() {
     'utf8',
   );
 
-  writeNear({ picked, found, prov, datasetDate });
   process.stdout.write(
-    '\ndata/geo/near-landmarks.geojson et src/data/nearLandmarks.ts écrits.\n',
+    `\n${found.length} objets relevés → data/geo/near-landmarks.geojson\n` +
+      'Enchaînez « node scripts/geo/pick-near.mjs » pour la sélection, ' +
+      'puis « node scripts/geo-loop.mjs ».\n',
   );
 }
 
@@ -203,15 +187,6 @@ function familyOf(tags) {
   // `tourism=attraction` est un fourre-tout : il ne rentre que s'il porte aussi
   // l'une des trois autres étiquettes, sinon on ne sait pas quoi en dessiner.
   return null;
-}
-
-/**
- * Ce qui fait un bon repère de quartier : une fiche Wikidata d'abord - c'est le
- * seul jugement de notoriété qu'on accepte, parce qu'il n'est pas le nôtre -,
- * puis la proximité de sa gare.
- */
-function score(f) {
-  return (f.wikidata ? 100000 : 0) - f.fromStation;
 }
 
 function boxOf(coords, margin) {
@@ -252,84 +227,6 @@ function distanceToLoop(px, pz, poly) {
   return best;
 }
 
-// --- Le fichier TypeScript ---------------------------------------------------
-
-function writeNear({ picked, found, prov, datasetDate }) {
-  const withCard = picked.filter((p) => p.wikidata).length;
-  const src = `// Les repères RÉELS du bord de voie : ce qu'on peut aller vérifier.
-//
-// GÉNÉRÉ par \`node scripts/geo/fetch-near.mjs\` - ne pas éditer à la main.
-//
-// ${prov.attribution} · ${prov.source}
-// Licence ${prov.license} · jeu daté du ${datasetDate} · ${prov.layer}
-//
-// La règle 12 de la bible géographique dit qu'un repère est ce qu'on peut
-// retrouver sur une carte. Ce fichier ne contient donc que des objets qui y
-// sont : ${picked.length} au plus un par gare et par famille, tirés des ${found.length} objets réels
-// relevés à moins de deux kilomètres de la voie, et ${withCard} d'entre eux portent une
-// fiche Wikidata. Chacun garde son identifiant OpenStreetMap : on peut ouvrir
-// la carte et regarder.
-//
-// CE QUE CE FICHIER A REMPLACÉ. src/data/districts.ts posait des « repères » à
-// une abscisse arbitraire de trente-quatre mètres et d'un côté choisi à la
-// main. Ici, le côté et la distance sont ceux du terrain : le Musée national
-// est au nord-ouest d'Ueno, il passe donc à gauche en 内回り et à droite en
-// 外回り, tout seul, parce que c'est là qu'il est.
-//
-// Ce qui reste dans districts.ts est du TISSU, marqué comme tel : des
-// silhouettes de bureaux, d'écrans et d'enseignes qui donnent le caractère d'un
-// quartier sans prétendre nommer quoi que ce soit.
-
-/** La famille d'un repère réel, qui décide de la silhouette qui le porte. */
-export type NearFamily = ${Object.keys(FAMILIES)
-    .map((f) => `'${f}'`)
-    .join(' | ')};
-
-export interface NearLandmark {
-  /** Identifiant stable : le type et le numéro de l'objet OpenStreetMap. */
-  id: string;
-  /** Nom japonais tel qu'OSM le porte, et sa transcription quand elle existe. */
-  name: string;
-  nameEn: string | null;
-  family: NearFamily;
-  /** Fiche Wikidata, quand l'objet en a une. C'est notre critère de notoriété. */
-  wikidata: string | null;
-  /** Est, en mètres depuis le point d'arrêt de Tokyo. */
-  x: number;
-  /** Nord NÉGATIF, en mètres depuis le point d'arrêt de Tokyo. */
-  z: number;
-  /** Distance à l'axe relevé des voies (m). */
-  distance: number;
-  /** Gare de rattachement (index 0..29), et distance à son point d'arrêt (m). */
-  station: number;
-  fromStation: number;
-}
-
-export const NEAR_LANDMARKS: readonly NearLandmark[] = [
-${picked
-  .map(
-    (p) =>
-      `  { id: '${p.id}', name: ${js(p.name)}, nameEn: ${js(p.nameEn)}, ` +
-      `family: '${p.family}', wikidata: ${js(p.wikidata)}, x: ${p.x}, z: ${p.z}, ` +
-      `distance: ${p.distance}, station: ${p.station}, fromStation: ${p.fromStation} },`,
-  )
-  .join('\n')}
-];
-
-/** Portée du relevé (m) : au-delà, c'est l'affaire de l'horizon géographique. */
-export const NEAR_REACH = ${REACH};
-
-const BY_ID = new Map(NEAR_LANDMARKS.map((lm) => [lm.id, lm]));
-
-/** Le repère réel d'identifiant \`id\`, ou \`undefined\`. */
-export function nearLandmark(id: string): NearLandmark | undefined {
-  return BY_ID.get(id);
-}
-`;
-  writeFileSync(new URL('../../src/data/nearLandmarks.ts', import.meta.url), src, 'utf8');
-}
-
-const js = (v) => (v === null ? 'null' : `'${String(v).replace(/'/g, "\\'")}'`);
 const round = (v, d) => Number(v.toFixed(d));
 
 main().catch((err) => {

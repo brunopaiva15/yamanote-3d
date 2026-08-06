@@ -54,7 +54,7 @@ import { GEO_LANDMARKS, type GeoLandmark } from '../data/tokyoGeo';
 import { NEAR_DATED, STATION_DATED, factVisible } from '../data/geo/provenance';
 import { loopPose, makePose, sightTo, type Sight } from '../systems/tokyoBearing';
 import { rng } from '../textures/procedural';
-import { box, glow, plane, sil, vehicle, type Ctx } from './landmarkKit';
+import { box, glow, mergeByMaterial, plane, sil, vehicle, type Ctx } from './landmarkKit';
 import { landmarkPush } from '../systems/stationOcclusion';
 import { plateauRuntime } from '../systems/plateau';
 
@@ -155,6 +155,25 @@ function lowFacade(ctx: Ctx, w: number, h: number, color: string, columns: boole
   }
 }
 
+// Stèle de site historique : socle, colonne gravée, haie basse.
+//
+// C'est la forme la plus commune de ce que la famille `historic` recouvre à
+// Tokyo - un 記念碑, un 跡地, un 史跡 -, et la seule qu'on puisse dessiner sans
+// rien inventer : ces objets n'ont pas de bâtiment, ils ont un marqueur. Sans
+// elle, trente objets relevés restaient dans les données sans pouvoir arriver
+// à l'écran.
+function stoneMarker(ctx: Ctx, h: number): void {
+  const stone = sil(ctx, '#b9b2a6');
+  const dark = sil(ctx, '#8d8578');
+  box(ctx, dark, 5.2, 0.7, 4.4, 0, 0.35, 0);
+  box(ctx, stone, 3.2, 0.6, 2.8, 0, 0.95, 0);
+  box(ctx, stone, 1.1, h, 0.9, 0, 1.25 + h / 2, 0);
+  box(ctx, dark, 1.4, 0.35, 1.2, 0, 1.25 + h + 0.18, 0);
+  const hedge = sil(ctx, seasonNow().foliage[1]);
+  box(ctx, hedge, 9, 1.2, 0.9, 0, 0.6, -2.6);
+  box(ctx, hedge, 9, 1.2, 0.9, 0, 0.6, 2.6);
+}
+
 // Toit de temple à croupe (tuiles sombres), sur un corps clair.
 function templeRoof(ctx: Ctx, w: number, h: number): void {
   box(ctx, sil(ctx, '#d8cdb8'), w, h, 5, 0, h / 2, 0);
@@ -243,6 +262,7 @@ const BUILDERS: Record<Land, Builder> = {
   forestMass: { near: false, build: (c) => forest(c, 13) },
   museumFacade: { near: false, build: (c) => lowFacade(c, 24, 11, '#d8cfc0', true) },
   templeRoof: { near: false, build: (c) => templeRoof(c, 12, 6) },
+  stoneMarker: { near: false, build: (c) => stoneMarker(c, 4) },
   tramCar: { near: true, build: (c) => vehicle(c, 'tram') },
   monorailBeam: { near: true, build: (c) => monorailBeam(c, NEAR_SPAN) },
   shinkansenSet: { near: true, build: (c) => vehicle(c, 'shinkansen') },
@@ -279,15 +299,65 @@ interface SlotItem {
  * jeu de données. nearLandmarks.ts reste le relevé détaillé (Wikidata, OSM) ;
  * tokyoGeo en porte la projection pour le rendu.
  */
-function geoOf(spec: LandmarkSpec, station: number): GeoLandmark | null {
+function geoOf(spec: LandmarkSpec, station: number, rank: number): GeoLandmark | null {
   if (spec.truth !== 'geo') return null;
   const family = LAND_FAMILY[spec.kind];
   if (!family) return null;
   return (
     GEO_LANDMARKS.find(
-      (lm) => lm.band === 'near' && lm.station === station && lm.family === family,
+      (lm) =>
+        lm.band === 'near' && lm.station === station && lm.family === family && lm.rank === rank,
     ) ?? null
   );
+}
+
+/** La silhouette d'office de chaque famille, quand le quartier n'en nomme pas. */
+const AUTO_KIND: Record<NonNullable<GeoLandmark['family']>, Land> = {
+  museum: 'museumFacade',
+  worship: 'templeRoof',
+  park: 'forestMass',
+  historic: 'stoneMarker',
+};
+
+/**
+ * Combien d'objets RÉELS une gare cite au plus.
+ *
+ * Quatre, soit une silhouette par famille. Ce n'est pas une limite de coût -
+ * seul le quartier courant est peuplé, et une silhouette pèse quelques dizaines
+ * de triangles - mais de composition : au-delà, le bord de voie devient une
+ * vitrine et on ne lit plus rien.
+ */
+const GEO_BUDGET = 4;
+
+/**
+ * Les silhouettes d'un quartier : celles qu'il nomme, plus celles que le relevé
+ * résout et qu'il ne nommait pas.
+ *
+ * C'était le vrai plafond, et il n'était pas dans les données. `districts.ts`
+ * ne déclarait que quatorze emplacements `truth: 'geo'` sur toute la boucle
+ * alors que le relevé résolvait quatre-vingt-neuf couples gare × famille :
+ * Hamamatsuchō avait le 旧芝離宮恩賜庭園 à cent trente-neuf mètres et ne le
+ * citait pas, faute d'une ligne écrite à la main. Les quartiers gardent la
+ * composition qu'on leur a donnée - le tissu, les échelles, les côtés - et le
+ * reste vient du terrain.
+ */
+function specsFor(districtIndex: number): LandmarkSpec[] {
+  const authored = DISTRICTS[districtIndex]?.landmarks ?? [];
+  const specs = [...authored];
+  const covered = new Set<string>();
+  for (const spec of authored) {
+    if (spec.truth !== 'geo') continue;
+    const family = LAND_FAMILY[spec.kind];
+    if (family) covered.add(family);
+  }
+  for (const lm of GEO_LANDMARKS) {
+    if (specs.length - authored.length + covered.size >= GEO_BUDGET) break;
+    if (lm.band !== 'near' || lm.station !== districtIndex || lm.rank !== 0) continue;
+    if (!lm.family || covered.has(lm.family)) continue;
+    covered.add(lm.family);
+    specs.push({ kind: AUTO_KIND[lm.family], truth: 'geo' });
+  }
+  return specs;
 }
 interface Slot {
   root: THREE.Group;
@@ -312,13 +382,20 @@ function disposeSlot(slot: Slot): void {
 function populate(slot: Slot, districtIndex: number): void {
   disposeSlot(slot);
   slot.district = districtIndex;
-  const specs = DISTRICTS[districtIndex]?.landmarks ?? [];
+  const specs = specsFor(districtIndex);
+  // Deux silhouettes d'une même famille dans un quartier citent DEUX objets :
+  // la seconde prend le rang suivant du relevé. Sans ce compteur, elles
+  // pointeraient toutes les deux sur le premier.
+  const used = new Map<string, number>();
   specs.forEach((spec: LandmarkSpec, i: number) => {
     const builder = BUILDERS[spec.kind];
     if (!builder) return;
+    const family = spec.truth === 'geo' ? LAND_FAMILY[spec.kind] : undefined;
+    const rank = family ? (used.get(family) ?? 0) : 0;
+    if (family) used.set(family, rank + 1);
     // Une silhouette réelle sans objet résolu ne se pose pas. C'est la règle 11
     // appliquée à la lettre : plutôt un quartier nu qu'un temple imaginaire.
-    const geo = geoOf(spec, districtIndex);
+    const geo = geoOf(spec, districtIndex, rank);
     if (spec.truth === 'geo' && !geo) return;
     // Faits datés : Takanawa Gateway avant 2020, Miyashita Park reconstruit…
     if (spec.truth === 'geo' && geo && !factVisible(NEAR_DATED[geo.id], runtime.tokyoDate)) return;
@@ -337,6 +414,9 @@ function populate(slot: Slot, districtIndex: number): void {
         r: rng(700 + districtIndex * 53 + i * 131 + spec.kind.length * 7 + zi * 17),
       };
       builder.build(ctx);
+      // Une silhouette, c'est jusqu'à vingt-deux boîtes pour trois teintes : on
+      // les fond avant de la poser, sinon chaque boîte se paie un appel de rendu.
+      mergeByMaterial(itemGroup, slot.geos);
       itemGroup.scale.setScalar(scale);
       const baseX = builder.near ? NEAR_X : FAR_X;
       if (builder.near) {

@@ -1720,6 +1720,66 @@ Coût mesuré (`node scripts/scenery-cost.mjs`, ultra en pleine voie) : 340 k
 triangles contre 333 k avant, pour une cible de 360 k. Les appels de rendu ne
 bougent pas - tout l'arrière-pays tient dans un seul maillage instancié.
 
+### Les gares citent enfin ce qu'il y a chez elles
+
+Le relevé des repères de bord de voie tenait 1 245 objets réels à moins de deux
+kilomètres de la voie, tous avec leur identifiant OpenStreetMap. Le jeu en
+citait **quatorze**. Deux plafonds se cumulaient, et il fallait les distinguer.
+
+**Le premier était dans la sélection.** `nearLandmarks` ne gardait qu'un objet
+par gare et par famille, départagé par « une fiche Wikidata d'abord, puis la
+proximité de la gare ». Ce critère ne peut pas arbitrer ce qu'on lui demandait :
+à Tokyo, l'objet le plus proche d'une gare qui porte une fiche Wikidata est
+presque toujours un petit sanctuaire de quartier. On gardait le 真性寺 et on
+écartait le 高岩寺 ; on gardait le 上野の森美術館 et on laissait dehors le
+国立西洋美術館.
+
+On aurait pu vouloir départager par notoriété. **On ne le fait pas** : rien dans
+le relevé ne la porte - la fiche Wikidata est un oui-non, pas un rang - et la
+fabriquer reviendrait à substituer notre jugement à la source, ce que la règle
+11 interdit. On garde donc **plusieurs** candidats par gare et par famille,
+rangés par le même score, et le jeu cite dans cet ordre. `rank` est une place
+dans un budget, pas un verdict.
+
+**Le second était le vrai, et il n'était pas dans les données.** `districts.ts`
+ne déclarait que quatorze emplacements `truth: 'geo'` sur toute la boucle, quand
+le relevé résolvait **quatre-vingt-neuf** couples gare × famille. Hamamatsuchō
+avait le 旧芝離宮恩賜庭園 à cent trente-neuf mètres et ne le citait pas, faute
+d'une ligne écrite à la main. Les emplacements viennent maintenant du terrain :
+un quartier garde la composition qu'on lui a donnée - le tissu, les échelles,
+les côtés - et cite en plus ce que le relevé lui résout, dans la limite de
+quatre objets réels.
+
+Et la famille `historic` n'avait **aucune silhouette** : trente objets relevés -
+le Rikugien, le site de la pagode de Yanaka, le lieu de l'entrevue de Saigō et
+Katsu - étaient versionnés sans pouvoir arriver à l'écran, parce que
+`fetch-near` les rangeait sous une forme dont la famille était `museum`. Ils ont
+la leur, une stèle sur son socle.
+
+**Citations réelles : 14 → 110.** Reviennent entre autres le 六義園 à Komagome,
+le 旧芝離宮恩賜庭園 à Hamamatsuchō, le 東京国立博物館 à Uguisudani, le 日比谷公園
+et le 明治生命館 à Yūrakuchō, le 谷中五重塔跡地 à Nippori, le 高岩寺 à Sugamo et
+le 国立西洋美術館 à Ueno.
+
+La sélection est sortie de l'import : `scripts/geo/fetch-near.mjs` **relève**,
+`scripts/geo/pick-near.mjs` **choisit**, et le second se rejoue hors ligne
+(`npm run geo:pick`). Un choix doit pouvoir se refaire sans redemander la donnée
+à un service public.
+
+**Ce qui ne revient pas, et pourquoi.** Hachikō, Yebisu Garden Place, le
+Kyu-Furukawa et le Meguro Gajoen ne sont pas dans le relevé du tout : la requête
+Overpass ne ramène que les musées, lieux de culte, parcs et sites historiques.
+Les récupérer demande d'élargir la requête, donc un import avec accès au réseau.
+Le 増上寺 et le 湯島天神 y sont mais restent derrière trois voisins plus proches
+de leur gare - et faute de rang de notoriété dans la source, on ne les promeut
+pas.
+
+Au passage, chaque silhouette est maintenant **fondue par matériau** : un
+bosquet, c'était vingt-deux maillages pour trois teintes, donc vingt-deux appels
+de rendu. Sans cette fusion, citer quatre objets par gare faisait passer la
+scène à quai de sept cents à neuf cent quatre-vingt-sept appels ; avec, elle
+retombe à 707–731, sous les 850 de la cible.
+
 ## Les saisons
 
 Le décor n'avait qu'une horloge, celle des heures. Un 21 décembre s'y déroulait

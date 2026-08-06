@@ -178,6 +178,7 @@ try {
       band: 'near',
       family: p.family,
       station: p.station,
+      rank: p.rank ?? 0,
       x: p.x,
       z: p.z,
     });
@@ -288,6 +289,14 @@ export interface GeoLandmark {
   family: 'museum' | 'worship' | 'park' | 'historic' | null;
   /** Gare de rattachement (bande near), sinon null. */
   station: number | null;
+  /**
+   * Place dans l'ordre de citation de sa gare et de sa famille (bande near).
+   *
+   * 0 est le premier cité. C'est un ordre de BUDGET - fiche Wikidata, puis
+   * proximité de la gare - et non un verdict sur l'importance : la source ne
+   * porte aucun rang de notoriété, et on n'en invente pas.
+   */
+  rank: number;
 }
 
 /** Un sommet de la polyligne de la boucle. \`station\` vaut −1 hors des gares. */
@@ -314,7 +323,8 @@ ${landmarks
       `  { id: '${l.id}', name: '${name}', lon: ${l.lon}, lat: ${l.lat}, ` +
       `x: ${num(l.x)}, z: ${num(l.z)}, height: ${l.height}, shape: '${l.shape}', ` +
       `band: '${l.band}', family: ${l.family ? `'${l.family}'` : 'null'}, ` +
-      `station: ${l.station === null || l.station === undefined ? 'null' : l.station} },`
+      `station: ${l.station === null || l.station === undefined ? 'null' : l.station}, ` +
+      `rank: ${l.rank ?? 0} },`
     );
   })
   .join('\n')}
