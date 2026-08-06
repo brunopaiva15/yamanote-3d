@@ -643,9 +643,17 @@ const REAL_MARGIN = 40;
 const NEAR_HITS = makeCorridorBuffer(24);
 const FAR_HITS = makeCorridorBuffer(48);
 
-/** Emprise VUE d'un sujet relevé, le long de la voie et en travers (m). */
-function realSpan(hit: CorridorHit): number {
-  return hit.plate * (Math.abs(Math.cos(hit.yaw)) + Math.abs(Math.sin(hit.yaw)));
+/**
+ * Emprise VUE d'un sujet relevé (m), le long de la voie (`along`) ou en travers.
+ *
+ * Les deux cotes ne sont plus égales depuis que les boîtes qui mordaient la
+ * voie sont découpées au gabarit : `plate` court le long des rails, `depth`
+ * s'en écarte.
+ */
+function realSpan(hit: CorridorHit, along: boolean): number {
+  const c = Math.abs(Math.cos(hit.yaw));
+  const s = Math.abs(Math.sin(hit.yaw));
+  return along ? hit.plate * c + hit.depth * s : hit.depth * c + hit.plate * s;
 }
 
 /**
@@ -673,9 +681,10 @@ function blockedByReal(
 ): boolean {
   for (let i = 0; i < n; i++) {
     const h = hits[i];
-    const half = realSpan(h) / 2;
-    if (h.s + half <= s0 || h.s - half >= s1) continue;
-    if (h.x + half <= x0 || h.x - half >= x1) continue;
+    const alongHalf = realSpan(h, true) / 2;
+    if (h.s + alongHalf <= s0 || h.s - alongHalf >= s1) continue;
+    const acrossHalf = realSpan(h, false) / 2;
+    if (h.x + acrossHalf <= x0 || h.x - acrossHalf >= x1) continue;
     return true;
   }
   return false;
@@ -706,8 +715,13 @@ function dressReal(
   // Le prisme est carré : `plate` est le côté de la boîte englobante du
   // contour, et la source n'en dit pas plus. Inventer un rapport de forme
   // serait inventer un bâtiment.
+  //
+  // Sauf quand la boîte mordait la voie. Elle a alors été DÉCOUPÉE au gabarit
+  // ferroviaire à l'import, et `depth` porte ce qu'il en reste en travers : on
+  // ne pose pas un bâtiment sur les rails sous prétexte que sa boîte
+  // englobante y allait.
   b.w = hit.plate;
-  b.d = hit.plate;
+  b.d = hit.depth;
   b.h = hit.h;
   b.yaw = hit.yaw;
   b.real = true;
@@ -862,8 +876,12 @@ export function buildCell(
       // Ni sur un bâtiment qui EXISTE. Le tissu est ce qu'on met là où l'on ne
       // sait pas ; là où l'on sait, il s'écarte.
       const spanX = d * Math.abs(Math.cos(yaw)) + w * Math.abs(Math.sin(yaw));
-      const reachIn = R.x0 + d / 2 - spanX / 2;
-      const reachOut = R.x1 - d / 2 + spanX / 2;
+      // La bande que le sujet peut ATTEINDRE, exactement celle où son placement
+      // le laissera tomber : il s'appuie sur le bord intérieur du rang, et
+      // déborde au-delà du bord extérieur quand son emprise vue est plus large
+      // que le rang lui-même - ce qui arrive dès qu'il est franchement tourné.
+      const reachIn = R.x0;
+      const reachOut = Math.max(R.x1, R.x0 + spanX);
       if (blockedByReal(NEAR_HITS, real.known, mid - spanS / 2, mid + spanS / 2, reachIn, reachOut)) {
         cursor += spanS;
         continue;
@@ -887,7 +905,13 @@ export function buildCell(
 
       const b = out[count];
       b.s = cursor + w / 2;
-      b.x = R.x0 + d / 2 + r() * Math.max(0, R.x1 - R.x0 - d);
+      // L'emprise EN TRAVERS, et non la seule profondeur : tourné dans sa trame,
+      // un sujet occupe latéralement plus que sa profondeur, et le rang de bord
+      // de voie débordait donc sous ses douze mètres - jusqu'à huit mètres
+      // trente de l'axe, à portée des poteaux caténaires. C'est le même défaut
+      // que celui qui faisait entrer les empreintes relevées dans la voie, et
+      // il se corrige de la même façon : on réserve l'emprise VUE.
+      b.x = R.x0 + spanX / 2 + r() * Math.max(0, R.x1 - R.x0 - spanX);
       b.y = cityGround(b.s, b.x, side);
       b.w = w;
       b.d = d;
@@ -1018,8 +1042,12 @@ export function buildFarCell(
       }
       const mid = cursor + w / 2;
       const spanX = d * Math.abs(Math.cos(yaw)) + w * Math.abs(Math.sin(yaw));
-      const reachIn = R.x0 + d / 2 - spanX / 2;
-      const reachOut = R.x1 - d / 2 + spanX / 2;
+      // La bande que le sujet peut ATTEINDRE, exactement celle où son placement
+      // le laissera tomber : il s'appuie sur le bord intérieur du rang, et
+      // déborde au-delà du bord extérieur quand son emprise vue est plus large
+      // que le rang lui-même - ce qui arrive dès qu'il est franchement tourné.
+      const reachIn = R.x0;
+      const reachOut = Math.max(R.x1, R.x0 + spanX);
       if (blockedByReal(FAR_HITS, real.known, mid - spanS / 2, mid + spanS / 2, reachIn, reachOut)) {
         cursor += spanS;
         continue;
@@ -1032,7 +1060,7 @@ export function buildFarCell(
       const facades = district.facades ?? FALLBACK_FACADE;
       const b = out[count];
       b.s = cursor + w / 2;
-      b.x = R.x0 + d / 2 + r() * Math.max(0, R.x1 - R.x0 - d);
+      b.x = R.x0 + spanX / 2 + r() * Math.max(0, R.x1 - R.x0 - spanX);
       b.y = cityGround(b.s, b.x, side);
       b.w = w;
       b.d = d;
