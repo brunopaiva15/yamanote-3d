@@ -33,6 +33,7 @@ import { SkyDome } from './three/city/SkyDome';
 import { FarSkyline } from './three/city/FarSkyline';
 import { FarRelief } from './three/city/FarRelief';
 import { CityRibbon } from './three/city/CityRibbon';
+import { Waterways } from './three/city/Waterways';
 import { Utilities } from './three/city/Utilities';
 import { Traffic } from './three/city/Traffic';
 import { Landmarks } from './three/Landmarks';
@@ -268,6 +269,10 @@ export default function Game() {
         <FarRelief />
         <FarSkyline />
         <CityRibbon />
+        {/* Les canaux du corridor et la baie, relevés sur OpenStreetMap. Après
+            le ruban : c'est une nappe transparente, elle doit se composer sur
+            une ville déjà écrite dans le tampon de profondeur. */}
+        <Waterways />
         <Utilities />
         <Traffic />
         <PlateauWorld />

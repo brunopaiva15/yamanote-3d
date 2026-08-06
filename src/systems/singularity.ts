@@ -1,10 +1,16 @@
 // Les singularités de la ligne : le passage à niveau, les traversées de
 // rivière, l'autoroute urbaine qui longe la voie.
 //
-// Ce ne sont pas des ornements tirés au sort mais des FAITS, écrits avec les
-// tronçons (data/segments) : un seul passage à niveau sur toute la boucle, trois
-// rivières, trois tronçons longés par le 首都高. Ce module dit OÙ ils tombent en
-// abscisse monde, et le rendu (three/Singularities) les y pose.
+// Ce ne sont pas des ornements tirés au sort mais des FAITS : un seul passage à
+// niveau sur toute la boucle, six traversées d'eau à ciel ouvert, trois tronçons
+// longés par le 首都高. Ce module dit OÙ ils tombent en abscisse monde, et le
+// rendu (three/Singularities) les y pose.
+//
+// Le passage à niveau et l'autoroute sont écrits avec les tronçons
+// (data/segments) : ils tiennent en un fait chacun. Les rivières, elles,
+// viennent d'OpenStreetMap (data/water, engendré par scripts/geo/fetch-water) —
+// position sur la boucle ET largeur relevée dans l'axe de la voie. Elles étaient
+// jusqu'ici trois fractions saisies à la main, dont une qui n'existe pas.
 //
 // --- Deux natures, deux géométries ---
 // Le passage à niveau et la rivière sont PONCTUELS : ils arrivent, on les
@@ -32,26 +38,33 @@
 
 import { SEGMENTS, cruiseDuration, segmentAt } from '../data/segments.ts';
 import type { LoopDirection } from '../data/platforms.ts';
+import { WATER_CROSSINGS, type WaterCrossing } from '../data/water.ts';
 import { cityAnchor, clearing, hashInt, streetNear } from './cityField.ts';
 import { journeyDistance } from './trainPhysics.ts';
 
 /** Les deux singularités ponctuelles de la boucle. */
 export type SingularKind = 'crossing' | 'river';
 
-const KINDS: readonly SingularKind[] = ['crossing', 'river'];
+/**
+ * Largeur de la trouée du passage à niveau, le long de la voie (m).
+ *
+ * La plus étroite du parcours : le 第二中里踏切 est une ruelle à voie unique, et
+ * c'est précisément ce qui explique qu'il ait survécu là où tous les autres ont
+ * été supprimés. Les rivières, elles, ont chacune la LEUR - mesurée dans l'axe
+ * de la voie sur le plan d'eau d'OpenStreetMap (src/data/water.ts) : la 神田川
+ * fait vingt-huit mètres et demi à Akihabara, onze et demi à Takadanobaba.
+ */
+export const CROSSING_WIDTH = 7;
 
 /**
- * Largeur de la trouée le long de la voie (m), par nature.
+ * Les traversées à ciel ouvert, rangées par tronçon.
  *
- * La rivière est la plus large de tout le parcours - rien ne se construit sur
- * une rivière - et le passage à niveau la plus étroite : le 第二中里踏切 est une
- * ruelle à voie unique, et c'est précisément ce qui explique qu'il ait survécu
- * là où tous les autres ont été supprimés.
+ * Une par tronçon au plus : c'est ce que dit le relevé, et tests/water le
+ * vérifie. Le rendu n'en pose qu'une à la fois, et deux au même endroit
+ * feraient disparaître la seconde sans un mot.
  */
-export const WIDTH: Record<SingularKind, number> = {
-  crossing: 7,
-  river: 24,
-};
+const RIVER_OF = new Map<number, WaterCrossing>();
+for (const c of WATER_CROSSINGS) if (!RIVER_OF.has(c.segment)) RIVER_OF.set(c.segment, c);
 
 /**
  * Profondeur du bâti proche (m) : la marge que la rotation coûte à la trouée.
@@ -182,15 +195,28 @@ export function inSingularity(s: number, margin = 0): boolean {
 export function singularityOffset(
   index: number,
   dir: LoopDirection,
-): { kind: SingularKind; at: number; length: number } | null {
-  const spec = SEGMENTS[segmentAt(index, dir)];
+): { kind: SingularKind; at: number; length: number; width: number } | null {
+  const seg = segmentAt(index, dir);
+  const spec = SEGMENTS[seg];
   if (!spec) return null;
+  const found = singularOn(seg);
+  if (!found) return null;
   const length = segmentLength(index, dir);
-  for (const kind of KINDS) {
-    const f = spec[kind];
-    if (f === undefined) continue;
-    return { kind, at: (dir === 'inner' ? f : 1 - f) * length, length };
-  }
+  const f = dir === 'inner' ? found.f : 1 - found.f;
+  return { kind: found.kind, at: f * length, length, width: found.width };
+}
+
+/**
+ * La singularité ponctuelle d'un tronçon, en fraction 内回り et en largeur.
+ *
+ * Le passage à niveau passe avant la rivière, et l'ordre ne se voit jamais :
+ * aucun tronçon ne porte les deux (tests/water).
+ */
+function singularOn(seg: number): { kind: SingularKind; f: number; width: number } | null {
+  const f = SEGMENTS[seg]?.crossing;
+  if (f !== undefined) return { kind: 'crossing', f, width: CROSSING_WIDTH };
+  const river = RIVER_OF.get(seg);
+  if (river) return { kind: 'river', f: river.fraction, width: river.width };
   return null;
 }
 
@@ -229,7 +255,7 @@ export function updateSingularity(index: number, dir: LoopDirection): void {
     const want = cityAnchor.s + found.at;
     if (found.kind !== singularity.kind || Math.abs(want - anchoredWant) > 1) {
       anchoredWant = want;
-      anchor(found.kind, want);
+      anchor(found.kind, want, found.width);
     }
   } else {
     retire();
@@ -256,15 +282,15 @@ function retire(): void {
   clearing.half = 0;
 }
 
-function anchor(kind: SingularKind, want: number): void {
+function anchor(kind: SingularKind, want: number, width: number): void {
   const street = streetNear(want);
   singularity.kind = kind;
-  singularity.w = WIDTH[kind];
+  singularity.w = width;
   singularity.s = street ? street.s : want;
   singularity.yaw = street ? Math.max(-YAW_MAX, Math.min(YAW_MAX, street.yaw)) : 0;
   singularity.epoch++;
   // Seule la rivière commande à la ville : une rue de dix mètres ne suffit pas à
-  // laisser passer une nappe d'eau de vingt-quatre, et le tissu doit s'ouvrir
+  // laisser passer les trente-neuf mètres du 日本橋川, et le tissu doit s'ouvrir
   // pour de bon. Le passage à niveau, lui, se contente de la rue qu'il trouve -
   // un passage à niveau EST une rue.
   if (kind === 'river') {

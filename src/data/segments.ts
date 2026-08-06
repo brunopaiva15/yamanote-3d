@@ -68,13 +68,6 @@ export interface Segment {
    */
   crossing?: number;
   /**
-   * Traversée de rivière, à cette fraction du tronçon (sens 内回り).
-   *
-   * La trouée la plus large de tout le parcours : rien ne se construit sur une
-   * rivière, et le tissu s'ouvre donc des deux côtés de la voie en même temps.
-   */
-  river?: number;
-  /**
    * L'autoroute urbaine (首都高) longe la voie sur ce tronçon.
    *
    * Ce n'est pas une singularité ponctuelle mais un COMPAGNON de route : le
@@ -94,10 +87,12 @@ export interface Segment {
 //   · 第二中里踏切 (segment 08) - LE passage à niveau, entre Komagome et
 //     Tabata. Le seul de la boucle, et l'un des derniers de tout le centre de
 //     Tokyo. Il tombe aux deux tiers du tronçon, du côté de Komagome.
-//   · 神田川 (01) - la Kanda, franchie juste au nord de Kanda, entre les
-//     viaducs de brique. La rivière que le Chūō longe et que la Yamanote coupe.
-//   · 渋谷川 (19) - la Shibuya, au sud de la gare, sous les viaducs.
-//   · 目黒川 (22) - la Meguro, entre Gotanda et Ōsaki.
+//   · LES RIVIÈRES ne sont plus ici. Elles y étaient, sous la forme de trois
+//     fractions saisies à la main - dont une, la 渋谷川 entre Shibuya et Ebisu,
+//     que la Yamanote ne franchit pas : la rivière longe la voie et s'en va
+//     vers l'est à Tengenji. Le relevé d'OpenStreetMap en donne six à ciel
+//     ouvert, avec leur largeur mesurée : voir src/data/water.ts, importé par
+//     scripts/geo/fetch-water.mjs.
 //   · 首都高 - l'autoroute urbaine longe la voie sur trois tronçons : la ligne 1
 //     上野線 au-dessus du 昭和通り entre Okachimachi et Ueno (03), la ligne 2
 //     目黒線 de Meguro à Gotanda (21), et la boucle centrale 都心環状線 le long du
@@ -107,7 +102,7 @@ export interface Segment {
 // rendu les retourne de lui-même en 外回り (systems/segmentEnv).
 export const SEGMENTS: Segment[] = [
   /* 00 Tokyo→Kanda             */ { kind: 'viaduct' },
-  /* 01 Kanda→Akihabara         */ { kind: 'viaduct', river: 0.24 },
+  /* 01 Kanda→Akihabara         */ { kind: 'viaduct' },
   /* 02 Akihabara→Okachimachi   */ { kind: 'viaduct' },
   /* 03 Okachimachi→Ueno        */ { kind: 'viaduct', expressway: true },
   /* 04 Ueno→Uguisudani         */ { kind: 'corridor', greenery: true },
@@ -125,10 +120,10 @@ export const SEGMENTS: Segment[] = [
   /* 16 Shinjuku→Yoyogi         */ { kind: 'corridor', covered: true, passing: 'commuter' },
   /* 17 Yoyogi→Harajuku         */ { kind: 'ground', greenery: true, passing: 'commuter' },
   /* 18 Harajuku→Shibuya        */ { kind: 'ground', greenery: true, passing: 'commuter' },
-  /* 19 Shibuya→Ebisu           */ { kind: 'viaduct', river: 0.18 },
+  /* 19 Shibuya→Ebisu           */ { kind: 'viaduct' },
   /* 20 Ebisu→Meguro            */ { kind: 'trench', bridges: 1 },
   /* 21 Meguro→Gotanda          */ { kind: 'trench', bridges: 1, opensAtEnd: true, expressway: true },
-  /* 22 Gotanda→Osaki           */ { kind: 'viaduct', river: 0.55 },
+  /* 22 Gotanda→Osaki           */ { kind: 'viaduct' },
   /* 23 Osaki→Shinagawa         */ { kind: 'corridor', depot: true, tracks: 3, passing: 'commuter' },
   /* 24 Shinagawa→Takanawa GW   */ { kind: 'corridor', tracks: 4, passing: 'commuter' },
   /* 25 Takanawa GW→Tamachi     */ { kind: 'corridor', tracks: 3, passing: 'commuter' },

@@ -47,6 +47,7 @@ import { directionStep, prevStation, wrapStation } from '../data/loop.ts';
 import type { LoopDirection } from '../data/platforms';
 import { runtime } from './runtime.ts';
 import { cityRelief } from './terrain.ts';
+import { WET, waterOn } from './water.ts';
 
 /** Longueur d'une cellule du ruban, le long de la voie (m). */
 export const CELL_LEN = 40;
@@ -140,6 +141,16 @@ const RANKS: Rank[] = [
   { x0: 40, x1: 66, n: 3, wMin: 16, wMax: 34, dMin: 15, dMax: 26, hMin: 9, hSpan: 52 },
 ];
 
+/**
+ * Milieu de chaque rang (m à l'axe) : le point où l'on demande s'il y a de
+ * l'eau.
+ *
+ * Le champ du relevé a une maille de quarante mètres, plus grosse que la bande
+ * d'un rang proche : le sonder au milieu ou à l'emplacement exact du sujet
+ * revient au même, et le milieu ne consomme pas de tirage.
+ */
+const RANK_MID = RANKS.map((r) => (r.x0 + r.x1) / 2);
+
 /** Trouées supplémentaires du premier rang : le ciel et le fond doivent passer. */
 const NEAR_EXTRA_GAP = 0.14;
 
@@ -176,6 +187,9 @@ const FAR_RANKS: Rank[] = [
 
 /** Plafond de hauteur de l'arrière-pays (m) : la plus haute tour de Shinjuku. */
 const FAR_H_MAX = 190;
+
+/** Milieu de chaque rang lointain (m à l'axe), pour le sondage d'eau. */
+const FAR_RANK_MID = FAR_RANKS.map((r) => (r.x0 + r.x1) / 2);
 
 export const FAR_CELL_CAPACITY = FAR_RANKS.reduce((a, r) => a + r.n, 0);
 
@@ -597,6 +611,17 @@ export function buildCell(
         cursor = Math.max(cursor + 1, clearing.s + clearing.half + CLEAR_MARGIN + r() * 3);
         continue;
       }
+      // Et rien ne se bâtit sur l'eau. Le champ d'OpenStreetMap porte ce que la
+      // trouée de rivière ne dit pas : les canaux de remblai de Kōnan et de
+      // Shibaura, que la voie longe au lieu de les couper, les douves du palais
+      // à Yūrakuchō, les bassins de la Sumida. Le rang est sondé en son MILIEU
+      // et non à l'emplacement tiré, pour que le tirage reste le même qu'avant
+      // l'eau - la maille du relevé fait quarante mètres, elle ne distingue pas
+      // les deux.
+      if (waterOn(mid, RANK_MID[rank], side) > WET) {
+        cursor += spanS;
+        continue;
+      }
       if (r() < gapChance) {
         cursor += spanS * (0.35 + r() * 0.5);
         continue;
@@ -722,6 +747,13 @@ export function buildFarCell(
       const yaw = gridAngleAt(cursor) + (r() * 2 - 1) * GRID_JITTER;
       const spanS = w * Math.abs(Math.cos(yaw)) + d * Math.abs(Math.sin(yaw));
 
+      // L'arrière-pays a plus besoin de cette règle que le bord de voie : c'est
+      // à cent et deux cents mètres que tombent les canaux de remblai de Kōnan
+      // et de Shibaura, et la baie elle-même quatre cents mètres plus loin.
+      if (waterOn(cursor + w / 2, FAR_RANK_MID[rank], side) > WET) {
+        cursor += spanS;
+        continue;
+      }
       if (r() < gapChance) {
         cursor += spanS * (0.4 + r() * 0.7);
         continue;

@@ -132,6 +132,25 @@ function lateralSign(): number {
 }
 
 /**
+ * Décalage latéral dans le repère de la BOUCLE (gauche des index croissants
+ * positive), à partir des coordonnées du ruban - `x` toujours positif, `side`
+ * le côté de la scène.
+ *
+ * Tous les champs relevés le long de la voie - relief, eau, littoral - sont
+ * rangés dans ce repère-là : c'est celui de la polyligne, qui ne dépend pas du
+ * sens de marche. La conversion est ici parce que c'est ici qu'on sait dans
+ * quel sens la rame parcourt la boucle.
+ */
+export function loopOffset(x: number, side: 1 | -1): number {
+  return side * x * lateralSign();
+}
+
+/** Le côté `side` de la scène est-il à gauche du sens des index croissants ? */
+export function loopLeft(side: 1 | -1): boolean {
+  return side * lateralSign() > 0;
+}
+
+/**
  * Abscisse de boucle du TRAIN, et cote du sol sous lui, tenues à jour une fois
  * par image.
  *
