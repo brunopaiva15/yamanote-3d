@@ -36,11 +36,11 @@
 // Seule la rivière, plus large qu'une rue, demande en plus une trouée imposée
 // (`clearing` de cityField).
 
-import { SEGMENTS, cruiseDuration, segmentAt } from '../data/segments.ts';
+import { SEGMENTS, segmentAt } from '../data/segments.ts';
 import type { LoopDirection } from '../data/platforms.ts';
 import { WATER_CROSSINGS, type WaterCrossing } from '../data/water.ts';
 import { cityAnchor, clearing, hashInt, streetNear } from './cityField.ts';
-import { journeyDistance } from './trainPhysics.ts';
+import { segmentLength } from './trainPhysics.ts';
 
 /** Les deux singularités ponctuelles de la boucle. */
 export type SingularKind = 'crossing' | 'river';
@@ -222,24 +222,6 @@ function singularOn(seg: number): { kind: SingularKind; f: number; width: number
 
 /** Dernière abscisse théorique ancrée : au mètre près, l'ancrage ne rejoue pas. */
 let anchoredWant = Number.NaN;
-
-/**
- * Longueurs de tronçon, mémorisées par durée de croisière.
- *
- * `journeyDistance` intègre six cents pas de profil de traction : c'est
- * dérisoire une fois, et déraisonnable soixante fois par seconde. Les trente
- * tronçons de la boucle n'ont que dix-huit durées de croisière distinctes.
- */
-const LENGTHS = new Map<number, number>();
-
-function segmentLength(index: number, dir: LoopDirection): number {
-  const cruise = cruiseDuration(index, dir);
-  const known = LENGTHS.get(cruise);
-  if (known !== undefined) return known;
-  const length = journeyDistance(cruise);
-  LENGTHS.set(cruise, length);
-  return length;
-}
 
 /**
  * À appeler une fois par frame, depuis `updateSegmentEnv`.

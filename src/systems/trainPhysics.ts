@@ -17,6 +17,8 @@
 // plus, donc Node exécute les deux tels quels - c'est ce qui rend le profil de
 // freinage testable sans harnais (tests/trainPhysics.test.ts).
 import { CONFIG, V_MAX } from '../data/config.ts';
+import { cruiseDuration } from '../data/segments.ts';
+import type { LoopDirection } from '../data/platforms.ts';
 import type { Phase } from '../store';
 
 /** Secondes immobiles en début de phase depart (desserrage des freins). */
@@ -183,6 +185,34 @@ export function journeyDistance(cruiseSec: number): number {
   integrateTrain(state, V_MAX, CONFIG.departTime - DEPART_HOLD + cruiseSec);
   integrateTrain(state, 0, CONFIG.brakeTime);
   return state.d;
+}
+
+/**
+ * Longueurs de tronçon, mémorisées par durée de croisière.
+ *
+ * `journeyDistance` intègre six cents pas de profil de traction : c'est
+ * dérisoire une fois, et déraisonnable soixante fois par seconde. Les trente
+ * tronçons de la boucle n'ont que dix-huit durées de croisière distinctes.
+ */
+const LENGTHS = new Map<number, number>();
+
+/**
+ * Longueur du tronçon qui MÈNE à `arrivalIndex`, dans ce sens (m).
+ *
+ * C'est la seule mesure d'inter-gare qui vaille pour l'odomètre : les tronçons
+ * du jeu sont plus longs que les vrais - le barème JR ne sert qu'à ce qui
+ * s'AFFICHE - et deux tronçons voisins vont du simple au quadruple, de cinq
+ * cents mètres entre Nippori et Nishi-Nippori à deux kilomètres entre Ōsaki et
+ * Shinagawa. Prendre l'un pour l'autre décale tout ce qui se repère en fraction
+ * de tronçon.
+ */
+export function segmentLength(arrivalIndex: number, dir: LoopDirection): number {
+  const cruise = cruiseDuration(arrivalIndex, dir);
+  const known = LENGTHS.get(cruise);
+  if (known !== undefined) return known;
+  const length = journeyDistance(cruise);
+  LENGTHS.set(cruise, length);
+  return length;
 }
 
 /** Vitesse cible de la phase courante (0 pendant le hold de départ). */

@@ -54,6 +54,7 @@ import {
 } from './corridor.ts';
 import { runtime } from './runtime.ts';
 import { cityGround } from './terrain.ts';
+import { segmentLength } from './trainPhysics.ts';
 import { WET, waterOn } from './water.ts';
 
 /** Longueur d'une cellule du ruban, le long de la voie (m). */
@@ -274,7 +275,18 @@ export const cityAnchor = {
   s: 0,
   /** Indice de station (0..29) posée en `s`. */
   index: 0,
-  /** Inter-gare mesuré (m). Valeur de départ : moyenne de la boucle. */
+  /**
+   * Longueur du tronçon EN COURS (m), telle que l'odomètre la parcourt.
+   *
+   * Elle vient de `segmentLength` - le profil de traction intégré - et non
+   * d'une mesure faite après coup. La différence n'est pas théorique : le
+   * décor se repère en FRACTION de tronçon, et mesurer le tronçon qu'on vient
+   * de finir pour s'en servir sur le suivant, c'est lire la fraction avec le
+   * mauvais mètre-étalon. Les tronçons de la boucle vont du simple au
+   * quadruple ; l'erreur atteignait quinze cents mètres d'abscisse à l'arrivée
+   * en gare, et dix mètres d'altitude - toute la ville montait au-dessus du
+   * sol en sortant de Shin-Ōkubo.
+   */
   span: 1150,
   /**
    * Pas d'index par inter-gare parcouru vers l'avant : +1 en 内回り, −1 en
@@ -298,20 +310,22 @@ export function updateCityAnchor(index: number, p: number, dir: LoopDirection): 
     anchorLastIndex = -1;
   }
   if (anchorLastIndex < 0) {
-    // Premier tick : on ne connaît pas encore l'inter-gare réel, on place la
-    // gare d'arrivée à la distance restante estimée.
+    // Premier tick, ou rentrée n'importe où sur la boucle : on connaît la
+    // longueur du tronçon en cours, on peut donc reculer jusqu'à la gare
+    // quittée au lieu de l'estimer.
     anchorLastIndex = index;
-    cityAnchor.index = index;
-    cityAnchor.s = runtime.distance + cityAnchor.span * (1 - p);
+    cityAnchor.span = segmentLength(index, dir);
+    cityAnchor.index = prevStation(index, dir);
+    cityAnchor.s = runtime.distance - cityAnchor.span * p;
     return;
   }
   if (index === anchorLastIndex) return;
   anchorLastIndex = index;
-  // L'index vient d'avancer : le train est physiquement à la gare qu'il quitte.
-  const travelled = runtime.distance - cityAnchor.s;
-  if (travelled > 400 && travelled < 3000) cityAnchor.span = travelled;
+  // L'index vient d'avancer : le train est physiquement à la gare qu'il quitte,
+  // et le tronçon qui commence a SA longueur - pas celle de celui qui finit.
   cityAnchor.index = prevStation(index, dir);
   cityAnchor.s = runtime.distance;
+  cityAnchor.span = segmentLength(index, dir);
 }
 
 /**
