@@ -55,7 +55,7 @@ import {
   cityAnchor,
   updateCityAnchor,
 } from '../../systems/cityField';
-import { cityRelief, updateTerrain } from '../../systems/terrain';
+import { cityGround, trackElevation, terrainEnabled, updateTerrain } from '../../systems/terrain';
 import { singularity } from '../../systems/singularity';
 import { GROUND_TILE, makeCityGroundTexture, makeSignageTexture } from '../../textures/city';
 import { makeCityMaterial } from './cityMaterial';
@@ -585,7 +585,15 @@ export function CityRibbon() {
     }
 
     // --- Élévation du tronçon, recul du monde, écartements latéraux ---
-    if (yRoot.current) yRoot.current.position.y = segEnv.cityY;
+    // Le bâti porte une altitude ORTHOMÉTRIQUE figée à l'écriture de la
+    // cellule. On ramène le datum « sol sous le train = 0 » ici, à chaque
+    // image : sans quoi la rue (relevée en direct) glisserait sous des pieds
+    // restés à la cote d'il y a deux cents mètres - et les immeubles
+    // flotterait dès que la voie grimpe, comme à Nippori.
+    if (yRoot.current) {
+      yRoot.current.position.y =
+        segEnv.cityY - (terrainEnabled() ? trackElevation() : 0);
+    }
     if (zRoot.current) {
       zRoot.current.position.z = runtime.distance - st.origin;
       // Le prototype PLATEAU pose une ville RÉELLE sur son tronçon : le ruban
@@ -618,13 +626,15 @@ export function CityRibbon() {
           ? x
           : x + side * push * underStation(z, stationOcclusion.z0, stationOcclusion.z1),
       );
-      // La rue épouse le relief. Sa coordonnée locale `x` se compte depuis le
-      // milieu de la nappe, posée à `GROUND_INNER + GROUND_SPAN / 2` de l'axe :
-      // la distance à la voie est donc cette pose plus l'abscisse locale. En
-      // `z`, la nappe ne défile pas - c'est sa texture qui coule - si bien que
-      // son z local EST le z de scène, et l'abscisse monde s'en déduit.
+      // La rue épouse le relief. Sa cote est ORTHOMÉTRIQUE, comme le bâti :
+      // le parent `yRoot` soustrait déjà `trackElevation()`, donc on n'y
+      // retranche plus `hereY` ici - sinon on compterait deux fois.
       const centre = GROUND_INNER + GROUND_SPAN / 2;
-      grounds[i].lift((z, x) => cityRelief(runtime.distance - z, centre + side * x, side));
+      grounds[i].lift((z, x) =>
+        terrainEnabled()
+          ? cityGround(runtime.distance - z, centre + side * x, side)
+          : 0,
+      );
     }
     built.groundTex.offset.y = runtime.distance / GROUND_TILE;
 

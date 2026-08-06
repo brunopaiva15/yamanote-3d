@@ -180,15 +180,35 @@ export function updateTerrain(
 }
 
 /**
+ * Altitude orthométrique du sol (m) aux coordonnées du ruban.
+ *
+ * Contrairement à `cityRelief`, cette cote ne dépend PAS de la position du
+ * train : un bâtiment écrit une fois dans l'anneau garde le même pied quand la
+ * voie monte ou descend sous lui. Le datum « sol sous le train = 0 » se
+ * bascule ensuite, à chaque image, sur le parent du ruban
+ * (`cityY − trackElevation()`), pour que rue, immeubles et arbres restent
+ * calés les uns sur les autres.
+ */
+export function cityGround(worldS: number, x: number, side: 1 | -1): number {
+  if (!enabled) return 0;
+  return groundAt(loopSOfWorld(worldS), side * x * lateralSign());
+}
+
+/**
  * Cote du sol de la ville par rapport à la voie (m), aux coordonnées du ruban.
  *
  * `worldS` est l'abscisse monde d'un bâtiment, `x` sa distance à l'axe (toujours
  * positive), `side` le côté de la scène. Zéro au droit du train : c'est une
  * DIFFÉRENCE, et c'est tout ce que l'œil peut lire depuis un siège.
+ *
+ * À réserver aux couches recalculées CHAQUE IMAGE (nappe d'eau, sondes). Pour
+ * le bâti et les arbres de l'anneau, préférer `cityGround` : une différence
+ * figée au moment où la cellule entre dans l'anneau se décale dès que
+ * `hereY` change, et les pieds flottent au-dessus de la rue.
  */
 export function cityRelief(worldS: number, x: number, side: 1 | -1): number {
   if (!enabled) return 0;
-  return groundAt(loopSOfWorld(worldS), side * x * lateralSign()) - hereY;
+  return cityGround(worldS, x, side) - hereY;
 }
 
 /** Altitude orthométrique du sol sous le train (m) : la cote de la voie. */
