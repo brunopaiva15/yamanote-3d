@@ -1125,6 +1125,8 @@ cellules de 40 m et engendre, pour chacune, un tissu de bâtiments à partir de
 son seul index monde. Le rendu n'en garde qu'un anneau glissant de treize
 cellules par côté - 520 m, au-delà de la portée de la brume - recyclé une
 cellule à la fois, soit une réécriture toutes les 1,6 s à vitesse de croisière.
+Un second anneau, à sa propre maille de 120 m, porte l'arrière-pays jusqu'à
+440 m (voir plus bas).
 Entre deux recyclages, plus rien ne bouge : le groupe entier recule d'un
 `runtime.distance` et les instances gardent une abscisse fixe.
 
@@ -1190,8 +1192,11 @@ entre dans un quartier, on le traverse, on en sort. À la frontière, les deux
 tissus s'entremêlent bâtiment par bâtiment sur ±90 m - une ville ne change pas
 de caractère sur une ligne.
 
-**Le ciel et l'horizon** tiennent en une passe (`three/city/SkyDome`) : un seul
-cylindre opaque, test de profondeur désactivé, dessiné avant tout le reste. Le
+**Le ciel et l'horizon** tiennent en une passe (`three/city/SkyDome`) : une seule
+sphère opaque *lue comme un cylindre* - l'UV est recalculé depuis la direction
+regardée -, test de profondeur désactivé, dessinée avant tout le reste. Le
+cylindre d'origine montrait son arête supérieure dès que le regard se levait ; la
+sphère n'a pas d'arête, et le calcul d'UV lui garde la parallaxe cylindrique. Le
 ciel était fait de trois cylindres transparents fondus, ce qui marchait tant que
 tout le décor était transparent et n'écrivait pas la profondeur ; un ruban
 opaque posé à deux cents mètres dans l'axe de la voie passerait maintenant
@@ -1260,10 +1265,203 @@ C'est le mélange qui fait le caractère, pas l'uniformité.
   du premier rang et multiplient les rez-de-chaussée commerçants ; les quartiers
   de tours, à l'inverse, n'ont pas d'échoppes en pied d'immeuble.
 
-Quatre familles, quatre `InstancedMesh` par côté : le générateur les entremêle
-dans un seul tampon, le rendu les répartit. Bosquets et croupes sont écrits dans
-un cube unité posé PAR LA BASE, ce qui rend leur matrice d'instance directement
-lisible en mètres.
+Chaque famille a son `InstancedMesh` par côté : le générateur les entremêle dans
+un seul tampon, le rendu les répartit. Bosquets, croupes et accessoires de
+toiture sont écrits dans un cube unité posé PAR LA BASE, ce qui rend leur
+matrice d'instance directement lisible en mètres.
+
+### La trame des rues ne suit pas la voie
+
+Tout était **parallèle aux rails** : la matrice de rotation de chaque instance
+restait l'identité, et une ville dont tous les pignons sont alignés sur la voie
+se lit comme un décor de train électrique. Aucune ville n'est bâtie comme ça, et
+Tokyo moins que toute autre - la Yamanote coupe en biais des trames qui ont
+chacune leur âge et leur orientation.
+
+`gridAngleAt(s)` donne l'angle de la trame à une abscisse : une valeur **hachée
+de l'index de quartier** (donc stable pour toujours), d'amplitude ±26°, plus un
+jeu de ±4° par bâtiment pour que deux voisins ne s'alignent pas au degré. La
+trame tourne lentement le long de la boucle au lieu de sauter d'une cellule à
+l'autre, et la **rue perpendiculaire tourne avec elle** - c'est la trouée qui
+prouve que la ville est de biais, pas les façades.
+
+Ça ne coûte rien : c'est la même matrice, composée avec un quaternion au lieu de
+l'identité. Le seul point technique est que le pas d'avancement du curseur de
+placement doit compter l'**emprise projetée** du bâtiment le long de la voie
+(`w·|cos yaw| + d·|sin yaw|`) et non sa largeur : sans quoi deux voisins tournés
+se chevauchent d'autant que la rotation leur donne.
+
+### L'arrière-pays
+
+La ville s'arrêtait à **soixante-six mètres**, et derrière il n'y avait que la
+silhouette peinte du ciel, à neuf cents mètres. Entre les deux, huit cents
+mètres de rien - un trou que la brume masquait justement en portant à deux cents
+mètres, c'est-à-dire en servant de mur.
+
+Deux mailles cohabitent maintenant dans le même `zRoot` :
+
+| anneau | maille | rangs | portée | hauteurs |
+|---|---|---|---|---|
+| proche | 40 m | 3 | 12 → 66 m | jusqu'à 61 m |
+| lointain | 120 m | 3 | 70 → 440 m | jusqu'à 190 m |
+
+À trois cents mètres on ne lit plus un îlot mais une **masse et une ligne de
+faîte** : une maille grossière tient donc l'arrière-pays entier pour quelques
+dizaines d'instances, et il ne porte **aucun accessoire** - ni acrotère, ni
+enseigne, ni réservoir. Le dernier rang court jusqu'à 440 m parce qu'un fond qui
+s'arrête net se lit comme une toile de fond, aussi loin soit-il.
+
+Le vrai arbitrage n'est pas la géométrie, c'est **la brume**. Elle passait de
+220 à **520 m × clarté** de jour, et son `near` de 30 à 45 m. La conséquence est
+assumée : la ville moyenne se voile moins qu'avant - ce qui est le comportement
+juste, un matin clair de janvier à Tokyo porte à des kilomètres, c'est de là
+qu'on voit le Fuji. Ce qui referme la vue, ce sont `season.clarity` et
+`weather.visibility`, déjà en place : sous l'averse ou dans la moiteur d'août, on
+retombe à cent mètres. Le plan lointain de la caméra passe de 260 à **1 400 m**,
+ce qui ne dégrade rien - la précision du tampon de profondeur est commandée par
+`near`, qui ne change pas.
+
+### Les toits, et les coursives
+
+La Yamanote court sur viaduc la moitié de la boucle : sept mètres au-dessus de la
+rue, la surface qu'on voit le plus n'est ni une façade ni une chaussée, c'est une
+**toiture**. Elle n'avait qu'un acrotère et, de loin en loin, un édicule en
+boîte - et une boîte sur une boîte ne se lit pas comme un toit habité.
+
+`three/city/roofKit` ajoute quatre familles, toutes en géométries fusionnées
+écrites dans un cube unité :
+
+- le **réservoir d'eau sur quatre pieds** (高置水槽), la silhouette la plus
+  reconnaissable d'un toit japonais ;
+- la **batterie de condenseurs** de climatisation, alignés ;
+- le **mât d'antenne**, avec son **feu rouge d'obstacle** émissif la nuit sur ce
+  qui dépasse quarante mètres ;
+- le **garde-corps de toiture** sur le bâti moyen.
+
+Les capacités sont serrées à trois ou quatre par cellule : la leçon des
+emplacements réservés qui se paient (plus bas) reste la règle.
+
+Et les **coursives**. Un immeuble d'habitation japonais n'a pas une façade de
+bureau : il a une galerie extérieure par niveau, un garde-corps continu, et du
+linge. C'est une seconde tuile de façade (`makeBalconyTexture`), choisie par
+instance via un attribut `aFacade` tiré d'une proportion `tissue.balcony` -
+forte sur le résidentiel aisé et les bas quartiers de temples, nulle dans les
+quartiers de tours. Porté **deux fois**, en GLSL et en TSL
+(`three/webgpu/impl/city`) : le mode Extraordinaire doit rester identique.
+
+### Les fils et la circulation
+
+Deux ajouts qui ne se remarquent que par leur absence.
+
+**Les poteaux et les fils** (`three/city/Utilities`) : un poteau tous les 26 m à
+10,4 m de l'axe, entre l'emprise ferroviaire et le premier rang, avec ses
+traverses, son transformateur, son luminaire, et **les fils qui pendent d'un
+poteau au suivant** - la chaînette de `three/catenary` se réutilise telle quelle.
+C'est le ciel encombré de câbles sans lequel aucune rue de Tokyo n'est crédible.
+
+**La circulation** (`three/city/Traffic`) : quelques véhicules par rue
+perpendiculaire, en travers des rangs, plus des véhicules à l'arrêt sur les
+parcelles ; phares et feux arrière émissifs la nuit. Une rue n'est visible que
+deux secondes à quatre-vingt-dix, et ça suffit largement - c'est ce qui fait
+qu'une ville est *habitée*. La logique de voie vit dans `systems/trafficLane`,
+séparée du rendu pour être vérifiable : une voiture qui roule à côté de sa
+chaussée est pire que pas de voiture du tout, et un test le garantit au
+centimètre contre la dalle que pose `buildCellProps`.
+
+### L'horizon vrai
+
+Le morceau « 1:1 ». Les repères lointains étaient des banques procédurales par
+gare : rien ne disait que le Skytree est au **nord-est** quand on est à Ueno.
+
+- `scripts/geo-loop.mjs` réutilise la géodésie du pipeline PLATEAU (projection
+  EPSG:6677, JGD2011 / CS IX) pour projeter en mètres les coordonnées réelles des
+  **trente milieux de quai** et de **seize repères**, et émet `src/data/tokyoGeo`.
+- `systems/tokyoBearing` transforme `(index, progression)` en une position et un
+  **cap vrai** sur la boucle, par interpolation Catmull-Rom entre gares ; le cap
+  est pris sur un bras de 420 m de part et d'autre, sinon il sautait de plusieurs
+  degrés à Ōsaki, où le tracé casse.
+- `three/city/FarSkyline` pose chaque repère à son **relèvement** et à sa
+  **taille angulaire** vraie, en silhouette plate sur une sphère centrée sur
+  l'œil, entre le ciel et le reste - `renderOrder` intermédiaire et `depthTest`
+  désactivé, l'idiome déjà établi par `SkyDome`. Les formes sont procédurales
+  (`skylineKit`) : aiguille, tour, tours jumelles, montagne, pont.
+- `tests/tokyoGeo.test.ts` verrouille les données contre le réel : le périmètre
+  de la boucle projetée doit retomber sur les 34,5 km de `data/segments`, et
+  chaque inter-gare sur la longueur déclarée de son tronçon.
+
+Le **Fuji** est à 94 km au sud-ouest, et il n'apparaît que quand
+`season.clarity × weather.visibility` est haut - c'est-à-dire l'hiver, par temps
+sec, exactement comme dans la vraie vie. Le voile atmosphérique de chaque repère
+suit sa distance : Yokohama à 27 km n'est jamais qu'une teinte, le Skytree à 5 km
+se découpe franchement. La nuit, les silhouettes ne se fondent pas dans du bleu
+sombre mais dans la **lueur urbaine** chaude, et les aiguilles gardent leur feu.
+
+Deux sondes pour juger tout ça sans quitter le navigateur : `__probeHorizon()`
+rapporte l'azimut relatif, la hauteur apparente et la teinte rendue de chaque
+repère ; `__probeNoCity()` retire le ruban urbain par les **calques** (et non par
+`visible`, qui serait réécrit à l'image suivante) le temps d'une capture.
+
+### Les singularités de la ligne
+
+Des faits vérifiables, écrits avec les tronçons dans `data/segments` plutôt que
+tirés au sort par le décor.
+
+- **Le 第二中里踏切**, entre Tabata et Komagome : *le* passage à niveau, le seul
+  de toute la Yamanote et l'un des derniers du centre de Tokyo. Une ligne qui
+  passe toutes les deux minutes ne peut pas s'offrir des barrières - celles-ci
+  restent baissées la plupart du temps, et c'est pour ça qu'on les voit fermées
+  quand la rame arrive. Feux battants, damier, lisse peinte.
+- **Trois rivières** : la 神田川 au nord de Kanda, la 渋谷川 au sud de Shibuya, la
+  目黒川 entre Gotanda et Ōsaki. Un chenal de béton entre deux murs, comme toutes
+  les rivières de Tokyo depuis les années soixante. C'est la trouée la plus large
+  du parcours : rien ne se construit sur une rivière, et le tissu s'ouvre des
+  deux côtés en même temps.
+- **L'autoroute urbaine** (首都高) sur trois tronçons - la ligne 1 上野線
+  au-dessus du 昭和通り, la ligne 2 目黒線 de Meguro à Gotanda, la boucle centrale
+  都心環状線 le long du viaduc de Hamamatsuchō. Ce n'est pas une singularité
+  ponctuelle mais un **compagnon de route** : un tablier de quinze mètres sur ses
+  piles, à 13,4 m au-dessus de la rue - donc au-dessus de tout le premier rang -
+  qui accompagne la rame une minute entière.
+
+Quatre décisions font tenir l'ensemble (`systems/singularity`) :
+
+1. **Une abscisse monde, pas une fraction de trajet.** Le décor est posé dans le
+   monde et c'est le train qui avance : une singularité qui vivrait en fraction
+   glisserait avec le temps - elle avancerait pendant le freinage et resterait
+   immobile pendant le hold de départ. Elle est donc ancrée une fois par trajet,
+   à l'abscisse de la gare quittée plus sa part de la longueur du tronçon, et ne
+   bouge plus. La longueur, elle, est la **distance réellement parcourue** :
+   `journeyDistance` intègre le profil de traction, et le résultat est mémorisé
+   par durée de croisière - trente tronçons, dix-huit durées distinctes.
+2. **Une rue existante.** Une rivière et un passage à niveau ont besoin d'une
+   trouée, et il y en a déjà une : la rue perpendiculaire, qui perce les trois
+   rangs au même endroit. On accroche donc l'ouvrage à la rue la plus proche de
+   son abscisse théorique - à quelques dizaines de mètres près, ce qui ne se
+   vérifie sur aucune carte - plutôt que d'ouvrir une brèche au milieu d'un îlot.
+   Il en hérite aussi la **trame du quartier**, bornée à 12° : suivie telle
+   quelle, un mur de berge de cent trente mètres balaierait cinquante mètres de
+   voie.
+3. **La rivière commande à la ville.** Une rue de dix mètres ne laisse pas passer
+   une nappe de vingt-quatre : `clearing` impose au générateur une trouée qu'il
+   ne négocie pas. Comme l'anneau porte deux cent vingt mètres d'avance et que la
+   Kanda tombe à cent soixante-dix mètres de Kanda, les cellules concernées ont
+   pu être engendrées **avant** qu'on sache qu'une rivière allait passer là : un
+   compteur d'ancrage les fait rebâtir sur place.
+4. **Le bord de voie s'écarte.** Un bosquet planté au milieu d'une chaussée, une
+   voiture qui roule sur l'eau, un poteau dans le chenal : chaque pourvoyeur
+   connaît l'abscisse monde de ce qu'il pose, et `inSingularity` lui suffit. La
+   clôture de ligne, elle, est un plan de quatre cents mètres à texture répétée -
+   y percer un trou demanderait un nuanceur, qu'il faudrait écrire deux fois. On
+   l'efface donc en entier, mais sur une fenêtre courte : une haie qui traverse
+   une chaussée se remarque immédiatement, une haie absente pendant deux secondes
+   ne se remarque pas.
+
+Le platelage du passage à niveau descend au **niveau du rail** par une
+contre-pente courte, et les rails reviennent par-dessus en relief : réglé à la
+cote de la rue, il devenait une planche jetée en travers de la voie qui masquait
+les rails et portait son ombre sur le ballast. Rien de tout cela n'est posé sur
+le prototype PLATEAU, où la ville est relevée sur le terrain : une rivière
+procédurale y couperait une rue réelle.
 
 ### L'emprise ferroviaire
 
@@ -1320,17 +1518,24 @@ remise à zéro automatique et cumule sur un nombre d'images connu.
 
 | palier | où | appels | triangles | instances |
 |---|---|---|---|---|
-| ultra | voie | 759 | 273 k | 1 612 |
-| ultra | quai | 634 | 167 k | 2 209 |
-| medium | voie | 274 | 131 k | 1 428 |
-| veryLow | voie | 225 | 94 k | 785 |
+| ultra | voie | 805 | 327 k | 2 406 |
+| ultra | quai | 756 | 190 k | 4 387 |
+| medium | voie | 290 | 178 k | 2 026 |
+| veryLow | voie | 247 | 104 k | 943 |
 
 Deux enseignements. D'abord, **le paysage n'est pas le poste dominant** : il pèse
-une quarantaine de maillages sur sept cent vingt visibles, et une cinquantaine
-de milliers de triangles sur deux cent soixante-treize mille - l'intérieur du
-wagon et ses passagers font le reste. Ensuite, **le grand levier du palier est
-l'ombre du soleil**, coupée à partir de `medium` : c'est elle qui fait passer de
-690 à 274 appels, en supprimant une seconde passe sur tout ce qui projette.
+une cinquantaine de maillages sur sept cent vingt visibles, et le wagon et ses
+passagers font le reste. Ensuite, **le grand levier du palier est l'ombre du
+soleil**, coupée à partir de `medium` : c'est elle qui fait passer de 730 à 290
+appels, en supprimant une seconde passe sur tout ce qui projette.
+
+Le budget fixé avant la troisième passe était de **850 appels et 360 k
+triangles** en ultra, pleine voie, contre 759 et 273 k avant elle. Il tient :
+805 appels et 327 k triangles pour un arrière-pays jusqu'à 440 m, les
+accessoires de toiture, les fils, la circulation, l'horizon géoréférencé et les
+trois singularités. Les deux paliers les plus bas ne reçoivent rien de neuf
+**sauf l'orientation de trame**, qui est gratuite : ni toits, ni balcons, ni
+fils, ni circulation, ni ouvrages, et un arrière-pays allégé.
 
 Trois corrections sont sorties de cette première mesure - la première fois que
 le paysage était mesuré plutôt que supposé :
@@ -1351,14 +1556,24 @@ le paysage était mesuré plutôt que supposé :
   barre qui balaie l'intérieur du wagon toutes les trente secondes est l'un des
   plus beaux effets de la course.
 
-Aux deux derniers paliers, acrotères, croupes et bosquets tombent - mais pas les
-enseignes : un quad par bâtiment, et c'est tout ce qui reste de reconnaissable à
-Akihabara ou Shin-Ōkubo une fois la nuit tombée.
+Aux deux derniers paliers, acrotères, croupes, toits et bosquets tombent - mais
+pas les enseignes : un quad par bâtiment, et c'est tout ce qui reste de
+reconnaissable à Akihabara ou Shin-Ōkubo une fois la nuit tombée. L'arrière-pays
+reste, réduit à cinq cellules : c'est un seul maillage par côté, et c'est lui qui
+donne au fond une ligne de faîte au lieu d'un aplat de brume.
 
 Pour regarder tout ça : `node scripts/scenery-shots.mjs /tmp/decor` se cale au
-milieu d'un inter-gare, vise par une baie et capture, de jour comme de nuit. La
-sonde de gare, elle, se pose à l'arrêt - là où le quai masque justement tout le
-paysage.
+milieu d'un inter-gare, vise par une baie et capture, de jour comme de nuit -
+puis recommence **sans la caisse** (`__probeBare`), parce qu'on ne juge pas une
+ligne de toits à travers un montant de fenêtre. La sonde de gare, elle, se pose à
+l'arrêt - là où le quai masque justement tout le paysage.
+
+Deux pièges de capture, appris à ce prix. D'abord, l'attente se compte en
+**images rendues** et non en millisecondes : sous SwiftShader une image coûte
+près d'une seconde, et une attente en temps laissait photographier l'état de la
+prise précédente. Ensuite, il faut pouvoir **retenir la rame** (`__probeHold`) :
+une seconde, c'est vingt-cinq mètres de voie, et un ouvrage cadré à vingt mètres
+est derrière le train avant que la capture soit prise.
 
 ### Ville géoréférencée (prototype PLATEAU)
 
