@@ -23,7 +23,7 @@
 //   node scripts/plateau/fetch-route.mjs --overpass      # OSM (réseau requis)
 //   node scripts/plateau/fetch-route.mjs --out <chemin>
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { PLATEAU_CONFIG } from './config.mjs';
 import { makeProjector, geodesicDistance } from './lib/geo.mjs';
@@ -31,6 +31,7 @@ import { PipelineError, createReporter, runMain } from './lib/log.mjs';
 
 const PROTO = PLATEAU_CONFIG.prototype;
 const DEFAULT_OUT = join(PLATEAU_CONFIG.paths.geo, `${PROTO.name}.geojson`);
+const LOOP_FILE = join(PLATEAU_CONFIG.paths.geo, 'yamanote-loop.geojson');
 
 /** Repères des deux gares (JGD2011, degrés décimaux) - voir config.mjs. */
 export const STATION_ANCHORS = PROTO.anchors;
@@ -254,6 +255,14 @@ const OSM_SOURCE = {
   approximate: false,
 };
 
+const LOOP_SOURCE = {
+  source: 'OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)',
+  license: 'ODbL 1.0',
+  attribution: '© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright',
+  approximate: false,
+  note: 'Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).',
+};
+
 const APPROX_SOURCE = {
   source: 'Approximation géométrique (arc de cercle entre les deux gares)',
   license: 'CC0 - produit par ce dépôt, ne contient aucune donnée tierce',
@@ -262,23 +271,83 @@ const APPROX_SOURCE = {
   note:
     `Tracé APPROCHÉ, pas un relevé : arc calé sur les coordonnées publiées des quais ` +
     `${PROTO.from} et ${PROTO.to}, flèche de ${Math.abs(PROTO.sagittaMeters)} m. ` +
-    `Régénérer avec --overpass pour obtenir la géométrie OSM réelle (ODbL).`,
+    `Par défaut on découpe yamanote-loop.geojson ; --approx force cet arc ; ` +
+    `--overpass interroge Overpass.`,
 };
+
+/**
+ * Découpe la polyligne réelle de la boucle (chantier 1) entre les deux gares.
+ *
+ * C'est le défaut : plus besoin d'Overpass pour avoir le vrai tracé, et les
+ * trente tronçons de PROTOTYPE_SEGMENTS héritent du même axe.
+ */
+export function buildFromLoop() {
+  if (!existsSync(LOOP_FILE)) {
+    throw new PipelineError(
+      `data/geo/yamanote-loop.geojson introuvable.`,
+      'Lancez « npm run geo:loop » ou passez --approx / --overpass.',
+    );
+  }
+  const doc = JSON.parse(readFileSync(LOOP_FILE, 'utf8'));
+  const ring = doc.features[0].geometry.coordinates; // fermé : dernier = premier
+  const open = ring.slice(0, -1);
+  const fromSt = doc.stations.find((s) => s.index === PROTO.segment);
+  const toSt = doc.stations.find((s) => s.index === PROTO.arrivalStation);
+  if (!fromSt || !toSt) {
+    throw new PipelineError(
+      `Gares ${PROTO.segment}→${PROTO.arrivalStation} absentes de yamanote-loop.geojson.`,
+    );
+  }
+  let i0 = fromSt.vertex;
+  let i1 = toSt.vertex;
+  const slice = [];
+  // Sens 内回り : index JY croissant le long de la polyligne.
+  let i = i0;
+  for (;;) {
+    const [lon, lat] = open[i];
+    slice.push([lon, lat]);
+    if (i === i1) break;
+    i = (i + 1) % open.length;
+    if (slice.length > open.length + 2) {
+      throw new PipelineError(`Découpe de boucle infinie sur ${PROTO.name}.`);
+    }
+  }
+  if (slice.length < 2) {
+    throw new PipelineError(`Tronçon ${PROTO.name} vide après découpe de la boucle.`);
+  }
+  return slice.map(([lon, lat], idx) => {
+    const t = idx / (slice.length - 1);
+    const alt = RAIL_ELEVATION.start + (RAIL_ELEVATION.end - RAIL_ELEVATION.start) * t;
+    return [lon, lat, Math.round(alt * 100) / 100];
+  });
+}
 
 await runMain(async () => {
   const args = process.argv.slice(2);
   const useOverpass = args.includes('--overpass');
+  const useApprox = args.includes('--approx');
   const outIdx = args.indexOf('--out');
   const out = outIdx >= 0 ? args[outIdx + 1] : DEFAULT_OUT;
   const reporter = createReporter('fetch-route');
 
-  const coordinates = useOverpass ? await fetchFromOverpass(reporter) : buildApproximateAlignment();
-  const fc = makeFeatureCollection(coordinates, useOverpass ? OSM_SOURCE : APPROX_SOURCE);
+  let coordinates;
+  let source;
+  if (useOverpass) {
+    coordinates = await fetchFromOverpass(reporter);
+    source = OSM_SOURCE;
+  } else if (useApprox) {
+    coordinates = buildApproximateAlignment();
+    source = APPROX_SOURCE;
+  } else {
+    coordinates = buildFromLoop();
+    source = LOOP_SOURCE;
+  }
+  const fc = makeFeatureCollection(coordinates, source);
 
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, `${JSON.stringify(fc, null, 2)}\n`);
   reporter.info(
     `${coordinates.length} points, ${fc.features[0].properties.lengthMeters} m → ${out}` +
-      (useOverpass ? ' (OSM / ODbL)' : ' (approché)'),
+      (useOverpass ? ' (OSM / Overpass)' : useApprox ? ' (approché)' : ' (yamanote-loop)'),
   );
 });

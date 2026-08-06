@@ -14,8 +14,27 @@
 
 import * as THREE from 'three';
 import { MeshBasicNodeMaterial } from 'three/webgpu';
-import { Fn, float, mix, smoothstep, step, texture, uniform, uv, vec2, vec3 } from 'three/tsl';
+import {
+  Fn,
+  float,
+  mix,
+  positionLocal,
+  smoothstep,
+  step,
+  texture,
+  uniform,
+  vec2,
+  vec3,
+} from 'three/tsl';
 import type { SkyTextures, SkyUniforms } from '../kit';
+
+/**
+ * Rayon et hauteur du cylindre de RÉFÉRENCE du ciel : les mêmes que dans
+ * three/city/SkyDome, et pour la même raison - le ciel est une voûte, mais son
+ * dégradé se lit comme un cylindre.
+ */
+const R = 100;
+const HEIGHT = 82;
 
 export function makeSkyMaterial(tex: SkyTextures): {
   material: THREE.Material;
@@ -52,7 +71,17 @@ export function makeSkyMaterial(tex: SkyTextures): {
   material.fog = false;
 
   material.colorNode = Fn(() => {
-    const suv = uv();
+    // Direction → coordonnées du ciel de référence : hauteur sur un cylindre de
+    // rayon R, saturée, et enroulement identique à celui d'un CylinderGeometry
+    // pour que le défilement de la silhouette garde son sens.
+    const dir = positionLocal;
+    const horiz = dir.xz.length().max(0.001);
+    const yEq = dir.y.mul(float(R).div(horiz));
+    const suv = vec2(
+      // `atan` à deux arguments EST atan2, en TSL comme en GLSL.
+      dir.x.atan(dir.z).mul(0.15915494),
+      yEq.add(HEIGHT / 2).div(HEIGHT).clamp(0, 1),
+    ).toVar();
     const col = vec3(
       uDay
         .sample(suv)

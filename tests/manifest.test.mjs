@@ -148,8 +148,13 @@ test('la table des tronçons est cohérente', () => {
       assert.ok(a.lon > 139.6 && a.lon < 139.85, `${id}.${end} : longitude ${a.lon} hors de Tokyo`);
       assert.ok(a.lat > 35.5 && a.lat < 35.85, `${id}.${end} : latitude ${a.lat} hors de Tokyo`);
     }
-    // Viaduc ⇒ rail au-dessus de la rue ; tranchée ⇒ en dessous.
-    assert.notEqual(seg.railAboveGround, 0, `${id} : railAboveGround doit être signé`);
+    // Viaduc ⇒ rail au-dessus de la rue ; tranchée ⇒ en dessous ; sol /
+    // corridor ⇒ ~0 (la voie est au niveau de la rue).
+    assert.ok(Number.isFinite(seg.railAboveGround), `${id} : railAboveGround manquant`);
+    if (Math.abs(seg.railAboveGround) >= 0.5) {
+      // Signé dès qu'il y a un dénivelé affirmé.
+      assert.notEqual(seg.railAboveGround, 0, `${id} : railAboveGround doit être signé`);
+    }
   }
 });
 

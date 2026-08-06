@@ -65,14 +65,14 @@ export const plateauRuntime = {
 /**
  * Le prototype est-il actif pour ce tronçon, dans ce sens ?
  *
- * 内回り SEULEMENT. Le tracé exporté (`route.json`) est une polyligne orientée,
- * de Shibuya vers Ebisu : la parcourir en 外回り demanderait de l'inverser, et
- * avec elle l'ordre des chunks et l'origine des distances. Tant que le monde
- * géoréférencé est un prototype sur un seul tronçon, le décor procédural -
- * lui, symétrique - reprend la main dans l'autre sens.
+ * Les deux sens. Le tracé exporté (`route.json`) est une polyligne orientée
+ * (内回り) : en 外回り, PlateauWorld parcourt la même polyligne à l'envers
+ * (progression `1 − t`), ce qui évite de dupliquer les chunks. Tant que le
+ * monde géoréférencé ne couvre qu'un tronçon, le décor procédural reprend la
+ * main partout ailleurs.
  */
-export function plateauCoversSegment(segment: number, dir: LoopDirection): boolean {
-  return plateauEnabled() && dir === 'inner' && segment === PLATEAU_SEGMENT;
+export function plateauCoversSegment(segment: number, _dir: LoopDirection): boolean {
+  return plateauEnabled() && segment === PLATEAU_SEGMENT;
 }
 
 /**
@@ -107,11 +107,15 @@ export const PLATEAU_ENTRY_STATION = (PLATEAU_SEGMENT + 1) % 30; // Ebisu (20)
  * une heure de trajet pour atteindre le tronçon couvert. Le paramètre fait
  * donc les deux choses à la fois - allumer le prototype ET s'y rendre.
  *
+ * En 内回り on arrive à Ebisu (PLATEAU_ENTRY_STATION) ; en 外回り on arrive à
+ * Shibuya (PLATEAU_SEGMENT), pour que `segmentAt` tombe sur le même tronçon.
+ *
  * Renvoie `undefined` dès que le paramètre est absent : le boarding normal
  * (gare tirée au sort, ou choisie dans le menu) n'est jamais touché.
  */
-export function plateauEntryStation(): number | undefined {
-  return queryFlag() === true ? PLATEAU_ENTRY_STATION : undefined;
+export function plateauEntryStation(dir: LoopDirection = 'inner'): number | undefined {
+  if (queryFlag() !== true) return undefined;
+  return dir === 'outer' ? PLATEAU_SEGMENT : PLATEAU_ENTRY_STATION;
 }
 
 function queryFlag(): boolean | null {

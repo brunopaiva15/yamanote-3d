@@ -16,7 +16,9 @@
 // Extension explicite : `data/config` n'a aucune dépendance et ce module non
 // plus, donc Node exécute les deux tels quels - c'est ce qui rend le profil de
 // freinage testable sans harnais (tests/trainPhysics.test.ts).
-import { V_MAX } from '../data/config.ts';
+import { CONFIG, V_MAX } from '../data/config.ts';
+import { cruiseDuration } from '../data/segments.ts';
+import type { LoopDirection } from '../data/platforms.ts';
 import type { Phase } from '../store';
 
 /** Secondes immobiles en début de phase depart (desserrage des freins). */
@@ -157,6 +159,60 @@ export function stopDistance(v: number, a: number): number {
   const state: TrainState = { v, a, d: 0 };
   for (let i = 0; i < 3000 && state.v > 1e-3; i++) stepTrain(state, 0, 0.05);
   return state.d;
+}
+
+/**
+ * Longueur d'un trajet inter-gares (m), pour une croisière de `cruiseSec`.
+ *
+ * C'est la MESURE du tronçon, telle que le train la parcourt : depart (hold
+ * compris), croisière, freinage. Elle vaut ce que `runtime.distance` aura
+ * gagné d'une gare à la suivante, et elle est déterministe - le profil de
+ * traction ne dépend de rien d'autre que du temps.
+ *
+ * Un arrêt subi en pleine voie ne la fausse pas, et c'est voulu : pendant une
+ * urgence le cycle avance le chrono de phase au prorata de la vitesse
+ * (`stationCycle`), si bien que la distance parcourue par seconde de chrono
+ * reste V_MAX. Ce que l'immobilisation coûte en temps, elle ne le coûte pas en
+ * mètres.
+ *
+ * De là on sait poser une singularité de la ligne à sa vraie place : une
+ * rivière aux 24 % du tronçon Kanda→Akihabara est à 24 % de CETTE longueur
+ * après le départ (voir systems/singularity).
+ */
+export function journeyDistance(cruiseSec: number): number {
+  const state: TrainState = { v: 0, a: 0, d: 0 };
+  integrateTrain(state, 0, DEPART_HOLD);
+  integrateTrain(state, V_MAX, CONFIG.departTime - DEPART_HOLD + cruiseSec);
+  integrateTrain(state, 0, CONFIG.brakeTime);
+  return state.d;
+}
+
+/**
+ * Longueurs de tronçon, mémorisées par durée de croisière.
+ *
+ * `journeyDistance` intègre six cents pas de profil de traction : c'est
+ * dérisoire une fois, et déraisonnable soixante fois par seconde. Les trente
+ * tronçons de la boucle n'ont que dix-huit durées de croisière distinctes.
+ */
+const LENGTHS = new Map<number, number>();
+
+/**
+ * Longueur du tronçon qui MÈNE à `arrivalIndex`, dans ce sens (m).
+ *
+ * C'est la seule mesure d'inter-gare qui vaille pour l'odomètre : les tronçons
+ * du jeu sont plus longs que les vrais - le barème JR ne sert qu'à ce qui
+ * s'AFFICHE - et deux tronçons voisins vont du simple au quadruple, de cinq
+ * cents mètres entre Nippori et Nishi-Nippori à deux kilomètres entre Ōsaki et
+ * Shinagawa. Prendre l'un pour l'autre décale tout ce qui se repère en fraction
+ * de tronçon.
+ */
+export function segmentLength(arrivalIndex: number, dir: LoopDirection): number {
+  const cruise = cruiseDuration(arrivalIndex, dir);
+  const known = LENGTHS.get(cruise);
+  if (known !== undefined) return known;
+  const length = journeyDistance(cruise);
+  LENGTHS.set(cruise, length);
+  return length;
 }
 
 /** Vitesse cible de la phase courante (0 pendant le hold de départ). */

@@ -107,6 +107,73 @@ export function makeFacadeTexture(): THREE.DataTexture {
 }
 
 /**
+ * Façade de logement collectif - la マンション, et son trait décisif : la
+ * COURSIVE EXTÉRIEURE.
+ *
+ * C'est la différence la plus visible entre une rue d'habitation japonaise et
+ * une rue d'habitation occidentale, et elle manquait entièrement : tout le
+ * ruban portait la même façade de bureau à meneaux, du bâti de rapport de
+ * Nishi-Nippori aux tours de Shinjuku. Or ce qu'on longe pendant les deux tiers
+ * de la boucle, ce sont des logements, et un logement japonais se dessert par
+ * l'extérieur : un balcon filant par niveau, son garde-corps, sa main
+ * courante, et le nez de dalle qui souligne chaque étage d'une ligne franche.
+ *
+ * Même trame que la façade courante - quatre travées de trois mètres sur quatre
+ * niveaux, douze mètres de côté -, pour que les deux se substituent sans que
+ * rien d'autre ne change. Une travée est un LOGEMENT : sa baie coulissante
+ * occupe toute sa largeur, et le garde-corps en cache le bas. De loin en loin,
+ * du linge : c'est ce qui distingue un immeuble habité d'un immeuble dessiné.
+ */
+export function makeBalconyTexture(): THREE.DataTexture {
+  const S = 256;
+  const CELL = S / 4; // 64 px = 3 m
+  const d = new Uint8Array(S * S * 4);
+  const r = rng(0xba1c07);
+  // Le linge : trois cotons délavés, et pas un de plus - au-delà, une façade
+  // se lit comme un pavoisement.
+  const LINEN = [
+    [214, 226, 232],
+    [226, 202, 196],
+    [206, 214, 198],
+  ];
+
+  rect(d, S, S, 0, 0, S, S, 226, 222, 214, 0);
+  for (let fy = 0; fy < 4; fy++) {
+    const y = fy * CELL;
+    // Fond de loggia : en retrait, donc dans l'ombre. C'est ce contraste-là qui
+    // creuse la coursive - sans lui, le garde-corps se lit comme un bandeau
+    // peint sur un mur plat.
+    rect(d, S, S, 0, y + 7, S, 50, 170, 167, 160, 0);
+    for (let fx = 0; fx < 4; fx++) {
+      const x = fx * CELL;
+      // Baie coulissante toute largeur : un logement, pas un bureau.
+      const lit = 26 + Math.floor(r() * 229);
+      rect(d, S, S, x + 8, y + 9, 48, 46, 146, 164, 186, lit);
+      // Cloison séparative entre deux logements, en saillie franche.
+      rect(d, S, S, x, y + 7, 8, 50, 208, 204, 196, 0);
+    }
+    // Garde-corps : barreaux serrés sur le tiers bas. Ils écrasent l'alpha du
+    // vitrage qu'ils couvrent, et c'est juste - une coursive ne laisse voir la
+    // lumière que par le haut de la baie.
+    for (let px = 3; px < S; px += 7) {
+      rect(d, S, S, px, y + 8, 3, 24, 212, 209, 202, 0);
+    }
+    // Main courante, puis nez de dalle : les deux lignes horizontales qui
+    // donnent son échelle à l'immeuble et son rythme à la rue.
+    rect(d, S, S, 0, y + 31, S, 4, 228, 225, 218, 0);
+    rect(d, S, S, 0, y, S, 7, 234, 231, 224, 0);
+    rect(d, S, S, 0, y + 57, S, 7, 152, 150, 144, 0); // sous-face de la dalle
+    // Le linge, une travée sur trois environ.
+    for (let fx = 0; fx < 4; fx++) {
+      if (r() > 0.34) continue;
+      const c = LINEN[Math.floor(r() * LINEN.length) % LINEN.length];
+      rect(d, S, S, fx * CELL + 14 + Math.floor(r() * 24), y + 11, 11, 19, c[0], c[1], c[2], 0);
+    }
+  }
+  return toTexture(d, S, S);
+}
+
+/**
  * Toiture vue de trois quarts : la Yamanote court sur viaduc la moitié de la
  * boucle, on regarde donc des toits, pas seulement des façades. Étanchéité
  * grise, joints de lés, blocs techniques et un réservoir clair.

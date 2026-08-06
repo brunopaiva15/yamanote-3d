@@ -1,0 +1,74 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-ikebukuro-mejiro",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "line": "JR山手線 / Yamanote Line",
+        "from": "Ikebukuro (JY13)",
+        "to": "Mejiro (JY14)",
+        "segment": 12,
+        "direction": "inner (内回り)",
+        "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
+        "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
+        "license": "ODbL 1.0",
+        "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
+        "approximate": false,
+        "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
+        "lengthMeters": 1085.1,
+        "generatedBy": "scripts/plateau/fetch-route.mjs"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.710986,
+            35.730244,
+            64.1
+          ],
+          [
+            139.710565,
+            35.729411,
+            63.85
+          ],
+          [
+            139.709889,
+            35.727712,
+            63.6
+          ],
+          [
+            139.70974,
+            35.727406,
+            63.35
+          ],
+          [
+            139.708861,
+            35.725685,
+            63.1
+          ],
+          [
+            139.708251,
+            35.724646,
+            62.85
+          ],
+          [
+            139.707138,
+            35.722506,
+            62.6
+          ],
+          [
+            139.706803,
+            35.721852,
+            62.35
+          ],
+          [
+            139.706516,
+            35.721178,
+            62.1
+          ]
+        ]
+      }
+    }
+  ]
+}

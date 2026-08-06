@@ -1,0 +1,74 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-hamamatsucho-shimbashi",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "line": "JR山手線 / Yamanote Line",
+        "from": "Hamamatsucho (JY28)",
+        "to": "Shimbashi (JY29)",
+        "segment": 27,
+        "direction": "inner (内回り)",
+        "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
+        "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
+        "license": "ODbL 1.0",
+        "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
+        "approximate": false,
+        "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
+        "lengthMeters": 1242.2,
+        "generatedBy": "scripts/plateau/fetch-route.mjs"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.757036,
+            35.655114,
+            47.9
+          ],
+          [
+            139.757581,
+            35.657146,
+            47.86
+          ],
+          [
+            139.758362,
+            35.660356,
+            47.83
+          ],
+          [
+            139.75852,
+            35.661303,
+            47.79
+          ],
+          [
+            139.758571,
+            35.661944,
+            47.75
+          ],
+          [
+            139.758574,
+            35.662631,
+            47.71
+          ],
+          [
+            139.758536,
+            35.663283,
+            47.68
+          ],
+          [
+            139.758245,
+            35.665362,
+            47.64
+          ],
+          [
+            139.758087,
+            35.666164,
+            47.6
+          ]
+        ]
+      }
+    }
+  ]
+}

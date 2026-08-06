@@ -23,11 +23,12 @@ export async function prepareGame(
     // L'expérience reste jouable sans audio.
   }
 
-  const entryStation = plateauEntryStation();
+  const entryStation = plateauEntryStation(direction ?? 'inner');
   if (entryStation !== undefined) {
+    const dir = direction ?? 'inner';
     for (let attempt = 0; attempt < 32; attempt++) {
-      randomizeEntry(entryStation, 'inner');
-      if (segmentAt(useStore.getState().index, 'inner') === PLATEAU_SEGMENT) break;
+      randomizeEntry(entryStation, dir);
+      if (segmentAt(useStore.getState().index, dir) === PLATEAU_SEGMENT) break;
     }
   } else {
     randomizeEntry(stationIndex, direction);

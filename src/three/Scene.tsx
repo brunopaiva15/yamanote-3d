@@ -311,10 +311,16 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
         mixColor(scene.fog.color, w, FOG_COLORS)
           .lerp(tint.current, 0.24 * (1 - w.night))
           .lerp(overcastTone, 0.55 * overcast * (1 - 0.5 * w.night));
-        // Far élargi : la ville vue à travers les baies en regardant le fond
-        // du wagon est beaucoup plus loin que la distance latérale pure.
-        scene.fog.near = (30 * w.day + 22 * w.golden + 16 * w.night) * clarity;
-        scene.fog.far = (220 * w.day + 170 * w.golden + 150 * w.night) * clarity;
+        // Portée réelle du regard, et non portée du décor. Elle valait 220 m de
+        // jour du temps où la ville s'arrêtait à soixante-six mètres : tout ce
+        // qui était derrière n'existant pas, la brume servait de mur, et le
+        // paysage se fermait à deux cents mètres même par un ciel de janvier.
+        // Or un matin clair de Tokyo porte à des kilomètres - c'est là qu'on
+        // voit le Fuji depuis les tours - et c'est SEULEMENT le temps qu'il
+        // fait qui referme la vue : sous l'averse, la ville s'arrête à cent
+        // mètres, et `weather.visibility` s'en charge déjà.
+        scene.fog.near = (45 * w.day + 32 * w.golden + 22 * w.night) * clarity;
+        scene.fog.far = (520 * w.day + 400 * w.golden + 320 * w.night) * clarity;
       }
       if (scene.background instanceof THREE.Color) {
         mixColor(tmp.current, w, BG_COLORS)
@@ -493,7 +499,7 @@ export function Scene() {
   return (
     <>
       <color attach="background" args={['#bcdaee']} />
-      <fog attach="fog" args={['#d6e8f2', 30, 220]} />
+      <fog attach="fog" args={['#d6e8f2', 45, 520]} />
       <AdaptiveDpr level={perfLevel} />
       <EnvironmentMap />
       <ShadowFlags />

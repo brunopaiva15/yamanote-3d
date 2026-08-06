@@ -1,0 +1,39 @@
+{
+ "_": "Corrections de lecture faites à l'oreille, appliquées PAR-DESSUS la table générée par lectures.py, qui elle est réécrite en entier à chaque régénération. Format : \"texte source\": [katakana, hiragana].",
+ "_exemple": [
+  "カタカナ",
+  "ひらがな"
+ ],
+ "お乗換です": [
+  "お乗り換えです",
+  "お乗り換えです"
+ ],
+ "_お乗換です": "Rendu en katakana (オノリカエデス) le modèle l'étirait sans qu'aucun resserrage ne le sauve. On repasse à l'écriture mixte : les okurigana り et え ancrent le mot comme japonais, donc le risque de lecture chinoise qui justifiait les kana ne se pose pas ici, contrairement à un 渋谷 tout nu.",
+ "_京浜東北線_essai": "Essayé en kanji, RETIRÉ : le modèle l'a dit en chinois. Le risque était annoncé - cinq kanji d'affilée sans un seul okurigana pour ancrer la langue, c'est le cas même qui avait motivé le passage aux kana. La graphie mixte marche pour お乗り換えです parce que ses り et え tranchent ; un nom propre tout en kanji, non.",
+ "お出口は右側です": [
+  "オデグチワ、ミギガワデス",
+  "おでぐちわ、みぎがわです"
+ ],
+ "お出口は左側です": [
+  "オデグチワ、ヒダリガワデス",
+  "おでぐちわ、ひだりがわです"
+ ],
+ "_お出口は": "Virgule ajoutée après 「お出口は」 : la prise réelle y marque un creux de 80 ms à 0,75 s du début du segment, soit pile à cette frontière. Le segment reste UN fragment - le couper en deux coûtait 19 % de longueur, chaque moitié payant son attaque - donc la pause est demandée au modèle, à l'intérieur.",
+ "上野": [
+  "、ウエノ",
+  "、うえの"
+ ],
+ "上野・池袋方面ゆきです": [
+  "、ウエノ、イケブクロホウメンユキデス",
+  "、うえの、いけぶくろほうめんゆきです"
+ ],
+ "上野・東京方面ゆきです": [
+  "、ウエノ、トウキョウホウメンユキデス",
+  "、うえの、とうきょうほうめんゆきです"
+ ],
+ "運転再開まで": [
+  "、ウンテンサイカイマデ",
+  "、うんてんさいかいまで"
+ ],
+ "_ウ_initial": "Virgule EN TÊTE sur les fragments commençant par ウ. Mesuré : les quatre seuls fragments dont la première trame dépasse -12 dB sous la crête commencent tous par ウ, quand la médiane du corpus est à -67 dB. Le modèle escamote cette attaque - ウ est la voyelle la plus faible du japonais. La virgule initiale lui donne un appui ; le silence qu'elle produit est ôté au rognage, donc elle ne coûte rien."
+}

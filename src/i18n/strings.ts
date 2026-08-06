@@ -256,6 +256,32 @@ export interface Strings {
   };
 
   /**
+   * La qualité du SON, qui n'a rien à voir avec celle de l'image.
+   *
+   * Elle ne change ni ce qu'on entend ni quand : elle change ce qu'il en coûte
+   * de le calculer. `auto` mesure la machine et descend d'elle-même au premier
+   * craquement - c'est le bon réglage pour tout le monde, et le libellé doit le
+   * dire. Les trois autres sont là pour qui veut trancher : forcer la
+   * spatialisation complète sur une bonne machine, ou forcer le mode le plus
+   * sûr sans attendre qu'un craquement l'ait prouvé.
+   *
+   * `note` est la seule chose vraiment utile à savoir : ce choix-là ne prend
+   * effet qu'au prochain embarquement, parce que la taille du tampon de sortie
+   * se fige à l'ouverture du contexte audio.
+   */
+  audioQuality: {
+    label: string;
+    levels: {
+      auto: string;
+      full: string;
+      reduced: string;
+      minimal: string;
+    };
+    note: string;
+    lowered: string;
+  };
+
+  /**
    * Quand la toile 3D n'a pas démarré du tout : le navigateur a refusé le
    * contexte WebGL, on a remonté une toile neuve autant de fois qu'on se
    * l'autorise, et il n'y a plus rien à tenter sans le joueur. Le message doit
@@ -572,6 +598,17 @@ const FR: Strings = {
     extraordinaryLoadingNote:
       'Le moteur se met en route et prépare ses effets. Quelques secondes la première fois.',
   },
+  audioQuality: {
+    label: 'Qualité sonore',
+    levels: {
+      auto: 'Automatique',
+      full: 'Spatialisation complète',
+      reduced: 'Allégée',
+      minimal: 'Sans réverbération',
+    },
+    note: 'Automatique écoute la machine et allège d’elle-même au moindre craquement. Un choix manuel s’applique au prochain embarquement.',
+    lowered: 'Le son a été allégé : cette machine n’arrivait pas à le calculer sans craquer.',
+  },
   render: {
     failedTitle: 'L’affichage n’a pas démarré',
     failedBody:
@@ -828,6 +865,17 @@ const EN: Strings = {
     extraordinaryLoadingNote:
       'The renderer is starting up and building its effects. A few seconds the first time.',
   },
+  audioQuality: {
+    label: 'Sound quality',
+    levels: {
+      auto: 'Automatic',
+      full: 'Full spatial audio',
+      reduced: 'Lighter',
+      minimal: 'No reverb',
+    },
+    note: 'Automatic listens to your machine and lightens the sound at the first crackle. A manual choice takes effect next time you board.',
+    lowered: 'Sound was lightened: this machine could not compute it without crackling.',
+  },
   render: {
     failedTitle: 'The view could not start',
     failedBody:
@@ -1078,6 +1126,17 @@ const JA: Strings = {
     extraordinaryFailed: 'この環境では起動できませんでした。ウルトラに戻します。',
     extraordinaryLoading: 'エクストラオーディナリーを準備中…',
     extraordinaryLoadingNote: '描画エンジンを起動し、効果を準備しています。初回は数秒かかります。',
+  },
+  audioQuality: {
+    label: '音質',
+    levels: {
+      auto: '自動',
+      full: '立体音響（フル）',
+      reduced: '軽量',
+      minimal: '残響なし',
+    },
+    note: '「自動」は動作を見ながら、音が途切れそうになると自動で軽くします。手動で選んだ設定は次回の乗車から有効です。',
+    lowered: 'この端末では処理が追いつかないため、音を軽くしました。',
   },
   render: {
     failedTitle: '映像を開始できませんでした',

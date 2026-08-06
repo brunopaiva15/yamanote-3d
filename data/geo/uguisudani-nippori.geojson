@@ -1,0 +1,74 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-uguisudani-nippori",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "line": "JR山手線 / Yamanote Line",
+        "from": "Uguisudani (JY06)",
+        "to": "Nippori (JY07)",
+        "segment": 5,
+        "direction": "inner (内回り)",
+        "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
+        "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
+        "license": "ODbL 1.0",
+        "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
+        "approximate": false,
+        "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
+        "lengthMeters": 974.3,
+        "generatedBy": "scripts/plateau/fetch-route.mjs"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.777904,
+            35.721695,
+            46.3
+          ],
+          [
+            139.776728,
+            35.722699,
+            47.22
+          ],
+          [
+            139.77413,
+            35.725116,
+            48.15
+          ],
+          [
+            139.773573,
+            35.725612,
+            49.08
+          ],
+          [
+            139.772985,
+            35.726039,
+            50
+          ],
+          [
+            139.7726,
+            35.726271,
+            50.93
+          ],
+          [
+            139.771608,
+            35.726932,
+            51.85
+          ],
+          [
+            139.771128,
+            35.727332,
+            52.78
+          ],
+          [
+            139.770404,
+            35.72797,
+            53.7
+          ]
+        ]
+      }
+    }
+  ]
+}

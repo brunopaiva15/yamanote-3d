@@ -2,7 +2,8 @@
 //
 // Le tronçon couvert est celui de PLATEAU_SEGMENT (systems/plateau.ts), qui
 // doit correspondre à celui du monde publié - la validation du build le
-// vérifie. Par défaut : Shibuya → Ebisu, en viaduc.
+// vérifie. Par défaut : Shibuya → Ebisu, en viaduc. Les deux sens sont couverts :
+// en 外回り la polyligne s'inverse par la progression.
 //
 // PRINCIPE
 // --------
@@ -74,9 +75,8 @@ const BASE = import.meta.env.BASE_URL;
  * injecté dans routeMath (qui reste sans dépendance). `targetAt` reproduit
  * l'enchaînement depart → cruise → brake du trajet inter-gares.
  */
-function makeProfile(stationIndex: number): SpeedProfile {
-  // Le prototype ne couvre que le sens 内回り (voir systems/plateau).
-  const cruise = cruiseDuration(stationIndex, 'inner');
+function makeProfile(stationIndex: number, dir: 'inner' | 'outer'): SpeedProfile {
+  const cruise = cruiseDuration(stationIndex, dir);
   const departEnd = CONFIG.departTime;
   const cruiseEnd = departEnd + cruise;
   return {
@@ -89,13 +89,14 @@ function makeProfile(stationIndex: number): SpeedProfile {
   };
 }
 
-/** Distance totale simulée du trajet inter-gares (m), mémorisée par gare. */
-const totalDistanceCache = new Map<number, number>();
-function journeyTotalDistance(stationIndex: number): number {
-  const cached = totalDistanceCache.get(stationIndex);
+/** Distance totale simulée du trajet inter-gares (m), mémorisée par gare×sens. */
+const totalDistanceCache = new Map<string, number>();
+function journeyTotalDistance(stationIndex: number, dir: 'inner' | 'outer'): number {
+  const key = `${stationIndex}:${dir}`;
+  const cached = totalDistanceCache.get(key);
   if (cached !== undefined) return cached;
-  const total = integrateJourney(makeProfile(stationIndex), journeyDuration(stationIndex, 'inner'));
-  totalDistanceCache.set(stationIndex, total);
+  const total = integrateJourney(makeProfile(stationIndex, dir), journeyDuration(stationIndex, dir));
+  totalDistanceCache.set(key, total);
   return total;
 }
 
@@ -223,9 +224,12 @@ export function PlateauWorld() {
     // c'est ce qui permet de contrôler les quatre coins du tracé en quelques
     // secondes (scripts/plateau/visual-check.mjs).
     const seek = (fraction: number) => {
-      const { index } = useStore.getState();
-      const total = journeyTotalDistance(index);
-      baseDistance.current = runtime.distance - Math.min(1, Math.max(0, fraction)) * total;
+      const { index, loopDirection } = useStore.getState();
+      const total = journeyTotalDistance(index, loopDirection);
+      // En 外回り la polyligne se lit à l'envers : fraction 0 = Ebisu côté 内回り.
+      const t = Math.min(1, Math.max(0, fraction));
+      const along = loopDirection === 'outer' ? 1 - t : t;
+      baseDistance.current = runtime.distance - along * total;
       return probe();
     };
     const w = window as unknown as Record<string, unknown>;
@@ -280,7 +284,7 @@ export function PlateauWorld() {
     // rapportée à la distance totale du trajet simulé. L'origine est recalée à
     // l'activation, ce qui gère aussi l'entrée en cours de trajet
     // (randomizeEntry place le joueur n'importe où sur la boucle).
-    const total = journeyTotalDistance(index);
+    const total = journeyTotalDistance(index, loopDirection);
     let travelled = baseDistance.current === null ? Number.NaN : runtime.distance - baseDistance.current;
     // Recalage : à l'activation, mais aussi si la distance parcourue sort
     // franchement du tronçon. Cela arrive quand le cycle saute (onglet repris
@@ -288,22 +292,29 @@ export function PlateauWorld() {
     // train) - sans ce garde-fou, le monde resterait bloqué à une extrémité.
     if (!(travelled > -25 && travelled < total + 25)) {
       const elapsed = Math.min(
-        phaseBase(phase, index, 'inner') + runtime.phaseT,
-        journeyDuration(index, 'inner'),
+        phaseBase(phase, index, loopDirection) + runtime.phaseT,
+        journeyDuration(index, loopDirection),
       );
-      baseDistance.current = runtime.distance - integrateJourney(makeProfile(index), elapsed);
+      baseDistance.current =
+        runtime.distance - integrateJourney(makeProfile(index, loopDirection), elapsed);
       travelled = runtime.distance - baseDistance.current;
     }
     // À l'arrêt en gare le trajet est terminé par définition : on force la fin
     // du tracé, sans quoi un arrêt d'urgence laisserait la ville en retard.
-    const progress = phase === 'dwell' ? 1 : total > 0 ? travelled / total : 0;
+    // En 外回り on parcourt la polyligne à l'envers : dwell = origine du tracé.
+    const raw = phase === 'dwell' ? 1 : total > 0 ? travelled / total : 0;
+    const progress = loopDirection === 'outer' ? 1 - raw : raw;
     const s = progressToDistance(progress, route.totalLength);
     plateauRuntime.distance = s;
 
     // Position et cap du train sur le tracé, puis transformation inverse.
     sampleRoute(route.points, s, scratch.sample);
     scratch.position.set(scratch.sample.x, scratch.sample.y, scratch.sample.z);
-    scratch.quaternion.setFromAxisAngle(scratch.up, scratch.sample.yaw);
+    // La polyligne est orientée 内回り : en 外回り on la parcourt à l'envers,
+    // donc le cap doit pivoter d'un demi-tour, sinon le décor avancerait
+    // derrière la rame.
+    const yaw = loopDirection === 'outer' ? scratch.sample.yaw + Math.PI : scratch.sample.yaw;
+    scratch.quaternion.setFromAxisAngle(scratch.up, yaw);
     scratch.trainMatrix.compose(scratch.position, scratch.quaternion, scratch.scale);
     scratch.worldMatrix.copy(scratch.trainMatrix).invert();
     group.matrix.copy(scratch.worldMatrix);

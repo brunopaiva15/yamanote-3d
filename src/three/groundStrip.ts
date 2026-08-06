@@ -23,11 +23,15 @@
 import * as THREE from 'three';
 
 /**
- * Découpe en long. Vingt mètres environ par tronçon sur quatre cent soixante :
- * c'est la maille la plus grossière où le biseau d'about reste une pente et
- * non une marche.
+ * Découpe en long : vingt mètres environ par tronçon, c'est la maille la plus
+ * grossière où le biseau d'about (TAPER, 22 m) reste une pente et non une
+ * marche. Elle se déduit donc de la LONGUEUR, et ne peut pas être une constante
+ * - une nappe de mille deux cents mètres découpée en vingt-quatre donnerait
+ * cinquante mètres par tronçon, et le biseau redeviendrait un ressaut.
  */
-const SEGMENTS = 24;
+function segmentsFor(length: number): number {
+  return Math.max(8, Math.min(96, Math.round(length / 19)));
+}
 
 export interface GroundStrip {
   geometry: THREE.BufferGeometry;
@@ -36,6 +40,16 @@ export interface GroundStrip {
    * sommet de rive et le z monde de sa ligne, et rend l'abscisse locale voulue.
    */
   update(edgeAt: (z: number, x: number) => number): void;
+  /**
+   * Relève la nappe. `heightAt(z, x)` reçoit la position LOCALE au repos d'un
+   * sommet et rend sa cote (m).
+   *
+   * La rue de la ville n'est plus horizontale depuis que le relief du
+   * 国土地理院 est entré dans le décor : elle monte vers la falaise du plateau à
+   * Nishi-Nippori, elle plonge dans la cuvette de Shibuya. Sans ce relèvement,
+   * les bâtiments montaient et descendaient au-dessus d'un bitume resté plat.
+   */
+  lift(heightAt: (z: number, x: number) => number): void;
   dispose(): void;
 }
 
@@ -45,9 +59,18 @@ export interface GroundStrip {
  * `width` × `length` et les UV sont exactement ceux d'un PlaneGeometry couché
  * - c'est d'ailleurs de là qu'ils viennent, pour que le calage de texture des
  * appelants (repeat, offset défilant) continue de valoir mot pour mot.
+ *
+ * `widthSegments` vaut un par défaut : une nappe qui reste plate n'a besoin que
+ * de ses deux rives. Celle qui suit le relief en demande davantage, sans quoi
+ * quatre cents mètres de travers seraient interpolés en ligne droite et la
+ * falaise deviendrait une rampe.
  */
-export function makeGroundStrip(width: number, length: number): GroundStrip {
-  const geometry = new THREE.PlaneGeometry(width, length, 1, SEGMENTS);
+export function makeGroundStrip(
+  width: number,
+  length: number,
+  widthSegments = 1,
+): GroundStrip {
+  const geometry = new THREE.PlaneGeometry(width, length, widthSegments, segmentsFor(length));
   geometry.rotateX(-Math.PI / 2);
 
   const pos = geometry.attributes.position as THREE.BufferAttribute;
@@ -77,6 +100,23 @@ export function makeGroundStrip(width: number, length: number): GroundStrip {
         pos.needsUpdate = true;
         uv.needsUpdate = true;
       }
+    },
+    lift(heightAt) {
+      let moved = false;
+      for (let i = 0; i < pos.count; i++) {
+        const y = heightAt(restZ[i], restX[i]);
+        if (y !== pos.getY(i)) {
+          pos.setY(i, y);
+          moved = true;
+        }
+      }
+      // Les normales ne sont PAS recalculées, et c'est délibéré : elles
+      // resteraient verticales à un degré près - la plus forte pente du
+      // corridor, la falaise de Yanaka, fait moins de dix pour cent sur la
+      // largeur d'une maille - et les recalculer coûterait un parcours de mille
+      // triangles à chaque image pour une nuance d'éclairage invisible sur un
+      // bitume. Ce qui compte est que la rue MONTE, pas qu'elle s'ombre.
+      if (moved) pos.needsUpdate = true;
     },
     dispose() {
       geometry.dispose();

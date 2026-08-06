@@ -57,18 +57,59 @@ export interface Segment {
   tracks?: number;
   /** Tronçon largement couvert par des structures de gare (Shinjuku→Yoyogi). */
   covered?: boolean;
+  /**
+   * Passage à niveau, à cette fraction du tronçon (sens 内回り).
+   *
+   * Il n'y en a QU'UN sur toute la boucle : le 第二中里踏切, entre Komagome et
+   * Tabata. Les vingt-neuf autres tronçons n'en ont aucun, et c'est ce fait-là
+   * qui rend celui-ci intéressant - une ligne urbaine à cent-vingt secondes
+   * d'intervalle ne peut pas s'offrir des barrières, et JR East cherche depuis
+   * des années à le supprimer.
+   */
+  crossing?: number;
+  /**
+   * L'autoroute urbaine (首都高) longe la voie sur ce tronçon.
+   *
+   * Ce n'est pas une singularité ponctuelle mais un COMPAGNON de route : le
+   * tablier prend le tronçon d'un bout à l'autre, sur ses piles, au-dessus du
+   * premier rang bâti. C'est la forme qu'elle a vraiment - le 首都高 suit les
+   * avenues et les rivières, il ne traverse pas la ville au hasard.
+   */
+  expressway?: boolean;
 }
 
+// Les singularités de la ligne, et leur source.
+//
+// Ce ne sont pas des ornements posés au hasard : chacune est un fait de la
+// Yamanote, et c'est pour cela qu'elles sont écrites ici, avec les tronçons,
+// plutôt que tirées au sort par le décor.
+//
+//   · 第二中里踏切 (segment 08) - LE passage à niveau, entre Komagome et
+//     Tabata. Le seul de la boucle, et l'un des derniers de tout le centre de
+//     Tokyo. Il tombe aux deux tiers du tronçon, du côté de Komagome.
+//   · LES RIVIÈRES ne sont plus ici. Elles y étaient, sous la forme de trois
+//     fractions saisies à la main - dont une, la 渋谷川 entre Shibuya et Ebisu,
+//     que la Yamanote ne franchit pas : la rivière longe la voie et s'en va
+//     vers l'est à Tengenji. Le relevé d'OpenStreetMap en donne six à ciel
+//     ouvert, avec leur largeur mesurée : voir src/data/water.ts, importé par
+//     scripts/geo/fetch-water.mjs.
+//   · 首都高 - l'autoroute urbaine longe la voie sur trois tronçons : la ligne 1
+//     上野線 au-dessus du 昭和通り entre Okachimachi et Ueno (03), la ligne 2
+//     目黒線 de Meguro à Gotanda (21), et la boucle centrale 都心環状線 le long du
+//     viaduc de Hamamatsuchō à Shimbashi (27).
+//
+// Les fractions sont comptées dans le sens 内回り, comme le nom du tronçon ; le
+// rendu les retourne de lui-même en 外回り (systems/segmentEnv).
 export const SEGMENTS: Segment[] = [
   /* 00 Tokyo→Kanda             */ { kind: 'viaduct' },
   /* 01 Kanda→Akihabara         */ { kind: 'viaduct' },
   /* 02 Akihabara→Okachimachi   */ { kind: 'viaduct' },
-  /* 03 Okachimachi→Ueno        */ { kind: 'viaduct' },
+  /* 03 Okachimachi→Ueno        */ { kind: 'viaduct', expressway: true },
   /* 04 Ueno→Uguisudani         */ { kind: 'corridor', greenery: true },
   /* 05 Uguisudani→Nippori      */ { kind: 'corridor', passing: 'shinkansen' },
   /* 06 Nippori→Nishi-Nippori   */ { kind: 'corridor' },
   /* 07 Nishi-Nippori→Tabata    */ { kind: 'corridor', depot: true },
-  /* 08 Tabata→Komagome         */ { kind: 'ground', greenery: true },
+  /* 08 Tabata→Komagome         */ { kind: 'ground', greenery: true, crossing: 0.68 },
   /* 09 Komagome→Sugamo         */ { kind: 'trench', bridges: 2, wallHeight: 7 },
   /* 10 Sugamo→Otsuka           */ { kind: 'trench', bridges: 1, opensAtEnd: true },
   /* 11 Otsuka→Ikebukuro        */ { kind: 'ground', passing: 'commuter' },
@@ -81,13 +122,13 @@ export const SEGMENTS: Segment[] = [
   /* 18 Harajuku→Shibuya        */ { kind: 'ground', greenery: true, passing: 'commuter' },
   /* 19 Shibuya→Ebisu           */ { kind: 'viaduct' },
   /* 20 Ebisu→Meguro            */ { kind: 'trench', bridges: 1 },
-  /* 21 Meguro→Gotanda          */ { kind: 'trench', bridges: 1, opensAtEnd: true },
+  /* 21 Meguro→Gotanda          */ { kind: 'trench', bridges: 1, opensAtEnd: true, expressway: true },
   /* 22 Gotanda→Osaki           */ { kind: 'viaduct' },
   /* 23 Osaki→Shinagawa         */ { kind: 'corridor', depot: true, tracks: 3, passing: 'commuter' },
   /* 24 Shinagawa→Takanawa GW   */ { kind: 'corridor', tracks: 4, passing: 'commuter' },
   /* 25 Takanawa GW→Tamachi     */ { kind: 'corridor', tracks: 3, passing: 'commuter' },
   /* 26 Tamachi→Hamamatsucho    */ { kind: 'ground' },
-  /* 27 Hamamatsucho→Shimbashi  */ { kind: 'viaduct' },
+  /* 27 Hamamatsucho→Shimbashi  */ { kind: 'viaduct', expressway: true },
   /* 28 Shimbashi→Yurakucho     */ { kind: 'viaduct', bridges: 1 },
   /* 29 Yurakucho→Tokyo         */ { kind: 'viaduct' },
 ];

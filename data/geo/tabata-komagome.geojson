@@ -1,0 +1,119 @@
+{
+  "type": "FeatureCollection",
+  "name": "yamanote-tabata-komagome",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "line": "JR山手線 / Yamanote Line",
+        "from": "Tabata (JY09)",
+        "to": "Komagome (JY10)",
+        "segment": 8,
+        "direction": "inner (内回り)",
+        "altitude": "ellipsoidal metres (JGD2011 / GRS80), approximate rail head",
+        "source": "OpenStreetMap (data/geo/yamanote-loop.geojson, relation 5376382)",
+        "license": "ODbL 1.0",
+        "attribution": "© les contributeurs OpenStreetMap - https://www.openstreetmap.org/copyright",
+        "approximate": false,
+        "note": "Tracé découpé depuis la polyligne réelle de la boucle (chantier 1).",
+        "lengthMeters": 1550.2,
+        "generatedBy": "scripts/plateau/fetch-route.mjs"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.76169,
+            35.73736,
+            46.7
+          ],
+          [
+            139.759268,
+            35.739403,
+            47.4
+          ],
+          [
+            139.758812,
+            35.739718,
+            48.1
+          ],
+          [
+            139.758567,
+            35.739856,
+            48.8
+          ],
+          [
+            139.758028,
+            35.740109,
+            49.5
+          ],
+          [
+            139.757399,
+            35.740322,
+            50.2
+          ],
+          [
+            139.757105,
+            35.740394,
+            50.9
+          ],
+          [
+            139.75655,
+            35.740477,
+            51.6
+          ],
+          [
+            139.756053,
+            35.740476,
+            52.3
+          ],
+          [
+            139.755627,
+            35.740443,
+            53
+          ],
+          [
+            139.755298,
+            35.740375,
+            53.7
+          ],
+          [
+            139.754931,
+            35.740261,
+            54.4
+          ],
+          [
+            139.754614,
+            35.740132,
+            55.1
+          ],
+          [
+            139.751632,
+            35.738594,
+            55.8
+          ],
+          [
+            139.749547,
+            35.737559,
+            56.5
+          ],
+          [
+            139.748387,
+            35.737014,
+            57.2
+          ],
+          [
+            139.747746,
+            35.736745,
+            57.9
+          ],
+          [
+            139.747256,
+            35.736557,
+            58.6
+          ]
+        ]
+      }
+    }
+  ]
+}

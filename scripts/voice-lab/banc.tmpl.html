@@ -1,0 +1,541 @@
+<title>Voix Yamanote — banc d'écoute A/B</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --paper: #f3f5ec;
+    --raised: #ffffff;
+    --ink: #14180f;
+    --muted: #676e5b;
+    --faint: #939a86;
+    --line: #d8ddc9;
+    --line-soft: #e7ebdd;
+    --accent: #6f9210;
+    --accent-soft: #e5eecb;
+    --warn: #a8641c;
+    --warn-soft: #f3e4d0;
+    --cool: #3a6a80;
+    --cool-soft: #dbe8ed;
+    --shadow: 0 1px 0 rgba(20, 24, 15, .05), 0 8px 24px -18px rgba(20, 24, 15, .5);
+
+    --f-display: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --f-body: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --f-data: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --f-jp: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo,
+            "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #12150e;
+      --raised: #1b1f16;
+      --ink: #eef1e6;
+      --muted: #9ba38c;
+      --faint: #6d7562;
+      --line: #2d3325;
+      --line-soft: #232819;
+      --accent: #a5cc35;
+      --accent-soft: #2b3a12;
+      --warn: #d69b52;
+      --warn-soft: #3a2a15;
+      --cool: #7fb4cb;
+      --cool-soft: #17303b;
+      --shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 10px 26px -18px #000;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #12150e; --raised: #1b1f16; --ink: #eef1e6; --muted: #9ba38c;
+    --faint: #6d7562; --line: #2d3325; --line-soft: #232819;
+    --accent: #a5cc35; --accent-soft: #2b3a12; --warn: #d69b52;
+    --warn-soft: #3a2a15; --cool: #7fb4cb; --cool-soft: #17303b;
+    --shadow: 0 1px 0 rgba(0,0,0,.3), 0 10px 26px -18px #000;
+  }
+  :root[data-theme="light"] {
+    --paper: #f3f5ec; --raised: #ffffff; --ink: #14180f; --muted: #676e5b;
+    --faint: #939a86; --line: #d8ddc9; --line-soft: #e7ebdd;
+    --accent: #6f9210; --accent-soft: #e5eecb; --warn: #a8641c;
+    --warn-soft: #f3e4d0; --cool: #3a6a80; --cool-soft: #dbe8ed;
+    --shadow: 0 1px 0 rgba(20,24,15,.05), 0 8px 24px -18px rgba(20,24,15,.5);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 96px; }
+
+  /* --- en-tête --- */
+  header { padding: 56px 0 28px; border-bottom: 1px solid var(--line); }
+  .eyebrow {
+    font-family: var(--f-data); font-size: 11px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .eyebrow::before {
+    content: ""; width: 26px; height: 3px; background: var(--accent); border-radius: 2px;
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 800; letter-spacing: -.028em;
+    font-size: clamp(30px, 4.6vw, 50px); line-height: 1.02; margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .lede { max-width: 62ch; color: var(--muted); font-size: 16.5px; margin: 0; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: var(--f-display); font-weight: 750; letter-spacing: -.018em;
+    font-size: 25px; margin: 0 0 6px; text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--f-data); font-size: 11px; letter-spacing: .15em;
+    text-transform: uppercase; color: var(--faint); font-weight: 600;
+    margin: 0 0 12px;
+  }
+  section { padding-top: 52px; }
+  .sec-note { color: var(--muted); max-width: 66ch; margin: 0 0 24px; }
+
+  /* --- carte des registres --- */
+  .band { background: var(--raised); border: 1px solid var(--line);
+          border-radius: 3px; padding: 22px 24px 16px; box-shadow: var(--shadow); }
+  .bandwrap { overflow-x: auto; }
+  .band svg { display: block; width: 100%; min-width: 560px; height: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 12px;
+            font-family: var(--f-data); font-size: 11.5px; color: var(--muted); }
+  .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px;
+              margin-right: 7px; vertical-align: -1px; }
+
+  /* --- constat --- */
+  .findings { display: grid; gap: 1px; background: var(--line);
+              border: 1px solid var(--line); border-radius: 3px; overflow: hidden;
+              grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .finding { background: var(--raised); padding: 18px 20px 20px; }
+  .finding .k { font-family: var(--f-data); font-size: 10.5px; letter-spacing: .14em;
+                text-transform: uppercase; color: var(--faint); }
+  .finding .v { font-family: var(--f-data); font-size: 27px; font-weight: 600;
+                letter-spacing: -.02em; margin: 8px 0 2px; font-variant-numeric: tabular-nums; }
+  .finding .v.off { color: var(--warn); }
+  .finding .v.ok { color: var(--accent); }
+  .finding p { margin: 4px 0 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+
+  /* --- tableau des canaux --- */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px;
+               background: var(--raised); }
+  table { border-collapse: collapse; width: 100%; min-width: 660px; }
+  th, td { padding: 11px 16px; text-align: right; border-bottom: 1px solid var(--line-soft); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-family: var(--f-data); font-size: 10.5px; letter-spacing: .12em;
+             text-transform: uppercase; color: var(--faint); font-weight: 600;
+             border-bottom: 1px solid var(--line); white-space: nowrap; }
+  tbody td { font-family: var(--f-data); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  tbody td:first-child { font-family: var(--f-body); font-size: 14px; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tr.target td { background: var(--accent-soft); }
+  tr.target td:first-child { font-weight: 600; }
+  .off { color: var(--warn); }
+  .dim { color: var(--faint); }
+
+  /* --- banc d'écoute --- */
+  .dock { position: sticky; top: 0; z-index: 20; background: var(--paper);
+          padding: 14px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+  .dock-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .dock-label { font-family: var(--f-data); font-size: 10.5px; letter-spacing: .14em;
+                text-transform: uppercase; color: var(--cool); margin-right: 4px; }
+
+  .chip {
+    font-family: var(--f-data); font-size: 12px; border: 1px solid var(--line);
+    background: var(--raised); color: var(--ink); border-radius: 999px;
+    padding: 6px 14px 6px 11px; cursor: pointer; display: inline-flex;
+    align-items: center; gap: 7px; line-height: 1;
+  }
+  .chip:hover { border-color: var(--cool); }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cool); }
+  .chip[aria-pressed="true"] { background: var(--cool-soft); border-color: var(--cool);
+                               color: var(--ink); }
+
+  .rows { display: grid; gap: 10px; }
+  .row {
+    display: grid; grid-template-columns: 46px minmax(0, 1fr) auto;
+    gap: 16px; align-items: center;
+    background: var(--raised); border: 1px solid var(--line); border-radius: 3px;
+    padding: 14px 16px; box-shadow: var(--shadow);
+  }
+  .row.playing { border-color: var(--accent); }
+  .row.now { border-left: 3px solid var(--faint); }
+  .row.best { border-left: 3px solid var(--accent); }
+  .badge { font-family: var(--f-data); font-size: 15px; font-weight: 600;
+           color: var(--muted); letter-spacing: .02em; }
+  .row.best .badge { color: var(--accent); }
+  .rlabel { font-weight: 600; font-size: 15px; letter-spacing: -.01em; }
+  .rnote { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .metrics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+  .m { font-family: var(--f-data); font-size: 11.5px; font-variant-numeric: tabular-nums;
+       border: 1px solid var(--line); border-radius: 2px; padding: 2px 7px;
+       color: var(--muted); white-space: nowrap; }
+  .m b { font-weight: 600; color: var(--ink); }
+  .m.hit { border-color: var(--accent); background: var(--accent-soft); }
+  .m.hit b { color: var(--accent); }
+  .m.miss { border-color: var(--warn); background: var(--warn-soft); }
+  .m.miss b { color: var(--warn); }
+
+  .play { display: flex; gap: 8px; }
+  .pbtn {
+    font-family: var(--f-data); font-size: 12px; cursor: pointer;
+    border: 1px solid var(--line); background: transparent; color: var(--ink);
+    border-radius: 2px; padding: 9px 12px; min-width: 74px; line-height: 1;
+  }
+  .pbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .pbtn[data-on="1"] { background: var(--accent); border-color: var(--accent);
+                       color: var(--paper); }
+
+  button:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent);
+                                              outline-offset: 2px; }
+
+  .phrase { font-family: var(--f-jp); font-size: 13.5px; color: var(--muted); }
+  .phrase.en { font-family: var(--f-body); }
+
+  .caveat { margin-top: 44px; border-left: 3px solid var(--warn);
+            background: var(--warn-soft); padding: 16px 20px; border-radius: 0 3px 3px 0; }
+  .caveat h3 { color: var(--warn); margin-bottom: 8px; }
+  .caveat p { margin: 0 0 10px; font-size: 14px; max-width: 68ch; }
+  .caveat p:last-child { margin-bottom: 0; }
+
+  .hint { font-family: var(--f-data); font-size: 11.5px; color: var(--faint);
+          margin-top: 14px; }
+  kbd { font-family: var(--f-data); font-size: 11px; border: 1px solid var(--line);
+        border-bottom-width: 2px; border-radius: 3px; padding: 1px 5px; color: var(--muted); }
+
+  @media (max-width: 640px) {
+    .row { grid-template-columns: 34px minmax(0, 1fr); }
+    .play { grid-column: 1 / -1; }
+    .pbtn { flex: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">JR 山手線 · réglage des voix de synthèse</p>
+    <h1>Ce que dit l'enregistrement,<br>et ce que disent les clips</h1>
+    <p class="lede">
+      L'enregistrement fait à bord a été mesuré segment par segment&nbsp;:
+      <strong>292 segments de parole</strong>, hauteur, étendue d'intonation, débit,
+      et surtout la <strong>durée des silences</strong>. Les clips du jeu passent par
+      exactement les mêmes mesures. Quatre écarts en sortent — et une chose qui, elle, est déjà juste. Le banc
+      d'écoute plus bas isole chaque correction pour que l'oreille tranche.
+    </p>
+  </header>
+
+  <section>
+    <h2>Où se situent les voix</h2>
+    <p class="sec-note">
+      Distribution de la hauteur médiane des 292 segments de parole de
+      l'enregistrement — deux modes nets, à 224&nbsp;Hz et 256&nbsp;Hz, et rien
+      au-dessous de 180. Les repères
+      du dessous sont les six canaux du jeu, mesurés de la même façon.
+    </p>
+    <div class="band">
+      <div class="bandwrap"><svg id="bandsvg" viewBox="0 0 900 250"
+        role="img" aria-label="Distribution des hauteurs de l'enregistrement et position des voix du jeu"></svg></div>
+      <div class="legend">
+        <span><i style="background: var(--cool)"></i>enregistrement (segments)</span>
+        <span><i style="background: var(--accent)"></i>dans la plage relevée</span>
+        <span><i style="background: var(--warn)"></i>hors plage</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Le constat</h2>
+    <div class="findings" id="findings"></div>
+  </section>
+
+  <section>
+    <h2>Tous les canaux, mesurés</h2>
+    <p class="sec-note">
+      Médiane par canal, sur les 25 à 30 premiers clips de chacun. « Segment » est la
+      durée moyenne d'un morceau de parole entre deux silences&nbsp;: c'est elle qui
+      dit si l'annonce est hachée. « Débit » compte les noyaux syllabiques par
+      seconde de parole, silences exclus.
+    </p>
+    <div class="tablewrap"><table id="chan"></table></div>
+  </section>
+
+  <section id="bench-ja">
+    <h2>Banc d'écoute — japonais de bord</h2>
+    <p class="sec-note">
+      Chaque variante ne change qu'une chose par rapport à la précédente. Les
+      extraits de l'enregistrement restent accrochés en haut de l'écran&nbsp;:
+      c'est l'étalon, on y revient entre deux essais.
+    </p>
+    <div class="dock" id="dock-ja"></div>
+    <div class="rows" id="rows-ja"></div>
+    <p class="hint">
+      <kbd>R</kbd> rejoue la référence · <kbd>Espace</kbd> rejoue la dernière variante
+      · <kbd>↑</kbd> <kbd>↓</kbd> passe d'une variante à l'autre
+    </p>
+  </section>
+
+  <section id="bench-en">
+    <h2>Banc d'écoute — anglais de bord</h2>
+    <p class="sec-note">
+      Même protocole. L'anglais souffre moins du registre que du débit&nbsp;:
+      6,90&nbsp;pics/s contre 6,15 dans l'enregistrement, soit 12&nbsp;% trop vite —
+      et l'enregistrement ne dit pas lequel des deux modes de hauteur lui revient,
+      d'où deux variantes de registre à départager.
+    </p>
+    <div class="dock" id="dock-en"></div>
+    <div class="rows" id="rows-en"></div>
+  </section>
+
+  <section>
+    <div class="caveat">
+      <h3>Ce que cette analyse ne dit pas</h3>
+      <p>
+        <strong>Les voix de quai ne sont pas jugeables ici.</strong> L'enregistrement
+        est pris <em>dans la rame</em>&nbsp;: la sonorisation du quai n'y entre que par
+        les portes ouvertes, filtrée et lointaine. Les 92&nbsp;Hz de jm_kumo et les
+        119&nbsp;Hz d'am_michael sont très au-dessous de tout ce qu'on entend ici
+        (plancher mesuré&nbsp;: 165&nbsp;Hz), mais il faudrait un enregistrement fait
+        sur le quai pour en conclure quoi que ce soit.
+      </p>
+      <p>
+        <strong>Le japonais et l'anglais n'ont pas pu être séparés automatiquement.</strong>
+        La séparation demandait un modèle de reconnaissance vocale, dont l'hôte est
+        bloqué par la politique de sortie réseau de la session. Les deux modes
+        (224 et 256&nbsp;Hz) sont donc deux registres constatés, sans étiquette de
+        langue&nbsp;: c'est à l'écoute des extraits que se décide lequel viser pour
+        quelle langue. Les écarts relevés, eux, ne dépendent pas de cette
+        attribution — 283&nbsp;Hz est au-dessus des deux modes, 199&nbsp;Hz au-dessous.
+      </p>
+    </div>
+  </section>
+</div>
+
+<script>
+  const DATA = /*__DATA__*/;
+  const $ = (s, r = document) => r.querySelector(s);
+  const ROLES = {
+    cabin: ['bord', 'sono de la rame'], 'atos-inner': ['quai 内', 'quai 内回り'],
+    'atos-outer': ['quai 外', 'quai 外回り'], agent: ['agent', 'agent au micro'],
+    'atos-en': ['quai', 'quai']
+  };
+  const LANGS = { 'ja-JP': ['JA', 'Japonais'], 'en-US': ['EN', 'Anglais'] };
+  const shortName = v => `${LANGS[v.lang][0]} ${(ROLES[v.role] || [v.role])[0]}`;
+  const longName = v => `${LANGS[v.lang][1]} · ${(ROLES[v.role] || [v.role, v.role])[1]}`;
+  const el = (t, c, h) => { const n = document.createElement(t); if (c) n.className = c;
+                            if (h !== undefined) n.innerHTML = h; return n; };
+
+  /* ---------- lecteur unique ---------- */
+  const audio = new Audio();
+  let current = null;
+  function stop() {
+    audio.pause();
+    document.querySelectorAll('[data-on="1"]').forEach(b => b.dataset.on = "0");
+    document.querySelectorAll('.row.playing').forEach(r => r.classList.remove('playing'));
+    current = null;
+  }
+  function play(src, btn) {
+    if (current === btn) { stop(); return; }
+    stop();
+    audio.src = src; audio.play();
+    current = btn;
+    if (btn) {
+      btn.dataset.on = "1";
+      btn.closest('.row')?.classList.add('playing');
+      if (btn.classList.contains('chip')) btn.setAttribute('aria-pressed', 'true');
+    }
+  }
+  audio.addEventListener('ended', stop);
+
+  /* ---------- carte des registres ---------- */
+  (function band() {
+    const svg = $('#bandsvg');
+    const W = 900, H = 250, L = 46, R = 20, T = 16;
+    const lo = 70, hi = 330;                       // Hz affichés
+    const x = v => L + (Math.log2(v) - Math.log2(lo)) /
+                       (Math.log2(hi) - Math.log2(lo)) * (W - L - R);
+    const hist = DATA.ref.hist, maxc = Math.max(...hist.map(h => h[1]));
+    const HB = 108;                                 // hauteur de l'histogramme
+    let s = '';
+
+    // plage inter-quartile de l'enregistrement
+    s += `<rect x="${x(DATA.ref.f0.p25)}" y="${T}" width="${x(DATA.ref.f0.p75) - x(DATA.ref.f0.p25)}"
+           height="${HB + 8}" fill="var(--cool-soft)"/>`;
+
+    hist.forEach(([b, c]) => {
+      const x0 = x(b), x1 = x(b + 8), h = c / maxc * HB;
+      s += `<rect x="${x0 + .6}" y="${T + HB - h}" width="${Math.max(x1 - x0 - 1.2, 1)}"
+             height="${h}" fill="var(--cool)" opacity=".62"/>`;
+    });
+
+    // axe
+    const AY = T + HB + 26;
+    s += `<line x1="${L}" y1="${AY}" x2="${W - R}" y2="${AY}" stroke="var(--line)" stroke-width="1"/>`;
+    [80, 100, 130, 160, 200, 250, 300].forEach(v => {
+      s += `<line x1="${x(v)}" y1="${AY}" x2="${x(v)}" y2="${AY + 5}" stroke="var(--line)"/>`;
+      s += `<text x="${x(v)}" y="${AY + 19}" text-anchor="middle" font-size="11"
+             font-family="var(--f-data)" fill="var(--faint)">${v}</text>`;
+    });
+    s += `<text x="${W - R}" y="${AY + 19}" text-anchor="end" font-size="10.5"
+           font-family="var(--f-data)" fill="var(--faint)" letter-spacing="1.4">HZ</text>`;
+
+    // repères des canaux du jeu
+    const names = k => shortName(DATA.now[k]);
+    const inBand = f => f >= DATA.ref.f0.p10 && f <= DATA.ref.f0.p90;
+    let row = 0;
+    Object.entries(DATA.now)
+      .sort((a, b) => a[1].f0 - b[1].f0)
+      .forEach(([k, v]) => {
+        const y = AY + 40 + row * 21; row++;
+        const col = inBand(v.f0) ? 'var(--accent)' : 'var(--warn)';
+        s += `<line x1="${x(v.f0)}" y1="${T}" x2="${x(v.f0)}" y2="${y - 6}"
+               stroke="${col}" stroke-width="1" stroke-dasharray="2 3" opacity=".5"/>`;
+        s += `<circle cx="${x(v.f0)}" cy="${y}" r="4" fill="${col}"/>`;
+        const anchor = x(v.f0) > W / 2 ? 'end' : 'start';
+        const dx = anchor === 'end' ? -10 : 10;
+        s += `<text x="${x(v.f0) + dx}" y="${y + 4}" text-anchor="${anchor}" font-size="12"
+               font-family="var(--f-data)" fill="var(--ink)">${names(k)}
+               <tspan fill="var(--faint)"> ${v.f0} Hz</tspan></text>`;
+      });
+    svg.setAttribute('viewBox', `0 0 ${W} ${AY + 40 + row * 21 + 14}`);
+    svg.innerHTML = s;
+  })();
+
+  /* ---------- constat ---------- */
+  (function findings() {
+    const f = [
+      ['Registre', '283 Hz', 'off',
+       `La voix japonaise de bord est <b>4,0 demi-tons</b> au-dessus du mode principal
+        de l'enregistrement (224 Hz), et 2,2 au-dessus du second (256 Hz).`],
+      ['Étendue d’intonation', '8,4 st', 'off',
+       `L'enregistrement module sur <b>11,1 demi-tons</b>. jf_alpha en fait 8,4 :
+        la voix est sensiblement plus plate que l'original.`],
+      ['Découpe', '0,90 s', 'off',
+       `Un morceau de parole dure <b>1,63 s</b> dans l'enregistrement, 0,90 s dans
+        les clips : l'annonce est hachée près de deux fois trop souvent.`],
+      ['Silences', '0,62 s', 'off',
+       `Les silences réels sont <b>bimodaux — 0,32 s et 1,06 s</b>, presque rien
+        entre les deux. Le générateur pose un 0,62 s unique, pile dans le creux.`],
+      ['Débit · japonais', '6,02 pics/s', 'ok',
+       `Dans la phrase, le japonais est déjà au bon rythme (6,15 dans
+        l'enregistrement). <b>Ne pas toucher à <code>speed</code></b> de ce côté.`],
+      ['Débit · anglais', '6,90 pics/s', 'off',
+       `L'anglais, lui, parle <b>12 % trop vite</b>. C'est son écart principal :
+        son registre (199 Hz) n'est qu'à 1,9 demi-ton du mode bas.`],
+    ];
+    const box = $('#findings');
+    f.forEach(([k, v, cls, p]) => {
+      const n = el('div', 'finding');
+      n.append(el('div', 'k', k), el('div', 'v ' + cls, v), el('p', '', p));
+      box.append(n);
+    });
+  })();
+
+  /* ---------- tableau des canaux ---------- */
+  (function chan() {
+    const t = $('#chan');
+
+    const r = DATA.ref;
+    let h = `<thead><tr><th>Canal</th><th>Voix</th><th>F0</th><th>Étendue</th>
+             <th>Segment</th><th>Débit</th></tr></thead><tbody>`;
+    h += `<tr class="target"><td>Enregistrement (cible)</td><td class="dim">—</td>
+          <td>${r.f0.p25}–${r.f0.p75}</td><td>${String(r.rng).replace('.', ',')} st</td>
+          <td>${String(r.seg).replace('.', ',')} s</td>
+          <td>${String(r.rate).replace('.', ',')}</td></tr>`;
+    const off = (cond, v) => cond ? `<span class="off">${v}</span>` : v;
+    Object.entries(DATA.now).forEach(([k, v]) => {
+      h += `<tr><td>${longName(v)}</td><td class="dim">${v.voice}</td>
+            <td>${off(v.f0 < r.f0.p10 || v.f0 > r.f0.p90, v.f0)}</td>
+            <td>${off(v.rng < r.rng - 2, String(v.rng).replace('.', ','))} st</td>
+            <td>${off(v.seg < r.seg - .4, v.seg.toFixed(2).replace('.', ','))} s</td>
+            <td>${off(Math.abs(v.rate - r.rate) > .5, v.rate.toFixed(2).replace('.', ','))}</td></tr>`;
+    });
+    t.innerHTML = h + '</tbody>';
+  })();
+
+  /* ---------- bancs d'écoute ---------- */
+  const r = DATA.ref;
+  function metric(label, value, unit, state) {
+    return `<span class="m ${state}">${label} <b>${value}</b>${unit}</span>`;
+  }
+  function buildDock(id) {
+    const d = $(id);
+    const inner = el('div', 'dock-inner');
+    inner.append(el('span', 'dock-label', 'Référence'));
+    DATA.refClips.forEach(c => {
+      const b = el('button', 'chip',
+        `<span class="dot"></span>${c.label} <span style="color:var(--faint)">${c.f0} Hz</span>`);
+      b.type = 'button'; b.setAttribute('aria-pressed', 'false');
+      b.onclick = () => {
+        document.querySelectorAll('.chip').forEach(c2 => c2.setAttribute('aria-pressed', 'false'));
+        play(DATA.clips[c.id], b);
+      };
+      inner.append(b);
+    });
+    d.append(inner);
+  }
+  function buildRows(id, list, phrases, best) {
+    const box = $(id);
+    list.forEach(v => {
+      const row = el('div', 'row' + (v.id.endsWith('-A') ? ' now' : '') +
+                              (v.id === best ? ' best' : ''));
+      row.append(el('div', 'badge', v.id.split('-')[1]));
+      const mid = el('div');
+      mid.append(el('div', 'rlabel', v.label.replace(/^\w+ — /, '')));
+      mid.append(el('div', 'rnote', v.notes));
+      const f0hit = v.f0 >= r.f0.p10 && v.f0 <= r.f0.p90;
+      const rnghit = v.rng >= r.rng - 2.5 && v.rng <= r.rng + 3.5;
+      mid.append(el('div', 'metrics',
+        metric('F0', v.f0, ' Hz', f0hit ? 'hit' : 'miss') +
+        metric('étendue', String(v.rng).replace('.', ','), ' st', rnghit ? 'hit' : 'miss') +
+        metric('durée', v.dur.toFixed(2).replace('.', ','), ' s', '') +
+        (v.semitones ? metric('transposition', (v.semitones > 0 ? '+' : '') +
+          String(v.semitones).replace('.', ','), ' st', '') : '') +
+        metric('voix', v.voice, '', '')));
+      row.append(mid);
+      const play_ = el('div', 'play');
+      phrases.forEach(([tag, txt]) => {
+        const b = el('button', 'pbtn', tag === 'next' ? '次は…' : 'まもなく…');
+        if (id === '#rows-en') b.textContent = tag === 'next' ? 'The next…' : 'We will soon…';
+        b.type = 'button'; b.title = txt;
+        b.onclick = () => play(DATA.clips[`${v.id}-${tag}`], b);
+        play_.append(b);
+      });
+      row.append(play_);
+      box.append(row);
+    });
+  }
+  buildDock('#dock-ja'); buildDock('#dock-en');
+  buildRows('#rows-ja', DATA.ja, DATA.jaPhrases, 'ja-E');
+  buildRows('#rows-en', DATA.en, DATA.enPhrases, 'en-C');
+
+  /* ---------- clavier ---------- */
+  let lastVariant = null;
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.pbtn');
+    if (b) lastVariant = b;
+  });
+  document.addEventListener('keydown', e => {
+    if (e.target.matches('input, textarea')) return;
+    if (e.key === 'r' || e.key === 'R') {
+      e.preventDefault();
+      const near = document.elementFromPoint(window.innerWidth / 2, 60);
+      const dock = near?.closest('section')?.querySelector('.chip') ||
+                   document.querySelector('.chip');
+      dock?.click();
+    } else if (e.key === ' ') {
+      e.preventDefault(); lastVariant?.click();
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const all = [...document.querySelectorAll('.pbtn')];
+      if (!all.length) return;
+      const i = lastVariant ? all.indexOf(lastVariant) : -1;
+      const step = e.key === 'ArrowDown' ? 2 : -2;
+      const next = all[Math.max(0, Math.min(all.length - 1, i + step))];
+      if (next) { e.preventDefault(); next.click(); next.scrollIntoView({ block: 'center' }); }
+    }
+  });
+</script>

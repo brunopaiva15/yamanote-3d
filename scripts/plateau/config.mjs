@@ -8,6 +8,7 @@
 
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { buildAllSegments } from './segments-all.mjs';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -25,70 +26,18 @@ function str(name, fallback) {
 }
 
 /**
- * Tronçons descriptibles par le pipeline.
+ * Tronçons descriptibles par le pipeline — les trente inter-gares.
  *
  * Changer de tronçon est un changement de CONFIGURATION, pas de code : tout ce
  * qui distingue un inter-gare d'un autre - où il commence, où il finit, à
  * quelle hauteur court la voie - tient dans cette table. Le reste du pipeline
- * n'en sait rien.
+ * n'en sait rien. Voir scripts/plateau/segments-all.mjs.
  *
- * ⚠️ Les ancrages sont les coordonnées publiées du milieu des quais Yamanote,
- * arrondies à ~10 m, et la géométrie entre les deux est une APPROXIMATION
- * (arc de cercle). `node scripts/plateau/fetch-route.mjs --overpass` remplace
- * le tout par la géométrie OpenStreetMap réelle.
+ * ⚠️ Les ancrages sont les points d'arrêt OSM (tokyoGeo). `node scripts/plateau/fetch-route.mjs --overpass`
+ * (ou le tracé découpé depuis yamanote-loop.geojson) remplace l'arc approché
+ * par la géométrie réelle.
  */
-export const PROTOTYPE_SEGMENTS = {
-  'shibuya-ebisu': {
-    name: 'shibuya-ebisu',
-    /** Index de tronçon dans src/data/segments.ts. */
-    segment: 19,
-    from: 'Shibuya',
-    to: 'Ebisu',
-    /** Index de la gare d'ARRIVÉE dans STATIONS : segmentAt(arrivalStation) = segment. */
-    arrivalStation: 20,
-    anchors: {
-      from: { lon: 139.70165, lat: 35.65845, name: '渋谷 Shibuya (JY20)' },
-      to: { lon: 139.71005, lat: 35.6467, name: '恵比寿 Ebisu (JY21)' },
-    },
-    /**
-     * Flèche de l'arc par rapport à la corde (m), signée : positive = vers la
-     * gauche du sens de marche. Simple bombement plausible, pas un relevé.
-     */
-    sagittaMeters: -55,
-    /**
-     * Hauteur du RAIL par rapport au niveau de la rue (m).
-     * Positif = viaduc (on roule au-dessus des toits bas) ;
-     * négatif = tranchée (la ville est au-dessus de nous).
-     * Calé sur VIADUCT_RISE = 7,5 de src/systems/segmentEnv.ts, pour que la
-     * ville PLATEAU et le sol procédural tombent au même niveau.
-     */
-    railAboveGround: 7.4,
-    /**
-     * Niveau de la RUE aux deux extrémités, en hauteur ellipsoïdale (m).
-     * Shibuya est un fond de vallée, Ebisu est sur le plateau : la ligne
-     * remonte d'une dizaine de mètres entre les deux. Ondulation du géoïde à
-     * Tokyo ≈ 37 m, incluse.
-     */
-    groundElevation: { start: 59, end: 68 },
-  },
-
-  'sugamo-otsuka': {
-    name: 'sugamo-otsuka',
-    segment: 10,
-    from: 'Sugamo',
-    to: 'Otsuka',
-    arrivalStation: 11,
-    anchors: {
-      from: { lon: 139.7393, lat: 35.73352, name: '巣鴨 Sugamo (JY11)' },
-      to: { lon: 139.72855, lat: 35.73147, name: '大塚 Ōtsuka (JY12)' },
-    },
-    sagittaMeters: 60,
-    // Tranchée à Sugamo, qui s'ouvre en arrivant à Ōtsuka - d'où le
-    // `opensAtEnd` de SEGMENTS[10]. Le rail est donc SOUS la rue.
-    railAboveGround: -6,
-    groundElevation: { start: 67, end: 67 },
-  },
-};
+export const PROTOTYPE_SEGMENTS = buildAllSegments();
 
 const PROTOTYPE_ID = str('PLATEAU_PROTOTYPE', 'shibuya-ebisu');
 const SELECTED = PROTOTYPE_SEGMENTS[PROTOTYPE_ID];

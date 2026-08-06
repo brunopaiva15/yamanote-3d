@@ -92,6 +92,8 @@ export interface BarrierGateUniforms {
 
 export interface CityTextures {
   facade: THREE.Texture;
+  /** Façade de logement collectif, à coursive extérieure : la マンション. */
+  balcony: THREE.Texture;
   roof: THREE.Texture;
   socle: THREE.Texture;
   facadeTile: number;

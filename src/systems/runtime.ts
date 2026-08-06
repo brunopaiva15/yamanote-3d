@@ -1,9 +1,9 @@
 // Valeurs continues mutées chaque frame (jamais dans React) : la boucle 60 fps
 // lit et écrit ici, les composants three lisent dans leur useFrame.
 
-import { CONFIG } from '../data/config';
+import { CONFIG } from '../data/config.ts';
 import type { TokyoDate } from '../data/occupancy';
-import { clearLineDisruption } from './lineDisruption';
+import { clearLineDisruption } from './lineDisruption.ts';
 
 /**
  * Repère de marche du joueur : dans le wagon, ou sur le quai. Défini ici (et

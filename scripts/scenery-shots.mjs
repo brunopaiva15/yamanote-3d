@@ -73,8 +73,19 @@ const angles = [
   ['rasant', -230, 55],
 ];
 
-for (const [idx, clock, name] of cases) {
-  for (const [tag, dx, dy] of angles) {
+// Deuxième jeu d'angles, caisse effacée. De l'intérieur, le montant de baie,
+// la banquette et les poignées mangent les trois quarts de l'image - c'est la
+// condition réelle, et c'est bien pour ça qu'on capture d'abord comme ça. Mais
+// on n'y voit pas assez pour arbitrer une trame de rues, une couche lointaine
+// ou une ligne de toits. `__probeBare` retire la rame le temps de ces trois-là.
+const bareAngles = [
+  ['nu-travers', -230, -8],
+  ['nu-biais', -150, -8],
+  ['nu-toits', -230, 34],
+];
+
+async function shoot(idx, clock, name, list) {
+  for (const [tag, dx, dy] of list) {
     await aim(dx, dy);
     // Re-poser l'état JUSTE avant la capture : sous SwiftShader une frame dure
     // plusieurs secondes et le cycle station file pendant les temps morts.
@@ -89,6 +100,16 @@ for (const [idx, clock, name] of cases) {
     console.log('→', `${name}-${tag}`);
   }
 }
+
+for (const [idx, clock, name] of cases) {
+  await shoot(idx, clock, name, angles);
+}
+
+await page.evaluate(() => window.__probeBare(true));
+for (const [idx, clock, name] of cases) {
+  await shoot(idx, clock, name, bareAngles);
+}
+await page.evaluate(() => window.__probeBare(false));
 
 await browser.close();
 await server.close();
