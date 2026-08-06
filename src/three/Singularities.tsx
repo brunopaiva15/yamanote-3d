@@ -36,24 +36,55 @@ import { plateauRuntime } from '../systems/plateau';
 import { hiddenByStation, sidePush } from '../systems/stationOcclusion';
 import { qualityLevel, usePerf, type Quality } from '../systems/perf';
 import { weather } from '../systems/weather';
+import { makeWaterTexture } from '../textures/procedural';
 
 /** Demi-longueur de la chaussée du passage à niveau (m). */
 const ROAD_HALF = 74;
 /** Largeur de la chaussée (m) : une ruelle à voie unique, comme le vrai. */
 const ROAD_W = 7;
 /**
- * Cote de la chaussée au-dessus du sol de la ville (m).
+ * Cote de la chaussée LOIN de la voie (m au-dessus du sol de la ville).
  *
  * La dalle de rue du générateur monte à 14 cm (`buildCellProps`) et la
- * singularité s'ancre justement SUR une rue : tout ce qui est posé au sol l'est
- * donc au-dessus d'elle, sans quoi les deux surfaces clignotent l'une dans
- * l'autre sur toute la trouée.
+ * singularité s'ancre justement SUR une rue : la chaussée passe donc au-dessus
+ * d'elle, sans quoi les deux surfaces clignotent l'une dans l'autre sur toute
+ * la trouée.
  */
-const ROAD_Y = 0.15;
+const ROAD_Y = 0.17;
+/**
+ * Cote du platelage AU DROIT DE LA VOIE (m au-dessus du sol de la ville).
+ *
+ * Négative, et c'est là tout le sujet : dans un passage à niveau la route se met
+ * au niveau du RAIL. La plate-forme est un plan texturé posé cinq centimètres
+ * plus bas que le sol urbain (three/Wayside), et le platelage vient deux
+ * centimètres au-dessus d'elle. Réglé à la cote de la rue, il devenait une
+ * planche jetée en travers de la voie : elle masquait les rails, portait son
+ * ombre sur le ballast, et se lisait tout de suite comme une erreur.
+ */
+const DECK_Y = -0.03;
+/** Demi-largeur du platelage (m) : l'emprise de la plate-forme, et rien de plus. */
+const DECK_HALF = 5.6;
+/** Abscisse où la chaussée a fini de remonter à la cote de la rue (m). */
+const RAMP_OUT = 7.2;
+/** Demi-écartement de la voie (m) : les rails restent lisibles sur le platelage. */
+const GAUGE_X = 0.7175;
+/** Épaisseur de la chaussée et du platelage (m). */
+const ROAD_T = 0.16;
 /** Demi-longueur du chenal (m) : jusqu'au dernier rang proche, pas au-delà. */
 const RIVER_HALF = 66;
 /** Largeur de la nappe d'eau (m). */
 const WATER_W = 24;
+/**
+ * Cote de la nappe (m au-dessus du sol de la ville).
+ *
+ * Elle est POSITIVE, ce qui est le contraire de ce qu'on attend d'une rivière -
+ * et c'est un choix contraint. La rivière s'ancre sur une rue, donc sur la dalle
+ * de chaussée du générateur (14 cm) : creuser demanderait de percer un trou dans
+ * la nappe de sol urbain, qui est un plan d'un seul tenant. Ce sont donc les MURS
+ * de berge qui creusent, en montant deux mètres trente au-dessus de l'eau -
+ * exactement la lecture qu'on a d'un 三面張り depuis un viaduc.
+ */
+const WATER_Y = 0.2;
 /** Hauteur des murs de berge au-dessus de l'eau (m). */
 const BANK_H = 2.5;
 
@@ -159,6 +190,54 @@ function buildCrossingDark(): THREE.BufferGeometry {
   return merge(parts);
 }
 
+/**
+ * La chaussée : deux alignements droits, et la rampe qui descend au rail.
+ *
+ * Vingt centimètres à racheter sur un mètre soixante, soit sept degrés. C'est
+ * exactement ce qui se passe sur place - une rue de Tokyo arrive au passage à
+ * niveau par une contre-pente courte, et c'est même ce qui la fait ralentir.
+ */
+function buildCrossingRoad(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const dx = RAMP_OUT - DECK_HALF;
+  const dy = ROAD_Y - DECK_Y;
+  const straight = ROAD_HALF - RAMP_OUT;
+  for (const side of [1, -1]) {
+    parts.push(
+      boxAt(straight, ROAD_T, ROAD_W, side * (RAMP_OUT + straight / 2), ROAD_Y - ROAD_T / 2, 0),
+    );
+    // La rampe est une boîte INCLINÉE : on la tourne à l'origine, puis on la
+    // pose. Traduite d'abord, elle tournerait autour de l'axe de la voie.
+    const slope = new THREE.BoxGeometry(Math.hypot(dx, dy), ROAD_T, ROAD_W);
+    slope.rotateZ(side * Math.atan2(dy, dx));
+    slope.translate(side * (DECK_HALF + dx / 2), DECK_Y + dy / 2 - ROAD_T / 2, 0);
+    parts.push(slope);
+  }
+  return merge(parts);
+}
+
+/** Le platelage, et les deux rails qui le traversent. */
+function buildCrossingDeck(): THREE.BufferGeometry {
+  return boxAt(DECK_HALF * 2, ROAD_T, ROAD_W + 0.4, 0, DECK_Y - ROAD_T / 2, 0);
+}
+
+/**
+ * Les rails, par-dessus le platelage.
+ *
+ * Sans eux la voie s'interrompait sur sept mètres : le platelage recouvre la
+ * plate-forme, qui est un plan texturé où les rails sont PEINTS. Ils reviennent
+ * donc ici en relief, trois centimètres au-dessus de la dalle, avec l'ornière
+ * que la dalle laisse de chaque côté - c'est ce détail-là qui dit qu'on
+ * franchit une voie ferrée et non un caniveau.
+ */
+function buildCrossingRails(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  for (const side of [1, -1]) {
+    parts.push(boxAt(0.075, 0.07, ROAD_W + 0.6, side * GAUGE_X, DECK_Y, 0));
+  }
+  return merge(parts);
+}
+
 // --- L'autoroute urbaine ----------------------------------------------------
 
 /** Une travée : dalle, deux parapets, et la chevêtre qui repose sur les piles. */
@@ -173,14 +252,26 @@ function buildDeck(): THREE.BufferGeometry {
   // Chevêtre au joint de travée : elle porte, et elle donne au tablier le
   // rythme qu'on lit en passant dessous.
   parts.push(boxAt(w * 0.96, 0.95, 2.4, mid, -0.48, -SEC / 2 + 1.2));
+  // Candélabres du parapet intérieur. Ils ont d'abord été posés SUR le parapet,
+  // ce qui revenait à ne pas les poser du tout : la rame passe sous le tablier,
+  // et un foyer derrière un parapet ne se voit pas de dessous. Sur leur fût, ils
+  // dépassent du bord et se découpent sur le ciel - c'est de là qu'on sait, la
+  // nuit, qu'il y a une route au-dessus.
+  for (const z of [-SEC / 4, SEC / 4]) {
+    parts.push(boxAt(0.13, LAMP_MAST, 0.13, LAMP_X, 2.4 + LAMP_MAST / 2, z));
+  }
   return merge(parts);
 }
 
-/** Les deux foyers d'éclairage d'une travée, sur le parapet intérieur. */
+/** Fût et abscisse des candélabres du tablier (m). */
+const LAMP_MAST = 1.5;
+const LAMP_X = PIER_IN - 0.62;
+
+/** Les deux foyers d'une travée : la lentille, en tête de fût. */
 function buildDeckLamps(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
   for (const z of [-SEC / 4, SEC / 4]) {
-    parts.push(boxAt(0.44, 0.11, 0.22, PIER_IN - 0.5, 2.46, z));
+    parts.push(boxAt(0.52, 0.14, 0.26, LAMP_X - 0.16, 2.4 + LAMP_MAST, z));
   }
   return merge(parts);
 }
@@ -210,15 +301,36 @@ export function Singularities() {
     });
     const warn = new THREE.MeshStandardMaterial({ color: '#e5c33a', roughness: 0.7 });
     const dark = new THREE.MeshStandardMaterial({ color: '#232326', roughness: 0.75 });
-    // L'eau : lisse et sombre. Sans carte d'environnement elle ne réfléchit rien
-    // d'autre que le soleil - c'est peu, et c'est déjà ce qui la fait lire comme
-    // de l'eau plutôt que comme du bitume.
+    // Le platelage du passage à niveau : du béton de dalle usé par les roues,
+    // plus sombre qu'un tablier neuf. Au gris de tablier, il devenait la surface
+    // la plus claire du cadre - et un platelage n'est pas ce qu'on regarde.
+    const slab = new THREE.MeshStandardMaterial({ color: '#8b8984', roughness: 0.92 });
+    slab.userData.base = slab.color.clone();
+    // L'eau. Elle a d'abord été faite métallique et sombre, ce qui semblait
+    // juste et ne l'était pas : sans carte d'environnement, un métal lisse ne
+    // réfléchit que le soleil et reste noir partout ailleurs - le chenal lisait
+    // comme une chaussée. Ce qui fait qu'on reconnaît de l'eau vue d'en haut,
+    // c'est qu'elle est PLUS CLAIRE que ses berges, parce qu'elle rend le ciel.
+    // Elle est donc diélectrique, à peine rugueuse, et sa teinte se relève du
+    // ciel du moment chaque image.
+    // La teinte de fond est BASSE et ce n'est pas une erreur : la nappe reçoit le
+    // soleil, le ciel de l'hémisphérique et l'ambiante, soit deux fois et demie
+    // ce que sa couleur annonce. Réglée à l'œil sur ce qu'on voudrait voir, l'eau
+    // ressortait plus claire que ses propres murs de berge.
+    const waterTex = makeWaterTexture();
+    waterTex.repeat.set(RIVER_HALF * 2 / 26, 1);
     const water = new THREE.MeshStandardMaterial({
-      color: '#33474c',
-      roughness: 0.14,
-      metalness: 0.55,
+      map: waterTex,
+      color: '#7c8f99',
+      roughness: 0.34,
+      metalness: 0.1,
     });
     water.userData.base = water.color.clone();
+    // Le béton des berges, plus sourd que celui d'un tablier d'autoroute : c'est
+    // du vieux mur de canal, et c'est SON contraste avec la nappe qui fait lire
+    // le chenal. Les deux au même gris, on ne voyait qu'une dalle.
+    const bank = new THREE.MeshStandardMaterial({ color: '#9b988f', roughness: 0.9 });
+    bank.userData.base = bank.color.clone();
     // Feux battants et foyers d'autoroute : hors correction de tons, jamais
     // éclairés - ce sont des sources.
     const lampA = new THREE.MeshBasicMaterial({ color: '#ff2a1e', toneMapped: false, fog: true });
@@ -248,26 +360,34 @@ export function Singularities() {
 
     // --- Passage à niveau ---
     // La chaussée passe par-dessus la dalle de rue du générateur (14 cm), sinon
-    // les deux se disputent le tampon de profondeur au droit de la trouée.
-    const roadGeo = boxAt(ROAD_HALF * 2, 0.14, ROAD_W, 0, ROAD_Y + 0.07, 0);
-    const panelGeo = boxAt(11.4, 0.18, ROAD_W + 0.4, 0, ROAD_Y + 0.09, 0);
+    // les deux se disputent le tampon de profondeur au droit de la trouée - puis
+    // elle redescend au rail, où c'est le platelage qui prend le relais.
+    const roadGeo = buildCrossingRoad();
+    const panelGeo = buildCrossingDeck();
+    const railGeo = buildCrossingRails();
     const steelGeo = buildCrossingSteel();
     const warnGeo = buildCrossingWarn();
     const darkGeo = buildCrossingDark();
-    // Les deux feux : des disques tournés vers la chaussée, donc couchés le long
-    // de l'axe des x. Couchés d'abord, posés ensuite.
+    // Les deux feux.
+    //
+    // Ils ont d'abord été faits en disques tournés vers la chaussée - ce que
+    // sont les vrais, un 警報機 avertit la route et pas le train - et on ne les
+    // voyait donc pas : depuis la voie, un disque se présente par la tranche.
+    // Ce sont maintenant des calottes, qui se lisent de tous les côtés comme se
+    // lit une lentille bombée sous son visière ; l'écran noir derrière elles
+    // continue de dire de quel côté regarde le feu.
     const bulb = (dz: number) => {
-      const g = new THREE.CylinderGeometry(0.15, 0.15, 0.07, 12);
-      g.rotateZ(Math.PI / 2);
-      g.translate(SIGNAL_X + 0.06, 2.28, KERB_Z + dz);
+      const g = new THREE.SphereGeometry(0.19, 8, 5);
+      g.translate(SIGNAL_X + 0.1, 2.28, KERB_Z + dz);
       return g;
     };
     const bulbA = bulb(0.3);
     const bulbB = bulb(-0.3);
 
     const road = new THREE.Mesh(roadGeo, asphalt);
-    const panel = new THREE.Mesh(panelGeo, concrete);
-    for (const m of [road, panel]) {
+    const panel = new THREE.Mesh(panelGeo, slab);
+    const rails = new THREE.Mesh(railGeo, steel);
+    for (const m of [road, panel, rails]) {
       m.frustumCulled = false;
       m.receiveShadow = false;
       m.castShadow = false;
@@ -281,7 +401,7 @@ export function Singularities() {
     // --- Rivière ---
     const waterGeo = new THREE.PlaneGeometry(RIVER_HALF * 2, WATER_W);
     waterGeo.rotateX(-Math.PI / 2);
-    waterGeo.translate(0, ROAD_Y + 0.05, 0);
+    waterGeo.translate(0, WATER_Y, 0);
     const waterMesh = new THREE.Mesh(waterGeo, water);
     waterMesh.frustumCulled = false;
     // Mur de berge : le voile, sa margelle, et la lisse de garde-corps qu'on
@@ -292,7 +412,7 @@ export function Singularities() {
       boxAt(RIVER_HALF * 2, 0.09, 0.09, 0, BANK_H + 1.0, 0.62),
       boxAt(RIVER_HALF * 2, 0.09, 0.09, 0, BANK_H + 0.62, 0.62),
     ]);
-    const banks = mkInstanced(bankGeo, concrete, 2, 'berge');
+    const banks = mkInstanced(bankGeo, bank, 2, 'berge');
 
     // --- Autoroute urbaine ---
     const deckGeo = buildDeck();
@@ -304,10 +424,12 @@ export function Singularities() {
     const lamps = mkInstanced(lampGeo, deckLamp, count, 'foyers du tablier');
 
     return {
-      mats: [asphalt, concrete, steel, warn, dark, water, lampA, lampB, deckLamp],
+      mats: [asphalt, concrete, slab, bank, steel, warn, dark, water, lampA, lampB, deckLamp],
+      texs: [waterTex],
       geos: [
         roadGeo,
         panelGeo,
+        railGeo,
         steelGeo,
         warnGeo,
         darkGeo,
@@ -319,13 +441,14 @@ export function Singularities() {
         pierGeo,
         lampGeo,
       ],
-      concrete,
+      toned: [concrete, slab, bank],
       water,
       lampA,
       lampB,
       deckLamp,
       road,
       panel,
+      rails,
       gear,
       gearWarn,
       gearDark,
@@ -356,6 +479,7 @@ export function Singularities() {
       }
       for (const g of built.geos) g.dispose();
       for (const m of built.mats) m.dispose();
+      for (const t of built.texs) t.dispose();
     },
     [built],
   );
@@ -376,7 +500,7 @@ export function Singularities() {
     [],
   );
 
-  useFrame(() => {
+  useFrame((state) => {
     if (!sections) return;
     const sc = scratch;
     const w = dayNightWeights(runtime.clockMin / 60);
@@ -384,20 +508,30 @@ export function Singularities() {
     const nightK = 1 - 0.5 * night;
     // Le béton d'un ouvrage prend la lumière du jour comme les murs de tronçon :
     // même loi, sinon un tablier reste blanc à minuit au-dessus d'une ville
-    // éteinte.
-    built.concrete.color
-      .copy(built.concrete.userData.base as THREE.Color)
-      .multiplyScalar(nightK * (1 - 0.22 * weather.wet));
-    // L'eau, elle, ne s'éteint pas : elle prend la couleur du ciel. La nuit,
-    // c'est la ville qu'elle renvoie, et une rivière de Tokyo à minuit est plus
-    // claire que ses berges.
+    // éteinte. Tablier, platelage et murs de berge suivent la même.
+    const dim = nightK * (1 - 0.22 * weather.wet);
+    for (const m of built.toned) {
+      m.color.copy(m.userData.base as THREE.Color).multiplyScalar(dim);
+    }
+    // L'eau, elle, ne s'éteint pas : elle prend la couleur du ciel. La brume de
+    // la scène EST cette couleur - c'est le même ciel diffusé qui teinte le
+    // lointain (three/Scene) - et la reprendre ici donne gratuitement l'accord
+    // qu'on cherchait : bleue par temps clair, plombée sous l'averse, mauve à la
+    // nuit tombée. La nuit, c'est la ville qu'elle renvoie, et une rivière de
+    // Tokyo à minuit est plus claire que ses berges.
+    const sky = state.scene.fog instanceof THREE.Fog ? state.scene.fog.color : null;
     built.water.color
       .copy(built.water.userData.base as THREE.Color)
-      .multiplyScalar(1 - 0.55 * night);
-    built.water.emissive.setRGB(0.06, 0.045, 0.03).multiplyScalar(night);
+      .multiplyScalar(1 - 0.4 * night);
+    if (sky) built.water.color.lerp(sky, 0.07);
+    built.water.emissive.setRGB(0.07, 0.055, 0.04).multiplyScalar(night);
 
     // --- Passage à niveau et rivière : ponctuels, posés sur une rue ---
-    const kind = singularity.kind;
+    //
+    // Rien de tout cela sur le prototype PLATEAU, pour la même raison que le
+    // tablier plus bas : la ville y est relevée sur le terrain, et une rivière
+    // procédurale couperait une rue réelle.
+    const kind = plateauRuntime.coverage < 0.5 ? singularity.kind : null;
     const z = runtime.distance - singularity.s;
     const near = kind !== null && Math.abs(z) < 340;
 
@@ -516,6 +650,7 @@ export function Singularities() {
       <group ref={crossRoot} visible={false}>
         <primitive object={built.road} />
         <primitive object={built.panel} />
+        <primitive object={built.rails} />
         <primitive object={built.gear} />
         <primitive object={built.gearWarn} />
         <primitive object={built.gearDark} />

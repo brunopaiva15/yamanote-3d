@@ -39,6 +39,7 @@ import { hiddenByStation, sidePush } from '../../systems/stationOcclusion';
 import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
 import { CELL_LEN } from '../../systems/cityField';
 import { laneSlot, makeLane } from '../../systems/trafficLane';
+import { inSingularity } from '../../systems/singularity';
 
 /** Cote de la chaussée : le dessus de la dalle de rue de `buildCellProps`. */
 const ROAD_TOP = 0.14;
@@ -278,6 +279,11 @@ export function Traffic() {
           if (!laneSlot(cell, side, i, perStreet, t, lane)) continue;
           const z = runtime.distance - lane.s;
           if (hiddenByStation(z)) continue;
+          // Personne ne roule sur une rivière, et personne ne s'engage sur un
+          // passage à niveau barrières baissées : la rue que l'ouvrage occupe se
+          // vide. Une chaussée déserte devant un passage à niveau fermé est
+          // exactement ce qu'on voit sur place.
+          if (inSingularity(lane.s, 3)) continue;
 
           const target = lane.van ? built.van : built.car;
           const cap = lane.van ? VAN_CAP : CAR_CAP;

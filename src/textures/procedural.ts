@@ -1272,6 +1272,56 @@ export function makeTrackFieldTexture(): THREE.CanvasTexture {
   return t;
 }
 
+/**
+ * Nappe d'eau d'une rivière canalisée (三面張り), vue d'en haut.
+ *
+ * Une rivière rendue en teinte unie ne lit pas comme de l'eau, quelle que soit
+ * la teinte : sans reflet ni ride, un quadrilatère parfaitement plat ressemble
+ * à une dalle - et l'essai en gris-bleu ressortait plus clair que ses propres
+ * murs de berge. Ce qu'il faut, c'est de la STRUCTURE : des traînées dans le
+ * sens du courant, quelques éclats de ciel, et le fond qui s'assombrit vers le
+ * milieu du chenal comme il le fait vraiment.
+ *
+ * Les traînées courent selon x, qui est le sens du chenal (three/Singularities).
+ */
+export function makeWaterTexture(): THREE.CanvasTexture {
+  const { c, g } = makeCanvas(256, 64);
+  const r = rng(6041);
+  g.fillStyle = '#42606c';
+  g.fillRect(0, 0, 256, 64);
+  // Le milieu du chenal est plus profond, donc plus sombre : un dégradé en
+  // travers suffit à donner du creux à une nappe qui n'en a pas. Poussé à
+  // soixante pour cent, il éteignait la teinte au point que le chenal rendait un
+  // gris d'asphalte relevé au photomètre - c'est le creux qu'on voulait, pas
+  // l'extinction.
+  const deep = g.createLinearGradient(0, 0, 0, 64);
+  deep.addColorStop(0, 'rgba(20,44,54,0)');
+  deep.addColorStop(0.5, 'rgba(20,44,54,0.4)');
+  deep.addColorStop(1, 'rgba(20,44,54,0)');
+  g.fillStyle = deep;
+  g.fillRect(0, 0, 256, 64);
+  // Traînées de courant : longues, molles, jamais tout à fait parallèles.
+  for (let i = 0; i < 70; i++) {
+    const y = r() * 64;
+    const len = 30 + r() * 120;
+    const pale = r() < 0.42;
+    g.fillStyle = pale
+      ? `rgba(190,214,224,${0.05 + r() * 0.1})`
+      : `rgba(16,34,42,${0.06 + r() * 0.12})`;
+    g.fillRect(r() * 256, y, len, 1 + r() * 2);
+  }
+  // Éclats de ciel : ce que l'œil prend pour un reflet, et ce qui fait basculer
+  // la lecture d'un coup - une dalle n'accroche pas la lumière par plaques.
+  for (let i = 0; i < 34; i++) {
+    g.fillStyle = `rgba(216,234,244,${0.12 + r() * 0.2})`;
+    g.fillRect(r() * 256, r() * 64, 5 + r() * 16, 1);
+  }
+  const t = toTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  return t;
+}
+
 // --- Clôture de voie (niveau du sol) : poteaux + fils, ou haie taillée ---
 export function makeTrackFenceTexture(hedge: boolean): THREE.CanvasTexture {
   const { c, g } = makeCanvas(256, 64);

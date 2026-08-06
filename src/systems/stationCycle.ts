@@ -1217,9 +1217,32 @@ export function randomizeEntry(stationIndex?: number, direction?: LoopDirection)
 }
 
 
+/**
+ * Retenir la rame là où elle est, pour les captures de développement.
+ *
+ * Sous SwiftShader une image prend une seconde, c'est-à-dire vingt-cinq mètres :
+ * un ouvrage qu'on vient cadrer à vingt mètres est DERRIÈRE la rame avant que la
+ * capture soit prise, et l'on photographie une trouée vide sans comprendre
+ * pourquoi. La retenue arrête l'avance, et rien d'autre - l'heure tourne, les
+ * feux battent, la ville reste où elle est puisque c'est le train qui bouge.
+ */
+let held = false;
+
+export function holdTrain(on: boolean): void {
+  held = on;
+  if (!on) return;
+  runtime.speed = 0;
+  runtime.accel = 0;
+  runtime.sway = 0;
+}
+
 export function updateCycle(dt: number): void {
   const s = useStore.getState();
   if (!s.started) return;
+  if (held) {
+    advanceClock(dt);
+    return;
+  }
 
   // Pendant un arrêt subi, le chrono de phase avance au prorata de la
   // vitesse : gelé à l'arrêt, cohérent avec la distance pendant freinage et

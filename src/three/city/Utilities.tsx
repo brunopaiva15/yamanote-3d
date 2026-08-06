@@ -28,6 +28,7 @@ import { segEnv } from '../../systems/segmentEnv';
 import { plateauRuntime } from '../../systems/plateau';
 import { hiddenByStation, sidePush } from '../../systems/stationOcclusion';
 import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
+import { inSingularity } from '../../systems/singularity';
 
 /** Abscisse des poteaux (m) : entre l'emprise ferroviaire et le premier rang. */
 const POLE_X = 10.4;
@@ -258,7 +259,9 @@ export function Utilities() {
       const x = s.side * (POLE_X + sidePush(s.side) + segEnv.citySetback);
       for (let i = 0; i < count; i++) {
         const z = ((runtime.distance + i * SPACING) % span) - span / 2;
-        if (hiddenByStation(z)) {
+        // Un poteau planté dans le chenal d'une rivière, ou au milieu d'une
+        // chaussée de passage à niveau, tient debout mais n'a rien à y faire.
+        if (hiddenByStation(z) || inSingularity(runtime.distance - z, 1.5)) {
           s.pole.setMatrixAt(i, sc.hidden);
           s.wire.setMatrixAt(i, sc.hidden);
           s.lamp.setMatrixAt(i, sc.hidden);

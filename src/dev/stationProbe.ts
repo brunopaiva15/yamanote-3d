@@ -22,6 +22,7 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { input } from '../systems/input';
 import { placementFor } from '../systems/stationPlacement';
+import { holdTrain } from '../systems/stationCycle';
 import { psdGates } from '../three/station/psdLayout';
 import { freezeWeather, weather } from '../systems/weather';
 import { seasonNow } from '../systems/season';
@@ -352,12 +353,24 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   // murs de tranchée (`opensAtEnd`) et l'élévation de la ville. Pouvoir s'y
   // placer est indispensable pour juger un tronçon qui s'ouvre en fin de
   // course - regarder par la baie à p = 0,2 ne montre que le mur.
-  w.__probeCruise = (i: number, phaseT = 8) => {
+  //
+  // LE SENS DE MARCHE SE FIXE ICI AUSSI, et il faut le savoir : la boucle en
+  // tire un tronçon DIFFÉRENT pour un même index (`segmentAt`). Le sens est
+  // pourtant tiré au sort à l'embarquement - une capture demandée à Tabata→
+  // Komagome montrait donc la tranchée de Komagome→Sugamo une fois sur deux,
+  // sans un mot pour le dire.
+  w.__probeCruise = (i: number, phaseT = 8, dir?: 'inner' | 'outer') => {
     const k = ((i % 30) + 30) % 30;
     // platformIndex aussi : c'est LUI qui choisit le tronçon (systems/segmentEnv
     // retient la gare quittée tant que son quai est visible). Sans ça, on
     // demandait Harajuku→Shibuya et on regardait le décor d'un autre tronçon.
-    useStore.setState({ index: k, platformIndex: k, phase: 'cruise', doorSide: DOOR_SIDE[k] });
+    useStore.setState({
+      index: k,
+      platformIndex: k,
+      phase: 'cruise',
+      doorSide: DOOR_SIDE[k],
+      ...(dir ? { loopDirection: dir } : {}),
+    });
     runtime.phaseT = phaseT;
     runtime.platformFade = 0;
     runtime.platformSlide = 0;
@@ -438,11 +451,18 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
    * systems/singularity), si bien que la trouée reste où elle est et que la
    * ville n'est pas rebâtie.
    *
+   * Sur un tronçon longé par le 首都高 il n'y a pas d'ouvrage ponctuel à viser :
+   * la distance demandée compte alors depuis le DÉBUT du tablier, ce qui permet
+   * de se placer dessous plutôt que de le regarder de loin.
+   *
    *   __probeSingularity()      → ce qui est posé, et à quelle distance
    *   __probeSingularity(120)   → s'arrêter cent vingt mètres avant
    */
   w.__probeSingularity = (ahead?: number) => {
-    if (ahead !== undefined && singularity.kind) runtime.distance = singularity.s - ahead;
+    if (ahead !== undefined) {
+      if (singularity.kind) runtime.distance = singularity.s - ahead;
+      else if (expressway.on) runtime.distance = expressway.s0 + ahead;
+    }
     return {
       nature: singularity.kind,
       devant: +(singularity.s - runtime.distance).toFixed(1),
@@ -505,8 +525,14 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     clockMin: Math.round(runtime.clockMin),
     index: useStore.getState().index,
     phase: useStore.getState().phase,
+    // Le sens de marche : il est tiré au sort à l'embarquement, et c'est lui qui
+    // décide quel TRONÇON se traverse pour un index donné (data/segments).
+    dir: useStore.getState().loopDirection,
     platformFade: +runtime.platformFade.toFixed(2),
     distance: Math.round(runtime.distance),
+    // Où porte le regard : l'écart au sens de marche, en degrés, positif vers la
+    // droite. Un script qui vise à l'aveugle ne peut pas savoir s'il a tourné.
+    regard: +((Math.atan2(runtime.lookX, -runtime.lookZ) * 180) / Math.PI).toFixed(1),
     // Où se tient le joueur, en repère QUAI : c'est le seul repère dans
     // lequel se lisent les cotes de gare (bord, limites de marche, mobilier).
     frame: runtime.playerFrame,
@@ -525,6 +551,15 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   // saisons sur la même image plutôt que sur deux quartiers différents.
   w.__probeDistance = (m: number) => {
     runtime.distance = m;
+  };
+
+  // Retenir la rame là où elle est (voir systems/stationCycle). Nécessaire dès
+  // qu'on cadre un OUVRAGE et non un paysage : sous SwiftShader une image coûte
+  // une seconde, et vingt-cinq mètres de voie passent entre la pose et la
+  // capture.
+  w.__probeHold = (on = true) => {
+    holdTrain(on);
+    return on;
   };
 
   // Temps qu'il fait, forcé. Le modèle (systems/weather) le reprendrait à la

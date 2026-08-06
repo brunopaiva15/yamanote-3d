@@ -115,6 +115,60 @@ export const expressway = {
 const EXPRESSWAY_MARGIN = 60;
 
 /**
+ * Une chose posée le long de la voie à l'abscisse `s` est-elle DANS l'ouvrage ?
+ *
+ * Le passage à niveau et la rivière sont des trouées : le décor de bord de voie
+ * les traverserait sans y penser - un arbre planté au milieu de la chaussée, une
+ * voiture qui roule sur l'eau, un poteau dans le chenal. Chacun de ces
+ * pourvoyeurs (three/Wayside, city/Traffic, city/Utilities) connaît l'abscisse
+ * monde de ce qu'il pose : il suffit de la lui faire vérifier ici.
+ *
+ * La marge est celle de l'objet, pas de l'ouvrage : un arbre de six mètres de
+ * couronne doit s'écarter davantage qu'une borne.
+ */
+/**
+ * Faut-il OUVRIR la clôture de la ligne, et de combien (0..1) ?
+ *
+ * Un passage à niveau est par définition une rupture de la clôture, et une
+ * rivière en est une autre. Mais la clôture n'est pas faite d'objets qu'on
+ * escamote un à un : c'est un plan de quatre cents mètres à texture répétée
+ * (three/SegmentEnvironment), et y percer un trou demanderait un nuanceur - qu'il
+ * faudrait alors écrire deux fois, le mode Extraordinaire ne lisant pas le GLSL.
+ *
+ * On l'efface donc en entier, mais SEULEMENT quand l'ouvrage est sous les yeux.
+ * L'arbitrage se voit à l'œil nu : une haie qui traverse une chaussée se
+ * remarque immédiatement, une haie absente pendant trois secondes ne se remarque
+ * pas - elle est basse, répétitive, et l'œil est occupé ailleurs.
+ */
+export function fenceBreak(distance: number): number {
+  if (singularity.kind === null) return 0;
+  const d = Math.abs(distance - singularity.s);
+  const t = (d - FENCE_HIDE) / (FENCE_KEEP - FENCE_HIDE);
+  return 1 - Math.max(0, Math.min(1, t));
+}
+
+/**
+ * Distances (m) entre lesquelles la clôture revient de rien à tout.
+ *
+ * La fenêtre est COURTE, et elle l'est devenue à la lecture des captures : la
+ * clôture est déjà semi-transparente d'elle-même (le fondu croisé haie/grillage
+ * de three/SegmentEnvironment), et l'ouvrir en plus la changeait en panneaux de
+ * verre vert sur cent mètres de voie. Vingt-cinq mètres de fondu ne se voient
+ * pas ; cent mètres de haie fantôme se voient tout de suite.
+ */
+const FENCE_HIDE = 42;
+const FENCE_KEEP = 78;
+
+export function inSingularity(s: number, margin = 0): boolean {
+  if (singularity.kind === null) return false;
+  // L'ouvrage est tourné dans la trame : ses bords balaient un peu de voie de
+  // part et d'autre. Douze mètres d'emprise ferroviaire suffisent à décrire ce
+  // que la rotation coûte à ce qui est posé au bord.
+  const skew = 12 * Math.abs(Math.sin(singularity.yaw));
+  return Math.abs(s - singularity.s) < singularity.w / 2 + skew + margin;
+}
+
+/**
  * Nature et position de la singularité ponctuelle d'un trajet, en mètres depuis
  * la gare quittée - ou `null` si le tronçon n'en porte aucune.
  *
