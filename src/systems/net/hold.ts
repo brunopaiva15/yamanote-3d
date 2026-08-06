@@ -1,4 +1,4 @@
-// La rame attend ses passagers, et jusqu'à quand.
+// La rame attend ses passagers. Tous, et aussi longtemps qu'il le faut.
 //
 // --- Le problème que ça résout ----------------------------------------------
 //
@@ -23,114 +23,110 @@
 // pour laisser monter un voyageur, avec l'annonce qui va avec, c'est le
 // quotidien de la Yamanote.
 //
-// --- Pourquoi un plafond ----------------------------------------------------
+// --- POURQUOI LE PLAFOND A DISPARU ------------------------------------------
 //
-// Parce que sans lui, un joueur qui pose son casque et va déjeuner immobilise
-// tout le salon indéfiniment. Quatre-vingt-dix secondes, c'est deux fois le
-// temps d'un arrêt : largement de quoi remonter, et pas assez pour que les
-// autres se demandent si le jeu a planté. Passé ce délai, la rame part, et le
-// retardataire se DÉTACHE - il continue de jouer et de discuter, mais son monde
-// n'est plus celui du salon, et il ne peut plus en être l'hôte.
+// Il valait quatre-vingt-dix secondes. Passé ce délai la rame partait, et le
+// retardataire se DÉTACHAIT : il gardait sa gare, les autres continuaient sans
+// lui, et un bouton « Rattraper la rame » proposait de se reposer là où le
+// salon en était.
+//
+// Ça ne tenait pas debout, et le symptôme le disait : resté à quai pendant que
+// les autres embarquaient, on voyait LES BÂTIMENTS AVANCER TOUT SEULS. Ce
+// n'était pas un défaut de rendu. Le monde d'un suiveur se recale sur celui de
+// l'hôte (`systems/net/worldSync`), et la resynchronisation dure écrit
+// `runtime.distance` : dès que la rame du salon roulait, notre décor roulait
+// avec elle, quai sous les pieds. Deux mondes qui divergent ne se rejoignent pas
+// à moitié.
+//
+// La rame attend donc maintenant que TOUT LE MONDE soit à bord. C'est plus
+// simple à expliquer qu'un compte à rebours, c'est vrai d'une vraie ligne quand
+// un agent tient une porte, et surtout ça ne peut pas produire deux mondes.
+//
+// --- Ce qui remplace le plafond ---------------------------------------------
+//
+// La peur qu'il calmait était réelle : quelqu'un qui pose son casque et va
+// déjeuner immobiliserait le salon. La réponse n'est pas un chronomètre, c'est
+// la PRÉSENCE. Un onglet fermé disparaît du roster et cesse d'être attendu ; un
+// onglet muet - plus une seule pose depuis deux secondes et demie - ne compte
+// plus non plus. On attend les joueurs qui jouent, pas les places vides.
 
 import { runtime } from '../runtime';
 import { setDepartureBlockers } from '../departureSequence';
 import { peers } from './peers';
+import { isStale } from './poseBuffer';
 import { netRole } from './worldDecisions';
 
-/**
- * Combien de temps la rame accepte d'attendre un membre resté à quai (s).
- *
- * Deux fois la durée d'un arrêt ordinaire. Au-delà, ce n'est plus quelqu'un qui
- * traîne, c'est quelqu'un qui est parti.
- */
-export const HOLD_MAX_S = 90;
+/** Combien de membres du salon ont les pieds sur le quai, nous compris. */
+let aQuai = 0;
+/** Sommes-nous l'un d'eux ? Le message affiché n'est pas le même. */
+let moiAQuai = false;
 
-/** Temps déjà passé à attendre pour l'arrêt en cours. */
-let attente = 0;
-/** L'arrêt pour lequel on compte : un nouvel arrêt remet le compteur à zéro. */
-let attenteStop = -1;
-/** On s'est détaché soi-même : la rame est partie sans nous. */
-let detache = false;
-
-export function isDetached(): boolean {
-  return detache;
+/** Combien de voyageurs la rame attend. Zéro : elle n'attend personne. */
+export function holdingAshore(): number {
+  return runtime.departureBlockers.heldAtStation ? aQuai : 0;
 }
 
-/** Le temps d'attente restant (s), pour l'afficher. Zéro si personne n'attend. */
-export function holdRemaining(): number {
-  if (!runtime.departureBlockers.heldAtStation) return 0;
-  return Math.max(0, HOLD_MAX_S - attente);
+/** La rame m'attend-elle, MOI ? */
+export function holdingSelf(): boolean {
+  return runtime.departureBlockers.heldAtStation && moiAQuai;
 }
 
 /**
- * Y a-t-il quelqu'un du salon sur le quai ?
+ * Qui du salon est sur le quai ?
  *
  * Nous compris : si c'est NOUS qui sommes descendus, la rame doit nous attendre
- * aussi. Le drapeau `attached` d'un pair vaut faux dès qu'il a laissé la rame
- * partir - celui-là, on ne l'attend plus, il a déjà son propre monde.
+ * aussi. Le drapeau `attached` d'un pair vaut faux quand il n'est pas dans le
+ * monde du salon - celui-là n'a pas de rame à prendre.
+ *
+ * Un pair MUET ne compte pas. Ce n'est pas une entorse à la règle « on attend
+ * tout le monde » : c'est ce qui la rend tenable. Un onglet fermé met un instant
+ * à quitter le roster, et sa dernière pose le montre debout sur le quai pour
+ * toujours. On attend les joueurs qui jouent.
  */
-function quelquUnAQuai(): boolean {
-  if (runtime.playerFrame === 'platform' && !detache) return true;
+function compterAQuai(now: number): void {
+  aQuai = 0;
+  moiAQuai = runtime.playerFrame === 'platform';
+  if (moiAQuai) aQuai++;
   for (const p of peers.values()) {
-    if (!p.attached) continue;
+    if (!p.attached || p.gone) continue;
+    if (isStale(p.poses, now)) continue;
     const derniere = p.poses[p.poses.length - 1];
-    if (derniere && derniere.frame === 1) return true;
+    if (derniere && derniere.frame === 1) aQuai++;
   }
-  return false;
 }
 
 /**
- * Décide si la rame attend, et jusqu'à quand. Une fois par image.
+ * Décide si la rame attend. Une fois par image.
  *
  * Seul l'HÔTE pose le blocage : c'est lui qui décide du départ, et les suiveurs
  * le reçoivent dans le battement. Deux clients qui poseraient chacun leur
  * blocage se retiendraient l'un l'autre sans jamais s'accorder sur la fin de
  * l'attente.
+ *
+ * Le comptage, lui, se fait CHEZ TOUT LE MONDE : c'est ce qui permet à un
+ * suiveur d'afficher pourquoi les portes ne se ferment pas, sans attendre que
+ * l'hôte le lui dise.
  */
-export function updateHold(dt: number): void {
+export function updateHold(now: number = Date.now()): void {
   const role = netRole();
   if (role === 'solo') {
     // Hors salon, ce blocage n'a pas de producteur - comme avant.
-    attente = 0;
-    attenteStop = -1;
-    detache = false;
+    aQuai = 0;
+    moiAQuai = false;
     return;
   }
 
-  // Un nouvel arrêt : on repart d'une attente vierge.
-  if (attenteStop !== runtime.stopSequence) {
-    attenteStop = runtime.stopSequence;
-    attente = 0;
-  }
-
-  // Remonter à bord annule le détachement : on redemande sa place au salon.
-  if (detache && runtime.playerFrame === 'car') detache = false;
-
+  compterAQuai(now);
   if (role !== 'host') return;
 
-  const attendre = quelquUnAQuai() && attente < HOLD_MAX_S;
-  if (attendre) attente += dt;
-
+  const attendre = aQuai > 0;
   if (runtime.departureBlockers.heldAtStation !== attendre) {
     setDepartureBlockers({ heldAtStation: attendre });
   }
 }
 
-/**
- * La rame est partie sans nous : on se détache.
- *
- * Appelé par `platformWait` quand la rame quittée est hors de vue - c'est le
- * moment précis où les deux mondes cessent d'être le même, et où continuer à
- * faire semblant coûterait plus cher que de le dire.
- */
-export function detachSelf(): void {
-  if (netRole() === 'solo') return;
-  detache = true;
-}
-
 /** Quitter le salon remet tout à plat. */
 export function resetHold(): void {
-  attente = 0;
-  attenteStop = -1;
-  detache = false;
+  aQuai = 0;
+  moiAQuai = false;
 }

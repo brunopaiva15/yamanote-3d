@@ -1,4 +1,4 @@
-// La rame qui attend, et celle qui part sans vous.
+// La rame attend tout le monde, et ne part jamais sans personne.
 //
 // C'est la règle qui empêche un salon de se scinder en deux. Le jeu a deux
 // machines à états - le cycle de la boucle, et l'attente de quai - qui ne
@@ -7,13 +7,21 @@
 // la divergence d'arriver : tant qu'un membre a les pieds sur le quai, la rame
 // attend.
 //
-// Trois propriétés à tenir, et elles se contredisent presque :
+// ELLE ATTENDAIT QUATRE-VINGT-DIX SECONDES, puis partait, et le retardataire se
+// « détachait ». Ça ne tenait pas debout, et le symptôme le disait : resté à
+// quai pendant que les autres embarquaient, on voyait les bâtiments avancer
+// tout seuls - la resynchronisation dure écrit `runtime.distance`, si bien que
+// le décor d'un suiveur roulait avec la rame du salon, quai sous les pieds.
+// Deux mondes qui divergent ne se rejoignent pas à moitié.
 //
-//  · la rame attend VRAIMENT (sinon la règle ne sert à rien) ;
-//  · elle n'attend pas INDÉFINIMENT (sinon quelqu'un qui va déjeuner immobilise
-//    tout le salon) ;
+// Trois propriétés à tenir :
+//
+//  · la rame attend VRAIMENT, et sans limite de temps ;
+//  · elle n'attend pas une place VIDE - un onglet fermé ou muet ne compte pas,
+//    et c'est ce qui remplace l'ancien plafond ;
 //  · seul l'HÔTE pose le blocage (sinon deux clients se retiennent l'un l'autre
-//    sans jamais s'accorder sur la fin de l'attente).
+//    sans jamais s'accorder sur la fin de l'attente), mais TOUT LE MONDE compte
+//    les gens à quai, pour pouvoir l'afficher.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,10 +29,11 @@ import { register } from 'node:module';
 
 register('./fixtures/ts-resolve.mjs', import.meta.url);
 
-const { HOLD_MAX_S, detachSelf, holdRemaining, isDetached, resetHold, updateHold } = await import(
+const { holdingAshore, holdingSelf, resetHold, updateHold } = await import(
   '../src/systems/net/hold.ts'
 );
 const { clearPeers, receivePose, syncRoster } = await import('../src/systems/net/peers.ts');
+const { POSE_STALE_MS } = await import('../src/systems/net/poseBuffer.ts');
 const { runtime } = await import('../src/systems/runtime.ts');
 const { resetDecisions, setNetRole } = await import('../src/systems/net/worldDecisions.ts');
 
@@ -62,11 +71,6 @@ function neuf(role: 'solo' | 'host' | 'follower' = 'host'): void {
   runtime.departureBlockers.heldAtStation = false;
 }
 
-/** Fait passer le temps, par pas d'un dixième de seconde. */
-function avancer(secondes: number): void {
-  for (let i = 0; i < Math.ceil(secondes * 10); i++) updateHold(0.1);
-}
-
 /** Un pair présent, dans le repère demandé. */
 function pair(id: string, frame: 0 | 1, attached = true): void {
   syncRoster(
@@ -77,20 +81,28 @@ function pair(id: string, frame: 0 | 1, attached = true): void {
   receivePose(id, pose(frame), horloge);
 }
 
+/** Une image, à l'instant de la dernière pose reçue. */
+function image(): void {
+  updateHold(horloge);
+}
+
 // --- La rame attend ---------------------------------------------------------
 
 test('personne à quai : la rame ne retient rien', () => {
   neuf();
   pair('toi', 0);
-  updateHold(0.1);
+  image();
   assert.equal(runtime.departureBlockers.heldAtStation, false);
+  assert.equal(holdingAshore(), 0);
 });
 
 test('un pair sur le quai retient la rame', () => {
   neuf();
   pair('toi', 1);
-  updateHold(0.1);
+  image();
   assert.equal(runtime.departureBlockers.heldAtStation, true);
+  assert.equal(holdingAshore(), 1);
+  assert.equal(holdingSelf(), false, 'ce n’est pas nous qu’on attend');
 });
 
 test('descendre soi-même retient la rame aussi', () => {
@@ -98,81 +110,132 @@ test('descendre soi-même retient la rame aussi', () => {
   // roster (voir peers), donc la boucle sur les pairs ne nous voit pas.
   neuf();
   runtime.playerFrame = 'platform';
-  updateHold(0.1);
+  image();
   assert.equal(runtime.departureBlockers.heldAtStation, true);
+  assert.equal(holdingSelf(), true);
+});
+
+test('on compte tout le monde, pas seulement le premier', () => {
+  neuf();
+  runtime.playerFrame = 'platform';
+  syncRoster(
+    [
+      { id: 'a', name: 'a', avatar: 1, mode: 'full', attached: true, joinedAt: 1 },
+      { id: 'b', name: 'b', avatar: 2, mode: 'full', attached: true, joinedAt: 1 },
+    ],
+    'moi',
+    0,
+  );
+  receivePose('a', pose(1), horloge);
+  receivePose('b', pose(1), horloge);
+  image();
+  assert.equal(holdingAshore(), 3, 'eux deux, et nous');
 });
 
 test('remonter à bord libère la rame', () => {
   neuf();
   pair('toi', 1);
-  updateHold(0.1);
+  image();
   assert.equal(runtime.departureBlockers.heldAtStation, true);
   receivePose('toi', pose(0), horloge);
-  updateHold(0.1);
+  image();
   assert.equal(runtime.departureBlockers.heldAtStation, false);
 });
 
-test('un pair déjà détaché ne retient plus rien', () => {
-  // Il a laissé la rame partir : il a son propre monde, sa propre gare, sa
-  // propre rame. L'attendre reviendrait à retenir le salon pour quelqu'un qui
-  // n'y est plus.
+test('la rame n’est libérée que quand le DERNIER est monté', () => {
   neuf();
-  pair('parti', 1, false);
-  updateHold(0.1);
+  runtime.playerFrame = 'platform';
+  pair('toi', 1);
+  image();
+  assert.equal(holdingAshore(), 2);
+  // Le pair monte : on est encore à quai, la rame reste tenue.
+  receivePose('toi', pose(0), horloge);
+  image();
+  assert.equal(runtime.departureBlockers.heldAtStation, true);
+  assert.equal(holdingAshore(), 1);
+  // On monte à notre tour : elle peut partir.
+  runtime.playerFrame = 'car';
+  image();
   assert.equal(runtime.departureBlockers.heldAtStation, false);
 });
 
-// --- Mais pas indéfiniment --------------------------------------------------
+test('un pair qui n’est pas dans le monde du salon ne retient rien', () => {
+  neuf();
+  pair('ailleurs', 1, false);
+  image();
+  assert.equal(runtime.departureBlockers.heldAtStation, false);
+});
 
-test('au bout de quatre-vingt-dix secondes, la rame part', () => {
+// --- Elle n'attend pas une place vide ---------------------------------------
+
+test('la rame attend aussi longtemps qu’il le faut', () => {
+  // C'est le changement : l'ancienne règle la faisait partir au bout de
+  // quatre-vingt-dix secondes, et laissait le retardataire dans un autre monde.
   neuf();
   pair('toi', 1);
-  // On boucle franchement au-delà du plafond, et non pile dessus : neuf cents
-  // additions de 0,1 s font 89,999… en virgule flottante, et le seuil n'est
-  // jamais franchi. Un test qui tient à la dernière décimale d'un cumul de
-  // flottants ne mesure pas ce qu'il croit.
-  avancer(HOLD_MAX_S + 2);
+  for (let i = 0; i < 3000; i++) {
+    // Le pair continue de donner signe de vie, comme un joueur qui marche sur
+    // le quai : c'est bien lui qu'on attend, et non un onglet oublié.
+    receivePose('toi', pose(1), horloge);
+    image();
+  }
   assert.equal(
     runtime.departureBlockers.heldAtStation,
-    false,
-    'quelqu’un qui va déjeuner immobiliserait tout le salon',
+    true,
+    'la rame ne doit plus partir sans lui, quel que soit le temps passé',
   );
 });
 
-test('le compte à rebours décroît, et s’arrête à zéro', () => {
+test('un pair muet cesse d’être attendu', () => {
+  // Ce qui remplace le plafond, et c'est mieux : on n'attend pas un onglet
+  // fermé dont la dernière pose le montre debout sur le quai pour toujours.
   neuf();
   pair('toi', 1);
-  updateHold(0.1);
-  const debut = holdRemaining();
-  assert.ok(debut > 0 && debut <= HOLD_MAX_S, `${debut}`);
-  for (let i = 0; i < 100; i++) updateHold(0.1);
-  const apres = holdRemaining();
-  assert.ok(apres < debut, `${debut} → ${apres}`);
-  avancer(HOLD_MAX_S + 2);
-  assert.equal(holdRemaining(), 0);
+  image();
+  assert.equal(runtime.departureBlockers.heldAtStation, true);
+  updateHold(horloge + POSE_STALE_MS + 1);
+  assert.equal(runtime.departureBlockers.heldAtStation, false);
 });
 
-test('un nouvel arrêt rend son crédit d’attente', () => {
-  // Sans ça, un salon où quelqu'un descend souvent finirait par ne plus jamais
-  // attendre personne : le compteur ne se remettrait jamais à zéro.
+test('un pair qui reprend la parole est de nouveau attendu', () => {
   neuf();
   pair('toi', 1);
-  avancer(HOLD_MAX_S + 2);
+  updateHold(horloge + POSE_STALE_MS + 1);
   assert.equal(runtime.departureBlockers.heldAtStation, false);
-  runtime.stopSequence = 2;
-  updateHold(0.1);
+  receivePose('toi', pose(1), horloge);
+  image();
   assert.equal(runtime.departureBlockers.heldAtStation, true);
 });
 
-// --- Seul l'hôte décide -----------------------------------------------------
+test('notre propre silence ne nous efface pas', () => {
+  // On ne publie pas de pose pour soi-même : notre présence à quai se lit dans
+  // le runtime, pas dans un tampon. Un test de fraîcheur qui nous oublierait
+  // ferait partir la rame sans nous - exactement ce qu'on vient d'interdire.
+  neuf();
+  runtime.playerFrame = 'platform';
+  updateHold(horloge + 10 * POSE_STALE_MS);
+  assert.equal(runtime.departureBlockers.heldAtStation, true);
+});
+
+// --- Seul l'hôte décide, mais tout le monde compte --------------------------
 
 test('un suiveur ne pose jamais le blocage lui-même', () => {
   // Il le REÇOIT dans le battement. Deux clients qui poseraient chacun le leur
   // se retiendraient l'un l'autre sans jamais s'accorder sur la fin.
   neuf('follower');
   pair('toi', 1);
-  updateHold(0.1);
+  image();
   assert.equal(runtime.departureBlockers.heldAtStation, false);
+});
+
+test('un suiveur sait tout de même qui il attend', () => {
+  // Le blocage lui arrive dans le battement ; le COMPTE, lui, se fait chez lui,
+  // sans quoi il ne pourrait pas dire pourquoi les portes restent ouvertes.
+  neuf('follower');
+  pair('toi', 1);
+  image();
+  runtime.departureBlockers.heldAtStation = true;
+  assert.equal(holdingAshore(), 1);
 });
 
 test('hors salon, ce blocage n’a toujours aucun producteur', () => {
@@ -181,51 +244,16 @@ test('hors salon, ce blocage n’a toujours aucun producteur', () => {
   // parce que le multijoueur existe.
   neuf('solo');
   runtime.playerFrame = 'platform';
-  updateHold(0.1);
+  image();
   assert.equal(runtime.departureBlockers.heldAtStation, false);
-  assert.equal(holdRemaining(), 0);
-});
-
-// --- Le détachement ---------------------------------------------------------
-
-test('la rame partie sans nous, on se détache', () => {
-  neuf();
-  assert.equal(isDetached(), false);
-  detachSelf();
-  assert.equal(isDetached(), true);
-});
-
-test('un détaché ne retient plus la rame, même les pieds sur le quai', () => {
-  // Il a déjà son propre monde : le salon n'a plus rien à attendre de lui.
-  neuf();
-  runtime.playerFrame = 'platform';
-  detachSelf();
-  updateHold(0.1);
-  assert.equal(runtime.departureBlockers.heldAtStation, false);
-});
-
-test('remonter dans une rame annule le détachement', () => {
-  neuf();
-  runtime.playerFrame = 'platform';
-  detachSelf();
-  assert.equal(isDetached(), true);
-  runtime.playerFrame = 'car';
-  updateHold(0.1);
-  assert.equal(isDetached(), false);
-});
-
-test('hors salon, on ne se détache de rien', () => {
-  neuf('solo');
-  detachSelf();
-  assert.equal(isDetached(), false);
+  assert.equal(holdingAshore(), 0);
 });
 
 test('quitter le salon remet tout à plat', () => {
   neuf();
   runtime.playerFrame = 'platform';
-  detachSelf();
-  updateHold(0.1);
+  image();
   resetHold();
-  assert.equal(isDetached(), false);
-  assert.equal(holdRemaining(), 0);
+  assert.equal(holdingAshore(), 0);
+  assert.equal(holdingSelf(), false);
 });

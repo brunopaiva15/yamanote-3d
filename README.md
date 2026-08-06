@@ -2575,10 +2575,28 @@ divergence d'arriver : **tant qu'un membre a les pieds sur le quai, la rame
 attend**, portes ouvertes, comme un vrai お客様のご案内. Le blocage existait
 depuis longtemps dans le code sans producteur ; il en a un.
 
-Quatre-vingt-dix secondes au plus, sans quoi quelqu'un qui pose son casque
-immobilise tout le salon. Passé ce délai la rame part, et le retardataire se
-détache : il continue de jouer et de discuter, mais son monde n'est plus celui
-des autres. Un bouton du HUD le remet là où le salon en est.
+**Sans limite de temps, et ce n'est plus un compromis.** L'attente était
+plafonnée à quatre-vingt-dix secondes ; passé ce délai la rame partait et le
+retardataire se « détachait » - il gardait sa gare, les autres continuaient sans
+lui, et un bouton du HUD proposait de rattraper la rame.
+
+Ça ne tenait pas debout, et le symptôme le disait : resté à quai pendant que les
+autres embarquaient, on voyait **les bâtiments avancer tout seuls**. Ce n'était
+pas un défaut de rendu. Le monde d'un suiveur se recale sur celui de l'hôte, et
+la resynchronisation dure écrit `runtime.distance` : dès que la rame du salon
+roulait, le décor roulait avec elle, quai sous les pieds. Deux mondes qui
+divergent ne se rejoignent pas à moitié.
+
+La rame attend donc que **tout le monde** soit à bord. C'est plus simple à
+expliquer qu'un compte à rebours, c'est vrai d'une vraie ligne quand un agent
+tient une porte, et surtout ça ne peut pas produire deux mondes.
+
+Ce qui remplace le plafond n'est pas un chronomètre mais la **présence** : un
+onglet fermé quitte le roster et cesse d'être attendu, et un onglet muet - plus
+une seule pose depuis deux secondes et demie - ne compte plus non plus. On attend
+les joueurs qui jouent, pas les places vides. Le HUD dit qui l'on attend : « la
+rame vous attend » à celui qui est resté sur le quai, le nombre de retardataires
+à ceux qui sont assis.
 
 #### Ce que ça coûte, et pourquoi c'est bridé
 

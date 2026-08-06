@@ -340,25 +340,6 @@ export function netCycleDt(dt: number): number {
   return netRole() === 'follower' ? warpDt(dt, correction) : dt;
 }
 
-/**
- * Rattraper la rame : se reposer là où le salon en est.
- *
- * On ne se téléporte pas soi-même - on n'a aucune idée d'où le salon est rendu.
- * On envoie un `hello`, exactement comme un arrivant, et l'hôte répond par un
- * battement hors cadence que la resynchronisation dure appliquera. Un seul
- * chemin pour « j'arrive » et pour « je reviens », donc un seul chemin à roder.
- *
- * Le détachement lui-même se lèvera tout seul : `updateHold` le retire dès que
- * le joueur est de nouveau dans le repère du wagon.
- */
-export function rejoinRoomWorld(): void {
-  roomSend('event', { v: PROTOCOL_VERSION, from: useRoom.getState().selfId, k: 'hello' });
-  // Et l'on force la prochaine correction à être dure : après un détachement,
-  // notre horloge de phase n'a plus aucun rapport avec celle du salon, et un
-  // rattrapage en douceur mettrait des heures.
-  seqEntrant = -1;
-}
-
 // --- Cycle de vie -----------------------------------------------------------
 
 /** Branche l'écoute du monde. Idempotent. */
