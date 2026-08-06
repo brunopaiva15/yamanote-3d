@@ -29,6 +29,7 @@ import { plateauRuntime } from '../../systems/plateau';
 import { hiddenByStation, sidePush } from '../../systems/stationOcclusion';
 import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
 import { inSingularity } from '../../systems/singularity';
+import { cityRelief } from '../../systems/terrain';
 
 /** Abscisse des poteaux (m) : entre l'emprise ferroviaire et le premier rang. */
 const POLE_X = 10.4;
@@ -267,14 +268,19 @@ export function Utilities() {
           s.lamp.setMatrixAt(i, sc.hidden);
           continue;
         }
-        sc.pos.set(x, segEnv.cityY, z);
+        // Le pied du poteau suit le relief de la chaussée qu'il éclaire. Seize
+        // poteaux à vingt-six mètres couvrent quatre cents mètres de voie, sur
+        // lesquels le sol du 国土地理院 varie de plus d'une hauteur de poteau :
+        // à cote fixe, la moitié de la file flottait au-dessus de la rue.
+        const gy = segEnv.cityY + cityRelief(runtime.distance - z, Math.abs(x), s.side);
+        sc.pos.set(x, gy, z);
         sc.rot.setFromAxisAngle(sc.axis, yaw);
         sc.scl.set(1, 1, 1);
         sc.mtx.compose(sc.pos, sc.rot, sc.scl);
         s.pole.setMatrixAt(i, sc.mtx);
         s.wire.setMatrixAt(i, sc.mtx);
         // Sous-face du foyer : posée sous la potence, elle regarde le sol.
-        sc.pos.set(x + s.side * LAMP_REACH, segEnv.cityY + LAMP_Y - 0.09, z);
+        sc.pos.set(x + s.side * LAMP_REACH, gy + LAMP_Y - 0.09, z);
         sc.rot.identity();
         sc.mtx.compose(sc.pos, sc.rot, sc.scl);
         s.lamp.setMatrixAt(i, sc.mtx);

@@ -185,10 +185,35 @@ export function updateTerrain(
  * `worldS` est l'abscisse monde d'un bâtiment, `x` sa distance à l'axe (toujours
  * positive), `side` le côté de la scène. Zéro au droit du train : c'est une
  * DIFFÉRENCE, et c'est tout ce que l'œil peut lire depuis un siège.
+ *
+ * ATTENTION : cette cote est valable POUR CETTE IMAGE. `hereY` bouge avec le
+ * train - il monte de vingt mètres entre Gotanda et Meguro - si bien qu'une
+ * valeur retenue d'une image sur l'autre décrit un sol qui n'existe plus. Tout
+ * ce qui se pose une fois pour être revu longtemps doit garder l'ALTITUDE
+ * (`cityGround`) et laisser la soustraction au groupe de scène.
  */
 export function cityRelief(worldS: number, x: number, side: 1 | -1): number {
   if (!enabled) return 0;
   return groundAt(loopSOfWorld(worldS), side * x * lateralSign()) - hereY;
+}
+
+/**
+ * Altitude orthométrique du sol de la ville (m), aux coordonnées du ruban.
+ *
+ * La même lecture que `cityRelief`, mais dans un repère qui ne bouge pas : le
+ * niveau de la mer. C'est celui qu'il faut pour tout ce qui est ÉCRIT UNE FOIS
+ * et relu pendant des centaines de mètres - les bâtiments d'une cellule du
+ * ruban vivent quatre cent quatre-vingts mètres, l'arrière-pays douze cents.
+ * Le train, lui, monte et descend pendant ce temps : une cote prise par rapport
+ * à la voie au moment de l'écriture laisse le sujet en l'air, ou l'enterre, dès
+ * que la voie a changé d'altitude.
+ *
+ * La soustraction se fait alors une fois par image, sur le groupe qui porte
+ * tout le ruban (`segEnv.cityY - trackElevation()`), et non par sujet.
+ */
+export function cityGround(worldS: number, x: number, side: 1 | -1): number {
+  if (!enabled) return hereY;
+  return groundAt(loopSOfWorld(worldS), side * x * lateralSign());
 }
 
 /** Altitude orthométrique du sol sous le train (m) : la cote de la voie. */

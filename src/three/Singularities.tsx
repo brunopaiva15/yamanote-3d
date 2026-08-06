@@ -39,6 +39,7 @@ import { plateauRuntime } from '../systems/plateau';
 import { hiddenByStation, sidePush } from '../systems/stationOcclusion';
 import { qualityLevel, usePerf, type Quality } from '../systems/perf';
 import { weather } from '../systems/weather';
+import { cityRelief } from '../systems/terrain';
 import { makeWaterTexture } from '../textures/procedural';
 
 /** Demi-longueur de la chaussée du passage à niveau (m). */
@@ -546,7 +547,12 @@ export function Singularities() {
       const on = near && kind === 'crossing';
       crossRoot.current.visible = on;
       if (on) {
-        crossRoot.current.position.set(0, segEnv.cityY, z);
+        // La chaussée du passage à niveau est celle de la ville, et la ville a
+        // un relief : l'ouvrage est ancré à une abscisse MONDE fixe, que le
+        // train aborde depuis trois cent quarante mètres. Sur cette approche
+        // l'altitude de la voie change, et un ouvrage à cote fixe se soulevait
+        // du sol qu'il traverse.
+        crossRoot.current.position.set(0, segEnv.cityY + cityRelief(singularity.s, 0, 1), z);
         crossRoot.current.rotation.y = -singularity.yaw;
         // Les feux battent : deux temps par seconde, en opposition. C'est le
         // seul mouvement de tout le décor qui ne vienne pas de la vitesse du
@@ -580,7 +586,7 @@ export function Singularities() {
         // rue. C'est le parti de toutes les rivières canalisées de Tokyo, et
         // c'est aussi ce qui la rend visible depuis un viaduc : la nappe est
         // posée sur le sol urbain, ce sont les murs qui creusent.
-        riverRoot.current.position.set(0, segEnv.cityY, z);
+        riverRoot.current.position.set(0, segEnv.cityY + cityRelief(singularity.s, 0, 1), z);
         riverRoot.current.rotation.y = -singularity.yaw;
         built.waterMesh.scale.z = singularity.w;
         for (let i = 0; i < 2; i++) {
@@ -603,7 +609,7 @@ export function Singularities() {
       if (on) {
         const side = expressway.side;
         const push = side * (sidePush(side) + segEnv.citySetback);
-        const under = segEnv.cityY + DECK_CLEAR;
+        const deckX = Math.abs(push);
         const lit = night > 0.06;
         built.lamps.visible = lit;
         built.deckLamp.color.setRGB(1, 0.85, 0.63).multiplyScalar(0.3 + 1.5 * night);
@@ -627,7 +633,11 @@ export function Singularities() {
             built.piers.setMatrixAt(i * 2 + 1, sc.hidden);
             continue;
           }
-          sc.pos.set(push, under, dz);
+          // Le tablier et ses piles suivent le sol de la rue qu'ils enjambent :
+          // les travées courent sur plusieurs centaines de mètres devant la
+          // rame, et le relief y varie plus que la garde du tablier.
+          const gy = segEnv.cityY + cityRelief(s, deckX, side);
+          sc.pos.set(push, gy + DECK_CLEAR, dz);
           sc.rot.setFromAxisAngle(sc.axis, flip);
           sc.scl.set(1, 1, 1);
           sc.mtx.compose(sc.pos, sc.rot, sc.scl);
@@ -638,7 +648,7 @@ export function Singularities() {
           // type de tronçon, sept mètres plus bas sur un viaduc.
           const h = Math.max(1, DECK_CLEAR - 0.95);
           for (let k = 0; k < 2; k++) {
-            sc.pos.set(side * (k === 0 ? PIER_IN : PIER_OUT) + push, segEnv.cityY, dz - SEC / 2 + 1.2);
+            sc.pos.set(side * (k === 0 ? PIER_IN : PIER_OUT) + push, gy, dz - SEC / 2 + 1.2);
             sc.rot.identity();
             sc.scl.set(1, h, 1);
             sc.mtx.compose(sc.pos, sc.rot, sc.scl);
