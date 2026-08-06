@@ -47,6 +47,7 @@ import {
   sOfBibleKm,
 } from '../systems/kmPost';
 import { SECTORS } from '../data/sectors';
+import { CRUST } from '../data/crust';
 import { WATER_CROSSINGS } from '../data/water';
 import { GEO_LANDMARKS } from '../data/tokyoGeo';
 import { FOOTPRINT_TOTAL, FOOTPRINT_REACH } from '../data/footprints';
@@ -794,11 +795,15 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     bibleKmPoint(kmNow, pt);
     const bands = BANDS.map((outer, i) => {
       const inner = i === 0 ? 0 : BANDS[i - 1];
-      const n = SECTORS.filter((sec) => {
+      const within = (sec: { x: number; z: number }) => {
         const d = Math.hypot(sec.x - pt.x, sec.z - pt.z);
         return d > inner && d <= outer;
-      }).length;
-      return { bande: `${inner / 1000}-${outer / 1000} km`, secteurs: n };
+      };
+      return {
+        bande: `${inner / 1000}-${outer / 1000} km`,
+        amas: SECTORS.filter(within).length,
+        nappe: CRUST.filter(within).length,
+      };
     });
     return {
       km: +kmNow.toFixed(2),
