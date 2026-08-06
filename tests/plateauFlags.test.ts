@@ -67,12 +67,12 @@ test('même allumé, le prototype ne couvre QUE son tronçon', () => {
   withSearch('', () => assert.equal(plateauCoversSegment(PLATEAU_SEGMENT, 'inner'), false));
 });
 
-test('le prototype ne couvre que le sens 内回り', () => {
-  // Le tracé exporté est une polyligne ORIENTÉE (Shibuya → Ebisu) : en 外回り
-  // il faudrait l'inverser, chunks et origine des distances compris. Le décor
-  // procédural, symétrique, reprend la main dans l'autre sens.
+test('le prototype couvre les deux sens sur son tronçon', () => {
+  // La polyligne reste orientée 内回り ; en 外回り PlateauWorld la parcourt à
+  // l'envers (progression 1 − t). Les deux sens sont donc couverts.
   withSearch('?plateau=1', () => {
-    assert.equal(plateauCoversSegment(PLATEAU_SEGMENT, 'outer'), false);
+    assert.equal(plateauCoversSegment(PLATEAU_SEGMENT, 'inner'), true);
+    assert.equal(plateauCoversSegment(PLATEAU_SEGMENT, 'outer'), true);
   });
 });
 

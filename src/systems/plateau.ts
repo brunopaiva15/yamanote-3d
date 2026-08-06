@@ -65,14 +65,14 @@ export const plateauRuntime = {
 /**
  * Le prototype est-il actif pour ce tronçon, dans ce sens ?
  *
- * 内回り SEULEMENT. Le tracé exporté (`route.json`) est une polyligne orientée,
- * de Shibuya vers Ebisu : la parcourir en 外回り demanderait de l'inverser, et
- * avec elle l'ordre des chunks et l'origine des distances. Tant que le monde
- * géoréférencé est un prototype sur un seul tronçon, le décor procédural -
- * lui, symétrique - reprend la main dans l'autre sens.
+ * Les deux sens. Le tracé exporté (`route.json`) est une polyligne orientée
+ * (内回り) : en 外回り, PlateauWorld parcourt la même polyligne à l'envers
+ * (progression `1 − t`), ce qui évite de dupliquer les chunks. Tant que le
+ * monde géoréférencé ne couvre qu'un tronçon, le décor procédural reprend la
+ * main partout ailleurs.
  */
-export function plateauCoversSegment(segment: number, dir: LoopDirection): boolean {
-  return plateauEnabled() && dir === 'inner' && segment === PLATEAU_SEGMENT;
+export function plateauCoversSegment(segment: number, _dir: LoopDirection): boolean {
+  return plateauEnabled() && segment === PLATEAU_SEGMENT;
 }
 
 /**
