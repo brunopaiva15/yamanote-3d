@@ -46,6 +46,7 @@ import { DISTRICTS, GENERIC, type District, type Feat } from '../data/districts.
 import { directionStep, prevStation, wrapStation } from '../data/loop.ts';
 import type { LoopDirection } from '../data/platforms';
 import { runtime } from './runtime.ts';
+import { cityRelief } from './terrain.ts';
 
 /** Longueur d'une cellule du ruban, le long de la voie (m). */
 export const CELL_LEN = 40;
@@ -55,6 +56,16 @@ export interface CityBuilding {
   s: number;
   /** Distance latérale du centre à l'axe de la voie (m), toujours positive. */
   x: number;
+  /**
+   * Cote du pied du bâtiment par rapport au sol au droit du train (m).
+   *
+   * Le relief du 国土地理院, lu à l'emplacement exact du sujet. Zéro sous le
+   * train par construction : c'est une DIFFÉRENCE, la seule chose que l'œil
+   * puisse lire depuis un siège. C'est ce qui fait monter la ville en quittant
+   * Gotanda, se creuser la cuvette de Shibuya, et se dresser la falaise du
+   * plateau de Yanaka au-dessus de Nishi-Nippori.
+   */
+  y: number;
   /** Longueur le long de la voie (m). */
   w: number;
   /** Profondeur latérale (m). */
@@ -606,6 +617,7 @@ export function buildCell(
       const b = out[count];
       b.s = cursor + w / 2;
       b.x = R.x0 + d / 2 + r() * Math.max(0, R.x1 - R.x0 - d);
+      b.y = cityRelief(b.s, b.x, side);
       b.w = w;
       b.d = d;
       b.h = h;
@@ -719,6 +731,7 @@ export function buildFarCell(
       const b = out[count];
       b.s = cursor + w / 2;
       b.x = R.x0 + d / 2 + r() * Math.max(0, R.x1 - R.x0 - d);
+      b.y = cityRelief(b.s, b.x, side);
       b.w = w;
       b.d = d;
       b.h = Math.min(FAR_H_MAX, R.hMin + district.maxHeight * R.hSpan * farHeight(r()));
@@ -786,8 +799,10 @@ export interface CityProp {
   w: number;
   d: number;
   h: number;
-  /** Altitude de la BASE, relative au sol de la ville (m). */
+  /** Altitude de la BASE, relative au pied de son bâtiment (m). */
   y: number;
+  /** Cote du pied du bâtiment porteur (m) : le relief, comme `CityBuilding.y`. */
+  base: number;
   tone: string;
   /**
    * Variante de feuillage (0..3), pour les bosquets seulement.
@@ -818,6 +833,10 @@ function place(p: CityProp, b: CityBuilding, side: 1 | -1, u: number, v: number)
   p.s = b.s + u * c - v * side * sn;
   p.x = b.x + u * side * sn + v * c;
   p.yaw = b.yaw;
+  // Tout accessoire est porté par un bâtiment : il monte et descend avec lui
+  // sur le relief. Le poser ici plutôt qu'aux dix endroits qui écrivent `y`
+  // garantit qu'aucun ne reste en l'air.
+  p.base = b.y;
 }
 
 /**
@@ -1113,6 +1132,7 @@ export function makePropBuffer(): CityProp[] {
     d: 0,
     h: 0,
     y: 0,
+    base: 0,
     tone: '#ffffff',
     variant: 0,
     roll: 0,
@@ -1125,6 +1145,7 @@ export function makeCellBuffer(length = CELL_CAPACITY): CityBuilding[] {
   return Array.from({ length }, () => ({
     s: 0,
     x: 0,
+    y: 0,
     w: 0,
     d: 0,
     h: 0,
