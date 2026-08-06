@@ -196,7 +196,7 @@ export function Engine(): null {
     // immédiat pour les trois.
     // La rame attend-elle quelqu'un resté à quai ? Avant la publication : le
     // battement doit porter le blocage de CETTE image, pas celui d'avant.
-    updateHold(cycleDt);
+    updateHold();
     netPumpOut(cycleDt);
     // Les fondus des avatars distants avancent au temps RÉEL et non au temps du
     // cycle : un pair qui décroche doit s'estomper à la même vitesse qu'on

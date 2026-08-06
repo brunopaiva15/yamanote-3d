@@ -1927,25 +1927,6 @@ body,
   font-weight: 700;
 }
 
-/* La rame est partie sans nous : c'est le seul message du salon qui appelle une
-   action, donc le seul qui ait le droit d'être cliquable. */
-.room-notice-detached {
-  border-color: rgba(200, 120, 60, 0.6);
-}
-
-.room-notice-action {
-  appearance: none;
-  border: 0;
-  background: none;
-  padding: 0;
-  color: #9ec46f;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 /* --- Le tchat du salon ---------------------------------------------------
  *
  * AU-DESSUS du bandeau de sous-titres, jamais dessous. Les sous-titres sont la
