@@ -36,7 +36,6 @@ import { runtime } from '../../systems/runtime';
 import { dayNightWeights } from '../../systems/daynight';
 import { segEnv } from '../../systems/segmentEnv';
 import { groundPush, sidePush, stationOcclusion } from '../../systems/stationOcclusion';
-import { plateauRuntime } from '../../systems/plateau';
 import { useStore } from '../../store';
 import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
 import {
@@ -594,15 +593,7 @@ export function CityRibbon() {
     // que la voie monte - vingt mètres entre Gotanda et Meguro, soit plus que la
     // hauteur des immeubles du bord de voie.
     if (yRoot.current) yRoot.current.position.y = segEnv.cityY - trackElevation();
-    if (zRoot.current) {
-      zRoot.current.position.z = runtime.distance - st.origin;
-      // Le prototype PLATEAU pose une ville RÉELLE sur son tronçon : le ruban
-      // procédural s'efface alors, sinon deux villes se superposeraient. Le sol
-      // urbain, lui, reste - les données PLATEAU ne portent aucun terrain. La
-      // bascule a lieu au départ d'une gare, masquée par le quai, exactement
-      // comme le changement de type de tronçon.
-      zRoot.current.visible = plateauRuntime.coverage < 0.5;
-    }
+    if (zRoot.current) zRoot.current.position.z = runtime.distance - st.origin;
     for (let i = 0; i < built.sides.length; i++) {
       const root = sideRoots.current[i];
       const side = built.sides[i].side;

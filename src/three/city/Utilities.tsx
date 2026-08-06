@@ -25,7 +25,6 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { runtime } from '../../systems/runtime';
 import { dayNightWeights } from '../../systems/daynight';
 import { segEnv } from '../../systems/segmentEnv';
-import { plateauRuntime } from '../../systems/plateau';
 import { hiddenByStation, sidePush } from '../../systems/stationOcclusion';
 import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
 import { inSingularity } from '../../systems/singularity';
@@ -241,18 +240,10 @@ export function Utilities() {
     const w = dayNightWeights(runtime.clockMin / 60);
     const on = Math.min(1, w.night + w.golden * 0.5);
     built.lampMat.color.set('#ffe4b0').multiplyScalar(on * 1.5);
-    // Le prototype PLATEAU pose une ville réelle : le mobilier procédural
-    // s'efface avec le ruban, sinon un poteau se planterait dans un immeuble
-    // relevé sur le terrain.
-    const real = plateauRuntime.coverage >= 0.5;
-
     for (const s of built.sides) {
-      s.pole.visible = !real;
-      s.wire.visible = !real;
       // Un maillage caché ne coûte pas d'appel de rendu : le foyer est donc
       // gratuit sur les deux tiers du cycle horaire.
-      s.lamp.visible = !real && on > 0.03;
-      if (real) continue;
+      s.lamp.visible = on > 0.03;
       // Le poteau présente la MÊME face à la rue des deux côtés de la voie :
       // sa potence surplombe toujours la chaussée, jamais le ballast, et son
       // transformateur pèse toujours du côté des façades.

@@ -5,10 +5,6 @@
 // depuis OpenStreetMap - mais elles disent où s'arrête le train, et c'est par
 // leur projection sur l'axe relevé que les gares entrent dans la polyligne.
 //
-// Shibuya, Ebisu, Sugamo et Ōtsuka reprennent au mètre près les ancrages du
-// prototype PLATEAU (scripts/plateau/config.mjs) : les deux tables ne doivent
-// pas dériver l'une de l'autre.
-//
 // Cette table était dans scripts/geo-loop.mjs ; elle en est sortie pour que
 // l'import du tracé et le générateur de src/data/tokyoGeo.ts lisent la même.
 

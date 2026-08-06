@@ -12,8 +12,8 @@
 // modèle statistique par distance à la voie → measured:false.
 
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
-import { parseArgs } from '../plateau/lib/args.mjs';
-import { makeProjector, pickJapanZone } from '../plateau/lib/geo.mjs';
+import { parseArgs } from './lib/args.mjs';
+import { makeProjector, pickJapanZone } from './lib/geo.mjs';
 import { overpass } from './lib/net.mjs';
 import { provenance } from './lib/source.mjs';
 import { PLATFORMS } from './lib/platforms.mjs';

@@ -40,12 +40,6 @@ export const SOURCES = {
     attribution: '出典：国土地理院ウェブサイト',
     url: 'https://maps.gsi.go.jp/development/ichiran.html',
   },
-  plateau: {
-    name: 'Project PLATEAU (国土交通省)',
-    license: 'CC BY 4.0',
-    attribution: '© 国土交通省 Project PLATEAU',
-    url: 'https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku',
-  },
   repo: {
     name: 'Produit par ce dépôt',
     license: 'CC0 1.0',

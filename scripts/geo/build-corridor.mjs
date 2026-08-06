@@ -27,7 +27,7 @@
 // lequel. On ne présente jamais une couleur inventée comme un relevé.
 
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
-import { makeProjector, pickJapanZone } from '../plateau/lib/geo.mjs';
+import { makeProjector, pickJapanZone } from './lib/geo.mjs';
 import { PLATFORMS } from './lib/platforms.mjs';
 
 /**

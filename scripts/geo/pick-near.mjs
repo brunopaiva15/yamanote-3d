@@ -38,7 +38,7 @@
 // three/Landmarks porte maintenant la sienne.
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { parseArgs } from '../plateau/lib/args.mjs';
+import { parseArgs } from './lib/args.mjs';
 
 /** Portée du relevé (m). Doit valoir celle de fetch-near.mjs. */
 const REACH = 2000;

@@ -29,16 +29,7 @@
     "geo:near": "node scripts/geo/fetch-near.mjs && node scripts/geo/pick-near.mjs && node scripts/geo-loop.mjs",
     "geo:pick": "node scripts/geo/pick-near.mjs && node scripts/geo-loop.mjs",
     "geo:footprints": "node scripts/geo/fetch-footprints.mjs && node scripts/geo/build-corridor.mjs",
-    "geo:corridor": "node scripts/geo/build-corridor.mjs",
-    "world:route:prototype": "node scripts/plateau/fetch-route.mjs",
-    "world:sample:prototype": "node scripts/plateau/make-sample.mjs",
-    "world:download:prototype": "node scripts/plateau/download.mjs",
-    "world:convert:prototype": "node scripts/plateau/convert.mjs",
-    "world:process:prototype": "node scripts/plateau/process.mjs",
-    "world:optimize:prototype": "node scripts/plateau/optimize.mjs",
-    "world:validate:prototype": "node scripts/plateau/validate.mjs",
-    "world:build:prototype": "node scripts/plateau/build.mjs",
-    "world:check:prototype": "node scripts/plateau/visual-check.mjs"
+    "geo:corridor": "node scripts/geo/build-corridor.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

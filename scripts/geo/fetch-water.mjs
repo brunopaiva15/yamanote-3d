@@ -28,8 +28,8 @@
 // mètres, et le jeu pose sa nappe d'eau là où elle est vraiment.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { parseArgs } from '../plateau/lib/args.mjs';
-import { makeProjector, pickJapanZone } from '../plateau/lib/geo.mjs';
+import { parseArgs } from './lib/args.mjs';
+import { makeProjector, pickJapanZone } from './lib/geo.mjs';
 import { overpass } from './lib/net.mjs';
 import { provenance } from './lib/source.mjs';
 import { PLATFORMS } from './lib/platforms.mjs';

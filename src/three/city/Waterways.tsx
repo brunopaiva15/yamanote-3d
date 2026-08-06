@@ -35,7 +35,6 @@ import * as THREE from 'three';
 import { runtime } from '../../systems/runtime';
 import { dayNightWeights } from '../../systems/daynight';
 import { segEnv } from '../../systems/segmentEnv';
-import { plateauRuntime } from '../../systems/plateau';
 import { cityRelief, trackElevation } from '../../systems/terrain';
 import { shoreOn, waterOn } from '../../systems/water';
 import { WATER_COLS, WATER_S_STEP, WATER_X_STEP } from '../../data/water';
@@ -165,15 +164,7 @@ export function Waterways() {
 
   useFrame(() => {
     if (!built) return;
-    // Le prototype PLATEAU pose une ville relevée sur son propre terrain : un
-    // canal procédural y couperait une rue réelle. Même règle que le reste du
-    // ruban.
-    const show = plateauRuntime.coverage < 0.5;
-    if (root.current) {
-      root.current.visible = show;
-      root.current.position.y = segEnv.cityY;
-    }
-    if (!show) return;
+    if (root.current) root.current.position.y = segEnv.cityY;
 
     const sc = scratch;
     const w = dayNightWeights(runtime.clockMin / 60);

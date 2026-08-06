@@ -1,22 +1,22 @@
-// Géodésie du pipeline : projection Transverse Mercator (série de Krüger) vers
-// le système des coordonnées planes japonaises, plus quelques utilitaires
-// métriques.
+// Géodésie du pipeline géographique : projection Transverse Mercator (série de
+// Krüger) vers le système des coordonnées planes japonaises, plus quelques
+// utilitaires métriques.
 //
 // POURQUOI PAS proj4 : la seule projection nécessaire ici est une Transverse
 // Mercator sur GRS80, dont la série de Krüger tient en cinquante lignes et se
 // teste exactement (aller-retour + comparaison à la distance géodésique). Le
 // projet évite d'ajouter une dépendance quand les siennes suffisent.
 //
-// PLATEAU publie ses CityGML en EPSG:6697 = JGD2011 (géographique, ordre
-// latitude/longitude) + hauteur. JGD2011 partage l'ellipsoïde GRS80 et, aux
-// tolérances de ce prototype, l'origine de WGS 84 : on projette donc
-// directement les coordonnées géographiques sans changement de datum.
+// Les données japonaises se publient couramment en JGD2011 (EPSG:6668/6697),
+// qui partage l'ellipsoïde GRS80 et, aux tolérances de ce projet, l'origine de
+// WGS 84 : on projette donc directement les coordonnées géographiques d'OSM
+// comme celles d'un jeu officiel, sans changement de datum.
 //
-// ⚠️ Les hauteurs PLATEAU sont ELLIPSOÏDALES (au-dessus de GRS80), pas
-// orthométriques. L'écart de géoïde à Tokyo vaut ~36-37 m ; il est CONSTANT à
-// l'échelle d'un kilomètre, donc invisible ici puisque tout est recentré sur
-// l'altitude de la voie. Il faudrait le traiter (japan-geoid) pour mêler ces
-// données à un MNT en altitude orthométrique.
+// ⚠️ Une source peut donner des hauteurs ELLIPSOÏDALES (au-dessus de GRS80)
+// plutôt qu'orthométriques. L'écart de géoïde à Tokyo vaut ~36-37 m ; il est
+// CONSTANT à l'échelle du kilomètre, donc sans effet tant que tout est recentré
+// sur l'altitude de la voie. Il faudrait le traiter (japan-geoid) pour mêler
+// une telle source à un MNT en altitude orthométrique.
 
 /** Ellipsoïde GRS80 (JGD2011, et WGS 84 à 0,1 mm près sur le demi-petit axe). */
 export const GRS80 = { a: 6378137.0, f: 1 / 298.257222101 };
@@ -150,7 +150,7 @@ export function pickJapanZone(lon, lat) {
   if (lat >= 34.0 && lat <= 38.0 && lon >= 136.5 && lon <= 138.5) return 6676;
   throw new Error(
     `Aucune zone de projection métrique connue pour (lon=${lon}, lat=${lat}). ` +
-      'Étendez JAPAN_PLANE_ZONES dans scripts/plateau/lib/geo.mjs.',
+      'Étendez JAPAN_PLANE_ZONES dans scripts/geo/lib/geo.mjs.',
   );
 }
 

@@ -56,7 +56,6 @@ import { loopPose, makePose, sightTo, type Sight } from '../systems/tokyoBearing
 import { rng } from '../textures/procedural';
 import { box, glow, mergeByMaterial, plane, sil, vehicle, type Ctx } from './landmarkKit';
 import { landmarkPush } from '../systems/stationOcclusion';
-import { plateauRuntime } from '../systems/plateau';
 
 const BASE_Y = -1.1; // niveau du sol extérieur.
 const FAR_X = 34; // distance latérale des silhouettes (devant la couche lointaine).
@@ -490,17 +489,11 @@ export function Landmarks() {
     const silDay = 1 - 0.5 * cityNight; // silhouettes : plus sombres la nuit.
     const glowLvl = 0.28 + 0.72 * cityNight; // écrans/néons : éclatants la nuit.
 
-    // Sur le tronçon couvert par le prototype PLATEAU, les repères procéduraux
-    // s'effacent : ils sont placés « à vue » le long de la voie, sans
-    // géoréférencement, et flotteraient au milieu d'une ville qui, elle, est à
-    // sa vraie place. Ailleurs, `coverage` vaut 0 et rien ne change.
-    const plateauCity = plateauRuntime.coverage >= 0.5;
-
     const arriving = arrivingSlot.current;
     for (let s = 0; s < 2; s++) {
       const slot = pair[s];
       const closeness = s === arriving ? closeArr : closeDep;
-      const visible = closeness > 0.02 && !plateauCity;
+      const visible = closeness > 0.02;
       slot.root.visible = visible;
       if (!visible) continue;
       // depthWrite dès que le fondu est avancé : sinon les silhouettes

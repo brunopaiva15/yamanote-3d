@@ -44,22 +44,3 @@ test('les emprises viennent du polygone OSM, pas d’un carré inventé', () => 
     assert.ok(Number.isInteger(row[col.osmWay]) && row[col.osmWay] > 0);
   }
 });
-
-test('les trente tronçons du pipeline existent et le tracé vient de la boucle', async () => {
-  const { PROTOTYPE_SEGMENTS } = await import('../scripts/plateau/config.mjs');
-  const slugs = Object.keys(PROTOTYPE_SEGMENTS);
-  assert.equal(slugs.length, 30);
-  assert.ok(PROTOTYPE_SEGMENTS['shibuya-ebisu']);
-  assert.ok(PROTOTYPE_SEGMENTS['tokyo-kanda']);
-  const segs = new Set(Object.values(PROTOTYPE_SEGMENTS).map((s) => s.segment));
-  assert.equal(segs.size, 30);
-
-  for (const slug of slugs) {
-    const route = JSON.parse(
-      readFileSync(new URL(`../data/geo/${slug}.geojson`, import.meta.url), 'utf8'),
-    );
-    assert.equal(route.features[0].properties.approximate, false, slug);
-    assert.match(route.features[0].properties.source, /yamanote-loop|OpenStreetMap/, slug);
-    assert.ok(route.features[0].geometry.coordinates.length >= 2, slug);
-  }
-});

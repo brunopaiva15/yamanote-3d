@@ -238,10 +238,6 @@ gares, japonais et anglais, sont gravés une seule fois pour les deux. Ne
 s'ajoutent au corpus que les textes qui NOMMENT le sens ou un numéro de voie -
 quatre-vingt-trois clips, contre les quatre cent douze du total.
 
-Seule exception documentée : le prototype PLATEAU (§ *Ville géoréférencée*) ne
-couvre que le 内回り. Son tracé exporté est une polyligne orientée ; la
-parcourir à l'envers demanderait d'inverser chunks et origines de distance. En
-外回り, le décor procédural - lui, symétrique - reprend la main.
 
 ## Descendre en gare
 
@@ -1373,8 +1369,8 @@ centimètre contre la dalle que pose `buildCellProps`.
 Le morceau « 1:1 ». Les repères lointains étaient des banques procédurales par
 gare : rien ne disait que le Skytree est au **nord-est** quand on est à Ueno.
 
-- `scripts/geo-loop.mjs` réutilise la géodésie du pipeline PLATEAU (projection
-  EPSG:6677, JGD2011 / CS IX) pour projeter en mètres les coordonnées réelles des
+- `scripts/geo-loop.mjs` réutilise la géodésie de `scripts/geo/lib/geo.mjs`
+  (projection EPSG:6677, JGD2011 / CS IX) pour projeter en mètres les coordonnées réelles des
   **trente milieux de quai** et de **seize repères**, et émet `src/data/tokyoGeo`.
 - `systems/tokyoBearing` transforme `(index, progression)` en une position et un
   **cap vrai** sur la boucle, par interpolation Catmull-Rom entre gares ; le cap
@@ -1459,9 +1455,7 @@ Quatre décisions font tenir l'ensemble (`systems/singularity`) :
 Le platelage du passage à niveau descend au **niveau du rail** par une
 contre-pente courte, et les rails reviennent par-dessus en relief : réglé à la
 cote de la rue, il devenait une planche jetée en travers de la voie qui masquait
-les rails et portait son ombre sur le ballast. Rien de tout cela n'est posé sur
-le prototype PLATEAU, où la ville est relevée sur le terrain : une rivière
-procédurale y couperait une rue réelle.
+les rails et portait son ombre sur le ballast.
 
 ### L'emprise ferroviaire
 
@@ -1573,48 +1567,6 @@ prise précédente. Ensuite, il faut pouvoir **retenir la rame** (`__probeHold`)
 une seconde, c'est vingt-cinq mètres de voie, et un ouvrage cadré à vingt mètres
 est derrière le train avant que la capture soit prise.
 
-### Ville géoréférencée (prototype PLATEAU)
-
-Tout ce qui précède est **procédural** : un paysage crédible, jamais le vrai. Un
-prototype teste l'autre voie - construire le décor à partir des données ouvertes
-[Project PLATEAU](https://www.mlit.go.jp/plateau/) (modèles CityGML 3D des villes
-japonaises, 国土交通省) - sur **un seul tronçon à la fois**, par défaut
-Shibuya → Ebisu (`SEGMENTS[19]`). Le choix du tronçon compte : sur un viaduc, le
-train court sept mètres au-dessus de la rue et le regard passe par-dessus les
-toits ; dans une tranchée, le mur de soutènement masque tout, et c'est exact
-mais inutile à regarder.
-
-```bash
-npm run world:build:prototype -- --dry-run   # vérifie outils et configuration
-npm run world:build:prototype                # CityGML → GLB optimisés + manifeste
-npm run dev                                  # puis /?plateau=1
-```
-
-**Le prototype est éteint par défaut** : il faut `?plateau=1` dans l'URL, en
-développement comme en ligne. Le paramètre allume le monde géoréférencé *et*
-fait embarquer directement sur le tronçon. Sans lui, rien n'est chargé et le
-jeu est exactement celui d'avant. C'est délibéré : tant que le build tourne sur
-l'échantillon synthétique, les bâtiments sont inventés, et les montrer d'office
-ferait passer une ville fictive pour Tokyo.
-
-Le pipeline projette en JGD2011 / CS IX, sélectionne les bâtiments dans un
-corridor de ±300 m, les classe par distance à la voie, découpe en chunks de
-400 m recentrés sur leur propre origine, triangule, simplifie, compresse en
-meshopt et génère `public/world/plateau/manifest.json`. Dans le jeu, le wagon
-reste à l'origine et c'est le monde qui tourne autour de lui : on applique au
-groupe des chunks l'inverse de la transformation du train sur le tracé réel, à
-la vitesse réelle de la rame. Ailleurs sur la boucle, et sans `?plateau=1`, le
-décor procédural reprend tout.
-
-Changer de tronçon est une variable d'environnement - `PLATEAU_PROTOTYPE` -
-plus une constante à aligner côté jeu ; la validation du build refuse de publier
-un monde que le jeu chercherait ailleurs sur la boucle.
-
-⚠️ Le dépôt ne contient **aucune donnée PLATEAU** : le build par défaut tourne
-sur un échantillon CityGML *synthétique* au format PLATEAU. Tout est expliqué -
-outils, licences, limites, extension aux 30 tronçons - dans
-[`docs/PLATEAU_PIPELINE.md`](docs/PLATEAU_PIPELINE.md).
-
 ### Quatrième passe — la géographie importée
 
 Les trois premières passes ont bâti un paysage crédible. Celle-ci cesse
@@ -1650,8 +1602,7 @@ Square n'existe pas avant 2019. Ce sont des faits semi-statiques branchés sur
 `runtime.tokyoDate`.
 
 **Le corridor 0–1 km.** Empreintes OSM versionnées (`npm run geo:footprints`) ;
-hauteurs relevées ou `measured: false`. Les trente tronçons sont descriptibles
-par le pipeline PLATEAU ; `PlateauWorld` couvre aussi le 外回り.
+hauteurs relevées ou `measured: false`.
 
 Sondes : `__probeTerrain()`, `__probeBible()` / `__probeBible(12.5)`. Captures
 par KM : `node scripts/km-shots.mjs /tmp/km`. Budget : `node scripts/scenery-cost.mjs`
@@ -3014,8 +2965,6 @@ src/
                          scenery-shots, scenery-cost, pass-shots, season-shots,
                          weather-shots, audio-probe (les robinets de rendu du
                          moteur audio, mesurés sur le son qui sort)
-  scripts/plateau/       pipeline CityGML PLATEAU → GLB (docs/PLATEAU_PIPELINE.md)
-  three/PlateauWorld.tsx monde géoréférencé du prototype (un tronçon à la fois)
   textures/              CanvasTexture procédurales (sol, moquette, ville, pubs, visages)
   i18n/                  dictionnaires FR / EN / JA, détection de langue
   i18n/documentMeta.ts   titre, description, Open Graph et canonique, suivant

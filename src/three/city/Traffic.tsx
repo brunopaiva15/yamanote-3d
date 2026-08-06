@@ -34,7 +34,6 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { runtime } from '../../systems/runtime';
 import { dayNightWeights } from '../../systems/daynight';
 import { segEnv } from '../../systems/segmentEnv';
-import { plateauRuntime } from '../../systems/plateau';
 import { hiddenByStation, sidePush } from '../../systems/stationOcclusion';
 import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
 import { CELL_LEN } from '../../systems/cityField';
@@ -250,15 +249,8 @@ export function Traffic() {
     const w = dayNightWeights(runtime.clockMin / 60);
     const night = Math.min(1, w.night + w.golden * 0.6);
     const lit = night > 0.06;
-    // Le prototype PLATEAU pose une ville réelle, sans ses rues : la
-    // circulation procédurale s'efface avec le ruban qui la portait.
-    const real = plateauRuntime.coverage >= 0.5;
-
-    built.car.visible = !real;
-    built.van.visible = !real;
-    built.head.visible = !real && lit;
-    built.tail.visible = !real && lit;
-    if (real) return;
+    built.head.visible = lit;
+    built.tail.visible = lit;
 
     built.headMat.color.set('#fff2d4').multiplyScalar(0.7 + 1.1 * night);
     built.tailMat.color.set('#ff3324').multiplyScalar(0.5 + 1.1 * night);

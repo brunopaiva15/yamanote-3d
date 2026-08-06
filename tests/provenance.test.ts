@@ -95,9 +95,8 @@ test('Miyashita Park, Sakura Stage et Harajuku bois sont branchés sur le rendu'
   assert.equal(factVisible('miyashita-park', y2024), true);
 });
 
-test('public/world/LICENSE.md cite les trois sources', () => {
+test('public/world/LICENSE.md cite les deux sources', () => {
   const text = readFileSync(new URL('../public/world/LICENSE.md', import.meta.url), 'utf8');
   assert.match(text, /ODbL/);
   assert.match(text, /国土地理院|出典：国土地理院/);
-  assert.match(text, /CC BY 4\.0|PLATEAU/);
 });

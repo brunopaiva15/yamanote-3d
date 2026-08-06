@@ -33,15 +33,9 @@ public/models/raw/
 public/models/test_*.glb
 public/models/animals/test_*.glb
 
-# Pipeline PLATEAU : données brutes, archives téléchargées et intermédiaires.
-# Les livrables (public/world/plateau/*.glb, manifest.json, route.json,
-# LICENSE.md, build-report.json) sont, eux, versionnés.
+# Caches et intermédiaires des pipelines de données.
 .cache/
 work/
-
-# Échantillon CityGML synthétique : régénéré à la demande par
-# scripts/plateau/make-sample.mjs (graine fixe, sortie identique).
-data/plateau-sample/
 
 # Caches Python des générateurs audio (melodies-gen, piano-melody-gen, …) et
 # de l'atelier de voix, dont les modules s'importent entre eux.
