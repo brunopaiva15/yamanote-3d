@@ -107,6 +107,8 @@ export function makeCityMaterial(tex: CityTextures): {
   const jitter = attribute<'vec2'>('aJitter', 'vec2');
   const accent: V3 = attribute<'vec3'>('aAccent', 'vec3');
   const trim = attribute<'vec4'>('aTrim', 'vec4');
+  // 1 = façade de logement collectif, à coursive extérieure.
+  const facadeKind = attribute<'float'>('aFacade', 'float');
 
   // Le nuanceur choisit l'UV selon la face : le long de la voie sur les
   // pignons, en profondeur sur les faces qui regardent les rails, à plat sur
@@ -124,7 +126,14 @@ export function makeCityMaterial(tex: CityTextures): {
   const facUv = cityUv.add(jitter).div(tex.facadeTile);
   const socUv = vec2(cityUv.x.add(jitter.x).div(tex.socleTile[0]), up.div(tex.socleTile[1]));
 
-  const fac = texture(tex.facade).sample(facUv);
+  // Deux familles de façade, MÉLANGÉES et non branchées : en WGSL, un
+  // `textureSample` sous condition non uniforme est interdit - les dérivées, et
+  // donc le niveau de mip, n'y sont plus définies.
+  const fac = mix(
+    texture(tex.facade).sample(facUv),
+    texture(tex.balcony).sample(facUv),
+    facadeKind,
+  );
   const rof = texture(tex.roof).sample(facUv.mul(tex.roofScale));
   const soc = texture(tex.socle).sample(socUv);
 
@@ -166,8 +175,16 @@ export function makeCityMaterial(tex: CityTextures): {
   // Fenêtres : chaque vitrage porte un tirage stable dans l'alpha de la
   // texture ; le seuil descend avec la nuit, les étages s'allument donc par
   // paquets au fil de la soirée plutôt que tous d'un coup.
+  //
+  // Le seuil est franc mais pas net, et c'est la DISTANCE qui l'exige : passé
+  // deux cents mètres la trame de douze mètres tombe sous le pixel, l'alpha
+  // filtré converge vers sa moyenne, et deux comparaisons strictes rendaient
+  // alors un mur entièrement allumé ou entièrement éteint.
   const win = fac.a.mul(roofish.oneMinus()).mul(socle.oneMinus());
-  const winOn = step(0.03, win).mul(step(float(1).sub(night.mul(0.8)), win));
+  const winLvl = float(1).sub(night.mul(0.8));
+  const winOn = smoothstep(0.02, 0.05, win).mul(
+    smoothstep(winLvl.sub(0.12), winLvl.add(0.12), win),
+  );
   const glass = socle
     .mul(smoothstep(0.62, 0.7, soc.a))
     .mul(smoothstep(0.84, 0.93, soc.a).oneMinus());

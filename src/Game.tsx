@@ -30,9 +30,13 @@ import { DoorCloseLed } from './three/DoorCloseLed';
 import { Wayside } from './three/Wayside';
 import { Weather } from './three/Weather';
 import { SkyDome } from './three/city/SkyDome';
+import { FarSkyline } from './three/city/FarSkyline';
 import { CityRibbon } from './three/city/CityRibbon';
+import { Utilities } from './three/city/Utilities';
+import { Traffic } from './three/city/Traffic';
 import { Landmarks } from './three/Landmarks';
 import { SegmentEnvironment } from './three/SegmentEnvironment';
+import { Singularities } from './three/Singularities';
 import { PlateauWorld } from './three/PlateauWorld';
 import { HubStationRoof } from './three/HubStationRoof';
 import { Station } from './three/station/Station';
@@ -127,6 +131,18 @@ function useRenderPath(): 'webgl' | 'webgpu' | 'pending' {
   if (!wanted) return 'webgl';
   return ready ? 'webgpu' : 'pending';
 }
+
+/**
+ * Portée du plan lointain de la caméra (m).
+ *
+ * Elle valait 260, du temps où la ville s'arrêtait à soixante-six mètres.
+ * L'arrière-pays du ruban va jusqu'à deux cent soixante de côté - donc bien
+ * au-delà dans l'axe de la voie - et les repères géographiques de l'horizon se
+ * posent plus loin encore. La reculer ne coûte pas de précision de profondeur :
+ * la résolution du tampon à une distance donnée est commandée par `near`, que
+ * le terme en 1/near écrase, et `near` ne bouge pas.
+ */
+const CAMERA_FAR = 1400;
 
 /**
  * Fabrique de renderer passée à react-three-fiber, qui l'attend et s'en sert
@@ -227,7 +243,7 @@ export default function Game() {
         key={`${path}-${generation}`}
         dpr={[1, 2]}
         gl={path === 'webgpu' ? webgpuRenderer : webglRenderer}
-        camera={{ fov: 70, near: 0.05, far: 260, position: [0, CONFIG.eyeHeight, 4.2] }}
+        camera={{ fov: 70, near: 0.05, far: CAMERA_FAR, position: [0, CONFIG.eyeHeight, 4.2] }}
         shadows="percentage"
       >
         <Scene />
@@ -245,11 +261,19 @@ export default function Game() {
           <TrainConsist />
         </TrainRig>
         <SkyDome />
+        {/* Entre le ciel et la ville, au sens propre : les repères de Tokyo à
+            leur relèvement géographique. */}
+        <FarSkyline />
         <CityRibbon />
+        <Utilities />
+        <Traffic />
         <PlateauWorld />
         <Wayside />
         <Landmarks />
         <SegmentEnvironment />
+        {/* Ce qui n'arrive qu'une fois sur la boucle : le passage à niveau, les
+            rivières, l'autoroute urbaine. */}
+        <Singularities />
         <HubStationRoof />
         <Station />
         <PassingTrain />

@@ -17,6 +17,7 @@ import { runtime } from '../systems/runtime';
 import { dayNightWeights } from '../systems/daynight';
 import { segEnv, bridgeZ, BRIDGE_COUNT, VIADUCT_RISE, WALL_MAX } from '../systems/segmentEnv';
 import { sidePush } from '../systems/stationOcclusion';
+import { fenceBreak } from '../systems/singularity';
 import { weather } from '../systems/weather';
 import { SEGMENTS } from '../data/segments';
 import {
@@ -306,11 +307,16 @@ export function SegmentEnvironment() {
     }
 
     // --- Clôtures / haies : fondu croisé selon la végétation du tronçon ---
+    //
+    // Et rupture au droit d'un passage à niveau ou d'une rivière : la clôture de
+    // ligne s'y arrête pour de bon, sur place (voir systems/singularity).
+    const opening = 1 - fenceBreak(runtime.distance);
     for (let i = 0; i < built.fences.length; i++) {
       const f = built.fences[i];
       const mesh = fenceRefs.current[i];
       f.tex.offset.x = (f.sign * runtime.distance) / 6;
-      f.mat.opacity = f.hedge ? ground01 * segEnv.green : ground01 * (1 - segEnv.green) * 0.9;
+      f.mat.opacity =
+        opening * (f.hedge ? ground01 * segEnv.green : ground01 * (1 - segEnv.green) * 0.9);
       const base = f.mat.userData.base as THREE.Color;
       f.mat.color.copy(base).multiplyScalar(silDay);
       if (mesh) mesh.position.x = f.x + f.side * sidePush(f.side);

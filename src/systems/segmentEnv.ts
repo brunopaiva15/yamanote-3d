@@ -11,6 +11,7 @@
 import { SEGMENTS, journeyProgress, segmentAt, type SegmentKind } from '../data/segments';
 import { useStore } from '../store';
 import { runtime } from './runtime';
+import { updateSingularity } from './singularity';
 
 // Progression du trajet inter-gares : même convention que SkyDome/Landmarks
 // (depart → cruise → brake ; dwell maintient p = 1). Durée variable par tronçon.
@@ -140,6 +141,11 @@ export function updateSegmentEnv(dt: number): void {
   segEnv.cityY =
     GROUND_Y - VIADUCT_RISE * segEnv.w.viaduct + Math.max(0, segEnv.wallH) * segEnv.w.trench;
   segEnv.citySetback = CORRIDOR_SETBACK * segEnv.w.corridor;
+
+  // Les singularités de la ligne s'ancrent dans le MONDE, pas dans le trajet :
+  // elles se placent depuis la gare quittée (voir systems/singularity), donc
+  // depuis `index` et non depuis le tronçon retenu pendant le hold de départ.
+  updateSingularity(index, loopDirection);
 
   let shade = 0;
   if (segEnv.bridgeW > 0.01) {

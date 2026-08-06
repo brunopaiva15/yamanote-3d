@@ -22,9 +22,12 @@ import { useStore } from '../store';
 import { runtime } from '../systems/runtime';
 import { input } from '../systems/input';
 import { placementFor } from '../systems/stationPlacement';
+import { holdTrain } from '../systems/stationCycle';
 import { psdGates } from '../three/station/psdLayout';
 import { freezeWeather, weather } from '../systems/weather';
 import { seasonNow } from '../systems/season';
+import { clearing } from '../systems/cityField';
+import { expressway, singularity } from '../systems/singularity';
 
 interface Volume {
   label: string;
@@ -350,15 +353,170 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   // murs de tranchée (`opensAtEnd`) et l'élévation de la ville. Pouvoir s'y
   // placer est indispensable pour juger un tronçon qui s'ouvre en fin de
   // course - regarder par la baie à p = 0,2 ne montre que le mur.
-  w.__probeCruise = (i: number, phaseT = 8) => {
+  //
+  // LE SENS DE MARCHE SE FIXE ICI AUSSI, et il faut le savoir : la boucle en
+  // tire un tronçon DIFFÉRENT pour un même index (`segmentAt`). Le sens est
+  // pourtant tiré au sort à l'embarquement - une capture demandée à Tabata→
+  // Komagome montrait donc la tranchée de Komagome→Sugamo une fois sur deux,
+  // sans un mot pour le dire.
+  w.__probeCruise = (i: number, phaseT = 8, dir?: 'inner' | 'outer') => {
     const k = ((i % 30) + 30) % 30;
     // platformIndex aussi : c'est LUI qui choisit le tronçon (systems/segmentEnv
     // retient la gare quittée tant que son quai est visible). Sans ça, on
     // demandait Harajuku→Shibuya et on regardait le décor d'un autre tronçon.
-    useStore.setState({ index: k, platformIndex: k, phase: 'cruise', doorSide: DOOR_SIDE[k] });
+    useStore.setState({
+      index: k,
+      platformIndex: k,
+      phase: 'cruise',
+      doorSide: DOOR_SIDE[k],
+      ...(dir ? { loopDirection: dir } : {}),
+    });
     runtime.phaseT = phaseT;
     runtime.platformFade = 0;
     runtime.platformSlide = 0;
+  };
+
+  /**
+   * Ce que le ruban urbain rend VRAIMENT, famille par famille.
+   *
+   * Une ville qui ne montre pas ce qu'on croit y avoir mis peut l'être pour
+   * trois raisons : le générateur n'en produit pas, le rendu ne les écrit pas,
+   * ou le nuanceur ne les distingue pas. Sans mesure, on corrige la mauvaise.
+   * D'où ce relevé, pris sur le graphe tel qu'il est rendu : par famille, le
+   * nombre d'emplacements, ceux qui sont réellement pourvus (une instance
+   * escamotée a une matrice mise à zéro), et la part portant la façade à
+   * coursive.
+   *
+   *   __probeCity()  → [{ famille, emplacements, posées, coursives }, …]
+   */
+  w.__probeCity = () => {
+    const out: Record<string, unknown>[] = [];
+    const m = new THREE.Matrix4();
+    scene.traverse((o) => {
+      const family = o.userData?.cityFamily;
+      if (!family) return;
+      const im = o as THREE.InstancedMesh;
+      let placed = 0;
+      for (let i = 0; i < im.count; i++) {
+        im.getMatrixAt(i, m);
+        // Une instance escamotée a une échelle nulle : sa première colonne l'est.
+        if (m.elements[0] !== 0 || m.elements[1] !== 0 || m.elements[2] !== 0) placed++;
+      }
+      const fac = (im.geometry.attributes.aFacade as THREE.BufferAttribute | undefined)?.array;
+      let balcony = 0;
+      if (fac) for (let i = 0; i < im.count; i++) if (fac[i] > 0.5) balcony++;
+      out.push({ famille: family, emplacements: im.count, posées: placed, coursives: balcony });
+    });
+    return out;
+  };
+
+  /**
+   * L'horizon géographique, tel qu'il est POSÉ.
+   *
+   * Un relèvement se juge en degrés, pas à l'œil : une capture ne dit pas si le
+   * Skytree est à quarante-deux degrés sur la droite ou à cinquante-huit, et
+   * c'est pourtant la seule chose que cette couche promet. La sonde relit donc
+   * la position des découpes dans la scène - et non le calcul qui les a posées -
+   * pour en redéduire l'écart au sens de marche, la distance qu'implique leur
+   * taille angulaire, et leur hauteur apparente en degrés.
+   *
+   *   __probeHorizon()  → [{ repère, relèvement, hauteur, visible }, …]
+   */
+  w.__probeHorizon = () => {
+    const out: Record<string, unknown>[] = [];
+    scene.traverse((o) => {
+      if (!o.name.startsWith('horizon ')) return;
+      const mesh = o as THREE.Mesh;
+      const az = (Math.atan2(mesh.position.x, -mesh.position.z) * 180) / Math.PI;
+      const r = Math.hypot(mesh.position.x, mesh.position.z);
+      out.push({
+        repère: o.name.slice(8),
+        // Positif = à droite du sens de marche, comme dans systems/tokyoBearing.
+        relèvement: +az.toFixed(1),
+        hauteur: +((Math.atan(mesh.scale.y / r) * 180) / Math.PI).toFixed(2),
+        visible: mesh.visible,
+        teinte: `#${(mesh.material as THREE.MeshBasicMaterial).color.getHexString()}`,
+      });
+    });
+    return out.sort((a, b) => (a.relèvement as number) - (b.relèvement as number));
+  };
+
+  /**
+   * Les singularités de la ligne, et le moyen de s'arrêter devant.
+   *
+   * Elles n'arrivent chacune qu'une fois par tour, au milieu d'un inter-gare
+   * précis : les attendre à l'œil demanderait de rouler une heure. Appelée avec
+   * une distance, la sonde POSE la rame à tant de mètres en amont de l'ouvrage -
+   * l'ancrage, lui, ne bouge pas (il est calé sur la gare quittée, voir
+   * systems/singularity), si bien que la trouée reste où elle est et que la
+   * ville n'est pas rebâtie.
+   *
+   * Sur un tronçon longé par le 首都高 il n'y a pas d'ouvrage ponctuel à viser :
+   * la distance demandée compte alors depuis le DÉBUT du tablier, ce qui permet
+   * de se placer dessous plutôt que de le regarder de loin.
+   *
+   *   __probeSingularity()      → ce qui est posé, et à quelle distance
+   *   __probeSingularity(120)   → s'arrêter cent vingt mètres avant
+   */
+  w.__probeSingularity = (ahead?: number) => {
+    if (ahead !== undefined) {
+      if (singularity.kind) runtime.distance = singularity.s - ahead;
+      else if (expressway.on) runtime.distance = expressway.s0 + ahead;
+    }
+    return {
+      nature: singularity.kind,
+      devant: +(singularity.s - runtime.distance).toFixed(1),
+      trame: +((singularity.yaw * 180) / Math.PI).toFixed(1),
+      largeur: singularity.w,
+      trouée: +clearing.half.toFixed(1),
+      autoroute: expressway.on
+        ? {
+            côté: expressway.side,
+            début: +(expressway.s0 - runtime.distance).toFixed(1),
+            fin: +(expressway.s1 - runtime.distance).toFixed(1),
+          }
+        : null,
+    };
+  };
+
+  // Effacer la rame pour ne juger que le paysage.
+  //
+  // De l'intérieur, la ville se regarde par une baie : le montant, la banquette
+  // et les poignées mangent les trois quarts de l'image, et c'est la condition
+  // RÉELLE - on ne juge pas un décor sur une vue qu'aucun voyageur n'a jamais.
+  // Mais on n'y voit pas assez pour arbitrer une trame, une couche lointaine ou
+  // une ligne de toits. D'où cette bascule, qui n'existe qu'en développement :
+  // la caisse disparaît, le regard porte, et le paysage se juge en plein cadre.
+  w.__probeBare = (on = true) => {
+    const rame = scene.getObjectByName('rame');
+    if (rame) rame.visible = !on;
+    return !!rame;
+  };
+
+  /**
+   * Effacer la ville procédurale, comme `__probeBare` efface la rame.
+   *
+   * Le ruban urbain est opaque et il masque - à juste titre - le pied et
+   * souvent le tronc des repères lointains : depuis une baie, on ne voit le
+   * Skytree que dans une trouée, et c'est bien ce qui se passe dans le vrai
+   * train. Reste qu'un relèvement ne se juge pas sur ce qui n'est pas peint.
+   * Cette bascule retire les familles du ruban le temps d'une capture, et ne
+   * laisse que le ciel et l'horizon géographique.
+   *
+   * Elle passe par les CALQUES et non par `visible` : plusieurs familles
+   * rétablissent leur visibilité à chaque image - les feux d'obstacle selon
+   * l'heure, les poteaux selon la couverture PLATEAU - et reviendraient donc
+   * avant la capture. Personne ne touche aux calques ailleurs dans le jeu.
+   */
+  w.__probeNoCity = (on = true) => {
+    let n = 0;
+    scene.traverse((o) => {
+      if (!o.userData?.cityFamily) return;
+      if (on) o.layers.disableAll();
+      else o.layers.enable(0);
+      n++;
+    });
+    return n;
   };
 
   // État courant : de quoi diagnostiquer une capture qui ne montre pas ce
@@ -367,8 +525,14 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
     clockMin: Math.round(runtime.clockMin),
     index: useStore.getState().index,
     phase: useStore.getState().phase,
+    // Le sens de marche : il est tiré au sort à l'embarquement, et c'est lui qui
+    // décide quel TRONÇON se traverse pour un index donné (data/segments).
+    dir: useStore.getState().loopDirection,
     platformFade: +runtime.platformFade.toFixed(2),
     distance: Math.round(runtime.distance),
+    // Où porte le regard : l'écart au sens de marche, en degrés, positif vers la
+    // droite. Un script qui vise à l'aveugle ne peut pas savoir s'il a tourné.
+    regard: +((Math.atan2(runtime.lookX, -runtime.lookZ) * 180) / Math.PI).toFixed(1),
     // Où se tient le joueur, en repère QUAI : c'est le seul repère dans
     // lequel se lisent les cotes de gare (bord, limites de marche, mobilier).
     frame: runtime.playerFrame,
@@ -387,6 +551,15 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
   // saisons sur la même image plutôt que sur deux quartiers différents.
   w.__probeDistance = (m: number) => {
     runtime.distance = m;
+  };
+
+  // Retenir la rame là où elle est (voir systems/stationCycle). Nécessaire dès
+  // qu'on cadre un OUVRAGE et non un paysage : sous SwiftShader une image coûte
+  // une seconde, et vingt-cinq mètres de voie passent entre la pose et la
+  // capture.
+  w.__probeHold = (on = true) => {
+    holdTrain(on);
+    return on;
   };
 
   // Temps qu'il fait, forcé. Le modèle (systems/weather) le reprendrait à la

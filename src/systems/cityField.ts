@@ -13,21 +13,39 @@
 // même cellule donnent le même quartier. Le rendu n'en garde qu'un anneau
 // glissant (voir three/city/CityRibbon), rebâti une cellule à la fois.
 //
-// --- Trois rangs ---
+// --- Cinq rangs, en deux mailles ---
 // Un bord de voie bas et serré, un rang d'îlot, un fond haut. C'est cette
 // stratification qui produit l'occultation mutuelle et donc la profondeur ; un
 // plan unique, aussi bien dessiné soit-il, reste du carton.
+//
+// Ces trois-là tiennent dans les soixante-six premiers mètres, à la maille de
+// CELL_LEN. Au-delà commence l'ARRIÈRE-PAYS (FAR_RANKS), deux rangs de plus
+// jusqu'à deux cent soixante mètres, à sa propre maille de FAR_CELL_LEN : à
+// cette distance on ne lit plus un îlot mais une masse et une ligne de faîte,
+// et une maille grossière la tient pour quelques dizaines d'instances.
 //
 // --- Les rues ---
 // Une cellule sur deux environ est traversée par une rue perpendiculaire, qui
 // perce les TROIS rangs au même endroit. C'est le seul moment où le regard
 // s'enfonce dans la ville, et c'est le meilleur révélateur de vitesse qui soit
 // en train.
+//
+// --- La trame ---
+// Rien n'oblige un plan de ville à s'aligner sur une voie ferrée, et à Tokyo
+// il ne s'y aligne à peu près jamais : la Yamanote a été tracée dans les
+// creux, entre des quartiers dont les trames sont antérieures et
+// indépendantes. Tant que tous les bâtiments avaient leurs faces parallèles
+// aux rails, une rangée se relisait comme une pile de boîtes à chaussures -
+// c'est le défaut que `gridAngleAt` corrige, pour un coût nul (la matrice
+// d'instance porte déjà une rotation qu'on laissait à l'identité).
 
-import { DISTRICTS, GENERIC, type District, type Feat } from '../data/districts';
-import { directionStep, prevStation, wrapStation } from '../data/loop';
+// Les imports portent leur extension : ce module est chargé tel quel par node
+// pour les tests (tests/trafficLane.test.ts), qui n'a pas la résolution d'un
+// empaqueteur.
+import { DISTRICTS, GENERIC, type District, type Feat } from '../data/districts.ts';
+import { directionStep, prevStation, wrapStation } from '../data/loop.ts';
 import type { LoopDirection } from '../data/platforms';
-import { runtime } from './runtime';
+import { runtime } from './runtime.ts';
 
 /** Longueur d'une cellule du ruban, le long de la voie (m). */
 export const CELL_LEN = 40;
@@ -64,6 +82,21 @@ export interface CityBuilding {
   /** Décalage de la trame de façade (m), pour que deux voisins ne s'alignent pas. */
   jx: number;
   jy: number;
+  /**
+   * Le sujet porte-t-il la façade de logement collectif, à coursive extérieure ?
+   *
+   * C'est le trait le plus visible d'une rue d'habitation japonaise, et il vaut
+   * pour le bâti moyen : ni une échoppe de deux niveaux, ni une tour.
+   */
+  balcony: boolean;
+  /**
+   * Écart d'orientation entre le bâtiment et la voie (rad), mesuré dans le plan
+   * (s, x). Il vaut l'angle de trame du quartier, plus un petit jeu propre au
+   * sujet. Le rendu en tire une rotation autour de Y de `-yaw`, la même des
+   * deux côtés de la voie : une rue qui franchit le remblai continue du même
+   * angle de l'autre côté, elle ne s'y réfléchit pas.
+   */
+  yaw: number;
 }
 
 interface Rank {
@@ -99,15 +132,50 @@ const RANKS: Rank[] = [
 /** Trouées supplémentaires du premier rang : le ciel et le fond doivent passer. */
 const NEAR_EXTRA_GAP = 0.14;
 
-/** Plafond de hauteur : au-delà, les tours percent la voûte de ciel. */
+/** Plafond de hauteur du bâti proche (m). */
 const H_MAX = 52;
 
 /** Nombre maximal de bâtiments qu'une cellule peut rendre, tous rangs confondus. */
 export const CELL_CAPACITY = RANKS.reduce((a, r) => a + r.n, 0);
 
+// --- L'arrière-pays -------------------------------------------------------
+//
+// Les trois rangs s'arrêtaient à soixante-six mètres, et la brume à deux cent
+// vingt. Entre les deux, rien : la ville tombait d'un coup dans un aplat, puis
+// la silhouette peinte reprenait neuf cents mètres plus loin. C'est le défaut
+// qu'on voit le mieux d'un viaduc, là où le regard passe par-dessus les toits
+// bas et devrait rencontrer des couches de bâti sur des centaines de mètres.
+//
+// L'arrière-pays est donc un SECOND anneau, à sa propre maille : une cellule de
+// cent vingt mètres pour trois cent vingt mètres de profondeur. Compter les
+// bâtiments d'un îlot à deux cents mètres n'a aucun sens - ce qu'on lit là,
+// c'est une masse et une ligne de faîte -, et une maille grossière tient
+// l'arrière-pays entier pour le prix de quelques dizaines d'instances.
+export const FAR_CELL_LEN = 120;
+
+const FAR_RANKS: Rank[] = [
+  { x0: 70, x1: 132, n: 6, wMin: 24, wMax: 52, dMin: 20, dMax: 44, hMin: 7, hSpan: 52 },
+  { x0: 140, x1: 268, n: 5, wMin: 32, wMax: 76, dMin: 28, dMax: 68, hMin: 10, hSpan: 130 },
+  // Le dernier rang n'est presque plus un objet : à trois cents mètres, avec
+  // une brume qui porte à cinq cents, il ne reste qu'un dégradé de masses. Mais
+  // c'est LUI qui donne la profondeur - un fond qui s'arrête net à deux cent
+  // soixante-dix mètres se lit comme une toile de fond, aussi loin soit-elle.
+  { x0: 278, x1: 440, n: 4, wMin: 44, wMax: 110, dMin: 40, dMax: 96, hMin: 12, hSpan: 170 },
+];
+
+/** Plafond de hauteur de l'arrière-pays (m) : la plus haute tour de Shinjuku. */
+const FAR_H_MAX = 190;
+
+export const FAR_CELL_CAPACITY = FAR_RANKS.reduce((a, r) => a + r.n, 0);
+
 // --- Aléa déterministe -------------------------------------------------------
 
-function hashInt(a: number): number {
+/**
+ * Haché entier stable. Exporté pour que la circulation (three/city/Traffic)
+ * tire ses véhicules du MÊME haché que la ville : deux passages sur la même
+ * rue y trouvent la même camionnette garée au même endroit.
+ */
+export function hashInt(a: number): number {
   let h = a | 0;
   h = Math.imul(h ^ (h >>> 16), 2246822507);
   h = Math.imul(h ^ (h >>> 13), 3266489909);
@@ -197,6 +265,38 @@ export function districtAt(s: number, mix: number): District {
   return DISTRICTS[i] ?? GENERIC;
 }
 
+// --- Trame des rues ------------------------------------------------------
+
+/** Écart maximal entre la trame d'un quartier et la voie (rad, ~26°). */
+const GRID_MAX = 0.46;
+/** Jeu propre à chaque sujet dans sa trame (rad, ~4°). */
+const GRID_JITTER = 0.07;
+
+/** Angle de trame d'une gare : haché de son index, donc stable pour toujours. */
+function districtGrid(index: number): number {
+  return (hashInt(Math.imul(wrapStation(index), 2654435761) + 917) * 2 - 1) * GRID_MAX;
+}
+
+/**
+ * Angle de la trame de rues à une abscisse monde (rad).
+ *
+ * Un quartier a UNE trame - c'est ce qui en fait un quartier - mais elle ne
+ * peut pas pivoter de cinquante degrés sur une ligne : entre deux territoires,
+ * l'angle glisse vers celui du voisin et les deux se rejoignent exactement à
+ * mi-chemin, vu de l'un comme de l'autre. La fonction est donc continue tout le
+ * long de la boucle, et la ville tourne lentement autour du train au lieu de
+ * sauter d'une cellule à l'autre.
+ */
+export function gridAngleAt(s: number): number {
+  const t = (s - cityAnchor.s) / cityAnchor.span;
+  const k = Math.max(-3, Math.min(3, Math.round(t)));
+  const frac = t - k;
+  const a0 = districtGrid(cityAnchor.index + k * cityAnchor.step);
+  const a1 = districtGrid(cityAnchor.index + (k + (frac >= 0 ? 1 : -1)) * cityAnchor.step);
+  const w = Math.min(1, Math.abs(frac) * 2);
+  return a0 + (a1 - a0) * 0.5 * w * w * (3 - 2 * w);
+}
+
 // --- Tissu de quartier ------------------------------------------------------
 
 /**
@@ -233,6 +333,18 @@ export interface Tissue {
    * douceur, à la même heure.
    */
   cool: number;
+  /**
+   * Part de bâtiments portant la façade de logement collectif - la マンション,
+   * avec sa COURSIVE extérieure.
+   *
+   * C'est le trait le plus visible d'une rue d'habitation japonaise, et il
+   * manquait : tout le ruban portait la même façade de bureau à meneaux, du
+   * bâti de rapport de Nishi-Nippori aux tours de Shinjuku. Forte sur le
+   * résidentiel et les bas quartiers, nulle sur les quartiers de tours - une
+   * tour de bureaux n'a pas de balcons, et une tour d'habitation les a
+   * intérieurs.
+   */
+  balcony: number;
 }
 
 const TISSUE_CACHE = new Map<string, Tissue>();
@@ -249,14 +361,21 @@ export function tissueOf(district: District): Tissue {
     trade: 0.18 + district.density * 0.42,
     lowCap: 1,
     cool: 0.2,
+    // Le fond de la ville est du logement de rapport : c'est le cas COURANT le
+    // long de la Yamanote, pas l'exception.
+    balcony: 0.3,
   };
   if (has('parkGreen')) t.green += 0.3;
   if (has('torii')) t.green += 0.14;
   if (has('templeLowtown')) {
     t.hip += 0.5;
     t.green += 0.06;
+    t.balcony += 0.22;
   }
-  if (has('upscaleResidential')) t.hip += 0.26;
+  if (has('upscaleResidential')) {
+    t.hip += 0.26;
+    t.balcony += 0.3;
+  }
   if (has('giantScreen')) t.screen += 0.3;
   if (has('animeBillboard')) t.screen += 0.22;
   if (has('departmentStore')) t.screen += 0.12;
@@ -281,12 +400,18 @@ export function tissueOf(district: District): Tissue {
   if (has('glassTowers') || has('officeTowers') || has('skyscraperCluster') || has('modernWhite')) {
     t.trade -= 0.16;
     t.cool += 0.5;
+    // Une tour de bureaux n'a pas de balcons, et une tour d'habitation les a
+    // intérieurs : la coursive extérieure est une affaire de bâti moyen.
+    t.balcony -= 0.28;
   }
+  // Un quartier de commerce est en devantures et en enseignes, pas en logements.
+  if (has('shotengai') || has('lowriseMarket') || has('electricNeon')) t.balcony -= 0.14;
   if (has('upscaleResidential') || has('templeLowtown')) t.cool -= 0.12;
   t.cool = Math.max(0.05, Math.min(0.85, t.cool));
   t.trade = Math.max(0.04, Math.min(0.86, t.trade));
   t.green = Math.min(0.45, t.green);
   t.hip = Math.min(0.62, t.hip);
+  t.balcony = Math.max(0, Math.min(0.72, t.balcony));
   TISSUE_CACHE.set(district.name, t);
   return t;
 }
@@ -295,14 +420,111 @@ export function tissueOf(district: District): Tissue {
 
 const FALLBACK_FACADE = ['#e6dcc9', '#e4cfc5', '#dde4d2', '#e0d7e4', '#e8e1cf', '#d6dfe3', '#e7d6c2'];
 
-/** Rue perpendiculaire d'une cellule : [début, fin] en abscisse monde, ou null. */
-function streetOf(cell: number): [number, number] | null {
+/**
+ * Rue perpendiculaire d'une cellule : [début, fin] en abscisse monde, ou null.
+ *
+ * Exportée parce que la circulation (three/city/Traffic) doit tomber d'accord
+ * au centimètre avec la chaussée que `buildCellProps` pose : une voiture qui
+ * roule à côté de sa rue est pire que pas de voiture du tout.
+ */
+export function streetOf(cell: number): [number, number] | null {
   const a = hashInt(cell * 2654435761);
   if (a > 0.52) return null;
   const b = hashInt(cell * 40503 + 7919);
   const width = 9 + b * 7;
   const at = cell * CELL_LEN + 5 + hashInt(cell * 97 + 13) * (CELL_LEN - width - 10);
   return [at, at + width];
+}
+
+/** Rives de la chaussée d'une rue perpendiculaire (m à l'axe de la voie). */
+export const STREET_INNER = RANKS[0].x0 - 1.5;
+export const STREET_OUTER = RANKS[RANKS.length - 1].x1;
+
+/** La chaussée d'une rue perpendiculaire, telle qu'elle est POSÉE. */
+export interface Roadway {
+  /** Abscisse monde du centre, le long de la voie (m). */
+  s: number;
+  /** Distance du centre à l'axe de la voie (m) : à mi-profondeur du bâti. */
+  x: number;
+  /** Largeur, le long de la voie (m). */
+  w: number;
+  /** Longueur, à travers les rangs (m). */
+  d: number;
+  /** Trame du quartier (rad) : la rotation appliquée autour de son centre. */
+  yaw: number;
+}
+
+/**
+ * Cotes de la chaussée de la cellule, ou `false` s'il n'y a pas de rue.
+ *
+ * Un seul endroit décide où passe une rue et comment elle est tournée : la
+ * dalle de `buildCellProps` et la circulation de three/city/Traffic la lisent
+ * ici toutes les deux. La rotation se fait autour du CENTRE de la dalle, à
+ * mi-profondeur du bâti - prise depuis l'axe des rails, elle décalerait la rue
+ * d'une vingtaine de mètres le long de la voie.
+ */
+export function roadwayOf(cell: number, out: Roadway): boolean {
+  const street = streetOf(cell);
+  if (!street) return false;
+  out.s = (street[0] + street[1]) / 2;
+  out.w = street[1] - street[0] - 1.2;
+  out.x = (STREET_INNER + STREET_OUTER) / 2;
+  out.yaw = gridAngleAt(out.s);
+  // La dalle s'allonge de ce que la rotation lui fait perdre en profondeur,
+  // sinon la trouée n'atteint plus le dernier rang.
+  out.d = (STREET_OUTER - STREET_INNER) / Math.max(0.6, Math.cos(out.yaw));
+  return true;
+}
+
+/** Cotes de travail : le générateur ne doit rien allouer par cellule. */
+const ROADWAY: Roadway = { s: 0, x: 0, w: 0, d: 0, yaw: 0 };
+
+/**
+ * La rue la plus proche d'une abscisse monde, ou `null`.
+ *
+ * C'est par là que passent les singularités de la ligne (systems/segmentEnv) :
+ * une rivière, un passage à niveau et une autoroute urbaine ont tous besoin
+ * d'une TROUÉE dans le tissu, et il y en a déjà une - la rue perpendiculaire,
+ * qui perce les trois rangs au même endroit et dont la chaussée est déjà posée.
+ * Les accrocher à une rue existante au lieu d'en creuser une nouvelle évite
+ * qu'une pile de viaduc ne se plante dans un immeuble, et ne coûte rien.
+ *
+ * Une cellule sur deux porte une rue : chercher à deux cellules près suffit
+ * toujours, et l'écart au point demandé reste sous quatre-vingts mètres.
+ */
+export function streetNear(s: number, reach = 3): Roadway | null {
+  const home = Math.floor(s / CELL_LEN);
+  for (let k = 0; k <= reach; k++) {
+    // On s'écarte alternativement d'un côté puis de l'autre : la rue retenue
+    // est bien la plus proche, et non la première trouvée vers l'avant.
+    for (const cell of k === 0 ? [home] : [home - k, home + k]) {
+      if (roadwayOf(cell, ROADWAY)) return ROADWAY;
+    }
+  }
+  return null;
+}
+
+/**
+ * Trouée imposée au tissu, en abscisse monde : une rivière ne se contourne pas.
+ *
+ * Le générateur sait déjà laisser passer une rue ; il ne savait pas laisser
+ * passer VINGT-CINQ MÈTRES. C'est le seul cas où le décor commande à la ville
+ * plutôt que l'inverse, et il est bordé : `half` vaut zéro partout ailleurs, et
+ * le rendu la pose sur une rue existante, si bien que la moitié de la trouée est
+ * déjà vide.
+ *
+ * L'arrière-pays (`buildFarCell`) n'en tient pas compte à dessein : la nappe
+ * d'eau s'arrête au dernier rang proche, et ce qui est derrière est l'autre
+ * rive, bâtie.
+ */
+export const clearing = { s: 0, half: 0 };
+
+/** Retrait du premier sujet reconstruit après la trouée (m). */
+const CLEAR_MARGIN = 7;
+
+/** Le segment [s0, s1] tombe-t-il dans la trouée ? */
+function inClearing(s0: number, s1: number): boolean {
+  return clearing.half > 0 && s1 > clearing.s - clearing.half && s0 < clearing.s + clearing.half;
 }
 
 /**
@@ -339,18 +561,36 @@ export function buildCell(
 
       let w = R.wMin + r() * (R.wMax - R.wMin);
       if (w > end + 3 - cursor) w = Math.max(R.wMin * 0.6, end + 3 - cursor);
+      const d = R.dMin + r() * (R.dMax - R.dMin);
+      // La trame du quartier, plus le jeu du sujet dans sa propre parcelle : à
+      // Tokyo deux voisins se touchent sans être tout à fait parallèles.
+      const yaw = gridAngleAt(cursor) + (r() * 2 - 1) * GRID_JITTER;
+      // Tourné dans sa trame, un sujet occupe le long de la voie plus que sa
+      // seule longueur : c'est cette emprise-là qu'il faut réserver, sinon les
+      // voisins s'enfoncent l'un dans l'autre à mesure que la trame s'incline.
+      const spanS = w * Math.abs(Math.cos(yaw)) + d * Math.abs(Math.sin(yaw));
 
       // Rue perpendiculaire : elle perce les trois rangs au même endroit.
-      if (street && cursor + w > street[0] && cursor < street[1]) {
+      if (street && cursor + spanS > street[0] && cursor < street[1]) {
         cursor = street[1] + r() * 2;
         continue;
       }
+      // Trouée imposée : la rivière. Elle se traite comme une rue, en plus
+      // large - et sans tirage, parce qu'elle ne se négocie pas. On la teste sur
+      // l'emprise VUE, celle qui est centrée sur le sujet, et non sur la
+      // réservation du curseur : c'est la première qui se retrouverait dans
+      // l'eau. Le saut garde une marge, et il avance toujours - une trouée qui
+      // ferait reculer le curseur bouclerait sans fin.
+      const mid = cursor + w / 2;
+      if (inClearing(mid - spanS / 2, mid + spanS / 2)) {
+        cursor = Math.max(cursor + 1, clearing.s + clearing.half + CLEAR_MARGIN + r() * 3);
+        continue;
+      }
       if (r() < gapChance) {
-        cursor += w * (0.35 + r() * 0.5);
+        cursor += spanS * (0.35 + r() * 0.5);
         continue;
       }
 
-      const d = R.dMin + r() * (R.dMax - R.dMin);
       // Une masse d'arbres prend la place d'un bâtiment. C'est ce qui fait la
       // lisière du parc d'Ueno ou le bois du Meiji-jingū : non pas des arbres
       // AJOUTÉS au tissu, mais du tissu qui manque.
@@ -400,10 +640,113 @@ export function buildCell(
       b.warm = r() < coolChance ? 0.05 + r() * 0.2 : 0.75 + r() * 0.25;
       b.jx = r() * 12;
       b.jy = r() * 3;
+      b.yaw = yaw;
+      // Coursive : le bâti moyen, celui du logement de rapport. Une échoppe de
+      // deux niveaux n'en a pas, une tour non plus.
+      b.balcony = b.h >= 6 && b.h <= 46 && r() < tissue.balcony;
 
       count++;
       placed++;
-      cursor += w + 0.4 + r() * 2.6;
+      // L'entraxe se resserre de ce que la rotation a pris : une trame inclinée
+      // ne doit pas dépeupler le rang qu'elle traverse.
+      cursor += spanS + 0.3 + r() * 1.9;
+    }
+  }
+  return count;
+}
+
+/**
+ * Loi de hauteur de l'arrière-pays.
+ *
+ * Une ville n'a pas des hauteurs tirées à plat : elle en a beaucoup de basses,
+ * quelques moyennes, et de loin en loin une tour. C'est cette queue-là qui fait
+ * une LIGNE DE FAÎTE plutôt qu'une haie - et c'est justement ce qu'un tirage
+ * uniforme ne peut pas donner : à trois cents mètres, il aligne tout à
+ * mi-hauteur et l'arrière-pays redevient un mur, en plus loin.
+ */
+function farHeight(roll: number): number {
+  return 0.18 + 0.82 * Math.pow(roll, 2.2);
+}
+
+/**
+ * Remplit `out` avec les masses de l'arrière-pays de la cellule lointaine
+ * `cell`. Même contrat que `buildCell` : objets réutilisés, aucune allocation.
+ *
+ * Ce qui distingue une masse d'un bâtiment : elle n'a ni devanture, ni
+ * enseigne, ni toiture particulière. À cette distance on ne lit qu'un volume,
+ * une teinte et - la nuit - des fenêtres allumées. Tout le reste serait payé
+ * pour rien.
+ */
+export function buildFarCell(
+  cell: number,
+  side: 1 | -1,
+  out: CityBuilding[],
+  rankScale = 1,
+): number {
+  const start = cell * FAR_CELL_LEN;
+  const end = start + FAR_CELL_LEN;
+  let count = 0;
+
+  for (let rank = 0; rank < FAR_RANKS.length; rank++) {
+    const R = FAR_RANKS[rank];
+    const n = Math.max(1, Math.round(R.n * rankScale));
+    const r = stream(cell * 15485863 + (side === 1 ? 0 : 7919) + rank * 6151);
+    let placed = 0;
+    let cursor = start + r() * 12;
+
+    while (cursor < end && placed < n && count < out.length) {
+      const district = districtAt(cursor, r());
+      const tissue = tissueOf(district);
+      // Un parc ne se remplit pas. Là où le tissu proche s'ouvre en bosquets,
+      // l'arrière-pays s'éclaircit d'autant : c'est ce qui creuse le bois du
+      // Meiji-jingū ou le parc d'Ueno au-delà du premier plan, sans y planter
+      // un seul arbre de plus - à deux cents mètres, une masse verte et un
+      // vide se lisent pareil dans la brume.
+      const gapChance = 0.18 - district.density * 0.14 + tissue.green * 0.9;
+
+      let w = R.wMin + r() * (R.wMax - R.wMin);
+      if (w > end + 10 - cursor) w = Math.max(R.wMin * 0.6, end + 10 - cursor);
+      const d = R.dMin + r() * (R.dMax - R.dMin);
+      const yaw = gridAngleAt(cursor) + (r() * 2 - 1) * GRID_JITTER;
+      const spanS = w * Math.abs(Math.cos(yaw)) + d * Math.abs(Math.sin(yaw));
+
+      if (r() < gapChance) {
+        cursor += spanS * (0.4 + r() * 0.7);
+        continue;
+      }
+
+      const facades = district.facades ?? FALLBACK_FACADE;
+      const b = out[count];
+      b.s = cursor + w / 2;
+      b.x = R.x0 + d / 2 + r() * Math.max(0, R.x1 - R.x0 - d);
+      b.w = w;
+      b.d = d;
+      b.h = Math.min(FAR_H_MAX, R.hMin + district.maxHeight * R.hSpan * farHeight(r()));
+      b.facade = facades[Math.floor(r() * facades.length) % facades.length];
+      b.shade = 0.9 + r() * 0.22;
+      b.accent = district.accent;
+      b.glow = 0;
+      b.socle = 0;
+      b.grove = false;
+      b.crown = 'flat';
+      b.sign = 'none';
+      // L'arrière-pays est plus tertiaire que le bord de voie : c'est là que
+      // sont les tours, et une tour s'éclaire au néon.
+      b.warm = r() < tissue.cool * 1.3 ? 0.05 + r() * 0.2 : 0.75 + r() * 0.25;
+      b.jx = r() * 12;
+      b.jy = r() * 3;
+      b.yaw = yaw;
+      // À cette distance, la coursive ne se lit plus comme un balcon mais comme
+      // un rythme horizontal - et c'est précisément ce qui distingue un
+      // arrière-pays de logements d'un arrière-pays de bureaux.
+      b.balcony = b.h <= 46 && r() < tissue.balcony;
+
+      count++;
+      placed++;
+      // Serré : au-delà de soixante-dix mètres, Tokyo est une masse continue.
+      // Un arrière-pays clairsemé découvre la nappe de rue, et deux cents
+      // mètres de bitume gris valent moins que pas d'arrière-pays du tout.
+      cursor += spanS * 0.82 + r() * 4;
     }
   }
   return count;
@@ -412,16 +755,29 @@ export function buildCell(
 // --- Superstructures, toitures, bosquets et enseignes -----------------------
 
 /**
- * Ce qu'un bâtiment porte, ou ce qui le remplace. Quatre familles, chacune
- * rendue par son propre InstancedMesh :
+ * Ce qu'un bâtiment porte, ou ce qui le remplace. Une famille par
+ * InstancedMesh :
  *
  *   · `box`  - acrotère, édicule de toiture, chaussée : volumes nus, matériau
  *              de la ville avec le drapeau « nu » ;
  *   · `hip`  - toiture en croupe des bas quartiers et du résidentiel ;
+ *   · `tank` - réservoir d'eau sur pieds (高置水槽) ;
+ *   · `ac`   - batterie de condenseurs de climatisation ;
+ *   · `mast` - mât d'antenne, et `beacon` son feu rouge d'obstacle ;
+ *   · `rail` - garde-corps de toiture ;
  *   · `tree` - masse d'arbres à la place d'un bâtiment ;
  *   · `sign` - panneau lumineux plaqué sur la face qui regarde la voie.
  */
-export type PropKind = 'box' | 'hip' | 'tree' | 'sign';
+export type PropKind =
+  | 'box'
+  | 'hip'
+  | 'tank'
+  | 'ac'
+  | 'mast'
+  | 'beacon'
+  | 'rail'
+  | 'tree'
+  | 'sign';
 
 export interface CityProp {
   kind: PropKind;
@@ -444,6 +800,24 @@ export interface CityProp {
   variant: number;
   /** Tirage stable 0..1 : décide si le sujet est en fleurs à la saison des sakura. */
   roll: number;
+  /** Orientation dans le plan (s, x), héritée du bâtiment porteur. */
+  yaw: number;
+}
+
+/**
+ * Pose un accessoire dans le repère LOCAL de son bâtiment.
+ *
+ * `u` court le long de la façade, `v` s'en écarte perpendiculairement - négatif
+ * vers la voie, positif vers l'arrière. Sans ce passage par le repère local, un
+ * bandeau d'enseigne calculé en `x - d/2` se décollait de sa façade dès que le
+ * bâtiment tournait dans sa trame, et flottait à côté de lui.
+ */
+function place(p: CityProp, b: CityBuilding, side: 1 | -1, u: number, v: number): void {
+  const c = Math.cos(b.yaw);
+  const sn = Math.sin(b.yaw);
+  p.s = b.s + u * c - v * side * sn;
+  p.x = b.x + u * side * sn + v * c;
+  p.yaw = b.yaw;
 }
 
 /**
@@ -460,13 +834,28 @@ export interface CityProp {
 export const PROP_CAPS: Record<PropKind, number> = {
   box: 18,
   hip: 5,
+  // Les accessoires de toiture sont serrés à trois ou quatre par cellule. La
+  // leçon des emplacements réservés qui se paient reste la règle : quatre
+  // réservoirs par cellule couvrent le cas courant, et personne ne compte les
+  // châteaux d'eau d'un quartier depuis un train.
+  tank: 4,
+  ac: 4,
+  mast: 3,
+  beacon: 2,
+  rail: 3,
   tree: 5,
   sign: 6,
 };
-const PROP_TOTAL = PROP_CAPS.box + PROP_CAPS.hip + PROP_CAPS.tree + PROP_CAPS.sign;
+const PROP_TOTAL = Object.values(PROP_CAPS).reduce((a, b) => a + b, 0);
 
 const PARAPET_TONE = '#c6c3ba';
 const ROOFTOP_TONE = '#b4b1a8';
+/** Le galvanisé d'un réservoir et d'un mât : plus clair que le béton du toit. */
+const METAL_TONE = '#a9aeb2';
+/** Tôle laquée d'un condenseur, toujours plus claire que ce qui l'entoure. */
+const PLANT_TONE = '#c3c6c4';
+/** Feu d'obstacle : le rouge réglementaire, qui ne se négocie pas. */
+const BEACON_TONE = '#ff2f1c';
 const ROAD_TONE = '#5f5e5a';
 /** Tuile sombre : c'est elle qui signe un bas quartier, vue d'un viaduc. */
 const TILE_TONES = ['#4a5058', '#434a52', '#525a62', '#3e444c'];
@@ -502,8 +891,7 @@ export function buildCellProps(
       // La masse d'arbres remplace le bâtiment : ni acrotère, ni édicule.
       const t = push('tree');
       if (t) {
-        t.s = b.s;
-        t.x = b.x;
+        place(t, b, side, 0, 0);
         t.w = b.w;
         t.d = b.d;
         t.h = 6 + r() * 6;
@@ -529,8 +917,7 @@ export function buildCellProps(
     if (b.crown === 'hip') {
       const t = push('hip');
       if (t) {
-        t.s = b.s;
-        t.x = b.x;
+        place(t, b, side, 0, 0);
         t.w = b.w + 1.1; // débord de toiture, franc dans une rue basse
         t.d = b.d + 1.1;
         t.h = Math.min(3.4, 0.36 * Math.min(b.w, b.d) + 0.6);
@@ -540,8 +927,7 @@ export function buildCellProps(
     } else {
       const p = push('box');
       if (p) {
-        p.s = b.s;
-        p.x = b.x;
+        place(p, b, side, 0, 0);
         p.w = b.w + 0.45;
         p.d = b.d + 0.45;
         p.h = 0.55;
@@ -566,8 +952,7 @@ export function buildCellProps(
         q.w = ew;
         q.d = ed;
         q.h = eh;
-        q.s = b.s + es * (b.w - ew);
-        q.x = b.x + ex * (b.d - ed);
+        place(q, b, side, es * (b.w - ew), ex * (b.d - ed));
         q.y = b.h;
         q.tone = ROOFTOP_TONE;
       }
@@ -578,13 +963,13 @@ export function buildCellProps(
     if (b.sign !== 'none') {
       const g = push('sign');
       if (g) {
-        g.x = b.x - b.d / 2 - 0.09;
+        const v = -b.d / 2 - 0.09;
         g.tone = b.accent;
         g.d = 0;
         if (b.sign === 'screen') {
           g.w = Math.min(b.w * 0.84, 11);
           g.h = Math.min(b.h * 0.46, 7);
-          g.s = b.s;
+          place(g, b, side, 0, v);
           // Assez bas pour tomber dans le cône que la baie laisse passer : un
           // écran perché au sommet d'un immeuble proche ne se voit jamais.
           g.y = Math.max(2.6, Math.min(b.h * 0.38, b.h - g.h - 0.4));
@@ -592,27 +977,127 @@ export function buildCellProps(
           g.w = 1.15;
           g.h = Math.min(b.h * 0.62, 8.5);
           // Contre un angle : c'est là qu'elles se posent, pour se lire de biais.
-          g.s = b.s + (b.w / 2 - 0.8) * (r() < 0.5 ? 1 : -1);
+          place(g, b, side, (b.w / 2 - 0.8) * (r() < 0.5 ? 1 : -1), v);
           g.y = Math.max(2.9, b.h - g.h - 0.5);
         }
       }
     }
+
+    // --- Ce qu'il y a sur un toit ---
+    //
+    // La Yamanote court sur viaduc la moitié de la boucle : sept mètres
+    // au-dessus de la rue, la surface qu'on voit le plus n'est ni une façade ni
+    // une chaussée, c'est une TOITURE. Elle n'avait qu'un acrotère et, de loin
+    // en loin, un édicule en boîte - et une boîte sur une boîte ne se lit pas
+    // comme un toit habité.
+    //
+    // Tirages consommés d'abord, décisions ensuite, comme pour l'édicule : la
+    // cellule avance du même nombre de pas quelle que soit la branche.
+    const wTank = r();
+    const wAc = r();
+    const wMast = r();
+    const wRail = r();
+    const kitSize = r();
+    const tankU = (r() - 0.5) * 0.68;
+    const tankV = (r() - 0.5) * 0.68;
+    const acU = (r() - 0.5) * 0.66;
+    const acFace = r() < 0.5 ? 1 : -1;
+    const mastU = (r() - 0.5) * 0.72;
+    const mastRise = r();
+
+    const flat = b.crown === 'flat';
+    const small = Math.min(b.w, b.d);
+
+    // Réservoir sur pieds : la silhouette la plus reconnaissable d'un immeuble
+    // japonais. On le trouve sur le bâti moyen - une tour a ses réserves à
+    // l'intérieur, une échoppe n'en a pas besoin.
+    if (flat && b.h >= 6 && b.h <= 46 && small >= 5.5 && wTank < 0.46) {
+      const t = push('tank');
+      if (t) {
+        const tw = Math.min(3.3, Math.max(1.9, small * 0.32));
+        t.w = tw;
+        t.d = tw * 0.94;
+        t.h = 2.3 + kitSize * 1.1;
+        place(t, b, side, tankU * (b.w - tw), tankV * (b.d - tw));
+        t.y = b.h;
+        t.tone = METAL_TONE;
+      }
+    }
+
+    // Batterie de condenseurs, alignée le long d'un BORD de toiture : c'est là
+    // qu'elle est, pour la reprise d'air, jamais au milieu.
+    if (flat && b.h >= 8 && small >= 6 && wAc < 0.52) {
+      const p = push('ac');
+      if (p) {
+        const aw = Math.min(5, Math.max(2.4, small * 0.44));
+        p.w = aw;
+        p.d = aw * 0.66;
+        p.h = 1.35 + kitSize * 0.4;
+        place(p, b, side, acU * (b.w - aw), acFace * Math.max(0, b.d / 2 - p.d / 2 - 0.45));
+        p.y = b.h;
+        p.tone = PLANT_TONE;
+      }
+    }
+
+    // Mât d'antenne, et son feu rouge d'obstacle. La réglementation impose le
+    // feu au-dessus de soixante mètres et l'usage bien plus bas ; on le pose
+    // dès quarante, sur la pointe, parce que c'est ce qu'on voit d'un train la
+    // nuit - le seul point rouge fixe d'un ciel de Tokyo.
+    if (flat && b.h >= 11 && wMast < 0.34) {
+      const mh = 3.4 + mastRise * 5.6;
+      const m = push('mast');
+      if (m) {
+        m.w = 1.1;
+        m.d = 1.1;
+        m.h = mh;
+        place(m, b, side, mastU * (b.w - 1.6), 0);
+        m.y = b.h;
+        m.tone = METAL_TONE;
+        if (b.h + mh >= 40) {
+          const f = push('beacon');
+          if (f) {
+            f.w = 0.42;
+            f.d = 0.42;
+            f.h = 0.42;
+            f.s = m.s;
+            f.x = m.x;
+            f.yaw = m.yaw;
+            f.y = b.h + mh + 0.2;
+            f.tone = BEACON_TONE;
+          }
+        }
+      }
+    }
+
+    // Garde-corps : il se pose SUR l'acrotère. Vu d'un viaduc, c'est lui qui
+    // dit qu'un toit est accessible, donc habité.
+    if (flat && b.h >= 8 && b.h <= 50 && small >= 5 && wRail < 0.4) {
+      const p = push('rail');
+      if (p) {
+        place(p, b, side, 0, 0);
+        p.w = b.w - 0.3;
+        p.d = b.d - 0.3;
+        p.h = 1.05;
+        p.y = b.h + 0.55;
+        p.tone = METAL_TONE;
+      }
+    }
   }
 
-  // Chaussée : la trouée devient une perspective au lieu d'un trou.
-  const street = streetOf(cell);
-  if (street) {
-    const inner = RANKS[0].x0 - 1.5;
-    const outer = RANKS[RANKS.length - 1].x1;
+  // Chaussée : la trouée devient une perspective au lieu d'un trou. Elle prend
+  // la trame du quartier, comme le bâti qui la borde - une rue droite au milieu
+  // d'un tissu de biais se verrait tout de suite.
+  if (roadwayOf(cell, ROADWAY)) {
     const p = push('box');
     if (p) {
-      p.s = (street[0] + street[1]) / 2;
-      p.w = street[1] - street[0] - 1.2;
-      p.x = (inner + outer) / 2;
-      p.d = outer - inner;
+      p.s = ROADWAY.s;
+      p.w = ROADWAY.w;
+      p.x = ROADWAY.x;
+      p.d = ROADWAY.d;
       p.h = 0.14;
       p.y = 0;
       p.tone = ROAD_TONE;
+      p.yaw = ROADWAY.yaw;
     }
   }
   return count;
@@ -631,12 +1116,13 @@ export function makePropBuffer(): CityProp[] {
     tone: '#ffffff',
     variant: 0,
     roll: 0,
+    yaw: 0,
   }));
 }
 
 /** Tableau de travail réutilisable, à la capacité d'une cellule. */
-export function makeCellBuffer(): CityBuilding[] {
-  return Array.from({ length: CELL_CAPACITY }, () => ({
+export function makeCellBuffer(length = CELL_CAPACITY): CityBuilding[] {
+  return Array.from({ length }, () => ({
     s: 0,
     x: 0,
     w: 0,
@@ -653,5 +1139,7 @@ export function makeCellBuffer(): CityBuilding[] {
     warm: 1,
     jx: 0,
     jy: 0,
+    balcony: false,
+    yaw: 0,
   }));
 }

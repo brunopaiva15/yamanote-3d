@@ -1,7 +1,14 @@
 // Le ruban urbain : la ville en volume, posée dans le monde, que le train
-// dépasse. Deux InstancedMesh par côté - les corps de bâtiment et leurs volumes
-// secondaires (acrotères, édicules de toiture, chaussées) - découpés en
-// cellules de 40 m (voir systems/cityField) tenues dans un anneau glissant.
+// dépasse. Les corps de bâtiment et leurs volumes secondaires (acrotères,
+// édicules de toiture, chaussées) sont découpés en cellules de 40 m (voir
+// systems/cityField) tenues dans un anneau glissant.
+//
+// DEUX MAILLES, DEUX ANNEAUX. Le bâti proche tient les soixante-six premiers
+// mètres à la maille de 40 m ; l'arrière-pays va jusqu'à deux cent soixante, à
+// la maille de 120 m, dans un maillage à lui. Les deux partagent la même
+// origine - celle de l'anneau proche - et vivent donc sous le même groupe, ce
+// qui leur donne le même recul, la même élévation de tronçon et le même
+// écartement de gare.
 //
 // Le groupe entier recule d'un `runtime.distance` : les instances gardent donc
 // une abscisse FIXE et ne sont réécrites qu'au recyclage d'une cellule, soit
@@ -35,17 +42,29 @@ import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
 import {
   CELL_CAPACITY,
   CELL_LEN,
+  FAR_CELL_CAPACITY,
+  FAR_CELL_LEN,
   PROP_CAPS,
   type PropKind,
   buildCell,
   buildCellProps,
+  buildFarCell,
+  clearing,
   makeCellBuffer,
   makePropBuffer,
   updateCityAnchor,
 } from '../../systems/cityField';
+import { singularity } from '../../systems/singularity';
 import { GROUND_TILE, makeCityGroundTexture, makeSignageTexture } from '../../textures/city';
 import { makeCityMaterial } from './cityMaterial';
 import { makeGroveGeometry, makeGroveMaterial, makeHipRoofGeometry } from './cityProps';
+import {
+  makeAcBankGeometry,
+  makeMastGeometry,
+  makeObstacleLightGeometry,
+  makeRoofRailGeometry,
+  makeWaterTankGeometry,
+} from './roofKit';
 import { seasonNow } from '../../systems/season';
 import { weather } from '../../systems/weather';
 
@@ -57,25 +76,43 @@ const SNOW_GROUND = new THREE.Color('#dfe4ea');
 /** Axe de rotation des enseignes, qui regardent toutes la voie. */
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 /** Familles de volumes secondaires, dans l'ordre d'escamotage. */
-const PROP_KINDS: PropKind[] = ['box', 'hip', 'tree', 'sign'];
+/**
+ * Familles rendues avec le MATÉRIAU DE VILLE, drapeau « volume nu » : elles
+ * partagent le chemin d'écriture, seule la géométrie change.
+ */
+const SOLID_KINDS = ['box', 'hip', 'tank', 'ac', 'mast', 'rail'] as const;
+type SolidKind = (typeof SOLID_KINDS)[number];
+
+const PROP_KINDS: PropKind[] = [...SOLID_KINDS, 'tree', 'sign', 'beacon'];
 
 /** Emprise laissée libre de part et d'autre de l'axe : ballast et voie. */
 const GROUND_INNER = 5;
-/** Largeur d'une nappe de sol urbain (m) : au-delà du dernier rang bâti. */
-const GROUND_SPAN = 170;
+/**
+ * Largeur d'une nappe de sol urbain (m) : au-delà du dernier rang bâti, et
+ * au-delà de la portée de la brume. Sa rive extérieure doit être NOYÉE, sinon
+ * on voit la rue s'arrêter net sur du ciel - c'est ce qui est arrivé le jour
+ * où l'arrière-pays a repoussé le bâti à deux cent soixante mètres.
+ */
+const GROUND_SPAN = 560;
 /** Longueur des nappes (m) : la vue en biais vers le fond du wagon porte loin. */
-const GROUND_LEN = 460;
+const GROUND_LEN = 1200;
 
 /**
- * Longueur de l'anneau et allègement des rangs par palier de qualité.
+ * Longueur des deux anneaux et allègement des rangs par palier de qualité.
  *
- * L'anneau ne descend jamais sous 440 m (± 220 m) : c'est la portée de la brume
- * de jour, en deçà on verrait la ville apparaître à vue. Ce qui s'allège, c'est
- * la DENSITÉ de chaque rang, pas l'étendue.
+ * L'anneau proche ne descend jamais sous 440 m (± 220 m) : c'est la portée de
+ * la brume de jour, en deçà on verrait la ville apparaître à vue. Ce qui
+ * s'allège, c'est la DENSITÉ de chaque rang, pas l'étendue.
+ *
+ * L'arrière-pays (`farCells`, cellules de 120 m) suit la même règle à son
+ * échelle : il doit dépasser la brume, sinon la ligne de faîte s'ouvre devant
+ * le train.
  */
 function tuning(quality: Quality): {
   cells: number;
+  farCells: number;
   rankScale: number;
+  farScale: number;
   props: boolean;
   signs: boolean;
 } {
@@ -83,20 +120,26 @@ function tuning(quality: Quality): {
   // pousse pas l'anneau plus loin - la brume l'arrête de toute façon - il
   // resserre les rangs jusqu'au plafond de la cellule, là où le regard porte.
   // C'est la densité de Tokyo, pas son étendue, qui manquait.
-  if (quality === 'extraordinary') return { cells: 13, rankScale: 1.3, props: true, signs: true };
+  if (quality === 'extraordinary')
+    return { cells: 13, farCells: 11, rankScale: 1.3, farScale: 1.25, props: true, signs: true };
   const level = qualityLevel(quality);
-  if (level <= 1) return { cells: 13, rankScale: 1, props: true, signs: true };
-  if (level === 2) return { cells: 12, rankScale: 0.8, props: true, signs: true };
-  if (level === 3) return { cells: 11, rankScale: 0.6, props: true, signs: true };
+  if (level <= 1)
+    return { cells: 13, farCells: 11, rankScale: 1, farScale: 1, props: true, signs: true };
+  if (level === 2)
+    return { cells: 12, farCells: 9, rankScale: 0.8, farScale: 0.85, props: true, signs: true };
+  if (level === 3)
+    return { cells: 11, farCells: 7, rankScale: 0.6, farScale: 0.7, props: true, signs: true };
   // Aux deux derniers paliers, acrotères, croupes et bosquets tombent - mais
   // pas les enseignes : un quad par bâtiment, et c'est tout ce qui reste de
   // reconnaissable à Akihabara ou Shin-Ōkubo une fois la nuit tombée.
-  return { cells: 11, rankScale: 0.4, props: false, signs: true };
+  // L'arrière-pays reste, réduit : c'est un seul maillage par côté, et c'est
+  // lui qui donne au fond une ligne de faîte au lieu d'un aplat de brume.
+  return { cells: 11, farCells: 5, rankScale: 0.4, farScale: 0.55, props: false, signs: true };
 }
 
 export function CityRibbon() {
   const quality = usePerf((s) => s.quality);
-  const { cells, rankScale, props, signs } = tuning(quality);
+  const { cells, farCells, rankScale, farScale, props, signs } = tuning(quality);
 
   const yRoot = useRef<THREE.Group>(null);
   const zRoot = useRef<THREE.Group>(null);
@@ -113,7 +156,11 @@ export function CityRibbon() {
     const city = makeCityMaterial();
     const bodyPer = cells * CELL_CAPACITY;
 
-    const mkMesh = (count: number, geometry?: THREE.BufferGeometry) => {
+    // `family` n'est là que pour la sonde : elle permet de demander à la scène
+    // ce qu'elle rend vraiment - combien d'instances, combien d'escamotées,
+    // quelle part de coursives - au lieu de le déduire du générateur, qui est
+    // justement ce dont on doute quand une ville ne montre pas ce qu'on croit.
+    const mkMesh = (count: number, family: string, geometry?: THREE.BufferGeometry) => {
       // Une géométrie par maillage : les attributs d'instance vivent dessus,
       // deux InstancedMesh ne peuvent donc pas la partager.
       const geo = geometry ?? new THREE.BoxGeometry(1, 1, 1);
@@ -126,22 +173,29 @@ export function CityRibbon() {
       // instance : à côté des seize de la matrice, ce n'est rien, et ça évite
       // deux chemins de code dans la boucle de remplissage.
       const scale = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
+      // Famille de façade : 0 = façade courante à meneaux, 1 = coursive de
+      // logement collectif. Un seul nombre plutôt qu'un sac de bits, parce que
+      // c'est bien un choix de FAMILLE, et qu'il y en aura peut-être une autre.
+      const facade = new THREE.InstancedBufferAttribute(new Float32Array(count), 1);
       accent.setUsage(THREE.DynamicDrawUsage);
       jitter.setUsage(THREE.DynamicDrawUsage);
       trim.setUsage(THREE.DynamicDrawUsage);
       scale.setUsage(THREE.DynamicDrawUsage);
+      facade.setUsage(THREE.DynamicDrawUsage);
       geo.setAttribute('aAccent', accent);
       geo.setAttribute('aJitter', jitter);
       geo.setAttribute('aTrim', trim);
       geo.setAttribute('aScale', scale);
+      geo.setAttribute('aFacade', facade);
       const mesh = new THREE.InstancedMesh(geo, city.material, count);
+      mesh.userData.cityFamily = family;
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       // L'anneau couvre ± 220 m de part et d'autre : la sphère englobante de la
       // boîte unité ne veut rien dire ici, on désactive le tri par frustum.
       mesh.frustumCulled = false;
       mesh.castShadow = false;
       mesh.receiveShadow = false;
-      return { geo, mesh, accent, jitter, trim, scale };
+      return { geo, mesh, accent, jitter, trim, scale, facade };
     };
 
     // Bosquets : matériau propre, qui garde le tronc brun quand la frondaison
@@ -160,7 +214,21 @@ export function CityRibbon() {
     });
     const signGeo = new THREE.PlaneGeometry(1, 1);
     const groveGeo = makeGroveGeometry();
-    const hipGeo = makeHipRoofGeometry();
+    // Une géométrie par famille solide. La boîte unité sert de défaut : c'est
+    // l'acrotère, l'édicule et la chaussée.
+    const solidGeo: Record<SolidKind, THREE.BufferGeometry | undefined> = {
+      box: undefined,
+      hip: makeHipRoofGeometry(),
+      tank: makeWaterTankGeometry(),
+      ac: makeAcBankGeometry(),
+      mast: makeMastGeometry(),
+      rail: makeRoofRailGeometry(),
+    };
+    // Feu d'obstacle : ni éclairé, ni teinté par la scène, et INVISIBLE LE
+    // JOUR - un maillage caché ne coûte pas d'appel de rendu, ce qui rend le
+    // feu gratuit sur les deux tiers du cycle horaire.
+    const beaconMat = new THREE.MeshBasicMaterial({ toneMapped: false, fog: true });
+    const beaconGeo = makeObstacleLightGeometry();
 
     const mkPlain = (count: number, geo: THREE.BufferGeometry, mat: THREE.Material) => {
       const mesh = new THREE.InstancedMesh(geo, mat, count);
@@ -173,40 +241,68 @@ export function CityRibbon() {
 
     const sides = ([1, -1] as const).map((side) => ({
       side,
-      body: mkMesh(bodyPer),
-      // Les acrotères, édicules et chaussées passent par le matériau de ville
-      // (drapeau « nu ») ; les toitures en croupe aussi, avec leur pyramide.
-      box: props ? mkMesh(cells * PROP_CAPS.box) : null,
-      hip: props ? mkMesh(cells * PROP_CAPS.hip, hipGeo.clone()) : null,
+      body: mkMesh(bodyPer, 'corps'),
+      // L'arrière-pays : même matériau, même programme, un maillage de plus par
+      // côté. Il n'a ni acrotère, ni enseigne, ni bosquet - à deux cents mètres
+      // on ne lit qu'une masse et, la nuit, des fenêtres.
+      far: mkMesh(farCells * FAR_CELL_CAPACITY, 'arrière-pays'),
+      // Acrotères, édicules, chaussées, croupes, réservoirs, condenseurs, mâts
+      // et garde-corps : tous par le matériau de ville, drapeau « nu ».
+      solid: props
+        ? (Object.fromEntries(
+            SOLID_KINDS.map((k) => [k, mkMesh(cells * PROP_CAPS[k], k, solidGeo[k]?.clone())]),
+          ) as Record<SolidKind, ReturnType<typeof mkMesh>>)
+        : null,
       tree: props ? mkPlain(cells * PROP_CAPS.tree, groveGeo, groveMat) : null,
       sign: signs ? mkPlain(cells * PROP_CAPS.sign, signGeo, signMat) : null,
+      beacon: props ? mkPlain(cells * PROP_CAPS.beacon, beaconGeo, beaconMat) : null,
     }));
 
     const groundTex = makeCityGroundTexture();
     groundTex.repeat.set(GROUND_SPAN / GROUND_TILE, GROUND_LEN / GROUND_TILE);
     const groundMat = new THREE.MeshLambertMaterial({ map: groundTex, fog: true });
 
-    return { city, sides, groundTex, groundMat, grove, groveGeo, signMat, signTex, signGeo, hipGeo };
-  }, [cells, props, signs]);
+    return {
+      city,
+      sides,
+      groundTex,
+      groundMat,
+      grove,
+      groveGeo,
+      signMat,
+      signTex,
+      signGeo,
+      solidGeo,
+      beaconGeo,
+      beaconMat,
+    };
+  }, [cells, farCells, props, signs]);
 
   useEffect(
     () => () => {
       for (const s of built.sides) {
         s.body.mesh.dispose();
         s.body.geo.dispose();
-        s.box?.mesh.dispose();
-        s.box?.geo.dispose();
-        s.hip?.mesh.dispose();
-        s.hip?.geo.dispose();
+        s.far.mesh.dispose();
+        s.far.geo.dispose();
+        if (s.solid) {
+          for (const k of SOLID_KINDS) {
+            s.solid[k].mesh.dispose();
+            s.solid[k].geo.dispose();
+          }
+        }
         s.tree?.dispose();
         s.sign?.dispose();
+        s.beacon?.dispose();
       }
       built.groveGeo.dispose();
       built.grove.dispose();
       built.signGeo.dispose();
       built.signTex.dispose();
       built.signMat.dispose();
-      built.hipGeo.dispose();
+      for (const k of SOLID_KINDS) built.solidGeo[k]?.dispose();
+      built.beaconGeo.dispose();
+      built.beaconMat.dispose();
       built.groundMat.dispose();
       built.groundTex.dispose();
       built.city.dispose();
@@ -218,6 +314,7 @@ export function CityRibbon() {
   const scratch = useMemo(
     () => ({
       buf: makeCellBuffer(),
+      farBuf: makeCellBuffer(FAR_CELL_CAPACITY),
       propBuf: makePropBuffer(),
       mtx: new THREE.Matrix4(),
       hidden: new THREE.Matrix4().makeScale(0, 0, 0),
@@ -234,7 +331,7 @@ export function CityRibbon() {
     [],
   );
 
-  const ring = useRef({ first: 0, origin: 0, ready: false });
+  const ring = useRef({ first: 0, origin: 0, ready: false, farFirst: 0, epoch: -1 });
 
   useFrame(() => {
     const { index, loopDirection } = useStore.getState();
@@ -243,45 +340,73 @@ export function CityRibbon() {
     const st = ring.current;
     const sc = scratch;
 
+    /**
+     * Écrit `n` corps de bâtiment dans un maillage, à partir de l'emplacement
+     * `base`, et escamote le reste de la tranche. Les deux anneaux - le bâti
+     * proche et l'arrière-pays - passent par là : même matériau, mêmes
+     * attributs, seules la maille et la profondeur changent.
+     */
+    const writeBodies = (
+      t: (typeof built.sides)[number]['body'],
+      side: 1 | -1,
+      buf: typeof sc.buf,
+      base: number,
+      cap: number,
+      n: number,
+    ) => {
+      for (let i = 0; i < cap; i++) {
+        const idx = base + i;
+        const b = i < n ? buf[i] : null;
+        // Un bosquet REMPLACE le bâtiment : son emplacement reste vide.
+        if (!b || b.grove) {
+          t.mesh.setMatrixAt(idx, sc.hidden);
+          continue;
+        }
+        sc.pos.set(side * b.x, b.h / 2, st.origin - b.s);
+        sc.scl.set(b.d, b.h, b.w);
+        // La trame du quartier : une rotation autour de Y de -yaw, la MÊME
+        // des deux côtés de la voie. Le côté -x n'est pas un miroir du côté
+        // +x - une rue qui franchit le remblai continue du même angle.
+        sc.rot.setFromAxisAngle(Y_AXIS, -b.yaw);
+        sc.mtx.compose(sc.pos, sc.rot, sc.scl);
+        t.mesh.setMatrixAt(idx, sc.mtx);
+        t.scale.setXYZ(idx, sc.scl.x, sc.scl.y, sc.scl.z);
+        sc.color.set(b.facade).multiplyScalar(b.shade);
+        t.mesh.setColorAt(idx, sc.color);
+        sc.accent.set(b.accent);
+        t.accent.setXYZ(idx, sc.accent.r, sc.accent.g, sc.accent.b);
+        t.jitter.setXY(idx, b.jx, b.jy);
+        t.trim.setXYZW(idx, b.glow, b.socle, 0, b.warm);
+        t.facade.setX(idx, b.balcony ? 1 : 0);
+      }
+      t.mesh.instanceMatrix.needsUpdate = true;
+      if (t.mesh.instanceColor) t.mesh.instanceColor.needsUpdate = true;
+      t.accent.needsUpdate = true;
+      t.jitter.needsUpdate = true;
+      t.trim.needsUpdate = true;
+      t.scale.needsUpdate = true;
+      t.facade.needsUpdate = true;
+    };
+
+    const writeFarCell = (cell: number) => {
+      const slot = ((cell % farCells) + farCells) % farCells;
+      for (const s of built.sides) {
+        const n = buildFarCell(cell, s.side, sc.farBuf, farScale);
+        writeBodies(s.far, s.side, sc.farBuf, slot * FAR_CELL_CAPACITY, FAR_CELL_CAPACITY, n);
+      }
+    };
+
     const writeCell = (cell: number) => {
       const slot = ((cell % cells) + cells) % cells;
       for (const s of built.sides) {
         const n = buildCell(cell, s.side, sc.buf, rankScale);
+        writeBodies(s.body, s.side, sc.buf, slot * CELL_CAPACITY, CELL_CAPACITY, n);
 
-        // --- Corps de bâtiment ---
-        const base = slot * CELL_CAPACITY;
-        for (let i = 0; i < CELL_CAPACITY; i++) {
-          const idx = base + i;
-          const b = i < n ? sc.buf[i] : null;
-          // Un bosquet REMPLACE le bâtiment : son emplacement reste vide.
-          if (!b || b.grove) {
-            s.body.mesh.setMatrixAt(idx, sc.hidden);
-            continue;
-          }
-          sc.pos.set(s.side * b.x, b.h / 2, st.origin - b.s);
-          sc.scl.set(b.d, b.h, b.w);
-          sc.mtx.compose(sc.pos, sc.rot, sc.scl);
-          s.body.mesh.setMatrixAt(idx, sc.mtx);
-          s.body.scale.setXYZ(idx, sc.scl.x, sc.scl.y, sc.scl.z);
-          sc.color.set(b.facade).multiplyScalar(b.shade);
-          s.body.mesh.setColorAt(idx, sc.color);
-          sc.accent.set(b.accent);
-          s.body.accent.setXYZ(idx, sc.accent.r, sc.accent.g, sc.accent.b);
-          s.body.jitter.setXY(idx, b.jx, b.jy);
-          s.body.trim.setXYZW(idx, b.glow, b.socle, 0, b.warm);
-        }
-        s.body.mesh.instanceMatrix.needsUpdate = true;
-        if (s.body.mesh.instanceColor) s.body.mesh.instanceColor.needsUpdate = true;
-        s.body.accent.needsUpdate = true;
-        s.body.jitter.needsUpdate = true;
-        s.body.trim.needsUpdate = true;
-        s.body.scale.needsUpdate = true;
-
-        // --- Acrotères, croupes, bosquets, enseignes ---
+        // --- Acrotères, croupes, toitures, bosquets, enseignes ---
         if (!s.sign) continue;
         const np = buildCellProps(cell, s.side, sc.buf, n, sc.propBuf);
         // Un curseur par famille : le générateur les entremêle dans un seul
-        // tampon, le rendu les répartit dans quatre maillages.
+        // tampon, le rendu les répartit dans autant de maillages.
         const used = sc.used;
         for (const kind of PROP_KINDS) used[kind] = 0;
         for (let i = 0; i < np; i++) {
@@ -291,26 +416,40 @@ export function CityRibbon() {
           used[p.kind] = k + 1;
           const idx = slot * PROP_CAPS[p.kind] + k;
 
-          if (p.kind !== 'sign' && (!s.box || !s.hip || !s.tree)) continue;
+          if (p.kind !== 'sign' && (!s.solid || !s.tree || !s.beacon)) continue;
 
           if (p.kind === 'sign') {
             // Panneau plaqué sur la face qui regarde la voie, donc tourné vers
-            // l'axe : un quart de tour, dans le sens du côté.
+            // l'axe : un quart de tour, dans le sens du côté - plus la trame du
+            // bâtiment qui le porte, sans quoi il se décollerait de sa façade.
             sc.pos.set(s.side * p.x, p.y + p.h / 2, st.origin - p.s);
-            sc.rot.setFromAxisAngle(Y_AXIS, s.side === 1 ? -Math.PI / 2 : Math.PI / 2);
+            sc.rot.setFromAxisAngle(
+              Y_AXIS,
+              (s.side === 1 ? -Math.PI / 2 : Math.PI / 2) - p.yaw,
+            );
             sc.scl.set(p.w, p.h, 1);
             sc.mtx.compose(sc.pos, sc.rot, sc.scl);
             s.sign.setMatrixAt(idx, sc.mtx);
             sc.color.set(p.tone);
             s.sign.setColorAt(idx, sc.color);
-            sc.rot.identity();
             continue;
           }
 
-          // Bosquets et croupes sont écrits dans un cube unité POSÉ PAR LA
-          // BASE ; les volumes en boîte, eux, sont centrés.
+          // Bosquets, croupes et accessoires de toiture sont écrits dans un
+          // cube unité POSÉ PAR LA BASE ; les volumes en boîte, eux, sont
+          // centrés, et le feu d'obstacle est une bille centrée sur sa cote.
           const baseY = p.kind === 'box' ? p.y + p.h / 2 : p.y;
           sc.pos.set(s.side * p.x, baseY, st.origin - p.s);
+          sc.rot.setFromAxisAngle(Y_AXIS, -p.yaw);
+
+          if (p.kind === 'beacon' && s.beacon) {
+            sc.scl.set(p.d, p.h, p.w);
+            sc.mtx.compose(sc.pos, sc.rot, sc.scl);
+            s.beacon.setMatrixAt(idx, sc.mtx);
+            sc.color.set(p.tone);
+            s.beacon.setColorAt(idx, sc.color);
+            continue;
+          }
 
           if (p.kind === 'tree' && s.tree) {
             const spread = Math.min(p.h * 1.15, Math.max(p.d, p.w));
@@ -327,7 +466,7 @@ export function CityRibbon() {
 
           sc.scl.set(p.d, p.h, p.w);
           sc.mtx.compose(sc.pos, sc.rot, sc.scl);
-          const target = p.kind === 'hip' ? s.hip : s.box;
+          const target = s.solid?.[p.kind as SolidKind];
           if (!target) continue;
           target.mesh.setMatrixAt(idx, sc.mtx);
           sc.color.set(p.tone);
@@ -336,6 +475,7 @@ export function CityRibbon() {
           target.jitter.setXY(idx, 0, 0);
           target.trim.setXYZW(idx, 0, 0, 1, 1);
           target.scale.setXYZ(idx, sc.scl.x, sc.scl.y, sc.scl.z);
+          target.facade.setX(idx, 0);
         }
         // Escamoter les emplacements non pourvus de la cellule.
         for (const kind of PROP_KINDS) {
@@ -344,20 +484,23 @@ export function CityRibbon() {
             const idx = slot * cap + k;
             if (kind === 'sign') s.sign.setMatrixAt(idx, sc.hidden);
             else if (kind === 'tree') s.tree?.setMatrixAt(idx, sc.hidden);
-            else if (kind === 'hip') s.hip?.mesh.setMatrixAt(idx, sc.hidden);
-            else s.box?.mesh.setMatrixAt(idx, sc.hidden);
+            else if (kind === 'beacon') s.beacon?.setMatrixAt(idx, sc.hidden);
+            else s.solid?.[kind as SolidKind].mesh.setMatrixAt(idx, sc.hidden);
           }
         }
-        for (const m of [s.box, s.hip]) {
-          if (!m) continue;
-          m.mesh.instanceMatrix.needsUpdate = true;
-          if (m.mesh.instanceColor) m.mesh.instanceColor.needsUpdate = true;
-          m.accent.needsUpdate = true;
-          m.jitter.needsUpdate = true;
-          m.trim.needsUpdate = true;
-          m.scale.needsUpdate = true;
+        if (s.solid) {
+          for (const kind of SOLID_KINDS) {
+            const m = s.solid[kind];
+            m.mesh.instanceMatrix.needsUpdate = true;
+            if (m.mesh.instanceColor) m.mesh.instanceColor.needsUpdate = true;
+            m.accent.needsUpdate = true;
+            m.jitter.needsUpdate = true;
+            m.trim.needsUpdate = true;
+            m.scale.needsUpdate = true;
+            m.facade.needsUpdate = true;
+          }
         }
-        for (const m of [s.tree, s.sign]) {
+        for (const m of [s.tree, s.sign, s.beacon]) {
           if (!m) continue;
           m.instanceMatrix.needsUpdate = true;
           if (m.instanceColor) m.instanceColor.needsUpdate = true;
@@ -365,8 +508,12 @@ export function CityRibbon() {
       }
     };
 
-    // --- Anneau glissant : une cellule sort derrière, une entre devant ---
+    // --- Anneaux glissants : une cellule sort derrière, une entre devant ---
+    // Les deux mailles partagent la MÊME origine, celle de l'anneau proche :
+    // c'est ce qui leur permet de vivre sous le même groupe, donc de reculer
+    // d'un seul `runtime.distance`. Une ré-ancrage rebâtit forcément les deux.
     const want = Math.floor(runtime.distance / CELL_LEN) - (cells >> 1);
+    const farWant = Math.floor(runtime.distance / FAR_CELL_LEN) - (farCells >> 1);
     const drift = runtime.distance - st.origin;
     if (!st.ready || Math.abs(want - st.first) > cells || drift < 0 || drift > 12000) {
       // Reprise à froid, saut de position, ou dérive numérique : on rebâtit
@@ -374,12 +521,35 @@ export function CityRibbon() {
       // pour quelques centaines de matrices - invisible).
       st.origin = Math.floor(runtime.distance / CELL_LEN) * CELL_LEN;
       st.first = want;
+      st.farFirst = farWant;
       for (let k = 0; k < cells; k++) writeCell(want + k);
+      for (let k = 0; k < farCells; k++) writeFarCell(farWant + k);
       st.ready = true;
     } else {
       while (st.first < want) {
         writeCell(st.first + cells);
         st.first++;
+      }
+      while (st.farFirst < farWant) {
+        writeFarCell(st.farFirst + farCells);
+        st.farFirst++;
+      }
+    }
+
+    // --- Une trouée vient d'être ancrée : on rebâtit ce qu'elle recouvre ---
+    //
+    // L'anneau porte deux cent vingt mètres d'avance, et la Kanda tombe à cent
+    // soixante-dix mètres de la gare de Kanda : les cellules de la rivière ont
+    // donc été engendrées AVANT qu'on sache qu'une rivière allait passer là.
+    // Elles sont réécrites sur place, une poignée de fois par tour.
+    if (st.epoch !== singularity.epoch) {
+      st.epoch = singularity.epoch;
+      if (clearing.half > 0) {
+        const c0 = Math.floor((clearing.s - clearing.half) / CELL_LEN);
+        const c1 = Math.floor((clearing.s + clearing.half) / CELL_LEN);
+        for (let c = c0; c <= c1; c++) {
+          if (c >= st.first && c < st.first + cells) writeCell(c);
+        }
       }
     }
 
@@ -440,6 +610,10 @@ export function CityRibbon() {
     // Un écran géant existe le jour - il est simplement terne. La nuit, il
     // devient la source lumineuse la plus forte du quartier.
     built.signMat.color.setScalar(0.42 + 1.35 * night);
+    // Les feux d'obstacle ne s'allument pas : ils APPARAISSENT. Un maillage
+    // caché ne coûte pas d'appel de rendu, et une bille rouge posée sur un mât
+    // en pleine lumière ne se verrait de toute façon pas.
+    for (const s of built.sides) if (s.beacon) s.beacon.visible = night > 0.18;
     // Le sol de la rue se relève lui aussi : il reçoit l'éclairage public et
     // les vitrines, et un asphalte parfaitement noir n'existe pas en ville.
     // Mouillé, il renvoie franchement plus : c'est là que se lisent les néons.
@@ -464,10 +638,12 @@ export function CityRibbon() {
             }}
           >
             <primitive object={s.body.mesh} />
-            {s.box && <primitive object={s.box.mesh} />}
-            {s.hip && <primitive object={s.hip.mesh} />}
+            <primitive object={s.far.mesh} />
+            {s.solid &&
+              SOLID_KINDS.map((k) => <primitive key={k} object={s.solid![k].mesh} />)}
             {s.tree && <primitive object={s.tree} />}
             {s.sign && <primitive object={s.sign} />}
+            {s.beacon && <primitive object={s.beacon} />}
           </group>
         ))}
       </group>

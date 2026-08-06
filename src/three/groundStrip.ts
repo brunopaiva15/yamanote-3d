@@ -23,11 +23,15 @@
 import * as THREE from 'three';
 
 /**
- * Découpe en long. Vingt mètres environ par tronçon sur quatre cent soixante :
- * c'est la maille la plus grossière où le biseau d'about reste une pente et
- * non une marche.
+ * Découpe en long : vingt mètres environ par tronçon, c'est la maille la plus
+ * grossière où le biseau d'about (TAPER, 22 m) reste une pente et non une
+ * marche. Elle se déduit donc de la LONGUEUR, et ne peut pas être une constante
+ * - une nappe de mille deux cents mètres découpée en vingt-quatre donnerait
+ * cinquante mètres par tronçon, et le biseau redeviendrait un ressaut.
  */
-const SEGMENTS = 24;
+function segmentsFor(length: number): number {
+  return Math.max(8, Math.min(96, Math.round(length / 19)));
+}
 
 export interface GroundStrip {
   geometry: THREE.BufferGeometry;
@@ -47,7 +51,7 @@ export interface GroundStrip {
  * appelants (repeat, offset défilant) continue de valoir mot pour mot.
  */
 export function makeGroundStrip(width: number, length: number): GroundStrip {
-  const geometry = new THREE.PlaneGeometry(width, length, 1, SEGMENTS);
+  const geometry = new THREE.PlaneGeometry(width, length, 1, segmentsFor(length));
   geometry.rotateX(-Math.PI / 2);
 
   const pos = geometry.attributes.position as THREE.BufferAttribute;
