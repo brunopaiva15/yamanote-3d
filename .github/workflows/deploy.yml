@@ -77,23 +77,25 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # LE DÉLAI DE DIX MINUTES N'EST PAS RÉGLABLE, et ça vaut d'être écrit ici
+      # pour épargner l'essai à la personne suivante. `actions/deploy-pages`
+      # accepte bien une entrée `timeout`, mais la borne :
+      #
+      #   Warning: timeout value is greater than the allowed maximum
+      #           - timeout set to the maximum of 600000 milliseconds.
+      #
+      # Six cent mille millisecondes, soit dix minutes, et c'est un plafond en
+      # dur. Le 6 août, deux mises en ligne d'affilée sont restées en
+      # « deployment_in_progress » au-delà, et l'étape les a ANNULÉES.
+      #
+      # Ce n'est pas le poids de l'artefact : trente méga-octets compressés,
+      # contre trente avant qu'on y ajoute la géographie importée - un demi pour
+      # cent -, et le job de build entier (lint, 886 tests, tsc, vite, envoi)
+      # tient en soixante-trois secondes. La même journée, la même taille est
+      # passée en trois minutes le matin.
+      #
+      # Il n'y a donc rien à régler de ce côté : quand ça dépasse, c'est chez
+      # GitHub, et la seule chose à faire est de relancer le workflow.
       - name: Déploiement sur GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          # Le défaut est de dix minutes, et c'est trop juste.
-          #
-          # Ce n'est PAS une question de poids : l'artefact fait trente
-          # méga-octets compressés et n'a grossi que d'un demi pour cent depuis
-          # qu'on lui a ajouté la géographie importée. Le build et l'envoi
-          # tiennent en soixante-trois secondes.
-          #
-          # C'est la mise en ligne côté GitHub qui varie, et franchement : trois
-          # minutes le 6 août à 10 h, six puis neuf et demie l'après-midi, et à
-          # 14 h 26 elle a dépassé les dix - l'étape a abandonné, ANNULÉ un
-          # déploiement qui était peut-être en train d'aboutir, et laissé le site
-          # sur la version précédente. Attendre plus longtemps ne coûte rien
-          # (l'exécution est facturée à la minute, et une minute d'attente vaut
-          # mieux qu'un déploiement à refaire) ; abandonner trop tôt coûte une
-          # mise en ligne.
-          timeout: 1800000
