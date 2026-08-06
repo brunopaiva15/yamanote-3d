@@ -20,7 +20,9 @@ const server = await createServer({ root: process.cwd(), server: { port: 5205 },
 await server.listen();
 
 const browser = await chromium.launch({
-  executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  executablePath:
+    process.env.CHROMIUM ??
+    '/opt/google/chrome/chrome',
   args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'],
 });
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });

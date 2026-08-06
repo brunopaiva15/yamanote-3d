@@ -28,6 +28,21 @@ import { freezeWeather, weather } from '../systems/weather';
 import { seasonNow } from '../systems/season';
 import { clearing } from '../systems/cityField';
 import { expressway, singularity } from '../systems/singularity';
+import { groundAt, trackAt, trackElevation, loopHere, cityRelief } from '../systems/terrain';
+import {
+  BANDS,
+  BIBLE_KM_POSTS,
+  bibleKmOf,
+  bibleKmPoint,
+  nearestStation,
+  sOfBibleKm,
+} from '../systems/kmPost';
+import { SECTORS } from '../data/sectors';
+import { WATER_CROSSINGS } from '../data/water';
+import { GEO_LANDMARKS } from '../data/tokyoGeo';
+import { FOOTPRINT_TOTAL, FOOTPRINT_REACH } from '../data/footprints';
+import { GEO_REGISTRY, factVisible, DATED_FACTS } from '../data/geo/provenance';
+import { LOOP_PERIMETER } from '../systems/tokyoBearing';
 
 interface Volume {
   label: string;
@@ -673,6 +688,74 @@ export function installStationProbe(scene: THREE.Object3D, gl: THREE.WebGLRender
       month,
       day,
       weekday: utc.getUTCDay(),
+    };
+  };
+
+  /**
+   * Le relief sous le train, et celui de la ville à côté.
+   *
+   *   __probeTerrain()  → cote de la voie, sol à ±200 m, cuvette / plateau
+   */
+  w.__probeTerrain = () => {
+    const s = loopHere();
+    const left = cityRelief(runtime.distance, 200, 1);
+    const right = cityRelief(runtime.distance, 200, -1);
+    return {
+      s: +s.toFixed(1),
+      voie: +trackElevation().toFixed(2),
+      profil: +trackAt(s).toFixed(2),
+      solGauche200: +groundAt(s, 200).toFixed(2),
+      solDroite200: +groundAt(s, -200).toFixed(2),
+      reliefVilleGauche: +left.toFixed(2),
+      reliefVilleDroite: +right.toFixed(2),
+    };
+  };
+
+  /**
+   * La bible géographique, lue depuis la pose courante.
+   *
+   *   __probeBible()     → KM bible, gare la plus proche, bandes peuplées
+   *   __probeBible(12.5) → se poser au KM 12,5 (Shinagawa = 0)
+   */
+  w.__probeBible = (km?: number) => {
+    if (km !== undefined) {
+      const p = { x: 0, z: 0 };
+      bibleKmPoint(km, p);
+      // On ne peut pas téléporter en (x,z) monde depuis ici ; on pose l'odomètre
+      // sur l'abscisse correspondante et on laisse le cycle rejoindre.
+      const targetS = sOfBibleKm(km);
+      const here = loopHere();
+      runtime.distance += ((targetS - here + LOOP_PERIMETER) % LOOP_PERIMETER);
+    }
+    const s = loopHere();
+    const kmNow = bibleKmOf(s);
+    const near = nearestStation(kmNow);
+    const pt = { x: 0, z: 0 };
+    bibleKmPoint(kmNow, pt);
+    const bands = BANDS.map((outer, i) => {
+      const inner = i === 0 ? 0 : BANDS[i - 1];
+      const n = SECTORS.filter((sec) => {
+        const d = Math.hypot(sec.x - pt.x, sec.z - pt.z);
+        return d > inner && d <= outer;
+      }).length;
+      return { bande: `${inner / 1000}-${outer / 1000} km`, secteurs: n };
+    });
+    return {
+      km: +kmNow.toFixed(2),
+      gare: STATIONS[near.index]?.romaji ?? near.index,
+      écartGare: +near.meters.toFixed(0),
+      posts: BIBLE_KM_POSTS.length,
+      bandes: bands,
+      eau: WATER_CROSSINGS.length,
+      horizon: GEO_LANDMARKS.filter((lm) => lm.band === 'horizon').length,
+      near: GEO_LANDMARKS.filter((lm) => lm.band === 'near').length,
+      empreintes: FOOTPRINT_TOTAL,
+      empreinteReach: FOOTPRINT_REACH,
+      provenance: GEO_REGISTRY.length,
+      faitsDatés: DATED_FACTS.map((f) => ({
+        id: f.id,
+        visible: factVisible(f.id, runtime.tokyoDate),
+      })),
     };
   };
 }
