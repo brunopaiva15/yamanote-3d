@@ -46,6 +46,7 @@ import { useStore } from '../../store';
 import { CONFIG } from '../../data/config';
 import { journeyProgress } from '../../data/segments';
 import { GEO_LANDMARKS, GEO_STATIONS, type GeoLandmark } from '../../data/tokyoGeo';
+import { HORIZON_DATED, factVisible } from '../../data/geo/provenance';
 import { loopPose, makePose, sightTo, type Sight } from '../../systems/tokyoBearing';
 import { qualityLevel, usePerf, type Quality } from '../../systems/perf';
 import { airRange, veilAt, VEIL_MAX } from './airDepth';
@@ -261,7 +262,9 @@ export function FarSkyline() {
       // c'est elle qui fait qu'on n'en voit jamais le pied.
       const drop = (d * d) / (2 * EARTH_R);
       const veil = Math.max(veilAt(d, range), 1 - smoothstep(NEAR_HIDE, NEAR_FULL, d));
-      const show = veil < VEIL_MAX;
+      // Faits datés (Scramble Square 2019…) : hors fenêtre, le repère n'existe pas.
+      const datedOk = factVisible(HORIZON_DATED[it.lm.id], runtime.tokyoDate);
+      const show = veil < VEIL_MAX && datedOk;
       it.body.visible = show;
       if (it.trim) it.trim.visible = false;
       if (!show) continue;

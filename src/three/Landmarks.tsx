@@ -51,6 +51,7 @@ import { prevStation } from '../data/loop';
 import { journeyProgress } from '../data/segments';
 import { DISTRICTS, LAND_FAMILY, type Land, type LandmarkSpec } from '../data/districts';
 import { GEO_LANDMARKS, type GeoLandmark } from '../data/tokyoGeo';
+import { NEAR_DATED, STATION_DATED, factVisible } from '../data/geo/provenance';
 import { loopPose, makePose, sightTo, type Sight } from '../systems/tokyoBearing';
 import { rng } from '../textures/procedural';
 import { box, glow, plane, sil, vehicle, type Ctx } from './landmarkKit';
@@ -319,6 +320,10 @@ function populate(slot: Slot, districtIndex: number): void {
     // appliquée à la lettre : plutôt un quartier nu qu'un temple imaginaire.
     const geo = geoOf(spec, districtIndex);
     if (spec.truth === 'geo' && !geo) return;
+    // Faits datés : Takanawa Gateway avant 2020, Miyashita Park reconstruit…
+    if (spec.truth === 'geo' && geo && !factVisible(NEAR_DATED[geo.id], runtime.tokyoDate)) return;
+    const datedKey = `${districtIndex}:${spec.kind}`;
+    if (!factVisible(STATION_DATED[datedKey], runtime.tokyoDate)) return;
     const side = spec.side ?? 1;
     const scale = spec.scale ?? 1;
     const zs = builder.near ? [0] : [...FAR_ZS];
