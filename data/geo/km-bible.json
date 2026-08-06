@@ -1,0 +1,5554 @@
+{
+ "source": "bible géographique (cadrage macroscopique)",
+ "note": "La bible fournit la STRUCTURE - trente-six points kilométriques, KM 0 = Shinagawa, cinq rayons de 1, 5, 10, 20 et 50 km mesurés à vol d’oiseau - et une consigne de couverture. Elle ne fournit aucune géométrie et n’en tient pas lieu (règle 11) : les secteurs listés ici sont ceux de data/geo/sectors.json, résolus depuis OpenStreetMap, et cette grille dit seulement lesquels tombent dans quelle bande depuis quel point kilométrique. C’est une liste de couverture, pas une carte.",
+ "generatedBy": "scripts/geo/fetch-sectors.mjs",
+ "km0Station": 24,
+ "loopKm": 34.5,
+ "bands": [
+  1000,
+  5000,
+  10000,
+  20000,
+  50000
+ ],
+ "posts": [
+  {
+   "km": 0,
+   "s": 27701.8,
+   "x": -2539.3,
+   "z": 5842.8,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 1,
+     "resolved": 1,
+     "unresolved": 0,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 71,
+     "resolved": 25,
+     "unresolved": 46,
+     "masses": [
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--3205-8329",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass--3767-1140",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2974-10272",
+      "mass-1413-5412"
+     ],
+     "names": [
+      "新橋",
+      "港南",
+      "恵比寿",
+      "西新橋",
+      "海岸",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南",
+      "港南"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 230,
+     "resolved": 96,
+     "unresolved": 134,
+     "masses": [
+      "mass--6530--989",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "西新宿",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "蔵前",
+      "湊",
+      "飯田橋",
+      "平河町",
+      "春日",
+      "麹町"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 399,
+     "resolved": 165,
+     "unresolved": 234,
+     "masses": [
+      "mass--3857--7186",
+      "mass-3119--3206",
+      "mass--9338--2733",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "滝野川",
+      "花川戸",
+      "中野",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 525,
+     "resolved": 88,
+     "unresolved": 437,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 1,
+   "s": 26704,
+   "x": -2636.5,
+   "z": 6824.8,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 0,
+     "resolved": 0,
+     "unresolved": 0,
+     "masses": [
+      "mass--2009-6700"
+     ],
+     "names": [
+      "港南"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 63,
+     "resolved": 15,
+     "unresolved": 48,
+     "masses": [
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass--3131-2110",
+      "mass--2974-10272",
+      "mass-1413-5412"
+     ],
+     "names": [
+      "新橋",
+      "恵比寿",
+      "海岸",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南",
+      "港南",
+      "東大井",
+      "西麻布"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 211,
+     "resolved": 93,
+     "unresolved": 118,
+     "masses": [
+      "mass--6530--989",
+      "mass--1435-1374",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass--4685-1478",
+      "mass--2218-1460",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155"
+     ],
+     "names": [
+      "西新宿",
+      "西新橋",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "北青山",
+      "虎ノ門",
+      "湊",
+      "飯田橋",
+      "南青山"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 417,
+     "resolved": 178,
+     "unresolved": 239,
+     "masses": [
+      "mass--3857--7186",
+      "mass-2261--2221",
+      "mass-3119--3206",
+      "mass--9338--2733",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12999-23917"
+     ],
+     "names": [
+      "滝野川",
+      "蔵前",
+      "花川戸",
+      "中野",
+      "川崎区",
+      "日吉",
+      "高島",
+      "南幸"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 535,
+     "resolved": 89,
+     "unresolved": 446,
+     "masses": [
+      "mass--12152--23628",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "大字上落合",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 2,
+   "s": 25706.2,
+   "x": -3372,
+   "z": 6911,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 1,
+     "resolved": 0,
+     "unresolved": 1,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 75,
+     "resolved": 17,
+     "unresolved": 58,
+     "masses": [
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--1557-7934",
+      "mass--3131-2110",
+      "mass--2974-10272"
+     ],
+     "names": [
+      "港南",
+      "恵比寿",
+      "海岸",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南",
+      "港南",
+      "東大井",
+      "西麻布"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 194,
+     "resolved": 90,
+     "unresolved": 104,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--1435-1374",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass--4685-1478",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "西新橋",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "北青山",
+      "虎ノ門",
+      "晴海",
+      "湊"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 429,
+     "resolved": 183,
+     "unresolved": 246,
+     "masses": [
+      "mass--3857--7186",
+      "mass-2261--2221",
+      "mass--1280--3079",
+      "mass-3119--3206",
+      "mass--9338--2733",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "滝野川",
+      "蔵前",
+      "春日",
+      "花川戸",
+      "中野",
+      "川崎区",
+      "日吉",
+      "高島",
+      "南幸",
+      "高島"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 527,
+     "resolved": 85,
+     "unresolved": 442,
+     "masses": [
+      "mass--12152--23628"
+     ],
+     "names": [
+      "大字上落合"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 3,
+   "s": 24708.4,
+   "x": -3896.4,
+   "z": 6062.9,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 4,
+     "resolved": 1,
+     "unresolved": 3,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 80,
+     "resolved": 25,
+     "unresolved": 55,
+     "masses": [
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--3205-8329",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--1557-7934",
+      "mass--3767-1140",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2974-10272"
+     ],
+     "names": [
+      "新橋",
+      "港南",
+      "恵比寿",
+      "海岸",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南",
+      "港南",
+      "北青山"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 213,
+     "resolved": 94,
+     "unresolved": 119,
+     "masses": [
+      "mass--6530--989",
+      "mass--1435-1374",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass-661-3278",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "西新宿",
+      "西新橋",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "晴海",
+      "湊",
+      "飯田橋",
+      "平河町",
+      "春日"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 421,
+     "resolved": 175,
+     "unresolved": 246,
+     "masses": [
+      "mass--3857--7186",
+      "mass-2261--2221",
+      "mass-3119--3206",
+      "mass--9338--2733",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873"
+     ],
+     "names": [
+      "滝野川",
+      "蔵前",
+      "花川戸",
+      "中野",
+      "中島",
+      "川崎区",
+      "日吉",
+      "高島"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 508,
+     "resolved": 80,
+     "unresolved": 428,
+     "masses": [
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 4,
+   "s": 23710.6,
+   "x": -4557,
+   "z": 5379,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 7,
+     "resolved": 1,
+     "unresolved": 6,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 85,
+     "resolved": 34,
+     "unresolved": 51,
+     "masses": [
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--3205-8329",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--1557-7934",
+      "mass--3767-1140",
+      "mass--3006-1482",
+      "mass--3131-2110"
+     ],
+     "names": [
+      "新橋",
+      "港南",
+      "恵比寿",
+      "海岸",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南",
+      "港南"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 223,
+     "resolved": 98,
+     "unresolved": 125,
+     "masses": [
+      "mass--6530--989",
+      "mass--1435-1374",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass-661-3278",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass--9338--2733",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "西新宿",
+      "西新橋",
+      "神田駿河台",
+      "一ツ橋",
+      "晴海",
+      "湊",
+      "飯田橋",
+      "平河町",
+      "春日",
+      "晴海"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 420,
+     "resolved": 167,
+     "unresolved": 253,
+     "masses": [
+      "mass--3857--7186",
+      "mass-2261--2221",
+      "mass-3119--3206",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "滝野川",
+      "蔵前",
+      "花川戸",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 491,
+     "resolved": 75,
+     "unresolved": 416,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 5,
+   "s": 22712.8,
+   "x": -4839.8,
+   "z": 4429.7,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 7,
+     "resolved": 1,
+     "unresolved": 6,
+     "masses": [
+      "mass--4364-4031"
+     ],
+     "names": [
+      "恵比寿"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 86,
+     "resolved": 41,
+     "unresolved": 45,
+     "masses": [
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--3205-8329",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--1557-7934",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2926-339"
+     ],
+     "names": [
+      "新橋",
+      "港南",
+      "西新橋",
+      "海岸",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南",
+      "港南"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 248,
+     "resolved": 109,
+     "unresolved": 139,
+     "masses": [
+      "mass--6530--989",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass--2447--528",
+      "mass--2971--551",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass--9338--2733",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "西新宿",
+      "神田駿河台",
+      "一ツ橋",
+      "晴海",
+      "蔵前",
+      "湊",
+      "飯田橋",
+      "春日",
+      "晴海",
+      "麹町"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 418,
+     "resolved": 161,
+     "unresolved": 257,
+     "masses": [
+      "mass--3857--7186",
+      "mass-3119--3206",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "滝野川",
+      "花川戸",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 467,
+     "resolved": 63,
+     "unresolved": 404,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 6,
+   "s": 21714.9,
+   "x": -5248.2,
+   "z": 3519.6,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 5,
+     "resolved": 0,
+     "unresolved": 5,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 95,
+     "resolved": 51,
+     "unresolved": 44,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "港南",
+      "恵比寿",
+      "西新橋",
+      "海岸",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 260,
+     "resolved": 118,
+     "unresolved": 142,
+     "masses": [
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass--9338--2733",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "神田駿河台",
+      "一ツ橋",
+      "東大井",
+      "東大井",
+      "晴海",
+      "蔵前",
+      "湊",
+      "飯田橋",
+      "春日",
+      "晴海"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 427,
+     "resolved": 152,
+     "unresolved": 275,
+     "masses": [
+      "mass--3857--7186",
+      "mass-3119--3206",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "滝野川",
+      "花川戸",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 439,
+     "resolved": 54,
+     "unresolved": 385,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 7,
+   "s": 20717.1,
+   "x": -5807.4,
+   "z": 2697,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 7,
+     "resolved": 6,
+     "unresolved": 1,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 92,
+     "resolved": 47,
+     "unresolved": 45,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "恵比寿",
+      "西新橋",
+      "海岸",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布",
+      "北青山"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 273,
+     "resolved": 132,
+     "unresolved": 141,
+     "masses": [
+      "mass--2009-6700",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass--9338--2733",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "港南",
+      "神田駿河台",
+      "一ツ橋",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "晴海",
+      "蔵前",
+      "湊"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 444,
+     "resolved": 147,
+     "unresolved": 297,
+     "masses": [
+      "mass--3857--7186",
+      "mass-3119--3206",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "滝野川",
+      "花川戸",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 410,
+     "resolved": 43,
+     "unresolved": 367,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 8,
+   "s": 19719.3,
+   "x": -5852,
+   "z": 1721,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 6,
+     "resolved": 5,
+     "unresolved": 1,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 96,
+     "resolved": 49,
+     "unresolved": 47,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "恵比寿",
+      "西新橋",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布",
+      "北青山",
+      "西麻布"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 286,
+     "resolved": 142,
+     "unresolved": 144,
+     "masses": [
+      "mass--2009-6700",
+      "mass--1480-4636",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--3857--7186",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass--9338--2733",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "港南",
+      "海岸",
+      "神田駿河台",
+      "一ツ橋",
+      "港南",
+      "港南",
+      "東大井",
+      "滝野川",
+      "東大井",
+      "晴海"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 465,
+     "resolved": 142,
+     "unresolved": 323,
+     "masses": [
+      "mass-3119--3206",
+      "mass--9604-11820",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "花川戸",
+      "中原区",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 373,
+     "resolved": 37,
+     "unresolved": 336,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 9,
+   "s": 18721.5,
+   "x": -5679.2,
+   "z": 740.9,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 2,
+     "resolved": 1,
+     "unresolved": 1,
+     "masses": [
+      "mass--4861-872"
+     ],
+     "names": [
+      "北青山"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 106,
+     "resolved": 55,
+     "unresolved": 51,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "恵比寿",
+      "西新橋",
+      "白金",
+      "高輪",
+      "東麻布",
+      "北青山",
+      "西麻布",
+      "麻布台"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 300,
+     "resolved": 152,
+     "unresolved": 148,
+     "masses": [
+      "mass--2009-6700",
+      "mass--1480-4636",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--3857--7186",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass-3119--3206",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass--9338--2733",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "港南",
+      "海岸",
+      "神田駿河台",
+      "一ツ橋",
+      "港南",
+      "港南",
+      "東大井",
+      "滝野川",
+      "東大井",
+      "晴海"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 484,
+     "resolved": 136,
+     "unresolved": 348,
+     "masses": [
+      "mass--9604-11820",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "中原区",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 334,
+     "resolved": 31,
+     "unresolved": 303,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 10,
+   "s": 17723.7,
+   "x": -5829.9,
+   "z": -233.6,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 2,
+     "resolved": 2,
+     "unresolved": 0,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 104,
+     "resolved": 52,
+     "unresolved": 52,
+     "masses": [
+      "mass--6530--989",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--4861-872",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "西新宿",
+      "恵比寿",
+      "西新橋",
+      "北青山",
+      "北青山",
+      "西麻布",
+      "麻布台",
+      "虎ノ門",
+      "飯田橋",
+      "南青山"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 306,
+     "resolved": 159,
+     "unresolved": 147,
+     "masses": [
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--1480-4636",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--3857--7186",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass-3119--3206",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "新橋",
+      "港南",
+      "海岸",
+      "神田駿河台",
+      "一ツ橋",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南",
+      "港南"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 528,
+     "resolved": 135,
+     "unresolved": 393,
+     "masses": [
+      "mass--2974-10272",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "東大井",
+      "中原区",
+      "玉川",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 286,
+     "resolved": 27,
+     "unresolved": 259,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 11,
+   "s": 16725.9,
+   "x": -6024.8,
+   "z": -1205.9,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 4,
+     "resolved": 3,
+     "unresolved": 1,
+     "masses": [
+      "mass--6530--989"
+     ],
+     "names": [
+      "西新宿"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 100,
+     "resolved": 51,
+     "unresolved": 49,
+     "masses": [
+      "mass--4861-872",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2218-1460",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "北青山",
+      "北青山",
+      "西麻布",
+      "虎ノ門",
+      "飯田橋",
+      "南青山",
+      "平河町",
+      "赤坂",
+      "六本木",
+      "麹町"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 305,
+     "resolved": 157,
+     "unresolved": 148,
+     "masses": [
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--2118-2299",
+      "mass--3857--7186",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass-3119--3206",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "新橋",
+      "港南",
+      "恵比寿",
+      "西新橋",
+      "海岸",
+      "神田駿河台",
+      "一ツ橋",
+      "白金",
+      "高輪",
+      "東麻布"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 570,
+     "resolved": 142,
+     "unresolved": 428,
+     "masses": [
+      "mass--1557-7934",
+      "mass--2974-10272",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "東大井",
+      "東大井",
+      "中原区",
+      "玉川",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 247,
+     "resolved": 22,
+     "unresolved": 225,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 12,
+   "s": 15728.1,
+   "x": -6004.1,
+   "z": -2190.9,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 5,
+     "resolved": 2,
+     "unresolved": 3,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 98,
+     "resolved": 55,
+     "unresolved": 43,
+     "masses": [
+      "mass--6530--989",
+      "mass--4861-872",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass--3006-1482",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "西新宿",
+      "北青山",
+      "北青山",
+      "西麻布",
+      "飯田橋",
+      "南青山",
+      "平河町",
+      "春日",
+      "赤坂",
+      "麹町"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 307,
+     "resolved": 151,
+     "unresolved": 156,
+     "masses": [
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--2118-2299",
+      "mass--3857--7186",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass-1214-3273",
+      "mass-3119--3206",
+      "mass--3131-2110",
+      "mass-2432-2449"
+     ],
+     "names": [
+      "新橋",
+      "港南",
+      "恵比寿",
+      "西新橋",
+      "海岸",
+      "神田駿河台",
+      "一ツ橋",
+      "白金",
+      "高輪",
+      "東麻布"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 592,
+     "resolved": 146,
+     "unresolved": 446,
+     "masses": [
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "東大井",
+      "東大井",
+      "東大井",
+      "有明",
+      "豊洲",
+      "枝川",
+      "豊洲",
+      "中原区",
+      "玉川",
+      "中島"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 224,
+     "resolved": 21,
+     "unresolved": 203,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 13,
+   "s": 14730.2,
+   "x": -5787.8,
+   "z": -3161.4,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 3,
+     "resolved": 1,
+     "unresolved": 2,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 95,
+     "resolved": 49,
+     "unresolved": 46,
+     "masses": [
+      "mass--6530--989",
+      "mass--4861-872",
+      "mass--4685-1478",
+      "mass--3857--7186",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "西新宿",
+      "北青山",
+      "北青山",
+      "滝野川",
+      "飯田橋",
+      "南青山",
+      "平河町",
+      "春日",
+      "麹町",
+      "元赤坂"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 302,
+     "resolved": 151,
+     "unresolved": 151,
+     "masses": [
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass-1214-3273",
+      "mass-3119--3206",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass-2432-2449"
+     ],
+     "names": [
+      "新橋",
+      "恵比寿",
+      "西新橋",
+      "海岸",
+      "神田駿河台",
+      "一ツ橋",
+      "白金",
+      "高輪",
+      "東麻布",
+      "西麻布"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 615,
+     "resolved": 151,
+     "unresolved": 464,
+     "masses": [
+      "mass--2009-6700",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "港南",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "東大井",
+      "有明",
+      "豊洲",
+      "枝川",
+      "豊洲"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 211,
+     "resolved": 23,
+     "unresolved": 188,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 14,
+   "s": 13732.4,
+   "x": -5526.9,
+   "z": -4124.4,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 4,
+     "resolved": 3,
+     "unresolved": 1,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 89,
+     "resolved": 42,
+     "unresolved": 47,
+     "masses": [
+      "mass--6530--989",
+      "mass--3857--7186",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass--2447--528",
+      "mass--2971--551",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "西新宿",
+      "滝野川",
+      "飯田橋",
+      "春日",
+      "麹町",
+      "麹町",
+      "中野"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 296,
+     "resolved": 151,
+     "unresolved": 145,
+     "masses": [
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-3119--3206",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2926-339"
+     ],
+     "names": [
+      "新橋",
+      "恵比寿",
+      "西新橋",
+      "海岸",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 654,
+     "resolved": 156,
+     "unresolved": 498,
+     "masses": [
+      "mass--2009-6700",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass-1214-3273",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "港南",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "晴海",
+      "東大井",
+      "有明",
+      "豊洲",
+      "豊洲"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 183,
+     "resolved": 23,
+     "unresolved": 160,
+     "masses": [
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "中島",
+      "川崎区",
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 15,
+   "s": 12734.6,
+   "x": -5175.5,
+   "z": -5056.3,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 5,
+     "resolved": 4,
+     "unresolved": 1,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 95,
+     "resolved": 36,
+     "unresolved": 59,
+     "masses": [
+      "mass--6530--989",
+      "mass--3857--7186",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "西新宿",
+      "滝野川",
+      "飯田橋",
+      "春日",
+      "中野"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 269,
+     "resolved": 145,
+     "unresolved": 124,
+     "masses": [
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-3119--3206",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551"
+     ],
+     "names": [
+      "新橋",
+      "恵比寿",
+      "西新橋",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "白金",
+      "東麻布",
+      "北青山",
+      "西麻布"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 698,
+     "resolved": 165,
+     "unresolved": 533,
+     "masses": [
+      "mass--2009-6700",
+      "mass--1480-4636",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass-1214-3273",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--12152--23628"
+     ],
+     "names": [
+      "港南",
+      "海岸",
+      "高輪",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "晴海",
+      "晴海",
+      "東大井"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 159,
+     "resolved": 25,
+     "unresolved": 134,
+     "masses": [
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "中島",
+      "川崎区",
+      "日吉",
+      "高島",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 16,
+   "s": 11736.8,
+   "x": -4682.4,
+   "z": -5882.1,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 5,
+     "resolved": 4,
+     "unresolved": 1,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 94,
+     "resolved": 35,
+     "unresolved": 59,
+     "masses": [
+      "mass--3857--7186",
+      "mass--1280--3079"
+     ],
+     "names": [
+      "滝野川",
+      "春日"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 256,
+     "resolved": 137,
+     "unresolved": 119,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-3119--3206",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "恵比寿",
+      "西新橋",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "東麻布",
+      "北青山",
+      "西麻布"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 726,
+     "resolved": 167,
+     "unresolved": 559,
+     "masses": [
+      "mass--2009-6700",
+      "mass--1480-4636",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass-1214-3273",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--12152--23628"
+     ],
+     "names": [
+      "港南",
+      "海岸",
+      "白金",
+      "高輪",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "晴海",
+      "晴海"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 145,
+     "resolved": 32,
+     "unresolved": 113,
+     "masses": [
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "中島",
+      "川崎区",
+      "日吉",
+      "高島",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 17,
+   "s": 10739,
+   "x": -3724,
+   "z": -5668,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 6,
+     "resolved": 4,
+     "unresolved": 2,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 96,
+     "resolved": 35,
+     "unresolved": 61,
+     "masses": [
+      "mass--3857--7186",
+      "mass--1395--1843",
+      "mass--1280--3079"
+     ],
+     "names": [
+      "滝野川",
+      "飯田橋",
+      "春日"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 254,
+     "resolved": 134,
+     "unresolved": 120,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-3119--3206",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "恵比寿",
+      "西新橋",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "白金",
+      "東麻布",
+      "北青山"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 707,
+     "resolved": 164,
+     "unresolved": 543,
+     "masses": [
+      "mass--2009-6700",
+      "mass--1480-4636",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass-1214-3273",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--12152--23628"
+     ],
+     "names": [
+      "港南",
+      "海岸",
+      "高輪",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "晴海",
+      "東大井",
+      "有明"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 163,
+     "resolved": 38,
+     "unresolved": 125,
+     "masses": [
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "中島",
+      "川崎区",
+      "日吉",
+      "高島",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 18,
+   "s": 9741.2,
+   "x": -2774.1,
+   "z": -5613.7,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 5,
+     "resolved": 3,
+     "unresolved": 2,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 102,
+     "resolved": 44,
+     "unresolved": 58,
+     "masses": [
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--3857--7186",
+      "mass--1395--1843",
+      "mass--1280--3079"
+     ],
+     "names": [
+      "神田駿河台",
+      "一ツ橋",
+      "滝野川",
+      "飯田橋",
+      "春日"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 249,
+     "resolved": 124,
+     "unresolved": 125,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass-3119--3206",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass--9338--2733",
+      "mass-2898-2570"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "恵比寿",
+      "西新橋",
+      "北青山",
+      "白金",
+      "東麻布",
+      "北青山",
+      "西麻布",
+      "麻布台"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 688,
+     "resolved": 159,
+     "unresolved": 529,
+     "masses": [
+      "mass--2009-6700",
+      "mass--1480-4636",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2555-3104",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "港南",
+      "海岸",
+      "高輪",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "東大井",
+      "有明",
+      "豊洲"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 182,
+     "resolved": 45,
+     "unresolved": 137,
+     "masses": [
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "中島",
+      "川崎区",
+      "日吉",
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 19,
+   "s": 8743.3,
+   "x": -1885.9,
+   "z": -6068.4,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 4,
+     "resolved": 1,
+     "unresolved": 3,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 106,
+     "resolved": 52,
+     "unresolved": 54,
+     "masses": [
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--3857--7186",
+      "mass--1395--1843",
+      "mass--1280--3079"
+     ],
+     "names": [
+      "神田駿河台",
+      "一ツ橋",
+      "滝野川",
+      "飯田橋",
+      "春日"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 237,
+     "resolved": 108,
+     "unresolved": 129,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--1435-1374",
+      "mass--4861-872",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass-3119--3206",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass--9338--2733",
+      "mass-2898-2570"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "西新橋",
+      "北青山",
+      "東麻布",
+      "北青山",
+      "西麻布",
+      "麻布台",
+      "虎ノ門",
+      "晴海"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 701,
+     "resolved": 163,
+     "unresolved": 538,
+     "masses": [
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2555-3104",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "港南",
+      "恵比寿",
+      "海岸",
+      "白金",
+      "高輪",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "東大井"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 178,
+     "resolved": 51,
+     "unresolved": 127,
+     "masses": [
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "中島",
+      "川崎区",
+      "日吉",
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 20,
+   "s": 7745.5,
+   "x": -1020,
+   "z": -6560.4,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 6,
+     "resolved": 0,
+     "unresolved": 6,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 99,
+     "resolved": 51,
+     "unresolved": 48,
+     "masses": [
+      "mass--145--1963",
+      "mass--3857--7186",
+      "mass--1395--1843",
+      "mass--1280--3079"
+     ],
+     "names": [
+      "神田駿河台",
+      "滝野川",
+      "飯田橋",
+      "春日"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 225,
+     "resolved": 95,
+     "unresolved": 130,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--1435-1374",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-3119--3206",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass--9338--2733",
+      "mass-2898-2570"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "西新橋",
+      "一ツ橋",
+      "北青山",
+      "東麻布",
+      "北青山",
+      "西麻布",
+      "麻布台",
+      "虎ノ門"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 717,
+     "resolved": 173,
+     "unresolved": 544,
+     "masses": [
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass-1214-3273",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass-2555-3104",
+      "mass-2985-2902",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "港南",
+      "恵比寿",
+      "海岸",
+      "白金",
+      "高輪",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "晴海"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 179,
+     "resolved": 56,
+     "unresolved": 123,
+     "masses": [
+      "mass--9604-11820",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "中原区",
+      "中島",
+      "川崎区",
+      "日吉",
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 21,
+   "s": 6747.7,
+   "x": -250.1,
+   "z": -5996,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 4,
+     "resolved": 0,
+     "unresolved": 4,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 107,
+     "resolved": 59,
+     "unresolved": 48,
+     "masses": [
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--3857--7186",
+      "mass-2261--2221",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass-3119--3206"
+     ],
+     "names": [
+      "神田駿河台",
+      "一ツ橋",
+      "滝野川",
+      "蔵前",
+      "飯田橋",
+      "春日",
+      "花川戸"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 224,
+     "resolved": 87,
+     "unresolved": 137,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--1435-1374",
+      "mass--4861-872",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-1415-1258",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass--9338--2733",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "西新橋",
+      "北青山",
+      "東麻布",
+      "北青山",
+      "西麻布",
+      "麻布台",
+      "虎ノ門",
+      "晴海"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 663,
+     "resolved": 157,
+     "unresolved": 506,
+     "masses": [
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "港南",
+      "恵比寿",
+      "海岸",
+      "白金",
+      "高輪",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "東大井"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 228,
+     "resolved": 72,
+     "unresolved": 156,
+     "masses": [
+      "mass--9604-11820",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "中原区",
+      "中島",
+      "川崎区",
+      "日吉",
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 22,
+   "s": 5749.9,
+   "x": 329.8,
+   "z": -5187.4,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 4,
+     "resolved": 1,
+     "unresolved": 3,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 117,
+     "resolved": 68,
+     "unresolved": 49,
+     "masses": [
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--3857--7186",
+      "mass-2261--2221",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass-3119--3206"
+     ],
+     "names": [
+      "神田駿河台",
+      "一ツ橋",
+      "滝野川",
+      "蔵前",
+      "飯田橋",
+      "春日",
+      "花川戸"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 215,
+     "resolved": 78,
+     "unresolved": 137,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-1415-1258",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass--9338--2733",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "西新橋",
+      "海岸",
+      "北青山",
+      "白金",
+      "東麻布",
+      "北青山",
+      "西麻布",
+      "麻布台"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 622,
+     "resolved": 150,
+     "unresolved": 472,
+     "masses": [
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass--2974-10272",
+      "mass-1413-5412",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "港南",
+      "恵比寿",
+      "高輪",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "東大井",
+      "有明",
+      "中原区"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 268,
+     "resolved": 78,
+     "unresolved": 190,
+     "masses": [
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "中島",
+      "川崎区",
+      "日吉",
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 23,
+   "s": 4752.1,
+   "x": 1025.3,
+   "z": -4474.9,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 8,
+     "resolved": 6,
+     "unresolved": 2,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 117,
+     "resolved": 67,
+     "unresolved": 50,
+     "masses": [
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass-2261--2221",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass-3119--3206"
+     ],
+     "names": [
+      "神田駿河台",
+      "一ツ橋",
+      "蔵前",
+      "飯田橋",
+      "春日",
+      "花川戸"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 202,
+     "resolved": 71,
+     "unresolved": 131,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--3857--7186",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-1415-1258",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "西新橋",
+      "海岸",
+      "北青山",
+      "白金",
+      "東麻布",
+      "北青山",
+      "西麻布",
+      "麻布台"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 597,
+     "resolved": 145,
+     "unresolved": 452,
+     "masses": [
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass--2974-10272",
+      "mass--9338--2733",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "港南",
+      "恵比寿",
+      "高輪",
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "東大井",
+      "中野",
+      "中原区"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 302,
+     "resolved": 86,
+     "unresolved": 216,
+     "masses": [
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "中島",
+      "川崎区",
+      "日吉",
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 24,
+   "s": 3754.3,
+   "x": 865.8,
+   "z": -3614.3,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 9,
+     "resolved": 7,
+     "unresolved": 2,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 135,
+     "resolved": 71,
+     "unresolved": 64,
+     "masses": [
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass-3119--3206",
+      "mass--2447--528",
+      "mass--2971--551"
+     ],
+     "names": [
+      "神田駿河台",
+      "一ツ橋",
+      "蔵前",
+      "湊",
+      "飯田橋",
+      "春日",
+      "花川戸",
+      "麹町",
+      "麹町"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 186,
+     "resolved": 72,
+     "unresolved": 114,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--3857--7186",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2926-339",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "恵比寿",
+      "西新橋",
+      "海岸",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 571,
+     "resolved": 141,
+     "unresolved": 430,
+     "masses": [
+      "mass--2009-6700",
+      "mass--1490-6619",
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass--2974-10272",
+      "mass--9338--2733",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "港南",
+      "港南",
+      "東大井",
+      "東大井",
+      "東大井",
+      "中野",
+      "中原区",
+      "玉川"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 325,
+     "resolved": 84,
+     "unresolved": 241,
+     "masses": [
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "中島",
+      "川崎区",
+      "日吉",
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 25,
+   "s": 2756.5,
+   "x": 694.2,
+   "z": -2654.5,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 8,
+     "resolved": 7,
+     "unresolved": 1,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 144,
+     "resolved": 71,
+     "unresolved": 73,
+     "masses": [
+      "mass--1435-1374",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass-3119--3206",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551"
+     ],
+     "names": [
+      "西新橋",
+      "神田駿河台",
+      "一ツ橋",
+      "蔵前",
+      "湊",
+      "飯田橋",
+      "平河町",
+      "春日",
+      "花川戸",
+      "麹町"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 187,
+     "resolved": 79,
+     "unresolved": 108,
+     "masses": [
+      "mass--6530--989",
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--3857--7186",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass--3767-1140",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "西新宿",
+      "新橋",
+      "港南",
+      "恵比寿",
+      "海岸",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 524,
+     "resolved": 131,
+     "unresolved": 393,
+     "masses": [
+      "mass--3205-8329",
+      "mass--1557-7934",
+      "mass--2974-10272",
+      "mass--9338--2733",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155"
+     ],
+     "names": [
+      "東大井",
+      "東大井",
+      "東大井",
+      "中野",
+      "中原区",
+      "玉川",
+      "中島"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 363,
+     "resolved": 87,
+     "unresolved": 276,
+     "masses": [
+      "mass--6046-16594",
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "川崎区",
+      "日吉",
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 26,
+   "s": 1758.6,
+   "x": 553.7,
+   "z": -1668.2,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 6,
+     "resolved": 5,
+     "unresolved": 1,
+     "masses": [
+      "mass--145--1963"
+     ],
+     "names": [
+      "神田駿河台"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 149,
+     "resolved": 76,
+     "unresolved": 73,
+     "masses": [
+      "mass--1239-2151",
+      "mass--1435-1374",
+      "mass--404--1367",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass-3119--3206",
+      "mass--3006-1482",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass-2898-2570"
+     ],
+     "names": [
+      "新橋",
+      "西新橋",
+      "一ツ橋",
+      "麻布台",
+      "虎ノ門",
+      "晴海",
+      "蔵前",
+      "湊",
+      "飯田橋",
+      "平河町"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 183,
+     "resolved": 77,
+     "unresolved": 106,
+     "masses": [
+      "mass--6530--989",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--3857--7186",
+      "mass--1557-7934",
+      "mass--3767-1140",
+      "mass--3131-2110",
+      "mass-1413-5412",
+      "mass--9338--2733",
+      "mass-2555-3104",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "西新宿",
+      "港南",
+      "恵比寿",
+      "海岸",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南",
+      "港南"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 500,
+     "resolved": 130,
+     "unresolved": 370,
+     "masses": [
+      "mass--3205-8329",
+      "mass--2974-10272",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594"
+     ],
+     "names": [
+      "東大井",
+      "東大井",
+      "中原区",
+      "玉川",
+      "中島",
+      "川崎区"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 388,
+     "resolved": 87,
+     "unresolved": 301,
+     "masses": [
+      "mass--11001-15074",
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "日吉",
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 27,
+   "s": 760.8,
+   "x": 245.4,
+   "z": -719.7,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 7,
+     "resolved": 6,
+     "unresolved": 1,
+     "masses": [
+      "mass--404--1367"
+     ],
+     "names": [
+      "一ツ橋"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 144,
+     "resolved": 70,
+     "unresolved": 74,
+     "masses": [
+      "mass--1239-2151",
+      "mass--1435-1374",
+      "mass--145--1963",
+      "mass--2114-3146",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass-3119--3206",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "新橋",
+      "西新橋",
+      "神田駿河台",
+      "東麻布",
+      "麻布台",
+      "虎ノ門",
+      "晴海",
+      "蔵前",
+      "湊",
+      "飯田橋"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 190,
+     "resolved": 90,
+     "unresolved": 100,
+     "masses": [
+      "mass--6530--989",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--3205-8329",
+      "mass--4305-2488",
+      "mass--3857--7186",
+      "mass--1557-7934",
+      "mass-1413-5412",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "西新宿",
+      "港南",
+      "恵比寿",
+      "海岸",
+      "北青山",
+      "白金",
+      "高輪",
+      "港南",
+      "港南",
+      "北青山"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 486,
+     "resolved": 122,
+     "unresolved": 364,
+     "masses": [
+      "mass--2974-10272",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "東大井",
+      "中原区",
+      "玉川",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 399,
+     "resolved": 87,
+     "unresolved": 312,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 28,
+   "s": 34187.6,
+   "x": -56,
+   "z": 229.9,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 9,
+     "resolved": 9,
+     "unresolved": 0,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 128,
+     "resolved": 56,
+     "unresolved": 72,
+     "masses": [
+      "mass--1239-2151",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--2114-3146",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass-3119--3206",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "新橋",
+      "西新橋",
+      "海岸",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "白金",
+      "東麻布",
+      "北青山",
+      "西麻布"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 201,
+     "resolved": 101,
+     "unresolved": 100,
+     "masses": [
+      "mass--6530--989",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--3205-8329",
+      "mass--3857--7186",
+      "mass--1557-7934",
+      "mass-1413-5412",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "西新宿",
+      "港南",
+      "恵比寿",
+      "高輪",
+      "港南",
+      "港南",
+      "東大井",
+      "滝野川",
+      "東大井",
+      "有明"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 461,
+     "resolved": 124,
+     "unresolved": 337,
+     "masses": [
+      "mass--2974-10272",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "東大井",
+      "中原区",
+      "玉川",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 427,
+     "resolved": 85,
+     "unresolved": 342,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 29,
+   "s": 33189.8,
+   "x": -595.6,
+   "z": 1043.6,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 9,
+     "resolved": 7,
+     "unresolved": 2,
+     "masses": [
+      "mass--1435-1374"
+     ],
+     "names": [
+      "西新橋"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 117,
+     "resolved": 50,
+     "unresolved": 67,
+     "masses": [
+      "mass--1239-2151",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "新橋",
+      "恵比寿",
+      "海岸",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 220,
+     "resolved": 109,
+     "unresolved": 111,
+     "masses": [
+      "mass--6530--989",
+      "mass--2009-6700",
+      "mass--1490-6619",
+      "mass--3205-8329",
+      "mass--3857--7186",
+      "mass--1557-7934",
+      "mass-3119--3206",
+      "mass--2974-10272",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "西新宿",
+      "港南",
+      "港南",
+      "東大井",
+      "滝野川",
+      "東大井",
+      "花川戸",
+      "東大井",
+      "中野"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 436,
+     "resolved": 124,
+     "unresolved": 312,
+     "masses": [
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "中原区",
+      "玉川",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 444,
+     "resolved": 85,
+     "unresolved": 359,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 30,
+   "s": 32192,
+   "x": -720.9,
+   "z": 2002.3,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 8,
+     "resolved": 6,
+     "unresolved": 2,
+     "masses": [
+      "mass--1239-2151",
+      "mass--1435-1374"
+     ],
+     "names": [
+      "新橋",
+      "西新橋"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 104,
+     "resolved": 41,
+     "unresolved": 63,
+     "masses": [
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1480-4636",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass-661-3278",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "港南",
+      "恵比寿",
+      "海岸",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 226,
+     "resolved": 113,
+     "unresolved": 113,
+     "masses": [
+      "mass--6530--989",
+      "mass--3205-8329",
+      "mass--3857--7186",
+      "mass--1557-7934",
+      "mass-2261--2221",
+      "mass--1280--3079",
+      "mass-3119--3206",
+      "mass--2974-10272",
+      "mass--9338--2733"
+     ],
+     "names": [
+      "西新宿",
+      "東大井",
+      "滝野川",
+      "東大井",
+      "蔵前",
+      "春日",
+      "花川戸",
+      "東大井",
+      "中野"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 425,
+     "resolved": 127,
+     "unresolved": 298,
+     "masses": [
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "中原区",
+      "玉川",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 463,
+     "resolved": 88,
+     "unresolved": 375,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 31,
+   "s": 31194.2,
+   "x": -872.5,
+   "z": 2985,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 6,
+     "resolved": 4,
+     "unresolved": 2,
+     "masses": [
+      "mass--1239-2151"
+     ],
+     "names": [
+      "新橋"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 91,
+     "resolved": 36,
+     "unresolved": 55,
+     "masses": [
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "港南",
+      "恵比寿",
+      "西新橋",
+      "海岸",
+      "一ツ橋",
+      "北青山",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 239,
+     "resolved": 115,
+     "unresolved": 124,
+     "masses": [
+      "mass--6530--989",
+      "mass--145--1963",
+      "mass--3205-8329",
+      "mass-2261--2221",
+      "mass--1280--3079",
+      "mass-3119--3206",
+      "mass--2974-10272"
+     ],
+     "names": [
+      "西新宿",
+      "神田駿河台",
+      "東大井",
+      "蔵前",
+      "春日",
+      "花川戸",
+      "東大井"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 408,
+     "resolved": 131,
+     "unresolved": 277,
+     "masses": [
+      "mass--3857--7186",
+      "mass--9338--2733",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "滝野川",
+      "中野",
+      "中原区",
+      "玉川",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 482,
+     "resolved": 89,
+     "unresolved": 393,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 32,
+   "s": 30196.4,
+   "x": -1409.3,
+   "z": 3769.6,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 3,
+     "resolved": 1,
+     "unresolved": 2,
+     "masses": [
+      "mass--1480-4636",
+      "mass--2114-3146"
+     ],
+     "names": [
+      "海岸",
+      "東麻布"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 83,
+     "resolved": 36,
+     "unresolved": 47,
+     "masses": [
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--4861-872",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--3205-8329",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass-1415-1258",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "新橋",
+      "港南",
+      "恵比寿",
+      "西新橋",
+      "北青山",
+      "白金",
+      "高輪",
+      "港南",
+      "港南",
+      "北青山"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 242,
+     "resolved": 109,
+     "unresolved": 133,
+     "masses": [
+      "mass--6530--989",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass-2261--2221",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass-3119--3206",
+      "mass--2974-10272"
+     ],
+     "names": [
+      "西新宿",
+      "神田駿河台",
+      "一ツ橋",
+      "蔵前",
+      "飯田橋",
+      "春日",
+      "花川戸",
+      "東大井"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 404,
+     "resolved": 141,
+     "unresolved": 263,
+     "masses": [
+      "mass--3857--7186",
+      "mass--9338--2733",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "滝野川",
+      "中野",
+      "中原区",
+      "玉川",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 494,
+     "resolved": 88,
+     "unresolved": 406,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 33,
+   "s": 29198.6,
+   "x": -2125.1,
+   "z": 4412.2,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 2,
+     "resolved": 2,
+     "unresolved": 0,
+     "masses": [
+      "mass--1480-4636",
+      "mass--2944-4119"
+     ],
+     "names": [
+      "海岸",
+      "白金"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 81,
+     "resolved": 35,
+     "unresolved": 46,
+     "masses": [
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--4861-872",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--3205-8329",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass-1415-1258",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass-1413-5412",
+      "mass-2432-2449",
+      "mass-2555-3104"
+     ],
+     "names": [
+      "新橋",
+      "港南",
+      "恵比寿",
+      "西新橋",
+      "北青山",
+      "高輪",
+      "東麻布",
+      "港南",
+      "港南",
+      "北青山"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 248,
+     "resolved": 103,
+     "unresolved": 145,
+     "masses": [
+      "mass--6530--989",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass-2261--2221",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass-3119--3206",
+      "mass--2971--551",
+      "mass--2974-10272",
+      "mass-2898-2570",
+      "mass-2985-2902"
+     ],
+     "names": [
+      "西新宿",
+      "神田駿河台",
+      "一ツ橋",
+      "蔵前",
+      "飯田橋",
+      "春日",
+      "花川戸",
+      "麹町",
+      "東大井",
+      "枝川"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 389,
+     "resolved": 149,
+     "unresolved": 240,
+     "masses": [
+      "mass--3857--7186",
+      "mass--9338--2733",
+      "mass--9604-11820",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "滝野川",
+      "中野",
+      "中原区",
+      "玉川",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 506,
+     "resolved": 86,
+     "unresolved": 420,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 34,
+   "s": 28200.7,
+   "x": -2424.1,
+   "z": 5362.4,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 1,
+     "resolved": 1,
+     "unresolved": 0,
+     "masses": [
+      "mass--3163-4789"
+     ],
+     "names": [
+      "高輪"
+     ]
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 73,
+     "resolved": 28,
+     "unresolved": 45,
+     "masses": [
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--2944-4119",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--3205-8329",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass--3767-1140",
+      "mass--2494-365",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2974-10272",
+      "mass-1413-5412"
+     ],
+     "names": [
+      "新橋",
+      "港南",
+      "恵比寿",
+      "西新橋",
+      "海岸",
+      "白金",
+      "東麻布",
+      "港南",
+      "港南",
+      "北青山"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 238,
+     "resolved": 97,
+     "unresolved": 141,
+     "masses": [
+      "mass--6530--989",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--1280--3079",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820"
+     ],
+     "names": [
+      "西新宿",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "蔵前",
+      "湊",
+      "飯田橋",
+      "春日",
+      "麹町",
+      "元赤坂"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 392,
+     "resolved": 162,
+     "unresolved": 230,
+     "masses": [
+      "mass--3857--7186",
+      "mass-3119--3206",
+      "mass--9338--2733",
+      "mass--12319-7921",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "滝野川",
+      "花川戸",
+      "中野",
+      "玉川",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 522,
+     "resolved": 87,
+     "unresolved": 435,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  },
+  {
+   "km": 34.5,
+   "s": 27701.8,
+   "x": -2539.3,
+   "z": 5842.8,
+   "bands": [
+    {
+     "band": 0,
+     "inner": 0,
+     "outer": 1000,
+     "coveredBy": "ruban urbain (systems/cityField)",
+     "sectors": 1,
+     "resolved": 1,
+     "unresolved": 0,
+     "masses": [],
+     "names": []
+    },
+    {
+     "band": 1,
+     "inner": 1000,
+     "outer": 5000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 71,
+     "resolved": 25,
+     "unresolved": 46,
+     "masses": [
+      "mass--1239-2151",
+      "mass--2009-6700",
+      "mass--4364-4031",
+      "mass--1435-1374",
+      "mass--1480-4636",
+      "mass--2944-4119",
+      "mass--3163-4789",
+      "mass--2114-3146",
+      "mass--1490-6619",
+      "mass--1410-5857",
+      "mass--4685-1478",
+      "mass--3205-8329",
+      "mass--4305-2488",
+      "mass--2118-2299",
+      "mass--2218-1460",
+      "mass--1557-7934",
+      "mass-661-3278",
+      "mass--3767-1140",
+      "mass-1214-3273",
+      "mass--3006-1482",
+      "mass--3131-2110",
+      "mass--2974-10272",
+      "mass-1413-5412"
+     ],
+     "names": [
+      "新橋",
+      "港南",
+      "恵比寿",
+      "西新橋",
+      "海岸",
+      "白金",
+      "高輪",
+      "東麻布",
+      "港南",
+      "港南"
+     ]
+    },
+    {
+     "band": 2,
+     "inner": 5000,
+     "outer": 10000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 230,
+     "resolved": 96,
+     "unresolved": 134,
+     "masses": [
+      "mass--6530--989",
+      "mass--145--1963",
+      "mass--404--1367",
+      "mass--4861-872",
+      "mass-2261--2221",
+      "mass-1415-1258",
+      "mass--1395--1843",
+      "mass--2494-365",
+      "mass--1280--3079",
+      "mass--2447--528",
+      "mass--2926-339",
+      "mass--2971--551",
+      "mass-2432-2449",
+      "mass-2555-3104",
+      "mass-2898-2570",
+      "mass-2985-2902",
+      "mass--9604-11820",
+      "mass--12319-7921"
+     ],
+     "names": [
+      "西新宿",
+      "神田駿河台",
+      "一ツ橋",
+      "北青山",
+      "蔵前",
+      "湊",
+      "飯田橋",
+      "平河町",
+      "春日",
+      "麹町"
+     ]
+    },
+    {
+     "band": 3,
+     "inner": 10000,
+     "outer": 20000,
+     "coveredBy": "DistrictMassif",
+     "sectors": 399,
+     "resolved": 165,
+     "unresolved": 234,
+     "masses": [
+      "mass--3857--7186",
+      "mass-3119--3206",
+      "mass--9338--2733",
+      "mass--4758-16155",
+      "mass--6046-16594",
+      "mass--11001-15074"
+     ],
+     "names": [
+      "滝野川",
+      "花川戸",
+      "中野",
+      "中島",
+      "川崎区",
+      "日吉"
+     ]
+    },
+    {
+     "band": 4,
+     "inner": 20000,
+     "outer": 50000,
+     "coveredBy": "relief régional (data/relief)",
+     "sectors": 525,
+     "resolved": 88,
+     "unresolved": 437,
+     "masses": [
+      "mass--12325-23873",
+      "mass--12152--23628",
+      "mass--12999-23917",
+      "mass--12218-24666"
+     ],
+     "names": [
+      "高島",
+      "大字上落合",
+      "南幸",
+      "高島"
+     ]
+    }
+   ]
+  }
+ ]
+}
