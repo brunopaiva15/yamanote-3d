@@ -25,6 +25,7 @@
     "geo:dem": "node scripts/geo/fetch-dem.mjs",
     "geo:water": "node scripts/geo/fetch-water.mjs",
     "geo:sectors": "node scripts/geo/fetch-sectors.mjs",
+    "geo:near": "node scripts/geo/fetch-near.mjs && node scripts/geo-loop.mjs",
     "world:route:prototype": "node scripts/plateau/fetch-route.mjs",
     "world:sample:prototype": "node scripts/plateau/make-sample.mjs",
     "world:download:prototype": "node scripts/plateau/download.mjs",

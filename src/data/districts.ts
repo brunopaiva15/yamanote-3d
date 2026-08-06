@@ -35,11 +35,15 @@ export type Feat =
   | 'shinkansen'
   | 'upscaleResidential';
 
-// Repères 3D emblématiques (géométrie primitive, cf. three/Landmarks.tsx).
+// Silhouettes 3D du bord de voie (géométrie primitive, cf. three/Landmarks.tsx).
 // Pas de silhouettes rouge/brique massives (Tokyo Tower, viaducs, torii…) :
 // en transparent elles se lisaient comme de gros blocs lavés dehors.
+//
+// `latticeTower` a été RETIRÉ : il n'y a pas de tour treillis à Nippori, et
+// celle qu'on posait à Yoyogi doublait la tour NTT Docomo, qui est un objet
+// réel de deux cent soixante-douze mètres déjà relevé dans GEO_LANDMARKS. Deux
+// repères inventés, deux repères en moins (règles 11 et 12 de la bible).
 export type Land =
-  | 'latticeTower'
   | 'glassTowerCluster'
   | 'boxyTower'
   | 'twinTowers'
@@ -57,12 +61,50 @@ export type Land =
   | 'whiteLatticeRoof'
   | 'stackedSignFacade';
 
+/**
+ * Ce qu'une silhouette EST, et le champ le plus important de ce fichier.
+ *
+ * La bible géographique demande (règle 12) qu'un repère soit un objet qu'on
+ * puisse retrouver sur une carte, et (règle 11) qu'on n'en invente aucun. Le
+ * décor mélangeait les deux sans le dire : le tram d'Ōtsuka existe, la tour
+ * treillis de Nippori n'a jamais existé. On les sépare donc explicitement, et
+ * un test refuse toute silhouette qui ne se rangerait pas.
+ *
+ *   'geo'     Un objet réel avec sa coordonnée, résolu dans
+ *             src/data/nearLandmarks.ts par gare et par famille. Son CÔTÉ vient
+ *             du terrain : le Musée national est au nord d'Ueno, il passe donc
+ *             à gauche en 内回り et à droite en 外回り, tout seul.
+ *   'station' Un fait de cette gare-ci, dont la coordonnée EST celle de la
+ *             gare : la marquise de bois de Takanawa Gateway, le monorail qui
+ *             longe Hamamatsuchō, la C11 du parvis de Shimbashi, le tram
+ *             d'Ōtsuka. Vérifiable, mais sans objet OSM distinct à citer.
+ *   'fabric'  Du TISSU. Une grappe de tours de bureaux, un écran géant, une
+ *             façade d'enseignes empilées : le caractère d'un quartier, jamais
+ *             un objet nommé. Rien dans le jeu ne le présente comme un repère.
+ */
+export type LandmarkTruth = 'geo' | 'station' | 'fabric';
+
 export interface LandmarkSpec {
   kind: Land;
-  side?: 1 | -1; // côté de la voie (+x / -x). Par défaut : côté droit (1).
+  truth: LandmarkTruth;
+  side?: 1 | -1; // côté de la voie (+x / -x). Ignoré quand truth vaut 'geo'.
   scale?: number; // échelle globale (défaut 1).
   near?: boolean; // repère au niveau de la voie qui défile (sinon silhouette lointaine).
 }
+
+/**
+ * La famille de src/data/nearLandmarks qui porte chaque silhouette réelle.
+ *
+ * C'est par là que passe le lien entre un quartier et le terrain : le quartier
+ * dit « ici il y a un parc », le relevé dit LEQUEL et où. Une silhouette
+ * `truth: 'geo'` dont la famille n'est pas dans cette table, ou dont la gare
+ * n'a rien de résolu, n'est pas dessinée - c'est la règle 11 en une ligne.
+ */
+export const LAND_FAMILY: Partial<Record<Land, 'museum' | 'worship' | 'park' | 'historic'>> = {
+  museumFacade: 'museum',
+  templeRoof: 'worship',
+  forestMass: 'park',
+};
 
 export interface District {
   name: string; // repère de debug (correspond au romaji de STATIONS).
@@ -122,7 +164,7 @@ export const DISTRICTS: District[] = [
     accent: '#4a6fae',
     words: ['銀行', '商事', '証券', '本社', '保険', '珈琲'],
     feats: ['glassTowers', 'officeTowers', 'redBrick'],
-    landmarks: [{ kind: 'glassTowerCluster', side: -1, scale: 1.15 }],
+    landmarks: [{ kind: 'glassTowerCluster', truth: 'fabric', side: -1, scale: 1.15 }],
   },
   // 1 · JY02 Kanda - izakaya sous la voie, arches de brique.
   {
@@ -148,8 +190,8 @@ export const DISTRICTS: District[] = [
     roofWords: ['電気街', '無線堂', '未来電子', '秋葉市場', '光の街'],
     feats: ['electricNeon', 'animeBillboard', 'departmentStore'],
     landmarks: [
-      { kind: 'giantScreenWall', side: -1 },
-      { kind: 'stackedSignFacade', side: 1 },
+      { kind: 'giantScreenWall', truth: 'fabric', side: -1 },
+      { kind: 'stackedSignFacade', truth: 'fabric', side: 1 },
     ],
   },
   // 3 · JY04 Okachimachi - Ameyoko : marché bas, échoppes.
@@ -174,8 +216,8 @@ export const DISTRICTS: District[] = [
     words: ['美術館', '博物館', '珈琲', '名店', '甘味', '動物園'],
     feats: ['parkGreen', 'templeLowtown'],
     landmarks: [
-      { kind: 'forestMass', side: -1, scale: 1.2 },
-      { kind: 'museumFacade', side: 1 },
+      { kind: 'forestMass', truth: 'geo', scale: 1.2 },
+      { kind: 'museumFacade', truth: 'geo' },
     ],
   },
   // 5 · JY06 Uguisudani - hôtels/ryokan, temples, arrière discret.
@@ -190,8 +232,8 @@ export const DISTRICTS: District[] = [
     words: ['ホテル', '旅館', '甘味', '銭湯', '花', '喫茶'],
     feats: ['templeLowtown', 'shotengai'],
     landmarks: [
-      { kind: 'templeRoof', side: 1 },
-      { kind: 'forestMass', side: -1, scale: 0.7 },
+      { kind: 'templeRoof', truth: 'geo' },
+      { kind: 'forestMass', truth: 'geo', scale: 0.7 },
     ],
   },
   // 6 · JY07 Nippori - vieux quartier du tissu, temples.
@@ -204,10 +246,11 @@ export const DISTRICTS: District[] = [
     accent: '#9a6a4a',
     words: ['生地', '呉服', '手芸', '骨董', '寺', '珈琲'],
     feats: ['templeLowtown', 'shotengai'],
-    landmarks: [
-      { kind: 'templeRoof', side: 1 },
-      { kind: 'latticeTower', side: -1, scale: 1.3 },
-    ],
+    // Il n'y a pas de tour treillis à Nippori. Il y en avait une ici depuis la
+    // première passe, et elle n'a jamais existé nulle part ailleurs que dans ce
+    // fichier. Ce que Nippori a vraiment, ce sont ses temples de Yanaka - le
+    // relevé en résout un à quatre-vingt-treize mètres du quai.
+    landmarks: [{ kind: 'templeRoof', truth: 'geo' }],
   },
   // 7 · JY08 Nishi-Nippori - résidentiel, temples.
   {
@@ -219,7 +262,7 @@ export const DISTRICTS: District[] = [
     accent: '#8a6a4a',
     words: ['寺', '米', '豆腐', '酒', '花', '塾'],
     feats: ['templeLowtown', 'upscaleResidential'],
-    landmarks: [{ kind: 'templeRoof', side: 1 }],
+    landmarks: [{ kind: 'templeRoof', truth: 'geo' }],
   },
   // 8 · JY09 Tabata - résidentiel calme.
   {
@@ -231,7 +274,7 @@ export const DISTRICTS: District[] = [
     accent: '#7a8a6a',
     words: ['米', 'パン', '花', '珈琲', '塾', '美容'],
     feats: ['upscaleResidential', 'parkGreen'],
-    landmarks: [{ kind: 'forestMass', side: -1, scale: 0.7 }],
+    landmarks: [{ kind: 'forestMass', truth: 'geo', scale: 0.7 }],
   },
   // 9 · JY10 Komagome - jardins, torii, cerisiers.
   {
@@ -243,7 +286,7 @@ export const DISTRICTS: District[] = [
     accent: '#c86a8a',
     words: ['園芸', '花', '和菓子', '珈琲', '塾', '茶'],
     feats: ['parkGreen', 'torii', 'upscaleResidential'],
-    landmarks: [{ kind: 'forestMass', side: -1, scale: 0.9 }],
+    landmarks: [{ kind: 'forestMass', truth: 'geo', scale: 0.9 }],
   },
   // 10 · JY11 Sugamo - shotengai des anciens, temple Jizō.
   {
@@ -254,7 +297,7 @@ export const DISTRICTS: District[] = [
     accent: '#c8443a',
     words: ['甘味', '呉服', '大福', '地蔵', '名店', '茶'],
     feats: ['shotengai', 'templeLowtown'],
-    landmarks: [{ kind: 'templeRoof', side: -1 }],
+    landmarks: [{ kind: 'templeRoof', truth: 'geo' }],
   },
   // 11 · JY12 Ōtsuka - tramway Toden, izakaya.
   {
@@ -266,7 +309,7 @@ export const DISTRICTS: District[] = [
     accent: '#c86a3a',
     words: ['都電', '居酒屋', '甘味', '喫茶', 'ラーメン', '酒場'],
     feats: ['tram', 'shotengai', 'salarymanIzakaya'],
-    landmarks: [{ kind: 'tramCar', side: 1, near: true }],
+    landmarks: [{ kind: 'tramCar', truth: 'station', side: 1, near: true }],
   },
   // 12 · JY13 Ikebukuro - gratte-ciel, grands magasins.
   {
@@ -280,8 +323,8 @@ export const DISTRICTS: District[] = [
     words: ['百貨店', '家電', '書店', '劇場', 'ラーメン', '珈琲'],
     feats: ['skyscraperCluster', 'departmentStore', 'electricNeon'],
     landmarks: [
-      { kind: 'boxyTower', side: -1, scale: 1.2 },
-      { kind: 'giantScreenWall', side: 1 },
+      { kind: 'boxyTower', truth: 'fabric', side: -1, scale: 1.2 },
+      { kind: 'giantScreenWall', truth: 'fabric', side: 1 },
     ],
   },
   // 13 · JY14 Mejiro - résidentiel haut de gamme, verdure.
@@ -294,7 +337,7 @@ export const DISTRICTS: District[] = [
     accent: '#6a8a5a',
     words: ['珈琲', '花', '学院', 'パン', '美容', '雑貨'],
     feats: ['upscaleResidential', 'parkGreen'],
-    landmarks: [{ kind: 'forestMass', side: 1, scale: 1.0 }],
+    landmarks: [{ kind: 'forestMass', truth: 'geo', scale: 1.0 }],
   },
   // 14 · JY15 Takadanobaba - quartier étudiant, arcades.
   {
@@ -305,7 +348,7 @@ export const DISTRICTS: District[] = [
     accent: '#d88a3a',
     words: ['ラーメン', '学生', '古本', 'カレー', '定食', '酒場'],
     feats: ['studentArcade', 'shotengai', 'electricNeon'],
-    landmarks: [{ kind: 'stackedSignFacade', side: 1 }],
+    landmarks: [{ kind: 'stackedSignFacade', truth: 'fabric', side: 1 }],
   },
   // 15 · JY16 Shin-Ōkubo - Koreatown, enseignes denses.
   {
@@ -316,7 +359,7 @@ export const DISTRICTS: District[] = [
     accent: '#e2508a',
     words: ['韓国', 'コスメ', '焼肉', 'チーズ', 'カフェ', '雑貨'],
     feats: ['koreatownSigns', 'electricNeon'],
-    landmarks: [{ kind: 'stackedSignFacade', side: 1, scale: 1.1 }],
+    landmarks: [{ kind: 'stackedSignFacade', truth: 'fabric', side: 1, scale: 1.1 }],
   },
   // 16 · JY17 Shinjuku - gratte-ciels + néons massifs.
   {
@@ -330,8 +373,8 @@ export const DISTRICTS: District[] = [
     words: ['歌舞伎', '劇場', '百貨店', '珈琲', '酒場', '家電'],
     feats: ['skyscraperCluster', 'giantScreen', 'electricNeon', 'departmentStore'],
     landmarks: [
-      { kind: 'twinTowers', side: -1, scale: 1.25 },
-      { kind: 'giantScreenWall', side: 1 },
+      { kind: 'twinTowers', truth: 'fabric', side: -1, scale: 1.25 },
+      { kind: 'giantScreenWall', truth: 'fabric', side: 1 },
     ],
   },
   // 17 · JY18 Yoyogi - bureaux, lisière de parc, flèche fine.
@@ -344,10 +387,12 @@ export const DISTRICTS: District[] = [
     accent: '#5a7aae',
     words: ['学院', '珈琲', '予備校', '書店', '花', '定食'],
     feats: ['officeTowers', 'parkGreen'],
-    landmarks: [
-      { kind: 'latticeTower', side: 1, scale: 1.1 },
-      { kind: 'forestMass', side: -1, scale: 1.0 },
-    ],
+    // La tour treillis de Yoyogi était un doublon inventé : l'objet réel est la
+    // tour NTT Docomo Yoyogi, deux cent soixante-douze mètres, déjà relevée
+    // dans GEO_LANDMARKS et posée à son relèvement vrai par FarSkyline. Une
+    // seconde tour, plus petite et à trente-quatre mètres de la voie, ne
+    // pouvait que contredire la première.
+    landmarks: [{ kind: 'forestMass', truth: 'geo', scale: 1.0 }],
   },
   // 18 · JY19 Harajuku - mode/Takeshita, forêt de Meiji.
   {
@@ -358,7 +403,7 @@ export const DISTRICTS: District[] = [
     accent: '#e070a8',
     words: ['原宿', 'クレープ', '古着', 'カフェ', '雑貨', '美容'],
     feats: ['fashionBoutique', 'torii', 'parkGreen'],
-    landmarks: [{ kind: 'forestMass', side: -1, scale: 1.1 }],
+    landmarks: [{ kind: 'forestMass', truth: 'geo', scale: 1.1 }],
   },
   // 19 · JY20 Shibuya - écrans géants, mode, néon.
   {
@@ -370,9 +415,9 @@ export const DISTRICTS: District[] = [
     words: ['渋谷', 'ファッション', 'カフェ', '音楽', '古着', '雑貨'],
     feats: ['giantScreen', 'fashionBoutique', 'electricNeon'],
     landmarks: [
-      { kind: 'giantScreenWall', side: 1 },
-      { kind: 'giantScreenWall', side: -1, scale: 0.9 },
-      { kind: 'cylinderFashion', side: 1 },
+      { kind: 'giantScreenWall', truth: 'fabric', side: 1 },
+      { kind: 'giantScreenWall', truth: 'fabric', side: -1, scale: 0.9 },
+      { kind: 'cylinderFashion', truth: 'fabric', side: 1 },
     ],
   },
   // 20 · JY21 Ebisu - bureaux, brique, chic (Garden Place).
@@ -385,7 +430,7 @@ export const DISTRICTS: District[] = [
     accent: '#b06a4a',
     words: ['恵比寿', '麦酒', '珈琲', '洋食', '硝子', '雑貨'],
     feats: ['officeTowers', 'redBrick', 'upscaleResidential'],
-    landmarks: [{ kind: 'gardenPlaceArch', side: 1 }],
+    landmarks: [{ kind: 'gardenPlaceArch', truth: 'station', side: 1 }],
   },
   // 21 · JY22 Meguro - résidentiel haut de gamme, coteaux.
   {
@@ -398,8 +443,8 @@ export const DISTRICTS: District[] = [
     words: ['目黒', '珈琲', '美容', '花', '家具', '雑貨'],
     feats: ['upscaleResidential', 'officeTowers', 'templeLowtown'],
     landmarks: [
-      { kind: 'officeBlock', side: 1 },
-      { kind: 'templeRoof', side: -1 },
+      { kind: 'officeBlock', truth: 'fabric', side: 1 },
+      { kind: 'templeRoof', truth: 'geo' },
     ],
   },
   // 22 · JY23 Gotanda - bureaux, izakaya sous la voie.
@@ -413,7 +458,7 @@ export const DISTRICTS: District[] = [
     accent: '#6a7a9a',
     words: ['五反田', '居酒屋', '会計', '珈琲', '酒場', '定食'],
     feats: ['officeTowers', 'elevatedIzakaya', 'salarymanIzakaya'],
-    landmarks: [{ kind: 'officeBlock', side: 1 }],
+    landmarks: [{ kind: 'officeBlock', truth: 'fabric', side: 1 }],
   },
   // 23 · JY24 Ōsaki - tours de verre modernes, passerelles.
   {
@@ -426,7 +471,7 @@ export const DISTRICTS: District[] = [
     accent: '#4a78c8',
     words: ['大崎', '本社', '珈琲', '医院', '会議', '食堂'],
     feats: ['glassTowers', 'modernWhite', 'officeTowers'],
-    landmarks: [{ kind: 'glassTowerCluster', side: 1, scale: 1.1 }],
+    landmarks: [{ kind: 'glassTowerCluster', truth: 'fabric', side: 1, scale: 1.1 }],
   },
   // 24 · JY25 Shinagawa - tours de bureaux, shinkansen.
   {
@@ -440,8 +485,8 @@ export const DISTRICTS: District[] = [
     words: ['品川', '本社', 'ホテル', '珈琲', '会議', '食堂'],
     feats: ['officeTowers', 'glassTowers', 'shinkansen'],
     landmarks: [
-      { kind: 'glassTowerCluster', side: -1, scale: 1.1 },
-      { kind: 'shinkansenSet', side: 1, near: true },
+      { kind: 'glassTowerCluster', truth: 'fabric', side: -1, scale: 1.1 },
+      { kind: 'shinkansenSet', truth: 'station', side: 1, near: true },
     ],
   },
   // 25 · JY26 Takanawa Gateway - architecture blanche moderne.
@@ -456,8 +501,8 @@ export const DISTRICTS: District[] = [
     words: ['高輪', '珈琲', 'ギャラリー', '茶', '花'],
     feats: ['modernWhite', 'glassTowers'],
     landmarks: [
-      { kind: 'whiteLatticeRoof', side: 1 },
-      { kind: 'glassTowerCluster', side: -1, scale: 0.95 },
+      { kind: 'whiteLatticeRoof', truth: 'station', side: 1 },
+      { kind: 'glassTowerCluster', truth: 'fabric', side: -1, scale: 0.95 },
     ],
   },
   // 26 · JY27 Tamachi - bureaux, petit shotengai.
@@ -470,7 +515,7 @@ export const DISTRICTS: District[] = [
     accent: '#5a7a9a',
     words: ['田町', '会社', '定食', '珈琲', '学', '酒場'],
     feats: ['officeTowers', 'shotengai', 'upscaleResidential'],
-    landmarks: [{ kind: 'officeBlock', side: 1 }],
+    landmarks: [{ kind: 'officeBlock', truth: 'fabric', side: 1 }],
   },
   // 27 · JY28 Hamamatsuchō - bureaux, monorail.
   {
@@ -482,7 +527,7 @@ export const DISTRICTS: District[] = [
     accent: '#c86a4a',
     words: ['浜松町', '貿易', '珈琲', '空港', 'ホテル', '会議'],
     feats: ['officeTowers', 'monorail'],
-    landmarks: [{ kind: 'monorailBeam', side: 1, near: true }],
+    landmarks: [{ kind: 'monorailBeam', truth: 'station', side: 1, near: true }],
   },
   // 28 · JY29 Shimbashi - salaryman izakaya, Shiodome.
   {
@@ -496,8 +541,8 @@ export const DISTRICTS: District[] = [
     words: ['新橋', '居酒屋', '焼鳥', '商事', 'ホテル', '酒場'],
     feats: ['salarymanIzakaya', 'skyscraperCluster', 'brickArch'],
     landmarks: [
-      { kind: 'glassTowerCluster', side: -1, scale: 1.15 },
-      { kind: 'steamLoco', side: 1, near: true },
+      { kind: 'glassTowerCluster', truth: 'fabric', side: -1, scale: 1.15 },
+      { kind: 'steamLoco', truth: 'station', side: 1, near: true },
     ],
   },
   // 29 · JY30 Yūrakuchō - arches de brique, abords de Ginza.

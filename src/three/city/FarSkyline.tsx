@@ -79,8 +79,8 @@ const EARTH_R = 6371000;
 const NEAR_HIDE = 2000;
 const NEAR_FULL = 3500;
 
-/** Ton de chaque famille, et les repères qui ont le leur. */
-const SHAPE_TONE: Record<GeoLandmark['shape'], string> = {
+/** Ton de chaque famille d'horizon. Les formes near n'entrent pas ici. */
+const SHAPE_TONE: Record<'tower' | 'twin' | 'needle' | 'mountain' | 'bridge', string> = {
   tower: '#7f8da0',
   twin: '#818f9f',
   needle: '#8a8f98',
@@ -115,10 +115,10 @@ function smoothstep(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
-/** Combien de repères, du plus haut au plus modeste, selon le palier. */
+/** Combien de repères d'horizon, du plus haut au plus modeste, selon le palier. */
 function tuning(quality: Quality): number {
   const level = qualityLevel(quality);
-  if (quality === 'extraordinary' || level <= 1) return GEO_LANDMARKS.length;
+  if (quality === 'extraordinary' || level <= 1) return HORIZON_LANDMARKS.length;
   if (level === 2) return 11;
   if (level === 3) return 7;
   // Aux deux derniers paliers, rien de neuf : c'est la règle de la passe.
@@ -137,6 +137,15 @@ interface Item {
 }
 
 /**
+ * Les repères d'HORIZON seulement.
+ *
+ * GEO_LANDMARKS porte aussi le bord de voie (bande near) : le relais
+ * proche / lointain lit une seule table. Ici, un parc à trois cents mètres
+ * n'a rien à peindre sur la sphère - three/Landmarks s'en charge.
+ */
+const HORIZON_LANDMARKS = GEO_LANDMARKS.filter((lm) => lm.band === 'horizon');
+
+/**
  * Les repères par PRÉSENCE décroissante, et non par hauteur.
  *
  * C'est l'ordre dans lequel on coupe aux paliers modestes, et la hauteur seule
@@ -148,7 +157,7 @@ interface Item {
  * amorti par une puissance, parce qu'un repère lointain garde de l'importance
  * quand il est colossal : le Fuji reste dans les sept premiers.
  */
-const BY_PRESENCE = [...GEO_LANDMARKS].sort((a, b) => presence(b) - presence(a));
+const BY_PRESENCE = [...HORIZON_LANDMARKS].sort((a, b) => presence(b) - presence(a));
 
 function presence(lm: GeoLandmark): number {
   let near = Infinity;
@@ -180,9 +189,12 @@ export function FarSkyline() {
     const geos: THREE.BufferGeometry[] = [];
     const items: Item[] = [];
     for (const lm of BY_PRESENCE.slice(0, count)) {
-      const s = makeSilhouette(lm.shape);
+      // HORIZON_LANDMARKS ne porte que tower/twin/needle/mountain/bridge.
+      const s = makeSilhouette(lm.shape as 'tower' | 'twin' | 'needle' | 'mountain' | 'bridge');
       geos.push(s.body);
-      const tone = new THREE.Color(ID_TONE[lm.id] ?? SHAPE_TONE[lm.shape]);
+      const tone = new THREE.Color(
+        ID_TONE[lm.id] ?? SHAPE_TONE[lm.shape as keyof typeof SHAPE_TONE],
+      );
       const bodyMat = makeMat(tone);
       const body = new THREE.Mesh(s.body, bodyMat);
       body.name = `horizon ${lm.id}`;

@@ -149,8 +149,45 @@ const landmarks = LANDMARKS.map(([id, name, lat, lon, height, shape]) => ({
   lat,
   height,
   shape,
+  band: 'horizon',
+  family: null,
+  station: null,
   ...local(lon, lat),
 }));
+
+// Les objets réels à moins de 2 km (scripts/geo/fetch-near.mjs) entrent dans le
+// MÊME jeu que l'horizon : le relais proche / lointain ne lit qu'une table. Ce
+// qui change, c'est la bande - 'near' contre 'horizon' - et la famille, qui dit
+// quelle silhouette three/Landmarks leur doit. FarSkyline, lui, ne pose que
+// l'horizon : un parc à trois cents mètres n'a rien à faire sur une sphère de
+// quatre-vingt-seize mètres.
+const NEAR_FILE = new URL('../data/geo/near-landmarks.geojson', import.meta.url);
+const NEAR_HEIGHT = { museum: 18, worship: 14, park: 22, historic: 12 };
+try {
+  const nearDoc = JSON.parse(readFileSync(NEAR_FILE, 'utf8'));
+  for (const f of nearDoc.features) {
+    const p = f.properties;
+    if (!p.picked) continue;
+    landmarks.push({
+      id: p.id,
+      name: p.nameEn ? `${p.name} ${p.nameEn}` : p.name,
+      lon: p.lon,
+      lat: p.lat,
+      height: NEAR_HEIGHT[p.family] ?? 12,
+      shape: p.family,
+      band: 'near',
+      family: p.family,
+      station: p.station,
+      x: p.x,
+      z: p.z,
+    });
+  }
+} catch {
+  process.stderr.write(
+    'data/geo/near-landmarks.geojson introuvable : GEO_LANDMARKS ne portera que l’horizon.\n' +
+      'Lancez « node scripts/geo/fetch-near.mjs » pour y ajouter les objets de moins de 2 km.\n',
+  );
+}
 
 // --- Mesures --------------------------------------------------------------
 const legIndex = [];
@@ -236,8 +273,21 @@ export interface GeoLandmark {
   z: number;
   /** Hauteur de structure (m). */
   height: number;
-  /** Famille de silhouette (voir three/city/FarSkyline). */
-  shape: 'tower' | 'twin' | 'needle' | 'mountain' | 'bridge';
+  /**
+   * Famille de silhouette.
+   *
+   * L'horizon (FarSkyline) lit tower / twin / needle / mountain / bridge. Le
+   * bord de voie (Landmarks) lit museum / worship / park / historic - les
+   * objets réels de moins de deux kilomètres, posés dans la même table pour
+   * que le relais proche / lointain n'ait qu'un jeu à lire.
+   */
+  shape: 'tower' | 'twin' | 'needle' | 'mountain' | 'bridge' | 'museum' | 'worship' | 'park' | 'historic';
+  /** 'horizon' au-delà de 2 km ; 'near' pour le bord de voie. */
+  band: 'horizon' | 'near';
+  /** Renseigné pour la bande near : quelle silhouette Landmarks lui doit. */
+  family: 'museum' | 'worship' | 'park' | 'historic' | null;
+  /** Gare de rattachement (bande near), sinon null. */
+  station: number | null;
 }
 
 /** Un sommet de la polyligne de la boucle. \`station\` vaut −1 hors des gares. */
@@ -258,10 +308,15 @@ ${stations
 
 export const GEO_LANDMARKS: readonly GeoLandmark[] = [
 ${landmarks
-  .map(
-    (l) =>
-      `  { id: '${l.id}', name: '${l.name}', lon: ${l.lon}, lat: ${l.lat}, x: ${num(l.x)}, z: ${num(l.z)}, height: ${l.height}, shape: '${l.shape}' },`,
-  )
+  .map((l) => {
+    const name = String(l.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return (
+      `  { id: '${l.id}', name: '${name}', lon: ${l.lon}, lat: ${l.lat}, ` +
+      `x: ${num(l.x)}, z: ${num(l.z)}, height: ${l.height}, shape: '${l.shape}', ` +
+      `band: '${l.band}', family: ${l.family ? `'${l.family}'` : 'null'}, ` +
+      `station: ${l.station === null || l.station === undefined ? 'null' : l.station} },`
+    );
+  })
   .join('\n')}
 ];
 
