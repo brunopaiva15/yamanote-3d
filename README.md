@@ -1720,6 +1720,42 @@ Coût mesuré (`node scripts/scenery-cost.mjs`, ultra en pleine voie) : 340 k
 triangles contre 333 k avant, pour une cible de 360 k. Les appels de rendu ne
 bougent pas - tout l'arrière-pays tient dans un seul maillage instancié.
 
+#### Le gabarit ferroviaire, et le carré qui n'en était pas un
+
+Poser les empreintes a fait apparaître un défaut que le tissu engendré cachait :
+**des bâtiments entraient dans la voie**, et le train leur rentrait dedans - trois
+fois entre Okachimachi et Ueno, dont un à vingt-cinq mètres du point d'arrêt.
+
+Le filtre d'import portait sur le **centroïde** - à plus de douze mètres de
+l'axe - et la boîte débordait autour de lui. Un bâtiment dont le centre est à
+treize mètres avec une emprise de quarante en occupe sept *dans* la voie.
+Quatre-vingt-dix-huit empreintes mordaient la bande des douze mètres, dont
+**trente et une traversaient l'axe** ; la pire descendait à −110 m.
+
+Trois corrections, toutes dérivées de la même idée - le bâtiment réel n'est pas
+sur les rails, c'est la boîte englobante qui y va :
+
+- **on découpe au gabarit** plutôt que de déplacer ou de jeter. Le bord
+  extérieur reste où la source le met, la profondeur cède, et l'intersection de
+  la boîte avec « pas sur la voie » est une borne strictement meilleure que la
+  boîte. 87 empreintes découpées, 40 écartées parce qu'elles y tenaient
+  entièrement. `depth` porte ce qui reste ; quand il vaut `plate`, rien n'a été
+  retiré ;
+- **un carré ne représente pas une marquise de quai.** `footprints.json` ne
+  garde du contour que son plus grand côté : le carré est honnête tant que le
+  bâtiment est compact, il ne l'est plus du tout à quatre cent neuf mètres de
+  côté - cent soixante-sept mille mètres carrés revendiqués sur la foi d'un
+  seul nombre. Au-delà de **120 m** (la médiane est à 12,6, le percentile 99 à
+  90), 31 empreintes restent dans `data/geo/footprints.json` en attendant qu'on
+  sache lire leur contour ;
+- **le tissu engendré avait le même défaut**, en plus discret : il réservait sa
+  *profondeur* là où il occupe son emprise vue, si bien qu'un sujet tourné dans
+  sa trame descendait à 8,35 m de l'axe - à portée des poteaux caténaires, qui
+  sont à 5,2 m. Il réserve maintenant l'emprise vue.
+
+`tests/corridor.test.ts` balaie le ruban entier, des deux côtés, relevé et tissu
+confondus, et exige que le bord interne de chaque volume reste au gabarit.
+
 ### Les gares citent enfin ce qu'il y a chez elles
 
 Le relevé des repères de bord de voie tenait 1 245 objets réels à moins de deux

@@ -37,8 +37,10 @@ export interface CorridorHit {
   x: number;
   /** Hauteur (m). */
   h: number;
-  /** Côté de la boîte englobante du contour OSM (m). */
+  /** Côté de la boîte englobante du contour OSM (m) : longueur le long de la voie. */
   plate: number;
+  /** Profondeur en travers (m), après découpe au gabarit ferroviaire. */
+  depth: number;
   /** false = hauteur estimée, jamais présentée comme relevée. */
   measured: boolean;
   /** Orientation dans le plan (s, x) (rad). */
@@ -106,6 +108,7 @@ function write(hit: CorridorHit, i: number, worldS: number, x: number, inCell: b
   hit.x = x;
   hit.h = b.h;
   hit.plate = b.plate;
+  hit.depth = b.depth;
   hit.measured = b.measured;
   hit.yaw = b.yaw;
   hit.osmWay = b.osmWay;
@@ -200,6 +203,7 @@ export function makeCorridorBuffer(length: number): CorridorHit[] {
     x: 0,
     h: 0,
     plate: 0,
+    depth: 0,
     measured: false,
     yaw: 0,
     osmWay: 0,

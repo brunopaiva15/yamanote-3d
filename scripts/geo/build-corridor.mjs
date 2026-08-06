@@ -46,6 +46,27 @@ const NEAR_MIN = 12;
 const NEAR_MAX = 66;
 const FAR_MAX = 440;
 
+/**
+ * Au-delà, un carré ne représente plus rien (m).
+ *
+ * `data/geo/footprints.json` ne garde du contour que le PLUS GRAND côté de sa
+ * boîte englobante : on peut donc en tirer un carré, et c'est honnête tant que
+ * le bâtiment est compact. Il ne l'est plus du tout pour une marquise de quai
+ * de quatre cent neuf mètres, un hall de gare ou une halle : le carré y
+ * revendique un volume que la source ne porte pas, et il le revendique en
+ * grand - cent soixante-sept mille mètres carrés pour la marquise de Tokyo.
+ *
+ * Le relevé a une médiane de douze mètres et demi et un percentile 99 à
+ * quatre-vingt-dix. On s'arrête donc à cent vingt : trente empreintes sur neuf
+ * mille deux cent soixante-quinze, et ce sont exactement celles dont la forme
+ * ne se déduit pas. Elles restent dans data/geo/footprints.json, où leur
+ * contour attend qu'on sache le lire.
+ */
+const PLATE_MAX = 120;
+
+/** En deçà, ce qui reste après découpe n'est plus un bâtiment (m). */
+const MIN_SIDE = 3;
+
 /** Ramène un angle dans (−π/4, π/4]. */
 function wrapQuarter(a) {
   const q = Math.PI / 2;
@@ -120,6 +141,7 @@ function main() {
   const rows = [];
   let skippedInside = 0;
   let skippedBeyond = 0;
+  let skippedShape = 0;
   let residualMax = 0;
   for (const r of pack.rows) {
     const distance = r[col.distance];
@@ -131,28 +153,82 @@ function main() {
     const z = r[col.z10] / 10;
     const p = project(x, z);
     residualMax = Math.max(residualMax, Math.abs(p.d - distance));
-    if (p.d < NEAR_MIN) {
-      skippedInside++;
-      continue;
-    }
     if (p.d > FAR_MAX) {
       skippedBeyond++;
       continue;
     }
+    const plate = r[col.plate10] / 10;
+    if (plate > PLATE_MAX) {
+      skippedShape++;
+      continue;
+    }
+    // La boîte est celle du contour, alignée sur les axes de la projection : son
+    // emprise EN TRAVERS de la voie tient compte de l'angle qu'elle y fait.
+    const yaw = wrapQuarter(Math.atan2(-p.tx, -p.tz));
+    const half = (plate * (Math.abs(Math.cos(yaw)) + Math.abs(Math.sin(yaw)))) / 2;
+    const outer = p.d + half;
+    if (outer <= NEAR_MIN) {
+      skippedInside++;
+      continue;
+    }
+    // LE DÉCOUPAGE AU GABARIT. Le filtre portait sur le centroïde, et la boîte
+    // débordait autour de lui : un bâtiment dont le centre est à treize mètres
+    // de l'axe avec une emprise de quarante en occupait sept DANS la voie, et
+    // le train lui rentrait dedans - entre Okachimachi et Ueno, trois fois.
+    //
+    // On ne le déplace pas et on ne le jette pas : on lui retire ce qui
+    // empiète. Le bâtiment réel n'est pas sur les rails ; la boîte englobante,
+    // elle, y va, et l'intersection de la boîte avec « pas sur la voie » est
+    // une borne STRICTEMENT meilleure que la boîte. Le bord extérieur ne bouge
+    // pas : il reste là où la source le met.
+    const inner = Math.max(NEAR_MIN, p.d - half);
+    const clipped = inner > p.d - half + 1e-6;
+    // Profondeur en travers après découpe. La longueur le long de la voie ne
+    // cède pas la première : c'est la profondeur qui rend le terrain. Quand la
+    // rotation à elle seule fait déjà déborder - une boîte de travers occupe en
+    // travers plus que son côté -, les deux cotes rétrécissent ensemble.
+    const spanX = outer - inner;
+    const cos = Math.abs(Math.cos(yaw));
+    const sin = Math.abs(Math.sin(yaw));
+    let width = plate;
+    let depth = plate;
+    if (clipped) {
+      const wanted = (spanX - plate * sin) / cos;
+      if (wanted >= 1) {
+        depth = wanted;
+      } else {
+        const side = spanX / (cos + sin);
+        width = Math.min(plate, side);
+        depth = side;
+      }
+    }
+    // Ce qu'il en reste ne fait plus un bâtiment : la boîte était presque
+    // entièrement dans l'emprise ferroviaire. On l'écarte plutôt que de poser
+    // une lamelle de deux mètres au bord des rails.
+    if (width < MIN_SIDE || depth < MIN_SIDE) {
+      skippedInside++;
+      continue;
+    }
+    // Le bord interne se pose SUR le gabarit, par construction : on recompose
+    // le centre à partir de la demi-emprise réellement obtenue, plutôt que de
+    // faire confiance à la formule.
+    const halfX = (depth * cos + width * sin) / 2;
+    const offset = inner + halfX;
     rows.push({
       s: p.s,
       // Décalage compté à GAUCHE du sens des index croissants : le repère du
       // relief et de l'eau, celui que systems/terrain sait convertir.
-      offset: p.left ? p.d : -p.d,
+      offset: p.left ? offset : -offset,
       h: r[col.h10] / 10,
-      plate: r[col.plate10] / 10,
+      plate: width,
+      depth,
       measured: r[col.measured],
       // La boîte est celle du contour, alignée sur les axes de la projection :
       // son orientation dans le repère du ruban est donc celle de la voie,
       // et non une trame inventée. Repliée au quart de tour, puisqu'un carré
       // ne distingue pas ses deux côtés - c'est ce repli qui rend la valeur
       // valable dans les deux sens de marche, où la base du ruban se retourne.
-      yaw: wrapQuarter(Math.atan2(-p.tx, -p.tz)),
+      yaw,
       osmWay: r[col.osmWay],
     });
   }
@@ -181,17 +257,24 @@ function main() {
     estimatedHeights: rows.length - measured,
     skippedInside,
     skippedBeyond,
+    skippedShape,
+    plateMax: PLATE_MAX,
+    // Compté sur les cotes ARRONDIES, celles que le jeu lira : deux découpes
+    // sous le décimètre disparaissent au versionnement, et un compteur qui les
+    // annoncerait quand même mentirait sur la table.
+    clipped: rows.filter((r) => Math.round(r.depth * 10) < Math.round(r.plate * 10)).length,
     note:
       'Empreintes OSM projetées sur la polyligne relevée. s = abscisse de boucle (m), ' +
       'offset = décalage latéral signé, positif à gauche du sens des index JY croissants. ' +
       'plate = côté de la boîte englobante du contour OSM : une emprise relevée, ' +
       'simplifiée en LOD1, jamais un carré inventé. measured=0 : hauteur estimée.',
-    columns: ['s10', 'offset10', 'h10', 'plate10', 'measured', 'yaw1e4', 'osmWay'],
+    columns: ['s10', 'offset10', 'h10', 'plate10', 'depth10', 'measured', 'yaw1e4', 'osmWay'],
     rows: rows.map((r) => [
       Math.round(r.s * 10),
       Math.round(r.offset * 10),
       Math.round(r.h * 10),
       Math.round(r.plate * 10),
+      Math.round(r.depth * 10),
       r.measured,
       Math.round(r.yaw * 1e4),
       r.osmWay,
@@ -206,7 +289,10 @@ function main() {
     `${out.count} empreintes posées sur le ruban ` +
       `(${near} au bord de voie ≤ ${NEAR_MAX} m, ${out.far} en arrière-pays) · ` +
       `hauteur relevée ${measured}, estimée ${out.estimatedHeights} · ` +
-      `écartées : ${skippedInside} dans l'emprise ferroviaire, ${skippedBeyond} au-delà de ${FAR_MAX} m · ` +
+      `écartées : ${skippedInside} entièrement dans l'emprise ferroviaire, ` +
+      `${skippedShape} trop grandes pour un carré (> ${PLATE_MAX} m), ` +
+      `${skippedBeyond} au-delà de ${FAR_MAX} m · ` +
+      `${out.clipped} découpées au gabarit · ` +
       `résidu de projection ${residualMax.toFixed(2)} m\n`,
   );
 }
@@ -237,13 +323,26 @@ function writeCorridorTs(out) {
 //             haut comme il est haut, mais son plan est une boîte. La règle 4 de
 //             la bible demande l'empreinte exacte ; on n'y est pas, et le
 //             prétendre serait pire que ne pas y être.
+//   DÉCOUPÉ   ce qui empiétait sur la voie. Le carré est centré sur le
+//             centroïde du contour, et il déborde autour : un bâtiment dont le
+//             centre est à treize mètres de l'axe avec une emprise de quarante
+//             en occupait sept DANS la voie, et le train lui rentrait dedans.
+//             On ne le déplace pas, on ne le jette pas : on lui retire ce qui
+//             empiète. Le bâtiment réel n'est pas sur les rails, et
+//             l'intersection de la boîte avec « pas sur la voie » est une borne
+//             strictement meilleure que la boîte. \`depth\` porte la profondeur
+//             restante ; quand elle vaut \`plate\`, rien n'a été retiré.
 //   INVENTÉ   rien de géométrique. La teinte de façade, les enseignes, les
 //             fenêtres allumées viennent du tissu de quartier
 //             (src/data/districts.ts) : aucune source ne les porte, et le
 //             drapeau \`real\` du ruban permet de ne jamais les confondre.
 //
-// ${out.skippedInside} bâtiments d'OpenStreetMap tombent à moins de ${out.nearMin} m de l'axe -
-// l'emprise ferroviaire - et ne sont pas posés : ils traverseraient le train.
+// ${out.skippedInside} bâtiments d'OpenStreetMap tiennent ENTIÈREMENT dans l'emprise
+// ferroviaire et ne sont pas posés ; ${out.clipped} la mordaient et ont été découpés.
+// ${out.skippedShape} autres ont une boîte englobante de plus de ${out.plateMax} m : un carré de ce
+// côté-là revendique un volume que la source ne porte pas - une marquise de
+// quai de quatre cent neuf mètres n'est pas un cube - et ils restent donc dans
+// data/geo/footprints.json, où leur contour attend qu'on sache le lire.
 //
 // Le repère est celui du relief et de l'eau, et non celui de la carte :
 // abscisse de BOUCLE, et décalage latéral compté à gauche du sens des index JY
@@ -259,8 +358,15 @@ export interface CorridorBuilding {
   offset: number;
   /** Hauteur (m). */
   h: number;
-  /** Côté de la boîte englobante du contour OSM (m). */
+  /** Côté de la boîte englobante du contour OSM (m) : la longueur le long de la voie. */
   plate: number;
+  /**
+   * Profondeur en travers de la voie (m), après découpe au gabarit ferroviaire.
+   *
+   * Vaut \`plate\` quand la boîte ne mordait pas la voie, c'est-à-dire pour
+   * presque tout le monde.
+   */
+  depth: number;
   /** true = étiquette OSM \`height\` ; false = niveaux déclarés, ou modèle. */
   measured: boolean;
   /** Orientation dans le plan du ruban (rad), repliée au quart de tour. */
@@ -287,6 +393,13 @@ export const CORRIDOR_MEASURED = ${out.measuredHeights};
 export const CORRIDOR_SKIPPED_INSIDE = ${out.skippedInside};
 export const CORRIDOR_SKIPPED_BEYOND = ${out.skippedBeyond};
 
+/** Écartés parce qu'un carré de ce côté-là n'aurait rien représenté. */
+export const CORRIDOR_SKIPPED_SHAPE = ${out.skippedShape};
+export const CORRIDOR_PLATE_MAX = ${out.plateMax};
+
+/** Découpés au gabarit ferroviaire : leur boîte mordait la voie. */
+export const CORRIDOR_CLIPPED = ${out.clipped};
+
 const R = pack.rows as readonly (readonly number[])[];
 
 /**
@@ -300,9 +413,10 @@ export const CORRIDOR: readonly CorridorBuilding[] = R.map((r) => ({
   offset: r[1] / 10,
   h: r[2] / 10,
   plate: r[3] / 10,
-  measured: r[4] === 1,
-  yaw: r[5] / 1e4,
-  osmWay: r[6],
+  depth: r[4] / 10,
+  measured: r[5] === 1,
+  yaw: r[6] / 1e4,
+  osmWay: r[7],
 }));
 `;
   writeFileSync(new URL('../../src/data/corridor.ts', import.meta.url), src, 'utf8');

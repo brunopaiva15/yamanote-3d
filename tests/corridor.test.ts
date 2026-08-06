@@ -22,6 +22,8 @@ import * as THREE from 'three';
 
 import {
   CORRIDOR,
+  CORRIDOR_CLIPPED,
+  CORRIDOR_PLATE_MAX,
   CORRIDOR_FAR,
   CORRIDOR_FAR_MAX,
   CORRIDOR_LOOP_M,
@@ -88,7 +90,8 @@ test('chaque sujet est dans la bande du ruban, et retrouvable sur la carte', () 
     );
     assert.ok(b.s >= 0 && b.s <= CORRIDOR_LOOP_M, `abscisse hors boucle : ${b.osmWay}`);
     assert.ok(b.h > 1 && b.h < 800, `hauteur absurde : ${b.osmWay} (${b.h})`);
-    assert.ok(b.plate >= 1 && b.plate < 500, `emprise absurde : ${b.osmWay} (${b.plate})`);
+    assert.ok(b.plate >= 1 && b.plate <= CORRIDOR_PLATE_MAX, `emprise absurde : ${b.osmWay} (${b.plate})`);
+    assert.ok(b.depth >= 1 && b.depth <= b.plate + 1e-6, `profondeur absurde : ${b.osmWay}`);
     assert.ok(Number.isInteger(b.osmWay) && b.osmWay > 0, 'identifiant OSM manquant');
     assert.equal(typeof b.measured, 'boolean');
     if (x <= CORRIDOR_NEAR_MAX) near++;
@@ -189,9 +192,10 @@ test('un bâtiment relevé garde la hauteur et l’emprise de sa source', () => 
 
   for (const b of [...sweep(false), ...sweep(true)]) {
     if (!b.real) continue;
-    // Un prisme carré : la source donne la boîte englobante du contour, et rien
-    // ne doit lui inventer un rapport de forme.
-    assert.equal(b.w, b.d, 'emprise non carrée sur un sujet relevé');
+    // Un prisme carré, SAUF pour ceux que le gabarit ferroviaire a découpés :
+    // la source donne la boîte englobante du contour, et rien ne doit lui
+    // inventer un rapport de forme dans l'autre sens.
+    assert.ok(b.d <= b.w + 1e-6, 'emprise plus profonde que longue sur un sujet relevé');
     const key = `${b.h.toFixed(1)}|${b.w.toFixed(1)}`;
     assert.ok(byPlate.has(key), `hauteur/emprise introuvable dans la source (${key})`);
     assert.ok(b.x >= CORRIDOR_NEAR_MIN && b.x <= CORRIDOR_FAR_MAX, 'hors bande');
@@ -298,4 +302,99 @@ test('le prisme relevé se pose bien où la source le dit', () => {
     }
   }
   assert.ok(seen > 100, `échantillon trop maigre (${seen})`);
+});
+
+// --- Le gabarit ferroviaire -------------------------------------------------
+
+test('aucun bâtiment posé n’empiète sur la voie', () => {
+  // C'EST LE BUG QUI A MOTIVÉ CE TEST. Le filtre d'import portait sur le
+  // CENTROÏDE - à plus de douze mètres de l'axe - et la boîte débordait autour
+  // de lui : un bâtiment dont le centre est à treize mètres avec une emprise de
+  // quarante en occupait sept DANS la voie. Le train lui rentrait dedans, et
+  // trois fois entre Okachimachi et Ueno, dont une à vingt-cinq mètres du point
+  // d'arrêt.
+  //
+  // Ce qu'on vérifie ici est l'emprise VUE, celle du prisme tel qu'il est posé,
+  // rotation comprise - et non la distance du centre, qui était précisément la
+  // grandeur trompeuse.
+  let worst = Infinity;
+  let culprit = 0;
+  for (const b of CORRIDOR) {
+    const c = Math.abs(Math.cos(b.yaw));
+    const s = Math.abs(Math.sin(b.yaw));
+    const half = (b.depth * c + b.plate * s) / 2;
+    const inner = Math.abs(b.offset) - half;
+    if (inner < worst) {
+      worst = inner;
+      culprit = b.osmWay;
+    }
+  }
+  // Une décimale de tolérance : les cotes sont versionnées au décimètre.
+  assert.ok(
+    worst >= CORRIDOR_NEAR_MIN - 0.1,
+    `osm way/${culprit} entre dans la voie : bord interne à ${worst.toFixed(2)} m`,
+  );
+});
+
+test('découper ne déplace pas le bord extérieur', () => {
+  // On retire ce qui empiète, on ne pousse pas le bâtiment dehors. Le bord
+  // extérieur d'un sujet découpé doit donc rester au moins aussi loin que
+  // l'entrée du gabarit, et sa profondeur avoir vraiment cédé.
+  const clipped = CORRIDOR.filter((b) => b.depth < b.plate - 1e-6);
+  assert.equal(clipped.length, CORRIDOR_CLIPPED);
+  assert.ok(clipped.length > 0, 'plus rien n’est découpé : vérifier l’import');
+  for (const b of clipped) {
+    const c = Math.abs(Math.cos(b.yaw));
+    const s = Math.abs(Math.sin(b.yaw));
+    const half = (b.depth * c + b.plate * s) / 2;
+    assert.ok(
+      Math.abs(b.offset) + half > CORRIDOR_NEAR_MIN,
+      `osm way/${b.osmWay} : découpé jusqu’à disparaître`,
+    );
+  }
+});
+
+test('un carré ne prétend pas représenter une marquise de quai', () => {
+  // Quatre cent neuf mètres de côté pour la marquise de Tokyo, c'est cent
+  // soixante-sept mille mètres carrés revendiqués sur la foi d'un seul nombre.
+  // Ces emprises-là restent dans data/geo/footprints.json.
+  for (const b of CORRIDOR) {
+    assert.ok(b.plate <= CORRIDOR_PLATE_MAX, `osm way/${b.osmWay} : ${b.plate} m de côté`);
+  }
+});
+
+test('rien de ce que le ruban pose n’entre dans le gabarit, tissu compris', () => {
+  // Le même défaut vivait dans le tissu engendré : il réservait sa PROFONDEUR
+  // là où il occupe son emprise vue, si bien qu'un sujet tourné dans sa trame
+  // descendait à huit mètres trente de l'axe - à portée des poteaux caténaires,
+  // qui sont à 5,2 m. Le ruban est balayé sur un tour complet, des deux côtés.
+  const near = makeCellBuffer(CELL_CAPACITY);
+  const far = makeCellBuffer(FAR_CELL_CAPACITY);
+  let worst = Infinity;
+  let culprit = '';
+  for (const cell of CELLS) {
+    for (const side of [1, -1] as const) {
+      for (const [len, build, buf] of [
+        [CELL_LEN, buildCell, near],
+        [FAR_CELL_LEN, buildFarCell, far],
+      ] as const) {
+        placeTrain(cell * len, 1);
+        const n = build(cell, side, buf);
+        for (let i = 0; i < n; i++) {
+          const b = buf[i];
+          const c = Math.abs(Math.cos(b.yaw));
+          const s2 = Math.abs(Math.sin(b.yaw));
+          const inner = b.x - (b.d * c + b.w * s2) / 2;
+          if (inner < worst) {
+            worst = inner;
+            culprit = `${b.real ? 'relevé' : 'tissu'} cellule ${cell} côté ${side}`;
+          }
+        }
+      }
+    }
+  }
+  assert.ok(
+    worst >= CORRIDOR_NEAR_MIN - 0.1,
+    `${culprit} entre dans le gabarit : bord interne à ${worst.toFixed(2)} m`,
+  );
 });
