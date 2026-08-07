@@ -211,7 +211,7 @@ export function longLabel(bucket: Bucket, d: Date): string {
   }).format(d);
   switch (bucket) {
     case 'hour':
-      return `${date}, ${pad(d.getHours())} h – ${pad((d.getHours() + 1) % 24)} h`;
+      return `${date}, de ${pad(d.getHours())} h à ${pad((d.getHours() + 1) % 24)} h`;
     case 'day':
       return date;
     case 'week':

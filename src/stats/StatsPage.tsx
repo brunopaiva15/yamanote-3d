@@ -262,7 +262,7 @@ export function StatsPage() {
           <Tuile
             titre="Sessions"
             valeur={totals?.sessions}
-            note={`sur ${range.label.toLowerCase()} — un onglet ouvert = une session`}
+            note={`sur ${range.label.toLowerCase()}, un onglet ouvert = une session`}
           />
           <Tuile
             titre="Durée moyenne"
@@ -299,28 +299,22 @@ export function StatsPage() {
         <footer className="notes">
           <h2>Ce qui est mesuré</h2>
           <p>
-            Chaque onglet ouvert dépose une ligne toutes les cinq minutes, tant qu’il est
-            <strong> visible</strong> : un onglet laissé de côté ne compte plus, et une rame
-            oubliée toute la nuit ne gonfle rien. La ligne contient un identifiant d’onglet tiré
-            au hasard, l’appareil, la langue et la version — ni adresse IP, ni référent, ni
-            cookie. Le serveur de développement n’écrit rien.
+            Un onglet <strong>visible</strong> dépose une ligne toutes les cinq minutes. Un onglet
+            laissé de côté ne compte plus. La ligne porte un identifiant d’onglet tiré au hasard,
+            l’appareil, la langue et la version. Ni adresse IP, ni référent, ni cookie. Le serveur
+            de développement n’écrit rien.
           </p>
           <p>
-            Une <em>session</em> est un onglet ouvert, <strong>pas une personne</strong>, et cette
-            page ne sait pas faire la différence : <strong>rien n’est déposé sur l’appareil</strong>{' '}
-            — ni cookie, ni localStorage —, donc rien ne permet de reconnaître quelqu’un d’une
-            visite à l’autre. Qui revient trois jours de suite compte pour trois. Les chiffres
-            ci-dessus sont donc un <em>plafond</em> du nombre de personnes, jamais un plancher.
-          </p>
-          <p>
-            C’est un choix, et il a un prix : savoir qui revient supposerait de laisser une trace
-            persistante sur l’appareil du visiteur, ce qui relève du consentement au sens de la
-            directive ePrivacy. Un jeu qui se regarde passer n’a pas besoin d’un bandeau.
+            Une <em>session</em> est un onglet ouvert, <strong>pas une personne</strong>.{' '}
+            <strong>Rien n’est déposé sur l’appareil</strong> : ni cookie, ni localStorage. Qui
+            revient trois jours de suite compte donc pour trois, et ces chiffres sont un plafond
+            du nombre de gens, jamais un plancher. Reconnaître un visiteur demanderait une trace
+            persistante, donc un bandeau de consentement.
           </p>
           <p className="pied">
-            Le compteur « en ligne » du bandeau vient du canal de présence, pas de la table, et
-            compte cet onglet-ci. Table, droits et fonctions d’agrégat :{' '}
-            <code>supabase/analytics.sql</code>. Battement : <code>src/systems/analytics.ts</code>.
+            Le compteur « en ligne » vient du canal de présence, pas de la table, et compte cet
+            onglet. Table et droits : <code>supabase/analytics.sql</code>. Battement :{' '}
+            <code>src/systems/analytics.ts</code>.
           </p>
         </footer>
       </main>
@@ -343,7 +337,7 @@ function Tuile({
     <div className="tuile">
       <h3>{titre}</h3>
       <p className="valeur">
-        {valeur === undefined || valeur === null ? '—' : formatNombre(valeur)}
+        {valeur === undefined || valeur === null ? '-' : formatNombre(valeur)}
         {unite && valeur !== undefined && valeur !== null ? <span className="unite"> {unite}</span> : null}
       </p>
       <p className="note">{note}</p>
@@ -358,7 +352,7 @@ function Repartition({ titre, lignes }: { titre: string; lignes: BreakdownRow[] 
     <div className="repartition-carte">
       <h3>{titre}</h3>
       {triees.length === 0 ? (
-        <p className="vide">—</p>
+        <p className="vide">-</p>
       ) : (
         <div className="table-scroll">
         <table className="repartition">
@@ -379,7 +373,7 @@ function Repartition({ titre, lignes }: { titre: string; lignes: BreakdownRow[] 
               <tr key={l.value}>
                 <th scope="row">{VALEURS[l.value] ?? l.value}</th>
                 <td>{formatNombre(Number(l.sessions))}</td>
-                <td>{total > 0 ? `${Math.round((Number(l.sessions) / total) * 100)} %` : '—'}</td>
+                <td>{total > 0 ? `${Math.round((Number(l.sessions) / total) * 100)} %` : '-'}</td>
               </tr>
             ))}
           </tbody>
