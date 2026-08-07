@@ -2454,6 +2454,127 @@ Pour l'activer :
    onglets - **Variables** (recommandé, la clé anon est publique) ou
    **Secrets** - et les injecte au moment du build.
 
+### Fréquentation : `/stats.html` (facultatif)
+
+Le compteur ci-dessus dit combien de personnes sont là **maintenant**, et cette
+réponse s'évapore avec la question : le canal *Realtime Presence* ne garde rien.
+« Combien de monde mardi dernier à 21 h » demande donc d'avoir écrit quelque
+chose ce mardi-là, et c'est la seule chose de ce dépôt qui se conserve en base.
+
+La page `/stats.html` la lit : un histogramme **par heure, par jour, par semaine
+ou par mois** sur 24 h, 7 j, 30 j, 12 mois ou depuis le début, des totaux
+(sessions, durée moyenne), la répartition par appareil, par langue et par
+version, et le compteur temps réel du menu. Chaque graphique a son tableau
+équivalent, dépliable sous lui.
+
+Elle est **cachée, pas protégée**, et la nuance compte : aucun lien du site n'y
+mène - ni le menu, ni le pied de page, ni `about.html`, ni `sitemap.xml` -, elle
+se déclare `noindex`, et c'est tout. Qui tape l'adresse y arrive.
+`tests/statsPage.test.ts` vérifie qu'aucun lien n'apparaît, parce que la
+tentation d'en ajouter un « discret » est réelle.
+
+Elle n'est **volontairement pas** listée dans `public/robots.txt`. Ce n'est pas
+un oubli : un robots.txt est un fichier public, et y écrire
+`Disallow: /stats.html` publierait précisément l'adresse qu'on ne diffuse pas, à
+l'endroit que lit en premier qui cherche ce genre de page. Le `noindex` obtient
+mieux, sans l'annoncer - et contrairement à un Disallow, il fait *sortir* la
+page de l'index si elle y était entrée.
+
+#### Mise en place
+
+Les deux mêmes variables que le compteur, plus **une fois** du SQL :
+
+1. Ouvrir le SQL Editor du projet Supabase.
+2. Y coller `supabase/analytics.sql` en entier, et exécuter.
+
+Le script est idempotent : le relancer ne détruit aucune donnée. Sans lui, la
+page le dit clairement au lieu d'afficher « erreur », et le jeu continue de
+tourner exactement pareil - le battement s'arrête tout seul au premier refus.
+
+#### Ce qui est enregistré
+
+Une ligne toutes les cinq minutes par onglet ouvert, **tant qu'il est visible** :
+un onglet laissé de côté ne compte plus, et une rame oubliée toute la nuit ne
+gonfle rien. La ligne contient l'instant (posé par le serveur), un identifiant
+d'onglet aléatoire, l'appareil (`desktop` / `mobile`), la langue et la version
+(`menu` / `full` / `audio`). **Ni adresse IP, ni référent, ni cookie**, et rien
+qui désigne quelqu'un.
+
+Le battement part de l'ouverture de la PAGE et non du démarrage du jeu :
+quelqu'un qui lit le menu puis s'en va est venu, et c'est la question posée. Le
+champ `mode` distingue ensuite ceux qui sont montés à bord. Le serveur de
+développement, lui, n'écrit rien - sans quoi chaque `npm run dev` gonflerait les
+chiffres du site en ligne ; `?analytics=force` lève la garde le temps de
+vérifier que la table répond.
+
+#### Rien n'est déposé sur l'appareil, et c'est ce qui décide de tout le reste
+
+L'identifiant d'onglet vit dans une **variable de module** : ni cookie, ni
+`localStorage`, ni `sessionStorage`. Il meurt avec l'onglet, et rien ne survit
+au rechargement de la page.
+
+La conséquence est directe et il faut la connaître en lisant les chiffres : on
+ne peut pas reconnaître quelqu'un d'une visite à l'autre, donc **on ne compte
+pas des personnes, on compte des sessions**. Qui revient trois jours de suite
+compte pour trois. Les nombres affichés sont un *plafond* du nombre de gens,
+jamais un plancher.
+
+C'est un renoncement assumé. Distinguer les visiteurs supposerait de laisser une
+trace persistante sur leur appareil, ce qui fait entrer le site dans le champ de
+l'**article 5(3) de la directive ePrivacy** - donc du consentement, donc d'un
+bandeau sur un jeu contemplatif, et de chiffres devenus partiels puisque la
+plupart des gens le refusent. Les autres clés du `localStorage`
+(`yamanote.lang`, `yamanote.mode`, `yamanote.quality`…) ne posent pas ce
+problème : ce sont des **préférences demandées par le joueur**, donc strictement
+nécessaires au service, donc exemptées.
+
+`tests/statsPage.test.ts` refuse toute apparition de `localStorage`,
+`sessionStorage`, `document.cookie`, IndexedDB ou du cache dans
+`src/systems/analytics.ts`. La promesse se romprait d'une ligne, un jour où l'on
+trouverait le chiffre modeste ; autant que le test le dise avant la mise en
+ligne plutôt qu'un juriste six mois après.
+
+Reste ce qu'on ne maîtrise pas et qu'il vaut mieux écrire : la requête part du
+navigateur vers **Supabase**, qui voit donc l'adresse IP et la garde quelques
+jours dans ses journaux d'infrastructure - il est sous-traitant au sens du RGPD.
+Choisir une région européenne à la création du projet évite d'y ajouter la
+question du transfert hors UE. GitHub Pages journalise de la même façon, et
+c'était déjà vrai avant cette page.
+
+#### Ce que la clé publique permet, et ce qu'elle ne permet pas
+
+La clé anon est livrée au navigateur : tout le monde l'a. Les droits sont taillés
+en conséquence (`supabase/analytics.sql`) :
+
+- **INSERT autorisé**, avec un instant obligatoirement proche de l'heure du
+  serveur : on ne peut ni antidater ni postdater une visite.
+- **SELECT, UPDATE et DELETE refusés.** Personne - pas même `/stats.html` - ne
+  lit une ligne brute ni n'en efface une.
+- Trois fonctions d'agrégat `security definer` traversent seules la RLS, et ne
+  rendent que des **comptes**.
+
+Ce que ça n'empêche pas, et autant l'écrire : muni de la clé publique, on peut
+gonfler le compteur en insérant des lignes à la main, ou lire les agrégats. Le
+premier abus se voit (une bosse absurde dans l'histogramme), le second ne coûte
+rien - ce sont des nombres de visites. Une vraie barrière demanderait une Edge
+Function et une clé de service ; pour savoir si le site est visité par dix
+personnes ou par mille, c'est disproportionné.
+
+#### Le volume, et le ménage
+
+Un onglet ouvert une heure laisse douze lignes d'une centaine d'octets. Mille
+visites d'une heure par jour font quatre cents mégaoctets en un an, soit à peu
+près le demi-gigaoctet du plan gratuit. À cent visites par jour la question ne se
+pose pas ; le jour où elle se posera, la réponse est déjà écrite :
+
+```sql
+select public.visit_prune(400);   -- garde les 400 derniers jours
+```
+
+Automatisable via `pg_cron` (l'exemple est dans le fichier SQL). La fonction de
+purge n'est **pas** exposée au public : elle efface des lignes, `anon` n'a aucune
+raison de pouvoir le faire.
+
 ### Voyager à plusieurs (facultatif)
 
 On peut monter dans la **même rame** que quelqu'un d'autre : même gare, même
