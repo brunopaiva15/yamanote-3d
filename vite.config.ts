@@ -33,6 +33,10 @@ export default defineConfig({
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
         about: resolve(import.meta.dirname, 'about.html'),
+        // Page de fréquentation, à l'usage de l'auteur : aucun lien n'y mène,
+        // elle se déclare `noindex`, et elle a sa propre entrée pour que lire
+        // un histogramme ne télécharge ni three.js, ni le store, ni l'i18n.
+        stats: resolve(import.meta.dirname, 'stats.html'),
       },
     // Le bundle partait en un seul fichier de 2,4 Mo, dont les trois quarts sont
     // three.js et React - du code qui ne change jamais. Séparés, ils restent en

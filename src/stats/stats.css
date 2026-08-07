@@ -1,0 +1,417 @@
+/* Habillage de la page de fréquentation.
+   Volontairement séparé de src/styles.css : celui-là habille un jeu en plein
+   écran, sans défilement, avec un HUD qui esquive les encoches. Ici c'est un
+   document qui défile. Les couleurs, elles, sont les mêmes que about.html et
+   que le jeu - encre #10151a, vert de la ligne #80c241. */
+
+:root {
+  color-scheme: dark;
+  --ink: #10151a;
+  --surface: #161c22;
+  --line: #262f36;
+  --text: #eef1f2;
+  --dim: #aeb8bd;
+  --mute: #5c666d;
+  --green: #80c241;
+  font-family:
+    'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--text);
+}
+
+.stats {
+  width: min(64rem, 100%);
+  margin: 0 auto;
+  padding: 3rem 1.25rem 4rem;
+}
+
+h1 {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.9rem, 6vw, 2.9rem);
+  line-height: 1.1;
+}
+
+h2 {
+  margin: 0 0 1rem;
+  color: var(--green);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sous-titre {
+  margin: 0 0 2rem;
+  color: var(--dim);
+  line-height: 1.6;
+}
+
+.alerte {
+  margin: 0 0 1.5rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--green);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--dim);
+  line-height: 1.6;
+}
+
+code {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  color: var(--text);
+}
+
+/* --- La rangée de commandes, au-dessus de tout ce qu'elle règle ----------- */
+
+.filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.filtres fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.filtres legend {
+  padding: 0 0 0.4rem;
+  color: var(--mute);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filtres button {
+  margin: 0 0.3rem 0.3rem 0;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.filtres button:hover:not(:disabled) {
+  border-color: var(--green);
+  color: var(--text);
+}
+
+.filtres button.on {
+  border-color: var(--green);
+  background: var(--green);
+  color: #10151a;
+  font-weight: 700;
+}
+
+.filtres button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* --- Tuiles --------------------------------------------------------------- */
+
+.tuiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.tuile {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.tuile h3 {
+  margin: 0 0 0.5rem;
+  color: var(--mute);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tuile .valeur {
+  /* Chiffres proportionnels : à cette taille, `tabular-nums` fait bâiller les
+     nombres courts. L'alignement vertical, lui, se joue dans les tableaux. */
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.tuile .unite {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--dim);
+}
+
+.tuile .note {
+  margin: 0.4rem 0 0;
+  color: var(--mute);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+/* --- Cartes --------------------------------------------------------------- */
+
+.carte {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.repartitions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+
+.vide {
+  margin: 0;
+  padding: 2rem 0;
+  color: var(--mute);
+  text-align: center;
+}
+
+/* --- L'histogramme -------------------------------------------------------- */
+
+.chart {
+  transition: opacity 0.15s;
+}
+
+/* Pendant un rechargement, le dessin précédent RESTE, en retrait : un squelette
+   ferait sauter la mise en page à chaque changement de bouton. */
+.chart-stale {
+  opacity: 0.45;
+}
+
+.plot {
+  position: relative;
+  height: 15rem;
+  margin-left: 2.5rem;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+}
+
+/* Traits pleins d'un cran au-dessus du fond, jamais pointillés : un pointillé
+   se lit comme un seuil ou une projection, alors que ce n'est qu'une graduation. */
+.grid-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--line);
+}
+
+.grid-line span {
+  position: absolute;
+  right: 100%;
+  transform: translateY(-50%);
+  padding-right: 0.5rem;
+  color: var(--mute);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  /* Deux pixels de fond entre deux barres : c'est le séparateur, et il ne coûte
+     pas un contour autour de chaque marque. */
+  gap: 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.col {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  /* La cible de survol fait toute la hauteur du tracé, pas celle de la barre :
+     on n'a pas à viser le sommet d'une colonne de trois pixels. */
+  display: flex;
+  align-items: flex-end;
+  cursor: default;
+}
+
+.col:focus {
+  outline: none;
+}
+
+.bar {
+  width: 100%;
+  /* Une barre plafonnée : sur une fenêtre à sept créneaux, des colonnes de cent
+     pixels de large font un aplat, pas un histogramme. La marque reste fine, la
+     cible de survol garde toute la largeur de la colonne. */
+  max-width: 22px;
+  margin: 0 auto;
+  border-radius: 4px 4px 0 0;
+  background: var(--green);
+}
+
+.col:hover .bar,
+.col-actif .bar {
+  background: #a2dc63;
+}
+
+.col:focus-visible .bar {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+/* L'infobulle vit DANS le tracé, en haut. Posée au-dessus (bottom: 100%), elle
+   recouvrait le titre de la carte et les tuiles - c'est-à-dire des chiffres,
+   masqués par d'autres chiffres. Le haut du tracé, lui, est presque toujours
+   vide : c'est là qu'il reste de la place. */
+.tip {
+  position: absolute;
+  top: 0.25rem;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #10151a;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  pointer-events: none;
+  font-size: 0.8rem;
+  color: var(--dim);
+  z-index: 2;
+}
+
+.tip strong {
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.axis {
+  display: flex;
+  gap: 2px;
+  margin: 0.4rem 0 0 2.5rem;
+}
+
+.axis-label {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--mute);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  /* Une étiquette sur N seulement (voir labelStep) : les autres sont vides, et
+     celles qui restent débordent volontairement sur leurs voisines vides. */
+  overflow: visible;
+  white-space: nowrap;
+}
+
+/* --- Tableaux ------------------------------------------------------------- */
+
+.table-view {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.75rem;
+}
+
+.table-view summary {
+  color: var(--dim);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.table-scroll {
+  max-height: 22rem;
+  margin-top: 0.75rem;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+th,
+td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  color: var(--mute);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+tbody th {
+  font-weight: 400;
+  color: var(--dim);
+}
+
+td {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.repartition thead th:not(:first-child),
+.repartition td {
+  text-align: right;
+}
+
+/* --- Pied ----------------------------------------------------------------- */
+
+footer {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+footer p {
+  margin: 0 0 0.8rem;
+  color: var(--dim);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+footer .pied {
+  color: var(--mute);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 30rem) {
+  .plot {
+    height: 11rem;
+  }
+}

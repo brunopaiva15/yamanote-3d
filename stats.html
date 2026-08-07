@@ -1,0 +1,51 @@
+<!doctype html>
+<!--
+  Page de fréquentation, à l'usage de l'auteur.
+
+  Elle est CACHÉE au sens le plus faible du terme : aucun lien ne la désigne -
+  ni le menu, ni le pied de page, ni about.html, ni sitemap.xml -, et la balise
+  robots ci-dessous demande aux moteurs de ne pas l'indexer. Rien de plus. Ce
+  n'est pas une page protégée, et il vaut mieux le savoir en la lisant qu'en le
+  découvrant : qui tape l'adresse y arrive.
+
+  Elle n'est volontairement PAS listée dans public/robots.txt, et ce n'est pas
+  un oubli. Un robots.txt est un fichier public : y écrire « Disallow:
+  /stats.html » publierait précisément l'adresse qu'on ne diffuse pas, à
+  l'endroit que lisent en premier ceux qui cherchent ce genre de page. La balise
+  `noindex` obtient le même résultat sans l'annoncer - et, contrairement à un
+  Disallow, elle fait sortir la page de l'index si elle y était déjà entrée.
+
+  Aucun secret n'y transite pour autant : la table refuse la lecture à la clé
+  publique, et seuls des agrégats - des nombres de visiteurs - franchissent la
+  porte (voir supabase/analytics.sql).
+-->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10151a" />
+    <meta name="color-scheme" content="dark" />
+    <title>Fréquentation - Yamanote 3D</title>
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <style>
+      /* Le fond avant le module : sans lui, la page est blanche le temps du
+         téléchargement, puis noire. Mêmes valeurs que src/stats/stats.css. */
+      html,
+      body {
+        margin: 0;
+        background: #10151a;
+        color: #eef1f2;
+        font-family: 'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <noscript>
+        <p style="padding: 2rem">Cette page a besoin de JavaScript pour interroger la base.</p>
+      </noscript>
+    </div>
+    <script type="module" src="/src/stats/main.tsx"></script>
+  </body>
+</html>
