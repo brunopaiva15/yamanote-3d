@@ -1,7 +1,7 @@
 // L'histogramme, et le tableau qui dit la même chose.
 //
-// Une seule série à la fois - visiteurs OU sessions -, donc une seule couleur :
-// le vert de la ligne, celui du logo et du menu. Pas de légende (il n'y a rien à
+// Une seule série - les sessions -, donc une seule couleur : le vert de la
+// ligne, celui du logo et du menu. Pas de légende (il n'y a rien à
 // distinguer), pas de dégradé qui redirait la hauteur des barres en plus clair
 // et en plus foncé, pas de valeur écrite sur chaque barre. Le nombre exact se
 // lit dans l'infobulle, au clavier comme à la souris, et dans le tableau
@@ -17,12 +17,11 @@ import {
   niceMax,
   shortLabel,
 } from './buckets';
-import { METRIC_LABEL, type Metric, type Point } from './series';
+import { SERIE_LABEL, type Point } from './series';
 
 interface Props {
   points: Point[];
   bucket: Bucket;
-  metric: Metric;
   /** Vrai pendant un rechargement : on garde le dessin précédent, en retrait. */
   stale?: boolean;
 }
@@ -38,7 +37,7 @@ interface Props {
  */
 const LARGEUR_ETIQUETTE = 52;
 
-export function Chart({ points, bucket, metric, stale = false }: Props) {
+export function Chart({ points, bucket, stale = false }: Props) {
   const [actif, setActif] = useState<number | null>(null);
   const [largeur, setLargeur] = useState(0);
   const barres = useRef<(HTMLButtonElement | null)[]>([]);
@@ -64,7 +63,7 @@ export function Chart({ points, bucket, metric, stale = false }: Props) {
     return <p className="vide">Aucun battement sur cette période.</p>;
   }
 
-  const valeurs = points.map((p) => p[metric]);
+  const valeurs = points.map((p) => p.sessions);
   const max = Math.max(...valeurs);
   const haut = niceMax(max);
   const repères = gridTicks(max);
@@ -116,11 +115,11 @@ export function Chart({ points, bucket, metric, stale = false }: Props) {
         <div
           className="bars"
           role="group"
-          aria-label={`${METRIC_LABEL[metric]} par créneau`}
+          aria-label={`${SERIE_LABEL} par créneau`}
           onMouseLeave={() => setActif(null)}
         >
           {points.map((p, i) => {
-            const v = p[metric];
+            const v = p.sessions;
             return (
               <button
                 key={p.date.getTime()}
@@ -133,7 +132,7 @@ export function Chart({ points, bucket, metric, stale = false }: Props) {
                 ref={(el) => {
                   barres.current[i] = el;
                 }}
-                aria-label={`${longLabel(bucket, p.date)} : ${v} ${METRIC_LABEL[metric]}`}
+                aria-label={`${longLabel(bucket, p.date)} : ${v} ${SERIE_LABEL}`}
                 onMouseEnter={() => setActif(i)}
                 onFocus={() => setActif(i)}
                 onKeyDown={(e) => touche(e, i)}
@@ -154,8 +153,9 @@ export function Chart({ points, bucket, metric, stale = false }: Props) {
         {actif !== null && (
           <div className="tip" style={{ left: `${gauche}%` }} role="status">
             <strong>{longLabel(bucket, points[actif].date)}</strong>
-            <span>{points[actif].visitors} visiteurs</span>
-            <span>{points[actif].sessions} sessions</span>
+            <span>
+              {points[actif].sessions} {SERIE_LABEL}
+            </span>
           </div>
         )}
       </div>
@@ -173,7 +173,7 @@ export function Chart({ points, bucket, metric, stale = false }: Props) {
 
 /** Le jumeau lisible du graphique : les mêmes nombres, sans couleur ni survol. */
 export function ChartTable({ points, bucket }: { points: Point[]; bucket: Bucket }) {
-  const remplis = points.filter((p) => p.visitors > 0 || p.sessions > 0);
+  const remplis = points.filter((p) => p.sessions > 0);
   return (
     <details className="table-view">
       <summary>Voir les chiffres ({remplis.length} créneaux non vides)</summary>
@@ -182,7 +182,6 @@ export function ChartTable({ points, bucket }: { points: Point[]; bucket: Bucket
           <thead>
             <tr>
               <th scope="col">Créneau</th>
-              <th scope="col">Visiteurs</th>
               <th scope="col">Sessions</th>
             </tr>
           </thead>
@@ -190,7 +189,6 @@ export function ChartTable({ points, bucket }: { points: Point[]; bucket: Bucket
             {remplis.map((p) => (
               <tr key={p.date.getTime()}>
                 <th scope="row">{longLabel(bucket, p.date)}</th>
-                <td>{p.visitors}</td>
                 <td>{p.sessions}</td>
               </tr>
             ))}

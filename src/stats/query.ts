@@ -1,5 +1,11 @@
 // La lecture des chiffres : trois appels de fonction, aucune table.
 //
+// Une seule mesure en sort, la SESSION - un onglet ouvert. Il n'y a pas de
+// « visiteurs uniques » à lire parce qu'il n'y en a pas d'écrits : reconnaître
+// quelqu'un d'une visite à l'autre demanderait de laisser une trace sur son
+// appareil, et `systems/analytics` n'en laisse aucune. Quelqu'un qui revient
+// trois jours de suite compte donc pour trois.
+//
 // La page de statistiques ne fait PAS de `select` : la table `visit_pings`
 // refuse la lecture à la clé publique (voir `supabase/analytics.sql`). Elle
 // appelle trois fonctions `security definer` qui, elles, ne rendent que des
@@ -21,12 +27,10 @@ export const statsEnabled = netEnabled;
 export interface BucketRow {
   /** Instant de début du créneau, en ISO 8601 avec fuseau. */
   slot: string;
-  visitors: number;
   sessions: number;
 }
 
 export interface Totals {
-  visitors: number;
   sessions: number;
   pings: number;
   /** Durée moyenne d'une session, en minutes, à cinq minutes près. */
@@ -39,7 +43,6 @@ export interface Totals {
 export interface BreakdownRow {
   dimension: 'device' | 'lang' | 'mode';
   value: string;
-  visitors: number;
   sessions: number;
 }
 
@@ -99,7 +102,6 @@ export async function fetchTotals(since: Date): Promise<Totals | null> {
   // chaque tuile - un « 12 » textuel se formate très bien et s'additionne très
   // mal.
   return {
-    visitors: Number(t.visitors),
     sessions: Number(t.sessions),
     pings: Number(t.pings),
     avg_minutes: Number(t.avg_minutes),

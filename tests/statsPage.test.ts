@@ -181,6 +181,42 @@ test('la page de fréquentation a bien son entrée dans le build', () => {
   assert.match(read('vite.config.ts'), /stats:\s*resolve\([^)]*'stats\.html'\)/);
 });
 
+test('le battement ne dépose rien sur l’appareil du visiteur', () => {
+  // LA promesse de cette fonctionnalité, et celle qui décide de tout le reste :
+  // rien n'est écrit chez le visiteur, donc rien ne permet de le reconnaître
+  // d'une visite à l'autre, donc il n'y a pas de consentement à demander et pas
+  // de bandeau à afficher. Elle se rompt d'une seule ligne - « juste un
+  // identifiant, pour distinguer les nouveaux visiteurs » -, et le jour où
+  // quelqu'un l'écrira, il faudra que ce test le lui dise avant la mise en
+  // ligne, pas un juriste six mois après.
+  //
+  // On lit le fichier débarrassé de ses commentaires : ce dépôt EXPLIQUE ses
+  // choix, et l'explication ci-dessus nomme forcément les mécanismes interdits.
+  const source = read('src/systems/analytics.ts')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+  const interdits = [
+    { motif: /\blocalStorage\b/, quoi: 'localStorage' },
+    { motif: /\bsessionStorage\b/, quoi: 'sessionStorage' },
+    { motif: /\bdocument\.cookie\b/, quoi: 'un cookie' },
+    { motif: /\bindexedDB\b/, quoi: 'IndexedDB' },
+    { motif: /\bcaches\b/, quoi: 'le cache' },
+  ];
+  const fautes = interdits.filter(({ motif }) => motif.test(source)).map(({ quoi }) => quoi);
+  assert.deepEqual(
+    fautes,
+    [],
+    'Le battement de fréquentation écrit sur l’appareil du visiteur (' +
+      `${fautes.join(', ')}). C’est ce qui fait basculer le site dans le champ ` +
+      'du consentement ePrivacy. Si c’est voulu, il faut un bandeau et une ' +
+      'politique de confidentialité, pas seulement cette ligne.',
+  );
+
+  // Et la conséquence, côté table : pas de colonne d'identifiant persistant.
+  assert.doesNotMatch(read('supabase/analytics.sql'), /^\s*visitor\s+uuid/m);
+});
+
 test('le SQL de la table est versionné et ne rend que des agrégats', () => {
   const sql = read('supabase/analytics.sql');
   assert.match(sql, /enable row level security/i);

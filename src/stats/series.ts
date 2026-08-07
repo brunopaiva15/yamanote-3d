@@ -1,21 +1,22 @@
-// Ce que l'histogramme dessine : une série, et le nom qu'on lui donne.
+// Ce que l'histogramme dessine.
 //
-// Un fichier pour trois déclarations, parce qu'elles sont partagées entre la
-// page et le graphique et qu'un module qui exporte à la fois un composant et
-// une constante perd le rafraîchissement à chaud de Vite (oxlint le signale).
-// C'est aussi ce qui garde `Chart.tsx` à une seule chose : dessiner.
+// Un fichier pour deux déclarations, parce qu'elles sont partagées entre la page
+// et le graphique et qu'un module qui exporte à la fois un composant et une
+// constante perd le rafraîchissement à chaud de Vite (oxlint le signale). C'est
+// aussi ce qui garde `Chart.tsx` à une seule chose : dessiner.
 
-/** Deux façons de compter les gens, et elles ne disent pas la même chose. */
-export type Metric = 'visitors' | 'sessions';
+/**
+ * Le nom de la seule série mesurée.
+ *
+ * Une session est un onglet ouvert, pas une personne : le module de mesure ne
+ * dépose rien sur l'appareil, il ne peut donc pas savoir si quelqu'un revient.
+ * Le mot est choisi pour ne pas laisser croire l'inverse - « visiteurs » aurait
+ * été plus flatteur et plus faux.
+ */
+export const SERIE_LABEL = 'sessions';
 
-export const METRIC_LABEL: Record<Metric, string> = {
-  visitors: 'visiteurs',
-  sessions: 'sessions',
-};
-
-/** Un créneau de l'axe, ses deux comptes - zéros compris. */
+/** Un créneau de l'axe et son compte - zéros compris. */
 export interface Point {
   date: Date;
-  visitors: number;
   sessions: number;
 }

@@ -5,9 +5,15 @@
 // c'est tout ce qui la cache. Il faut donc le dire franchement : ce n'est pas
 // une page protégée, c'est une page discrète. Les chiffres qu'elle montre sont
 // de toute façon accessibles à qui possède la clé publique - elle est livrée
-// dans le code du jeu - et ce sont des nombres de visiteurs, pas un secret. Ce
+// dans le code du jeu - et ce sont des nombres de visites, pas un secret. Ce
 // que personne ne peut lire, en revanche, ce sont les lignes brutes : la table
 // refuse la lecture, seuls les agrégats sortent (voir `supabase/analytics.sql`).
+//
+// Une seule mesure est affichée, la SESSION - un onglet ouvert -, parce que
+// c'est la seule que la mesure sache produire sans rien déposer sur l'appareil
+// de personne. Le mot n'est pas remplacé par « visiteurs » quelque part dans la
+// page : ce serait plus flatteur et faux, et c'est le genre de mot qu'on
+// remplace un jour où l'on trouve le chiffre modeste.
 //
 // La page ne se compte pas elle-même : le battement part de `src/main.tsx`,
 // l'entrée du jeu, et cette page a la sienne. Consulter ses statistiques ne les
@@ -28,7 +34,7 @@ import {
   slotSequence,
 } from './buckets';
 import { Chart, ChartTable } from './Chart';
-import type { Metric, Point } from './series';
+import type { Point } from './series';
 import {
   type BreakdownRow,
   SchemaManquant,
@@ -65,7 +71,7 @@ const DIMENSIONS: { id: BreakdownRow['dimension']; titre: string }[] = [
 ];
 
 interface Donnees {
-  buckets: { slot: string; visitors: number; sessions: number }[];
+  buckets: { slot: string; sessions: number }[];
   totals: Totals | null;
   breakdown: BreakdownRow[];
 }
@@ -75,7 +81,6 @@ const VIDE: Donnees = { buckets: [], totals: null, breakdown: [] };
 export function StatsPage() {
   const [rangeId, setRangeId] = useState('30j');
   const [bucketChoisi, setBucketChoisi] = useState<Bucket>('day');
-  const [metric, setMetric] = useState<Metric>('visitors');
   const [donnees, setDonnees] = useState<Donnees>(VIDE);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -152,17 +157,14 @@ export function StatsPage() {
     // L'axe, lui, commence au premier battement RÉELLEMENT reçu : partir de
     // l'aube donnerait cinq ans de barres vides avant la première visite.
     const debut = range.days === null && premier ? new Date(premier) : new Date(depuisMs);
-    const comptes = new Map<string, { visitors: number; sessions: number }>();
+    const comptes = new Map<string, number>();
     for (const r of donnees.buckets) {
-      comptes.set(slotKey(bucket, new Date(r.slot)), {
-        visitors: Number(r.visitors),
-        sessions: Number(r.sessions),
-      });
+      comptes.set(slotKey(bucket, new Date(r.slot)), Number(r.sessions));
     }
-    return slotSequence(bucket, debut, fin).map((date) => {
-      const c = comptes.get(slotKey(bucket, date));
-      return { date, visitors: c?.visitors ?? 0, sessions: c?.sessions ?? 0 };
-    });
+    return slotSequence(bucket, debut, fin).map((date) => ({
+      date,
+      sessions: comptes.get(slotKey(bucket, date)) ?? 0,
+    }));
   }, [donnees.buckets, bucket, depuisMs, range, premier]);
 
   function choisirFenetre(id: string) {
@@ -242,30 +244,15 @@ export function StatsPage() {
             </button>
           ))}
         </fieldset>
-
-        <fieldset>
-          <legend>Mesure</legend>
-          {(['visitors', 'sessions'] as Metric[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              className={m === metric ? 'on' : ''}
-              aria-pressed={m === metric}
-              onClick={() => setMetric(m)}
-            >
-              {m === 'visitors' ? 'Visiteurs' : 'Sessions'}
-            </button>
-          ))}
-        </fieldset>
       </div>
 
       <div className="tuiles">
         <Tuile
-          titre="Visiteurs uniques"
-          valeur={totals?.visitors}
-          note={`sur ${range.label.toLowerCase()}`}
+          titre="Sessions"
+          valeur={totals?.sessions}
+          note={`sur ${range.label.toLowerCase()} — un onglet ouvert = une session`}
         />
-        <Tuile titre="Sessions" valeur={totals?.sessions} note="un onglet ouvert = une session" />
+        <Tuile titre="Battements" valeur={totals?.pings} note="une ligne toutes les cinq minutes" />
         <Tuile
           titre="Durée moyenne"
           valeur={totals?.avg_minutes}
@@ -280,10 +267,8 @@ export function StatsPage() {
       </div>
 
       <section className="carte">
-        <h2>
-          {metric === 'visitors' ? 'Visiteurs' : 'Sessions'} par {BUCKET_TITLE[bucket]}
-        </h2>
-        <Chart points={points} bucket={bucket} metric={metric} stale={chargement} />
+        <h2>Sessions par {BUCKET_TITLE[bucket]}</h2>
+        <Chart points={points} bucket={bucket} stale={chargement} />
         <ChartTable points={points} bucket={bucket} />
       </section>
 
@@ -302,17 +287,21 @@ export function StatsPage() {
         <p>
           Chaque onglet ouvert dépose une ligne toutes les cinq minutes, tant qu’il est
           <strong> visible</strong> : un onglet laissé de côté ne compte plus, et une rame oubliée
-          toute la nuit ne gonfle rien. La ligne contient deux identifiants tirés au hasard
-          (l’onglet, le visiteur), l’appareil, la langue et la version — ni adresse IP, ni
-          référent, ni cookie.
+          toute la nuit ne gonfle rien. La ligne contient un identifiant d’onglet tiré au hasard,
+          l’appareil, la langue et la version — ni adresse IP, ni référent, ni cookie. Le serveur
+          de développement n’écrit rien.
         </p>
         <p>
-          Une <em>session</em> est un onglet ; un <em>visiteur</em> est un navigateur, reconnu
-          par un identifiant aléatoire gardé localement. Les navigateurs qui émettent un signal
-          « ne me suivez pas » (Global Privacy Control, Do Not Track) sont comptés sans ce
-          souvenir : ils apparaissent en nouveau visiteur à chaque passage, ce qui{' '}
-          <strong>surestime légèrement</strong> le nombre de visiteurs uniques — jamais l’inverse.
-          Le serveur de développement n’écrit rien.
+          Une <em>session</em> est un onglet ouvert, <strong>pas une personne</strong>, et cette
+          page ne sait pas faire la différence : <strong>rien n’est déposé sur l’appareil</strong>{' '}
+          — ni cookie, ni localStorage —, donc rien ne permet de reconnaître quelqu’un d’une
+          visite à l’autre. Qui revient trois jours de suite compte pour trois. Les chiffres
+          ci-dessus sont donc un <em>plafond</em> du nombre de personnes, jamais un plancher.
+        </p>
+        <p>
+          C’est un choix, et il a un prix : savoir qui revient supposerait de laisser une trace
+          persistante sur l’appareil du visiteur, ce qui relève du consentement au sens de la
+          directive ePrivacy. Un jeu qui se regarde passer n’a pas besoin d’un bandeau.
         </p>
         <p className="pied">
           Table, droits et fonctions d’agrégat : <code>supabase/analytics.sql</code>. Battement :{' '}
@@ -347,8 +336,8 @@ function Tuile({
 }
 
 function Repartition({ titre, lignes }: { titre: string; lignes: BreakdownRow[] }) {
-  const triees = [...lignes].sort((a, b) => Number(b.visitors) - Number(a.visitors));
-  const total = triees.reduce((n, l) => n + Number(l.visitors), 0);
+  const triees = [...lignes].sort((a, b) => Number(b.sessions) - Number(a.sessions));
+  const total = triees.reduce((n, l) => n + Number(l.sessions), 0);
   return (
     <div className="carte">
       <h2>{titre}</h2>
@@ -359,7 +348,7 @@ function Repartition({ titre, lignes }: { titre: string; lignes: BreakdownRow[] 
           <thead>
             <tr>
               <th scope="col">{titre}</th>
-              <th scope="col">Visiteurs</th>
+              <th scope="col">Sessions</th>
               <th scope="col">Part</th>
             </tr>
           </thead>
@@ -367,8 +356,8 @@ function Repartition({ titre, lignes }: { titre: string; lignes: BreakdownRow[] 
             {triees.map((l) => (
               <tr key={l.value}>
                 <th scope="row">{VALEURS[l.value] ?? l.value}</th>
-                <td>{formatNombre(Number(l.visitors))}</td>
-                <td>{total > 0 ? `${Math.round((Number(l.visitors) / total) * 100)} %` : '—'}</td>
+                <td>{formatNombre(Number(l.sessions))}</td>
+                <td>{total > 0 ? `${Math.round((Number(l.sessions) / total) * 100)} %` : '—'}</td>
               </tr>
             ))}
           </tbody>

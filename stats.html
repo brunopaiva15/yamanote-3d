@@ -16,8 +16,10 @@
   Disallow, elle fait sortir la page de l'index si elle y était déjà entrée.
 
   Aucun secret n'y transite pour autant : la table refuse la lecture à la clé
-  publique, et seuls des agrégats - des nombres de visiteurs - franchissent la
-  porte (voir supabase/analytics.sql).
+  publique, et seuls des agrégats - des nombres de visites - franchissent la
+  porte (voir supabase/analytics.sql). Et rien n'est déposé sur l'appareil de
+  personne, ce qui est justement la raison pour laquelle la page compte des
+  sessions plutôt que des visiteurs.
 -->
 <html lang="fr">
   <head>

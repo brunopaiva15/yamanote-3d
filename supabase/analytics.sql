@@ -17,16 +17,23 @@
 -- Une ligne toutes les cinq minutes par onglet ouvert, avec :
 --
 --   at        l'instant, posé par le SERVEUR (le navigateur ne le choisit pas)
---   session   un identifiant tiré au hasard, mort à la fermeture de l'onglet
---   visitor   un identifiant tiré au hasard, gardé dans le localStorage
+--   session   un identifiant tiré au hasard, qui n'existe QUE dans la mémoire
+--             de l'onglet et meurt avec lui
 --   device    'desktop' ou 'mobile'
 --   lang      'fr', 'en' ou 'ja'
 --   mode      'menu', 'full' ou 'audio'
 --
 -- Et rien d'autre. Pas d'adresse IP - PostgREST n'en transmet aucune à la table -,
--- pas d'en-tête de navigateur, pas de page d'origine, pas de cookie. Les deux
--- identifiants sont des UUID aléatoires qui ne désignent personne : ils servent
--- à ne pas compter dix fois le même onglet, et c'est leur seul emploi.
+-- pas d'en-tête de navigateur, pas de page d'origine, pas de cookie.
+--
+-- Il n'y a délibérément PAS d'identifiant de visiteur, et c'est le choix qui
+-- structure tout le reste. Reconnaître quelqu'un d'une visite à l'autre suppose
+-- de laisser une trace sur SON appareil, ce qui fait entrer le site dans le
+-- champ de l'article 5(3) de la directive ePrivacy - donc du consentement. On
+-- renonce donc à la question « combien de personnes différentes » pour garder
+-- « combien de visites », qu'on peut compter sans rien déposer chez personne.
+-- Conséquence à connaître en lisant les chiffres : quelqu'un qui revient trois
+-- jours de suite compte pour trois sessions.
 --
 -- --- Qui peut faire quoi ----------------------------------------------------
 --
@@ -38,13 +45,12 @@
 --   · SELECT, UPDATE, DELETE refusés. Personne - pas même la page de stats -
 --     ne lit les lignes brutes ni n'en efface une.
 --   · les trois fonctions d'agrégat ci-dessous sont `security definer` : elles
---     seules traversent la RLS, et elles ne rendent que des COMPTES. La page de
---     stats n'a donc accès qu'à des totaux, jamais aux identifiants.
+--     seules traversent la RLS, et elles ne rendent que des COMPTES.
 --
 -- Ce que ça n'empêche pas, et autant l'écrire : quelqu'un qui récupère la clé
 -- publique peut gonfler le compteur en insérant des lignes à la main, ou lire
 -- les agrégats. Le premier abus se voit (une bosse absurde dans l'histogramme),
--- le second ne coûte rien - ce sont des nombres de visiteurs, pas un secret.
+-- le second ne coûte rien - ce sont des nombres de visites, pas un secret.
 -- Une vraie barrière demanderait une Edge Function et une clé de service ; pour
 -- savoir si le site est visité par dix personnes ou par mille, c'est
 -- disproportionné.
@@ -60,7 +66,6 @@ create table if not exists public.visit_pings (
   -- peut donc l'envoyer, mais pas mentir avec.
   at timestamptz not null default now(),
   session uuid not null,
-  visitor uuid not null,
   device text,
   lang text,
   mode text,
@@ -68,6 +73,13 @@ create table if not exists public.visit_pings (
   constraint visit_pings_lang_ok check (lang in ('fr', 'en', 'ja')),
   constraint visit_pings_mode_ok check (mode in ('menu', 'full', 'audio'))
 );
+
+-- Rattrapage pour une base où la première version du script est déjà passée :
+-- elle portait une colonne `visitor`, un identifiant gardé dans le localStorage
+-- du visiteur. Elle a été retirée plutôt que laissée à se remplir - c'est la
+-- seule façon de tenir la promesse « rien n'est déposé sur l'appareil », et une
+-- colonne qu'on cesse d'alimenter en garde le contenu.
+alter table public.visit_pings drop column if exists visitor;
 
 -- Toutes les requêtes de la page filtrent sur une fenêtre de temps puis
 -- regroupent : c'est le seul index utile, et il l'est pour les trois fonctions.
@@ -94,6 +106,16 @@ create policy visit_pings_insert
 -- Les agrégats, seule chose que le public peut lire
 -- ---------------------------------------------------------------------------
 
+-- `create or replace` ne sait pas changer le TYPE DE RETOUR d'une fonction : il
+-- répond « cannot change return type of existing function » et le script
+-- s'arrête. Les trois `drop` ci-dessous sont donc ce qui rend le fichier
+-- rejouable sur une base où la première version est déjà passée - celle qui
+-- comptait encore des visiteurs uniques.
+drop function if exists public.visit_buckets(text, timestamptz, text);
+drop function if exists public.visit_totals(timestamptz);
+drop function if exists public.visit_totals(timestamptz, text);
+drop function if exists public.visit_breakdown(timestamptz);
+
 -- Le découpage temporel, dans le fuseau de celui qui regarde.
 --
 -- `tz` n'est pas une coquetterie : « combien de monde le 6 août » n'a de sens
@@ -102,12 +124,12 @@ create policy visit_pings_insert
 -- le fuseau du navigateur ; le regroupement se fait donc sur des minuits et des
 -- heures locales, changements d'heure compris - c'est Postgres qui les connaît,
 -- pas nous.
-create or replace function public.visit_buckets(
+create function public.visit_buckets(
   bucket text,
   since timestamptz,
   tz text default 'UTC'
 )
-returns table (slot timestamptz, visitors bigint, sessions bigint)
+returns table (slot timestamptz, sessions bigint)
 language plpgsql
 stable
 security definer
@@ -126,7 +148,6 @@ begin
   return query
     select
       (date_trunc(bucket, p.at at time zone tz) at time zone tz) as slot,
-      count(distinct p.visitor) as visitors,
       count(distinct p.session) as sessions
     from public.visit_pings p
     where p.at >= since
@@ -136,14 +157,12 @@ end;
 $$;
 
 -- Les totaux de la fenêtre. Ils ne se déduisent PAS de la somme des créneaux :
--- quelqu'un qui revient trois jours de suite compte pour trois créneaux et pour
--- un seul visiteur. C'est précisément la question posée - « combien de
--- personnes » -, elle mérite donc sa requête.
-create or replace function public.visit_totals(
+-- une session à cheval sur deux heures apparaît dans les deux, et ne doit
+-- compter qu'une fois dans le total.
+create function public.visit_totals(
   since timestamptz
 )
 returns table (
-  visitors bigint,
   sessions bigint,
   pings bigint,
   avg_minutes numeric,
@@ -174,7 +193,6 @@ begin
       group by session
     )
     select
-      (select count(distinct f.visitor) from fenetre f),
       (select count(distinct f.session) from fenetre f),
       (select count(*) from fenetre f),
       (select round(coalesce(avg(d.minutes), 0)::numeric, 1) from durees d),
@@ -185,11 +203,11 @@ begin
 end;
 $$;
 
--- La répartition par appareil, langue et version, en une seule aller-retour.
-create or replace function public.visit_breakdown(
+-- La répartition par appareil, langue et version, en un seul aller-retour.
+create function public.visit_breakdown(
   since timestamptz
 )
-returns table (dimension text, value text, visitors bigint, sessions bigint)
+returns table (dimension text, value text, sessions bigint)
 language plpgsql
 stable
 security definer
@@ -204,13 +222,13 @@ begin
     with fenetre as (
       select * from public.visit_pings p where p.at >= since
     )
-    select 'device'::text, coalesce(f.device, '?'), count(distinct f.visitor), count(distinct f.session)
+    select 'device'::text, coalesce(f.device, '?'), count(distinct f.session)
       from fenetre f group by 2
     union all
-    select 'lang'::text, coalesce(f.lang, '?'), count(distinct f.visitor), count(distinct f.session)
+    select 'lang'::text, coalesce(f.lang, '?'), count(distinct f.session)
       from fenetre f group by 2
     union all
-    select 'mode'::text, coalesce(f.mode, '?'), count(distinct f.visitor), count(distinct f.session)
+    select 'mode'::text, coalesce(f.mode, '?'), count(distinct f.session)
       from fenetre f group by 2;
 end;
 $$;

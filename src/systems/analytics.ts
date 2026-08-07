@@ -9,12 +9,30 @@
 //
 // --- Ce que ce module envoie -------------------------------------------------
 //
-// Deux identifiants tirés au hasard (l'onglet, le visiteur), l'appareil
-// (« desktop » / « mobile »), la langue de l'interface, et la version en cours
-// (« menu », « full », « audio »). L'INSTANT n'est pas envoyé : il est posé par
-// le serveur, et la politique d'insertion refuse de toute façon tout ce qui
-// s'écarte de son heure. Pas d'adresse, pas d'en-tête, pas de référent, pas de
-// cookie.
+// Un identifiant d'onglet tiré au hasard, l'appareil (« desktop » / « mobile »),
+// la langue de l'interface, et la version en cours (« menu », « full »,
+// « audio »). L'INSTANT n'est pas envoyé : il est posé par le serveur, et la
+// politique d'insertion refuse de toute façon tout ce qui s'écarte de son heure.
+// Pas d'adresse, pas d'en-tête, pas de référent, pas de cookie.
+//
+// --- Ce qu'il n'écrit nulle part --------------------------------------------
+//
+// RIEN sur l'appareil du visiteur. Ni cookie, ni localStorage, ni
+// sessionStorage : l'identifiant d'onglet vit dans une variable de ce module et
+// meurt avec la page. C'est une contrainte, pas un détail - elle interdit de
+// savoir si quelqu'un revient, donc de compter des « visiteurs uniques », et on
+// ne compte que des SESSIONS. Quelqu'un qui revient trois jours de suite compte
+// pour trois.
+//
+// Ce qu'on achète en échange : déposer une trace persistante ferait entrer le
+// site dans le champ de l'article 5(3) de la directive ePrivacy - donc du
+// consentement, donc d'un bandeau sur un jeu contemplatif, et de chiffres
+// devenus partiels puisque la plupart des gens le refusent. Un jeu qui se
+// regarde passer n'a pas besoin de savoir qui revient.
+//
+// `tests/statsPage.test.ts` vérifie qu'aucun stockage n'apparaît dans ce
+// fichier : c'est le genre de promesse qu'on rompt d'une ligne, six mois plus
+// tard, pour « juste distinguer les nouveaux visiteurs ».
 //
 // --- Ce qui l'arrête -------------------------------------------------------
 //
@@ -51,14 +69,10 @@ const PING_MS = 5 * 60 * 1000;
 /** Au-delà, on considère que le service ne répondra pas davantage à la suivante. */
 const MAX_ECHECS = 3;
 
-/** Clé du localStorage, dans la famille des autres (`yamanote.mode`, `yamanote.lang`). */
-const VISITOR_KEY = 'yamanote.visitor';
-
 type Mode = 'menu' | 'full' | 'audio';
 
 interface Ping {
   session: string;
-  visitor: string;
   device: 'desktop' | 'mobile';
   lang: string;
   mode: Mode;
@@ -79,53 +93,6 @@ function uuid(): string {
     else out += hex[Math.floor(Math.random() * 16)];
   }
   return out;
-}
-
-/**
- * Le signal « ne me suivez pas » du navigateur.
- *
- * `globalPrivacyControl` est celui qui a une valeur juridique dans plusieurs
- * États, et Brave le pose par défaut ; `doNotTrack` est l'ancien, encore émis
- * par Firefox. On lit les deux.
- */
-function refuseLeSuivi(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const nav = navigator as Navigator & { globalPrivacyControl?: boolean; msDoNotTrack?: string };
-  if (nav.globalPrivacyControl === true) return true;
-  return nav.doNotTrack === '1' || nav.msDoNotTrack === '1';
-}
-
-/**
- * L'identité du visiteur, et la nuance qui compte.
- *
- * Par défaut : un UUID gardé dans le localStorage, qui permet de distinguer
- * « trente personnes » de « une personne trente fois ». Il ne désigne personne -
- * il n'est relié à aucune donnée, ici ni ailleurs -, mais il SURVIT à la visite,
- * et c'est très exactement ce qu'un signal « ne me suivez pas » demande de ne
- * pas faire.
- *
- * Quand ce signal est là, on ne renonce donc pas à la mesure : on renonce au
- * SOUVENIR. L'identifiant devient celui de l'onglet, jeté avec lui, et la visite
- * est comptée sans être reliée à la précédente. Conséquence à connaître en
- * lisant la page de statistiques : ces visiteurs-là comptent pour un nouveau à
- * chaque passage, donc le nombre de « visiteurs uniques » est légèrement
- * surestimé - jamais l'inverse.
- *
- * Un localStorage indisponible (navigation privée verrouillée, iframe cloisonnée)
- * retombe sur le même comportement, pour la même raison : rien à écrire, rien à
- * relire.
- */
-function visitorId(session: string): string {
-  if (refuseLeSuivi()) return session;
-  try {
-    const garde = localStorage.getItem(VISITOR_KEY);
-    if (garde) return garde;
-    const neuf = uuid();
-    localStorage.setItem(VISITOR_KEY, neuf);
-    return neuf;
-  } catch {
-    return session;
-  }
 }
 
 /** La version en cours, dans les termes de la table. */
@@ -156,15 +123,21 @@ let arrete = false;
 let echecs = 0;
 let timer: number | null = null;
 let dernier = 0;
-let identite: { session: string; visitor: string } | null = null;
+/**
+ * L'identifiant de cet onglet.
+ *
+ * Une variable de module, et rien d'autre : il n'est écrit nulle part, ne
+ * survit pas au rechargement de la page, et disparaît avec l'onglet. C'est
+ * toute la mesure du « suivi » dont ce fichier est capable.
+ */
+let session: string | null = null;
 
 /** Une insertion, et ce qu'on décide de faire de son échec. */
 async function ping(): Promise<void> {
-  if (arrete || !identite) return;
+  if (arrete || !session) return;
   dernier = Date.now();
   const ligne: Ping = {
-    session: identite.session,
-    visitor: identite.visitor,
+    session,
     device: coarsePointer() ? 'mobile' : 'desktop',
     lang: useStore.getState().lang,
     mode: currentMode(),
@@ -221,8 +194,7 @@ export function startVisitAnalytics(): void {
   if (!autorisePing()) return;
   demarre = true;
 
-  const session = uuid();
-  identite = { session, visitor: visitorId(session) };
+  session = uuid();
 
   void ping();
   planifie();
