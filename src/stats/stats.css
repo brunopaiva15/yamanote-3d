@@ -1,18 +1,33 @@
 /* Habillage de la page de fréquentation.
-   Volontairement séparé de src/styles.css : celui-là habille un jeu en plein
-   écran, sans défilement, avec un HUD qui esquive les encoches. Ici c'est un
-   document qui défile. Les couleurs, elles, sont les mêmes que about.html et
-   que le jeu - encre #10151a, vert de la ligne #80c241. */
+ *
+ * Elle parle le MÊME langage que le menu, et pas celui de about.html : aplat au
+ * vert de la ligne, grand carton blanc cerné d'encre, contours épais, ombres
+ * franches décalées vers le bas, aucun flou et aucun dégradé. Les valeurs sont
+ * recopiées de src/styles.css - #6cb032 pour l'aplat, #10151a pour l'encre,
+ * 3 px de contour, `0 6px 0` d'ombre, 22 px de rayon, séparateurs en pointillé
+ * #d5dade - et pas réinventées à l'œil.
+ *
+ * Elle ne PEUT pas importer src/styles.css : cette feuille-là habille un jeu en
+ * plein écran, sans défilement, avec un HUD qui esquive les encoches, et elle
+ * pose `overflow: hidden` sur html et body. Elle tirerait aussi tout le reste
+ * de l'interface pour trois variables. Les jetons du langage sont donc recopiés
+ * ici, en haut, et nulle part ailleurs dans le fichier.
+ */
 
 :root {
-  color-scheme: dark;
-  --ink: #10151a;
-  --surface: #161c22;
-  --line: #262f36;
-  --text: #eef1f2;
-  --dim: #aeb8bd;
-  --mute: #5c666d;
-  --green: #80c241;
+  /* --- Jetons repris de src/styles.css, mot pour mot --- */
+  --green: #6cb032;
+  --green-clair: #8ecf51;
+  --ink-line: #10151a;
+  --sticker: #ffffff;
+  --sticker-ink: #16181a;
+  --sticker-dim: #5c666d;
+  --sticker-shadow: 0 3px 0 rgba(16, 21, 26, 0.85);
+  --trait: #d5dade;
+  --creux: #e8edf0;
+  --texte: #4a5158;
+  --gris: #868f95;
+  color-scheme: light;
   font-family:
     'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
 }
@@ -23,191 +38,287 @@
 
 body {
   margin: 0;
-  background: var(--ink);
-  color: var(--text);
+  background: var(--green);
+  color: var(--sticker-ink);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
-.stats {
-  width: min(64rem, 100%);
-  margin: 0 auto;
-  padding: 3rem 1.25rem 4rem;
+.page {
+  min-height: 100dvh;
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+}
+
+/* Le carton, exactement celui du menu (`.start-board`) - au détail de la
+   largeur près. Le menu tient en 520 px parce qu'il tient une colonne de
+   réglages ; un histogramme de cent soixante-huit créneaux, non. 880 px reste
+   un carton posé sur l'aplat, pas une page pleine largeur. */
+.board {
+  position: relative;
+  width: 100%;
+  max-width: 880px;
+  margin: auto;
+  padding: 24px 28px 22px;
+  background: var(--sticker);
+  color: var(--sticker-ink);
+  border: 3px solid var(--ink-line);
+  border-radius: 22px;
+  box-shadow: 0 6px 0 var(--ink-line);
+  overflow: hidden;
 }
 
 h1 {
-  margin: 0 0 0.35rem;
-  font-size: clamp(1.9rem, 6vw, 2.9rem);
+  margin: 0;
+  text-align: center;
+  font-size: clamp(26px, 6vw, 38px);
+  font-weight: 800;
+  letter-spacing: -0.01em;
   line-height: 1.1;
 }
 
-h2 {
-  margin: 0 0 1rem;
-  color: var(--green);
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.tagline {
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--sticker-dim);
 }
 
-.sous-titre {
-  margin: 0 0 2rem;
-  color: var(--dim);
-  line-height: 1.6;
+/* Le bandeau de l'ekimeiban, repris tel quel de `.board-band` : bande à la
+   couleur de la ligne, sur toute la largeur du carton, cernée d'encre en haut
+   et en bas. Elle porte ici ce que porte le panneau d'une gare - où l'on est, et
+   ce qui se passe maintenant. */
+.band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px -28px 0;
+  padding: 6px 20px;
+  background: var(--green);
+  border-top: 3px solid var(--ink-line);
+  border-bottom: 3px solid var(--ink-line);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
+
+.band-online {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.band-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--ink-line);
+}
+
+/* --- Alertes ------------------------------------------------------------- */
 
 .alerte {
-  margin: 0 0 1.5rem;
-  padding: 0.9rem 1.1rem;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--green);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--dim);
-  line-height: 1.6;
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  background: var(--creux);
+  border: 2px solid var(--ink-line);
+  border-radius: 14px;
+  box-shadow: var(--sticker-shadow);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--texte);
 }
 
 code {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-  font-size: 0.9em;
-  color: var(--text);
+  font-size: 0.92em;
+  font-weight: 700;
+  color: var(--sticker-ink);
 }
 
-/* --- La rangée de commandes, au-dessus de tout ce qu'elle règle ----------- */
+/* --- Les commandes, en rangées d'étiquette et de pastilles --------------- */
 
 .filtres {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 4px;
 }
 
-.filtres fieldset {
+.filtre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
-.filtres legend {
-  padding: 0 0 0.4rem;
-  color: var(--mute);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.filtres button {
-  margin: 0 0.3rem 0.3rem 0;
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--dim);
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.filtres button:hover:not(:disabled) {
-  border-color: var(--green);
-  color: var(--text);
-}
-
-.filtres button.on {
-  border-color: var(--green);
-  background: var(--green);
-  color: #10151a;
+.filtre legend {
+  padding: 0;
+  font-size: 12.5px;
   font-weight: 700;
+  color: var(--sticker-dim);
 }
 
-.filtres button:disabled {
-  opacity: 0.35;
+.pastilles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* Même pastille que `.start-time-now` : creux clair, contour d'encre de 2 px,
+   ombre franche, et l'enfoncement au clic plutôt qu'un survol coloré. */
+.pastille {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sticker-ink);
+  background: var(--creux);
+  border: 2px solid var(--ink-line);
+  border-radius: 11px;
+  padding: 6px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: var(--sticker-shadow);
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease,
+    background-color 0.1s ease;
+}
+
+.pastille:hover:not(:disabled) {
+  background: #f1f3f5;
+}
+
+.pastille:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+
+.pastille:focus-visible {
+  outline: 3px solid #2f5d0f;
+  outline-offset: 2px;
+}
+
+/* L'état retenu prend le vert de la ligne, comme le bouton d'embarquement et
+   comme la langue choisie dans le sélecteur du menu. */
+.pastille.on {
+  background: var(--green);
+  color: var(--ink-line);
+}
+
+.pastille.on:hover {
+  background: var(--green-clair);
+}
+
+.pastille:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
-/* --- Tuiles --------------------------------------------------------------- */
+/* --- Tuiles -------------------------------------------------------------- */
 
 .tuiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 2px dashed var(--trait);
 }
 
 .tuile {
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
+  padding: 12px 14px;
+  background: var(--creux);
+  border: 2px solid var(--ink-line);
+  border-radius: 14px;
+  box-shadow: var(--sticker-shadow);
 }
 
 .tuile h3 {
-  margin: 0 0 0.5rem;
-  color: var(--mute);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  color: var(--sticker-dim);
 }
 
 .tuile .valeur {
   /* Chiffres proportionnels : à cette taille, `tabular-nums` fait bâiller les
-     nombres courts. L'alignement vertical, lui, se joue dans les tableaux. */
+     nombres courts. L'alignement vertical se joue dans les tableaux. */
   margin: 0;
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
   line-height: 1.1;
+  color: var(--sticker-ink);
 }
 
 .tuile .unite {
-  font-size: 1rem;
-  font-weight: 400;
-  color: var(--dim);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sticker-dim);
 }
 
 .tuile .note {
-  margin: 0.4rem 0 0;
-  color: var(--mute);
-  font-size: 0.78rem;
+  margin: 5px 0 0;
+  font-size: 11px;
   line-height: 1.4;
+  color: var(--gris);
 }
 
-/* --- Cartes --------------------------------------------------------------- */
+/* --- Blocs --------------------------------------------------------------- */
 
-.carte {
-  margin-bottom: 1.5rem;
-  padding: 1.25rem;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
+.bloc {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 2px dashed var(--trait);
 }
 
-.repartitions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 0.75rem;
+.bloc h2,
+.notes h2 {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sticker-dim);
 }
 
 .vide {
   margin: 0;
   padding: 2rem 0;
-  color: var(--mute);
+  color: var(--gris);
+  font-size: 13px;
   text-align: center;
 }
 
-/* --- L'histogramme -------------------------------------------------------- */
+/* --- L'histogramme ------------------------------------------------------- */
 
 .chart {
   transition: opacity 0.15s;
 }
 
 /* Pendant un rechargement, le dessin précédent RESTE, en retrait : un squelette
-   ferait sauter la mise en page à chaque changement de bouton. */
+   ferait sauter la mise en page à chaque changement de pastille. */
 .chart-stale {
   opacity: 0.45;
 }
 
 .plot {
   position: relative;
-  height: 15rem;
-  margin-left: 2.5rem;
+  height: 14rem;
+  margin-left: 2.2rem;
 }
 
 .grid {
@@ -215,22 +326,25 @@ code {
   inset: 0;
 }
 
-/* Traits pleins d'un cran au-dessus du fond, jamais pointillés : un pointillé
-   se lit comme un seuil ou une projection, alors que ce n'est qu'une graduation. */
+/* Traits pleins, jamais pointillés : dans cette interface le pointillé sépare
+   des SECTIONS (le menu s'en sert entre ses blocs de réglages), et un lecteur
+   qui le retrouve sur un graphique y lit un seuil ou une projection. Les
+   graduations restent donc des traits pleins, d'un ton plus clair que l'encre. */
 .grid-line {
   position: absolute;
   left: 0;
   right: 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--trait);
 }
 
 .grid-line span {
   position: absolute;
   right: 100%;
   transform: translateY(-50%);
-  padding-right: 0.5rem;
-  color: var(--mute);
-  font-size: 0.72rem;
+  padding-right: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--gris);
   font-variant-numeric: tabular-nums;
 }
 
@@ -239,10 +353,12 @@ code {
   inset: 0;
   display: flex;
   align-items: flex-end;
-  /* Deux pixels de fond entre deux barres : c'est le séparateur, et il ne coûte
-     pas un contour autour de chaque marque. */
+  /* Deux pixels de fond entre deux barres : le séparateur, sans avoir à cerner
+     chaque marque d'un contour. */
   gap: 2px;
-  border-bottom: 1px solid var(--line);
+  /* La ligne de base est un trait d'encre à part entière, comme les bords du
+     carton : c'est le sol sur lequel les barres se posent. */
+  border-bottom: 3px solid var(--ink-line);
 }
 
 .col {
@@ -266,63 +382,72 @@ code {
 .bar {
   width: 100%;
   /* Une barre plafonnée : sur une fenêtre à sept créneaux, des colonnes de cent
-     pixels de large font un aplat, pas un histogramme. La marque reste fine, la
-     cible de survol garde toute la largeur de la colonne. */
-  max-width: 22px;
+     pixels de large font un aplat, pas un histogramme. */
+  max-width: 26px;
   margin: 0 auto;
-  border-radius: 4px 4px 0 0;
   background: var(--green);
+}
+
+/* Le contour d'encre ne s'applique qu'aux barres assez larges pour le porter :
+   deux pixels de chaque côté d'une colonne de trois, ce n'est plus une barre
+   verte cernée d'encre, c'est un trait noir. Chart.tsx mesure et décide. */
+.bars-epaisses .bar {
+  border: 2px solid var(--ink-line);
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
 }
 
 .col:hover .bar,
 .col-actif .bar {
-  background: #a2dc63;
+  background: var(--green-clair);
 }
 
 .col:focus-visible .bar {
-  outline: 2px solid var(--text);
-  outline-offset: 1px;
+  outline: 3px solid #2f5d0f;
+  outline-offset: 2px;
 }
 
-/* L'infobulle vit DANS le tracé, en haut. Posée au-dessus (bottom: 100%), elle
-   recouvrait le titre de la carte et les tuiles - c'est-à-dire des chiffres,
-   masqués par d'autres chiffres. Le haut du tracé, lui, est presque toujours
-   vide : c'est là qu'il reste de la place. */
+/* Infobulle : un petit carton blanc cerné d'encre, comme tous les autres.
+   Posée DANS le tracé - au-dessus, elle recouvrait le titre du bloc et les
+   tuiles, c'est-à-dire des chiffres masqués par d'autres chiffres. */
 .tip {
   position: absolute;
-  top: 0.25rem;
+  top: 4px;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #10151a;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  gap: 1px;
+  padding: 7px 10px;
+  background: var(--sticker);
+  border: 2px solid var(--ink-line);
+  border-radius: 11px;
+  box-shadow: var(--sticker-shadow);
   white-space: nowrap;
   pointer-events: none;
-  font-size: 0.8rem;
-  color: var(--dim);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sticker-ink);
   z-index: 2;
 }
 
-.tip strong {
-  color: var(--text);
-  font-size: 0.85rem;
+.tip small {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--sticker-dim);
 }
 
 .axis {
   display: flex;
   gap: 2px;
-  margin: 0.4rem 0 0 2.5rem;
+  margin: 6px 0 0 2.2rem;
 }
 
 .axis-label {
   flex: 1 1 0;
   min-width: 0;
-  color: var(--mute);
-  font-size: 0.68rem;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--gris);
   font-variant-numeric: tabular-nums;
   text-align: center;
   /* Une étiquette sur N seulement (voir labelStep) : les autres sont vides, et
@@ -331,58 +456,90 @@ code {
   white-space: nowrap;
 }
 
-/* --- Tableaux ------------------------------------------------------------- */
+/* --- Tableaux ------------------------------------------------------------ */
 
 .table-view {
-  margin-top: 1.5rem;
-  border-top: 1px solid var(--line);
-  padding-top: 0.75rem;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--trait);
 }
 
 .table-view summary {
-  color: var(--dim);
-  font-size: 0.85rem;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sticker-dim);
   cursor: pointer;
 }
 
+.table-view summary:hover {
+  color: var(--sticker-ink);
+}
+
 .table-scroll {
-  max-height: 22rem;
-  margin-top: 0.75rem;
+  max-height: 20rem;
+  margin-top: 12px;
   overflow: auto;
+  border: 2px solid var(--ink-line);
+  border-radius: 14px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 12.5px;
 }
 
 th,
 td {
-  padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid var(--line);
+  padding: 6px 10px;
   text-align: left;
+}
+
+tbody tr + tr th,
+tbody tr + tr td {
+  border-top: 1px solid var(--trait);
 }
 
 thead th {
   position: sticky;
   top: 0;
-  background: var(--surface);
-  color: var(--mute);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  background: var(--creux);
+  border-bottom: 2px solid var(--ink-line);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  color: var(--sticker-dim);
 }
 
 tbody th {
-  font-weight: 400;
-  color: var(--dim);
+  font-weight: 600;
+  color: var(--texte);
 }
 
 td {
-  color: var(--text);
+  color: var(--sticker-ink);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.repartitions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 14px;
+}
+
+.repartition-carte h3 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sticker-dim);
+}
+
+.repartition-carte .table-scroll {
+  margin-top: 0;
 }
 
 .repartition thead th:not(:first-child),
@@ -390,28 +547,67 @@ td {
   text-align: right;
 }
 
-/* --- Pied ----------------------------------------------------------------- */
-
-footer {
-  margin-top: 2.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--line);
+/* Retiré de l'écran, laissé au document : ni display:none ni visibility:hidden,
+   qui l'ôteraient aussi aux lecteurs d'écran. Recopié de `.visually-hidden` dans
+   src/styles.css, pour la même raison qu'ici - donner un intitulé en TEXTE à une
+   colonne dont le titre est déjà écrit au-dessus du tableau. */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-footer p {
-  margin: 0 0 0.8rem;
-  color: var(--dim);
-  font-size: 0.88rem;
-  line-height: 1.65;
+/* --- Pied ---------------------------------------------------------------- */
+
+.notes {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 2px dashed var(--trait);
 }
 
-footer .pied {
-  color: var(--mute);
-  font-size: 0.8rem;
+.notes p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--texte);
 }
 
-@media (max-width: 30rem) {
+.notes .pied {
+  margin: 12px 0 0;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--gris);
+}
+
+@media (max-width: 34rem) {
+  .board {
+    padding: 20px 18px 18px;
+    border-radius: 18px;
+  }
+
+  .band {
+    margin: 14px -18px 0;
+    padding: 6px 14px;
+    font-size: 11.5px;
+  }
+
+  .filtre {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .pastilles {
+    justify-content: flex-start;
+  }
+
   .plot {
-    height: 11rem;
+    height: 10.5rem;
   }
 }

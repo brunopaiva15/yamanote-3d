@@ -37,6 +37,16 @@ interface Props {
  */
 const LARGEUR_ETIQUETTE = 52;
 
+/**
+ * En deçà de cette largeur, une barre ne peut plus porter son contour d'encre.
+ *
+ * Le langage du jeu cerne tout d'un trait de deux pixels. Sur une colonne de
+ * trois pixels de large, ces deux traits ne laissent rien entre eux : la barre
+ * verte devient un bâton noir, et l'histogramme entier vire au gris. Au-delà de
+ * dix pixels il reste six pixels de vert, ce qui se lit encore comme une barre.
+ */
+const LARGEUR_CONTOUR = 10;
+
 export function Chart({ points, bucket, stale = false }: Props) {
   const [actif, setActif] = useState<number | null>(null);
   const [largeur, setLargeur] = useState(0);
@@ -68,6 +78,10 @@ export function Chart({ points, bucket, stale = false }: Props) {
   const haut = niceMax(max);
   const repères = gridTicks(max);
   const pas = labelStep(points.length, Math.max(2, Math.floor(largeur / LARGEUR_ETIQUETTE)));
+  // Largeur d'une colonne : la place disponible moins les deux pixels de fond
+  // qui séparent chaque barre de la suivante.
+  const largeurBarre = points.length > 0 ? largeur / points.length - 2 : 0;
+  const epaisses = largeurBarre >= LARGEUR_CONTOUR;
 
   function bouge(depuis: number, delta: number) {
     const cible = Math.min(points.length - 1, Math.max(0, depuis + delta));
@@ -113,7 +127,7 @@ export function Chart({ points, bucket, stale = false }: Props) {
         </div>
 
         <div
-          className="bars"
+          className={`bars${epaisses ? ' bars-epaisses' : ''}`}
           role="group"
           aria-label={`${SERIE_LABEL} par créneau`}
           onMouseLeave={() => setActif(null)}
@@ -152,10 +166,10 @@ export function Chart({ points, bucket, stale = false }: Props) {
 
         {actif !== null && (
           <div className="tip" style={{ left: `${gauche}%` }} role="status">
-            <strong>{longLabel(bucket, points[actif].date)}</strong>
             <span>
               {points[actif].sessions} {SERIE_LABEL}
             </span>
+            <small>{longLabel(bucket, points[actif].date)}</small>
           </div>
         )}
       </div>

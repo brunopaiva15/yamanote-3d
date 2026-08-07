@@ -19,7 +19,7 @@
 // l'entrée du jeu, et cette page a la sienne. Consulter ses statistiques ne les
 // modifie donc pas - sauf le compteur « en ligne maintenant », qui passe par le
 // canal de présence partagé et dans lequel cet onglet-ci est bien une personne
-// de plus. C'est écrit sous la tuile.
+// de plus. C'est écrit sous le bandeau qui le porte.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -178,137 +178,153 @@ export function StatsPage() {
   const totals = donnees.totals;
 
   return (
-    <main className="stats">
-      <header>
+    <div className="page">
+      <main className="board">
         <h1>Fréquentation</h1>
-        <p className="sous-titre">
-          Yamanote 3D — qui ouvre le site, et quand.{' '}
-          {premier ? (
-            <>Mesuré depuis le {new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date(premier))}.</>
-          ) : (
-            <>Page non référencée : aucun lien n’y mène.</>
+        <p className="tagline">
+          {premier
+            ? `Mesuré depuis le ${new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date(premier))}.`
+            : 'Page non référencée : aucun lien n’y mène.'}
+        </p>
+
+        {/* Le bandeau de l'ekimeiban, comme sur le menu. Il porte ce que porte
+            un panneau de gare : où l'on est, et ce qui se passe maintenant. */}
+        <div className="band">
+          <span>山手線 3D</span>
+          {presenceEnabled && (
+            <span className="band-online" title="Cet onglet compris">
+              <span className="band-dot" aria-hidden="true" />
+              {enLigne ?? 0} en ligne
+            </span>
           )}
-        </p>
-      </header>
+        </div>
 
-      {!statsEnabled && (
-        <p className="alerte">
-          Aucune clé Supabase dans ce build (<code>VITE_SUPABASE_URL</code> et{' '}
-          <code>VITE_SUPABASE_ANON_KEY</code>). Il n’y a rien à mesurer ni à lire : voir{' '}
-          <code>.env.example</code>.
-        </p>
-      )}
+        {!statsEnabled && (
+          <p className="alerte">
+            Aucune clé Supabase dans ce build (<code>VITE_SUPABASE_URL</code> et{' '}
+            <code>VITE_SUPABASE_ANON_KEY</code>). Il n’y a rien à mesurer ni à lire : voir{' '}
+            <code>.env.example</code>.
+          </p>
+        )}
 
-      {aInstaller && (
-        <p className="alerte">
-          Les clés sont là, mais la base n’a pas encore de table de fréquentation. Coller{' '}
-          <code>supabase/analytics.sql</code> dans le SQL Editor du projet Supabase, une fois,
-          puis recharger cette page.
-        </p>
-      )}
+        {aInstaller && (
+          <p className="alerte">
+            Les clés sont là, mais la base n’a pas encore de table de fréquentation. Coller{' '}
+            <code>supabase/analytics.sql</code> dans le SQL Editor du projet Supabase, une fois,
+            puis recharger cette page.
+          </p>
+        )}
 
-      {erreur && <p className="alerte">Lecture impossible : {erreur}</p>}
+        {erreur && <p className="alerte">Lecture impossible : {erreur}</p>}
 
-      {/* Une seule rangée de commandes, au-dessus de tout ce qu'elle règle :
-          les tuiles, l'histogramme, le tableau et la répartition changent
-          ensemble. */}
-      <div className="filtres">
-        <fieldset>
-          <legend>Période</legend>
-          {RANGES.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              className={r.id === rangeId ? 'on' : ''}
-              aria-pressed={r.id === rangeId}
-              onClick={() => choisirFenetre(r.id)}
-            >
-              {r.label}
-            </button>
-          ))}
-        </fieldset>
+        {/* Les commandes, au-dessus de tout ce qu'elles règlent : les tuiles,
+            l'histogramme, le tableau et la répartition changent ensemble. Deux
+            rangées d'étiquette et de pastilles, comme les réglages du menu. */}
+        <div className="filtres">
+          <fieldset className="filtre">
+            <legend>Période</legend>
+            <div className="pastilles">
+              {RANGES.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className={`pastille${r.id === rangeId ? ' on' : ''}`}
+                  aria-pressed={r.id === rangeId}
+                  onClick={() => choisirFenetre(r.id)}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
 
-        <fieldset>
-          <legend>Granularité</legend>
-          {BUCKETS.map((b) => (
-            <button
-              key={b}
-              type="button"
-              className={b === bucket ? 'on' : ''}
-              aria-pressed={b === bucket}
-              disabled={!permises.includes(b)}
-              title={permises.includes(b) ? undefined : 'Sans objet sur cette période'}
-              onClick={() => setBucketChoisi(b)}
-            >
-              {BUCKET_LABEL[b]}
-            </button>
-          ))}
-        </fieldset>
-      </div>
+          <fieldset className="filtre">
+            <legend>Granularité</legend>
+            <div className="pastilles">
+              {BUCKETS.map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  className={`pastille${b === bucket ? ' on' : ''}`}
+                  aria-pressed={b === bucket}
+                  disabled={!permises.includes(b)}
+                  title={permises.includes(b) ? undefined : 'Sans objet sur cette période'}
+                  onClick={() => setBucketChoisi(b)}
+                >
+                  {BUCKET_LABEL[b]}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        </div>
 
-      <div className="tuiles">
-        <Tuile
-          titre="Sessions"
-          valeur={totals?.sessions}
-          note={`sur ${range.label.toLowerCase()} — un onglet ouvert = une session`}
-        />
-        <Tuile titre="Battements" valeur={totals?.pings} note="une ligne toutes les cinq minutes" />
-        <Tuile
-          titre="Durée moyenne"
-          valeur={totals?.avg_minutes}
-          unite="min"
-          note="à cinq minutes près"
-        />
-        <Tuile
-          titre="En ligne maintenant"
-          valeur={presenceEnabled ? (enLigne ?? undefined) : undefined}
-          note="temps réel, cet onglet compris"
-        />
-      </div>
-
-      <section className="carte">
-        <h2>Sessions par {BUCKET_TITLE[bucket]}</h2>
-        <Chart points={points} bucket={bucket} stale={chargement} />
-        <ChartTable points={points} bucket={bucket} />
-      </section>
-
-      <section className="repartitions">
-        {DIMENSIONS.map((d) => (
-          <Repartition
-            key={d.id}
-            titre={d.titre}
-            lignes={donnees.breakdown.filter((b) => b.dimension === d.id)}
+        <div className="tuiles">
+          <Tuile
+            titre="Sessions"
+            valeur={totals?.sessions}
+            note={`sur ${range.label.toLowerCase()} — un onglet ouvert = une session`}
           />
-        ))}
-      </section>
+          <Tuile
+            titre="Durée moyenne"
+            valeur={totals?.avg_minutes}
+            unite="min"
+            note="à cinq minutes près"
+          />
+          <Tuile
+            titre="Battements"
+            valeur={totals?.pings}
+            note="une ligne toutes les cinq minutes"
+          />
+        </div>
 
-      <footer>
-        <h2>Ce qui est mesuré</h2>
-        <p>
-          Chaque onglet ouvert dépose une ligne toutes les cinq minutes, tant qu’il est
-          <strong> visible</strong> : un onglet laissé de côté ne compte plus, et une rame oubliée
-          toute la nuit ne gonfle rien. La ligne contient un identifiant d’onglet tiré au hasard,
-          l’appareil, la langue et la version — ni adresse IP, ni référent, ni cookie. Le serveur
-          de développement n’écrit rien.
-        </p>
-        <p>
-          Une <em>session</em> est un onglet ouvert, <strong>pas une personne</strong>, et cette
-          page ne sait pas faire la différence : <strong>rien n’est déposé sur l’appareil</strong>{' '}
-          — ni cookie, ni localStorage —, donc rien ne permet de reconnaître quelqu’un d’une
-          visite à l’autre. Qui revient trois jours de suite compte pour trois. Les chiffres
-          ci-dessus sont donc un <em>plafond</em> du nombre de personnes, jamais un plancher.
-        </p>
-        <p>
-          C’est un choix, et il a un prix : savoir qui revient supposerait de laisser une trace
-          persistante sur l’appareil du visiteur, ce qui relève du consentement au sens de la
-          directive ePrivacy. Un jeu qui se regarde passer n’a pas besoin d’un bandeau.
-        </p>
-        <p className="pied">
-          Table, droits et fonctions d’agrégat : <code>supabase/analytics.sql</code>. Battement :{' '}
-          <code>src/systems/analytics.ts</code>.
-        </p>
-      </footer>
-    </main>
+        <section className="bloc">
+          <h2>Sessions par {BUCKET_TITLE[bucket]}</h2>
+          <Chart points={points} bucket={bucket} stale={chargement} />
+          <ChartTable points={points} bucket={bucket} />
+        </section>
+
+        <section className="bloc">
+          <h2>Répartition</h2>
+          <div className="repartitions">
+            {DIMENSIONS.map((d) => (
+              <Repartition
+                key={d.id}
+                titre={d.titre}
+                lignes={donnees.breakdown.filter((b) => b.dimension === d.id)}
+              />
+            ))}
+          </div>
+        </section>
+
+        <footer className="notes">
+          <h2>Ce qui est mesuré</h2>
+          <p>
+            Chaque onglet ouvert dépose une ligne toutes les cinq minutes, tant qu’il est
+            <strong> visible</strong> : un onglet laissé de côté ne compte plus, et une rame
+            oubliée toute la nuit ne gonfle rien. La ligne contient un identifiant d’onglet tiré
+            au hasard, l’appareil, la langue et la version — ni adresse IP, ni référent, ni
+            cookie. Le serveur de développement n’écrit rien.
+          </p>
+          <p>
+            Une <em>session</em> est un onglet ouvert, <strong>pas une personne</strong>, et cette
+            page ne sait pas faire la différence : <strong>rien n’est déposé sur l’appareil</strong>{' '}
+            — ni cookie, ni localStorage —, donc rien ne permet de reconnaître quelqu’un d’une
+            visite à l’autre. Qui revient trois jours de suite compte pour trois. Les chiffres
+            ci-dessus sont donc un <em>plafond</em> du nombre de personnes, jamais un plancher.
+          </p>
+          <p>
+            C’est un choix, et il a un prix : savoir qui revient supposerait de laisser une trace
+            persistante sur l’appareil du visiteur, ce qui relève du consentement au sens de la
+            directive ePrivacy. Un jeu qui se regarde passer n’a pas besoin d’un bandeau.
+          </p>
+          <p className="pied">
+            Le compteur « en ligne » du bandeau vient du canal de présence, pas de la table, et
+            compte cet onglet-ci. Table, droits et fonctions d’agrégat :{' '}
+            <code>supabase/analytics.sql</code>. Battement : <code>src/systems/analytics.ts</code>.
+          </p>
+        </footer>
+      </main>
+    </div>
   );
 }
 
@@ -339,15 +355,21 @@ function Repartition({ titre, lignes }: { titre: string; lignes: BreakdownRow[] 
   const triees = [...lignes].sort((a, b) => Number(b.sessions) - Number(a.sessions));
   const total = triees.reduce((n, l) => n + Number(l.sessions), 0);
   return (
-    <div className="carte">
-      <h2>{titre}</h2>
+    <div className="repartition-carte">
+      <h3>{titre}</h3>
       {triees.length === 0 ? (
         <p className="vide">—</p>
       ) : (
+        <div className="table-scroll">
         <table className="repartition">
           <thead>
             <tr>
-              <th scope="col">{titre}</th>
+              {/* Le titre de la carte est juste au-dessus : le répéter en
+                  intitulé de colonne le dirait deux fois à l'œil. Il reste en
+                  texte pour les lecteurs d'écran, qui n'ont pas ce « au-dessus ». */}
+              <th scope="col">
+                <span className="sr">{titre}</span>
+              </th>
               <th scope="col">Sessions</th>
               <th scope="col">Part</th>
             </tr>
@@ -362,6 +384,7 @@ function Repartition({ titre, lignes }: { titre: string; lignes: BreakdownRow[] 
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

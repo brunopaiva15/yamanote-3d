@@ -25,19 +25,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#10151a" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#6cb032" />
+    <meta name="color-scheme" content="light" />
     <title>Fréquentation - Yamanote 3D</title>
     <meta name="robots" content="noindex, nofollow, noarchive" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <style>
-      /* Le fond avant le module : sans lui, la page est blanche le temps du
-         téléchargement, puis noire. Mêmes valeurs que src/stats/stats.css. */
+      /* L'aplat au vert de la ligne AVANT le module : la feuille de style arrive
+         avec le JavaScript, donc trop tard pour la seule chose que ce fond doit
+         faire - exister avant lui. Même valeur que `.start-screen` dans
+         src/styles.css, et que src/stats/stats.css. */
       html,
       body {
         margin: 0;
-        background: #10151a;
-        color: #eef1f2;
+        background: #6cb032;
+        color: #16181a;
         font-family: 'Avenir Next', 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
       }
     </style>
