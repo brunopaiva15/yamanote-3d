@@ -180,11 +180,12 @@ export function StatsPage() {
     <div className="page">
       <main className="board">
         <h1>Fréquentation</h1>
-        <p className="tagline">
-          {premier
-            ? `Mesuré depuis le ${new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date(premier))}.`
-            : 'Page non référencée : aucun lien n’y mène.'}
-        </p>
+        {premier && (
+          <p className="tagline">
+            Mesuré depuis le{' '}
+            {new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date(premier))}.
+          </p>
+        )}
 
         {/* Le bandeau de l'ekimeiban, comme sur le menu. Il porte ce que porte
             un panneau de gare : où l'on est, et ce qui se passe maintenant. */}
