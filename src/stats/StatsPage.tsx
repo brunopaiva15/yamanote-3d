@@ -17,9 +17,8 @@
 //
 // La page ne se compte pas elle-même : le battement part de `src/main.tsx`,
 // l'entrée du jeu, et cette page a la sienne. Consulter ses statistiques ne les
-// modifie donc pas - sauf le compteur « en ligne maintenant », qui passe par le
-// canal de présence partagé et dans lequel cet onglet-ci est bien une personne
-// de plus. C'est écrit sous le bandeau qui le porte.
+// modifie donc pas - sauf le compteur du bandeau, qui passe par le canal de
+// présence partagé et dans lequel cet onglet-ci est bien une personne de plus.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -295,28 +294,6 @@ export function StatsPage() {
             ))}
           </div>
         </section>
-
-        <footer className="notes">
-          <h2>Ce qui est mesuré</h2>
-          <p>
-            Un onglet <strong>visible</strong> dépose une ligne toutes les cinq minutes. Un onglet
-            laissé de côté ne compte plus. La ligne porte un identifiant d’onglet tiré au hasard,
-            l’appareil, la langue et la version. Ni adresse IP, ni référent, ni cookie. Le serveur
-            de développement n’écrit rien.
-          </p>
-          <p>
-            Une <em>session</em> est un onglet ouvert, <strong>pas une personne</strong>.{' '}
-            <strong>Rien n’est déposé sur l’appareil</strong> : ni cookie, ni localStorage. Qui
-            revient trois jours de suite compte donc pour trois, et ces chiffres sont un plafond
-            du nombre de gens, jamais un plancher. Reconnaître un visiteur demanderait une trace
-            persistante, donc un bandeau de consentement.
-          </p>
-          <p className="pied">
-            Le compteur « en ligne » vient du canal de présence, pas de la table, et compte cet
-            onglet. Table et droits : <code>supabase/analytics.sql</code>. Battement :{' '}
-            <code>src/systems/analytics.ts</code>.
-          </p>
-        </footer>
       </main>
     </div>
   );
