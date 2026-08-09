@@ -226,8 +226,12 @@ export function HeldItem() {
  * couvercle enfoncé, la petite boîte de café à sa taille, le gobelet à son
  * évasement. Le niveau visible descend avec les gorgées - sur une bouteille,
  * qui est la seule qu'on voie par transparence.
+ *
+ * Exporté pour /prop-probe.html seulement : une sonde qui redessinerait sa
+ * propre copie de l'objet ne comparerait plus rien - elle comparerait une
+ * maquette à une autre maquette.
  */
-function Vessel({
+export function Vessel({
   product,
   held,
 }: {

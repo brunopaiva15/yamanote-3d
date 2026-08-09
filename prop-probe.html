@@ -1,0 +1,49 @@
+<!doctype html>
+<!-- Page de probe DEV : juxtapose un objet tenu en main procédural et un
+     maillage candidat posé dans public/models/raw/ (hors dépôt, voir README),
+     à la distance RÉELLE de la main et sous l'éclairage du wagon.
+
+     /prop-probe.html?id=monaka&file=monaka.glb
+     /prop-probe.html?id=shoyu&file=ramen.glb&mode=over&style=wire
+
+     R : candidat · P : procédural · S : texture / fantôme / fil de fer
+     T : rotation lente · ESPACE : distance de la main / recul d'examen -->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>prop-probe - objet tenu procédural vs maillage candidat</title>
+    <style>
+      html,
+      body,
+      #root {
+        margin: 0;
+        height: 100%;
+        background: #10141f;
+      }
+      .probe-hud {
+        position: fixed;
+        left: 12px;
+        bottom: 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: rgba(12, 16, 24, 0.78);
+        color: #e8eef5;
+        font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+        pointer-events: none;
+      }
+      .probe-hud kbd {
+        padding: 1px 5px;
+        border: 1px solid #56606f;
+        border-radius: 4px;
+      }
+      .probe-error {
+        margin-top: 4px;
+        color: #ff9b9b;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/dev/prop-probe-main.tsx"></script>
+  </body>
+</html>

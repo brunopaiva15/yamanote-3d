@@ -2416,6 +2416,50 @@ npm run models:inspect -- public/models/raw/e235-ref-module.glb --measure --scal
 En dev, `/car-probe.html` superpose ou juxtapose le wagon procédural et la
 maquette à la même caméra, pour arbitrer élément par élément.
 
+### Un objet tenu en main, contre un maillage candidat
+
+Le car-probe arbitre un wagon : on y entre, on recule de trois mètres, on juge
+une paroi. Un objet tenu en main ne se juge pas comme ça - il est à quatre-vingts
+centimètres du nez, il occupe un sixième de l'image, et c'est le seul maillage du
+jeu qu'on regarde de si près. Une amélioration qui ne se voit pas À CETTE
+DISTANCE-LÀ n'existe pas.
+
+`/prop-probe.html` plante donc la caméra là où l'œil du joueur se trouve - même
+champ, même éclairage, la caisse autour - et pose côte à côte l'objet
+procédural du jeu et un maillage candidat déposé dans `public/models/raw/` :
+
+```
+/prop-probe.html?id=monaka&file=monaka.glb        côte à côte
+/prop-probe.html?id=shoyu&file=ramen.glb&mode=over&style=wire   superposés
+```
+
+`?id=` est un identifiant de `data/products` (`monaka`, `shoyu`, `ocha`…),
+`?file=` le fichier dans `public/models/raw/`. Le candidat est ramené à la
+hauteur du procédural et sa base posée au sol - un export génératif arrive dans
+son unité et centré sur l'origine, jamais à l'échelle du jeu -, et le HUD donne
+les cotes des deux en centimètres et leur nombre de triangles. `?scale=`,
+`?rx/ry/rz=`, `?dy=` reprennent la main ; `?fit=` vise une autre hauteur ;
+`?opened=1`, `?sips=` montrent l'objet dans ses autres états ; `?h=21` le juge
+sous les néons de nuit. <kbd>R</kbd> et <kbd>P</kbd> montrent ou cachent chacun,
+<kbd>S</kbd> passe en fantôme puis en fil de fer, <kbd>T</kbd> fait tourner le
+socle, <kbd>espace</kbd> recule d'un pas.
+
+⚠️ **Ce que la sonde ne juge pas.** Les étiquettes du jeu sont des teintes à
+plat (`tone`, `ink`), pas des impressions : un candidat qui l'emporte grâce à un
+emballage photoréaliste n'a rien prouvé, il a changé de langue. C'est la
+SILHOUETTE qu'on vient chercher - d'où les styles fantôme et fil de fer.
+
+⚠️ **Les maillages génératifs ont une licence, et le palier gratuit est le
+piège.** Chez Tripo, la documentation publique donne le palier gratuit comme
+publiant les modèles dans la galerie publique sous CC BY 4.0 - attribution
+obligatoire - et réserve l'usage commercial aux paliers payants ; à vérifier sur
+son propre compte avant d'adopter quoi que ce soit, les conditions bougent. Tout
+ce que `public/models/` contient aujourd'hui est CC0, donc sans obligation :
+importer un CC BY ajoute une obligation de crédit qu'il faut écrire dans le
+`LICENSE.md` du dossier. Tant qu'on ne fait qu'essayer, la question ne se pose
+pas - `public/models/raw/` est hors dépôt et un greffon de build le retire de
+`dist/`.
+
 ## Déploiement (GitHub Pages)
 
 Le dépôt contient un workflow GitHub Actions (`.github/workflows/deploy.yml`)
