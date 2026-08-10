@@ -7,6 +7,8 @@ on écoute les annonces et les mélodies - et, si on s'arrête devant quelqu'un,
 l'écoute parler. La boucle tourne indéfiniment, en temps
 quasi réel (environ 1 à 3 minutes par tronçon selon la gare, ~67 minutes la boucle).
 
+Ce projet a nécessité plus de 50 heures de recherche et plus de 100 heures de travail.
+
 ## Lancer
 
 ```bash
