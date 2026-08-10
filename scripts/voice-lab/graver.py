@@ -113,7 +113,35 @@ SETTINGS = {
 # La clé est le TEXTE SOURCE, pas la lecture : elle reste lisible et survit à
 # un changement de graphie. Ces réglages entrent dans l'identité du fragment,
 # donc en changer un ne regrave que celui-là.
-REGLAGES = {}
+REGLAGES = {
+    # Signalé à l'oreille comme « trop enjoué », et la mesure le retrouve :
+    # sinuosite.py donne 36,9 demi-tons de trajet mélodique à ce fragment,
+    # 18e sur 171 et pile au neuvième décile du corpus, avec TROIS
+    # renversements de sens quand la médiane en fait un. Son contour, par
+    # dixièmes : +0,7 +4,5 -7,7 -2,3 +3,4 +3,2 +3,7 -0,0 -2,6 -5,7. Il monte,
+    # plonge, remonte tenir un palier haut sur toute la seconde moitié, puis
+    # retombe - une mélodie qui raconte quelque chose, là où une annonce
+    # automatique monte une fois et redescend.
+    #
+    # CE N'EST NI LE TEXTE NI LA PONCTUATION. Ses cinq sœurs de même
+    # construction - 東京メトロ〜線は, même voix, mêmes réglages, même virgule
+    # de position - tiennent entre 13,9 et 26,9 st de trajet et un ou deux
+    # renversements. Surtout, 「東京メトロ南北線」 sans la particule, donc les
+    # mêmes mots, sort à 9,0 st et zéro renversement : 160e sur 171, l'un des
+    # fragments les plus sages du corpus. C'est donc la PRISE qui a chanté,
+    # pas ce qu'on lui a demandé de dire - et une prise se retire.
+    #
+    # `stability` à 0,95 plutôt que les 0,85 du rôle : c'est le seul levier de
+    # tenue qu'expose ElevenLabs une fois `style` à zéro, et changer sa valeur
+    # change l'identité du fragment, donc tire une nouvelle prise - celle-là
+    # seule. On ne va pas à 1,00 : la tenue se paie en étendue d'intonation, et
+    # la voix réelle en garde 10,1 demi-tons. Après gravure, `verdict.py` dira
+    # si l'étendue a trop chuté, `sinuosite.py` si le trajet est revenu vers
+    # les 19 st de la médiane. Son voisin d'annonce, 「お乗換です」, reste à 0,85 :
+    # si la couture des deux tenues s'entend, redescendre à 0,90 plutôt que de
+    # monter le rôle entier, qui va bien partout ailleurs.
+    "東京メトロ南北線は": {"stability": 0.95},
+}
 
 # Silences relevés sur la prise étiquetée 「次は。渋谷。渋谷。お出口は右側です。」
 GAP_SENTENCE = 0.35
