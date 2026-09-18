@@ -412,26 +412,10 @@ body,
   height: auto;
 }
 
-.mode-card-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-line);
-  background: var(--sticker);
-  border: 2px solid var(--ink-line);
-  border-radius: 999px;
-  padding: 2px 8px;
-  box-shadow: 0 2px 0 var(--ink-line);
-}
-
 .mode-card-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   padding: 12px 14px 14px;
 }
 
@@ -442,14 +426,8 @@ body,
 
 .mode-card-example {
   font-size: 13px;
-  line-height: 1.5;
-  color: #3a4148;
-}
-
-.mode-card-note {
-  font-size: 12px;
   line-height: 1.45;
-  color: var(--sticker-dim);
+  color: #5c666d;
 }
 
 .mode-card-loading {

@@ -61,8 +61,6 @@ export function ModePick({
           mode="full"
           title={t.start.modeFull}
           example={t.start.modeFullExample}
-          note={t.start.modeFullNote}
-          exampleLabel={t.start.modePickExample}
           busy={pending === 'full'}
           locked={loading}
           onPick={onPick}
@@ -71,8 +69,6 @@ export function ModePick({
           mode="audio"
           title={t.start.modeAudio}
           example={t.start.modeAudioExample}
-          note={t.start.modeAudioNote}
-          exampleLabel={t.start.modePickExample}
           busy={pending === 'audio'}
           locked={loading}
           onPick={onPick}
@@ -86,8 +82,6 @@ function ModeCard({
   mode,
   title,
   example,
-  note,
-  exampleLabel,
   busy,
   locked,
   onPick,
@@ -95,8 +89,6 @@ function ModeCard({
   mode: GameMode;
   title: string;
   example: string;
-  note: string;
-  exampleLabel: string;
   busy: boolean;
   locked: boolean;
   onPick: (mode: GameMode) => void;
@@ -112,12 +104,10 @@ function ModeCard({
     >
       <span className="mode-card-preview" aria-hidden="true">
         {mode === 'full' ? <FullPreview /> : <AudioPreview />}
-        <span className="mode-card-badge">{exampleLabel}</span>
       </span>
       <span className="mode-card-body">
         <strong className="mode-card-title">{title}</strong>
         <span className="mode-card-example">{example}</span>
-        <span className="mode-card-note">{note}</span>
         {busy ? <span className="mode-card-loading">{t.start.loading}</span> : null}
       </span>
     </button>

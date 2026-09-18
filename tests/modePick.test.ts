@@ -32,13 +32,14 @@ test('le menu n’oblige plus à choisir la version avant d’embarquer', () => 
   assert.match(start, /loadGameFor\(chosen\)/, 'le morceau du jeu n’attend plus le choix de carte');
 });
 
-test('les deux versions ont un exemple, pas seulement un libellé', () => {
+test('les deux versions ont une illustration, pas seulement un libellé', () => {
   const pick = read('src/ui/ModePick.tsx');
-  assert.ok(pick.includes('modeFullExample'), 'la carte 3D n’a pas d’exemple écrit');
-  assert.ok(pick.includes('modeAudioExample'), 'la carte sonore n’a pas d’exemple écrit');
+  assert.ok(pick.includes('modeFullExample'), 'la carte 3D n’a pas de description');
+  assert.ok(pick.includes('modeAudioExample'), 'la carte sonore n’a pas de description');
   assert.ok(pick.includes('<FullPreview'), 'la carte 3D n’a pas d’illustration');
   assert.ok(pick.includes('<AudioPreview'), 'la carte sonore n’a pas d’illustration');
-  assert.ok(pick.includes('modePickExample'), 'l’étiquette « Exemple » a disparu');
+  assert.ok(!pick.includes('modePickExample'), 'l’étiquette « Exemple » est encore là');
+  assert.ok(!pick.includes('mode-card-badge'), 'le badge d’exemple est encore là');
 });
 
 test('la carte sonore n’importe pas three.js', () => {
