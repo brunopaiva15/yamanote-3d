@@ -131,6 +131,17 @@ export function remountRenderer(): void {
   }));
 }
 
+/** Retour au menu : la prochaine toile repart de zéro. */
+export function resetRenderHealth(): void {
+  useRenderHealth.setState({
+    status: 'ok',
+    alive: false,
+    generation: 0,
+    attempts: 1,
+    reason: null,
+  });
+}
+
 /** Le joueur redemande explicitement : le compteur de tentatives repart. */
 export function retryRenderer(): void {
   useRenderHealth.setState((s) => ({
