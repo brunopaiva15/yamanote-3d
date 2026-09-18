@@ -1388,6 +1388,37 @@ export async function startAudio(): Promise<void> {
   watchContextState();
 }
 
+/**
+ * Coupe le graphe. Sans ça, le roulement continuerait sur le menu : les
+ * oscillateurs tournent hors de la boucle d'images, et `startAudio` refuse de
+ * se relancer tant que `nodes` est encore là.
+ *
+ * Le contexte est jeté plutôt que mis en sourdine : un contexte qui tourne
+ * pour ne rien jouer coûte encore du fil audio, et le prochain embarquement
+ * en ouvre un neuf (c'est un geste utilisateur, Tone.start y a droit).
+ */
+export function stopAudio(): void {
+  if (!nodes) return;
+  nodes = null;
+  gates = null;
+  publishedTrainKey = '';
+  published.doors = Number.NaN;
+  published.slideTrain = Number.NaN;
+  published.slidePsd = Number.NaN;
+  published.ambience = '';
+  published.weather = '';
+  try {
+    Tone.getDestination().mute = true;
+  } catch {
+    /* déjà fermé */
+  }
+  try {
+    Tone.getContext().dispose();
+  } catch {
+    /* déjà fermé, ou refusé */
+  }
+}
+
 /** Le contexte natif, celui qui porte `renderCapacity`. */
 function rawAudioContext(): BaseAudioContext | null {
   try {
@@ -1637,6 +1668,7 @@ function watchContextState(): void {
   if (contextWatched || typeof window === 'undefined') return;
   contextWatched = true;
   const resume = (): void => {
+    if (!nodes) return;
     if (Tone.getContext().state === 'running') return;
     void Tone.getContext().resume().catch(() => {
       /* le prochain geste retentera */

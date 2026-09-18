@@ -155,6 +155,9 @@ export interface Strings {
     talkShort: string;
     fullscreen: string;
     fullscreenTitle: string;
+    /** Retour au menu, depuis le trajet. */
+    menu: string;
+    menuTitle: string;
     /** Avertissement affiché dans les espaces souterrains encore inachevés. */
     stationDevelopment: {
       title: string;
@@ -529,6 +532,8 @@ const FR: Strings = {
     talkShort: 'Parler',
     fullscreen: 'Plein écran',
     fullscreenTitle: 'Plein écran (F)',
+    menu: 'Menu',
+    menuTitle: 'Retour au menu',
     stationDevelopment: {
       title: 'Gare en cours de développement',
       detail: 'Cet espace de la gare est encore en construction.',
@@ -797,6 +802,8 @@ const EN: Strings = {
     talkShort: 'Talk',
     fullscreen: 'Fullscreen',
     fullscreenTitle: 'Fullscreen (F)',
+    menu: 'Menu',
+    menuTitle: 'Back to menu',
     stationDevelopment: {
       title: 'Station under development',
       detail: 'This part of the station is still being built.',
@@ -1061,6 +1068,8 @@ const JA: Strings = {
     talkShort: '話しかける',
     fullscreen: '全画面',
     fullscreenTitle: '全画面表示（F）',
+    menu: 'メニュー',
+    menuTitle: 'メニューに戻る',
     stationDevelopment: {
       title: '駅構内は開発中です',
       detail: 'この駅構内エリアは現在制作中です。',

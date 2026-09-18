@@ -115,6 +115,8 @@ interface AppState {
   held: HeldItem | null;
 
   start: () => void;
+  /** Revenir au menu : le trajet s'arrête, App remonte StartScreen. */
+  stop: () => void;
   setLang: (l: Lang) => void;
   setMode: (m: GameMode) => void;
   setSubtitles: (b: boolean) => void;
@@ -189,6 +191,16 @@ export const useStore = create<AppState>((set) => ({
     // première sortie du jeu se serait payée au tarif minimum quel que soit le
     // chemin parcouru.
     set((s) => ({ started: true, pocket: { ...s.pocket, entry: s.index } }));
+  },
+  stop: () => {
+    set({
+      started: false,
+      seated: false,
+      onPlatform: false,
+      held: null,
+      cash: START_CASH,
+      pocket: { ic: true, icBalance: START_IC, ticket: null, insideGate: true, entry: null },
+    });
   },
   setLang: (lang) => {
     storeLang(lang);

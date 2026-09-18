@@ -21,6 +21,7 @@ import { QualitySelect } from './QualitySelect';
 import { IncidentMenu } from './IncidentMenu';
 import { RoomMenu } from './RoomMenu';
 import { RoomNotice } from './RoomNotice';
+import { returnToMenu } from '../systems/stopGame';
 
 function useClock(): string {
   const [clock, setClock] = useState('');
@@ -232,6 +233,9 @@ export function Hud() {
       {!audioMode && <div className="hud-reticle" aria-hidden="true" />}
 
       <div className="hud-bottom" ref={barRef}>
+        <button className="hud-button" onClick={returnToMenu} title={t.hud.menuTitle}>
+          {t.hud.menu}
+        </button>
         <LanguageSwitcher className="lang-switch-hud" />
         {!audioMode && <QualitySelect className="quality-select-hud" />}
         {/* Le son et son curseur voyagent ensemble quand la barre passe à la
