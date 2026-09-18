@@ -83,16 +83,27 @@ export interface Strings {
     directionLabel: string;
     /** Option « laisser le hasard choisir le sens ». */
     directionRandom: string;
-    /** Libellé du sélecteur de version (expérience complète / version sonore). */
-    modeLabel: string;
     /** Les deux versions, telles qu'on les choisit. */
     modeFull: string;
     modeAudio: string;
     /**
-     * Ce que la version sonore change, en une phrase. Affiché sous le
-     * sélecteur, et seulement quand elle est choisie : personne n'a besoin
-     * qu'on lui explique le mode par défaut.
+     * Question posée après « Monter à bord », pas avant : on n'oblige pas à
+     * choisir 3D ou sonore pour cliquer.
      */
+    modePickTitle: string;
+    /** Une ligne sous le titre, pour dire que la ligne est la même. */
+    modePickLead: string;
+    /** Étiquette sur l'illustration : c'est un exemple, pas une capture. */
+    modePickExample: string;
+    /** Retour au menu, avant d'avoir tranché. */
+    modePickBack: string;
+    /** Phrase d'exemple : ce qu'on FAIT dans chaque version. */
+    modeFullExample: string;
+    modeAudioExample: string;
+    /**
+     * Ce que chaque version change, en une phrase, sous l'exemple.
+     */
+    modeFullNote: string;
     modeAudioNote: string;
   };
 
@@ -475,11 +486,19 @@ const FR: Strings = {
     stationRandom: 'Aléatoire',
     directionLabel: 'Sens',
     directionRandom: 'Aléatoire',
-    modeLabel: 'Version',
     modeFull: 'Complète (3D)',
     modeAudio: 'Sonore (sans 3D)',
+    modePickTitle: 'Comment voulez-vous voyager ?',
+    modePickLead: 'Même ligne, même horaire. Deux façons de monter à bord.',
+    modePickExample: 'Exemple',
+    modePickBack: 'Retour',
+    modeFullExample:
+      'On marche dans le wagon, on regarde Tokyo défiler par la vitre, on descend à quai.',
+    modeAudioExample:
+      'On s’assoit et on écoute : annonces, mélodie de départ, roulement des rails.',
+    modeFullNote: 'L’expérience complète. Une carte graphique est utile, pas obligatoire.',
     modeAudioNote:
-      "Le même trajet, les mêmes annonces, la même sonorisation - mais rien à l'écran qu'un tableau de bord et les sous-titres. Aucune carte graphique requise.",
+      'Le même trajet, les mêmes annonces - rien à l’écran qu’un afficheur et les sous-titres. Aucune carte graphique requise.',
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arrivée', dwell: 'À quai', depart: 'Départ' },
@@ -741,11 +760,19 @@ const EN: Strings = {
     stationRandom: 'Random',
     directionLabel: 'Direction',
     directionRandom: 'Random',
-    modeLabel: 'Version',
     modeFull: 'Full (3D)',
     modeAudio: 'Audio only (no 3D)',
+    modePickTitle: 'How would you like to ride?',
+    modePickLead: 'Same line, same timetable. Two ways to board.',
+    modePickExample: 'Example',
+    modePickBack: 'Back',
+    modeFullExample:
+      'Walk the carriage, watch Tokyo drift past the window, step onto the platform.',
+    modeAudioExample:
+      'Sit back and listen: announcements, departure melodies, the rumble of the rails.',
+    modeFullNote: 'The full experience. A graphics card helps, but is not required.',
     modeAudioNote:
-      'The same ride, the same announcements, the same public address - but nothing on screen except a dashboard and the subtitles. No graphics card needed.',
+      'The same ride, the same announcements — nothing on screen except a display and the subtitles. No graphics card needed.',
   },
   hud: {
     phase: { cruise: 'En route', brake: 'Arriving', dwell: 'At the platform', depart: 'Departing' },
@@ -1003,11 +1030,17 @@ const JA: Strings = {
     stationRandom: 'ランダム',
     directionLabel: '方向',
     directionRandom: 'ランダム',
-    modeLabel: 'バージョン',
     modeFull: '通常版（3D）',
     modeAudio: '音声版（3Dなし）',
+    modePickTitle: 'どの乗り方にしますか？',
+    modePickLead: '同じ路線、同じ時刻。乗り方だけが違います。',
+    modePickExample: '例',
+    modePickBack: '戻る',
+    modeFullExample: '車内を歩き、窓の外の東京を眺め、ホームに降りる。',
+    modeAudioExample: '座って耳をすませる。車内放送、発車メロディ、走行音。',
+    modeFullNote: '通常の体験です。グラフィックス性能があると快適ですが、必須ではありません。',
     modeAudioNote:
-      '同じ走行、同じ放送、同じ車内・駅の音響。画面にあるのは走行情報と字幕だけです。グラフィックス性能は不要です。',
+      '同じ走行、同じ放送。画面にあるのは車内案内と字幕だけです。グラフィックス性能は不要です。',
   },
   hud: {
     phase: { cruise: '走行中', brake: 'まもなく到着', dwell: '停車中', depart: '発車' },

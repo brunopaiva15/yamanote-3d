@@ -9,9 +9,11 @@
 // l'arrêt : par défaut, instant réel à Tokyo et gare tirée au hasard, comme
 // avant. La date n'est pas un détail d'état civil - c'est elle qui donne la
 // SAISON (systems/season) : la couleur des frondaisons, la hauteur du soleil,
-// l'heure à laquelle la nuit tombe, et le temps qu'il fait dehors.
+// l'heure à laquelle la nuit tombe, et le temps qu'il fait dehors. La version
+// (3D ou sonore) n'est pas un réglage de plus : elle se demande après le clic
+// sur « Monter à bord », avec un exemple de chaque voyage.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { LoopDirection } from '../data/platforms';
 import { STATIONS } from '../data/stations';
 import type { TokyoDate } from '../data/occupancy';
@@ -27,6 +29,7 @@ import { QualitySelect } from './QualitySelect';
 import { QualityNotice } from './QualityNotice';
 import { Logo } from './Logo';
 import { Footer } from './Footer';
+import { ModePick } from './ModePick';
 
 /** Minutes depuis minuit → chaîne HH:MM pour un <input type="time">. */
 function minutesToTimeValue(minutes: number): string {
@@ -100,14 +103,17 @@ function useOnlineCount(): number | null {
 
 export function StartScreen() {
   const start = useStore((s) => s.start);
-  // La version est choisie ICI et nulle part ailleurs : c'est elle qui décide
-  // quel morceau de code part au téléchargement au clic sur « Monter à bord ».
-  const mode = useStore((s) => s.mode);
+  // La version n'est plus choisie dans le menu : « Monter à bord » ouvre
+  // d'abord la question (ui/ModePick), et C'EST ce clic-là qui décide quel
+  // morceau part au téléchargement. On ne charge donc three.js que si on
+  // l'a demandé.
   const setMode = useStore((s) => s.setMode);
   const t = useT();
   const coarsePointer = useCoarsePointer();
   const online = useOnlineCount();
-  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'menu' | 'pick'>('menu');
+  const [pending, setPending] = useState<GameMode | null>(null);
+  const boarding = useRef(false);
   // Heure de départ : figée à l'ouverture du menu (Tokyo), modifiable ensuite.
   const [timeValue, setTimeValue] = useState(() => minutesToTimeValue(tokyoNow().minutes));
   // true tant que le joueur n'a pas touché le champ : on suit l'heure réelle.
@@ -130,6 +136,14 @@ export function StartScreen() {
     return () => window.clearInterval(id);
   }, [timePinned]);
 
+  // Le menu a souvent été déroulé : en ouvrant le choix, on revient en haut
+  // pour que les deux exemples soient visibles sans chercher.
+  useEffect(() => {
+    if (step !== 'pick') return;
+    const root = document.querySelector('.start-screen');
+    if (root) root.scrollTop = 0;
+  }, [step]);
+
   const syncTimeToNow = () => {
     const now = tokyoNow();
     setTimeValue(minutesToTimeValue(now.minutes));
@@ -137,15 +151,18 @@ export function StartScreen() {
     setTimePinned(false);
   };
 
-  const board = async () => {
-    setLoading(true);
+  const board = async (chosen: GameMode) => {
+    if (boarding.current) return;
+    boarding.current = true;
+    setMode(chosen);
+    setPending(chosen);
     // Laisser React peindre l'état de chargement avant d'entamer les imports et
     // la préparation synchrones, qui peuvent sinon monopoliser le thread
     // principal jusqu'au premier écran (gris) de la scène 3D.
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    // C'est seulement cette action utilisateur qui ouvre le chunk du jeu.
-    // Le téléchargement se fait en parallèle de la préparation de la partie.
-    const gamePromise = loadGameFor(mode);
+    // C'est seulement le choix de version, après « Monter à bord », qui ouvre
+    // le chunk du jeu. Le téléchargement se fait en parallèle de la préparation.
+    const gamePromise = loadGameFor(chosen);
     const {
       prepareGame,
     } = await import('../systems/startGame');
@@ -176,6 +193,25 @@ export function StartScreen() {
     start();
   };
 
+  if (step === 'pick') {
+    return (
+      <div className="start-screen">
+        <div className="start-board start-board--pick">
+          <LanguageSwitcher className="lang-switch-board" />
+          <h1 className="visually-hidden">Yamanote 3D - 山手線</h1>
+          <ModePick
+            pending={pending}
+            onPick={(mode) => void board(mode)}
+            onBack={() => {
+              if (pending) return;
+              setStep('menu');
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="start-screen">
       <div className="start-board">
@@ -193,8 +229,8 @@ export function StartScreen() {
           <span>外回り ▶</span>
         </div>
         <p className="start-text">{t.start.intro}</p>
-        <button className="start-button" onClick={() => void board()} disabled={loading}>
-          {loading ? t.start.loading : t.start.board}
+        <button className="start-button" onClick={() => setStep('pick')}>
+          {t.start.board}
         </button>
         <ul className="start-controls">
           {coarsePointer
@@ -301,34 +337,14 @@ export function StartScreen() {
               <option value="outer">外回り - Soto-mawari</option>
             </select>
           </div>
+          {/* La qualité vidéo se règle encore ici : on ne sait pas encore
+              quelle version sera choisie, et le réglage ne coûte rien à
+              laisser si l'on part ensuite sans image. */}
           <div className="start-option">
-            <label className="start-option-label" htmlFor="start-mode">
-              {t.start.modeLabel}
-            </label>
-            <select
-              id="start-mode"
-              className="quality-select start-station-select"
-              value={mode}
-              onChange={(e) => setMode(e.target.value as GameMode)}
-              aria-label={t.start.modeLabel}
-            >
-              <option value="full">{t.start.modeFull}</option>
-              <option value="audio">{t.start.modeAudio}</option>
-            </select>
+            <span className="start-option-label">{t.quality.label}</span>
+            <QualitySelect />
           </div>
-          {/* La qualité vidéo n'a rien à régler quand il n'y a pas d'image :
-              elle laisse la place à ce que la version sonore change vraiment. */}
-          {mode === 'audio' ? (
-            <p className="start-mode-note">{t.start.modeAudioNote}</p>
-          ) : (
-            <>
-              <div className="start-option">
-                <span className="start-option-label">{t.quality.label}</span>
-                <QualitySelect />
-              </div>
-              <QualityNotice />
-            </>
-          )}
+          <QualityNotice />
           {/* La qualité SONORE, elle, vaut pour les deux versions - et pour la
               version sonore plus encore que pour l'autre, puisqu'il n'y a que
               cela à entendre. Ici et pas dans le HUD : ce réglage ouvre le
