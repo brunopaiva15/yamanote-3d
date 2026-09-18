@@ -285,6 +285,177 @@ body,
   flex: none;
 }
 
+/* --- Choix de version, après « Monter à bord » ---
+   Deux cartes d'exemple, même langage sticker que le menu : on lit la
+   différence (vitre de rame / afficheur et sous-titres) avant de cliquer. */
+
+.start-board--pick {
+  max-width: 720px;
+  overflow: visible;
+  padding-top: 52px;
+}
+
+.mode-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.mode-pick-back {
+  align-self: flex-start;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #5c666d;
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  cursor: pointer;
+}
+
+.mode-pick-back:hover:not(:disabled) {
+  color: var(--sticker-ink);
+}
+
+.mode-pick-back:focus-visible {
+  outline: 3px solid #2f5d0f;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.mode-pick-back:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+
+.mode-pick-title {
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  outline: none;
+}
+
+.mode-pick-lead {
+  margin: 8px auto 0;
+  max-width: 440px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #4a5158;
+}
+
+.mode-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--sticker);
+  border: 3px solid var(--ink-line);
+  border-radius: 16px;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--ink-line);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.12s ease;
+}
+
+.mode-card:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 7px 0 var(--ink-line);
+  background: #f7faf4;
+}
+
+.mode-card:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink-line);
+}
+
+.mode-card:focus-visible {
+  outline: 3px solid #2f5d0f;
+  outline-offset: 3px;
+}
+
+.mode-card:disabled {
+  cursor: wait;
+}
+
+.mode-card.is-busy {
+  background: #f3f8ea;
+}
+
+.mode-card-preview {
+  position: relative;
+  display: block;
+  background: #2a3138;
+}
+
+.mode-card--audio .mode-card-preview {
+  background: #e8e7e0;
+}
+
+.mode-card-art {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mode-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px 14px;
+}
+
+.mode-card-title {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.mode-card-example {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #5c666d;
+}
+
+.mode-card-loading {
+  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2f5d0f;
+}
+
+@media (max-width: 640px) {
+  .mode-pick-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mode-pick-title {
+    font-size: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-card,
+  .mode-card:hover:not(:disabled),
+  .mode-card:active:not(:disabled) {
+    transition: none;
+    transform: none;
+  }
+}
+
 /* --- Voile d'attente, entre le clic et la première image ---
    Même vert de ligne et même carton blanc cerné d'encre que l'écran d'accueil :
    la bascule doit se lire comme une suite, pas comme un trou. */
@@ -1720,6 +1891,10 @@ body,
 }
 
 @media (max-width: 460px) {
+  .start-board--pick {
+    padding-top: 24px;
+  }
+
   /* Les quatre pastilles de contexte - heure, temps qu'il fait, remplissage,
      phase - tiennent sur une seule rangée jusqu'aux plus petits écrans : on
      resserre leur cadre plutôt que de les laisser retomber une par une. */
@@ -1796,6 +1971,29 @@ body,
   .start-board {
     max-width: 640px;
     padding: 16px 24px 18px;
+  }
+
+  .start-board--pick {
+    max-width: 720px;
+    padding-top: 40px;
+  }
+
+  .mode-pick-title {
+    font-size: 18px;
+  }
+
+  .mode-pick-lead {
+    margin-top: 4px;
+  }
+
+  .mode-pick-grid {
+    margin-top: 12px;
+    gap: 10px;
+  }
+
+  .mode-card-body {
+    padding: 8px 12px 10px;
+    gap: 4px;
   }
 
   .board-band {
@@ -2528,8 +2726,9 @@ body,
   }
 }
 
-/* Ce que la version sonore change, sous le sélecteur du menu. Le menu est un
-   panneau clair : ce texte-là ne suit pas la palette sombre du jeu. */
+/* Ce que la version sonore change, sous le sélecteur du menu, et les notes
+   de qualité audio. Le menu est un panneau clair : ce texte-là ne suit pas
+   la palette sombre du jeu. */
 .start-mode-note {
   font-size: 12px;
   line-height: 1.5;

@@ -86,7 +86,8 @@ interface AppState {
   /**
    * Version du jeu : l'expérience complète, ou la version sonore sans 3D.
    *
-   * Posé AVANT d'embarquer et constant ensuite : ce n'est pas un réglage
+   * Posé au moment de choisir, après « Monter à bord » et avant que le
+   * morceau du jeu parte au téléchargement. Ce n'est pas un réglage
    * d'affichage qu'on pousse en cours de trajet comme la qualité vidéo, c'est
    * le choix de ce qu'on lance - deux racines de rendu différentes, deux
    * boucles d'images différentes. Changer d'avis se fait en revenant au menu.
@@ -146,9 +147,9 @@ const START_IC = 1480;
 const START_LANG = initialLang();
 applyDocumentLang(START_LANG);
 
-// La version demandée est connue avant tout montage : c'est elle qui décide
-// quel morceau de code sera téléchargé au clic sur « Monter à bord », et le
-// menu doit donc pouvoir l'afficher dès la première image.
+// La version demandée n'est confirmée qu'au choix des cartes, après le clic
+// sur « Monter à bord ». La valeur initiale (URL, puis préférence, puis
+// complet) sert seulement de défaut si quelque chose lit `mode` trop tôt.
 const START_MODE = initialMode();
 
 export const useStore = create<AppState>((set) => ({

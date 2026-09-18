@@ -1,6 +1,7 @@
 // Le menu reste volontairement dans le bundle initial. Toute l'expérience 3D
 // vit derrière l'import dynamique et ne commence à charger qu'au clic sur
-// « Jouer » (StartScreen appelle loadGameFor avant de basculer `started`).
+// « Monter à bord » (StartScreen ouvre d'abord le choix de version, puis
+// appelle loadGameFor avant de basculer `started`).
 //
 // Deux versions, deux racines, un seul menu. La version sonore
 // (systems/gameMode) n'a ni toile, ni voile d'attente : il n'y a pas d'image à

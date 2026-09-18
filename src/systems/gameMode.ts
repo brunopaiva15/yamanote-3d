@@ -15,11 +15,13 @@
 // qui se dit, et c'est ce que fait systems/subtitles.
 //
 // Le choix se mémorise et s'écrit dans l'URL, exactement comme la langue
-// (i18n/strings) : `?mode=audio` est partageable tel quel.
+// (i18n/strings) : `?mode=audio` est partageable tel quel. Il n'ouvre plus
+// un sélecteur du menu : la question se pose après « Monter à bord », sur
+// deux cartes d'exemple (ui/ModePick).
 
 export type GameMode = 'full' | 'audio';
 
-/** Ordre d'affichage dans le sélecteur du menu. */
+/** Ordre d'affichage des cartes après « Monter à bord ». */
 export const GAME_MODES: readonly GameMode[] = ['full', 'audio'];
 
 const STORAGE_KEY = 'yamanote.mode';
