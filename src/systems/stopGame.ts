@@ -24,24 +24,24 @@ import { resetSubtitles } from './subtitles';
 
 export function returnToMenu(): void {
   if (!useStore.getState().started) return;
+  input.keys.clear();
+  input.joy.x = 0;
+  input.joy.y = 0;
+  if (typeof document !== 'undefined' && document.pointerLockElement) {
+    document.exitPointerLock();
+  }
+  leaveRoom();
+  // D'abord démonter le trajet : sinon réinitialiser le rendu (génération,
+  // voile d'attente) ferait disparaître la toile sous un HUD encore monté,
+  // un écran noir d'une frame, ou le carton de chargement par-dessus le menu.
+  useStore.getState().stop();
   stopAudioLoop();
   stopAudio();
   cancelSpeech();
   resetSubtitles();
   resetChat();
-  leaveRoom();
-  input.keys.clear();
-  input.joy.x = 0;
-  input.joy.y = 0;
-  if (typeof document !== 'undefined') {
-    if (document.pointerLockElement) document.exitPointerLock();
-  }
   applyThemeColor(null);
   resetRuntime();
-  // Le prochain embarquement 3D doit revoir le voile : sans ça, `ready`
-  // resterait vrai de la session précédente et RenderLoading ne s'afficherait
-  // pas pendant la reconstruction de la scène.
   beginRenderBoot();
   resetRenderHealth();
-  useStore.getState().stop();
 }

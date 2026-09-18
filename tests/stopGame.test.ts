@@ -34,4 +34,16 @@ test('revenir au menu coupe le son et démonte le trajet', () => {
   assert.ok(stop.includes('leaveRoom('), 'on reste dans le salon');
   assert.ok(!/\bfrom ['"]three/.test(stop), 'stopGame tire three');
   assert.ok(!stop.includes('@react-three'), 'stopGame tire le rendu React Three');
+  // Le store d’abord : sinon le voile d’attente et un remount de toile
+  // s’affichent sous le HUD encore monté (écran noir d’une frame).
+  const stopAt = stop.indexOf('useStore.getState().stop()');
+  const bootAt = stop.indexOf('beginRenderBoot()');
+  assert.ok(stopAt >= 0 && bootAt > stopAt, 'le trajet n’est pas démonté avant le voile');
+});
+
+test('le retour au menu ne jette pas la toile encore à l’écran', () => {
+  const health = read('src/systems/renderHealth.ts');
+  const fn = health.slice(health.indexOf('export function resetRenderHealth'));
+  assert.ok(fn.includes('generation: s.generation'), 'resetRenderHealth remet generation à zéro');
+  assert.ok(!fn.includes('generation: 0'), 'resetRenderHealth force generation à 0');
 });
