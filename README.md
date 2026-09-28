@@ -2418,6 +2418,40 @@ npm run models:inspect -- public/models/raw/e235-ref-module.glb --measure --scal
 En dev, `/car-probe.html` superpose ou juxtapose le wagon procédural et la
 maquette à la même caméra, pour arbitrer élément par élément.
 
+## Le film vertical (TikTok, Reels, Shorts)
+
+Une vidéo 1080×1920 de vingt-quatre secondes, « un matin sur la Yamanote »,
+**jouée par le jeu lui-même** : on ne pose pas une caméra à côté, on conduit le
+joueur. Il attend sur le quai de Shibuya pendant que la rame entre, touche le
+lecteur IC d'un distributeur et ramasse un café chaud, franchit la porte ouverte
+à pied, s'assoit, boit, lit 次は 恵比寿 sur l'écran de porte, regarde le soir
+tomber par la vitre. Rien n'est truqué : la foule, les portes, le freinage, la
+lumière sont ceux du jeu.
+
+- `src/dev/film/director.ts` : les sept plans, chacun une petite partition
+  (mise en place, condition « prêt », consignes image par image). Il pilote le
+  joueur par `dev/film/pilot` (regard, pas, place, geste) et la caméra libre.
+- `src/dev/film/timeline.ts` : ordre et durée des plans, partagés avec
+  l'habillage.
+- `film-overlay.html` : légendes, heure, carton de fin avec le vrai logo, rendus
+  sur fond transparent. `?t=4.2&bg=1` fige un instant pour le régler à l'œil.
+- `scripts/film/` : le tournage à **horloge virtuelle** (`performance.now`,
+  `requestAnimationFrame`, les minuteries et `Math.random` sont remplacés : sous
+  SwiftShader une image coûte des secondes, chacune dure pourtant exactement
+  1/30 s de jeu), l'habillage, puis le montage ffmpeg.
+
+```bash
+node scripts/film/shoot.mjs /tmp/film --stills 4          # planches : 4 images par plan
+node scripts/film/shoot.mjs /tmp/film --scale 2           # tournage 1080×1920 (~2 h en CPU)
+node scripts/film/overlay.mjs /tmp/habillage              # télécharge ses polices la 1re fois
+node --experimental-strip-types scripts/film/compose.mjs /tmp/film /tmp/habillage film.mp4
+node --experimental-strip-types scripts/film/compose.mjs /tmp/film - film-sans-texte.mp4
+```
+
+Avec un vrai GPU, on peut aussi le filmer en direct : `npm run dev`, monter à
+bord, puis `__film.play()` dans la console et enregistrer l'écran, fenêtre en
+9:16. Tout ce qui précède n'existe qu'en développement (`import.meta.env.DEV`).
+
 ## Déploiement (GitHub Pages)
 
 Le dépôt contient un workflow GitHub Actions (`.github/workflows/deploy.yml`)

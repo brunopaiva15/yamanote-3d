@@ -7,14 +7,38 @@
 
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
 const out = args[0];
 const atArg = args.includes('--at') ? args[args.indexOf('--at') + 1] : null;
 const fps = 30;
 mkdirSync(out, { recursive: true });
+
+// Polices (Inter, Noto Sans JP), téléchargées une fois dans scripts/film/.cache
+// et servies en local : le Chromium de tournage ne passe pas forcément par le
+// même proxy que le reste de la machine.
+const FONTS = 'scripts/film/.cache/fonts';
+if (!existsSync(join(FONTS, 'local.css'))) {
+  mkdirSync(FONTS, { recursive: true });
+  const ua = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36';
+  const url = 'https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&family=Noto+Sans+JP:wght@500;700;900&display=swap';
+  const get = (u, file) => {
+    const r = spawnSync('curl', ['-sSfL', '-A', ua, '-o', file, u], { stdio: 'inherit' });
+    if (r.status !== 0) throw new Error(`téléchargement impossible : ${u}`);
+  };
+  get(url, join(FONTS, 'fonts.css'));
+  let css = readFileSync(join(FONTS, 'fonts.css'), 'utf8');
+  const urls = [...new Set(css.match(/https:\/\/[^)]+/g) ?? [])];
+  urls.forEach((u, i) => {
+    const name = `f${String(i).padStart(3, '0')}.woff2`;
+    if (!existsSync(join(FONTS, name))) get(u, join(FONTS, name));
+    css = css.split(u).join(name);
+  });
+  writeFileSync(join(FONTS, 'local.css'), css);
+}
 
 const server = await createServer({
   root: process.cwd(),
