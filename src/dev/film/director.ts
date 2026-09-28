@@ -26,7 +26,6 @@ import { input } from '../../systems/input';
 import { SEAT_SLOTS, seatOccupant } from '../../systems/seats';
 import { machineState } from '../../systems/machines';
 import { freezeWeather, weather } from '../../systems/weather';
-import { crowdTarget, seedPlatformCrowd } from '../../systems/platformCrowd';
 import { productById } from '../../data/products';
 import { dwellDuration } from '../../systems/stationCycle';
 import { DUSK, durOf } from './timeline';
@@ -144,6 +143,29 @@ function backInCar() {
   platformWait.rate = 1;
 }
 
+interface CrowdPax {
+  state: string;
+  pos: { x: number; z: number };
+  home: { x: number; z: number };
+}
+
+/** Rapproche des voyageurs qui attendent dans la tranche [z0, z1] du quai. */
+function gatherCrowd(z0: number, z1: number, n: number) {
+  const crowd = (window as unknown as { __crowd?: CrowdPax[] }).__crowd ?? [];
+  const waiting = crowd.filter((p) => p.state === 'waiting' && (p.pos.z < z0 || p.pos.z > z1));
+  let moved = 0;
+  for (const p of waiting) {
+    if (moved >= n) break;
+    const mid = (z0 + z1) / 2;
+    const shift = Math.round((mid - p.pos.z) / 20) * 20;
+    const z = p.pos.z + shift;
+    if (z < z0 || z > z1) continue;
+    p.pos.z = z;
+    p.home.z += shift;
+    moved++;
+  }
+}
+
 /** Nez de la rame (voiture 1, côté -z), en repère QUAI. */
 function nosePlatZ(): number {
   const worldZ = carToWorldZ(-110);
@@ -217,12 +239,11 @@ const SHOTS: Shot[] = [
       const approaching = platformWait.stage === 'approaching';
       platformWait.rate = approaching && nosePlatZ() < 160 ? 1 : 40;
       runtime.clockMin = 7 * 60 + 41;
-      // L'attente accélérée ne laisse pas à la foule le temps de monter les
-      // escaliers : à l'heure de pointe, le quai est plein quand la rame entre.
-      once('crowd', approaching, () => {
-        const n = Math.round(crowdTarget(SHIBUYA) * 1.2);
-        seedPlatformCrowd(SHIBUYA, { total: n, walkers: Math.round(n * 0.12) });
-      });
+      // La foule qui attend est répartie sur les 224 m du quai : à peine une
+      // silhouette dans le champ. On en rapproche une quinzaine, décalées d'un
+      // multiple exact du pas des voitures - elles restent sur les marques
+      // d'attente, devant une porte.
+      once('crowd', approaching, () => gatherCrowd(30, 78, 16));
     },
     ready: () => platformWait.stage === 'approaching' && nosePlatZ() < 54,
     frame: ({ t }) => {
@@ -287,6 +308,9 @@ const SHOTS: Shot[] = [
         [3.9, [vend.glass[0], vend.glass[1] + 0.2, vend.glass[2]]],
       ]);
       aim(look);
+      // On se penche vers le bac : il est hors de portée depuis la vitrine.
+      filmPilot.pace = 0.5;
+      filmPilot.goal = t >= 2.3 && t < 3.45 ? { x: 5.2, z: 19.2 } : { x: 4.86, z: 19.2 };
       once('ic', t >= 0.95, act);
       once('press', t >= 2.0, act);
       // La canette met une seconde à tomber : on ne la prend qu'une fois là.
@@ -347,12 +371,24 @@ const SHOTS: Shot[] = [
         let bestD = Infinity;
         for (let i = 0; i < SEAT_SLOTS.length; i++) {
           const s = SEAT_SLOTS[i];
-          if (seatOccupant[i] !== null) continue;
-          const d = Math.abs(s.z - 0.6) + (s.side === -1 ? 0 : 3);
+          if (s.side !== -1 || seatOccupant[i] === 'player') continue;
+          const d = Math.abs(s.z - 0.6);
           if (d < bestD) {
             bestD = d;
             best = i;
           }
+        }
+        // À l'heure de pointe, pas une place de libre : celui qui l'occupait
+        // descend à Shibuya.
+        const occ = best >= 0 ? seatOccupant[best] : null;
+        if (typeof occ === 'number') {
+          const pax = (window as unknown as { __pax?: { id: number; state: string; seatSlot: number }[] }).__pax;
+          const p = pax?.find((q) => q.id === occ);
+          if (p) {
+            p.state = 'hidden';
+            p.seatSlot = -1;
+          }
+          seatOccupant[best] = null;
         }
         seatIndex = best;
         if (best >= 0) filmPilot.sit = best;
@@ -408,13 +444,16 @@ const SHOTS: Shot[] = [
       backInCar,
       () => {
         clearSky(DUSK.from);
-        w().__jumpTo('cruise', 25, 16);
+        // Uguisudani → Nippori : le grand faisceau de voies, le ciel ouvert.
+        w().__jumpTo('cruise', 25, 7);
       },
     ],
     frame: ({ t }) => {
       const k = ease(0, durOf('fenetre'), t);
       runtime.clockMin = mix(DUSK.from, DUSK.to, k);
-      freeCam(car([mix(0.55, 0.75, k), 1.5, -2.5]), car([4, 1.62, -2.5 - mix(0.9, 1.3, k)]), 0);
+      // Assez bas et tourné vers le haut pour que le ciel entre dans la vitre :
+      // c'est lui qui dit l'heure.
+      freeCam(car([mix(0.72, 0.86, k), 1.28, -2.5]), car([4, 2.25, -2.5 - mix(1.0, 1.5, k)]), 0);
     },
   },
 
