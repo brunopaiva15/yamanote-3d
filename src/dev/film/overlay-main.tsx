@@ -244,7 +244,12 @@ function set(t: number) {
 const win = window as unknown as Record<string, unknown>;
 win.__overlay = { set, total: TOTAL };
 // Laisser React poser le DOM, puis l'instant demandé dans l'URL.
-requestAnimationFrame(() => {
+function whenMounted() {
+  if (!document.querySelector('.stamp')) {
+    requestAnimationFrame(whenMounted);
+    return;
+  }
   set(Number(params.get('t') ?? 0));
   win.__overlayReady = true;
-});
+}
+requestAnimationFrame(whenMounted);
