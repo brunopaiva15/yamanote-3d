@@ -26,6 +26,8 @@ import { input } from '../../systems/input';
 import { SEAT_SLOTS, seatOccupant } from '../../systems/seats';
 import { machineState } from '../../systems/machines';
 import { freezeWeather, weather } from '../../systems/weather';
+import { crowdTarget, seedPlatformCrowd } from '../../systems/platformCrowd';
+import { consumeHeld } from '../../systems/interaction';
 import { productById } from '../../data/products';
 import { dwellDuration } from '../../systems/stationCycle';
 import { DUSK, durOf } from './timeline';
@@ -239,11 +241,16 @@ const SHOTS: Shot[] = [
       const approaching = platformWait.stage === 'approaching';
       platformWait.rate = approaching && nosePlatZ() < 160 ? 1 : 40;
       runtime.clockMin = 7 * 60 + 41;
-      // La foule qui attend est répartie sur les 224 m du quai : à peine une
-      // silhouette dans le champ. On en rapproche une quinzaine, décalées d'un
-      // multiple exact du pas des voitures - elles restent sur les marques
-      // d'attente, devant une porte.
-      once('crowd', approaching, () => gatherCrowd(30, 78, 16));
+      // L'attente accélérée ne laisse pas à la foule le temps de monter les
+      // escaliers : on peuple le quai d'un coup, comme à l'heure de pointe.
+      // Elle se répartit ensuite sur ses 224 m - à peine une silhouette dans le
+      // champ : on en rapproche une quinzaine, décalées d'un multiple exact du
+      // pas des voitures pour rester sur les marques d'attente d'une porte.
+      once('crowd', approaching, () => {
+        const n = Math.round(crowdTarget(SHIBUYA) * 1.2);
+        seedPlatformCrowd(SHIBUYA, { total: n, walkers: Math.round(n * 0.1) });
+      });
+      once('gather', approaching && fired.has('crowd'), () => gatherCrowd(30, 78, 16));
     },
     ready: () => platformWait.stage === 'approaching' && nosePlatZ() < 54,
     frame: ({ t }) => {
@@ -410,8 +417,9 @@ const SHOTS: Shot[] = [
         [3.8, [x, 1.5, e.z - 0.7]],
       ]);
       aim(look);
-      once('open', t >= 0.5, act);
-      once('sip', t >= 1.3, act);
+      // Boire directement : face à un voisin, « E » lui adresserait la parole.
+      once('open', t >= 0.5, () => consumeHeld());
+      once('sip', t >= 1.3, () => consumeHeld());
     },
   },
 
