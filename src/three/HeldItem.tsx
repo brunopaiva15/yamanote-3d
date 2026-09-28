@@ -61,6 +61,23 @@ const DRINK = new THREE.Vector3(0.06, -0.12, -0.26);
 const CARD = new THREE.Vector3(0.34, -0.24, -0.46);
 
 /**
+ * Décalage latéral qui tient dans le champ.
+ *
+ * `HOLD` et `CARD` sont réglés pour un écran en paysage : la main tombe à une
+ * trentaine de degrés à droite de l'axe. Un téléphone tenu en portrait n'en
+ * voit que vingt-trois de chaque côté - la canette et la carte sortaient de
+ * l'image, et l'on buvait un café invisible. On ramène donc la main vers
+ * l'axe juste assez pour qu'elle reste aux trois quarts du bord ; en paysage,
+ * rien ne change.
+ */
+function fitX(camera: THREE.Camera, x: number, z: number): number {
+  const cam = camera as THREE.PerspectiveCamera;
+  if (!cam.isPerspectiveCamera) return x;
+  const halfW = Math.atan(Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2) * cam.aspect);
+  return Math.min(x, Math.tan(halfW) * 0.74 * -z);
+}
+
+/**
  * Inclinaison de l'objet, au repos et à la lèvre (rad, autour de l'axe X de
  * l'œil).
  *
@@ -158,6 +175,7 @@ export function HeldItem() {
       swing.current += dt;
       const rest = HOLD.clone();
       rest.y += product ? mouthY(product.shape) : 0;
+      rest.x = fitX(camera, rest.x, rest.z);
       const target = rest.lerp(DRINK, lift);
       // Le balancement du pas : l'objet vit au bout d'un bras, il n'est pas
       // vissé à l'œil. Très petit - deux centimètres - mais c'est lui qui fait
@@ -187,7 +205,7 @@ export function HeldItem() {
         // La main s'avance et se retire : la carte part de plus loin et vient
         // se poser sur le lecteur.
         const reach = 1 - tap;
-        c.translateX(CARD.x - reach * 0.06);
+        c.translateX(fitX(camera, CARD.x, CARD.z) - reach * 0.06);
         c.translateY(CARD.y - reach * 0.05);
         c.translateZ(CARD.z + reach * 0.12);
         c.rotateX(-1.15);
