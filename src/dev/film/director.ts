@@ -250,9 +250,9 @@ const SHOTS: Shot[] = [
         const n = Math.round(crowdTarget(SHIBUYA) * 1.2);
         seedPlatformCrowd(SHIBUYA, { total: n, walkers: Math.round(n * 0.1) });
       });
-      once('gather', approaching && fired.has('crowd'), () => gatherCrowd(30, 78, 16));
+      once('gather', approaching && fired.has('crowd'), () => gatherCrowd(25, 52, 14));
     },
-    ready: () => platformWait.stage === 'approaching' && nosePlatZ() < 54,
+    ready: () => platformWait.stage === 'approaching' && nosePlatZ() < 47,
     frame: ({ t }) => {
       platformWait.rate = 1;
       // Caméra basse au bord du quai : la rame arrive de face, passe, et le
