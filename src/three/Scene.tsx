@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { installStationProbe } from '../dev/stationProbe';
 import { installFilm } from '../dev/film/director';
+import { filmPilot } from '../dev/film/pilot';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { EffectComposer, Bloom, N8AO, Vignette, ToneMapping, Noise } from '@react-three/postprocessing';
@@ -269,7 +270,9 @@ function DayNightLighting({ level }: { level: PerfLevel }) {
 
   useFrame((_, dt) => {
     acc.current += dt;
-    if (acc.current >= 0.5) {
+    // Deux fois par seconde suffit à l'œil ; pas à l'accéléré du tournage
+    // (dev/film), où deux heures passent en quatre secondes.
+    if (acc.current >= (import.meta.env.DEV && filmPilot.active ? 0 : 0.5)) {
       acc.current = 0;
       const w = dayNightWeights(runtime.clockMin / 60);
       const se = seasonNow();

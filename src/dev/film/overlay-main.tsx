@@ -35,13 +35,13 @@ const CAPTIONS: Caption[] = [
   { id: 'monter', lines: ["la porte s'ouvre.", 'on monte.'], tIn: S('monter') + 0.25, tOut: S('assis') },
   { id: 'assis', lines: ['une place assise.', 'la journée peut', 'commencer.'], tIn: S('assis') + 0.3, tOut: S('ecran') },
   { id: 'ecran', lines: ['[30] gares.', 'une boucle.', '[67] minutes.'], tIn: S('ecran') + 0.15, tOut: S('fenetre') },
-  { id: 'soir', lines: ['…puis le soir', 'tombe sur [Tokyo]'], tIn: S('fenetre') + 0.3, tOut: S('soir') + 0.15 },
+  { id: 'soir', lines: ['…puis le soir', 'tombe sur [Tokyo]'], tIn: S('fenetre') + 0.3, tOut: S('soir') + 0.5 },
 ];
 
 /** L'heure affichée dans chaque plan : le fil du « quotidien ». */
 function clockAt(t: number): number {
   const at = (name: Parameters<typeof S>[0]) => t >= S(name);
-  if (at('soir')) return 19 * 60 + 12;
+  if (at('soir')) return 19 * 60 + 40;
   if (at('fenetre')) {
     const k = ease(0, durOf('fenetre'), t - S('fenetre'));
     return DUSK.from + (DUSK.to - DUSK.from) * k;
@@ -53,7 +53,7 @@ function clockAt(t: number): number {
   return 7 * 60 + 41;
 }
 
-const END_AT = S('soir') + 0.35;
+const END_AT = S('soir') + 0.5;
 
 // --- Mouvement -------------------------------------------------------------
 
@@ -202,7 +202,7 @@ function set(t: number) {
     });
     const parts = el.querySelectorAll<HTMLElement>('[data-part]');
     parts.forEach((p) => {
-      const at = p.dataset.part === 'price' ? S('distributeur') + 3.05 : c.tIn + 0.55;
+      const at = p.dataset.part === 'price' ? S('distributeur') + 3.3 : c.tIn + 0.55;
       const k = clamp01((t - at) / 0.32);
       p.style.opacity = String(clamp01(k * 2));
       p.style.transform = `translateY(${(1 - back(k)) * 30}px)`;

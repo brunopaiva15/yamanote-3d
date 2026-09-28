@@ -26,6 +26,7 @@ import { input } from '../../systems/input';
 import { SEAT_SLOTS, seatOccupant } from '../../systems/seats';
 import { machineState } from '../../systems/machines';
 import { freezeWeather, weather } from '../../systems/weather';
+import { crowdTarget, seedPlatformCrowd } from '../../systems/platformCrowd';
 import { productById } from '../../data/products';
 import { dwellDuration } from '../../systems/stationCycle';
 import { DUSK, durOf } from './timeline';
@@ -207,6 +208,7 @@ const SHOTS: Shot[] = [
       () => {
         // Descendre : la rame repart sans nous, et l'on attend la suivante.
         filmPilot.place = { x: 3.6, z: 30 };
+        useStore.getState().setHeld(null);
       },
     ],
     prep: () => {
@@ -215,15 +217,23 @@ const SHOTS: Shot[] = [
       const approaching = platformWait.stage === 'approaching';
       platformWait.rate = approaching && nosePlatZ() < 160 ? 1 : 40;
       runtime.clockMin = 7 * 60 + 41;
+      // L'attente accélérée ne laisse pas à la foule le temps de monter les
+      // escaliers : à l'heure de pointe, le quai est plein quand la rame entre.
+      once('crowd', approaching, () => {
+        const n = Math.round(crowdTarget(SHIBUYA) * 1.2);
+        seedPlatformCrowd(SHIBUYA, { total: n, walkers: Math.round(n * 0.12) });
+      });
     },
-    ready: () => platformWait.stage === 'approaching' && nosePlatZ() < 86,
+    ready: () => platformWait.stage === 'approaching' && nosePlatZ() < 54,
     frame: ({ t }) => {
       platformWait.rate = 1;
-      // Caméra basse au bord du quai, qui accompagne le nez de la rame.
+      // Caméra basse au bord du quai : la rame arrive de face, passe, et le
+      // regard reste accroché à ses flancs qui défilent.
+      const camZ = mix(22, 20.5, ease(0, durOf('arrivee'), t));
       const nose = nosePlatZ();
-      const pos = plat([2.75, 1.25, mix(24, 21, ease(0, 2.8, t))]);
-      const look = plat([0.7, 1.55, Math.max(nose - 4, 0)]);
-      freeCam(pos, look, 0.015);
+      const pos = plat([2.6, 1.32, camZ]);
+      const look = plat([0.75, 1.4, Math.max(nose - 6, camZ + 7)]);
+      freeCam(pos, look, 0.012);
     },
   },
 
@@ -240,7 +250,7 @@ const SHOTS: Shot[] = [
         useStore.getState().setHeld(null);
       },
       () => {
-        filmPilot.place = { x: 5.02, z: 19.2 };
+        filmPilot.place = { x: 4.86, z: 19.2 };
       },
       () => {
         // Visées, lues sur les pièces telles qu'elles sont rendues.
@@ -254,7 +264,8 @@ const SHOTS: Shot[] = [
         const act0 = slot?.userData.act as { cols?: number; rows?: number } | undefined;
         if (slot && act0?.cols && act0.rows) {
           // Un café chaud, de préférence : c'est le matin.
-          const hot = s.slots.findIndex((p) => p?.hot && p.shape === 'canSlim');
+          const coffee = s.slots.findIndex((p) => !!p && ['kohi-b', 'kohi-m', 'latte', 'espresso'].includes(p.id));
+          const hot = coffee >= 0 ? coffee : s.slots.findIndex((p) => p?.hot && p.shape === 'canSlim');
           const any = s.slots.findIndex((p) => p !== null);
           const i = hot >= 0 ? hot : any;
           vend.cell = cellPoint(slot, i % act0.cols, Math.floor(i / act0.cols), act0.cols, act0.rows);
@@ -271,14 +282,15 @@ const SHOTS: Shot[] = [
         [1.3, vend.ic],
         [1.8, vend.cell],
         [2.2, vend.cell],
-        [2.8, vend.tray],
-        [3.15, vend.tray],
-        [3.7, [vend.glass[0], vend.glass[1] + 0.25, vend.glass[2]]],
+        [2.75, vend.tray],
+        [3.4, vend.tray],
+        [3.9, [vend.glass[0], vend.glass[1] + 0.2, vend.glass[2]]],
       ]);
       aim(look);
       once('ic', t >= 0.95, act);
       once('press', t >= 2.0, act);
-      once('take', t >= 3.0, act);
+      // La canette met une seconde à tomber : on ne la prend qu'une fois là.
+      once('take', t >= 3.25, act);
     },
   },
 
@@ -329,14 +341,14 @@ const SHOTS: Shot[] = [
         if (coffee) useStore.getState().setHeld({ productId: coffee.id, sips: coffee.sips, maxSips: coffee.sips, opened: false });
       },
       () => {
-        // Côté -x, face aux portes du quai : la place libre la plus proche du
-        // milieu de la voiture.
+        // La place libre la plus proche du milieu de la voiture, de préférence
+        // côté -x, face aux portes du quai.
         let best = -1;
         let bestD = Infinity;
         for (let i = 0; i < SEAT_SLOTS.length; i++) {
           const s = SEAT_SLOTS[i];
-          if (s.side !== -1 || seatOccupant[i] !== null) continue;
-          const d = Math.abs(s.z - 0.6);
+          if (seatOccupant[i] !== null) continue;
+          const d = Math.abs(s.z - 0.6) + (s.side === -1 ? 0 : 3);
           if (d < bestD) {
             bestD = d;
             best = i;
@@ -344,24 +356,26 @@ const SHOTS: Shot[] = [
         }
         seatIndex = best;
         if (best >= 0) filmPilot.sit = best;
-        filmPilot.yaw = -Math.PI / 2;
+        const side = best >= 0 ? SEAT_SLOTS[best].side : -1;
+        filmPilot.yaw = side === 1 ? Math.PI / 2 : -Math.PI / 2;
       },
     ],
     // Préparation longue : les portes se ferment, la rame démarre.
     ready: () => useStore.getState().phase === 'depart' && runtime.phaseT > 0.6,
     frame: ({ t }) => {
       const e = filmPilot.eye;
-      const across: V3 = [1.4, 1.45, e.z + 0.2];
-      const down: V3 = [e.x + 0.55, e.y - 0.55, e.z - 0.18];
+      // En face : la paroi opposée, ses vitres, et le quai qui s'en va.
+      const side = seatIndex >= 0 ? SEAT_SLOTS[seatIndex].side : -1;
+      const x = -side * 1.4;
       const look = path3(t, [
-        [0.0, across],
-        [0.8, down],
-        [2.0, down],
-        [2.8, [1.4, 1.5, e.z - 0.9]],
+        [0.0, [x, 1.2, e.z + 0.35]],
+        [1.1, [x, 1.05, e.z - 0.1]],
+        [2.4, [x, 1.4, e.z - 0.2]],
+        [3.8, [x, 1.5, e.z - 0.7]],
       ]);
       aim(look);
-      once('open', t >= 1.0, act);
-      once('sip', t >= 1.6, act);
+      once('open', t >= 0.5, act);
+      once('sip', t >= 1.3, act);
     },
   },
 
@@ -378,9 +392,10 @@ const SHOTS: Shot[] = [
       },
     ],
     frame: ({ t }) => {
-      const k = ease(0, 2.4, t);
-      const pos = car([mix(-0.5, -0.05, k), mix(1.66, 1.74, k), 2.5 + mix(0.35, 0.25, k)]);
-      freeCam(pos, car([1.35, 2.03, 2.83]), -0.01);
+      // De biais : de face, une poignée pend pile devant l'écran.
+      const k = ease(0, durOf('ecran'), t);
+      const pos = car([mix(0.15, 0.4, k), mix(1.72, 1.8, k), mix(3.62, 3.4, k)]);
+      freeCam(pos, car([1.38, 2.02, 2.86]), -0.015);
     },
   },
 
@@ -399,32 +414,32 @@ const SHOTS: Shot[] = [
     frame: ({ t }) => {
       const k = ease(0, durOf('fenetre'), t);
       runtime.clockMin = mix(DUSK.from, DUSK.to, k);
-      freeCam(car([mix(0.55, 0.75, k), 1.5, -2.5]), car([4, 1.35, -2.5 - mix(0.9, 1.3, k)]), 0);
+      freeCam(car([mix(0.55, 0.75, k), 1.5, -2.5]), car([4, 1.62, -2.5 - mix(0.9, 1.3, k)]), 0);
     },
   },
 
-  // 7. Le soir, sur le quai : la rame repart, et l'on rentre à pied.
+  // 7. Le soir, dans la voiture : la lumière du plafond, la ville noire aux
+  //    vitres, les téléphones. Fond du carton de fin.
   {
     name: 'soir',
     dur: durOf('soir'),
-    fov: 62,
+    fov: 66,
     steps: [
       backInCar,
       () => {
-        clearSky(19 * 60 + 12);
-        w().__jumpTo('dwell', Math.max(0, dwellDuration(SHIBUYA) - 4), SHIBUYA);
-      },
-      () => {
-        filmPilot.place = { x: 3.6, z: 8 };
+        clearSky(19 * 60 + 40);
+        w().__jumpTo('cruise', 22, 17);
+        useStore.getState().setHeld(null);
       },
     ],
     prep: () => {
-      runtime.clockMin = 19 * 60 + 12;
+      runtime.clockMin = 19 * 60 + 40;
     },
-    ready: () => platformWait.stage === 'departing' && platformWait.t > 1.5,
     frame: ({ t }) => {
-      const k = ease(0, 3.4, t);
-      freeCam(plat([mix(3.1, 3.4, k), 1.5, mix(-2, -8, k)]), plat([0.9, 1.35, -60]), 0.01);
+      runtime.clockMin = 19 * 60 + 40;
+      const k = ease(0, durOf('soir'), t);
+      // Au bout de la voiture, dans l'axe de l'allée, qui avance doucement.
+      freeCam(car([0.12, 1.66, mix(8.9, 7.9, k)]), car([0, 1.42, -9]), 0);
     },
   },
 ];

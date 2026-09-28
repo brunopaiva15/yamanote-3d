@@ -6,12 +6,12 @@
 
 export const TIMELINE = [
   { name: 'arrivee', dur: 2.8 },
-  { name: 'distributeur', dur: 3.7 },
+  { name: 'distributeur', dur: 3.9 },
   { name: 'monter', dur: 3.4 },
   { name: 'assis', dur: 3.8 },
   { name: 'ecran', dur: 2.4 },
   { name: 'fenetre', dur: 3.8 },
-  { name: 'soir', dur: 3.4 },
+  { name: 'soir', dur: 3.9 },
 ] as const;
 
 export type ShotName = (typeof TIMELINE)[number]['name'];
@@ -40,4 +40,4 @@ export const TOTAL = TIMELINE.reduce((a, s) => a + s.dur, 0);
  * Heure affichée à l'image, en minutes : c'est la même courbe que celle que
  * le réalisateur impose au jeu pendant l'accéléré de la fenêtre.
  */
-export const DUSK = { from: 16 * 60 + 50, to: 19 * 60 + 5 };
+export const DUSK = { from: 16 * 60 + 50, to: 19 * 60 + 30 };
