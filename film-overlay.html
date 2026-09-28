@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- Page DEV : l'habillage du film vertical (textes, heure, carton de fin),
+     rendu sur fond transparent image par image par scripts/film/overlay.mjs,
+     puis posé sur les plans tournés. Voir src/dev/film/overlay-main.tsx.
+
+     /film-overlay.html?t=4.2  fige l'habillage à un instant, pour le régler à
+     l'œil ; ?bg=1 pose un fond gris pour voir ce qui est blanc. -->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080" />
+    <title>Habillage du film</title>
+    <link rel="stylesheet" href="/scripts/film/.cache/fonts/local.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/dev/film/overlay-main.tsx"></script>
+  </body>
+</html>

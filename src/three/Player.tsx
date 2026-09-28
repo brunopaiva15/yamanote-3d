@@ -17,6 +17,7 @@ import { publishPlayerLook, publishPlayerPose, publishPlayerStance } from '../sy
 import { AISLE_U, frameAt, groundY, resolveMove, snapInside } from '../systems/walkable';
 import { alight, board, crossNearestPortal } from '../systems/boarding';
 import { setListenerPose } from '../systems/audioEngine';
+import { filmPilot, pilotAxes } from '../dev/film/pilot';
 
 const LOOK_SENS = 0.0032;
 
@@ -27,15 +28,18 @@ const freeCam = {
   active: false,
   pos: new THREE.Vector3(),
   target: new THREE.Vector3(),
+  /** Roulis (rad) autour de l'axe de visée - le tournage s'en sert. */
+  roll: 0,
 };
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__freeCam = (
-    v: { x: number; y: number; z: number; tx: number; ty: number; tz: number } | null,
+    v: { x: number; y: number; z: number; tx: number; ty: number; tz: number; roll?: number } | null,
   ) => {
     freeCam.active = v !== null;
     if (v) {
       freeCam.pos.set(v.x, v.y, v.z);
       freeCam.target.set(v.tx, v.ty, v.tz);
+      freeCam.roll = v.roll ?? 0;
     }
   };
 }
@@ -256,9 +260,13 @@ export function Player() {
       }
     }
     if (best < 0) return;
-    const s = SEAT_SLOTS[best];
-    seatOccupant[best] = 'player';
-    playerSeat.current = best;
+    sitAt(best);
+  };
+
+  const sitAt = (i: number) => {
+    const s = SEAT_SLOTS[i];
+    seatOccupant[i] = 'player';
+    playerSeat.current = i;
     seatAnchor.current.set(s.x - s.side * SEAT_EYE_INSET, CONFIG.sitHeight, s.z);
     seatYaw.current = s.side === 1 ? Math.PI / 2 : -Math.PI / 2; // dos à la paroi, face à l'allée
     transition.current = 0;
@@ -284,14 +292,38 @@ export function Player() {
 
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
-    const { started, seated } = useStore.getState();
+    // Tournage (dev) : le réalisateur pose ses consignes de l'image AVANT
+    // qu'on les lise - y compris celles de la caméra libre.
+    const pilot = import.meta.env.DEV && filmPilot.active;
+    if (import.meta.env.DEV && filmPilot.tick) filmPilot.tick(rawDt, camera as THREE.PerspectiveCamera);
 
     if (freeCam.active) {
       camera.position.copy(freeCam.pos);
       camera.rotation.set(0, 0, 0);
       camera.lookAt(freeCam.target);
+      if (freeCam.roll) camera.rotateZ(freeCam.roll);
       return;
     }
+
+    if (pilot) {
+      if (filmPilot.stand) {
+        filmPilot.stand = false;
+        if (useStore.getState().seated) standUp();
+      }
+      if (filmPilot.sit >= 0) {
+        const i = filmPilot.sit;
+        filmPilot.sit = -1;
+        if (useStore.getState().seated) standUp();
+        sitAt(i);
+      }
+      if (filmPilot.place) {
+        const p = filmPilot.place;
+        filmPilot.place = null;
+        pos.current.set(p.x, groundY(p.x, p.z) + CONFIG.eyeHeight, p.z);
+        camBase.current.copy(pos.current);
+      }
+    }
+    const { started, seated } = useStore.getState();
 
     // Regard.
     //
@@ -302,7 +334,10 @@ export function Player() {
     // pas - et tout ce mouvement se déverserait d'un seul coup à la fermeture
     // du champ, ce qui donne une embardée de plusieurs tours.
     const { dx, dy } = consumeLook();
-    if (started && !chatOpen()) {
+    if (pilot) {
+      yaw.current = filmPilot.yaw;
+      pitch.current = filmPilot.pitch;
+    } else if (started && !chatOpen()) {
       yaw.current -= dx * LOOK_SENS;
       pitch.current = THREE.MathUtils.clamp(pitch.current - dy * LOOK_SENS, -1.35, 1.35);
     }
@@ -349,7 +384,11 @@ export function Player() {
       // continue d'écrire dans `input.joy` à chaque `pointermove`, longtemps
       // après la purge. Une garde continue, elle, tient tant que le champ est
       // ouvert, quelle que soit la façon dont l'entrée revient.
-      const axes = chatOpen() ? { x: 0, y: 0 } : moveAxes();
+      const axes = pilot
+        ? pilotAxes(pos.current.x, pos.current.z, yaw.current)
+        : chatOpen()
+          ? { x: 0, y: 0 }
+          : moveAxes();
       const mag = Math.hypot(axes.x, axes.y);
       // Le quai fait 224 m de long (onze voitures) : au pas de promenade on
       // n'en verrait jamais le bout. Maj. pour presser le pas, comme tout le monde.
@@ -400,6 +439,11 @@ export function Player() {
 
     // Position du joueur partagée (regards des PNJ), dans les trois repères.
     publishPlayerPose(camera.position.x, camera.position.y, camera.position.z);
+    if (import.meta.env.DEV) {
+      filmPilot.eye.x = camera.position.x;
+      filmPilot.eye.y = camera.position.y;
+      filmPilot.eye.z = camera.position.z;
+    }
     // Et son appui, pris AVANT le balancement : `camBase` est la position de
     // marche (ou l'assise), la caméra est l'œil qui oscille autour d'elle. Le
     // seuil de porte se décide sur les pieds - deux centimètres de roulis ne

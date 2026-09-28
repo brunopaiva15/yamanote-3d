@@ -48,3 +48,6 @@ scripts/voice-lab/__pycache__/
 audio-src/essai/
 # Textes exportés pour la gravure : reconstruits par `npm run voix:textes`.
 audio-src/annonces.json
+
+# Tournage du film vertical (scripts/film) : polices téléchargées, images
+scripts/film/.cache/

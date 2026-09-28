@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { installStationProbe } from '../dev/stationProbe';
+import { installFilm } from '../dev/film/director';
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { EffectComposer, Bloom, N8AO, Vignette, ToneMapping, Noise } from '@react-three/postprocessing';
@@ -248,6 +249,8 @@ function seasonalSunPos(out: THREE.Vector3, noonAltitude: number): THREE.Vector3
 function StationProbe() {
   const { scene, gl } = useThree();
   useEffect(() => installStationProbe(scene, gl), [scene, gl]);
+  // Le réalisateur du film vertical (dev/film) : même régime, même scène.
+  useEffect(() => (import.meta.env.DEV ? installFilm(scene) : undefined), [scene]);
   return null;
 }
 
