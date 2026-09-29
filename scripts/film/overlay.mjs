@@ -4,6 +4,8 @@
 //   node scripts/film/overlay.mjs <dossier>              toutes les images
 //   node scripts/film/overlay.mjs <dossier> --at 1,5.2   quelques instants,
 //                                                        sur fond gris, pour régler
+//   node scripts/film/overlay.mjs <dossier> --end-only   le carton de fin seul
+//                                                        (version sans texte)
 
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
@@ -14,6 +16,7 @@ import { spawnSync } from 'node:child_process';
 const args = process.argv.slice(2);
 const out = args[0];
 const atArg = args.includes('--at') ? args[args.indexOf('--at') + 1] : null;
+const endOnly = args.includes('--end-only');
 const fps = 30;
 mkdirSync(out, { recursive: true });
 
@@ -52,7 +55,8 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
 page.on('pageerror', (e) => console.error('  ⚠ page :', e.message));
-await page.goto(`http://localhost:5320/film-overlay.html${atArg ? '?bg=1' : ''}`, { waitUntil: 'networkidle' });
+const query = [atArg ? 'bg=1' : '', endOnly ? 'end=1' : ''].filter(Boolean).join('&');
+await page.goto(`http://localhost:5320/film-overlay.html${query ? `?${query}` : ''}`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.__overlayReady === true);
 await page.evaluate(() => document.fonts.ready);
 const total = await page.evaluate(() => window.__overlay.total);

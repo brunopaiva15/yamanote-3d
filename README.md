@@ -2424,7 +2424,7 @@ Une vidéo 1080×1920 de vingt-quatre secondes, « un matin sur la Yamanote »,
 **jouée par le jeu lui-même** : on ne pose pas une caméra à côté, on conduit le
 joueur. Il attend sur le quai de Shibuya pendant que la rame entre, touche le
 lecteur IC d'un distributeur et ramasse un café chaud, franchit la porte ouverte
-à pied, s'assoit, boit, lit 次は 恵比寿 sur l'écran de porte, regarde le soir
+à pied, s'assoit, boit, lit 次は 恵比寿 sur le plan de boucle de l'écran de porte, regarde le soir
 tomber par la vitre. Rien n'est truqué : la foule, les portes, le freinage, la
 lumière sont ceux du jeu.
 
@@ -2445,7 +2445,8 @@ node scripts/film/shoot.mjs /tmp/film --stills 4          # planches : 4 images 
 node scripts/film/shoot.mjs /tmp/film --scale 2           # tournage 1080×1920 (~2 h en CPU)
 node scripts/film/overlay.mjs /tmp/habillage              # télécharge ses polices la 1re fois
 node --experimental-strip-types scripts/film/compose.mjs /tmp/film /tmp/habillage film.mp4
-node --experimental-strip-types scripts/film/compose.mjs /tmp/film - film-sans-texte.mp4
+node scripts/film/overlay.mjs /tmp/carton --end-only       # sans texte : le carton de fin seul
+node --experimental-strip-types scripts/film/compose.mjs /tmp/film /tmp/carton film-sans-texte.mp4
 ```
 
 Avec un vrai GPU, on peut aussi le filmer en direct : `npm run dev`, monter à

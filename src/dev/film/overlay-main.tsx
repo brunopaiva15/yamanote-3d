@@ -46,7 +46,7 @@ function clockAt(t: number): number {
     const k = ease(0, durOf('fenetre'), t - S('fenetre'));
     return DUSK.from + (DUSK.to - DUSK.from) * k;
   }
-  if (at('ecran')) return 7 * 60 + 46;
+  if (at('ecran')) return 7 * 60 + 47;
   if (at('assis')) return 7 * 60 + 44;
   if (at('monter')) return 7 * 60 + 43;
   if (at('distributeur')) return 7 * 60 + 42;
@@ -130,7 +130,7 @@ function Overlay() {
           gratuit, dans ton navigateur
         </div>
         <div className="end-url" data-part="l2">
-          brunopaiva15.github.io/yamanote-3d
+          yamanote-3d.com
         </div>
         <div className="end-note" data-part="l3">
           lien en bio
@@ -174,6 +174,12 @@ document.head.appendChild(style);
 
 const params = new URLSearchParams(location.search);
 if (params.get('bg')) document.body.classList.add('bg');
+/**
+ * `?end=1` : le carton de fin SEUL, pour la version sans texte. On y laisse
+ * quand même le nom du jeu et l'adresse - une vidéo qui circule sans dire d'où
+ * elle vient ne mène personne nulle part.
+ */
+const END_ONLY = params.get('end') === '1';
 
 createRoot(document.getElementById('root')!).render(<Overlay />);
 
@@ -185,7 +191,8 @@ function pad(n: number) {
 
 function set(t: number) {
   // Légendes, mot à mot.
-  for (const c of CAPTIONS) {
+  if (END_ONLY) document.querySelectorAll<HTMLElement>('.cap').forEach((el) => (el.style.display = 'none'));
+  for (const c of END_ONLY ? [] : CAPTIONS) {
     const el = document.querySelector<HTMLElement>(`[data-cap="${c.id}"]`);
     if (!el) continue;
     const out = ease(c.tOut - 0.2, c.tOut, t);
@@ -215,7 +222,7 @@ function set(t: number) {
   stamp.querySelector('.stamp-time')!.textContent = `${pad(m / 60)}:${pad(m % 60)}`;
   const stampIn = ease(0.35, 0.65, t);
   const stampOut = ease(END_AT - 0.1, END_AT + 0.2, t);
-  stamp.style.opacity = String(stampIn * (1 - stampOut));
+  stamp.style.opacity = END_ONLY ? '0' : String(stampIn * (1 - stampOut));
   // Pendant l'accéléré, l'heure grossit un peu : c'est elle qu'on regarde.
   const dusk = ease(S('fenetre'), S('fenetre') + 0.4, t) * (1 - ease(S('soir') - 0.3, S('soir'), t));
   stamp.style.transform = `scale(${1 + 0.18 * dusk})`;
@@ -223,7 +230,7 @@ function set(t: number) {
 
   // Voile du haut : lisibilité des légendes, jamais pendant le carton.
   const top = document.querySelector<HTMLElement>('.scrim-top')!;
-  top.style.opacity = String(ease(0, 0.2, t) * (1 - ease(END_AT - 0.2, END_AT + 0.2, t)));
+  top.style.opacity = END_ONLY ? '0' : String(ease(0, 0.2, t) * (1 - ease(END_AT - 0.2, END_AT + 0.2, t)));
 
   // Carton de fin.
   const endK = ease(END_AT, END_AT + 0.45, t);

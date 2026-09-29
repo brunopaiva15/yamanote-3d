@@ -5,7 +5,8 @@
 //   node --experimental-strip-types scripts/film/compose.mjs \
 //        <plans> <habillage|-> <sortie.mp4> [--ffmpeg /chemin/ffmpeg]
 //
-// `-` à la place du dossier d'habillage donne la version sans texte.
+// `-` à la place du dossier d'habillage donne les plans nus ; la version sans
+// texte se monte avec l'habillage `overlay.mjs --end-only` (carton de fin seul).
 
 import { mkdirSync, readdirSync, rmSync, symlinkSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';

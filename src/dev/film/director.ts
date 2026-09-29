@@ -31,6 +31,7 @@ import { consumeHeld } from '../../systems/interaction';
 import { productById } from '../../data/products';
 import { dwellDuration } from '../../systems/stationCycle';
 import { DUSK, durOf } from './timeline';
+import { lineScreenFrame, type LineScreenState } from '../../three/lineScreenCycle';
 
 type V3 = [number, number, number];
 
@@ -168,6 +169,20 @@ function gatherCrowd(z0: number, z1: number, n: number) {
   }
 }
 
+/**
+ * Cale l'horloge sur le premier instant, à partir de `from`, où l'afficheur de
+ * porte montre `state`. La rotation change d'écran tous les quarts de minute :
+ * on se pose juste après le changement, pour tenir tout le plan.
+ */
+function clockForScreen(state: LineScreenState, from: number): number {
+  for (let k = 0; k < 40; k++) {
+    runtime.clockMin = Math.floor(from * 4 + k) / 4 + 0.01;
+    if (lineScreenFrame().state === state) return runtime.clockMin;
+  }
+  runtime.clockMin = from;
+  return from;
+}
+
 /** Nez de la rame (voiture 1, côté -z), en repère QUAI. */
 function nosePlatZ(): number {
   const worldZ = carToWorldZ(-110);
@@ -213,6 +228,9 @@ let sceneRef: THREE.Scene | null = null;
 
 /** Visées du distributeur, relevées au moment du plan. */
 const vend = { ic: [0, 0, 0] as V3, cell: [0, 0, 0] as V3, tray: [0, 0, 0] as V3, glass: [0, 0, 0] as V3 };
+
+/** Heure retenue pour le plan de l'afficheur (voir `clockForScreen`). */
+let screenClock = 0;
 
 /** Place assise du plan 4 : côté -x, face aux portes du quai. */
 let seatIndex = -1;
@@ -434,6 +452,10 @@ const SHOTS: Shot[] = [
         clearSky(7 * 60 + 46);
         w().__jumpTo('cruise', 30, SHIBUYA + 1);
       },
+      () => {
+        // Le plan de boucle : l'anneau vert de la ligne, la rame dessus.
+        screenClock = clockForScreen('loopJP', 7 * 60 + 46);
+      },
     ],
     frame: ({ t }) => {
       // De biais : de face, une poignée pend pile devant l'écran.
@@ -506,7 +528,11 @@ const regie = {
   hidePrep: true,
   /** Tourner sans rendre : seules les images demandées sont regardées. */
   blind: false,
+  /** Images de chauffe déjà faites (voir `tick`). */
+  warm: 0,
 };
+
+const WARM_FRAMES = 3;
 
 let styleEl: HTMLStyleElement | null = null;
 function hideUi(on: boolean) {
@@ -537,6 +563,15 @@ function tick(dt: number, camera: THREE.PerspectiveCamera) {
       return;
     }
     shot.prep?.();
+    // Prêt : quelques images de chauffe, cadrées et rendues mais non
+    // retenues. Certaines surfaces (l'afficheur de porte) ne se repeignent que
+    // lorsqu'elles sont dans le champ : sans cela, la première image du plan
+    // montrait encore l'écran d'il y a dix minutes.
+    if (regie.warm > 0 || !shot.ready || shot.ready()) {
+      regie.warm++;
+      camera.layers.mask = regie.mask;
+      shot.frame({ t: 0, dt: 0, camera });
+    }
     return;
   }
   // Image aveugle : simulée mais pas rendue (planches de repérage).
@@ -549,6 +584,7 @@ function cut(i: number) {
   regie.shot = i;
   regie.step = 0;
   regie.t = 0;
+  regie.warm = 0;
   regie.mode = 'prep';
   fired.clear();
   filmPilot.active = true;
@@ -561,7 +597,7 @@ function isReady(): boolean {
   if (regie.mode !== 'prep') return regie.mode === 'roll';
   const shot = SHOTS[regie.shot];
   if (regie.step < shot.steps.length) return false;
-  return shot.ready ? shot.ready() : true;
+  return regie.warm >= WARM_FRAMES;
 }
 
 function roll() {
@@ -624,6 +660,7 @@ export function installFilm(scene: THREE.Scene): () => void {
       nose: +nosePlatZ().toFixed(1),
       held: useStore.getState().held,
       seat: seatIndex,
+      screen: { clock: +screenClock.toFixed(2), state: lineScreenFrame().state },
       machine: { ...machineState(MACHINE), slots: undefined },
     }),
   };
