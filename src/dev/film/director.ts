@@ -532,8 +532,13 @@ const regie = {
   warm: 0,
 };
 
-// Le fondu entre deux pages de l'afficheur dure 0,14 s (lineScreenAnim) : 8 images le couvrent.
-const WARM_FRAMES = 8;
+/**
+ * L'afficheur de porte ne change de page qu'au battement de la rame (0,5 s),
+ * puis fond d'une page à l'autre en 0,14 s (lineScreenAnim) : 24 images, soit
+ * 0,8 s, couvrent les deux. Seules les dernières sont rendues - c'est le rendu
+ * qui envoie la texture repeinte à la carte graphique.
+ */
+const WARM_FRAMES = 24;
 
 let styleEl: HTMLStyleElement | null = null;
 function hideUi(on: boolean) {
@@ -570,7 +575,7 @@ function tick(dt: number, camera: THREE.PerspectiveCamera) {
     // montrait encore l'écran d'il y a dix minutes.
     if (regie.warm > 0 || !shot.ready || shot.ready()) {
       regie.warm++;
-      camera.layers.mask = regie.mask;
+      camera.layers.mask = regie.warm > WARM_FRAMES - 3 ? regie.mask : 0;
       shot.frame({ t: 0, dt: 0, camera });
     }
     return;
