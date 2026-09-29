@@ -532,7 +532,8 @@ const regie = {
   warm: 0,
 };
 
-const WARM_FRAMES = 3;
+// Le fondu entre deux pages de l'afficheur dure 0,14 s (lineScreenAnim) : 8 images le couvrent.
+const WARM_FRAMES = 8;
 
 let styleEl: HTMLStyleElement | null = null;
 function hideUi(on: boolean) {
