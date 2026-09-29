@@ -16,6 +16,9 @@ const args = process.argv.slice(2);
 const [shotsDir, overlayDir, outFile] = args;
 if (!outFile) throw new Error('usage : compose.mjs <plans> <habillage|-> <sortie.mp4>');
 const ffmpeg = args.includes('--ffmpeg') ? args[args.indexOf('--ffmpeg') + 1] : process.env.FFMPEG ?? 'ffmpeg';
+// Débit visé : TikTok réencode autour de 8 à 10 Mb/s. Au-delà, on n'envoie que
+// du grain qu'il jettera ; en deçà, les aplats du rendu se mettent à baver.
+const bitrate = args.includes('--bitrate') ? args[args.indexOf('--bitrate') + 1] : '8.5M';
 
 // Une seule séquence numérotée, dans l'ordre du montage.
 const seq = resolve(shotsDir, '.seq');
@@ -37,7 +40,7 @@ const grade = [
   'scale=1080:1920:flags=lanczos',
   'eq=contrast=1.06:saturation=1.12:gamma=0.98',
   'vignette=angle=PI/5.5',
-  'noise=alls=3:allf=t',
+  'noise=alls=2:allf=t',
 ].join(',');
 
 const inputs = ['-framerate', String(FPS), '-i', join(seq, '%05d.jpg')];
@@ -58,7 +61,8 @@ const cmd = [
   '-map', '[out]',
   '-map', `${audioIndex}:a`,
   '-frames:v', String(n),
-  '-c:v', 'libx264', '-preset', 'slow', '-crf', '16', '-profile:v', 'high', '-level', '4.2',
+  '-c:v', 'libx264', '-preset', 'slow', '-b:v', bitrate, '-maxrate', '11M', '-bufsize', '16M',
+  '-profile:v', 'high', '-level', '4.2',
   '-r', String(FPS),
   '-c:a', 'aac', '-b:a', '128k', '-shortest',
   '-movflags', '+faststart',
