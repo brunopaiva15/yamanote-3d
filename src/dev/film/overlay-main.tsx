@@ -126,14 +126,8 @@ function Overlay() {
         <div className="end-logo">
           <Logo />
         </div>
-        <div className="end-line" data-part="l1">
-          gratuit, dans ton navigateur
-        </div>
-        <div className="end-url" data-part="l2">
+        <div className="end-url" data-part="url">
           yamanote-3d.com
-        </div>
-        <div className="end-note" data-part="l3">
-          lien en bio
         </div>
       </div>
     </div>
@@ -163,9 +157,7 @@ body.bg { background: #6d7680; }
 .end { position: absolute; left: 0; right: 0; top: 520px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .end-logo { width: 860px; padding: 34px 40px 26px; border-radius: 40px; background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
 .end-logo .logo { max-width: none; width: 100%; margin: 0; }
-.end-line { margin-top: 64px; font-size: 62px; font-weight: 900; letter-spacing: -0.02em; text-shadow: 0 6px 26px rgba(0,0,0,.5); }
-.end-url { margin-top: 30px; font-size: 40px; font-weight: 800; padding: 14px 34px; border-radius: 999px; background: #9acd32; color: #10240a; }
-.end-note { margin-top: 26px; font-size: 34px; font-weight: 700; opacity: .8; }
+.end-url { margin-top: 56px; font-size: 52px; font-weight: 800; padding: 14px 34px; border-radius: 999px; background: #9acd32; color: #10240a; }
 `;
 
 const style = document.createElement('style');
